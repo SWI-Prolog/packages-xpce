@@ -1,14 +1,17 @@
-/* Define if the type ulong is not in <sys/types.h> */
-#undef NEED_ULONG
-
-/* Define if the type ushort is not in <sys/types.h> */
-#undef NEED_USHORT
+/* If your compiler supports an 8-byte integer, define this to the type */
+#undef LONGLONG
 
 /* Define if you have BSD signals (i.e. signal handler does *not* reset */
 #undef BSD_SIGNALS
 
 /* Define if you have the dl library (-ldl).  */
 #undef HAVE_LIBDL
+
+/* Define if you have the jpeg library (-ljpeg).  */
+#undef HAVE_LIBJPEG
+
+/* Define if you have the Xpm library (-lXpm).  */
+#undef HAVE_LIBXPM
 
 /* Define if you have the elf library (-lelf).  */
 #undef HAVE_LIBELF
@@ -51,3 +54,30 @@
 
 /* Define if struct tm has tm_gmtoff field */
 #undef HAVE_TM_GMTOFF
+
+/* Define to include the password checking code */
+#undef O_LICENCE
+
+/* Define if position of data-segment isn't more or less constant */
+#undef VARIABLE_POINTER_OFFSET
+
+/* Define if iocll(tty, I_PUSH, "ttcompat") works on your machine */
+#undef HAVE_TTCOMPAT
+
+/* Define if sigaction() supports SA_SIGINFO and passes thechild pid in info */
+#undef USE_SIGINFO
+
+/* Define if your system is Unix-like, but doesn't know for itself */
+#undef __unix__
+
+/* Define to prepare for multi-threading */
+#undef _REENTRANT
+
+/* Define if we can cast to va_list (say no if you are not sure) */
+#undef HAVE_CAST_VA_LIST
+
+/* Define to use XPM without X11 (Cygwin) */
+#undef XPM_NO_X
+
+/* Define to use WIN32 graphics interface */
+#undef WIN32_GRAPHICS
