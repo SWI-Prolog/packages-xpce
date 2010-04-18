@@ -5,7 +5,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (C): %Y, University of Amsterdam
+    Copyright (C): 2009, University of Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -29,3 +29,62 @@
     the GNU General Public License.
 */
 
+:- module(pce_dispatch,
+	  [ pce_dispatch/1,		% +Options
+	    pce_end_dispatch/0,
+	    pce_call/1			% :Goal
+	  ]).
+:- use_module(library(pce)).
+
+:- meta_predicate
+	pce_call(0).
+
+%%	pce_dispatch(+Options) is det.
+%
+%	Create a new thread =pce= that takes   care  of the XPCE message
+%	loop.
+
+pce_dispatch(Options) :-
+	thread_create(pce_dispatcher, _, [alias(pce)|Options]).
+
+:- dynamic
+	end_pce_dispatcher/1.
+
+pce_dispatcher :-
+	set_pce_thread,
+	thread_self(Me),
+	retractall(pce:pce_thread(_)),
+	assert(pce:pce_thread(Me)),
+	repeat,
+	    catch(pce_dispatch, E, true),
+	    (	var(E)
+	    ->	true
+	    ;	print_message(error, E)
+	    ),
+	retract(end_pce_dispatcher(Sender)),
+	thread_send_message(Sender, end_pce_dispatcher).
+
+end(Requester) :-
+	assert(end_pce_dispatcher(Requester)).
+
+%%	pce_end_dispatch/0
+%
+%	End the XPCE dispatcher loop
+
+pce_end_dispatch :-
+	thread_self(Me),
+	in_pce_thread(end(Me)),
+	thread_get_message(end_pce_dispatcher),
+	set_pce_thread,
+	thread_self(Me),
+	retractall(pce:pce_thread(_)),
+	assert(pce:pce_thread(Me)).
+
+%%	pce_call(:Goal)
+%
+%	Run Goal in the XPCE thread.
+%
+%	@deprecated New code should used in_pce_thread/1.
+
+pce_call(Goal) :-
+	in_pce_thread(Goal).
