@@ -46,11 +46,6 @@ static status	closeTokeniser(Tokeniser);
 
 #define IsEof(c)	((c) == EOF)
 
-/* Problems:
-
-	* UNGETC has to do two chars!
-*/
-
 static status
 initialiseTokeniser(Tokeniser t, SyntaxTable syntax)
 { assign(t, syntax,  syntax);
@@ -167,14 +162,44 @@ GETC(Tokeniser t)
 }
 
 
+static int
+PEEKC(Tokeniser t)
+{ int c;
+
+  switch(t->access)
+  { case A_FILE:
+    { FileObj f = t->source;
+      c = Speekcode(f->fd);
+      break;
+    }
+    case A_CHAR_ARRAY:
+    { CharArray ca = t->source;
+      String s = &ca->data;
+
+      c = (t->caret < s->size ? (int)str_fetch(&ca->data, t->caret) : EOF);
+      break;
+    }
+    case A_TEXT_BUFFER:
+    { TextBuffer tb = t->source;
+      c = fetch_textbuffer(tb, t->caret);
+    }
+    default:
+      return EOF;
+  }
+
+  return c;
+}
+
+
 static void
-UNGETC(Tokeniser t, int c)
+UNGETC(Tokeniser t, int c)		/* Only used for tokenizing numbers */
 { if ( t->caret > 0 )
   { switch(t->access)
     { case A_FILE:
       { FileObj f = t->source;
 
-	Sungetcode(c, f->fd);
+	assert(c<128);
+	Sungetc(c, f->fd);
       }
     }
 
@@ -196,22 +221,14 @@ getCharacterTokeniser(Tokeniser t)
 }
 
 
-static status
-characterTokeniser(Tokeniser t, Int c)
-{ UNGETC(t, valInt(c));
-
-  succeed;
-}
-
-
 Int
 getPeekTokeniser(Tokeniser t)
-{ Int chr;
+{ int c = PEEKC(t);
 
-  if ( (chr = getCharacterTokeniser(t)) )
-    characterTokeniser(t, chr);
+  if ( !IsEof(c) )
+    answer(toInt(c));
 
-  answer(chr);
+  fail;
 }
 
 		 /*******************************
@@ -313,11 +330,14 @@ getTokenTokeniser(Tokeniser t)
 
       continue;
     } else if ( tiscommentstart1(s, c) ) /* 2 character comment */
-    { int c2 = GETC(t);
+    { int c2 = PEEKC(t);
 
       if ( tiscommentstart2(s, c2) )
-      { int c1 = GETC(t);
-	int c2 = GETC(t);
+      { int c1, c2;
+
+	GETC(t);			/* get peeked char */
+	c1 = GETC(t);
+	c2 = GETC(t);
 
 	while( !tiscommentend1(s, c1) || !tiscommentend2(s, c2) )
 	{ c1 = c2;
@@ -328,8 +348,6 @@ getTokenTokeniser(Tokeniser t)
 	}
 
 	continue;
-      } else
-      { UNGETC(t, c2);
       }
     }
 
@@ -355,14 +373,14 @@ getTokenTokeniser(Tokeniser t)
 
       if ( tisstringescape(s, open, c) )
       { if ( c == open )		/* escape as double "" or '' */
-	{ int c2 = GETC(t);
+	{ int c2 = PEEKC(t);
 
 	  if ( c2 == open )
-	  { *q++ = c;
+	  { GETC(t);			/* get peeked */
+	    *q++ = c;
 	    continue;
 	  } else
-	  { UNGETC(t, c2);
-	    *q = EOS;
+	  { *q = EOS;
 	    answer(CtoString(buf));
 	  }
 	} else
@@ -391,14 +409,12 @@ getTokenTokeniser(Tokeniser t)
     int is_int = TRUE;
 
     if ( c == '-' )
-    { int c2 = GETC(t);
+    { int c2 = PEEKC(t);
 
       if ( !tisdigit(s, c2) )
-      { UNGETC(t, c2);
 	goto nonum;
-      }
       *q++ = c;
-      c = c2;
+      c = GETC(t);
     }
 
     do
@@ -408,36 +424,34 @@ getTokenTokeniser(Tokeniser t)
     } while ( tisdigit(s, c) );
 
     if ( c == '.' )
-    { int c2 = GETC(t);
+    { int c2 = PEEKC(t);
 
       if ( tisdigit(s, c2) )
       { *q++ = c;
-        c = c2;
+        c = GETC(t);
         is_int = FALSE;
 	do
 	{ *q++ = c;
 	  c = GETC(t);
 	} while( tisdigit(s, c) );
       } else
-      { UNGETC(t, c2);
-	goto num_out;
+      { goto num_out;
       }
     }
 
     if ( c == 'e' || c == 'E' )
-    { int c2 = GETC(t);
+    { int c2 = PEEKC(t);
 
       if ( tisdigit(s, c2) )
       { *q++ = c;
-        c = c2;
+        c = GETC(t);
         is_int = FALSE;
 	do
 	{ *q++ = c;
 	  c = GETC(t);
 	} while( tisdigit(s, c) );
       } else
-      { UNGETC(t, c2);
-	goto num_out;
+      { goto num_out;
       }
     }
   num_out:
@@ -474,12 +488,14 @@ nonum:
   { char buf[LINESIZE];
     char *q = buf;
 
-    do
-    { *q++ = c;
-      c = GETC(t);
-    } while ( tisalnum(s, c) );
+    *q++ = c;
+    for(;;)
+    { c = PEEKC(t);
+      if ( !tisalnum(s, c) )
+	break;
+      *q++ = GETC(t);
+    }
     *q = EOS;
-    UNGETC(t, c);
 
     return CtoKeyword(buf);		/* uppercase conversion! */
   } else				/* singleton */
@@ -494,18 +510,20 @@ nonum:
     if ( isNil(t->symbols) || !getMemberHashTable(t->symbols, symb) )
       answer(symb);
 
-    do
+    for(;;)
     { symbol = symb;
-      c = GETC(t);
+      c = PEEKC(t);
       *s++ = c;
       *s   = EOS;
       if ( !tischtype(t->syntax, c, PU) )
 	break;
       symb = CtoName(buf);
       DEBUG(NAME_token, Cprintf("trying symbol %s\n", pp(symb)));
-    } while( getMemberHashTable(t->symbols, symb) );
+      if ( !getMemberHashTable(t->symbols, symb) )
+	break;
+      c = GETC(t);
+    }
 
-    UNGETC(t, c);
     answer(symbol);
   }
 }
@@ -544,8 +562,6 @@ static senddecl send_tokeniser[] =
      DEFAULT, "Create from syntax"),
   SM(NAME_close, 0, NULL, closeTokeniser,
      NAME_input, "Close source"),
-  SM(NAME_character, 1, "char", characterTokeniser,
-     NAME_readAhead, "Unget (push back) character"),
   SM(NAME_token, 1, "token=any", tokenTokeniser,
      NAME_readAhead, "Push back a token"),
   SM(NAME_syntaxError, 1, "message=char_array", syntaxErrorTokeniser,

@@ -32,6 +32,10 @@
 #include <sys/_mbstate_t.h>
 #endif
 
+#if defined(_MSC_VER) && !defined(__WINDOWS__)
+#define __WINDOWS__ 1
+#endif
+
 #include <stdarg.h>
 #include <wchar.h>
 #include <stddef.h>
@@ -102,7 +106,8 @@ stuff.
 #endif
 
 #if defined(__WINDOWS__) && !defined(EWOULDBLOCK)
-#define EWOULDBLOCK	1000		/* Needed for socket handling */
+#define EWOULDBLOCK	140		/* Needed for socket handling */
+					/* 140 is compatible to VS2010 */
 #endif
 #define EPLEXCEPTION	1001		/* errno: pending Prolog exception */
 
@@ -188,7 +193,11 @@ typedef struct io_stream
   struct io_stream *	upstream;	/* stream providing our input */
   struct io_stream *	downstream;	/* stream providing our output */
   unsigned		newline : 2;	/* Newline mode */
-  intptr_t		reserved[3];	/* reserved for extension */
+  unsigned		erased : 1;	/* Stream was erased */
+  unsigned		references : 4;	/* Reference-count */
+  int			io_errno;	/* Save errno value */
+  void *		exception;	/* pending exception (record_t) */
+  intptr_t		reserved[2];	/* reserved for extension */
 } IOSTREAM;
 
 
@@ -247,9 +256,12 @@ PL_EXPORT_DATA(IOSTREAM)    S__iob[3];		/* Libs standard streams */
 #define Sgetchar()	Sgetc(Sinput)
 #define Sputchar(c)	Sputc((c), Soutput)
 
+#define S__checkpasteeof(s,c) \
+	if ( (c)==-1 && (s)->flags & (SIO_FEOF|SIO_FERR) ) \
+	  ((s)->flags |= SIO_FEOF2)
 #define S__updatefilepos_getc(s, c) \
 	((s)->position ? S__fupdatefilepos_getc((s), (c)) \
-		       : (c))
+		       : S__fcheckpasteeof((s), (c)))
 
 #define Snpgetc(s) ((s)->bufp < (s)->limitp ? (int)(*(s)->bufp++)&0xff \
 					    : S__fillbuf(s))
@@ -328,6 +340,7 @@ PL_EXPORT(void)		SinitStreams();
 PL_EXPORT(void)		Scleanup(void);
 PL_EXPORT(void)		Sreset(void);
 PL_EXPORT(int)		S__fupdatefilepos_getc(IOSTREAM *s, int c);
+PL_EXPORT(int)		S__fcheckpasteeof(IOSTREAM *s, int c);
 PL_EXPORT(int)		S__fillbuf(IOSTREAM *s);
 PL_EXPORT(int)		Sunit_size(IOSTREAM *s);
 					/* byte I/O */
@@ -338,7 +351,7 @@ PL_EXPORT(int)		Sungetc(int c, IOSTREAM *s);
 PL_EXPORT(int)		Scanrepresent(int c, IOSTREAM *s);
 PL_EXPORT(int)		Sputcode(int c, IOSTREAM *s);
 PL_EXPORT(int)		Sgetcode(IOSTREAM *s);
-PL_EXPORT(int)		Sungetcode(int c, IOSTREAM *s);
+PL_EXPORT(int)		Speekcode(IOSTREAM *s);
 					/* word I/O */
 PL_EXPORT(int)		Sputw(int w, IOSTREAM *s);
 PL_EXPORT(int)		Sgetw(IOSTREAM *s);
@@ -351,6 +364,11 @@ PL_EXPORT(int)		Sfpasteof(IOSTREAM *s);
 PL_EXPORT(int)		Sferror(IOSTREAM *s);
 PL_EXPORT(void)		Sclearerr(IOSTREAM *s);
 PL_EXPORT(void)		Sseterr(IOSTREAM *s, int which, const char *message);
+#ifdef _FLI_H_INCLUDED
+PL_EXPORT(void)		Sset_exception(IOSTREAM *s, term_t ex);
+#else
+PL_EXPORT(void)		Sset_exception(IOSTREAM *s, intptr_t ex);
+#endif
 PL_EXPORT(int)		Ssetenc(IOSTREAM *s, IOENC new_enc, IOENC *old_enc);
 PL_EXPORT(int)		Sflush(IOSTREAM *s);
 PL_EXPORT(long)		Ssize(IOSTREAM *s);
