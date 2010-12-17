@@ -126,6 +126,8 @@ map_term_expand(X, Y) :-
 map_term_expand(X, X).
 
 
+do_term_expand(end_of_file, _) :-
+	cleanup, !, fail.
 do_term_expand(In0, Out) :-
 	pce_expandable(In0),
 	(   do_expand(In0, Out0)
@@ -939,6 +941,21 @@ pce_compiling(ClassName) :-
 
 pce_compiling :-
 	compiling(_, _), !.
+
+
+		 /*******************************
+		 *	      CLEANUP		*
+		 *******************************/
+
+%	cleanup
+%
+%	Cleanup the compilation data. We should  probably give a warning
+%	when not under xref and there is data left.
+
+cleanup :-
+	source_location(Path, _),
+	forall(retract(compiling(Class, Path)),
+	       retractall(attribute(Class, _, _))).
 
 
 		 /*******************************
