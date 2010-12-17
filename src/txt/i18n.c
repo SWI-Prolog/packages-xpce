@@ -225,7 +225,7 @@ charArrayToWC(CharArray ca, size_t *len)
     cuchar *e = &s[str->size];
     wchar_t *o;
 
-    roomBuffer(out, str->size*sizeof(wchar_t));
+    roomBuffer(out, (str->size+1)*sizeof(wchar_t));
 
     for(o=(wchar_t*)out->data ; s<e; )
     { *o++ = *s++;
