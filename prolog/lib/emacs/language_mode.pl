@@ -146,7 +146,6 @@ fill_comment_paragraph(M, Justify:justify=[bool|int], From:[int]) :->
 	    fail
 	),
 	new(Re, regex(string('^%s?[ \t]*$', CS))),
-	new(LeadRe, regex(string('%s%s*[ \t]*', CS, CS))),
 	get(M, caret, Caret),
 	get(M, text_buffer, TB),
 	(   From \== @default
@@ -161,7 +160,13 @@ fill_comment_paragraph(M, Justify:justify=[bool|int], From:[int]) :->
 	;   get(TB, size, End)
 	),
 	free(Re),
-	send(M, fill_comment, Start, End, LeadRe, Justify),
+	(   new(LeadRe, regex(string('%s[^\n]*\t[\t]*', CS))),
+	    send(LeadRe, match, TB, Start)
+	->  LeadCont = CS
+	;   new(LeadRe, regex(string('%s%s*[ \t]*', CS, CS))),
+	    LeadCont = @default
+	),
+	send(M, fill_comment, Start, End, LeadRe, Justify, LeadCont),
 	free(LeadRe).
 
 %	->fill_comment
@@ -170,7 +175,8 @@ fill_comment_paragraph(M, Justify:justify=[bool|int], From:[int]) :->
 
 fill_comment(M,
 	     Start:from=int, End:to=int,
-	     Re:leading=regex, Justify:justify=[bool|int]) :->
+	     Re:leading=regex, Justify:justify=[bool|int],
+	     LeadCont:lead_continuation=[char_array]) :->
 	"Fill paragraph given `leading' regex"::
 	(   (Justify == @default ; Justify == @off ; Justify == 0)
 	->  TheJustify = @off
@@ -188,7 +194,11 @@ fill_comment(M,
 	get(M, right_margin, RM0),
 	RM is RM0 - LeadCol,
 	send(M, fill, Start, EndF?start, 0, RM, TheJustify),
-	comment(M, Start, EndF, Lead, LeadCol),
+	(   LeadCont == @default
+	->  TheLeadCont = Lead
+	;   TheLeadCont = LeadCont
+	),
+	comment(M, Start, EndF, Lead, TheLeadCont, LeadCol),
 	send(M, caret, CaretF?start),
 	free(EndF),
 	free(CaretF).
@@ -207,16 +217,16 @@ uncomment(M, Re, LeadCol, Here, EndF) :-
 	get(TB, scan, Here, line, 1, start, NextHere),
 	uncomment(M, Re, LeadCol, NextHere, EndF).
 
-comment(_, Here, EndF, _, _Col) :-
+comment(_, Here, EndF, _, _, _Col) :-
 	get(EndF, start, End),
 	Here >= End, !.
-comment(M, Here, EndF, Lead, Col) :-
+comment(M, Here, EndF, Lead, LeadCont, Col) :-
 	get(M, text_buffer, TB),
 	send(TB, insert, Here, Lead),
 	get(Lead, size, Size),
 	send(M, align, Col, Here+Size),
 	get(TB, scan, Here, line, 1, start, NextHere),
-	comment(M, NextHere, EndF, Lead, Col).
+	comment(M, NextHere, EndF, LeadCont, LeadCont, Col).
 
 
 insert_comment_block(E) :->

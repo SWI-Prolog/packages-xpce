@@ -353,10 +353,12 @@ fill_paragraph(M, Justify:[int]) :->
 
 fill_comment(M,
 	     Start:from=int, End:to=int,
-	     Re:leading=regex, Justify:justify=[bool|int]) :->
+	     Re:leading=regex, Justify:justify=[bool|int],
+	     LeadCont:lead_continuation=[char_array]) :->
 	"Fill/justify comments"::
 	send(M, slot, var_mark_enabled, @off),
-	call_cleanup(send_super(M, fill_comment, Start, End, Re, Justify),
+	call_cleanup(send_super(M, fill_comment, Start, End, Re, Justify,
+				LeadCont),
 		     send(M, slot, var_mark_enabled, @on)),
 	(   send(M, has_send_method, colourise_comments)
 	->  send(M, colourise_comments, Start, End)
