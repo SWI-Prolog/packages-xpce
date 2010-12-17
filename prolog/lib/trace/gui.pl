@@ -412,7 +412,10 @@ fill_menu_bar(F) :->
 			      message(F, exceptions),
 			      end_group := @on),
 		    menu_item(toggle_edit_mode,
-			      message(F, edit))
+			      message(F, edit),
+			      end_group := @on),
+		    menu_item(copy_goal,
+			      message(F, copy_goal))
 		  ]),
 	send_list(View, append,
 		  [ menu_item(threads,
@@ -654,6 +657,21 @@ details(F) :->
 query(_F) :->
 	"Enter and run a query"::
 	prolog_ide(open_query_window).
+
+copy_goal(F) :->
+	"Copy the current goal into the copy-buffer"::
+	get(F, selected_frame, Frame),
+	(   Frame \== @nil
+	->  true
+	;   send(F, report, warning, 'No current frame'),
+	    fail
+	),
+	prolog_frame_attribute(F, Frame, goal, Goal),
+	prolog_frame_attribute(F, Frame, predicate_indicator, PI),
+	format(string(Text), '~q .', [Goal]),
+	send(@display, copy, Text),
+	format(atom(PIA), '~q', [PI]),
+	send(F, report, inform, 'Copied goal (%s) to clipboard', PIA).
 
 :- pce_group(delegate).
 
