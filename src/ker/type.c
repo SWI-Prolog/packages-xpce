@@ -1398,7 +1398,8 @@ nameToType(Name name)
   if ( (type = getMemberHashTable(TypeTable, name)) )
     return type;
 
-  init_string(&str, &name->data);
+  if ( !init_string(&str, &name->data) )
+    fail;
 
   if ( (type = named_type(&str)) )
     return type;

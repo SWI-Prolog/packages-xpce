@@ -3,7 +3,7 @@
 /* /home/jan/src/pl/packages/xpce/src/ker/alloc.c */
 COMMON(Any)	alloc(size_t n);
 COMMON(void)	unalloc(size_t n, Any p);
-COMMON(void)	initAlloc(void);
+COMMON(void)	pceInitAlloc(void);
 COMMON(void)	allocRange(void *low, size_t size);
 COMMON(status)	listWastedCorePce(Pce pce, BoolObj ppcells);
 COMMON(Any)	alloc(size_t n);

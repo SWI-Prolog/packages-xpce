@@ -65,7 +65,7 @@ ws_console_label(CharArray label)
 
     sprintf(buf, "\033]2;%s\007", strName(label));
     len = strlen(buf);
-    if ( write(2, buf, len) != len )
+    if ( write(2, buf, len) != (ssize_t)len )
       fail;
   }
 

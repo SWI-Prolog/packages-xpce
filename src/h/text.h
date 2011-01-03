@@ -75,7 +75,7 @@ NewClass(fragment)
   Name	 	style;			/* style of fragment (via editor) */
   intptr_t   	start;			/* start of fragment */
   intptr_t  	length;			/* length of fragment (> 0) */
-  intptr_t		attributes;		/* FRAG_... */
+  intptr_t	attributes;		/* FRAG_... */
 End;
 
 NewClass(style)
