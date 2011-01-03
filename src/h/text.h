@@ -46,18 +46,18 @@ NewClass(text_buffer)
   Fragment	first_fragment;		/* first fragment */
   Fragment	last_fragment;		/* last fragment */
   Chain		editors;		/* editors associated buffer */
-  BoolObj		modified;		/* has textbuffer been modified? */
+  BoolObj	modified;		/* has textbuffer been modified? */
   Int		undo_buffer_size;	/* Size of the undo-buffer */
   SyntaxTable	syntax;			/* Syntax description */
   Int		generation;		/* Increments on each change */
 					/* start private data */
-  int		changed_start;		/* start of changed region */
-  int		changed_end;		/* end of changed region */
-  int		gap_start;		/* first location of the gap */
-  int		gap_end;		/* last location of the gap */
-  int		size;			/* # characters in buffer */
-  int		lines;			/* total number of lines */
-  int		allocated;		/* allocated size */
+  intptr_t	changed_start;		/* start of changed region */
+  intptr_t	changed_end;		/* end of changed region */
+  intptr_t	gap_start;		/* first location of the gap */
+  intptr_t	gap_end;		/* last location of the gap */
+  intptr_t	size;			/* # characters in buffer */
+  intptr_t	lines;			/* total number of lines */
+  intptr_t	allocated;		/* allocated size */
   UndoBuffer	undo_buffer;		/* Undo log */
   string	buffer;			/* Actual buffer (with gap) */
 End;
@@ -73,9 +73,9 @@ NewClass(fragment)
   Fragment	next;			/* next fragment */
   Fragment  	prev;			/* previous fragment */
   Name	 	style;			/* style of fragment (via editor) */
-  long   	start;			/* start of fragment */
-  long  	length;			/* length of fragment (> 0) */
-  long		attributes;		/* FRAG_... */
+  intptr_t   	start;			/* start of fragment */
+  intptr_t  	length;			/* length of fragment (> 0) */
+  intptr_t		attributes;		/* FRAG_... */
 End;
 
 NewClass(style)
@@ -85,7 +85,7 @@ NewClass(style)
   Image		icon;			/* margin marker */
   Int		left_margin;		/* left margin in pixels */
   Int		right_margin;		/* right margin in pixels */
-  long		attributes;		/* style attributes */
+  intptr_t	attributes;		/* style attributes */
 End;
 
 typedef struct
@@ -149,7 +149,7 @@ NewClass(editor)
   Int		dabbrev_pos;		/* Current search position */
   Int		dabbrev_origin;		/* Start of dabbrev word */
 					/* Private data */
-  long		internal_mark;		/* Internally used mark */
+  intptr_t	internal_mark;		/* Internally used mark */
   FragmentCache fragment_cache;		/* Cache to compute frament overlap */
 End;
 
@@ -200,15 +200,15 @@ struct text_char
   FontObj	font;			/* Font of this character */
   Colour	colour;			/* Colour of this character */
   Any		background;		/* Background for the characters */
-  long		index;			/* Index in line (relative) */
+  intptr_t	index;			/* Index in line (relative) */
   short		x;			/* X-position in line (pixels) */
   unsigned char attributes;		/* Its attributes */
   unsigned 	type : 2;		/* type of character */
 };
 
 struct text_line
-{ long		start;			/* Start index (relative) */
-  long		end;			/* Last index (relative) */
+{ intptr_t	start;			/* Start index (relative) */
+  intptr_t	end;			/* Last index (relative) */
   short		y;			/* Y-position in pixels */
   short		h;			/* Heigth in pixels */
   short		w;			/* Width of displayed text */
@@ -241,11 +241,11 @@ NewClass(text_image)			/* TBD: subclass of bitmap? */
   BoolObj		eof_in_window;		/* EOF is in the window */
   Elevation	elevation;		/* Box elevation */
 					/* start private data */
-  int		w;			/* Used width in pixels */
-  int		h;			/* Used height in pixels */
-  int		change_start;		/* Start of changes */
-  int		change_end;		/* End of changes */
-  int		inserted;       	/* Number of chars inserted/deleted */
+  intptr_t	w;			/* Used width in pixels */
+  intptr_t	h;			/* Used height in pixels */
+  intptr_t	change_start;		/* Start of changes */
+  intptr_t	change_end;		/* End of changes */
+  intptr_t	inserted;       	/* Number of chars inserted/deleted */
   SeekFunction  seek;			/* Seek to position */
   ScanFunction	scan;			/* Scan for character type */
   FetchFunction fetch;			/* Function to fetch characters */
