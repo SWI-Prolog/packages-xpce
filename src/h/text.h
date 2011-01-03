@@ -127,8 +127,8 @@ NewClass(editor)
   Sheet		styles;			/* Style-name --> Style-object */
   KeyBinding	bindings;		/* Key bindings */
   Name		focus_function;		/* Function in focus */
-  BoolObj		fill_mode;		/* Auto fill */
-  BoolObj		exact_case;		/* Search and replace do exact case */
+  BoolObj	fill_mode;		/* Auto fill */
+  BoolObj	exact_case;		/* Search and replace do exact case */
   Name		kill_location;		/* Processing kill sequences */
   Name		search_direction;	/* direction of the search */
   StringObj	search_string;		/* Target of search */
@@ -136,13 +136,13 @@ NewClass(editor)
   Int		search_base;		/* Currently searching from here */
   Name		selection_unit;		/* Selection unit (char, word, line) */
   Name		selection_origin;	/* Original start of selection */
-  BoolObj		editable;		/* Text may be changed by user */
+  BoolObj	editable;		/* Text may be changed by user */
   Code		error_message;		/* Forward error messages */
   Code		modified_message;	/* Forward <->modified changed */
   Int		left_margin;		/* Left margin indentation */
   Int		right_margin;		/* Right margin */
   Int		indent_increment; 	/* Steps taken by region in/undent1 */
-  BoolObj		auto_newline;		/* Auto newline on ->append */
+  BoolObj	auto_newline;		/* Auto newline on ->append */
   SourceSink	file;			/* Name of file or NIL */
   Name		dabbrev_target;		/* Base of the dabbrev expansion */
   Chain		dabbrev_reject;		/* Hits rejected by dabbrev */
@@ -238,7 +238,7 @@ NewClass(text_image)			/* TBD: subclass of bitmap? */
   Int		tab_distance;		/* Tab distance in pixels */
   Vector	tab_stops;		/* Vector of tab-stops (pixels) */
   Graphical	pointed;		/* Graphical under the pointer */
-  BoolObj		eof_in_window;		/* EOF is in the window */
+  BoolObj	eof_in_window;		/* EOF is in the window */
   Elevation	elevation;		/* Box elevation */
 					/* start private data */
   intptr_t	w;			/* Used width in pixels */
