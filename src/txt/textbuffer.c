@@ -29,27 +29,28 @@
 
 forwards Int	getMatchingQuoteTextBuffer(TextBuffer, Int, Name);
 forwards int	match(TextBuffer, int, String, int, int);
-forwards int	room(TextBuffer, int, int);
-forwards status capitalise_textbuffer(TextBuffer, int, int);
+forwards int	room(TextBuffer, intptr_t, intptr_t);
+forwards status capitalise_textbuffer(TextBuffer, intptr_t, intptr_t);
 forwards status clear_textbuffer(TextBuffer);
-forwards status downcase_textbuffer(TextBuffer, int, int);
-forwards void	end_change(TextBuffer, int);
+forwards status downcase_textbuffer(TextBuffer, intptr_t, intptr_t);
+forwards void	end_change(TextBuffer, intptr_t);
 forwards Int    getSizeTextBuffer(TextBuffer);
-forwards status store_textbuffer(TextBuffer, int, wint_t);
-forwards status transpose_textbuffer(TextBuffer, int, int, int, int);
-forwards status upcase_textbuffer(TextBuffer, int, int);
-forwards status save_textbuffer(TextBuffer, int, int, SourceSink);
-forwards status insert_file_textbuffer(TextBuffer, int, int, SourceSink);
-forwards status shift_fragments(TextBuffer, long, long);
-forwards void	start_change(TextBuffer, int);
-forwards status insert_textbuffer_shift(TextBuffer, int, int, String, int);
+forwards status store_textbuffer(TextBuffer, intptr_t, wint_t);
+forwards status transpose_textbuffer(TextBuffer, intptr_t, intptr_t, intptr_t, intptr_t);
+forwards status upcase_textbuffer(TextBuffer, intptr_t, intptr_t);
+forwards status save_textbuffer(TextBuffer, intptr_t, intptr_t, SourceSink);
+forwards status insert_file_textbuffer(TextBuffer, intptr_t, intptr_t, SourceSink);
+forwards status shift_fragments(TextBuffer, intptr_t, intptr_t);
+forwards void	start_change(TextBuffer, intptr_t);
+forwards status insert_textbuffer_shift(TextBuffer, intptr_t, intptr_t, String, int);
 forwards status promoteTextBuffer(TextBuffer tb);
 
 #define ALLOC (256)		/* increment allocation by this amount */
 #define ROUND(n, r)		( (((n) + (r)-1) / (r)) * (r) )
 #define NormaliseIndex(tb, i)	( i < 0 ? 0 : i > tb->size ? tb->size : i)
-#define Swap(a, b)		{ int _tmp = (a); (a) = (b); (b) = _tmp; }
+#define Swap(a, b)		{ intptr_t _tmp = (a); (a) = (b); (b) = _tmp; }
 #define Before(i1, i2)		{ if ( i1 > i2 ) Swap(i1, i2); }
+#define Before_i(x, y)  	if ( x > y ) { intptr_t _z = x; x=y; y=_z; }
 #define fetch(i)		fetch_textbuffer(tb, i)
 #define istbA(tb)		isstrA(&(tb)->buffer)
 #define Address(tb, i)		(istbA(tb) ? &(tb)->tb_bufferA[(i)] \
@@ -291,10 +292,13 @@ changedTextBuffer(TextBuffer tb)
 
 status
 ChangedRegionTextBuffer(TextBuffer tb, Int start, Int end)
-{ int s = valInt(start);
-  int e = valInt(end);
+{ intptr_t s = valInt(start);
+  intptr_t e = valInt(end);
 
-  Before(s, e);
+  if ( s > e )
+  { intptr_t tmp = s;
+    s = e; e = tmp;
+  }
   start_change(tb, s);
   end_change(tb, e);
 
@@ -540,8 +544,8 @@ contentsTextBuffer(TextBuffer tb, CharArray ca)
 static StringObj
 getSubTextBuffer(TextBuffer tb, Int from, Int to)
 { string s;
-  int f = (isDefault(from) ? 0 : valInt(from));
-  int t = (isDefault(to) ? tb->size : valInt(to));
+  intptr_t f = (isDefault(from) ? 0 : valInt(from));
+  intptr_t t = (isDefault(to) ? tb->size : valInt(to));
 
   str_sub_text_buffer(tb, &s, f, t-f);
   answer(StringToString(&s));
@@ -688,13 +692,13 @@ getFindTextBuffer(TextBuffer tb, Int from, StringObj str,
 
 
 static status
-ends_sentence(TextBuffer tb, int here)
+ends_sentence(TextBuffer tb, intptr_t here)
 { return matchRegex(tb->syntax->sentence_end, tb, toInt(here), DEFAULT);
 }
 
 
 status
-parsep_line_textbuffer(TextBuffer tb, int here)
+parsep_line_textbuffer(TextBuffer tb, intptr_t here)
 { int rval = matchRegex(tb->syntax->paragraph_end, tb, toInt(here), DEFAULT);
 
   DEBUG(NAME_paragraph,
@@ -706,7 +710,7 @@ parsep_line_textbuffer(TextBuffer tb, int here)
 
 
 static int
-all_layout(TextBuffer tb, int from, int to)
+all_layout(TextBuffer tb, intptr_t from, intptr_t to)
 { SyntaxTable syntax = tb->syntax;
 
   while( from < to && tislayout(syntax, fetch(from)) )
@@ -716,12 +720,12 @@ all_layout(TextBuffer tb, int from, int to)
 }
 
 
-static int
-forward_skip_par_textbuffer(TextBuffer tb, int here)
-{ int size = tb->size;
+static intptr_t
+forward_skip_par_textbuffer(TextBuffer tb, intptr_t here)
+{ intptr_t size = tb->size;
 
   while( here < size && parsep_line_textbuffer(tb, here) )
-  { int h = scan_textbuffer(tb, here, NAME_line, 1, 'a');
+  { intptr_t h = scan_textbuffer(tb, here, NAME_line, 1, 'a');
     if ( !all_layout(tb, here, h) )
       return h;
     here = h;
@@ -733,12 +737,12 @@ forward_skip_par_textbuffer(TextBuffer tb, int here)
 }
 
 
-static int
-backward_skip_par_textbuffer(TextBuffer tb, int here)
+static intptr_t
+backward_skip_par_textbuffer(TextBuffer tb, intptr_t here)
 { here = scan_textbuffer(tb, here, NAME_line, -1, 'a');
 
   while( here > 0 && parsep_line_textbuffer(tb, here) )
-  { int h = scan_textbuffer(tb, here, NAME_line, -1, 'a');
+  { intptr_t h = scan_textbuffer(tb, here, NAME_line, -1, 'a');
     if ( !all_layout(tb, h, here) )
       return h;
     here = h;
@@ -750,10 +754,10 @@ backward_skip_par_textbuffer(TextBuffer tb, int here)
 }
 
 
-int
-scan_textbuffer(TextBuffer tb, int from, Name unit, int amount, int az)
-{ int here;
-  int size = tb->size;
+intptr_t
+scan_textbuffer(TextBuffer tb, intptr_t from, Name unit, intptr_t amount, int az)
+{ intptr_t here;
+  intptr_t size = tb->size;
   SyntaxTable syntax = tb->syntax;
 
   DEBUG(NAME_scan, Cprintf("scan_textbuffer(%s, %d, %s, %d, %c)\n",
@@ -1003,14 +1007,14 @@ typedef int (*scan_callback_t)(TextBuffer, long, long, int);
 
 static int
 scan_syntax_textbuffer(TextBuffer tb,
-		       long from, long to,
+		       intptr_t from, intptr_t to,
 		       scan_callback_t *callback,
 		       int flags,
-		       long *start)
-{ long here = from;			/* current position */
+		       intptr_t *start)
+{ intptr_t here = from;			/* current position */
   SyntaxTable syntax = tb->syntax;	/* syntax-table */
   int state = SST_PLAIN;		/* initial/current state */
-  int tokenstart = from;
+  intptr_t tokenstart = from;
 
   for(; here < to; here++)
   { int c = fetch(here);
@@ -1171,14 +1175,14 @@ inStringTextBuffer(TextBuffer tb, Int pos, Int from)
 
 Int
 getMatchingBracketTextBuffer(TextBuffer tb, Int idx, Int bracket)
-{ int i = valInt(idx);
+{ intptr_t i = valInt(idx);
   wint_t stack[MAXBRACKETS];
   int depth = 1;
   int ic;
   SyntaxTable syntax = tb->syntax;
   int c;
 
-  c = (notDefault(bracket) ? valInt(bracket) : fetch(i));
+  c = (notDefault(bracket) ? (int)valInt(bracket) : fetch(i));
   stack[0] = c;
 
   if ( tisopenbrace(syntax, c) )
@@ -1450,9 +1454,9 @@ getLineNumberTextBuffer(TextBuffer tb, Int i)
 }
 
 
-int
-find_textbuffer(TextBuffer tb, int here, String str,
-		int times, char az, int ec, int wm)
+intptr_t
+find_textbuffer(TextBuffer tb, intptr_t here, String str,
+		intptr_t times, char az, int ec, int wm)
 { int hit = FALSE;
   int where = here;
 
@@ -1487,8 +1491,8 @@ find_textbuffer(TextBuffer tb, int here, String str,
 
 static int
 match(TextBuffer tb, int here, String s, int ec, int wm)
-{ int l = s->size;
-  int i;
+{ intptr_t l = s->size;
+  intptr_t i;
 
   if ( wm && (tisalnum(tb->syntax, fetch(here-1)) ||
 	      tisalnum(tb->syntax, fetch(here+l))) )
@@ -1714,9 +1718,9 @@ count_lines_textbuffer()       finds the number of newlines in a region.
 start_of_line_n_textbuffer()   finds the character index of the nth-1 line.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-int
-count_lines_textbuffer(TextBuffer tb, int f, int t)
-{ int lines = 0;
+intptr_t
+count_lines_textbuffer(TextBuffer tb, intptr_t f, intptr_t t)
+{ intptr_t lines = 0;
   SyntaxTable syntax = tb->syntax;
 
   f = NormaliseIndex(tb, f);
@@ -1809,7 +1813,7 @@ start_of_line_n_textbuffer(TextBuffer tb, int lineno)
 		*********************************/
 
 int
-fetch_textbuffer(TextBuffer tb, int where)
+fetch_textbuffer(TextBuffer tb, intptr_t where)
 { int idx;
 
   if ( where < 0 || where >= tb->size )
@@ -1821,8 +1825,8 @@ fetch_textbuffer(TextBuffer tb, int where)
 
 
 static status
-store_textbuffer(TextBuffer tb, int where, wint_t c)
-{ long idx;
+store_textbuffer(TextBuffer tb, intptr_t where, wint_t c)
+{ intptr_t idx;
   wint_t old;
 
   if ( where < 0 || where >= tb->size )
@@ -1920,9 +1924,9 @@ mirror_textbuffer(TextBuffer tb, int f, int t)
 
 
 static status
-transpose_textbuffer(TextBuffer tb, int f1, int t1, int f2, int t2)
-{ Before(f1, t1);
-  Before(f2, t2);
+transpose_textbuffer(TextBuffer tb, intptr_t f1, intptr_t t1, intptr_t f2, intptr_t t2)
+{ Before_i(f1, t1);
+  Before_i(f2, t2);
 
   f1 = NormaliseIndex(tb, f1);
   t1 = NormaliseIndex(tb, t1);
@@ -1954,7 +1958,7 @@ transpose_textbuffer(TextBuffer tb, int f1, int t1, int f2, int t2)
 
 
 static status
-downcase_textbuffer(TextBuffer tb, int from, int len)
+downcase_textbuffer(TextBuffer tb, intptr_t from, intptr_t len)
 { for( ; from < tb->size && len > 0; len--, from++ )
   { wint_t c;
 
@@ -1967,7 +1971,7 @@ downcase_textbuffer(TextBuffer tb, int from, int len)
 
 
 static status
-upcase_textbuffer(TextBuffer tb, int from, int len)
+upcase_textbuffer(TextBuffer tb, intptr_t from, intptr_t len)
 { for( ; from < tb->size && len > 0; len--, from++ )
   { wint_t c;
 
@@ -1980,7 +1984,7 @@ upcase_textbuffer(TextBuffer tb, int from, int len)
 
 
 static status
-capitalise_textbuffer(TextBuffer tb, int from, int len)
+capitalise_textbuffer(TextBuffer tb, intptr_t from, intptr_t len)
 { wint_t b = ' ';
 
   for( ; from < tb->size && len > 0; len--, from++ )
@@ -2012,7 +2016,7 @@ streamError(IOSTREAM *fd)
 
 
 static status
-save_textbuffer(TextBuffer tb, int from, int len, SourceSink file)
+save_textbuffer(TextBuffer tb, intptr_t from, intptr_t len, SourceSink file)
 { IOSTREAM *fd;
 
   room(tb, tb->size, 0);		/* move the gap to the end */
@@ -2055,7 +2059,7 @@ save_textbuffer(TextBuffer tb, int from, int len, SourceSink file)
 
 
 status
-str_sub_text_buffer(TextBuffer tb, String s, int start, int len)
+str_sub_text_buffer(TextBuffer tb, String s, intptr_t start, intptr_t len)
 { int idx;
 
   if ( start < 0 )
@@ -2167,8 +2171,8 @@ potential duplication of memory usage.
 
 
 static int
-insert_file_textbuffer(TextBuffer tb, int where, int times, SourceSink file)
-{ long grow, here;
+insert_file_textbuffer(TextBuffer tb, intptr_t where, intptr_t times, SourceSink file)
+{ intptr_t grow, here;
   size_t size;
   IOSTREAM *fd;
 
@@ -2268,10 +2272,10 @@ the string is wide, the textbuffer is promoted.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static status
-insert_textbuffer_shift(TextBuffer tb, int where, int times,
+insert_textbuffer_shift(TextBuffer tb, intptr_t where, intptr_t times,
 			String s, int shift)
-{ int grow;
-  int here;
+{ intptr_t grow;
+  intptr_t here;
 
   if ( s->size == 0 )
     succeed;
@@ -2323,7 +2327,7 @@ insert_textbuffer_shift(TextBuffer tb, int where, int times,
 
 
 status
-insert_textbuffer(TextBuffer tb, int where, int times, String s)
+insert_textbuffer(TextBuffer tb, intptr_t where, intptr_t times, String s)
 { return insert_textbuffer_shift(tb, where, times, s, TRUE);
 }
 
@@ -2355,7 +2359,7 @@ clear_textbuffer(TextBuffer tb)
 
 
 status
-delete_textbuffer(TextBuffer tb, int where, int length)
+delete_textbuffer(TextBuffer tb, intptr_t where, intptr_t length)
 { if ( length < 0 )				/* delete backwards */
   { if ( where + length < 0 )			/* passed start: normalise */
       length = -where;
@@ -2400,7 +2404,7 @@ Frag:				-------
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static status
-shift_fragments(TextBuffer tb, long int from, long int shift)
+shift_fragments(TextBuffer tb, intptr_t from, intptr_t shift)
 { Fragment f;
   Cell cell;
 
@@ -2418,11 +2422,11 @@ shift_fragments(TextBuffer tb, long int from, long int shift)
 	f->length += shift;
     }
   } else				/* delete */
-  { int to = from - shift;
+  { intptr_t to = from - shift;
     Fragment next;
 
     for(f=tb->first_fragment; notNil(f); f = next)
-    { int oldlen = f->length;
+    { intptr_t oldlen = f->length;
 
       next = f->next;
       DEBUG(NAME_shift, Cprintf("%s: start = %ld, length = %ld --> ",
@@ -2440,7 +2444,7 @@ shift_fragments(TextBuffer tb, long int from, long int shift)
 						/* 6 */
 	} else					/* 2,4 */
 	{ if ( to < f->start + f->length )	/* 2 */
-	  { int reduce = to - f->start;
+	  { intptr_t reduce = to - f->start;
 
 	    f->length -= reduce;
 	    f->start -= -shift - reduce;
@@ -2469,14 +2473,14 @@ shift_fragments(TextBuffer tb, long int from, long int shift)
 
 
 static void
-start_change(TextBuffer tb, int where)
+start_change(TextBuffer tb, intptr_t where)
 { if ( tb->changed_start > where )
     tb->changed_start = where;
 }
 
 
 static void
-end_change(TextBuffer tb, int where)
+end_change(TextBuffer tb, intptr_t where)
 { if ( tb->changed_end < where )
     tb->changed_end = where;
 }
@@ -2487,7 +2491,7 @@ end_change(TextBuffer tb, int where)
  ** Tue Apr  4 17:23:28 1989  jan@swivax.UUCP (Jan Wielemaker)  */
 
 static int
-room(TextBuffer tb, int where, int grow)
+room(TextBuffer tb, intptr_t where, intptr_t grow)
 { ssize_t shift;
 
   if ( grow + tb->size > tb->allocated )

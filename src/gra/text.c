@@ -37,6 +37,7 @@ static status	prepareEditText(TextObj t, Name selector);
 #define Wrapped(t)      ((t)->wrap == NAME_wrap || \
 			 (t)->wrap == NAME_wrapFixedWidth)
 #define Before(x, y)    if ( valInt(x) > valInt(y) ) { Int _z = x; x=y; y=_z; }
+#define Before_i(x, y)  if ( x > y ) { intptr_t _z = x; x=y; y=_z; }
 #define MakeSel(f, t)   toInt(((valInt(t) & 0xffff) << 16) | \
 			      (valInt(f) & 0xffff))
 #define GetSel(s,f,t)	{ *(t) = ((valInt(s) >> 16) & 0xffff); \

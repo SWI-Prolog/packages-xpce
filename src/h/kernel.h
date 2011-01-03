@@ -1681,8 +1681,8 @@ extern char *T_report[];		/* ->report: kind, format, args... */
   { int _i; for(_i=0; _i < (n); _i++) (t)[_i] = (f)[_i]; }
 
 #define for_chain(ch, val, code) \
-  { int _i=0, _size  = valInt(ch->size); \
-    Any *_array = (Any *)alloca(_size * sizeof(Any)); \
+  { intptr_t _i=0, _size  = valInt(ch->size); \
+    Any *_array = (Any *)alloca((size_t)_size * sizeof(Any)); \
     Cell _cell = ch->head; \
 	\
     for( ; notNil(_cell); _cell = _cell->next, _i++ ) \
@@ -1699,7 +1699,7 @@ extern char *T_report[];		/* ->report: kind, format, args... */
   }
 
 #define for_vector(v, val, code) \
-  { int _iv, _sizev = valInt((v)->size); \
+  { intptr_t _iv, _sizev = valInt((v)->size); \
     for(_iv = 0; _iv < _sizev; _iv++) \
     { val = (v)->elements[_iv]; \
       code; \
@@ -1707,10 +1707,10 @@ extern char *T_report[];		/* ->report: kind, format, args... */
   }
 
 #define for_vector_i(v, val, i, code) \
-  { int _iv, _sizev = valInt((v)->size); \
-    int _offv = valInt((v)->offset)+1; \
+  { intptr_t _iv, _sizev = valInt((v)->size); \
+    intptr_t _offv = valInt((v)->offset)+1; \
     for(_iv = 0; _iv < _sizev; _iv++) \
-    { int i = _iv + _offv; \
+    { intptr_t i = _iv + _offv; \
       val = (v)->elements[_iv]; \
       code; \
     } \
@@ -1718,7 +1718,7 @@ extern char *T_report[];		/* ->report: kind, format, args... */
 
 
 #define for_hash_table(ht, var, code) \
-  { int _iht, _sizeht = (ht)->buckets; \
+  { intptr_t _iht, _sizeht = (ht)->buckets; \
     for(_iht = 0; _iht < _sizeht; _iht++) \
     { Symbol var = &(ht)->symbols[_iht]; \
       if ( var->name != NULL ) \
