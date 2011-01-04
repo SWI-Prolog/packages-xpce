@@ -40,7 +40,12 @@ prolog/lib/Makefile
 prolog/pwboot/Makefile
 sicstus/src/Makefile
 src/names
+src/.names-senitel
 src/xpce-stub.exe
 src/xpce-stub.res
 xpce.spec
 src/xpce-install.exe
+src/config.h
+src/version.h
+src/xpce-client
+src/xpce-install
