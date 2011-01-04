@@ -70,7 +70,7 @@ static int
 scan_file(const char *file)
 { FILE *fd = fopen(file, "r");
   char buf[LINESIZE];
-  int len = strlen(name);
+  size_t len = strlen(name);
 
   if ( !fd )
   { fprintf(stderr, "Warning: could not open %s (skipped)\n", file);

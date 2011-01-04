@@ -947,7 +947,7 @@ scan_textbuffer(TextBuffer tb, intptr_t from, Name unit, intptr_t amount, int az
 
 static Int
 getMatchingQuoteTextBuffer(TextBuffer tb, Int idx, Name direction)
-{ long i = valInt(idx);
+{ intptr_t i = valInt(idx);
   int c = fetch(i);
   SyntaxTable syntax = tb->syntax;
 
@@ -955,7 +955,7 @@ getMatchingQuoteTextBuffer(TextBuffer tb, Int idx, Name direction)
     fail;
 
   if ( direction == NAME_forward )
-  { long i0 = i;
+  { intptr_t i0 = i;
     int quoteisescape = tisstringescape(syntax, c, c);
 
     for(i++; i<tb->size; i++)
@@ -1003,12 +1003,9 @@ getMatchingQuoteTextBuffer(TextBuffer tb, Int idx, Name direction)
 #define SST_COMMENT2	0x400		/* 2-character comment-string */
 #define SST_STRING	0x800		/* string (low-order is start) */
 
-typedef int (*scan_callback_t)(TextBuffer, long, long, int);
-
 static int
 scan_syntax_textbuffer(TextBuffer tb,
 		       intptr_t from, intptr_t to,
-		       scan_callback_t *callback,
 		       int flags,
 		       intptr_t *start)
 { intptr_t here = from;			/* current position */
@@ -1103,16 +1100,16 @@ scan_syntax_textbuffer(TextBuffer tb,
 
 static Tuple
 getScanSyntaxTextBuffer(TextBuffer tb, Int f, Int t)
-{ long from = NormaliseIndex(tb, valInt(f));
-  long to   = NormaliseIndex(tb, valInt(t));
-  long start;
+{ intptr_t from = NormaliseIndex(tb, valInt(f));
+  intptr_t to   = NormaliseIndex(tb, valInt(t));
+  intptr_t start;
   Name class;
   int s;
 
   if ( to == tb->size )
     to--;
 
-  s = scan_syntax_textbuffer(tb, from, to, NULL, 0, &start);
+  s = scan_syntax_textbuffer(tb, from, to, 0, &start);
   switch(s&0xff00)
   { case SST_PLAIN:
       class = NAME_code;
@@ -1135,8 +1132,8 @@ getScanSyntaxTextBuffer(TextBuffer tb, Int f, Int t)
 
 static status
 inStringTextBuffer(TextBuffer tb, Int pos, Int from)
-{ long idx = valInt(pos);
-  long here = (isDefault(from) ? 0L : valInt(from));
+{ intptr_t idx = valInt(pos);
+  intptr_t here = (isDefault(from) ? 0L : valInt(from));
   SyntaxTable syntax = tb->syntax;
 
   for( ; here <= idx; here++)
@@ -1231,8 +1228,8 @@ getMatchingBracketTextBuffer(TextBuffer tb, Int idx, Int bracket)
 
 Int
 getSkipBlanksTextBuffer(TextBuffer tb, Int where, Name direction, BoolObj skipnl)
-{ long pos = valInt(where);
-  long size = tb->size;
+{ intptr_t pos = valInt(where);
+  intptr_t size = tb->size;
 
   pos = NormaliseIndex(tb, pos);
 
@@ -1265,8 +1262,8 @@ getSkipBlanksTextBuffer(TextBuffer tb, Int where, Name direction, BoolObj skipnl
 
 static Int
 getSkipCommentTextBuffer(TextBuffer tb, Int where, Int to, BoolObj layouttoo)
-{ long pos = valInt(where);
-  long end = (isDefault(to) ? tb->size : valInt(to));
+{ intptr_t pos = valInt(where);
+  intptr_t end = (isDefault(to) ? tb->size : valInt(to));
   int fwd = (end >= pos);
 
   pos = NormaliseIndex(tb, pos);
@@ -1325,7 +1322,7 @@ getSkipCommentTextBuffer(TextBuffer tb, Int where, Int to, BoolObj layouttoo)
       }
 
       if ( tiscommentend(tb->syntax, c=fetch(pos)) )
-      { long possave = pos;
+      { intptr_t possave = pos;
 
 	for( pos--;
 	     pos >= end && !tiscommentstart(tb->syntax, c=fetch(pos));
@@ -1531,7 +1528,7 @@ textbuffer.  Characters after to are always left untouched.
 #define MAX_WORDS 1000
 
 static void
-distribute_spaces(TextBuffer tb, int spaces, int nbreaks, long int *breaks)
+distribute_spaces(TextBuffer tb, int spaces, int nbreaks, intptr_t *breaks)
 { int s = (nbreaks > 1 ? (spaces / (nbreaks-1)) : 1);
   int n, m;
   int *extra = (int *)alloca(nbreaks * sizeof(int));
@@ -1563,14 +1560,14 @@ distribute_spaces(TextBuffer tb, int spaces, int nbreaks, long int *breaks)
 }
 
 
-long
-fill_line_textbuffer(TextBuffer tb, long int here, long int to,
+intptr_t
+fill_line_textbuffer(TextBuffer tb, intptr_t here, intptr_t to,
 		     int sc, int rm, int justify)
 { int col = sc;
-  long breaks[MAX_WORDS];
+  intptr_t breaks[MAX_WORDS];
   int nbreaks = 0;
   int last_break_col = 0;
-  long i;
+  intptr_t i;
   String nl = str_nl(&tb->buffer);
   String space = str_spc(&tb->buffer);
 
@@ -1864,8 +1861,8 @@ store_textbuffer(TextBuffer tb, intptr_t where, wint_t c)
 
 
 status
-change_textbuffer(TextBuffer tb, int where, String s)
-{ int w, n;
+change_textbuffer(TextBuffer tb, intptr_t where, String s)
+{ intptr_t w, n;
 
   if ( s->size < 0 || where < 0 || where+s->size > tb->size )
     fail;
@@ -1877,7 +1874,7 @@ change_textbuffer(TextBuffer tb, int where, String s)
 
   if ( istbA(tb) )
   { for( w=where, n=0; n < s->size; n++, w++ )
-    { long i = Index(tb, w);
+    { intptr_t i = Index(tb, w);
       wint_t new = str_fetch(s, n);
 
       if ( tb->tb_bufferA[i] != new )
@@ -1890,7 +1887,7 @@ change_textbuffer(TextBuffer tb, int where, String s)
     }
   } else
   { for( w=where, n=0; n < s->size; n++, w++ )
-    { long i = Index(tb, w);
+    { intptr_t i = Index(tb, w);
       charW new = str_fetch(s, n);
 
       if ( tb->tb_bufferW[i] != new )
@@ -2118,7 +2115,7 @@ promoteTextBuffer(TextBuffer tb)
 
 
 static status
-fits_iso_latin_1(const charW *s, long len)
+fits_iso_latin_1(const charW *s, size_t len)
 { const charW *e = &s[len];
 
   for( ;s<e; s++)
