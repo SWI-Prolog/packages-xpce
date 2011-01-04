@@ -40,7 +40,7 @@ prolog/lib/Makefile
 prolog/pwboot/Makefile
 sicstus/src/Makefile
 src/names
-src/.names-senitel
+src/.names-sentinel
 src/xpce-stub.exe
 src/xpce-stub.res
 xpce.spec
