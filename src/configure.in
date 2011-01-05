@@ -500,7 +500,7 @@ AC_CHECK_PROGS(MAKESHELL, bash sh, "/bin/sh")
 AC_CHECK_PROGS(MAKE, gmake make, "make")
 AC_CHECK_PROGS(ETAGS, emacs-etags etags ctags, ":")
 AC_CHECK_PROGS(RSYNC, rsync ./rsync.sh)
-C_PROG_LN_S
+AC_PROG_LN_S
 AC_PROG_CPP
 AC_PROG_CXX
 AC_ISC_POSIX
