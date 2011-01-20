@@ -77,13 +77,13 @@
 #define ABSTRACT_STREAM \
   Code		input_message;		/* Message forwarded on input */ \
   Any		record_separator;	/* Separate input records */ \
-  long		wrfd;			/* FD to write to process */ \
-  long		rdfd;			/* FD to read from process */ \
+  intptr_t	wrfd;			/* FD to write to process */ \
+  intptr_t	rdfd;			/* FD to read from process */ \
   FILE *	rdstream;		/* Stream to read from process */ \
   WsRef		ws_ref;			/* Window System Handle */ \
   unsigned char * input_buffer;		/* Input buffer */ \
-  long		input_allocated;	/* Allocated size of buffer */ \
-  long		input_p;		/* Pointer into input buffer */
+  intptr_t	input_allocated;	/* Allocated size of buffer */ \
+  intptr_t	input_p;		/* Pointer into input buffer */
 
 
 NewClass(fileobj)
@@ -93,7 +93,7 @@ NewClass(fileobj)
   Name		kind;			/* {text,binary} */
   Name		status;			/* current open mode */
   Name		filter;			/* I/O filter used */
-  BoolObj		bom;			/* Use/has BOM marker? */
+  BoolObj	bom;			/* Use/has BOM marker? */
   Name		newline_mode;		/* Newline mode {dos,posix} */
   IOSTREAM     *fd;			/* file descriptor */
 End;
@@ -125,7 +125,7 @@ NewClass(process)
   Vector	arguments;		/* vector of arguments */
   Name		status;			/* status of process */
   Any		code;			/* Signal/exit status */
-  BoolObj		use_tty;		/* use a tty? */
+  BoolObj	use_tty;		/* use a tty? */
   Name		tty;			/* Pseudo tty used */
   Code		terminate_message;	/* message forwarded o terminate */
   Int		pid;			/* Process id */

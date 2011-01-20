@@ -973,8 +973,8 @@ NewClass(class)
   Name		init_variables;		/* How to initialise slots */
 
   InstanceProto	proto;			/* Prototype instance */
-  int		tree_index;		/* Index in depth-first tree */
-  int		neighbour_index;	/* Index of my neighbour */
+  intptr_t	tree_index;		/* Index in depth-first tree */
+  intptr_t	neighbour_index;	/* Index of my neighbour */
 
   GetFunc	get_function;		/* `Get' on Code objects */
   SendFunc	send_function;		/* `Send' on Code objects */
@@ -985,7 +985,7 @@ NewClass(class)
   SendFunc	changedFunction;	/* Trap instance changes */
   SendFunc	in_event_area_function;	/* Test if event is in area */
   SendFunc	make_class_function;	/* makeClass function pointer */
-  int		boot;			/* When booting: #pce-slots; else 0 */
+  intptr_t	boot;			/* When booting: #pce-slots; else 0 */
 
   classdecl    *c_declarations;		/* Non-object declarations */
 End;
@@ -997,8 +997,8 @@ NewClass(type)
   Name		argument_name;		/* Name of the argument */
   Chain		supers;			/* Super-types */
   Any		context;		/* Context argument for functions */
-  BoolObj		vector;			/* Method: vector of these */
-  int		validate_function;	/* Function to check the type */
+  BoolObj	vector;			/* Method: vector of these */
+  intptr_t	validate_function;	/* Function to check the type */
   Func		translate_function;	/* Function to convert the type */
 End;
 
@@ -1093,7 +1093,7 @@ End;
 #define ABSTRACT_HASH_TABLE \
   Name		refer;			/* Maintain references */ \
   Int		size;			/* # symbols in table */ \
-  int		buckets;		/* # buckets in symbol-array */ \
+  intptr_t	buckets;		/* # buckets in symbol-array */ \
   Symbol	symbols;		/* Symbol-array */
 
 NewClass(hash_table)
