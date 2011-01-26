@@ -613,7 +613,7 @@ getWinDirectoryDisplay(DisplayObj d,
     bi.lpszTitle = L"Choose folder";
   else
     bi.lpszTitle = nameToTCHAR(title);
-  bi.ulFlags = BIF_RETURNONLYFSDIRS;
+  bi.ulFlags = (BIF_RETURNONLYFSDIRS|BIF_USENEWUI);
   if ( notDefault(dir) )
   { wchar_t windir[MAXPATHLEN];
 
