@@ -9,6 +9,7 @@
 *.lib
 *.pdb
 *.cab
+*.manifest
 *~
 *.old
 *.qlf
