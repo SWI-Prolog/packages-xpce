@@ -823,6 +823,7 @@ static kbDef editor[] =
   { "\\eDEL",		NAME_backwardKillWord },
 
   { "\\C-x\\C-x",	NAME_exchangePointAndMark },
+  { "\\C-xh",		NAME_markWholeBuffer },
   { "\\C-x\\C-o",	NAME_deleteBlankLines },
   { "\\C-x\\C-t",	NAME_transposeLines },
   { "\\C-x\\C-l",	NAME_downcaseRegion },

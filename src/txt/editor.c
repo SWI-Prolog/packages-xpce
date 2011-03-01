@@ -2400,6 +2400,16 @@ exchangePointAndMarkEditor(Editor e)
 
 
 static status
+markWholeBufferEditor(Editor e)
+{ TextBuffer tb = e->text_buffer;
+
+  return ( CaretEditor(e, toInt(0)) &&
+	   markEditor(e, toInt(tb->size), NAME_highlight) &&
+	   copyEditor(e) );
+}
+
+
+static status
 transposeWordEditor(Editor e)
 { Int f1, t1, f2, t2;
   Int caret = e->caret;
@@ -5023,6 +5033,8 @@ static senddecl send_editor[] =
      NAME_selection, "Make [from, to) the selection"),
   SM(NAME_mark, 2, T_mark, markEditor,
      NAME_selection, "Set mark and region-status"),
+  SM(NAME_markWholeBuffer, 0, NULL, markWholeBufferEditor,
+     NAME_selection, "Set point at start and mark at end of buffer"),
   SM(NAME_selectionExtend, 1, "to=int", selectionExtendEditor,
      NAME_selection, "Extend the selection"),
   SM(NAME_selectionToCutBuffer, 1, "buffer=[0..9]", selectionToCutBufferEditor,
