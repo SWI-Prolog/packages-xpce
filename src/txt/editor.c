@@ -2404,7 +2404,7 @@ markWholeBufferEditor(Editor e)
 { TextBuffer tb = e->text_buffer;
 
   return ( CaretEditor(e, toInt(0)) &&
-	   markEditor(e, toInt(tb->size), NAME_highlight) &&
+	   markEditor(e, toInt(tb->size), NAME_active) &&
 	   copyEditor(e) );
 }
 
