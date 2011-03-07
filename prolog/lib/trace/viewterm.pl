@@ -5,7 +5,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2008, University of Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -36,6 +37,35 @@
 :- use_module(library(pce)).
 :- use_module(library(lists)).
 :- use_module(pprint).
+
+/** <module> Graphical viewer for Prolog terms
+
+This module implements an XPCE  widget   that  exploits  print_term/2 to
+display a Prolog term. Thde widget provides  buttons to control the most
+important options to control the output.
+*/
+
+%%	view_term(@Term) is det.
+%%	view_term(@Term, +Options) is det.
+%
+%	Display a Prolog term in  an   XPCE  window. Options defines the
+%	following options:
+%
+%	    * view(?Object)
+%	    XPCE object reference to create or re-use.
+%	    * clear(+Boolean)
+%	    Clear view before showing term (default: =true=)
+%	    * open(+Boolean)
+%	    Send an ->open message to the XPCE object (default: =true=)
+%	    * expose(+Boolean)
+%	    Send an ->expose message to the XPCE object (default: =false)
+%	    * write_option(+Options)
+%	    Options to pass to write_term/3.  Current defaults are:
+%	        - quoted(true)
+%	        - portray(true)
+%	        - numbervars(true)
+%	        - attributes(portray)
+%	        - max_depth(100)
 
 view_term(Term) :-
 	view_term(Term, []).
