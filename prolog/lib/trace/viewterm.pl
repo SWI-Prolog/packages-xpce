@@ -56,7 +56,8 @@ defaults([ view(@view_term),
 	   write_options([ quoted(true),
 			   portray(true),
 			   numbervars(true),
-			   attributes(portray)
+			   attributes(portray),
+			   max_depth(100)
 			 ])
 	 ]).
 
@@ -102,7 +103,7 @@ initialise(TV) :->
 		    quoted,
 		    max_depth
 		  ]),
-	send(TD, append, int_item(max_depth, 10,
+	send(TD, append, int_item(max_depth, 100,
 				  message(TV, update), 1),
 	     right).
 
