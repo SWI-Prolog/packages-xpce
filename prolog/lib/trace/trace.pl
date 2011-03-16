@@ -77,12 +77,9 @@ user:prolog_trace_interception(Port, Frame, CHP, Action) :-
 
 map_action(creep, _, continue) :-
 	traceall.
-map_action(skip, _, continue) :-
-	get_tracer(selected_frame, Frame),
-	prolog_frame_attribute(Frame, level, Level),
-	Skip is Level + 1,
+map_action(skip, Frame, continue) :-
 	trace,
-	prolog_skip_level(_, Skip).
+	prolog_skip_frame(Frame).
 map_action(into, _, continue) :-
 	visible(+unify),
 	traceall.
@@ -95,16 +92,13 @@ map_action(retry, _, retry(Frame)) :-
 map_action(fail, _, fail) :-
 	traceall.
 map_action(nodebug, _, nodebug).
-map_action(leap, _, continue) :-
-	notrace.
 map_action(abort, _, abort).
 map_action(halt, _, continue) :-
 	halt.
 map_action(finish, _, continue) :-
 	get_tracer(selected_frame, Frame),
-	prolog_frame_attribute(Frame, level, Level),
 	trace,
-	prolog_skip_level(_, Level).
+	prolog_skip_frame(Frame).
 
 %%	traceall is det.
 %
@@ -194,6 +188,7 @@ do_intercept(redo, Frame, CHP, Action) :-
 	prolog_frame_attribute(Frame, goal, Goal),
 	(   predicate_property(Goal, nodebug)
 	;   predicate_property(Goal, foreign)
+	;   prolog_skip_level(redo_in_skip, redo_in_skip)
 	), !,
 	show(Frame, CHP, 1, redo),
 	action(Action).
