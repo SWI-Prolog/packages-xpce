@@ -32,7 +32,7 @@ config.log
 config.status
 CXX/demo/Makefile
 Makefile
-lib/x86_64-linux
+lib/*-linux
 linux
 man/reference/index.obj
 pl/src/Makefile.bin
