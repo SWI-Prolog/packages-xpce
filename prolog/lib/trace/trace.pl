@@ -488,12 +488,12 @@ head_pos(_, term_position(_, _, _, _, [HPos,_]), HPos).
 %	warning, ((a,b),c)) --> compiled to (a, (b, c))!!!  We try to correct
 %	that in clause.pl.  This is work in progress.
 
-find_subgoal([], Pos, Pos).
 find_subgoal([A|T], term_position(_, _, _, _, PosL), SPos) :-
-	nth1(A, PosL, Pos),
+	nth1(A, PosL, Pos), !,
 	find_subgoal(T, Pos, SPos).
-find_subgoal([1|T], brace_term_position(_,_,Pos), SPos) :-
+find_subgoal([1|T], brace_term_position(_,_,Pos), SPos) :- !,
 	find_subgoal(T, Pos, SPos).
+find_subgoal(_, Pos, Pos).
 
 
 		 /*******************************
