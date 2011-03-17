@@ -63,6 +63,11 @@ setting(list_max_clauses,  25).		% only list this amount of clauses
 setting(stack_depth, 	   10).		% # frames shown
 setting(choice_depth,	   10).		% # choice-points shown
 setting(term_depth,	   2).		% nesting for printing terms
+setting(portray_codes,	   Val) :-
+	(   current_predicate(portray_text:do_portray_text/1)
+	->  portray_text:do_portray_text(Val)
+	;   Val = false
+	).
 setting(auto_raise,	   true).	% automatically raise the frame
 setting(console_actions,   false).	% map actions from the console
 setting(use_pce_emacs,	   true).	% use PceEmacs editor
@@ -70,9 +75,11 @@ setting(use_pce_emacs,	   true).	% use PceEmacs editor
 trace_setting(Name, Value) :-
 	setting(Name, Value).
 trace_setting(Name, Old, New) :-
-	setting(Name, Old), !,
-	retractall(setting(Name, Old)),
+	clause(setting(Name, Old), true, Ref), !,
+	erase(Ref),
 	assert(setting(Name, New)).
+trace_setting(Name, Old, _) :-
+	setting(Name, Old).
 
 
 		 /*******************************

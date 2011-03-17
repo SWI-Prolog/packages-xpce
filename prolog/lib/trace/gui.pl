@@ -685,8 +685,12 @@ copy_goal(F) :->
 	),
 	prolog_frame_attribute(F, Frame, goal, Goal),
 	prolog_frame_attribute(F, Frame, predicate_indicator, PI),
-	format(string(Text), '~q .', [Goal]),
-	send(@display, copy, Text),
+	(   numbervars(Goal, 0, _, [attvar(skip)]),
+	    format(string(Text), '~q', [Goal]),
+	    send(@display, copy, Text),
+	    fail
+	;   true
+	),
 	format(atom(PIA), '~q', [PI]),
 	send(F, report, inform, 'Copied goal (%s) to clipboard', PIA).
 

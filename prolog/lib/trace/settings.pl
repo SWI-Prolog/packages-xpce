@@ -40,24 +40,21 @@ setting(?Name, ?ValueSet, ?Comment)
 	Defines the settable attributes for the GUI based tracer.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-setting(verbose,
-	[true, false],
-	'Print GUI debugging info (maintenance)').
 setting(show_unbound,
 	[true, false],
 	'`Bindings'' window shows unbound variables').
 setting(cluster_variables,
 	[true, false],
 	'`Bindings'' window clusters variables with the same value').
+setting(portray_codes,
+	[ true, false ],
+	'Portray code-lists as text').
 setting(stack_depth,
 	int(2, infinite),
 	'Number of stack-frames displayed').
 setting(choice_depth,
 	int(0, infinite),
 	'Number of choice-points displayed').
-%setting(term_depth,
-%	int(2, infinite),
-%	'Nesting depth of terms printed').
 setting(list_max_clauses,
 	int(2, infinite),
 	'Maximum number of clauses decompiled when listing dynamic code').
@@ -67,6 +64,9 @@ setting(auto_raise,
 setting(use_pce_emacs,
 	[true, false],
 	'Use Built-in PceEmacs editor').
+setting(verbose,
+	[true, false],
+	'Print GUI debugging info (maintenance)').
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 trace_setting/0
@@ -114,5 +114,10 @@ make_item(D, Name) :-
 	send(TI, help_message, tag, Comment).
 
 set_trace_setting(Name, Value) :-
-	trace_setting(Name, _, Value).
+	trace_setting(Name, _, Value),
+	act_on_setting(Name, Value).
+
+act_on_setting(portray_codes, Val) :- !,
+	portray_text(Val).
+act_on_setting(_, _).
 
