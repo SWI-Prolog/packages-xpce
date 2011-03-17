@@ -62,6 +62,10 @@
 	user:prolog_event_hook/1,
 	user:message_hook/3.
 
+:- meta_predicate
+	in_debug_thread(+, 0),
+	send_pce(0).
+
 register_directories :-
 	(   member(SpyBase, ['icons/nospy', library('trace/icons/nospy')]),
 	    absolute_file_name(SpyBase,
@@ -168,10 +172,6 @@ get_tracer(Thread, Term, Result) :-
 		 /*******************************
 		 *    THREAD SYNCHRONISATION	*
 		 *******************************/
-
-:- meta_predicate
-	in_debug_thread(+, :),
-	send_pce(:).
 
 %%	thread_debug_queue(+Thread, -Queue) is det.
 %
