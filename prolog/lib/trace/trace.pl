@@ -271,13 +271,13 @@ show(StartFrame, CHP, Up, Port) :-
 	send_tracer(report(status, '%s: %s', Port?label_name, Pred)).
 
 show(StartFrame, CHP, Up, Port, Style) :-
-	send_tracer(current_frame(StartFrame)),
+	find_frame(Up, StartFrame, Port, PC, Frame),
+	send_tracer(trapped_location(StartFrame, Frame, Port)),
 	prolog_show_frame(StartFrame,
 			  [ port(Port),
 			    choice(CHP),
 			    stack
 			  ]),
-	find_frame(Up, StartFrame, Port, PC, Frame),
 	prolog_show_frame(Frame,
 			  [ pc(PC),
 			    port(Port),
@@ -287,7 +287,7 @@ show(StartFrame, CHP, Up, Port, Style) :-
 			  ]).
 
 
-%%	find_frame(+Up, +StartFrame, +Port, -PC, -Frame)
+%%	find_frame(+Up, +StartFrame, +Port, -PC, -Frame) is det.
 %
 %	Find the parent frame Up levels above StartFrame. Must be called
 %	in the context of the debugged thread.

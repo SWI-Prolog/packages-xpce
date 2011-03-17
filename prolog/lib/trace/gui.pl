@@ -306,6 +306,8 @@ initialise(App) :->
 variable(source,	any,		both, "Source view").
 variable(break_level,	int,		get,  "Break-level I'm associated to").
 variable(thread,	'int|name*',	get,  "Associated thread").
+variable(trap_frame,    int*,   	get,  "Last trapped frame").
+variable(trap_port,     name*,   	get,  "Last trapped port").
 variable(current_frame, int*,   	both, "The most recent frame").
 variable(current_break,	tuple*,		both, "tuple(ClauseRef, PC)").
 variable(quitted,	bool := @off,   both, "Asked to quit").
@@ -457,9 +459,13 @@ help(_) :->
 
 show_frame(GUI, Frame:int, PC:'int|name') :->
 	"Show the variables of this frame"::
+	(   get(GUI, trap_frame, Frame)
+	->  get(GUI, trap_port, Style)
+	;   Style = frame
+	),
 	prolog_show_frame(Frame, [ gui(GUI), pc(PC),
 				   source, bindings,
-				   style(frame)
+				   style(Style)
 				 ]).
 
 show_stack(GUI, CallFrames:prolog, ChoiceFrames:prolog) :->
@@ -471,6 +477,12 @@ show_stack(GUI, CallFrames:prolog, ChoiceFrames:prolog) :->
 show_threads(_GUI) :->
 	"Open Thread monitor"::
 	prolog_ide(thread_monitor).
+
+trapped_location(GUI, StartFrame:int, Frame:int, Port:name) :->
+	"The last trapped location"::
+	send(GUI, slot, trap_frame, Frame),
+	send(GUI, slot, trap_port, Port),
+	send(GUI, current_frame, StartFrame).
 
 
 		 /*******************************
