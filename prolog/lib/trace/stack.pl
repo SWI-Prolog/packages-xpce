@@ -115,7 +115,7 @@ display_levels([Y-Frames|T], Choice, Window) :-
 	SortedFrames = [frame(Frame, PC)|_],
 	prolog_frame_attribute(Window, Frame, level, Level),
 	send(Window, display, text(Level, left, normal), point(5, Y)),
-	(   PC == choice
+	(   PC = choice(_)
 	->  X0 is 30 + 150
 	;   X0 is 30
 	),
@@ -123,12 +123,12 @@ display_levels([Y-Frames|T], Choice, Window) :-
 	display_levels(T, Choice, Window).
 
 
-cmpframes(Choice, Result, frame(Fr1, choice), frame(Fr2, choice)) :- !,
-	nth1(I1, Choice, frame(Fr1, choice)),
-	nth1(I2, Choice, frame(Fr2, choice)),
+cmpframes(Choice, Result, frame(Fr1, choice(_)), frame(Fr2, choice(_))) :- !,
+	nth1(I1, Choice, frame(Fr1, choice(_))),
+	nth1(I2, Choice, frame(Fr2, choice(_))),
 	compare(Result, I1, I2).
-cmpframes(_, <, _, frame(_, choice)) :- !.
-cmpframes(_, >, frame(_, choice), _) :- !.
+cmpframes(_, <, _, frame(_, choice(_))) :- !.
+cmpframes(_, >, frame(_, choice(_)), _) :- !.
 cmpframes(_, Result, F1, F2) :-
 	compare(Result, F1, F2).
 
@@ -141,9 +141,9 @@ display_frames([F|T], Window, X, Y) :-
 	display_frames(T, Window, X2, Y).
 
 
-v_stack_frame(Window, frame(Frame, choice), V) :- !,
+v_stack_frame(Window, frame(Frame, choice(CH)), V) :- !,
 	frame_label(Window, Frame, Label),
-	new(V, prolog_stack_frame(Window, Frame, Label, choice, choicepoint)).
+	new(V, prolog_stack_frame(Window, Frame, Label, choice(CH), choicepoint)).
 v_stack_frame(Window, frame(Frame, PC), V) :-
 	frame_label(Window, Frame, Label),
 	frame_style(Window, Frame, PC, Style),
@@ -239,13 +239,15 @@ clear(B) :->
 	send(B?graphicals, for_all, message(@arg1, destroy)).
 
 
-member(B, F:int, PC:[name|int], V:prolog_stack_frame) :<-
+member(B, F:int, Location:[prolog], V:prolog_stack_frame) :<-
 	"Find visualiser from frame"::
 	get(B, members, Table),
 	get(Table, member, F, Chain),
-	(   PC == @default
+	(   Location == @default
 	->  get(Chain, head, V)
-	;   get(Chain, find, @arg1?pc == PC, V)
+	;   Location = choice(CHP)
+	->  get(Chain, find, @arg1?choice == CHP, V)
+	;   get(Chain, find, @arg1?pc == Location, V)
 	).
 
 
@@ -324,7 +326,7 @@ down(B, Times:[int]) :->
 	NN is -N,
 	send(B, up, NN).
 
-selection(B, What:'int|prolog_stack_frame', PC:[int|name]) :->
+selection(B, What:'int|prolog_stack_frame', PC:location=[prolog]) :->
 	"Select the given frame"::
 	(   integer(What)
 	->  (   get(B, member, What, PC, V)
@@ -377,6 +379,7 @@ style_image(user,		'user.xpm').
 
 variable(frame_reference,  int,		get, "Reference of Prolog frame").
 variable(pc,		   'int|name',	get, "Location in the frame").
+variable(choice,	   int*,	get, "Id of choice-point").
 variable(frame_level,	   int,		get, "Nesting of the frame").
 
 :- pce_global(@prolog_stack_frame_recogniser,
@@ -384,7 +387,7 @@ variable(frame_level,	   int,		get, "Nesting of the frame").
 				message(@receiver, select)))).
 
 initialise(D, Window:window, Frame:int, Label:char_array,
-	   PC:'int|name', Style:name) :->
+	   Location:prolog, Style:name) :->
 	send_super(D, initialise),
 	send(D, border, 3),
 	send(D, shadow, 1),
@@ -394,7 +397,11 @@ initialise(D, Window:window, Frame:int, Label:char_array,
 	send(D, display, new(B, bitmap(Image))),
 	send(D, display, text(Label, left, normal), point(B?right_side, 0)),
 	send(D, slot, frame_reference, Frame),
-	send(D, slot, pc, PC),
+	(   Location = choice(CH)
+	->  send(D, slot, pc, choice),
+	    send(D, slot, choice, CH)
+	;   send(D, slot, pc, Location)
+	),
 	prolog_frame_attribute(Window, Frame, level, Level),
 	send(D, slot, frame_level, Level).
 
@@ -422,7 +429,12 @@ select(D, Show:[bool]) :->
 	->  get(D, frame_reference, Frame),
 	    get(D, pc, PC),
 	    debug('~p: select ~p at PC=~w~n', [D, Frame, PC]),
-	    send(D?frame, show_frame, Frame, PC)
+	    (	PC == choice
+	    ->	get(D, choice, CH),
+		Location = choice(CH)
+	    ;	Location = PC
+	    ),
+	    send(D?frame, show_frame, Frame, Location)
 	;   true
 	).
 

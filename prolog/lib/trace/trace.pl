@@ -350,6 +350,8 @@ tracer_gui(_, GUI) :-
 %	provided by Attributes.  Defined attributes:
 %
 %		* pc(PC)
+%		Location.  This is one of an integer (Program Counter),
+%		a port-name or choice(CHP).
 %		* choice(CHP)
 %		* port(Port)
 %		* style(Style)
@@ -389,34 +391,37 @@ show_source(Frame, Attributes) :-
 	    attribute(Attributes, port(Port), call),
 	    attribute(Attributes, style(Style), Port),
 	    debug('Show source, PC = ~w, Port = ~w~n', [PC, Port]),
-	    (   atom(PC), PC \== exit		% PC is a port-name
-	    ->  prolog_frame_attribute(GUI, Frame, goal, Goal),
+	    (	clause_position(PC),
+		prolog_frame_attribute(GUI, Frame, clause, ClauseRef),
+		debug('ClauseRef = ~w, PC = ~w~n', [ClauseRef, PC]),
+		ClauseRef \== 0
+	    ->	subgoal_position(ClauseRef, PC, File, CharA, CharZ),
+		debug('~p.~n', [show_range(File, CharA, CharZ, Style)]),
+		send_tracer(GUI, show_range(File, CharA, CharZ, Style)),
+		(   clause_property(ClauseRef, erased)
+		->  send_tracer(GUI,
+				report(warning,
+				       'Running erased clause; \
+				       source location may be incorrect'))
+		;   true
+		)
+	    ;	prolog_frame_attribute(GUI, Frame, goal, Goal),
 		find_source(Goal, File, Line),
 		debug('At ~w:~d~n', [File, Line]),
 		send_tracer(GUI, show_line(File, Line, Style))
-	    ;   (   prolog_frame_attribute(GUI, Frame, clause, ClauseRef),
-		    debug('ClauseRef = ~w, PC = ~w~n', [ClauseRef, PC]),
-		    ClauseRef \== 0
-		->  subgoal_position(ClauseRef, PC, File, CharA, CharZ),
-		    debug('~p.~n', [show_range(File, CharA, CharZ, Style)]),
-		    send_tracer(GUI, show_range(File, CharA, CharZ, Style)),
-		    (	clause_property(ClauseRef, erased)
-		    ->	send_tracer(GUI,
-				    report(warning,
-					   'Running erased clause; \
-					   source location may be incorrect'))
-		    ;	true
-		    )
-		;   prolog_frame_attribute(GUI, Frame, goal, Goal),
-		    find_source(Goal, File, Line),
-		    send_tracer(GUI, show_line(File, Line, Style))
-		)
 	    )
 	->  true
 	;   send_tracer(GUI, file(@nil))
 	).
 show_source(_, _).
 
+%%	clause_position(+PC) is semidet.
+%
+%	True if the position can be related to a clause.
+
+clause_position(PC) :- integer(PC), !.
+clause_position(exit).
+clause_position(choice(_)).
 
 %%	subgoal_position(+Clause, +PortOrPC, -File, -CharA, -CharZ) is det.
 %
@@ -428,7 +433,7 @@ subgoal_position(ClauseRef, unify, File, CharA, CharZ) :- !,
 	head_pos(ClauseRef, TPos, PosTerm),
 	arg(1, PosTerm, CharA),
 	arg(2, PosTerm, CharZ).
-subgoal_position(ClauseRef, choice, File, CharA, CharZ) :- !,
+subgoal_position(ClauseRef, choice(_), File, CharA, CharZ) :- !,
 	pce_clause_info(ClauseRef, File, TPos, _),
 	arg(2, TPos, CharA),
 	CharZ is CharA + 1.		% i.e. select the dot.
@@ -615,10 +620,17 @@ stack_frames(Depth, F, PC, Frames) :-
 	;   RestFrames = []
 	).
 
-%	choice_frames(+Max, +CHP, +MinLevel-MaxLevel, -Frames)
+%%	choice_frames(+Max, +CHP, +MinLevel-MaxLevel, -Frames) is det.
+%
+%	Frames is a list of frames that hold choice-points.
+%
+%	@param Max is the maximum number of choicepoints returned
+%	@param CHP is the initial choicepoint
+%	@param MinLevel-MaxLevel is the depth-range we consider.
+%	       Currently, MaxLevel is ignored (see in_range/2).
 
 choice_frames(_, none, _, _, []) :- !.
-choice_frames(Max, CHP, Range, Seen, [frame(Frame, choice)|Frames]) :-
+choice_frames(Max, CHP, Range, Seen, [frame(Frame, choice(CH))|Frames]) :-
 	Max > 0,
 	earlier_choice(CHP, CH),
 	visible_choice(CH),
@@ -633,16 +645,17 @@ choice_frames(Max, CHP, Range, Seen, [frame(Frame, choice)|Frames]) :-
 	).
 choice_frames(_, _, _, _, []).
 
-%	earlier_choice(+Here, -Visible)
+%%	earlier_choice(+Here, -Visible) is nondet.
 %
-%	Return earliers choices on backgtracking.
+%	Visible is an older choicepoint  than   Here.  Older choices are
+%	returned on backtracking.
 
 earlier_choice(CHP, CHP).
 earlier_choice(CHP, Next) :-
 	prolog_choice_attribute(CHP, parent, Parent),
 	earlier_choice(Parent, Next).
 
-%	visible_choice(+CHP)
+%%	visible_choice(+CHP) is semidet.
 %
 %	A visible choice is a choice-point that realises a real choice
 %	and is created by a visible frame.

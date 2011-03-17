@@ -457,7 +457,7 @@ help(_) :->
         "Show window with help-text"::
         send(@helper, give_help, pltracer, main).
 
-show_frame(GUI, Frame:int, PC:'int|name') :->
+show_frame(GUI, Frame:int, PC:prolog) :->
 	"Show the variables of this frame"::
 	(   get(GUI, trap_frame, Frame)
 	->  get(GUI, trap_port, Style)
