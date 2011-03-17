@@ -459,9 +459,11 @@ help(_) :->
 
 show_frame(GUI, Frame:int, PC:prolog) :->
 	"Show the variables of this frame"::
-	(   get(GUI, trap_frame, Frame)
+	(   get(GUI, trap_frame, Frame)		% the initial trapped port
 	->  get(GUI, trap_port, Style)
-	;   Style = frame
+	;   PC = choice(_)			% A choice-point
+	->  Style = choice
+	;   Style = frame			% Somewhere up the stack
 	),
 	prolog_show_frame(Frame, [ gui(GUI), pc(PC),
 				   source, bindings,

@@ -43,6 +43,10 @@
 :- use_module(library(pce)).
 :- use_module(clause).
 
+:- meta_predicate
+	find_source(:, -, -).
+
+
 		 /*******************************
 		 *	     SETTINGS		*
 		 *******************************/
@@ -75,11 +79,11 @@ trace_setting(Name, Old, New) :-
 		 *      SOURCE LOCATIONS	*
 		 *******************************/
 
-%	find_source(+HeadTerm, -File, -Line)
+%%	find_source(:HeadTerm, -File, -Line) is det.
 %
-%	Finds the source-location of the predicate.  If the predicate
-%	is not defined, it will list the predicate on @dynamic_source_buffer
-%	and return this buffer.
+%	Finds the source-location of the predicate.  If the predicate is
+%	not    defined,    it    will    list     the    predicate    on
+%	@dynamic_source_buffer and return this buffer.
 
 find_source(Predicate, File, Line) :-
 	predicate_property(Predicate, file(File)),
@@ -89,9 +93,7 @@ find_source(Predicate, File, 1) :-
 	File = @dynamic_source_buffer,
 	send(File, clear),
 	pce_open(File, write, Fd),
-	telling(Old), set_output(Fd),
-	list_predicate(Predicate),
-	tell(Old),
+	with_output_to(Fd, list_predicate(Predicate)),
 	close(Fd).
 
 list_predicate(Predicate) :-

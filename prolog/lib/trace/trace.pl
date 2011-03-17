@@ -406,14 +406,23 @@ show_source(Frame, Attributes) :-
 		;   true
 		)
 	    ;	prolog_frame_attribute(GUI, Frame, goal, Goal),
-		find_source(Goal, File, Line),
-		debug('At ~w:~d~n', [File, Line]),
-		send_tracer(GUI, show_line(File, Line, Style))
+		qualify(Goal, QGoal),
+		(   clause(QGoal, _Body, ClauseRef)
+		->  subgoal_position(ClauseRef, unify, File, CharA, CharZ),
+		    send_tracer(GUI, show_range(File, CharA, CharZ, Style))
+		;   find_source(QGoal, File, Line),
+		    debug('At ~w:~d~n', [File, Line]),
+		    send_tracer(GUI, show_line(File, Line, Style))
+		)
 	    )
 	->  true
 	;   send_tracer(GUI, file(@nil))
 	).
 show_source(_, _).
+
+qualify(Goal, Goal) :-
+	functor(Goal, :, 2), !.
+qualify(Goal, user:Goal).
 
 %%	clause_position(+PC) is semidet.
 %
@@ -433,10 +442,15 @@ subgoal_position(ClauseRef, unify, File, CharA, CharZ) :- !,
 	head_pos(ClauseRef, TPos, PosTerm),
 	arg(1, PosTerm, CharA),
 	arg(2, PosTerm, CharZ).
-subgoal_position(ClauseRef, choice(_), File, CharA, CharZ) :- !,
-	pce_clause_info(ClauseRef, File, TPos, _),
-	arg(2, TPos, CharA),
-	CharZ is CharA + 1.		% i.e. select the dot.
+subgoal_position(ClauseRef, choice(CHP), File, CharA, CharZ) :- !,
+	(   prolog_choice_attribute(CHP, type, jump),
+	    prolog_choice_attribute(CHP, pc, To)
+	->  debug('Term-position: choice-jump to ~w~n', [To]),
+	    subgoal_position(ClauseRef, To, File, CharA, CharZ)
+	;   pce_clause_info(ClauseRef, File, TPos, _),
+	    arg(2, TPos, CharA),
+	    CharZ is CharA + 1		% i.e. select the dot.
+	).
 subgoal_position(ClauseRef, exit, File, CharA, CharZ) :- !,
 	pce_clause_info(ClauseRef, File, TPos, _),
 	arg(2, TPos, CharA),
