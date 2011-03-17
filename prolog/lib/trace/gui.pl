@@ -874,6 +874,8 @@ variable(prolog_frame, int*, both, "Frame who's variables we are showing").
 
 :- pce_global(@prolog_binding_recogniser,
 	      make_prolog_binding_recogniser).
+:- pce_global(@prolog_binding_popup,
+	      make_prolog_binding_popup).
 
 make_prolog_binding_recogniser(G) :-
 	new(View, @event?window),
@@ -882,8 +884,18 @@ make_prolog_binding_recogniser(G) :-
 			      message(View, on_click, Index))),
 	new(C2, click_gesture(left, '', double,
 			      message(View, details))),
-	new(G, handler_group(C1, C2)).
+	new(C3, popup_gesture(@prolog_binding_popup)),
+	send(@prolog_binding_popup, update_message,
+	     message(View, on_click, Index)),
+	new(G, handler_group(C1, C2, C3)).
 
+make_prolog_binding_popup(P) :-
+	new(P, popup),
+	send_list(P, append,
+		  [ menu_item(details, message(@arg1?window, details)),
+		    menu_item(copy,    message(@arg1?window, details,
+					       @default, copy))
+		  ]).
 
 initialise(B) :->
 	send_super(B, initialise),
@@ -906,7 +918,7 @@ clear(B, Content:[bool]) :->
 	;   send_super(B, clear)
 	).
 
-details(B, Fragment:[prolog_frame_var_fragment]) :->
+details(B, Fragment:[prolog_frame_var_fragment], Action:[{view,copy}]) :->
 	"View details of the binding"::
 	get(B, prolog_frame, Frame),
 	(   Frame \== @nil
@@ -934,11 +946,20 @@ details(B, Fragment:[prolog_frame_var_fragment]) :->
 	),
 	format(string(Label), '~w ~w of frame at level ~d running ~w',
 		[ VarType, VarName, Level, PredName ]),
-	view_term(Value,
-		  [ comment(Label),
-		    source_object(Frag),
-		    expose(true)
-		  ]).
+	debug('Action ~w on ~w~n', [Action, Value]),
+	(   Action == copy
+	->  (   numbervars(Value, 0, _, [attvar(skip)]),
+	        format(string(Text), '~q', [Value]),
+		send(@display, copy, Text),
+		fail
+	    ;   send(B, report, status, Label)
+	    )
+	;   view_term(Value,
+		      [ comment(Label),
+			source_object(Frag),
+			expose(true)
+		      ])
+	).
 
 on_click(B, Index:int) :->
 	"Select fragment clicked"::
