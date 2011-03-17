@@ -56,7 +56,8 @@ style(fail,  		style(background := '#ff8080',
 style(exception,  	style(background := magenta,
 			      icon := 'except.xpm')).
 style(unify, 		style(background := sky_blue)).
-
+style(frame, 		style(background := '#d6dc5e',
+			      icon := 'stack.xpm')).
 style(breakpoint, 	style(icon := 'stop.xpm')).
 
 

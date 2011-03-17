@@ -457,7 +457,10 @@ help(_) :->
 
 show_frame(GUI, Frame:int, PC:'int|name') :->
 	"Show the variables of this frame"::
-	prolog_show_frame(Frame, [gui(GUI), pc(PC), source, bindings]).
+	prolog_show_frame(Frame, [ gui(GUI), pc(PC),
+				   source, bindings,
+				   style(frame)
+				 ]).
 
 show_stack(GUI, CallFrames:prolog, ChoiceFrames:prolog) :->
 	"Show the stack and choicepoints"::
