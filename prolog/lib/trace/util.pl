@@ -69,6 +69,7 @@ setting(portray_codes,	   Val) :-
 	;   Val = false
 	).
 setting(auto_raise,	   true).	% automatically raise the frame
+setting(auto_close,	   true).	% automatically raise the frame
 setting(console_actions,   false).	% map actions from the console
 setting(use_pce_emacs,	   true).	% use PceEmacs editor
 

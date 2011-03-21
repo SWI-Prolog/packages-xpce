@@ -61,6 +61,9 @@ setting(list_max_clauses,
 setting(auto_raise,
 	[true, false],
 	'Automatically raise the tracer window').
+setting(auto_close,
+	[true, false],
+	'Close window on n(odebug) and a(abort)').
 setting(use_pce_emacs,
 	[true, false],
 	'Use Built-in PceEmacs editor').

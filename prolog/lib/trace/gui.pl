@@ -671,6 +671,22 @@ details(F) :->
 	get(F, member, bindings, Bindings),
 	send(Bindings, details).
 
+nodebug(F) :->
+	"User hit n(odebug)"::
+	(   setting(auto_close, true)
+	->  send(F, quitted, @on)
+	;   true
+	),
+	send(F, return, nodebug).
+
+abort(F) :->
+	"User hit a(bort)"::
+	(   setting(auto_close, true)
+	->  send(F, quitted, @on)
+	;   true
+	),
+	send(F, return, abort).
+
 query(_F) :->
 	"Enter and run a query"::
 	prolog_ide(open_query_window).
@@ -773,9 +789,9 @@ button(finish,	       "f",   'finish.xpm',	     'Finish selected goal').
 button(gap,	       -,     -,		     -).
 button(retry,	       "r",   'retry.xpm',	     'Retry selected goal').
 button(gap,	       -,     -,		     -).
-button(nodebug,	       "n",   'nodebug.xpm',	     'Continue without debugging').
+button(+nodebug,       "n",   'nodebug.xpm',	     'Continue without debugging').
 button(+query,	       "b",   'break.xpm',	     'Enter a query').
-button(abort,	       "a",   'abort.xpm',	     'Abort to the Prolog toplevel').
+button(+abort,	       "a",   'abort.xpm',	     'Abort to the Prolog toplevel').
 button(fail,	       "F",   'fail.xpm',	     'Force query to fail').
 button(gap,	       -,     -,		     -).
 button(+up,	       "u",   'up.xpm',		     'Select parent frame').
