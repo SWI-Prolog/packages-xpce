@@ -223,6 +223,8 @@ getCapitaliseCharArray(CharArray n)
       if ( iswordsep(c) )
       { if ( ++i < size )
 	  str_store(buf, o, towupper(str_fetch(d, i)));
+	else
+	  break;
       } else
 	str_store(buf, o, towlower(c));
     }
