@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -30,15 +31,17 @@
 */
 
 :- module(swi_ide,
-	  [ prolog_ide/1		% +Action
+	  [ prolog_ide/0,		%
+	    prolog_ide/1		% +Action
 	  ]).
 :- use_module(library(pce)).
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+/** <module> SWI-Prolog IDE controller
+
 This module defines  the  application   @prolog_ide  and  the  predicate
 prolog_ide(+Action). The major motivation is be   able  to delay loading
 the IDE components to the autoloading of one single predicate.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+*/
 
 		 /*******************************
 		 *    AUTOLOAD OF COMPONENTS	*
@@ -46,6 +49,7 @@ the IDE components to the autoloading of one single predicate.
 
 :- pce_image_directory(library('trace/icons')).
 
+:- pce_autoload(swi_console,		library('swi/swi_console')).
 :- pce_autoload(prolog_debug_status,	library('trace/status')).
 :- pce_autoload(prolog_navigator,	library('trace/browse')).
 :- pce_autoload(prolog_query_frame,	library('trace/query')).
@@ -60,10 +64,13 @@ the IDE components to the autoloading of one single predicate.
 
 %%	prolog_ide(+Action)
 %
-%	Invoke an action on the (SWI-)Prolog IDE application.  This is a
-%	predicate to ensure optimal delaying of loading and object creation
-%	for accessing the various components of the Prolog Integrated
-%	Development Environment.
+%	Invoke an action on the (SWI-)Prolog  IDE application. This is a
+%	predicate to ensure  optimal  delaying   of  loading  and object
+%	creation for accessing the  various   components  of  the Prolog
+%	Integrated Development Environment.
+
+prolog_ide :-
+	prolog_ide(open_console).
 
 prolog_ide(Action) :-
 	in_pce_thread(send(@prolog_ide, Action)).
@@ -82,6 +89,15 @@ initialise(IDE) :->
 	"Create as service application"::
 	send_super(IDE, initialise, prolog_ide),
 	send(IDE, kind, service).
+
+open_console(IDE) :->
+	"Open SWI-Prolog Cross-Referencer frontend"::
+	(   get(IDE, member, swi_console, Console)
+	->  send(Console, open)
+	;   new(Console, swi_console),
+	    send(Console, application, IDE),
+	    send(Console, wait)
+	).
 
 open_debug_status(IDE) :->
 	"Open/show the status of the debugger"::
