@@ -829,11 +829,7 @@ typed(E, Id:'event|event_id') :->
 	"Handle typing via mode"::
 	send(E, start_idle_timer),
 	get(E, mode, Mode),
-	(   send(Mode, typed, Id, E),
-	    object(Mode)		% may disappear
-	->  send(Mode, highlight_matching_bracket)
-	;   true
-	).
+	send(Mode, typed, Id, E).
 
 
 caret(E, Caret:[int]) :->
