@@ -39,7 +39,8 @@
 	    get_tracer/2,		% :Goal, -Result
 	    in_debug_thread/2,		% +ObjOrThread, :Goal
 	    thread_debug_queue/2,	% +Thread, -Queue
-	    prolog_frame_attribute/4	% +GUI, +Frame, +Attr, -Value
+	    prolog_frame_attribute/4,	% +GUI, +Frame, +Attr, -Value
+	    prolog_choice_attribute/4	% +GUI, +Choice, +Attr, -Value
 	  ]).
 :- use_module(library(pce)).
 :- use_module(library(lists)).
@@ -278,6 +279,11 @@ in_debug_thread(Thread, Goal) :-
 prolog_frame_attribute(Thread, Frame, Attribute, Value) :-
 	in_debug_thread(Thread,
 			prolog_frame_attribute(Frame, Attribute, Value)).
+
+prolog_choice_attribute(GUI, Choice, Attribute, Value) :-
+	in_debug_thread(GUI,
+			prolog_choice_attribute(Choice, Attribute, Value)).
+
 
 
 		 /*******************************

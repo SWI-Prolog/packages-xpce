@@ -395,7 +395,7 @@ show_source(Frame, Attributes) :-
 		prolog_frame_attribute(GUI, Frame, clause, ClauseRef),
 		debug('ClauseRef = ~w, PC = ~w~n', [ClauseRef, PC]),
 		ClauseRef \== 0
-	    ->	subgoal_position(ClauseRef, PC, File, CharA, CharZ),
+	    ->	subgoal_position(GUI, ClauseRef, PC, File, CharA, CharZ),
 		debug('~p.~n', [show_range(File, CharA, CharZ, Style)]),
 		send_tracer(GUI, show_range(File, CharA, CharZ, Style)),
 		(   clause_property(ClauseRef, erased)
@@ -408,7 +408,7 @@ show_source(Frame, Attributes) :-
 	    ;	prolog_frame_attribute(GUI, Frame, goal, Goal),
 		qualify(Goal, QGoal),
 		(   clause(QGoal, _Body, ClauseRef)
-		->  subgoal_position(ClauseRef, unify, File, CharA, CharZ),
+		->  subgoal_position(GUI, ClauseRef, unify, File, CharA, CharZ),
 		    send_tracer(GUI, show_range(File, CharA, CharZ, Style))
 		;   find_source(QGoal, File, Line),
 		    debug('At ~w:~d~n', [File, Line]),
@@ -432,34 +432,34 @@ clause_position(PC) :- integer(PC), !.
 clause_position(exit).
 clause_position(choice(_)).
 
-%%	subgoal_position(+Clause, +PortOrPC, -File, -CharA, -CharZ) is det.
+%%	subgoal_position(+GUI, +Clause, +PortOrPC, -File, -CharA, -CharZ) is det.
 %
 %	Character  range  CharA..CharZ  in  File   is  the  location  to
 %	highlight for the given clause at the given location.
 
-subgoal_position(ClauseRef, unify, File, CharA, CharZ) :- !,
+subgoal_position(_, ClauseRef, unify, File, CharA, CharZ) :- !,
 	pce_clause_info(ClauseRef, File, TPos, _),
 	head_pos(ClauseRef, TPos, PosTerm),
 	arg(1, PosTerm, CharA),
 	arg(2, PosTerm, CharZ).
-subgoal_position(ClauseRef, choice(CHP), File, CharA, CharZ) :- !,
-	(   prolog_choice_attribute(CHP, type, jump),
-	    prolog_choice_attribute(CHP, pc, To)
+subgoal_position(GUI, ClauseRef, choice(CHP), File, CharA, CharZ) :- !,
+	(   prolog_choice_attribute(GUI, CHP, type, jump),
+	    prolog_choice_attribute(GUI, CHP, pc, To)
 	->  debug('Term-position: choice-jump to ~w~n', [To]),
-	    subgoal_position(ClauseRef, To, File, CharA, CharZ)
+	    subgoal_position(GUI, ClauseRef, To, File, CharA, CharZ)
 	;   pce_clause_info(ClauseRef, File, TPos, _),
 	    arg(2, TPos, CharA),
 	    CharZ is CharA + 1		% i.e. select the dot.
 	).
-subgoal_position(ClauseRef, exit, File, CharA, CharZ) :- !,
+subgoal_position(_, ClauseRef, exit, File, CharA, CharZ) :- !,
 	pce_clause_info(ClauseRef, File, TPos, _),
 	arg(2, TPos, CharA),
 	CharZ is CharA + 1.		% i.e. select the dot.
-subgoal_position(ClauseRef, fail, File, CharA, CharZ) :- !,
+subgoal_position(_, ClauseRef, fail, File, CharA, CharZ) :- !,
 	subgoal_position(ClauseRef, exit, File, CharA, CharZ).
-subgoal_position(ClauseRef, exception, File, CharA, CharZ) :- !,
+subgoal_position(_, ClauseRef, exception, File, CharA, CharZ) :- !,
 	subgoal_position(ClauseRef, exit, File, CharA, CharZ).
-subgoal_position(ClauseRef, PC, File, CharA, CharZ) :-
+subgoal_position(_, ClauseRef, PC, File, CharA, CharZ) :-
 	pce_clause_info(ClauseRef, File, TPos, _),
 	(   '$clause_term_position'(ClauseRef, PC, List)
 	->  debug('Term-position: for ref=~w at PC=~w: ~w~n',
