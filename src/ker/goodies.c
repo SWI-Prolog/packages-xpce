@@ -1106,18 +1106,36 @@ mclock()
 		*            SLEEP		*
 		********************************/
 
-#if defined(__WATCOMC__)
-#include <dos.h>
+#if !defined(MSLEEP_DONE) && defined(HAVE_NANOSLEEP)
+#define MSLEEP_DONE 1
+#include <errno.h>
 
 void
 msleep(int time)
-{ if ( time > 0 )
-    delay(time);
+{ struct timespec req;
+  int rc;
+
+  if ( time < 0 )
+    return;
+
+  DEBUG(NAME_flash,
+	Cprintf("nanosleep() %d milliseconds ...\n", time));
+
+  req.tv_sec = time/1000;
+  req.tv_nsec = (time%1000)*1000000;
+
+  do
+  { rc = nanosleep(&req, &req);
+  } while ( rc == -1 && errno == EINTR );
+
+  DEBUG(NAME_flash, Cprintf("ok\n"));
 }
 
-#else  /* !defined(__WATCOMC__) */
+#endif
 
-#ifdef HAVE_SELECT
+#if !defined(MSLEEP_DONE) && defined(HAVE_SELECT)
+#define MSLEEP_DONE 1
+
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif
@@ -1129,7 +1147,7 @@ msleep(int time)
   timeout.tv_usec = (time%1000)*1000;
 
   DEBUG(NAME_flash,
-	Cprintf("waiting %d milliseconds ...", time));
+	Cprintf("waiting %d milliseconds ...\n", time));
 
 #ifdef SELLIST
   { SELLIST(1,1) readbits = {0, 0};
@@ -1139,13 +1157,15 @@ msleep(int time)
     select(0, &readbits, &writebits, &exceptbits, &timeout);
   }
 #else
-  select(32, NULL, NULL, NULL, &timeout);
+  select(0, NULL, NULL, NULL, &timeout);
 #endif
 
   DEBUG(NAME_flash, Cprintf("ok\n"));
 }
 
-#else /*HAVE_SELECT*/
+#endif
+
+#ifndef MSLEEP_DONE
 
 extern void ws_msleep(int time);
 
@@ -1154,8 +1174,7 @@ msleep(int time)
 { ws_msleep(time);
 }
 
-#endif /*HAVE_SELECT*/
-#endif /*__WATCOMC__*/
+#endif
 
 		 /*******************************
 		 *	 ASSERT() SUPPORT	*
