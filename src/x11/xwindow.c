@@ -440,12 +440,21 @@ void
 ws_flash_area_window(PceWindow sw, int x, int y, int w, int h, int msecs)
 { if ( sw->displayed == ON )
   { int ox, oy, dw, dh;
+    int maxrect = 100;
 
     compute_window(sw, &ox, &oy, &dw, &dh);
     ox += valInt(sw->scroll_offset->x);
     oy += valInt(sw->scroll_offset->y);
 
     d_offset(ox, oy);
+    if ( w > maxrect )
+    { x += (w-maxrect)/2;
+      w = maxrect;
+    }
+    if ( h > maxrect )
+    { y += (h-maxrect)/2;
+      h = maxrect;
+    }
     d_window(sw, x, y, w, h, FALSE, TRUE);
     r_complement(x, y, w, h);
     d_flush();
@@ -462,14 +471,25 @@ ws_flash_window(PceWindow sw, int msecs)
 { if ( sw->displayed == ON )
   { int w = valInt(sw->area->w);
     int h = valInt(sw->area->h);
+    int x = 0, y = 0;
+    int maxrect = 100;
+
+    if ( w > maxrect )
+    { x = (w-maxrect)/2;
+      w = maxrect;
+    }
+    if ( h > maxrect )
+    { y = (h-maxrect)/2;
+      h = maxrect;
+    }
 
     d_offset(0, 0);
-    d_window(sw, 0, 0, w, h, FALSE, FALSE);
+    d_window(sw, x, y, w, h, FALSE, FALSE);
 
-    r_complement(0, 0, w, h);
+    r_complement(x, y, w, h);
     d_flush();
     msleep(msecs);
-    r_complement(0, 0, w, h);
+    r_complement(x, y, w, h);
     d_flush();
 
     d_done();
