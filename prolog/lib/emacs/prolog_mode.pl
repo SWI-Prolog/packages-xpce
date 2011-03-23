@@ -566,10 +566,12 @@ pce_define_class(M, Name:name,
 
 prolog_navigator(M) :->
 	"Open source-file browser"::
-	get(M, file, File), File \== @nil,
-	get(File, absolute_path, Path),
-	get(M, line_number, Line),
-	prolog_ide(open_navigator(source_location(Path, Line))).
+	(   get(M, file, File), File \== @nil
+	->  get(File, absolute_path, Path),
+	    get(M, line_number, Line),
+	    prolog_ide(open_navigator(source_location(Path, Line)))
+	;   prolog_ide(open_navigator)
+	).
 
 
 edit_breakpoints(_M) :->
