@@ -39,11 +39,30 @@
 :- meta_predicate
 	pce_call(0).
 
+/** <module> Run XPCE in a separate thread
+
+This module allows one to run XPCE in   a separate thread =pce=. This is
+especially  nice  if  xpce  is  only  used  to  support  the  SWI-Prolog
+development tools because it ensures that   the  tools remain responsive
+while the main thread executes long-running goals.
+
+This module can be activated automatically if   xpce is loaded using the
+prolog flag xpce_threaded:
+
+  ==
+  :- set_prolog_flag(xpce_threaded, true).
+  ==
+
+@tbd	This module is highly experimental and has only be tested
+	somewhat on Linux systems.
+*/
+
 %%	pce_dispatch(+Options) is det.
 %
 %	Create a new thread =pce= that takes   care  of the XPCE message
-%	loop.  This predicate has no effect if dispatching is already on
-%	another thread than the =main=.
+%	loop. This predicate has no effect  if dispatching is already on
+%	another thread than the =main=.  The   loop  can  be ended using
+%	pce_end_dispatch/0.
 
 pce_dispatch(Options) :-
 	pce_thread(main), !,
@@ -70,9 +89,9 @@ pce_dispatcher :-
 end(Requester) :-
 	assert(end_pce_dispatcher(Requester)).
 
-%%	pce_end_dispatch/0
+%%	pce_end_dispatch is det.
 %
-%	End the XPCE dispatcher loop
+%	End the XPCE dispatcher loop started with pce_dispatch/1.
 
 pce_end_dispatch :-
 	thread_self(Me),
@@ -83,7 +102,7 @@ pce_end_dispatch :-
 	retractall(pce:pce_thread(_)),
 	assert(pce:pce_thread(Me)).
 
-%%	pce_call(:Goal)
+%%	pce_call(:Goal) is det.
 %
 %	Run Goal in the XPCE thread.
 %

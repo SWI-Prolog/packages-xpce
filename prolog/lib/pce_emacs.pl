@@ -68,7 +68,7 @@ start_emacs :-
 	send(@emacs, start).
 
 
-%%	register_emacs/0
+%%	register_emacs is det.
 %
 %	If the user has not specified a specific editor and has started
 %	PceEmacs, make it the default editor.
