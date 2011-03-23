@@ -123,6 +123,15 @@ reexports the content of these files.
 :- dynamic
 	pce_thread/1.
 
+start_dispatch :-
+	current_prolog_flag(xpce_threaded, true),
+	pce_thread(main), !,
+	pce_dispatch([]).
+start_dispatch.
+
+:- initialization
+	start_dispatch.
+
 set_version :-
 	current_prolog_flag(version_data, swi(Major, Minor, Patch, _)),
 	send(@pce, catch_error_signals, @on),
