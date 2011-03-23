@@ -372,7 +372,7 @@ static foreign_t
 pl_pce_dispatch()
 { pceDispatch(-1, 250);
 
-  if ( PL_exception(0) )
+  if ( PL_handle_signals() == -1 || PL_exception(0) )
     return FALSE;
 
   return TRUE;
