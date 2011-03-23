@@ -42,10 +42,11 @@
 :- pce_autoload(float_item,   library(pce_float_item)).
 :- pce_autoload(tick_box,     library(pce_tick_box)).
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+/** <module> XPCE-base SWI-Prolog thread monitor
+
 This library defines  the  class   prolog_thread_monitor,  a  frame that
 displays the status of threads.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+*/
 
 resource(running,   image, library('trace/icons/mini-run.xpm')).
 resource(true,	    image, image('16x16/ok.xpm')).
@@ -258,12 +259,6 @@ initialise(TB) :->
 			      message(@arg1, join),
 			      condition := not(IsRunning)),
 		    gap,
-		    menu_item(attach_console,
-			      message(@arg1, signal, attach_console),
-			      condition := IsRunning),
-		    menu_item(trace,
-			      message(@arg1, trace),
-			      condition := IsRunning),
 		    menu_item(graphical_debugger,
 			      message(@arg1, gtrace),
 			      condition := IsRunning),
@@ -272,6 +267,13 @@ initialise(TB) :->
 			      condition := IsRunning),
 		    menu_item(nodebug_mode,
 			      message(@arg1, signal, nodebug),
+			      condition := IsRunning),
+		    gap,
+		    menu_item(trace,
+			      message(@arg1, trace),
+			      condition := IsRunning),
+		    menu_item(attach_console,
+			      message(@arg1, signal, attach_console),
 			      condition := IsRunning),
 		    gap,
 		    menu_item(profile,
@@ -609,7 +611,8 @@ initialise(TM) :->
 	send(TM, fill_tool_dialog, TD),
 	send(TM, update),
 	get(TM, update_interval, Time),
-	send(TM, update_interval, Time).
+	send(TM, update_interval, Time),
+	send(TM, selection, main).
 
 unlink(TM) :->
 	send(TM, update_interval, @nil),
@@ -663,6 +666,12 @@ update(TM) :->
 	get(TM, member, thread_browser, TB),
 	send(TB, update).
 
+selection(TM, Thread:'name|int') :->
+	"Select the given thread"::
+	get(TM, member, thread_browser, TB),
+	get(TB, member, Thread, DI),
+	send(TB, selection, DI),
+	send(TB, details, DI).
 
 recall(TM, Recall:'1..') :->
 	"#samples recalled"::
