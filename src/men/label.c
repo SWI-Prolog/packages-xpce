@@ -328,9 +328,8 @@ reportLabel(Label lb, Name kind, CharArray fmt, int argc, Any *argv)
   { TRY(formatLabel(lb, fmt, argc, argv));
 
     if ( kind == NAME_error || kind == NAME_warning )
-    { send(lb, NAME_flash, EAV);
       alertReporteeVisual((VisualObj) lb);
-    } else if ( kind == NAME_progress )
+    else if ( kind == NAME_progress )
       flushGraphical(lb);
   }
 
