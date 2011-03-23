@@ -253,15 +253,27 @@ detachTextBuffer(TextBuffer tb, Editor e)
 
 static status
 reportTextBuffer(TextBuffer tb, Name kind, CharArray fmt, int argc, Any *argv)
-{ ArgVector(av, argc + 2);
-  Any editor;
+{ Any to;
 
-  av[0] = kind;
-  av[1] = fmt;
-  copyArgs(argc, argv, &av[2]);
+  if ( (to = get(tb, NAME_reportTo, EAV)) && notNil(to) )
+  { Any editor;
 
-  for_chain(tb->editors, editor, sendv(editor, NAME_report, argc+2, av));
-  succeed;
+    ArgVector(av, argc + 2);
+
+    av[0] = kind;
+    av[1] = fmt;
+    copyArgs(argc, argv, &av[2]);
+
+    if ( (editor = get(to, NAME_container, ClassEditor, EAV)) )
+    { sendv(editor, NAME_report, argc+2, av);
+    } else
+    { sendv(to, NAME_report, argc+2, av);
+    }
+
+    succeed;
+  }
+
+  return printReportObject(tb, kind, fmt, argc, argv);
 }
 
 

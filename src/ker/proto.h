@@ -277,6 +277,8 @@ COMMON(status)	CheckObject(Any obj, BoolObj recursive);
 COMMON(status)	errorObjectv(Any obj, Error e, int argc, Any *argv);
 COMMON(Name)	getManIdObject(Any obj);
 COMMON(status)	makeClassObject(Class class);
+COMMON(status)	printReportObject(Any obj, Name kind,
+				  CharArray fmt, int argc, Any *argv);
 
 /* /home/jan/src/pl/packages/xpce/src/ker/programobject.c */
 COMMON(status)	initialiseProgramObject(Any obj);
