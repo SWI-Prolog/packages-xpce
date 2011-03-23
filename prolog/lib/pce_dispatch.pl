@@ -42,10 +42,13 @@
 %%	pce_dispatch(+Options) is det.
 %
 %	Create a new thread =pce= that takes   care  of the XPCE message
-%	loop.
+%	loop.  This predicate has no effect if dispatching is already on
+%	another thread than the =main=.
 
 pce_dispatch(Options) :-
+	pce_thread(main), !,
 	thread_create(pce_dispatcher, _, [alias(pce)|Options]).
+pce_dispatch(_).
 
 :- dynamic
 	end_pce_dispatcher/1.
@@ -61,7 +64,7 @@ pce_dispatcher :-
 	    ->	true
 	    ;	print_message(error, E)
 	    ),
-	retract(end_pce_dispatcher(Sender)),
+	retract(end_pce_dispatcher(Sender)), !,
 	thread_send_message(Sender, end_pce_dispatcher).
 
 end(Requester) :-
