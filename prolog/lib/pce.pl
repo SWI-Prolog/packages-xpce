@@ -124,10 +124,10 @@ reexports the content of these files.
 	pce_thread/1.
 
 start_dispatch :-
-	current_prolog_flag(xpce_threaded, true),
-	pce_thread(main), !,
-	pce_dispatch([]).
-start_dispatch.
+	(   current_prolog_flag(xpce_threaded, true)
+	->  pce_dispatch([])
+	;   true
+	).
 
 :- initialization
 	start_dispatch.

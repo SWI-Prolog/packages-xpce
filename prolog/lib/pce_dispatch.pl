@@ -65,18 +65,24 @@ prolog flag xpce_threaded:
 %	pce_end_dispatch/0.
 
 pce_dispatch(Options) :-
+	with_mutex(pce_dispatch, pce_dispatch_(Options)).
+
+pce_dispatch_(Options) :-
 	pce_thread(main), !,
-	thread_create(pce_dispatcher, _, [alias(pce)|Options]).
-pce_dispatch(_).
+	thread_self(Me),
+	thread_create(pce_dispatcher(Me), _, [alias(pce)|Options]),
+	thread_get_message(pce_dispatch).
+pce_dispatch_(_).
 
 :- dynamic
 	end_pce_dispatcher/1.
 
-pce_dispatcher :-
+pce_dispatcher(Origin) :-
 	set_pce_thread,
 	thread_self(Me),
 	retractall(pce:pce_thread(_)),
 	assert(pce:pce_thread(Me)),
+	thread_send_message(Origin, pce_dispatch),
 	repeat,
 	    catch(pce_dispatch, E, true),
 	    (	var(E)
