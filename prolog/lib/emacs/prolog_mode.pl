@@ -134,7 +134,7 @@ class_variable(varmark_style, style*,
 	       style(background := honeydew,
 		     underline := @on)).
 class_variable(show_syntax_errors, {never,typing,pause},
-	       pause).
+	       typing).
 
 variable(varmark_style,    style*,       get, "How to mark variables").
 variable(has_var_marks,    bool := @off, get, "Optimise a bit").
