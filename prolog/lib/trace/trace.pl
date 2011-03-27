@@ -455,10 +455,10 @@ subgoal_position(_, ClauseRef, exit, File, CharA, CharZ) :- !,
 	pce_clause_info(ClauseRef, File, TPos, _),
 	arg(2, TPos, CharA),
 	CharZ is CharA + 1.		% i.e. select the dot.
-subgoal_position(_, ClauseRef, fail, File, CharA, CharZ) :- !,
-	subgoal_position(ClauseRef, exit, File, CharA, CharZ).
-subgoal_position(_, ClauseRef, exception, File, CharA, CharZ) :- !,
-	subgoal_position(ClauseRef, exit, File, CharA, CharZ).
+subgoal_position(GUI, ClauseRef, fail, File, CharA, CharZ) :- !,
+	subgoal_position(GUI, ClauseRef, exit, File, CharA, CharZ).
+subgoal_position(GUI, ClauseRef, exception, File, CharA, CharZ) :- !,
+	subgoal_position(GUI, ClauseRef, exit, File, CharA, CharZ).
 subgoal_position(_, ClauseRef, PC, File, CharA, CharZ) :-
 	pce_clause_info(ClauseRef, File, TPos, _),
 	(   '$clause_term_position'(ClauseRef, PC, List)
