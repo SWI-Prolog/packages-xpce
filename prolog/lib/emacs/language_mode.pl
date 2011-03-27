@@ -57,6 +57,8 @@
 	]).
 
 
+variable(bracket_gen,	    int*,	get, "Generation we checked brackets").
+variable(bracket_caret,	    int*,	get, "Location we checked brackets").
 variable(comment_column,    int,        both, "Column for line comment").
 variable(show_line_numbers, 'int|bool', get,  "Show line numbers?").
 class_variable(show_line_numbers, 'int|bool', 250000).
@@ -674,18 +676,34 @@ highlight_matching_bracket(M, CaretSpec:[int]) :->
 	->  get(M, caret, Caret)
 	;   Caret = CaretSpec
 	),
-	get(M, text_buffer, TB),
-	get(TB, syntax, SyntaxTable),
-	(   (   Here = Caret,
-	        get(TB, character, Here, Char),
-		send(SyntaxTable, has_syntax, Char, open_bracket)
-	    ;   Here is Caret - 1,
-		get(TB, character, Here, Char),
-	        send(SyntaxTable, has_syntax, Char, close_bracket)
+	(   send(M, highlight_up_to_date, Caret)
+	->  true
+	;   get(M, text_buffer, TB),
+	    get(TB, syntax, SyntaxTable),
+	    (   (   Here = Caret,
+		    get(TB, character, Here, Char),
+		    send(SyntaxTable, has_syntax, Char, open_bracket)
+		;   Here is Caret - 1,
+		    get(TB, character, Here, Char),
+		    send(SyntaxTable, has_syntax, Char, close_bracket)
+		)
+	    ->  get(TB, matching_bracket, Here, Match),
+		send(M, show_matching_bracket_fragment, Match)
+	    ;   send(M, unshow_matching_bracket_fragment)
 	    )
-	->  get(TB, matching_bracket, Here, Match),
-	    send(M, show_matching_bracket_fragment, Match)
-	;   send(M, unshow_matching_bracket_fragment)
+	;   true
+	).
+
+highlight_up_to_date(M, Caret:int) :->
+	"True if highlight indication is up-to-date"::
+	get(M, text_buffer, TB),
+	get(TB, generation, Gen),
+	(   get(M, bracket_caret, Caret),
+	    get(M, bracket_gen, Gen)
+	->  true
+	;   send(M, slot, bracket_caret, Caret),
+	    send(M, slot, bracket_gen, Gen),
+	    fail
 	).
 
 show_matching_bracket_fragment(M, At:int) :->
