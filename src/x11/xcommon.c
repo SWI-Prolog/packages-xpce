@@ -97,32 +97,7 @@ extern XtAppContext _XtDefaultAppContext(void);
 #define XtCreateApplicationContext _XtDefaultAppContext
 #endif
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-(*) XInitThreads() must  be  called  if   multiple  thread  access  Xlib
-functions concurrently. Given the  current  locking,   I  think  this is
-cannot happen as we lock the central  XPCE   lock  both if we receive an
-event and if we send a message from Prolog.
-
-Nevertheless, XPCE uses this  flag  to   prepare  for  more fine-grained
-locking. It turns out the X11 version  distributed with MacOSX has a but
-that causes a deadlock in handling dead-keys.  Therefore, we do not lock
-for the Mac.  Here is the stack-trace:
-
-#1  0x900019cc in pthread_mutex_lock ()
-#2  0x9ba85b9c in _XLockDisplay ()
-#3  0x9ba61054 in XPutBackEvent ()
-#4  0x9baba0b4 in _XimLocalFilter ()
-#5  0x9ba8548c in XFilterEvent ()
-#6  0x9bde9538 in _XtDefaultDispatcher ()
-#7  0x9bde97b0 in XtDispatchEvent ()
-#8  0x9bdf5934 in XtAppProcessEvent ()
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-#ifdef __APPLE__
-static int use_x_init_threads = FALSE;
-#else
 static int use_x_init_threads = TRUE;
-#endif
 
 void *
 pceXtAppContext(void * ctx)
