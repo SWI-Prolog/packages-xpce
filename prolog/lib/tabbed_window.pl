@@ -132,7 +132,8 @@ append(W, Window:window=window, Label:name=[name], Expose:expose=[bool]) :->
 	send(Window, '_compute_desired_size'),
 	send(W, tab, new(Tab, window_tab(Window, Label))),
 	(   Expose == @on
-	->  get_super(W, member, tab_stack, TS),
+	->  send(W, resize, Tab),
+	    get_super(W, member, tab_stack, TS),
 	    send(TS, on_top, Tab)
 	;   true
 	).
