@@ -634,14 +634,14 @@ stack_frames(Depth, F, PC, Frames) :-
 	;   RestFrames = []
 	).
 
-%%	choice_frames(+Max, +CHP, +MinLevel-MaxLevel, -Frames) is det.
+%%	choice_frames(+Max, +CHP, +MinMaxLevel, -Frames) is det.
 %
 %	Frames is a list of frames that hold choice-points.
 %
 %	@param Max is the maximum number of choicepoints returned
 %	@param CHP is the initial choicepoint
-%	@param MinLevel-MaxLevel is the depth-range we consider.
-%	       Currently, MaxLevel is ignored (see in_range/2).
+%	@param MinMaxLevel is a pair holding the depth-range we
+%	consider. Currently, MaxLevel is ignored (see in_range/2).
 
 choice_frames(_, none, _, _, []) :- !.
 choice_frames(Max, CHP, Range, Seen, [frame(Frame, choice(CH))|Frames]) :-
