@@ -59,34 +59,29 @@ clear_message_list :-
 	;   true
 	).
 
-user:message_hook(Term, Level, Lines) :-
-	accept_level(Level),
-	(   Term = error(syntax_error(Error),
-			 file(Path, Line, _LinePos, _CharPos))
-	->  new(Message, string('Syntax error: %s', Error))
-	;   Term = error(_, Location),
-	    nonvar(Location),
-	    Location = file(Path, Line)
-	->  make_message(Lines, Message)
-	;   source_location(Path, Line),
-	    make_message(Lines, Message)
-	),
-	atom(Path),			% void surprises
-	\+ object(@loading_emacs),
+%%	ide_message(+Location, +String)
+%
+%	Display system messages in a graphical window.
+
+ide_message(Path:Line, String) :-
 	start_emacs,
 	new(Buffer, emacs_buffer(Path)),
 	get(Buffer, scan, 0, line, Line-1, start, SOL),
-	send(@prolog_warnings, append_hit, Buffer, SOL, @default, Message),
-	fail.					% give normal message too
-user:message_hook(make(reload(_Files)), _, _) :-
-	clear_message_list,
-	fail.
-user:message_hook(emacs(consult(_File)), _, _) :-
-	clear_message_list,
-	fail.
+	send(@prolog_warnings, append_hit, Buffer, SOL, @default, String).
 
-accept_level(warning).
-accept_level(error).
+message_to_pce(Term, Lines, Path:Line, String) :-
+	(   Term = error(syntax_error(Error),
+			 file(Path, Line, _LinePos, _CharPos))
+	->  new(String, string('Syntax error: %s', Error))
+	;   Term = error(_, Location),
+	    nonvar(Location),
+	    Location = file(Path, Line)
+	->  make_message(Lines, String)
+	;   source_location(Path, Line),
+	    make_message(Lines, String)
+	),
+	atom(Path).
+
 
 make_message(Lines, String) :-
 	phrase(make_message(Lines), Chars), !,
@@ -106,4 +101,24 @@ make_message([Fmt|T]) -->
 	make_message([Fmt-[]|T]).
 
 dlist(Codes, Tail, Codes, Tail).
+
+%%	user:message_hook(+Term, +Level, +Lines)
+%
+%	Hook clauses that direct error messages to the (xpce) IDE.
+
+user:message_hook(Term, Level, Lines) :-
+	accept_level(Level),
+	\+ object(@loading_emacs),
+	message_to_pce(Term, Lines, Location, String),
+	in_pce_thread(ide_message(Location, String)),
+	fail.
+user:message_hook(make(reload(_Files)), _, _) :-
+	in_pce_thread(clear_message_list),
+	fail.
+user:message_hook(emacs(consult(_File)), _, _) :-
+	in_pce_thread(clear_message_list),
+	fail.
+
+accept_level(warning).
+accept_level(error).
 
