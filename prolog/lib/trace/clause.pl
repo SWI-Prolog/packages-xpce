@@ -67,7 +67,7 @@ pce_clause_info(ClauseRef, S, TermPos, NameOffset) :-
 		     close(Handle)),
 	prolog_clause:unify_term(Clause, ReadClause),
 	debug(clause_info, 'ok ...', []),
-	prolog_clause:make_varnames(Clause, VarOffset, VarNames, NameOffset),
+	prolog_clause:make_varnames(Clause, Clause, VarOffset, VarNames, NameOffset),
 	debug(clause_info, 'got names~n', []), !.
 
 
