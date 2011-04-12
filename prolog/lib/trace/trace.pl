@@ -410,6 +410,12 @@ show_source(Frame, Attributes) :-
 		(   clause(QGoal, _Body, ClauseRef)
 		->  subgoal_position(GUI, ClauseRef, unify, File, CharA, CharZ),
 		    send_tracer(GUI, show_range(File, CharA, CharZ, Style))
+		;   functor(Goal, Functor, Arity),
+		    functor(GoalTemplate, Functor, Arity),
+		    qualify(GoalTemplate, QGoalTemplate),
+		    clause(QGoalTemplate, _TBody, ClauseRef)
+		->  subgoal_position(GUI, ClauseRef, unify, File, CharA, CharZ),
+		    send_tracer(GUI, show_range(File, CharA, CharZ, Style))
 		;   find_source(QGoal, File, Line),
 		    debug('At ~w:~d~n', [File, Line]),
 		    send_tracer(GUI, show_line(File, Line, Style))
