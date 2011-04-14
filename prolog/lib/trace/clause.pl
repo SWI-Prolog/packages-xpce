@@ -32,6 +32,9 @@ user:prolog_event_hook(erased(Ref)) :-
 clear_clause_info_cache :-
 	retractall(clause_info_cache(_, _, _, _)).
 
+:- multifile
+	prolog:term_compiled/2.
+
 %	clause_info(+ClauseRef, -File, -TermPos, -VarNames)
 %
 %	Fetches source information for the given clause.
@@ -47,8 +50,8 @@ pce_clause_info(ClauseRef, S, TermPos, NameOffset) :-
 	debug(clause_info, 'Listing for clause ~w', [ClauseRef]),
 	'$clause'(Head, Body, ClauseRef, VarOffset),
 	(   Body == true
-	->  Clause = Head
-	;   Clause = (Head :- Body)
+	->  Clause0 = Head
+	;   Clause0 = (Head :- Body)
 	),
 	start_emacs,
 	S = @dynamic_source_buffer,
@@ -57,6 +60,10 @@ pce_clause_info(ClauseRef, S, TermPos, NameOffset) :-
 	     string('Decompiled listing of %s', ClauseName)),
 	send(S, clear),
 	debug(clause_info, 'Writing clause ~w to string ~p ... ', [ClauseRef, S]),
+	(	catch(prolog:term_compiled(Clause, Clause0), _, fail)
+	->	true
+	;	Clause = Clause0
+	),
 	pce_open(S, write, Fd),
 	portray_clause(Fd, Clause),
 	close(Fd),
