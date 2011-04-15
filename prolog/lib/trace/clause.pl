@@ -1,3 +1,35 @@
+/*  $Id$
+
+    Part of XPCE --- The SWI-Prolog GUI toolkit
+
+    Author:        Jan Wielemaker and Anjo Anjewierden
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org/packages/xpce/
+    Copyright (C): 2011, University of Amsterdam,
+    			 VU University Amsterdam
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 2
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+    As a special exception, if you link this library with other files,
+    compiled with a Free Software compiler, to produce an executable, this
+    library does not by itself cause the resulting executable to be covered
+    by the GNU General Public License. This exception does not however
+    invalidate any other reasons why the executable file might be covered by
+    the GNU General Public License.
+*/
+
 :- module(pce_prolog_clause,
 	  [ pce_clause_info/4,		% +ClauseRef, -File, -TermPos, -VarNames
 	    clear_clause_info_cache/0,
@@ -7,6 +39,31 @@
 :- use_module(library(debug)).
 :- use_module(library(listing)).
 :- use_module(library(prolog_clause)).
+
+/** <module> Clause info for the source level debugger
+
+This module wraps library(prolog_clause) to deal  with clauses that have
+no source or for which clause_info/4  fails to provide information about
+the clause because it  was  modified   by  e.g.,  term_expansion/2 in an
+untracktable way.
+*/
+
+%%	prolog:term_compiled(+Source, -Compiled) is semidet.
+%%	prolog:term_compiled(-Source, +Compiled) is semidet.
+%
+%	This hook supports debugging in higher  level languages that are
+%	compiled to plain Prolog and whose source is expressed in Prolog
+%	terms. The first version compiles a  target language term into a
+%	plain Prolog term and can be   compared to term_expansion/2. The
+%	second decompiles a Prolog clause into a source-term.
+%
+%	@tbd	This hook is experimental. It   was added for supporting
+%		debugging dynamic objects in  Logtalk.   It  may also be
+%		useful for listing/1. We might   add  additional context
+%		information, such as the clause reference (if known).
+
+:- multifile
+	prolog:term_compiled/2.
 
 :- pce_global(@dynamic_source_buffer,
 	      make_dynamic_source_buffer).
@@ -31,9 +88,6 @@ user:prolog_event_hook(erased(Ref)) :-
 
 clear_clause_info_cache :-
 	retractall(clause_info_cache(_, _, _, _)).
-
-:- multifile
-	prolog:term_compiled/2.
 
 %	clause_info(+ClauseRef, -File, -TermPos, -VarNames)
 %
@@ -60,18 +114,18 @@ pce_clause_info(ClauseRef, S, TermPos, NameOffset) :-
 	     string('Decompiled listing of %s', ClauseName)),
 	send(S, clear),
 	debug(clause_info, 'Writing clause ~w to string ~p ... ', [ClauseRef, S]),
-	(	catch(prolog:term_compiled(Clause, Clause0), _, fail)
-	->	true
-	;	Clause = Clause0
+	(   prolog:term_compiled(Clause, Clause0)
+	->  true
+	;   Clause = Clause0
 	),
-	pce_open(S, write, Fd),
-	portray_clause(Fd, Clause),
-	close(Fd),
+	setup_call_cleanup(pce_open(S, write, Fd),
+			   portray_clause(Fd, Clause),
+			   close(Fd)),
 	debug(clause_info, 'ok, reading ... ', []),
-	pce_open(S, read, Handle),
-	call_cleanup(prolog_clause:read(Handle, user,
-					ReadClause, TermPos, VarNames),
-		     close(Handle)),
+	setup_call_cleanup(pce_open(S, read, Handle),
+			   prolog_clause:read(Handle, user,
+					      ReadClause, TermPos, VarNames),
+			   close(Handle)),
 	prolog_clause:unify_term(Clause, ReadClause),
 	debug(clause_info, 'ok ...', []),
 	prolog_clause:make_varnames(Clause, Clause, VarOffset, VarNames, NameOffset),
