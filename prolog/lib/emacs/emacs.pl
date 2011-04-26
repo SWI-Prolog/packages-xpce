@@ -105,6 +105,7 @@ pce_ifhostproperty(prolog(swi),
 :- declare_emacs_mode(prolog,	library('emacs/prolog_mode')).
 :- declare_emacs_mode(chr,	library('emacs/chr_mode')).
 :- declare_emacs_mode(latex,	library('emacs/latex_mode')).
+:- declare_emacs_mode(logtalk,	library('emacs/logtalk_mode')).
 %:- declare_emacs_mode(html,	library('emacs/html_mode')).
 :- declare_emacs_mode(java,	library('emacs/java_mode')).
 :- declare_emacs_mode(c,	library('emacs/c_mode')).
@@ -164,6 +165,7 @@ default_emacs_mode('\\.(pl|xpce|pceemacs)rc~?',	   prolog).
 default_emacs_mode('.*\.chr~?$',		   chr).
 default_emacs_mode('.*\\.(tex|sty)~?$',		   latex).
 default_emacs_mode('.*\\.doc~?$',		   latex).
+default_emacs_mode('.*\\.lgt~?$',		   logtalk).
 default_emacs_mode('.*\\.html~?$',		   html).
 default_emacs_mode('.*\\.php[0-9]?~?$',		   html).
 default_emacs_mode('.*\\.sgml~?$',		   sgml).
