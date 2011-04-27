@@ -497,7 +497,7 @@ static PL_dispatch_hook_t	old_dispatch_hook;
 #if SIZEOF_VOIDP == 8 && SIZEOF_VOIDP != SIZEOF_LONG
 #define GetInteger(a, i)	PL_get_int64((a), (i))
 #else
-#define GetInteger(a, i)	PL_get_long((a), (long*)(i))
+#define GetInteger(a, i)	PL_get_intptr((a), (intptr_t*)(i))
 #endif
 #define GetAtom(a, n)		PL_get_atom((a), (n))
 #define GetFloat(a, f)		PL_get_float((a), (f))
@@ -761,7 +761,7 @@ ThrowException(int id, ...)
       break;
     }
     case EX_BAD_INTEGER_OBJECT_REF:		/* , <integer> */
-    { long ref = va_arg(args, long);
+    { intptr_t ref = va_arg(args, intptr_t);
       char *descr = pcePPReference(cToPceInteger(ref));
       term_t a1 = PL_new_term_ref();
       term_t a2 = PL_new_term_ref();
@@ -940,12 +940,12 @@ static int
 get_object_from_refterm(term_t t, PceObject *obj)
 { term_t a = PL_new_term_ref();
   PceObject o;
-  long r;
+  intptr_t r;
   atom_t name;
 
   _PL_get_arg(1, t, a);
 
-  if ( PL_get_long(a, &r) )
+  if ( PL_get_intptr(a, &r) )
   { if ( (o = cToPceReference(r)) )
     { *obj = o;
 
@@ -1104,7 +1104,7 @@ rewindHostHandles(HostStackEntry top)
       { term_t t = getTermHandle(e->handle);
 	Record r = PL_record(t);
 
-	assert((((unsigned long)r & 0x1L) == 0L));
+	assert((((uintptr_t)r & 0x1L) == 0L));
 	setHostDataHandle(e->handle, r);
       }
 
@@ -1123,7 +1123,7 @@ as handles to the Prolog recorded database.
 
 static PceObject
 makeTermHandle(term_t t)
-{ void *h = (void *)(((unsigned long)PL_copy_term_ref(t)<<1) | 0x1L);
+{ void *h = (void *)(((uintptr_t)PL_copy_term_ref(t)<<1) | 0x1L);
 
   return pushHostHandle(CtoHostData(ClassProlog, h, 0));
 }
@@ -1133,7 +1133,7 @@ static PceObject
 makeRecordedTermHandle(term_t t)
 { Record r = PL_record(t);
 
-  assert((((unsigned long)r & 0x1L) == 0L));
+  assert((((uintptr_t)r & 0x1L) == 0L));
   return CtoHostData(ClassProlog, r, PCE_ANSWER);
 }
 
@@ -1143,7 +1143,7 @@ getTermHandle(PceObject hd)
 { void *h;
 
   if ( (h = getHostDataHandle(hd)) )
-  { unsigned long l = (unsigned long)h;
+  { uintptr_t l = (uintptr_t)h;
 
     if ( l & 1 )
       return (term_t)(l>>1);
@@ -1224,7 +1224,7 @@ get_typed_object(PceGoal g, term_t t, PceType type, PceObject* rval)
       break;
     case PL_INTEGER:
       if ( val.i >= PCE_MIN_INT && val.i <= PCE_MAX_INT )
-	obj = cToPceInteger((long)val.i);
+	obj = cToPceInteger(val.i);
       else
 	obj = cToPceReal((double)val.i);
       break;
@@ -1273,7 +1273,7 @@ get_answer_object(PceGoal g, term_t t, PceType type, PceObject *rval)
       break;
     case PL_INTEGER:
       if ( val.i >= PCE_MIN_INT && val.i <= PCE_MAX_INT )
-	obj = cToPceInteger((long)val.i);
+	obj = cToPceInteger(val.i);
       else
 	obj = cToPceReal((double)val.i);
       break;
@@ -1314,7 +1314,7 @@ static int
 unlinkProlog(PceObject hd)
 { void *h = getHostDataHandle(hd);
 
-  if ( !((unsigned long)h & 0x1) )
+  if ( !((uintptr_t)h & 0x1) )
   { /*Sdprintf("Erasing recorded Prolog term\n");*/
     PL_erase(h);			/* This is a record */
   }
@@ -1843,7 +1843,7 @@ put_prolog_argument(PceGoal g, term_t t, PceType type, term_t f)
       }
       break;
     case PL_INTEGER:
-      if ( pceCheckIntType(type, (long)val.i) ) /* cast ok? */
+      if ( pceCheckIntType(type, val.i) )
 	return PL_put_int64(t, val.i);
       break;
     case PL_FLOAT:
@@ -2687,7 +2687,7 @@ pl_pce_open(term_t t, term_t mode, term_t plhandle)
     }
 
     if ( (handle = pceOpen(obj, flags, (void *)&enc)) >= 0 )
-    { IOSTREAM *s = Snew((void *)(long)handle, sflags, &pceFunctions);
+    { IOSTREAM *s = Snew((void *)(intptr_t)handle, sflags, &pceFunctions);
       s->encoding = enc;
 
       return PL_open_stream(plhandle, s);
@@ -2971,7 +2971,7 @@ PrologAction(int action, va_list args)
       return PCE_SUCCEED;
     case HOST_BACKTRACE:
     { int frames = va_arg(args, int);
-      PL_action(PL_ACTION_BACKTRACE, (void *) (long)frames);
+      PL_action(PL_ACTION_BACKTRACE, (void *)(intptr_t)frames);
       return PCE_SUCCEED;
     }
     case HOST_ATEXIT:
