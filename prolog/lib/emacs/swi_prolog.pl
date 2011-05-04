@@ -61,13 +61,15 @@ clear_message_list :-
 
 %%	ide_message(+Location, +String)
 %
-%	Display system messages in a graphical window.
+%	Display system messages in a graphical  window. Note that String
+%	is locked to avoid XPCE's GC.
 
 ide_message(Path:Line, String) :-
 	start_emacs,
 	new(Buffer, emacs_buffer(Path)),
 	get(Buffer, scan, 0, line, Line-1, start, SOL),
-	send(@prolog_warnings, append_hit, Buffer, SOL, @default, String).
+	send(@prolog_warnings, append_hit, Buffer, SOL, @default, String),
+	send(String, lock_object, @off).
 
 message_to_pce(Term, Lines, Path:Line, String) :-
 	(   Term = error(syntax_error(Error),
@@ -80,8 +82,14 @@ message_to_pce(Term, Lines, Path:Line, String) :-
 	;   source_location(Path, Line),
 	    make_message(Lines, String)
 	),
-	atom(Path).
+	atom(Path),
+	send(String, lock_object, @on).
 
+%%	make_message(+MessageLine, -String) is det.
+%
+%	Translate a list of message lines into  a PCE string. The string
+%	is  locked  because  it  is  send    to  the  IDE  thread  using
+%	in_pce_thread/1.
 
 make_message(Lines, String) :-
 	phrase(make_message(Lines), Chars), !,
