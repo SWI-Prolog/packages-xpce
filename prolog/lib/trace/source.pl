@@ -39,6 +39,8 @@
 :- use_module(break).
 :- use_module(util).
 :- use_module(library(emacs_extend)).
+:- use_module(library(pce_template)).
+
 
 		 /*******************************
 		 *	       STYLES		*
@@ -63,9 +65,7 @@ style(frame, 		style(background := '#d6dc5e',
 style(breakpoint, 	style(icon := 'stop.xpm')).
 
 
-:- emacs_begin_mode(prolog_debug, prolog,
-		    "Submode for the debugger",
-		    [], []).
+:- pce_begin_class(prolog_debug_methods, template).
 
 save_text(M) :->
 	"Switch to non-edit mode after saving the buffer"::
@@ -74,6 +74,19 @@ save_text(M) :->
 	     if(message(@arg1?window, instance_of, prolog_source_view),
 		message(@arg1?window, edit, @off))).
 
+:- pce_end_class.
+
+
+% If you define an alternative mode as a subclass of the Prolog mode
+% and you use this mode in the debugger, you must create a mode
+% <X>_debug.  The minimal example for this mode is below.  The
+% predicate buffer/2 below associates the debug mode with the
+% source view.
+
+:- emacs_begin_mode(prolog_debug, prolog,
+		    "Submode for the debugger",
+		    [], []).
+:- use_class_template(prolog_debug_methods).
 :- emacs_end_mode.
 
 :- initialization
@@ -258,7 +271,14 @@ current_source_buffer(File, Buffer) :-
 
 buffer(File, Buffer) :-
 	new(Buffer, emacs_buffer(File)),
-	send(Buffer, mode, prolog_debug),
+	get(Buffer, mode, Mode),
+	(   sub_atom(Mode, _, _, 0, '_debug')
+	->  true
+	;   atom_concat(Mode, '_debug', DebugMode),
+	    get(@pce, convert, DebugMode, emacs_mode, _)
+	->  send(Buffer, mode, DebugMode)
+	;   send(Buffer, mode, prolog_debug)
+	),
 	mark_special(File, Buffer).
 
 mark_special(_, Buffer) :-
