@@ -33,6 +33,8 @@
 :- use_module(library(pce)).
 :- use_module(prolog_mode).
 :- use_module(library(operators)).	% push/pop operators
+:- use_module(library(trace/emacs_debug_modes)).
+:- use_module(library(emacs_extend)).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -62,6 +64,16 @@ colourise_buffer(M) :->
 		pop_logtalk_operators).
 
 :- emacs_end_mode.
+
+
+:- emacs_begin_mode(logtalk_debug, logtalk,
+		    "Submode for the debugger",
+		    [], []).
+:- use_class_template(prolog_debug_methods).
+:- emacs_end_mode.
+
+:- initialization
+   declare_emacs_mode(logtalk_debug, []).
 
 
 		 /*******************************

@@ -40,6 +40,7 @@
 :- use_module(util).
 :- use_module(library(emacs_extend)).
 :- use_module(library(pce_template)).
+:- use_module(emacs_debug_modes).
 
 
 		 /*******************************
@@ -63,18 +64,6 @@ style(choice, 		style(background := yellow,
 style(frame, 		style(background := '#d6dc5e',
 			      icon := 'stack.xpm')).
 style(breakpoint, 	style(icon := 'stop.xpm')).
-
-
-:- pce_begin_class(prolog_debug_methods, template).
-
-save_text(M) :->
-	"Switch to non-edit mode after saving the buffer"::
-	send_super(M, save_text),
-	send(M?editors, for_all,
-	     if(message(@arg1?window, instance_of, prolog_source_view),
-		message(@arg1?window, edit, @off))).
-
-:- pce_end_class.
 
 
 % If you define an alternative mode as a subclass of the Prolog mode
