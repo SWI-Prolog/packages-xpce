@@ -264,6 +264,7 @@ buffer(File, Buffer) :-
 	(   sub_atom(Mode, _, _, 0, '_debug')
 	->  true
 	;   atom_concat(Mode, '_debug', DebugMode),
+	    get(@pce, convert, Mode, emacs_mode, _), % force loading the code
 	    get(@pce, convert, DebugMode, emacs_mode, _)
 	->  send(Buffer, mode, DebugMode)
 	;   send(Buffer, mode, prolog_debug)
