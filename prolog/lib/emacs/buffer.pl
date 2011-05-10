@@ -45,7 +45,7 @@ variable(mode,		  name,		get,  "Major mode of operation").
 variable(time_stamp,	  date*,	get,  "Time-stamp for file").
 variable(ensure_newline,  bool := @on,	both, "Add newline when done").
 variable(ensure_no_whitespace_errors,
-			  bool,  	both, "Remove trailing whitespace when done").
+			  bool,		both, "Remove trailing whitespace when done").
 variable(auto_save_mode,  bool,		both, "Auto-save?").
 variable(auto_save_count, number,	get,  "Auto-save at expiration").
 variable(saved_caret,	  int,		both, "Saved caret on last quit").
@@ -199,7 +199,7 @@ name(B, Name:name) :->
 		get(Name, append, string('<%d>', N), BufName),
 	        \+ get(@emacs_buffers, member, BufName, _),
 		!
- 	    ;   BufName = Name
+	    ;   BufName = Name
 	    ),
 	    send(B, slot, name, BufName),
 	    (	OldName \== @nil,
@@ -317,16 +317,54 @@ complete_last_line(B) :->
 
 fix_whitespace_errors(B) :->
 	"Remove trailing spaces and tabs from lines"::
-	new(Re, regex('[ \t]+\n')),
 	new(Count, number(0)),
-	send(Re, for_all, B,
-	     and(message(@arg1, replace, @arg2, '\n'),
-		 message(Count, plus, 1))),
+	send(B, fix_trailing_space_errors, Count),
+	send(B, fix_space_tab_errors, Count),
 	(   get(Count, value, 0)
 	->  true
 	;   send(B, report, status,
 		 'Fixed %d whitespace errors', Count)
 	).
+
+fix_trailing_space_errors(B, Count:number) :->
+	"Remove trailing spaces and tabs from lines"::
+	new(Re, regex('[ \t]+\n')),
+	send(Re, for_all, B,
+	     and(message(@arg1, replace, @arg2, '\n'),
+		 message(Count, plus, 1))).
+
+fix_space_tab_errors(B, Count:number) :->
+	"Replace space+tab sequences"::
+	new(Re, regex(' +\t')),
+	send(Re, for_all, B,
+	     and(message(B, fix_space_tab, Re),
+		 message(Count, plus, 1))).
+
+fix_space_tab(B, Re:regex) :->
+	"Fix matched spaces followed by tab"::
+	(   get(B?editors, head, E)
+	->  get(Re, register_start, 0, Start),
+	    get(Re, register_end, 0, End),
+	    get(E, column, Start, StartCol),
+	    get(E, column, End, EndCol),
+	    get(E, tab_distance, TD),
+	    tabs(StartCol, EndCol, TD, Tabs),
+	    tab_atom(Tabs, Atom),
+	    send(Re, replace, B, Atom)
+	;   true
+	).
+
+tabs(SC, EC, _, 0) :-
+	SC >= EC, !.
+tabs(SC, EC, TD, N) :-
+	SC2 is ((SC+TD)//TD)*TD,
+	tabs(SC2, EC, TD, N0),
+	N is N0+1.
+
+tab_atom(N, Atom) :-
+	length(List, N),
+	maplist(=(0'\t), List),
+	atom_codes(Atom, List).
 
 
 do_save(B, SaveFile:file, Start:[int], Length:[int]) :->
