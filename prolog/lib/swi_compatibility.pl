@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -38,41 +39,53 @@
 	    pce_info/1
 	  ]).
 
-:- module_transparent
-	auto_call/1,
-	callable_predicate/1.
+/** <module> XPCE Compatibility layer
+
+This layer defines some predicates to   enhance portability with SICStus
+and Quintus Prolog. These systems are  no   longer  supported, but it is
+probably wise to keep this layer for `just-in-case'.
+*/
+
+:- meta_predicate
+	auto_call(0),
+	callable_predicate(:).
+
+%%	auto_call(:Goal)
+%
+%	Autoload Goal and call it.  In   SWI-Prolog,  this  simply means
+%	calling it.
 
 auto_call(G) :-
-	G.
+	call(G).
 
 
 		 /*******************************
 		 *      DIALOG EDITOR SUPPORT	*
 		 *******************************/
 
-%%	callable_predicate(:Head)
+%%	callable_predicate(:Head) is semidet.
 %
 %	Succeeds if Head can be called without raising an exception for
 %	an undefined predicate
 
-callable_predicate(Spec) :-
-	strip_module(Spec, M, Head),
+callable_predicate(M:Head) :-
 	callable(Head),
 	functor(Head, Name, Arity),
 	current_predicate(M:Name/Arity).
 
-%%	modified_since_last_loaded(Path)
+%%	modified_since_last_loaded(Path) is semidet.
+%
 %	True is file has been modified since the last time it was loaded.
 
 modified_since_last_loaded(File) :-
 	'$time_source_file'(File, LoadTime, user), !,
 	time_file(File, Modified),
-	Modified @> LoadTime.
+	Modified > LoadTime.
 modified_since_last_loaded(InFile) :-
 	'$time_source_file'(File, LoadTime, user),
 	same_file(InFile, File), !,
 	time_file(File, Modified),
-	Modified @> LoadTime.
+	Modified > LoadTime.
 
 
 		 /*******************************
@@ -91,6 +104,12 @@ prolog:message(context_error(Goal, Context, What)) -->
 	pce_message_context(Context).
 prolog:message(type_error(Goal, ArgN, Type, _Value)) -->
 	[ '~w: argument ~w must be a ~w'-[Goal, ArgN, Type], nl ].
+
+%%	pce_error(+Term) is det.
+%%	pce_warn(+Term) is det.
+%%	pce_info(+Term) is det.
+%
+%	Portability layer wrappers around print_message/2.
 
 pce_error(Term) :-
 	print_message(error, Term).
