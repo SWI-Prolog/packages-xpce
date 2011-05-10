@@ -511,7 +511,13 @@ static PL_dispatch_hook_t	old_dispatch_hook;
 #define PutTerm(t, f)		PL_put_term((t), (f))
 #define UnifyAtom(t, a)		PL_unify_atom((t), (a))
 #define UnifyFloat(t, a)	PL_unify_float((t), (a))
+#if SIZEOF_VOIDP == 8 && SIZEOF_VOIDP != SIZEOF_LONG
+#define UnifyInteger(t, a)	PL_unify_int64((t), (a))
+#define PutInteger(t, a)	PL_put_int64((t), (a))
+#else
 #define UnifyInteger(t, a)	PL_unify_integer((t), (a))
+#define PutInteger(t, a)	PL_put_integer((t), (a))
+#endif
 #define PutVar(t)		PL_put_variable((t))
 #define StripModuleTag(t, m, p)	PL_strip_module((t), (m), (p))
 #define FindPredicate(n, a, m)	PL_pred(PL_new_functor(n, a), m)
@@ -974,7 +980,7 @@ unifyReferenceArg(term_t t, int type, PceCValue value)
 { term_t t2 = PL_new_term_ref();	/* Exploit SWI-Prolog PL_unify-* */
 
   if ( type == PCE_REFERENCE )
-  { if ( !PL_put_integer(t2, value.integer) )
+  { if ( !PutInteger(t2, value.integer) )
       return FALSE;
   } else
   { PceITFSymbol symbol = value.itf_symbol;
