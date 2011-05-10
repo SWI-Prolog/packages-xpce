@@ -120,7 +120,7 @@ make_colour_browser(CB, DataBase) :-
 	    (   send(F, open, read)
 	    ->  repeat,
 		(   get(F, read_line, String)
-		->  get(String, scan, '%d%d%d%*[ 	]%[a-zA-Z0-9_ ]',
+		->  get(String, scan, '%d%d%d%*[ \t]%[a-zA-Z0-9_ ]',
 			vector(R, G, B, Name)),
 		    send(Name, translate, ' ', '_'),
 		    send(Name, downcase),
