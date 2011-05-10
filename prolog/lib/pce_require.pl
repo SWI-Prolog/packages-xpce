@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -33,7 +34,6 @@
 	  [ pce_require/1		% file
 	  , pce_require/3		% file x directive x message
 	  ]).
-
 :- use_module(library(pce)).
 :- require([ absolute_file_name/3
 	   , append/3
@@ -44,6 +44,14 @@
 	   , pce_error/1
 	   , sformat/3
 	   ]).
+
+/** <module> XPCE sanity check and cross-referencer
+
+This module is part of infrastructure to port XPCE between SWI, SICStus
+and Quintus.
+
+@tbd	This should be (re-)based on library(prolog_xref).
+*/
 
 target_prolog(common).			% Common between QP 3.2 and SICStus 3
 
@@ -69,11 +77,19 @@ system_predicate(Head) :-
 		*            TOPLEVEL		*
 		********************************/
 
+%%	pce_require(+File) is det.
+%
+%	Compute the require/1 directive for  File   and  print it to the
+%	current output.
+
 pce_require(File) :-
 	clean,
 	collect(File),
 	report.
 
+%%	pce_require(+File, -Directive, -Message) is det.
+%
+%	Compute the :- require/1 directive by cross-referencing File.
 
 pce_require(File, Directive, Message) :-
 	new(D, string),
@@ -372,7 +388,7 @@ report_undefined([L]) :- !,
 report_undefined([H|T]) :-
 	functor(H, Name, Arity),
 	report_name_arity(Name, Arity),
-	output('~n	   , ', []),
+	output(',~n	     ', []),
 	report_undefined(T).
 
 report_name_arity(Name, Arity) :-
@@ -388,6 +404,7 @@ report_name_arity(Name, Arity) :-
 		********************************/
 
 %%	find_source_file(+Spec, -File)
+%
 %	Find named source file.
 
 find_source_file(Spec, File) :-
