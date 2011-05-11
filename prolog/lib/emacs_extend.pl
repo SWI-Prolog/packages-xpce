@@ -132,6 +132,8 @@ emacs_expansion((:- emacs_end_mode), (:- pce_end_class)).
 
 %%	emacs_mode_bindings(+Mode, +Module, +Bindings, +Syntax)
 
+:- public emacs_mode_bindings/4. % called from code expanded by emacs_expansion/2.
+
 emacs_mode_bindings(Mode, Module, Bindings, Syntax) :-
 	emacs_mode_class(Mode, PceClass),
 	get(@pce, convert, PceClass, class, ClassObject),
