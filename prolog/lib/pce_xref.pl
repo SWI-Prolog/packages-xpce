@@ -2044,6 +2044,8 @@ not_called(File, NotCalled) :-		% non-module version
 	   ;   xref_called(AutoImportFile, NotCalled),
 	       \+ defined(AutoImportFile, NotCalled),
 	       global_predicate(NotCalled)
+	   ;   xref_hook(NotCalled)
+	   ;   xref_hook(user:NotCalled)
 	   ).
 
 record_predicate(M:Term) :-
