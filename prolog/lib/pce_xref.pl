@@ -2026,6 +2026,7 @@ not_called(File, NotCalled) :-		% module version
 	   ;   NotCalled = M:G,
 	       xref_called(ModFile, G),
 	       xref_module(ModFile, M)
+	   ;   record_predicate(Module:NotCalled)
 	   ).
 not_called(File, NotCalled) :-		% non-module version
 	defined(File, NotCalled),
@@ -2040,6 +2041,10 @@ not_called(File, NotCalled) :-		% non-module version
 	       \+ defined(AutoImportFile, NotCalled),
 	       global_predicate(NotCalled)
 	   ).
+
+record_predicate(M:Term) :-
+	functor(Term, Name, Arity),
+	current_record_predicate(_, M:Name/Arity).
 
 %%	xref_called(?Source, ?Callable)
 %
