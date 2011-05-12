@@ -320,9 +320,9 @@ GLOBAL uintptr_t pce_data_pointer_offset;
 #endif
 #endif
 
-#define PointerToCInt(p) (((uintptr_t)(p) - POINTER_OFFSET)/sizeof(int))
+#define PointerToCInt(p) (((uintptr_t)(p) - POINTER_OFFSET)/sizeof(void*))
 #define PointerToInt(p)	 toInt(PointerToCInt(p))
-#define longToPointer(i) ((Any) (i * sizeof(int) + POINTER_OFFSET))
+#define longToPointer(i) ((Any) (i * sizeof(void*) + POINTER_OFFSET))
 #define IntToPointer(i)  longToPointer(valInt(i))
 
 

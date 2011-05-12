@@ -146,7 +146,7 @@ __pce_export PceITFSymbol getITFSymbolName(PceName);
 
 typedef union
 { char		character;		/* Value is a C char */
-  long		integer;		/* Value of PCE int or reference */
+  intptr_t	integer;		/* Value of PCE int or reference */
   double 	real;			/* Value of PCE real */
   char *	string;			/* Value is a C char * */
   void *	pointer;		/* Anonymous pointer */
