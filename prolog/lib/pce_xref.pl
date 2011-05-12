@@ -96,9 +96,13 @@ XPCE based font-end of the Prolog cross-referencer.  Tasks:
 
 %%	gxref
 %
-%	Start graphical cross-referencer on loaded program.
+%	Start graphical cross-referencer on loaded program.  The GUI
+%	is started in the XPCE thread.
 
 gxref :-
+	in_pce_thread(xref_gui).
+
+xref_gui :-
 	send(new(XREF, xref_frame), open),
 	send(XREF, wait),
 	send(XREF, update).
@@ -2046,13 +2050,17 @@ record_predicate(M:Term) :-
 	functor(Term, Name, Arity),
 	current_record_predicate(_, M:Name/Arity).
 
-%%	xref_called(?Source, ?Callable)
+%%	xref_called(?Source, ?Callable) is nondet.
 %
 %	True if Callable is called in   Source, after removing recursive
-%	calls.
+%	calls and calls made to predicates where the condition says that
+%	the predicate should not exist.
 
 xref_called(Source, Callable) :-
-	xref_called(Source, Callable, By),
+	xref_called_cond(Source, Callable, _).
+
+xref_called_cond(Source, Callable, Cond) :-
+	xref_called(Source, Callable, By, Cond),
 	By \= Callable.			% recursive calls
 
 %%	defined(?File, ?Callable)
@@ -2073,13 +2081,34 @@ defined(File, Callable) :-
 
 undefined(File, Undef) :-
 	xref_module(File, _), !,
-	xref_called(File, Undef),
-	\+ (  available(File, Undef, How),
-	      How \== plain_file
+	xref_called_cond(File, Undef, Cond),
+	\+ (   available(File, Undef, How),
+	       How \== plain_file
+	   ;   included_if_defined(Cond, Undef)
 	   ).
 undefined(File, Undef) :-
-	xref_called(File, Undef),
-	\+ available(File, Undef, _).
+	xref_called_cond(File, Undef, Cond),
+	\+ (   available(File, Undef, _)
+	   ;   included_if_defined(Cond, Undef)
+	   ).
+
+
+%%	included_if_defined(+Condition, +Callable) is semidet.
+
+included_if_defined(true, _)  :- !.
+included_if_defined(false, _) :- !, fail.
+included_if_defined(fail, _)  :- !, fail.
+included_if_defined(current_predicate(Name/Arity), Callable) :-
+	functor(Callable, Name, Arity), !.
+included_if_defined(\+ Cond, Callable) :- !,
+	\+ included_if_defined(Cond, Callable).
+included_if_defined((A,B), Callable) :- !,
+	included_if_defined(A, Callable),
+	included_if_defined(B, Callable).
+included_if_defined((A;B), Callable) :- !,
+	(   included_if_defined(A, Callable)
+	;   included_if_defined(B, Callable)
+	).
 
 
 		 /*******************************
