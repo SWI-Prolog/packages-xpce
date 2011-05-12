@@ -610,12 +610,16 @@ colourise_meta_args(_, _, _, _, []) :- !.
 colourise_meta_args(N, Goal, MetaArgs, TB, [P0|PT]) :-
 	arg(N, Goal, Arg),
 	arg(N, MetaArgs, MetaSpec),
-	(   expand_meta(MetaSpec, Arg, Expanded)
-	->  colourise_goal(Expanded, [], TB, P0) % TBD: recursion
-	;   colourise_term_arg(Arg, TB, P0)
-	),
+	colourise_meta_arg(MetaSpec, Arg, TB, P0),
 	NN is N + 1,
 	colourise_meta_args(NN, Goal, MetaArgs, TB, PT).
+
+colourise_meta_arg(MetaSpec, Arg, TB, Pos) :-
+	expand_meta(MetaSpec, Arg, Expanded), !,
+	colourise_goal(Expanded, [], TB, Pos). % TBD: recursion
+colourise_meta_arg(_, Arg, TB, Pos) :-
+	colourise_term_arg(Arg, TB, Pos).
+
 
 %	meta_args(+Goal, -ArgSpec)
 %
@@ -764,7 +768,7 @@ colourise_term_arg(Atom, TB, Pos) :-			% single quoted atom
 	colour_item(quoted_atom, TB, Pos).
 colourise_term_arg(List, TB, list_position(_, _, Elms, Tail)) :- !,
 	colourise_list_args(Elms, Tail, List, TB, classify).	% list
-colourise_term_arg(Compound, TB, Pos) :- 		% compound
+colourise_term_arg(Compound, TB, Pos) :-		% compound
 	compound(Compound), !,
 	colourise_term_args(Compound, TB, Pos).
 colourise_term_arg(_, TB, string_position(F, T)) :- !,	% string
@@ -1089,12 +1093,12 @@ head_colours(M:_, meta-[module(M),extern(M)]).
 
 def_style(goal(built_in,_),	style(colour := blue)).
 def_style(goal(imported(_),_),	style(colour := blue)).
-def_style(goal(autoload,_), 	style(colour := navy_blue)).
+def_style(goal(autoload,_),	style(colour := navy_blue)).
 def_style(goal(global,_),	style(colour := navy_blue)).
 def_style(goal(undefined,_),	style(colour := red)).
 def_style(goal(thread_local(_),_), style(colour := magenta,
 				      underline:= @on)).
-def_style(goal(dynamic(_),_), 	style(colour := magenta)).
+def_style(goal(dynamic(_),_),	style(colour := magenta)).
 def_style(goal(multifile(_),_),	style(colour := navy_blue)).
 def_style(goal(expanded,_),	style(colour := blue,
 				      underline := @on)).
@@ -1112,19 +1116,19 @@ def_style(head(extern(_)),	style(bold := @on, colour := blue)).
 def_style(head(dynamic),	style(bold := @on, colour := magenta)).
 def_style(head(multifile),	style(bold := @on, colour := navy_blue)).
 def_style(head(unreferenced),	style(bold := @on, colour := red)).
-def_style(head(hook),	  	style(underline  := @on, colour := blue)).
-def_style(head(meta),	  	@default).
+def_style(head(hook),		style(underline  := @on, colour := blue)).
+def_style(head(meta),		@default).
 def_style(head(constraint(_)),	style(bold := @on, colour := darkcyan)).
-def_style(head(_),	  	style(bold := @on)).
+def_style(head(_),		style(bold := @on)).
 def_style(module(_),		style(colour := dark_slate_blue)).
 def_style(comment,		style(colour := dark_green)).
 
-def_style(directive,	  	style(background := grey90)).
-def_style(method(_),	  	style(bold := @on)).
+def_style(directive,		style(background := grey90)).
+def_style(method(_),		style(bold := @on)).
 
-def_style(var,		  	style(colour := red4)).
+def_style(var,			style(colour := red4)).
 def_style(unbound,		style(bold := @on, colour := red)).
-def_style(quoted_atom,        	style(colour := navy_blue)).
+def_style(quoted_atom,		style(colour := navy_blue)).
 def_style(string,		style(colour := navy_blue)).
 def_style(nofile,		style(colour := red)).
 def_style(file(_),		style(colour := blue,
@@ -1136,14 +1140,14 @@ def_style(class(library(_),_),	style(colour := navy_blue,
 				      underline := @on)).
 def_style(class(local(_,_,_),_), style(underline := @on)).
 def_style(class(user(_),_),	style(underline := @on)).
-def_style(class(user,_), 	style(underline := @on)).
+def_style(class(user,_),	style(underline := @on)).
 def_style(class(undefined,_),	style(colour := red,
 				      underline  := @on)).
 def_style(prolog_data,		style(colour := blue,
 				      underline  := @on)).
 
-def_style(keyword(_), 		style(colour := blue)).
-def_style(identifier, 		style(bold := @on)).
+def_style(keyword(_),		style(colour := blue)).
+def_style(identifier,		style(bold := @on)).
 def_style(delimiter,		style(bold := @on)).
 def_style(expanded,		style(colour := blue,
 				      underline  := @on)).
@@ -1317,6 +1321,8 @@ specified_item(body, Term, TB, Pos) :- !,
 	colourise_body(Term, TB, Pos).
 specified_item(setof, Term, TB, Pos) :- !,
 	colourise_setof(Term, TB, Pos).
+specified_item(meta(MetaSpec), Term, TB, Pos) :- !,
+	colourise_meta_arg(MetaSpec, Term, TB, Pos).
 					% DCG goal in body
 specified_item(dcg, Term, TB, Pos) :- !,
 	colourise_dcg(Term, [], TB, Pos).
