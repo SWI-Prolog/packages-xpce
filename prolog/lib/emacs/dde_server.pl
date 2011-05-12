@@ -35,10 +35,19 @@
 	  ]).
 :- use_module(library(pce)).
 
+/** <module> Register PceEmacs with the Windows DDE services
+
+This module registers the DDE service   =PceEmacs= that allows accessing
+PceEmacs from the Windows shell. The access   points  are dummy calls if
+DDE is nor provided.
+*/
+
 %%	start_emacs_dde_server is det.
 %
 %	If there is no DDE server, register it as =PceEmacs= using the
 %	topic =control=.
+
+:- if(current_predicate(open_dde_conversation/3)).
 
 start_emacs_dde_server(_) :-
 	dde_current_service('PceEmacs', control), !.
@@ -69,8 +78,21 @@ handle_request(Item) :-
 	format(user_error, 'PceEmacs DDE server: unknown request: ~q', [Item]),
 	fail.
 
+:- else.
+
+start_emacs_dde_server(_).
+
+:- endif.
+
+:- if(current_predicate(shell_register_dde/6)).
+
 win_register_emacs :-
 	current_prolog_flag(argv, [Me|_]),
 	shell_register_dde('prolog.type', edit,
 			   'PceEmacs', control, 'edit %1', Me).
 
+:- else.
+
+win_register_emacs.
+
+:- endif.

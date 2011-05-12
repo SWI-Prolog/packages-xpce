@@ -263,30 +263,31 @@ customise(_Emacs) :->
 
 server_start(Emacs, Force:[bool]) :->
 	"Start server-mode (xpce-client interface)"::
-	(   (	\+ get(class(socket), send_method, listen, _)
-	    ;	\+ send(class(socket), has_feature, unix_domain)
-	    ;	get(@emacs_server, status, listen)
-	    )
-	->  (   current_prolog_flag(windows, true)
-	    ->	Goal = start_emacs_dde_server(false), % fool xref
-	        catch(Goal, _, true)
-	    ;	true
-	    )
-	;   (	send(@emacs_server_address, exists, @off)
-	    ->  (   Force \== @on,
-		    pce_catch_error(socket, send(@emacs_server, connect))
-		->  free(@emacs_server),
-		    send(Emacs, report, status, 'Server on other PceEmacs'),
-		    fail
-		;   free(@emacs_server), % will recreate!
-		    ignore(send(Emacs, report, status, 'Restarted server')),
-		    send(@emacs_server_address, remove)
-		)
-	    ;	true
-	    ),
-	    ignore(send(@emacs_server, listen))
-	).
+	server_start(Emacs, Force).
 
+:- if(current_predicate(start_emacs_dde_server/1)).
+server_start(_Emacs, _Force) :-
+	(   \+ get(class(socket), send_method, listen, _)
+	;   \+ send(class(socket), has_feature, unix_domain)
+	),
+	start_emacs_dde_server(false).
+:- endif.
+server_start(_Emacs, _Force) :-
+	get(@emacs_server, status, listen), !.
+server_start(Emacs, Force) :-
+	(   send(@emacs_server_address, exists, @off)
+        ->  (   Force \== @on,
+	        pce_catch_error(socket, send(@emacs_server, connect))
+	    ->  free(@emacs_server),
+		send(Emacs, report, status, 'Server on other PceEmacs'),
+		fail
+	    ;   free(@emacs_server), % will recreate!
+		ignore(send(Emacs, report, status, 'Restarted server')),
+		send(@emacs_server_address, remove)
+	    )
+	;   true
+	),
+	ignore(send(@emacs_server, listen)).
 
 :- pce_group(customise).
 
