@@ -2030,7 +2030,7 @@ not_called(File, NotCalled) :-		% module version
 	   ;   NotCalled = M:G,
 	       xref_called(ModFile, G),
 	       xref_module(ModFile, M)
-	   ;   record_predicate(Module:NotCalled)
+	   ;   generated_callable(Module:NotCalled)
 	   ).
 not_called(File, NotCalled) :-		% non-module version
 	defined(File, NotCalled),
@@ -2046,11 +2046,12 @@ not_called(File, NotCalled) :-		% non-module version
 	       global_predicate(NotCalled)
 	   ;   xref_hook(NotCalled)
 	   ;   xref_hook(user:NotCalled)
+	   ;   generated_callable(user:NotCalled)
 	   ).
 
-record_predicate(M:Term) :-
+generated_callable(M:Term) :-
 	functor(Term, Name, Arity),
-	current_record_predicate(_, M:Name/Arity).
+	prolog:generated_predicate(M:Name/Arity).
 
 %%	xref_called(?Source, ?Callable) is nondet.
 %
