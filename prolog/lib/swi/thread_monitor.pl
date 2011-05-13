@@ -393,9 +393,10 @@ variable(graphs, chain, get, "Graphs shown").
 initialise(TD, TS:thread_status, Graphs:chain, H:int, V:int) :->
 	"Create from thread-status report"::
 	send_super(TD, initialise),
+	default_size_limit(Limit),
 	send(TD, slot, graphs, Graphs),
 	send(TD, axis,
-	     new(X, thread_axis(y, 100, 1e8, 10,  V, point(50,200)))),
+	     new(X, thread_axis(y, 100, Limit, 10,  V, point(50,200)))),
 	send(X, scale, log),
 	send(TD, axis,
 	     plot_axis(x, 0, H, 100, H, point(50, 200))),
@@ -403,6 +404,11 @@ initialise(TD, TS:thread_status, Graphs:chain, H:int, V:int) :->
 	send(TS, recall, H),
 	send(TD, update).
 
+default_size_limit(Limit) :-
+	(   current_prolog_flag(address_bits, 32)
+	->  Limit is 128*1000*1000
+	;   Limit is 16*1000*1000*1000
+	).
 
 attach(TD, TS:thread_status) :->
 	"Switch to another thread"::
@@ -515,11 +521,14 @@ label_for_value(A, Val:'int|real', Gr:graphical) :<-
 	"Generate readable labels"::
 	(   Val < 1000
 	->  S = Val
-	;   Val < 1000000
+	;   Val < 1000*1000
 	->  K is Val / 1000,
 	    new(S, string('%dK', K))
-	;   M is Val / 1000000,
+	;   Val < 1000*1000*1000
+	->  M is Val / (1000*1000),
 	    new(S, string('%dM', M))
+	;   M is Val / (1000*1000*1000),
+	    new(S, string('%dG', M))
 	),
 	get(A, tag_font, Font),
 	new(Gr, text(S, right, Font)).
@@ -595,7 +604,7 @@ graphs(Win, Graphs:chain) :->
 :- pce_begin_class(prolog_thread_monitor, persistent_frame,
 		   "Monitor thread-activity").
 
-variable(timer,	  	  timer*,     get, "Update timer").
+variable(timer,		  timer*,     get, "Update timer").
 variable(graphs,	  chain,      get, "Which graphs are shown").
 variable(update_interval, 'int|real*', get, "Update interval").
 
