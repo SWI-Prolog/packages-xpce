@@ -3,9 +3,10 @@
     Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2002, University of Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -322,7 +323,12 @@ update(TB) :->
 	       send(TB, update_thread, Id, Status)),
 	send(Dict, for_all,
 	     if(@arg1?seen == @off,
-		message(@arg1, free))).
+		message(@arg1, free))),
+	(   get(TB, selection, TS),
+	    TS \== @nil
+	->  send(TB, report_status, TS)
+	;   true
+	).
 
 
 recall(TB, Recall:'1..') :->
@@ -357,18 +363,25 @@ details(TB, TS:thread_status) :->
 	"Show detailed usage of thread"::
 	get(TB?frame, member, thread_window, P),
 	send(P, thread_diagram, TS),
+	send(TB, report_status, TS).
+
+report_status(TB, TS:thread_status) :->
+	"Report status of a thread"::
 	get(TS, status, Status),
 	get(TS, key, TID),
-	send(TB, report_status, TID, Status).
-
-report_status(TB, TID:any, Status:prolog) :->
-	"Report status of a thread"::
+	get(TS, lastcpu, Time),
+	(   number(Time)
+	->  RTime = Time
+	;   RTime = 0
+	),
 	(   Status = exception(Except),
 	    special_exception(Except)
 	->  message_to_string(Except, Message),
-	    send(TB, report, status, 'Thread %s ERROR: %s', TID, Message)
+	    send(TB, report, status,
+		 'Thread %s ERROR: %s (%.3f sec CPU)', TID, Message, RTime)
 	;   atomic(Status)
-	->  send(TB, report, status, 'Thread %s status: %s', TID, Status)
+	->  send(TB, report, status,
+		 'Thread %s status: %s (%.3f sec CPU)', TID, Status, RTime)
 	;   new(S, text_buffer),
 	    pce_open(S, write, Out),
 	    write_term(Out, Status, [ max_depth(5),
@@ -376,7 +389,8 @@ report_status(TB, TID:any, Status:prolog) :->
 				      portray(true)
 				    ]),
 	    close(Out),
-	    send(TB, report, status, 'Thread %s status: %s', TID, S?contents)
+	    send(TB, report, status,
+		 'Thread %s status: %s (%.3f sec CPU)', TID, S?contents, RTime)
 	).
 
 special_exception(error(_,_)).
@@ -406,8 +420,8 @@ initialise(TD, TS:thread_status, Graphs:chain, H:int, V:int) :->
 
 default_size_limit(Limit) :-
 	(   current_prolog_flag(address_bits, 32)
-	->  Limit is 128*1000*1000
-	;   Limit is 16*1000*1000*1000
+	->  Limit is 100*1000*1000
+	;   Limit is 10*1000*1000*1000
 	).
 
 attach(TD, TS:thread_status) :->
