@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        wielemak@science.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2008, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -882,6 +883,17 @@ pi_to_term(Name//Arity0, Term) :-
 	Arity is Arity0 + 2,
 	functor(Term, Name, Arity).
 
+%%	colourise_prolog_flag_name(+Name, +TB, +Pos)
+%
+%	Colourise the name of a Prolog flag
+
+colourise_prolog_flag_name(Name, TB, Pos) :-
+	current_prolog_flag(Name, _), !,
+	colour_item(flag_name(Name), TB, Pos).
+colourise_prolog_flag_name(Name, TB, Pos) :-
+	colour_item(no_flag_name(Name), TB, Pos).
+
+
 %%	colour_item(+Class, +TB, +Pos)
 %
 %	colourise region if a style is defined for this class.
@@ -1037,6 +1049,9 @@ goal_colours(retract(_),	     built_in-[db]).
 goal_colours(retractall(_),	     built_in-[db]).
 goal_colours(clause(_,_),	     built_in-[db,classify]).
 goal_colours(clause(_,_,_),	     built_in-[db,classify,classify]).
+% misc
+goal_colours(set_prolog_flag(_,_),   built_in-[prolog_flag_name,classify]).
+goal_colours(current_prolog_flag(_,_), built_in-[prolog_flag_name,classify]).
 % XPCE stuff
 goal_colours(pce_autoload(_,_),	     classify-[classify,file]).
 goal_colours(pce_image_directory(_), classify-[directory]).
@@ -1145,6 +1160,8 @@ def_style(class(undefined,_),	style(colour := red,
 				      underline  := @on)).
 def_style(prolog_data,		style(colour := blue,
 				      underline  := @on)).
+def_style(flag_name(_),		style(colour := blue)).
+def_style(no_flag_name(_),	style(colour := red)).
 
 def_style(keyword(_),		style(colour := blue)).
 def_style(identifier,		style(bold := @on)).
@@ -1344,6 +1361,9 @@ specified_item(imports(File), Term, TB, Pos) :- !,
 					% Name/Arity, ...
 specified_item(predicates, Term, TB, Pos) :- !,
 	colourise_declarations(Term, TB, Pos).
+					% set_prolog_flag(Name, _)
+specified_item(prolog_flag_name, Term, TB, Pos) :- !,
+	colourise_prolog_flag_name(Term, TB, Pos).
 					% XPCE new argument
 specified_item(pce_new, Term, TB, Pos) :- !,
 	(   atom(Term)
