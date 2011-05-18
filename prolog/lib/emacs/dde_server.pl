@@ -60,7 +60,7 @@ start_emacs_dde_server(true) :-
 start_emacs_dde_server(false) :-
 	open_dde_conversation('PceEmacs', control, Handle), !,
 	close_dde_conversation(Handle),
-	send(@emacs, report, status, 'Server on other PceEmacs').
+	ignore(send(@emacs, report, status, 'Server on other PceEmacs')).
 start_emacs_dde_server(_) :-
 	dde_register_service('PceEmacs'(control, Item),
 			     handle_request(Item)).

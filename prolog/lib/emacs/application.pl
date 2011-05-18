@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -31,10 +32,9 @@
 
 :- module(emacs_application, []).
 :- use_module(library(pce)).
-:- (   current_prolog_flag(windows, true)
-   ->  use_module(dde_server)
-   ;   true
-   ).
+:- if(current_prolog_flag(windows, true)).
+:- use_module(dde_server).
+:- endif.
 :- require([ ignore/1
 	   , pce_help_file/2
 	   ]).
@@ -269,7 +269,7 @@ server_start(Emacs, Force:[bool]) :->
 server_start(_Emacs, _Force) :-
 	(   \+ get(class(socket), send_method, listen, _)
 	;   \+ send(class(socket), has_feature, unix_domain)
-	),
+	), !,
 	start_emacs_dde_server(false).
 :- endif.
 server_start(_Emacs, _Force) :-
