@@ -135,7 +135,6 @@ pce_ifhostproperty(prolog(swi),
 	      new(hash_table)).			  % name --> mode object
 :- pce_global(@emacs,
 	      new(emacs(@emacs_buffers))).
-:- pce_global(@emacs_comment_column, new(number(40))).
 :- pce_global(@emacs_default_mode, new(var(value := script))).
 :- pce_global(@emacs_mode_list, make_emacs_mode_list).
 :- pce_global(@emacs_interpreter_mode_list, make_emacs_interpreter_mode_list).
@@ -223,7 +222,7 @@ make_emacs_content_mode_list(Sheet) :-
 %	True if Mode must be used for a   file in which Regex matches in
 %	the first Limit characters of the file.
 
-emacs_content_mode('library(chr)', 	5000,	chr).
+emacs_content_mode('library(chr)',	5000,	chr).
 
 
 %	Do not make backup of a file matching this pattern

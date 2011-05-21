@@ -61,6 +61,8 @@ variable(bracket_gen,	    int*,	get, "Generation we checked brackets").
 variable(bracket_caret,	    int*,	get, "Location we checked brackets").
 variable(comment_column,    int,        both, "Column for line comment").
 variable(show_line_numbers, 'int|bool', get,  "Show line numbers?").
+
+class_variable(comment_column,	  'int',      48).
 class_variable(show_line_numbers, 'int|bool', 250000).
 
 setup_mode(E) :->
@@ -68,11 +70,6 @@ setup_mode(E) :->
 	send_super(E, setup_mode),
 	send(E, fill_mode, @on),
 	send(E, style, matching_bracket, style(background := skyblue)).
-
-initialise(M) :->
-	"Inititialise comment_column"::
-	send(M, send_super, initialise),
-	send(M, comment_column, @emacs_comment_column).
 
 
 		 /*******************************
@@ -446,7 +443,7 @@ indent_comment_line(M) :->
 	get(M, caret, Caret),
 	get(M, scan, Caret, line, -1, start, SOPL),
 	new(LeadRe, regex(string('%s[ \t]*', CS))),
-	get(LeadRe, match, TB, SOPL, Len), 	% Previous holds comment
+	get(LeadRe, match, TB, SOPL, Len),	% Previous holds comment
 	get(M, scan, Caret, line, 0, start, SOL),
 	send(M, looking_at, string('%s?[ \t]*$', CS), SOL),
 	get(TB, contents, SOPL, Len, Lead),
