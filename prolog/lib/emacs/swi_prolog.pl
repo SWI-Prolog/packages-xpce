@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -39,6 +40,18 @@
 	user:message_hook/3.
 :- dynamic
 	user:message_hook/3.
+
+/** <module> Add messages related to a source-location to the GUI
+
+This module implements user:message_hook/3 to add messages printed using
+print_message/2 that can be related to   a source-location to the window
+@prolog_warnings.
+
+This library is always loaded when XPCE is loaded.  Its functionality is
+controlled by the Prolog flag message_ide.
+*/
+
+:- create_prolog_flag(message_ide, true, []).
 
 
 		 /*******************************
@@ -115,15 +128,19 @@ dlist(Codes, Tail, Codes, Tail).
 %	Hook clauses that direct error messages to the (xpce) IDE.
 
 user:message_hook(Term, Level, Lines) :-
+	current_prolog_flag(message_ide, true),
+	ide_message(Term, Level, Lines).
+
+ide_message(Term, Level, Lines) :-
 	accept_level(Level),
 	\+ object(@loading_emacs),
 	message_to_pce(Term, Lines, Location, String),
 	in_pce_thread(ide_message(Location, String)),
 	fail.
-user:message_hook(make(reload(_Files)), _, _) :-
+ide_message(make(reload(_Files)), _, _) :-
 	in_pce_thread(clear_message_list),
 	fail.
-user:message_hook(emacs(consult(_File)), _, _) :-
+ide_message(emacs(consult(_File)), _, _) :-
 	in_pce_thread(clear_message_list),
 	fail.
 
