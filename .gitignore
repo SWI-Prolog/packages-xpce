@@ -33,6 +33,7 @@ config.status
 CXX/demo/Makefile
 Makefile
 lib/*-linux
+lib/*-darwin*
 linux
 man/reference/index.obj
 pl/src/Makefile.bin
@@ -44,6 +45,8 @@ src/names
 src/.names-sentinel
 src/xpce-stub.exe
 src/xpce-stub.res
+src/find_names.dSYM
+src/xpce-install.dSYM
 xpce.spec
 src/xpce-install.exe
 src/config.h
