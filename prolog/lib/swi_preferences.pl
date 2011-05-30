@@ -63,7 +63,7 @@ locate_preferences(xpce_user, File) :-
 	ensure_xpce_config_dir(Dir),
 	get(string('%s/Defaults', Dir), value, File).
 locate_preferences(prolog, File) :-
-	'$option'(init_file, Base, Base), % should be in current_prolog_flag!
+	'$option'(init_file, Base), % should be in current_prolog_flag!
 	(   absolute_file_name(user_profile(Base), File,
 			       [ access(read),
 				 file_errors(fail)
