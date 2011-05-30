@@ -74,7 +74,7 @@
 	  ispell		   = button(file),
 	  shell			   = button(file),
 	  (mode)		   = key('\\em') +
-	  			     button(file, @emacs_mode?modes),
+				     button(file, @emacs_mode?modes),
 	  properties		   = button(file),
 	  -			   = button(file),
 	  quit			   = key('\\C-x\\C-c') + button(file),
@@ -88,6 +88,7 @@
 	  -			   = button(edit),
 	  find			   = button(edit),
 	  replace		   = button(edit),
+	  preferences		   = button(edit),
 
 					% BROWSER menu
 	  split_window		   = key('\\C-x2') + button(browse),
@@ -162,7 +163,7 @@ auto_colourise_buffer(M) :->
 	    get(TB, size, Size),
 	    get(M, auto_colourise_size_limit, Limit),
 	    Size < Limit,
-	    get(M, focus_function, @nil) 	% don't colour in special modes
+	    get(M, focus_function, @nil)	% don't colour in special modes
 	->  (	send(M, colourise_buffer)
 	    ->	send(TB, coloured_generation, Generation)
 	    ;	true
@@ -221,6 +222,10 @@ quit(M) :->
 	"Destroy the editor"::
 	ignore(send(M?text_buffer, save_if_modified)),
 	send(M, destroy).
+
+preferences(_M) :->
+	"Edit (xpce) preferences"::
+	prolog_edit_preferences(xpce).
 
 
 		 /*******************************
@@ -582,7 +587,7 @@ replace_end(M) :->
 '_query_replace_regex'(M, Id:event_id) :->
 	"Focus function for query_replace_regex"::
 	(   Id == 0'y				% replace-and-continue
- 	->  replace_match(M),
+	->  replace_match(M),
 	    ignore(replace_find_and_mark(M))
 	;   Id == 0'.				% replace and done
 	->  replace_match(M),
