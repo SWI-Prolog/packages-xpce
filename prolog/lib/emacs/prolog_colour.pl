@@ -888,10 +888,13 @@ pi_to_term(Name//Arity0, Term) :-
 %	Colourise the name of a Prolog flag
 
 colourise_prolog_flag_name(Name, TB, Pos) :-
-	current_prolog_flag(Name, _), !,
-	colour_item(flag_name(Name), TB, Pos).
+	atom(Name), !,
+	(   current_prolog_flag(Name, _)
+	->  colour_item(flag_name(Name), TB, Pos)
+	;   colour_item(no_flag_name(Name), TB, Pos)
+	).
 colourise_prolog_flag_name(Name, TB, Pos) :-
-	colour_item(no_flag_name(Name), TB, Pos).
+	colourise_term(Name, TB, Pos).
 
 
 %%	colour_item(+Class, +TB, +Pos)
