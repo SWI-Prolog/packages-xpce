@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        wielemak@science.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2006, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -33,7 +34,8 @@
 :- use_module(library(pce)).
 :- use_module(library(pce_config)).
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+/** <module> Save/restore layout of XPCE windows
+
 This library defines the class  persistent_frame,   a  subclass of class
 frame remembering its geometry  and  optionally   (by  default  on)  the
 subwindow layout.
@@ -57,14 +59,15 @@ for  which  you  want  the  geometry  remembered  a  subclass  of  class
 persistent_frame rather than class frame.  Note   that  this implies you
 have to create your frame explitely:
 
+    ==
 	...
 	new(F, persistent_frame('Pretty Application')),
 	send(F, geometry_key, pretty_app),
 	send(F, append, new(D, dialog)),
 	send(new(V, view), right, D),
 	...
-
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+    ==
+*/
 
 :- pce_begin_class(persistent_frame, frame, "Frame remembering location").
 
