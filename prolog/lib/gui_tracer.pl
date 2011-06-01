@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -38,8 +39,24 @@
 	    gdebug/0			% Start tracer and debug
 	  ]).
 :- set_prolog_flag(generate_debug_info, false).
-:- module_transparent
-	gspy/1.
+:- meta_predicate
+	gspy(:).
+
+/** <module> Graphical debugger utilities
+
+This module provides utilities that use   the  graphical debugger rather
+than the conventional 4-port commandline debugger.  This library is part
+of XPCE.
+
+@see	library(threadutil) provides another set t* predicates that
+	deal with threads.
+*/
+
+%%	guitracer is det.
+%
+%	Enable the graphical debugger.  A   subsequent  call  to trace/0
+%	opens the de debugger window. The   tranditional debugger can be
+%	re-enabled using noguitracer/0.
 
 guitracer :-
 	current_prolog_flag(gui_tracer, true), !.
@@ -57,6 +74,12 @@ guitracer :-
 	visible(+cut_call),
 	print_message(informational, gui_tracer(true)).
 
+%%	noguitracer is det.
+%
+%	Disable the graphical debugger.
+%
+%	@see guitracer/0
+
 noguitracer :-
 	current_prolog_flag(gui_tracer, true), !,
 	set_prolog_flag(gui_tracer, false),
@@ -64,7 +87,7 @@ noguitracer :-
 	print_message(informational, gui_tracer(false)).
 noguitracer.
 
-%	gtrace/0
+%%	gtrace is det.
 %
 %	Like trace/0, but uses the graphical tracer.
 
@@ -74,17 +97,17 @@ gtrace :-
 	guitracer,
 	trace.
 
-%%	gspy(+Spec)
+%%	gspy(:Spec) is det.
 %
-%	Like spy/1, but uses the graphical tracer.
+%	Same as spy/1, but uses the graphical debugger.
 
 gspy(Predicate) :-
 	guitracer,
 	spy(Predicate).
 
-%	gdebug
+%%	gdebug is det.
 %
-%	Like debug/0, but uses the graphical tracer.
+%	Same as debug/0, but uses the graphical tracer.
 
 gdebug :-
 	guitracer,
