@@ -115,6 +115,16 @@ unlink(B) :->
 	),
 	send(B, send_super, unlink).
 
+report(B,
+       Kind:kind={status,inform,progress,done,warning,error,fatal},
+       Format:format=[char_array],
+       Argv:any ...) :->
+	"Report to associated editors"::
+	get(B, editors, Editors),
+	Message =.. [message, @arg1, report, Kind, Format | Argv],
+	send(Editors, for_all, Message).
+
+
 scratch_text('% This buffer is for notes you don\'t want to save.\n\
 	     % If you want to create a file, visit that file with C-x C-f,\n\
 	     % then enter the text in that file\'s own buffer.\n\n').
