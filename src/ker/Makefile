@@ -21,7 +21,7 @@ proto.h:	$(KER1SRC)
 		$(MKPROTO) $(KER1SRC:.o=.c) | $(CLPROTO) > proto.h
 
 version.h:	../../Makefile
-		@echo "#define MACHINE \"$(ARCH)\"" > %$@%
+		@echo "#define MACHINE \"$(PLARCH)\"" > %$@%
 		@echo "#define PCE_VERSION \"$(VERSION)\"" >> %$@%
 		@echo "#define OS \"$(OS)\"" >> %$@%
 		@if cmp -s %$@% $@; then rm %$@%; else mv %$@% $@; fi

@@ -149,7 +149,6 @@ SOMAJOR=$(VMAJOR)
 SOMINOR=$(VMINOR).$(VPATCH)
 PCEVERSION=$(VMAJOR).$(VMINOR).$(VPATCH)
 VERSION=$(PCEVERSION), $(PCEVERSIONDATE)
-ARCH=@ARCH@
 OS=@OS@
 
 ################################################################
@@ -184,7 +183,7 @@ everything:	proto tags xpce-pl
 
 banner:
 		@echo "****************"
-		@echo "Making XPCE $(VERSION) for $(ARCH)-$(OS)"
+		@echo "Making XPCE $(VERSION) for $(PLARCH)-$(OS)"
 		@echo "****************"
 
 .PHONY:		xpce prepare libXPCE
@@ -424,7 +423,7 @@ $(srcdir)/ker/proto.h:	$(KER1SRC)
 		$(MKPROTO) $(KER1SRC) | grep -v PceGoal | grep -v PceType > $@
 
 version.h:	Makefile
-		@echo "#define MACHINE \"$(ARCH)\"" > $@%
+		@echo "#define MACHINE \"$(PLARCH)\"" > $@%
 		@echo "#define PCE_VERSION \"$(VERSION)\"" >> $@%
 		@echo "#define OS \"$(OS)\"" >> $@%
 		@mv $@% $@

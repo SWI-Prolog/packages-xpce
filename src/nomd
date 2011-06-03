@@ -2,11 +2,11 @@
 
 arch=$1
 
-echo "[ERROR: No machine description file for ARCH=$arch]"
+echo "[ERROR: No machine description file for PLARCH=$arch]"
 
 arches=`ls md | grep -v CVS | sed 's/md-\(.*\)\.h/\1/'`
 
 echo ""
-echo "Please edit ARCH in Makefile to be one of:"
+echo "Please edit PLARCH in Makefile to be one of:"
 for a in $arches; do echo "	$a"; done
 exit 1
