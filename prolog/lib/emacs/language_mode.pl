@@ -159,8 +159,10 @@ fill_comment_paragraph(M, Justify:justify=[bool|int], From:[int]) :->
 	;   get(TB, size, End)
 	),
 	free(Re),
-	(   new(LeadRe, regex(string('%s[^\n]*\t[\t]*', CS))),
-	    send(LeadRe, match, TB, Start)
+	(   new(LeadRe, regex(string('%s([^\n\t]*)\t[\t]*', CS))),
+	    send(LeadRe, match, TB, Start),
+	    get(LeadRe, register_size, 1, Size),
+	    Size > 0
 	->  LeadCont = CS
 	;   new(LeadRe, regex(string('%s%s*[ \t]*', CS, CS))),
 	    LeadCont = @default
