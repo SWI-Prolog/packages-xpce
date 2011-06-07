@@ -77,9 +77,8 @@ user:prolog_trace_interception(Port, Frame, CHP, Action) :-
 
 map_action(creep, _, continue) :-
 	traceall.
-map_action(skip, Frame, continue) :-
-	trace,
-	prolog_skip_frame(Frame).
+map_action(skip, _Frame, skip) :-
+	trace.
 map_action(into, _, continue) :-
 	visible(+unify),
 	traceall.
