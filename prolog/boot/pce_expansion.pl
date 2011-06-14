@@ -106,7 +106,7 @@ pop_compile_operators :-
 
 pce_term_expansion(In, Out) :-
 	pce_pre_expand(In, In0),
-	(   list(In0)
+	(   is_list(In0)
 	->  maplist(map_term_expand, In0, In1),
 	    flatten(In1, Out0),
 	    (	Out0 = [X]
@@ -115,9 +115,6 @@ pce_term_expansion(In, Out) :-
 	    )
 	;   do_term_expand(In0, Out)
 	).
-
-list([]).
-list([_|_]).
 
 map_term_expand(X, X) :-
 	var(X), !.
@@ -183,7 +180,7 @@ head_arg(_, A) :-
 
 pce_pre_expand(X, Y) :-
 	user:pce_pre_expansion_hook(X, X1), !,
-	(   list(X1)
+	(   is_list(X1)
 	->  maplist(do_pce_pre_expand, X1, Y)
 	;   do_pce_pre_expand(X1, Y)
 	).
@@ -455,7 +452,7 @@ Importing the template (pce_use_class_template/1):
 template_clause((M:send_implementation(Id, Msg, R) :- Body),
 		[ (M:send_implementation(Tid, ClassMsg, R) :- ClassBody),
 		  (M:(send_implementation(Id, Msg, R) :-
-		  	send_implementation(Tid, IClassMsg, R)))
+			send_implementation(Tid, IClassMsg, R)))
 		]) :- !,
 	atom_concat('T-', Id, Tid),
 	Msg =.. Args,
@@ -467,7 +464,7 @@ template_clause((M:send_implementation(Id, Msg, R) :- Body),
 template_clause((M:get_implementation(Id, Msg, R, V) :- Body),
 		[ (M:get_implementation(Tid, ClassMsg, R, V) :- ClassBody),
 		  (M:(get_implementation(Id, Msg, R, V) :-
-		  	get_implementation(Tid, IClassMsg, R, V)))
+			get_implementation(Tid, IClassMsg, R, V)))
 		]) :- !,
 	atom_concat('T-', Id, Tid),
 	Msg =.. Args,
@@ -551,7 +548,7 @@ use_template_send_method(Template, pce_principal:Clause) :-
 	(   Clause = pce_lazy_send_method(Sel, ClassName, NewBinder),
 	    NewBinder =.. [Functor, NewId | RestBinder]
 	;   Clause = (send_implementation(NewId, Msg, R) :-
-		     	send_implementation(Tid, IClassMsg, R)),
+			send_implementation(Tid, IClassMsg, R)),
 	    attribute(ClassName, super, SuperClass), % TBD: pce_extend_class/1
 	    arg(2, Binder, Types),
 	    type_arity(Types, Arity),
@@ -573,7 +570,7 @@ use_template_get_method(Template, pce_principal:Clause) :-
 	(   Clause = pce_lazy_get_method(Sel, ClassName, NewBinder),
 	    NewBinder =.. [Functor, NewId | RestBinder]
 	;   Clause = (get_implementation(NewId, Msg, R, V) :-
-		     	get_implementation(Tid, IClassMsg, R, V)),
+			get_implementation(Tid, IClassMsg, R, V)),
 	    attribute(ClassName, super, SuperClass), % TBD: pce_extend_class/1
 	    arg(3, Binder, Types),
 	    type_arity(Types, Arity),
