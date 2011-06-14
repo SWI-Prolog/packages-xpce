@@ -46,6 +46,15 @@ save_text(M) :->
 	     if(message(@arg1?window, instance_of, prolog_source_view),
 		message(@arg1?window, edit, @off))).
 
+quit(M) :->
+	"Destroy the editor"::
+	ignore(send(M?text_buffer, save_if_modified)),
+	(   get(M, frame, Frame)
+	->  send(Frame, quitted, @on),
+	    send(Frame, nodebug)
+	;   send(M, destroy)
+	).
+
 :- pce_end_class.
 
 
