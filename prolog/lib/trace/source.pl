@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -47,23 +48,23 @@
 		 *	       STYLES		*
 		 *******************************/
 
-style(call,  		style(background := green,
+style(call,		style(background := green,
 			      icon := 'call.xpm')).
-style(break, 		style(background := cyan)).
-style(exit,  		style(background := green,
+style(break,		style(background := cyan)).
+style(exit,		style(background := green,
 			      icon := 'exit.xpm')).
-style(redo,  		style(background := yellow,
+style(redo,		style(background := yellow,
 			      icon := 'redo.xpm')).
-style(fail,  		style(background := '#ff8080',
+style(fail,		style(background := '#ff8080',
 			      icon := 'fail.xpm')).
-style(exception,  	style(background := magenta,
+style(exception,	style(background := magenta,
 			      icon := 'except.xpm')).
-style(unify, 		style(background := sky_blue)).
-style(choice, 		style(background := yellow,
+style(unify,		style(background := sky_blue)).
+style(choice,		style(background := yellow,
 			      icon := 'ndet.xpm')).
-style(frame, 		style(background := '#d6dc5e',
+style(frame,		style(background := '#d6dc5e',
 			      icon := 'stack.xpm')).
-style(breakpoint, 	style(icon := 'stop.xpm')).
+style(breakpoint,	style(icon := 'stop.xpm')).
 
 
 % If you define an alternative mode as a subclass of the Prolog mode
@@ -240,11 +241,9 @@ listing(V, Module:name, Predicate:name, Arity:int) :->
 	functor(Head, Predicate, Arity),
 	send(V, source, @nil),
 	get(V, text_buffer, TB),
-	open(TB, write, Fd),
-	telling(Old), set_output(Fd),
-	ignore(listing(Module:Head)),
-	tell(Old),
-	close(Fd).
+	setup_call_cleanup(open(TB, write, Fd),
+			   with_output_to(Fd, listing(Module:Head)),
+			   close(Fd)).
 
 :- pce_end_class.
 
@@ -293,7 +292,7 @@ mark_stop_points(_, _).
 %	Mark stop-points using a breakpoint fragment.
 
 mark_stop_point(ClauseRef, PC) :-
-	stop_fragment(ClauseRef, PC, _), !. 		% already got this one
+	stop_fragment(ClauseRef, PC, _), !.		% already got this one
 mark_stop_point(ClauseRef, PC) :-
 	break_location(ClauseRef, PC, File, A-Z),
 	current_source_buffer(File, Buffer),
