@@ -6,7 +6,7 @@
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
     Copyright (C): 2011, University of Amsterdam,
-    			 VU University Amsterdam
+			 VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -119,7 +119,7 @@ pce_clause_info(ClauseRef, S, TermPos, NameOffset) :-
 	;   Clause = Clause0
 	),
 	setup_call_cleanup(pce_open(S, write, Fd),
-			   portray_clause(Fd, Clause),
+			   portray_clause(Fd, Clause, [max_depth(10)]),
 			   close(Fd)),
 	debug(clause_info, 'ok, reading ... ', []),
 	setup_call_cleanup(pce_open(S, read, Handle),
