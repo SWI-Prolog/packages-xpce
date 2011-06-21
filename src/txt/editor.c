@@ -3377,16 +3377,43 @@ isearchBackwardEditor(Editor e)
 
 
 static status
+showIsearchHitEditor(Editor ed, Int start, Int end)
+{ int s = valInt(start);
+  int e = valInt(end);
+  Int mark, caret;
+
+  if ( ed->search_direction == NAME_forward )
+  { caret = toInt(max(s,e));
+    mark  = toInt(min(s,e));
+  } else
+  { caret = toInt(min(s,e));
+    mark  = toInt(max(s,e));
+  }
+
+  selection_editor(ed, mark, caret, NAME_highlight);
+  ensureVisibleEditor(ed, mark, caret);
+
+  succeed;
+}
+
+
+static status
 extendSearchStringToWordEditor(Editor e)
 { TextBuffer tb = e->text_buffer;
-  Int start = e->mark;			/* TBD */
-  Int end   = e->caret;
+  Int size = getSizeCharArray(e->search_string);
+  Int start, end;
+
+  if ( e->search_direction == NAME_forward )
+  { end = e->caret;
+    start = sub(end, size);
+  } else
+  { start = e->caret;
+    end   = add(start, size);
+  }
 
   end = getScanTextBuffer(tb, end, NAME_word, ZERO, NAME_end);
-
   assign(e, search_string, getContentsTextBuffer(tb, start, sub(end, start)));
-  selection_editor(e, start, end, NAME_highlight);
-  return ensureVisibleEditor(e, start, end);
+  return showIsearchHitEditor(e, start, end);
 }
 
 
@@ -3455,15 +3482,7 @@ executeSearchEditor(Editor e, Int chr)
   if ( isDefault(chr) )
     assign(e, search_base, toInt(fwd ? hit_start : hit_end-1));
 
-  if ( !fwd )				/* backward: swap */
-  { int tmp = hit_end;
-    hit_end = hit_start;
-    hit_start = tmp;
-  }
-  selection_editor(e, toInt(hit_start), toInt(hit_end), NAME_highlight);
-  ensureVisibleEditor(e, toInt(hit_start), toInt(hit_end));
-
-  succeed;
+  return showIsearchHitEditor(e, toInt(hit_start), toInt(hit_end));
 }
 
 
