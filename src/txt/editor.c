@@ -3316,8 +3316,8 @@ static status
 StartIsearchEditor(Editor e, EventId id)
 { Name cmd = getKeyBindingEditor(e, characterName(id));
 
-  if ( !equalName(cmd, NAME_isearchForward) &&
-       !equalName(cmd, NAME_isearchBackward) )
+  if ( cmd != NAME_isearchForward &&
+       cmd != NAME_isearchBackward )
     assign(e, search_string, NIL);
 
   assign(e, focus_function, NAME_Isearch);
