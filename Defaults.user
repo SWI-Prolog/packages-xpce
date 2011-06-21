@@ -43,8 +43,7 @@
 
 ! When to highlight syntax errors in PceEmacs Prolog mode.  One of
 ! typing (always), pause (on whole-buffer scan) or never.  Default
-! is currently pause, but this will probably change to typing if
-! this mode becomes more mature.
+! is typing
 
 ! emacs_prolog_mode.show_syntax_errors: typing
 
@@ -61,18 +60,18 @@
 ! font here.
 
 !display.system_fonts:	[ normal    := font(helvetica, roman,   12), \
-! 			  bold      := font(helvetica, bold,    12), \
-! 			  italic    := font(helvetica, oblique, 12), \
-! 			  small     := font(helvetica, roman,   10), \
-! 			  large     := font(helvetica, roman,   14), \
-! 			  boldlarge := font(helvetica, bold,    14), \
-! 			  huge      := font(helvetica, roman,   18), \
-! 			  boldhuge  := font(helvetica, bold,    18), \
-! 			  fixed     := font(screen,    roman,   13), \
-! 			  tt        := font(screen,    roman,   13), \
-! 			  boldtt    := font(screen,    bold,    13), \
-! 			  symbol    := font(symbol,    roman,   12)  \
-! 			]
+!			  bold      := font(helvetica, bold,    12), \
+!			  italic    := font(helvetica, oblique, 12), \
+!			  small     := font(helvetica, roman,   10), \
+!			  large     := font(helvetica, roman,   14), \
+!			  boldlarge := font(helvetica, bold,    14), \
+!			  huge      := font(helvetica, roman,   18), \
+!			  boldhuge  := font(helvetica, bold,    18), \
+!			  fixed     := font(screen,    roman,   13), \
+!			  tt        := font(screen,    roman,   13), \
+!			  boldtt    := font(screen,    bold,    13), \
+!			  symbol    := font(symbol,    roman,   12)  \
+!			]
 
 ! On Windows, specified font sizes are multiplied by the factor below to
 ! get more or less the same behaviour as for X11.  You can change this scale
