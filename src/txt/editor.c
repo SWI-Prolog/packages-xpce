@@ -3352,11 +3352,7 @@ abortIsearchEditor(Editor e)
 static status
 endIsearchEditor(Editor e)
 { if ( isisearchingEditor(e) )
-  { /*int caret = (e->search_direction == NAME_forward ? e->selection_end
-						     : e->selection_start);
-
-    CaretEditor(e, toInt(caret)); TBD */
-    abortIsearchEditor(e);
+  { abortIsearchEditor(e);
     send(e, NAME_report, NAME_status, NAME_, EAV);
   }
 
