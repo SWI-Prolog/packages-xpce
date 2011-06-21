@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs,vu,nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -1358,7 +1359,7 @@ event_editor(Editor e, EventObj ev)
   if ( isAEvent(ev, NAME_keyboard) )
     return send(e, NAME_typed, ev, EAV);
 
-  					/* delete mode on button down */
+					/* delete mode on button down */
   if ( isDownEvent(ev) )
   { PceWindow sw = getWindowGraphical((Graphical)e);
 
@@ -2832,7 +2833,7 @@ getIndentationEditor(Editor e, Int where, Regex re)
   } else
   { long eol = end_of_line(e, where);
     eoi = ((n=getMatchRegex(re, tb, toInt(sol), toInt(eol))) ? sol+valInt(n)
-	   						     : sol);
+							     : sol);
   }
 
   for(col = 0; sol < eoi; sol++)
@@ -3095,7 +3096,7 @@ fillEditor(Editor e,
     { if ( fetch_textbuffer(tb, pos) == '\t' )
         col = Round(col+1, valInt(e->tab_distance));
       else
-      	col++;
+	col++;
       pos++;
     }
     DEBUG(NAME_fill, Cprintf("Filling first paragraph line from %d\n", pos));
@@ -3626,7 +3627,7 @@ get_case_pattern(SyntaxTable syntax, String s)
   if ( tisupper(syntax, str_fetch(s, 0)) )
   { for( i=1; i < size; i++)
     { if ( tislower(syntax, str_fetch(s, i)) )
-    	return NAME_capitalised;
+	return NAME_capitalised;
     }
     return NAME_upper;
   }
@@ -3723,9 +3724,9 @@ DabbrevExpandEditor(Editor e, EventId id)
     { Name reject = cell->value;
 
       if ( ec && reject == hit )
-      	goto next;
+	goto next;
       if ( !ec && str_icase_eq(&hit->data, &reject->data) )
-      	goto next;
+	goto next;
     }
 
     if ( memberChain(e->dabbrev_reject, hit) == SUCCEED )
