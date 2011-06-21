@@ -71,10 +71,10 @@ End;
 NewClass(fragment)
   TextBuffer	textbuffer;		/* text buffer fragment associated */
   Fragment	next;			/* next fragment */
-  Fragment  	prev;			/* previous fragment */
-  Name	 	style;			/* style of fragment (via editor) */
-  intptr_t   	start;			/* start of fragment */
-  intptr_t  	length;			/* length of fragment (> 0) */
+  Fragment	prev;			/* previous fragment */
+  Name		style;			/* style of fragment (via editor) */
+  intptr_t	start;			/* start of fragment */
+  intptr_t	length;			/* length of fragment (> 0) */
   intptr_t	attributes;		/* FRAG_... */
 End;
 
@@ -134,6 +134,8 @@ NewClass(editor)
   StringObj	search_string;		/* Target of search */
   Int		search_origin;		/* Incremental search started here */
   Int		search_base;		/* Currently searching from here */
+  Name		search_wrapped;		/* Whether search is wrapped */
+  BoolObj	search_wrapped_warned;	/* ISearch hit end of buffer */
   Name		selection_unit;		/* Selection unit (char, word, line) */
   Name		selection_origin;	/* Original start of selection */
   BoolObj	editable;		/* Text may be changed by user */
@@ -141,7 +143,7 @@ NewClass(editor)
   Code		modified_message;	/* Forward <->modified changed */
   Int		left_margin;		/* Left margin indentation */
   Int		right_margin;		/* Right margin */
-  Int		indent_increment; 	/* Steps taken by region in/undent1 */
+  Int		indent_increment;	/* Steps taken by region in/undent1 */
   BoolObj	auto_newline;		/* Auto newline on ->append */
   SourceSink	file;			/* Name of file or NIL */
   Name		dabbrev_target;		/* Base of the dabbrev expansion */
@@ -203,7 +205,7 @@ struct text_char
   intptr_t	index;			/* Index in line (relative) */
   short		x;			/* X-position in line (pixels) */
   unsigned char attributes;		/* Its attributes */
-  unsigned 	type : 2;		/* type of character */
+  unsigned	type : 2;		/* type of character */
 };
 
 struct text_line
@@ -230,7 +232,7 @@ struct text_screen
 
 NewClass(text_image)			/* TBD: subclass of bitmap? */
   ABSTRACT_GRAPHICAL
-  Any   	text;			/* Text we are operation on */
+  Any		text;			/* Text we are operation on */
   Any		background;		/* Background of text */
   Int		start;			/* Start offset */
   Int		end;			/* First non-visible character */
@@ -245,7 +247,7 @@ NewClass(text_image)			/* TBD: subclass of bitmap? */
   intptr_t	h;			/* Used height in pixels */
   intptr_t	change_start;		/* Start of changes */
   intptr_t	change_end;		/* End of changes */
-  intptr_t	inserted;       	/* Number of chars inserted/deleted */
+  intptr_t	inserted;		/* Number of chars inserted/deleted */
   SeekFunction  seek;			/* Seek to position */
   ScanFunction	scan;			/* Scan for character type */
   FetchFunction fetch;			/* Function to fetch characters */

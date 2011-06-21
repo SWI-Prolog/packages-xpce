@@ -156,6 +156,8 @@ initialiseEditor(Editor e, TextBuffer tb, Int w, Int h, Int tmw)
   assign(e, search_string, NIL);
   assign(e, search_origin, ZERO);
   assign(e, search_base, ZERO);
+  assign(e, search_wrapped, NIL);
+  assign(e, search_wrapped_warned, OFF);
   assign(e, selection_origin, ZERO);
   assign(e, selection_unit, NAME_character);
 /*assign(e, selection_style, getClassVariableValueObject(e, NAME_selectionStyle));*/
@@ -3327,12 +3329,15 @@ StartIsearchEditor(Editor e, EventId id)
 
 static status
 beginIsearchEditor(Editor e, Name direction)
-{ assign(e, search_direction, direction);
-  assign(e, search_base,      e->caret);
-  assign(e, search_origin,    e->caret);
-  assign(e, focus_function,   NAME_StartIsearch);
+{ assign(e, search_direction,      direction);
+  assign(e, search_wrapped,        NIL);
+  assign(e, search_wrapped_warned, OFF);
+  assign(e, search_base,           e->caret);
+  assign(e, search_origin,         e->caret);
+  assign(e, focus_function,        NAME_StartIsearch);
   selection_editor(e, e->caret, e->caret, NAME_highlight);
-  send(e, NAME_report, NAME_status, CtoName("isearch %s"), direction, EAV);
+  send(e, NAME_report, NAME_status,
+       CtoName("ISearch %s (type to search)"), direction, EAV);
 
   succeed;
 }
@@ -3376,18 +3381,39 @@ static status
 showIsearchHitEditor(Editor ed, Int start, Int end)
 { int s = valInt(start);
   int e = valInt(end);
+  int wrapped;
   Int mark, caret;
+  const char *fmt;
 
   if ( ed->search_direction == NAME_forward )
   { caret = toInt(max(s,e));
     mark  = toInt(min(s,e));
+    wrapped = valInt(caret) < valInt(ed->search_origin);
   } else
   { caret = toInt(min(s,e));
     mark  = toInt(max(s,e));
+    wrapped = valInt(caret) > valInt(ed->search_origin);
   }
 
   selection_editor(ed, mark, caret, NAME_highlight);
   ensureVisibleEditor(ed, mark, caret);
+
+  if ( wrapped )
+  { if ( isNil(ed->search_wrapped) )
+      assign(ed, search_wrapped, NAME_wrapped);
+  } else
+  { if ( ed->search_wrapped == NAME_wrapped )
+      assign(ed, search_wrapped, NAME_overWrapped);
+  }
+
+  if ( isNil(ed->search_wrapped) )
+    fmt = "Isearch %s %I%s";
+  else
+    fmt = "Isearch %s (%s) %s";
+
+  send(ed, NAME_report, NAME_status, CtoName(fmt),
+       ed->search_direction, ed->search_wrapped, ed->search_string,
+       EAV);
 
   succeed;
 }
@@ -3442,7 +3468,7 @@ executeSearchEditor(Editor e, Int chr)
     insertCharacterString(e->search_string, chr, DEFAULT, DEFAULT);
   }
 
-  l     = valInt(getSizeCharArray(e->search_string));
+  l = valInt(getSizeCharArray(e->search_string));
   if ( fwd )
   { times = 1;
     start = valInt(e->mark);
@@ -3465,11 +3491,20 @@ executeSearchEditor(Editor e, Int chr)
 			      &e->search_string->data,
 			      times, 'a', !ign, FALSE);
   if ( hit_start < 0 )
+  { if ( e->search_wrapped_warned == ON )
+    { hit_start = find_textbuffer(e->text_buffer,
+				  fwd ? 0 : e->text_buffer->size,
+				  &e->search_string->data,
+				  times, 'a', !ign, FALSE);
+      assign(e, search_wrapped_warned, OFF);
+    }
+  }
+
+  if ( hit_start < 0 )
   { send(e, NAME_report, NAME_warning,
 	 CtoName("Failing ISearch: %s"), e->search_string, EAV);
-
-    if ( notDefault(chr) )
-      backwardDeleteCharSearchStringEditor(e);
+    if ( e->search_wrapped_warned == OFF )
+      assign(e, search_wrapped_warned, ON);
 
     succeed;
   }
@@ -4722,6 +4757,10 @@ static vardecl var_editor[] =
      NAME_internal, "Index where search started"),
   IV(NAME_searchBase, "int", IV_NONE,
      NAME_internal, "Index where last change was done"),
+  IV(NAME_searchWrapped, "{wrapped,over_wrapped}*", IV_NONE,
+     NAME_internal, "Wrapped search state"),
+  IV(NAME_searchWrappedWarned, "bool", IV_NONE,
+     NAME_internal, "Isearch hit end of buffer"),
   IV(NAME_selectionUnit, "{character,word,line}", IV_BOTH,
      NAME_selection, "Multiclick processing for the selection"),
   SV(NAME_selectionOrigin, "int", IV_GET|IV_STORE, selectionOriginEditor,
