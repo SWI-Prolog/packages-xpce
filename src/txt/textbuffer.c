@@ -28,7 +28,6 @@
 #include <h/unix.h>
 
 forwards Int	getMatchingQuoteTextBuffer(TextBuffer, Int, Name);
-forwards int	match(TextBuffer, int, String, int, int);
 forwards int	room(TextBuffer, intptr_t, intptr_t);
 forwards status capitalise_textbuffer(TextBuffer, intptr_t, intptr_t);
 forwards status clear_textbuffer(TextBuffer);
@@ -50,7 +49,7 @@ forwards status promoteTextBuffer(TextBuffer tb);
 #define NormaliseIndex(tb, i)	( i < 0 ? 0 : i > tb->size ? tb->size : i)
 #define Swap(a, b)		{ intptr_t _tmp = (a); (a) = (b); (b) = _tmp; }
 #define Before(i1, i2)		{ if ( i1 > i2 ) Swap(i1, i2); }
-#define Before_i(x, y)  	if ( x > y ) { intptr_t _z = x; x=y; y=_z; }
+#define Before_i(x, y)		if ( x > y ) { intptr_t _z = x; x=y; y=_z; }
 #define fetch(i)		fetch_textbuffer(tb, i)
 #define istbA(tb)		isstrA(&(tb)->buffer)
 #define Address(tb, i)		(istbA(tb) ? &(tb)->tb_bufferA[(i)] \
@@ -538,10 +537,10 @@ getScanTextBuffer(TextBuffer tb, Int from, Name unit, Int amount, Name az)
     az = (valInt(amount) >= 0 ? NAME_end : NAME_start);
 
   return toInt(scan_textbuffer(tb,
-  			       valInt(from),
-  			       unit,
-  			       valInt(amount),
-  			       az == NAME_start ? 'a' : 'z'));
+			       valInt(from),
+			       unit,
+			       valInt(amount),
+			       az == NAME_start ? 'a' : 'z'));
 }
 
 
@@ -677,11 +676,11 @@ getFindTextBuffer(TextBuffer tb, Int from, StringObj str,
     are the definitions of the units recognised currently.
 
     NAME_character
-    	A character unit has no start, nor an end.
+	A character unit has no start, nor an end.
     NAME_word
-    	A word consists of a contiguous string of `alNum' characters
-    	(digits + letters + _). A separator is a contiguous string of
-    	'non-alNum' characters.
+	A word consists of a contiguous string of `alNum' characters
+	(digits + letters + _). A separator is a contiguous string of
+	'non-alNum' characters.
     NAME_line
         A line consists of a (possible empty) string of non-'\n'
         characters. A separator is exactly one '\n'.
@@ -1365,7 +1364,7 @@ getSkipCommentTextBuffer(TextBuffer tb, Int where, Int to, BoolObj layouttoo)
 	   tiscommentend1(tb->syntax, fetch(pos-1)) )
       { for( pos -= 4;
 	     pos >= end && !(tiscommentstart1(tb->syntax, fetch(pos+1)) &&
-	    	             tiscommentstart2(tb->syntax, fetch(pos+2)));
+		             tiscommentstart2(tb->syntax, fetch(pos+2)));
 	     pos-- )
 	  ;
 	continue;
@@ -1472,7 +1471,7 @@ find_textbuffer(TextBuffer tb, intptr_t here, String str,
   if ( times < 0 )
   { for( ; here >= 0 && times < 0; times++ )
     { for( ; here >= 0; here-- )
-      { if ( match(tb, here, str, ec, wm) )
+      { if ( match_textbuffer(tb, here, str, ec, wm) )
 	{ hit = TRUE;
 	  where = here;
 	  break;
@@ -1484,7 +1483,7 @@ find_textbuffer(TextBuffer tb, intptr_t here, String str,
 
     for( ; here < size && times > 0; times-- )
     { for( ; here < size; here++ )
-      { if ( match(tb, here, str, ec, wm) )
+      { if ( match_textbuffer(tb, here, str, ec, wm) )
         { hit = TRUE;
           where = here;
           break;
@@ -1498,8 +1497,8 @@ find_textbuffer(TextBuffer tb, intptr_t here, String str,
 }
 
 
-static int
-match(TextBuffer tb, int here, String s, int ec, int wm)
+int
+match_textbuffer(TextBuffer tb, intptr_t here, String s, int ec, int wm)
 { intptr_t l = s->size;
   intptr_t i;
 
@@ -1597,7 +1596,7 @@ fill_line_textbuffer(TextBuffer tb, intptr_t here, intptr_t to,
 
 
   for(;;)
-  { 					/* copy string of non-blanks */
+  {					/* copy string of non-blanks */
     for( ; here < to && !tislayout(tb->syntax, fetch(here)); here++ )
       col++;
     DEBUG(NAME_fill,
