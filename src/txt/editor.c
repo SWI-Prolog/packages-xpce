@@ -1049,18 +1049,21 @@ fetch_editor(Any obj, TextChar tc)
     again:
 
       if ( index >= ic->hit_start && index < ic->hit_end )
-      { tc->attributes |= s->attributes;
-	if ( notDefault(s->font) )
-	  tc->font = s->font;
-	if ( notDefault(s->colour) )
-	  tc->colour = s->colour;
-	if ( notDefault(s->background) )
-	  tc->background = s->background;
+      { if ( tc->value.c != '\n' )
+	{ tc->attributes |= s->attributes;
+	  if ( notDefault(s->font) )
+	    tc->font = s->font;
+	  if ( notDefault(s->colour) )
+	    tc->colour = s->colour;
+	  if ( notDefault(s->background) )
+	    tc->background = s->background;
+	}
       } else
       { int len = valInt(getSizeCharArray(e->search_string));
+	TextBuffer tb = e->text_buffer;
 
 	if ( len > 0 &&
-	     match_textbuffer(e->text_buffer, index, &e->search_string->data,
+	     match_textbuffer(tb, index, &e->search_string->data,
 			      e->exact_case == ON, FALSE) )
 	{ ic->hit_start = index;
 	  ic->hit_end = index+len;
