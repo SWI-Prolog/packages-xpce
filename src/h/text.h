@@ -105,6 +105,7 @@ typedef int (*TextEventFunction)(text_event *event);
 
 
 typedef struct fragment_cache *FragmentCache;
+typedef struct isearch_cache  *ISearchCache;
 
 NewClass(editor)
   ABSTRACT_DEVICE			/* abstract super class device */
@@ -153,6 +154,7 @@ NewClass(editor)
 					/* Private data */
   intptr_t	internal_mark;		/* Internally used mark */
   FragmentCache fragment_cache;		/* Cache to compute frament overlap */
+  ISearchCache  isearch_cache;		/* Cache for highlighting search hits */
 End;
 
 NewClass(text_cursor)

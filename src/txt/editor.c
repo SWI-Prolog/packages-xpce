@@ -36,6 +36,8 @@ static Int		normalise_index(Editor, Int);
 static FragmentCache	newFragmentCache(Editor);
 static void		freeFragmentCache(FragmentCache);
 static void		resetFragmentCache(FragmentCache, TextBuffer);
+static ISearchCache	newISearchCache(Editor);
+static void		freeISearchCache(ISearchCache);
 static status		CaretEditor(Editor, Int);
 static status		caretEditor(Editor, Int);
 static status		IsearchEditor(Editor, EventId);
@@ -67,6 +69,7 @@ static status		newKill(CharArray);
 static CharArray	killRegister(Int);
 static status		tabDistanceEditor(Editor e, Int tab);
 static status		isisearchingEditor(Editor e);
+static status		changedHitsEditor(Editor e);
 static status		showLabelEditor(Editor e, BoolObj val);
 static Int		countLinesEditor(Editor e, Int from, Int to);
 static status		deleteEditor(Editor e, Int from, Int to);
@@ -105,6 +108,11 @@ static Timer	ElectricTimer;
 #define MAXPRECISESCROLLING   10000
 #define MAXLINEBASEDSCROLLING 25000
 
+struct isearch_cache
+{ Style		style;			/* Style used for search hits */
+  intptr_t	hit_start;		/* Start of a hit */
+  intptr_t	hit_end;		/* Start of a hit */
+};
 
 		/********************************
 		*            CREATE		*
@@ -175,6 +183,7 @@ initialiseEditor(Editor e, TextBuffer tb, Int w, Int h, Int tmw)
   assign(e, styles, newObject(ClassSheet, EAV));
 
   e->fragment_cache = newFragmentCache(e);
+  e->isearch_cache = newISearchCache(e);
 
   send(e->image, NAME_cursor, getClassVariableValueObject(e, NAME_cursor), EAV);
   send(e->image, NAME_set, e->scroll_bar->area->w, ZERO, EAV);
@@ -222,6 +231,10 @@ unlinkEditor(Editor e)
   if ( e->fragment_cache != NULL )
   { freeFragmentCache(e->fragment_cache);
     e->fragment_cache = NULL;
+  }
+  if ( e->isearch_cache != NULL )
+  { freeISearchCache(e->isearch_cache);
+    e->isearch_cache = NULL;
   }
 
   unlinkDevice((Device) e);
@@ -915,6 +928,22 @@ indexFragmentCache(FragmentCache fc, Editor e, long int i)
 }
 
 
+static ISearchCache
+newISearchCache(Editor e)
+{ ISearchCache ic = alloc(sizeof(struct isearch_cache));
+
+  memset(ic, 0, sizeof(*ic));
+
+  return ic;
+}
+
+
+static void
+freeISearchCache(ISearchCache ic)
+{ unalloc(sizeof(struct isearch_cache), ic);
+}
+
+
 static void
 seek_editor(Any obj, long int index)
 { Editor e = obj;
@@ -1002,6 +1031,43 @@ fetch_editor(Any obj, TextChar tc)
 
       indexFragmentCache(e->fragment_cache, e, index+3);
       return fc->index;
+    }
+  }
+
+  if ( isisearchingEditor(e) )
+  { ISearchCache ic = e->isearch_cache;
+
+    if ( !ic->style )
+    { Style s = getClassVariableValueObject(e, NAME_isearchOtherStyle);
+
+      if ( !s ) s = NIL;
+      ic->style = s;
+    }
+
+    if ( notNil(ic->style) )
+    { Style s = ic->style;
+    again:
+
+      if ( index >= ic->hit_start && index < ic->hit_end )
+      { tc->attributes |= s->attributes;
+	if ( notDefault(s->font) )
+	  tc->font = s->font;
+	if ( notDefault(s->colour) )
+	  tc->colour = s->colour;
+	if ( notDefault(s->background) )
+	  tc->background = s->background;
+      } else
+      { int len = valInt(getSizeCharArray(e->search_string));
+
+	if ( len > 0 &&
+	     match_textbuffer(e->text_buffer, index, &e->search_string->data,
+			      e->exact_case == ON, FALSE) )
+	{ ic->hit_start = index;
+	  ic->hit_end = index+len;
+
+	  goto again;
+	}
+      }
     }
   }
 
@@ -3347,6 +3413,7 @@ static status
 abortIsearchEditor(Editor e)
 { if ( isisearchingEditor(e) )
   { assign(e, focus_function, NIL);
+    changedHitsEditor(e);
     selection_editor(e, DEFAULT, DEFAULT, NAME_inactive);
   }
 
@@ -3378,6 +3445,32 @@ isearchBackwardEditor(Editor e)
 
 
 static status
+changedHitsEditor(Editor e)
+{ intptr_t len;
+
+  if ( notNil(e->search_string) &&
+       (len = valInt(getSizeCharArray(e->search_string))) > 0 )
+  { intptr_t start = valInt(e->image->start);
+    intptr_t end   = valInt(e->image->end);
+    TextBuffer tb = e->text_buffer;
+    String s  = &e->search_string->data;
+    int ec = (e->exact_case == ON);
+
+    while(start<end)
+    { if ( match_textbuffer(tb, start, s, ec, FALSE) )
+      { ChangedRegionEditor(e, toInt(start), toInt(start+len));
+	start += len;
+      }
+      start++;
+    }
+
+  }
+
+  succeed;
+}
+
+
+static status
 showIsearchHitEditor(Editor ed, Int start, Int end)
 { int s = valInt(start);
   int e = valInt(end);
@@ -3395,6 +3488,7 @@ showIsearchHitEditor(Editor ed, Int start, Int end)
     wrapped = valInt(caret) > valInt(ed->search_origin);
   }
 
+  changedHitsEditor(ed);
   selection_editor(ed, mark, caret, NAME_highlight);
   ensureVisibleEditor(ed, mark, caret);
 
@@ -3434,6 +3528,7 @@ extendSearchStringToWordEditor(Editor e)
   }
 
   end = getScanTextBuffer(tb, end, NAME_word, ZERO, NAME_end);
+  changedHitsEditor(e);
   assign(e, search_string, getContentsTextBuffer(tb, start, sub(end, start)));
   return showIsearchHitEditor(e, start, end);
 }
@@ -3464,6 +3559,8 @@ executeSearchEditor(Editor e, Int chr)
   if ( notDefault(chr) )
   { if ( isNil(e->search_string) )
       assign(e, search_string, newObject(ClassString, EAV));
+    else
+      changedHitsEditor(e);
 
     insertCharacterString(e->search_string, chr, DEFAULT, DEFAULT);
   }
@@ -4792,7 +4889,9 @@ static vardecl var_editor[] =
   IV(NAME_internalMark, "alien:int", IV_NONE,
      NAME_internal, "Additional mark for internal use"),
   IV(NAME_fragmentCache, "alien:FragmentCache", IV_NONE,
-     NAME_cache, "Cache to compute fragment attributes")
+     NAME_cache, "Cache to compute fragment attributes"),
+  IV(NAME_isearchCache, "alien:ISearchCache", IV_NONE,
+     NAME_cache, "Keep track of highlighting search hits")
 };
 
 static senddecl send_editor[] =
@@ -5233,6 +5332,11 @@ static classvardecl rc_editor[] =
 	   "     style(background:= @grey25_image))",
 	   "@_isearch_style"),
      "Style for incremental search"),
+  RC(NAME_isearchOtherStyle, "style",
+     "when(@colour_display,\n"
+     "     style(background := pale_turquoise),\n"
+     "     style(background:= @grey12_image))",
+     "Style for `other matches' in incremental search"),
   RC(NAME_keyBinding, "string", "",
      "`Key = selector' binding list"),
   RC(NAME_pen, "0..", UXWIN("0", "1"),
