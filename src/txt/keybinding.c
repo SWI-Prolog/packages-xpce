@@ -653,12 +653,12 @@ static kbDef emacs_special[] =
 };
 
 static kbDef emacs_caret_basics[] =
-{ { "\\C-a", 		NAME_beginningOfLine },
-  { "\\C-b", 		NAME_backwardChar },
-  { "\\C-e", 		NAME_endOfLine },
-  { "\\C-f", 		NAME_forwardChar },
-  { "\\C-n", 		NAME_nextLine },
-  { "\\C-p", 		NAME_previousLine },
+{ { "\\C-a",		NAME_beginningOfLine },
+  { "\\C-b",		NAME_backwardChar },
+  { "\\C-e",		NAME_endOfLine },
+  { "\\C-f",		NAME_forwardChar },
+  { "\\C-n",		NAME_nextLine },
+  { "\\C-p",		NAME_previousLine },
 
   { "\\eb",		NAME_backwardWord },
   { "\\ef",		NAME_forwardWord },
@@ -676,11 +676,11 @@ static kbDef emacs_edit_basics[] =
 { { SUPER,		NAME_insert },
 
   { "backspace",	NAME_cutOrBackwardDeleteChar },
-  { "\\C-d", 		NAME_deleteChar },
+  { "\\C-d",		NAME_deleteChar },
   { "DEL",		NAME_cutOrDeleteChar },
-  { "\\C-t", 		NAME_transposeChars },
-  { "\\C-k", 		NAME_killLine },
-  { "\\C-o", 		NAME_openLine },
+  { "\\C-t",		NAME_transposeChars },
+  { "\\C-k",		NAME_killLine },
+  { "\\C-o",		NAME_openLine },
 
   { "\\ed",		NAME_killWord },
   { "\\ebackspace",	NAME_backwardKillWord },
@@ -757,10 +757,10 @@ static kbDef list_browser[] =
   { "TAB",		NAME_extendPrefixOrNext },
   { "\\C-w",		NAME_extendToCurrent },
   { "\\C-s",		NAME_repeatSearch },
-  { "\\C-n", 		NAME_nextLine },
+  { "\\C-n",		NAME_nextLine },
   { "cursor_down",	NAME_nextLine },
-  { "\\C-p", 		NAME_previousLine },
-  { "cursor_up", 	NAME_previousLine },
+  { "\\C-p",		NAME_previousLine },
+  { "cursor_up",	NAME_previousLine },
 
 /*{ DEFAULT_FUNCTION,	NAME_alert },*/
 
@@ -791,14 +791,15 @@ static kbDef editor[] =
   { "page_down",	NAME_cursorPageDown },
 
   { "\\C-@",		NAME_setMark },
-  { "LFD", 		NAME_newlineAndIndent },
-  { "\\C-j", 		NAME_newlineAndIndent },
-  { "\\C-r", 		NAME_isearchBackward },
-  { "\\C-s", 		NAME_isearchForward },
+  { "LFD",		NAME_newlineAndIndent },
+  { "\\C-j",		NAME_newlineAndIndent },
+  { "\\C-r",		NAME_isearchBackward },
+  { "\\C-s",		NAME_isearchForward },
+  { "key_top_3",	NAME_isearchForward },
   { "\\C-w",		NAME_killOrGrabRegion },
   { "\\C-y",		NAME_yank },
-  { "\\C-_", 		NAME_undo },
-  { "\\C-z", 		NAME_undo },		/* Windows compatibility */
+  { "\\C-_",		NAME_undo },
+  { "\\C-z",		NAME_undo },		/* Windows compatibility */
 
   { "\\e\\C-b",		NAME_backwardTerm },
   { "\\e\\C-f",		NAME_forwardTerm },
@@ -833,7 +834,7 @@ static kbDef editor[] =
 
   { DEFAULT_FUNCTION,	NAME_undefined },
 
-  { NULL, 	        NULL }
+  { NULL,	        NULL }
 };
 
 
@@ -919,7 +920,7 @@ initPredefinedKeyBinding(KeyBinding kb)
     } else
       functionKeyBinding(kb,
 			 table->key[0] == '\\' ? CtoName(table->key)
-			 		       : CtoKeyword(table->key),
+					       : CtoKeyword(table->key),
 			 table->function);
   }
 
