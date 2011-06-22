@@ -107,7 +107,9 @@
 	  help_on_mode		   = button(help),
 	  customise		   = button(help),
 	  -			   = button(help),
-	  show_key_bindings	   = key('\\C-hb') + button(help),
+	  show_key_bindings	   = key(key_top_1)
+					+ key('\\C-hb')
+					+ button(help),
 	  describe_key		   = key('\\C-hk') + button(help),
 	  describe_function	   = key('\\C-hf') + button(help),
 	  -			   = button(help),
