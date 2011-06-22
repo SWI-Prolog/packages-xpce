@@ -5,7 +5,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2009, University of Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -123,7 +124,7 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
 
 	  paragraph_end([ '\\s*$',		% empty line
 			  '/\\*',		% comment start
-			  '[^\n]*\\*/\\s*$', 	% comment end
+			  '[^\n]*\\*/\\s*$',	% comment end
 			  '%',			% line comment
 			  '\t',			% indented line
 			  '[^\n]*:<?->?\\s*$'	% clause head
@@ -142,10 +143,15 @@ variable(var_marked_caret, int*,	 get, "Last caret at ->mark_variable").
 variable(var_marked_gen,   int*,	 get, "Last generation").
 variable(var_mark_enabled, bool := @on,  get, "Do varmark stuff").
 variable(show_syntax_errors,
-	 		   {never,typing,pause},
-	 				 get, "When highlight syntax errors").
+			   {never,typing,pause},
+					 get, "When highlight syntax errors").
 variable(warnings,	   int := 0,	 get, "Number of warnings").
 variable(errors,	   int := 0,	 get, "Number of errors").
+variable(body_indentation, int,		 get, "Indentation for body-goals").
+variable(cond_indentation, int,		 get, "Indent step for conditional").
+
+class_variable(body_indentation, int, 8).
+class_variable(cond_indentation, int, 4).
 
 
 icon(_, I:image) :<-
@@ -217,7 +223,8 @@ indent_line(E) :->
 	;   send(E, indent_if_then_else)
 	;   send(E, indent_expression_line, ')}]', Base)
 	;   send(E, indent_clause_line)
-	;   send(E, align_line, 8)
+	;   get(E, body_indentation, Indent),
+	    send(E, align_line, Indent)
 	).
 
 
@@ -230,7 +237,7 @@ beginning_of_clause(E, Start:int, BOP:int) :<-
 		;   \+ send(@prolog_full_stop, search, TB, Here, 0)
 		)
 	    ->	!,
-		(   get(TB, character, 0, 0'#) 	% Deal with #! first-line
+		(   get(TB, character, 0, 0'#)	% Deal with #! first-line
 		->  get(TB, scan, 0, line, 1, start, BOP0)
 		;   BOP0 = 0
 		),
@@ -285,18 +292,19 @@ indent_clause_line(E) :->
 	get(E, text_buffer, TB),
 	get(E, skip_comment, Caret-1, 0, Glue),
 	debug(emacs(indent), 'Glue at ~d', [Glue]),
+	get(E, body_indentation, Indent),
 	(   send(regex(\.), match, TB, Glue)		% new clause
 	->  send(E, align_line, 0)
-	;   send(regex(','), match, TB, Glue)	  	% Next subclause
+	;   send(regex(','), match, TB, Glue)		% Next subclause
 	->  get(E, alignment_of_previous_line, N),
 	    (	N == 0					% head :- !,
-	    ->	send(E, align_line, 8)
+	    ->	send(E, align_line, Indent)
 	    ;	send(E, align_line, N)
 	    )
 	;   send(@prolog_neck_regex, match, TB, Glue+1, 0) % First subclause
-	->  send(E, align_line, 8)			% (seach backward)
+	->  send(E, align_line, Indent)			% (seach backward)
 	;   send(@prolog_decl_regex, match, TB, Glue+1, 0)
-	->  send(E, align_line, 8)
+	->  send(E, align_line, Indent)
 	;   send(E, align_with_previous_line)
 	).
 
@@ -311,7 +319,8 @@ insert_if_then_else(E, Times:[int], Char:char) :->
 	    Caret =:= SOL + L,
 	    get(E, beginning_of_if_then_else, OpenPos)
 	->  get(E, column, OpenPos, Col),
-	    send(E, align, Col+4)
+	    get(E, cond_indentation, Indent),
+	    send(E, align, Col+Indent)
 	;   true
 	).
 
@@ -336,7 +345,7 @@ indent_clause(E) :->
 	    ;   send(E, next_line),
 		fail
 	    ),
- 	send(E, forward_char, Size),
+	send(E, forward_char, Size),
 	send(E, electric_caret, Start).
 
 
@@ -455,7 +464,7 @@ find_definition(M, For:prolog_predicate, Where:[{here,tab,window}]) :->
 	    get(EmacsFrame, mode, Mode),
 	    send(Mode, instance_of, emacs_prolog_mode),
 	    send(Mode, find_local_definition, For)
-	;   get(For, source, SourceLocation) 		% From Prolog DB
+	;   get(For, source, SourceLocation)		% From Prolog DB
 	->  send(@emacs, goto_source_location, SourceLocation, Where)
 	;   send(For, has_property, foreign)
 	->  send(M, report, warning,
@@ -1165,7 +1174,7 @@ mark_variable(M, Check:[bool]) :->
 	    send(M, slot, var_marked_gen, Gen),
 
 	    get(M, editor, E),
-	    get(E, slot, kill_location, KillLocation), 		%  (*)
+	    get(E, slot, kill_location, KillLocation),		%  (*)
 	    send(M, unmark_variables),
 	    get(M, beginning_of_clause, Caret, Start),
 	    (   Check == @on

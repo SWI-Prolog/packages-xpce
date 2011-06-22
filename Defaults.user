@@ -45,7 +45,14 @@
 ! typing (always), pause (on whole-buffer scan) or never.  Default
 ! is typing
 
-! emacs_prolog_mode.show_syntax_errors: typing
+!emacs_prolog_mode.show_syntax_errors: typing
+
+! Indentation parameters for Prolog mode.  body_indentation is the
+! indentation of goals in the body.  cond_indentation is the extra
+! indentation for (if->then;else), (a;b), etc.
+
+!emacs_prolog_mode.body_indentation: 8
+!emacs_prolog_mode.cond_indentation: 4
 
 ! Spelling program options for the ispell demo and checker for PceEmacs.
 ! Ispell is available on most Unix installations.
