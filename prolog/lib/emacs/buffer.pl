@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -125,9 +126,9 @@ report(B,
 	send(Editors, for_all, Message).
 
 
-scratch_text('% This buffer is for notes you don\'t want to save.\n\
-	     % If you want to create a file, visit that file with C-x C-f,\n\
-	     % then enter the text in that file\'s own buffer.\n\n').
+scratch_text('% This buffer is for notes you don\'t want to save.\n\c
+	      % If you want to create a file, visit that file with C-x C-f,\n\c
+	      % then enter the text in that file\'s own buffer.\n\n').
 
 :- pce_global(@emacs_interpreter_regex,
 	      new(regex('#!(\\S+)\\s'))).
