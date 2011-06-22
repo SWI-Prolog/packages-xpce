@@ -1034,7 +1034,7 @@ fetch_editor(Any obj, TextChar tc)
     }
   }
 
-  if ( isisearchingEditor(e) )
+  if ( e->focus_function == NAME_Isearch )	/* actively searching */
   { ISearchCache ic = e->isearch_cache;
 
     if ( !ic->style )
