@@ -150,8 +150,10 @@ variable(errors,	   int := 0,	 get, "Number of errors").
 variable(body_indentation, int,		 get, "Indentation for body-goals").
 variable(cond_indentation, int,		 get, "Indent step for conditional").
 
-class_variable(body_indentation, int, 8).
-class_variable(cond_indentation, int, 4).
+class_variable(body_indentation, int,  8).
+class_variable(cond_indentation, int,  4).
+class_variable(indent_tabs,      bool, @on,
+	       "Use tabs for indentation").
 
 
 icon(_, I:image) :<-

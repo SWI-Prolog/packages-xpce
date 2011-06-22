@@ -49,10 +49,12 @@
 
 ! Indentation parameters for Prolog mode.  body_indentation is the
 ! indentation of goals in the body.  cond_indentation is the extra
-! indentation for (if->then;else), (a;b), etc.
+! indentation for (if->then;else), (a;b), etc.  indent_tabs defines
+! whether tabs or spaces are used for (re-)indentation.
 
 !emacs_prolog_mode.body_indentation: 8
 !emacs_prolog_mode.cond_indentation: 4
+!emacs_prolog_mode.indent_tabs:	     @on
 
 ! Spelling program options for the ispell demo and checker for PceEmacs.
 ! Ispell is available on most Unix installations.

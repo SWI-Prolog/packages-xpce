@@ -103,6 +103,7 @@ initialise(B, File:file*, Name:[name]) :->
 	    )
 	),
 
+	send(B, init_mode_defaults),
 	send(B, slot, auto_save_count, number(300)),
 	send(B, name, BufBaseName).
 
@@ -664,8 +665,24 @@ mode(B, Mode:name) :->
 	(   get(B, mode, Mode)
 	->  true
 	;   send(B, slot, mode, Mode),
+	    send(B, init_mode_defaults),
 	    send(B?editors, for_some, message(@arg1, mode, Mode))
 	).
+
+init_mode_defaults(B) :->
+	"Initialise defaults from the current mode"::
+	get(B, mode, ModeName),
+	atomic_list_concat([emacs_, ModeName, '_mode'], ClassName),
+	get(@pce, convert, ClassName, class, ModeClass),
+	(   copy_class_var(Name),
+	    get(ModeClass, class_variable, Name, CV),
+	    get(CV, value, Value),
+	    send(B, Name, Value),
+	    fail
+	;   true
+	).
+
+copy_class_var(indent_tabs).
 
 
 		 /*******************************
