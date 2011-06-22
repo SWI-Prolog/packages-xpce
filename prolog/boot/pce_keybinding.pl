@@ -57,7 +57,7 @@ binding(cua, editor,
 	  '\\C-s' = save_buffer
 	]).
 binding(cua, 'emacs$fundamental',
-	[ '\\C-f' = find,
+	[ '\\C-f' = isearch_forward,
 	  '\\C-o' = open,
 	  '\\C-n' = new,
 	  '\\C-p' = print

@@ -86,7 +86,7 @@
 	  cut			   = button(edit),
 	  paste			   = button(edit),
 	  -			   = button(edit),
-	  find			   = button(edit),
+	  find			   = key(key_top_4) + button(edit),
 	  replace		   = button(edit),
 	  preferences		   = button(edit),
 
