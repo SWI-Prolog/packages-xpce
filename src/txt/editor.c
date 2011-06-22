@@ -2949,7 +2949,10 @@ alignEditor(Editor e, Int column, Int where)
     else
       spaces = 1;
   } else
-  { tabs   = col / tabd - txtcol / tabd;
+  { if ( tb->indent_tabs == OFF )
+      tabs = 0;
+    else
+      tabs = col / tabd - txtcol / tabd;
     spaces = (tabs == 0 ? col - txtcol : col % tabd);
   }
   DEBUG(NAME_align, Cprintf("tabs = %d; spaces = %d\n", tabs, spaces));
@@ -2986,8 +2989,11 @@ alignOneLineEditor(Editor e, Int where, Int column)
     ;
 					/* delete old indent */
   delete_textbuffer(tb, sol, sot-sol);
-  tabs   = col / valInt(e->tab_distance);
-  spaces = col % valInt(e->tab_distance);
+  if ( tb->indent_tabs == OFF )
+    tabs = 0;
+  else
+    tabs = col / valInt(e->tab_distance);
+  spaces = (tabs == 0 ? col : col % valInt(e->tab_distance));
   insert_textbuffer(tb, sol, tabs, str_tab(&tb->buffer));
   insert_textbuffer(tb, sol+tabs, spaces, str_spc(&tb->buffer));
 

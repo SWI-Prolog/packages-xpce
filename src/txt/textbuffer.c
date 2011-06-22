@@ -2635,6 +2635,8 @@ static vardecl var_textBuffer[] =
      NAME_modified, "Size of the undo-buffer in characters"),
   IV(NAME_syntax, "syntax_table", IV_BOTH,
      NAME_language, "Description of the used syntax"),
+  IV(NAME_indentTabs, "bool", IV_BOTH,
+     NAME_indentation, "Re-indent using tabs (true) or spaces (false)"),
   IV(NAME_generation, "0..", IV_GET,
      NAME_modified, "Indicate change-generation"),
   IV(NAME_changedStart, "alien:int", IV_NONE,
@@ -2772,7 +2774,8 @@ static classvardecl rc_textBuffer[] =
 { RC(NAME_syntax, "[syntax_table]", "default",
      "Syntax definition"),
   RC(NAME_undoBufferSize, "int", "10000",
-     "Memory allocated to store undo")
+     "Memory allocated to store undo"),
+  RC(NAME_indentTabs, "bool", "@on", NULL)
 };
 
 /* Class Declaration */

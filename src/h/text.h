@@ -49,6 +49,7 @@ NewClass(text_buffer)
   BoolObj	modified;		/* has textbuffer been modified? */
   Int		undo_buffer_size;	/* Size of the undo-buffer */
   SyntaxTable	syntax;			/* Syntax description */
+  BoolObj	indent_tabs;		/* Indent with tabs? */
   Int		generation;		/* Increments on each change */
 					/* start private data */
   intptr_t	changed_start;		/* start of changed region */
