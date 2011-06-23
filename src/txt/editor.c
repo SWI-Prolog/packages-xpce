@@ -3556,7 +3556,7 @@ backwardDeleteCharSearchStringEditor(Editor e)
 
 
 static status
-executeSearchEditor(Editor e, Int chr)
+executeSearchEditor(Editor e, Int chr, Int from)
 { int l, hit_start, hit_end;
   int times, start;
   int fwd = (e->search_direction == NAME_forward);
@@ -3571,7 +3571,13 @@ executeSearchEditor(Editor e, Int chr)
     insertCharacterString(e->search_string, chr, DEFAULT, DEFAULT);
   }
 
-  l = valInt(getSizeCharArray(e->search_string));
+  if ( isNil(e->search_string) ||
+       (l=valInt(getSizeCharArray(e->search_string))) == 0 )
+  { send(e, NAME_report, NAME_warning, CtoName("No search string"), EAV);
+    abortIsearchEditor(e);
+    succeed;
+  }
+
   if ( fwd )
   { times = 1;
     start = valInt(e->mark);
@@ -3579,12 +3585,8 @@ executeSearchEditor(Editor e, Int chr)
   { times = -1;
     start = valInt(e->caret);
   }
-
-  if ( isNil(e->search_string) || l == 0 )
-  { send(e, NAME_report, NAME_warning, CtoName("No search string"), EAV);
-    abortIsearchEditor(e);
-    succeed;
-  }
+  if ( notDefault(from) )
+    start = valInt(from);
 
   if ( isDefault(chr) && e->mark != e->caret )
     start += times;
@@ -3613,7 +3615,7 @@ executeSearchEditor(Editor e, Int chr)
   }
   hit_end = hit_start + l;
 
-  if ( isDefault(chr) )
+  if ( isDefault(chr) && isDefault(from) )
     assign(e, search_base, toInt(fwd ? hit_start : hit_end-1));
 
   return showIsearchHitEditor(e, toInt(hit_start), toInt(hit_end));
@@ -3656,11 +3658,11 @@ IsearchEditor(Editor e, EventId id)
   }
   if ( cmd == NAME_isearchForward )
   { searchDirectionEditor(e, NAME_forward);
-    return executeSearchEditor(e, DEFAULT);
+    return executeSearchEditor(e, DEFAULT, DEFAULT);
   }
   if ( cmd == NAME_isearchBackward )
   { searchDirectionEditor(e, NAME_backward);
-    return executeSearchEditor(e, DEFAULT);
+    return executeSearchEditor(e, DEFAULT, DEFAULT);
   }
   if ( cmd == NAME_backwardDeleteChar ||
        cmd == NAME_cutOrBackwardDeleteChar ||
@@ -3668,8 +3670,7 @@ IsearchEditor(Editor e, EventId id)
   { changedHitsEditor(e);
     backwardDeleteCharSearchStringEditor(e);
     if ( notNil(e->search_string) )
-    { selection_editor(e, e->search_base, e->search_base, DEFAULT);
-      executeSearchEditor(e, DEFAULT);
+    { executeSearchEditor(e, DEFAULT, e->search_base);
     } else
     { e->caret = e->search_origin;		/* re-start */
       beginIsearchEditor(e, e->search_direction);
@@ -3694,7 +3695,7 @@ IsearchEditor(Editor e, EventId id)
       chr = toInt(Control('J'));
     case Control('J'):
     case Control('I'):
-      return executeSearchEditor(e, chr);
+      return executeSearchEditor(e, chr, DEFAULT);
     case Control('L'):
     case Control('@'):
       endIsearchEditor(e);
@@ -3703,7 +3704,7 @@ IsearchEditor(Editor e, EventId id)
 
   if ( valInt(chr) < Meta(0) &&
        tisprint(e->text_buffer->syntax, valInt(chr)) )
-    return executeSearchEditor(e, chr);
+    return executeSearchEditor(e, chr, DEFAULT);
 
   endIsearchEditor(e);
   fail;
