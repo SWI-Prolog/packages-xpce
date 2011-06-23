@@ -296,6 +296,7 @@ COMMON(status)	makeClassScrollBar(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/text.c */
 COMMON(void)	str_format(String out, const String in, const int width, const FontObj font);
+COMMON(void)	str_one_line(String to, String from);
 COMMON(status)	repaintText(TextObj t, int x, int y, int w, int h);
 COMMON(Int)	get_pointed_text(TextObj t, int x, int y);
 COMMON(status)	transparentText(TextObj t, BoolObj val);

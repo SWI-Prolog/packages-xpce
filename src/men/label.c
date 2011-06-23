@@ -41,6 +41,7 @@ initialiseLabel(Label lb, Name name, Any selection, FontObj font)
     assign(lb, font, font);
   selectionLabel(lb, selection);
   assign(lb, width, DEFAULT);
+  assign(lb, wrap, NAME_extend);
 
   return requestComputeGraphical(lb, DEFAULT);
 }
@@ -59,20 +60,34 @@ RedrawAreaLabel(Label lb, Area a)
 
   x += valInt(lb->border);
   y += valInt(lb->border);
+  w -= 2*valInt(lb->border);
+  h -= 2*valInt(lb->border);
+
+  if ( lb->wrap == NAME_clip )
+    d_clip(x, y, w, h);
 
   if ( instanceOfObject(lb->selection, ClassCharArray) )
-  { CharArray s = lb->selection;
+  { String s = &((CharArray)lb->selection)->data;
 
     if ( notNil(z) )
       x += valInt(getExFont(lb->font))/2;
 
-    str_label(&s->data, 0, lb->font, x, y, w, h, NAME_left, NAME_top,
+    if ( lb->wrap == NAME_clip )
+    { LocalString(buf, s->iswide, s->size+1);
+
+      str_one_line(buf, s);
+      s = buf;
+    }
+    str_label(s, 0, lb->font, x, y, w, h, NAME_left, NAME_top,
 	      lb->active == ON ? 0 : LABEL_INACTIVE);
   } else /*if ( instanceOfObject(lb->selection, ClassImage) )*/
   { Image image = (Image) lb->selection;
 
     r_image(image, 0, 0, x, y, w, h, ON);
   }
+
+  if ( lb->wrap == NAME_clip )
+    d_clip_done();
 
   if ( preview && isNil(z) )
     r_complement(x, y, w, h);
@@ -139,11 +154,18 @@ computeLabel(Label lb)
       b += abs(valInt(lb->elevation->height));
 
     if ( instanceOfObject(lb->selection, ClassCharArray) )
-    { CharArray s = (CharArray) lb->selection;
+    { String s = &((CharArray)lb->selection)->data;
       int minw;
       int ex = valInt(getExFont(lb->font));
 
-      str_size(&s->data, lb->font, &w, &h);
+      if ( lb->wrap == NAME_clip )
+      { LocalString(buf, s->iswide, s->size+1);
+
+	str_one_line(buf, s);
+	s = buf;
+      }
+
+      str_size(s, lb->font, &w, &h);
       w += ex;
 
       if ( notDefault(lb->width) )
@@ -209,7 +231,7 @@ selectionLabel(Label lb, Any selection)
 
 static status
 clearLabel(Label lb)
-{ return selectionLabel(lb, CtoName(""));
+{ return selectionLabel(lb, NAME_);
 }
 
 
@@ -238,6 +260,10 @@ fontLabel(Label lb, FontObj font)
   succeed;
 }
 
+static status
+wrapLabel(Label lb, Name wrap)
+{ return assignGraphical(lb, NAME_wrap, wrap);
+}
 
 static status
 lengthLabel(Label lb, Int length)
@@ -357,6 +383,8 @@ static char *T_geometry[] =
 static vardecl var_label[] =
 { SV(NAME_font, "font", IV_GET|IV_STORE, fontLabel,
      NAME_appearance, "Font for selection"),
+  SV(NAME_wrap, "{extend,clip}", IV_GET|IV_STORE, wrapLabel,
+     NAME_appearance, "How to handle long text"),
   SV(NAME_length, "0..", IV_GET|IV_STORE, lengthLabel,
      NAME_area, "Length in characters (with text)"),
   SV(NAME_width, "[0..]", IV_NONE|IV_STORE, widthLabel,

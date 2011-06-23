@@ -51,11 +51,11 @@ typedef struct colour_context *ColourContext; /* for selection/inactive */
 
 #define ABSTRACT_GRAPHICAL \
   ABSTRACT_VISUAL \
-  Device     	device;			/* device on which displayed */ \
-  Area	     	area;			/* area (bounding box) */ \
-  BoolObj       	displayed;		/* is graphical object displayed? */ \
-  Int        	pen;			/* pen thickness for this object */ \
-  Name	     	texture;		/* dash pattern for lines */ \
+  Device	device;			/* device on which displayed */ \
+  Area		area;			/* area (bounding box) */ \
+  BoolObj		displayed;		/* is graphical object displayed? */ \
+  Int		pen;			/* pen thickness for this object */ \
+  Name		texture;		/* dash pattern for lines */ \
   Any		colour;			/* colour of the graphical */ \
   Chain		handles;		/* handles connected to graphical */ \
   Chain		connections;		/* Available connections */ \
@@ -65,7 +65,7 @@ typedef struct colour_context *ColourContext; /* for selection/inactive */
   BoolObj		active;			/* (de)activated */ \
   CursorObj	cursor;			/* cursor of the graphical */ \
   LayoutInterface layout_interface;	/* Interface to layout manager */ \
-  Any	     	request_compute;	/* graphical needs recomputed */
+  Any		request_compute;	/* graphical needs recomputed */
 
 #define ABSTRACT_DEVICE \
   ABSTRACT_GRAPHICAL \
@@ -191,21 +191,21 @@ NewClass(format)
 End;
 
 NewClass(tileobj)
-  Int	     	idealWidth;		/* Desired width of the tile */
-  Int	     	idealHeight;		/* Idem for height */
-  Int	     	horStretch;		/* Horizontal stretchability */
-  Int	     	horShrink;		/* Horizontal shrinkability */
-  Int	     	verStretch;		/* Vertical stretchability */
-  Int	     	verShrink;		/* Vertical shrinkability */
-  BoolObj	     	canResize;		/* Can be resized by user? */
+  Int		idealWidth;		/* Desired width of the tile */
+  Int		idealHeight;		/* Idem for height */
+  Int		horStretch;		/* Horizontal stretchability */
+  Int		horShrink;		/* Horizontal shrinkability */
+  Int		verStretch;		/* Vertical stretchability */
+  Int		verShrink;		/* Vertical shrinkability */
+  BoolObj		canResize;		/* Can be resized by user? */
   TileAdjuster	adjuster;		/* Object that resizes me */
-  Int	     	border;			/* Border between subtiles */
-  Name       	orientation;		/* none, horizontal, vertical */
-  Chain	     	members;		/* subtiles */
-  TileObj    	super;			/* Super tile */
-  Any	     	object;			/* Object managed */
-  Area	     	area;			/* Current area of the tile */
-  BoolObj	     	enforced;		/* Enfore layout */
+  Int		border;			/* Border between subtiles */
+  Name		orientation;		/* none, horizontal, vertical */
+  Chain		members;		/* subtiles */
+  TileObj	super;			/* Super tile */
+  Any		object;			/* Object managed */
+  Area		area;			/* Current area of the tile */
+  BoolObj		enforced;		/* Enfore layout */
 End;
 
 NewClass(tree)
@@ -349,6 +349,7 @@ End;
 NewClass(label)
   ABSTRACT_DIALOGITEM
   FontObj    font;			/* Font of the text */
+  Name	     wrap;			/* How to handle long text */
   Int	     length;			/* Length in characters */
   Int	     width;			/* Width of field in pixels */
   Any	     selection;			/* Currently displayed value */
@@ -602,7 +603,7 @@ NewClass(key_binding)
   Sheet		bindings;		/* Key-name --> function */
   Chain		defaults;		/* Default tables to be used */
   Any		default_function;	/* Function if not defined */
-  Name 		prefix;			/* Parsed prefix */
+  Name		prefix;			/* Parsed prefix */
   Int		argument;		/* Universal argument */
   Name		status;			/* {universal_argument}* */
   Int		saved_column;		/* {next,previous}_line column */
@@ -977,7 +978,7 @@ the optimal redisplay behaviour.
     _device = (gr)->device;				\
 							\
     code;						\
-    							\
+							\
     if ( (_x != (gr)->area->x || _y != (gr)->area->y ||	\
           _w != (gr)->area->w || _h != (gr)->area->h)&& \
 	 _device == (gr)->device)			\
@@ -1024,7 +1025,7 @@ struct colour_context
 typedef struct
 { Int	x;
   Int	y;
-  Int 	w;
+  Int	w;
   Int	h;
 } device_draw_context, *DeviceDrawContext;
 

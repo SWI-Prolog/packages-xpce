@@ -429,7 +429,7 @@ human_accelerator(Key, Text) :-
 
 :- pce_begin_class(emacs_mini_window, dialog, "Prompt and feedback window").
 
-variable(prompter, 	 dialog_item*,  get,	"Current prompter").
+variable(prompter,	 dialog_item*,  get,	"Current prompter").
 variable(report_count,	 number,	get,	"Count to erase report").
 variable(report_type,	 name*,		both,	"Last type of report").
 
@@ -438,7 +438,8 @@ initialise(D) :->
 	send(D, slot, report_count, number(0)),
 	send(D, gap, size(10, 2)),
 	send(D, pen, 0),
-	send(D, display, label(reporter), point(0, 2)),
+	send(D, display, new(R, label(reporter)), point(0, 2)),
+	send(R, wrap, clip),
 	send(D, display, new(T, text('', right, normal)), point(100, 2)),
 	send(T, name, line),
 	get(text_item(''), height, MH),
@@ -694,7 +695,7 @@ prompt(V, Label:char_array, Default:[any], Type:[type], History:[chain],
 	fix_rval(Type, RawRval, Rval),
 	(   object(Rval),
 	    get(Rval, lock_object, @off)
-	->  send(Rval, lock_object, @on), 	% protect during deletion!
+	->  send(Rval, lock_object, @on),	% protect during deletion!
 	    free(Item),
 	    get(Rval, unlock, Rval)
 	;   free(Item)
@@ -803,7 +804,7 @@ make_idle_timer(T) :-
 	new(T, timer(2)),
 	send(T, message,
 	     new(Msg, message(T, send_hyper, editor, editor_idle_event))),
-	send(Msg, debug_class, service). 	% non-traceable
+	send(Msg, debug_class, service).	% non-traceable
 
 
 editor_idle_event(E) :->
@@ -1333,11 +1334,11 @@ typed(M, Id:'event|event_id', Editor:editor) :->
 
 					% send to mode rather than editor
 	(   get(M, focus_function, F), F \== @nil
- 	->  (   send(M, F, Id)
+	->  (   send(M, F, Id)
 	    ->  true
 	    ;   send(M, focus_function, @nil),
 		send(M, typed, Id, Editor)	  % failed: unfocus and resent
- 	    )
+	    )
 	;   get(M, bindings, Binding),
 	    send(Binding, typed, Id, M)
 	).

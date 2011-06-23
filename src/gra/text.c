@@ -228,7 +228,7 @@ str_format(String out, const String in, const int width, const FontObj font)
 }
 
 
-static void
+void
 str_one_line(String to, String from)
 { int n;
 
