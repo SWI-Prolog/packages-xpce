@@ -3665,12 +3665,15 @@ IsearchEditor(Editor e, EventId id)
   if ( cmd == NAME_backwardDeleteChar ||
        cmd == NAME_cutOrBackwardDeleteChar ||
        cnm == NAME_backspace )		/* also if re-bound */
-  { backwardDeleteCharSearchStringEditor(e);
+  { changedHitsEditor(e);
+    backwardDeleteCharSearchStringEditor(e);
     if ( notNil(e->search_string) )
     { selection_editor(e, e->search_base, e->search_base, DEFAULT);
       executeSearchEditor(e, DEFAULT);
     } else
-      endIsearchEditor(e);
+    { e->caret = e->search_origin;		/* re-start */
+      beginIsearchEditor(e, e->search_direction);
+    }
 
     succeed;
   }
