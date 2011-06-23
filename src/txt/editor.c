@@ -51,7 +51,7 @@ static status		prependKill(CharArray);
 static status		geometryEditor(Editor, Int, Int, Int, Int);
 static status		ensureVisibleEditor(Editor, Int, Int);
 static status		ensureCaretInWindowEditor(Editor);
-static status		endIsearchEditor(Editor);
+static status		endIsearchEditor(Editor, BoolObj save_mark);
 static status		updateStyleCursorEditor(Editor);
 static status		selectedFragmentEditor(Editor, Fragment);
 static status		showMatchingBracketEditor(Editor, Int);
@@ -74,7 +74,7 @@ static status		showLabelEditor(Editor e, BoolObj val);
 static Int		countLinesEditor(Editor e, Int from, Int to);
 static status		deleteEditor(Editor e, Int from, Int to);
 static status		deleteSelectionEditor(Editor e);
-static status		abortIsearchEditor(Editor e);
+static status		abortIsearchEditor(Editor e, BoolObj save_mark);
 static status		scrollUpEditor(Editor e, Int arg);
 static Int		getColumnLocationEditor(Editor e, Int c, Int from);
 
@@ -1369,7 +1369,7 @@ reportEditor(Editor e, Name kind, CharArray fm, int argc, Any *argv)
 
 status
 forwardModifiedEditor(Editor e, BoolObj val)
-{ abortIsearchEditor(e);
+{ abortIsearchEditor(e, OFF);
 
   if ( notNil(e->modified_message) )
     forwardReceiverCode(e->modified_message, Receiver(e), val, EAV);
@@ -1437,7 +1437,7 @@ event_editor(Editor e, EventObj ev)
     if ( sw && notNil(sw) && sw->keyboard_focus != (Graphical)e )
       send(e, NAME_keyboardFocus, ON, EAV);
 
-    endIsearchEditor(e);
+    endIsearchEditor(e, OFF);
     assign(e, focus_function, NIL);
   }
 
@@ -1462,8 +1462,6 @@ event_editor(Editor e, EventObj ev)
 
     if ( !where )
       fail;
-
-/*  endIsearchEditor(e); */
 
     if ( isDownEvent(ev) )
     { status rval = FAIL;
@@ -2396,7 +2394,7 @@ undefinedEditor(Editor e)
 static status
 keyboardQuitEditor(Editor e, Int arg)
 { assign(e, focus_function, NIL);
-  abortIsearchEditor(e);
+  abortIsearchEditor(e, OFF);
   markStatusEditor(e, NAME_inactive);
   send(e, NAME_report, NAME_warning, CtoName("Quit"), EAV);
 
@@ -3419,11 +3417,14 @@ beginIsearchEditor(Editor e, Name direction)
 
 
 static status
-abortIsearchEditor(Editor e)
+abortIsearchEditor(Editor e, BoolObj save_mark)
 { if ( isisearchingEditor(e) )
   { assign(e, focus_function, NIL);
     changedHitsEditor(e);
-    selection_editor(e, DEFAULT, DEFAULT, NAME_inactive);
+    if ( save_mark == ON )
+      selection_editor(e, e->search_origin, DEFAULT, NAME_inactive);
+    else
+      selection_editor(e, DEFAULT, DEFAULT, NAME_inactive);
   }
 
   succeed;
@@ -3431,10 +3432,17 @@ abortIsearchEditor(Editor e)
 
 
 static status
-endIsearchEditor(Editor e)
+endIsearchEditor(Editor e, BoolObj save_mark)
 { if ( isisearchingEditor(e) )
-  { abortIsearchEditor(e);
-    send(e, NAME_report, NAME_status, NAME_, EAV);
+  { Name msg;
+
+    abortIsearchEditor(e, save_mark);
+    if ( save_mark )
+      msg = CtoName("Mark saved where search started");
+    else
+      msg = NAME_;
+
+    send(e, NAME_report, NAME_status, msg, EAV);
   }
 
   succeed;
@@ -3577,7 +3585,7 @@ executeSearchEditor(Editor e, Int chr, Int from)
   if ( isNil(e->search_string) ||
        (l=valInt(getSizeCharArray(e->search_string))) == 0 )
   { send(e, NAME_report, NAME_warning, CtoName("No search string"), EAV);
-    abortIsearchEditor(e);
+    abortIsearchEditor(e, OFF);
     succeed;
   }
 
@@ -3655,7 +3663,7 @@ IsearchEditor(Editor e, EventId id)
   { selection_editor(e, e->search_origin, e->search_origin, NAME_inactive);
     assign(e, search_string, NIL);
     keyboardQuitEditor(e, DEFAULT);
-    endIsearchEditor(e);
+    endIsearchEditor(e, OFF);
 
     succeed;
   }
@@ -3683,13 +3691,13 @@ IsearchEditor(Editor e, EventId id)
   }
 
   if ( !isInteger(id) )
-  { endIsearchEditor(e);
+  { endIsearchEditor(e, ON);
     fail;
   }
 
   switch( valInt(chr) )
   { case ESC:
-      endIsearchEditor(e);
+      endIsearchEditor(e, ON);
       succeed;
     case Control('W'):
       extendSearchStringToWordEditor(e);
@@ -3701,7 +3709,7 @@ IsearchEditor(Editor e, EventId id)
       return executeSearchEditor(e, chr, DEFAULT);
     case Control('L'):
     case Control('@'):
-      endIsearchEditor(e);
+      endIsearchEditor(e, ON);
       fail;
   }
 
@@ -3709,7 +3717,7 @@ IsearchEditor(Editor e, EventId id)
        tisprint(e->text_buffer->syntax, valInt(chr)) )
     return executeSearchEditor(e, chr, DEFAULT);
 
-  endIsearchEditor(e);
+  endIsearchEditor(e, ON);
   fail;
 }
 
@@ -3994,7 +4002,7 @@ scrollVerticalEditor(Editor e, Name dir, Name unit, Int amount)
 { TextBuffer tb = e->text_buffer;
   Int start;
 
-  endIsearchEditor(e);
+  endIsearchEditor(e, OFF);
   markStatusEditor(e, NAME_inactive);
 
   if ( unit == NAME_file )
@@ -4070,7 +4078,7 @@ getInternalMarkEditor(Editor e)
 
 static status
 selectionOriginEditor(Editor e, Int where)
-{ endIsearchEditor(e);
+{ endIsearchEditor(e, OFF);
   assign(e, selection_origin, where);
 
   return selectionExtendEditor(e, where);
