@@ -49,10 +49,11 @@ save_text(M) :->
 quit(M) :->
 	"Destroy the editor"::
 	ignore(send(M?text_buffer, save_if_modified)),
-	(   get(M, frame, Frame)
+	(   get(M, frame, Frame),
+	    send(Frame, has_send_method, quitted)
 	->  send(Frame, quitted, @on),
 	    send(Frame, nodebug)
-	;   send(M, destroy)
+	;   send_super(M, quit)
 	).
 
 :- pce_end_class.
