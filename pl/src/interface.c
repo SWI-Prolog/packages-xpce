@@ -168,12 +168,13 @@ static PceType		cToPceType(const char *name);
 
 static int prof_active;			/* activated */
 static PL_prof_type_t pceProfType;	/* registration */
+static int pce_initialised = FALSE;	/* library is initialiased */
 
 		 /*******************************
 		 *	       CONTEXT		*
 		 *******************************/
 
-static Module 	 DefaultModule;		/* For module handling */
+static Module	 DefaultModule;		/* For module handling */
 static PceObject DefaultContext;	/* Executing context */
 
 		 /*******************************
@@ -235,7 +236,7 @@ initPrologConstants()
   ATOM_argument			= AtomFromString("argument");
   ATOM_argument_count		= AtomFromString("argument_count");
   ATOM_assign		        = AtomFromString(":=");
-  ATOM_badIntegerReference 	= AtomFromString("bad_integer_reference");
+  ATOM_badIntegerReference	= AtomFromString("bad_integer_reference");
   ATOM_badList		        = AtomFromString("bad_list");
   ATOM_badObjectDescription	= AtomFromString("bad_object_description");
   ATOM_badReference		= AtomFromString("bad_reference");
@@ -244,15 +245,15 @@ initPrologConstants()
   ATOM_behaviour		= AtomFromString("behaviour");
   ATOM_context			= AtomFromString("context");
   ATOM_default			= AtomFromString("default");
-  ATOM_dot	   		= AtomFromString(".");
-  ATOM_domain_error   		= AtomFromString("domain_error");
+  ATOM_dot			= AtomFromString(".");
+  ATOM_domain_error		= AtomFromString("domain_error");
   ATOM_error			= AtomFromString("error");
   ATOM_existence_error		= AtomFromString("existence_error");
   ATOM_get			= AtomFromString("get");
   ATOM_initialisation		= AtomFromString("initialisation");
   ATOM_instantiation_error	= AtomFromString("instantiation_error");
   ATOM_io_mode			= AtomFromString("io_mode");
-  ATOM_module   		= AtomFromString(":");
+  ATOM_module			= AtomFromString(":");
   ATOM_named_argument		= AtomFromString("named_argument");
   ATOM_named_reference		= AtomFromString("named_reference");
   ATOM_new			= AtomFromString("new");
@@ -318,7 +319,7 @@ initPceConstants()
   PROLOG	  = cToPceAssoc("host");
 
   ClassBinding    = cToPceAssoc(":=_class");	/* not so nice! */
-  ClassType       = cToPceAssoc("type_class"); 	/* not so nice! */
+  ClassType       = cToPceAssoc("type_class");	/* not so nice! */
   assert(ClassBinding);
 
   TypeInt	  = cToPceType("int");
@@ -353,10 +354,10 @@ cToPceType(const char *name)
 #define	FUNCTOR_pce3		ATOM_pce, 3
 #define	FUNCTOR_ref1		ATOM_ref, 1
 #define	FUNCTOR_new1		ATOM_new, 1
-#define	FUNCTOR_string1 	ATOM_string, 1
-#define	FUNCTOR_module2 	ATOM_module, 2
-#define FUNCTOR_namearg 	ATOM_assign, 2
-#define FUNCTOR_error2  	ATOM_error, 2
+#define	FUNCTOR_string1		ATOM_string, 1
+#define	FUNCTOR_module2		ATOM_module, 2
+#define FUNCTOR_namearg		ATOM_assign, 2
+#define FUNCTOR_error2		ATOM_error, 2
 #define FUNCTOR_domain_error2	ATOM_domain_error, 2
 
 #define initHostConstants()
@@ -546,22 +547,22 @@ static PL_dispatch_hook_t	old_dispatch_hook;
 static void
 initHostConstants()
 { FUNCTOR_behaviour1        = PL_new_functor(ATOM_behaviour, 1);
-  FUNCTOR_error2  	    = PL_new_functor(ATOM_error, 2);
+  FUNCTOR_error2	    = PL_new_functor(ATOM_error, 2);
   FUNCTOR_existence_error2  = PL_new_functor(ATOM_existence_error, 2);
-  FUNCTOR_get2    	    = PL_new_functor(ATOM_get, 2);
-  FUNCTOR_module2 	    = PL_new_functor(ATOM_module, 2);
-  FUNCTOR_namearg 	    = PL_new_functor(ATOM_assign, 2);
+  FUNCTOR_get2		    = PL_new_functor(ATOM_get, 2);
+  FUNCTOR_module2	    = PL_new_functor(ATOM_module, 2);
+  FUNCTOR_namearg	    = PL_new_functor(ATOM_assign, 2);
   FUNCTOR_context2	    = PL_new_functor(ATOM_context, 2);
-  FUNCTOR_pce1	  	    = PL_new_functor(ATOM_pce, 1);
-  FUNCTOR_pce2    	    = PL_new_functor(ATOM_pce, 2);
-  FUNCTOR_pce3    	    = PL_new_functor(ATOM_pce, 3);
+  FUNCTOR_pce1		    = PL_new_functor(ATOM_pce, 1);
+  FUNCTOR_pce2		    = PL_new_functor(ATOM_pce, 2);
+  FUNCTOR_pce3		    = PL_new_functor(ATOM_pce, 3);
   FUNCTOR_permission_error3 = PL_new_functor(ATOM_permission_error, 3);
-  FUNCTOR_ref1    	    = PL_new_functor(ATOM_ref, 1);
-  FUNCTOR_new1    	    = PL_new_functor(ATOM_new, 1);
-  FUNCTOR_send2   	    = PL_new_functor(ATOM_send, 2);
-  FUNCTOR_spy1    	    = PL_new_functor(ATOM_spy, 1);
-  FUNCTOR_string1 	    = PL_new_functor(ATOM_string, 1);
-  FUNCTOR_trace1  	    = PL_new_functor(ATOM_trace, 1);
+  FUNCTOR_ref1		    = PL_new_functor(ATOM_ref, 1);
+  FUNCTOR_new1		    = PL_new_functor(ATOM_new, 1);
+  FUNCTOR_send2		    = PL_new_functor(ATOM_send, 2);
+  FUNCTOR_spy1		    = PL_new_functor(ATOM_spy, 1);
+  FUNCTOR_string1	    = PL_new_functor(ATOM_string, 1);
+  FUNCTOR_trace1	    = PL_new_functor(ATOM_trace, 1);
   FUNCTOR_type_error2       = PL_new_functor(ATOM_type_error, 2);
   FUNCTOR_domain_error2     = PL_new_functor(ATOM_domain_error, 2);
 
@@ -628,16 +629,18 @@ static OnExitFunction		exitpce_hook;
 
 install_t
 install_pl2xpce()
-{ PL_register_foreign("$pce_init", 1, pl_pce_init, PL_FA_TRANSPARENT);
+{ if ( pce_initialised )
+    return;
+  pce_initialised = TRUE;
+
+  PL_register_foreign("$pce_init", 1, pl_pce_init, PL_FA_TRANSPARENT);
 }
 
 install_t
 uninstall_pl2xpce()
-{ static int doing = FALSE;		/* avoid recursion */
-
-  if ( doing )
+{ if ( !pce_initialised )
     return;
-  doing = TRUE;
+  pce_initialised = FALSE;
 
   DEBUG(Sdprintf("Removing hooks (%p and %p)\n",
 		 old_dispatch_hook, old_update_hook));
@@ -1387,14 +1390,14 @@ makeClassProlog()
 		"unlink",			/* Name of the method */
 		NULL,				/* Group */
 		0,				/* # arguments */
-		"Discard associated term", 	/* Summary */
+		"Discard associated term",	/* Summary */
 		unlinkProlog);			/* Function */
   pceGetMethod (ClassProlog,			/* The class */
 		"print_name",			/* Name of the method */
 		NULL,				/* Group */
 		"string",			/* Return type */
 		0,				/* # arguments */
-		"Discard associated term", 	/* Summary */
+		"Discard associated term",	/* Summary */
 		getPrintNameProlog);		/* Function */
 
   /* type(prolog, atomic, @default, chain(type(prolog_term))) */
@@ -1419,7 +1422,7 @@ makeClassProlog()
 		NULL,				/* Group */
 		1,				/* # arguments */
 		"prolog",			/* Type arg1 */
-		"Test equality (==)", 		/* Summary */
+		"Test equality (==)",		/* Summary */
 		equalProlog);			/* Function */
 }
 
@@ -1446,7 +1449,7 @@ termToObject(term_t t, PceType type, atom_t assoc, int new)
 	Sdprintf(")\n"));
 
   if ( GetNameArity(t, &functor, &arity) )
-  { 					/* Just an atom */
+  {					/* Just an atom */
     if ( arity == 0 )
     { PceName name = atomToName(functor);
 
@@ -2231,12 +2234,18 @@ int r;
 
 static int
 PrologSend(PceObject prolog, PceObject sel, int argc, PceObject *argv)
-{ Fid fid = OpenForeign();
-  Module m = pceContextModule();
+{ Fid fid;
+  Module m;
   PceCValue value;
   Predicate pred = NULL;
   term_t goal = 0;
   int rval;
+
+  if ( !pce_initialised )
+    return FALSE;
+
+  fid = OpenForeign();
+  m = pceContextModule();
 
   switch(pceToC(sel, &value))
   { case PCE_NAME:
@@ -2300,12 +2309,20 @@ PrologSend(PceObject prolog, PceObject sel, int argc, PceObject *argv)
 
 static PceObject
 PrologGet(PceObject prolog, PceObject sel, int argc, PceObject *argv)
-{ Fid fid = OpenForeign();
-  Module m = pceContextModule();
-  atom_t name = nameToAtom(sel);
-  Predicate pred = FindPredicate(name, argc+1, m);
+{ Fid fid;
+  Module m;
+  atom_t name;
+  Predicate pred;
   int i;
   PceObject obj;
+
+  if ( !pce_initialised )
+    return PCE_FAIL;
+
+  fid = OpenForeign();
+  m = pceContextModule();
+  name = nameToAtom(sel);
+  FindPredicate(name, argc+1, m);
 
 #ifdef SWI
   term_t terms = PL_new_term_refs(argc+1);
@@ -2511,6 +2528,9 @@ static int
 PrologCall(PceGoal goal)
 { prolog_call_data *pcd;
 
+  if ( !pce_initialised )
+    return FALSE;
+
   if ( (pcd = get_pcd(goal->implementation)) )
   { fid_t fid;
 
@@ -2518,7 +2538,7 @@ PrologCall(PceGoal goal)
     { term_t av  = PL_new_term_refs(4);
       term_t mav = PL_new_term_refs(pcd->argc);
       int rval = PCE_FAIL, n;
-  					  /* push method identifier */
+					  /* push method identifier */
       if ( (pcd->flags & (PCE_METHOD_INFO_TRACE|PCE_METHOD_INFO_BREAK)) )
       { if ( !put_trace_info(av+0, pcd) )
 	  goto error;
@@ -3173,7 +3193,7 @@ registerPredicates()
   InstallPredicate("new",		2, pl_new,		META);
   InstallPredicate("pce_method_implementation", 2,
 		   pl_pce_method_implementation, 0);
-  InstallPredicate("pce_open",		3, pl_pce_open, 	0);
+  InstallPredicate("pce_open",		3, pl_pce_open,		0);
   InstallPredicate("pce_postscript_stream", 1, pl_pce_postscript_stream, 0);
 }
 
