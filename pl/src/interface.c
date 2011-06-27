@@ -2322,10 +2322,10 @@ PrologGet(PceObject prolog, PceObject sel, int argc, PceObject *argv)
   fid = OpenForeign();
   m = pceContextModule();
   name = nameToAtom(sel);
-  FindPredicate(name, argc+1, m);
+  pred = FindPredicate(name, argc+1, m);
 
 #ifdef SWI
-  term_t terms = PL_new_term_refs(argc+1);
+{ term_t terms = PL_new_term_refs(argc+1);
   qid_t qid;
   int rval;
 
@@ -2343,7 +2343,7 @@ PrologGet(PceObject prolog, PceObject sel, int argc, PceObject *argv)
     obj = termToObject(terms+argc, NULL, NULLATOM, FALSE);
   else
     obj = PCE_FAIL;
-
+}
 #else /*~SWI*/
 
   if ( pred )
