@@ -56,6 +56,11 @@
 !emacs_prolog_mode.cond_indentation: 4
 !emacs_prolog_mode.indent_tabs:	     @on
 
+! Comment column for M-; This may be refined by mode (e.g. emacs_prolog_mode,
+! etc.)
+
+!emacs_language_mode.comment_column: 48
+
 ! Spelling program options for the ispell demo and checker for PceEmacs.
 ! Ispell is available on most Unix installations.
 
