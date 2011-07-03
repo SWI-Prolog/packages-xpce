@@ -276,8 +276,7 @@ Note that we could generalise this to deal with all included files.
 
 push_logtalk_operators :-
 	logtalk_operators(Ops),
-	'$set_source_module'(SM, SM),
-	push_operators(SM:Ops).
+	push_operators(emacs_prolog_mode:Ops).
 
 pop_logtalk_operators :-
 	pop_operators.
