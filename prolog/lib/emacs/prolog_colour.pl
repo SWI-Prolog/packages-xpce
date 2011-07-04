@@ -50,6 +50,7 @@ User extension hooks.
 	identify/2,
 	term_colours/2,
 	goal_colours/2,
+	directive_colours/2,		% Term, Colours
 	goal_classification/2.
 
 :- emacs_extend_mode(prolog,
@@ -444,10 +445,23 @@ functor_position(list_position(F,_T,Elms,none), F-FT, Elms) :- !,
 functor_position(Pos, Pos, []).
 
 
-%	colourise_directive(+Body, +TB, +Pos)
+%%	colourise_directive(+Body, +TB, +Pos)
 %
 %	Colourise the body of a directive.
 
+colourise_directive((A,B), TB, term_position(_,_,_,_,[PA,PB])) :- !,
+	colourise_directive(A, TB, PA),
+	colourise_directive(B, TB, PB).
+colourise_directive(Body, TB, Pos) :-
+	nonvar(Body),
+	directive_colours(Body, ClassSpec-ArgSpecs), !, % specified
+	functor_position(Pos, FPos, ArgPos),
+	(   ClassSpec == classify
+	->  goal_classification(TB, Body, [], Class)
+	;   Class = ClassSpec
+	),
+	colour_item(goal(Class, Body), TB, FPos),
+	specified_items(ArgSpecs, Body, TB, ArgPos).
 colourise_directive(Body, TB, Pos) :-
 	colourise_body(Body, TB, Pos).
 
