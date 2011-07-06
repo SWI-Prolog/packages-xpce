@@ -3533,7 +3533,7 @@ showIsearchHitEditor(Editor ed, Int start, Int end)
 static status
 extendSearchStringToWordEditor(Editor e)
 { TextBuffer tb = e->text_buffer;
-  Int size = getSizeCharArray(e->search_string);
+  Int size = isNil(e->search_string) ? ZERO : getSizeCharArray(e->search_string);
   Int start, end;
 
   if ( e->search_direction == NAME_forward )
