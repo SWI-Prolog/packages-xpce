@@ -47,6 +47,7 @@ variable(time_stamp,	  date*,	get,  "Time-stamp for file").
 variable(ensure_newline,  bool := @on,	both, "Add newline when done").
 variable(ensure_no_whitespace_errors,
 			  bool,		both, "Remove trailing whitespace when done").
+variable(tab_width,	  int := 8,	both, "Width of a tab").
 variable(auto_save_mode,  bool,		both, "Auto-save?").
 variable(auto_save_count, number,	get,  "Auto-save at expiration").
 variable(saved_caret,	  int,		both, "Saved caret on last quit").
@@ -179,15 +180,18 @@ attach(B, E:editor) :->
 	get(B, editors, Editors),
 	(   send(Editors, empty)
 	->  get(B, saved_caret, Caret),
-	    get(B, saved_fill, Fill)
+	    get(B, saved_fill, Fill),
+	    get(B, tab_width, TabWidth)
 	;   get(Editors?head, caret, Caret),
-	    get(Editors?head, fill_mode, Fill)
+	    get(Editors?head, fill_mode, Fill),
+	    get(Editors?head, tab_distance, TabWidth)
 	),
 	get(B, margin_width, MW),
 	send(B, send_super, attach, E),
 	send(E, caret, Caret),
 	send(E, fill_mode, Fill),
-	send(E, margin_width, MW).
+	send(E, margin_width, MW),
+	send(E, tab_distance, TabWidth).
 
 
 detach(B, E:editor) :->
@@ -683,6 +687,7 @@ init_mode_defaults(B) :->
 	).
 
 copy_class_var(indent_tabs).
+copy_class_var(tab_width).
 
 
 		 /*******************************

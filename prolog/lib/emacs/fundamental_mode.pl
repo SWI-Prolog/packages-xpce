@@ -133,6 +133,9 @@ class_variable(print_command,	string,
 		 windows('NOTEPAD.EXE /P %s')
 	       ],
 	       "Command to print a file").
+class_variable(tab_width,	int,
+	       8,
+	       "Distance between tab-stops").
 
 variable(print_command, name, both,
 	 "Command to print a file").
@@ -488,6 +491,13 @@ newline_mode(M, Mode:mode={posix,dos}) :->
 	get(M, text_buffer, TB),
 	get(TB, file, File),
 	send(File, newline_mode, Mode).
+
+tab_width(M, Width:width='2..') :->
+	"Set distance between tab-stops"::
+	get(M, text_buffer, TB),
+	get(M, editor, E),
+	send(TB, tab_width, Width),
+	send(E, tab_distance, Width).
 
 
 		 /*******************************

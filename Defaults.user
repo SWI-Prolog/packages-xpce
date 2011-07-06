@@ -47,6 +47,11 @@
 
 !emacs_prolog_mode.show_syntax_errors: typing
 
+! Specify the distance between tab-stops in spaces.  This can be refined
+! for other modes.
+
+!emacs_fundamental_mode.tab_width: 8
+
 ! Indentation parameters for Prolog mode.  body_indentation is the
 ! indentation of goals in the body.  cond_indentation is the extra
 ! indentation for (if->then;else), (a;b), etc.  indent_tabs defines
