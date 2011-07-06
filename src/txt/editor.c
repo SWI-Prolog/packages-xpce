@@ -1058,7 +1058,7 @@ fetch_editor(Any obj, TextChar tc)
 	  if ( notDefault(s->background) )
 	    tc->background = s->background;
 	}
-      } else
+      } else if ( notNil(e->search_string) )
       { int len = valInt(getSizeCharArray(e->search_string));
 	TextBuffer tb = e->text_buffer;
 
@@ -3661,11 +3661,9 @@ IsearchEditor(Editor e, EventId id)
 
   if ( cmd == NAME_keyboardQuit )	/* abort the search */
   { selection_editor(e, e->search_origin, e->search_origin, NAME_inactive);
-    assign(e, search_string, NIL);
-    keyboardQuitEditor(e, DEFAULT);
     endIsearchEditor(e, OFF);
 
-    succeed;
+    fail;
   }
   if ( cmd == NAME_isearchForward )
   { searchDirectionEditor(e, NAME_forward);
