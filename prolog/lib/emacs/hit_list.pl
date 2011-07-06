@@ -34,6 +34,9 @@
 :- require([ default/3
 	   ]).
 
+/** <module> PceEmacs class to show error search location
+*/
+
 :- pce_begin_class(emacs_hit_list, frame,
 		   "Represent result of find, errors, etc.").
 
@@ -41,7 +44,7 @@ variable(expose_on_append, bool := @off, both,
 	 "->expose on ->append_hit").
 variable(clear_on_append,  bool := @off, both,
 	 "Clear on ->append_hit after usage").
-variable(used, 		   bool := @off, both,
+variable(used,		   bool := @off, both,
 	 "->goto has been used").
 variable(message,	   name := caret, both,
 	 "Method to apply").
@@ -51,22 +54,33 @@ class_variable(confirm_done, bool, @off).
 initialise(L, Label:[string]) :->
 	"Create from label"::
 	default(Label, 'Compilation errors', FrameLabel),
-	send(L, send_super, initialise, FrameLabel),
+	send_super(L, initialise, FrameLabel),
 	send(L, append, new(B, browser('', size(60, 6)))),
-	send(B, open_message, message(L, goto, @arg1?object)),
+	send(B, select_message, message(L, goto, @arg1?object)),
 	send(new(D, dialog), below, B),
 	send(D, pen, 0),
 	send(D, gap, size(10, 5)),
 	send(D, append, button(quit, message(L, destroy))),
-	send(D, append, label(reporter), right),
-	send(L, open).
+	send(D, append, label(reporter), right).
 
 
 unlink(L) :->
 	"Remove fragments from the buffers"::
 	send(L, clear),
-	send(L, send_super, unlink).
+	send_super(L, unlink).
 
+open(L) :->
+	"Open, if possible as a transient window for PceEmacs"::
+	debug(emacs, 'Open ~p~n', [L]),
+	(   object(@emacs),
+	    get(@emacs, current_frame, Frame)
+	->  get(Frame, area, area(X,Y,W,_H)),
+	    send(L, transient_for, Frame),
+	    send(L, create),
+	    get(L, size, size(BW,_)),
+	    send_super(L, open, point(X+W-BW,Y+20))
+	;   send_super(L, open)
+	).
 
 browser(L, Browser:list_browser) :<-
 	get(L, member, browser, B),

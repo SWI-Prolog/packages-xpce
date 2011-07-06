@@ -416,12 +416,14 @@ indent_comment_line(E) :->
 
 make(E) :->				% SWI-Prolog specific
 	"Run `make/0' in the Prolog window"::
+	send(E, close_warning_window),
 	send(@emacs, save_some_buffers),
 	make,
 	send(E, report, status, 'Make done').
 
 compile_buffer(E) :->
 	"Save current buffer and (re)consult its file"::
+	send(E, close_warning_window),
 	get(E?text_buffer, file, File),
 	(   send(File, instance_of, file)
 	->  send(E, save_if_modified),
@@ -432,6 +434,13 @@ compile_buffer(E) :->
 	    send(E, report, status, '%s compiled', Path)
 	;   send(E, report, error,
 		 'Buffer is not connected to a file')
+	).
+
+close_warning_window(_E) :->
+	"Destroy compilation error window"::
+	(   object(@prolog_warnings)
+	->  send(@prolog_warnings, destroy)
+	;   true
 	).
 
 
