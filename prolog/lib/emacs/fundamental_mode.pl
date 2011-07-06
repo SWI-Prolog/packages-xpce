@@ -56,6 +56,8 @@
 	  write_region		   = key('\\e\\C-w'),
 	  compile		   = key('\\C-x\\C-m'),
 
+	  prefix		   = key('\\eg'),
+
 					% FILE menu
 	  show_buffer_menu	   = key('\\C-x\\C-b') + button(file),
 	  switch_to_buffer	   = key('\\C-xb') +
@@ -86,6 +88,8 @@
 	  cut			   = button(edit),
 	  paste			   = button(edit),
 	  -			   = button(edit),
+	  goto_line		   = button(edit) +
+				     key('\\eg\\eg') + key('\\egg'),
 	  find			   = key(key_top_4) + button(edit),
 	  replace		   = button(edit),
 	  preferences		   = button(edit),
