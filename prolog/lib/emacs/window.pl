@@ -78,11 +78,11 @@ current(TW, Window:window) :->
 	"Make the given window the current one"::
 	send_super(TW, current, Window),
 	get(Window, text_buffer, TB),
-	send(TB, check_modified_file, @on),
 	(   get(TW, frame, Frame),
+	    send(TB, check_modified_file, Frame, @on),
 	    send(Frame, has_send_method, setup_mode)
 	->  send(TW?frame, setup_mode, Window)
-	;   true
+	;   send(TB, check_modified_file, @default, @on)
 	).
 
 frame_window(_TW, Window:window, _Name:name, _Rank:'1..', Frame:frame) :<-

@@ -574,7 +574,7 @@ margin_width(B, W:'0..') :->
 
 modified(B, Val:bool) :->
 	"Check the file; mark buffer-menu"::
-	send(B, send_super, modified, Val),
+	send_super(B, modified, Val),
 	(   Val == @on
 	->  send(B, check_modified_file)
 	;   send(B, delete_auto_save_file)
@@ -582,7 +582,7 @@ modified(B, Val:bool) :->
 	send(B, update_label).
 
 
-check_modified_file(B, Confirm:[bool]) :->
+check_modified_file(B, Frame:frame=[frame], Confirm:confirm=[bool]) :->
 	"Check if file has been modified after buffer"::
 	(   get(B, file, File),
 	    File \== @nil,
@@ -591,18 +591,19 @@ check_modified_file(B, Confirm:[bool]) :->
 	    get(File, time, FileStamp),
 	    \+ send(Stamp, equal, FileStamp),
 	    \+ object(@emacs_reverting)
-	->  (   confirm_reload(B, Confirm, File)
+	->  (   confirm_reload(B, Frame, Confirm, File)
 	    ->	send(B, revert)
 	    ;	true
 	    )
 	;   true
 	).
 
-confirm_reload(_, @off, _) :- !.
-confirm_reload(B, @default, _) :-
+confirm_reload(_, _, @off, _) :- !.
+confirm_reload(B, _, @default, _) :-
 	get(B, prompt_reload, @off), !,
-	send(B, saved_caret, 0).
-confirm_reload(_, _, File) :-
+	send(B, saved_caret, 0),
+	send(B?editors, for_all, message(@arg1, caret, 0)).
+confirm_reload(_, Frame, _, File) :-
 	new(D, dialog('Modified file')),
 	send(D, append,
 	     label(title,  string('File %N was modified', File))),
@@ -610,7 +611,18 @@ confirm_reload(_, _, File) :-
 	     button(reload_file, message(D, return, reload_file))),
 	send(D, append,
 	     button(edit_buffer, message(D, return, edit_buffer))),
-	get(D, confirm_centered, RVal),
+	(   Frame \== @default
+	->  EmacsFrame = Frame
+	;   get(@emacs, current_frame, EmacsFrame)
+	->  true
+	;   EmacsFrame = @nil
+	),
+	(   EmacsFrame \== @default
+	->  get(EmacsFrame?area, center, Position),
+	    send(D, transient_for, EmacsFrame)
+	;   Position = @default
+	),
+	get(D, confirm_centered, Position, RVal),
 	send(D, destroy),
 	RVal == reload_file.
 
@@ -632,7 +644,7 @@ open(B, How:[{here,tab,window}], Frame:emacs_frame) :<-
 	    send(Frame, expose)
 	;   send(new(Frame, emacs_frame(B)), open)
 	),
-	send(B, check_modified_file).
+	send(B, check_modified_file, Frame).
 
 open(B, How:[{here,tab,window}]) :->
 	"Create window for buffer"::
@@ -713,7 +725,7 @@ copy_class_var(tab_width).
 
 %	emacs_buffer<-name_and_arity returns the name and arity if the
 %	caret is in the functor of the term.  If the arity cannot be
-%	determines, arity is returned as @default.
+%	determined, arity is returned as @default.
 
 name_and_arity(TB, Pos:int, Tuple:tuple) :<-
 	"Find name and arity of term at position"::
