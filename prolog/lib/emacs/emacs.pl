@@ -234,14 +234,15 @@ make_no_backup_list(Ch) :-
 	->  CaseSensitive = @on
 	;   CaseSensitive = @off
 	),
-	no_backup(Pattern),
-	send(Ch, append, regex(Pattern, CaseSensitive)).
+	forall(no_backup(Pattern),
+	       send(Ch, append, regex(Pattern, CaseSensitive))).
 
 %%	no_backup(?Regex)
 %
 %	True if PceEmacs does not backup files that match Regex.
 
 no_backup('/tmp/.*').
+no_backup('.*/COMMIT_EDITMSG$').
 
 :- free(@loading_emacs).
 

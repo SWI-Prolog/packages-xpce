@@ -42,6 +42,7 @@
 variable(name,		  name,		get,  "Name of this buffer").
 variable(directory,	  directory,	both, "Associated CWD").
 variable(file,		  file*,	get,  "Associated file").
+variable(prompt_reload,	  bool := @on,  both, "Prompt before reloading").
 variable(mode,		  name,		get,  "Major mode of operation").
 variable(time_stamp,	  date*,	get,  "Time-stamp for file").
 variable(ensure_newline,  bool := @on,	both, "Add newline when done").
@@ -160,10 +161,19 @@ determine_initial_mode(B) :->
 		message(@arg1?name, match, Match), Att)
 	->  send(B, slot, mode, Att?value)
 	;   send(B, slot, mode, @emacs_default_mode)
+	),
+	send(B, set_temp_file).
+
+set_temp_file(B) :->
+	"Clear ->prompt_reload if this is a temp file"::
+	get(B, file, File),
+	(   no_backup(File)
+	->  send(B, prompt_reload, @off)
+	;   true
 	).
 
 
-%	content_from_mode(+Buffer, -Mode)
+%%	content_from_mode(+Buffer, -Mode) is semidet.
 %
 %	Search Buffer with the patterns from @emacs_content_mode_list
 
@@ -309,8 +319,7 @@ save(B, File:[file]) :->
 	->  send(B, fix_whitespace_errors)
 	;   true
 	),
-	(   get(@emacs_no_backup_list, find,
-		message(@arg1, match, SaveFile?name), _)
+	(   no_backup(SaveFile)
 	->  true
 	;   ignore(send(SaveFile, backup))
 	),
@@ -320,6 +329,11 @@ save(B, File:[file]) :->
 	->  ignore(send(@emacs_mark_list, saved_buffer, B))
 	;   true
 	).
+
+no_backup(File) :-
+	get(@emacs_no_backup_list, find,
+	    message(@arg1, match, File?name), _).
+
 
 complete_last_line(B) :->
 	"Add \\n if needed"::
@@ -577,15 +591,18 @@ check_modified_file(B, Confirm:[bool]) :->
 	    get(File, time, FileStamp),
 	    \+ send(Stamp, equal, FileStamp),
 	    \+ object(@emacs_reverting)
-	->  (   confirm_reload(Confirm, File)
+	->  (   confirm_reload(B, Confirm, File)
 	    ->	send(B, revert)
 	    ;	true
 	    )
 	;   true
 	).
 
-confirm_reload(@off, _) :- !.
-confirm_reload(_, File) :-
+confirm_reload(_, @off, _) :- !.
+confirm_reload(B, @default, _) :-
+	get(B, prompt_reload, @off), !,
+	send(B, saved_caret, 0).
+confirm_reload(_, _, File) :-
 	new(D, dialog('Modified file')),
 	send(D, append,
 	     label(title,  string('File %N was modified', File))),
