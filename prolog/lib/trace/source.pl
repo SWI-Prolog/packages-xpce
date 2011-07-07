@@ -211,7 +211,7 @@ check_modified(V) :->
 	"Check for possibly modified file"::
 	(   not_recently_checked
 	->  get(V, text_buffer, TB),
-	    send(TB, check_modified_file, @off)
+	    send(TB, check_modified_file, V?frame, @off)
 	;   true
 	).
 
