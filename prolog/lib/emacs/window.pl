@@ -79,7 +79,7 @@ current(TW, Window:window) :->
 	send_super(TW, current, Window),
 	get(Window, text_buffer, TB),
 	(   get(TW, frame, Frame),
-	    send(TB, check_modified_file, Frame, @on),
+	    send(TB, check_modified_file, Frame),
 	    send(Frame, has_send_method, setup_mode)
 	->  send(TW?frame, setup_mode, Window)
 	;   send(TB, check_modified_file)
