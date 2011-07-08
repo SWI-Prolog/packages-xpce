@@ -82,7 +82,7 @@ current(TW, Window:window) :->
 	    send(TB, check_modified_file, Frame, @on),
 	    send(Frame, has_send_method, setup_mode)
 	->  send(TW?frame, setup_mode, Window)
-	;   send(TB, check_modified_file, @default, @on)
+	;   send(TB, check_modified_file)
 	).
 
 frame_window(_TW, Window:window, _Name:name, _Rank:'1..', Frame:frame) :<-
