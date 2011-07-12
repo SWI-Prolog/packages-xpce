@@ -5,7 +5,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2010, University of Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -33,6 +33,8 @@
 :- module(prolog_pretty_print,
 	  [ print_term/2	% +Term, +Options
 	  ]).
+:- use_module(library(listing)).
+:- use_module(library(option)).
 
 /** <module> pretty print Prolog terms
 
@@ -59,6 +61,8 @@ etc.
 %	  Define the output stream.  Default is =user_output=
 %	  * right_margin(+Integer)
 %	  Width of a line.  Default is 72 characters.
+%	  * tab_width(+Integer)
+%	  Distance between tab-stops.  Default is 8 characters.
 %	  * indent_arguments(+Spec)
 %	  Defines how arguments of compound terms are placed.  Defined
 %	  values are:
@@ -74,7 +78,7 @@ etc.
 %	    Place them vertically aligned, <N> spaces to the right of
 %	    the beginning of the head.
 %	  * operators(+Boolean)
-%	  This is the reverse of the write_term/3 option =ignore_ops=.
+%	  This is the inverse of the write_term/3 option =ignore_ops=.
 %	  Default is to respect them.
 %	  * write_options(+List)
 %	  List of options passed to write_term/3 for terms that are
@@ -86,16 +90,64 @@ etc.
 %	        ]
 %	    ==
 
-print_term(Term, Options0) :-
+print_term(Term, Options) :-
+	\+ \+ print_term_2(Term, Options).
+
+print_term_2(Term, Options0) :-
+	prepare_term(Term, Template, Cycles, Constraints),
 	defaults(Defs),
-	append(Options0, Defs, Options1),
-	select(write_options(WrtOpts0), Options1, Options2), !,
-	(   select(max_depth(MaxDepth), WrtOpts0, WrtOpts)
-	->  Options = [write_options(WrtOpts)|Options2]
-	;   MaxDepth = inf,
-	    Options = Options1
-	),
-	pp(Term, ctx(0,0,1200,MaxDepth), Options).
+	merge_options(Options0, Defs, Options),
+	option(write_options(WrtOpts), Options),
+	option(max_depth(MaxDepth), WrtOpts, infinite),
+	Context	= ctx(0,0,1200,MaxDepth),
+	pp(Template, Context, Options),
+	print_extra(Cycles, Context, 'where', Options),
+	print_extra(Constraints, Context, 'with constraints', Options).
+
+print_extra([], _, _, _) :- !.
+print_extra(List, Context, Comment, Options) :-
+	option(output(Out), Options),
+	format(Out, ', % ~w', [Comment]),
+	modify_context(Context, [indent=4], Context1),
+	print_extra_2(List, Context1, Options).
+
+print_extra_2([H|T], Context, Options) :-
+	option(output(Out), Options),
+	context(Context, indent, Indent),
+	indent(Out, Indent, Options),
+	pp(H, Context, Options),
+	(   T == []
+	->  true
+	;   format(Out, ',', []),
+	    print_extra_2(T, Context, Options)
+	).
+
+
+%%	prepare_term(+Term, -Template, -Cycles, -Constraints)
+%
+%	Prepare a term, possibly  holding   cycles  and  constraints for
+%	printing.
+
+prepare_term(Term, Template, Cycles, Constraints) :-
+	term_attvars(Term, []), !,
+	Constraints = [],
+	'$factorize_term'(Term, Template, Factors),
+	bind_non_cycles(Factors, 1, Cycles).
+prepare_term(Term, Template, Cycles, Constraints) :-
+	copy_term(Term, Copy, Constraints), !,
+	'$factorize_term'(Copy, Template, Factors),
+	bind_non_cycles(Factors, 1, Cycles).
+
+bind_non_cycles([], _, []).
+bind_non_cycles([V=Term|T], I, L) :-
+	unify_with_occurs_check(V, Term), !,
+	bind_non_cycles(T, I, L).
+bind_non_cycles([H|T0], I, [H|T]) :-
+	H = ('$VAR'(Name)=_),
+	atom_concat('_S', I, Name),
+	I2 is I + 1,
+	bind_non_cycles(T0, I2, T).
+
 
 defaults([ output(user_output),
 	   right_margin(72),
@@ -107,13 +159,6 @@ defaults([ output(user_output),
 			   attributes(portray)
 			 ])
 	 ]).
-
-		 /*******************************
-		 *	       OPTIONS		*
-		 *******************************/
-
-option(Options, A) :-
-	memberchk(A, Options).
 
 
 		 /*******************************
@@ -147,7 +192,7 @@ modify_context(I, Arity, Ctx0, Mapping, Ctx) :-
 
 
 dec_depth(Ctx, Ctx) :-
-	context(Ctx, max_depth, inf), !.
+	context(Ctx, max_depth, infinite), !.
 dec_depth(ctx(I,D,P,MD0), ctx(I,D,P,MD)) :-
 	MD is MD0 - 1.
 
@@ -165,13 +210,13 @@ pp(List, Ctx, Options) :-
 	List = [_|_], !,
 	context(Ctx, indent, Indent),
 	context(Ctx, depth, Depth),
-	option(Options, output(Out)),
-	option(Options, indent_arguments(IndentStyle)),
+	option(output(Out), Options),
+	option(indent_arguments(IndentStyle), Options),
 	(   (   IndentStyle == false
 	    ->	true
 	    ;	IndentStyle == auto,
-		print_width(List, Ctx, Options, Width),
-		option(Options, right_margin(RM)),
+		print_width(List, Width, Options),
+		option(right_margin(RM), Options),
 		Indent + Width < RM
 	    )
 	->  pprint(List, Ctx, Options)
@@ -180,15 +225,15 @@ pp(List, Ctx, Options) :-
 	    NDepth is Depth + 1,
 	    modify_context(Ctx, [indent=Nindent, depth=NDepth], NCtx),
 	    pp_list_elements(List, NCtx, Options),
-	    indent(Out, Indent),
+	    indent(Out, Indent, Options),
 	    format(Out, ']', [])
 	).
 pp(Term, Ctx, Options) :-		% handle operators
 	functor(Term, Name, Arity),
 	current_op(Prec, Type, Name),
 	match_op(Type, Arity, Kind, Prec, Left, Right),
-	option(Options, operators(true)), !,
-	option(Options, output(Out)),
+	option(operators(true), Options), !,
+	option(output(Out), Options),
 	context(Ctx, indent, Indent),
 	context(Ctx, depth, Depth),
 	context(Ctx, precedence, CPrec),
@@ -243,14 +288,14 @@ pp(Term, Ctx, Options) :-		% handle operators
 	    )
 	).
 pp(Term, Ctx, Options) :-		% compound
-	option(Options, output(Out)),
-	option(Options, indent_arguments(IndentStyle)),
+	option(output(Out), Options),
+	option(indent_arguments(IndentStyle), Options),
 	context(Ctx, indent, Indent),
 	(   IndentStyle == false
 	->  pprint(Term, Ctx, Options)
 	;   IndentStyle == auto,
-	    print_width(Term, Ctx, Options, Width),
-	    option(Options, right_margin(RM)),
+	    print_width(Term, Width, Options),
+	    option(right_margin(RM), Options),
 	    Indent + Width < RM		% fits on a line, simply write
 	->  pprint(Term, Ctx, Options)
 	;   Term =.. [Name|Args],
@@ -260,7 +305,7 @@ pp(Term, Ctx, Options) :-		% compound
 	    (   integer(IndentStyle)
 	    ->	Nindent is Indent + IndentStyle,
 	        (   FunctorIndent > IndentStyle
-		->  indent(Out, Nindent)
+		->  indent(Out, Nindent, Options)
 		;   true
 		)
 	    ;   Nindent is Indent + FunctorIndent
@@ -276,7 +321,7 @@ pp(Term, Ctx, Options) :-		% compound
 
 pp_list_elements(_, Ctx, Options) :-
 	context(Ctx, max_depth, 0), !,
-	option(Options, output(Out)),
+	option(output(Out), Options),
 	write(Out, '...').
 pp_list_elements([H|T], Ctx0, Options) :-
 	dec_depth(Ctx0, Ctx),
@@ -285,14 +330,14 @@ pp_list_elements([H|T], Ctx0, Options) :-
 	->  true
 	;   nonvar(T),
 	    T = [_|_]
-	->  option(Options, output(Out)),
+	->  option(output(Out), Options),
 	    write(Out, ','),
 	    context(Ctx, indent, Indent),
-	    indent(Out, Indent),
+	    indent(Out, Indent, Options),
 	    pp_list_elements(T, Ctx, Options)
-	;   option(Options, output(Out)),
+	;   option(output(Out), Options),
 	    context(Ctx, indent, Indent),
-	    indent(Out, Indent-2),
+	    indent(Out, Indent-2, Options),
 	    write(Out, '| '),
 	    pp(T, Ctx, Options)
 	).
@@ -303,14 +348,14 @@ pp_compound_args([H|T], Ctx, Options) :-
 	(   T == []
 	->  true
 	;   T = [_|_]
-	->  option(Options, output(Out)),
+	->  option(output(Out), Options),
 	    write(Out, ','),
 	    context(Ctx, indent, Indent),
-	    indent(Out, Indent),
+	    indent(Out, Indent, Options),
 	    pp_compound_args(T, Ctx, Options)
-	;   option(Options, output(Out)),
+	;   option(output(Out), Options),
 	    context(Ctx, indent, Indent),
-	    indent(Out, Indent-2),
+	    indent(Out, Indent-2, Options),
 	    write(Out, '| '),
 	    pp(T, Ctx, Options)
 	).
@@ -327,42 +372,43 @@ match_op(xfy,	2, infix,   P, L, P) :- L is P - 1.
 match_op(yfx,	2, infix,   P, P, R) :- R is P - 1.
 
 
-%	indent(+Out, +Indent)
+%%	indent(+Out, +Indent, +Options)
 %
-%	Newline and indent to the indicated column.
+%	Newline and indent to the indicated  column. Respects the option
+%	=tab_width=.  Default  is  8.  If  the  tab-width  equals  zero,
+%	indentation is emitted using spaces.
 
-indent(Out, Indent) :-
+indent(Out, Indent, Options) :-
+	option(tab_width(TW), Options, 8),
 	nl(Out),
-	Tabs is Indent // 8,
-	Spaces is Indent mod 8,
-	forall(between(1, Tabs, _), put(Out, 9)),
-	tab(Out, Spaces).
+	(   TW =:= 0
+	->  tab(Out, Indent)
+	;   Tabs is Indent // TW,
+	    Spaces is Indent mod TW,
+	    forall(between(1, Tabs, _), put(Out, 9)),
+	    tab(Out, Spaces)
+	).
 
-
-%	print_width(+Term, +Context, +Options, -W)
+%%	print_width(+Term, -W, +Options) is det.
 %
 %	Width required when printing `normally' left-to-right.
 
-print_width(Term, Ctx, Options, W) :-
-	open_null_stream(Out),
-	pprint(Out, Term, Ctx, Options),
-%	line_position(Out, W),
-	character_count(Out, W),
-	close(Out).
+print_width(Term, W, Options) :-
+	option(right_margin(RM), Options),
+	prolog_listing:print_length(Term, RM, W, Options).
 
-
-%	pprint(+Term, +Context, +Options)
+%%	pprint(+Term, +Context, +Options)
 %
 %	The bottom-line print-routine.
 
 pprint(Term, Ctx, Options) :-
-	option(Options, output(Out)),
+	option(output(Out), Options),
 	pprint(Out, Term, Ctx, Options).
 
 pprint(Out, Term, Ctx, Options) :-
-	option(Options, write_options(WriteOptions)),
+	option(write_options(WriteOptions), Options),
 	context(Ctx, max_depth, MaxDepth),
-	(   MaxDepth == inf
+	(   MaxDepth == infinite
 	->  write_term(Out, Term, WriteOptions)
 	;   MaxDepth =< 0
 	->  format(Out, '...', [])
