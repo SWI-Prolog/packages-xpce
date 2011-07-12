@@ -957,30 +957,32 @@ details(B, Fragment:[prolog_frame_var_fragment], Action:[{view,copy}]) :->
 	    )
 	;   Frag = Fragment
 	),
-	get(Frag, var_name, VarName),
-	get(Frag, value, Value),
-	prolog_frame_attribute(B, Frame, level, Level),
-	prolog_frame_attribute(B, Frame, goal, Goal),
-	predicate_name(Goal, PredName),
-	(   integer(VarName)
-	->  VarType = 'Argument'
-	;   VarType = 'Variable'
-	),
-	format(string(Label), '~w ~w of frame at level ~d running ~w',
-		[ VarType, VarName, Level, PredName ]),
-	debug('Action ~w on ~w~n', [Action, Value]),
-	(   Action == copy
-	->  (   numbervars(Value, 0, _, [attvar(skip)]),
-	        format(string(Text), '~q', [Value]),
-		send(@display, copy, Text),
-		fail
-	    ;   send(B, report, status, Label)
+	(   get(Frag, var_name, VarName)
+	->  get(Frag, value, Value),
+	    prolog_frame_attribute(B, Frame, level, Level),
+	    prolog_frame_attribute(B, Frame, goal, Goal),
+	    predicate_name(Goal, PredName),
+	    (   integer(VarName)
+	    ->  VarType = 'Argument'
+	    ;   VarType = 'Variable'
+	    ),
+	    format(string(Label), '~w ~w of frame at level ~d running ~w',
+		   [ VarType, VarName, Level, PredName ]),
+	    debug('Action ~w on ~w~n', [Action, Value]),
+	    (   Action == copy
+	    ->  (   numbervars(Value, 0, _, [attvar(skip)]),
+		    format(string(Text), '~q', [Value]),
+		    send(@display, copy, Text),
+		    fail
+		;   send(B, report, status, Label)
+		)
+	    ;   view_term(Value,
+			  [ comment(Label),
+			    source_object(Frag),
+			    expose(true)
+			  ])
 	    )
-	;   view_term(Value,
-		      [ comment(Label),
-			source_object(Frag),
-			expose(true)
-		      ])
+	;   send(B, report, warning, 'Not a variable value')
 	).
 
 on_click(B, Index:int) :->
@@ -1136,6 +1138,10 @@ value(F, Value:prolog) :<-
 initialise(F, TB:text_buffer, From:int, To:int) :->
 	Len is To-From,
 	send_super(F, initialise, TB, From, Len, constraint).
+
+var_name(_F, _Name:name) :<-
+	"Cannot show details"::
+	fail.
 
 :- pce_end_class(prolog_frame_constraint_fragment).
 
