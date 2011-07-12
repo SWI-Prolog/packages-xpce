@@ -312,9 +312,9 @@ initialise(App) :->
 variable(source,	any,		both, "Source view").
 variable(break_level,	int,		get,  "Break-level I'm associated to").
 variable(thread,	'int|name*',	get,  "Associated thread").
-variable(trap_frame,    int*,   	get,  "Last trapped frame").
-variable(trap_port,     name*,   	get,  "Last trapped port").
-variable(current_frame, int*,   	both, "The most recent frame").
+variable(trap_frame,    int*,		get,  "Last trapped frame").
+variable(trap_port,     name*,		get,  "Last trapped port").
+variable(current_frame, int*,		both, "The most recent frame").
 variable(current_break,	tuple*,		both, "tuple(ClauseRef, PC)").
 variable(quitted,	bool := @off,   both, "Asked to quit").
 variable(mode,		name := created,both, "Current mode").
@@ -889,7 +889,7 @@ it.
 :- pce_begin_class(prolog_bindings_view, view,
 		   "Overview of bindings of the current frame").
 
-class_variable(font,	font, 	normal, "Font for bindings").
+class_variable(font,	font,	normal, "Font for bindings").
 class_variable(size,    size,   size(40,11), "Initial size").
 
 variable(prolog_frame, int*, both, "Frame who's variables we are showing").
@@ -992,6 +992,10 @@ on_click(B, Index:int) :->
 	;   send(B, selected_fragment, @nil)
 	).
 
+% Bindings is a list of Vars = Value,   where Vars is a list of variable
+% identifiers that take the form Name:ArgN,   were  Name is the variable
+% name (atom) and ArgN is the location in the frame.
+
 bindings(B, Bindings:prolog) :->
 	"Display complete list of bindings"::
 	(   term_attvars(Bindings, [])
@@ -999,13 +1003,16 @@ bindings(B, Bindings:prolog) :->
 	    Constraints = []
 	;   copy_term(Bindings, Plain, Constraints)
 	),
+	bind_vars(Plain),
+	cycles(Plain, Template, Cycles, Plain),
 	send(B, background, white),
 	pce_open(B, write, Fd),
-	(   bind_vars(Plain),
-	    forall(member(Vars=Value, Plain),
+	(   forall(member(Vars=Value, Template),
 		   send(B, append_binding, Vars, value(Value), Fd)),
 	    forall(member(C, Constraints),
-		   send(B, append_constraint, C, Fd)),
+		   send(B, append_extra, C, Fd, constraint)),
+	    forall(member(C, Cycles),
+		   send(B, append_extra, C, Fd, cycle)),
 	    fail
 	;   true
 	),
@@ -1020,6 +1027,36 @@ bind_vars([Vars=Value|T]) :-
 	;   true
 	),
 	bind_vars(T).
+
+cycles(Term, Template, Cycles, _) :-
+	acyclic_term(Term), !,
+	Template = Term,
+	Cycles = [].
+cycles(Term, Template, Cycles, Bindings) :-
+	'$factorize_term'(Term, Template, Factors),
+	bind_non_cycles(Factors, Cycles),
+	name_cycle_vars(Cycles, 1, Bindings).
+
+bind_non_cycles([], []).
+bind_non_cycles([V=Term|T], L) :-
+	unify_with_occurs_check(V, Term), !,
+	bind_non_cycles(T, L).
+bind_non_cycles([H|T0], [H|T]) :-
+	bind_non_cycles(T0, T).
+
+
+name_cycle_vars([], _, _).
+name_cycle_vars([H|T], I, Bindings) :-
+	H = (Var=_Value),
+	(   member(Vars=VarsValue, Bindings),
+	    VarsValue == Var,
+	    Vars = [Name:_|_]
+	->  I2 = I
+	;   atom_concat('_S', I, Name),
+	    I2 is I + 1
+	),
+	Var = '$VAR'(Name),
+	name_cycle_vars(T, I2, Bindings).
 
 
 append_binding(B, Names0:prolog, ValueTerm:prolog, Fd:prolog) :->
@@ -1054,12 +1091,12 @@ write_varnames(Fd, [N:_|T]) :-
 	format(Fd, '~w = ', N),
 	write_varnames(Fd, T).
 
-append_constraint(B, Constraint:prolog, Fd:prolog) :->
+append_extra(B, Constraint:prolog, Fd:prolog, Comment:name) :->
 	"Display current constraints"::
 	get(B, text_buffer, TB),
 	current_prolog_flag(toplevel_print_options, Options),
 	get(TB, size, S0),
-	format(Fd, '(constraint)\t~W~n', [Constraint, Options]),
+	format(Fd, '(~w)\t~W~n', [Comment, Constraint, Options]),
 	flush_output(Fd),
 	get(TB, size, S1),
 	new(_, prolog_frame_constraint_fragment(TB, S0, S1)).

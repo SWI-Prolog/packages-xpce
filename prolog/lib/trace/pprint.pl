@@ -132,11 +132,16 @@ prepare_term(Term, Template, Cycles, Constraints) :-
 	term_attvars(Term, []), !,
 	Constraints = [],
 	'$factorize_term'(Term, Template, Factors),
-	bind_non_cycles(Factors, 1, Cycles).
+	bind_non_cycles(Factors, 1, Cycles),
+	numbervars(Template+Cycles+Constraints, 0, _,
+		   [singletons(true)]).
 prepare_term(Term, Template, Cycles, Constraints) :-
 	copy_term(Term, Copy, Constraints), !,
 	'$factorize_term'(Copy, Template, Factors),
-	bind_non_cycles(Factors, 1, Cycles).
+	bind_non_cycles(Factors, 1, Cycles),
+	numbervars(Template+Cycles+Constraints, 0, _,
+		   [singletons(true)]).
+
 
 bind_non_cycles([], _, []).
 bind_non_cycles([V=Term|T], I, L) :-
