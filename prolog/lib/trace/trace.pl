@@ -112,7 +112,6 @@ traceall :-
 %	Toplevel of the tracer interception.  Runs in debugged thread.
 
 intercept(Port, Frame, CHP, Action) :-
-	send_tracer(current_break(@nil)),
 	debug('*** do_intercept(~w, ~w, ~w, _) ...~n', [Port, Frame, CHP]),
 	do_intercept(Port, Frame, CHP, Action0),
 	fix_action(Port, Action0, Action),
@@ -206,23 +205,6 @@ do_intercept(unify, Frame, CHP, Action) :-
 	prolog_frame_attribute(Frame, goal, Goal),
 	predicate_name(user:Goal, Pred),
 	send_tracer(report(status, '%s: %s', How?label_name, Pred)),
-	action(Action).
-do_intercept(break(PC), Frame, CHP, Action) :-
-	prolog_frame_attribute(Frame, goal, Goal),
-	prolog_frame_attribute(Frame, clause, ClauseRef),
-	'$fetch_vm'(ClauseRef, PC, NPC, _VMI),
-	predicate_name(user:Goal, Pred),
-	send_tracer(report(status, 'Break in: %s', Pred)),
-	send_tracer(current_break(tuple(ClauseRef, PC))),
-	prolog_show_frame(Frame,
-			  [ pc(NPC),
-			    choice(CHP),
-			    port(call),
-			    style(break),
-			    stack,
-			    source,
-			    bindings
-			  ]),
 	action(Action).
 do_intercept(cut_call(PC), Frame, CHP, Action) :-
 	prolog_frame_attribute(Frame, goal, Goal),

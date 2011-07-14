@@ -159,10 +159,16 @@ stop_at(V) :->
 	).
 
 delete_selected_stop(V) :->
-	"Deleted selected stop"::
-	get(V, selected_fragment, F),
-	send(F, instance_of, break_fragment),
-	send(F, remove).
+	"Deleted selected stop or stop overlapping <-caret"::
+	(   get(V, selected_fragment, F),
+	    send(F, instance_of, break_fragment)
+	->  send(F, remove)
+	;   get(V, caret, Caret),
+	    get(V?text_buffer, find_fragment,
+		and(message(@arg1, instance_of, break_fragment),
+		    message(@arg1, overlap_caret, Caret)), F)
+	->  send(F, remove)
+	).
 
 :- pce_group(source).
 
@@ -334,5 +340,14 @@ remove(F) :->
 	"Remove the associated break-point"::
 	break_fragment(ClauseRef, PC, F),
 	'$break_at'(ClauseRef, PC, false).
+
+overlap_caret(F, Caret:int) :->
+	"True if F overlaps with position"::
+	(   send(F, overlap, Caret)
+	->  true
+	;   get(F, end, E),
+	    get(F, start, S),
+	    Caret >= S, Caret =< E+1
+	).
 
 :- pce_end_class.

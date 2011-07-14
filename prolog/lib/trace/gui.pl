@@ -315,7 +315,6 @@ variable(thread,	'int|name*',	get,  "Associated thread").
 variable(trap_frame,    int*,		get,  "Last trapped frame").
 variable(trap_port,     name*,		get,  "Last trapped port").
 variable(current_frame, int*,		both, "The most recent frame").
-variable(current_break,	prolog*,	both, "Current break-point").
 variable(quitted,	bool := @off,   both, "Asked to quit").
 variable(mode,		name := created,both, "Current mode").
 
@@ -636,8 +635,6 @@ nostop_or_spy(F) :->
 	"Clear spy-point"::
 	(   send(F?source, delete_selected_stop)
 	->  true
-	;   get(F, current_break, tuple(ClauseRef, PC))
-	->  '$break_at'(ClauseRef, PC, false)
 	;   (   get(F, current_frame, Frame)
 	    ;   get(F, selected_frame, Frame)
 	    ),
