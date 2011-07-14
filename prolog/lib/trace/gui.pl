@@ -315,7 +315,7 @@ variable(thread,	'int|name*',	get,  "Associated thread").
 variable(trap_frame,    int*,		get,  "Last trapped frame").
 variable(trap_port,     name*,		get,  "Last trapped port").
 variable(current_frame, int*,		both, "The most recent frame").
-variable(current_break,	tuple*,		both, "tuple(ClauseRef, PC)").
+variable(current_break,	prolog*,	both, "Current break-point").
 variable(quitted,	bool := @off,   both, "Asked to quit").
 variable(mode,		name := created,both, "Current mode").
 

@@ -161,11 +161,8 @@ stop_at(V) :->
 delete_selected_stop(V) :->
 	"Deleted selected stop"::
 	get(V, selected_fragment, F),
-	F \== @nil,
-	get(F, attribute, clause, ClauseRef),
-	get(F, attribute, pc, PC), !,
-	'$break_at'(ClauseRef, PC, false).
-
+	send(F, instance_of, break_fragment),
+	send(F, remove).
 
 :- pce_group(source).
 
@@ -287,32 +284,22 @@ mark_stop_points(_, _).
 
 :- pce_global(@prolog_debugger, new(object)).
 
-%	mark_stop_point(+ClauseRef, +PC)
+%%	mark_stop_point(+ClauseRef, +PC)
 %
 %	Mark stop-points using a breakpoint fragment.
 
 mark_stop_point(ClauseRef, PC) :-
-	stop_fragment(ClauseRef, PC, _), !.		% already got this one
+	break_fragment(ClauseRef, PC, _), !.
 mark_stop_point(ClauseRef, PC) :-
 	break_location(ClauseRef, PC, File, A-Z),
 	current_source_buffer(File, Buffer),
-	new(F, fragment(Buffer, A, Z-A, breakpoint)),
-	send(F, attribute, clause, ClauseRef),
-	send(F, attribute, pc, PC),
+	new(F, break_fragment(Buffer, A, Z)),
+	assertz(break_fragment(ClauseRef, PC, F)),
 	new(_, hyper(@prolog_debugger, F, break, debugger)).
 
 unmark_stop_point(ClauseRef, PC) :-
-	(   stop_fragment(ClauseRef, PC, Fragment)
-	->  free(Fragment)
-	;   true
-	).
-
-stop_fragment(ClauseRef, PC, Fragment) :-
-	get(@prolog_debugger, find_hyper, break,
-	    and(@arg3?clause == ClauseRef,
-		@arg3?pc == PC),
-	    Hyper),
-	get(Hyper, to, Fragment).
+	forall(break_fragment(ClauseRef, PC, Fragment),
+	       free(Fragment)).
 
 
 		 /*******************************
@@ -328,3 +315,24 @@ unlink_from(H) :->
 
 :- pce_end_class.
 
+:- pce_begin_class(break_fragment, fragment,
+		   "Visualise a break-point").
+
+:- dynamic
+	break_fragment/3.
+
+initialise(F, TB:text_buffer, Start:int, End:int) :->
+	"Indicate the location of a break-point"::
+	Len is End - Start,
+	send_super(F, initialise, TB, Start, Len, breakpoint).
+
+unlink(F) :->
+	retractall(break_fragment(_,_,F)),
+	send_super(F, unlink).
+
+remove(F) :->
+	"Remove the associated break-point"::
+	break_fragment(ClauseRef, PC, F),
+	'$break_at'(ClauseRef, PC, false).
+
+:- pce_end_class.

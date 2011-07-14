@@ -80,7 +80,7 @@ range([H|T], term_position(_, _, _, _, PosL), A, Z) :-
 	nth1(H, PosL, Pos),
 	range(T, Pos, A, Z).
 
-       		 /*******************************
+		 /*******************************
 		 *	      FEEDBACK		*
 		 *******************************/
 
@@ -90,11 +90,11 @@ user:prolog_event_hook(break(ClauseRef, PC, Set)) :-
 break(SetClear, ClauseRef, PC) :-
 	print_message(informational, break(SetClear, ClauseRef, PC)),
 	(   SetClear == true
-	->  debug('Trap in Clause ~d, PC ~d~n', [ClauseRef, PC]),
+	->  debug('Trap in Clause ~p, PC ~d~n', [ClauseRef, PC]),
 	    clause_property(ClauseRef, file(File)),
 	    current_source_buffer(File, _Buffer),
 	    mark_stop_point(ClauseRef, PC)
-	;   debug('Deleted break at clause ~d, PC ~d~n', [ClauseRef, PC]),
+	;   debug('Deleted break at clause ~p, PC ~d~n', [ClauseRef, PC]),
 	    unmark_stop_point(ClauseRef, PC)
 	).
 
