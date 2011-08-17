@@ -35,7 +35,10 @@
 :- use_module(library(readutil)).
 :- use_module(library(pce)).
 
-%	reply_image(+Image, +Options)
+/** <module> Serve dynamically generated images through XPCE
+*/
+
+%%	reply_image(+Image, +Options)
 %
 %	Formulate a CGI reply from an XPCE graphical.  This call handles
 %	anything that can be converted into a pixmap object, notably any
