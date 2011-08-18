@@ -169,7 +169,7 @@ GIFReadFD(IOSTREAM *fd,
   /* read colormaps */
   if ( BitSet((UCHAR) buf[4], LOCALCOLORMAP) )
   { if ( (rval=ReadColorMap(fd, GifScreen.BitPixel, at, ac, closure))
-	 							!= GIF_OK )
+								!= GIF_OK )
     { setGifError("Error reading GIF colormap");
       return rval;
     }
@@ -487,11 +487,11 @@ LZWReadByte(IOSTREAM * fd, int flag, int input_code_size)
       max_code = clear_code + 2;
       sp = stack;
       firstcode = oldcode = GetCode(fd, code_size, FALSE);
-      return firstcode;
-    } else if (code == end_code)
+      return (firstcode&255);
+    } else if (code == end_code || code > max_code)
     {
       int count;
-      UCHAR buf[260];
+      UCHAR buf[260];			/* Block buffer */
 
       if (ZeroDataBlock)
 	return -2;
@@ -504,7 +504,7 @@ LZWReadByte(IOSTREAM * fd, int flag, int input_code_size)
     }
     incode = code;
 
-    if (code >= max_code)
+    if (code == max_code)
     {
       *sp++ = firstcode;
       code = oldcode;
@@ -537,9 +537,9 @@ LZWReadByte(IOSTREAM * fd, int flag, int input_code_size)
     oldcode = incode;
 
     if (sp > stack)
-      return *--sp;
+      return ((*--sp) & 255);
   }
-  return code;
+  return (code&255);
 }
 
 
