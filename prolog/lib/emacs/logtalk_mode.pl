@@ -55,6 +55,11 @@ This module deals with colourisation of .lgt files.
 		    [
 		    ]).
 
+class_variable(tab_width, int, 4).
+class_variable(body_indentation, int, 4).
+class_variable(cond_indentation, int, 4).
+class_variable(indent_tabs, bool, @on).
+
 colourise_buffer(M) :->
 	"Cross-reference the buffer and set up colours"::
 	push_logtalk_operators,
@@ -81,56 +86,147 @@ colourise_buffer(M) :->
 		 *******************************/
 
 :- multifile
-	emacs_prolog_colours:goal_colours/2.
+	emacs_prolog_colours:style/2,
+	emacs_prolog_colours:term_colours/2,
+	emacs_prolog_colours:goal_colours/2,
+	emacs_prolog_colours:directive_colours/2,
+	emacs_prolog_colours:goal_classification/2.
+
+
+object_opening_directive_relations(Relations, entity_relation-Colours) :-
+	nonvar(Relations),
+	Relations =.. [Functor| Entities],
+	valid_object_relation(Functor),
+	entity_relation_colours(Entities, Colours).
+
+protocol_opening_directive_relations(Relations, entity_relation-Colours) :-
+	nonvar(Relations),
+	Relations =.. [Functor| Entities],
+	valid_protocol_relation(Functor),
+	entity_relation_colours(Entities, Colours).
+
+category_opening_directive_relations(Relations, entity_relation-Colours) :-
+	nonvar(Relations),
+	Relations =.. [Functor| Entities],
+	valid_category_relation(Functor),
+	entity_relation_colours(Entities, Colours).
+
+entity_relation_colours([], []).
+entity_relation_colours(['::'(_, _)| Entities], [built_in-[classify,entity_identifier]| Colours]) :-
+	!,
+	entity_relation_colours(Entities, Colours).
+entity_relation_colours([_| Entities], [entity_identifier| Colours]) :-
+	entity_relation_colours(Entities, Colours).
+
+valid_object_relation(implements).
+valid_object_relation(imports).
+valid_object_relation(extends).
+valid_object_relation(instantiates).
+valid_object_relation(specializes).
+
+valid_protocol_relation(extends).
+
+valid_category_relation(implements).
+valid_category_relation(extends).
+valid_category_relation(complements).
+
+
+info_directive_items([], []).
+info_directive_items([_ is _| Items], [built_in-[classify,classify]| Colours]) :-
+	info_directive_items(Items, Colours).
+
+
+entity_identifier(Object, Colour) :-
+	(	atom(Object) ->
+		Colour = entity_identifier
+	;	compound(Object) ->
+		Object =.. [_| Parameters],
+		entity_parameters(Parameters, Colours),
+		Colour = entity_identifier-[Colours]
+	).
+
+entity_parameters([], []).
+entity_parameters([_| Parameters], [parameter| Colours]) :-
+	entity_parameters(Parameters, Colours).
+
+
+term_colours((:- encoding(_)), classify-[source_file_directive-[classify]]).
+
+
+directive_colours(object(Object), entity_directive-[Colour]) :-
+	entity_identifier(Object, Colour).
+directive_colours(object(_, Relations), entity_directive-[entity_identifier,Colours]) :-
+	object_opening_directive_relations(Relations, Colours).
+directive_colours(object(_, Relations1, Relations2), entity_directive-[entity_identifier,Colours1,Colours2]) :-
+	object_opening_directive_relations(Relations1, Colours1),
+	object_opening_directive_relations(Relations2, Colours2).
+directive_colours(object(_, Relations1, Relations2, Relations3), entity_directive-[entity_identifier,Colours1,Colours2,Colours3]) :-
+	object_opening_directive_relations(Relations1, Colours1),
+	object_opening_directive_relations(Relations2, Colours2),
+	object_opening_directive_relations(Relations3, Colours3).
+directive_colours(object(_, Relations1, Relations2, Relations3, Relations4), entity_directive-[entity_identifier,Colours1,Colours2,Colours3,Colours4]) :-
+	object_opening_directive_relations(Relations1, Colours1),
+	object_opening_directive_relations(Relations2, Colours2),
+	object_opening_directive_relations(Relations3, Colours3),
+	object_opening_directive_relations(Relations4, Colours4).
+
+directive_colours(protocol(_), entity_directive-[entity_identifier]).
+directive_colours(protocol(_, Relations), entity_directive-[entity_identifier,Colours]) :-
+	protocol_opening_directive_relations(Relations, Colours).
+
+directive_colours(category(_), entity_directive-[entity_identifier]).
+directive_colours(category(_, Relations), entity_directive-[entity_identifier,Colours]) :-
+	category_opening_directive_relations(Relations, Colours).
+directive_colours(category(_, Relations1, Relations2), entity_directive-[entity_identifier,Colours1,Colours2]) :-
+	category_opening_directive_relations(Relations1, Colours1),
+	category_opening_directive_relations(Relations2, Colours2).
+
+% source file directives
+directive_colours(encoding(_), source_file_directive-[classify]).
+directive_colours(set_prolog_flag(_, _), source_file_directive-[classify,classify]).
+% conditional compilation directives
+directive_colours(if(_), conditional_compilation_directive-[classify]).
+directive_colours(elif(_), conditional_compilation_directive-[classify]).
+directive_colours(else, conditional_compilation_directive-[]).
+directive_colours(endif, conditional_compilation_directive-[]).
+% entity directives
+directive_colours(set_logtalk_flag(_, _), entity_directive-[classify,classify]).
+directive_colours(calls(_), entity_directive-[entity_identifier]).
+directive_colours(dynamic, entity_directive-[]).
+directive_colours(end_category, entity_directive-[]).
+directive_colours(end_object, entity_directive-[]).
+directive_colours(end_protocol, entity_directive-[]).
+directive_colours(info(_), entity_directive-[classify]).
+directive_colours(initialization(_), entity_directive-[classify]).
+directive_colours(synchronized, entity_directive-[]).
+directive_colours(threaded, entity_directive-[]).
+directive_colours(uses(_), entity_directive-[entity_identifier]).
+% module directives
+directive_colours(use_module(_), entity_directive-[entity_identifier]).
+directive_colours(use_module(_, _), entity_directive-[entity_identifier,classify]).
+% predicate directives
+directive_colours(alias(_, _, _), predicate_directive-[classify,classify,classify]).
+directive_colours(annotation(_), predicate_directive-[classify]).
+directive_colours(coinductive(_), predicate_directive-[classify]).
+directive_colours(discontiguous(_), predicate_directive-[classify]).
+directive_colours(dynamic(_), predicate_directive-[classify]).
+directive_colours(info(_, _), predicate_directive-[classify,classify]).
+directive_colours(meta_predicate(_), predicate_directive-[classify]).
+directive_colours(meta_non_terminal(_), predicate_directive-[classify]).
+directive_colours(mode(_, _), predicate_directive-[classify,classify]).
+directive_colours(multifile(_), predicate_directive-[classify]).
+directive_colours(op(_, _, _), predicate_directive-[classify,classify,classify]).
+directive_colours(private(_), predicate_directive-[classify]).
+directive_colours(protected(_), predicate_directive-[classify]).
+directive_colours(public(_), predicate_directive-[classify]).
+directive_colours(synchronized(_), predicate_directive-[classify]).
+directive_colours(uses(_, _), predicate_directive-[entity_identifier,classify]).
+
 
 %	goal_colours(+Goal, -Colours)
 %
 %	Colouring of special goals.
 
-% source file directives
-goal_colours(set_logtalk_flag(_, _), built_in-[predicates]).
-% conditional compilation directives
-goal_colours(if(_), built_in-[classify]).
-goal_colours(elif(_), built_in-[classify]).
-goal_colours(else, built_in-[]).
-goal_colours(endif, built_in-[]).
-% entity directives
-goal_colours(calls(_), built_in-[identifier]).
-goal_colours(category(_), built_in-[identifier]).
-goal_colours(category(_, _), built_in-[identifier,classify]).
-goal_colours(category(_, _, _), built_in-[identifier,classify,classify]).
-goal_colours(dynamic, built_in-[]).
-goal_colours(end_category, built_in-[]).
-goal_colours(end_object, built_in-[]).
-goal_colours(end_protocol, built_in-[]).
-goal_colours(info(_), built_in-[classify]).
-goal_colours(initialization(_), built_in-[predicates]).
-goal_colours(object(_), built_in-[identifier]).
-goal_colours(object(_, _), built_in-[identifier,classify]).
-goal_colours(object(_, _, _), built_in-[identifier,classify,classify]).
-goal_colours(object(_, _, _, _), built_in-[identifier,classify,classify,classify]).
-goal_colours(object(_, _, _, _, _), built_in-[identifier,classify,classify,classify,classify]).
-goal_colours(protocol(_), built_in-[identifier]).
-goal_colours(protocol(_, _), built_in-[identifier,classify]).
-goal_colours(synchronized, built_in-[predicates]).
-goal_colours(threaded, built_in-[predicates]).
-goal_colours(uses(_), built_in-[identifier]).
-% predicate directives
-goal_colours(alias(_, _, _), built_in-[classify,predicates,predicates]).
-goal_colours(annotation(_), built_in-[predicates]).
-goal_colours(coinductive(_), built_in-[predicates]).
-goal_colours(discontiguous(_), built_in-[predicates]).
-goal_colours(dynamic(_), built_in-[predicates]).
-goal_colours(info(_, _), built_in-[predicates,classify]).
-goal_colours(meta_predicate(_), built_in-[classify]).
-goal_colours(mode(_, _), built_in-[classify,classify]).
-goal_colours(multifile(_), built_in-[classify]).
-goal_colours(op(_, _, _), built_in-[classify,classify,classify]).
-goal_colours(private(_), built_in-[predicates]).
-goal_colours(protected(_), built_in-[predicates]).
-goal_colours(public(_), built_in-[predicates]).
-goal_colours(synchronized(_), built_in-[predicates]).
-goal_colours(uses(_, _), built_in-[identifier,predicates]).
 % enumerating objects, categories and protocols
 goal_colours(current_category(_), built_in-[classify]).
 goal_colours(current_object(_), built_in-[classify]).
@@ -140,9 +236,9 @@ goal_colours(category_property(_, _), built_in-[classify,classify]).
 goal_colours(object_property(_, _), built_in-[classify,classify]).
 goal_colours(protocol_property(_, _), built_in-[classify,classify]).
 % creating new objects, categories and protocols
-goal_colours(create_category(_, _, _, _), built_in-[predicates]).
-goal_colours(create_object(_, _, _, _), built_in-[predicates]).
-goal_colours(create_protocol(_, _, _), built_in-[predicates]).
+goal_colours(create_category(_, _, _, _), built_in-[classify,classify,classify,classify]).
+goal_colours(create_object(_, _, _, _), built_in-[classify,classify,classify,classify]).
+goal_colours(create_protocol(_, _, _), built_in-[classify,classify,classify,classify]).
 % abolishing objects, categories and protocols
 goal_colours(abolish_category(_), built_in-[classify]).
 goal_colours(abolish_object(_), built_in-[classify]).
@@ -202,7 +298,6 @@ goal_colours(self(_), built_in-[classify]).
 goal_colours(sender(_), built_in-[classify]).
 goal_colours(this(_), built_in-[classify]).
 goal_colours(parameter(_, _), built_in-[classify,classify]).
-/*
 % reflection methods
 goal_colours(current_predicate(_), built_in-[classify]).
 goal_colours(predicate_property(_, _), built_in-[classify,classify]).
@@ -217,7 +312,7 @@ goal_colours(retractall(_), built_in-[db]).
 goal_colours(call(_), built_in-[classify]).
 goal_colours(ignore(_), built_in-[classify]).
 goal_colours(once(_), built_in-[classify]).
-goal_colours(\+(_), built_in-[classify]).
+goal_colours(\+ _, built_in-[classify]).
 % exception-handling methods
 goal_colours(catch(_, _, _), built_in-[classify,classify,classify]).
 goal_colours(throw(_), built_in-[classify]).
@@ -226,11 +321,9 @@ goal_colours(findall(_, _, _), built_in-[classify,classify,classify]).
 goal_colours(forall(_, _), built_in-[classify,classify]).
 goal_colours(bagof(_, _, _), built_in-[classify,setof,classify]).
 goal_colours(setof(_, _, _), built_in-[classify,setof,classify]).
-*/
 % event handler methods
 goal_colours(before(_, _, _), built_in-[classify,classify,classify]).
 goal_colours(after(_, _, _), built_in-[classify,classify,classify]).
-/*
 % DCGs rules parsing methods and non-terminals
 %call//1
 goal_colours(phrase(_, _), built_in-[classify,classify]).
@@ -240,7 +333,6 @@ goal_colours(expand_term(_, _), built_in-[classify,classify]).
 goal_colours(term_expansion(_, _), built_in-[classify,classify]).
 goal_colours(expand_goal(_, _), built_in-[classify,classify]).
 goal_colours(goal_expansion(_, _), built_in-[classify,classify]).
-*/
 % message sending
 goal_colours('::'(_, _), built_in-[classify,classify]).
 goal_colours('::'(_), built_in-[classify]).
@@ -252,10 +344,44 @@ goal_colours('<<'(_, _), built_in-[classify,classify]).
 % direct calls of imported predicates
 goal_colours(':'(_), built_in-[classify]).
 
-%emacs_prolog_colours:term_colours(Term, Colours) :-
-%	term_colours(Term, Colours).
+
+goal_classification(_, normal).
+
+style(goal(source_file_directive,_), style(colour := blue)).
+style(goal(conditional_compilation_directive,_), style(colour := blue)).
+style(goal(entity_directive,_), style(colour := blue)).
+style(goal(predicate_directive,_), style(colour := blue)).
+
+style(directive, style(bold := @off)).
+style(entity_directive, style(colour := navy_blue)).
+style(entity_identifier, style(colour := dark_slate_blue)).
+style(identifier, style(bold := @on)).
+style(entity_relation, style(colour := blue)).
+style(head(_), style(bold := @off)).
+style(built_in, style(colour := blue)).
+style(parameter, Style) :-
+	emacs_prolog_colours:def_style(var, Style).
+
+
+emacs_prolog_colours:style(Pattern, Style) :-
+	style(Pattern, Style).
+
+
+emacs_prolog_colours:term_colours(Term, Colours) :-
+	term_colours(Term, Colours).
+
+
+emacs_prolog_colours:directive_colours(Directive, Colours) :-
+	directive_colours(Directive, Colours).
+
+
 emacs_prolog_colours:goal_colours(Term, Colours) :-
 	goal_colours(Term, Colours).
+
+
+emacs_prolog_colours:goal_classification(Goal, Classification) :-
+	goal_classification(Goal, Classification).
+
 
 		 /*******************************
 		 *	   SYNTAX HOOKS		*
