@@ -555,7 +555,7 @@ ReadImage(IOSTREAM *fd,
   int xpos = 0, ypos = 0, pass = 0;
   long curidx;
 
-  if (!ReadOK(fd, &c, 1))
+  if ( !ReadOK(fd, &c, 1) || c > MAX_LZW_BITS )
   { return GIF_INVALID;
   }
   if (LZWReadByte(fd, TRUE, c) < 0)
