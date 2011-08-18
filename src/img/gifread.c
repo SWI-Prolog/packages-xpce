@@ -466,7 +466,7 @@ LZWReadByte(IOSTREAM * fd, int flag, int input_code_size)
       firstcode = oldcode = GetCode(fd, code_size, FALSE);
     }
     while (firstcode == clear_code);
-    return firstcode;
+    return (firstcode&255);
   }
   if (sp > stack)
     return *--sp;
@@ -505,11 +505,11 @@ LZWReadByte(IOSTREAM * fd, int flag, int input_code_size)
     incode = code;
 
     if (code == max_code)
-    {
-      *sp++ = firstcode;
+    { if ( sp < stack+sizeof(stack) )	/* stack is UCHAR */
+	*sp++ = firstcode;
       code = oldcode;
     }
-    while (code >= clear_code)
+    while (code >= clear_code && sp < stack+sizeof(stack) )
     {
       *sp++ = vals[code];
       if (code == (int) next[code])
@@ -520,7 +520,8 @@ LZWReadByte(IOSTREAM * fd, int flag, int input_code_size)
       code = next[code];
     }
 
-    *sp++ = firstcode = vals[code];
+    if ( sp < stack+sizeof(stack) )
+      *sp++ = firstcode = vals[code];
 
     if ((code = max_code) < (1 << MAX_LZW_BITS))
     {
