@@ -809,6 +809,7 @@ keycode_to_name(Any sw, XEvent *event)
     case XK_Cancel:	return NAME_cancel;
     case XK_Help:	return NAME_help;
     case XK_Break:	return NAME_break;
+    case XK_Pause:	return NAME_pause;
   }
 
   DEBUG(NAME_keysym, Cprintf("sym = 0x%X\n", (unsigned int)sym));
@@ -954,10 +955,10 @@ CtoEvent(Any window, XEvent *event)	/* window or frame */
 
       if ( event->xany.type == EnterNotify )
       { name = (state & AnyButtonMask ? NAME_areaResume
-		 		      : NAME_areaEnter);
+				      : NAME_areaEnter);
       } else
       { name = (state & AnyButtonMask ? NAME_areaCancel
-			    	      : NAME_areaExit);
+				      : NAME_areaExit);
       }
 
       break;

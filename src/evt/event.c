@@ -32,7 +32,7 @@ extern EventNodeObj getNodeEventTree(EventTreeObj t, Any value);
 
 #define TOINT(x) x
 
-static Int 	 last_buttons     = TOINT(ZERO); /* defaults for next event */
+static Int	 last_buttons     = TOINT(ZERO); /* defaults for next event */
 static Any	 last_window      = NIL;
 static Int	 last_x		  = TOINT(ZERO);
 static Int	 last_y		  = TOINT(ZERO);
@@ -268,7 +268,7 @@ isAEvent(EventObj e, Any id)
     if      ( c < 32 || c == 127 )		nm = NAME_control;
     else if ( c >= 32 && c < META_OFFSET )	nm = NAME_printable;
     else if ( c >= META_OFFSET   )		nm = NAME_meta;
-    else 					fail;
+    else					fail;
   } else if ( isName(e->id) )
   { nm = e->id;
   } else
@@ -1082,6 +1082,7 @@ static struct namepair
   { NAME_cancel,	NAME_namedFunction },
   { NAME_help,		NAME_namedFunction },
   { NAME_break,		NAME_namedFunction },
+  { NAME_pause,		NAME_namedFunction },
   { NAME_backspace,	NAME_namedFunction },
 
   { NAME_cursorHome,	NAME_cursor },
@@ -1106,9 +1107,9 @@ static struct namepair
 
   { NAME_focus,				NAME_any },
   { NAME_deactivateKeyboardFocus,	NAME_focus },
-  { NAME_releaseKeyboardFocus, 		NAME_deactivateKeyboardFocus },
-  { NAME_obtainKeyboardFocus, 		NAME_focus },
-  { NAME_activateKeyboardFocus, 	NAME_obtainKeyboardFocus },
+  { NAME_releaseKeyboardFocus,		NAME_deactivateKeyboardFocus },
+  { NAME_obtainKeyboardFocus,		NAME_focus },
+  { NAME_activateKeyboardFocus,		NAME_obtainKeyboardFocus },
   { NAME_releaseFocus,			NAME_focus },
   { NAME_obtainFocus,			NAME_focus },
 
