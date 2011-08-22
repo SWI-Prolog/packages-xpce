@@ -196,7 +196,7 @@ AC_ARG_WITH(pl-include,[  --with-pl-include=DIR   find the pl include files in D
 	],
 	[
 		if test -z "$PLINCL"; then
-	 	  PLINCL="$PLBASE/include"
+		  PLINCL="$PLBASE/include"
 		fi
 	])
 
@@ -377,7 +377,7 @@ EOF
 	QPENTRIES=entries.c
 	;;
     *hpux*)
-    	SO="sl"
+	SO="sl"
 	LDSOFLAGS="-b"
 	;;
     *cygwin*)
@@ -753,15 +753,10 @@ if test "$WITHX11" = true; then
 BEFOREXLIBS="$LIBS"
 
 AC_PATH_X
-
-if test "$static_x_libraries" = "yes"; then
-    XLIBS="$XLIB/libXt.a $XLIB/libX11.a"
-else
-    XLIBS="-lXt -lX11"
-fi
+XLIBS="-lXt -lX11"
 
 if test "$x_libraries" = ""; then
-    XLIB=/usr/lib
+    XLIB=/usr/X11/lib
 else
     XLIB="$x_libraries"
 fi
@@ -969,7 +964,7 @@ cat << _EOM_
 *	freetype development packages				*
 *	fontconfig development packages				*
 *								*
-* If all is installed properly, pkg-config should output 	*
+* If all is installed properly, pkg-config should output	*
 * something like this (the details may vary):			*
 *								*
 *	% pkg-config --libs xft					*
