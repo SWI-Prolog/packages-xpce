@@ -316,7 +316,7 @@ variable(trap_frame,    int*,		get,  "Last trapped frame").
 variable(trap_port,     name*,		get,  "Last trapped port").
 variable(current_frame, int*,		both, "The most recent frame").
 variable(quitted,	bool := @off,   both, "Asked to quit").
-variable(mode,		name := created,both, "Current mode").
+variable(mode,		name := created,get,  "Current mode").
 
 running_in_pce_thread :-
 	pce_thread(Pce), thread_self(Pce).
@@ -776,6 +776,17 @@ query_finished(F, Message:char_array) :->
 	send(F, mode, query_finished),
 	send(F, report, status, Message).
 
+mode(F, Mode:name) :->
+	"Switch modes"::
+	send(F, slot, mode, Mode),
+	(   get(F, member, buttons, D)
+	->  (   Mode == wait_user
+	    ->  send(D, running, @off)
+	    ;   send(D, running, @on)
+	    )
+	;   true
+	).
+
 :- pce_end_class(prolog_debugger).
 
 		 /*******************************
@@ -837,11 +848,12 @@ initialise(D) :->
 	    (	Action == gap
 	    ->	send(TB, append, gap)
 	    ;   tag_balloon(Balloon0, Keys, Balloon),
-		make_message(Action, D, Message),
+		make_message(Action, Name, D, Message),
 	        send(TB, append,
 		     new(B, tool_button(Message,
 					image(Image),
-					Balloon))),
+					Balloon,
+				        name := Name))),
 	        chain_list(KL, Keys),
 	        send(B, attribute, keys, KL)
 	    ),
@@ -849,8 +861,8 @@ initialise(D) :->
 	;   true
 	).
 
-make_message(+Action, D, message(D?frame, Action)) :- !.
-make_message(Action,  D, message(D, return, Action)).
+make_message(+Action, Action, D, message(D?frame, Action)) :- !.
+make_message(Action,  Action, D, message(D, return, Action)).
 
 typed(D, Id:event_id, Delegate:[bool]) :->
 	"Handle typing"::
@@ -873,6 +885,27 @@ button(D, Name:name, Button:button) :<-
 	"Find button from its name"::
 	get(D, member, tool_bar, TB),
 	get(TB, member, Name, Button).
+
+running(D, Running:bool) :->
+	"Make some buttons (in)active"::
+	get(Running, negate, NotRunning),
+	forall(running_button(Name),
+	       (   get(D, button, Name, Button)
+	       ->  send(Button, active, NotRunning)
+	       ;   format('No button ~w~n', [Name])
+	       )),
+	(   get(D, button, interrupt, Interrupt)
+	->  send(Interrupt, active, Running)
+	;   true
+	).
+
+running_button(into).
+running_button(creep).
+running_button(skip).
+running_button(retry).
+running_button(finish).
+running_button(nodebug).
+running_button(abort).
 
 :- pce_end_class(prolog_button_dialog).
 
