@@ -71,7 +71,7 @@ print(MyApp) :->
 :- pce_begin_class(tool_bar, dialog_group,
 		   "Row of buttons").
 
-variable(orientation, 	{horizontal,vertical},	get,  "Stacking direction").
+variable(orientation,	{horizontal,vertical},	get,  "Stacking direction").
 variable(client,	object*,		both, "Receiving object").
 
 initialise(BG, Client:[object]*, Orientation:[{horizontal,vertical}]) :->
@@ -130,12 +130,13 @@ initialise(TB,
 	   Action:action='name|code',
 	   Label:label='name|image',
 	   Balloon:balloon=[name|string],
-	   Condition:condition=[code]*) :->
+	   Condition:condition=[code]*,
+	   Name:name=[name]) :->
 	default(Condition, @nil, Cond),
 	make_label(Label, Lbl),
-	make_name(Action, Name),
+	make_name(Action, Name, ButtonName),
 	make_message(Action, Msg),
-	send(TB, send_super, initialise, Name, Msg),
+	send(TB, send_super, initialise, ButtonName, Msg),
 	send(TB, label, Lbl),
 	send(TB, slot, condition, Cond),
 	(   Balloon == @default
@@ -154,6 +155,10 @@ make_message(Name, @default) :-
 	atomic(Name), !.
 make_message(Code, Code).
 
+
+make_name(Action, @default, Name) :- !,
+	make_name(Action, Name).
+make_name(_, Name, Name).
 
 make_name(Name, Name) :-
 	atomic(Name), !.
