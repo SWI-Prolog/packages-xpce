@@ -690,6 +690,11 @@ abort(F) :->
 	),
 	send(F, return, abort).
 
+interrupt(F) :->
+	"User hit t (interrupt, trace)"::
+	get(F, thread, Thread),
+	thread_signal(Thread, trace).
+
 query(_F) :->
 	"Enter and run a query"::
 	prolog_ide(open_query_window).
@@ -793,8 +798,9 @@ button(gap,	       -,     -,		     -).
 button(retry,	       "r",   'retry.xpm',	     'Retry selected goal').
 button(gap,	       -,     -,		     -).
 button(+nodebug,       "n",   'nodebug.xpm',	     'Continue without debugging').
-button(+query,	       "b",   'break.xpm',	     'Enter a query').
 button(+abort,	       "a",   'abort.xpm',	     'Abort to the Prolog toplevel').
+button(+interrupt,     "t",   'interrupt.xpm',	     'Interrupt (trace)').
+button(+query,	       "b",   'break.xpm',	     'Enter a query').
 button(fail,	       "F",   'fail.xpm',	     'Force query to fail').
 button(gap,	       -,     -,		     -).
 button(+up,	       "u",   'up.xpm',		     'Select parent frame').
