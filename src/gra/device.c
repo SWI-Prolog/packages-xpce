@@ -173,7 +173,7 @@ updatePointedDevice(Device dev, EventObj ev)
 
 					/* Exit event: leave all children */
   if ( isAEvent(ev, NAME_areaExit) )
-  { for_cell(cell, dev->pointed)
+  { for_cell_save(cell, c2, dev->pointed)
       generateEventGraphical(cell->value, exit);
 
     clearChain(dev->pointed);
@@ -245,7 +245,7 @@ inspectDevice(Device dev, EventObj ev)
   for_cell(cell, dev->pointed)
   { if ( instanceOfObject(cell->value, ClassDevice) )
     { if ( inspectDevice(cell->value, ev) )
-    	succeed;
+	succeed;
     } else
     { if ( inspectDisplay(d, cell->value, ev) )
 	succeed;
@@ -601,7 +601,7 @@ computeBoundingBoxDevice(Device dev)
     if ( updateBoundingBoxDevice(dev, od) )
     { if ( notNil(dev->device) )
       { requestComputeDevice(dev->device, DEFAULT);
-      	updateConnectionsGraphical((Graphical) dev, sub(dev->level, ONE));
+	updateConnectionsGraphical((Graphical) dev, sub(dev->level, ONE));
       }
 
       qadSendv(dev, NAME_changedUnion, 4, od);
@@ -1108,7 +1108,7 @@ computeFormatDevice(Device dev)
           case 'r':	move_graphical(gr, x+cw[c]-valInt(gr->area->w), y);
 			break;
 	  case 'c':	move_graphical(gr, x+(cw[c]-valInt(gr->area->w))/2, y);
-	  		break;
+			break;
 	}
       } else
       { switch( cf[c] )
@@ -1117,7 +1117,7 @@ computeFormatDevice(Device dev)
           case 'r':	move_graphical(gr, y, x+cw[c]-valInt(gr->area->h));
 			break;
 	  case 'c':	move_graphical(gr, y, x+(cw[c]-valInt(gr->area->h))/2);
-	  		break;
+			break;
 	}
       }
 
@@ -1482,7 +1482,7 @@ adjustDialogItem(Any obj, Int x, Int y, Int w, Int h)
 	Cprintf("%s --> %s %s %s %s\n",
 		pp(obj), pp(x), pp(y), pp(w), pp(h)));
 
-  if ( instanceOfObject(gr, ClassWindow) && 		/* HACK */
+  if ( instanceOfObject(gr, ClassWindow) &&		/* HACK */
        notNil(((PceWindow)gr)->decoration) )
     gr = (Graphical)((PceWindow)gr)->decoration;
 
@@ -2008,7 +2008,7 @@ resizeDevice(Device dev, Real xfactor, Real yfactor, Point origin)
     succeed;
 
   p = tempObject(ClassPoint, toInt(ox - valInt(dev->offset->x)),
-		 	     toInt(oy - valInt(dev->offset->y)), EAV);
+			     toInt(oy - valInt(dev->offset->y)), EAV);
   for_cell(cell, dev->graphicals)
     send(cell->value, NAME_resize, xfactor, yfactor, p, EAV);
   considerPreserveObject(p);
