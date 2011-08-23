@@ -114,7 +114,7 @@ do_window_wnd_proc(HWND hwnd, UINT message, UINT wParam, LONG lParam)
       if ( DragQueryPoint(hdrop, &pt)  &&
 	   (nfiles = DragQueryFile(hdrop, (UINT)-1, NULL, 0)) >= 0 )
       { Chain files;
-      	Point pos;
+	Point pos;
 	wchar_t buf[MAXPATHLEN];
 	AnswerMark mark;
 	int i;
@@ -436,6 +436,7 @@ ws_create_window(PceWindow sw, PceWindow parent)
 { HWND hwnd;
   HWND parent_handle;
   DWORD style = WS_CHILD|WS_CLIPCHILDREN|WS_CLIPSIBLINGS|WS_VISIBLE;
+  DWORD tid;
 
   DEBUG(NAME_window, Cprintf("ws_create_window(%s %s)\n", pp(sw), pp(parent)));
 
@@ -458,6 +459,13 @@ ws_create_window(PceWindow sw, PceWindow parent)
 		      parent_handle, NULL, PceHInstance, NULL);
   if ( !hwnd )
     return errorPce(sw, NAME_createFailed);
+
+  if ( ThePceThread && (tid=GetCurrentThreadId()) != ThePceThread )
+  { int rc = AttachThreadInput(tid, ThePceThread, TRUE);
+
+    DEBUG(NAME_thread, Cprintf("AttachThreadInput(%d, %d) --> %d\n",
+			       (int)tid, (int)ThePceThread, rc));
+  }
 
   DEBUG(NAME_window, Cprintf("Windows hwnd = %ld\n", (long) hwnd));
 

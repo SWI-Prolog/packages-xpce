@@ -43,6 +43,7 @@
 		 *******************************/
 
 HINSTANCE ThePceHInstance;		/* Global handle */
+DWORD	  ThePceThread;			/* Dispatching thread */
 
 BOOL WINAPI
 DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
@@ -68,6 +69,18 @@ pceMTdetach()
   destroyThreadWindows(ClassWindow);
 
   return TRUE;
+}
+
+
+unsigned					/* interface.h cannot depend */
+setPceThread(unsigned id)			/* on DWORD due to conflicts */
+{ DWORD old = ThePceThread;
+
+  assert(sizeof(unsigned) == sizeof(DWORD));
+
+  ThePceThread = id;
+
+  return old;
 }
 
 

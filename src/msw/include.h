@@ -22,8 +22,8 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#undef  O_IMGLIB  			/* Generic IMGLIB support */
-#undef  O_GIFREAD 			/* The GIF library */
+#undef  O_IMGLIB			/* Generic IMGLIB support */
+#undef  O_GIFREAD			/* The GIF library */
 #define O_XPM	  1			/* use Xpm library */
 #define O_GIF	  1			/* use our GIF loader */
 #define O_GIFWRITE 1			/* allow writing GIF files */
@@ -58,6 +58,7 @@
 typedef struct win_mf *WinMF;		/* win_metafile pointer type */
 
 extern HINSTANCE ThePceHInstance;	/* HINSTANCE from pceDLLEntry() */
+extern DWORD	 ThePceThread;
 
 typedef char	cwidth;			/* width of a character */
 

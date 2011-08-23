@@ -25,7 +25,6 @@
 #include <stdio.h>
 #include <SWI-Stream.h>
 #include <SWI-Prolog.h>
-#include <h/interface.h>
 
 #ifdef __WINDOWS__
 
@@ -38,6 +37,8 @@
 #define HAVE_UNISTD_H 1
 
 #endif /*__WINDOWS__*/
+
+#include <h/interface.h>
 
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
@@ -89,7 +90,7 @@ typedef struct
   HWND		window;
 #else /*__WINDOWS__*/
   int		pipe[2];
-  XtInputId 	id;
+  XtInputId	id;
 #endif /*__WINDOWS__*/
 } context_t;
 
@@ -355,6 +356,7 @@ set_pce_thread()
     { DestroyWindow(context.window);
       context.window = 0;
     }
+    setPceThread(GetCurrentThreadId());
     setup();
 #endif
 

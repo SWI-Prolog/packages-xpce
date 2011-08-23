@@ -208,7 +208,7 @@ do_frame_wnd_proc(FrameObj fr,
 	    send(fr, NAME_resize, EAV);
 	    SetWindowText(hwnd, nameToWC(fr->label, NULL));
 	    assign(fr, status, wParam == SIZE_MAXIMIZED ? NAME_fullScreen
-		   					: NAME_window);
+							: NAME_window);
 	    for_cell(cell, fr->members)
 	      DisplayedGraphical(cell->value, ON);
 	  }
@@ -656,6 +656,7 @@ ws_create_frame(FrameObj fr)
   HWND owner = NULL;
   DWORD style = WS_CLIPCHILDREN;
   DWORD exstyle = 0;
+  DWORD tid;
   RECT rect;
   int w, h;
 
@@ -730,6 +731,13 @@ ws_create_frame(FrameObj fr)
 
   if ( !ref )
     return errorPce(fr, NAME_xOpen, fr->display);
+
+  if ( ThePceThread && (tid=GetCurrentThreadId()) != ThePceThread )
+  { int rc = AttachThreadInput(tid, ThePceThread, TRUE);
+
+    DEBUG(NAME_thread, Cprintf("%s: AttachThreadInput(%d, %d) --> %d\n",
+			       pp(fr), (int)tid, (int)ThePceThread, rc));
+  }
 
   setHwndFrame(fr, ref);
   assocObjectToHWND(ref, fr);

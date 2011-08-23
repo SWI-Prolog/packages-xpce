@@ -147,7 +147,7 @@ __pce_export PceITFSymbol getITFSymbolName(PceName);
 typedef union
 { char		character;		/* Value is a C char */
   intptr_t	integer;		/* Value of PCE int or reference */
-  double 	real;			/* Value of PCE real */
+  double	real;			/* Value of PCE real */
   char *	string;			/* Value is a C char * */
   void *	pointer;		/* Anonymous pointer */
   PceITFSymbol	itf_symbol;		/* Interface symbol */
@@ -296,6 +296,9 @@ __pce_export void	pceMTLock(int lock);
 __pce_export void	pceMTUnlock(int lock);
 __pce_export int	pceMTTryLock(int lock);
 __pce_export int	pceMTdetach(void);
+#ifdef __WINDOWS__
+__pce_export unsigned	setPceThread(unsigned id);
+#endif
 
 		/********************************
 		*          PCE CALLING C	*
