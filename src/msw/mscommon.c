@@ -297,6 +297,7 @@ messageToKeyId(UINT message, UINT wParam, LONG lParam, unsigned long *bmask)
 	case VK_PRIOR:		id = NAME_pageUp;	break;
 	case VK_NEXT:		id = NAME_pageDown;	break;
 	case VK_END:		id = NAME_end;		break;
+	case VK_PAUSE:		id = NAME_pause;	break;
 
 	case VK_SELECT:		id = NAME_select;	break;
 	case VK_PRINT:		id = NAME_print;	break;
