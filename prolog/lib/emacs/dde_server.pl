@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        wielemak@science.uva.nl
+    E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (C): 2006, University of Amsterdam
+    Copyright (C): 2006-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -42,28 +43,36 @@ PceEmacs from the Windows shell. The access   points  are dummy calls if
 DDE is nor provided.
 */
 
-%%	start_emacs_dde_server is det.
+%%	start_emacs_dde_server(+Force) is det.
 %
 %	If there is no DDE server, register it as =PceEmacs= using the
 %	topic =control=.
 
 :- if(current_predicate(open_dde_conversation/3)).
+:- use_module(library(dde)).
 
 start_emacs_dde_server(_) :-
 	dde_current_service('PceEmacs', control), !.
 start_emacs_dde_server(true) :-
-	open_dde_conversation('PceEmacs', control, Handle),
-	dde_execute(Handle, 'close-server'),
-	close_dde_conversation(Handle),
-	send(@emacs, report, status, 'Closed server on other PceEmacs'),
+	catch(close_other_dde_server, _, fail),
 	fail.
 start_emacs_dde_server(false) :-
-	open_dde_conversation('PceEmacs', control, Handle), !,
-	close_dde_conversation(Handle),
+	catch(ping_other_dde_server, _, fail), !,
 	ignore(send(@emacs, report, status, 'Server on other PceEmacs')).
 start_emacs_dde_server(_) :-
 	dde_register_service('PceEmacs'(control, Item),
 			     handle_request(Item)).
+
+close_other_dde_server :-
+	setup_call_cleanup(open_dde_conversation('PceEmacs', control, Handle),
+			   dde_execute(Handle, 'close-server'),
+			   close_dde_conversation(Handle)),
+	send(@emacs, report, status, 'Closed server on other PceEmacs').
+
+ping_other_dde_server :-
+	open_dde_conversation('PceEmacs', control, Handle), !,
+	close_dde_conversation(Handle).
+
 
 handle_request(Item) :-
 	atom_concat('edit ', WinFile, Item), !,
