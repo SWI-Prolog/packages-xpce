@@ -69,6 +69,7 @@ static int LZWReadByte (IOSTREAM *fd,int flag, int  input_code_size);
 static int ReadImage(IOSTREAM *fd,
 		     PIXEL *bigMemBuf,
 		     int width, int height,
+		     int ncolors,
 		     int interlace);
 
 
@@ -251,14 +252,14 @@ GIFReadFD(IOSTREAM *fd,
 	return rval;
       }
       /*read image */
-      if ( (rval=ReadImage(fd, bigBuf, w, h,
+      if ( (rval=ReadImage(fd, bigBuf, w, h, bitPixel,
 			   BitSet((UCHAR) buf[8], INTERLACE))) != GIF_OK )
       { setGifError("Error reading GIF file.  LocalColorMap. Giving up");
 	pceFree(bigBuf);
 	return rval;
       }
     } else
-    { if ( (rval=ReadImage(fd, bigBuf, w, h,
+    { if ( (rval=ReadImage(fd, bigBuf, w, h, GifScreen.BitPixel,
 			   BitSet((UCHAR) buf[8], INTERLACE))) != GIF_OK )
       { setGifError("Error reading GIF file.  GIFScreen Colormap.  Giving up");
 	pceFree(bigBuf);
@@ -548,6 +549,7 @@ static int
 ReadImage(IOSTREAM *fd,
 	  PIXEL *bigMemBuf,
 	  int width, int height,
+	  int ncolors,
 	  int interlace)
 {
   UCHAR c;
@@ -567,6 +569,10 @@ ReadImage(IOSTREAM *fd,
   {
     curidx = (long) xpos + (long) ypos *(long) width; /* optimize */
 
+    if ( color >= ncolors )
+    { /*Cprintf("Color %d; ncolors = %d\n", color, ncolors);*/
+      return GIF_INVALID;
+    }
     bigMemBuf[curidx] = color;
 
     ++xpos;
