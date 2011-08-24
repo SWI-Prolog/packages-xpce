@@ -553,7 +553,9 @@ ReadImage(IOSTREAM *fd,
   UCHAR c;
   int color;
   int xpos = 0, ypos = 0, pass = 0;
+  int lines = 0;
   long curidx;
+  int last;
 
   if ( !ReadOK(fd, &c, 1) || c > MAX_LZW_BITS )
   { return GIF_INVALID;
@@ -606,20 +608,23 @@ ReadImage(IOSTREAM *fd,
 	  }
 	}
       } else
-      {
-	++ypos;
+      { ++ypos;
       }
+      ++lines;
     }
     if (ypos >= height)
-      break;
+      goto fini;
   }
+  return GIF_INVALID;			/* short file */
 
 fini:
+  if ( lines != height )
+    return GIF_INVALID;
 
-  if (LZWReadByte(fd, FALSE, c) >= 0)
-  {
+  if ( (last=LZWReadByte(fd, FALSE, c)) >= 0 )
+  { return GIF_OK;			/* end is 0x3B, but we only read the */
+  }					/* first image of animated GIFs */
 
-  }
-  return GIF_OK;
+  return GIF_INVALID;
 }
 
