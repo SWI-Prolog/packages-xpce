@@ -159,7 +159,7 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
 		       cwd,			/* directory */
 		       &startinfo,
 		       processinfo) )
-    { CloseHandle(processinfo->hThread); 	/* don't need this */
+    { CloseHandle(processinfo->hThread);	/* don't need this */
       pidProcess(p, toInt(processinfo->dwProcessId));
       p->rdfd   = (int) rdfd[0];
       p->wrfd   = (int) wrfd[1];
@@ -206,10 +206,11 @@ ws_kill_process(Process p, int sig)
 
 void
 ws_done_process(Process p)
-{ PROCESS_INFORMATION *pi = p->ws_ref;
+{ PROCESS_INFORMATION *pi;
 
-  CloseHandle(pi->hProcess);
-
-  unalloc(sizeof(*pi), pi);
-  p->ws_ref = NULL;
+  if ( (pi=p->ws_ref) )
+  { CloseHandle(pi->hProcess);
+    unalloc(sizeof(*pi), pi);
+    p->ws_ref = NULL;
+  }
 }
