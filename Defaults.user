@@ -66,6 +66,11 @@
 
 !emacs_language_mode.comment_column: 48
 
+! Get grep to work on Windows (using the grep that ships with MSysGit)
+! Alternative is to make sure there is a compatible grep in %PATH%
+
+! emacs_fundamental_mode.grep_command: 'C:/Program Files (x86)/Git/bin/grep.exe -n %s NUL'
+
 ! Spelling program options for the ispell demo and checker for PceEmacs.
 ! Ispell is available on most Unix installations.
 
