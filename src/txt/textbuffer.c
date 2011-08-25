@@ -2181,7 +2181,7 @@ potential duplication of memory usage.
 static int
 insert_file_textbuffer(TextBuffer tb, intptr_t where, intptr_t times, SourceSink file)
 { intptr_t grow, here;
-  size_t size;
+  int64_t size;
   IOSTREAM *fd;
 
   if ( times <= 0 )

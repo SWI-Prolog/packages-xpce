@@ -484,7 +484,7 @@ readXpmFile(Image image, IOSTREAM *fd)
   Display *disp = defaultXDisplay();
 
   if ( offset == 0 )			/* only entire file for now */
-  { long fsize = Ssize(fd);
+  { int64_t fsize = Ssize(fd);
 
     if ( fsize >= 0 )
     { size_t size = (size_t)fsize;

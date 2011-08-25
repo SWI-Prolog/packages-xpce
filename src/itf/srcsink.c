@@ -66,7 +66,7 @@ static const encname enc_names[] =
 { { NAME_octet,		ENC_OCTET },
   { NAME_ascii,		ENC_ASCII },
   { NAME_iso_latin_1,   ENC_ISO_LATIN_1 },
-  { NAME_text,   	ENC_ANSI },
+  { NAME_text,		ENC_ANSI },
   { NAME_utf8,		ENC_UTF8 },
   { NAME_unicodeBe,	ENC_UNICODE_BE },
   { NAME_unicodeLe,	ENC_UNICODE_LE },
@@ -116,7 +116,7 @@ getContentsSourceSink(SourceSink ss, Int from, Int len)
   IOSTREAM *fd = Sopen_object(ss, mode);
 
   if ( fd )
-  { long size = Ssize(fd);
+  { int64_t size = Ssize(fd);
     string s;
     status ok;
 

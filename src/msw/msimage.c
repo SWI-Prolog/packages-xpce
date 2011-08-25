@@ -321,9 +321,9 @@ typedef struct
 } ICONDIRENTRY, *LPICONDIRENTRY;
 
 typedef struct
-{ WORD  	idReserved;   /* Reserved */
-  WORD  	idType;       /* resource type (1 for icons) */
-  WORD  	idCount;      /* how many images? */
+{ WORD		idReserved;   /* Reserved */
+  WORD		idType;       /* resource type (1 for icons) */
+  WORD		idCount;      /* how many images? */
   ICONDIRENTRY	idEntries[1]; /* the entries for each image */
 } ICONDIR, *LPICONDIR;
 
@@ -448,7 +448,7 @@ ws_load_windows_ico_file(Image image, IOSTREAM *fd)
 	assign(image->size, h, toInt(bm.bmHeight));
 	assign(image,       depth, toInt(bm.bmPlanes * bm.bmBitsPixel));
 	assign(image,	    kind,  image->depth == ONE ? NAME_bitmap
-	       					       : NAME_pixmap);
+						       : NAME_pixmap);
 
 	registerXrefObject(image, image->display, copy);
       } else
@@ -513,7 +513,7 @@ ws_load_windows_ico_file(Image image, IOSTREAM *fd)
 	assign(mask->size, h, toInt(bm.bmHeight));
 	assign(mask,       depth, toInt(bm.bmPlanes * bm.bmBitsPixel));
 	assign(mask,	   kind,  image->depth == ONE ? NAME_bitmap
-	       					       : NAME_pixmap);
+						       : NAME_pixmap);
 
 	registerXrefObject(mask, image->display, copy);
       }
@@ -553,7 +553,7 @@ static int
 readXpmImage(IOSTREAM *fd, Image image, XpmImage *img, XpmInfo *info)
 { int rval;
   int size;
-  long offset = Stell(fd);
+  int64_t offset = Stell(fd);
 
 #ifdef O_GIF
   if ( (rval=XpmReadGIF(fd, img)) == XpmSuccess )
@@ -2044,7 +2044,7 @@ Win32 predefined images.
 
 static struct system_image window_images[] =
 { { "win_btncorners",	OBM_BTNCORNERS },
-  { "win_btsize", 	OBM_BTSIZE },
+  { "win_btsize",	OBM_BTSIZE },
   { "win_check",	OBM_CHECK },
   { "win_checkboxes",	OBM_CHECKBOXES },
   { "win_close",	OBM_CLOSE },
