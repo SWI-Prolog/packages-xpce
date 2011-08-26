@@ -409,7 +409,7 @@ install_pcecall()
   context.pipe[0] = context.pipe[1] = -1;
 #endif
 
-  PL_register_foreign("in_pce_thread",  1, in_pce_thread, PL_FA_TRANSPARENT);
+  PL_register_foreign("in_pce_thread",  1, in_pce_thread, PL_FA_META, "0");
   PL_register_foreign("set_pce_thread", 0, set_pce_thread, 0);
   PL_register_foreign("pce_dispatch",   0, pl_pce_dispatch, 0);
 }
