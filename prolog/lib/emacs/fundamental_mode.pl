@@ -123,21 +123,24 @@
 	[
 	]).
 
-class_variable(grep_command,	string, 'grep -n %s /dev/null',
+class_variable(grep_command, string,
+	       [ 'X'('grep -n %s /dev/null'),
+		 windows('grep -n %s NUL')
+	       ],
 	       "Command of M-x grep").
-class_variable(shell_command,	chain*,
+class_variable(shell_command, chain*,
 	       when(@pce?window_system == windows,
 		    @nil,
 		    chain('/bin/sh', '-c')),
 	       "Command for running grep, make, etc.").
 class_variable(auto_colourise_size_limit, int, 50000,
 	       "Auto-colourise if buffer is smaller then this").
-class_variable(print_command,	string,
+class_variable(print_command, string,
 	       [ 'X'('lpr %s'),
 		 windows('NOTEPAD.EXE /P %s')
 	       ],
 	       "Command to print a file").
-class_variable(tab_width,	int,
+class_variable(tab_width, int,
 	       8,
 	       "Distance between tab-stops").
 
