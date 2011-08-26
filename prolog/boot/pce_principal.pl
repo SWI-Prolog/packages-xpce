@@ -51,6 +51,7 @@
 
 	    pce_open/3,			% +Object, +Mode, -Stream
 	    in_pce_thread/1,		% :Goal
+	    in_pce_thread_sync/1,	% :Goal
 	    set_pce_thread/0,
 	    pce_dispatch/0,
 
@@ -127,7 +128,7 @@ pce_ifhostproperty(prolog(sicstus), [
 		********************************/
 
 
-%%   	free(+Ref) is det.
+%%	free(+Ref) is det.
 %
 %	Delete object if it exists.
 

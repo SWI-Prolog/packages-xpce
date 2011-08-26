@@ -76,9 +76,22 @@ static pthread_mutex_t pce_dispatch_mutex = PTHREAD_MUTEX_INITIALIZER;
 		 *	       TYPES		*
 		 *******************************/
 
+typedef enum goal_state
+{ G_WAITING,
+  G_RUNNING,
+  G_TRUE,
+  G_FALSE,
+  G_ERROR
+} goal_state;
+
 typedef struct
-{ module_t module;			/* module to call in */
-  record_t goal;			/* the term to call */
+{ module_t	module;			/* module to call in */
+  record_t	goal;			/* the term to call */
+  int		acknowledge;		/* If set, wait ( */
+  goal_state	state;			/* G_* */
+#ifdef __WINDOWS__
+  DWORD		client;			/* id of client thread */
+#endif
 } prolog_goal;
 
 
@@ -96,7 +109,7 @@ typedef struct
 #endif /*__WINDOWS__*/
 } context_t;
 
-static int init_prolog_goal(prolog_goal *g, term_t goal);
+static int init_prolog_goal(prolog_goal *g, term_t goal, int acknowledge);
 static void call_prolog_goal(prolog_goal *g);
 
 static context_t context;
@@ -143,7 +156,8 @@ type_error(term_t actual, const char *expected)
 		 *	  WINDOWS SOLUTION	*
 		 *******************************/
 
-#define WM_CALL	(WM_USER+56)
+#define WM_CALL		(WM_USER+56)
+#define WM_CALL_DONE	(WM_USER+57)
 
 static LRESULT WINAPI
 call_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -152,7 +166,11 @@ call_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     { prolog_goal *g = (prolog_goal *)lParam;
 
       call_prolog_goal(g);
-      PL_free(g);
+      if ( g->acknowledge )
+      { PostThreadMessage(g->client, WM_CALL_DONE, 0, 0);
+      } else
+      { PL_free(g);
+      }
       pceRedraw(FALSE);
 
       return 0;
@@ -225,7 +243,7 @@ static foreign_t
 in_pce_thread(term_t goal)
 { prolog_goal *g = PL_malloc(sizeof(*g));
 
-  if ( !init_prolog_goal(g, goal) )
+  if ( !init_prolog_goal(g, goal, FALSE) )
   { PL_free(g);
     return FALSE;
   }
@@ -236,7 +254,51 @@ in_pce_thread(term_t goal)
 }
 
 
-#else /*__WINDOWS__*/
+static foreign_t
+in_pce_thread_sync(term_t goal)
+{ prolog_goal *g = PL_malloc(sizeof(*g));
+  MSG msg;
+  int rc = FALSE;
+
+  if ( !init_prolog_goal(g, goal, TRUE) )
+  { PL_free(g);
+    return FALSE;
+  }
+
+  g->client = GetCurrentThreadId();
+  PostMessage(context.window, WM_CALL, (WPARAM)0, (LPARAM)g);
+
+  while( GetMessage(&msg, NULL, 0, 0) )
+  { TranslateMessage(&msg);
+    DispatchMessage(&msg);
+    if ( PL_handle_signals() < 0 )
+      return FALSE;
+
+    switch(g->state)
+    { case G_TRUE:
+	rc = TRUE;
+        goto out;
+      case G_FALSE:
+	goto out;
+      case G_ERROR:
+      { term_t ex = PL_new_term_ref();
+
+	if ( PL_recorded(g->goal, ex) )
+	  rc = PL_raise_exception(ex);
+	goto out;
+      }
+      default:
+	continue;
+    }
+  }
+
+out:
+  PL_free(g);
+  return rc;
+}
+
+
+#else /*!__WINDOWS__*/
 
 		 /*******************************
 		 *	   X11 SCHEDULING	*
@@ -288,10 +350,9 @@ in_pce_thread(term_t goal)
   if ( !setup() )
     return FALSE;
 
-  if ( !init_prolog_goal(&g, goal) )
+  if ( !init_prolog_goal(&g, goal, FALSE) )
     return FALSE;
 
-					/* must be locked? */
   rc = write(context.pipe[1], &g, sizeof(g));
 
   if ( rc == sizeof(g) )
@@ -300,7 +361,27 @@ in_pce_thread(term_t goal)
   return FALSE;
 }
 
-#endif /*__WINDOWS__*/
+
+static foreign_t
+in_pce_thread_sync(term_t goal)
+{ prolog_goal g;
+  int rc;
+
+  if ( !setup() )
+    return FALSE;
+
+  if ( !init_prolog_goal(&g, goal, FALSE) )
+    return FALSE;
+
+  rc = write(context.pipe[1], &g, sizeof(g));
+
+  if ( rc == sizeof(g) )
+    return TRUE;
+
+  return FALSE;
+}
+
+#endif /*!__WINDOWS__*/
 
 
 		 /*******************************
@@ -308,10 +389,12 @@ in_pce_thread(term_t goal)
 		 *******************************/
 
 static int
-init_prolog_goal(prolog_goal *g, term_t goal)
+init_prolog_goal(prolog_goal *g, term_t goal, int acknowledge)
 { term_t plain = PL_new_term_ref();
 
-  g->module = NULL;
+  g->module	 = NULL;
+  g->acknowledge = acknowledge;
+  g->state       = G_WAITING;
   PL_strip_module(goal, &g->module, plain);
   if ( !(PL_is_compound(plain) || PL_is_atom(plain)) )
     return type_error(goal, "callable");
@@ -323,21 +406,50 @@ init_prolog_goal(prolog_goal *g, term_t goal)
 
 static void
 call_prolog_goal(prolog_goal *g)
-{ fid_t fid = PL_open_foreign_frame();
-  term_t t = PL_new_term_ref();
+{ fid_t fid;
   static predicate_t pred = NULL;
   int rc;
 
   if ( !pred )
     pred = PL_predicate("call", 1, "user");
 
-  rc = PL_recorded(g->goal, t);
-  PL_erase(g->goal);
-  if ( rc )
-    PL_call_predicate(g->module, PL_Q_NORMAL, pred, t);
-  else
+  if ( (fid = PL_open_foreign_frame()) )
+  { term_t t = PL_new_term_ref();
+    rc = PL_recorded(g->goal, t);
+    PL_erase(g->goal);
+    g->goal = 0;
+    g->state = G_RUNNING;
+    if ( rc )
+    { qid_t qid;
+      int flags = PL_Q_NORMAL;
+
+      if ( g->acknowledge )
+	flags |= PL_Q_CATCH_EXCEPTION;
+
+
+      if ( (qid = PL_open_query(g->module, flags, pred, t)) )
+      { rc = PL_next_solution(qid);
+
+	if ( rc )
+	{ g->state = G_TRUE;
+	} else
+	{ term_t ex;
+
+	  if ( g->acknowledge && (ex=PL_exception(qid)) )
+	  { g->goal = PL_record(ex);
+	    g->state = G_ERROR;
+	  } else
+	  { g->state = G_FALSE;
+	  }
+	}
+
+	PL_cut_query(qid);
+      } else
+	PL_warning("ERROR: pce: out of global stack");
+    }
+    PL_discard_foreign_frame(fid);
+  } else
     PL_warning("ERROR: pce: out of global stack");
-  PL_discard_foreign_frame(fid);
 }
 
 
@@ -409,7 +521,10 @@ install_pcecall()
   context.pipe[0] = context.pipe[1] = -1;
 #endif
 
-  PL_register_foreign("in_pce_thread",  1, in_pce_thread, PL_FA_META, "0");
+  PL_register_foreign("in_pce_thread",      1,
+		      in_pce_thread, PL_FA_META, "0");
+  PL_register_foreign("in_pce_thread_sync", 1,
+		      in_pce_thread_sync, PL_FA_META, "0");
   PL_register_foreign("set_pce_thread", 0, set_pce_thread, 0);
   PL_register_foreign("pce_dispatch",   0, pl_pce_dispatch, 0);
 }

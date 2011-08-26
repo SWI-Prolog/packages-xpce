@@ -74,6 +74,7 @@ reexports the content of these files.
 	    pce_catch_error/2,		% pce_error
 	    pce_open/3,
 	    in_pce_thread/1,		% :Goal
+	    in_pce_thread_sync/1,	% :Goal
 	    set_pce_thread/0,
 	    pce_thread/1,		% -Thread
 	    pce_dispatch/0,
