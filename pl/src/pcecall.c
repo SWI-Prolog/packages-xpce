@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -25,6 +26,10 @@
 #include <stdio.h>
 #include <SWI-Stream.h>
 #include <SWI-Prolog.h>
+
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
 #ifdef __WINDOWS__
 
@@ -91,6 +96,9 @@ typedef struct
   goal_state	state;			/* G_* */
 #ifdef __WINDOWS__
   DWORD		client;			/* id of client thread */
+#else
+  pthread_cond_t  cv;
+  pthread_mutex_t mutex;
 #endif
 } prolog_goal;
 
@@ -300,6 +308,7 @@ out:
 
 #else /*!__WINDOWS__*/
 
+
 		 /*******************************
 		 *	   X11 SCHEDULING	*
 		 *******************************/
@@ -307,11 +316,17 @@ out:
 static void
 on_input(XtPointer xp, int *source, XtInputId *id)
 { context_t *ctx = (context_t *)xp;
-  prolog_goal g;
+  prolog_goal *g;
   int n;
 
   if ( (n=read(ctx->pipe[0], &g, sizeof(g))) == sizeof(g) )
-  { call_prolog_goal(&g);
+  { call_prolog_goal(g);
+    if ( g->acknowledge )
+    { pthread_cond_signal(&g->cv);
+    } else
+    { PL_free(g);
+    }
+    pceRedraw(FALSE);
   } else if ( n == 0 )		/* EOF: quit */
   { close(ctx->pipe[0]);
     ctx->pipe[0] = -1;
@@ -320,7 +335,7 @@ on_input(XtPointer xp, int *source, XtInputId *id)
 
 
 static int
-setup()
+setup(void)
 { if ( context.pipe[0] > 0 )
     return TRUE;
 
@@ -344,13 +359,13 @@ setup()
 
 static foreign_t
 in_pce_thread(term_t goal)
-{ prolog_goal g;
+{ prolog_goal *g = PL_malloc(sizeof(*g));
   int rc;
 
-  if ( !setup() )
+  if ( !g || !setup() )
     return FALSE;
 
-  if ( !init_prolog_goal(&g, goal, FALSE) )
+  if ( !init_prolog_goal(g, goal, FALSE) )
     return FALSE;
 
   rc = write(context.pipe[1], &g, sizeof(g));
@@ -364,21 +379,75 @@ in_pce_thread(term_t goal)
 
 static foreign_t
 in_pce_thread_sync(term_t goal)
-{ prolog_goal g;
+{ prolog_goal *g = PL_malloc(sizeof(*g));
   int rc;
 
-  if ( !setup() )
+  if ( !g || !setup() )
     return FALSE;
 
-  if ( !init_prolog_goal(&g, goal, FALSE) )
+  if ( !init_prolog_goal(g, goal, TRUE) )
     return FALSE;
 
+  pthread_cond_init(&g->cv, NULL);
+  pthread_mutex_init(&g->mutex, NULL);
   rc = write(context.pipe[1], &g, sizeof(g));
 
   if ( rc == sizeof(g) )
-    return TRUE;
+  { rc = FALSE;
+    pthread_mutex_lock(&g->mutex);
 
-  return FALSE;
+    for(;;)
+    { struct timespec timeout;
+#ifdef HAVE_CLOCK_GETTIME
+      struct timespec now;
+
+      clock_gettime(CLOCK_REALTIME, &now);
+      timeout.tv_sec  = now.tv_sec;
+      timeout.tv_nsec = (now.tv_nsec+250000000);
+#else
+      struct timeval now;
+
+      gettimeofday(&now, NULL);
+      timeout.tv_sec  = now.tv_sec;
+      timeout.tv_nsec = (now.tv_usec+250000) * 1000;
+#endif
+
+      if ( timeout.tv_nsec >= 1000000000 ) /* some platforms demand this */
+      { timeout.tv_nsec -= 1000000000;
+	timeout.tv_sec += 1;
+      }
+
+      pthread_cond_timedwait(&g->cv, &g->mutex, &timeout);
+      if ( PL_handle_signals() < 0 )
+	goto out;
+
+      switch(g->state)
+      { case G_TRUE:
+	  rc = TRUE;
+	  goto out;
+	case G_FALSE:
+	  goto out;
+	case G_ERROR:
+	{ term_t ex = PL_new_term_ref();
+
+	  if ( PL_recorded(g->goal, ex) )
+	    rc = PL_raise_exception(ex);
+	  PL_erase(g->goal);
+	  goto out;
+	}
+	default:
+	  continue;
+      }
+    }
+  out:
+    pthread_mutex_unlock(&g->mutex);
+  }
+
+  pthread_mutex_destroy(&g->mutex);
+  pthread_cond_destroy(&g->cv);
+  PL_free(g);
+
+  return rc;
 }
 
 #endif /*!__WINDOWS__*/
