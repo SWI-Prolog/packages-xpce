@@ -186,14 +186,14 @@ send_input(B, Caret:int) :->
 	(   Caret >= End
 	->  get(B, contents, End, Caret-End, Data),
 	    send(B, insert, Caret, @newline)
- 	;   get(B, scan, Caret, line, 0, start, SOL),
+	;   get(B, scan, Caret, line, 0, start, SOL),
 	    get(B, scan, Caret, line, 0, end, EOL),
 	    get(B, contents, SOL, EOL-SOL, Data),
 	    (   get(B, prompt_regex, Prompt), Prompt \== @nil,
 		get(Prompt, match, Data, Size)
 	    ->  send(Data, delete, 0, Size)
- 	    ;   true
- 	    ),
+	    ;   true
+	    ),
 	    send(B, append, Data),
 	    send(B, append, @newline),
 	    send(B?editors, for_all, message(@arg1, caret))
@@ -482,7 +482,7 @@ end_of_file(E) :->
 	      new(chain(regex('(\\S+):\\s*(\\d+):'),        % gcc, grep
 			regex('"(\\S+)", line (\\d+):')))). % SUN cc
 :- pce_global(@emacs_cd_regexs,
-	      new(chain(regex('\\ycd\\s+((\\w|[_/+-.:])+)'),
+	      new(chain(regex('\\ycd\\s+((\\w|[_/+-.: ])+)'),
 			regex('Entering directory `([^\']+)\'')))).
 :- pce_global(@emacs_canonise_dir_regex,
 	      new(regex('[^/]+/\\.\\./'))).
