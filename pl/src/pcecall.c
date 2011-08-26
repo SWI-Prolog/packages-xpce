@@ -29,6 +29,7 @@
 #ifdef __WINDOWS__
 
 #include <windows.h>
+#include <console.h>
 
 #else /*__WINDOWS__*/
 
@@ -82,15 +83,16 @@ typedef struct
 
 
 typedef struct
-{ int		pce_thread;
-  PL_dispatch_hook_t input_hook;
-  int		input_hook_saved;
+{ int			pce_thread;
+  PL_dispatch_hook_t	input_hook;
+  int			input_hook_saved;
 #ifdef __WINDOWS__
-  HINSTANCE	hinstance;
-  HWND		window;
+  HINSTANCE		hinstance;
+  HWND			window;
+  RlcUpdateHook		update_hook;
 #else /*__WINDOWS__*/
-  int		pipe[2];
-  XtInputId	id;
+  int			pipe[2];
+  XtInputId		id;
 #endif /*__WINDOWS__*/
 } context_t;
 
@@ -339,6 +341,11 @@ call_prolog_goal(prolog_goal *g)
 }
 
 
+#ifdef __WINDOWS__
+/* from interface.c */
+extern RlcUpdateHook indirect_rlc_update_hook(RlcUpdateHook hook);
+#endif
+
 static foreign_t
 set_pce_thread()
 { int tid = PL_thread_self();
@@ -348,6 +355,9 @@ set_pce_thread()
 
     if ( context.input_hook_saved )
     { PL_dispatch_hook(context.input_hook);
+#ifdef __WINDOWS__
+      indirect_rlc_update_hook(context.update_hook);
+#endif
       context.input_hook_saved = FALSE;
     }
 
@@ -362,6 +372,9 @@ set_pce_thread()
 
     if ( context.pce_thread != 1 )
     { context.input_hook = PL_dispatch_hook(NULL);
+#ifdef __WINDOWS__
+      context.update_hook = indirect_rlc_update_hook(NULL);
+#endif
       context.input_hook_saved = TRUE;
     }
   }

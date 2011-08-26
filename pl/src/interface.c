@@ -590,7 +590,7 @@ getConsoleFunction(const char *name)
 }
 
 
-static RlcUpdateHook
+RlcUpdateHook
 indirect_rlc_update_hook(RlcUpdateHook hook)
 { RlcUpdateHook (*sethook)(RlcUpdateHook new);
 
