@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.nl/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -65,7 +66,7 @@ extended in Prolog.
 
 start_emacs :-
 	register_emacs,
-	send(@emacs, start).
+	in_pce_thread_sync(send(@emacs, start)).
 
 
 %%	register_emacs is det.
@@ -96,8 +97,8 @@ emacs_server :-
 
 emacs :-
 	start_emacs,
-	new(Scratch, emacs_buffer(@nil, '*scratch*')),
-	send(Scratch, open, tab).
+	in_pce_thread((new(Scratch, emacs_buffer(@nil, '*scratch*')),
+		       send(Scratch, open, tab))).
 
 %%	emacs(+Location) is det.
 %
@@ -110,10 +111,12 @@ emacs(File:Line) :-
 	integer(Line),
 	atom(File), !,
 	start_emacs,
-	send(@emacs, goto_source_location, source_location(File, Line), tab).
+	in_pce_thread(send(@emacs, goto_source_location,
+			   source_location(File, Line), tab)).
 emacs(File) :-
 	start_emacs,
-	send(@emacs, goto_source_location, source_location(File), tab).
+	in_pce_thread(send(@emacs, goto_source_location,
+			   source_location(File), tab)).
 
 %%	emacs_toplevel is det.
 %
