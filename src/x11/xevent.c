@@ -76,7 +76,7 @@ ws_dispatch(Int FD, Any timeout)
   int ofd = dispatch_fd;
   int fd = (isDefault(FD) ? dispatch_fd :
 	    isNil(FD)	  ? -1
-	    		  : valInt(FD));
+			  : valInt(FD));
 
 					/* No context: wait for input */
 					/* timeout */
@@ -138,9 +138,10 @@ ws_dispatch(Int FD, Any timeout)
   DEBUG(NAME_dispatch, Cprintf("Dispatch: timeout = %s, tid = %d\n",
 			       pp(timeout), tid));
 
-  pceMTLock(LOCK_PCE);
-  RedrawDisplayManager(TheDisplayManager());
-  pceMTUnlock(LOCK_PCE);
+  if ( pceMTTryLock(LOCK_PCE) )
+  { RedrawDisplayManager(TheDisplayManager());
+    pceMTUnlock(LOCK_PCE);
+  }
 					/* All callbacks must be locked! */
   XtAppProcessEvent(ThePceXtAppContext,
 		    XtIMXEvent|XtIMTimer|XtIMAlternateInput);
