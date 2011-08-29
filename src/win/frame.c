@@ -56,19 +56,19 @@ initialiseFrame(FrameObj fr, Name label, Name kind,
   if ( isDefault(app) )
     app = NIL;
 
-  assign(fr, name,	    	    getClassNameObject(fr));
-  assign(fr, label,         	    label);
-  assign(fr, display,       	    display);
+  assign(fr, name,		    getClassNameObject(fr));
+  assign(fr, label,		    label);
+  assign(fr, display,		    display);
   assign(fr, border,		    DEFAULT);
-  assign(fr, area,	    	    newObject(ClassArea, EAV));
-  assign(fr, members,	    	    newObject(ClassChain, EAV));
-  assign(fr, kind,	    	    kind);
-  assign(fr, status,	    	    NAME_unmapped);
-  assign(fr, can_delete,    	    ON);
-  assign(fr, input_focus,   	    OFF);
-  assign(fr, sensitive,   	    ON);
+  assign(fr, area,		    newObject(ClassArea, EAV));
+  assign(fr, members,		    newObject(ClassChain, EAV));
+  assign(fr, kind,		    kind);
+  assign(fr, status,		    NAME_unmapped);
+  assign(fr, can_delete,	    ON);
+  assign(fr, input_focus,	    OFF);
+  assign(fr, sensitive,		    ON);
   assign(fr, fitting,		    OFF);
-  assign(fr, wm_protocols,  	    newObject(ClassSheet, EAV));
+  assign(fr, wm_protocols,	    newObject(ClassSheet, EAV));
   assign(fr, wm_protocols_attached, OFF);
   obtainClassVariablesObject(fr);
 
@@ -741,7 +741,7 @@ static Name
 getGeometryFrame(FrameObj fr)
 { int x, y, ww, wh;
 
-  if ( ws_frame_bb(fr, &x, &y, &ww, &wh) ) 	/* outer area */
+  if ( ws_frame_bb(fr, &x, &y, &ww, &wh) )	/* outer area */
   { int mx, my, mw, mh;
     int xn=FALSE, yn=FALSE;
     char buf[100];
@@ -1857,6 +1857,8 @@ static senddecl send_frame[] =
      NAME_modal, "Return after a <-confirm"),
   SM(NAME_create, 0, NULL, createFrame,
      NAME_open, "Establish window-system counterpart"),
+  SM(NAME_Create, 0, NULL, createFrame,
+     NAME_open, "Establish window-system counterpart (internal)"),
   SM(NAME_mapped, 1, "bool", mappedFrame,
      NAME_open, "Inform transients using ->show"),
   SM(NAME_open, 3, T_positionADpointD_grabADboolD_normaliseADboolD, openFrame,

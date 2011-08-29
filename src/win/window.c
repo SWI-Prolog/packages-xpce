@@ -673,11 +673,11 @@ postEventWindow(PceWindow sw, EventObj ev)
 	    Cprintf("FOCUS: Directing focussed %s event to %s\n",
 		    pp(ev->id),
 		    isNil(sw->focus_recogniser) ? pp(sw->focus)
-		    				: pp(sw->focus_recogniser)));
+						: pp(sw->focus_recogniser)));
 
       rval = postEvent(ev, sw->focus,
 		       isNil(sw->focus_recogniser) ? DEFAULT
-		     				   : sw->focus_recogniser);
+						   : sw->focus_recogniser);
     }
 
     if ( isFreedObj(sw) )
@@ -763,7 +763,7 @@ inputFocusWindow(PceWindow sw, BoolObj val)
     if ( notNil(sw->keyboard_focus) )
       generateEventGraphical(sw->keyboard_focus,
 			     val == ON ? NAME_activateKeyboardFocus
-			   	       : NAME_deactivateKeyboardFocus);
+				       : NAME_deactivateKeyboardFocus);
   }
 
   if ( instanceOfObject(sw, ClassWindowDecorator) )
@@ -809,7 +809,7 @@ keyboardFocusWindow(PceWindow sw, Graphical gr)
     if ( notNil(gr) )
       generateEventGraphical(gr,
 			     sw->input_focus == ON ? NAME_activateKeyboardFocus
-			     			   : NAME_obtainKeyboardFocus);  }
+						   : NAME_obtainKeyboardFocus);  }
 
   succeed;
 }
@@ -842,7 +842,7 @@ focusWindow(PceWindow sw, Graphical gr, Recogniser recogniser,
     if ( notDefault(cursor) )
       assign(sw, focus_cursor, cursor);
     if ( isDefault(button) &&
-    	 notNil(sw->current_event) && isDownEvent(sw->current_event) )
+	 notNil(sw->current_event) && isDownEvent(sw->current_event) )
       assign(sw, focus_button, getButtonEvent(sw->current_event));
     else
       assign(sw, focus_button, button);
@@ -1150,7 +1150,7 @@ RedrawWindow(PceWindow sw)
 
     a = sw->changes_data;
     sw->changes_data = NULL;		/* if we crash, data will be fine! */
- 					/* (only some bytes lost) */
+					/* (only some bytes lost) */
 
 
     DEBUG(NAME_changesData, Cprintf("%s:\n", pp(sw)));
@@ -2300,6 +2300,8 @@ static senddecl send_window[] =
      NAME_layout, "Put me right of argument"),
   SM(NAME_create, 1, "[window]", createWindow,
      NAME_open, "Create associated X-window structure"),
+  SM(NAME_Create, 1, "[window]", createWindow,
+     NAME_open, "Create associated X-window structure (internal)"),
   SM(NAME_open, 2, T_open, openWindow,
      NAME_open, "Open associated frame on the display"),
   SM(NAME_openCentered, 3, T_confirmCentered, openCenteredWindow,
