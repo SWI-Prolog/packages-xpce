@@ -1283,7 +1283,8 @@ break_at(M) :->
 	->  get(M, caret, Caret),
 	    get(M, line_number, M?caret, Line),
 	    (	auto_call(prolog_break_at(Source, Line, Caret))
-	    ->	(   get(TB, margin_width, 0)
+	    ->  tdebug,			% debug all threads
+		(   get(TB, margin_width, 0)
 		->  send(TB, margin_width, 22)
 		;   true
 		),

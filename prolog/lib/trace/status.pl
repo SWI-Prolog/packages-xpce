@@ -276,9 +276,9 @@ delete(break, clause(Ref, PC)) :-
 
 mode(_D, Mode:{normal,debug,trace}) :->
 	(   Mode == normal
-	->  set_prolog_flag(debug, false)
+	->  tnodebug
 	;   Mode == debug
-	->  set_prolog_flag(debug, true)
+	->  tdebug
 	;   Mode == trace
 	->  guitracer
 	).

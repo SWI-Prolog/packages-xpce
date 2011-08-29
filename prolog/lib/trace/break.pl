@@ -37,41 +37,53 @@
 :- use_module(util).
 :- use_module(clause).
 :- use_module(source).
+:- use_module(library(debug)).
+
+/** <module> Manage Prolog break-points
+
+*/
 
 :- dynamic
 	user:prolog_event_hook/1.
 :- multifile
 	user:prolog_event_hook/1.
 
-%	break_at(File, Line, Char)
+%%	break_at(+File, +Line, +Char) is det.
 %
-%	Put a breakpoint at the indicated source-location.  File is a current
-%	sourcefile (as reported by source_file/1).  Line is the 1-based line
-%	in which Char is.  Char is the position of the break.
+%	Put a breakpoint at the  indicated   source-location.  File is a
+%	current sourcefile (as reported by   source_file/1). Line is the
+%	1-based line in which Char  is.  Char   is  the  position of the
+%	break.
 %
 %	First, '$clause_from_source'/3 uses the SWI-Prolog clause-source
-%	information to find the last clause starting before Line.  '$break_pc'
-%	generated (on backtracking), a list of possible break-points.
+%	information to find  the  last   clause  starting  before  Line.
+%	'$break_pc' generated (on backtracking),  a   list  of  possible
+%	break-points.
+%
+%	Note that in addition to  setting   the  break-point, the system
+%	must be in debug mode. With threading enabled, there are various
+%	different ways this may  be  done.   See  debug/0,  tdebug/0 and
+%	tdebug/1. Therefore, this predicate  does   *not*  enable  debug
+%	mode.
 
 break_at(File, Line, Char) :-
-	debug('break_at(~q, ~d, ~d).~n', [File, Line, Char]),
+	debug(break, 'break_at(~q, ~d, ~d).~n', [File, Line, Char]),
 	'$clause_from_source'(File, Line, ClauseRef),
 	pce_clause_info(ClauseRef, InfoFile, TermPos, _NameOffset),
 	(   InfoFile == File
 	->  '$break_pc'(ClauseRef, PC, NextPC),
-	    debug('Clause ~p, NextPC = ~w~n', [ClauseRef, NextPC]),
+	    debug(break, 'Clause ~p, NextPC = ~w~n', [ClauseRef, NextPC]),
 	    '$clause_term_position'(ClauseRef, NextPC, List),
-	    debug('Location = ~w~n', [List]),
+	    debug(break, 'Location = ~w~n', [List]),
 	    range(List, TermPos, A, Z),
-	    debug('Term from ~w-~w~n', [A, Z]),
+	    debug(break, 'Term from ~w-~w~n', [A, Z]),
 	    Z >= Char, !
 	;   format('Failed to unify clause ~p, using first break~n',
 		   [ClauseRef]),
 	    '$break_pc'(ClauseRef, PC, _), !
 	),
-	debug('Break at clause ~w, PC=~w~n', [ClauseRef, PC]),
-	'$break_at'(ClauseRef, PC, true),
-	debug.
+	debug(break, 'Break at clause ~w, PC=~w~n', [ClauseRef, PC]),
+	'$break_at'(ClauseRef, PC, true).
 
 range([], Pos, A, Z) :-
 	arg(1, Pos, A),
@@ -90,15 +102,15 @@ user:prolog_event_hook(break(ClauseRef, PC, Set)) :-
 break(SetClear, ClauseRef, PC) :-
 	print_message(informational, break(SetClear, ClauseRef, PC)),
 	(   SetClear == true
-	->  debug('Trap in Clause ~p, PC ~d~n', [ClauseRef, PC]),
+	->  debug(break, 'Trap in Clause ~p, PC ~d~n', [ClauseRef, PC]),
 	    clause_property(ClauseRef, file(File)),
 	    current_source_buffer(File, _Buffer),
 	    mark_stop_point(ClauseRef, PC)
-	;   debug('Deleted break at clause ~p, PC ~d~n', [ClauseRef, PC]),
+	;   debug(break, 'Deleted break at clause ~p, PC ~d~n', [ClauseRef, PC]),
 	    unmark_stop_point(ClauseRef, PC)
 	).
 
-%	break_location(+ClauseRef, +PC, -File, -A-Z)
+%%	break_location(+ClauseRef, +PC, -File, -A-Z)
 %
 %	Determine source-code location of a break-point.
 
@@ -106,9 +118,9 @@ break_location(ClauseRef, PC, File, A-Z) :-
 	pce_clause_info(ClauseRef, File, TermPos, _NameOffset),
 	'$fetch_vm'(ClauseRef, PC, NPC, _VMI),
 	'$clause_term_position'(ClauseRef, NPC, List),
-	debug('ClausePos = ~w~n', [List]),
+	debug(break, 'ClausePos = ~w~n', [List]),
 	range(List, TermPos, A, Z),
-	debug('Range: ~d .. ~d~n', [A, Z]).
+	debug(break, 'Range: ~d .. ~d~n', [A, Z]).
 
 
 		 /*******************************
