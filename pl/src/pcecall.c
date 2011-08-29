@@ -92,6 +92,7 @@ typedef enum goal_state
 typedef struct
 { module_t	module;			/* module to call in */
   record_t	goal;			/* the term to call */
+  record_t	result;			/* exception/variables */
   int		acknowledge;		/* If set, wait ( */
   goal_state	state;			/* G_* */
 #ifdef __WINDOWS__
@@ -263,7 +264,7 @@ in_pce_thread(term_t goal)
 
 
 static foreign_t
-in_pce_thread_sync(term_t goal)
+in_pce_thread_sync2(term_t goal, term_t vars)
 { prolog_goal *g = PL_malloc(sizeof(*g));
   MSG msg;
   int rc = FALSE;
@@ -284,15 +285,19 @@ in_pce_thread_sync(term_t goal)
 
     switch(g->state)
     { case G_TRUE:
-	rc = TRUE;
+      { term_t v = PL_new_term_ref();
+
+	rc = PL_recorded(g->result, v) && PL_unify(vars, v);
+	PL_erase(g->result);
         goto out;
       case G_FALSE:
 	goto out;
       case G_ERROR:
       { term_t ex = PL_new_term_ref();
 
-	if ( PL_recorded(g->goal, ex) )
+	if ( PL_recorded(g->result, ex) )
 	  rc = PL_raise_exception(ex);
+	PL_erase(g->result);
 	goto out;
       }
       default:
@@ -378,7 +383,7 @@ in_pce_thread(term_t goal)
 
 
 static foreign_t
-in_pce_thread_sync(term_t goal)
+in_pce_thread_sync2(term_t goal, term_t vars)
 { prolog_goal *g = PL_malloc(sizeof(*g));
   int rc;
 
@@ -423,16 +428,20 @@ in_pce_thread_sync(term_t goal)
 
       switch(g->state)
       { case G_TRUE:
-	  rc = TRUE;
+	{ term_t v = PL_new_term_ref();
+
+	  rc = PL_recorded(g->result, v) && PL_unify(vars, v);
+	  PL_erase(g->result);
 	  goto out;
+	}
 	case G_FALSE:
 	  goto out;
 	case G_ERROR:
 	{ term_t ex = PL_new_term_ref();
 
-	  if ( PL_recorded(g->goal, ex) )
+	  if ( PL_recorded(g->result, ex) )
 	    rc = PL_raise_exception(ex);
-	  PL_erase(g->goal);
+	  PL_erase(g->result);
 	  goto out;
 	}
 	default:
@@ -484,6 +493,7 @@ call_prolog_goal(prolog_goal *g)
 
   if ( (fid = PL_open_foreign_frame()) )
   { term_t t = PL_new_term_ref();
+    term_t vars;
     rc = PL_recorded(g->goal, t);
     PL_erase(g->goal);
     g->goal = 0;
@@ -493,19 +503,28 @@ call_prolog_goal(prolog_goal *g)
       int flags = PL_Q_NORMAL;
 
       if ( g->acknowledge )
-	flags |= PL_Q_CATCH_EXCEPTION;
-
+      { flags |= PL_Q_CATCH_EXCEPTION;
+	vars = PL_new_term_ref();
+	if ( !PL_get_arg(2, t, vars) ||		/* Goal-Vars */
+	     !PL_get_arg(1, t, t) )
+	{ PL_warning("ERROR: in_pce_thread: bad goal-vars term");
+	}
+      } else
+      { vars = 0;
+      }
 
       if ( (qid = PL_open_query(g->module, flags, pred, t)) )
       { rc = PL_next_solution(qid);
 
 	if ( rc )
 	{ g->state = G_TRUE;
+	  if ( vars )
+	    g->result = PL_record(vars);
 	} else
 	{ term_t ex;
 
 	  if ( g->acknowledge && (ex=PL_exception(qid)) )
-	  { g->goal = PL_record(ex);
+	  { g->result = PL_record(ex);
 	    g->state = G_ERROR;
 	  } else
 	  { g->state = G_FALSE;
@@ -592,8 +611,7 @@ install_pcecall()
 
   PL_register_foreign("in_pce_thread",      1,
 		      in_pce_thread, PL_FA_META, "0");
-  PL_register_foreign("in_pce_thread_sync", 1,
-		      in_pce_thread_sync, PL_FA_META, "0");
-  PL_register_foreign("set_pce_thread", 0, set_pce_thread, 0);
-  PL_register_foreign("pce_dispatch",   0, pl_pce_dispatch, 0);
+  PL_register_foreign("in_pce_thread_sync2", 2, in_pce_thread_sync2, 0);
+  PL_register_foreign("set_pce_thread",      0, set_pce_thread,      0);
+  PL_register_foreign("pce_dispatch",        0, pl_pce_dispatch,     0);
 }

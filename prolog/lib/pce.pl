@@ -88,6 +88,9 @@ reexports the content of these files.
 
 :- system_module.
 
+:- meta_predicate
+	in_pce_thread_sync(0).
+
 		/********************************
 		*      LOAD COMMON PLATFORM	*
 		********************************/
@@ -129,6 +132,24 @@ start_dispatch :-
 	->  pce_dispatch([])
 	;   true
 	).
+
+%%	in_pce_thread_sync(:Goal) is semidet.
+%
+%	Same as in_pce_thread/1, but wait  for   Goal  to  be completed.
+%	Success depends on the success of executing Goal. If Goal throws
+%	an exception, this exception is re-thrown by in_pce_thread/1.
+%
+%	Possible bindings of Goal are returned,   but  be aware that the
+%	term has been _copied_. If in_pce_thread_sync/1 is called in the
+%	thread running pce, it behaves as once/1.
+
+in_pce_thread_sync(Goal) :-
+	thread_self(Me),
+	pce_thread(Me), !,
+	Goal, !.
+in_pce_thread_sync(Goal) :-
+	term_variables(Goal, Vars),
+	pce_principal:in_pce_thread_sync2(Goal-Vars, Vars).
 
 :- initialization
 	start_dispatch.

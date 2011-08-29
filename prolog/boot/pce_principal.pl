@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.nu.nl
+    WWW:           http://www.swi-prolog.nl/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -51,7 +52,6 @@
 
 	    pce_open/3,			% +Object, +Mode, -Stream
 	    in_pce_thread/1,		% :Goal
-	    in_pce_thread_sync/1,	% :Goal
 	    set_pce_thread/0,
 	    pce_dispatch/0,
 
