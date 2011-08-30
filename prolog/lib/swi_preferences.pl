@@ -36,14 +36,29 @@
 :- use_module(library(pce)).
 :- use_module(library(pce_tick_box)).
 
+/** <module> Edit preferences files
+
+This  module  provides  prolog_edit_preferences/1,  which   is  used  to
+simplify locating the preference files and provide a default if the user
+has no such file.
+
+@see	library(win_menu) binds this to the Settings menu of the console on
+	the MS-Windows version.
+*/
+
 %%	prolog_edit_preferences(+What) is det.
 %
 %	Edit the specified user preference file.  What is one of
 %
-%	    * xpce
-%	    * prolog
+%	    * =xpce=
+%	    * =prolog=
+%
+%	The UI components are started asynchronously in the XPCE thread.
 
 prolog_edit_preferences(What) :-
+	in_pce_thread(pce_edit_preferences(What)).
+
+pce_edit_preferences(What) :-
 	locate_preferences(What, File),
 	auto_call(start_emacs),
 	(   \+ access_file(File, exist)
