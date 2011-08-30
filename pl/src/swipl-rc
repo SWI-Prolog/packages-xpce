@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.nl/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -25,10 +26,16 @@
 :- module(link_xpce, []).
 :- style_check(+dollar).		% lock as system module
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-This file is loaded  on  startup.  Use   it  for  local  (not  personal)
-configuration purposes.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/** <module> Associate XPCE with SWI-Prolog
+
+This  file  initialises  XPCE,  the  SWI-Prolog   native  GUI.  XPCE  is
+initialised only if it is detected.
+
+The source-location of this file is packages/xpce/pl/src/swipl-rc. It is
+installed as <plbase>/<exe-base>.rc, where   <exe-base> is =|swipl-win|=
+to associate with the SWI-Prolog gui  application on Windows and =swipl=
+on Unix/X11 platforms.
+*/
 
 :- initialization op(200, fy,  user:(@)).
 :- initialization op(250, yfx, user:(?)).
