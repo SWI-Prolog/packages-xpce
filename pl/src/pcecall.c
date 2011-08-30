@@ -290,6 +290,7 @@ in_pce_thread_sync2(term_t goal, term_t vars)
 	rc = PL_recorded(g->result, v) && PL_unify(vars, v);
 	PL_erase(g->result);
         goto out;
+      }
       case G_FALSE:
 	goto out;
       case G_ERROR:
