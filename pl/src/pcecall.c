@@ -545,10 +545,24 @@ call_prolog_goal(prolog_goal *g)
 #ifdef __WINDOWS__
 /* from interface.c */
 extern RlcUpdateHook indirect_rlc_update_hook(RlcUpdateHook hook);
+
+static int
+set_menu_thread(void)
+{ HMODULE hconsole;
+  int (*set_mt)(void);
+
+  if ( (hconsole=GetModuleHandle(NULL)) )	/* NULL gets the executable */
+  { if ( (set_mt = (void*)GetProcAddress(hconsole, "PL_set_menu_thread")) )
+      return (*set_mt)();
+  }
+
+  return FALSE;
+}
 #endif
 
+
 static foreign_t
-set_pce_thread()
+set_pce_thread(void)
 { int tid = PL_thread_self();
 
   if ( tid != context.pce_thread )
@@ -569,6 +583,7 @@ set_pce_thread()
     }
     setPceThread(GetCurrentThreadId());
     setup();
+    set_menu_thread();
 #endif
 
     if ( context.pce_thread != 1 )
