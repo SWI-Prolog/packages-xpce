@@ -557,7 +557,7 @@ ReadImage(IOSTREAM *fd,
   int xpos = 0, ypos = 0, pass = 0;
   int lines = 0;
   long curidx;
-  int last;
+  UCHAR last;
 
   if ( !ReadOK(fd, &c, 1) || c > MAX_LZW_BITS )
   { return GIF_INVALID;
@@ -570,7 +570,7 @@ ReadImage(IOSTREAM *fd,
     curidx = (long) xpos + (long) ypos *(long) width; /* optimize */
 
     if ( color >= ncolors )
-    { /*Cprintf("Color %d; ncolors = %d\n", color, ncolors);*/
+    { DEBUG(NAME_gif, Cprintf("Color %d; ncolors = %d\n", color, ncolors));
       return GIF_INVALID;
     }
     bigMemBuf[curidx] = color;
@@ -621,16 +621,15 @@ ReadImage(IOSTREAM *fd,
     if (ypos >= height)
       goto fini;
   }
+  DEBUG(NAME_gif, Cprintf("Short file\n"));
   return GIF_INVALID;			/* short file */
 
 fini:
   if ( lines != height )
+  { DEBUG(NAME_gif, Cprintf("Lines = %d; height=%d\n", lines, height));
     return GIF_INVALID;
+  }
 
-  if ( (last=LZWReadByte(fd, FALSE, c)) >= 0 )
-  { return GIF_OK;			/* end is 0x3B, but we only read the */
-  }					/* first image of animated GIFs */
-
-  return GIF_INVALID;
+  return GIF_OK;			/* end is 0x3B, but we only read the */
 }
 
