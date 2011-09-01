@@ -22,6 +22,10 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#ifdef __WINDOWS__
+#define USE_WIN32_CRITICAL_SECTION
+#endif
+
 #ifdef USE_WIN32_CRITICAL_SECTION
 #define WINDOWS_LEAN_AND_MEAN
 #define _WIN32_WINNT 0x400		/* get TryEnterCriticalSection() */
@@ -79,6 +83,7 @@ UNLOCK()
   }
 }
 
+#define Code SWI_Code
 #include <SWI-Prolog.h>
 static foreign_t
 pce_lock_owner(term_t owner, term_t count)
@@ -854,7 +859,7 @@ pceExecuteGoal(PceGoal g)
 	  { withReceiver(g->receiver, m->context,
 			 rval = forwardCodev(m->message, g->argc, g->argv));
 	  }
-  	}
+	}
       } else
 	rval = hostCall(g);
     }
