@@ -124,6 +124,14 @@ emit_term(Term, Options) :-
 	option(output(Out), Options, current_output),
 	print_stream_properties(Term, Out).
 emit_term(Term, Options) :-
+	current_blob(Term, record), !,
+	option(output(Out), Options, current_output),
+	print_record_properties(Term, Out).
+emit_term(Term, Options) :-
+	current_blob(Term, clause), !,
+	option(output(Out), Options, current_output),
+	print_clause_properties(Term, Out).
+emit_term(Term, Options) :-
 	print_term(Term, Options).
 
 
@@ -138,6 +146,23 @@ print_stream_properties(Stream, Out) :-
 	    fail
 	;   true
 	).
+
+print_record_properties(Record, Out) :-
+	format(Out, 'Record reference ~w~n', [Record]),
+	(   recorded(Key, Value, Record)
+	->  format(Out, '\tKey:   ~p~n', [Key]),
+	    format(Out, '\tValue: ~p~n', [Value])
+	;   format(Out, '\t<erased>~n', [])
+	).
+
+print_clause_properties(Ref, Out) :-
+	format(Out, 'Clause reference ~w~n', [Ref]),
+	(   clause(Head, Body, Ref)
+	->  nl(Out),
+	    portray_clause(Out, (Head:-Body))
+	;   format(Out, '\t<erased>~n', [])
+	).
+
 
 
 		 /*******************************
