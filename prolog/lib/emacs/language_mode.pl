@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -57,13 +58,15 @@
 	]).
 
 
-variable(bracket_gen,	    int*,	get, "Generation we checked brackets").
-variable(bracket_caret,	    int*,	get, "Location we checked brackets").
-variable(comment_column,    int,        both, "Column for line comment").
-variable(show_line_numbers, 'int|bool', get,  "Show line numbers?").
+variable(bracket_gen,		int*,  get,  "Generation we checked brackets").
+variable(bracket_caret,		int*,  get,  "Location we checked brackets").
+variable(comment_column,	int,   both, "Column for line comment").
+variable(parameter_indentation,	int,   both, "Indentation for parameters").
+variable(show_line_numbers,	'int|bool', get,  "Show line numbers?").
 
-class_variable(comment_column,	  'int',      48).
-class_variable(show_line_numbers, 'int|bool', 250000).
+class_variable(comment_column,	      int,	  48).
+class_variable(show_line_numbers,     'int|bool', 250000).
+class_variable(parameter_indentation, int,	  4).
 
 setup_mode(E) :->
 	"Switch editor into fill-mode"::
@@ -412,6 +415,24 @@ indent_close_bracket_line(E, Brackets:[name], Base:[int]) :->
 	send(E, align_line, Col).
 
 
+%	->indent_expression_line
+%
+%	This deal with the following layouts:
+%
+%	  ==
+%		[ aap,
+%		  noot
+%		| mies
+%		]
+%
+%	  functor(arg1,
+%		  arg2)
+%
+%	  functor(
+%	     arg1,
+%	     arg2)
+%	  ==
+
 indent_expression_line(E, Brackets:[name], Base:[int]) :->
 	"Indent current line according to expression"::
 	default(Brackets, ')}]', B1),
@@ -426,10 +447,17 @@ indent_expression_line(E, Brackets:[name], Base:[int]) :->
 	    ;	true
 	    ),
 	    get(TB, scan, OpenPos, line, 0, end, EOL),
-	    (	send(E, looking_at, '[,|]')
+	    (	send(E, looking_at, '[,|]')	% line starts with , or |
 	    ->	get(E, column, OpenPos, Col)
 	    ;   get(TB, skip_comment, OpenPos+1, EOL, P1),
-		get(E, column, P1, Col)
+		(   P1 == EOL,
+		    get(E, scan, OpenPos, word, 0, start, SOT),
+		    send(E, looking_at, '\\w+[ \t]*[({[]', SOT)
+		->  get(E, column, SOT, StartCol),
+		    get(E, parameter_indentation, PI),
+		    Col is StartCol+PI
+		;   get(E, column, P1, Col)
+		)
 	    ),
 	    send(E, align_line, Col), !.
 
