@@ -95,7 +95,10 @@ indent_line(E, Times:[int]) :->
 
 backward_skip_statement(TB, Here, Start) :-
 	get(TB, skip_comment, Here, 0, H1),
-	(   (	H1 == 0
+	(   get(TB, character, H1, 0'))		% e.g., for (...) { ... }
+	->  get(TB, matching_bracket, H1, OpenPos),
+	    get(TB, scan, OpenPos, word, 0, start, Start)
+        ;   (	H1 == 0
 	    ;	get(TB, character, H1, C1),
 		memberchk(C1, "{;}")
 	    ),
