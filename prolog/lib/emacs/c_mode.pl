@@ -76,7 +76,8 @@ indent_line(E, Times:[int]) :->
 	default(Times, 1, Tms),
 	(   between(1, Tms, N),
 	    send(E, beginning_of_text_on_line),
-	    (	(   send(E, indent_close_bracket_line)
+	    (	(   send(E, indent_close_brace_line)
+		;   send(E, indent_close_bracket_line)
 		;   send(E, indent_expression_line, ')]')
 		;   send(E, indent_statement)
 		;   send(E, align_with_previous_line, '\\s*(\\{\\s*)*')
@@ -126,6 +127,17 @@ backward_statement(E) :->
 	get(E, backward_statement, Start),
 	send(E, caret, Start).
 
+indent_close_brace_line(E) :->
+	"Indent a line holding a bracket"::
+	get(E, text_buffer, TB),
+	get(E, caret, Caret),
+	get(TB, character, Caret, 0'}),
+	get(TB, matching_bracket, Caret, OpenPos),
+	(   get(E, back_skip_if_etc, OpenPos-1, IfPos)
+	->  get(E, column, IfPos, Col)
+	;   get(E, column, OpenPos, Col)
+	),
+	send(E, align_line, Col).
 
 indent_statement(E) :->
 	"Indent statement in { ... } context"::
@@ -140,7 +152,10 @@ indent_statement(E) :->
 	    get(E, column, P2, Col),
 	    send(E, align_line, Col)
 	;   memberchk(Chr, "{")		% first in compound block
-	->  get(E, column, P0, Col),
+	->  (	get(E, back_skip_if_etc, P0-1, IfPos)
+	    ->	get(E, column, IfPos, Col)
+	    ;	get(E, column, P0, Col)
+	    ),
 	    get(E, indent_level, Inc),
 	    send(E, align, Col + Inc)
 	;   \+ memberchk(Chr, ";,"),	% for, while, if, ...
@@ -168,6 +183,17 @@ back_prefixes(E, P0, P) :-
 	),
 	get(TB, skip_comment, P2, P0, P).
 
+back_skip_if_etc(E, Pos:int, StartIf:int) :<-
+	"Find the start of an if/while/for at the same line"::
+	get(E, scan, Pos, line, 0, start, SOL),
+	get(E, skip_comment, Pos, SOL, Prev),
+	Prev > SOL,
+	(   get(E, character, Prev, 0'))
+	->  get(E, matching_bracket, Prev, OpenPos),
+	    get(E, scan, OpenPos, word, 0, start, StartIf)
+	;   get(E, looking_at, '}\\s*else\\s*', Prev+1, SOL, Len)
+	->  StartIf is Prev+1 - Len
+	).
 
 insert_c_begin(E, Times:[int], Id:[event_id]) :->
 	"Insert and adjust the inserted '{'"::
@@ -185,7 +211,7 @@ insert_c_begin(E, Times:[int], Id:[event_id]) :->
 
 
 		 /*******************************
-		 *	   PROTOPTYPES		*
+		 *	    PROTOTYPES		*
 		 *******************************/
 
 :- pce_global(@emacs_makeproto, make_makeproto).
