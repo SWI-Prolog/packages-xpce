@@ -994,6 +994,15 @@ looking_at(E, Re:regex, Where:[int], End:[int]) :->
 	get(E, text_buffer, TB),
 	send(Re, match, TB, C, End).
 
+looking_at(E, Re:regex, Where:[int], End:[int], Len:int) :<-
+	"Test if regex macthes from the caret"::
+	(   Where == @default
+	->  get(E, caret, C)
+	;   C = Where
+	),
+	get(E, text_buffer, TB),
+	get(Re, match, TB, C, End, Len).
+
 :- pce_end_class.
 
 
