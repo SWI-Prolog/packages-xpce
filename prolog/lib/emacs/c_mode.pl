@@ -60,13 +60,15 @@
 		      paragraph_end(regex('[[:blank:]]*\n|/\\*|[^\n]*\\*/'))
 		    ]).
 
+variable(indent_level, int, both, "Indentation level in spaces").
+class_variable(indent_level, int, 2).
+
 :- initialization
 	send(@class, attribute, outline_regex_list,
 	     chain(regex('^(\\w+\\([^)]*\\).*\n)(\\{([^}].*\n)+\\}(\\s*\n)*)'),
 		   regex('^(\\w+.*\n)(\\{([^}].*\n)+\\};(\\s*\n)*)'),
 		   regex('^(#\\s*define.*\\\\)\n((.*\\\\\n)+.*\n)'))).
 
-:- pce_global(@c_indent, new(number(2))).
 :- pce_global(@c_undent_regex, new(regex('\\{|else|\\w+:'))).
 
 indent_line(E, Times:[int]) :->
@@ -139,7 +141,8 @@ indent_statement(E) :->
 	    send(E, align_line, Col)
 	;   memberchk(Chr, "{")		% first in compound block
 	->  get(E, column, P0, Col),
-	    send(E, align, Col + @c_indent)
+	    get(E, indent_level, Inc),
+	    send(E, align, Col + Inc)
 	;   \+ memberchk(Chr, ";,"),	% for, while, if, ...
 	    (   get(TB, matching_bracket, P0, P1)
 	    ->  true
@@ -150,7 +153,8 @@ indent_statement(E) :->
 	    get(E, column, P3, Column),
 	    (   send(@c_undent_regex, match, TB, Caret)
 	    ->  send(E, align, Column)
-	    ;   send(E, align, Column + @c_indent)
+	    ;   get(E, indent_level, Inc),
+	        send(E, align, Column + Inc)
 	    )
 	).
 
