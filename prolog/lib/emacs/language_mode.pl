@@ -511,10 +511,7 @@ align_close_bracket(E, Times:[int], Id:[event_id]) :->
 	get(E, scan, Caret, line, 0, end,   EOL),
 	(   get(E, skip_comment, SOL, EOL, P0),
 	    Caret =:= P0+1
-	->  get(E, matching_bracket, Caret-1, Open),
-	    get(E, column, Open, Col),
-	    send(E, caret, Caret),
-	    send(E, align, Col, Caret-1)
+	->  send(E, indent_line)
 	;   true
 	).
 
