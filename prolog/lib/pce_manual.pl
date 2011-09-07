@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -35,15 +36,17 @@
 	    manpce/1
 	  ]).
 :- use_module(library(pce)).
-:- consult(
-	[ 'man/util'			% Common utilities
-	, 'man/p_card'			% General card infra-structure
-	, 'man/p_data'			% Manual specific infra-structure
-	, 'man/v_manual'		% Top level window
-	]).
+:- consult([ man/util			% Common utilities
+	   , man/p_card			% General card infra-structure
+	   , man/p_data			% Manual specific infra-structure
+	   , man/v_manual		% Top level window
+	   ]).
 :- require([ pce_warn/1
 	   , pce_to_method/2
 	   ]).
+
+/** <module> Start XPCE manual
+*/
 
 :- pce_autoload(man_class_browser,	library('man/v_class')).
 :- pce_autoload(man_editor,		library('man/v_editor')).
@@ -65,11 +68,29 @@
 
 :- pce_global(@manual, new(man_manual)).
 
-manpce :-
-	send(@manual, expose).
+%%	manpce is det.
+%
+%	Starts the XPCE manual tools by opening a small window.
 
+manpce :-
+	in_pce_thread(send(@manual, expose)).
+
+
+%%	manpce(+Spec) is det.
+%
+%	Start the XPCE manual tools, opening   the manual page for Spec.
+%	Spec is translated into an   XPCE  object using pce_to_method/2.
+%	Examples:
+%
+%	  ==
+%	  ?- manpce(window).
+%	  ?- manpce(point->x).
+%	  ==
 
 manpce(Spec) :-
+	in_pce_thread(manpce_(Spec)).
+
+manpce_(Spec) :-
 	(   method(Spec, Object)
 	->  send(@manual, manual, Object)
 	;   pce_warn(pce(no_help(Spec))),
