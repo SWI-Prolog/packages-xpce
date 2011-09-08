@@ -31,7 +31,7 @@ by msimage.c, which in  turn  implements   the  OS  specific  version of
 gra/image.c implementing class image.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#ifdef __CYGWIN__
+#if defined(__CYGWIN__) || defined(__MINGW32__)
 #define XMD_H
 #endif
 
