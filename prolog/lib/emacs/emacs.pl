@@ -108,6 +108,7 @@ pce_ifhostproperty(prolog(swi),
 :- declare_emacs_mode(logtalk,	library('emacs/logtalk_mode')).
 %:- declare_emacs_mode(html,	library('emacs/html_mode')).
 :- declare_emacs_mode(java,	library('emacs/java_mode')).
+:- declare_emacs_mode(java_script, library('emacs/java_script_mode')).
 :- declare_emacs_mode(c,	library('emacs/c_mode')).
 :- declare_emacs_mode(cpp,	library('emacs/cpp_mode')).
 :- declare_emacs_mode(script,	library('emacs/script_mode')).
@@ -176,6 +177,7 @@ default_emacs_mode('.*\\.owl~?$',		   owl).
 default_emacs_mode('.*\\.ann~?$',		   annotate).
 default_emacs_mode('.*\\.[ch]~?$',		   c).
 default_emacs_mode('.*\\.java~?$',		   java).
+default_emacs_mode('.*\\.js~?$',		   java_script).
 default_emacs_mode('.*\\.C$',			   cpp).
 default_emacs_mode('.*\\.cc$',			   cpp).
 default_emacs_mode('.*\\.cpp$',			   cpp).
