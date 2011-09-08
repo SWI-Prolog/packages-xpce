@@ -95,9 +95,15 @@ indent_line(E, Times:[int]) :->
 
 backward_skip_statement(TB, Here, Start) :-
 	get(TB, skip_comment, Here, 0, H1),
-	(   get(TB, character, H1, 0'))		% e.g., for (...) { ... }
+	get(TB, character, H1, C1),
+	(   memberchk(C1, ")")			% e.g., for (...) { ... }
 	->  get(TB, matching_bracket, H1, OpenPos),
-	    get(TB, scan, OpenPos, word, 0, start, Start)
+	    (	get(TB, scan, OpenPos, word, 0, start, Start),
+		get(TB, scan, Start, word, 0, end, EF),
+		get(TB, skip_layout, EF, forward, @off, OpenPos)
+	    ->	true
+	    ;	Start = OpenPos
+	    )
         ;   (	H1 == 0
 	    ;	get(TB, character, H1, C1),
 		memberchk(C1, "{;}")
@@ -116,13 +122,20 @@ backward_statement(E, Here:[int], There:int) :<-
 	default(Here, E?caret, Caret),
 	get(E, text_buffer, TB),
 	get(TB, skip_comment, Caret, 0, H1),
-	(   get(TB, character, H1, Chr),
-	    memberchk(Chr, "};")
-	->  get(TB, scan, H1+1, term, -1, H2a),
-	    H2 is H2a - 1
-	;   H2 = H1
+	backward_skip_semicolon(TB, H1, H2),
+	get(TB, character, H2, Chr),
+	(   memberchk(Chr, "}")
+	->  get(E, matching_bracket, H1, H3),
+	    H4 is H3 - 1
+	;   H4 = H2
 	),
-	backward_skip_statement(TB, H2, There).
+	backward_skip_statement(TB, H4, There).
+
+backward_skip_semicolon(TB, Here, Pos) :-
+	(   get(TB, character, Here, 0';)
+	->  get(TB, skip_comment, Here-1, 0, Pos)
+	;   Pos = Here
+	).
 
 
 backward_statement(E) :->
