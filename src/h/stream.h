@@ -39,7 +39,7 @@
 #include <stdarg.h>
 #include <wchar.h>
 #include <stddef.h>
-#ifdef __WINDOWS__
+#ifdef _MSC_VER
 typedef __int64 int64_t;
 #if (_MSC_VER < 1300)
 typedef long intptr_t;

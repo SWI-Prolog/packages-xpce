@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <stddef.h>
-#ifdef __WINDOWS__
+#ifdef _MSC_VER
 typedef __int64 int64_t;
 typedef unsigned __int64 uint64_t;
 #if (_MSC_VER < 1300)
