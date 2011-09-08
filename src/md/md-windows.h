@@ -27,7 +27,6 @@
 #define UXWIN(unx, win) win
 
 #define HAVE_UXNT_H 1
-#include <uxnt.h>			/* must be first! */
 #define O_XOS 1				/* specific hooks */
 #define O_DOSFILENAMES 1
 #define O_HASSHARES			/* UNC filenames: //host/share */

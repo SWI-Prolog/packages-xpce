@@ -551,6 +551,17 @@ AC_CHECK_HEADERS(frame.h sys/timeb.h sys/times.h siginfo.h bstring.h)
 AC_CHECK_HEADERS(sys/socketvar.h conio.h sys/access.h termios.h termio.h)
 AC_CHECK_HEADERS(sched.h)
 
+case "$OS" in
+    *mingw*)
+        ocflags="$CFLAGS"
+        ocppflags="$CPPFLAGS"
+        CFLAGS="$CFLAGS -I$PLINCL"
+        CPPFLAGS="$CPPFLAGS -I$PLINCL"
+        AC_CHECK_HEADERS(uxnt.h, [CIFLAGS="$CIFLAGS -I$PLINCL"])
+        CFLAGS="$ocflags"
+        CPPFLAGS="$ocppflags"
+esac
+
 AC_CHECK_FUNCS(vsscanf on_exit memmove select popen strerror timelocal)
 AC_CHECK_FUNCS(getdtablesize socket fork ftime getpid select getlogin)
 AC_CHECK_FUNCS(getcwd setsid grantpt gethostname fstat gettimeofday)

@@ -44,6 +44,14 @@ autoconf/config.h based machine-binding file.
 #endif
 
 		 /*******************************
+		 *             UXNT             *
+		 *******************************/
+
+#ifdef HAVE_UXNT_H
+#include <uxnt.h>	/* must be first! */
+#endif
+
+		 /*******************************
 		 *	    DEFINE UNIX?	*
 		 *******************************/
 
