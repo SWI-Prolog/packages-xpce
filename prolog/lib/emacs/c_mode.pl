@@ -40,6 +40,7 @@
 :- emacs_begin_mode(c, language,
 		    "Mode for editing C programs",
 		    [ insert_c_begin	= key('{'),
+		      insert_label	= key(':'),
 		      prototype_mark	= key('\\C-cRET'),
 		      add_prototype	= key('\\C-c\\C-p'),
 		      insert_NAME_	= key('\\C-c\\C-n'),
@@ -79,6 +80,7 @@ indent_line(E, Times:[int]) :->
 	    (	(   send(E, indent_close_brace_line)
 		;   send(E, indent_close_bracket_line)
 		;   send(E, indent_expression_line, ')]')
+		;   send(E, indent_label)
 		;   send(E, indent_statement)
 		;   send(E, align_with_previous_line, '\\s*(\\{\\s*)*')
 		)
@@ -155,6 +157,15 @@ indent_close_brace_line(E) :->
 	),
 	send(E, align_line, Col).
 
+indent_label(E) :->
+	"Indent case and label:"::
+	send(E, looking_at, 'case\\s|\\w+:'), !,
+	send(E, indent_statement),
+	get(E, column, Col0),
+	get(E, indent_level, Inc),
+	Col is Col0-Inc,
+	send(E, align, Col).
+
 indent_statement(E) :->
 	"Indent statement in { ... } context"::
 	get(E, text_buffer, TB),
@@ -218,6 +229,20 @@ insert_c_begin(E, Times:[int], Id:[event_id]) :->
 	get(E, text_buffer, TB),
 	get(TB, scan, Caret, line, 0, start, SOL),
 	(   send(regex(string('\\\\s*%c', Id)), match, TB, SOL, Caret)
+	->  new(F, fragment(TB, Caret, 0)),
+	    send(E, indent_line),
+	    send(E, caret, F?start),
+	    free(F)
+	;   true
+	).
+
+insert_label(E, Times:[int], Id:[event_id]) :->
+	"Insert and adjust the inserted ':'"::
+	send(E, insert_self, Times, Id),
+	get(E, caret, Caret),
+	get(E, text_buffer, TB),
+	get(TB, scan, Caret, line, 0, start, SOL),
+	(   send(regex('\\s*(case\\s|\\w+:)'), match, TB, SOL, Caret)
 	->  new(F, fragment(TB, Caret, 0)),
 	    send(E, indent_line),
 	    send(E, caret, F?start),
