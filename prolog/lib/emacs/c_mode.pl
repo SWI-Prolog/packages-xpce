@@ -110,9 +110,7 @@ backward_skip_statement(TB, Here, Start) :-
 	    ),
 	    get(TB, skip_comment, H1+1, H2)
 	->  Start = H2
-	;   get(TB, scan, H1, term, -1, start, H2),
-	    H3 = H2 - 1,
-	    backward_skip_statement(TB, H3, Start)
+	;   get(TB, scan, H1, term, 0, start, Start)
 	).
 
 prev_word(TB, Here, Word, BeforeWord) :-
