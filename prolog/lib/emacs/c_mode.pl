@@ -92,7 +92,6 @@ indent_line(E, Times:[int]) :->
 	;   true
 	).
 
-
 backward_skip_statement(TB, Here, Start) :-
 	get(TB, skip_comment, Here, 0, H1),
 	get(TB, character, H1, C1),
@@ -104,18 +103,22 @@ backward_skip_statement(TB, Here, Start) :-
 	    ->	true
 	    ;	Start = OpenPos
 	    )
-        ;   (	H1 == 0
-	    ;	get(TB, character, H1, C1),
-		memberchk(C1, "{;}")
+        ;   prev_word(TB, H1+1, else, StartElse)
+	->  backward_skip_statement(TB, StartElse, Start)
+	;   (	H1 == 0
+	    ;	memberchk(C1, "{;}")
 	    ),
-	    get(TB, skip_comment, H1+1, H2),
-	    \+ send(regex(else), match, TB, H2)
+	    get(TB, skip_comment, H1+1, H2)
 	->  Start = H2
 	;   get(TB, scan, H1, term, -1, start, H2),
 	    H3 = H2 - 1,
 	    backward_skip_statement(TB, H3, Start)
 	).
 
+prev_word(TB, Here, Word, BeforeWord) :-
+	get(TB, scan, Here, word, 0, start, SW),
+	get(TB, contents, SW, Here-SW, string(Word)),
+	get(TB, skip_comment, SW, 0, BeforeWord).
 
 backward_statement(E, Here:[int], There:int) :<-
 	"Find start of C-statement"::
@@ -136,7 +139,6 @@ backward_skip_semicolon(TB, Here, Pos) :-
 	->  get(TB, skip_comment, Here-1, 0, Pos)
 	;   Pos = Here
 	).
-
 
 backward_statement(E) :->
 	"Go back one statement"::
