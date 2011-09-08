@@ -397,6 +397,19 @@ EOF
 	CMFLAGS=`echo $CMFLAGS | sed 's/-fPIC//'`
 	AC_MSG_RESULT(ok)
 	;;
+    *mingw*)
+	AC_MSG_CHECKING("Setup for MinGW")
+	WITHX11=false
+	VWS=msw
+	AC_DEFINE(WIN32_GRAPHICS, 1, [Define to use WIN32 graphics interface])
+	AC_DEFINE(FOR_MSW, 1, [Define to use XPM without X11 (MinGW)])
+	AC_DEFINE(O_XOS, 1, [Define to use specific hooks])
+	AC_DEFINE(O_DOSFILENAMES, 1, [Define if system supports DOS filenames])
+	AC_DEFINE(O_HASSHARES, 1, [Define if system supports UNC filenames])
+	CMFLAGS=`echo $CMFLAGS | sed 's/-fPIC//'`
+	CMFLAGS="$CMFLAGS -D__WINDOWS__ -DWIN32"
+	AC_MSG_RESULT(ok)
+	;;
     *darwin*)
 	LD=swipl-ld
 	LDSOFLAGS="-shared"
@@ -746,6 +759,15 @@ main()
    AC_MSG_RESULT(no),
    AC_MSG_RESULT(assuming no))
 
+case "$OS" in
+    *mingw*)
+        AC_CHECK_LIB(ws2_32, main,
+                     [AC_DEFINE(HAVE_WINSOCK, 1, "Define if you have the Windows socket library")
+                      AC_DEFINE(USE_WINSOCK2, 1, "Define if you have the winsock2 library")
+                      NETLIBS="$NETLIBS -lws2_32"])
+	;;
+esac
+
 dnl ****************************************************************
 dnl * X11 configuration
 dnl ****************************************************************
@@ -925,6 +947,7 @@ dnl * X11 extensions
 dnl * XFT: The Xfree font management system
 dnl ****************************************************************
 
+if test "$WITHX11" = true; then
 AC_CHECK_PROGS(XFTCONFIG, pkg-config xft-config, "false")
 case "$XFTCONFIG" in
 	pkg-config)
@@ -977,6 +1000,7 @@ cat << _EOM_
 *****************************************************************
 _EOM_
 exit 1
+fi
 fi
 
 
