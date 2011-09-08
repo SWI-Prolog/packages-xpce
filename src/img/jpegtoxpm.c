@@ -28,7 +28,9 @@
 #define  FOR_MSW 1
 #include <msw/xpm.h>
 #endif
-/*#define boolean jpeg_boolean*/
+#ifdef __RPCNDR_H__
+#define HAVE_BOOLEAN		/* prevent jmorecfg.h from redefining it */
+#endif
 #else /*__WINDOWS__*/
 #include <h/kernel.h>
 #ifdef HAVE_LIBXPM

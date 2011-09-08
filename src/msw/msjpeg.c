@@ -36,7 +36,9 @@ gra/image.c implementing class image.
 #endif
 
 #ifdef HAVE_LIBJPEG
-/*#define boolean jpeg_boolean*/
+#ifdef __RPCNDR_H__
+#define HAVE_BOOLEAN		/* prevent jmorecfg.h from redefining it */
+#endif
 #undef GLOBAL				/* conflict */
 #include <jpeglib.h>
 #include <jerror.h>
