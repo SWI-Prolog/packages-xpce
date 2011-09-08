@@ -36,7 +36,6 @@ static HashTable X11ColourNames;	/* rgb --> X11-name */
 
 static status	ws_alloc_colour(ColourMap cm, Colour c);
 static void	ws_unalloc_colour(ColourMap cm, Colour c);
-static void	ws_system_colours(DisplayObj d);
 
 #ifdef USE_CONVERTED_COLOURS
 
@@ -432,7 +431,7 @@ ws_system_colour(DisplayObj d, const char *name, COLORREF rgb)
 }
 
 
-static void
+void
 ws_system_colours(DisplayObj d)
 { struct system_colour *sc = window_colours;
 
