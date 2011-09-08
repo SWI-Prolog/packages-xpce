@@ -28,6 +28,10 @@
 #define O_GIF	  1			/* use our GIF loader */
 #define O_GIFWRITE 1			/* allow writing GIF files */
 
+#ifndef WINVER
+#define WINVER 0x0500
+#endif
+
 #define RedrawWindow WinRedrawWindow
 #include <windows.h>
 #ifdef USE_WINSOCK2
