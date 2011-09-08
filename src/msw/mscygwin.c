@@ -10,6 +10,7 @@
     Copyright (C) 1990-2001 SWI, University of Amsterdam. All rights reserved.
 */
 
+#ifdef __CYGWIN__
 #include "include.h"
 
 void
@@ -22,4 +23,4 @@ GetEnhMetaFileBits(HENHMETAFILE hemf, UINT cbBuffer, LPBYTE lpbBuffer)
 { Cprintf("GetEnhMetaFileBits() stub called\n");
   return FALSE;
 }
-
+#endif
