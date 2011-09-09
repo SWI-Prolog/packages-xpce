@@ -24,7 +24,7 @@
 
 #define GLOBAL SO_LOCAL
 #if defined(__WINDOWS__) || defined(__WINDOWS__)
-#define PUBLIC_GLOBAL _declspec(dllexport)
+#define PUBLIC_GLOBAL __declspec(dllexport)
 #else
 #define PUBLIC_GLOBAL
 #endif

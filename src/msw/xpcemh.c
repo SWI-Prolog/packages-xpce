@@ -35,7 +35,7 @@
 #include <SWI-Stream.h>
 #endif
 
-#define _export _declspec(dllexport)
+#define _export __declspec(dllexport)
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 The module ensures we get area enter/exit   messages in XPCE windows. It

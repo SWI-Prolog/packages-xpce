@@ -14,7 +14,7 @@
 
 #ifndef __pce_export
 #ifdef WIN32
-#define __pce_export _declspec(dllexport)
+#define __pce_export __declspec(dllexport)
 #else
 #define __pce_export extern
 #endif

@@ -37,7 +37,7 @@
 #define HAVE_LIBXPM 1
 #define HAVE_LIBJPEG 1
 
-#define export _declspec(dllexport)
+#define export __declspec(dllexport)
 
 #define ALLOCA_BUG			/* see ker/goodies.c. MSVC++ 2.0 bug */
 
