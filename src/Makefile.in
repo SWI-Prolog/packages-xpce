@@ -68,6 +68,7 @@ MKPROTO=$(srcdir)/mkproto.sh
 LN=@LN_S@
 AR=@AR@
 ARFLAGS=ru
+WINDRES=@WINDRES@
 ETAGS=@ETAGS@
 SED=sed
 RM=rm
@@ -173,6 +174,12 @@ MANINDEX=../man/reference/index.obj
 # MAIN TARGETS
 ################################################################
 
+ifeq ($(VWS),x11)
+XPCECLIENT=xpce-client
+else
+XPCECLIENT=xpce-stub$(EXEEXT)
+endif
+
 .PHONY: all banner xpce-pl
 all:		banner ./xpce-install @ALLTARGET@
 
@@ -187,7 +194,7 @@ banner:
 		@echo "****************"
 
 .PHONY:		xpce prepare libXPCE
-xpce:		prepare libXPCE xpce-client
+xpce:		prepare libXPCE $(XPCECLIENT)
 
 xpce-pl:	xpce pl-itf
 
@@ -561,11 +568,6 @@ UNXSRC=		$(addprefix $(srcdir)/unx/, $(UNXOBJS:.o=.c))
 $(srcdir)/unx/proto.h:	$(UNXSRC)
 		$(MKPROTO) $(UNXSRC) > $@
 
-xpce-client:	unx/client.c
-		$(CC) -c $(CFLAGS) $< -o client.o
-		$(CC) $(COFLAGS) $(CIFLAGS) $(LDFLAGS) -o $@ client.o $(NETLIBS)
-		rm -f client.o
-
 
 ################################################################
 # WIN 		--- Windows and Frames
@@ -669,6 +671,22 @@ endif
 
 wsobjs:		$(WSOBJECTS)
 
+ifeq ($(VWS),x11)
+$(XPCECLIENT):	unx/client.c
+		$(CC) -c $(CFLAGS) $< -o client.o
+		$(CC) $(COFLAGS) $(CIFLAGS) $(LDFLAGS) -o $@ client.o $(NETLIBS)
+		rm -f client.o
+else
+$(XPCECLIENT):	xpce-stub.res xpce-stub.o
+		$(PLLD) -Wl,--subsystem,windows -o $@ $^
+
+xpce-stub.res:	../pl/src/xpce-stub.rc ../pl/src/xpce.ico
+		$(WINDRES) -o $@ $<
+
+xpce-stub.o:	../pl/src/xpce-stub.c
+		$(CC) -c $(CFLAGS) $< -o $@
+endif
+
 ################################################################
 # INSTALLATION
 ################################################################
@@ -728,7 +746,7 @@ ln-classindex::
 
 #	runtime only stuff
 
-RTBINS=		xpce xpce-client
+RTBINS=		xpce $(XPCECLIENT)
 RTLIBS=		pl2xpce.$(SO) $(LIBXPCESOMM) $(LIBXPCEMAIN)
 
 rt-home:
@@ -751,7 +769,7 @@ rt-bins:	rt-home
 		    rm -f $(DESTDIR)$(PLBINDIR)/xpce; \
 		    (cd $(DESTDIR)$(PLBINDIR); ln -s $(PLNAME) xpce) ; \
 		fi
-		@for f in xpce-client; do \
+		@for f in $(XPCECLIENT); do \
 		    if [ -f $$f ]; then \
 			echo "$$f --> $(DESTDIR)$(RTBINDIR)"; \
 		        $(INSTALL_PROGRAM) $$f $(DESTDIR)$(RTBINDIR); \
@@ -872,7 +890,7 @@ ifeq ($(DESTDIR),)
 endif
 
 dv-bins:
-		$(INSTALL_PROGRAM) xpce-client $(DESTDIR)$(bindir)
+		$(INSTALL_PROGRAM) $(XPCECLIENT) $(DESTDIR)$(bindir)
 
 pdf-install::
 html-install::
@@ -907,7 +925,7 @@ distclean:	clean
 		$(RM) -f version.h ../xpce.spec
 		$(RM) -f xpce.sh find_names
 		$(RM) -f $(LIB)
-		$(RM) -f xpce-install rt-install xpce pl2xpce.so xpce-client
+		$(RM) -f xpce-install rt-install xpce pl2xpce.so $(XPCECLIENT)
 		$(RM) -f Makefile config.h config.status config.cache
 		$(RM) -f ../pl/src/Makefile.bin
 		$(RM) -f ../prolog/lib/Makefile
