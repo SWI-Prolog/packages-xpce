@@ -304,6 +304,9 @@ and without SIGBUS ...
 
 #ifdef __WINDOWS__
 
+#ifdef __MINGW32__
+#define __SEH_NOOP /* TBD: handle being passed wrong data on MinGW! */
+#endif
 #include <excpt.h>
 
 char *
