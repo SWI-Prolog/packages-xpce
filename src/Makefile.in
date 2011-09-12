@@ -19,7 +19,7 @@
 # Addresses:	Jan Wielemaker:		J.Wielemaker@uva.nl
 #		Anjo Anjewierden:	A.A.Anjewierden@gw.utwente.nl
 #
-# 		Human-Computer Studies
+#		Human-Computer Studies
 #		University of Amsterdam
 #		Kruislaan 419
 #		1098 VA  Amsterdam
@@ -174,10 +174,13 @@ MANINDEX=../man/reference/index.obj
 # MAIN TARGETS
 ################################################################
 
+# actually depends on whether Unix-domain sockets are supported
 ifeq ($(VWS),x11)
 XPCECLIENT=xpce-client
-else
-XPCECLIENT=xpce-stub$(EXEEXT)
+endif
+
+ifeq ($(VWS),msw)
+XPCESTUB=xpce-stub$(EXEEXT)
 endif
 
 .PHONY: all banner xpce-pl
@@ -194,7 +197,7 @@ banner:
 		@echo "****************"
 
 .PHONY:		xpce prepare libXPCE
-xpce:		prepare libXPCE $(XPCECLIENT)
+xpce:		prepare libXPCE $(XPCECLIENT) $(XPCESTUB)
 
 xpce-pl:	xpce pl-itf
 
@@ -326,7 +329,7 @@ tags:
 		$(ETAGS) $$fs
 
 ################################################################
-# ADT 		--- Abstract Data Types
+# ADT		--- Abstract Data Types
 ################################################################
 
 ADTOBJS=	area.o atable.o attribute.o bool.o chain.o chaintable.o \
@@ -338,7 +341,7 @@ $(srcdir)/adt/proto.h:	$(ADTSRC)
 		$(MKPROTO) $(ADTSRC) > $@
 
 ################################################################
-# ARI 		--- Arithmetic Operations
+# ARI		--- Arithmetic Operations
 ################################################################
 
 ARIOBJS=	equation.o expression.o
@@ -348,7 +351,7 @@ $(srcdir)/ari/proto.h:	$(ARISRC)
 		$(MKPROTO) $(ARISRC) > $@
 
 ################################################################
-# EVT 		--- Event Handling Primitives
+# EVT		--- Event Handling Primitives
 ################################################################
 
 EVTOBJS=	clickgesture.o conngesture.o event.o \
@@ -363,7 +366,7 @@ $(srcdir)/evt/proto.h:	$(EVTSRC)
 		$(MKPROTO) $(EVTSRC) > $@
 
 ################################################################
-# GNU 		--- GNU-Project Libraries
+# GNU		--- GNU-Project Libraries
 ################################################################
 
 GNUOBJS=	getdate.o
@@ -388,7 +391,7 @@ $(srcdir)/gnu/proto.h:	$(GNUSRC)
 		$(MKPROTO) $(GNUSRC) > $@
 
 ################################################################
-# GRA 		--- Graphics Classes
+# GRA		--- Graphics Classes
 ################################################################
 
 GRAOBJS=	arc.o arrow.o bitmap.o box.o circle.o colour.o \
@@ -404,7 +407,7 @@ $(srcdir)/gra/proto.h:	$(GRASRC)
 		$(MKPROTO) $(GRASRC) > $@
 
 ################################################################
-# ITF 		--- Host Interface Layer
+# ITF		--- Host Interface Layer
 ################################################################
 
 ITFOBJS=	c.o host.o interface.o cpointer.o asfile.o console.o \
@@ -413,7 +416,7 @@ ITFOBJS=	c.o host.o interface.o cpointer.o asfile.o console.o \
 ITFSRC=		$(addprefix $(srcdir)/itf/, $(ITFOBJS:.o=.c))
 
 ################################################################
-# KER 		--- Kernel modules
+# KER		--- Kernel modules
 ################################################################
 
 KER1OBJS=	alloc.o assoc.o behaviour.o class.o conversion.o \
@@ -449,7 +452,7 @@ ker/glob.o:	h/kernel.h h/types.h h/graphics.h h/lang.h h/layout.h
 
 
 ################################################################
-# MEN 		--- Menu (Dialog) items
+# MEN		--- Menu (Dialog) items
 ################################################################
 
 MENOBJS=	button.o dialogitem.o label.o menu.o menubar.o \
@@ -462,7 +465,7 @@ $(srcdir)/men/proto.h:	$(MENSRC)
 
 
 ################################################################
-# FMT 		--- Layout managers
+# FMT		--- Layout managers
 ################################################################
 
 FMTOBJS=	layoutmgr.o layoutitf.o \
@@ -474,7 +477,7 @@ $(srcdir)/fmt/proto.h:	$(FMTSRC)
 
 
 ################################################################
-# BOX 		--- Typesetting stuff
+# BOX		--- Typesetting stuff
 ################################################################
 
 BOXOBJS=	boxes.o hbox.o tbox.o parbox.o grbox.o rubber.o \
@@ -486,7 +489,7 @@ $(srcdir)/box/proto.h:	$(BOXSRC)
 
 
 ################################################################
-# MSG 		--- Executable (message) Objects
+# MSG		--- Executable (message) Objects
 ################################################################
 
 MSGOBJS=	and.o assign.o binding.o block.o code.o create.o \
@@ -499,7 +502,7 @@ $(srcdir)/msg/proto.h:	$(MSGSRC)
 		$(MKPROTO) $(MSGSRC) > $@
 
 ################################################################
-# PRG 		--- Language Definition Classes
+# PRG		--- Language Definition Classes
 ################################################################
 
 PRGOBJS=	operator.o parser.o tokeniser.o
@@ -509,7 +512,7 @@ $(srcdir)/prg/proto.h:	$(PRGSRC)
 		$(MKPROTO) $(PRGSRC) > $@
 
 ################################################################
-# REL 		--- Relation Classes
+# REL		--- Relation Classes
 ################################################################
 
 RELOBJS=	constraint.o hyper.o identity.o relation.o \
@@ -546,7 +549,7 @@ rgx/regerror.o:	rgx/regerror.c
 $(srcdir)/rgx/proto.h::
 
 ################################################################
-# TXT 		--- Text Representation and Manipulation Classes
+# TXT		--- Text Representation and Manipulation Classes
 ################################################################
 
 TXTOBJS=	chararray.o editor.o fragment.o keybinding.o \
@@ -559,7 +562,7 @@ $(srcdir)/txt/proto.h:	$(TXTSRC)
 		$(MKPROTO) $(TXTSRC) > $@
 
 ################################################################
-# UNX 		--- Unix File, Process and Network Classes
+# UNX		--- Unix File, Process and Network Classes
 ################################################################
 
 UNXOBJS=	directory.o file.o process.o socket.o stream.o
@@ -570,7 +573,7 @@ $(srcdir)/unx/proto.h:	$(UNXSRC)
 
 
 ################################################################
-# WIN 		--- Windows and Frames
+# WIN		--- Windows and Frames
 ################################################################
 
 WINOBJS=	browser.o decorate.o dialog.o display.o \
@@ -584,7 +587,7 @@ $(srcdir)/win/proto.h:	$(WINSRC)
 
 
 ################################################################
-# IMG 		--- Platform independent low-level image stuff
+# IMG		--- Platform independent low-level image stuff
 ################################################################
 
 IMGOBJS=	jdatasrc.o jdatadst.o jpegtoxpm.o gifread.o giftoxpm.o \
@@ -595,7 +598,7 @@ $(srcdir)/img/proto.h:	$(IMGSRC)
 		$(MKPROTO) $(IMGSRC) > $@
 
 ################################################################
-# X11 		--- X11 implementation of the XPCE Virtual Window Interface
+# X11		--- X11 implementation of the XPCE Virtual Window Interface
 ################################################################
 
 XCOMMOBJS=	canvas.o fshell.o xcommon.o xconvert.o x11-compat.o xppm.o
@@ -612,7 +615,7 @@ $(srcdir)/x11/wstproto.h: $(WSTSRC)
 		$(MKPROTO) $(WSTSRC) | grep -v '^XImage' > $@
 
 ################################################################
-# MSW 		--- MS-Windows implementation of the
+# MSW		--- MS-Windows implementation of the
 #		    XPCE Virtual Window Interface
 ################################################################
 
@@ -671,13 +674,12 @@ endif
 
 wsobjs:		$(WSOBJECTS)
 
-ifeq ($(VWS),x11)
 $(XPCECLIENT):	unx/client.c
 		$(CC) -c $(CFLAGS) $< -o client.o
 		$(CC) $(COFLAGS) $(CIFLAGS) $(LDFLAGS) -o $@ client.o $(NETLIBS)
 		rm -f client.o
-else
-$(XPCECLIENT):	xpce-stub.res xpce-stub.o
+
+$(XPCESTUB):	xpce-stub.res xpce-stub.o
 		$(PLLD) -Wl,--subsystem,windows -o $@ $^
 
 xpce-stub.res:	../pl/src/xpce-stub.rc ../pl/src/xpce.ico
@@ -685,7 +687,6 @@ xpce-stub.res:	../pl/src/xpce-stub.rc ../pl/src/xpce.ico
 
 xpce-stub.o:	../pl/src/xpce-stub.c
 		$(CC) -c $(CFLAGS) $< -o $@
-endif
 
 ################################################################
 # INSTALLATION
@@ -746,7 +747,7 @@ ln-classindex::
 
 #	runtime only stuff
 
-RTBINS=		xpce $(XPCECLIENT)
+RTBINS=		xpce $(XPCECLIENT) $(XPCESTUB)
 RTLIBS=		pl2xpce.$(SO) $(LIBXPCESOMM) $(LIBXPCEMAIN)
 
 rt-home:
@@ -769,7 +770,7 @@ rt-bins:	rt-home
 		    rm -f $(DESTDIR)$(PLBINDIR)/xpce; \
 		    (cd $(DESTDIR)$(PLBINDIR); ln -s $(PLNAME) xpce) ; \
 		fi
-		@for f in $(XPCECLIENT); do \
+		@for f in $(XPCECLIENT) $(XPCESTUB); do \
 		    if [ -f $$f ]; then \
 			echo "$$f --> $(DESTDIR)$(RTBINDIR)"; \
 		        $(INSTALL_PROGRAM) $$f $(DESTDIR)$(RTBINDIR); \
@@ -890,7 +891,7 @@ ifeq ($(DESTDIR),)
 endif
 
 dv-bins:
-		$(INSTALL_PROGRAM) $(XPCECLIENT) $(DESTDIR)$(bindir)
+		$(INSTALL_PROGRAM) $(XPCECLIENT) $(XPCESTUB) $(DESTDIR)$(bindir)
 
 pdf-install::
 html-install::
@@ -925,7 +926,8 @@ distclean:	clean
 		$(RM) -f version.h ../xpce.spec
 		$(RM) -f xpce.sh find_names
 		$(RM) -f $(LIB)
-		$(RM) -f xpce-install rt-install xpce pl2xpce.so $(XPCECLIENT)
+		$(RM) -f xpce-install rt-install xpce pl2xpce.so
+		$(RM) -f $(XPCECLIENT) $(XPCESTUB)
 		$(RM) -f Makefile config.h config.status config.cache
 		$(RM) -f ../pl/src/Makefile.bin
 		$(RM) -f ../prolog/lib/Makefile
