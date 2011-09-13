@@ -31,6 +31,7 @@
 
 :- module(emacs_c_mode, []).
 :- use_module(library(pce)).
+:- use_module(library(debug)).
 :- require([ between/3
 	   , default/3
 	   , forall/2
@@ -97,14 +98,17 @@ indent_line(E, Times:[int]) :->
 backward_skip_statement(TB, Here, Start) :-
 	get(TB, skip_comment, Here, 0, H1),
 	get(TB, character, H1, C1),
+	debug(c_statement, '~p: ~w->~w = \'~c\'', [TB, Here, H1, C1]),
 	(   memberchk(C1, ")")			% e.g., for (...) { ... }
 	->  get(TB, matching_bracket, H1, OpenPos),
-	    (	get(TB, scan, OpenPos, word, 0, start, Start),
-		get(TB, scan, Start, word, 0, end, EF),
+	    (	get(TB, scan, OpenPos, word, 0, start, Start0),
+		get(TB, scan, Start0, word, 0, end, EF),
 		get(TB, skip_layout, EF, forward, @off, OpenPos)
 	    ->	true
-	    ;	Start = OpenPos
-	    )
+	    ;	Start0 = OpenPos
+	    ),
+	    Start1 is max(0,Start0-1),
+	    backward_skip_statement(TB, Start1, Start)
         ;   prev_word(TB, H1+1, else, StartElse)
 	->  backward_skip_statement(TB, StartElse, Start)
 	;   (	H1 == 0
@@ -112,7 +116,9 @@ backward_skip_statement(TB, Here, Start) :-
 	    ),
 	    get(TB, skip_comment, H1+1, H2)
 	->  Start = H2
-	;   get(TB, scan, H1, term, 0, start, Start)
+	;   get(TB, scan, H1, term, 0, start, Start0),
+	    Start1 is max(0,Start0-1),
+	    backward_skip_statement(TB, Start1, Start)
 	).
 
 prev_word(TB, Here, Word, BeforeWord) :-
