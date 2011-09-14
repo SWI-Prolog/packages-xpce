@@ -117,7 +117,7 @@ ws_realise_frame() sends ->geometry to all windows.
     w = XtCreateWidget(strName(sw->name),
 		       canvasWidgetClass,
 		       isDefault(parent) ? widgetFrame(sw->frame)
-		       			 : widgetWindow(parent),
+					 : widgetWindow(parent),
 		       args, n);
     DEBUG(NAME_create, Cprintf("Widget = %p\n", w));
   }
@@ -455,13 +455,14 @@ ws_flash_area_window(PceWindow sw, int x, int y, int w, int h, int msecs)
     { y += (h-maxrect)/2;
       h = maxrect;
     }
-    d_window(sw, x, y, w, h, FALSE, TRUE);
-    r_complement(x, y, w, h);
-    d_flush();
-    msleep(msecs);
-    r_complement(x, y, w, h);
-    d_flush();
-    d_done();
+    if ( d_window(sw, x, y, w, h, FALSE, TRUE) )
+    { r_complement(x, y, w, h);
+      d_flush();
+      msleep(msecs);
+      r_complement(x, y, w, h);
+      d_flush();
+      d_done();
+    }
   }
 }
 
@@ -484,15 +485,14 @@ ws_flash_window(PceWindow sw, int msecs)
     }
 
     d_offset(0, 0);
-    d_window(sw, x, y, w, h, FALSE, FALSE);
-
-    r_complement(x, y, w, h);
-    d_flush();
-    msleep(msecs);
-    r_complement(x, y, w, h);
-    d_flush();
-
-    d_done();
+    if ( d_window(sw, x, y, w, h, FALSE, FALSE) )
+    { r_complement(x, y, w, h);
+      d_flush();
+      msleep(msecs);
+      r_complement(x, y, w, h);
+      d_flush();
+      d_done();
+    }
   }
 }
 

@@ -324,9 +324,12 @@ Initialise a picture to redraw all graphicals in the area (x y w h) in the
 pictures coordinate system.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-void
+status
 d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
 { DisplayObj d = getDisplayGraphical((Graphical)sw);
+
+  if ( !d )
+    fail;
 
   DEBUG(NAME_redraw,
 	Cprintf("d_window(%s, %d, %d, %d, %d) (on %s)\n",
@@ -408,6 +411,8 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
 
   if ( clear )
     r_clear(x, y, w, h);
+
+  succeed;
 }
 
 
@@ -864,7 +869,7 @@ r_fillpattern(Any fill, Name which)	/* image or colour */
 	DEBUG(NAME_fillPattern, Cprintf("fg = %ld, bg = %ld\n",
 					context.gcs->foreground_pixel,
 					context.gcs->background_pixel));
-	mask 		  = (GCStipple|GCFillStyle|GCForeground|GCBackground);
+	mask		  = (GCStipple|GCFillStyle|GCForeground|GCBackground);
       } else				/* colour pattern in bitmap context */
       { Image mono;
 
@@ -925,7 +930,7 @@ r_andpattern(Image i)
     if ( context.kind != NAME_bitmap && i->kind == NAME_bitmap )
     { values.stipple    = image;
       values.fill_style = FillOpaqueStippled;
-      mask 		= (GCStipple|GCFillStyle);
+      mask		= (GCStipple|GCFillStyle);
     } else
     { values.tile       = image;
       values.fill_style = FillTiled;
@@ -1467,18 +1472,18 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 	is++;
 					/* bottom-right at xt+w-r, yt+h-r */
 	as[ns].x = xt+w-r-ar+1;		as[ns].y = yt+h-r-ar+1;
-	as[ns].width = 			as[ns].height = ar*2;
+	as[ns].width =			as[ns].height = ar*2;
 	as[ns].angle1 = 270*64;		as[ns].angle2 = 90*64;
 	ns++;
 					/* top-right around xt+w-r, yt+r */
 	ang = 90;
 	as[ns].x = xt+w-2*ar-os;	as[ns].y = yt;
-	as[ns].width = 			as[ns].height = ar*2;
+	as[ns].width =			as[ns].height = ar*2;
 	as[ns].angle1 = 0*64;		as[ns].angle2 = ang*64;
 	ns++;
 					/* bottom-left around xt+r, yt+h-r */
 	as[ns].x = xt;			as[ns].y = yt+h-2*ar-os;
-	as[ns].width = 			as[ns].height = ar*2;
+	as[ns].width =			as[ns].height = ar*2;
 	as[ns].angle1 = (270-ang)*64;	as[ns].angle2 = ang*64;
 	ns++;
       }
@@ -1583,11 +1588,11 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 	ss[is].x2 = os+xt+w-r;  ss[is].y2 = -os+yt+h;
 	is++;
 
-	ar[nr].x = os+xt;	ar[nr].y = os+yt; 	/* top-left */
+	ar[nr].x = os+xt;	ar[nr].y = os+yt;	/* top-left */
 	ar[nr].width = wh;	ar[nr].height = wh;
         ar[nr].angle1 = 90*64;  ar[nr].angle2 = 90*64;
 	nr++;
-	ar[nr].x = -os+xt+w-wh;	ar[nr].y = os+yt; 	/* top-right */
+	ar[nr].x = -os+xt+w-wh;	ar[nr].y = os+yt;	/* top-right */
 	ar[nr].width = wh;	ar[nr].height = wh;
         ar[nr].angle1 = 45*64;  ar[nr].angle2 = 45*64;
 	nr++;
@@ -1600,7 +1605,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 	as[ns].width = wh;	as[ns].height = wh;
         as[ns].angle1 = 270*64;	as[ns].angle2 = 90*64;
 	ns++;
-	as[ns].x = -os+xt+w-wh;	as[ns].y = os+yt; 	/* top-right */
+	as[ns].x = -os+xt+w-wh;	as[ns].y = os+yt;	/* top-right */
 	as[ns].width = wh;	as[ns].height = wh;
         as[ns].angle1 = 0*64;   as[ns].angle2 = 45*64;
 	ns++;
@@ -1620,7 +1625,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
     { XSegment s[2 * MAX_SHADOW];
 
       for(i=0, os=0; os < shadow; os += pen)
-      { s[i].x1 = xt+os;	s[i].y1 = yt+os; 	/* top-side */
+      { s[i].x1 = xt+os;	s[i].y1 = yt+os;	/* top-side */
 	s[i].x2 = xt+w-1-os;	s[i].y2 = yt+os;
 	i++;
 	s[i].x1 = xt+os;	s[i].y1 = yt+os;	/* left-side */
@@ -2181,7 +2186,7 @@ r_image(Image image,
 	  values.background  = context.gcs->background_pixel;
 	  values.stipple     = pix;
 	  values.fill_style  = (transparent == ON ? FillStippled
-			      			  : FillOpaqueStippled);
+						  : FillOpaqueStippled);
 
 	  XChangeGC(context.display, context.gcs->bitmapGC,
 		    GCClipXOrigin|GCClipYOrigin|GCClipMask|
@@ -2409,10 +2414,10 @@ r_pixel(int x, int y, Any val)
   if ( in_clip(x, y) )
   { if ( context.kind == NAME_bitmap )
     { if ( isOn(val) )
-    	XDrawPoint(context.display, context.drawable, context.gcs->workGC,
+	XDrawPoint(context.display, context.drawable, context.gcs->workGC,
 		   x, y);
       else
-      	XDrawPoint(context.display, context.drawable, context.gcs->clearGC,
+	XDrawPoint(context.display, context.drawable, context.gcs->clearGC,
 		   x, y);
     } else
     { r_colour(val);

@@ -111,7 +111,7 @@ typedef struct
 static int		cache = 1;	/* Do or don't */
 static int		quick;		/* Prefer speed */
 static int		has_cmap;	/* Do we have a colourmap? */
-static wdraw_context	context; 	/* current context */
+static wdraw_context	context;	/* current context */
 static wdraw_context	ctx_stack[MAX_CTX_DEPTH];  /* Context stack */
 static int		ctx_stacked;	/* Saved frames */
 static os_platform	platform;	/* For platform hacks */
@@ -145,7 +145,7 @@ reset_context()
   context.hpal		     = NULL;
   context.ohpal		     = NULL;
   context.ochpal	     = NULL;
-  context.hpen 		     = 0;
+  context.hpen		     = 0;
   context.stockpen	     = FALSE;
   context.colour             = BLACK_COLOUR;
   context.background         = WHITE_COLOUR;	/* is this true? */
@@ -451,9 +451,14 @@ d_mswindow(PceWindow sw, IArea a, int clear)
 }
 
 
-void
+status
 d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
-{ d_display(getDisplayGraphical((Graphical)sw));
+{ DisplayObj d = getDisplayGraphical((Graphical)sw);
+
+  if ( !d )
+    fail;
+
+  d_display(d);
 
   if ( !context.open++ )
   { push_context();
@@ -468,6 +473,8 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
     if ( clear )
       r_clear(x, y, w, h);
   }
+
+  succeed;
 }
 
 
@@ -912,7 +919,7 @@ static struct dashpattern
 { Name	       dash;
   DWORD        style;			/* non-PS_USERSTYLE style */
   const DWORD *dash_list;
-  int 	       dash_list_length;
+  int	       dash_list_length;
 } dash_patterns[] =
 { { NAME_none,		PS_SOLID,	NULL,		0},
   { NAME_dotted,	PS_ALTERNATE,	dotted,		2},
@@ -1746,18 +1753,18 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 	is++;
 					/* bottom-right at xt+w-r, yt+h-r */
 	as[ns].x = xt+w-r-ar+1;		as[ns].y = yt+h-r-ar+1;
-	as[ns].width = 			as[ns].height = ar*2;
+	as[ns].width =			as[ns].height = ar*2;
 	as[ns].angle1 = 270*64;		as[ns].angle2 = 90*64;
 	ns++;
 					/* top-right around xt+w-r, yt+r */
 	ang = 90;
 	as[ns].x = xt+w-2*ar-os;	as[ns].y = yt;
-	as[ns].width = 			as[ns].height = ar*2;
+	as[ns].width =			as[ns].height = ar*2;
 	as[ns].angle1 = 0*64;		as[ns].angle2 = ang*64;
 	ns++;
 					/* bottom-left around xt+r, yt+h-r */
 	as[ns].x = xt;			as[ns].y = yt+h-2*ar-os;
-	as[ns].width = 			as[ns].height = ar*2;
+	as[ns].width =			as[ns].height = ar*2;
 	as[ns].angle1 = (270-ang)*64;	as[ns].angle2 = ang*64;
 	ns++;
       }
@@ -1830,11 +1837,11 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 	ss[is].x2 = os+xt+w-r;  ss[is].y2 = -os+yt+h;
 	is++;
 
-	ar[nr].x = os+xt;	ar[nr].y = os+yt; 	/* top-left */
+	ar[nr].x = os+xt;	ar[nr].y = os+yt;	/* top-left */
 	ar[nr].width = wh;	ar[nr].height = wh;
         ar[nr].angle1 = 90*64;  ar[nr].angle2 = 90*64;
 	nr++;
-	ar[nr].x = -os+xt+w-wh;	ar[nr].y = os+yt; 	/* top-right */
+	ar[nr].x = -os+xt+w-wh;	ar[nr].y = os+yt;	/* top-right */
 	ar[nr].width = wh;	ar[nr].height = wh;
         ar[nr].angle1 = 45*64;   ar[nr].angle2 = 45*64;
 	nr++;
@@ -1847,7 +1854,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 	as[ns].width = wh;	as[ns].height = wh;
         as[ns].angle1 = 270*64;	as[ns].angle2 = 90*64;
 	ns++;
-	as[ns].x = -os+xt+w-wh;	as[ns].y = os+yt; 	/* top-right */
+	as[ns].x = -os+xt+w-wh;	as[ns].y = os+yt;	/* top-right */
 	as[ns].width = wh;	as[ns].height = wh;
         as[ns].angle1 = 0*64;  as[ns].angle2 = 45*64;
 	ns++;
@@ -1867,7 +1874,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
       int xt = x, yt = y;
 
       for(i=0, os=0; os < shadow; os += pen)
-      { s[i].x1 = xt+os;	s[i].y1 = yt+os; 	/* top-side */
+      { s[i].x1 = xt+os;	s[i].y1 = yt+os;	/* top-side */
 	s[i].x2 = xt+w-1-os;	s[i].y2 = yt+os;
 	i++;
 	s[i].x1 = xt+os;	s[i].y1 = yt+os;	/* left-side */

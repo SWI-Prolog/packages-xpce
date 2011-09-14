@@ -64,7 +64,7 @@ COMMON(void)	r_fillrestore(fill_state *state);
 COMMON(DisplayObj) d_display(DisplayObj d);
 COMMON(void)	d_ensure_display(void);
 COMMON(void)	d_flush(void);
-COMMON(void)	d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit);
+COMMON(status)	d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit);
 COMMON(void)	d_image(Image i, int x, int y, int w, int h);
 COMMON(void)	d_screen(DisplayObj d);
 COMMON(void)	d_frame(FrameObj fr, int x, int y, int w, int h);

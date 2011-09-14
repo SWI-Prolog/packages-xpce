@@ -1202,16 +1202,16 @@ RedrawAreaWindow(PceWindow sw, IArea a, int clear)
     oy += valInt(sw->scroll_offset->y);
 
     d_offset(ox, oy);
-    d_window(sw, a->x, a->y, a->w, a->h, clear, TRUE);
+    if ( d_window(sw, a->x, a->y, a->w, a->h, clear, TRUE) )
+    { assign(oa, x, toInt(a->x));
+      assign(oa, y, toInt(a->y));
+      assign(oa, w, toInt(a->w));
+      assign(oa, h, toInt(a->h));
 
-    assign(oa, x, toInt(a->x));
-    assign(oa, y, toInt(a->y));
-    assign(oa, w, toInt(a->w));
-    assign(oa, h, toInt(a->h));
+      qadSendv(sw, NAME_RedrawArea, 1, (Any *)&oa);
 
-    qadSendv(sw, NAME_RedrawArea, 1, (Any *)&oa);
-
-    d_done();
+      d_done();
+    }
     rewindAnswerStack(mark, NIL);
   }
 
