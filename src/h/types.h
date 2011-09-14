@@ -43,10 +43,11 @@ typedef struct pceITFSymbol    *PceITFSymbol;
 typedef struct _string	       *String;
 
 #ifndef LONGLONG
-#define LONGLONG long
+typedef	long			PseudoFloat;
+#else
+typedef	LONGLONG		PseudoFloat;
 #endif
 
-typedef	LONGLONG		PseudoFloat;
 
 		/********************************
 		*         KERNEL TYPES		*
