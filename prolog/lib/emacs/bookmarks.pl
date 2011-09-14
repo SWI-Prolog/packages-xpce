@@ -287,7 +287,7 @@ open_node(BW, Id:any) :->
 	(   send(Id, instance_of, emacs_bookmark)
 	->  (   send(Id, exists)
 	    ->	ignore(send(Id, update)),
-	        send(@emacs, goto_source_location, Id)
+	        send(@emacs, goto_source_location, Id, tab)
 	    ;	(   get(Id, file_name, File),
 		    send(@display, confirm,
 			 'Marked file "%s" does not exist.\nDelete bookmark?',
