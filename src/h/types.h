@@ -42,12 +42,6 @@ typedef struct _goal	       *Goal;
 typedef struct pceITFSymbol    *PceITFSymbol;
 typedef struct _string	       *String;
 
-#ifndef LONGLONG
-typedef	long			PseudoFloat;
-#else
-typedef	LONGLONG		PseudoFloat;
-#endif
-
 
 		/********************************
 		*         KERNEL TYPES		*
@@ -72,7 +66,7 @@ typedef struct chain_table *		ChainTable;
 typedef struct char_array *		CharArray;
 typedef struct class *			Class;
 typedef struct class_stub *		ClassStub;
-typedef struct class_variable * 	ClassVariable;
+typedef struct class_variable *		ClassVariable;
 typedef struct code *			Code;
 typedef struct constant *		Constant;
 typedef struct constraint *		Constraint;
@@ -89,7 +83,7 @@ typedef struct eventobj *		EventObj;
 typedef struct expression *		Expression;
 typedef struct fileobj *		FileObj;
 typedef struct function *		Function;
-typedef struct gesture * 		Gesture;
+typedef struct gesture *		Gesture;
 typedef struct get_method *		GetMethod;
 typedef struct handle *			Handle;
 typedef struct handler *		Handler;
@@ -145,7 +139,7 @@ typedef struct type *			Type;
 typedef struct variable *		Variable;
 typedef struct var *			Var;
 typedef struct vector *			Vector;
-typedef struct visual * 		VisualObj;
+typedef struct visual *			VisualObj;
 typedef struct when *			When;
 typedef struct while_obj *		While;
 typedef struct create_obj *		Create;
@@ -155,18 +149,18 @@ typedef struct create_obj *		Create;
 		*        GRAPHICAL TYPES	*
 		********************************/
 
-typedef struct arc 			* Arc;
+typedef struct arc			* Arc;
 typedef struct arrow			* Arrow;
-typedef struct bezier 			* Bezier;
+typedef struct bezier			* Bezier;
 typedef struct bitmapobj		* BitmapObj;
 typedef struct box			* Box;
 typedef struct browser			* Browser;
 typedef struct button			* Button;
 typedef struct circle			* Circle;
-typedef struct click_gesture    	* ClickGesture;
+typedef struct click_gesture		* ClickGesture;
 typedef struct colour			* Colour;
 typedef struct colour_map		* ColourMap;
-typedef struct connect_gesture    	* ConnectGesture;
+typedef struct connect_gesture		* ConnectGesture;
 typedef struct connection		* Connection;
 typedef struct cursorobj		* CursorObj;
 typedef struct device			* Device;
@@ -176,8 +170,8 @@ typedef struct dialog_group		* DialogGroup;
 typedef struct display_manager		* DisplayManager;
 typedef struct displayobj		* DisplayObj;
 typedef struct draw_context		* DrawContext;
-typedef struct edit_text_gesture     	* EditTextGesture;
-typedef struct editor 			* Editor;
+typedef struct edit_text_gesture	* EditTextGesture;
+typedef struct editor			* Editor;
 typedef struct elevation		* Elevation;
 typedef struct ellipse			* Ellipse;
 typedef struct event_nodeobj		* EventNodeObj;
@@ -199,15 +193,15 @@ typedef struct menu			* Menu;
 typedef struct menu_bar			* MenuBar;
 typedef struct menu_item		* MenuItem;
 typedef struct monitor			* Monitor;
-typedef struct move_gesture     	* MoveGesture;
+typedef struct move_gesture		* MoveGesture;
 typedef struct move_outline_gesture     * MoveOutlineGesture;
 typedef struct node			* Node;
 typedef struct path			* Path;
 typedef struct picture			* PictureObj;
 typedef struct pixmapobj		* PixmapObj;
-typedef struct popup_gesture    	* PopupGesture;
+typedef struct popup_gesture		* PopupGesture;
 typedef struct popupobj			* PopupObj;
-typedef struct resize_gesture   	* ResizeGesture;
+typedef struct resize_gesture		* ResizeGesture;
 typedef struct resize_outline_gesture   * ResizeOutlineGesture;
 typedef struct scrollbar		* ScrollBar;
 typedef struct slider			* Slider;
@@ -227,7 +221,7 @@ typedef struct tree			* Tree;
 typedef struct undo_buffer		* UndoBuffer;
 typedef struct view			* View;
 typedef struct windowobj		* PceWindow;
-typedef struct window_decorator 	* WindowDecorator;
+typedef struct window_decorator		* WindowDecorator;
 typedef struct resize_table_slice_gesture * ResizeTableSliceGesture;
 
 typedef Any				EventId;

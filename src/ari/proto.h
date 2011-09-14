@@ -10,7 +10,6 @@ COMMON(status)	makeClassGreater(Class class);
 COMMON(status)	makeClassGreaterEqual(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/ari/expression.c */
-COMMON(PseudoFloat) getPseudoFloatExpression(Any e);
 COMMON(void)	promoteToRealNumericValue(NumericValue n);
 COMMON(status)	ar_add(NumericValue n1, NumericValue n2, NumericValue r);
 COMMON(int)	ar_minus(NumericValue n1, NumericValue n2, NumericValue r);

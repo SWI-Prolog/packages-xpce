@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -26,60 +27,6 @@
 #include <h/arith.h>
 
 static int	get_var_in_binary_expression(Any e, Var var, int n);
-
-#ifdef O_NOFLOAT			/* old fixed-point arithmetic */
-
-PseudoFloat
-getPseudoFloatExpression(Any e)
-{ Int ival;
-
-  if ( isFunction(e) )
-  { Any e2;
-
-    if ( instanceOfObject(e, ClassBinaryExpression) )
-    { Class class = classOfObject(e);
-      PseudoFloat fl, fr;
-
-      fl = getPseudoFloatExpression(LEFTHAND(e));
-      fr = getPseudoFloatExpression(RIGHTHAND(e));
-      if ( arithError )
-	return Int_PSF(1);
-
-      if ( class == ClassPlus )		/* + */
-	return PSF_add(fl, fr);
-      if ( class == ClassMinus )	/* - */
-	return PSF_sub(fl, fr);
-      if ( class == ClassTimes )	/* * */
-	return PSF_mul(fl, fr);
-      if ( class == ClassDivide )	/* / */
-	return PSF_div(fl, fr);
-    }
-
-    if ( !(e2 = expandFunction(e)) )
-    { errorPce(e, NAME_evalFailed);
-      arithError = TRUE;
-      return Int_PSF(0);
-    } else
-      e = e2;
-  }
-
-  if ( isInteger(e) )			/* int */
-    return Int_PSF(valInt(e));
-
-  if ( instanceOfObject(e, ClassNumber) ) /* number */
-    return Int_PSF(((Number)e)->value);
-  if ( instanceOfObject(e, ClassReal) )	/* real */
-    return Float_PSF(valReal(e));
-
-  if ( (ival = (Int) checkType(e, TypeInt, NIL)) )
-    return Int_PSF(valInt(ival));
-
-  errorPce(e, NAME_unexpectedType, TypeExpression);
-  arithError = TRUE;
-  return Int_PSF(1);
-}
-
-#else /* O_NOFLOAT*/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 The arithmetic code below is from SWI-Prolog  2.6.0. As the copyright to
@@ -303,8 +250,6 @@ ar_int_result(Any e, NumericValue n)
 }
 
 
-#endif /*O_NOFLOAT*/
-
 		/********************************
 		*       BINARY EXPRESSIONS	*
 		********************************/
@@ -321,24 +266,12 @@ initialiseBinaryExpression(BinaryExpression e,
 
 static Any
 getExecuteExpression(BinaryExpression e)
-{
-#ifdef O_NOFLOAT
-  PseudoFloat f;
-
-  arithError = FALSE;
-  f = getPseudoFloatExpression(e);
-  if ( arithError )
-    fail;
-
-  answer(toInt(PSF_Int(f)));
-#else
-  numeric_value v;
+{ numeric_value v;
 
   if ( evaluateExpression(e, &v) )
     return ar_result(&v);
 
   fail;
-#endif
 }
 
 
