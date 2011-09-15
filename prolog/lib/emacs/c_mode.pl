@@ -82,6 +82,7 @@ indent_line(E, Times:[int]) :->
 		;   send(E, indent_close_bracket_line)
 		;   send(E, indent_expression_line, ')]')
 		;   send(E, indent_label)
+		;   send(E, indent_cpp_line)
 		;   send(E, indent_statement)
 		;   send(E, align_with_previous_line, '\\s*(\\{\\s*)*')
 		)
@@ -206,7 +207,6 @@ indent_statement(E) :->
 	    )
 	).
 
-
 back_prefixes(E, P0, P) :-
 	get(E, text_buffer, TB),
 	get(TB, scan, P0, line, 0, start, SOL),
@@ -227,6 +227,11 @@ back_skip_if_etc(E, Pos:int, StartIf:int) :<-
 	;   get(E, looking_at, '}\\s*else\\s*', Prev+1, SOL, Len)
 	->  StartIf is Prev+1 - Len
 	).
+
+indent_cpp_line(E) :->
+	"Indent lines starting with #"::
+	send(E, looking_at, '#'),
+	send(E, align, 0).
 
 insert_c_begin(E, Times:[int], Id:[event_id]) :->
 	"Insert and adjust the inserted '{'"::
