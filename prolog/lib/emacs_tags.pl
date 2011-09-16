@@ -30,13 +30,13 @@
 */
 
 :- module(emacs_tags,
-	[ emacs_tag/3
-	, emacs_tag_file/1
-        , emacs_init_tags/1
-	, emacs_complete_tag/2
-	]).
+	  [ emacs_tag/4,			% +Symbol, ?Dir, -File, -Line
+	    emacs_tag_file/1,			% ?File
+	    emacs_init_tags/1,			% +FileOrDir
+	    emacs_complete_tag/3		% +Prefix, ?Dir, :Goal
+	  ]).
 
-:- meta_predicate emacs_complete_tag(+, :).
+:- meta_predicate emacs_complete_tag(+, 1).
 
 :- use_module(library(pce)).
 :- require([ call/2
@@ -44,7 +44,8 @@
 	   ]).
 
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+/** <module> Query GNU-Emacs TAGS files
+
 Make Emacs tags (produced with etags) information available to Prolog.
 Predicates:
 
@@ -53,12 +54,11 @@ emacs_init_tags(+Directory|+TagFile)
 
 emacs_tag(+Symbol, -File, -LineNo)
   Lookup tag in loaded tag-table
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+*/
 
 :- dynamic
-	tag_string/1,
-	tag_file/2,
-	tag_dir/1.
+	tag_string/2,		% XPCE string holding content of tag file
+	tag_file/2.
 
 
 :- pce_global(@emacs_tag_file_regex,
@@ -66,8 +66,15 @@ emacs_tag(+Symbol, -File, -LineNo)
 :- pce_global(@emacs_tag_line_regex,
 	      new(regex('[^\n]*\\D(\\d+),\\d+\n'))).
 
-emacs_tag(Name, File, LineNo) :-
-	tag_string(String), !,
+%%	emacs_tag(+Symbol, ?Dir, -File, -Line)
+%
+%	Symbol is defined in File at Line.
+%
+%	@param	Dir is the directory in which the tag-file resides,
+%		represented as a canonical file-name.
+
+emacs_tag(Name, Dir, File, LineNo) :-
+	tag_string(String, Dir), !,
 	new(Re, regex('')),
 	get(Re, quote, Name, QName),
 	(   send(Re, pattern, string('\\\\y%s\\\\y', QName))
@@ -77,7 +84,6 @@ emacs_tag(Name, File, LineNo) :-
 	get(Re, search, String, Start), !,
 	send(@emacs_tag_file_regex, search, String, Start, 0),
 	get(@emacs_tag_file_regex, register_value, String, 1, FNS),
-	tag_dir(Dir),
 	new(S, string('%s', Dir)),
 	send(S, ensure_suffix, /),
 	send(S, append, FNS),
@@ -87,14 +93,24 @@ emacs_tag(Name, File, LineNo) :-
 	get(@pce, convert, LNS, int, LineNo).
 
 
-emacs_complete_tag(Name, Goal) :-
-	tag_string(String), !,
+%%	emacs_complete_tag(+Prefix, ?Directory, :Goal) is semidet.
+%
+%	Call call(Goal, Symbol) for  each  symbol   that  has  the given
+%	Prefix.
+%
+%	@see	Used by class emacs_tag_item (defined in this file)
+
+emacs_complete_tag(Name, Dir, Goal) :-
 	(   Name == ''
 	->  new(Re, regex('\\y[a-zA-Z_]\\w*'))
 	;   new(Re, regex('')),
 	    get(Re, quote, Name, QName),
 	    send(Re, pattern, string('\\\\y%s\\\\w*', QName))
 	),
+	forall(tag_string(String, Dir),
+	       complete_from_tag_string(String, Re, Goal)).
+
+complete_from_tag_string(String, Re, Goal) :-
 	new(Here, number(0)),
 	repeat,
 	    (	send(Re, search, String, Here)
@@ -107,21 +123,23 @@ emacs_complete_tag(Name, Goal) :-
 	    ).
 
 
+%%	emacs_init_tags(+FileOrDir) is semidet.
+%
+%	Load tags from the given GNU-Emacs TAGS  file. If FileOrDir is a
+%	directory, see whether <dir>/TAGS exists.
+
 emacs_init_tags(TagFile) :-
 	send(file(TagFile), exists), !,
 	(   get(file(TagFile), time, TagDate),
 	    tag_file(TagFile, LoadedTagDate),
 	    send(LoadedTagDate, equal, TagDate)
 	->  true
-	;   forall(tag_string(Str), free(Str)),
-	    retractall(tag_string(_)),
-	    retractall(tag_file(_, _)),
-	    retractall(tag_dir(_)),
+	;   get(file(TagFile), directory_name, Dir),
+	    forall(retract(tag_string(Str, Dir)), free(Str)),
+	    retractall(tag_file(TagFile, _)),
 	    get(file(TagFile), time, TagTime),
 	    send(TagTime, lock_object, @on),
-	    load_tags(TagFile),
-	    get(file(TagFile), directory_name, Dir),
-	    assert(tag_dir(Dir)),
+	    load_tags(TagFile, Dir),
 	    assert(tag_file(TagFile, TagTime))
 	).
 emacs_init_tags(Dir) :-
@@ -130,12 +148,12 @@ emacs_init_tags(Dir) :-
 	emacs_init_tags(TagFile).
 
 
-load_tags(File) :-
+load_tags(File, Dir) :-
 	new(F, file(File)),
 	send(F, open, read),
 	get(F, read, TagString),
 	send(TagString, lock_object, @on),
-	asserta(tag_string(TagString)),
+	asserta(tag_string(TagString, Dir)),
 	send(F, close),
 	send(F, free).
 
@@ -155,19 +173,19 @@ initialise(TI, Label:name, Default:[name], Message:[code]*) :->
 
 completions(TI, Text:name, Symbols:chain) :<-
 	"Complete symbol from current TAGS-table"::
-	(   tag_string(_)
+	(   tag_string(_, _)
 	->  new(Symbols, chain),
-	    catch(emacs_complete_tag(Text, add_completion(Symbols)),
+	    catch(emacs_complete_tag(Text, _, add_completion(Symbols)),
 		  too_many_matches,
 		  send(TI, report, error, 'Too many matches')),
-	    send(Symbols, sort)
+	    send(Symbols, sort, unique := @on)
 	;   send(TI, report, warning, 'No tag-table loaded'),
 	    fail
 	).
 
 add_completion(Chain, _Match) :-
 	get(Chain, size, 5000),
-	send(Chain, sort, @default, @on),
+	send(Chain, sort, unique := @on),
 	get(Chain, size, 5000),
 	throw(too_many_matches).
 add_completion(Chain, Match) :-

@@ -34,6 +34,7 @@
 :- use_module(library(pce)).
 :- use_module(library(hyper)).
 :- use_module(library(socket), [gethostname/1]).
+:- use_module(library(debug)).
 :- require([ auto_call/1
 	   , chain_list/2
 	   , default/3
@@ -600,8 +601,15 @@ expand_tag(M, Tag:[name], TheTag:name) :<-
 
 find_tag(M, Tag:emacs_tag, Where:[{here,tab,window}], Editor:editor) :<-
 	"Jump to indicated tag entry"::
-	(   auto_call(emacs_tag(Tag, File, Line)),
-	    new(B, emacs_buffer(File)),
+	(   get(M, directory, Dir),
+	    find_tag_from_dir(Dir, TagFile),
+	    get(TagFile, directory_name, TagDirName),
+	    (	SearchDir = TagDirName
+	    ;	true
+	    ),
+	    debug(emacs(tag), 'Search ~q from ~q', [Tag, SearchDir]),
+	    auto_call(emacs_tag(Tag, SearchDir, File, Line))
+	->  new(B, emacs_buffer(File)),
 	    get(B, open, Where, Frame),
 	    get(Frame, editor, Editor),
 	    send(Editor, line_number, Line),
