@@ -14,6 +14,7 @@ AC_SUBST(PLLIBS)
 AC_SUBST(PLBASE)
 AC_SUBST(PLARCH)
 AC_SUBST(PLINCL)
+AC_SUBST(INSTALL_PLARCH)
 AC_SUBST(XLIB)
 AC_SUBST(XINCLUDES)
 AC_SUBST(XLIBS)
@@ -165,8 +166,13 @@ if test "$swipl" != "no"; then
     AC_MSG_RESULT("		MAKE_SHARED_OBJECT=$MAKE_SHARED_OBJECT")
 
     case "$PLARCH" in
-	*)			LDFLAGS="$PLLDFLAGS" ;;
+	*-win32|*-win64)
+	    ;;
+	*)	
+	    INSTALL_PLARCH=PLARCH
+	    ;;
     esac
+    LDFLAGS="$PLLDFLAGS"
     ALLTARGET=xpce-pl
     PLTARGET=nosoall
   else

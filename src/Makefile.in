@@ -121,13 +121,14 @@ LIB=libXPCE.a
 PLBASE=@PLBASE@
 PLARCH=@PLARCH@
 PLINCL=@PLINCL@
-PLBINDIR=$(PLBASE)/bin/$(PLARCH)
+PLBINDIR=$(PLBASE)/bin/$(INSTALL_PLARCH)
 PL=@PL@
 PLBUILD=@PLBUILD@
 PLNAME=@PLNAME@
 PLLD=@PLLD@
+INSTALL_PLARCH=@INSTALL_PLARCH@
 
-PLRUNTIME=$(PLBASE)/runtime/$(PLARCH)
+PLRUNTIME=$(PLBASE)/runtime/$(INSTALL_PLARCH)
 PLOBJ=pl.o
 
 PLTARGET=@PLTARGET@
@@ -761,7 +762,7 @@ rt-misc:	rt-home
 		$(INSTALL_DATA) -C .. $(RTMISC) $(DESTDIR)$(RTHOME)
 
 rt-bins:	rt-home
-		$(INSTALL_DATA) -dC $(DESTDIR)$(RTHOME) bin/$(PLARCH) lib/$(PLARCH)
+		$(INSTALL_DATA) -dC $(DESTDIR)$(RTHOME) bin/$(INSTALL_PLARCH) lib/$(INSTALL_PLARCH)
 		@if [ -f xpce ]; then \
 		    echo "xpce --> $(PLBINDIR)"; \
 		    $(INSTALL_PROGRAM) xpce $(DESTDIR)$(PLBINDIR); \
@@ -778,12 +779,12 @@ rt-bins:	rt-home
 		done
 		@for f in $(RTLIBS); do \
 		    if [ -f $$f ]; then \
-			echo "$$f --> $(DESTDIR)$(RTHOME)/lib/$(PLARCH)"; \
-		        $(INSTALL_PROGRAM) $$f $(DESTDIR)$(RTHOME)/lib/$(PLARCH); \
+			echo "$$f --> $(DESTDIR)$(RTHOME)/lib/$(INSTALL_PLARCH)"; \
+		        $(INSTALL_PROGRAM) $$f $(DESTDIR)$(RTHOME)/lib/$(INSTALL_PLARCH); \
 		    fi; \
 		done
-		if [ -f $(DESTDIR)$(RTHOME)/lib/$(PLARCH)/$(LIBXPCESOMM) ]; then \
-		    (cd $(DESTDIR)$(RTHOME)/lib/$(PLARCH); \
+		if [ -f $(DESTDIR)$(RTHOME)/lib/$(INSTALL_PLARCH)/$(LIBXPCESOMM) ]; then \
+		    (cd $(DESTDIR)$(RTHOME)/lib/$(INSTALL_PLARCH); \
 		         rm -f $(LIBXPCESOM) $(LIBXPCESO); \
 		         ln -s $(LIBXPCESOMM) $(LIBXPCESOM); \
 		         ln -s $(LIBXPCESOM) $(LIBXPCESO)); \
