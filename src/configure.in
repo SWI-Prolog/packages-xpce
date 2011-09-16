@@ -31,6 +31,7 @@ AC_SUBST(ALLTARGET)
 AC_SUBST(RTSUFFIX)
 AC_SUBST(LD)
 AC_SUBST(SO)
+AC_SUBST(SOLIB)
 AC_SUBST(LDSOFLAGS)
 AC_SUBST(SONAMEFLAG)
 AC_SUBST(SOWHOLEARCHIVE)
@@ -167,8 +168,10 @@ if test "$swipl" != "no"; then
 
     case "$PLARCH" in
 	*-win32|*-win64)
+	    SOLIB=bin
 	    ;;
 	*)	
+	    SOLIB=lib
 	    INSTALL_PLARCH=PLARCH
 	    ;;
     esac

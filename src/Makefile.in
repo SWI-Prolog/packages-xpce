@@ -86,6 +86,7 @@ GCCLIB=@GCCLIB@
 LDSOFLAGS=@LDSOFLAGS@ -L$(XLIB)
 SOEXTRAOBJ=@SOEXTRAOBJ@
 SO=@SO@
+SOLIB=@SOLIB@
 VWS=@VWS@
 
 LIBS= $(XLIBS) $(NETLIBS) -lm
@@ -779,12 +780,12 @@ rt-bins:	rt-home
 		done
 		@for f in $(RTLIBS); do \
 		    if [ -f $$f ]; then \
-			echo "$$f --> $(DESTDIR)$(RTHOME)/lib/$(INSTALL_PLARCH)"; \
-		        $(INSTALL_PROGRAM) $$f $(DESTDIR)$(RTHOME)/lib/$(INSTALL_PLARCH); \
+			echo "$$f --> $(DESTDIR)$(RTHOME)/$(SOLIB)/$(INSTALL_PLARCH)"; \
+		        $(INSTALL_PROGRAM) $$f $(DESTDIR)$(RTHOME)/$(SOLIB)/$(INSTALL_PLARCH); \
 		    fi; \
 		done
-		if [ -f $(DESTDIR)$(RTHOME)/lib/$(INSTALL_PLARCH)/$(LIBXPCESOMM) ]; then \
-		    (cd $(DESTDIR)$(RTHOME)/lib/$(INSTALL_PLARCH); \
+		if [ -f $(DESTDIR)$(RTHOME)/$(SOLIB)/$(INSTALL_PLARCH)/$(LIBXPCESOMM) ]; then \
+		    (cd $(DESTDIR)$(RTHOME)/$(SOLIB)/$(INSTALL_PLARCH); \
 		         rm -f $(LIBXPCESOM) $(LIBXPCESO); \
 		         ln -s $(LIBXPCESOMM) $(LIBXPCESOM); \
 		         ln -s $(LIBXPCESOM) $(LIBXPCESO)); \
