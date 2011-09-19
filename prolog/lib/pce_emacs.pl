@@ -66,7 +66,10 @@ extended in Prolog.
 
 start_emacs :-
 	register_emacs,
-	in_pce_thread_sync(send(@emacs, start)).
+	(   object(@emacs)
+	->  true
+	;   in_pce_thread_sync(send(@emacs, start))
+	).
 
 
 %%	register_emacs is det.
