@@ -170,9 +170,9 @@ if test "$swipl" != "no"; then
 	*-win32|*-win64)
 	    SOLIB=bin
 	    ;;
-	*)	
+	*)
 	    SOLIB=lib
-	    INSTALL_PLARCH=PLARCH
+	    INSTALL_PLARCH=$PLARCH
 	    ;;
     esac
     LDFLAGS="$PLLDFLAGS"
