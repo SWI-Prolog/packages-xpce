@@ -744,12 +744,14 @@ show_args_pc(foreign).
 show_arguments(GUI, Frame, _Attributes) :-
 	get_tracer(GUI, member(bindings), Browser),
 	in_debug_thread(GUI, frame_arguments(Frame, Args)),
+	debug('Frame arguments = ~w~n', [Args]),
 	send(Browser, bindings, Args).
 
 %%	frame_arguments(+Frame, -Args)
 %
-%	Return arguments of the frame as [I:I=Value, ...], compatible with
-%	the normal binding list. Must run in context of debugged thread.
+%	Return arguments of the frame  as [[I:I]=Value, ...], compatible
+%	with the normal binding list. Must   run  in context of debugged
+%	thread.
 
 frame_arguments(Frame, Args) :-
 	prolog_frame_attribute(Frame, goal, Goal),
@@ -759,7 +761,7 @@ frame_arguments(Frame, Args) :-
 	),
 	frame_arguments(1, Arity, Frame, Args).
 
-frame_arguments(I, Arity, Frame, [I:I=Value|T]) :-
+frame_arguments(I, Arity, Frame, [[I:I]=Value|T]) :-
 	I =< Arity, !,
 	prolog_frame_attribute(Frame, argument(I), Value),
 	NI is I + 1,
