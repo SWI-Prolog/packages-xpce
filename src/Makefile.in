@@ -709,10 +709,10 @@ DVBOOTDIRS=	boot
 DVMISCFILES=	ChangeLog
 RTMISC=		Defaults Defaults.user COPYING README
 DVFILES=	rt-install dv-home dv-lib dv-boot dv-help \
-	        rt-link dv-link dv-pl-files dv-manual dv-man \
+	        dv-link dv-pl-files dv-manual dv-man \
 		dv-misc
 DVINSTALL=	$(DVFILES) dv-qlf dv-bins dv-online dv-classindex
-RTINSTALL=	home rt-misc rt-bitmaps rt-bins rt-link
+RTINSTALL=	home rt-misc rt-bitmaps rt-bins
 
 .PHONY:		install dv-install $(DVINSTALL) $(RTINSTALL)
 install:
@@ -723,7 +723,7 @@ rt-install:	$(INSTALL) $(RTINSTALL)
 dv-install:	$(DVINSTALL)
 
 rpm-install:	rt-home rt-misc rt-bitmaps rt-bins \
-		dv-lib dv-boot dv-help rt-link dv-link dv-pl-files dv-manual dv-man \
+		dv-lib dv-boot dv-help dv-link dv-pl-files dv-manual dv-man \
 		dv-misc dv-bins dv-online dv-classindex
 
 manindex:	$(MANINDEX)
@@ -751,7 +751,10 @@ RTBINS=		xpce $(XPCECLIENT) $(XPCESTUB)
 RTLIBS=		pl2xpce.$(SO) $(LIBXPCESOMM) $(LIBXPCEMAIN)
 
 rt-home:
-		if [ ! -d $(DESTDIR)$(RTHOME) ]; then mkdir -p $(DESTDIR)$(RTHOME); fi
+		if [ ! -d $(DESTDIR)$(RTHOME) ]; then \
+			rm -f $(DESTDIR)$(RTHOME); \
+			mkdir -p $(DESTDIR)$(RTHOME); \
+		fi
 
 rt-bitmaps:	rt-home
 		BMFS=`find ../bitmaps/ \( -name '*.bm' -o -name '*.xpm' -o -name '*.xbm' \) -print` && \
@@ -790,7 +793,10 @@ rt-bins:	rt-home
 		fi
 
 dv-home:
-		if [ ! -d $(DESTDIR)$(DVHOME) ]; then mkdir -p $(DESTDIR)$(DVHOME); fi
+		if [ ! -d $(DESTDIR)$(DVHOME) ]; then \
+			rm -f $(DESTDIR)$(DVHOME) \
+			mkdir -p $(DESTDIR)$(DVHOME); \
+		fi
 
 dv-lib:		dv-home
 		@if [ ! -d $(DESTDIR)$(DVHOME)/prolog ]; then mkdir $(DESTDIR)$(DVHOME)/prolog; fi
@@ -862,9 +868,6 @@ dv-man:		dv-manual
 		        $(INSTALL_DATA) ../man/$$f.1 $(DESTDIR)$(smandir)/$$f.$(mansec); \
 		    fi; \
 	        done
-
-rt-link:
-		cd $(DESTDIR)$(PLBASE); rm -f xpce; ln -s xpce-$(PCEVERSION) xpce
 
 dv-link::
 		$(INSTALL_DATA) ../pl/src/swipl-rc $(DESTDIR)$(PLBASE)/$(PLNAME).rc
