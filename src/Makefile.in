@@ -697,11 +697,7 @@ xpce-stub.o:	../pl/src/xpce-stub.c
 ################################################################
 
 RTINSTALLDIRS=	postscript
-ifeq ($(VWS),x11)
-RTHOME=		$(PLBASE)/xpce-$(PCEVERSION)
-else
 RTHOME=		$(PLBASE)/xpce
-endif
 RTBINDIR=	$(RTHOME)/bin/$(INSTALL_PLARCH)
 DVHOME=		$(RTHOME)
 DVLIBDIRS=	lib lib/compatibility lib/dialog lib/draw lib/emacs lib/man \
@@ -726,15 +722,11 @@ rt-install:	$(INSTALL) $(RTINSTALL)
 
 dv-install:	$(DVINSTALL)
 
-rpm-install:	rt-home rt-misc rt-bitmaps rt-bins rpm-link \
+rpm-install:	rt-home rt-misc rt-bitmaps rt-bins \
 		dv-lib dv-boot dv-help rt-link dv-link dv-pl-files dv-manual dv-man \
 		dv-misc dv-bins dv-online dv-classindex
 
 manindex:	$(MANINDEX)
-
-rpm-link::
-		rm -f $(DESTDIR)$(PLBASE)/xpce
-		(cd $(DESTDIR)$(PLBASE) && ln -s xpce-$(PCEVERSION) xpce)
 
 # ln-install installs the system by creating a link from the installed
 # Prolog to the XPCE build-tree. Such installations enable development
