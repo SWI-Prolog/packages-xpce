@@ -812,7 +812,7 @@ if test "$x_libraries" = ""; then
 else
     XLIB="$x_libraries"
 fi
-XLIBS="-L$XLIB -Xt -X11"
+XLIBS="-L$XLIB -lXt -lX11"
 
 if test "$x_includes" = ""; then
 XINCLUDES="-I/usr/include"
