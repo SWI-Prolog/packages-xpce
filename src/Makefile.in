@@ -697,8 +697,12 @@ xpce-stub.o:	../pl/src/xpce-stub.c
 ################################################################
 
 RTINSTALLDIRS=	postscript
+ifeq ($(VWS),x11)
 RTHOME=		$(PLBASE)/xpce-$(PCEVERSION)
-RTBINDIR=	$(RTHOME)/bin/$(PLARCH)
+else
+RTHOME=		$(PLBASE)/xpce
+endif
+RTBINDIR=	$(RTHOME)/bin/$(INSTALL_PLARCH)
 DVHOME=		$(RTHOME)
 DVLIBDIRS=	lib lib/compatibility lib/dialog lib/draw lib/emacs lib/man \
 		lib/xref lib/english demo contrib contrib/rubik lib/trace \
