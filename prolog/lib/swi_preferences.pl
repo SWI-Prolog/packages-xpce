@@ -98,8 +98,8 @@ locate_preferences(prolog, File) :-
 
 default_preferences(prolog, File) :-
 	member(Location,
-	       [ swi('custom/pl.ini'),
-		 swi('dotfiles/dotplrc')
+	       [ swi('customize/pl.ini'),
+		 swi('customize/dotplrc')
 	       ]),
 	absolute_file_name(Location,
 			   [ access(read),
