@@ -627,7 +627,7 @@ MSWOBJS=	mscolour.o mscursor.o msdisplay.o msdraw.o msevent.o \
 		msfont.o msframe.o msimage.o msstream.o mstimer.o \
 		mswindow.o msmenu.o mswin.o msppm.o msprinter.o \
 		mscommon.o msmetafile.o msreadimage.o msjpeg.o \
-		mscygwin.o
+		msprocess.o mscygwin.o
 
 MSWSRC=		$(addprefix $(srcdir)/msw/, $(MSWOBJS:.o=.c))
 
