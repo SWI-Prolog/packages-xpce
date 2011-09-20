@@ -783,6 +783,14 @@ main()
 
 case "$OS" in
     *mingw*)
+        AC_CHECK_LIB(gdi32, main,
+                     [NETLIBS="$NETLIBS -lgdi32"])
+        AC_CHECK_LIB(comdlg32, main,
+                     [NETLIBS="$NETLIBS -lcomdlg32"])
+        AC_CHECK_LIB(ole32, main,
+                     [NETLIBS="$NETLIBS -lole32"])
+        AC_CHECK_LIB(shell32, main,
+                     [NETLIBS="$NETLIBS -lshell32"])
         AC_CHECK_LIB(ws2_32, main,
                      [AC_DEFINE(HAVE_WINSOCK, 1, "Define if you have the Windows socket library")
                       AC_DEFINE(USE_WINSOCK2, 1, "Define if you have the winsock2 library")
