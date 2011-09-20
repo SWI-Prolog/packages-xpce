@@ -32,6 +32,10 @@
 #define WINVER 0x0500
 #endif
 
+#ifndef _WIN32_IE
+#define _WIN32_IE 0x0400
+#endif
+
 #define RedrawWindow WinRedrawWindow
 #include <windows.h>
 #ifdef USE_WINSOCK2
