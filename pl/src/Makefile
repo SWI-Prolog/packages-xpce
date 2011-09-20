@@ -112,7 +112,7 @@ sopce$(XPCESO):
 		    LD_RUN_PATH="$(libdir):$$LD_RUN_PATH"; \
 		fi; \
 		export LD_RUN_PATH; \
-		$(PLLD) -shared $(SOITF) $(LDFLAGS) -L$(XLIB) -L$(LIBDIR) -lXPCE -o $(XPCESO);
+		$(PLLD) -shared $(SOITF) $(LDFLAGS) $(XLIBS) -L$(LIBDIR) -lXPCE -o $(XPCESO);
 axpce$(XPCESO):
 		if [ "x$$LD_RUN_PATH" = "x" ]; then \
 		    LD_RUN_PATH="$(libdir)"; \
@@ -121,7 +121,7 @@ axpce$(XPCESO):
 		fi; \
 		export LD_RUN_PATH; \
 		$(PLLD) -shared $(LDFLAGS) $(SOITF) $(SOEXTR) -L$(LIBDIR) \
-		-lXPCE $(GCCLIB) -L$(XLIB) $(XLIBS) $(NETLIBS) -o $(XPCESO);
+		-lXPCE $(GCCLIB) $(XLIBS) $(NETLIBS) -o $(XPCESO);
 
 ################################################################$
 # QLF generation
