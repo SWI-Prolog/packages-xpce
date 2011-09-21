@@ -73,7 +73,7 @@ ETAGS=@ETAGS@
 SED=sed
 RM=rm
 REL_LN=$(srcdir)/rel-ln
-INSTALL=xpce-install$(EXEEXT)
+INSTALL=./xpce-install$(EXEEXT)
 INSTALL_PROGRAM=$(INSTALL) -m 755
 INSTALL_DATA=$(INSTALL) -m 644
 FIND_NAMES=find_names$(EXEEXT)
@@ -125,22 +125,11 @@ PL2XPCE=$(LIBDIR)/pl2xpce.$(SO)
 PLBASE=@PLBASE@
 PLARCH=@PLARCH@
 PLINCL=@PLINCL@
+INSTALL_PLARCH=@INSTALL_PLARCH@
 PLBINDIR=$(PLBASE)/bin/$(INSTALL_PLARCH)
 PL=@PL@
-PLBUILD=@PLBUILD@
 PLNAME=@PLNAME@
 PLLD=@PLLD@
-INSTALL_PLARCH=@INSTALL_PLARCH@
-
-PLRUNTIME=$(PLBASE)/runtime/$(INSTALL_PLARCH)
-PLOBJ=pl.o
-
-PLTARGET=@PLTARGET@
-
-# SICStus Prolog (not used, see README.sicstus)
-
-SICSHOME=/usr/local/lib/sicstus
-SICSTARGET=xpce-sicstus
 
 ################################################################
 # Version information
@@ -206,7 +195,7 @@ pl-itf:		$(PL2XPCE)
 $(PL2XPCE):	$(LIBXPCE)
 		cd ../pl/src; \
 		CANONICAL_PATHS=$(PCEHOME); export CANONICAL_PATHS; \
-		$(MAKE) PLLD=$(PLLD) PL=$(PLBUILD) $(PLTARGET)
+		$(MAKE) PLLD=$(PLLD) PL=$(PL) soall
 
 $(MANINDEX):	$(shell find ../man/reference -name '*.doc')
 		-./xpce.sh \
@@ -778,7 +767,7 @@ dv-lib:		dv-home
 		    fi; \
 		    echo done; \
 		done
-		$(PLBUILD) -f none -t halt \
+		$(PL) -f none -t halt \
 			-g "make_library_index('$(DESTDIR)$(DVHOME)/prolog/lib')"
 		$(INSTALL_DATA) ../prolog/lib/Overview $(DESTDIR)$(DVHOME)/prolog/lib
 		$(INSTALL_DATA) ../prolog/lib/trace/pltracer.hlp $(DESTDIR)$(DVHOME)/prolog/lib/trace
@@ -868,7 +857,7 @@ html-install::
 ################################################################
 
 check::
-		$(PLBUILD) -q -f ../src/test.pl -g test,halt -t 'halt(1)'
+		$(PL) -q -f ../src/test.pl -g test,halt -t 'halt(1)'
 
 
 ################################################################

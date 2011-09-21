@@ -4,17 +4,5 @@
 # running Prolog from the build-location
 
 PCEHOME=@PCEHOME@
-PLARCH=@PLARCH@
-ldir=$PCEHOME/lib/$PLARCH
 
-if [ "x$@DLLIBVAR@" = "x" ]; then
-  @DLLIBVAR@=$ldir
-else
-  @DLLIBVAR@="$ldir:$@DLLIBVAR@"
-fi
-export @DLLIBVAR@
-
-XPCEHOME=$PCEHOME
-export XPCEHOME
-
-@PLBUILD@ -F none -f $PCEHOME/pl/src/swipl-rc "$@"
+@PL@ -F none -f $PCEHOME/pl/src/swipl-rc "$@"
