@@ -19,27 +19,26 @@
 
 .SUFFIXES: .qlf .pl
 
-libXPCE=	../../$(builddir)/libXPCE.a
-LIBDIR=		../../$(builddir)
+LIBDIR=		../../lib/$(PLARCH)
+libXPCE=	$(LIBDIR)/libXPCE.a
 BINDIR=		../../$(builddir)
 OBJDIR=		../../$(builddir)/pl
 CONFIG=		../../$(builddir)/config.h
 
 CPLIFLAGS=	-I$(PLINCL) -I../../$(builddir) -I../../src
-PL=     	pl
+PL=		pl
 PLLD=		plld -pl $(PL)
-ITFOBJ= 	$(addprefix $(OBJDIR)/, interface.o link.o pcecall.o)
+ITFOBJ=		$(addprefix $(OBJDIR)/, interface.o link.o pcecall.o)
 ITFSRC=		interface.c table.c
 SOITF=		$(addprefix $(OBJDIR)/, so-interface.o pcecall.o)
 OBJ=		$(ITFOBJ)
 XPCE=		$(BINDIR)/xpce
-QLF=    	$(BINDIR)/xpce.qlf
-#XLIBS=		-lXt -lX11
-XPCESO= 	$(LIBDIR)/pl2xpce.$(SO)
+QLF=		$(BINDIR)/xpce.qlf
+XPCESO=		$(LIBDIR)/pl2xpce.$(SO)
 SOEXTR=		$(addprefix $(OBJDIR)/, $(SOEXTRAOBJ))
 CITFFLAGS=	-DSWI -DHAVE_CONFIG_H
 
-CFLAGS= 	$(COFLAGS) $(CWFLAGS) $(CMFLAGS) $(CPLIFLAGS) $(CITFFLAGS)
+CFLAGS=		$(COFLAGS) $(CWFLAGS) $(CMFLAGS) $(CPLIFLAGS) $(CITFFLAGS)
 
 PCEPLS=		pce_expand.pl ../lib/english/pce_messages.pl pce_pl.pl \
 		pce_principal.pl pce_error.pl pce_autoload.pl pce_global.pl \
@@ -52,16 +51,11 @@ LIBQLFS=	pce_manual.qlf dialog/dialog.qlf emacs/emacs.qlf pcedraw.qlf
 # The main targets
 ################################################################
 
-nosoall:	$(XPCE)
-
 soall:		$(PLBASE)/xpce/lib/$(PLARCH) $(XPCESO)
 
 common:		$(PLBASE)/pl.rc $(PLBASE)/xpce.rc $(PLBASE)/xpce \
 		$(PLBASE)/Makefile \
 		$(PLBASE)/xpce/prolog/lib/INDEX.pl
-
-rt-soall:	$(XPCESO)
-rt-nosoall:	$(XPCE)
 
 ################################################################
 # Objects for $(OBJDIR)
@@ -73,20 +67,6 @@ $(OBJDIR)/link.o:	link.c
 		$(CC) -c $(CFLAGS) $< -o $@
 $(OBJDIR)/pcecall.o:	pcecall.c
 		$(CC) -c $(CFLAGS) $(XINCLUDES) $< -o $@
-
-################################################################
-# Creating statically linked xpce and its xpce.qlf bootfile
-################################################################
-
-$(XPCE):	$(ITFOBJ) $(libXPCE)
-		$(PLLD) $(LDFLAGS) $(COFLAGS) -o $@ $(ITFOBJ) -L$(LIBDIR) -lXPCE $(LIBS)
-		echo $(PLBASE) > ../../swipl
-
-$(QLF):		$(XPCE)
-		$(XPCE) -O -o $(QLF) \
-			-g pce_welcome \
-			-b $(PLBASE)/boot/init.pl \
-			-c load.pl
 
 ################################################################$
 # Creating pl2xpce.so
@@ -157,17 +137,6 @@ $(PLBASE)/Makefile: Makefile.bin
 
 $(PLBASE)/xpce/prolog/lib/INDEX.pl:
 	$(PL) -g "make_library_index('$(PLBASE)/xpce/prolog/lib')" -t halt
-
-################################################################
-# C++ Name mangling.  Not used right now
-################################################################
-
-mangle:		mangle.c
-		$(CC) -O -o mangle mangle.c
-
-domangle:	mangle mlist xpce.base
-		./mangle mlist xpce.base
-		touch domangle
 
 ################################################################
 # Cleanup

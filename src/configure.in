@@ -27,7 +27,6 @@ AC_SUBST(ETAGS)
 AC_SUBST(ARCH)
 AC_SUBST(OS)
 AC_SUBST(TAR_CP_FLAGS)
-AC_SUBST(ALLTARGET)
 AC_SUBST(RTSUFFIX)
 AC_SUBST(LD)
 AC_SUBST(SO)
@@ -176,13 +175,8 @@ if test "$swipl" != "no"; then
 	    ;;
     esac
     LDFLAGS="$PLLDFLAGS"
-    ALLTARGET=xpce-pl
     PLTARGET=nosoall
-  else
-    ALLTARGET=xpce
   fi
-else
-  ALLTARGET=xpce
 fi
 
 if test "$MT" = true; then

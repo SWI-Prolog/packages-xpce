@@ -8,9 +8,6 @@
 # Targets:
 #
 #	make			Builds shared object for SWI-Prolog
-#	make install		Installs XPCE as SWI-Prolog library
-#	make pl-static		Builds statically linked xpce holding
-#				SWI-Prolog and XPCE combined
 #
 # The XPCE project was started by Anjo Anjewierden, who developed version
 # 1 and 2.  Version 3 is result of joint effort from Anjo Anjewierden and
@@ -30,7 +27,8 @@
 # XPCE is licenced under the LGPL. See the file COPYING or
 # http://www.swi-prolog.org/license.html
 #
-# Copyright (C) 1993-2009, University of Amsterdam
+# Copyright (C) 1993-2011, University of Amsterdam
+#			   VU University Amsterdam
 ################################################################
 
 .EXPORT_ALL_VARIABLES:
@@ -113,7 +111,8 @@ CFLAGS=$(CWFLAGS) $(COFLAGS) $(CIFLAGS) $(CMFLAGS)
 # TARGET LIBRARIES
 ################################################################
 
-LIB=libXPCE.a
+LIBDIR=../lib/@PLARCH@
+LIB=$(LIBDIR)/libXPCE.a
 
 ################################################################
 # PATHS FOR HOST-LANGUAGES
@@ -187,8 +186,8 @@ ifeq ($(VWS),msw)
 XPCESTUB=xpce-stub$(EXEEXT)
 endif
 
-.PHONY: all banner xpce-pl
-all:		banner ./xpce-install @ALLTARGET@
+.PHONY: all banner xpce pl-itf
+all:		banner ./xpce-install xpce pl-itf
 
 everything:	proto tags xpce-pl
 
@@ -203,25 +202,10 @@ banner:
 .PHONY:		xpce prepare libXPCE
 xpce:		prepare libXPCE $(XPCECLIENT) $(XPCESTUB)
 
-xpce-pl:	xpce pl-itf
-
 pl-itf:		pl libXPCE
 		cd ../pl/src; \
 		CANONICAL_PATHS=$(PCEHOME); export CANONICAL_PATHS; \
 		$(MAKE) PLLD=$(PLLD) PL=$(PLBUILD) $(PLTARGET)
-		rm -f ../lib/$(PLARCH)
-		(cd ../lib && ln -s ../$(builddir) $(PLARCH))
-
-pl-shared:	pl libXPCE
-		cd ../pl/src; \
-		CANONICAL_PATHS=$(PCEHOME); export CANONICAL_PATHS; \
-		$(MAKE) soall
-
-static:		pl-static
-pl-static:	xpce pl
-		cd ../pl/src; \
-		CANONICAL_PATHS=$(PCEHOME); export CANONICAL_PATHS; \
-		$(MAKE) nosoall
 
 pl:
 		mkdir $@
@@ -664,10 +648,13 @@ endif
 
 $(OBJECTS) $(WSOBJECTS):	h/kernel.h
 
-libXPCE:	version.h $(OBJECTS) dowsobjs
+libXPCE:	version.h $(OBJECTS) dowsobjs $(LIBDIR)
 		@echo "Running ar ru $(LIB) objects ..."
 		@$(AR) ru $(LIB) $(OBJECTS) $(WSOBJECTS)
 		$(RANLIB) $(LIB)
+
+$(LIBDIR):
+		mkdir -p $@
 
 dowsobjs:	h/kernel.h
 ifeq ($(VWS),x11)
