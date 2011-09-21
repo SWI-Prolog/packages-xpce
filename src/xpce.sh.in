@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Run XPCE from the  build-location.  This   relies  on  ../../pl.sh for
+# Run XPCE from the build-location. This   relies  on ../../swipl.sh for
 # running Prolog from the build-location
 
 PCEHOME=@PCEHOME@

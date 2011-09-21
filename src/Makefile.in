@@ -73,9 +73,10 @@ ETAGS=@ETAGS@
 SED=sed
 RM=rm
 REL_LN=$(srcdir)/rel-ln
-INSTALL=./xpce-install
-INSTALL_PROGRAM=./xpce-install -m 755
-INSTALL_DATA=./xpce-install -m 644
+INSTALL=xpce-install$(EXEEXT)
+INSTALL_PROGRAM=$(INSTALL) -m 755
+INSTALL_DATA=$(INSTALL) -m 644
+FIND_NAMES=find_names$(EXEEXT)
 
 # LIBRARIES
 
@@ -188,9 +189,9 @@ XPCESTUB=xpce-stub$(EXEEXT)
 endif
 
 .PHONY: all banner xpce pl-itf
-all:		banner ./xpce-install xpce pl-itf
+all:		banner $(INSTALL) xpce pl-itf
 
-./xpce-install:	xpce-install.c
+$(INSTALL):	xpce-install.c
 		$(CC) $(CFLAGS) -o $@ $(srcdir)/xpce-install.c
 
 banner:
@@ -286,13 +287,13 @@ $(MODULES) bin lib $(VWS):
 # Building the name tables
 ################################################################
 
-find_names:	$(srcdir)/find_names.c
-		$(CC) $(CFLAGS) -o find_names $(srcdir)/find_names.c
+$(FIND_NAMES):	$(srcdir)/find_names.c
+		$(CC) $(CFLAGS) -o $@ $(srcdir)/find_names.c
 
 $(NAMES):	.names-sentinel
 .names-sentinel:	find_names
 		cd $(srcdir); \
-		../$(builddir)/find_names h/names.ic h/names.ih -- h/*.h ???/*.c
+		../$(builddir)/$(FIND_NAMES) h/names.ic h/names.ih -- h/*.h ???/*.c
 		@touch $@
 
 ################################################################
@@ -894,9 +895,9 @@ distclean:	clean
 		if [ -h h ]; then $(RM) h; fi
 		rm -f ../lib/$(PLARCH)
 		$(RM) -f version.h ../xpce.spec
-		$(RM) -f xpce.sh find_names
+		$(RM) -f xpce.sh $(FIND_NAMES)
 		$(RM) -f $(LIBXPCE) $(PL2XPCE)
-		$(RM) -f xpce-install rt-install xpce
+		$(RM) -f $(INSTALL)
 		$(RM) -f $(XPCECLIENT) $(XPCESTUB)
 		$(RM) -f Makefile config.h config.status config.cache
 		$(RM) -f ../pl/src/Makefile.bin
