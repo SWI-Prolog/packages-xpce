@@ -83,9 +83,7 @@ FIND_NAMES=find_names$(EXEEXT)
 NETLIBS=@NETLIBS@
 XLIBS=@XLIBS@
 LDFLAGS=@LDFLAGS@
-GCCLIB=@GCCLIB@
 LDSOFLAGS=@LDSOFLAGS@
-SOEXTRAOBJ=@SOEXTRAOBJ@
 SO=@SO@
 SOLIB=@SOLIB@
 VWS=@VWS@
@@ -203,48 +201,6 @@ $(MANINDEX):	$(shell find ../man/reference -name '*.doc')
 		  -f ../pl/src/swipl-rc \
 		  -g "[library('man/man_index')],pce_make_manual_index('$@')" \
 		  -t halt
-
-xpce-sicstus:	xpce
-		cd ../sicstus/src; \
-		$(MAKE) TARGET=$(SICSTARGET)
-
-################################################################
-# Public shared library objects
-################################################################
-
-LIBXPCESO=	libXPCE.$(SO)
-LIBXPCESOM=	$(LIBXPCESO).$(SOMAJOR)
-LIBXPCESOMM=	$(LIBXPCESO).$(SOMAJOR).$(SOMINOR)
-LIBXPCEMAIN=	libXPCEmain.a
-
-SONAMEFLAG=	@SONAMEFLAG@
-MKSOFLAGS=	$(LDSOFLAGS) @SOWHOLEARCHIVE@
-SOLIBS=		$(SOEXTRAOBJ) libXPCE.a $(GCCLIB) $(XLIBS) $(NETLIBS) -lm
-
-.PHONY:		so
-so:		$(LIBXPCESO) $(LIBXPCEMAIN)
-
-so-clean:
-		for lib in $(SOLIBS); do $(RM) -f $$lib*; done
-
-so-install:	so
-		@echo "****************"
-		@echo "* Installing XPCE shared libraries in $(libdir)"
-		@echo "****************"
-		$(INSTALL_PROGRAM) $(LIBXPCESOMM) $(DESTDIR)$(libdir)
-		(cd $(DESTDIR)$(libdir); \
-		     rm -f $(LIBXPCESOM) $(LIBXPCESO); \
-		     ln -s $(LIBXPCESOMM) $(LIBXPCESOM); \
-		     ln -s $(LIBXPCESOM) $(LIBXPCESO))
-		$(LDCONFIG)
-		$(INSTALL_DATA) $(LIBXPCEMAIN) $(DESTDIR)$(libdir)
-		(cd $(DESTDIR)$(libdir) ; $(RANLIB) $(LIBXPCEMAIN))
-
-$(LIBXPCESO):	libXPCE.a $(SOEXTRAOBJ)
-		$(LD) $(MKSOFLAGS) $(SONAMEFLAG) -o $(LIBXPCESOMM) $(SOLIBS)
-		rm -f $(LIBXPCESOM) $(LIBXPCESO)
-		ln -s $(LIBXPCESOMM) $(LIBXPCESOM)
-		ln -s $(LIBXPCESOM) $(LIBXPCESO)
 
 ################################################################
 # XPCE's modules
@@ -711,7 +667,7 @@ ln-classindex::
 #	runtime only stuff
 
 RTBINS=		xpce $(XPCECLIENT) $(XPCESTUB)
-RTLIBS=		$(PL2XPCE) $(LIBXPCESOMM) $(LIBXPCEMAIN)
+RTLIBS=		$(PL2XPCE)
 
 rt-home:
 		if [ ! -d $(DESTDIR)$(RTHOME) ]; then \
@@ -740,12 +696,6 @@ rt-bins:	rt-home
 		        $(INSTALL_PROGRAM) $$f $(DESTDIR)$(RTHOME)/$(SOLIB)/$(INSTALL_PLARCH); \
 		    fi; \
 		done
-		if [ -f $(DESTDIR)$(RTHOME)/$(SOLIB)/$(INSTALL_PLARCH)/$(LIBXPCESOMM) ]; then \
-		    (cd $(DESTDIR)$(RTHOME)/$(SOLIB)/$(INSTALL_PLARCH); \
-		         rm -f $(LIBXPCESOM) $(LIBXPCESO); \
-		         ln -s $(LIBXPCESOMM) $(LIBXPCESOM); \
-		         ln -s $(LIBXPCESOM) $(LIBXPCESO)); \
-		fi
 
 dv-home:
 		if [ ! -d $(DESTDIR)$(DVHOME) ]; then \

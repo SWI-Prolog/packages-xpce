@@ -80,29 +80,8 @@ $(OBJDIR)/so-interface.o: interface.c
 		$(CC) -DO_SHAREDLIBRARY $(CFLAGS) -c $< -o $@
 
 $(XPCESO):	$(SOITF) $(libXPCE) $(SOEXTR)
-		@if [ -r $(LIBDIR)/libXPCE.$(SO) ]; then \
-		    $(MAKE) sopce$(XPCESO); \
-		else \
-		    $(MAKE) axpce$(XPCESO); \
-		fi
-
-sopce$(XPCESO):
-		if [ "x$$LD_RUN_PATH" = "x" ]; then \
-		    LD_RUN_PATH="$(libdir)"; \
-		else \
-		    LD_RUN_PATH="$(libdir):$$LD_RUN_PATH"; \
-		fi; \
-		export LD_RUN_PATH; \
-		$(PLLD) -shared $(SOITF) $(LDFLAGS) $(XLIBS) -L$(LIBDIR) -lXPCE -o $(XPCESO);
-axpce$(XPCESO):
-		if [ "x$$LD_RUN_PATH" = "x" ]; then \
-		    LD_RUN_PATH="$(libdir)"; \
-		else \
-		    LD_RUN_PATH="$(libdir):$$LD_RUN_PATH"; \
-		fi; \
-		export LD_RUN_PATH; \
-		$(PLLD) -shared $(LDFLAGS) $(SOITF) $(SOEXTR) -L$(LIBDIR) \
-		-lXPCE $(GCCLIB) $(XLIBS) $(NETLIBS) -o $(XPCESO);
+		$(PLLD) -shared $(LDSOFLAGS) $(SOITF) $(SOEXTR) -L$(LIBDIR) \
+		-lXPCE $(XLIBS) $(NETLIBS) -o $(XPCESO);
 
 ################################################################$
 # QLF generation
