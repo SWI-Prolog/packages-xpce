@@ -64,12 +64,12 @@ QPENTRIES=""
 QPBIN="sun4-5"
 QPPATH="/usr/quintus"
 
-LD=ld
 AC_PROG_CC
-AC_PROG_RANLIB
-AC_CHECK_PROGS(AR, ar /usr/ccs/bin/ar, ar)
-AC_CHECK_PROGS(LDCONFIG, ldconfig, "true")
 AC_CANONICAL_HOST
+AC_CHECK_TOOLS(AR, ar, ar)
+AC_CHECK_TOOLS(RANLIB, ranlib, ranlib)
+AC_CHECK_TOOLS(LD, ld, ld)
+AC_CHECK_PROGS(LDCONFIG, ldconfig, "true")
 changequote(,)dnl
 ARCH=`echo $host | sed 's/\([^-]*\)-[^-]*-[^-]*/\1/'`
 OS=`echo $host | sed 's/[^-]*-[^-]*-\([^-]*\)/\1/'`
