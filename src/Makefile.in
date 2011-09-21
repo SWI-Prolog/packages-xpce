@@ -641,7 +641,7 @@ endif
 
 $(OBJECTS) $(WSOBJECTS):	h/kernel.h
 
-$(LIBXPCE):	version.h $(OBJECTS) dowsobjs $(LIBDIR)
+$(LIBXPCE):	version.h $(OBJECTS) $(WSOBJECTS) $(LIBDIR)
 		@echo "Running ar ru $(LIBXPCE) objects ..."
 		@$(AR) ru $(LIBXPCE) $(OBJECTS) $(WSOBJECTS)
 		$(RANLIB) $(LIBXPCE)
@@ -649,14 +649,12 @@ $(LIBXPCE):	version.h $(OBJECTS) dowsobjs $(LIBDIR)
 $(LIBDIR):
 		mkdir -p $@
 
-dowsobjs:	h/kernel.h
+# GNU-Make "Target-specific Variable Values"
 ifeq ($(VWS),x11)
-		$(MAKE) CIFLAGS="$(CIFLAGS) $(XINCLUDES)" wsobjs
+$(WSOBJECTS):	CIFLAGS+=$(XINCLUDES)
 else
-		$(MAKE) CIFLAGS="$(CIFLAGS) $(XINCLUDES) -DWIN32" wsobjs
+$(WSOBJECTS):	CIFLAGS+=$(XINCLUDES) -DWIN32
 endif
-
-wsobjs:		$(WSOBJECTS)
 
 $(XPCECLIENT):	unx/client.c
 		$(CC) -c $(CFLAGS) $< -o client.o
