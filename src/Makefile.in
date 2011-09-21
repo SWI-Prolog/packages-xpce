@@ -291,7 +291,7 @@ $(FIND_NAMES):	$(srcdir)/find_names.c
 		$(CC) $(CFLAGS) -o $@ $(srcdir)/find_names.c
 
 $(NAMES):	.names-sentinel
-.names-sentinel:	find_names
+.names-sentinel: $(FIND_NAMES)
 		cd $(srcdir); \
 		../$(builddir)/$(FIND_NAMES) h/names.ic h/names.ih -- h/*.h ???/*.c
 		@touch $@
