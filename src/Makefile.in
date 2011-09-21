@@ -13,7 +13,7 @@
 # 1 and 2.  Version 3 is result of joint effort from Anjo Anjewierden and
 # Jan Wielemaker.  Versions 4 to 6 are written by Jan Wielemaker.
 #
-# Addresses:	Jan Wielemaker:		J.Wielemaker@uva.nl
+# Addresses:	Jan Wielemaker:		J.Wielemaker@vu.nl
 #		Anjo Anjewierden:	A.A.Anjewierden@gw.utwente.nl
 #
 #		Human-Computer Studies
@@ -740,14 +740,6 @@ rt-misc:	rt-home
 
 rt-bins:	rt-home
 		$(INSTALL_DATA) -dC $(DESTDIR)$(RTHOME) bin/$(INSTALL_PLARCH) lib/$(INSTALL_PLARCH)
-		@if [ -f xpce ]; then \
-		    echo "xpce --> $(PLBINDIR)"; \
-		    $(INSTALL_PROGRAM) xpce $(DESTDIR)$(PLBINDIR); \
-		else \
-		    echo "linking xpce to $(PLNAME) in $(DESTDIR)$(PLBINDIR)"; \
-		    rm -f $(DESTDIR)$(PLBINDIR)/xpce; \
-		    (cd $(DESTDIR)$(PLBINDIR); ln -s $(PLNAME) xpce) ; \
-		fi
 		@for f in $(XPCECLIENT) $(XPCESTUB); do \
 		    if [ -f $$f ]; then \
 			echo "$$f --> $(DESTDIR)$(RTBINDIR)"; \
