@@ -46,9 +46,6 @@ AC_SUBST(AR)
 AC_SUBST(MAKESHELL)
 AC_SUBST(RSYNC)
 AC_SUBST(WINDRES)
-AC_SUBST(QPENTRIES)
-AC_SUBST(QPBIN)
-AC_SUBST(QPPATH)
 AC_SUBST(SP_PATH)
 AC_SUBST(VWS)
 AC_SUBST(DLLIBVAR)
@@ -59,9 +56,6 @@ WITHX11=true
 VWS=x11
 
 RTSUFFIX=""
-QPENTRIES=""
-QPBIN="sun4-5"
-QPPATH="/usr/quintus"
 
 AC_PROG_CC
 AC_CANONICAL_HOST
@@ -377,7 +371,6 @@ EOF
 	DLLIBVAR=LIBPATH
 	undefine([__unix__])
 	AC_DEFINE(__unix__, 1, "Define if your system is Unix-like")
-	QPENTRIES=entries.c
 	;;
     *hpux*)
 	SO="sl"
@@ -457,34 +450,6 @@ AC_CHECK_SIZEOF(int,  4)
 AC_CHECK_SIZEOF(long,  4)
 AC_CHECK_SIZEOF(double, 8)
 
-
-dnl %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-dnl % Begin Quintus specific configuration
-dnl %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-if test -d ../quintus/src; then
-
-AC_CHECK_PROGS(QPproduct, qpc qld quintus prolog, ":")
-if test $QPproduct != ":"; then
-    AC_CHECK_PROGS(QGETPATH, qgetpath, ":")
-    if test $QGETPATH != ":"; then
-	AC_PATH_PROG(QPPRODUCT, $QPproduct)
-	AC_MSG_CHECKING("Quintus directory")
-	QPPATH=`$QGETPATH -q $QPPRODUCT`
-	AC_MSG_RESULT($QPPATH)
-	AC_MSG_CHECKING("Quintus host type identifier")
-	QPBIN=`$QGETPATH -h $QPPRODUCT`
-	QPBIN=`basename $QPBIN`
-	AC_MSG_RESULT($QPBIN)
-    fi
-fi
-
-
-fi
-
-dnl %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-dnl % End Quintus specific configuration
-dnl %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 dnl %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 dnl % Begin SICStus specific configuration
