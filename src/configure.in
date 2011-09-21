@@ -124,6 +124,13 @@ case "$OS" in
         AC_CHECK_HEADERS(uxnt.h, [CIFLAGS="$CIFLAGS -I$PLINCL"])
         CFLAGS="$ocflags"
         CPPFLAGS="$ocppflags"
+        AC_DEFINE(WIN32_GRAPHICS, 1, [Define to use WIN32 graphics interface])
+        AC_DEFINE(FOR_MSW, 1, [Define to use XPM without X11 (MinGW)])
+        AC_DEFINE(O_XOS, 1, [Define to use specific hooks])
+        AC_DEFINE(O_DOSFILENAMES, 1, [Define if system supports DOS filenames])
+        AC_DEFINE(O_HASSHARES, 1, [Define if system supports UNC filenames])
+        WITHX11=false
+        VWS=msw
 esac
 
 AC_CHECK_FUNCS(vsscanf on_exit memmove select popen strerror timelocal)
