@@ -115,8 +115,8 @@ AC_CHECK_HEADERS(frame.h sys/timeb.h sys/times.h siginfo.h bstring.h)
 AC_CHECK_HEADERS(sys/socketvar.h conio.h sys/access.h termios.h termio.h)
 AC_CHECK_HEADERS(sched.h)
 
-case "$OS" in
-    *mingw*)
+case "$PLARCH" in
+    *-win32|*-win64)
         ocflags="$CFLAGS"
         ocppflags="$CPPFLAGS"
         CFLAGS="$CFLAGS -I$PLINCL"
@@ -341,8 +341,8 @@ main()
    AC_MSG_RESULT(no),
    AC_MSG_RESULT(assuming no))
 
-case "$OS" in
-    *mingw*)
+case "$PLARCH" in
+    *-win32|*-win64)
 	AC_CHECK_LIB(pthreadGC2, pthread_create,
                      [NETLIBS="$NETLIBS -lpthreadGC2"])
         if test ! "$ac_cv_lib_pthreadGC2_pthread_create" = "yes"; then
