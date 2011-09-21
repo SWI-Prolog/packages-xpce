@@ -273,15 +273,14 @@ proto:		$(foreach m, $(MODULES) $(VWS), $(srcdir)/$(m)/proto.h)
 # Building the directories
 ################################################################
 
-prepare:	directories h/names.ih h/interface.h
+NAMES=		$(srcdir)/h/names.ih $(srcdir)/h/interface.h
 
-directories:	h $(MODULES) $(VWS)
+prepare:	directories $(NAMES)
+
+directories:	$(MODULES) $(VWS)
 
 $(MODULES) bin lib $(VWS):
 		mkdir $@
-
-h:
-		ln -s $(srcdir)/h .
 
 ################################################################
 # Building the name tables
@@ -290,7 +289,7 @@ h:
 find_names:	$(srcdir)/find_names.c
 		$(CC) $(CFLAGS) -o find_names $(srcdir)/find_names.c
 
-h/names.ih h/names.ic:	.names-sentinel
+$(NAMES):	.names-sentinel
 .names-sentinel:	find_names
 		cd $(srcdir); \
 		../$(builddir)/find_names h/names.ic h/names.ih -- h/*.h ???/*.c
@@ -414,19 +413,20 @@ version.h:	Makefile
 		@echo "#define MACHINE \"$(PLARCH)\"" > $@%
 		@echo "#define PCE_VERSION \"$(VERSION)\"" >> $@%
 		@echo "#define OS \"$(OS)\"" >> $@%
-		@mv $@% $@
+		@if cmp -s $@% $@; then rm $@%; else mv $@% $@; fi
 
 h/interface.h:	Makefile
 		@sed 's/^#define *PCE_VERSION *.*/#define PCE_VERSION \"$(VERSION)\"/' $@ > $@%
 		@if cmp -s $@% $@; then rm $@%; else mv $@% $@; fi
 
-h/kernel.h:	h/names.ih
+$(srcdir)/h/kernel.h:	$(srcdir)/h/names.ih
 
 ker/self.o:	version.h
 
-ker/name.o:	h/names.ih h/names.ic
+ker/name.o:	$(NAMES)
 
-ker/glob.o:	h/kernel.h h/types.h h/graphics.h h/lang.h h/layout.h
+ker/glob.o:	$(srcdir)/h/kernel.h $(srcdir)/h/types.h $(srcdir)/h/graphics.h \
+		$(srcdir)/h/lang.h $(srcdir)/h/layout.h
 
 
 ################################################################
