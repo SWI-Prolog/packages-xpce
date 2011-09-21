@@ -112,7 +112,7 @@ CFLAGS=$(CWFLAGS) $(COFLAGS) $(CIFLAGS) $(CMFLAGS)
 ################################################################
 
 LIBDIR=../lib/@PLARCH@
-LIB=$(LIBDIR)/libXPCE.a
+LIBXPCE=$(LIBDIR)/libXPCE.a
 
 ################################################################
 # PATHS FOR HOST-LANGUAGES
@@ -649,9 +649,9 @@ endif
 $(OBJECTS) $(WSOBJECTS):	h/kernel.h
 
 libXPCE:	version.h $(OBJECTS) dowsobjs $(LIBDIR)
-		@echo "Running ar ru $(LIB) objects ..."
-		@$(AR) ru $(LIB) $(OBJECTS) $(WSOBJECTS)
-		$(RANLIB) $(LIB)
+		@echo "Running ar ru $(LIBXPCE) objects ..."
+		@$(AR) ru $(LIBXPCE) $(OBJECTS) $(WSOBJECTS)
+		$(RANLIB) $(LIBXPCE)
 
 $(LIBDIR):
 		mkdir -p $@
@@ -915,7 +915,7 @@ distclean:	clean
 		rm -f ../lib/$(PLARCH)
 		$(RM) -f version.h ../xpce.spec
 		$(RM) -f xpce.sh find_names
-		$(RM) -f $(LIB)
+		$(RM) -f $(LIBXPCE)
 		$(RM) -f xpce-install rt-install xpce pl2xpce.so
 		$(RM) -f $(XPCECLIENT) $(XPCESTUB)
 		$(RM) -f Makefile config.h config.status config.cache
