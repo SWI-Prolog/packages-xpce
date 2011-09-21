@@ -783,6 +783,16 @@ main()
 
 case "$OS" in
     *mingw*)
+	AC_CHECK_LIB(pthreadGC2, pthread_create,
+                     [NETLIBS="$NETLIBS -lpthreadGC2"])
+        if test ! "$ac_cv_lib_pthreadGC2_pthread_create" = "yes"; then
+          AC_CHECK_LIB(pthreadGC, pthread_create,
+                       [NETLIBS="$NETLIBS -lpthreadGC"])
+          if test ! "$ac_cv_lib_pthreadGC_pthread_create" = "yes"; then
+            AC_CHECK_LIB(pthread, pthread_create,
+                         [NETLIBS="$NETLIBS -lpthread"])
+          fi
+        fi
         AC_CHECK_LIB(gdi32, main,
                      [NETLIBS="$NETLIBS -lgdi32"])
         AC_CHECK_LIB(comdlg32, main,
