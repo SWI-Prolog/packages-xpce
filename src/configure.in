@@ -27,7 +27,6 @@ AC_SUBST(ETAGS)
 AC_SUBST(ARCH)
 AC_SUBST(OS)
 AC_SUBST(TAR_CP_FLAGS)
-AC_SUBST(RTSUFFIX)
 AC_SUBST(LD)
 AC_SUBST(SO)
 AC_SUBST(SOLIB)
@@ -50,12 +49,10 @@ AC_SUBST(SP_PATH)
 AC_SUBST(VWS)
 AC_SUBST(DLLIBVAR)
 
-dnl Link to X11.  Only Cygwin version doesn't do this
+dnl Link to X11.  Cygwin and MinGW versions overrule this later
 
 WITHX11=true
 VWS=x11
-
-RTSUFFIX=""
 
 AC_PROG_CC
 AC_CANONICAL_HOST
@@ -82,11 +79,6 @@ AC_ARG_ENABLE(shared, [  --enable-shared	  Prepare for shared lib],
 	      [case "$enableval" in
 		   yes) MAKE_SHARED_OBJECT=yes ;;
 		   no)  MAKE_SHARED_OBJECT=no ;;
-	       esac])
-AC_ARG_ENABLE(sysld, [  --enable-sysld	  Use system ld, not gcc -shared],
-	      [case "$enableval" in
-		   yes) GCCLD=no ;;
-		   no)  GCCLD=yes ;;
 	       esac])
 AC_ARG_ENABLE(cpp, [  --enable-cpp		  Include C++ interface],
 	      [case "$enableval" in
@@ -175,10 +167,10 @@ fi
 
 if test "$MT" = true; then
   case "$OS" in
-      *freebsd*)	AC_DEFINE(_THREAD_SAFE, 1,
+    *freebsd|openbsd*)	AC_DEFINE(_THREAD_SAFE, 1,
 				  [Define for threaded code on FreeBSD])
 			;;
-      *)		AC_DEFINE(_REENTRANT, 1,
+    *)			AC_DEFINE(_REENTRANT, 1,
 				  "Define to prepare for multi-threading")
   esac
 fi
