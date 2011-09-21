@@ -51,7 +51,7 @@ LIBQLFS=	pce_manual.qlf dialog/dialog.qlf emacs/emacs.qlf pcedraw.qlf
 # The main targets
 ################################################################
 
-soall:		$(PLBASE)/xpce/lib/$(PLARCH) $(XPCESO)
+soall:		$(XPCESO)
 
 common:		$(PLBASE)/pl.rc $(PLBASE)/xpce.rc $(PLBASE)/xpce \
 		$(PLBASE)/Makefile \
@@ -60,6 +60,10 @@ common:		$(PLBASE)/pl.rc $(PLBASE)/xpce.rc $(PLBASE)/xpce \
 ################################################################
 # Objects for $(OBJDIR)
 ################################################################
+
+$(SOITF):	$(OBJDIR)
+$(OBJDIR):
+		mkdir -p $@
 
 $(OBJDIR)/interface.o:	$(ITFSRC)
 		$(CC) -c $(CFLAGS) $< -o $@

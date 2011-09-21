@@ -113,6 +113,7 @@ CFLAGS=$(CWFLAGS) $(COFLAGS) $(CIFLAGS) $(CMFLAGS)
 
 LIBDIR=../lib/@PLARCH@
 LIBXPCE=$(LIBDIR)/libXPCE.a
+PL2XPCE=$(LIBDIR)/pl2xpce.$(SO)
 
 ################################################################
 # PATHS FOR HOST-LANGUAGES
@@ -189,8 +190,6 @@ endif
 .PHONY: all banner xpce pl-itf
 all:		banner ./xpce-install xpce pl-itf
 
-everything:	proto tags xpce-pl
-
 ./xpce-install:	xpce-install.c
 		$(CC) $(CFLAGS) -o $@ $(srcdir)/xpce-install.c
 
@@ -201,14 +200,12 @@ banner:
 
 .PHONY:		xpce prepare
 xpce:		prepare $(LIBXPCE) $(XPCECLIENT) $(XPCESTUB)
+pl-itf:		$(PL2XPCE)
 
-pl-itf:		pl $(LIBXPCE)
+$(PL2XPCE):	$(LIBXPCE)
 		cd ../pl/src; \
 		CANONICAL_PATHS=$(PCEHOME); export CANONICAL_PATHS; \
 		$(MAKE) PLLD=$(PLLD) PL=$(PLBUILD) $(PLTARGET)
-
-pl:
-		mkdir $@
 
 $(MANINDEX):	$(shell find ../man/reference -name '*.doc')
 		-./xpce.sh \
@@ -726,7 +723,7 @@ ln-classindex::
 #	runtime only stuff
 
 RTBINS=		xpce $(XPCECLIENT) $(XPCESTUB)
-RTLIBS=		pl2xpce.$(SO) $(LIBXPCESOMM) $(LIBXPCEMAIN)
+RTLIBS=		$(PL2XPCE) $(LIBXPCESOMM) $(LIBXPCEMAIN)
 
 rt-home:
 		if [ ! -d $(DESTDIR)$(RTHOME) ]; then \
@@ -906,8 +903,8 @@ distclean:	clean
 		rm -f ../lib/$(PLARCH)
 		$(RM) -f version.h ../xpce.spec
 		$(RM) -f xpce.sh find_names
-		$(RM) -f $(LIBXPCE)
-		$(RM) -f xpce-install rt-install xpce pl2xpce.so
+		$(RM) -f $(LIBXPCE) $(PL2XPCE)
+		$(RM) -f xpce-install rt-install xpce
 		$(RM) -f $(XPCECLIENT) $(XPCESTUB)
 		$(RM) -f Makefile config.h config.status config.cache
 		$(RM) -f ../pl/src/Makefile.bin
