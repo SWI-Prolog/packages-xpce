@@ -12,7 +12,7 @@
 # This makefile is for use with Microsoft NMAKE.  The configuration
 # for Unix-based platforms uses GNU autoconf.
 #
-# Configuration is done in the ...\pl\src\rules.mk file
+# Configuration is done in the ...\swipl\rules.mk file
 ################################################################
 
 PLHOME=..\..\..
@@ -289,7 +289,7 @@ find_names.exe: find_names.obj
 # Build SWI-Prolog interface
 ################################################################
 
-PLOBJ=		$(OBJECTS) ..\pl\src\interface.obj ..\pl\src\pcecall.obj
+PLOBJ=		$(OBJECTS) ..\swipl\interface.obj ..\swipl\pcecall.obj
 
 $(PL2XPCE).dll:	prepare $(PLOBJ)
 		@echo Linking $@ ...
@@ -302,11 +302,11 @@ $(PL2XPCE).dll:	prepare $(PLOBJ)
 xpce-stub.exe:	xpce-stub.res xpce-stub.obj
 		$(LD) $(LDFLAGS) /subsystem:windows /out:$@ xpce-stub.obj $(PLLIB) xpce-stub.res $(LIBS)
 
-xpce-stub.res:	..\pl\src\xpce-stub.rc ..\pl\src\xpce.ico
-		$(RSC) /fo$@ ..\pl\src\xpce-stub.rc
+xpce-stub.res:	..\swipl\xpce-stub.rc ..\swipl\xpce.ico
+		$(RSC) /fo$@ ..\swipl\xpce-stub.rc
 
-xpce-stub.obj:	..\pl\src\xpce-stub.c
-		@$(CC) -I $(PLHOME)\include $(CFLAGS) /Fo$@ ..\pl\src\xpce-stub.c
+xpce-stub.obj:	..\swipl\xpce-stub.c
+		@$(CC) -I $(PLHOME)\include $(CFLAGS) /Fo$@ ..\swipl\xpce-stub.c
 
 ################################################################
 # Installation program
@@ -412,7 +412,7 @@ classindex::
 			-g pce_make_library_index('.') \
 			-t halt
 irc::
-		$(INSTALL) ..\pl\src\swipl-rc "$(PLBASE)\swipl-win.rc"
+		$(INSTALL) ..\swipl\swipl-rc "$(PLBASE)\swipl-win.rc"
 
 ireadme::
 		$(INSTALL) -C .. $(README) "$(IBASE)"

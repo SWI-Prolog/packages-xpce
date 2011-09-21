@@ -3,6 +3,7 @@
 # Run XPCE from the build-location. This   relies  on ../../swipl.sh for
 # running Prolog from the build-location
 
-PCEHOME=@PCEHOME@
+XPCEHOME=@PCEHOME@
+export XPCEHOME
 
-@PL@ -F none -f $PCEHOME/pl/src/swipl-rc "$@"
+@PL@ -F none -f $XPCEHOME/swipl/swipl-rc "$@"

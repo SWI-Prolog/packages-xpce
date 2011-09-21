@@ -73,10 +73,14 @@ ETAGS=@ETAGS@
 SED=sed
 RM=rm
 REL_LN=$(srcdir)/rel-ln
-INSTALL=./xpce-install$(EXEEXT)
+
+CC_FOR_BUILD = @CC_FOR_BUILD@
+EXEEXT_FOR_BUILD = @EXEEXT_FOR_BUILD@
+
+INSTALL=./xpce-install$(EXEEXT_FOR_BUILD)
 INSTALL_PROGRAM=$(INSTALL) -m 755
 INSTALL_DATA=$(INSTALL) -m 644
-FIND_NAMES=find_names$(EXEEXT)
+FIND_NAMES=find_names$(EXEEXT_FOR_BUILD)
 
 # LIBRARIES
 
@@ -179,7 +183,7 @@ endif
 all:		banner $(INSTALL) xpce pl-itf
 
 $(INSTALL):	xpce-install.c
-		$(CC) $(CFLAGS) -o $@ $(srcdir)/xpce-install.c
+		$(CC_FOR_BUILD) -o $@ $(srcdir)/xpce-install.c
 
 banner:
 		@echo "****************"
@@ -191,14 +195,13 @@ xpce:		prepare $(LIBXPCE) $(XPCECLIENT) $(XPCESTUB)
 pl-itf:		$(PL2XPCE)
 
 $(PL2XPCE):	$(LIBXPCE)
-		cd ../pl/src; \
+		cd ../swipl; \
 		CANONICAL_PATHS=$(PCEHOME); export CANONICAL_PATHS; \
 		$(MAKE) PLLD=$(PLLD) PL=$(PL) soall
 
 $(MANINDEX):	$(shell find ../man/reference -name '*.doc')
 		-./xpce.sh \
 		  -F none \
-		  -f ../pl/src/swipl-rc \
 		  -g "[library('man/man_index')],pce_make_manual_index('$@')" \
 		  -t halt
 
@@ -233,7 +236,7 @@ $(MODULES) bin lib $(VWS):
 ################################################################
 
 $(FIND_NAMES):	$(srcdir)/find_names.c
-		$(CC) $(CFLAGS) -o $@ $(srcdir)/find_names.c
+		$(CC_FOR_BUILD) -o $@ $(srcdir)/find_names.c
 
 $(NAMES):	.names-sentinel
 .names-sentinel: $(FIND_NAMES)
@@ -607,10 +610,10 @@ $(XPCECLIENT):	unx/client.c
 $(XPCESTUB):	xpce-stub.res xpce-stub.o
 		$(PLLD) -Wl,--subsystem,windows -o $@ $^
 
-xpce-stub.res:	../pl/src/xpce-stub.rc ../pl/src/xpce.ico
+xpce-stub.res:	../swipl/xpce-stub.rc ../swipl/xpce.ico
 		$(WINDRES) -o $@ $<
 
-xpce-stub.o:	../pl/src/xpce-stub.c
+xpce-stub.o:	../swipl/xpce-stub.c
 		$(CC) -c $(CFLAGS) $< -o $@
 
 ################################################################
@@ -772,14 +775,14 @@ dv-man:		dv-manual
 	        done
 
 dv-link::
-		$(INSTALL_DATA) ../pl/src/swipl-rc $(DESTDIR)$(PLBASE)/$(PLNAME).rc
-		$(INSTALL_DATA) ../pl/src/Makefile.bin $(DESTDIR)$(PLBASE)/Makefile
+		$(INSTALL_DATA) ../swipl/swipl-rc $(DESTDIR)$(PLBASE)/$(PLNAME).rc
+		$(INSTALL_DATA) ../swipl/Makefile.bin $(DESTDIR)$(PLBASE)/Makefile
 
 dv-pl-files:	rt-home
 		if [ ! -d $(DESTDIR)$(RTHOME)/pl ]; then mkdir $(DESTDIR)$(RTHOME)/pl; fi
-		$(INSTALL_DATA) ../pl/src/swipl-rc $(DESTDIR)$(RTHOME)/pl/swipl.rc
-		$(INSTALL_DATA) ../pl/src/swipl-rc $(DESTDIR)$(RTHOME)/pl/xpce.rc
-		$(INSTALL_DATA) ../pl/src/Makefile.bin $(DESTDIR)$(RTHOME)/pl/Makefile
+		$(INSTALL_DATA) ../swipl/swipl-rc $(DESTDIR)$(RTHOME)/pl/swipl.rc
+		$(INSTALL_DATA) ../swipl/swipl-rc $(DESTDIR)$(RTHOME)/pl/xpce.rc
+		$(INSTALL_DATA) ../swipl/Makefile.bin $(DESTDIR)$(RTHOME)/pl/Makefile
 
 # (for now) only build the quick load files if we actually install into
 # the target location.  If not, the paths will be wrong anyway.
@@ -815,7 +818,7 @@ check::
 ################################################################
 
 clean:
-		for d in ../pl/src; do (cd $$d; $(MAKE) clean); done
+		$(MAKE) -C ../swipl $@
 		for m in $(MODULES) x11 msw pl; do \
 		    if [ -d $$m ]; then \
 		        (cd $$m; $(RM) -f *.o *~ *% core); \
@@ -825,7 +828,7 @@ clean:
 		$(RM) -f *.o config.log
 
 distclean:	clean
-		for d in ../pl/src; do (cd $$d; $(MAKE) distclean); done
+		$(MAKE) -C ../swipl $@
 		if [ -h h ]; then $(RM) h; fi
 		rm -f ../lib/$(PLARCH)
 		$(RM) -f version.h ../xpce.spec
@@ -834,7 +837,7 @@ distclean:	clean
 		$(RM) -f $(INSTALL)
 		$(RM) -f $(XPCECLIENT) $(XPCESTUB)
 		$(RM) -f Makefile config.h config.status config.cache
-		$(RM) -f ../pl/src/Makefile.bin
+		$(RM) -f ../swipl/Makefile.bin
 		$(RM) -f ../prolog/lib/Makefile
 		$(RM) -f ../prolog/pwboot/Makefile
 		$(RM) -f ../sicstus/src/Makefile

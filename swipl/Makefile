@@ -12,22 +12,20 @@
 # $(PLINCL)     SWI-Prolog's include files
 # $(builddir)	Path from XPCE home to build directory
 # $(C?FLAGS)	The various C-compiler flags
-# $(SOEXTRAOBJ)	Possibly non-standard .o files for creating pl2xpce.so
-# $(GCCLIB)	The path to -lgcc
 # $(SO)		Extension for shared libraries
 ################################################################
 
 .SUFFIXES: .qlf .pl
 
-LIBDIR=		../../lib/$(PLARCH)
+LIBDIR=		../lib/$(PLARCH)
 libXPCE=	$(LIBDIR)/libXPCE.a
-BINDIR=		../../$(builddir)
-OBJDIR=		../../$(builddir)/pl
-CONFIG=		../../$(builddir)/config.h
+BINDIR=		../$(builddir)
+OBJDIR=		../$(builddir)/pl
+CONFIG=		../$(builddir)/config.h
 
-CPLIFLAGS=	-I$(PLINCL) -I../../$(builddir) -I../../src
-PL=		pl
-PLLD=		plld -pl $(PL)
+CPLIFLAGS=	-I$(PLINCL) -I../$(builddir) -I../src
+PL=		swipl
+PLLD=		swipl-ld -pl $(PL)
 ITFOBJ=		$(addprefix $(OBJDIR)/, interface.o link.o pcecall.o)
 ITFSRC=		interface.c table.c
 SOITF=		$(addprefix $(OBJDIR)/, so-interface.o pcecall.o)
@@ -35,7 +33,6 @@ OBJ=		$(ITFOBJ)
 XPCE=		$(BINDIR)/xpce
 QLF=		$(BINDIR)/xpce.qlf
 XPCESO=		$(LIBDIR)/pl2xpce.$(SO)
-SOEXTR=		$(addprefix $(OBJDIR)/, $(SOEXTRAOBJ))
 CITFFLAGS=	-DSWI -DHAVE_CONFIG_H
 
 CFLAGS=		$(COFLAGS) $(CWFLAGS) $(CMFLAGS) $(CPLIFLAGS) $(CITFFLAGS)
@@ -79,19 +76,19 @@ $(OBJDIR)/pcecall.o:	pcecall.c
 $(OBJDIR)/so-interface.o: interface.c
 		$(CC) -DO_SHAREDLIBRARY $(CFLAGS) -c $< -o $@
 
-$(XPCESO):	$(SOITF) $(libXPCE) $(SOEXTR)
-		$(PLLD) -shared $(LDSOFLAGS) $(SOITF) $(SOEXTR) -L$(LIBDIR) \
+$(XPCESO):	$(SOITF) $(libXPCE)
+		$(PLLD) -shared $(LDSOFLAGS) $(SOITF) -L$(LIBDIR) \
 		-lXPCE $(XLIBS) $(NETLIBS) -o $(XPCESO);
 
 ################################################################$
 # QLF generation
 ################################################################
 
-libqlfs:	$(addprefix ../../prolog/lib/, $(LIBQLFS))
-bootqlf:	$(addprefix ../../prolog/lib/, $(BOOTQLF))
+libqlfs:	$(addprefix ../prolog/lib/, $(LIBQLFS))
+bootqlf:	$(addprefix ../prolog/lib/, $(BOOTQLF))
 
-../../prolog/lib/pce.qlf: $(addprefix ../../prolog/boot/, $(PCEPLS))
-		$(PL) -g "qcompile('../../prolog/lib/pce.pl')" -t halt
+../prolog/lib/pce.qlf: $(addprefix ../prolog/boot/, $(PCEPLS))
+		$(PL) -g "qcompile('../prolog/lib/pce.pl')" -t halt
 
 .pl.qlf:
 		$(PL) -g "pce_welcome,qcompile('$*')" -t halt
@@ -99,18 +96,6 @@ bootqlf:	$(addprefix ../../prolog/lib/, $(BOOTQLF))
 ################################################################
 # Link xpce to the SWI-Prolog library directory
 ################################################################
-
-$(PLBASE)/pl.rc:	plrc
-	cp plrc $@
-
-$(PLBASE)/xpce.rc:	plrc
-	cp plrc $@
-
-$(PLBASE)/xpce:
-	(cd $(PLBASE); rm -f xpce; ln -s $(PCEHOME) xpce)
-
-$(PLBASE)/xpce/lib/$(PLARCH):
-	(cd ../../lib; rm -f $(PLARCH); ln -s ../$(builddir) $(PLARCH))
 
 $(PLBASE)/Makefile: Makefile.bin
 	-cp Makefile.bin $@
