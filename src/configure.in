@@ -354,7 +354,6 @@ EOF
 	    LDSOFLAGS="-assert nodefinitions"
 	    SOWHOLEARCHIVE="-u _pceSend -u _pceOpen"
 	    SONAMEFLAG=""
-	    SOEXTRAOBJ=Initialize.o
 	fi
 	if test -z "$GCC"; then
 	    CMFLAGS="$CMFLAGS -KPIC"

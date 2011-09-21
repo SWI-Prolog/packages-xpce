@@ -75,9 +75,6 @@ $(OBJDIR)/pcecall.o:	pcecall.c
 $(OBJDIR)/so-interface.o: interface.c
 		$(CC) -DO_SHAREDLIBRARY $(CFLAGS) -c $< -o $@
 
-$(OBJDIR)/Initialize.o:
-		ar x $(XLIB)/libXt.a $@
-
 $(XPCESO):	$(SOITF) $(libXPCE) $(SOEXTR)
 		@if [ -r $(LIBDIR)/libXPCE.$(SO) ]; then \
 		    $(MAKE) sopce$(XPCESO); \

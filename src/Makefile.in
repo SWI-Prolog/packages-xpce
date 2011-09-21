@@ -259,13 +259,6 @@ $(LIBXPCESO):	libXPCE.a $(SOEXTRAOBJ)
 		ln -s $(LIBXPCESOMM) $(LIBXPCESOM)
 		ln -s $(LIBXPCESOM) $(LIBXPCESO)
 
-# On SunOs using MIT X11R5 the symbol __XtInherit will be reported
-# unititialized it this file isn't included explicitely.
-# Looks like a bug to me.
-
-Initialize.o:
-		ar x $(XLIB)/libXt.a $@
-
 ################################################################
 # XPCE's modules
 ################################################################
