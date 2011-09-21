@@ -116,8 +116,15 @@ get_mode(const char *s, unsigned short *m)
 static int
 isdir(const char *path)
 { struct stat buf;
+  char tmp[MAXPATHLEN];
+  char *s;
 
-  if ( stat(path, &buf) < 0 ||
+  strcpy(tmp, path);			/* delete trailing / to work */
+  s = tmp+strlen(tmp);			/* around bugs in some runtime */
+  if ( s>tmp && s[-1] == '/' )		/* libraries */
+    *--s = 0;
+
+  if ( stat(tmp, &buf) < 0 ||
        (buf.st_mode & S_IFMT) != S_IFDIR )
     return FALSE;
 
