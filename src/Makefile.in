@@ -682,11 +682,9 @@ DVLIBDIRS=	lib lib/compatibility lib/dialog lib/draw lib/emacs lib/man \
 DVIMGDIRS=	lib/dialog/bitmaps lib/trace/icons lib/trace/icons/16x16 \
 		lib/doc/icons
 DVBOOTDIRS=	boot
-DVMISCFILES=	ChangeLog
 RTMISC=		Defaults Defaults.user COPYING README
 DVFILES=	rt-install dv-home dv-lib dv-boot dv-help \
-	        dv-link dv-pl-files dv-manual dv-man \
-		dv-misc
+	        dv-link dv-pl-files dv-manual dv-man
 DVINSTALL=	$(DVFILES) dv-qlf dv-bins dv-online dv-classindex
 RTINSTALL=	home rt-misc rt-bitmaps rt-bins
 
@@ -700,7 +698,7 @@ dv-install:	$(DVINSTALL)
 
 rpm-install:	rt-home rt-misc rt-bitmaps rt-bins \
 		dv-lib dv-boot dv-help dv-link dv-pl-files dv-manual dv-man \
-		dv-misc dv-bins dv-online dv-classindex
+		dv-bins dv-online dv-classindex
 
 manindex:	$(MANINDEX)
 
@@ -815,9 +813,6 @@ dv-boot:	dv-lib
 
 dv-help:	dv-home
 		$(INSTALL_DATA) -vp1 ../appl-help/*.hlp $(DESTDIR)$(DVHOME)
-
-dv-misc:	dv-home
-		$(INSTALL_DATA) -C .. $(DVMISCFILES) $(DESTDIR)$(DVHOME)
 
 dv-manual:	dv-home
 		$(INSTALL_DATA) -p1 ../man/reference/*.doc $(DESTDIR)$(DVHOME)

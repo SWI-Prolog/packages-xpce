@@ -35,7 +35,7 @@ MODULES=	adt ari evt gnu gra itf ker men fmt msg prg rel \
 		rgx txt unx win img box msw
 
 ################################################################
-# ADT 		--- Abstract Data Types
+# ADT		--- Abstract Data Types
 ################################################################
 
 ADTOBJS=	adt\area.obj adt\atable.obj adt\attribute.obj \
@@ -47,13 +47,13 @@ ADTOBJS=	adt\area.obj adt\atable.obj adt\attribute.obj \
 		adt\vector.obj
 
 ################################################################
-# ARI 		--- Arithmetic Operations
+# ARI		--- Arithmetic Operations
 ################################################################
 
 ARIOBJS=	ari\equation.obj ari\expression.obj
 
 ################################################################
-# EVT 		--- Event Handling Primitives
+# EVT		--- Event Handling Primitives
 ################################################################
 
 EVTOBJS=	evt\clickgesture.obj evt\conngesture.obj \
@@ -66,7 +66,7 @@ EVTOBJS=	evt\clickgesture.obj evt\conngesture.obj \
 		evt\browserselgesture.obj evt\resizetabslice.obj
 
 ################################################################
-# GNU 		--- GNU-Project Libraries
+# GNU		--- GNU-Project Libraries
 ################################################################
 
 GNUOBJS=	gnu\getdate.obj
@@ -76,7 +76,7 @@ gnu\gregex.obj:	gnu\gregex.c
 			/Fo$@ gnu\gregex.c
 
 ################################################################
-# GRA 		--- Graphics Classes
+# GRA		--- Graphics Classes
 ################################################################
 
 GRAOBJS=	gra\arc.obj gra\arrow.obj gra\bitmap.obj gra\box.obj \
@@ -92,7 +92,7 @@ GRAOBJS=	gra\arc.obj gra\arrow.obj gra\bitmap.obj gra\box.obj \
 		gra\colourmap.obj gra\bezier.obj gra\hsv.obj
 
 ################################################################
-# ITF 		--- Host Interface Layer
+# ITF		--- Host Interface Layer
 ################################################################
 
 ITFOBJS=	itf\c.obj itf\host.obj itf\interface.obj \
@@ -102,7 +102,7 @@ ITFOBJS=	itf\c.obj itf\host.obj itf\interface.obj \
 		itf\public.obj
 
 ################################################################
-# KER 		--- Kernel modules
+# KER		--- Kernel modules
 ################################################################
 
 KEROBJS=	ker\alloc.obj ker\assoc.obj ker\behaviour.obj \
@@ -119,7 +119,7 @@ KEROBJS=	ker\alloc.obj ker\assoc.obj ker\behaviour.obj \
 ker\name.obj:	h\names.ic h\names.ih
 
 ################################################################
-# MEN 		--- Menu (Dialog) items
+# MEN		--- Menu (Dialog) items
 ################################################################
 
 MENOBJS=	men\button.obj men\dialogitem.obj men\label.obj \
@@ -129,14 +129,14 @@ MENOBJS=	men\button.obj men\dialogitem.obj men\label.obj \
 		men\labelbox.obj men\intitem.obj
 
 ################################################################
-# FMT 		--- Layout managers
+# FMT		--- Layout managers
 ################################################################
 
 FMTOBJS=	fmt\layoutmgr.obj fmt\layoutitf.obj \
 		fmt\table.obj fmt\tabcell.obj fmt\tabslice.obj
 
 ################################################################
-# BOX 		--- Typesetting stuff
+# BOX		--- Typesetting stuff
 ################################################################
 
 BOXOBJS=	box\boxes.obj box\hbox.obj box\tbox.obj \
@@ -144,7 +144,7 @@ BOXOBJS=	box\boxes.obj box\hbox.obj box\tbox.obj \
 		box\lbox.obj
 
 ################################################################
-# MSG 		--- Executable (message) Objects
+# MSG		--- Executable (message) Objects
 ################################################################
 
 MSGOBJS=	msg\and.obj msg\assign.obj msg\binding.obj \
@@ -156,13 +156,13 @@ MSGOBJS=	msg\and.obj msg\assign.obj msg\binding.obj \
 		msg\nameref.obj
 
 ################################################################
-# PRG 		--- Language Definition Classes
+# PRG		--- Language Definition Classes
 ################################################################
 
 PRGOBJS=	prg\operator.obj prg\parser.obj prg\tokeniser.obj
 
 ################################################################
-# REL 		--- Relation Classes
+# REL		--- Relation Classes
 ################################################################
 
 RELOBJS=	rel\constraint.obj rel\hyper.obj rel\identity.obj \
@@ -194,7 +194,7 @@ rgx\regerror.obj:	rgx\regerror.c
 
 
 ################################################################
-# TXT 		--- Text Representation and Manipulation Classes
+# TXT		--- Text Representation and Manipulation Classes
 ################################################################
 
 TXTOBJS=	txt\chararray.obj txt\editor.obj txt\fragment.obj \
@@ -205,14 +205,14 @@ TXTOBJS=	txt\chararray.obj txt\editor.obj txt\fragment.obj \
 		txt\utf8.obj txt\i18n.obj
 
 ################################################################
-# UNX 		--- Unix File, Process and Network Classes
+# UNX		--- Unix File, Process and Network Classes
 ################################################################
 
 UNXOBJS=	unx\directory.obj unx\file.obj unx\process.obj \
 		unx\socket.obj unx\stream.obj
 
 ################################################################
-# WIN 		--- Windows and Frames
+# WIN		--- Windows and Frames
 ################################################################
 
 WINOBJS=	win\browser.obj win\decorate.obj win\dialog.obj \
@@ -222,7 +222,7 @@ WINOBJS=	win\browser.obj win\decorate.obj win\dialog.obj \
 		win\tileadjust.obj win\monitor.obj
 
 ################################################################
-# IMG 		--- Platform independent low-level image stuff
+# IMG		--- Platform independent low-level image stuff
 ################################################################
 
 IMGOBJS=	img\jdatasrc.obj img\jdatadst.obj img\imgutil.obj \
@@ -360,8 +360,7 @@ IDIRS=	appl-help \
 
 MANINDEX=$(IBASE)\man\reference\index.obj
 
-README=	ChangeLog \
-	Defaults \
+README=	Defaults \
 	Defaults.user \
 	INFO \
 	README \
