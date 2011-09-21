@@ -45,6 +45,7 @@ vpath %.y @srcdir@
 vpath %.cxx @srcdir@
 prefix=@prefix@
 exec_prefix=@exec_prefix@
+datarootdir=@datarootdir@
 mansec=1
 mandir=@mandir@
 smandir=$(mandir)/man$(mansec)
