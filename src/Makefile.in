@@ -199,10 +199,10 @@ banner:
 		@echo "Making XPCE $(VERSION) for $(PLARCH)-$(OS)"
 		@echo "****************"
 
-.PHONY:		xpce prepare libXPCE
-xpce:		prepare libXPCE $(XPCECLIENT) $(XPCESTUB)
+.PHONY:		xpce prepare
+xpce:		prepare $(LIBXPCE) $(XPCECLIENT) $(XPCESTUB)
 
-pl-itf:		pl libXPCE
+pl-itf:		pl $(LIBXPCE)
 		cd ../pl/src; \
 		CANONICAL_PATHS=$(PCEHOME); export CANONICAL_PATHS; \
 		$(MAKE) PLLD=$(PLLD) PL=$(PLBUILD) $(PLTARGET)
@@ -641,7 +641,7 @@ endif
 
 $(OBJECTS) $(WSOBJECTS):	h/kernel.h
 
-libXPCE:	version.h $(OBJECTS) dowsobjs $(LIBDIR)
+$(LIBXPCE):	version.h $(OBJECTS) dowsobjs $(LIBDIR)
 		@echo "Running ar ru $(LIBXPCE) objects ..."
 		@$(AR) ru $(LIBXPCE) $(OBJECTS) $(WSOBJECTS)
 		$(RANLIB) $(LIBXPCE)
