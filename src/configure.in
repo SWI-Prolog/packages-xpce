@@ -37,6 +37,14 @@ case $PL in
 	;;
 esac
 
+AC_CANONICAL_HOST
+changequote(,)dnl
+OS=`echo $host | sed 's/[^-]*-[^-]*-\([^-]*\)/\1/'`
+VMAJOR=`sed 's/\([0-9]*\).*/\1/' ../VERSION`
+VMINOR=`sed 's/[0-9]*\.\([0-9]*\).*/\1/' ../VERSION`
+VPATCH=`sed 's/[0-9]*\.[0-9]*\.\([0-9]*\).*/\1/' ../VERSION`
+changequote([,])dnl
+
 AC_CHECK_TOOLS(AR, ar, ar)
 AC_CHECK_TOOLS(RANLIB, ranlib, ranlib)
 AC_CHECK_TOOLS(WINDRES, windres, ":")
