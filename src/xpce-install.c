@@ -72,6 +72,12 @@ interpreter and copy command.
 #define O_BINARY 0
 #endif
 
+#if defined(_MSC_VER) || defined(__MINGW32__)
+#ifndef __WINDOWS__
+#define __WINDOWS__
+#endif
+#endif
+
 #ifdef __WINDOWS__
 #include <io.h>				/* read, write, etc */
 #include <direct.h>			/* mkdir, chdir */
