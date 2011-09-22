@@ -6,4 +6,12 @@
 XPCEHOME=@PCEHOME@
 export XPCEHOME
 
-@PL@ -F none -f $XPCEHOME/swipl/swipl-rc "$@"
+case "$1" in
+  -C) CDARGS="$1 $2"
+      shift
+      shift
+      ;;
+   *) ;;
+esac
+
+@PL@ $CDARGS -F none -f $XPCEHOME/swipl/swipl-rc "$@"

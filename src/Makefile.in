@@ -665,8 +665,8 @@ link-dev-tree::
 		rm -f $(DESTDIR)$(PLBASE)/xpce
 		(here=`pwd` && home=`dirname $$here` && $(REL_LN) $$home $(DESTDIR)$(PLBASE)/xpce)
 ln-classindex::
-		./xpce.sh -t "halt(1)" \
-			-g "[library(pce_class_index)],pce_make_library_index('$(DESTDIR)$(PLBASE)/xpce/prolog/lib'),halt"
+		./xpce.sh -C "$(DESTDIR)$(PLBASE)/xpce/prolog/lib" -t "halt(1)" \
+			-g "[library(pce_class_index)],pce_make_library_index('.'),halt"
 
 #	runtime only stuff
 
@@ -740,8 +740,8 @@ dv-lib:		dv-home
 		$(INSTALL_DATA) ../prolog/lib/Makefile $(DESTDIR)$(DVHOME)/prolog/lib
 
 dv-classindex:	dv-lib
-		./xpce.sh -t "halt(1)" \
-			-g "[library(pce_class_index)],pce_make_library_index('$(DESTDIR)$(DVHOME)/prolog/lib'),halt"
+		./xpce.sh -C "$(DESTDIR)$(DVHOME)/prolog/lib" -t "halt(1)" \
+			-g "[library(pce_class_index)],pce_make_library_index('.'),halt"
 
 dv-boot:	dv-lib
 		@for d in $(DVBOOTDIRS); do \
