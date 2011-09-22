@@ -447,8 +447,8 @@ clean::
 		  $(CMD) /c "chdir %d & if exist *.obj del *.obj"
 		@echo off & for %d in ($(MODULES)) do \
 		  $(CMD) /c "chdir %d & if exist *~ del *~"
-		$(CMD) /c "chdir ..\pl\src & if exist *.obj del *.obj"
-		$(CMD) /c "chdir ..\pl\src & if exist *~ del *~"
+		$(CMD) /c "chdir ..\swipl & if exist *.obj del *.obj"
+		$(CMD) /c "chdir ..\swipl & if exist *~ del *~"
 		if exist xpce-install.exe del xpce-install.exe
 		if exist find_names.exe del find_names.exe
 		if exist *.obj del *.obj
