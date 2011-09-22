@@ -54,8 +54,8 @@ AC_CHECK_PROGS(ETAGS, emacs-etags etags ctags, ":")
 AC_CHECK_PROGS(YACC, bison yacc, yacc)
 if test $YACC = "bison"; then YACC="bison -y"; fi
 
+AC_PROG_CC
 AC_PROG_LN_S
-AC_PROG_CPP
 AC_ISC_POSIX
 AC_HEADER_STDC
 AC_C_INLINE
