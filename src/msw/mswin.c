@@ -248,7 +248,7 @@ ws_user()
 }
 
 
-#include <Shlobj.h>
+#include <shlobj.h>
 
 Name
 ws_appdata(const char *sub)
