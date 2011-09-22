@@ -21,7 +21,7 @@ AC_SUBST(MAKESHELL)
 AC_SUBST(WINDRES)
 AC_SUBST(VWS)
 AC_SUBST(DLLIBVAR)
-AC_SUBST(PLNAME)
+AC_SUBST(PLWINNAME)
 
 dnl Link to X11.  Cygwin and MinGW versions overrule this later
 
@@ -31,9 +31,18 @@ VWS=x11
 PKGDIR=../..
 m4_include([../../ac_swi_c.m4])
 
-case $PL in
+case "$PL" in
    *swipl.sh)
-	PLNAME=$(grep ^PL= $PL | sed 's/^PL=//')
+	PLWINNAME=$(grep ^PL= $PL | sed 's/^PL=//')
+	;;
+   *)
+	PLWINNAME=$(basename $PL .exe)
+	;;
+esac
+
+case "$PLARCH" in
+   *-win32|*-win64)
+	PLWINNAME="swipl-win"
 	;;
 esac
 

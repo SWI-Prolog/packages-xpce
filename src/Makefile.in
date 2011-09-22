@@ -131,7 +131,7 @@ PLINCL=@PLINCL@
 INSTALL_PLARCH=@INSTALL_PLARCH@
 PLBINDIR=$(PLBASE)/bin/$(INSTALL_PLARCH)
 PL=@PL@
-PLNAME=@PLNAME@
+PLWINNAME=@PLWINNAME@
 PLLD=@PLLD@
 
 ################################################################
@@ -776,7 +776,7 @@ dv-man:		dv-manual
 	        done
 
 dv-link::
-		$(INSTALL_DATA) ../swipl/swipl-rc $(DESTDIR)$(PLBASE)/$(PLNAME).rc
+		$(INSTALL_DATA) ../swipl/swipl-rc $(DESTDIR)$(PLBASE)/$(PLWINNAME).rc
 		$(INSTALL_DATA) ../swipl/Makefile.bin $(DESTDIR)$(PLBASE)/Makefile
 
 dv-pl-files:	rt-home

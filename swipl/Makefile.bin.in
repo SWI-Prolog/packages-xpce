@@ -3,43 +3,25 @@
 # SWI-Prolog and/or XPCE
 #
 # Author: Jan Wielemaker
-# E-mail: jan@swi-prolog.org
+# E-mail: J.Wielemaker@cs.vu.nl
 #
 # Targets
 #	make		(Re)makes SWI-Prolog startup file and XPCE
-#			precompiled Prolog files (QLF-files).  The
-#			latter is only possible if you can open a
-#			connection to the X-server
-#
-#	make [prefix=path] [PWD=path-to-here] [PL=pl] [XPCE=xpce] install
-#			Install public binaries and manual pages for
-#			pl, xpce, chpl and pl-bite.  The binaries are
-#			installed in $prefix/bin and the manuals in
-#			$prefix/man/man$(mansec)
-#
-#			The default prefix is /usr/local, the default
-#			path-to-here is the result if `pwd`.
-#
-#			The variables $PL and $XPCE may be used to
-#			modify the name of the executable
+#			precompiled Prolog files (QLF-files).
+#	make clean	Remove XPCE QLF-files.  All should work
+#			without them.  Without QLF files loading
+#			is slower but development is better and
+#			relocating the system is more robust.
 ################################################################
 
-
-prefix=/usr/local
-bindir=$(prefix)/bin
-mansec=1
-mandir=$(prefix)/man/man$(mansec)
-
 MAKE=@MAKE@
-PLNAME=@PLNAME@
-PL=bin/@PLARCH@/$(PLNAME)
-XPCE=xpce
-CLIENT=xpce-client
+PLWINNAME=@PLWINNAME@
+PL=bin/@PLARCH@/$(PLWINNAME)
 PLARCH=@PLARCH@
 INSTALL_PLARCH=@INSTALL_PLARCH@
 EXEEXT=@EXEEXT@
 
-BPL=		bin/$(INSTALL_PLARCH)/$(PLNAME)$(EXEEXT)
+BPL=		bin/$(INSTALL_PLARCH)/$(PLWINNAME)$(EXEEXT)
 PWD=`pwd`
 
 # Make this boot64 for 64-bit processors
