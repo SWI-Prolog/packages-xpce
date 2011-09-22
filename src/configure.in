@@ -10,7 +10,6 @@ AC_SUBST(XLIB)
 AC_SUBST(XINCLUDES)
 AC_SUBST(XLIBS)
 AC_SUBST(PCEHOME)
-AC_SUBST(OS)
 AC_SUBST(buildsubdir)
 AC_SUBST(VMAJOR)
 AC_SUBST(VMINOR)
@@ -46,12 +45,10 @@ case "$PLARCH" in
 	;;
 esac
 
-AC_CANONICAL_HOST
-changequote(,)dnl
-OS=`echo $host | sed 's/[^-]*-[^-]*-\([^-]*\)/\1/'`
-VMAJOR=`sed 's/\([0-9]*\).*/\1/' ../VERSION`
-VMINOR=`sed 's/[0-9]*\.\([0-9]*\).*/\1/' ../VERSION`
-VPATCH=`sed 's/[0-9]*\.[0-9]*\.\([0-9]*\).*/\1/' ../VERSION`
+changequote(,)dnl keep [] in sed expressions
+VMAJOR=$(sed 's/\([0-9]*\).*/\1/' ../VERSION)
+VMINOR=$(sed 's/[0-9]*\.\([0-9]*\).*/\1/' ../VERSION)
+VPATCH=$(sed 's/[0-9]*\.[0-9]*\.\([0-9]*\).*/\1/' ../VERSION)
 changequote([,])dnl
 
 AC_CHECK_TOOLS(AR, ar, ar)

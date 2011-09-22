@@ -147,7 +147,6 @@ SOMAJOR=$(VMAJOR)
 SOMINOR=$(VMINOR).$(VPATCH)
 PCEVERSION=$(VMAJOR).$(VMINOR).$(VPATCH)
 VERSION=$(PCEVERSION), $(PCEVERSIONDATE)
-OS=@OS@
 
 ################################################################
 # OTHER PATHS
@@ -188,7 +187,7 @@ $(INSTALL):	xpce-install.c
 
 banner:
 		@echo "****************"
-		@echo "Making XPCE $(VERSION) for $(PLARCH)-$(OS)"
+		@echo "Making XPCE $(VERSION) for $(PLARCH)"
 		@echo "****************"
 
 .PHONY:		xpce prepare
@@ -362,7 +361,7 @@ $(srcdir)/ker/proto.h:	$(KER1SRC)
 version.h:	Makefile
 		@echo "#define MACHINE \"$(PLARCH)\"" > $@%
 		@echo "#define PCE_VERSION \"$(VERSION)\"" >> $@%
-		@echo "#define OS \"$(OS)\"" >> $@%
+		@echo "#define OS \"$(PLARCH)\"" >> $@%
 		@if cmp -s $@% $@; then rm $@%; else mv $@% $@; fi
 
 h/interface.h:	Makefile
@@ -670,7 +669,7 @@ ln-classindex::
 
 #	runtime only stuff
 
-RTBINS=		xpce $(XPCECLIENT) $(XPCESTUB)
+RTBINS=		$(XPCECLIENT) $(XPCESTUB)
 RTLIBS=		$(PL2XPCE)
 
 rt-home:
@@ -701,7 +700,7 @@ rt-bins:	rt-home
 		    fi; \
 		done
 
-dv-home:
+dv-home::
 		if [ ! -d $(DESTDIR)$(DVHOME) ]; then \
 			rm -f $(DESTDIR)$(DVHOME) \
 			mkdir -p $(DESTDIR)$(DVHOME); \
