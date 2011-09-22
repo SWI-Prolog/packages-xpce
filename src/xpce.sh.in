@@ -10,7 +10,7 @@ else
 fi
 export XPCEHOME
 
-case "@PL$" in
+case "@PL@" in
   *swipl.sh)
      case "$1" in
        -C) CDARGS="$1 $2"
