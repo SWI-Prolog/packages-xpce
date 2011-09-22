@@ -14,12 +14,11 @@
 # achieve a relocatable object.  Notably useful for generating RPM files.
 
 check_path()
-{ case "$1" in
-    /*) ;;
-    *)  echo "Error: $1 isn't absolute path" >&2
-        exit 1
-        ;;
-  esac
+{ dir=$(dirname "$1")
+  file=$(basename "$1")
+  cdir=$(cd $dir && pwd)
+
+  echo $cdir/$file
 }
 
 compare()
@@ -35,8 +34,8 @@ fi
 from=$1
 to=$2
 
-check_path $from
-check_path $to
+from=$(check_path "$from")
+to=$(check_path "$to")
 
 # Make sure $to points to destination file instead of dir
 
