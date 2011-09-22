@@ -70,7 +70,6 @@ user:file_search_path(library, pce('prolog/lib')).
 user:file_search_path(foreign, pce(ArchLib)) :-
 	current_prolog_flag(arch, Arch),
 	atom_concat('lib/', Arch, ArchLib).
-user:file_search_path(foreign, pce(lib)).
 
 % We added a directory to the autoload directories: force reloading the
 % index

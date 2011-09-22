@@ -3,7 +3,11 @@
 # Run XPCE from the build-location. This   relies  on ../../swipl.sh for
 # running Prolog from the build-location
 
-XPCEHOME=@PCEHOME@
+if [ "@WINEPATHEXE@" = ":" ]; then
+  XPCEHOME="@PCEHOME@"
+else
+  XPCEHOME="$(@WINEPATHEXE@ -w @PCEHOME@)"
+fi
 export XPCEHOME
 
 case "$1" in
@@ -14,4 +18,4 @@ case "$1" in
    *) ;;
 esac
 
-@PL@ $CDARGS -F none -f $XPCEHOME/swipl/swipl-rc "$@"
+@PL@ $CDARGS -F none -f "$XPCEHOME/swipl/swipl-rc" "$@"

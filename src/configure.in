@@ -21,6 +21,7 @@ AC_SUBST(WINDRES)
 AC_SUBST(VWS)
 AC_SUBST(DLLIBVAR)
 AC_SUBST(PLWINNAME)
+AC_SUBST(WINEPATHEXE)
 
 dnl Link to X11.  Cygwin and MinGW versions overrule this later
 
@@ -42,6 +43,10 @@ esac
 case "$PLARCH" in
    *-win32|*-win64)
 	PLWINNAME="swipl-win"
+	AC_CHECK_PROG(WINEPATHEXE, winepath, winepath, ":")
+	;;
+   *)
+	WINEPATHEXE=":"
 	;;
 esac
 
