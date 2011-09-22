@@ -25,7 +25,7 @@
 #ifdef __WINDOWS__
 #define HAVE_MALLOC_H 1
 #define HAVE_SIGNAL_H 1
-#include "../../src/md.h"
+#include "../src/md.h"
 #else
 #ifdef HAVE_CONFIG_H
 #include <config.h>
