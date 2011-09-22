@@ -10,12 +10,25 @@ else
 fi
 export XPCEHOME
 
-case "$1" in
-  -C) CDARGS="$1 $2"
-      shift
-      shift
-      ;;
-   *) ;;
+case "@PL$" in
+  *swipl.sh)
+     case "$1" in
+       -C) CDARGS="$1 $2"
+	   shift
+	   shift
+	   ;;
+        *) ;;
+     esac
+     ;;
+  *)
+     case "$1" in
+       -C) cd "$2"
+	   shift
+	   shift
+	   ;;
+        *) ;;
+     esac
+     ;;
 esac
 
 @PL@ $CDARGS -F none -f "$XPCEHOME/swipl/swipl-rc" "$@"
