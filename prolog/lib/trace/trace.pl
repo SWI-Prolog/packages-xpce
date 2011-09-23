@@ -388,6 +388,7 @@ show_source(Frame, Attributes) :-
 		)
 	    ;	prolog_frame_attribute(GUI, Frame, goal, Goal),
 		qualify(Goal, QGoal),
+		\+ predicate_property(QGoal, foreign),
 		(   clause(QGoal, _Body, ClauseRef)
 		->  subgoal_position(GUI, ClauseRef, unify, File, CharA, CharZ),
 		    send_tracer(GUI, show_range(File, CharA, CharZ, Style))
