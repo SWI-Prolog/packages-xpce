@@ -585,7 +585,7 @@ WSOBJECTS=	$(addprefix msw/, $(MSWOBJS)) \
 		$(addprefix img/, $(IMGOBJS))
 endif
 
-$(OBJECTS) $(WSOBJECTS):	h/kernel.h
+$(OBJECTS) $(WSOBJECTS): h/kernel.h .names-sentinel
 
 $(LIBXPCE):	version.h $(OBJECTS) $(WSOBJECTS) $(LIBDIR)
 		@echo "Running ar ru $(LIBXPCE) objects ..."
