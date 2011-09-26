@@ -597,11 +597,14 @@ else
 $(WSOBJECTS):	CIFLAGS+=$(XINCLUDES) -DWIN32
 endif
 
+# Unix only (assumes using CC=swipl-ld)
+$(XPCECLIENT):	LDFLAGS+=-nolibswipl
 $(XPCECLIENT):	unx/client.c
 		$(CC) -c $(CFLAGS) $< -o client.o
 		$(CC) $(COFLAGS) $(CIFLAGS) $(LDFLAGS) -o $@ client.o $(NETLIBS)
 		rm -f client.o
 
+# MinGW only
 $(XPCESTUB):	xpce-stub.res xpce-stub.o
 		$(PLLD) -Wl,--subsystem,windows -o $@ $^
 
