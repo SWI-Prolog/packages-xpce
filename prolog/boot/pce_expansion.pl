@@ -52,7 +52,6 @@
 	   , append/3
 	   , atom_concat/3
 	   , between/3
-	   , genarg/3
 	   , maplist/3
 	   , sub_atom/5
 	   , push_operators/1
@@ -65,10 +64,12 @@
 	verbose/0,
 	recording/2.			% items recorded
 
-pce_ifhostproperty(prolog(swi),
-		   [ (:- index(attribute(1,1,0))),
-		     (:- use_module(library(quintus), [genarg/3]))
-		   ]).
+:- if(current_predicate(index/1)).
+:- index(attribute(1,1,0)).
+:- endif.
+:- if(exists_source(library(quintus))).
+:- use_module(library(quintus), [genarg/3]).
+:- endif.
 
 		 /*******************************
 		 *	     OPERATORS		*
