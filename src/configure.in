@@ -28,7 +28,7 @@ dnl Link to X11.  Cygwin and MinGW versions overrule this later
 WITHX11=true
 VWS=x11
 
-PKGDIR=../..
+PLPKGDIR=../..
 m4_include([../../ac_swi_c.m4])
 
 case "$PL" in
