@@ -569,7 +569,7 @@ find_tag_from_dir(Dir, File) :-
 ensure_loaded_tags(M) :->
 	"Make sure we have a tag-table loaded"::
 	(   auto_call(emacs_tag_file(_))
-	->  true
+	->  emacs_update_tags
 	;   get(M, directory, Dir),
 	    (	send(?(Dir, file, 'TAGS'), exists)
 	    ->	get(Dir, path, Path),
@@ -608,6 +608,7 @@ find_tag(M, Tag:emacs_tag, Where:[{here,tab,window}], Editor:editor) :<-
 	    ;	true
 	    ),
 	    debug(emacs(tag), 'Search ~q from ~q', [Tag, SearchDir]),
+	    emacs_update_tags,
 	    auto_call(emacs_tag(Tag, SearchDir, File, Line))
 	->  new(B, emacs_buffer(File)),
 	    get(B, open, Where, Frame),

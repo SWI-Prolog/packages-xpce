@@ -33,10 +33,11 @@
 	  [ emacs_tag/4,			% +Symbol, ?Dir, -File, -Line
 	    emacs_tag_file/1,			% ?File
 	    emacs_init_tags/1,			% +FileOrDir
+	    emacs_update_tags/0,
 	    emacs_complete_tag/3		% +Prefix, ?Dir, :Goal
 	  ]).
 
-:- meta_predicate emacs_complete_tag(+, 1).
+:- meta_predicate emacs_complete_tag(+, ?, 1).
 
 :- use_module(library(pce)).
 :- require([ call/2
@@ -156,6 +157,19 @@ load_tags(File, Dir) :-
 	asserta(tag_string(TagString, Dir)),
 	send(F, close),
 	send(F, free).
+
+%%	emacs_update_tags is det.
+%
+%	Reload all modified tag-files.
+
+emacs_update_tags :-
+	forall(tag_file(TagFile, _),
+	       emacs_init_tags(TagFile)).
+
+
+%%	emacs_tag_file(?File) is nondet.
+%
+%	True if File is a loaded Emacs tag-file.
 
 emacs_tag_file(File) :-
 	tag_file(File, _).
