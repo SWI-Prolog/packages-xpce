@@ -576,9 +576,13 @@ OBJECTS=	$(addprefix adt/, $(ADTOBJS)) \
 		$(addprefix unx/, $(UNXOBJS)) \
 		$(addprefix win/, $(WINOBJS))
 
+ifeq ($(VWS),x11)
+WSOBJECTS=	$(addprefix $(VWS)/, $(X11OBJS))
+else
+WSOBJECTS=	$(addprefix $(VWS)/, $(MSWOBJS))
+endif
 
-WSOBJECTS=	$(addprefix $(VWS)/, $(X11OBJS)) \
-		$(addprefix img/, $(IMGOBJS))
+WSOBJECTS+=	$(addprefix img/, $(IMGOBJS))
 
 $(OBJECTS) $(WSOBJECTS): h/kernel.h .names-sentinel
 
