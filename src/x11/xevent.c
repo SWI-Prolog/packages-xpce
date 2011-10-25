@@ -93,10 +93,12 @@ ws_dispatch(Int FD, Any timeout)
     { to.tv_sec = 0;
       to.tv_usec = 250000;
     } else if ( isInteger(timeout) )
-    { to.tv_sec  = valInt(timeout) / 1000;
-      to.tv_usec = valInt(timeout) % 1000;
-    } else /* if ( isReal(timeout) ) */
-    { double v = valReal(timeout);
+    { double v;
+
+      if ( isInteger(timeout) )
+	v = (double)valInt(timeout)/1000.0;
+      else
+	v = valReal(timeout);
 
       to.tv_sec  = (long)v;
       to.tv_usec = (long)(v * 1000000.0) % 1000000;
