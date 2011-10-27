@@ -207,12 +207,11 @@ update_library_index :-
 
 
 index_file(File) :-
-	absolute_file_name(library('CLASSINDEX.pl'),
+	absolute_file_name(library('CLASSINDEX.pl'), File,
 			   [ access(read),
 			     solutions(all),
 			     file_errors(fail)
-			   ],
-			   File).
+			   ]).
 
 load_index_files([]).
 load_index_files([H|T]) :-
@@ -275,7 +274,7 @@ implements(Class, send(Name), Method) :-
 	    ),
 	    member(Method, Methods),
 	    get(Method, name, Name),
-	    get(ClassObject, send_method, Name, Method) 	% not overruled
+	    get(ClassObject, send_method, Name, Method)		% not overruled
 	).
 implements(Class, get(Name), Method) :-
 	current_class(Class, ClassObject),

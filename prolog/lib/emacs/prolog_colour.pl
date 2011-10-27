@@ -1709,12 +1709,11 @@ autoload_source(F, Source) :-
 	get(F, name, Name),
 	get(F, arity, Arity),
 	'$find_library'(_Module, Name, Arity, _LoadModule, Library), !,
-	absolute_file_name(Library,
+	absolute_file_name(Library, Source,
 			   [ file_type(prolog),
 			     access(read),
 			     file_errors(fail)
-			   ],
-			   Source).
+			   ]).
 
 :- pce_end_class(emacs_goal_fragment).
 

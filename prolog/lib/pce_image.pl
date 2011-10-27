@@ -80,10 +80,10 @@ pce_image_directory(Dir) :-
 	    ),
 	    asserta(user:file_search_path(image, DirPath))
 	;   asserta(user:file_search_path(image, Dir)),
-	    absolute_file_name(Dir,
+	    absolute_file_name(Dir, DirPath,
 			       [ file_type(directory),
 				 access(read)
-			       ], DirPath)
+			       ])
 	),
 	(   compiling,
 	    get(@display, open, @off)	% don't force the display

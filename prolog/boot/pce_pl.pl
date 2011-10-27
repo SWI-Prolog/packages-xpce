@@ -71,10 +71,10 @@ property(runtime) :-
 		********************************/
 
 pce_home(PceHome) :-
-	absolute_file_name(pce('.'),
+	absolute_file_name(pce('.'), PceHome,
 			   [ file_type(directory),
 			     file_errors(fail)
-			   ], PceHome),
+			   ]),
 	exists_directory(PceHome), !.
 pce_home(PceHome) :-
 	getenv('XPCEHOME', PceHome),
@@ -84,10 +84,10 @@ pce_home(PceHome) :-
 	    atom_concat('/xpce-', Version, Suffix)
 	;   Suffix = '/xpce'
 	),
-	absolute_file_name(swi(Suffix),
+	absolute_file_name(swi(Suffix), PceHome,
 			   [ file_type(directory),
 			     file_errors(fail)
-			   ], PceHome),
+			   ]),
 	exists_directory(PceHome), !.
 pce_home(PceHome) :-
 	current_prolog_flag(saved_program, true), !,

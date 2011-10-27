@@ -101,15 +101,15 @@ default_preferences(prolog, File) :-
 	       [ swi('customize/pl.ini'),
 		 swi('customize/dotplrc')
 	       ]),
-	absolute_file_name(Location,
+	absolute_file_name(Location, File,
 			   [ access(read),
 			     file_errors(fail)
-			   ], File), !.
+			   ]), !.
 default_preferences(xpce, File) :-
-	absolute_file_name(pce('Defaults.user'),
+	absolute_file_name(pce('Defaults.user'), File,
 			   [ access(read),
 			     file_errors(fail)
-			   ], File), !.
+			   ]), !.
 
 
 %%	ensure_xpce_config_dir(-Dir:atom)

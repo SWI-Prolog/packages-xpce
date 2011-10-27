@@ -202,9 +202,9 @@ process_directive(Goal) :-
 	      *             BODY		*
 	      ********************************/
 
-meta_goal((A, B), 		[A, B]).
-meta_goal((A; B), 		[A, B]).
-meta_goal((A| B), 		[A, B]).
+meta_goal((A, B),		[A, B]).
+meta_goal((A; B),		[A, B]).
+meta_goal((A| B),		[A, B]).
 meta_goal((A -> B),		[A, B]).
 meta_goal(findall(_V, G, _L),	[G]).
 meta_goal(setof(_V, G, _L),	[G]).
@@ -414,11 +414,11 @@ find_source_file(Spec, _) :-
 	fail.
 
 do_find_source_file(Spec, File) :-
-	absolute_file_name(Spec,
+	absolute_file_name(Spec, File,
 			   [ file_type(prolog),
 			     access(read),
 			     file_errors(fail)
-			   ], File), !.
+			   ]), !.
 
 
 		/********************************

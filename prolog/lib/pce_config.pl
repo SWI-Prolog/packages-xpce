@@ -255,15 +255,15 @@ save_file(Key, File) :-
 	is_absolute_file_name(Key), !,
 	File = Key.
 save_file(Key, File) :-
-	absolute_file_name(config(Key),
+	absolute_file_name(config(Key), File,
 			   [ access(write),
 			     extensions([cnf]),
 			     file_errors(fail)
-			   ], File), !.
+			   ]), !.
 save_file(Key, File) :-
-	absolute_file_name(config(Key),
+	absolute_file_name(config(Key), File,
 			   [ extensions([cnf])
-			   ], File), !,
+			   ]), !,
 	file_directory_name(File, Dir),
 	(   send(directory(Dir), exists)
 	->  send(@pce, report, error, 'Cannot write config directory %s', Dir),
@@ -363,11 +363,11 @@ load_file(Key, File) :-
 	is_absolute_file_name(Key), !,
 	File = Key.
 load_file(Key, File) :-
-	absolute_file_name(config(Key),
+	absolute_file_name(config(Key), File,
 			   [ access(read),
 			     extensions([cnf]),
 			     file_errors(fail)
-			   ], File).
+			   ]).
 
 load_key(_DB, Key) :-
 	nonvar(Key), !.

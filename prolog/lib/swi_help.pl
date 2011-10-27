@@ -604,9 +604,8 @@ drop(V, Id:name) :->
 %	found, display an error message.
 
 manual_file(File) :-
-	absolute_file_name(library('MANUAL'),
-			   [access(read)],
-			   File), !.
+	absolute_file_name(library('MANUAL'), File,
+			   [access(read)]), !.
 manual_file(_File) :-
 	send(@nil, report, error, 'Can''t find manual database MANUAL'),
 	fail.
