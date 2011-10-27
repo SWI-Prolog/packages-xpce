@@ -110,9 +110,13 @@ break(SetClear, ClauseRef, PC) :-
 	    unmark_stop_point(ClauseRef, PC)
 	).
 
-%%	break_location(+ClauseRef, +PC, -File, -A-Z)
+%%	break_location(+ClauseRef, +PC, -File, -AZ) is det.
 %
-%	Determine source-code location of a break-point.
+%	True when File and AZ represent the  location of the goal called
+%	at PC in ClauseRef.
+%
+%	@param AZ is a term A-Z, where   A and Z are character positions
+%	in File.
 
 break_location(ClauseRef, PC, File, A-Z) :-
 	pce_clause_info(ClauseRef, File, TermPos, _NameOffset),
