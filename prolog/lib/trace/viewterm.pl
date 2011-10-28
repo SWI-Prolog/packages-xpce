@@ -36,6 +36,7 @@
 	  ]).
 :- use_module(library(pce)).
 :- use_module(library(lists)).
+:- use_module(library(option)).
 :- use_module(pprint).
 
 /** <module> Graphical viewer for Prolog terms
@@ -91,28 +92,24 @@ defaults([ view(@view_term),
 			 ])
 	 ]).
 
-tv(Term, Attributes) :-
-	attribute(Attributes, view(V)),
-	if(Attributes, clear(true), send(V, clear)),
-	if(Attributes, open(true), send(V, open)),
-	if(Attributes, expose(true), send(V, expose)),
-	if(Attributes, comment(Comment), send(V, label, Comment)),
-	if(Attributes, source_object(Frag), send(V, source_object, Frag)),
+tv(Term,Opts) :-
+	option(view(V),Opts),
+	(option(clear(true),Opts)         -> send(V, clear)               ; true),
+	(option(open(true),Opts)          -> send(V, open)                ; true),
+	(option(expose(true),Opts)        -> send(V, expose)              ; true),
+	(option(comment(Comment),Opts)    -> send(V, label, Comment)      ; true),
+	(option(source_object(Frag),Opts) -> send(V, source_object, Frag) ; true),
 	get(V, text_buffer, TB),
 	setup_call_cleanup(pce_open(TB, write, Fd),
-			   emit_term(Term, [output(Fd)|Attributes]),
+			   emit_term(Term, [output(Fd)|Opts]),
 			   close(Fd)),
 	send(V, caret, 0),
 	send(V, editable, @off),
-	if(Attributes, write_options(WrtOpts), send(V, show_options, WrtOpts)).
+	(   option(write_options(WrtOpts),Opts)
+	->  send(V, show_options, WrtOpts)
+	;   true
+	).
 
-attribute(Attributes, A) :-
-	memberchk(A, Attributes).
-
-if(Attributes, Cond, Goal) :-
-	memberchk(Cond, Attributes), !,
-	Goal.
-if(_, _, _).
 
 %%	emit_term(+Term, +Options) is det.
 %
