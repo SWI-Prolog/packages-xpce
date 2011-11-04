@@ -140,9 +140,23 @@ scratch_text('% This buffer is for notes you don\'t want to save.\n\c
 	      new(regex('.*-\\*-\\s*([Mm]ode:\\s*(\\w+);.*-\\*-|(\\w+)\\s*-\\*-)'))).
 
 
+% ->determine_initial_mode uses the following steps:
+%
+%   1. If the file is a loaded file, it is a Prolog file
+%   2. The Emacs magic sequences -*- Mode -*- or -*- mode: Mode; ... -*-
+%   3. Try @emacs_content_mode_list
+%   4. Try #! interpreter (PrologScript)
+%   5. Try the file-name
+
 determine_initial_mode(B) :->
 	"Determine initial mode"::
-	(   send(@emacs_mode_regex, match, B),
+	(   get(B, file, File), File \== @nil,
+	    get(File, name, FileName),
+	    absolute_file_name(FileName, FilePath),
+	    source_file(FilePath),
+	    \+ source_file_property(FilePath, derived_from(_,_))
+	->  send(B, slot, mode, prolog)
+	;   send(@emacs_mode_regex, match, B),
 	    member(Reg, [2,3]),
 	    get(@emacs_mode_regex, register_value, B, Reg, Mode0),
 	    get(Mode0?downcase, value, Mode),
