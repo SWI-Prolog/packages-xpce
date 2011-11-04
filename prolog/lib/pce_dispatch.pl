@@ -57,6 +57,10 @@ prolog flag xpce_threaded:
 	somewhat on Linux systems.
 */
 
+:- predicate_options(pce_dispatch/1, 1,
+		     [ pass_to(system:thread_create/3, 3)
+		     ]).
+
 %%	pce_dispatch(+Options) is det.
 %
 %	Create a new thread =pce= that takes   care  of the XPCE message
