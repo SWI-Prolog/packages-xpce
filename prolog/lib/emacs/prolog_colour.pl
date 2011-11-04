@@ -35,23 +35,34 @@
 :- use_module(library(pce)).
 :- use_module(library(emacs_extend)).
 :- use_module(library(pce_prolog_xref)).
+:- use_module(library(predicate_options)).
 :- use_module(library(prolog_source)).
 :- use_module(library(lists)).
 :- use_module(library(operators)).
 :- use_module(library(debug)).
 :- use_module(library(edit)).
+:- use_module(library(error)).
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-User extension hooks.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/** <module> PceEmacs Prolog mode colour code
+
+This  module  defines  the   PceEmacs    colourization   code.  PceEmacs
+colourization  is  based  on  actual    parsing   and  cross-referencing
+information gathered at the fly.
+
+The functionality can be extended  using   various  multifile hooks. See
+library(emacs/logtalk_mode) for an example.
+
+@tbd	Document this file and share it with PlDoc's colour code.
+*/
+
 
 :- multifile
-	style/2,
-	identify/2,
-	term_colours/2,
-	goal_colours/2,
-	directive_colours/2,		% Term, Colours
-	goal_classification/2.
+	style/2,			% +ColourClass, -Attributes
+	identify/2,			% +ColourClass, -Summary
+	term_colours/2,			% +SourceTerm, -ColourSpec
+	goal_colours/2,			% +Goal, -ColourSpec
+	directive_colours/2,		% +Goal, -ColourSpec
+	goal_classification/2.		% +Goal, -Class
 
 :- emacs_extend_mode(prolog,
 		     [ colourise_or_recenter = key('\\C-l')
@@ -610,16 +621,20 @@ colourise_goal(Goal, Origin, TB, Pos) :-
 	colour_item(goal(Class, Goal), TB, FPos),
 	colourise_goal_args(Goal, TB, Pos).
 
-%	colourise_goal_args(+Goal, +TB, +Pos)
+%%	colourise_goal_args(+Goal, +TB, +Pos)
 %
 %	Colourise the arguments to a goal. This predicate deals with
 %	meta- and database-access predicates.
 
 colourise_goal_args(Goal, TB, term_position(_,_,_,_,ArgPos)) :-
+	colourise_options(Goal, TB, ArgPos),
 	meta_args(Goal, MetaArgs), !,
 	colourise_meta_args(1, Goal, MetaArgs, TB, ArgPos).
 colourise_goal_args(Goal, TB, Pos) :-
+	Pos = term_position(_,_,_,_,ArgPos), !,
+	colourise_options(Goal, TB, ArgPos),
 	colourise_term_args(Goal, TB, Pos).
+colourise_goal_args(_, _, _).		% no arguments
 
 colourise_meta_args(_, _, _, _, []) :- !.
 colourise_meta_args(N, Goal, MetaArgs, TB, [P0|PT]) :-
@@ -634,7 +649,6 @@ colourise_meta_arg(MetaSpec, Arg, TB, Pos) :-
 	colourise_goal(Expanded, [], TB, Pos). % TBD: recursion
 colourise_meta_arg(_, Arg, TB, Pos) :-
 	colourise_term_arg(Arg, TB, Pos).
-
 
 %	meta_args(+Goal, -ArgSpec)
 %
@@ -708,6 +722,58 @@ colourise_db(Module:Head, TB, term_position(_,_,_,_,[MP,HP])) :- !,
 colourise_db(Head, TB, Pos) :-
 	colourise_goal(Head, '<db-change>', TB, Pos).
 
+
+%%	colourise_options(+Goal, +TB, +ArgPos)
+%
+%	Colourise predicate options
+
+colourise_options(Goal, TB, ArgPos) :-
+	(   compound(Goal),
+	    functor(Goal, Name, Arity),
+	    (	xref_module(TB, Module)
+	    ->	true
+	    ;	Module = user
+	    ),
+	    current_predicate_options(Module:Name/Arity, Arg, OptionDecl),
+	    debug(emacs, 'Colouring option-arg ~w of ~p',
+		  [Arg, Module:Name/Arity]),
+	    arg(Arg, Goal, Options),
+	    nth1(Arg, ArgPos, Pos),
+	    (	Pos = list_position(_, _, ElmPos, TailPos)
+	    ->	colourise_option_list(Options, OptionDecl, TB, ElmPos, TailPos)
+	    ;	var(Options)
+	    ->	colourise_term_arg(Options, TB, Pos)
+	    ;	colour_item(type_error(list), TB, Pos)
+	    ),
+	    fail
+	;   true
+	).
+
+colourise_option_list(_, _, _, [], none).
+colourise_option_list(Tail, _, TB, [], TailPos) :-
+	colourise_term_arg(Tail, TB, TailPos).
+colourise_option_list([H|T], OptionDecl, TB, [HPos|TPos], TailPos) :-
+	colourise_option(H, OptionDecl, TB, HPos),
+	colourise_option_list(T, OptionDecl, TB, TPos, TailPos).
+
+colourise_option(Opt, _, TB, Pos) :-
+	var(Opt), !,
+	colourise_term_arg(Opt, TB, Pos).
+colourise_option(Opt, OptionDecl, TB, term_position(_,_,FF,FT,[ValPos])) :- !,
+	Opt =.. [Name,Value],
+	GenOpt =.. [Name,Type],
+	(   memberchk(GenOpt, OptionDecl)
+	->  colour_item(option_name, TB, FF-FT),
+	    (	(   var(Value)
+		;   is_of_type(Type, Value)
+		)
+	    ->	colourise_term_arg(Value, TB, ValPos)
+	    ;	colour_item(type_error(Type), TB, ValPos)
+	    )
+	;   colour_item(no_option_name, TB, FF-FT)
+	).
+colourise_option(_, _, TB, Pos) :-
+	colour_item(type_error(option), TB, Pos).
 
 %	colourise_files(+Arg, +TB, +Pos)
 %
@@ -953,11 +1019,9 @@ make_fragment(Class, TB, F, L, Style) :-
 	new(Fragment, emacs_prolog_fragment(TB, F, L, Style)),
 	functor(Class, Classification, Arity),
 	send(Fragment, classification, Classification),
-	(   Arity == 1,
-	    arg(1, Class, Context),
-	    callable(Context),
-	    functor(Context, ContextName, _)
-	->  send(Fragment, context, ContextName)
+	(   Arity == 1
+	->  arg(1, Class, Context),
+	    send(Fragment, context, Context)
 	;   true
 	).
 
@@ -1139,6 +1203,9 @@ def_style(goal(meta,_),		style(colour := red4)). % same as var
 def_style(goal(foreign(_),_),	style(colour := darkturquoise)).
 def_style(goal(local(_),_),	@default).
 def_style(goal(constraint(_),_), style(colour := darkcyan)).
+
+def_style(option_name,		style(colour := '#3434ba')).
+def_style(no_option_name,	style(colour := red)).
 
 def_style(head(exported),	style(bold := @on, colour := blue)).
 def_style(head(public(_)),	style(bold := @on, colour := '#016300')).
@@ -1489,10 +1556,10 @@ specified_list(Spec, Tail, TB, [], TailPos) :-
 :- pce_begin_class(emacs_goal_fragment, emacs_colour_fragment,
 		   "Fragment for a goal in PceEmacs Prolog mode").
 
-variable(name,		 name,	both, "Name of the predicate").
-variable(arity,		 int,	both, "Arity of the predicate").
-variable(classification, name,	both, "XREF classification").
-variable(context,	 any*,	both, "Classification argument").
+variable(name,		 name, both, "Name of the predicate").
+variable(arity,		 int,  both, "Arity of the predicate").
+variable(classification, name, both, "XREF classification").
+variable(context,	 any*, both, "Classification argument").
 
 :- pce_group(popup).
 
@@ -1852,10 +1919,10 @@ classify_class(_, Name, library(File)) :-
 	FileSpec = library(File),
 	(   get(@classes, member, Name, Class),
 	    get(Class, source, source_location(File, _Line))
-	->  absolute_file_name(FileSpec,
+	->  absolute_file_name(FileSpec, File,
 			       [ access(read)
-			       ],
-			       File)
+			       ])
+
 	;   true
 	), !.
 classify_class(_, Name, user(File)) :-
@@ -1880,8 +1947,8 @@ classify_class(_, _, undefined).
 :- pce_begin_class(emacs_prolog_fragment, emacs_colour_fragment,
 		   "Colour fragment in Prolog mode").
 
-variable(classification, name,	both, "XREF classification").
-variable(context,	 any*,	both, "Classification argument").
+variable(classification, name,	  both,	"XREF classification").
+variable(context,	 prolog*, both,	"Classification argument").
 
 :- pce_group(popup).
 
@@ -1936,7 +2003,7 @@ identify_fragment(file(Path), _, Summary) :-
 identify_fragment(directory(Path), _, Summary) :-
 	new(Summary, string('Directory %s', Path)).
 identify_fragment(type_error(Type), _, Summary) :-
-	new(Summary, string('Type error: argument must be a %s', Type)).
+	identify_type_error(Type, Summary).
 identify_fragment(syntax_error(Message), _, Summary) :-
 	new(Summary, string('%s', Message)).
 identify_fragment(module(Module), _, Summary) :-
@@ -1954,6 +2021,22 @@ identify_fragment(keyword(except), _, 'Import all except given').
 identify_fragment(keyword(as), _, 'Import under a different name').
 identify_fragment(Class, _, Summary) :-
 	term_to_atom(Class, Summary).
+
+identify_type_error(oneof(List), Summary) :- !,
+	new(Summary, string('Type error: argument must be one of ')),
+	add_one_ofs(List, Summary).
+identify_type_error(Type, Summary) :-
+	new(Summary, string('Type error: argument must be a %s', Type)).
+
+add_one_ofs([], _).
+add_one_ofs([H|T], Summary) :-
+	send(Summary, append, H),
+	(   T = [Last]
+	->  send(Summary, append, ' or '),
+	    send(Summary, append,  Last)
+	;   send(Summary, append, ', '),
+	    add_one_ofs(T, Summary)
+	).
 
 :- pce_end_class(emacs_prolog_fragment).
 
