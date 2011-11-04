@@ -32,7 +32,7 @@ BOOTPLS=	boot/apply.pl boot/autoload.pl \
 		boot/history.pl boot/init.pl \
 		boot/load.pl boot/parms.pl \
 		boot/qlf.pl boot/syspred.pl boot/toplevel.pl \
-		boot/topvars.pl
+		boot/topvars.pl boot/predopts.pl
 
 all:		$(STARTUP) xpce-qlfs
 
