@@ -741,7 +741,9 @@ colourise_options(Goal, TB, ArgPos) :-
 	    nth1(Arg, ArgPos, Pos),
 	    (	Pos = list_position(_, _, ElmPos, TailPos)
 	    ->	colourise_option_list(Options, OptionDecl, TB, ElmPos, TailPos)
-	    ;	var(Options)
+	    ;	(   var(Options)
+		;   Options == []
+		)
 	    ->	colourise_term_arg(Options, TB, Pos)
 	    ;	colour_item(type_error(list), TB, Pos)
 	    ),
@@ -1271,7 +1273,7 @@ style(Class, Name, Style) :-
 	term_to_atom(Copy, Name).
 
 
-%%	term_colours(+Term, -FunctorColour - ArgColours)
+%%	term_colours(+Term, -FunctorColour, -ArgColours)
 %
 %	Define colourisation for specific terms.
 
