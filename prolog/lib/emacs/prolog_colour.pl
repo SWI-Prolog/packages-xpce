@@ -929,7 +929,7 @@ colourise_import(PI, _, TB, Pos) :-
 	colourise_declaration(PI, TB, Pos).
 
 
-%	colourise_declarations(+Term, +TB, +Pos)
+%%	colourise_declarations(+Term, +TB, +Pos)
 %
 %	Colourise the Predicate indicator lists of dynamic, multifile, etc
 %	declarations.
@@ -1117,6 +1117,7 @@ goal_colours(ensure_loaded(_),	     built_in-[file]).
 goal_colours(load_files(_,_),	     built_in-[file,classify]).
 goal_colours(setof(_,_,_),	     built_in-[classify,setof,classify]).
 goal_colours(bagof(_,_,_),	     built_in-[classify,setof,classify]).
+goal_colours(predicate_options(_,_,_), built_in-[predicate,classify,classify]).
 % Database access
 goal_colours(assert(_),		     built_in-[db]).
 goal_colours(asserta(_),	     built_in-[db]).
@@ -1270,7 +1271,7 @@ style(Class, Name, Style) :-
 	term_to_atom(Copy, Name).
 
 
-%	term_colours(+Term, -FunctorColour - ArgColours)
+%%	term_colours(+Term, -FunctorColour - ArgColours)
 %
 %	Define colourisation for specific terms.
 
@@ -1443,6 +1444,9 @@ specified_item(imports(File), Term, TB, Pos) :- !,
 					% Name/Arity, ...
 specified_item(predicates, Term, TB, Pos) :- !,
 	colourise_declarations(Term, TB, Pos).
+					% Name/Arity
+specified_item(predicate, Term, TB, Pos) :- !,
+	colourise_declaration(Term, TB, Pos).
 					% set_prolog_flag(Name, _)
 specified_item(prolog_flag_name, Term, TB, Pos) :- !,
 	colourise_prolog_flag_name(Term, TB, Pos).
