@@ -701,7 +701,7 @@ colourise_db((Head:-_Body), TB, term_position(_,_,_,_,[HP,_])) :- !,
 colourise_db(Module:Head, TB, term_position(_,_,_,_,[MP,HP])) :- !,
 	colour_item(module(Module), TB, MP),
 	(   atom(Module),
-	    xref_module(Module, TB)
+	    xref_module(TB, Module)
 	->  colourise_db(Head, TB, HP)
 	;   true			% TBD: Modifying in other module
 	).
@@ -1034,9 +1034,7 @@ built_in_predicate(elif(_)).
 built_in_predicate(else).
 built_in_predicate(endif).
 
-%	Specify colours for individual goals.  Currently used only to
-%	highlight file references, so we can jump to them and are indicated
-%	on missing files.
+%	Specify colours for individual goals.
 
 goal_colours(module(_,_),	     built_in-[identifier,exports]).
 goal_colours(use_module(_),	     built_in-[file]).
