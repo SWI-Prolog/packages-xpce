@@ -737,8 +737,10 @@ colourise_options(Goal, TB, ArgPos) :-
 	    current_predicate_options(Module:Name/Arity, Arg, OptionDecl),
 	    debug(emacs, 'Colouring option-arg ~w of ~p',
 		  [Arg, Module:Name/Arity]),
-	    arg(Arg, Goal, Options),
-	    nth1(Arg, ArgPos, Pos),
+	    arg(Arg, Goal, Options0),
+	    nth1(Arg, ArgPos, Pos0),
+	    strip_option_module_qualifier(Goal, Module, Arg, TB,
+					  Options0, Pos0, Options, Pos),
 	    (	Pos = list_position(_, _, ElmPos, TailPos)
 	    ->	colourise_option_list(Options, OptionDecl, TB, ElmPos, TailPos)
 	    ;	(   var(Options)
@@ -750,6 +752,16 @@ colourise_options(Goal, TB, ArgPos) :-
 	    fail
 	;   true
 	).
+
+strip_option_module_qualifier(Goal, Module, Arg, TB,
+			      M:Options, term_position(_,_,_,_,[MP,Pos]),
+			      Options, Pos) :-
+	predicate_property(Module:Goal, meta_predicate(Head)),
+	arg(Arg, Head, :), !,
+	colour_item(module(M), TB, MP).
+strip_option_module_qualifier(_, _, _, _,
+			      Options, Pos, Options, Pos).
+
 
 colourise_option_list(_, _, _, [], none).
 colourise_option_list(Tail, _, TB, [], TailPos) :-
