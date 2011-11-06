@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        wielemak@science.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 2006, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 2006-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
