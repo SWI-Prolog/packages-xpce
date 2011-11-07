@@ -773,21 +773,29 @@ colourise_option_list([H|T], OptionDecl, TB, [HPos|TPos], TailPos) :-
 colourise_option(Opt, _, TB, Pos) :-
 	var(Opt), !,
 	colourise_term_arg(Opt, TB, Pos).
-colourise_option(Opt, OptionDecl, TB, term_position(_,_,FF,FT,[ValPos])) :- !,
-	Opt =.. [Name,Value],
-	GenOpt =.. [Name,Type],
+colourise_option(Opt, OptionDecl, TB, term_position(_,_,FF,FT,ValPosList)) :- !,
+	functor(Opt, Name, Arity),
+	functor(GenOpt, Name, Arity),
 	(   memberchk(GenOpt, OptionDecl)
 	->  colour_item(option_name, TB, FF-FT),
-	    (	(   var(Value)
-		;   is_of_type(Type, Value)
-		)
-	    ->	colourise_term_arg(Value, TB, ValPos)
-	    ;	colour_item(type_error(Type), TB, ValPos)
-	    )
+	    Opt =.. [Name|Values],
+	    GenOpt =.. [Name|Types],
+	    colour_option_values(Values, Types, TB, ValPosList)
 	;   colour_item(no_option_name, TB, FF-FT)
 	).
 colourise_option(_, _, TB, Pos) :-
 	colour_item(type_error(option), TB, Pos).
+
+colour_option_values([], [], _, _).
+colour_option_values([V0|TV], [T0|TT], TB, [P0|TP]) :-
+	(   (   var(V0)
+	    ;	is_of_type(T0, V0)
+	    )
+	->  colourise_term_arg(V0, TB, P0)
+	;   colour_item(type_error(T0), TB, P0)
+	),
+	colour_option_values(TV, TT, TB, TP).
+
 
 %	colourise_files(+Arg, +TB, +Pos)
 %
