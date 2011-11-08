@@ -86,8 +86,8 @@ example below records all goals trapped by the tracer in the database.
 
 \begin{code}
 prolog_trace_interception(Port, Frame, _PC, continue) :-
-        prolog_frame_attribute(Frame, goal, Goal), 
-        prolog_frame_attribute(Frame, level, Level), 
+        prolog_frame_attribute(Frame, goal, Goal),
+        prolog_frame_attribute(Frame, level, Level),
         recordz(trace, trace(Port, Level, Goal)).
 \end{code}
 
@@ -146,7 +146,7 @@ The stack is analysed using prolog_frame_attribute/3:
 \begin{description}
     \predicate{prolog_frame_attribute}{3}{+Frame, +Key, -Value}
 Obtain information about the local stack frame \arg{Frame}.  \arg{Frame}
-is a frame reference as obtained through prolog_current_frame/1, 
+is a frame reference as obtained through prolog_current_frame/1,
 prolog_trace_interception/4 or this predicate.  The key values are
 described below.
 
@@ -225,12 +225,12 @@ the location of the subterm {\bf d}.  In this case, this is the term:
 \end{verbatim}
 
 The first `2' indicate the term is in the body, the second that it is
-in the second argument of \funcref{,}{2}, the `1' indicates the first
-argument of the \funcref{;}/2 and the final `2' the second argument
-of \funcref{->}{2}.
+in the second argument of \cfuncref{,}{2}, the `1' indicates the first
+argument of the \cfuncref{;}/2 and the final `2' the second argument
+of \cfuncref{->}{2}.
 
 Next, clause_property/3 is used to find the file and line of the clause.
-read_term/3 using the option \funcref{subterm_positions}{1} is then used
+read_term/3 using the option \cfuncref{subterm_positions}{1} is then used
 to find the locations of the various parts of the clause.
 
 The tracer maintains a cache to avoid excessive file-access.  The hook
