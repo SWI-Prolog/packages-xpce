@@ -400,7 +400,10 @@ indent(Out, Indent, Options) :-
 
 print_width(Term, W, Options) :-
 	option(right_margin(RM), Options),
-	prolog_listing:print_length(Term, RM, W, Options).
+	(   write_length(Term, W, [max_length(RM)|Options])
+	->  true
+	;   W = RM
+	).
 
 %%	pprint(+Term, +Context, +Options)
 %
