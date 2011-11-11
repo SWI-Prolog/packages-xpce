@@ -107,8 +107,10 @@ general_exception(E0, E) :-
 	prolog:general_exception(E0, E), !.
 general_exception(error(E0, _), error(E, _)) :- !,
 	general_exception(E0, E).
-general_exception(permission_error(Type, Action, _), permission_error(Type, Action, _)) :- !.
-general_exception(existence_error(Type, Object, _), existence_error(Type, Object, _)) :- !.
+general_exception(permission_error(Type, Action, _),
+		  permission_error(Type, Action, _)) :- !.
+general_exception(existence_error(Type, Object, _),
+		  existence_error(Type, Object, _)) :- !.
 general_exception('$stream'(_), '$stream'(_)) :- !.
 general_exception('$socket'(_), '$socket'(_)) :- !.
 general_exception(C0, C) :-
@@ -122,7 +124,7 @@ general_exception(E, E).
 %%	new_exception(+Term, +Where) is det.
 %%	new_exception(+Term, +NotCaught, +Caught, +Where) is det.
 %
-%	Add a new exception. If the new  exception is a specilisation of
+%	Add a new exception. If the new exception is a specialization of
 %	an already registered exception, copy the properties.
 
 new_exception(Ex, Where) :-
