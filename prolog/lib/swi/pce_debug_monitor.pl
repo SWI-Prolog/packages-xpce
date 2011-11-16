@@ -246,15 +246,17 @@ enable(B, DI:dict_item) :->
 
 prolog:debug_print_hook(Topic, Format, Arguments) :-
 	(   view_window(_)
-	->  (   thread_self(main)
-	    ->	debug_message(Topic, Format, Arguments)
-	    ;   in_pce_thread(debug_message(Topic, Format, Arguments))
+	->  message_to_string(debug(Format, Arguments), Text),
+	    (   thread_self(Me),
+	        pce_thread(Me)
+	    ->	debug_message(Topic, Text)
+	    ;   in_pce_thread(debug_message(Topic, Text))
 	    )
 	).
 
-debug_message(Topic, Format, Arguments) :-
+debug_message(Topic, Text) :-
 	forall(view_window(V),
-	       send(V, debug_message, Topic, Format, Arguments)).
+	       send(V, debug_message, Topic, string(Text))).
 
 
 :- pce_begin_class(prolog_debug_view, view,
@@ -274,14 +276,11 @@ hightlight_messages(V, Topic:prolog) :->
 	topic_to_atom(Topic, Style),
 	send(V, style, Style, style(bold := @on)).
 
-debug_message(V, Topic:prolog, Format:prolog, Arguments:prolog) :->
+debug_message(V, Topic:prolog, Text:string) :->
 	get(V, text_buffer, TB),
 	get(TB, size, S0),
-	pce_open(TB, append, Out),
-	message_to_string(debug(Format, Arguments), Text),
-	format(Out, '~s', Text),
-	nl(Out),
-	close(Out),
+	send(TB, append, Text),
+	send(TB, append, '\n'),
 	get(TB, size, S1),
 	Len is S1 - S0 - 1,
 	topic_to_atom(Topic, Style),
