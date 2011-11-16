@@ -792,6 +792,12 @@ colour_option_values([V0|TV], [T0|TT], TB, [P0|TP]) :-
 	    ;	is_of_type(T0, V0)
 	    )
 	->  colourise_term_arg(V0, TB, P0)
+	;   callable(V0),
+	    (	T0 = callable
+	    ->	N = 0
+	    ;	T0 = (callable+N)
+	    )
+	->  colourise_meta_arg(N, V0, TB, P0)
 	;   colour_item(type_error(T0), TB, P0)
 	),
 	colour_option_values(TV, TT, TB, TP).
