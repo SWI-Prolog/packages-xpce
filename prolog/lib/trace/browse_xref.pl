@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -165,7 +166,9 @@ set_xref(OldXref) :-
 
 process_file(In) :-
 	repeat,
-	  prolog_read_source_term(In, Term, Expanded, []),
+	  catch(prolog_read_source_term(In, Term, Expanded, []),
+		_,
+		fail),
 	  ignore(process_raw(Term)),
 	  (   is_list(Expanded)
 	  ->  member(T, Expanded)

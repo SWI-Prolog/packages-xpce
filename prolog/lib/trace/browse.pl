@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -35,7 +36,8 @@
 :- use_module(library(pce_report)).
 :- use_module(library(toolbar)).
 :- use_module(library(helpidx)).
-:- use_module(library('trace/util')).
+:- use_module(library(trace/util)).
+:- use_module(library(prolog_source)).
 :- use_module(browse_xref).
 :- use_module(library(persistent_frame)).
 :- require([ '$qlf_info'/5
@@ -284,13 +286,11 @@ module(TF, Module:name) :<-
 	).
 
 module_of_path(Path, Module) :-
-	open(Path, read, Fd),
-	(   peek_char(Fd, '#')		% skip !# line
-	->  skip(Fd, 10)
-	;   true
-	),
-	read(Fd, Term),
-	close(Fd),
+	catch(setup_call_cleanup(
+		  prolog_open_source(Path, Stream),
+		  prolog_read_source_term(Stream, Term, _, []),
+		  prolog_close_source(Stream)), _,
+	      fail),
 	Term = (:- module(Module, _Public)).
 
 hidden_entity(module(_)).
