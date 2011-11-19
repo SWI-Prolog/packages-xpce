@@ -31,14 +31,12 @@
 */
 
 :- module(prolog_source_view,
-	  [ mark_stop_point/2,		% +ClauseRef, +PC
-	    unmark_stop_point/2,	% +ClauseRef, +PC
-	    current_source_buffer/2	% +File, -Buffer
+	  [ current_source_buffer/2	% +File, -Buffer
 	  ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_emacs)).
-:- use_module(break).
 :- use_module(util).
+:- use_module(library(prolog_breakpoints)).
 :- use_module(library(emacs_extend)).
 :- use_module(library(pce_template)).
 :- use_module(emacs_debug_modes).
@@ -153,7 +151,7 @@ stop_at(V) :->
 	(   get(V, source_file, File)
 	->  get(V, caret, Caret),
 	    get(V, line_number, Line),
-	    break_at(File, Line, Caret)
+	    set_breakpoint(File, Line, Caret, _)
 	;   send(V, report, error, 'No source'),
 	    fail
 	).
@@ -282,30 +280,34 @@ mark_special(File, Buffer) :-
 	mark_stop_points(Buffer, Source).
 
 mark_stop_points(_, Source) :-
-	'$current_break'(ClauseRef, PC),
-	clause_property(ClauseRef, file(Source)),
-	mark_stop_point(ClauseRef, PC),
-	fail.
-mark_stop_points(_, _).
+	forall(breakpoint_property(Id, file(Source)),
+	       mark_breakpoint(Id, set)).
 
 :- pce_global(@prolog_debugger, new(object)).
 
-%%	mark_stop_point(+ClauseRef, +PC)
+%%	mark_breakpoint(+Id, +SetDel) is det.
 %
-%	Mark stop-points using a breakpoint fragment.
+%	Mark stop-points using a breakpoint fragment.  SetDel is one of
+%	=set= or =delete=
 
-mark_stop_point(ClauseRef, PC) :-
-	break_fragment(ClauseRef, PC, _), !.
-mark_stop_point(ClauseRef, PC) :-
-	break_location(ClauseRef, PC, File, A-Z),
+mark_breakpoint(Id, set) :-
+	break_fragment(Id, _), !.
+mark_breakpoint(Id, set) :-
+	breakpoint_property(Id, file(File)),
 	current_source_buffer(File, Buffer),
-	new(F, break_fragment(Buffer, A, Z)),
-	assertz(break_fragment(ClauseRef, PC, F)),
+	new(F, break_fragment(Buffer, Id)),
+	assertz(break_fragment(Id, F)),
 	new(_, hyper(@prolog_debugger, F, break, debugger)).
 
-unmark_stop_point(ClauseRef, PC) :-
-	forall(break_fragment(ClauseRef, PC, Fragment),
+mark_breakpoint(Id, delete) :-
+	forall(break_fragment(Id, Fragment),
 	       free(Fragment)).
+
+:- multifile user:message_hook/3.
+
+user:message_hook(breakpoint(SetDel, Id), _, _) :-
+	catch(mark_breakpoint(Id, SetDel), _, fail),
+	fail.
 
 
 		 /*******************************
@@ -324,22 +326,33 @@ unlink_from(H) :->
 :- pce_begin_class(break_fragment, fragment,
 		   "Visualise a break-point").
 
-:- dynamic
-	break_fragment/3.
+variable(breakpoint_id, int, both, "Identifier for the break-point").
 
-initialise(F, TB:text_buffer, Start:int, End:int) :->
+:- dynamic
+	break_fragment/2.		% ?Id, ?Fragment
+
+initialise(F, TB:text_buffer, Id:int) :->
 	"Indicate the location of a break-point"::
-	Len is End - Start,
-	send_super(F, initialise, TB, Start, Len, breakpoint).
+	(   breakpoint_property(Id, character_range(Start, Len))
+	->  send_super(F, initialise, TB, Start, Len, breakpoint)
+	;   breakpoint_property(Id, line_count(Line))
+	->  Skip is Line - 1,
+	    get(TB, scan, 0, line, Skip, start, Start),
+	    get(TB, scan, Start, line, 0, end, End),
+	    Len is End-Start,
+	    send_super(F, initialise, TB, Start, Len, breakpoint)
+	;   send_super(F, initialise, TB, 0, 0) % No source, what to do?
+	),
+	send(F, slot, breakpoint_id, Id).
 
 unlink(F) :->
-	retractall(break_fragment(_,_,F)),
+	retractall(break_fragment(_,F)),
 	send_super(F, unlink).
 
 remove(F) :->
 	"Remove the associated break-point"::
-	break_fragment(ClauseRef, PC, F),
-	'$break_at'(ClauseRef, PC, false).
+	break_fragment(Id, F),
+	delete_breakpoint(Id).
 
 overlap_caret(F, Caret:int) :->
 	"True if F overlaps with position"::

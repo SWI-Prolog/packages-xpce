@@ -1282,7 +1282,7 @@ break_at(M) :->
 	    send(File, same, Source)
 	->  get(M, caret, Caret),
 	    get(M, line_number, M?caret, Line),
-	    (	auto_call(prolog_break_at(Source, Line, Caret))
+	    (	auto_call(set_breakpoint(Source, Line, Caret, _))
 	    ->  tdebug,			% debug all threads
 		(   get(TB, margin_width, 0)
 		->  send(TB, margin_width, 22)
@@ -1298,10 +1298,9 @@ break_at(M) :->
 delete_breakpoint(M) :->
 	"Delete selected breakpoint"::
 	(   get(M, selected_fragment, F),
-	    F \== @nil,
-	    get(F, attribute, clause, ClauseRef),
-	    get(F, attribute, pc, PC)
-	->  '$break_at'(ClauseRef, PC, false)
+	    send(F, instance_of, break_fragment),
+	    get(F, breakpoint_id, Id)
+	->  delete_breakpoint(Id)
 	;   send(M, report, warning, 'No selected breakpoint')
 	).
 

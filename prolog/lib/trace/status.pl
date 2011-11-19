@@ -36,6 +36,7 @@
 :- use_module(library(toolbar)).
 :- use_module(library('trace/clause')).
 :- use_module(library(prolog_predicate_item)).
+:- use_module(library(prolog_breakpoints)).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 This  module  defines  the  class   prolog_debug_status,  a  status  dialog
@@ -166,15 +167,16 @@ debugging(How, Where) :-
 	current_predicate(_, Where),
 	\+ predicate_property(Where, imported_from(_)),
 	debugging_(Where, How).
-debugging(break, clause(ClauseRef,PC)) :-
-	'$current_break'(ClauseRef, PC).
+debugging(break, break(Id)) :-
+	breakpoint_property(Id, clause(_)).
 
 debugging_(Where, spy) :-
 	'$get_predicate_attribute'(Where, spy, 1).
 debugging_(Where, trace) :-
 	'$get_predicate_attribute'(Where, trace_any, 1).
 
-name_of(clause(Ref, _PC), Label) :- !,
+name_of(break(Id), Label) :- !,
+	breakpoint_property(Id, clause(Ref)),
 	clause_name(Ref, Label).
 name_of(Where, Label) :-
 	predicate_name(user:Where, Label).
@@ -271,8 +273,8 @@ delete(spy, Head) :- !,
 	'$nospy'(Head).
 delete(trace, Head) :- !,
 	trace(Head, -all).
-delete(break, clause(Ref, PC)) :-
-	'$break_at'(Ref, PC, false).
+delete(break, break(Id)) :-
+	delete_breakpoint(Id).
 
 mode(_D, Mode:{normal,debug,trace}) :->
 	(   Mode == normal
@@ -301,9 +303,9 @@ user:message_hook(spy(Head), _Level, _Lines) :-
 	debug_status_window(D),
 	send(D, append_debug, spy, Head),
 	fail.
-user:message_hook(break(true, ClauseRef, PC), _Level, _Lines) :-
+user:message_hook(breakpoint(set, Id), _Level, _Lines) :-
 	debug_status_window(D),
-	send(D, append_debug, break, clause(ClauseRef, PC)),
+	send(D, append_debug, break, break(Id)),
 	fail.
 user:message_hook(trace(Head, Ports), _Level, _Lines) :-
 	Ports \== [],
@@ -317,9 +319,9 @@ user:message_hook(nospy(Head), _Level, _Lines) :-
 	get(D, item, spy, Head, DI),
 	free(DI),
 	fail.
-user:message_hook(break(false, ClauseRef, PC), _Level, _Lines) :-
+user:message_hook(break(delete, Id), _Level, _Lines) :-
 	debug_status_window(D),
-	get(D, item, break, clause(ClauseRef, PC), DI),
+	get(D, item, break, break(Id), DI),
 	free(DI),
 	fail.
 user:message_hook(trace(Head, []), _Level, _Lines) :-

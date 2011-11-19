@@ -39,7 +39,6 @@
 :- consult([ clause,
 	     util,
 	     source,
-	     break,
 	     gui,
 	     stack
 	   ]).
