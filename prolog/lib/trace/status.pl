@@ -167,7 +167,7 @@ debugging(How, Where) :-
 	current_predicate(_, Where),
 	\+ predicate_property(Where, imported_from(_)),
 	debugging_(Where, How).
-debugging(break, break(Id)) :-
+debugging(break, breakpoint(Id)) :-
 	breakpoint_property(Id, clause(_)).
 
 debugging_(Where, spy) :-
@@ -175,7 +175,7 @@ debugging_(Where, spy) :-
 debugging_(Where, trace) :-
 	'$get_predicate_attribute'(Where, trace_any, 1).
 
-name_of(break(Id), Label) :- !,
+name_of(breakpoint(Id), Label) :- !,
 	breakpoint_property(Id, clause(Ref)),
 	clause_name(Ref, Label).
 name_of(Where, Label) :-
@@ -273,7 +273,7 @@ delete(spy, Head) :- !,
 	'$nospy'(Head).
 delete(trace, Head) :- !,
 	trace(Head, -all).
-delete(break, break(Id)) :-
+delete(break, breakpoint(Id)) :-
 	delete_breakpoint(Id).
 
 mode(_D, Mode:{normal,debug,trace}) :->
@@ -305,7 +305,7 @@ user:message_hook(spy(Head), _Level, _Lines) :-
 	fail.
 user:message_hook(breakpoint(set, Id), _Level, _Lines) :-
 	debug_status_window(D),
-	send(D, append_debug, break, break(Id)),
+	send(D, append_debug, break, breakpoint(Id)),
 	fail.
 user:message_hook(trace(Head, Ports), _Level, _Lines) :-
 	Ports \== [],
@@ -319,9 +319,9 @@ user:message_hook(nospy(Head), _Level, _Lines) :-
 	get(D, item, spy, Head, DI),
 	free(DI),
 	fail.
-user:message_hook(break(delete, Id), _Level, _Lines) :-
+user:message_hook(breakpoint(delete, Id), _Level, _Lines) :-
 	debug_status_window(D),
-	get(D, item, break, break(Id), DI),
+	get(D, item, break, breakpoint(Id), DI),
 	free(DI),
 	fail.
 user:message_hook(trace(Head, []), _Level, _Lines) :-
