@@ -120,15 +120,9 @@ prolog_tracer(Thread, Ref, Create) :-
 %%	break_level(-Level)
 %
 %	Current break-level.
-%
-%	@bug	Breaks only work in the main thread. We need to change I/O
-%		handling and where the break-level is stored to fix
-%		this.
 
 break_level(Level) :-
-	thread_self(main), !,
-	flag('$break_level', Level, Level).
-break_level(1).
+	current_prolog_flag(break_level, Level).
 
 
 %%	send_tracer(+ThreadOrGUI, +Term) is semidet.
