@@ -33,7 +33,7 @@
 	  [ grapher/1,			% +Message
 	    grapher/2			% +Grapher, +Message
 	  ]).
-:- style_check(+dollar).		% avoid tracing this module
+:- set_prolog_flag(generate_debug_info, false).
 :- use_module(library(pce)).
 :- use_module(library(pce_util)).
 :- use_module(library(pce_tagged_connection)).
