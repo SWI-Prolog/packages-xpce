@@ -122,7 +122,8 @@ prolog_tracer(Thread, Ref, Create) :-
 %	Current break-level.
 
 break_level(Level) :-
-	current_prolog_flag(break_level, Level).
+	current_prolog_flag(break_level, Level), !.
+break_level(-1).				% non-interactive thread.
 
 
 %%	send_tracer(+ThreadOrGUI, +Term) is semidet.
