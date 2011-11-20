@@ -12,7 +12,7 @@ QLF2=	pce_manual.qlf pcedraw.qlf dialog/dialog.qlf \
 	emacs/emacs.qlf trace/trace.qlf emacs/prolog_mode.qlf
 QLF=	$(QLF1) $(QLF2)
 
-all:	
+all:
 	$(MAKE) checkwd
 	$(MAKE) INDEX.pl qlf
 
@@ -57,7 +57,7 @@ emacs/emacs.qlf:	emacs/emacs.pl emacs/window.pl emacs/buffer.pl \
 			emacs/bookmarks.pl
 
 trace/trace.qlf:	trace/trace.pl trace/clause.pl trace/util.pl \
-			trace/settings.pl trace/break.pl trace/source.pl \
+			trace/settings.pl trace/source.pl \
 			trace/stack.pl trace/pprint.pl trace/viewterm.pl \
 			trace/gui.pl
 
