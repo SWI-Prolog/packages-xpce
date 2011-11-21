@@ -468,7 +468,8 @@ find_definition(M, For:prolog_predicate, Where:[{here,tab,window}]) :->
 	    )
 	->  get(TB, open, Where, Frame),
 	    get(Frame, editor, Editor),
-	    send(Editor, goto_line, Line)
+	    send(Editor, goto_line, Line),
+	    send(M, location_history, title := For?print_name)
 	;   xref_defined(TB, Head, imported(File))	% imported
 	->  new(B, emacs_buffer(File)),
 	    get(B, open, Where, EmacsFrame),
@@ -494,7 +495,8 @@ find_local_definition(M, For:prolog_predicate) :->
 	    ;   send(M, xref_buffer),
 		xref_defined(TB, Head, local(Line))
 	    )
-	->  send(M, goto_line, Line)
+	->  send(M, goto_line, Line),
+	    send(M, location_history, title := For?print_name)
 	;   send(M, report, warning, 'Cannot find %N', For)
 	).
 
