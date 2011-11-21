@@ -144,12 +144,11 @@ do_intercept(call, Frame, CHP, Action) :-
 	    action(Action)
 	).
 do_intercept(exit, Frame, CHP, Action) :-
-	(   %last_action(finish)
-	    prolog_frame_attribute(Frame, goal, Goal),
+	(   prolog_frame_attribute(Frame, goal, Goal),
 	    \+(( predicate_property(Goal, nodebug)
 	       ; predicate_property(Goal, foreign)
 	      )),
-	    \+(( last_action(skip),
+	    \+(( prolog_frame_attribute(Frame, skipped, true),
 		 prolog_skip_level(L,L),
 		 L \== very_deep,
 		 prolog_frame_attribute(Frame, level, FL),
