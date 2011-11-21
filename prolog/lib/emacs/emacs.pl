@@ -77,6 +77,7 @@ pce_ifhostproperty(prolog(swi),
 :- consult(application).
 :- consult(buffer_menu).
 :- consult(server).
+:- consult(history).
 :- consult(fundamental_mode).
 :- consult(language_mode).
 :- consult(outline_mode).

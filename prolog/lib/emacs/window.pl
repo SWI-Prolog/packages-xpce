@@ -1483,6 +1483,22 @@ m_x_next(M, Value:any) :<-
 
 
 		 /*******************************
+		 *	 LOCATION HISTORY	*
+		 *******************************/
+
+location_history(M, Start:start=[int], Len:length=[int],
+		 Title:title=[char_array]) :->
+	"Add location to the editor history"::
+	(   Start == @default
+	->  get(M, caret, Caret),
+	    get(M, scan, Caret, line, 0, start, SOF)
+	;   SOF = Start
+	),
+	get(M, text_buffer, TB),
+	new(_, emacs_history_fragment(TB, SOF, Len, Title)).
+
+
+		 /*******************************
 		 *	      REPORT		*
 		 *******************************/
 

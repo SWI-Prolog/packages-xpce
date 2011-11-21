@@ -614,7 +614,8 @@ find_tag(M, Tag:emacs_tag, Where:[{here,tab,window}], Editor:editor) :<-
 	    get(B, open, Where, Frame),
 	    get(Frame, editor, Editor),
 	    send(Editor, line_number, Line),
-	    adjust_tag(Editor, Tag)
+	    adjust_tag(Editor, Tag),
+	    send(M, location_history, title := Tag)
 	;   send(M, report, warning, 'Cannot find tag %s', Tag),
 	    fail
 	).

@@ -71,6 +71,11 @@ location(H, Loc:any) :->
 	send(H, slot, current, Loc),
 	ignore(send(H, send_hyper, button, activate)).
 
+delete(H, Loc:any) :->
+	"Delete object from history"::
+	send(H?backward_list, delete_all, Loc),
+	send(H?forward_list, delete_all, Loc).
+
 backward(DW, Obj:any) :<-
 	"Return previous location"::
 	get(DW, backward_list, L),
@@ -94,9 +99,10 @@ backward(DW) :->
 goto(DW, Dir:{forward,backward}, Obj:any) :->
 	get(DW, message, Msg),
 	Msg \== @nil,
-	send(DW, slot, action, Dir),
-	call_cleanup(send(Msg, forward, Obj),
-		     send(DW, slot, action, @nil)).
+	setup_call_cleanup(
+	    send(DW, slot, action, Dir),
+	    send(Msg, forward, Obj),
+	    send(DW, slot, action, @nil)).
 
 can_backward(H) :->
 	"Test whether there is backward history available"::

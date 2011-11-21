@@ -60,7 +60,8 @@ initialise(Emacs, Buffers:dict) :->
 	send(Emacs, send_super, initialise, emacs),
 	send(Emacs, leader, frame('PceEmacs')),
 	send(Emacs, kind, service),
-	send(Emacs, slot, history, new(history)),
+	send(Emacs, slot, history,
+	     history(message(Emacs, goto_history, @arg1))),
 	send(Emacs, slot, buffer_list, Buffers),
 	new(Msg, message(Emacs, check_saved_at_exit)),
 	send(@pce, exit_message, Msg),
@@ -151,6 +152,10 @@ goto_source_location(_Emacs,
 	;   true
 	).
 
+goto_history(Emacs, HE:emacs_history_entry, Where:where=[{here,tab,window}]) :->
+	"Go back to an old history location"::
+	send(Emacs, goto_source_location, HE?source_location, Where),
+	send(Emacs?history, location, HE).
 
 edit(Emacs, Location:source_location) :->
 	"Equivalent to ->goto_source_location"::
