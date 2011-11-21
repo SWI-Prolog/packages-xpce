@@ -323,6 +323,7 @@ initialise(D) :->
 	send(D, pen, 0),
 	send(D, append, new(emacs_menu_bar)),
 	send(D, append, new(TB, tool_bar), right),
+	send(TB, reference, point(0,15)),
 	send(TB, alignment, right),
 	get(@emacs, history, History),
 	get(History, button, forward, Forward),
