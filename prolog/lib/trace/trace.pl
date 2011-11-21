@@ -247,7 +247,11 @@ show(StartFrame, CHP, Up, Port) :-
 	show(StartFrame, CHP, Up, Port, Port),
 	prolog_frame_attribute(StartFrame, goal, Goal),
 	predicate_name(user:Goal, Pred),
-	send_tracer(report(status, '%s: %s', Port?label_name, Pred)).
+	(   Port == redo,
+	    prolog_frame_attribute(StartFrame, skipped, true)
+	->  send_tracer(report(status, '%s: %s (skipped)', Port?label_name, Pred))
+	;   send_tracer(report(status, '%s: %s', Port?label_name, Pred))
+	).
 
 show(StartFrame, CHP, Up, Port, Style) :-
 	find_frame(Up, StartFrame, Port, PC, Frame),
