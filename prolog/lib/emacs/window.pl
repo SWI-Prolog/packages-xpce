@@ -321,7 +321,14 @@ initialise(D) :->
 	send_super(D, initialise),
 	send(D, gap, size(0,0)),
 	send(D, pen, 0),
-	send(D, append, new(emacs_menu_bar)).
+	send(D, append, new(emacs_menu_bar)),
+	send(D, append, new(TB, tool_bar), right),
+	send(TB, alignment, right),
+	get(@emacs, history, History),
+	get(History, button, forward, Forward),
+	get(History, button, backward, Backward),
+	send_list(TB, append, [Backward,Forward]),
+	send_list([Backward,Forward], activate).
 
 resize(D) :->
 	send(D, layout, D?area?size).

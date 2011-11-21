@@ -3,9 +3,10 @@
     Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2002, University of Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -121,6 +122,6 @@ button(DW, Dir:{forward,backward}, B:tool_button) :<-
 			   Tag,
 			   message(DW, Can))),
 	new(_, partof_hyper(DW, B, button, history)).
-			   
+
 :- pce_end_class(history).
 

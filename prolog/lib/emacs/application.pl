@@ -32,6 +32,7 @@
 
 :- module(emacs_application, []).
 :- use_module(library(pce)).
+:- use_module(library(pce_history)).
 :- if(current_prolog_flag(windows, true)).
 :- use_module(dde_server).
 :- endif.
@@ -46,8 +47,9 @@
 :- pce_begin_class(emacs, application,
 		   "PceEmacs main object").
 
-variable(buffer_list,	dict,	get, "List of buffers maintained").
-variable(exit_message,	message,get, "Registered exit message").
+variable(buffer_list,	dict,	 get, "List of buffers maintained").
+variable(exit_message,	message, get, "Registered exit message").
+variable(history,	history, get, "History of visited places").
 
 
 		 /*******************************
@@ -58,6 +60,7 @@ initialise(Emacs, Buffers:dict) :->
 	send(Emacs, send_super, initialise, emacs),
 	send(Emacs, leader, frame('PceEmacs')),
 	send(Emacs, kind, service),
+	send(Emacs, slot, history, new(history)),
 	send(Emacs, slot, buffer_list, Buffers),
 	new(Msg, message(Emacs, check_saved_at_exit)),
 	send(@pce, exit_message, Msg),
