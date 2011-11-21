@@ -65,7 +65,8 @@ library(emacs/logtalk_mode) for an example.
 	goal_classification/2.		% +Goal, -Class
 
 :- emacs_extend_mode(prolog,
-		     [ colourise_or_recenter = key('\\C-l')
+		     [ colourise_or_recenter = key('\\C-l'),
+		       colourise_buffer = key(key_top_5)
 		     ]).
 
 class_variable(auto_colourise_size_limit, int, 50000,
