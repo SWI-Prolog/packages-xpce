@@ -136,19 +136,32 @@ find_file(Emacs, Dir:[directory]) :->
 	get(@finder, file, @on, @default, Dir, FileName),
 	send(Emacs, open_file, FileName).
 
-goto_source_location(_Emacs,
+goto_source_location(Emacs,
 		     Location:source_location,
-		     Where:where=[{here,tab,window}]) :->
+		     Where:where=[{here,tab,window}],
+		     Title:title=[char_array]) :->
 	"Visit the indicated source-location"::
+	send(Emacs, location_history),
 	get(Location, file_name, File),
 	new(B, emacs_buffer(File)),
 	get(B, open, Where, Frame),
 	send(B, check_modified_file),
+	get(Frame, editor, Editor),
+	get(Editor, mode, Mode),
 	(   get(Location, line_no, Line),
 	    Line \== @nil
-	->  get(Frame, editor, Editor),
-	    send(Editor, mark_status, inactive),
-	    send(Editor?mode, select_line, Line)
+	->  send(Editor, mark_status, inactive),
+	    send(Mode, select_line, Line)
+	;   true
+	),
+	send(Mode, location_history, title := Title).
+
+location_history(Emacs, Title:title=[char_array]) :->
+	"Save current location into history"::
+	(   get(Emacs, current_frame, Frame),
+	    get(Frame, editor, Editor),
+	    get(Editor, mode, Mode)
+	->  send(Mode, location_history, title := Title)
 	;   true
 	).
 

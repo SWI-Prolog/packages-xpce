@@ -1494,8 +1494,26 @@ location_history(M, Start:start=[int], Len:length=[int],
 	    get(M, scan, Caret, line, 0, start, SOF)
 	;   SOF = Start
 	),
+	(   send(M, history_close, SOF)
+	->  true
+	;   get(M, text_buffer, TB),
+	    new(_, emacs_history_fragment(TB, SOF, Len, Title))
+	).
+
+history_close(M, Start:int, MaxDist:[int]) :->
+	"True if Start is close to the recent history mark"::
+	default(MaxDist, 10, MD),
 	get(M, text_buffer, TB),
-	new(_, emacs_history_fragment(TB, SOF, Len, Title)).
+	get(@emacs?history, current, Current), Current \== @nil,
+	get(Current, get_hyper, fragment, text_buffer, TB),
+	get(Current, get_hyper, fragment, start, StartOfCurrent),
+	(   Start < StartOfCurrent
+	->  get(TB, count_lines, Start, StartOfCurrent, Lines)
+	;   Start > StartOfCurrent
+	->  get(TB, count_lines, StartOfCurrent, Start, Lines)
+	;   Lines = 0
+	),
+	Lines < MD.
 
 
 		 /*******************************

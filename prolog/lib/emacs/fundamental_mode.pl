@@ -893,9 +893,17 @@ what_line(M) :->
 	send(M, report, inform, 'line %d', CaretLine).
 
 
-goto_line(M, LineNo:int) :->
+goto_line(M, LineNo:int, Title:[char_array]*) :->
 	"Goto given line-number"::
-	send(M, point_to_top_of_file, LineNo).
+	(   (   Title == @nil
+	    ;	get(M, line_number, M?caret, CaretLine),
+		abs(LineNo-CaretLine) < 10
+	    )
+	->  send(M, point_to_top_of_file, LineNo)
+	;   send(@emacs, location_history),
+	    send(M, point_to_top_of_file, LineNo),
+	    send(@emacs, location_history, Title)
+	).
 
 
 count_lines_region(M) :->
