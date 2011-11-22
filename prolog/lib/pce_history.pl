@@ -114,15 +114,21 @@ can_forward(H) :->
 
 :- pce_group(gui).
 
-update_menu(DW, Popup:popup) :->
+update_menu(DW, Popup:popup, MaxLen:[int]) :->
 	"Update forward/backward popup"::
+	default(MaxLen, 10, Max),
 	get(Popup, name, Dir),
 	(   Dir == forward
 	->  get(DW, forward_list, Targets)
 	;   get(DW, backward_list, Targets)
 	),
+	get(Targets, size, Len),
+	(   Len > Max
+	->  get(Targets, sub, 0, Max, MenuTargets)
+	;   MenuTargets = Targets
+	),
 	send(Popup, clear),
-	send(Targets, for_all,
+	send(MenuTargets, for_all,
 	     message(Popup, append,
 		     create(menu_item,
 			    @arg1, @default, @arg1?print_name))).
