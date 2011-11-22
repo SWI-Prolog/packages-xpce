@@ -61,7 +61,7 @@ initialise(Emacs, Buffers:dict) :->
 	send(Emacs, leader, frame('PceEmacs')),
 	send(Emacs, kind, service),
 	send(Emacs, slot, history,
-	     history(message(Emacs, goto_history, @arg1))),
+	     history(message(Emacs, goto_history, @arg1, tab))),
 	send(Emacs, slot, buffer_list, Buffers),
 	new(Msg, message(Emacs, check_saved_at_exit)),
 	send(@pce, exit_message, Msg),
