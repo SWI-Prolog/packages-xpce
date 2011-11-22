@@ -46,6 +46,10 @@ unlink(HE) :->
 	send(@emacs?history, delete, HE),
 	send_super(HE, delete).
 
+print_name(HR, Label:char_array) :<-
+	"Get human-readable representation of the entry"::
+	get(HR, get_hyper, fragment, print_name, Label).
+
 :- pce_end_class.
 
 		 /*******************************
@@ -77,6 +81,13 @@ source_location(HF, Loc:source_location) :<-
 	get(TB, line_number, HF?start, Line),
 	get(TB?file, name, File),
 	new(Loc, source_location(File, Line)).
+
+print_name(HF, Label:char_array) :<-
+	"Get human-readable representation of the entry"::
+	(   get(HF, title, Title), Title \== @nil
+	->  Label = Title
+	;   get(HF, string, Label)
+	).
 
 :- pce_end_class.
 
