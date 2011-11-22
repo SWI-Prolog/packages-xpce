@@ -613,6 +613,7 @@ find_tag(M, Tag:emacs_tag, Where:[{here,tab,window}], Editor:editor) :<-
 	->  new(B, emacs_buffer(File)),
 	    get(B, open, Where, Frame),
 	    get(Frame, editor, Editor),
+	    send(M, location_history),
 	    send(Editor, line_number, Line),
 	    adjust_tag(Editor, Tag),
 	    send(M, location_history, title := Tag)
