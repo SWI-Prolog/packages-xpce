@@ -80,23 +80,37 @@ delete(H, Loc:any) :->
 	send(H?backward_list, delete_all, Loc),
 	send(H?forward_list, delete_all, Loc).
 
-forward(DW) :->
+forward(DW, Obj:[any]) :->
 	"Forward into history"::
 	get(DW, forward_list, Forward),
 	get(DW, backward_list, Backward),
-	get(Forward, delete_head, Obj),
-	send(Backward, prepend, Obj),
+	(   Obj == @default
+	->  Roll = 1
+	;   get(Forward, index, Obj, Roll)
+	),
+	roll(Roll, Forward, Backward),
 	get(Backward, head, Here),
 	send(DW, goto, forward, Here).
 
-backward(DW) :->
+backward(DW, Obj:[any]) :->
 	"Backward into history"::
 	get(DW, forward_list, Forward),
 	get(DW, backward_list, Backward),
-	get(Backward, delete_head, Obj),
-	send(Forward, prepend, Obj),
+	(   Obj == @default
+	->  Roll = 1
+	;   get(Backward, index, Obj, I),
+	    Roll is I-1
+	),
+	roll(Roll, Backward, Forward),
 	get(Backward, head, Here),
 	send(DW, goto, backward, Here).
+
+roll(N, Ch1, Ch2) :-
+	succ(N2, N), !,
+	get(Ch1, delete_head, Obj),
+	send(Ch2, prepend, Obj),
+	roll(N2, Ch1, Ch2).
+roll(_, _, _).
 
 goto(DW, Dir:{forward,backward}, Obj:any) :->
 	get(DW, message, Msg),
@@ -152,7 +166,7 @@ button(DW, Dir:{forward,backward}, B:tool_button) :<-
 			   Tag,
 			   message(DW, Can))),
 	send(B, popup,
-	     new(P, popup(Dir, message(DW, goto, Dir, @arg1)))),
+	     new(P, popup(Dir, message(DW, Dir, @arg1)))),
 	send(P, update_message, message(DW, update_menu, P)),
 	send(B, recogniser,
 	     handler_group(timed_click_gesture(
