@@ -94,7 +94,13 @@ print_name(HF, Label:char_array) :<-
 	(   get(HF, title, Title), Title \== @nil
 	->  Label = Title
 	;   get(HF, string, Label),
-	    send(Label, strip)
+	    send(Label, strip),
+	    get(Label, size, Size),
+	    Size > 0
+	->  true
+	;   get(HF, source_location, source_location(File, Line)),
+	    file_base_name(File, FileBase),
+	    new(Label, string('%s:%d', FileBase, Line))
 	).
 
 :- pce_end_class.
