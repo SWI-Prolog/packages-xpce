@@ -444,6 +444,8 @@ static vardecl var_tab[] =
      NAME_layout, "X-Offset of label-box"),
   SV(NAME_status, "{on_top,hidden}", IV_GET|IV_STORE, statusTab,
      NAME_appearance, "Currently displayed status"),
+  IV(NAME_previousTop, "name*", IV_NONE,
+     NAME_update, "Name of tab on top before me"),
   SV(NAME_labelFormat, "{left,center,right}", IV_GET|IV_STORE|IV_REDEFINE,
      labelFormatDialogGroup,
      NAME_appearance, "Alignment of label in box")
@@ -495,7 +497,7 @@ static classvardecl rc_tab[] =
 { RC(NAME_elevation, "elevation",
      "when(@colour_display, " /* concat */
            "1, " /* concat */
-     	   "elevation(tab, 2, relief := @grey50_image, shadow := black))",
+	   "elevation(tab, 2, relief := @grey50_image, shadow := black))",
      "Elevation above environment"),
   RC(NAME_inactiveColour, "colour|pixmap*",
      "@nil", NULL),

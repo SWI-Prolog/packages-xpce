@@ -25,6 +25,8 @@
 #include <h/kernel.h>
 #include <h/dialog.h>
 
+static Tab	getOnTopTabStack(TabStack ts);
+
 
 		/********************************
 		*            CREATE		*
@@ -128,12 +130,15 @@ eraseTabStack(TabStack ts, Graphical gr)
     Tab newtop = NULL;
 
     if ( t->status == NAME_onTop )
-    { newtop = getNextChain(ts->graphicals, t);
+    { if ( !(notNil(t->previous_top) &&
+	     (newtop = (Tab)getMemberDevice((Device)ts, t->previous_top))) )
+      { newtop = getNextChain(ts->graphicals, t);
 
-      if ( !newtop )
-      { newtop = getHeadChain(ts->graphicals);
-	if ( newtop == t )
-	  newtop = NULL;
+	if ( !newtop )
+	{ newtop = getHeadChain(ts->graphicals);
+	  if ( newtop == t )
+	    newtop = NULL;
+	}
       }
     } else
       changedLabelImageTab(t);
@@ -233,14 +238,23 @@ layoutDialogTabStack(TabStack ts, Size s)
 
 static status
 onTopTabStack(TabStack ts, Tab t)
-{ Cell cell;
+{ if ( t->status != NAME_onTop )
+  { Cell cell;
+    Tab prev;
 
-  for_cell(cell, ts->graphicals)
-  { send(cell->value, NAME_status,
-	 (Tab)cell->value == t ? NAME_onTop : NAME_hidden, EAV);
+    if ( (prev = getOnTopTabStack(ts)) )
+    { assign(t, previous_top, prev->name);
+      DEBUG(NAME_tabStack,
+	    Cprintf("Set %s->previous_top to %s\n", pp(t), pp(prev->name)));
+    }
+
+    for_cell(cell, ts->graphicals)
+    { send(cell->value, NAME_status,
+	   (Tab)cell->value == t ? NAME_onTop : NAME_hidden, EAV);
+    }
+
+    send(t, NAME_advance, EAV);		/* initialise keyboard focus */
   }
-
-  send(t, NAME_advance, EAV);		/* initialise keyboard focus */
 
   succeed;
 }
