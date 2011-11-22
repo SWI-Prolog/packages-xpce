@@ -172,7 +172,7 @@ tab(F, B:buffer=emacs_buffer, Expose:expose=[bool]) :->
 	    ->	send(TW, on_top, Window)
 	    ;	true
 	    )
-	;   send(TW, append, new(V, emacs_view(B)), @default, Expose),
+	;   send(TW, append, new(V, emacs_view(B)), B?name, Expose),
 	    send(B, update_label),
 	    send(F, setup_mode, V)
 	).
