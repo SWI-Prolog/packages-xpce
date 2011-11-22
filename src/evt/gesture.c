@@ -120,12 +120,14 @@ cancelGesture(Gesture g, EventObj ev)
   if ( notNil(fe) )
     send(sw, NAME_event, fe, EAV);
 
-  addCodeReference(ev);
-  oev = sw->current_event;
-  assign(sw, current_event, NIL);
-  send(sw, NAME_postEvent, ev, EAV);
-  assign(sw, current_event, oev);
-  delCodeReference(ev);
+  if ( ev != sw->focus_event )
+  { addCodeReference(ev);
+    oev = sw->current_event;
+    assign(sw, current_event, NIL);
+    send(sw, NAME_postEvent, ev, EAV);
+    assign(sw, current_event, oev);
+    delCodeReference(ev);
+  }
 
   assign(g, active, ON);
   delCodeReference(fe);
