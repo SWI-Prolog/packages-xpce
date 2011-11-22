@@ -86,7 +86,8 @@ print_name(HF, Label:char_array) :<-
 	"Get human-readable representation of the entry"::
 	(   get(HF, title, Title), Title \== @nil
 	->  Label = Title
-	;   get(HF, string, Label)
+	;   get(HF, string, Label),
+	    send(Label, strip)
 	).
 
 :- pce_end_class.
