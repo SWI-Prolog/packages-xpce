@@ -1462,6 +1462,15 @@ getLineNumberTextBuffer(TextBuffer tb, Int i)
 }
 
 
+Int
+getCountLinesTextBuffer(TextBuffer tb, Int from, Int to)
+{ intptr_t f = (isDefault(from) ? 0        : valInt(from));
+  intptr_t t = (isDefault(to)   ? tb->size : valInt(to));
+
+  answer(toInt(count_lines_textbuffer(tb, f, t)));
+}
+
+
 intptr_t
 find_textbuffer(TextBuffer tb, intptr_t here, String str,
 		intptr_t times, char az, int ec, int wm)
@@ -2765,7 +2774,10 @@ static getdecl get_textBuffer[] =
      NAME_stream, "Implement seek when using as a file"),
   GM(NAME_scanSyntax, 2, "tuple", T_fromADintD_toADintD,
      getScanSyntaxTextBuffer,
-     NAME_language, "Find syntactical state of position")
+     NAME_language, "Find syntactical state of position"),
+  GM(NAME_countLines, 2, "int", T_fromADintD_toADintD,
+     getCountLinesTextBuffer,
+     NAME_line, "Count lines in character range")
 };
 
 /* Resources */
