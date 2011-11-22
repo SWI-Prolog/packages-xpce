@@ -1504,7 +1504,7 @@ history_close(M, Start:int, MaxDist:[int]) :->
 	"True if Start is close to the recent history mark"::
 	default(MaxDist, 10, MD),
 	get(M, text_buffer, TB),
-	get(@emacs?history, current, Current), Current \== @nil,
+	get(@emacs?history, current, Current),
 	get(Current, get_hyper, fragment, text_buffer, TB),
 	get(Current, get_hyper, fragment, start, StartOfCurrent),
 	(   Start < StartOfCurrent

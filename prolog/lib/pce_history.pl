@@ -46,7 +46,6 @@ variable(backward_list,	chain,		     get,  "Backward history").
 variable(forward_list,	chain,		     get,  "Forward history").
 variable(message,	code*,		     both, "Message executed").
 variable(action,	{forward,backward}*, get,  "Current action").
-variable(current,	any*,		     get,  "Current location").
 
 
 initialise(H, Msg:[code]*) :->
@@ -60,41 +59,44 @@ initialise(H, Msg:[code]*) :->
 
 location(H, Loc:any) :->
 	"Tell history we go some location"::
-	get(H, current, Current),
-	(   Current \== @nil
-	->  (   get(H, action, backward)
-	    ->	send(H?forward_list, prepend, Current)
-	    ;	send(H?backward_list, prepend, Current)
+	(   get(H, action, @nil)
+	->  get(H, forward_list, Forward),
+	    get(H, backward_list, Backward),
+	    (	send(Backward?head, equal, Loc)
+	    ->	true
+	    ;	send(Forward, clear),
+		send(Backward, prepend, Loc)
 	    )
 	;   true
 	),
-	send(H, slot, current, Loc),
 	ignore(send(H, send_hyper, button, activate)).
+
+current(H, Loc:any) :<-
+	"Return current location"::
+	get(H?backward_list, head, Loc).
 
 delete(H, Loc:any) :->
 	"Delete object from history"::
 	send(H?backward_list, delete_all, Loc),
 	send(H?forward_list, delete_all, Loc).
 
-backward(DW, Obj:any) :<-
-	"Return previous location"::
-	get(DW, backward_list, L),
-	get(L, delete_head, Obj).
-
-forward(DW, Obj:any) :<-
-	"Return next location"::
-	get(DW, forward_list, L),
-	get(L, delete_head, Obj).
-
 forward(DW) :->
 	"Forward into history"::
-	get(DW, forward, Next),
-	send(DW, goto, forward, Next).
+	get(DW, forward_list, Forward),
+	get(DW, backward_list, Backward),
+	get(Forward, delete_head, Obj),
+	send(Backward, prepend, Obj),
+	get(Backward, head, Here),
+	send(DW, goto, forward, Here).
 
 backward(DW) :->
 	"Backward into history"::
-	get(DW, backward, Next),
-	send(DW, goto, backward, Next).
+	get(DW, forward_list, Forward),
+	get(DW, backward_list, Backward),
+	get(Backward, delete_head, Obj),
+	send(Forward, prepend, Obj),
+	get(Backward, head, Here),
+	send(DW, goto, backward, Here).
 
 goto(DW, Dir:{forward,backward}, Obj:any) :->
 	get(DW, message, Msg),
@@ -106,7 +108,9 @@ goto(DW, Dir:{forward,backward}, Obj:any) :->
 
 can_backward(H) :->
 	"Test whether there is backward history available"::
-	\+ send(H?backward_list, empty).
+	get(H, backward_list, Backward),
+	get(Backward, size, Count),
+	Count > 1.
 
 can_forward(H) :->
 	"Test whether there is forward history available"::

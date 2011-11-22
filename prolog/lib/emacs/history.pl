@@ -50,6 +50,13 @@ print_name(HR, Label:char_array) :<-
 	"Get human-readable representation of the entry"::
 	get(HR, get_hyper, fragment, print_name, Label).
 
+equal(HE, HE2:emacs_history_entry) :->
+	"True if both entries start and the same location"::
+	get(HE, get_hyper, fragment, text_buffer, TB),
+	get(HE2, get_hyper, fragment, text_buffer, TB),
+	get(HE, get_hyper, fragment, start, Start),
+	get(HE2, get_hyper, fragment, start, Start).
+
 :- pce_end_class.
 
 		 /*******************************

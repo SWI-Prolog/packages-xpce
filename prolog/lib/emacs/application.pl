@@ -139,9 +139,12 @@ find_file(Emacs, Dir:[directory]) :->
 goto_source_location(Emacs,
 		     Location:source_location,
 		     Where:where=[{here,tab,window}],
-		     Title:title=[char_array]) :->
+		     Title:title=[char_array]*) :->
 	"Visit the indicated source-location"::
-	send(Emacs, location_history),
+	(   Title == @nil
+	->  true
+	;   send(Emacs, location_history)
+	),
 	get(Location, file_name, File),
 	new(B, emacs_buffer(File)),
 	get(B, open, Where, Frame),
@@ -154,7 +157,10 @@ goto_source_location(Emacs,
 	    send(Mode, select_line, Line)
 	;   true
 	),
-	send(Mode, location_history, title := Title).
+	(   Title == @nil
+	->  true
+	;   send(Mode, location_history, title := Title)
+	).
 
 location_history(Emacs, Title:title=[char_array]) :->
 	"Save current location into history"::
@@ -167,7 +173,7 @@ location_history(Emacs, Title:title=[char_array]) :->
 
 goto_history(Emacs, HE:emacs_history_entry, Where:where=[{here,tab,window}]) :->
 	"Go back to an old history location"::
-	send(Emacs, goto_source_location, HE?source_location, Where),
+	send(Emacs, goto_source_location, HE?source_location, Where, @nil),
 	send(Emacs?history, location, HE).
 
 edit(Emacs, Location:source_location) :->
