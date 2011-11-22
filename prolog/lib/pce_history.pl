@@ -114,6 +114,20 @@ can_forward(H) :->
 
 :- pce_group(gui).
 
+update_menu(DW, Popup:popup) :->
+	"Update forward/backward popup"::
+	get(Popup, name, Dir),
+	(   Dir == forward
+	->  get(DW, forward_list, Targets)
+	;   get(DW, backward_list, Targets)
+	),
+	send(Popup, clear),
+	send(Targets, for_all,
+	     message(Popup, append,
+		     create(menu_item,
+			    @arg1, @default, @arg1?print_name))).
+
+
 button(DW, Dir:{forward,backward}, B:tool_button) :<-
 	"Create tool-buttons for manipulating the history"::
 	(   Dir == forward
@@ -127,7 +141,67 @@ button(DW, Dir:{forward,backward}, B:tool_button) :<-
 			   image(resource(Img)),
 			   Tag,
 			   message(DW, Can))),
+	send(B, popup,
+	     new(P, popup(Dir, message(DW, goto, Dir, @arg1)))),
+	send(P, update_message, message(DW, update_menu, P)),
+	send(B, recogniser,
+	     handler_group(timed_click_gesture(
+			       left, @default,
+			       message(@receiver, execute),
+			       message(@receiver, status, preview),
+			       message(B, cancel)),
+			   new(timed_popup_gesture(P, left)))),
 	new(_, partof_hyper(DW, B, button, history)).
 
 :- pce_end_class(history).
 
+:- pce_begin_class(timed_click_gesture, click_gesture,
+		   "Click gesture that cancels").
+
+variable(timer,  timer,   get, "Associated timer").
+variable(window, window*, get, "Window I'm associated to").
+
+initialise(G,
+	   Button:button=[button_name],
+	   Modifier:modifier=[modifier],
+	   Message:message=[code]*,
+	   Preview:preview=[code]*,
+	   Cancel:cancel=[code]*,
+	   Time:time=[float]) :->
+	"Initialise as click_gesture with timeout"::
+	default(Time, 0.3, TheTime),
+	send_super(G, initialise,
+		   Button, Modifier, single,
+		   Message, Preview, Cancel),
+	send(G, slot, timer, timer(TheTime, message(G, timeout))).
+
+initiate(G, Ev:event) :->
+	send_super(G, initiate, Ev),
+	send(G, slot, window, Ev?window),
+	send(G?timer, start, once).
+
+timeout(G) :->
+	"Button pressed too long; cancel"::
+	get(G, window, Window), Window \== @nil,
+	get(Window, focus_event, Ev), Ev \== @nil,
+	send(G, slot, window, @nil),
+	send(G, cancel, Ev).
+
+terminate(G, Ev:event) :->
+	send(G?timer, stop),
+	send(G, slot, window, @nil),
+	send_super(G, terminate, Ev).
+
+:- pce_end_class(timed_click_gesture).
+
+:- pce_begin_class(timed_popup_gesture, popup_gesture,
+	       "Complement timed_click_gesture").
+
+initiate(G, Ev:event) :->
+	get(Ev, receiver, Gr),
+	get(Gr, height, Y),
+	get(G, slot, current, Popup),
+	send(Popup, open, Gr, point(0,Y), @off, @off),
+	send(Ev, post, Popup).
+
+:- pce_end_class.
