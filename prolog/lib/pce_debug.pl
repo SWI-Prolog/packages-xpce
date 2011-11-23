@@ -44,8 +44,6 @@
 	, pcerefer/2			% Print objects refering to me
 	, pce_global_objects/1		% -globals
 	]).
-
-
 :- use_module(library(pce)).
 :- require([ forall/2
 	   , pce_to_method/2
@@ -54,6 +52,7 @@
 	   , genarg/3
 	   ]).
 :- set_prolog_flag(generate_debug_info, false).
+:- meta_predicate test(0,-).
 
 % leave this to the user
 % :- op(100, xfx, user:(<-)).
@@ -311,6 +310,8 @@ pcerefer(From, Obj) :-
 	    free(Found)
 	;   true
 	).
+
+:- public pcerefer/6.
 
 pcerefer(Obj, From, Type, Where, All, Found) :-
 	Obj \== All,

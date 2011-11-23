@@ -179,6 +179,8 @@ setup_mode(M) :->
 :- send(@class, attribute, outline_regex_list,
 	chain(regex('(^\\w+.*:<?->?)([^.]+\\.(\\s*\n)*)\\s'))).
 
+:- public source_file_chain/1.		% Supports source_file in button(browse)
+
 source_file_chain(Ch) :-
 	new(Ch, chain),
 	forall(user_source_file(X), send(Ch, append, X)),

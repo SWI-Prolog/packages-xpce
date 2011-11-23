@@ -86,7 +86,7 @@ reexports the content of these files.
 	    op(990, xfx, :=)
 	  ]).
 
-:- system_module.
+:- set_prolog_flag(generate_debug_info, false).
 
 :- meta_predicate
 	in_pce_thread_sync(0).
