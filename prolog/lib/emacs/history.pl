@@ -44,7 +44,7 @@ source_location(HE, Loc:source_location) :<-
 unlink(HE) :->
 	"Remove from history"::
 	send(@emacs?history, delete, HE),
-	send_super(HE, delete).
+	send_super(HE, unlink).
 
 print_name(HR, Label:char_array) :<-
 	"Get human-readable representation of the entry"::
