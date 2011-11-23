@@ -34,15 +34,26 @@
 /** <module> Hook XPCE based graphics tools into IDE
 
 Loading this file enables the graphical  frontends for the online manual
-and profiler.
+and profiler. This file is normally   loaded from swipl.rc (swipl-win.rc
+on Windows); the file that makes XPCE known to Prolog.
+
+This file uses call/1 to call the real work to avoid undefined predicate
+messages when using make/0 (calling list_undefined/0).
+
+Since  the  introduction   of   the    more   advanced   autoloader   in
+library(prolog_autoload), using call/1 no longer   suffices to stop this
+file from being loaded.
 */
+
+:- set_module(class(development)).
 
 :- multifile
 	prolog:debug_control_hook/1,
 	prolog:help_hook/1,
 	prolog:show_profile_hook/2.
 
-       		 /*******************************
+
+		 /*******************************
 		 *	    DEBUG HOOKS		*
 		 *******************************/
 
