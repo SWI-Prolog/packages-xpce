@@ -842,19 +842,6 @@ insert_full_stop(M, Arg:[int]) :->
 	;   true
 	).
 
-:- multifile
-	alternate_syntax/3.
-
-alternate_syntax(prolog,
-		 true,
-		 true).
-alternate_syntax(pce_class,
-		 pce_expansion:push_compile_operators(emacs_prolog_mode),
-		 pce_expansion:pop_compile_operators).
-
-:- dynamic
-	last_syntax_error/1.
-
 check_clause(M, From:from=[int], Repair:repair=[bool], End:int) :<-
 	"Check clause, returning the end of it"::
         (   From == @default
@@ -866,9 +853,10 @@ check_clause(M, From:from=[int], Repair:repair=[bool], End:int) :<-
 	    Verbose = false
 	),
 	get(M, text_buffer, TB),
-	pce_open(TB, read, Fd),
-	read_term_from_stream(TB, Fd, Start, T, Error, S, P, Comments),
-	close(Fd),
+	setup_call_cleanup(
+	    pce_open(TB, read, Fd),
+	    read_term_from_stream(TB, Fd, Start, T, Error, S, P, Comments),
+	    close(Fd)),
 	(   var(Error)
 	->  (	send(M, has_send_method, colourise_term)
 	    ->	send(M, colourise_term, T, P, Comments)
