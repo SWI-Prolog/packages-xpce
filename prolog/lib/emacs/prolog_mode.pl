@@ -852,45 +852,23 @@ check_clause(M, From:from=[int], Repair:repair=[bool], End:int) :<-
 	;   Start = From,
 	    Verbose = false
 	),
-	get(M, text_buffer, TB),
-	setup_call_cleanup(
-	    pce_open(TB, read, Fd),
-	    read_term_from_stream(TB, Fd, Start, T, Error, S, P, Comments),
-	    close(Fd)),
-	(   var(Error)
-	->  (	send(M, has_send_method, colourise_term)
-	    ->	send(M, colourise_term, T, P, Comments)
-	    ;	unmark_singletons(M, P)
-	    ),
-	    (   S == []
-	    ->  (   Verbose == true
-		->  send(M, report, status, 'Clause checked')
-		;   true
-		)
-	    ;   send(M, mark_singletons, T, S, P),
-		(   Repair \== @off
-		->  replace_singletons(M, P)
-		;   true
-		)
-	    ),
-	    arg(2, P, E0),
-	    get(TB, find, E0, '.', 1, end, End)
-	;   get(M, forward_clause, Start, End),
-	    send(M, remove_syntax_fragments, Start, End),
-	    (	send(M, has_send_method, colourise_comments)
-	    ->	send(M, colourise_comments, Start, End)
-	    ;	true
-	    ),
-	    Error = EPos:Msg,
+	get(M, colourise_clause, Start, TermPos),
+	(   TermPos = error_position(StartClause, EndClause, ErrorPos)
+	->  send(M, remove_syntax_fragments, StartClause, EndClause),
+	    (   send(M, has_send_method, colourise_comments)
+            ->  send(M, colourise_comments, StartClause, EndClause)
+            ;   true
+            ),
 	    (	Repair \== @off
-	    ->  send(M, caret, EPos),
-		send(M, report, warning, 'Syntax-error: %s', Msg)
-	    ;	get(M, show_syntax_errors, typing)
-	    ->	send(M, show_syntax_error, EPos, Msg)
+	    ->	send(M, caret, ErrorPos)
 	    ;	true
-	    ),
-	    fail
+	    )
+	;   TermPos \= error_position(_,_,_),
+	    arg(2, TermPos, End0),
+	    get(M, text_buffer, TB),
+	    get(TB, find, End0, '.', 1, end, End)
 	).
+
 
 %%	read_term_from_stream(+TextBuffer, +Stream, +Start,
 %%			      -Start, -Term, -Error, -Singletons, -TermPos,
