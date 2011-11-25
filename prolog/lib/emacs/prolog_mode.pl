@@ -853,13 +853,8 @@ check_clause(M, From:from=[int], Repair:repair=[bool], End:int) :<-
 	    Verbose = false
 	),
 	get(M, colourise_clause, Start, TermPos),
-	(   TermPos = error_position(StartClause, EndClause, ErrorPos)
-	->  send(M, remove_syntax_fragments, StartClause, EndClause),
-	    (   send(M, has_send_method, colourise_comments)
-            ->  send(M, colourise_comments, StartClause, EndClause)
-            ;   true
-            ),
-	    (	Repair \== @off
+	(   TermPos = error_position(_StartClause, _EndClause, ErrorPos)
+	->  (	Repair \== @off
 	    ->	send(M, caret, ErrorPos)
 	    ;	true
 	    )

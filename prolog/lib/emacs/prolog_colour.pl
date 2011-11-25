@@ -91,6 +91,9 @@ colourise_clause(M, From:from=[int], TermPos:prolog) :<-
 :- dynamic
 	style_name/2.
 
+colour_item(M, term, Start, Length) :- !,
+	End is Start+Length,
+	send(M, remove_syntax_fragments, Start, End).
 colour_item(M, Class, Start, Length) :-
 	style_name(Class, Name), !,
 	make_fragment(Class, M, Start, Length, Name).
@@ -231,8 +234,7 @@ make_fragment(class(Type, Class), M, F, L, Style) :-
 	functor(Type, Classification, _),
 	send(Fragment, classification, Classification),
 	send(Fragment, referenced_class, Class).
-make_fragment(syntax_error(Message, Start-End), M, F, L, Style) :- !,
-	send(M, colourise_comments, Start, End),
+make_fragment(syntax_error(Message, _Range), M, F, L, Style) :- !,
 	(   \+ get(M, show_syntax_errors, never)
 	->  make_simple_fragment(syntax_error(Message), M, F, L, Style)
 	;   true
