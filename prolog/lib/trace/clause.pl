@@ -118,14 +118,19 @@ pce_clause_info(ClauseRef, S, TermPos, NameOffset) :-
 	->  true
 	;   Clause = Clause0
 	),
-	setup_call_cleanup(pce_open(S, write, Fd),
-			   portray_clause(Fd, Clause, [max_depth(10)]),
-			   close(Fd)),
+	setup_call_cleanup(
+	    pce_open(S, write, Fd),
+	    portray_clause(Fd, Clause, [max_depth(10)]),
+	    close(Fd)),
 	debug(clause_info, 'ok, reading ... ', []),
-	setup_call_cleanup(pce_open(S, read, Handle),
-			   prolog_clause:read(Handle, user,
-					      ReadClause, TermPos, VarNames),
-			   close(Handle)),
+	setup_call_cleanup(
+	    pce_open(S, read, Handle),
+	    read_source_term_at_location(Handle, ReadClause,
+					 [ module(user),
+					   subterm_positions(TermPos),
+					   variable_names(VarNames)
+					 ]),
+	    close(Handle)),
 	prolog_clause:unify_term(Clause, ReadClause),
 	debug(clause_info, 'ok ...', []),
 	prolog_clause:make_varnames(Clause, Clause, VarOffset, VarNames, NameOffset),

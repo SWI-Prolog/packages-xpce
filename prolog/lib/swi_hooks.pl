@@ -87,3 +87,21 @@ prolog:help_hook(help(What)) :- !,
 
 prolog:show_profile_hook(_Style, _Top) :-
 	call(pce_show_profile).
+
+
+		 /*******************************
+		 *	       SOURCE		*
+		 *******************************/
+
+%%	prolog:alternate_syntax(?Syntax, +Module, -Setup, -Restore)
+%
+%	Implements operator handling for reading   arbitrary  terms from
+%	XPCE classes.
+
+:- multifile
+	prolog:alternate_syntax/4.
+
+prolog:alternate_syntax(pce_class, M, pce_expansion:push_compile_operators(M),
+				      pce_expansion:pop_compile_operators) :-
+	current_prolog_flag(xpce, true).
+
