@@ -91,9 +91,13 @@ colourise_clause(M, From:from=[int], TermPos:prolog) :<-
 :- dynamic
 	style_name/2.
 
-colour_item(M, term, Start, Length) :- !,
+colour_item(M, range, Start, Length) :- !,
 	End is Start+Length,
 	send(M, remove_syntax_fragments, Start, End).
+colour_item(M, atom, Start, Length) :-
+	get(M, text_buffer, TB),
+	get(TB, character, Start, 0'\'), !,
+	colour_item(M, quoted_atom, Start, Length).
 colour_item(M, Class, Start, Length) :-
 	style_name(Class, Name), !,
 	make_fragment(Class, M, Start, Length, Name).

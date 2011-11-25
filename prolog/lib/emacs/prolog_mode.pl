@@ -164,7 +164,6 @@ icon(_, I:image) :<-
 setup_mode(M) :->
 	"Attach styles for errors, warnings, etc."::
 	send_super(M, setup_mode),
-	send(M, style, singleton,  style(bold := @on)),
 	send(M,	style, breakpoint, style(icon := resource(breakpoint))),
 	send(M,	style, error,	   style(background := red)),
 	send(M,	style, warning,	   style(background := orange)),
