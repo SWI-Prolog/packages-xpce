@@ -857,10 +857,13 @@ check_clause(M, From:from=[int], Repair:repair=[bool], End:int) :<-
 	    ->	send(M, caret, ErrorPos)
 	    ;	true
 	    )
-	;   TermPos \= error_position(_,_,_),
-	    arg(2, TermPos, End0),
+	;   arg(2, TermPos, End0),
 	    get(M, text_buffer, TB),
-	    get(TB, find, End0, '.', 1, end, End)
+	    get(TB, find, End0, '.', 1, end, End),
+	    (	Repair \== @off
+	    ->	send(M, replace_singletons, Start, End)
+	    ;	true
+	    )
 	).
 
 
@@ -892,71 +895,21 @@ check_clause(M, From:from=[int], Repair:repair=[bool]) :->
 	get(M, check_clause, From, Repair, _).
 
 
-unmark_singletons(M, P) :-
-	arg(1, P, Start),
-	arg(2, P, End),
-	new(Pt, point(Start, End)),
-	send(M, for_all_fragments,
-	     if(and(@arg1?style == singleton,
-		    message(@arg1, overlap, Pt)),
-		message(@arg1, free))).
-
-%	->mark_singletons: Term, Singletons, Pos
-%
-%	Mark singleton variables in Term, where Singletons is a list of
-%	singleton variables returned from read_term/3 and Pos is the
-%	subterm-position returned.
-
-mark_singletons(M, Term:prolog, Singletons:prolog, Pos:prolog) :->
-	"Mark singleton variables using info from read_term/3"::
-	(   Singletons == []
-	->  true
-	;   mark_singletons(M, Term, Singletons, Pos)
-	).
-
-mark_singletons(M, T, S, A-Z) :-
-	var(T),
-	member_var(T, S), !,
-	get(M, text_buffer, TB),
-	new(_, emacs_colour_fragment(TB, A, Z-A, singleton)).
-mark_singletons(_, _, _, _-_) :- !.
-mark_singletons(_, _, _, list_position(_, _, [], none)) :- !.
-mark_singletons(M, T, S, list_position(_, _, [], Tail)) :- !,
-	mark_singletons(M, T, S, Tail).
-mark_singletons(M, [H|T], S, list_position(A, Z, [E|ET], Tail)) :- !,
-	mark_singletons(M, H, S, E),
-	mark_singletons(M, T, S, list_position(A, Z, ET, Tail)).
-mark_singletons(_, _, _, string_position(_,_)) :- !.
-mark_singletons(M, {T}, S, brace_term_position(_, _, P)) :- !,
-	mark_singletons(M, T, S, P).
-mark_singletons(M, T, S, term_position(_,_,_,_,Args)) :-
-	mark_arg_singletons(M, T, S, 1, Args).
-
-mark_arg_singletons(_, _, _, _, []) :- !.
-mark_arg_singletons(M, T, S, N, [H|L]) :-
-	arg(N, T, A),
-	mark_singletons(M, A, S, H),
-	NN is N + 1,
-	mark_arg_singletons(M, T, S, NN, L).
-
-member_var(V, [_=V2|_]) :-
-	V == V2, !.
-member_var(V, [_|T]) :-
-	member_var(V, T).
-
-replace_singletons(M, P) :-
-	arg(1, P, Start),
-	arg(2, P, End),
+replace_singletons(M, Start:int, End:int) :->
+	"Replace singletion variables in range"::
 	new(Pt, point(Start, End)),
 	get(M, find_all_fragments,
 	    and(message(@arg1, overlap, Pt),
 		@arg1?style == singleton),
 	    Frags),
-	send(M, attribute, singletons, Frags),
-	get(M, caret, C),
-	send(M, internal_mark, C),
-	send(M, focus_function, '_replace_singletons'),
-	prepare_replace_singletons(M).
+	(   send(Frags, empty)
+	->  true
+	;   send(M, attribute, singletons, Frags),
+	    get(M, caret, C),
+	    send(M, internal_mark, C),
+	    send(M, focus_function, '_replace_singletons'),
+	    prepare_replace_singletons(M)
+	).
 
 '_replace_singletons'(M, Id:event_id) :->
 	get(M, attribute, singletons, Frags),
@@ -1040,7 +993,10 @@ typed(M, Id:'event|event_id', Editor:editor) :->
 	send_super(M, typed, Id, Editor),
 	(   object(M)			% Control-x k destroys the mode
 	->  (   get(M, varmark_style, Style),
-		Style \== @nil
+		Style \== @nil,
+					% Otherwise the singleton fragments
+					% are deleted
+		\+ get(M, focus_function, '_replace_singletons')
 	    ->  send(M, mark_variable, @on)
 	    ;   true
 	    )
