@@ -893,7 +893,7 @@ what_line(M) :->
 	send(M, report, inform, 'line %d', CaretLine).
 
 
-goto_line(M, LineNo:int, Title:[char_array]*) :->
+goto_line(M, LineNo:int, Title:title=[char_array]*) :->
 	"Goto given line-number"::
 	(   (   Title == @nil
 	    ;	get(M, line_number, M?caret, CaretLine),
