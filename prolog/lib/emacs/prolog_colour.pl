@@ -35,6 +35,7 @@
 :- use_module(library(pce)).
 :- use_module(library(emacs_extend)).
 :- use_module(library(pce_prolog_xref)).
+:- use_module(library(pce_meta)).
 :- use_module(library(predicate_options)).
 :- use_module(library(prolog_source)).
 :- use_module(library(lists)).
@@ -1940,35 +1941,12 @@ class_summary(ClassName, Summary) :-
 	).
 
 
-%	classify_class(+ClassName, -Classification).
+%%	classify_class(+TB, +ClassName, -Classification).
 
-classify_class(_, Name, built_in) :-
-	get(@classes, member, Name, Class),
-	get(Class, creator, built_in), !.
 classify_class(TB, Name, Class) :-
-	xref_defined_class(TB, Name, Class).
-classify_class(_, Name, library(File)) :-
-	pce_library_class(Name, _, _, FileSpec),
-	FileSpec = library(File),
-	(   get(@classes, member, Name, Class),
-	    get(Class, source, source_location(File, _Line))
-	->  absolute_file_name(FileSpec, File,
-			       [ access(read)
-			       ])
-
-	;   true
-	), !.
-classify_class(_, Name, user(File)) :-
-	get(@classes, member, Name, Class),
-	get(Class, source, source_location(File, _Line)).
-classify_class(_, Name, user(File)) :-
-	pce_prolog_class(Name),
-	pce_principal:pce_class(Name, _Meta, _Super, _Vars, _Res, Attributes),
-	memberchk(send(@class, source, source_location(File, _Line)),
-		  Attributes), !.
-classify_class(_, Name, user) :-
-	get(@classes, member, Name, _), !.
-classify_class(_, _, undefined).
+	xref_defined_class(TB, Name, Class), !.
+classify_class(_, Name, Class) :-
+	classify_class(Name, Class).
 
 :- pce_end_class(emacs_class_fragment).
 

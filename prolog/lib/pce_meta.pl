@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -38,7 +39,8 @@
 	    implements/2,		% ?Class, ?SendOrGet(?Name)
 	    implements/3,		% idem, -Method
 	    pce_to_pl_type/2,		% +PceType, -PrologType
-	    type_accepts_function/1	% +Type
+	    type_accepts_function/1,	% +Type
+	    classify_class/2		% +Class, -Classification
 	  ]).
 :- use_module(library(pce)).
 :- require([ pce_error/1
@@ -46,6 +48,13 @@
 	   , get_chain/3
 	   , maplist/3
 	   ]).
+
+/** <module> Reflection support for XPCE
+
+This module defines utilities to  simplify   reflexion  support of XPCE,
+notably implementing non-deterministic logical relations   on top of the
+deterministic XPCE methods.
+*/
 
 
 		 /*******************************
@@ -382,3 +391,40 @@ list_to_value_or([A|B], or(value(A), T)) :-
 
 type_accepts_function(Type) :-
 	send(type(function), specialised, Type).
+
+%%	classify_class(+ClassName, -Classification) is det.
+%
+%	Classify an XPCE class.  Defined classes are:
+%
+%	  * built_in
+%	  * file(File)
+%	  * library(File)
+%	  * user(File)
+%	  * user
+%	  * undefined
+
+classify_class(Name, built_in) :-
+	get(@classes, member, Name, Class),
+	get(Class, creator, built_in), !.
+classify_class(Name, library(File)) :-
+	pce_library_class(Name, _, _, FileSpec),
+	FileSpec = library(File),
+	(   get(@classes, member, Name, Class),
+	    get(Class, source, source_location(File, _Line))
+	->  absolute_file_name(FileSpec, File,
+			       [ access(read)
+			       ])
+
+	;   true
+	), !.
+classify_class(Name, user(File)) :-
+	get(@classes, member, Name, Class),
+	get(Class, source, source_location(File, _Line)).
+classify_class(Name, user(File)) :-
+	pce_prolog_class(Name),
+	pce_principal:pce_class(Name, _Meta, _Super, _Vars, _Res, Attributes),
+	memberchk(send(@class, source, source_location(File, _Line)),
+		  Attributes), !.
+classify_class(Name, user) :-
+	get(@classes, member, Name, _), !.
+classify_class(_, undefined).
