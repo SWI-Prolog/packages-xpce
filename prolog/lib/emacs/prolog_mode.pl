@@ -36,6 +36,7 @@
 :- use_module(library(operators)).
 :- use_module(library(emacs_extend)).
 :- use_module(library(prolog_predicate)).
+:- use_module(library(prolog_source)).
 :- use_module(library(pce_prolog_xref)).
 :- require([ make/0
 	   , absolute_file_name/3
@@ -868,7 +869,7 @@ check_clause(M, From:from=[int], Repair:repair=[bool], End:int) :<-
 	pce_open(TB, read, Fd),
 	read_term_from_stream(TB, Fd, Start, T, Error, S, P, Comments),
 	close(Fd),
-	(   Error == none
+	(   var(Error)
 	->  (	send(M, has_send_method, colourise_term)
 	    ->	send(M, colourise_term, T, P, Comments)
 	    ;	unmark_singletons(M, P)
@@ -904,90 +905,26 @@ check_clause(M, From:from=[int], Repair:repair=[bool], End:int) :<-
 	).
 
 %%	read_term_from_stream(+TextBuffer, +Stream, +Start,
-%%			      -Start, -Term, -Errors, -Singletons, -TermPos,
+%%			      -Start, -Term, -Error, -Singletons, -TermPos,
 %%			      -Comments) is det.
 %
 %	@param	Comments is list of comments or (-) if the parser cannot
 %		produce information about comments.
 
-read_term_from_stream(TB, Fd, Start, T, Error, S, P, C) :-
-	retractall(last_syntax_error(_)),
-	alternate_syntax(_Name, Setup, Restore),
+read_term_from_stream(TB, Fd, Start,
+		      Term, Error,
+		      Singletons, TermPos, Comments) :-
 	findall(Op, xref_op(TB, Op), Ops),
-	push_operators(Ops),
-	Setup,
-	seek(Fd, Start, bof, _),
-	read_with_errors(Fd, Start, T, Error, S, P, C),
-	Restore,
-	pop_operators,
-	(   Error == none
-	->  true
-	;   assert(last_syntax_error(Error)),
-	    fail
-	), !.
-read_term_from_stream(_, _, _, _, Error, _, _, _) :-
-	setof(E, retract(last_syntax_error(E)), Es),
-	last(Es, Error).
-
-pce_ifhostproperty(prolog(swi),
-(read_with_errors(Fd, _Start, T, Error, Singletons, TermPos, Comments) :-
-	catch(read_term(Fd, T, [ singletons(Singletons),
-				 subterm_positions(TermPos),
-				 module(emacs_prolog_mode),
-				 comments(Comments)
-			       ]),
-	      Error0,
-	      true),
-	pl_error_message(Error0, Error))).
-pce_ifhostproperty(prolog(quintus),
-(read_with_errors(Fd, Start, T, Error, Singletons, TermPos, -) :-
-	on_exception(syntax_error(_G, _Pos,
-				  Message,
-				  Pre, Post, _),
-		     read_term(Fd, [ syntax_errors(error),
-				     singletons(Singletons),
-				     subterm_positions(TermPos)
-				   ], T),
-		     qp_error_message(Message, Start, Pre, Post, Error)),
-	(var(Error) -> Error = none ; true))).
-
-pce_ifhostproperty(prolog(swi),
-[(
-pl_error_message(X, none) :-
-	var(X), !
- ),
- (
-pl_error_message(error(syntax_error(Id),
-		       stream(_S, _Line, _LinePos, CharNo)),
-		 CharNo:Msg) :-
-	message_to_string(error(syntax_error(Id), _), Msg)
- )
-]).
-
-pce_ifhostproperty(prolog(quintus),
-(qp_error_message(Msg, Start, Pre, Post, EP:TheMsg) :-
-	length(Pre, EP0),
-	(   EP0 > 10
-	->  length(PreM, 10),
-	    append(_, PreM, Pre)
-	;   PreM = Pre
-	),
-	length(Post, PL),
-	(   PL > 10
-	->  length(PosM, 10),
-	    append(PosM, _, Post)
-	;   PosM = Post
-	),
-	(   Msg == ''
-	->  MsgChars0 = ''
-	;   atom_codes(Msg, MsgChars0)
-	),
-	concat_chars([ MsgChars0,
-		       "between `..", PreM, "' and `", PosM, "..'"
-		     ],
-		     MsgChars),
-	atom_codes(TheMsg, MsgChars),
-	EP is EP0 + Start)).
+	read_source_term_at_location(
+	    Fd, Term,
+	    [ offset(Start),
+	      module(emacs_prolog_mode),
+	      operators(Ops),
+	      error(Error),
+	      singletons(Singletons),
+	      subterm_positions(TermPos),
+	      comments(Comments)
+	    ]).
 
 
 check_clause(M, From:from=[int], Repair:repair=[bool]) :->
@@ -1123,7 +1060,7 @@ prolog_term(M, From:[int], Silent:[bool], TermPos:[prolog], Clause:prolog) :<-
 	  read_term_from_stream(TB, Fd, Start, Clause, Error, _S, P, _C),
 	  close(Fd),
 	  ignore(P = TermPos),
-	  (   Error == none
+	  (   var(Error)
 	  ->  true
 	  ;   (   Silent \== @on
 	      ->  Error = EPos:Msg,

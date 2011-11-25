@@ -323,7 +323,7 @@ colourise(TB, Fd) :-
 						Error,
 						_Singletons,
 						TermPos, Comments),
-	(   Error == none
+	(   var(Error)
 	->  colourise_term(Term, TB, TermPos, Comments)
 	;   show_syntax_error(TB, Error)
 	).
