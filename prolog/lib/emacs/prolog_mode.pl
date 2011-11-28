@@ -1385,6 +1385,9 @@ reload_styles(M) :->
 %	Enumerate the known styles, assign a name for them and create an
 %	XPCE style object.
 
+:- public
+	style/3.			% Used by completion extension
+
 style(Class, Name, Style) :-
 	syntax_colour(Class, Attributes),
 	copy_term(Class, Copy),

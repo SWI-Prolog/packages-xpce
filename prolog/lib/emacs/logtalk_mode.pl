@@ -86,11 +86,11 @@ colourise_buffer(M) :->
 		 *******************************/
 
 :- multifile
-	emacs_prolog_colours:style/2,
-	emacs_prolog_colours:term_colours/2,
-	emacs_prolog_colours:goal_colours/2,
-	emacs_prolog_colours:directive_colours/2,
-	emacs_prolog_colours:goal_classification/2.
+	prolog_colour:style/2,
+	prolog_colour:term_colours/2,
+	prolog_colour:goal_colours/2,
+	prolog_colour:directive_colours/2,
+	prolog_colour:goal_classification/2.
 
 
 object_opening_directive_relations(Relations, entity_relation-Colours) :-
@@ -347,39 +347,39 @@ goal_colours(':'(_), built_in-[classify]).
 
 goal_classification(_, normal).
 
-style(goal(source_file_directive,_), style(colour := blue)).
-style(goal(conditional_compilation_directive,_), style(colour := blue)).
-style(goal(entity_directive,_), style(colour := blue)).
-style(goal(predicate_directive,_), style(colour := blue)).
+style(goal(source_file_directive,_),		 [colour(blue)]).
+style(goal(conditional_compilation_directive,_), [colour(blue)]).
+style(goal(entity_directive,_),			 [colour(blue)]).
+style(goal(predicate_directive,_),		 [colour(blue)]).
 
-style(directive, style(bold := @off)).
-style(entity_directive, style(colour := navy_blue)).
-style(entity_identifier, style(colour := dark_slate_blue)).
-style(identifier, style(bold := @on)).
-style(entity_relation, style(colour := blue)).
-style(head(_), style(bold := @off)).
-style(built_in, style(colour := blue)).
+style(directive,				 [bold(false)]).
+style(entity_directive,				 [colour(navy_blue)]).
+style(entity_identifier,			 [colour(dark_slate_blue)]).
+style(identifier,				 [bold(true)]).
+style(entity_relation,				 [colour(blue)]).
+style(head(_),					 [bold(false)]).
+style(built_in,					 [colour(blue)]).
 style(parameter, Style) :-
-	emacs_prolog_colours:def_style(var, Style).
+	prolog_colour:def_style(var, Style).
 
 
-emacs_prolog_colours:style(Pattern, Style) :-
+prolog_colour:style(Pattern, Style) :-
 	style(Pattern, Style).
 
 
-emacs_prolog_colours:term_colours(Term, Colours) :-
+prolog_colour:term_colours(Term, Colours) :-
 	term_colours(Term, Colours).
 
 
-emacs_prolog_colours:directive_colours(Directive, Colours) :-
+prolog_colour:directive_colours(Directive, Colours) :-
 	directive_colours(Directive, Colours).
 
 
-emacs_prolog_colours:goal_colours(Term, Colours) :-
+prolog_colour:goal_colours(Term, Colours) :-
 	goal_colours(Term, Colours).
 
 
-emacs_prolog_colours:goal_classification(Goal, Classification) :-
+prolog_colour:goal_classification(Goal, Classification) :-
 	goal_classification(Goal, Classification).
 
 
@@ -388,12 +388,12 @@ emacs_prolog_colours:goal_classification(Goal, Classification) :-
 		 *******************************/
 
 :- multifile
-	emacs_prolog_mode:alternate_syntax/3.
+	prolog:alternate_syntax/4.
 
 
-emacs_prolog_mode:alternate_syntax(logtalk,
-				   emacs_logtalk_mode:push_logtalk_operators,
-				   emacs_logtalk_mode:pop_logtalk_operators).
+prolog:alternate_syntax(logtalk, Module,
+			emacs_logtalk_mode:push_logtalk_operators(Module),
+			emacs_logtalk_mode:pop_logtalk_operators).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -401,8 +401,12 @@ Note that we could generalise this to deal with all included files.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 push_logtalk_operators :-
+	'$set_source_module'(M, M),
+	push_logtalk_operators(M).
+
+push_logtalk_operators(Module) :-
 	logtalk_operators(Ops),
-	push_operators(emacs_prolog_mode:Ops).
+	push_operators(Module:Ops).
 
 pop_logtalk_operators :-
 	pop_operators.

@@ -69,8 +69,8 @@ colourise_buffer(M) :->
 		 *******************************/
 
 :- multifile
-	emacs_prolog_colours:term_colours/2,
-	emacs_prolog_colours:goal_colours/2.
+	prolog_colour:term_colours/2,
+	prolog_colour:goal_colours/2.
 
 %	term_colours(+Term, -Colours)
 %
@@ -107,10 +107,11 @@ chr_body(_, body).
 %	Colouring of special goals.
 
 goal_colours(constraints(_),	built_in-[predicates]).
+goal_colours(chr_constraint(_),	built_in-[predicates]).
 
-emacs_prolog_colours:term_colours(Term, Colours) :-
+prolog_colour:term_colours(Term, Colours) :-
 	term_colours(Term, Colours).
-emacs_prolog_colours:goal_colours(Term, Colours) :-
+prolog_colour:goal_colours(Term, Colours) :-
 	goal_colours(Term, Colours).
 
 		 /*******************************
