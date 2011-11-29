@@ -111,7 +111,10 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
 	  -			       = button(pce),
 	  pce_define_class	       = button(pce),
 	  -			       = button(browse),
-	  prolog_navigator	       = button(browse) + key('\\C-c\\C-n')
+	  prolog_navigator	       = button(browse) + key('\\C-c\\C-n'),
+
+	  colourise_or_recenter	       = key('\\C-l'),
+	  colourise_buffer	       = key(key_top_5)
 	],
 					% SYNTAX TABLE
 	[ ($)  = symbol,
