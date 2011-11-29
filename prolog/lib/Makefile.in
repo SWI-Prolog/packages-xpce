@@ -61,8 +61,7 @@ trace/trace.qlf:	trace/trace.pl trace/clause.pl trace/util.pl \
 			trace/stack.pl trace/pprint.pl trace/viewterm.pl \
 			trace/gui.pl
 
-emacs/prolog_mode.qlf:	emacs/prolog_mode.pl emacs/prolog_colour.pl \
-			xref/common.pl
+emacs/prolog_mode.qlf:	emacs/prolog_mode.pl xref/common.pl
 
 
 INDEX.pl:	.

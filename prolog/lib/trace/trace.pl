@@ -52,6 +52,7 @@
 		 *******************************/
 
 :- thread_local
+	finished_frame/1,
 	last_action/1,
 	show_unify_as/2.
 
@@ -65,6 +66,13 @@ user:prolog_trace_interception(Port, Frame, CHP, Action) :-
 						     CHP, Action))),
 	    Action = continue
 	).
+
+:- multifile
+	user:prolog_event_hook/1.
+
+user:prolog_event_hook(frame_finished(Frame)) :-
+	retractall(finished_frame(Frame)),
+	fail.
 
 
 %%	map_action(+GuiAction, +Frame, -Action) is det.
@@ -95,6 +103,7 @@ map_action(halt, _, continue) :-
 	halt.
 map_action(finish, _, continue) :-
 	get_tracer(selected_frame, Frame),
+	asserta(finished_frame(Frame)),
 	trace,
 	prolog_skip_frame(Frame).
 
@@ -149,6 +158,7 @@ do_intercept(exit, Frame, CHP, Action) :-
 	       ; predicate_property(Goal, foreign)
 	      )),
 	    \+(( prolog_frame_attribute(Frame, skipped, true),
+		 \+ finished_frame(Frame),
 		 prolog_skip_level(L,L),
 		 L \== very_deep,
 		 prolog_frame_attribute(Frame, level, FL),
