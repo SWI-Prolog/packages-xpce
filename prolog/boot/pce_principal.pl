@@ -55,6 +55,8 @@
 	    set_pce_thread/0,
 	    pce_dispatch/0,
 
+	    pce_postscript_stream/1,	% -Stream
+
 	    op(200, fy,  @),
 	    op(250, yfx, ?),
 	    op(990, xfx, :=)
