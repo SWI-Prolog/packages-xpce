@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www-swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -46,6 +47,8 @@ pce_message(error(pce(ErrorId, Args), _Context)) -->
 	  get(String, value, Text)
 	},
 	[Text].
+pce_message(error(pce_error(ErrorId), _Context)) -->
+	pce_message(ErrorId).
 					% Messages from the interface
 pce_message(pce(bad_object_description, Culprit)) -->
 	['Illegal object description: `~w'''-[Culprit], nl].
@@ -65,6 +68,8 @@ pce_message(pce(inconsistent_argc)) -->
 	['Internal interface error: inconsistent argument count'-[], nl].
 pce_message(pce(no_predicate_reference)) -->
 	['Internal interface error: not a predicate reference'-[], nl].
+pce_message(init_failed) -->
+	['Failed to initialise XPCE'-[], nl].
 
 pce_message(help_goal(Goal)) -->
 	[nl,'For HELP, please invoke the predicate `~w''.'-[Goal],nl,nl].

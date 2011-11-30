@@ -30,15 +30,20 @@
 */
 
 :- module(pce_util,
-	  [ get_object/3, get_object/4, get_object/5
-	  , get_object/6, get_object/7, get_object/8
+	  [ get_object/3,		% +Receiver, +Selector, ..., -Result
+	    get_object/4,
+	    get_object/5,
+	    get_object/6,
+	    get_object/7,
+	    get_object/8,
 
-	  , send_list/2, send_list/3
-	  , get_chain/3
+	    send_list/2,		% +Receivers, +Methods
+	    send_list/3,		% +Receivers, +Methods, +Args
 
-	  , chain_list/2
+	    get_chain/3,		% +Receiver, +Selector, -List
+	    chain_list/2,		% ?Chain, ?List
 
-	  , default/3
+	    default/3			% +MethodArg, +Default, -Arg
 	  ]).
 
 
@@ -59,8 +64,6 @@
 
 
 :- use_module(library(pce)).
-:- require([ pce_error/1
-	   ]).
 
 %%   get_object(+Object, +Selector, +Arg..., -Output) is semidet.
 %

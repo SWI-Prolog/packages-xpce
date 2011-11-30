@@ -600,7 +600,7 @@ set_pce_thread(void)
 
 
 static foreign_t
-pl_pce_dispatch()
+pl_pce_dispatch(void)
 { pceDispatch(-1, 250);
 
   if ( PL_handle_signals() == -1 || PL_exception(0) )
@@ -616,7 +616,7 @@ pl_pce_dispatch()
 		 *******************************/
 
 install_t
-install_pcecall()
+install_pcecall(void)
 { context.pce_thread = PL_thread_self();
 
 #ifdef __WINDOWS__

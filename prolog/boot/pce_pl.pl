@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -30,20 +31,7 @@
 */
 
 
-:- module(pce_host,
-	  [ '$load_pce'/0
-	  ]).
-
-
-:- module_transparent
-	'$load_pce'/0.
-
-
-		 /*******************************
-		 *	    EXPANSION		*
-		 *******************************/
-
-system:term_expansion((:- require(_)), []).
+:- module(pce_host, []).
 
 
 		 /*******************************
@@ -64,82 +52,6 @@ property(runtime) :-
 		 *******************************/
 
 :- consult('../lib/swi_compatibility').
-
-
-		/********************************
-		*             ENTRY		*
-		********************************/
-
-pce_home(PceHome) :-
-	absolute_file_name(pce('.'), PceHome,
-			   [ file_type(directory),
-			     file_errors(fail)
-			   ]),
-	exists_directory(PceHome), !.
-pce_home(PceHome) :-
-	getenv('XPCEHOME', PceHome),
-	exists_directory(PceHome), !.
-pce_home(PceHome) :-
-	(   current_prolog_flag(xpce_version, Version),
-	    atom_concat('/xpce-', Version, Suffix)
-	;   Suffix = '/xpce'
-	),
-	absolute_file_name(swi(Suffix), PceHome,
-			   [ file_type(directory),
-			     file_errors(fail)
-			   ]),
-	exists_directory(PceHome), !.
-pce_home(PceHome) :-
-	current_prolog_flag(saved_program, true), !,
-	(   current_prolog_flag(home, PceHome)
-	->  true
-	;   current_prolog_flag(symbol_file, Exe)
-	->  file_directory_name(Exe, PceHome)
-	;   PceHome = '.'
-	).
-pce_home(_) :-
-	print_message(error, format('Cannot find XPCE home directory', [])),
-	halt(1).
-
-'$load_pce' :-
-	current_predicate(user:'$pce_init'/1), !,
-	init_pce.
-'$load_pce' :-
-	current_prolog_flag(open_shared_object, true),
-	(   load_foreign_library(pce_principal:foreign(pl2xpce))
-	->  true
-	;   print_message(error,
-			  format('Failed to load XPCE foreign library', [])),
-	    halt(1)
-	),
-	init_pce.
-
-init_pce :-
-	current_prolog_flag(xpce, true),
-	current_predicate(pce_principal:object/1), !.
-init_pce :-
-	(   pce_home(PceHome),
-	    pce_principal:'$pce_init'(PceHome)
-	->  create_prolog_flag(xpce, true, []),
-	    thread_self(Me),
-	    assert(pce:pce_thread(Me))
-	;   print_message(error,
-			  format('Failed to initialise XPCE', [])),
-	    abort
-	).
-
-%	We must declare this here as boot/english/pce_messages.pl is
-%	not yet loaded.
-%
-%	Right now the message is not printed from here but directly from
-%	pl/src/interface.c.
-
-:- multifile
-	prolog:message/3.
-
-prolog:message(pce(no_threads)) -->
-        [ 'This version of XPCE does not support multi-threading'
-        ].
 
 
 		 /*******************************

@@ -162,6 +162,20 @@ static term_t		getTermHandle(PceObject hd);
 static PceType		cToPceType(const char *name);
 
 
+static foreign_t	pl_new(term_t assoc, term_t descr);
+static foreign_t	pl_send(term_t rec, term_t msg);
+static foreign_t	pl_send_class(term_t rec, term_t cl, term_t msg);
+static foreign_t	pl_get(term_t rec, term_t msg, term_t ret);
+static foreign_t	pl_get_class(term_t rec, term_t cl, term_t msg, term_t r);
+static foreign_t	pl_object1(term_t ref);
+static foreign_t	pl_object2(term_t ref, term_t description);
+static foreign_t	pl_pce_method_implementation(term_t id, term_t msg);
+static foreign_t	pl_pce_open(term_t t, term_t mode, term_t plhandle);
+static foreign_t	pl_pce_postscript_stream(term_t ps);
+
+extern install_t	install_pcecall(void);
+
+
 		 /*******************************
 		 *	      PROFILER		*
 		 *******************************/
@@ -527,10 +541,6 @@ static PL_dispatch_hook_t	old_dispatch_hook;
 #define DebugMode		(pceExecuteMode() == PCE_EXEC_USER \
 					? PL_Q_NORMAL : PL_Q_NODEBUG)
 
-#define META	PL_FA_TRANSPARENT
-#define InstallPredicate(n, a, f, flags) \
-	PL_register_foreign(n, a, f, flags)
-
 #if defined(__WINDOWS__)
 #define PROLOG_INSTALL_DISPATCH_FUNCTION(f) {}
 #else
@@ -633,11 +643,34 @@ install_pl2xpce()
     return;
   pce_initialised = TRUE;
 
-  PL_register_foreign("$pce_init", 1, pl_pce_init, PL_FA_TRANSPARENT);
+  PL_register_foreign("pce_init", 1,
+		      pl_pce_init, PL_FA_TRANSPARENT);
+  PL_register_foreign("send", 2,
+		      pl_send, PL_FA_TRANSPARENT);
+  PL_register_foreign("get", 3,
+		      pl_get, PL_FA_TRANSPARENT);
+  PL_register_foreign("send_class", 3,
+		      pl_send_class, PL_FA_TRANSPARENT);
+  PL_register_foreign("get_class", 4,
+		      pl_get_class, PL_FA_TRANSPARENT);
+  PL_register_foreign("object", 1,
+		      pl_object1, 0);
+  PL_register_foreign("object", 2,
+		      pl_object2, 0);
+  PL_register_foreign("new", 2,
+		      pl_new, PL_FA_TRANSPARENT);
+  PL_register_foreign("pce_method_implementation", 2,
+		      pl_pce_method_implementation, 0);
+  PL_register_foreign("pce_open", 3,
+		      pl_pce_open, 0);
+  PL_register_foreign("pce_postscript_stream", 1,
+		      pl_pce_postscript_stream, 0);
+
+  install_pcecall();
 }
 
 install_t
-uninstall_pl2xpce()
+uninstall_pl2xpce(void)
 { if ( !pce_initialised )
     return;
   pce_initialised = FALSE;
@@ -3182,22 +3215,6 @@ static pce_callback_functions callbackfunction =
 };
 
 
-static void
-registerPredicates()
-{ InstallPredicate("send",		2, pl_send,		META);
-  InstallPredicate("get",		3, pl_get,		META);
-  InstallPredicate("send_class",	3, pl_send_class,	META);
-  InstallPredicate("get_class",		4, pl_get_class,	META);
-  InstallPredicate("object",		1, pl_object1,		0);
-  InstallPredicate("object",		2, pl_object2,		0);
-  InstallPredicate("new",		2, pl_new,		META);
-  InstallPredicate("pce_method_implementation", 2,
-		   pl_pce_method_implementation, 0);
-  InstallPredicate("pce_open",		3, pl_pce_open,		0);
-  InstallPredicate("pce_postscript_stream", 1, pl_pce_postscript_stream, 0);
-}
-
-
 #ifndef PROLOG_ARGC
 #define PROLOG_ARGC() 0
 #endif
@@ -3259,15 +3276,13 @@ detach_thread(void *closure)
 { pceMTdetach();
 }
 
-extern install_t install_pcecall();
-
 foreign_t
 pl_pce_init(term_t a)
 { char **argv;
   int argc;
   const char *home;
   atom_t ahome;
-  static int initialised = 0;
+  static int initialised = FALSE;
 
   if ( GetAtom(a, &ahome) )
     home = AtomCharp(ahome);
@@ -3277,8 +3292,10 @@ pl_pce_init(term_t a)
   argc = PROLOG_ARGC();
   argv = PROLOG_ARGV();
 
-  if ( !initialised++ )
+  if ( !initialised )
   { PceObject plname;
+
+    initialised = TRUE;
 
     if ( hasThreadsProlog() )
     { if ( pceMTinit() )
@@ -3300,7 +3317,6 @@ pl_pce_init(term_t a)
     initPceConstants();			/* get code used PCE constants */
     initPrologConstants();		/* Public prolog constants */
     initHostConstants();		/* Host-specific Prolog constants */
-    registerPredicates();		/* make the interface known */
     registerProfiler();			/* hook the profilers */
 
     plname = cToPceName("prolog");
@@ -3308,8 +3324,6 @@ pl_pce_init(term_t a)
     PROLOG_INSTALL_DISPATCH_FUNCTION(pce_dispatch);
     PROLOG_INSTALL_RESET_FUNCTION(do_reset);
     PROLOG_INSTALL_REDRAW_FUNCTION(do_redraw);
-
-    install_pcecall();
   }
 
   return TRUE;

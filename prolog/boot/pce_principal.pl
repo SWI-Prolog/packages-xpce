@@ -85,34 +85,60 @@
 :- op(990, xfx, :=).
 
 		/********************************
+		*             HOME		*
+		********************************/
+
+%%	pce_home(-Home) is det.
+%
+%	True when Home is the home directory of XPCE.
+
+pce_home(PceHome) :-
+	absolute_file_name(pce('.'), PceHome,
+			   [ file_type(directory),
+			     file_errors(fail)
+			   ]),
+	exists_directory(PceHome), !.
+pce_home(PceHome) :-
+	getenv('XPCEHOME', PceHome),
+	exists_directory(PceHome), !.
+pce_home(PceHome) :-
+	(   current_prolog_flag(xpce_version, Version),
+	    atom_concat('/xpce-', Version, Suffix)
+	;   Suffix = '/xpce'
+	),
+	absolute_file_name(swi(Suffix), PceHome,
+			   [ file_type(directory),
+			     file_errors(fail)
+			   ]),
+	exists_directory(PceHome), !.
+pce_home(PceHome) :-
+	current_prolog_flag(saved_program, true), !,
+	(   current_prolog_flag(home, PceHome)
+	->  true
+	;   current_prolog_flag(executable, Exe)
+	->  file_directory_name(Exe, PceHome)
+	;   PceHome = '.'
+	).
+pce_home(_) :-
+	throw(error(pce_error(no_home), _)).
+
+
+		/********************************
 		*           LOAD C-PART		*
 		********************************/
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-The following predicate must be defined before loading this  file.  It
-is  normally defined   in the   prolog-dependant   first  file of  the
-interface, called pce_<prolog-name>.pl
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+init_pce :-
+	pce_home(Home),
+	pce_init(Home), !,
+	create_prolog_flag(xpce, true, []),
+	thread_self(Me),
+	assert(pce:pce_thread(Me)).
+init_pce :-
+	throw(error(pce_error(init_failed), _)).
 
-:- pce_host:'$load_pce'.
-:- initialization pce_host:'$load_pce'.
-
-pce_ifhostproperty(prolog(sicstus), [
-(send(Object, Message) :-
-	pce_host:send(Object, Message, 1)),
-(get(Object, Message, Return) :-
-	pce_host:get(Object, Message, Return, 1)),
-(send_class(Object, Class, Message) :-
-	pce_host:send(Object, Class, Message, 1)),
-(get(Object, Class, Message, Return) :-
-	pce_host:get(Object, Class, Message, Return, 1)),
-(object(Object) :-
-	pce_host:object(Object, 1)),
-(object(Object, Term) :-
-	pce_host:object(Object, Term, 1)),
-(new(Object, Term) :-
-	pce_host:new(Object, Term, 1))
-]).
+:- use_foreign_library(foreign(pl2xpce)).
+:- initialization
+	init_pce.
 
 :- noprofile((send_implementation/3,
 	      get_implementation/4,
