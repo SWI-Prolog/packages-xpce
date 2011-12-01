@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -41,11 +42,15 @@
 	   , term_to_atom/2
 	   ]).
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-This file defines a demo-starting tool.  The  demo's themselves should
-be  in the library  files 'demo/<demo-file>.pl'.  At   the end of this
-file is a list of available demo's.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+:- multifile				% So this may be predefined, avoiding
+	pcedemo/0.			% an undefined trap
+
+/** <module> XPCE demo starter
+
+This file defines a demo-starting tool.  The demo's themselves should be
+in the library files 'demo/<demo-file>.pl'. At the end of this file is a
+list of available demo's.
+*/
 
 pcedemo :-
 	new(F, persistent_frame('XPCE Demo Programs')),

@@ -59,10 +59,10 @@ manual tools.
 			     |
 			     | (select)
 			     |
-			     V         	 | ClassBrowser
+			     V		 | ClassBrowser
 			   Tools         | ClassHierarchy
-                             |  	 | TopicBrowser
-			     |  	 | KeywordBrowser
+                             |		 | TopicBrowser
+			     |		 | KeywordBrowser
 			     |
 			     | (find/browse)
 			     V
@@ -72,14 +72,14 @@ manual tools.
 	          /          |             \
 	         /           |	            \
              Sources      Textual          Relations
-	        	Attributes    [Type] Name [Summary]
+			Attributes    [Type] Name [Summary]
 
 
 The communication between  the tools is arranged  via messages send to
 and possible broadcasted by ManualTool.  These messages are:
 
     ->request_selection: man_frame, object*, [bool]
-    	Set the <-selection and <-selection_holder attribute of the
+	Set the <-selection and <-selection_holder attribute of the
 	ManualTool and broadcasts the following messages:
 
 		* SelectionHolder ->release_selection
@@ -608,10 +608,13 @@ help(M) :->
 		*              DEMO		*
 		********************************/
 
+:- multifile
+	pce_demo:pcedemo/0.
+
 start_demo(M) :->
 	send(M, report, progress, 'Starting demo tool ...'),
-	ensure_loaded(demo(pce_demo)),
-	Goal = pcedemo, Goal,		% fool require generation
+	use_module(demo(pce_demo), []),
+	pce_demo:pcedemo,
 	send(M, report, done).
 
 
