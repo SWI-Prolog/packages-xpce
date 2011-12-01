@@ -33,7 +33,6 @@
 :- module(gui_tracer,
 	  [ guitracer/0,
 	    noguitracer/0,		% Switch it off
-	    prolog_break_at/3,		% +File, +Line, +Pos
 	    gtrace/0,			% Start tracer and trace
 	    gspy/1,			% Start tracer and set spypoint
 	    gdebug/0			% Start tracer and debug
@@ -112,14 +111,6 @@ gspy(Predicate) :-
 gdebug :-
 	guitracer,
 	debug.
-
-%%	prolog_break_at(+File, +Line, +Pos)
-%
-%	Set a Prolog break-point.  Used to set break-points from PceEmacs.
-
-prolog_break_at(File, Line, Pos) :-
-	guitracer,
-	prolog_break:break_at(File, Line, Pos).
 
 
 		 /*******************************
