@@ -176,10 +176,12 @@ checkpce :-
 
 check_classes :-
 	(   pce_expansion:compiling(_, _)
-	->  forall(pce_expansion:compiling(Class),
-		   send(@pce, format,
-			'[PCE: WARNING: definition of class %s not closed]\n',
-			Class)),
+	->  forall(pce_expansion:compiling(Class, Path),
+		   ( file_base_name(Path, File),
+		     send(@pce, format,
+			  '[PCE: WARNING: definition of class \c
+			  %s in ~s not closed]\n',
+			  Class, File))),
 	    fail
 	;   true
 	).
