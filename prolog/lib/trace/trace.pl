@@ -430,6 +430,7 @@ qualify(Goal, user:Goal).
 
 clause_position(PC) :- integer(PC), !.
 clause_position(exit).
+clause_position(unify).
 clause_position(choice(_)).
 
 %%	subgoal_position(+GUI, +Clause, +PortOrPC, -File, -CharA, -CharZ) is det.
