@@ -4,6 +4,9 @@
 # See also ./configure
 ################################################################
 
+.EXPORT_ALL_VARIABLES:
+include ../Makefile.defs
+
 MAKE=@MAKE@
 BUILDARCH=@BUILDARCH@
 

@@ -60,9 +60,9 @@ EXEEXT=@EXEEXT@
 
 # PROGRAMS
 
-CC=@CC@
-LD=@LD@
-RANLIB=@RANLIB@
+#CC=@CC@
+#LD=@LD@
+#RANLIB=@RANLIB@
 LDCONFIG=@LDCONFIG@
 YACC=@YACC@
 MKPROTO=$(srcdir)/mkproto.sh
@@ -97,19 +97,14 @@ LIBS= $(XLIBS) $(NETLIBS) -lm
 
 ################################################################
 # CFLAGS
-#
-# COFLAGS:	Optimiser flags.  Use make COFLAGS=-g for debugging
-# CWFLAGS:	Warning flags
-# CIFLAGS:	Include directories (for X11 for example)
-# CMFLAGS:	Miscelaneous flags (all others)
-# CFLAGS:	The combination.  Don't edit this.
 ################################################################
 
-COFLAGS=@COFLAGS@
-CWFLAGS=@CWFLAGS@
-CIFLAGS=-I. -I$(srcdir) @CIFLAGS@
-CMFLAGS=@CMFLAGS@ @DEFS@
-CFLAGS=$(CWFLAGS) $(COFLAGS) $(CIFLAGS) $(CMFLAGS)
+#COFLAGS=@COFLAGS@
+#CWFLAGS=@CWFLAGS@
+#CIFLAGS=-I. -I$(srcdir) @CIFLAGS@
+#CMFLAGS=@CMFLAGS@ @DEFS@
+#CFLAGS=$(CWFLAGS) $(COFLAGS) $(CIFLAGS) $(CMFLAGS)
+CFLAGS+= -I$(srcdir)
 
 ################################################################
 # TARGET LIBRARIES
@@ -297,12 +292,12 @@ $(srcdir)/evt/proto.h:	$(EVTSRC)
 
 GNUOBJS=	getdate.o
 GNUSRC=		$(addprefix $(srcdir)/gnu/, $(GNUOBJS:.o=.c))
-CNWFLAGS=	$(CMFLAGS) $(COFLAGS) $(CIFLAGS)
+#CNWFLAGS=	$(CMFLAGS) $(COFLAGS) $(CIFLAGS)
 
 gnu/gregex.o:	gnu/gregex.c gnu/gregex.h
 		$(CC) -c $(CFLAGS) -Dpce_source $< -o $@
 gnu/getdate.o:	$(srcdir)/gnu/getdate.c
-		$(CC) -c $(CNWFLAGS) $< -o $@
+		$(CC) -c $(CFLAGS) $< -o $@
 
 # NOTE: this is not a normal dependency as include the .c file in
 # the distro to reduce build dependencies (M$-Windows) and we do
@@ -596,16 +591,16 @@ $(LIBDIR):
 
 # GNU-Make "Target-specific Variable Values"
 ifeq ($(VWS),x11)
-$(WSOBJECTS):	CIFLAGS+=$(XINCLUDES)
+$(WSOBJECTS):	CFLAGS+=$(XINCLUDES)
 else
-$(WSOBJECTS):	CIFLAGS+=$(XINCLUDES) -DWIN32
+$(WSOBJECTS):	CFLAGS+=$(XINCLUDES) -DWIN32
 endif
 
 # Unix only (assumes using CC=swipl-ld)
 $(XPCECLIENT):	LDFLAGS+=-nolibswipl
 $(XPCECLIENT):	unx/client.c
 		$(CC) -c $(CFLAGS) $< -o client.o
-		$(CC) $(COFLAGS) $(CIFLAGS) $(LDFLAGS) -o $@ client.o $(NETLIBS)
+		$(LD) $(LDFLAGS) -o $@ client.o $(NETLIBS)
 		rm -f client.o
 
 # MinGW only

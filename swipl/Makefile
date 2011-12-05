@@ -23,9 +23,7 @@ BINDIR=		../$(builddir)
 OBJDIR=		../$(builddir)/pl
 CONFIG=		../$(builddir)/config.h
 
-CPLIFLAGS=	-I$(PLINCL) -I../$(builddir) -I../src
 PL=		swipl
-PLLD=		swipl-ld -pl $(PL)
 ITFOBJ=		$(addprefix $(OBJDIR)/, interface.o link.o pcecall.o)
 ITFSRC=		interface.c table.c
 SOITF=		$(addprefix $(OBJDIR)/, so-interface.o pcecall.o)
@@ -33,9 +31,8 @@ OBJ=		$(ITFOBJ)
 XPCE=		$(BINDIR)/xpce
 QLF=		$(BINDIR)/xpce.qlf
 XPCESO=		$(LIBDIR)/pl2xpce.$(SO)
-CITFFLAGS=	-DSWI -DHAVE_CONFIG_H
 
-CFLAGS=		$(COFLAGS) $(CWFLAGS) $(CMFLAGS) $(CPLIFLAGS) $(CITFFLAGS)
+CFLAGS+= -DSWI
 
 PCEPLS=		pce_expand.pl ../lib/english/pce_messages.pl pce_pl.pl \
 		pce_principal.pl pce_error.pl pce_autoload.pl pce_global.pl \
@@ -77,7 +74,7 @@ $(OBJDIR)/so-interface.o: interface.c
 		$(CC) -DO_SHAREDLIBRARY $(CFLAGS) -c $< -o $@
 
 $(XPCESO):	$(SOITF) $(libXPCE)
-		$(PLLD) -shared $(LDSOFLAGS) $(SOITF) -L$(LIBDIR) \
+		$(LD) $(LDSOFLAGS) $(SOITF) -L$(LIBDIR) \
 		-lXPCE $(XLIBS) $(NETLIBS) -o $(XPCESO);
 
 ################################################################$
