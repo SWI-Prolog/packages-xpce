@@ -32,7 +32,7 @@ XPCE=		$(BINDIR)/xpce
 QLF=		$(BINDIR)/xpce.qlf
 XPCESO=		$(LIBDIR)/pl2xpce.$(SO)
 
-CFLAGS+= -DSWI
+CFLAGS+= -DSWI -I../$(builddir)
 
 PCEPLS=		pce_expand.pl ../lib/english/pce_messages.pl pce_pl.pl \
 		pce_principal.pl pce_error.pl pce_autoload.pl pce_global.pl \

@@ -33,6 +33,7 @@
 
 .EXPORT_ALL_VARIABLES:
 .SUFFIXES: .cxx
+include ../../Makefile.defs
 
 SHELL=@MAKESHELL@
 MAKE=@MAKE@
@@ -60,9 +61,6 @@ EXEEXT=@EXEEXT@
 
 # PROGRAMS
 
-#CC=@CC@
-#LD=@LD@
-#RANLIB=@RANLIB@
 LDCONFIG=@LDCONFIG@
 YACC=@YACC@
 MKPROTO=$(srcdir)/mkproto.sh
@@ -99,12 +97,7 @@ LIBS= $(XLIBS) $(NETLIBS) -lm
 # CFLAGS
 ################################################################
 
-#COFLAGS=@COFLAGS@
-#CWFLAGS=@CWFLAGS@
-#CIFLAGS=-I. -I$(srcdir) @CIFLAGS@
-#CMFLAGS=@CMFLAGS@ @DEFS@
-#CFLAGS=$(CWFLAGS) $(COFLAGS) $(CIFLAGS) $(CMFLAGS)
-CFLAGS+= -I$(srcdir)
+CFLAGS+=-I. -I$(srcdir)
 
 ################################################################
 # TARGET LIBRARIES
@@ -597,7 +590,6 @@ $(WSOBJECTS):	CFLAGS+=$(XINCLUDES) -DWIN32
 endif
 
 # Unix only (assumes using CC=swipl-ld)
-$(XPCECLIENT):	LDFLAGS+=-nolibswipl
 $(XPCECLIENT):	unx/client.c
 		$(CC) -c $(CFLAGS) $< -o client.o
 		$(LD) $(LDFLAGS) -o $@ client.o $(NETLIBS)
