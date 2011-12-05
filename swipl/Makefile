@@ -16,6 +16,7 @@
 ################################################################
 
 .SUFFIXES: .qlf .pl
+include ../../Makefile.defs
 
 LIBDIR=		../lib/$(PLARCH)
 libXPCE=	$(LIBDIR)/libXPCE.a
