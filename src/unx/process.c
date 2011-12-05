@@ -67,6 +67,9 @@ reduced to the facility to terminate the inferior process.
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+#ifdef HAVE_CRT_EXTERNS_H 
+#include <crt_externs.h>
+#endif
 
 #ifdef HAVE_TERMIOS_H
 #include <termios.h>
@@ -85,9 +88,12 @@ reduced to the facility to terminate the inferior process.
 #ifdef __WINDOWS__
 #define environ _environ	/* declared in STDLIB.H */
 #else
+#ifdef HAVE__NSGETENVIRON
+#define environ (*_NSGetEnviron())
+#else
 extern char **environ;		/* Unix version */
 #endif
-
+#endif
 					/* this fixes RS6000/AIX problems */
 #if !defined(TCGETS) && defined(HAVE_TERMIO_H)
 #include <termio.h>
