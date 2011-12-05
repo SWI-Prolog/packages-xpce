@@ -571,11 +571,11 @@ if test "$WITHX11" = true; then
 AC_CHECK_PROGS(XFTCONFIG, pkg-config xft-config, "false")
 case "$XFTCONFIG" in
 	pkg-config)
-		if pkg-config --exists xft; then
+		if pkg-config --exists xft fontconfig; then
 			AC_DEFINE(USE_XFT, 1,
 				  "Define to use the Xft scalable and anti-aliasing font system")
-			XLIBS="$XLIBS `pkg-config --libs xft`"
-			XINCLUDES="$XINCLUDES `pkg-config --cflags xft`"
+			XLIBS="$XLIBS `pkg-config --libs xft fontconfig`"
+			XINCLUDES="$XINCLUDES `pkg-config --cflags xft fontconfig`"
 			ac_xft=true
 		fi
 		;;
