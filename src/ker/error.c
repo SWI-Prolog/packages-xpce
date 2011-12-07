@@ -393,9 +393,9 @@ static const error_def errors[] =
     "%N: Failed to convert %s.  Trying program default" },
   { NAME_cannotConvertProgramDefault,	ET_FATAL,
     "%N: Failed to convert program default %O" },
-  { NAME_winMetafile, 		ET_WARNING,
+  { NAME_winMetafile,		ET_WARNING,
     "%O: API operation %s failed: %s" },
-  { NAME_x11Threads, 		ET_WARNING,
+  { NAME_x11Threads,		ET_WARNING,
     "%O: Cannot change X11 threading: display is already open" },
 
 					/* Save/Load */
@@ -575,9 +575,9 @@ static const error_def errors[] =
     "%O%s%s: Unterminated argument list on call from C?" },
 
 					/* consistency-check (object) */
-  { NAME_checkedObjects, 	ET_INFORM|EF_PRINT,
+  { NAME_checkedObjects,	ET_INFORM|EF_PRINT,
     "%IChecked %d objects" },
-  { NAME_noExtension, 		ET_WARNING|EF_PRINT,
+  { NAME_noExtension,		ET_WARNING|EF_PRINT,
     "%O: No attribute of extension %s" },
   { NAME_noProperObject,	ET_WARNING|EF_PRINT,
     "%O: Not a proper object" },
@@ -680,7 +680,7 @@ static const error_def errors[] =
     "%O: Signal trapped: %s" },
   { NAME_createFailed,		0,
     "%O: Failed to ->create" },
-  { NAME_noCharacter,		0,
+  { NAME_noCharacter,		ET_WARNING|EF_REPORT,
     "%O: No character and @event is not printable" },
   { NAME_noKeyBinding,		0,
     "%O: No key_binding named %s" },
