@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    Copyright (C): 1985-2011, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -34,15 +35,19 @@
 :- use_module(library(emacs_extend)).
 :- use_module(sgml_mode).
 :- use_module(library(rdf)).
+:- use_module(library(semweb/rdf_db)).
 
 :- pce_autoload(rdf_diagram, library(rdf_diagram)).
 
-:- emacs_begin_mode(rdf, xml,
-		    "Mode for editing RDF documents",
-		    [ -			     = button(sgml),
-		      show_diagram	     = button(sgml)
-		    ],
-		    []).
+:- emacs_begin_mode(
+       rdf, xml,
+       "Mode for editing RDF documents",
+       [ -			     = button(sgml),
+	 show_diagram	     = button(sgml),
+	 rdf_make	     = key('\\C-c\\C-m') + button(compile),
+	 rdf_load	     = key('\\C-c\\C-b') + button(compile)
+       ],
+       []).
 
 open_document(M) :->
 	"Insert document header"::
@@ -71,6 +76,24 @@ show_diagram(M) :->
 	send(D, triples, Triples),
 	send(D, open).
 
+rdf_make(M) :->
+	"Run rdf_make/0"::
+	send(@emacs, save_some_buffers),
+	rdf_make,
+	send(M, report, status, 'RDF Make done').
+
+rdf_load(M) :->
+	"Run rdf_load on the file"::
+	get(M?text_buffer, file, File),
+	(   send(File, instance_of, file)
+	->  send(M, save_if_modified),
+	    get(File, name, Path),
+	    rdf_load(Path),
+	    send(M, report, status, '%s loaded', Path)
+	;   send(M, report, error,
+		 'Buffer is not connected to a file')
+	).
+
 :- emacs_end_mode.
 
 
@@ -85,7 +108,7 @@ open_document(M) :->
 	     '<?xml version="1.0" encoding="iso-8859-1"?>\n\n\
 	      <!DOCTYPE rdfs [\n  \
 	      <!ENTITY rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  \
-     	      <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">\n  \
+	      <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">\n  \
               <!ENTITY xsd  "http://www.w3.org/2000/10/XMLSchema#">\n\
               ]>\n\n\
 	      <rdf:RDF\n  \
@@ -110,7 +133,7 @@ open_document(M) :->
 	     '<?xml version="1.0" encoding="iso-8859-1"?>\n\n\
 	      <!DOCTYPE owl [\n  \
 	      <!ENTITY rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  \
-     	      <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">\n  \
+	      <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">\n  \
 	      <!ENTITY owl  "http://www.w3.org/2002/7/owl#">\n  \
               <!ENTITY xsd  "http://www.w3.org/2000/10/XMLSchema#">\n  \
 	      <!ENTITY dc   "http://purl.org/dc/elements/1.1/">\n\
