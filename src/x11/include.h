@@ -58,11 +58,6 @@
 #undef index				/* X11 defines this too */
 #undef String
 
-#ifndef XMalloc
-#define XMalloc(size) pceMalloc(size)
-#define XFree(ptr)    pceFree(ptr)
-#endif
-
 #if XT_VERSION == 10
 error XPCE cannot be build for X version 10.  Sorry.
 #endif
@@ -162,7 +157,7 @@ struct xpce_font_info
 { XFontSet	 font_set;		/* FontSet structure */
   char	       **missing;		/* Missing charsets */
   int		nmissing;		/* # missing charsets */
-  char 	        *def_string;		/* Default for missing glyphs */
+  char	        *def_string;		/* Default for missing glyphs */
 };
 
 #else /*USE_XFONTSET*/
