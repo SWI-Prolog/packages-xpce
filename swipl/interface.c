@@ -2947,27 +2947,17 @@ PrologQuery(int what, PceCValue *value)
 
 #ifdef SWI
 
-#if 1
-#define pl_malloc NULL
-#define pl_realloc NULL
-#define pl_free NULL
-#else
-#define pl_malloc PL_malloc
+#define pl_malloc  PL_malloc
 #define pl_realloc PL_realloc
-#define pl_free PL_free
-#endif
+#define pl_free    PL_free
+
 
 		 /*******************************
 		 *	    CONSOLE I/O		*
 		 *******************************/
 
-#if 1
 #define XPCE_OUTPUT Suser_output	/* log in current console */
 #define XPCE_INPUT Suser_input
-#else
-#define XPCE_OUTPUT Soutput		/* always log in user console */
-#define XPCE_INPUT Sinput
-#endif
 
 void
 pl_Cvprintf(const char *fmt, va_list args)
