@@ -647,7 +647,7 @@ collect_selection_display(Widget w, XtPointer xtp,
 	return;
       }
 
-      outA = bufA = malloc(l);
+      outA = bufA = pceMalloc(l);
       while(in<end)
       { in = utf8_get_uchar(in, &chr);
 
