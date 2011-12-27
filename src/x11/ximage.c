@@ -143,11 +143,15 @@ ws_store_image(Image image, FileObj file)
 }
 
 
-
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Image memory must be allocated through malloc()  and will be freed using
+XDestroyImage(), which apparently calls XFree(). This is pretty dubious,
+but XMalloc() does (no longer?) exist.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 status
 loadXImage(Image image, IOSTREAM *fd)
-{ XImage *im, *tmp = (XImage *)XMalloc(sizeof(XImage));
+{ XImage *im, *tmp = (XImage *)pceMalloc(sizeof(XImage));
   char *data;
   int c;
   int size;
@@ -171,7 +175,7 @@ loadXImage(Image image, IOSTREAM *fd)
   tmp->bytes_per_line   = loadWord(fd);
 
   size = DataSize(tmp);
-  data = XMalloc(size);
+  data = malloc(size);				/* See above */
   tmp->data = data;
   Sfread(data, 1, size, fd);
 
@@ -186,7 +190,7 @@ loadXImage(Image image, IOSTREAM *fd)
 		    tmp->width, tmp->height,
 		    tmp->bitmap_pad, tmp->bytes_per_line);
 
-  XFree(tmp);
+  pceFree(tmp);
   setXImageImage(image, im);
   assign(image, depth, toInt(im->depth));
   if ( restoreVersion < 7 )

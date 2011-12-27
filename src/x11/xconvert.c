@@ -100,12 +100,16 @@ defaultXDisplay()
 }
 
 
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Note: Data is freed through XDestroyImage()
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
 XImage *
 CreateXImageFromData(unsigned char *data, int width, int height)
 { Display *disp = defaultXDisplay();
   XImage *image;
 
-  image = XCreateImage(disp,
+  image = XCreateImage(disp,			/* calls XCreateImage */
 		       DefaultVisual(disp, DefaultScreen(disp)),
 		       1,
 		       XYBitmap,
@@ -339,7 +343,7 @@ read_x11_bitmap_file(IOSTREAM *fd, int *w, int *h)
     bytes_per_line = (ww+7)/8 + padding;
 
     size = bytes_per_line * hh;
-    data = (unsigned char *) XMalloc(size);
+    data = (unsigned char *) malloc(size);
 
     if (version10p)
     { unsigned char *ptr;
@@ -399,7 +403,7 @@ read_sun_icon_file(IOSTREAM *fd, int *width, int *height)
     initHexTable();
 
   size = Round(w, 8) * h;
-  dst = data = (unsigned char *) XMalloc(size);
+  dst = data = (unsigned char *) malloc(size);
 
   skip_last = (w % 16) <= 8 && (w % 16) > 0;
 
