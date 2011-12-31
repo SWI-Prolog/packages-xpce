@@ -84,7 +84,7 @@ gui_setup_ :-
 	create_prolog_flag(gui, true, []),
 	menu_setup_,
 	editor_setup,
-	use_module(user:library(swi_hooks)).	% help, etc.
+	load_files(user:library(swi_hooks), [silent(true)]).	% help, etc.
 
 menu_setup_ :-					% plwin.exe menus
 	current_prolog_flag(console_menu, true),
