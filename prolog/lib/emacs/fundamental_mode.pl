@@ -130,7 +130,7 @@ class_variable(grep_command, string,
 	       ],
 	       "Command of M-x grep").
 class_variable(git_grep_command, string,
-	       'git grep -n %s | cat',
+	       'git --no-pager grep -n %s',
 	       "Command of M-x git-grep").
 class_variable(shell_command, chain*,
 	       when(@pce?window_system == windows,
