@@ -102,6 +102,7 @@
 	  show_bookmarks	   = button(browse),
 	  -			   = button(browse),
 	  grep			   = button(browse),
+	  git_grep		   = button(browse),
 
 					% COMPILE menu
 	  compile		   = button(compile),
@@ -128,6 +129,9 @@ class_variable(grep_command, string,
 		 windows('grep -n %s NUL')
 	       ],
 	       "Command of M-x grep").
+class_variable(git_grep_command, string,
+	       'git grep -n %s | cat',
+	       "Command of M-x git-grep").
 class_variable(shell_command, chain*,
 	       when(@pce?window_system == windows,
 		    @nil,
@@ -752,11 +756,19 @@ compile(M, Command:shell_command=string, Label:[name]) :->
 
 
 grep(M, GrepArgs:grep_arguments=string) :->
-	"Run Unix grep in compilation buffer"::
+	"Run the OS grep command in compilation buffer"::
 	get(M, grep_command, GrepCommad),
 	send(M, compile,
 	     string(GrepCommad, GrepArgs),
 	     string('grep %s', GrepArgs)).
+
+
+git_grep(M, GrepArgs:grep_arguments=string) :->
+	"Run the git grep in compilation buffer"::
+	get(M, git_grep_command, GrepCommad),
+	send(M, compile,
+	     string(GrepCommad, GrepArgs),
+	     string('git-grep %s', GrepArgs)).
 
 
 shell(M) :->
