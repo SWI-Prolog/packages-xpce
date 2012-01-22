@@ -93,13 +93,13 @@ rc_convert_value(Value, Type, NewVal) :-
 	pce_warn(compatibility(resource(Value, NewVal))).
 rc_convert_value(Value, _, Value).
 
-convert_value(Value, _chain, NewVal) :-		% list --> chain(members)
+convert_value(Value, _Chain, NewVal) :-		% list --> chain(members)
 	is_list(Value), !,
 	NewVal =.. [chain|Value].
 convert_value(Value, _Type, NewVal) :-		% '@name' --> @name
 	atom(Value),
 	term_to_atom(NewVal, Value),
-	NewVal = @Name,
+	NewVal = @(Name),
 	atom(Name), !.
 convert_value(_, Type, _) :-			% textual types
 	atomic_type(Type), !,
