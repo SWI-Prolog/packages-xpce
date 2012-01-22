@@ -111,6 +111,9 @@ GIFReadFD(IOSTREAM *fd,
 	  PIXEL **data, int *width, int *height,
 	  GIFAllocColorTable at, GIFAllocColor ac, void *closure)
 	Read GIF image from the given IO/stream
+
+*data is allocated using malloc().  It will be freed using Xfree(). See
+also ximage.c.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 int
@@ -238,7 +241,7 @@ GIFReadFD(IOSTREAM *fd,
       return GIF_INVALID;
     }
     bufsize = (long) w *(long) h;
-    bigBuf  = (PIXEL *)pceMalloc(bufsize * sizeof(PIXEL));
+    bigBuf  = (PIXEL *)malloc(bufsize * sizeof(PIXEL));
 
     if (bigBuf == NULL)
     {
