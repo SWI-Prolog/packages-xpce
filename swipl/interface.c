@@ -2947,9 +2947,16 @@ PrologQuery(int what, PceCValue *value)
 
 #ifdef SWI
 
-#define pl_malloc  PL_malloc
-#define pl_realloc PL_realloc
-#define pl_free    PL_free
+/* No need to redirect allocation over SWI-Prolog.  In particular, we
+   do not want to use Boehm-GC for XPCE as long as it has its own GC.
+
+   Note that using Boehm-GC would be much better for XPCE; it is
+   precisely the sort of application Boehm-GC is designed for.
+*/
+
+#define pl_malloc  NULL
+#define pl_realloc NULL
+#define pl_free    NULL
 
 
 		 /*******************************
