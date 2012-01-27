@@ -178,7 +178,7 @@ call_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
       if ( g->acknowledge )
       { PostThreadMessage(g->client, WM_CALL_DONE, 0, 0);
       } else
-      { PL_free(g);
+      { free(g);
       }
       pceRedraw(FALSE);
 
@@ -250,10 +250,13 @@ setup()
 
 static foreign_t
 in_pce_thread(term_t goal)
-{ prolog_goal *g = PL_malloc(sizeof(*g));
+{ prolog_goal *g = malloc(sizeof(*g));
+
+  if ( !g )
+    return PL_resource_error("memory");
 
   if ( !init_prolog_goal(g, goal, FALSE) )
-  { PL_free(g);
+  { free(g);
     return FALSE;
   }
 
@@ -265,12 +268,15 @@ in_pce_thread(term_t goal)
 
 static foreign_t
 in_pce_thread_sync2(term_t goal, term_t vars)
-{ prolog_goal *g = PL_malloc(sizeof(*g));
+{ prolog_goal *g = malloc(sizeof(*g));
   MSG msg;
   int rc = FALSE;
 
+  if ( !g )
+    return PL_resource_error("memory");
+
   if ( !init_prolog_goal(g, goal, TRUE) )
-  { PL_free(g);
+  { free(g);
     return FALSE;
   }
 
@@ -307,7 +313,7 @@ in_pce_thread_sync2(term_t goal, term_t vars)
   }
 
 out:
-  PL_free(g);
+  free(g);
   return rc;
 }
 
@@ -330,7 +336,7 @@ on_input(XtPointer xp, int *source, XtInputId *id)
     if ( g->acknowledge )
     { pthread_cond_signal(&g->cv);
     } else
-    { PL_free(g);
+    { free(g);
     }
     pceRedraw(FALSE);
   } else if ( n == 0 )		/* EOF: quit */
@@ -365,11 +371,14 @@ setup(void)
 
 static foreign_t
 in_pce_thread(term_t goal)
-{ prolog_goal *g = PL_malloc(sizeof(*g));
+{ prolog_goal *g;
   int rc;
 
-  if ( !g || !setup() )
+  if ( !setup() )
     return FALSE;
+
+  if ( !(g  = malloc(sizeof(*g))) )
+    return PL_resource_error("memory");
 
   if ( !init_prolog_goal(g, goal, FALSE) )
     return FALSE;
@@ -385,11 +394,14 @@ in_pce_thread(term_t goal)
 
 static foreign_t
 in_pce_thread_sync2(term_t goal, term_t vars)
-{ prolog_goal *g = PL_malloc(sizeof(*g));
+{ prolog_goal *g;
   int rc;
 
-  if ( !g || !setup() )
+  if ( !setup() )
     return FALSE;
+
+  if ( !(g  = malloc(sizeof(*g))) )
+    return PL_resource_error("memory");
 
   if ( !init_prolog_goal(g, goal, TRUE) )
     return FALSE;
@@ -455,7 +467,7 @@ in_pce_thread_sync2(term_t goal, term_t vars)
 
   pthread_mutex_destroy(&g->mutex);
   pthread_cond_destroy(&g->cv);
-  PL_free(g);
+  free(g);
 
   return rc;
 }
