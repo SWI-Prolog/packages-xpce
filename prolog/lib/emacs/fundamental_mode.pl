@@ -92,7 +92,9 @@
 				     key('\\eg\\eg') + key('\\egg'),
 	  find			   = key(key_top_4) + button(edit),
 	  replace		   = button(edit),
-	  preferences		   = button(edit),
+	  -			   = button(edit),
+	  editor_preferences	   = button(edit),
+	  prolog_preferences	   = button(edit),
 
 					% BROWSER menu
 	  split_window		   = key('\\C-x2') + button(browse),
@@ -239,9 +241,13 @@ quit(M) :->
 	ignore(send(M?text_buffer, save_if_modified)),
 	send(M, destroy).
 
-preferences(_M) :->
-	"Edit (xpce) preferences"::
+editor_preferences(_M) :->
+	"Edit XPCE preferences"::
 	prolog_edit_preferences(xpce).
+
+prolog_preferences(_M) :->
+	"Edit Prolog customization file"::
+	prolog_edit_preferences(prolog).
 
 
 		 /*******************************
