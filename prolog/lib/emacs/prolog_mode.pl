@@ -184,7 +184,8 @@ setup_mode(M) :->
 	->  send(M, style, varmark, Style)
 	;   true
 	),
-	send(M, setup_styles).
+	send(M, setup_styles),
+	send(M, setup_margin).
 
 
 :- send(@class, attribute, outline_regex_list,
@@ -1149,7 +1150,8 @@ break_at(M) :->
 	    send(File, same, Source)
 	->  get(M, caret, Caret),
 	    get(M, line_number, M?caret, Line),
-	    (	auto_call(set_breakpoint(Source, Line, Caret, _))
+	    (	guitracer,
+	        auto_call(set_breakpoint(Source, Line, Caret, _))
 	    ->  tdebug,			% debug all threads
 		(   get(TB, margin_width, 0)
 		->  send(TB, margin_width, 22)
@@ -1169,6 +1171,18 @@ delete_breakpoint(M) :->
 	    get(F, breakpoint_id, Id)
 	->  delete_breakpoint(Id)
 	;   send(M, report, warning, 'No selected breakpoint')
+	).
+
+setup_margin(M) :->
+	"Enable the editor margin if necessary"::
+	(   get(M, margin_width, 0),
+	    get(M, text_buffer, TB),
+	    get(TB, file, File), File \== @nil,
+	    get(File, absolute_path, Path),
+	    absolute_file_name(Path, Canonical),
+	    breakpoint_property(_, file(Canonical))
+	->  send(M, margin_width, 22)
+	;   true
 	).
 
 
