@@ -1096,9 +1096,11 @@ name_cycle_vars([H|T], I, Bindings) :-
 append_binding(B, Names0:prolog, ValueTerm:prolog, Fd:prolog) :->
 	"Add a binding to the browser"::
 	ValueTerm = value(Value0),	% protect :=, ?, etc.
-	(   Value0 = '$VAR'(_), Names0 = [_],
-	    setting(show_unbound, false)
-	->  true
+	(   Value0 = '$VAR'(Name), Names0 = [Name:_]
+	->  (   setting(show_unbound, false)
+	    ->  true
+	    ;	format(Fd, '~w\t= _~n', [Name])
+	    )
 	;   (   Value0 = '$VAR'(_), Names0 = [_,_|_]
 	    ->	append(Names, [VarN:_], Names0),
 		Value = '$VAR'(VarN)
