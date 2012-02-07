@@ -34,7 +34,7 @@ exception(ex1, error(_, _), true, false).
 
 exception_hook(Ex, Ex, _Frame, Catcher) :-
 	register(Ex),
-	exception(_, Ex, NotCaught, Caught),
+	exception(_, Ex, NotCaught, Caught), !,
 	(   Caught == true
 	->  true
 	;   Catcher == none,
