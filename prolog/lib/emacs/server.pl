@@ -3,9 +3,10 @@
     Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@cs.vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2012, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -38,6 +39,14 @@
 	   , term_to_atom/2
 	   ]).
 
+/** <module> Remote control for PceEmacs
+
+This module allows for controlling PceEmacs   from  the (Unix) shell. It
+creates a Unix domain socket  in  the   user's  home  directory. A shell
+script =|edit.sh|= is available from library('emacs/edit.sh').
+*/
+
+
 :- pce_global(@emacs_server, make_emacs_server).
 :- pce_global(@emacs_server_address, make_emacs_server_address).
 :- pce_global(@emacs_server_method,
@@ -49,9 +58,21 @@
 					message(@receiver, free)))))).
 
 make_emacs_server_address(F) :-
-	get(@pce, hostname, Host),
-	atom_concat('~/.xpce_emacs_server.', Host, Server),
+	(   get(@pce, environment_variable, 'DISPLAY', Display),
+	    atom_codes(Display, Codes),
+	    phrase(local_display(Local), Codes, _)
+	->  true
+	;   get(@pce, hostname, Local)
+	),
+	atom_concat('~/.xpce_emacs_server.', Local, Server),
 	new(F, file(Server)).
+
+local_display(N) -->
+	":", digits(D), !,
+	{ number_codes(N, D) }.
+
+digits([H|T]) --> [H], { between(0'0, 0'9, H) }, !, digits(T).
+digits([]) --> "".
 
 
 make_emacs_server(Socket) :-
