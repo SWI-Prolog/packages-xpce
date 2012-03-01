@@ -176,6 +176,8 @@ do_intercept(fail, Frame, CHP, Action) :-
 	    ;	predicate_property(Goal, foreign)
 	    )
 	->  Up = 1
+	;   last_action(skip)
+	->  Up = 1
 	;   Up = 0
 	),
 	show(Frame, CHP, Up, fail),
@@ -185,6 +187,8 @@ do_intercept(exception(Except), Frame, CHP, Action) :-
 	    (	predicate_property(Goal, nodebug)
 	    ;	predicate_property(Goal, foreign)
 	    )
+	->  Up = 1
+	;   last_action(skip)
 	->  Up = 1
 	;   Up = 0
 	),
