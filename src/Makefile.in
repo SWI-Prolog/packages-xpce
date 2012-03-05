@@ -675,7 +675,7 @@ rt-misc:	rt-home
 
 rt-bins:	rt-home
 		$(INSTALL_DATA) -d "$(DESTDIR)$(RTBINDIR)" "$(DESTDIR)$(RTLIBDIR)"
-		@for f in $(XPCECLIENT) $(XPCESTUB); do \
+		@for f in $(XPCESTUB); do \
 		    if [ -f $$f ]; then \
 			echo "$$f --> $(DESTDIR)$(RTBINDIR)"; \
 		        $(INSTALL_PROGRAM) $$f "$(DESTDIR)$(RTBINDIR)"; \
