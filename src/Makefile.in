@@ -16,18 +16,10 @@
 # Addresses:	Jan Wielemaker:		J.Wielemaker@vu.nl
 #		Anjo Anjewierden:	A.A.Anjewierden@gw.utwente.nl
 #
-#		Human-Computer Studies
-#		University of Amsterdam
-#		Kruislaan 419
-#		1098 VA  Amsterdam
-#		The Netherlands
-#		FAX: (+31) 20 888 6896
-#		Phone: (+31) 20 888 4671
-#
 # XPCE is licenced under the LGPL. See the file COPYING or
 # http://www.swi-prolog.org/license.html
 #
-# Copyright (C) 1993-2011, University of Amsterdam
+# Copyright (C) 1993-2012, University of Amsterdam
 #			   VU University Amsterdam
 ################################################################
 
