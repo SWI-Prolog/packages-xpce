@@ -981,9 +981,12 @@ prolog_term(M, From:[int], Silent:[bool], TermPos:[prolog], Clause:prolog) :<-
 	  ;   Start = From
 	  ),
 	  get(M, text_buffer, TB),
-	  pce_open(TB, read, Fd),
-	  read_term_from_stream(TB, Fd, Start, Clause, Error, _S, P, _C),
-	  close(Fd),
+	  setup_call_cleanup(
+	      pce_open(TB, read, Fd),
+	      ( set_stream_file(TB, Fd),
+		read_term_from_stream(TB, Fd, Start, Clause, Error, _S, P, _C)
+	      ),
+	      close(Fd)),
 	  ignore(P = TermPos),
 	  (   var(Error)
 	  ->  true
@@ -1352,12 +1355,19 @@ colourise_clause(M, From:from=[int], TermPos:prolog) :<-
 	get(M, text_buffer, TB),
 	setup_call_cleanup(
 	    pce_open(TB, read, Stream),
-	    ( seek(Stream, Start, bof, _),
+	    ( set_stream_file(TB, Stream),
+	      seek(Stream, Start, bof, _),
 	      prolog_colourise_term(Stream, TB, colour_item(M),
 				    [ subterm_positions(TermPos)
 				    ])
 	    ),
 	    close(Stream)).
+
+set_stream_file(TB, Stream) :-
+	get(TB, file, File), File \== @nil,
+	get(File, absolute_path, Path0),
+	absolute_file_name(Path0, Path),	% Make sure it is canonical
+	set_stream(Stream, file_name(Path)).
 
 :- dynamic
 	style_name/2.
@@ -1483,7 +1493,9 @@ colourise_buffer(M) :-
 	get(M, text_buffer, TB),
 	setup_call_cleanup(
 	    pce_open(TB, read, Stream),
-	    prolog_colourise_stream(Stream, TB, colour_item(M)),
+	    ( set_stream_file(TB, Stream),
+	      prolog_colourise_stream(Stream, TB, colour_item(M))
+	    ),
 	    close(Stream)).
 
 
