@@ -3270,7 +3270,9 @@ delete all windows operating in this thread.
 
 static void
 detach_thread(void *closure)
-{ pceMTdetach();
+{ LOCK();
+  pceMTdetach();
+  UNLOCK();
 }
 
 foreign_t
