@@ -1364,10 +1364,12 @@ colourise_clause(M, From:from=[int], TermPos:prolog) :<-
 	    close(Stream)).
 
 set_stream_file(TB, Stream) :-
-	get(TB, file, File), File \== @nil,
+	get(TB, file, File), File \== @nil, !,
 	get(File, absolute_path, Path0),
 	absolute_file_name(Path0, Path),	% Make sure it is canonical
 	set_stream(Stream, file_name(Path)).
+set_stream_file(_, _).
+
 
 :- dynamic
 	style_name/2.
