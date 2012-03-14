@@ -75,9 +75,9 @@ isqrt(long a)
 
 int
 distance(int x1, int y1, int x2, int y2)
-{ int dx = x1-x2, dy = y1-y2;
+{ double dx = (double)(x1-x2), dy = (double)(y1-y2);
 
-  return isqrt(dx*dx + dy*dy);
+  return rfloat(sqrt(dx*dx + dy*dy));
 }
 
 
@@ -390,7 +390,7 @@ writef_arguments(char *fm, va_list args, int *argc, Any *argv)
 	}
 	continue;
       default:
-      	fm++;
+	fm++;
 	continue;
     }
   }
@@ -535,7 +535,7 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 	      char buf[64];
 
 	      if ( argc <= 0 )
-	      	a = 0;
+		a = 0;
 	      else
 	      { if ( (i = checkType(argv[0], TypeInt, NIL)) )
 		  a = valInt(i);
@@ -554,7 +554,7 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 	      if ( arg == NOT_SET )
 		sprintf(buf, fmtbuf, a);
 	      else
-	      	sprintf(buf, fmtbuf, arg, a);
+		sprintf(buf, fmtbuf, arg, a);
 
 	      PutString(buf);
 
@@ -570,7 +570,7 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 	      char buf[64];
 
 	      if ( argc <= 0 )
-	      	a = 0.0;
+		a = 0.0;
 	      else
 	      { if ( (f = checkType(argv[0], TypeReal, NIL)) )
 		  a = valReal(f);
@@ -588,7 +588,7 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 	      if ( arg == NOT_SET )
 		sprintf(buf, fmtbuf, a);
 	      else
-	      	sprintf(buf, fmtbuf, arg, a);
+		sprintf(buf, fmtbuf, arg, a);
 
 	      PutString(buf);
 
@@ -775,7 +775,7 @@ scanstr(char *str, char *fmt, Any *r)
 	  length = 0;
 
 	switch(*s)			/* conversion char */
-    	{ case 'u':
+	{ case 'u':
 	    if ( !supress )
 	    { types[argn] = length|T_INT|S_UNSIGNED;
 	      ptrs[argn]  = (void *)alloca(sizeof(long));
@@ -833,7 +833,7 @@ scanstr(char *str, char *fmt, Any *r)
 	    continue;
 	}
       default:
-      	s++;
+	s++;
 	continue;
     }
   }
@@ -854,7 +854,7 @@ scanstr(char *str, char *fmt, Any *r)
 			              ptrs[3], ptrs[4]); break;
     case 6:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
 			              ptrs[3], ptrs[4], ptrs[5]);
-    				      break;
+				      break;
     case 7:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
 			              ptrs[3], ptrs[4], ptrs[5],
 			              ptrs[6]); break;
@@ -868,75 +868,75 @@ scanstr(char *str, char *fmt, Any *r)
     case 10:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
 			              ptrs[3], ptrs[4], ptrs[5],
 			              ptrs[6], ptrs[7], ptrs[8],
-			    	      ptrs[9]);
+				      ptrs[9]);
 				      break;
     case 11:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
 			              ptrs[3], ptrs[4], ptrs[5],
 			              ptrs[6], ptrs[7], ptrs[8],
-			    	      ptrs[9], ptrs[10]);
+				      ptrs[9], ptrs[10]);
 				      break;
     case 12:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
 			              ptrs[3], ptrs[4], ptrs[5],
 			              ptrs[6], ptrs[7], ptrs[8],
-			    	      ptrs[9], ptrs[10], ptrs[11]);
+				      ptrs[9], ptrs[10], ptrs[11]);
 				      break;
     case 13:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
 			              ptrs[3], ptrs[4], ptrs[5],
 			              ptrs[6], ptrs[7], ptrs[8],
-			    	      ptrs[9], ptrs[10], ptrs[11],
-			    	      ptrs[12]);
+				      ptrs[9], ptrs[10], ptrs[11],
+				      ptrs[12]);
 				      break;
     case 14:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
 			              ptrs[3], ptrs[4], ptrs[5],
 			              ptrs[6], ptrs[7], ptrs[8],
-			    	      ptrs[9], ptrs[10], ptrs[11],
-			    	      ptrs[12], ptrs[13]);
+				      ptrs[9], ptrs[10], ptrs[11],
+				      ptrs[12], ptrs[13]);
 				      break;
     case 15:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
 			              ptrs[3], ptrs[4], ptrs[5],
 			              ptrs[6], ptrs[7], ptrs[8],
-			    	      ptrs[9], ptrs[10], ptrs[11],
-			    	      ptrs[12], ptrs[13], ptrs[14]);
+				      ptrs[9], ptrs[10], ptrs[11],
+				      ptrs[12], ptrs[13], ptrs[14]);
 				      break;
     case 16:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
 			              ptrs[3], ptrs[4], ptrs[5],
 			              ptrs[6], ptrs[7], ptrs[8],
-			    	      ptrs[9], ptrs[10], ptrs[11],
-			    	      ptrs[12], ptrs[13], ptrs[14],
-			    	      ptrs[15]);
+				      ptrs[9], ptrs[10], ptrs[11],
+				      ptrs[12], ptrs[13], ptrs[14],
+				      ptrs[15]);
 				      break;
     case 17:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
 			              ptrs[3], ptrs[4], ptrs[5],
 			              ptrs[6], ptrs[7], ptrs[8],
-			    	      ptrs[9], ptrs[10], ptrs[11],
-			    	      ptrs[12], ptrs[13], ptrs[14],
-			    	      ptrs[15], ptrs[16]);
+				      ptrs[9], ptrs[10], ptrs[11],
+				      ptrs[12], ptrs[13], ptrs[14],
+				      ptrs[15], ptrs[16]);
 				      break;
     case 18:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
 			              ptrs[3], ptrs[4], ptrs[5],
 			              ptrs[6], ptrs[7], ptrs[8],
-			    	      ptrs[9], ptrs[10], ptrs[11],
-			    	      ptrs[12], ptrs[13], ptrs[14],
-			    	      ptrs[15], ptrs[16], ptrs[17]);
+				      ptrs[9], ptrs[10], ptrs[11],
+				      ptrs[12], ptrs[13], ptrs[14],
+				      ptrs[15], ptrs[16], ptrs[17]);
 				      break;
     case 19:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
 			              ptrs[3], ptrs[4], ptrs[5],
 			              ptrs[6], ptrs[7], ptrs[8],
-			    	      ptrs[9], ptrs[10], ptrs[11],
-			    	      ptrs[12], ptrs[13], ptrs[14],
-			    	      ptrs[15], ptrs[16], ptrs[17],
-			    	      ptrs[18]);
+				      ptrs[9], ptrs[10], ptrs[11],
+				      ptrs[12], ptrs[13], ptrs[14],
+				      ptrs[15], ptrs[16], ptrs[17],
+				      ptrs[18]);
 				      break;
     case 20:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
 			              ptrs[3], ptrs[4], ptrs[5],
 			              ptrs[6], ptrs[7], ptrs[8],
-			    	      ptrs[9], ptrs[10], ptrs[11],
-			    	      ptrs[12], ptrs[13], ptrs[14],
-			    	      ptrs[15], ptrs[16], ptrs[17],
+				      ptrs[9], ptrs[10], ptrs[11],
+				      ptrs[12], ptrs[13], ptrs[14],
+				      ptrs[15], ptrs[16], ptrs[17],
 			              ptrs[18], ptrs[19]);
 				      break;
     default:	errorPce(NIL, NAME_tooManyArguments);
-    		fail;
+		fail;
   }
 #endif /*HAVE_VSSCANF*/
 
