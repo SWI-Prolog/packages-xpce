@@ -114,6 +114,18 @@ getPathSourceLocation(SourceLocation loc)
   }
 }
 
+
+static StringObj
+getPrintNameSourceLocation(SourceLocation loc)
+{ static Name fmt = NULL;
+
+  if ( !fmt )
+    fmt = CtoName("%s:%d");
+
+  answer(answerObject(ClassString, fmt, loc->file_name, loc->line_no, EAV));
+}
+
+
 		 /*******************************
 		 *	 CLASS DECLARATION	*
 		 *******************************/
@@ -147,7 +159,9 @@ static getdecl get_sourceLocation[] =
 { GM(NAME_convert, 1, "source_location", "char_array|file", getConvertSourceLocation,
      DEFAULT, "Convert `file', `path-name' and `path-name:line-no'"),
   GM(NAME_path, 0, "name", NULL, getPathSourceLocation,
-     NAME_path, "Get absolute path-name of source file")
+     NAME_path, "Get absolute path-name of source file"),
+  GM(NAME_printName, 0, "string", NULL, getPrintNameSourceLocation,
+     NAME_textual, "Printed representation as %s:%d")
 };
 
 /* Resources */
