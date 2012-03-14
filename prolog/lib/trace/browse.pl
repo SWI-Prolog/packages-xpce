@@ -262,10 +262,7 @@ event(FB, Ev:event) :->
 initialise(TF, File:file) :->
 	get(File, name, FileName),
 	canonical_source_file(FileName, Path),
-	(   source_file(Path)
-	->  Img = 'plloadedfile.xpm'
-	;   Img = 'plfile.xpm'
-	),
+	file_image(Path, Img),
 	file_base_name(FileName, Base),
 	send_super(TF, initialise, Base, Path, Img),
 	send(TF, name, Base).
@@ -276,6 +273,20 @@ update_image(_TF) :->
 loaded(TF) :->
 	get(TF, identifier, Path),
 	source_file(Path).
+
+included(TF) :->
+	get(TF, identifier, Path),
+	included_file(Path).
+
+file_image(Path, 'plloadedfile.xpm') :-
+	source_file(Path), !.
+file_image(Path, 'plincludedfile.xpm') :-
+	included_file(Path), !.
+file_image(_, 'plfile.xpm').
+
+included_file(Path) :-
+	source_file_property(Path, included_in(_,_)).
+
 
 module(TF, Module:name) :<-
 	"Return module defined in this file"::
@@ -361,6 +372,8 @@ identify(TF) :->
 	get(TF, identifier, Path),
 	(   send(TF, loaded)
 	->  send(TF, report, status, 'Loaded file %s', Path)
+	;   send(TF, included)
+	->  send(TF, report, status, 'Included file %s', Path)
 	;   send(TF, report, status, 'File %s', Path)
 	).
 
