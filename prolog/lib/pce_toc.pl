@@ -356,7 +356,7 @@ node_image(TC, From:any, Gr:graphical) :<-
 :- pce_begin_class(toc_node, node,
 		   "Node for the table-of-contents package").
 
-variable(identifier, [any], 		none, "Identification handle").
+variable(identifier, [any],		none, "Identification handle").
 
 initialise(TN, Id:any, Image:toc_image) :->
 	send(TN, slot, identifier, Id),
@@ -677,5 +677,8 @@ initialise(TF, Label:'char_array|graphical', Id:[any], Img:[image]) :->
 son(TF, _Son:toc_node) :->
 	send(TF, report, error, 'Cannot add sons to a file'),
 	fail.
+
+expand_all(_TF) :->
+	true.
 
 :- pce_end_class.

@@ -210,8 +210,16 @@ goto(FB, File:'file|node', Line:int) :->
 popup(FB, Id:any, Popup:popup) :<-
 	"Return popup from current node"::
 	get(FB, node, Id, Node),
-	send(Node, has_get_method, popup),
-	get(Node, popup, Popup).
+	(   send(Node, has_get_method, popup),
+	    get(Node, popup, Popup)
+	->  true
+	;   send(Node, instance_of, toc_directory)
+	->  new(Popup, popup(options)),
+	    send(Popup, append,
+		 menu_item(expand_all,
+			   message(Node, expand_all)))
+	).
+
 
 :- pce_group(edit).
 
@@ -328,6 +336,9 @@ expand(TF) :->
 	    fail
 	;   true
 	).
+
+expand_all(_TF) :->
+	true.
 
 split_head(M:Head, Name, Arity, M) :- !,
 	callable(Head),
@@ -945,11 +956,17 @@ image(predicate,	dcg,		'grammar.xpm').
 :- multifile
 	user:message_hook/3.
 
-image_of_load_state(start,	'loading.xpm').
-image_of_load_state(true,	'plloadedfile.xpm').
-image_of_load_state(false,	'loadfailed.xpm').
+image_of_load_state(start, _,	    'loading.xpm').
+image_of_load_state(true,  load,    'plloadedfile.xpm').
+image_of_load_state(true,  include, 'plincludedfile.xpm').
+image_of_load_state(false, _,	    'loadfailed.xpm').
 
 user:message_hook(load_file(What), _Kind, _Lines) :-
+	loading(What, load).
+user:message_hook(include_file(What), _Kind, _Lines) :-
+	loading(What, include).
+
+loading(What, How) :-
 	load_info(What, File, Stage),
 	prolog_overview_window(Win),
 	(   file_name_extension(_, qlf, File)
@@ -960,7 +977,7 @@ user:message_hook(load_file(What), _Kind, _Lines) :-
 	;   TheFile = File
 	),
 	get(Win, file_node, TheFile, Node),
-	image_of_load_state(Stage, Img),
+	image_of_load_state(Stage, How, Img),
 	send(Node, image, Img),
 	send(Node, flush),
 	fail.
@@ -975,5 +992,7 @@ load_info(failed(Spec),
 			   ],
 			   Path).
 load_info(done(_Level, file(_, Path), _, _, _, _),
+	  Path, true).
+load_info(done(_Level, file(_, Path)),
 	  Path, true).
 

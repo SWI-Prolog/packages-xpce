@@ -61,6 +61,11 @@ expand(F) :->
 	"Expand this directory"::
 	send(F, update).
 
+expand_all(F) :->
+	"Expand this directory recursively"::
+	send(F, collapsed, @off),
+	send(F?sons, for_all, message(@arg1, expand_all)).
+
 refresh(F) :->
 	"Update for possible changes"::
 	get(F, identifier, Dir),
