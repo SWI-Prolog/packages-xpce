@@ -237,11 +237,13 @@ findbest:
 #define FindBestHandle \
   { Handle h = cell->value; \
     Int hx, hy; \
+    double dx, dy; \
     if ( h->kind != kind ) \
       continue; \
     getXYHandle(h, gr, dev, &hx, &hy); \
     X = valInt(hx); Y = valInt(hy); \
-    D = isqrt((x-X)*(x-X) + (y-Y)*(y-Y)); \
+    dx = (double)(x-X); dy = (double)(y-Y); \
+    D = rdouble(sqrt(dx*dx+dy*dy)); \
     DC = distanceLineToPoint_int(x, y, X, Y, cx, cy); \
     if ((D + DC < bestd + bestdc) || found == FAIL) \
     { bestd = D; \
