@@ -100,6 +100,8 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
 	  consult_selection	       = button(compile) + button(compile),
 	  source_file		       = button(browse,
 						@prolog?source_file_chain),
+	  loaded_from		       = button(browse,
+						@emacs_mode?loaded_from_chain),
 
 	  forward_clause	       = key('\\ee'),
 	  backward_clause	       = key('\\ea'),
@@ -511,6 +513,29 @@ find_local_definition(M, For:prolog_predicate) :->
 	    )
 	->  send(M, goto_line, Line, title := For?print_name)
 	;   send(M, report, warning, 'Cannot find %N', For)
+	).
+
+
+		 /*******************************
+		 *	   LOAD CONTEXT		*
+		 *******************************/
+
+loaded_from(_M, LoadedFrom:source_location) :->
+	"Jump to position I'm loaded from"::
+	send(@emacs, goto_source_location, LoadedFrom, tab).
+
+loaded_from_chain(M, LoadedFrom:chain) :<-
+	"Chain with files and locations I'm loaded from"::
+	get(M, file, File), File \== @nil,
+	get(File, absolute_path, Path0),
+	absolute_file_name(Path0, Path),
+	findall(SLoc, loaded_from(Path, SLoc), Locations),
+	Term =.. [chain|Locations],
+	new(LoadedFrom, Term).
+
+loaded_from(Path, source_location(File, Line)) :-
+	(   source_file_property(Path, load_context(_Module, File:Line, _Options))
+	;   source_file_property(Path, included_in(File, Line))
 	).
 
 
