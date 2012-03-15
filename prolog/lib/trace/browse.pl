@@ -978,9 +978,12 @@ loading(What, How) :-
 	),
 	get(Win, file_node, TheFile, Node),
 	image_of_load_state(Stage, How, Img),
-	send(Node, image, Img),
-	send(Node, flush),
+	in_pce_thread(update_image(Node, Img)),
 	fail.
+
+update_image(Node, Img) :-
+	send(Node, image, Img),
+	send(Node, flush).
 
 load_info(start(_Level, file(_, Path)),
 	  Path, start).
