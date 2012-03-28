@@ -89,4 +89,8 @@ prolog:xref_open_source(SourceId, Stream) :-
 	integer(SourceId),
 	Obj = @SourceId,
 	object(Obj),
-	pce_open(Obj, read, Stream).
+	pce_open(Obj, read, Stream),
+	(   catch(get(Obj?file, absolute_path, Path), _, fail)
+	->  set_stream(Stream, file_name(Path))
+	;   true
+	).
