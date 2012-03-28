@@ -2018,13 +2018,14 @@ identify_fragment(method(send), _, 'XPCE send method').
 identify_fragment(method(get), _, 'XPCE get method').
 identify_fragment(head(unreferenced), _, 'Unreferenced predicate (from this file)').
 identify_fragment(head(exported), _, 'Exported predicate').
-identify_fragment(head(public), _, 'Public predicate').
+identify_fragment(head(public(_)), _,
+		  'Public predicate (not exported, but called from elsewhere)').
 identify_fragment(head(multifile), _, 'Multifile predicate').
-identify_fragment(head(constraint), _, 'Constraint').
+identify_fragment(head(constraint), _, 'Constraint (CHR)').
 identify_fragment(head(iso), _, 'ISO built-in (cannot be redefined)').
 identify_fragment(head(built_in), _, 'SWI-Prolog built-in (cannot be redefined)').
-identify_fragment(head(def_iso), _, 'ISO built-in').
-identify_fragment(head(def_swi), _, 'SWI-Prolog built-in').
+identify_fragment(head(def_iso), _, 'Definition of an ISO built-in').
+identify_fragment(head(def_swi), _, 'Definition of an SWI-Prolog built-in').
 identify_fragment(head(imported(From)), _, Summary) :-
 	new(Summary, string('Also imported from %s', From)).
 identify_fragment(prolog_data, _, 'Pass Prolog term unmodified').
