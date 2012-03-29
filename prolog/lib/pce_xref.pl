@@ -1407,7 +1407,7 @@ event(T, Ev:event) :->
 	).
 
 arm(TF, Val:bool) :->
-	"Preview activiity"::
+	"Preview activity"::
 	(   Val == @on
 	->  send(TF, underline, @on),
 	    send(TF, report, status, 'File %s', TF?path)
