@@ -112,10 +112,16 @@ prolog:message(type_error(Goal, ArgN, Type, _Value)) -->
 %	Portability layer wrappers around print_message/2.
 
 pce_error(Term) :-
-	print_message(error, Term).
+	(   current_prolog_flag(xref, true)
+	->  true
+	;   print_message(error, Term)
+	).
 
 pce_warn(Term) :-
-	print_message(warning, Term).
+	(   current_prolog_flag(xref, true)
+	->  true
+	;   print_message(warning, Term)
+	).
 
 pce_info(Term) :-
 	print_message(informational, Term).
