@@ -1624,6 +1624,8 @@ make_prolog_mode_goal_popup(G) :-
 			      message(Fragment, edit, window),
 			      condition := HasSource),
 		    gap,
+		    menu_item(info,
+			      message(Fragment, info)),
 		    menu_item(listing,
 			      message(Fragment, listing),
 			      condition := HasListing),
@@ -1700,13 +1702,12 @@ listing(F) :->
 	"Generate a listing"::
 	get(F, loaded_specifier, Spec),
 	new(Tmp, emacs_buffer(@nil, string('*Listing for %N*', F))),
-	pce_open(Tmp, write, Out),
-	telling(Old), set_output(Out),
-	ignore(listing(Spec)),
-	tell(Old),
-	close(Out),
+	send(Tmp, mode, prolog),
+	setup_call_cleanup(
+	    pce_open(Tmp, write, Out),
+	    with_output_to(Out, listing(Spec)),
+	    close(Out)),
 	send(Tmp, modified, @off),
-%	send(Tmp, mode, prolog),
 	send(Tmp, open, tab).
 
 
@@ -1716,6 +1717,10 @@ has_listing(F) :->
 	predicate_property(Spec, number_of_clauses(N)),
 	N > 0.
 
+info(F) :->
+	"Provide all know information about P"::
+	get(F, predicate, P),
+	send(P, info).
 
 documentation(F) :->
 	"Invoke Prolog help-system"::
