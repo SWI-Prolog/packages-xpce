@@ -1611,8 +1611,9 @@ popup(_GF, Popup:popup) :<-
 make_prolog_mode_goal_popup(G) :-
 	new(G, popup(goal_actions)),
 	Fragment = @arg1,
-	new(HasSource, message(Fragment, has_source)),
+	new(HasSource,  message(Fragment, has_source)),
 	new(HasListing, message(Fragment, has_listing)),
+	new(HasInfo,    message(Fragment, has_info)),
 	send_list(G, append,
 		  [ menu_item(edit_in_tab,
 			      message(Fragment, edit, tab),
@@ -1625,7 +1626,8 @@ make_prolog_mode_goal_popup(G) :-
 			      condition := HasSource),
 		    gap,
 		    menu_item(info,
-			      message(Fragment, info)),
+			      message(Fragment, info),
+			      condition := HasInfo),
 		    menu_item(listing,
 			      message(Fragment, listing),
 			      condition := HasListing),
@@ -1637,17 +1639,36 @@ make_prolog_mode_goal_popup(G) :-
 
 module(F, Module:name) :<-
 	"Module for Module:Goal references"::
-	get(F, classification, extern),
-	get(F, context, Module),
-	Module \== @nil.
+	(   get(F, classification, extern),
+	    get(F, context, Module),
+	    Module \== @nil
+	->  true
+	;   get(F, file_module, Module)
+	).
+
+
+file_module(F, Module:name) :<-
+	"Module used for the file"::
+	get(F, text_buffer, TB),
+	(   xref_module(TB, Module)
+	->  true
+	;   get(TB, file, File), File \== @nil,
+	    get(File, absolute_path, Path0),
+	    absolute_file_name(Path0, Path),
+	    (   source_file_property(Path, module(Module))
+	    ->  true
+	    ;   source_file_property(Path, load_context(Module, _, _))
+	    )
+	).
+
 
 predicate(F, Pred:prolog_predicate) :<-
 	"Get referenced predicate"::
 	get(F, name, Name),
 	get(F, arity, Arity),
 	(   get(F, module, Module)
-	->  Spec = Name/Arity
-	;   Spec = Module:Name/Arity
+	->  Spec = Module:Name/Arity
+	;   Spec = Name/Arity
 	),
 	new(Pred, prolog_predicate(Spec)).
 
@@ -1666,8 +1687,7 @@ loaded_specifier(F, TheHead:prolog) :<-
 	get(F, head, Head),
 	(   Head = _:_
 	->  TheHead = Head
-	;   get(F, text_buffer, TB),
-	    xref_module(TB, M)
+	;   get(F, file_module, M)
 	->  TheHead = M:Head
 	;   TheHead = _:Head
 	),
@@ -1721,6 +1741,12 @@ info(F) :->
 	"Provide all know information about P"::
 	get(F, predicate, P),
 	send(P, info).
+
+has_info(F) :->
+	"Provide all know information about P"::
+	get(F, predicate, P),
+	get(P, head, Head),
+	predicate_property(Head, _), !.
 
 documentation(F) :->
 	"Invoke Prolog help-system"::
