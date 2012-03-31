@@ -34,6 +34,7 @@
 :- use_module(library(pce)).
 :- use_module(library(debug)).
 :- use_module(library(edit)).
+:- use_module(library(make)).			% for reloading files
 :- use_module(library(emacs_extend)).
 :- use_module(library(error)).
 :- use_module(library(lists)).
@@ -443,14 +444,29 @@ compile_buffer(E) :->
 	get(E?text_buffer, file, File),
 	(   send(File, instance_of, file)
 	->  send(E, save_if_modified),
-	    get(File, name, Path),
-	    print_message(silent, emacs(consult(user:Path))),
-	    consult(user:Path),
-	    print_message(silent, emacs(consulted(user:Path))),
-	    send(E, report, status, '%s compiled', Path)
+	    get(File, absolute_path, Path0),
+	    absolute_file_name(Path0, Path),
+	    master_load_file(Path, [], ToLoad),
+	    print_message(silent, emacs(consult(user:ToLoad))),
+	    make:reload_file(ToLoad),
+	    print_message(silent, emacs(consulted(user:ToLoad))),
+	    send(E, report, status, '%s compiled', ToLoad)
 	;   send(E, report, error,
 		 'Buffer is not connected to a file')
 	).
+
+%%	master_load_file(+File, +Seen, -MasterFile) is det.
+%
+%	If file is included into another  file, find the outermost file.
+%	This is the file that needs to  be reloaded instead of reloading
+%	File.
+
+master_load_file(File0, Seen, File) :-
+	source_file_property(File0, included_in(File1, _Line)),
+	\+ memberchk(File1, Seen), !,
+	master_load_file(File1, [File0|Seen], File).
+master_load_file(File, _, File).
+
 
 close_warning_window(_E) :->
 	"Destroy compilation error window"::
@@ -1655,11 +1671,18 @@ file_module(F, Module:name) :<-
 	;   get(TB, file, File), File \== @nil,
 	    get(File, absolute_path, Path0),
 	    absolute_file_name(Path0, Path),
-	    (   source_file_property(Path, module(Module))
-	    ->  true
-	    ;   source_file_property(Path, load_context(Module, _, _))
-	    )
+	    module_context(Path, [], Module)
 	).
+
+
+module_context(File, _, Module) :-
+	source_file_property(File, module(Module)), !.
+module_context(File, Seen, Module) :-
+	source_file_property(File, included_in(File2, _Line)),
+	\+ memberchk(File, Seen), !,
+	module_context(File2, [File|Seen], Module).
+module_context(File, _, Module) :-
+	source_file_property(File, load_context(Module, _, _)).
 
 
 predicate(F, Pred:prolog_predicate) :<-
