@@ -237,7 +237,12 @@ summary(PI, Summary) :-
 
 info(P) :->
 	"Open information sheet on predicate"::
-	send(prolog_predicate_frame(P), open).
+	(   get(P, head, Head),
+	    predicate_property(Head, imported_from(M2))
+	->  get(P, pi, @off, PI),
+	    send(prolog_predicate_frame(prolog_predicate(M2:PI)), open)
+	;   send(prolog_predicate_frame(P), open)
+	).
 
 :- pce_end_class(prolog_predicate).
 
