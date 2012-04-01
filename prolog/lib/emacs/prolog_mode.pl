@@ -494,13 +494,18 @@ find_definition(M, For:prolog_predicate, Where:[{here,tab,window}]) :->
 	"Find definition of predicate [in new window]"::
 	get(M, text_buffer, TB),
 	get(For, head, @off, Head),
-	(   (   xref_defined(TB, Head, local(Line))		% local
-	    ;	xref_defined(TB, Head, constraint(Line))
-	    ;   xref_defined(TB, Head, foreign(Line))
+	(   (   xref_defined(TB, Head, local(Location))		% local
+	    ;	xref_defined(TB, Head, constraint(Location))
+	    ;   xref_defined(TB, Head, foreign(Location))
 	    )
 	->  get(TB, open, Where, Frame),
 	    get(Frame, editor, Editor),
-	    send(Editor, goto_line, Line, title := For?print_name)
+	    (	integer(Location)
+	    ->	send(Editor, goto_line, Location, title := For?print_name)
+	    ;	Location = (File:Line)
+	    ->  send(@emacs, goto_source_location,
+		     source_location(File, Line), tab)
+	    )
 	;   xref_defined(TB, Head, imported(File))	% imported
 	->  new(B, emacs_buffer(File)),
 	    get(B, open, Where, EmacsFrame),
@@ -522,12 +527,17 @@ find_local_definition(M, For:prolog_predicate) :->
 	"Find Prolog predicate in local buffer"::
 	get(M, text_buffer, TB),
 	get(For, head, @off, Head),
-	(   (   xref_defined(TB, Head, local(Line))
+	(   (   xref_defined(TB, Head, local(Location))
 	    ->  true
 	    ;   send(M, xref_buffer),
-		xref_defined(TB, Head, local(Line))
+		xref_defined(TB, Head, local(Location))
 	    )
-	->  send(M, goto_line, Line, title := For?print_name)
+	->  (   integer(Location)
+	    ->	send(M, goto_line, Location, title := For?print_name)
+	    ;	Location = (File:Line)
+	    ->	send(@emacs, goto_source_location,
+		     source_location(File, Line), tab)
+	    )
 	;   send(M, report, warning, 'Cannot find %N', For)
 	).
 
@@ -1553,7 +1563,10 @@ make_fragment(goal(Class, Goal), M, F, L, Style) :-
 	functor(Goal, Name, Arity),
 	send(Fragment, name, Name),
 	send(Fragment, arity, Arity),
-	(   Class =.. [ClassName,Context],
+	(   Class = local(Include:Line)
+	->  send(Fragment, classification, include),
+	    send(Fragment, context, source_location(Include, Line))
+	;   Class =.. [ClassName,Context],
 	    atomic(Context)
 	->  send(Fragment, classification, ClassName),
 	    send(Fragment, context, Context)
@@ -1619,7 +1632,7 @@ popup(_GF, Popup:popup) :<-
 :- pce_global(@prolog_mode_goal_popup,
 	      make_prolog_mode_goal_popup).
 
-%	make_prolog_mode_goal_popup(-Popup)
+%%	make_prolog_mode_goal_popup(-Popup)
 %
 %	Create the popup and define actions for handling the right-menu
 %	on goals.
@@ -1831,6 +1844,10 @@ identify_pred(autoload, F, Summary) :-	% Autoloaded predicates
 	new(Summary, string('%N: autoload from %s', F, Atom)).
 identify_pred(local(Line), F, Summary) :-	% Local predicates
 	new(Summary, string('%N: locally defined at line %d', F, Line)).
+identify_pred(include(SrcLoc), F, Summary) :-
+	get(SrcLoc, file_name, File),
+	get(SrcLoc, line_no, Line),
+	new(Summary, string('%N: included from %s:%d', F, File, Line)).
 identify_pred(public(Line), F, Summary) :-	% Public predicates
 	new(Summary, string('%N: declared public at line %d', F, Line)).
 identify_pred(foreign(Line), F, Summary) :-	% Foreign predicates
