@@ -703,7 +703,7 @@ properties(M, V:view) :<-
 	send(V, caret, 0),
 	send(new(D, dialog), below, V),
 	send(D, append, button(quit, message(V, destroy))),
-	send(V, open).
+	send(V, open_centered, M?frame?area?center).
 
 
 		 /*******************************
