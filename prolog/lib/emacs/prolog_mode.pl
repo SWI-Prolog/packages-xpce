@@ -1,6 +1,4 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
@@ -530,7 +528,8 @@ find_local_definition(M, For:prolog_predicate) :->
 	(   (   xref_defined(TB, Head, local(Location))
 	    ->  true
 	    ;   send(M, xref_buffer),
-		xref_defined(TB, Head, local(Location))
+		get(M, xref_source_id, SourceID),
+		xref_defined(SourceID, Head, local(Location))
 	    )
 	->  (   integer(Location)
 	    ->	send(M, goto_line, Location, title := For?print_name)
@@ -1427,13 +1426,15 @@ colourise_clause(M, From:from=[int], TermPos:prolog) :<-
 	;   Start = From
 	),
 	get(M, text_buffer, TB),
+	get(M, xref_source_id, SourceID),
 	setup_call_cleanup(
 	    pce_open(TB, read, Stream),
 	    ( set_stream_file(TB, Stream),
 	      seek(Stream, Start, bof, _),
-	      prolog_colourise_term(Stream, TB, colour_item(M),
-				    [ subterm_positions(TermPos)
-				    ])
+	      prolog_colourise_term(
+		  Stream, SourceID, colour_item(M),
+		  [ subterm_positions(TermPos)
+		  ])
 	    ),
 	    close(Stream)).
 
@@ -1553,11 +1554,39 @@ xref_buffer(M, Always:[bool]) :->
 	    ;   get(TB, xref_generation, GRef),
 		GRef \== G
 	    )
-	->  send(M, report, progress, 'Cross-referencing buffer ...'),
-	    xref_source(TB),
+	->  xref_source_id(TB, SourceId),
+	    (	TB == SourceId
+	    ->	send(M, report, progress, 'Cross-referencing buffer ...')
+	    ;	send(M, report, progress, 'Cross-referencing %s ...', SourceId),
+	        send(TB, attribute, xref_source_id, SourceId)
+	    ),
+	    xref_source(SourceId),
 	    send(TB, xref_generation, G),
 	    send(M, report, done)
 	;   true
+	).
+
+xref_source_id(M, SourceId:any) :<-
+	"Xref source identifier"::
+	(   get(M, text_buffer, TB),
+	    get(TB, attribute, xref_source_id, SourceId)
+	->  true
+	;   SourceId = TB
+	).
+
+%%	xref_source_id(+TextBuffer, -SourceID) is det.
+%
+%	Find the object we need  to   examine  for cross-referencing. If
+%	this is an included file, this is the corresponding main file.
+
+xref_source_id(TB, SourceId) :-
+	get(TB, file, File), File \== @nil,
+	get(File, absolute_path, Path0),
+	absolute_file_name(Path0, Path),
+	master_load_file(Path, [], Master),
+	(   Master == Path
+	->  SourceId = TB
+	;   SourceId = Master
 	).
 
 
@@ -1567,10 +1596,11 @@ xref_buffer(M, Always:[bool]) :->
 
 colourise_buffer(M) :-
 	get(M, text_buffer, TB),
+	get(M, xref_source_id, SourceID),
 	setup_call_cleanup(
 	    pce_open(TB, read, Stream),
 	    ( set_stream_file(TB, Stream),
-	      prolog_colourise_stream(Stream, TB, colour_item(M))
+	      prolog_colourise_stream(Stream, SourceID, colour_item(M))
 	    ),
 	    close(Stream)).
 
