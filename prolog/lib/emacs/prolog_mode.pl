@@ -1708,31 +1708,33 @@ predicate(F, Pred:prolog_predicate) :<-
 	),
 	new(Pred, prolog_predicate(Spec)).
 
-head(F, Head:prolog) :<-
+head(F, Qualify:[bool], Head:prolog) :<-
 	"Return goal-head"::
 	get(F, name, Name),
 	get(F, arity, Arity),
 	functor(Head0, Name, Arity),
-	(   get(F, module, M)
-	->  Head = M:Head0
-	;   Head = Head0
+	(   Qualify == @off			% @off: only if qualification is
+	->  (   get(F, classification, extern),  % explicit.
+	        get(F, context, Module),
+		Module \== @nil
+	    ->  Head = Module:Head0
+	    ;	Head = Head0
+	    )
+	;   (   get(F, module, M)
+	    ->  Head = M:Head0
+	    ;   Head = Head0
+	    )
 	).
 
-loaded_specifier(F, TheHead:prolog) :<-
+loaded_specifier(F, Head:prolog) :<-
 	"Get predicate specifier for loaded predicate"::
 	get(F, head, Head),
-	(   Head = _:_
-	->  TheHead = Head
-	;   get(F, file_module, M)
-	->  TheHead = M:Head
-	;   TheHead = _:Head
-	),
-	current_predicate(_, TheHead).
+	current_predicate(_, Head).
 
 has_source(F) :->
 	"Test if there is source available"::
 	get(F, text_buffer, TB),
-	get(F, head, Head),
+	get(F, head, @off, Head),
 	(   xref_defined(TB, Head, How),
 	    xref_definition_line(How, _)
 	;   xref_defined(TB, Head, imported(_From))
