@@ -664,6 +664,49 @@ has_processes(M) :->
 	).
 
 		 /*******************************
+		 *	       INFO		*
+		 *******************************/
+
+properties(M) :->
+	"Display information-window on buffer"::
+	get(M, properties, _).
+
+properties(M, V:view) :<-
+	"Display information-window on buffer"::
+	get(M, text_buffer, Buffer),
+	get(Buffer, name, Name),
+	get(Buffer, modified, Modified),
+	get(Buffer, size, Size),
+	get(Buffer, line_number, Lines),
+	get(Buffer, mode, Mode),
+	new(V, view(string('Buffer %s', Name), size(60, 8))),
+	send(V, confirm_done, @off),
+	send(V, tab_stops, vector(200)),
+	send(V, appendf, 'Buffer Name:\t%s\n', Name),
+	send(V, appendf, 'Mode:\t%s\n', Mode),
+	send(V, appendf, 'Modified:\t%s\n', Modified?name),
+	send(V, appendf, 'Size:\t%d characters; %d lines\n', Size, Lines-1),
+	get(Buffer, file, File),
+	(   Modified == @on,
+	    File \== @nil
+	->  get(File, size, FileSize),
+	    send(V, appendf, 'File Size:\t%d characters\n', FileSize)
+	;   true
+	),
+	(   File \== @nil
+	->  get(File, absolute_path, Path),
+	    send(V, appendf, 'Path:\t%s\n', Path),
+	    send(V, appendf, 'Encoding:\t%s (BOM=%s, NL=%s)\n',
+		 File?encoding, File?bom, File?newline_mode)
+	;   send(V, appendf, 'Path:\t<No file>\n')
+	),
+	send(V, caret, 0),
+	send(new(D, dialog), below, V),
+	send(D, append, button(quit, message(V, destroy))),
+	send(V, open).
+
+
+		 /*******************************
 		 *	     SPELLING		*
 		 *******************************/
 
