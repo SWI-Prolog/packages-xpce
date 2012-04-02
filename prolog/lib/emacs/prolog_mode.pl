@@ -566,6 +566,29 @@ loaded_from(Path, source_location(File, Line)) :-
 
 
 		 /*******************************
+		 *	       INFO		*
+		 *******************************/
+
+file_module(M, Module:name) :<-
+	"Module used for the file"::
+	get(M, text_buffer, TB),
+	(   xref_module(TB, Module)
+	->  true
+	;   get(TB, file, File), File \== @nil,
+	    get(File, absolute_path, Path0),
+	    absolute_file_name(Path0, Path),
+	    module_context(Path, [], Module)
+	).
+
+properties(M, V:view) :<-
+	get_super(M, properties, V),
+	(   get(M, file_module, Module)
+	->  send(V, appendf, 'Prolog module:\t%s\n', Module)
+	;   true
+	).
+
+
+		 /*******************************
 		 *	    PCE CLASSES		*
 		 *******************************/
 
