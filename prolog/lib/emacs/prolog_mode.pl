@@ -1626,6 +1626,24 @@ make_fragment(goal(Class, Goal), M, F, L, Style) :-
 	;   functor(Class, ClassName, _),
 	    send(Fragment, classification, ClassName)
 	).
+make_fragment(head(Class, Head), M, F, L, Style) :-
+	callable(Head), !,
+	get(M, text_buffer, TB),
+	new(Fragment, emacs_head_fragment(TB, F, L, Style)),
+	functor(Head, Name, Arity),
+	send(Fragment, name, Name),
+	send(Fragment, arity, Arity),
+	(   Class = local(_Include:Line)
+	->  send(Fragment, classification, local),
+	    send(Fragment, context, Line)
+	;   functor(Class, Classification, ClassArity),
+	    send(Fragment, classification, Classification),
+	    (   ClassArity == 1
+	    ->  arg(1, Class, Context),
+		send(Fragment, context, Context)
+	    ;   true
+	    )
+	).
 make_fragment(class(Type, Class), M, F, L, Style) :-
 	atom(Class), !,
 	get(M, text_buffer, TB),
@@ -1937,6 +1955,12 @@ autoload_source(F, Source) :-
 			   ]).
 
 :- pce_end_class(emacs_goal_fragment).
+
+
+:- pce_begin_class(emacs_head_fragment, emacs_goal_fragment,
+		   "Fragment for a predicate head in PceEmacs").
+
+:- pce_end_class(emacs_head_fragment).
 
 
 		 /*******************************
