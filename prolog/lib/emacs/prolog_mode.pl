@@ -1616,16 +1616,7 @@ make_fragment(goal(Class, Goal), M, F, L, Style) :-
 	functor(Goal, Name, Arity),
 	send(Fragment, name, Name),
 	send(Fragment, arity, Arity),
-	(   Class = local(Include:Line)
-	->  send(Fragment, classification, include),
-	    send(Fragment, context, source_location(Include, Line))
-	;   Class =.. [ClassName,Context],
-	    atomic(Context)
-	->  send(Fragment, classification, ClassName),
-	    send(Fragment, context, Context)
-	;   functor(Class, ClassName, _),
-	    send(Fragment, classification, ClassName)
-	).
+	set_xref_fragment_context(Fragment, Class).
 make_fragment(head(Class, Head), M, F, L, Style) :-
 	callable(Head), !,
 	get(M, text_buffer, TB),
@@ -1633,17 +1624,7 @@ make_fragment(head(Class, Head), M, F, L, Style) :-
 	functor(Head, Name, Arity),
 	send(Fragment, name, Name),
 	send(Fragment, arity, Arity),
-	(   Class = local(_Include:Line)
-	->  send(Fragment, classification, local),
-	    send(Fragment, context, Line)
-	;   functor(Class, Classification, ClassArity),
-	    send(Fragment, classification, Classification),
-	    (   ClassArity == 1
-	    ->  arg(1, Class, Context),
-		send(Fragment, context, Context)
-	    ;   true
-	    )
-	).
+	set_xref_fragment_context(Fragment, Class).
 make_fragment(class(Type, Class), M, F, L, Style) :-
 	atom(Class), !,
 	get(M, text_buffer, TB),
@@ -1676,6 +1657,21 @@ make_simple_fragment(Class, M, F, L, Style) :-
 	(   Arity == 1
 	->  arg(1, Class, Context),
 	    send(Fragment, context, Context)
+	;   true
+	).
+
+set_xref_fragment_context(Fragment, Class) :-
+	functor(Class, Classification, Arity),
+	send(Fragment, classification, Classification),
+	(   Arity == 1
+	->  arg(1, Class, Context),
+	    (   atomic(Context)
+	    ->	send(Fragment, context, Context)
+	    ;	ground(Context),
+		Context = (Include:Line)
+	    ->	send(Fragment, context, source_location(Include, Line))
+	    ;	true
+	    )
 	;   true
 	).
 
