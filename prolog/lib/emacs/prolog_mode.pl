@@ -1956,6 +1956,38 @@ autoload_source(F, Source) :-
 :- pce_begin_class(emacs_head_fragment, emacs_goal_fragment,
 		   "Fragment for a predicate head in PceEmacs").
 
+:- pce_group(popup).
+
+popup(_GF, Popup:popup) :<-
+	"Return popup menu"::
+	Popup = @prolog_mode_head_popup.
+
+:- pce_global(@prolog_mode_head_popup,
+	      make_prolog_mode_head_popup).
+
+%%	make_prolog_mode_head_popup(-Popup)
+%
+%	Create the popup and define actions for handling the right-menu
+%	on predicate heads.
+
+make_prolog_mode_head_popup(G) :-
+	new(G, popup(head_actions)),
+	Fragment = @arg1,
+	new(HasListing, message(Fragment, has_listing)),
+	new(HasInfo,    message(Fragment, has_info)),
+	send_list(G, append,
+		  [ menu_item(info,
+			      message(Fragment, info),
+			      condition := HasInfo),
+		    menu_item(listing,
+			      message(Fragment, listing),
+			      condition := HasListing),
+		    gap,
+		    menu_item(documentation,
+			      message(Fragment, documentation))
+		  ]).
+
+
 :- pce_end_class(emacs_head_fragment).
 
 
