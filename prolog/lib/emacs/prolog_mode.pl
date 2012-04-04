@@ -1987,6 +1987,70 @@ make_prolog_mode_head_popup(G) :-
 			      message(Fragment, documentation))
 		  ]).
 
+identify(F) :->
+	"Tell the user about the predicate"::
+	get(F, text_buffer, TB),
+	get(F, classification, Class),
+	(   get(F, context, Context),
+	    Context \== @nil
+	->  Id =.. [Class, Context]
+	;   Id = Class
+	),
+	identify_head(Id, F, Report),
+	send(TB, report, status, Report).
+
+identify_head(Class, F, Summary) :-
+	get(F, print_name, Name), !,
+	(   get(F, loaded_specifier, Head)
+	->  findall(Prop, head_property(Head, Prop), Props),
+	    atomic_list_concat(Props, ', ', Text),
+	    new(Summary, string('%s: (loaded) %s', Name, Text))
+	;   term_to_atom(Class, Text),
+	    new(Summary, string('%s: (not loaded) %s', Name, Text))
+	).
+
+head_property(Head, Text) :-
+	predicate_property(Head, Prop),
+	\+ hidden_property(Prop, Head),
+	(   atomic(Text)
+	->  Text = Prop
+	;   property_text(Prop, Text)
+	).
+
+hidden_property(file(_), _).
+hidden_property(line_count(_), _).
+hidden_property(nodebug, _).
+hidden_property(interpreted, _).
+hidden_property(visible, _).
+hidden_property(transparent, Head) :-
+	predicate_property(Head, meta_predicate(_)).
+
+property_text(number_of_clauses(N), Text) :- !,
+	(   N == 1
+	->  Text = '1 clause'
+	;   atomic_list_concat([N, ' clauses'], Text)
+	).
+property_text(indexed(List), Text) :- !,
+	(   List = [1-_]
+	->  Text = 'hashed on first argument'
+	;   List = [N-_]
+	->  int_postfix(N, PostFix),
+	    format(atom(Text), 'hashed on ~d-~w argument', [N, PostFix])
+	;   pairs_keys(List, Args),
+	    atomic_list_concat(Args, ', ', ArgText),
+	    format(atom(Text), 'hashed on arguments ~w', [ArgText])
+	).
+property_text(meta_predicate(Head), Text) :- !,
+	Head =.. [_|Args],
+	Meta =.. [meta_predicate|Args],
+	term_to_atom(Meta, Text).
+property_text(Term, Text) :-
+	term_to_atom(Term, Text).
+
+int_postfix(1, st) :- !.
+int_postfix(2, nd) :- !.
+int_postfix(3, rd) :- !.
+int_postfix(_, th).
 
 :- pce_end_class(emacs_head_fragment).
 
