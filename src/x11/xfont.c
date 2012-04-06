@@ -52,6 +52,8 @@ ws_create_font(FontObj f, DisplayObj d)
     int i;
     char *fam;
     int mono = FALSE;
+    Real  scale  = getClassVariableValueObject(f, NAME_scale);
+    double fscale = (scale ? valReal(scale) : 1.0);
 
     if ( f->family == NAME_screen )
     { fam = "monospace";
@@ -60,7 +62,7 @@ ws_create_font(FontObj f, DisplayObj d)
       fam = strName(f->family);
 
     XftPatternAddString(p, XFT_FAMILY, fam);
-    XftPatternAddDouble(p, XFT_PIXEL_SIZE, (double)valInt(f->points));
+    XftPatternAddDouble(p, XFT_PIXEL_SIZE, (double)valInt(f->points)*fscale);
     if ( f->style == NAME_italic )
       XftPatternAddInteger(p, XFT_SLANT, XFT_SLANT_ITALIC);
     else if ( f->style == NAME_roman )
