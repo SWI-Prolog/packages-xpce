@@ -982,6 +982,15 @@ count_chars_region(M) :->
 	Chars is End - Start,
 	send(M, report, inform, 'Region contains %d characters', Chars).
 
+resize_font(M, Factor:int) :->
+	"Resize font to percentage, keep size in chars"::
+	get(M, font, Font),
+	get(Font, family, Family),
+	get(Font, style, Style),
+	get(Font, points, Points0),
+	Points is round(Points0*Factor/100),
+	send(M, font, font(Family, Style, Points)).
+
 
 		 /*******************************
 		 *	       HELP		*

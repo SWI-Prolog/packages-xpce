@@ -992,6 +992,27 @@ label(E, Label:name) :->
 	get(E, device, View),
 	send(View, label, Label).
 
+size(E, Size:size) :->
+	"Set size, resizing the frame"::
+	get(E, frame, Frame),
+	get(Frame, size, size(FW,FH)),
+	get(E?area, size, size(W0,H0)),
+	send_super(E, size, Size),
+	get(E?area, size, size(W1,H1)),
+	FW1 is FW+W1-W0,
+	FH1 is FH+H1-H0,
+	send(Frame, size, size(FW1, FH1)).
+
+font(E, Font:font) :->
+	"Set font, resizing the frame"::
+	get(E, frame, Frame),
+	get(Frame, size, size(FW,FH)),
+	get(E?area, size, size(W0,H0)),
+	send_super(E, font, Font),
+	get(E?area, size, size(W1,H1)),
+	FW1 is FW+W1-W0,
+	FH1 is FH+H1-H0,
+	send(Frame, size, size(FW1, FH1)).
 
 looking_at(E, Re:regex, Where:[int], End:[int]) :->
 	"Test if regex macthes from the caret"::
