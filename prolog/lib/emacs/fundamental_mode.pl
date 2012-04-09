@@ -58,6 +58,10 @@
 
 	  prefix		   = key('\\eg'),
 
+	  font_magnify		   = key('\\C-+'),
+	  font_reduce		   = key('\\C--'),
+	  font_default		   = key('\\C-='),
+
 					% FILE menu
 	  show_buffer_menu	   = key('\\C-x\\C-b') + button(file),
 	  switch_to_buffer	   = key('\\C-xb') +
@@ -989,7 +993,25 @@ resize_font(M, Factor:int) :->
 	get(Font, style, Style),
 	get(Font, points, Points0),
 	Points is round(Points0*Factor/100),
-	send(M, font, font(Family, Style, Points)).
+	send(M, font, font(Family, Style, Points)),
+	get(@pce, convert, fixed, font, Default),
+	get(Default, points, DefPoints),
+	Perc is round(Points*100/DefPoints),
+	send(M, report, status, 'Resized to %d percent', Perc).
+
+font_magnify(M) :->
+	"Increase font 20%"::
+	send(M, resize_font, 110).
+
+font_reduce(M) :->
+	"Decrease font 20%"::
+	A is round(100*100/110),
+	send(M, resize_font, A).
+
+font_default(M) :->
+	"Use default font (size)"::
+	send(M, font, fixed),
+	send(M, report, status, 'Resized to 100 percent').
 
 
 		 /*******************************
