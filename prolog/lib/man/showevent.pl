@@ -89,9 +89,9 @@ event_property(id, next_row, []).
 event_property(x,  next_row, [length(4)]).
 event_property(y,  right,    [length(4), alignment(left)]).
 
-modifier(s).
-modifier(c).
-modifier(m).
+modifier(s, shift).
+modifier(c, control).
+modifier(m, meta).
 
 fill_dialog(V) :->
 	get(V, member, dialog, Dialog),
@@ -107,7 +107,7 @@ fill_dialog(V) :->
 	;   true
 	),
 	send(Dialog, append, new(I, menu(modifiers, marked))),
-	forall(modifier(M), send(I, append, M)).
+	forall(modifier(M, _), send(I, append, M)).
 
 update_dialog(V, Ev:event) :->
 	get(V, member, dialog, Dialog),
@@ -119,8 +119,8 @@ update_dialog(V, Ev:event) :->
 	;   true
 	),
 	get(Dialog, member, modifiers, Menu),
-	forall(modifier(M),
-	       (   send(Ev, has_modifier, M)
+	forall(modifier(M, Name),
+	       (   send(Ev, has_modifier, modifier(Name := @on))
 	       ->  send(Menu, selected, M, @on)
 	       ;   send(Menu, selected, M, @off)
 	       )),
