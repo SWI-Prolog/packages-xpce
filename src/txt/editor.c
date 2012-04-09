@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@cs,vu,nl
+    E-mail:        J.Wielemaker@cs.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2012, University of Amsterdam
 			      VU University Amsterdam
 
     This library is free software; you can redistribute it and/or
@@ -187,7 +185,6 @@ initialiseEditor(Editor e, TextBuffer tb, Int w, Int h, Int tmw)
 
   send(e->image, NAME_cursor, getClassVariableValueObject(e, NAME_cursor), EAV);
   send(e->image, NAME_set, e->scroll_bar->area->w, ZERO, EAV);
-/*tabDistanceEditor(e, getClassVariableValueObject(e, NAME_tabDistance));*/
   tabDistanceTextImage(e->image, mul(e->tab_distance, getExFont(e->font)));
   heightGraphical((Graphical) e->scroll_bar, ih);
   displayDevice(e, e->scroll_bar, DEFAULT);
@@ -4581,6 +4578,7 @@ static status
 fontEditor(Editor e, FontObj font)
 { if ( e->font != font )
   { assign(e, font, font);
+    tabDistanceTextImage(e->image, mul(e->tab_distance, getExFont(e->font)));
     setGraphical(e, DEFAULT, DEFAULT, e->size->w, e->size->h);
     updateStyleCursorEditor(e);
     ChangedEditor(e);
