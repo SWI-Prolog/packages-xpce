@@ -349,6 +349,8 @@ characterName(Any chr)
       } else
       { size_t l;
 
+	if ( ctrl )
+	  wcscat(buf, L"\\C-");
         buf[l=wcslen(buf)] = c;
 	buf[l+1] = EOS;
       }
