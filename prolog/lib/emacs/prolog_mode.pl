@@ -1568,8 +1568,8 @@ xref_buffer(M, Always:[bool]) :->
 
 xref_source_id(M, SourceId:any) :<-
 	"Xref source identifier"::
-	(   get(M, text_buffer, TB),
-	    get(TB, attribute, xref_source_id, SourceId)
+	get(M, text_buffer, TB),
+	(   get(TB, attribute, xref_source_id, SourceId)
 	->  true
 	;   SourceId = TB
 	).
