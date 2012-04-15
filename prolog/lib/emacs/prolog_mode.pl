@@ -31,35 +31,14 @@
 :- module(emacs_prolog_mode, []).
 :- use_module(library(pce)).
 :- use_module(library(debug)).
-:- use_module(library(edit)).
 :- use_module(library(make)).			% for reloading files
 :- use_module(library(emacs_extend)).
-:- use_module(library(error)).
 :- use_module(library(lists)).
-:- use_module(library(operators)).
 :- use_module(library(pce_meta)).
 :- use_module(library(pce_prolog_xref)).
-:- use_module(library(predicate_options)).
 :- use_module(library(prolog_colour)).
-:- use_module(library(prolog_predicate)).
+:- use_module(library(prolog_predicate)).	% class prolog_predicate
 :- use_module(library(prolog_source)).
-:- require([ make/0
-	   , absolute_file_name/3
-	   , auto_call/1
-	   , chain_list/2
-	   , atomic_list_concat/2
-	   , default/3
-	   , forall/2
-	   , ignore/1
-	   , last/2
-	   , list_to_set/2
-	   , member/2
-	   , memberchk/2
-	   , seek/4
-	   , strip_module/3
-	   ]).
-pce_ifhostproperty(prolog(quintus),
-		   (:- use_module(library(strings), [concat_chars/2]))).
 
 resource(mode_pl_icon, image, image('32x32/doc_pl.xpm')).
 resource(breakpoint,   image, image('16x16/stop.xpm')).
@@ -2230,9 +2209,11 @@ make_prolog_mode_file_popup(G) :-
 	make_prolog_mode_module_popup(G),
 	send_list(G, append,
 		  [ gap,
-		    menu_item(resolves_,
-			      message(@arg1, resolves))
-		  ]).
+		    new(R, popup(resolves, message(@arg1, edit)))
+		  ]),
+	send(R, update_message,
+	     message(@arg1, add_resolve_items, R)).
+
 
 file(F, File:name) :<-
 	"Return associated file"::
@@ -2243,9 +2224,9 @@ file(F, File:name) :<-
 	->  module_property(Context, file(File))
 	).
 
-
-resolves(F) :->
-	"Show predicates resolved by this module"::
+add_resolve_items(F, Popup:popup) :->
+	"Add entries for resolved predicates"::
+	send(Popup, clear),
 	get(F, context, File),
 	get(F, text_buffer, TB),
 	(   get(TB, attribute, xref_source_id, SourceId)
@@ -2255,8 +2236,31 @@ resolves(F) :->
 	findall(Head, ( xref_defined(SourceId, Head, imported(File)),
 			xref_called(SourceId, Head, _)
 		      ),
-		UsedHeads),
-	writeln(UsedHeads).
+		UsedHeads0),
+	(   UsedHeads0 == []
+	->  send(Popup, append,
+		 menu_item('File resolves no predicates', @nil))
+	;   (   source_file_property(File, module(FromModule))
+	    ->  maplist(head_pi(FromModule), UsedHeads0, UsedPreds0)
+	    ;   maplist(head_pi, UsedHeads0, UsedPreds0)
+	    ),
+	    sort(UsedPreds0, UsedPreds),
+	    forall(member(Pred, UsedPreds),
+		   (   new(PredObj, prolog_predicate(Pred)),
+		       send(Popup, append,
+			    menu_item(PredObj, @default, PredObj?print_name))
+		   ))
+	).
+
+head_pi(M0, Head, M:Name/Arity) :-
+	strip_module(M0:Head, M, Term),
+	functor(Term, Name, Arity).
+
+head_pi(M0:Head, M:Name/Arity) :- !,
+	strip_module(M0:Head, M, Term),
+	functor(Term, Name, Arity).
+head_pi(Term, Name/Arity) :- !,
+	functor(Term, Name, Arity).
 
 
 identify(F) :->
