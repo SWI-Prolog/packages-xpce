@@ -2205,15 +2205,18 @@ popup(F, Popup:popup) :<-
 	get(F, context, Context),
 	Context \== @nil,
 	(   get(F, classification, file)
+	->  Popup = @prolog_mode_file_popup
 	;   get(F, classification, module)
-	),
-	Popup = @prolog_mode_file_popup.
+	->  Popup = @prolog_mode_module_popup
+	).
 
 :- pce_global(@prolog_mode_file_popup,
 	      make_prolog_mode_file_popup).
+:- pce_global(@prolog_mode_module_popup,
+	      make_prolog_mode_module_popup).
 
-make_prolog_mode_file_popup(G) :-
-	new(G, popup(file_actions)),
+make_prolog_mode_module_popup(G) :-
+	new(G, popup(actions)),
 	send_list(G, append,
 		  [ menu_item(open_in_tab,
 			      message(@emacs, open_file, @arg1?file, tab)),
@@ -2221,6 +2224,14 @@ make_prolog_mode_file_popup(G) :-
 			      message(@emacs, open_file, @arg1?file, window)),
 		    menu_item(open_here,
 			      message(@emacs, open_file, @arg1?file, here))
+		  ]).
+
+make_prolog_mode_file_popup(G) :-
+	make_prolog_mode_module_popup(G),
+	send_list(G, append,
+		  [ gap,
+		    menu_item(resolves_,
+			      message(@arg1, resolves))
 		  ]).
 
 file(F, File:name) :<-
@@ -2231,6 +2242,21 @@ file(F, File:name) :<-
 	;   get(F, classification, module)
 	->  module_property(Context, file(File))
 	).
+
+
+resolves(F) :->
+	"Show predicates resolved by this module"::
+	get(F, context, File),
+	get(F, text_buffer, TB),
+	(   get(TB, attribute, xref_source_id, SourceId)
+	->  true
+	;   SourceId = TB
+	),
+	findall(Head, ( xref_defined(SourceId, Head, imported(File)),
+			xref_called(SourceId, Head, _)
+		      ),
+		UsedHeads),
+	writeln(UsedHeads).
 
 
 identify(F) :->
