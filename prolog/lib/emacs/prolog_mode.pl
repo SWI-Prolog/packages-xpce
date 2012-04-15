@@ -2183,11 +2183,12 @@ variable(context,	 prolog*, both,	"Classification argument").
 popup(F, Popup:popup) :<-
 	get(F, context, Context),
 	Context \== @nil,
-	(   get(F, classification, file)
-	->  Popup = @prolog_mode_file_popup
-	;   get(F, classification, module)
-	->  Popup = @prolog_mode_module_popup
-	).
+	get(F, classification, FragClass),
+	fragment_popup(FragClass, Popup).
+
+fragment_popup(file,	       @prolog_mode_file_popup).
+fragment_popup(file_no_depend, @prolog_mode_file_popup).
+fragment_popup(module,	       @prolog_mode_module_popup).
 
 :- pce_global(@prolog_mode_file_popup,
 	      make_prolog_mode_file_popup).
@@ -2218,7 +2219,9 @@ make_prolog_mode_file_popup(G) :-
 file(F, File:name) :<-
 	"Return associated file"::
 	get(F, context, Context),
-	(   get(F, classification, file)
+	(   (   get(F, classification, file)
+	    ;	get(F, classification, file_no_depend)
+	    )
 	->  File = Context
 	;   get(F, classification, module)
 	->  module_property(Context, file(File))
@@ -2238,8 +2241,11 @@ add_resolve_items(F, Popup:popup) :->
 		      ),
 		UsedHeads0),
 	(   UsedHeads0 == []
-	->  send(Popup, append,
-		 menu_item('File resolves no predicates', @nil))
+	->  (   \+ xref_defined(SourceId, Head, imported(File))
+	    ->	Comment = 'File has no exports'
+	    ;	Comment	= 'File resolves no predicates'
+	    ),
+	    send(Popup, append, menu_item(Comment, @nil))
 	;   (   source_file_property(File, module(FromModule))
 	    ->  maplist(head_pi(FromModule), UsedHeads0, UsedPreds0)
 	    ;   maplist(head_pi, UsedHeads0, UsedPreds0)
@@ -2277,6 +2283,8 @@ identify(F) :->
 identify_fragment(var,  _, 'Variable').
 identify_fragment(file(Path), _, Summary) :-
 	new(Summary, string('File %s', Path)).
+identify_fragment(file_no_depend(Path), _, Summary) :-
+	new(Summary, string('File %s (does not resolve any predicates)', Path)).
 identify_fragment(directory(Path), _, Summary) :-
 	new(Summary, string('Directory %s', Path)).
 identify_fragment(type_error(Type), _, Summary) :-
