@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2012, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -2311,6 +2311,8 @@ identify_fragment(head(imported(From)), _, Summary) :-
 identify_fragment(prolog_data, _, 'Pass Prolog term unmodified').
 identify_fragment(keyword(except), _, 'Import all except given').
 identify_fragment(keyword(as), _, 'Import under a different name').
+identify_fragment(unused_import, _, 'Imported predicate is not used').
+identify_fragment(undefined_import, _, 'Predicate is not exported').
 identify_fragment(Class, _, Summary) :-
 	term_to_atom(Class, Summary).
 
