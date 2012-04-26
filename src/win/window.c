@@ -635,7 +635,7 @@ postEventWindow(PceWindow sw, EventObj ev)
   if ( isAEvent(ev, NAME_areaEnter) )
   { FrameObj fr = getFrameWindow(sw, DEFAULT);
 
-    if ( notNil(fr) &&
+    if ( fr && notNil(fr) &&
 	 !getHyperedObject(fr, NAME_keyboardFocus, DEFAULT) )
       send(fr, NAME_inputWindow, sw, EAV);
     send(sw, NAME_hasPointer, ON, EAV);
