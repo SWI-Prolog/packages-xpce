@@ -2599,10 +2599,10 @@ PrologCall(PceGoal goal)
 	goto error;
 
       if ( goal->flags & PCE_GF_SEND )
-	rval = PL_call_predicate(MODULE_user, DebugMode,
+	rval = PL_call_predicate(MODULE_user, DebugMode|PL_Q_PASS_EXCEPTION,
 				 PREDICATE_send_implementation, av);
       else
-      { rval = PL_call_predicate(MODULE_user, DebugMode,
+      { rval = PL_call_predicate(MODULE_user, DebugMode|PL_Q_PASS_EXCEPTION,
 				 PREDICATE_get_implementation, av);
 	if ( rval )
 	{ if ( !get_answer_object(goal, av+3, goal->return_type, &goal->rval) )
