@@ -5,7 +5,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.nl/projects/xpce/
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2012, University of Amsterdam
 			      VU University Amsterdam
 
     This library is free software; you can redistribute it and/or
@@ -37,9 +37,9 @@ to associate with the SWI-Prolog gui  application on Windows and =swipl=
 on Unix/X11 platforms.
 */
 
-:- initialization op(200, fy,  user:(@)).
-:- initialization op(250, yfx, user:(?)).
-:- initialization op(990, xfx, user:(:=)).
+:- op(200, fy,  user:(@)).
+:- op(250, yfx, user:(?)).
+:- op(990, xfx, user:(:=)).
 
 :- multifile
 	user:file_search_path/2.
