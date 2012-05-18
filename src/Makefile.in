@@ -126,6 +126,7 @@ VERSION=$(PCEVERSION), $(PCEVERSIONDATE)
 ################################################################
 
 MANINDEX=../man/reference/index.obj
+LOCALINDEX=../prolog/lib/INDEX.pl
 
 ################################################################
 # IMPLICIT RULES
@@ -177,6 +178,10 @@ $(MANINDEX):	$(shell find ../man/reference -name '*.doc')
 		  -F none \
 		  -g "[library('man/man_index')],pce_make_manual_index('$@')" \
 		  -t halt
+
+$(LOCALINDEX):
+		$(PL) -f none -t 'halt(1)' \
+			-g "make_library_index('../prolog/lib'),halt"
 
 ################################################################
 # XPCE's modules
@@ -783,7 +788,7 @@ html-install::
 # CHECK
 ################################################################
 
-check::
+check:		$(LOCALINDEX)
 		./xpce.sh -q -g "['../src/test.pl'],test,halt" -t 'halt(1)'
 
 
@@ -813,6 +818,7 @@ distclean:	clean
 		$(RM) -f Makefile config.h config.status config.cache
 		$(RM) -f ../swipl/Makefile.bin
 		$(RM) -f ../prolog/lib/Makefile
+		$(RM) -f ../prolog/lib/INDEX.pl
 		$(RM) -f ../prolog/pwboot/Makefile
 		$(RM) -f ../sicstus/src/Makefile
 		$(RM) -f ../man/reference/index.obj
