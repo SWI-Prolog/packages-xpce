@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2012, University of Amsterdam
+			      VU University Amsterdam
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -43,9 +42,6 @@
 #include <msw/xpm.h>
 #endif
 #endif
-
-#undef offset
-#define offset(s, f) ((int)&((s *)NULL)->f)
 
 /* Using ws_ref for storing the bits and the xref mechanism for storing
    the Windows HBITMAP handle
@@ -307,7 +303,9 @@ while the structure in memory is 32-bit aligned.  Hence, we read 3 times
 sizeof(WORD).
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+#ifndef offsetof
 #define offsetof(type, field) (int)(&((type *)NULL)->field)
+#endif
 
 typedef struct
 { BYTE	bWidth;               /* Width of the image */
@@ -672,7 +670,7 @@ of that, and left the code for later.  This is the XPMTODIB.
     int n;
     int pentries=0;
 
-    lp = pceMalloc(offset(LOGPALETTE, palPalEntry[xpmimg->ncolors]));
+    lp = pceMalloc(offsetof(LOGPALETTE, palPalEntry[xpmimg->ncolors]));
     lp->palVersion    = 0x300;
     pe                = &lp->palPalEntry[0];
 
