@@ -62,7 +62,7 @@ DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
 
 
 int
-pceMTdetach()
+pceMTdetach(void)
 { DEBUG(NAME_thread,
 	Cprintf("Detached thread 0x%x\n", GetCurrentThreadId()));
   destroyThreadWindows(ClassFrame);

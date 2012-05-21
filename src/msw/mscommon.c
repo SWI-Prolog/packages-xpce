@@ -76,6 +76,8 @@ typedef struct _winassoc
 } winassoc, *WinAssoc;
 
 static WinAssoc wintable[WINASSOC_TABLESIZE];
+static int		lock_initialized;
+static CRITICAL_SECTION lock;
 
 static int
 handleKey(HWND handle)
@@ -95,20 +97,28 @@ assocObjectToHWND(HWND hwnd, Any obj)
   WinAssoc *p = &wintable[key];
   WinAssoc  a = *p;
 
+  if ( !lock_initialized )		/* we are serialized by the XPCE */
+  { lock_initialized = TRUE;		/* lock, so this must be safe */
+    InitializeCriticalSection(&lock);
+  }
+
   if ( isNil(obj) )			/* delete from table */
-  { for( ; a ; p = &a->next, a = a->next )
+  { EnterCriticalSection(&lock);
+    for( ; a ; p = &a->next, a = a->next )
     { if ( a->hwnd == hwnd )
       { *p = a->next;
         unalloc(sizeof(winassoc), a);
 	return;
       }
     }
+    LeaveCriticalSection(&lock);
 					/* not in the table!? */
   } else
   { WinAssoc n = alloc(sizeof(winassoc));
-    n->next   = *p;
+
     n->hwnd   = hwnd;
     n->object = obj;
+    n->next   = *p;
     *p = n;
   }
 
@@ -139,33 +149,59 @@ destroyThreadWindows(Class class)
     *destroy* such objects.  We could also have choosen for `uncreate',
     leaving the object around but destroying the Windows.
 
-    This routine is called from DllMain() in mswin.c
+    This routine is called from pceMTdetach() in mswin.c
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 void
 destroyThreadWindows(Class class)
-{ Chain ch = newObject(ClassChain, EAV);
+{ int found = FALSE;
   int i;
   DWORD tid = GetCurrentThreadId();
   Any obj;
 
+  if ( !lock_initialized )		/* there are no windows */
+    return;
+
+  EnterCriticalSection(&lock);
   for(i=0; i<WINASSOC_TABLESIZE; i++)
   { WinAssoc a;
 
     for(a = wintable[i]; a; a = a->next)
-    { if ( instanceOfObject(a->object, class) &&
-	   tid == GetWindowThreadProcessId(a->hwnd, NULL) )
-	appendChain(ch, a->object);
+    { if ( tid == GetWindowThreadProcessId(a->hwnd, NULL) )
+      { found = TRUE;
+	goto out;
+      }
     }
   }
+out:
+  LeaveCriticalSection(&lock);
 
-  for_chain(ch, obj,
-	    { DEBUG(NAME_thread, Cprintf("Destroying %s owned by 0x%x\n",
-					 pp(obj), tid));
-	      sendv(obj, NAME_destroy, 0, NULL);
-	    });
+  if ( found )
+  { Chain ch;
 
-  freeObject(ch);
+    DEBUG(NAME_thread,
+	  Cprintf("Thread has associated windows; destroying ...\n"));
+    pceMTLock(LOCK_PCE);
+    ch = newObject(ClassChain, EAV);
+
+    for(i=0; i<WINASSOC_TABLESIZE; i++)
+    { WinAssoc a;
+
+      for(a = wintable[i]; a; a = a->next)
+      { if ( instanceOfObject(a->object, class) &&
+	     tid == GetWindowThreadProcessId(a->hwnd, NULL) )
+	  appendChain(ch, a->object);
+      }
+    }
+
+    for_chain(ch, obj,
+	      { DEBUG(NAME_thread, Cprintf("Destroying %s owned by 0x%x\n",
+					   pp(obj), tid));
+		sendv(obj, NAME_destroy, 0, NULL);
+	      });
+    freeObject(ch);
+    pceMTUnlock(LOCK_PCE);
+  }
 }
 
 
