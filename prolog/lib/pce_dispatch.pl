@@ -87,6 +87,7 @@ pce_dispatcher(Origin) :-
 	retractall(pce:pce_thread(_)),
 	assert(pce:pce_thread(Me)),
 	thread_send_message(Origin, pce_dispatch),
+	set_prolog_flag(generate_debug_info, true), % Started with false
 	repeat,
 	    catch(pce_dispatch, E, true),
 	    (	var(E)
