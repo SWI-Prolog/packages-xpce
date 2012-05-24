@@ -585,7 +585,7 @@ $(XPCECLIENT):	unx/client.c
 $(XPCESTUB):	xpce-stub.res xpce-stub.o
 		$(PLLD) -Wl,--subsystem,windows -o $@ $^
 
-xpce-stub.res:	../swipl/xpce-stub.rc ../swipl/xpce.ico
+xpce-stub.res:	../swipl/xpce-stub.rc ../swipl/swipl.ico
 		$(WINDRES) -o $@ $<
 
 xpce-stub.o:	../swipl/xpce-stub.c

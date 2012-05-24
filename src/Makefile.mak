@@ -302,7 +302,7 @@ $(PL2XPCE).dll:	prepare $(PLOBJ)
 xpce-stub.exe:	xpce-stub.res xpce-stub.obj
 		$(LD) $(LDFLAGS) /subsystem:windows /out:$@ xpce-stub.obj $(PLLIB) xpce-stub.res $(LIBS)
 
-xpce-stub.res:	..\swipl\xpce-stub.rc ..\swipl\xpce.ico
+xpce-stub.res:	..\swipl\xpce-stub.rc ..\swipl\swipl.ico
 		$(RSC) /fo$@ ..\swipl\xpce-stub.rc
 
 xpce-stub.obj:	..\swipl\xpce-stub.c
