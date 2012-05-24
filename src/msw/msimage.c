@@ -1927,24 +1927,24 @@ black_mask(int w, int h)
 
 
 HICON
-ws_icon_from_image(Image img)
-{ WsImage r = attach_ws_image(img);
+ws_icon_from_image(Image image)
+{ WsImage r = attach_ws_image(image);
 
   if ( !r->icon )
-  { int iw = GetSystemMetrics(SM_CXICON);
-    int ih = GetSystemMetrics(SM_CYICON);
-    int freemask = FALSE;
-    Image image, imask;
+  { int freemask = FALSE;
+    Image imask;
+    ICONINFO iinfo;
     HICON icon;
+    HBITMAP hbmColor;
 
-#ifdef O_SCALE_ICON
-    if ( valInt(img->size->w) != iw || valInt(img->size->h) != ih )
-      image = get(img, NAME_scale,
-		  answerObject(ClassSize, toInt(iw), toInt(ih), EAV),
-		  EAV);
-    else
-#endif
-      image = img;
+						/* first open the main image */
+						/* to initialize the mask */
+    if ( isNil(image->display) )
+      assign(image, display, CurrentDisplay(NIL));
+    hbmColor = (HBITMAP) getXrefObject(image, image->display);
+
+    DEBUG(NAME_icon, Cprintf("ws_icon_from_image(%s) (mask = %s)\n",
+			     pp(image), pp(image->mask)));
 
     if ( notNil(image->mask) )
     { if ( image->mask->kind == NAME_pixmap )
@@ -1952,52 +1952,19 @@ ws_icon_from_image(Image img)
 	freemask = TRUE;
       } else
 	imask = image->mask;
-    } else
-      imask = black_mask(iw, ih);
+    } else					/* Still no mask; create one */
+      imask = black_mask(valInt(image->size->w), valInt(image->size->h));
 
-    if ( isNil(image->display) )
-      assign(image, display, CurrentDisplay(NIL));
     assign(imask, display, image->display);
-
-#if 1
-  { ICONINFO iinfo;
 
     iinfo.fIcon = TRUE;
     iinfo.xHotspot = 0;
     iinfo.yHotspot = 0;
     iinfo.hbmMask  = (HBITMAP) getXrefObject(imask, imask->display);
-    iinfo.hbmColor = (HBITMAP) getXrefObject(image, image->display);
+    iinfo.hbmColor = hbmColor;
 
     icon = CreateIconIndirect(&iinfo);
-  }
-#else
-  { HBITMAP hbm, hmsk;
-    BITMAP bm, msk;
-    BYTE *bmbits, *mskbits;
 
-    hbm  = (HBITMAP) getXrefObject(image, image->display);
-    hmsk = (HBITMAP) getXrefObject(imask, imask->display);
-    GetObject(hbm,  sizeof(bm), &bm);
-    GetObject(hmsk, sizeof(msk), &msk);
-    bmbits  = pceMalloc(ih * bm.bmWidthBytes);
-    mskbits = pceMalloc(ih * msk.bmWidthBytes);
-
-    GetBitmapBits(hbm,  ih * bm.bmWidthBytes,  bmbits);
-    GetBitmapBits(hmsk, ih * msk.bmWidthBytes, mskbits);
-
-    icon = CreateIcon(PceHInstance,
-		      iw, ih,
-		      (BYTE)bm.bmPlanes, (BYTE)bm.bmBitsPixel,
-		      mskbits,
-		      bmbits);
-
-    pceFree(bmbits);
-    pceFree(mskbits);
-  }
-#endif
-
-    if ( image != img )
-      freeObject(image);
     if ( freemask )
       freeObject(imask);
 
