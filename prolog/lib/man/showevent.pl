@@ -120,7 +120,7 @@ update_dialog(V, Ev:event) :->
 	),
 	get(Dialog, member, modifiers, Menu),
 	forall(modifier(M, Name),
-	       (   send(Ev, has_modifier, modifier(Name := @on))
+	       (   send(Ev, has_modifier, modifier(Name := down))
 	       ->  send(Menu, selected, M, @on)
 	       ;   send(Menu, selected, M, @off)
 	       )),
