@@ -364,7 +364,9 @@ messageToKeyId(UINT message, UINT wParam, LONG lParam, unsigned long *bmask)
 
   switch(message)
   { case WM_KEYDOWN:
-    { switch((int) wParam)
+    { DEBUG(NAME_key, Cprintf("WM_KEYDOWN(%d)\n", (int) wParam));
+
+      switch((int) wParam)
       { case VK_DELETE:		id = toInt(127);	break;
         case VK_LEFT:		id = NAME_cursorLeft;	break;
         case VK_RIGHT:		id = NAME_cursorRight;	break;
@@ -397,15 +399,19 @@ messageToKeyId(UINT message, UINT wParam, LONG lParam, unsigned long *bmask)
 	  if ( state & BUTTON_control )
 	    id = ZERO;
 	  break;
-	case 0xbd:			/* OEM specific Control('_') ??? */
+	case VK_OEM_MINUS:
 	  if ( (state & BUTTON_control) && !(state & BUTTON_shift) )
-	    id = toInt(Control('_'));
+	    id = toInt('-');
 	  break;
-	case 0x56:			/* OEM specific 'V' ??? */
+	case VK_OEM_PLUS:
+	  if ( (state & BUTTON_control) )
+	    id = toInt('+');
+	  break;
+	case 'V':			/* OEM specific 'V' ??? */
 	  if ( (state & BUTTON_control) && (state & BUTTON_meta) )
 	    id = toInt(Control('V') + META_OFFSET);
 	  break;
-	case 0x49:			/* OEM specific 'I' ??? */
+	case 'I':			/* OEM specific 'I' ??? */
 	  if ( (state & BUTTON_control) && (state & BUTTON_meta) )
 	    id = toInt(Control('I') + META_OFFSET);
 	  break;
@@ -414,13 +420,15 @@ messageToKeyId(UINT message, UINT wParam, LONG lParam, unsigned long *bmask)
       break;
     }
     case WM_SYSCHAR:			/* handle ALT keys myself */
+      DEBUG(NAME_key, Cprintf("WM_SYSCHAR(%d)\n", (int) wParam));
       id = toInt(wParam + META_OFFSET);
       state |= BUTTON_meta;
       break;
 
     case WM_CHAR:
-    { id = toInt(wParam);
+    { DEBUG(NAME_key, Cprintf("WM_CHAR(%d)\n", (int) wParam));
 
+      id = toInt(wParam);
       if ( wParam == ' ' &&  (state & BUTTON_control) )
         id = ZERO;			/* ^-space --> ^@ */
       else if ( wParam == 8 && !(state & BUTTON_control) )
