@@ -299,13 +299,54 @@ ws_emulate_three_buttons(int time)
 }
 
 
+/* Adapted from code by Jeroen van der Zijp for FX.  Bottom line is that
+   on some keyboards (certainly French and German), AltGR sends CONTROL
+   and ALT.
+*/
+
+static int
+ws_has_alt_gr(void)
+{ static int has_altgr = FALSE;
+  static HKL hklOld = NULL;
+  HKL hkl=GetKeyboardLayout(0);
+
+  if ( hklOld != hkl )
+  { unsigned int ch;
+
+    hklOld = hkl;
+    has_altgr = FALSE;
+
+    for(ch=0x20; ch<=0xff ; ++ch)
+    { // <MSDN>
+      // For keyboard layouts that use the right-hand ALT key as a shift key
+      // (for example, the French keyboard layout), the shift state is
+      // represented by the value 6, because the right-hand ALT key is
+      // converted internally into CTRL+ALT.
+      // </MSDN>
+      if ( HIBYTE(VkKeyScanEx(ch,hkl)) == 6 )
+      { has_altgr = TRUE;
+	break;
+      }
+    }
+
+    DEBUG(NAME_key, Cprintf("has_altgr = %d\n", has_altgr));
+  }
+
+  return has_altgr;
+}
+
+
 static int
 IsDownKey(code)
 { short mask = GetKeyState(code);
+  int down = (mask & 0x8000) != 0;
 
   DEBUG(NAME_key, Cprintf("IsDownKey(%d): mask = 0x%x\n", code, mask));
+  if ( code == VK_CONTROL && ws_has_alt_gr() &&
+       (GetKeyState(VK_MENU) & 0x8000) )
+    return FALSE;
 
-  return mask & 0x8000;
+  return down;
 }
 
 
