@@ -76,7 +76,7 @@ $(OBJDIR)/so-interface.o: interface.c
 
 $(XPCESO):	$(SOITF) $(libXPCE)
 		$(LD) $(LDSOFLAGS) $(SOITF) -L$(LIBDIR) \
-		-lXPCE $(XLIBS) $(NETLIBS) -o $(XPCESO);
+		-lXPCE $(LIBPLSO) $(XOSLIB) $(XLIBS) $(NETLIBS) -o $(XPCESO);
 
 ################################################################$
 # QLF generation

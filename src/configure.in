@@ -9,6 +9,7 @@ AC_SUBST(NETLIBS)
 AC_SUBST(XLIB)
 AC_SUBST(XINCLUDES)
 AC_SUBST(XLIBS)
+AC_SUBST(XOSLIB)
 AC_SUBST(PCEHOME)
 AC_SUBST(buildsubdir)
 AC_SUBST(VMAJOR)
@@ -148,6 +149,7 @@ case "$PLARCH" in
         AC_DEFINE(O_XOS, 1, [Define to use specific hooks])
         AC_DEFINE(O_DOSFILENAMES, 1, [Define if system supports DOS filenames])
         AC_DEFINE(O_HASSHARES, 1, [Define if system supports UNC filenames])
+	XOSLIB=-luxnt
         WITHX11=false
         VWS=msw
 esac
