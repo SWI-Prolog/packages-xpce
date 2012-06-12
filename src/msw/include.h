@@ -33,7 +33,7 @@
 #endif
 
 #ifndef _WIN32_IE
-#define _WIN32_IE 0x0400
+#define _WIN32_IE 0x0501
 #endif
 
 #define RedrawWindow WinRedrawWindow
