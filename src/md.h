@@ -65,7 +65,9 @@ autoconf/config.h based machine-binding file.
 
 /* AIX requires this to be the first thing in the file.  */
 #ifdef __GNUC__
+#ifndef alloca
 #define alloca __builtin_alloca
+#endif
 #else /* not __GNUC__ */
 #if HAVE_ALLOCA_H
 #include <alloca.h>
