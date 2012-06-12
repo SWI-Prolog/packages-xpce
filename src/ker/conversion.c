@@ -300,13 +300,22 @@ value hexadecimal in case of error.
 We have structure exception-handling of   Windows, Unix with traditional
 signal(), Unix with sigaction (preserves more  context) and systems with
 and without SIGBUS ...
+
+This is hard on MinGW. There is a  library libSEH that is supposed to do
+the job, but this is basically just to   make XPCE deal with errors more
+elegantly, so for now we just run the code unprotected.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #ifdef __WINDOWS__
 
 #ifdef __MINGW32__
-#define __SEH_NOOP /* TBD: handle being passed wrong data on MinGW! */
-#endif
+
+char *
+pcePP(Any obj)
+{ return do_pp(obj);
+}
+
+#else
 #include <excpt.h>
 
 char *
@@ -333,7 +342,7 @@ pcePP(Any obj)
 
   return s;
 }
-
+#endif /*__MINGW32__*/
 
 #else /*__WINDOWS__*/
 
