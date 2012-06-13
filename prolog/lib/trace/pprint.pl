@@ -211,6 +211,11 @@ pp(Primitive, Ctx, Options) :-
 	;   var(Primitive)
 	), !,
 	pprint(Primitive, Ctx, Options).
+pp(Portray, _Ctx, Options) :-
+	option(write_options(WriteOptions), Options),
+	option(portray(true), WriteOptions),
+	option(output(Out), Options),
+	with_output_to(Out, user:portray(Portray)), !.
 pp(List, Ctx, Options) :-
 	List = [_|_], !,
 	context(Ctx, indent, Indent),
