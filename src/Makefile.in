@@ -78,8 +78,7 @@ FIND_NAMES=find_names$(EXEEXT_FOR_BUILD)
 NETLIBS=@NETLIBS@
 XLIBS=@XLIBS@
 XOSLIB=@XOSLIB@
-LDFLAGS=@LDFLAGS@
-LDSOFLAGS=@LDSOFLAGS@
+PKGLDFLAGS=@LDFLAGS@
 SO=@SO@
 SOLIB=@SOLIB@
 VWS=@VWS@
@@ -107,7 +106,6 @@ INSTALL_PLARCH=@INSTALL_PLARCH@
 PLBINDIR=$(PLBASE)/bin/$(INSTALL_PLARCH)
 PL=@PL@
 PLWINNAME=@PLWINNAME@
-PLLD=@PLLD@
 
 ################################################################
 # Version information
@@ -172,7 +170,7 @@ pl-itf:		$(PL2XPCE)
 $(PL2XPCE):	$(LIBXPCE)
 		cd ../swipl; \
 		CANONICAL_PATHS=$(PCEHOME); export CANONICAL_PATHS; \
-		$(MAKE) PLLD=$(PLLD) PL=$(PL) soall
+		$(MAKE) PL=$(PL) soall
 
 $(MANINDEX):	$(shell find ../man/reference -name '*.doc')
 		-./xpce.sh \
@@ -583,10 +581,10 @@ $(XPCECLIENT):	unx/client.c
 		rm -f client.o
 
 # MinGW only
-$(XPCESTUB):	xpce-stub.res xpce-stub.o
-		$(PLLD) -Wl,--subsystem,windows -o $@ $^
+$(XPCESTUB):	xpce-res.o xpce-stub.o
+		$(LD) $(LDFLAGS) -Wl,--subsystem,windows -o $@ $^ $(LIBPLSO)
 
-xpce-stub.res:	../swipl/xpce-stub.rc ../swipl/swipl.ico
+xpce-res.o:	../swipl/xpce-stub.rc ../swipl/swipl.ico
 		$(WINDRES) -o $@ $<
 
 xpce-stub.o:	../swipl/xpce-stub.c
