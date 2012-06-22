@@ -2280,6 +2280,12 @@ identify(F) :->
 	identify_fragment(Term, F, Summary), !,
 	send(F, report, status, Summary).
 
+:- multifile
+	identify/2.
+
+identify_fragment(Term, _F, Text) :-
+	phrase(syntax_message(Term), List), !,
+	elements_to_string(List, Text).
 identify_fragment(var,  _, 'Variable').
 identify_fragment(file(Path), _, Summary) :-
 	new(Summary, string('File %s', Path)).
@@ -2331,5 +2337,14 @@ add_one_ofs([H|T], Summary) :-
 	;   send(Summary, append, ', '),
 	    add_one_ofs(T, Summary)
 	).
+
+elements_to_string(List, String) :-
+	maplist(element_to_string, List, Parts),
+	atomic_list_concat(Parts, String).
+
+element_to_string(Fmt-Args, String) :- !,
+	format(string(String), Fmt, Args).
+element_to_string(nl, '\n') :- !.
+element_to_string(Atom, Atom).
 
 :- pce_end_class(emacs_prolog_fragment).
