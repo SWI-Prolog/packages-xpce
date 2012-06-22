@@ -732,14 +732,13 @@ show_bindings(Frame, Attributes) :-
 	->  true
 	;   PC = @default
 	),
+	debug('(Frame=~p, PC=~p) ', [Frame, PC]),
 	show_stack_location(GUI, Frame, PC),
 	send(Browser, clear),
 	send(Browser, prolog_frame, Frame),
-	(   show_args_pc(PC)
-	->  send(Browser, label, 'Arguments'),
-	    show_arguments(GUI, Frame, Attributes)
-	;   send(Browser, label, 'Bindings'),
-	    prolog_frame_attribute(GUI, Frame, clause, ClauseRef),
+	(   \+ show_args_pc(PC),
+	    prolog_frame_attribute(GUI, Frame, clause, ClauseRef)
+	->  send(Browser, label, 'Bindings'),
 	    debug('(clause ~w) ', [ClauseRef]),
 	    catch(pce_clause_info(ClauseRef, _, _, VarNames), E,
 		  (print_message(error, E), fail)),
@@ -747,6 +746,9 @@ show_bindings(Frame, Attributes) :-
 	    debug('(bindings ~p) ', [Bindings]),
 	    send(Browser, bindings, Bindings),
 	    debug('(ok) ', [])
+	;   debug('(arguments) ', []),
+	    send(Browser, label, 'Arguments'),
+	    show_arguments(GUI, Frame, Attributes)
 	).
 show_bindings(_, _).
 
