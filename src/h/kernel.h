@@ -108,7 +108,7 @@ generate warnings on accidental use of them.
 #define PCE_MAX_RECURSION	1000	/* maximum send() recursion */
 #define METHOD_MAX_ARGS		16	/* maximum # args for C-method */
 #define FWD_PCE_MAX_ARGS	10	/* @arg1 ... @arg10 */
-#define SCAN_MAX_ARGS 		32	/* scanstr maximum arguments */
+#define SCAN_MAX_ARGS		32	/* scanstr maximum arguments */
 #define PCE_MAX_INT		((intptr_t)(((intptr_t)1<<(sizeof(Any)*8 - TAG_BITS-1))-1))
 #define PCE_MIN_INT		(-(PCE_MAX_INT-1))
 #ifndef INT_MAX
@@ -155,8 +155,8 @@ different types when passed to a vararg function.
 		*       SAVING OBJECTS		*
 		********************************/
 
-#define SAVEMAGIC   		"PCE version 4"
-#define SAVEVERSION 		18	/* last increment for 5.6.14 */
+#define SAVEMAGIC		"PCE version 4"
+#define SAVEVERSION		18	/* last increment for 5.6.14 */
 
 		/********************************
 		*             ASSERTS		*
@@ -278,8 +278,8 @@ cpdata(to, from, type, n)
 #define CtoType(s)	nameToType(CtoName(s))  /* char * --> type object */
 #define WCtoType(s)	nameToType(WCToName(s, -1)) /* wchar_t * --> type object */
 #define	pp(x)		pcePP((Any)(x))		/* interface name */
-#define get             getPCE          	/* avoid common name-conflict */
-#define send            sendPCE         	/* same */
+#define get             getPCE			/* avoid common name-conflict */
+#define send            sendPCE			/* same */
 #define toString	toStringPCE		/* SWI-Prolog name-conflict */
 #define valReal		valPceReal		/* and another */
 
@@ -299,15 +299,15 @@ typedef void			(*VoidFunc)();
 typedef void *			WsRef;		/* Window-system reference */
 typedef struct xref *		Xref;		/* Entry in ws-table */
 
-typedef struct classdef        *ClassDef; 	/* See pce-save.c */
-typedef struct dCell 	      **DelegateList;   /* See msg-passing.c */
+typedef struct classdef        *ClassDef;	/* See pce-save.c */
+typedef struct dCell	      **DelegateList;   /* See msg-passing.c */
 
 #include "types.h"
 
 #define INVOKE_FUNC ((SendFunc)~0L)
 
 		/********************************
-		*	    POINTERS	 	*
+		*	    POINTERS		*
 		********************************/
 
 #ifdef VARIABLE_POINTER_OFFSET
@@ -375,6 +375,8 @@ test, conversion and computation macro's are provided.
 #ifndef INTPTR_FORMAT
 #if SIZEOF_LONG == SIZEOF_VOIDP
 #define INTPTR_FORMAT "%ld"		/* printf format for intptr_t */
+#elif defined(__WIN64)
+#define INTPTR_FORMAT "%I64d"
 #else
 #error "Config needs INTPTR_FORMAT"
 #endif
@@ -446,7 +448,7 @@ test, conversion and computation macro's are provided.
 					/* Variable attributes */
 #define D_SAVE_NORMAL	  makeDFlag(8) /* Save normally */
 #define D_SAVE_NIL	  makeDFlag(9) /* Save as NIL */
-#define D_SAVE 		  (D_SAVE_NORMAL|D_SAVE_NIL)
+#define D_SAVE		  (D_SAVE_NORMAL|D_SAVE_NIL)
 
 #define D_CLONE_RECURSIVE makeDFlag(10) /* Clone object recursively */
 #define D_CLONE_REFERENCE makeDFlag(11) /* Clone object reference */
@@ -575,7 +577,7 @@ test, conversion and computation macro's are provided.
 #define isVirginObj(o)		(noRefsObj(o) && \
 				 !onFlag(o, F_LOCKED|F_PROTECTED|F_ANSWER))
 #define freeableObj(o)		if ( isVirginObj(o) ) \
-  				  freeObject(o)
+				  freeObject(o)
 #define checkDeferredUnalloc(o)	if ( (((Instance)o)->references) <= 0 ) \
 				  unreferencedObject(o)
 
@@ -745,7 +747,7 @@ End;
 #define ABSTRACT_METHOD \
   ABSTRACT_BEHAVIOUR \
   Name		group;			/* Conceptual group */ \
-  Vector 	types;			/* type checking codes */ \
+  Vector	types;			/* type checking codes */ \
   StringObj	summary;		/* Summary of this method */ \
   SourceLocation source;		/* Location of def in sources */ \
   Code		message;		/* message implementing method */
@@ -755,7 +757,7 @@ End;
 #define ABSTRACT_METHOD \
   ABSTRACT_BEHAVIOUR \
   Name		group;			/* Conceptual group */ \
-  Vector 	types;			/* type checking codes */ \
+  Vector	types;			/* type checking codes */ \
   StringObj	summary;		/* Summary of this method */ \
   Code		message;		/* message implementing method */
 #endif/*O_RUNTIME*/
@@ -843,7 +845,7 @@ typedef struct _senddecl
   void	       *types;			/* type or type-vector */
   SendFunc	function;		/* implementation */
   Name		group;			/* group id */
-  char   	*summary;		/* documentation summary */
+  char		*summary;		/* documentation summary */
 } senddecl;
 
 typedef struct _getdecl
@@ -1576,7 +1578,7 @@ COMMON(status)	initialiseSourceSink(SourceSink ss);
 COMMON(status)	checkErrorSourceSink(SourceSink ss, IOSTREAM *fd);
 COMMON(status)	initialiseSourceSink(SourceSink ss);
 COMMON(IOSTREAM *)	Sopen_object(Any obj, const char *mode);
-COMMON(status) 	setStreamEncodingSourceSink(SourceSink ss, IOSTREAM *fd);
+COMMON(status)	setStreamEncodingSourceSink(SourceSink ss, IOSTREAM *fd);
 COMMON(Name)	encoding_to_name(IOENC encoding);
 
 #if O_CPLUSPLUS
