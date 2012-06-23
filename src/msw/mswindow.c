@@ -266,12 +266,8 @@ do_window_wnd_proc(HWND hwnd, UINT message, UINT wParam, LONG lParam)
 
 	if ( oproc )			/* refining alien window */
 					/* see winHandleWindow() below */
-	{
-#if (_MSC_VER < 1400)
-	  SetWindowLong(hwnd, GWL_WNDPROC, (LONG) oproc);
-#else
-	  SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR) oproc);
-#endif
+	{ SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR) oproc);
+
 	  return CallWindowProc(oproc, hwnd, message, wParam, lParam);
 	}
 
@@ -857,13 +853,8 @@ winHandleWindow(PceWindow sw, Int handle)
   setHwndWindow(sw, hwnd);
   assocObjectToHWND(hwnd, sw);
   w = sw->ws_ref;
-#if (_MSC_VER < 1400)
-  w->saved_window_procedure = (WNDPROC)GetWindowLong(hwnd, GWL_WNDPROC);
-  SetWindowLong(hwnd, GWL_WNDPROC, (LONG) window_wnd_proc);
-#else
   w->saved_window_procedure = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_WNDPROC);
   SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR) window_wnd_proc);
-#endif
   GetWindowRect(hwnd, &rect);
   ServiceMode(is_service_window(sw),
 	      { Area a = sw->area;
