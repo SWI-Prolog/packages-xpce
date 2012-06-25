@@ -130,18 +130,25 @@ dlist(Codes, Tail, Codes, Tail).
 
 user:message_hook(Term, Level, Lines) :-
 	current_prolog_flag(message_ide, true),
-	in_pce_thread(ide_message(Term, Level, Lines)),
+	ide_message(Term, Level, Lines),
 	fail.
 
 ide_message(Term, Level, Lines) :-
-	accept_level(Level),
+	accept_level(Level), !,
+	(   pce_thread(PceThread),
+	    thread_self(PceThread)
+	->  pce_message(Term, Lines)
+	;   in_pce_thread(pce_message(Term, Lines))
+	).
+ide_message(make(reload(_Files)), _, _) :-
+	in_pce_thread(clear_message_list).
+ide_message(emacs(consult(_File)), _, _) :-
+	in_pce_thread(clear_message_list).
+
+pce_message(Term, Lines) :-
 	\+ object(@loading_emacs),
 	message_to_pce(Term, Lines, Location, String),
 	ide_message(Location, String).
-ide_message(make(reload(_Files)), _, _) :-
-	clear_message_list.
-ide_message(emacs(consult(_File)), _, _) :-
-	clear_message_list.
 
 accept_level(warning).
 accept_level(error).
