@@ -776,9 +776,9 @@ ifeq ($(DESTDIR),)
 endif
 
 dv-bins:
-		if [ -r $(XPCECLIENT) ]; then \
-		     $(INSTALL_PROGRAM) $(XPCECLIENT) $(DESTDIR)$(bindir); \
-		fi
+		for f in $(XPCECLIENT); do \
+		     $(INSTALL_PROGRAM) $$f $(DESTDIR)$(bindir); \
+		done
 
 pdf-install::
 html-install::
