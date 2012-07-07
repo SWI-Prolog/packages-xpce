@@ -58,7 +58,7 @@ variable(history,	history, get, "History of visited places").
 
 initialise(Emacs, Buffers:dict) :->
 	send(Emacs, send_super, initialise, emacs),
-	send(Emacs, leader, frame('PceEmacs')),
+%	send(Emacs, leader, frame('PceEmacs')),
 	send(Emacs, kind, service),
 	send(Emacs, slot, history,
 	     history(message(Emacs, goto_history, @arg1, tab))),
