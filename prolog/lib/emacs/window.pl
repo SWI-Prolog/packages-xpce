@@ -104,6 +104,7 @@ class_variable(prompt_style, {mini_window,dialog}, dialog, "How to prompt").
 initialise(F, For:'emacs_buffer|emacs_view') :->
 	"Create window for buffer"::
 	send(F, send_super, initialise, 'PceEmacs', application := @emacs),
+	send(F, icon, image(resource(mode_x_icon))),
 	send(F, done_message, message(F, quit)),
 	send(F, append, new(MBD, emacs_mode_dialog)),
 
