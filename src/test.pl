@@ -223,7 +223,13 @@ file(exists-1) :-
 	       ->  send(file(F), exists)
 	       ;   \+ send(file(F), exists)
 	       )).
-file(utf8-1) :-
+
+
+		 /*******************************
+		 *	   UNICODE FILE		*
+		 *******************************/
+
+unicode_file(utf8-1) :-
 	foreign(Name),
 	Text = 'Hello world\n',
 	new(F, file(Name)),
@@ -235,7 +241,7 @@ file(utf8-1) :-
 	send(F2, exists),
 	get(F2, contents, string(Text)),
 	send(F2, remove).
-file(backup-1) :-
+unicode_file(backup-1) :-
 	foreign(Name),
 	get(file(Name), backup_file_name, Backup),
 	atom_concat(Name, ~, Backup).
@@ -273,13 +279,19 @@ dir(members-3) :-
 	expand_file_name(*, PlAll),
 	sort(PlAll, S1),
 	S0 == S1.
-dir(foreign-1) :-
+
+
+		 /*******************************
+		 *	UNICODE DIRECTORY	*
+		 *******************************/
+
+unicode_dir(foreign-1) :-
 	foreign(Name),
 	new(D, directory(Name)),
 	send(D, make),
 	send(D, exists),
 	delete_directory(Name).
-dir(foreign-2) :-
+unicode_dir(foreign-2) :-
 	foreign(Name),
 	new(D, directory(Name)),
 	send(D, make),
@@ -288,7 +300,7 @@ dir(foreign-2) :-
 	get_chain(D2, directories, Dirs),
 	member(Name, Dirs),
 	delete_directory(Name).
-dir(foreign-3) :-
+unicode_dir(foreign-3) :-
 	foreign(Name),
 	new(D, directory(Name)),
 	send(D, make),
@@ -647,11 +659,16 @@ script_failed(File, Except) :-
 
 testset(name).				% XPCE names
 testset(wname).				% Names holding wide characters
-testset(wstring).			% Strings holding wide characters
+testset(wstring) :-			% Strings holding wide characters
+        wide_character_types.
 testset(fmt).				% Formatting actions
 testset(srcsink).			% Source/Sink operations
 testset(file).				% file (-name) handling
+testset(unicode_file) :-		% Unicode file (-name) handling
+        unicode_file_locale.
 testset(dir).				% directory (-name) handling
+testset(unicode_dir) :-			% Unicode directory (-name) handling
+        unicode_file_locale.
 testset(bom).				% Byte Order Mark hanling
 testset(plterm).			% Prolog terms in XPCE
 testset(real).				% floating point numbers
@@ -661,6 +678,30 @@ testset(selection).			% X11 selection
 testset(image).				% Simple image manipulation
 testset(regex).				% Regular expression matches
 testset(type).				% Check type logic
+
+%	unicode_file_locale/0
+%
+%	True if out filesystem can   handle Unicode filenames. Difficult
+%	to have a good test.
+
+unicode_file_locale :-
+	current_prolog_flag(encoding, utf8), !.
+unicode_file_locale :-
+	catch(file_name_extension(_,_,[1050]), E, true),
+	(   var(E)
+	->  true
+	;   E \= error(representation_error(encoding), _)
+	).
+
+%	wide_character_types
+%
+%	True if the  character  classification   routines  work  on wide
+%	characters. Hard to say when this is  the case. On some machines
+%	the wide character versions always work,  on others only for the
+%	codepages covered by the locale.
+
+wide_character_types :-
+	current_prolog_flag(encoding, utf8), !.
 
 %	testdir(Dir)
 %
