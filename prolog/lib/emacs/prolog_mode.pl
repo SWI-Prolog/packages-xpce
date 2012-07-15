@@ -1922,7 +1922,8 @@ identify_pred(Class, _, ClassName) :-
 autoload_source(F, Source) :-
 	get(F, name, Name),
 	get(F, arity, Arity),
-	'$find_library'(_Module, Name, Arity, _LoadModule, Library), !,
+	functor(Head, Name, Arity),
+	predicate_property(Head, autoload(Library)),
 	absolute_file_name(Library, Source,
 			   [ file_type(prolog),
 			     access(read),
