@@ -66,7 +66,8 @@
 
 :- meta_predicate
 	in_debug_thread(+, 0),
-	send_pce(0).
+	send_pce(0),
+	send_pce_async(0).
 
 register_directories :-
 	(   member(SpyBase, ['icons/nospy', library('trace/icons/nospy')]),
@@ -264,6 +265,18 @@ in_debug_thread(Thread, Goal) :-
 	;   Result = true(BGVars)
 	->  GVars = BGVars
 	).
+
+
+%%	send_pce_async(:Goal) is det.
+%
+%	Send to the debug thread asynchronously.
+
+send_pce_async(Goal) :-
+	thread_self(Me),
+	pce_thread(Me), !,
+	Goal.
+send_pce_async(Goal) :-
+	in_pce_thread(Goal).
 
 
 %%	prolog_frame_attribute(+GUI, +Frame, +Attribute, -Value) is det.
@@ -1190,24 +1203,24 @@ var_name(_F, _Name:name) :<-
 %	fail.
 user:prolog_event_hook(frame_finished(Frame)) :-
 	thread_self(Thread),
-	gui(Thread, _, Gui),
-	send(Gui, frame_finished, Frame),
+	gui(Thread, _, Gui),		% has a gui
+	send_pce_async(send(Gui, frame_finished(Frame))),
 	fail.
 user:prolog_event_hook(exit_break(Level)) :-
 	thread_self(Thread),
 	gui(Thread, Level, Gui),
-	send(Gui, destroy),
+	send_pce_async(send(Gui, destroy)),
 	fail.
 user:prolog_event_hook(finished_query(_Qid, YesNo)) :-
 	thread_self(Thread),		% only main?
 	break_level(Level),
 	gui(Thread, Level, Ref),
-	send(Ref, query_finished, YesNo),
+	send_pce_async(send(Ref, query_finished(YesNo))),
 	fail.
 user:prolog_event_hook(thread_finished(Thread)) :-
 	gui(Thread, _, Gui),
 	thread_property(Thread, status(Status)),
-	in_pce_thread(send(Gui, thread_finished, Status)),
+	send_pce_async(send(Gui, thread_finished(Status))),
 	fail.
 
 user:message_hook('$aborted', _, _Lines) :-
@@ -1221,16 +1234,17 @@ aborted :-
 	thread_self(Thread),
 	gui(Thread, Level, Gui),
 	(   Level \== 0
-	->  send(Gui, destroy)
-	;   send(Gui, aborted)
-	).
+	->  Message = destroy
+	;   Message = aborted
+	),
+	send_pce_async(send(Gui, Message)).
 
 query_finished(YesNo) :-
 	finished(YesNo, Message),
 	thread_self(Thread),
 	break_level(Level),
 	gui(Thread, Level, Gui),
-	send(Gui, query_finished, Message).
+	send_pce_async(send(Gui, query_finished(Message))).
 
 finished(no, 'Query failed').
 finished(yes, 'Query succeeded').
