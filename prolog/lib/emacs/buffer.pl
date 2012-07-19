@@ -417,6 +417,10 @@ do_save(B, SaveFile:file, Start:[int], Length:[int]) :->
 	(   pce_catch_error(io_error,
 			    send_super(B, save, SaveFile, Start, Length))
 	->  true
+	;   get(SaveFile, name, FileName),
+	    \+ access_file(FileName, write)
+	->  send(B, report, error, 'Cannot write %s (permission denied)', FileName),
+	    fail
 	;   get(SaveFile, encoding, Encoding),
 	    Encoding \== FallBackEncoding
 	->  send(SaveFile, encoding, FallBackEncoding),
