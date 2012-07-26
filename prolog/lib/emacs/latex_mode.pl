@@ -127,12 +127,6 @@ what_environment(E) :->
 		 *	      TYPING		*
 		 *******************************/
 
-insert_self(M, Times:[int], Id:[char]) :->
-	"Insert, but do not warn on mismatched bracket"::
-	pce_catch_error(chain(no_matching_bracket, mismatched_bracket),
-			send(M?editor, insert_self, Times, Id)).
-
-
 %	->auto_fill: From:[int]
 %
 %	First try comment-filling (normally only in style-files).  If this

@@ -76,15 +76,6 @@ setup_mode(E) :->
 	"Switch editor into fill-mode"::
 	send(E, fill_mode, @on).
 
-		 /*******************************
-		 *	      TYPING		*
-		 *******************************/
-
-insert_self(M, Times:[int], Id:[char]) :->
-	"Insert, but donot warn on mismatched bracket"::
-	pce_catch_error(chain(no_matching_bracket, mismatched_bracket),
-			send(M?editor, insert_self, Times, Id)).
-
 
 		 /*******************************
 		 *	      DOCUMENT		*

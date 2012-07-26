@@ -456,9 +456,9 @@ static const error_def errors[] =
   { NAME_completeNoMatch,	EF_REPORT|ET_WARNING,
     "%N: No Match" },
 					/* Text (editor, text_buffer) */
-  { NAME_mismatchedBracket,	EF_REPORT|ET_WARNING,
+  { NAME_mismatchedBracket,	EF_REPORT|ET_STATUS,
     "%IMismatched bracket" },
-  { NAME_noMatchingBracket,	EF_REPORT|ET_WARNING,
+  { NAME_noMatchingBracket,	EF_REPORT|ET_STATUS,
     "%INo matching bracket" },
   { NAME_undoOverflow,		EF_REPORT|ET_IGNORED,
     "%ICouldn't store undo information; check Pce.TextBuffer.undo_size" },
@@ -738,7 +738,6 @@ initErrorDatabase(HashTable db)
 
   for(; err->id; err++)
   { Name feedback = NIL, kind = NIL;
-    Error e;
 
     switch(err->flags & ET_MASK)
     { case ET_ERROR:	kind = NAME_error;	break;
@@ -763,8 +762,8 @@ initErrorDatabase(HashTable db)
     feedback = NAME_report;
 #endif /*O_RUNTIME*/
 
-    e = newObject(ClassError, err->id, CtoString(err->format),
-		  kind, feedback, EAV);
+    newObject(ClassError, err->id, CtoString(err->format),
+	      kind, feedback, EAV);
   }
 }
 
