@@ -462,7 +462,7 @@ interrupt_subjob(E) :->
 	send(E?process, append, string('%c', 3)).	% ^C
 
 quit_subjob(E) :->
-	"Send control-\ to process"::
+	"Send control-\\ to process"::
 	send(E?process, append, string('%c', 28)).	% ^\
 
 suspend_subjob(E) :->
