@@ -101,6 +101,12 @@ pce_clause_info(ClauseRef, File, TermPos, NameOffset) :-
 	asserta(clause_info_cache(ClauseRef, File, TermPos, NameOffset)),
 	debug(clause_info, 'Added to info-cache', []).
 pce_clause_info(ClauseRef, S, TermPos, NameOffset) :-
+	setup_call_cleanup(
+	    '$push_input_context'(clause_info),
+	    pce_clause_info_2(ClauseRef, S, TermPos, NameOffset),
+	    '$pop_input_context').
+
+pce_clause_info_2(ClauseRef, S, TermPos, NameOffset) :-
 	debug(clause_info, 'Listing for clause ~w', [ClauseRef]),
 	'$clause'(Head, Body, ClauseRef, VarOffset),
 	(   Body == true

@@ -383,9 +383,14 @@ load_config(Spec) :-
 load_config(M, Key) :-
 	load_key(M, Key),
 	load_file(Key, File), !,
-	open(File, read, Fd),
-	read_config_file(Fd, _SaveVersion, _SaveModule, Bindings),
-	close(Fd),
+	setup_call_cleanup(
+	    ( '$push_input_context'(pce_config),
+	      open(File, read, Fd)
+	    ),
+	    read_config_file(Fd, _SaveVersion, _SaveModule, Bindings),
+	    ( close(Fd),
+	      '$pop_input_context'
+	    )),
 	load_config_keys(M, Bindings),
 	set_config_(M, config/file, File, file),
 	clear_modified(M).
