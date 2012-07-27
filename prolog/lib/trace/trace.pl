@@ -120,6 +120,7 @@ traceall :-
 
 intercept(Port, Frame, CHP, Action) :-
 	debug('*** do_intercept(~w, ~w, ~w, _) ...~n', [Port, Frame, CHP]),
+	visible(-unify),
 	do_intercept(Port, Frame, CHP, Action0),
 	fix_action(Port, Action0, Action),
 	debug('*** ---> Action = ~w~n', [Action]),
@@ -137,7 +138,8 @@ fix_action(_,    Action, Action).
 %	debugged thread.
 
 do_intercept(call, Frame, CHP, Action) :-
-	(   (   last_action(retry)
+	(   \+ hide_children_frame(Frame),
+	    (   last_action(retry)
 	    ;	prolog_frame_attribute(Frame, top, true),
 		debug('Toplevel frame~n', [])
 	    ;	prolog_frame_attribute(Frame, parent, Parent),
@@ -149,13 +151,11 @@ do_intercept(call, Frame, CHP, Action) :-
 	->  Action = into,
 	    asserta(show_unify_as(Frame, call))
 	;   show(Frame, CHP, 1, call),
-	    action(Action)
+	    action(Action),
+	    writeln(Action)
 	).
 do_intercept(exit, Frame, CHP, Action) :-
-	(   prolog_frame_attribute(Frame, goal, Goal),
-	    \+(( predicate_property(Goal, nodebug)
-	       ; predicate_property(Goal, foreign)
-	      )),
+	(   \+ hide_children_frame(Frame),
 	    \+(( prolog_frame_attribute(Frame, skipped, true),
 		 \+ finished_frame(Frame),
 		 prolog_skip_level(L,L),
@@ -170,10 +170,7 @@ do_intercept(exit, Frame, CHP, Action) :-
 	;   Action = creep
 	).
 do_intercept(fail, Frame, CHP, Action) :-
-	(   prolog_frame_attribute(Frame, goal, Goal),
-	    (	predicate_property(Goal, nodebug)
-	    ;	predicate_property(Goal, foreign)
-	    )
+	(   hide_children_frame(Frame)
 	->  Up = 1
 	;   last_action(skip)
 	->  Up = 1
@@ -182,10 +179,7 @@ do_intercept(fail, Frame, CHP, Action) :-
 	show(Frame, CHP, Up, fail),
 	action(Action).
 do_intercept(exception(Except), Frame, CHP, Action) :-
-	(   prolog_frame_attribute(Frame, goal, Goal),
-	    (	predicate_property(Goal, nodebug)
-	    ;	predicate_property(Goal, foreign)
-	    )
+	(   hide_children_frame(Frame)
 	->  Up = 1
 	;   last_action(skip)
 	->  Up = 1
@@ -194,19 +188,13 @@ do_intercept(exception(Except), Frame, CHP, Action) :-
 	show(Frame, CHP, Up, exception(Except)),
 	action(Action).
 do_intercept(redo, Frame, CHP, Action) :-
-	prolog_frame_attribute(Frame, goal, Goal),
-	(   predicate_property(Goal, nodebug)
-	;   predicate_property(Goal, foreign)
+	(   hide_children_frame(Frame)
 	;   prolog_skip_level(redo_in_skip, redo_in_skip)
 	), !,
 	show(Frame, CHP, 1, redo),
 	action(Action).
-do_intercept(redo, Frame, _CHP, into) :-
-	prolog_frame_attribute(Frame, goal, GT),
-	debug('Redo on ~p~n', [GT]),
-	asserta(show_unify_as(Frame, redo)).
+do_intercept(redo, _Frame, _CHP, creep).
 do_intercept(unify, Frame, CHP, Action) :-
-	visible(-unify),
 	(   show_unify_as(Frame, How)
 	;   How = unify
 	), !,
@@ -242,6 +230,17 @@ do_intercept(cut_exit(PC), Frame, CHP, Action) :-
 			    bindings
 			  ]),
 	action(Action).
+
+%%	hide_children_frame(+Frame) is semidet.
+%
+%	True if Frame runs a goal for which we must hide the children.
+
+hide_children_frame(Frame) :-
+	prolog_frame_attribute(Frame, goal, Goal),
+	(   predicate_property(Goal, nodebug)
+	->  true
+	;   predicate_property(Goal, foreign)
+	).
 
 
 %%	show(+StartFrame, +Choice, +Up, +Port) is det.
