@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@cs.vu.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog/projects/xpce/
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2012, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -435,7 +433,9 @@ fill_menu_bar(F) :->
 		  ]),
 	send_list(View, append,
 		  [ menu_item(threads,
-			      message(F, show_threads))
+			      message(F, show_threads)),
+		    new(PT, menu_item(portray_code_lists,
+				      message(F, portray_text)))
 		  ]),
 	send_list(Comp, append,
 		  [ menu_item(make,
@@ -452,7 +452,10 @@ fill_menu_bar(F) :->
 			      message(@prolog, prolog_help)),
 		    menu_item('XPCE manual',
 			      message(@prolog, manpce))
-		  ]).
+		  ]),
+	send(View, show_current, @on),
+	send(View, multiple_selection, @on),
+	send(PT, condition, message(F, update_portray_text, PT)).
 
 settings(_F) :->
 	"Edit the preferences"::
@@ -494,11 +497,43 @@ show_threads(_GUI) :->
 	"Open Thread monitor"::
 	prolog_ide(thread_monitor).
 
+portray_text(GUI) :->
+	"Toggle portray of text"::
+	portraying_text(Old),
+	negate(Old, New),
+	portray_text(New),
+	send(GUI, refresh_bindings),
+	send(GUI, report, status, 'Portray code-list as text: %s', New).
+
+negate(true, false).
+negate(false, true).
+
+update_portray_text(_GUI, MI:menu_item) :->
+	"Update selected of portray text item"::
+	portraying_text(Bool),
+	send(MI, selected, Bool).
+
+portraying_text(Bool) :-
+	current_predicate(portray_text:do_portray_text/1), !,
+	portray_text:do_portray_text(Bool).
+portraying_text(false).
+
 trapped_location(GUI, StartFrame:int, Frame:int, Port:name) :->
 	"The last trapped location"::
 	send(GUI, slot, trap_frame, Frame),
 	send(GUI, slot, trap_port, Port),
 	send(GUI, current_frame, StartFrame).
+
+refresh_bindings(GUI) :->
+	"Refresch the binding view after changing parameters"::
+	(   get(GUI, member, bindings, Bindings),
+	    get(Bindings, prolog_frame, Frame),
+	    Frame \== @nil
+	->  prolog_show_frame(Frame, [ gui(GUI),
+				       bindings
+				     ])
+	;   true
+	).
 
 
 		 /*******************************
