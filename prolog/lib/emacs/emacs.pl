@@ -165,7 +165,7 @@ default_emacs_mode('.*\\.pl~?$',		   prolog).
 default_emacs_mode('.*\\.plu~?$',		   prolog).
 default_emacs_mode('\\.(pl|xpce|pceemacs)rc~?',	   prolog).
 default_emacs_mode('\\.yap~?',			   prolog).
-default_emacs_mode('.*\.chr~?$',		   chr).
+default_emacs_mode('.*\\.chr~?$',		   chr).
 default_emacs_mode('.*\\.(tex|sty)~?$',		   latex).
 default_emacs_mode('.*\\.doc~?$',		   latex).
 default_emacs_mode('.*\\.lgt~?$',		   logtalk).
