@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@cs.vu.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2012, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -34,11 +32,13 @@
 	  [ guitracer/0,
 	    noguitracer/0,		% Switch it off
 	    gtrace/0,			% Start tracer and trace
+	    gtrace/1,			% :Goal
 	    gspy/1,			% Start tracer and set spypoint
 	    gdebug/0			% Start tracer and debug
 	  ]).
 :- set_prolog_flag(generate_debug_info, false).
 :- meta_predicate
+	gtrace(0),
 	gspy(:).
 
 /** <module> Graphical debugger utilities
@@ -96,6 +96,44 @@ gtrace :-
 	guitracer,
 	trace.
 
+%%	gtrace(:Goal) is det.
+%
+%	Trace Goal in a separate thread,  such that the toplevel remains
+%	free for user interaction.
+
+gtrace(Goal) :-
+	guitracer,
+	thread_create(trace_goal(Goal), Id, [detached(true)]),
+	print_message(informational, gui_tracer(in_thread(Id, Goal))).
+
+trace_goal(Goal) :-
+	catch(trace_goal_2(Goal), _, true), !.
+trace_goal(_).
+
+trace_goal_2(Goal) :-
+	setup_call_catcher_cleanup(
+	    trace,
+	    Goal,
+	    Catcher,
+	    finished(Catcher, Det)),
+	notrace,
+	(   Det == true
+	->  true
+	;   in_pce_thread_sync(send(@(display), confirm, 'Retry goal?'))
+	->  trace, fail
+	;   !
+	).
+
+:- '$hide'(finished/2).
+
+finished(Reason, Det) :-
+	notrace,
+	print_message(informational, gui_tracer(completed(Reason))),
+	(   Reason == exit
+	->  Det = true
+	;   Det = false
+	).
+
 %%	gspy(:Spec) is det.
 %
 %	Same as spy/1, but uses the graphical debugger.
@@ -121,6 +159,10 @@ gdebug :-
 	prolog:message/3.
 
 prolog:message(gui_tracer(true)) -->
-	['The graphical front-end will be used for subsequent tracing'].
+	[ 'The graphical front-end will be used for subsequent tracing' ].
 prolog:message(gui_tracer(false)) -->
-	['Subsequent tracing uses the commandline tracer'].
+	[ 'Subsequent tracing uses the commandline tracer' ].
+prolog:message(gui_tracer(in_thread(Id, _Goal))) -->
+	[ 'Debugging goal in new thread ~q'-[Id] ].
+prolog:message(gui_tracer(completed(Reason))) -->
+	[ 'Goal completed: ~q~n'-[Reason] ].
