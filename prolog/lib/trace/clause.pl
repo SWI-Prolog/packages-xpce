@@ -77,13 +77,14 @@ make_dynamic_source_buffer(B) :-
 		 *******************************/
 
 :- dynamic
-	clause_info_cache/4.
+	clause_info_cache/4,
+	dynamic_info_cache/5.
 :- multifile
 	user:prolog_event_hook/1.
 
 user:prolog_event_hook(erased(Ref)) :-
 	retract(clause_info_cache(Ref, _, _, _)),
-	debug(clause_info, 'Retracted info for ~d~n', [Ref]),
+	debug(clause_info, 'Retracted info for ~p~n', [Ref]),
 	fail.				% allow other hooks
 
 clear_clause_info_cache :-
@@ -94,20 +95,29 @@ clear_clause_info_cache :-
 %	Fetches source information for the given clause.
 
 pce_clause_info(ClauseRef, File, TermPos, NameOffset) :-
-	clause_info_cache(ClauseRef, File, TermPos, NameOffset), !,
-	debug(clause_info, 'clause_info(~w): from cache~n', [ClauseRef]).
+	clause_info_cache(ClauseRef, File, TermPos, NameOffset),
+	\+ clause_property(ClauseRef, erased), !,
+	debug(clause_info, 'clause_info(~p): from cache~n', [ClauseRef]).
 pce_clause_info(ClauseRef, File, TermPos, NameOffset) :-
 	clause_info(ClauseRef, File, TermPos, NameOffset), !,
 	asserta(clause_info_cache(ClauseRef, File, TermPos, NameOffset)),
 	debug(clause_info, 'Added to info-cache', []).
 pce_clause_info(ClauseRef, S, TermPos, NameOffset) :-
+	dynamic_info_cache(ClauseRef, S, TermPos, NameOffset, Gen),
+	object(S),
+	get(S, generation, Gen), !,
+	debug(clause_info, 'clause_info(~p): from dynamic cache~n', [ClauseRef]).
+pce_clause_info(ClauseRef, S, TermPos, NameOffset) :-
+	retractall(dynamic_info_cache(_,_,_,_,_)),
 	setup_call_cleanup(
 	    '$push_input_context'(clause_info),
 	    pce_clause_info_2(ClauseRef, S, TermPos, NameOffset),
-	    '$pop_input_context').
+	    '$pop_input_context'),
+	get(S, generation, Gen),
+	asserta(dynamic_info_cache(ClauseRef, S, TermPos, NameOffset, Gen)).
 
 pce_clause_info_2(ClauseRef, S, TermPos, NameOffset) :-
-	debug(clause_info, 'Listing for clause ~w', [ClauseRef]),
+	debug(clause_info, 'Listing for clause ~p', [ClauseRef]),
 	'$clause'(Head, Body, ClauseRef, VarOffset),
 	(   Body == true
 	->  Clause0 = Head
@@ -119,7 +129,7 @@ pce_clause_info_2(ClauseRef, S, TermPos, NameOffset) :-
 	send(S, attribute, comment,
 	     string('Decompiled listing of %s', ClauseName)),
 	send(S, clear),
-	debug(clause_info, 'Writing clause ~w to string ~p ... ', [ClauseRef, S]),
+	debug(clause_info, 'Writing clause ~p to string ~p ... ', [ClauseRef, S]),
 	(   prolog:term_compiled(Clause, Clause0)
 	->  true
 	;   Clause = Clause0
