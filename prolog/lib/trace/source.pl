@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@cs.vu.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2012, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
