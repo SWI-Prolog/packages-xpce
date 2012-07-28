@@ -152,8 +152,7 @@ do_intercept(call, Frame, CHP, Action) :-
 	->  Action = into,
 	    asserta(show_unify_as(Frame, call))
 	;   show(Frame, CHP, 1, call),
-	    action(Action),
-	    writeln(Action)
+	    action(Action)
 	).
 do_intercept(exit, Frame, CHP, Action) :-
 	(   \+ hide_children_frame(Frame),
@@ -171,30 +170,20 @@ do_intercept(exit, Frame, CHP, Action) :-
 	;   Action = creep
 	).
 do_intercept(fail, Frame, CHP, Action) :-
-	(   hide_children_frame(Frame)
-	->  Up = 1
-	;   last_action(skip)
-	->  Up = 1
-	;   Up = 0
-	),
-	show(Frame, CHP, Up, fail),
+	show(Frame, CHP, 1, fail),
 	action(Action).
 do_intercept(exception(Except), Frame, CHP, Action) :-
-	(   hide_children_frame(Frame)
-	->  Up = 1
-	;   last_action(skip)
-	->  Up = 1
-	;   Up = 0
-	),
-	show(Frame, CHP, Up, exception(Except)),
+	show(Frame, CHP, 1, exception(Except)),
 	action(Action).
-do_intercept(redo, Frame, CHP, Action) :-
+do_intercept(redo(_), Frame, CHP, Action) :-
 	(   hide_children_frame(Frame)
 	;   prolog_skip_level(redo_in_skip, redo_in_skip)
-	), !,
+	), !,					% inside black box or skipped goal
 	show(Frame, CHP, 1, redo),
 	action(Action).
-do_intercept(redo, _Frame, _CHP, creep).
+do_intercept(redo(0), Frame, _CHP, into) :- !,	% next clause
+	asserta(show_unify_as(Frame, redo)).
+do_intercept(redo(_PC), _Frame, _CHP, creep).	% internal branch
 do_intercept(unify, Frame, CHP, Action) :-
 	(   show_unify_as(Frame, How)
 	;   How = unify
