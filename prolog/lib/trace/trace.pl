@@ -119,7 +119,8 @@ traceall :-
 %	Toplevel of the tracer interception.  Runs in debugged thread.
 
 intercept(Port, Frame, CHP, Action) :-
-	debug('*** do_intercept(~w, ~w, ~w, _) ...~n', [Port, Frame, CHP]),
+	prolog_frame_attribute(Frame, predicate_indicator, PI),
+	debug('*** do_intercept ~w, ~w, ~w: ~q ...~n', [Port, Frame, CHP, PI]),
 	visible(-unify),
 	do_intercept(Port, Frame, CHP, Action0),
 	fix_action(Port, Action0, Action),
