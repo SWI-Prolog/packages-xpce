@@ -173,7 +173,12 @@ do_intercept(fail, Frame, CHP, Action) :-
 	show(Frame, CHP, 1, fail),
 	action(Action).
 do_intercept(exception(Except), Frame, CHP, Action) :-
-	show(Frame, CHP, 1, exception(Except)),
+	(   prolog_frame_attribute(Frame, goal, Goal),
+	    predicate_property(Goal, interpreted)
+	->  Up = 0
+	;   Up = 1			% foreign, undefined, ...
+	),
+	show(Frame, CHP, Up, exception(Except)),
 	action(Action).
 do_intercept(redo(_), Frame, CHP, Action) :-
 	(   hide_children_frame(Frame)
