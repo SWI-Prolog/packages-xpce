@@ -280,7 +280,10 @@ show(StartFrame, CHP, Up, Port, Style) :-
 %%	find_frame(+Up, +StartFrame, +Port, -PC, -Frame) is det.
 %
 %	Find the parent frame Up levels above StartFrame. Must be called
-%	in the context of the debugged thread.
+%	in the context of the debugged  thread.   We  sto going up if we
+%	find a frame that wants to hide   its  children. This happens if
+%	nodebug code calls user-code. In that case we prefer to show the
+%	user code over showing the internals of the nodebug code.
 %
 %	@param PC	PC in parent frame
 %	@param Frame	Parent frame
@@ -289,7 +292,8 @@ find_frame(N, Start, _, PC, Frame) :-
 	N > 0,
 	debug('Frame = ~w; ', [Start]),
 	prolog_frame_attribute(Start, pc, PC0),
-	prolog_frame_attribute(Start, parent, Frame0), !,
+	prolog_frame_attribute(Start, parent, Frame0),
+	\+ hide_children_frame(Frame0), !,
 	debug('parent = ~w~n', [Frame0]),
 	NN is N - 1,
 	find_frame2(NN, Frame0, PC0, Frame, PC).
