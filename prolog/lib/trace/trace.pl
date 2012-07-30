@@ -120,11 +120,12 @@ traceall :-
 
 intercept(Port, Frame, CHP, Action) :-
 	prolog_frame_attribute(Frame, predicate_indicator, PI),
-	debug('*** do_intercept ~w, ~w, ~w: ~q ...~n', [Port, Frame, CHP, PI]),
+	debug(gtrace(intercept),
+	      '*** do_intercept ~w, ~w, ~w: ~q ...', [Port, Frame, CHP, PI]),
 	visible(-unify),
 	do_intercept(Port, Frame, CHP, Action0),
 	fix_action(Port, Action0, Action),
-	debug('*** ---> Action = ~w~n', [Action]),
+	debug(gtrace(intercept), '*** ---> Action = ~w', [Action]),
 	send_if_tracer(report(status, '%s ...', Action)),
 	retractall(last_action(_)),
 	asserta(last_action(Action)).
@@ -395,7 +396,7 @@ show_source(Frame, Attributes) :-
 		(   clause_property(ClauseRef, erased)
 		->  send_tracer(GUI,
 				report(warning,
-				       'Running erased clause; \
+				       'Running erased clause; \c
 				       source location may be incorrect'))
 		;   true
 		)
@@ -556,7 +557,7 @@ action(Action) :-
 
 wait_error(E) :-
 	message_to_string(E, Message),
-	format(user_error, 'Error while waiting for for user: ~w~n\
+	format(user_error, 'Error while waiting for for user: ~w~n\c
 			   Retrying~n', [Message]),
 	fail.
 

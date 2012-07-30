@@ -466,7 +466,7 @@ about(_) :->
 	"Display aout message"::
 	version(Version),
 	send(@display, inform,
-	     'SWI-Prolog debugger version %s\n\
+	     'SWI-Prolog debugger version %s\n\c
 	      By Jan Wielemaker',
 	     Version).
 
