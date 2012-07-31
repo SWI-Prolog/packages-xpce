@@ -98,10 +98,10 @@ index_file(File, Out) :-
 
 header(Out) :-
 	format(Out,
-	       '/*  $Id\
-	       $\n\n    \
-	       Creator: pce_make_library_index/1\n    \
-	       Purpose: Provide index of XPCE classes in directory\n\
+	       '/*  $Id\c
+	       $\n\n    \c
+	       Creator: pce_make_library_index/1\n    \c
+	       Purpose: Provide index of XPCE classes in directory\n\c
 	       */\n\n',
 	       []).
 
