@@ -263,7 +263,7 @@ open_package_doc(_F) :->
 	->  atom_concat('file://', Page, URL),
 	    www_open_url(URL)
 	;   send(@display, inform,
-		 'Package documentation is not installed.  You may\n \
+		 'Package documentation is not installed.  You may\n \c
 		  wish to view it on http://www.swi-prolog.org')
 	).
 
