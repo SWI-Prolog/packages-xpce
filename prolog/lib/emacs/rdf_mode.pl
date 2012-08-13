@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@cs.vu.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2012, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -52,15 +50,15 @@
 open_document(M) :->
 	"Insert document header"::
 	send(M, format,
-	     '<?xml version="1.0" encoding="iso-8859-1"?>\n\n\
-	      <!DOCTYPE rdf [\n  \
-	      <!ENTITY rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  \
-              <!ENTITY xsd  "http://www.w3.org/2000/10/XMLSchema#">\n\
-              ]>\n\n\
-	      <rdf:RDF\n  \
-	      xmlns:rdf ="&rdf;"\n  \
-	      xmlns:xsd ="&xsd;"\n\
-	      >\n\n\
+	     '<?xml version="1.0" encoding="iso-8859-1"?>\n\n\c
+	      <!DOCTYPE rdf [\n  \c
+	      <!ENTITY rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  \c
+              <!ENTITY xsd  "http://www.w3.org/2000/10/XMLSchema#">\n\c
+              ]>\n\n\c
+	      <rdf:RDF\n  \c
+	      xmlns:rdf ="&rdf;"\n  \c
+	      xmlns:xsd ="&xsd;"\n\c
+	      >\n\n\c
 	      </rdf:RDF>\n').
 
 show_diagram(M) :->
@@ -105,17 +103,17 @@ rdf_load(M) :->
 open_document(M) :->
 	"Insert document header"::
 	send(M, format,
-	     '<?xml version="1.0" encoding="iso-8859-1"?>\n\n\
-	      <!DOCTYPE rdfs [\n  \
-	      <!ENTITY rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  \
-	      <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">\n  \
-              <!ENTITY xsd  "http://www.w3.org/2000/10/XMLSchema#">\n\
-              ]>\n\n\
-	      <rdf:RDF\n  \
-	      xmlns:rdf ="&rdf;"\n  \
-	      xmlns:rdfs="&rdfs;"\n  \
-	      xmlns:xsd ="&xsd;"\n\
-	      >\n\n\
+	     '<?xml version="1.0" encoding="iso-8859-1"?>\n\n\c
+	      <!DOCTYPE rdfs [\n  \c
+	      <!ENTITY rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  \c
+	      <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">\n  \c
+              <!ENTITY xsd  "http://www.w3.org/2000/10/XMLSchema#">\n\c
+              ]>\n\n\c
+	      <rdf:RDF\n  \c
+	      xmlns:rdf ="&rdf;"\n  \c
+	      xmlns:rdfs="&rdfs;"\n  \c
+	      xmlns:xsd ="&xsd;"\n\c
+	      >\n\n\c
 	      </rdf:RDF>\n').
 
 :- emacs_end_mode.
@@ -130,23 +128,23 @@ open_document(M) :->
 open_document(M) :->
 	"Insert document header"::
 	send(M, format,
-	     '<?xml version="1.0" encoding="iso-8859-1"?>\n\n\
-	      <!DOCTYPE owl [\n  \
-	      <!ENTITY rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  \
-	      <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">\n  \
-	      <!ENTITY owl  "http://www.w3.org/2002/7/owl#">\n  \
-              <!ENTITY xsd  "http://www.w3.org/2000/10/XMLSchema#">\n  \
-	      <!ENTITY dc   "http://purl.org/dc/elements/1.1/">\n\
-              ]>\n\n\
-	      <rdf:RDF\n  \
-	      xmlns:rdf ="&rdf;"\n  \
-	      xmlns:rdfs="&rdfs;"\n  \
-	      xmlns:owl ="&owl;"\n  \
-	      xmlns:xsd ="&xsd;"\n  \
-	      xmlns:dc  ="&dc;"\n\
-	      >\n\n\
-	      <Ontology rdf:about="">\n\
-	      </Ontology>\n\n\
+	     '<?xml version="1.0" encoding="iso-8859-1"?>\n\n\c
+	      <!DOCTYPE owl [\n  \c
+	      <!ENTITY rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  \c
+	      <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">\n  \c
+	      <!ENTITY owl  "http://www.w3.org/2002/7/owl#">\n  \c
+              <!ENTITY xsd  "http://www.w3.org/2000/10/XMLSchema#">\n  \c
+	      <!ENTITY dc   "http://purl.org/dc/elements/1.1/">\n\c
+              ]>\n\n\c
+	      <rdf:RDF\n  \c
+	      xmlns:rdf ="&rdf;"\n  \c
+	      xmlns:rdfs="&rdfs;"\n  \c
+	      xmlns:owl ="&owl;"\n  \c
+	      xmlns:xsd ="&xsd;"\n  \c
+	      xmlns:dc  ="&dc;"\n\c
+	      >\n\n\c
+	      <Ontology rdf:about="">\n\c
+	      </Ontology>\n\n\c
 	      </rdf:RDF>\n').
 
 :- emacs_end_mode.
