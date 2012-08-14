@@ -164,7 +164,7 @@ fill_toolbar(F, TD:tool_dialog) :->
 about(_F) :->
 	version(Version),
 	send(@display, inform,
-	     string('SWI-Prolog cross-referencer version %s\n\
+	     string('SWI-Prolog cross-referencer version %s\n\c
 		    By Jan Wielemaker', Version)).
 
 :- pce_group(parts).
@@ -290,7 +290,7 @@ initialise(W) :->
 update(P) :->
 	"Initial screen"::
 	send(P, display,
-	     new(T, text('Drag files or directories to dependency view\n\
+	     new(T, text('Drag files or directories to dependency view\n\c
 			  or use background menu to show the whole project')),
 	     point(10,10)),
 	send(T, name, intro_text),

@@ -151,7 +151,7 @@ show_statistics(F) :->
 	;   Distortion is 100*(Account/Ticks)
 	),
 	send(F, report, inform,
-	     '%d samples in %.2f sec; %d predicates; \
+	     '%d samples in %.2f sec; %d predicates; \c
 	      %d nodes in call-graph; distortion %.0f%%',
 	     Ticks, Time, Predicates, Nodes, Distortion).
 
@@ -206,14 +206,14 @@ render_time(F, Ticks:int, Rendered:any) :<-
 
 about(_F) :->
 	send(@display, inform,
-	     'SWI-Prolog execution profile viewer\n\
+	     'SWI-Prolog execution profile viewer\n\c
 	     By Jan Wielemaker').
 
 help(_F) :->
 	send(@display, confirm,
-	     'No online help yet\n\
-	      The profiler is described in the SWI-Prolog Reference Manual\n\
-	      available from www.swi-prolog.org\n\n\
+	     'No online help yet\n\c
+	      The profiler is described in the SWI-Prolog Reference Manual\n\c
+	      available from www.swi-prolog.org\n\n\c
 	      Press OK to open the manual in your browser'),
 	www_open_url('http://www.swi.psy.uva.nl/projects/SWI-Prolog/Manual/profile.html').
 

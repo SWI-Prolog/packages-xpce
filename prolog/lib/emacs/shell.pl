@@ -459,19 +459,24 @@ kill_subjob(E, Signal:'[int|name]') :->
 
 interrupt_subjob(E) :->
 	"Send control-C to process"::
-	send(E?process, append, string('%c', 3)).	% ^C
+	send(E, char_code, 3).		% ^C
 
 quit_subjob(E) :->
 	"Send control-\\ to process"::
-	send(E?process, append, string('%c', 28)).	% ^\
+	send(E, char_code, 28).		% ^\
 
 suspend_subjob(E) :->
 	"Send control-Z to process"::
-	send(E?process, append, string('%c', 26)).	% ^Z
+	send(E, char_code, 26).		% ^Z
 
 end_of_file(E) :->
 	"Send control-D to process"::
-	send(E?process, append, string('%c', 4)).	% ^D
+	send(E, char_code, 4).		% ^D
+
+char_code(E, Code:int) :->
+	"Send a specific character code"::
+	char_code(Char, Code),
+	send(E?process, append, Char).
 
 
 		 /*******************************

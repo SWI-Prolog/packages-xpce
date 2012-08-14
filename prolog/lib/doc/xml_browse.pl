@@ -123,9 +123,9 @@ dialect(sgm,  sgml).
 
 about(_B) :->
 	send(@display, inform,
-	     'Visualise HTML/XML/SGML DOM structure\n\
-	      as produced by library(sgml)\n\n\
-	      By Jan Wielemaker\n\
+	     'Visualise HTML/XML/SGML DOM structure\n\c
+	      as produced by library(sgml)\n\n\c
+	      By Jan Wielemaker\n\c
 	      jan@swi.psy.uva.nl').
 
 view_dom(B) :->
