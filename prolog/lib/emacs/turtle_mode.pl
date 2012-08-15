@@ -43,7 +43,8 @@
        [ -		     = button(turtle),
 	 show_diagram	     = button(turtle),
 	 rdf_make	     = key('\\C-c\\C-m') + button(compile),
-	 rdf_load	     = key('\\C-c\\C-b') + button(compile)
+	 rdf_load	     = key('\\C-c\\C-b') + button(compile),
+	 open_document	     = button(turtle)
        ],
        []).
 
