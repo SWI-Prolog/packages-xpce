@@ -841,6 +841,9 @@ mapWheelMouseEvent(EventObj ev, Any rec)
     if ( isDefault(rec) )
       rec = ev->receiver;
 
+    DEBUG(NAME_wheel,
+	  Cprintf("mapWheelMouseEvent() on %s, rot=%s\n", pp(rec), pp(rot)));
+
     if ( !hasSendMethodObject(rec, NAME_scrollVertical) )
       fail;
 

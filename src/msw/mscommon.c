@@ -577,9 +577,12 @@ messageToEvent(HWND hwnd, UINT message, UINT wParam, LONG lParam)
     }
 #ifdef WM_MOUSEWHEEL			/* appears to be sent to frame! */
     case WM_MOUSEWHEEL:
-    { id = NAME_wheel;
+    { short a = (short)HIWORD(wParam);
+      Any angle = toInt(a);
+
+      id = NAME_wheel;
       ctx_name = NAME_rotation;
-      ctx = toInt(HIWORD(wParam));
+      ctx = angle;
 
       mouse_ev++;
       break;
@@ -654,7 +657,9 @@ messageToEvent(HWND hwnd, UINT message, UINT wParam, LONG lParam)
 		      EAV);
 
     if ( ctx_name )
+    { DEBUG(NAME_event, Cprintf("\tcontext %s = %s\n", pp(ctx_name), pp(ctx)));
       attributeObject(ev, ctx_name, ctx);
+    }
 
     return ev;
   } else

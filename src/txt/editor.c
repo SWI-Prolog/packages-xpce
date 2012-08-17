@@ -3992,7 +3992,7 @@ recenterEditor(Editor e, Int arg)
 }
 
 
-static status
+status
 scrollVerticalEditor(Editor e, Name dir, Name unit, Int amount)
 { TextBuffer tb = e->text_buffer;
   Int start;

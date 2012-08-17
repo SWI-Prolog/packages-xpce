@@ -154,6 +154,12 @@ scrollToView(View v, Int index, Int screenline)
 
 
 static status
+scrollVerticalView(View v, Name dir, Name unit, Int amount)
+{ return scrollVerticalEditor(v->editor, dir, unit, amount);
+}
+
+
+static status
 formatView(View v, CharArray fmt, int argc, Any *argv)
 { return formatEditor(v->editor, fmt, argc, argv);
 }
@@ -192,6 +198,9 @@ static char *T_selection[] =
 	};
 static char *T_scrollTo[] =
 	{ "index=[int]", "screenline=[int]" };
+static char *T_scrollVertical[] =
+        { "direction={forwards,backwards,goto}",
+	  "unit={file,page,line}", "amount=int" };
 
 /* Instance Variables */
 
@@ -219,6 +228,8 @@ static senddecl send_view[] =
      NAME_scroll, "Overrule window behaviour"),
   SM(NAME_scrollTo, 2, T_scrollTo, scrollToView,
      NAME_scroll, "Overrule window behaviour"),
+  SM(NAME_scrollVertical, 3, T_scrollVertical, scrollVerticalView,
+     NAME_scroll, "Trap scroll_bar request"),
   SM(NAME_selection, 3, T_selection, selectionView,
      NAME_selection, "Overrule window behaviour"),
   SM(NAME_background, 1, "colour|pixmap", backgroundView,

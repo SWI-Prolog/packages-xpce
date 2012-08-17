@@ -28,6 +28,7 @@ COMMON(status)	normaliseEditor(Editor e, Int start, Int end);
 COMMON(Any)	ReceiverOfEditor(Editor e);
 COMMON(status)	forwardModifiedEditor(Editor e, BoolObj val);
 COMMON(status)	scrollToEditor(Editor e, Int pos, Int screenline);
+COMMON(status)  scrollVerticalEditor(Editor e, Name dir, Name unit, Int amount);
 COMMON(status)	selectionEditor(Editor e, Int from, Int to, Name status);
 COMMON(Point)	getSelectionEditor(Editor e);
 COMMON(StringObj) getSelectedEditor(Editor e);
