@@ -129,21 +129,6 @@ static context_t context;
 		 *******************************/
 
 static int
-resource_error(const char *error)
-{ term_t ex;
-
-  if ( (ex = PL_new_term_ref()) &&
-       PL_unify_term(ex,
-		     PL_FUNCTOR_CHARS, "error", 2,
-		       PL_FUNCTOR_CHARS, "resource_error", 1,
-		         PL_CHARS, error,
-		       PL_VARIABLE) )
-    return PL_raise_exception(ex);
-
-  return FALSE;
-}
-
-static int
 type_error(term_t actual, const char *expected)
 { term_t ex = PL_new_term_ref();
 
@@ -198,7 +183,7 @@ HiddenFrameClass()
   { char buf[50];
 
     context.hinstance = GetModuleHandle("xpce2pl");
-    sprintf(buf, "PceCallWin%d", (int)context.hinstance);
+    sprintf(buf, "PceCallWin%d", (int)(intptr_t)context.hinstance);
     name = strdup(buf);
 
     wndClass.style		= 0;
@@ -355,7 +340,7 @@ setup(void)
   if ( context.pipe[0] == -1 )
   { if ( pipe(context.pipe) == -1 )
     { DUNLOCK();
-      return resource_error("open_files");
+      return PL_resource_error("open_files");
     }
 
     context.id = XtAppAddInput(pceXtAppContext(NULL),

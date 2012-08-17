@@ -626,7 +626,9 @@ indirect_rlc_hwnd()
 	{ }
 #define PROLOG_INSTALL_REDRAW_FUNCTION(f) \
 	{ old_update_hook = indirect_rlc_update_hook(f); }
+#ifndef O_SHAREDLIBRARY
 #define O_SHAREDLIBRARY
+#endif
 #endif
 
 #ifdef O_SHAREDLIBRARY
@@ -2791,6 +2793,7 @@ better solution for signal handling is to be searched for (also avoiding
 the possibility of reentrance at moments this is not allowed in PCE ...
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+#ifndef __WINDOWS__
 #ifndef PROLOG_DISPATCH_INPUT
 #define PROLOG_DISPATCH_INPUT 1
 #define PROLOG_DISPATCH_TIMEOUT 0
@@ -2807,6 +2810,7 @@ pce_dispatch(int fd)
 
   return PROLOG_DISPATCH_TIMEOUT;
 }
+#endif /*__WINDOWS__*/
 
 #ifdef SICSTUS
 
