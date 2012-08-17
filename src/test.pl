@@ -38,7 +38,7 @@ available test sets. The public goals are:
 % Load XPCE from the development environment
 
 :- get(@pce, version, V),
-   format('XPCE/SWI-Prolog test suite. (XPCE version ~w)~n\
+   format('XPCE/SWI-Prolog test suite. (XPCE version ~w)~n\c
           To run all tests run ?- test.~n~n', [V]).
 
 
