@@ -36,6 +36,8 @@ lib/*-linux
 lib/*-darwin*
 linux
 mingw
+win32
+win64
 man/reference/index.obj
 pl/src/Makefile.bin
 prolog/lib/.pwd
