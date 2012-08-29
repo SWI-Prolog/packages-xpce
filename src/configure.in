@@ -149,9 +149,15 @@ case "$PLARCH" in
         AC_DEFINE(O_XOS, 1, [Define to use specific hooks])
         AC_DEFINE(O_DOSFILENAMES, 1, [Define if system supports DOS filenames])
         AC_DEFINE(O_HASSHARES, 1, [Define if system supports UNC filenames])
+	AC_DEFINE(_REENTRANT, 1, [Define to support multi-threaded access])
 	XOSLIB=-luxnt
         WITHX11=false
         VWS=msw
+esac
+
+case "$PLARCH" in
+    *-win32)
+	AC_DEFINE(INTPTR_FORMAT, "%d", [printf format for intptr_t])
 esac
 
 AC_CHECK_FUNCS(vsscanf on_exit memmove select popen strerror timelocal)

@@ -23,6 +23,7 @@
 */
 
 #define WIN32_GRAPHICS 1		/* Use Win32 graphics API */
+#define _REENTRANT 1			/* Only multi-threading support */
 #define USE_WINSOCK2			/* version 2 of winsock */
 #define UXWIN(unx, win) win
 
@@ -39,7 +40,9 @@
 
 #define export __declspec(dllexport)
 
+#ifdef _MSC_VER
 #define ALLOCA_BUG			/* see ker/goodies.c. MSVC++ 2.0 bug */
+#endif
 
 #define O_CPLUSPLUS 1
 

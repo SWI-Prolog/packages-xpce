@@ -64,7 +64,7 @@ initialiseListBrowser(ListBrowser lb, Dict dict, Int w, Int h)
   assign(lb,   pen,		      getClassVariableValueObject(lb, NAME_pen));
   assign(lb,   dict,                  dict);
   assign(dict, browser,               lb);
-  assign(lb,   status, 		      NAME_inactive);
+  assign(lb,   status,		      NAME_inactive);
   assign(lb,   key_binding,	      newObject(ClassKeyBinding, NIL,
 						NAME_listBrowser, EAV));
   assign(lb,   select_message,        NIL);
@@ -416,7 +416,7 @@ static Dict	     current_dict;	/* Currently displayed dict */
 static Cell	     current_cell;	/* Cell of this item */
 static int	     current_item;	/* Index of current name */
 static int	     current_index;	/* Current location */
-static String 	     current_name;	/* Working on this name */
+static String	     current_name;	/* Working on this name */
 static int	     current_search;	/* search feedback */
 static unsigned char current_atts;	/* Attributes for it */
 static FontObj	     current_font;	/* Current font */
@@ -511,7 +511,7 @@ seek_list_browser(Any obj, long int index)
       current_dict = d;
     } else
     { for( ; item > current_item && notNil(current_cell); current_item++ )
-    	current_cell = current_cell->next;
+	current_cell = current_cell->next;
       assert(current_cell != NULL);
     }
 
@@ -1327,7 +1327,6 @@ nextLineListBrowser(ListBrowser lb, Int lines)
     } else
     { int start = valInt(lb->image->start) / BROWSER_LINE_WIDTH;
       int last  = (valInt(lb->image->end) - 1) / BROWSER_LINE_WIDTH;
-      int oldcaret = -1;
       int caret = -1;
 
       if ( notNil(lb->caret) )
@@ -1351,9 +1350,8 @@ nextLineListBrowser(ListBrowser lb, Int lines)
 	}
       }
       if ( caret >= 0 )
-      { caret = valInt(normalise_index(lb, toInt(caret)));
-	oldcaret = caret;
-      } else
+	caret = valInt(normalise_index(lb, toInt(caret)));
+      else
 	caret = start;
 
       caret += times;
@@ -1463,7 +1461,7 @@ multipleSelectionListBrowser(ListBrowser lb, BoolObj val)
     { if ( isNil(lb->selection) )
         assign(lb, selection, newObject(ClassChain, EAV));
       else
-      	assign(lb, selection, newObject(ClassChain, lb->selection, EAV));
+	assign(lb, selection, newObject(ClassChain, lb->selection, EAV));
     } else
     { if ( emptyChain(lb->selection) )
       { assign(lb, selection, NIL);

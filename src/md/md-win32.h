@@ -33,3 +33,6 @@
 #define SIZEOF_VOIDP 4
 #define SIZEOF_LONG 4
 #define SIZEOF_DOUBLE 8
+/* intptr_t is typedeffed to int */
+#define INTPTR_FORMAT "%d"
+x y z
