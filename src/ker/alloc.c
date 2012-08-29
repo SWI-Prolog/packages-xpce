@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu,nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2012, University of Amsterdam
+			      VU University Amsterdam
 
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
@@ -67,12 +66,12 @@ unalloc(size_t n, Any p)
 void
 pceInitAlloc(void)
 { wastedbytes = allocbytes = 0;
-  allocTop  = 0L;
-  allocBase = 0xffffffff;
+  allocTop  = (uintptr_t)0;
+  allocBase = ~((uintptr_t)0);
 
-  alloc(sizeof(long));			/* initialise Top/Base */
+  alloc(sizeof(intptr_t));			/* initialise Top/Base */
 #ifdef VARIABLE_POINTER_OFFSET
-  pce_data_pointer_offset = allocBase & 0xf0000000L;
+  pce_data_pointer_offset = allocBase & ~((uintptr_t)0xfffffff);
 #endif
 }
 
@@ -129,7 +128,6 @@ perfect fit strategy for memory allocation.
 static inline Zone
 allocate(size_t size)
 { unsigned char *p;
-  long top, base;
   Zone z;
   size_t alloc_size = size + offset(struct zone, start);
 
@@ -170,8 +168,6 @@ allocate(size_t size)
   memset(p, ALLOC_MAGIC_FREE, ALLOCSIZE);
 #endif
 
-  top       = (long) p + ALLOCSIZE - 1;
-  base      = (long) p;
   allocRange(p, ALLOCSIZE);
 
   spaceptr = (char*)p + alloc_size;
@@ -218,10 +214,10 @@ alloc(size_t n)
     if ( (z = freeChains[m]) != NULL )	/* perfect fit */
     {
 #if ALLOC_DEBUG
-      assert((long) z >= allocBase && (long) z <= allocTop);
+      assert((intptr_t) z >= allocBase && (intptr_t) z <= allocTop);
       assert(z->in_use == FALSE);
       assert(z->magic  == ALLOC_MAGIC_WORD);
-      assert((long)z->next % 4 == 0);
+      assert((intptr_t)z->next % 4 == 0);
 
       z->in_use = TRUE;
 #endif
@@ -279,7 +275,7 @@ unalloc(size_t n, Any p)
 
   if ( n <= ALLOCFAST )
   { size_t m = n / sizeof(Zone);
-    assert((unsigned long)z >= allocBase && (unsigned long)z <= allocTop);
+    assert((uintptr_t)z >= allocBase && (uintptr_t)z <= allocTop);
 
 #if ALLOC_DEBUG
     assert((uintptr_t)z % 4 == 0);
@@ -326,7 +322,7 @@ pceInitAlloc(void)
   wastedbytes = allocbytes = 0;
   allocTop  = 0L;
   allocBase = 0xffffffff;
-  alloc(sizeof(long));			/* initialise Top/Base */
+  alloc(sizeof(intptr_t));			/* initialise Top/Base */
 #ifdef VARIABLE_POINTER_OFFSET
   pce_data_pointer_offset = allocBase & 0xf0000000L;
 #endif
@@ -354,9 +350,9 @@ checkFreeChains()
   { Zone z = freeChains[n];
 
     for(; z != NULL; z = z->next)
-    { assert((long)z >= allocBase && (long)z <= allocTop);
+    { assert((intptr_t)z >= allocBase && (intptr_t)z <= allocTop);
       assert(z->next == NULL ||
-	     ((long)z->next >= allocBase && (long)z->next <= allocTop));
+	     ((intptr_t)z->next >= allocBase && (intptr_t)z->next <= allocTop));
     }
   }
 }
@@ -372,7 +368,7 @@ listWastedCorePce(Pce pce, BoolObj ppcells)
   Cprintf("Wasted core:\n");
   for(n=0; n <= ALLOCFAST/sizeof(Zone); n++)
   { if ( freeChains[n] != NULL )
-    { unsigned long size = (unsigned long) n*sizeof(Zone);
+    { uintptr_t size = (uintptr_t) n*sizeof(Zone);
 
       if ( ppcells == ON )
       { Cprintf("    Size = %ld:\n", size);
