@@ -165,7 +165,7 @@ create_class(ClassName, MetaClassName, Super, Class) :-
 	    )
 	->  true
         ;   pce_error(superclass_not_changed(ClassName))
-    	),
+	),
 	(   (   MetaClassName == @default
 	    ;	get(Class, class, MetaClass),
 		get(MetaClass, name, MetaClassName)
@@ -212,14 +212,23 @@ attach_class_variable(Class, M:class_variable(Name, Def, Type, Summary)) :- !,
 attach_class_variable(Class, ClassVar) :-
 	attach_class_variable(Class, user:ClassVar).
 
-%	Allow the default to be specified as below to deal with different
-%	window systems.
+%%	classvar_default(+DefaultSpec, -Default) is det.
 %
-%	[ windows(foo), 'X'(bar) ]
+%	Allow environment specific defaults. If   DefaultSpec is a list,
+%	it may hold terms   windows(WindowsDefault),  'X'(X11Default) or
+%	apple(AppleDefault). The system is considered   =apple=  if @pce
+%	has  window_system  =X=  and    <-operating_system  matches  the
+%	substring  =darwin=.  If  apple(AppleDefault)    is  not  found,
+%	'X'(X11Default) is tried.
 
 classvar_default(List, Default) :-
 	is_list(List), !,
-	(   get(@pce, window_system, WS),
+	(   get(@pce, window_system, 'X'),
+	    get(@pce, operating_system, OS),
+	    sub_atom(OS, _, _, _, darwin),
+	    memberchk(apple(AppleDefault), List)
+	->  Default = AppleDefault
+	;   get(@pce, window_system, WS),
 	    Term =.. [WS,Default],
 	    memberchk(Term, List)
 	->  true

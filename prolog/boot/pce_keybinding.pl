@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2012, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -61,6 +60,13 @@ binding(cua, 'emacs$fundamental',
 	  '\\C-o' = open,
 	  '\\C-n' = new,
 	  '\\C-p' = print
+	]).
+binding(apple, editor,
+	[ '\\ec'  = copy_or_capitalize_word,
+	  '\\es'  = save_buffer
+	]).
+binding(apple, emacs_page,
+	[ '\\ev'  = paste_or_scroll_down
 	]).
 
 
@@ -122,9 +128,10 @@ modify1(delete(Key), KB) :-
 
 class_variable(style, name,
 	       [ 'X'(emacs),
-		 windows(cua)
+		 windows(cua),
+		 apple(apple)
 	       ],
-	       "Basic binding style").
+	       "Basic binding style (emacs,cua,apple)").
 
 %%	current_style(-Style) is det.
 %%	set_style(+Style) is det.
@@ -245,3 +252,36 @@ make_key_binding_style_type :-
 	send(Type, slot, context, Styles).
 
 :- initialization make_key_binding_style_type.
+
+
+		 /*******************************
+		 *	       APPLE		*
+		 *******************************/
+
+:- pce_extend_class(editor).
+
+copy_or_capitalize_word(E, Arg:[int]) :->
+	"Command-c copies; ESC c capitalizes word"::
+	(   Arg == @default,
+	    send(@event, has_modifier, m)
+	->  send(E, copy)
+	;   send(E, capitalize_word, Arg)
+	).
+
+paste_or_scroll_down(E, Arg:[int]) :->
+	"Command-v pasts; ESC v scrolls down"::
+	(   Arg == @default,
+	    send(@event, has_modifier, m)
+	->  send(E, paste)
+	;   send(E, scroll_down, Arg)
+	).
+
+:- pce_end_class(editor).
+
+:- pce_extend_class(list_browser).
+
+paste_or_scroll_down(LB, Arg:[int]) :->
+	"Forward to ->scroll_down (Apple keybinding)"::
+	send(LB, scroll_down, Arg).
+
+:- pce_end_class(list_browser).

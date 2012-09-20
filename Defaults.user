@@ -14,11 +14,14 @@
 !	on the next line
 
 ! Basic style for keyboard accelerators.  On Windows the default is `cua'.
-! (Common User Access), on Unix the default is `emacs'.  You can overrule
-! the default here.
+! (Common User Access), on Unix the default is `emacs'.  On Apple, the
+! default is `apple', which is `emacs', but giving Command-v, Command-c
+! and Command-s their usual meaning.  The Emacs equivalent can be accessed
+! using ESC-v, etc.
 
 !key_binding.style:	cua
 !key_binding.style:	emacs
+!key_binding.style:	apple
 
 ! By default, the editors are case-insensitive in search and replace.  Set to
 ! @on to use case-sensitive search and replace
