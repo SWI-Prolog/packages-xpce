@@ -64,9 +64,6 @@
 	verbose/0,
 	recording/2.			% items recorded
 
-:- if(current_predicate(index/1)).
-:- index(attribute(1,1,0)).
-:- endif.
 :- if(exists_source(library(quintus))).
 :- use_module(library(quintus), [genarg/3]).
 :- endif.
@@ -300,6 +297,8 @@ do_expand((:- pce_end_class),
 	pop_class.
 do_expand((:- pce_end_class), []) :-
 	pce_error(no_class_to_end).
+do_expand((:- use_class_template(_)), []) :-
+	current_prolog_flag(xref, true), !.
 do_expand((:- use_class_template(Template)), []) :-
 	used_class_template(Template), !.
 do_expand((:- use_class_template(Template)),
