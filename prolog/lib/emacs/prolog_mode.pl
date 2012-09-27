@@ -214,15 +214,37 @@ indent_line(E) :->
 	send(E, beginning_of_text_on_line),
 	get(E, caret, Caret),
 	get(E, beginning_of_clause, Caret, Base),
-	(   send(E, indent_comment_line)
-	;   send(E, indent_close_bracket_line, ')}]', Base)
-	;   send(E, indent_if_then_else)
-	;   send(E, indent_expression_line, ')}]', Base)
-	;   send(E, indent_clause_line)
-	;   get(E, body_indentation, Indent),
+	(   send(E, indent_comment_line),			W = comment
+	;   send(E, indent_close_bracket_line, ')}]', Base),	W = close_bracket
+	;   send(E, indent_if_then_else),			W = if_then_else
+	;   send(E, indent_expression_line, ')}]', Base),	W = expression
+	;   send(E, indent_clause_line),			W = clause
+	;   get(E, body_indentation, Indent),			W = body,
 	    send(E, align_line, Indent)
-	).
+	),
+	debug(emacs(indent), 'Indented line as ~w', [W]),
+	send(E, fixup_if_then_else).
 
+
+% ->fixup_if_then_else fixes changed alignment due to tabs
+% that expand to a different number of spaces.  Now only
+% does this for the first one.  Probably should do this
+% for the entire line.
+
+fixup_if_then_else(E) :->
+	"Fixup [(;->]\t"::
+	get(E, caret, C),
+	get(E, column, C, Indent),
+	(   get(E, looking_at, '(\\(|;|->)\t', Len)
+	->  get(E, caret, Caret),
+	    get(E, column, Caret+Len, Col),
+	    get(E, cond_indentation, Extra),
+	    (   Col =:= Indent+Extra
+	    ->  true
+	    ;   send(E, align, Indent+Extra, Caret+Len)
+	    )
+	;   true
+	).
 
 beginning_of_clause(E, Start:int, BOP:int) :<-
 	"Find start of predicate"::
