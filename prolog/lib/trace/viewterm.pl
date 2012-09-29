@@ -129,7 +129,21 @@ emit_term(Term, Options) :-
 	option(output(Out), Options, current_output),
 	print_clause_properties(Term, Out).
 emit_term(Term, Options) :-
+	clause_term(Term), !,
+	option(output(Out), Options, current_output),
+	portray_clause(Out, Term, Options).
+emit_term(Term, Options) :-
 	print_term(Term, Options).
+
+
+clause_term(Var) :-
+	var(Var), !, fail.
+clause_term(_:-_).
+clause_term(:-_).
+clause_term((_,_)).
+clause_term(_;_).
+clause_term(_->_).
+clause_term(_*->_).
 
 
 print_stream_properties(Stream, Out) :-
