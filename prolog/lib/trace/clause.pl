@@ -1,6 +1,4 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
@@ -84,7 +82,7 @@ make_dynamic_source_buffer(B) :-
 
 user:prolog_event_hook(erased(Ref)) :-
 	retract(clause_info_cache(Ref, _, _, _)),
-	debug(clause_info, 'Retracted info for ~p~n', [Ref]),
+	debug(clause_info, 'Retracted info for ~p', [Ref]),
 	fail.				% allow other hooks
 
 clear_clause_info_cache :-
@@ -97,7 +95,7 @@ clear_clause_info_cache :-
 pce_clause_info(ClauseRef, File, TermPos, NameOffset) :-
 	clause_info_cache(ClauseRef, File, TermPos, NameOffset),
 	\+ clause_property(ClauseRef, erased), !,
-	debug(clause_info, 'clause_info(~p): from cache~n', [ClauseRef]).
+	debug(clause_info, 'clause_info(~p): from cache', [ClauseRef]).
 pce_clause_info(ClauseRef, File, TermPos, NameOffset) :-
 	clause_info(ClauseRef, File, TermPos, NameOffset), !,
 	asserta(clause_info_cache(ClauseRef, File, TermPos, NameOffset)),
@@ -106,7 +104,7 @@ pce_clause_info(ClauseRef, S, TermPos, NameOffset) :-
 	dynamic_info_cache(ClauseRef, S, TermPos, NameOffset, Gen),
 	object(S),
 	get(S, generation, Gen), !,
-	debug(clause_info, 'clause_info(~p): from dynamic cache~n', [ClauseRef]).
+	debug(clause_info, 'clause_info(~p): from dynamic cache', [ClauseRef]).
 pce_clause_info(ClauseRef, S, TermPos, NameOffset) :-
 	retractall(dynamic_info_cache(_,_,_,_,_)),
 	setup_call_cleanup(
@@ -150,7 +148,7 @@ pce_clause_info_2(ClauseRef, S, TermPos, NameOffset) :-
 	prolog_clause:unify_term(Clause, ReadClause),
 	debug(clause_info, 'ok ...', []),
 	prolog_clause:make_varnames(Clause, Clause, VarOffset, VarNames, NameOffset),
-	debug(clause_info, 'got names~n', []), !.
+	debug(clause_info, 'got names', []), !.
 
 
 predicate_classification(Goal, Style) :-

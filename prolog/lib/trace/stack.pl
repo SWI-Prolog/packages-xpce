@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        wielemak@science.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2006, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2012, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -111,7 +110,7 @@ same_level(_, T, [], T).
 display_levels([], _, _).
 display_levels([Y-Frames|T], Choice, Window) :-
 	predsort(cmpframes(Choice), Frames, SortedFrames),
-	debug('Sorted frames: ~p~n', [SortedFrames]),
+	debug(gtrace(stack), 'Sorted frames: ~p', [SortedFrames]),
 	SortedFrames = [frame(Frame, PC)|_],
 	prolog_frame_attribute(Window, Frame, level, Level),
 	send(Window, display, text(Level, left, normal), point(5, Y)),
@@ -285,7 +284,7 @@ step(N, B, child, V, V2) :-
 step(N, B, parent, V, V2) :-
 	get(V, frame_reference, Frame),
 	in_debug_thread(B, prolog_parent(Frame, Parent, PC)),
-	(   debug('Looking for parent ~d, PC=~d~n', [Parent, PC]),
+	(   debug(gtrace(stack), 'Looking for parent ~d, PC=~d', [Parent, PC]),
 	    get(B, member, Parent, PC, V1)
 	->  true
 	;   v_stack_frame(B, frame(Parent, PC), V1),
@@ -428,7 +427,7 @@ select(D, Show:[bool]) :->
 	(   Show \== @off
 	->  get(D, frame_reference, Frame),
 	    get(D, pc, PC),
-	    debug('~p: select ~p at PC=~w~n', [D, Frame, PC]),
+	    debug(gtrace(stack), '~p: select ~p at PC=~w', [D, Frame, PC]),
 	    (	PC == choice
 	    ->	get(D, choice, CH),
 		Location = choice(CH)

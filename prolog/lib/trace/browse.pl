@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2012, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -970,9 +968,9 @@ loading(What, How) :-
 	load_info(What, File, Stage),
 	prolog_overview_window(Win),
 	(   file_name_extension(_, qlf, File)
-	->  debug('Looking for ~q~n', [File]),
+	->  debug(gtrace(qlf), 'Looking for ~q', [File]),
 	    '$qlf_info'(File, V, V, _WordSize, Sources),
-	    debug('Contains ~q~n', [Sources]),
+	    debug(gtrace(qlf), 'Contains ~q', [Sources]),
 	    member(TheFile, Sources)
 	;   TheFile = File
 	),

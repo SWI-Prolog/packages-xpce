@@ -143,7 +143,7 @@ do_intercept(call, Frame, CHP, Action) :-
 	(   \+ hide_children_frame(Frame),
 	    (   last_action(retry)
 	    ;	prolog_frame_attribute(Frame, top, true),
-		debug('Toplevel frame~n', [])
+		debug(gtrace(intercept), 'Toplevel frame', [])
 	    ;	prolog_frame_attribute(Frame, parent, Parent),
 		(   prolog_frame_attribute(Parent, hidden, true)
 		;   prolog_frame_attribute(Parent, goal, ParentGoal),
@@ -195,7 +195,7 @@ do_intercept(unify, Frame, CHP, Action) :-
 	;   How = unify
 	), !,
 	retractall(show_unify_as(_, _)),
-	debug('Show unify port as ~w~n', [How]),
+	debug(gtrace(port), 'Show unify port as ~w', [How]),
 	show(Frame, CHP, 0, unify, How),
 	prolog_frame_attribute(Frame, goal, Goal),
 	predicate_name(user:Goal, Pred),
@@ -291,11 +291,11 @@ show(StartFrame, CHP, Up, Port, Style) :-
 
 find_frame(N, Start, _, PC, Frame) :-
 	N > 0,
-	debug('Frame = ~w; ', [Start]),
+	debug(gtrace(frame), 'Frame = ~w', [Start]),
 	prolog_frame_attribute(Start, pc, PC0),
 	prolog_frame_attribute(Start, parent, Frame0),
 	\+ hide_children_frame(Frame0), !,
-	debug('parent = ~w~n', [Frame0]),
+	debug(gtrace(frame), 'parent = ~w', [Frame0]),
 	NN is N - 1,
 	find_frame2(NN, Frame0, PC0, Frame, PC).
 find_frame(_, Frame, Port, Port, Frame).
@@ -333,11 +333,11 @@ attribute(_, Att, Def) :-
 
 tracer_gui(Attributes, GUI) :-
 	attribute(Attributes, gui(GUI)), !,
-	debug('GUI = ~p (given)~n', [GUI]).
+	debug(gtrace(gui), 'GUI = ~p (given)', [GUI]).
 tracer_gui(_, GUI) :-
 	thread_self(Thread),
 	prolog_tracer(Thread, GUI),
-	debug('GUI = ~p (from thread ~p)~n', [GUI, Thread]).
+	debug(gtrace(gui), 'GUI = ~p (from thread ~p)', [GUI, Thread]).
 
 %%	prolog_show_frame(+Frame, +Attributes) is det.
 %
@@ -361,7 +361,7 @@ tracer_gui(_, GUI) :-
 %		Gui to address
 
 prolog_show_frame(Frame, Attributes) :-
-	debug('prolog_show_frame(~p, ~p)~n', [Frame, Attributes]),
+	debug(gtrace(frame), 'prolog_show_frame(~p, ~p)', [Frame, Attributes]),
 	show_stack(Frame, Attributes),
 	show_bindings(Frame, Attributes),
 	show_source(Frame, Attributes),
@@ -381,17 +381,20 @@ prolog_show_frame(Frame, Attributes) :-
 show_source(Frame, Attributes) :-
 	attribute(Attributes, source), !,
 	tracer_gui(Attributes, GUI),
-	debug('source for #~w~n: ', [Frame]),
+	debug(gtrace(source), 'source for #~w: ', [Frame]),
 	(   attribute(Attributes, pc(PC)),
 	    attribute(Attributes, port(Port), call),
 	    attribute(Attributes, style(Style), Port),
-	    debug('Show source, PC = ~w, Port = ~w~n', [PC, Port]),
+	    debug(gtrace(source),
+		  'Show source, PC = ~w, Port = ~w', [PC, Port]),
 	    (	clause_position(PC),
 		prolog_frame_attribute(GUI, Frame, clause, ClauseRef),
-		debug('ClauseRef = ~w, PC = ~w~n', [ClauseRef, PC]),
+		debug(gtrace(source),
+		      'ClauseRef = ~w, PC = ~w', [ClauseRef, PC]),
 		ClauseRef \== 0
 	    ->	subgoal_position(GUI, ClauseRef, PC, File, CharA, CharZ),
-		debug('~p.~n', [show_range(File, CharA, CharZ, Style)]),
+		debug(gtrace(source),
+		      '~p.', [show_range(File, CharA, CharZ, Style)]),
 		send_tracer(GUI, show_range(File, CharA, CharZ, Style)),
 		(   clause_property(ClauseRef, erased)
 		->  send_tracer(GUI,
@@ -413,7 +416,7 @@ show_source(Frame, Attributes) :-
 		->  subgoal_position(GUI, ClauseRef, unify, File, CharA, CharZ),
 		    send_tracer(GUI, show_range(File, CharA, CharZ, Style))
 		;   find_source(QGoal, File, Line),
-		    debug('At ~w:~d~n', [File, Line]),
+		    debug(gtrace(source), 'At ~w:~d', [File, Line]),
 		    send_tracer(GUI, show_line(File, Line, Style))
 		)
 	    )
@@ -448,7 +451,7 @@ subgoal_position(_, ClauseRef, unify, File, CharA, CharZ) :- !,
 subgoal_position(GUI, ClauseRef, choice(CHP), File, CharA, CharZ) :- !,
 	(   prolog_choice_attribute(GUI, CHP, type, jump),
 	    prolog_choice_attribute(GUI, CHP, pc, To)
-	->  debug('Term-position: choice-jump to ~w~n', [To]),
+	->  debug(gtrace(position), 'Term-position: choice-jump to ~w', [To]),
 	    subgoal_position(GUI, ClauseRef, To, File, CharA, CharZ)
 	;   pce_clause_info(ClauseRef, File, TPos, _),
 	    arg(2, TPos, CharA),
@@ -465,7 +468,7 @@ subgoal_position(GUI, ClauseRef, exception, File, CharA, CharZ) :- !,
 subgoal_position(_, ClauseRef, PC, File, CharA, CharZ) :-
 	pce_clause_info(ClauseRef, File, TPos, _),
 	(   '$clause_term_position'(ClauseRef, PC, List)
-	->  debug('Term-position: for ref=~w at PC=~w: ~w~n',
+	->  debug(gtrace(position), 'Term-position: for ref=~w at PC=~w: ~w',
 		  [ClauseRef, PC, List]),
 	    (   find_subgoal(List, TPos, PosTerm)
 	    ->  true
@@ -519,22 +522,22 @@ action(Action) :-
 	pce_thread(Pce),
 	thread_self(Pce), !,
 	get_tracer(action, Action0),
-	debug('Got action ~w~n', [Action0]),
+	debug(gtrace(action), 'Got action ~w', [Action0]),
 	action(Action0, Action).
 action(Action) :-
 	send_tracer(prepare_action),
 	repeat,
-	debug(' ---> action: wait~n', []),
+	debug(gtrace(action), ' ---> action: wait', []),
 	(   thread_self(Me),
 	    thread_debug_queue(Me, Queue),
 	    repeat,
 	    catch(thread_get_message(Queue, '$trace'(Result)),
 		  E, wait_error(E))
 	->  true
-	;   debug('thread_get_message() failed; retrying ...~n'),
+	;   debug('thread_get_message() failed; retrying ...'),
 	    fail
 	),
-	debug(' ---> action: result = ~p~n', [Result]),
+	debug(gtrace(action), ' ---> action: result = ~p', [Result]),
 	(   Result = call(Goal, GVars, Caller)
 	->  run_in_debug_thread(Goal, GVars, Caller),
 	    fail
@@ -570,7 +573,7 @@ run_in_debug_thread(Goal, GVars, Caller) :-
 	    )
 	;   Result = false
 	),
-	debug(' ---> run_in_debug_thread: send ~p~n', [Result]),
+	debug(gtrace(thread), ' ---> run_in_debug_thread: send ~p', [Result]),
 	thread_debug_queue(Caller, Queue),
 	thread_send_message(Queue, '$trace'(Result)).
 
@@ -592,7 +595,7 @@ action(Action, Action).
 show_stack(Frame, Attributes) :-
 	attribute(Attributes, stack), !,
 	tracer_gui(Attributes, GUI),
-	debug('stack ...', []),
+	debug(gtrace(stack), 'stack ...', []),
 	in_debug_thread(GUI,
 			stack_info(Frame,
 				   CallFrames, ChoiceFrames,
@@ -613,11 +616,11 @@ stack_info(Frame, CallFrames, ChoiceFrames, Attributes) :-
 	setting(stack_depth, Depth),
 	setting(choice_depth, MaxChoice),
 	stack_frames(Depth, Frame, PC, CallFrames),
-	debug('Stack frames: ~w~n', [CallFrames]),
+	debug(gtrace(stack), 'Stack frames: ~w', [CallFrames]),
 	level_range(CallFrames, Range),
-	debug('Levels ~w, CHP = ~w~n', [Range, CHP]),
+	debug(gtrace(stack), 'Levels ~w, CHP = ~w', [Range, CHP]),
 	choice_frames(MaxChoice, CHP, Range, [], ChoiceFrames),
-	debug('Choicepoints: ~p~n', [ChoiceFrames]).
+	debug(gtrace(stack), 'Choicepoints: ~p', [ChoiceFrames]).
 
 
 stack_frames(0, _, _, []) :- !.
@@ -682,7 +685,7 @@ visible_choice(CHP) :-
 	real_choice_type(Type),
 	prolog_choice_attribute(CHP, frame, Frame),
 	prolog_frame_attribute(Frame, hidden, false),
-	debug('Choice ~w of type ~w running frame ~w~n',
+	debug(gtrace(stack), 'Choice ~w of type ~w running frame ~w',
 	      [CHP, Type, Frame]).
 
 real_choice_type(clause).
@@ -698,7 +701,7 @@ level_range(Frames, H-L) :-
 
 flevel(frame(Frame, _), L) :-
 	prolog_frame_attribute(Frame, level, L),
-	debug('Frame ~d at level ~d~n', [Frame, L]).
+	debug(gtrace(stack), 'Frame ~d at level ~d', [Frame, L]).
 
 in_range(Level, Low-_High) :-
 	Level >= Low.
@@ -724,27 +727,27 @@ show_stack_location(GUI, Frame, PC) :-
 show_bindings(Frame, Attributes) :-
 	attribute(Attributes, bindings), !,
 	tracer_gui(Attributes, GUI),
-	debug('bindings ... ', []),
+	debug(gtrace(bindings), 'bindings ... ', []),
 	get_tracer(GUI, member(bindings), Browser),
 	(   attribute(Attributes, pc(PC))
 	->  true
 	;   PC = @default
 	),
-	debug('(Frame=~p, PC=~p) ', [Frame, PC]),
+	debug(gtrace(bindings), '(Frame=~p, PC=~p) ', [Frame, PC]),
 	show_stack_location(GUI, Frame, PC),
 	send(Browser, clear),
 	send(Browser, prolog_frame, Frame),
 	(   \+ show_args_pc(PC),
 	    prolog_frame_attribute(GUI, Frame, clause, ClauseRef)
 	->  send(Browser, label, 'Bindings'),
-	    debug('(clause ~w) ', [ClauseRef]),
+	    debug(gtrace(bindings), '(clause ~w) ', [ClauseRef]),
 	    catch(pce_clause_info(ClauseRef, _, _, VarNames), E,
 		  (print_message(error, E), fail)),
 	    in_debug_thread(GUI, frame_bindings(Frame, VarNames, Bindings)),
-	    debug('(bindings ~p) ', [Bindings]),
+	    debug(gtrace(bindings), '(bindings ~p) ', [Bindings]),
 	    send(Browser, bindings, Bindings),
-	    debug('(ok) ', [])
-	;   debug('(arguments) ', []),
+	    debug(gtrace(bindings), '(ok) ', [])
+	;   debug(gtrace(bindings), '(arguments) ', []),
 	    send(Browser, label, 'Arguments'),
 	    show_arguments(GUI, Frame, Attributes)
 	).
@@ -762,7 +765,7 @@ show_args_pc(foreign).
 show_arguments(GUI, Frame, _Attributes) :-
 	get_tracer(GUI, member(bindings), Browser),
 	in_debug_thread(GUI, frame_arguments(Frame, Args)),
-	debug('Frame arguments = ~w~n', [Args]),
+	debug(gtrace(bindings), 'Frame arguments = ~w', [Args]),
 	send(Browser, bindings, Args).
 
 %%	frame_arguments(+Frame, -Args)

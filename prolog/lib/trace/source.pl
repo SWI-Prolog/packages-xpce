@@ -32,6 +32,7 @@
 	  [ current_source_buffer/2	% +File, -Buffer
 	  ]).
 :- use_module(library(pce)).
+:- use_module(library(debug)).
 :- use_module(library(pce_emacs)).
 :- use_module(util).
 :- use_module(library(prolog_breakpoints)).
@@ -181,7 +182,7 @@ not_recently_checked :-
 
 source(V, Source:'name|emacs_buffer*') :->
 	"Attach to indicated file"::
-	debug('Attaching source ~p ...', [Source]),
+	debug(gtrace(source), 'Attaching source ~p ...', [Source]),
 	(   get(V, source, Source)
 	->  send(V, check_modified)
 	;   (   Source == @nil
@@ -198,7 +199,7 @@ source(V, Source:'name|emacs_buffer*') :->
 	    send(V, update_label),
 	    send(V?editor, auto_colourise_buffer)
 	),
-	debug('ok~n', []).
+	debug(gtrace(source), 'ok', []).
 
 source_file(V, File:name) :<-
 	"Currently shown sourcefile"::
@@ -227,12 +228,12 @@ show_range(V, File:'name|emacs_buffer', From:int, To:int, Style:name) :->
 
 show_line(V, File:'name|emacs_buffer', Line:int, Style:name) :->
 	"Show numbered line"::
-	debug('Show ~w:~w, style = ~w~n', [File, Line, Style]),
+	debug(gtrace(source), 'Show ~w:~w, style = ~w', [File, Line, Style]),
 	send(V, source, File),
 	get(V, text_buffer, TB),
 	get(TB, scan, 0, line, Line - 1, start, SOL),
 	get(TB, scan, SOL, line, 0, end, EOL),
-	debug('Char range ~w ... ~w~n', [SOL, EOL]),
+	debug(gtrace(source), 'Char range ~w ... ~w', [SOL, EOL]),
 	send(V, show_range, File, SOL, EOL, Style).
 
 listing(V, Module:name, Predicate:name, Arity:int) :->

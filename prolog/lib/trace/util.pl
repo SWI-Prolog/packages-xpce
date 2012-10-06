@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2012, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -36,11 +35,10 @@
 
 	    canonical_source_file/2,	% +RawFile, -CanonicalFile
 
-	    find_source/3,		% +Head, -File|TextBuffer, -Line
-
-	    debug/2			% +Fmt, +Args
+	    find_source/3		% +Head, -File|TextBuffer, -Line
 	  ]).
 :- use_module(library(pce)).
+:- use_module(library(debug)).
 :- use_module(clause).
 
 :- meta_predicate
@@ -54,13 +52,11 @@
 :- dynamic
 	setting/2.			% what, value
 
-%setting(verbose, 	   true).	% debugging this package
-setting(verbose, 	   false).	% debugging this package
-setting(active,	 	   true).	% actually use this tracer
+setting(active,		   true).	% actually use this tracer
 setting(show_unbound,	   false).	% show unbound variables
 setting(cluster_variables, true).	% cluster variables
 setting(list_max_clauses,  25).		% only list this amount of clauses
-setting(stack_depth, 	   10).		% # frames shown
+setting(stack_depth,	   10).		% # frames shown
 setting(choice_depth,	   10).		% # choice-points shown
 setting(term_depth,	   2).		% nesting for printing terms
 setting(portray_codes,	   Val) :-
@@ -97,12 +93,13 @@ find_source(Predicate, File, Line) :-
 	predicate_property(Predicate, file(File)),
 	predicate_property(Predicate, line_count(Line)), !.
 find_source(Predicate, File, 1) :-
-	debug('No source for ~p~n', [Predicate]),
+	debug(gtrace(source), 'No source for ~p', [Predicate]),
 	File = @dynamic_source_buffer,
 	send(File, clear),
-	pce_open(File, write, Fd),
-	with_output_to(Fd, list_predicate(Predicate)),
-	close(Fd).
+	setup_call_cleanup(
+	    pce_open(File, write, Fd),
+	    with_output_to(Fd, list_predicate(Predicate)),
+	    close(Fd)).
 
 list_predicate(Predicate) :-
 	predicate_property(Predicate, foreign), !,
@@ -161,18 +158,3 @@ canonical_source_file(Source, File) :-
 	->  true
 	;   File = Source		% system source files
 	).
-
-
-		 /*******************************
-		 *	       DEBUG		*
-		 *******************************/
-
-debug(Fmt, Args) :-
-	setting(verbose, true), !,
-	thread_self(Me),
-	(   Me == main
-	->  format(user_error, Fmt, Args)
-	;   atom_concat('[~w] ', Fmt, Format),
-	    format(user_error, Format, [Me|Args])
-	).
-debug(_, _).

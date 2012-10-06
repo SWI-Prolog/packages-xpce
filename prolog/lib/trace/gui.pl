@@ -112,7 +112,8 @@ prolog_tracer(Thread, Ref, Create) :-
 	(   gui(Thread, Level, Ref)
 	->  true
 	;   Create == true
-	->  debug('New GUI for thread ~p, break level ~p~n', [Thread, Level]),
+	->  debug(gtrace(gui),
+		  'New GUI for thread ~p, break level ~p', [Thread, Level]),
 	    send_pce(send(new(Ref, prolog_debugger(Level, Thread)), open))
 	).
 
@@ -209,7 +210,7 @@ send_pce(Goal) :-
 	thread_debug_queue(Self, Queue),
 	repeat,
 	thread_get_message(Queue, '$trace'(Result)),
-	debug(' ---> send_pce: result = ~p~n', [Result]),
+	debug(gtrace(thread), ' ---> send_pce: result = ~p', [Result]),
 	(   Result = error(E)
 	->  throw(E)
 	;   Result = call(CallBack, CBVars, Caller)
@@ -222,7 +223,7 @@ send_pce(Goal) :-
 	).
 
 run_pce(Goal, Vars, Caller) :-
-	debug('Running ~p for thread ~p~n', [Goal, Caller]),
+	debug(gtrace(thread), 'Running ~p for thread ~p', [Goal, Caller]),
 	(   catch(Goal, Error, true)
 	->  (   var(Error)
 	    ->	Result = true(Vars)
@@ -230,7 +231,7 @@ run_pce(Goal, Vars, Caller) :-
 	    )
 	;   Result = false
 	),
-	debug('Ok, returning ~p~n', [Result]),
+	debug(gtrace(thread), 'Ok, returning ~p', [Result]),
 	thread_debug_queue(Caller, Queue),
 	thread_send_message(Queue, '$trace'(Result)).
 
@@ -251,13 +252,13 @@ in_debug_thread(Thread, Goal) :-
 	Goal, !.
 in_debug_thread(Thread, Goal) :-
 	thread_self(Self),
-	debug('Call [Thread ~p] ~p~n', [Thread, Goal]),
+	debug(gtrace(thread), 'Call [Thread ~p] ~p', [Thread, Goal]),
 	term_variables(Goal, GVars),
 	thread_debug_queue(Thread, Queue),
 	thread_send_message(Queue, '$trace'(call(Goal, GVars, Self))),
 	thread_debug_queue(Self, MyQueue),
 	thread_get_message(MyQueue, '$trace'(Result)),
-	debug(' ---> in_debug_thread: result = ~p~n', [Result]),
+	debug(gtrace(thread), ' ---> in_debug_thread: result = ~p', [Result]),
 	(   Result = error(E)
 	->  throw(E)
 	;   Result = true(BGVars)
@@ -585,7 +586,8 @@ return(Frame, Result:any) :->
 		->  send(Frame, destroy)
 		;   true
 		),
-		debug(' ---> frame for thread = ~p: result = ~p~n',
+		debug(gtrace(thread),
+		      ' ---> frame for thread = ~p: result = ~p',
 		      [Thread, Result]),
 		thread_debug_queue(Thread, Queue),
 		thread_send_message(Queue, '$trace'(action(Result)))
@@ -1048,7 +1050,7 @@ details(B, Fragment:[prolog_frame_var_fragment], Action:[{view,copy}]) :->
 	    ),
 	    format(string(Label), '~w ~w of frame at level ~d running ~w',
 		   [ VarType, VarName, Level, PredName ]),
-	    debug('Action ~w on ~w~n', [Action, Value]),
+	    debug(gtrace(bindings), 'Action ~w on ~w', [Action, Value]),
 	    (   Action == copy
 	    ->  (   numbervars(Value, 0, _, [attvar(skip)]),
 		    format(string(Text), '~q', [Value]),
@@ -1234,7 +1236,7 @@ var_name(_F, _Name:name) :<-
 		 *******************************/
 
 %user:prolog_event_hook(Term) :-
-%	debug('prolog_event_hook(~w).~n', [Term]),
+%	debug('prolog_event_hook(~w).', [Term]),
 %	fail.
 user:prolog_event_hook(frame_finished(Frame)) :-
 	thread_self(Thread),

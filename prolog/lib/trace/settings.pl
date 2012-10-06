@@ -67,9 +67,6 @@ setting(auto_close,
 setting(use_pce_emacs,
 	[true, false],
 	'Use Built-in PceEmacs editor').
-setting(verbose,
-	[true, false],
-	'Print GUI debugging info (maintenance)').
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 trace_setting/0
