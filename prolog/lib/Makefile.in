@@ -6,6 +6,7 @@
 .PHONY: all qlf checkwd
 
 PL=	swipl
+PLOFLAGS = -O
 
 QLF1=	pce.qlf
 QLF2=	pce_manual.qlf pcedraw.qlf dialog/dialog.qlf \
@@ -56,6 +57,7 @@ emacs/emacs.qlf:	emacs/emacs.pl emacs/window.pl emacs/buffer.pl \
 			emacs/outline_mode.pl emacs/application.pl \
 			emacs/bookmarks.pl
 
+trace/trace.qlf:	PLOFLAGS=
 trace/trace.qlf:	trace/trace.pl trace/clause.pl trace/util.pl \
 			trace/settings.pl trace/source.pl \
 			trace/stack.pl trace/pprint.pl trace/viewterm.pl \
@@ -71,4 +73,4 @@ INDEX.pl:	.
 	@echo '****************'
 	@echo '* QLF compilation of $*'
 	@echo '****************'
-	$(PL) -f none -O -g "qcompile('$*')" -t halt -- -nopce
+	$(PL) -f none $(PLOFLAGS) -g "qcompile('$*')" -t halt -- -nopce
