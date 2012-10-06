@@ -30,7 +30,8 @@
 
 
 :- module(pce_keybinding, []).
-:- use_module(library(pce)).
+:- use_module(pce_boot(pce_principal)).
+:- use_module(pce_boot(pce_realise)).
 
 :- multifile
 	binding/3.
