@@ -179,6 +179,10 @@ get_tracer(Thread, Term, Result) :-
 	thread_debug_queue_store/2.
 
 thread_debug_queue(Thread, Queue) :-
+	with_mutex(debug_msg_queue,
+		   thread_debug_queue_locked(Thread, Queue)).
+
+thread_debug_queue_locked(Thread, Queue) :-
 	(   thread_debug_queue_store(Thread, Q)
 	->  Queue = Q
 	;   message_queue_create(Q),
@@ -194,6 +198,22 @@ user:prolog_event_hook(thread_finished(TID)) :-
 	       message_queue_destroy(Queue)),
 	fail.				% allow other hooks
 
+msg_id(Id) :-
+	with_mutex(debug_msg_id,
+		   msg_id_locked(Id)).
+
+:- dynamic
+	trace_msg_id/1.
+
+msg_id_locked(Id) :-
+	(   retract(trace_msg_id(Id0))
+	->  NId is Id0+1
+	;   NId = 1
+	),
+	assert(trace_msg_id(NId)),
+	Id = NId.
+
+
 %%	send_pce(:Goal)
 %
 %	Run Goal in XPCE thread. Wait  for completion. In the meanwhile,
@@ -206,24 +226,30 @@ send_pce(Goal) :-
 send_pce(Goal) :-
 	thread_self(Self),
 	term_variables(Goal, GVars),
-	in_pce_thread(run_pce(Goal, GVars, Self)),
+	msg_id(Id),
+	in_pce_thread(run_pce(Goal, GVars, Self, Id)),
 	thread_debug_queue(Self, Queue),
 	repeat,
-	thread_get_message(Queue, '$trace'(Result)),
-	debug(gtrace(thread), ' ---> send_pce: result = ~p', [Result]),
-	(   Result = error(E)
-	->  throw(E)
-	;   Result = call(CallBack, CBVars, Caller)
-	->  run_pce(CallBack, CBVars, Caller),
+	thread_get_message(Queue, '$trace'(Result, Id2)),
+	debug(gtrace(thread),
+	      ' ---> ~w: send_pce: result = ~p', [Id2, Result]),
+	(   Result = call(CallBack, CBVars, Caller)
+	->  run_pce(CallBack, CBVars, Caller, Id2),
 	    fail
-	;   Result = true(BGVars)
-	->  !, BGVars = GVars
-	;   assertion(Result == false), !,
-	    fail
+	;   assertion(Id == Id2),
+	    (	Result = true(BGVars)
+	    ->  !, BGVars = GVars
+	    ;   Result == false
+	    ->	fail
+	    ;	Result = error(E)
+	    ->  throw(E)
+	    ;	assertion(false)
+	    )
 	).
 
-run_pce(Goal, Vars, Caller) :-
-	debug(gtrace(thread), 'Running ~p for thread ~p', [Goal, Caller]),
+run_pce(Goal, Vars, Caller, Id) :-
+	debug(gtrace(thread), '~w: running ~p for thread ~p',
+	      [Id, Goal, Caller]),
 	(   catch(Goal, Error, true)
 	->  (   var(Error)
 	    ->	Result = true(Vars)
@@ -231,9 +257,9 @@ run_pce(Goal, Vars, Caller) :-
 	    )
 	;   Result = false
 	),
-	debug(gtrace(thread), 'Ok, returning ~p', [Result]),
+	debug(gtrace(thread), '~w: ok, returning ~p', [Id, Result]),
 	thread_debug_queue(Caller, Queue),
-	thread_send_message(Queue, '$trace'(Result)).
+	thread_send_message(Queue, '$trace'(Result, Id)).
 
 %%	in_debug_thread(+Thread, :Goal) is semidet.
 %%	in_debug_thread(+Object, :Goal) is semidet.
@@ -252,13 +278,15 @@ in_debug_thread(Thread, Goal) :-
 	Goal, !.
 in_debug_thread(Thread, Goal) :-
 	thread_self(Self),
+	msg_id(Id),
 	debug(gtrace(thread), 'Call [Thread ~p] ~p', [Thread, Goal]),
 	term_variables(Goal, GVars),
 	thread_debug_queue(Thread, Queue),
-	thread_send_message(Queue, '$trace'(call(Goal, GVars, Self))),
+	thread_send_message(Queue, '$trace'(call(Goal, GVars, Self), Id)),
 	thread_debug_queue(Self, MyQueue),
-	thread_get_message(MyQueue, '$trace'(Result)),
-	debug(gtrace(thread), ' ---> in_debug_thread: result = ~p', [Result]),
+	thread_get_message(MyQueue, '$trace'(Result, Id)),
+	debug(gtrace(thread),
+	      ' ---> in_debug_thread: result = ~p', [Result]),
 	(   Result = error(E)
 	->  throw(E)
 	;   Result = true(BGVars)
