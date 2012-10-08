@@ -531,7 +531,7 @@ action(Action) :-
 	(   thread_self(Me),
 	    thread_debug_queue(Me, Queue),
 	    repeat,
-	    catch(thread_get_message(Queue, '$trace'(Result)),
+	    catch(thread_get_message(Queue, '$trace'(Result, Id)),
 		  E, wait_error(E))
 	->  true
 	;   debug('thread_get_message() failed; retrying ...'),
@@ -539,7 +539,7 @@ action(Action) :-
 	),
 	debug(gtrace(action), ' ---> action: result = ~p', [Result]),
 	(   Result = call(Goal, GVars, Caller)
-	->  run_in_debug_thread(Goal, GVars, Caller),
+	->  run_in_debug_thread(Goal, GVars, Caller, Id),
 	    fail
 	;   Result = action(Action)
 	->  !
@@ -565,7 +565,7 @@ wait_error(E) :-
 	fail.
 
 
-run_in_debug_thread(Goal, GVars, Caller) :-
+run_in_debug_thread(Goal, GVars, Caller, Id) :-
 	(   catch(Goal, Error, true)
 	->  (   var(Error)
 	    ->	Result = true(GVars)
@@ -575,7 +575,7 @@ run_in_debug_thread(Goal, GVars, Caller) :-
 	),
 	debug(gtrace(thread), ' ---> run_in_debug_thread: send ~p', [Result]),
 	thread_debug_queue(Caller, Queue),
-	thread_send_message(Queue, '$trace'(Result)).
+	thread_send_message(Queue, '$trace'(Result, Id)).
 
 action(break, Action) :- !,
 	break,

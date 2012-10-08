@@ -618,7 +618,7 @@ return(Frame, Result:any) :->
 		      ' ---> frame for thread = ~p: result = ~p',
 		      [Thread, Result]),
 		thread_debug_queue(Thread, Queue),
-		thread_send_message(Queue, '$trace'(action(Result)))
+		thread_send_message(Queue, '$trace'(action(Result), action))
 	    )
 	;   get(Frame, quitted, @on)
 	->  send(Frame, destroy)
