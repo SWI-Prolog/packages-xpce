@@ -22,7 +22,7 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__GLIBC__) || defined(__GNU__)
 #define _XOPEN_SOURCE			/* GNU glibc grantpt() prototypes */
 #endif
 #include <h/kernel.h>
@@ -67,7 +67,7 @@ reduced to the facility to terminate the inferior process.
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-#ifdef HAVE_CRT_EXTERNS_H 
+#ifdef HAVE_CRT_EXTERNS_H
 #include <crt_externs.h>
 #endif
 
@@ -634,7 +634,7 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
       int pid;
 
       if ( pipe(wrfd) )
-      	return errorPce(p, NAME_noPipe, OsError());
+	return errorPce(p, NAME_noPipe, OsError());
       if ( pipe(rdfd) )
       { close(wrfd[0]);
 	close(wrfd[1]);
