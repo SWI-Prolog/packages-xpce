@@ -669,13 +669,16 @@ testset(unicode_file) :-		% Unicode file (-name) handling
 testset(dir).				% directory (-name) handling
 testset(unicode_dir) :-			% Unicode directory (-name) handling
         unicode_file_locale.
-testset(bom).				% Byte Order Mark hanling
+testset(bom) :-				% Byte Order Mark hanling
+        display_present.
 testset(plterm).			% Prolog terms in XPCE
 testset(real).				% floating point numbers
 testset(textbuffer).
 testset(asfile).			% test pce_open and friends
-testset(selection).			% X11 selection
-testset(image).				% Simple image manipulation
+testset(selection) :-			% X11 selection
+        display_present.
+testset(image) :-			% Simple image manipulation
+        display_present.
 testset(regex).				% Regular expression matches
 testset(type).				% Check type logic
 
@@ -702,6 +705,17 @@ unicode_file_locale :-
 
 wide_character_types :-
 	current_prolog_flag(encoding, utf8), !.
+
+%	display_present
+%
+%	True if the current user session is running under a windowed
+%	environment.
+
+display_present :-
+        (   current_prolog_flag(windows, true)
+        ->  true
+        ;   getenv('DISPLAY', _)
+        ).
 
 %	testdir(Dir)
 %
