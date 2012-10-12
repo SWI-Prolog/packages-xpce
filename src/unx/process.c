@@ -1052,7 +1052,9 @@ copyTty(Process p, char *pty, int fd)
     buf.c_cc[VKILL]    = Control('U');
     buf.c_cc[VEOF]     = Control('D');
     buf.c_cc[VEOL]     = Control('@');
+#ifdef VEOL2
     buf.c_cc[VEOL2]    = Control('@');
+#endif
 #ifdef VSWTCH
     buf.c_cc[VSWTCH]   = Control('@');
 #endif
