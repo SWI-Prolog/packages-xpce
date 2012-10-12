@@ -661,9 +661,6 @@ static Name name_star;			/* '*' */
 
 #define LBUFSIZE 256			/* initial value buffer */
 #define MAXFIELDS 10			/* Max # x.y.z... fields */
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 256
-#endif
 
 static void
 add_class_variable(int nfields, Name *fields, StringObj value)

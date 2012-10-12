@@ -55,10 +55,9 @@
 
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
-#else
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 256
 #endif
+#ifndef MAXPATHLEN
+#define MAXPATHLEN 1024
 #endif
 
 #ifdef HAVE_PWD_H

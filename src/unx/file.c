@@ -35,10 +35,9 @@
 
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
-#else
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 256
 #endif
+#ifndef MAXPATHLEN
+#define MAXPATHLEN 1024
 #endif
 
 #if HAVE_SYS_ACCESS_H			/* AIX 3.2.5 */
@@ -980,7 +979,7 @@ getReadFile(FileObj f, Int n)
     str_alloc(&s->data);
 
     if ( (m = Sfread(s->data.s_textA, 1, size, f->fd)) != size )
-    { deleteString(s, toInt(m), DEFAULT); 			/* TBD: error? */
+    { deleteString(s, toInt(m), DEFAULT);			/* TBD: error? */
     }
   } else
   { tmp_string tmp;

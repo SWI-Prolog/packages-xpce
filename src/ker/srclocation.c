@@ -23,13 +23,6 @@
 */
 
 #include <h/kernel.h>
-#ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h>
-#else
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 256
-#endif
-#endif
 
 status
 initialiseSourceLocation(SourceLocation loc, Name file, Int line)
