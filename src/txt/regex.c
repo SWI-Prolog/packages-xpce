@@ -100,8 +100,8 @@ static status
 loadRegex(Regex re, IOSTREAM *fd, ClassDef def)
 { TRY(loadSlotsObject(re, fd, def));
 
-  re->registers	  	  = NULL;
-  re->compiled 		  = NULL;
+  re->registers		  = NULL;
+  re->compiled		  = NULL;
 
   succeed;
 }
@@ -112,7 +112,7 @@ cloneRegex(Regex re, Regex clone)
 { clonePceSlots(re, clone);
 
   re->registers		  = NULL;
-  re->compiled 		  = NULL;
+  re->compiled		  = NULL;
 
   succeed;
 }
@@ -563,7 +563,10 @@ replaceRegex(Regex re, Any obj, CharArray value)
 	i++;
 	continue;
       } else
-	errorPce(re, NAME_noRegexRegister, reg, 0);
+      { //errorPce(re, NAME_noRegexRegister, reg, 0);
+	i++;
+	continue;
+      }
     }
     str_store(buf, o, c);
     o++;
