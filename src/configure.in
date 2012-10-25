@@ -49,7 +49,7 @@ case "$PLARCH" in
 	AC_CHECK_PROG(WINEPATHEXE, winepath, winepath, ":")
 	;;
    *)
-	PLWINNAME=$(SWIPL)
+	PLWINNAME="$SWIPL"
 	PLWINARG=""
 	WINEPATHEXE=":"
 	;;
