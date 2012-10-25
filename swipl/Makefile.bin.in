@@ -15,13 +15,14 @@
 ################################################################
 
 MAKE=@MAKE@
-PLWINNAME=@PLWINNAME@
+SWIPL=@SWIPL@
+PLWINARG=@PLWINARG@
 PL=bin/@PLARCH@/$(PLWINNAME)
 PLARCH=@PLARCH@
 INSTALL_PLARCH=@INSTALL_PLARCH@
 EXEEXT=@EXEEXT@
 
-BPL=		bin/$(INSTALL_PLARCH)/$(PLWINNAME)$(EXEEXT)
+BPL=		bin/$(INSTALL_PLARCH)/$(SWIPL)$(EXEEXT) $(PLWINARG)
 PWD=`pwd`
 
 # Make this boot64 for 64-bit processors
@@ -42,8 +43,8 @@ $(STARTUP):	$(BOOTPLS)
 xpce-qlfs:
 		@PLBASE=$(PWD); \
 		if [ -d xpce ]; then \
-		   echo $(MAKE) PL=$$PLBASE/$(BPL); \
-                   (cd xpce/prolog/lib; $(MAKE) PL=$$PLBASE/$(BPL)); \
+		   echo $(MAKE) PL="$$PLBASE/$(BPL)"; \
+                   (cd xpce/prolog/lib; $(MAKE) PL="$$PLBASE/$(BPL)"); \
 		fi
 
 clean:

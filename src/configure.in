@@ -20,7 +20,9 @@ AC_SUBST(MAKESHELL)
 AC_SUBST(WINDRES)
 AC_SUBST(VWS)
 AC_SUBST(DLLIBVAR)
+AC_SUBST(SWIPL)
 AC_SUBST(PLWINNAME)
+AC_SUBST(PLWINARG)
 AC_SUBST(WINEPATHEXE)
 
 dnl Link to X11.  Cygwin and MinGW versions overrule this later
@@ -33,19 +35,22 @@ m4_include([../../ac_swi_c.m4])
 
 case "$PL" in
    *swipl.sh)
-	PLWINNAME=$(grep ^PL= $PL | sed 's/^PL=//')
+	SWIPL=$(grep ^PL= $PL | sed 's/^PL=//')
 	;;
    *)
-	PLWINNAME=$(basename $PL .exe)
+	SWIPL=$(basename $PL .exe)
 	;;
 esac
 
 case "$PLARCH" in
    *-win32|*-win64)
-	PLWINNAME="swipl-win"
+	PLWINNAME=swipl-win
+	PLWINARG="-F swipl-win"
 	AC_CHECK_PROG(WINEPATHEXE, winepath, winepath, ":")
 	;;
    *)
+	PLWINNAME=$(SWIPL)
+	PLWINARG=""
 	WINEPATHEXE=":"
 	;;
 esac
