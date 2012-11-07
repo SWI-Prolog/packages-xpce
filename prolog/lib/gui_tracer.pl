@@ -106,6 +106,8 @@ gtrace(Goal) :-
 	thread_create(trace_goal(Goal), Id, [detached(true)]),
 	print_message(informational, gui_tracer(in_thread(Id, Goal))).
 
+:- meta_predicate trace_goal(0).
+
 trace_goal(Goal) :-
 	catch(trace_goal_2(Goal), _, true), !.
 trace_goal(_).
