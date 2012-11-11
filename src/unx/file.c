@@ -83,7 +83,7 @@ initialiseFile(FileObj f, Name name, Name encoding)
     if ( (s=getenv("TMPDIR")) && strlen(s) < sizeof(namebuf)-13 )
     { strcpy(namebuf, s);
       strcat(namebuf, "/xpce-XXXXXX");
-    } elseq
+    } else
       strcpy(namebuf, "/tmp/xpce-XXXXXX");
 
     if ( (fileno = mkstemp(namebuf)) < 0 )
