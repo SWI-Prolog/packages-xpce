@@ -75,6 +75,7 @@ initialiseFile(FileObj f, Name name, Name encoding)
   if ( isDefault(name) )
   {
 #ifdef HAVE_MKSTEMP
+#define TMP_FILE_DONE
     char namebuf[100];
     int fileno;
     char *s;
@@ -82,7 +83,7 @@ initialiseFile(FileObj f, Name name, Name encoding)
     if ( (s=getenv("TMPDIR")) && strlen(s) < sizeof(namebuf)-13 )
     { strcpy(namebuf, s);
       strcat(namebuf, "/xpce-XXXXXX");
-    } else
+    } elseq
       strcpy(namebuf, "/tmp/xpce-XXXXXX");
 
     if ( (fileno = mkstemp(namebuf)) < 0 )
@@ -94,8 +95,27 @@ initialiseFile(FileObj f, Name name, Name encoding)
 
     name = CtoName(namebuf);
     assign(f, status, NAME_tmpWrite);
-#else					/* use unsafe tmpnam */
-#ifdef HAVE_TMPNAM
+#endif
+
+#if !defined(TMP_FILE_DONE) && defined(HAVE_TEMPNAM)
+#define TMP_FILE_DONE			/* Prefer this on __WINDOWS__ */
+#ifdef __WINDOWS__
+    char *s = tempnam("c:\\tmp", "xpce");
+#else
+    char *s = tempnam("/tmp", "xpce");
+#endif
+
+    if ( s )
+    { name = CtoName(s);
+      /*Cprintf("tempnam() returns %s\n", s);*/
+      free(s);
+    } else
+    { return errorPce(f, NAME_noTempFile, getOsErrorPce(PCE));
+    }
+#endif
+
+#if !defined(TMP_FILE_DONE) && defined(HAVE_TMPNAM)
+#define TMP_FILE_DONE				/* use unsafe tmpnam */
     char namebuf[L_tmpnam];
     char *s = tmpnam(namebuf);
 
@@ -105,22 +125,11 @@ initialiseFile(FileObj f, Name name, Name encoding)
     } else
     { return errorPce(f, NAME_noTempFile, getOsErrorPce(PCE));
     }
-#else
-#ifdef HAVE_TEMPNAM			/* Prefer this on __WINDOWS__ */
-    char *s = tempnam("c:\\tmp", "xpce");
+#endif
 
-    if ( s )
-    { name = CtoName(s);
-      /*Cprintf("tempnam() returns %s\n", s);*/
-      free(s);
-    } else
-    { return errorPce(f, NAME_noTempFile, getOsErrorPce(PCE));
-    }
-#else
+#if !defined(TMP_FILE_DONE)
     Cprintf("No temporary files on this platform");
     fail;
-#endif
-#endif
 #endif
   }
 
