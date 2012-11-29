@@ -88,7 +88,12 @@ ide_message(Path:Line, String) :-
 message_to_pce(Term, Lines, Path:Line, String) :-
 	(   Term = error(syntax_error(Error),
 			 file(Path, Line, _LinePos, _CharPos))
-	->  new(String, string('Syntax error: %s', Error))
+	->  atom(Path), integer(Line),
+	    (	atom(Error)
+	    ->	Msg = Error
+	    ;	format(atom(Msg), '~p', [Error])
+	    ),
+	    new(String, string('Syntax error: %s', Msg))
 	;   Term = error(_, Location),
 	    nonvar(Location),
 	    Location = file(Path, Line)
