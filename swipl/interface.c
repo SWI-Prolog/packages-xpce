@@ -1167,7 +1167,8 @@ as handles to the Prolog recorded database.
 
 static PceObject
 makeTermHandle(term_t t)
-{ void *h = (void *)(((uintptr_t)PL_copy_term_ref(t)<<1) | 0x1L);
+{ term_t copy = PL_copy_term_ref(t);
+  void *h = (void *)(((uintptr_t)copy<<1) | 0x1L);
 
   return pushHostHandle(CtoHostData(ClassProlog, h, 0));
 }
@@ -1968,6 +1969,7 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
   Module odm;
   pce_goal goal;
   HostStackEntry hmark;
+  fid_t fid = 0;
 
   LOCK();
   odm = PushDefaultModule();
@@ -2007,12 +2009,14 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
       { if ( goal.flags & PCE_GF_HOST )
 	{ prolog_call_data *pcd = get_pcd(goal.implementation);
 				/* Implemented in Prolog */
-	  fid_t  fid = PL_open_foreign_frame();
-	  term_t av  = PL_new_term_refs(4);
-	  term_t mav = PL_new_term_refs(pcd->argc);
+	  term_t av, mav;
 	  term_t tmp, tmp2, tail;
 	  int n;
 	  void *prof_node;
+
+	  fid = PL_open_foreign_frame();
+	  av  = PL_new_term_refs(4);
+	  mav = PL_new_term_refs(pcd->argc);
 
 	  goal.flags |= PCE_GF_HOSTARGS;
 	  pceInitArgumentsGoal(&goal);
@@ -2115,11 +2119,9 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
 	  if ( prof_node )
 	    PL_prof_exit(prof_node);
 
-	  PL_close_foreign_frame(fid);	/* keep bindings */
 	  goto out;
 	plerror:
 	  pceReportErrorGoal(&goal);
-	  PL_close_foreign_frame(fid);	/* keep bindings */
 	  goto out;
 	} else				/* Implemented in XPCE itself */
 	{ int n;
@@ -2166,6 +2168,8 @@ out:
   rewindAnswerStack(mark, goal.rval);
   PopDefaultModule(odm);
   pceFreeGoal(&goal);
+  if ( fid )
+    PL_close_foreign_frame(fid);
   UNLOCK();
 
   return rval;
