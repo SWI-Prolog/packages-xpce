@@ -1561,7 +1561,7 @@ xref_buffer(M, Always:[bool]) :->
 	    ;	send(M, report, progress, 'Cross-referencing %s ...', SourceId),
 	        send(TB, attribute, xref_source_id, SourceId)
 	    ),
-	    xref_source(SourceId),
+	    xref_source(SourceId, [silent(true)]),
 	    send(TB, xref_generation, G),
 	    send(M, report, done)
 	;   true

@@ -215,7 +215,7 @@ xref_file(F, File:name) :->
 	    Modified == Time
 	->  true
 	;   send(F, report, progress, 'XREF %s', File),
-	    xref_source(File),
+	    xref_source(File, [silent(true)]),
 	    send(F, report, done)
 	).
 
