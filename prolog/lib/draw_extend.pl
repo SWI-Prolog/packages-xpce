@@ -30,7 +30,7 @@
 */
 
 :- module(draw_extend,
-	  [ draw_begin_shape/3,
+	  [ draw_begin_shape/4,
 	    draw_end_shape/0
 	  ]).
 :- use_module(library(pce)).
@@ -86,4 +86,7 @@ make_pce_super(DrawClass) :-
 make_pce_super(DrawClass) :-
 	concat(draw_, PceClass, DrawClass),
 	get(@pce, convert, PceClass, class, _),
-	new(NewClass, draw_shape_class(DrawClass, PceClass)).
+	new(_NewClass, draw_shape_class(DrawClass, PceClass)).
+
+draw_end_shape :-
+	pce_end_class.

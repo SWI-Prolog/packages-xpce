@@ -212,9 +212,9 @@ handle(_Fact, _) :- !.
 
 meta(','(:, :)).
 meta(';'(:, :)).
-meta('->'(:, :)).
-meta('*->'(:, :)).
-meta('\+'(:)).
+meta(->(:, :)).
+meta(*->(:, :)).
+meta(\+(:)).
 meta(findall(+, :, -)).
 meta(setof(+, :, -)).
 meta(not(:)).
@@ -273,7 +273,7 @@ meta_body(N, Meta, Templ, [P|T]) :-
 
 
 		 /*******************************
-		 *	     DGC-RULES 		*
+		 *	     DGC-RULES		*
 		 *******************************/
 
 dcg_body(Var, _) :-
@@ -526,7 +526,7 @@ style(iso,		 iso,		    style(colour := red)).
 style(argv,		 argv,		    style(colour := red)).
 style(codes,		 codes,		    style(colour := red)).
 style(character_escapes, character_escapes, style(colour := red)).
-style(op, 		 warn,		    style(colour := blue)).
+style(op,		 warn,		    style(colour := blue)).
 style(dup_stream,	 error,		    style(colour := red)).
 style(done,		 done,		    style(colour := dark_blue)).
 style(syntax_error,	 error,		    style(colour := red)).
