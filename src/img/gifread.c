@@ -308,26 +308,20 @@ static int
 DoExtension(IOSTREAM * fd, int label, GIFDoExtension doext, void *cl)
 {
   static char buf[256];
-  char *str;
 
   switch (label)
   {
-  case 0x01:
-    str = "Plain Text Ext";
+  case 0x01:					/* Plain Text Ext */
+  case 0xff:					/* Appl ext */
     break;
-  case 0xff:
-    str = "Appl ext";
-    break;
-  case 0xfe:
-    str = "Comment Ext";
+  case 0xfe:					/* Comment Ext */
     while (GetDataBlock(fd, (UCHAR *) buf) != 0)
     {
       /*AfxMessageBox(buf, MB_OK | MB_ICONINFORMATION); */
     }
     return FALSE;
     break;
-  case 0XF9:
-    str = "Graphic Ctrl Ext";
+  case 0XF9:					/* Graphic Ctrl Ext */
     (void) GetDataBlock(fd, (UCHAR *) buf);
     Gif89.disposal = (buf[0] >> 2) & 0x7;
     Gif89.inputFlag = (buf[0] >> 1) & 0x1;
@@ -341,7 +335,6 @@ DoExtension(IOSTREAM * fd, int label, GIFDoExtension doext, void *cl)
     return FALSE;
     break;
   default:
-    str = buf;
     sprintf(buf, "UNKNOWN (0x%02x)", label);
     break;
   }
@@ -560,7 +553,6 @@ ReadImage(IOSTREAM *fd,
   int xpos = 0, ypos = 0, pass = 0;
   int lines = 0;
   long curidx;
-  UCHAR last;
 
   if ( !ReadOK(fd, &c, 1) || c > MAX_LZW_BITS )
   { return GIF_INVALID;
