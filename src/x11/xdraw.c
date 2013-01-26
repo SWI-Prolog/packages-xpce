@@ -600,9 +600,7 @@ do_clip(int x, int y, int w, int h)
 
 void
 d_clip(int x, int y, int w, int h)
-{ XRectangle rect;
-
-  DEBUG(NAME_redraw, Cprintf("d_clip(%d, %d, %d, %d) -> ", x, y, w, h));
+{ DEBUG(NAME_redraw, Cprintf("d_clip(%d, %d, %d, %d) -> ", x, y, w, h));
   NormaliseArea(x, y, w, h);
   Translate(x, y);
   DEBUG(NAME_redraw, Cprintf("(%d %d %d %d) -> ", x, y, w, h));
@@ -614,11 +612,6 @@ d_clip(int x, int y, int w, int h)
   env->area.y = y;
   env->area.w = w;
   env->area.h = h;
-
-  rect.x      = x;
-  rect.y      = y;
-  rect.width  = w;
-  rect.height = h;
 
   DEBUG(NAME_redraw, Cprintf("clip to %d %d %d %d\n", x, y, w, h));
 

@@ -372,6 +372,9 @@ read_x11_bitmap_file(IOSTREAM *fd, int *w, int *h)
     RETURN_ERROR;
   }
 
+  (void)hx;					/* not (yet) used */
+  (void)hy;
+
   *w = ww;
   *h = hh;
 

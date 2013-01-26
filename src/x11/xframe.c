@@ -147,8 +147,8 @@ ws_create_frame(FrameObj fr)
 
   XtSetArg(args[n], XtNtitle,		  nameToMB(fr->label));   n++;
   XtSetArg(args[n], XtNmappedWhenManaged, False);                 n++;
-  XtSetArg(args[n], XtNwidth,      	  valInt(fr->area->w));   n++;
-  XtSetArg(args[n], XtNheight,      	  valInt(fr->area->h));   n++;
+  XtSetArg(args[n], XtNwidth,		  valInt(fr->area->w));   n++;
+  XtSetArg(args[n], XtNheight,		  valInt(fr->area->h));   n++;
   XtSetArg(args[n], XtNinput,		  True);		  n++;
   if ( instanceOfObject(fr->background, ClassColour) )
   { XtSetArg(args[n], XtNbackground, getPixelColour(fr->background, d));
@@ -754,7 +754,7 @@ x_event_frame(Widget w, FrameObj fr, XEvent *event)
     }
     case CirculateNotify:
       if ( event->xcirculate.place == PlaceOnTop )
-      	send(fr, NAME_exposed, EAV);
+	send(fr, NAME_exposed, EAV);
       else
 	send(fr, NAME_hidden, EAV);
       return;
@@ -1061,8 +1061,8 @@ ws_x_geometry_frame(FrameObj fr, Name spec, Monitor mon)
   if ( wdg )
   { char *e, *s = strName(spec);
     int x, y, w, h, w0, h0;
-    int ew, eh;
-    int dx, dy, dw, dh;
+    int eh;
+    int dw, dh;
     int flags = 0;
     char signx[10], signy[10];
     int ok=0;
@@ -1079,13 +1079,10 @@ ws_x_geometry_frame(FrameObj fr, Name spec, Monitor mon)
     if ( instanceOfObject(mon, ClassMonitor) )
     { Area a = (notNil(mon->work_area) ? mon->work_area : mon->area);
 
-      dx = valInt(a->x);
-      dy = valInt(a->y);
       dw = valInt(a->w);
       dh = valInt(a->h);
     } else
-    { dx = dy = 0;
-      dw = valInt(getWidthDisplay(fr->display));
+    { dw = valInt(getWidthDisplay(fr->display));
       dh = valInt(getHeightDisplay(fr->display));
     }
 
@@ -1093,8 +1090,7 @@ ws_x_geometry_frame(FrameObj fr, Name spec, Monitor mon)
       return;
     w = w0;
     h = h0;
-    ew = w - valInt(fr->area->w);	/* width/height of decorations */
-    eh = h - valInt(fr->area->h);
+    eh = h - valInt(fr->area->h);		/* height of decorations */
 
     getWMFrameFrame(fr, &offX, &offY);
 

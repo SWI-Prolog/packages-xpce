@@ -670,6 +670,8 @@ keycode_to_name(Any sw, XEvent *event)
         break;
     }
 
+    (void)has_chars;			/* not sure ... */
+
     if ( has_sym )
     { switch(sym)
       { case XK_BackSpace:
