@@ -237,7 +237,7 @@ initialiseSocket(Socket s, Any address, Name domain)
 
   assign(s, domain,	    domain);
   assign(s, address,	    address);
-  assign(s, status, 	    NAME_idle);
+  assign(s, status,	    NAME_idle);
 
   succeed;
 }
@@ -539,14 +539,16 @@ acceptSocket(Socket s)
       if ( (hp = gethostbyaddr((char *)&address.sin_addr,
 			       sizeof(address.sin_addr),
 			       AF_INET)) )
-	client_address = newObject(ClassTuple,
-				   CtoName(hp->h_name),
-				   toInt(address.sin_port),
-				   EAV);
+	client_address = answerObject(ClassTuple,
+				      CtoName(hp->h_name),
+				      toInt(address.sin_port),
+				      EAV);
       else
 	client_address = NIL;
     }
   }
+
+  (void)client_address;				/* not used right now */
 
   if ( !(s2 = get(s, NAME_clone, EAV)) )
     return errorPce(s, NAME_failedToClone);
