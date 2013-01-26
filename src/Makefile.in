@@ -1,6 +1,4 @@
 ################################################################
-# $Id$
-#
 # Makefile for XPCE version 6
 #
 # NOTE NOTE NOTE: This Makefile only works with GNU-Make!!
@@ -19,7 +17,7 @@
 # XPCE is licenced under the LGPL. See the file COPYING or
 # http://www.swi-prolog.org/license.html
 #
-# Copyright (C) 1993-2012, University of Amsterdam
+# Copyright (C) 1993-2013, University of Amsterdam
 #			   VU University Amsterdam
 ################################################################
 
@@ -643,6 +641,7 @@ link-dev-tree::
 		(here=`pwd` && home=`dirname $$here` && $(REL_LN) $$home $(DESTDIR)$(PLBASE)/xpce)
 ln-classindex::
 		./xpce.sh -C "$(DESTDIR)$(PLBASE)/xpce/prolog/lib" -t "halt(1)" \
+			--home=$(DESTDIR)$(PLBASE) \
 			-g "[library(pce_class_index)],pce_make_library_index('.'),halt"
 
 ln-dv-lib::
@@ -714,9 +713,7 @@ dv-lib:		dv-home
 				$(DESTDIR)$(DVHOME)/prolog/lib/man
 		$(INSTALL_DATA) ../prolog/lib/Makefile $(DESTDIR)$(DVHOME)/prolog/lib
 
-dv-classindex:	dv-lib
-		./xpce.sh -C "$(DESTDIR)$(DVHOME)/prolog/lib" -t "halt(1)" \
-			-g "[library(pce_class_index)],pce_make_library_index('.'),halt"
+dv-classindex:	dv-lib ln-classindex
 
 dv-boot:	dv-lib
 		@for d in $(DVBOOTDIRS); do \
