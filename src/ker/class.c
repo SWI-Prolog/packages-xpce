@@ -520,7 +520,7 @@ installClass(Class class)
       for_cell(cell, cl->send_methods)
       { SendMethod m = cell->value;
 
-      	if ( !getMemberHashTable(class->send_table, m->name) )
+	if ( !getMemberHashTable(class->send_table, m->name) )
 	  getResolveSendMethodClass(class, m->name);
       }
 
@@ -737,7 +737,7 @@ instanceVariableClass(Class class, Variable var)
       }
     }
     offset = class->slots;
-    assign(class, slots, incrInt(class->slots));
+    assign(class, slots, toInt(valInt(class->slots)+1));
     if ( InstanceSize(class) > valInt(class->instance_size) )
       assign(class, instance_size, toInt(InstanceSize(class)));
   }
@@ -2063,7 +2063,7 @@ append_class_header(Class cl, TextBuffer tb)
 
     for(i=1; i<=valInt(cl->term_names->size); i++)
     { if ( i != 1 )
-    	CAppendTextBuffer(tb, ", ");
+	CAppendTextBuffer(tb, ", ");
       appendTextBuffer(tb, getElementVector(cl->term_names, toInt(i)), ONE);
     }
   }
