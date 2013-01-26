@@ -299,9 +299,9 @@ dcg_meta_body(N, Meta, Templ, [P|T]) :-
 
 dcg_meta(','(:, :)).
 dcg_meta(';'(:, :)).
-dcg_meta('->'(:, :)).
-dcg_meta('*->'(:, :)).
-dcg_meta('\+'(:)).
+dcg_meta(->(:, :)).
+dcg_meta(*->(:, :)).
+dcg_meta(\+(:)).
 
 
 		 /*******************************
