@@ -284,7 +284,7 @@ gnu/getdate.o:	$(srcdir)/gnu/getdate.c
 # it, run "make getdate-src".
 
 getdate-src::
-		$(YACC) $(srcdir)/gnu/getdate.y
+		$(YACC) $(srcdir)/gnu/getdate-source.y
 		mv -f y.tab.c $(srcdir)/gnu/getdate.c
 
 $(srcdir)/gnu/proto.h:	$(GNUSRC)
