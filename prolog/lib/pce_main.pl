@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/packages/xpce/
+    Copyright (C): 1985-2013, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -63,7 +62,8 @@ pce_main_loop(Goal) :-
 	pce_loop(Goal, ApplArgv),
 	halt.
 
-%%	pce_loop(+Goal, [+ArgList])
+%%	pce_loop(+Goal).
+%%	pce_loop(+Goal, +Argv:list).
 %
 %	Runs `Goal', finds all toplevel frames created and then dispatches
 %	events untill the last frame is destroyed.
