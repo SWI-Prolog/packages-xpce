@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/packages/xpce/
+    Copyright (C): 1985-2013, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -41,18 +40,21 @@
 	   , term_to_atom/2
 	   ]).
 
-%%	pce_server(+Atom|Int)
+%%	pce_server(+Address)
 %
 %	Create a PCE socket and interpret incomming lines as Prolog goals.
-%	The argument is:
+%	The Address argument is one of:
 %
-%		# Atom
+%		* Atom
 %		Unix-domain socket.  Atom is used as filename
-%		# Integer
-%		Internet socket.  Integer is the port number (> 5000)
+%		* Integer
+%		Internet socket.  Integer is the port number
 %
 %	Output send to current_output is send to the client, as are error
 %	messages
+%
+%	@see	The SWI-Prolog library(prolog_server) implements a telnet
+%		server that provides a Prolog toplevel.
 
 pce_server(Address) :-
 	strip_module(Address, Module, Addr),
