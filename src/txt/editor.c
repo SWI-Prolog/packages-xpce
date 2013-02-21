@@ -4174,7 +4174,8 @@ selectLineEditor(Editor e, Int line, BoolObj newline)
 status
 selectionEditor(Editor e, Int from, Int to, Name status)
 { selection_editor(e, from, to, status);
-  normaliseEditor(e, e->mark, e->caret);
+  if ( e->mark != e->caret )
+    normaliseEditor(e, e->mark, e->caret);
 
   succeed;
 }
