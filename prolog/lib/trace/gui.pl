@@ -1050,6 +1050,12 @@ clear(B, Content:[bool]) :->
 	;   send_super(B, clear)
 	).
 
+scroll_to_end(B) :->
+	"Scroll the last line to the bottom"::
+	get(B, editor, E),
+	get(E, size, size(_,Lines)),
+	send(E, scroll_to, @default, Lines).
+
 details(B, Fragment:[prolog_frame_var_fragment], Action:[{view,copy}]) :->
 	"View details of the binding"::
 	get(B, prolog_frame, Frame),
@@ -1129,7 +1135,7 @@ bindings(B, Bindings:prolog) :->
 	;   true
 	),
 	close(Fd),
-	send(B, caret, 0).
+	send(B, scroll_to_end).
 
 bind_vars([]).
 bind_vars([Vars=Value|T]) :-
