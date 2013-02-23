@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/packages/xpce/
+    Copyright (C): 1985-2013, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -51,7 +50,7 @@
 	  ]).
 
 :- meta_predicate
-	register_config(:),
+	register_config(2),
 	register_config_type(:, +),
 	current_config_type(:, -, -),
 	get_config_type(:, -),
@@ -94,29 +93,35 @@ user:file_search_path(config, Dir) :-
 
 config_version(1).			% version of the config package
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Database
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/** <module> XPCE congifuration database
+
+This module deals with saving and   loading application settings such as
+preferences and the layout of windows.
+
+@see	library(settings) provides the Prolog equivalent
+*/
 
 :- dynamic
 	config_type/3,			% Type, Module, Attributes
 	config_db/2,			% DB, Predicate
 	config_store/4.			% DB, Path, Value, Type
 
-lasserta(Term) :-
-	asserta(Term).
-lretract(Term) :-
-	retract(Term).
 
 		 /*******************************
 		 *	     REGISTER		*
 		 *******************************/
 
+%%	register_config(:Pred) is det.
+%
+%	Register  Pred  to  provide  metadata  about  the  configuration
+%	handled in the calling module.  Pred   is  called  as call(Pred,
+%	Path, Attributes).
+
 register_config(Spec) :-
 	strip_module(Spec, Module, Pred),
 	(   config_db(Module, Pred)
 	->  true
-	;   lasserta(config_db(Module, Pred))
+	;   asserta(config_db(Module, Pred))
 	).
 
 
@@ -130,6 +135,9 @@ get_config_type(Key, Type) :-
 	call(DB:Pred, Path, Attributes),
 	memberchk(type(Type), Attributes).
 
+%%	get_config(:Key, -Value) is det.
+%
+%	Get configuration for Key as Value.
 
 get_config(Key, Value) :-
 	strip_module(Key, DB, Path),
@@ -139,7 +147,7 @@ get_config(Key, Value) :-
 	config_attribute(Key, default(Default)), !,
 	(   config_attribute(Key, type(Type))
 	->  strip_module(Key, DB, Path),
-	    lasserta(config_store(DB, Path, Default, Type)),
+	    asserta(config_store(DB, Path, Default, Type)),
 	    config_term_to_object(Type, Default, Value)
 	;   Value = Default
 	).
@@ -154,6 +162,14 @@ get_config_term(Key, Term, Type) :-
 		 *	       MODIFY		*
 		 *******************************/
 
+%%	set_config(:Key, +Value) is det.
+%
+%	Set the configuration parameter Key to   Value.  If the value is
+%	modified, a broadcast message set_config(Key, Value) is issued.
+
+set_config(Key, Value) :-
+	get_config(Key, Current),
+	Value == Current, !.
 set_config(Key, Value) :-
 	strip_module(Key, DB, Path),
 	set_config_(DB, Path, Value),
@@ -161,12 +177,12 @@ set_config(Key, Value) :-
 	broadcast(set_config(Key, Value)).
 
 set_config_(DB, Path, Value) :-		% local version
-	(   lretract(config_store(DB, Path, _, Type))
+	(   retract(config_store(DB, Path, _, Type))
 	->  true
 	;   get_config_type(DB:Path, Type)
 	),
 	config_term_to_object(Type, TermValue, Value),
-	lasserta(config_store(DB, Path, TermValue, Type)).
+	asserta(config_store(DB, Path, TermValue, Type)).
 
 set_config_term(DB, Path, Term, Type) :- % loaded keys
 	retractall(config_store(DB, Path, _, _)),
@@ -180,7 +196,7 @@ set_config_(DB, Path, Value, Type) :-	% local version
 
 add_config(Key, Value) :-
 	strip_module(Key, DB, Path),
-	(   lretract(config_store(DB, Path, Set0, Type)),
+	(   retract(config_store(DB, Path, Set0, Type)),
 	    is_list(Set0)
 	->  (   delete(Set0, Value, Set1)
 	    ->	Set = [Value|Set1]
@@ -190,15 +206,15 @@ add_config(Key, Value) :-
 	    get_config_type(Key, Type),
 	    Set = [Value]
 	),
-	lasserta(config_store(DB, Path, Set, Type)),
+	asserta(config_store(DB, Path, Set, Type)),
 	set_modified(DB).
 
 del_config(Key, Value) :-
 	strip_module(Key, DB, Path),
 	config_store(DB, Path, Set0, Type),
 	delete(Set0, Value, Set),
-	lretract(config_store(DB, Path, Set0, Type)), !,
-	lasserta(config_store(DB, Path, Set, Type)),
+	retract(config_store(DB, Path, Set0, Type)), !,
+	asserta(config_store(DB, Path, Set, Type)),
 	set_modified(DB).
 
 set_modified(DB) :-
@@ -485,7 +501,7 @@ register_config_type(TypeSpec, Attributes) :-
 	strip_module(TypeSpec, Module, Type),
 	(   config_type(Type, Module, Attributes)
 	->  true
-	;   lasserta(config_type(Type, Module, Attributes))
+	;   asserta(config_type(Type, Module, Attributes))
 	).
 
 current_config_type(TypeSpec, DefModule, Attributes) :-
