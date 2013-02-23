@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2013, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -250,63 +248,3 @@ config(history/subwindow_layout/_Key,
 load_geometry_config :-
 	context_module(M),
 	ensure_loaded_config(M:_).
-
-
-		 /*******************************
-		 *	       TEST		*
-		 *******************************/
-
-end_of_file.				% make the file end here.
-
-test :-
-	send(new(mydialog), open).
-
-:- pce_begin_class(myframe1, persistent_frame).
-
-initialise(F) :->
-	send_super(F, initialise, 'Frame holding a browser'),
-	send(F, append, new(browser)).
-
-:- pce_end_class(myframe1).
-
-
-:- pce_begin_class(myframe2, persistent_frame).
-
-initialise(F) :->
-	send_super(F, initialise, 'Frame holding a view'),
-	send(F, append, new(V, view)),
-	send(new(picture), left, V).
-
-:- pce_end_class(myframe2).
-
-:- pce_begin_class(myframe3, persistent_frame).
-
-initialise(F) :->
-	send_super(F, initialise, 'Frame holding a picture'),
-	send(F, append, new(picture)).
-
-:- pce_end_class(myframe3).
-
-:- pce_begin_class(mydialog, persistent_frame).
-
-initialise(F) :->
-	send_super(F, initialise('Test persistent frames')),
-	send(F, append, new(D, dialog)),
-	send(D, append, button(frame_1)),
-	send(D, append, button(frame_2)),
-	send(D, append, button(frame_3)),
-	send(D, open).
-
-frame_1(_F) :->
-	send(new(myframe1), open).
-
-frame_2(_F) :->
-	send(new(myframe2), open).
-
-frame_3(_F) :->
-	send(new(myframe3), open).
-
-:- pce_end_class(mydialog).
-
-
-
