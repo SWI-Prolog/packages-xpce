@@ -154,6 +154,10 @@ open_query_window(IDE) :->
 	),
 	send(QF, expose).
 
+open_interactor(_) :->
+	"Create a new interactor window"::
+	interactor.
+
 thread_monitor(IDE) :->
 	"Open a monitor for running threads"::
 	(   current_prolog_flag(threads, true)

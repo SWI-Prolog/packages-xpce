@@ -771,7 +771,7 @@ interrupt(F) :->
 
 query(_F) :->
 	"Enter and run a query"::
-	prolog_ide(open_query_window).
+	prolog_ide(open_interactor).
 
 copy_goal(F) :->
 	"Copy the current goal into the copy-buffer"::
