@@ -114,10 +114,5 @@ make_item(D, Name) :-
 	send(TI, help_message, tag, Comment).
 
 set_trace_setting(Name, Value) :-
-	trace_setting(Name, _, Value),
-	act_on_setting(Name, Value).
-
-act_on_setting(portray_codes, Val) :- !,
-	portray_text(Val).
-act_on_setting(_, _).
+	trace_setting(Name, _, Value).
 

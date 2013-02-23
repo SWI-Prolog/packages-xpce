@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (C): 1985-2012, University of Amsterdam
+    Copyright (C): 1985-2013, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -38,6 +38,7 @@
 	    find_source/3		% +Head, -File|TextBuffer, -Line
 	  ]).
 :- use_module(library(pce)).
+:- use_module(library(pce_config), []).	% Get config path alias
 :- use_module(library(debug)).
 :- use_module(clause).
 
@@ -71,12 +72,46 @@ setting(use_pce_emacs,	   true).	% use PceEmacs editor
 
 trace_setting(Name, Value) :-
 	setting(Name, Value).
+
+trace_setting(Name, Old, New) :-
+	setting(Name, Old),
+	Old == New, !.
+trace_setting(portray_codes, Old, New) :- !,
+	setting(portray_codes, Old),
+	portray_text(New).
 trace_setting(Name, Old, New) :-
 	clause(setting(Name, Old), true, Ref), !,
 	erase(Ref),
-	assert(setting(Name, New)).
+	assertz(setting(Name, New)).
 trace_setting(Name, Old, _) :-
 	setting(Name, Old).
+
+save_trace_settings :-
+	absolute_file_name(config('Tracer.cnf'), Path,
+			   [ access(write),
+			     file_errors(fail)
+			   ]), !,
+	setup_call_cleanup(
+	    open(Path, write, Out),
+	    forall(( setting(Name, Value),
+		     \+ no_save(Name)
+		   ),
+		   format(Out, '~q.~n', setting(Name, Value))),
+	    close(Out)).
+save_trace_settings.
+
+no_save(active).
+
+load_trace_settings :-
+	read_file_to_terms(config('Tracer.cnf'), Terms,
+			   [ file_errors(fail)
+			   ]), !,
+	forall(member(setting(Name, Value), Terms),
+	       trace_setting(Name, _, Value)).
+load_trace_settings.
+
+:- initialization load_trace_settings.
+:- at_halt(save_trace_settings).
 
 
 		 /*******************************
@@ -143,7 +178,7 @@ tag_module(Module) :-
 		 *	     SOURCE FILE	*
 		 *******************************/
 
-%	canonical_source_file(+Raw, -Cononical)
+%%	canonical_source_file(+Raw, -Cononical)
 %
 %	Determine the internal canonical filename from a raw file.
 
