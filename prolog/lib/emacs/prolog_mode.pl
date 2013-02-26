@@ -820,10 +820,12 @@ do_spy(variable(Name, _Type, _Access, _Doc), M, (Class-Name)) :-
 do_spy((Head :- _Body), M, Spec) :-
 	prolog_debug_spec(M, Head, Spec),
 	user:spy(Spec).
+do_spy((Head --> _Body), M, Spec) :-
+	dcg_debug_spec(M, Head, Spec),
+	user:spy(Spec).
 do_spy(Head, M, Spec) :-
 	prolog_debug_spec(M, Head, Spec),
 	user:spy(Spec).
-
 
 trace(M) :->
 	"Set trace-point on implementation"::
@@ -862,6 +864,13 @@ prolog_debug_spec(M, Head, Spec) :-
 	(   get(M, prolog_module, Module)
 	->  Spec = (Module:Name/Arity)
 	;   Spec = Name/Arity
+	).
+
+dcg_debug_spec(M, Head, Spec) :-
+	catch(functor(Head, Name, Arity), _, fail),
+	(   get(M, prolog_module, Module)
+	->  Spec = (Module:Name//Arity)
+	;   Spec = Name//Arity
 	).
 
 		 /*******************************
