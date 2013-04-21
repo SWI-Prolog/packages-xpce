@@ -3143,6 +3143,8 @@ fillEditor(Editor e,
   MustBeEditable(e);
 
   end = valInt(normalise_index(e, to));
+  if ( end > 0 && tisendsline(tb->syntax, fetch_textbuffer(tb, end-1)) )
+    end--;
 
   while( pos < end )
   { int p0 = pos;
