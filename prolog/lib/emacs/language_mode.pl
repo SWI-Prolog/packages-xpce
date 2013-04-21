@@ -148,7 +148,7 @@ fill_comment_paragraph(M, Justify:justify=[bool|int], From:[int]) :->
 	;   send(M, report, warning, 'No line-comment character defined'),
 	    fail
 	),
-	new(Re, regex(string('^%s?[ \t]*$', CS))),
+	new(Re, regex(string('^(%s?[ \t]*$|[^%s])', CS, CS))),
 	get(M, caret, Caret),
 	get(M, text_buffer, TB),
 	(   From \== @default
@@ -163,6 +163,7 @@ fill_comment_paragraph(M, Justify:justify=[bool|int], From:[int]) :->
 	;   get(TB, size, End)
 	),
 	free(Re),
+	debug(fill(comment), '~p: filling ~d..~d', [M, Start, End]),
 	(   new(LeadRe, regex(string('%s([^\n\t]*)\t[\t]*', CS))),
 	    send(LeadRe, match, TB, Start),
 	    get(LeadRe, register_size, 1, Size),
@@ -198,7 +199,9 @@ fill_comment(M,
 	uncomment(M, Re, LeadCol, Start, EndF),
 	get(M, right_margin, RM0),
 	RM is RM0 - LeadCol,
-	send(M, fill, Start, EndF?start, 0, RM, TheJustify),
+	get(EndF, start, NewEnd),
+	debug(fill(comment), '->fill: ~d ~d', [Start, NewEnd]),
+	send(M, fill, Start, NewEnd, 0, RM, TheJustify),
 	(   LeadCont == @default
 	->  TheLeadCont = Lead
 	;   TheLeadCont = LeadCont
