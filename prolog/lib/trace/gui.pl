@@ -770,9 +770,44 @@ interrupt(F) :->
 	get(F, thread, Thread),
 	thread_signal(Thread, trace).
 
-query(_F) :->
+query(F) :->
 	"Enter and run a query"::
+	send(F, check_console),
+	send(F, report, status,
+	     'Started toplevel in console.  Type Control-D to resume debugging'),
+	send(F, synchronise),
+	in_debug_thread(F, prolog),
+	send(F, report, status,
+	     'Toplevel has terminated; resuming debugger').
+
+check_console(F) :->
+	"See whether the debugged thread has a console"::
+	(   in_debug_thread(F, thread_util:has_console)
+	->  true
+	;   send(@display, inform,
+		 'The debugged thread is not attached to a console.\n\c
+		  Cannot run an interactive session in the debuggee.'),
+	    fail
+	).
+
+interactor(F) :->
+	"Open a new interactor"::
+	send(F, warn_windows_thread),
 	prolog_ide(open_interactor).
+
+warn_windows_thread(_F) :->
+	"Warn to run in a separate thread"::
+	(   current_prolog_flag(windows, true),
+	    pce_thread(main)
+	->  send(@display, inform,
+		 'Opening a new interactor from the debugger requires\n\c
+		  for the tools to run in a separate thread.  Please set\n\c
+		  the flag "xpce_threaded" to "true" in your Prolog startup\n\c
+		  file and restart Prolog'),
+	    fail
+	;   true
+	).
+
 
 copy_goal(F) :->
 	"Copy the current goal into the copy-buffer"::
@@ -886,7 +921,8 @@ button(gap,	       -,     -,		     -).
 button(+nodebug,       "n",   'nodebug.xpm',	     'Continue without debugging').
 button(+abort,	       "a",   'abort.xpm',	     'Abort to the Prolog toplevel').
 button(+interrupt,     "t",   'interrupt.xpm',	     'Interrupt (trace)').
-button(+query,	       "b",   'break.xpm',	     'Enter a query').
+button(+query,	       "b",   'break.xpm',	     'Enter a query (in debugged thread)').
+button(+interactor,    "B",   'interactor.xpm',	     'Enter a query (in new thread)').
 button(fail,	       "F",   'fail.xpm',	     'Force query to fail').
 button(gap,	       -,     -,		     -).
 button(+up,	       "u",   'up.xpm',		     'Select parent frame').
