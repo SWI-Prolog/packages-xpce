@@ -1664,9 +1664,10 @@ make_simple_fragment(Class, M, F, L, Style) :-
 	new(Fragment, emacs_prolog_fragment(TB, F, L, Style)),
 	functor(Class, Classification, Arity),
 	send(Fragment, classification, Classification),
-	(   Arity == 1
-	->  arg(1, Class, Context),
-	    send(Fragment, context, Context)
+	(   Arity >= 1,
+	    arg(1, Class, Context),
+	    atomic(Context)
+	->  send(Fragment, context, Context)
 	;   true
 	).
 
@@ -2351,6 +2352,7 @@ identify_fragment(keyword(except), _, 'Import all except given').
 identify_fragment(keyword(as), _, 'Import under a different name').
 identify_fragment(unused_import, _, 'Imported predicate is not used').
 identify_fragment(undefined_import, _, 'Predicate is not exported').
+identify_fragment(goal(not_callable), _, 'Goal is not callable (type error)').
 identify_fragment(Class, _, Summary) :-
 	term_to_atom(Class, Summary).
 
