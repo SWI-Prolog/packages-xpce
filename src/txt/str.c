@@ -454,26 +454,21 @@ str_prefix(String s1, String s2)	/* s2 is prefix of s1 */
 
 int
 str_icase_prefix(String s1, String s2)	/* s2 is prefix of s1 */
-{ sameEncoding(s1, s2);
-
-  if ( s2->size <= s1->size )
+{ if ( s2->size <= s1->size )
   { int n = s2->size;
 
-    if ( isstrA(s1) )
+    if ( isstrA(s1) && isstrA(s2) )
     { charA *d1 = s1->s_textA;
       charA *d2 = s2->s_textA;
 
       for(; n-- > 0; d1++, d2++)
 	if ( tolower(*d1) != tolower(*d2) )
 	  return FALSE;
-
-      return TRUE;
     } else
-    { charW *d1 = s1->s_textW;
-      charW *d2 = s2->s_textW;
+    { int i = 0;
 
-      for(; n-- > 0; d1++, d2++)
-	if ( towlower(*d1) != towlower(*d2) )
+      for(; n-- > 0; i++)
+	if ( towlower(str_fetch(s1, i)) != towlower(str_fetch(s2, i)) )
 	  return FALSE;
     }
 
@@ -486,13 +481,11 @@ str_icase_prefix(String s1, String s2)	/* s2 is prefix of s1 */
 
 int
 str_suffix(String s1, String s2)	/* s2 is suffix of s1 */
-{ sameEncoding(s1, s2);
-
-  if ( s2->size <= s1->size )
+{ if ( s2->size <= s1->size )
   { int n = s2->size;
     int offset = s1->size - s2->size;
 
-    if ( isstrA(s1) )
+    if ( isstrA(s1) && isstrA(s2) )
     { charA *d1 = &s1->s_textA[offset];
       charA *d2 = s2->s_textA;
 
@@ -502,15 +495,12 @@ str_suffix(String s1, String s2)	/* s2 is suffix of s1 */
 
       return TRUE;
     } else
-    { charW *d1 = &s1->s_textW[offset];
-      charW *d2 = s2->s_textW;
-
-      while(n-- > 0)
-	if ( *d1++ != *d2++ )
+    { while(--n >= 0)
+	if ( str_fetch(s1, n+offset) != str_fetch(s2, n) )
 	  return FALSE;
-    }
 
-    return TRUE;
+      return TRUE;
+    }
   }
 
   return FALSE;
@@ -519,13 +509,11 @@ str_suffix(String s1, String s2)	/* s2 is suffix of s1 */
 
 int
 str_icase_suffix(String s1, String s2)	/* s2 is suffix of s1 */
-{ sameEncoding(s1, s2);
-
-  if ( s2->size <= s1->size )
+{ if ( s2->size <= s1->size )
   { int n = s2->size;
     int offset = s1->size - s2->size;
 
-    if ( isstrA(s1) )
+    if ( isstrA(s1) && isstrA(s2) )
     { charA *d1 = &s1->s_textA[offset];
       charA *d2 = s2->s_textA;
 
@@ -536,11 +524,10 @@ str_icase_suffix(String s1, String s2)	/* s2 is suffix of s1 */
 
       return TRUE;
     } else
-    { charW *d1 = &s1->s_textW[offset];
-      charW *d2 = s2->s_textW;
+    { int i = 0;
 
-      for( ; n-- > 0; d1++, d2++)
-      { if ( towlower(*d1) != towlower(*d2) )
+      for( ; n-- > 0; i++)
+      { if ( towlower(str_fetch(s1, i)) != towlower(str_fetch(s2, i)) )
 	  return FALSE;
       }
     }
@@ -554,37 +541,50 @@ str_icase_suffix(String s1, String s2)	/* s2 is suffix of s1 */
 
 int
 str_sub(String s1, String s2)		/* s2 is substring of s1 */
-{ sameEncoding(s1, s2);
-
-  if ( s2->size <= s1->size )
+{ if ( s2->size <= s1->size )
   { int n = 0;
     int m = s1->size - s2->size;
 
-    if ( isstrA(s1) )
-    { for(; n <= m; n++)
-      { charA *d1 = &s1->s_textA[n];
-	charA *d2 = s2->s_textA;
-	int i = s2->size;
+    if ( s1->iswide == s2->iswide )
+    { if ( isstrA(s1) )
+      { for(; n <= m; n++)
+	{ charA *d1 = &s1->s_textA[n];
+	  charA *d2 = s2->s_textA;
+	  int i = s2->size;
 
-	while( i-- > 0 )
-	  if ( *d1++ != *d2++ )
-	    goto next8;
+	  while( i-- > 0 )
+	    if ( *d1++ != *d2++ )
+	      goto next8;
 
-	return TRUE;
-      next8:;
+	  return TRUE;
+	next8:;
+	}
+      } else
+      { for(; n <= m; n++)
+	{ charW *d1 = &s1->s_textW[n];
+	  charW *d2 = s2->s_textW;
+	  int i = s2->size;
+
+	  while( i-- > 0 )
+	    if ( *d1++ != *d2++ )
+	      goto next16;
+
+	  return TRUE;
+	next16:;
+	}
       }
     } else
     { for(; n <= m; n++)
-      { charW *d1 = &s1->s_textW[n];
-	charW *d2 = s2->s_textW;
+      { int i1 = n;
+	int i2 = 0;
 	int i = s2->size;
 
-	while( i-- > 0 )
-	  if ( *d1++ != *d2++ )
-	    goto next16;
+	for( ; i-- > 0; i1++, i2++ )
+	  if ( str_fetch(s1, i1) != str_fetch(s2, i2) )
+	    goto nextmixed;
 
 	return TRUE;
-      next16:;
+      nextmixed:;
       }
     }
   }
@@ -595,39 +595,52 @@ str_sub(String s1, String s2)		/* s2 is substring of s1 */
 
 int
 str_icasesub(String s1, String s2)		/* s2 is substring of s1 */
-{ sameEncoding(s1, s2);
-
-  if ( s2->size <= s1->size )
+{ if ( s2->size <= s1->size )
   { int n = 0;
     int m = s1->size - s2->size;
 
-    if ( isstrA(s1) )
-    { for(; n <= m; n++)
-      { charA *d1 = &s1->s_textA[n];
-	charA *d2 = s2->s_textA;
-	int i;
+    if ( s1->iswide == s2->iswide )
+    { if ( isstrA(s1) )
+      { for(; n <= m; n++)
+	{ charA *d1 = &s1->s_textA[n];
+	  charA *d2 = s2->s_textA;
+	  int i;
 
-	for(i=s2->size; i-- > 0; d1++, d2++ )
-	{ if ( tolower(*d1) != tolower(*d2) )
-	    goto next8;
+	  for(i=s2->size; i-- > 0; d1++, d2++ )
+	  { if ( tolower(*d1) != tolower(*d2) )
+	      goto next8;
+	  }
+
+	  return TRUE;
+	next8:;
 	}
+      } else
+      { for(; n <= m; n++)
+	{ charW *d1 = &s1->s_textW[n];
+	  charW *d2 = s2->s_textW;
+	  int i;
 
-	return TRUE;
-      next8:;
+	  for(i=s2->size; i-- > 0; d1++, d2++ )
+	  { if ( towlower(*d1) != towlower(*d2) )
+	      goto next16;
+	  }
+
+	  return TRUE;
+	next16:;
+	}
       }
     } else
     { for(; n <= m; n++)
-      { charW *d1 = &s1->s_textW[n];
-	charW *d2 = s2->s_textW;
-	int i;
+      { int i1 = n;
+	int i2 = 0;
+	int i = s2->size;
 
-	for(i=s2->size; i-- > 0; d1++, d2++ )
-	{ if ( towlower(*d1) != towlower(*d2) )
-	    goto next16;
-	}
+	for( ; i-- > 0; i1++, i2++ )
+	  if ( towlower(str_fetch(s1, i1)) != towlower(str_fetch(s2, i2)) )
+	    goto nextmixed;
 
 	return TRUE;
-      next16:;
+      nextmixed:;
       }
     }
   }
