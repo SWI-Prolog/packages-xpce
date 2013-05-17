@@ -1815,6 +1815,10 @@ has_source(F) :->
 	get(F, head, @off, Head),
 	(   xref_defined(TB, Head, How),
 	    xref_definition_line(How, _)
+	;   Head = Module:Plain,
+	    xref_module(Src, Module),
+	    xref_defined(Src, Plain, How),
+	    xref_definition_line(How, _)
 	;   xref_defined(TB, Head, imported(_From))
 	;   get(prolog_predicate(Head), source, _)
 	), !.
