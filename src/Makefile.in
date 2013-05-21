@@ -640,9 +640,8 @@ link-dev-tree::
 		rm -f $(DESTDIR)$(PLBASE)/xpce
 		(here=`pwd` && home=`dirname $$here` && $(REL_LN) $$home $(DESTDIR)$(PLBASE)/xpce)
 ln-classindex::
-		./xpce.sh -C "$(DESTDIR)$(PLBASE)/xpce/prolog/lib" -t "halt(1)" \
-			--home=$(DESTDIR)$(PLBASE) \
-			-g "[library(pce_class_index)],pce_make_library_index('.'),halt"
+		./xpce.sh -t "halt(1)" \
+			-g "[library(pce_class_index)],pce_make_library_index('$(DESTDIR)$(PLBASE)/xpce/prolog/lib'),halt"
 
 ln-dv-lib::
 		$(REL_LN) $(PL2XPCE) $(RTLIBDIR)
