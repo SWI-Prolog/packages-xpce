@@ -86,7 +86,7 @@ index_file('INDEX.pl', _) :- !.
 index_file('MKINDEX.pl', _) :- !.
 index_file('CLASSINDEX.pl', _) :- !.
 index_file(File, Out) :-
-	xref_source(File),
+	xref_source(File, [silent(true)]),
 	(   xref_defined_class(File, Class, local(_Line, Super, Summary)),
 	    format(Out,
 		   'class(~q, ~q, ~q, ~q).~n',
