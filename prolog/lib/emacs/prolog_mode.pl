@@ -49,6 +49,7 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
 	[ insert_if_then_else	       = key('(') + key(';') + key('>'),
 	  insert_quote		       = key('"'),
 	  insert_percent	       = key('%'),
+	  insert_quasi_quote	       = key('!'),
 
 	  newline_and_indent	       = key('RET'),
 
@@ -424,6 +425,15 @@ indent_comment_line(E) :->
 	;   true
 	).
 
+
+insert_quasi_quote(E) :->
+	"Deal with <![Type[Quoted]]>"::
+	get(E, caret, Here),
+	(   send(E, looking_at, '[^#$&*+-./:<=>?@\\^~]<', Here, 0)
+	->  send(E, insert, '![[]]>'),
+	    send(E, backward_char, 4)
+	;   send(E, insert, '!')
+	).
 
 
 		 /*******************************
