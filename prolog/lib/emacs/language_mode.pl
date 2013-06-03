@@ -770,22 +770,29 @@ unshow_matching_bracket_fragment(M) :->
 		 *	RESTYLE IDNTIFIERS	*
 		 *******************************/
 
-camelcase_word(M) :->
+camelcase_word(M, Arg:[int]) :->
 	"Change word to CamelCase"::
-	send(M, restyle_word, 'OneTwo').
+	send(M, restyle_word, 'OneTwo', Arg).
 
-underscores_word(M) :->
+underscores_word(M, Arg:[int]) :->
 	"Change word to undercore_mode"::
-	send(M, restyle_word, one_two).
+	send(M, restyle_word, one_two, Arg).
 
-restyle_word(M, Style:{'OneTwo',oneTwo,one_two,'One_Two'}) :->
+restyle_word(M, Style:{'OneTwo',oneTwo,one_two,'One_Two'}, Arg:[int]) :->
 	"Restyle the current identifier word"::
-	get(M, caret, Here),
-	get(M, scan, Here, word, 0, end, End),
-	get(M, contents, Here, End-Here, string(Word)),
-	restyle_identifier(Style, Word, NewWord),
-	send(M, delete, Here, End),
-	send(M, insert, NewWord).
+	default(Arg, 1, Times),
+	forall(between(1, Times, _),
+	       ( (   send(M, looking_at, '\\w')
+		 ->  get(M, caret, Here)
+		 ;   get(M, caret, Caret),
+		     get(M, scan, Caret, word, 1, start, Here)
+		 ),
+		 get(M, scan, Here, word, 0, end, End),
+		 get(M, contents, Here, End-Here, string(Word)),
+		 restyle_identifier(Style, Word, NewWord),
+		 send(M, delete, Here, End),
+		 send(M, caret, Here),
+		 send(M, insert, NewWord))).
 
 
 %%	restyle_identifier(+Style, +In, -Out) is det.
