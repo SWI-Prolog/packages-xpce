@@ -275,7 +275,7 @@ beginning_of_clause(E) :->
 	get(E, beginning_of_clause, Caret, BOC),
 	send(E, caret, BOC).
 
-beginning_of_if_then_else(E, OpenPos:int) :<-
+beginning_of_if_then_else(E, New:[bool], OpenPos:int) :<-
 	"Beginning of if-then-else construct"::
 	get(E, caret, Caret),
 	get(E, text_buffer, TB),
@@ -284,9 +284,12 @@ beginning_of_if_then_else(E, OpenPos:int) :<-
 	get(TB, character, OpenPos-1, Before),
 	\+ send(E?syntax, has_syntax, Before, word),
 	Before \== 0'?,				% '?(' for xpce
-	get(TB, scan, OpenPos, line, 0, end, EOL), % see <-argument_indent
-	get(TB, skip_comment, OpenPos+1, EOL, P1),
-	P1 \== EOL,
+	(   New \== @on
+	->  get(TB, scan, OpenPos, line, 0, end, EOL), % see <-argument_indent
+	    get(TB, skip_comment, OpenPos+1, EOL, P1),
+	    P1 \== EOL
+	;   true
+	),
 	get(E, beginning_of_clause, Caret, BegOfPred),
 	BegOfPred < OpenPos,
 	get(TB, scan_syntax, BegOfPred, OpenPos, tuple(code,_)).
@@ -339,7 +342,7 @@ insert_if_then_else(E, Times:[int], Char:char) :->
 	get(TB, scan, Caret, line, 0, start, SOL),
 	(   get(regex('\\s*(\\(|->|;)'), match, TB, SOL, L),
 	    Caret =:= SOL + L,
-	    get(E, beginning_of_if_then_else, OpenPos)
+	    get(E, beginning_of_if_then_else, @on, OpenPos)
 	->  get(E, column, OpenPos, Col),
 	    get(E, cond_indentation, Indent),
 	    send(E, align, Col+Indent)
