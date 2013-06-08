@@ -48,6 +48,7 @@
 :- use_module(library(pce_util)).
 :- use_module(library(persistent_frame)).
 :- use_module(library(debug)).
+:- use_module(library(threadutil)).
 :- use_module(trace).
 :- use_module(clause).
 :- use_module(util).
@@ -782,7 +783,7 @@ query(F) :->
 
 check_console(F) :->
 	"See whether the debugged thread has a console"::
-	(   in_debug_thread(F, thread_util:has_console)
+	(   in_debug_thread(F, thread_has_console)
 	->  true
 	;   send(@display, inform,
 		 'The debugged thread is not attached to a console.\n\c
