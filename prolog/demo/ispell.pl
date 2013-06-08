@@ -386,14 +386,19 @@ using `process ->wait'.
 
 spell(F) :->
 	send(F, clear_errors),
-
+	get(F?view, contents, String),
+	(   send(String, is_wide)
+	->  send(F, report, error, 'Cannot spell Unicode data (yet)'),
+	    fail
+	;   true
+	),
 	get(F, ispell_program, Prog),
 	new(P, process('/bin/sh', '-c', string('%s -l | sort -u', Prog))),
 	send(P, use_tty, @off),
 	send(P, input_message, message(F, mark_word, @arg1)),
 	send(F, report, progress, 'Running "%s" ...', Prog),
 	send(P, open),
-	send(P, append, F?view?contents),
+	send(P, append, String),
 	send(P, close),
 	send(P, wait),				% wait for completion
 	send(P, free),
