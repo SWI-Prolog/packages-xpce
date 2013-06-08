@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (C): 1985-2013, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -29,19 +28,26 @@
     the GNU General Public License.
 */
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Aims
+:- module(ispell,
+	  [ ispell/0
+	  , ispell/1
+	  ]).
+:- use_module(library(pce)).
+:- require([ send_list/3
+	   ]).
+
+/** <module> An ispell interface for XPCE
 
 This file  defines  a window-based  interfaced to  the GNU distributed
 ispell program.  It has been written with the following goals in mind:
 
-        # Test-case for editor/fragment handling, processes and regular
+        - Test-case for editor/fragment handling, processes and regular
           expressions
-        # Demo of text facilities, browsers, dialog-windows and process
+        - Demo of text facilities, browsers, dialog-windows and process
           interface
-        # A useful tool for correcting spelling errors
+        - A useful tool for correcting spelling errors
 
-Functionality
+## Functionality
 
 The UI consists of a view (text-window)  for the text to be corrected,
 two browsers, one with an alphabetical  list of errors detected by the
@@ -61,15 +67,15 @@ The error will appear  in the  `word' and  `correction' fields of  the
 dialog-window and  near-misses of the dictionary will  be shown in the
 corrections-browser.  Next, the user has several options:
 
-	# `Next'
+	- `Next'
 	  Don't change this occurrence, but search for the next.
-	# `Replace'
+	- `Replace'
 	  Replace this occurrence with the value of `correction' and
 	  search for the next.
-        # `Replace All'
+        - `Replace All'
 	  Replace all occurrences of this error by the value of
 	  `correction' .
-	# `Dict'
+	- `Dict'
 	  Remove this error from the text and error-browser and add
 	  the word to the user's personal dictionary.
 
@@ -78,15 +84,13 @@ field `correction'.  This field may also be edited directly.
 
 Finally, the text-window  is an EMACS-like  editor  and errors may  be
 corrected directly.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+*/
 
-:- module(ispell,
-	  [ ispell/0
-	  , ispell/1
-	  ]).
-:- use_module(library(pce)).
-:- require([ send_list/3
-	   ]).
+%%	ispell is det.
+%%	ispell(+File) is det.
+%
+%	Open the ispell interface. The predicate   ispell/1 loads a file
+%	into the interface.
 
 ispell :-
 	new(S, ispell),
