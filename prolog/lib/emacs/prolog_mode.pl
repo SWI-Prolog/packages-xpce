@@ -248,7 +248,7 @@ fixup_if_then_else(E) :->
 	).
 
 beginning_of_clause(E, Start:int, BOP:int) :<-
-	"Find start of predicate"::
+	"Find start of the a clause that contains Start"::
 	new(Here, number(Start)),
 	get(E, text_buffer, TB),
 	repeat,
