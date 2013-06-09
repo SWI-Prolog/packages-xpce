@@ -128,7 +128,7 @@ recognised:
     ~t	    Figure	Translate to XY of figure
     ~T	    Graphical	Set texture to texture of graphical
     ~C	    Graphical	Output colour of the graphical
-    ~N	    Name 	print text of name
+    ~N	    Name	print text of name
     ~S	    StringObj	Output text of StringObj with postscript escapes
     ~O	    Object	Output comment to start O
     ~P	    Int, Image	Output pattern of grayscale image with depth Int
@@ -149,7 +149,7 @@ _output(char *fm, va_list args)
     { case '\\':
 	switch(*++fm)				/* \ escapes */
 	{ case 'n':	ps_put_char('\n');
-	  		continue;
+			continue;
 	  case '\\':	ps_put_char('\\');
 			continue;
 	  case '\0':	ps_put_char('\\');
@@ -158,7 +158,7 @@ _output(char *fm, va_list args)
       case '~':
 	switch(*++fm)				/* ~ escapes */
 	{ case '~':	ps_put_char('~');
-    			continue;
+			continue;
 	  case '\0':	ps_put_char('~');
 			return;
 	  case 's':	putString(va_arg(args, char *));
@@ -169,9 +169,15 @@ _output(char *fm, va_list args)
 	  case 'D':	sprintf(tmp, "%d", va_arg(args, int));
 			putString(tmp);
 			continue;
-	  case 'f':	sprintf(tmp, "%.2f", va_arg(args, double) );
+	  case 'f':   { char *s;
+
+			sprintf(tmp, "%.2f", va_arg(args, double));
+			for(s=tmp; *s; s++)
+			  if ( !isalnum(*s) )
+			    *s = '.';
 			putString(tmp);
 			continue;
+		      }
 	  case 'm':   { Graphical gr = va_arg(args, Graphical);
 			sprintf(tmp, INTPTR_FORMAT " " INTPTR_FORMAT " moveto",
 				valInt(gr->area->x),
@@ -570,7 +576,7 @@ actual object.
 #define PSMACRO(a, b, r) { a, b, r }
 
 typedef struct
-{ Name 		name;
+{ Name		name;
   const char   *def;
   const char   *required;
 } psmacro;
