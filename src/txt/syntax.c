@@ -380,6 +380,10 @@ makeClassSyntaxTable(Class class)
 	     "Regular expression for end of sentence");
   localClass(class, NAME_paragraphEnd, NAME_syntax, "regex", NAME_both,
 	     "Regular expression for end of paragraph");
+  localClass(class, NAME_quasiQuotationStart, NAME_syntax, "name*", NAME_both,
+	     "Starts a quasi quotation");
+  localClass(class, NAME_quasiQuotationEnd, NAME_syntax, "name*", NAME_both,
+	     "Ends a quasi quotation");
   localClass(class, NAME_table, NAME_storage, "alien:ushort *", NAME_none,
 	     "Type-flags");
   localClass(class, NAME_context, NAME_storage, "alien:char *", NAME_none,

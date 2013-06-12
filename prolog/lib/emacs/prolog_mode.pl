@@ -112,6 +112,7 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
 	  '\\n' + comment_end,
 	  '/'  + comment_start('*'),
 	  '*'  + comment_end('/'),
+	  quasi_quotation('{|', '|}'),
 
 	  paragraph_end([ '\\s*$',		% empty line
 			  '/\\*',		% comment start

@@ -1009,10 +1009,22 @@ getMatchingQuoteTextBuffer(TextBuffer tb, Int idx, Name direction)
 		 *        SYNTAX HANDLING	*
 		 *******************************/
 
-#define SST_PLAIN	0x100		/* syntax-state */
-#define SST_COMMENT1	0x200		/* 1-character comment-string */
-#define SST_COMMENT2	0x400		/* 2-character comment-string */
-#define SST_STRING	0x800		/* string (low-order is start) */
+#define SST_PLAIN	0x0100		/* syntax-state */
+#define SST_COMMENT1	0x0200		/* 1-character comment-string */
+#define SST_COMMENT2	0x0400		/* 2-character comment-string */
+#define SST_STRING	0x0800		/* string (low-order is start) */
+#define SST_QQ		0x1000		/* Quasi quotation */
+
+static int
+match_qq(TextBuffer tb, intptr_t here, const char *s)
+{ for(; *s; s++)
+  { if ( fetch(here) != *s )
+      fail;
+  }
+
+  succeed;
+}
+
 
 static int
 scan_syntax_textbuffer(TextBuffer tb,
@@ -1023,6 +1035,10 @@ scan_syntax_textbuffer(TextBuffer tb,
   SyntaxTable syntax = tb->syntax;	/* syntax-table */
   int state = SST_PLAIN;		/* initial/current state */
   intptr_t tokenstart = from;
+  char *qq_start = NULL;
+
+  if ( notNil(syntax->qq_start) )
+    qq_start = strName(syntax->qq_start);
 
   for(; here < to; here++)
   { int c = fetch(here);
@@ -1096,6 +1112,28 @@ scan_syntax_textbuffer(TextBuffer tb,
 
       state = SST_COMMENT2;
       break;
+    } else if ( qq_start && c == qq_start[0] &&
+		match_qq(tb, here+1, qq_start+1) )
+    { char *qq_end;
+
+      if ( notNil(syntax->qq_end) )
+	qq_end = strName(syntax->qq_end);
+      else
+	goto cont;			/* no end.  Warning? */
+
+      tokenstart = here;
+
+      for(here += strlen(qq_start); here < to; here++)
+      { int c = fetch(here);
+
+	if ( c == qq_end[0] && match_qq(tb, here+1, qq_end+1) )
+	{ here += strlen(qq_end);
+	  goto cont;
+	}
+      }
+
+      state = SST_QQ;
+      break;
     }
 
   cont:
@@ -1131,6 +1169,9 @@ getScanSyntaxTextBuffer(TextBuffer tb, Int f, Int t)
       break;
     case SST_STRING:
       class = NAME_string;
+      break;
+    case SST_QQ:
+      class = NAME_quasiQuotation;
       break;
     default:
       assert(0);

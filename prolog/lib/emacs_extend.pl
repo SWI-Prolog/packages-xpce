@@ -192,6 +192,9 @@ syntax(sentence_end(End), ST) :-
 	;   Regex = End
 	),
 	send(ST, sentence_end, Regex).
+syntax(quasi_quotation(Start, End), ST) :-
+	send(ST, quasi_quotation_start, Start),
+	send(ST, quasi_quotation_end, End).
 
 
 		 /*******************************

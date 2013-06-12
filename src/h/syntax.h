@@ -31,8 +31,10 @@ NewClass(syntax_table)
   Int		size;			/* Size of the table (256) */
   Regex		sentence_end;		/* End-Of-Sentence */
   Regex		paragraph_end;		/* End-Of-Pargraph */
-  unsigned short       *table;		/* Type-flags */
-  unsigned char *context;		/* Context info */
+  Name		qq_start;		/* Quasi quotation start */
+  Name		qq_end;			/* Quasi quotation end */
+  unsigned short *table;		/* Type-flags */
+  unsigned char  *context;		/* Context info */
 End;
 
 #define makeCFlag(n)	(1 << (n-1))
@@ -41,16 +43,16 @@ End;
 #define UC	makeCFlag(2)		/* Upper case letter */
 #define DI	makeCFlag(3)		/* Digit */
 #define WS	makeCFlag(4)		/* Word separator (in symbol) */
-#define SY	makeCFlag(5) 		/* Other symbol-characters */
-#define OB	makeCFlag(6)    	/* Open Brace (context: close) */
-#define CB	makeCFlag(7)    	/* Close Brace (context: open) */
-#define EL	makeCFlag(8)    	/* Ends Line */
-#define BL	makeCFlag(9)    	/* Blank */
-#define QT	makeCFlag(10)   	/* String quote (context: escape) */
+#define SY	makeCFlag(5)		/* Other symbol-characters */
+#define OB	makeCFlag(6)		/* Open Brace (context: close) */
+#define CB	makeCFlag(7)		/* Close Brace (context: open) */
+#define EL	makeCFlag(8)		/* Ends Line */
+#define BL	makeCFlag(9)		/* Blank */
+#define QT	makeCFlag(10)		/* String quote (context: escape) */
 #define PU	makeCFlag(11)		/* Punctuation */
 #define EB	makeCFlag(12)		/* End Buffer/string */
 #define CS	makeCFlag(13)		/* Comment-start (context: 2nd char) */
-#define CE	makeCFlag(14)  		/* Comment-end (context: 2nd char) */
+#define CE	makeCFlag(14)		/* Comment-end (context: 2nd char) */
 #define CT	makeCFlag(15)		/* Control character */
 #define XD	makeCFlag(16)		/* Xdigit */
 
