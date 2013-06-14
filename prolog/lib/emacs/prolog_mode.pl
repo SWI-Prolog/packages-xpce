@@ -49,7 +49,7 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
 	[ insert_if_then_else	       = key('(') + key(';') + key('>'),
 	  insert_quote		       = key('"'),
 	  insert_percent	       = key('%'),
-	  insert_quasi_quote	       = key('!'),
+	  insert_quasi_quote	       = key('|'),
 
 	  newline_and_indent	       = key('RET'),
 
@@ -112,7 +112,7 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
 	  '\\n' + comment_end,
 	  '/'  + comment_start('*'),
 	  '*'  + comment_end('/'),
-	  quasi_quotation('{|', '|}'),
+	  quasi_quotation('||', '|}'),
 
 	  paragraph_end([ '\\s*$',		% empty line
 			  '/\\*',		% comment start
@@ -143,10 +143,13 @@ variable(warnings,	   int := 0,	 get, "Number of warnings").
 variable(errors,	   int := 0,	 get, "Number of errors").
 variable(body_indentation, int,		 get, "Indentation for body-goals").
 variable(cond_indentation, int,		 get, "Indent step for conditional").
+variable(quasiquotation_syntax,
+			   name*,	 both, "Default quasiquotation syntax").
 
-class_variable(body_indentation, int,  8).
-class_variable(cond_indentation, int,  4).
-class_variable(indent_tabs,      bool, @on,
+class_variable(quasiquotation_syntax, name*, @nil).
+class_variable(body_indentation,      int,   8).
+class_variable(cond_indentation,      int,   4).
+class_variable(indent_tabs,           bool,  @on,
 	       "Use tabs for indentation").
 
 
@@ -434,12 +437,19 @@ indent_comment_line(E) :->
 
 
 insert_quasi_quote(E) :->
-	"Deal with <![Type[Quoted]]>"::
+	"Deal with {|Syntax||Quoted|}>"::
+	send(E, insert, '|'),
 	get(E, caret, Here),
-	(   send(E, looking_at, '[^#$&*+-./:<=>?@\\^~]<', Here, 0)
-	->  send(E, insert, '![[]]>'),
-	    send(E, backward_char, 4)
-	;   send(E, insert, '!')
+	(   send(E, looking_at, '{\\|', Here, 0)
+	->  (   get(E, quasiquotation_syntax, Syntax),
+	        Syntax \== @nil
+	    ->	send(E, insert, Syntax),
+		send(E, insert, '|||}'),
+		send(E, backward_char, 2)
+	    ;	send(E, insert, '|||}'),
+		send(E, backward_char, 4)
+	    )
+	;   true
 	).
 
 
