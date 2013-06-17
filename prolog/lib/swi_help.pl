@@ -48,7 +48,6 @@ This module is normally hooked into help/1 by the module swi_hooks.pl.
 :- pce_autoload(toc_window, library(pce_toc)).
 :- use_module(library(helpidx)).
 :- require([ start_emacs/0
-	   , '$apropos_match'/2
 	   , absolute_file_name/3
 	   , append/3
 	   , atom_length/2
@@ -871,8 +870,9 @@ append_apropos(V, Jump, Summary) :-
 	atom_length(Jump, Len),
 	new(_, fragment(V, Caret, Len, button)).
 
-apropos_match(A, B) :-
-	'$apropos_match'(A, B).			% C defined for performance
+apropos_match(Needle, Haystack) :-
+	sub_atom_icasechk(Haystack, _, Needle).
+
 
 		 /*******************************
 		 *	       EXPLAIN		*
