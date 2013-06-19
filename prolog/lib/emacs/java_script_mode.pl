@@ -38,4 +38,13 @@
 		    ],
 		    []).
 
+back_skip_if_etc(E, Pos:int, Start:int) :<-
+	"Find indent for stuff before {"::
+	get_super(E, back_skip_if_etc, Pos, Start0),
+	get(E, scan, Pos, line, 0, start, SOL),
+	(   get(E, looking_at, 'function\\s*', Start0, SOL, Len)
+	->  Start is Start0 - Len
+	;   Start = Start0
+	).
+
 :- emacs_end_mode.

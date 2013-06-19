@@ -183,6 +183,7 @@ indent_statement(E) :->
 	get(E, matching_bracket, Caret, '}', _), % in C-body
 	get(TB, skip_comment, Caret-1, 0, P0),
 	get(TB, character, P0, Chr),
+	debug(emacs(indent), 'Statement: ~c at ~d', [Chr, P0]),
 	(   memberchk(Chr, ";}")	% new statement
 	->  get(E, backward_statement, P0+1, P1),
 	    back_prefixes(E, P1, P2),
