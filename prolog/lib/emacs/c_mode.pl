@@ -78,15 +78,9 @@ indent_line(E, Times:[int]) :->
 	default(Times, 1, Tms),
 	(   between(1, Tms, N),
 	    send(E, beginning_of_text_on_line),
-	    (	(   send(E, indent_close_brace_line)
-		;   send(E, indent_close_bracket_line)
-		;   send(E, indent_expression_line, ')]')
-		;   send(E, indent_label)
-		;   send(E, indent_cpp_line)
-		;   send(E, indent_statement)
-		;   send(E, align_with_previous_line, '\\s*(\\{\\s*)*')
-		)
-	    ->	true
+	    (	indent_method(Method),
+		send(E, Method)
+	    ->	debug(emacs(indent), 'Indented line using ~q', [Method])
 	    ),
 	    (	N == Tms
 	    ->	true
@@ -95,6 +89,15 @@ indent_line(E, Times:[int]) :->
 	    fail
 	;   true
 	).
+
+indent_method(indent_close_brace_line).
+indent_method(indent_close_bracket_line).
+indent_method(indent_expression_line(')]')).
+indent_method(indent_label).
+indent_method(indent_cpp_line).
+indent_method(indent_statement).
+indent_method(align_with_previous_line('\\s*(\\{\\s*)*')).
+
 
 backward_skip_statement(TB, Here, Start) :-
 	get(TB, skip_comment, Here, 0, H1),
