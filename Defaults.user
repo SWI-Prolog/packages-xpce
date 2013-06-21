@@ -23,6 +23,12 @@
 !key_binding.style:	emacs
 !key_binding.style:	apple
 
+! Creating a selection using  the  mouse   puts  the  selection into the
+! copy/paste ! buffer by default.  This behaviour can be disabled with the
+! preference below.
+
+!editor.auto_copy:	@off
+
 ! By default, the editors are case-insensitive in search and replace.  Set to
 ! @on to use case-sensitive search and replace
 
@@ -100,8 +106,6 @@
 !			  symbol    := font(symbol,    roman,   12)  \
 !			]
 
-! On Windows, specified font sizes are multiplied by the factor below to
-! get more or less the same behaviour as for X11.  You can change this scale
-! to rescale all your fonts.
+! Scale all fonts with a constant factor.
 
 !font.scale: 1.4
