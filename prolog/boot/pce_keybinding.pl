@@ -63,8 +63,12 @@ binding(cua, 'emacs$fundamental',
 	  '\\C-p' = print
 	]).
 binding(apple, editor,
+	[ '\\es'  = save_buffer,
+	  '\\ez'  = undo
+	]).
+binding(apple, 'emacs$fundamental',
 	[ '\\ec'  = copy_or_capitalize_word,
-	  '\\es'  = save_buffer
+	  '\\ex'  = cut_or_execute_extended_command
 	]).
 binding(apple, emacs_page,
 	[ '\\ev'  = paste_or_scroll_down
@@ -268,6 +272,15 @@ copy_or_capitalize_word(E, Arg:[int]) :->
 	->  send(E, copy)
 	;   send(E, capitalize_word, Arg)
 	).
+
+cut_or_execute_extended_command(E, Arg:[int]) :->
+	"Command-X cut; ESC-x starts extended command"::
+	(   Arg == @default,
+	    send(@event, has_modifier, m)
+	->  send(E, cut)
+	;   send(E, noarg_call, execute_extended_command, Arg)
+	).
+
 
 paste_or_scroll_down(E, Arg:[int]) :->
 	"Command-v pasts; ESC v scrolls down"::
