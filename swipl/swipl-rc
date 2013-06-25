@@ -107,7 +107,7 @@ pce_setup_ :-
 	(   memberchk('--pce', Args)
 	;   prolog_to_os_filename(Path, Argv0),
 	    file_base_name(Path, Base),
-	    '$apropos_match'(pce, Base)
+	    sub_atom_icasechk(Base, _, pce)
 	), !,
 	load_files(user:library(pce), [silent(true)]),
 	flag('$banner_goal', _, pce_welcome).
