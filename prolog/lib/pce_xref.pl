@@ -2087,14 +2087,12 @@ undefined(File, Undef) :-
 	xref_called_cond(File, Undef, Cond),
 	\+ (   available(File, Undef, How),
 	       How \== plain_file
-	   ;   included_if_defined(Cond, Undef)
-	   ).
+	   ),
+	included_if_defined(Cond, Undef).
 undefined(File, Undef) :-
 	xref_called_cond(File, Undef, Cond),
-	\+ (   available(File, Undef, _)
-	   ;   included_if_defined(Cond, Undef)
-	   ).
-
+	\+ available(File, Undef, _),
+	included_if_defined(Cond, Undef).
 
 %%	included_if_defined(+Condition, +Callable) is semidet.
 
@@ -2102,7 +2100,7 @@ included_if_defined(true, _)  :- !.
 included_if_defined(false, _) :- !, fail.
 included_if_defined(fail, _)  :- !, fail.
 included_if_defined(current_predicate(Name/Arity), Callable) :-
-	functor(Callable, Name, Arity), !.
+	\+ functor(Callable, Name, Arity), !.
 included_if_defined(\+ Cond, Callable) :- !,
 	\+ included_if_defined(Cond, Callable).
 included_if_defined((A,B), Callable) :- !,
