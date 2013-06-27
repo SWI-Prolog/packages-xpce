@@ -121,11 +121,13 @@ AC_CHECK_SIZEOF(long,  4)
 AC_CHECK_SIZEOF(double, 8)
 
 AC_CHECK_FUNC(socket, [], [
+	     unset ac_cv_func_socket
              AC_CHECK_LIB(socket, socket,
                       [NETLIBS="$NETLIBS -lsocket"; LIBS="$LIBS -lsocket"]
                       AC_DEFINE(HAVE_LIBSOCKET, 1,
                       "Define if you have the socket library (-lsocket)."))])
 AC_CHECK_FUNC(gethostent, [], [
+	     unset ac_check_func_gethostent
              AC_CHECK_LIB(nsl, gethostent,
                       [NETLIBS="$NETLIBS -lnsl"]
                       AC_DEFINE(HAVE_LIBNSL, 1,
