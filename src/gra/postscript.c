@@ -173,7 +173,7 @@ _output(char *fm, va_list args)
 
 			sprintf(tmp, "%.2f", va_arg(args, double));
 			for(s=tmp; *s; s++)
-			  if ( !isalnum(*s) )
+			  if ( *s != '-' && !isalnum(*s) )
 			    *s = '.';
 			putString(tmp);
 			continue;
