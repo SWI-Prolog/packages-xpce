@@ -37,7 +37,7 @@ static Name	getAccessArrowMethod(Method m);
 status
 createMethod(Method m, Name name, Vector types, StringObj doc, Func action)
 { m->name        = name;
-  m->group 	 = NIL;
+  m->group	 = NIL;
   m->message	 = NIL;
   m->types	 = NIL;
   m->function    = action;
@@ -77,25 +77,6 @@ initialiseMethod(Method m, Name name, Vector types, Code msg, StringObj doc, Sou
     setDFlag(m, D_HOSTMETHOD);
 
   return typesMethod(m, types);
-}
-
-
-static status
-storeFdMethod(Method m, FileObj file)
-{ if ( storeSlotsObject(m, file) &&
-       storeWordFile(file, (Any)m->function))
-    succeed;
-
-  fail;
-}
-
-
-static status
-loadMethod(Method m, IOSTREAM *fd, ClassDef def)
-{ TRY(loadSlotsObject(m, fd, def));
-  m->function = (Func) loadWord(fd);
-
-  succeed;
 }
 
 
@@ -542,8 +523,6 @@ status
 makeClassMethod(Class class)
 { declareClass(class, &method_decls);
 
-  setLoadStoreFunctionClass(class, loadMethod, storeFdMethod);
-					/* for sharing of templates */
   cloneStyleVariableClass(class, NAME_types, NAME_reference);
   cloneStyleVariableClass(class, NAME_summary, NAME_reference);
   cloneStyleVariableClass(class, NAME_source, NAME_reference);
