@@ -366,8 +366,8 @@ ws_pointer_location_display(DisplayObj d, int *x, int *y)
 
 static HGLOBAL
 ws_string_to_global_mem(String s)
-{ int size  = s->size;
-  int extra = str_count_chr(s, 0, s->size, '\n');
+{ int size  = s->s_size;
+  int extra = str_count_chr(s, 0, s->s_size, '\n');
   HGLOBAL mem;
   wchar_t *data;
   int i;

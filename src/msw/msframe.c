@@ -61,7 +61,7 @@ WinFrameClass()
   if ( !cname )
   { TCHAR buf[50];
 
-    wsprintf(buf, _T("PceFrame%ld"), (unsigned long)PceHInstance);
+    wsprintf(buf, _T("PceFrame%ld"), (unsigned long)(intptr_t)PceHInstance);
     cname = store_stringW(buf);
 
     wndClass.style		= 0;
@@ -97,7 +97,7 @@ WinPopupFrameClass()
   if ( !cname )
   { TCHAR buf[50];
 
-    wsprintf(buf, _T("PcePopupFrame%ld"), (unsigned long)PceHInstance);
+    wsprintf(buf, _T("PcePopupFrame%ld"), (unsigned long)(intptr_t)PceHInstance);
     cname = store_stringW(buf);
 
   retry:
@@ -304,15 +304,15 @@ do_frame_wnd_proc(FrameObj fr,
       return FALSE;
     }
     case WM_PALETTECHANGED:
-      if ( (HWND)wParam != hwnd )
+      if ( (HWND)(intptr_t)wParam != hwnd )
 	goto case_query;
 
       return FALSE;
 
     case WM_ERASEBKGND:			/* TODO: Add colourmap code */
-    { HDC hdc = (HDC) wParam;
+      { HDC hdc = (HDC) (intptr_t)wParam;
       RECT rect;
-      COLORREF rgb = (COLORREF) getXrefObject(fr->background, fr->display);
+      COLORREF rgb = (COLORREF) (intptr_t)getXrefObject(fr->background, fr->display);
       HBRUSH hbrush;
 
       rgb = GetNearestColor(hdc, rgb);
@@ -550,7 +550,6 @@ keyboard_event_frame(FrameObj fr, Any id,
   POINT pt;
   EventObj ev;
   AnswerMark mark;
-  status rval = FALSE;
   Any receiver;
   unsigned long m;
 
@@ -584,7 +583,7 @@ keyboard_event_frame(FrameObj fr, Any id,
   }
 
   addCodeReference(ev);
-  rval = postNamedEvent(ev, receiver, DEFAULT, NAME_postEvent);
+  postNamedEvent(ev, receiver, DEFAULT, NAME_postEvent);
   delCodeReference(ev);
   freeableObj(ev);
 
@@ -779,19 +778,16 @@ ws_place_frame(FrameObj fr)
 { static int last_x = 0, last_y = 0;
   static int placed = 0;
   Monitor mon;
-  int mx, my, mw, mh;
+  int mw, mh;
   int fw = valInt(fr->area->w);
   int fh = valInt(fr->area->h);
   int xborder, yborder, ycap;
 
   if ( (mon=getMonitorDisplay(fr->display, DEFAULT)) )
-  { mx = valInt(mon->area->x);
-    my = valInt(mon->area->y);
-    mw = valInt(mon->area->w);
+  { mw = valInt(mon->area->w);
     mh = valInt(mon->area->h);
   } else
-  { mx = my = 0;
-    mw = valInt(getWidthDisplay(fr->display));
+  { mw = valInt(getWidthDisplay(fr->display));
     mh = valInt(getHeightDisplay(fr->display));
     mon = (Monitor)DEFAULT;
   }
@@ -1041,7 +1037,6 @@ ws_geometry_frame(FrameObj fr, Int px, Int py, Int pw, Int ph, Monitor mon)
 
   if ( f && f->hwnd )
   { UINT flags = SWP_NOACTIVATE|SWP_NOZORDER;
-    Area a = fr->area;
     RECT rect;
     int w, h;
 
@@ -1321,7 +1316,7 @@ ws_image_of_frame(FrameObj fr)
     w = rect.right - rect.left;
     h = rect.bottom - rect.top;
 
-    DEBUG(NAME_image, Cprintf("hdc = %d, size = %dx%d\n", (int) hdc, w, h));
+    DEBUG(NAME_image, Cprintf("hdc = %p, size = %dx%d\n", hdc, w, h));
     image = answerObject(ClassImage, NIL,
 			 toInt(w), toInt(h), NAME_pixmap, EAV);
     assign(image, display, fr->display);

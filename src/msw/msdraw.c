@@ -1187,7 +1187,7 @@ winBrushTable()
 
 void
 declareWindowsBrush(Any obj, HBRUSH brush)
-{ Int b = toInt((long)brush);
+{ Int b = toInt((intptr_t)brush);
 
   assert((HBRUSH) valInt(b) == brush);
   appendHashTable(winBrushTable(), obj, b);
@@ -1486,8 +1486,8 @@ COLORREF
 cref_colour(Colour c)
 { COLORREF r;
 
-  if ( !(r = (COLORREF) getExistingXrefObject(c, context.display)) )
-  { r = (COLORREF) getXrefObject(c, context.display);
+  if ( !(r = (COLORREF)(intptr_t) getExistingXrefObject(c, context.display)) )
+  { r = (COLORREF)(intptr_t) getXrefObject(c, context.display);
     if ( context.hpal )
       RealizePalette(context.hdc);
   }
@@ -1620,14 +1620,14 @@ draw_segments(lsegment *s, int n, HPEN pen)
 void
 r_3d_segments(int n, ISegment s, Elevation e, int light)
 { HPEN old;
-  int i, x = PCE_MAX_INT, y = PCE_MAX_INT;
+  int i, x = 0, y = 0;
 
   r_elevation(e);
 
   old = ZSelectObject(context.hdc, light ? context.relief_pen
 					 : context.shadow_pen);
   for(i=0; i<n; i++, s++)
-  { if ( x != s->x1 || y != s->y1 )
+  { if ( i == 0 || x != s->x1 || y != s->y1 )
       MoveTo(context.hdc, s->x1, s->y1);
     LineTo(context.hdc, s->x2, s->y2);
     x = s->x2; y = s->y2;
@@ -2287,8 +2287,8 @@ r_op_image(Image image, int sx, int sy, int x, int y, int w, int h, Name op)
 
   DEBUG(NAME_redraw,
 	Cprintf("r_op_image(%s, %d, %d, %d, %d, %d, %d, %s) "
-		"(bm=0x%x, mhdc=0x%x)\n",
-		pp(image), sx, sy, x, y, w, h, pp(op), (long)bm, (long)mhdc));
+		"(bm=%p, mhdc=%p)\n",
+		pp(image), sx, sy, x, y, w, h, pp(op), bm, mhdc));
   obm = ZSelectObject(mhdc, bm);
   BitBlt(context.hdc, x, y, w, h, mhdc, sx, sy, rop);
   if ( op == NAME_xor )
@@ -2736,7 +2736,7 @@ s_font(FontObj font)
 
     DEBUG(NAME_font,
 	  Cprintf("s_font(%s) (hfont = 0x%x)%s\n",
-		  pp(font), (int)wsf->hfont,
+		  pp(font), (int)(intptr_t)wsf->hfont,
 		  context.hdc == default_hdc ? " (default_hdc)" : ""));
 
     context.wsf = wsf;
@@ -2815,7 +2815,7 @@ s_width_(String s, int from, int to)
   { SIZE size;
 
     if ( isstrA(s) )
-    { GetTextExtentPoint32A(context.hdc, s->s_textA+from, to-from, &size);
+      { GetTextExtentPoint32A(context.hdc, (char*)s->s_textA+from, to-from, &size);
     } else
     { GetTextExtentPoint32W(context.hdc, s->s_textW+from, to-from, &size);
     }
@@ -2829,10 +2829,10 @@ int
 str_width(String s, int from, int to, FontObj f)
 { if ( from < 0 )
     from = 0;
-  if ( from >= s->size || to <= from )
+  if ( from >= s->s_size || to <= from )
     return 0;
-  if ( to > s->size )
-    to = s->size;
+  if ( to > s->s_size )
+    to = s->s_size;
 
   s_font(f);
   return s_width_(s, from, to);
@@ -2853,7 +2853,7 @@ s_printA(charA *s, int l, int x, int y, FontObj f)
 { if ( l > 0 )
   { s_font(f);
     y -= context.wsf->ascent;
-    TextOut(context.hdc, x, y, s, l);
+    TextOut(context.hdc, x, y, (char*)s, l);
   }
 }
 
@@ -2871,9 +2871,9 @@ s_printW(charW *s, int l, int x, int y, FontObj f)
 void
 s_print(String s, int x, int y, FontObj f)
 { if ( isstrA(s) )
-    s_printA(s->s_textA, s->size, x, y, f);
+    s_printA(s->s_textA, s->s_size, x, y, f);
   else
-    s_printW(s->s_textW, s->size, x, y, f);
+    s_printW(s->s_textW, s->s_size, x, y, f);
 }
 
 
@@ -2891,15 +2891,15 @@ the baseline.
 static void
 str_text(String s, int x, int y)
 { if ( isstrA(s) )
-    TextOutA(context.hdc, x, y, s->s_textA, s->size);
+    TextOutA(context.hdc, x, y, (char*)s->s_textA, s->s_size);
   else
-    TextOutW(context.hdc, x, y, s->s_textW, s->size);
+    TextOutW(context.hdc, x, y, s->s_textW, s->s_size);
 }
 
 
 void
 str_size(String s, FontObj font, int *width, int *height)
-{ if ( s->size > 0 )
+{ if ( s->s_size > 0 )
   { RECT rect;
     UINT flags = DT_CALCRECT|DT_EXTERNALLEADING|DT_NOCLIP|DT_NOPREFIX;
     int rval;
@@ -2911,16 +2911,16 @@ str_size(String s, FontObj font, int *width, int *height)
 
     s_font(font);
     if ( isstrA(s) )
-      rval = DrawTextA(context.hdc, s->s_textA, s->size, &rect, flags);
+      rval = DrawTextA(context.hdc, (char*)s->s_textA, s->s_size, &rect, flags);
     else
-      rval = DrawTextW(context.hdc, s->s_textW, s->size, &rect, flags);
+      rval = DrawTextW(context.hdc, s->s_textW, s->s_size, &rect, flags);
 
     DEBUG(NAME_font,
 	  { char buf[32];
-	    int n = min(s->size, 25);
-	    strncpy(buf, s->s_textA, n);
+	    int n = min(s->s_size, 25);
+	    strncpy(buf, (char*)s->s_textA, n);
 	    buf[n] = EOS;
-	    if ( s->size > 25 )
+	    if ( s->s_size > 25 )
 	      strcat(buf, " ...");
 
 	    Cprintf("DrawText(\"%s\") --> %d\n", buf, rval);
@@ -2931,7 +2931,7 @@ str_size(String s, FontObj font, int *width, int *height)
     *width = 0;				/* looks like a Windows bug ... */
 
   *height = valInt(getHeightFont(font)) *
-	    (str_count_chr(s, 0, s->size, '\n')+1);
+	    (str_count_chr(s, 0, s->s_size, '\n')+1);
 }
 
 
@@ -2954,7 +2954,7 @@ typedef struct
 static void
 str_break_into_lines(String s, strTextLine *line, int *nlines, int maxlines)
 { int here = 0;
-  int size = s->size;
+  int size = s->s_size;
   int nls = 0;
 
   *nlines = 0;
@@ -2962,7 +2962,7 @@ str_break_into_lines(String s, strTextLine *line, int *nlines, int maxlines)
   if ( size == 0 )			/* totally empty: report one line */
   { str_cphdr(&line->text, s);
     line->text.s_text = s->s_text;
-    line->text.size = 0;
+    line->text.s_size = 0;
     *nlines = 1;
     return;
   }
@@ -2974,16 +2974,16 @@ str_break_into_lines(String s, strTextLine *line, int *nlines, int maxlines)
     line->text.s_text = str_textp(s, here);
 
     if ( (el = str_next_index(s, here, '\n')) >= 0 )
-    { line->text.size = el - here;
+    { line->text.s_size = el - here;
       here = el + 1;
       if ( here == size )		/* last char is newline: add a line */
       { line++, nls++;
 	str_cphdr(&line->text, s);
 	line->text.s_text = str_textp(s, here);
-	line->text.size = 0;
+	line->text.s_size = 0;
       }
     } else
-    { line->text.size = size - here;
+    { line->text.s_size = size - here;
       here = size;
     }
   }
@@ -3011,7 +3011,7 @@ str_compute_lines(strTextLine *lines, int nlines, FontObj font,
   for( n = 0, line = lines; n++ < nlines; line++, cy += th )
   { line->y      = cy;
     line->height = th;
-    line->width  = str_width(&line->text, 0, line->text.size, font);
+    line->width  = str_width(&line->text, 0, line->text.s_size, font);
 
     if ( hadjust == NAME_left )
       line->x = x;
@@ -3030,7 +3030,7 @@ ps_string(String s, FontObj font, int x, int y, int w, Name format, int flags)
   int nlines, n;
   int baseline;
 
-  if ( s->size == 0 )
+  if ( s->s_size == 0 )
     return;
 
   s_font(font);
@@ -3041,7 +3041,7 @@ ps_string(String s, FontObj font, int x, int y, int w, Name format, int flags)
   str_compute_lines(lines, nlines, font, x, y, w, 0, format, NAME_top);
 
   for(n=0, line = lines; n++ < nlines; line++)
-  { if ( line->text.size > 0 )
+  { if ( line->text.s_size > 0 )
     { ps_output("~D ~D 0 ~D ~a text\n",
 		line->x, line->y+baseline,
 		line->width, &line->text);
@@ -3065,7 +3065,7 @@ str_string(String s, FontObj font,
   int n;
   int baseline;
 
-  if ( s->size == 0 )
+  if ( s->s_size == 0 )
     return;
 
   s_font(font);
@@ -3104,7 +3104,7 @@ str_draw_text_lines(int acc, FontObj font,
     { int cx = line->x;
       int cn;
 
-      for(cn=0; cn<line->text.size; cn++)
+      for(cn=0; cn<line->text.s_size; cn++)
       { wint_t c  = str_fetch(&line->text, cn);
 	int cw = c_width(c, font);
 
@@ -3148,7 +3148,7 @@ str_label(String s, int acc, FontObj font, int x, int y, int w, int h,
   int nlines;
   UINT oalign;
 
-  if ( s->size == 0 )
+  if ( s->s_size == 0 )
     return;
 
   s_font(font);
@@ -3194,7 +3194,7 @@ str_stext(String s, int f, int len, Style style)
     }
 
     if ( isstrA(s) )
-    { TextOut(context.hdc, 0, 0, s->s_textA+f, len);
+      { TextOut(context.hdc, 0, 0, (char*)s->s_textA+f, len);
     } else
     { TextOutW(context.hdc, 0, 0, s->s_textW+f, len);
     }
@@ -3220,7 +3220,7 @@ str_selected_string(String s, FontObj font,
   int here = 0;
   UINT oalign;
 
-  if ( s->size == 0 )
+  if ( s->s_size == 0 )
     return;
 
   s_font(font);
@@ -3231,7 +3231,7 @@ str_selected_string(String s, FontObj font,
   oalign = SetTextAlign(context.hdc, TA_BASELINE|TA_LEFT|TA_UPDATECP);
 
   for(n=0, line = lines; n++ < nlines; line++)
-  { int len = line->text.size;
+  { int len = line->text.s_size;
 
     MoveToEx(context.hdc, line->x, line->y+baseline, NULL);
 
