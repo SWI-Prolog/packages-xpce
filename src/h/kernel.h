@@ -372,9 +372,16 @@ integer is declared as of type Int (for casting purposes). The following
 test, conversion and computation macro's are provided.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#ifndef INTPTR_FORMAT
-#if SIZEOF_LONG == SIZEOF_VOIDP
-#define INTPTR_FORMAT "%ld"		/* printf format for intptr_t */
+/* TBD: INTPTR_FORMAT is available as PRTdPTR from <inttypes.h>.  Our
+   include for fixed size integers is a bit flaky on various platforms
+   though
+*/
+
+#ifndef INTPTR_FORMAT		/* printf format for intptr_t */
+#if SIZEOF_INT == SIZEOF_VOIDP
+#define INTPTR_FORMAT "%d"
+#elif SIZEOF_LONG == SIZEOF_VOIDP
+#define INTPTR_FORMAT "%ld"
 #elif defined(__WIN64)
 #define INTPTR_FORMAT "%I64d"
 #else

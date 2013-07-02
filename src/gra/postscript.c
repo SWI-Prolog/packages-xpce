@@ -319,7 +319,7 @@ ps_put_string(String s)
 			{ ps_put_char(c);
 			} else
 			{ char tmp[8];
-			  sprintf(tmp, "\\%03o", c);
+			  sprintf(tmp, "\\%03o", (unsigned int)c);
 			  putString(tmp);
 			}
     }
