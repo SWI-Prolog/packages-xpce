@@ -198,8 +198,7 @@ ws_kill_process(Process p, int sig)
        sig == 15 )
   { TerminateProcess(pi->hProcess, sig);
   } else if ( sig == 3 )
-    { GenerateConsoleCtrlEvent(CTRL_C_EVENT, (intptr_t)pi->hProcess);
-    					   /* TBD: must be process group id */
+  { GenerateConsoleCtrlEvent(CTRL_C_EVENT, pi->dwProcessId);
   } else
     Cprintf("%s: process->kill only supports INT, KILL\n", pp(p));
 }
