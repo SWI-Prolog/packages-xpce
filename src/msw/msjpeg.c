@@ -52,7 +52,7 @@ extern void attach_dib_image(Image image, BITMAPINFO *bmi, BYTE *bits);
 int
 write_jpeg_file(IOSTREAM *fd, Image image, HBITMAP bm)
 { BITMAP bitmap;
-  int width, height, depth;
+  int width, height;
   int y;
   HDC hdc;
   HBITMAP obm;
@@ -76,7 +76,7 @@ write_jpeg_file(IOSTREAM *fd, Image image, HBITMAP bm)
 
   width  = bitmap.bmWidth;
   height = bitmap.bmHeight;
-  depth  = bitmap.bmPlanes * bitmap.bmBitsPixel;
+  /*depth  = bitmap.bmPlanes * bitmap.bmBitsPixel;*/
 
   hdc = CreateCompatibleDC(NULL);
   if ( hpal )
@@ -250,7 +250,7 @@ read_jpeg_file(IOSTREAM *fd, Image image)
   JSAMPLE **buff;
   BYTE *data;
   BITMAPINFO *dib = NULL;
-  BITMAPINFOHEADER *header;
+  BITMAPINFOHEADER *header = NULL; /* silence compiler */
   DisplayObj d = image->display;
   int outline;
   JpegColourMap cmap = NULL;
@@ -378,7 +378,7 @@ read_jpeg_file(IOSTREAM *fd, Image image)
     { if ( m->marker == JPEG_COM )
       { string s;
 
-	if ( str_set_n_ascii(&s, m->data_length, m->data) )
+	if ( str_set_n_ascii(&s, m->data_length, (char*)m->data) )
 	  appendChain(ch, StringToString(&s));
       }
     }

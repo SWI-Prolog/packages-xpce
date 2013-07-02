@@ -292,7 +292,7 @@ COMMON(Int)	isSavedObject(Any obj);
 COMMON(status)	saveInFileObject(Any obj, FileObj file);
 COMMON(status)	storeObject(Any obj, FileObj file);
 COMMON(status)	storeSlotsObject(Any obj, FileObj file);
-COMMON(long)	loadWord(IOSTREAM *fd);
+COMMON(int)	loadWord(IOSTREAM *fd);
 COMMON(double)	loadDouble(IOSTREAM *fd);
 COMMON(int)	loadStringFile(IOSTREAM *fd, String s);
 COMMON(void)	restoreMessage(Any msg);

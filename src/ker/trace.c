@@ -48,9 +48,9 @@ isProperGoal(PceGoal g)
     fail;
 
 #if defined(STACK_DIRECTION) && STACK_DIRECTION > 0
-  if ( (unsigned long)g > (unsigned long)&dummy ) /* stack grows up */
+  if ( (uintptr_t)g > (uintptr_t)&dummy ) /* stack grows up */
 #else
-  if ( (unsigned long)g < (unsigned long)&dummy ) /* stack grows down */
+  if ( (uintptr_t)g < (uintptr_t)&dummy ) /* stack grows down */
 #endif
     fail;
   if ( isProperObject(g->implementation) &&

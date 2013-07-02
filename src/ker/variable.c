@@ -41,7 +41,7 @@ createVariable(Name name, Type type, Name access)
   var->group	     = NIL;
   var->offset        = (Int) NIL;
   var->type	     = (Type) NIL;
-  var->dflags	     = (unsigned long) ZERO;
+  var->dflags	     = (uintptr_t) ZERO;
   var->context	     = NIL;
   var->summary       = NIL;
   var->init_function = NIL;

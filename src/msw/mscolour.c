@@ -306,7 +306,7 @@ ws_create_colour(Colour c, DisplayObj d)
       assign(c, green, toInt(g));
       assign(c, blue,  toInt(b));
 
-      registerXrefObject(c, d, (void *)rgb);
+      registerXrefObject(c, d, (void *)(uintptr_t)rgb);
     } else
       fail;
   } else
@@ -314,7 +314,7 @@ ws_create_colour(Colour c, DisplayObj d)
 		       valInt(c->green)/256,
 		       valInt(c->blue)/256);
 
-    registerXrefObject(c, d, (void *)rgb);
+    registerXrefObject(c, d, (void *)(uintptr_t)rgb);
   }
 
   if ( instanceOfObject(d->colour_map, ClassColourMap) &&
@@ -424,7 +424,7 @@ ws_system_colour(DisplayObj d, const char *name, COLORREF rgb)
 
   if ( (c = newObject(ClassColour, ref, toInt(r), toInt(g), toInt(b), EAV)) )
   { lockObject(c, ON);
-    registerXrefObject(c, d, (void *)rgb);
+    registerXrefObject(c, d, (void *)(uintptr_t)rgb);
   }
 
   return c;
@@ -448,7 +448,7 @@ ws_system_colours(DisplayObj d)
 		 *******************************/
 
 #undef offset
-#define offset(s, f) ((int)&((s *)NULL)->f)
+#define offset(s, f) ((intptr_t)&((s *)NULL)->f)
 
 static void ws_open_colourmap(ColourMap cm);
 

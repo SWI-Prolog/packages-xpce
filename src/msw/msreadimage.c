@@ -154,8 +154,6 @@ read_x11_bitmap_file(IOSTREAM *fd, int *w, int *h)
   int bytes_per_line;			/* per scanline of data */
   unsigned int ww = 0;			/* width */
   unsigned int hh = 0;			/* height */
-  int hx = -1;				/* x hotspot */
-  int hy = -1;				/* y hotspot */
 
   if (initialized == FALSE)
     initHexTable();
@@ -176,10 +174,12 @@ read_x11_bitmap_file(IOSTREAM *fd, int *w, int *h)
       if (!strcmp("hot", type))
       { if (type-- == name_and_type || type-- == name_and_type)
 	  continue;
+	/*
 	if (!strcmp("x_hot", type))
 	  hx = value;
 	if (!strcmp("y_hot", type))
 	  hy = value;
+	*/
       }
       continue;
     }

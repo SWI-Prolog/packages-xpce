@@ -1443,7 +1443,6 @@ ws_rotate_image(Image image, float a)	/* 0.0<angle<360.0 */
   int w, h;
   float angle = (a * M_PI)/180.0;
   float sina, cosa;
-  int rot90;				/* rotation by 0,90,180,270 */
   Image copy;				/* rotated image */
   DisplayObj d;
 
@@ -1452,22 +1451,18 @@ ws_rotate_image(Image image, float a)	/* 0.0<angle<360.0 */
     h = ow;
     sina = 1.0;
     cosa = 0.0;
-    rot90 = TRUE;
   } else if ( falmost(angle, M_PI) )	/* 180 degrees */
   { w = ow;
     h = oh;
     cosa = -1.0;
     sina = 0.0;
-    rot90 = TRUE;
   } else if ( falmost(angle, 3*M_PI/2) ) /* 270 degrees */
   { w = oh;
     h = ow;
     sina = -1.0;
     cosa = 0.0;
-    rot90 = TRUE;
   } else
-  { rot90 = FALSE;
-    sina = sin(angle);
+  { sina = sin(angle);
     cosa = cos(angle);
 
     w = fabs((float)oh*sina) + fabs((float)ow*cosa) + 0.99999;
@@ -1503,7 +1498,7 @@ ws_rotate_image(Image image, float a)	/* 0.0<angle<360.0 */
       assign(copy, foreground, image->foreground);
       { Any bg = (isDefault(copy->background) ? d->background
 					      : copy->background);
-	COLORREF rgb = (COLORREF) getXrefObject(bg, d);
+	COLORREF rgb = (COLORREF) (uintptr_t)getXrefObject(bg, d);
 	HBRUSH hbrush = ZCreateSolidBrush(GetNearestColor(hdcdst, rgb));
 	RECT rect;
 
@@ -1863,8 +1858,8 @@ ws_image_bits_for_cursor(Image image, Name kind, int w, int h)
     dbits = alloc(bytes);
     alloced = bytes;
 
-    DEBUG(NAME_cursor, Cprintf("Alloced %d bytes at 0x%lx\n",
-			       alloced, (long) dbits));
+    DEBUG(NAME_cursor, Cprintf("Alloced %d bytes at %p\n",
+			       alloced, dbits));
 
     if ( bytes != GetBitmapBits(bm, bytes, dbits) )
       Cprintf("GetBitmapBits() failed\n");
@@ -1985,8 +1980,8 @@ struct system_brush
 };
 
 struct system_image
-{ char *name;
-  int  id;
+{ char	       *name;
+  intptr_t	id;
 };
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

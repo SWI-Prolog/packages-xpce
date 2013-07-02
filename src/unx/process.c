@@ -117,12 +117,14 @@ static status	killProcess(Process p, Any sig);
 
 #define OsError() getOsErrorPce(PCE)
 
+#ifdef HAVE_PTYS
 #ifndef USE_GRANTPT
 forwards int		getSlave(Process p, const char *line);
 static int		getPseudoTTY(Process p, char *line,
 				     int *master, int *slave);
 #endif
 forwards status		copyTty(Process, char *, int);
+#endif
 
 static Chain		ProcessChain;	/* running process objects */
 static int		initialised;	/* signals initialised */
@@ -420,6 +422,7 @@ closeInputProcess(Process p)
 		 *     ENVIRONMENT HANDLING	*
 		 *******************************/
 
+#ifndef __WINDOWS__
 static void
 initEnvironment(Process p)
 { if ( notNil(p->environment) )
@@ -456,6 +459,7 @@ initEnvironment(Process p)
   }
 }
 
+#endif /*__WINDOWS__*/
 
 static Sheet
 getEnvironmentProcess(Process p)

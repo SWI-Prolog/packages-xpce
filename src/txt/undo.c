@@ -125,8 +125,8 @@ struct undo_buffer
 #define Distance(p1, p2)	((char *)(p1) - (char *)(p2))
 #define SizeAfter(ub, size)	((size) <= ub->size - \
 				           Distance(ub->free, ub->buffer))
-#define UndoDeleteSize(len) ((unsigned)(long) &((UndoDelete)NULL)->text.A[len])
-#define UndoChangeSize(len) ((unsigned)(long) &((UndoChange)NULL)->text.A[len])
+#define UndoDeleteSize(len) ((unsigned)(uintptr_t) &((UndoDelete)NULL)->text.A[len])
+#define UndoChangeSize(len) ((unsigned)(uintptr_t) &((UndoChange)NULL)->text.A[len])
 
 
 static UndoBuffer

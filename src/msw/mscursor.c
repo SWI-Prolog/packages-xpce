@@ -176,7 +176,7 @@ We use negative numbers, just to distinguish   them  from the others and
 avoid too much dependency on where Microsoft places these numbers.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#define MSINTVAL(charp) (-((int)(charp)))
+#define MSINTVAL(charp) (-((int)(intptr_t)(charp)))
 
   { "win_arrow",		MSINTVAL(IDC_ARROW) },
   { "win_ibeam",		MSINTVAL(IDC_IBEAM) },

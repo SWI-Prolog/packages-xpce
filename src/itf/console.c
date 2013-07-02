@@ -65,16 +65,16 @@ doesn't appear to work however (Windows-NT 4.0, MSVC 4.2).
 #include <fcntl.h>
 
 static int
-ensure_console()
-{ static allocated = 0;
+ensure_console(void)
+{ static int allocated = 0;
 
   if ( !allocated )
   { allocated++;
     if ( AllocConsole() )
     { HANDLE hin  = GetStdHandle(STD_INPUT_HANDLE);
       HANDLE hout = GetStdHandle(STD_OUTPUT_HANDLE);
-      int in  = _open_osfhandle((long)hin, _O_RDONLY);
-      int out = _open_osfhandle((long)hout, _O_APPEND);
+      int in  = _open_osfhandle((intptr_t)hin, _O_RDONLY);
+      int out = _open_osfhandle((intptr_t)hout, _O_APPEND);
 
       console_in  = _fdopen(in, "r");
       console_out = _fdopen(out, "w");

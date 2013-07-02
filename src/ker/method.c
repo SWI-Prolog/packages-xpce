@@ -46,7 +46,7 @@ createMethod(Method m, Name name, Vector types, StringObj doc, Func action)
 #ifndef O_RUNTIME
   m->source	 = NIL;
 #endif
-  m->dflags      = (unsigned long) ZERO;
+  m->dflags      = (uintptr_t) ZERO;
 
   initialiseMethod(m, name, types, NIL, doc, NIL, DEFAULT);
   createdObject(m, NAME_new);
@@ -93,7 +93,7 @@ storeFdMethod(Method m, FileObj file)
 static status
 loadMethod(Method m, IOSTREAM *fd, ClassDef def)
 { TRY(loadSlotsObject(m, fd, def));
-  m->function = (Func) loadWord(fd);;
+  m->function = (Func) loadWord(fd);
 
   succeed;
 }

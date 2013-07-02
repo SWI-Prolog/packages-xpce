@@ -174,10 +174,12 @@ closeAllSockets(int status)
 }
 
 
+#ifdef SIGPIPE
 static void
 sigPipeSocket(void)
 { errorPce(PCE, NAME_brokenPipe, 0);
 }
+#endif
 
 
 static void
@@ -483,7 +485,7 @@ bindSocket(Socket s, BoolObj reuse)
 	    ((Tuple)s->address)->second == ZERO) )
       { struct sockaddr_in addr;
 #ifdef __WINDOWS__
-	DWORD len = sizeof(addr);
+	int len = sizeof(addr);
 #else
 	socklen_t len = sizeof(addr);
 #endif
@@ -526,7 +528,7 @@ acceptSocket(Socket s)
 #endif
   { struct sockaddr_in address;
 #ifdef __WINDOWS__
-    DWORD len = sizeof(address);
+    int len = sizeof(address);
 #else
     socklen_t len = sizeof(address);
 #endif
@@ -681,7 +683,7 @@ getPeerNameSocket(Socket s)
 #endif /*UNIX_DOMAIN_SOCKETS*/
   { struct sockaddr_in address;
 #ifdef __WINDOWS__
-    DWORD len = sizeof(address);
+    int len = sizeof(address);
 #else
     socklen_t len = sizeof(address);
 #endif

@@ -204,7 +204,7 @@ safeStringName(Name n)
   else
   { char buf[100];
 
-    sprintf(buf, "0x%lx", (unsigned long)n);
+    sprintf(buf, "%p", n);
     return ppsavestring(buf);
   }
 }
@@ -287,7 +287,7 @@ do_pp(Any obj)
     return ppsavestring(tmp);
   }
 
-  sprintf(tmp, "0x%lx", (unsigned long) obj);
+  sprintf(tmp, "%p", obj);
   return ppsavestring(tmp);
 }
 

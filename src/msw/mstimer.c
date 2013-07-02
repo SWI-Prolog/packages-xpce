@@ -28,14 +28,14 @@ static HashTable TimerTable;
 
 static UINT
 getIdTimer(Timer tm)
-{ return (UINT) tm->ws_ref;
+{ return (UINT)(intptr_t) tm->ws_ref;
 }
 
 
 static void
 setIdTimer(Timer tm, UINT id)
 { DEBUG(NAME_timer, Cprintf("setIdTimer(%s, %d)\n", pp(tm), id));
-  tm->ws_ref = (WsRef) id;
+  tm->ws_ref = (WsRef) (intptr_t)id;
 }
 
 

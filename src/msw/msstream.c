@@ -129,7 +129,7 @@ handleInputSocket(Socket s)
 
 
 static int WINAPI
-do_socket_wnd_proc(HWND hwnd, UINT message, UINT wParam, LONG lParam)
+do_socket_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 { switch( message )
   { case WM_SOCKET:
     { SOCKET sock = (SOCKET) wParam;
@@ -243,7 +243,7 @@ HiddenFrameClass()
   if ( !winclassname )
   { char buf[50];
 
-    sprintf(buf, "PceSocketWin%d", (int)PceHInstance);
+    sprintf(buf, "PceSocketWin%d", (int)(intptr_t)PceHInstance);
     winclassname = CtoName(buf);
 
     wndClass.style		= 0;

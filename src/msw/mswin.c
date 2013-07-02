@@ -607,7 +607,6 @@ getWinDirectoryDisplay(DisplayObj d,
 		       Any owner)	/* owner window */
 { BROWSEINFO bi;
   HWND hwnd;
-  Name rval = 0;
   EventObj ev = EVENT->value;
   LPITEMIDLIST pidl;
   Name result = NULL;

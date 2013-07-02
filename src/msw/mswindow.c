@@ -41,7 +41,7 @@ WinWindowClass()
   if ( !winclassname )
   { char buf[50];
 
-    sprintf(buf, "PceWindow%ld", (long)PceHInstance);
+    sprintf(buf, "PceWindow%d", (int)(intptr_t)PceHInstance);
     winclassname = CtoName(buf);
 
     wndClass.style		= 0/*CS_HREDRAW|CS_VREDRAW*/;
@@ -87,7 +87,7 @@ getExistingFrameWindow(PceWindow sw)
 #define WM_PCE_REDRAW (WM_USER+25)
 
 static int WINAPI
-do_window_wnd_proc(HWND hwnd, UINT message, UINT wParam, LONG lParam)
+do_window_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 { PceWindow sw = getObjectFromHWND(hwnd);
   FrameObj fr;
   WsFrame wfr;
@@ -227,8 +227,8 @@ do_window_wnd_proc(HWND hwnd, UINT message, UINT wParam, LONG lParam)
 
       ServiceMode(is_service_window(sw),
 		  DEBUG(NAME_redraw,
-			Cprintf("%s (0x%04x) received WM_PAINT (%s clear)\n",
-				pp(sw), (long)hwnd,
+			Cprintf("%s (%p) received WM_PAINT (%s clear)\n",
+				pp(sw), hwnd,
 				clearing_update ? "" : "no"));
 
 		  if ( sw->displayed == OFF )
@@ -463,7 +463,7 @@ ws_create_window(PceWindow sw, PceWindow parent)
 			       (int)tid, (int)ThePceThread, rc));
   }
 
-  DEBUG(NAME_window, Cprintf("Windows hwnd = %ld\n", (long) hwnd));
+  DEBUG(NAME_window, Cprintf("Windows hwnd = %p\n", hwnd));
 
   setHwndWindow(sw, hwnd);
   assocObjectToHWND(hwnd, sw);

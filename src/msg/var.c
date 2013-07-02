@@ -234,7 +234,7 @@ resetVars(void)
 		*          ENVIRONMENTS		*
 		********************************/
 
-#define sizeofVarExtension(n) ((int)(long)(&((VarExtension)NULL)->bindings[n]))
+#define sizeofVarExtension(n) ((int)(intptr_t)(&((VarExtension)NULL)->bindings[n]))
 
 #define EXTBLOCKSIZE 8
 

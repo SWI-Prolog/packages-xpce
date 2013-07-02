@@ -503,15 +503,15 @@ static HashTable savedClassTable;	/* table with saved classes */
 static HashTable restoreTable;		/* restored objects table */
 static Chain	 restoreMessages;	/* messages for restoration */
 
-long
+int
 loadWord(IOSTREAM *fd)
 {
 #ifndef WORDS_BIGENDIAN
   union
-  { unsigned long l;
+  { unsigned int  l;
     unsigned char c[4];
   } cvrt;
-  long rval;
+  int rval;
 
   cvrt.l = Sgetw(fd);
   rval = (cvrt.c[0] << 24) |

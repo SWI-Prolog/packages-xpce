@@ -234,7 +234,7 @@ ensure_compiled_regex(Regex re, int flags)
 
 #define IDXOFF		0x1000
 #define IDX2PTR(i)	(charW*)((i)*sizeof(charW)+IDXOFF)
-#define PTR2IDX(p)	((long)(p)-IDXOFF)/sizeof(charW)
+#define PTR2IDX(p)	((uintptr_t)(p)-IDXOFF)/sizeof(charW)
 
 
 static int

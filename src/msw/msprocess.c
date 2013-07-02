@@ -161,8 +161,8 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
 		       processinfo) )
     { CloseHandle(processinfo->hThread);	/* don't need this */
       pidProcess(p, toInt(processinfo->dwProcessId));
-      p->rdfd   = (int) rdfd[0];
-      p->wrfd   = (int) wrfd[1];
+      p->rdfd   = (intptr_t) rdfd[0];
+      p->wrfd   = (intptr_t) wrfd[1];
       p->ws_ref = processinfo;
       assign(p, status, NAME_running);
 
@@ -198,7 +198,8 @@ ws_kill_process(Process p, int sig)
        sig == 15 )
   { TerminateProcess(pi->hProcess, sig);
   } else if ( sig == 3 )
-  { GenerateConsoleCtrlEvent(CTRL_C_EVENT, (unsigned long)pi->hProcess);
+    { GenerateConsoleCtrlEvent(CTRL_C_EVENT, (intptr_t)pi->hProcess);
+    					   /* TBD: must be process group id */
   } else
     Cprintf("%s: process->kill only supports INT, KILL\n", pp(p));
 }

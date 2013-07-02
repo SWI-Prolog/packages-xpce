@@ -1082,7 +1082,7 @@ putstdw(unsigned long w, IOSTREAM *fd)
 
 status
 storeWordFile(FileObj f, Any w)
-{ putstdw((unsigned long) w, f->fd);
+{ putstdw((uintptr_t) w, f->fd);
 
   return checkErrorFile(f);
 }
@@ -1120,7 +1120,7 @@ an ISO Latin-1 string.
 status
 storeStringFile(FileObj f, String s)
 { if ( isstrA(s) )
-  { TRY(storeWordFile(f, (Any) (long)s->s_size));
+  { TRY(storeWordFile(f, (Any) (uintptr_t)s->s_size));
     Sfwrite(s->s_textA, sizeof(char), s->s_size, f->fd);
 
     DEBUG(NAME_save, Cprintf("Saved ISO string, %ld chars\n", s->s_size));
@@ -1128,7 +1128,7 @@ storeStringFile(FileObj f, String s)
   { const charW *w = s->s_textW;
     const charW *e = &w[s->s_size];
 
-    TRY(storeWordFile(f, (Any) (long)s->s_size));
+    TRY(storeWordFile(f, (Any) (uintptr_t)s->s_size));
     for( ; w<e; w++)
     { if ( Sputc(*w, f->fd) < 0 )
 	return checkErrorFile(f);
@@ -1141,7 +1141,7 @@ storeStringFile(FileObj f, String s)
     const charW *w = s->s_textW;
     const charW *e = &w[s->s_size];
 
-    TRY(storeWordFile(f, (Any) -(long)s->s_size));
+    TRY(storeWordFile(f, (Any) -(uintptr_t)s->s_size));
     oenc = f->fd->encoding;
     f->fd->encoding = ENC_UTF8;
     for( ; w<e; w++)

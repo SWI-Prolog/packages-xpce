@@ -32,7 +32,7 @@ TBD:	handle destruction of these objects.  Not that important as they
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #define XREF_TABLESIZE 		256
-#define HashValue(obj)		(((unsigned long)(obj) & (XREF_TABLESIZE-1)))
+#define HashValue(obj)		(int)(((uintptr_t)(obj) & (XREF_TABLESIZE-1)))
 
 static Xref XrefTable[XREF_TABLESIZE];
 
@@ -46,8 +46,8 @@ getXrefObject(Any obj, DisplayObj d)
 
   for( r = XrefTable[v]; r != NULL; r = r->next)
     if ( r->object == obj && r->display == d )
-    { DEBUG(NAME_getXref, Cprintf("getXrefObject(%s, %s) --> 0x%lx\n",
-				  pp(obj), pp(d), (unsigned long) r->xref));
+    { DEBUG(NAME_getXref, Cprintf("getXrefObject(%s, %s) --> %p\n",
+				  pp(obj), pp(d), r->xref));
       return r->xref;
     }
 
@@ -55,8 +55,8 @@ getXrefObject(Any obj, DisplayObj d)
   { if ( send(obj, NAME_Xopen, d, EAV) == SUCCEED )
     { for( r = XrefTable[v]; r != NULL; r = r->next)
 	if ( r->object == obj && r->display == d )
-	{ DEBUG(NAME_getXref, Cprintf("getXrefObject(%s, %s) --> 0x%lx\n",
-				      pp(obj), pp(d), (unsigned long) r->xref));
+	{ DEBUG(NAME_getXref, Cprintf("getXrefObject(%s, %s) --> %p\n",
+				      pp(obj), pp(d), r->xref));
 	  return r->xref;
 	}
     }
@@ -91,8 +91,8 @@ registerXrefObject(Any obj, DisplayObj d, WsRef xref)
 { Xref *R = &XrefTable[HashValue(obj)];
   Xref r, new;
 
-  DEBUG(NAME_xref, Cprintf("registerXrefObject(%s, %s, 0x%lx)\n",
-			   pp(obj), pp(d), (unsigned long) xref));
+  DEBUG(NAME_xref, Cprintf("registerXrefObject(%s, %s, %p)\n",
+			   pp(obj), pp(d), xref));
 
   for( r = *R; r != NULL; r = r->next)
     if ( r->object == obj && r->display == d )

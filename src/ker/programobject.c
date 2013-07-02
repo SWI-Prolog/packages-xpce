@@ -29,7 +29,7 @@ status
 initialiseProgramObject(Any obj)
 { ProgramObject o = obj;
 
-  o->dflags = (unsigned long) ZERO | D_SYSTEM;
+  o->dflags = (uintptr_t) ZERO | D_SYSTEM;
 
   succeed;
 }
@@ -38,7 +38,7 @@ initialiseProgramObject(Any obj)
 status
 initialiseNewSlotProgramObject(ProgramObject obj, Variable var)
 { if ( var->name == NAME_dflags )
-    obj->dflags = (unsigned long) ZERO;
+    obj->dflags = (uintptr_t) ZERO;
 
   succeed;
 }

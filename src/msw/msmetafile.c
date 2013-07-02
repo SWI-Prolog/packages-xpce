@@ -560,12 +560,9 @@ static status
 saveALDUS(WinMF mf, HMETAFILE ghmf, FileObj file,
 	  int width, int height, int mapping)
 { UINT            uiSize;
-  DWORD           dwHigh, dwLow;
   int		  rval = TRUE;
 
   uiSize = GetMetaFileBitsEx(ghmf, 0, NULL);
-  dwHigh = 0;
-  dwLow  = uiSize + APMSIZE;
 
   if ( !send(file, NAME_kind, NAME_binary, EAV) ||
        !send(file, NAME_open, NAME_write, EAV) )
