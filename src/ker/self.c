@@ -1471,6 +1471,14 @@ objectAttributeTable(Name name)
 }
 
 
+static void
+protectConstant(Any obj)
+{ Instance i = obj;
+
+  i->flags = F_PROTECTED|OBJ_MAGIC;
+}
+
+
 export status
 pceInitialise(int handles, const char *home, int argc, char **argv)
 { AnswerMark mark;
@@ -1502,10 +1510,10 @@ pceInitialise(int handles, const char *home, int argc, char **argv)
   markAnswerStack(mark);
   syntax.word_separator = '_';
 
-  ((Instance)NIL)->flags     = F_PROTECTED|OBJ_MAGIC;
-  ((Instance)DEFAULT)->flags = F_PROTECTED|OBJ_MAGIC;
-  ((Instance)ON)->flags      = F_PROTECTED|OBJ_MAGIC;
-  ((Instance)OFF)->flags     = F_PROTECTED|OBJ_MAGIC;
+  protectConstant(NIL);
+  protectConstant(DEFAULT);
+  protectConstant(ON);
+  protectConstant(OFF);
 
   DEBUG_BOOT(Cprintf("Alloc ...\n"));
   pceInitAlloc();
