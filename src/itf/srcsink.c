@@ -141,7 +141,7 @@ getContentsSourceSink(SourceSink ss, Int from, Int len)
     if ( ss->encoding == NAME_octet ||
 	 ss->encoding == NAME_iso_latin_1 )
     { str_inithdr(&s, FALSE);
-      s.size = size;
+      s.s_size = size;
       str_alloc(&s);
 
       Sfread(s.s_textA, sizeof(char), size, fd);
@@ -164,14 +164,14 @@ getContentsSourceSink(SourceSink ss, Int from, Int len)
       long n = 0;
 
       str_inithdr(&s, FALSE);
-      s.size = 256;
-      s.s_textA = pceMalloc(s.size);
+      s.s_size = 256;
+      s.s_textA = pceMalloc(s.s_size);
 
       setStreamEncodingSourceSink(ss, fd);
 
       while( n < size && (c=Sgetcode(fd)) != EOF )
-      { if ( c > 0xff && !s.iswide )
-	{ charW *w = pceMalloc(s.size*sizeof(charW));
+      { if ( c > 0xff && !s.s_iswide )
+	{ charW *w = pceMalloc(s.s_size*sizeof(charW));
 	  charW *t = w;
 	  const charA *f = s.s_textA;
 	  const charA *e = &f[n];
@@ -181,15 +181,15 @@ getContentsSourceSink(SourceSink ss, Int from, Int len)
 
 	  pceFree(s.s_textA);
 	  s.s_textW = w;
-	  s.iswide = TRUE;
+	  s.s_iswide = TRUE;
 	}
-	if ( n >= s.size )
-	{ s.size *= 2;
+	if ( n >= s.s_size )
+	{ s.s_size *= 2;
 
 	  if ( isstrA(&s) )
-	    s.s_textA = pceRealloc(s.s_textA, s.size);
+	    s.s_textA = pceRealloc(s.s_textA, s.s_size);
 	  else
-	    s.s_textA = pceRealloc(s.s_textW, s.size*sizeof(charW));
+	    s.s_textA = pceRealloc(s.s_textW, s.s_size*sizeof(charW));
 	}
 	if ( isstrA(&s) )
 	  s.s_textA[n++] = c;
@@ -199,7 +199,7 @@ getContentsSourceSink(SourceSink ss, Int from, Int len)
 
       ok = checkErrorSourceSink(ss, fd);
       Sclose(fd);
-      s.size = n;
+      s.s_size = n;
 
       if ( ok )
       { StringObj str = StringToString(&s);

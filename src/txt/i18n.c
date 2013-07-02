@@ -126,7 +126,7 @@ stringToUTF8(String str)
 
   if ( isstrA(str) )
   { cuchar *s = (cuchar*) str->s_textA;
-    cuchar *e = &s[str->size];
+    cuchar *e = &s[str->s_size];
 
     for( ; s<e; s++ )			/* do we need conversion */
     { if ( *s & 0x80 )
@@ -143,7 +143,7 @@ stringToUTF8(String str)
     }
   } else
   { cwchar *s = str->s_textW;
-    cwchar *e = &s[str->size];
+    cwchar *e = &s[str->s_size];
 
     out = find_ring();
     for( ; s<e; s++ )
@@ -170,7 +170,7 @@ stringToMB(String str)
 
   if ( isstrA(str) )
   { cuchar *s = (cuchar*) str->s_textA;
-    cuchar *e = &s[str->size];
+    cuchar *e = &s[str->s_size];
 
     for( ; s<e; s++ )			/* do we need conversion? */
     { if ( (rc=wcrtomb(b, *s, &mbs)) == 1 && b[0] == *s )
@@ -192,7 +192,7 @@ stringToMB(String str)
     }
   } else
   { cwchar *s = str->s_textW;
-    cwchar *e = &s[str->size];
+    cwchar *e = &s[str->s_size];
 
     out = find_ring();
     for( ; s<e; s++ )
@@ -217,15 +217,15 @@ charArrayToWC(CharArray ca, size_t *len)
 { String str = &ca->data;
 
   if ( len )
-    *len = str->size;
+    *len = str->s_size;
 
   if ( isstrA(str) )
   { rcell *out = find_ring();
     cuchar *s = (cuchar*) str->s_textA;
-    cuchar *e = &s[str->size];
+    cuchar *e = &s[str->s_size];
     wchar_t *o;
 
-    roomBuffer(out, (str->size+1)*sizeof(wchar_t));
+    roomBuffer(out, (str->s_size+1)*sizeof(wchar_t));
 
     for(o=(wchar_t*)out->data ; s<e; )
     { *o++ = *s++;

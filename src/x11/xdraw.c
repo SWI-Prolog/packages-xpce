@@ -3023,10 +3023,10 @@ str_width(String s, int from, int to, FontObj f)
 
   if ( from < 0 )
     from = 0;
-  if ( from >= s->size || to <= from )
+  if ( from >= s->s_size || to <= from )
     return 0;
-  if ( to > s->size )
-    to = s->size;
+  if ( to > s->s_size )
+    to = s->s_size;
 
   if ( to > from )
   { int w = lbearing(str_fetch(s, from));
@@ -3050,15 +3050,15 @@ str_advance(String s, int from, int to, FontObj font)
 void
 s_print(String s, int x, int y, FontObj f)
 { if ( isstrA(s) )
-    s_printA(s->s_textA, s->size, x, y, f);
+    s_printA(s->s_textA, s->s_size, x, y, f);
   else
-    s_printW(s->s_textW, s->size, x, y, f);
+    s_printW(s->s_textW, s->s_size, x, y, f);
 }
 
 
 void
 s_print_aligned(String s, int x, int y, FontObj f)
-{ if ( s->size > 0 )
+{ if ( s->s_size > 0 )
   { s_font(f);
 
     x += lbearing(str_fetch(s, 0));
@@ -3069,7 +3069,7 @@ s_print_aligned(String s, int x, int y, FontObj f)
 
 static void
 str_draw_text(String s, int offset, int len, int x, int y)
-{ if ( offset >= s->size )
+{ if ( offset >= s->s_size )
     return;
 
   if ( offset < 0 )
@@ -3077,10 +3077,10 @@ str_draw_text(String s, int offset, int len, int x, int y)
     offset = 0;
   }
 
-  if ( offset + len > s->size )
-    len = s->size - offset;
+  if ( offset + len > s->s_size )
+    len = s->s_size - offset;
 
-  if ( s->size > 0 )
+  if ( s->s_size > 0 )
   { InvTranslate(x, y);			/* Hack */
 
     if ( isstrA(s) )
@@ -3127,10 +3127,10 @@ str_stext(String s, int f, int len, int x, int y, Style style)
 
 static void
 str_text(String s, int x, int y)
-{ if ( s->size > 0 )
+{ if ( s->s_size > 0 )
   { x += lbearing(str_fetch(s, 0));
 
-    str_draw_text(s, 0, s->size, x, y);
+    str_draw_text(s, 0, s->s_size, x, y);
   }
 }
 
@@ -3153,7 +3153,7 @@ typedef struct
 static void
 str_break_into_lines(String s, strTextLine *line, int *nlines, int maxlines)
 { int here = 0;
-  int size = s->size;
+  int size = s->s_size;
   int nls = 0;
 
   *nlines = 0;
@@ -3161,7 +3161,7 @@ str_break_into_lines(String s, strTextLine *line, int *nlines, int maxlines)
   if ( size == 0 )			/* totally empty: report one line */
   { str_cphdr(&line->text, s);
     line->text.s_text = s->s_text;
-    line->text.size = 0;
+    line->text.s_size = 0;
     *nlines = 1;
     return;
   }
@@ -3173,16 +3173,16 @@ str_break_into_lines(String s, strTextLine *line, int *nlines, int maxlines)
     line->text.s_text = str_textp(s, here);
 
     if ( (el = str_next_index(s, here, '\n')) >= 0 )
-    { line->text.size = el - here;
+    { line->text.s_size = el - here;
       here = el + 1;
       if ( here == size )		/* last char is newline: add a line */
       { line++, nls++;
 	str_cphdr(&line->text, s);
 	line->text.s_text = str_textp(s, here);
-	line->text.size = 0;
+	line->text.s_size = 0;
       }
     } else
-    { line->text.size = size - here;
+    { line->text.s_size = size - here;
       here = size;
     }
   }
@@ -3210,7 +3210,7 @@ str_compute_lines(strTextLine *lines, int nlines, FontObj font,
   for( n = 0, line = lines; n++ < nlines; line++, cy += th )
   { line->y      = cy;
     line->height = th;
-    line->width  = str_width(&line->text, 0, line->text.size, font);
+    line->width  = str_width(&line->text, 0, line->text.s_size, font);
 
     if ( hadjust == NAME_left )
       line->x = x;
@@ -3233,11 +3233,11 @@ str_size(String s, FontObj font, int *width, int *height)
 
   str_break_into_lines(s, lines, &nlines, MAX_TEXT_LINES);
   for(n = 0, line = lines; n++ < nlines; line++)
-  { if ( line->text.size > 0 )
+  { if ( line->text.s_size > 0 )
     { int lw;
 
       lw = lbearing(str_fetch(&line->text, 0));
-      lw += s_advance(&line->text, 0, line->text.size);
+      lw += s_advance(&line->text, 0, line->text.s_size);
 
       if ( w < lw )
 	w = lw;
@@ -3257,7 +3257,7 @@ str_string(String s, FontObj font, int x, int y, int w, int h,
   int nlines, n;
   int baseline;
 
-  if ( s->size == 0 )
+  if ( s->s_size == 0 )
     return;
 
   Translate(x, y);
@@ -3292,7 +3292,7 @@ str_selected_string(String s, FontObj font,
   int baseline;
   int here = 0;
 
-  if ( s->size == 0 )
+  if ( s->s_size == 0 )
     return;
 
   Translate(x, y);
@@ -3302,7 +3302,7 @@ str_selected_string(String s, FontObj font,
   str_compute_lines(lines, nlines, font, x, y, w, h, hadjust, vadjust);
 
   for(n=0, line = lines; n++ < nlines; line++)
-  { int len = line->text.size;
+  { int len = line->text.s_size;
 
     line->x += lbearing(str_fetch(&line->text, 0));
 
@@ -3341,7 +3341,7 @@ ps_string(String s, FontObj font, int x, int y, int w, Name format, int flags)
   int nlines, n;
   int baseline;
 
-  if ( s->size == 0 )
+  if ( s->s_size == 0 )
     return;
 
   s_font(font);
@@ -3352,7 +3352,7 @@ ps_string(String s, FontObj font, int x, int y, int w, Name format, int flags)
   str_compute_lines(lines, nlines, font, x, y, w, 0, format, NAME_top);
 
   for(n=0, line = lines; n++ < nlines; line++)
-  { if ( line->text.size > 0 )
+  { if ( line->text.s_size > 0 )
     { ps_output("~D ~D 0 ~D ~a text\n",
 		line->x, line->y+baseline,
 		line->width, &line->text);
@@ -3387,7 +3387,7 @@ str_draw_text_lines(int acc, FontObj font,
 
       cx += lbearing(str_fetch(&line->text, 0));
 
-      for(cn=0; cn<line->text.size; cn++)
+      for(cn=0; cn<line->text.s_size; cn++)
       { int c  = str_fetch(&line->text, cn);
 	int cw = c_width(c, font);
 
@@ -3425,7 +3425,7 @@ str_label(String s, int acc, FontObj font, int x, int y, int w, int h,
 { strTextLine lines[MAX_TEXT_LINES];
   int nlines;
 
-  if ( s->size == 0 )
+  if ( s->s_size == 0 )
     return;
 
   Translate(x, y);

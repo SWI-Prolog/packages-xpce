@@ -297,8 +297,8 @@ compare_dict_items(const void *d1, const void *d2)
     String s2 = &c2->data;
 
     if ( sort_ignore_blanks )
-    { LocalString(t1, s1->iswide, s1->size);
-      LocalString(t2, s2->iswide, s2->size);
+    { LocalString(t1, s1->s_iswide, s1->s_size);
+      LocalString(t2, s2->s_iswide, s2->s_size);
 
       str_cpy(t1, s1);
       str_cpy(t2, s2);

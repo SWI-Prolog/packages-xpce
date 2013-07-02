@@ -64,7 +64,7 @@ getConvertSourceLocation(SourceLocation loc, Any spec)
       string fn;
 
       i++;
-      for(j=0; j<sizeof(lb)-1 && i+j<s->size; j++)
+      for(j=0; j<sizeof(lb)-1 && i+j<s->s_size; j++)
       { int c = str_fetch(s, i+j);
 
 	if ( isdigit(c) )
@@ -77,7 +77,7 @@ getConvertSourceLocation(SourceLocation loc, Any spec)
 
       lb[j] = EOS;
       fn = *s;
-      fn.size = i-1;
+      fn.s_size = i-1;
       answer(newObject(ClassSourceLocation,
 		       StringToName(&fn), toInt(atol(lb)), EAV));
     }

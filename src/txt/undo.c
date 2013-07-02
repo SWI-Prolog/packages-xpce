@@ -182,8 +182,8 @@ getUndoTextBuffer(TextBuffer tb)
 	{ UndoDelete d = (UndoDelete) cell;
 	  string s;
 
-	  s.size = d->len;
-	  s.iswide = d->iswide;
+	  s.s_size = d->len;
+	  s.s_iswide = d->iswide;
 	  if ( d->iswide )
 	    s.s_textA = d->text.A;
 	  else
@@ -207,8 +207,8 @@ getUndoTextBuffer(TextBuffer tb)
 	{ UndoChange c = (UndoChange) cell;
 	  string s;
 
-	  s.size = c->len;
-	  s.iswide = c->iswide;
+	  s.s_size = c->len;
+	  s.s_iswide = c->iswide;
 	  if ( c->iswide )
 	    s.s_textA = c->text.A;
 	  else
@@ -220,7 +220,7 @@ getUndoTextBuffer(TextBuffer tb)
 	  change_textbuffer(tb, c->where, &s);
 	  caret = max(caret, c->where + c->len);
 	  break;
- 	}
+	}
       }
 
       cell = cell->previous;
@@ -530,7 +530,7 @@ register_delete_textbuffer(TextBuffer tb, long where, long len)
 
     if ( udc != NULL && udc->type == UNDO_DELETE &&
 	 udc->marked == FALSE &&
-	 tb->buffer.iswide == udc->iswide )
+	 tb->buffer.s_iswide == udc->iswide )
     { if ( where == udc->where )	/* forward delete */
       { cell_size = len+udc->len;
 	if ( udc->iswide )
@@ -617,7 +617,7 @@ register_change_textbuffer(TextBuffer tb, long int where, long int len)
 
     if ( uc != NULL && uc->type == UNDO_CHANGE &&
 	 uc->marked == FALSE &&
-	 tb->buffer.iswide == uc->iswide )
+	 tb->buffer.s_iswide == uc->iswide )
     { if ( where == uc->where + uc->len )	/* forward change */
       {	cell_size = len+uc->len;
 	if ( uc->iswide )

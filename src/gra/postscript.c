@@ -302,7 +302,7 @@ ps_output(char *fm, ...)
 static void
 ps_put_string(String s)
 { wint_t c;
-  int i, size = s->size;
+  int i, size = s->s_size;
 
   ps_put_char('(');
 
@@ -1658,7 +1658,7 @@ status
 drawPostScriptText(TextObj t, Name hb)
 { String s = &t->string->data;
 
-  if ( s[0].size > 0 )			/* i.e. non-empty */
+  if ( s[0].s_size > 0 )		/* i.e. non-empty */
   { int x, y, w;
     int b = valInt(t->border);
 
@@ -1711,7 +1711,7 @@ drawPostScriptText(TextObj t, Name hb)
 	flags |= TXT_UNDERLINED;
 
       if ( Wrapped(t) )
-      { LocalString(buf, s->iswide, s->size + MAX_WRAP_LINES);
+      { LocalString(buf, s->s_iswide, s->s_size + MAX_WRAP_LINES);
 
 	str_format(buf, s, valInt(t->margin), t->font);
 	ps_string(buf, t->font, x+b, y+b, w-2*b, t->format, flags);

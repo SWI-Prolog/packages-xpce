@@ -95,7 +95,7 @@ cdataParBox(ParBox pb, StringObj cdata,
 	    Name ignore_blanks)
 { string *text = &cdata->data;
   int here = 0;
-  int end = text->size;
+  int end = text->s_size;
   Any refbox = NIL;
 
   if ( ignore_blanks == NAME_leading || ignore_blanks == NAME_both )
@@ -125,7 +125,7 @@ cdataParBox(ParBox pb, StringObj cdata,
 	here++;
 
       str_cphdr(&s, text);
-      s.size = here-start;
+      s.s_size = here-start;
       if ( isstrA(text) )
 	s.s_textA = &text->s_textA[start];
       else

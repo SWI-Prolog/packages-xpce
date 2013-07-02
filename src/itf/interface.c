@@ -414,7 +414,7 @@ pceCharArrayToCA(Any val, size_t *len)
 
     if ( isstrA(&ca->data) )
     { if ( len )
-	*len = ca->data.size;
+	*len = ca->data.s_size;
 
       return (char*)ca->data.s_textA;
     }
@@ -431,7 +431,7 @@ pceCharArrayToCW(Any val, size_t *len)
 
     if ( isstrW(&ca->data) )
     { if ( len )
-	*len = ca->data.size;
+	*len = ca->data.s_size;
 
       return ca->data.s_textW;
     }
@@ -851,15 +851,15 @@ Cputstr(String s)
 { if ( TheCallbackFunctions.Cputchar )
   { int i;
 
-    for(i=0; i<s->size; i++)
+    for(i=0; i<s->s_size; i++)
     { (*TheCallbackFunctions.Cputchar)(str_fetch(s, i));
     }
 
-    return s->size;
+    return s->s_size;
   } else if ( isstrA(s) )
   { Cprintf("%s", s->s_textA);
 
-    return s->size;
+    return s->s_size;
   } else
     return 0;
 }

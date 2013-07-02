@@ -156,7 +156,7 @@ getFunctionKeyBinding(KeyBinding kb, EventId id)
     answer(cmd);
 
 					/* deal with UNICODE characters */
-  if ( key->data.iswide && key->data.size == 1 )
+  if ( key->data.s_iswide && key->data.s_size == 1 )
   { int c = key->data.s_textW[0];
 
     if ( valInt(id) >= c )

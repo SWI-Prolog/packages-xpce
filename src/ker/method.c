@@ -318,7 +318,7 @@ getManIdMethod(Method m)
   size_t len;
   Name rc;
 
-  len = 6 + ctx->data.size + m->name->data.size;
+  len = 6 + ctx->data.s_size + m->name->data.s_size;
   if ( len < LINESIZE )
     nm = buf;
   else

@@ -73,7 +73,7 @@ RedrawAreaLabel(Label lb, Area a)
       x += valInt(getExFont(lb->font))/2;
 
     if ( lb->wrap == NAME_clip )
-    { LocalString(buf, s->iswide, s->size+1);
+    { LocalString(buf, s->s_iswide, s->s_size+1);
 
       str_one_line(buf, s);
       s = buf;
@@ -159,7 +159,7 @@ computeLabel(Label lb)
       int ex = valInt(getExFont(lb->font));
 
       if ( lb->wrap == NAME_clip )
-      { LocalString(buf, s->iswide, s->size+1);
+      { LocalString(buf, s->s_iswide, s->s_size+1);
 
 	str_one_line(buf, s);
 	s = buf;

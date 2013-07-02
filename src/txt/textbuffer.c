@@ -180,7 +180,7 @@ loadTextBuffer(TextBuffer tb, IOSTREAM *fd, ClassDef def)
 
       pceFree(tb->tb_bufferA);
       tb->tb_bufferW = w;
-      tb->buffer.iswide = TRUE;
+      tb->buffer.s_iswide = TRUE;
       tb->tb_bufferW[i++] = chr;
 
       for(; i<end; i++)
@@ -1543,13 +1543,13 @@ find_textbuffer(TextBuffer tb, intptr_t here, String str,
   } else
     return here;
 
-  return hit ? (az == 'a' ? where : where + str->size) : -1;
+  return hit ? (az == 'a' ? where : where + str->s_size) : -1;
 }
 
 
 int
 match_textbuffer(TextBuffer tb, intptr_t here, String s, int ec, int wm)
-{ intptr_t l = s->size;
+{ intptr_t l = s->s_size;
   intptr_t i;
 
   if ( wm && (tisalnum(tb->syntax, fetch(here-1)) ||
@@ -1751,7 +1751,7 @@ sortTextBuffer(TextBuffer tb, Int from, Int to)
 
       str_set_ascii(&s, lines[n]);
       insert_textbuffer(tb, f, 1, &s);
-      f += s.size;
+      f += s.s_size;
       insert_textbuffer(tb, f, 1, nl);
       f++;
     }
@@ -1925,16 +1925,16 @@ status
 change_textbuffer(TextBuffer tb, intptr_t where, String s)
 { intptr_t w, n;
 
-  if ( s->size < 0 || where < 0 || where+s->size > tb->size )
+  if ( s->s_size < 0 || where < 0 || where+s->s_size > tb->size )
     fail;
 
   if ( istbA(tb) && str_iswide(s) )
     promoteTextBuffer(tb);
 
-  register_change_textbuffer(tb, where, s->size);
+  register_change_textbuffer(tb, where, s->s_size);
 
   if ( istbA(tb) )
-  { for( w=where, n=0; n < s->size; n++, w++ )
+  { for( w=where, n=0; n < s->s_size; n++, w++ )
     { intptr_t i = Index(tb, w);
       wint_t new = str_fetch(s, n);
 
@@ -1947,7 +1947,7 @@ change_textbuffer(TextBuffer tb, intptr_t where, String s)
       }
     }
   } else
-  { for( w=where, n=0; n < s->size; n++, w++ )
+  { for( w=where, n=0; n < s->s_size; n++, w++ )
     { intptr_t i = Index(tb, w);
       charW new = str_fetch(s, n);
 
@@ -1962,7 +1962,7 @@ change_textbuffer(TextBuffer tb, intptr_t where, String s)
   }
 
   start_change(tb, where);
-  end_change(tb, where+s->size);
+  end_change(tb, where+s->s_size);
   CmodifiedTextBuffer(tb, ON);
 
   succeed;
@@ -2134,7 +2134,7 @@ str_sub_text_buffer(TextBuffer tb, String s, intptr_t start, intptr_t len)
     room(tb, start + len, 1);
 
   str_cphdr(s, &tb->buffer);
-  s->size = len;
+  s->s_size = len;
 
   if ( start < tb->gap_start )
     idx = start;
@@ -2168,7 +2168,7 @@ promoteTextBuffer(TextBuffer tb)
 
     pceFree(tb->tb_bufferA);
     tb->tb_bufferW = w;
-    tb->buffer.iswide = TRUE;
+    tb->buffer.s_iswide = TRUE;
   }
 
   succeed;
@@ -2204,7 +2204,7 @@ demoteTextBuffer(TextBuffer tb)
 
       pceFree(tb->tb_bufferW);
       tb->tb_bufferA = s;
-      tb->buffer.iswide = FALSE;
+      tb->buffer.s_iswide = FALSE;
     } else
     { fail;
     }
@@ -2335,38 +2335,38 @@ insert_textbuffer_shift(TextBuffer tb, intptr_t where, intptr_t times,
 { intptr_t grow;
   intptr_t here;
 
-  if ( s->size == 0 )
+  if ( s->s_size == 0 )
     succeed;
 
   if ( istbA(tb) && str_iswide(s) )
     promoteTextBuffer(tb);
 
-  grow = times * s->size;
+  grow = times * s->s_size;
   where = NormaliseIndex(tb, where);
   room(tb, where, grow);
 
   register_insert_textbuffer(tb, where, grow);
   start_change(tb, tb->gap_start);
   while(times-- > 0)
-  { if ( tb->buffer.iswide == s->iswide )
+  { if ( tb->buffer.s_iswide == s->s_iswide )
     { memmove(Address(tb, tb->gap_start), s->s_text, str_datasize(s));
     } else if ( isstrA(s) )		/* insert A in W */
     { charW *d = &tb->buffer.s_textW[tb->gap_start];
       const charA *f = s->s_textA;
-      const charA *e = &f[s->size];
+      const charA *e = &f[s->s_size];
 
       while(f<e)
 	*d++ = *f++;
     } else				/* insert W in A */
     { charA *d = &tb->buffer.s_textA[tb->gap_start];
       const charW *f = s->s_textW;
-      const charW *e = &f[s->size];
+      const charW *e = &f[s->s_size];
 
       while(f<e)
 	*d++ = *f++;
     }
-    tb->gap_start += s->size;
-    tb->size += s->size;
+    tb->gap_start += s->s_size;
+    tb->size += s->s_size;
   }
   end_change(tb, tb->gap_start);
 

@@ -45,7 +45,7 @@ getConvertModifier(Class class, Name name)
     answer(m);
   else
   { String s = &name->data;
-    int i, size = s->size;
+    int i, size = s->s_size;
     Name shift   = NAME_up;
     Name control = NAME_up;
     Name meta    = NAME_up;

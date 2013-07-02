@@ -797,21 +797,21 @@ convert_selection_display(Widget w,
 	char *out;
 
 	if ( isstrA(s) )
-	  length = pce_utf8_enclenA((char*)s->s_textA, s->size);
+	  length = pce_utf8_enclenA((char*)s->s_textA, s->s_size);
 	else
-	  length = pce_utf8_enclenW(s->s_textW, s->size);
+	  length = pce_utf8_enclenW(s->s_textW, s->s_size);
 
 	out = buf = XtMalloc(length+1);
 	if ( isstrA(s) )
 	{ const charA *f = s->s_textA;
-	  const charA *e = &f[s->size];
+	  const charA *e = &f[s->s_size];
 
 	  for(; f<e; f++)
 	    out = utf8_put_char(out, *f);
 	  *out = EOS;
 	} else
 	{ const charW *f = s->s_textW;
-	  const charW *e = &f[s->size];
+	  const charW *e = &f[s->s_size];
 
 	  for(; f<e; f++)
 	    out = utf8_put_char(out, *f);

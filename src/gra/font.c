@@ -244,7 +244,7 @@ getWidthFont(FontObj f, CharArray txt)
 
   d_ensure_display();			/* TBD */
 
-  answer(toInt(str_width(&txt->data, 0, txt->data.size, f)));
+  answer(toInt(str_width(&txt->data, 0, txt->data.s_size, f)));
 }
 
 
@@ -252,7 +252,7 @@ Int
 getAdvanceFont(FontObj f, CharArray txt)
 { d_ensure_display();			/* TBD */
 
-  return toInt(str_advance(&txt->data, 0, txt->data.size, f));
+  return toInt(str_advance(&txt->data, 0, txt->data.s_size, f));
 }
 
 

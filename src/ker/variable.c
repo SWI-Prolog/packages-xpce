@@ -380,7 +380,7 @@ getManIdVariable(Variable v)
   size_t len;
   Name rc;
 
-  len = 4 + ctx->data.size + v->name->data.size;
+  len = 4 + ctx->data.s_size + v->name->data.s_size;
   if ( len < LINESIZE )
     nm = buf;
   else
@@ -452,7 +452,7 @@ getPrintNameVariable(Variable var)
   size_t len;
   Name rc;
 
-  len = 5 + ctx->data.size + var->name->data.size;
+  len = 5 + ctx->data.s_size + var->name->data.s_size;
   if ( len < LINESIZE )
     nm = buf;
   else

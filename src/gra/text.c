@@ -104,7 +104,7 @@ static status
 recomputeText(TextObj t, Name what)
 { if ( notNil(t->selection) )		/* normalise the selection */
   { int from, to;
-    int size = t->string->data.size;
+    int size = t->string->data.s_size;
 
     GetSel(t->selection, &from, &to);
     if ( from > size || to > size )
@@ -151,7 +151,7 @@ str_format(String out, const String in, const int width, const FontObj font)
 
   if ( isstrA(in) )			/* 8-bit string */
   { charA  *s = in->s_textA;
-    charA  *e = &s[in->size];
+    charA  *e = &s[in->s_size];
     charA  *o = out->s_textA;
     charA *lb = NULL;			/* last-break; */
 
@@ -161,8 +161,8 @@ str_format(String out, const String in, const int width, const FontObj font)
       if ( s == e )
       { int n = o - out->s_textA - 1;
 
-	assert(n <= out->size);
-	out->size = n;
+	assert(n <= out->s_size);
+	out->s_size = n;
 	return;
       }
 
@@ -190,7 +190,7 @@ str_format(String out, const String in, const int width, const FontObj font)
     }
   } else				/* 16-bit string */
   { charW  *s = in->s_textW;
-    charW  *e = &s[in->size];
+    charW  *e = &s[in->s_size];
     charW  *o = out->s_textW;
     charW *lb = NULL;			/* last-break; */
 
@@ -198,7 +198,7 @@ str_format(String out, const String in, const int width, const FontObj font)
     { *o++ = *s;
 
       if ( s == e )
-      { out->size = o - out->s_textW - 1;
+      { out->s_size = o - out->s_textW - 1;
 	return;
       }
 
@@ -232,7 +232,7 @@ void
 str_one_line(String to, String from)
 { int n;
 
-  for(n=0; n<from->size; n++)
+  for(n=0; n<from->s_size; n++)
   { unsigned int c = str_fetch(from, n);
 
     if      ( c == '\n' ) c = 0xb6;	/* Paragraph sign */
@@ -241,7 +241,7 @@ str_one_line(String to, String from)
     str_store(to, n, c);
   }
 
-  to->size = from->size;
+  to->s_size = from->s_size;
 }
 
 
@@ -306,7 +306,7 @@ repaintText(TextObj t, int x, int y, int w, int h)
   }
 
   if ( Wrapped(t) )
-  { LocalString(buf, s->iswide, s->size+1);
+  { LocalString(buf, s->s_iswide, s->s_size+1);
 
     DEBUG(NAME_text,
 	  Cprintf("RedrawAreaText(%s): \"%s\"\n", pp(t), s->s_textA));
@@ -321,7 +321,7 @@ repaintText(TextObj t, int x, int y, int w, int h)
 		 t->format, NAME_top, flags);
   } else
   { if ( t->wrap == NAME_clip )
-    { LocalString(buf, s->iswide, s->size+1);
+    { LocalString(buf, s->s_iswide, s->s_size+1);
 
       str_one_line(buf, s);
       s = buf;
@@ -377,7 +377,7 @@ initAreaText(TextObj t)
 { int tw, x, y, w, h;
   Point pos = t->position;
   String s = &t->string->data;
-  int size = s->size;
+  int size = s->s_size;
   int b = valInt(t->border);
 
   if ( valInt(t->caret) < 0 )
@@ -386,7 +386,7 @@ initAreaText(TextObj t)
     assign(t, caret, toInt(size));
 
   if ( Wrapped(t) )
-  { LocalString(buf, s->iswide, s->size + MAX_WRAP_LINES);
+  { LocalString(buf, s->s_iswide, s->s_size + MAX_WRAP_LINES);
 
     str_format(buf, s, valInt(t->margin), t->font);
     str_size(buf, t->font, &tw, &h);
@@ -394,7 +394,7 @@ initAreaText(TextObj t)
       tw = valInt(t->margin);
   } else
   { if ( t->wrap == NAME_clip )
-    { LocalString(buf, s->iswide, s->size + 1);
+    { LocalString(buf, s->s_iswide, s->s_size + 1);
 
       str_one_line(buf, s);
       s = buf;
@@ -437,7 +437,7 @@ initPositionText(TextObj t)
   int b = valInt(t->border);
 
   if ( Wrapped(t) )
-  { LocalString(buf, s->iswide, s->size + MAX_WRAP_LINES);
+  { LocalString(buf, s->s_iswide, s->s_size + MAX_WRAP_LINES);
 
     str_format(buf, s, valInt(t->margin), t->font);
     str_size(buf, t->font, &tw, &h);
@@ -445,7 +445,7 @@ initPositionText(TextObj t)
       tw = valInt(t->margin);
   } else
   { if ( t->wrap == NAME_clip )
-    { LocalString(buf, s->iswide, s->size + 1);
+    { LocalString(buf, s->s_iswide, s->s_size + 1);
 
       str_one_line(buf, s);
       s = buf;
@@ -570,12 +570,12 @@ get_char_pos_text(TextObj t, Int chr, int *X, int *Y)
   int b = valInt(t->border);
 
   if ( Wrapped(t) )
-  { LocalString(buf, s->iswide, Wrapped(t) ? s->size + MAX_WRAP_LINES : 0);
+  { LocalString(buf, s->s_iswide, Wrapped(t) ? s->s_size + MAX_WRAP_LINES : 0);
 
     str_format(buf, s, valInt(t->margin), t->font);
     s = buf;
   } else if ( t->wrap == NAME_clip )
-  { LocalString(buf, s->iswide, s->size + 1);
+  { LocalString(buf, s->s_iswide, s->s_size + 1);
 
     str_one_line(buf, s);
     s = buf;
@@ -598,7 +598,7 @@ get_char_pos_text(TextObj t, Int chr, int *X, int *Y)
     int rw;
 
     if ( (el = str_next_index(s, caret, '\n')) < 0 )
-      el = s->size;
+      el = s->s_size;
     rw = str_width(s, caret, el, t->font);
 
     if ( t->format == NAME_center )
@@ -624,7 +624,7 @@ get_pointed_text(TextObj t, int x, int y)
   int line = (y-b) / ch;			/* line for caret */
   string buf;
 
-  if ( s->size == 0 )
+  if ( s->s_size == 0 )
     answer(ZERO);
 
   x -= b;
@@ -643,10 +643,10 @@ get_pointed_text(TextObj t, int x, int y)
       break;
     caret = c2+1;
   }
-  if ( caret > s->size )
-    caret = s->size;
+  if ( caret > s->s_size )
+    caret = s->s_size;
   if ( (el = str_next_index(s, caret, '\n')) < 0 )
-    el = s->size;
+    el = s->s_size;
 
   /* caret = start of line, el = end of line */
 
@@ -997,7 +997,7 @@ start_of_line(String s, int n)
 static int
 end_of_line(String s, int n)
 { if ( (n = str_next_index(s, n, '\n')) < 0 )
-    n = s->size;
+    n = s->s_size;
 
   return n;
 }
@@ -1005,9 +1005,9 @@ end_of_line(String s, int n)
 
 static int
 forward_word(String s, int i, int n)
-{ while( n-- > 0 && i < s->size )
-  { while( i < s->size && !isalnum(str_fetch(s, i)) ) i++;
-    while( i < s->size && isalnum(str_fetch(s, i)) ) i++;
+{ while( n-- > 0 && i < s->s_size )
+  { while( i < s->s_size && !isalnum(str_fetch(s, i)) ) i++;
+    while( i < s->s_size && isalnum(str_fetch(s, i)) ) i++;
   }
 
   return i;
@@ -1041,7 +1041,7 @@ deselectText(TextObj t)
 
 static status
 caretText(TextObj t, Int where)
-{ int size = t->string->data.size;
+{ int size = t->string->data.s_size;
 
   if ( isDefault(where) || valInt(where) >= size )
   { where = toInt(size);
@@ -1116,7 +1116,7 @@ endOfLineText(TextObj t, Int arg)
 
   deselectText(t);
   caret = end_of_line(s, caret);
-  for(n = UArg(t)-1; caret < t->string->data.size && n > 0; n--)
+  for(n = UArg(t)-1; caret < t->string->data.s_size && n > 0; n--)
   { caret++;
     caret = end_of_line(s, caret);
   }
@@ -1215,7 +1215,7 @@ backwardDeleteCharText(TextObj t, Int arg)
 { int caret = valInt(t->caret);
   int len  = UArg(t);
   int from = (len > 0 ? caret - len : caret);
-  int size = t->string->data.size;
+  int size = t->string->data.s_size;
 
   deselectText(t);
 
@@ -1275,7 +1275,7 @@ killLineText(TextObj t, Int arg)
 
   end = end_of_line(s, caret);
   if ( notDefault(arg) )
-    for( n=UArg(t); end < s->size && n > 0; n--, end++ )
+    for( n=UArg(t); end < s->s_size && n > 0; n--, end++ )
       end = end_of_line(s, end);
 
   prepareEditText(t, DEFAULT);
@@ -1334,7 +1334,7 @@ insertSelfText(TextObj t, Int times, Int chr)
 
     for(i=0; i<tms; i++)
       str_store(buf, i, c);
-    buf->size = i;
+    buf->s_size = i;
 
     str_insert_string((StringObj) t->string, t->caret, buf);
     caretText(t, add(t->caret, times));
@@ -1356,12 +1356,12 @@ openLineText(TextObj t, Int arg)
 
   if ( tms > 0 )
   { String nl = str_nl(&t->string->data);
-    LocalString(buf, t->string->data.iswide, nl->size * tms);
+    LocalString(buf, t->string->data.s_iswide, nl->s_size * tms);
     int i;
 
     for(i=0; i<tms; i++)
-      str_ncpy(buf, i * nl->size, nl, 0, nl->size);
-    buf->size = nl->size * tms;
+      str_ncpy(buf, i * nl->s_size, nl, 0, nl->s_size);
+    buf->s_size = nl->s_size * tms;
 
     prepareInsertText(t);
     str_insert_string((StringObj) t->string, t->caret, buf);

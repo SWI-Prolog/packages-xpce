@@ -46,7 +46,7 @@ struct pce_file_handle
   int		my_flags;		/* private flags */
 };
 
-#define 	PCE_IO_MAGIC	0x72eb9ace
+#define		PCE_IO_MAGIC	0x72eb9ace
 
 #define		MY_ISSTREAM	0x0001	/* data a a byte-stream */
 
@@ -333,21 +333,21 @@ pceRead(int handle, char *buf, size_t size)
 	 instanceOfObject(sub, ClassCharArray) )
     { String s = &sub->data;
 
-      assert(s->size <= size/sizeof(wchar_t));
+      assert(s->s_size <= size/sizeof(wchar_t));
 
       if ( isstrA(s) )
       { charW *dest = (charW*)buf;
 	const charA *f = s->s_textA;
-	const charA *e = &f[s->size];
+	const charA *e = &f[s->s_size];
 
 	while(f<e)
 	  *dest++ = *f++;
       } else
-      { memcpy(buf, s->s_textW, s->size*sizeof(charW));
+      { memcpy(buf, s->s_textW, s->s_size*sizeof(charW));
       }
 
-      chread = s->size * sizeof(wchar_t);
-      h->point += s->size;
+      chread = s->s_size * sizeof(wchar_t);
+      h->point += s->s_size;
     } else
     { errno = EIO;
       chread = -1;

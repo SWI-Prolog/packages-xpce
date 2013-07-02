@@ -1250,7 +1250,7 @@ getSelectionTextItem(TextItem ti)
 
     if ( !ok &&				/* better '' ---> @default?? */
 	 includesType(ti->type, TypeDefault) &&
-	 ti->value_text->string->data.size == 0 )
+	 ti->value_text->string->data.s_size == 0 )
 
     { assign(ti, selection, DEFAULT);
       ok++;

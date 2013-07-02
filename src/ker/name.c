@@ -94,7 +94,7 @@ static inline int
 stringHashValue(String s)
 { unsigned int value = 0;
   unsigned int shift = 5;
-  int size = s->size;
+  int size = s->s_size;
   charA *t = s->s_textA;
 
   if ( isstrW(s) )
@@ -225,7 +225,7 @@ initNamesPass1(void)
 
   for( name=(Name)builtin_names; name->data.s_text != NULL; name++)
   { str_inithdr(&name->data, FALSE);
-    name->data.size = (int)strlen((char *)name->data.s_text);
+    name->data.s_size = (int)strlen((char *)name->data.s_text);
   }
 }
 
@@ -415,7 +415,7 @@ ValueName(Name n, CharArray val)
     str_unalloc(&n->data);
   str_cphdr(&n->data, &val->data);
   str_alloc(&n->data);
-  str_ncpy(&n->data, 0, &val->data, 0, val->data.size);
+  str_ncpy(&n->data, 0, &val->data, 0, val->data.s_size);
   insertName(n);
 
   DEBUG((Name)NAME_name, Cprintf("%s\n", strName(n)));
@@ -427,7 +427,7 @@ ValueName(Name n, CharArray val)
 static status
 syntaxName(Name n, Name casemap, Int ws)
 { String s = &n->data;
-  int size = s->size;
+  int size = s->s_size;
   int i;
   StringObj str;
 
@@ -442,7 +442,7 @@ syntaxName(Name n, Name casemap, Int ws)
   upcaseString(str);
   if ( notDefault(ws) )
   { s = &str->data;
-    size = s->size;
+    size = s->s_size;
 
     for(i=0; i<size; i++)
       if ( str_fetch(s, i) == (wint_t)syntax.word_separator )
@@ -520,9 +520,9 @@ StringToName(String s)
   void *do_free = NULL;
   Name name;
 
-  if ( s->iswide )
+  if ( s->s_iswide )
   { const charW *txt = s->s_textW;
-    const charW *end = &txt[s->size];
+    const charW *end = &txt[s->s_size];
     charA *p;
 
     for( ; txt < end; txt++ )
@@ -531,9 +531,9 @@ StringToName(String s)
     }
 
     str_inithdr(&s2, FALSE);
-    s2.size = s->size;
-    if ( !(s2.s_textA = alloca(s->size)) )
-    { s2.s_textA = pceMalloc(s->size);
+    s2.s_size = s->s_size;
+    if ( !(s2.s_textA = alloca(s->s_size)) )
+    { s2.s_textA = pceMalloc(s->s_size);
       do_free = s2.s_textA;
     }
     for(txt = s->s_textW, p = s2.s_textA; txt < end; )
@@ -564,7 +564,7 @@ canonical:
 
     str_cphdr(&name->data, s);
     str_alloc(&name->data);
-    str_ncpy(&name->data, 0, s, 0, s->size);
+    str_ncpy(&name->data, 0, s, 0, s->s_size);
     registerName(name);
     createdObject(name, (Name)NAME_new);
   } else

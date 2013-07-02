@@ -151,10 +151,10 @@ Name
 getNameType(Type t)
 { String str = &t->fullname->data;
 
-  if ( str->size > 0 && iscsym(str_fetch(str,0)) )
+  if ( str->s_size > 0 && iscsym(str_fetch(str,0)) )
   { int i;
 
-    for(i=1; i<str->size; i++)
+    for(i=1; i<str->s_size; i++)
     { if ( iscsym(str_fetch(str, i)) )
 	continue;
       if ( str_fetch(str, i) == '=' )
@@ -735,7 +735,7 @@ getCharType(const Type t, const Any val, const Any ctx)
     String s = &ca->data;
     int c;
 
-    if ( s->size == 1 )
+    if ( s->s_size == 1 )
       return toInt(str_fetch(s, 0));
     if ( isstrA(s) && (c = charpToChar((char *)s->s_text)) >= 0 )
       return toInt(c);
@@ -1129,13 +1129,13 @@ strip_string(StrPart s)
 
 static status
 init_string(StrPart s, String t)
-{ if ( t->size >= LINESIZE )
+{ if ( t->s_size >= LINESIZE )
     fail;
 
   if ( isstrA(t) )
   { wchar_t *o = s->text;
     cucharp i = (cucharp)t->s_textA;
-    cucharp e = &i[t->size];
+    cucharp e = &i[t->s_size];
 
     while(i<e)
       *o++ = *i++;
@@ -1145,7 +1145,7 @@ init_string(StrPart s, String t)
   }
 
   s->start = s->text;
-  s->end = &s->text[t->size - 1];
+  s->end = &s->text[t->s_size - 1];
   strip_string(s);
 
   succeed;

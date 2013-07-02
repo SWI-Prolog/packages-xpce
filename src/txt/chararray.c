@@ -36,7 +36,7 @@ status
 initialiseCharArray(CharArray n, CharArray value)
 { str_cphdr(&n->data, &value->data);
   str_alloc(&n->data);
-  if ( value->data.readonly )
+  if ( value->data.s_readonly )
     n->data.s_textA = value->data.s_textA;
   else
     memcpy(n->data.s_textA, value->data.s_textA, str_datasize(&n->data));
@@ -207,12 +207,12 @@ getCopyCharArray(CharArray n)
 
 CharArray
 getCapitaliseCharArray(CharArray n)
-{ if ( n->data.size == 0 )
+{ if ( n->data.s_size == 0 )
     answer(n);
   else
   { String d = &n->data;
-    int size = d->size;
-    LocalString(buf, d->iswide, size);
+    int size = d->s_size;
+    LocalString(buf, d->s_iswide, size);
     int i=1, o=1;
 
     str_store(buf, 0, towupper(str_fetch(d, 0)));
@@ -229,7 +229,7 @@ getCapitaliseCharArray(CharArray n)
 	str_store(buf, o, towlower(c));
     }
 
-    buf->size = o;
+    buf->s_size = o;
     answer(ModifiedCharArray(n, buf));
   }
 }
@@ -243,13 +243,13 @@ by spaces.
 CharArray
 getLabelNameCharArray(CharArray n)
 { String s = &n->data;
-  int size = s->size;
+  int size = s->s_size;
   int i;
 
   if ( size == 0 )
     return n;
 
-  { LocalString(buf, s->iswide, size);
+  { LocalString(buf, s->s_iswide, size);
     int o = 0;
     wint_t c = str_fetch(s, 0);
 
@@ -265,7 +265,7 @@ getLabelNameCharArray(CharArray n)
       else
 	str_store(buf, o, c);
     }
-    buf->size = o;
+    buf->s_size = o;
 
     answer(ModifiedCharArray(n, buf));
   }
@@ -275,13 +275,13 @@ getLabelNameCharArray(CharArray n)
 CharArray
 getDowncaseCharArray(CharArray n)
 { String s = &n->data;
-  int size = s->size;
-  LocalString(buf, s->iswide, size);
+  int size = s->s_size;
+  LocalString(buf, s->s_iswide, size);
   int i;
 
   for(i=0; i<size; i++)
     str_store(buf, i, tolower(str_fetch(s, i)));
-  buf->size = size;
+  buf->s_size = size;
 
   answer(ModifiedCharArray(n, buf));
 }
@@ -290,13 +290,13 @@ getDowncaseCharArray(CharArray n)
 static CharArray
 getUpcaseCharArray(CharArray n)
 { String s = &n->data;
-  int size = s->size;
-  LocalString(buf, s->iswide, size);
+  int size = s->s_size;
+  LocalString(buf, s->s_iswide, size);
   int i;
 
   for(i=0; i<size; i++)
     str_store(buf, i, towupper(str_fetch(s, i)));
-  buf->size = size;
+  buf->s_size = size;
 
   answer(ModifiedCharArray(n, buf));
 }
@@ -305,8 +305,8 @@ getUpcaseCharArray(CharArray n)
 static CharArray
 getStripCharArray(CharArray n, Name how)
 { String s = &n->data;
-  int size = s->size;
-  LocalString(buf, s->iswide, size);
+  int size = s->s_size;
+  LocalString(buf, s->s_iswide, size);
   int i=0, o=0, lnb=0;
 
   if ( isDefault(how) )
@@ -328,9 +328,9 @@ getStripCharArray(CharArray n, Name how)
     }
   }
   if ( how == NAME_canonise || how == NAME_trailing || how == NAME_both )
-    buf->size = lnb;
+    buf->s_size = lnb;
   else
-    buf->size = o;
+    buf->s_size = o;
 
   answer(ModifiedCharArray(n, buf));
 }
@@ -339,7 +339,7 @@ getStripCharArray(CharArray n, Name how)
 static Chain
 getSplitCharArray(CharArray in, CharArray br)
 { String s1 = &in->data;
-  int size = s1->size;
+  int size = s1->s_size;
   int i=0, last=0;
   Chain ch = answerObject(ClassChain, EAV);
   string buf;
@@ -349,17 +349,17 @@ getSplitCharArray(CharArray in, CharArray br)
   if ( notDefault(br) )			/* given pattern */
   { String b = &br->data;
 
-    while( i<=size-b->size )
+    while( i<=size-b->s_size )
     { if ( str_prefix_offset(s1, i, b) )
       { if ( isstrA(s1) )
 	  buf.s_textA = s1->s_textA+last;
 	else
 	  buf.s_textW = s1->s_textW+last;
 
-	buf.size = i-last;
+	buf.s_size = i-last;
 	appendChain(ch, ModifiedCharArray(in, &buf));
 
-	i = last = i+b->size;
+	i = last = i+b->s_size;
       } else
 	i++;
     }
@@ -375,7 +375,7 @@ getSplitCharArray(CharArray in, CharArray br)
 	else
 	  buf.s_textW = s1->s_textW+last;
 
-	buf.size = i-last;
+	buf.s_size = i-last;
 	appendChain(ch, ModifiedCharArray(in, &buf));
 
 	while(i < size && iswspace(str_fetch(s1, i)))
@@ -393,7 +393,7 @@ getSplitCharArray(CharArray in, CharArray br)
   else
     buf.s_textW = s1->s_textW+last;
 
-  buf.size = size-last;
+  buf.s_size = size-last;
   appendChain(ch, ModifiedCharArray(in, &buf));
 
   answer(ch);
@@ -404,12 +404,12 @@ CharArray
 getAppendCharArray(CharArray n1, CharArray n2)
 { String s1 = &n1->data;
   String s2 = &n2->data;
-  int iswide = (s1->iswide || s2->iswide);
-  LocalString(buf, iswide, s1->size + s2->size);
+  int iswide = (s1->s_iswide || s2->s_iswide);
+  LocalString(buf, iswide, s1->s_size + s2->s_size);
 
-  buf->size = s1->size + s2->size;
-  str_ncpy(buf, 0, s1, 0, s1->size);
-  str_ncpy(buf, s1->size, s2, 0, s2->size);
+  buf->s_size = s1->s_size + s2->s_size;
+  str_ncpy(buf, 0, s1, 0, s1->s_size);
+  str_ncpy(buf, s1->s_size, s2, 0, s2->s_size);
 
   answer(ModifiedCharArray(n1, buf));
 }
@@ -417,28 +417,28 @@ getAppendCharArray(CharArray n1, CharArray n2)
 
 static CharArray
 getAppendCharArrayv(CharArray ca, int argc, CharArray *argv)
-{ int l = ca->data.size;
-  int iswide = ca->data.iswide;
+{ int l = ca->data.s_size;
+  int iswide = ca->data.s_iswide;
   int i;
 
   for( i=0; i<argc; i++ )
-  { l += argv[i]->data.size;
-    if ( argv[i]->data.iswide )
+  { l += argv[i]->data.s_size;
+    if ( argv[i]->data.s_iswide )
       iswide = TRUE;
   }
 
   { LocalString(buf, iswide, l);
     int d;
 
-    str_ncpy(buf, 0, &ca->data, 0, ca->data.size);
-    d = ca->data.size;
+    str_ncpy(buf, 0, &ca->data, 0, ca->data.s_size);
+    d = ca->data.s_size;
 
     for( i=0; i<argc; i++ )
-    { str_ncpy(buf, d, &argv[i]->data, 0, argv[i]->data.size);
-      d += argv[i]->data.size;
+    { str_ncpy(buf, d, &argv[i]->data, 0, argv[i]->data.s_size);
+      d += argv[i]->data.s_size;
     }
 
-    buf->size = l;
+    buf->s_size = l;
     answer(ModifiedCharArray(ca, buf));
   }
 }
@@ -451,7 +451,7 @@ getDeleteSuffixCharArray(CharArray n, CharArray s)
 
     str_cphdr(&buf, &n->data);
     buf.s_text = n->data.s_text;
-    buf.size = n->data.size - s->data.size;
+    buf.s_size = n->data.s_size - s->data.s_size;
 
     answer(ModifiedCharArray(n, &buf));
   }
@@ -475,11 +475,11 @@ getDeletePrefixCharArray(CharArray n, CharArray s)
   { string buf;
 
     str_cphdr(&buf, &n->data);
-    buf.size = n->data.size - s->data.size;
+    buf.s_size = n->data.s_size - s->data.s_size;
     if ( isstrA(&buf) )
-      buf.s_textA = &n->data.s_textA[s->data.size];
+      buf.s_textA = &n->data.s_textA[s->data.s_size];
     else
-      buf.s_textW = &n->data.s_textW[s->data.size];
+      buf.s_textW = &n->data.s_textW[s->data.s_size];
 
     answer(ModifiedCharArray(n, &buf));
   }
@@ -492,7 +492,7 @@ CharArray
 getSubCharArray(CharArray n, Int start, Int end)
 { string s;
   int x, y;
-  int len = n->data.size;
+  int len = n->data.s_size;
 
   x = valInt(start);
   y = (isDefault(end) ? len : valInt(end));
@@ -500,7 +500,7 @@ getSubCharArray(CharArray n, Int start, Int end)
     fail;
 
   str_cphdr(&s, &n->data);
-  s.size = y-x;
+  s.s_size = y-x;
   if ( isstrA(&n->data) )
     s.s_textA = &n->data.s_textA[x];
   else
@@ -542,7 +542,7 @@ base64_code(unsigned int in)
 static CharArray
 getBase64EncodeCharArray(CharArray in)
 { String s = &in->data;
-  int size = s->size;
+  int size = s->s_size;
   int triples = (size+2)/3;
   LocalString(buf, FALSE, triples*4);
   int i, o=0;
@@ -571,7 +571,7 @@ getBase64EncodeCharArray(CharArray in)
     str_store(buf, o++, '=');
   }
 
-  buf->size = o;
+  buf->s_size = o;
   answer(ModifiedCharArray(in, buf));
 }
 
@@ -579,7 +579,7 @@ getBase64EncodeCharArray(CharArray in)
 static CharArray
 getBase64DecodeCharArray(CharArray in)
 { String s = &in->data;
-  int size = s->size;
+  int size = s->s_size;
   LocalString(buf, FALSE, (size/4)*3);
   int i, o = 0;
   unsigned long v = 0L;
@@ -614,7 +614,7 @@ getBase64DecodeCharArray(CharArray in)
   if ( i != size || v == ~(unsigned long)0 )
     fail;
 
-  buf->size = o;
+  buf->s_size = o;
   answer(ModifiedCharArray(in, buf));
 }
 
@@ -628,19 +628,19 @@ getReadAsFileCharArray(CharArray n, Int from, Int size)
 { int f = valInt(from);
   int s = valInt(size);
 
-  if ( f < 0 || s < 0 || f > n->data.size )
+  if ( f < 0 || s < 0 || f > n->data.s_size )
     fail;
 
-  if ( f == 0 && s >= n->data.size )
+  if ( f == 0 && s >= n->data.s_size )
     answer(n);
   else
   { string str;
 
-    if ( f+s > n->data.size )
-      s = n->data.size - f;
+    if ( f+s > n->data.s_size )
+      s = n->data.s_size - f;
 
     str_cphdr(&str, &n->data);
-    str.size = s;
+    str.s_size = s;
     if ( isstrA(&n->data) )
       str.s_textA = &n->data.s_textA[f];
     else
@@ -659,7 +659,7 @@ Int
 getSizeCharArray(Any n)
 { CharArray c = n;
 
-  answer(toInt(c->data.size));
+  answer(toInt(c->data.s_size));
 }
 
 
@@ -667,7 +667,7 @@ static Int
 getCharacterCharArray(CharArray n, Int idx)
 { int i = valInt(idx);
 
-  if ( i < 0 || i >= n->data.size )
+  if ( i < 0 || i >= n->data.s_size )
     fail;
 
   answer(toInt(str_fetch(&n->data, i)));
@@ -690,7 +690,7 @@ getIndexCharArray(CharArray n, Int chr, Int here)
 static Int
 getRindexCharArray(CharArray n, Int chr, Int here)
 { wint_t c = valInt(chr);
-  int h, len = n->data.size;
+  int h, len = n->data.s_size;
 
   h = (isDefault(here) ? (len - 1) : valInt(here));
   if ( (h = str_next_rindex(&n->data, h, c)) >= 0 )
@@ -702,7 +702,7 @@ getRindexCharArray(CharArray n, Int chr, Int here)
 
 static Int
 getLineNoCharArray(CharArray name, Int caret)
-{ int here = (isDefault(caret) ? name->data.size : valInt(caret));
+{ int here = (isDefault(caret) ? name->data.s_size : valInt(caret));
 
   answer(toInt(str_lineno(&name->data, here)));
 }

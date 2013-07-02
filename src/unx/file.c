@@ -792,13 +792,13 @@ append_file(FileObj f, String str)
   if ( f->encoding == NAME_octet )
   { if ( Sfwrite(str->s_text,
 		 isstrA(str) ? sizeof(charA) : sizeof(charW),
-		 str->size,
-		 f->fd) != str->size )
+		 str->s_size,
+		 f->fd) != str->s_size )
       return reportErrorFile(f);
   } else
   { if ( isstrA(str) )
     { const charA *s = str->s_textA;
-      const charA *e = &s[str->size];
+      const charA *e = &s[str->s_size];
 
       for(; s<e; s++)
       { if ( Sputcode(*s, f->fd) < 0 )
@@ -806,7 +806,7 @@ append_file(FileObj f, String str)
       }
     } else
     { const charW *s = str->s_textW;
-      const charW *e = &s[str->size];
+      const charW *e = &s[str->s_size];
 
       for(; s<e; s++)
       { if ( Sputcode(*s, f->fd) < 0 )
@@ -940,7 +940,7 @@ getReadLineFile(FileObj f)
   { int c = Sgetcode(f->fd);
 
     if ( c == EOF )
-    { if ( tmp.s.size == 0 )
+    { if ( tmp.s.s_size == 0 )
 	fail;
       break;
     }
@@ -984,7 +984,7 @@ getReadFile(FileObj f, Int n)
     s = answerObject(ClassString, EAV);
     str_unalloc(&s->data);
     str_inithdr(&s->data, FALSE);
-    s->data.size = (int)size;
+    s->data.s_size = (int)size;
     str_alloc(&s->data);
 
     if ( (m = Sfread(s->data.s_textA, 1, size, f->fd)) != size )
@@ -995,7 +995,7 @@ getReadFile(FileObj f, Int n)
     int c;
 
     str_tmp_init(&tmp);
-    while(tmp.s.size < size && (c = Sgetcode(f->fd)) != EOF )
+    while(tmp.s.s_size < size && (c = Sgetcode(f->fd)) != EOF )
     { str_tmp_put(&tmp, (wint_t)c);
     }
     if ( !checkErrorFile(f) )
@@ -1120,28 +1120,28 @@ an ISO Latin-1 string.
 status
 storeStringFile(FileObj f, String s)
 { if ( isstrA(s) )
-  { TRY(storeWordFile(f, (Any) (long)s->size));
-    Sfwrite(s->s_textA, sizeof(char), s->size, f->fd);
+  { TRY(storeWordFile(f, (Any) (long)s->s_size));
+    Sfwrite(s->s_textA, sizeof(char), s->s_size, f->fd);
 
-    DEBUG(NAME_save, Cprintf("Saved ISO string, %ld chars\n", s->size));
+    DEBUG(NAME_save, Cprintf("Saved ISO string, %ld chars\n", s->s_size));
   } else if ( !str_iswide(s) )
   { const charW *w = s->s_textW;
-    const charW *e = &w[s->size];
+    const charW *e = &w[s->s_size];
 
-    TRY(storeWordFile(f, (Any) (long)s->size));
+    TRY(storeWordFile(f, (Any) (long)s->s_size));
     for( ; w<e; w++)
     { if ( Sputc(*w, f->fd) < 0 )
 	return checkErrorFile(f);
     }
 
     DEBUG(NAME_save,
-	  Cprintf("Saved converted ISO string, %ld chars\n", s->size));
+	  Cprintf("Saved converted ISO string, %ld chars\n", s->s_size));
   } else
   { IOENC oenc;
     const charW *w = s->s_textW;
-    const charW *e = &w[s->size];
+    const charW *e = &w[s->s_size];
 
-    TRY(storeWordFile(f, (Any) -(long)s->size));
+    TRY(storeWordFile(f, (Any) -(long)s->s_size));
     oenc = f->fd->encoding;
     f->fd->encoding = ENC_UTF8;
     for( ; w<e; w++)
@@ -1152,7 +1152,7 @@ storeStringFile(FileObj f, String s)
     }
     f->fd->encoding = oenc;
 
-    DEBUG(NAME_save, Cprintf("Saved wide string, %ld chars\n", s->size));
+    DEBUG(NAME_save, Cprintf("Saved wide string, %ld chars\n", s->s_size));
   }
 
   return checkErrorFile(f);

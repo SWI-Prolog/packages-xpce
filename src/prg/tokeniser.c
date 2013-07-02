@@ -143,7 +143,7 @@ GETC(Tokeniser t)
     { CharArray ca = t->source;
       String s = &ca->data;
 
-      c = (t->caret < s->size ? (int)str_fetch(&ca->data, t->caret) : EOF);
+      c = (t->caret < s->s_size ? (int)str_fetch(&ca->data, t->caret) : EOF);
       break;
     }
     case A_TEXT_BUFFER:
@@ -176,7 +176,7 @@ PEEKC(Tokeniser t)
     { CharArray ca = t->source;
       String s = &ca->data;
 
-      c = (t->caret < s->size ? (int)str_fetch(&ca->data, t->caret) : EOF);
+      c = (t->caret < s->s_size ? (int)str_fetch(&ca->data, t->caret) : EOF);
       break;
     }
     case A_TEXT_BUFFER:
@@ -238,7 +238,7 @@ getPeekTokeniser(Tokeniser t)
 status
 symbolTokeniser(Tokeniser t, Name symb)	/* only need 2++ characters!? */
 { String s = &symb->data;
-  int size = s->size;
+  int size = s->s_size;
 
   if ( size > 1 )
   { int i;
@@ -250,7 +250,7 @@ symbolTokeniser(Tokeniser t, Name symb)	/* only need 2++ characters!? */
 	str_cphdr(&s2, s);
 	s2.s_text = s->s_text;
 	for(i=1; i<=size; i++)
-	{ s2.size = i;
+	{ s2.s_size = i;
 	  appendHashTable(t->symbols, StringToName(&s2), ON);
 	}
 

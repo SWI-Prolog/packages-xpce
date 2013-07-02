@@ -38,9 +38,14 @@ typedef wchar_t       charW;		/* wide character */
 #define STR_MAX_SIZE ((1L<<STR_SIZE_BITS)-1)
 
 typedef struct _string
-{ unsigned	size : STR_SIZE_BITS;	/* size indication (512 MB) */
-  unsigned	iswide : 1;		/* char- or wide characters */
-  unsigned	readonly : 1;		/* storage is externally managed */
+{ union
+  { struct
+    { unsigned	size : STR_SIZE_BITS;	/* size indication (512 MB) */
+      unsigned	iswide : 1;		/* char- or wide characters */
+      unsigned	readonly : 1;		/* storage is externally managed */
+    } f;
+    unsigned mask;
+  } hdr;
   union
   { charA *	textA;
     charW *	textW;
@@ -49,13 +54,16 @@ typedef struct _string
 
 #define s_text		text_union.textA
 #define s_textA		text_union.textA
-#define s_textW	text_union.textW
+#define s_textW		text_union.textW
+#define s_size		hdr.f.size
+#define s_iswide	hdr.f.iswide
+#define s_readonly	hdr.f.readonly
 
-#define isstrA(s) ((s)->iswide == 0)	/* 8-bit string */
-#define isstrW(s) ((s)->iswide == 1)	/* 16-bit string */
+#define isstrA(s) ((s)->s_iswide == 0)	/* 8-bit string */
+#define isstrW(s) ((s)->s_iswide == 1)	/* 16-bit string */
 
-#define str_len(s) ((s)->size)		/* length of the string */
-#define str_wsize(s) ((((s)->iswide \
+#define str_len(s) ((s)->s_size)	/* length of the string */
+#define str_wsize(s) ((((s)->s_iswide \
 	? (s)->size * sizeof(charW) \
 	: (s)->size) + sizeof(wint_t) - 1) / sizeof(wint_t))
 #define str_fetchA(s, i)	(s->s_textA[(i)])
@@ -63,13 +71,13 @@ typedef struct _string
 #define str_storeA(s, i, c)	(s->s_textA[(i)] = (charA)(c))
 #define str_storeW(s, i, c)	(s->s_textW[(i)] = (charW)(c))
 
-#define str_cphdr(t, f) do { *(unsigned long *)(t) = *(unsigned long *)(f); \
+#define str_cphdr(t, f) do { (t)->hdr.mask = (f)->hdr.mask; \
 			   } while(0)
-#define str_inithdr(s, w) do { *(unsigned long *)(s) = 0L; \
-			       (s)->iswide = w; \
+#define str_inithdr(s, w) do { (s)->hdr.mask = 0; \
+			       (s)->s_iswide = w; \
 			     } while(0)
 
-#define str_datasize(s) (isstrA(s) ? (s)->size : (s)->size * sizeof(charW))
+#define str_datasize(s) (isstrA(s) ? (s)->s_size : (s)->s_size * sizeof(charW))
 
 #ifndef FALSE
 #define FALSE 0

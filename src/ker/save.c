@@ -561,7 +561,7 @@ loadStringFile(IOSTREAM *fd, String s)
 
   if ( size >= 0 )
   { str_inithdr(s, FALSE);
-    s->size = size;
+    s->s_size = size;
 
     str_alloc(s);
     if ( Sfread(s->s_textA, sizeof(char), size, fd) != (size_t)size )
@@ -572,12 +572,12 @@ loadStringFile(IOSTREAM *fd, String s)
     IOENC oenc;
 
     str_inithdr(s, TRUE);
-    s->size = -size;
+    s->s_size = -size;
     str_alloc(s);
 
     oenc = fd->encoding;
     fd->encoding = ENC_UTF8;
-    for(d=s->s_textW, i=0; i<s->size; i++)
+    for(d=s->s_textW, i=0; i<s->s_size; i++)
     { int chr = Sgetcode(fd);
 
       if ( chr != EOF )

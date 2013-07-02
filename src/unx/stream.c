@@ -393,7 +393,7 @@ formatStream(Stream s, CharArray fmt, int argc, Any *argv)
 
   str_writefv(&tmp, fmt, argc, argv);
   if ( isstrA(&tmp) )
-  { rc = ws_write_stream_data(s, tmp.s_textA, tmp.size);
+  { rc = ws_write_stream_data(s, tmp.s_textA, tmp.s_size);
   } else
   { Cprintf("TBD: wide characters in stream->format");
 

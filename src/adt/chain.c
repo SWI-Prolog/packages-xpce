@@ -1071,7 +1071,7 @@ Tuple
 getCompleteNameChain(Chain ch, CharArray prefix, Function map,
 		     BoolObj ignore_case)
 { Chain matches = NIL;
-  LocalString(common, prefix->data.iswide, LINESIZE);
+  LocalString(common, prefix->data.s_iswide, LINESIZE);
   Cell cell;
 
   for_cell(cell, ch)
@@ -1089,15 +1089,15 @@ getCompleteNameChain(Chain ch, CharArray prefix, Function map,
     if ( rval )
     { if ( ((ignore_case == ON && str_icase_prefix(&prt, &prefix->data)) ||
 	    (ignore_case != ON && str_prefix(&prt, &prefix->data))) &&
-	   prt.size < LINESIZE ) /* hit */
+	   prt.s_size < LINESIZE ) /* hit */
       { if ( isNil(matches) )
 	{ matches = answerObject(ClassChain, obj, EAV);
 	  str_cpy(common, &prt);
 	} else
 	{ if ( ignore_case == ON )
-	    common->size = str_icase_common_length(&prt, common);
+	    common->s_size = str_icase_common_length(&prt, common);
 	  else
-	    common->size = str_common_length(&prt, common);
+	    common->s_size = str_common_length(&prt, common);
 
 	  appendChain(matches, obj);
 	}

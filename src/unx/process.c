@@ -436,13 +436,13 @@ initEnvironment(Process p)
       String vs = &((CharArray)a->value)->data;
 
       if ( isstrA(ns) && isstrA(vs) )
-      { int len = ns->size + 1 + vs->size + 1;
+      { int len = ns->s_size + 1 + vs->s_size + 1;
 	char *e;
 
 	e = malloc(len);
-	memcpy(e, ns->s_textA, ns->size);
-	e[ns->size] = '=';
-	memcpy(e+ns->size+1, vs->s_textA, vs->size);
+	memcpy(e, ns->s_textA, ns->s_size);
+	e[ns->s_size] = '=';
+	memcpy(e+ns->s_size+1, vs->s_textA, vs->s_size);
 	e[len-1] = EOS;
 
 	env[i++] = e;

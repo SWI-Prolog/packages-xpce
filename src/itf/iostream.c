@@ -74,31 +74,31 @@ Sread_object(void *handle, char *buf, size_t size)
        instanceOfObject(sub, ClassCharArray) )
   { String s = &sub->data;
 
-    assert(s->size <= advance);
+    assert(s->s_size <= advance);
 
     if ( h->encoding == ENC_WCHAR )
     { if ( isstrA(s) )
       { charW *dest = (charW*)buf;
 	const charA *f = s->s_textA;
-	const charA *e = &f[s->size];
+	const charA *e = &f[s->s_size];
 
 	while(f<e)
 	  *dest++ = *f++;
       } else
-      { memcpy(buf, s->s_textW, s->size*sizeof(charW));
+      { memcpy(buf, s->s_textW, s->s_size*sizeof(charW));
       }
-      chread = s->size * sizeof(wchar_t);
+      chread = s->s_size * sizeof(wchar_t);
     } else
     { if ( isstrA(s) )
-      { memcpy(buf, s->s_textA, s->size);
+      { memcpy(buf, s->s_textA, s->s_size);
       } else
       { errno = EIO;
 	chread = -1;
       }
-      chread = s->size;
+      chread = s->s_size;
     }
 
-    h->point += s->size;
+    h->point += s->s_size;
   } else
   { errno = EIO;
     chread = -1;

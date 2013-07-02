@@ -186,7 +186,7 @@ getConvertStringClassVariable(ClassVariable cv, CharArray value)
   }
 
   if ( specialisedType(cv->type, TypeCharArray) ||
-       value->data.size == 0 )		/* empty atom */
+       value->data.s_size == 0 )		/* empty atom */
     answer(checkType(value, cv->type, cv->context));
 
   if ( syntax.uppercase &&
@@ -458,7 +458,7 @@ getManIdClassVariable(ClassVariable cv)
   size_t len;
   Name rc;
 
-  len = 4 + ctx->data.size + cv->name->data.size;
+  len = 4 + ctx->data.s_size + cv->name->data.s_size;
   if ( len < LINESIZE )
     nm = buf;
   else
@@ -523,7 +523,7 @@ getPrintNameClassVariable(ClassVariable cv)
   size_t len;
   Name rc;
 
-  len = 2 + ctx->data.size + cv->name->data.size;
+  len = 2 + ctx->data.s_size + cv->name->data.s_size;
   if ( len < LINESIZE )
     nm = buf;
   else

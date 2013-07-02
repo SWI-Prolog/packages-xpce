@@ -440,12 +440,12 @@ put_string(int (*out)(void*, wint_t), void *closure, String s)
   if ( isstrA(s) )
   { charA *t = s->s_textA;
 
-    for(i=0; i<s->size; i++)
+    for(i=0; i<s->s_size; i++)
       Put(t[i]);
   } else
   { charW *t = s->s_textW;
 
-    for(i=0; i<s->size; i++)
+    for(i=0; i<s->s_size; i++)
       Put(t[i]);
   }
 
@@ -462,12 +462,12 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 	 const String fmt, int argc, const Any argv[])
 { int i;
 
-  for( i=0; i<fmt->size; i++ )
+  for( i=0; i<fmt->s_size; i++ )
   { wint_t c;
 
     switch((c=str_fetch(fmt, i)))
     { case '\\':
-	if ( ++i == fmt->size )
+	if ( ++i == fmt->s_size )
 	{ Put('\\');
 	  continue;
 	} else
@@ -483,7 +483,7 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 	  continue;
 	}
       case '%':
-	if ( ++i == fmt->size )
+	if ( ++i == fmt->s_size )
 	{ Put('\\');
 	  continue;
 	}
@@ -602,7 +602,7 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 	    case 'N':
 	    { if ( argc <= 0 )
 	      { str_set_ascii(&a, "(nil)");
-		a.readonly = TRUE;
+		a.s_readonly = TRUE;
 	      } else if ( !toString(argv[0], &a) )
 	      { Any pn;
 
@@ -619,11 +619,11 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 	      if ( arg == NOT_SET )
 		arg = atoi(fmtbuf+1);
 
-	      if ( a.size >= abs(arg) )
+	      if ( a.s_size >= abs(arg) )
 	      { if ( !put_string(out, closure, &a) )
 		  return FALSE;
 	      } else
-	      { int pad = abs(arg) - a.size;
+	      { int pad = abs(arg) - a.s_size;
 		int i;
 
 		if ( arg > 0 )
@@ -675,9 +675,9 @@ static int
 put_void_str(void *ctx, wint_t c)
 { String s = ctx;
 
-  s->size++;
+  s->s_size++;
   if ( c > 0xff )
-    s->iswide = TRUE;
+    s->s_iswide = TRUE;
 
   return TRUE;
 }
@@ -687,8 +687,8 @@ static int
 put_str(void *ctx, wint_t c)
 { String s = ctx;
 
-  str_store(s, s->size, c);
-  s->size++;
+  str_store(s, s->s_size, c);
+  s->s_size++;
 
   return TRUE;
 }
@@ -699,13 +699,13 @@ str_writefv(String s, CharArray format, int argc, const Any *argv)
 { int len;
 
   str_inithdr(s, FALSE);
-  s->size = 0;
+  s->s_size = 0;
   swritefv(put_void_str, s, &format->data, argc, argv);
-  len = s->size;
+  len = s->s_size;
   str_alloc(s);
-  s->size = 0;				/* dubious */
+  s->s_size = 0;		/* dubious */
   swritefv(put_str, s, &format->data, argc, argv);
-  assert(s->size == len);
+  assert(s->s_size == len);
 
   succeed;
 }

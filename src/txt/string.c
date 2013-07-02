@@ -35,9 +35,9 @@ create_string_from_str(String s, int tmp)
   StringObj str;
   charA *do_free = NULL;
 
-  if ( s->iswide )
+  if ( s->s_iswide )
   { const charW *txt = s->s_textW;
-    const charW *end = &txt[s->size];
+    const charW *end = &txt[s->s_size];
     charA *p;
 
     for( ; txt < end; txt++ )
@@ -46,9 +46,9 @@ create_string_from_str(String s, int tmp)
     }
 
     str_inithdr(&s2, FALSE);
-    s2.size = s->size;
-    if ( !(s2.s_textA = alloca(s->size)) )
-    { s2.s_textA = pceMalloc(s->size);
+    s2.s_size = s->s_size;
+    if ( !(s2.s_textA = alloca(s->s_size)) )
+    { s2.s_textA = pceMalloc(s->s_size);
       do_free = s2.s_textA;
     }
     for(txt = s->s_textW, p = s2.s_textA; txt < end; )
@@ -99,7 +99,7 @@ staticCtoString(const char *s)
 { CharArray c = CtoScratchCharArray(s);
   StringObj str;
 
-  c->data.readonly = TRUE;
+  c->data.s_readonly = TRUE;
   str = answerObject(ClassString, name_procent_s, c, EAV);
   doneScratchCharArray(c);
 
@@ -125,21 +125,21 @@ getModifyString(StringObj str, CharArray value)
 
 static void
 prepareWriteString(StringObj s)
-{ if ( s->data.readonly )
+{ if ( s->data.s_readonly )
     setString(s, &s->data);
 }
 
 
 static void
 promoteString(StringObj s)
-{ if ( !s->data.iswide )
+{ if ( !s->data.s_iswide )
   { string ws;
     const charA *f = s->data.s_textA;
-    const charA *e = &f[s->data.size];
+    const charA *e = &f[s->data.s_size];
     charW *t;
 
     str_inithdr(&ws, TRUE);
-    ws.size = s->data.size;
+    ws.s_size = s->data.s_size;
     str_alloc(&ws);
 
     for(t=ws.s_textW; f<e;)
@@ -154,14 +154,14 @@ status
 initialiseStringv(StringObj str, CharArray fmt, int argc, Any *argv)
 { if ( isDefault(fmt) )
   { str_inithdr(&str->data, FALSE);
-    str->data.size = 0;
+    str->data.s_size = 0;
     str_alloc(&str->data);
   } else if ( (Name) fmt == name_procent_s &&
 	      argc == 1 && instanceOfObject(argv[0], ClassCharArray) )
   { CharArray v = argv[0];
 
     str_cphdr(&str->data, &v->data);
-    if ( v->data.readonly )
+    if ( v->data.s_readonly )
     { str->data.s_textA = v->data.s_textA;
 
       DEBUG(NAME_readOnly, Cprintf("Shared %s\n", pp(str)));
@@ -249,7 +249,7 @@ prependString(StringObj s1, StringObj s2)
 
 static status
 ensureNlString(StringObj s1, CharArray s2)
-{ if ( s1->data.size > 0 && str_fetch(&s1->data, s1->data.size-1) != '\n' )
+{ if ( s1->data.s_size > 0 && str_fetch(&s1->data, s1->data.s_size-1) != '\n' )
     str_insert_string(s1, DEFAULT, str_nl(&s1->data));
 
   if ( notDefault(s2) )
@@ -277,12 +277,12 @@ newlineString(StringObj s, Int times)
   tms = valInt(times);
 
   { String nl = str_nl(&s->data);
-    LocalString(buf, s->data.iswide, nl->size * tms);
+    LocalString(buf, s->data.s_iswide, nl->s_size * tms);
     int i;
 
     for(i=0; i<tms; i++)
-      str_ncpy(buf, i * nl->size, nl, 0, nl->size);
-    buf->size = nl->size * tms;
+      str_ncpy(buf, i * nl->s_size, nl, 0, nl->s_size);
+    buf->s_size = nl->s_size * tms;
 
     return str_insert_string(s, DEFAULT, buf);
   }
@@ -299,7 +299,7 @@ insertCharacterString(StringObj str, Int chr, Int where, Int times)
 
   for(i=0; i<tms; i++)
     str_store(buf, i, c);
-  buf->size = tms;
+  buf->s_size = tms;
   str_insert_string(str, where, buf);
 
   succeed;
@@ -315,7 +315,7 @@ appendString(StringObj s1, CharArray s2)
 static status
 stripString(StringObj str, Name where)
 { String s = &str->data;
-  int size = s->size;
+  int size = s->s_size;
   int from = 0;
   int to = size;
   string buf;
@@ -332,7 +332,7 @@ stripString(StringObj str, Name where)
 
   str_cphdr(&buf, s);
   buf.s_text = str_textp(s, from);
-  buf.size = to - from;
+  buf.s_size = to - from;
 
   return setString(str, &buf);
 }
@@ -359,9 +359,9 @@ untabifyString(StringObj str, Any tabs)
       maxtab = n;
     }
 
-    { int size = str->data.size;
+    { int size = str->data.s_size;
       String s = &str->data;
-      LocalString(buf, s->iswide, size + maxtab);
+      LocalString(buf, s->s_iswide, size + maxtab);
       int i=0, o=0, col=0;
 
       for( ; i < size; i++ )
@@ -389,16 +389,16 @@ untabifyString(StringObj str, Any tabs)
 	    col++;
 	}
       }
-      buf->size = o;
+      buf->s_size = o;
 
       return setString(str, buf);
     }
   } else if ( (n = checkType(tabs, TypeInt, NIL)) )
-  { int size = str->data.size;
+  { int size = str->data.s_size;
     int d = valInt(n);
     String s = &str->data;
     int tabs = str_count_chr(s, 0, size, '\t');
-    LocalString(buf, s->iswide, size + d * tabs);
+    LocalString(buf, s->s_iswide, size + d * tabs);
     int i=0, o=0, col=0;
 
     for( ; i < size; i++ )
@@ -417,7 +417,7 @@ untabifyString(StringObj str, Any tabs)
 	  col++;
       }
     }
-    buf->size = o;
+    buf->s_size = o;
 
     return setString(str, buf);
   }
@@ -430,7 +430,7 @@ status
 upcaseString(StringObj s)
 { prepareWriteString(s);
 
-  str_upcase(&s->data, 0, s->data.size);
+  str_upcase(&s->data, 0, s->data.s_size);
   return setString(s, &s->data);
 }
 
@@ -439,7 +439,7 @@ static status
 downcaseString(StringObj s)
 { prepareWriteString(s);
 
-  str_downcase(&s->data, 0, s->data.size);
+  str_downcase(&s->data, 0, s->data.s_size);
   return setString(s, &s->data);
 }
 
@@ -455,7 +455,7 @@ translateString(StringObj str, Int c1, Int c2)
 { wint_t f = valInt(c1);
   int changed = 0;
   String s = &str->data;
-  int size = s->size;
+  int size = s->s_size;
   int i = 0;
 
   if ( notNil(c2) )
@@ -477,7 +477,7 @@ translateString(StringObj str, Int c1, Int c2)
     if ( changed )
       setString(str, &str->data);	/* forward changes */
   } else				/* delete c1's */
-  { LocalString(buf, s->iswide, size);
+  { LocalString(buf, s->s_iswide, size);
     int o = 0;
 
     for(;;)
@@ -494,7 +494,7 @@ translateString(StringObj str, Int c1, Int c2)
     if ( changed )
     { str_ncpy(buf, o, s, i, size-i);
       o += size-i;
-      buf->size = o;
+      buf->s_size = o;
 
       setString(str, buf);
     }
@@ -509,11 +509,11 @@ characterString(StringObj str, Int index, Int chr)
 { int i = valInt(index);
   wint_t c = valInt(chr);
 
-  if ( i <  0 || i >= str->data.size )
+  if ( i <  0 || i >= str->data.s_size )
     fail;
 
   if ( str_fetch(&str->data, i) != c )
-  { if ( c > 0xff && !str->data.iswide )
+  { if ( c > 0xff && !str->data.s_iswide )
       promoteString(str);
     else
       prepareWriteString(str);
@@ -528,7 +528,7 @@ characterString(StringObj str, Int index, Int chr)
 status
 deleteString(StringObj str, Int start, Int length)
 { String s = &str->data;
-  int size = s->size;
+  int size = s->s_size;
   int f = valInt(start);
   int e = (isDefault(length) ? size : valInt(length)) + f - 1;
   int d;
@@ -540,11 +540,11 @@ deleteString(StringObj str, Int start, Int length)
     e = size - 1;
   d = e - f + 1;
 
-  { LocalString(buf, s->iswide, size-d);
+  { LocalString(buf, s->s_iswide, size-d);
 
     str_ncpy(buf, 0, s, 0, f);
     str_ncpy(buf, f, s, e+1, size - (e+1));
-    buf->size = size-d;
+    buf->s_size = size-d;
 
     setString(str, buf);
   }
@@ -569,11 +569,11 @@ setString(StringObj str, String s)
 
   if ( str->data.s_text != s->s_text ||
        str_allocsize(&str->data) != str_allocsize(s) ||
-       str->data.readonly )
+       str->data.s_readonly )
   { string s2 = *s;
 
     DEBUG(NAME_readOnly,
-	  if ( str->data.readonly )
+	  if ( str->data.s_readonly )
 	    Cprintf("Copying %s", pp(str)));
 
     str_alloc(&s2);
@@ -592,18 +592,18 @@ setString(StringObj str, String s)
 
 status
 str_insert_string(StringObj str, Int where, String s)
-{ int sz = str->data.size;
-  int iswide = (str->data.iswide || s->iswide);
-  LocalString(buf, iswide, sz + s->size);
+{ int sz = str->data.s_size;
+  int iswide = (str->data.s_iswide || s->s_iswide);
+  LocalString(buf, iswide, sz + s->s_size);
   int p = (isDefault(where) ? sz : valInt(where));
 
   if ( p < 0  ) p = 0;
   if ( p > sz ) p = sz;
 
   str_ncpy(buf, 0, &str->data, 0, p);
-  str_ncpy(buf, p, s, 0, s->size);
-  str_ncpy(buf, p+s->size, &str->data, p, str->data.size - p);
-  buf->size = sz + s->size;
+  str_ncpy(buf, p, s, 0, s->s_size);
+  str_ncpy(buf, p+s->s_size, &str->data, p, str->data.s_size - p);
+  buf->s_size = sz + s->s_size;
 
   return setString(str, buf);
 }
@@ -614,7 +614,7 @@ StringObj
 getSubString(StringObj n, Int start, Int end)
 { string s;
   int x, y;
-  int len = n->data.size;
+  int len = n->data.s_size;
 
   x = valInt(start);
   y = (isDefault(end) ? len : valInt(end));
@@ -622,7 +622,7 @@ getSubString(StringObj n, Int start, Int end)
     fail;
 
   str_cphdr(&s, &n->data);
-  s.size = y-x;
+  s.s_size = y-x;
   if ( isstrA(&n->data) )
     s.s_textA = &n->data.s_textA[x];
   else

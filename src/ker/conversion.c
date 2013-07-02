@@ -83,12 +83,12 @@ toInteger(Any obj)
   { CharArray ca = obj;
     String s = &ca->data;
 
-    if ( isstrA(s) && s->size > 0 )
+    if ( isstrA(s) && s->s_size > 0 )
     { char *end;
       long i;
 
       i = strtol((char *)s->s_textA, &end, 10);
-      if ( end == (char *)&s->s_textA[s->size] )
+      if ( end == (char *)&s->s_textA[s->s_size] )
 	return toInt(i);
     }
   }
@@ -242,7 +242,7 @@ do_pp(Any obj)
     { CharArray ca = obj;
 
       summary[0] = '"';
-      if ( ca->data.size < 25 )
+      if ( ca->data.s_size < 25 )
       { strcpy(&summary[1], charArrayToUTF8(ca));
       } else
       { strncpy(&summary[1], charArrayToUTF8(ca), 25);

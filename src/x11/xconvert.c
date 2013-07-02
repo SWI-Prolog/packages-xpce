@@ -643,7 +643,7 @@ write_jpeg_file(IOSTREAM *fd,
     { CharArray v = comment;
       String s = &v->data;
 
-      jpeg_write_marker(&cinfo, JPEG_COM, s->s_textA, s->size);
+      jpeg_write_marker(&cinfo, JPEG_COM, s->s_textA, s->s_size);
     } else if ( instanceOfObject(comment, ClassChain) )
     { Chain ch = comment;
       Cell cell;
@@ -653,7 +653,7 @@ write_jpeg_file(IOSTREAM *fd,
 	{ CharArray v = cell->value;
 	  String s= &v->data;
 
-	  jpeg_write_marker(&cinfo, JPEG_COM, s->s_textA, s->size);
+	  jpeg_write_marker(&cinfo, JPEG_COM, s->s_textA, s->s_size);
 	} else
 	  errorPce(comment, NAME_unexpectedType, TypeCharArray);
       }

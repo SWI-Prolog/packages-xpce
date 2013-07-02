@@ -271,7 +271,7 @@ search_string_regex(Regex re, String s)
   if ( !ensure_compiled_regex(re, RE_SEARCH) )
     fail;
 
-  rc = re_execW(re->compiled, IDX2PTR(0), s->size,
+  rc = re_execW(re->compiled, IDX2PTR(0), s->s_size,
 		re_fetch_string, s,
 		NULL,
 		re->compiled->re_nsub+1, re->registers, 0);
@@ -295,7 +295,7 @@ search_regex(Regex re, Any obj, Int start, Int end, int flags)
   { CharArray ca = obj;			/* TBD: 16-bit? */
     String s = &ca->data;
 
-    len = s->size;
+    len = s->s_size;
     fetch = re_fetch_string;
     closure = s;
   } else if ( instanceOfObject(obj, ClassTextBuffer) )
@@ -543,8 +543,8 @@ registerValueRegex(Regex re, Any obj, CharArray value, Int which)
 static status
 replaceRegex(Regex re, Any obj, CharArray value)
 { String s = &value->data;
-  LocalString(buf, s->iswide, FORMATSIZE);
-  int o, i, size = s->size;
+  LocalString(buf, s->s_iswide, FORMATSIZE);
+  int o, i, size = s->s_size;
   CharArray repl;
   status rval;
 
@@ -558,8 +558,8 @@ replaceRegex(Regex re, Any obj, CharArray value)
       Int reg = toInt(c2 - '0');
 
       if ( (ca = getRegisterValueRegex(re, obj, reg, DEFAULT)) )
-      { str_ncpy(buf, o, &ca->data, 0, ca->data.size);
-	o += ca->data.size;
+      { str_ncpy(buf, o, &ca->data, 0, ca->data.s_size);
+	o += ca->data.s_size;
 	i++;
 	continue;
       } else
@@ -571,7 +571,7 @@ replaceRegex(Regex re, Any obj, CharArray value)
     str_store(buf, o, c);
     o++;
   }
-  buf->size = o;
+  buf->s_size = o;
 
   repl = StringToScratchCharArray(buf);
   rval = registerValueRegex(re, obj, repl, ZERO);
@@ -624,8 +624,8 @@ getPrintNameRegex(Regex re)
 static StringObj
 getQuoteRegex(Regex re, CharArray ca)
 { String s = &ca->data;
-  int size = s->size;
-  LocalString(buf, s->iswide, LINESIZE);
+  int size = s->s_size;
+  LocalString(buf, s->s_iswide, LINESIZE);
   int i, o=0;
 
   if ( str_fetch(s, 0) == '^' )
@@ -655,7 +655,7 @@ getQuoteRegex(Regex re, CharArray ca)
     str_store(buf, o++, c);
   }
 
-  buf->size = o;
+  buf->s_size = o;
 
   answer(StringToString(buf));
 }

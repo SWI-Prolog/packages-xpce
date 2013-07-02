@@ -467,7 +467,7 @@ compute_current(ListBrowser lb)
     }
 
     if ( di->index == lb->search_hit )
-    { current_search = lb->search_string->data.size;
+    { current_search = lb->search_string->data.s_size;
     } else
       current_search = 0;
   } else
@@ -546,7 +546,7 @@ fetch_list_browser(Any obj, TextChar tc)
   int pos   = current_index++ % BROWSER_LINE_WIDTH;
 
   if ( current_name )
-  { int len = current_name->size;
+  { int len = current_name->s_size;
 
     if ( pos <= len )
     { if ( pos == 0 )
@@ -680,11 +680,11 @@ normalise_index(ListBrowser lb, Int index)
 
 static StringObj
 getExtendPrefixDict(Dict dict, CharArray pref, BoolObj ign_case)
-{ LocalString(common, pref->data.iswide, LINESIZE);
+{ LocalString(common, pref->data.s_iswide, LINESIZE);
   Cell cell;
   int hit = FALSE;
 
-  common->size = 0;
+  common->s_size = 0;
 
   for_cell(cell, dict->members)
   { DictItem di = cell->value;
@@ -695,8 +695,8 @@ getExtendPrefixDict(Dict dict, CharArray pref, BoolObj ign_case)
       continue;
 
     name = &c->data;
-    if ( name->size > LINESIZE ||
-	 name->iswide != common->iswide ) /* TBD */
+    if ( name->s_size > LINESIZE ||
+	 name->s_iswide != common->s_iswide ) /* TBD */
       continue;
 
     if ( ign_case == OFF )
@@ -704,15 +704,15 @@ getExtendPrefixDict(Dict dict, CharArray pref, BoolObj ign_case)
       { if ( !hit++ )
 	  str_cpy(common, name);
 	else
-	  common->size = str_common_length(common, name);
+	  common->s_size = str_common_length(common, name);
       }
     } else
     { if ( str_icase_prefix(name, &pref->data) )
       { if ( !hit++ )
         { str_cpy(common, name);
-	  str_downcase(common, 0, common->size);
+	  str_downcase(common, 0, common->s_size);
 	} else
-	  common->size = str_icase_common_length(common, name);
+	  common->s_size = str_icase_common_length(common, name);
       }
     }
   }

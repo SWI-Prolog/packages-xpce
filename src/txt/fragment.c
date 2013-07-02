@@ -503,7 +503,7 @@ stringFragment(Fragment f, CharArray ca)
 { TextBuffer tb = f->textbuffer;
   int start = f->start;
   int len = f->length;
-  int calen = ca->data.size;
+  int calen = ca->data.s_size;
 
   insertTextBuffer(tb, toInt(start), ca, ONE);
   startFragment(f, toInt(start), OFF);		/* TBD */

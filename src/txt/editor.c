@@ -1589,7 +1589,7 @@ insert_editor(Editor e, Int times, Int chr, int fill)
     c = valInt(chr);
 
   str_store(s, 0, c);
-  s->size = 1;
+  s->s_size = 1;
   insert_textbuffer(e->text_buffer, Caret(e), valInt(times), s);
 
   if ( tisclosebrace(e->text_buffer->syntax, c) &&
@@ -3273,7 +3273,7 @@ insertSelfFillEditor(Editor e, Int times, Int chr)
     c = valInt(chr);
 
   str_store(s, 0, c);
-  s->size = 1;
+  s->s_size = 1;
   insert_textbuffer(e->text_buffer, Caret(e), valInt(times), s);
   le = getScanTextBuffer(tb, e->caret, NAME_line, ZERO, NAME_end);
 
@@ -3369,9 +3369,9 @@ findCutBufferEditor(Editor e, Int arg)
 
   selection_editor(e,
 		   toInt(hit_start),
-		   toInt(hit_start + str->data.size),
+		   toInt(hit_start + str->data.s_size),
 		   NAME_highlight);
-  ensureVisibleEditor(e, toInt(hit_start), toInt(hit_start + str->data.size));
+  ensureVisibleEditor(e, toInt(hit_start), toInt(hit_start + str->data.s_size));
   succeed;
 }
 
@@ -3759,7 +3759,7 @@ dabbrevExpandEditor(Editor e)
     assign(e, dabbrev_reject, newObject(ClassChain, EAV));
   appendChain(e->dabbrev_reject, target);
 
-  assign(e, dabbrev_pos, sub(e->caret, toInt(target->data.size+1)));
+  assign(e, dabbrev_pos, sub(e->caret, toInt(target->data.s_size+1)));
   assign(e, focus_function, NAME_DabbrevExpand);
 
   DEBUG(NAME_editor, Cprintf("starting DabbrevExpand\n"));
@@ -3787,7 +3787,7 @@ get_dabbrev_hit_editor(Editor e, int start)
 
 static Name
 get_case_pattern(SyntaxTable syntax, String s)
-{ int i, size = s->size;
+{ int i, size = s->s_size;
 
   if ( tisupper(syntax, str_fetch(s, 0)) )
   { for( i=1; i < size; i++)
@@ -3804,14 +3804,14 @@ get_case_pattern(SyntaxTable syntax, String s)
 static void
 fix_case_and_insert(TextBuffer tb, int where, String insert,
 		    Name pattern, int ec)
-{ if ( insert->size == 0 )
+{ if ( insert->s_size == 0 )
     return;
 
   if ( ec )
   { insert_textbuffer(tb, where, 1, insert);
   } else
-  { int size = insert->size;
-    LocalString(copy, insert->iswide, insert->size);
+  { int size = insert->s_size;
+    LocalString(copy, insert->s_iswide, insert->s_size);
 
     str_cpy(copy, insert);
     if ( equalName(pattern, NAME_upper) )
@@ -3842,7 +3842,7 @@ DabbrevExpandEditor(Editor e, EventId id)
   { Name cmd = getKeyBindingEditor(e, characterName(id));
 
     if ( equalName(cmd, NAME_keyboardQuit) )
-    { Int start = add(e->dabbrev_origin, toInt(target->size));
+    { Int start = add(e->dabbrev_origin, toInt(target->s_size));
 
       deleteTextBuffer(tb, start, sub(e->caret, start));
       keyboardQuitEditor(e, DEFAULT);
@@ -3883,7 +3883,7 @@ DabbrevExpandEditor(Editor e, EventId id)
 
     hit = get_dabbrev_hit_editor(e, hit_pos);
     DEBUG(NAME_editor, Cprintf("hit = %s\n", pp(hit)));
-    pos = (dir < 0 ? hit_pos - 1 : hit_pos + target->size);
+    pos = (dir < 0 ? hit_pos - 1 : hit_pos + target->s_size);
 
     for_cell(cell, e->dabbrev_reject)
     { Name reject = cell->value;
