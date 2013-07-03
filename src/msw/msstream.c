@@ -224,7 +224,7 @@ do_socket_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 
 static int WINAPI
-socket_wnd_proc(HWND hwnd, UINT message, UINT wParam, LONG lParam)
+socket_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 { int rval;
 
   pceMTLock(LOCK_PCE);

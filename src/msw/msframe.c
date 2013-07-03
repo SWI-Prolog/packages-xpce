@@ -27,9 +27,9 @@
 #include "include.h"
 #include <tchar.h>
 
-static int WINAPI frame_wnd_proc(HWND win, UINT msg, UINT wP, LONG lP);
+static int WINAPI frame_wnd_proc(HWND win, UINT msg, WPARAM wP, LPARAM lP);
 static status     keyboard_event_frame(FrameObj fr, Any id,
-				       UINT wParam, LONG lParam,
+				       WPARAM wParam, LPARAM lParam,
 				       unsigned long bmask);
 static void       paint_icon(FrameObj fr);
 
@@ -138,7 +138,7 @@ frame_palette(FrameObj fr)
 
 static int
 do_frame_wnd_proc(FrameObj fr,
-		  HWND hwnd, UINT message, UINT wParam, LONG lParam)
+		  HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 { DEBUG(NAME_event,
 	Cprintf("%s(0x%04x): MS-Windows event 0x%04x with 0x%04x/0x%08lx\n",
 		pp(fr), hwnd, message, wParam, lParam));
@@ -465,7 +465,7 @@ service_frame(FrameObj fr)
 
 
 static int WINAPI
-frame_wnd_proc(HWND hwnd, UINT message, UINT wParam, LONG lParam)
+frame_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 { FrameObj fr = getObjectFromHWND(hwnd);
   int rval;
 
@@ -544,7 +544,7 @@ get_window_holding_point(FrameObj fr, POINT *pt)
 
 static status
 keyboard_event_frame(FrameObj fr, Any id,
-		     UINT wParam, LONG lParam,
+		     WPARAM wParam, LPARAM lParam,
 		     unsigned long bmask)
 { PceWindow sw;
   POINT pt;

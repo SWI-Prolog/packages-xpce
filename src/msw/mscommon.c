@@ -351,7 +351,7 @@ IsDownKey(code)
 
 
 Any
-messageToKeyId(UINT message, UINT wParam, LONG lParam, unsigned long *bmask)
+messageToKeyId(UINT message, WPARAM wParam, LPARAM lParam, unsigned long *bmask)
 { Any id = FAIL;
   unsigned long state = 0L;
 
@@ -454,7 +454,7 @@ messageToKeyId(UINT message, UINT wParam, LONG lParam, unsigned long *bmask)
 
 
 EventObj
-messageToEvent(HWND hwnd, UINT message, UINT wParam, LONG lParam)
+messageToEvent(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 { Any id = NIL;
   Int x = DEFAULT, y = DEFAULT;
   Int buttons = DEFAULT;
