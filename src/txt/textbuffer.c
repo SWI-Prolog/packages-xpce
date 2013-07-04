@@ -2426,10 +2426,18 @@ delete_textbuffer(TextBuffer tb, intptr_t where, intptr_t length)
     length = -length;
   }
 
+  if ( where > tb->size )
+  { intptr_t s = where-tb->size;
+    where -= s;
+    length -= s;
+    if ( length <= 0 )
+      succeed;
+  }
+
   if ( where + length > tb->size )		/* normalise on end */
     length = tb->size - where;
 
-  if ( length == 0 )				/* out of bounds: ignore */
+  if ( length <= 0 )				/* out of bounds: ignore */
     succeed;
 
   room(tb, where, 0);				/* move the gap here */
