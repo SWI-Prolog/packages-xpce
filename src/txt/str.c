@@ -321,15 +321,12 @@ str_cmp(String s1, String s2)
 
   if ( s1->s_iswide == s2->s_iswide )
   { if ( isstrA(s1) )
-    { charA *d1 = s1->s_textA;
-      charA *d2 = s2->s_textA;
-      int d;
+    { int d;
 
-      while(n-- > 0)
-	if ( (d = (*d1++ - *d2++)) )
-	  return d;
+      if ( (d=strncmp((const char*)s1->s_textA, (const char*)s2->s_textA, n)) == 0 )
+	return s1->s_size - s2->s_size;
 
-      return s1->s_size - s2->s_size;
+      return d;
     } else
     { charW *d1 = s1->s_textW;
       charW *d2 = s2->s_textW;
