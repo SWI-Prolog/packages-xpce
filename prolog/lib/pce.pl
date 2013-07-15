@@ -112,7 +112,7 @@ reexports the content of these files.
 		pce_boot(pce_keybinding),
 		pce_boot(pce_portray)
 	      ],
-	      [ qcompile(part),		% compile boot files as pat of pce.qlf
+	      [ qcompile(part),		% compile boot files as part of pce.qlf
 		silent(true)
 	      ]).
 
