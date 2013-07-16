@@ -748,6 +748,9 @@ dv-man:		dv-manual
 dv-link::
 		$(INSTALL_DATA) ../swipl/swipl-rc $(DESTDIR)$(PLBASE)/$(PLWINNAME).rc
 		$(INSTALL_DATA) ../swipl/Makefile.bin $(DESTDIR)$(PLBASE)/Makefile
+ifneq ($(PLWINNAME),swipl-win)
+		$(INSTALL_DATA) ../swipl/swipl-rc $(DESTDIR)$(PLBASE)/swipl-win.rc
+endif
 
 dv-pl-files:	rt-home
 		if [ ! -d $(DESTDIR)$(RTHOME)/pl ]; then mkdir $(DESTDIR)$(RTHOME)/pl; fi
