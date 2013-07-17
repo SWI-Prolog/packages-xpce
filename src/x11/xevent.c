@@ -137,8 +137,8 @@ ws_dispatch(Int FD, Any timeout)
 			    (XtPointer) &rval);
   }
 
-  DEBUG(NAME_dispatch, Cprintf("Dispatch: timeout = %s, tid = %d\n",
-			       pp(timeout), tid));
+  DEBUG(NAME_dispatch, Cprintf("Dispatch: timeout = %s, tid = %p\n",
+			       pp(timeout), (void*)tid));
 
   if ( pceMTTryLock(LOCK_PCE) )
   { RedrawDisplayManager(TheDisplayManager());
