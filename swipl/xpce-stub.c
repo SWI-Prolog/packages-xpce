@@ -15,6 +15,7 @@
 #include <windows.h>
 #include <malloc.h>
 #include <stdio.h>
+#include <ctype.h>
 
 #ifdef O_DEBUG
 #define DEBUG(g) g

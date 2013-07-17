@@ -85,7 +85,7 @@ gif_extension(int ext, void *data, void *closure)
   switch(ext)
   { case GIFEXT_TRANSPARENT:
     { XpmColor *c;
-      long i = (long)data;
+      long i = (long)(intptr_t)data;
 
       DEBUG(NAME_gif, Cprintf("Using %d as transparent (ncolors=%d)\n",
 			      i, img->ncolors));
