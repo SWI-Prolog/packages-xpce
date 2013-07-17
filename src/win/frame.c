@@ -294,7 +294,7 @@ openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
 #endif
 
   if ( !isOpenFrameStatus(fr->status) )
-    statusFrame(fr, NAME_window);
+    return send(fr, NAME_status, NAME_window, EAV);
 
   succeed;
 }
