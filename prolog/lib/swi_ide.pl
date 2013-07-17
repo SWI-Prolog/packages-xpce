@@ -168,7 +168,7 @@ thread_monitor(IDE) :->
 	    ),
 	    send(Monitor, open)
 	;   send(@display, report, error,
-		 'This version of SWI-Prolog is not built\n\c
+		 'This version of SWI-Prolog is not built \n\c
 		  with thread-support')
 	).
 
