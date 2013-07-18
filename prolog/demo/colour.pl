@@ -77,7 +77,8 @@ make_colour_browser(CB, DataBase) :-
 	send_list(M, append, [foreground, background]),
 	send(M, selection, background),
 	send(new(CB, browser('XPCE (X11) named colours')), below, D),
-	send(CB, width, 33),
+	send(CB, width, 40),
+	send(CB, font, fixed),
 
 	send(CB?key_binding, function,	% pretend arrow up/down not only
 	     cursor_down,		% do the preview, but also show
@@ -110,7 +111,7 @@ make_colour_browser(CB, DataBase) :-
 	     message(@prolog, selected_colour, P, M?selection, @arg1?label)),
 
 					% set tab-stops for nice alignment
-	send(CB?image, tab_stops, vector(110, 140, 170)),
+	send(CB?image, tab_stops, vector(170)),
 					% scan de database
 	(   send(DataBase, instance_of, hash_table)
 	->  send(DataBase, for_all,
@@ -122,6 +123,7 @@ make_colour_browser(CB, DataBase) :-
 		(   get(F, read_line, String)
 		->  get(String, scan, '%d%d%d%*[ \t]%[a-zA-Z0-9_ ]',
 			vector(R, G, B, Name)),
+		    format(atom(HexName), '#~|~`0t~16r~2+~`0t~16r~2+~`0t~16r~2+', [R,G,B]),
 		    send(Name, translate, ' ', '_'),
 		    send(Name, downcase),
 		    get(Name, value, Atom),
@@ -129,8 +131,8 @@ make_colour_browser(CB, DataBase) :-
 		    ->  true
 		    ;   send(CB, append,
 			     dict_item(Name,
-				       string('%s\t%d\t%d\t%d',
-					      Name, R, G, B)))
+				       string('%s\t%3d %3d %3d %s',
+					      Name, R, G, B, HexName)))
 		    ),
 		    fail
 		;   !,
@@ -143,7 +145,8 @@ append_colour(CB, Name, RGB) :-
 	B is RGB >> 16,
 	G is (RGB >> 8) /\ 255,
 	R is (RGB /\ 255),
-	send(CB, append, string('%s\t%d\t%d\t%d', Name, R, G, B)).
+	format(atom(HexName), '#~|~`0t~16r~2+~`0t~16r~2+~`0t~16r~2+', [R,G,B]),
+	send(CB, append, string('%s\t%3d %3d %3d %s', Name, R, G, B, HexName)).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 A colour was selected.  Change the colour attribute of the picture window.
