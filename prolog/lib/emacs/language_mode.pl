@@ -761,7 +761,7 @@ show_matching_bracket_fragment(M, At:int) :->
 	->  send(F, start, At),
 	    send(F, length, 1)
 	;   new(_, partof_hyper(TB,
-				new(F, fragment(TB, At, 1, matching_bracket)),
+				fragment(TB, At, 1, matching_bracket),
 				matching_bracket_fragment,
 				text_buffer))
 	).

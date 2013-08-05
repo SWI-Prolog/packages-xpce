@@ -968,10 +968,8 @@ check_clause(M, From:from=[int], Repair:repair=[bool], End:int) :<-
         (   From == @default
 	->  get(M, caret, C),
 	    get(M, beginning_of_clause, C, Start),
-	    ignore(send(M, electric_caret, Start)),
-	    Verbose = true
-	;   Start = From,
-	    Verbose = false
+	    ignore(send(M, electric_caret, Start))
+	;   Start = From
 	),
 	get(M, colourise_clause, Start, TermPos),
 	(   TermPos = error_position(_StartClause, _EndClause, ErrorPos)
@@ -1407,7 +1405,7 @@ backward_predicate(M, P0:int, BPred:int) :<-
 		    fail
 		)
 	;   get(M, backward_clause, P0-1, P2),
-	    (	get(M, name_and_arity, P2, tuple(Name, Arity))
+	    (	get(M, name_and_arity, P2, _)
 	    ->	get(M, backward_predicate, P2+1, BPred)
 	    ;	BPred = P2
 	    )
