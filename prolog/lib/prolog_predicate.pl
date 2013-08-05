@@ -83,8 +83,8 @@ initialise(P, Term:prolog) :->
 convert(_, From:name, P:prolog_predicate) :<-
 	"Convert textual and Prolog term"::
 	catch(term_to_atom(From, Term), _, fail),
-	(   (   Term = Module:Name/Arity
-	    ;	Term = Name/Arity
+	(   (   Term = _:_/_
+	    ;	Term = _/_
 	    )
 	->  new(P, prolog_predicate(Term))
 	;   Term = Module:Head,
@@ -92,7 +92,8 @@ convert(_, From:name, P:prolog_predicate) :<-
 	->  functor(Head, Name, Arity),
 	    new(P, prolog_predicate(Module:Name/Arity))
 	;   callable(Head)
-	->  new(P, prolog_predicate(Name/Arity))
+	->  functor(Head, Name, Arity),
+	    new(P, prolog_predicate(Name/Arity))
 	).
 
 print_name(P, PN:name) :<-
@@ -313,9 +314,9 @@ update(W) :->
 	get(W, predicate, P),
 	send(W, clear),
 	get(P, pi, PI),
-	(   PI = M:_
+	(   PI = _:_
 	->  QPI = PI
-	;   QPI = M:PI
+	;   QPI = _:PI
 	),
 	forall(setof(Prop, pi_property(QPI, Prop), Props),
 	       send(W, properties, QPI, Props)).
@@ -352,7 +353,7 @@ properties(W, QPI:prolog, Props:prolog) :->
 	;   Atomic2 = Atomic1
 	),
 	forall(member(P, Valued2), send(W, property, P)),
-	atomic_list_concat(Atomic1, ', ', AtomicText),
+	atomic_list_concat(Atomic2, ', ', AtomicText),
 	send(T, append, 'Flags:', bold, right),
 	send(T, append, AtomicText),
 	send(T, next_row).
