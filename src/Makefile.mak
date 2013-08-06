@@ -312,14 +312,14 @@ xpce-stub.obj:	..\swipl\xpce-stub.c
 # Installation program
 ################################################################
 
-xpce-install:	xpce-install.exe
+xpce-copy:	xpce-copy.exe
 
 # NOTE: setargv.obj ensures main() is fet with expanded arguments (see
 # MSVC documentation).
 
-xpce-install.exe: xpce-install.obj
+xpce-copy.exe: xpce-copy.obj
 		$(LD) /out:$@ /subsystem:console \
-			xpce-install.obj setargv.obj $(LIBS)
+			xpce-copy.obj setargv.obj $(LIBS)
 
 ################################################################
 # Installation
@@ -366,9 +366,9 @@ README=	Defaults \
 	README \
 	VERSION
 
-INSTALL=xpce-install.exe -n
+INSTALL=xpce-copy.exe -n
 
-ITRG=	xpce-install.exe \
+ITRG=	xpce-copy.exe \
 	ibindir idirs idll ilib irc iindex imanidx ireadme ixpce-stub \
 	classindex
 
@@ -449,7 +449,7 @@ clean::
 		  $(CMD) /c "chdir %d & if exist *~ del *~"
 		$(CMD) /c "chdir ..\swipl & if exist *.obj del *.obj"
 		$(CMD) /c "chdir ..\swipl & if exist *~ del *~"
-		if exist xpce-install.exe del xpce-install.exe
+		if exist xpce-copy.exe del xpce-copy.exe
 		if exist find_names.exe del find_names.exe
 		if exist *.obj del *.obj
 		if exist *~ del *~

@@ -64,7 +64,7 @@ REL_LN=$(srcdir)/rel-ln
 CC_FOR_BUILD = @CC_FOR_BUILD@
 EXEEXT_FOR_BUILD = @EXEEXT_FOR_BUILD@
 
-INSTALL=./xpce-install$(EXEEXT_FOR_BUILD)
+INSTALL=./xpce-copy$(EXEEXT_FOR_BUILD)
 INSTALL_PROGRAM=$(INSTALL) -m 755
 INSTALL_DATA=$(INSTALL) -m 644
 FIND_NAMES=find_names$(EXEEXT_FOR_BUILD)
@@ -152,8 +152,8 @@ endif
 .PHONY: all banner xpce pl-itf
 all:		banner $(INSTALL) xpce pl-itf
 
-$(INSTALL):	xpce-install.c
-		$(CC_FOR_BUILD) -o $@ $(srcdir)/xpce-install.c
+$(INSTALL):	xpce-copy.c
+		$(CC_FOR_BUILD) -o $@ $(srcdir)/xpce-copy.c
 
 banner:
 		@echo "****************"

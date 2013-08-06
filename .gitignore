@@ -50,10 +50,10 @@ src/.names-sentinel
 src/xpce-stub.exe
 src/xpce-stub.res
 src/find_names.dSYM
-src/xpce-install.dSYM
+src/xpce-copy.dSYM
 xpce.spec
-src/xpce-install.exe
+src/xpce-copy.exe
 src/config.h
 src/version.h
 src/xpce-client
-src/xpce-install
+src/xpce-copy

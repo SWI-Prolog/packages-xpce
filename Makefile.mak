@@ -1,5 +1,5 @@
 ################################################################
-# Hook into the SWI-Prolog package building for building using 
+# Hook into the SWI-Prolog package building for building using
 # NMAKE.
 #
 # The real makefile is in the src directory
@@ -14,7 +14,7 @@ all::
 install::
 	@chdir src & $(MAKE) $@
 
-xpce-install::
+xpce-copy::
 	@chdir src & $(MAKE) $@
 
 html-install::

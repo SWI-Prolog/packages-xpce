@@ -23,8 +23,8 @@
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 SYNOPSIS:
-	xpce-install [-v] [-c] [-m mode] from to
-	xpce-install [-v] [-c] [-m mode] [-p] file file ... dir
+	xpce-copy [-v] [-c] [-m mode] from to
+	xpce-copy [-v] [-c] [-m mode] [-p] file file ... dir
 
 Simple install replacement  to  be  used   for  XPCE  installation.  The
 configure install.sh script is very slow,   while  all operating systems
