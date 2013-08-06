@@ -25,7 +25,7 @@ AC_SUBST(PLWINNAME)
 AC_SUBST(PLWINARG)
 AC_SUBST(WINEPATHEXE)
 
-dnl Link to X11.  Cygwin and MinGW versions overrule this later
+dnl Link to X11.  MinGW versions overrule this later
 
 WITHX11=true
 VWS=x11

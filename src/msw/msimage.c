@@ -36,11 +36,7 @@
 
 #ifdef O_XPM
 #define FOR_MSW 1
-#ifdef __CYGWIN__XXX
-#include <xpm.h>
-#else
 #include <msw/xpm.h>
-#endif
 #endif
 
 /* Using ws_ref for storing the bits and the xref mechanism for storing

@@ -320,11 +320,7 @@ WinStrError(int error, ...)
 		      GetUserDefaultLangID(),
 		      msg,
 		      sizeof(msg),
-#ifdef __CYGWIN__
-		      args) )		/* Cygwin is according to docs ... */
-#else
 		      (char **)args) )
-#endif
   { wsprintf(msg, _T("Unknown WINAPI error %d"), error);
   }
   va_end(args);

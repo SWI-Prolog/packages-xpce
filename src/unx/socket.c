@@ -22,11 +22,6 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifdef __CYGWIN__
-#define __USE_W32_SOCKETS
-#define HAVE_WINSOCK 1
-#endif
-
 #include <md.h>				/* get HAVE_'s */
 #if defined(HAVE_SOCKET) || defined(HAVE_WINSOCK)
 

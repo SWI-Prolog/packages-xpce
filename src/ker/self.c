@@ -651,7 +651,7 @@ infoPce(Pce pce)
   writef("	Release:            %s\n", pce->version);
   writef("	System:             %s\n", pce->machine);
   writef("	Operating System:   %s\n", pce->operating_system);
-#ifdef __WINDOWS__				/* TBD: Cygwin? */
+#ifdef __WINDOWS__
   writef("	Window System:      windows %s.%s\n",
 	 pce->window_system_version,
 	 pce->window_system_revision);
@@ -760,7 +760,7 @@ Linux sysinfo() is something completely  different from Solaris sysinfo,
 for which this code was designed.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#ifdef __linux__
+#if defined (__linux__) || defined (__CYGWIN__)
 #undef HAVE_SYSINFO
 #endif
 
