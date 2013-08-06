@@ -71,12 +71,12 @@ prolog flag xpce_threaded:
 pce_dispatch(Options) :-
 	with_mutex(pce_dispatch, pce_dispatch_(Options)).
 
+pce_dispatch_(_) :-
+	pce_thread(pce), !.
 pce_dispatch_(Options) :-
-	pce_thread(main), !,
 	thread_self(Me),
 	thread_create(pce_dispatcher(Me), _, [alias(pce)|Options]),
 	thread_get_message(pce_dispatch).
-pce_dispatch_(_).
 
 :- dynamic
 	end_pce_dispatcher/1.
