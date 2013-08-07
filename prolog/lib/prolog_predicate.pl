@@ -226,7 +226,7 @@ summary(P, Summary:string) :<-
 	;   (   get(P, module, M),
 	        M \== @nil
 	    ->	true
-	    ;	true
+	    ;	M = _
 	    ),
 	    summary(M:Name/Arity, Summary)
 	).
