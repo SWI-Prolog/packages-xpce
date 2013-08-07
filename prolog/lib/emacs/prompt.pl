@@ -198,9 +198,8 @@ is_complete(_TI, Name:name, Type:type) :->
 
 completions(TI, From:char_array, Unique:chain) :<-
 	get(TI, value_set, Set),
-	(   Set == @nil
-	->  fail
-	;   Set == @default
+	Set \== @nil,
+	(   Set == @default
 	->  get(TI, type, Type),
 	    get(Type, value_set, TheSet)
 	;   get(@pce, convert, Set, chain, TheSet)
@@ -257,7 +256,7 @@ make_prompt_binding(G) :-
 	send(G, function, 'SPC', insert_self),
 	send(G, function, 'RET', message(Window, on_return)),
 	send(G, function, page_up, Back),
-	send(G, function, '\\ep', Back), 	% traditional Emacs
+	send(G, function, '\\ep', Back),	% traditional Emacs
 	send(G, function, page_down, Forw),
 	send(G, function, '\\en', Forw),
 	send(G, function, '\\C-g', and(message(@receiver, keyboard_quit),
@@ -402,8 +401,9 @@ forwards(D) :->
 	(   (Idx == @nil ; Idx =< 1 ; History == @nil)
 	->  send(D, report, warning, 'Back at start'),
 	    fail
-	;   Nidx is Idx - 1
+	;   true
 	),
+	Nidx is Idx - 1,
 	get(History, nth1, Nidx, ArgVector),
 	send(D, hindex, Nidx),
 	send(D, fill_from_argv, ArgVector).

@@ -61,12 +61,13 @@ initialise(P, Term:prolog) :->
 	(   Term = Module:Name/Arity
 	->  true
 	;   Term = Name/Arity
-	->  true
+	->  Module = @nil
 	;   Term = Module:Head,
 	    callable(Head)
 	->  functor(Head, Name, Arity)
 	;   callable(Term)
-	->  functor(Term, Name, Arity)
+	->  functor(Term, Name, Arity),
+	    Module = @nil
 	),
 	(   var(Arity)
 	->  Arity = @default

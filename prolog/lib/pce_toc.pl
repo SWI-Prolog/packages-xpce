@@ -408,14 +408,13 @@ collapsed(Node, Val:bool*) :->
 		    ignore(send(TocWindow, expand_node, Id)),
 		    send(Display, busy_cursor, @nil)
 		;   ignore(send(TocWindow, expand_node, Id))
-		),
-		Normalise = true
-	    ;	true
+		)
+	    ;	TocWindow = @nil
 	    ),
 	    (	object(Node)
 	    ->  send_super(Node, collapsed, Val),
 		send(Node, update_image),
-		(   Normalise == true
+		(   Val == @off
 		->  send(TocWindow, normalise_tree, Node)
 		;   true
 		)
