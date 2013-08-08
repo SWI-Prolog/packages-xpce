@@ -159,7 +159,7 @@ COMMON(void)	msleep(int time);
 COMMON(void)	msleep(int time);
 COMMON(int)	pceAssert(int expr, char *text, char *file, int line);
 COMMON(void)	at_pce_exit(atexit_function f, int flags);
-COMMON(void)	run_pce_exit_hooks(int rval);
+COMMON(int)	run_pce_exit_hooks(int rval);
 
 /* /home/jan/src/pl/packages/xpce/src/ker/passing.c */
 COMMON(status)	vm_send(Any receiver, Name selector, Class class, int argc, const Any argv []);

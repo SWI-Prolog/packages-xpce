@@ -1228,7 +1228,7 @@ at_pce_exit(atexit_function f, int flags)
 }
 
 
-void
+int
 run_pce_exit_hooks(int rval)
 { AtexitEntry h;
 
@@ -1242,5 +1242,7 @@ run_pce_exit_hooks(int rval)
 
   for(h = atexit_head; h; h = h->next)
     (*h->function)(rval);
+
+  return 0;
 }
 

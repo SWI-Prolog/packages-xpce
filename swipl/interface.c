@@ -3003,7 +3003,7 @@ pl_Cgetline(char *buf, int size)
 		 *******************************/
 
 typedef void (*sighandler_t)(int);
-typedef void (*halthandler_t)(int, void *);
+typedef int  (*halthandler_t)(int, void *);
 
 static int
 PrologAction(int action, va_list args)

@@ -204,17 +204,19 @@ HiddenFrameClass()
 }
 
 
-static void
+static int
 unsetup(int code, void *closure)
 { if ( context.window )
   { DestroyWindow(context.window);
     context.window = 0;
   }
+
+  return 0;
 }
 
 
 static int
-setup()
+setup(void)
 { if ( context.window )
     return TRUE;
 
