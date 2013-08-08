@@ -48,7 +48,6 @@
 		   "PceEmacs main object").
 
 variable(buffer_list,	dict,	 get, "List of buffers maintained").
-variable(exit_message,	message, get, "Registered exit message").
 variable(history,	history, get, "History of visited places").
 
 
@@ -57,25 +56,20 @@ variable(history,	history, get, "History of visited places").
 		 *******************************/
 
 initialise(Emacs, Buffers:dict) :->
-	send(Emacs, send_super, initialise, emacs),
+	send_super(Emacs, initialise, emacs),
 %	send(Emacs, leader, frame('PceEmacs')),
 	send(Emacs, kind, service),
 	send(Emacs, slot, history,
 	     history(message(Emacs, goto_history, @arg1, tab))),
 	send(Emacs, slot, buffer_list, Buffers),
-	new(Msg, message(Emacs, check_saved_at_exit)),
-	send(@pce, exit_message, Msg),
-	send(Emacs, slot, exit_message, Msg),
 	new(@emacs_mark_list, emacs_bookmark_editor),
 	ignore(send(Emacs, server_start)),
-	ignore(send(Emacs, load_user_init_file)).
+	ignore(send(Emacs, load_user_init_file)),
+	register_clean_exit(Emacs).
 
 unlink(Emacs) :->
-	(   get(Emacs, exit_message, Msg),
-	    send(@pce?exit_messages, delete, Msg)
-	;   true
-	),
-	send(Emacs, send_super, unlink).
+	unregister_clean_exit(Emacs),
+	send_super(Emacs, unlink).
 
 start(_Emacs) :->
 	true.
@@ -216,6 +210,35 @@ save_some_buffers(BM, Confirm:[bool]) :->
 	).
 
 
+		 /*******************************
+		 *	    CLEAN EXIT		*
+		 *******************************/
+
+:- dynamic
+	emacs_application/1,
+	registered/0.
+
+register_clean_exit(Emacs) :-
+	asserta(emacs_application(Emacs)),
+	(   registered
+	->  true
+	;   asserta(registered),
+	    at_halt(exit_emacs)
+	).
+
+unregister_clean_exit(Emacs) :-
+	retractall(emacs_application(Emacs)).
+
+exit_emacs :-
+	forall(emacs_application(Emacs),
+	       exit_emacs(Emacs)).
+
+exit_emacs(Emacs) :-
+	(   in_pce_thread_sync(send(Emacs, check_saved_at_exit))
+	->  true
+	;   cancel_halt('Unsaved buffers')
+	).
+
 check_saved_at_exit(BM) :->
 	"Check for unsaved buffers when called from exit"::
 	send(BM, save_some_buffers, @on),
@@ -223,20 +246,15 @@ check_saved_at_exit(BM) :->
 	    and(@arg1?object?file \== @nil,
 		@arg1?object?modified == @on)),
 	(   get(BM?buffer_list, find, ModifiedItem, _)
-	->  (   send(@display, confirm, 'Discard modified buffers?')
-	    ->	true
-	    ;	repeat,
-			send(@display, dispatch),
-			format('Dispatch running; discarding input~n', []),
-			get0(_),
-			fail
-	    )
+	->  send(@display, confirm, 'Discard modified buffers?')
 	;   true
 	).
+
 
 		 /*******************************
 		 *	      WINDOWS		*
 		 *******************************/
+
 :- pce_group(window).
 
 current_frame(Emacs, Frame:emacs_frame) :<-
