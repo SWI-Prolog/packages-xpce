@@ -293,7 +293,7 @@ pp(Term, Ctx, Options) :-		% handle operators
 		pp(Arg1, Ctx3, Options),
 		format(Out, ' ~q ', Name),
 		modify_context(Ctx2, [precedence=Right], Ctx4),
-		pp(Arg2, Ctx2, Options),
+		pp(Arg2, Ctx4, Options),
 		format(Out, ')', [])
 	    )
 	).
