@@ -206,7 +206,9 @@ save_some_buffers(BM, Confirm:[bool]) :->
 			message(@display, confirm, 'Save %s?',
 				@arg1?object?file?name)),
 		     message(@arg1?object, save, @arg1?object?file)))
-	;   send(@pce, report, status, 'No buffers need saving')
+	;   send(@event, instance_of, event) % GUI initiated
+	->  send(@pce, report, status, 'No buffers need saving')
+	;   true
 	).
 
 
