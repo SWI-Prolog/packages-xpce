@@ -76,7 +76,7 @@ typedef struct _winassoc
 } winassoc, *WinAssoc;
 
 static WinAssoc wintable[WINASSOC_TABLESIZE];
-static int		lock_initialized;
+static int		lock_initialized = FALSE;
 static CRITICAL_SECTION lock;
 
 static int
@@ -108,7 +108,7 @@ assocObjectToHWND(HWND hwnd, Any obj)
     { if ( a->hwnd == hwnd )
       { *p = a->next;
         unalloc(sizeof(winassoc), a);
-	return;
+	break;
       }
     }
     LeaveCriticalSection(&lock);
@@ -162,7 +162,12 @@ destroyThreadWindows(Class class)
   if ( !lock_initialized )		/* there are no windows */
     return;
 
+  DEBUG(NAME_thread,
+	Cprintf("Destroying windows for %s\n", pp(class)));
+
   EnterCriticalSection(&lock);
+  DEBUG(NAME_thread,
+	Cprintf("\tGot lock\n"));
   for(i=0; i<WINASSOC_TABLESIZE; i++)
   { WinAssoc a;
 

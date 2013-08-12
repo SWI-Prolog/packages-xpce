@@ -63,7 +63,15 @@ DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
 
 int
 pceMTdetach(void)
-{ DEBUG(NAME_thread,
+{
+#if O_DEBUG_EXIT
+  ServiceMode = PCE_EXEC_USER;
+  PCEdebugging = TRUE;
+
+  Cprintf("pceMTdetach() in user mode\n");
+#endif
+
+  DEBUG(NAME_thread,
 	Cprintf("Detached thread 0x%x\n", GetCurrentThreadId()));
   destroyThreadWindows(ClassFrame);
   destroyThreadWindows(ClassWindow);
