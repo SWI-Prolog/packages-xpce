@@ -1238,7 +1238,7 @@ run_pce_exit_hooks(int rval)
 #endif
 
   if ( exit_running++ )
-    return;
+    return -1;
 
   for(h = atexit_head; h; h = h->next)
     (*h->function)(rval);
