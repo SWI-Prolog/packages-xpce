@@ -383,7 +383,7 @@ drop(G, Obj:object, Pos:point) :->
 	->  get(Obj, path, File),
 	    (   get(G, node, File, Node)
 	    ->  send(Node, flash)
-	    ;   get(G, node, File, always, Pos, Node),
+	    ;   get(G, node, File, always, Pos, _Node),
 		send(G, update_links)
 	    )
 	;   send(Obj, instance_of, xref_directory_text)
@@ -1453,7 +1453,7 @@ initialise(TF, Dir:name, Label:[name]) :->
 	->  file_base_name(Path, TheLabel)
 	;   TheLabel = Label
 	),
-	send_super(TF, initialise, Label),
+	send_super(TF, initialise, TheLabel),
 	send(TF, slot, path, Path).
 
 files(DT, Files:chain) :<-
