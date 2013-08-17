@@ -148,7 +148,11 @@ goto_source_location(Emacs,
 	(   get(Location, line_no, Line),
 	    Line \== @nil
 	->  send(Editor, mark_status, inactive),
-	    send(Mode, select_line, Line)
+	    send(Mode, select_line, Line),
+	    (	get(Location, attribute, linepos, LinePos)
+	    ->	send(Mode, forward_char, LinePos)
+	    ;	true
+	    )
 	;   true
 	),
 	(   Title == @nil

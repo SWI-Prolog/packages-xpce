@@ -105,11 +105,22 @@ emacs :-
 
 %%	emacs(+Location) is det.
 %
-%	Create PceEmacs and edit Location. If   Location  is of the type
-%	File:Line, edit File at the given Line
+%	Create PceEmacs and edit  Location.  Location   is  one  of  the
+%	following, where File must be an atom   and Line and LinePos are
+%	integers.
 %
-%	@param Location	place to edit.  Either a file or File:Line term.
+%	  - File:Line:LinePos
+%	  - File:Line
+%	  - File
 
+emacs(File:Line:LinePos) :-
+	integer(Line),
+	integer(LinePos),
+	atom(File), !,
+	start_emacs,
+	new(Loc, source_location(File, Line)),
+	send(Loc, attribute, linepos, LinePos),
+	in_pce_thread(send(@emacs, goto_source_location, Loc, tab)).
 emacs(File:Line) :-
 	integer(Line),
 	atom(File), !,
@@ -117,9 +128,13 @@ emacs(File:Line) :-
 	in_pce_thread(send(@emacs, goto_source_location,
 			   source_location(File, Line), tab)).
 emacs(File) :-
+	atom(File), !,
 	start_emacs,
 	in_pce_thread(send(@emacs, goto_source_location,
 			   source_location(File), tab)).
+emacs(File) :-
+	domain_error(location, File).
+
 
 %%	emacs_toplevel is det.
 %
