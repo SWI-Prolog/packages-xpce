@@ -58,8 +58,7 @@
 pce_main_loop(Goal) :-
 	setup_runtime,
 	current_prolog_flag(argv, Argv),
-	application_flags(Argv, ApplArgv),
-	pce_loop(Goal, ApplArgv),
+	pce_loop(Goal, Argv),
 	halt.
 
 %%	pce_loop(+Goal).
@@ -78,13 +77,6 @@ pce_loop(Goal, Argv) :-
 	send(FrameChain, subtract, FramesOld),
 	chain_list(FrameChain, Frames),
 	dispatch_for_frames(Frames).
-
-application_flags(Argv, Appl) :-
-	append(_, ['--'|Appl], Argv), !.
-application_flags(Argv, Appl) :-
-	append(_, ['-x', _State|Appl], Argv), !.
-application_flags([_|Appl], Appl).
-
 
 dispatch_for_frames([]) :- !.
 dispatch_for_frames(Frames) :-

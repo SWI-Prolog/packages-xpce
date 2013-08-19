@@ -96,7 +96,7 @@ start_emacs_dde_server(_).
 :- if(current_predicate(shell_register_dde/6)).
 
 win_register_emacs :-
-	current_prolog_flag(argv, [Me|_]),
+	current_prolog_flag(executable, Me),
 	shell_register_dde('prolog.type', edit,
 			   'PceEmacs', control, 'edit %1', Me).
 

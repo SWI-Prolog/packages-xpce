@@ -142,8 +142,7 @@ emacs(File) :-
 
 emacs_toplevel :-
 	send(@pce, trap_errors, @off),
-	current_prolog_flag(argv, Argv),
-	files(Argv, Files),
+	current_prolog_flag(argv, Files),
 	(   Files = [_|_]
 	->  start_emacs,
 	    maplist(make_buffer, Files, [B0|_]),
@@ -153,9 +152,3 @@ emacs_toplevel :-
 
 make_buffer(File, Buffer) :-
 	new(Buffer, emacs_buffer(File)).
-
-files(List, Files) :-
-	append(_, ['--'|Files], List), !.
-files(List, Files) :-
-	append(_, ['-x', _State|Files], List), !.
-files([_Prog|Files], Files).

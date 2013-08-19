@@ -92,8 +92,7 @@ which can cause this module to raise an exception.
 %	#!/usr/bin/pl -q -g regex_main -s
 
 regex_main :-
-	current_prolog_flag(argv, Argv),
-	append(_, [--|Files], Argv),
+	current_prolog_flag(argv, Files),
 	maplist(regex_convert_file, Files),
 	halt.
 
