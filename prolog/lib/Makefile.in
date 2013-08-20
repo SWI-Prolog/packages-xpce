@@ -73,4 +73,4 @@ INDEX.pl:	.
 	@echo '****************'
 	@echo '* QLF compilation of $*'
 	@echo '****************'
-	$(PL) -f none $(PLOFLAGS) -g "qcompile('$*')" -t halt -- -nopce
+	$(PL) -f none $(PLOFLAGS) -g "qcompile('$*')" -t halt -- --nopce
