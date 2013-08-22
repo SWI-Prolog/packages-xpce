@@ -88,7 +88,7 @@ gui_setup_ :-
 
 menu_setup_ :-					% plwin.exe menus
 	current_prolog_flag(console_menu, true),
-	use_module(user:library(win_menu)).
+	load_files(user:library(win_menu), [silent(true)]).
 menu_setup_.
 
 editor_setup :-
