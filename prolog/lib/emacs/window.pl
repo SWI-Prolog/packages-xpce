@@ -472,7 +472,7 @@ resize(D) :->
 	get(D, member, line, Text),
 	get(D?area, width, W),
 	get(Text, width, TW),
-	send(Text, x, W-TW-2).
+	send(Text, x, W-TW-16).
 
 '_compute_desired_size'(_) :->
 	"We have fixed size"::
