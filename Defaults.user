@@ -35,7 +35,7 @@
 !editor.exact_case:	@on
 
 ! How PceEmacs deals with DOS (\r\n) and POSIX (\n) newline separators.
-! Default for existing files is to detect and safe in the old format.
+! Default for existing files is to detect and save in the old format.
 ! Default for new files depends on the platform, but can be overruled
 ! by this declaration.  Setting the new file is particulary interesting
 ! when sharing files between Windows and Unix, such as through a shared
@@ -64,7 +64,8 @@
 ! Indentation parameters for Prolog mode.  body_indentation is the
 ! indentation of goals in the body.  cond_indentation is the extra
 ! indentation for (if->then;else), (a;b), etc.  indent_tabs defines
-! whether tabs or spaces are used for (re-)indentation.
+! whether tabs or spaces are used for (re-)indentation.  Default is
+! to use tabs (@on).
 
 !emacs_prolog_mode.body_indentation: 8
 !emacs_prolog_mode.cond_indentation: 4
