@@ -205,12 +205,11 @@ syntax(quasi_quotation(Start, End), ST) :-
 %
 %	Convert between plain PceEmacs modename and the mode class.
 
+emacs_mode_class(@default, emacs_mode) :- !.
+emacs_mode_class([], emacs_mode) :- !.
 emacs_mode_class(ModeName, ClassName) :-
 	atom(ModeName), !,
-	(   ModeName == []
-	->  ClassName = emacs_mode
-	;   atomic_list_concat([emacs_, ModeName, '_mode'], ClassName)
-	).
+        atomic_list_concat([emacs_, ModeName, '_mode'], ClassName).
 emacs_mode_class(ModeName, ClassName) :-
 	atom_concat(emacs_, M0, ClassName),
 	atom_concat(ModeName, '_mode', M0), !.
