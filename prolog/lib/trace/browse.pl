@@ -365,7 +365,7 @@ make_file_toc_entry(dynamic, TE) :-
 	new(TE, sb_predicate_list(dynamic, @default, 'mini-run.xpm')).
 
 to_summary(Doc, String) :-
-	catch(string_to_list(String, Doc), _, fail), !.
+	catch(string_codes(String, Doc), _, fail), !.
 to_summary(_, @default).
 
 local_predicate_name(M:Head, Label) :- !,

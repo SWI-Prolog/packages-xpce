@@ -686,7 +686,7 @@ pce_define_class(M, Name:name,
 		  :- pce_end_class(%s).\n',
 		 QName, QSuper, QName)
 	;   atom_codes(C, Codes),
-	    string_to_list(S, Codes),
+	    string_codes(S, Codes),
 	    format(string(QComment), '~q', S),
 	    send(M, format,
 		 ':- pce_begin_class(%s, %s, %s).\n\n\c

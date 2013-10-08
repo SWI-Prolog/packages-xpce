@@ -48,7 +48,7 @@
 	   , forall/2
 	   , reverse/2
 	   , source_location/2
-	   , string_to_list/2
+	   , string_codes/2
 	   , append/3
 	   , atom_concat/3
 	   , between/3
@@ -751,7 +751,7 @@ pce_ifhostproperty(string, [
 (pce_summary(String, String) :-
 	string(String), !),
 (pce_summary(List, String) :-
-	string_to_list(String, List))]).
+	string_codes(String, List))]).
 pce_summary(List, string(List)).
 
 

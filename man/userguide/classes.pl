@@ -109,7 +109,7 @@ process_line(In, LineNo, Out) :-
 	substitute(Class, TexClass, Header, TexHeader),
 	sformat(S, '\\classsummary~w{~w}{~w}{~w}~n',
 		[Cont, TexClass, TexHeader, PS]),
-	string_to_list(S, Out).
+	string_codes(S, Out).
 
 line(Class, Header, PS) -->
 	"#class",
@@ -150,7 +150,7 @@ string([C|T]) -->
 class_to_ps(CN, PS) :-
 	atom_codes(CN, Chars),
 	delete(Chars, 0'_, C2),
- 	atom_codes(PS, C2).
+	atom_codes(PS, C2).
 
 
 class_to_tex(Name, TeXName) :-
