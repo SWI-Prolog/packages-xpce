@@ -453,6 +453,31 @@ put_string(int (*out)(void*, wint_t), void *closure, String s)
 }
 
 
+#ifdef __WINDOWS__
+/* See pl-nt.c of SWI-Prolog for details on this madness
+*/
+
+#define snprintf ms_snprintf
+
+int
+ms_snprintf(char *buffer, size_t count, const char *fmt, ...)
+{ va_list ap;
+  int ret;
+
+  va_start(ap, fmt);
+  ret = _vsnprintf(buffer, count-1, fmt, ap);
+  va_end(ap);
+
+  if ( ret < 0 || ret == count )
+  { ret = (int)count;
+    buffer[count-1] = '\0';
+  }
+
+  return ret;
+}
+#endif
+
+
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Comment to avoid mkproto not generating the prototype for this function
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -535,6 +560,7 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 	    { int a;
 	      Int i;
 	      char buf[64];
+	      int rc;
 
 	      if ( argc <= 0 )
 		a = 0;
@@ -554,11 +580,33 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 	      *r = EOS;
 
 	      if ( arg == NOT_SET )
-		sprintf(buf, fmtbuf, a);
+		rc = snprintf(buf, sizeof(buf), fmtbuf, a);
 	      else
-		sprintf(buf, fmtbuf, arg, a);
+		rc = snprintf(buf, sizeof(buf), fmtbuf, arg, a);
 
-	      PutString(buf);
+	      if ( rc < sizeof(buf) )
+	      { PutString(buf);
+	      } else
+	      { size_t size = sizeof(buf)*2;
+
+		for(;;)
+		{ char *b2 = pceMalloc(size);
+
+		  if ( arg == NOT_SET )
+		    rc = snprintf(b2, size, fmtbuf, a);
+		  else
+		    rc = snprintf(b2, size, fmtbuf, arg, a);
+
+		  if ( rc < size )
+		  { PutString(b2);
+		    pceFree(b2);
+		    break;
+		  }
+
+		  pceFree(b2);
+		  size *= 2;
+		}
+	      }
 
 	      continue;
 	    }
@@ -570,6 +618,7 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 	    { double a;
 	      Real f;
 	      char buf[64];
+	      int rc;
 
 	      if ( argc <= 0 )
 		a = 0.0;
@@ -588,11 +637,33 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 	      *r++ = c;
 	      *r = EOS;
 	      if ( arg == NOT_SET )
-		sprintf(buf, fmtbuf, a);
+		rc = snprintf(buf, sizeof(buf), fmtbuf, a);
 	      else
-		sprintf(buf, fmtbuf, arg, a);
+		rc = snprintf(buf, sizeof(buf), fmtbuf, arg, a);
 
-	      PutString(buf);
+	      if ( rc < sizeof(buf) )
+	      { PutString(buf);
+	      } else
+	      { size_t size = sizeof(buf)*2;
+
+		for(;;)
+		{ char *b2 = pceMalloc(size);
+
+		  if ( arg == NOT_SET )
+		    snprintf(b2, size, fmtbuf, a);
+		  else
+		    snprintf(b2, size, fmtbuf, arg, a);
+
+		  if ( rc < size )
+		  { PutString(b2);
+		    pceFree(b2);
+		    break;
+		  }
+
+		  pceFree(b2);
+		  size *= 2;
+		}
+	      }
 
 	      continue;
 	    }
