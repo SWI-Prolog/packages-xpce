@@ -1533,9 +1533,9 @@ termToObject(term_t t, PceType type, atom_t assoc, int new)
 
       QGetArg(1, t, a);
       if ( PL_get_nchars(a, &len, &s, CVT_ALL) )
-	return cToPceStringA(pceassoc, s, len, TRUE);
+	return cToPceStringA(pceassoc, s, len, FALSE);
       else if ( PL_get_wchars(a, &len, &sW, CVT_ALL) )
-	return cToPceStringW(pceassoc, sW, len, TRUE);
+	return cToPceStringW(pceassoc, sW, len, FALSE);
 
       ThrowException(EX_TYPE, ATOM_string, t);
       return PCE_FAIL;
