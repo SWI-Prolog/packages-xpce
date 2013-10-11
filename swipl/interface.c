@@ -208,7 +208,10 @@ static atom_t ATOM_badStringArgument;	/* "bad_string_argument" */
 static atom_t ATOM_behaviour;		/* "behaviour" */
 static atom_t ATOM_context;		/* "context" */
 static atom_t ATOM_default;		/* "default" */
+
+#ifndef ATOM_dot
 static atom_t ATOM_dot;			/* "." */
+#endif
 static atom_t ATOM_domain_error;		/* "domain_error" */
 static atom_t ATOM_error;			/* "error" */
 static atom_t ATOM_existence_error;	/* "existence_error" */
@@ -259,7 +262,9 @@ initPrologConstants()
   ATOM_behaviour		= AtomFromString("behaviour");
   ATOM_context			= AtomFromString("context");
   ATOM_default			= AtomFromString("default");
+#ifndef ATOM_dot
   ATOM_dot			= AtomFromString(".");
+#endif
   ATOM_domain_error		= AtomFromString("domain_error");
   ATOM_error			= AtomFromString("error");
   ATOM_existence_error		= AtomFromString("existence_error");
