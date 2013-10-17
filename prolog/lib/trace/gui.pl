@@ -956,7 +956,8 @@ initialise(D) :->
 	send(D, gap, size(0,0)),
 	get(D, frame, Frame),
 	send(D, append, new(TB, tool_bar(Frame))),
-	(   button(Action, Keys, Image, Balloon0),
+	(   button(Action, KeyString, Image, Balloon0),
+	    string_codes(KeyString, Keys),
 	    (	Action == gap
 	    ->	send(TB, append, gap)
 	    ;   tag_balloon(Balloon0, Keys, Balloon),

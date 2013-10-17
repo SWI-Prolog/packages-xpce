@@ -143,12 +143,15 @@ do_term_expand((Head :- Body), _) :-	% check for :- instead of :-> or :<-
 	fail.
 
 
-is_string(0) :- !, fail.		% catch variables
-is_string([]).
-is_string([H|T]) :-
-	integer(H),
-	between(0, 255, H),
-	is_string(T).
+%%	is_string(@Doc) is semidet.
+%
+%	See whether Doc may have originated from "..."
+
+is_string(Doc) :-
+	string(Doc), !.
+is_string(Doc) :-
+	is_list(Doc),
+	catch(string_codes(Doc, _), _, fail).
 
 typed_head(T) :-
 	functor(T, _, Arity),
@@ -812,7 +815,7 @@ to_atom(Atom, Atom) :-
 	atom(Atom), !.
 to_atom(Term, Atom) :-
 	ground(Term), !,
-	phrase(pce_type_description(Term), Chars, []),
+	phrase(pce_type_description(Term), Chars),
 	atom_chars(Atom, Chars).
 to_atom(Term, any) :-
 	pce_error(type_error(to_atom(Term, any), 1, ground, Term)).

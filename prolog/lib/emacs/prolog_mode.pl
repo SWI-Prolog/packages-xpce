@@ -936,12 +936,14 @@ error_at_location(M, Caret:int) :->
 	send(M, check_clause).
 
 
-symbol_chars("-#$&*+./:<=>?@\\^`~").
+symbol_chars('-#$&*+./:<=>?@\\^~').
 
+term_expansion(symbol_char(_), Clauses) :-
+	symbol_chars(String),
+	atom_codes(String, Codes),
+	findall(symbol_char(C), member(C,Codes), Clauses).
 
-symbol_char(C) :-
-	symbol_chars(Symbols),
-	memberchk(C, Symbols).
+symbol_char(_Code).
 
 
 insert_full_stop(M, Arg:[int]) :->
