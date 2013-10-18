@@ -103,7 +103,7 @@ backward_skip_statement(TB, Here, Start) :-
 	get(TB, skip_comment, Here, 0, H1),
 	get(TB, character, H1, C1),
 	debug(c_statement, '~p: ~w->~w = \'~c\'', [TB, Here, H1, C1]),
-	(   memberchk(C1, ")")			% e.g., for (...) { ... }
+	(   string_code(_, ")", C1)			% e.g., for (...) { ... }
 	->  get(TB, matching_bracket, H1, OpenPos),
 	    (	get(TB, scan, OpenPos, word, 0, start, Start0),
 		get(TB, scan, Start0, word, 0, end, EF),
@@ -116,7 +116,7 @@ backward_skip_statement(TB, Here, Start) :-
         ;   prev_word(TB, H1+1, else, StartElse)
 	->  backward_skip_statement(TB, StartElse, Start)
 	;   (	H1 == 0
-	    ;	memberchk(C1, "{;}")
+	    ;	string_code(_, "{;}", C1)
 	    ),
 	    get(TB, skip_comment, H1+1, H2)
 	->  Start = H2
@@ -137,7 +137,7 @@ backward_statement(E, Here:[int], There:int) :<-
 	get(TB, skip_comment, Caret, 0, H1),
 	backward_skip_semicolon(TB, H1, H2),
 	get(TB, character, H2, Chr),
-	(   memberchk(Chr, "}")
+	(   string_code(_, "}", Chr)
 	->  get(E, matching_bracket, H1, H3),
 	    H4 is H3 - 1
 	;   H4 = H2
@@ -184,19 +184,19 @@ indent_statement(E) :->
 	get(TB, skip_comment, Caret-1, 0, P0),
 	get(TB, character, P0, Chr),
 	debug(emacs(indent), 'Statement: ~c at ~d', [Chr, P0]),
-	(   memberchk(Chr, ";}")	% new statement
+	(   string_code(_, ";}", Chr)	% new statement
 	->  get(E, backward_statement, P0+1, P1),
 	    back_prefixes(E, P1, P2),
 	    get(E, column, P2, Col),
 	    send(E, align_line, Col)
-	;   memberchk(Chr, "{")		% first in compound block
+	;   string_code(_, "{", Chr)		% first in compound block
 	->  (	get(E, back_skip_if_etc, P0-1, IfPos)
 	    ->	get(E, column, IfPos, Col)
 	    ;	get(E, column, P0, Col)
 	    ),
 	    get(E, indent_level, Inc),
 	    send(E, align, Col + Inc)
-	;   \+ memberchk(Chr, ";,"),	% for, while, if, ...
+	;   \+ string_code(_, ";,", Chr),	% for, while, if, ...
 	    (   get(TB, matching_bracket, P0, P1)
 	    ->  true
 	    ;   P1 = P0
