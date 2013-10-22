@@ -90,8 +90,7 @@ cache_file(ParsedURL, File) :-
 	->  atom_concat(Path0, '.index', Path)
 	;   Path = Path0
 	),
-	sformat(S, '~w/~w/~w:~w~w', [Dir, Protocol, Host, Port, Path]),
-	string_to_atom(S, File),
+	format(atom(File), '~w/~w/~w:~w~w', [Dir, Protocol, Host, Port, Path]),
 	ensure_dir_for_file(File),
 	debug(cache, 'Cache file is \'~w\'~n', File).
 
