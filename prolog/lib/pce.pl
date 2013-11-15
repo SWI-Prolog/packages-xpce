@@ -78,8 +78,6 @@ reexports the content of these files.
 	    pce_thread/1,		% -Thread
 	    pce_dispatch/0,
 
-	    pce_welcome/0,
-
 	    op(200, fy,  @),
 	    op(250, yfx, ?),
 	    op(990, xfx, :=)
@@ -245,21 +243,3 @@ method_clause(<-(Class, Get), Ref) :-
 	clause(pce_principal:get_implementation(Id, _M, _O, _R), _B, Ref),
 	atom(Id),
 	atomic_list_concat([Class,Get], '->', Id).
-
-
-		/********************************
-		*            BANNER		*
-		********************************/
-
-pce_welcome :-
-	current_prolog_flag(verbose, silent), !.
-pce_welcome :-
-	send(@pce, banner),
-	(   get(@pce, is_runtime_system, @(off))
-	->  format('~nFor HELP on prolog, please type help. or apropos(topic).~n'),
-	    format('         on xpce, please type manpce.~n~n')
-	;   format('~n', [])
-	).
-
-
-:- flag('$banner_goal', _, pce_welcome).

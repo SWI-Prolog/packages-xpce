@@ -109,8 +109,7 @@ pce_setup_ :-
 	    file_base_name(Executable, Base),
 	    sub_atom_icasechk(Base, _, pce)
 	), !,
-	load_files(user:library(pce), [silent(true)]),
-	flag('$banner_goal', _, pce_welcome).
+	load_files(user:library(pce), [silent(true)]).
 pce_setup_.
 
 :- initialization pce_setup_.
