@@ -50,7 +50,8 @@ file from being loaded.
 :- multifile
 	prolog:debug_control_hook/1,
 	prolog:help_hook/1,
-	prolog:show_profile_hook/2.
+	prolog:show_profile_hook/1,		% new
+	prolog:show_profile_hook/2.		% compatibility
 
 
 		 /*******************************
@@ -85,6 +86,8 @@ prolog:help_hook(help(What)) :- !,
 		 *	     PROFILING		*
 		 *******************************/
 
+prolog:show_profile_hook(_Options) :-
+	call(pce_show_profile).
 prolog:show_profile_hook(_Style, _Top) :-
 	call(pce_show_profile).
 
