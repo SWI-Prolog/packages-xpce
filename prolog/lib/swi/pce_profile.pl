@@ -53,9 +53,10 @@ profiler output.
 %	Show already collected profile using a graphical browser.
 
 pce_show_profile :-
-	'$prof_statistics'(Ticks, Account, Time, NodeCount),
+	'$prof_statistics'(Samples, Ticks, Account, Time, NodeCount),
 	findall(Node, prof_node(Node), Nodes),
-	in_pce_thread(show_profile(prof_data(Ticks, Account, Time, NodeCount, Nodes))).
+	in_pce_thread(show_profile(prof_data(Samples, Ticks, Account,
+					     Time, NodeCount, Nodes))).
 
 show_profile(Data) :-
 	send(new(F, prof_frame), open),
@@ -70,11 +71,12 @@ show_profile(Data) :-
 :- pce_begin_class(prof_frame, persistent_frame,
 		   "Show Prolog profile data").
 
+variable(samples,	   int,	 get, "Total # samples").
 variable(ticks,		   int,	 get, "Total # ticks").
 variable(accounting_ticks, int,	 get, "# ticks while accounting").
 variable(time,		   real, get, "Total time").
 variable(nodes,		   int,	 get, "Nodes created").
-variable(time_view,	   {ticks,percentage,seconds} := percentage,
+variable(time_view,	   {percentage,seconds} := percentage,
 				 get, "How time is displayed").
 
 class_variable(auto_reset, bool, @on, "Reset profiler after collecting").
@@ -116,13 +118,20 @@ fill_dialog(F, TD:tool_dialog) :->
 		  ]).
 
 
+% make this work on older versions of SWI-Prolog
+:- if(\+current_predicate('$prof_statistics'/5)).
+'$prof_statistics'(Ticks, Ticks, Account, Time, NodeCount) :-
+	'$prof_statistics'(Ticks, Account, Time, NodeCount).
+:- endif.
+
 load_profile(F, ProfData:[prolog]) :->
 	"Load stored profile from the Prolog database"::
-	(   ProfData = prof_data(Ticks, Account, Time, NodeCount, Nodes)
+	(   ProfData = prof_data(Samples, Ticks, Account, Time, NodeCount, Nodes)
 	->  true
-	;   '$prof_statistics'(Ticks, Account, Time, NodeCount),
+	;   '$prof_statistics'(Samples, Ticks, Account, Time, NodeCount),
 	    findall(Node, prof_node(Node), Nodes)
 	),
+	send(F, slot, samples, Samples),
 	send(F, slot, ticks, Ticks),
 	send(F, slot, accounting_ticks, Account),
 	send(F, slot, time, Time),
@@ -140,6 +149,7 @@ load_profile(F, ProfData:[prolog]) :->
 
 show_statistics(F) :->
 	"Show basic statistics on profile"::
+	get(F, samples, Samples),
 	get(F, ticks, Ticks),
 	get(F, accounting_ticks, Account),
 	get(F, time, Time),
@@ -153,7 +163,7 @@ show_statistics(F) :->
 	send(F, report, inform,
 	     '%d samples in %.2f sec; %d predicates; \c
 	      %d nodes in call-graph; distortion %.0f%%',
-	     Ticks, Time, Predicates, Nodes, Distortion).
+	     Samples, Time, Predicates, Nodes, Distortion).
 
 
 details(F, From:prolog) :->
@@ -184,9 +194,7 @@ time_view(F, TV:name) :->
 render_time(F, Ticks:int, Rendered:any) :<-
 	"Render a time constant"::
 	get(F, time_view, View),
-	(   View == ticks
-	->  Rendered = Ticks
-	;   View == percentage
+	(   View == percentage
 	->  get(F, ticks, Total),
 	    get(F, accounting_ticks, Accounting),
 	    (	Total-Accounting =:= 0
