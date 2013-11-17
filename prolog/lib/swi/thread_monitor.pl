@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@cs.vu.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2013, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -183,18 +181,30 @@ is_running(TS) :->
 	get(TS, style, Style),
 	sub_atom(Style, 0, _, _, running).
 
-start_profile(TS) :->
+start_profile(TS, How:[{cpu,wall}]) :->
 	"Start profiling this thread"::
 	(   get(TS, profiling, @on)
 	->  send(TS, report, warning, 'Already profiling')
 	;   get(TS, key, TID),
+	    profile_arg(How, TS, Arg),
 	    thread_signal(TID,
 			  (	  reset_profiler,
-				  profiler(_, true)
+				  profiler(_, Arg)
 			  )),
 	    send(TS, slot, profiling, @on),
 	    send(TS, style, profiling)
 	).
+
+
+:- if(current_predicate('$profile'/2)).
+profile_arg(cpu,  _, cputime).
+profile_arg(wall, _, walltime).
+:- else.
+profile_arg(cpu,  _, true).
+profile_arg(wall, TS, true) :-
+	send(TS, report, warning,
+	     'Wall time profiling requires a more recent Prolog version').
+:- endif.
 
 end_profile(TS) :->
 	"End profiling"::
@@ -202,12 +212,20 @@ end_profile(TS) :->
 	->  send(TS, report, error, 'Not profiling')
 	;   get(TS, key, TID),
 	    thread_signal(TID,
-			  (	  profiler(_, false),
-				  show_profile(plain, 25)
+			  ( profiler(_, false),
+			    show_profile
 			  )),
 	    send(TS, slot, profiling, @off),
 	    send(TS, style, TS?state)
 	).
+
+:- if(current_predicate(show_profile/2)).
+show_profile :-					% backward compatibility
+	show_profile(plain, 25).
+:- else.
+show_profile :-
+	show_profile([]).
+:- endif.
 
 abort(TS) :->
 	"Send abort to the thread"::
@@ -277,8 +295,12 @@ initialise(TB) :->
 			      message(@arg1, signal, attach_console),
 			      condition := IsRunning),
 		    gap,
-		    menu_item(profile,
-			      message(@arg1, start_profile),
+		    menu_item(profile_cpu,
+			      message(@arg1, start_profile, cpu),
+			      condition := and(IsRunning,
+					       not(TB?profiling))),
+		    menu_item(profile_wall_time,
+			      message(@arg1, start_profile, wall),
 			      condition := and(IsRunning,
 					       not(TB?profiling))),
 		    menu_item(show_profile,
