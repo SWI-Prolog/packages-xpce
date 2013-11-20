@@ -214,7 +214,7 @@ completions(TI, From:char_array, Unique:chain) :<-
 :- pce_begin_class(emacs_command_item, emacs_complete_item,
 		   "Prompt for a M-x command").
 
-canonise(TI) :->
+canonicalise(TI) :->
 	get(TI, value_text, Text),
 	get(Text, string, String),
 	new(Displayed, string('%s', String)),	% make sure it is a string
@@ -222,12 +222,12 @@ canonise(TI) :->
 	send(TI, displayed_value, Displayed).
 
 complete(TI, Ev:[event_id]) :->
-	send(TI, canonise),
+	send(TI, canonicalise),
 	send_super(TI, complete, Ev).
 
 selection(TI, Name:name) :<-
 	"Return unique value if possible"::
-	send(TI, canonise),
+	send(TI, canonicalise),
 	get_super(TI, selection, Name).
 
 :- pce_end_class(emacs_command_item).

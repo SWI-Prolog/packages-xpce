@@ -83,7 +83,7 @@ make_promper(P) :-
 	send(P, done_message, message(P, return, cancel)).
 
 prompter(Title, Attributes) :-
-	maplist(canonise_attribute, Attributes, CAtts),
+	maplist(canonicalise_attribute, Attributes, CAtts),
 	send(@prompter, clear),
 	maplist(append_prompter(@prompter), CAtts),
 	send(@prompter, append,
@@ -114,7 +114,7 @@ prompter(Title, Attributes) :-
 		fail
 	    ).
 
-canonise_attribute(Label:Type = Value, Label:PceType = Value) :-
+canonicalise_attribute(Label:Type = Value, Label:PceType = Value) :-
 	pce_type(Type, PceType).
 
 pce_type(Type, Type) :-
@@ -209,7 +209,7 @@ set_default(_, _).
 read_prompter(P, Label:Type = Value) :-
 	get(P, member, Label, DI),
 	(   get(DI, selection, V0)
-	->  canonise(DI, V0, V1),
+	->  canonicalise(DI, V0, V1),
 	    (   get(@pce, convert, V1, Type, Val)
 	    ->  (   nonvar(Value),
 		    Value = RVal/_
@@ -224,10 +224,10 @@ read_prompter(P, Label:Type = Value) :-
 	).
 
 
-canonise(DI, A, B) :-
+canonicalise(DI, A, B) :-
 	send(DI, instance_of, text_item), !,
 	get(A, strip, B).
-canonise(DI, A, B) :-
+canonicalise(DI, A, B) :-
 	send(DI, instance_of, list_browser), !,
 	get(A, key, B).
-canonise(_, Val, Val).				  % TBD
+canonicalise(_, Val, Val).				  % TBD

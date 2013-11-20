@@ -67,7 +67,7 @@
 static Chain DirectoryStack;
 static Name  ExpandProblem;
 
-static char *	canonisePath(char *);
+static char *	canonicalisePath(char *);
 static Name	getWorkingDirectoryPce(Pce pce);
 
 #define MODIFIED_NOT_SET ((time_t) ~0L)
@@ -568,7 +568,7 @@ state-shifting multibyte encodings.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static char *
-canonisePath(char *path)
+canonicalisePath(char *path)
 { char *out = path, *in = path;
   char *osave[100];
   int  osavep = 0;
@@ -773,7 +773,7 @@ absolutePath(const char *file, char *path, size_t buflen)
   } else
     strcpy(path, file);
 
-  canonisePath(path);
+  canonicalisePath(path);
 
   return (int)strlen(path);
 }

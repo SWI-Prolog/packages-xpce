@@ -185,7 +185,7 @@ source_attribute(Dialog, layout, Layout) :-
 	get(Dialog, overlay, Overlay),
 	delete(Grs, Overlay, Items),
 	findall(Alignment, alignment(Items, Alignment), P0),
-	maplist(canonise_alignment, P0, P1),
+	maplist(canonicalise_alignment, P0, P1),
 	list_to_set(P1, P2),
 	maplist(symbolic_pair, P2, Pairs),
 	aligned(P2, Aligned),
@@ -211,9 +211,9 @@ pair(I1, I2, [I1|L]) :-
 pair(I1, I2, [_|T]) :-
 	pair(I1, I2, T).
 
-canonise_alignment(left(I1, I2), right(I2, I1)) :- !.
-canonise_alignment(above(I1, I2), below(I2, I1)) :- !.
-canonise_alignment(A, A).
+canonicalise_alignment(left(I1, I2), right(I2, I1)) :- !.
+canonicalise_alignment(above(I1, I2), below(I2, I1)) :- !.
+canonicalise_alignment(A, A).
 
 aligned(Pairs, Items) :-
 	aligned_(Pairs, I0),

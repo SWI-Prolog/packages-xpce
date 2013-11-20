@@ -489,10 +489,10 @@ char_code(E, Code:int) :->
 :- pce_global(@emacs_cd_regexs,
 	      new(chain(regex('\\ycd\\s+((\\w|[_/+-.: ])+)'),
 			regex('Entering directory `([^\']+)\'')))).
-:- pce_global(@emacs_canonise_dir_regex,
+:- pce_global(@emacs_canonicalise_dir_regex,
 	      new(regex('[^/]+/\\.\\./'))).
 
-canonise_path(Path) :-
+canonicalise_path(Path) :-
 	send(regex('[^/]+/\\.\\./'), for_all, Path,
 	     message(@arg1, replace, Path, '')),
 	send(regex('/\\./|//'), for_all, Path,
@@ -520,7 +520,7 @@ directory_name(M, Pos:[int]*, DirName:string) :<-
 	    )
 	),
 	send(DirName, ensure_suffix, /),
-	canonise_path(DirName).
+	canonicalise_path(DirName).
 
 
 match_cd_regex(TB, P0, Dir, Here) :-
@@ -560,7 +560,7 @@ error(M, Pos:int, Tuple:tuple) :<-
 	->  new(Tuple, tuple(File, LineNo))
 	;   get(M, directory_name, SOL, DirNameStr),
 	    send(DirNameStr, append, File),
-	    canonise_path(DirNameStr),
+	    canonicalise_path(DirNameStr),
 	    get(DirNameStr, value, DirName),
 	    new(Tuple, tuple(DirName, LineNo))
 	).

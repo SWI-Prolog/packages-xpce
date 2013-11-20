@@ -55,7 +55,7 @@ from_pce('Receiver',		'Class').
 from_pce('Cell',		'Chain').
 from_pce('Pointer',		'Pointer').
 
-canonise(Headers) :-
+canonicalise(Headers) :-
 	forall(from_pce(F, T), ignore(send(Headers, replace, F, T))),
 	send(Headers, sort), send(Headers, unique),
 	ignore(send(Headers, move_after, 'Pce')).
@@ -64,10 +64,10 @@ canonise(Headers) :-
 pce_insert_include_files(M) :->
 	"Collect the used Pce classes and insert includes"::
 	get(M, collect, regex('#\\s*include\\s+<pce/([A-Za-z]+).h>'), 1, CE),
-	canonise(CE),
+	canonicalise(CE),
 
 	get(M, collect, regex('\\yPce([A-Z][a-zA-Z]*)'), 1, Ch),
-	canonise(Ch),
+	canonicalise(Ch),
 
 	(   send(CE, equal, Ch)
 	->  send(M, report, status, 'No changes necessary')

@@ -194,7 +194,7 @@ lib_dir(D) :-
 	ignore_paths_from(Category),
 	user:file_search_path(Category, X),
 	expand_path(X, D0),
-	absolute_file_name(D0, D).	% canonise
+	absolute_file_name(D0, D).	% canonicalise
 
 expand_path(X, X) :-
 	atomic(X), !.

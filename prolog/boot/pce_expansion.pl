@@ -802,14 +802,14 @@ pce_access(X) :-
 
 pce_type(Prolog, Pce) :-
 	to_atom(Prolog, RawPce),
-	canonise_type(RawPce, Pce).
+	canonicalise_type(RawPce, Pce).
 
-canonise_type(T0, T0) :-
+canonicalise_type(T0, T0) :-
 	sub_atom(T0, _, _, 0, ' ...'), !.
-canonise_type(T0, T) :-
+canonicalise_type(T0, T) :-
 	atom_concat(T1, '...', T0), !,
 	atom_concat(T1, ' ...', T).
-canonise_type(T, T).
+canonicalise_type(T, T).
 
 to_atom(Atom, Atom) :-
 	atom(Atom), !.

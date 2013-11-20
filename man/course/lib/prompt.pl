@@ -83,7 +83,7 @@ set_default(_, _).
 read_prompter(P, Label:Type = Value) :-
 	get(P, member, Label, DI),
 	get(DI, selection, V0),
-	canonise(DI, V0, V1),
+	canonicalise(DI, V0, V1),
 	(   get(@pce, convert, V1, Type, Val)
 	->  (   nonvar(Value),
 	        Value = RVal/_
@@ -95,10 +95,10 @@ read_prompter(P, Label:Type = Value) :-
 	).
 
 
-canonise(DI, A, B) :-
+canonicalise(DI, A, B) :-
 	send(DI?class, is_a, text_item), !,
 	new(S, string(A)),
 	send(S, strip),
 	get(S, value, B),
 	send(S, done).
-canonise(_, Val, Val).				  % TBD
+canonicalise(_, Val, Val).				  % TBD

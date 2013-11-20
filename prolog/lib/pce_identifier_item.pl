@@ -45,9 +45,9 @@ white-space regimes are:
 
 	accept			Don't change
 	stripped		Delete leading and trailing white space
-	canonise*		As stripped and make all internal white
+	canonicalise*		As stripped and make all internal white
 				space exactly one space-character
-	<a character>		As canonise, but pass spaces as this
+	<a character>		As canonicalise, but pass spaces as this
 				character.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -56,20 +56,20 @@ white-space regimes are:
 :- use_module(library(pce)).
 
 :- pce_begin_class(identifier_item, text_item,
-		   "Item for non-empty, canonised word").
+		   "Item for non-empty, canonicalised word").
 
 variable(case,  {sensitive,upper,lower} := sensitive,
 	 both, "Case mapping").
-variable(blank, '{accept,stripped,canonise}|char' := canonise,
+variable(blank, '{accept,stripped,canonicalise}|char' := canonicalise,
 	 both, "How to handle blank space").
 
 selection(II, Selection:name) :<-
-	"Get selection and canonise"::
+	"Get selection and canonicalise"::
 	get(II, get_super, selection, Name0),
 	get(II, case, CaseMap),
-	canonise_case(CaseMap, Name0, Name1),
+	canonicalise_case(CaseMap, Name0, Name1),
 	get(II, blank, BlankMap),
-	canonise_blanks(BlankMap, Name1, Selection),
+	canonicalise_blanks(BlankMap, Name1, Selection),
 	(   Selection == ''
 	->  get(II?name, label_name, Label),
 	    send(II, error, item_not_filled, Label),
@@ -77,24 +77,24 @@ selection(II, Selection:name) :<-
 	;   true
 	).
 
-canonise_case(upper, Name, Upper) :- !,
+canonicalise_case(upper, Name, Upper) :- !,
 	get(Name, upcase, Upper).
-canonise_case(lower, Name, Upper) :- !,
+canonicalise_case(lower, Name, Upper) :- !,
 	get(Name, downcase, Upper).
-canonise_case(_, Name, Name).
+canonicalise_case(_, Name, Name).
 
-canonise_blanks(canonise, Name0, Name) :- !,
-	get(Name0, strip, canonise, Name).
-canonise_blanks(stripped, Name0, Name) :- !,
+canonicalise_blanks(canonicalise, Name0, Name) :- !,
+	get(Name0, strip, canonicalise, Name).
+canonicalise_blanks(stripped, Name0, Name) :- !,
 	get(Name0, strip, both, Name).
-canonise_blanks(Mapped, Name0, Name) :-
+canonicalise_blanks(Mapped, Name0, Name) :-
 	integer(Mapped), !,
-	get(Name0, strip, canonise, Name1),
+	get(Name0, strip, canonicalise, Name1),
 	new(S, string('%s', Name1)),
 	send(S, translate, ' ', Mapped),
 	get(S, value, Name),
 	free(S).
-canonise_blanks(_, Name, Name).
+canonicalise_blanks(_, Name, Name).
 
 %typed(II, Key:event_id) :->
 %	"Properly handle completion"::

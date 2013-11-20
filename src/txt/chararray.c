@@ -310,9 +310,9 @@ getStripCharArray(CharArray n, Name how)
   int i=0, o=0, lnb=0;
 
   if ( isDefault(how) )
-    how = NAME_canonise;
+    how = NAME_canonicalise;
 
-  if ( how == NAME_canonise || how == NAME_leading || how == NAME_both )
+  if ( how == NAME_canonicalise || how == NAME_leading || how == NAME_both )
   { for(; i<size && iswspace(str_fetch(s, i)); i++)
       ;
   }
@@ -322,12 +322,12 @@ getStripCharArray(CharArray n, Name how)
     str_store(buf, o++, c);
     if ( !iswspace(c) )
       lnb = o;
-    else if ( how == NAME_canonise )
+    else if ( how == NAME_canonicalise )
     { for( ; i+1<size && iswspace(str_fetch(s, i+1)); i++)
 	;
     }
   }
-  if ( how == NAME_canonise || how == NAME_trailing || how == NAME_both )
+  if ( how == NAME_canonicalise || how == NAME_trailing || how == NAME_both )
     buf->s_size = lnb;
   else
     buf->s_size = o;
@@ -899,7 +899,7 @@ static getdecl get_charArray[] =
      NAME_case, "Default name used for labels"),
   GM(NAME_upcase, 0, "char_array", NULL, getUpcaseCharArray,
      NAME_case, "Map all lowercase letters to uppercase"),
-  GM(NAME_strip, 1, "char_array", "[{canonise,leading,trailing,both}]", getStripCharArray,
+  GM(NAME_strip, 1, "char_array", "[{canonicalise,leading,trailing,both}]", getStripCharArray,
      NAME_content, "Strip leading/trailing blanks"),
   GM(NAME_compare, 2, "{smaller,equal,larger}", T_match, getCompareCharArray,
      NAME_compare, "Alphabetical comparison"),

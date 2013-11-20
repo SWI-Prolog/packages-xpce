@@ -111,7 +111,7 @@ of \class{doc_mode}, a data-object holding style-information.
     \item [<Atomic>]
 Atomic data is added as text to the output.  If `doc_mode<-space_mode'
 equals \const{preserve}, spaces are preserved.  Otherwise space is
-canonised, smashing multiple consecutive banks into a single (rubber)
+canonicalised, smashing multiple consecutive banks into a single (rubber)
 space.
 
     \item [\bsl{}Action]

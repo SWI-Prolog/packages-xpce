@@ -177,7 +177,7 @@ fill_form(I, Data:sheet) :->
 select_content([], _).
 select_content([element(option, Attr, Content)|T], Menu) :-
 	content_to_atom(Content, Atom),
-	get(Atom, strip, canonise, Clean),
+	get(Atom, strip, canonicalise, Clean),
 	(   option(value(Value), Attr)
 	->  true
 	;   Value = Clean
