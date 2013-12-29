@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2012, University of Amsterdam
+    Copyright (C): 1985-2013, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -1650,7 +1650,7 @@ make_fragment(goal(Class, Goal), M, F, L, Style) :-
 	callable(Goal), !,
 	get(M, text_buffer, TB),
 	new(Fragment, emacs_goal_fragment(TB, F, L, Style)),
-	functor(Goal, Name, Arity),
+	goal_name_arity(Goal, Name, Arity),
 	send(Fragment, name, Name),
 	send(Fragment, arity, Arity),
 	set_xref_fragment_context(Fragment, Class).
@@ -1658,7 +1658,7 @@ make_fragment(head(Class, Head), M, F, L, Style) :-
 	callable(Head), !,
 	get(M, text_buffer, TB),
 	new(Fragment, emacs_head_fragment(TB, F, L, Style)),
-	functor(Head, Name, Arity),
+	goal_name_arity(Head, Name, Arity),
 	send(Fragment, name, Name),
 	send(Fragment, arity, Arity),
 	set_xref_fragment_context(Fragment, Class).
@@ -1666,7 +1666,7 @@ make_fragment(class(Type, Class), M, F, L, Style) :-
 	atom(Class), !,
 	get(M, text_buffer, TB),
 	new(Fragment, emacs_class_fragment(TB, F, L, Style)),
-	functor(Type, Classification, _),
+	functor_name(Type, Classification),
 	send(Fragment, classification, Classification),
 	send(Fragment, referenced_class, Class).
 make_fragment(syntax_error(Message, _Range), M, F, L, Style) :- !,
@@ -1689,7 +1689,7 @@ make_fragment(Class, M, F, L, Style) :-
 make_simple_fragment(Class, M, F, L, Style) :-
 	get(M, text_buffer, TB),
 	new(Fragment, emacs_prolog_fragment(TB, F, L, Style)),
-	functor(Class, Classification, Arity),
+	goal_name_arity(Class, Classification, Arity),
 	send(Fragment, classification, Classification),
 	(   Arity >= 1,
 	    arg(1, Class, Context),
@@ -2414,3 +2414,17 @@ element_to_string(nl, '\n') :- !.
 element_to_string(Atom, Atom).
 
 :- pce_end_class(emacs_prolog_fragment).
+
+goal_name_arity(Goal, Name, Arity) :-
+	(   compound(Goal)
+	->  compound_name_arity(Goal, Name, Arity)
+	;   atom(Goal)
+	->  Name = Goal, Arity = 0
+	).
+
+functor_name(Term, Name) :-
+	(   compound(Term)
+	->  compound_name_arity(Term, Name, _)
+	;   atom(Term)
+	->  Name = Term
+	).
