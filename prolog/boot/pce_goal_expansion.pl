@@ -135,12 +135,14 @@ super_class(Class, Super) :-
 
 pce_ifhostproperty(prolog(sicstus),
 (   user:goal_expansion(Goal, _Context, ExpandedGoal) :-
+	compound(Goal),
 	functor(Goal, Name, Arity),
 	expandable(Name, Arity),
 	expand(Goal, ExpandedGoal)
 ),
 (   system:goal_expansion(Goal, ExpandedGoal) :-
-	functor(Goal, Name, Arity),
+	compound(Goal),
+	compound_name_arity(Goal, Name, Arity),
 	expandable(Name, Arity),
 	expand(Goal, ExpandedGoal)
 )).
