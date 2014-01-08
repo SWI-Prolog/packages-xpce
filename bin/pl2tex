@@ -59,7 +59,7 @@ sub quoteline
 sub quote
 { if ( /^\s*[-*#]/ )
   { $list = "shortlist";
-  } elsif ( /^\s*\d+\)/ ) 
+  } elsif ( /^\s*\d+\)/ )
   { $list = "enum";
   } else
   { $list = "code";
@@ -86,7 +86,7 @@ sub footnote
   print "\\footnote{";
   $_ = $1;
   &printTeX;
-  
+
   while (<ARGV>)
   { if ( /^\S/ )
     { print "}\n";
@@ -110,14 +110,14 @@ sub comment
       next;
     }
 
-    if (/^(- )+\*\//) 
+    if (/^(- )+\*\//)
     { print "\n";
       return;
     }
-    
+
     if ( $blanklines > 0 && /^\t/ )
     { &quote;
-      if (/^(- )+\*\//) 
+      if (/^(- )+\*\//)
       { print "\n";
 	return;
       }
@@ -139,7 +139,7 @@ sub printTeX
   s/<->(\w+)/\\both{\1}/g;
   s/<-(\w+)/\\get{\1}/g;
   s/->(\w+)/\\send{\1}/g;
-  s/(\w+)\/((\d+|\[\d+-\d+\]))/\\index{\1\/\2}\\predrefer{\1}{\2}/g;
+  s/(\w+)\/((\d+|\[\d+-\d+\]))/\\index{\1\/\2}\\predref{\1}{\2}/g;
   s/(\w+\.pl)/\\index{\1}\1/g;
   s/(\w\.\w)\.(\s+[a-z])/\1.\\\2/g;
   s/(^|[^\w}])@(\w+)/\1\\index{@\2}\\objectname{\2}/g;
@@ -198,7 +198,7 @@ sub countArity
   $bracketnesting = 0;
 
   for($i=0; $i<length($args); $i++)
-  { $c = substr($args, $i, 1); 
+  { $c = substr($args, $i, 1);
 
     if ( $c eq "," && $bracketnesting == 0 )
     { $arity++;
@@ -206,7 +206,7 @@ sub countArity
     { $bracketnesting++;
     } elsif ( $c =~ /[])}]/ )
     { $bracketnesting--;
-    } 
+    }
   }
 
   return $arity;
@@ -245,7 +245,7 @@ sub printCode
     { print "\\index{$1\/0}";
     } elsif ( /@(\w+)/ )
     { print "\\index{\@$1}";
-    } 
+    }
 
     $lineno++;
     print "\\lineno{$lineno}";

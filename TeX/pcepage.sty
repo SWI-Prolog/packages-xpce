@@ -7,7 +7,6 @@
 \input local.sty
 \input psfig.sty
 \input logo.sty
-\input fancyheadings.sty
 \input fancychap.sty
 
 \catcode`\@=11\relax
@@ -146,7 +145,7 @@
 
 \newenvironment{pcecode}{%
 	\begin{trivlist}\parindent 0pt\listparindent 0pt\parsep 0pt%
-	\item[]\small\obeylines}{% 
+	\item[]\small\obeylines}{%
 	\end{trivlist}}
 
 \newcommand{\lineno}[1]{\makebox[1cm][l]{\tiny #1}}
@@ -179,21 +178,9 @@
 %       ---------------------------------------
 %
 %       bla, bla, bla, ...
-%       
+%
 %       \bottomleft    - page -    \bottomright
 
 \def\arabicday{\number\year-\number\month-\number\day}
-
-\pagestyle{fancyplain}
-\def\chaptermark{\mbox{}}
-\renewcommand{\chaptermark}[1]{\markboth{#1}{#1}} % remember chapter title
-\renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
-
-\lhead[\fancyplain{}{\bf\thepage}]{\fancyplain{}{\bf\rightmark}}
-\rhead[\fancyplain{}{\bf\leftmark}]{\fancyplain{}{\bf\thepage}}
-\footrulewidth 0.2pt
-\lfoot[\tiny XPCE course notes \today]{}
-\rfoot[]{\tiny XPCE course notes \today}
-\cfoot{}
 
 \catcode`\@=12\relax

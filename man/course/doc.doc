@@ -1,4 +1,22 @@
-\documentstyle[twoside,pce,psfig,11pt]{report}
+\documentclass[11pt,twoside]{report}
+\def\setuphyperref{\usepackage[pdftex,colorlinks=true,urlcolor=blue]{hyperref}}
+\usepackage{../../../../man/pl}
+\usepackage{../../../../man/html}
+\usepackage{xpce}
+
+\usepackage{times}
+\usepackage{fancyhdr}
+\newcommand{\runningtitle}{XPCE/Prolog course notes}
+\headheight 14pt
+\renewcommand{\chaptermark}[1]{\markboth{#1}{#1}} % remember chapter title
+\renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
+                                                % section number and title
+\lhead[\fancyplain{}{\bf\thepage}]{\fancyplain{}{\bf\rightmark}}
+\rhead[\fancyplain{}{\bf\leftmark}]{\fancyplain{}{\bf\thepage}}
+%\footrulewidth 0.2pt
+\lfoot[\tiny \runningtitle]{}
+\rfoot[]{\tiny \runningtitle}
+\cfoot{}
 
 %\psdraft
 
@@ -30,9 +48,9 @@ for a course in programming XPCE/Prolog.
 \noindent
 This is edition~2 of the XPCE training-course notes.  It adds sections
 on types, custom-dialog design and interprocess communication to
-edition~1. Please E-mail comments and suggestions to jan@swi.psy.uva.nl.
-\vfil\vfil\vfil\vfil\vfil\vfil\vfil\vfil\vfil\vfil
-\vfil
+edition~1. Please E-mail comments and suggestions to
+\email{J.Wielemaker@vu.nl}.
+\vfil\vfil\vfil\vfil\vfil\vfil\vfil\vfil\vfil\vfil \vfil
 
 \noindent
 Typeset using LaTeX.  LaTeX files created using perl preprocessors from

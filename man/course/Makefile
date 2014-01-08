@@ -10,7 +10,7 @@ TEX=	doc.tex intro.tex course.tex process.tex ftp.tex
 
 LOGO=	figs/uva.ps figs/swi.ps
 
-all:	$(TEX) $(LOGO)
+all:	$(TEX)
 	-$(CORRECTINDEX) doc.idx
 	-$(MAKEINDEX) doc
 	touch doc.ind
@@ -38,4 +38,4 @@ $(TEX):	$(DOCTOTEX)
 clean:
 	rm -f $(TEX) *.dvi *.toc *.aux *.idx *.ind *.[ib]lg *.log *~ figs/*~ \
 	      $(LOGO)
-	
+
