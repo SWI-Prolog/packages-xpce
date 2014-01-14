@@ -238,6 +238,41 @@ pp(List, Ctx, Options) :-
 	    indent(Out, Indent, Options),
 	    format(Out, ']', [])
 	).
+:- if(current_predicate(is_dict/1)).
+pp(Dict, Ctx, Options) :-
+	is_dict(Dict), !,
+	dict_pairs(Dict, Tag, Pairs),
+	option(output(Out), Options),
+	option(indent_arguments(IndentStyle), Options),
+	context(Ctx, indent, Indent),
+	(   IndentStyle == false ; Pairs == []
+	->  pprint(Dict, Ctx, Options)
+	;   IndentStyle == auto,
+	    print_width(Dict, Width, Options),
+	    option(right_margin(RM), Options),
+	    Indent + Width < RM		% fits on a line, simply write
+	->  pprint(Dict, Ctx, Options)
+	;   format(atom(Buf2), '~q{ ', [Tag]),
+	    write(Out, Buf2),
+	    atom_length(Buf2, FunctorIndent),
+	    (   integer(IndentStyle)
+	    ->	Nindent is Indent + IndentStyle,
+	        (   FunctorIndent > IndentStyle
+		->  indent(Out, Nindent, Options)
+		;   true
+		)
+	    ;   Nindent is Indent + FunctorIndent
+	    ),
+	    context(Ctx, depth, Depth),
+	    NDepth is Depth + 1,
+	    modify_context(Ctx, [indent=Nindent, depth=NDepth], NCtx0),
+	    dec_depth(NCtx0, NCtx),
+	    pp_dict_args(Pairs, NCtx, Options),
+	    BraceIndent is Nindent - 2,		% '{ '
+	    indent(Out, BraceIndent, Options),
+	    write(Out, '}')
+	).
+:- endif.
 pp(Term, Ctx, Options) :-		% handle operators
 	functor(Term, Name, Arity),
 	current_op(Prec, Type, Name),
@@ -370,6 +405,26 @@ pp_compound_args([H|T], Ctx, Options) :-
 	    pp(T, Ctx, Options)
 	).
 
+
+:- if(current_predicate(is_dict/1)).
+pp_dict_args([Name-Value|T], Ctx, Options) :-
+	option(output(Out), Options),
+	line_position(Out, Pos0),
+	pp(Name, Ctx, Options),
+	write(Out, ':'),
+	line_position(Out, Pos1),
+	context(Ctx, indent, Indent),
+	Indent2 is Indent + Pos1-Pos0,
+	modify_context(Ctx, [indent=Indent2], Ctx2),
+	pp(Value, Ctx2, Options),
+	(   T == []
+	->  true
+	;   option(output(Out), Options),
+	    write(Out, ','),
+	    indent(Out, Indent, Options),
+	    pp_dict_args(T, Ctx, Options)
+	).
+:- endif.
 
 %	match_op(+Type, +Arity, +Precedence, -LeftPrec, -RightPrec
 
