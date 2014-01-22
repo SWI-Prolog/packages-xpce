@@ -73,7 +73,7 @@ prolog:help_hook(help) :- !,
 prolog:help_hook(apropos(What)) :- !,
 	call(prolog_apropos(What)).
 prolog:help_hook(help(What)) :- !,
-	call((   pce_to_method(What, Method)
+	call((   in_pce_thread_sync(pce_to_method(What, Method))
 	     ->  manpce(Method)
 	     ;	 current_prolog_flag(pldoc_collecting, _),
 		 doc_browser(What)

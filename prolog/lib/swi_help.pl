@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        wielemak@science.uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (C): 1985-2005, University of Amsterdam
+    Copyright (C): 1985-2014, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -43,7 +42,6 @@ This module is normally hooked into help/1 by the module swi_hooks.pl.
 */
 
 :- use_module(library(pce)).
-:- use_module(library(pce_edit)).
 :- use_module(library(persistent_frame)).
 :- pce_autoload(toc_window, library(pce_toc)).
 :- use_module(library(helpidx)).
@@ -93,6 +91,9 @@ prolog_help :-
 %	Topic is not in the manual.
 
 prolog_help(Topic) :-
+	in_pce_thread(prolog_help_sync(Topic)).
+
+prolog_help_sync(Topic) :-
 	help_atom(Topic, Atom),
 	(   atomic(Atom)
 	->  once(manual_range(Atom, _)),
@@ -111,11 +112,21 @@ prolog_help(Topic) :-
 %	Do a keyword search on the manual through the object summaries.
 
 prolog_apropos(Keywd) :-
+	in_pce_thread(prolog_apropos_sync(Keywd)).
+
+prolog_apropos_sync(Keywd) :-
 	send(@pui_help_window, apropos, Keywd),
 	send(@pui_help_window?frame, expose).
 
+%%	prolog_explain(+Term) is det.
+%
+%	Provide all information Prolog knows about Term.
+
 
 prolog_explain(Term) :-
+	in_pce_thread(prolog_explain_sync(Term)).
+
+prolog_explain_sync(Term) :-
 	term_to_atom(Term, Atom),
 	send(@pui_help_window, explain, Atom),
 	send(@pui_help_window?frame, expose).

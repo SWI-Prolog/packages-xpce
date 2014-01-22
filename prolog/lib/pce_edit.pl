@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/packages/xpce/
+    Copyright (C): 1985-2014, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -34,8 +33,25 @@
 	  ]).
 :- use_module(library(pce)).
 
+/** <module> Find and edit the source location of an XPCE object
+*/
+
+%%	editpce(+Spec)
+%
+%	Edit an xpce `object' from Spec using PceEmacs. Spec is one of:
+%
+%	  - An xpce object that implements <-source
+%	  - An xpce object, taking its <-class
+%	  - The name of a class
+%	  - A term Object->selector
+%	  - A term Object<-selector
+%
+%	@see	edit/1 provides the same functionality.
 
 editpce(Spec) :-
+	in_pce_thread(editpce_sync(Spec)).
+
+editpce_sync(Spec) :-
 	method(Spec, Obj),
 	(   get(Obj, source, Location),
 	    Location \== @nil
