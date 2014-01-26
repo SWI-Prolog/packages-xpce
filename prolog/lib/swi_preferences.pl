@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2014, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -79,7 +77,7 @@ locate_preferences(xpce, File) :-
 	ensure_xpce_config_dir(Dir),
 	get(string('%s/Defaults', Dir), value, File).
 locate_preferences(prolog, File) :-
-	'$option'(init_file, Base), % should be in current_prolog_flag!
+	prolog_init_file(Base),
 	(   absolute_file_name(user_profile(Base), File,
 			       [ access(read),
 				 file_errors(fail)
@@ -90,6 +88,21 @@ locate_preferences(prolog, File) :-
 				 file_errors(fail)
 			       ])
 	).
+
+%%	prolog_init_file(-Base)
+%
+%	Get the base-name of the Prolog user initialization file.
+%
+%	@tbd This should have a public interface.
+
+:- if(current_predicate('$cmd_option_val'/2)).
+prolog_init_file(Base) :-
+	'$cmd_option_val'(init_file, Base).
+:- else.
+prolog_init_file(Base) :-
+	'$option'(init_file, Base).
+:- endif.
+
 
 %%	default_preferences(+Id, -File)
 %
