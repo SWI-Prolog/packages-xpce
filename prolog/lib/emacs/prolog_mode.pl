@@ -2385,6 +2385,7 @@ identify_fragment(unused_import, _, 'Imported predicate is not used').
 identify_fragment(undefined_import, _, 'Predicate is not exported').
 identify_fragment(dcg_right_hand_ctx, _, 'right-hand-context (DCG `push-back\')').
 identify_fragment(goal(not_callable), _, 'Goal is not callable (type error)').
+identify_fragment(structured_comment, _, 'PlDoc comment').
 identify_fragment(Class, _, Summary) :-
 	term_to_atom(Class, Summary).
 
