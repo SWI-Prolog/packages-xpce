@@ -226,6 +226,7 @@ indent_line(E) :->
 	;   get(E, body_indentation, Indent),			W = body,
 	    send(E, align_line, Indent)
 	),
+	atom(W),				% avoid semantic singleton
 	debug(emacs(indent), 'Indented line as ~w', [W]),
 	send(E, fixup_if_then_else).
 
