@@ -49,6 +49,7 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
 	[ insert_if_then_else	       = key('(') + key(';') + key('>'),
 	  insert_quote		       = key('"'),
 	  insert_percent	       = key('%'),
+	  insert_exclamation_mark      = key('!'),
 	  insert_quasi_quote	       = key('|'),
 
 	  newline_and_indent	       = key('RET'),
@@ -106,8 +107,6 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
 					% SYNTAX TABLE
 	[ ($)  = symbol,
 	  (@)  = symbol,
-%	  '"'  = string_quote('"'),
-%	  '''' = string_quote(''''),
 	  '%'  = comment_start,
 	  '\\n' + comment_end,
 	  '/'  + comment_start('*'),
@@ -426,11 +425,22 @@ insert_percent(E, Times:[int], Char:char) :->
 	).
 
 
+insert_exclamation_mark(E, Times:[int], Char:char) :->
+	"Deal with %! comments"::
+	send(E, insert_self, Times, Char),
+	get(E, caret, Here),
+	(   send(E, looking_at, '\n%!', Here, 0),
+	    send(E, looking_at, '\\s*$', Here)
+	->  send(E, insert, '\t')
+	;   true
+	).
+
+
 indent_comment_line(E) :->
 	"Deal with %% comments"::
 	send_super(E, indent_comment_line),
 	get(E, caret, Here),
-	(   send(E, looking_at, '\n%%[^\n]*\n%\\s*\n%', Here, 0)
+	(   send(E, looking_at, '\n%[%!][^\n]*\n%\\s*\n%', Here, 0)
 	->  send(E, insert, '\t')
 	;   true
 	).
