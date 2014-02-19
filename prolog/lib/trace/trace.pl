@@ -123,7 +123,11 @@ intercept(Port, Frame, CHP, Action) :-
 	debug(gtrace(intercept),
 	      '*** do_intercept ~w, ~w, ~w: ~q ...', [Port, Frame, CHP, PI]),
 	visible(-unify),
-	do_intercept(Port, Frame, CHP, Action0),
+	(   do_intercept(Port, Frame, CHP, Action0)
+	->  true
+	;   debug(gtrace(intercept), 'Intercept failed; creeping', []),
+	    Action0 = creep
+	),
 	fix_action(Port, Action0, Action),
 	debug(gtrace(intercept), '*** ---> Action = ~w', [Action]),
 	send_if_tracer(report(status, '%s ...', Action)),
@@ -239,7 +243,7 @@ hide_children_frame(Frame) :-
 	).
 
 
-%%	show(+StartFrame, +Choice, +Up, +Port) is det.
+%%	show(+StartFrame, +Choice, +Up, +Port) is semidet.
 %
 %	Show current location from StartFrame.  Must be called in the
 %	context of the debugged thread.
@@ -260,7 +264,6 @@ show(StartFrame, CHP, Up, Port) :-
 	->  send_tracer(report(status, '%s: %s (skipped)', Port?label_name, Pred))
 	;   send_tracer(report(status, '%s: %s', Port?label_name, Pred))
 	).
-
 show(StartFrame, CHP, Up, Port, Style) :-
 	find_frame(Up, StartFrame, Port, PC, Frame),
 	send_tracer(trapped_location(StartFrame, Frame, Port)),
@@ -273,7 +276,7 @@ show(StartFrame, CHP, Up, Port, Style) :-
 			  [ pc(PC),
 			    port(Port),
 			    style(Style),
-			    source,
+			    source,	% may fail
 			    bindings
 			  ]).
 
@@ -339,7 +342,7 @@ tracer_gui(_, GUI) :-
 	prolog_tracer(Thread, GUI),
 	debug(gtrace(gui), 'GUI = ~p (from thread ~p)', [GUI, Thread]).
 
-%%	prolog_show_frame(+Frame, +Attributes) is det.
+%%	prolog_show_frame(+Frame, +Attributes) is semidet.
 %
 %	Show given Prolog Frame in GUI-tracer, updating information as
 %	provided by Attributes.  Defined attributes:
@@ -364,7 +367,12 @@ prolog_show_frame(Frame, Attributes) :-
 	debug(gtrace(frame), 'prolog_show_frame(~p, ~p)', [Frame, Attributes]),
 	show_stack(Frame, Attributes),
 	show_bindings(Frame, Attributes),
-	show_source(Frame, Attributes),
+	(   show_source(Frame, Attributes)
+	->  true
+	;   debug(gtrace(source),
+		  'show_source(~p,~p) failed', [Frame, Attributes]),
+	    fail
+	),
 	(   setting(auto_raise, true)
 	->  tracer_gui(Attributes, GUI),
 	    send_tracer(GUI, expose)
@@ -372,7 +380,7 @@ prolog_show_frame(Frame, Attributes) :-
 	).
 
 
-%%	show_source(+Frame, +Attributes) is det.
+%%	show_source(+Frame, +Attributes) is semidet.
 %
 %	Update the current location in the source window. If called from
 %	the GUI, the attribute gui(GUI) must be   given to relate to the
@@ -421,7 +429,7 @@ show_source(Frame, Attributes) :-
 		)
 	    )
 	->  true
-	;   send_tracer(GUI, file(@nil))
+	;   fail
 	).
 show_source(_, _).
 
@@ -438,7 +446,8 @@ clause_position(exit).
 clause_position(unify).
 clause_position(choice(_)).
 
-%%	subgoal_position(+GUI, +Clause, +PortOrPC, -File, -CharA, -CharZ) is det.
+%%	subgoal_position(+GUI, +Clause, +PortOrPC,
+%%			 -File, -CharA, -CharZ) is semidet.
 %
 %	Character  range  CharA..CharZ  in  File   is  the  location  to
 %	highlight for the given clause at the given location.
@@ -446,6 +455,7 @@ clause_position(choice(_)).
 subgoal_position(_, ClauseRef, unify, File, CharA, CharZ) :- !,
 	pce_clause_info(ClauseRef, File, TPos, _),
 	head_pos(ClauseRef, TPos, PosTerm),
+	nonvar(PosTerm),
 	arg(1, PosTerm, CharA),
 	arg(2, PosTerm, CharZ).
 subgoal_position(GUI, ClauseRef, choice(CHP), File, CharA, CharZ) :- !,
@@ -454,11 +464,13 @@ subgoal_position(GUI, ClauseRef, choice(CHP), File, CharA, CharZ) :- !,
 	->  debug(gtrace(position), 'Term-position: choice-jump to ~w', [To]),
 	    subgoal_position(GUI, ClauseRef, To, File, CharA, CharZ)
 	;   pce_clause_info(ClauseRef, File, TPos, _),
+	    nonvar(TPos),
 	    arg(2, TPos, CharA),
 	    CharZ is CharA + 1		% i.e. select the dot.
 	).
 subgoal_position(_, ClauseRef, exit, File, CharA, CharZ) :- !,
 	pce_clause_info(ClauseRef, File, TPos, _),
+	nonvar(TPos),
 	arg(2, TPos, CharA),
 	CharZ is CharA + 1.		% i.e. select the dot.
 subgoal_position(GUI, ClauseRef, fail, File, CharA, CharZ) :- !,
@@ -477,6 +489,7 @@ subgoal_position(_, ClauseRef, PC, File, CharA, CharZ) :-
 				   'Clause source-info could not be parsed')),
 		fail
 	    ),
+	    nonvar(PosTerm),
 	    arg(1, PosTerm, CharA),
 	    arg(2, PosTerm, CharZ)
 	;   send_tracer(report(warning,
