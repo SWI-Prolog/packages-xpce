@@ -463,20 +463,11 @@ subgoal_position(GUI, ClauseRef, choice(CHP), File, CharA, CharZ) :- !,
 	    prolog_choice_attribute(GUI, CHP, pc, To)
 	->  debug(gtrace(position), 'Term-position: choice-jump to ~w', [To]),
 	    subgoal_position(GUI, ClauseRef, To, File, CharA, CharZ)
-	;   pce_clause_info(ClauseRef, File, TPos, _),
-	    nonvar(TPos),
-	    arg(2, TPos, CharA),
-	    CharZ is CharA + 1		% i.e. select the dot.
+	;   clause_end(ClauseRef, File, CharA, CharZ)
 	).
-subgoal_position(_, ClauseRef, exit, File, CharA, CharZ) :- !,
-	pce_clause_info(ClauseRef, File, TPos, _),
-	nonvar(TPos),
-	arg(2, TPos, CharA),
-	CharZ is CharA + 1.		% i.e. select the dot.
-subgoal_position(GUI, ClauseRef, fail, File, CharA, CharZ) :- !,
-	subgoal_position(GUI, ClauseRef, exit, File, CharA, CharZ).
-subgoal_position(GUI, ClauseRef, exception, File, CharA, CharZ) :- !,
-	subgoal_position(GUI, ClauseRef, exit, File, CharA, CharZ).
+subgoal_position(_, ClauseRef, Port, File, CharA, CharZ) :-
+	end_port(Port), !,
+	clause_end(ClauseRef, File, CharA, CharZ).
 subgoal_position(_, ClauseRef, PC, File, CharA, CharZ) :-
 	pce_clause_info(ClauseRef, File, TPos, _),
 	(   '$clause_term_position'(ClauseRef, PC, List)
@@ -498,6 +489,15 @@ subgoal_position(_, ClauseRef, PC, File, CharA, CharZ) :-
 	    fail
 	).
 
+end_port(exit).
+end_port(fail).
+end_port(exception).
+
+clause_end(ClauseRef, File, CharA, CharZ) :-
+	pce_clause_info(ClauseRef, File, TPos, _),
+	nonvar(TPos),
+	arg(2, TPos, CharA),
+	CharZ is CharA + 1.
 
 head_pos(Ref, Pos, HPos) :-
 	clause_property(Ref, fact), !,
