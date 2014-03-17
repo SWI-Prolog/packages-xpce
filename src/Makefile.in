@@ -153,7 +153,7 @@ endif
 all:		banner $(INSTALL) xpce pl-itf
 
 $(INSTALL):	xpce-copy.c
-		$(CC_FOR_BUILD) -o $@ $(srcdir)/xpce-copy.c
+		$(CC_FOR_BUILD) -I. -DHAVE_CONFIG_H -o $@ $(srcdir)/xpce-copy.c
 
 banner:
 		@echo "****************"
