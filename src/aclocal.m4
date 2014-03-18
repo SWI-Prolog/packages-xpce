@@ -37,7 +37,7 @@ if test -n "$CC_FOR_BUILD"; then
   SWI_PROG_CC_FOR_BUILD_WORKS($CC_FOR_BUILD,,
     [AC_MSG_ERROR([Specified CC_FOR_BUILD doesn't seem to work])])
 else
-  for i in cc gcc c89 c99 "$CC" "$CC $CFLAGS $CPPFLAGS"; do
+  for i in cc gcc clang c89 c99 "$CC" "$CC $CFLAGS $CPPFLAGS"; do
     SWI_PROG_CC_FOR_BUILD_WORKS($i,
       [CC_FOR_BUILD=$i
        break])
@@ -70,7 +70,7 @@ main ()
   exit(0);
 }
 EOF
-swi_compile="$1 conftest.c"
+swi_compile="$1 -DHAVE_CONFIG_H conftest.c"
 cc_for_build_works=no
 if AC_TRY_EVAL(swi_compile); then
   if (./a.out || ./b.out || ./a.exe || ./a_out.exe || ./conftest) >&AC_FD_CC 2>&1; then
