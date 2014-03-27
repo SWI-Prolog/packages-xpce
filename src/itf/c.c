@@ -334,7 +334,9 @@ XPCE_send(XPCE_Object receiver, XPCE_Object selector, ...)
   va_start(args, selector);
   for(argc=0; (argv[argc] = va_arg(args, Any)) != XPCE_END; argc++)
   { if ( argc > VA_PCE_MAX_ARGS )
+    { va_end(args);
       return errorPce(receiver, NAME_badCArgList, CtoName("->"), selector);
+    }
   }
   va_end(args);
 
@@ -351,7 +353,8 @@ XPCE_get(XPCE_Object receiver, XPCE_Object selector, ...)
   va_start(args, selector);
   for(argc=0; (argv[argc] = va_arg(args, Any)) != XPCE_END; argc++)
   { if ( argc > VA_PCE_MAX_ARGS )
-    { errorPce(receiver, NAME_badCArgList, CtoName("<-"), selector);
+    { va_end(args);
+      errorPce(receiver, NAME_badCArgList, CtoName("<-"), selector);
       fail;
     }
   }
@@ -370,7 +373,8 @@ XPCE_new(XPCE_Object class, const XPCE_Object name, ...)
   va_start(args, name);
   for(argc=0; (argv[argc] = va_arg(args, Any)) != XPCE_END; argc++)
   { if ( argc > VA_PCE_MAX_ARGS )
-    { errorPce(class, NAME_badCArgList, CtoName("<-"), NAME_instance);
+    { va_end(args);
+      errorPce(class, NAME_badCArgList, CtoName("<-"), NAME_instance);
       fail;
     }
   }
@@ -436,7 +440,8 @@ XPCE_call(XPCE_Procedure function, ...)
   va_start(args, function);
   for(argc=0; (argv[argc] = va_arg(args, Any)) != XPCE_END; argc++)
   { if ( argc > VA_PCE_MAX_ARGS )
-    { errorPce(XPCE_CHost(), NAME_badCArgList, CtoName("->"), NAME_call);
+    { va_end(args);
+      errorPce(XPCE_CHost(), NAME_badCArgList, CtoName("->"), NAME_call);
       fail;
     }
   }
@@ -455,7 +460,8 @@ XPCE_funcall(XPCE_Function function, ...)
   va_start(args, function);
   for(argc=0; (argv[argc] = va_arg(args, Any)) != XPCE_END; argc++)
   { if ( argc > VA_PCE_MAX_ARGS )
-    { errorPce(XPCE_CHost(), NAME_badCArgList, CtoName("<-"), NAME_call);
+    { va_end(args);
+      errorPce(XPCE_CHost(), NAME_badCArgList, CtoName("<-"), NAME_call);
       fail;
     }
   }
