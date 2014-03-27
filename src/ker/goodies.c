@@ -1090,6 +1090,7 @@ sysPce(char *fm, ...)
 
   Cprintf("[PCE system error: ");
   Cvprintf(fm, args);
+  va_end(args);
 
 #ifndef O_RUNTIME
   Cprintf("\n\tStack:\n");
@@ -1117,7 +1118,6 @@ sysPce(char *fm, ...)
   exit(1);
 #endif /*O_RUNTIME*/
 
-  va_end(args);
   return PCE_FAIL;
 }
 
