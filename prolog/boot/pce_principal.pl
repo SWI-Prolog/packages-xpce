@@ -130,17 +130,21 @@ pce_home(_) :-
 		********************************/
 
 init_pce :-
+	catch(load_foreign_library(foreign(pl2xpce)),
+	      error(Error, _Context),		% suppress stack trace
+	      (	  print_message(error, error(Error, _)),
+		  fail
+	      )),
 	pce_home(Home),
 	pce_init(Home), !,
 	create_prolog_flag(xpce, true, []),
 	thread_self(Me),
 	assert(pce:pce_thread(Me)).
 init_pce :-
-	throw(error(pce_error(init_failed), _)).
+	print_message(error, error(pce_error(init_failed), _)),
+	halt(1).
 
-:- use_foreign_library(foreign(pl2xpce)).
-:- initialization
-	init_pce.
+:- initialization(init_pce, now).
 
 :- noprofile((send_implementation/3,
 	      get_implementation/4,
