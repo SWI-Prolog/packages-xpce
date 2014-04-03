@@ -1237,7 +1237,7 @@ append_binding(B, Names0:prolog, ValueTerm:prolog, Fd:prolog) :->
 	    ;	Names = [VarName:ArgN|_],
 	        write_varnames(Fd, Names)
 	    ),
-	    current_prolog_flag(toplevel_print_options, Options),
+	    current_prolog_flag(answer_write_options, Options),
 	    format(Fd, '\t= ~W~n', [Value, Options]),
 	    flush_output(Fd),
 	    get(TB, size, S1),
@@ -1253,7 +1253,7 @@ write_varnames(Fd, [N:_|T]) :-
 append_extra(B, Constraint:prolog, Fd:prolog, Comment:name) :->
 	"Display current constraints"::
 	get(B, text_buffer, TB),
-	current_prolog_flag(toplevel_print_options, Options),
+	current_prolog_flag(answer_write_options, Options),
 	get(TB, size, S0),
 	format(Fd, '(~w)\t~W~n', [Comment, Constraint, Options]),
 	flush_output(Fd),
