@@ -278,7 +278,7 @@ l2:
 
     for_cell(cell, t2->supers)
     { if ( specialisedType(t1, cell->value) )
-      	succeed;
+	succeed;
     }
   }
 
@@ -317,7 +317,7 @@ includesType(Type t1, Type t2)		/* t1 includes t2 */
 
     for_cell(cell, t1->supers)
     { if ( includesType(cell->value, t2) )
-      	succeed;
+	succeed;
     }
   }
 
@@ -675,7 +675,7 @@ validateType(Type t, const Any val, const Any ctx)
 
     for_cell(cell, t->supers)
     { if ( validateType(cell->value, val, ctx) )
-      	succeed;
+	succeed;
     }
   }
 
@@ -1079,7 +1079,7 @@ createClassType(Name name)
     return type;
   else
     return createType(name, NAME_class, inBoot ? (Any) typeClass(name)
-		      			       : (Any) name);
+					       : (Any) name);
 }
 
 		/********************************
@@ -1166,7 +1166,7 @@ suffix_string(StrPart s, const char *suff)
   { if ( ts == (cucharp)suff )
     { es--;
       while(*es == ' ' && es >= s->start)
-    	es--;
+	es--;
 
       if ( es >= s->start )
       { s->end = es;
@@ -1270,13 +1270,13 @@ real_range_type(StrPart str)
   Type type;
   Real l = NIL, h = NIL;
 
-  low = wcstod(str->start, &e0);
+  low = cwcstod(str->start, &e0);
   for( e=e0; *e == ' '; e++ )
     ;
   if ( e[0] != '.' || e[1] != '.' )
     fail;
   e += 2;
-  high = wcstod(e, &e2);
+  high = cwcstod(e, &e2);
   if ( e2 != str->end+1 )
     fail;
   if ( e2 == e && e0 == str->start )
@@ -1457,7 +1457,7 @@ nameToType(Name name)
       }
     } else
     { if ( (type = name_of_type(&str)) )
-    	return type;
+	return type;
 
       if ( (isdigit(*str.start) || *str.start == '.' || *str.start == '-') &&
 	   (isdigit(*str.end) || *str.end == '.') )
@@ -1468,7 +1468,7 @@ nameToType(Name name)
       }
 
       if ( (type = disjunctive_type(&str)) )
-      	return type;
+	return type;
 
       if ( (type = kind_type(&str)) )
 	return type;
@@ -1500,7 +1500,7 @@ struct built_in_type
 { Type *	global;
   Name		name;
   Name		kind;
-  Any 		context;
+  Any		context;
 } built_in_types[] =
 { { &TypeUnchecked, NAME_unchecked, NAME_unchecked, NIL },
   { &TypeAlien,	    NAME_alien,	    NAME_alien,     NIL },
@@ -1737,7 +1737,7 @@ pceCheckNameType(PceType t, const char *s)
 
     for_cell(cell, t->supers)
     { if ( pceCheckNameType(cell->value, s) )
-      	succeed;
+	succeed;
     }
   }
 

@@ -180,6 +180,77 @@ cstrtod(const char *in, char **end)
 }
 
 
+double
+cwcstod(const wchar_t *in, wchar_t **end)
+{ double rval;
+  int sign = 1;
+
+  if ( (*in == '-' || *in == '+') && cisdigit(in[1]) )
+  { if ( *in == '-' )
+      sign = -1;
+    in++;
+  }
+
+  if ( cisdigit(*in) )
+  { rval = digitval(*in);
+    in++;
+
+    while(cisdigit(*in))
+    { rval = rval*10.0 + digitval(*in);
+      in++;
+    }
+  } else if ( *in == '.' )
+  { rval = 0.0;
+  } else
+  { *end = (wchar_t *)in;
+    return 0.0;
+  }
+
+  if ( *in == '.' && cisdigit(in[1]) )
+  { double n = 10.0;
+    in++;
+
+    while(cisdigit(*in))
+    { rval += digitval(*in)/n;
+      n *= 10.0;
+      in++;
+    }
+  }
+
+  if ( *in == 'e' || *in == 'E' )
+  { int esign;
+    long exp;
+    const wchar_t *eend = in;
+
+    in++;
+    if ( *in == '-' )
+    { esign = -1;
+      in++;
+    } else if ( *in == '+' )
+    { esign = 1;
+      in++;
+    } else
+      esign = 1;
+
+    if ( cisdigit(*in) )
+    { exp = digitval(*in);
+      in++;
+    } else
+    { *end = (wchar_t *)eend;
+      return rval*sign;
+    }
+    while(cisdigit(*in))
+    { exp = exp*10+digitval(*in);
+      in++;
+    }
+    rval *= pow(10.0, (double)(esign*exp));
+  }
+
+  *end = (wchar_t *)in;
+  return rval*sign;
+}
+
+
 		/********************************
 		*           STRINGS             *
 		*********************************/
