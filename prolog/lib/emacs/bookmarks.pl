@@ -212,20 +212,26 @@ save(BM) :->
 	get(BM, bookmarks_file, write, File),
 	get(BM, tree, Tree),
 	get(Tree, root, Root),
-	send(file(File), backup),
-	open(File, write, Fd),
-	format(Fd, '/* PceEmacs Bookmarks */~n~n', []),
-	send(Root, save, Fd),
-	close(Fd),
-	send(BM, report, status, 'Saved bookmarks to %s', File).
+	ignore(pce_catch_error(_, send(file(File), backup))),
+	(   catch(setup_call_cleanup(
+		      open(File, write, Fd),
+		      ( format(Fd, '/* PceEmacs Bookmarks */~n~n', []),
+			send(Root, save, Fd)
+		      ),
+		      close(Fd)),
+		  _, fail)
+	->  send(BM, report, status, 'Saved bookmarks to %s', File)
+	;   send(BM, report, status, 'Failed to save bookmarks to %s', File)
+	).
 
 load(BM) :->
 	"Load bookmarks from file"::
 	get(BM, bookmarks_file, File),
 	catch(open(File, read, Fd), _, fail),
-	read(Fd, Term0),
-	load_bookmarks(Term0, Fd, BM),
-	close(Fd).
+	call_cleanup(( read(Fd, Term0),
+		       load_bookmarks(Term0, Fd, BM)
+		     ),
+		     close(Fd)).
 
 
 load_bookmarks(end_of_file, _, _) :- !.
