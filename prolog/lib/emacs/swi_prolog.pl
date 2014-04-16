@@ -48,10 +48,10 @@ print_message/2 that can be related to   a source-location to the window
 @prolog_warnings.
 
 This library is always loaded when XPCE is loaded.  Its functionality is
-controlled by the Prolog flag message_ide.
+controlled by the Prolog flag =message_ide=.
 */
 
-:- create_prolog_flag(message_ide, true, []).
+:- create_prolog_flag(message_ide, true, [keep(true)]).
 
 
 		 /*******************************
