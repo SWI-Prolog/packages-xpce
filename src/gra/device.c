@@ -586,7 +586,7 @@ updateBoundingBoxDevice(Device dev, Int *od)
   }
   relativeMoveArea(a, dev->offset);
 
-  if ( od[0] != a->x || od[1] != a->y || od[3] != a->w || od[4] != a->h )
+  if ( od[0] != a->x || od[1] != a->y || od[2] != a->w || od[3] != a->h )
     succeed;
 
   fail;
