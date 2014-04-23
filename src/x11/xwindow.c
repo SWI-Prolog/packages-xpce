@@ -76,9 +76,9 @@ ws_uncreate_window(PceWindow sw)
     XtRemoveAllCallbacks(w, XtNresizeCallback);
     XtRemoveAllCallbacks(w, XtNdestroyCallback);
 
-    XtDestroyWidget(w);
     destroy_window(w, (XtPointer)sw, NULL); /* callback may be delayed */
-					    /* too long */
+    XtDestroyWidget(w);			    /* too long */
+
   }
 }
 
