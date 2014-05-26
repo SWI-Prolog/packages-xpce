@@ -93,7 +93,9 @@ open_demo(Browser) :-
 	    (	(   demo(Name, Summary, File, Predicate)
 		;   contribution(Name, Summary, _Author, File, Predicate)
 		)
-	    ->  (   use_module(File)
+	    ->  (   send(@pce, report, progress, 'Loading demo %s ...', Summary),
+		    use_module(File),
+		    send(@pce, report, done)
 		->  (   Predicate
 		    ->  true
 		    ;   send(@pce, inform, 'Failed to start %s demo', Name)
@@ -109,8 +111,8 @@ view_source(Browser) :-
 	(   DictItem == @nil
 	->  send(@display, inform, 'First select a demo')
 	;   get(DictItem, key, Name),
-	    (	demo(Name, Summary, File, Predicate)
-	    ;	contribution(Name, Summary, _Author, File, Predicate)
+	    (	demo(Name, _, File, _)
+	    ;	contribution(Name, _, _Author, File, _)
 	    ),
 	    (	locate_file(File, Path)
 	    ->	emacs(Path)
