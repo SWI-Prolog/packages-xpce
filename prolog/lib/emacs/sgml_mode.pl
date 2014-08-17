@@ -521,7 +521,7 @@ style(tag(begin, _),		style(colour := blue,
 style(tag(end, shortref),	style(colour := blue,
 				      background := grey90,
 				      bold   := @on)).
-style(tag(end, _),     		style(colour := blue)).
+style(tag(end, _),		style(colour := blue)).
 style(cdata(cdata),		style(colour := sea_green)).
 style(doctype,			style(bold := @on)).
 style(comment,			style(colour := dark_green,
@@ -529,8 +529,8 @@ style(comment,			style(colour := dark_green,
 style(decl(_),			style(colour := maroon)).
 style(error(warning),		style(background := orange)).
 style(error(_),			style(background := hotpink)).
-style(entity,	     		style(colour := dark_green)).
-style(element,	     		style(background := pale_turquoise)).
+style(entity,			style(colour := dark_green)).
+style(element,			style(background := pale_turquoise)).
 
 :- dynamic
 	style_name/2.
@@ -1066,9 +1066,8 @@ initialise(M) :->
 	send(M, dialect, html).
 
 open_document(M) :->
-	"Insert document header"::
-	send(M, format,
-	     '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">\n\n'),
+	"Insert HTML5 document header"::
+	send(M, format, '<!DOCTYPE HTML>\n\n'),
 	send(M, insert_element, html).
 
 open_in_browser(M) :->
