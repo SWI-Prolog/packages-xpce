@@ -482,13 +482,24 @@ argument_indent(E, OpenPos:int, StartCol:int) :<-
 indent_comment_line(M) :->
 	"Copy leading comment of previous line"::
 	get(M, text_buffer, TB),
-	get(TB?syntax, comment_start, 1, CS),
 	get(M, caret, Caret),
 	get(M, scan, Caret, line, -1, start, SOPL),
-	new(LeadRe, regex(string('%s[ \t]*', CS))),
-	get(LeadRe, match, TB, SOPL, Len),	% Previous holds comment
+	debug(indent(comment), 'Prev line at ~d', [SOPL]),
+	(   get(TB?syntax, comment_start, 1, CS),
+	    new(LeadRe, regex(string('%s[ \t]*', CS))),
+	    get(LeadRe, match, TB, SOPL, Len),	% Previous holds comment
+	    CLine = string('%s?[ \t]*$', CS)
+	->  true
+	;   get(TB?syntax, comment_start, 2, '/*'),
+	    new(LeadRe, regex(string(' \\*[ \t]*'))),
+	    get(LeadRe, match, TB, SOPL, Len),
+	    debug(indent(comment), ' *-match', []),
+	    get(M, scan_syntax, 0, Caret, tuple(comment, StartComment)),
+	    send(M, looking_at, '/\\*', StartComment),
+	    CLine = ' ?\\*?[ \t]*$'
+	),
 	get(M, scan, Caret, line, 0, start, SOL),
-	send(M, looking_at, string('%s?[ \t]*$', CS), SOL),
+	send(M, looking_at, CLine, SOL),
 	get(TB, contents, SOPL, Len, Lead),
 	get(M, scan, SOL, line, 0, end, EOL),
 	send(TB, delete, SOL, EOL-SOL),
