@@ -49,6 +49,7 @@
 	  insert_section_header		= key('\\eh'),
 	  insert_comment_block		= key('\\C-c\\C-q'),
 	  insert_line_comment		= key('\\e;'),
+	  close_block_comment		= key('/'),
 	  find_tag			= key('\\e.') + button(browse),
 	  camelcase_word		= key('\\C-c\\C-c'),
 	  underscores_word		= key('\\C-c\\C--')
@@ -535,6 +536,21 @@ indent_comment_line(M) :->
 	get(M, scan, SOL, line, 0, end, EOL),
 	send(TB, delete, SOL, EOL-SOL),
 	send(M, insert, Lead).
+
+
+close_block_comment(M, Times:[int], Id:[event_id]) :->
+	"Close a /** ... */ multiline comment"::
+	(   Times == @default,
+	    get(M?syntax, comment_start, 2, '/*'),
+	    get(M, caret, Caret),
+	    get(M, scan, Caret, line, 0, start, SOL),
+	    send(M, looking_at, ' \\*[ \t]*$', SOL)
+	->  get(M, scan, SOL, line, 0, end, EOL),
+	    get(M, text_buffer, TB),
+	    send(TB, delete, SOL, EOL-SOL),
+	    send(M, insert, ' */')
+	;   send(M, insert_self, Times, Id)
+	).
 
 
 		/********************************
