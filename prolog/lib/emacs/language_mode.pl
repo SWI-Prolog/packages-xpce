@@ -519,7 +519,7 @@ indent_comment_line(M) :->
 	    CLine = string('%s?[ \t]*$', CS)
 	->  true
 	;   get(TB?syntax, comment_start, 2, '/*'),
-	    new(LeadRe, regex(string(' \\*[ \t]*'))),
+	    new(LeadRe, regex(string('/\\*| \\*[ \t]*'))),
 	    get(LeadRe, match, TB, SOPL, Len),
 	    debug(indent(comment), ' *-match', []),
 	    get(M, scan_syntax, 0, Caret, tuple(comment, StartComment)),
@@ -528,7 +528,10 @@ indent_comment_line(M) :->
 	),
 	get(M, scan, Caret, line, 0, start, SOL),
 	send(M, looking_at, CLine, SOL),
-	get(TB, contents, SOPL, Len, Lead),
+	(   StartComment == SOPL	% Prev line is /**
+	->  Lead = ' * '
+	;   get(TB, contents, SOPL, Len, Lead)
+	),
 	get(M, scan, SOL, line, 0, end, EOL),
 	send(TB, delete, SOL, EOL-SOL),
 	send(M, insert, Lead).
