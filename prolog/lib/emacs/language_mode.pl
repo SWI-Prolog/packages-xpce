@@ -370,14 +370,14 @@ fill_paragraph(M, Justify:[int]) :->
 
 in_fillable_comment(M, Caret, Lead) :-
 	get(M, scan_syntax, 0, Caret, tuple(comment, Start)),
-	get(M, column, Start, 0),
 	(   get(M?syntax, comment_start, 1, CS),
+	    get(M, column, Start, 0),
 	    send(M, looking_at, CS, Caret)
 	->  Lead = CS
-	;   get(M?syntax, comment_start, 2, '/*'),
+	;   send(M, looking_at, '/\\*', Start),
 	    get(M, scan, Caret, line, 0, start, SOL),
-	    send(M, looking_at, ' *\\*[ \t]', SOL)
-	->  Lead = ' *\\*'
+	    send(M, looking_at, '[ \t]*\\*[ \t]', SOL)
+	->  Lead = '[ \t]*\\*'
 	), !.
 in_fillable_comment(M, Caret, CS) :-
 	get(M, column, Caret, 0),
@@ -397,14 +397,14 @@ auto_fill(M, From:[int], Regex:[regex]) :->
 	;   Caret = From
 	),
 	(   get(M, scan_syntax, 0, Caret, tuple(comment, Start)),
-	    get(M, column, Start, 0),
 	    get(M, scan, Caret, line, 0, start, SOL)
-	->  (	in_fillable_comment(M, Caret, Lead)
+	->  (   in_fillable_comment(M, Caret, Lead)
 	    ->	(   get(M?syntax, comment_start, 1, Lead)
 		->  send(M, fill_comment_paragraph, @off, SOL)
 		;   send(M, fill_comment_paragraph, @off, SOL, Lead)
 		)
-	    ;	get(M, editor, Editor),
+	    ;   get(M, column, Start, 0),
+		get(M, editor, Editor),
 	        send_class(Editor, editor, auto_fill(Caret, Regex))
 	    )
 	).
@@ -507,7 +507,6 @@ argument_indent(E, OpenPos:int, StartCol:int) :<-
 %	->indent_comment_line
 %
 
-
 indent_comment_line(M) :->
 	"Copy leading comment of previous line"::
 	get(M, text_buffer, TB),
@@ -520,18 +519,24 @@ indent_comment_line(M) :->
 	    CLine = string('%s?[ \t]*$', CS)
 	->  true
 	;   get(TB?syntax, comment_start, 2, '/*'),
-	    new(LeadRe, regex(string('/\\*| \\*[ \t]*'))),
+	    new(LeadRe, regex(string('[ \t]*(/\\*|\\*)[ \t]*'))),
 	    get(LeadRe, match, TB, SOPL, Len),
 	    debug(indent(comment), ' *-match', []),
 	    get(M, scan_syntax, 0, Caret, tuple(comment, StartComment)),
 	    send(M, looking_at, '/\\*', StartComment),
-	    CLine = ' ?\\*?[ \t]*$'
+	    CLine = ' *\\*?[ \t]*$',
+	    BlockComment = true
 	),
 	get(M, scan, Caret, line, 0, start, SOL),
 	send(M, looking_at, CLine, SOL),
-	(   StartComment == SOPL	% Prev line is /**
-	->  Lead = ' * '
-	;   get(TB, contents, SOPL, Len, Lead)
+	get(TB, contents, SOPL, Len, Lead),
+	(   BlockComment == true
+	->  (   send(Lead, sub, /)
+	    ->	send(Lead, translate, /, ' '),
+		send(Lead, append, ' ')
+	    ;	true
+	    )
+	;   true
 	),
 	get(M, scan, SOL, line, 0, end, EOL),
 	send(TB, delete, SOL, EOL-SOL),
@@ -544,11 +549,10 @@ close_block_comment(M, Times:[int], Id:[event_id]) :->
 	    get(M?syntax, comment_start, 2, '/*'),
 	    get(M, caret, Caret),
 	    get(M, scan, Caret, line, 0, start, SOL),
-	    send(M, looking_at, ' \\*[ \t]*$', SOL)
-	->  get(M, scan, SOL, line, 0, end, EOL),
-	    get(M, text_buffer, TB),
-	    send(TB, delete, SOL, EOL-SOL),
-	    send(M, insert, ' */')
+	    send(M, looking_at, '[ \t]*\\*[ \t]*$', SOL)
+	->  send(M, just_one_space),
+	    send(M, backward_delete_char),
+	    send(M, insert, /)
 	;   send(M, insert_self, Times, Id)
 	).
 
