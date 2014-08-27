@@ -354,24 +354,34 @@ substitute(String, From, To) :-
 fill_paragraph(M, Justify:[int]) :->
 	"Fill comment paragraph"::
 	get(M, caret, Caret),
-	(   (   get(M, scan_syntax, 0, Caret, tuple(comment, Start))
-	    ->  get(M, column, Start, 0),
-		(   get(M?syntax, comment_start, 1, CS),
-		    send(M, looking_at, CS, Caret)
-		->  send(M, fill_comment_paragraph, Justify)
-		;   get(M?syntax, comment_start, 2, '/*'),
-		    get(M, scan, Caret, line, 0, start, SOL),
-		    send(M, looking_at, ' *\\*[ \t]', SOL),
-		    send(M, fill_comment_paragraph, Justify, lead := ' *\\*')
-		)
-	    ;	get(M, column, Caret, 0),
-		get(M?syntax, comment_start, 1, CS),
-		send(M, looking_at, CS, Caret)
+	(   in_fillable_comment(M, Caret, Lead)
+	->  (   get(M?syntax, comment_start, 1, Lead)
 	    ->	send(M, fill_comment_paragraph, Justify)
+	    ;	send(M, fill_comment_paragraph, Justify, lead := Lead)
 	    )
-	->  true
 	;   send_super(M, fill_paragraph, Justify)
 	).
+
+%%	in_fillable_comment(+Mode, +Caret, -Lead) is semidet.
+%
+%	True when Caret is inside a comment starting at the beginning of a
+%	line.
+
+in_fillable_comment(M, Caret, Lead) :-
+	get(M, scan_syntax, 0, Caret, tuple(comment, Start)),
+	get(M, column, Start, 0),
+	(   get(M?syntax, comment_start, 1, CS),
+	    send(M, looking_at, CS, Caret)
+	->  Lead = CS
+	;   get(M?syntax, comment_start, 2, '/*'),
+	    get(M, scan, Caret, line, 0, start, SOL),
+	    send(M, looking_at, ' *\\*[ \t]', SOL)
+	->  Lead = ' *\\*'
+	), !.
+in_fillable_comment(M, Caret, CS) :-
+	get(M, column, Caret, 0),
+	get(M?syntax, comment_start, 1, CS),
+	send(M, looking_at, CS, Caret).
 
 
 justify_paragraph(M) :->
@@ -386,10 +396,13 @@ auto_fill(M, From:[int], Regex:[regex]) :->
 	;   Caret = From
 	),
 	(   get(M, scan_syntax, 0, Caret, tuple(comment, Start)),
-	    get(M, column, Start, 0)
-	->  (	get(M?syntax, comment_start, 1, CS),
-	        send(M, looking_at, CS, Start)
-	    ->	send(M, fill_comment_paragraph, @off, Start)
+	    get(M, column, Start, 0),
+	    get(M, scan, Caret, line, 0, start, SOL)
+	->  (	in_fillable_comment(M, Caret, Lead)
+	    ->	(   get(M?syntax, comment_start, 1, Lead)
+		->  send(M, fill_comment_paragraph, @off, SOL)
+		;   send(M, fill_comment_paragraph, @off, SOL, Lead)
+		)
 	    ;	get(M, editor, Editor),
 	        send_class(Editor, editor, auto_fill(Caret, Regex))
 	    )
