@@ -143,15 +143,15 @@ comment_lines(TB, S0, End, Comment) :-
 
 
 fill_comment_paragraph(M, Justify:justify=[bool|int], From:from=[int],
-		       Lead:lead=[char_array]) :->
+		       Lead0:lead=[char_array]) :->
 	"Fill paragraph in (line) comment"::
-	(   Lead == @default
+	(   Lead0 == @default
 	->  (   get(M?syntax, comment_start, 1, CS)
 	    ->  Lead = CS
 	    ;   send(M, report, warning, 'No line-comment character defined'),
 		fail
 	    )
-	;   true
+	;   Lead = Lead0
 	),
 	new(Re, regex(string('^((%s)?[ \t]*$|[^%s])', Lead, Lead))),
 	get(M, caret, Caret),
@@ -372,7 +372,7 @@ in_fillable_comment(M, Caret, Lead) :-
 	get(M, scan_syntax, 0, Caret, tuple(comment, Start)),
 	(   get(M?syntax, comment_start, 1, CS),
 	    get(M, column, Start, 0),
-	    send(M, looking_at, CS, Caret)
+	    send(M, looking_at, CS, Start)
 	->  Lead = CS
 	;   send(M, looking_at, '/\\*', Start),
 	    get(M, scan, Caret, line, 0, start, SOL),
