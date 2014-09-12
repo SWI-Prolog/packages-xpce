@@ -1220,7 +1220,7 @@ unmark_variables(M) :->
 	;   true
 	).
 
-%	find_variable(+TermPos, +Clause, +Caret, -Var)
+%%	find_variable(+TermPos, +Clause, +Caret, -Var) is semidet.
 %
 %	Find the variable around the caret and return it in Var. If the
 %	caret is not on a variable, fail.
@@ -1231,12 +1231,21 @@ find_variable(F-T, Var, Caret, Var) :-
 find_variable(term_position(_,_,_,_,ArgPos), Compound, Caret, Var) :-
 	nth1(N, ArgPos, P),
 	arg(N, Compound, Arg),
-	find_variable(P, Arg, Caret, Var).
+	find_variable(P, Arg, Caret, Var), !.
 find_variable(list_position(_,_,EP,TP), List, Caret, Var) :-
 	list_pos(EP, TP, List, P, E),
-	find_variable(P, E, Caret, Var).
+	find_variable(P, E, Caret, Var), !.
 find_variable(brace_term_position(_,_,TP), {Term}, Caret, Var) :-
 	find_variable(TP, Term, Caret, Var).
+find_variable(dict_position(_,_,TF,TT,KVPos), Dict, Caret, Var) :-
+	(   is_dict(Dict, Tag),
+	    find_variable(TF-TT, Tag, Caret, Var)
+	->  true
+	;   is_list(KVPos),
+	    member(key_value_position(_,_,_,_,K,_,VP), KVPos),
+	    get_dict(K, Dict, V),
+	    find_variable(VP, V, Caret, Var)
+	), !.
 
 list_pos([], P, T, P, T) :-
 	P \== none, !.
@@ -1244,7 +1253,7 @@ list_pos([PH|_],  _, [EH|_], PH, EH).
 list_pos([_|PT], TP, [_|ET],  P,  E) :-
 	list_pos(PT, TP, ET, P, E).
 
-%	subterm_position(+Term, +Clause, +TermPos, -Pos)
+%%	subterm_position(+Term, +Clause, +TermPos, -Pos) is nondet.
 %
 %	Find all positions at which Term appears in Clause.
 
@@ -1259,6 +1268,14 @@ subterm_position(Search, List, list_position(_,_,EP,TP), Pos) :-
 	subterm_position(Search, E, P, Pos).
 subterm_position(Search, {Term}, brace_term_position(_,_,TP), Pos) :-
 	subterm_position(Search, Term, TP, Pos).
+subterm_position(Search, Dict, dict_position(_,_,TF,TT,KVPos), Pos) :-
+	(   is_dict(Dict, Tag),
+	    subterm_position(Search, Tag, TF-TT, Pos)
+	;   is_list(KVPos),
+	    member(key_value_position(_,_,_,_,K,_,VP), KVPos),
+	    get_dict(K, Dict, V),
+	    subterm_position(Search, V, VP, Pos)
+	).
 
 
 		 /*******************************
