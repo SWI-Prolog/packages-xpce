@@ -109,6 +109,8 @@ goal_colours(constraints(Decls), deprecated-[DeclColours]) :-
 	chr_constraint_colours(Decls, DeclColours).
 goal_colours(chr_constraint(Decls), built_in-[DeclColours]) :-
 	chr_constraint_colours(Decls, DeclColours).
+goal_colours(chr_type(TypeDecl), built_in-[DeclColours]) :-
+	chr_type_decl_colours(TypeDecl, DeclColours).
 
 chr_constraint_colours(Var, instantiation_error(Var)) :-
 	var(Var), !.
@@ -141,6 +143,17 @@ chr_mode(-).
 pi_to_term(Name/Arity, Term) :-
 	atom(Name), integer(Arity), Arity >= 0, !,
 	functor(Term, Name, Arity).
+
+chr_type_decl_colours((Type ---> Def), built_in-[chr_type(Type), DefColours]) :-
+	chr_type_colours(Def, DefColours).
+chr_type_decl_colours((Type == Alias), built_in-[chr_type(Type), chr_type(Alias)]).
+
+chr_type_colours(Var, classify) :-
+	var(Var), !.
+chr_type_colours((A;B), control-[CA,CB]) :- !,
+	chr_type_colours(A, CA),
+	chr_type_colours(B, CB).
+chr_type_colours(T, chr_type(T)).
 
 prolog_colour:term_colours(Term, Colours) :-
 	term_colours(Term, Colours).
