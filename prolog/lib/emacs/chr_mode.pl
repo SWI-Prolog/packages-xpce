@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (C): 1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/packages/xpce/
+    Copyright (C): 1985-2014, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -72,7 +71,7 @@ colourise_buffer(M) :->
 	prolog_colour:term_colours/2,
 	prolog_colour:goal_colours/2.
 
-%	term_colours(+Term, -Colours)
+%%	term_colours(+Term, -Colours)
 %
 %	Colourisation of a toplevel term as read from the file.
 
@@ -102,12 +101,46 @@ chr_body((Guard|Goal), delimiter - [ GuardColour, GoalColour ]) :- !,
 chr_body(_, body).
 
 
-%	goal_colours(+Goal, -Colours)
+%%	goal_colours(+Goal, -Colours)
 %
 %	Colouring of special goals.
 
-goal_colours(constraints(_),	built_in-[predicates]).
-goal_colours(chr_constraint(_),	built_in-[predicates]).
+goal_colours(constraints(Decls), deprecated-[DeclColours]) :-
+	chr_constraint_colours(Decls, DeclColours).
+goal_colours(chr_constraint(Decls), built_in-[DeclColours]) :-
+	chr_constraint_colours(Decls, DeclColours).
+
+chr_constraint_colours(Var, instantiation_error(Var)) :-
+	var(Var), !.
+chr_constraint_colours((H,T), classify-[HeadColours,BodyColours]) :- !,
+	chr_constraint_colours(H, HeadColours),
+	chr_constraint_colours(T, BodyColours).
+chr_constraint_colours(PI, Colours) :-
+	pi_to_term(PI, Goal), !,
+	Colours = predicate_indicator-[ goal(constraint(0), Goal),
+					arity
+				      ].
+chr_constraint_colours(Goal, Colours) :-
+	atom(Goal), !,
+	Colours = goal(constraint(0), Goal).
+chr_constraint_colours(Goal, Colours) :-
+	compound(Goal), !,
+	compound_name_arguments(Goal, _Name, Args),
+	maplist(chr_argspec, Args, ArgColours),
+	Colours = goal(constraint(0), Goal)-ArgColours.
+
+chr_argspec(Term, mode(Mode)-[chr_type(Type)]) :-
+	compound(Term),
+	compound_name_arguments(Term, Mode, [Type]),
+	chr_mode(Mode).
+
+chr_mode(+).
+chr_mode(?).
+chr_mode(-).
+
+pi_to_term(Name/Arity, Term) :-
+	atom(Name), integer(Arity), Arity >= 0, !,
+	functor(Term, Name, Arity).
 
 prolog_colour:term_colours(Term, Colours) :-
 	term_colours(Term, Colours).
