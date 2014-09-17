@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2014, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -33,7 +31,6 @@
 :- module(prolog_pretty_print,
 	  [ print_term/2	% +Term, +Options
 	  ]).
-:- use_module(library(listing)).
 :- use_module(library(option)).
 
 /** <module> pretty print Prolog terms
@@ -53,6 +50,16 @@ etc.
      terms.
 */
 
+:- predicate_options(print_term/2, 2,
+		     [ output(stream),
+		       right_margin(integer),
+		       left_margin(integer),
+		       tab_width(integer),
+		       indent_arguments(integer),
+		       operators(boolean),
+		       write_options(list)
+		     ]).
+
 %%	print_term(+Term, +Options) is det.
 %
 %	Pretty print a Prolog term. The following options are processed:
@@ -61,6 +68,8 @@ etc.
 %	  Define the output stream.  Default is =user_output=
 %	  * right_margin(+Integer)
 %	  Width of a line.  Default is 72 characters.
+%	  * left_margin(+Integer)
+%	  Left margin for continuation lines.  Default is 0.
 %	  * tab_width(+Integer)
 %	  Distance between tab-stops.  Default is 8 characters.
 %	  * indent_arguments(+Spec)
@@ -99,7 +108,8 @@ print_term_2(Term, Options0) :-
 	merge_options(Options0, Defs, Options),
 	option(write_options(WrtOpts), Options),
 	option(max_depth(MaxDepth), WrtOpts, infinite),
-	Context	= ctx(0,0,1200,MaxDepth),
+	option(left_margin(LeftMargin), Options, 0),
+	Context	= ctx(LeftMargin,0,1200,MaxDepth),
 	pp(Template, Context, Options),
 	print_extra(Cycles, Context, 'where', Options),
 	print_extra(Constraints, Context, 'with constraints', Options).
