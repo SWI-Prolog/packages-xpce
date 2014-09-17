@@ -1,10 +1,8 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/packages/xpce/
     Copyright (C): 1985-2011, University of Amsterdam
 			      VU University Amsterdam
 
@@ -37,7 +35,7 @@
 :- use_module(library(pce)).
 :- use_module(library(lists)).
 :- use_module(library(option)).
-:- use_module(pprint).
+:- use_module(library(pprint)).
 
 /** <module> Graphical viewer for Prolog terms
 
