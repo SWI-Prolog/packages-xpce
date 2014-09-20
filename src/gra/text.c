@@ -1191,13 +1191,13 @@ prepareEditText(TextObj t, Name selector)
 
 
 status
-pasteText(TextObj t, Int buffer)
+pasteText(TextObj t, Name which)
 { CharArray str;
   Any selection;
   DisplayObj d = CurrentDisplay(t);
 
   if ( d &&
-       (selection=get(d, NAME_paste, EAV)) &&
+       (selection=get(d, NAME_paste, which, EAV)) &&
        (str=checkType(selection, TypeCharArray, NIL)) )
   { prepareInsertText(t);
     insertString((StringObj) t->string, t->caret, str);
@@ -1731,8 +1731,8 @@ static senddecl send_text[] =
      NAME_postscript, "Create PostScript"),
   SM(NAME_compute, 0, NULL, computeText,
      NAME_repaint, "Recompute area/offset"),
-  SM(NAME_paste, 1, "[0..9]", pasteText,
-     NAME_selection, "Paste value of cut-buffer"),
+  SM(NAME_paste, 1, "which=[{primary,clipboard}]", pasteText,
+     NAME_selection, "Paste primary selection or clipboard"),
   SM(NAME_gosmacsTranspose, 0, NULL, gosmacsTransposeText,
      NAME_transpose, "Transpose two char_array before caret"),
   SM(NAME_transposeChars, 0, NULL, transposeCharsText,

@@ -40,7 +40,7 @@ make_editor_recogniser(G) :-
 	new(Editor, @event?receiver),
 	new(G, handler_group(new(select_editor_text_gesture),
 			     click_gesture(middle, '', single,
-					   and(message(Editor, paste),
+					   and(message(Editor, paste, primary),
 					       message(Editor, mark_undo))))).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

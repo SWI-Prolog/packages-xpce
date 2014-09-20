@@ -1490,7 +1490,7 @@ event_editor(Editor e, EventObj ev)
     } else
     { if ( isAEvent(ev, NAME_msMiddleUp) &&
 	   hasModifierEvent(ev, select_modifier) )
-      { insertCutBufferEditor(e, DEFAULT);
+      { send(e, NAME_paste, NAME_primary, EAV);
 	succeed;
       } else if ( hasModifierEvent(ev, select_modifier) )
       { selectionExtendEditor(e, where);
@@ -1975,7 +1975,7 @@ cutEditor(Editor e)
 
 
 static status
-pasteEditor(Editor e)
+pasteEditor(Editor e, Name which)
 { DisplayObj d = getDisplayGraphical((Graphical)e);
   CharArray str;
   Any selection;
@@ -1983,7 +1983,7 @@ pasteEditor(Editor e)
   MustBeEditable(e);
 
   if ( d &&
-       (selection=get(d, NAME_paste, EAV)) &&
+       (selection=get(d, NAME_paste, which, EAV)) &&
        (str=checkType(selection, TypeCharArray, NIL)) )
   { if ( HasSelection(e) &&
 	 getClassVariableValueObject(e, NAME_insertDeletesSelection) == ON )
@@ -5025,8 +5025,8 @@ static senddecl send_editor[] =
      NAME_selection, "Copy selection"),
   SM(NAME_cut, 0, NULL, cutEditor,
      NAME_selection, "Copy and delete selection"),
-  SM(NAME_paste, 0, NULL, pasteEditor,
-     NAME_selection, "Paste the clipboard value"),
+  SM(NAME_paste, 1, "which=[{primary,clipboard}]", pasteEditor,
+     NAME_selection, "Paste the selection or clipboard value"),
   SM(NAME_cutOrDeleteChar, 1, "[int]", cutOrDeleteCharEditor,
      NAME_delete, "Cut selection or delete characters forward"),
   SM(NAME_cutOrBackwardDeleteChar, 1, "[int]", cutOrBackwardDeleteCharEditor,

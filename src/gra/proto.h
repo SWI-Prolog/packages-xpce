@@ -304,7 +304,7 @@ COMMON(status)	fontText(TextObj t, FontObj font);
 COMMON(status)	borderText(TextObj t, Int border);
 COMMON(status)	stringText(TextObj t, CharArray s);
 COMMON(status)	showCaretText(TextObj t, Any val);
-COMMON(status)	pasteText(TextObj t, Int buffer);
+COMMON(status)	pasteText(TextObj t, Name buffer);
 COMMON(status)	lengthText(TextObj t, Int l);
 COMMON(status)	marginText(TextObj t, Int width, Name wrap);
 COMMON(status)	makeClassText(Class class);

@@ -253,8 +253,8 @@ ws_open_display(DisplayObj d)
     Cardinal n = 0;
 
     XtSetArg(args[n], XtNmappedWhenManaged, False); n++;
-    XtSetArg(args[n], XtNwidth,      	    64);    n++;
-    XtSetArg(args[n], XtNheight,      	    64);    n++;
+    XtSetArg(args[n], XtNwidth,		    64);    n++;
+    XtSetArg(args[n], XtNheight,	    64);    n++;
 
     ref->shell_xref = XtAppCreateShell("xpce",
 				       "Pce", /* Resource Class */
@@ -564,6 +564,9 @@ ws_get_cutbuffer(DisplayObj d, int n)
 		 /*******************************
 		 *	     SELECTION		*
 		 *******************************/
+
+/* See http://www.jwz.org/doc/x-cut-and-paste.html
+*/
 
 static int	 selection_complete;
 static StringObj selection_value;

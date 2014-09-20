@@ -39,12 +39,12 @@ static status
 initialiseDisplay(DisplayObj d, Name address)
 { DisplayManager dm = TheDisplayManager();
 
-  assign(d, size,        	NIL);
-  assign(d, address,     	address);
+  assign(d, size,		NIL);
+  assign(d, address,		address);
   assign(d, font_table,		newObject(ClassHashTable, EAV));
-  assign(d, frames,	 	newObject(ClassChain, EAV));
+  assign(d, frames,		newObject(ClassChain, EAV));
   assign(d, inspect_handlers,	newObject(ClassChain, EAV));
-  assign(d, cache,	 	NIL);
+  assign(d, cache,		NIL);
   assign(d, colour_map,		DEFAULT);
   assign(d, display_manager,	dm);
   assign(d, busy_locks,		ZERO);
@@ -624,7 +624,7 @@ copyDisplay(DisplayObj d, StringObj data)
 
 
 static StringObj
-getPasteDisplay(DisplayObj d)
+getPasteDisplay(DisplayObj d, Name which)
 { static Name formats[] = { NAME_utf8_string,
 			    NAME_text,
 			    NAME_string,
@@ -633,9 +633,12 @@ getPasteDisplay(DisplayObj d)
   StringObj s = NULL;
   Name *fmt;
 
+  if ( isDefault(which) )
+    which = NAME_clipboard;
+
   catchErrorPce(PCE, NAME_getSelection);
   for(fmt = formats; *fmt; fmt++)
-  { if ( (s=get(d, NAME_selection, DEFAULT, *fmt, EAV)) )
+  { if ( (s=get(d, NAME_selection, which, *fmt, EAV)) )
       break;
   }
   if ( ! (*fmt) )
@@ -764,7 +767,7 @@ display_help(DisplayObj d, StringObj hlp, Name msg)
   send(msg_text, NAME_set, toInt(tx), toInt(ty), DEFAULT, DEFAULT, EAV);
 
   send(get(p, NAME_frame, EAV), NAME_set, toInt(fx), toInt(fy),
-       					toInt(fw), toInt(fh), EAV);
+					toInt(fw), toInt(fh), EAV);
 
   send(d, NAME_SeenDown, OFF, EAV);
   send(p, NAME_show, ON, EAV);
@@ -1301,7 +1304,7 @@ static getdecl get_display[] =
      NAME_selection, "Current object owning the X11 selection"),
   GM(NAME_selectionTimeout, 0, "real", NULL, getSelectionTimeoutDisplay,
      NAME_selection, "Get the current selection timeout time (seconds)"),
-  GM(NAME_paste, 0, "string", NULL, getPasteDisplay,
+  GM(NAME_paste, 1, "string", "which=[{primary,clipboard}]", getPasteDisplay,
      NAME_selection, "Simple interface to get clipboard value"),
 #ifdef WIN32_GRAPHICS
   GM(NAME_winFileName, 7, "name", T_win_file_name, getWinFileNameDisplay,

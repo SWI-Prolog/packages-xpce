@@ -52,7 +52,7 @@ initialiseTextItem(TextItem ti, Name name, Any val, Code msg)
 
   createDialogItem(ti, name);
 
-  assign(ti, message, 	       msg);
+  assign(ti, message,	       msg);
   assign(ti, value_set,	       DEFAULT);
   assign(ti, value_width,      DEFAULT);
   assign(ti, print_name,       CtoString(""));
@@ -326,7 +326,7 @@ getReferenceTextItem(TextItem ti)
 
 
 static status
-pasteTextItem(TextItem ti, Int buffer)
+pasteTextItem(TextItem ti, Name buffer)
 { BoolObj oldm, newm;
 
   oldm = getModifiedTextItem(ti);
@@ -940,7 +940,7 @@ eventTextItem(TextItem ti, EventObj ev)
 
     if ( isAEvent(ev, NAME_keyboard) )
     { KeyBinding kb = (ti->editable == ON ? KeyBindingTextItem()
-			 		  : KeyBindingTextItemView());
+					  : KeyBindingTextItemView());
       Name f = getFunctionKeyBinding(kb, ev);
 
       if ( f != NAME_complete && f != NAME_keyboardQuit )
@@ -981,7 +981,7 @@ eventTextItem(TextItem ti, EventObj ev)
     { return send(ti, NAME_typed, ev, EAV);
     } else
     { if ( ti->editable == ON && isAEvent(ev, NAME_msMiddleUp) )
-	return pasteTextItem(ti, DEFAULT);
+	return send(ti, NAME_paste, NAME_primary, EAV);
     }
   }
 
@@ -1086,7 +1086,7 @@ keyTextItem(TextItem ti, Name key)
 status
 typedTextItem(TextItem ti, EventId id)
 { return typedKeyBinding(ti->editable == ON ? KeyBindingTextItem()
-			 		    : KeyBindingTextItemView(),
+					    : KeyBindingTextItemView(),
 			 id, (Graphical) ti);
 }
 
@@ -1671,8 +1671,8 @@ static senddecl send_textItem[] =
      NAME_layout, "Width of label in pixels"),
   SM(NAME_clear, 0, NULL, clearTextItem,
      NAME_selection, "Clear entry field"),
-  SM(NAME_paste, 1, "[int]", pasteTextItem,
-     NAME_selection, "Paste value of cut-buffer"),
+  SM(NAME_paste, 1, "which=[{primary,clipboard}]", pasteTextItem,
+     NAME_selection, "Paste primary selection or clipboard"),
   SM(NAME_displayedValue, 1, "char_array", displayedValueTextItem,
      NAME_textual, "Visible (typed) textual value"),
   SM(NAME_catchAll, 2, T_catchAll, catchAllTextItem,
