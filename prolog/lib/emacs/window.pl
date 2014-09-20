@@ -892,9 +892,9 @@ event(E, Ev:event) :->
 	).
 
 
-paste(E) :->
+paste(E, Which:[{primary,clipboard}]) :->
 	send(E, start_idle_timer),
-	send_super(E, paste),
+	send_super(E, paste, Which),
 	send(E, highlight_matching_bracket).
 
 
