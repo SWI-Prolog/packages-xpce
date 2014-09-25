@@ -37,16 +37,12 @@
 :- use_module(library(pce)).
 :- use_module(library('http/html_write')).
 
-:- style_check(-atom).
-
-
 :- meta_predicate
 	html_hierarchy(+, :, :, +, -, +).
 
 html_hierarchy(Root, GenChild, GenLabel, Cookie) -->
 	{ strip_module(GenChild, M1, T1),
 	  strip_module(GenLabel, M2, T2)
-%	  ,format('Cookie = ~w~n', [Cookie])
 	},
 	script,
 	hierarchy(Root, M1:T1, M2:T2, Cookie, 0, []).
