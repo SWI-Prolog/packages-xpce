@@ -1,6 +1,4 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
@@ -33,7 +31,7 @@
 :- use_module(library(pce)).
 :- use_module(library('doc/load')).
 :- use_module(library('doc/xml_hierarchy')).
-:- use_module(library('trace/pprint')).
+:- use_module(library(pprint)).
 :- use_module(library(toolbar)).
 :- use_module(library(pce_report)).
 :- use_module(library(find_file)).
