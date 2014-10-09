@@ -21,6 +21,7 @@ PL=bin/@PLARCH@/$(PLWINNAME)
 PLARCH=@PLARCH@
 INSTALL_PLARCH=@INSTALL_PLARCH@
 EXEEXT=@EXEEXT@
+.SUFFIXES: .pl .qlf
 
 BPL=		bin/$(INSTALL_PLARCH)/$(SWIPL)$(EXEEXT) $(PLWINARG)
 PWD=`pwd`
@@ -34,6 +35,7 @@ BOOTPLS=	boot/apply.pl boot/autoload.pl \
 		boot/load.pl boot/parms.pl \
 		boot/qlf.pl boot/syspred.pl boot/toplevel.pl \
 		boot/topvars.pl boot/predopts.pl
+LIBQLF=		library/cql/cql.qlf $(LIBQLF)
 
 all:		$(STARTUP) xpce-qlfs
 
@@ -47,5 +49,10 @@ xpce-qlfs:
                    (cd xpce/prolog/lib; $(MAKE) PL="$$PLBASE/$(BPL)"); \
 		fi
 
+.pl.qlf:
+		if [ -f $*.pl ]; then \
+		  $(BPL) -g 'qcompile($*),halt' -t 'halt(1)'; \
+		fi
+
 clean:
-		rm -f `find xpce/prolog -name '*.qlf' -print`
+		rm -f `find . -name '*.qlf' -print`
