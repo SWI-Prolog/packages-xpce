@@ -49,12 +49,12 @@
 :- use_module(library(persistent_frame)).
 :- use_module(library(debug)).
 :- use_module(library(threadutil)).
+:- use_module(library(pprint)).
 :- use_module(trace).
 :- use_module(clause).
 :- use_module(util).
 :- use_module(source).
 :- consult([ settings,
-	     pprint,
 	     stack,
 	     viewterm
 	   ]).
