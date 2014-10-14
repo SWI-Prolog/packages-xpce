@@ -22,7 +22,6 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#define __USE_W32_SOCKETS		/* Use Win32 sockets for cygwin */
 #include "include.h"
 #include <h/unix.h>
 #include <h/interface.h>
