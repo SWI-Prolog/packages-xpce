@@ -69,7 +69,7 @@ pce_message(pce(inconsistent_argc)) -->
 pce_message(pce(no_predicate_reference)) -->
 	['Internal interface error: not a predicate reference'-[], nl].
 pce_message(init_failed) -->
-	['Failed to initialise the XPCE tookit.  This is normally'-[], nl],
+	['Failed to initialise the XPCE toolkit.  This is normally'-[], nl],
 	['caused by a missing or incompatible X11 library.'-[], nl],
 	['See http://www.swi-prolog.org/build/issues/xpce.html'-[], nl],
 	['Sorry, cannot recover from this.  Process terminates.'-[], nl].
