@@ -715,10 +715,15 @@ pceWriteErrorGoal(void)
 		 *******************************/
 
 static void
-outOfMemory()
-{ Cprintf("Out of memory: ");
+outOfMemory(void)
+{ static int nesting = 0;
+
+  if ( nesting++ > 2 )
+    abort();
+  Cprintf("Out of memory: ");
   Cprintf("%s", strName(getOsErrorPce(PCE)));
   hostAction(HOST_RECOVER_FROM_FATAL_ERROR);
+  nesting--;
 }
 
 
