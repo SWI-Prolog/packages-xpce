@@ -75,7 +75,11 @@ pce_dispatch_(_) :-
 	pce_thread(pce), !.
 pce_dispatch_(Options) :-
 	thread_self(Me),
-	thread_create(pce_dispatcher(Me), _, [alias(pce)|Options]),
+	thread_create(pce_dispatcher(Me), _,
+		      [ alias(pce),
+			debug(false)
+		      | Options
+		      ]),
 	thread_get_message(pce_dispatch).
 
 :- dynamic
