@@ -61,7 +61,7 @@ exception(ex1, error(_, _), true, false).
 :- dynamic
 	user:prolog_exception_hook/4.
 
-%%	exception_hook(+ExIn, -ExOut, +Frame, +Catcher) is fail.
+%%	exception_hook(+ExIn, -ExOut, +Frame, +Catcher) is failure.
 %
 %	Trap exceptions and consider whether or not to start the tracer.
 
