@@ -420,27 +420,30 @@ mark_word(F, S:string) :->
 	"Mark all occurrences of word"::
 	send(S, strip),
 	get(S, value, Word),
-	send(F, report, progress, 'Marking %s ...', Word),
-	get(F, errors, B),
-	send(B, append, dict_item(Word, @default, new(Errors, chain))),
-	get(F, view, View),
-	get(View, text_buffer, TB),
-	get(@ispell_mark_re, quote, S, Q),
-	send(Q, prepend, '\\y'),
-	send(Q, append, '\\y'),
-	send(@ispell_mark_re, pattern, Q),
-	mark_all(TB, 0, @ispell_mark_re, Word, Errors, error),
-	send(F, report, done).
+	(   Word == ''
+	->  true
+	;   send(F, report, progress, 'Marking %s ...', Word),
+	    get(F, errors, B),
+	    send(B, append, dict_item(Word, @default, new(Errors, chain))),
+	    get(F, view, View),
+	    get(View, text_buffer, TB),
+	    get(@ispell_mark_re, quote, S, Q),
+	    send(Q, prepend, '\\y'),
+	    send(Q, append, '\\y'),
+	    send(@ispell_mark_re, pattern, Q),
+	    mark_all(TB, 0, @ispell_mark_re, Errors, error),
+	    send(F, report, done)
+	).
 
-mark_all(TB, Index, Re, Word, Errors, Kind) :-
+mark_all(TB, Index, Re, Errors, Kind) :-
 	send(Re, search, TB, Index), !,
 	get(Re, register_start, RS),
 	get(Re, register_end, RE),
 	L is RE - RS,
 	new(Fragment, fragment(TB, RS, L, Kind)),
 	send(Errors, append, Fragment),
-	mark_all(TB, RE, Re, Word, Errors, Kind).
-mark_all(_, _, _, _, _, _).
+	mark_all(TB, RE, Re, Errors, Kind).
+mark_all(_, _, _, _, _).
 
 
 		/********************************
