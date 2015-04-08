@@ -284,7 +284,7 @@ show(StartFrame, CHP, Up, Port, Style) :-
 %%	find_frame(+Up, +StartFrame, +Port, -PC, -Frame) is det.
 %
 %	Find the parent frame Up levels above StartFrame. Must be called
-%	in the context of the debugged  thread.   We  sto going up if we
+%	in the context of the debugged thread.   We  stop going up if we
 %	find a frame that wants to hide   its  children. This happens if
 %	nodebug code calls user-code. In that case we prefer to show the
 %	user code over showing the internals of the nodebug code.
