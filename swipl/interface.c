@@ -431,7 +431,7 @@ GetChars(term_t t, char **s, unsigned int *len)
 
 #ifndef SWI
 
-static void
+static int
 StripModuleTag(term_t t, atom_t *module, term_t p)
 { atom_t name;
   int arity;
@@ -450,6 +450,8 @@ StripModuleTag(term_t t, atom_t *module, term_t p)
     } else
       break;
   }
+
+  return TRUE;
 }
 
 #endif /*~SWI*/
@@ -1809,7 +1811,8 @@ pl_new(term_t assoc, term_t descr)
   goal.implementation =	NIL;
   pcePushGoal(&goal);
 
-  StripModuleTag(descr, &DefaultModule, d);
+  if ( !StripModuleTag(descr, &DefaultModule, d) )
+    return FALSE;
   markAnswerStack(mark);
   obj = do_new(assoc, d);
   rewindAnswerStack(mark, obj);
@@ -1996,7 +1999,8 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
     { rval = ThrowException(EX_EXISTENCE, ATOM_class, cl);
       goto out;
     }
-    StripModuleTag(msg, &DefaultModule, msg);
+    if ( !StripModuleTag(msg, &DefaultModule, msg) )
+      goto out;
     if ( GetNameArity(msg, &name, &arity) )
     { PceName selector = atomToName(name);
       term_t arg;

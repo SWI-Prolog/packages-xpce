@@ -1,11 +1,9 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (C): 1985-2011, University of Amsterdam
+    Copyright (C): 1985-2015, University of Amsterdam
 			      VU University Amsterdam
 
     This library is free software; you can redistribute it and/or
@@ -473,7 +471,8 @@ init_prolog_goal(prolog_goal *g, term_t goal, int acknowledge)
   g->module	 = NULL;
   g->acknowledge = acknowledge;
   g->state       = G_WAITING;
-  PL_strip_module(goal, &g->module, plain);
+  if ( !PL_strip_module(goal, &g->module, plain) )
+    return FALSE;
   if ( !(PL_is_compound(plain) || PL_is_atom(plain)) )
     return type_error(goal, "callable");
   g->goal = PL_record(plain);
