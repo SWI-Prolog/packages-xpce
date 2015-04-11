@@ -142,7 +142,7 @@ user:message_hook(Term, Level, Lines) :-
 	pce(0).
 
 ide_message(Term, Level, Lines) :-
-	accept_level(Level), !,
+	accept_level(Level), Lines \== [], !,
 	pce(pce_message(Term, Lines)).
 ide_message(make(reload(_Files)), _, _) :-
 	pce(clear_message_list).
