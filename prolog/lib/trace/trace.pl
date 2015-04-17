@@ -666,8 +666,7 @@ choice_frames(_, none, _, _, []) :- !.
 choice_frames(Max, CHP, Range, Seen, [frame(Frame, choice(CH))|Frames]) :-
 	Max > 0,
 	earlier_choice(CHP, CH),
-	visible_choice(CH),
-	prolog_choice_attribute(CH, frame, Frame),
+	visible_choice(CH, Frame),
 	\+ memberchk(Frame, Seen),
 	prolog_frame_attribute(Frame, level, Flev),
 	in_range(Flev, Range), !,
@@ -688,16 +687,26 @@ earlier_choice(CHP, Next) :-
 	prolog_choice_attribute(CHP, parent, Parent),
 	earlier_choice(Parent, Next).
 
-%%	visible_choice(+CHP) is semidet.
+%%	ancestor_frame(+Frame, ?Ancestor) is nondet.
+%
+%	True when Ancestor is an ancestor of frame. Starts with Frame.
+
+ancestor_frame(Frame, Frame).
+ancestor_frame(Frame, Ancestor) :-
+	prolog_frame_attribute(Frame, parent, Parent),
+	ancestor_frame(Parent, Ancestor).
+
+%%	visible_choice(+CHP, -Frame) is semidet.
 %
 %	A visible choice is a choice-point that realises a real choice
 %	and is created by a visible frame.
 
-visible_choice(CHP) :-
+visible_choice(CHP, Frame) :-
 	prolog_choice_attribute(CHP, type, Type),
 	real_choice_type(Type),
-	prolog_choice_attribute(CHP, frame, Frame),
-	prolog_frame_attribute(Frame, hidden, false),
+	prolog_choice_attribute(CHP, frame, Frame0),
+	ancestor_frame(Frame0, Frame),
+	prolog_frame_attribute(Frame, hidden, false), !,
 	debug(gtrace(stack), 'Choice ~w of type ~w running frame ~w',
 	      [CHP, Type, Frame]).
 
