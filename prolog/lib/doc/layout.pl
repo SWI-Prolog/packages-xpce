@@ -87,8 +87,8 @@ clicked(PB, Ev:event) :->
 	;   find_button(PB, Index, Button),
 	    get(Button, message, Message),
 	    send(Message, forward, Button)
+	->  true
 	;   debugging(parbox),
-	    get(PB, box, Index, Box),
 	    get(PB, box_area, Index, area(X,Y,W,H)),
 	    send(PB, display, box(W, H), point(X, Y))
 	).
@@ -296,7 +296,7 @@ initialise(M) :->
 	send(M, slot, style, style(font := VFont?font)),
 	send(M, slot, ignore_blanks, @default),
 	send(M, set_font, family, helvetica),
-	send(M, slot, parsep, hbox(0,8)), 	% vertical skip
+	send(M, slot, parsep, hbox(0,8)),	% vertical skip
 	send(M, slot, parindent, hbox(0,0)),	% horizontal skip
 	send(M, space_mode, canonical).
 
