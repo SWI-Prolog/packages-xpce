@@ -30,6 +30,7 @@
 */
 
 :- module(sp_errors, []).
+:- use_module(library(pce)).
 
 :- multifile
 	user:message_hook/3.
