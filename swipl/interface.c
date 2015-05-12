@@ -2763,6 +2763,8 @@ pl_pce_open(term_t t, term_t mode, term_t plhandle)
     if ( (handle = pceOpen(obj, flags, (void *)&enc)) >= 0 )
     { IOSTREAM *s = Snew((void *)(intptr_t)handle, sflags, &pceFunctions);
       s->encoding = enc;
+      if ( enc != ENC_OCTET )
+	s->flags |= SIO_TEXT;
 
       return PL_open_stream(plhandle, s);
     } else
