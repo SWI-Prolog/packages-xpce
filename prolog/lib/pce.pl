@@ -113,6 +113,7 @@ reexports the content of these files.
 	      [ qcompile(part),		% compile boot files as part of pce.qlf
 		silent(true)
 	      ]).
+:- use_module(pce_dispatch).
 
 %%	pce_thread(-Thread) is det.
 %
