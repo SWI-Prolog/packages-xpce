@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of XPCE --- The SWI-Prolog GUI toolkit
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (C): 2009, University of Amsterdam
+    Copyright (C): 2009-2015, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -46,15 +45,11 @@ especially  nice  if  xpce  is  only  used  to  support  the  SWI-Prolog
 development tools because it ensures that   the  tools remain responsive
 while the main thread executes long-running goals.
 
-This module can be activated automatically if   xpce is loaded using the
-prolog flag xpce_threaded:
+This module can be deactivated by setting the flag `xpce_threaded`:
 
   ==
-  :- set_prolog_flag(xpce_threaded, true).
+  :- set_prolog_flag(xpce_threaded, false).
   ==
-
-@tbd	This module is highly experimental and has only be tested
-	somewhat on Linux systems.
 */
 
 :- predicate_options(pce_dispatch/1, 1,

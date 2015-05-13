@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (C): 1985-2012, University of Amsterdam
+    Copyright (C): 1985-2015, University of Amsterdam
 			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
@@ -120,6 +120,8 @@ reexports the content of these files.
 %	message loop.
 %
 %	@see pce_dispatch/1.
+
+:- create_prolog_flag(xpce_threaded, true, [keep(true)]).
 
 :- dynamic
 	pce_thread/1.
