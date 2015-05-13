@@ -273,7 +273,7 @@ Both versions will put various things   in the SWI-Prolog home directory
 to make XPCE known to Prolog:
 
 	* A link to the xpce build-directory
-	* A plrc script to register the xpce library
+	* A swipl.rc script to register the xpce library
 	* A Makefile to recompile the XPCE/Prolog quick-load-files
 
 Testing XPCE

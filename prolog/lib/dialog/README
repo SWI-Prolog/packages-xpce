@@ -27,7 +27,7 @@ The dialog editor is started using the Prolog predicate
 
 from the main source directory.  To run it from another directory,
 turn the dialog editor main directory into a library.  Suppose you
-installed dialog in ~/xpce/dialog, add the following line to ~/.plrc:
+installed dialog in ~/xpce/dialog, add the following line to ~/.swiplrc:
 
 	:- assert(library_directory('~/xpce/dialog')).
 
@@ -41,7 +41,7 @@ Most popup menus have a (working :-) help entry.
 Demos
 =====
 
-The directory demo contains some demos.  You can load them using the 
+The directory demo contains some demos.  You can load them using the
 `File/load' option from the dialog editor.
 
 

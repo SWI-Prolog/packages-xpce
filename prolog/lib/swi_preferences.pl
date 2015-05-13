@@ -111,8 +111,8 @@ prolog_init_file(Base) :-
 
 default_preferences(prolog, File) :-
 	member(Location,
-	       [ swi('customize/pl.ini'),
-		 swi('customize/dotplrc')
+	       [ swi('customize/swipl.ini'),
+		 swi('customize/dotswiplrc')
 	       ]),
 	absolute_file_name(Location, File,
 			   [ access(read),

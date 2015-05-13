@@ -1755,8 +1755,8 @@ profile_file(Path) :-
 	file_name_on_path(Path, user_profile(File)),
 	known_profile_file(File).
 
-known_profile_file('.plrc').
-known_profile_file('pl.ini').
+known_profile_file('.swiplrc').
+known_profile_file('swipl.ini').
 known_profile_file('.pceemacsrc').
 known_profile_file(File) :-
 	sub_atom(File, 0, _, _, 'lib/xpce/emacs').
