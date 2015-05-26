@@ -259,7 +259,11 @@ dir(parent-1) :-
 	new(D, directory(.)),
 	get(D, parent, PD),
 	get(PD, path, Parent),
-	working_directory(CWD, CWD),
+	working_directory(CWD0, CWD0),
+	(   sub_atom(CWD0, _, _, 0, /)
+	->  file_directory_name(CWD0, CWD)
+	;   CWD = CWD0
+	),
 	file_directory_name(CWD, PlParent),
 	same_file(Parent, PlParent).
 dir(members-1) :-
