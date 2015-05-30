@@ -1,11 +1,10 @@
-/*  $Id$
-
-    Part of SWI-Prolog
+/*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (C): 1985-2002, University of Amsterdam
+    Copyright (C): 1985-2015, University of Amsterdam
+			      VU University Amsterdam
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -44,15 +43,19 @@
 %	anything that can be converted into a pixmap object, notably any
 %	XPCE graphical object.
 %
-%	Currently the only option recognised is content_type(+Type) to
-%	specify the type.  image/jpeg and image/gif are the only sensible
-%	values.  The default is to generate gif.
+%	Currently the only option recognised   is content_type(+Type) to
+%	specify the type. image/jpeg and image/gif are the only sensible
+%	values. The default is to generate gif.
 %
 %	If this module is used as a server on X11-based systems the user
-%	must ensure the presence of an X11 server.  The XPCE library
+%	must ensure the presence of  an   X11  server.  The XPCE library
 %	'Xserver' provides code to start a `head-less' (i.e. server that
-%	doesn't need a physical display) server and adjust the
+%	doesn't  need  a  physical  display)    server  and  adjust  the
 %	environment to make XPCE use this server.
+
+% (*) Note that this code uses  a   text_buffer  as intermediate for the
+% data. this is pretty dubious as binary data is not well supported this
+% way. It still works, but only when using newline(posix) for Windows.
 
 reply_image(Image, Options) :-
 	(   memberchk(content_type(Type), Options)
@@ -66,6 +69,7 @@ reply_image(Image, Options) :-
 	send(Pixmap, save, TB, ImgType),
 	format('Content-type: ~w~n~n', [Type]),
 	pce_open(TB, read, Data),
+	set_stream(Data, newline(posix)),	% (*)
 	copy_stream_data(Data, current_output),
 	close(Data),
 	free(TB),
