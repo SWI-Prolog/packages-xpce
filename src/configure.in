@@ -408,18 +408,31 @@ BEFOREXLIBS="$LIBS"
 
 AC_PATH_X
 
-if test "$x_libraries" = ""; then
+if test "$x_libraries" = "" -o "$x_libraries" = NONE; then
+  AC_MSG_CHECKING("Checking for XQuartz");
+  if test -r /opt/X11/lib/libX11.dylib; then
+    XLIB=/opt/X11/lib
+    AC_MSG_RESULT($XLIB);
+  else
+    AC_MSG_RESULT("no");
     XLIB=/usr/X11/lib
+  fi
 else
-    XLIB="$x_libraries"
+  XLIB="$x_libraries"
 fi
 XLIBS="-L$XLIB -lXt -lX11"
 
-if test "$x_includes" = ""; then
-XINCLUDES="-I/usr/include"
+if test "$x_includes" = "" -o "$x_includes" = NONE; then
+  if test -r /opt/X11/include/X11/Xlib.h; then
+    XINCLUDES="-I/opt/X11/include"
+  else
+    XINCLUDES="-I/usr/include"
+  fi
 else
-XINCLUDES="-I$x_includes"
+  XINCLUDES="-I$x_includes"
 fi
+
+dnl echo XLIBS: $XLIBS, XINCLUDES $XINCLUDES
 
 ac_oldlibs="$LIBS"
 if test ! -z "$x_libraries"; then
@@ -429,7 +442,7 @@ XSMLIBS=""
 AC_CHECK_LIB(SM, main,
 	     XSMLIBS="-lSM -lICE",
 	     ,
-	     -lX11 -lXt -lICE)
+	     $XLIBS -lICE)
 XLIBS="$XLIBS $XSMLIBS"
 
 if test ! -z "$x_libraries"; then
