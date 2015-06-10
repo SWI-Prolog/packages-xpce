@@ -70,8 +70,9 @@ static int
 nextBucketSize(int n)
 { int m;
 
-  for(m=2; m<n; m<<=1);
-    return m;
+  for(m=2; m<n; m<<=1)
+    ;
+  return m;
 }
 #endif
 
@@ -431,7 +432,7 @@ forAllHashTable(HashTable ht, Code code, BoolObj safe)
 
     for(n=size, s=ht->symbols; n-- > 0; s++)
       if ( s->name )
-      	*q++ = *s;
+	*q++ = *s;
 
     for(n=valInt(ht->size), q=symbols; n-- > 0; q++)
       if ( (nonObject(q->name) || !isFreedObj(q->name)) &&
@@ -458,7 +459,7 @@ forSomeHashTable(HashTable ht, Code code, BoolObj safe)
 
     for(n=size, s=ht->symbols; n-- > 0; s++)
       if ( s->name )
-      	*q++ = *s;
+	*q++ = *s;
 
     for(n=valInt(ht->size), q=symbols; n-- > 0; q++)
       if ( (nonObject(q->name) || !isFreedObj(q->name)) &&
