@@ -113,7 +113,7 @@ ar_divide(NumericValue n1, NumericValue n2, NumericValue r)
 int
 ar_times(NumericValue n1, NumericValue n2, NumericValue r)
 { if ( intNumericValue(n1) && intNumericValue(n2) )
-  { if ( abs(n1->value.i) >= (1 << 15) || abs(n2->value.i) >= (1 << 15) )
+  { if ( labs(n1->value.i) >= (1 << 15) || labs(n2->value.i) >= (1 << 15) )
     { r->value.f = (double)n1->value.i * (double)n2->value.i;
       r->type = V_DOUBLE;
       succeed;
