@@ -36,6 +36,7 @@
 	    gspy/1,			% Start tracer and set spypoint
 	    gdebug/0			% Start tracer and debug
 	  ]).
+:- use_module(library(pce)).
 :- set_prolog_flag(generate_debug_info, false).
 :- meta_predicate
 	gtrace(0),
@@ -65,10 +66,11 @@ guitracer :-
 	visible(+cut_call),
 	print_message(informational, gui_tracer(true)).
 guitracer :-
-	load_files([library('trace/trace')],
-		   [ silent(true),
-		     if(not_loaded)
-		   ]),
+	in_pce_thread_sync(
+	    load_files([library('trace/trace')],
+		       [ silent(true),
+			 if(not_loaded)
+		       ])),
 	set_prolog_flag(gui_tracer, true),
 	visible(+cut_call),
 	print_message(informational, gui_tracer(true)).
