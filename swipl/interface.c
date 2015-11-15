@@ -434,7 +434,7 @@ GetChars(term_t t, char **s, unsigned int *len)
 static int
 StripModuleTag(term_t t, atom_t *module, term_t p)
 { atom_t name;
-  int arity;
+  size_t arity;
   term_t a = PL_new_term_ref();
 
   PutTerm(p, t);
@@ -1485,7 +1485,7 @@ termToObject(term_t t, PceType targettype, atom_t assoc, int new)
 static PceObject
 termToObject(term_t t, PceType type, atom_t assoc, int new)
 { atom_t functor;
-  int arity;
+  size_t arity;
 
   DEBUG(Sdprintf("termToObject(");
 	PL_write_term(Soutput, t, 1200, 0);
@@ -1688,7 +1688,7 @@ unifyObject(term_t t, PceObject obj, int top)
     case PCE_ASSOC:
       if ( !top )
       { atom_t n;
-	int a;
+	size_t a;
 
 	if ( IsVar(t) )			/* get(R, S, Var) */
 	  return unifyReference(t, pcetype, value);
@@ -1724,7 +1724,7 @@ unifyObject(term_t t, PceObject obj, int top)
   }
 
   { atom_t name;
-    int n, arity;
+    size_t n, arity;
     atom_t pname;				/* name of Pce object */
     int parity;				/* its `arity' */
     PceObject got;			/* temp variable */
@@ -1992,7 +1992,7 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
 
   if ( receiver )
   { atom_t name;
-    int  arity;
+    size_t  arity;
     PceClass class;
 
     if ( !get_pce_class(cl, &class) )
@@ -2217,7 +2217,7 @@ pl_get_class(term_t rec, term_t cl, term_t msg, term_t ret)
 static foreign_t
 pl_object1(term_t ref)
 { atom_t name;
-  int arity;
+  size_t arity;
 
   if ( GetNameArity(ref, &name, &arity) &&
        name == ATOM_ref &&
@@ -3110,7 +3110,7 @@ unify_prof_node(term_t t, void *impl)
 static int
 get_prof_node(term_t ref, void **impl)
 { atom_t name;
-  int arity;
+  size_t arity;
 
   if ( GetNameArity(ref, &name, &arity) &&
        name == ATOM_ref &&

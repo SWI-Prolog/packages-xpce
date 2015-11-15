@@ -21,13 +21,13 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include <stdio.h>
-#include <SWI-Stream.h>
-#include <SWI-Prolog.h>
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
+
+#include <stdio.h>
+#include <SWI-Stream.h>
+#include <SWI-Prolog.h>
 
 #ifdef __WINDOWS__
 
