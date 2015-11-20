@@ -1,6 +1,4 @@
-/*  $Id$
-
-    Part of XPCE
+/*  Part of XPCE
 
     Author:  Jan Wielemaker and Anjo Anjewierden
     E-mail:  jan@swi.psy.uva.nl
@@ -10,6 +8,7 @@
     Copyright (C) 1990-2001 SWI, University of Amsterdam. All rights reserved.
 */
 
+#define PL_ARITY_AS_SIZE 1
 #include <SWI-Stream.h>
 #include <SWI-Prolog.h>
 #include <windows.h>
