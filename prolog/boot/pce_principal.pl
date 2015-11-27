@@ -321,11 +321,12 @@ get_implementation(trace(Id), Args, Obj, Rval) :-
 %	SWI-Prolog: make this a normal user (debug-able) predicate.
 
 pce_ifhostproperty(prolog(swi), [
-(:- '$set_predicate_attribute'(send_implementation(_,_,_),  system,      0)),
-(:- '$set_predicate_attribute'(get_implementation(_,_,_,_), system,      0)),
-(:- '$set_predicate_attribute'(send_implementation(_,_,_),  hide_childs, 0)),
-(:- '$set_predicate_attribute'(get_implementation(_,_,_,_), hide_childs, 0))
-				]).
+(:- unlock_predicate(send_implementation/3)),
+(:- unlock_predicate(get_implementation/4)),
+(:- '$set_predicate_attribute'(send_implementation(_,_,_),  hide_childs, false)),
+(:- '$set_predicate_attribute'(get_implementation(_,_,_,_), hide_childs, false))
+		   ]).
+
 
 		 /*******************************
 		 *	    DECLARATIONS	*
