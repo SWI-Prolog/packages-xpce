@@ -76,7 +76,9 @@ ws_create_font(FontObj f, DisplayObj d)
     }
 
     if ( !(match = XftFontMatch(r->display_xref, r->screen, p, &fcrc)) )
+    { DEBUG(NAME_font, Cprintf("Not found.  Calling replaceFont()\n"));
       return replaceFont(f, d);
+    }
 
 #ifdef HAVE_XFTNAMEUNPARSE
     DEBUG(NAME_font,
