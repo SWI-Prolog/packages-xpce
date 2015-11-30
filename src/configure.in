@@ -617,7 +617,10 @@ esac
 
 dnl XftNameUnparse() is not available in all versions
 if test "$ac_xft" = true; then
+    oldlibs="$LIBS"
+    LIBS="$XLIBS $LIBS"
     AC_CHECK_FUNCS(XftNameUnparse)
+    LIBS="$oldlibs"
 else
 cat << _EOM_
 *****************************************************************
