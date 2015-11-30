@@ -76,7 +76,7 @@ ws_create_font(FontObj f, DisplayObj d)
     }
 
     if ( !(match = XftFontMatch(r->display_xref, r->screen, p, &fcrc)) )
-    { DEBUG(NAME_font, Cprintf("Not found.  Calling replaceFont()\n"));
+    { DEBUG(NAME_font, Cprintf("XftFontMatch() failed. Calling replaceFont()\n"));
       return replaceFont(f, d);
     }
 
@@ -100,7 +100,10 @@ ws_create_font(FontObj f, DisplayObj d)
     xft = XftFontOpenPattern(r->display_xref, match);
 
     if ( !xft )
+    { DEBUG(NAME_font,
+	    Cprintf("XftFontOpenPattern() failed. Calling replaceFont()\n"));
       return replaceFont(f, d);
+    }
 
 //   XftPatternDestroy(p);
 //    XftPatternDestroy(match);
