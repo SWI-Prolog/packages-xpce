@@ -14,7 +14,7 @@
 :-use_module(library(pce)).
 :- require([ send_list/3
 	   ]).
-
+:- license(gplv2).
 
 % First read the Prolog predicates for solving Rubik's Cube. These predicates
 % do the real work (i.e. order Rubik's Cube) and are defined so that they

@@ -20,14 +20,8 @@ programmer and has bindings for X-windows (X11) and MS-Windows (Win32).
 
 Copyrights
 
-The copyright to XPCE is owned by  the University of Amsterdam. The XPCE
-kernel (the C sources) are  distributed   under  the  Lesser GNU General
-Public License (LGPL). The XPCE/Prolog   libraries  are distibuted under
-the normal GNU General Public License (GPL) with an additional statement
-that allows using these files to   create  an executable program without
-the requirement on the licence  conditions.  This   is  the  same as the
-SWI-Prolog  copyright.  See  http://www.swi-prolog.org/license.html  for
-details and discussion.
+The copyright to XPCE is owned by   the University of Amsterdam. XPCE is
+distributed under the "Simplified BSD License"
 
 
 Installation

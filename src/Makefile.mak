@@ -1,7 +1,7 @@
 ################################################################
 # Makefile for XPCE as a SWI-Prolog package for MS-Windows
 #
-# Author:	Jan Wielemaker
+# Author:	Jan Wielemaker <J.Wielemaker@vu.nl>
 # E-mail:	J.Wielemaker@uva.nl
 # Copyright:	University of Amsterdam
 # Copying:	LGPL.  See file COPYING or http://www.gnu.org/
