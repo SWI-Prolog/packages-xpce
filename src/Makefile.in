@@ -14,10 +14,9 @@
 # Addresses:	Jan Wielemaker:		J.Wielemaker@vu.nl
 #		Anjo Anjewierden:	A.A.Anjewierden@gw.utwente.nl
 #
-# XPCE is licenced under the LGPL. See the file COPYING or
-# http://www.swi-prolog.org/license.html
+# XPCE is licenced under the simplified BSD license.
 #
-# Copyright (C) 1993-2013, University of Amsterdam
+# Copyright (C) 1993-2015, University of Amsterdam
 #			   VU University Amsterdam
 ################################################################
 
@@ -606,7 +605,7 @@ DVLIBDIRS=	lib lib/compatibility lib/dialog lib/draw lib/emacs lib/man \
 DVIMGDIRS=	lib/dialog/bitmaps lib/trace/icons lib/trace/icons/16x16 \
 		lib/doc/icons
 DVBOOTDIRS=	boot
-RTMISC=		Defaults Defaults.user COPYING README
+RTMISC=		Defaults Defaults.user README
 DVFILES=	rt-install dv-home dv-lib dv-boot dv-help \
 	        dv-link dv-pl-files dv-manual dv-man
 DVINSTALL=	$(DVFILES) dv-qlf dv-bins dv-online dv-classindex
