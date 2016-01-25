@@ -2036,7 +2036,7 @@ backwards_filled_line_from_dy(TextImage ti, TextLine l, long here, int dy)
 
     idx0 = paragraph_start(ti, here-1);
 
-    for(sy=0, idx=idx0; ;)		/* Heigth of the paragraph */
+    for(sy=0, idx=idx0; ;)		/* Height of the paragraph */
     { idx = do_fill_line(ti, l, idx);
       sy += l->h;
       if ( l->end >= here )
