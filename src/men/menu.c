@@ -2316,7 +2316,7 @@ static classvardecl rc_menu[] =
   RC(NAME_elevation, RC_REFINE,
      UXWIN("when(@colour_display, 0, @nil)", "@nil"), NULL),
   RC(NAME_valueFont, RC_REFINE, "normal", NULL),
-  RC(NAME_comboBoxHeigth, "1..", "6",
+  RC(NAME_comboBoxHeight, "1..", "6",
      "Maximum height of the combo-box shown for completions")
 };
 

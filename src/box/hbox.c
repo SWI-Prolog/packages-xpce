@@ -71,7 +71,7 @@ static vardecl var_hbox[] =
 { IV(NAME_width,  "int", IV_GET,
      NAME_dimension, "Natural width of content"),
   IV(NAME_ascent, "0..", IV_GET,
-     NAME_dimension, "Heigth above baseline"),
+     NAME_dimension, "Height above baseline"),
   IV(NAME_descent, "0..", IV_GET,
      NAME_dimension, "Depth below baseline"),
   IV(NAME_rubber, "rubber*", IV_GET,

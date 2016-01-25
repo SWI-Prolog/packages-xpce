@@ -225,7 +225,7 @@ struct text_line
 { intptr_t	start;			/* Start index (relative) */
   intptr_t	end;			/* Last index (relative) */
   short		y;			/* Y-position in pixels */
-  short		h;			/* Heigth in pixels */
+  short		h;			/* Height in pixels */
   short		w;			/* Width of displayed text */
   short		base;			/* Baseline (relative to y) */
   short		length;			/* Number of characters displayed */

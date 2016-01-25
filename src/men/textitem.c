@@ -464,7 +464,7 @@ selectCompletionDialogItem(Any item, Chain matches,
   }
 
   lines = valInt(getSizeChain(c->list_browser->dict->members));
-  if ( (ml = getClassVariableValueObject(item, NAME_comboBoxHeigth)) &&
+  if ( (ml = getClassVariableValueObject(item, NAME_comboBoxHeight)) &&
        isInteger(ml) )
     maxlines = max(1, valInt(ml));
   else
@@ -1750,7 +1750,7 @@ static classvardecl rc_textItem[] =
   RC(NAME_look, RC_REFINE, UXWIN("gtk", "win"), NULL),
   RC(NAME_elevation, RC_REFINE,
      UXWIN("when(@colour_display, 1, @nil)", "@_txt_height"), NULL),
-  RC(NAME_comboBoxHeigth, "1..", "6",
+  RC(NAME_comboBoxHeight, "1..", "6",
      "Maximum height of the combo-box shown for completions")
 };
 
