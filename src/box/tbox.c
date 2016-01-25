@@ -131,7 +131,7 @@ static vardecl var_tbox[] =
 { IV(NAME_text, "char_array", IV_GET,
      NAME_content, "Represented text"),
   IV(NAME_style, "style", IV_GET,
-     NAME_appearance, "Appearence of the text")
+     NAME_appearance, "Appearance of the text")
 };
 
 /* Send Methods */
@@ -169,4 +169,3 @@ status
 makeClassTBox(Class class)
 { return declareClass(class, &tbox_decls);
 }
-
