@@ -88,7 +88,7 @@ user:file_search_path(foreign, pce(ArchLib)) :-
 gui_setup_ :-
 	current_prolog_flag(gui, true), !.
 gui_setup_ :-
-	(   getenv('DISPLAY', _)
+	(   getenv('DISPLAY', D), D \== ''
 	;   current_prolog_flag(windows, true)
 	), !,
 	create_prolog_flag(gui, true, []),
