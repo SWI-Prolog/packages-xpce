@@ -737,13 +737,13 @@ struct vars *v;
 		break;
 	case CHR('u'):
 		c = lexdigits(v, 16, 4, 4);
-		if (ISERR())
+		if (ISERR() || c < CHR_MIN || c > CHR_MAX)
 			FAILW(REG_EESCAPE);
 		RETV(PLAIN, c);
 		break;
 	case CHR('U'):
 		c = lexdigits(v, 16, 8, 8);
-		if (ISERR())
+		if (ISERR() || c < CHR_MIN || c > CHR_MAX)
 			FAILW(REG_EESCAPE);
 		RETV(PLAIN, c);
 		break;
@@ -761,7 +761,7 @@ struct vars *v;
 	case CHR('x'):
 		NOTE(REG_UUNPORT);
 		c = lexdigits(v, 16, 1, 255);	/* REs >255 long outside spec */
-		if (ISERR())
+		if (ISERR() || c < CHR_MIN || c > CHR_MAX)
 			FAILW(REG_EESCAPE);
 		RETV(PLAIN, c);
 		break;
@@ -811,6 +811,8 @@ struct vars *v;
 /*
  - lexdigits - slurp up digits and return chr value
  ^ static chr lexdigits(struct vars *, int, int, int);
+ * This does not account for overflow; callers should range-check the result
+ * if maxlen is large enough to make that possible.
  */
 static chr			/* chr value; errors signalled via ERR */
 lexdigits(v, base, minlen, maxlen)

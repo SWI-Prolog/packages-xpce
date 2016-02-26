@@ -594,7 +594,7 @@ struct nfa *nfa;
  * tied together with '|'.  They appear in the tree as the left children
  * of a chain of '|' subres.
  ^ static struct subre *parse(struct vars *, int, int, struct state *,
- ^ 	struct state *);
+ ^	struct state *);
  */
 static struct subre *
 parse(v, stopper, type, init, final)
@@ -669,7 +669,7 @@ struct state *final;		/* final state */
  * Concatenated things are bundled up as much as possible, with separate
  * ',' nodes introduced only when necessary due to substructure.
  ^ static struct subre *parsebranch(struct vars *, int, int, struct state *,
- ^ 	struct state *, int);
+ ^	struct state *, int);
  */
 static struct subre *
 parsebranch(v, stopper, type, left, right, partial)
@@ -694,7 +694,7 @@ int partial;			/* is this only part of a branch? */
 		newarc(v->nfa, '^', 0, lp, right);
 		newarc(v->nfa, '^', 1, lp, right);
 		seencontent = 1;
- 	}
+	}
 
 	while (!SEE('|') && !SEE(stopper) && !SEE(EOS)) {
 		if (seencontent) {	/* implicit concat operator */
@@ -724,7 +724,7 @@ int partial;			/* is this only part of a branch? */
  * in particular, it contains a recursion that can involve parsing the rest
  * of the branch, making this function's name somewhat inaccurate.
  ^ static VOID parseqatom(struct vars *, int, int, struct state *,
- ^ 	struct state *, struct subre *);
+ ^	struct state *, struct subre *);
  */
 static VOID
 parseqatom(v, stopper, type, lp, rp, top)
@@ -1579,7 +1579,7 @@ struct state *rp;
  - dovec - fill in arcs for each element of a cvec
  * This one has to handle the messy cases, like MCCEs and MCCE leaders.
  ^ static VOID dovec(struct vars *, struct cvec *, struct state *,
- ^ 	struct state *);
+ ^	struct state *);
  */
 static VOID
 dovec(v, cv, lp, rp)
@@ -1616,9 +1616,10 @@ struct state *rp;
 	/* first, get the ordinary characters out of the way */
 	for (p = cv->chrs, i = cv->nchrs; i > 0; p++, i--) {
 		ch = *p;
-		if (!ISCELEADER(v, ch))
+		if (!ISCELEADER(v, ch)) {
 			newarc(v->nfa, PLAIN, subcolor(v->cm, ch), lp, rp);
-		else {
+		        NOERR();
+		} else {
 			assert(singleton(v->cm, ch));
 			assert(leads != NULL);
 			if (!haschr(leads, ch))
@@ -1641,6 +1642,7 @@ struct state *rp;
 		}
 		if (from <= to)
 			subrange(v, from, to, lp, rp);
+		NOERR();
 	}
 
 	if ((leads == NULL || leads->nchrs == 0) && cv->nmcces == 0)
