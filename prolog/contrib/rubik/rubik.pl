@@ -1,73 +1,35 @@
-%
-% %Z% %M% %I% %E% %Q%
-%
-% Copyright (C) 1992, 1993 by Christian Schlichtherle.
-%
-% For distribution conditions please read the
-% GNU General Public License version 2.
-%
-%
-% Rubik's Cube:
-%
-% The algorithm of this program is based on Josef Trajber's book
-% 'Der Wuerfel (Rubiks Cube); Loesungswege; math. Grundlagen; Varianten fuer
-% Supertueftler', Falken-Verlag, 1981.
-%
-% There are two different data structures handled by this program:
-% 1. The cube is represented as a prolog term
-%
-%      cube(+Field1, ...+Field54)
-%
-%    where FieldX is the X-th field on the cube.
-%      The ordinate X of a field can easily be seen when you take a cube and
-%    fold it out into a 2-dimensional cross. The fields on this cross are
-%    numbered in canonical order, i.e. from left to right, top down.
-%      Any full instantiated term can be used as a value of a field since the
-%    terms are only used to compare them to the terms of the centerstones.
-% 2. Draws to the cube are notated as a Prolog term like this:
-%
-%      S/N
-%    where S is one of:
-%
-%      l: left side.
-%      f: front side.
-%      r: right side.
-%      b: back side.
-%      u: upside.
-%      d: downside.
-%
-%    and N is the number of clockwise 90 degree turns applying to this side:
-%
-%      -1: one turn counterclockwise (i.e. three clockwise turns).
-%       0: no op.
-%       1: one turn.
-%       2: two turns (either directions).
-%
-%    To know how a sidename is attached to a side of the cube you should know
-%    that the heart of the cross is called the front side. All other sidenames
-%    are then obvious.
-%
-% INTERNALS:
-%
-% Important note: Rotating the cube clockwise around the front surface
-% (turn_cube/3 does this for you) is a permutation of the sides adjacent to the
-% front side. The permutation is (l u r d) (<-- This is the cyclic notation of
-% the permutation).
-% Thus, if you have a list of draws applying to a one times 90 degree clockwise
-% turned cube and you want to know which draws would do the same job on the
-% unturned cube, take the side of the cube to turn from each draw and apply
-% the permutation backwards! The number and direction of each turn stays the
-% same!
-% Thus, the draw list [r/1,f/ -1,l/2] becomes [u/1,f/ -1,d/2]
-% (f and b stay the same because they are not permuted and are thus not
-% mentioned in the cycle).
-% In general: If the cube was turned n times,
-% you have to apply the permutation n times backwards.
-% Thus, if the cube was three times turned clockwise,
-% the draw r/ -1 becomes d/ -1.
-% Note that this is the same as if the cube has been turned counterclockwise
-% one time (thus applying the permutation one times forward).
-%
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
+
+    Author:        Christian Schlichtherle
+    WWW:           http://www.swi-prolog.org
+    Copyright (c)  1995, Christian Schlichtherle
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in
+       the documentation and/or other materials provided with the
+       distribution.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE.
+*/
 
 :-module(rubik,[ordered/1,
 		ordered/7,
@@ -92,6 +54,64 @@
 
 :- op(0, fx, l).
 
+/** <module> Rubik's Cube
+
+The algorithm of this program is based on Josef Trajber's book
+'Der Wuerfel (Rubiks Cube); Loesungswege; math. Grundlagen; Varianten fuer
+Supertueftler', Falken-Verlag, 1981.
+
+There are two different data structures handled by this program:
+1. The cube is represented as a prolog term
+
+     cube(+Field1, ...+Field54)
+
+   where FieldX is the X-th field on the cube. The ordinate X of a field
+   can easily be seen when you take a cube and fold it out into a
+   2-dimensional cross. The fields on this cross are numbered in
+   canonical order, i.e. from left to right, top down. Any full
+   instantiated term can be used as a value of a field since the terms
+   are only used to compare them to the terms of the centerstones. 2.
+   Draws to the cube are notated as a Prolog term like this:
+
+   S/N, where S is one of:
+
+     l: left side.
+     f: front side.
+     r: right side.
+     b: back side.
+     u: upside.
+     d: downside.
+
+   and N is the number of clockwise 90 degree turns applying to this side:
+
+     -1: one turn counterclockwise (i.e. three clockwise turns).
+      0: no op.
+      1: one turn.
+      2: two turns (either directions).
+
+   To know how a sidename is attached to a side of the cube you should know
+   that the heart of the cross is called the front side. All other sidenames
+   are then obvious.
+
+## Internals
+
+Important note: Rotating the cube clockwise around the front surface
+(turn_cube/3 does this for you) is a permutation of the sides adjacent
+to the front side. The permutation is (l u r d) (<-- This is the cyclic
+notation of the permutation). Thus, if you have a list of draws applying
+to a one times 90 degree clockwise turned cube and you want to know
+which draws would do the same job on the unturned cube, take the side of
+the cube to turn from each draw and apply the permutation backwards! The
+number and direction of each turn stays the same! Thus, the draw list
+[r/1,f/ -1,l/2] becomes [u/1,f/ -1,d/2] (f and b stay the same because
+they are not permuted and are thus not mentioned in the cycle). In
+general: If the cube was turned n times, you have to apply the
+permutation n times backwards. Thus, if the cube was three times turned
+clockwise, the draw r/ -1 becomes d/ -1. Note that this is the same as
+if the cube has been turned counterclockwise one time (thus applying the
+permutation one times forward).
+*/
+
 % This is for printing Rubik's Cube:
 % I splitted the predicate up so SB-Prolog can work with it.
 portray([]):-!.
@@ -100,7 +120,7 @@ portray([H|T]):-
 portray(S/N):-
 	portray(S),write('/'),portray(N).
 portray(
-    cube(U1,U2,U3,
+   cube(U1,U2,U3,
          U4,U5,U6,
          U7,U8,U9,
 L1,L2,L3,F1,F2,F3,R1,R2,R3,

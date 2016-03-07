@@ -2,11 +2,11 @@ This  directory  is  for   contributions    from   the  user  community.
 Contributions are, when not  specified   otherwise  in  the contribution
 itself, distributed under the following conditions:
 
-	* GNU General Public Licence Release 2 is applicable
+	* Simplified BSD license is applicable
 
 Administrative points:
 
-	* Contributions may be mailed to jan@swi.psy.uva.nl.  Anything
+	* Contributions may be mailed to J.Wielemaker@vu.nl.  Anything
 	  is welcome!
 
 	* Each contribution lives in it's own directory below this one
@@ -21,7 +21,7 @@ Administrative points:
 
 Using this schema
 
-	* Interactive complete programs may be started from the 
+	* Interactive complete programs may be started from the
 	  DemoBrowser.
 
 	* Libraries may be loaded using:
