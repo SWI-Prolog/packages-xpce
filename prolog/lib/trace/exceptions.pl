@@ -153,6 +153,8 @@ general_exception(existence_error(Type, _Object),
 		  existence_error(Type, _)) :- !.
 general_exception(syntax_error(_Message),
 		  syntax_error(_)) :- !.
+general_exception(timeout_error(Action, _Stream),
+		  timeout_error(Action,_)) :- !.
 general_exception('$stream'(_), '$stream'(_)) :- !.
 general_exception('$socket'(_), '$socket'(_)) :- !.
 general_exception(C0, C) :-
