@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog/projects/xpce/
-    Copyright (c)  2001-2014, University of Amsterdam
+    Copyright (c)  2001-2016, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -141,6 +141,9 @@ break_level(-1).				% non-interactive thread.
 %	@param Thread: calling thread.
 
 send_tracer(Term) :-
+	notrace(send_tracer_(Term)).
+
+send_tracer_(Term) :-
 	thread_self(Thread),
 	send_tracer(Thread, Term).
 

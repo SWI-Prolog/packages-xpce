@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (c)  2001-2015, University of Amsterdam
+    Copyright (c)  2001-2016, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -55,12 +55,31 @@
 		 *	      INTERCEPT		*
 		 *******************************/
 
+%%	with_access_user(:Goal) is det.
+%
+%	Run Goal with set_prolog_flag(access_level,user)
+
+:- meta_predicate with_access_user(0).
+:- '$hide'(with_access_user/1).  % Just hide entry and leave children tracable
+
+with_access_user(G) :-
+      notrace(( current_prolog_flag(access_level, Was),
+		set_prolog_flag(access_level, user))),
+      setup_call_cleanup(
+	  true,
+	  G,
+	  notrace(set_prolog_flag(access_level, Was))).
+
+
 :- thread_local
 	finished_frame/1,
 	last_action/1,
 	show_unify_as/2.
 
 user:prolog_trace_interception(Port, Frame, CHP, Action) :-
+       with_access_user(prolog_trace_interception_gui(Port, Frame, CHP, Action)).
+
+prolog_trace_interception_gui(Port, Frame, CHP, Action) :-
 	current_prolog_flag(gui_tracer, true),
 	(   notrace(intercept(Port, Frame, CHP, GuiAction)),
 	    map_action(GuiAction, Frame, Action)
@@ -124,6 +143,9 @@ traceall :-
 %	Toplevel of the tracer interception.  Runs in debugged thread.
 
 intercept(Port, Frame, CHP, Action) :-
+	with_access_user(intercept_(Port, Frame, CHP, Action)).
+
+intercept_(Port, Frame, CHP, Action) :-
 	prolog_frame_attribute(Frame, predicate_indicator, PI),
 	debug(gtrace(intercept),
 	      '*** do_intercept ~w, ~w, ~w: ~q ...', [Port, Frame, CHP, PI]),
@@ -148,7 +170,10 @@ fix_action(_,    Action, Action).
 %	Actual core of the tracer intercepting code. Runs in the
 %	debugged thread.
 
-do_intercept(call, Frame, CHP, Action) :-
+do_intercept(Port, Frame, CHP, Action) :-
+	with_access_user(do_intercept_(Port, Frame, CHP, Action)).
+
+do_intercept_(call, Frame, CHP, Action) :-
 	(   \+ hide_children_frame(Frame),
 	    (   last_action(retry)
 	    ;	prolog_frame_attribute(Frame, top, true),
@@ -164,7 +189,7 @@ do_intercept(call, Frame, CHP, Action) :-
 	;   show(Frame, CHP, 1, call),
 	    action(Action)
 	).
-do_intercept(exit, Frame, CHP, Action) :-
+do_intercept_(exit, Frame, CHP, Action) :-
 	(   \+ hide_children_frame(Frame),
 	    \+(( prolog_frame_attribute(Frame, skipped, true),
 		 \+ finished_frame(Frame),
@@ -179,10 +204,10 @@ do_intercept(exit, Frame, CHP, Action) :-
 	->  Action = leap
 	;   Action = creep
 	).
-do_intercept(fail, Frame, CHP, Action) :-
+do_intercept_(fail, Frame, CHP, Action) :-
 	show(Frame, CHP, 1, fail),
 	action(Action).
-do_intercept(exception(Except), Frame, CHP, Action) :-
+do_intercept_(exception(Except), Frame, CHP, Action) :-
 	(   prolog_frame_attribute(Frame, goal, Goal),
 	    predicate_property(Goal, interpreted)
 	->  Up = 0
@@ -190,16 +215,16 @@ do_intercept(exception(Except), Frame, CHP, Action) :-
 	),
 	show(Frame, CHP, Up, exception(Except)),
 	action(Action).
-do_intercept(redo(_), Frame, CHP, Action) :-
+do_intercept_(redo(_), Frame, CHP, Action) :-
 	(   hide_children_frame(Frame)
 	;   prolog_skip_level(redo_in_skip, redo_in_skip)
 	), !,					% inside black box or skipped goal
 	show(Frame, CHP, 1, redo),
 	action(Action).
-do_intercept(redo(0), Frame, _CHP, into) :- !,	% next clause
+do_intercept_(redo(0), Frame, _CHP, into) :- !,	% next clause
 	asserta(show_unify_as(Frame, redo)).
-do_intercept(redo(_PC), _Frame, _CHP, creep).	% internal branch
-do_intercept(unify, Frame, CHP, Action) :-
+do_intercept_(redo(_PC), _Frame, _CHP, creep).	% internal branch
+do_intercept_(unify, Frame, CHP, Action) :-
 	(   show_unify_as(Frame, How)
 	;   How = unify
 	), !,
@@ -210,7 +235,7 @@ do_intercept(unify, Frame, CHP, Action) :-
 	predicate_name(user:Goal, Pred),
 	send_tracer(report(status, '%s: %s', How?label_name, Pred)),
 	action(Action).
-do_intercept(cut_call(PC), Frame, CHP, Action) :-
+do_intercept_(cut_call(PC), Frame, CHP, Action) :-
 	prolog_frame_attribute(Frame, goal, Goal),
 	predicate_name(user:Goal, Pred),
 	send_tracer(report(status, 'Cut in: %s', Pred)),
@@ -224,7 +249,7 @@ do_intercept(cut_call(PC), Frame, CHP, Action) :-
 			    bindings
 			  ]),
 	action(Action).
-do_intercept(cut_exit(PC), Frame, CHP, Action) :-
+do_intercept_(cut_exit(PC), Frame, CHP, Action) :-
 	prolog_show_frame(Frame,
 			  [ pc(PC),
 			    choice(CHP),
@@ -536,13 +561,15 @@ find_subgoal(_, Pos, Pos).
 %
 %	@tbd	Synchronise with send_pce/1 and in_debug_thread/2.
 
-action(Action) :-
+action(Action) :- with_access_user(action_(Action)).
+
+action_(Action) :-
 	pce_thread(Pce),
 	thread_self(Pce), !,
 	get_tracer(action, Action0),
 	debug(gtrace(action), 'Got action ~w', [Action0]),
 	action(Action0, Action).
-action(Action) :-
+action_(Action) :-
 	send_tracer(prepare_action),
 	repeat,
 	debug(gtrace(action), ' ---> action: wait', []),
@@ -595,6 +622,7 @@ run_in_debug_thread(Goal, GVars, Caller, Id) :-
 	thread_debug_queue(Caller, Queue),
 	thread_send_message(Queue, '$trace'(Result, Id)).
 
+
 action(break, Action) :- !,
 	break,
 	format(user_error, 'Continuing the debug session~n', []),
@@ -615,9 +643,9 @@ show_stack(Frame, Attributes) :-
 	tracer_gui(Attributes, GUI),
 	debug(gtrace(stack), 'stack ...', []),
 	in_debug_thread(GUI,
-			stack_info(Frame,
+			notrace(stack_info(Frame,
 				   CallFrames, ChoiceFrames,
-				   Attributes)),
+				   Attributes))),
 	send_tracer(GUI, show_stack(CallFrames, ChoiceFrames)).
 show_stack(_, _).
 
