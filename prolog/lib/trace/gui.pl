@@ -140,7 +140,9 @@ break_level(-1).				% non-interactive thread.
 %
 %	@param Thread: calling thread.
 
-send_tracer(Term) :-
+send_tracer(Term):- notrace(send_tracer_(Term)).
+
+send_tracer_(Term) :-
 	thread_self(Thread),
 	send_tracer(Thread, Term).
 
