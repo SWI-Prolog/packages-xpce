@@ -58,6 +58,7 @@
 %%	with_access_user(:Goal) is det.
 %
 %	Run Goal with set_prolog_flag(access_level,user)
+:- meta_predicate with_access_user(0).
 :- '$hide'(with_access_user/1).  % Just hide entry and leave children tracable
 with_access_user(G):-
       notrace((current_prolog_flag(access_level,Was),set_prolog_flag(access_level,user))),
