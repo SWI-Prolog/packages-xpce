@@ -405,7 +405,7 @@ test, conversion and computation macro's are provided.
 #define min(a, b)	((a) < (b) ? (a) : (b))
 
 #define isInteger(i)	((uintptr_t)(i) & INT_MASK)
-#define toInt(i)	((Int)(((intptr_t)(i)<<TAG_BITS)|INT_MASK))
+#define toInt(i)	((Int)(((uintptr_t)(i)<<TAG_BITS)|INT_MASK))
 #define valInt(i)	(((intptr_t)(i))>>TAG_BITS)
 #define incrInt(i)	((i) = toInt(valInt(i)+1))
 #define decrInt(i)	((i) = toInt(valInt(i)-1))
