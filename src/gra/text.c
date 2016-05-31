@@ -573,7 +573,7 @@ getCharacterPositionText(TextObj t, Int chr)
 static status
 get_char_pos_text(TextObj t, Int chr, int *X, int *Y)
 { int caret = (isDefault(chr) ? valInt(t->caret) : valInt(chr));
-  int w   = abs(valInt(t->area->w));
+  int w   = abs((int)valInt(t->area->w));
   int ch  = valInt(getHeightFont(t->font));
   int cx, cy = 0, lw, sl;
   String s = &t->string->data;

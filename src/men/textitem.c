@@ -133,7 +133,7 @@ RedrawAreaTextItem(TextItem ti, Area a)
   if ( !ws_entry_field(tx, ty, tw+text_item_combo_width(ti), th, flags) )
   { if ( flags & TEXTFIELD_EDITABLE )
     { if ( z && notNil(z) )
-      { int zh = abs(valInt(z->height));
+      { int zh = abs((int)valInt(z->height));
 	int ly = y+am+zh+valInt(getDescentFont(vt->font));
 
 	r_3d_line(x+lw, ly, x+lw+tw, ly, z, TRUE);

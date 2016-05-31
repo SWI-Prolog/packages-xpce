@@ -161,7 +161,7 @@ computeLabel(Label lb)
     TRY(obtainClassVariablesObject(lb));
     b = valInt(lb->border);
     if ( notNil(lb->elevation) )
-      b += abs(valInt(lb->elevation->height));
+      b += abs((int)valInt(lb->elevation->height));
 
     if ( instanceOfObject(lb->selection, ClassCharArray) )
     { String s = &((CharArray)lb->selection)->data;
