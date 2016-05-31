@@ -268,7 +268,7 @@ install_file(const char *from, const char *to)
     if ( last_modified(to, &to_time) == 0 )
     { time_t from_time;
 
-      if ( !last_modified(from, &from_time) == 0 )
+      if ( last_modified(from, &from_time) != 0 )
       { perror(from);
 	return FALSE;
       }
