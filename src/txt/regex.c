@@ -711,6 +711,7 @@ filePatternRegex(Regex re, CharArray file_pattern)
 	}
 	continue;
       case '.':
+      case '+':
 	*q++ = '\\';
 	*q++ = *s;
         continue;
