@@ -47,6 +47,9 @@
 #ifdef HAVE_BSTRING_H
 #include <bstring.h>
 #endif
+#ifdef HAVE_POLL_H
+#include <poll.h>
+#endif
 #ifdef HAVE_SYS_SELECT_H
 #include <sys/select.h>
 #endif
@@ -100,7 +103,7 @@ ws_close_output_stream(Stream s)
 #ifdef HAVE_SHUTDOWN
     if ( instanceOfObject(s, ClassSocket) )
       shutdown(s->wrfd, SHUT_WR);
-/*    else 		Seems we must do both to free the descriptor */
+/*    else		Seems we must do both to free the descriptor */
 #endif
       close(s->wrfd);
     s->wrfd = -1;
@@ -209,17 +212,31 @@ ws_read_stream_data(Stream s, void *data, int len, Real timeout)
   }
 
   if ( notDefault(timeout) )
-  { fd_set readfds;
-    struct timeval to;
+  {
+#ifdef HAVE_POLL
     double v = valReal(timeout);
+    int to = (int)(v*1000.0);
+    struct pollfd fds[1];
 
-    to.tv_sec  = (long)v;
-    to.tv_usec = (long)(v * 1000000.0) % 1000000;
-
-    FD_ZERO(&readfds);
-    FD_SET(s->rdfd, &readfds);
-    if ( select(s->rdfd+1, &readfds, NULL, NULL, &to) == 0 )
+    fds[0].fd = s->rdfd;
+    fds[0].events = POLLIN;
+    if ( poll(fds, 1, to) == 0 )
       return -2;
+#else
+    if ( s->rdfd < FD_SETSIZE )
+    { fd_set readfds;
+      struct timeval to;
+      double v = valReal(timeout);
+
+      to.tv_sec  = (long)v;
+      to.tv_usec = (long)(v * 1000000.0) % 1000000;
+
+      FD_ZERO(&readfds);
+      FD_SET(s->rdfd, &readfds);
+      if ( select(s->rdfd+1, &readfds, NULL, NULL, &to) == 0 )
+	return -2;
+    }
+#endif
   }
 
   return read(s->rdfd, data, len);
