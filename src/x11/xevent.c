@@ -43,6 +43,9 @@
 #ifndef FD_ZERO
 #include <sys/select.h>
 #endif
+#if defined(HAVE_POLL_H)
+#include <poll.h>
+#endif
 #ifdef HAVE_BSTRING_H
 #include <bstring.h>
 #endif
@@ -91,24 +94,45 @@ ws_dispatch(Int FD, Any timeout)
 					/* No context: wait for input */
 					/* timeout */
   if ( ThePceXtAppContext == NULL )
-  { struct timeval to;
+  { int ready;
+#ifdef HAVE_POLL
+    int to;
+    struct pollfd fds[1];
+
+    if ( isNil(timeout) )
+    { to = -1;
+    } else if ( isDefault(timeout) )
+    { to = 250;
+    } else if ( isInteger(timeout) )
+    { to = valInt(timeout);
+    } else if ( instanceOfObject(timeout, ClassReal) )
+    { to = (int)(valReal(timeout)*1000.0);
+    }
+
+    fds[0].fd = fd;
+    fds[0].events = POLLIN;
+
+    ready = poll(fds, 1, to);
+#else
+    struct timeval to;
     struct timeval *tp = &to;
     fd_set readfds;
     int setmax = 0;
-    int ready;
 
     if ( isNil(timeout) )
     { tp = NULL;
     } else if ( isDefault(timeout) )
     { to.tv_sec = 0;
       to.tv_usec = 250000;
-    } else if ( isInteger(timeout) )
+    } else
     { double v;
 
       if ( isInteger(timeout) )
 	v = (double)valInt(timeout)/1000.0;
-      else
+      else if ( instanceOfObject(timeout, ClassReal) )
 	v = valReal(timeout);
+      else
+	v = 0.25;
 
       to.tv_sec  = (long)v;
       to.tv_usec = (long)(v * 1000000.0) % 1000000;
@@ -122,6 +146,7 @@ ws_dispatch(Int FD, Any timeout)
     }
 
     ready = select(setmax+1, &readfds, NULL, NULL, tp);
+#endif
     dispatch_fd = ofd;
 
     return (ready > 0 ? SUCCEED : FAIL);
@@ -172,15 +197,28 @@ ws_dispatch(Int FD, Any timeout)
 
 static int
 input_on_fd(int fd)
-{ fd_set rfds;
-  struct timeval tv;
+{
+#ifdef HAVE_POLL
+  struct pollfd fds[1];
 
-  FD_ZERO(&rfds);
-  FD_SET(fd, &rfds);
-  tv.tv_sec = 0;
-  tv.tv_usec = 0;
+  fds[0].fd = fd;
+  fds[0].events = POLLIN;
 
-  return select(fd+1, &rfds, NULL, NULL, &tv) != 0;
+  return poll(fds, 1, 0) != 0;
+#else
+  if ( fd < FD_SETSIZE )
+  { fd_set rfds;
+    struct timeval tv;
+
+    FD_ZERO(&rfds);
+    FD_SET(fd, &rfds);
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
+
+    return select(fd+1, &rfds, NULL, NULL, &tv) != 0;
+  } else
+    return 1;
+#endif
 }
 
 
