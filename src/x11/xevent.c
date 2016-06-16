@@ -107,7 +107,8 @@ ws_dispatch(Int FD, Any timeout)
     { to = valInt(timeout);
     } else if ( instanceOfObject(timeout, ClassReal) )
     { to = (int)(valReal(timeout)*1000.0);
-    }
+    } else
+      to = 256;
 
     fds[0].fd = fd;
     fds[0].events = POLLIN;
