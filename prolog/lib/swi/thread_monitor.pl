@@ -341,12 +341,11 @@ running_styles(TB) :->
 	;   true
 	).
 
-
 update(TB) :->
 	"Update with thread-status"::
 	get(TB, dict, Dict),
 	send(Dict, for_all, message(@arg1, seen, @off)),
-	forall(thread_property(Id, status(Status)),
+	forall(thread_id_status(Id, Status),
 	       send(TB, update_thread, Id, Status)),
 	send(Dict, for_all,
 	     if(@arg1?seen == @off,
@@ -356,6 +355,18 @@ update(TB) :->
 	->  send(TB, report_status, TS)
 	;   true
 	).
+
+:- if(catch(thread_property(main, id(_)),_,fail)).
+thread_id_status(Id, Status) :-
+	thread_property(Handle, status(Status)),
+	(   atom(Handle)
+	->  Id = Handle
+	;   thread_property(Handle, id(Id))
+	).
+:- else.
+thread_id_status(Id, Status) :-
+	thread_property(Id, status(Status)).
+:- endif.
 
 
 recall(TB, Recall:'1..') :->
