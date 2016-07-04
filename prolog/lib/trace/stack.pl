@@ -52,7 +52,7 @@
 
 running_in_pce_thread :-
 	pce_thread(Pce),
-	thread_self(Pce).
+	thread_self_id(Pce).
 
 display_stack(Window, Call, Choice) :-
 	assertion(running_in_pce_thread),

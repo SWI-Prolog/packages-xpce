@@ -144,7 +144,7 @@ send_tracer(Term) :-
 	notrace(send_tracer_(Term)).
 
 send_tracer_(Term) :-
-	thread_self(Thread),
+	thread_self_id(Thread),
 	send_tracer(Thread, Term).
 
 send_tracer(GUI, Term) :-
@@ -155,7 +155,7 @@ send_tracer(Thread, Term) :-
 	send_pce(send(Ref, Term)).
 
 send_if_tracer(Term) :-
-	thread_self(Thread),
+	thread_self_id(Thread),
 	send_if_tracer(Thread, Term).
 send_if_tracer(Thread, Term) :-
 	(   prolog_tracer(Thread, Ref, false)
@@ -164,7 +164,7 @@ send_if_tracer(Thread, Term) :-
 	).
 
 get_tracer(Term, Result) :-
-	thread_self(Thread),
+	thread_self_id(Thread),
 	get_tracer(Thread, Term, Result).
 
 get_tracer(GUI, Term, Result) :-
@@ -229,11 +229,11 @@ msg_id_locked(Id) :-
 %	allow the XPCE thread to call in_debug_thread/1.
 
 send_pce(Goal) :-
-	thread_self(Me),
+	thread_self_id(Me),
 	pce_thread(Me), !,
 	Goal.
 send_pce(Goal) :-
-	thread_self(Self),
+	thread_self_id(Self),
 	term_variables(Goal, GVars),
 	msg_id(Id),
 	in_pce_thread(run_pce(Goal, GVars, Self, Id)),
@@ -283,10 +283,10 @@ in_debug_thread(Object, Goal) :-
 	get(Frame, thread, Thread),
 	in_debug_thread(Thread, Goal).
 in_debug_thread(Thread, Goal) :-
-	thread_self(Thread), !,
+	thread_self_id(Thread), !,
 	Goal, !.
 in_debug_thread(Thread, Goal) :-
-	thread_self(Self),
+	thread_self_id(Self),
 	msg_id(Id),
 	debug(gtrace(thread), 'Call [Thread ~p] ~p', [Thread, Goal]),
 	term_variables(Goal, GVars),
@@ -308,7 +308,7 @@ in_debug_thread(Thread, Goal) :-
 %	Send to the debug thread asynchronously.
 
 send_pce_async(Goal) :-
-	thread_self(Me),
+	thread_self_id(Me),
 	pce_thread(Me), !,
 	Goal.
 send_pce_async(Goal) :-
@@ -364,7 +364,7 @@ variable(quitted,	bool := @off,   both, "Asked to quit").
 variable(mode,		name := created,get,  "Current mode").
 
 running_in_pce_thread :-
-	pce_thread(Pce), thread_self(Pce).
+	pce_thread(Pce), thread_self_id(Pce).
 
 initialise(F, Level:int, Thread:'int|name') :->
 	assertion(running_in_pce_thread),
@@ -1320,17 +1320,17 @@ var_name(_F, _Name:name) :<-
 %	debug('prolog_event_hook(~w).', [Term]),
 %	fail.
 user:prolog_event_hook(frame_finished(Frame)) :-
-	thread_self(Thread),
+	thread_self_id(Thread),
 	gui(Thread, _, Gui),		% has a gui
 	send_pce_async(send(Gui, frame_finished(Frame))),
 	fail.
 user:prolog_event_hook(exit_break(Level)) :-
-	thread_self(Thread),
+	thread_self_id(Thread),
 	gui(Thread, Level, Gui),
 	send_pce_async(send(Gui, destroy)),
 	fail.
 user:prolog_event_hook(finished_query(_Qid, YesNo)) :-
-	thread_self(Thread),		% only main?
+	thread_self_id(Thread),		% only main?
 	break_level(Level),
 	gui(Thread, Level, Ref),
 	send_pce_async(send(Ref, query_finished(YesNo))),
@@ -1349,7 +1349,7 @@ user:message_hook(query(YesNo), _, _Lines) :-
 	fail.
 
 aborted :-
-	thread_self(Thread),
+	thread_self_id(Thread),
 	gui(Thread, Level, Gui),
 	(   Level \== 0
 	->  Message = destroy
@@ -1359,7 +1359,7 @@ aborted :-
 
 query_finished(YesNo) :-
 	finished(YesNo, Message),
-	thread_self(Thread),
+	thread_self_id(Thread),
 	break_level(Level),
 	gui(Thread, Level, Gui),
 	send_pce_async(send(Gui, query_finished(Message))).

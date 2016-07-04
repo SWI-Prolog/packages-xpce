@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (c)  2001-2013, University of Amsterdam
+    Copyright (c)  2001-2016, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -40,7 +40,8 @@
 
 	    canonical_source_file/2,	% +RawFile, -CanonicalFile
 
-	    find_source/3		% +Head, -File|TextBuffer, -Line
+	    find_source/3,		% +Head, -File|TextBuffer, -Line
+	    thread_self_id/1		% -Name|Int
 	  ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_config), []).	% Get config path alias
@@ -197,4 +198,15 @@ canonical_source_file(Source, File) :-
 	    same_file(Source, File)
 	->  true
 	;   File = Source		% system source files
+	).
+
+%%	thread_self_id(-Id)
+%
+%	Get the current thread as atom or integer
+
+thread_self_id(Id) :-
+	thread_self(Thread),
+	(   atom(Thread)
+	->  Id = Thread
+	;   thread_property(Thread, id(Id))
 	).

@@ -368,7 +368,7 @@ tracer_gui(Attributes, GUI) :-
 	attribute(Attributes, gui(GUI)), !,
 	debug(gtrace(gui), 'GUI = ~p (given)', [GUI]).
 tracer_gui(_, GUI) :-
-	thread_self(Thread),
+	thread_self_id(Thread),
 	prolog_tracer(Thread, GUI),
 	debug(gtrace(gui), 'GUI = ~p (from thread ~p)', [GUI, Thread]).
 
@@ -565,7 +565,7 @@ action(Action) :- with_access_user(action_(Action)).
 
 action_(Action) :-
 	pce_thread(Pce),
-	thread_self(Pce), !,
+	thread_self_id(Pce), !,
 	get_tracer(action, Action0),
 	debug(gtrace(action), 'Got action ~w', [Action0]),
 	action(Action0, Action).
@@ -573,7 +573,7 @@ action_(Action) :-
 	send_tracer(prepare_action),
 	repeat,
 	debug(gtrace(action), ' ---> action: wait', []),
-	(   thread_self(Me),
+	(   thread_self_id(Me),
 	    thread_debug_queue(Me, Queue),
 	    repeat,
 	    catch(thread_get_message(Queue, '$trace'(Result, Id)),
