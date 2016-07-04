@@ -202,11 +202,21 @@ canonical_source_file(Source, File) :-
 
 %%	thread_self_id(-Id)
 %
-%	Get the current thread as atom or integer
+%	Get the current thread as atom  or   integer.  This is needed to
+%	pass the thread id through XPCE. If   the caller is an engine we
+%	return the id of the calling thread.
 
 thread_self_id(Id) :-
-	thread_self(Thread),
+	thread_self(Self),
+	real_thread(Self, Thread),
+	debug(gtrace(thread), 'real_thread: ~p --> ~p', [Self, Thread]),
 	(   atom(Thread)
 	->  Id = Thread
 	;   thread_property(Thread, id(Id))
 	).
+
+:- if(current_predicate(engine_create/3)).
+real_thread(Self, Thread) :-
+	thread_property(Self, thread(Thread)), !.
+:- endif.
+real_thread(Thread, Thread).

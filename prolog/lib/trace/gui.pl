@@ -123,12 +123,17 @@ prolog_tracer(Thread, Ref, Create) :-
 	    send_pce(send(new(Ref, prolog_debugger(Level, Thread)), open))
 	).
 
-%%	break_level(-Level)
+%%	break_level(-Level) is det.
 %
-%	Current break-level.
+%	Current break-level. Level is left unbound   if the caller is an
+%	engine. In that case we  use  the   break  level  of  the client
+%	thread.
 
 break_level(Level) :-
 	current_prolog_flag(break_level, Level), !.
+break_level(_Level) :-
+	thread_self(Me),
+	thread_property(Me, engine(true)), !.
 break_level(-1).				% non-interactive thread.
 
 
