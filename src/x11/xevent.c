@@ -207,7 +207,9 @@ input_on_fd(int fd)
 
   return poll(fds, 1, 0) != 0;
 #else
+#ifndef __WINDOWS__
   if ( fd < FD_SETSIZE )
+#endif
   { fd_set rfds;
     struct timeval tv;
 

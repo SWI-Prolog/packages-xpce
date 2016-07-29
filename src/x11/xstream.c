@@ -223,7 +223,9 @@ ws_read_stream_data(Stream s, void *data, int len, Real timeout)
     if ( poll(fds, 1, to) == 0 )
       return -2;
 #else
+#ifndef __WINDOWS__
     if ( s->rdfd < FD_SETSIZE )
+#endif
     { fd_set readfds;
       struct timeval to;
       double v = valReal(timeout);
