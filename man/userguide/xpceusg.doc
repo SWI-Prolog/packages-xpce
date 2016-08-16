@@ -31,8 +31,8 @@
 
 \renewcommand{\runningtitle}{\product{} \productversion}
 \def\booktitle{Programming in XPCE/Prolog}
-\author{\email[Jan Wielemaker]{wielemak@science.uva.nl} \\
-	\email[Anjo Anjewierden]{anjo@science.uva.nl} \\
+\author{\href{mailto:J.Wielemaker@vu.nl}{Jan Wielemaker} \\
+	\href{mailto:a.a.anjewierden@utwente.nl}{Anjo Anjewierden} \\
 	SWI, University of Amsterdam \\
 	Kruislaan 419 \\
 	1098~VA~~Amsterdam}
