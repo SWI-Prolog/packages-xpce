@@ -1016,6 +1016,7 @@ read_term_from_stream(TB, Fd, Start,
 		      Term, Error,
 		      Singletons, TermPos, Comments) :-
 	findall(Op, xref_op(TB, Op), Ops),
+	findall(Opt, xref_flag_option(TB, Opt), Opts),
 	read_source_term_at_location(
 	    Fd, Term,
 	    [ offset(Start),
@@ -1025,8 +1026,16 @@ read_term_from_stream(TB, Fd, Start,
 	      singletons(Singletons),
 	      subterm_positions(TermPos),
 	      comments(Comments)
+	    | Opts
 	    ]).
 
+
+:- if(predicate_property(xref_prolog_flag(_,_,_,_), defined)).
+xref_flag_option(TB, var_prefix(Bool)) :-
+	xref_prolog_flag(TB, var_prefix, Bool, _Line).
+:- else.
+xref_flag_option(_, _) :- fail.
+:- endif.
 
 check_clause(M, From:from=[int], Repair:repair=[bool]) :->
 	"Check syntax of clause"::
