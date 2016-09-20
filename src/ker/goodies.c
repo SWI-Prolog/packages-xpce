@@ -280,7 +280,8 @@ substr(register char *str, register char *sb)
 { register char *r, *q;
 
   for (; *str; str++)
-  { for (r=str, q=sb; *r == *q && *r != '\0'; r++, q++) ;
+  { for (r=str, q=sb; *r == *q && *r != '\0'; r++, q++)
+      ;
 
     if (*q == '\0')
       succeed;
@@ -304,7 +305,8 @@ substr_ignore_case(register char *str, register char *sb)
 { register char *r, *q;
 
   for (; *str; str++)
-  { for (r=str, q=sb; tolower(*r) == tolower(*q) && *r != '\0'; r++, q++) ;
+  { for (r=str, q=sb; tolower(*r) == tolower(*q) && *r != '\0'; r++, q++)
+      ;
 
     if (*q == EOS)
       succeed;
