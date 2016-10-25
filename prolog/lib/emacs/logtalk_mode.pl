@@ -201,15 +201,13 @@ directive_colours(end_object, entity_directive-[]).
 directive_colours(end_protocol, entity_directive-[]).
 directive_colours(info(_), entity_directive-[classify]).
 directive_colours(initialization(_), entity_directive-[classify]).
-directive_colours(synchronized, entity_directive-[]).
 directive_colours(threaded, entity_directive-[]).
 directive_colours(uses(_), entity_directive-[entity_identifier]).
 % module directives
 directive_colours(use_module(_), entity_directive-[entity_identifier]).
 directive_colours(use_module(_, _), entity_directive-[entity_identifier,classify]).
 % predicate directives
-directive_colours(alias(_, _, _), predicate_directive-[classify,classify,classify]).
-directive_colours(annotation(_), predicate_directive-[classify]).
+directive_colours(alias(_, _), predicate_directive-[entity_identifier,classify]).
 directive_colours(coinductive(_), predicate_directive-[classify]).
 directive_colours(discontiguous(_), predicate_directive-[classify]).
 directive_colours(dynamic(_), predicate_directive-[classify]).
@@ -281,6 +279,16 @@ goal_colours(threaded_peek(_), built_in-[classify]).
 goal_colours(threaded_peek(_, _), built_in-[classify,classify]).
 goal_colours(threaded_wait(_), built_in-[classify]).
 goal_colours(threaded_notify(_), built_in-[classify]).
+% threaded engines
+goal_colours(threaded_engine_create(_, _, _), built_in-[classify,classify,classify]).
+goal_colours(threaded_engine_destroy(_), built_in-[classify]).
+goal_colours(threaded_engine_self(_), built_in-[classify]).
+goal_colours(threaded_engine(_), built_in-[classify]).
+goal_colours(threaded_engine_next(_, _), built_in-[classify,classify]).
+goal_colours(threaded_engine_next_reified(_, _), built_in-[classify,classify]).
+goal_colours(threaded_engine_yield(_), built_in-[classify]).
+goal_colours(threaded_engine_post(_, _), built_in-[classify,classify]).
+goal_colours(threaded_engine_fetch(_, _), built_in-[classify,classify]).
 % compiling and loading objects, categories and protocols
 goal_colours(logtalk_compile(_), built_in-[classify]).
 goal_colours(logtalk_compile(_, _), built_in-[classify,classify]).
@@ -288,9 +296,13 @@ goal_colours(logtalk_load(_), built_in-[classify]).
 goal_colours(logtalk_load(_, _), built_in-[classify,classify]).
 goal_colours(logtalk_library_path(_, _), built_in-[classify,classify]).
 goal_colours(logtalk_load_context(_, _), built_in-[classify,classify]).
+% make
+goal_colours(logtalk_make, built_in-[classify,classify]).
+goal_colours(logtalk_make(_), built_in-[classify]).
 % flags
 goal_colours(current_logtalk_flag(_, _), built_in-[classify,classify]).
 goal_colours(set_logtalk_flag(_, _), built_in-[classify,classify]).
+goal_colours(create_logtalk_flag(_, _, _), built_in-[classify,classify,classify]).
 /*
 % others
 goal_colours(forall(_, _), built_in-[classify,classify]).
@@ -320,6 +332,7 @@ goal_colours(\+ _, built_in-[classify]).
 goal_colours(catch(_, _, _), built_in-[classify,classify,classify]).
 goal_colours(throw(_), built_in-[classify]).
 % all solutions methods
+goal_colours(findall(_, _, _, _), built_in-[classify,classify,classify,classify]).
 goal_colours(findall(_, _, _), built_in-[classify,classify,classify]).
 goal_colours(forall(_, _), built_in-[classify,classify]).
 goal_colours(bagof(_, _, _), built_in-[classify,setof,classify]).
@@ -339,13 +352,14 @@ goal_colours(goal_expansion(_, _), built_in-[classify,classify]).
 % message sending
 goal_colours('::'(_, _), built_in-[classify,classify]).
 goal_colours('::'(_), built_in-[classify]).
+% "super" calls
 goal_colours('^^'(_), built_in-[classify]).
+% message forwarding
+goal_colours([_], built_in-[classify]).
 % calling external code
 goal_colours('{}'(_), built_in-[classify]).
 % context-switching calls
 goal_colours('<<'(_, _), built_in-[classify,classify]).
-% direct calls of imported predicates
-goal_colours(':'(_), built_in-[classify]).
 
 
 goal_classification(_, normal).
@@ -424,6 +438,8 @@ logtalk_operators([
 	op(200,  fy, ?),	% input/output argument
 	op(200,  fy, @),	% input argument (not modified by the call)
 	op(200,  fy, -),	% output argument (not instantiated)
-	% imported category predicate call operator
-	op(600,  fy, :)
+	% ground argument
+	op(200,  fy, ++),
+	% unbound argument (typically when returning an opaque term)
+	op(200,  fy, --)
 ]).
