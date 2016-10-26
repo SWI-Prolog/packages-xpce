@@ -193,6 +193,7 @@ directive_colours(elif(_), conditional_compilation_directive-[classify]).
 directive_colours(else, conditional_compilation_directive-[]).
 directive_colours(endif, conditional_compilation_directive-[]).
 % entity directives
+directive_colours(built_in, entity_directive-[]).
 directive_colours(set_logtalk_flag(_, _), entity_directive-[classify,classify]).
 directive_colours(calls(_), entity_directive-[entity_identifier]).
 directive_colours(dynamic, entity_directive-[]).
@@ -288,7 +289,7 @@ goal_colours(threaded_engine_next(_, _), built_in-[classify,classify]).
 goal_colours(threaded_engine_next_reified(_, _), built_in-[classify,classify]).
 goal_colours(threaded_engine_yield(_), built_in-[classify]).
 goal_colours(threaded_engine_post(_, _), built_in-[classify,classify]).
-goal_colours(threaded_engine_fetch(_, _), built_in-[classify,classify]).
+goal_colours(threaded_engine_fetch(_), built_in-[classify]).
 % compiling and loading objects, categories and protocols
 goal_colours(logtalk_compile(_), built_in-[classify]).
 goal_colours(logtalk_compile(_, _), built_in-[classify,classify]).
