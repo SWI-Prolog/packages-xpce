@@ -55,4 +55,4 @@ xpce-qlfs:
 		fi
 
 clean:
-		rm -f `find . -name '*.qlf' -print`
+		rm -f $(find -L . -name '*.qlf' -print)
