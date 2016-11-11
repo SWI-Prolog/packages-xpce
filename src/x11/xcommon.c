@@ -99,6 +99,13 @@ x_error_handler(Display *display, XErrorEvent *error)
 }
 
 
+static void
+xt_warning_handler(char *message)
+{ if ( strcmp(message, "Select failed; error code 9") != 0 )
+    Cprintf("XPCE Xt warning: %s\n", message);
+}
+
+
 #define USE_XDEFAULT_APP_CONTEXT 1
 
 #ifdef USE_XDEFAULT_APP_CONTEXT
@@ -135,6 +142,7 @@ pceXtAppContext(void * ctx)
       { errorPce(TheDisplayManager(), NAME_noApplicationContext);
 	fail;
       }
+      XtAppSetWarningHandler(ThePceXtAppContext, xt_warning_handler);
 
       if ( !XtSetLanguageProc(ThePceXtAppContext, NULL, NULL) )
       { errorPce(TheDisplayManager(), NAME_noLocaleSupport,
