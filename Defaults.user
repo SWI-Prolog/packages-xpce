@@ -50,6 +50,14 @@
 
 !emacs_buffer.unicode_encoding: utf8
 
+!Canonicalization done before saving the file.  ensure_newline ensures the
+!last line terminates in a newline.  ensure_no_whitespace_errors removes
+!GIT white space errors: spaces followed by tabs, spaces before a newline
+!and empty newlines before the end of the file.
+
+!emacs_buffer.ensure_newline: @on
+!emacs_buffer.ensure_no_whitespace_errors: @on
+
 ! When to highlight syntax errors in PceEmacs Prolog mode.  One of
 ! typing (always), pause (on whole-buffer scan) or never.  Default
 ! is typing
