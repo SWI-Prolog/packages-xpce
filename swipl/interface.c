@@ -965,7 +965,7 @@ PceName	atomToName(atom_t a)
 	XPCE names and Prolog atoms.
 
 PceObject referenceToObject(term_t a)
-	a is the argment to @/1.  Translate to an XPCE object or raise
+	a is the argument to @/1.  Translate to an XPCE object or raise
 	an error.  This function too caches using the
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 

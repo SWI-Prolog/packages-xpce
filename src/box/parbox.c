@@ -1391,7 +1391,7 @@ static senddecl send_parbox[] =
 { SM(NAME_initialise, 2, T_initialise, initialiseParBox,
      DEFAULT, "Create parbox from width and content"),
   SM(NAME_compute, 0, NULL, computeParBox,
-     DEFAULT, "Compute heigth"),
+     DEFAULT, "Compute height"),
   SM(NAME_requestGeometry, 4, T_geometry, requestGeometryParBox,
      DEFAULT, "Change parbox width"),
   SM(NAME_geometry, 4, T_geometry, geometryParBox,
@@ -1451,5 +1451,3 @@ makeClassParBox(Class class)
 
   succeed;
 }
-
-

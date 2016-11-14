@@ -570,7 +570,7 @@ static senddecl send_date[] =
   SM(NAME_current, 0, NULL, currentDate,
      NAME_set, "Change date to be `now'"),
   SM(NAME_copy, 1, "date", copyDate,
-     NAME_set, "Copy time from argment date object"),
+     NAME_set, "Copy time from argument date object"),
   SM(NAME_set, 6, T_initialise, setDate,
      NAME_set, "Set date from smhDMY"),
   SM(NAME_posixValue, 1, "real", posixValueDate,

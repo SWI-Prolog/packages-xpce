@@ -89,7 +89,7 @@ static vardecl var_rubber[] =
   IV(NAME_natural, "[int]", IV_BOTH,
      NAME_dimension, "Natrual size"),
   IV(NAME_minimum, "int*", IV_BOTH,
-     NAME_dimension, "Mimimum size"),
+     NAME_dimension, "Minimum size"),
   IV(NAME_maximum, "int*", IV_BOTH,
      NAME_dimension, "Maximum size"),
   IV(NAME_linebreak, "{allow,force}*", IV_GET,
@@ -145,4 +145,3 @@ makeClassRubber(Class class)
 
   succeed;
 }
-

@@ -135,7 +135,7 @@ typedef struct _table_cell_dimensions
 { int	x;				/* X-location */
   int	y;				/* Y-location */
   int	w;				/* Width of the cell (outer) */
-  int	h;				/* heigth */
+  int	h;				/* height */
   int	rx;				/* reference-X */
   int	ry;				/* reference-Y */
   int	px;				/* H-padding */

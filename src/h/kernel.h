@@ -1171,7 +1171,7 @@ NewClass(pce)
   BoolObj		debugging;		/* debugging? (watching spy points) */
   BoolObj		trap_errors;		/* Trap tracer on errors */
 #endif
-  Name		last_error;		/* Last error occured */
+  Name		last_error;		/* Last error occurred */
   Chain		catched_errors;		/* Stack of catched error-id's */
   BoolObj		catch_error_signals;	/* Catch Unix signals */
 

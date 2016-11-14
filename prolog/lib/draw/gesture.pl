@@ -354,7 +354,7 @@ class_variable(button,	     button_name, left).
 class_variable(modifier,     modifier,	  '').
 class_variable(cursor,	     cursor,      bottom_right_corner).
 class_variable(minimum_size,  int, 	  3,
-	       "Mimimum width/height of the object").
+	       "Minimum width/height of the object").
 
 variable(object,	graphical*,	both,
 	 "Object created").
