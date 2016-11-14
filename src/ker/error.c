@@ -535,7 +535,7 @@ static const error_def errors[] =
   { NAME_noSuperClassOf,	0,
     "%N: \"%s\" is not a super-class of my class" },
   { NAME_noImplementation,	0,
-    "%N: Not implementated" },
+    "%N: Not implemented" },
   { NAME_badReturnValue,	0,
     "%N: Return of incompatible value: %O; return_type is %N" },
   { NAME_convertedReturnValue,	ET_STATUS,
@@ -894,12 +894,3 @@ errorTypeMismatch(Any rec, Any impl, int arg, Type type, Any val)
   return errorPce(impl, NAME_argumentType,
 		  toInt(arg), argname, getNameType(type), val);
 }
-
-
-
-
-
-
-
-
-

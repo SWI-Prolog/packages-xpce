@@ -46,7 +46,7 @@ errorSignal(int sig)
 #ifdef SIGQUIT
     case SIGQUIT:		msg = "Quit";			break;
 #endif
-    case SIGILL:		msg = "Illegal intruction";	break;
+    case SIGILL:		msg = "Illegal instruction";	break;
 #ifdef SIGEMT
     case SIGEMT:		msg = "EMT trap";		break;
 #endif
