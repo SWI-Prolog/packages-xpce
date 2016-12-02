@@ -352,7 +352,7 @@ ws_has_alt_gr(void)
 
 
 static int
-IsDownKey(code)
+IsDownKey(int code)
 { short mask = GetKeyState(code);
   int down = (mask & 0x8000) != 0;
 
