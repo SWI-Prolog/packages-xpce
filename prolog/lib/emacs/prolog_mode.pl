@@ -145,7 +145,7 @@ variable(show_syntax_errors,
 					 get, "When highlight syntax errors").
 variable(warnings,	   int := 0,	 get, "Number of warnings").
 variable(errors,	   int := 0,	 get, "Number of errors").
-variable(body_indentation, int,		 get, "Indentation for body-goals").
+variable(body_indentation, int,		 both, "Indentation for body-goals").
 variable(cond_indentation, int,		 get, "Indent step for conditional").
 variable(quasiquotation_syntax,
 			   name*,	 both, "Default quasiquotation syntax").
@@ -174,7 +174,8 @@ setup_mode(M) :->
 	;   true
 	),
 	send(M, setup_styles),
-	send(M, setup_margin).
+	send(M, setup_margin),
+	ignore(send(M, setup_auto_indent)).
 
 
 :- send(@class, attribute, outline_regex_list,
@@ -217,6 +218,47 @@ expand_path(Term, D) :-
 	      new(regex('[^-#$&*+./:<=>?@\\\\^`~]\\.($|\\s)'))).
 :- pce_global(@prolog_decl_regex,
 	      new(regex('^:-\\s*[a-z_]+'))).
+
+setup_auto_indent(E) :->
+	"Detect auto-indent parameters from content"::
+	get(E, text_buffer, TB),
+	State = state(0),
+	repeat,
+	    arg(1, State, Here),
+	    (	Here == end_of_file
+	    ->	!, fail
+	    ;	true
+	    ),
+	    (	get(@prolog_full_stop, search, TB, Here, End),
+		get(TB, scan, End, line, 1, start, SOL),
+		get(TB, size, Size),
+		SOL =\= Size
+	    ->	nb_setarg(1, State, SOL)
+	    ;	nb_setarg(1, State, end_of_file)
+	    ),
+	    get(E, prolog_term, Here, @on, Pos, Clause),
+	    Clause = (_Head :- Body),
+	    Pos = term_position(_,_,_,_,[_H,BPos]),
+	    real_body_pos(Body, BPos, BodPos),
+	    arg(1, BodPos, SBody),
+	    get(TB, scan, SBody, line, 0, start, SOL),
+	    get(TB, skip_comment, SOL, skip_layout := @on, SBody),
+	    get(E, column, SBody, Indent), !,
+	    IndentLen is SBody-SOL,
+	    get(TB, contents, SOL, IndentLen, string(IndentString)),
+	    (	sub_string(IndentString, 0, _, _, "\t")
+	    ->	IndentTabs = true
+	    ;	IndentTabs = false
+	    ),
+	    send(E, indent_tabs, IndentTabs),
+	    send(E, body_indentation, Indent),
+	    send(E, report, inform,
+		 'Detected: body_indentation=%s, indent_tabs=%s',
+		 Indent, IndentTabs).
+
+
+real_body_pos((!,_), term_position(_,_,_,_,[_,Pos]), Pos) :- !.
+real_body_pos(_, Pos, Pos).
 
 indent_line(E) :->
 	"Indent current line (Prolog indentation)"::
