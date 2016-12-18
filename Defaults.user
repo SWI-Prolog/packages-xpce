@@ -73,11 +73,12 @@
 ! indentation of goals in the body.  cond_indentation is the extra
 ! indentation for (if->then;else), (a;b), etc.  indent_tabs defines
 ! whether tabs or spaces are used for (re-)indentation.  Default is
-! to use tabs (@on).
+! to use tabs (@on).  PceEmacs detects body_indentation and
+! indent_tabs from the first clause when editing an existing file.
 
-!emacs_prolog_mode.body_indentation: 8
+!emacs_prolog_mode.body_indentation: 4
 !emacs_prolog_mode.cond_indentation: 4
-!emacs_prolog_mode.indent_tabs:	     @on
+!emacs_prolog_mode.indent_tabs:	     @off
 
 ! Comment column for M-; This may be refined by mode (e.g. emacs_prolog_mode,
 ! etc.)

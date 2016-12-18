@@ -151,9 +151,9 @@ variable(quasiquotation_syntax,
 			   name*,	 both, "Default quasiquotation syntax").
 
 class_variable(quasiquotation_syntax, name*, @nil).
-class_variable(body_indentation,      int,   8).
+class_variable(body_indentation,      int,   4).
 class_variable(cond_indentation,      int,   4).
-class_variable(indent_tabs,           bool,  @on,
+class_variable(indent_tabs,           bool,  @off,
 	       "Use tabs for indentation").
 
 
