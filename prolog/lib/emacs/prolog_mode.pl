@@ -468,7 +468,10 @@ insert_percent(E, Times:[int], Char:char) :->
 	get(E, caret, Here),
 	(   send(E, looking_at, '\n%%', Here, 0),
 	    send(E, looking_at, '\\s*$', Here)
-	->  send(E, insert, '\t')
+	->  get(E, body_indentation, Indent),
+	    send(E, backward_delete_char),
+	    send(E, insert, '!'),
+	    send(E, align, Indent)
 	;   true
 	).
 
@@ -479,7 +482,8 @@ insert_exclamation_mark(E, Times:[int], Char:char) :->
 	get(E, caret, Here),
 	(   send(E, looking_at, '\n%!', Here, 0),
 	    send(E, looking_at, '\\s*$', Here)
-	->  send(E, insert, '\t')
+	->  get(E, body_indentation, Indent),
+	    send(E, align, Indent)
 	;   true
 	).
 
@@ -489,7 +493,8 @@ indent_comment_line(E) :->
 	send_super(E, indent_comment_line),
 	get(E, caret, Here),
 	(   send(E, looking_at, '\n%[%!][^\n]*\n%\\s*\n%', Here, 0)
-	->  send(E, insert, '\t')
+	->  get(E, body_indentation, Indent),
+	    send(E, align, Indent)
 	;   true
 	).
 
