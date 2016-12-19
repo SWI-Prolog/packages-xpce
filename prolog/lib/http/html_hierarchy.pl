@@ -38,7 +38,7 @@
 	    pageYOffset/2		% +Cookie, -Y
 	  ]).
 :- use_module(library(pce)).
-:- use_module(library('http/html_write')).
+:- use_module(library(http/html_write)).
 
 :- meta_predicate
 	html_hierarchy(+, :, :, +, -, +).
@@ -175,7 +175,7 @@ function expandall()
 ')).
 
 
-%	pageYOffset(+Cookie, -Y)
+%%	pageYOffset(+Cookie, -Y)
 %
 %	Return the current page Y-offset from the cookie.  This value may
 %	be used in the onLoad handler of the page-body.
