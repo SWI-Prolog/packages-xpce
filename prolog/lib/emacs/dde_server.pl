@@ -34,9 +34,9 @@
 */
 
 :- module(emacs_dde_server,
-	  [ start_emacs_dde_server/1,	% +Force
-	    win_register_emacs/0	% +Externsion
-	  ]).
+          [ start_emacs_dde_server/1,   % +Force
+            win_register_emacs/0        % +Externsion
+          ]).
 :- use_module(library(pce)).
 
 /** <module> Register PceEmacs with the Windows DDE services
@@ -46,49 +46,53 @@ PceEmacs from the Windows shell. The access   points  are dummy calls if
 DDE is nor provided.
 */
 
-%%	start_emacs_dde_server(+Force) is det.
+%!  start_emacs_dde_server(+Force) is det.
 %
-%	If there is no DDE server, register it as =PceEmacs= using the
-%	topic =control=.
+%   If there is no DDE server, register it as =PceEmacs= using the
+%   topic =control=.
 
 :- if(current_predicate(open_dde_conversation/3)).
 :- use_module(library(dde)).
 
 start_emacs_dde_server(_) :-
-	dde_current_service('PceEmacs', control), !.
+    dde_current_service('PceEmacs', control),
+    !.
 start_emacs_dde_server(true) :-
-	catch(close_other_dde_server, _, fail),
-	fail.
+    catch(close_other_dde_server, _, fail),
+    fail.
 start_emacs_dde_server(false) :-
-	catch(ping_other_dde_server, _, fail), !,
-	ignore(send(@emacs, report, status, 'Server on other PceEmacs')).
+    catch(ping_other_dde_server, _, fail),
+    !,
+    ignore(send(@emacs, report, status, 'Server on other PceEmacs')).
 start_emacs_dde_server(_) :-
-	dde_register_service('PceEmacs'(control, Item),
-			     handle_request(Item)).
+    dde_register_service('PceEmacs'(control, Item),
+                         handle_request(Item)).
 
 close_other_dde_server :-
-	setup_call_cleanup(open_dde_conversation('PceEmacs', control, Handle),
-			   dde_execute(Handle, 'close-server'),
-			   close_dde_conversation(Handle)),
-	send(@emacs, report, status, 'Closed server on other PceEmacs').
+    setup_call_cleanup(open_dde_conversation('PceEmacs', control, Handle),
+                       dde_execute(Handle, 'close-server'),
+                       close_dde_conversation(Handle)),
+    send(@emacs, report, status, 'Closed server on other PceEmacs').
 
 ping_other_dde_server :-
-	open_dde_conversation('PceEmacs', control, Handle), !,
-	close_dde_conversation(Handle).
+    open_dde_conversation('PceEmacs', control, Handle),
+    !,
+    close_dde_conversation(Handle).
 
 
 handle_request(Item) :-
-	atom_concat('edit ', WinFile, Item), !,
-	prolog_to_os_filename(File, WinFile),
-	new(B, emacs_buffer(File)),
-	send(B, open, tab),
-	send(B, check_modified_file).
+    atom_concat('edit ', WinFile, Item),
+    !,
+    prolog_to_os_filename(File, WinFile),
+    new(B, emacs_buffer(File)),
+    send(B, open, tab),
+    send(B, check_modified_file).
 handle_request('close-server') :-
-	dde_unregister_service('PceEmacs'),
-	send(@emacs, report, status, 'Closed DDE server').
+    dde_unregister_service('PceEmacs'),
+    send(@emacs, report, status, 'Closed DDE server').
 handle_request(Item) :-
-	format(user_error, 'PceEmacs DDE server: unknown request: ~q', [Item]),
-	fail.
+    format(user_error, 'PceEmacs DDE server: unknown request: ~q', [Item]),
+    fail.
 
 :- else.
 
@@ -99,9 +103,9 @@ start_emacs_dde_server(_).
 :- if(current_predicate(shell_register_dde/6)).
 
 win_register_emacs :-
-	current_prolog_flag(executable, Me),
-	shell_register_dde('prolog.type', edit,
-			   'PceEmacs', control, 'edit %1', Me).
+    current_prolog_flag(executable, Me),
+    shell_register_dde('prolog.type', edit,
+                       'PceEmacs', control, 'edit %1', Me).
 
 :- else.
 

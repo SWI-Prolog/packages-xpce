@@ -33,8 +33,8 @@
 */
 
 :- module(area,
-	[ side_pattern/3	% Side x Side x Pattern
-	]).
+        [ side_pattern/3        % Side x Side x Pattern
+        ]).
 
 %%   side_pattern(+SideA, +SideB, -Pattern)
 %

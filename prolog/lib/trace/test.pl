@@ -42,28 +42,29 @@ situations.  Test 1 2 3 4.
 :- dynamic status/1.
 
 t1 :-
-	trace,
-	forall(between(0, 10, X), assert(status(X))),
-	(   status(S),
-	    S == 5
-	).
+    trace,
+    forall(between(0, 10, X), assert(status(X))),
+    (   status(S),
+        S == 5
+    ).
 
 t2 :-
-	(   \+ foo = foo
-	->  writeln(yes)
-	;   writeln(no)
-	).
+    (   \+ foo = foo
+    ->  writeln(yes)
+    ;   writeln(no)
+    ).
 
 t3 :-
-	A = foo(X),
-	B = bar(X),
-	writeln((A=B)),
-	true.
+    A = foo(X),
+    B = bar(X),
+    writeln((A=B)),
+    true.
 
 t4 :-
-	a(X),
-	b(Y), !,
-	format('X=~w, Y=~w~n', [X, Y]).
+    a(X),
+    b(Y),
+    !,
+    format('X=~w, Y=~w~n', [X, Y]).
 t4.
 
 a(1).
@@ -73,15 +74,15 @@ b(1).
 b(2).
 
 t5 :-
-	a(_A),
-	forall(a(X), b(X)),
-	b(_B).
+    a(_A),
+    forall(a(X), b(X)),
+    b(_B).
 
 t6 :-
-	findall(A, a(A), As),
-	writeln(As).
+    findall(A, a(A), As),
+    writeln(As).
 
 t7 :-
-	format('Please enter your name, followed by a dot~n', []),
-	read(Name),
-	format('Hello ~w~n', [Name]).
+    format('Please enter your name, followed by a dot~n', []),
+    read(Name),
+    format('Hello ~w~n', [Name]).

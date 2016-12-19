@@ -57,71 +57,71 @@ This class was designed to be used with the library scaledbitmap.pl.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- pce_begin_class(url_image, image,
-		   "Image whose source comes from a URL").
+                   "Image whose source comes from a URL").
 
-variable(url,	 name, get, "Source of the image").
+variable(url,    name, get, "Source of the image").
 variable(cache,  bool, get, "Image is cached").
 variable(exists, bool, get, "We succeeded loading the image from URL").
 
 initialise(I, URL:url=name, Cache:cache=[bool], NoImage:no_image=[image]*) :->
-	"Create image from URL data"::
-	send_super(I, initialise),
-	(   (   NoImage == @nil
-	    ->	send(I, load, URL, Cache)
-	    ;	pce_catch_error(_, send(I, load, URL, Cache))
-	    )
-	->  send(I, slot, exists, @on)
-	;   send(I, slot, exists, @off),
-	    (	send(NoImage, instance_of, image)
-	    ->  send(I, copy, NoImage)
-	    ;   NoImage == @default
-	    ->  send_super(I, load, resource(noimg))
-	    )
-	).
+    "Create image from URL data"::
+    send_super(I, initialise),
+    (   (   NoImage == @nil
+        ->  send(I, load, URL, Cache)
+        ;   pce_catch_error(_, send(I, load, URL, Cache))
+        )
+    ->  send(I, slot, exists, @on)
+    ;   send(I, slot, exists, @off),
+        (   send(NoImage, instance_of, image)
+        ->  send(I, copy, NoImage)
+        ;   NoImage == @default
+        ->  send_super(I, load, resource(noimg))
+        )
+    ).
 
 :- pce_global(@url_image_table, new(hash_table)).
 
 lookup(_, URL:name, Cache:[bool], I:url_image) :<-
-	"Lookup from image table"::
-	Cache \== @off,
-	get(@url_image_table, member, URL, I).
+    "Lookup from image table"::
+    Cache \== @off,
+    get(@url_image_table, member, URL, I).
 
 unlink(I) :->
-	get(I, url, URL),
-	(   get(I, cache, @on)
-	->  send(@url_image_table, delete, URL)
-	;   true
-	),
-	send_super(I, unlink).
+    get(I, url, URL),
+    (   get(I, cache, @on)
+    ->  send(@url_image_table, delete, URL)
+    ;   true
+    ),
+    send_super(I, unlink).
 
 free(I) :->
-	"Only free if not referenced"::
-	(   get(I, references, 1)	% 1 from hash-table
-	->  send_super(I, free)
-	).
+    "Only free if not referenced"::
+    (   get(I, references, 1)       % 1 from hash-table
+    ->  send_super(I, free)
+    ).
 
 :- pce_group(file).
 
 load(I, URL:name, Cache:[bool]) :->
-	"load from URL data"::
-	send(I, slot, url, URL),
-	(   new(Re, regex('file:(.*)', @off)),
-	    send(Re, match, URL)
-	->  get(Re, register_value, URL, 1, name, FileName),
-	    send_super(I, load, FileName)
-	;   send(URL, prefix, 'http:', @on)
-	->  new(HC, http_client(URL)),
-	    new(TB, text_buffer),
-	    send(HC, fetch_data, TB),
-	    send_super(I, load, TB),
-	    free(TB),
-	    free(HC)
-	),
-	(   Cache == @off
-	->  send(I, slot, cache, @off)
-	;   send(@url_image_table, append, URL, I),
-	    send(I, slot, cache, @on)
-	).
+    "load from URL data"::
+    send(I, slot, url, URL),
+    (   new(Re, regex('file:(.*)', @off)),
+        send(Re, match, URL)
+    ->  get(Re, register_value, URL, 1, name, FileName),
+        send_super(I, load, FileName)
+    ;   send(URL, prefix, 'http:', @on)
+    ->  new(HC, http_client(URL)),
+        new(TB, text_buffer),
+        send(HC, fetch_data, TB),
+        send_super(I, load, TB),
+        free(TB),
+        free(HC)
+    ),
+    (   Cache == @off
+    ->  send(I, slot, cache, @off)
+    ;   send(@url_image_table, append, URL, I),
+        send(I, slot, cache, @on)
+    ).
 
 :- pce_end_class.
 

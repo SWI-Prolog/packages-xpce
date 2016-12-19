@@ -36,19 +36,19 @@
 :- use_module(library(pce)).
 
 :- emacs_begin_mode(javascript, c,
-		    "Mode for JavaScript programs",
-		    [
-		    ],
-		    []).
+                    "Mode for JavaScript programs",
+                    [
+                    ],
+                    []).
 
 /* Seems JavaScript works best by simply indenting relative to
    the first non-comment/blank on the line.
 */
 
 back_skip_if_etc(E, Pos:int, Start:int) :<-
-	"Find indent for stuff before {"::
-	get(E, scan, Pos, line, 0, start, SOL),
-	get(E, scan, Pos, line, 0, end, EOL),
-	get(E, skip_comment, SOL, EOL, Start).
+    "Find indent for stuff before {"::
+    get(E, scan, Pos, line, 0, start, SOL),
+    get(E, scan, Pos, line, 0, end, EOL),
+    get(E, skip_comment, SOL, EOL, Start).
 
 :- emacs_end_mode.

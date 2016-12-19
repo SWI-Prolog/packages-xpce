@@ -33,200 +33,202 @@
 */
 
 :- module(emacs_extend,
-	  [ declare_emacs_mode/2,
-	    declare_emacs_mode/3
-	  ]).
+          [ declare_emacs_mode/2,
+            declare_emacs_mode/3
+          ]).
 :- use_module(library(pce)).
 :- require([ atomic_list_concat/2
-	   ]).
+           ]).
 
-		/********************************
-		*         DECLARE MODES		*
-		********************************/
+                /********************************
+                *         DECLARE MODES         *
+                ********************************/
 
-:- dynamic				% ensure it is restored over a state
-	emacs_mode_name/1.
+:- dynamic                              % ensure it is restored over a state
+    emacs_mode_name/1.
 
 fix_mode_name_type :-
-	get(@pce, convert, mode_name, type, Type),
-	send(Type, name_reference, mode_name_type),
-	send(Type, kind, name_of),
-	send(Type, slot, context, new(Ctx, chain)),
-	send_list(Ctx, append,
-		  [ fundamental
-		  , prolog
-		  , shell
-		  ]),
-	forall(emacs_mode_name(Mode), send(Ctx, append, Mode)),
-	send(Ctx, sort, unique := @on).
+    get(@pce, convert, mode_name, type, Type),
+    send(Type, name_reference, mode_name_type),
+    send(Type, kind, name_of),
+    send(Type, slot, context, new(Ctx, chain)),
+    send_list(Ctx, append,
+              [ fundamental
+              , prolog
+              , shell
+              ]),
+    forall(emacs_mode_name(Mode), send(Ctx, append, Mode)),
+    send(Ctx, sort, unique := @on).
 
 :- initialization fix_mode_name_type.
 
-%%	declare_emacs_mode(+ModeName, +FileSpec).
+%!  declare_emacs_mode(+ModeName, +FileSpec).
 %
-%	Specifies that PceEmacs mode `ModeName' may be defined by
-%	(auto)loading `FileSpec'.
+%   Specifies that PceEmacs mode `ModeName' may be defined by
+%   (auto)loading `FileSpec'.
 
 declare_emacs_mode(Mode, File) :-
-	get(string('emacs_%s_mode', Mode), value, EmacsModeClass),
-	(   File == []
-	->  true
-	;   pce_autoload(EmacsModeClass, File)
-	),
-	(   \+ special_mode(Mode)
-	->  get(@mode_name_type, context, Ctx),
-	    send(Ctx, add, Mode),
-	    send(Ctx, sort, unique := @on),
-	    assert(emacs_mode_name(Mode))
-	;   true
-	).
+    get(string('emacs_%s_mode', Mode), value, EmacsModeClass),
+    (   File == []
+    ->  true
+    ;   pce_autoload(EmacsModeClass, File)
+    ),
+    (   \+ special_mode(Mode)
+    ->  get(@mode_name_type, context, Ctx),
+        send(Ctx, add, Mode),
+        send(Ctx, sort, unique := @on),
+        assert(emacs_mode_name(Mode))
+    ;   true
+    ).
 
 special_mode(shell).
 special_mode(gdb).
 special_mode(annotate).
 
 
-%%	declare_emacs_mode(+ModeName, +FileSpec, +ListOfPatterns)
+%!  declare_emacs_mode(+ModeName, +FileSpec, +ListOfPatterns)
 %
-%	Sames as declare_emacs_mode/2.  `ListOfPatterns' is a list of
-%	regular expressions that will automatically start this mode.
+%   Sames as declare_emacs_mode/2.  `ListOfPatterns' is a list of
+%   regular expressions that will automatically start this mode.
 
 declare_emacs_mode(Mode, File, Extensions) :-
-	declare_emacs_mode(Mode, File),
-	declare_file_patterns(Extensions, Mode, @emacs_mode_list).
+    declare_emacs_mode(Mode, File),
+    declare_file_patterns(Extensions, Mode, @emacs_mode_list).
 
 declare_file_patterns([], _, _).
 declare_file_patterns([Ext|Rest], Mode, Sheet) :-
-	send(Sheet, value, regex(Ext), Mode),
-	declare_file_patterns(Rest, Mode, Sheet).
+    send(Sheet, value, regex(Ext), Mode),
+    declare_file_patterns(Rest, Mode, Sheet).
 
-%	:- emacs_begin_mode(+Mode, +Super, +Summary, +Bindings, +Syntax).
+%       :- emacs_begin_mode(+Mode, +Super, +Summary, +Bindings, +Syntax).
 %
-%	Binding:
+%       Binding:
 %
-%		Selector = [key(Key)]
-%			   [+ button(Button)]
-%			   [+ button(Button, Function)]		(pullright)
+%               Selector = [key(Key)]
+%                          [+ button(Button)]
+%                          [+ button(Button, Function)]         (pullright)
 %
-%	Syntax:
+%       Syntax:
 %
-%		Char [=+] Category(Args)
+%               Char [=+] Category(Args)
 
 emacs_expansion((:- emacs_begin_mode(Mode, Super, Summary, Bindings, Syntax)),
-		[(:- pce_begin_class(PceMode, PceSuper, Summary)),
-		 (:- pce_class_directive(emacs_extend:emacs_mode_bindings(Mode,
-							     Module,
-							     Bindings,
-							     Syntax)))
-		]) :-
-	emacs_mode_class(Mode, PceMode),
-	emacs_mode_class(Super, PceSuper),
-	prolog_load_context(module, Module).
+                [(:- pce_begin_class(PceMode, PceSuper, Summary)),
+                 (:- pce_class_directive(emacs_extend:emacs_mode_bindings(Mode,
+                                                             Module,
+                                                             Bindings,
+                                                             Syntax)))
+                ]) :-
+    emacs_mode_class(Mode, PceMode),
+    emacs_mode_class(Super, PceSuper),
+    prolog_load_context(module, Module).
 emacs_expansion((:- emacs_extend_mode(Mode, Bindings)),
-		[(:- pce_extend_class(PceMode)),
-		 (:- pce_class_directive(emacs_extend:emacs_mode_bindings(Mode,
-							     Module,
-							     Bindings,
-							     [])))
-		]) :-
-	emacs_mode_class(Mode, PceMode),
-	prolog_load_context(module, Module).
+                [(:- pce_extend_class(PceMode)),
+                 (:- pce_class_directive(emacs_extend:emacs_mode_bindings(Mode,
+                                                             Module,
+                                                             Bindings,
+                                                             [])))
+                ]) :-
+    emacs_mode_class(Mode, PceMode),
+    prolog_load_context(module, Module).
 emacs_expansion((:- emacs_end_mode), (:- pce_end_class)).
 
-%%	emacs_mode_bindings(+Mode, +Module, +Bindings, +Syntax)
+%!  emacs_mode_bindings(+Mode, +Module, +Bindings, +Syntax)
 
 :- public emacs_mode_bindings/4. % called from code expanded by emacs_expansion/2.
 
 emacs_mode_bindings(Mode, Module, Bindings, Syntax) :-
-	emacs_mode_class(Mode, PceClass),
-	get(@pce, convert, PceClass, class, ClassObject),
-	get(ClassObject, super_class, SuperClass),
-	get(SuperClass, name, SuperName),
-	emacs_mode_class(SuperMode, SuperName),
-	new(KB, emacs_key_binding(Mode, SuperMode)),
-	new(MM, emacs_mode_menu(Mode, SuperMode)),
-	(   get(@syntax_tables, member, Mode, ST)
-	->  true
-	;   new(ST, syntax_table(Mode, SuperMode))
-	),
-	make_bindings(Bindings, Module, KB, MM),
-	send(KB, apply_preferences),
-	make_syntax(Syntax, ST).
+    emacs_mode_class(Mode, PceClass),
+    get(@pce, convert, PceClass, class, ClassObject),
+    get(ClassObject, super_class, SuperClass),
+    get(SuperClass, name, SuperName),
+    emacs_mode_class(SuperMode, SuperName),
+    new(KB, emacs_key_binding(Mode, SuperMode)),
+    new(MM, emacs_mode_menu(Mode, SuperMode)),
+    (   get(@syntax_tables, member, Mode, ST)
+    ->  true
+    ;   new(ST, syntax_table(Mode, SuperMode))
+    ),
+    make_bindings(Bindings, Module, KB, MM),
+    send(KB, apply_preferences),
+    make_syntax(Syntax, ST).
 
 make_bindings([], _, _, _).
 make_bindings([Selector = Term|Rest], Module, KB, MM) :-
-	bind(Term, Selector, Module, KB, MM),
-	make_bindings(Rest, Module, KB, MM).
+    bind(Term, Selector, Module, KB, MM),
+    make_bindings(Rest, Module, KB, MM).
 
 make_syntax([], _).
 make_syntax([S|Rest], ST) :-
-	syntax(S, ST),
-	make_syntax(Rest, ST).
+    syntax(S, ST),
+    make_syntax(Rest, ST).
 
 bind(key(Key), Selector, _, KB, _) :-
-	send(KB, function, Key, Selector).
+    send(KB, function, Key, Selector).
 bind(-button(Button), Selector, _, _, MM) :-
-	send(MM, delete, Button, Selector).
+    send(MM, delete, Button, Selector).
 bind(button(Button), Selector, _, _, MM) :-
-	send(MM, append, Button, Selector).
+    send(MM, append, Button, Selector).
 bind(button(Button, Func), Selector, Module, _, MM) :-
-	send(MM, Module:append(Button, emacs_argument_item(Selector, Func))).
+    send(MM, Module:append(Button, emacs_argument_item(Selector, Func))).
 bind(A+B, Selector, Module, KB, MM) :-
-	bind(A, Selector, Module, KB, MM),
-	bind(B, Selector, Module, KB, MM).
+    bind(A, Selector, Module, KB, MM),
+    bind(B, Selector, Module, KB, MM).
 
 syntax(Char = Term, ST) :-
-	Term =.. TermArgs,
-	Msg =.. [syntax, Char | TermArgs],
-	send(ST, Msg).
+    Term =.. TermArgs,
+    Msg =.. [syntax, Char | TermArgs],
+    send(ST, Msg).
 syntax(Char + Term, ST) :-
-	Term =.. TermArgs,
-	Msg =.. [add_syntax, Char | TermArgs],
-	send(ST, Msg).
+    Term =.. TermArgs,
+    Msg =.. [add_syntax, Char | TermArgs],
+    send(ST, Msg).
 syntax(paragraph_end(End), ST) :-
-	(   is_list(End)
-	->  atomic_list_concat(End, '|', Regex)
-	;   Regex = End
-	),
-	send(ST, paragraph_end, Regex).
+    (   is_list(End)
+    ->  atomic_list_concat(End, '|', Regex)
+    ;   Regex = End
+    ),
+    send(ST, paragraph_end, Regex).
 syntax(sentence_end(End), ST) :-
-	(   is_list(End)
-	->  atomic_list_concat(End, '|', Regex)
-	;   Regex = End
-	),
-	send(ST, sentence_end, Regex).
+    (   is_list(End)
+    ->  atomic_list_concat(End, '|', Regex)
+    ;   Regex = End
+    ),
+    send(ST, sentence_end, Regex).
 syntax(quasi_quotation(Start, End), ST) :-
-	send(ST, quasi_quotation_start, Start),
-	send(ST, quasi_quotation_end, End).
+    send(ST, quasi_quotation_start, Start),
+    send(ST, quasi_quotation_end, End).
 
 
-		 /*******************************
-		 *	       UTIL		*
-		 *******************************/
+                 /*******************************
+                 *             UTIL             *
+                 *******************************/
 
-%%	emacs_mode_class(?ModeName, ?ClassName)
+%!  emacs_mode_class(?ModeName, ?ClassName)
 %
-%	Convert between plain PceEmacs modename and the mode class.
+%   Convert between plain PceEmacs modename and the mode class.
 
 emacs_mode_class(@default, emacs_mode) :- !.
 emacs_mode_class([], emacs_mode) :- !.
 emacs_mode_class(ModeName, ClassName) :-
-	atom(ModeName), !,
-        atomic_list_concat([emacs_, ModeName, '_mode'], ClassName).
+    atom(ModeName),
+    !,
+    atomic_list_concat([emacs_, ModeName, '_mode'], ClassName).
 emacs_mode_class(ModeName, ClassName) :-
-	atom_concat(emacs_, M0, ClassName),
-	atom_concat(ModeName, '_mode', M0), !.
+    atom_concat(emacs_, M0, ClassName),
+    atom_concat(ModeName, '_mode', M0),
+    !.
 emacs_mode_class(@default, emacs_mode).
 
 
-		 /*******************************
-		 *	   REGISTRATION		*
-		 *******************************/
+                 /*******************************
+                 *         REGISTRATION         *
+                 *******************************/
 
 :- multifile
-	user:pce_pre_expansion_hook/2.
+    user:pce_pre_expansion_hook/2.
 :- dynamic
-	user:pce_pre_expansion_hook/2.
+    user:pce_pre_expansion_hook/2.
 
 user:pce_pre_expansion_hook(In, Out) :-
-	emacs_expansion(In, Out).
+    emacs_expansion(In, Out).

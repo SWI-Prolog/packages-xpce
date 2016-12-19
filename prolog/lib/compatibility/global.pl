@@ -33,10 +33,10 @@
 */
 
 :- module_transparent
-	new_global/2.
+    new_global/2.
 
 
 new_global(Ref, Term) :-
-	new(Ref, Term),
-	send(Ref, lock_object, @on).
+    new(Ref, Term),
+    send(Ref, lock_object, @on).
 

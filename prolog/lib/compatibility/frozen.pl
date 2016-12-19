@@ -35,8 +35,8 @@
 :- pce_extend_class(device).
 
 frozen(_Dev, _Val:bool) :->
-	"Compatibility with version 4.1.x."::
-	true.
+    "Compatibility with version 4.1.x."::
+    true.
 
 :- pce_end_class.
 

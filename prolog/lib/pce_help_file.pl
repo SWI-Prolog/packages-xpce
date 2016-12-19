@@ -33,26 +33,26 @@
 */
 
 :- module(pce_help_file,
-	  [ pce_help_file/2,
-	    pce_help/2
-	  ]).
+          [ pce_help_file/2,
+            pce_help/2
+          ]).
 :- use_module(library(pce)).
 :- require([ atomic_list_concat/2
-	   , is_absolute_file_name/1
-	   ]).
+           , is_absolute_file_name/1
+           ]).
 
 :- multifile
-	user:file_search_path/2.
+    user:file_search_path/2.
 :- dynamic
-	user:file_search_path/2.
+    user:file_search_path/2.
 
-user:file_search_path(pce_help,	pce('appl-help')).
+user:file_search_path(pce_help, pce('appl-help')).
 
 :- pce_autoload(helper, library(pce_helper)).
 :- pce_global(@helper, new(helper)).
 
 :- dynamic
-	resource/3.
+    resource/3.
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 This module is closely  connected  to   library(pce_helper).   It  is  a
@@ -65,28 +65,28 @@ directive)  will  make  the  necessary    pce_global   and  pce_autoload
 declarations to load the help-system itself as soon as it is referenced.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-%%	pce_help_file(+DataBaseId, +FileName).
+%!  pce_help_file(+DataBaseId, +FileName).
 %
-%	Declare `FileName' to hold a helper-format file holding the
-%	help-database `DataBaseId'.  FileName will be converted into
-%	an absolute filename.  Normally used as a directive.
+%   Declare `FileName' to hold a helper-format file holding the
+%   help-database `DataBaseId'.  FileName will be converted into
+%   an absolute filename.  Normally used as a directive.
 
 pce_help_file(Id, FileName) :-
-	(   atom(FileName),
-	    \+ is_absolute_file_name(FileName)
-	->  prolog_load_context(directory, Cwd),
-	    atomic_list_concat([Cwd, /, FileName], Path)
-	;   Path = FileName
-	),
-	retractall(resource(Id, help, Path)),
-	asserta(resource(Id, help, Path)).
+    (   atom(FileName),
+        \+ is_absolute_file_name(FileName)
+    ->  prolog_load_context(directory, Cwd),
+        atomic_list_concat([Cwd, /, FileName], Path)
+    ;   Path = FileName
+    ),
+    retractall(resource(Id, help, Path)),
+    asserta(resource(Id, help, Path)).
 
-%%	pce_help(+DataBaseId, +Label)
+%!  pce_help(+DataBaseId, +Label)
 %
-%	Start @helper/helper on the help module `DataBaseId', searching
-%	for a fragment with label `Label'.  Normally invoked through the
-%	send directly.
+%   Start @helper/helper on the help module `DataBaseId', searching
+%   for a fragment with label `Label'.  Normally invoked through the
+%   send directly.
 
 pce_help(DataBase, Label) :-
-	send(@helper, give_help, DataBase, Label).
+    send(@helper, give_help, DataBase, Label).
 

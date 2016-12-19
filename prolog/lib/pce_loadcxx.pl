@@ -33,14 +33,14 @@
 */
 
 :- module(pce_load_cxx,
-	  [ pce_load_cxx/1		% +File
-	  ]).
+          [ pce_load_cxx/1              % +File
+          ]).
 :- use_module(library(pce)).
 :- require([ absolute_file_name/3
-	   , feature/2
-	   , open_dll/2
-	   , open_shared_object/2
-	   ]).
+           , feature/2
+           , open_dll/2
+           , open_shared_object/2
+           ]).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 pce_load_cxx(+Spec)
@@ -49,11 +49,12 @@ pce_load_cxx(+Spec)
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 pce_load_cxx(File) :-
-	current_prolog_flag(open_shared_object, true), !,
-	absolute_file_name(File,
-			   [ extensions([so]),
-			     access(read)
-			   ],
-			   Path),
-	send(@pce, succeed),		% ensure XPCE is loaded
-	open_shared_object(Path, _Handle).
+    current_prolog_flag(open_shared_object, true),
+    !,
+    absolute_file_name(File,
+                       [ extensions([so]),
+                         access(read)
+                       ],
+                       Path),
+    send(@pce, succeed),            % ensure XPCE is loaded
+    open_shared_object(Path, _Handle).

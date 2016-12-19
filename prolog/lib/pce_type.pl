@@ -33,39 +33,40 @@
 */
 
 :- module(pce_type,
-	  [ pce_define_type/2
-	  ]).
+          [ pce_define_type/2
+          ]).
 :- use_module(library(pce)).
 
-%%	pce_define_type(+Name, +Type) is det.
+%!  pce_define_type(+Name, +Type) is det.
 %
-%       Create a type alias name, so we can write more readable code.
-%	Typical examples make aliases for `name' (name cannot be subclassed),
-%	alias for numeric and name-sets.  Here are some examples:
+%   Create a type alias name, so we can write more readable code.
+%   Typical examples make aliases for `name' (name cannot be subclassed),
+%   alias for numeric and name-sets.  Here are some examples:
 %
-%	==
-%	:- pce_define_type(rdf_resource, name).
-%	:- pce_define_type(weekday,	{sunday,monday,tuesday,wednesday,
-%					 thursday,friday,saturday}).
-%	:- pce_define_type(natural,	'1..').
-%	==
+%   ==
+%   :- pce_define_type(rdf_resource, name).
+%   :- pce_define_type(weekday,     {sunday,monday,tuesday,wednesday,
+%                                    thursday,friday,saturday}).
+%   :- pce_define_type(natural,     '1..').
+%   ==
 
 pce_define_type(Alias, Type) :-
-        get(@types, member, Alias, TypeObj), !,
-        (   get(TypeObj, kind, alias),
-            get(TypeObj, context, Aliased),
-            get(Aliased, name, Type)
-        ->  true
-        ;   throw(error(redefine(type, Alias), _))
-        ).
+    get(@types, member, Alias, TypeObj),
+    !,
+    (   get(TypeObj, kind, alias),
+        get(TypeObj, context, Aliased),
+        get(Aliased, name, Type)
+    ->  true
+    ;   throw(error(redefine(type, Alias), _))
+    ).
 pce_define_type(Alias, Type) :-
-	(   object(Type)
-	->  TheType = Type
-	;   atom(Type)
-	->  get(@pce, convert, Type, type, TheType)
-	;   format(string(Atom), '~w', Type),
-	    get(@pce, convert, Atom, type, TheType)
-	),
-        new(_, type(Alias, alias, TheType)).
+    (   object(Type)
+    ->  TheType = Type
+    ;   atom(Type)
+    ->  get(@pce, convert, Type, type, TheType)
+    ;   format(string(Atom), '~w', Type),
+        get(@pce, convert, Atom, type, TheType)
+    ),
+    new(_, type(Alias, alias, TheType)).
 
 

@@ -35,7 +35,7 @@
 :- module(pce_tick_box, []).
 :- use_module(library(pce)).
 :- require([ default/3
-	   ]).
+           ]).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Class `tick_box' defines a label with a `tick-box' displayed left of the
@@ -49,64 +49,64 @@ variable(align_with, {left,value} := left, both, "How to align").
 class_variable(item_elevation, elevation*, @nil, "Elevation of the label").
 
 initialise(TB, Name:name, Value:[bool], Message:[code]*) :->
-	default(Value, @off, Def),
-	send_super(TB, initialise, Name, marked, Message),
-	send(TB, multiple_selection, @on),
-	send_super(TB, show_label, @off),
-	get(TB, label_font, Font),
-	send(TB, value_font, Font),
-	send(TB, append, menu_item(Name,
-				   message(@receiver, forward))),
-	send(TB, default, Def).
+    default(Value, @off, Def),
+    send_super(TB, initialise, Name, marked, Message),
+    send(TB, multiple_selection, @on),
+    send_super(TB, show_label, @off),
+    get(TB, label_font, Font),
+    send(TB, value_font, Font),
+    send(TB, append, menu_item(Name,
+                               message(@receiver, forward))),
+    send(TB, default, Def).
 
 :- pce_group(appearance).
 
 label_width(TB, LW:int) :->
-	"Honour label alignment if we align with value of <-above"::
-	(   get(TB, align_with, value)
-	->  send_super(TB, label_width, LW)
-	;   true
-	).
+    "Honour label alignment if we align with value of <-above"::
+    (   get(TB, align_with, value)
+    ->  send_super(TB, label_width, LW)
+    ;   true
+    ).
 
 label(TB, Label:'name|image') :->
-	"Set the label"::
-	(   get(TB, members, Members),
-	    Members \== @nil
-	->  get(Members, head, Item),
-	    send(Item, label, Label)
-	;   send(TB, send_super, label, Label) % during initialise
-	).
+    "Set the label"::
+    (   get(TB, members, Members),
+        Members \== @nil
+    ->  get(Members, head, Item),
+        send(Item, label, Label)
+    ;   send(TB, send_super, label, Label) % during initialise
+    ).
 
 show_label(TB, Show:bool) :->
-	"Show the label"::
-	get(TB?members, head, Item),
-	(   Show == @on
-	->  send(Item, label, Item?value?label_name)
-	;   send(Item, label, '')
-	).
+    "Show the label"::
+    get(TB?members, head, Item),
+    (   Show == @on
+    ->  send(Item, label, Item?value?label_name)
+    ;   send(Item, label, '')
+    ).
 
 :- pce_group(selection).
 
 selection(TB, Val:bool) :->
-	"Set selection as boolean"::
-	get(TB?members, head, Item),
-	send(Item, selected, Val).
+    "Set selection as boolean"::
+    get(TB?members, head, Item),
+    send(Item, selected, Val).
 selection(TB, Val:bool) :<-
-	"Get selection as boolean"::
-	get(TB?members, head, Item),
-	get(Item, selected, Val).
+    "Get selection as boolean"::
+    get(TB?members, head, Item),
+    get(Item, selected, Val).
 
 forward(TB) :->
-	"Execute the message"::
-	get(TB, message, Msg),
-	get(TB, selection, Val),
-	(   Msg == @default
-	->  get(TB, name, Selector),
-	    send(TB?device, Selector, Val)
-	;   Msg == @nil
-	->  true
-	;   send(Msg, forward, Val)
-	).
+    "Execute the message"::
+    get(TB, message, Msg),
+    get(TB, selection, Val),
+    (   Msg == @default
+    ->  get(TB, name, Selector),
+        send(TB?device, Selector, Val)
+    ;   Msg == @nil
+    ->  true
+    ;   send(Msg, forward, Val)
+    ).
 
 :- pce_end_class.
 

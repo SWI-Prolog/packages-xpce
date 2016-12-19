@@ -34,86 +34,87 @@
 */
 
 :- module(pce_main,
-	  [ pce_loop/2,			% :Goal, +Argv
-	    pce_loop/1,			% :Goal
-	    pce_main_loop/1,		% :Goal
-	    dispatch_for_frames/1	% +FrameList
-	  ]).
+          [ pce_loop/2,                 % :Goal, +Argv
+            pce_loop/1,                 % :Goal
+            pce_main_loop/1,            % :Goal
+            dispatch_for_frames/1       % +FrameList
+          ]).
 
 :- meta_predicate
-	pce_loop(:),
-	pce_loop(:, +),
-	pce_main_loop(:).
+    pce_loop(:),
+    pce_loop(:, +),
+    pce_main_loop(:).
 
 :- use_module(library(pce)).
 :- use_module(library(pce_util)).
 :- require([ append/3
-	   , call/2
-	   , ignore/1
-	   , unix/1
-	   , chain_list/2
-	   ]).
+           , call/2
+           , ignore/1
+           , unix/1
+           , chain_list/2
+           ]).
 
-%%	pce_main_loop(+Goal)
+%!  pce_main_loop(+Goal)
 %
-%	Simple XPCE runtime toplevel loop.  This goal extracts the command
-%	line arguments, calls `call(Goal, CmdLineArgs)' and waits for all
-%	frames created by this call to be invisible.  Then it will halt/0.
+%   Simple XPCE runtime toplevel loop.  This goal extracts the command
+%   line arguments, calls `call(Goal, CmdLineArgs)' and waits for all
+%   frames created by this call to be invisible.  Then it will halt/0.
 
 pce_main_loop(Goal) :-
-	setup_runtime,
-	current_prolog_flag(argv, Argv),
-	pce_loop(Goal, Argv),
-	halt.
+    setup_runtime,
+    current_prolog_flag(argv, Argv),
+    pce_loop(Goal, Argv),
+    halt.
 
-%%	pce_loop(+Goal).
-%%	pce_loop(+Goal, +Argv:list).
+%!  pce_loop(+Goal).
+%!  pce_loop(+Goal, +Argv:list).
 %
-%	Runs `Goal', finds all toplevel frames created and then dispatches
-%	events untill the last frame is destroyed.
+%   Runs `Goal', finds all toplevel frames created and then dispatches
+%   events untill the last frame is destroyed.
 
 pce_loop(Goal) :-
-	pce_loop(Goal, []).
+    pce_loop(Goal, []).
 pce_loop(Goal, Argv) :-
-	get(@display?frames, find_all, @arg1?kind == toplevel, FramesOld),
-	call(Goal, Argv),
-	get(@display?frames, find_all, @arg1?kind == toplevel, FramesNew),
-	get(FramesNew, copy, FrameChain),
-	send(FrameChain, subtract, FramesOld),
-	chain_list(FrameChain, Frames),
-	dispatch_for_frames(Frames).
+    get(@display?frames, find_all, @arg1?kind == toplevel, FramesOld),
+    call(Goal, Argv),
+    get(@display?frames, find_all, @arg1?kind == toplevel, FramesNew),
+    get(FramesNew, copy, FrameChain),
+    send(FrameChain, subtract, FramesOld),
+    chain_list(FrameChain, Frames),
+    dispatch_for_frames(Frames).
 
 dispatch_for_frames([]) :- !.
 dispatch_for_frames(Frames) :-
-	(   catch(send(@display, dispatch), E,
-		  (   message_to_string(E, Msg),
-		      send(@display, inform, Msg),
-		      (	  E == '$aborted'
-		      ->  throw(E)
-		      ;	  true
-		      )
-		  ))
-	->  true
-	;   true
-	),
-	existing_frames(Frames, Existing),
-	dispatch_for_frames(Existing).
+    (   catch(send(@display, dispatch), E,
+              (   message_to_string(E, Msg),
+                  send(@display, inform, Msg),
+                  (   E == '$aborted'
+                  ->  throw(E)
+                  ;   true
+                  )
+              ))
+    ->  true
+    ;   true
+    ),
+    existing_frames(Frames, Existing),
+    dispatch_for_frames(Existing).
 
 existing_frames([], []).
 existing_frames([H|T0], [H|T]) :-
-	object(H),
-	send(H, instance_of, frame),
-	get(H, status, Status),
-	Status \== unmapped, !,
-	existing_frames(T0, T).
+    object(H),
+    send(H, instance_of, frame),
+    get(H, status, Status),
+    Status \== unmapped,
+    !,
+    existing_frames(T0, T).
 existing_frames([_|T0], T) :-
-	existing_frames(T0, T).
+    existing_frames(T0, T).
 
 setup_runtime :-
-	(   get(@pce, is_runtime_system, @on)
-	->  true
-	;   send(@pce, trap_errors, @off)
-	),
-	catch(set_prolog_flag(debug_on_error, false), _, true).
+    (   get(@pce, is_runtime_system, @on)
+    ->  true
+    ;   send(@pce, trap_errors, @off)
+    ),
+    catch(set_prolog_flag(debug_on_error, false), _, true).
 
 

@@ -37,13 +37,13 @@
 %-----------------------------------------------
 
 :- module(scan_arguments,
-	[ scan_arguments/2	% Arguments x ValueList
-	, scan_arguments/3	% Arguments x ValueList -> Rest
-	]).
+        [ scan_arguments/2      % Arguments x ValueList
+        , scan_arguments/3      % Arguments x ValueList -> Rest
+        ]).
 
 :- use_module(library(pce)).
 :- require([ select/3
-	   ]).
+           ]).
 
 
 %-----------------------------------------------
@@ -65,40 +65,41 @@
 %
 %   Error messages are printed on missing arguments.
 %
-%	?- scan_arguments([hello=world], [hello=X])
+%       ?- scan_arguments([hello=world], [hello=X])
 %
-%	X = world
+%       X = world
 %
-%	?- scan_arguments([name=anjo], [name=N, city=C/amsterdam]).
+%       ?- scan_arguments([name=anjo], [name=N, city=C/amsterdam]).
 %
-%	N = anjo
-%	C = amsterdam
+%       N = anjo
+%       C = amsterdam
 
 scan_arguments(Args, List, Rest) :-
-	get_arguments(List, Args, Rest).
+    get_arguments(List, Args, Rest).
 
 scan_arguments(Args, List) :-
-	get_arguments(List, Args, Rest),
-	(   Rest == []
-	->  true
-	;   format(user_error,
-		   'scan_arguments:Arguments not required: ~w~n', Rest)
-	).
+    get_arguments(List, Args, Rest),
+    (   Rest == []
+    ->  true
+    ;   format(user_error,
+               'scan_arguments:Arguments not required: ~w~n', Rest)
+    ).
 
 get_arguments([], Args, Args) :- !.
 get_arguments([Name = Value|T], Args, RestArgs) :-
-	non_default_argument(Value), !,
-	(   select(Name=Value, Args, Rest)
-	->  get_arguments(T, Rest, RestArgs)
-	;   format(user_error,
-		   'Argument ~w not present and no default defined', [Name])
-	).
+    non_default_argument(Value),
+    !,
+    (   select(Name=Value, Args, Rest)
+    ->  get_arguments(T, Rest, RestArgs)
+    ;   format(user_error,
+               'Argument ~w not present and no default defined', [Name])
+    ).
 get_arguments([Name = Value / Default|T], Args, RestArgs) :-
-	(   select(Name=Value, Args, Rest)
-	->  get_arguments(T, Rest, RestArgs)
-	;   Value = Default,
-	    get_arguments(T, Args, RestArgs)
-	).
+    (   select(Name=Value, Args, Rest)
+    ->  get_arguments(T, Rest, RestArgs)
+    ;   Value = Default,
+        get_arguments(T, Args, RestArgs)
+    ).
 
 
 non_default_argument(Value) :- var(Value), !.

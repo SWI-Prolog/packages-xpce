@@ -35,7 +35,7 @@
 :- module(emacs_logtalk_mode, []).
 :- use_module(library(pce)).
 :- use_module(prolog_mode).
-:- use_module(library(operators)).	% push/pop operators
+:- use_module(library(operators)).      % push/pop operators
 :- use_module(library(trace/emacs_debug_modes)).
 :- use_module(library(emacs_extend)).
 
@@ -45,18 +45,18 @@ This module deals with colourisation of .lgt files.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-		 /*******************************
-		 *	      LOGTALK MODE		*
-		 *******************************/
+                 /*******************************
+                 *            LOGTALK MODE              *
+                 *******************************/
 
 :- emacs_begin_mode(logtalk, prolog,
-		    "Mode for editing Logtalk documents",
-		    % BINDINGS
-		    [
-		    ],
-		    % SYNTAX TABLE
-		    [
-		    ]).
+                    "Mode for editing Logtalk documents",
+                    % BINDINGS
+                    [
+                    ],
+                    % SYNTAX TABLE
+                    [
+                    ]).
 
 class_variable(tab_width, int, 4).
 class_variable(body_indentation, int, 4).
@@ -64,19 +64,19 @@ class_variable(cond_indentation, int, 4).
 class_variable(indent_tabs, bool, @on).
 
 colourise_buffer(M) :->
-	"Cross-reference the buffer and set up colours"::
-	push_logtalk_operators,
-	setup_call_cleanup(
-		true,
-		send_super(M, colourise_buffer),
-		pop_logtalk_operators).
+    "Cross-reference the buffer and set up colours"::
+    push_logtalk_operators,
+    setup_call_cleanup(
+            true,
+            send_super(M, colourise_buffer),
+            pop_logtalk_operators).
 
 :- emacs_end_mode.
 
 
 :- emacs_begin_mode(logtalk_debug, logtalk,
-		    "Submode for the debugger",
-		    [], []).
+                    "Submode for the debugger",
+                    [], []).
 :- use_class_template(prolog_debug_methods).
 :- emacs_end_mode.
 
@@ -84,42 +84,42 @@ colourise_buffer(M) :->
    declare_emacs_mode(logtalk_debug, []).
 
 
-		 /*******************************
-		 *	   SYNTAX RULES		*
-		 *******************************/
+                 /*******************************
+                 *         SYNTAX RULES         *
+                 *******************************/
 
 :- multifile
-	prolog_colour:style/2,
-	prolog_colour:term_colours/2,
-	prolog_colour:goal_colours/2,
-	prolog_colour:directive_colours/2,
-	prolog_colour:goal_classification/2.
+    prolog_colour:style/2,
+    prolog_colour:term_colours/2,
+    prolog_colour:goal_colours/2,
+    prolog_colour:directive_colours/2,
+    prolog_colour:goal_classification/2.
 
 
 object_opening_directive_relations(Relations, entity_relation-Colours) :-
-	nonvar(Relations),
-	Relations =.. [Functor| Entities],
-	valid_object_relation(Functor),
-	entity_relation_colours(Entities, Colours).
+    nonvar(Relations),
+    Relations =.. [Functor| Entities],
+    valid_object_relation(Functor),
+    entity_relation_colours(Entities, Colours).
 
 protocol_opening_directive_relations(Relations, entity_relation-Colours) :-
-	nonvar(Relations),
-	Relations =.. [Functor| Entities],
-	valid_protocol_relation(Functor),
-	entity_relation_colours(Entities, Colours).
+    nonvar(Relations),
+    Relations =.. [Functor| Entities],
+    valid_protocol_relation(Functor),
+    entity_relation_colours(Entities, Colours).
 
 category_opening_directive_relations(Relations, entity_relation-Colours) :-
-	nonvar(Relations),
-	Relations =.. [Functor| Entities],
-	valid_category_relation(Functor),
-	entity_relation_colours(Entities, Colours).
+    nonvar(Relations),
+    Relations =.. [Functor| Entities],
+    valid_category_relation(Functor),
+    entity_relation_colours(Entities, Colours).
 
 entity_relation_colours([], []).
 entity_relation_colours(['::'(_, _)| Entities], [built_in-[classify,entity_identifier]| Colours]) :-
-	!,
-	entity_relation_colours(Entities, Colours).
+    !,
+    entity_relation_colours(Entities, Colours).
 entity_relation_colours([_| Entities], [entity_identifier| Colours]) :-
-	entity_relation_colours(Entities, Colours).
+    entity_relation_colours(Entities, Colours).
 
 valid_object_relation(implements).
 valid_object_relation(imports).
@@ -136,53 +136,53 @@ valid_category_relation(complements).
 
 info_directive_items([], []).
 info_directive_items([_ is _| Items], [built_in-[classify,classify]| Colours]) :-
-	info_directive_items(Items, Colours).
+    info_directive_items(Items, Colours).
 
 
 entity_identifier(Object, Colour) :-
-	(	atom(Object) ->
-		Colour = entity_identifier
-	;	compound(Object) ->
-		Object =.. [_| Parameters],
-		entity_parameters(Parameters, Colours),
-		Colour = entity_identifier-[Colours]
-	).
+    (       atom(Object) ->
+            Colour = entity_identifier
+    ;       compound(Object) ->
+            Object =.. [_| Parameters],
+            entity_parameters(Parameters, Colours),
+            Colour = entity_identifier-[Colours]
+    ).
 
 entity_parameters([], []).
 entity_parameters([_| Parameters], [parameter| Colours]) :-
-	entity_parameters(Parameters, Colours).
+    entity_parameters(Parameters, Colours).
 
 
 term_colours((:- encoding(_)), classify-[source_file_directive-[classify]]).
 
 
 directive_colours(object(Object), entity_directive-[Colour]) :-
-	entity_identifier(Object, Colour).
+    entity_identifier(Object, Colour).
 directive_colours(object(_, Relations), entity_directive-[entity_identifier,Colours]) :-
-	object_opening_directive_relations(Relations, Colours).
+    object_opening_directive_relations(Relations, Colours).
 directive_colours(object(_, Relations1, Relations2), entity_directive-[entity_identifier,Colours1,Colours2]) :-
-	object_opening_directive_relations(Relations1, Colours1),
-	object_opening_directive_relations(Relations2, Colours2).
+    object_opening_directive_relations(Relations1, Colours1),
+    object_opening_directive_relations(Relations2, Colours2).
 directive_colours(object(_, Relations1, Relations2, Relations3), entity_directive-[entity_identifier,Colours1,Colours2,Colours3]) :-
-	object_opening_directive_relations(Relations1, Colours1),
-	object_opening_directive_relations(Relations2, Colours2),
-	object_opening_directive_relations(Relations3, Colours3).
+    object_opening_directive_relations(Relations1, Colours1),
+    object_opening_directive_relations(Relations2, Colours2),
+    object_opening_directive_relations(Relations3, Colours3).
 directive_colours(object(_, Relations1, Relations2, Relations3, Relations4), entity_directive-[entity_identifier,Colours1,Colours2,Colours3,Colours4]) :-
-	object_opening_directive_relations(Relations1, Colours1),
-	object_opening_directive_relations(Relations2, Colours2),
-	object_opening_directive_relations(Relations3, Colours3),
-	object_opening_directive_relations(Relations4, Colours4).
+    object_opening_directive_relations(Relations1, Colours1),
+    object_opening_directive_relations(Relations2, Colours2),
+    object_opening_directive_relations(Relations3, Colours3),
+    object_opening_directive_relations(Relations4, Colours4).
 
 directive_colours(protocol(_), entity_directive-[entity_identifier]).
 directive_colours(protocol(_, Relations), entity_directive-[entity_identifier,Colours]) :-
-	protocol_opening_directive_relations(Relations, Colours).
+    protocol_opening_directive_relations(Relations, Colours).
 
 directive_colours(category(_), entity_directive-[entity_identifier]).
 directive_colours(category(_, Relations), entity_directive-[entity_identifier,Colours]) :-
-	category_opening_directive_relations(Relations, Colours).
+    category_opening_directive_relations(Relations, Colours).
 directive_colours(category(_, Relations1, Relations2), entity_directive-[entity_identifier,Colours1,Colours2]) :-
-	category_opening_directive_relations(Relations1, Colours1),
-	category_opening_directive_relations(Relations2, Colours2).
+    category_opening_directive_relations(Relations1, Colours1),
+    category_opening_directive_relations(Relations2, Colours2).
 
 % source file directives
 directive_colours(encoding(_), source_file_directive-[classify]).
@@ -225,9 +225,9 @@ directive_colours(synchronized(_), predicate_directive-[classify]).
 directive_colours(uses(_, _), predicate_directive-[entity_identifier,classify]).
 
 
-%	goal_colours(+Goal, -Colours)
+%       goal_colours(+Goal, -Colours)
 %
-%	Colouring of special goals.
+%       Colouring of special goals.
 
 % enumerating objects, categories and protocols
 goal_colours(current_category(_), built_in-[classify]).
@@ -365,53 +365,53 @@ goal_colours('<<'(_, _), built_in-[classify,classify]).
 
 goal_classification(_, normal).
 
-style(goal(source_file_directive,_),		 [colour(blue)]).
+style(goal(source_file_directive,_),             [colour(blue)]).
 style(goal(conditional_compilation_directive,_), [colour(blue)]).
-style(goal(entity_directive,_),			 [colour(blue)]).
-style(goal(predicate_directive,_),		 [colour(blue)]).
+style(goal(entity_directive,_),                  [colour(blue)]).
+style(goal(predicate_directive,_),               [colour(blue)]).
 
-style(directive,				 [bold(false)]).
-style(entity_directive,				 [colour(navy_blue)]).
-style(entity_identifier,			 [colour(dark_slate_blue)]).
-style(identifier,				 [bold(true)]).
-style(entity_relation,				 [colour(blue)]).
-style(head(_),					 [bold(false)]).
-style(built_in,					 [colour(blue)]).
+style(directive,                                 [bold(false)]).
+style(entity_directive,                          [colour(navy_blue)]).
+style(entity_identifier,                         [colour(dark_slate_blue)]).
+style(identifier,                                [bold(true)]).
+style(entity_relation,                           [colour(blue)]).
+style(head(_),                                   [bold(false)]).
+style(built_in,                                  [colour(blue)]).
 style(parameter, Style) :-
-	prolog_colour:def_style(var, Style).
+    prolog_colour:def_style(var, Style).
 
 
 prolog_colour:style(Pattern, Style) :-
-	style(Pattern, Style).
+    style(Pattern, Style).
 
 
 prolog_colour:term_colours(Term, Colours) :-
-	term_colours(Term, Colours).
+    term_colours(Term, Colours).
 
 
 prolog_colour:directive_colours(Directive, Colours) :-
-	directive_colours(Directive, Colours).
+    directive_colours(Directive, Colours).
 
 
 prolog_colour:goal_colours(Term, Colours) :-
-	goal_colours(Term, Colours).
+    goal_colours(Term, Colours).
 
 
 prolog_colour:goal_classification(Goal, Classification) :-
-	goal_classification(Goal, Classification).
+    goal_classification(Goal, Classification).
 
 
-		 /*******************************
-		 *	   SYNTAX HOOKS		*
-		 *******************************/
+                 /*******************************
+                 *         SYNTAX HOOKS         *
+                 *******************************/
 
 :- multifile
-	prolog:alternate_syntax/4.
+    prolog:alternate_syntax/4.
 
 
 prolog:alternate_syntax(logtalk, Module,
-			emacs_logtalk_mode:push_logtalk_operators(Module),
-			emacs_logtalk_mode:pop_logtalk_operators).
+                        emacs_logtalk_mode:push_logtalk_operators(Module),
+                        emacs_logtalk_mode:pop_logtalk_operators).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -419,28 +419,28 @@ Note that we could generalise this to deal with all included files.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 push_logtalk_operators :-
-	'$set_source_module'(M, M),
-	push_logtalk_operators(M).
+    '$set_source_module'(M, M),
+    push_logtalk_operators(M).
 
 push_logtalk_operators(Module) :-
-	logtalk_operators(Ops),
-	push_operators(Module:Ops).
+    logtalk_operators(Ops),
+    push_operators(Module:Ops).
 
 pop_logtalk_operators :-
-	pop_operators.
+    pop_operators.
 
 logtalk_operators([
-	% message sending operators
-	op(600, xfy, ::),	% send to object
-	op(600,  fy, ::),	% send to self
-	op(600,  fy, ^^),	% "super" call (calls an overriden, inherited method definition)
-	% mode operators
-	op(200,  fy, +),	% input argument (instantiated)
-	op(200,  fy, ?),	% input/output argument
-	op(200,  fy, @),	% input argument (not modified by the call)
-	op(200,  fy, -),	% output argument (not instantiated)
-	% ground argument
-	op(200,  fy, ++),
-	% unbound argument (typically when returning an opaque term)
-	op(200,  fy, --)
+        % message sending operators
+        op(600, xfy, ::),       % send to object
+        op(600,  fy, ::),       % send to self
+        op(600,  fy, ^^),       % "super" call (calls an overriden, inherited method definition)
+        % mode operators
+        op(200,  fy, +),        % input argument (instantiated)
+        op(200,  fy, ?),        % input/output argument
+        op(200,  fy, @),        % input argument (not modified by the call)
+        op(200,  fy, -),        % output argument (not instantiated)
+        % ground argument
+        op(200,  fy, ++),
+        % unbound argument (typically when returning an opaque term)
+        op(200,  fy, --)
 ]).

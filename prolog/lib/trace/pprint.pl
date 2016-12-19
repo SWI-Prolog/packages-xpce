@@ -34,16 +34,16 @@
 */
 
 :- module(pce_prolog_pretty_print,
-	  [ print_term/2	% +Term, +Options
-	  ]).
+          [ print_term/2        % +Term, +Options
+          ]).
 :- reexport(library(pprint)).
 
 :- multifile
-	prolog:message//1.
+    prolog:message//1.
 
 prolog:message(moved_library(Old, New)) -->
-	[ 'Library was moved: ~q --> ~q'-[Old, New] ].
+    [ 'Library was moved: ~q --> ~q'-[Old, New] ].
 
 :- initialization
    print_message(informational, moved_library(library(trace/pprint),
-					      library(pprint))).
+                                          library(pprint))).

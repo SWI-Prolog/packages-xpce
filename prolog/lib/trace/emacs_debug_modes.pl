@@ -40,24 +40,24 @@
 */
 
 :- pce_begin_class(prolog_debug_methods, template,
-		   "Mode extensions for running under the debugger").
+                   "Mode extensions for running under the debugger").
 
 save_text(M) :->
-	"Switch to non-edit mode after saving the buffer"::
-	send_super(M, save_text),
-	send(M?editors, for_all,
-	     if(message(@arg1?window, instance_of, prolog_source_view),
-		message(@arg1?window, edit, @off))).
+    "Switch to non-edit mode after saving the buffer"::
+    send_super(M, save_text),
+    send(M?editors, for_all,
+         if(message(@arg1?window, instance_of, prolog_source_view),
+            message(@arg1?window, edit, @off))).
 
 quit(M) :->
-	"Destroy the editor"::
-	ignore(send(M?text_buffer, save_if_modified)),
-	(   get(M, frame, Frame),
-	    send(Frame, has_send_method, quitted)
-	->  send(Frame, quitted, @on),
-	    send(Frame, nodebug)
-	;   send_super(M, quit)
-	).
+    "Destroy the editor"::
+    ignore(send(M?text_buffer, save_if_modified)),
+    (   get(M, frame, Frame),
+        send(Frame, has_send_method, quitted)
+    ->  send(Frame, quitted, @on),
+        send(Frame, nodebug)
+    ;   send_super(M, quit)
+    ).
 
 :- pce_end_class.
 

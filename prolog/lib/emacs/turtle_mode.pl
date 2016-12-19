@@ -45,51 +45,51 @@
 :- emacs_begin_mode(
        turtle, language,
        "Mode for editing Turtle documents",
-       [ -		     = button(turtle),
-	 show_diagram	     = button(turtle),
-	 rdf_make	     = key('\\C-c\\C-m') + button(compile),
-	 rdf_load	     = key('\\C-c\\C-b') + button(compile),
-	 open_document	     = button(turtle)
+       [ -                   = button(turtle),
+         show_diagram        = button(turtle),
+         rdf_make            = key('\\C-c\\C-m') + button(compile),
+         rdf_load            = key('\\C-c\\C-b') + button(compile),
+         open_document       = button(turtle)
        ],
        []).
 
 open_document(M) :->
-	"Insert document header"::
-	send(M, format,
-	     '@prefix  rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\c
-	      @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\c
-	      @prefix  owl: <http://www.w3.org/2002/07/owl#> .\n\c
-	      \n').
+    "Insert document header"::
+    send(M, format,
+         '@prefix  rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n\c
+              @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\c
+              @prefix  owl: <http://www.w3.org/2002/07/owl#> .\n\c
+              \n').
 
 show_diagram(M) :->
-	"Show diagram of file"::
-	get(M, text_buffer, TB),
-	setup_call_cleanup(
-	    pce_open(TB, read, In),
-	    rdf_read_turtle(stream(In), Triples, []),
-	    close(In)),
-	new(D, rdf_diagram(string('RDF triple diagram'))),
-	send(new(report_dialog), below, D),
-	send(D, triples, Triples),
-	send(D, open).
+    "Show diagram of file"::
+    get(M, text_buffer, TB),
+    setup_call_cleanup(
+        pce_open(TB, read, In),
+        rdf_read_turtle(stream(In), Triples, []),
+        close(In)),
+    new(D, rdf_diagram(string('RDF triple diagram'))),
+    send(new(report_dialog), below, D),
+    send(D, triples, Triples),
+    send(D, open).
 
 rdf_make(M) :->
-	"Run rdf_make/0"::
-	send(@emacs, save_some_buffers),
-	rdf_make,
-	send(M, report, status, 'RDF Make done').
+    "Run rdf_make/0"::
+    send(@emacs, save_some_buffers),
+    rdf_make,
+    send(M, report, status, 'RDF Make done').
 
 rdf_load(M) :->
-	"Run rdf_load on the file"::
-	get(M?text_buffer, file, File),
-	(   send(File, instance_of, file)
-	->  send(M, save_if_modified),
-	    get(File, name, Path),
-	    rdf_load(Path),
-	    send(M, report, status, '%s loaded', Path)
-	;   send(M, report, error,
-		 'Buffer is not connected to a file')
-	).
+    "Run rdf_load on the file"::
+    get(M?text_buffer, file, File),
+    (   send(File, instance_of, file)
+    ->  send(M, save_if_modified),
+        get(File, name, Path),
+        rdf_load(Path),
+        send(M, report, status, '%s loaded', Path)
+    ;   send(M, report, error,
+             'Buffer is not connected to a file')
+    ).
 
 :- emacs_end_mode.
 

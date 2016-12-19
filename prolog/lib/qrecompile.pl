@@ -33,8 +33,8 @@
 */
 
 :- module(pce_qrecompile,
-	  [ qcompile_pce/0
-	  ]).
+          [ qcompile_pce/0
+          ]).
 
 qmodule(library(pce)).
 qmodule(library(pce_manual)).
@@ -43,14 +43,14 @@ qmodule(library('emacs/emacs')).
 qmodule(library('dialog/dialog')).
 
 qcompile_pce :-
-	format('Checking library-index~n'),
-	make,
-	format('Recompiling modules~n'),
-	qmodule(Module),
-	format('~*c~n', [64, 0'*]),
-	format('* Qcompile module ~w~n', [Module]),
-	format('~*c~n', [64, 0'*]),
-	once(qcompile(Module)),
-	fail.
+    format('Checking library-index~n'),
+    make,
+    format('Recompiling modules~n'),
+    qmodule(Module),
+    format('~*c~n', [64, 0'*]),
+    format('* Qcompile module ~w~n', [Module]),
+    format('~*c~n', [64, 0'*]),
+    once(qcompile(Module)),
+    fail.
 qcompile_pce.
 

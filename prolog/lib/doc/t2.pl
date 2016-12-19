@@ -35,9 +35,9 @@
 :- use_module(xml_browse).
 
 show :-
-	show('t.html').
+    show('t.html').
 
 show(File) :-
-	load_html_file(File, Tokens),
-	new(W, xml_browser(Tokens)),
-	send(W, open).
+    load_html_file(File, Tokens),
+    new(W, xml_browser(Tokens)),
+    send(W, open).

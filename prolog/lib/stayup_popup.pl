@@ -41,22 +41,22 @@ open while releasing the pointer and keyboard.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- module(stayup_popup,
-	  [ install_unfocus_hook/0
-	  ]).
+          [ install_unfocus_hook/0
+          ]).
 :- use_module(library(pce)).
 
 install_unfocus_hook :-
-	send(@display, inspect_handler,
-	     handler(65563,		% ALT-ESC
-		     message(@prolog, unfocus))).
+    send(@display, inspect_handler,
+         handler(65563,             % ALT-ESC
+                 message(@prolog, unfocus))).
 
 unfocus :-
-	format('Destroying XPCE focus~n'),
-	get(@event, window, W),
-	format('Releasing ~p~n', [W]),
-	send(W, focus, @nil),
-	send(W, grab_pointer, @off),
-	send(W, grab_keyboard, @off).
+    format('Destroying XPCE focus~n'),
+    get(@event, window, W),
+    format('Releasing ~p~n', [W]),
+    send(W, focus, @nil),
+    send(W, grab_pointer, @off),
+    send(W, grab_keyboard, @off).
 
 :- initialization(install_unfocus_hook).
 

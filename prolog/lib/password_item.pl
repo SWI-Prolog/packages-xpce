@@ -33,8 +33,8 @@
 */
 
 :- module(pce_password_item,
-	  [
-	  ]).
+          [
+          ]).
 :- use_module(library(pce)).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -45,64 +45,64 @@ find.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
-		 /*******************************
-		 *	 CLASS PASSWD_ITEM	*
-		 *******************************/
+                 /*******************************
+                 *       CLASS PASSWD_ITEM      *
+                 *******************************/
 
 :- pce_begin_class(password_item, text_item, "text-item for entering a passwd").
 
-variable(shadow,	text_item,	get, "The real (invisible) item").
+variable(shadow,        text_item,      get, "The real (invisible) item").
 
 initialise(I, Name:[name], Message:[message]) :->
-	default(Name, password, TheName),
-	send_super(I, initialise, TheName, string('')),
-	send(I, slot, shadow, text_item(TheName, string(''), Message)).
+    default(Name, password, TheName),
+    send_super(I, initialise, TheName, string('')),
+    send(I, slot, shadow, text_item(TheName, string(''), Message)).
 
 
 unlink(I) :->
-	get(I, shadow, Shadow),
-	free(Shadow),
-	send_super(I, unlink).
+    get(I, shadow, Shadow),
+    free(Shadow),
+    send_super(I, unlink).
 
 
 event(I, Ev:event) :->
-	get(I, shadow, Shadow),
-	(   get(Shadow, message, @default),
-	    get(Ev, id, 13)		% RET
-	->  send_super(I, event)
-	;   get(Ev, id, 9)		% TAB
-	->  send_super(I, event, Ev)
-	;   send(Shadow, event, Ev),
-	    send(I, update),
-	    (   send(Ev, is_a, keyboard)
-	    ->  true
-	    ;   send_super(I, event, Ev)
-	    )
-	).
+    get(I, shadow, Shadow),
+    (   get(Shadow, message, @default),
+        get(Ev, id, 13)             % RET
+    ->  send_super(I, event)
+    ;   get(Ev, id, 9)              % TAB
+    ->  send_super(I, event, Ev)
+    ;   send(Shadow, event, Ev),
+        send(I, update),
+        (   send(Ev, is_a, keyboard)
+        ->  true
+        ;   send_super(I, event, Ev)
+        )
+    ).
 
 
 update(I) :->
-	"Update visual representation"::
-	get(I, shadow, Shadow),
-	get(Shadow, selection, String),
-	get(Shadow, caret, Caret),
-	get(String, size, Size),
-	make_star_string(Size, Stars),
-	send_super(I, selection, Stars),
-	send(I, caret, Caret).
+    "Update visual representation"::
+    get(I, shadow, Shadow),
+    get(Shadow, selection, String),
+    get(Shadow, caret, Caret),
+    get(String, size, Size),
+    make_star_string(Size, Stars),
+    send_super(I, selection, Stars),
+    send(I, caret, Caret).
 
 
 selection(I, Passwd:string) :<-
-	get(I, shadow, Shadow),
-	get(Shadow, selection, Passwd).
+    get(I, shadow, Shadow),
+    get(Shadow, selection, Passwd).
 
 selection(I, Passwd:string) :->
-	get(I, shadow, Shadow),
-	send(Shadow, selection, Passwd),
-	send(I, update).
+    get(I, shadow, Shadow),
+    send(Shadow, selection, Passwd),
+    send(I, update).
 
 make_star_string(Size, S) :-
-	new(S, string),
-	forall(between(1, Size, _), send(S, append, '*')).
+    new(S, string),
+    forall(between(1, Size, _), send(S, append, '*')).
 
 :- pce_end_class(password_item).

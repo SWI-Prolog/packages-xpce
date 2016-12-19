@@ -56,19 +56,19 @@ help.   The   source-code   that   attaches     this   library   is   in
 :- pce_extend_class(graphical).
 
 clipped_by_window(Gr) :->
-	"Test if graphical is clipped by window border"::
-	get(Gr, window, Window),
-	get(Window, visible, Visible),
-	get(Gr, absolute_position, Window, point(X,Y)),
-	get(Gr, area, area(_,_,W,H)),
-	\+ send(Visible, inside, area(X,Y,W,H)).
+    "Test if graphical is clipped by window border"::
+    get(Gr, window, Window),
+    get(Window, visible, Visible),
+    get(Gr, absolute_position, Window, point(X,Y)),
+    get(Gr, area, area(_,_,W,H)),
+    \+ send(Visible, inside, area(X,Y,W,H)).
 
 :- pce_end_class(graphical).
 
 
-		 /*******************************
-		 *	     INVISIBLE		*
-		 *******************************/
+                 /*******************************
+                 *           INVISIBLE          *
+                 *******************************/
 
 :- pce_global(@unclip_window, new(pce_unclip_window)).
 
@@ -80,99 +80,99 @@ variable(busy,    bool := @off, none, "Handling attach/detach?").
 class_variable(background, colour, azure).
 
 initialise(W) :->
-	send_super(W, initialise),
-	get(W, frame, Fr),
-	send(Fr, kind, popup),
-	send(Fr, sensitive, @off),
-	send(W, pen, 0),
-	send(Fr, border, 1),
-	send(Fr?tile, border, 0),
-	send(W, slot, handler,
-	     handler(any, message(W, unclipped_event, @event))).
+    send_super(W, initialise),
+    get(W, frame, Fr),
+    send(Fr, kind, popup),
+    send(Fr, sensitive, @off),
+    send(W, pen, 0),
+    send(Fr, border, 1),
+    send(Fr?tile, border, 0),
+    send(W, slot, handler,
+         handler(any, message(W, unclipped_event, @event))).
 
 attach(W, To:graphical) :->
-	"Attach to graphical"::
-	(   get(W, slot, busy, @off)
-	->  send(W, slot, busy, @on),
-	    call_cleanup(attach(W, To),
-			 send(W, slot, busy, @off))
-	;   true
-	).
+    "Attach to graphical"::
+    (   get(W, slot, busy, @off)
+    ->  send(W, slot, busy, @on),
+        call_cleanup(attach(W, To),
+                     send(W, slot, busy, @off))
+    ;   true
+    ).
 
 attach(W, To) :-
-	get(To, window, ToWindow),
-	(   get(W, hypered, mirroring, Old)
-	->  send(W, delete_hypers, mirroring),
-	    (	get(Old, window, ToWindow)
-	    ->	true
-	    ;	send(Old, grab_pointer, @off),
-		send(ToWindow, grab_pointer, @on)
-	    )
-	;   get(W, handler, H),
-	    send(ToWindow, grab_pointer, @on),
-	    send(@display?inspect_handlers, prepend, H)
-	),
-	new(_, hyper(To, W, mirror, mirroring)),
-	send(W, update),
-	get(To, display_position, point(X,Y)),
-	(   get(@pce, window_system, windows)
-	->  Border = 0			% TBD: Fix inside kernel
-	;   get(W, border, Border)
-	),
-	send(W, open, point(X-Border,Y-Border)),
-	send(W, expose).
+    get(To, window, ToWindow),
+    (   get(W, hypered, mirroring, Old)
+    ->  send(W, delete_hypers, mirroring),
+        (   get(Old, window, ToWindow)
+        ->  true
+        ;   send(Old, grab_pointer, @off),
+            send(ToWindow, grab_pointer, @on)
+        )
+    ;   get(W, handler, H),
+        send(ToWindow, grab_pointer, @on),
+        send(@display?inspect_handlers, prepend, H)
+    ),
+    new(_, hyper(To, W, mirror, mirroring)),
+    send(W, update),
+    get(To, display_position, point(X,Y)),
+    (   get(@pce, window_system, windows)
+    ->  Border = 0                  % TBD: Fix inside kernel
+    ;   get(W, border, Border)
+    ),
+    send(W, open, point(X-Border,Y-Border)),
+    send(W, expose).
 
 update(W) :->
-	"Update for changed receiver"::
-	send(W, clear),
-	(   get(W, hypered, mirroring, Gr)
-	->  get(Gr, clone, Clone),
-	    (   get(@pce, window_system, windows)
-	    ->  get(Clone, size, size(W0, H0)),
-		send(W, size, size(W0+1, H0+1))
-	    ;   get(Clone, size, Size),
-		send(W, size, Size)
-	    ),
-	    send(Clone, set, 0, 0),
-	    send(W, display, Clone)
-	;   true
-	).
+    "Update for changed receiver"::
+    send(W, clear),
+    (   get(W, hypered, mirroring, Gr)
+    ->  get(Gr, clone, Clone),
+        (   get(@pce, window_system, windows)
+        ->  get(Clone, size, size(W0, H0)),
+            send(W, size, size(W0+1, H0+1))
+        ;   get(Clone, size, Size),
+            send(W, size, Size)
+        ),
+        send(Clone, set, 0, 0),
+        send(W, display, Clone)
+    ;   true
+    ).
 
 
 detach(W) :->
-	"Detach and hide"::
-	(   get(W, slot, busy, @off)
-	->  send(W, slot, busy, @on),
-	    call_cleanup(detach(W),
-			 send(W, slot, busy, @off))
-	;   true
-	).
+    "Detach and hide"::
+    (   get(W, slot, busy, @off)
+    ->  send(W, slot, busy, @on),
+        call_cleanup(detach(W),
+                     send(W, slot, busy, @off))
+    ;   true
+    ).
 
 detach(W) :-
-	(   get(W, hypered, mirroring, Gr)
-	->  send(W, delete_hypers, mirroring),
-	    send(W, clear),
-	    send(W, show, @off),
-	    get(W, handler, H),
-	    send(Gr?window, grab_pointer, @off),
-	    send(@display?inspect_handlers, delete, H)
-	;   true
-	).
+    (   get(W, hypered, mirroring, Gr)
+    ->  send(W, delete_hypers, mirroring),
+        send(W, clear),
+        send(W, show, @off),
+        get(W, handler, H),
+        send(Gr?window, grab_pointer, @off),
+        send(@display?inspect_handlers, delete, H)
+    ;   true
+    ).
 
 
 unclipped_event(W, Ev:event) :->
-	(   send(Ev, is_a, loc_move),
-	    (	\+ send(Ev, inside, W)
-	    ;	get(W, hypered, mirroring, Gr),
-		\+ send(Ev, inside, Gr?window)
-	    )
-	->  send(W, detach)
-	;   (   send(Ev, is_a, button)
-	    ;	send(Ev, is_a, keyboard)
-	    ;	send(Ev, is_a, wheel)
-	    )
-	->  send(W, detach),
-	    fail			% normal event-processing
-	).
+    (   send(Ev, is_a, loc_move),
+        (   \+ send(Ev, inside, W)
+        ;   get(W, hypered, mirroring, Gr),
+            \+ send(Ev, inside, Gr?window)
+        )
+    ->  send(W, detach)
+    ;   (   send(Ev, is_a, button)
+        ;   send(Ev, is_a, keyboard)
+        ;   send(Ev, is_a, wheel)
+        )
+    ->  send(W, detach),
+        fail                        % normal event-processing
+    ).
 
 :- pce_end_class(pce_unclip_window).

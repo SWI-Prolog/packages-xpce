@@ -33,8 +33,8 @@
 */
 
 :- module(xref_common,
-	  [ built_in/1
-	  ]).
+          [ built_in/1
+          ]).
 
 built_in(!).
 built_in([]).

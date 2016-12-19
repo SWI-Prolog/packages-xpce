@@ -45,112 +45,112 @@
 :- emacs_begin_mode(
        rdf, xml,
        "Mode for editing RDF documents",
-       [ -			     = button(sgml),
-	 show_diagram	     = button(sgml),
-	 rdf_make	     = key('\\C-c\\C-m') + button(compile),
-	 rdf_load	     = key('\\C-c\\C-b') + button(compile)
+       [ -                           = button(sgml),
+         show_diagram        = button(sgml),
+         rdf_make            = key('\\C-c\\C-m') + button(compile),
+         rdf_load            = key('\\C-c\\C-b') + button(compile)
        ],
        []).
 
 open_document(M) :->
-	"Insert document header"::
-	send(M, format,
-	     '<?xml version="1.0" encoding="iso-8859-1"?>\n\n\c
-	      <!DOCTYPE rdf [\n  \c
-	      <!ENTITY rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  \c
+    "Insert document header"::
+    send(M, format,
+         '<?xml version="1.0" encoding="iso-8859-1"?>\n\n\c
+              <!DOCTYPE rdf [\n  \c
+              <!ENTITY rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  \c
               <!ENTITY xsd  "http://www.w3.org/2000/10/XMLSchema#">\n\c
               ]>\n\n\c
-	      <rdf:RDF\n  \c
-	      xmlns:rdf ="&rdf;"\n  \c
-	      xmlns:xsd ="&xsd;"\n\c
-	      >\n\n\c
-	      </rdf:RDF>\n').
+              <rdf:RDF\n  \c
+              xmlns:rdf ="&rdf;"\n  \c
+              xmlns:xsd ="&xsd;"\n\c
+              >\n\n\c
+              </rdf:RDF>\n').
 
 show_diagram(M) :->
-	"Show diagram of file"::
-	get(M, text_buffer, TB),
-	pce_open(TB, read, In),
-	load_rdf(stream(In), Triples,
-		 [ expand_foreach(true)
-		 ]),
-	close(In),
-	new(D, rdf_diagram(string('RDF triple diagram'))),
-	send(new(report_dialog), below, D),
-	send(D, triples, Triples),
-	send(D, open).
+    "Show diagram of file"::
+    get(M, text_buffer, TB),
+    pce_open(TB, read, In),
+    load_rdf(stream(In), Triples,
+             [ expand_foreach(true)
+             ]),
+    close(In),
+    new(D, rdf_diagram(string('RDF triple diagram'))),
+    send(new(report_dialog), below, D),
+    send(D, triples, Triples),
+    send(D, open).
 
 rdf_make(M) :->
-	"Run rdf_make/0"::
-	send(@emacs, save_some_buffers),
-	rdf_make,
-	send(M, report, status, 'RDF Make done').
+    "Run rdf_make/0"::
+    send(@emacs, save_some_buffers),
+    rdf_make,
+    send(M, report, status, 'RDF Make done').
 
 rdf_load(M) :->
-	"Run rdf_load on the file"::
-	get(M?text_buffer, file, File),
-	(   send(File, instance_of, file)
-	->  send(M, save_if_modified),
-	    get(File, name, Path),
-	    rdf_load(Path),
-	    send(M, report, status, '%s loaded', Path)
-	;   send(M, report, error,
-		 'Buffer is not connected to a file')
-	).
+    "Run rdf_load on the file"::
+    get(M?text_buffer, file, File),
+    (   send(File, instance_of, file)
+    ->  send(M, save_if_modified),
+        get(File, name, Path),
+        rdf_load(Path),
+        send(M, report, status, '%s loaded', Path)
+    ;   send(M, report, error,
+             'Buffer is not connected to a file')
+    ).
 
 :- emacs_end_mode.
 
 
 :- emacs_begin_mode(rdfs, rdf,
-		    "Mode for editing RDFS documents",
-		    [],
-		    []).
+                    "Mode for editing RDFS documents",
+                    [],
+                    []).
 
 open_document(M) :->
-	"Insert document header"::
-	send(M, format,
-	     '<?xml version="1.0" encoding="iso-8859-1"?>\n\n\c
-	      <!DOCTYPE rdfs [\n  \c
-	      <!ENTITY rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  \c
-	      <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">\n  \c
+    "Insert document header"::
+    send(M, format,
+         '<?xml version="1.0" encoding="iso-8859-1"?>\n\n\c
+              <!DOCTYPE rdfs [\n  \c
+              <!ENTITY rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  \c
+              <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">\n  \c
               <!ENTITY xsd  "http://www.w3.org/2000/10/XMLSchema#">\n\c
               ]>\n\n\c
-	      <rdf:RDF\n  \c
-	      xmlns:rdf ="&rdf;"\n  \c
-	      xmlns:rdfs="&rdfs;"\n  \c
-	      xmlns:xsd ="&xsd;"\n\c
-	      >\n\n\c
-	      </rdf:RDF>\n').
+              <rdf:RDF\n  \c
+              xmlns:rdf ="&rdf;"\n  \c
+              xmlns:rdfs="&rdfs;"\n  \c
+              xmlns:xsd ="&xsd;"\n\c
+              >\n\n\c
+              </rdf:RDF>\n').
 
 :- emacs_end_mode.
 
 
 
 :- emacs_begin_mode(owl, rdfs,
-		    "Mode for editing OWL documents",
-		    [],
-		    []).
+                    "Mode for editing OWL documents",
+                    [],
+                    []).
 
 open_document(M) :->
-	"Insert document header"::
-	send(M, format,
-	     '<?xml version="1.0" encoding="iso-8859-1"?>\n\n\c
-	      <!DOCTYPE owl [\n  \c
-	      <!ENTITY rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  \c
-	      <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">\n  \c
-	      <!ENTITY owl  "http://www.w3.org/2002/7/owl#">\n  \c
+    "Insert document header"::
+    send(M, format,
+         '<?xml version="1.0" encoding="iso-8859-1"?>\n\n\c
+              <!DOCTYPE owl [\n  \c
+              <!ENTITY rdf  "http://www.w3.org/1999/02/22-rdf-syntax-ns#">\n  \c
+              <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">\n  \c
+              <!ENTITY owl  "http://www.w3.org/2002/7/owl#">\n  \c
               <!ENTITY xsd  "http://www.w3.org/2000/10/XMLSchema#">\n  \c
-	      <!ENTITY dc   "http://purl.org/dc/elements/1.1/">\n\c
+              <!ENTITY dc   "http://purl.org/dc/elements/1.1/">\n\c
               ]>\n\n\c
-	      <rdf:RDF\n  \c
-	      xmlns:rdf ="&rdf;"\n  \c
-	      xmlns:rdfs="&rdfs;"\n  \c
-	      xmlns:owl ="&owl;"\n  \c
-	      xmlns:xsd ="&xsd;"\n  \c
-	      xmlns:dc  ="&dc;"\n\c
-	      >\n\n\c
-	      <Ontology rdf:about="">\n\c
-	      </Ontology>\n\n\c
-	      </rdf:RDF>\n').
+              <rdf:RDF\n  \c
+              xmlns:rdf ="&rdf;"\n  \c
+              xmlns:rdfs="&rdfs;"\n  \c
+              xmlns:owl ="&owl;"\n  \c
+              xmlns:xsd ="&xsd;"\n  \c
+              xmlns:dc  ="&dc;"\n\c
+              >\n\n\c
+              <Ontology rdf:about="">\n\c
+              </Ontology>\n\n\c
+              </rdf:RDF>\n').
 
 :- emacs_end_mode.
 

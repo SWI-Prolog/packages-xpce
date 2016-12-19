@@ -34,18 +34,18 @@
 */
 
 :- module(gui_tracer,
-	  [ guitracer/0,
-	    noguitracer/0,		% Switch it off
-	    gtrace/0,			% Start tracer and trace
-	    gtrace/1,			% :Goal
-	    gspy/1,			% Start tracer and set spypoint
-	    gdebug/0			% Start tracer and debug
-	  ]).
+          [ guitracer/0,
+            noguitracer/0,              % Switch it off
+            gtrace/0,                   % Start tracer and trace
+            gtrace/1,                   % :Goal
+            gspy/1,                     % Start tracer and set spypoint
+            gdebug/0                    % Start tracer and debug
+          ]).
 :- use_module(library(pce)).
 :- set_prolog_flag(generate_debug_info, false).
 :- meta_predicate
-	gtrace(0),
-	gspy(:).
+    gtrace(0),
+    gspy(:).
 
 /** <module> Graphical debugger utilities
 
@@ -53,125 +53,129 @@ This module provides utilities that use   the  graphical debugger rather
 than the conventional 4-port commandline debugger.  This library is part
 of XPCE.
 
-@see	library(threadutil) provides another set t* predicates that
-	deal with threads.
+@see    library(threadutil) provides another set t* predicates that
+        deal with threads.
 */
 
-%%	guitracer is det.
+%!  guitracer is det.
 %
-%	Enable the graphical debugger.  A   subsequent  call  to trace/0
-%	opens the de debugger window. The   tranditional debugger can be
-%	re-enabled using noguitracer/0.
+%   Enable the graphical debugger.  A   subsequent  call  to trace/0
+%   opens the de debugger window. The   tranditional debugger can be
+%   re-enabled using noguitracer/0.
 
 guitracer :-
-	current_prolog_flag(gui_tracer, true), !.
+    current_prolog_flag(gui_tracer, true),
+    !.
 guitracer :-
-	current_prolog_flag(gui_tracer, _), !,
-	set_prolog_flag(gui_tracer, true),
-	visible(+cut_call),
-	print_message(informational, gui_tracer(true)).
+    current_prolog_flag(gui_tracer, _),
+    !,
+    set_prolog_flag(gui_tracer, true),
+    visible(+cut_call),
+    print_message(informational, gui_tracer(true)).
 guitracer :-
-	in_pce_thread_sync(
-	    load_files([library('trace/trace')],
-		       [ silent(true),
-			 if(not_loaded)
-		       ])),
-	set_prolog_flag(gui_tracer, true),
-	visible(+cut_call),
-	print_message(informational, gui_tracer(true)).
+    in_pce_thread_sync(
+        load_files([library('trace/trace')],
+                   [ silent(true),
+                     if(not_loaded)
+                   ])),
+    set_prolog_flag(gui_tracer, true),
+    visible(+cut_call),
+    print_message(informational, gui_tracer(true)).
 
-%%	noguitracer is det.
+%!  noguitracer is det.
 %
-%	Disable the graphical debugger.
+%   Disable the graphical debugger.
 %
-%	@see guitracer/0
+%   @see guitracer/0
 
 noguitracer :-
-	current_prolog_flag(gui_tracer, true), !,
-	set_prolog_flag(gui_tracer, false),
-	visible(-cut_call),
-	print_message(informational, gui_tracer(false)).
+    current_prolog_flag(gui_tracer, true),
+    !,
+    set_prolog_flag(gui_tracer, false),
+    visible(-cut_call),
+    print_message(informational, gui_tracer(false)).
 noguitracer.
 
-%%	gtrace is det.
+%!  gtrace is det.
 %
-%	Like trace/0, but uses the graphical tracer.
+%   Like trace/0, but uses the graphical tracer.
 
-:- '$hide'(gtrace/0).			% don't trace it
+:- '$hide'(gtrace/0).                   % don't trace it
 
 gtrace :-
-	guitracer,
-	trace.
+    guitracer,
+    trace.
 
-%%	gtrace(:Goal) is det.
+%!  gtrace(:Goal) is det.
 %
-%	Trace Goal in a separate thread,  such that the toplevel remains
-%	free for user interaction.
+%   Trace Goal in a separate thread,  such that the toplevel remains
+%   free for user interaction.
 
 gtrace(Goal) :-
-	guitracer,
-	thread_create(trace_goal(Goal), Id, [detached(true)]),
-	print_message(informational, gui_tracer(in_thread(Id, Goal))).
+    guitracer,
+    thread_create(trace_goal(Goal), Id, [detached(true)]),
+    print_message(informational, gui_tracer(in_thread(Id, Goal))).
 
 :- meta_predicate trace_goal(0).
 
 trace_goal(Goal) :-
-	catch(trace_goal_2(Goal), _, true), !.
+    catch(trace_goal_2(Goal), _, true),
+    !.
 trace_goal(_).
 
 trace_goal_2(Goal) :-
-	setup_call_catcher_cleanup(
-	    trace,
-	    Goal,
-	    Catcher,
-	    finished(Catcher, Det)),
-	notrace,
-	(   Det == true
-	->  true
-	;   in_pce_thread_sync(send(@(display), confirm, 'Retry goal?'))
-	->  trace, fail
-	;   !
-	).
+    setup_call_catcher_cleanup(
+        trace,
+        Goal,
+        Catcher,
+        finished(Catcher, Det)),
+    notrace,
+    (   Det == true
+    ->  true
+    ;   in_pce_thread_sync(send(@(display), confirm, 'Retry goal?'))
+    ->  trace, fail
+    ;   !
+    ).
 
 :- '$hide'(finished/2).
 
 finished(Reason, Det) :-
-	notrace,
-	print_message(informational, gui_tracer(completed(Reason))),
-	(   Reason == exit
-	->  Det = true
-	;   Det = false
-	).
+    notrace,
+    print_message(informational, gui_tracer(completed(Reason))),
+    (   Reason == exit
+    ->  Det = true
+    ;   Det = false
+    ).
 
-%%	gspy(:Spec) is det.
+%!  gspy(:Spec) is det.
 %
-%	Same as spy/1, but uses the graphical debugger.
+%   Same as spy/1, but uses the graphical debugger.
 
 gspy(Predicate) :-
-	guitracer,
-	spy(Predicate).
+    guitracer,
+    spy(Predicate).
 
-%%	gdebug is det.
+%!  gdebug is det.
 %
-%	Same as debug/0, but uses the graphical tracer.
+%   Same as debug/0, but uses the graphical tracer.
 
 gdebug :-
-	guitracer,
-	debug.
+    guitracer,
+    debug.
 
 
-		 /*******************************
-		 *	      MESSAGES		*
-		 *******************************/
+                 /*******************************
+                 *            MESSAGES          *
+                 *******************************/
 
 :- multifile
-	prolog:message/3.
+    prolog:message/3.
 
 prolog:message(gui_tracer(true)) -->
-	[ 'The graphical front-end will be used for subsequent tracing' ].
+    [ 'The graphical front-end will be used for subsequent tracing' ].
 prolog:message(gui_tracer(false)) -->
-	[ 'Subsequent tracing uses the commandline tracer' ].
+    [ 'Subsequent tracing uses the commandline tracer' ].
 prolog:message(gui_tracer(in_thread(Id, _Goal))) -->
-	[ 'Debugging goal in new thread ~q'-[Id] ].
+    [ 'Debugging goal in new thread ~q'-[Id] ].
 prolog:message(gui_tracer(completed(Reason))) -->
-	[ 'Goal completed: ~q~n'-[Reason] ].
+    [ 'Goal completed: ~q~n'-[Reason] ].

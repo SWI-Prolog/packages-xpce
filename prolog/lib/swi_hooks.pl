@@ -51,63 +51,66 @@ file from being loaded.
 :- set_module(class(development)).
 
 :- multifile
-	prolog:debug_control_hook/1,
-	prolog:help_hook/1,
-	prolog:show_profile_hook/1,		% new
-	prolog:show_profile_hook/2.		% compatibility
+    prolog:debug_control_hook/1,
+    prolog:help_hook/1,
+    prolog:show_profile_hook/1,             % new
+    prolog:show_profile_hook/2.             % compatibility
 
 
-		 /*******************************
-		 *	    DEBUG HOOKS		*
-		 *******************************/
+                 /*******************************
+                 *          DEBUG HOOKS         *
+                 *******************************/
 
 prolog:debug_control_hook(spy(Method)) :-
-	call(spypce(Method)).
+    call(spypce(Method)).
 prolog:debug_control_hook(nospy(Method)) :-
-	call(nospypce(Method)).
+    call(nospypce(Method)).
 
 
-		 /*******************************
-		 *	     HELP HOOK		*
-		 *******************************/
+                 /*******************************
+                 *           HELP HOOK          *
+                 *******************************/
 
-prolog:help_hook(help) :- !,
-	call(prolog_help).
-prolog:help_hook(apropos(What)) :- !,
-	call(prolog_apropos(What)).
-prolog:help_hook(help(What)) :- !,
-	call((   in_pce_thread_sync(pce_to_method(What, Method))
-	     ->  manpce(Method)
-	     ;	 current_prolog_flag(pldoc_collecting, _),
-		 doc_browser(What)
-	     ->	 true
-	     ;   prolog_help(What)
-	     )).
+prolog:help_hook(help) :-
+    !,
+    call(prolog_help).
+prolog:help_hook(apropos(What)) :-
+    !,
+    call(prolog_apropos(What)).
+prolog:help_hook(help(What)) :-
+    !,
+    call((   in_pce_thread_sync(pce_to_method(What, Method))
+         ->  manpce(Method)
+         ;   current_prolog_flag(pldoc_collecting, _),
+             doc_browser(What)
+         ->  true
+         ;   prolog_help(What)
+         )).
 
 
-		 /*******************************
-		 *	     PROFILING		*
-		 *******************************/
+                 /*******************************
+                 *           PROFILING          *
+                 *******************************/
 
 prolog:show_profile_hook(_Options) :-
-	call(pce_show_profile).
+    call(pce_show_profile).
 prolog:show_profile_hook(_Style, _Top) :-
-	call(pce_show_profile).
+    call(pce_show_profile).
 
 
-		 /*******************************
-		 *	       SOURCE		*
-		 *******************************/
+                 /*******************************
+                 *             SOURCE           *
+                 *******************************/
 
-%%	prolog:alternate_syntax(?Syntax, +Module, -Setup, -Restore)
+%!  prolog:alternate_syntax(?Syntax, +Module, -Setup, -Restore)
 %
-%	Implements operator handling for reading   arbitrary  terms from
-%	XPCE classes.
+%   Implements operator handling for reading   arbitrary  terms from
+%   XPCE classes.
 
 :- multifile
-	prolog:alternate_syntax/4.
+    prolog:alternate_syntax/4.
 
 prolog:alternate_syntax(pce_class, M, pce_expansion:push_compile_operators(M),
-				      pce_expansion:pop_compile_operators) :-
-	current_prolog_flag(xpce, true).
+                                      pce_expansion:pop_compile_operators) :-
+    current_prolog_flag(xpce, true).
 

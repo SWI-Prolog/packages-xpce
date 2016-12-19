@@ -34,56 +34,56 @@
 */
 
 :- module(http_image,
-	  [ reply_image/2		% +Image, +Options
-	  ]).
+          [ reply_image/2               % +Image, +Options
+          ]).
 :- use_module(library(readutil)).
 :- use_module(library(pce)).
 
 /** <module> Serve dynamically generated images through XPCE
 */
 
-%%	reply_image(+Image, +Options)
+%!  reply_image(+Image, +Options)
 %
-%	Formulate a CGI reply from an XPCE graphical.  This call handles
-%	anything that can be converted into a pixmap object, notably any
-%	XPCE graphical object.
+%   Formulate a CGI reply from an XPCE graphical.  This call handles
+%   anything that can be converted into a pixmap object, notably any
+%   XPCE graphical object.
 %
-%	Currently the only option recognised   is content_type(+Type) to
-%	specify the type. image/jpeg and image/gif are the only sensible
-%	values. The default is to generate gif.
+%   Currently the only option recognised   is content_type(+Type) to
+%   specify the type. image/jpeg and image/gif are the only sensible
+%   values. The default is to generate gif.
 %
-%	If this module is used as a server on X11-based systems the user
-%	must ensure the presence of  an   X11  server.  The XPCE library
-%	'Xserver' provides code to start a `head-less' (i.e. server that
-%	doesn't  need  a  physical  display)    server  and  adjust  the
-%	environment to make XPCE use this server.
+%   If this module is used as a server on X11-based systems the user
+%   must ensure the presence of  an   X11  server.  The XPCE library
+%   'Xserver' provides code to start a `head-less' (i.e. server that
+%   doesn't  need  a  physical  display)    server  and  adjust  the
+%   environment to make XPCE use this server.
 
 % (*) Note that this code uses  a   text_buffer  as intermediate for the
 % data. this is pretty dubious as binary data is not well supported this
 % way. It still works, but only when using newline(posix) for Windows.
 
 reply_image(Image, Options) :-
-	(   memberchk(content_type(Type), Options)
-	->  image_format(Type, ImgType)
-	;   Type = image/gif,
-	    ImgType = gif
-	),
-	get(@pce, convert, Image, pixmap, Pixmap),
-	new(TB, text_buffer),
-	send(TB, undo_buffer_size, 0),
-	send(Pixmap, save, TB, ImgType),
-	format('Content-type: ~w~n~n', [Type]),
-	pce_open(TB, read, Data),
-	set_stream(Data, newline(posix)),	% (*)
-	copy_stream_data(Data, current_output),
-	close(Data),
-	free(TB),
-	(   Pixmap \== Image
-	->  free(Pixmap)
-	;   true
-	).
+    (   memberchk(content_type(Type), Options)
+    ->  image_format(Type, ImgType)
+    ;   Type = image/gif,
+        ImgType = gif
+    ),
+    get(@pce, convert, Image, pixmap, Pixmap),
+    new(TB, text_buffer),
+    send(TB, undo_buffer_size, 0),
+    send(Pixmap, save, TB, ImgType),
+    format('Content-type: ~w~n~n', [Type]),
+    pce_open(TB, read, Data),
+    set_stream(Data, newline(posix)),       % (*)
+    copy_stream_data(Data, current_output),
+    close(Data),
+    free(TB),
+    (   Pixmap \== Image
+    ->  free(Pixmap)
+    ;   true
+    ).
 
 image_format(image/Type, Type) :- !.
 image_format(Format, Type) :-
-	atom_concat('image/', Type, Format).
+    atom_concat('image/', Type, Format).
 

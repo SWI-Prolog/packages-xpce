@@ -33,15 +33,15 @@
 */
 
 :- module(doc_test,
-	  [ test/0,
-	    test/1			% +URL
-	  ]).
+          [ test/0,
+            test/1                      % +URL
+          ]).
 :- use_module(library('doc/load')).
-:- use_module(doc(url_fetch)).		% avoid autoload for debugging
+:- use_module(doc(url_fetch)).          % avoid autoload for debugging
 
 test :-
-	test('http://localhost/').
+    test('http://localhost/').
 
 test(URL) :-
-	send(new(B, doc_browser), open),
-	send(B, url, URL).
+    send(new(B, doc_browser), open),
+    send(B, url, URL).

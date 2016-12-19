@@ -33,8 +33,8 @@
 */
 
 :- make_library_index('.',
-		      [ '*.pl',
-			'trace/browse.pl',
-			'swi/*.pl'
-		      ]).
+                      [ '*.pl',
+                        'trace/browse.pl',
+                        'swi/*.pl'
+                      ]).
 

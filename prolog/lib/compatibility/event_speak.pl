@@ -56,7 +56,7 @@ stretch_opposite(south_west, north_east).
 stretch_opposite(south_east, north_west).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-			     MOVING GRAPHICALS
+                             MOVING GRAPHICALS
 
 move-Button
     Drags a graphical by moving the entire graphical each drag-event.  This
@@ -65,29 +65,32 @@ move-Button
     or the graphical is moved over complex graphicals.  Use with care!
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-do_make_handlers(move-Button, Group) :- !,
-	mouse_event_type(Button-down, Down),
-	mouse_event_type(Button-drag, Drag),
-	mouse_event_type(Button-up, Up), !,
+do_make_handlers(move-Button, Group) :-
+    !,
+    mouse_event_type(Button-down, Down),
+    mouse_event_type(Button-drag, Drag),
+    mouse_event_type(Button-up, Up),
 
-	new_handler(DragHandler, Drag,
-		    block(message(@event_receiver, position,
-				  ?(@event_position,
-				    difference,
-				    ?(@event_window, saved_cursor))))),
-        send(DragHandler, active, @off),
-	new_handler(DownHandler, Down,
-		    block(message(DragHandler, active, @on),
-			  message(@event_window,
-				  saved_cursor, @event_relative))),
-	new_handler(UpHandler, Up,
-		    message(DragHandler, active, @off)),
+    !,
 
-	new(Group, handler_group(DragHandler, UpHandler, DownHandler)).
+    new_handler(DragHandler, Drag,
+                block(message(@event_receiver, position,
+                              ?(@event_position,
+                                difference,
+                                ?(@event_window, saved_cursor))))),
+    send(DragHandler, active, @off),
+    new_handler(DownHandler, Down,
+                block(message(DragHandler, active, @on),
+                      message(@event_window,
+                              saved_cursor, @event_relative))),
+    new_handler(UpHandler, Up,
+                message(DragHandler, active, @off)),
+
+    new(Group, handler_group(DragHandler, UpHandler, DownHandler)).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-			ATTACH/DETACH HANDLERS
+                        ATTACH/DETACH HANDLERS
 
 attach_handlers(+Object, +HandlerTypes)
 detach_handlers(+Object, +HandlerTypes)
@@ -95,38 +98,41 @@ detach_handlers(+Object, +HandlerTypes)
     The elements in HandlerTypes are defined by the argument to
     make_handlers/1.  For example:
 
-	attach_handlers(@b, [stretch-left, move-middle]).
+        attach_handlers(@b, [stretch-left, move-middle]).
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 attach_handlers(_, []) :- !.
-attach_handlers(Object, [H|T]) :- !,
-       attach_handlers(Object, H),
-       attach_handlers(Object, T).
+attach_handlers(Object, [H|T]) :-
+    !,
+    attach_handlers(Object, H),
+    attach_handlers(Object, T).
 attach_handlers(Object, Type) :-
-       find_handler(Type, Handler),
-       send(Object, recogniser, Handler).
+    find_handler(Type, Handler),
+    send(Object, recogniser, Handler).
 
 detach_handlers(_, []) :- !.
-detach_handlers(Object, [H|T]) :- !,
-       detach_handlers(Object, H),
-       detach_handlers(Object, T).
+detach_handlers(Object, [H|T]) :-
+    !,
+    detach_handlers(Object, H),
+    detach_handlers(Object, T).
 detach_handlers(Object, Type) :-
-       find_handler(Type, Handler),
-       send(Object, delete_recogniser, Handler).
+    find_handler(Type, Handler),
+    send(Object, delete_recogniser, Handler).
 
 find_handler(Type, Handler) :-
-       es_handlers(Type, Handler), !.
+    es_handlers(Type, Handler),
+    !.
 find_handler(Type, Handler) :-
-       make_handlers(Type),
-       es_handlers(Type, Handler).
+    make_handlers(Type),
+    es_handlers(Type, Handler).
 
 
-		/********************************
-		*            UTILITIES		*
-		********************************/
+                /********************************
+                *            UTILITIES          *
+                ********************************/
 
 assert_handlers(Type, Handlers) :-
-	asserta(es_handlers(Type, Handlers)).
+    asserta(es_handlers(Type, Handlers)).
 
 %   new_handler(?@Handler, +EventType, +Message)
 %   new_handler(?@Handler, +EventType, +Message, +Region)
@@ -136,7 +142,7 @@ assert_handlers(Type, Handlers) :-
 %   is valid (default is the entire area of the graphical).
 
 new_handler(Handler, EventType, Message) :-
-	new_handler(Handler, EventType, Message, @default).
+    new_handler(Handler, EventType, Message, @default).
 
 new_handler(Handler, EventType, Message, Region) :-
-	new(Handler, handler(EventType, Message, Region)).
+    new(Handler, handler(EventType, Message, Region)).

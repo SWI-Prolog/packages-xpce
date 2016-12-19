@@ -53,4 +53,4 @@ mapped_class_name(>,                       greater).
 mapped_class_name(>=,                      greateq).
 mapped_class_name(?,                       obtain).
 mapped_class_name(\==,                     noteq).
-mapped_class_name(@=,			   nameref).
+mapped_class_name(@=,                      nameref).

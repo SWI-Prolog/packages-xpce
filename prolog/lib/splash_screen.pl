@@ -42,8 +42,8 @@
 Provide a splash-screen for an application.  The simplest operation is
 to open it with a timer that destroys it:
 
-	send(new(splash_screen(Image)), open, Time)
-	<continue initialisation>
+        send(new(splash_screen(Image)), open, Time)
+        <continue initialisation>
 
 Note that the window will only disappear after the elapsed time if
 events are dispatched (see @display->synchronise).
@@ -51,119 +51,119 @@ events are dispatched (see @display->synchronise).
 You can also open it permanently and   associate active regions to parts
 of the image:
 
-	new(S, splash_screen(Image)),
-	send(S, map, graphical(25,50,100,20),
-	     message(@prolog, start_my_app),
-	     'Start application'),
-	send(S, map, graphical(25,70,100,20),
-	     message(@prolog, browse_manual),
-	     'Browse manual'),
-	send(S, open).
+        new(S, splash_screen(Image)),
+        send(S, map, graphical(25,50,100,20),
+             message(@prolog, start_my_app),
+             'Start application'),
+        send(S, map, graphical(25,70,100,20),
+             message(@prolog, browse_manual),
+             'Browse manual'),
+        send(S, open).
 
 The graphical is used to define the sensitive area as well as the cursor
 that is visible in the area. It is not displayed.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- pce_begin_class(splash_screen, auto_sized_picture,
-		   "Show splash window").
+                   "Show splash window").
 
-variable(maps,	chain*,	 get, "Event-handling map").
+variable(maps,  chain*,  get, "Event-handling map").
 
 initialise(S, Img:image, Label:[char_array]) :->
-	send_super(S, initialise, Label),
-	get(@display, size, MaxSize),
-	send(S, max_size, MaxSize),
-	send(S, border, 0),
-	(   Label == @default
-	->  send(S, kind, popup)	% do not show border
-	;   true
-	),
-	send(S, display, bitmap(Img)).
+    send_super(S, initialise, Label),
+    get(@display, size, MaxSize),
+    send(S, max_size, MaxSize),
+    send(S, border, 0),
+    (   Label == @default
+    ->  send(S, kind, popup)        % do not show border
+    ;   true
+    ),
+    send(S, display, bitmap(Img)).
 
 open(S, Time:[real]*) :->
-	send(S, open_centered),
-	send(S, wait),
-	(   number(Time)
-	->  new(T, timer(Time, message(S, destroy))),
-	    new(_, partof_hyper(S, T, timer)),
-	    send(T, start)
-	;   true
-	).
+    send(S, open_centered),
+    send(S, wait),
+    (   number(Time)
+    ->  new(T, timer(Time, message(S, destroy))),
+        new(_, partof_hyper(S, T, timer)),
+        send(T, start)
+    ;   true
+    ).
 
 map(S, Gr:[graphical]*, Msg:code, Alt:[char_array]) :->
-	"Extend the event-handling map"::
-	default(Gr, @nil, TheGr),
-	(   get(S, maps, Maps),
-	    Maps \== @nil
-	->  true
-	;   send(S, slot, maps, new(Maps, chain))
-	),
-	send(Maps, append, splash_map(TheGr, Msg, Alt)).
+    "Extend the event-handling map"::
+    default(Gr, @nil, TheGr),
+    (   get(S, maps, Maps),
+        Maps \== @nil
+    ->  true
+    ;   send(S, slot, maps, new(Maps, chain))
+    ),
+    send(Maps, append, splash_map(TheGr, Msg, Alt)).
 
 map(S, At:point, Map:splash_map) :<-
-	"Find map from position"::
-	get(S, maps, Maps), Maps \== @nil,
-	object(At, point(X, Y)),
-	get(Maps, find,
-	    or(@arg1?graphical == @nil,
-	       message(@arg1?graphical, in_event_area, X, Y)),
-	    Map).
+    "Find map from position"::
+    get(S, maps, Maps), Maps \== @nil,
+    object(At, point(X, Y)),
+    get(Maps, find,
+        or(@arg1?graphical == @nil,
+           message(@arg1?graphical, in_event_area, X, Y)),
+        Map).
 
 :- pce_group(event).
 
 :- pce_global(@spash_screen_recogniser,
-	      new(click_gesture(left, '', single,
-				message(@receiver, clicked,
-					@event?position)))).
+              new(click_gesture(left, '', single,
+                                message(@receiver, clicked,
+                                        @event?position)))).
 
 event(S, Ev:event) :->
-	(   send_super(S, event, Ev)
-	->  true
-	;   send(@spash_screen_recogniser, event, Ev)
-	;   send(Ev, is_a, loc_move),
-	    (	get(S, map, ?(Ev, position, S), Map)
-	    ->  get(Map, graphical, Gr),
-		(   Gr \== @nil,
-		    get(Gr, cursor, Cursor),
-		    Cursor \== @nil
-		->  send(S, cursor, Cursor)
-		;   send(S, cursor, hand2)
-		)
-	    ;	get(S, class_variable_value, cursor, DefCursor),
-		send(S, cursor, DefCursor)
-	    )
-	).
+    (   send_super(S, event, Ev)
+    ->  true
+    ;   send(@spash_screen_recogniser, event, Ev)
+    ;   send(Ev, is_a, loc_move),
+        (   get(S, map, ?(Ev, position, S), Map)
+        ->  get(Map, graphical, Gr),
+            (   Gr \== @nil,
+                get(Gr, cursor, Cursor),
+                Cursor \== @nil
+            ->  send(S, cursor, Cursor)
+            ;   send(S, cursor, hand2)
+            )
+        ;   get(S, class_variable_value, cursor, DefCursor),
+            send(S, cursor, DefCursor)
+        )
+    ).
 
 help_message(S, What:{tag,summary}, Ev:event, Alt:string) :<-
-	"Show balloon"::
-	What == tag,
-	get(S, map, ?(Ev, position, S), Map),
-	get(Map, alt, Alt),
-	Alt \== @nil.
+    "Show balloon"::
+    What == tag,
+    get(S, map, ?(Ev, position, S), Map),
+    get(Map, alt, Alt),
+    Alt \== @nil.
 
 clicked(S, At:point) :->
-	"Handle clicked"::
-	send(S, expose),
-	get(S, map, At, Map),
-	get(Map, message, Code),
-	get(S, display, Display),
-	send(Display, busy_cursor),
-	call_cleanup(send(Code, forward, S),
-		     send(Display, busy_cursor, @nil)).
+    "Handle clicked"::
+    send(S, expose),
+    get(S, map, At, Map),
+    get(Map, message, Code),
+    get(S, display, Display),
+    send(Display, busy_cursor),
+    call_cleanup(send(Code, forward, S),
+                 send(Display, busy_cursor, @nil)).
 
 :- pce_end_class(splash_screen).
 
 :- pce_begin_class(splash_map, object, "Area in splash screen").
 
-variable(graphical,	graphical*,	get, "Graphical defining area").
-variable(message,	code,		get, "Associated code").
-variable(alt,		char_array*,	get, "Balloon text").
+variable(graphical,     graphical*,     get, "Graphical defining area").
+variable(message,       code,           get, "Associated code").
+variable(alt,           char_array*,    get, "Balloon text").
 
 initialise(SM, Gr:graphical*, Msg:code, Alt:[char_array]*) :->
-	send_super(SM, initialise),
-	send(SM, slot, graphical, Gr),
-	send(SM, slot, message, Msg),
-	default(Alt, @nil, TheAlt),
-	send(SM, slot, alt, TheAlt).
+    send_super(SM, initialise),
+    send(SM, slot, graphical, Gr),
+    send(SM, slot, message, Msg),
+    default(Alt, @nil, TheAlt),
+    send(SM, slot, alt, TheAlt).
 
 :- pce_end_class(splash_map).

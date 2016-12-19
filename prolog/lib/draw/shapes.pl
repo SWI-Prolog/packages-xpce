@@ -37,23 +37,23 @@
 :- use_module(library(pce)).
 :- use_module(library(pce_template)).
 :- require([ default/3
-	   , forall/2
-	   , get_config/2
-	   , ignore/1
-	   , member/2
-	   ]).
+           , forall/2
+           , get_config/2
+           , ignore/1
+           , member/2
+           ]).
 
 :- multifile
-	user:pce_pre_expansion_hook/2.
+    user:pce_pre_expansion_hook/2.
 :- dynamic
-	user:pce_pre_expansion_hook/2.
+    user:pce_pre_expansion_hook/2.
 
 user:pce_pre_expansion_hook((:- draw_begin_shape(Name, Super,
-						 Summary, Recognisers)),
-	       [(:- pce_begin_class(draw_shape_class:Name, Super, Summary)),
-		(:- use_class_template(draw_shape)),
-		(:- pce_class_directive(draw_shapes:associate_recognisers(Recognisers)))
-	       ]).
+                                                 Summary, Recognisers)),
+               [(:- pce_begin_class(draw_shape_class:Name, Super, Summary)),
+                (:- use_class_template(draw_shape)),
+                (:- pce_class_directive(draw_shapes:associate_recognisers(Recognisers)))
+               ]).
 user:pce_pre_expansion_hook((:- draw_end_shape), (:- pce_end_class)).
 
 
@@ -74,9 +74,9 @@ the tool- would be saved too.  This leads  to a bad separation of UI and
 the actual data manipulated.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-		/********************************
-		*	  COMMON TEMPLATE	*
-		********************************/
+                /********************************
+                *         COMMON TEMPLATE       *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 To facilate users to refine PceDraw for   their own needs, we designed a
@@ -84,11 +84,11 @@ very simple schema for defining  new  shapes.    A  PceDraw  shape  is a
 subclass of a PCE graphical or of   another PceDraw shape.  Such classes
 are defined between the braces:
 
-	:- draw_begin_shape(Name, Super, Summary, Recognisers).
+        :- draw_begin_shape(Name, Super, Summary, Recognisers).
 
-	...
+        ...
 
-	:- draw_end_shape.
+        :- draw_end_shape.
 
 The public predicate draw_begin_shape/4 creates a  new XPCE class `Name'
 below `Super'.  The  class  object  itself   is  an  instance  of  class
@@ -100,8 +100,8 @@ We extend the  meta-knowledge  represented   in  classes  with  `hidden'
 attributes (attributes that *can*, but *are not* edited by the attribute
 editor (see `draw_shape ->has_attribute') and recognisers.
 
-NOTE:	I consider allowing for class-level recognisers anyway, avoiding
-	the need for explicit event-handling methods in many cases.
+NOTE:   I consider allowing for class-level recognisers anyway, avoiding
+        the need for explicit event-handling methods in many cases.
 
 First the definition of the meta-class draw_shape_class:
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -109,86 +109,86 @@ First the definition of the meta-class draw_shape_class:
 :- pce_begin_class(draw_shape_class, class, "Handle class-level stuff").
 
 variable(hidden_attributes, chain,  get, "Masked attributes").
-variable(recognisers,	    chain,  get, "Event-handling recognisers").
+variable(recognisers,       chain,  get, "Event-handling recognisers").
 variable(part_attributes,   sheet*, get, "Compound attribute dispatching").
 
 initialise(Class, Name, Super) :->
-	send(Class, send_super, initialise, Name, Super),
-	(   get(Class, super_class, SuperClass),
-	    send(SuperClass, instance_of, draw_shape_class)
-	->  send(Class, slot, hidden_attributes,
-		 SuperClass?hidden_attributes?copy),
-	    send(Class, slot, recognisers,
-		 SuperClass?recognisers?copy),
-	    send(Class, slot, part_attributes,
-		 SuperClass?part_attributes?clone)
-	;   send(Class, slot, hidden_attributes, new(chain)),
-	    send(Class, slot, recognisers, new(chain))
-	).
+    send(Class, send_super, initialise, Name, Super),
+    (   get(Class, super_class, SuperClass),
+        send(SuperClass, instance_of, draw_shape_class)
+    ->  send(Class, slot, hidden_attributes,
+             SuperClass?hidden_attributes?copy),
+        send(Class, slot, recognisers,
+             SuperClass?recognisers?copy),
+        send(Class, slot, part_attributes,
+             SuperClass?part_attributes?clone)
+    ;   send(Class, slot, hidden_attributes, new(chain)),
+        send(Class, slot, recognisers, new(chain))
+    ).
 
 :- pce_group(attribute).
 
 hidden_attribute(Class, Attr:name) :->
-	"Register a hidden attribute"::
-	get(Class, hidden_attributes, Hidden),
-	send(Hidden, add, Attr).
+    "Register a hidden attribute"::
+    get(Class, hidden_attributes, Hidden),
+    send(Hidden, add, Attr).
 
 part_attribute(Class, Attribute:name, Part:name) :->
-	"Attribute must be manipulated on part"::
-	get(Class, part_attributes, A0),
-	(   A0 == @nil
-	->  send(Class, slot, part_attributes, new(Mapping, sheet))
-	;   Mapping = A0
-	),
-	send(Mapping, value, Attribute, Part).
+    "Attribute must be manipulated on part"::
+    get(Class, part_attributes, A0),
+    (   A0 == @nil
+    ->  send(Class, slot, part_attributes, new(Mapping, sheet))
+    ;   Mapping = A0
+    ),
+    send(Mapping, value, Attribute, Part).
 
 :- pce_group(handle).
 
 delete_all_handles(Class) :->
-	"Delete all registered handles"::
-	(   get(Class, handles, Chain),
-	    Chain \== @nil
-	->  send(Chain, clear)
-	;   true
-	).
+    "Delete all registered handles"::
+    (   get(Class, handles, Chain),
+        Chain \== @nil
+    ->  send(Chain, clear)
+    ;   true
+    ).
 
 :- pce_group(event).
 
 recogniser(Class, Recogniser:recogniser) :->
-	"Register (prepend) a recogniser"::
-	get(Class, recognisers, Recognisers),
-	send(Recognisers, add, Recogniser).
+    "Register (prepend) a recogniser"::
+    get(Class, recognisers, Recognisers),
+    send(Recognisers, add, Recogniser).
 
 :- pce_end_class.
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-			EXPANSION
+                        EXPANSION
 
 The following fragment defines compiler expansion for:
 
-	:- draw_begin_shape
-	...
-	:- draw_end_shape.
+        :- draw_begin_shape
+        ...
+        :- draw_end_shape.
 
 :- draw_begin_shape should create an instance of call draw_shape_class
 rarther then class class.  This is achieved using the construct
 
-	:- pce_begin_class(MetaClass:Class(...), ...)
+        :- pce_begin_class(MetaClass:Class(...), ...)
 
 Which tells pce_realise_class/1 that it  should   create  the  new class
 using the call
 
-	new(_, MetaClass(Class, Super))
+        new(_, MetaClass(Class, Super))
 
 rather then the default
 
-	get(Super, sub_class, Class, _)
+        get(Super, sub_class, Class, _)
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 associate_recognisers(Recognisers) :-
-	forall(member(R, Recognisers),
-	       send(@class, recogniser, R)).
+    forall(member(R, Recognisers),
+           send(@class, recogniser, R)).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -207,63 +207,63 @@ included.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- pce_begin_class(draw_shape, template,
-		   "Common methods for PceDraw objects").
+                   "Common methods for PceDraw objects").
 
 geometry(Gr, X:[int], Y:[int], W:[int], H:[int]) :->
-	"Like super-method, but activate ->modified"::
-	(   get(Gr, window, Window)
-	->  send(Window, open_undo_group),
-	    get(Gr, area, area(OX, OY, OW, OH)),
-	    Msg =.. [message, Gr, do_set, OX, OY, OW, OH],
-	    send(Window, undo_action, Msg),
-	    send(Gr, send_super, geometry, X, Y, W, H),
-	    send(Window, close_undo_group)
-	;   send(Gr, send_super, geometry, X, Y, W, H)
-	),
-	send(Gr, modified).
+    "Like super-method, but activate ->modified"::
+    (   get(Gr, window, Window)
+    ->  send(Window, open_undo_group),
+        get(Gr, area, area(OX, OY, OW, OH)),
+        Msg =.. [message, Gr, do_set, OX, OY, OW, OH],
+        send(Window, undo_action, Msg),
+        send(Gr, send_super, geometry, X, Y, W, H),
+        send(Window, close_undo_group)
+    ;   send(Gr, send_super, geometry, X, Y, W, H)
+    ),
+    send(Gr, modified).
 
 cut(Gr) :->
-	"Remove graphical from the drawing"::
-	(   get(Gr, attribute, cutting, _) % avoid recursion
-	->  true
-	;   send(Gr, attribute, cutting),
-	    get(Gr, window, Window),
-	    send(Window, open_undo_group),
-	    get(Gr, device, OldDev),
-	    send(Gr, device, @nil),
-	    send(Window, undo_action, message(Gr, un_cut, OldDev)),
-	    send(Window, close_undo_group),
-	    send(Gr, delete_attribute, cutting)
-	).
+    "Remove graphical from the drawing"::
+    (   get(Gr, attribute, cutting, _) % avoid recursion
+    ->  true
+    ;   send(Gr, attribute, cutting),
+        get(Gr, window, Window),
+        send(Window, open_undo_group),
+        get(Gr, device, OldDev),
+        send(Gr, device, @nil),
+        send(Window, undo_action, message(Gr, un_cut, OldDev)),
+        send(Window, close_undo_group),
+        send(Gr, delete_attribute, cutting)
+    ).
 
 un_cut(Gr, Dev:device*) :->
-	"Redisplay a cutted graphical"::
-	send(Gr, device, Dev),
-	get(Gr, window, Window),
-	send(Window, open_undo_group),
-	send(Window, undo_action, message(Gr, cut)),
-	send(Window, close_undo_group).
+    "Redisplay a cutted graphical"::
+    send(Gr, device, Dev),
+    get(Gr, window, Window),
+    send(Window, open_undo_group),
+    send(Window, undo_action, message(Gr, cut)),
+    send(Window, close_undo_group).
 
 :- pce_group(attribute).
 
 draw_attribute(Gr, Att, Val) :->
-	"Modify an attribute if ->has_attribute"::
-	send(Gr, has_attribute, Att),
-	get(Gr, draw_attribute, Att, OldVal),
-	send(OldVal, lock_object, @on),
-	(   catch(send(OldVal, equal, Val), _, fail)
-	->  true
-	;   get(Gr, window, Window),
-	    send(Window, open_undo_group),
-	    send(Gr, Att, Val),
-	    send(Window, undo_action,
-		 message(Gr, draw_attribute, Att, OldVal)),
-	    send(Window, close_undo_group)
-	),
-	send(Gr, modified).
+    "Modify an attribute if ->has_attribute"::
+    send(Gr, has_attribute, Att),
+    get(Gr, draw_attribute, Att, OldVal),
+    send(OldVal, lock_object, @on),
+    (   catch(send(OldVal, equal, Val), _, fail)
+    ->  true
+    ;   get(Gr, window, Window),
+        send(Window, open_undo_group),
+        send(Gr, Att, Val),
+        send(Window, undo_action,
+             message(Gr, draw_attribute, Att, OldVal)),
+        send(Window, close_undo_group)
+    ),
+    send(Gr, modified).
 draw_attribute(Gr, Att, Val) :<-
-	"Just completeness"::
-	get(Gr, Att, Val).
+    "Just completeness"::
+    get(Gr, Att, Val).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -277,17 +277,17 @@ explicitely masked.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 has_attribute(Gr, Att:name) :->
-	"Test if object defines attribute"::
-	send(Gr, has_send_method, Att),
-	send(Gr, has_get_method, Att),
-	\+ send(Gr, hidden_attribute, Att).
+    "Test if object defines attribute"::
+    send(Gr, has_send_method, Att),
+    send(Gr, has_get_method, Att),
+    \+ send(Gr, hidden_attribute, Att).
 
 
 hidden_attribute(Gr, Att:name) :->
-	"True if attibute is not editable"::
-	get(Gr, class, Class),
-	get(Class, hidden_attributes, Hidden),
-	send(Hidden, member, Att).
+    "True if attibute is not editable"::
+    get(Gr, class, Class),
+    get(Class, hidden_attributes, Hidden),
+    send(Hidden, member, Att).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 If an object is ->modified, the modified   flag of the drawing should be
@@ -297,14 +297,14 @@ updated and the attribute editor should be notified.
 :- pce_group(modified).
 
 modified(Gr) :->
-	"Inform <-window and update attribute editor"::
-	(   get(Gr, window, Window),
-	    send(Window, modified),
-	    get(Gr, selected, @on),
-	    send(Window, update_attribute_editor)
-	->  true
-	;   true
-	).
+    "Inform <-window and update attribute editor"::
+    (   get(Gr, window, Window),
+        send(Window, modified),
+        get(Gr, selected, @on),
+        send(Window, update_attribute_editor)
+    ->  true
+    ;   true
+    ).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ->event just walks through the recognisers defined on the class.
@@ -313,69 +313,69 @@ modified(Gr) :->
 :- pce_group(event).
 
 event(Gr, Ev:event) :->
-	"Handle <-class recognisers"::
-	(   send(Gr, send_super, event, Ev)
-	;   get(Gr?class, recognisers, Chain),
-	    get(Chain, find,
-		message(@arg1, event, Ev),
-		_)
-	).
+    "Handle <-class recognisers"::
+    (   send(Gr, send_super, event, Ev)
+    ;   get(Gr?class, recognisers, Chain),
+        get(Chain, find,
+            message(@arg1, event, Ev),
+            _)
+    ).
 
 :- pce_group(mode).
 
 mode(Gr, Mode:name) :<-
-	"Request <-window's <-mode"::
-	get(Gr, window, Window),
-	get(Window, mode, Mode).
+    "Request <-window's <-mode"::
+    get(Gr, window, Window),
+    get(Window, mode, Mode).
 
 
 :- pce_group(edit).
 
 undo_restack_action(Gr) :->
-	"Register restack-undo action"::
-	(   get(Gr, window, Canvas)
-	->  send(Canvas, open_undo_group),
-	    get(Gr?device, graphicals, Grs),
-	    (   get(Grs, next, Gr, Next)
-	    ->  send(Canvas, undo_action,
-		     message(Gr, hide, Next))
-	    ;   send(Canvas, undo_action,
-		     message(Gr, expose))
-	    ),
-	    send(Canvas, close_undo_group)
-	;   true
-	).
+    "Register restack-undo action"::
+    (   get(Gr, window, Canvas)
+    ->  send(Canvas, open_undo_group),
+        get(Gr?device, graphicals, Grs),
+        (   get(Grs, next, Gr, Next)
+        ->  send(Canvas, undo_action,
+                 message(Gr, hide, Next))
+        ;   send(Canvas, undo_action,
+                 message(Gr, expose))
+        ),
+        send(Canvas, close_undo_group)
+    ;   true
+    ).
 
 
 hide(Gr, Behind:[graphical]) :->
-	send(Gr, undo_restack_action),
-	send(Gr, send_super, hide, Behind).
+    send(Gr, undo_restack_action),
+    send(Gr, send_super, hide, Behind).
 
 expose(Gr, Before:[graphical]) :->
-	send(Gr, undo_restack_action),
-	send(Gr, send_super, expose, Before).
+    send(Gr, undo_restack_action),
+    send(Gr, send_super, expose, Before).
 
 restack(Gr, How:'{hide,expose}|int') :->
-	"Hide one step or to background"::
-	(   integer(How)
-	->  get(Gr?device, graphicals, Grs),
-	    get(Grs, index, Gr, Idx),
-	    I is Idx + How,
-	    (	get(Grs, nth1, I, Before)
-	    ->  (   How < 0
-		->  send(Gr, hide, Before)
-		;   send(Gr, expose, Before)
-		)
-	    )
-	;   send(Gr, How)		% hide, expose
-	).
+    "Hide one step or to background"::
+    (   integer(How)
+    ->  get(Gr?device, graphicals, Grs),
+        get(Grs, index, Gr, Idx),
+        I is Idx + How,
+        (   get(Grs, nth1, I, Before)
+        ->  (   How < 0
+            ->  send(Gr, hide, Before)
+            ;   send(Gr, expose, Before)
+            )
+        )
+    ;   send(Gr, How)               % hide, expose
+    ).
 
 :- pce_end_class.
 
 
-		/********************************
-		*             BOX		*
-		********************************/
+                /********************************
+                *             BOX               *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Box is the most prototypical example of a graphical.  Boxes in PceDraw
@@ -390,7 +390,7 @@ class  (see `class ->handle')   rather  than  to  the  instances  (see
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- draw_begin_shape(draw_box, box, "PceDraw editable box",
-		    [@draw_resizable_shape_recogniser]).
+                    [@draw_resizable_shape_recogniser]).
 
 handle(w/2, 0,   link, north).
 handle(w/2, h,   link, south).
@@ -399,12 +399,12 @@ handle(w,   h/2, link, east).
 
 :- draw_end_shape.
 
-		/********************************
-		*           ELLIPSE		*
-		********************************/
+                /********************************
+                *           ELLIPSE             *
+                ********************************/
 
 :- draw_begin_shape(draw_ellipse, ellipse, "PceDraw editable ellipse",
-		    [@draw_resizable_shape_recogniser]).
+                    [@draw_resizable_shape_recogniser]).
 
 handle(w/2, 0,   link, north).
 handle(w/2, h,   link, south).
@@ -413,12 +413,12 @@ handle(w,   h/2, link, east).
 
 :- draw_end_shape.
 
-		 /*******************************
-		 *	      METAFILE		*
-		 *******************************/
+                 /*******************************
+                 *            METAFILE          *
+                 *******************************/
 
 :- draw_begin_shape(draw_metafile, win_metafile, "PceDraw Windows Metafile",
-		    [@draw_resizable_shape_recogniser]).
+                    [@draw_resizable_shape_recogniser]).
 
 handle(w/2, 0,   link, north).
 handle(w/2, h,   link, south).
@@ -428,9 +428,9 @@ handle(w,   h/2, link, east).
 :- draw_end_shape.
 
 
-		/********************************
-		*            TEXT		*
-		********************************/
+                /********************************
+                *            TEXT               *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 In draw_text, we'd like to write  ->event,   but  this  has already been
@@ -450,13 +450,13 @@ handle(0,   h/2, link, west).
 handle(w,   h/2, link, east).
 
 initialise(T, String:[string], Format:[name], Font:[font]) :->
-	default(String, '',     Str),
-	default(Format, center, Fmt),
-	(   Font == @default
-	->  get_config(draw_config:resources/default_font, Fnt)
-	;   Fnt = Font
-	),
-	send(T, send_super, initialise, Str, Fmt, Fnt).
+    default(String, '',     Str),
+    default(Format, center, Fmt),
+    (   Font == @default
+    ->  get_config(draw_config:resources/default_font, Fnt)
+    ;   Fnt = Font
+    ),
+    send(T, send_super, initialise, Str, Fmt, Fnt).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -468,53 +468,53 @@ managing the focus, cursor   and state-variables needed to parse   the
 event sequence.   For simple events all  this is not necessary,  so we
 might just as well parse them within the ->event method.
 
-NOTE:	Events types will be changed shortly.  Having to refer to ESC
-	as `27' is not the right way to program.  I'm not yet sure on
-	the details.
+NOTE:   Events types will be changed shortly.  Having to refer to ESC
+        as `27' is not the right way to program.  I'm not yet sure on
+        the details.
 
-NOTE:	PCE will probably provided higher-level primitives such as a
-	special subclass of recogniser to deal with most of the details
-	of this method.
+NOTE:   PCE will probably provided higher-level primitives such as a
+        special subclass of recogniser to deal with most of the details
+        of this method.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 event(Text, Ev:event) :->
-	get(Ev, window, Canvas),
-	(   send(Ev, is_a, focus)
-	->  ignore(send(Text, send_super, event, Ev)),
-	    (	send(Ev, is_a, release_keyboard_focus)
-	    ->	(   get(Text?string, size, 0),
-		    send(Text?device, instance_of, draw_canvas) % HACK
-		->  send(Text, cut)
-		;   send(Text, show_caret, @off)
-		),
-		get(Text, attribute, old_string, Old),
-		(   send(Old, equal, Text?string)
-		->  true
-		;   send(Canvas, undo_action,
-			 message(Text, string, Old))
-		),
-		send(Text, delete_attribute, old_string),
-		send(Canvas, close_undo_group)
-	    ;	send(Ev, is_a, obtain_keyboard_focus)
-	    ->	send(Canvas, open_undo_group),
-		send(Text, attribute, old_string, Text?string?copy)
-	    ;	true
-	    )
-	;   get(Text, show_caret, @on),
-	    (   get(Ev, id, Id),
-		event(Id, Text)
-	    ->  true
-	    ;   send(Ev, is_a, keyboard),
-		send(Text, typed, Ev),
-		send(Text, modified)
-	    )
-	;   send(@draw_text_recogniser, event, Ev)
-	).
+    get(Ev, window, Canvas),
+    (   send(Ev, is_a, focus)
+    ->  ignore(send(Text, send_super, event, Ev)),
+        (   send(Ev, is_a, release_keyboard_focus)
+        ->  (   get(Text?string, size, 0),
+                send(Text?device, instance_of, draw_canvas) % HACK
+            ->  send(Text, cut)
+            ;   send(Text, show_caret, @off)
+            ),
+            get(Text, attribute, old_string, Old),
+            (   send(Old, equal, Text?string)
+            ->  true
+            ;   send(Canvas, undo_action,
+                     message(Text, string, Old))
+            ),
+            send(Text, delete_attribute, old_string),
+            send(Canvas, close_undo_group)
+        ;   send(Ev, is_a, obtain_keyboard_focus)
+        ->  send(Canvas, open_undo_group),
+            send(Text, attribute, old_string, Text?string?copy)
+        ;   true
+        )
+    ;   get(Text, show_caret, @on),
+        (   get(Ev, id, Id),
+            event(Id, Text)
+        ->  true
+        ;   send(Ev, is_a, keyboard),
+            send(Text, typed, Ev),
+            send(Text, modified)
+        )
+    ;   send(@draw_text_recogniser, event, Ev)
+    ).
 
-event(27, Text) :-				  % ESC
-	send(Text?window, keyboard_focus, @nil).
-event(9, Text) :-				  % TAB
-	send(Text?device, advance, Text).
+event(27, Text) :-                                % ESC
+    send(Text?window, keyboard_focus, @nil).
+event(9, Text) :-                                 % TAB
+    send(Text?device, advance, Text).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -523,79 +523,79 @@ keyboard focus.  It is interpreted by the `Device ->advance' method to
 set the keyboard  focus  to  the  next object   that wants to   accept
 keystrokes.
 
-NOTE:	This mechanism needs some redesign and documentation.
+NOTE:   This mechanism needs some redesign and documentation.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 '_wants_keyboard_focus'(_T) :->
-	"Indicate device I'm sensitive for typing"::
-	true.
+    "Indicate device I'm sensitive for typing"::
+    true.
 
 paste(T) :->
-	get(T?string, copy, Old),
-	send(T, send_super, paste),
-	(   get(T, window, Canvas),
-	    send(Canvas, has_send_method, undo_action)
-	->  send(Canvas, open_undo_group),
-	    send(Canvas, undo_action, message(T, string, Old)),
-	    send(Canvas, close_undo_group)
-	;   true
-	).
+    get(T?string, copy, Old),
+    send(T, send_super, paste),
+    (   get(T, window, Canvas),
+        send(Canvas, has_send_method, undo_action)
+    ->  send(Canvas, open_undo_group),
+        send(Canvas, undo_action, message(T, string, Old)),
+        send(Canvas, close_undo_group)
+    ;   true
+    ).
 
 
 format(T, Fmt:{left,center,right}) :->
-	(   get(T, window, Canvas),
-	    send(Canvas, has_send_method, undo_action)
-	->  send(Canvas, open_undo_group),
-	    get(T, format, Old),
-	    send(Canvas, undo_action, message(T, format, Old)),
-	    send(Canvas, close_undo_group)
-	;   true
-	),
-	send(T, send_super, format, Fmt).
+    (   get(T, window, Canvas),
+        send(Canvas, has_send_method, undo_action)
+    ->  send(Canvas, open_undo_group),
+        get(T, format, Old),
+        send(Canvas, undo_action, message(T, format, Old)),
+        send(Canvas, close_undo_group)
+    ;   true
+    ),
+    send(T, send_super, format, Fmt).
 
 
 string(T, Str:char_array) :->
-	(   send(Str, equal, T?string)
-	->  true
-	;   (   get(T, window, Canvas),
-	        send(Canvas, has_send_method, undo_action)
-	    ->  send(Canvas, open_undo_group),
-		get(T?string, copy, Old),
-		send(Canvas, undo_action, message(T, string, Old)),
-		send(Canvas, close_undo_group)
-	    ;   true
-	    ),
-	    send(T, send_super, string, Str)
-	).
+    (   send(Str, equal, T?string)
+    ->  true
+    ;   (   get(T, window, Canvas),
+            send(Canvas, has_send_method, undo_action)
+        ->  send(Canvas, open_undo_group),
+            get(T?string, copy, Old),
+            send(Canvas, undo_action, message(T, string, Old)),
+            send(Canvas, close_undo_group)
+        ;   true
+        ),
+        send(T, send_super, string, Str)
+    ).
 
 :- pce_group(menu).
 
 menu_text(T, Scale:[bool]) :->
-	"Prepare text for menu ('T')"::
-	send(T, string, 'T'),
-	(   Scale == @on
-	->  get(T, font, Font),
-	    get(Font, family, Family),
-	    get(Font, style, Style),
-	    new(S, var(value := Font)),
-	    send(@fonts, for_all,
-		 if(and(@arg2?family == Family,
-			@arg2?style == Style,
-			@arg2?points < S?points,
-			@arg2?points > 5),
-		    assign(S, @arg2, global))),
-	    send(T, font, S)
-	;   true
-	).
+    "Prepare text for menu ('T')"::
+    send(T, string, 'T'),
+    (   Scale == @on
+    ->  get(T, font, Font),
+        get(Font, family, Family),
+        get(Font, style, Style),
+        new(S, var(value := Font)),
+        send(@fonts, for_all,
+             if(and(@arg2?family == Family,
+                    @arg2?style == Style,
+                    @arg2?points < S?points,
+                    @arg2?points > 5),
+                assign(S, @arg2, global))),
+        send(T, font, S)
+    ;   true
+    ).
 
 :- draw_end_shape.
 
-		/********************************
-		*             LINE		*
-		********************************/
+                /********************************
+                *             LINE              *
+                ********************************/
 
 :- draw_begin_shape(draw_line, line, "PceDraw editable line",
-		    [@draw_line_recogniser]).
+                    [@draw_line_recogniser]).
 
 handle(w/2, h/2, link, center).
 handle(0,   0,   link, start).
@@ -604,97 +604,97 @@ handle(w,   h,   link, end).
 :- draw_end_shape.
 
 
-		/********************************
-		*             PATH		*
-		********************************/
+                /********************************
+                *             PATH              *
+                ********************************/
 
 :- draw_begin_shape(draw_path, path, "PceDraw editable path",
-		    [@draw_path_recogniser]).
+                    [@draw_path_recogniser]).
 :- pce_class_directive(send(@class, hidden_attribute, radius)).
 
 interpolation(L, N:int) :->
-	(   N == 0
-	->  send(L, kind, poly)
-	;   send(L, intervals, N),
-	    send(L, kind, smooth)
-	).
+    (   N == 0
+    ->  send(L, kind, poly)
+    ;   send(L, intervals, N),
+        send(L, kind, smooth)
+    ).
 interpolation(L, N:int) :<-
-	(   get(L, kind, poly)
-	->  N = 0
-	;   get(L, intervals, N)
-	).
+    (   get(L, kind, poly)
+    ->  N = 0
+    ;   get(L, intervals, N)
+    ).
 
 append(Path, P:point) :->
-	"Activate undo system"::
-	send(Path, send_super, append, P),
-	(   get(Path, window, Window),
-	    send(Window, has_send_method, undo_action)
-	->  send(Window, undo_action, message(Path, delete, P))
-	;   true
-	).
+    "Activate undo system"::
+    send(Path, send_super, append, P),
+    (   get(Path, window, Window),
+        send(Window, has_send_method, undo_action)
+    ->  send(Window, undo_action, message(Path, delete, P))
+    ;   true
+    ).
 
 append_at_create(Path, P:point) :->
-	"->append, but do not inform undo"::
-	send(Path, send_super, append, P).
+    "->append, but do not inform undo"::
+    send(Path, send_super, append, P).
 
 delete(Path, P:point) :->
-	"Activate undo system"::
-	(   get(Path, window, Window),
-	    send(Window, has_send_method, undo_action)
-	->  get(Path, points, Pts),
-	    (	get(Pts, previous, P, Prev)
-	    ->	send(Window, undo_action,
-		     message(Path, insert, P, Prev))
-	    ;	send(Window, undo_action,
-		     message(Path, insert, P, @nil))
-	    )
-	;   true
-	),
-	send_super(Path, delete, P).
+    "Activate undo system"::
+    (   get(Path, window, Window),
+        send(Window, has_send_method, undo_action)
+    ->  get(Path, points, Pts),
+        (   get(Pts, previous, P, Prev)
+        ->  send(Window, undo_action,
+                 message(Path, insert, P, Prev))
+        ;   send(Window, undo_action,
+                 message(Path, insert, P, @nil))
+        )
+    ;   true
+    ),
+    send_super(Path, delete, P).
 
 insert(Path, P:point, After:point*) :->
-	send(Path, send_super, insert, P, After),
-	(   get(Path, window, Window),
-	    send(Window, has_send_method, undo_action)
-	->  send(Window, undo_action, message(Path, delete, P))
-	;   true
-	).
+    send(Path, send_super, insert, P, After),
+    (   get(Path, window, Window),
+        send(Window, has_send_method, undo_action)
+    ->  send(Window, undo_action, message(Path, delete, P))
+    ;   true
+    ).
 
 set_point(Path, P:point, X:int, Y:int) :->
-	(   get(Path, window, Window),
-	    send(Window, has_send_method, undo_action)
-	->  object(P, point(OX, OY)),
-	    send(Window, undo_action, message(Path, set_point, P, OX, OY))
-	;   true
-	),
-	send(Path, send_super, set_point, P, X, Y).
+    (   get(Path, window, Window),
+        send(Window, has_send_method, undo_action)
+    ->  object(P, point(OX, OY)),
+        send(Window, undo_action, message(Path, set_point, P, OX, OY))
+    ;   true
+    ),
+    send(Path, send_super, set_point, P, X, Y).
 
 
 :- draw_end_shape.
 
 
-		 /*******************************
-		 *	   BEZIER CURVE		*
-		 *******************************/
+                 /*******************************
+                 *         BEZIER CURVE         *
+                 *******************************/
 
 :- draw_begin_shape(draw_bezier, bezier_curve, "PceDraw editable Bezier curve",
-		    [@draw_bezier_recogniser]).
+                    [@draw_bezier_recogniser]).
 
 set_point(Path, P:point, X:int, Y:int) :->
-	(   get(Path, window, Window),
-	    send(Window, has_send_method, undo_action)
-	->  object(P, point(OX, OY)),
-	    send(Window, undo_action, message(Path, set_point, P, OX, OY))
-	;   true
-	),
-	send(Path, send_super, set_point, P, X, Y).
+    (   get(Path, window, Window),
+        send(Window, has_send_method, undo_action)
+    ->  object(P, point(OX, OY)),
+        send(Window, undo_action, message(Path, set_point, P, OX, OY))
+    ;   true
+    ),
+    send(Path, send_super, set_point, P, X, Y).
 
 :- draw_end_shape.
 
 
-		/********************************
-		*           CONNECTIONS		*
-		********************************/
+                /********************************
+                *           CONNECTIONS         *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 A connection is a line between two handles on  two different graphical
@@ -702,58 +702,58 @@ objects.  See clas handle, graphical and connection for details.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- draw_begin_shape(draw_connection, connection, "PceDraw editable connection",
-		    [@draw_connection_recogniser]).
+                    [@draw_connection_recogniser]).
 
 handle(w/2, h/2, link, center).
 
 initialise(C, F:graphical, T:graphical, L:[link], HF:[name]*, HT:[name]*) :->
-	send(C, send_super, initialise, F, T, L, HF, HT),
-	(   get(C, window, Window),
-	    send(Window, open_undo_group),
-	    send(Window, undo_action, message(C, cut)),
-	    send(Window, close_undo_group)
-	;   true
-	).
+    send(C, send_super, initialise, F, T, L, HF, HT),
+    (   get(C, window, Window),
+        send(Window, open_undo_group),
+        send(Window, undo_action, message(C, cut)),
+        send(Window, close_undo_group)
+    ;   true
+    ).
 
 geometry(Gr, X:[int], Y:[int], W:[int], H:[int]) :->
-	"No logging needed"::
-	send(Gr, send_super, geometry, X, Y, W, H).
+    "No logging needed"::
+    send(Gr, send_super, geometry, X, Y, W, H).
 
 cut(Gr) :->
-	"Remove graphical from the drawing"::
-	get(Gr, window, Window),
-	send(Window, open_undo_group),
-	get(Gr, from, From),
-	get(Gr, to, To),
-	send(Window, undo_action, message(Gr, un_cut, From, To)),
-	send(Gr, relate, @nil, @nil),
-	send(Window, close_undo_group).
+    "Remove graphical from the drawing"::
+    get(Gr, window, Window),
+    send(Window, open_undo_group),
+    get(Gr, from, From),
+    get(Gr, to, To),
+    send(Window, undo_action, message(Gr, un_cut, From, To)),
+    send(Gr, relate, @nil, @nil),
+    send(Window, close_undo_group).
 
 un_cut(Gr, From:graphical, To:graphical) :->
-	"Redisplay a cutted graphical"::
-	send(Gr, relate, From, To),
-	get(Gr, window, Window),
-	send(Window, open_undo_group),
-	send(Window, undo_action, message(Gr, cut)),
-	send(Window, close_undo_group).
+    "Redisplay a cutted graphical"::
+    send(Gr, relate, From, To),
+    get(Gr, window, Window),
+    send(Window, open_undo_group),
+    send(Window, undo_action, message(Gr, cut)),
+    send(Window, close_undo_group).
 
 start_text(_C, _Ev:[event]) :->
-	"Dummy method"::
-	true.
+    "Dummy method"::
+    true.
 
 :- draw_end_shape.
 
 
-		/********************************
-		*             BITMAP		*
-		********************************/
+                /********************************
+                *             BITMAP            *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Bitmaps are used to import arbitrary images into a drawing.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- draw_begin_shape(draw_bitmap, bitmap, "PceDraw editable bitmap",
-		    [@draw_bitmap_recogniser]).
+                    [@draw_bitmap_recogniser]).
 
 handle(w/2, 0,   link, north).
 handle(w/2, h,   link, south).
@@ -763,9 +763,9 @@ handle(w,   h/2, link, east).
 :- draw_end_shape.
 
 
-		/********************************
-		*           COMPOUNDS		*
-		********************************/
+                /********************************
+                *           COMPOUNDS           *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Compounds are used  to realise (user-defined) prototypes that  consist
@@ -776,7 +776,7 @@ the text objects inside it and resizing the device.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- draw_begin_shape(draw_compound, figure, "PceDraw editable device",
-		    [@draw_compound_recogniser]).
+                    [@draw_compound_recogniser]).
 
 handle(w/2, 0,   link, north).
 handle(w/2, h,   link, south).
@@ -799,45 +799,45 @@ coordinates.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 geometry(C, X:[int], Y:[int], W:[int], H:[int]) :->
-	"Resize compound graphical"::
-	(   get(C, window, Window)
-	->  send(Window, open_undo_group),
-	    get(C, area, area(OX, OY, OW, OH)),
-	    send(Window, undo_action,
-		 message(C, do_set, OX, OY, OW, OH))
-	;   true
-	),
-	resize_factor(W, C, width,  Xfactor),
-	resize_factor(H, C, height, Yfactor),
-	(   (Xfactor \== 1 ; Yfactor \== 1)
-	->  get(C?area, position, Origin),
-	    send(Origin, minus, C?position),
-	    send(C?graphicals, for_all,
-		 message(@arg1, resize, Xfactor, Yfactor, Origin)),
-	    send(Origin, done)
-	;   true
-	),
-	send(C, send_super, geometry, X, Y, W, H),
-	(   get(C, window, Window)
-	->  send(Window, close_undo_group)
-	;   true
-	),
-	send(C, modified).
+    "Resize compound graphical"::
+    (   get(C, window, Window)
+    ->  send(Window, open_undo_group),
+        get(C, area, area(OX, OY, OW, OH)),
+        send(Window, undo_action,
+             message(C, do_set, OX, OY, OW, OH))
+    ;   true
+    ),
+    resize_factor(W, C, width,  Xfactor),
+    resize_factor(H, C, height, Yfactor),
+    (   (Xfactor \== 1 ; Yfactor \== 1)
+    ->  get(C?area, position, Origin),
+        send(Origin, minus, C?position),
+        send(C?graphicals, for_all,
+             message(@arg1, resize, Xfactor, Yfactor, Origin)),
+        send(Origin, done)
+    ;   true
+    ),
+    send(C, send_super, geometry, X, Y, W, H),
+    (   get(C, window, Window)
+    ->  send(Window, close_undo_group)
+    ;   true
+    ),
+    send(C, modified).
 
 
 resize_factor(@default, _, _, 1) :- !.
 resize_factor(W1, C, S, F) :-
-	get(C, S, W0),
-	F is W1 / W0.
+    get(C, S, W0),
+    F is W1 / W0.
 
 
 event(C, Ev:event) :->
-	"Handle <-class recognisers"::
-	(   get(C, all_recognisers, InstanceRecognisers),
-	    get(InstanceRecognisers, find, message(@arg1, event, Ev), _)
-	;   get(C?class, recognisers, Chain),
-	    get(Chain, find, message(@arg1, event, Ev), _)
-	).
+    "Handle <-class recognisers"::
+    (   get(C, all_recognisers, InstanceRecognisers),
+        get(InstanceRecognisers, find, message(@arg1, event, Ev), _)
+    ;   get(C?class, recognisers, Chain),
+        get(Chain, find, message(@arg1, event, Ev), _)
+    ).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -847,16 +847,16 @@ strings to `T', resp '' (nothing).
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 string(C, Str:string) :->
-	"Set string of all texts"::
-	send(C?graphicals, for_all,
-	     if(message(@arg1, has_send_method, string),
-		message(@arg1, string, Str))).
+    "Set string of all texts"::
+    send(C?graphicals, for_all,
+         if(message(@arg1, has_send_method, string),
+            message(@arg1, string, Str))).
 
 menu_text(C) :->
-	"Set all <-graphicals to `T'"::
-	send(C?graphicals, for_all,
-	     if(message(@arg1, has_send_method, menu_text),
-		message(@arg1, menu_text, @on))).
+    "Set all <-graphicals to `T'"::
+    send(C?graphicals, for_all,
+         if(message(@arg1, has_send_method, menu_text),
+            message(@arg1, menu_text, @on))).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -874,27 +874,27 @@ object of the compound.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 start_text(C, Ev:[event]) :->
-	"Enter typing mode"::
-	get(C?graphicals, find_all,
-	    message(@arg1, instance_of, text), Texts),
-	(   Ev \== @default,
-	    get(Texts, find, message(Ev, inside, @arg1), Pointed)
-	->  send(C?window, keyboard_focus, Pointed),
-	    get(Pointed, pointed, ?(Ev, position, Pointed), Caret),
-	    send(Pointed, caret, Caret)
-	;   get(Texts, head, First)
-	->  send(First, caret, @default),
-	    send(C?window, keyboard_focus, First)
-	;   true	% Thanks, Lourens van der Meij <lourens@cs.vu.nl>
-	),
-	send(Texts, done).
+    "Enter typing mode"::
+    get(C?graphicals, find_all,
+        message(@arg1, instance_of, text), Texts),
+    (   Ev \== @default,
+        get(Texts, find, message(Ev, inside, @arg1), Pointed)
+    ->  send(C?window, keyboard_focus, Pointed),
+        get(Pointed, pointed, ?(Ev, position, Pointed), Caret),
+        send(Pointed, caret, Caret)
+    ;   get(Texts, head, First)
+    ->  send(First, caret, @default),
+        send(C?window, keyboard_focus, First)
+    ;   true        % Thanks, Lourens van der Meij <lourens@cs.vu.nl>
+    ),
+    send(Texts, done).
 
 
 '_wants_keyboard_focus'(C) :->
-	"Test if I contain editable components"::
-	get(C?graphicals, find,
-	    message(@arg1, '_wants_keyboard_focus'),
-	    _).
+    "Test if I contain editable components"::
+    get(C?graphicals, find,
+        message(@arg1, '_wants_keyboard_focus'),
+        _).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 The  code below illustrates  another reason for  not communicating the
@@ -911,57 +911,57 @@ geometry_selector(width).
 geometry_selector(height).
 
 :- pce_global(@is_draw_shape,
-	      new(message(@arg1?class, instance_of, draw_shape_class))).
+              new(message(@arg1?class, instance_of, draw_shape_class))).
 
 has_attribute(C, Att:name) :->
-	"Test if object has attribute"::
-	\+ send(C, hidden_attribute, Att),
-	(   geometry_selector(Att)
-	->  true
-	;   get(C?graphicals, find,
-		if(@is_draw_shape,
-		   message(@arg1, has_attribute, Att),
-		   and(message(@arg1, has_send_method, Att),
-		       message(@arg1, has_get_method, Att))),
-		_)
-	).
+    "Test if object has attribute"::
+    \+ send(C, hidden_attribute, Att),
+    (   geometry_selector(Att)
+    ->  true
+    ;   get(C?graphicals, find,
+            if(@is_draw_shape,
+               message(@arg1, has_attribute, Att),
+               and(message(@arg1, has_send_method, Att),
+                   message(@arg1, has_get_method, Att))),
+            _)
+    ).
 
 draw_attribute(C, Att:name, Val:any) :->
-	(   geometry_selector(Att)
-	->  send(C, Att, Val)
-	;   get(C?class, part_attributes, Sheet),  Sheet \== @nil,
-	    get(Sheet, value, Att, PartName)
-	->  get(C, member, PartName, Part),
-	    (	send(Part, has_send_method, draw_attribute)
-	    ->  send(Part, draw_attribute, Att, Val)
-	    ;	send(Part, Att, Val)
-	    )
-	;   send(C?graphicals, for_some,
-		 if(@is_draw_shape,
-		    message(@arg1, draw_attribute, Att, Val),
-		    and(message(@arg1, has_send_method, Att),
-			message(@arg1, Att, Val),
-			message(C, modified))))
-	).
+    (   geometry_selector(Att)
+    ->  send(C, Att, Val)
+    ;   get(C?class, part_attributes, Sheet),  Sheet \== @nil,
+        get(Sheet, value, Att, PartName)
+    ->  get(C, member, PartName, Part),
+        (   send(Part, has_send_method, draw_attribute)
+        ->  send(Part, draw_attribute, Att, Val)
+        ;   send(Part, Att, Val)
+        )
+    ;   send(C?graphicals, for_some,
+             if(@is_draw_shape,
+                message(@arg1, draw_attribute, Att, Val),
+                and(message(@arg1, has_send_method, Att),
+                    message(@arg1, Att, Val),
+                    message(C, modified))))
+    ).
 
 draw_attribute(C, Att:name, Val) :<-
-	(   geometry_selector(Att)
-	->  get(C, Att, Val)
-	;   get(C?class, part_attributes, Sheet),  Sheet \== @nil,
-	    get(Sheet, value, Att, PartName)
-	->  get(C, member, PartName, Part),
-	    (	send(Part, has_get_method, draw_attribute)
-	    ->  get(Part, draw_attribute, Att, Val)
-	    ;	get(Part, Att, Val)
-	    )
-	;   get(C?graphicals, find,
-		if(@is_draw_shape,
-		   message(@arg1, has_attribute, Att),
-		   and(message(@arg1, has_send_method, Att),
-		       message(@arg1, has_get_method, Att))),
-		Shape),
-	    get(Shape, Att, Val)
-	).
+    (   geometry_selector(Att)
+    ->  get(C, Att, Val)
+    ;   get(C?class, part_attributes, Sheet),  Sheet \== @nil,
+        get(Sheet, value, Att, PartName)
+    ->  get(C, member, PartName, Part),
+        (   send(Part, has_get_method, draw_attribute)
+        ->  get(Part, draw_attribute, Att, Val)
+        ;   get(Part, Att, Val)
+        )
+    ;   get(C?graphicals, find,
+            if(@is_draw_shape,
+               message(@arg1, has_attribute, Att),
+               and(message(@arg1, has_send_method, Att),
+                   message(@arg1, has_get_method, Att))),
+            Shape),
+        get(Shape, Att, Val)
+    ).
 
 :- draw_end_shape.
 

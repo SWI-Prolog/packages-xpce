@@ -36,9 +36,9 @@
 :- use_module(library(pce)).
 
 :- emacs_begin_mode(java, c,
-		    "Mode for Java programs",
-		    [
-		    ],
-		    []).
+                    "Mode for Java programs",
+                    [
+                    ],
+                    []).
 
 :- emacs_end_mode.

@@ -36,14 +36,14 @@
 :- use_module(library(pce)).
 
 :- emacs_begin_mode(script, language,
-		  "Edit arbitrary scripts with # line comment",
-		  [
-		  ],
-		  [ '"'  = string_quote('\\'),
-		    '''' = string_quote('\\'),
-		    '#'  = comment_start,
-		    '\n' + comment_end
-		  ]).
+                  "Edit arbitrary scripts with # line comment",
+                  [
+                  ],
+                  [ '"'  = string_quote('\\'),
+                    '''' = string_quote('\\'),
+                    '#'  = comment_start,
+                    '\n' + comment_end
+                  ]).
 
 :- emacs_end_mode.
 

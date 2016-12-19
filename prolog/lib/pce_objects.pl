@@ -39,38 +39,38 @@
 This module defines a number of commonly used global objects.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-		 /*******************************
-		 *	   EVENT CONTEXT	*
-		 *******************************/
+                 /*******************************
+                 *         EVENT CONTEXT        *
+                 *******************************/
 
-:- pce_global(@event_receiver,	new(@event?receiver)).
-:- pce_global(@event_char,	new(@event?id)).
-:- pce_global(@node,		new(@event_receiver?node)).
-:- pce_global(@tree,		new(@event_receiver?device)).
-
-
-		 /*******************************
-		 *	   CODE OBJECTS		*
-		 *******************************/
-
-:- pce_global(@true,		new(and)).
-:- pce_global(@false,		new(or)).
+:- pce_global(@event_receiver,  new(@event?receiver)).
+:- pce_global(@event_char,      new(@event?id)).
+:- pce_global(@node,            new(@event_receiver?node)).
+:- pce_global(@tree,            new(@event_receiver?device)).
 
 
-		 /*******************************
-		 *	     SPATIALS		*
-		 *******************************/
+                 /*******************************
+                 *         CODE OBJECTS         *
+                 *******************************/
 
-:- pce_global(@center,		new(spatial(xref = x + w/2, yref = y + h/2,
-					    xref = x + w/2, yref = y + h/2))).
-:- pce_global(@center_x,	new(spatial(xref = x + w/2, @default,
-					    xref = x + w/2, @default))).
-:- pce_global(@center_y,	new(spatial(@default, yref = y + h/2,
-					    @default, yref = y + h/2))).
+:- pce_global(@true,            new(and)).
+:- pce_global(@false,           new(or)).
 
-		 /*******************************
-		 *    HANDLES AND CONNECTIONS	*
-		 *******************************/
+
+                 /*******************************
+                 *           SPATIALS           *
+                 *******************************/
+
+:- pce_global(@center,          new(spatial(xref = x + w/2, yref = y + h/2,
+                                            xref = x + w/2, yref = y + h/2))).
+:- pce_global(@center_x,        new(spatial(xref = x + w/2, @default,
+                                            xref = x + w/2, @default))).
+:- pce_global(@center_y,        new(spatial(@default, yref = y + h/2,
+                                            @default, yref = y + h/2))).
+
+                 /*******************************
+                 *    HANDLES AND CONNECTIONS   *
+                 *******************************/
 
 :- pce_global(@north, handle(x + w/2, y,       link, north)).
 :- pce_global(@south, handle(x + w/2, y + h,   link, south)).

@@ -33,12 +33,12 @@
 */
 
 :- module(dia_main,
-	  [ dialog/0			% start dialog editor
-	  ]).
+          [ dialog/0                    % start dialog editor
+          ]).
 :- use_module(library(pce)).
 
 :- pce_autoload(dia_editor, library('dialog/dialog')).
 
 dialog :-
-	send(new(dia_editor), open).
+    send(new(dia_editor), open).
 

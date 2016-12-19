@@ -58,13 +58,13 @@ to file.
 
 :- use_module(library(pce)).
 :- require([ default/3
-	   , memberchk/2
-	   ]).
+           , memberchk/2
+           ]).
 
 
-		/********************************
-		*          ICON MENU		*
-		********************************/
+                /********************************
+                *          ICON MENU            *
+                ********************************/
 
 :- pce_begin_class(draw_menu, dialog).
 
@@ -72,10 +72,10 @@ to file.
 Variables to keep track of load/save.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-variable(file,		file*,	both,
-	 "File for storing prototypes").
-variable(modified,	bool,	get,
-	 "Menu has been modified").
+variable(file,          file*,  both,
+         "File for storing prototypes").
+variable(modified,      bool,   get,
+         "Menu has been modified").
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 The menu of with the modes and  prototypes   is  a  dialog window with a
@@ -86,28 +86,28 @@ for the modes.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 initialise(M) :->
-	send(M, send_super, initialise, 'Icons'),
-	send(M, gap, size(0,0)),
-	send(M, ver_shrink, 100),
-	send(M, ver_stretch, 100),
-	send(M, display,
-	     new(P, menu(proto, choice, message(@arg1, activate)))),
-	send(P, layout, vertical),
-	send(P, show_label, @off),
-	send(M, resize_message, message(M, new_size, @arg2)),
-	send(M, modified, @off).
+    send(M, send_super, initialise, 'Icons'),
+    send(M, gap, size(0,0)),
+    send(M, ver_shrink, 100),
+    send(M, ver_stretch, 100),
+    send(M, display,
+         new(P, menu(proto, choice, message(@arg1, activate)))),
+    send(P, layout, vertical),
+    send(P, show_label, @off),
+    send(M, resize_message, message(M, new_size, @arg2)),
+    send(M, modified, @off).
 
 
 new_size(M, Size:size) :->
-	get(M, member, proto, Menu),
-	get(Size, width, W),
-	Cols is max(1, W // 48),
-	send(Menu, columns, Cols).
+    get(M, member, proto, Menu),
+    get(Size, width, W),
+    Cols is max(1, W // 48),
+    send(Menu, columns, Cols).
 
 
 modified(M, Value:[bool]) :->
-	default(Value, @on, Val),
-	send(M, slot, modified, Val).
+    default(Value, @on, Val),
+    send(M, slot, modified, Val).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -117,256 +117,257 @@ Attach   a new prototype.
 proto(M, Proto:proto='graphical|link*', Mode:'mode=name',
       Cursor:cursor=cursor, Icon:icon=[image], Tag:tag=[name],
       UserProto:user_proto=[bool]) :->
-	"Attach a new prototype"::
-	default(UserProto, @off, UProto),
-	get(M, member, proto, Menu),
-	send(Menu, append, new(I, draw_icon(Proto, Mode, Cursor, Icon))),
-	(   Tag \== @default,
-	    send(I, has_send_method, help_message) % help message package
-	->  send(I, help_message, tag, Tag) 	   % loaded
-	;   true
-	),
-	send(I, user_proto, UProto),
-	send(M, adjust),
-	send(M, modified, @on).
+    "Attach a new prototype"::
+    default(UserProto, @off, UProto),
+    get(M, member, proto, Menu),
+    send(Menu, append, new(I, draw_icon(Proto, Mode, Cursor, Icon))),
+    (   Tag \== @default,
+        send(I, has_send_method, help_message) % help message package
+    ->  send(I, help_message, tag, Tag)        % loaded
+    ;   true
+    ),
+    send(I, user_proto, UProto),
+    send(M, adjust),
+    send(M, modified, @on).
 
 
 adjust(M) :->
-	"Make it wide enough to display all items"::
-	(   get(M, displayed, @on)
-	->  get(M?visible, height, H),
-	    get(M, member, proto, Menu),
-	    get(Menu?members, size, S),
-	    get(Menu, border, B),
-	    Rows is max(1, H//(32+2*B)),
-	    Cols is (S+Rows-1)//Rows,
-	    (	get(Menu, columns, Cols)
-	    ->	true
-	    ;	send(Menu, columns, Cols),
-		send(M, ideal_width, Menu?width),
-		send(M?frame, resize)
-	    )
-	;   true
-	).
+    "Make it wide enough to display all items"::
+    (   get(M, displayed, @on)
+    ->  get(M?visible, height, H),
+        get(M, member, proto, Menu),
+        get(Menu?members, size, S),
+        get(Menu, border, B),
+        Rows is max(1, H//(32+2*B)),
+        Cols is (S+Rows-1)//Rows,
+        (   get(Menu, columns, Cols)
+        ->  true
+        ;   send(Menu, columns, Cols),
+            send(M, ideal_width, Menu?width),
+            send(M?frame, resize)
+        )
+    ;   true
+    ).
 
 
 current(M, Icon:draw_icon) :<-
-	"Find current icon"::
-	get(M, member, proto, Menu),
-	get(Menu, selection, Icon).
+    "Find current icon"::
+    get(M, member, proto, Menu),
+    get(Menu, selection, Icon).
 
 
 find_icon(M, Cond:code, Icon:draw_icon) :<-
-	"Find icon from condition"::
-	get(M, member, proto, Menu),
-	get(Menu?members, map, @arg1?value, Icons),
-	get(Icons, find, Cond, Icon).
+    "Find icon from condition"::
+    get(M, member, proto, Menu),
+    get(Menu?members, map, @arg1?value, Icons),
+    get(Icons, find, Cond, Icon).
 
 
 activate_select(M) :->
-	"Activate icon that does select"::
-	get(M, member, proto, Menu),
-	get(Menu?members, find, @arg1?(mode) == select, Item),
-	send(Item, activate).
+    "Activate icon that does select"::
+    get(M, member, proto, Menu),
+    get(Menu?members, find, @arg1?(mode) == select, Item),
+    send(Item, activate).
 
-		 /*******************************
-		 *	     STYLE  		*
-		 *******************************/
+                 /*******************************
+                 *           STYLE              *
+                 *******************************/
 
 columns(M, Cols:'0..') :->
-	"Set # columns in menu"::
-	get(M, member, proto, TheMenu),
-	send(TheMenu, columns, Cols).
+    "Set # columns in menu"::
+    get(M, member, proto, TheMenu),
+    send(TheMenu, columns, Cols).
 
 
-		/********************************
-		*            CREATE		*
-		********************************/
+                /********************************
+                *            CREATE             *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Create a prototype from a  chain of graphicals (usually the selection;
 in the future this might  also come from  a prototype editor).  If the
 chain has one element, no compound is needed.
 
-NOTE:	Due to the improper functioning of <-clone with regards to
-	connections to the outside world, all connections should be
-	internal to the chain of graphicals.  We won't try to program
-	around this problem here, but improve PCE's kloning schema
-	later.
+NOTE:   Due to the improper functioning of <-clone with regards to
+        connections to the outside world, all connections should be
+        internal to the chain of graphicals.  We won't try to program
+        around this problem here, but improve PCE's kloning schema
+        later.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 create_proto(M, Graphicals:chain, How:{as_is,virgin}) :->
-	"Create a prototype from a chain of graphicals"::
-	get(Graphicals, size, Size),
-	(   Size == 0
-	->  send(M, report, error, 'No selection')
-	;   Size == 1
-	->  get(Graphicals, head, Sel1),
-	    clone_proto(How, Sel1, Proto),
-	    send(Proto, selected, @off)
-	;   new(Proto, draw_compound),
-	    get(Graphicals, clone, Members),
-	    send(Members, for_all,
-		 and(message(Proto, display, @arg1),
-		     message(@arg1, selected, @off))),
-	    send(Proto, reference, @default),
-	    send(Proto, string, '')
-	),
-	mode_and_cursor_from_proto(How, Proto, Mode, Cursor),
-	send(M, proto, Proto, Mode, Cursor, user_proto := @on).
+    "Create a prototype from a chain of graphicals"::
+    get(Graphicals, size, Size),
+    (   Size == 0
+    ->  send(M, report, error, 'No selection')
+    ;   Size == 1
+    ->  get(Graphicals, head, Sel1),
+        clone_proto(How, Sel1, Proto),
+        send(Proto, selected, @off)
+    ;   new(Proto, draw_compound),
+        get(Graphicals, clone, Members),
+        send(Members, for_all,
+             and(message(Proto, display, @arg1),
+                 message(@arg1, selected, @off))),
+        send(Proto, reference, @default),
+        send(Proto, string, '')
+    ),
+    mode_and_cursor_from_proto(How, Proto, Mode, Cursor),
+    send(M, proto, Proto, Mode, Cursor, user_proto := @on).
 
 clone_proto(_, Connection, Clone) :-
-	send(Connection, instance_of, connection), !,
-	get(Connection, link, Link),
-	get(Link, clone, Clone),
-	send(Clone, copy, Connection).
+    send(Connection, instance_of, connection),
+    !,
+    get(Connection, link, Link),
+    get(Link, clone, Clone),
+    send(Clone, copy, Connection).
 clone_proto(virgin, Path, Clone) :-
-	send(Path, instance_of, path),
-	get(Path, clone, Clone),
-	send(Clone, clear).
+    send(Path, instance_of, path),
+    get(Path, clone, Clone),
+    send(Clone, clear).
 clone_proto(_, Graphical, Clone) :-
-	get(Graphical, clone, Clone).
+    get(Graphical, clone, Clone).
 
 
-mode_and_cursor(text,  		draw_text,    xterm).
-mode_and_cursor(box,   		draw_resize,  crosshair).
-mode_and_cursor(ellipse,	draw_resize,  crosshair).
-mode_and_cursor(line,  		draw_line,    crosshair).
-mode_and_cursor(path,  		draw_path,    cross).
-mode_and_cursor(link,  		draw_connect, plus).
+mode_and_cursor(text,           draw_text,    xterm).
+mode_and_cursor(box,            draw_resize,  crosshair).
+mode_and_cursor(ellipse,        draw_resize,  crosshair).
+mode_and_cursor(line,           draw_line,    crosshair).
+mode_and_cursor(path,           draw_path,    cross).
+mode_and_cursor(link,           draw_connect, plus).
 
 mode_and_cursor_from_proto(as_is, _Proto, draw_proto, dotbox) :- !.
 mode_and_cursor_from_proto(virgin, Proto, Mode, Cursor) :-
-	mode_and_cursor(Class, Mode, Cursor),
-	send(Proto, instance_of, Class).
+    mode_and_cursor(Class, Mode, Cursor),
+    send(Proto, instance_of, Class).
 
-		/********************************
-		*            DELETE		*
-		********************************/
+                /********************************
+                *            DELETE             *
+                ********************************/
 
 can_delete(M) :->
-	"Test if current prototype may be deleted"::
-	get(M, current, Icon),
-	send(Icon, can_delete).
+    "Test if current prototype may be deleted"::
+    get(M, current, Icon),
+    send(Icon, can_delete).
 
 
 delete(M, Icon0:[draw_icon]) :->
-	"Delete current prototype"::
-	(   Icon0 == @default
-	->  get(M, current, Icon),
-	    (	send(Icon, can_delete)
-	    ->	send(M, activate_select)
-	    ;	send(@display, inform, 'Can''t delete this prototype'),
-		fail
-	    )
-	;   Icon = Icon0
-	),
-	send(Icon, free),
-	send(M, modified, @on).
+    "Delete current prototype"::
+    (   Icon0 == @default
+    ->  get(M, current, Icon),
+        (   send(Icon, can_delete)
+        ->  send(M, activate_select)
+        ;   send(@display, inform, 'Can''t delete this prototype'),
+            fail
+        )
+    ;   Icon = Icon0
+    ),
+    send(Icon, free),
+    send(M, modified, @on).
 
 clear(M) :->
-	"Remove all prototypes"::
-	get(M, member, proto, TheMenu),
-	send(TheMenu, clear).
+    "Remove all prototypes"::
+    get(M, member, proto, TheMenu),
+    send(TheMenu, clear).
 
 
-		/********************************
-		*           SAVE/LOAD		*
-		********************************/
+                /********************************
+                *           SAVE/LOAD           *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Saving/loading is very similar to the corresponding code in canvas.pl.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 save_as(M) :->
-	"Save in user-requested file"::
-	get(@finder, file, @off, '.proto', File),
-	send(M, save, File).
+    "Save in user-requested file"::
+    get(@finder, file, @off, '.proto', File),
+    send(M, save, File).
 
 
 save(M, File:[file]) :->
-	"Save prototypes to named file"::
-	(   File == @default
-	->  get(M, file, SaveFile),
-	    SaveFile \== @nil
-	;   send(M, file, File),
-	    SaveFile = File
-	),
-	get(M, proto_sheet, Sheet),
-	send(Sheet, save_in_file, SaveFile),
-	send(M, report, status,
-	     'Prototypes saved in %s', SaveFile?absolute_path),
-	send(M, modified, @off).
+    "Save prototypes to named file"::
+    (   File == @default
+    ->  get(M, file, SaveFile),
+        SaveFile \== @nil
+    ;   send(M, file, File),
+        SaveFile = File
+    ),
+    get(M, proto_sheet, Sheet),
+    send(Sheet, save_in_file, SaveFile),
+    send(M, report, status,
+         'Prototypes saved in %s', SaveFile?absolute_path),
+    send(M, modified, @off).
 
 proto_sheet(M, Sheet:sheet) :<-
-	"Fetch description of user prototypes in a sheet"::
-	new(Sheet, sheet(attribute(pcedraw_prototype_version, 1),
-			 attribute(protos, new(Protos, chain)))),
-	get(M, member, proto, Menu),
-	send(Menu?members, for_all,
-	     message(M, append_proto_sheet, Protos, @arg1)).
+    "Fetch description of user prototypes in a sheet"::
+    new(Sheet, sheet(attribute(pcedraw_prototype_version, 1),
+                     attribute(protos, new(Protos, chain)))),
+    get(M, member, proto, Menu),
+    send(Menu?members, for_all,
+         message(M, append_proto_sheet, Protos, @arg1)).
 
 
 append_proto_sheet(_M, Protos:chain, Icon:draw_icon) :->
-	"Append a single proto to Protos"::
-	(   get(Icon, user_proto, @on)
-	->  get(Icon, mode_cursor, CursorName),
-	    get(Icon, mode, Mode),
-	    get(Icon, slot, proto, Proto), % also @nil !
-	    send(Protos, append,
-		 sheet(attribute(cursor, CursorName),
-		       attribute(mode, Mode),
-		       attribute(proto, Proto)))
-	;   true
-	).
+    "Append a single proto to Protos"::
+    (   get(Icon, user_proto, @on)
+    ->  get(Icon, mode_cursor, CursorName),
+        get(Icon, mode, Mode),
+        get(Icon, slot, proto, Proto), % also @nil !
+        send(Protos, append,
+             sheet(attribute(cursor, CursorName),
+                   attribute(mode, Mode),
+                   attribute(proto, Proto)))
+    ;   true
+    ).
 
 
 proto_sheet(M, Sheet:sheet, Clear:[bool]) :->
-	"Load prototype definitions from sheet"::
-	get(M, member, proto, Menu),
-	(   Clear == @on
-	->  send(Menu, clear),
-	    send(M?frame, fill_menu)
-	;   true
-	),
-	get(Sheet, protos, Chain),
-	send(Chain, for_all,
-	     message(M, proto,
-		     @arg1?proto, @arg1?mode, @arg1?cursor,
-		     user_proto := @on)).
+    "Load prototype definitions from sheet"::
+    get(M, member, proto, Menu),
+    (   Clear == @on
+    ->  send(Menu, clear),
+        send(M?frame, fill_menu)
+    ;   true
+    ),
+    get(Sheet, protos, Chain),
+    send(Chain, for_all,
+         message(M, proto,
+                 @arg1?proto, @arg1?mode, @arg1?cursor,
+                 user_proto := @on)).
 
 
 load_from(M) :->
-	"Load from user-requested file"::
-	get(@finder, file, @on, '.proto', File),
-	send(M, load, File).
+    "Load from user-requested file"::
+    get(@finder, file, @on, '.proto', File),
+    send(M, load, File).
 
 
 load(M, File:[file]) :->
-	"Load prototypes from named file"::
-	(   File == @default
-	->  get(M, file, LoadFile),
-	    LoadFile \== @nil
-	;   send(M, file, File),
-	    LoadFile = File
-	),
-	get(LoadFile, object, ProtoSheet),
-	(   send(ProtoSheet, instance_of, sheet),
-	    get(ProtoSheet, pcedraw_prototype_version, 1)
-	->  send(M, proto_sheet, ProtoSheet, @on),
-	    send(M, activate_select),
-	    send(M, adjust),
-	    send(M, modified, @off)
-	;   send(M, report, error,
-		 'File contains old or no PceDraw prototypes')
-	).
+    "Load prototypes from named file"::
+    (   File == @default
+    ->  get(M, file, LoadFile),
+        LoadFile \== @nil
+    ;   send(M, file, File),
+        LoadFile = File
+    ),
+    get(LoadFile, object, ProtoSheet),
+    (   send(ProtoSheet, instance_of, sheet),
+        get(ProtoSheet, pcedraw_prototype_version, 1)
+    ->  send(M, proto_sheet, ProtoSheet, @on),
+        send(M, activate_select),
+        send(M, adjust),
+        send(M, modified, @off)
+    ;   send(M, report, error,
+             'File contains old or no PceDraw prototypes')
+    ).
 
 :- pce_end_class.
 
 
-		/********************************
-		*             ICONS		*
-		********************************/
+                /********************************
+                *             ICONS             *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 We have chosen  to specialise class   `bitmap' to represent the  icon.
@@ -390,47 +391,47 @@ the contents of the bitmap.  This however is not very hard.
 
 :- pce_begin_class(draw_icon, menu_item).
 
-variable(proto,		'graphical|link*', none,
-	 "Prototype represented").
-variable(mode,		name,		both,
-	 "Mode initiated by the icon").
-variable(mode_cursor,	name,		both,
-	 "Associated cursor-name").
-variable(user_proto,	bool := @off,	both,
-	 "Prototype was created by the user").
+variable(proto,         'graphical|link*', none,
+         "Prototype represented").
+variable(mode,          name,           both,
+         "Mode initiated by the icon").
+variable(mode_cursor,   name,           both,
+         "Associated cursor-name").
+variable(user_proto,    bool := @off,   both,
+         "Prototype was created by the user").
 
 item_size(48,32).
 
 initialise(I, Proto:'graphical|link*', Mode:name,
-	   Cursor:cursor, Image:[image]) :->
-	"Create an icon for a specific mode"::
-	send(I, send_super, initialise, @nil),
-	send(I, slot, value, I),	% hack, needs to be fixed!
-	send(I, mode, Mode),
-	send(I, proto, Proto, Image),
-	send(I, slot, mode_cursor, Cursor?name).
+           Cursor:cursor, Image:[image]) :->
+    "Create an icon for a specific mode"::
+    send(I, send_super, initialise, @nil),
+    send(I, slot, value, I),        % hack, needs to be fixed!
+    send(I, mode, Mode),
+    send(I, proto, Proto, Image),
+    send(I, slot, mode_cursor, Cursor?name).
 
 proto(I, Proto:'graphical|link') :<-
-	get(I, slot, proto, Proto),
-	Proto \== @nil.
+    get(I, slot, proto, Proto),
+    Proto \== @nil.
 
 
 can_delete(I) :->
-	"Can I delete this icon?"::
-	get(I, user_proto, @on).
+    "Can I delete this icon?"::
+    get(I, user_proto, @on).
 
 
-		/********************************
-		*           PROTOTYPES		*
-		********************************/
+                /********************************
+                *           PROTOTYPES          *
+                ********************************/
 
 proto(I, Proto:'graphical|link*', Image:[image]) :->
-	"Set the prototype"::
-	send(I, slot, proto, Proto),
-	(   Image == @default
-	->  send(I, paint_proto)
-	;   send(I, label, Image)
-	).
+    "Set the prototype"::
+    send(I, slot, proto, Proto),
+    (   Image == @default
+    ->  send(I, paint_proto)
+    ;   send(I, label, Image)
+    ).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -446,68 +447,68 @@ prototype creates additional graphicals, these are displayed correctly.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 paint_proto(MI) :->
-	"Paint a small version of the prototype"::
-	get(MI, slot, proto, Proto),
-	item_size(IW, IH),
-	send(MI, label, new(I, image(@nil, IW, IH))),
-	send(MI, paint_outline),
-	(   Proto == @nil
-	->  true
-	;   send(Proto, instance_of, link)
-	->  new(Dev, device),			% links (connection)
-	    send(Dev, display, new(B1, box(0,0)), point(11, 10)),
-	    send(Dev, display, new(B2, box(0,0)), point(27, 20)),
-	    send(B1, handle, handle(0, 0, Proto?from)),
-	    send(B2, handle, handle(0, 0, Proto?to)),
-	    (	get(Proto, attribute, draw_connection_class, Class)
-	    ->	true
-	    ;	Class = draw_connection
-	    ),
-	    Term =.. [Class, B1, B2, Proto],
-	    new(Connection, Term),
-	    (	send(Connection, has_send_method, menu_text)
-	    ->  send(Connection, menu_text)
-	    ;   true
-	    ),
-	    send(I, draw_in, Dev),
-	    send(Dev, destroy)
-	;   send(Proto, instance_of, path), 	% Path case
-	    send(Proto?points, empty)
-	->  get(Proto, clone, Clone),
-	    send(Clone, clear),
-	    send(Clone, append, point(10,10)),
-	    send(Clone, append, point(20,7)),
-	    send(Clone, append, point(30,15)),
-	    send(Clone, append, point(15,21)),
-	    send(I, draw_in, Clone)
-	;   send(Proto, instance_of, bezier_curve)	% Bezier curves
-	->  get(Proto, clone, Clone),
-	    send(Clone, start, point(5,23)),
-	    send(Clone, end, point(35,23)),
-	    send(Clone, control1, point(15,0)),
-	    send(Clone, control2, point(48,0)),
-	    send(I, draw_in, Clone)
-	;   new(D, device),		% general case
-	    get(Proto, clone, Clone),
-	    (   send(Clone, has_send_method, menu_text)
-	    ->  send(Clone, menu_text)
-	    ;   true
-	    ),
-	    (	get(MI, mode, draw_proto)
-	    ->	get(Clone, size, size(PW, PH)),
-		(   (PW/30) > (PH/20)
-		->  DW = 30, DH is integer(30 * PH/PW)
-		;   DH = 20, DW is integer(20 * PW/PH)
-		)
-	    ;	DW = 30,
-		DH = 14
-	    ),
-	    send(Clone, size, size(DW, DH)),
-	    send(D, display, Clone),
-	    send(D, center, point(22, 14)),
-	    send(I, draw_in, D)
-	),
-	send(MI, label, I).
+    "Paint a small version of the prototype"::
+    get(MI, slot, proto, Proto),
+    item_size(IW, IH),
+    send(MI, label, new(I, image(@nil, IW, IH))),
+    send(MI, paint_outline),
+    (   Proto == @nil
+    ->  true
+    ;   send(Proto, instance_of, link)
+    ->  new(Dev, device),                   % links (connection)
+        send(Dev, display, new(B1, box(0,0)), point(11, 10)),
+        send(Dev, display, new(B2, box(0,0)), point(27, 20)),
+        send(B1, handle, handle(0, 0, Proto?from)),
+        send(B2, handle, handle(0, 0, Proto?to)),
+        (   get(Proto, attribute, draw_connection_class, Class)
+        ->  true
+        ;   Class = draw_connection
+        ),
+        Term =.. [Class, B1, B2, Proto],
+        new(Connection, Term),
+        (   send(Connection, has_send_method, menu_text)
+        ->  send(Connection, menu_text)
+        ;   true
+        ),
+        send(I, draw_in, Dev),
+        send(Dev, destroy)
+    ;   send(Proto, instance_of, path),     % Path case
+        send(Proto?points, empty)
+    ->  get(Proto, clone, Clone),
+        send(Clone, clear),
+        send(Clone, append, point(10,10)),
+        send(Clone, append, point(20,7)),
+        send(Clone, append, point(30,15)),
+        send(Clone, append, point(15,21)),
+        send(I, draw_in, Clone)
+    ;   send(Proto, instance_of, bezier_curve)      % Bezier curves
+    ->  get(Proto, clone, Clone),
+        send(Clone, start, point(5,23)),
+        send(Clone, end, point(35,23)),
+        send(Clone, control1, point(15,0)),
+        send(Clone, control2, point(48,0)),
+        send(I, draw_in, Clone)
+    ;   new(D, device),             % general case
+        get(Proto, clone, Clone),
+        (   send(Clone, has_send_method, menu_text)
+        ->  send(Clone, menu_text)
+        ;   true
+        ),
+        (   get(MI, mode, draw_proto)
+        ->  get(Clone, size, size(PW, PH)),
+            (   (PW/30) > (PH/20)
+            ->  DW = 30, DH is integer(30 * PH/PW)
+            ;   DH = 20, DW is integer(20 * PW/PH)
+            )
+        ;   DW = 30,
+            DH = 14
+        ),
+        send(Clone, size, size(DW, DH)),
+        send(D, display, Clone),
+        send(D, center, point(22, 14)),
+        send(I, draw_in, D)
+    ),
+    send(MI, label, I).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -517,13 +518,13 @@ image in the bitmap.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 paint_outline(MI) :->
-	"Paint the mode indicating bitmap"::
-	get(MI, label, I),
-	get(MI, mode, Mode),
-	outline_image(Mode, ImageFile),
-	send(I, copy, image(resource(ImageFile))).
+    "Paint the mode indicating bitmap"::
+    get(MI, label, I),
+    get(MI, mode, Mode),
+    outline_image(Mode, ImageFile),
+    send(I, copy, image(resource(ImageFile))).
 
-outline_image(select,	     'select.bm').
+outline_image(select,        'select.bm').
 outline_image(draw_text,     'draw_text.bm').
 outline_image(draw_resize,   'draw_resize.bm').
 outline_image(draw_line,     'draw_line.bm').
@@ -538,12 +539,12 @@ Hook to find the resource.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 resource(Name, image, image(Name)) :-
-	outline_image(_, Name).
+    outline_image(_, Name).
 
 
-		/********************************
-		*           ATTRIBUTES		*
-		********************************/
+                /********************************
+                *           ATTRIBUTES          *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 These two methods from the  interface to  the attribute editor.    See
@@ -553,21 +554,21 @@ regarded arguments.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 has_attribute(I, Att:name) :->
-	"Test if prototype has named attribute"::
-	\+ memberchk(Att, [x, y]),
-	send(I?proto, has_attribute, Att).
+    "Test if prototype has named attribute"::
+    \+ memberchk(Att, [x, y]),
+    send(I?proto, has_attribute, Att).
 
 
 draw_attribute(I, Att:name, Val:any) :->
-	"Set attribute of prototype"::
-	send(I?proto, draw_attribute, Att, Val),
-	send(I, repaint_proto),
-	send(I?window, modified, @on).
+    "Set attribute of prototype"::
+    send(I?proto, draw_attribute, Att, Val),
+    send(I, repaint_proto),
+    send(I?window, modified, @on).
 
 
-		/********************************
-		*          ACTIVATION		*
-		********************************/
+                /********************************
+                *          ACTIVATION           *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Activate an icon.   First it sets `Graphical   ->inverted' to @on  for
@@ -578,13 +579,13 @@ performance.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 activate(I) :->
-	"Select the icon; set mode and proto"::
-	get(I, menu, Menu),
-	send(Menu, selection, I),
-	send(Menu?frame, mode, I?mode, I?mode_cursor),
-	(   get(I, proto, Proto)
-	->  send(Menu?frame, proto, Proto)
-	;   send(Menu?frame, proto, @nil)
-	).
+    "Select the icon; set mode and proto"::
+    get(I, menu, Menu),
+    send(Menu, selection, I),
+    send(Menu?frame, mode, I?mode, I?mode_cursor),
+    (   get(I, proto, Proto)
+    ->  send(Menu?frame, proto, Proto)
+    ;   send(Menu?frame, proto, @nil)
+    ).
 
 :- pce_end_class.

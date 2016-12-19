@@ -36,52 +36,54 @@
 :- use_module(library(pce)).
 
 :- pce_begin_class(reporter, label,
-		   "Label for reporting").
+                   "Label for reporting").
 
-variable(hor_stretch,	int := 100,	get, "Stretch-ability").
-variable(hor_shrink,	int := 100,	get, "Shrink-ability").
-variable(error_delay,	int := 5,	both, "Delay after error").
-variable(warning_delay,	int := 2,	both, "Delay after warning").
-variable(delay_next_to,	date*,		get, "Delay errors and warnings").
+variable(hor_stretch,   int := 100,     get, "Stretch-ability").
+variable(hor_shrink,    int := 100,     get, "Shrink-ability").
+variable(error_delay,   int := 5,       both, "Delay after error").
+variable(warning_delay, int := 2,       both, "Delay after warning").
+variable(delay_next_to, date*,          get, "Delay errors and warnings").
 
 initialise(R) :->
-	send_super(R, initialise, reporter, ''),
-	send(R, elevation, -1),
-	send(R, border, 2),
-	send(R, reference, point(0, R?height)).
+    send_super(R, initialise, reporter, ''),
+    send(R, elevation, -1),
+    send(R, border, 2),
+    send(R, reference, point(0, R?height)).
 
 report(R, Status:name, Fmt:[char_array], Args:any ...) :->
-	(   get(R, delay_next_to, DelayTo),
-	    DelayTo \== @nil,
-	    get(DelayTo, difference, new(date), ToGo),
-	    ToGo > 0,
-	    (   vital(Status)
-	    ->	send(timer(ToGo), delay),
-		fail
-	    ;	true
-	    )
-	->  true
-	;   Msg =.. [report, Status, Fmt | Args],
-	    colour(Status, Colour),
-	    send(R, colour, Colour),
-	    delay(R, Status, Date),
-	    send(R, slot, delay_next_to, Date),
-	    send_super(R, Msg)
-	).
+    (   get(R, delay_next_to, DelayTo),
+        DelayTo \== @nil,
+        get(DelayTo, difference, new(date), ToGo),
+        ToGo > 0,
+        (   vital(Status)
+        ->  send(timer(ToGo), delay),
+            fail
+        ;   true
+        )
+    ->  true
+    ;   Msg =.. [report, Status, Fmt | Args],
+        colour(Status, Colour),
+        send(R, colour, Colour),
+        delay(R, Status, Date),
+        send(R, slot, delay_next_to, Date),
+        send_super(R, Msg)
+    ).
 
 colour(error, red) :- !.
 colour(_, @default).
 
 delay(R, warning, Date) :-
-	get(R, warning_delay, Delay),
-	Delay > 0, !,
-	new(Date, date),
-	send(Date, advance, Delay).
+    get(R, warning_delay, Delay),
+    Delay > 0,
+    !,
+    new(Date, date),
+    send(Date, advance, Delay).
 delay(R, error, Date) :-
-	get(R, error_delay, Delay),
-	Delay > 0, !,
-	new(Date, date),
-	send(Date, advance, Delay).
+    get(R, error_delay, Delay),
+    Delay > 0,
+    !,
+    new(Date, date),
+    send(Date, advance, Delay).
 delay(_, _, @nil).
 
 vital(warning).
@@ -92,16 +94,16 @@ vital(inform).
 
 
 :- pce_begin_class(report_dialog, dialog,
-		   "Dialog window holding reporter").
+                   "Dialog window holding reporter").
 
 variable(reporter, reporter, get, "Associated reporter").
 delegate_to(reporter).
 
 initialise(D) :->
-	send_super(D, initialise),
-	send(D, gap, size(0, 0)),
-	send(D, resize_message, message(D, layout, @arg2)),
-	send(D, append, new(R, reporter)),
-	send(D, slot, reporter, R).
+    send_super(D, initialise),
+    send(D, gap, size(0, 0)),
+    send(D, resize_message, message(D, layout, @arg2)),
+    send(D, append, new(R, reporter)),
+    send(D, slot, reporter, R).
 
 :- pce_end_class.

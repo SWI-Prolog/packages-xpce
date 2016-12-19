@@ -41,4 +41,4 @@ compatibility reasons.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- format(user_error,
-	  '[COMPATIBILITY: library(pce_selection) is obsolete]~n', []).
+          '[COMPATIBILITY: library(pce_selection) is obsolete]~n', []).

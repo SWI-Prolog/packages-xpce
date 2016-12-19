@@ -36,22 +36,22 @@
 :- use_module(library(pce)).
 
 :- pce_begin_class(dia_transient_hyper, hyper,
-		   "Hyper-link to a transient window").
+                   "Hyper-link to a transient window").
 
 unlink_from(H) :->
-	get(H, to, Transient),
-	send_super(H, unlink_from),
-	send(Transient, destroy).
+    get(H, to, Transient),
+    send_super(H, unlink_from),
+    send(Transient, destroy).
 
 :- pce_end_class.
 
 
 :- pce_begin_class(dia_client_hyper, dia_transient_hyper,
-		   "Clear dialog when destroyed").
+                   "Clear dialog when destroyed").
 
 unlink_to(H) :->
-	get(H, to, To),
-	send(To, clear),
-	send_super(H, unlink_to).
+    get(H, to, To),
+    send(To, clear),
+    send_super(H, unlink_to).
 
 :- pce_end_class.

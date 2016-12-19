@@ -34,67 +34,69 @@
 */
 
 :- module(pce_prolog_xref,
-	  [ xref_source/1,		% +Source
-	    xref_source/2,		% +Source, +Options
-	    xref_called/3,		% ?Source, ?Callable, ?By
-	    xref_defined/3,		% ?Source. ?Callable, -How
-	    xref_definition_line/2,	% +How, -Line
-	    xref_exported/2,		% ?Source, ?Callable
-	    xref_module/2,		% ?Source, ?Module
-	    xref_op/2,			% ?Source, ?Op
-	    xref_clean/1,		% +Source
-	    xref_current_source/1,	% ?Source
-	    xref_done/2,		% +Source, -Time
-	    xref_built_in/1,		% ?Callable
-	    xref_source_file/3,		% +Spec, -Path, +Source
-	    xref_source_file/4,		% +Spec, -Path, +Source, +Options
-	    xref_public_list/4,		% +Path, -Export, +Src
-	    xref_meta/2,		% +Goal, -Called
-	    xref_hook/1,		% ?Callable
-					% XPCE class references
-	    xref_used_class/2,		% ?Source, ?ClassName
-	    xref_defined_class/3	% ?Source, ?ClassName, -How
-	  ]).
+          [ xref_source/1,              % +Source
+            xref_source/2,              % +Source, +Options
+            xref_called/3,              % ?Source, ?Callable, ?By
+            xref_defined/3,             % ?Source. ?Callable, -How
+            xref_definition_line/2,     % +How, -Line
+            xref_exported/2,            % ?Source, ?Callable
+            xref_module/2,              % ?Source, ?Module
+            xref_op/2,                  % ?Source, ?Op
+            xref_clean/1,               % +Source
+            xref_current_source/1,      % ?Source
+            xref_done/2,                % +Source, -Time
+            xref_built_in/1,            % ?Callable
+            xref_source_file/3,         % +Spec, -Path, +Source
+            xref_source_file/4,         % +Spec, -Path, +Source, +Options
+            xref_public_list/4,         % +Path, -Export, +Src
+            xref_meta/2,                % +Goal, -Called
+            xref_hook/1,                % ?Callable
+                                        % XPCE class references
+            xref_used_class/2,          % ?Source, ?ClassName
+            xref_defined_class/3        % ?Source, ?ClassName, -How
+          ]).
 :- use_module(library(pce)).
 :- use_module(library(prolog_xref)).
 
 :- multifile
-	prolog:xref_source_identifier/2,	% +Source, -Id
-	prolog:xref_source_directory/2,		% +Source, -Dir
-	prolog:xref_open_source/2.		% +SourceId, -Stream
+    prolog:xref_source_identifier/2,        % +Source, -Id
+    prolog:xref_source_directory/2,         % +Source, -Dir
+    prolog:xref_open_source/2.              % +SourceId, -Stream
 
-%%	prolog:xref_source_identifier(+Object, -Ref)
+%!  prolog:xref_source_identifier(+Object, -Ref)
 %
-%	The  cross-referencer  runs  faster  if   the  reference  is  an
-%	indexable term. Therefore we strip the XPCE @ from the object.
+%   The  cross-referencer  runs  faster  if   the  reference  is  an
+%   indexable term. Therefore we strip the XPCE @ from the object.
 
 prolog:xref_source_identifier(Object, Ref) :-
-	object(Object), !,
-	Object = @Ref.
+    object(Object),
+    !,
+    Object = @Ref.
 prolog:xref_source_identifier(Ref, Ref) :-
-	integer(Ref), !.
+    integer(Ref),
+    !.
 
-%%	prolog:xref_source_directory(+Source, -Dir)
+%!  prolog:xref_source_directory(+Source, -Dir)
 %
-%	Find the directory of a PceEmacs buffer to resolve relative paths.
+%   Find the directory of a PceEmacs buffer to resolve relative paths.
 
 prolog:xref_source_directory(SourceId, Dir) :-
-	integer(SourceId),
-	Obj = @SourceId,
-	object(Obj),
-	catch(get(Obj?file, absolute_path, Path), _, fail),
-	file_directory_name(Path, Dir).
+    integer(SourceId),
+    Obj = @SourceId,
+    object(Obj),
+    catch(get(Obj?file, absolute_path, Path), _, fail),
+    file_directory_name(Path, Dir).
 
-%%	prolog:xref_open_source(+Source, -Stream)
+%!  prolog:xref_open_source(+Source, -Stream)
 %
-%	Open the PceEmacs as a Prolog stream.
+%   Open the PceEmacs as a Prolog stream.
 
 prolog:xref_open_source(SourceId, Stream) :-
-	integer(SourceId),
-	Obj = @SourceId,
-	object(Obj),
-	pce_open(Obj, read, Stream),
-	(   catch(get(Obj?file, absolute_path, Path), _, fail)
-	->  set_stream(Stream, file_name(Path))
-	;   true
-	).
+    integer(SourceId),
+    Obj = @SourceId,
+    object(Obj),
+    pce_open(Obj, read, Stream),
+    (   catch(get(Obj?file, absolute_path, Path), _, fail)
+    ->  set_stream(Stream, file_name(Path))
+    ;   true
+    ).

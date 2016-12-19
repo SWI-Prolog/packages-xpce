@@ -36,13 +36,13 @@
 :- use_module(library(pce)).
 
 :- emacs_begin_mode(text, fundamental,
-		    "Edit plain text (sets fillmode",
-	[],
-	[]).
+                    "Edit plain text (sets fillmode",
+        [],
+        []).
 
 setup_mode(E) :->
-	"Switch editor into fill-mode"::
-	send(E, fill_mode, @on).
+    "Switch editor into fill-mode"::
+    send(E, fill_mode, @on).
 
 :- emacs_end_mode.
 

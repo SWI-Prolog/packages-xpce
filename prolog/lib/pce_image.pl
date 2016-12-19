@@ -33,13 +33,13 @@
 */
 
 :- module(pce_image,
-	  [ pce_image_directory/1
-	  ]).
+          [ pce_image_directory/1
+          ]).
 :- use_module(library(pce)).
 :- require([ absolute_file_name/3
-	   , atomic_list_concat/2
-	   , is_absolute_file_name/1
-	   ]).
+           , atomic_list_concat/2
+           , is_absolute_file_name/1
+           ]).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Prepend the given  directory  to  the   image  search-path.  Useful  for
@@ -49,12 +49,12 @@ Typically one would put all images required   by an application in *.xpm
 files in a directory called bitmaps. The   load  file of the application
 makes a call
 
-	:- pce_image_directory(bitmaps).
+        :- pce_image_directory(bitmaps).
 
 after which the images from the  directory   may  be accessed using -for
 example-:
 
-	send(Box, fill_pattern, image('my_image.bm')).
+        send(Box, fill_pattern, image('my_image.bm')).
 
 See also the ImageViewer demo  tool  to   get  an  overview of available
 images in a directory.
@@ -67,32 +67,32 @@ file_search_path/2 declarations using the alias   `image'. Especially if
 the application should (eventually)  be  turned   into  a  runtime,  the
 following skeleton for using images as program resources is adviced:
 
-resource(cute,	image, image('cute.xpm')).
+resource(cute,  image, image('cute.xpm')).
 
-	...
-	new(I, image(resource(cute)),
-	...
+        ...
+        new(I, image(resource(cute)),
+        ...
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 pce_image_directory(Dir) :-
-	(   atom(Dir)
-	->  (   \+ is_absolute_file_name(Dir),
-	        prolog_load_context(directory, Cwd)
-	    ->	atomic_list_concat([Cwd, /, Dir], DirPath)
-	    ;	DirPath = Dir
-	    ),
-	    asserta(user:file_search_path(image, DirPath))
-	;   asserta(user:file_search_path(image, Dir)),
-	    absolute_file_name(Dir, DirPath,
-			       [ file_type(directory),
-				 access(read)
-			       ])
-	),
-	(   compiling,
-	    get(@display, open, @off)	% don't force the display
-					% when compiling
-	->  true
-	;   get(class(image), class_variable, path, PathVar),
-	    get(PathVar, value, Path),
-	    send(PathVar, value, string('%s:%s', DirPath, Path))
-	).
+    (   atom(Dir)
+    ->  (   \+ is_absolute_file_name(Dir),
+            prolog_load_context(directory, Cwd)
+        ->  atomic_list_concat([Cwd, /, Dir], DirPath)
+        ;   DirPath = Dir
+        ),
+        asserta(user:file_search_path(image, DirPath))
+    ;   asserta(user:file_search_path(image, Dir)),
+        absolute_file_name(Dir, DirPath,
+                           [ file_type(directory),
+                             access(read)
+                           ])
+    ),
+    (   compiling,
+        get(@display, open, @off)   % don't force the display
+                                    % when compiling
+    ->  true
+    ;   get(class(image), class_variable, path, PathVar),
+        get(PathVar, value, Path),
+        send(PathVar, value, string('%s:%s', DirPath, Path))
+    ).
