@@ -36,36 +36,36 @@
 :- module(pce_host, []).
 
 
-		 /*******************************
-		 *	    PROPERTIES		*
-		 *******************************/
+                 /*******************************
+                 *          PROPERTIES          *
+                 *******************************/
 
-property(prolog(swi)).			% this is SWI-Prolog
-property(file_extensions([pl])).	% list of file extensions
-property(use_predicate_references).	% use direct predicate refs in methods
-property(register_source_locations).	% register the source locations
-property(string).			% Supports string datatype
+property(prolog(swi)).                  % this is SWI-Prolog
+property(file_extensions([pl])).        % list of file extensions
+property(use_predicate_references).     % use direct predicate refs in methods
+property(register_source_locations).    % register the source locations
+property(string).                       % Supports string datatype
 property(runtime) :-
-	get(@(pce), is_runtime_system, @(on)).
+    get(@(pce), is_runtime_system, @(on)).
 
 
-		 /*******************************
-		 *	     ERRORS		*
-		 *******************************/
+                 /*******************************
+                 *           ERRORS             *
+                 *******************************/
 
 :- consult('../lib/swi_compatibility').
 
 
-		 /*******************************
-		 *	       ABORT		*
-		 *******************************/
+                 /*******************************
+                 *             ABORT            *
+                 *******************************/
 
 :- multifile
-	user:message_hook/3.
+    user:message_hook/3.
 :- dynamic
-	user:message_hook/3.
+    user:message_hook/3.
 
 user:message_hook('$aborted', _Kind, _Lines) :-
-	current_prolog_flag(xpce, true),
-	send(@(display), reset),
-	fail.
+    current_prolog_flag(xpce, true),
+    send(@(display), reset),
+    fail.

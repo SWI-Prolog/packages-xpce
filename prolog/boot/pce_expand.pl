@@ -35,20 +35,20 @@
 :- module(pce_expand, []).
 
 :- multifile
-	system:term_expansion/2.
+    system:term_expansion/2.
 :- dynamic
-	system:term_expansion/2.
+    system:term_expansion/2.
 
 system:term_expansion(pce_ifhostproperty(Prop, Clause), TheClause) :-
-	(   pce_host:property(Prop)
-	->  TheClause = Clause
-	;   TheClause = []
-	).
+    (   pce_host:property(Prop)
+    ->  TheClause = Clause
+    ;   TheClause = []
+    ).
 system:term_expansion(pce_ifhostproperty(Prop, If, Else), Clause) :-
-	(   pce_host:property(Prop)
-	->  Clause = If
-	;   Clause = Else
-	).
+    (   pce_host:property(Prop)
+    ->  Clause = If
+    ;   Clause = Else
+    ).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Defined properties:

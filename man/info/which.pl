@@ -4,7 +4,7 @@
 */
 
 which(Name, File) :-
-	get(@pce, environment_variable, 'PATH', Path),
-	new(F, file(Name)),
-	send(F, find, Path, execute),
-	get(F, absolute_path, File).
+    get(@pce, environment_variable, 'PATH', Path),
+    new(F, file(Name)),
+    send(F, find, Path, execute),
+    get(F, absolute_path, File).

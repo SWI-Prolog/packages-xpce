@@ -33,84 +33,87 @@
 */
 
 :- module(pce_autoload,
-	[ pce_autoload/2
-	, pce_autoload_all/0
-	]).
+        [ pce_autoload/2
+        , pce_autoload_all/0
+        ]).
 
 :- use_module(pce_boot(pce_principal)).
 :- use_module(pce_boot(pce_realise),
-	      [ pce_realise_class/1,
-		pce_prolog_class/1
-	      ]).
+              [ pce_realise_class/1,
+                pce_prolog_class/1
+              ]).
 :- require([ is_absolute_file_name/1
-	   , atomic_list_concat/2
-	   , absolute_file_name/3
-	   , get/3
-	   ]).
+           , atomic_list_concat/2
+           , absolute_file_name/3
+           , get/3
+           ]).
 
 :- dynamic
-	autoload/2.
+    autoload/2.
 
-%%	pce_autoload(+ClassName, +FileSpec)
+%!  pce_autoload(+ClassName, +FileSpec)
 %
-%	States class `ClassName' can be created by loading the Prolog
-%	file `FileSpec'.  This will actually be done if either the class
-%	is actually needed by PCE or pce_autoload_all/0 is called.
+%   States class `ClassName' can be created by loading the Prolog
+%   file `FileSpec'.  This will actually be done if either the class
+%   is actually needed by PCE or pce_autoload_all/0 is called.
 
-pce_autoload(Class, PathAlias) :-	% trap library(), demo(), contrib(), ..
-	functor(PathAlias, _, 1), !,
-	retractall(autoload(Class, _)),
-	assert(autoload(Class, PathAlias)).
+pce_autoload(Class, PathAlias) :-       % trap library(), demo(), contrib(), ..
+    functor(PathAlias, _, 1),
+    !,
+    retractall(autoload(Class, _)),
+    assert(autoload(Class, PathAlias)).
 pce_autoload(Class, Abs) :-
-	is_absolute_file_name(Abs), !,
-	absolute_file_name(Abs, Canonical),
-	retractall(autoload(Class, _)),
-	assert(autoload(Class, Canonical)).
+    is_absolute_file_name(Abs),
+    !,
+    absolute_file_name(Abs, Canonical),
+    retractall(autoload(Class, _)),
+    assert(autoload(Class, Canonical)).
 pce_autoload(Class, Local) :-
-	prolog_load_context(directory, Dir),
-	atomic_list_concat([Dir, /, Local], File),
-	pce_host:property(file_extensions(Exts)),
-	absolute_file_name(File,
-			   [ extensions(Exts),
-			     access(exist)
-			   ], Abs),
-	retractall(autoload(Class, _)),
-	assert(autoload(Class, Abs)).
+    prolog_load_context(directory, Dir),
+    atomic_list_concat([Dir, /, Local], File),
+    pce_host:property(file_extensions(Exts)),
+    absolute_file_name(File,
+                       [ extensions(Exts),
+                         access(exist)
+                       ], Abs),
+    retractall(autoload(Class, _)),
+    assert(autoload(Class, Abs)).
 
-%%	pce_autoload_all
+%!  pce_autoload_all
 %
-%	Load all    classes  declared  using   the    pce_autoload/2
-%	directive.  Useful for debugging purposes.
+%   Load all    classes  declared  using   the    pce_autoload/2
+%   directive.  Useful for debugging purposes.
 
 pce_autoload_all :-
-	autoload(Class, File),
-	\+ get(@classes, member, Class, _),
-	\+ pce_prolog_class(Class),
-	ensure_loaded(user:File),
-	fail.
+    autoload(Class, File),
+    \+ get(@classes, member, Class, _),
+    \+ pce_prolog_class(Class),
+    ensure_loaded(user:File),
+    fail.
 pce_autoload_all.
 
 
 register_handler :-
-   send(@pce?exception_handlers, append(
-	attribute(undefined_class,
-		  message(@prolog, call, trap_autoload, @arg1)))).
+    send(@pce?exception_handlers, append(
+         attribute(undefined_class,
+                   message(@prolog, call, trap_autoload, @arg1)))).
 
 :- initialization
-	register_handler.
+    register_handler.
 
 pce_ifhostproperty(prolog(swi),
-		   (:- '$hide'(trap_autoload/1)),
-		   (notrace(G) :- G)).
+                   (:- '$hide'(trap_autoload/1)),
+                   (notrace(G) :- G)).
 
 trap_autoload(Class) :-
-	notrace(do_trap_autoload(Class)).
+    notrace(do_trap_autoload(Class)).
 
 do_trap_autoload(Class) :-
-	pce_realise_class(Class), !.
+    pce_realise_class(Class),
+    !.
 do_trap_autoload(Class) :-
-	autoload(Class, File),
-	load_files(user:File,
-		   [ autoload(true)
-		   ]),
-	pce_realise_class(Class).
+    autoload(Class, File),
+    load_files(user:File,
+               [ autoload(true)
+               ]),
+    pce_realise_class(Class).

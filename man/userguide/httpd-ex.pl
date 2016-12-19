@@ -1,15 +1,15 @@
 :- module(my_httpd,
-	  [ go/1
-	  ]).
+          [ go/1
+          ]).
 :- use_module(library(pce)).
 :- use_module(library('http/httpd')).
 :- use_module(library('http/html_write')).
 :- use_module(library('draw/importpl')).
 
-%	Create server at Port
+%       Create server at Port
 
 go(Port) :-
-	new(_, my_httpd(Port)).
+    new(_, my_httpd(Port)).
 
 :- pce_begin_class(my_httpd, httpd, "Demo Web server").
 
@@ -20,12 +20,12 @@ replies.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 request(HTTPD, Request:sheet) :->
-	"A request came in."::
-	get(Request, path, Path),
-	reply(Path, HTTPD).
+    "A request came in."::
+    get(Request, path, Path),
+    reply(Path, HTTPD).
 
 :- discontiguous
-	reply/2.
+    reply/2.
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -35,48 +35,49 @@ formatted HTML document. The complex  term   can  invoke  additional DCG
 rulesets, providing nicely structured content-generation.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-reply('/', HTTPD) :- !,
-	send(HTTPD, reply_html, my_httpd:frames).
+reply('/', HTTPD) :-
+    !,
+    send(HTTPD, reply_html, my_httpd:frames).
 
 frames -->
-	html(html([ head(title('Demo')),
-		    frameset([cols('25%,75%')],
-			     [ frame([ src('/index'),
-				       name(index)
-				     ]),
-			       frame([ src('/blank'),
-				       name(body)
-				     ])
-			     ])
-		  ])).
+    html(html([ head(title('Demo')),
+                frameset([cols('25%,75%')],
+                         [ frame([ src('/index'),
+                                   name(index)
+                                 ]),
+                           frame([ src('/blank'),
+                                   name(body)
+                                 ])
+                         ])
+              ])).
 
 
 reply('/blank', HTTPD) :-
-	send(HTTPD, reply_html, my_httpd:blank).
+    send(HTTPD, reply_html, my_httpd:blank).
 
 blank -->
-	page(title('Blank'),
-	     []).
+    page(title('Blank'),
+         []).
 
 reply('/index', HTTPD) :-
-	send(HTTPD, reply_html, my_httpd:index).
+    send(HTTPD, reply_html, my_httpd:index).
 
 index -->
-	page(title('Index'),
-	     [ a([ href('/text'), target(body) ],
-		 [ 'Show text' ]),
-	       br([]),
-	       a([ href('/picture'), target(body) ],
-		 [ 'Show picture' ])
-	     ]).
+    page(title('Index'),
+         [ a([ href('/text'), target(body) ],
+             [ 'Show text' ]),
+           br([]),
+           a([ href('/picture'), target(body) ],
+             [ 'Show picture' ])
+         ]).
 
 reply('/text', HTTPD) :-
-	send(HTTPD, reply_html, my_httpd:text).
+    send(HTTPD, reply_html, my_httpd:text).
 
 text -->
-	page(title('Text'),
-	     [ p(['Just showing a little text'])
-	     ]).
+    page(title('Text'),
+         [ p(['Just showing a little text'])
+         ]).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -89,37 +90,37 @@ into an XPCE graphical using the support library draw/importpl.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 reply('/picture', HTTPD) :-
-	make_picture(Gr),
-	send(HTTPD, reply, Gr, 'image/gif').
+    make_picture(Gr),
+    send(HTTPD, reply, Gr, 'image/gif').
 
 make_picture(Dev) :-
-	new(Dev, device),
-	drawing(xpcenetscape, Drawing),
-	realise_drawing(Dev, Drawing).
+    new(Dev, device),
+    drawing(xpcenetscape, Drawing),
+    realise_drawing(Dev, Drawing).
 
-%	Drawing imported from PceDraw
+%       Drawing imported from PceDraw
 
 drawing(xpcenetscape,
-	[ compound(new(A, figure),
-		   drawing([ display(box(137, 74)+radius(17),
-				     point(0, 0)),
-			     display(text('XPCE', center, normal),
-				     point(52, 30))
-			   ]),
-		   point(163, 183)),
-	  compound(new(B, figure),
-		   drawing([ display(box(137, 74)+radius(17),
-				     point(0, 0)),
-			     display(text('Netscape', center, normal),
-				     point(42, 30))
-			   ]),
-		   point(350, 183)),
-	  connect(connection(A,
-			     B,
-			     handle(w, h/2, link, east),
-			     handle(0, h/2, link, west)) +
-		    arrows(both))
-	]).
+        [ compound(new(A, figure),
+                   drawing([ display(box(137, 74)+radius(17),
+                                     point(0, 0)),
+                             display(text('XPCE', center, normal),
+                                     point(52, 30))
+                           ]),
+                   point(163, 183)),
+          compound(new(B, figure),
+                   drawing([ display(box(137, 74)+radius(17),
+                                     point(0, 0)),
+                             display(text('Netscape', center, normal),
+                                     point(42, 30))
+                           ]),
+                   point(350, 183)),
+          connect(connection(A,
+                             B,
+                             handle(w, h/2, link, east),
+                             handle(0, h/2, link, west)) +
+                    arrows(both))
+        ]).
 
 :- pce_end_class(my_httpd).
 

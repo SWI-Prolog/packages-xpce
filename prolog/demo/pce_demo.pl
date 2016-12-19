@@ -34,19 +34,19 @@
 */
 
 :- module(pce_demo,
-	  [ pcedemo/0
-	  ]).
+          [ pcedemo/0
+          ]).
 :- use_module(library(pce)).
 :- use_module(contrib(contrib)).
 :- use_module(library(persistent_frame)).
 :- require([ emacs/1
-	   , forall/2
-	   , member/2
-	   , term_to_atom/2
-	   ]).
+           , forall/2
+           , member/2
+           , term_to_atom/2
+           ]).
 
-:- multifile				% So this may be predefined, avoiding
-	pcedemo/0.			% an undefined trap
+:- multifile                            % So this may be predefined, avoiding
+    pcedemo/0.                      % an undefined trap
 
 /** <module> XPCE demo starter
 
@@ -56,96 +56,96 @@ list of available demo's.
 */
 
 pcedemo :-
-	new(F, persistent_frame('XPCE Demo Programs')),
-	send(F, append, new(B, browser(@default, size(60,10)))),
-	send(B, confirm_done, @off),
-	send(B, tab_stops, vector(150)),
-	fill_browser(B),
+    new(F, persistent_frame('XPCE Demo Programs')),
+    send(F, append, new(B, browser(@default, size(60,10)))),
+    send(B, confirm_done, @off),
+    send(B, tab_stops, vector(150)),
+    fill_browser(B),
 
-	send(new(D, dialog), below, B),
-	send(D, append, new(O, button(open, message(@prolog, open_demo, B)))),
-	send(D, append, button(source, message(@prolog, view_source, B))),
-	send(D, append, button(quit, message(D?frame, free))),
-	send(D, default_button, open),
+    send(new(D, dialog), below, B),
+    send(D, append, new(O, button(open, message(@prolog, open_demo, B)))),
+    send(D, append, button(source, message(@prolog, view_source, B))),
+    send(D, append, button(quit, message(D?frame, free))),
+    send(D, default_button, open),
 
-	send(B, open_message, message(O, execute)),
-	send(B, style, title, style(font := font(helvetica, bold, 14))),
+    send(B, open_message, message(O, execute)),
+    send(B, style, title, style(font := font(helvetica, bold, 14))),
 
-	send(B, open).
+    send(B, open).
 
 
 fill_browser(B) :-
-	forall(demo(Name, Summary, _, _),
-	       send(B, append, dict_item(Name,
-					 string('%s	%s', Name, Summary)))),
-	send(B, append,
-	     dict_item('======Contributions====================',
-		       style := title)),
-	forall(contribution(Name, Summary, _Author, _, _),
-	       send(B, append, dict_item(Name,
-					 string('%s	%s', Name, Summary)))).
+    forall(demo(Name, Summary, _, _),
+           send(B, append, dict_item(Name,
+                                     string('%s\t%s', Name, Summary)))),
+    send(B, append,
+         dict_item('======Contributions====================',
+                   style := title)),
+    forall(contribution(Name, Summary, _Author, _, _),
+           send(B, append, dict_item(Name,
+                                     string('%s\t%s', Name, Summary)))).
 
 
 open_demo(Browser) :-
-	get(Browser, selection, DictItem),
-	(   (	DictItem == @nil
-	    ;	get(DictItem, style, title)
-	    )
-	->  send(@display, inform, 'First select a demo')
-	;   get(DictItem, key, Name),
-	    (	(   demo(Name, Summary, File, Predicate)
-		;   contribution(Name, Summary, _Author, File, Predicate)
-		)
-	    ->  (   send(@pce, report, progress, 'Loading demo %s ...', Summary),
-		    use_module(File),
-		    send(@pce, report, done)
-		->  (   Predicate
-		    ->  true
-		    ;   send(@pce, inform, 'Failed to start %s demo', Name)
-		    )
-		;   send(@pce, inform, 'Can''t find demo sourcefile')
-		)
-	    ;   send(Browser, report, error, 'No such demo: %s', Name)
-	    )
-	).
+    get(Browser, selection, DictItem),
+    (   (   DictItem == @nil
+        ;   get(DictItem, style, title)
+        )
+    ->  send(@display, inform, 'First select a demo')
+    ;   get(DictItem, key, Name),
+        (   (   demo(Name, Summary, File, Predicate)
+            ;   contribution(Name, Summary, _Author, File, Predicate)
+            )
+        ->  (   send(@pce, report, progress, 'Loading demo %s ...', Summary),
+                use_module(File),
+                send(@pce, report, done)
+            ->  (   Predicate
+                ->  true
+                ;   send(@pce, inform, 'Failed to start %s demo', Name)
+                )
+            ;   send(@pce, inform, 'Can''t find demo sourcefile')
+            )
+        ;   send(Browser, report, error, 'No such demo: %s', Name)
+        )
+    ).
 
 view_source(Browser) :-
-	get(Browser, selection, DictItem),
-	(   DictItem == @nil
-	->  send(@display, inform, 'First select a demo')
-	;   get(DictItem, key, Name),
-	    (	demo(Name, _, File, _)
-	    ;	contribution(Name, _, _Author, File, _)
-	    ),
-	    (	locate_file(File, Path)
-	    ->	emacs(Path)
-	    ;	term_to_atom(File, FileAtom),
-	        send(Browser, report, error,
-		     'Can''t find source from %s', FileAtom)
-	    )
-	).
+    get(Browser, selection, DictItem),
+    (   DictItem == @nil
+    ->  send(@display, inform, 'First select a demo')
+    ;   get(DictItem, key, Name),
+        (   demo(Name, _, File, _)
+        ;   contribution(Name, _, _Author, File, _)
+        ),
+        (   locate_file(File, Path)
+        ->  emacs(Path)
+        ;   term_to_atom(File, FileAtom),
+            send(Browser, report, error,
+                 'Can''t find source from %s', FileAtom)
+        )
+    ).
 
 locate_file(Base, File) :-
-	absolute_file_name(Base,
-			   [ file_type(prolog),
-			     access(read)
-			   ], File).
+    absolute_file_name(Base,
+                       [ file_type(prolog),
+                         access(read)
+                       ], File).
 
 
-		/********************************
-		*             DEMO'S		*
-		********************************/
+                /********************************
+                *             DEMO'S            *
+                ********************************/
 
-demo('PceDraw',				% Name
-     'Drawing tool',			% Summary
-     library(pcedraw),			% Sources
-     pcedraw).				% Toplevel predicate
+demo('PceDraw',                         % Name
+     'Drawing tool',                    % Summary
+     library(pcedraw),                  % Sources
+     pcedraw).                          % Toplevel predicate
 
 demo('Ispell',
      'Graphical interface to ispell (requires ispell 3)',
      demo(ispell),
      ispell) :-
-	send(@pce, has_feature, process).
+    send(@pce, has_feature, process).
 
 demo('Emacs',
      'Emacs (Epoch) look-alike editor',
@@ -196,18 +196,18 @@ demo('FtpLog',
      'Examine /usr/adm/xferlog (ftp log file)',
      demo(ftplog),
      ftplog('/usr/adm/xferlog')) :-
-	send(@pce, has_feature, process),
-	absolute_file_name('/usr/adm/xferlog', Path),
-	send(file(Path), access, read).
+    send(@pce, has_feature, process),
+    absolute_file_name('/usr/adm/xferlog', Path),
+    send(file(Path), access, read).
 
 
 demo('ChessTool',
      'Simple frontend for /usr/games/chess',
      demo(chess),
      chess) :-
-	send(@pce, has_feature, process),
-	absolute_file_name('/usr/games/chess', Path),
-	send(file(Path), access, execute).
+    send(@pce, has_feature, process),
+    absolute_file_name('/usr/games/chess', Path),
+    send(file(Path), access, execute).
 
 demo('Constraints',
      'Using constraints and relations',

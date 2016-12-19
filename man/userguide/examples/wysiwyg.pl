@@ -5,8 +5,8 @@ various Prolog dialects supported by XPCE.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- module(wysiwyg,
-	  [ wysiwyg/1		% +File
-	  ]).
+          [ wysiwyg/1           % +File
+          ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_style_item)).
 :- use_module(library(pce_report)).
@@ -18,23 +18,23 @@ selection.  Both dialog items use call-back to @prolog.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 wysiwyg(File) :-
-	new(Fr, frame(File)),
-	send(Fr, append, new(D, dialog)),
-	send(new(V, view), below, D),
-	send(new(report_dialog), below, V),
-	send(V, font, normal),
-	send(D, append,
-	     button(define_style,
-		    message(@prolog, define_style, Fr))),
-	send(D, append,
-	     menu(style, toggle,
-		  and(message(@prolog, set_style, Fr, @arg1),
-		      message(@receiver, clear_selection))),
-	     right),
-	append_style(Fr, bold,   style(font := bold)),
-	append_style(Fr, italic, style(font := italic)),
-	send(V, load, File),
-	send(Fr, open).
+    new(Fr, frame(File)),
+    send(Fr, append, new(D, dialog)),
+    send(new(V, view), below, D),
+    send(new(report_dialog), below, V),
+    send(V, font, normal),
+    send(D, append,
+         button(define_style,
+                message(@prolog, define_style, Fr))),
+    send(D, append,
+         menu(style, toggle,
+              and(message(@prolog, set_style, Fr, @arg1),
+                  message(@receiver, clear_selection))),
+         right),
+    append_style(Fr, bold,   style(font := bold)),
+    append_style(Fr, italic, style(font := italic)),
+    send(V, load, File),
+    send(Fr, open).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Set the style for the current selection. Simply pick the selection start
@@ -43,29 +43,29 @@ style-name.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 set_style(Fr, Style) :-
-	get(Fr, member, view, V),
-	get(V, selection, point(Start, End)),
-	(   get(V, mark_status, active)
-	->  get(V, text_buffer, TB),
-	    new(_, fragment(TB, Start, End-Start, Style))
-	;   send(Fr, report, warning, 'No selection')
-	).
+    get(Fr, member, view, V),
+    get(V, selection, point(Start, End)),
+    (   get(V, mark_status, active)
+    ->  get(V, text_buffer, TB),
+        new(_, fragment(TB, Start, End-Start, Style))
+    ;   send(Fr, report, warning, 'No selection')
+    ).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Define a new style and add it to the menu and the view.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 define_style(Fr) :-
-	ask_style(Fr, Name, Style),
-	append_style(Fr, Name, Style).
+    ask_style(Fr, Name, Style),
+    append_style(Fr, Name, Style).
 
 append_style(Fr, Name, Style) :-
-	get(Fr, member, dialog, D),
-	get(D, member, style, Menu),
-	send(Menu, append, Name),
-	send(Menu, active, @on),
-	get(Fr, member, view, View),
-	send(View, style, Name, Style).
+    get(Fr, member, dialog, D),
+    get(D, member, style, Menu),
+    send(Menu, append, Name),
+    send(Menu, active, @on),
+    get(Fr, member, view, View),
+    send(View, style, Name, Style).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Prompt for the style-name and style-object.  Class style_item is defined
@@ -77,32 +77,32 @@ activated.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 ask_style(Fr, Name, Style) :-
-	new(D, dialog('Define Style')),
-	send(D, append,
-	     new(N, text_item(name, ''))),
-	send(D, append,
-	     new(S, style_item(style))),
-	send(D, append,
-	     button(ok, message(D, return, ok))),
-	send(D, append,
-	     button(cancel, message(D, return, cancel))),
-	send(D, default_button, ok),
-	send(D, transient_for, Fr),
-	repeat,
-	get(D, confirm_centered, Fr?area?center, Answer),
-	(   Answer == ok
-	->  get(N, selection, Name),
-	    (	Name == ''
-	    ->	send(D, report, error,
-		     'Please enter a name'),
-		fail
-	    ;	!,
-	        get(S, selection, Style),
-		send(Style, lock_object, @on),
-		send(D, destroy)
-	    )
-	;   !,
-	    send(D, destroy),
-	    fail
-	).
+    new(D, dialog('Define Style')),
+    send(D, append,
+         new(N, text_item(name, ''))),
+    send(D, append,
+         new(S, style_item(style))),
+    send(D, append,
+         button(ok, message(D, return, ok))),
+    send(D, append,
+         button(cancel, message(D, return, cancel))),
+    send(D, default_button, ok),
+    send(D, transient_for, Fr),
+    repeat,
+    get(D, confirm_centered, Fr?area?center, Answer),
+    (   Answer == ok
+    ->  get(N, selection, Name),
+        (   Name == ''
+        ->  send(D, report, error,
+                 'Please enter a name'),
+            fail
+        ;   !,
+            get(S, selection, Style),
+            send(Style, lock_object, @on),
+            send(D, destroy)
+        )
+    ;   !,
+        send(D, destroy),
+        fail
+    ).
 

@@ -14,14 +14,14 @@ representation techniques and may  be  used   as  a  starting  point for
 implementing a BibTeX database manager program.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-		 /*******************************
-		 *	      DATABASE		*
-		 *******************************/
+                 /*******************************
+                 *            DATABASE          *
+                 *******************************/
 
-:- pce_begin_class(bibtex_db,	hash_table, "BibTeX DataBase").
+:- pce_begin_class(bibtex_db,   hash_table, "BibTeX DataBase").
 
-variable(strings,	sheet,	get, "Table of strings").
-variable(file,		file*,	get, "File it was loaded from").
+variable(strings,       sheet,  get, "Table of strings").
+variable(file,          file*,  get, "File it was loaded from").
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 A BibTeX database is  represented  by   a  hash_table  mapping keys onto
@@ -33,13 +33,13 @@ string-constants as well as a reference to   the file it was loaded from
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 initialise(DB, File:[file]*) :->
-	"Create BibTeX database from file"::
-	send(DB, send_super, initialise),
-	send(DB, slot, strings, new(sheet)),
-	(   File \== @default
-	->  send(DB, slot, file, File),
-	    send(DB, load, File)
-	).
+    "Create BibTeX database from file"::
+    send(DB, send_super, initialise),
+    send(DB, slot, strings, new(sheet)),
+    (   File \== @default
+    ->  send(DB, slot, file, File),
+        send(DB, load, File)
+    ).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -49,11 +49,11 @@ regex.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 load(DB, File:file) :->
-	"Load entries from file"::
-	new(TB, text_buffer),
-	send(TB, insert_file, 0, File),
-	send(DB, parse, TB),
-	free(TB).
+    "Load entries from file"::
+    new(TB, text_buffer),
+    send(TB, insert_file, 0, File),
+    send(DB, parse, TB),
+    free(TB).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -63,14 +63,15 @@ allowing the '\s ' operator in regular expressions to include newlines.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 parse(DB, TB:text_buffer) :->
-	"Parse all entries from given text-buffer"::
-	new(Here, number(0)),
-	get(TB, size, Size),
-	send(TB, syntax, new(S, syntax_table)),
-	send(S, add_syntax, '\n', white_space),
-	repeat,
-		send(DB, parse_entry, TB, Here),
-		get(Here, value, Size), !.
+    "Parse all entries from given text-buffer"::
+    new(Here, number(0)),
+    get(TB, size, Size),
+    send(TB, syntax, new(S, syntax_table)),
+    send(S, add_syntax, '\n', white_space),
+    repeat,
+            send(DB, parse_entry, TB, Here),
+            get(Here, value, Size),
+    !.
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -82,68 +83,69 @@ full description.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- pce_global(@bibtex_head_regex,
-   new(regex('@\(\w+\){'))).
+   new(regex('@\\(\\w+\\){'))).
 :- pce_global(@bibtex_key_regex,
-   new(regex('\s *\(\S +\)\s *,'))).
+   new(regex('\\s *\\(\\S +\\)\\s *,'))).
 :- pce_global(@bibtex_att_regex,
-   new(regex('\s *\(\w+\)\s *=\s *\("\(\\"\|[^"]\)*"\|\w+\|[^,]+\)\s *,?'))).
+   new(regex('\\s *\\(\\w+\\)\\s *=\\s *\\("\\(\\\\"\\|[^"]\\)*"\\|\\w+\\|[^,]+\\)\s *,?'))).
 :- pce_global(@bibtex_end_attr_regex,
-   new(regex('\s *}\s *'))).
+   new(regex('\\s *}\\s *'))).
 
 
 parse_entry(DB, TB:text_buffer, Here:number) :->
-	"Parse 1 entry"::
-	send(@bibtex_head_regex, search, TB, Here), !,
-	get(@bibtex_head_regex, register_value, TB, 1, name, T0),
-	send(Here, value, @bibtex_head_regex?register_end),
-	get(T0, downcase, Type),
-	(   Type == string
-	->  (	send(@bibtex_att_regex, match, TB, Here)
-	    ->	get(@bibtex_att_regex, register_value, TB, 1, name, SName),
-		get(@bibtex_att_regex, register_value, TB, 2, SValue),
-		send(DB?strings, value, SName, SValue),
-		send(Here, value, @bibtex_att_regex?register_end)
-	    ;	send(TB, report, error, 'Illegal string at %d', Here),
-		fail
-	    )
-	;   send(@bibtex_key_regex, match, TB, Here),
-	    get(@bibtex_key_regex, register_value, TB, 1, name, Key),
-	    send(DB, append, Key, new(E, bibtex_entry(Type, Key))),
-	    send(Here, value, @bibtex_key_regex?register_end),
-	    repeat,
-	    (   send(E, parse_attribute, TB, Here)
-	    ->	(   send(@bibtex_end_attr_regex, match, TB, Here)
-		->  !,
-		    send(Here, value, @bibtex_end_attr_regex?register_end)
-		;   fail
-		)
-	    ;	!,
-		send(TB, report, error, 'Cannot parse attribute at %d', Here),
-		fail
-	    )
-	).
+    "Parse 1 entry"::
+    send(@bibtex_head_regex, search, TB, Here),
+    !,
+    get(@bibtex_head_regex, register_value, TB, 1, name, T0),
+    send(Here, value, @bibtex_head_regex?register_end),
+    get(T0, downcase, Type),
+    (   Type == string
+    ->  (   send(@bibtex_att_regex, match, TB, Here)
+        ->  get(@bibtex_att_regex, register_value, TB, 1, name, SName),
+            get(@bibtex_att_regex, register_value, TB, 2, SValue),
+            send(DB?strings, value, SName, SValue),
+            send(Here, value, @bibtex_att_regex?register_end)
+        ;   send(TB, report, error, 'Illegal string at %d', Here),
+            fail
+        )
+    ;   send(@bibtex_key_regex, match, TB, Here),
+        get(@bibtex_key_regex, register_value, TB, 1, name, Key),
+        send(DB, append, Key, new(E, bibtex_entry(Type, Key))),
+        send(Here, value, @bibtex_key_regex?register_end),
+        repeat,
+        (   send(E, parse_attribute, TB, Here)
+        ->  (   send(@bibtex_end_attr_regex, match, TB, Here)
+            ->  !,
+                send(Here, value, @bibtex_end_attr_regex?register_end)
+            ;   fail
+            )
+        ;   !,
+            send(TB, report, error, 'Cannot parse attribute at %d', Here),
+            fail
+        )
+    ).
 
 :- pce_end_class.
 
 
-		 /*******************************
-		 *	       ENTRY		*
-		 *******************************/
+                 /*******************************
+                 *             ENTRY            *
+                 *******************************/
 
 :- pce_begin_class(bibtex_entry, sheet).
 
 initialise(E, Type:name, Key:name) :->
-	send(E, send_super, initialise),
-	send(E, value, type, Type),
-	send(E, value, key, Key).
+    send(E, send_super, initialise),
+    send(E, value, type, Type),
+    send(E, value, key, Key).
 
 
 parse_attribute(E, TB:text_buffer, Here:number) :->
-	"Parse attribute-value pair"::
-	send(@bibtex_att_regex, match, TB, Here),
-	get(@bibtex_att_regex, register_value, TB, 1, name, AName),
-	get(@bibtex_att_regex, register_value, TB, 2, AValue),
-	send(E, value, AName, AValue),
-	send(Here, value, @bibtex_att_regex?register_end).
+    "Parse attribute-value pair"::
+    send(@bibtex_att_regex, match, TB, Here),
+    get(@bibtex_att_regex, register_value, TB, 1, name, AName),
+    get(@bibtex_att_regex, register_value, TB, 2, AValue),
+    send(E, value, AName, AValue),
+    send(Here, value, @bibtex_att_regex?register_end).
 
 :- pce_end_class.

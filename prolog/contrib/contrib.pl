@@ -34,8 +34,8 @@
 
 :- module(pce_contrib, [contribution/5]).
 
-contribution('Rubiks Cube',			% Name
-	     'The Rubiks Cube Game',		% Summary
-	     'Christian Schlichtherle',		% Author
-	     contrib('rubik/rubikpce'),		% Library to load
-	     rubikpce).				% Toplevel goal
+contribution('Rubiks Cube',                     % Name
+             'The Rubiks Cube Game',            % Summary
+             'Christian Schlichtherle',         % Author
+             contrib('rubik/rubikpce'),         % Library to load
+             rubikpce).                         % Toplevel goal

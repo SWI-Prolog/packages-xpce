@@ -33,24 +33,25 @@
 */
 
 :- module(pce_error,
-	  [ pce_catch_error/2
-	  ]).
+          [ pce_catch_error/2
+          ]).
 
 :- meta_predicate
-	pce_catch_error(+, 0).
+    pce_catch_error(+, 0).
 
 :- use_module(pce_boot(pce_principal)).
 
 
-%%	pce_catch_error(?Errors, :Goal)
+%!  pce_catch_error(?Errors, :Goal)
 %
-%	Run goal, fail silently on indicated errors.  If the first argument
-%	is a variable, any error will be catched.
+%   Run goal, fail silently on indicated errors.  If the first argument
+%   is a variable, any error will be catched.
 
 pce_catch_error(Error, Goal) :-
-	var(Error), !,
-	send(@pce, catch_error, @default),
-	call_cleanup((Goal, !), send(@pce, catch_pop)).
+    var(Error),
+    !,
+    send(@pce, catch_error, @default),
+    call_cleanup((Goal, !), send(@pce, catch_pop)).
 pce_catch_error(Errors, Goal) :-
-	send(@pce, catch_error, Errors),
-	call_cleanup((Goal, !), send(@pce, catch_pop)).
+    send(@pce, catch_error, Errors),
+    call_cleanup((Goal, !), send(@pce, catch_pop)).

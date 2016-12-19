@@ -33,7 +33,7 @@
 */
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\chapter{Example: A Chess Interface}	\label{sec:chess}
+\chapter{Example: A Chess Interface}    \label{sec:chess}
 
 \index{chess front-end}
 In         chapters~\ref{sec:starting},~\ref{sec:graphics}         and
@@ -48,8 +48,8 @@ is to move next, etc.  The (annotated) sources of this example  may be
 found in the library file demo/chess.pl.  The chesstool may be started
 from the manual tools or from the Prolog top level by typing:
 
-	1 ?- [demo(chess)].
-	2 ?- chess.
+        1 ?- [demo(chess)].
+        2 ?- chess.
 
 Which will (after some moves) produce the window shown in
 figure~\ref{fig:chess}.
@@ -63,12 +63,12 @@ A chess-board consists  of $8\times8$ squares,  each  of which  has  a
 black-  or   white   background and optionally  a  piece  on  it.  The
 basic following operations need to be implemented on the board:
 
-	- Create board.
-	- Put a black- or white piece at some square.
-	- Remove a piece from a square.
-	- Generate the initial chess position.
-	- Detect a gesture with the mouse to move a piece and generate
-	  the moved piece and coordinates from the gesture.
+        - Create board.
+        - Put a black- or white piece at some square.
+        - Remove a piece from a square.
+        - Generate the initial chess position.
+        - Detect a gesture with the mouse to move a piece and generate
+          the moved piece and coordinates from the gesture.
 
 
 \section{Design}
@@ -117,18 +117,18 @@ SICStus Prolog and ignores the require/1 directive.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- module(pcechess,
-	  [ chess/0,
-	    chess/1			% +Program
-	  ]).
+          [ chess/0,
+            chess/1                     % +Program
+          ]).
 :- use_module(library(pce)).
 :- require([ between/3
-	   , call/2
-	   , atomic_list_concat/2
-	   , term_variables/2
-	   ]).
+           , call/2
+           , atomic_list_concat/2
+           , term_variables/2
+           ]).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-\subsection{Squares and Pieces}		\label{sec:squareimage}
+\subsection{Squares and Pieces}         \label{sec:squareimage}
 
 As described above bitmaps are used to represent squares with optional
 pieces  on them.  The pixels  of a bitmap  are represented by an image
@@ -152,33 +152,35 @@ to the image: `piece' and `colour'.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- dynamic
-	computed_image/4.
+    computed_image/4.
 
-%	square_image(+PieceName, +PieceColour, +SquareColour, -Image)
+%       square_image(+PieceName, +PieceColour, +SquareColour, -Image)
 
 square_image(Piece, PieceColour, SquareColour, Image) :-
-	computed_image(Piece, PieceColour, SquareColour, Image), !.
+    computed_image(Piece, PieceColour, SquareColour, Image),
+    !.
 square_image(Piece, PieceColour, SquareColour, Image) :-
-	image_name(Piece, _, ImageName),
-	new(TotalImage, image(ImageName)),
-	sub_area(PieceColour, SquareColour, Area), !,
-	get(TotalImage, clip, Area, Image),
-	send(Image, lock_object, @on),
-	send(Image, attribute, attribute(piece, Piece)),
-	send(Image, attribute, attribute(colour, PieceColour)),
-	asserta(computed_image(Piece, PieceColour, SquareColour, Image)).
+    image_name(Piece, _, ImageName),
+    new(TotalImage, image(ImageName)),
+    sub_area(PieceColour, SquareColour, Area),
+    !,
+    get(TotalImage, clip, Area, Image),
+    send(Image, lock_object, @on),
+    send(Image, attribute, attribute(piece, Piece)),
+    send(Image, attribute, attribute(colour, PieceColour)),
+    asserta(computed_image(Piece, PieceColour, SquareColour, Image)).
 
-%	image_name(?PieceName, ?ChessProgram Id, ?ImageName)
+%       image_name(?PieceName, ?ChessProgram Id, ?ImageName)
 
-image_name(empty,	_, 'chesssquare.bm').
-image_name(pawn,	p, 'pawn.bm').
-image_name(rook,	r, 'rook.bm').
-image_name(knight,	n, 'knight.bm').
-image_name(bishop,	b, 'bishop.bm').
-image_name(king,	k, 'king.bm').
-image_name(queen,	q, 'queen.bm').
+image_name(empty,       _, 'chesssquare.bm').
+image_name(pawn,        p, 'pawn.bm').
+image_name(rook,        r, 'rook.bm').
+image_name(knight,      n, 'knight.bm').
+image_name(bishop,      b, 'bishop.bm').
+image_name(king,        k, 'king.bm').
+image_name(queen,       q, 'queen.bm').
 
-%	sub_area(+PieceColour, +SquareColour, -AreaTerm)
+%       sub_area(+PieceColour, +SquareColour, -AreaTerm)
 
 sub_area(white, white, area(32,  0, 32, 32)).
 sub_area(white, black, area(0,   0, 32, 32)).
@@ -190,20 +192,20 @@ sub_area(black, black, area(0,  32, 32, 32)).
 Below is a  small  test to demonstrate the  usage of this  part of the
 program.
 
-	1 ?- test_square(rook, black, white, Image),
-	     get(Image, colour, Colour),
-	     get(Image, piece, Piece).
-	Colour = black, Piece = rook, Image = @773336/image
+        1 ?- test_square(rook, black, white, Image),
+             get(Image, colour, Colour),
+             get(Image, piece, Piece).
+        Colour = black, Piece = rook, Image = @773336/image
 
-	test_square(Piece, Colour, SquareColour, Image) :-
-		(object(@p) -> true ; send(new(@p, picture), open)),
-		square_image(Piece, Colour, SquareColour, Image),
-		send(@p, display, bitmap(Image)).
+        test_square(Piece, Colour, SquareColour, Image) :-
+                (object(@p) -> true ; send(new(@p, picture), open)),
+                square_image(Piece, Colour, SquareColour, Image),
+                send(@p, display, bitmap(Image)).
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-		/********************************
-		*           THE BOARD		*
-		********************************/
+                /********************************
+                *           THE BOARD           *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 In this section we will create  the chess-board.  The chess-board  is an
@@ -212,97 +214,99 @@ graphical objects.  Each  of the  objects is a bitmap  of $32\times32$
 pixels.   Each  of the bitmap  objects will  be  extended with various
 attributes:
 
-	# square_colour
-	Represents  the  colour  of the  square.   This  attribute  is
-	attached to the  bitmap rather than  to  the image  because it
-	will not change during the life-time of the board.
+        # square_colour
+        Represents  the  colour  of the  square.   This  attribute  is
+        attached to the  bitmap rather than  to  the image  because it
+        will not change during the life-time of the board.
 
-	# Get methods for <-piece and <-colour
-	These methods allow  us to ask the piece  and colour currently
-	represented by this  bitmap.  The information itself is stored
-	on the <-image of the bitmap (see above).
+        # Get methods for <-piece and <-colour
+        These methods allow  us to ask the piece  and colour currently
+        represented by this  bitmap.  The information itself is stored
+        on the <-image of the bitmap (see above).
 
-	A  \class{get_method} object consists  of a selector, the type
-	of the return  value,  a vector  describing the   types of the
-	requested arguments  and the implementation.   The latter must
-	be an instance of class \class{function}.
+        A  \class{get_method} object consists  of a selector, the type
+        of the return  value,  a vector  describing the   types of the
+        requested arguments  and the implementation.   The latter must
+        be an instance of class \class{function}.
 
-	In  section~\ref{sec:starting}       we       introduced   the
-	\class{message}  object as  a template  for a  send-operation.
-	The get-operation  has a  similar  object:  an \idx{obtainer}.
-	The class name for an  obtainer  is  `?'\index{?  (obtainer)}.
-	The PCE/Prolog interface defines   `?'  as an  infix operator,
-	which allows us to write
+        In  section~\ref{sec:starting}       we       introduced   the
+        \class{message}  object as  a template  for a  send-operation.
+        The get-operation  has a  similar  object:  an \idx{obtainer}.
+        The class name for an  obtainer  is  `?'\index{?  (obtainer)}.
+        The PCE/Prolog interface defines   `?'  as an  infix operator,
+        which allows us to write
 
-		\line{Receiver?Selector}
+                \line{Receiver?Selector}
 
-	for  obtainers that  do   not  require  arguments.   When  the
-	get_method  is  invoked,  it will   process the arguments  and
-	evaluate the   obtainer object, returning  the   result of the
-	get-operation.
+        for  obtainers that  do   not  require  arguments.   When  the
+        get_method  is  invoked,  it will   process the arguments  and
+        evaluate the   obtainer object, returning  the   result of the
+        get-operation.
 
-	\index{method,arguments to}
-	The implementation of a  method may refer to the  object it is
-	attached to using the  function  @receiver.  The arguments  to
-	the method  may be referred  to as @arg1, @arg2,  ...  As  the
-	resulting method object has no direct references to the object
-	it is attached to it may be associated with multiple objects.
+        \index{method,arguments to}
+        The implementation of a  method may refer to the  object it is
+        attached to using the  function  @receiver.  The arguments  to
+        the method  may be referred  to as @arg1, @arg2,  ...  As  the
+        resulting method object has no direct references to the object
+        it is attached to it may be associated with multiple objects.
 
-	# Name = location in algebraic chess notation
-	Graphical objects have a name.  This name may be used to refer
-	to them    (see  section~\ref{sec:devicemember}).  The default
-	name of a graphical is its class name.   In our case it is more
-	natural to give each  bitmap the name of  its location in  the
-	chess notation: a1,  a2, ... a8,  b1, ... b8, ... h8.
+        # Name = location in algebraic chess notation
+        Graphical objects have a name.  This name may be used to refer
+        to them    (see  section~\ref{sec:devicemember}).  The default
+        name of a graphical is its class name.   In our case it is more
+        natural to give each  bitmap the name of  its location in  the
+        chess notation: a1,  a2, ... a8,  b1, ... b8, ... h8.
 
 The directive pce_global/2 declares a globally available object.  See
 section~\ref{sec:global}.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- pce_global(@square_colour, new(get_method(colour, name, new(vector),
-					    @receiver?image?colour))).
+                                            @receiver?image?colour))).
 :- pce_global(@square_piece, new(get_method(piece, name, new(vector),
-					   @receiver?image?piece))).
+                                           @receiver?image?piece))).
 
 make_chess_board(Board) :-
-	new(Board, device),
-	(   between(0, 7, X),
-	    between(0, 7, Y),
-		GX is X * 32,
-		GY is (7-Y) * 32,
-		square_colour(X, Y, Colour),
-		square_image(empty, _, Colour, Image),
-		send(Board, display,
-		     new(Bitmap, bitmap(Image)),
-		     point(GX, GY)),
-		send(Bitmap, attribute, attribute(square_colour, Colour)),
-		send(Bitmap, get_method, @square_piece),
-		send(Bitmap, get_method, @square_colour),
-		xy_where(X, Y, Where),
-		send(Bitmap, name, Where),
-	    fail ; true
-	).
+    new(Board, device),
+    (   between(0, 7, X),
+        between(0, 7, Y),
+            GX is X * 32,
+            GY is (7-Y) * 32,
+            square_colour(X, Y, Colour),
+            square_image(empty, _, Colour, Image),
+            send(Board, display,
+                 new(Bitmap, bitmap(Image)),
+                 point(GX, GY)),
+            send(Bitmap, attribute, attribute(square_colour, Colour)),
+            send(Bitmap, get_method, @square_piece),
+            send(Bitmap, get_method, @square_colour),
+            xy_where(X, Y, Where),
+            send(Bitmap, name, Where),
+        fail ; true
+    ).
 
 
-%	square_colour(+X, +Y, -Colour)
+%       square_colour(+X, +Y, -Colour)
 
 square_colour(X, Y, Colour) :-
-	(X+Y) mod 2 =:= 0, !,
-	Colour = black.
+    (X+Y) mod 2 =:= 0,
+    !,
+    Colour = black.
 square_colour(_, _, white).
 
 
-%	xy_where(?X, ?Y, ?Where).
+%       xy_where(?X, ?Y, ?Where).
 
 xy_where(X, Y, Where) :-
-	var(Where), !,
-	CX is X + 0'a,
-	CY is Y + 0'1,
-	name(Where, [CX, CY]).
+    var(Where),
+    !,
+    CX is X + 0'a,
+    CY is Y + 0'1,
+    name(Where, [CX, CY]).
 xy_where(X, Y, Where) :-
-	name(Where, [CX, CY]),
-	X is CX - 0'a,
-	Y is CY - 0'1.
+    name(Where, [CX, CY]),
+    X is CX - 0'a,
+    Y is CY - 0'1.
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \index{function objects}\index{garbage collection}
@@ -317,17 +321,17 @@ object is  initialised  from the    result.  Finally  the  incremental
 garbage collector   of PCE   destroys      both   *   objects.     See
 appendix~\ref{sec:memory}.
 
-	1 ?- make_chess_board(@cb),
-	     new(W, window('Chess Board', size(8*32, 8*32))),
-	     send(W, display, @cb),
-	     send(W, open).
+        1 ?- make_chess_board(@cb),
+             new(W, window('Chess Board', size(8*32, 8*32))),
+             send(W, display, @cb),
+             send(W, open).
 
 We may now issue various requests to the board:
 
-	2 ?- get(@cb, member, e2, Bitmap),
-	     get(Bitmap, square_colour, SquareColour),
-	     get(Bitmap, piece, Piece).
-	SquareColour = black, Bitmap = @802111/bitmap, Piece = empty
+        2 ?- get(@cb, member, e2, Bitmap),
+             get(Bitmap, square_colour, SquareColour),
+             get(Bitmap, piece, Piece).
+        SquareColour = black, Bitmap = @802111/bitmap, Piece = empty
 
 The predicates  put_piece/4  and move/3  below complete  the primitive
 layer.  put_piece/4 allows  us  to put  pieces of  any  colour  at any
@@ -336,45 +340,45 @@ to  find   the bitmap for   the  specified  location.   Then  it calls
 square_image/4 to  compute the (new)  image and associates   the image
 with the bitmap.  Try:
 
-	3 ?- put_piece(@cb, bishop, white, b1).
+        3 ?- put_piece(@cb, bishop, white, b1).
 
 The predicate move/3 moves a piece.  First it determines the piece and
 colour of the `from' location.   Then it  puts this piece on  the `to'
 location and clears the `from' location to empty.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-%	put_piece(+Board, +Piece, +Colour, +Where)
+%       put_piece(+Board, +Piece, +Colour, +Where)
 
 put_piece(Board, Piece, Colour, Where) :-
-	get(Board, member, Where, Bitmap),
-	get(Bitmap, square_colour, SquareColour),
-	square_image(Piece, Colour, SquareColour, Image),
-	send(Bitmap, image, Image).
+    get(Board, member, Where, Bitmap),
+    get(Bitmap, square_colour, SquareColour),
+    square_image(Piece, Colour, SquareColour, Image),
+    send(Bitmap, image, Image).
 
 
-%	move(+Board, +From, +To).
+%       move(+Board, +From, +To).
 
 move(Board, From, To) :-
-	get(Board, member, From, FromBitmap),
-	get(FromBitmap, piece, Piece),
-	get(FromBitmap, colour, Colour),
-	put_piece(Board, Piece, Colour, To),
-	put_piece(Board, empty, _, From).
+    get(Board, member, From, FromBitmap),
+    get(FromBitmap, piece, Piece),
+    get(FromBitmap, colour, Colour),
+    put_piece(Board, Piece, Colour, To),
+    put_piece(Board, empty, _, From).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 The predicate below resets the board to the initial position.  Test it
 using:
 
-	3 ?- initial_position(@cb).
+        3 ?- initial_position(@cb).
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 initial_position(Board) :-
-	between(0, 7, X),
-	between(0, 7, Y),
-	    initial_piece(X, Y, Piece, Colour),
-	    xy_where(X, Y, Where),
-	    put_piece(Board, Piece, Colour, Where),
-	fail.
+    between(0, 7, X),
+    between(0, 7, Y),
+        initial_piece(X, Y, Piece, Colour),
+        xy_where(X, Y, Where),
+        put_piece(Board, Piece, Colour, Where),
+    fail.
 initial_position(_).
 
 initial_piece(0, 0, rook,   white) :- !.
@@ -387,8 +391,9 @@ initial_piece(6, 0, knight, white) :- !.
 initial_piece(7, 0, rook,   white) :- !.
 initial_piece(_, 1, pawn,   white) :- !.
 initial_piece(X, Y, Piece,  black) :-
-	WY is 7 - Y,
-	initial_piece(X, WY, Piece, white), !.
+    WY is 7 - Y,
+    initial_piece(X, WY, Piece, white),
+    !.
 initial_piece(_, _, empty,  black).
 
 
@@ -398,7 +403,7 @@ initial position and move  pieces around by calling Prolog predicates.
 In the next section we will discuss how we can detect and interpret an
 attempt to move a piece by the user.
 
-\subsection{Moving Pieces with the mouse}	\label{sec:movepiece}
+\subsection{Moving Pieces with the mouse}       \label{sec:movepiece}
 
 
 \index{event,processing}\index{moving graphicals}\index{graphical,moving}
@@ -437,13 +442,13 @@ methods call a Prolog predicate.
 :- pce_global(@move_piece_gesture, make_move_piece_gesture).
 
 make_move_piece_gesture(G) :-
-	new(G, move_outline_gesture(left)),
-	send(G, send_method,
-	     send_method(verify, vector(event),
-			 message(@prolog, verify, @receiver, @arg1))),
-	send(G, send_method,
-	     send_method(terminate, vector(event),
-			 message(@prolog, terminate, @receiver, @arg1))).
+    new(G, move_outline_gesture(left)),
+    send(G, send_method,
+         send_method(verify, vector(event),
+                     message(@prolog, verify, @receiver, @arg1))),
+    send(G, send_method,
+         send_method(terminate, vector(event),
+                     message(@prolog, terminate, @receiver, @arg1))).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 The method  ->verify is invoked to  verify all conditions to start the
@@ -456,9 +461,9 @@ class-level to complete the test.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 verify(Gesture, Event) :-
-	get(Event, receiver, SquareBitmap),
-	\+ get(SquareBitmap, piece, empty),
-	send(Gesture, send_class, verify, Event).
+    get(Event, receiver, SquareBitmap),
+    \+ get(SquareBitmap, piece, empty),
+    send(Gesture, send_class, verify, Event).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 The   ->terminate method is   invoked   on  the button-up.  The normal
@@ -477,31 +482,31 @@ method `chain  ->sort' accepts  a function as argument.  This function
 will be called to  compare  pairs  of elements  of the chain.  In this
 case the function is <-compare on the <-measure%
   \footnote{The method `area <-measure' returns $abs(w) \times abs(h)$
-	    of the area object.  Actually class `area' should have been
-	    named `region' or `rectangle' and <-measure should have
-	    been named `area'.}
+            of the area object.  Actually class `area' should have been
+            named `region' or `rectangle' and <-measure should have
+            been named `area'.}
 of both <-intersection  areas.  Sorting is  done `smallest  first' and
 the  <-tail   of the chain thus   holds  the   bitmap with the largest
 intersection.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 terminate(Gesture, Event) :-
-	get(Event, receiver, FromBitmap),
-	get(FromBitmap, device, Board),		  % the board
-	get(Gesture, outline, Box),
-	get(Box, area, Area),			  % current area
-	send(Box, device, @nil),		  % Undisplay the outline
-	get(Board?graphicals, find_all,
-	    message(@arg1?area, overlap, Area),
-	    OverlappingSquares),
-	send(OverlappingSquares, sort,
-	     ?((?(@arg1?area, intersection, Area)) ? measure, compare,
-	       (?(@arg2?area, intersection, Area)) ? measure)),
-	get(OverlappingSquares, tail, Best),
-	get(Best, name, ToLocation),
-	get(FromBitmap, name, FromLocation),
-	get(FromBitmap, piece, Piece),
-	user_move(Board, Piece, FromLocation, ToLocation).
+    get(Event, receiver, FromBitmap),
+    get(FromBitmap, device, Board),           % the board
+    get(Gesture, outline, Box),
+    get(Box, area, Area),                     % current area
+    send(Box, device, @nil),                  % Undisplay the outline
+    get(Board?graphicals, find_all,
+        message(@arg1?area, overlap, Area),
+        OverlappingSquares),
+    send(OverlappingSquares, sort,
+         ?((?(@arg1?area, intersection, Area)) ? measure, compare,
+           (?(@arg2?area, intersection, Area)) ? measure)),
+    get(OverlappingSquares, tail, Best),
+    get(Best, name, ToLocation),
+    get(FromBitmap, name, FromLocation),
+    get(FromBitmap, piece, Piece),
+    user_move(Board, Piece, FromLocation, ToLocation).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 With  this  definition   the  generic    piece-move-gesture   has been
@@ -520,13 +525,13 @@ etc.\ is much easier to read and write and much faster.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 attach_recognisers(Board) :-
-	send(Board?graphicals, for_all,
-	     message(@arg1, recogniser, @move_piece_gesture)).
+    send(Board?graphicals, for_all,
+         message(@arg1, recogniser, @move_piece_gesture)).
 
 
-		/********************************
-		*    CHESS PROCESS INTERFACE	*
-		********************************/
+                /********************************
+                *    CHESS PROCESS INTERFACE    *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 In this section we will connect  our   interface  to  the Unix program
@@ -543,12 +548,12 @@ and attaches it as  an  attribute   to  the  chess-board.  The message
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 attach_chess_program(Board, Program) :-
-	send(Board, attribute,
-	     attribute(process, new(P, process(Program)))),
-	send(P, use_tty, @off),		  % use pipes to communicate
-	send(P, input_message,
-	     message(@prolog, chess_utterance, Board, @arg1)),
-	send(P, open).
+    send(Board, attribute,
+         attribute(process, new(P, process(Program)))),
+    send(P, use_tty, @off),           % use pipes to communicate
+    send(P, input_message,
+         message(@prolog, chess_utterance, Board, @arg1)),
+    send(P, open).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -565,27 +570,27 @@ not_open} is raised by `process ->format', the call will fail silently.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 user_move(Board, Piece, FromLocation, ToLocation) :-
-	chess_move_name(Piece, FromLocation, ToLocation, Move),
-	format('Sending ~w~n', Move),
-	get(Board, process, ChessProcess),
-	(   pce_catch_error(not_open,
-			    send(ChessProcess, format, '%s\n', Move))
-	->  true
-	;   send(Board, report, error, 'No chess process')
-	).
+    chess_move_name(Piece, FromLocation, ToLocation, Move),
+    format('Sending ~w~n', Move),
+    get(Board, process, ChessProcess),
+    (   pce_catch_error(not_open,
+                        send(ChessProcess, format, '%s\n', Move))
+    ->  true
+    ;   send(Board, report, error, 'No chess process')
+    ).
 
 
 chess_move_name(_Piece, F, T, Move) :-
-	chess_coordinate(F, CF),
-	chess_coordinate(T, CT),
-	atomic_list_concat([CF, CT], Move).
+    chess_coordinate(F, CF),
+    chess_coordinate(T, CT),
+    atomic_list_concat([CF, CT], Move).
 
 
 chess_coordinate(Where, C) :-
-	xy_where(X, Y, Where),
-	CY is Y + 1,
-	chess_x(X, CX),
-	atom_concat(CX, CY, C).
+    xy_where(X, Y, Where),
+    CY is Y + 1,
+    chess_x(X, CX),
+    atom_concat(CX, CY, C).
 
 chess_x(0, a).
 chess_x(1, b).
@@ -611,30 +616,32 @@ square_image/4 in maintaining a database of reusable objects.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 chess_utterance(Board, Utterance) :-
-	send(@pce, format, 'Got %s\n', Utterance),
-	utterance(Pattern, Goal),
-	make_regex(Pattern, RegEx),
-	send(RegEx, search, Utterance), !,
-	term_variables(Goal, List),
-	bind_args(List, 1, RegEx, Utterance),
-	call(Goal, Board).
+    send(@pce, format, 'Got %s\n', Utterance),
+    utterance(Pattern, Goal),
+    make_regex(Pattern, RegEx),
+    send(RegEx, search, Utterance),
+    !,
+    term_variables(Goal, List),
+    bind_args(List, 1, RegEx, Utterance),
+    call(Goal, Board).
 
 :- dynamic
-	regex/2.
+    regex/2.
 
 make_regex(Pattern, RegEx) :-
-	regex(Pattern, RegEx), !.
+    regex(Pattern, RegEx),
+    !.
 make_regex(Pattern, RegEx) :-
-	new(RegEx, regex(Pattern)),
-	send(RegEx, lock_object, @on),
-	assert(regex(Pattern, RegEx)).
+    new(RegEx, regex(Pattern)),
+    send(RegEx, lock_object, @on),
+    assert(regex(Pattern, RegEx)).
 
 bind_args([], _, _, _).
 bind_args([H|T], N, R, U) :-
-	get(R, register_value, U, N, Str),
-	get(Str, value, H),
-	NN is N + 1,
-	bind_args(T, NN, R, U).
+    get(R, register_value, U, N, Str),
+    get(Str, value, H),
+    NN is N + 1,
+    bind_args(T, NN, R, U).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \index{regex}\index{regular expressions}\index{GNU-Emacs}
@@ -645,19 +652,19 @@ clause catches anything unrecognised.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 utterance('[0-9]+\\. \\(\\w\\)\\([1-8]\\)\\(\\w\\)\\([1-8]\\)',
-	  player_move(_FX, _FY, _TX, _TY)).
+          player_move(_FX, _FY, _TX, _TY)).
 utterance('[0-9]+\\. \\(\\w\\)\\([1-8]\\)x\\(\\w\\)\\([1-8]\\)',
-	  player_move(_FX, _FY, _TX, _TY)).
+          player_move(_FX, _FY, _TX, _TY)).
 utterance('[0-9]+\\. \\(o-o\\(-o\\)?\\)',
-	  player_oo(_OO)).
+          player_oo(_OO)).
 utterance('[0-9]+\\. \\.\\.\\. \\(\\w+\\)\\([1-8]\\)x\\w/\\(\\w+\\)\\([1-8]\\)',
-	  opponent_move(_FX, _FY, _TX, _TY)).
+          opponent_move(_FX, _FY, _TX, _TY)).
 utterance('[0-9]+\\. \\.\\.\\. \\(o-o\\(-o\\)?\\)',
-	  opponent_oo(_OO)).
+          opponent_oo(_OO)).
 utterance('[0-9]+\\. \\.\\.\\. \\(\\w\\)\\([1-8]\\)\\(\\w\\)\\([1-8]\\)',
-	  opponent_move(_FX, _FY, _TX, _TY)).
-utterance('Chess',	banner).
-utterance('\\(.*\\)',	warn(_Message)).
+          opponent_move(_FX, _FY, _TX, _TY)).
+utterance('Chess',      banner).
+utterance('\\(.*\\)',   warn(_Message)).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Below are the various  predicates called by  chess_utterance/2 through
@@ -667,40 +674,40 @@ on the board.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 warn(Utterance, _Board) :-
-	send(@display, inform, Utterance).
+    send(@display, inform, Utterance).
 
 player_move(CFX, CFY, CTX, CTY, Board) :-
-	chess_x(FX, CFX),
-	chess_x(TX, CTX),
-	get(CFY - 1, value, FY),
-	get(CTY - 1, value, TY),
-	xy_where(FX, FY, F),
-	xy_where(TX, TY, T),
-	move(Board, F, T).
+    chess_x(FX, CFX),
+    chess_x(TX, CTX),
+    get(CFY - 1, value, FY),
+    get(CTY - 1, value, TY),
+    xy_where(FX, FY, F),
+    xy_where(TX, TY, T),
+    move(Board, F, T).
 
 player_oo('o-o', Board) :-
-	move(Board, e1, g1),
-	move(Board, h1, f1).
+    move(Board, e1, g1),
+    move(Board, h1, f1).
 player_oo('o-o-o', Board) :-
-	move(Board, e1, c1),
-	move(Board, a1, d1).
+    move(Board, e1, c1),
+    move(Board, a1, d1).
 
 opponent_move(CFX, CFY, CTX, CTY, Board) :-
-	player_move(CFX, CFY, CTX, CTY, Board).
+    player_move(CFX, CFY, CTX, CTY, Board).
 
 opponent_oo('o-o', Board) :-
-	move(Board, e8, g8),
-	move(Board, h8, f8).
+    move(Board, e8, g8),
+    move(Board, h8, f8).
 opponent_oo('o-o-o', Board) :-
-	move(Board, e8, c8),
-	move(Board, a8, d8).
+    move(Board, e8, c8),
+    move(Board, a8, d8).
 
 banner(_).
 
 
-		/********************************
-		*            TOPLEVEL		*
-		********************************/
+                /********************************
+                *            TOPLEVEL           *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Below is  the toplevel that combines   all  the declarations  above to
@@ -719,19 +726,19 @@ success of the message.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 chess :-
-	chess(gnuchessc).		% chesstool compatible GNU-chess
+    chess(gnuchessc).               % chesstool compatible GNU-chess
 
 chess(Program) :-
-	new(Window, window('ChessBoard 0.1', size(8*32, 8*32))),
-	make_chess_board(Board),
-	send(Window, display, Board),
-	attach_recognisers(Board),
-	initial_position(Board),
-	send(Window, open),
-	attach_chess_program(Board, Program),
-	send(Window, done_message,
-	     and(if(message(Board?process, kill)),
-		 message(Window, destroy))).
+    new(Window, window('ChessBoard 0.1', size(8*32, 8*32))),
+    make_chess_board(Board),
+    send(Window, display, Board),
+    attach_recognisers(Board),
+    initial_position(Board),
+    send(Window, open),
+    attach_chess_program(Board, Program),
+    send(Window, done_message,
+         and(if(message(Board?process, kill)),
+             message(Window, destroy))).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 \section{Summary}

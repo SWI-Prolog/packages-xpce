@@ -34,12 +34,12 @@
 */
 
 :- module(ispell,
-	  [ ispell/0
-	  , ispell/1
-	  ]).
+          [ ispell/0
+          , ispell/1
+          ]).
 :- use_module(library(pce)).
 :- require([ send_list/3
-	   ]).
+           ]).
 
 /** <module> An ispell interface for XPCE
 
@@ -72,17 +72,17 @@ The error will appear  in the  `word' and  `correction' fields of  the
 dialog-window and  near-misses of the dictionary will  be shown in the
 corrections-browser.  Next, the user has several options:
 
-	- `Next'
-	  Don't change this occurrence, but search for the next.
-	- `Replace'
-	  Replace this occurrence with the value of `correction' and
-	  search for the next.
+        - `Next'
+          Don't change this occurrence, but search for the next.
+        - `Replace'
+          Replace this occurrence with the value of `correction' and
+          search for the next.
         - `Replace All'
-	  Replace all occurrences of this error by the value of
-	  `correction' .
-	- `Dict'
-	  Remove this error from the text and error-browser and add
-	  the word to the user's personal dictionary.
+          Replace all occurrences of this error by the value of
+          `correction' .
+        - `Dict'
+          Remove this error from the text and error-browser and add
+          the word to the user's personal dictionary.
 
 Clicking a correction  of the correction-browser  sets  the text entry
 field `correction'.  This field may also be edited directly.
@@ -91,18 +91,18 @@ Finally, the text-window  is an EMACS-like  editor  and errors may  be
 corrected directly.
 */
 
-%%	ispell is det.
-%%	ispell(+File) is det.
+%!  ispell is det.
+%!  ispell(+File) is det.
 %
-%	Open the ispell interface. The predicate   ispell/1 loads a file
-%	into the interface.
+%   Open the ispell interface. The predicate   ispell/1 loads a file
+%   into the interface.
 
 ispell :-
-	new(S, ispell),
-	send(S, open).
+    new(S, ispell),
+    send(S, open).
 ispell(File) :-
-	new(S, ispell(File)),
-	send(S, open).
+    new(S, ispell(File)),
+    send(S, open).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Tell PCE/Prolog that  class   finder is defined   in the  library  and
@@ -133,7 +133,7 @@ Create a class-variable defining  the  spell   program  used  to  get an
 initial list of errors. The user  may   choose  another spell program by
 adding the following line to his/her ~/.xpce/Defaults file:
 
-	ispell.spell_program: myspell
+        ispell.spell_program: myspell
 
 The  variables `word'  and  `fragment'   define the  word    currently
 examined/replaced  and the current fragment.   They are manipulated by
@@ -141,17 +141,17 @@ examined/replaced  and the current fragment.   They are manipulated by
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 class_variable(ispell_program, name, 'ispell',
-	       "ISpell command with common options").
+               "ISpell command with common options").
 class_variable(error_style,   style, style(colour := red),
-	       "Style used to highlight errors").
+               "Style used to highlight errors").
 
-variable(word,	   name*,	get,	"Currently handled word").
-variable(fragment, fragment*,	get,	"Currently handled fragment").
-variable(ispell,   process*,	none,	"The ispell -a process").
+variable(word,     name*,       get,    "Currently handled word").
+variable(fragment, fragment*,   get,    "Currently handled fragment").
+variable(ispell,   process*,    none,   "The ispell -a process").
 
-		/********************************
-		*         CREATE/DESTROY	*
-		********************************/
+                /********************************
+                *         CREATE/DESTROY        *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 The ispell UI consists of a view to display the  text to be corrected,
@@ -176,36 +176,36 @@ are setup.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 initialise(F, File:[file]) :->
-	"Create from file"::
-	send(F, send_super, initialise, 'Ispell'),
-	send(F, append, new(V, view)),
-	send(F, append, new(D, dialog)),
-	send(F, append, new(B, browser)),
-	send(F, append, new(C, browser)),
-	send(C, below, B),
-	send(B, left, V),
-	send(D, below, V),
+    "Create from file"::
+    send(F, send_super, initialise, 'Ispell'),
+    send(F, append, new(V, view)),
+    send(F, append, new(D, dialog)),
+    send(F, append, new(B, browser)),
+    send(F, append, new(C, browser)),
+    send(C, below, B),
+    send(B, left, V),
+    send(D, below, V),
 
-	send(B, name, errors),
-	send(C, name, corrections),
-	send(B?list_browser, label, 'Errors'),
-	send(C?list_browser, label, 'Corrections'),
+    send(B, name, errors),
+    send(C, name, corrections),
+    send(B?list_browser, label, 'Errors'),
+    send(C?list_browser, label, 'Corrections'),
 
-	get(F, error_style, ErrorStyle),
-	send(V, style, error, ErrorStyle),
-	send(V, selected_fragment_style, style(underline := @on)),
-	send(V?image, recogniser,
-	     click_gesture(left, '', double,
-			   message(F, select_current_fragment))),
-	fill_dialog(D),
-	send(B, select_message, message(F, select, @arg1?key)),
-	send(C, select_message, message(F, correction, @arg1?key)),
-	send(F, clear_errors),
+    get(F, error_style, ErrorStyle),
+    send(V, style, error, ErrorStyle),
+    send(V, selected_fragment_style, style(underline := @on)),
+    send(V?image, recogniser,
+         click_gesture(left, '', double,
+                       message(F, select_current_fragment))),
+    fill_dialog(D),
+    send(B, select_message, message(F, select, @arg1?key)),
+    send(C, select_message, message(F, correction, @arg1?key)),
+    send(F, clear_errors),
 
-	(   File \== @default
-	->  send(F, file, File)
-	;   true
-	).
+    (   File \== @default
+    ->  send(F, file, File)
+    ;   true
+    ).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -214,14 +214,14 @@ will destroy the inferior ispell process when it has been created.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 unlink(F) :->
-	"Destroy the ispell program when running"::
-	send(F, clear_errors),
-	get(F, slot, ispell, Ispell),
-	(   Ispell \== @nil
-	->  send(Ispell, close)
-	;   true
-	),
-	send(F, send_super, unlink).
+    "Destroy the ispell program when running"::
+    send(F, clear_errors),
+    get(F, slot, ispell, Ispell),
+    (   Ispell \== @nil
+    ->  send(Ispell, close)
+    ;   true
+    ),
+    send(F, send_super, unlink).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Fill the dialog window.  Most of the dialog items simply send a message
@@ -229,154 +229,154 @@ to the ispell frame.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 fill_dialog(D) :-
-	get(D, frame, F),
-	send(D, append, label(reporter)),
+    get(D, frame, F),
+    send(D, append, label(reporter)),
 
-	send(D, append, button(load, message(F, file))),
-	send(D, append, button(save, message(F, save))),
-	send(D, append, button(spell, message(F, spell))),
-	send(D, append, button(quit, message(F, wm_delete))),
+    send(D, append, button(load, message(F, file))),
+    send(D, append, button(save, message(F, save))),
+    send(D, append, button(spell, message(F, spell))),
+    send(D, append, button(quit, message(F, wm_delete))),
 
-	send(D, append, new(W, text_item(word, ''))),
-	send(D, append, new(C, text_item(correction, ''))),
-	send(W, editable, @off),
-	send(W, pen, 0),
+    send(D, append, new(W, text_item(word, ''))),
+    send(D, append, new(C, text_item(correction, ''))),
+    send(W, editable, @off),
+    send(W, pen, 0),
 
-	send(D, append, button(next, message(F, next))),
-	send(D, append, button(replace,
-			       message(F, replace, C?selection))),
-	send(D, append, button(replace_all,
-			       message(F, action, C?selection))),
-	send(D, append, button(dict,
-			       message(F, action, @default, @on))),
-	send(D, append, button(undo, message(F?view, undo))).
+    send(D, append, button(next, message(F, next))),
+    send(D, append, button(replace,
+                           message(F, replace, C?selection))),
+    send(D, append, button(replace_all,
+                           message(F, action, C?selection))),
+    send(D, append, button(dict,
+                           message(F, action, @default, @on))),
+    send(D, append, button(undo, message(F?view, undo))).
 
 
-		/********************************
-		*      GETTING THE PARTS	*
-		********************************/
+                /********************************
+                *      GETTING THE PARTS        *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 These methods  obtain  the  various  parts  of the ispell application.
 This makes it easy to modify the  organisation of the  application and
 allows us to write expressions as:
 
-	send(F?view, undo).
+        send(F?view, undo).
 
 to invoke some method on a part.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 view(F, View) :<-
-	"View part"::
-	get(F, member, view, View).
+    "View part"::
+    get(F, member, view, View).
 
 
 errors(F, Browser) :<-
-	"Browser for errors"::
-	get(F, member, errors, Browser).
+    "Browser for errors"::
+    get(F, member, errors, Browser).
 
 
 corrections(F, Browser) :<-
-	"Browser for corrections"::
-	get(F, member, corrections, Browser).
+    "Browser for corrections"::
+    get(F, member, corrections, Browser).
 
 
 dialog(F, Dialog) :<-
-	"Dialog window"::
-	get(F, member, dialog, Dialog).
+    "Dialog window"::
+    get(F, member, dialog, Dialog).
 
 
-		/********************************
-		*           FEEDBACK		*
-		********************************/
+                /********************************
+                *           FEEDBACK            *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 This method deactivates a number of dialog items.  It uses the catch_all
 mechanism of class device to find the references:
 
-	get(Device, member, Name, Reference)
+        get(Device, member, Name, Reference)
 
 is equivalent to
 
-	get(Device, Name_member, Reference)
+        get(Device, Name_member, Reference)
 
 but the latter allows us to use the ?/2 infix notation.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 activate_replacement_items(F, Val:bool) :->
-	"(De)activate items used for replacement"::
-	get(F, dialog, D),
-	send_list([ D?word_member
-		  , D?correction_member
-		  , D?replace_member
-		  , D?replace_all_member
-		  , D?dict_member
-		  , D?next_member
-		  ], active, Val).
+    "(De)activate items used for replacement"::
+    get(F, dialog, D),
+    send_list([ D?word_member
+              , D?correction_member
+              , D?replace_member
+              , D?replace_all_member
+              , D?dict_member
+              , D?next_member
+              ], active, Val).
 
 
-		 /*******************************
-		 *	USER-DEFINED SAVE	*
-		 *******************************/
+                 /*******************************
+                 *      USER-DEFINED SAVE       *
+                 *******************************/
 
 save(F) :->
-	"->save_buffer the <-view"::
-	send(F?view, save_buffer).
+    "->save_buffer the <-view"::
+    send(F?view, save_buffer).
 
 
 save_action(F, Action:code, Label:[name]) :->
-	"Modify the save action"::
-	get(F, dialog, D),
-	get(D, member, save, SaveButton),
-	send(SaveButton, message, Action),
-	(   Label \== @default
-	->  send(SaveButton, selection, Label?label_name)
-	;   true
-	).
+    "Modify the save action"::
+    get(F, dialog, D),
+    get(D, member, save, SaveButton),
+    send(SaveButton, message, Action),
+    (   Label \== @default
+    ->  send(SaveButton, selection, Label?label_name)
+    ;   true
+    ).
 
 
-		 /*******************************
-		 *	  LOADING BUFFER	*
-		 *******************************/
+                 /*******************************
+                 *        LOADING BUFFER        *
+                 *******************************/
 
 buffer(F, TB:text_buffer) :->
-	"Load text-buffer (cooperation with editors)"::
-	send(F?view, text_buffer, TB),
-	send(F, confirm_done, @off),
-	get(F, dialog, Dialog),
-	get(Dialog, member, load, BL), send(BL, active, @off),
-	get(Dialog, member, save, BS), send(BS, active, @off).
+    "Load text-buffer (cooperation with editors)"::
+    send(F?view, text_buffer, TB),
+    send(F, confirm_done, @off),
+    get(F, dialog, Dialog),
+    get(Dialog, member, load, BL), send(BL, active, @off),
+    get(Dialog, member, save, BS), send(BS, active, @off).
 
 
-		/********************************
-		*         LOADING FILES		*
-		********************************/
+                /********************************
+                *         LOADING FILES         *
+                ********************************/
 
 file(F, File:[file]) :->
-	"Load file (or ask for one)"::
-	send(F, clear_errors),
-	(   File == @default
-	->  get(@finder, file, open, LoadName),
-	    new(LoadFile, file(LoadName))
-	;   LoadFile = File
-	),
-	send(F?view, load, LoadFile),
-	send(F, label, string('Ispell: %s', LoadFile?base_name), 'Ispell').
+    "Load file (or ask for one)"::
+    send(F, clear_errors),
+    (   File == @default
+    ->  get(@finder, file, open, LoadName),
+        new(LoadFile, file(LoadName))
+    ;   LoadFile = File
+    ),
+    send(F?view, load, LoadFile),
+    send(F, label, string('Ispell: %s', LoadFile?base_name), 'Ispell').
 
 
-		/********************************
-		*     RUN SPELL AND MARK ALL	*
-		********************************/
+                /********************************
+                *     RUN SPELL AND MARK ALL    *
+                ********************************/
 
 clear_errors(F) :->
-	"Reset all error info"::
-	send(F, select, @nil),
-	get(F?view, text_buffer, TB),
-	get(TB, find_all_fragments, @arg1?style == error, ErrorFrags),
-	send(ErrorFrags, for_all, message(@arg1, free)),
-	send(ErrorFrags, done),
-	send(F?errors, clear),
-	send(F?corrections, clear).
+    "Reset all error info"::
+    send(F, select, @nil),
+    get(F?view, text_buffer, TB),
+    get(TB, find_all_fragments, @arg1?style == error, ErrorFrags),
+    send(ErrorFrags, for_all, message(@arg1, free)),
+    send(ErrorFrags, done),
+    send(F?errors, clear),
+    send(F?corrections, clear).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -390,25 +390,25 @@ using `process ->wait'.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 spell(F) :->
-	send(F, clear_errors),
-	get(F?view, contents, String),
-	(   send(String, is_wide)
-	->  send(F, report, error, 'Cannot spell Unicode data (yet)'),
-	    fail
-	;   true
-	),
-	get(F, ispell_program, Prog),
-	new(P, process('/bin/sh', '-c', string('%s -l | sort -u', Prog))),
-	send(P, use_tty, @off),
-	send(P, input_message, message(F, mark_word, @arg1)),
-	send(F, report, progress, 'Running "%s" ...', Prog),
-	send(P, open),
-	send(P, append, String),
-	send(P, close),
-	send(P, wait),				% wait for completion
-	send(P, free),
-	get(F?errors?dict?members, size, Errors),
-	send(F, report, done, 'Spelling done. %d Errors', Errors).
+    send(F, clear_errors),
+    get(F?view, contents, String),
+    (   send(String, is_wide)
+    ->  send(F, report, error, 'Cannot spell Unicode data (yet)'),
+        fail
+    ;   true
+    ),
+    get(F, ispell_program, Prog),
+    new(P, process('/bin/sh', '-c', string('%s -l | sort -u', Prog))),
+    send(P, use_tty, @off),
+    send(P, input_message, message(F, mark_word, @arg1)),
+    send(F, report, progress, 'Running "%s" ...', Prog),
+    send(P, open),
+    send(P, append, String),
+    send(P, close),
+    send(P, wait),                          % wait for completion
+    send(P, free),
+    get(F?errors?dict?members, size, Errors),
+    send(F, report, done, 'Spelling done. %d Errors', Errors).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -422,38 +422,39 @@ a fragment.
 :- pce_global(@ispell_mark_re, new(regex(''))).
 
 mark_word(F, S:string) :->
-	"Mark all occurrences of word"::
-	send(S, strip),
-	get(S, value, Word),
-	(   Word == ''
-	->  true
-	;   send(F, report, progress, 'Marking %s ...', Word),
-	    get(F, errors, B),
-	    send(B, append, dict_item(Word, @default, new(Errors, chain))),
-	    get(F, view, View),
-	    get(View, text_buffer, TB),
-	    get(@ispell_mark_re, quote, S, Q),
-	    send(Q, prepend, '\\y'),
-	    send(Q, append, '\\y'),
-	    send(@ispell_mark_re, pattern, Q),
-	    mark_all(TB, 0, @ispell_mark_re, Errors, error),
-	    send(F, report, done)
-	).
+    "Mark all occurrences of word"::
+    send(S, strip),
+    get(S, value, Word),
+    (   Word == ''
+    ->  true
+    ;   send(F, report, progress, 'Marking %s ...', Word),
+        get(F, errors, B),
+        send(B, append, dict_item(Word, @default, new(Errors, chain))),
+        get(F, view, View),
+        get(View, text_buffer, TB),
+        get(@ispell_mark_re, quote, S, Q),
+        send(Q, prepend, '\\y'),
+        send(Q, append, '\\y'),
+        send(@ispell_mark_re, pattern, Q),
+        mark_all(TB, 0, @ispell_mark_re, Errors, error),
+        send(F, report, done)
+    ).
 
 mark_all(TB, Index, Re, Errors, Kind) :-
-	send(Re, search, TB, Index), !,
-	get(Re, register_start, RS),
-	get(Re, register_end, RE),
-	L is RE - RS,
-	new(Fragment, fragment(TB, RS, L, Kind)),
-	send(Errors, append, Fragment),
-	mark_all(TB, RE, Re, Errors, Kind).
+    send(Re, search, TB, Index),
+    !,
+    get(Re, register_start, RS),
+    get(Re, register_end, RE),
+    L is RE - RS,
+    new(Fragment, fragment(TB, RS, L, Kind)),
+    send(Errors, append, Fragment),
+    mark_all(TB, RE, Re, Errors, Kind).
 mark_all(_, _, _, _, _).
 
 
-		/********************************
-		*         SELECT WORDS		*
-		********************************/
+                /********************************
+                *         SELECT WORDS          *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Select the word after a double click.  The first click (of the double)
@@ -462,17 +463,17 @@ caret position and take the smallest.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 select_current_fragment(F) :->
-	"Select fragment of caret"::
-	get(F, view, View),
-	get(View, caret, Caret),
-	get(View, find_all_fragments,
-	    message(@arg1, overlap, Caret), Fragments),
-	send(Fragments, sort, @arg1?length < @arg2?length),
-	get(Fragments, head, Fragment),
-	get(Fragment, string, Word),
-	send(F, select, Word, Fragment),
-	send(F?errors, selection, Word),
-	send(F?errors, normalise, Word).
+    "Select fragment of caret"::
+    get(F, view, View),
+    get(View, caret, Caret),
+    get(View, find_all_fragments,
+        message(@arg1, overlap, Caret), Fragments),
+    send(Fragments, sort, @arg1?length < @arg2?length),
+    get(Fragments, head, Fragment),
+    get(Fragment, string, Word),
+    send(F, select, Word, Fragment),
+    send(F?errors, selection, Word),
+    send(F?errors, normalise, Word).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -484,40 +485,40 @@ view.  The dialog is updated.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 select(F, Word:name*, Fragment:[fragment]) :->
-	"Select some word"::
-	get(F, dialog, Dialog),
-	(   Word == @nil			% clear selection
-	->  send(F, slot, word, @nil),
-	    send(F, slot, fragment, @nil),
-	    send(Dialog?word_member, selection, ''),
-	    send(Dialog?correction_member, selection, ''),
-	    send(F?corrections, clear),
-	    send(F, activate_replacement_items, @off)
-	;   send(F?ispell, append_line, Word),
-	    get(F, errors, Browser),
-	    get(Browser, member, Word, DI),
-	    get(DI, object, Errors),
-	    (   get(F, word, Word)		% same word
-	    ->  true
-	    ;   send(Dialog?word_member, selection, Word),
-		send(Dialog?correction_member, selection, Word),
-	        send(F, report, status,
-		     '%d occurrences of "%s"', Errors?size, Word),
-	        send(F, slot, word, Word)
-	    ),
-	    send(F, activate_replacement_items, @on),
-	    (   Fragment \== @default
-	    ->  send(F, slot, fragment, Fragment)
-	    ;   (   send(Errors, empty)
-		->  fail
-		;   send(F, slot, fragment, Errors?head)
-		)
-	    ),
-	    get(F, fragment, Frag),
-	    get(F, view, View),
-	    send(View, caret, Frag?start),
-	    send(View, selected_fragment, Frag)
-	).
+    "Select some word"::
+    get(F, dialog, Dialog),
+    (   Word == @nil                        % clear selection
+    ->  send(F, slot, word, @nil),
+        send(F, slot, fragment, @nil),
+        send(Dialog?word_member, selection, ''),
+        send(Dialog?correction_member, selection, ''),
+        send(F?corrections, clear),
+        send(F, activate_replacement_items, @off)
+    ;   send(F?ispell, append_line, Word),
+        get(F, errors, Browser),
+        get(Browser, member, Word, DI),
+        get(DI, object, Errors),
+        (   get(F, word, Word)              % same word
+        ->  true
+        ;   send(Dialog?word_member, selection, Word),
+            send(Dialog?correction_member, selection, Word),
+            send(F, report, status,
+                 '%d occurrences of "%s"', Errors?size, Word),
+            send(F, slot, word, Word)
+        ),
+        send(F, activate_replacement_items, @on),
+        (   Fragment \== @default
+        ->  send(F, slot, fragment, Fragment)
+        ;   (   send(Errors, empty)
+            ->  fail
+            ;   send(F, slot, fragment, Errors?head)
+            )
+        ),
+        get(F, fragment, Frag),
+        get(F, view, View),
+        send(View, caret, Frag?start),
+        send(View, selected_fragment, Frag)
+    ).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -526,14 +527,14 @@ updates the `correction' text_item.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 correction(F, Word:name) :->
-	"Put value in correction field"::
-	get(F?dialog, correction_member, TI),
-	send(TI, selection, Word).
+    "Put value in correction field"::
+    get(F?dialog, correction_member, TI),
+    send(TI, selection, Word).
 
 
-		/********************************
-		*       ISPELL PROGRAM		*
-		********************************/
+                /********************************
+                *       ISPELL PROGRAM          *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Interface to the  interactive   inferior ispell program   to  generate
@@ -546,17 +547,17 @@ or creates one  otherwise.   The ispell  process will invoke   `ispell
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 ispell(F, Ispell) :<-
-	"Get the ispell process or start it"::
-	(    get(F, slot, ispell, Ispell),
-	     Ispell \== @nil
-	->   true
-	;    get(F, ispell_program, CMD),
-	     new(Ispell, process('/bin/sh', '-c', string('%s -a', CMD))),
-	     send(Ispell, use_tty, @off),
-	     send(Ispell, input_message, message(F, ispell_utterance, @arg1)),
-	     send(Ispell, open),
-	     send(F, slot, ispell, Ispell)
-	).
+    "Get the ispell process or start it"::
+    (    get(F, slot, ispell, Ispell),
+         Ispell \== @nil
+    ->   true
+    ;    get(F, ispell_program, CMD),
+         new(Ispell, process('/bin/sh', '-c', string('%s -a', CMD))),
+         send(Ispell, use_tty, @off),
+         send(Ispell, input_message, message(F, ispell_utterance, @arg1)),
+         send(Ispell, open),
+         send(F, slot, ispell, Ispell)
+    ).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 If Ispell utters `& alternative  ...' the alternatives should be added
@@ -572,29 +573,29 @@ entire match.
 :- pce_global(@re_word_ispell_4, new(regex('\\s+(\\S+)'))).
 
 ispell_utterance(F, Line:string) :->
-	"Handle line of output from ispell"::
-	get(F, corrections, Corrections),
-	(   get(Line, size, 1)
-	->  true
-	;   send(Corrections, clear)
-	),
-	(   send(Line, prefix, '& ')
-	->  send(Line, strip),
-	    (   get(Line, index, ':', _)
-	    ->  Re = @re_word_ispell_3
-	    ;   Re = @re_word_ispell_4
-	    ),
-	    send(Re, for_all, Line,
-		 message(Corrections, append,
-			 ?(@arg1, register_value, @arg2, 1)))
-	;   send(Line, prefix, '#'),
-	    send(F, report, warning, 'No suggestions')
-	).
+    "Handle line of output from ispell"::
+    get(F, corrections, Corrections),
+    (   get(Line, size, 1)
+    ->  true
+    ;   send(Corrections, clear)
+    ),
+    (   send(Line, prefix, '& ')
+    ->  send(Line, strip),
+        (   get(Line, index, ':', _)
+        ->  Re = @re_word_ispell_3
+        ;   Re = @re_word_ispell_4
+        ),
+        send(Re, for_all, Line,
+             message(Corrections, append,
+                     ?(@arg1, register_value, @arg2, 1)))
+    ;   send(Line, prefix, '#'),
+        send(F, report, warning, 'No suggestions')
+    ).
 
 
-		/********************************
-		*           REPLACEMENTS	*
-		********************************/
+                /********************************
+                *           REPLACEMENTS        *
+                ********************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 `ispell ->action' handles the current word for all matching fragments.
@@ -609,26 +610,26 @@ events here, we'll have to indicate the unit of undo ourselves.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 action(F, R:[name], AddToDict:[bool]) :->
-	"Replace and/or add to dictionary"::
-	get(F, errors, Browser),
-	get(F, word, Word),
-	get(Browser, member, Word, DI),
-	get(DI, object, Errors),
-	(   R \== @default
-	->  send(Errors, for_all, message(@arg1, string, R)),
-	    send(F?view, mark_undo),
-	    ToDict = R
-	;   ToDict = Word
-	),
-	(   AddToDict == @on
-	->  send(F?ispell, format, '*%s\\n#\\n', ToDict),
-	    send(F, report, status, 'Added "%s" to dictionary', ToDict)
-	;   true
-	),
-	send(Errors, for_all, message(@arg1, free)),
-	send(Errors, free),
-	send(DI, free),
-	send(F, select, @nil).
+    "Replace and/or add to dictionary"::
+    get(F, errors, Browser),
+    get(F, word, Word),
+    get(Browser, member, Word, DI),
+    get(DI, object, Errors),
+    (   R \== @default
+    ->  send(Errors, for_all, message(@arg1, string, R)),
+        send(F?view, mark_undo),
+        ToDict = R
+    ;   ToDict = Word
+    ),
+    (   AddToDict == @on
+    ->  send(F?ispell, format, '*%s\\n#\\n', ToDict),
+        send(F, report, status, 'Added "%s" to dictionary', ToDict)
+    ;   true
+    ),
+    send(Errors, for_all, message(@arg1, free)),
+    send(Errors, free),
+    send(DI, free),
+    send(F, select, @nil).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 `ispell ->replace'  replaces the  current  (underlined) fragment   and
@@ -636,12 +637,12 @@ selects the next fragment.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 replace(F, R:name) :->
-	"Replace current fragment"::
-	get(F, view, View),
-	get(View, selected_fragment, Fr),
-	send(Fr, string, R),
-	send(F?view, mark_undo),
-	send(F, next).
+    "Replace current fragment"::
+    get(F, view, View),
+    get(View, selected_fragment, Fr),
+    send(Fr, string, R),
+    send(F?view, mark_undo),
+    send(F, next).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 `ispell ->next' will unmark the current fragment and skip to the next.
@@ -654,25 +655,25 @@ first.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 next(F) :->
-	"Select next fragment, deleting this one"::
-	get(F, word, Word),
-	get(F, fragment, F1),
-	get(F, errors, Browser),
-	get(Browser, member, Word, DI),
-	get(DI, object, Errors),
+    "Select next fragment, deleting this one"::
+    get(F, word, Word),
+    get(F, fragment, F1),
+    get(F, errors, Browser),
+    get(Browser, member, Word, DI),
+    get(DI, object, Errors),
 
-	get(Errors, index, F1, IF1),
-	send(Errors, delete, F1),
-	send(F1, free),
+    get(Errors, index, F1, IF1),
+    send(Errors, delete, F1),
+    send(F1, free),
 
-	(   send(Errors, empty)
-	->  send(Browser, delete, Word),
-	    send(F, select, @nil)
-	;   (   get(Errors, nth1, IF1, F2)
-	    ;   get(Errors, head, F2)
-	    )
-	->  send(F, select, Word, F2)
-	).
+    (   send(Errors, empty)
+    ->  send(Browser, delete, Word),
+        send(F, select, @nil)
+    ;   (   get(Errors, nth1, IF1, F2)
+        ;   get(Errors, head, F2)
+        )
+    ->  send(F, select, Word, F2)
+    ).
 
 :- pce_end_class.
 

@@ -11,21 +11,21 @@ rectangle indicating the area of  the   graphical  to  be imported.  See
 :- pce_begin_class(drop_picture, picture).
 
 preview_drop(P, Gr:graphical*, Pos:[point]) :->
-	(   Gr == @nil			% pointer leaves area
-	->  (   get(P, attribute, drop_outline, OL)
-	    ->	send(OL, free),
-		send(P, delete_attribute, drop_outline)
-	    ;	true
-	    )
-	;   (   get(P, attribute, drop_outline, OL)
-	    ->	send(OL, position, Pos)
-	    ;	get(Gr?area, size, size(W, H)),
-		new(OL, box(W, H)),
-		send(OL, texture, dotted),
-		send(P, display, OL, Pos),
-		send(P, attribute, drop_outline, OL)
-	    )
-	).
+    (   Gr == @nil                  % pointer leaves area
+    ->  (   get(P, attribute, drop_outline, OL)
+        ->  send(OL, free),
+            send(P, delete_attribute, drop_outline)
+        ;   true
+        )
+    ;   (   get(P, attribute, drop_outline, OL)
+        ->  send(OL, position, Pos)
+        ;   get(Gr?area, size, size(W, H)),
+            new(OL, box(W, H)),
+            send(OL, texture, dotted),
+            send(P, display, OL, Pos),
+            send(P, attribute, drop_outline, OL)
+        )
+    ).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 The method ->drop. If the  graphical   originates  from the same picture
@@ -33,11 +33,11 @@ just move it. Otherwise <-clone the graphical and display the clone.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 drop(P, Gr:graphical, Pos:point) :->
-	(   get(Gr, device, P)
-	->  send(Gr, position, Pos)
-	;   get(Gr, clone, Gr2),
-	    send(P, display, Gr2, Pos)
-	).
+    (   get(Gr, device, P)
+    ->  send(Gr, position, Pos)
+    ;   get(Gr, clone, Gr2),
+        send(P, display, Gr2, Pos)
+    ).
 
 :- pce_end_class.
 
@@ -52,13 +52,13 @@ and dragged.
 :- pce_global(@dragbox_recogniser, make_dragbox_recogniser).
 
 make_dragbox_recogniser(G) :-
-	new(G, handler_group(resize_gesture(left),
-			     drag_and_drop_gesture(left))).
+    new(G, handler_group(resize_gesture(left),
+                         drag_and_drop_gesture(left))).
 
 event(B, Ev:event) :->
-	(   send(B, send_super, event, Ev)
-	;   send(@dragbox_recogniser, event, Ev)
-	).
+    (   send(B, send_super, event, Ev)
+    ;   send(@dragbox_recogniser, event, Ev)
+    ).
 
 :- pce_end_class.
 
@@ -71,8 +71,8 @@ other windows makes a copy of the box.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 dragdropdemo :-
-	new(F, frame('Drag and Drop Demo')),
-	send(F, append, new(P1, drop_picture)),
-	send(new(drop_picture), right, P1),
-	send(P1, display, dragbox(100, 50), point(20,20)),
-	send(F, open).
+    new(F, frame('Drag and Drop Demo')),
+    send(F, append, new(P1, drop_picture)),
+    send(new(drop_picture), right, P1),
+    send(P1, display, dragbox(100, 50), point(20,20)),
+    send(F, open).
