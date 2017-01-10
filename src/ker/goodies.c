@@ -998,6 +998,8 @@ scanstr(char *str, char *fmt, Any *r)
 #if defined(HAVE_VSSCANF) && defined(HAVE_CAST_VA_LIST)
   ar = vsscanf(str, fmt, (va_list) ptrs);
 #else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wformat-security"
   switch(argn)
   { case 0:	ar = sscanf(str, fmt); break;
     case 1:	ar = sscanf(str, fmt, ptrs[0]); break;
@@ -1094,6 +1096,7 @@ scanstr(char *str, char *fmt, Any *r)
     default:	errorPce(NIL, NAME_tooManyArguments);
 		fail;
   }
+#pragma GCC diagnostic pop
 #endif /*HAVE_VSSCANF*/
 
   DEBUG(NAME_scan, Cprintf("ar = %d\n", argn));
