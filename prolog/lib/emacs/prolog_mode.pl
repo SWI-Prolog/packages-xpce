@@ -230,11 +230,8 @@ setup_auto_indent(E) :->
         ->  !, fail
         ;   true
         ),
-        (   get(@prolog_full_stop, search, TB, Here, End),
-            get(TB, scan, End, line, 1, start, SOL),
-            get(TB, size, Size),
-            SOL =\= Size
-        ->  nb_setarg(1, State, SOL)
+        (   next_candidate(TB, Here, Next)
+        ->  nb_setarg(1, State, Next)
         ;   nb_setarg(1, State, end_of_file)
         ),
         get(E, prolog_term, Here, @on, Pos, Clause),
@@ -244,8 +241,8 @@ setup_auto_indent(E) :->
         arg(1, BodPos, SBody),
         get(TB, scan, SBody, line, 0, start, SOL),
         get(TB, skip_comment, SOL, skip_layout := @on, SBody),
-        get(E, column, SBody, Indent),
         !,
+        get(E, column, SBody, Indent),
         IndentLen is SBody-SOL,
         get(TB, contents, SOL, IndentLen, string(IndentString)),
         (   sub_string(IndentString, 0, _, _, "\t")
@@ -258,6 +255,12 @@ setup_auto_indent(E) :->
              'Detected: body_indentation=%s, indent_tabs=%s',
              Indent, IndentTabs).
 
+next_candidate(TB, Here, Next) :-
+    get(TB, skip_comment, Here, skip_layout := @on, Here1),
+    get(@prolog_full_stop, search, TB, Here1, End),
+    get(TB, scan, End, line, 1, start, Next),
+    get(TB, size, Size),
+    Next =\= Size.
 
 real_body_pos((!,_), term_position(_,_,_,_,[_,Pos]), Pos) :- !.
 real_body_pos(_, Pos, Pos).
