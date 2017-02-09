@@ -109,8 +109,8 @@ allocFileHandle()
 }
 
 
-int
-pceOpen(Any obj, int flags, void *encoding)
+static int
+pceOpen_nolock(Any obj, int flags, void *encoding)
 { int handle = allocFileHandle();
   PceFileHandle h;
 
@@ -169,9 +169,20 @@ pceOpen(Any obj, int flags, void *encoding)
   return handle;
 }
 
-
 int
-pceClose(int handle)
+pceOpen(Any obj, int flags, void *encoding)
+{ int rc;
+
+  pceMTLock(LOCK_PCE);
+  rc = pceOpen_nolock(obj, flags, encoding);
+  pceMTUnlock(LOCK_PCE);
+
+  return rc;
+}
+
+
+static int
+pceClose_nolock(int handle)
 { PceFileHandle h;
 
   if ( handle >= 0 && handle < max_handles &&
@@ -186,6 +197,18 @@ pceClose(int handle)
 
   errno = EBADF;
   return -1;
+}
+
+
+int
+pceClose(int handle)
+{ int rc;
+
+  pceMTLock(LOCK_PCE);
+  rc = pceClose_nolock(handle);
+  pceMTUnlock(LOCK_PCE);
+
+  return rc;
 }
 
 
@@ -205,8 +228,8 @@ findHandle(int handle)
 
 
 
-ssize_t
-pceWrite(int handle, const char *buf, size_t size)
+static ssize_t
+pceWrite_nolock(int handle, const char *buf, size_t size)
 { PceFileHandle h;
 
   if ( !(h=findHandle(handle)) )
@@ -267,13 +290,24 @@ pceWrite(int handle, const char *buf, size_t size)
 }
 
 
+ssize_t
+pceWrite(int handle, const char *buf, size_t size)
+{ ssize_t rc;
+
+  pceMTLock(LOCK_PCE);
+  rc = pceWrite_nolock(handle, buf, size);
+  pceMTUnlock(LOCK_PCE);
+
+  return rc;
+}
+
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Note: pos is measured  in  bytes.  If   we  use  wchar  encoding we must
 compensate for this.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-long
-pceSeek(int handle, long offset, int whence)
+static long
+pceSeek_nolock(int handle, long offset, int whence)
 { PceFileHandle h;
 
   offset /= sizeof(wchar_t);
@@ -316,10 +350,22 @@ pceSeek(int handle, long offset, int whence)
 }
 
 
+long
+pceSeek(int handle, long offset, int whence)
+{ long rc;
+
+  pceMTLock(LOCK_PCE);
+  rc = pceSeek_nolock(handle, offset, whence);
+  pceMTUnlock(LOCK_PCE);
+
+  return rc;
+}
+
+
 /* see also Sread_object() */
 
-ssize_t
-pceRead(int handle, char *buf, size_t size)
+static ssize_t
+pceRead_nolock(int handle, char *buf, size_t size)
 { PceFileHandle h;
 
   if ( !(h=findHandle(handle)) )
@@ -370,8 +416,20 @@ pceRead(int handle, char *buf, size_t size)
 }
 
 
+ssize_t
+pceRead(int handle, char *buf, size_t size)
+{ ssize_t rc;
+
+  pceMTLock(LOCK_PCE);
+  rc = pceRead_nolock(handle, buf, size);
+  pceMTUnlock(LOCK_PCE);
+
+  return rc;
+}
+
+
 int
-pceControl(int handle, int cmd, void *closure)
+pceControl_nolock(int handle, int cmd, void *closure)
 { PceFileHandle h;
 
   if ( !(h=findHandle(handle)) )
@@ -387,6 +445,16 @@ pceControl(int handle, int cmd, void *closure)
   return -1;
 }
 
+int
+pceControl(int handle, int cmd, void *closure)
+{ int rc;
+
+  pceMTLock(LOCK_PCE);
+  rc = pceControl_nolock(handle, cmd, closure);
+  pceMTUnlock(LOCK_PCE);
+
+  return rc;
+}
 
 
 const char *
