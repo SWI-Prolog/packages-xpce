@@ -1312,6 +1312,8 @@ find_variable(list_position(_,_,EP,TP), List, Caret, Var) :-
     !.
 find_variable(brace_term_position(_,_,TP), {Term}, Caret, Var) :-
     find_variable(TP, Term, Caret, Var).
+find_variable(parentheses_term_position(_,_,TP), Term, Caret, Var) :-
+    find_variable(TP, Term, Caret, Var).
 find_variable(dict_position(_,_,TF,TT,KVPos), Dict, Caret, Var) :-
     (   is_dict(Dict, Tag),
         find_variable(TF-TT, Tag, Caret, Var)
@@ -1345,6 +1347,8 @@ subterm_position(Search, List, list_position(_,_,EP,TP), Pos) :-
     list_pos(EP, TP, List, P, E),
     subterm_position(Search, E, P, Pos).
 subterm_position(Search, {Term}, brace_term_position(_,_,TP), Pos) :-
+    subterm_position(Search, Term, TP, Pos).
+subterm_position(Search, Term, parentheses_term_position(_,_,TP), Pos) :-
     subterm_position(Search, Term, TP, Pos).
 subterm_position(Search, Dict, dict_position(_,_,TF,TT,KVPos), Pos) :-
     (   is_dict(Dict, Tag),
