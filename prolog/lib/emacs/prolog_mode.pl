@@ -77,6 +77,7 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
           view_debug_messages          = button(prolog),
           -                            = button(prolog),
           check_clause                 = key('\\C-c\\C-s') + button(prolog),
+          setup_auto_indent            = button(prolog),
           insert_full_stop             = key(.),
           find_definition              = key('\\e.') + button(browse),
           -                            = button(prolog),
