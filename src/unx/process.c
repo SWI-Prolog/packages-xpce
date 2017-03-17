@@ -33,7 +33,7 @@
 */
 
 #if defined(__linux__) || defined(__GLIBC__) || defined(__GNU__)
-#define _XOPEN_SOURCE			/* GNU glibc grantpt() prototypes */
+#define _XOPEN_SOURCE 500 /* GNU glibc grantpt() prototypes */
 #endif
 #include <h/kernel.h>
 
