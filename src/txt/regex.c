@@ -295,7 +295,7 @@ search_string_regex(Regex re, String s)
 
 
 static status
-search_regex(Regex re, Any obj, Int start, Int end, int flags)
+search_regex(Regex re, Any obj, Int start, Int end, int *sp, int *ep, int flags)
 { int from = isDefault(start) ? 0 : valInt(start);
   int len, to, eflags = 0;
   int (*fetch)(const charW*, void*);
@@ -339,6 +339,9 @@ search_regex(Regex re, Any obj, Int start, Int end, int flags)
     if ( from < 0   ) from = 0;
     if ( from > len ) from = len;
   }
+
+  if ( sp ) *sp = from;
+  if ( ep ) *ep = to;
 
   if ( from <= to )			/* forwards */
   { int rc;
@@ -429,7 +432,7 @@ search_regex(Regex re, Any obj, Int start, Int end, int flags)
 
 status
 searchRegex(Regex re, Any obj, Int start, Int end)
-{ return search_regex(re, obj, start, end, RE_SEARCH);
+{ return search_regex(re, obj, start, end, NULL, NULL, RE_SEARCH);
 }
 
 
@@ -443,7 +446,7 @@ getSearchRegex(Regex re, Any obj, Int start, Int end)
 
 Int
 getMatchRegex(Regex re, Any obj, Int start, Int end)
-{ if ( search_regex(re, obj, start, end, RE_MATCH) )
+{ if ( search_regex(re, obj, start, end, NULL, NULL, RE_MATCH) )
     answer(toInt(re->registers[0].rm_eo -
 		 re->registers[0].rm_so));
 
@@ -605,20 +608,31 @@ getRegistersRegex(Regex re)
 
 static status
 forAllRegex(Regex re, Any obj, Code code, Int from, Int to)
-{ if ( isDefault(from) )
+{ int s, e;
+
+  if ( isDefault(from) )
     from = ZERO;
 
-  while( searchRegex(re, obj, from, to) )
+  while( search_regex(re, obj, from, to, &s, &e, RE_SEARCH) )
   { int oe = re->registers[0].rm_eo;
-    int ne;
+    int se = re->registers[0].rm_so;
+    int ne, atend, moved, empty;
+    int dir = s<e ? 1 : -1;
+
+    atend = (oe == e);
+    moved = (se != s);
+    empty = (oe == se);
 
     TRY(forwardCode(code, re, obj, EAV));
 
     ne = re->registers[0].rm_eo;
-    if ( ne == valInt(from) && oe == valInt(from) )
-      from = toInt(ne+1);
-    else
+
+    if ( moved && !empty )
       from = toInt(ne);
+    else if ( atend )
+      break;
+    else
+      from = toInt(ne+dir);
   }
 
   succeed;
