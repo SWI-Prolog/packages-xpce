@@ -585,6 +585,7 @@ query_replace_regex(M,
     send(M, internal_mark),
     send(M, attribute, attribute(replace_search_pattern, From)),
     send(M, attribute, attribute(replace_replace_pattern, To)),
+    send(M, attribute, attribute(replace_count, number(0))),
     replace_find_and_mark(M),
     send(M, focus_function, '_query_replace_regex').
 
@@ -594,9 +595,11 @@ replace_find_and_mark(M) :-
     (   send(Regex, search, M?text_buffer, M?caret)
     ->  get(Regex, register_start, Start),
         get(Regex, register_end, End),
+        send(M, caret, End),
         send(M, selection, Start, End, highlight),
         send(M, report, status,
-             'Commands: "y" = replace-and-next; "." = replace; "n" = next; "!" = non-interactive; "ESC" = stop')
+             'Commands: "y" = replace-and-next; "." = replace; \c
+             "n" = next; "!" = non-interactive; "ESC" = stop')
     ;   send(M, report, status, 'Done.'),
         send(M, replace_end),
         fail
@@ -606,10 +609,12 @@ replace_find_and_mark(M) :-
 replace_match(M) :-
     get(M, replace_search_pattern, Regex),
     get(M, replace_replace_pattern, Replace),
+    get(Regex, register_end, End0),
+    get(Regex, register_start, Start0),
     send(Regex, replace, M?text_buffer, Replace),
+    send(M?replace_count, plus, 1),
     get(Regex, register_end, End),
-    get(Regex, register_start, Start),
-    (   End == Start                % 0-length search string!
+    (   End0 == Start0                % 0-length search string!
     ->  send(M, caret, End+1)
     ;   send(M, caret, End)
     ).
@@ -618,7 +623,9 @@ replace_match(M) :-
 replace_end(M) :->
     send(M, focus_function, @nil),
     get(M, internal_mark, Mark),
-    send(M, selection, Mark, @default, inactive).
+    send(M, selection, Mark, @default, inactive),
+    get(M?replace_count, value, Replaced),
+    send(M, report, status, 'Replaced %s matches', Replaced).
 
 
 '_query_replace_regex'(M, Id:event_id) :->
@@ -628,8 +635,7 @@ replace_end(M) :->
         ignore(replace_find_and_mark(M))
     ;   Id == 0'.                           % replace and done
     ->  replace_match(M),
-        send(M, replace_end),
-        send(M, report, status, 'Done.')
+        send(M, replace_end)
     ;   Id == 0'n                           % donot replace and continue
     ->  (   replace_find_and_mark(M)
         ->  true
