@@ -794,6 +794,14 @@ show_line_numbers(M, Show:bool) :->
     send(M, new_caret_position, M?caret).
 
 
+what_syntax(E) :->
+    "Find syntax at caret"::
+    get(E, caret, C),
+    get(E, scan_syntax, 0, C, tuple(Syntax, Start)),
+    send(E, report, inform,
+         'Syntax: "%s"; started at %d', Syntax, Start).
+
+
                  /*******************************
                  *       MATCHING BRACKETS      *
                  *******************************/

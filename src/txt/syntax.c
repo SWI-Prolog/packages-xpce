@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2017, University of Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -53,6 +53,7 @@ initialiseSyntaxTable(SyntaxTable t, Name name, SyntaxTable def)
     context = def->context;
     assign(t, sentence_end, def->paragraph_end);
     assign(t, paragraph_end, def->paragraph_end);
+    assign(t, prolog, def->prolog);
   } else
   { flags = char_flags;
     context = char_context;
@@ -60,6 +61,7 @@ initialiseSyntaxTable(SyntaxTable t, Name name, SyntaxTable def)
 	   newObject(ClassRegex, CtoName("[.?!]\\s"), EAV));
     assign(t, paragraph_end,
 	   newObject(ClassRegex, CtoName("\\s*\n"), EAV));
+    assign(t, prolog, OFF);
   }
 
   assign(t, name, name);
@@ -394,6 +396,8 @@ makeClassSyntaxTable(Class class)
 	     "Starts a quasi quotation");
   localClass(class, NAME_quasiQuotationEnd, NAME_syntax, "name*", NAME_both,
 	     "Ends a quasi quotation");
+  localClass(class, NAME_prolog, NAME_syntax, "bool", NAME_both,
+	     "Use Prolog syntax");
   localClass(class, NAME_table, NAME_storage, "alien:ushort *", NAME_none,
 	     "Type-flags");
   localClass(class, NAME_context, NAME_storage, "alien:char *", NAME_none,
@@ -464,7 +468,7 @@ makeClassSyntaxTable(Class class)
 		********************************/
 
 
-unsigned short syntax_spec_code[] = {
+unsigned short syntax_spec_code[] = {	/* regex support */
 /* ^@  ^A  ^B  ^C  ^D  ^E  ^F  ^G  ^H  ^I  ^J  ^K  ^L  ^M  ^N  ^O    0-15 */
     0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
 /* ^P  ^Q  ^R  ^S  ^T  ^U  ^V  ^W  ^X  ^Y  ^Z  ^[  ^\  ^]  ^^  ^_   16-31 */
@@ -510,7 +514,7 @@ unsigned short char_flags[] = {
 /*  P   Q   R   S   T   U   V   W   X   Y   Z   [   \   ]   ^   _   80-95 */
    UC, UC, UC, UC, UC, UC, UC, UC, UC, UC, UC, OB, PU, CB, PU, WS,
 /*  `   a   b   c   d   e   f   g   h   i   j   k   l   m   n   o   96-111 */
-   PU, xl, xl, xl, xl, xl, xl, LC, LC, LC, LC, LC, LC, LC, LC, LC,
+   QT, xl, xl, xl, xl, xl, xl, LC, LC, LC, LC, LC, LC, LC, LC, LC,
 /*  p   q   r   s   t   u   v   w   x   y   z   {   |   }   ~  ^?   112-127 */
    LC, LC, LC, LC, LC, LC, LC, LC, LC, LC, LC, OB, PU, CB, PU, CT,
 			  /* 128-255 */

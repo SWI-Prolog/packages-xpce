@@ -1058,7 +1058,7 @@ scan_syntax_textbuffer(TextBuffer tb,
     { int quoteisescape = tisstringescape(syntax, c, c);
 
 					/* Prolog 0'char syntax */
-      if ( c == '\'' && syntax->name == NAME_prolog && here > 0 )
+      if ( c == '\'' && syntax->prolog == ON && here > 0 )
       { wint_t c0 = fetch(here-1);
 
 	if ( iswdigit(c0) )		/* or <digit><number> */

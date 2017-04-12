@@ -198,6 +198,8 @@ syntax(sentence_end(End), ST) :-
 syntax(quasi_quotation(Start, End), ST) :-
     send(ST, quasi_quotation_start, Start),
     send(ST, quasi_quotation_end, End).
+syntax(prolog, ST) :-
+    send(ST, prolog, @on).
 
 
                  /*******************************

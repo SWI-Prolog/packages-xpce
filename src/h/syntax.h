@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2017, University of Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,7 @@ NewClass(syntax_table)
   Regex		paragraph_end;		/* End-Of-Pargraph */
   Name		qq_start;		/* Quasi quotation start */
   Name		qq_end;			/* Quasi quotation end */
+  BoolObj	prolog;			/* Is Prolog syntax */
   unsigned short *table;		/* Type-flags */
   unsigned char  *context;		/* Context info */
 End;
