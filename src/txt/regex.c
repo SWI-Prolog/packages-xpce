@@ -627,7 +627,7 @@ forAllRegex(Regex re, Any obj, Code code, Int from, Int to)
 
     ne = re->registers[0].rm_eo;
 
-    if ( moved && !empty )
+    if ( moved || !empty )
       from = toInt(ne);
     else if ( atend )
       break;
