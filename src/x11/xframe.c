@@ -1003,6 +1003,10 @@ getWMFrameFrame(FrameObj fr, int *dxp, int *dyp)
 		Cprintf("w = %ld; root = %ld; parent = %ld; "
 			"dx=%d; dy=%d; bw = %d\n",
 			w, root, parent, dx, dy, bw));
+	} else
+	{ DEBUG(NAME_frame,
+		Cprintf("w = %ld; root = %ld; parent = %ld\n",
+			w, root, parent));
 	}
 
 	if ( parent == root )
@@ -1036,6 +1040,10 @@ ws_frame_bb(FrameObj fr, int *x, int *y, int *w, int *h)
     *y = atts.y - bw;
     *w = atts.width + 2*bw;
     *h = atts.height + 2*bw;
+
+    DEBUG(NAME_geometry,
+	  Cprintf("ws_frame_bb(%s): %d %d %d %d\n",
+		  pp(fr), *x, *y, *w, *h));
 
     succeed;
   }
@@ -1148,15 +1156,13 @@ ws_x_geometry_frame(FrameObj fr, Name spec, Monitor mon)
     }
 
     if ( ok )
-    { int mw = (w < MIN_VISIBLE ? MIN_VISIBLE : w);
-
-      if ( y < 0 )			/* above the screen */
-	y = 0;
-      if ( y > dh-MIN_VISIBLE )		/* below the screen */
+    { if ( y < 1 )			/* above the screen */
+	y = 1;
+      else if ( y > dh-MIN_VISIBLE )	/* below the screen */
 	y = dh - MIN_VISIBLE;
-      if ( x+mw < MIN_VISIBLE )		/* left of the screen */
-	x = MIN_VISIBLE-mw;
-      if ( x > dw-MIN_VISIBLE )		/* right of the screen */
+      if ( x < 1 )			/* left of the screen */
+	x = 1;
+      else if ( x > dw-MIN_VISIBLE )	/* right of the screen */
 	x = dw - MIN_VISIBLE;
     }
 
