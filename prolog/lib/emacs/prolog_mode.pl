@@ -35,6 +35,8 @@
 
 :- module(emacs_prolog_mode, []).
 :- use_module(library(pce)).
+:- use_module(library(apply)).
+:- use_module(library(pairs)).
 :- use_module(library(debug)).
 :- use_module(library(make)).                   % for reloading files
 :- use_module(library(emacs_extend)).
@@ -2206,13 +2208,14 @@ property_text(number_of_clauses(N), Text) :-
     ).
 property_text(indexed(List), Text) :-
     !,
-    (   List = [1-_]
+    (   List = [[1]-_]
     ->  Text = 'hashed on first argument'
-    ;   List = [N-_]
+    ;   List = [[N]-_]
     ->  int_postfix(N, PostFix),
         format(atom(Text), 'hashed on ~d-~w argument', [N, PostFix])
     ;   pairs_keys(List, Args),
-        atomic_list_concat(Args, ', ', ArgText),
+        maplist(term_to_atom, Args, Atoms),
+        atomic_list_concat(Atoms, ', ', ArgText),
         format(atom(Text), 'hashed on arguments ~w', [ArgText])
     ).
 property_text(meta_predicate(Head), Text) :-
