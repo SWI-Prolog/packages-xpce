@@ -175,8 +175,8 @@ $(MANINDEX):	$(shell find ../man/reference -name '*.doc')
 		  -t halt
 
 $(LOCALINDEX):
-		$(PL) -f none -t 'halt(1)' \
-			-g "make_library_index('../prolog/lib'),halt"
+		$(PL) -f none -t halt \
+			-g "make_library_index('../prolog/lib')"
 
 ################################################################
 # XPCE's modules
@@ -639,8 +639,8 @@ link-dev-tree::
 		rm -f $(DESTDIR)$(PLBASE)/xpce
 		(here=`pwd` && home=`dirname $$here` && $(REL_LN) $$home $(DESTDIR)$(PLBASE)/xpce)
 ln-classindex::
-		./xpce.sh -t "halt(1)" \
-			-g "[library(pce_class_index)],pce_make_library_index('$(DESTDIR)$(PLBASE)/xpce/prolog/lib'),halt"
+		./xpce.sh -t "halt" \
+			-g "[library(pce_class_index)],pce_make_library_index('$(DESTDIR)$(PLBASE)/xpce/prolog/lib')"
 
 ln-dv-lib::
 		$(REL_LN) $(PL2XPCE) $(RTLIBDIR)
@@ -693,8 +693,8 @@ dv-lib:		dv-home
 		    fi; \
 		    echo done; \
 		done
-		$(PL) -C "$(DESTDIR)$(DVHOME)" -f none -t 'halt(1)' \
-			-g "make_library_index('prolog/lib'),halt"
+		$(PL) -C "$(DESTDIR)$(DVHOME)" -f none -t halt \
+			-g "make_library_index('prolog/lib')"
 		$(INSTALL_DATA) ../prolog/lib/Overview $(DESTDIR)$(DVHOME)/prolog/lib
 		$(INSTALL_DATA) ../prolog/lib/trace/pltracer.hlp $(DESTDIR)$(DVHOME)/prolog/lib/trace
 		@for d in $(DVIMGDIRS); do \
@@ -785,7 +785,7 @@ html-install::
 ################################################################
 
 check:		$(LOCALINDEX)
-		./xpce.sh -q -g "['../src/test.pl'],test,halt" -t 'halt(1)'
+		./xpce.sh -q -g "['../src/test.pl'],test" -t halt
 
 
 ################################################################
