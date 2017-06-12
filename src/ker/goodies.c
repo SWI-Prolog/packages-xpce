@@ -888,6 +888,12 @@ extern int vsscanf(const char *, const char *, va_list);
 #define alloca(n) pceMalloc(n)
 #endif /*ALLOCA_BUG*/
 
+#if !(defined(HAVE_VSSCANF) && defined(HAVE_CAST_VA_LIST))
+#define NO_VSSCANF 1
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security"
+#endif
+
 Int
 scanstr(char *str, char *fmt, Any *r)
 { int types[SCAN_MAX_ARGS];
@@ -995,11 +1001,9 @@ scanstr(char *str, char *fmt, Any *r)
   }
 
   DEBUG(NAME_scan, Cprintf("argn = %d\n", argn));
-#if defined(HAVE_VSSCANF) && defined(HAVE_CAST_VA_LIST)
+#ifndef NO_VSSCANF
   ar = vsscanf(str, fmt, (va_list) ptrs);
 #else
-#pragma GCC diagnostic push
-#pragma GCC diagnostic warning "-Wformat-security"
   switch(argn)
   { case 0:	ar = sscanf(str, fmt); break;
     case 1:	ar = sscanf(str, fmt, ptrs[0]); break;
@@ -1096,7 +1100,6 @@ scanstr(char *str, char *fmt, Any *r)
     default:	errorPce(NIL, NAME_tooManyArguments);
 		fail;
   }
-#pragma GCC diagnostic pop
 #endif /*HAVE_VSSCANF*/
 
   DEBUG(NAME_scan, Cprintf("ar = %d\n", argn));
@@ -1154,6 +1157,10 @@ scanstr(char *str, char *fmt, Any *r)
 
   return toInt(ar);
 }
+
+#ifdef NO_VSSCANF
+#pragma GCC diagnostic pop
+#endif
 
 		/********************************
 		*         FATAL ERRORS		*
