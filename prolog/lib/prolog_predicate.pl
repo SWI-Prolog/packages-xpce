@@ -95,8 +95,8 @@ convert(_, From:name, P:prolog_predicate) :<-
         callable(Head)
     ->  functor(Head, Name, Arity),
         new(P, prolog_predicate(Module:Name/Arity))
-    ;   callable(Head)
-    ->  functor(Head, Name, Arity),
+    ;   callable(Term)
+    ->  functor(Term, Name, Arity),
         new(P, prolog_predicate(Name/Arity))
     ).
 
