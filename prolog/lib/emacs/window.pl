@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2010, University of Amsterdam, VU University Amsterdam
+    Copyright (c)  1985-2017, University of Amsterdam,
+                              VU University Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -1053,6 +1054,17 @@ looking_at(E, Re:regex, Where:[int], End:[int], Len:int) :<-
     ),
     get(E, text_buffer, TB),
     get(Re, match, TB, C, End, Len).
+
+
+		 /*******************************
+		 *            DABBREV		*
+		 *******************************/
+
+dabbrev_candidates(E, CMode:name, Target:char_array, Completions:chain) :<-
+    get(E, mode, Mode),
+    Mode \== @nil,
+    send(Mode, has_get_method, dabbrev_candidates),
+    get(Mode, dabbrev_candidates, CMode, Target, Completions).
 
 :- pce_end_class.
 

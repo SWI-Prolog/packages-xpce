@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (c)  1985-2012, University of Amsterdam
+    Copyright (c)  1985-2017, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -3763,6 +3763,8 @@ dabbrevExpandEditor(Editor e)
 
   TRY( target = get_dabbrev_target(e) );
   assign(e, dabbrev_target, target);
+  assign(e, dabbrev_mode, NAME_backwards);
+  assign(e, dabbrev_candidates, NIL);
   DEBUG(NAME_editor, Cprintf("dabbrev target = %s\n", pp(target)));
 
   if ( notNil(e->dabbrev_reject) )
@@ -3839,6 +3841,21 @@ fix_case_and_insert(TextBuffer tb, int where, String insert,
 }
 
 
+static Name
+nextDabbrevMode(Editor e)
+{ if ( e->dabbrev_mode == NAME_forwards )
+    assign(e, dabbrev_mode, NAME_user1);
+  else if ( e->dabbrev_mode == NAME_user1 )
+    assign(e, dabbrev_mode, NAME_user2);
+  else if ( e->dabbrev_mode == NAME_user2 )
+    assign(e, dabbrev_mode, NAME_user3);
+  else
+    fail;
+
+  return e->dabbrev_mode;
+}
+
+
 static status
 DabbrevExpandEditor(Editor e, EventId id)
 { int pos = valInt(e->dabbrev_pos);
@@ -3871,31 +3888,53 @@ DabbrevExpandEditor(Editor e, EventId id)
   { Cell cell;
 
     DEBUG(NAME_editor, Cprintf("Starting search\n"));
-    hit_pos = find_textbuffer(tb, pos, target, dir, 'a', ec, FALSE);
+    if ( equalName(e->dabbrev_mode, NAME_backwards) ||
+	 equalName(e->dabbrev_mode, NAME_forwards) )
+    { hit_pos = find_textbuffer(tb, pos, target, dir, 'a', ec, FALSE);
 
-    if ( hit_pos < 0 )
-    { if ( dir < 0 )			/* no more backwards; revert */
-      { dir = -dir;
-	pos = caret;
-        continue;
+      if ( hit_pos < 0 )
+      { if ( dir < 0 )			/* no more backwards; revert */
+	{ dir = -dir;
+	  pos = caret;
+	  assign(e, dabbrev_mode, NAME_forwards);
+	  continue;
+	}
+
+	goto user;
       }
 
-      send(e, NAME_report, NAME_warning, CtoName("No more hits"), EAV);
-      assign(e, focus_function, NIL);
-      succeed;
+      if ( hit_pos != 0 &&
+	   tisalnum(tb->syntax, fetch_textbuffer(tb, hit_pos-1)) )
+      { pos = hit_pos + dir;		/* hit is no start of word */
+	continue;
+      }
+
+      DEBUG(NAME_editor, Cprintf("hit at %d\n", hit_pos));
+
+      hit = get_dabbrev_hit_editor(e, hit_pos);
+      DEBUG(NAME_editor, Cprintf("hit = %s\n", pp(hit)));
+      pos = (dir < 0 ? hit_pos - 1 : hit_pos + target->s_size);
+    } else
+    { user:
+      while ( !(notNil(e->dabbrev_candidates) &&
+		(hit = getDeleteHeadChain(e->dabbrev_candidates))) )
+      { Name mode = nextDabbrevMode(e);
+
+	if ( mode )
+	{ Chain ch;
+
+	  ch = get(e, NAME_dabbrevCandidates, mode, e->dabbrev_target, EAV);
+
+	  if ( !instanceOfObject(ch, ClassChain) )
+	    ch = NIL;
+	  assign(e, dabbrev_candidates, ch);
+	} else
+	{ send(e, NAME_report, NAME_warning, CtoName("No more hits"), EAV);
+	  assign(e, focus_function, NIL);
+	  succeed;
+	}
+      }
     }
-
-    if ( hit_pos != 0 &&
-	 tisalnum(tb->syntax, fetch_textbuffer(tb, hit_pos-1)) )
-    { pos = hit_pos + dir;		/* hit is no start of word */
-      continue;
-    }
-
-    DEBUG(NAME_editor, Cprintf("hit at %d\n", hit_pos));
-
-    hit = get_dabbrev_hit_editor(e, hit_pos);
-    DEBUG(NAME_editor, Cprintf("hit = %s\n", pp(hit)));
-    pos = (dir < 0 ? hit_pos - 1 : hit_pos + target->s_size);
 
     for_cell(cell, e->dabbrev_reject)
     { Name reject = cell->value;
@@ -3925,6 +3964,13 @@ DabbrevExpandEditor(Editor e, EventId id)
     next:;
   }
 }
+
+
+static Chain
+getDabbrevCandidatesEditor(Editor e, Name mode, CharArray target)
+{ return NIL;
+}
+
 
 		/********************************
 		*           SCROLLING		*
@@ -4827,6 +4873,9 @@ static char *T_scrollTo[] =
 	{ "index=[int]", "screenline=[int]" };
 static char *T_autoFill[] =
         { "from=[int]", "skip=[regex]" };
+static char *T_dabbrevCandidates[] =
+        { "mode={user1,user2,user3}", "target=char_array" };
+
 
 /* Instance Variables */
 
@@ -4918,6 +4967,10 @@ static vardecl var_editor[] =
      NAME_internal, "Caret index at start of dabbrev"),
   IV(NAME_dabbrevOrigin, "int*", IV_NONE,
      NAME_internal, "Caret index of start of target"),
+  IV(NAME_dabbrevMode, "{backwards,forwards,user1,user2,user3}", IV_NONE,
+     NAME_internal, "Current dabbrev search mode"),
+  IV(NAME_dabbrevCandidates, "chain*", IV_NONE,
+     NAME_internal, "Current dabbrev candidates"),
   IV(NAME_internalMark, "alien:int", IV_NONE,
      NAME_internal, "Additional mark for internal use"),
   IV(NAME_fragmentCache, "alien:FragmentCache", IV_NONE,
@@ -5334,7 +5387,10 @@ static getdecl get_editor[] =
   GM(NAME_showLabel, 0, "bool", NULL, getShowLabelEditor,
      NAME_appearance, "Bool indicating if label is visible"),
   GM(NAME_marginWidth, 0, "pixels=int", NULL, getMarginWidthEditor,
-     NAME_visualisation, "Width of annotation margin")
+     NAME_visualisation, "Width of annotation margin"),
+  GM(NAME_dabbrevCandidates, 2, "chain*", T_dabbrevCandidates,
+     getDabbrevCandidatesEditor, NAME_complete,
+     "Get alternative dabbrev candidates")
 };
 
 /* Resources */

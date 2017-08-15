@@ -804,6 +804,31 @@ view_debug_messages(_M) :->
     prolog_ide(debug_monitor).
 
 
+		 /*******************************
+		 *           DABBREV		*
+		 *******************************/
+
+dabbrev_candidates(_M, Mode:name, Target:char_array, Completions:chain) :<-
+    "Provide additional dabbrev completions"::
+    (   atom(Target)
+    ->  Prefix = Target
+    ;   object(Target, string(Prefix))
+    ),
+    findall(Completion, completion(Mode, Prefix, Completion), List),
+    List \== [],
+    Term =.. [chain|List],
+    new(Completions, Term).
+
+completion(user1, Prefix, Completion) :-
+    module_predicate_name(user, Prefix, Completion).
+
+module_predicate_name(M, Prefix, Name) :-
+    predicate_property(M:Head, visible),
+    functor(Head, Name, _Arity),
+    sub_atom(Name, 0, _, _, Prefix),
+    \+ sub_atom(Name, 0, _, _, $).
+
+
                  /*******************************
                  *         COMPILATION          *
                  *******************************/

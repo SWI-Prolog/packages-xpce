@@ -398,6 +398,9 @@ delete_rectangle(M) :->
 
 */
 
+dabbrev_candidates(_M, _Mode:name, _Target:char_array, _Completions:chain) :<-
+    fail.
+
                  /*******************************
                  *            LOAD/SAVE         *
                  *******************************/

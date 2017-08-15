@@ -162,6 +162,8 @@ NewClass(editor)
   Chain		dabbrev_reject;		/* Hits rejected by dabbrev */
   Int		dabbrev_pos;		/* Current search position */
   Int		dabbrev_origin;		/* Start of dabbrev word */
+  Name		dabbrev_mode;		/* Current dabbrev mode */
+  Chain		dabbrev_candidates;	/* Dabbrev user candidates */
 					/* Private data */
   intptr_t	internal_mark;		/* Internally used mark */
   FragmentCache fragment_cache;		/* Cache to compute frament overlap */
