@@ -112,7 +112,7 @@ initialisePce(Pce pce)
   assign(pce, debugging,              OFF);
   assign(pce, trap_errors,	      ON);
 #endif
-  assign(pce, catched_errors,	      newObject(ClassChain, EAV));
+  assign(pce, caught_errors,	      newObject(ClassChain, EAV));
   assign(pce, catch_error_signals,    OFF);
 
   assign(pce, exit_messages,	      newObject(ClassChain, EAV));
@@ -285,21 +285,21 @@ status
 catchErrorPce(Pce pce, Any ids)
 { assign(pce, last_error, NIL);
 
-  return prependChain(pce->catched_errors, ids);
+  return prependChain(pce->caught_errors, ids);
 }
 
 
 status
 catchPopPce(Pce pce)
-{ return deleteHeadChain(pce->catched_errors);
+{ return deleteHeadChain(pce->caught_errors);
 }
 
 
 status
-catchedErrorPce(Pce pce, Name id)
+caughtErrorPce(Pce pce, Name id)
 { Cell cell;
 
-  for_cell(cell, pce->catched_errors)
+  for_cell(cell, pce->caught_errors)
   { if ( isDefault(cell->value) )
       succeed;				/* catch all of them */
 
@@ -1053,7 +1053,7 @@ resetPce(Pce pce)
 #ifndef O_RUNTIME
     debuggingPce(pce, OFF);
 #endif
-    clearChain(pce->catched_errors);
+    clearChain(pce->caught_errors);
   }
 
   resetTypes();
@@ -1251,7 +1251,7 @@ static vardecl var_pce[] =
 #endif
   IV(NAME_lastError, "name*", IV_BOTH,
      NAME_exception, "Id of last occurred error"),
-  IV(NAME_catchedErrors, "chain", IV_GET,
+  IV(NAME_caughtErrors, "chain", IV_GET,
      NAME_exception, "Errors are expected by code"),
   SV(NAME_catchErrorSignals, "bool", IV_GET|IV_STORE, catchErrorSignalsPce,
      NAME_debugging, "Trap Unix signals to deal with errors"),
@@ -1326,8 +1326,8 @@ static senddecl send_pce[] =
      NAME_exception, "Indicate code is prepared to handle errors"),
   SM(NAME_catchPop, 0, NULL, catchPopPce,
      NAME_exception, "Pop pushed error handlers"),
-  SM(NAME_catched, 1, "identifier=name", catchedErrorPce,
-     NAME_exception, "Test if error_id is catched"),
+  SM(NAME_caught, 1, "identifier=name", caughtErrorPce,
+     NAME_exception, "Test if error_id is caught"),
   SM(NAME_exception, 2, T_exception, exceptionPcev,
      NAME_exception, "Raise an exception"),
   SM(NAME_banner, 0, NULL, bannerPce,

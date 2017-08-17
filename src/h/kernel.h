@@ -1172,7 +1172,7 @@ NewClass(pce)
   BoolObj		trap_errors;		/* Trap tracer on errors */
 #endif
   Name		last_error;		/* Last error occurred */
-  Chain		catched_errors;		/* Stack of catched error-id's */
+  Chain		caught_errors;		/* Stack of caught error-id's */
   BoolObj		catch_error_signals;	/* Catch Unix signals */
 
   Chain		exit_messages;		/* Called on exit */

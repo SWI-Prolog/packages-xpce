@@ -2524,7 +2524,7 @@ errorObjectv(Any obj, Error e, int argc, Any *argv)
 
   assign(PCE, last_error, e->id);
 
-  if ( !catchedErrorPce(PCE, e->id) || e->kind == NAME_fatal )
+  if ( !caughtErrorPce(PCE, e->id) || e->kind == NAME_fatal )
   { ArgVector(av, argc+1);
     PceGoal g = CurrentGoal;
     int i;
