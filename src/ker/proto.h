@@ -307,7 +307,7 @@ COMMON(status)	formatPcev(Pce pce, CharArray fmt, int argc, Any *argv);
 COMMON(Name)	getOsErrorPce(Pce pce);
 COMMON(status)	catchErrorPce(Pce pce, Any ids);
 COMMON(status)	catchPopPce(Pce pce);
-COMMON(status)	catchedErrorPce(Pce pce, Name id);
+COMMON(status)	caughtErrorPce(Pce pce, Name id);
 COMMON(Name)	getEnvironmentVariablePce(Pce pce, Name name);
 COMMON(status)	debuggingPce(Pce pce, BoolObj val);
 COMMON(status)	exceptionPcev(Pce pce, Name name, int argc, Any *argv);

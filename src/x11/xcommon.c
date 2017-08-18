@@ -69,7 +69,7 @@ static unsigned int MetaMask = DefMetaMask;	/* Key-mask for meta */
 
 static int
 x_error_handler(Display *display, XErrorEvent *error)
-{ if ( !catchedErrorPce(PCE, NAME_xError) )
+{ if ( !caughtErrorPce(PCE, NAME_xError) )
   { char msg[1024];
     char request[100];
     char buf[100];

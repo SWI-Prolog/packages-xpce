@@ -45,7 +45,7 @@
 %!  pce_catch_error(?Errors, :Goal)
 %
 %   Run goal, fail silently on indicated errors.  If the first argument
-%   is a variable, any error will be catched.
+%   is a variable, any error will be caught.
 
 pce_catch_error(Error, Goal) :-
     var(Error),
