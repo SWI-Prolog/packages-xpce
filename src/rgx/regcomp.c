@@ -402,8 +402,10 @@ int flags;
 	CNOERR();
 	assert(v->nlacons == 0 || v->lacons != NULL);
 	for (i = 1; i < v->nlacons; i++) {
+#ifdef REG_DEBUG
 		if (debug != NULL)
 			fprintf(debug, "\n\n\n========= LA%d ==========\n", i);
+#endif
 		nfanode(v, &v->lacons[i], debug);
 	}
 	CNOERR();
