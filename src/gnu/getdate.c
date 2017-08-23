@@ -36,8 +36,11 @@
 */
 
 #include "md.h"
-#include <gnu/system.h>
+#ifdef HAVE_SYS_TIMEB_H
+#include <sys/timeb.h>
+#endif
 #include <ctype.h>
+#include <stdlib.h>
 
 #define malloc(n)	pceMalloc(n)
 #define free(p)		pceFree(p)
@@ -432,7 +435,7 @@ void *alloca ();
 #define YYEMPTY		-2
 #define YYEOF		0
 #define YYACCEPT	return(0)
-#define YYABORT 	return(1)
+#define YYABORT		return(1)
 #define YYERROR		goto yyerrlab1
 /* Like YYERROR except do call yyerror.
    This remains here temporarily to ease the
@@ -1206,8 +1209,8 @@ case 48:
 		      }
 		    else
 		      {
-		    	yyHour = yyvsp[0].Number / 100;
-		    	yyMinutes = yyvsp[0].Number % 100;
+			yyHour = yyvsp[0].Number / 100;
+			yyMinutes = yyvsp[0].Number % 100;
 		      }
 		    yySeconds = 0;
 		    yyMeridian = MER24;

@@ -11,7 +11,9 @@
 */
 
 #include "md.h"
-#include <gnu/system.h>
+#ifdef HAVE_SYS_TIMEB_H
+#include <sys/timeb.h>
+#endif
 #include <ctype.h>
 
 #define malloc(n)	pceMalloc(n)
@@ -420,8 +422,8 @@ number	: tUNUMBER
 		      }
 		    else
 		      {
-		    	yyHour = $1 / 100;
-		    	yyMinutes = $1 % 100;
+			yyHour = $1 / 100;
+			yyMinutes = $1 % 100;
 		      }
 		    yySeconds = 0;
 		    yyMeridian = MER24;
