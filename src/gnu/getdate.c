@@ -36,6 +36,7 @@
 */
 
 #include "md.h"
+#include <time.h>
 #ifdef HAVE_SYS_TIMEB_H
 #include <sys/timeb.h>
 #endif
@@ -82,8 +83,6 @@ extern void *pceFree(void *p);
    it's important to use the locale's definition of `digit' even when the
    host does not conform to Posix.  */
 #define ISDIGIT(c) ((unsigned) (c) - '0' <= 9)
-
-#include "getdate.h"
 
 #if defined (STDC_HEADERS) || defined (USG)
 # include <string.h>
