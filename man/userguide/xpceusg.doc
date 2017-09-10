@@ -63,9 +63,9 @@ in \productpl{} are portable across the supported X11 and Win32
 %\product{} has been connected to the following Prolog systems.
 %
 %\begin{itemize}
-%    \item \url[SWI-Prolog]{http://www.swi.psy.uva.nl/projects/SWI-Prolog/}
-%    \item \url[Quintus Prolog]{http://www.sics.se/quintus/}
-%    \item \url[SICStus Prolog]{http://www.sics.se/isl/sicstus.html}
+%    \item \href{http://www.swi-prolog.org/}{SWI-Prolog}
+%    \item \href{http://www.sics.se/quintus/}{Quintus Prolog}
+%    \item \href{http://www.sics.se/isl/sicstus.html}{SICStus Prolog}
 %\end{itemize}
 
 {\it Last updated July, 2005 for \product{} version
@@ -80,7 +80,7 @@ Copyright \copyright\ 1992-2005 University of Amsterdam
 This document is maintained in the LaTeX document processing system. It
 was converted to HTML format using a latex2html written in SWI-Prolog
 which, unlike
-\url[latex2html]{http://www-dsed.llnl.gov/files/programs/unix/latex2html/sources/},
+\href{http://www-dsed.llnl.gov/files/programs/unix/latex2html/sources/}{latex2html},
 concentrates on extensibility, rather then making the HTML document
 look as closely as possible the same as the LaTeX version.  The document
 is maintained using macros dedicated to describe its content.  These

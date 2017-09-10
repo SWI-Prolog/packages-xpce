@@ -3,7 +3,7 @@
 Web presentation has attractive features. It is well accepted,
 standardised (if you stick to the basics) and network-transparent. Many
 people think you need a web-server like
-\url[Apache]{http://www.apache.org} with some sort of server-scripting
+\href{http://www.apache.org}{Apache} with some sort of server-scripting
 (\idx{CGI}) to realise a server.  This is not true.  Any application
 capable of elementary TCP/IP communication can easily act as a
 web-server.

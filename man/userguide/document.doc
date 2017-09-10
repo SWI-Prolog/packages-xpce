@@ -37,7 +37,7 @@ and the document is translated into a sequence of \class{tbox},
 \index{SP,package}%
 We have developed a Prolog library for rendering a large subset of HTML
 using these primitives. This library builds on {\em xml2pl}, a wrapper
-around \url[James Clark's SP-package]{http://www.jclark.com/}
+around \href{http://www.jclark.com/}{James Clark's SP-package}
 for reading XML and SGML documents into a nested Prolog term.
 
 The rendering library maps Prolog terms created by {\em xml2pl} first
