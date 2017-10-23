@@ -1,56 +1,33 @@
-		Installing XPCE/Prolog from the SOURCES
-		=======================================
+# Installing XPCE/Prolog from source
 
-			   Jan Wielemaker
-			(jan@swi.psy.uva.nl)
+Normally, xpce is provided as `packages/xpce` in the SWI-Prolog sources.
+It     is     build      as      part       of      SWI-Prolog.      See
+http://www.swi-prolog.org/build/index.txt for building   SWI-Prolog  and
+xpce.
 
-History:	Tue Feb 01, 2005 for version 5.5.5  (minor changes)
-		Thu Apr 29, 2004 for version 5.3.10 (minor changes)
-		Fri Apr 26, 1996 for version 4.8.17 (complete rewrite)
-		Tue Jan 21, 1997 updated for 4.9.1  (minor changes)
-		Fri Aug 29, 1997 updated for 4.9.3  (minor changes)
-		Mon Dec	08, 1997 updated for 4.9.7  (minor changes)
-		Fri Feb	05, 1999 updated for 5.0.0  (deleted old stuff)
-
+The documentation below is in part out of date, but left as a reference.
 Configuration, compilation and installation is based on the GNU autoconf
-package. General comments on installing packages   based on autoconf are
-in the file INSTALL.
+package.
 
-Required tools
-==============
+## Required tools
 
-	# GNU-Make
-	We're using version 3.80.  Many other versions will do as well,
-	but non-gnu versions of make will fail.
+	- GNU-Make
+	Non-gnu versions of make will fail.
 
-	# GCC
+	- GCC or clang
 	Necessary on most machines, though you might get away with
-	another ANSI C compiler.  Check the Makefile carefully for
-	the various flags passed to compiler in that case.  The only
-	non-gcc compiler used by us is MSVC++ 6.0 for the Win32 version.
+	another ANSI C compiler.
 
-	Most GCC versions these days are fine.  We use gcc 3.3
-
-	You need g++ to compile the C++ interface, but if you don't
-	have it, configure will automatically exclude the C++ interface.
-	libg++ is not required *NOTE: C++ is currently not supported*
-
-	# libXpm
+	- libXpm
 	The X11 XPM (XPixMap) format libary for handling coloured and
-	masked images.  XPM is an X11 contrib package.
-	You can fetch the sources from many places on the net, or from
+	masked images.  For any popular Unix platform you should be
+	able to find this package.  For the Windows built we provide
+	a port at https://github.com/SWI-Prolog/libXpm.git
 
-	    ftp://swi.psy.uva.nl/pub/xpce/util/images/xpm-3.4i.tar.gz
-
-	# libjpeg
+	- libjpeg
 	The JPEG group library for handling JPEG images.
-	The sources for this library are in:
 
-	    ftp://swi.psy.uva.nl/pub/xpce/util/images/jpegsrc.v6a.tar.gz
-
-	which, again, can be found at many other places on the net.
-
-	# Freetype
+	- Freetype
 	Not really required, but if present the system will use the
 	Freetype library to realise scalable and antialiased fonts.
 	Its presence is detected by looking for the program xft-config,
@@ -60,20 +37,16 @@ Required tools
 
 
 For all other required tools, both the   GNU,  BSD and System-V versions
-are supposed to work properly. Our path   prefers the tools in the order
-GNU, BSD (UCB), System-V. If you have trouble,  you may want to try this
-order and inform us about your experiences.
+are supposed to work properly.
 
-
-Bluffers Installation Guide
-===========================
+## Bluffers Installation Guide
 
 To install XPCE/SWI-Prolog from the sources:
 
-	1) Build SWI-Prolog according to the instructions and install it.
-	2) Determine an installation prefix (normally use the same as for
+	1. Build SWI-Prolog according to the instructions and install it.
+	2. Determine an installation prefix (normally use the same as for
 	   SWI-Prolog, we use `linux' in this example).
-	3) Run the following commands
+	3. Run the following commands
 
 		% mkdir linux
 		% cd linux
@@ -81,54 +54,13 @@ To install XPCE/SWI-Prolog from the sources:
 		% make
 		% make install
 
-XPM colour image files
-======================
-
-XPCE requires the  libXpm  to  deal   with  XPM  image  files, providing
-portable full-colour images with mask  and   hot-spot,  ready  to use as
-icons or cursors on  both  X11   and  Windows  platforms. Unfortunately,
-libXpm is not part of many standard   X11 distributions, and should thus
-be installed prior to running configure for XPCE. You can find a version
-of the xpm sources in
-
-	ftp://gollem.science.uva.nl/pub/xpce/util/images/xpm-3.4i.tar.gz.
-
-If you make a version for  distribution,   it  is  good practice to link
-using the static version of libXpm.
-
-If you have libXPM installed at a location not searched for includes and
-libraries you can add --with-xmp=<dir>,  after   which  the  system adds
-<dir>/include to the include search-path and   <dir>/lib  to the library
-search path.
-
-
-JPEG colour image files
-=======================
-
-XPCE requires libjpeg to deal with JPEG  image files. The jpeg format is
-especially useful for handling large   full-colour  images of real-world
-scenes. JPEG reading is based on  the   jpeg  library as provided by the
-independent JPEG group.  The  source  for   this  library  is  free, and
-available from
-
-	ftp://gollem.science.uva.nl/pub/xpce/util/images/jpegsrc.v6a.tar.gz
-
-If you have libjpeg installed at a   location  not searched for includes
-and libraries you can add --with-jpeg=<dir>, after which the system adds
-<dir>/include to the include search-path and   <dir>/lib  to the library
-search path.
-
-
-===========================
-Detailed Installation Guide
-===========================
+# Detailed Installation Guide
 
 We start at the SWI-Prolog  installation,   as  this  needs some special
 considerations on some platforms.
 
 
-Choosing the build-directory
-============================
+## Choosing the build-directory
 
 You can place the directory for   building  XPCE/Prolog anywhere. A good
 choice is /usr/local/src or, if you are   installing  as a private user,
@@ -138,15 +70,15 @@ $HOME/src. Unpack the Prolog and XPCE archives from the same directory:
 	% gunzip < xpce-<version>.tar.gz | tar xvfB -
 
 NOTES:
-	* Some versions of tar hate reading from a pipe.  In that case
+
+	- Some versions of tar hate reading from a pipe.  In that case
 	use `gunzip file.tar.gz' followed by `tar xvf file.tar' to extract
 	the archives
 
-	* If you are using GNU-tar, `tar zxvf file.tar.gz' is easier.
+	- If you are using GNU-tar, `tar zxvf file.tar.gz' is easier.
 
 
-Choosing a build sub-directory
-==============================
+## Choosing a build sub-directory
 
 For easy cleanup or building for   multiple directories, both SWI-Prolog
 and XPCE are normally built in a   directory  next to the src directory.
@@ -154,17 +86,18 @@ The name is not important. Good examples  are `sunos' `linux', etc. In
 the examples below, we use `linux'.
 
 
-The Destination Prefix (configure --prefix=dir)
-===============================================
+## The Destination Prefix (configure --prefix=dir)
 
 GNU autoconf-based packages accept the   flag  --prefix=<dir> to specify
 the destination. The installation will use the following subdirectories:
 
+```
 	bin			For making *links* to the executables
 	man/man1		For installing the manual pages
 	include			For installing the SWI-Prolog.h header file
 	lib/pl-<version>	For installing libs, executables, etc.
 	lib			For installing public shared objects (if any)
+```
 
 The default prefix is /usr/local.  If   you  choose  another one (assume
 /home/projects/bigmoney), do (if the  directory   structure  is  not yet
@@ -175,16 +108,14 @@ available):
 
 Make sure the binary directory is in your PATH!
 
-Preparing SWI-Prolog
-====================
+## Preparing SWI-Prolog
 
 	% cd pl-<version>
 	% mkdir linux
 	% cd linux
 	% ../src/configure
 
-Shared libraries or not?
-------------------------
+## Shared libraries or not?
 
 By default, the installation atempts to   build SWI-Prolog and load xpce
 as a shared object (.so file on   most  Unix machines) into Prolog. This
@@ -196,10 +127,7 @@ alternative is no longer actively maintained. When  porting to a new OS,
 please check the shared library facilities   of the SWI-Prolog plld tool
 and make sure it runs on your environment.
 
-****************************************************************
-
-Preparing XPCE
-==============
+## Preparing XPCE
 
 XPCE extracts most information about  the configuration from SWI-Prolog,
 so it is generally much easier. Most of the configure run is simple, but
@@ -220,13 +148,12 @@ other X11 software we run locally. For distribution, we configure using:
 
 	--x-includes=/usr/openwin/include --x-libraries=/usr/openwin/lib
 
-Checking Program versions
--------------------------
+## Checking Program versions
 
 Just to make sure your programs are accessible and of the right version,
 try:
 
-	% pl -v
+	% swipl -v
 	SWI-Prolog version 5.3.9 for i686-linux
 	% make -v
 	GNU Make 3.80
@@ -243,8 +170,7 @@ Now, run configure:
 	% mkdir linux
 	% ../src/configure <options>
 
-Building the library
-====================
+## Building the library
 
 Now, make the XPCE library:
 
@@ -256,8 +182,7 @@ at the steps above. If all goes well, the compilation should finish with
 few warnings, resulting in the library libXPCE.a
 
 
-Building the interface:
-=======================
+## Building the interface:
 
 With write premission to the Prolog home directory, now do the following
 to make the interface.
@@ -276,26 +201,17 @@ to make XPCE known to Prolog:
 	* A swipl.rc script to register the xpce library
 	* A Makefile to recompile the XPCE/Prolog quick-load-files
 
-Testing XPCE
-============
+## Testing XPCE
 
 Now, if you have build  for  a   shared  object,  xpce  is a dynamically
 loadable Prolog library, so to test it simply do:
 
-	% pl
+	% swipl
 	?- manpce.
 
 which should start the manual tools.
 
-If you built the xpce executable using `make pl-static', do:
-
-	% ./xpce
-	?- manpce.
-
-****************************************************************
-
-Installing the XPCE library
-===========================
+## Installing the XPCE library
 
 Finally, to install the XPCE libraries, do:
 
@@ -303,14 +219,14 @@ Finally, to install the XPCE libraries, do:
 
 Which will:
 
-	# Create a directory xpce-<version> in the Prolog home and
+	- Create a directory xpce-<version> in the Prolog home and
 	copy the Prolog libraries, manual data and other resources
 	into this directory.
 
-	# In the Prolog home, make a link from xpce to xpce-<version>
+	- In the Prolog home, make a link from xpce to xpce-<version>
 
-	# run `make' in the Prolog home directory to make quick-load
+	- run `make' in the Prolog home directory to make quick-load
 	versions of some large and frequently used library packages.
 
-	# in $exec_prefix/bin, make links to the xpce and xpce-client
+	- in $exec_prefix/bin, make links to the xpce and xpce-client
 	executables
