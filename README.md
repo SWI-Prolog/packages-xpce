@@ -1,4 +1,4 @@
-Contents
+# Contents
 
 This directory contains XPCE, an   object-oriented  symbolic programming
 environment   for   User   Interfaces.   XPCE   was   designed   to   be
@@ -7,7 +7,7 @@ and many useful libraries are now   available for Prolog only. Therefore
 we will often talk about XPCE/Prolog.
 
 
-Authors
+# Authors
 
 The development of XPCE was started by Anjo Anjewierden. The package was
 then called PCE. He designed and implemented  version 1 and 2. Version 3
@@ -18,28 +18,13 @@ object oriented mechanisms  underlying  PCE   available  to  the  Prolog
 programmer and has bindings for X-windows (X11) and MS-Windows (Win32).
 
 
-Copyrights
+# Copyrights
 
 The copyright to XPCE is owned by   the University of Amsterdam. XPCE is
 distributed under the "Simplified BSD License"
 
 
-Installation
+# Installation
 
-See the file INSTALL for installing  the binary version. See COMPILATION
-for installing from the sources. Further information on building XPCE is
-also available from the SWI-Prolog and XPCE web pages.
-
-
-Bugs
-
-Bugs should be reported to xpce-bugs@swi.psy.uva.nl. Please indicate the
-XPCE version and Prolog/Lisp system  used   (if  not SWI-Prolog). If the
-error can be isolated, it will generally  be   fixed,  so  it is in your
-interrest to report the error in such a way that we can reproduce it.
-
-
-Warranty
-
-The authors, nor the Department or University PROVIDE ANY WARRANTY.  See
-the license agreement for further details.
+See the file INSTALL.md  for  building   xpce.  Further  information  on
+building XPCE is also available from the SWI-Prolog and XPCE web pages.
