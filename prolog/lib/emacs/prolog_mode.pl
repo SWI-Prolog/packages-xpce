@@ -1838,28 +1838,51 @@ make_fragment(Class, M, F, L, Style) :-
 make_simple_fragment(Class, M, F, L, Style) :-
     get(M, text_buffer, TB),
     new(Fragment, emacs_prolog_fragment(TB, F, L, Style)),
-    goal_name_arity(Class, Classification, Arity),
+    goal_name_arity(Class, Classification, _Arity),
     send(Fragment, classification, Classification),
-    (   Arity >= 1,
-        arg(1, Class, Context),
-        atomic(Context)
-    ->  send(Fragment, context, Context)
-    ;   true
-    ).
+    set_fragment_context(Fragment, Class).
 
 set_xref_fragment_context(Fragment, Class) :-
-    functor(Class, Classification, Arity),
+    functor(Class, Classification, _Arity),
     send(Fragment, classification, Classification),
-    (   Arity == 1
-    ->  arg(1, Class, Context),
-        (   atomic(Context)
-        ->  send(Fragment, context, Context)
-        ;   ground(Context),
-            Context = (Include:Line)
-        ->  send(Fragment, context, source_location(Include, Line))
-        ;   true
+    set_fragment_context(Fragment, Class).
+
+set_fragment_context(Fragment, Class) :-
+    compound(Class),
+    !,
+    (   context_arg(I, P),
+        (   arg(I, Class, Arg)
+        ->  set_fragment_context(Fragment, P, Arg),
+            fail
+        ;   !
         )
     ;   true
+    ).
+set_fragment_context(_, _).
+
+set_fragment_context(Fragment, P, Context) :-
+    send(Fragment, has_send_method, P),
+    (   atomic(Context)
+    ->  send(Fragment, P, Context)
+    ;   ground(Context),
+        Context = (Include:Line)
+    ->  send(Fragment, P, source_location(Include, Line))
+    ;   true
+    ).
+set_fragment_context(_, _, _).
+
+context_arg(1, context).
+context_arg(2, context_2).
+
+fragment_class(Fragment, Class) :-
+    get(Fragment, classification, Classification),
+    (   get(Fragment, context, Ctx1), Ctx1 \== @nil
+    ->  (   send(Fragment, has_get_method, context_2),
+            get(Fragment, context_2, Ctx2), Ctx2 \== @nil
+        ->  Class =.. [Classification, Ctx1, Ctx2]
+        ;   Class =.. [Classification, Ctx1]
+        )
+    ;   Class = Classification
     ).
 
 :- emacs_end_mode.                      % end Prolog mode.
@@ -1876,6 +1899,7 @@ variable(name,           name, both, "Name of the predicate").
 variable(arity,          int,  both, "Arity of the predicate").
 variable(classification, name, both, "XREF classification").
 variable(context,        any*, both, "Classification argument").
+variable(context_2,      prolog*, both, "Classification argument 2").
 
 :- pce_group(popup).
 
@@ -2066,12 +2090,7 @@ print_name(F, PN:string) :<-
 identify(F) :->
     "Tell the user about the predicate"::
     get(F, text_buffer, TB),
-    get(F, classification, Class),
-    (   get(F, context, Context),
-        Context \== @nil
-    ->  Id =.. [Class, Context]
-    ;   Id = Class
-    ),
+    fragment_class(F, Id),
     identify_pred(Id, F, Report),
     send(TB, report, status, Report).
 
@@ -2079,7 +2098,12 @@ identify(F) :->
 %
 %   Generate an identifying description for the predicate.
 
-identify_pred(Class, F, Summary) :-             % SWI-Prolog documented built-in
+identify_pred(Class, F, Summary) :-         % Use prolog_colour hook.
+    get(F, head, Head),
+    phrase(syntax_message(goal(Class,Head)), List),
+    !,
+    elements_to_string(List, Summary).
+identify_pred(Class, F, Summary) :-         % SWI-Prolog documented built-in
     get(F, predicate, Pred),                % & PlDoc summaries
     get(Pred, summary, Summary0),
     !,
@@ -2189,12 +2213,7 @@ make_prolog_mode_head_popup(G) :-
 identify(F) :->
     "Tell the user about the predicate"::
     get(F, text_buffer, TB),
-    get(F, classification, Class),
-    (   get(F, context, Context),
-        Context \== @nil
-    ->  Id =.. [Class, Context]
-    ;   Id = Class
-    ),
+    fragment_class(F, Id),
     identify_head(Id, F, Report),
     send(TB, report, status, Report).
 
@@ -2405,7 +2424,7 @@ classify_class(_, Name, Class) :-
                    "Colour fragment in Prolog mode").
 
 variable(classification, name,    both, "XREF classification").
-variable(context,        prolog*, both, "Classification argument").
+variable(context,      prolog*, both, "Classification argument 1").
 
 :- pce_group(popup).
 
@@ -2426,13 +2445,17 @@ fragment_popup(module,         @prolog_mode_module_popup).
 
 make_prolog_mode_module_popup(G) :-
     new(G, popup(actions)),
+    HasFile = (condition := message(@arg1, has_file)),
     send_list(G, append,
               [ menu_item(open_in_tab,
-                          message(@emacs, open_file, @arg1?file, tab)),
+                          message(@emacs, open_file, @arg1?file, tab),
+                          HasFile),
                 menu_item(open_in_window,
-                          message(@emacs, open_file, @arg1?file, window)),
+                          message(@emacs, open_file, @arg1?file, window),
+                          HasFile),
                 menu_item(open_here,
-                          message(@emacs, open_file, @arg1?file, here))
+                          message(@emacs, open_file, @arg1?file, here),
+                          HasFile)
               ]).
 
 make_prolog_mode_file_popup(G) :-
@@ -2455,6 +2478,10 @@ file(F, File:name) :<-
     ;   get(F, classification, module)
     ->  module_property(Context, file(File))
     ).
+
+has_file(F) :->
+    "Test that fragment has a file associated"::
+    get(F, file, _).
 
 add_resolve_items(F, Popup:popup) :->
     "Add entries for resolved predicates"::
@@ -2502,12 +2529,7 @@ head_pi(Term, Name/Arity) :-
 
 identify(F) :->
     "Identify in status window"::
-    get(F, classification, Class),
-    (   get(F, context, Context),
-        Context \== @nil
-    ->  Term =.. [Class, Context]
-    ;   Term = Class
-    ),
+    fragment_class(F, Term),
     identify_fragment(Term, F, Summary),
     !,
     send(F, report, status, Summary).
