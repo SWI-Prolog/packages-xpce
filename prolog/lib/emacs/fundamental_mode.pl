@@ -739,6 +739,14 @@ ispell(M) :->
     send(Ispell, open),
     send(Ispell, spell).
 
+		 /*******************************
+		 *       EDIT WITH EMACS	*
+		 *******************************/
+
+chrome_server(_) :->
+    "Start HTTP server on 9292 for Edit With Emacs"::
+    send(@emacs, chrome_server).
+
 
                  /*******************************
                  *        M-x PROCESSING        *

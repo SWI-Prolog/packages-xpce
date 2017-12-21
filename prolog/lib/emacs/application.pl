@@ -345,6 +345,11 @@ server_start(Emacs, Force) :-
     ),
     ignore(send(@emacs_server, listen)).
 
+chrome_server(_Emacs) :->
+    "Start HTTP server on 9292 for Edit With Emacs"::
+    use_module(library(emacs/emacs_chrome_server)),
+    emacs_chrome_server.
+
 :- pce_group(customise).
 
 
