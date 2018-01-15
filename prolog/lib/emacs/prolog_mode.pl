@@ -2611,14 +2611,23 @@ element_to_string(Atom, Atom).
 
 goal_name_arity(Goal, Name, Arity) :-
     (   compound(Goal)
-    ->  compound_name_arity(Goal, Name, Arity)
+    ->  compound_name_arity(Goal, Name0, Arity)
     ;   atom(Goal)
-    ->  Name = Goal, Arity = 0
-    ).
+    ->  Name0 = Goal, Arity = 0
+    ),
+    atom_name(Name0, Name).
 
 functor_name(Term, Name) :-
     (   compound(Term)
-    ->  compound_name_arity(Term, Name, _)
+    ->  compound_name_arity(Term, Name0, _)
     ;   atom(Term)
-    ->  Name = Term
-    ).
+    ->  Name0 = Term
+    ),
+    atom_name(Name0, Name).
+
+atom_name(Name0, Name) :-
+    atom(Name0),
+    !,
+    Name = Name0.
+atom_name(Name0, Name) :-
+    format(atom(Name), '~w', [Name0]).
