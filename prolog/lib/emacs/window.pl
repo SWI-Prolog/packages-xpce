@@ -67,13 +67,13 @@ make_emacs_tab_popup(P) :-
     Tab = @arg1,
     Cond = (Tab?device?graphicals?size \== 1),
     send_list(P, append,
-              [ menu_item(close,
+              [ menu_item(close_tab,
                           message(Tab, destroy),
                           condition := Cond),
-                menu_item(close_others,
+                menu_item(close_other_tabs,
                           message(Tab, close_other_tabs),
                           condition := Cond),
-                menu_item(detach,
+                menu_item(move_to_new_window,
                           message(Tab, untab),
                           condition := Cond)
               ]).
