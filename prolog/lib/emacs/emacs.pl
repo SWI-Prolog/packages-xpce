@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        J.Wielemaker@vu.nl
+    WWW:           http://www.swi-prolog.org/packackes/xpce/
+    Copyright (c)  1985-2018, University of Amsterdam
+			      VU University Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -42,7 +43,8 @@
 :- multifile
     no_backup/1.
 :- multifile
-    user:file_search_path/2.
+    user:file_search_path/2,
+    default_emacs_mode/2.
 
 
                  /*******************************
@@ -161,12 +163,14 @@ make_emacs_mode_list(Sheet) :-
 
 %!  default_emacs_mode(+Regex, -Mode) is nondet.
 %
-%   True if Mode is the PceEmacs mode   associated  with a file that
-%   matches Regex.
+%   True if Mode is the  PceEmacs  mode   associated  with  a  file that
+%   matches Regex. This is a multifile predicate that can be extended to
+%   support additional mappings.
 
 default_emacs_mode('.*\\.pl~?$',                   prolog).
 default_emacs_mode('.*\\.plu~?$',                  prolog).
-default_emacs_mode('\\.(pl|xpce|pceemacs)rc~?',    prolog).
+default_emacs_mode('.*\\.plt~?$',                  prolog).
+default_emacs_mode('\\.swiplrc~?',		   prolog).
 default_emacs_mode('\\.yap~?',                     prolog).
 default_emacs_mode('.*\\.chr~?$',                  chr).
 default_emacs_mode('.*\\.(tex|sty)~?$',            latex).
