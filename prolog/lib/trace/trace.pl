@@ -287,7 +287,7 @@ hide_children_frame(Frame) :-
 show(StartFrame, CHP, Up, exception(Except)) :-
     !,
     show(StartFrame, CHP, Up, exception, exception),
-    message_to_string(Except, Message),
+    message_to_string(Except, Message, 200),
     send_tracer(report(warning, 'Exception: %s', Message)).
 show(StartFrame, CHP, Up, Port) :-
     show(StartFrame, CHP, Up, Port, Port),
@@ -314,6 +314,16 @@ show(StartFrame, CHP, Up, Port, Style) :-
                         bindings
                       ]).
 
+message_to_string(Except, Message, MaxLength) :-
+    catch(message_to_string(Except, Message0), _, fail),
+    string_length(Message0, Len),
+    (   Len > MaxLength
+    ->  sub_string(Message0, 0, MaxLength, _, Base),
+        string_concat(Base, ' ...', Message)
+    ;   Message = Message0
+    ).
+message_to_string(_, Message, _) :-
+    Message = "<exception too large>".
 
 %!  find_frame(+Up, +StartFrame, +Port, -PC, -Frame) is det.
 %

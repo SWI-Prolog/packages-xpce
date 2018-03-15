@@ -463,7 +463,8 @@ selection(TI, Term:prolog) :->
     send(TI, slot, selection, prolog(Term)),
     \+ \+ ( numbervars(Term, 0, _, [singletons(true)]),
             format(string(S), '~W', [Term, [ quoted(true),
-                                             numbervars(true)
+                                             numbervars(true),
+                                             max_depth(10)
                                            ]]),
             send(TI, string, S)).
 
