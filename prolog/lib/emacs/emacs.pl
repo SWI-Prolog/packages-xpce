@@ -129,6 +129,7 @@ pce_ifhostproperty(prolog(swi),
 :- declare_emacs_mode(rdfs,     library('emacs/rdf_mode')).
 :- declare_emacs_mode(owl,      library('emacs/rdf_mode')).
 :- declare_emacs_mode(turtle,   library('emacs/turtle_mode')).
+:- declare_emacs_mode(yaml,     library('emacs/yaml_mode')).
 
 
                  /*******************************
@@ -192,6 +193,7 @@ default_emacs_mode('.*\\.C$',                      cpp).
 default_emacs_mode('.*\\.cc$',                     cpp).
 default_emacs_mode('.*\\.cpp$',                    cpp).
 default_emacs_mode('.*\\.idl$',                    cpp).
+default_emacs_mode('.*\\.yaml~?$',                 yaml).
 default_emacs_mode('.*\\.txt~?$',                  text).
 default_emacs_mode('[Cc]ompose|README|\\.article', text).
 default_emacs_mode(Pattern, prolog) :-
