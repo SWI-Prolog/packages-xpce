@@ -154,7 +154,7 @@ This refinement of `device->event' determines the cell in which the
 event occurs.  If this cell has a `cell<->note_mark' attached and the
 graphical defines the method ->on_mark_clicked, the event is checked
 against the mark-image. Otherwise the event is forwarded to the
-graphical inside the cell, even it it doesn't occur in the area of
+graphical inside the cell, even if it does not occur in the area of
 the graphical, making small (text-)objects sensitive to all events in
 the cell. Finally, this method checks for attempts to drag the
 column-borders, changing the layout of the table.
