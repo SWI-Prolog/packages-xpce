@@ -62,7 +62,7 @@ is invoked on the `tool_bar<-client'.  If it is a code object this
 code is simply executed.  \arg{Label} is the label.  Normally for
 toolbars this will be an \class{image} object.  \arg{Balloon} defines
 the text for the popup-window if the user rests the pointer long enough
-on the button.  It it is a name, this balloon is subject to
+on the button.  If it is a name, this balloon is subject to
 `name<-label_name' (see \secref{mlingual}), otherwise it is passed
 literally.  Finally, if \arg{Condition} is present it is evaluated by
 ->activate to determine the activation-state of the button.
