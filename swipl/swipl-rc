@@ -47,10 +47,6 @@ to associate with the SWI-Prolog gui  application on Windows and =swipl=
 on Unix/X11 platforms.
 */
 
-:- op(200, fy,  user:(@)).
-:- op(250, yfx, user:(?)).
-:- op(990, xfx, user:(:=)).
-
 :- multifile
 	user:file_search_path/2.
 

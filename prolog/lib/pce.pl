@@ -85,7 +85,7 @@ reexports the content of these files.
 
             op(200, fy,  @),
             op(250, yfx, ?),
-            op(990, xfx, :=)
+            op(800, xfx, :=)
           ]).
 
 :- set_prolog_flag(generate_debug_info, false).
