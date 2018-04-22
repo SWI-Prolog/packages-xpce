@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2005-2015, University of Amsterdam
+    Copyright (c)  2005-2018, University of Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -47,6 +47,7 @@ available test sets. The public goals are:
 
 % Load XPCE from the development environment
 
+:- use_module(library(pce)).
 :- get(@pce, version, V),
    format('XPCE/SWI-Prolog test suite. (XPCE version ~w)~n\c
           To run all tests run ?- test.~n~n', [V]).
