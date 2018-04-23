@@ -201,7 +201,7 @@ user:file_search_path(image,   pce(bitmaps)).
                  *            HOOKS             *
                  *******************************/
 
-:- use_module(swi_hooks).
+:- use_module(library(swi_hooks)).
 
                  /*******************************
                  *         EDIT HOOKS           *
