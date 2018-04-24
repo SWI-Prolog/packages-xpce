@@ -97,6 +97,9 @@ version('2.0').
                  *******************************/
 
 resource(debug, image,  image('debug.xpm')).
+resource(Name,  image,  image(XPM)) :-
+    button(_, _, XPM, _),
+    file_name_extension(Name, xpm, XPM).
 
                  /*******************************
                  *           TOPLEVEL           *
@@ -980,6 +983,7 @@ initialise(D) :->
     get(D, frame, Frame),
     send(D, append, new(TB, tool_bar(Frame))),
     (   button(Action, KeyString, Image, Balloon0),
+        file_name_extension(Resource, _, Image),
         string_codes(KeyString, Keys),
         (   Action == gap
         ->  send(TB, append, gap)
@@ -987,7 +991,7 @@ initialise(D) :->
             make_message(Action, Name, D, Message),
             send(TB, append,
                  new(B, tool_button(Message,
-                                    image(Image),
+                                    resource(Resource),
                                     Balloon,
                                     name := Name))),
             chain_list(KL, Keys),

@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (c)  2001-2012, University of Amsterdam
+    Copyright (c)  2001-2018, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -50,23 +50,32 @@
                  *             STYLES           *
                  *******************************/
 
+resource(call,   image, image('call.xpm')).
+resource(exit,   image, image('exit.xpm')).
+resource(redo,   image, image('redo.xpm')).
+resource(fail,   image, image('fail.xpm')).
+resource(except, image, image('except.xpm')).
+resource(ndet,   image, image('ndet.xpm')).
+resource(stack,  image, image('stack.xpm')).
+resource(stop,   image, image('stop.xpm')).
+
 style(call,             style(background := green,
-                              icon := 'call.xpm')).
+                              icon := resource(call))).
 style(break,            style(background := cyan)).
 style(exit,             style(background := green,
-                              icon := 'exit.xpm')).
+                              icon := resource(exit))).
 style(redo,             style(background := yellow,
-                              icon := 'redo.xpm')).
+                              icon := resource(redo))).
 style(fail,             style(background := '#ff8080',
-                              icon := 'fail.xpm')).
+                              icon := resource(fail))).
 style(exception,        style(background := magenta,
-                              icon := 'except.xpm')).
+                              icon := resource(except))).
 style(unify,            style(background := sky_blue)).
 style(choice,           style(background := yellow,
-                              icon := 'ndet.xpm')).
+                              icon := resource(ndet))).
 style(frame,            style(background := '#d6dc5e',
-                              icon := 'stack.xpm')).
-style(breakpoint,       style(icon := 'stop.xpm')).
+                              icon := resource(stack))).
+style(breakpoint,       style(icon := resource(stop))).
 
 
 % If you define an alternative mode as a subclass of the Prolog mode

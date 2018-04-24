@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (c)  2001-2012, University of Amsterdam
+    Copyright (c)  2001-2018, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -384,6 +384,10 @@ frame_finished(B, Fr:int) :->
 handle(-5,  h/2, link, east).
 handle(w+5, h/2, link, west).
 
+resource(Name, image, image(File)) :-
+    style_image(_, File),
+    file_name_extension(Name, xpm, File).
+
 style_image(deterministic,      'det.xpm').
 style_image(choicepoint,        'ndet.xpm').
 style_image(built_in,           'builtin.xpm').
@@ -410,7 +414,8 @@ initialise(D, Window:window, Frame:int, Label:char_array,
     send(D, pen, 1),
     send(D, background, colour(white)),
     style_image(Style, Image),
-    send(D, display, new(B, bitmap(Image))),
+    file_name_extension(Resource, _, Image),
+    send(D, display, new(B, bitmap(resource(Resource)))),
     send(D, display, text(Label, left, normal), point(B?right_side, 0)),
     send(D, slot, frame_reference, Frame),
     (   Location = choice(CH)
