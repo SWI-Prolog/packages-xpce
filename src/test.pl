@@ -272,7 +272,7 @@ dir(parent-1) :-
     get(PD, path, Parent),
     working_directory(CWD0, CWD0),
     (   sub_atom(CWD0, _, _, 0, /)
-    ->  file_directory_name(CWD0, CWD)
+    ->  atom_concat(CWD, /, CWD0)
     ;   CWD = CWD0
     ),
     file_directory_name(CWD, PlParent),
