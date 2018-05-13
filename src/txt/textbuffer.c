@@ -1092,7 +1092,8 @@ scan_syntax_textbuffer(TextBuffer tb,
 
 	  state = SST_PLAIN;
 	  goto cont;
-	}
+	} else if ( c2 == '\\' )
+	  here++;				/* skip next */
       }
     } else if ( tiscommentstart(syntax, c) ) /* COMMENT (1) */
     { tokenstart = here;
