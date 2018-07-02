@@ -43,7 +43,7 @@
 #define SIN(x) sin(((x) * M_PI) / 180.0)
 
 static status
-initialiseArc(Arc a, Int radius, Real start_angle, Real size_angle)
+initialiseArc(ArcObj a, Int radius, Real start_angle, Real size_angle)
 { initialiseJoint((Joint) a, ZERO, ZERO, ZERO, ZERO, DEFAULT);
 
   if ( isDefault(radius) )
@@ -64,7 +64,7 @@ initialiseArc(Arc a, Int radius, Real start_angle, Real size_angle)
 
 
 void
-points_arc(Arc a, int *sx, int *sy, int *ex, int *ey)
+points_arc(ArcObj a, int *sx, int *sy, int *ex, int *ey)
 { int cx = valInt(a->position->x);
   int cy = valInt(a->position->y);
   float start = valReal(a->start_angle);
@@ -83,7 +83,7 @@ points_arc(Arc a, int *sx, int *sy, int *ex, int *ey)
 
 
 static status
-RedrawAreaArc(Arc a, Area area)
+RedrawAreaArc(ArcObj a, Area area)
 { int x, y, w, h;
   int aw = valInt(a->size->w);
   int ah = valInt(a->size->h);
@@ -183,7 +183,7 @@ RedrawAreaArc(Arc a, Area area)
 
 
 static status
-angleInArc(Arc a, int angle)
+angleInArc(ArcObj a, int angle)
 { int start = rfloat(valReal(a->start_angle));
   int size  = rfloat(valReal(a->size_angle));
 
@@ -204,7 +204,7 @@ angleInArc(Arc a, int angle)
 
 
 static void
-includeArrowsInAreaArc(Arc a)
+includeArrowsInAreaArc(ArcObj a)
 { if ( notNil(a->first_arrow) || notNil(a->second_arrow) )
   { int sx, sy, ex, ey;
     int cx, cy;
@@ -253,7 +253,7 @@ includeArrowsInAreaArc(Arc a)
 
 
 static status
-computeArc(Arc a)
+computeArc(ArcObj a)
 { if ( notNil(a->request_compute) )
   { int minx, miny, maxx, maxy;
     int sx, sy, ex, ey;
@@ -299,7 +299,7 @@ computeArc(Arc a)
 
     CHANGING_GRAPHICAL(a,
 		       { setArea(a->area, toInt(minx), toInt(miny),
-			       	          toInt(maxx-minx), toInt(maxy-miny));
+				          toInt(maxx-minx), toInt(maxy-miny));
 			 includeArrowsInAreaArc(a);
 		         changedEntireImageGraphical(a);
 		       });
@@ -312,7 +312,7 @@ computeArc(Arc a)
 
 
 static status
-geometryArc(Arc a, Int x, Int y, Int w, Int h)
+geometryArc(ArcObj a, Int x, Int y, Int w, Int h)
 { Int ox, oy;
 
   ox = isDefault(x) ? ZERO : sub(x, a->area->x);
@@ -327,7 +327,7 @@ geometryArc(Arc a, Int x, Int y, Int w, Int h)
 
 
 static status
-setArc(Arc a, Int x, Int y, Int radius, float start, float size)
+setArc(ArcObj a, Int x, Int y, Int radius, float start, float size)
 { int changed = 0;
 
   if ( a->position->x != x || a->position->y != y )
@@ -353,7 +353,7 @@ setArc(Arc a, Int x, Int y, Int radius, float start, float size)
 
 
 static status
-radiusArc(Arc a, Int r)
+radiusArc(ArcObj a, Int r)
 { if ( a->size->w != r || a->size->h != r )
   { setSize(a->size, r, r);
     requestComputeGraphical(a, DEFAULT);
@@ -364,7 +364,7 @@ radiusArc(Arc a, Int r)
 
 
 static status
-positionArc(Arc a, Point pos)
+positionArc(ArcObj a, Point pos)
 { if ( !equalPoint(a->position, pos) )
   { copyPoint(a->position, pos);
     requestComputeGraphical(a, DEFAULT);
@@ -375,7 +375,7 @@ positionArc(Arc a, Point pos)
 
 
 static status
-resizeArc(Arc a, Real xfactor, Real yfactor, Point origin)
+resizeArc(ArcObj a, Real xfactor, Real yfactor, Point origin)
 { float xf, yf;
   int ox = valInt(a->position->x);
   int oy = valInt(a->position->y);
@@ -398,13 +398,13 @@ resizeArc(Arc a, Real xfactor, Real yfactor, Point origin)
 
 
 static Int
-getRadiusArc(Arc a)
+getRadiusArc(ArcObj a)
 { answer(a->size->w);
 }
 
 
 static Point
-getStartArc(Arc a)
+getStartArc(ArcObj a)
 { int sx, sy;
 
   points_arc(a, &sx, &sy, NULL, NULL);
@@ -413,7 +413,7 @@ getStartArc(Arc a)
 
 
 static Point
-getEndArc(Arc a)
+getEndArc(ArcObj a)
 { int ex, ey;
 
   points_arc(a, NULL, NULL, &ex, &ey);
@@ -422,7 +422,7 @@ getEndArc(Arc a)
 
 
 static status
-sizeArc(Arc a, Size sz)
+sizeArc(ArcObj a, Size sz)
 { if ( !equalSize(a->size, sz) )
   { copySize(a->size, sz);
     requestComputeGraphical(a, DEFAULT);
@@ -433,7 +433,7 @@ sizeArc(Arc a, Size sz)
 
 
 static status
-startAngleArc(Arc a, Real s)
+startAngleArc(ArcObj a, Real s)
 { if ( valReal(a->start_angle) != valReal(s) )
   { valueReal(a->start_angle, s);
     requestComputeGraphical(a, DEFAULT);
@@ -444,7 +444,7 @@ startAngleArc(Arc a, Real s)
 
 
 static status
-sizeAngleArc(Arc a, Real e)
+sizeAngleArc(ArcObj a, Real e)
 { if ( valReal(a->size_angle) != valReal(e) )
   { valueReal(a->size_angle, e);
     requestComputeGraphical(a, DEFAULT);
@@ -455,7 +455,7 @@ sizeAngleArc(Arc a, Real e)
 
 
 static status
-endAngleArc(Arc a, Real e)
+endAngleArc(ArcObj a, Real e)
 { float size = valReal(e) - valReal(a->start_angle);
   if ( size < 0.0 )
     size += 360.0;
@@ -470,7 +470,7 @@ endAngleArc(Arc a, Real e)
 
 
 static status
-closeArc(Arc a, Name how)
+closeArc(ArcObj a, Name how)
 { if ( a->close != how )
   { assign(a, close, how);
     requestComputeGraphical(a, DEFAULT);
@@ -486,7 +486,7 @@ closeArc(Arc a, Name how)
 		********************************/
 
 static status
-connectAngleArc(Arc a, Line l1, Line l2)
+connectAngleArc(ArcObj a, Line l1, Line l2)
 { Point is;
 
   if ( !(is = getIntersectionLine(l1, l2)) )
@@ -502,7 +502,7 @@ connectAngleArc(Arc a, Line l1, Line l2)
 
 
 static status
-pointsArc(Arc a, Int Sx, Int Sy, Int Ex, Int Ey, Int D)
+pointsArc(ArcObj a, Int Sx, Int Sy, Int Ex, Int Ey, Int D)
 { int sx, sy, ex, ey, d;
   int cx, cy;
   int dx, dy;
@@ -512,7 +512,7 @@ pointsArc(Arc a, Int Sx, Int Sy, Int Ex, Int Ey, Int D)
 
   sx = valInt(Sx), sy = valInt(Sy), ex = valInt(Ex), ey = valInt(Ey);
   d = valInt(D);
-  DEBUG(NAME_arc, Cprintf("Arc %d,%d --> %d,%d (%d)\n", sx, sy, ex, ey, d));
+  DEBUG(NAME_arc, Cprintf("ArcObj %d,%d --> %d,%d (%d)\n", sx, sy, ex, ey, d));
 
   cx = (sx + ex + 1)/2;			/* center of segment line */
   cy = (sy + ey + 1)/2;
@@ -607,7 +607,7 @@ static senddecl send_arc[] =
   SM(NAME_geometry, 4, T_geometry, geometryArc,
      DEFAULT, "Only move the arc"),
   SM(NAME_initialise, 3, T_initialise, initialiseArc,
-     DEFAULT, "Create Arc from radius, start_angle and size_angle (degrees)"),
+     DEFAULT, "Create ArcObj from radius, start_angle and size_angle (degrees)"),
   SM(NAME_resize, 3, T_resize, resizeArc,
      DEFAULT, "Resize arc with specified factor"),
   SM(NAME_connectAngle, 2, T_connectAngle, connectAngleArc,
@@ -619,7 +619,7 @@ static senddecl send_arc[] =
   SM(NAME_DrawPostScript, 1, "{head,body}", drawPostScriptArc,
      NAME_postscript, "Create PostScript"),
   SM(NAME_points, 5, T_points, pointsArc,
-     NAME_tip, "Arc between two points")
+     NAME_tip, "ArcObj between two points")
 };
 
 /* Get Methods */

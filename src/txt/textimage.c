@@ -48,7 +48,7 @@ The textimage object understands the following method:
     ->start    Integer		Defines first character to be displayed
     ->wrap     Name		none, character or word.  Defines wrap mode
     ->Inserted Start Amount	Amount characters have been inserted/
-    				deleted at Start (deleted: negative argument)
+				deleted at Start (deleted: negative argument)
     ->ChangedRegion From To	Region [From, To) has changed
 
 The textimage extracts information from the underlying text object using
@@ -83,6 +83,7 @@ been changed, so we can forward this to the device's update algorithm.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
+#undef INFINITE
 #define INFINITE 0x3fffffff		/* 31-bit int, but will do anyhow */
 #define Round(n, r)  ((((n) + ((r)-1)) / (r)) * (r))
 
@@ -353,7 +354,7 @@ ChangedEntireTextImage(TextImage ti)
 
 
 		/********************************
-		*         FILLING INFO 		*
+		*         FILLING INFO		*
 		********************************/
 
 static int
@@ -686,7 +687,7 @@ updateMapTextImage(TextImage ti)
 
       index = next_index;
       if ( ti->map->lines[line].ends_because & END_EOF )
-      	eof_in_window = ON;
+	eof_in_window = ON;
     }
   }
 

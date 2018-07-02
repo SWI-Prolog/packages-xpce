@@ -50,8 +50,11 @@
 #endif
 
 #ifdef __MINGW32__
+#define RedrawWindow WinRedrawWindow
 #include <winsock2.h>
 #include <windows.h>
+#undef RedrawWindow
+#undef V_ERROR
 #endif
 
 #include <stdarg.h>

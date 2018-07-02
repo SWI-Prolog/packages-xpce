@@ -43,10 +43,10 @@ NAME_northEast
 NAME_southEast
 */
 
-#define InitAreaA	int ax = valInt(a->x), ay = valInt(a->y), 	\
+#define InitAreaA	int ax = valInt(a->x), ay = valInt(a->y),	\
 			    aw = valInt(a->w), ah = valInt(a->h)
 
-#define InitAreaB	int bx = valInt(b->x), by = valInt(b->y), 	\
+#define InitAreaB	int bx = valInt(b->x), by = valInt(b->y),	\
 			    bw = valInt(b->w), bh = valInt(b->h)
 
 #define ExitAreaA	assign(a, x, toInt(ax));			\
@@ -559,6 +559,9 @@ getOrientationArea(Area a)
 }
 
 
+#undef NEAR
+#undef SAME
+#undef LESS
 #define NEAR(a, b, d, m, p)	{ if (abs(a-b) <= d) m |= p; }
 #define SAME(a, b, m, p)	{ if (a == b) m |= p; }
 #define LESS(a, b, m, p)	{ if (a < b) m |= p; }

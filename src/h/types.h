@@ -32,7 +32,7 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-/********************************
+		/********************************
 		*       KERNEL IDENTIFIERS	*
 		********************************/
 
@@ -159,7 +159,7 @@ typedef struct create_obj *		Create;
 		*        GRAPHICAL TYPES	*
 		********************************/
 
-typedef struct arc			* Arc;
+typedef struct arc			* ArcObj;
 typedef struct arrow			* Arrow;
 typedef struct bezier			* Bezier;
 typedef struct bitmapobj		* BitmapObj;
@@ -183,7 +183,7 @@ typedef struct draw_context		* DrawContext;
 typedef struct edit_text_gesture	* EditTextGesture;
 typedef struct editor			* Editor;
 typedef struct elevation		* Elevation;
-typedef struct ellipse			* Ellipse;
+typedef struct ellipse			* EllipseObj;
 typedef struct event_nodeobj		* EventNodeObj;
 typedef struct event_treeobj		* EventTreeObj;
 typedef struct figure			* Figure;

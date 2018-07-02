@@ -40,11 +40,11 @@
 #endif
 
 #ifdef MAXFLOAT
-#define INFINITE MAXFLOAT
+#define DBL_INFINITE MAXFLOAT
 #elif defined(HUGE_VAL)
-#define INFINITE HUGE_VAL
+#define DBL_INFINITE HUGE_VAL
 #else
-#define INFINITE HUGE
+#define DBL_INFINITE HUGE
 #endif
 
 
@@ -537,7 +537,7 @@ parms_line(Line ln, int *a, double *b)			/* y = a + bx */
   int y2 = valInt(ln->end_y);
 
   if ( x1 == x2 )
-  { *b = INFINITE;			/* vertical */
+  { *b = DBL_INFINITE;			/* vertical */
     *a = 0;
   } else
   { *b = (double)(y2 - y1) / (double)(x2 - x1);
@@ -561,10 +561,10 @@ getIntersectionLine(Line l1, Line l2)
 
   if ( b1 == b2 )
     fail;				/* parallel */
-  if ( b1 == INFINITE )			/* l1 is vertical */
+  if ( b1 == DBL_INFINITE )			/* l1 is vertical */
   { xx = (double) valInt(l1->end_x);
     xy = a2 + rfloat(b2 * xx);
-  } else if ( b2 == INFINITE )		/* l2 is vertical */
+  } else if ( b2 == DBL_INFINITE )		/* l2 is vertical */
   { xx = (double) valInt(l2->end_x);
     xy = a1 + rfloat(b1 * xx);
   } else

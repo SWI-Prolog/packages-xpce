@@ -293,6 +293,8 @@ cpdata(to, from, type, n)
 #define toString	toStringPCE		/* SWI-Prolog name-conflict */
 #define valReal		valPceReal		/* and another */
 
+#undef hyper
+
 		 /*******************************
 		 *	    BASIC TYPES		*
 		 *******************************/
@@ -553,8 +555,8 @@ test, conversion and computation macro's are provided.
 #define F_ISHOSTDATA		makeFlag(23) /* instanceOf(x, ClassHostData) */
 #define F_NOTANY		makeFlag(24) /* Not acceptable to any/object */
 
-#define OBJ_MAGIC		((uintptr_t)(0x94L << 25))
-#define OBJ_MAGIC_MASK		((uintptr_t)(0xfeL << 25))
+#define OBJ_MAGIC		((uintptr_t)0x14 << 25)
+#define OBJ_MAGIC_MASK		((uintptr_t)0x7e << 25)
 
 #define hasObjectMagic(obj)	((((Instance)(obj))->flags&OBJ_MAGIC_MASK) == \
 					OBJ_MAGIC)

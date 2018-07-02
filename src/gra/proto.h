@@ -1,7 +1,7 @@
 #define COMMON(type) SO_LOCAL type
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/arc.c */
-COMMON(void)	points_arc(Arc a, int *sx, int *sy, int *ex, int *ey);
+COMMON(void)	points_arc(ArcObj a, int *sx, int *sy, int *ex, int *ey);
 COMMON(status)	makeClassArc(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/arrow.c */
@@ -276,12 +276,12 @@ COMMON(status)	drawPostScriptFigure(Figure f, Name hb);
 COMMON(status)	drawPostScriptTree(Tree tree, Name hb);
 COMMON(status)	drawPostScriptBox(Box b, Name hb);
 COMMON(status)	drawPostScriptCircle(Circle c, Name hb);
-COMMON(status)	drawPostScriptEllipse(Ellipse e, Name hb);
+COMMON(status)	drawPostScriptEllipse(EllipseObj e, Name hb);
 COMMON(status)	drawPostScriptPath(Path p, Name hb);
 COMMON(status)	drawPostScriptBezier(Bezier b, Name hb);
 COMMON(status)	drawPostScriptLine(Line ln, Name hb);
 COMMON(status)	drawPostScriptArrow(Arrow a, Name hb);
-COMMON(status)	drawPostScriptArc(Arc a, Name hb);
+COMMON(status)	drawPostScriptArc(ArcObj a, Name hb);
 COMMON(status)	drawPostScriptBitmap(BitmapObj bm, Name hb);
 COMMON(status)	drawPostScriptImage(Image image, Name hb);
 COMMON(status)	drawPostScriptText(TextObj t, Name hb);

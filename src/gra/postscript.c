@@ -1255,7 +1255,7 @@ drawPostScriptCircle(Circle c, Name hb)
 
 
 status
-drawPostScriptEllipse(Ellipse e, Name hb)
+drawPostScriptEllipse(EllipseObj e, Name hb)
 { if ( hb == NAME_head )
   { psdef(NAME_draw);
     psdef(NAME_nodash);
@@ -1538,7 +1538,7 @@ drawPostScriptArrow(Arrow a, Name hb)
 
 
 status
-drawPostScriptArc(Arc a, Name hb)
+drawPostScriptArc(ArcObj a, Name hb)
 { if ( hb == NAME_head )
   { psdef(NAME_draw);
     psdef(NAME_arcpath);

@@ -41,7 +41,7 @@ static status	computeTile(TileObj t);
 #define Max(a, b)	(valInt(a) > valInt(b) ? (a) : (b))
 #define Min(a, b)	(valInt(a) < valInt(b) ? (a) : (b))
 #define MAX_TILE_MEMBERS 200
-#define INFINITE toInt(PCE_MAX_INT)
+#define INT_INFINITE toInt(PCE_MAX_INT)
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -162,8 +162,8 @@ computeTile(TileObj t)
 
     hsh = ZERO;
     hst = ZERO;
-    vsh = INFINITE;
-    vst = INFINITE;
+    vsh = INT_INFINITE;
+    vst = INT_INFINITE;
 
     for_cell(cell, t->members)
     { TileObj t2 = cell->value;
@@ -188,8 +188,8 @@ computeTile(TileObj t)
 
     vsh = ZERO;
     vst = ZERO;
-    hsh = INFINITE;
-    hst = INFINITE;
+    hsh = INT_INFINITE;
+    hst = INT_INFINITE;
 
     for_cell(cell, t->members)
     { TileObj t2 = cell->value;
@@ -943,7 +943,7 @@ heightTile(TileObj t, Int h)
 static status
 cornerTile(TileObj t, Point pos)
 { return setTile(t, DEFAULT, DEFAULT, sub(pos->x, t->area->x),
-		      		      sub(pos->y, t->area->y));
+				      sub(pos->y, t->area->y));
 }
 
 

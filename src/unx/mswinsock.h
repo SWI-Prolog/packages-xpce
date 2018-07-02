@@ -52,17 +52,11 @@
 
 #define RedrawWindow WinRedrawWindow
 
-#define Arc WinArc
-#define Ellipse WinEllipse
-
 #ifdef USE_WINSOCK2
 #include <winsock2.h>
 #else
 #include <winsock.h>
 #endif
-
-#undef Ellipse
-#undef Arc
 
 #undef RedrawWindow
 #undef hyper				/* don't need this */

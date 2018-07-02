@@ -36,7 +36,7 @@
 #include <h/graphics.h>
 
 static status
-initialiseEllipse(Ellipse e, Int w, Int h)
+initialiseEllipse(EllipseObj e, Int w, Int h)
 { initialiseGraphical(e, ZERO, ZERO, w, h);
   assign(e, shadow, ZERO);
   assign(e, fill_pattern, NIL);
@@ -46,7 +46,7 @@ initialiseEllipse(Ellipse e, Int w, Int h)
 
 
 static status
-RedrawAreaEllipse(Ellipse e, Area a)
+RedrawAreaEllipse(EllipseObj e, Area a)
 { int x, y, w, h;
 
   initialiseDeviceGraphical(e, &x, &y, &w, &h);

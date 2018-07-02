@@ -59,11 +59,11 @@ compatibility issues.
 #define METHODDEF(type)		static type
 
 /* this is not a core library module, so it doesn't define JPEG_INTERNALS */
+#include <h/stream.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <jpeglib.h>
 #include <jerror.h>
-#include <h/stream.h>
 
 #ifndef SIZEOF
 #define SIZEOF(t) sizeof(t)

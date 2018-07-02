@@ -37,12 +37,7 @@
 #endif
 
 #ifdef USE_WIN32_CRITICAL_SECTION
-#define WINDOWS_LEAN_AND_MEAN
 #define _WIN32_WINNT 0x400		/* get TryEnterCriticalSection() */
-#include <windows.h>
-#undef hyper				/* don't need this */
-#define Ellipse PceEllipse
-#define Arc PceArc
 #endif /*USE_WIN32_CRITICAL_SECTION*/
 
 #define _GNU_SOURCE 1			/* for recursive mutexes */
@@ -54,8 +49,6 @@
 					/* Win32 native locking */
 #ifdef USE_WIN32_CRITICAL_SECTION
 #define HAS_LOCK 1
-#undef Arc
-#undef Ellipse
 
 static CRITICAL_SECTION mutex;
 int lock_count;

@@ -46,28 +46,18 @@
 #define _WIN32_IE 0x0501
 #endif
 
-#define RedrawWindow WinRedrawWindow
-#include <windows.h>
-#ifdef USE_WINSOCK2
-#include <winsock2.h>
-#else
-#include <winsock.h>
-#endif
+#define PceHInstance ThePceHInstance
+
+#include <h/kernel.h>
+#include <h/graphics.h>
+#undef End
+#include <shlobj.h>
+#define End \
+  }
+
 #ifndef WM_MOUSEWHEEL			/* sometimes not defined */
 #define WM_MOUSEWHEEL 0x020A
 #endif
-#undef RedrawWindow
-#undef hyper				/* don't need this */
-#include <shlobj.h>
-
-#define PceHInstance ThePceHInstance
-
-#define Ellipse PceEllipse
-#define Arc PceArc
-#include <h/kernel.h>
-#include <h/graphics.h>
-#undef Arc
-#undef Ellipse
 
 #define APIError() WinStrError(GetLastError())
 

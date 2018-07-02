@@ -1681,7 +1681,11 @@ typedef hist2d hist3d[HIST_C0_ELEMS];
 
 typedef short FSERROR;		/* 16 bits should be enough */
 typedef int LOCFSERROR;		/* use 'int' for calculation temps */
+#ifndef _BASETSD_H_		/* Microsoft defines it in basetsd.h */
+#ifndef _BASETSD_H		/* MinGW is slightly different */
 typedef long INT32;
+#endif
+#endif
 
 typedef FSERROR *FSERRPTR;	/* pointer to error array */
 
