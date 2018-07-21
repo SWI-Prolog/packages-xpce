@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1997-2013, University of Amsterdam
+    Copyright (c)  1997-2018, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -317,10 +317,12 @@ save_config(File, M) :-
           print_message(warning, E)).
 
 do_save_config(File, M) :-
-    open(File, write, Fd),
-    save_config_header(Fd, M),
-    save_config_body(Fd, M),
-    close(Fd).
+    setup_call_cleanup(
+        open(File, write, Fd, [encoding(utf8)]),
+        ( save_config_header(Fd, M),
+          save_config_body(Fd, M)
+        ),
+        close(Fd)).
 
 save_config_header(Fd, M) :-
     get(@pce?date, value, Date),
@@ -350,12 +352,13 @@ save_config_key(Fd, Key) :-
     fail.
 save_config_key(Fd, Key) :-
     strip_module(Key, _, Path),
+    Options = [quoted(true), module(pce)],
     (   get_config_term(Key, Value, _Type),
         (   (   config_attribute(Key, default(Value0))
             ->  Value == Value0
             )
-        ->  format(Fd, '%~q = ~t~32|~q.~n', [Path, Value])
-        ;   format(Fd, '~q = ~t~32|~q.~n',  [Path, Value])
+        ->  format(Fd, '%~W = ~t~32|~q.~n', [Path, Value, Options])
+        ;   format(Fd, '~W = ~t~32|~q.~n',  [Path, Value, Options])
         ),
         fail
     ;   true
@@ -421,7 +424,7 @@ load_config(M, Key) :-
     !,
     setup_call_cleanup(
         ( '$push_input_context'(pce_config),
-          open(File, read, Fd)
+          open(File, read, Fd, [encoding(utf8)])
         ),
         read_config_file(Fd, _SaveVersion, _SaveModule, Bindings),
         ( close(Fd),
@@ -439,12 +442,12 @@ load_config(M, Key) :-                  % no config file, use defaults
 read_config_file(Fd, SaveVersion, SaveModule, Bindings) :-
     read(Fd, configversion(SaveVersion)),
     read(Fd, [SaveModule]),
-    read(Fd, Term),
+    read_term(Fd, Term, [module(pce)]),
     read_config_file(Term, Fd, Bindings).
 
 read_config_file(end_of_file, _, []) :- !.
 read_config_file(Binding, Fd, [Binding|T]) :-
-    read(Fd, Term),
+    read_term(Fd, Term, [module(pce)]),
     read_config_file(Term, Fd, T).
 
 load_config_keys(DB, Bindings) :-
