@@ -357,8 +357,8 @@ save_config_key(Fd, Key) :-
         (   (   config_attribute(Key, default(Value0))
             ->  Value == Value0
             )
-        ->  format(Fd, '%~W = ~t~32|~q.~n', [Path, Value, Options])
-        ;   format(Fd, '~W = ~t~32|~q.~n',  [Path, Value, Options])
+        ->  format(Fd, '%~q = ~t~32|~W.~n', [Path, Value, Options])
+        ;   format(Fd, '~q = ~t~32|~W.~n',  [Path, Value, Options])
         ),
         fail
     ;   true
