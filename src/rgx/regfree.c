@@ -36,6 +36,7 @@
  * regcomp.c gets compiled once per character size.
  */
 
+#define REG_WIDE 1
 #include "regguts.h"
 
 /*

@@ -1275,6 +1275,8 @@ mclock()
 #if !defined(MSLEEP_DONE) && defined(HAVE_NANOSLEEP)
 #define MSLEEP_DONE 1
 #include <errno.h>
+#include <time.h>
+
 
 void
 msleep(int time)

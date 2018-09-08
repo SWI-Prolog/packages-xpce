@@ -29,6 +29,7 @@
  *
  */
 
+#define REG_WIDE 1
 #include "regguts.h"
 
 /* unknown-error explanation */
@@ -52,10 +53,10 @@ static struct rerr {
 size_t				/* actual space needed (including NUL) */
 regerror(int errcode, CONST regex_t * preg, char * errbuf, size_t  errbuf_size)
 /*
-int errcode;			error code, or REG_ATOI or REG_ITOA 
-CONST regex_t *preg;	associated regex_t (unused at present) 
-char *errbuf;			result buffer (unless errbuf_size==0) 
-size_t errbuf_size;		available space in errbuf, can be 0 
+int errcode;			error code, or REG_ATOI or REG_ITOA
+CONST regex_t *preg;	associated regex_t (unused at present)
+char *errbuf;			result buffer (unless errbuf_size==0)
+size_t errbuf_size;		available space in errbuf, can be 0
 */
 {
 	struct rerr *r;
