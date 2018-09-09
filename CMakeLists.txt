@@ -43,23 +43,29 @@ add_custom_target(
 add_executable(find_names src/find_names.c)
 
 swipl_plugin(
-    xpce
+    pl2xpce
     C_SOURCES ${XPCE_SOURCES} ${HOST_INTERFACE_SOURCES}
     C_LIBS ${X11_LIBRARIES} ${JPEG_LIBRARIES} ${JPEG_LIBRARIES}
     PL_LIBS)
-add_dependencies(plugin_xpce xpce_names)
+add_dependencies(plugin_pl2xpce xpce_names)
 
 target_include_directories(
-    plugin_xpce BEFORE PRIVATE
+    plugin_pl2xpce BEFORE PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${JPEG_INCLUDE_DIRS})
 
+# Install the data files
 foreach(d ${XPCE_DATA_DIRS})
     string(REGEX REPLACE "/" "_" filevar ${d})
     prepend(files ${d} ${XPCE_DATA_${filevar}})
     install(FILES ${files}
 	    DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce/${d})
 endforeach()
+
+# Install the link file
+install(FILES swipl/swipl-rc
+	DESTINATION ${SWIPL_INSTALL_PREFIX}
+	RENAME swipl.rc)
 
 endif(X11_FOUND AND JPEG_FOUND)

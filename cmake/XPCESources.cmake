@@ -105,7 +105,7 @@ endforeach()
 ################
 # SWI-Prolog interface
 
-set(SWIPL_SRC interface.c link.c pcecall.c)
+set(SWIPL_SRC interface.c pcecall.c)
 prepend(SWIPL_SRC swipl/ ${SWIPL_SRC})
 
 set(HOST_INTERFACE_SOURCES ${SWIPL_SRC})
