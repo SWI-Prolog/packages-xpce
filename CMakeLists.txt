@@ -23,8 +23,9 @@ set(X11_LIBRARIES
 
 configure_file(config.h.cmake config.h)
 
+# -DSWI is required for the interface only
 if(UNIX)
-  add_compile_options(-DHAVE_CONFIG_H)
+  add_compile_options(-DHAVE_CONFIG_H -DSWI)
 endif()
 
 add_custom_command(
@@ -42,7 +43,7 @@ add_executable(find_names src/find_names.c)
 
 swipl_plugin(
     xpce
-    C_SOURCES ${XPCE_SOURCES}
+    C_SOURCES ${XPCE_SOURCES} ${HOST_INTERFACE_SOURCES}
     C_LIBS ${X11_LIBRARIES} ${JPEG_LIBRARIES} ${JPEG_LIBRARIES}
     PL_LIBS)
 add_dependencies(plugin_xpce xpce_names)
