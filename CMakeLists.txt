@@ -24,6 +24,9 @@ include(XPCEConfig)
 
 configure_file(config.h.cmake config.h)
 
+################
+# Build pl2xpce shared object
+
 # -DSWI is required for the interface only
 if(UNIX)
   add_compile_options(-DHAVE_CONFIG_H -DSWI)
@@ -55,6 +58,9 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${JPEG_INCLUDE_DIRS})
 
+################
+# Install
+
 # Install the data files
 foreach(d ${XPCE_DATA_DIRS})
     string(REGEX REPLACE "/" "_" filevar ${d})
@@ -67,5 +73,28 @@ endforeach()
 install(FILES swipl/swipl-rc
 	DESTINATION ${SWIPL_INSTALL_PREFIX}
 	RENAME swipl.rc)
+
+################
+# Create indexes
+# This is currently done using install(CODE ...).  The advantage is that we pick only
+# the installed libraries.  Some care must be taken that the generated files are
+# processed correctly.
+
+set(XPCE_PROLOG_LIB_DIR ${SWIPL_INSTALL_PREFIX}/xpce/prolog/lib)
+set(XPCE_MANINDEX ${SWIPL_INSTALL_PREFIX}/xpce/man/reference/index.obj)
+
+install(CODE "message(\"-- Creating indexes\")")
+
+install(CODE "message(\"  -- Building INDEX.pl\")")
+install(CODE "EXECUTE_PROCESS(COMMAND swipl -f none -g \"make_library_index('${XPCE_PROLOG_LIB_DIR}')\" -t halt)")
+
+install(CODE "message(\"  -- Building CLASSINDEX.pl\")")
+install(CODE "EXECUTE_PROCESS(COMMAND swipl -f none -s ${XPCE_PROLOG_LIB_DIR}/pce_class_index.pl -g \"pce_make_library_index('${XPCE_PROLOG_LIB_DIR}')\" -t halt)")
+
+install(CODE "message(\"  -- Building ${XPCE_MANINDEX}\")")
+install(CODE "EXECUTE_PROCESS(COMMAND swipl -f none -s ${XPCE_PROLOG_LIB_DIR}/man/man_index.pl -g \"pce_make_manual_index('${XPCE_MANINDEX}')\" -t halt)")
+
+install(CODE "message(\"-- Indexes created\")")
+
 
 endif(X11_FOUND AND JPEG_FOUND)
