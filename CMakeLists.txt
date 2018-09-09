@@ -9,7 +9,6 @@ find_package(JPEG)
 if(X11_FOUND AND JPEG_FOUND)
 
 include(XPCESources)
-include(XPCEConfig)
 
 set(X11_LIBRARIES
     ${X11_Xpm_LIB}
@@ -20,6 +19,8 @@ set(X11_LIBRARIES
     ${X11_SM_LIB}
     ${X11_ICE_LIB}
     ${X11_Xft_LIB})
+
+include(XPCEConfig)
 
 configure_file(config.h.cmake config.h)
 
