@@ -128,7 +128,11 @@ set(XPCE_DATA_DIRS
 
     prolog/demo
 
-    bitmaps bitmaps/16x16 bitmaps/32x32 bitmaps/patterns)
+    bitmaps bitmaps/16x16 bitmaps/32x32 bitmaps/patterns
+
+    appl-help
+
+    man man/faq man/reference man/reference/class)
 
 set(XPCE_DATA_prolog_boot pce_autoload.pl pce_editor.pl pce_error.pl
     pce_expand.pl pce_expansion.pl pce_global.pl pce_goal_expansion.pl
@@ -311,4 +315,52 @@ set(XPCE_DATA_bitmaps_patterns Arches.xbm Balls.xbm Bats.xbm brick_2.xbm
     weave_rect_wide2.xbm weave_rect_wide.xbm weave_rect.xbm
     weave_tied_cross.xbm weave_wide2.xbm weave_wide.xbm Wiggly.xbm
     Zigzag.xbm)
+
+set(XPCE_DATA_appl-help customise.hlp dialog.hlp emacs.hlp
+    event_monitor.hlp help.hlp pcedraw.hlp pcefaq.hlp plprefs.hlp)
+
+set(XPCE_DATA_man_faq faq.html)
+
+set(XPCE_DATA_man_reference bug_fixes.doc changes.doc errors.doc
+    examples.doc groups.doc objects.doc predicates.doc tools.doc
+    topics.doc)
+
+set(XPCE_DATA_man_reference_class and.doc application.doc arc.doc
+    area.doc arrow.doc assign.doc attribute.doc behaviour.doc
+    bezier_curve.doc binary_condition.doc binary_expression.doc binding.doc
+    bitmap.doc block.doc bool.doc box.doc browser.doc
+    browser_select_gesture.doc button.doc chain.doc chain_hyper.doc
+    chain_table.doc char_array.doc circle.doc class.doc class_variable.doc
+    click_gesture.doc code.doc code_vector.doc colour.doc colour_map.doc
+    connect_gesture.doc connection.doc constant.doc constraint.doc
+    c_pointer.doc create.doc cursor.doc date.doc device.doc dialog.doc
+    dialog_group.doc dialog_item.doc dict.doc dict_item.doc directory.doc
+    display.doc display_manager.doc divide.doc @=.doc editor.doc
+    elevation.doc ellipse.doc eq.doc equal.doc error.doc event.doc
+    event_node.doc event_tree.doc figure.doc file.doc font.doc format.doc
+    fragment.doc frame.doc function.doc gesture.doc get_method.doc
+    graphical.doc grbox.doc greateq.doc greater.doc handle.doc handler.doc
+    handler_group.doc hash_table.doc hbox.doc host_data.doc host.doc
+    hyper.doc identity.doc if.doc image.doc int_item.doc joint.doc
+    key_binding.doc label_box.doc label.doc layout_manager.doc lbox.doc
+    less.doc lesseq.doc line.doc link.doc list_browser.doc menu_bar.doc
+    menu.doc menu_item.doc message.doc method.doc minus.doc modifier.doc
+    monitor.doc move_gesture.doc move_outline_gesture.doc name.doc
+    nameref.doc node.doc not.doc noteq.doc number.doc object.doc obtain.doc
+    operator.doc or.doc parbox.doc parser.doc path.doc pce.doc picture.doc
+    pixmap.doc plus.doc point.doc popup.doc popup_gesture.doc process.doc
+    progn.doc program_object.doc prolog_term.doc quote_function.doc real.doc
+    recogniser.doc regex.doc region.doc relation.doc relation_table.doc
+    resize_gesture.doc resize_outline_gesture.doc
+    resize_table_slice_gesture.doc resource.doc rubber.doc scroll_bar.doc
+    send_method.doc sheet.doc size.doc slider.doc socket.doc
+    source_location.doc source_sink.doc spatial.doc stream.doc string.doc
+    style.doc syntax_table.doc tab.doc table_cell.doc table_column.doc
+    table.doc table_row.doc table_slice.doc tab_stack.doc tbox.doc
+    text_buffer.doc text_cursor.doc text.doc text_image.doc text_item.doc
+    text_margin.doc tile_adjuster.doc tile.doc timer.doc times.doc
+    tokeniser.doc tree.doc tuple.doc type.doc var.doc variable.doc
+    vector.doc view.doc visual.doc vmi.doc when.doc while.doc
+    window_decorator.doc window.doc win_metafile.doc win_printer.doc)
+
 
