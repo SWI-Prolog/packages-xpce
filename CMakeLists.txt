@@ -55,4 +55,11 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${JPEG_INCLUDE_DIRS})
 
+foreach(d ${XPCE_DATA_DIRS})
+    string(REGEX REPLACE "/" "_" filevar ${d})
+    prepend(files ${d} ${XPCE_DATA_${filevar}})
+    install(FILES ${files}
+	    DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce/${d})
+endforeach()
+
 endif(X11_FOUND AND JPEG_FOUND)

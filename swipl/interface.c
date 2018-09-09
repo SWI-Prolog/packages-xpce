@@ -43,6 +43,7 @@
 #endif
 
 #define SWI 1			/* SWI-Prolog version 2.5! and up */
+#define O_SHAREDLIBRARY 1
 
 #ifdef SWI
 #include <SWI-Stream.h>			/* get intptr_t, etc first */

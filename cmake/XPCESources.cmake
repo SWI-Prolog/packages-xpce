@@ -1,3 +1,7 @@
+################
+# C sources
+################
+
 set(ADT_SRC	area.c atable.c attribute.c bool.c chain.c chaintable.c
 		constant.c date.c dict.c dictitem.c hashtable.c number.c
 		point.c real.c region.c sheet.c size.c tuple.c vector.c)
@@ -105,3 +109,206 @@ set(SWIPL_SRC interface.c link.c pcecall.c)
 prepend(SWIPL_SRC swipl/ ${SWIPL_SRC})
 
 set(HOST_INTERFACE_SOURCES ${SWIPL_SRC})
+
+################
+# Prolog libraries
+################
+
+set(XPCE_DATA_DIRS
+    prolog/boot
+
+    prolog/lib prolog/lib/compatibility prolog/lib/dialog prolog/lib/doc
+    prolog/lib/draw prolog/lib/emacs prolog/lib/english prolog/lib/http
+    prolog/lib/man prolog/lib/math prolog/lib/plot prolog/lib/swi
+    prolog/lib/trace prolog/lib/trace/icons prolog/lib/trace/icons/16x16
+    prolog/lib/xref
+
+    prolog/contrib
+    prolog/contrib/rubik
+
+    prolog/demo
+
+    bitmaps bitmaps/16x16 bitmaps/32x32 bitmaps/patterns)
+
+set(XPCE_DATA_prolog_boot pce_autoload.pl pce_editor.pl pce_error.pl
+    pce_expand.pl pce_expansion.pl pce_global.pl pce_goal_expansion.pl
+    pce_keybinding.pl pce_pl.pl pce_portray.pl pce_principal.pl
+    pce_realise.pl)
+
+set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
+    draw_extend.pl edit_dialog.pl emacs_extend.pl emacs_tags.pl file_item.pl
+    find_file_dialog.pl find_file.pl getpass.pl gradient.pl gui_tracer.pl
+    help_message.pl http_client.pl hyper.pl imageops.pl isocomp.pl
+    keybinding.pl make_dialog.pl MKINDEX.pl Overview
+    password_item.pl pce_arm.pl pce_arrow_item.pl pce_class_index.pl
+    pce_colour_item.pl pce_configeditor.pl pce_config.pl pce_cxx_headers.pl
+    pce_debug.pl pce_dispatch.pl pce_drag_and_drop_dict_item.pl
+    pce_drag_and_drop.pl pcedraw.pl pce_editable_text.pl pce_edit.pl
+    pce_emacs.pl pce_float_item.pl pce_font_item.pl pce_grapher.pl
+    pce_graphical_browser.pl pce_helper.pl pce_help_file.pl pce_history.pl
+    pce_identifier_item.pl pce_image_browser.pl pce_image_item.pl
+    pce_image.pl pce_loadcxx.pl pce_main.pl pce_manual.pl pce_meta.pl
+    pce_objects.pl pce.pl pce_postscript.pl pce_progress.pl
+    pce_prolog_xref.pl pce_prompter.pl pce_regex_compat.pl pce_renew.pl
+    pce_report.pl pce_require.pl pce_selection.pl pce_select_set_item.pl
+    pce_server.pl pce_set_item.pl pce_shell.pl pce_style_item.pl
+    pce_tagged_connection.pl pce_template.pl pce_tick_box.pl pce_toc.pl
+    pce_type.pl pce_unclip.pl pce_util.pl pce_xref.pl persistent_frame.pl
+    portray_object.pl print_graphics.pl print_text.pl
+    prolog_predicate_item.pl prolog_predicate.pl qrecompile.pl
+    scaledbitmap.pl scan_arguments.pl sp_fcompile.pl splash_screen.pl
+    stayup_popup.pl swi_compatibility.pl swi_edit.pl swi_help.pl
+    swi_hooks.pl swi_ide.pl swi_preferences.pl tabbed_window.pl tabular.pl
+    toc_filesystem.pl toolbar.pl url_image.pl Xserver.pl)
+
+set(XPCE_DATA_prolog_lib_compatibility bitmap.pl event_speak.pl frozen.pl
+    global.pl resource.pl send.pl)
+
+set(XPCE_DATA_prolog_lib_dialog attribute.pl behaviour.pl dialog.pl
+    font.pl generate.pl image_item.pl label.pl layout.pl load.pl menuitem.pl
+    meta.pl pretty_print.pl prompter.pl proto.pl README util.pl)
+
+set(XPCE_DATA_prolog_lib_draw align.pl attribute.pl canvas.pl config.pl draw.pl
+    exportpl.pl gesture.pl importpl.pl menu.pl README shapes.pl undo.pl)
+
+set(XPCE_DATA_prolog_lib_emacs annotate_mode.pl application.pl bookmarks.pl
+    buffer_menu.pl buffer.pl chr_mode.pl c_mode.pl cpp_mode.pl dde_server.pl
+    emacs_chrome_server.pl emacs.pl find.pl fundamental_mode.pl gdb.pl
+    help.pl history.pl hit_list.pl html_mode.pl java_mode.pl
+    javascript_mode.pl language_mode.pl latex_mode.pl logtalk_mode.pl
+    man_mode.pl outline_mode.pl prolog_mode.pl prompt.pl rdf_mode.pl
+    script_mode.pl server.pl sgml_mode.pl shell.pl swi_prolog.pl
+    text_mode.pl turtle_mode.pl window.pl yaml_mode.pl)
+
+set(XPCE_DATA_prolog_lib_english pce_messages.pl)
+
+set(XPCE_DATA_prolog_lib_http html_hierarchy.pl html_refman.pl html_write.pl
+    httpd.pl http_image.pl http_man.pl README run.pl xref.pl)
+
+set(XPCE_DATA_prolog_lib_man behaviour_item.pl classification.dat classmap.pl
+    man_index.pl p_card.pl pce_op.pl p_data.pl showevent.pl util.pl
+    v_card.pl v_class.pl v_editor.pl v_error.pl v_global.pl v_group.pl
+    v_hierarchy.pl v_inherit.pl v_inspector.pl v_instance.pl v_manual.pl
+    v_module.pl v_search.pl v_select.pl v_statistics.pl v_summary.pl
+    v_tile.pl v_topic.pl v_visual.pl)
+
+set(XPCE_DATA_prolog_lib_math expandmath.pl)
+
+set(XPCE_DATA_prolog_lib_plot axis.pl barchart.pl demo.pl plotter.pl README)
+
+set(XPCE_DATA_prolog_lib_swi pce_debug_monitor.pl pce_profile.pl swi_console.pl
+    thread_monitor.pl)
+
+set(XPCE_DATA_prolog_lib_trace browse.pl browse_xref.pl clause.pl
+    emacs_debug_modes.pl exceptions.pl gui.pl pltracer.hlp pprint.pl
+    query.pl README settings.pl source.pl stack.pl status.pl test.pl
+    trace.pl util.pl viewterm.pl)
+
+set(XPCE_DATA_prolog_lib_trace_icons abort.xpm breakpoint.xpm break.xpm bug.xpm
+    builtin.xpm butterfly.xpm call.xpm classext.xpm classvar.xpm class.xpm
+    closedir.xpm creep.xpm debug.xpm details.xpm det.xpm
+    down.xpm dynamic.xpm dyn.xpm edit.xpm except.xpm exit.xpm export.xpm
+    eyes.xpm fact.xpm fail.xpm finish.xpm foreign.xpm get.xpm grammar.xpm
+    import.xpm interactor.xpm interrupt.xpm into.xpm ivar.xpm leap.xpm
+    list.xpm loadfailed.xpm loading.xpm locate.xpm meta.xpm mini-globe.xpm
+    mini-run.xpm module.xpm ndet.xpm nodebug.xpm nospy.xpm nostopspy.xpm
+    nostop.xpm opendir.xpm openmodule.xpm plfile.xpm plincludedfile.xpm
+    plloadedfile.xpm pred.xpm redo.xpm retry.xpm send.xpm skip.xpm spy.xpm
+    stack.xpm stop.xpm undefined.xpm undefpred.xpm unrefpred.xpm up.xpm
+    user.xpm warnpred.xpm)
+
+set(XPCE_DATA_prolog_lib_trace_icons_16x16 butterfly.xpm dbgsettings.xpm)
+
+set(XPCE_DATA_prolog_lib_xref common.pl mkcommon.pl quintus.pl sicstus.pl)
+
+set(XPCE_DATA_prolog_contrib contrib.pl README)
+
+set(XPCE_DATA_prolog_contrib_rubik maplist.pl README rubikpce.pl rubik.pl)
+
+set(XPCE_DATA_prolog_demo chess.pl colour.pl constraint.pl cursor.pl
+    event_hierarchy.pl fontviewer.pl ftplog.pl graph.pl hsvcolour.pl
+    imageviewer.pl ispell.pl juggler.pl kangaroo.pl pce_demo.pl)
+
+set(XPCE_DATA_bitmaps bishop.bm box.bm bullet.bm bullseye.bm busy_bee.bm
+    cassette.bm chessboard.bm chesssquare.bm close.bm closedir.xpm
+    concept.bm conceptLink.bm confirm.bm confirm_name.bm console_tile.bm
+    creating.bm cross.bm cycle.bm desktop.bm dir.bm domain.bm
+    draw_cconnect.bm draw_connect.bm draw_edit.bm draw_line.bm draw_path.bm
+    draw_proto.bm draw_resize.bm draw_text.bm ellipse.bm fatleft_arrow.bm
+    fatright_arrow.bm file.bm folder.bm fragment.bm globe.bm go.bm group.bm
+    hand.bm happy.bm help.bm hierarchy.bm hourgl10.bm hourgl1.bm hourgl2.bm
+    hourgl3.bm hourgl4.bm hourgl5.bm hourgl6.bm hourgl7.bm hourgl8.bm
+    hourgl9.bm hourgl.bm juggler1.bm juggler2.bm juggler3.bm juggler4.bm
+    juggler5.bm kangro10.bm kangro11.bm kangro1.bm kangro2.bm kangro3.bm
+    kangro4.bm kangro5.bm kangro6.bm kangro7.bm kangro8.bm kangro9.bm
+    king.bm knight.bm left_arrow.bm line.bm link.bm linking.bm magnify.xpm
+    main_link.bm mark.bm ms_down_arrow.bm ms_left_arrow.bm ms_right_arrow.bm
+    ms_up_arrow.bm nomark.bm nosticky.bm note.bm off_marked.bm off_toggle.bm
+    ol_cycle.bm ol_pulldown.bm ol_pullright.bm on_marked.bm on_toggle.bm
+    opendir.xpm other_link.bm paste.bm pawn.bm pce16.xpm pce.bm
+    pinned.xpm pin.xpm printer.bm queen.bm question.bm README right_arrow.bm
+    rook_64.bm rook.bm sad.bm select.bm selecting.bm slant_left.bm
+    slant_right.bm sticky.bm support.bm text.bm textedit.bm thermo.bm
+    toggle_off.bm toggle_on.bm transcript.bm trash.bm typing.bm web.bm)
+
+set(XPCE_DATA_bitmaps_16x16 alert.xpm arrow_length.xpm arrows.bm
+    arrow_wing.xpm back.xpm binocular.xpm book2.xpm bookmarks.xpm
+    builtin_classflash.xpm builtin_class.xpm closedir.xpm copy.xpm
+    cpalette1.xpm cpalette2.xpm cut.xpm delete.xpm distribute.xpm doc.xpm
+    done.xpm down.xpm drawing.xpm drive.xpm duplicate.xpm edit.xpm error.xpm
+    exclamation.xpm eye.xpm false.xpm fatleft_arrow.xpm fatright_arrow.xpm
+    fillpattern.bm font.xpm foot.xpm forward.xpm funcdoc.xpm ghost.xpm
+    graph.xpm handpoint.xpm help.xpm hierarchy.xpm manual.xpm newdir.xpm
+    new.xpm noimg.xpm note.xpm ok.xpm opendir.xpm open.xpm paste.xpm pce.xpm
+    pen.xpm preddoc.xpm print.xpm profiler.xpm redo.xpm refresh.xpm
+    saveall.xpm save.xpm stop.xpm trashcan.xpm undo.xpm up.xpm
+    user_classflash.xpm user_class.xpm user.xpm valign.xpm
+    vcr_fast_forward.xpm vcr_forward.xpm vga16.xpm wipeall.xpm)
+
+set(XPCE_DATA_bitmaps_32x32 books.xpm buffers.xpm dbgsettings.xpm
+    doc_pl.xpm doc_x.xpm drawing.xpm help.xpm pensil.xpm viewer.xpm
+    vishier.xpm)
+
+set(XPCE_DATA_bitmaps_patterns Arches.xbm Balls.xbm Bats.xbm brick_2.xbm
+    brick_block.xbm brick_cobble.xbm brick_diag_block.xbm
+    brick_diag_hering.xbm brick_diag.xbm brick_hering.xbm brick_overlap.xbm
+    brick_pat1.xbm bricks_weave.xbm brick.xbm Bumps.xbm Carpet.xbm
+    check_stag.xbm check.xbm chev_box.xbm chev_circle.xbm chev_same.xbm
+    chev_stag.xbm chev_swap.xbm Circle_hex.xbm Circles.xbm Circle_tile.xbm
+    Crabcan.xbm Diamonds.xbm dots_big_diag.xbm dots_big.xbm
+    dots_diag_wide.xbm dots_diag.xbm dots_hex.xbm dots_open_diag.xbm
+    dots_rand2.xbm dots_rand.xbm dots_skew2.xbm dots_skew.xbm dots_stag.xbm
+    dots_wide.xbm dots.xbm fence_chain_half.xbm fence_chain.xbm
+    fence_knitting.xbm fence_link1.xbm fence_link2.xbm fence_sqknot.xbm
+    Fish_escher.xbm Fishes.xbm Grey_32_00.xbm Grey_32_01.xbm Grey_32_02.xbm
+    Grey_32_03.xbm Grey_32_04.xbm Grey_32_05.xbm Grey_32_06.xbm
+    Grey_32_07.xbm Grey_32_08.xbm Grey_32_09.xbm Grey_32_10.xbm
+    Grey_32_11.xbm Grey_32_12.xbm Grey_32_13.xbm Grey_32_14.xbm
+    Grey_32_15.xbm Grey_32_16.xbm Grey_32_17.xbm Grey_32_18.xbm
+    Grey_32_19.xbm Grey_32_20.xbm Grey_32_21.xbm Grey_32_22.xbm
+    Grey_32_23.xbm Grey_32_24.xbm Grey_32_25.xbm Grey_32_26.xbm
+    Grey_32_27.xbm Grey_32_28.xbm Grey_32_29.xbm Grey_32_30.xbm
+    Grey_32_31.xbm Grey_32_32.xbm Grey_9_0.xbm Grey_9_1.xbm Grey_9_2.xbm
+    Grey_9_3.xbm Grey_9_4.xbm Grey_9_5.xbm Grey_9_6.xbm Grey_9_7.xbm
+    Grey_9_8.xbm Grey_9_9.xbm grid16.xbm grid4.xbm grid8.xbm grid_diag2.xbm
+    grid_diag4.xbm grid_diag8.xbm Hearts.xbm Interferance.xbm Ironcoat.xbm
+    Kapow.xbm line_diag3_1.xbm line_diag3_2.xbm line_diag4_1.xbm
+    line_diag4_2.xbm line_diag4_3.xbm line_diag8_1.xbm line_diag8_2.xbm
+    line_diag8_3.xbm line_diag8_4.xbm line_hex_small.xbm line_hex.xbm
+    line_horz2_1.xbm line_vert2_1.xbm line_vert3_1.xbm line_vert3_2.xbm
+    line_vert4_1.xbm line_vert4_2.xbm line_vert4_3.xbm line_vert5_1.xbm
+    line_vert5_2.xbm line_vert8_4.xbm line_wave.xbm Movietone.xbm Ovals.xbm
+    plaid4.xbm plaid8.xbm plaid.xbm Rain.xbm random_1.xbm random_2.xbm
+    random_3.xbm random_4.xbm Scales.xbm Snake.xbm Spirals.xbm Spiral.xbm
+    Squared.xbm Squares.xbm Squarez.xbm Stars.xbm stich_diag2.xbm
+    stich_diag.xbm stich_horz.xbm stich_vert.xbm Suntile.xbm Tellipse.xbm
+    Tiles.xbm Trelis.xbm Tripoint.xbm tweed2_2.xbm tweed4_3.xbm tweed4_4.xbm
+    tweed5_5.xbm tweed_crab.xbm tweed_cross.xbm tweeddish.xbm tweed.xbm
+    Tyres.xbm Ubalu2.xbm Ubalu.xbm Vertigo.xbm Vibration.xbm
+    weave_crazy_long.xbm weave_crazy.xbm weave_diag_1.xbm weave_diag_2.xbm
+    weave_diag_3.xbm weave_diag_4.xbm weave_diag_root.xbm weave_diag.xbm
+    weave_rect_dbl.xbm weave_rect_long.xbm weave_rect_loose.xbm
+    weave_rect_wide2.xbm weave_rect_wide.xbm weave_rect.xbm
+    weave_tied_cross.xbm weave_wide2.xbm weave_wide.xbm Wiggly.xbm
+    Zigzag.xbm)
+
