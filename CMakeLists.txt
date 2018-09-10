@@ -76,6 +76,9 @@ foreach(d ${XPCE_DATA_DIRS})
 	    DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce/${d})
 endforeach()
 
+install(FILES Defaults Defaults.user
+	DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce)
+
 # Install the link file
 install(FILES swipl/swipl-rc
 	DESTINATION ${SWIPL_INSTALL_PREFIX}
