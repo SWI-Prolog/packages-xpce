@@ -1,5 +1,6 @@
 include(Sockets)
 include(CheckTypeSize)
+include(TestBSDSignals)
 
 string(TOLOWER ${CMAKE_HOST_SYSTEM_NAME} OS)
 
@@ -14,7 +15,8 @@ AC_CHECK_HEADERS(unistd.h string.h memory.h time.h sys/time.h sys/file.h pwd.h)
 AC_CHECK_HEADERS(sys/select.h sys/param.h malloc.h sys/resource.h stropts.h)
 AC_CHECK_HEADERS(frame.h sys/timeb.h sys/times.h siginfo.h bstring.h)
 AC_CHECK_HEADERS(sys/socketvar.h conio.h sys/access.h termios.h termio.h)
-AC_CHECK_HEADERS(sched.h crt_externs.h poll.h)
+AC_CHECK_HEADERS(sched.h crt_externs.h poll.h jerror.h jpeglib.h)
+AC_CHECK_HEADERS(X11/extensions/Xinerama.h)
 
 AC_CHECK_FUNCS(vsscanf on_exit memmove select popen strerror timelocal)
 AC_CHECK_FUNCS(getdtablesize socket fork ftime getpid select getlogin)
@@ -23,9 +25,11 @@ AC_CHECK_FUNCS(rename atexit on_exit tmpnam sysinfo sigaction getpwnam)
 AC_CHECK_FUNCS(shutdown mkstemp sched_yield mktime timegm nanosleep)
 AC_CHECK_FUNCS(clock_gettime tempnam _NSGetEnviron poll signal sigaction)
 
-AC_CHECK_FUNCS(XtPopupSpringLoaded)
+AC_CHECK_FUNCS(XtPopupSpringLoaded XftNameUnparse XmIsMotifWMRunning
+	       XInitThreads)
 
 check_struct_has_member("struct tm" tm_gmtoff time.h HAVE_TM_GMTOFF)
+check_struct_has_member("struct termios" c_line termios.h TERMIOS_HAS_C_LINE)
 
 if(HAVE_SIGNAL AND NOT HAVE_SIGACTION)
   include(TestBSDSignals)
@@ -38,7 +42,10 @@ if(JPEG_FOUND)
   set(HAVE_LIBJPEG 1)
 endif()
 if(X11_Xft_FOUND)
-  set(USE_XFT)
+  set(USE_XFT 1)
+endif()
+if(X11_Xinerama_FOUND)
+  set(HAVE_LIBXINERAMA 1)
 endif()
 
 #FIXME usable siginfo

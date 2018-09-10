@@ -9,6 +9,8 @@ find_package(JPEG)
 if(X11_FOUND AND JPEG_FOUND)
 
 include(XPCESources)
+find_package(Freetype)
+find_package(FontConfig)
 
 set(X11_LIBRARIES
     ${X11_Xpm_LIB}
@@ -18,7 +20,9 @@ set(X11_LIBRARIES
     ${X11_X11_LIB}
     ${X11_SM_LIB}
     ${X11_ICE_LIB}
-    ${X11_Xft_LIB})
+    ${X11_Xft_LIB}
+    ${FREETYPE_LIBRARIES}
+    ${FONTCONFIG_LIBRARIES})
 
 include(XPCEConfig)
 
@@ -56,7 +60,10 @@ target_include_directories(
     plugin_pl2xpce BEFORE PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${JPEG_INCLUDE_DIRS})
+    ${JPEG_INCLUDE_DIRS}
+    ${X11_INCLUDE_DIR}
+    ${FREETYPE_INCLUDE_DIRS}
+    ${FONTCONFIG_INCLUDE_DIR})
 
 ################
 # Install
