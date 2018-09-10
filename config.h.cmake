@@ -1,4 +1,5 @@
 #cmakedefine OS "@OS@"
+#cmakedefine MACHINE "@MACHINE@"
 #cmakedefine HAVE_ALLOCA @HAVE_ALLOCA@
 #cmakedefine HAVE_ALLOCA_H @HAVE_ALLOCA_H@
 #cmakedefine HAVE_ATEXIT @HAVE_ATEXIT@

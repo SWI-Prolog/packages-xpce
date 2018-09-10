@@ -25,6 +25,7 @@ set(X11_LIBRARIES
     ${FONTCONFIG_LIBRARIES})
 
 include(XPCEConfig)
+set(MACHINE ${SWIPL_ARCH})
 
 configure_file(config.h.cmake config.h)
 
