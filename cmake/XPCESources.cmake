@@ -121,7 +121,8 @@ set(XPCE_DATA_DIRS
     prolog/lib/draw prolog/lib/emacs prolog/lib/english prolog/lib/http
     prolog/lib/man prolog/lib/math prolog/lib/plot prolog/lib/swi
     prolog/lib/trace prolog/lib/trace/icons prolog/lib/trace/icons/16x16
-    prolog/lib/xref
+    prolog/lib/xref prolog/lib/dialog/bitmaps prolog/lib/doc
+    prolog/lib/doc/icons
 
     prolog/contrib
     prolog/contrib/rubik
@@ -168,9 +169,20 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
 set(XPCE_DATA_prolog_lib_compatibility bitmap.pl event_speak.pl frozen.pl
     global.pl resource.pl send.pl)
 
+set(XPCE_DATA_prolog_lib_doc browser.pl emit.pl form.pl html.pl
+    layout.pl load.pl objects.pl README sp_errors.pl t2.pl table.pl test.pl
+    url_fetch.pl util.pl vfont.pl window.pl xml_browse.pl xml_hierarchy.pl)
+
+set(XPCE_DATA_prolog_lib_doc_icons back.xpm forward.xpm reload.xpm
+    source.xpm)
+
 set(XPCE_DATA_prolog_lib_dialog attribute.pl behaviour.pl dialog.pl
     font.pl generate.pl image_item.pl label.pl layout.pl load.pl menuitem.pl
     meta.pl pretty_print.pl prompter.pl proto.pl README util.pl)
+
+set(XPCE_DATA_prolog_lib_dialog_bitmaps button.bm choice.bm cycle.bm
+    editor.bm image.bm label.bm list.bm reporter.bm slider.bm text_item.bm
+    toggle.bm)
 
 set(XPCE_DATA_prolog_lib_draw align.pl attribute.pl canvas.pl config.pl draw.pl
     exportpl.pl gesture.pl importpl.pl menu.pl README shapes.pl undo.pl)
