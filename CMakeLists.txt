@@ -41,7 +41,7 @@ endif()
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/h/names.ih
 	   ${CMAKE_CURRENT_BINARY_DIR}/h/names.ic
-    COMMAND mkdir ${CMAKE_CURRENT_BINARY_DIR}/h
+    COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/h
     COMMAND find_names ${CMAKE_CURRENT_BINARY_DIR}/h/names.ic
 		       ${CMAKE_CURRENT_BINARY_DIR}/h/names.ih
 		       -- h/*.h ???/*.c
