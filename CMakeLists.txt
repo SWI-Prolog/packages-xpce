@@ -26,6 +26,7 @@ set(X11_LIBRARIES
 
 include(XPCEConfig)
 set(MACHINE ${SWIPL_ARCH})
+set(PCE_VERSION 6.6.6)
 
 configure_file(config.h.cmake config.h)
 

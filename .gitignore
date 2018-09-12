@@ -54,6 +54,5 @@ src/xpce-copy.dSYM
 xpce.spec
 src/xpce-copy.exe
 src/config.h
-src/version.h
 src/xpce-client
 src/xpce-copy

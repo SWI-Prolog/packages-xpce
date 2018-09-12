@@ -331,19 +331,11 @@ KER1SRC=	$(addprefix $(srcdir)/ker/, $(KER1OBJS:.o=.c))
 $(srcdir)/ker/proto.h:	$(KER1SRC)
 		$(MKPROTO) $(KER1SRC) | grep -v PceGoal | grep -v PceType > $@
 
-version.h:	Makefile
-		@echo "#define MACHINE \"$(PLARCH)\"" > $@%
-		@echo "#define PCE_VERSION \"$(VERSION)\"" >> $@%
-		@echo "#define OS \"$(PLARCH)\"" >> $@%
-		@if cmp -s $@% $@; then rm $@%; else mv $@% $@; fi
-
 h/interface.h:	Makefile
 		@sed 's/^#define *PCE_VERSION *.*/#define PCE_VERSION \"$(VERSION)\"/' $@ > $@%
 		@if cmp -s $@% $@; then rm $@%; else mv $@% $@; fi
 
 $(srcdir)/h/kernel.h:	$(srcdir)/h/names.ih
-
-ker/self.o:	version.h
 
 ker/name.o:	$(NAMES)
 
@@ -559,7 +551,7 @@ WSOBJECTS+=	$(addprefix img/, $(IMGOBJS))
 
 $(OBJECTS) $(WSOBJECTS): h/kernel.h .names-sentinel
 
-$(LIBXPCE):	version.h $(OBJECTS) $(WSOBJECTS) $(LIBDIR)
+$(LIBXPCE):	$(OBJECTS) $(WSOBJECTS) $(LIBDIR)
 		@echo "Running ar ru $(LIBXPCE) objects ..."
 		@$(AR) ru $(LIBXPCE) $(OBJECTS) $(WSOBJECTS)
 		$(RANLIB) $(LIBXPCE)
@@ -806,7 +798,7 @@ distclean:	clean
 		$(MAKE) -C ../swipl $@
 		if [ -h h ]; then $(RM) h; fi
 		rm -rf ../lib/$(PLARCH)
-		$(RM) -f version.h ../xpce.spec
+		$(RM) -f ../xpce.spec
 		$(RM) -f xpce.sh $(FIND_NAMES)
 		$(RM) -f $(LIBXPCE) $(PL2XPCE)
 		$(RM) -f $(INSTALL)

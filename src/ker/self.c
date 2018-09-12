@@ -32,9 +32,6 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#if !defined(__WINDOWS__) && !defined(__WINDOWS__)
-#include <version.h>			/* get MACHINE and PCE_VERSION */
-#endif
 #include <h/kernel.h>
 #include "alloc.h"
 #include <h/interface.h>
