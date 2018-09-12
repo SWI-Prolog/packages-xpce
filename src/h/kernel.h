@@ -1438,7 +1438,7 @@ struct class_definition
 #ifndef NO_BUILT_IN_DECL
 extern struct name builtin_names[];	/* object-array of built-in's */
 #endif
-#include "names.ih"			/* #defines for code used names */
+#include "h/names.ih"			/* #defines for code used names */
 
 #define isName(name)	(isObject(name) && onFlag((name), F_ISNAME))
 #define notName(name)	(!isName(name))
