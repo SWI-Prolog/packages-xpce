@@ -39,15 +39,18 @@ if(UNIX)
 endif()
 
 add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/h/names.ih
-	   ${CMAKE_CURRENT_SOURCE_DIR}/src/h/names.ic
-    COMMAND find_names h/names.ic h/names.ih -- h/*.h ???/*.c
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/h/names.ih
+	   ${CMAKE_CURRENT_BINARY_DIR}/h/names.ic
+    COMMAND mkdir ${CMAKE_CURRENT_BINARY_DIR}/h
+    COMMAND find_names ${CMAKE_CURRENT_BINARY_DIR}/h/names.ic
+		       ${CMAKE_CURRENT_BINARY_DIR}/h/names.ih
+		       -- h/*.h ???/*.c
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src
     COMMENT "Collecting NAME_ declarations")
 
 add_custom_target(
     xpce_names
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/h/names.ih)
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/h/names.ih)
 
 add_executable(find_names src/find_names.c)
 
