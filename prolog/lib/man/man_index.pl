@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1996-2011, University of Amsterdam
+    Copyright (c)  1996-2018, University of Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -34,8 +35,8 @@
 
 :- module(man_word_index,
           [ pce_make_manual_index/0,
-            pce_make_manual_index/1     % +File
-          , pce_make_manual_index/2     % +File, -Reference
+            pce_make_manual_index/1,    % +File
+            pce_make_manual_index/2     % +File, -Reference
           ]).
 :- use_module(user:library(pce)).       % HACK: needed for build process
 :- use_module(library(pce)).
@@ -44,7 +45,10 @@
            ]).
 
 :- dynamic
-    use_gui/0.
+    use_gui/0,
+    quiet/0.
+
+quiet.
 
 :- pce_begin_class(man_index_manager, object,
                    "Dummy object to exploit XPCE autoloader").
@@ -106,7 +110,7 @@ pce_make_manual_index(File) :-
         send(Abort, active, @off)
     ;   true
     ).
-make_manual_index(File) :-
+pce_make_manual_index(File) :-
     send(file(File), report, error, 'Cannot write %s', File),
     fail.
 
@@ -190,9 +194,12 @@ column(_, C) :<-
     C = 0.
 
 format(_, Fmt:char_array, Args:any ...) :->
-    Msg =.. [format, Fmt | Args],
-    send(@pce, Msg),
-    flush.
+    (   quiet
+    ->  true
+    ;   Msg =.. [format, Fmt | Args],
+        send(@pce, Msg),
+        flush
+    ).
 
 frame(_, _) :<-
     fail.

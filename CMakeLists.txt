@@ -98,18 +98,15 @@ install(FILES swipl/swipl-rc
 set(XPCE_PROLOG_LIB_DIR ${SWIPL_INSTALL_PREFIX}/xpce/prolog/lib)
 set(XPCE_MANINDEX ${SWIPL_INSTALL_PREFIX}/xpce/man/reference/index.obj)
 
-install(CODE "message(\"-- Creating indexes\")")
+install(CODE "message(\"-- Creating xpce indexes\")")
 
-install(CODE "message(\"  -- Building INDEX.pl\")")
+install(CODE "message(\"   -- Building predicate index\")")
 install(CODE "EXECUTE_PROCESS(COMMAND swipl -f none -g \"make_library_index('${XPCE_PROLOG_LIB_DIR}')\" -t halt)")
 
-install(CODE "message(\"  -- Building CLASSINDEX.pl\")")
+install(CODE "message(\"   -- Building class index\")")
 install(CODE "EXECUTE_PROCESS(COMMAND swipl -f none -s ${XPCE_PROLOG_LIB_DIR}/pce_class_index.pl -g \"pce_make_library_index('${XPCE_PROLOG_LIB_DIR}')\" -t halt)")
 
-install(CODE "message(\"  -- Building ${XPCE_MANINDEX}\")")
+install(CODE "message(\"   -- Building manual index\")")
 install(CODE "EXECUTE_PROCESS(COMMAND swipl -f none -s ${XPCE_PROLOG_LIB_DIR}/man/man_index.pl -g \"pce_make_manual_index('${XPCE_MANINDEX}')\" -t halt)")
-
-install(CODE "message(\"-- Indexes created\")")
-
 
 endif(X11_FOUND AND JPEG_FOUND)
