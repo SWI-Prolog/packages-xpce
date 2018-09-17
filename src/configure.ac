@@ -25,8 +25,8 @@ AC_SUBST(PLWINNAME)
 AC_SUBST(PLWINARG)
 AC_SUBST(WINEPATHEXE)
 AC_SUBST(PCE_VERSION)
-AC_SUBST(MACHINE)
-AC_SUBST(OS)
+AC_SUBST(PCE_MACHINE)
+AC_SUBST(PCE_OS)
 
 dnl Link to X11.  MinGW versions overrule this later
 
@@ -65,10 +65,10 @@ VPATCH=$(sed 's/[0-9]*\.[0-9]*\.\([0-9]*\).*/\1/' ../VERSION)
 changequote([,])dnl
 AC_DEFINE(PCE_VERSION, "$VMAJOR.$VMINOR.$VPATCH",
 	  [Current xpce version])
-AC_DEFINE(MACHINE, "$PLARCH",
-	  [Define @pce->machine])
-os="${echo $PLARCH | sed 's/^[^-]*-//')"
-AC_DEFINE(OS, "$os",
+AC_DEFINE(PCE_MACHINE, "$PLARCH",
+	  [Define machine])
+pce_os="$(echo $PLARCH | sed 's/^[^-]*-//')"
+AC_DEFINE(PCE_OS, "$pce_os",
 	  [Current OS])
 
 AC_CHECK_TOOLS(WINDRES, windres, ":")

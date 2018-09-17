@@ -26,7 +26,8 @@ set(X11_LIBRARIES
     ${FONTCONFIG_LIBRARIES})
 
 include(XPCEConfig)
-set(MACHINE ${SWIPL_ARCH})
+set(PCE_MACHINE ${SWIPL_ARCH})
+set(PCE_OS ${CMAKE_HOST_SYSTEM_NAME})
 set(PCE_VERSION 6.6.6)
 
 configure_file(config.h.cmake config.h)

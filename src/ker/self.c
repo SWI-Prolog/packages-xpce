@@ -47,8 +47,12 @@
 #include <errno.h>
 
 #ifdef __WINDOWS__
-#undef MACHINE
-#define MACHINE "i386"
+#undef PCE_MACHINE
+#ifdef WIN64
+#define PCE_MACHINE "x86_64"
+#else
+#define PCE_MACHINE "i386"
+#endif
 #undef OS
 #define OS ws_os()
 #endif
@@ -119,8 +123,8 @@ initialisePce(Pce pce)
   assign(pce, defaults,		      CtoString("$PCEHOME/Defaults"));
   setAppDataPce(pce);
   assign(pce, version,                CtoName(PCE_VERSION));
-  assign(pce, machine,                CtoName(MACHINE));
-  assign(pce, operating_system,       CtoName(OS));
+  assign(pce, machine,                CtoName(PCE_MACHINE));
+  assign(pce, operating_system,       CtoName(PCE_OS));
 #ifdef WIN32_GRAPHICS
   assign(pce, window_system,	      NAME_windows);
 #else

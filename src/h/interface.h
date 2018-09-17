@@ -48,8 +48,8 @@
 #define OS_VERSION "unknown"
 #endif
 
-#ifndef MACHINE
-#define MACHINE "unknown"
+#ifndef PCE_MACHINE
+#define PCE_MACHINE "unknown"
 #endif
 
 
