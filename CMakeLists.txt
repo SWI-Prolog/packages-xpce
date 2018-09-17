@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8.12)
 project(swipl-xpce)
 
 include("../cmake/PrologPackage.cmake")
+include(QLF)
 
 find_package(X11)
 find_package(JPEG)
@@ -108,5 +109,10 @@ install(CODE "EXECUTE_PROCESS(COMMAND swipl -f none -s ${XPCE_PROLOG_LIB_DIR}/pc
 
 install(CODE "message(\"   -- Building manual index\")")
 install(CODE "EXECUTE_PROCESS(COMMAND swipl -f none -s ${XPCE_PROLOG_LIB_DIR}/man/man_index.pl -g \"pce_make_manual_index('${XPCE_MANINDEX}')\" -t halt)")
+
+qcompile("library(pce)"
+	 "library(trace/trace)"
+	 "library(emacs/emacs)"
+	 "library(emacs/prolog_mode)")
 
 endif(X11_FOUND AND JPEG_FOUND)
