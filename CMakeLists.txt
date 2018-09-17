@@ -101,14 +101,13 @@ set(XPCE_MANINDEX ${SWIPL_INSTALL_PREFIX}/xpce/man/reference/index.obj)
 
 install(CODE "message(\"-- Creating xpce indexes\")")
 
-install(CODE "message(\"   -- Building predicate index\")")
-install(CODE "EXECUTE_PROCESS(COMMAND swipl -f none -g \"make_library_index('${XPCE_PROLOG_LIB_DIR}')\" -t halt)")
-
-install(CODE "message(\"   -- Building class index\")")
-install(CODE "EXECUTE_PROCESS(COMMAND swipl -f none -s ${XPCE_PROLOG_LIB_DIR}/pce_class_index.pl -g \"pce_make_library_index('${XPCE_PROLOG_LIB_DIR}')\" -t halt)")
-
-install(CODE "message(\"   -- Building manual index\")")
-install(CODE "EXECUTE_PROCESS(COMMAND swipl -f none -s ${XPCE_PROLOG_LIB_DIR}/man/man_index.pl -g \"pce_make_manual_index('${XPCE_MANINDEX}')\" -t halt)")
+run_installed_swipl("make_library_index('${XPCE_PROLOG_LIB_DIR}')"
+		    COMMENT "   -- Building predicate index" QUIET)
+run_installed_swipl("pce_make_library_index('${XPCE_PROLOG_LIB_DIR}')"
+		    COMMENT "   -- Building class index")
+run_installed_swipl("pce_make_manual_index('${XPCE_MANINDEX}')"
+		    SCRIPT  "${XPCE_PROLOG_LIB_DIR}/man/man_index.pl"
+		    COMMENT "   -- Building manual index")
 
 qcompile("library(pce)"
 	 "library(trace/trace)"
