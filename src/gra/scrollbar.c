@@ -371,7 +371,7 @@ sb_init_draw_data(ScrollBar s, Area a, SbDrawData d, Any bg)
 
     r_3d_box(d->x, d->y, d->w, d->h, 0, bg, TRUE);
 
-    m = abs(valInt(z->height)) + 1;
+    m = labs(valInt(z->height)) + 1;
     d->x += m;
     d->y += m;
     d->w -= 2*m;

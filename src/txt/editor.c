@@ -2225,7 +2225,7 @@ static status
 yankEditor(Editor e, Int times)
 { CharArray s = killRegister(ZERO);
 
-  times = toInt(abs(UArg(times)));
+  times = toInt(labs(UArg(times)));
   MustBeEditable(e);
 
   if ( s )

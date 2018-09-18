@@ -734,7 +734,7 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
   { int m;
 
     if ( instanceOfObject(z, ClassElevation) )
-    { m = abs(valInt(z->height));
+    { m = labs(valInt(z->height));
     } else
       m = 0;
 
