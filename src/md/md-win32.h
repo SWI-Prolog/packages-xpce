@@ -36,7 +36,7 @@
 #define WIN32
 #endif
 
-#pragma warning(4:4244 4305 4018 4550)
+// #pragma warning(4:4244 4305 4018 4550)
 
 #include "md-windows.h"
 
@@ -45,4 +45,5 @@
 #define SIZEOF_DOUBLE 8
 /* intptr_t is typedeffed to int */
 #define INTPTR_FORMAT "%d"
-x y z
+
+#define PCE_OS "win32"

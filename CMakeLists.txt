@@ -2,28 +2,47 @@ cmake_minimum_required(VERSION 2.8.12)
 project(swipl-xpce)
 
 include("../cmake/PrologPackage.cmake")
-include(QLF)
 
-find_package(X11)
+if(WIN32)
+  set(HAVE_GUI 1)
+  set(WIN32_GRAPHICS 1)
+  set(FOR_MSW 1)
+  set(O_XOS 1)
+  set(O_DOSFILENAMES 1)
+  set(O_HASSHARES 1)
+  set(HAVE_WINSOCK 1)
+  set(GUI_LIBRARIES
+      gdi32.lib
+      comdlg32.lib
+      ole32.lib
+      shell32.lib
+      ws2_32)
+else()
+  find_package(X11)
+  if(X11_FOUND)
+    set(HAVE_GUI 1)
+    find_package(Freetype)
+    find_package(FontConfig)
+
+    set(GUI_LIBRARIES
+	${X11_Xpm_LIB}
+	${X11_Xinerama_LIB}
+	${X11_Xext_LIB}
+	${X11_Xt_LIB}
+	${X11_X11_LIB}
+	${X11_SM_LIB}
+	${X11_ICE_LIB}
+	${X11_Xft_LIB}
+	${FREETYPE_LIBRARIES}
+	${FONTCONFIG_LIBRARIES})
+  endif()
+endif()
 find_package(JPEG)
 
-if(X11_FOUND AND JPEG_FOUND)
+if(HAVE_GUI AND JPEG_FOUND)
 
+include(QLF)
 include(XPCESources)
-find_package(Freetype)
-find_package(FontConfig)
-
-set(X11_LIBRARIES
-    ${X11_Xpm_LIB}
-    ${X11_Xinerama_LIB}
-    ${X11_Xext_LIB}
-    ${X11_Xt_LIB}
-    ${X11_X11_LIB}
-    ${X11_SM_LIB}
-    ${X11_ICE_LIB}
-    ${X11_Xft_LIB}
-    ${FREETYPE_LIBRARIES}
-    ${FONTCONFIG_LIBRARIES})
 
 include(XPCEConfig)
 set(PCE_MACHINE ${SWIPL_ARCH})
@@ -59,7 +78,7 @@ add_executable(find_names src/find_names.c)
 swipl_plugin(
     pl2xpce
     C_SOURCES ${XPCE_SOURCES} ${HOST_INTERFACE_SOURCES}
-    C_LIBS ${X11_LIBRARIES} ${JPEG_LIBRARIES} ${JPEG_LIBRARIES}
+    C_LIBS ${GUI_LIBRARIES} ${JPEG_LIBRARIES}
     PL_LIBS)
 add_dependencies(plugin_pl2xpce xpce_names)
 
@@ -115,4 +134,4 @@ qcompile("library(pce)"
 	 "library(emacs/emacs)"
 	 "library(emacs/prolog_mode)")
 
-endif(X11_FOUND AND JPEG_FOUND)
+endif(HAVE_GUI AND JPEG_FOUND)

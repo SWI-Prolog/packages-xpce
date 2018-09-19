@@ -36,7 +36,7 @@
 #define WIN64
 #endif
 
-#pragma warning(4:4244 4305 4018 4550)
+//#pragma warning(4:4244 4305 4018 4550)
 
 #define SIZEOF_VOIDP 8
 #define SIZEOF_LONG 4
@@ -44,5 +44,7 @@
 
 /* printf format for intptr_t */
 #define INTPTR_FORMAT "%I64d"
+
+#define PCE_OS "win64"
 
 #include "md-windows.h"
