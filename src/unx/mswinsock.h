@@ -52,11 +52,7 @@
 
 #define RedrawWindow WinRedrawWindow
 
-#ifdef USE_WINSOCK2
 #include <winsock2.h>
-#else
-#include <winsock.h>
-#endif
 
 #undef RedrawWindow
 #undef hyper				/* don't need this */

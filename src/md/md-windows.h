@@ -34,7 +34,6 @@
 
 #define WIN32_GRAPHICS 1		/* Use Win32 graphics API */
 #define _REENTRANT 1			/* Only multi-threading support */
-#define USE_WINSOCK2			/* version 2 of winsock */
 #define UXWIN(unx, win) win
 
 #define HAVE_UXNT_H 1

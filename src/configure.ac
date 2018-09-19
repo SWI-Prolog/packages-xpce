@@ -401,7 +401,6 @@ case "$PLARCH" in
                      [NETLIBS="$NETLIBS -lshell32"])
         AC_CHECK_LIB(ws2_32, main,
                      [AC_DEFINE(HAVE_WINSOCK, 1, "Define if you have the Windows socket library")
-                      AC_DEFINE(USE_WINSOCK2, 1, "Define if you have the winsock2 library")
                       NETLIBS="$NETLIBS -lws2_32"])
 	;;
 esac
