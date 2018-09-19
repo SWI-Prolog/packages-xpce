@@ -229,11 +229,17 @@ do_frame_wnd_proc(FrameObj fr,
     }
 
     case WM_MOVE:			/* frame moved */
-    { POINTS pt = MAKEPOINTS(lParam);
+    { union mkpts
+      { LPARAM lp;
+	POINTS pt;
+      } mkpts;
 
-      DEBUG(NAME_frame, Cprintf("Moved %s to %d, %d\n", pp(fr), pt.x, pt.y));
-      assign(fr->area, x, toInt(pt.x));
-      assign(fr->area, y, toInt(pt.y));
+      mkpts.lp = lParam;
+
+      DEBUG(NAME_frame, Cprintf("Moved %s to %d, %d\n",
+				pp(fr), mkpts.pt.x, mkpts.pt.y));
+      assign(fr->area, x, toInt(mkpts.pt.x));
+      assign(fr->area, y, toInt(mkpts.pt.y));
 
       return 0;
     }
