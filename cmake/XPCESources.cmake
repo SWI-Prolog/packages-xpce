@@ -79,7 +79,7 @@ set(MSW_SRC	mscolour.c mscursor.c msdisplay.c msdraw.c msevent.c
 		msfont.c msframe.c msimage.c msstream.c mstimer.c
 		mswindow.c msmenu.c mswin.c msppm.c msprinter.c
 		mscommon.c msmetafile.c msreadimage.c msjpeg.c
-		msprocess.c)
+		msprocess.c msuxnt.c)
 else()
 set(X11_SRC	canvas.c fshell.c xcommon.c xconvert.c x11-compat.c xppm.c
 		xcolour.c xcursor.c xdisplay.c xdraw.c xevent.c xfont.c

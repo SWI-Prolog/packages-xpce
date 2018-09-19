@@ -4,6 +4,7 @@ project(swipl-xpce)
 include("../cmake/PrologPackage.cmake")
 
 if(WIN32)
+  find_package(LibXpm)
   set(HAVE_GUI 1)
   set(WIN32_GRAPHICS 1)
   set(FOR_MSW 1)
@@ -16,7 +17,10 @@ if(WIN32)
       comdlg32.lib
       ole32.lib
       shell32.lib
-      ws2_32)
+      ws2_32.lib
+      ${XPM_LIBRARY})
+  set(GUI_INCLUDE_DIRS
+      ${JPEG_INCLUDE_DIR})
 else()
   find_package(X11)
   if(X11_FOUND)
@@ -35,6 +39,12 @@ else()
 	${X11_Xft_LIB}
 	${FREETYPE_LIBRARIES}
 	${FONTCONFIG_LIBRARIES})
+
+    set(GUI_INCLUDE_DIRS
+	${JPEG_INCLUDE_DIR}
+	${X11_INCLUDE_DIR}
+	${FREETYPE_INCLUDE_DIRS}
+	${FONTCONFIG_INCLUDE_DIR})
   endif()
 endif()
 find_package(JPEG)
@@ -86,10 +96,7 @@ target_include_directories(
     plugin_pl2xpce BEFORE PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${JPEG_INCLUDE_DIR}
-    ${X11_INCLUDE_DIR}
-    ${FREETYPE_INCLUDE_DIRS}
-    ${FONTCONFIG_INCLUDE_DIR})
+    ${GUI_INCLUDE_DIRS})
 
 ################
 # Install
