@@ -86,7 +86,7 @@ target_include_directories(
     plugin_pl2xpce BEFORE PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${JPEG_INCLUDE_DIRS}
+    ${JPEG_INCLUDE_DIR}
     ${X11_INCLUDE_DIR}
     ${FREETYPE_INCLUDE_DIRS}
     ${FONTCONFIG_INCLUDE_DIR})
