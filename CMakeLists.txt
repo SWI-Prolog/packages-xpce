@@ -135,16 +135,22 @@ set(XPCE_MANINDEX ${SWIPL_INSTALL_PREFIX}/xpce/man/reference/index.obj)
 install(CODE "message(\"-- Creating xpce indexes\")")
 
 run_installed_swipl("make_library_index('${XPCE_PROLOG_LIB_DIR}')"
+		    RC swipl-win
 		    COMMENT "   -- Building predicate index" QUIET)
 run_installed_swipl("pce_make_library_index('${XPCE_PROLOG_LIB_DIR}')"
+		    RC swipl-win
 		    COMMENT "   -- Building class index")
 run_installed_swipl("pce_make_manual_index('${XPCE_MANINDEX}')"
+		    RC swipl-win
 		    SCRIPT  "${XPCE_PROLOG_LIB_DIR}/man/man_index.pl"
 		    COMMENT "   -- Building manual index")
 
-qcompile("library(pce)"
-	 "library(trace/trace)"
-	 "library(emacs/emacs)"
-	 "library(emacs/prolog_mode)")
+qcompile(RC
+	     swipl-win
+	 LIBRARIES
+	     pce
+	     trace/trace
+	     emacs/emacs
+	     emacs/prolog_mode)
 
 endif(HAVE_GUI AND JPEG_FOUND)
