@@ -21,6 +21,7 @@ if(WIN32)
       ${XPM_LIBRARY})
   set(GUI_INCLUDE_DIRS
       ${JPEG_INCLUDE_DIR})
+  set(XPCE_LINK_RC swipl-win)
 else()
   find_package(X11)
   if(X11_FOUND)
@@ -45,6 +46,7 @@ else()
 	${X11_INCLUDE_DIR}
 	${FREETYPE_INCLUDE_DIRS}
 	${FONTCONFIG_INCLUDE_DIR})
+    set(XPCE_LINK_RC swipl)
   endif()
 endif()
 find_package(JPEG)
@@ -98,6 +100,8 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${GUI_INCLUDE_DIRS})
 
+install_dll(${JPEG_LIBRARIES})
+
 ################
 # Install
 
@@ -113,9 +117,11 @@ install(FILES Defaults Defaults.user
 	DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce)
 
 # Install the link file
-install(FILES swipl/swipl-rc
-	DESTINATION ${SWIPL_INSTALL_PREFIX}
-	RENAME swipl.rc)
+foreach(rc ${XPCE_LINK_RC})
+  install(FILES swipl/swipl-rc
+	  DESTINATION ${SWIPL_INSTALL_PREFIX}
+	  RENAME ${rc}.rc)
+endforeach()
 
 ################
 # Create indexes
