@@ -959,15 +959,8 @@ ws_save_image_file(Image image, SourceSink into, Name fmt)
     return errorPce(image, NAME_noImageFormat, NAME_gif);
 #endif
   } else
-  { int pnm_fmt;
-    HBITMAP bm;
+  { HBITMAP bm;
     status rval;
-
-    if ( fmt == NAME_pnm )	pnm_fmt = PNM_PNM;
-    else if ( fmt == NAME_pbm )	pnm_fmt = PNM_PBM;
-    else if ( fmt == NAME_pgm )	pnm_fmt = PNM_PGM;
-    else if ( fmt == NAME_ppm )	pnm_fmt = PNM_PPM;
-    else fail;
 
     if ( (bm = getXrefObject(image, d)) )
     { IOSTREAM *fd;

@@ -619,23 +619,29 @@ messageToEvent(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
   }
 
   if ( mouse_ev )
-  { POINTS pt = MAKEPOINTS(lParam);
+  { union mkpts
+    { LPARAM lp;
+      POINTS pt;
+    } mkpts;
+    /*POINTS pt = MAKEPOINTS(lParam);*/
     int state = 0;
     static PceWindow lastwin;
     static int lastx;
     static int lasty;
 
-    x = toInt(pt.x);
-    y = toInt(pt.y);
+    mkpts.lp = lParam;
+
+    x = toInt(mkpts.pt.x);
+    y = toInt(mkpts.pt.y);
 
 				/* Some versions of windows sometimes */
 				/* give fake move-events.  We suppress these */
     if ( id == NAME_locMove )
-    { if ( pt.x == lastx && pt.y == lasty && window == lastwin )
+    { if ( mkpts.pt.x == lastx && mkpts.pt.y == lasty && window == lastwin )
 	fail;
       else
-      { lastx = pt.x;
-	lasty = pt.y;
+      { lastx = mkpts.pt.x;
+	lasty = mkpts.pt.y;
 	lastwin = window;
       }
     }
