@@ -19,8 +19,7 @@ if(WIN32)
       shell32.lib
       ws2_32.lib
       ${XPM_LIBRARY})
-  set(GUI_INCLUDE_DIRS
-      ${JPEG_INCLUDE_DIR})
+  set(GUI_INCLUDE_DIRS)
   set(XPCE_LINK_RC swipl-win)
 else()
   find_package(X11)
@@ -42,7 +41,6 @@ else()
 	${FONTCONFIG_LIBRARIES})
 
     set(GUI_INCLUDE_DIRS
-	${JPEG_INCLUDE_DIR}
 	${X11_INCLUDE_DIR}
 	${FREETYPE_INCLUDE_DIRS}
 	${FONTCONFIG_INCLUDE_DIR})
@@ -50,6 +48,7 @@ else()
   endif()
 endif()
 find_package(JPEG)
+set(GUI_INCLUDE_DIRS ${GUI_INCLUDE_DIRS} ${JPEG_INCLUDE_DIR})
 
 if(HAVE_GUI AND JPEG_FOUND)
 
