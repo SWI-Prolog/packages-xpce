@@ -35,10 +35,12 @@ CXX/demo/Makefile
 Makefile
 lib/*-linux
 lib/*-darwin*
+auto
 linux
 mingw
 win32
 win64
+apple
 man/reference/index.obj
 pl/src/Makefile.bin
 prolog/lib/.pwd
