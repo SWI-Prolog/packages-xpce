@@ -437,7 +437,7 @@ static StringObj
 getXMLStringDate(Date d)
 { time_t now = d->unix_date;
   struct tm *tm = gmtime(&now);
-  char date[30];
+  char date[100];
 
   sprintf(date, "%04d-%02d-%02dT%02d:%02d:%02dZ",
 	  tm->tm_year + 1900,
