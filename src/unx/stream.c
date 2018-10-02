@@ -456,12 +456,12 @@ getReadLineStream(Stream s, Real timeout)
       for(n=s->input_p, q = s->input_buffer; n > 0; n--, q++)
       { if ( *q == '\n' )
 	{ string str;
-	  int len = (q-s->input_buffer)+1;
+	  size_t len = (q-s->input_buffer)+1;
 	  StringObj rval;
 
 	  str_set_n_ascii(&str, len, (char *)s->input_buffer);
 	  rval = StringToString(&str);
-	  strncpy((char *)s->input_buffer,
+	  memmove((char *)s->input_buffer,
 		  (char *)&s->input_buffer[len], s->input_p - len);
 	  s->input_p -= len;
 
