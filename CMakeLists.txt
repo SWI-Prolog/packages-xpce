@@ -108,18 +108,18 @@ install_dll(${JPEG_LIBRARIES})
 foreach(d ${XPCE_DATA_DIRS})
     string(REGEX REPLACE "/" "_" filevar ${d})
     prepend(files ${d} ${XPCE_DATA_${filevar}})
-    install(FILES ${files}
-	    DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce/${d})
+    install_src(FILES ${files}
+		DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce/${d})
 endforeach()
 
-install(FILES Defaults Defaults.user
-	DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce)
+install_src(FILES Defaults Defaults.user
+	    DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce)
 
 # Install the link file
 foreach(rc ${XPCE_LINK_RC})
-  install(FILES swipl/swipl-rc
-	  DESTINATION ${SWIPL_INSTALL_PREFIX}
-	  RENAME ${rc}.rc)
+  install_src(FILES swipl/swipl-rc
+	      DESTINATION ${SWIPL_INSTALL_PREFIX}
+	      RENAME ${rc}.rc)
 endforeach()
 
 ################
