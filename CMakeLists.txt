@@ -117,6 +117,7 @@ add_swipl_target(
     xpce-predicate-index
     OUTPUT  ${XPCE_PREDICATE_INDEX}
     COMMAND "make_library_index('${XPCE_BUILD_LIBRARY}')"
+    QUIET
     COMMENT "-- Building xpce predicate index")
 add_swipl_target(
     xpce-class-index
@@ -132,10 +133,15 @@ add_swipl_target(
     DEPENDS xpce-predicate-index
     COMMENT "-- Building manual index")
 
-add_qcompile_target(pce               DEPENDS ${XPCE_QLF_pce})
-add_qcompile_target(trace/trace       DEPENDS ${XPCE_QLF_trace})
-add_qcompile_target(emacs/emacs	      DEPENDS ${XPCE_QLF_emacs})
-add_qcompile_target(emacs/prolog_mode DEPENDS)
+set(SWIPL_COMMAND_DEPENDS ${SWIPL_COMMAND_DEPENDS}
+    xpce-predicate-index xpce-class-index)
+
+add_qcompile_target(pce               SOURCES ${XPCE_QLF_pce})
+add_qcompile_target(emacs/emacs	      SOURCES ${XPCE_QLF_emacs}
+				      DEPENDS qlf-pce)
+add_qcompile_target(trace/trace       SOURCES ${XPCE_QLF_trace}
+				      DEPENDS qlf-emacs-emacs)
+add_qcompile_target(emacs/prolog_mode DEPENDS qlf-emacs-emacs)
 
 ################
 # Install
