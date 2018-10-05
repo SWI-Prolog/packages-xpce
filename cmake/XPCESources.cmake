@@ -121,8 +121,7 @@ set(XPCE_DATA_DIRS
     prolog/lib/draw prolog/lib/emacs prolog/lib/english prolog/lib/http
     prolog/lib/man prolog/lib/math prolog/lib/plot prolog/lib/swi
     prolog/lib/trace prolog/lib/trace/icons prolog/lib/trace/icons/16x16
-    prolog/lib/xref prolog/lib/dialog/bitmaps prolog/lib/doc
-    prolog/lib/doc/icons
+    prolog/lib/xref prolog/lib/dialog/bitmaps prolog/lib/doc/icons
 
     prolog/contrib
     prolog/contrib/rubik
@@ -375,4 +374,16 @@ set(XPCE_DATA_man_reference_class and.doc application.doc arc.doc
     vector.doc view.doc visual.doc vmi.doc when.doc while.doc
     window_decorator.doc window.doc win_metafile.doc win_printer.doc)
 
+################
+# QLF DEPENDENCIES
 
+prepend(XPCE_QLF_pce ../boot/ ${XPCE_DATA_prolog_boot})
+set(XPCE_QLF_pce ${XPCE_QLF_pce}
+    swi_compatibility.pl english/pce_messages.pl)
+set(XPCE_QLF_trace trace/clause.pl trace/util.pl trace/source.pl
+    trace/gui.pl trace/settings.pl trace/stack.pl trace/viewterm.pl
+    trace/stack.pl)
+set(XPCE_QLF_emacs emacs/window.pl emacs/buffer.pl emacs/application.pl
+    emacs/buffer_menu.pl emacs/server.pl emacs/history.pl
+    emacs/fundamental_mode.pl emacs/language_mode.pl emacs/outline_mode.pl
+    emacs/bookmarks.pl)

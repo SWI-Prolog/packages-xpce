@@ -104,29 +104,38 @@ install_dll(${JPEG_LIBRARIES})
 ################
 # Create indexes
 
-message("Build home: ${SWIPL_BUILD_HOME}")
-
 set(XPCE_BUILD_HOME      ${SWIPL_BUILD_HOME}/xpce)
 set(XPCE_BUILD_LIBRARY   ${XPCE_BUILD_HOME}/prolog/lib)
 set(XPCE_PREDICATE_INDEX ${XPCE_BUILD_LIBRARY}/INDEX.pl)
 set(XPCE_CLASS_INDEX     ${XPCE_BUILD_LIBRARY}/CLASSINDEX.pl)
+set(XPCE_MANINDEX        ${XPCE_BUILD_HOME}/man/reference/index.obj)
 
-add_swipl_command(
+set(SWIPL_COMMAND_DEPENDS plugin_pl2xpce)
+set(SWIPL_QLF_BASE        ${XPCE_BUILD_LIBRARY})
+
+add_swipl_target(
+    xpce-predicate-index
     OUTPUT  ${XPCE_PREDICATE_INDEX}
     COMMAND "make_library_index('${XPCE_BUILD_LIBRARY}')"
-    COMMENT "-- Building xpce predicate index"
-    DEPENDS plugin_pl2xpce)
-add_swipl_command(
+    COMMENT "-- Building xpce predicate index")
+add_swipl_target(
+    xpce-class-index
     OUTPUT  ${XPCE_CLASS_INDEX}
     COMMAND "pce_make_library_index('${XPCE_BUILD_LIBRARY}')"
-    COMMENT "-- Building xpce class index"
-    DEPENDS plugin_pl2xpce)
+    DEPENDS xpce-predicate-index
+    COMMENT "-- Building xpce class index")
+add_swipl_target(
+    xpce-manual-index
+    OUTPUT ${XPCE_MANINDEX}
+    COMMAND "pce_make_manual_index('${XPCE_MANINDEX}')"
+    SCRIPT  "${XPCE_BUILD_LIBRARY}/man/man_index.pl"
+    DEPENDS xpce-predicate-index
+    COMMENT "-- Building manual index")
 
-add_custom_target(
-    xpce_indexes ALL
-    DEPENDS ${XPCE_PREDICATE_INDEX}
-)
-
+add_qcompile_target(pce               DEPENDS ${XPCE_QLF_pce})
+add_qcompile_target(trace/trace       DEPENDS ${XPCE_QLF_trace})
+add_qcompile_target(emacs/emacs	      DEPENDS ${XPCE_QLF_emacs})
+add_qcompile_target(emacs/prolog_mode DEPENDS)
 
 ################
 # Install
@@ -148,35 +157,5 @@ foreach(rc ${XPCE_LINK_RC})
 	      DESTINATION ${SWIPL_INSTALL_PREFIX}
 	      RENAME ${rc}.rc)
 endforeach()
-
-################
-# Create indexes
-# This is currently done using install(CODE ...).  The advantage is that we pick only
-# the installed libraries.  Some care must be taken that the generated files are
-# processed correctly.
-
-set(XPCE_PROLOG_LIB_DIR ${SWIPL_INSTALL_PREFIX}/xpce/prolog/lib)
-set(XPCE_MANINDEX ${SWIPL_INSTALL_PREFIX}/xpce/man/reference/index.obj)
-
-install(CODE "message(\"-- Creating xpce indexes\")")
-
-run_installed_swipl("make_library_index('${XPCE_PROLOG_LIB_DIR}')"
-		    RC ${XPCE_LINK_RC}
-		    COMMENT "   -- Building predicate index" QUIET)
-run_installed_swipl("pce_make_library_index('${XPCE_PROLOG_LIB_DIR}')"
-		    RC ${XPCE_LINK_RC}
-		    COMMENT "   -- Building class index")
-run_installed_swipl("pce_make_manual_index('${XPCE_MANINDEX}')"
-		    RC ${XPCE_LINK_RC}
-		    SCRIPT  "${XPCE_PROLOG_LIB_DIR}/man/man_index.pl"
-		    COMMENT "   -- Building manual index")
-
-qcompile(RC
-	     ${XPCE_LINK_RC}
-	 LIBRARIES
-	     pce
-	     trace/trace
-	     emacs/emacs
-	     emacs/prolog_mode)
 
 endif(HAVE_GUI AND JPEG_FOUND)
