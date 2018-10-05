@@ -102,6 +102,33 @@ target_include_directories(
 install_dll(${JPEG_LIBRARIES})
 
 ################
+# Create indexes
+
+message("Build home: ${SWIPL_BUILD_HOME}")
+
+set(XPCE_BUILD_HOME      ${SWIPL_BUILD_HOME}/xpce)
+set(XPCE_BUILD_LIBRARY   ${XPCE_BUILD_HOME}/prolog/lib)
+set(XPCE_PREDICATE_INDEX ${XPCE_BUILD_LIBRARY}/INDEX.pl)
+set(XPCE_CLASS_INDEX     ${XPCE_BUILD_LIBRARY}/CLASSINDEX.pl)
+
+add_swipl_command(
+    OUTPUT  ${XPCE_PREDICATE_INDEX}
+    COMMAND "make_library_index('${XPCE_BUILD_LIBRARY}')"
+    COMMENT "-- Building xpce predicate index"
+    DEPENDS plugin_pl2xpce)
+add_swipl_command(
+    OUTPUT  ${XPCE_CLASS_INDEX}
+    COMMAND "pce_make_library_index('${XPCE_BUILD_LIBRARY}')"
+    COMMENT "-- Building xpce class index"
+    DEPENDS plugin_pl2xpce)
+
+add_custom_target(
+    xpce_indexes ALL
+    DEPENDS ${XPCE_PREDICATE_INDEX}
+)
+
+
+################
 # Install
 
 # Install the data files
