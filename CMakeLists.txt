@@ -159,9 +159,9 @@ install_src(FILES Defaults Defaults.user
 
 # Install the link file
 foreach(rc ${XPCE_LINK_RC})
-  install_src(FILES swipl/swipl-rc
-	      DESTINATION ${SWIPL_INSTALL_PREFIX}
-	      RENAME ${rc}.rc)
+  install(FILES swipl/swipl-rc
+	  DESTINATION ${SWIPL_INSTALL_PREFIX}
+	  RENAME ${rc}.rc)
 endforeach()
 
 endif(HAVE_GUI AND JPEG_FOUND)
