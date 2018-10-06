@@ -150,11 +150,13 @@ add_qcompile_target(emacs/prolog_mode DEPENDS qlf-emacs-emacs)
 foreach(d ${XPCE_DATA_DIRS})
     string(REGEX REPLACE "/" "_" filevar ${d})
     prepend(files ${d} ${XPCE_DATA_${filevar}})
-    install_src(FILES ${files}
+    install_src(pkg_xpce_${filevar}
+		FILES ${files}
 		DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce/${d})
 endforeach()
 
-install_src(FILES Defaults Defaults.user
+install_src(pkg_xpce_defaults
+	    FILES Defaults Defaults.user
 	    DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce)
 
 # Install the link file
