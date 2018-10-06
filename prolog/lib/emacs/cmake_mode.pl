@@ -36,7 +36,7 @@
 :- module(emacs_cmake_mode, []).
 :- use_module(library(pce)).
 
-:- emacs_begin_mode(script, language,
+:- emacs_begin_mode(cmake, language,
                     "Edit CMAKE scripts",
                     [
                     ],
