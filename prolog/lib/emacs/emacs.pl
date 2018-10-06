@@ -130,6 +130,7 @@ pce_ifhostproperty(prolog(swi),
 :- declare_emacs_mode(owl,      library('emacs/rdf_mode')).
 :- declare_emacs_mode(turtle,   library('emacs/turtle_mode')).
 :- declare_emacs_mode(yaml,     library('emacs/yaml_mode')).
+:- declare_emacs_mode(cmake,    library('emacs/cmake_mode')).
 
 
                  /*******************************
@@ -194,6 +195,7 @@ default_emacs_mode('.*\\.cc$',                     cpp).
 default_emacs_mode('.*\\.cpp$',                    cpp).
 default_emacs_mode('.*\\.idl$',                    cpp).
 default_emacs_mode('.*\\.yaml~?$',                 yaml).
+default_emacs_mode('.*\\.cmake~?$|CMakeLists.txt', cmake).
 default_emacs_mode('.*\\.txt~?$',                  text).
 default_emacs_mode('[Cc]ompose|README|\\.article', text).
 default_emacs_mode(Pattern, prolog) :-
@@ -214,7 +216,7 @@ make_emacs_interpreter_mode_list(Sheet) :-
 %   True if Mode must be used for   a  file starting with #!Path and
 %   Path matches Regex.
 
-emacs_interpreter_mode('.*/pl',                         prolog).
+emacs_interpreter_mode('.*/swipl',                      prolog).
 emacs_interpreter_mode('.*/xpce',                       prolog).
 emacs_interpreter_mode('.*/perl',                       c).
 emacs_interpreter_mode('.*/awk',                        c).

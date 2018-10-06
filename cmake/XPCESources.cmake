@@ -193,7 +193,7 @@ set(XPCE_DATA_prolog_lib_emacs annotate_mode.pl application.pl bookmarks.pl
     javascript_mode.pl language_mode.pl latex_mode.pl logtalk_mode.pl
     man_mode.pl outline_mode.pl prolog_mode.pl prompt.pl rdf_mode.pl
     script_mode.pl server.pl sgml_mode.pl shell.pl swi_prolog.pl
-    text_mode.pl turtle_mode.pl window.pl yaml_mode.pl)
+    text_mode.pl turtle_mode.pl window.pl yaml_mode.pl cmake_mode.pl)
 
 set(XPCE_DATA_prolog_lib_english pce_messages.pl)
 
