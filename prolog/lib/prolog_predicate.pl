@@ -238,7 +238,7 @@ summary(P, Summary:string) :<-
 
 :- if(current_predicate(man_object_property/2)).
 man_predicate_summary(PI, Summary) :-
-    man_object_property(PI, Summary).
+    man_object_property(PI, summary(Summary)).
 :- elif(current_predicate(predicate/5)).
 man_predicate_summary(Name/Arity, Summary) :-
     predicate(Name, Arity, Summary, _, _).
