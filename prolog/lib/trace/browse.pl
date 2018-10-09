@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2013, University of Amsterdam
+    Copyright (c)  2001-2018, University of Amsterdam
                               VU University Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -38,7 +39,11 @@
 :- use_module(library(toc_filesystem)).
 :- use_module(library(pce_report)).
 :- use_module(library(toolbar)).
-:- use_module(library(helpidx)).
+:- if(exists_source(library(pldoc/man_index))).
+:- use_module(library(pldoc/man_index)).
+:- if(exists_source(library(helpidx))).
+:- use_module(library(helpidx), [predicate/5]).
+:- endif.
 :- use_module(library(trace/util)).
 :- use_module(library(prolog_source)).
 :- use_module(browse_xref).
@@ -896,7 +901,19 @@ has_manual(P) :->
     "Succeed if there is a manual-page"::
     get(P, name, Name),
     get(P, arity, Arity),
-    predicate(Name, Arity, _, _, _).
+    man_predicate_summary(Name/Arity, _).
+
+:- if(current_predicate(man_object_property/2)).
+man_predicate_summary(PI, Summary) :-
+    man_object_property(PI, Summary).
+:- elif(current_predicate(predicate/5)).
+man_predicate_summary(Name/Arity, Summary) :-
+    predicate(Name, Arity, Summary, _, _).
+:- else.
+man_predicate_summary(_, _) :-
+    fail.
+:- endif.
+
 
 built_in(P) :->
     "True is represented predicate is builtin"::

@@ -161,7 +161,7 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     portray_object.pl print_graphics.pl print_text.pl
     prolog_predicate_item.pl prolog_predicate.pl qrecompile.pl
     scaledbitmap.pl scan_arguments.pl sp_fcompile.pl splash_screen.pl
-    stayup_popup.pl swi_compatibility.pl swi_edit.pl swi_help.pl
+    stayup_popup.pl swi_compatibility.pl swi_edit.pl
     swi_hooks.pl swi_ide.pl swi_preferences.pl tabbed_window.pl tabular.pl
     toc_filesystem.pl toolbar.pl url_image.pl Xserver.pl)
 

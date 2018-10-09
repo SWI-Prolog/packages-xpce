@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2014, University of Amsterdam
+    Copyright (c)  2001-2018, University of Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -52,7 +53,6 @@ file from being loaded.
 
 :- multifile
     prolog:debug_control_hook/1,
-    prolog:help_hook/1,
     prolog:show_profile_hook/1,             % new
     prolog:show_profile_hook/2.             % compatibility
 
@@ -65,27 +65,6 @@ prolog:debug_control_hook(spy(Method)) :-
     call(spypce(Method)).
 prolog:debug_control_hook(nospy(Method)) :-
     call(nospypce(Method)).
-
-
-                 /*******************************
-                 *           HELP HOOK          *
-                 *******************************/
-
-prolog:help_hook(help) :-
-    !,
-    call(prolog_help).
-prolog:help_hook(apropos(What)) :-
-    !,
-    call(prolog_apropos(What)).
-prolog:help_hook(help(What)) :-
-    !,
-    call((   in_pce_thread_sync(pce_to_method(What, Method))
-         ->  manpce(Method)
-         ;   current_prolog_flag(pldoc_collecting, _),
-             doc_browser(What)
-         ->  true
-         ;   prolog_help(What)
-         )).
 
 
                  /*******************************
