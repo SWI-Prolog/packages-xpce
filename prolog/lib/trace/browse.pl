@@ -41,6 +41,7 @@
 :- use_module(library(toolbar)).
 :- if(exists_source(library(pldoc/man_index))).
 :- use_module(library(pldoc/man_index)).
+:- endif.
 :- if(exists_source(library(helpidx))).
 :- use_module(library(helpidx), [predicate/5]).
 :- endif.
