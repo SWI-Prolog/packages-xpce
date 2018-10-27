@@ -119,7 +119,7 @@ enable_all(B) :->
     send(B, refresh).
 
 help(_) :->
-    "Start help on predciate"::
+    "Start help on predicate"::
     auto_call(help(debug/3)).
 
 :- pce_end_class(prolog_debug_monitor).
