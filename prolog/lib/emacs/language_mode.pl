@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (c)  1985-2013, University of Amsterdam
+    Copyright (c)  1985-2018, University of Amsterdam
                               VU University Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -38,6 +39,7 @@
 :- use_module(library(hyper)).
 :- use_module(library(socket), [gethostname/1]).
 :- use_module(library(debug)).
+:- use_module(library(atom)).
 :- require([ auto_call/1
            , chain_list/2
            , default/3
@@ -863,7 +865,7 @@ unshow_matching_bracket_fragment(M) :->
 
 
                  /*******************************
-                 *      RESTYLE IDNTIFIERS      *
+                 *      RESTYLE IDENTIFIERS     *
                  *******************************/
 
 camelcase_word(M, Arg:[int]) :->
@@ -889,97 +891,6 @@ restyle_word(M, Style:{'OneTwo',oneTwo,one_two,'One_Two'}, Arg:[int]) :->
              send(M, delete, Here, End),
              send(M, caret, Here),
              send(M, insert, NewWord))).
-
-
-%!  restyle_identifier(+Style, +In, -Out) is det.
-%
-%   Restyle an identifier by extracting the alnum substrings and
-%   joining them together according to Style.
-%
-%   @param Style is described with join_name_parts/3.
-
-restyle_identifier(Style, In, Out) :-
-    name_parts(In, Parts),
-    join_name_parts(Style, Parts, Out).
-
-
-%!  name_parts(+Identifier, -Parts) is det.
-%
-%   Parts is a list of atoms  that   make  up  Identifier. The parts
-%   found are turned into lowercase, unless   all its characters are
-%   uppercase.  E.g.,
-%
-%   ==
-%   ?- name_parts('sourceCodeURI', X).
-%   X = [source, code, 'URI'].
-%   ==
-
-name_parts(Name, Parts) :-
-    atom_codes(Name, Codes),
-    phrase(name_parts(Parts), Codes).
-
-name_parts([H|T]) -->
-    name_part(H),
-    !,
-    name_parts(T).
-name_parts([]) --> [].
-
-name_part(H) -->
-    string(Codes, Tail),
-    sep(Tail),
-    !,
-    { Codes = [_|_],
-      atom_codes(H0, Codes),
-      (   maplist(is_upper, Codes)
-      ->  H = H0
-      ;   downcase_atom(H0, H)
-      )
-    }.
-
-string(T,T) --> [].
-string([H|T], L) --> [H], string(T, L).
-
-sep([]) --> sep_char, !, sep_chars.
-sep([T]), [N] -->
-    [T,N],
-    { code_type(T, lower),
-      code_type(N, upper)
-    }.
-sep([],[],[]).
-
-sep_char -->
-    [H],
-    { \+ code_type(H, alnum) }.
-
-sep_chars --> sep_char, !, sep_chars.
-sep_chars --> [].
-
-%!  join_name_parts(+Style, +Parts, -Identifier)
-%
-%   Join parts of an identifier according to Style.  Style is
-%   one of:
-%
-%       * 'OneTwo'
-%       * oneTwo
-%       * one_two
-%       * 'One_Two'
-
-join_name_parts(Style, [First|Parts], Identifier) :-
-    style(Style, CapFirst, CapRest, Sep),
-    capitalise(CapFirst, First, H),
-    maplist(capitalise(CapRest), Parts, T),
-    atomic_list_concat([H|T], Sep, Identifier).
-
-style('OneTwo',  true,  true,  '').
-style(oneTwo,    false, true,  '').
-style(one_two,   false, false, '_').
-style('One_Two', true,  true,  '_').
-
-capitalise(false, X, X) :- !.
-capitalise(true, X, Y) :-
-    atom_codes(X, [H0|T]),
-    code_type(H0, to_lower(H)),
-    atom_codes(Y, [H|T]).
 
 
                  /*******************************
