@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2018, University of Amsterdam
+			      CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -179,14 +180,6 @@ closeAllSockets(int status)
 }
 
 
-#ifdef SIGPIPE
-static void
-sigPipeSocket(void)
-{ errorPce(PCE, NAME_brokenPipe, 0);
-}
-#endif
-
-
 static void
 setupSockets(void)
 { static int initialised = 0;
@@ -210,10 +203,6 @@ setupSockets(void)
 #endif
 
     at_pce_exit(closeAllSockets, ATEXIT_FIFO);
-
-#ifdef SIGPIPE
-    hostAction(HOST_SIGNAL, SIGPIPE, sigPipeSocket);
-#endif
 
     initialised++;
   }
