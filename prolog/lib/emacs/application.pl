@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (c)  1996-2013, University of Amsterdam
+    Copyright (c)  1996-2018, University of Amsterdam
                               VU University Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -41,6 +42,7 @@
 :- endif.
 :- require([ ignore/1
            , pce_help_file/2
+           , member/2
            ]).
 
 :- pce_global(@finder, new(finder)).
@@ -348,7 +350,8 @@ server_start(Emacs, Force) :-
 chrome_server(_Emacs) :->
     "Start HTTP server on 9292 for Edit With Emacs"::
     use_module(library(emacs/emacs_chrome_server)),
-    emacs_chrome_server.
+    member(Goal, [emacs_chrome_server]),        % fool xref
+    call(Goal).
 
 :- pce_group(customise).
 
