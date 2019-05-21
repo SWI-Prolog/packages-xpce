@@ -334,16 +334,25 @@ repaintText(TextObj t, int x, int y, int w, int h)
     { LocalString(buf, s->s_iswide, s->s_size+1);
 
       str_one_line(buf, s);
-      s = buf;
-    }
-    if ( notNil(t->selection) )
-    { str_selected_string(s, t->font, sf, st, style,
-			  x+valInt(t->x_offset), y, w, h,
-			  t->format, NAME_top);
+      if ( notNil(t->selection) )
+      { str_selected_string(buf, t->font, sf, st, style,
+			    x+valInt(t->x_offset), y, w, h,
+			    t->format, NAME_top);
+      } else
+      { str_string(buf, t->font,
+		   x+valInt(t->x_offset), y, w, h,
+		   t->format, NAME_top, flags);
+      }
     } else
-    { str_string(s, t->font,
-		 x+valInt(t->x_offset), y, w, h,
-		 t->format, NAME_top, flags);
+    { if ( notNil(t->selection) )
+      { str_selected_string(s, t->font, sf, st, style,
+			    x+valInt(t->x_offset), y, w, h,
+			    t->format, NAME_top);
+      } else
+      { str_string(s, t->font,
+		   x+valInt(t->x_offset), y, w, h,
+		   t->format, NAME_top, flags);
+      }
     }
   }
 
@@ -407,9 +416,10 @@ initAreaText(TextObj t)
     { LocalString(buf, s->s_iswide, s->s_size + 1);
 
       str_one_line(buf, s);
-      s = buf;
+      str_size(buf, t->font, &tw, &h);
+    } else
+    { str_size(s, t->font, &tw, &h);
     }
-    str_size(s, t->font, &tw, &h);
   }
 
   if ( t->wrap == NAME_clip )
@@ -570,39 +580,25 @@ getCharacterPositionText(TextObj t, Int chr)
 }
 
 
-static status
-get_char_pos_text(TextObj t, Int chr, int *X, int *Y)
-{ int caret = (isDefault(chr) ? valInt(t->caret) : valInt(chr));
-  int w   = abs((int)valInt(t->area->w));
+static void
+get_char_pos_helper(TextObj t, String s, int caret, int *cx, int *cy)
+{ int b = valInt(t->border);
   int ch  = valInt(getHeightFont(t->font));
-  int cx, cy = 0, lw, sl;
-  String s = &t->string->data;
-  int b = valInt(t->border);
-
-  if ( Wrapped(t) )
-  { LocalString(buf, s->s_iswide, Wrapped(t) ? s->s_size + MAX_WRAP_LINES : 0);
-
-    str_format(buf, s, valInt(t->margin), t->font);
-    s = buf;
-  } else if ( t->wrap == NAME_clip )
-  { LocalString(buf, s->s_iswide, s->s_size + 1);
-
-    str_one_line(buf, s);
-    s = buf;
-  }
+  int w   = abs((int)valInt(t->area->w));
+  int lw, sl;
 
   if ( (sl = str_next_rindex(s, caret-1, '\n')) < 0 )
-    sl = 0;
-  else
+  { sl = 0;
+  } else
   { sl++;
-    cy += (str_lineno(s, sl)-1) * ch;
+    *cy += (str_lineno(s, sl)-1) * ch;
   }
 
   lw = str_width(s, sl, caret, t->font);
   w -= 2 * b;
 
   if ( t->format == NAME_left )
-  { cx = lw;
+  { *cx = lw;
   } else
   { int el;
     int rw;
@@ -612,9 +608,30 @@ get_char_pos_text(TextObj t, Int chr, int *X, int *Y)
     rw = str_width(s, caret, el, t->font);
 
     if ( t->format == NAME_center )
-      cx = w/2 - (lw+rw)/2 + lw;
+      *cx = w/2 - (lw+rw)/2 + lw;
     else				/* right */
-      cx = w - rw;
+      *cx = w - rw;
+  }
+}
+
+
+static status
+get_char_pos_text(TextObj t, Int chr, int *X, int *Y)
+{ int caret = (isDefault(chr) ? valInt(t->caret) : valInt(chr));
+  int cx, cy = 0;
+  String s = &t->string->data;
+  int b = valInt(t->border);
+
+  if ( Wrapped(t) )
+  { LocalString(buf, s->s_iswide, Wrapped(t) ? s->s_size + MAX_WRAP_LINES : 0);
+
+    str_format(buf, s, valInt(t->margin), t->font);
+    get_char_pos_helper(t, s, caret, &cx, &cy);
+  } else if ( t->wrap == NAME_clip )
+  { LocalString(buf, s->s_iswide, s->s_size + 1);
+
+    str_one_line(buf, s);
+    get_char_pos_helper(t, s, caret, &cx, &cy);
   }
 
   *X = cx + valInt(t->x_offset) + b;

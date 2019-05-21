@@ -86,10 +86,12 @@ RedrawAreaLabel(Label lb, Area a)
     { LocalString(buf, s->s_iswide, s->s_size+1);
 
       str_one_line(buf, s);
-      s = buf;
+      str_label(buf, 0, lb->font, x, y, w, h, NAME_left, NAME_top,
+		lb->active == ON ? 0 : LABEL_INACTIVE);
+    } else
+    { str_label(s, 0, lb->font, x, y, w, h, NAME_left, NAME_top,
+		lb->active == ON ? 0 : LABEL_INACTIVE);
     }
-    str_label(s, 0, lb->font, x, y, w, h, NAME_left, NAME_top,
-	      lb->active == ON ? 0 : LABEL_INACTIVE);
   } else /*if ( instanceOfObject(lb->selection, ClassImage) )*/
   { Image image = (Image) lb->selection;
 
@@ -172,10 +174,10 @@ computeLabel(Label lb)
       { LocalString(buf, s->s_iswide, s->s_size+1);
 
 	str_one_line(buf, s);
-	s = buf;
+	str_size(buf, lb->font, &w, &h);
+      } else
+      { str_size(s, lb->font, &w, &h);
       }
-
-      str_size(s, lb->font, &w, &h);
       w += ex;
 
       if ( notDefault(lb->width) )
