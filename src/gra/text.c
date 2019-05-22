@@ -618,7 +618,8 @@ get_char_pos_helper(TextObj t, String s, int caret, int *cx, int *cy)
 static status
 get_char_pos_text(TextObj t, Int chr, int *X, int *Y)
 { int caret = (isDefault(chr) ? valInt(t->caret) : valInt(chr));
-  int cx, cy = 0;
+  int cx = 0;			/* clang doesn't see this is not needed */
+  int cy = 0;
   String s = &t->string->data;
   int b = valInt(t->border);
 
