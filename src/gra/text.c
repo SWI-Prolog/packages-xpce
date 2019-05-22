@@ -468,9 +468,10 @@ initPositionText(TextObj t)
     { LocalString(buf, s->s_iswide, s->s_size + 1);
 
       str_one_line(buf, s);
-      s = buf;
+      str_size(buf, t->font, &tw, &h);
+    } else
+    { str_size(s, t->font, &tw, &h);
     }
-    str_size(s, t->font, &tw, &h);
   }
 
   if ( t->wrap == NAME_clip )
