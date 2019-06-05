@@ -208,7 +208,9 @@ update(F) :->
 
 xref_all(F) :->
     "Run X-referencer on all files"::
-    forall(source_file(File),
+    forall(( source_file(File),
+             exists_file(File)
+           ),
            send(F, xref_file, File)).
 
 xref_file(F, File:name) :->
