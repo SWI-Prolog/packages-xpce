@@ -82,13 +82,13 @@ make_dynamic_source_buffer(B) :-
 :- dynamic
     clause_info_cache/4,
     dynamic_info_cache/5.
-:- multifile
-    user:prolog_event_hook/1.
 
-user:prolog_event_hook(erased(Ref)) :-
-    retract(clause_info_cache(Ref, _, _, _)),
-    debug(clause_info, 'Retracted info for ~p', [Ref]),
-    fail.                           % allow other hooks
+:- initialization
+    prolog_unlisten(erase, clear_clause_info_cache),
+    prolog_listen(erase, clear_clause_info_cache).
+
+clear_clause_info_cache(Ref) :-
+    retractall(clause_info_cache(Ref, _, _, _)).
 
 clear_clause_info_cache :-
     retractall(clause_info_cache(_, _, _, _)).

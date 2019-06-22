@@ -65,7 +65,6 @@
            ]).
 
 :- multifile
-    user:prolog_event_hook/1,
     user:message_hook/3.
 
 :- meta_predicate
@@ -211,13 +210,14 @@ thread_debug_queue_locked(Thread, Queue) :-
         Queue = Q
     ).
 
-:- multifile
-    user:prolog_event_hook/1.
+:- initialization
+    prolog_unlisten(thread_exit, thread_finished),
+    prolog_listen(thread_exit, thread_finished).
 
-user:prolog_event_hook(thread_finished(TID)) :-
+thread_finished(TID) :-
+    destroy_thread_debug_gui(TID),
     forall(retract(thread_debug_queue_store(TID, Queue)),
-           message_queue_destroy(Queue)),
-    fail.                           % allow other hooks
+           message_queue_destroy(Queue)).
 
 msg_id(Id) :-
     with_mutex(debug_msg_id,
@@ -1333,41 +1333,36 @@ var_name(_F, _Name:name) :<-
 :- pce_end_class(prolog_frame_constraint_fragment).
 
 
-
                  /*******************************
                  *             EVENTS           *
                  *******************************/
 
-%user:prolog_event_hook(Term) :-
-%       debug('prolog_event_hook(~w).', [Term]),
-%       fail.
-user:prolog_event_hook(frame_finished(Frame)) :-
+:- initialization
+    prolog_unlisten(frame_finished, frame_finished),
+    prolog_listen(frame_finished, frame_finished).
+
+frame_finished(Frame) :-
     thread_self_id(Thread),
     gui(Thread, _, Gui),            % has a gui
-    send_pce_async(send(Gui, frame_finished(Frame))),
-    fail.
-user:prolog_event_hook(exit_break(Level)) :-
-    thread_self_id(Thread),
-    gui(Thread, Level, Gui),
-    send_pce_async(send(Gui, destroy)),
-    fail.
-user:prolog_event_hook(finished_query(_Qid, YesNo)) :-
-    thread_self_id(Thread),         % only main?
-    break_level(Level),
-    gui(Thread, Level, Ref),
-    send_pce_async(send(Ref, query_finished(YesNo))),
-    fail.
-user:prolog_event_hook(thread_finished(Thread)) :-
-    gui(Thread, _, Gui),
-    thread_property(Thread, status(Status)),
-    send_pce_async(send(Gui, thread_finished(Status))),
-    fail.
+    send_pce_async(send(Gui, frame_finished(Frame))).
+
+destroy_thread_debug_gui(Thread) :-
+    (   gui(Thread, _, Gui)
+    ->  thread_property(Thread, status(Status)),
+        send_pce_async(send(Gui, thread_finished(Status)))
+    ;   true
+    ).
 
 user:message_hook('$aborted', _, _Lines) :-
     aborted,
     fail.
 user:message_hook(query(YesNo), _, _Lines) :-
     query_finished(YesNo),
+    fail.
+user:message_hook(break(end, Level)) :-
+    thread_self_id(Thread),
+    gui(Thread, Level, Gui),
+    send_pce_async(send(Gui, destroy)),
     fail.
 
 aborted :-

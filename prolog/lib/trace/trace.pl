@@ -90,13 +90,12 @@ prolog_trace_interception_gui(Port, Frame, CHP, Action) :-
         Action = continue
     ).
 
-:- multifile
-    user:prolog_event_hook/1.
+:- initialization
+    prolog_unlisten(frame_finished, retract_frame),
+    prolog_listen(frame_finished, retract_frame).
 
-user:prolog_event_hook(frame_finished(Frame)) :-
-    retractall(finished_frame(Frame)),
-    fail.
-
+retract_frame(Frame) :-
+    retractall(finished_frame(Frame)).
 
 %!  map_action(+GuiAction, +Frame, -Action) is det.
 %
