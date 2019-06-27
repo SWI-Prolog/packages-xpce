@@ -1657,6 +1657,19 @@ termToObject(term_t t, PceType type, atom_t assoc, int new)
     if ( GetFloat(t, &f) )		/* floating point number */
       return cToPceReal(f);
 
+    if ( PL_get_nil(t) )
+    { PceName classname = NAME_codeVector;
+
+      if ( type )
+      { if ( pceSend(type, NULL, NAME_includes,
+		     1, (PceObject *)&NAME_chain) )
+	  classname = NAME_chain;
+	else if ( pceSend(type, NULL, NAME_includes, 1,
+			  (PceObject *)&NAME_vector) )
+	  classname = NAME_vector;
+      }
+      return pceNew(NIL, classname, 0, NULL);
+    }
 					/* anything else */
   type_error:
     ThrowException(EX_TYPE, ATOM_object, t);
