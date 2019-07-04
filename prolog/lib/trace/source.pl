@@ -139,6 +139,7 @@ update_label(V) :->
 post_event(V, Ev:event) :->
     (   send(Ev, is_a, keyboard),
         get(V, editable, @off),
+        get(V, focus_function, @nil),
         get(V, frame, Tracer),
         send(Tracer, has_send_method, source_typed),
         send(Tracer, source_typed, Ev)
