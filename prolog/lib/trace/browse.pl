@@ -1012,8 +1012,7 @@ loading(What, How) :-
     prolog_overview_window(Win),
     (   file_name_extension(_, qlf, File)
     ->  debug(gtrace(qlf), 'Looking for ~q', [File]),
-        '$qlf_info'(File, _CV, MV, FV, Sig, Sig, _WordSize, Sources),
-        FV >= MV,
+        '$qlf_sources'(File, Sources),
         debug(gtrace(qlf), 'Contains ~q', [Sources]),
         member(TheFile, Sources)
     ;   TheFile = File
