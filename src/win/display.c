@@ -453,7 +453,7 @@ getMonitorDisplay(DisplayObj d, Any obj)
 
 static status
 cutBufferDisplay(DisplayObj d, Int n, CharArray str)
-{ String s = &str->data;
+{ PceString s = &str->data;
   TRY(openDisplay(d));
 
   if ( isDefault(n) )

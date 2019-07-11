@@ -60,7 +60,7 @@ typedef struct
 typedef struct
 { FontObj	font;			/* font of the item */
   Style		style;			/* its style */
-  String	text;			/* represented text */
+  PceString	text;			/* represented text */
   int		x;			/* X-position */
 } lineitem;
 

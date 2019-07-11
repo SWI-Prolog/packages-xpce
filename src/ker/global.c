@@ -135,7 +135,7 @@ static status
 isFontReference(Name name)
 { int i1, i2;
   char sep = syntax.word_separator;
-  String s = &name->data;
+  PceString s = &name->data;
 
   if ( (i1=str_index(s, sep)) >= 0 &&
        i1 != (i2=str_rindex(s, sep)) &&

@@ -51,7 +51,7 @@ forwards status save_textbuffer(TextBuffer, intptr_t, intptr_t, SourceSink);
 forwards status insert_file_textbuffer(TextBuffer, intptr_t, intptr_t, SourceSink);
 forwards status shift_fragments(TextBuffer, intptr_t, intptr_t);
 forwards void	start_change(TextBuffer, intptr_t);
-forwards status insert_textbuffer_shift(TextBuffer, intptr_t, intptr_t, String, int);
+forwards status insert_textbuffer_shift(TextBuffer, intptr_t, intptr_t, PceString, int);
 forwards status promoteTextBuffer(TextBuffer tb);
 
 #define ALLOC (256)		/* increment allocation by this amount */
@@ -1524,7 +1524,7 @@ getCountLinesTextBuffer(TextBuffer tb, Int from, Int to)
 
 
 intptr_t
-find_textbuffer(TextBuffer tb, intptr_t here, String str,
+find_textbuffer(TextBuffer tb, intptr_t here, PceString str,
 		intptr_t times, char az, int ec, int wm)
 { int hit = FALSE;
   int where = here;
@@ -1559,7 +1559,7 @@ find_textbuffer(TextBuffer tb, intptr_t here, String str,
 
 
 int
-match_textbuffer(TextBuffer tb, intptr_t here, String s, int ec, int wm)
+match_textbuffer(TextBuffer tb, intptr_t here, PceString s, int ec, int wm)
 { intptr_t l = s->s_size;
   intptr_t i;
 
@@ -1604,7 +1604,7 @@ distribute_spaces(TextBuffer tb, int spaces, int nbreaks, intptr_t *breaks)
 { int s = (nbreaks > 1 ? (spaces / (nbreaks-1)) : 1);
   int n, m;
   int *extra = (int *)alloca(nbreaks * sizeof(int));
-  String space = str_spc(&tb->buffer);
+  PceString space = str_spc(&tb->buffer);
 
   DEBUG(NAME_justify, Cprintf("%d spaces (each %d)\n", spaces, s));
 
@@ -1640,8 +1640,8 @@ fill_line_textbuffer(TextBuffer tb, intptr_t here, intptr_t to,
   int nbreaks = 0;
   int last_break_col = 0;
   intptr_t i;
-  String nl = str_nl(&tb->buffer);
-  String space = str_spc(&tb->buffer);
+  PceString nl = str_nl(&tb->buffer);
+  PceString space = str_spc(&tb->buffer);
 
   DEBUG(NAME_fill, Cprintf("fill_line(tb, %ld, %ld, %d, %d)\n",
 			   here, to, sc, rm));
@@ -1757,7 +1757,7 @@ sortTextBuffer(TextBuffer tb, Int from, Int to)
 
     delete_textbuffer(tb, f, t-f);
     for(n=0; n<ln; n++)
-    { String nl = str_nl(&tb->buffer);
+    { PceString nl = str_nl(&tb->buffer);
       string s;
 
       str_set_ascii(&s, lines[n]);
@@ -1933,7 +1933,7 @@ store_textbuffer(TextBuffer tb, intptr_t where, wint_t c)
 
 
 status
-change_textbuffer(TextBuffer tb, intptr_t where, String s)
+change_textbuffer(TextBuffer tb, intptr_t where, PceString s)
 { intptr_t w, n;
 
   if ( s->s_size < 0 || where < 0 || where+s->s_size > tb->size )
@@ -2128,7 +2128,7 @@ save_textbuffer(TextBuffer tb, intptr_t from, intptr_t len, SourceSink file)
 
 
 status
-str_sub_text_buffer(TextBuffer tb, String s, intptr_t start, intptr_t len)
+str_sub_text_buffer(TextBuffer tb, PceString s, intptr_t start, intptr_t len)
 { int idx;
 
   if ( start < 0 )
@@ -2342,7 +2342,7 @@ the string is wide, the textbuffer is promoted.
 
 static status
 insert_textbuffer_shift(TextBuffer tb, intptr_t where, intptr_t times,
-			String s, int shift)
+			PceString s, int shift)
 { intptr_t grow;
   intptr_t here;
 
@@ -2396,7 +2396,7 @@ insert_textbuffer_shift(TextBuffer tb, intptr_t where, intptr_t times,
 
 
 status
-insert_textbuffer(TextBuffer tb, intptr_t where, intptr_t times, String s)
+insert_textbuffer(TextBuffer tb, intptr_t where, intptr_t times, PceString s)
 { return insert_textbuffer_shift(tb, where, times, s, TRUE);
 }
 

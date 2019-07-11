@@ -159,7 +159,7 @@ getConvertType(Class class, Name name)
 
 Name
 getNameType(Type t)
-{ String str = &t->fullname->data;
+{ PceString str = &t->fullname->data;
 
   if ( str->s_size > 0 && iscsym(str_fetch(str,0)) )
   { int i;
@@ -742,7 +742,7 @@ static Any
 getCharType(const Type t, const Any val, const Any ctx)
 { if ( instanceOfObject(val, ClassCharArray) )
   { CharArray ca = val;
-    String s = &ca->data;
+    PceString s = &ca->data;
     int c;
 
     if ( s->s_size == 1 )
@@ -1138,7 +1138,7 @@ strip_string(StrPart s)
 
 
 static status
-init_string(StrPart s, String t)
+init_string(StrPart s, PceString t)
 { if ( t->s_size >= LINESIZE )
     fail;
 

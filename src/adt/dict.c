@@ -303,8 +303,8 @@ compare_dict_items(const void *d1, const void *d2)
   CharArray c2 = getLabelDictItem(*(DictItem *)d2);
 
   if ( c1 && c2 )
-  { String s1 = &c1->data;
-    String s2 = &c2->data;
+  { PceString s1 = &c1->data;
+    PceString s2 = &c2->data;
 
     if ( sort_ignore_blanks )
     { LocalString(t1, s1->s_iswide, s1->s_size);

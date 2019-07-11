@@ -445,8 +445,8 @@ initEnvironment(Process p)
 
     for_cell(cell, p->environment->attributes)
     { Attribute a = cell->value;
-      String ns = &((CharArray)a->name)->data;
-      String vs = &((CharArray)a->value)->data;
+      PceString ns = &((CharArray)a->name)->data;
+      PceString vs = &((CharArray)a->value)->data;
 
       if ( isstrA(ns) && isstrA(vs) )
       { int len = ns->s_size + 1 + vs->s_size + 1;

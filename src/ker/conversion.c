@@ -37,7 +37,7 @@
 static char *ppsavestring(const char *s);
 
 status
-toString(Any obj, String s)
+toString(Any obj, PceString s)
 { char tmp[25];
   char *str;
   status rval = FAIL;
@@ -91,7 +91,7 @@ toInteger(Any obj)
   { return toInt(rfloat(valReal(obj)));
   } else if ( instanceOfObject(obj, ClassCharArray) )	/* char_array */
   { CharArray ca = obj;
-    String s = &ca->data;
+    PceString s = &ca->data;
 
     if ( isstrA(s) && s->s_size > 0 )
     { char *end;

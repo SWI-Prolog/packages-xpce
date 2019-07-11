@@ -796,7 +796,7 @@ seekFile(FileObj f, Int index, Name whence)
 
 
 static status
-append_file(FileObj f, String str)
+append_file(FileObj f, PceString str)
 { TRY( check_file(f, NAME_write) );
 
   if ( f->encoding == NAME_octet )
@@ -1128,7 +1128,7 @@ an ISO Latin-1 string.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 status
-storeStringFile(FileObj f, String s)
+storeStringFile(FileObj f, PceString s)
 { if ( isstrA(s) )
   { TRY(storeWordFile(f, (Any) (uintptr_t)s->s_size));
     Sfwrite(s->s_textA, sizeof(char), s->s_size, f->fd);

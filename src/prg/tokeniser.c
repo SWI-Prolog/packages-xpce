@@ -151,7 +151,7 @@ GETC(Tokeniser t)
     }
     case A_CHAR_ARRAY:
     { CharArray ca = t->source;
-      String s = &ca->data;
+      PceString s = &ca->data;
 
       c = (t->caret < s->s_size ? (int)str_fetch(&ca->data, t->caret) : EOF);
       break;
@@ -184,7 +184,7 @@ PEEKC(Tokeniser t)
     }
     case A_CHAR_ARRAY:
     { CharArray ca = t->source;
-      String s = &ca->data;
+      PceString s = &ca->data;
 
       c = (t->caret < s->s_size ? (int)str_fetch(&ca->data, t->caret) : EOF);
       break;
@@ -247,7 +247,7 @@ getPeekTokeniser(Tokeniser t)
 
 status
 symbolTokeniser(Tokeniser t, Name symb)	/* only need 2++ characters!? */
-{ String s = &symb->data;
+{ PceString s = &symb->data;
   int size = s->s_size;
 
   if ( size > 1 )

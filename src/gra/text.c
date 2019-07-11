@@ -155,7 +155,7 @@ RedrawAreaText(TextObj t, Area a)
 
 
 void
-str_format(String out, const String in, const int width, const FontObj font)
+str_format(PceString out, const PceString in, const int width, const FontObj font)
 { int x = 0;
   int last_is_layout = TRUE;
 
@@ -239,7 +239,7 @@ str_format(String out, const String in, const int width, const FontObj font)
 
 
 void
-str_one_line(String to, String from)
+str_one_line(PceString to, PceString from)
 { int n;
 
   for(n=0; n<from->s_size; n++)
@@ -286,7 +286,7 @@ draw_caret(int x, int y, int w, int h, int active)
 
 status
 repaintText(TextObj t, int x, int y, int w, int h)
-{ String s = &t->string->data;
+{ PceString s = &t->string->data;
   int b = valInt(t->border);
   int sf = 0, st = 0;
   int flags = 0;
@@ -395,7 +395,7 @@ static status
 initAreaText(TextObj t)
 { int tw, x, y, w, h;
   Point pos = t->position;
-  String s = &t->string->data;
+  PceString s = &t->string->data;
   int size = s->s_size;
   int b = valInt(t->border);
 
@@ -453,7 +453,7 @@ static status
 initPositionText(TextObj t)
 { int tw, x, y, w, h;
   Point pos = t->position;
-  String s = &t->string->data;
+  PceString s = &t->string->data;
   int b = valInt(t->border);
 
   if ( Wrapped(t) )
@@ -582,7 +582,7 @@ getCharacterPositionText(TextObj t, Int chr)
 
 
 static void
-get_char_pos_helper(TextObj t, String s, int caret, int *cx, int *cy)
+get_char_pos_helper(TextObj t, PceString s, int caret, int *cx, int *cy)
 { int b = valInt(t->border);
   int ch  = valInt(getHeightFont(t->font));
   int w   = abs((int)valInt(t->area->w));
@@ -621,7 +621,7 @@ get_char_pos_text(TextObj t, Int chr, int *X, int *Y)
 { int caret = (isDefault(chr) ? valInt(t->caret) : valInt(chr));
   int cx = 0;			/* clang doesn't see this is not needed */
   int cy = 0;
-  String s = &t->string->data;
+  PceString s = &t->string->data;
   int b = valInt(t->border);
 
   if ( Wrapped(t) )
@@ -645,7 +645,7 @@ get_char_pos_text(TextObj t, Int chr, int *X, int *Y)
 
 Int
 get_pointed_text(TextObj t, int x, int y)
-{ String s = &t->string->data;
+{ PceString s = &t->string->data;
   int ch = valInt(getHeightFont(t->font));
   int b = valInt(t->border);
   int cw, w;
@@ -1013,7 +1013,7 @@ typedText(TextObj t, EventId id)
 
 
 static int
-start_of_line(String s, int n)
+start_of_line(PceString s, int n)
 { if ( n > 0 && str_fetch(s, n) == '\n' )
     n--;
 
@@ -1024,7 +1024,7 @@ start_of_line(String s, int n)
 
 
 static int
-end_of_line(String s, int n)
+end_of_line(PceString s, int n)
 { if ( (n = str_next_index(s, n, '\n')) < 0 )
     n = s->s_size;
 
@@ -1033,7 +1033,7 @@ end_of_line(String s, int n)
 
 
 static int
-forward_word(String s, int i, int n)
+forward_word(PceString s, int i, int n)
 { while( n-- > 0 && i < s->s_size )
   { while( i < s->s_size && !isalnum(str_fetch(s, i)) ) i++;
     while( i < s->s_size && isalnum(str_fetch(s, i)) ) i++;
@@ -1044,7 +1044,7 @@ forward_word(String s, int i, int n)
 
 
 static int
-backward_word(String s, int i, int n)
+backward_word(PceString s, int i, int n)
 { while( n-- > 0 && i > 0 )
   { i--;
     while( i > 0 && !isalnum(str_fetch(s, i)) ) i--;
@@ -1139,7 +1139,7 @@ getColumnText(TextObj t)
 
 static status
 endOfLineText(TextObj t, Int arg)
-{ String s = &t->string->data;
+{ PceString s = &t->string->data;
   int caret = valInt(t->caret);
   int n;
 
@@ -1155,7 +1155,7 @@ endOfLineText(TextObj t, Int arg)
 
 static status
 beginningOfLineText(TextObj t, Int arg)
-{ String s = &t->string->data;
+{ PceString s = &t->string->data;
   int caret = valInt(t->caret);
   int n;
 
@@ -1293,7 +1293,7 @@ cutOrBackwardDeleteCharText(TextObj t, Int arg)
 
 static status
 killLineText(TextObj t, Int arg)
-{ String s = &t->string->data;
+{ PceString s = &t->string->data;
   int caret = valInt(t->caret);
   int end, n;
 
@@ -1384,7 +1384,7 @@ openLineText(TextObj t, Int arg)
 { int tms = UArg(t);
 
   if ( tms > 0 )
-  { String nl = str_nl(&t->string->data);
+  { PceString nl = str_nl(&t->string->data);
     LocalString(buf, t->string->data.s_iswide, nl->s_size * tms);
     int i;
 
@@ -1407,7 +1407,7 @@ gosmacsTransposeText(TextObj t)
 
   if ( caret >= 2 )
   { wint_t tmp;
-    String s;
+    PceString s;
 
     deselectText(t);
     prepareEditText(t, DEFAULT);
@@ -1428,7 +1428,7 @@ transposeCharsText(TextObj t)
 
   if ( caret >= 1 )
   { wint_t tmp;
-    String s;
+    PceString s;
 
     deselectText(t);
     prepareEditText(t, DEFAULT);

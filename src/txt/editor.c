@@ -3481,7 +3481,7 @@ changedHitsEditor(Editor e)
   { intptr_t start = valInt(e->image->start);
     intptr_t end   = valInt(e->image->end);
     TextBuffer tb = e->text_buffer;
-    String s  = &e->search_string->data;
+    PceString s  = &e->search_string->data;
     int ec = (e->exact_case == ON);
 
     while(start<end)
@@ -3800,7 +3800,7 @@ get_dabbrev_hit_editor(Editor e, int start)
 
 
 static Name
-get_case_pattern(SyntaxTable syntax, String s)
+get_case_pattern(SyntaxTable syntax, PceString s)
 { int i, size = s->s_size;
 
   if ( tisupper(syntax, str_fetch(s, 0)) )
@@ -3816,7 +3816,7 @@ get_case_pattern(SyntaxTable syntax, String s)
 
 
 static void
-fix_case_and_insert(TextBuffer tb, int where, String insert,
+fix_case_and_insert(TextBuffer tb, int where, PceString insert,
 		    Name pattern, int ec)
 { if ( insert->s_size == 0 )
     return;
@@ -3860,7 +3860,7 @@ static status
 DabbrevExpandEditor(Editor e, EventId id)
 { int pos = valInt(e->dabbrev_pos);
   int caret = valInt(e->caret);
-  String target = &e->dabbrev_target->data;
+  PceString target = &e->dabbrev_target->data;
   int ec = (e->exact_case == ON);
   TextBuffer tb = e->text_buffer;
   int dir = (pos < caret ? -1 : 1);

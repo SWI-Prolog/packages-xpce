@@ -506,7 +506,7 @@ test, conversion and computation macro's are provided.
   string _s_ ## name ## _hdr; \
   void  *_s_ ## name ## _buf = (void *)alloca(iswide ? (size) * sizeof(charW) \
 						   : (size) * sizeof(charA)); \
-  String name = fstr_inithdr(&_s_ ## name ## _hdr, iswide, _s_ ## name ## _buf, size)
+  PceString name = fstr_inithdr(&_s_ ## name ## _hdr, iswide, _s_ ## name ## _buf, size)
 
 		/********************************
 		*         OBJECT HEADER		*

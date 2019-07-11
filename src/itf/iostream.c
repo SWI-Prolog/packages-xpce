@@ -82,7 +82,7 @@ Sread_object(void *handle, char *buf, size_t size)
 
   if ( (sub = getv(h->object, NAME_readAsFile, 2, argv)) &&
        instanceOfObject(sub, ClassCharArray) )
-  { String s = &sub->data;
+  { PceString s = &sub->data;
 
     assert(s->s_size <= advance);
 

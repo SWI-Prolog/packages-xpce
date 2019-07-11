@@ -36,10 +36,10 @@
 #include <h/unix.h>
 
 static status	appendString(StringObj, CharArray);
-static status	setString(StringObj str, String s);
+static status	setString(StringObj str, PceString s);
 
 StringObj
-create_string_from_str(String s, int tmp)
+create_string_from_str(PceString s, int tmp)
 { string s2;
   CharArray c;
   StringObj str;
@@ -83,13 +83,13 @@ canonical:
 
 
 StringObj
-StringToString(String s)
+StringToString(PceString s)
 { return create_string_from_str(s, FALSE);
 }
 
 
 StringObj
-StringToTempString(String s)
+StringToTempString(PceString s)
 { return create_string_from_str(s, TRUE);
 }
 
@@ -286,7 +286,7 @@ newlineString(StringObj s, Int times)
     times = ONE;
   tms = valInt(times);
 
-  { String nl = str_nl(&s->data);
+  { PceString nl = str_nl(&s->data);
     LocalString(buf, s->data.s_iswide, nl->s_size * tms);
     int i;
 
@@ -324,7 +324,7 @@ appendString(StringObj s1, CharArray s2)
 
 static status
 stripString(StringObj str, Name where)
-{ String s = &str->data;
+{ PceString s = &str->data;
   int size = s->s_size;
   int from = 0;
   int to = size;
@@ -370,7 +370,7 @@ untabifyString(StringObj str, Any tabs)
     }
 
     { int size = str->data.s_size;
-      String s = &str->data;
+      PceString s = &str->data;
       LocalString(buf, s->s_iswide, size + maxtab);
       int i=0, o=0, col=0;
 
@@ -406,7 +406,7 @@ untabifyString(StringObj str, Any tabs)
   } else if ( (n = checkType(tabs, TypeInt, NIL)) )
   { int size = str->data.s_size;
     int d = valInt(n);
-    String s = &str->data;
+    PceString s = &str->data;
     int tabs = str_count_chr(s, 0, size, '\t');
     LocalString(buf, s->s_iswide, size + d * tabs);
     int i=0, o=0, col=0;
@@ -464,7 +464,7 @@ static status
 translateString(StringObj str, Int c1, Int c2)
 { wint_t f = valInt(c1);
   int changed = 0;
-  String s = &str->data;
+  PceString s = &str->data;
   int size = s->s_size;
   int i = 0;
 
@@ -537,7 +537,7 @@ characterString(StringObj str, Int index, Int chr)
 
 status
 deleteString(StringObj str, Int start, Int length)
-{ String s = &str->data;
+{ PceString s = &str->data;
   int size = s->s_size;
   int f = valInt(start);
   int e = (isDefault(length) ? size : valInt(length)) + f - 1;
@@ -574,7 +574,7 @@ insertString(StringObj s1, Int n, CharArray s2)
 		*********************************/
 
 static status
-setString(StringObj str, String s)
+setString(StringObj str, PceString s)
 { Class class = classOfObject(str);
 
   if ( str->data.s_text != s->s_text ||
@@ -601,7 +601,7 @@ setString(StringObj str, String s)
 
 
 status
-str_insert_string(StringObj str, Int where, String s)
+str_insert_string(StringObj str, Int where, PceString s)
 { int sz = str->data.s_size;
   int iswide = (str->data.s_iswide || s->s_iswide);
   LocalString(buf, iswide, sz + s->s_size);

@@ -463,7 +463,7 @@ __pce_export void	Cflush(void);
 __pce_export char *	Cgetline(char *line, int size);
 
 #ifdef PCE_INCLUDED
-	     int	Cputstr(String s);
+	     int	Cputstr(PceString s);
 #endif
 
 

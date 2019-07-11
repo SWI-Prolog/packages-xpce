@@ -651,7 +651,7 @@ write_jpeg_file(IOSTREAM *fd,
        (comment=get(image, NAME_comment, EAV)) )
   { if ( instanceOfObject(comment, ClassCharArray) )
     { CharArray v = comment;
-      String s = &v->data;
+      PceString s = &v->data;
 
       jpeg_write_marker(&cinfo, JPEG_COM, s->s_textA, s->s_size);
     } else if ( instanceOfObject(comment, ClassChain) )
@@ -661,7 +661,7 @@ write_jpeg_file(IOSTREAM *fd,
       for_cell(cell, ch)
       { if ( instanceOfObject(cell->value, ClassCharArray) )
 	{ CharArray v = cell->value;
-	  String s= &v->data;
+	  PceString s= &v->data;
 
 	  jpeg_write_marker(&cinfo, JPEG_COM, s->s_textA, s->s_size);
 	} else

@@ -42,7 +42,7 @@
 #endif
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-These  functions  translate  CharArray  (String,  Name)  into  a  format
+These  functions  translate  CharArray  (PceString,  Name)  into  a  format
 suitable to drive operating- or windowsystem   calls,  such as accessing
 filenames, window titles, etc.
 
@@ -130,7 +130,7 @@ typedef const unsigned char cuchar;
 typedef const wchar_t       cwchar;
 
 static char *
-stringToUTF8(String str)
+stringToUTF8(PceString str)
 { rcell *out;
 
   if ( isstrA(str) )
@@ -169,7 +169,7 @@ stringToUTF8(String str)
 
 
 static char *
-stringToMB(String str)
+stringToMB(PceString str)
 { rcell *out;
   mbstate_t mbs;
   char b[MB_LEN_MAX];
@@ -223,7 +223,7 @@ stringToMB(String str)
 
 wchar_t *
 charArrayToWC(CharArray ca, size_t *len)
-{ String str = &ca->data;
+{ PceString str = &ca->data;
 
   if ( len )
     *len = str->s_size;
@@ -471,7 +471,7 @@ charArrayToFN(CharArray ca)
 
 
 char *
-stringToFN(String s)
+stringToFN(PceString s)
 {
 #ifdef O_XOS
    return stringToUTF8(s);

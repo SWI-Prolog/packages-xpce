@@ -85,7 +85,7 @@ COMMON(Chain)	getSendMethodsClass(Class class);
 COMMON(status)	makeClassClass(Class class);
 
 /* /home/jan/src/pl/packages/xpce/src/ker/conversion.c */
-COMMON(status)	toString(Any obj, String s);
+COMMON(status)	toString(Any obj, PceString s);
 COMMON(char *)	toCharp(Any obj);
 COMMON(Int)	toInteger(Any obj);
 COMMON(Real)	toReal(Any obj);
@@ -148,7 +148,7 @@ COMMON(void)	checkSummaryCharp(Name classname, Name name, char *s);
 COMMON(Name)	characterName(Any chr);
 COMMON(status)	writef_arguments(char *fm, va_list args, int *argc, Any *argv);
 COMMON(void)	writef(char *fm, ...);
-COMMON(status)	str_writefv(String s, CharArray format, int argc, const Any *argv);
+COMMON(status)	str_writefv(PceString s, CharArray format, int argc, const Any *argv);
 COMMON(Int)	scanstr(char *str, char *fmt, Any *r);
 COMMON(status)	sysPce(char *fm, ...);
 COMMON(void)	initMClock(void);
@@ -194,7 +194,7 @@ COMMON(status)	forNamePce(Pce pce, Code code);
 COMMON(Name)	getCapitaliseName(Name n);
 COMMON(Name)	GetLabelNameName(Name n);
 COMMON(Name)	getDeleteSuffixName(Name n, Name suffix);
-COMMON(Name)	StringToName(String s);
+COMMON(Name)	StringToName(PceString s);
 COMMON(Name)	CtoKeyword(const char *s);
 COMMON(status)	makeClassName(Class class);
 
@@ -295,7 +295,7 @@ COMMON(status)	storeObject(Any obj, FileObj file);
 COMMON(status)	storeSlotsObject(Any obj, FileObj file);
 COMMON(int)	loadWord(IOSTREAM *fd);
 COMMON(double)	loadDouble(IOSTREAM *fd);
-COMMON(int)	loadStringFile(IOSTREAM *fd, String s);
+COMMON(int)	loadStringFile(IOSTREAM *fd, PceString s);
 COMMON(void)	restoreMessage(Any msg);
 COMMON(status)	checkObjectMagic(IOSTREAM *fd);
 COMMON(Any)	getObjectSourceSink(SourceSink f);

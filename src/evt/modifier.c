@@ -54,7 +54,7 @@ getConvertModifier(Class class, Name name)
   if ( (m = getMemberHashTable(ModifierTable, name)) )
     answer(m);
   else
-  { String s = &name->data;
+  { PceString s = &name->data;
     int i, size = s->s_size;
     Name shift   = NAME_up;
     Name control = NAME_up;

@@ -37,7 +37,7 @@
 #include <h/unix.h>
 #include <h/text.h>
 
-static void	ps_put_string(String);
+static void	ps_put_string(PceString);
 static int	postscriptImage(Image, Int, int iscolor);
 static int	header(Any, Area, BoolObj);
 static int	footer(void);
@@ -129,7 +129,7 @@ recognised:
   Option   Argument	Description
     ~~        -		Output a tilde
     ~s	    char *	Output literal string
-    ~a	    String	Output String as PostScript string
+    ~a	    PceString	Output PceString as PostScript string
     ~c	    Point	Output <-x and <-y of the point
     ~d	    Int		Output an integer
     ~D	    int		Output an integer
@@ -233,7 +233,7 @@ _output(char *fm, va_list args)
 
 			continue;
 		      }
-	  case 'a':	ps_put_string(va_arg(args, String));
+	  case 'a':	ps_put_string(va_arg(args, PceString));
 			continue;
 	  case 'N':	putString(strName(va_arg(args, Name)));
 			continue;
@@ -310,7 +310,7 @@ ps_output(char *fm, ...)
 
 
 static void
-ps_put_string(String s)
+ps_put_string(PceString s)
 { wint_t c;
   int i, size = s->s_size;
 
@@ -1666,7 +1666,7 @@ drawPostScriptImage(Image image, Name hb)
 
 status
 drawPostScriptText(TextObj t, Name hb)
-{ String s = &t->string->data;
+{ PceString s = &t->string->data;
 
   if ( s[0].s_size > 0 )		/* i.e. non-empty */
   { int x, y, w;

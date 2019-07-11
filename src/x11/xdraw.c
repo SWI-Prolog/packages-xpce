@@ -2592,7 +2592,7 @@ c_width(wint_t c, FontObj font)
 
 
 static int
-s_advance(String s, int from, int to)
+s_advance(PceString s, int from, int to)
 { int len = to-from;
   XGlyphInfo info;
 
@@ -2757,7 +2757,7 @@ c_width(wint_t c, FontObj font)
 
 
 static int
-s_advance(String s, int from, int to)
+s_advance(PceString s, int from, int to)
 { int len = to-from;
 
   if ( len <= 0 )
@@ -2953,7 +2953,7 @@ c_width(wint_t c, FontObj font)
 
 
 static int
-s_advance(String s, int from, int to)
+s_advance(PceString s, int from, int to)
 { if ( !context.gcs->char_widths )
   { return context.gcs->font_info->max_bounds.width * (to-from);
   } else
@@ -3028,7 +3028,7 @@ s_height(FontObj f)
 
 
 int
-str_width(String s, int from, int to, FontObj f)
+str_width(PceString s, int from, int to, FontObj f)
 { s_font(f);
 
   if ( from < 0 )
@@ -3050,7 +3050,7 @@ str_width(String s, int from, int to, FontObj f)
 
 
 int
-str_advance(String s, int from, int to, FontObj font)
+str_advance(PceString s, int from, int to, FontObj font)
 { s_font(font);
 
   return s_advance(s, from, to);
@@ -3058,7 +3058,7 @@ str_advance(String s, int from, int to, FontObj font)
 
 
 void
-s_print(String s, int x, int y, FontObj f)
+s_print(PceString s, int x, int y, FontObj f)
 { if ( isstrA(s) )
     s_printA(s->s_textA, s->s_size, x, y, f);
   else
@@ -3067,7 +3067,7 @@ s_print(String s, int x, int y, FontObj f)
 
 
 void
-s_print_aligned(String s, int x, int y, FontObj f)
+s_print_aligned(PceString s, int x, int y, FontObj f)
 { if ( s->s_size > 0 )
   { s_font(f);
 
@@ -3078,7 +3078,7 @@ s_print_aligned(String s, int x, int y, FontObj f)
 
 
 static void
-str_draw_text(String s, int offset, int len, int x, int y)
+str_draw_text(PceString s, int offset, int len, int x, int y)
 { if ( offset >= s->s_size )
     return;
 
@@ -3103,7 +3103,7 @@ str_draw_text(String s, int offset, int len, int x, int y)
 
 
 static void
-str_stext(String s, int f, int len, int x, int y, Style style)
+str_stext(PceString s, int f, int len, int x, int y, Style style)
 { if ( len > 0 )
   { Any ofg = NULL;
     int w = 0;				/* make compiler happy */
@@ -3136,7 +3136,7 @@ str_stext(String s, int f, int len, int x, int y, Style style)
 
 
 static void
-str_text(String s, int x, int y)
+str_text(PceString s, int x, int y)
 { if ( s->s_size > 0 )
   { x += lbearing(str_fetch(s, 0));
 
@@ -3161,7 +3161,7 @@ typedef struct
 
 
 static void
-str_break_into_lines(String s, strTextLine *line, int *nlines, int maxlines)
+str_break_into_lines(PceString s, strTextLine *line, int *nlines, int maxlines)
 { int here = 0;
   int size = s->s_size;
   int nls = 0;
@@ -3233,7 +3233,7 @@ str_compute_lines(strTextLine *lines, int nlines, FontObj font,
 
 
 void
-str_size(String s, FontObj font, int *width, int *height)
+str_size(PceString s, FontObj font, int *width, int *height)
 { strTextLine lines[MAX_TEXT_LINES];
   strTextLine *line;
   int nlines, n;
@@ -3260,7 +3260,7 @@ str_size(String s, FontObj font, int *width, int *height)
 
 
 void
-str_string(String s, FontObj font, int x, int y, int w, int h,
+str_string(PceString s, FontObj font, int x, int y, int w, int h,
 	   Name hadjust, Name vadjust, int flags)
 { strTextLine lines[MAX_TEXT_LINES];
   strTextLine *line;
@@ -3292,7 +3292,7 @@ str_string(String s, FontObj font, int x, int y, int w, int h,
 
 
 void
-str_selected_string(String s, FontObj font,
+str_selected_string(PceString s, FontObj font,
 		    int f, int t, Style style,	/* selection parameters */
 		    int x, int y, int w, int h,
 		    Name hadjust, Name vadjust)
@@ -3345,7 +3345,7 @@ str_selected_string(String s, FontObj font,
 		 *******************************/
 
 void
-ps_string(String s, FontObj font, int x, int y, int w, Name format, int flags)
+ps_string(PceString s, FontObj font, int x, int y, int w, Name format, int flags)
 { strTextLine lines[MAX_TEXT_LINES];
   strTextLine *line;
   int nlines, n;
@@ -3430,7 +3430,7 @@ r_text_colour(Any c)
 
 
 void
-str_label(String s, int acc, FontObj font, int x, int y, int w, int h,
+str_label(PceString s, int acc, FontObj font, int x, int y, int w, int h,
 	   Name hadjust, Name vadjust, int flags)
 { strTextLine lines[MAX_TEXT_LINES];
   int nlines;

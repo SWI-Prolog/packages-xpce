@@ -101,7 +101,7 @@ static Name    *name_table;
 static int	builtins;		/* number of builtin names */
 
 static inline int
-stringHashValue(String s)
+stringHashValue(PceString s)
 { unsigned int value = 0;
   unsigned int shift = 5;
   int size = s->s_size;
@@ -436,7 +436,7 @@ ValueName(Name n, CharArray val)
 
 static status
 syntaxName(Name n, Name casemap, Int ws)
-{ String s = &n->data;
+{ PceString s = &n->data;
   int size = s->s_size;
   int i;
   StringObj str;
@@ -523,7 +523,7 @@ character string.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 Name
-StringToName(String s)
+StringToName(PceString s)
 { int hashkey;
   Name *namep;
   string s2;

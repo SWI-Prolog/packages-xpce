@@ -566,7 +566,7 @@ format details.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 int
-loadStringFile(IOSTREAM *fd, String s)
+loadStringFile(IOSTREAM *fd, PceString s)
 { int size = loadWord(fd);
 
   if ( size >= 0 )

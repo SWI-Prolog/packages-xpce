@@ -375,7 +375,7 @@ ws_pointer_location_display(DisplayObj d, int *x, int *y)
 #define CLIPBOARDWIN	PceHiddenWindow()
 
 static HGLOBAL
-ws_string_to_global_mem(String s)
+ws_string_to_global_mem(PceString s)
 { int size  = s->s_size;
   int extra = str_count_chr(s, 0, s->s_size, '\n');
   HGLOBAL mem;
@@ -416,7 +416,7 @@ ws_string_to_global_mem(String s)
 
 
 status
-ws_set_cutbuffer(DisplayObj d, int n, String s)
+ws_set_cutbuffer(DisplayObj d, int n, PceString s)
 { if ( n == 0 )
   { HGLOBAL mem = ws_string_to_global_mem(s);
 
@@ -562,7 +562,7 @@ ws_provide_selection(int format)
     { CharArray ca = checkType(val, TypeCharArray, NIL);
 
       if ( ca )
-      { String s = &ca->data;
+      { PceString s = &ca->data;
       	HGLOBAL mem = ws_string_to_global_mem(s);
 
 	if ( mem )

@@ -371,7 +371,7 @@ handleInputStream(Stream s)
 
 static status
 appendStream(Stream s, CharArray data)
-{ String str = &data->data;
+{ PceString str = &data->data;
   int l = str_datasize(str);
 
   return ws_write_stream_data(s, str->s_text, l);

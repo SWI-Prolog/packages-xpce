@@ -426,7 +426,7 @@ static Dict	     current_dict;	/* Currently displayed dict */
 static Cell	     current_cell;	/* Cell of this item */
 static int	     current_item;	/* Index of current name */
 static int	     current_index;	/* Current location */
-static String	     current_name;	/* Working on this name */
+static PceString	     current_name;	/* Working on this name */
 static int	     current_search;	/* search feedback */
 static unsigned char current_atts;	/* Attributes for it */
 static FontObj	     current_font;	/* Current font */
@@ -442,7 +442,7 @@ compute_current(ListBrowser lb)
     Style style;
 
     assert(valInt(di->index) == current_item);
-    current_name = (label ? &label->data : (String) NULL);
+    current_name = (label ? &label->data : (PceString) NULL);
 
     if ( notDefault(di->style) &&
 	 (style = getValueSheet(lb->styles, di->style)) )
@@ -699,7 +699,7 @@ getExtendPrefixDict(Dict dict, CharArray pref, BoolObj ign_case)
   for_cell(cell, dict->members)
   { DictItem di = cell->value;
     CharArray c = getLabelDictItem(di);
-    String name;
+    PceString name;
 
     if ( !c )
       continue;

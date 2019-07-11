@@ -2818,7 +2818,7 @@ c_width(wint_t c, FontObj font)
 
 
 static inline int
-s_width_(String s, int from, int to)
+s_width_(PceString s, int from, int to)
 { if ( !context.wsf )
   { return 0;			/* TBD */
   } else
@@ -2836,7 +2836,7 @@ s_width_(String s, int from, int to)
 
 
 int
-str_width(String s, int from, int to, FontObj f)
+str_width(PceString s, int from, int to, FontObj f)
 { if ( from < 0 )
     from = 0;
   if ( from >= s->s_size || to <= from )
@@ -2850,7 +2850,7 @@ str_width(String s, int from, int to, FontObj f)
 
 
 int
-str_advance(String s, int from, int to, FontObj f)
+str_advance(PceString s, int from, int to, FontObj f)
 { if ( !f )
     f = context.font;
 
@@ -2879,7 +2879,7 @@ s_printW(charW *s, int l, int x, int y, FontObj f)
 
 
 void
-s_print(String s, int x, int y, FontObj f)
+s_print(PceString s, int x, int y, FontObj f)
 { if ( isstrA(s) )
     s_printA(s->s_textA, s->s_size, x, y, f);
   else
@@ -2888,7 +2888,7 @@ s_print(String s, int x, int y, FontObj f)
 
 
 void
-s_print_aligned(String s, int x, int y, FontObj f)
+s_print_aligned(PceString s, int x, int y, FontObj f)
 { s_print(s, x, y, f);			/* same on Win32: no {l,r}bearing */
 }					/* in font metrics */
 
@@ -2899,7 +2899,7 @@ the baseline.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static void
-str_text(String s, int x, int y)
+str_text(PceString s, int x, int y)
 { if ( isstrA(s) )
     TextOutA(context.hdc, x, y, (char*)s->s_textA, s->s_size);
   else
@@ -2908,7 +2908,7 @@ str_text(String s, int x, int y)
 
 
 void
-str_size(String s, FontObj font, int *width, int *height)
+str_size(PceString s, FontObj font, int *width, int *height)
 { if ( s->s_size > 0 )
   { RECT rect;
     UINT flags = DT_CALCRECT|DT_EXTERNALLEADING|DT_NOCLIP|DT_NOPREFIX;
@@ -2962,7 +2962,7 @@ typedef struct
 
 
 static void
-str_break_into_lines(String s, strTextLine *line, int *nlines, int maxlines)
+str_break_into_lines(PceString s, strTextLine *line, int *nlines, int maxlines)
 { int here = 0;
   int size = s->s_size;
   int nls = 0;
@@ -3034,7 +3034,7 @@ str_compute_lines(strTextLine *lines, int nlines, FontObj font,
 
 
 void
-ps_string(String s, FontObj font, int x, int y, int w, Name format, int flags)
+ps_string(PceString s, FontObj font, int x, int y, int w, Name format, int flags)
 { strTextLine lines[MAX_TEXT_LINES];
   strTextLine *line;
   int nlines, n;
@@ -3065,7 +3065,7 @@ ps_string(String s, FontObj font, int x, int y, int w, Name format, int flags)
 
 
 void
-str_string(String s, FontObj font,
+str_string(PceString s, FontObj font,
 	   int x, int y, int w, int h,
 	   Name hadjust, Name vadjust, int flags)
 { strTextLine lines[MAX_TEXT_LINES];
@@ -3152,7 +3152,7 @@ r_text_colour(Any colour)
 
 
 void
-str_label(String s, int acc, FontObj font, int x, int y, int w, int h,
+str_label(PceString s, int acc, FontObj font, int x, int y, int w, int h,
 	  Name hadjust, Name vadjust, int flags)
 { strTextLine lines[MAX_TEXT_LINES];
   int nlines;
@@ -3182,7 +3182,7 @@ str_label(String s, int acc, FontObj font, int x, int y, int w, int h,
 
 
 static void
-str_stext(String s, int f, int len, Style style)
+str_stext(PceString s, int f, int len, Style style)
 { if ( len > 0 )
   { Any ofg = NULL;
     int w = 0;				/* make compiler happy */
@@ -3219,7 +3219,7 @@ str_stext(String s, int f, int len, Style style)
 
 
 void
-str_selected_string(String s, FontObj font,
+str_selected_string(PceString s, FontObj font,
 		    int f, int t, Style style,	/* selection parameters */
 		    int x, int y, int w, int h,
 		    Name hadjust, Name vadjust)

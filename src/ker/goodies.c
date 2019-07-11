@@ -517,7 +517,7 @@ writef(char *fm, ...)
 			} while(0)
 
 static int
-put_string(int (*out)(void*, wint_t), void *closure, String s)
+put_string(int (*out)(void*, wint_t), void *closure, PceString s)
 { int i;
 
   if ( isstrA(s) )
@@ -567,7 +567,7 @@ Comment to avoid mkproto not generating the prototype for this function
 
 static int
 swritefv(int (*out)(void*, wint_t), void *closure,
-	 const String fmt, int argc, const Any argv[])
+	 const PceString fmt, int argc, const Any argv[])
 { int i;
 
   for( i=0; i<fmt->s_size; i++ )
@@ -827,7 +827,7 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 
 static int
 put_void_str(void *ctx, wint_t c)
-{ String s = ctx;
+{ PceString s = ctx;
 
   s->s_size++;
   if ( c > 0xff )
@@ -839,7 +839,7 @@ put_void_str(void *ctx, wint_t c)
 
 static int
 put_str(void *ctx, wint_t c)
-{ String s = ctx;
+{ PceString s = ctx;
 
   str_store(s, s->s_size, c);
   s->s_size++;
@@ -849,7 +849,7 @@ put_str(void *ctx, wint_t c)
 
 
 status
-str_writefv(String s, CharArray format, int argc, const Any *argv)
+str_writefv(PceString s, CharArray format, int argc, const Any *argv)
 { int len;
 
   str_inithdr(s, FALSE);

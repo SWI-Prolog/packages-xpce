@@ -77,7 +77,7 @@ RedrawAreaLabel(Label lb, Area a)
     d_clip(x, y, w, h);
 
   if ( instanceOfObject(lb->selection, ClassCharArray) )
-  { String s = &((CharArray)lb->selection)->data;
+  { PceString s = &((CharArray)lb->selection)->data;
 
     if ( notNil(z) )
       x += valInt(getExFont(lb->font))/2;
@@ -166,7 +166,7 @@ computeLabel(Label lb)
       b += abs((int)valInt(lb->elevation->height));
 
     if ( instanceOfObject(lb->selection, ClassCharArray) )
-    { String s = &((CharArray)lb->selection)->data;
+    { PceString s = &((CharArray)lb->selection)->data;
       int minw;
       int ex = valInt(getExFont(lb->font));
 

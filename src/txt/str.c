@@ -48,7 +48,7 @@
 		 *******************************/
 
 inline int
-str_allocsize(String s)
+str_allocsize(PceString s)
 { int len;
 
   len = isstrA(s) ? s->s_size : s->s_size*sizeof(charW);
@@ -58,7 +58,7 @@ str_allocsize(String s)
 
 
 inline void
-str_pad(String s)			/* only 8-bit strings */
+str_pad(PceString s)			/* only 8-bit strings */
 { if ( isstrA(s) )
   { int from = s->s_size;
     int len  = str_allocsize(s);
@@ -76,7 +76,7 @@ str_pad(String s)			/* only 8-bit strings */
 
 
 void
-str_alloc(String s)
+str_alloc(PceString s)
 { s->s_textA  = alloc(str_allocsize(s));
   s->s_readonly = FALSE;
   str_pad(s);
@@ -88,7 +88,7 @@ static char *str_ring[STR_RING_SIZE] = {NULL};
 int    str_ring_ptr = 0;
 
 static void
-str_ring_alloc(String s)
+str_ring_alloc(PceString s)
 { int size = str_allocsize(s);
 
   if ( !str_ring[str_ring_ptr] )
@@ -105,7 +105,7 @@ str_ring_alloc(String s)
 
 
 void
-str_unalloc(String s)
+str_unalloc(PceString s)
 { if ( s->s_textA && !s->s_readonly )
   { unalloc(str_allocsize(s), s->s_textA);
     s->s_textA = NULL;
@@ -113,8 +113,8 @@ str_unalloc(String s)
 }
 
 
-String
-str_init(String s, String proto, charA *data)
+PceString
+str_init(PceString s, PceString proto, charA *data)
 { str_cphdr(s, proto);
   s->s_text = data;
 
@@ -122,8 +122,8 @@ str_init(String s, String proto, charA *data)
 }
 
 
-String
-fstr_inithdr(String s, int iswide, void *data, int len)
+PceString
+fstr_inithdr(PceString s, int iswide, void *data, int len)
 { str_inithdr(s, iswide);
   s->s_text = data;
   s->s_size = len;
@@ -133,7 +133,7 @@ fstr_inithdr(String s, int iswide, void *data, int len)
 
 
 status
-str_set_n_ascii(String str, size_t len, char *text)
+str_set_n_ascii(PceString str, size_t len, char *text)
 { if ( len > STR_MAX_SIZE )
     return errorPce(NIL, NAME_stringTooLong, toInt(len));
 
@@ -146,7 +146,7 @@ str_set_n_ascii(String str, size_t len, char *text)
 
 
 status
-str_set_n_wchar(String str, size_t len, wchar_t *text)
+str_set_n_wchar(PceString str, size_t len, wchar_t *text)
 { if ( len > STR_MAX_SIZE )
     return errorPce(NIL, NAME_stringTooLong, toInt(len));
 
@@ -159,7 +159,7 @@ str_set_n_wchar(String str, size_t len, wchar_t *text)
 
 
 status
-str_set_ascii(String str, char *text)
+str_set_ascii(PceString str, char *text)
 { size_t len = strlen(text);
 
   return str_set_n_ascii(str, len, text);
@@ -167,7 +167,7 @@ str_set_ascii(String str, char *text)
 
 
 status
-str_set_utf8(String str, const char *text)
+str_set_utf8(PceString str, const char *text)
 { const char *s = text;
   const char *e = &text[strlen(s)];
   int iswide = FALSE;
@@ -202,7 +202,7 @@ str_set_static(): initialise a string from a static C-string
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 status
-str_set_static(String str, const char *text)
+str_set_static(PceString str, const char *text)
 { size_t len = strlen(text);
 
   if ( len > STR_MAX_SIZE )
@@ -218,7 +218,7 @@ str_set_static(String str, const char *text)
 
 
 status
-str_iswide(String s)
+str_iswide(PceString s)
 { if ( s->s_iswide )
   { const charW *w = s->s_textW;
     const charW *e = &w[s->s_size];
@@ -239,7 +239,7 @@ str_iswide(String s)
 		 *******************************/
 
 void
-str_ncpy(String dest, int at, String src, int from, int len)
+str_ncpy(PceString dest, int at, PceString src, int from, int len)
 { if ( dest->s_iswide == src->s_iswide )	/* same size */
   { if ( isstrA(dest) )
       memcpy(&dest->s_textA[at], &src->s_textA[from], len * sizeof(charA));
@@ -264,14 +264,14 @@ str_ncpy(String dest, int at, String src, int from, int len)
 
 
 void
-str_cpy(String dest, String src)
+str_cpy(PceString dest, PceString src)
 { str_cphdr(dest, src);
   str_ncpy(dest, 0, src, 0, src->s_size);
 }
 
 
 charA *
-str_textp(String s, int i)
+str_textp(PceString s, int i)
 { return isstrA(s) ? &s->s_textA[i] : (charA *)&s->s_textW[i];
 }
 
@@ -281,7 +281,7 @@ str_textp(String s, int i)
 		 *******************************/
 
 void
-str_upcase(String str, int from, int to)
+str_upcase(PceString str, int from, int to)
 { if ( isstrA(str) )
   { charA *s = &str->s_textA[from];
 
@@ -297,7 +297,7 @@ str_upcase(String str, int from, int to)
 
 
 void
-str_downcase(String str, int from, int to)
+str_downcase(PceString str, int from, int to)
 { if ( isstrA(str) )
   { charA *s = &str->s_textA[from];
 
@@ -317,16 +317,16 @@ str_downcase(String str, int from, int to)
 		 *******************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-int str_cmp(String s1, String s2)
+int str_cmp(PceString s1, PceString s2)
     returns < 0 if s1 is before s2, == 0 if equal and > 0 if s2 is
     before s2.
 
-int str_eq(String s1, String s2)
+int str_eq(PceString s1, PceString s2)
     returns != 0 if s1 equals s2.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 int
-str_cmp(String s1, String s2)
+str_cmp(PceString s1, PceString s2)
 { int n = min(s1->s_size, s2->s_size);
 
   if ( s1->s_iswide == s2->s_iswide )
@@ -365,7 +365,7 @@ str_cmp(String s1, String s2)
 
 
 int
-str_icase_cmp(String s1, String s2)
+str_icase_cmp(PceString s1, PceString s2)
 { int n = min(s1->s_size, s2->s_size);
 
   if ( s1->s_iswide == s2->s_iswide )
@@ -407,7 +407,7 @@ str_icase_cmp(String s1, String s2)
 
 
 int
-str_eq(String s1, String s2)
+str_eq(PceString s1, PceString s2)
 { if ( s1->s_size == s2->s_size )
     return str_cmp(s1, s2) == 0;
 
@@ -416,7 +416,7 @@ str_eq(String s1, String s2)
 
 
 int
-str_icase_eq(String s1, String s2)
+str_icase_eq(PceString s1, PceString s2)
 { if ( s1->s_size == s2->s_size )
     return str_icase_cmp(s1, s2) == 0;
 
@@ -425,7 +425,7 @@ str_icase_eq(String s1, String s2)
 
 
 int					/* s2 is prefix of s1+offset */
-str_prefix_offset(String s1, unsigned int offset, String s2)
+str_prefix_offset(PceString s1, unsigned int offset, PceString s2)
 { if ( s2->s_size <= s1->s_size-offset )
   { int n = s2->s_size;
 
@@ -454,13 +454,13 @@ str_prefix_offset(String s1, unsigned int offset, String s2)
 
 
 int
-str_prefix(String s1, String s2)	/* s2 is prefix of s1 */
+str_prefix(PceString s1, PceString s2)	/* s2 is prefix of s1 */
 { return str_prefix_offset(s1, 0, s2);
 }
 
 
 int
-str_icase_prefix(String s1, String s2)	/* s2 is prefix of s1 */
+str_icase_prefix(PceString s1, PceString s2)	/* s2 is prefix of s1 */
 { if ( s2->s_size <= s1->s_size )
   { int n = s2->s_size;
 
@@ -487,7 +487,7 @@ str_icase_prefix(String s1, String s2)	/* s2 is prefix of s1 */
 
 
 int
-str_suffix(String s1, String s2)	/* s2 is suffix of s1 */
+str_suffix(PceString s1, PceString s2)	/* s2 is suffix of s1 */
 { if ( s2->s_size <= s1->s_size )
   { int n = s2->s_size;
     int offset = s1->s_size - s2->s_size;
@@ -515,7 +515,7 @@ str_suffix(String s1, String s2)	/* s2 is suffix of s1 */
 
 
 int
-str_icase_suffix(String s1, String s2)	/* s2 is suffix of s1 */
+str_icase_suffix(PceString s1, PceString s2)	/* s2 is suffix of s1 */
 { if ( s2->s_size <= s1->s_size )
   { int n = s2->s_size;
     int offset = s1->s_size - s2->s_size;
@@ -547,7 +547,7 @@ str_icase_suffix(String s1, String s2)	/* s2 is suffix of s1 */
 
 
 int
-str_sub(String s1, String s2)		/* s2 is substring of s1 */
+str_sub(PceString s1, PceString s2)		/* s2 is substring of s1 */
 { if ( s2->s_size <= s1->s_size )
   { int n = 0;
     int m = s1->s_size - s2->s_size;
@@ -601,7 +601,7 @@ str_sub(String s1, String s2)		/* s2 is substring of s1 */
 
 
 int
-str_icasesub(String s1, String s2)		/* s2 is substring of s1 */
+str_icasesub(PceString s1, PceString s2)		/* s2 is substring of s1 */
 { if ( s2->s_size <= s1->s_size )
   { int n = 0;
     int m = s1->s_size - s2->s_size;
@@ -657,7 +657,7 @@ str_icasesub(String s1, String s2)		/* s2 is substring of s1 */
 
 
 int
-str_next_index(String s, int from, wint_t chr)
+str_next_index(PceString s, int from, wint_t chr)
 { int i, n = s->s_size;
 
   if ( isstrA(s) )
@@ -679,7 +679,7 @@ str_next_index(String s, int from, wint_t chr)
 
 
 int
-str_next_rindex(String s, int from, wint_t chr)
+str_next_rindex(PceString s, int from, wint_t chr)
 { int i;
 
   if ( isstrA(s) )
@@ -701,20 +701,20 @@ str_next_rindex(String s, int from, wint_t chr)
 
 
 int
-str_index(String s, wint_t chr)
+str_index(PceString s, wint_t chr)
 { return str_next_index(s, 0, chr);
 }
 
 
 int
-str_rindex(String s, wint_t chr)
+str_rindex(PceString s, wint_t chr)
 { return str_next_rindex(s, s->s_size, chr);
 }
 
 /* count chr in [from,to) */
 
 int
-str_count_chr(String s, int from, int to, wint_t chr)
+str_count_chr(PceString s, int from, int to, wint_t chr)
 { int i, count = 0;
 
   if ( isstrA(s) )
@@ -736,20 +736,20 @@ str_count_chr(String s, int from, int to, wint_t chr)
 
 
 int
-str_lineno(String s, int at)
+str_lineno(PceString s, int at)
 { return str_count_chr(s, 0, at, '\n') + 1;
 }
 
 
 wint_t
-str_fetch(String s, int idx)
+str_fetch(PceString s, int idx)
 { return s->s_iswide ? str_fetchW(s, idx)
 		   : str_fetchA(s, idx) & 0xff;
 }
 
 
 int
-str_store(String s, int idx, unsigned int chr)
+str_store(PceString s, int idx, unsigned int chr)
 { return s->s_iswide ? str_storeW(s, idx, chr)
 		   : str_storeA(s, idx, chr);
 }
@@ -759,7 +759,7 @@ str_store(String s, int idx, unsigned int chr)
 		 *******************************/
 
 static void
-str_from_char(String s, char c)
+str_from_char(PceString s, char c)
 { unsigned char *text = alloc(sizeof(char)*2);
   text[0] = c;
   text[1] = '\0';
@@ -771,7 +771,7 @@ str_from_char(String s, char c)
 
 
 static void
-str_from_char16(String s, int c)
+str_from_char16(PceString s, int c)
 { charW *text = alloc(sizeof(charW)*2);
   text[0] = c;
   text[1] = '\0';
@@ -782,8 +782,8 @@ str_from_char16(String s, int c)
 }
 
 
-String
-str_nl(String proto)
+PceString
+str_nl(PceString proto)
 { static string nl8;
   static string nl16;
 
@@ -801,8 +801,8 @@ str_nl(String proto)
 }
 
 
-String
-str_spc(String proto)
+PceString
+str_spc(PceString proto)
 { static string spc8;
   static string spc16;
 
@@ -820,8 +820,8 @@ str_spc(String proto)
 }
 
 
-String
-str_tab(String proto)
+PceString
+str_tab(PceString proto)
 { static string tab8;
   static string tab16;
 
@@ -840,7 +840,7 @@ str_tab(String proto)
 
 
 void
-str_strip(String s)
+str_strip(PceString s)
 { int size = s->s_size;
 
   if ( isstrA(s) )
@@ -882,7 +882,7 @@ str_strip(String s)
 
 
 int
-str_common_length(String s1, String s2)
+str_common_length(PceString s1, PceString s2)
 { int i = 0;
   int size = min(s1->s_size, s2->s_size);
 
@@ -907,7 +907,7 @@ str_common_length(String s1, String s2)
 
 
 int
-str_icase_common_length(String s1, String s2)
+str_icase_common_length(PceString s1, PceString s2)
 { int i = 0;
   int size = min(s1->s_size, s2->s_size);
 
@@ -953,7 +953,7 @@ str_tmp_init(tmp_string *tmp)
 
 wint_t
 str_tmp_put(tmp_string *tmp, wint_t c)
-{ String s = &tmp->s;
+{ PceString s = &tmp->s;
 
   if ( c > 0xff && !s->s_iswide )
   { if ( s->s_textA == tmp->buffer &&

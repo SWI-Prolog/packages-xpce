@@ -249,7 +249,7 @@ ensure_compiled_regex(Regex re, int flags)
 
 static int
 re_fetch_string(const charW *at, void *closure)
-{ String str = closure;
+{ PceString str = closure;
   long idx = PTR2IDX(at);
 
   return str_fetch(str, idx);
@@ -275,7 +275,7 @@ re_fetch_fragment(const charW *at, void *closure)
 
 
 status
-search_string_regex(Regex re, String s)
+search_string_regex(Regex re, PceString s)
 { int rc;
 
   if ( !ensure_compiled_regex(re, RE_SEARCH) )
@@ -303,7 +303,7 @@ search_regex(Regex re, Any obj, Int start, Int end, int *sp, int *ep, int flags)
 
   if ( instanceOfObject(obj, ClassCharArray) )
   { CharArray ca = obj;			/* TBD: 16-bit? */
-    String s = &ca->data;
+    PceString s = &ca->data;
 
     len = s->s_size;
     fetch = re_fetch_string;
@@ -555,7 +555,7 @@ registerValueRegex(Regex re, Any obj, CharArray value, Int which)
 
 static status
 replaceRegex(Regex re, Any obj, CharArray value)
-{ String s = &value->data;
+{ PceString s = &value->data;
   LocalString(buf, s->s_iswide, FORMATSIZE);
   int o, i, size = s->s_size;
   CharArray repl;
@@ -647,7 +647,7 @@ getPrintNameRegex(Regex re)
 
 static StringObj
 getQuoteRegex(Regex re, CharArray ca)
-{ String s = &ca->data;
+{ PceString s = &ca->data;
   int size = s->s_size;
   LocalString(buf, s->s_iswide, LINESIZE);
   int i, o=0;
@@ -816,7 +816,7 @@ static getdecl get_regex[] =
   GM(NAME_registerStart, 1, "index=int", "register=[0..9]", getRegisterStartRegex,
      NAME_registers, "Start index of register or match"),
   GM(NAME_registerValue, 3, "register=any", T_gregisterValue, getRegisterValueRegex,
-     NAME_registers, "String of specified register or match"),
+     NAME_registers, "PceString of specified register or match"),
   GM(NAME_registers, 0, "registers=int", NULL, getRegistersRegex,
      NAME_registers, "Number of \\( ... \\) pairs in pattern"),
   GM(NAME_match, 3, "length=int", T_inAchar_arrayOtext_bufferOfragment_startADintD_endADintD, getMatchRegex,

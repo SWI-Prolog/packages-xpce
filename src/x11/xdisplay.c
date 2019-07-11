@@ -537,7 +537,7 @@ ws_init_monitors_display(DisplayObj d)
 		 *******************************/
 
 status
-ws_set_cutbuffer(DisplayObj d, int n, String s)
+ws_set_cutbuffer(DisplayObj d, int n, PceString s)
 { DisplayWsXref r = d->ws_ref;
 
   if ( n == 0 )
@@ -634,7 +634,7 @@ collect_selection_display(Widget w, XtPointer xtp,
   } else if ( *type == XA_STRING )
   { if ( *format == 8 )
     { if ( !str_set_n_ascii(&s, *len, (char *)value) )
-      { selection_error = CtoName("String too long");
+      { selection_error = CtoName("PceString too long");
 	selection_complete = TRUE;
 	return;
       }
@@ -802,7 +802,7 @@ convert_selection_display(Widget w,
 
     if ( (ca = getForwardReceiverFunction(msg, h->to, which, tname, EAV)) &&
 	 (ca = checkType(ca, TypeCharArray, NIL)) )
-    { String s = &ca->data;
+    { PceString s = &ca->data;
 
       if ( tname == NAME_utf8_string )
       { char *buf;

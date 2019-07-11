@@ -50,7 +50,7 @@
 
 typedef struct _goal	       *Goal;
 typedef struct pceITFSymbol    *PceITFSymbol;
-typedef struct _string	       *String;
+typedef struct _string	       *PceString;
 
 
 		/********************************

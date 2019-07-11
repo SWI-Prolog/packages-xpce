@@ -27,7 +27,7 @@ COMMON(status)	storeCharFile(FileObj f, int c);
 COMMON(void)	putstdw(unsigned long w, IOSTREAM *fd);
 COMMON(status)	storeWordFile(FileObj f, Any w);
 COMMON(status)	storeDoubleFile(FileObj file, double f);
-COMMON(status)	storeStringFile(FileObj f, String s);
+COMMON(status)	storeStringFile(FileObj f, PceString s);
 COMMON(status)	storeNameFile(FileObj f, Name n);
 COMMON(status)	storeIntFile(FileObj f, Int i);
 COMMON(status)	findFile(FileObj f, CharArray path, Name mode);

@@ -35,7 +35,7 @@
 #include <h/kernel.h>
 #include <h/unix.h>			/* storeStringFile() prototype */
 
-static CharArray	stringToCharArray(String s);
+static CharArray	stringToCharArray(PceString s);
 
 		/********************************
 		*         CREATE/CONVERT	*
@@ -187,7 +187,7 @@ getModifyCharArray(CharArray n, CharArray n2)
 
 
 static CharArray
-ModifiedCharArray(CharArray n, String buf)
+ModifiedCharArray(CharArray n, PceString buf)
 {
   Class class = classOfObject(n);
 
@@ -220,7 +220,7 @@ getCapitaliseCharArray(CharArray n)
 { if ( n->data.s_size == 0 )
     answer(n);
   else
-  { String d = &n->data;
+  { PceString d = &n->data;
     int size = d->s_size;
     LocalString(buf, d->s_iswide, size);
     int i=1, o=1;
@@ -252,7 +252,7 @@ by spaces.
 
 CharArray
 getLabelNameCharArray(CharArray n)
-{ String s = &n->data;
+{ PceString s = &n->data;
   int size = s->s_size;
   int i;
 
@@ -284,7 +284,7 @@ getLabelNameCharArray(CharArray n)
 
 CharArray
 getDowncaseCharArray(CharArray n)
-{ String s = &n->data;
+{ PceString s = &n->data;
   int size = s->s_size;
   LocalString(buf, s->s_iswide, size);
   int i;
@@ -299,7 +299,7 @@ getDowncaseCharArray(CharArray n)
 
 static CharArray
 getUpcaseCharArray(CharArray n)
-{ String s = &n->data;
+{ PceString s = &n->data;
   int size = s->s_size;
   LocalString(buf, s->s_iswide, size);
   int i;
@@ -314,7 +314,7 @@ getUpcaseCharArray(CharArray n)
 
 static CharArray
 getStripCharArray(CharArray n, Name how)
-{ String s = &n->data;
+{ PceString s = &n->data;
   int size = s->s_size;
   LocalString(buf, s->s_iswide, size);
   int i=0, o=0, lnb=0;
@@ -348,7 +348,7 @@ getStripCharArray(CharArray n, Name how)
 
 static Chain
 getSplitCharArray(CharArray in, CharArray br)
-{ String s1 = &in->data;
+{ PceString s1 = &in->data;
   int size = s1->s_size;
   int i=0, last=0;
   Chain ch = answerObject(ClassChain, EAV);
@@ -357,7 +357,7 @@ getSplitCharArray(CharArray in, CharArray br)
   str_cphdr(&buf, s1);
 
   if ( notDefault(br) )			/* given pattern */
-  { String b = &br->data;
+  { PceString b = &br->data;
 
     while( i<=size-b->s_size )
     { if ( str_prefix_offset(s1, i, b) )
@@ -412,8 +412,8 @@ getSplitCharArray(CharArray in, CharArray br)
 
 CharArray
 getAppendCharArray(CharArray n1, CharArray n2)
-{ String s1 = &n1->data;
-  String s2 = &n2->data;
+{ PceString s1 = &n1->data;
+  PceString s2 = &n2->data;
   int iswide = (s1->s_iswide || s2->s_iswide);
   LocalString(buf, iswide, s1->s_size + s2->s_size);
 
@@ -551,7 +551,7 @@ base64_code(unsigned int in)
 
 static CharArray
 getBase64EncodeCharArray(CharArray in)
-{ String s = &in->data;
+{ PceString s = &in->data;
   int size = s->s_size;
   int triples = (size+2)/3;
   LocalString(buf, FALSE, triples*4);
@@ -588,7 +588,7 @@ getBase64EncodeCharArray(CharArray in)
 
 static CharArray
 getBase64DecodeCharArray(CharArray in)
-{ String s = &in->data;
+{ PceString s = &in->data;
   int size = s->s_size;
   LocalString(buf, FALSE, (size/4)*3);
   int i, o = 0;
@@ -803,7 +803,7 @@ CtoScratchCharArray(const char *s)
 
 
 CharArray
-StringToScratchCharArray(const String s)
+StringToScratchCharArray(const PceString s)
 { CharArray name = scratch_char_arrays;
   int n;
 
@@ -838,7 +838,7 @@ CtoCharArray(char *s)
 
 
 static CharArray
-stringToCharArray(String s)
+stringToCharArray(PceString s)
 { CharArray name = StringToScratchCharArray(s);
   CharArray rval = answerObject(ClassCharArray, name, EAV);
 

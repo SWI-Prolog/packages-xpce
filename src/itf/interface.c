@@ -862,7 +862,7 @@ Cputchar(int chr)
 
 
 int
-Cputstr(String s)
+Cputstr(PceString s)
 { if ( TheCallbackFunctions.Cputchar )
   { int i;
 

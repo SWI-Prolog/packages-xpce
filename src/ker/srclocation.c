@@ -65,7 +65,7 @@ getConvertSourceLocation(SourceLocation loc, Any spec)
       answer(newObject(ClassSourceLocation, abs, EAV));
   } else /* if ( instanceOfObject(spec, ClassCharArray) */
   { CharArray ca = spec;
-    String s = &ca->data;
+    PceString s = &ca->data;
     int i;
 
     if ( (i=str_rindex(s, ':')) > 0 )

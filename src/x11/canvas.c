@@ -132,11 +132,11 @@ CanvasClassRec canvasClassRec = {
     /* display_accelerator	*/	XtInheritDisplayAccelerator,
     /* extension		*/	NULL
   }, {					/* Composite */
-    /* geometry_manager   	*/      XtInheritGeometryManager,
-    /* change_managed     	*/      XtInheritChangeManaged,
-    /* insert_child	  	*/	XtInheritInsertChild,
-    /* delete_child	  	*/	XtInheritDeleteChild,
-    /* extension	  	*/	NULL
+    /* geometry_manager		*/      XtInheritGeometryManager,
+    /* change_managed		*/      XtInheritChangeManaged,
+    /* insert_child		*/	XtInheritInsertChild,
+    /* delete_child		*/	XtInheritDeleteChild,
+    /* extension		*/	NULL
   }, { /* canvas fields */
     /* empty			*/	0
   }

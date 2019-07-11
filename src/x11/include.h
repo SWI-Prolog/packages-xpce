@@ -59,14 +59,12 @@
 
 #define O_GIFWRITE 1
 
-#define String XString
 #include <X11/Intrinsic.h>
 #include <X11/IntrinsicP.h>		/* XtConfigureWidget() prototype */
 #include <X11/StringDefs.h>
 #include <X11/Xatom.h>
 #include <X11/Shell.h>
 #undef index				/* X11 defines this too */
-#undef String
 
 #if XT_VERSION == 10
 error XPCE cannot be build for X version 10.  Sorry.
