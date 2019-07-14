@@ -1170,7 +1170,7 @@ details(B, Fragment:[prolog_frame_var_fragment], Action:[{view,copy}]) :->
 on_click(B, Index:int) :->
     "Select fragment clicked"::
     get(B, text_buffer, TB),
-    send(B, selection, 0, 0),
+    send(B, selection, Index, Index),           % do not move
     (   get(TB, find_fragment, message(@arg1, overlap, Index), Frag)
     ->  send(B, selected_fragment, Frag)
     ;   send(B, selected_fragment, @nil)
