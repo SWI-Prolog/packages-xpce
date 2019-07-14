@@ -40,6 +40,9 @@
 :- use_module(library('trace/clause')).
 :- use_module(library(prolog_predicate_item)).
 :- use_module(library(prolog_breakpoints)).
+:- if(exists_source(library(prolog_trace))).
+:- use_module(library(prolog_trace)).
+:- endif.
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 This  module  defines  the  class   prolog_debug_status,  a  status  dialog
@@ -175,8 +178,14 @@ debugging(break, breakpoint(Id)) :-
 
 debugging_(Where, spy) :-
     '$get_predicate_attribute'(Where, spy, 1).
+:- if(exists_source(library(prolog_trace))).
+debugging_(M:Head, trace) :-
+    functor(Head, Name, Arity),
+    tracing(M:Name/Arity, _).
+:- else.
 debugging_(Where, trace) :-
     '$get_predicate_attribute'(Where, trace_any, 1).
+:- endif.
 
 name_of(breakpoint(Id), Label) :-
     !,
