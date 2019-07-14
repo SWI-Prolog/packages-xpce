@@ -138,6 +138,7 @@ complete_predicate(Prefix, Module, Matches) :-
     var(Module),
     !,
     (   current_functor(Name, Arity),
+        atom(Name),                             % avoid blob functors
         atom_prefix(Name, Prefix),
         functor(Head, Name, Arity),
         current_predicate(Name, Module:Head),
