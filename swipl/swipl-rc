@@ -71,6 +71,7 @@ pcehome_(Home) :-
 	asserta(pcehomestore_(Home)).
 
 user:file_search_path(pce, PceHome) :-
+	current_prolog_flag(xpce, true),
 	pcehome_(PceHome).
 user:file_search_path(library, pce('prolog/lib')).
 user:file_search_path(foreign, pce(ArchLib)) :-
@@ -102,20 +103,33 @@ editor_setup :-
 	set_prolog_flag(editor, pce_emacs).
 editor_setup.
 
+:- dynamic
+	pce_setup_done/0.
+
 pce_setup_ :-
-	current_prolog_flag(xpce, true), !.
+	pce_setup_done, !.
 pce_setup_ :-
-	current_prolog_flag(argv, Argv),
-	\+ memberchk('--nopce', Argv),	% explicitely no XPCE
+	current_prolog_flag(xpce, false), !.
+pce_setup_ :-
 	pcehome_(PceHome),
 	exists_directory(PceHome),
+	(   current_prolog_flag(xpce, true)
+	->  Preload = true
+	;   Preload = false
+	),
+	set_prolog_flag(xpce, true),
 	gui_setup_,
-	(   memberchk('--pce', Argv)
-	;   current_prolog_flag(executable, Executable),
-	    file_base_name(Executable, Base),
-	    sub_atom_icasechk(Base, _, pce)
-	), !,
-	load_files(user:library(pce), [silent(true)]).
-pce_setup_.
+	!,
+	asserta(pce_setup_done),
+	(   (   Preload == true
+	    ;	current_prolog_flag(executable, Executable),
+		file_base_name(Executable, Base),
+		sub_atom_icasechk(Base, _, pce)
+	    )
+	->  ensure_loaded(user:library(pce))
+	;   true
+	).
+pce_setup_ :-
+	asserta(pce_setup_done).
 
 :- initialization pce_setup_.
