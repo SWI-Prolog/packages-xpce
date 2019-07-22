@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2015, University of Amsterdam
+    Copyright (c)  1985-2019, University of Amsterdam
                               VU University Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -87,6 +88,9 @@ reexports the content of these files.
             op(250, yfx, ?),
             op(800, xfx, :=)
           ]).
+
+:- multifile
+    on_load/0.
 
 :- set_prolog_flag(generate_debug_info, false).
 
@@ -176,6 +180,11 @@ get_pce_version :-
     ).
 
 :- initialization get_pce_version.
+
+run_on_load :-
+    forall(on_load, true).
+
+:- initialization run_on_load.
 
 
                  /*******************************
