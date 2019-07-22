@@ -45,6 +45,9 @@
 :- use_module(library(pce_template)).
 :- use_module(emacs_debug_modes).
 
+:- multifile
+    port_style/2.
+
 
                  /*******************************
                  *             STYLES           *
@@ -59,23 +62,32 @@ resource(ndet,   image, image('ndet.xpm')).
 resource(stack,  image, image('stack.xpm')).
 resource(stop,   image, image('stop.xpm')).
 
-style(call,             style(background := green,
-                              icon := resource(call))).
-style(break,            style(background := cyan)).
-style(exit,             style(background := green,
-                              icon := resource(exit))).
-style(redo,             style(background := yellow,
-                              icon := resource(redo))).
-style(fail,             style(background := '#ff8080',
-                              icon := resource(fail))).
-style(exception,        style(background := magenta,
-                              icon := resource(except))).
-style(unify,            style(background := sky_blue)).
-style(choice,           style(background := yellow,
-                              icon := resource(ndet))).
-style(frame,            style(background := '#d6dc5e',
-                              icon := resource(stack))).
-style(breakpoint,       style(icon := resource(stop))).
+style(Port, Style) :-
+    def_style(Port, DefAttrs),
+    (   port_style(Port, PrefAttrs)
+    ->  merge_options(PrefAttrs, DefAttrs, Attrs)
+    ;   Attrs = DefAttrs
+    ),
+    make_style(Attrs, Style).
+
+make_style(Attributes, ObjTerm) :-
+    maplist(att_assign, Attributes, Args),
+    ObjTerm =.. [style|Args].
+
+att_assign(Term, Name := Value) :-
+    Term =.. [Name, Value].
+
+
+def_style(call,         [background(green),     icon(resource(call))]).
+def_style(break,        [background(cyan)]).
+def_style(exit,         [background(green),     icon(resource(exit))]).
+def_style(redo,         [background(yellow),    icon(resource(redo))]).
+def_style(fail,         [background('#ff8080'), icon(resource(fail))]).
+def_style(exception,    [background(magenta),   icon(resource(except))]).
+def_style(unify,        [background(sky_blue)]).
+def_style(choice,       [background(yellow),    icon(resource(ndet))]).
+def_style(frame,        [background('#d6dc5e'), icon(resource(stack))]).
+def_style(breakpoint,   [icon(resource(stop))]).
 
 
 % If you define an alternative mode as a subclass of the Prolog mode

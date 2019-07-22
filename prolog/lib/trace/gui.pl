@@ -884,7 +884,8 @@ frame_finished(F, Frame:int) :->
     send(StackView, frame_finished, Frame),
     (   get(F, member, bindings, Bindings),
         get(Bindings, prolog_frame, Frame)
-    ->  send(Bindings, background, grey80),
+    ->  send(Bindings, background,
+             ?(Bindings, class_variable_value, background_inactive)),
         send(Bindings, slot, prolog_frame, @nil),
         ignore(send(F, send_hyper, fragment, free))
     ;   true
@@ -1070,6 +1071,9 @@ class_variable(size,    size,   size(40,11), "Initial size").
 
 variable(prolog_frame, int*, both, "Frame who's variables we are showing").
 
+class_variable(background_active,   colour, white).
+class_variable(background_inactive, colour, grey80).
+
 :- pce_global(@prolog_binding_recogniser,
               make_prolog_binding_recogniser).
 :- pce_global(@prolog_binding_popup,
@@ -1112,7 +1116,7 @@ initialise(B) :->
 clear(B, Content:[bool]) :->
     send(B, prolog_frame, @nil),
     (   Content == @off
-    ->  send(B, background, grey80)
+    ->  send(B, background, ?(B, class_variable_value, background_inactive))
     ;   send_super(B, clear)
     ).
 
@@ -1189,7 +1193,7 @@ bindings(B, Bindings:prolog) :->
     ),
     bind_vars(Plain),
     cycles(Plain, Template, Cycles, Plain),
-    send(B, background, white),
+    send(B, background, ?(B, class_variable_value, background_active)),
     pce_open(B, write, Fd),
     (   forall(member(Vars=Value, Template),
                send(B, append_binding, Vars, value(Value), Fd)),

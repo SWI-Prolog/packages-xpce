@@ -233,6 +233,9 @@ clean_level(Text) :-
 
 variable(members,       hash_table,  get, "Frame --> Visualiser table").
 
+class_variable(background, colour, white).
+class_variable(colour,     colour, black).
+
 initialise(B) :->
     assertion(running_in_pce_thread),
     get(@pce, convert, normal, font, Font),
@@ -375,8 +378,14 @@ frame_finished(B, Fr:int) :->
                  *       FRAME VISUALISER       *
                  *******************************/
 
+:- pce_begin_class(prolog_stack_link, line).
+
+class_variable(colour, colour, black).
+
+:- pce_end_class.
+
 :- pce_global(@prolog_choice_link,
-              new(link(link, link, line(arrows := second)))).
+              new(link(link, link, prolog_stack_link(arrows := second)))).
 
 :- pce_begin_class(prolog_stack_frame, figure,
                    "Frame of the stack-view").
@@ -402,6 +411,9 @@ variable(pc,               'int|name',  get, "Location in the frame").
 variable(choice,           int*,        get, "Id of choice-point").
 variable(frame_level,      int,         get, "Nesting of the frame").
 
+class_variable(background, colour, white).
+class_variable(colour,     colour, black).
+
 :- pce_global(@prolog_stack_frame_recogniser,
               new(click_gesture(left, '', single,
                                 message(@receiver, select)))).
@@ -409,10 +421,11 @@ variable(frame_level,      int,         get, "Nesting of the frame").
 initialise(D, Window:window, Frame:int, Label:char_array,
            Location:prolog, Style:name) :->
     send_super(D, initialise),
+    send(D, background, ?(D, class_variable_value, background)),
+    send(D, colour, ?(D, class_variable_value, colour)),
     send(D, border, 3),
     send(D, shadow, 1),
     send(D, pen, 1),
-    send(D, background, colour(white)),
     style_image(Style, Image),
     file_name_extension(Resource, _, Image),
     send(D, display, new(B, bitmap(resource(Resource)))),
