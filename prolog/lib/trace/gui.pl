@@ -211,8 +211,11 @@ thread_debug_queue_locked(Thread, Queue) :-
     ).
 
 :- initialization
-    prolog_unlisten(thread_exit, thread_finished),
-    prolog_listen(thread_exit, thread_finished).
+    (   current_prolog_flag(threads, true)
+    ->  prolog_unlisten(thread_exit, thread_finished),
+        prolog_listen(thread_exit, thread_finished)
+    ;   true
+    ).
 
 thread_finished(TID) :-
     destroy_thread_debug_gui(TID),

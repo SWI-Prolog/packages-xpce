@@ -128,8 +128,10 @@ typedef struct
 #endif /*__WINDOWS__*/
 } context_t;
 
+#ifdef O_PLMT
 static int init_prolog_goal(prolog_goal *g, term_t goal, int acknowledge);
 static void call_prolog_goal(prolog_goal *g);
+#endif
 
 static context_t context;
 
@@ -138,6 +140,7 @@ static context_t context;
 		 *	       ERRORS		*
 		 *******************************/
 
+#ifdef O_PLMT
 static int
 type_error(term_t actual, const char *expected)
 { term_t ex = PL_new_term_ref();
@@ -153,6 +156,7 @@ type_error(term_t actual, const char *expected)
 
   return FALSE;
 }
+#endif
 
 #ifdef __WINDOWS__
 
@@ -322,6 +326,8 @@ out:
 		 *	   X11 SCHEDULING	*
 		 *******************************/
 
+#ifdef O_PLMT
+
 static void
 on_input(XtPointer xp, int *source, XtInputId *id)
 { context_t *ctx = (context_t *)xp;
@@ -364,11 +370,14 @@ setup(void)
 
   return TRUE;
 }
+#endif
 
 
 static foreign_t
 in_pce_thread(term_t goal)
-{ prolog_goal *g;
+{
+#ifdef O_PLMT
+  prolog_goal *g;
   int rc;
 
   if ( !setup() )
@@ -386,12 +395,17 @@ in_pce_thread(term_t goal)
     return TRUE;
 
   return FALSE;
+#else
+  return PL_call(goal, NULL);
+#endif
 }
 
 
 static foreign_t
 in_pce_thread_sync2(term_t goal, term_t vars)
-{ prolog_goal *g;
+{
+#ifdef O_PLMT
+  prolog_goal *g;
   int rc;
 
   if ( !setup() )
@@ -412,7 +426,8 @@ in_pce_thread_sync2(term_t goal, term_t vars)
     pthread_mutex_lock(&g->mutex);
 
     for(;;)
-    { struct timespec timeout;
+    {
+      struct timespec timeout;
 #ifdef HAVE_CLOCK_GETTIME
       struct timespec now;
 
@@ -467,6 +482,9 @@ in_pce_thread_sync2(term_t goal, term_t vars)
   free(g);
 
   return rc;
+#else /*O_PLMT*/
+  return PL_call(goal, NULL);
+#endif /*O_PLMT*/
 }
 
 #endif /*!__WINDOWS__*/
@@ -476,6 +494,7 @@ in_pce_thread_sync2(term_t goal, term_t vars)
 		 *	CREATE/EXECUTE GOAL	*
 		 *******************************/
 
+#if O_PLMT
 static int
 init_prolog_goal(prolog_goal *g, term_t goal, int acknowledge)
 { term_t plain = PL_new_term_ref();
@@ -550,6 +569,7 @@ call_prolog_goal(prolog_goal *g)
   } else
     PL_warning("ERROR: pce: out of global stack");
 }
+#endif
 
 
 #ifdef __WINDOWS__

@@ -130,7 +130,8 @@ user:file_search_path(pce_boot, pce(prolog/boot)).
 %
 %   @see pce_dispatch/1.
 
-:- create_prolog_flag(xpce_threaded, true, [keep(true)]).
+:- current_prolog_flag(threads, HasThreads),
+   create_prolog_flag(xpce_threaded, HasThreads, [keep(true)]).
 
 :- dynamic
     pce_thread/1.
