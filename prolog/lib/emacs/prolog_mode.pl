@@ -132,7 +132,7 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
         ]).
 
 class_variable(varmark_style, style*,
-               style(background := honeydew,
+               style(background := pale_turquoise,
                      underline := @on)).
 class_variable(show_syntax_errors, {never,typing,pause},
                typing).
