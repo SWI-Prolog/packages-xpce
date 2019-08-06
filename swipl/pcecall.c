@@ -42,7 +42,7 @@
 #include <SWI-Prolog.h>
 
 #ifdef __WINDOWS__
-
+#define O_PLMT 1
 #include <windows.h>
 #include <console.h>
 
