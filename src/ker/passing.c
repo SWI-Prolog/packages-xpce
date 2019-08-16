@@ -36,10 +36,6 @@
 #define USE_WIN32_CRITICAL_SECTION
 #endif
 
-#ifdef USE_WIN32_CRITICAL_SECTION
-#define _WIN32_WINNT 0x400		/* get TryEnterCriticalSection() */
-#endif /*USE_WIN32_CRITICAL_SECTION*/
-
 #define _GNU_SOURCE 1			/* for recursive mutexes */
 #define INLINE_UTILITIES 1
 #include <h/kernel.h>
