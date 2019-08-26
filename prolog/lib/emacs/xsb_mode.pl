@@ -36,14 +36,13 @@
 :- module(emacs_xsb_mode, []).
 :- use_module(library(pce)).
 :- use_module(prolog_mode).
+:- use_module(library(prolog_xref)).
 :- use_module(library(operators)).      % push/pop operators
 :- use_module(library(trace/emacs_debug_modes)).
 :- use_module(library(dialect/xsb), []).
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-This module deals with colourisation of .lgt files.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
+/** <module> Colour XSB source files
+*/
 
                  /*******************************
                  *            LOGTALK MODE              *
@@ -58,13 +57,9 @@ This module deals with colourisation of .lgt files.
                     [
                     ]).
 
-colourise_buffer(M) :->
-    "Cross-reference the buffer and set up colours"::
-    push_xsb_operators,
-    setup_call_cleanup(
-            true,
-            send_super(M, colourise_buffer),
-            pop_xsb_operators).
+operators(_M, Ops:prolog) :<-
+    "Get mode specific operators"::
+    xsb_operators(Ops).
 
 :- emacs_end_mode.
 
@@ -78,7 +73,76 @@ colourise_buffer(M) :->
     prolog_colour:term_colours/2,
     prolog_colour:goal_colours/2,
     prolog_colour:directive_colours/2,
-    prolog_colour:goal_classification/2.
+    prolog_colour:goal_classification/2,
+    prolog_colour:message//1.
+
+:- op(1040, xfx, from).
+
+prolog_colour:goal_colours(import(Preds from Module),
+                           xsb-[ keyword(from)-[ Imports,
+                                                 File
+                                               ]
+                               ]) :-
+    xsb_module_file(Module, File),
+    xsb_imports(Preds, File, Imports).
+prolog_colour:goal_colours(dynamic(_Preds as Options),
+                           xsb-[ keyword(as)-[ predicates,
+                                               OptColours
+                                             ]
+                               ]) :-
+    dyn_option_colours(Options, OptColours).
+
+xsb_module_file(usermod, module(user)) :-
+    !.
+xsb_module_file(Module, file(Path)) :-
+    prolog_load_context(file, Here),
+    absolute_file_name(Module, Path,
+                       [ extensions(['P', pl, prolog]),
+                         access(read),
+                         relative_to(Here),
+                         file_errors(fail)
+                       ]),
+    !.
+xsb_module_file(Module, file(Path)) :-
+    (   Spec = library(dialect/xsb/Module)
+    ;   Spec = library(Module)
+    ),
+    absolute_file_name(Spec, Path,
+                       [ extensions(['P', pl, prolog]),
+                         access(read),
+                         file_errors(fail)
+                       ]),
+    !.
+xsb_module_file(_Module, nofile).
+
+xsb_imports(_, nofile, predicates) :-
+    !.
+xsb_imports(Var, _, classify) :-
+    var(Var),
+    !.
+xsb_imports((A,B), From, functor-[CA, CB]) :-
+    xsb_imports(A, From, CA),
+    xsb_imports(B, From, CB).
+xsb_imports(_, file(Path), import(Path)).
+
+dyn_option_colours(Var, error(instantiation_error)) :-
+    var(Var),
+    !.
+dyn_option_colours((A,B), functor-[CA, CB]) :-
+    dyn_option_colours(A, CA),
+    dyn_option_colours(B, CB).
+dyn_option_colours(Opt, identifier) :-
+    valid_dyn_option(Opt),
+    !.
+dyn_option_colours(_Opt, error(type_error(xsb_dynamic_option))).
+
+valid_dyn_option(incremental).
+valid_dyn_option(abstract(_)).
+
+prolog_colour:style(goal(xsb, _), [colour(blue), underline(true)]).
+
+prolog_colour:message(goal(xsb, _)) -->
+    [ 'XSB emulated' ].
 
 
                  /*******************************
@@ -88,10 +152,13 @@ colourise_buffer(M) :->
 :- multifile
     prolog:alternate_syntax/4.
 
-
 prolog:alternate_syntax(xsb, Module,
                         emacs_xsb_mode:push_xsb_operators(Module),
                         emacs_xsb_mode:pop_xsb_operators).
+
+:- public
+    push_xsb_operators/0,
+    pop_xsb_operators/0.
 
 push_xsb_operators :-
     '$set_source_module'(M, M),
