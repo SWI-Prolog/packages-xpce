@@ -1775,13 +1775,23 @@ xref_source_id(TB, SourceId) :-
                  *           PREDICATES         *
                  *******************************/
 
+operators(_M, Ops:prolog) :<-
+    "Get mode specific operators"::
+    Ops = [].
+
 colourise_buffer(M) :-
     get(M, text_buffer, TB),
     get(M, xref_source_id, SourceID),
+    (   get(M, operators, Ops)
+    ->  true
+    ;   Ops = []
+    ),
     setup_call_cleanup(
         pce_open(TB, read, Stream),
         ( set_stream_file(TB, Stream),
-          prolog_colourise_stream(Stream, SourceID, colour_item(M))
+          prolog_colourise_stream(Stream, SourceID, colour_item(M),
+                                  [ operators(Ops)
+                                  ])
         ),
         close(Stream)).
 
