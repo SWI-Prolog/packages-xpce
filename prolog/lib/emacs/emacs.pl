@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/packackes/xpce/
-    Copyright (c)  1985-2018, University of Amsterdam
+    Copyright (c)  1985-2019, University of Amsterdam
 			      VU University Amsterdam
     All rights reserved.
 
@@ -109,6 +109,7 @@ pce_ifhostproperty(prolog(swi),
 %:- declare_emacs_mode(outline, library('emacs/outline_mode')).
 %:- declare_emacs_mode(language,library('emacs/language_mode')).
 :- declare_emacs_mode(prolog,   library('emacs/prolog_mode')).
+:- declare_emacs_mode(xsb,      library('emacs/xsb_mode')).
 :- declare_emacs_mode(chr,      library('emacs/chr_mode')).
 :- declare_emacs_mode(latex,    library('emacs/latex_mode')).
 :- declare_emacs_mode(logtalk,  library('emacs/logtalk_mode')).
@@ -173,6 +174,7 @@ default_emacs_mode('.*\\.pl~?$',                   prolog).
 default_emacs_mode('.*\\.plu~?$',                  prolog).
 default_emacs_mode('.*\\.plt~?$',                  prolog).
 default_emacs_mode('\\.swiplrc~?',		   prolog).
+default_emacs_mode('.*\\.P~?$',                    xsb).
 default_emacs_mode('\\.yap~?',                     prolog).
 default_emacs_mode('.*\\.chr~?$',                  chr).
 default_emacs_mode('.*\\.(tex|sty)~?$',            latex).

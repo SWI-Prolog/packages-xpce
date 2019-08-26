@@ -189,7 +189,7 @@ set(XPCE_DATA_prolog_lib_draw align.pl attribute.pl canvas.pl config.pl draw.pl
 set(XPCE_DATA_prolog_lib_emacs annotate_mode.pl application.pl bookmarks.pl
     buffer_menu.pl buffer.pl chr_mode.pl c_mode.pl cpp_mode.pl dde_server.pl
     emacs_chrome_server.pl emacs.pl find.pl fundamental_mode.pl gdb.pl
-    help.pl history.pl hit_list.pl html_mode.pl java_mode.pl
+    help.pl history.pl hit_list.pl html_mode.pl java_mode.pl xsb_mode.pl
     javascript_mode.pl language_mode.pl latex_mode.pl logtalk_mode.pl
     man_mode.pl outline_mode.pl prolog_mode.pl prompt.pl rdf_mode.pl
     script_mode.pl server.pl sgml_mode.pl shell.pl swi_prolog.pl
