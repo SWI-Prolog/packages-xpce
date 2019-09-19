@@ -171,7 +171,7 @@ show_statistics(F) :->
 details(F, From:prolog) :->
     "Show details on node or predicate"::
     get(F, member, prof_details, W),
-    (   functor(From, node, 7)
+    (   functor(From, node, 8)
     ->  send(W, node, From)
     ;   get(F, member, prof_browser, B),
         get(B?dict, find,
@@ -675,8 +675,9 @@ key(ticks_self,     2).
 key(ticks_children, 3).
 key(call,           4).
 key(redo,           5).
-key(callers,        6).
-key(callees,        7).
+key(redo,           6).
+key(callers,        7).
+key(callees,        8).
 
 value(Data, name, Name) :-
     !,
@@ -752,14 +753,14 @@ predicate_name(H, Name) :-
 
 prof_node(node(Impl,
                TicksSelf, TicksChildren,
-               Call, Redo,
+               Call, Redo, Exit,
                Parents, Children)) :-
     setof(Impl, prof_impl(Impl, -), Impls0),
     join_impl(Impls0, Impls),
     member(Impl, Impls),
     '$prof_procedure_data'(Impl,
                            TicksSelf, TicksChildren,
-                           Call, Redo,
+                           Call, Redo, Exit,
                            Parents, Children).
 
 join_impl([], []).
