@@ -381,7 +381,7 @@ title(W) :->
     get(W, tabular, T),
     BG = (background := khaki1),
     send(T, append, 'Time',   bold, center, colspan := 2, BG),
-    send(T, append, 'Access', bold, center, colspan := 2, BG),
+    send(T, append, 'Port',   bold, center, colspan := 4, BG),
     send(T, append, 'Predicate', bold, center,
          valign := center, BG,
          rowspan := 2),
@@ -390,6 +390,8 @@ title(W) :->
     send(T, append, 'Children',   bold, center, BG),
     send(T, append, 'Call',   bold, center, BG),
     send(T, append, 'Redo',   bold, center, BG),
+    send(T, append, 'Exit',   bold, center, BG),
+    send(T, append, 'Fail',   bold, center, BG),
     send(T, next_row).
 
 cluster_title(W, Cycle:int) :->
@@ -444,31 +446,33 @@ show_cluster(Callers, Callees, Data, Cycle, W) :-
     ),
     sort_relatives(Callers, Callers1),
     show_relatives(Callers1, parent, W),
-    ticks(Callers1, Self, Children, Call, Redo),
-    send(W, show_predicate, Data, Self, Children, Call, Redo),
+    ticks(Callers1, Self, Children, Call, Redo, Exit),
+    send(W, show_predicate, Data, Self, Children, Call, Redo, Exit),
     sort_relatives(Callees, Callees1),
     reverse(Callees1, Callees2),
     show_relatives(Callees2, child, W).
 
-ticks(Callers, Self, Children, Call, Redo) :-
-    ticks(Callers, 0, Self, 0, Children, 0, Call, 0, Redo).
+ticks(Callers, Self, Children, Call, Redo, Exit) :-
+    ticks(Callers, 0, Self, 0, Children, 0, Call, 0, Redo, 0, Exit).
 
-ticks([], Self, Self, Sibl, Sibl, Call, Call, Redo, Redo).
+ticks([], Self, Self, Sibl, Sibl, Call, Call, Redo, Redo, Exit, Exit).
 ticks([H|T],
-      Self0, Self, Sibl0, Sibl, Call0, Call, Redo0, Redo) :-
+      Self0, Self, Sibl0, Sibl, Call0, Call, Redo0, Redo, Exit0, Exit) :-
     arg(1, H, '<recursive>'),
     !,
-    ticks(T, Self0, Self, Sibl0, Sibl, Call0, Call, Redo0, Redo).
-ticks([H|T], Self0, Self, Sibl0, Sibl, Call0, Call, Redo0, Redo) :-
+    ticks(T, Self0, Self, Sibl0, Sibl, Call0, Call, Redo0, Redo, Exit0, Exit).
+ticks([H|T], Self0, Self, Sibl0, Sibl, Call0, Call, Redo0, Redo, Exit0, Exit) :-
     arg(3, H, ThisSelf),
     arg(4, H, ThisSibings),
     arg(5, H, ThisCall),
     arg(6, H, ThisRedo),
+    arg(7, H, ThisExit),
     Self1 is ThisSelf + Self0,
     Sibl1 is ThisSibings + Sibl0,
     Call1 is ThisCall + Call0,
     Redo1 is ThisRedo + Redo0,
-    ticks(T, Self1, Self, Sibl1, Sibl, Call1, Call, Redo1, Redo).
+    Exit1 is ThisExit + Exit0,
+    ticks(T, Self1, Self, Sibl1, Sibl, Call1, Call, Redo1, Redo, Exit1, Exit).
 
 
 %       clusters(+Relatives, -Cycles)
@@ -527,7 +531,7 @@ show_relatives([H|T], Role, W) :-
 
 show_predicate(W, Data:prolog,
                Ticks:int, ChildTicks:int,
-               Call:int, Redo:int) :->
+               Call:int, Redo:int, Exit:int) :->
     "Show the predicate we have details on"::
     value(Data, predicate, Pred),
     get(W, frame, Frame),
@@ -535,10 +539,13 @@ show_predicate(W, Data:prolog,
     get(Frame, render_time, ChildTicks, Children),
     get(W, tabular, T),
     BG = (background := khaki1),
+    Fail is Call+Redo-Exit,
     send(T, append, Self, halign := right, BG),
     send(T, append, Children, halign := right, BG),
     send(T, append, Call, halign := right, BG),
     send(T, append, Redo, halign := right, BG),
+    send(T, append, Exit, halign := right, BG),
+    send(T, append, Fail, halign := right, BG),
     (   object(Pred)
     ->  new(Txt, prof_node_text(Pred, self))
     ;   new(Txt, prof_predicate_text(Pred, self))
@@ -548,20 +555,23 @@ show_predicate(W, Data:prolog,
     send(T, next_row).
 
 show_relative(W, Caller:prolog, Role:name) :->
-    Caller = node(Pred, _Cluster, Ticks, ChildTicks, Calls, Redos),
+    Caller = node(Pred, _Cluster, Ticks, ChildTicks, Calls, Redos, Exits),
     get(W, tabular, T),
     get(W, frame, Frame),
     (   Pred == '<recursive>'
     ->  send(T, append, new(graphical), colspan := 2),
         send(T, append, Calls, halign := right),
-        send(T, append, new(graphical)),
+        send(T, append, new(graphical), colspan := 3),
         send(T, append, Pred, italic)
     ;   get(Frame, render_time, Ticks, Self),
         get(Frame, render_time, ChildTicks, Children),
         send(T, append, Self, halign := right),
         send(T, append, Children, halign := right),
+        Fails is Calls+Redos-Exits,
         send(T, append, Calls, halign := right),
         send(T, append, Redos, halign := right),
+        send(T, append, Exits, halign := right),
+        send(T, append, Fails, halign := right),
         (   Pred == '<spontaneous>'
         ->  send(T, append, Pred, italic)
         ;   object(Pred)
