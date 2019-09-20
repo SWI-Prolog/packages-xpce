@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2003-2013, University of Amsterdam
+    Copyright (c)  2003-2019, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -36,6 +36,7 @@
 :- module(pce_profile,
           [ pce_show_profile/0
           ]).
+:- use_module(library(statistics), [profile_data/1]).
 :- use_module(library(pce)).
 :- use_module(library(lists)).
 :- use_module(library(persistent_frame)).
@@ -55,10 +56,8 @@ profiler output.
 %   Show already collected profile using a graphical browser.
 
 pce_show_profile :-
-    '$prof_statistics'(Samples, Ticks, Account, Time, NodeCount),
-    findall(Node, prof_node(Node), Nodes),
-    in_pce_thread(show_profile(prof_data(Samples, Ticks, Account,
-                                         Time, NodeCount, Nodes))).
+    profile_data(Data),
+    in_pce_thread(show_profile(Data)).
 
 show_profile(Data) :-
     send(new(F, prof_frame), open),
@@ -120,27 +119,21 @@ fill_dialog(F, TD:tool_dialog) :->
               ]).
 
 
-% make this work on older versions of SWI-Prolog
-:- if(\+current_predicate('$prof_statistics'/5)).
-'$prof_statistics'(Ticks, Ticks, Account, Time, NodeCount) :-
-    '$prof_statistics'(Ticks, Account, Time, NodeCount).
-:- endif.
-
-load_profile(F, ProfData:[prolog]) :->
+load_profile(F, ProfData0:[prolog]) :->
     "Load stored profile from the Prolog database"::
-    (   ProfData = prof_data(Samples, Ticks, Account, Time, NodeCount, Nodes)
-    ->  true
-    ;   '$prof_statistics'(Samples, Ticks, Account, Time, NodeCount),
-        findall(Node, prof_node(Node), Nodes)
+    (   is_dict(ProfData0)
+    ->  ProfData = ProfData0
+    ;   profile_data(ProfData)
     ),
-    send(F, slot, samples, Samples),
-    send(F, slot, ticks, Ticks),
-    send(F, slot, accounting_ticks, Account),
-    send(F, slot, time, Time),
-    send(F, slot, nodes, NodeCount),
+    Summary = ProfData.summary,
+    send(F, slot, samples, Summary.samples),
+    send(F, slot, ticks, Summary.ticks),
+    send(F, slot, accounting_ticks, Summary.accounting),
+    send(F, slot, time, Summary.time),
+    send(F, slot, nodes, Summary.nodes),
     get(F, member, prof_browser, B),
     send(F, report, progress, 'Loading profile data ...'),
-    send(B, load_profile, Nodes),
+    send(B, load_profile, ProfData.nodes),
     send(F, report, done),
     send(F, show_statistics),
     (   get(F, auto_reset, @on)
@@ -171,7 +164,7 @@ show_statistics(F) :->
 details(F, From:prolog) :->
     "Show details on node or predicate"::
     get(F, member, prof_details, W),
-    (   functor(From, node, 8)
+    (   is_dict(From)
     ->  send(W, node, From)
     ;   get(F, member, prof_browser, B),
         get(B?dict, find,
@@ -295,20 +288,18 @@ variable(data,         prolog, get, "Predicate data").
 initialise(DI, Node:prolog, SortBy:name, F:prof_frame) :->
     "Create from predicate head"::
     send(DI, slot, data, Node),
-    value(Node, predicate, Predicate),
-    predicate_label(Predicate, Key),
+    predicate_label(Node.predicate, Key),
     send_super(DI, initialise, Key),
     send(DI, update_label, SortBy, F).
 
 value(DI, Name:name, Value:prolog) :<-
     "Get associated value"::
     get(DI, data, Data),
-    value(Data, Name, Value).
+    Value = Data.Name.
 
 has_predicate(DI, Test:prolog) :->
     get(DI, data, Data),
-    value(Data, predicate, Pred),
-    same_pred(Test, Pred).
+    same_pred(Test, Data.predicate).
 
 same_pred(X, X) :- !.
 same_pred(user:Pred, Pred) :- !.
@@ -415,10 +406,8 @@ node(W, Data:prolog) :->
     send(W?tabular, clear),
     send(W, scroll_to, point(0,0)),
     send(W, title),
-    value(Data, callers, Callers),
-    value(Data, callees, Callees),
-    clusters(Callers, CallersCycles),
-    clusters(Callees, CalleesCycles),
+    clusters(Data.callers, CallersCycles),
+    clusters(Data.callees, CalleesCycles),
     (   CallersCycles = [_]
     ->  show_clusters(CallersCycles, CalleesCycles, Data, 0, W)
     ;   show_clusters(CallersCycles, CalleesCycles, Data, 1, W)
@@ -533,7 +522,7 @@ show_predicate(W, Data:prolog,
                Ticks:int, ChildTicks:int,
                Call:int, Redo:int, Exit:int) :->
     "Show the predicate we have details on"::
-    value(Data, predicate, Pred),
+    Pred = Data.predicate,
     get(W, frame, Frame),
     get(Frame, render_time, Ticks, Self),
     get(Frame, render_time, ChildTicks, Children),
@@ -751,43 +740,3 @@ predicate_name(_:H, Name) :-
     predicate_name(H, Name).
 predicate_name(H, Name) :-
     functor(H, Name, _Arity).
-
-%!  prof_node(Data:node(Pred,
-%!                      TicksSelf, TicksChildren,
-%!                      Calls, Redo,
-%!                      Parents, Children)) is nondet.
-%
-%   Data is a node of the   profile call-tree. Backtracking over all
-%   solutions  generates  the   entire    call-tree   with   profile
-%   statistics.
-
-prof_node(node(Impl,
-               TicksSelf, TicksChildren,
-               Call, Redo, Exit,
-               Parents, Children)) :-
-    setof(Impl, prof_impl(Impl, -), Impls0),
-    join_impl(Impls0, Impls),
-    member(Impl, Impls),
-    '$prof_procedure_data'(Impl,
-                           TicksSelf, TicksChildren,
-                           Call, Redo, Exit,
-                           Parents, Children).
-
-join_impl([], []).
-join_impl([H|T0], [H|T]) :-
-    same(H, T0, T1),
-    join_impl(T1, T).
-
-same(H, [H|T0], T) :-
-    !,
-    same(H, T0, T).
-same(_, L, L).
-
-
-prof_impl(Impl, Node) :-
-    Node \== (-),
-    '$prof_node'(Node, Impl, _, _, _, _, _).
-prof_impl(Impl, Root) :-
-    '$prof_sibling_of'(Node, Root),
-    prof_impl(Impl, Node).
-
