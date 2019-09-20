@@ -232,7 +232,7 @@ help(_F) :->
 
 class_variable(size, size, size(40,20)).
 
-variable(sort_by,  name := ticks_self, get, "How the items are sorted").
+variable(sort_by,  name := ticks, get, "How the items are sorted").
 
 initialise(B) :->
     send_super(B, initialise),
@@ -295,7 +295,7 @@ initialise(DI, Node:prolog, SortBy:name, F:prof_frame) :->
 value(DI, Name:name, Value:prolog) :<-
     "Get associated value"::
     get(DI, data, Data),
-    Value = Data.Name.
+    value(Name, Data, Value).
 
 has_predicate(DI, Test:prolog) :->
     get(DI, data, Data),
@@ -669,38 +669,24 @@ details(T) :->
                  *              UTIL            *
                  *******************************/
 
-key(predicate,      1).
-key(ticks_self,     2).
-key(ticks_children, 3).
-key(call,           4).
-key(redo,           5).
-key(redo,           6).
-key(callers,        7).
-key(callees,        8).
+value(name, Data, Name) :-
+    !,
+    predicate_name(Data.predicate, Name).
+value(label, Data, Label) :-
+    !,
+    predicate_label(Data.predicate, Label).
+value(ticks, Data, Ticks) :-
+    !,
+    Ticks is Data.ticks_self + Data.ticks_siblings.
+value(Name, Data, Value) :-
+    Value = Data.Name.
 
-value(Data, name, Name) :-
-    !,
-    arg(1, Data, Pred),
-    predicate_name(Pred, Name).
-value(Data, label, Label) :-
-    !,
-    arg(1, Data, Pred),
-    predicate_label(Pred, Label).
-value(Data, ticks, Ticks) :-
-    !,
-    arg(2, Data, Self),
-    arg(3, Data, Children),
-    Ticks is Self + Children.
-value(Data, Name, Value) :-
-    key(Name, Arg),
-    arg(Arg, Data, Value).
-
-sort_by(flat_profile_by_name,                name,           normal).
 sort_by(cumulative_profile_by_time,          ticks,          reverse).
 sort_by(flat_profile_by_time_self,           ticks_self,     reverse).
-sort_by(cumulative_profile_by_time_children, ticks_children, reverse).
+sort_by(cumulative_profile_by_time_children, ticks_siblings, reverse).
 sort_by(flat_profile_by_number_of_calls,     call,           reverse).
 sort_by(flat_profile_by_number_of_redos,     redo,           reverse).
+sort_by(flat_profile_by_name,                name,           normal).
 
 
 %!  predicate_label(+Head, -Label)
