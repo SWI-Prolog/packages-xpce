@@ -397,7 +397,7 @@ title(W) :->
 cluster_title(W, Cycle:int) :->
     get(W, tabular, T),
     send(T, append, string('Cluster <%d>', Cycle),
-         bold, center, colspan := 5,
+         bold, center, colspan := 7,
          background := navyblue, colour := yellow),
     send(T, next_row).
 
