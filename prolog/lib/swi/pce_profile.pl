@@ -44,6 +44,7 @@
 :- use_module(library(pce_report)).
 :- use_module(library(tabular)).
 :- use_module(library(prolog_predicate)).
+:- use_module(library(prolog_code)).
 
 /** <module> GUI frontend for the profiler
 
@@ -288,7 +289,7 @@ variable(data,         prolog, get, "Predicate data").
 initialise(DI, Node:prolog, SortBy:name, F:prof_frame) :->
     "Create from predicate head"::
     send(DI, slot, data, Node),
-    predicate_label(Node.predicate, Key),
+    pce_predicate_label(Node.predicate, Key),
     send_super(DI, initialise, Key),
     send(DI, update_label, SortBy, F).
 
@@ -671,10 +672,10 @@ details(T) :->
 
 value(name, Data, Name) :-
     !,
-    predicate_name(Data.predicate, Name).
+    predicate_sort_key(Data.predicate, Name).
 value(label, Data, Label) :-
     !,
-    predicate_label(Data.predicate, Label).
+    pce_predicate_label(Data.predicate, Label).
 value(ticks, Data, Ticks) :-
     !,
     Ticks is Data.ticks_self + Data.ticks_siblings.
@@ -689,40 +690,14 @@ sort_by(flat_profile_by_number_of_redos,     redo,           reverse).
 sort_by(flat_profile_by_name,                name,           normal).
 
 
-%!  predicate_label(+Head, -Label)
+%!  pce_predicate_label(+PI, -Label)
 %
 %   Label is the human-readable identification   for Head. Calls the
 %   hook user:prolog_predicate_name/2.
 
-:- multifile
-    user:prolog_predicate_name/2.
-
-predicate_label(Obj, Label) :-
+pce_predicate_label(Obj, Label) :-
     object(Obj),
     !,
     get(Obj, print_name, Label).
-predicate_label(Head, Label) :-
-    user:prolog_predicate_name(Head, Label),
-    !.
-predicate_label(M:H, Label) :-
-    !,
-    functor(H, Name, Arity),
-    (   hidden_module(M, H)
-    ->  atomic_list_concat([Name, /, Arity], Label)
-    ;   atomic_list_concat([M, :, Name, /, Arity], Label)
-    ).
-predicate_label(H, Label) :-
-    !,
-    functor(H, Name, Arity),
-    atomic_list_concat([Name, /, Arity], Label).
-
-hidden_module(system, _).
-hidden_module(user, _).
-hidden_module(M, H) :-
-    predicate_property(system:H, imported_from(M)).
-
-predicate_name(_:H, Name) :-
-    !,
-    predicate_name(H, Name).
-predicate_name(H, Name) :-
-    functor(H, Name, _Arity).
+pce_predicate_label(PI, Label) :-
+    predicate_label(PI, Label).
