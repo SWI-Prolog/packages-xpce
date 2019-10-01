@@ -303,8 +303,19 @@ has_predicate(DI, Test:prolog) :->
     same_pred(Test, Data.predicate).
 
 same_pred(X, X) :- !.
-same_pred(user:Pred, Pred) :- !.
-same_pred(Pred, user:Pred).
+same_pred(QP1, QP2) :-
+    unqualify(QP1, P1),
+    unqualify(QP2, P2),
+    same_pred_(P1, P2).
+
+unqualify(user:X, X) :- !.
+unqualify(X, X).
+
+same_pred_(X, X) :- !.
+same_pred_(Head, Name/Arity) :-
+    pi_head(Name/Arity, Head).
+same_pred_(Head, user:Name/Arity) :-
+    pi_head(Name/Arity, Head).
 
 compare(DI, DI2:prof_dict_item,
         SortBy:name, Order:{normal,reverse},
@@ -578,8 +589,8 @@ show_relative(W, Caller:prolog, Role:name) :->
 :- pce_begin_class(prof_node_text, text,
                    "Show executable object").
 
-variable(context,   any,                   get, "Represented executable").
-variable(role,      {parent,self,child}, get,   "Represented role").
+variable(context,   any,                 get, "Represented executable").
+variable(role,      {parent,self,child}, get, "Represented role").
 
 initialise(T, Context:any, Role:{parent,self,child}, Cycle:[int]) :->
     send(T, slot, context, Context),
