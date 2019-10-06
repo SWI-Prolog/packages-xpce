@@ -67,8 +67,11 @@ make_emacs_server_address(F) :-
     ->  true
     ;   get(@pce, hostname, Local)
     ),
-    atom_concat('~/.xpce_emacs_server.', Local, Server),
-    new(F, file(Server)).
+    atom_concat('emacs_server.', Local, ServerRel),
+    get(@pce, application_data, Dir),
+    get(Dir, file, ServerRel, FA),
+    get(FA, name, FileName),
+    new(F, file(FileName)).
 
 local_display(N) -->
     ":", digits(D),

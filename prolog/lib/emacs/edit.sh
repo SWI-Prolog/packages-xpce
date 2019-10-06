@@ -8,19 +8,20 @@ usage()
 line=""
 
 HOST=`hostname`
-server="$HOME/.xpce_emacs_server"
+APPCONFIG=${XDG_DATA_HOME-$HOME/.config}/swi-prolog/xpce
+serverbase="$APPCONFIG/emacs_server"
 
 case "$DISPLAY" in
-  :*)	server=$server.$(echo "$DISPLAY" | sed 's/^:\([0-9]*\).*/\1/')
+  :*)	server=$serverbase.$(echo "$DISPLAY" | sed 's/^:\([0-9]*\).*/\1/')
 	;;
-  *)	server=$server.$HOST
+  *)	server=$serverbase.$HOST
         ;;
 esac
 
 #echo "Server = $server"
 
 if [ ! -S "$server" -o -z "$DISPLAY" ]; then
-    server="$HOME/.xpce_emacs_server"
+    server="$serverbase"
     if [ ! -S "$server" ]; then
 	echo "No PceEmacs server"
 	exec emacs "$*"
