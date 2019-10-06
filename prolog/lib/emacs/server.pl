@@ -107,8 +107,11 @@ server_action((A,B), Socket) :-
     server_action(B, Socket).
 server_action(edit(File), Socket) :-
     !,
-    server_action(edit(File, []), Socket).
+    server_action(edit(File, [], []), Socket).
 server_action(edit(File, Line), Socket) :-
+    !,
+    server_action(edit(File, Line, []), Socket).
+server_action(edit(File, Line, CharPos), Socket) :-
     !,
     new(B, emacs_buffer(File)),
     get(B, open, tab, Frame),
@@ -120,6 +123,10 @@ server_action(edit(File, Line), Socket) :-
     (   Line == []
     ->  true
     ;   send(Editor, goto_line, Line)
+    ),
+    (   CharPos == []
+    ->  true
+    ;   send(Editor, column, CharPos)
     ).
 server_action(gdb(File, Pid), Socket) :-
     !,

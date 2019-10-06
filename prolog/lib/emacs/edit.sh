@@ -1,4 +1,14 @@
 #!/bin/sh -f
+#
+# Ask PceEmacs to edit files for  me.   To  use  this package, make sure
+# xpce-client is installed in  your  path   and  one  XPCE  process runs
+# PceEmacs as a server. One way to do   that  is to put the following in
+# your X startup:
+#
+#      xterm -iconic -title 'PceEmacs server' -e swipl -g emacs_server
+#
+# Author: Jan Wielemaker
+# Copying: Public domain
 
 usage()
 { echo "usage: `basename $0` [+line] file[:line]"
@@ -51,15 +61,20 @@ case "$file" in
 esac
 
 case "$file" in
+	*:[0-9]*:[0-9]*)
+		eval `echo $file | sed 's/\(.*\):\([0-9]*\):\([0-9]*\)$/file=\1;line=\2;charpos=\3/'`
+		;;
 	*:[0-9]*)
 		eval `echo $file | sed 's/\(.*\):\([0-9]*\)$/file=\1;line=\2/'`
 		;;
 esac
 
-if [ "$line" = "" ]; then
+if [ -z "$line" ]; then
 	cmd="edit('$file')"
-else
+elif [ -z "$charpos" ]; then
 	cmd="edit('$file', $line)"
+else
+	cmd="edit('$file', $line, $charpos)"
 fi
 
 xpce-client $server -bc "$cmd"
