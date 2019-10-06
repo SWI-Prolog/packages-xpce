@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        wielemak@science.uva.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2011-2015, University of Amsterdam
+    Copyright (c)  2011-2019, University of Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -167,7 +167,7 @@ static PceObject	termToObject(term_t t, PceType type,
 static prolog_call_data *get_pcd(PceObject method);
 static int		put_object(term_t t, PceObject obj);
 static int		put_trace_info(term_t id, prolog_call_data *pm);
-       foreign_t	pl_pce_init(term_t a);
+       foreign_t	pl_pce_init(term_t home, term_t appdir);
 static Module		pceContextModule();
 static void		makeClassProlog();
 static term_t		getTermHandle(PceObject hd);
@@ -659,12 +659,12 @@ indirect_rlc_hwnd()
 static OnExitFunction		exitpce_hook;
 
 install_t
-install_pl2xpce()
+install_pl2xpce(void)
 { if ( pce_initialised )
     return;
   pce_initialised = TRUE;
 
-  PL_register_foreign("pce_init", 1,
+  PL_register_foreign("pce_init", 2,
 		      pl_pce_init, PL_FA_TRANSPARENT);
   PL_register_foreign("send", 2,
 		      pl_send, PL_FA_TRANSPARENT);
@@ -3319,17 +3319,21 @@ detach_thread(void *closure)
 
 
 foreign_t
-pl_pce_init(term_t a)
+pl_pce_init(term_t Home, term_t AppDir)
 { char **argv;
   int argc;
-  const char *home;
-  atom_t ahome;
+  const char *home, *appdata;
+  atom_t ahome, aappdata;
   static int initialised = FALSE;
 
-  if ( GetAtom(a, &ahome) )
+  if ( GetAtom(Home, &ahome) )
     home = AtomCharp(ahome);
   else
     home = NULL;
+  if ( GetAtom(AppDir, &aappdata) )
+    appdata = AtomCharp(aappdata);
+  else
+    appdata = NULL;
 
   argc = PROLOG_ARGC();
   argv = PROLOG_ARGV();
@@ -3353,7 +3357,7 @@ pl_pce_init(term_t a)
 
     pceRegisterCallbacks(&callbackfunction);
     initNameAtomTable();
-    if ( !pceInitialise(0, home, argc, argv) )
+    if ( !pceInitialise(0, home, appdata, argc, argv) )
       return FALSE;
 
     initPceConstants();			/* get code used PCE constants */

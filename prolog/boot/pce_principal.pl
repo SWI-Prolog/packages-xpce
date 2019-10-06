@@ -127,6 +127,36 @@ pce_home(PceHome) :-
 pce_home(_) :-
     throw(error(pce_error(no_home), _)).
 
+%!  xpce_application_dir(-Dir)
+%
+%   Set the directory for storing user XPCE configuration and data.
+
+xpce_application_dir(Dir) :-
+    absolute_file_name(app_config(xpce), Dir,
+                       [ file_type(directory),
+                         access(write),
+                         file_errors(fail)
+                       ]),
+    ensure_dir(Dir),
+    !.
+xpce_application_dir(Dir) :-
+    absolute_file_name(app_config(.), CDir,
+                       [ file_type(directory),
+                         access(write),
+                         file_errors(fail)
+                       ]),
+    atom_concat(CDir, '/xpce', Dir),
+    ensure_dir(Dir),
+    !.
+xpce_application_dir(Dir) :-
+    expand_file_name('~/.xpce', [Dir]).
+
+ensure_dir(Dir) :-
+    exists_directory(Dir),
+    !.
+ensure_dir(Dir) :-
+    catch(make_directory(Dir), _, fail).
+
 
                 /********************************
                 *           LOAD C-PART         *
@@ -139,7 +169,8 @@ init_pce :-
               fail
           )),
     pce_home(Home),
-    pce_init(Home),
+    xpce_application_dir(AppDir),
+    pce_init(Home, AppDir),
     !,
     create_prolog_flag(xpce, true, []),
     thread_self(Me),

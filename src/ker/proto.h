@@ -318,7 +318,8 @@ COMMON(status)	catchErrorSignalsPce(Pce pce, BoolObj val);
 COMMON(status)	resetPce(Pce pce);
 COMMON(Any)	getObjectFromReferencePce(Pce pce, Any ref);
 COMMON(status)	makeClassPce(Class class);
-COMMON(export status) pceInitialise(int handles, const char *home, int argc, char **argv);
+COMMON(export status) pceInitialise(int handles, const char *home, const char *appdata,
+				    int argc, char **argv);
 
 /* /home/jan/src/pl/packages/xpce/src/ker/sendmethod.c */
 COMMON(SendMethod) createSendMethod(Name name, Vector types, StringObj doc, SendFunc action);

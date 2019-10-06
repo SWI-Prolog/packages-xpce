@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@uva.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2009, University of Amsterdam
+    Copyright (c)  1985-2019, University of Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -72,21 +72,24 @@ static void	run_pce_atexit_hooks(void);
 #endif
 
 static int
-setAppDataPce(Pce pce)
+setAppDataPce(Pce pce, const char *dir)
 { Name appdataname;
 
+  if ( dir )
+  { appdataname = CtoName(dir);
+  } else
+  {
 #ifdef __WINDOWS__
-  if ( !(appdataname = ws_appdata("xpce")) )
-    appdataname = CtoName("~/.xpce");
+    if ( !(appdataname = ws_appdata("xpce")) )
+      appdataname = CtoName("~/.xpce");
 #else
-  appdataname = CtoName("~/.xpce");
+    appdataname = CtoName("~/.xpce");
 #endif
+  }
   assign(pce, application_data, newObject(ClassDirectory, appdataname, EAV));
 
   succeed;
 }
-
-
 
 /* The MacOS X hack.  The mac loader doesn't want to load ker/glob.o, from
    libXPCE.a as it only contains common variables.  This is fixed by adding
@@ -121,7 +124,6 @@ initialisePce(Pce pce)
 
   assign(pce, home,		      DEFAULT);
   assign(pce, defaults,		      CtoString("$PCEHOME/Defaults"));
-  setAppDataPce(pce);
   assign(pce, version,                CtoName(PCE_VERSION));
   assign(pce, machine,                CtoName(PCE_MACHINE));
   assign(pce, operating_system,       CtoName(PCE_OS));
@@ -1491,7 +1493,8 @@ protectConstant(Any obj)
 
 
 export status
-pceInitialise(int handles, const char *home, int argc, char **argv)
+pceInitialise(int handles, const char *home, const char *appdata,
+	      int argc, char **argv)
 { AnswerMark mark;
 
   if ( XPCE_initialised )
@@ -1760,6 +1763,8 @@ pceInitialise(int handles, const char *home, int argc, char **argv)
   initCGlobals();
   if ( home )
     send(PCE, NAME_home, CtoName(home), EAV);
+  if ( appdata )
+    setAppDataPce(PCE, appdata);
 
   rewindAnswerStack(mark, NIL);
   inBoot = FALSE;

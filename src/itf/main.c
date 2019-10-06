@@ -42,7 +42,7 @@ extern int pceInitApplication(int argc, char **argv);
 
 int
 main(int argc, char* argv[])
-{ if ( !pceInitialise(0, NULL, argc, argv) )
+{ if ( !pceInitialise(0, NULL, NULL, argc, argv) )
   { Cprintf("Sorry, failed to initialise XPCE\n");
     exit(1);
   }

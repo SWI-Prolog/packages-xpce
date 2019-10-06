@@ -49,7 +49,7 @@
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 This module provides the first  definition   of  an advanced bookmarking
 system   for   PceEmacs.   Bookmarks    are     kept    in    the   file
-~/.xpce/emacs_bookmarks as Prolog data. Bookmarks   can be annotated and
+<config>/emacs_bookmarks as Prolog data. Bookmarks  can be annotated and
 are time-stampted.
 
 The bookmark mechanism is available through the Browse menu of PceEmacs.

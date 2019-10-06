@@ -49,7 +49,7 @@ int
 main(int argc, char* argv[])
 { int frames = TRUE;
 
-  if ( !pceInitialise(0, (char *)0, argc, argv) )
+  if ( !pceInitialise(0, (char *)0, (char *)0, argc, argv) )
   { Cprintf("Sorry, failed to initialise XPCE\n");
     exit(1);
   }

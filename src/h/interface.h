@@ -396,7 +396,7 @@ __pce_export int pceSetProfileHooks(pce_profile_hooks *hooks);
 		*         INITIALISATION	*
 		********************************/
 
-__pce_export int pceInitialise(int handles, const char *home,
+__pce_export int pceInitialise(int handles, const char *home, const char *appdata,
 			       int argc, char **argv);
 
 
