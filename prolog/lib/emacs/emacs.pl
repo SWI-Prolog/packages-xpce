@@ -52,7 +52,7 @@
                  *******************************/
 
 user:file_search_path(emacs_user_library,
-                      user_profile('/lib/xpce/emacs')).
+                      app_config('xpce/emacs')).
 
 
                  /*******************************
