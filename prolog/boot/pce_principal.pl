@@ -132,7 +132,7 @@ pce_home(_) :-
 %   Set the directory for storing user XPCE configuration and data.
 
 xpce_application_dir(Dir) :-
-    absolute_file_name(app_config(xpce), Dir,
+    absolute_file_name(user_app_config(xpce), Dir,
                        [ file_type(directory),
                          access(write),
                          file_errors(fail)
@@ -140,7 +140,7 @@ xpce_application_dir(Dir) :-
     ensure_dir(Dir),
     !.
 xpce_application_dir(Dir) :-
-    absolute_file_name(app_config(.), CDir,
+    absolute_file_name(user_app_config(.), CDir,
                        [ file_type(directory),
                          access(write),
                          file_errors(fail)
