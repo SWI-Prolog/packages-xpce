@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.nu.nl
     WWW:           http://www.swi-prolog.nl/projects/xpce/
-    Copyright (c)  1985-2011, University of Amsterdam
+    Copyright (c)  1985-2019, University of Amsterdam
                               VU University Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -64,6 +65,8 @@
             op(250, yfx, ?),
             op(800, xfx, :=)
           ]).
+:- use_module(library(apply)).
+:- use_module(library(lists)).
 
 
 :- meta_predicate
@@ -132,30 +135,55 @@ pce_home(_) :-
 %   Set the directory for storing user XPCE configuration and data.
 
 xpce_application_dir(Dir) :-
-    absolute_file_name(user_app_config(xpce), Dir,
-                       [ file_type(directory),
-                         access(write),
-                         file_errors(fail)
-                       ]),
-    ensure_dir(Dir),
-    !.
-xpce_application_dir(Dir) :-
-    absolute_file_name(user_app_config(.), CDir,
-                       [ file_type(directory),
-                         access(write),
-                         file_errors(fail)
-                       ]),
-    atom_concat(CDir, '/xpce', Dir),
-    ensure_dir(Dir),
+    create_config_directory(user_app_config(xpce), Dir),
     !.
 xpce_application_dir(Dir) :-
     expand_file_name('~/.xpce', [Dir]).
 
-ensure_dir(Dir) :-
+
+%!  create_config_directory(+Alias, -Dir) is semidet.
+%
+%   Try to find an  existing  config   directory  or  create a writeable
+%   config directory below a directory owned   by this process. If there
+%   are multiple possibilities, create the one   that requires the least
+%   number of new directories.
+
+create_config_directory(Alias, Dir) :-
+    member(Access, [write, read]),
+    absolute_file_name(Alias, Dir0,
+                       [ file_type(directory),
+                         access(Access),
+                         file_errors(fail)
+                       ]),
+    !,
+    Dir = Dir0.
+create_config_directory(Alias, Dir) :-
+    findall(Candidate,
+            absolute_file_name(Alias, Candidate,
+                               [ solutions(all),
+                                 file_errors(fail)
+                               ]),
+            Candidates),
+    convlist(missing, Candidates, Paths),
+    member(_-Create, Paths),
+    catch(maplist(make_directory, Create), _, fail),
+    !,
+    last(Create, Dir).
+
+missing(Dir, Len-Create) :-
+    missing_(Dir, Create0),
+    reverse(Create0, Create),
+    length(Create, Len).
+
+missing_(Dir, []) :-
     exists_directory(Dir),
+    access_file(Dir, write),
+    '$my_file'(Dir),
     !.
-ensure_dir(Dir) :-
-    catch(make_directory(Dir), _, fail).
+missing_(Dir, [Dir|T]) :-
+    file_directory_name(Dir, Parent),
+    Parent \== Dir,
+    missing_(Parent, T).
 
 
                 /********************************
