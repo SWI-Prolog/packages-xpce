@@ -274,7 +274,7 @@ bookmarks_file(BM, Access:[{read,write}], File:name) :<-
     ->  get(F, absolute_path, File)
     ;   get(@pce, application_data, DataDir),
         (   Access == write
-        ->  get(DataDir, absolute_path, Path),
+        ->  get(DataDir, path, Path),
             '$my_file'(Path)                % process owns path
         ;   true
         ),
