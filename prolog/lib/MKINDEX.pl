@@ -32,7 +32,8 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- make_library_index('.',
+:- prolog_load_context(directory, Dir),
+   make_library_index(Dir,
                       [ '*.pl',
                         'trace/browse.pl',
                         'swi/*.pl'
