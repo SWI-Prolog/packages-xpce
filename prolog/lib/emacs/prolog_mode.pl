@@ -1872,7 +1872,12 @@ set_fragment_context(_, _).
 
 set_fragment_context(Fragment, P, Context) :-
     send(Fragment, has_send_method, P),
-    (   atomic(Context)
+    (   rational(Context),
+        \+ integer(Context)
+    ->  rational(Context, Num, Den),
+        format(string(Ctx), '~d/~d', [Num, Den])
+    ->  send(Fragment, P, Ctx)
+    ;   atomic(Context)
     ->  send(Fragment, P, Context)
     ;   ground(Context),
         Context = (Include:Line)
