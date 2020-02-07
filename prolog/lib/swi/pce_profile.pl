@@ -154,7 +154,7 @@ show_statistics(F) :->
     get(B?dict?members, size, Predicates),
     (   Ticks == 0
     ->  Distortion = 0.0
-    ;   Distortion is 100*(Account/Ticks)
+    ;   Distortion is 100.0*(Account/Ticks)
     ),
     send(F, report, inform,
          '%d samples in %.2f sec; %d predicates; \c
@@ -195,7 +195,7 @@ render_time(F, Ticks:int, Rendered:any) :<-
         get(F, accounting_ticks, Accounting),
         (   Total-Accounting =:= 0
         ->  Rendered = '0.0%'
-        ;   Percentage is 100 * (Ticks/(Total-Accounting)),
+        ;   Percentage is 100.0 * (Ticks/(Total-Accounting)),
             new(Rendered, string('%.1f%%', Percentage))
         )
     ;   View == seconds
@@ -203,7 +203,7 @@ render_time(F, Ticks:int, Rendered:any) :<-
         (   Total == 0
         ->  Rendered = '0.0 s.'
         ;   get(F, time, TotalTime),
-            Time is TotalTime*(Ticks/Total),
+            Time is TotalTime*(Ticks/float(Total)),
             new(Rendered, string('%.2f s.', Time))
         )
     ).
