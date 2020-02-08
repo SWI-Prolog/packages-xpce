@@ -81,7 +81,7 @@ view_term(Term, _) :-                   % TBD: Turn into user hook!
     send(@manual, inspect, Term).
 view_term(Term, Attributes0) :-
     defaults(Defs),
-    append(Attributes0, Defs, Attributes),
+    merge_options(Attributes0, Defs, Attributes),
     tv(Term, Attributes).
 
 defaults([ view(@view_term),
