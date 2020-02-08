@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2018, University of Amsterdam
+    Copyright (c)  2001-2020, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
     All rights reserved.
@@ -35,30 +35,43 @@
 */
 
 :- module(prolog_navigator, []).
-:- use_module(library(pce)).
+:- use_module(library(pce),
+              [ send_class/3, send/2, get/3, pce_register_class/1,
+                new/2, free/1, pce_global/2, pce_prolog_class/1,
+                in_pce_thread/1,
+                op(_,_,_)
+              ]).
+:- use_module(library(persistent_frame)).
 :- use_module(library(toc_filesystem)).
 :- use_module(library(pce_report)).
 :- use_module(library(toolbar)).
+
+:- autoload(browse_xref,
+	    [ x_browse_info/2,
+	      x_browse_analyse/1,
+	      system_predicate/1,
+	      global_predicate/1
+	    ]).
+:- autoload(library(debug),[debug/3]).
+:- autoload(library(edit),[edit/1]).
+:- autoload(library(help),[help/1]).
+:- autoload(library(lists),[member/2]).
+:- autoload(library(pce_debug),
+	    [nospypce/1,spypce/1,notracepce/1,tracepce/1]).
+:- autoload(library(pce_image),[pce_image_directory/1]).
+:- autoload(library(pce_manual),[manpce/1,manpce/0]).
+:- autoload(library(pce_util),[send_list/3,default/3,get_chain/3]).
+:- autoload(library(prolog_source),
+	    [ prolog_open_source/2,
+	      prolog_read_source_term/4,
+	      prolog_close_source/1
+	    ]).
+:- autoload(library(prolog_trace),[trace/2,trace/1]).
+:- autoload(library(swi_ide),[prolog_ide/1]).
+:- autoload(library(trace/util),[canonical_source_file/2]).
 :- if(exists_source(library(pldoc/man_index))).
-:- use_module(library(pldoc/man_index)).
+:- autoload(library(pldoc/man_index),[man_object_property/2]).
 :- endif.
-:- if(exists_source(library(helpidx))).
-:- use_module(library(helpidx), [predicate/5]).
-:- endif.
-:- use_module(library(trace/util)).
-:- use_module(library(prolog_source)).
-:- use_module(browse_xref).
-:- use_module(library(persistent_frame)).
-:- require([ append/3
-           , atomic_list_concat/2
-           , atomic_list_concat/3
-           , file_name_extension/3
-           , flatten/2
-           , gensym/2
-           , member/2
-           , once/1
-           , pce_image_directory/1
-           ]).
 
 :- pce_image_directory(library('trace/icons')).
 
@@ -907,14 +920,9 @@ has_manual(P) :->
 :- if(current_predicate(man_object_property/2)).
 man_predicate_summary(PI, Summary) :-
     man_object_property(PI, Summary).
-:- elif(current_predicate(predicate/5)).
-man_predicate_summary(Name/Arity, Summary) :-
-    predicate(Name, Arity, Summary, _, _).
-:- else.
+:- endif.
 man_predicate_summary(_, _) :-
     fail.
-:- endif.
-
 
 built_in(P) :->
     "True is represented predicate is builtin"::
