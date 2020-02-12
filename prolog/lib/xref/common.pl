@@ -39,13 +39,21 @@
 built_in(!).
 built_in([]).
 built_in(abort).
+built_in(ignore(_)).
+built_in(is_list(_)).
+built_in(atom_concat(_,_,_)).
+built_in(catch(_,_,_)).
+built_in(sub_atom(_,_,_,_,_)).
 built_in(at_end_of_line).
+built_in(atom_codes(_,_)).
+built_in(number_codes(_,_)).
 built_in(break).
 built_in(debug).
 built_in(debugging).
 built_in(fail).
 built_in(false).
 built_in(fileerrors).
+built_in(forall(_,_)).
 built_in(garbage_collect).
 built_in(gc).
 built_in(halt).
@@ -71,7 +79,7 @@ built_in(version).
 built_in(','(_, _)).
 built_in(-->(_, _)).
 built_in(->(_, _)).
-built_in('.'(_, _)).
+built_in([_|_]).
 built_in(:(_, _)).
 built_in(:-(_)).
 built_in(:-(_, _)).

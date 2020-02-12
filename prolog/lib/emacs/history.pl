@@ -34,6 +34,7 @@
 
 :- module(emacs_history, []).
 :- use_module(library(pce)).
+:- require([default/3]).
 
                  /*******************************
                  *            HISTORY           *

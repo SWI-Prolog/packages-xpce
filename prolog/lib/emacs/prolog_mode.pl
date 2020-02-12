@@ -46,6 +46,40 @@
 :- use_module(library(prolog_colour)).
 :- use_module(library(prolog_predicate)).       % class prolog_predicate
 :- use_module(library(prolog_source)).
+:- require([ guitracer/0,
+	     tdebug/0,
+	     auto_call/1,
+	     delete_breakpoint/1,
+	     manpce/1,
+	     prolog_ide/1,
+	     rational/1,
+	     spypce/1,
+	     tracepce/1,
+	     atomic_list_concat/2,
+	     breakpoint_property/2,
+	     call_cleanup/2,
+	     is_dict/2,
+	     memberchk/2,
+	     module_property/2,
+	     set_stream/2,
+	     source_file_property/2,
+	     string_codes/2,
+	     term_to_atom/2,
+	     absolute_file_name/3,
+	     atomic_list_concat/3,
+	     between/3,
+	     compound_name_arity/3,
+	     default/3,
+	     file_name_extension/3,
+	     get_dict/3,
+	     nb_setarg/3,
+	     rational/3,
+	     send_list/3,
+	     setup_call_cleanup/3,
+	     strip_module/3,
+	     xref_prolog_flag/4,
+	     sub_string/5
+	   ]).
 
 resource(mode_pl_icon, image, image('32x32/doc_pl.xpm')).
 resource(breakpoint,   image, image('16x16/stop.xpm')).

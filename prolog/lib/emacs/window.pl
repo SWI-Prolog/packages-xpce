@@ -37,11 +37,11 @@
 :- use_module(library(pce)).
 :- use_module(library(tabbed_window)).
 :- use_module(prompt).
-:- require([ between/3
-           , atomic_list_concat/2
-           , default/3
-           , forall/2
-           , ignore/1
+:- require([ between/3,
+             atomic_list_concat/2,
+             default/3,
+             send_list/2,
+             send_list/3
            ]).
 
 resource(pinned,        image, image('pinned.xpm')).

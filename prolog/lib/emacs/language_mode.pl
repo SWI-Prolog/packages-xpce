@@ -40,11 +40,12 @@
 :- use_module(library(socket), [gethostname/1]).
 :- use_module(library(debug)).
 :- use_module(library(atom)).
-:- require([ auto_call/1
-           , chain_list/2
-           , default/3
-           , ignore/1
-           , member/2
+:- require([ auto_call/1,
+             chain_list/2,
+             default/3,
+             ignore/1,
+             member/2,
+             pce_define_type/2
            ]).
 
 :- emacs_begin_mode(language, fundamental,

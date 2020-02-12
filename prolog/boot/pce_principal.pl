@@ -65,9 +65,11 @@
             op(250, yfx, ?),
             op(800, xfx, :=)
           ]).
-:- use_module(library(apply)).
-:- use_module(library(lists)).
-
+:- autoload(library(apply),[convlist/3,maplist/2]).
+:- autoload(library(lists),[member/2,last/2,reverse/2]).
+:- autoload(library(shlib),[load_foreign_library/1]).
+:- autoload(library(swi_compatibility),[pce_info/1]).
+:- autoload(library(system),[unlock_predicate/1]).
 
 :- meta_predicate
     send_class(+, +, :),

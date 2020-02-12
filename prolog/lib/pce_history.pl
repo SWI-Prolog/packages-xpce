@@ -37,6 +37,8 @@
 :- use_module(library(pce)).
 :- use_module(library(toolbar)).
 :- use_module(library(hyper)).
+:- require([ default/3
+           ]).
 
 resource(back, image, image('16x16/back.xpm')).
 resource(forw, image, image('16x16/forward.xpm')).

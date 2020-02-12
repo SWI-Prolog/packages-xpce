@@ -37,7 +37,8 @@
             declare_emacs_mode/3
           ]).
 :- use_module(library(pce)).
-:- require([ atomic_list_concat/2
+:- require([ atomic_list_concat/2,
+             send_list/3
            ]).
 
                 /********************************
