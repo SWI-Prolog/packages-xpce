@@ -37,7 +37,9 @@
         , pce_autoload_all/0
         ]).
 
-:- use_module(pce_boot(pce_principal)).
+:- use_module(pce_boot(pce_principal),
+              [ get/3, send/2, op(_,_,_)
+              ]).
 :- use_module(pce_boot(pce_realise),
               [ pce_realise_class/1,
                 pce_prolog_class/1
@@ -45,7 +47,6 @@
 :- require([ is_absolute_file_name/1
            , atomic_list_concat/2
            , absolute_file_name/3
-           , get/3
            ]).
 
 :- dynamic
