@@ -34,7 +34,9 @@
 */
 
 :- module(pce_host, []).
-
+:- require([ send/2,
+	     get/3
+	   ]).
 
                  /*******************************
                  *          PROPERTIES          *

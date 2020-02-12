@@ -35,12 +35,7 @@
 */
 
 :- module(prolog_navigator, []).
-:- use_module(library(pce),
-              [ send_class/3, send/2, get/3, pce_register_class/1,
-                new/2, free/1, pce_global/2, pce_prolog_class/1,
-                in_pce_thread/1,
-                op(_,_,_)
-              ]).
+:- use_module(library(pce)).
 :- use_module(library(persistent_frame)).
 :- use_module(library(toc_filesystem)).
 :- use_module(library(pce_report)).

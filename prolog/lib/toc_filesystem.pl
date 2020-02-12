@@ -35,6 +35,8 @@
 :- module(toc_filesystem, []).
 :- use_module(library(pce)).
 :- use_module(library(pce_toc)).
+:- require([ default/3
+	   ]).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 This  library  refines   library(pce_toc)    with   filesystem  browsing

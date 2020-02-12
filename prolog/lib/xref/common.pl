@@ -50,6 +50,7 @@ built_in(at_end_of_line).
 built_in(atom_codes(_,_)).
 built_in(number_codes(_,_)).
 built_in(current_prolog_flag(_,_)).
+built_in(set_prolog_flag(_,_)).
 built_in(current_predicate(_)).
 built_in(break).
 built_in(debug).

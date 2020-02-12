@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2011, University of Amsterdam
+    Copyright (c)  2001-2020, University of Amsterdam
                               VU University Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -41,7 +42,18 @@
             global_predicate/1          % +Head
           ]).
 :- use_module(library(pce)).
-:- use_module(library(prolog_source)).
+:- require([ maplist/2,
+	     member/2,
+	     source_location/2,
+	     xref_meta/2,
+	     append/3,
+	     atomic_list_concat/3,
+	     setup_call_cleanup/3,
+	     xref_public_list/4,
+             prolog_open_source/2,
+             prolog_close_source/1,
+             prolog_read_source_term/4
+	   ]).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 This file has a common origin  as library(pce_prolog_xref). I'm not sure
@@ -159,9 +171,11 @@ x_browse_analyse(File) :-
     x_browse_free(File),
     setup_call_cleanup(( prolog_open_source(File, Fd),
                          asserta(current_id(File), Ref),
-                         set_xref(OldXref)),
+                         set_xref(OldXref)
+                       ),
                        process_file(Fd),
-                       ( set_prolog_flag(xref, OldXref),
+                       ( prolog_close_source(Fd),
+                         set_prolog_flag(xref, OldXref),
                          erase(Ref),
                          post_analysis
                        )).
@@ -175,9 +189,10 @@ set_xref(OldXref) :-
 
 
 process_file(In) :-
+    Error = error(_,_),
     repeat,
       catch(prolog_read_source_term(In, Term, Expanded, []),
-            _,
+            Error,
             fail),
       ignore(process_raw(Term)),
       (   is_list(Expanded)
@@ -458,6 +473,7 @@ no_record_called((_,_)).
 no_record_called((_;_)).
 no_record_called((_|_)).
 no_record_called((_->_)).
+no_record_called((_*->_)).
 no_record_called(\+(_)).
 no_record_called(!).
 

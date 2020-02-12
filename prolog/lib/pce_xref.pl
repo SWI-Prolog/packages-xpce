@@ -51,12 +51,29 @@
 :- use_module(print_graphics).
 :- use_module(tabular).
 :- use_module(library(lists)).
-:- use_module(library(debug)).
 :- use_module(library(autowin)).
 :- use_module(library(broadcast)).
 :- use_module(library(prolog_source)).
+:- require([ auto_call/1,
+	     edit/1,
+	     exists_file/1,
+	     (\=)/2,
+	     call_cleanup/2,
+	     file_base_name/2,
+	     file_directory_name/2,
+	     portray_clause/2,
+	     term_to_atom/2,
+	     time_file/2,
+	     absolute_file_name/3,
+	     atomic_list_concat/3,
+	     file_name_extension/3,
+	     format_time/3,
+	     maplist/3,
+	     strip_module/3,
+	     xref_called/4
+	   ]).
 
-version('0.1.1').
+gxref_version('0.1.1').
 
 :- dynamic
     setting/2.
@@ -165,7 +182,7 @@ fill_toolbar(F, TD:tool_dialog) :->
     send(F, update_setting_menu).
 
 about(_F) :->
-    version(Version),
+    gxref_version(Version),
     send(@display, inform,
          string('SWI-Prolog cross-referencer version %s\n\c
                     By Jan Wielemaker', Version)).
@@ -1432,7 +1449,7 @@ run_default_action(T) :->
 
 edit(T) :->
     get(T, path, Path),
-    edit(file(Path)).
+    auto_call(edit(file(Path))).
 
 info(T) :->
     get(T, path, Path),
