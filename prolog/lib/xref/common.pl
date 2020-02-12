@@ -39,15 +39,18 @@
 built_in(!).
 built_in([]).
 built_in(abort).
+built_in(char_code(_,_)).
 built_in(ignore(_)).
 built_in(is_list(_)).
 built_in(atom_concat(_,_,_)).
 built_in(catch(_,_,_)).
+built_in(throw(_)).
 built_in(sub_atom(_,_,_,_,_)).
 built_in(at_end_of_line).
 built_in(atom_codes(_,_)).
 built_in(number_codes(_,_)).
 built_in(current_prolog_flag(_,_)).
+built_in(current_predicate(_)).
 built_in(break).
 built_in(debug).
 built_in(debugging).
@@ -77,6 +80,8 @@ built_in(true).
 built_in(ttyflush).
 built_in(ttynl).
 built_in(version).
+built_in(term_variables(_,_)).
+built_in(copy_term(_,_)).
 built_in(','(_, _)).
 built_in(-->(_, _)).
 built_in(->(_, _)).

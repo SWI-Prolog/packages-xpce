@@ -36,13 +36,16 @@
 :- module(prolog_ide_stack,
           [ display_stack/3             % +Window, +Call, +Choice
           ]).
-:- use_module(library(lists)).
-:- use_module(library(debug)).
 :- use_module(library(pce)).
-:- use_module(library(pce_util)).
-:- use_module(util).
-:- use_module(gui).
-:- use_module(clause).
+:- autoload(clause,[predicate_classification/2]).
+:- autoload(gui,[in_debug_thread/2,prolog_frame_attribute/4]).
+:- autoload(util,[thread_self_id/1]).
+:- autoload(library(debug),[assertion/1,debug/3]).
+:- autoload(library(lists),[member/2,nth1/3]).
+:- autoload(library(pce_util),[default/3]).
+:- autoload(library(prolog_clause),[predicate_name/2]).
+:- autoload(library(sort),[predsort/3]).
+:- autoload(library(system),[system_module/0]).
 
 :- system_module.
 

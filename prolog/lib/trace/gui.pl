@@ -63,6 +63,38 @@
              stack,
              viewterm
            ]).
+:- require([ make/0,
+	     acyclic_term/1,
+	     current_predicate/1,
+	     message_queue_create/1,
+	     message_queue_destroy/1,
+	     notrace/1,
+	     pce_image_directory/1,
+	     portray_text/1,
+	     prolog_ide/1,
+	     thread_self/1,
+	     atomic_list_concat/2,
+	     file_directory_name/2,
+	     pce_help_file/2,
+	     predicate_name/2,
+	     prolog_listen/2,
+	     prolog_unlisten/2,
+	     string_codes/2,
+	     term_attvars/2,
+	     thread_get_message/2,
+	     thread_property/2,
+	     thread_send_message/2,
+	     thread_signal/2,
+	     unify_with_occurs_check/2,
+	     with_mutex/2,
+	     '$factorize_term'/3,
+	     '$get_predicate_attribute'/3,
+	     absolute_file_name/3,
+	     atomic_list_concat/3,
+	     file_name_extension/3,
+	     maplist/3,
+	     numbervars/4
+	   ]).
 
 :- multifile
     user:message_hook/3.

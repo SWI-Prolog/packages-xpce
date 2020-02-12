@@ -44,6 +44,10 @@
 :- use_module(library(emacs_extend)).
 :- use_module(library(pce_template)).
 :- use_module(emacs_debug_modes).
+:- require([ maplist/3,
+	     merge_options/3,
+	     setup_call_cleanup/3
+	   ]).
 
 :- multifile
     port_style/2.

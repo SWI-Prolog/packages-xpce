@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/projects/xpce/
-    Copyright (c)  2001-2016, University of Amsterdam
+    Copyright (c)  2001-2020, University of Amsterdam
                               VU University Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -43,11 +44,15 @@
             find_source/3,              % +Head, -File|TextBuffer, -Line
             thread_self_id/1            % -Name|Int
           ]).
-:- use_module(library(pce)).
-:- use_module(library(pce_config), []). % Get config path alias
-:- use_module(library(debug)).
-:- use_module(clause).
+:- use_module(library(pce),[send/2,pce_open/3,op(_,_,_)]).
+:- autoload(library(debug),[debug/3]).
+:- autoload(library(listing),[portray_clause/1]).
+:- autoload(library(lists),[member/2]).
+:- autoload(library(portray_text),[portray_text/1]).
+:- autoload(library(prolog_clause),[predicate_name/2]).
+:- autoload(library(readutil),[read_file_to_terms/3]).
 
+:- use_module(library(pce_config), []). % Get config path alias
 :- meta_predicate
     find_source(:, -, -).
 

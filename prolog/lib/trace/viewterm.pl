@@ -38,9 +38,19 @@
             view_term/2                 % +Term, +Attributes
           ]).
 :- use_module(library(pce)).
-:- use_module(library(lists)).
-:- use_module(library(option)).
-:- use_module(library(pprint)).
+:- require([ is_stream/1,
+	     current_blob/2,
+	     member/2,
+	     option/2,
+	     portray_clause/2,
+	     print_term/2,
+	     stream_property/2,
+	     merge_options/3,
+	     option/3,
+	     portray_clause/3,
+	     send_list/3,
+	     setup_call_cleanup/3
+	   ]).
 
 /** <module> Graphical viewer for Prolog terms
 
@@ -77,7 +87,7 @@ view_term(Term) :-
 view_term(Term, _) :-                   % TBD: Turn into user hook!
     object(Term),
     !,
-    manpce,
+    auto_call(manpce),
     send(@manual, inspect, Term).
 view_term(Term, Attributes0) :-
     defaults(Defs),

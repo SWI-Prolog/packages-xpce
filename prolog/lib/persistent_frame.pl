@@ -36,6 +36,11 @@
 :- module(persistent_frame, []).
 :- use_module(library(pce)).
 :- use_module(library(pce_config)).
+:- require([ context_module/1,
+	     chain_list/2,
+	     member/2,
+	     maplist/3
+	   ]).
 
 /** <module> Save/restore layout of XPCE windows
 
