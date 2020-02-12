@@ -47,6 +47,7 @@ built_in(sub_atom(_,_,_,_,_)).
 built_in(at_end_of_line).
 built_in(atom_codes(_,_)).
 built_in(number_codes(_,_)).
+built_in(current_prolog_flag(_,_)).
 built_in(break).
 built_in(debug).
 built_in(debugging).

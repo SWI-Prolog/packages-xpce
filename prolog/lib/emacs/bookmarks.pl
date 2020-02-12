@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        wielemak@science.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1999-2014, University of Amsterdam
+    Copyright (c)  1999-2020, University of Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -38,13 +39,15 @@
 :- use_module(library(pce_toc)).
 :- use_module(library(pce_report)).
 :- use_module(library(persistent_frame)).
-:- require([ ignore/1
-           , file_directory_name/2
-           , term_to_atom/2
-           , catch/3
-           , default/3
-           , send_list/3
-           ]).
+:- require([ '$my_file'/1,
+	     call_cleanup/2,
+	     file_directory_name/2,
+	     term_to_atom/2,
+	     absolute_file_name/3,
+	     default/3,
+	     get_chain/3,
+	     send_list/3
+	   ]).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 This module provides the first  definition   of  an advanced bookmarking

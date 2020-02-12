@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2013, University of Amsterdam
+    Copyright (c)  2002-2020, University of Amsterdam
                               VU University Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -38,6 +39,9 @@
             prolog_ide/1                % +Action
           ]).
 :- use_module(library(pce)).
+:- require([ pce_image_directory/1,
+	     file_directory_name/2
+	   ]).
 
 /** <module> SWI-Prolog IDE controller
 
@@ -161,7 +165,7 @@ open_query_window(IDE) :->
 
 open_interactor(_) :->
     "Create a new interactor window"::
-    interactor.
+    auto_call(interactor).
 
 thread_monitor(IDE) :->
     "Open a monitor for running threads"::
