@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        J.Wielemaker@cwi.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2013, University of Amsterdam
+    Copyright (c)  2001-2020, University of Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -38,14 +39,13 @@
 :- use_module(library(persistent_frame)).
 :- use_module(library(tabbed_window)).
 :- use_module(library(tabular)).
-:- require([ atomic_list_concat/2
-           , term_to_atom/2
+:- require([ atomic_list_concat/2,
+             term_to_atom/2,
+             auto_call/1
            ]).
 
 :- if(exists_source(library(pldoc/man_index))).
-:- use_module(library(pldoc/man_index)).
-:- elif(exists_source(library(helpidx))).
-:- use_module(library(helpidx), [predicate/5]).
+:- autoload(library(pldoc/man_index), [man_object_property/2]).
 :- endif.
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -193,7 +193,7 @@ source(P, Autoload:[bool], Loc:source_location) :<-
 edit(P) :->
     "Edit the predicate"::
     get(P, head, @on, Head),
-    edit(Head).
+    auto_call(edit(Head)).
 
 
 autoload(P, Module:[name]) :->

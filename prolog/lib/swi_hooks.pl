@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        J.Wielemaker@cwi.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2018, University of Amsterdam
+    Copyright (c)  2001-2020, University of Amsterdam
                               CWI, Amsterdam
     All rights reserved.
 
@@ -34,6 +34,7 @@
 */
 
 :- module(pce_swi_hooks, []).
+:- autoload(swi_compatibility, [auto_call/1]).
 
 /** <module> Hook XPCE based graphics tools into IDE
 
@@ -62,9 +63,9 @@ file from being loaded.
                  *******************************/
 
 prolog:debug_control_hook(spy(Method)) :-
-    call(spypce(Method)).
+    auto_call(spypce(Method)).
 prolog:debug_control_hook(nospy(Method)) :-
-    call(nospypce(Method)).
+    auto_call(nospypce(Method)).
 
 
                  /*******************************
@@ -72,9 +73,9 @@ prolog:debug_control_hook(nospy(Method)) :-
                  *******************************/
 
 prolog:show_profile_hook(_Options) :-
-    call(pce_show_profile).
+    auto_call(pce_show_profile).
 prolog:show_profile_hook(_Style, _Top) :-
-    call(pce_show_profile).
+    auto_call(pce_show_profile).
 
 
                  /*******************************

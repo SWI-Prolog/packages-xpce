@@ -55,10 +55,27 @@ probably wise to keep this layer for `just-in-case'.
 
 %!  auto_call(:Goal)
 %
-%   Autoload Goal and call it.  In   SWI-Prolog,  this  simply means
-%   calling it.
+%   Autoload Goal and call it. If autoloading   is enabled we can simply
+%   call  the  target.  Otherwise   we    autoload   the  predicate  and
+%   subsequently call it.
+%
+%   This predicate should be used to open new IDE tools, for example the
+%   manual opening the editor, etc.
 
 auto_call(G) :-
+    current_prolog_flag(autoload, true),
+    !,
+    call(G).
+auto_call(G) :-
+    '$pi_head'(PI, G),
+    current_prolog_flag(autoload, Old),
+    setup_call_cleanup(
+        asserta(user:thread_message_hook(autoload(disabled(_Count)),_,_), Ref),
+        setup_call_cleanup(
+            set_prolog_flag(autoload, true),
+            '$autoload'(PI),
+            set_prolog_flag(autoload, Old)),
+        erase(Ref)),
     call(G).
 
 
