@@ -34,15 +34,15 @@
 */
 
 :- module(pce_messages,
-          [ pce_message/3,
-            pce_message_context/3
+          [ pce_message//1,
+            pce_message_context//1
           ]).
-:- require([ append/3
-           , get/3
+:- require([ append/3,
+             get/3
            ]).
 
 :- multifile
-    pce_message/3.
+    pce_message//1.
 
 pce_message(error(pce(ErrorId, Args), _Context)) -->
     { Msg =.. [format|Args],

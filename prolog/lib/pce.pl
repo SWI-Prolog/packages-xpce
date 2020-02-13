@@ -116,7 +116,8 @@ user:file_search_path(pce_boot, pce(prolog/boot)).
                 pce_boot(pce_autoload),
                 pce_boot(pce_editor),
                 pce_boot(pce_keybinding),
-                pce_boot(pce_portray)
+                pce_boot(pce_portray),
+                'english/pce_messages'
               ],
               [ qcompile(part),         % compile boot files as part of pce.qlf
                 silent(true)
@@ -265,3 +266,19 @@ method_clause(<-(Class, Get), Ref) :-
     clause(pce_principal:get_implementation(Id, _M, _O, _R), _B, Ref),
     atom(Id),
     atomic_list_concat([Class,Get], '->', Id).
+
+
+                 /*******************************
+                 *           MESSAGES           *
+                 *******************************/
+
+:- multifile
+    prolog:message/3.
+
+prolog:message(Spec) -->
+    pce_message(Spec).
+prolog:message(context_error(Goal, Context, What)) -->
+    [ '~w: ~w '-[Goal, What] ],
+    pce_message_context(Context).
+prolog:message(type_error(Goal, ArgN, Type, _Value)) -->
+    [ '~w: argument ~w must be a ~w'-[Goal, ArgN, Type], nl ].

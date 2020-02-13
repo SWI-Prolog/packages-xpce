@@ -114,19 +114,6 @@ modified_since_last_loaded(InFile) :-
                  *           MESSAGES           *
                  *******************************/
 
-:- consult(library('english/pce_messages')).
-
-:- multifile
-    prolog:message/3.
-
-prolog:message(Spec) -->
-    pce_message(Spec).
-prolog:message(context_error(Goal, Context, What)) -->
-    [ '~w: ~w '-[Goal, What] ],
-    pce_message_context(Context).
-prolog:message(type_error(Goal, ArgN, Type, _Value)) -->
-    [ '~w: argument ~w must be a ~w'-[Goal, ArgN, Type], nl ].
-
 %!  pce_error(+Term) is det.
 %!  pce_warn(+Term) is det.
 %!  pce_info(+Term) is det.
