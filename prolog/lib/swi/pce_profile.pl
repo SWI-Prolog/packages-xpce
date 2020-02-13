@@ -36,7 +36,6 @@
 :- module(pce_profile,
           [ pce_show_profile/0
           ]).
-:- use_module(library(statistics), [profile_data/1]).
 :- use_module(library(pce)).
 :- use_module(library(lists)).
 :- use_module(library(persistent_frame)).
@@ -44,7 +43,18 @@
 :- use_module(library(pce_report)).
 :- use_module(library(tabular)).
 :- use_module(library(prolog_predicate)).
-:- use_module(library(prolog_code)).
+
+:- require([ auto_call/1,
+	     reset_profiler/0,
+	     is_dict/1,
+	     profile_data/1,
+	     www_open_url/1,
+	     pi_head/2,
+	     predicate_label/2,
+	     predicate_sort_key/2,
+	     get_chain/3,
+	     send_list/3
+	   ]).
 
 /** <module> GUI frontend for the profiler
 
@@ -649,7 +659,7 @@ event(T, Ev:event) :->
 has_help(T) :->
     get(T, context, Ctx),
     (   send(Ctx, instance_of, method) % hack
-    ->  manpce
+    ->  auto_call(manpce)
     ;   true
     ),
     send(Ctx, has_send_method, has_help),
