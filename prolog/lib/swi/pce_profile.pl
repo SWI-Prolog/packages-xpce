@@ -671,7 +671,7 @@ initialise(T, Pred:prolog, Role:{parent,self,child}, Cycle:[int]) :->
 
 details(T) :->
     "Show details of clicked predicate"::
-    get(T?context, head, @on, Head),
+    get(T?context, pi, @on, Head),
     send(T?frame, details, Head).
 
 :- pce_end_class(prof_predicate_text).
