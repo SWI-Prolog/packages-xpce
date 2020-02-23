@@ -99,6 +99,41 @@ line_comment(E, CS:name) :<-
     get(Syntax, comment_end, CSlen, CE),
     send(CE, equal, '\n').
 
+line_comment_column_in_context(E) :->
+    get(E, line_comment_column_in_context, Col),
+    send(E, report, inform, 'Column %d', Col).
+
+line_comment_start(TB, Re, Caret, To, Start) :-
+    send(Re, search, TB, Caret, To),
+    get(Re, register_start, 1, Start).
+
+line_comment_column_in_context(E, Col:int) :<-
+    "Find the column for line comment nearby"::
+    member(CSlen, [1, 2]),
+    get(E?syntax, comment_start, CSlen, CS),
+    !,
+    get(E, caret, Caret),
+    get(E, text_buffer, TB),
+    get(TB, size, TBLen),
+    get(regex(''), quote, CS, string(QCS)),
+    format(string(ReS), '^\\s*\\S[^\n]*(~w)', [QCS]),
+    new(Re, regex(ReS)),
+    Start is max(Caret-10000, 0),
+    End is min(Caret+10000, TBLen),
+    ignore(line_comment_start(TB, Re, Caret, Start, M1)),
+    ignore(line_comment_start(TB, Re, Caret, End,   M2)),
+    (   nonvar(M1), nonvar(M2)
+    ->  (   abs(M1-Caret) < abs(M2-Caret)
+        ->  SCM = M1
+        ;   SCM = M2
+        )
+    ;   nonvar(M1)
+    ->  SCM = M1
+    ;   nonvar(M2)
+    ->  SCM = M2
+    ),
+    get(E, column, SCM, Col).
+
 insert_line_comment(E) :->
     "Insert (line) comment"::
     member(CSlen, [1, 2]),
@@ -108,13 +143,18 @@ insert_line_comment(E) :->
     get(E, text_buffer, TB),
     get(TB, scan, Caret, line, 0, start, SOL),
     get(TB, scan, Caret, line, 0, end,   EOL),
+    (   get(E, line_comment_column_in_context, CC),
+        CC > 20, CC < 100
+    ->  true
+    ;   get(E, comment_column, CC)
+    ),
     (   get(regex(?(regex(''), quote, CS)), search, TB, SOL, EOL, Start)
     ->  send(E, caret, Start),
-        send(E, align, E?comment_column),
+        send(E, align, CC),
         send(E, forward_char, CSlen + 1)
     ;   send(E, end_of_line),
         send(E, just_one_space),
-        send(E, align, E?comment_column),
+        send(E, align, CC),
         get(E?syntax, comment_end, CSlen, CE),
         (   send(CE, equal, '\n')
         ->  send(E, format, '%s ', CS)
