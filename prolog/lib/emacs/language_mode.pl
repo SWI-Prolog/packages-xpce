@@ -134,7 +134,7 @@ line_comment_column_in_context(E, Col:int) :<-
     ),
     get(E, column, SCM, Col).
 
-insert_line_comment(E) :->
+insert_line_comment(E, Arg:[int]) :->
     "Insert (line) comment"::
     member(CSlen, [1, 2]),
     get(E?syntax, comment_start, CSlen, CS),
@@ -143,7 +143,10 @@ insert_line_comment(E) :->
     get(E, text_buffer, TB),
     get(TB, scan, Caret, line, 0, start, SOL),
     get(TB, scan, Caret, line, 0, end,   EOL),
-    (   get(E, line_comment_column_in_context, CC),
+    (   integer(Arg), Arg > 4
+    ->  CC = Arg
+    ;   Arg == @default,
+        get(E, line_comment_column_in_context, CC),
         CC > 20, CC < 100
     ->  true
     ;   get(E, comment_column, CC)
