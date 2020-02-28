@@ -48,7 +48,7 @@
 :- autoload(library(debug),[debug/3]).
 :- autoload(library(listing),[portray_clause/1]).
 :- autoload(library(lists),[member/2]).
-:- autoload(library(portray_text),[portray_text/1]).
+:- autoload(library(portray_text),[portray_text/1, '$portray_text_enabled'/1]).
 :- autoload(library(prolog_clause),[predicate_name/2]).
 :- autoload(library(readutil),[read_file_to_terms/3]).
 
@@ -72,10 +72,7 @@ setting(stack_depth,       10).         % # frames shown
 setting(choice_depth,      10).         % # choice-points shown
 setting(term_depth,        2).          % nesting for printing terms
 setting(portray_codes,     Val) :-
-    (   current_predicate(portray_text:do_portray_text/1)
-    ->  portray_text:do_portray_text(Val)
-    ;   Val = false
-    ).
+    '$portray_text_enabled'(Val).
 setting(auto_raise,        true).       % automatically raise the frame
 setting(auto_close,        true).       % automatically raise the frame
 setting(console_actions,   false).      % map actions from the console
