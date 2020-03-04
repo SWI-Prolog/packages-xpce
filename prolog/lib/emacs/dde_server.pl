@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2006-2013, University of Amsterdam
+    Copyright (c)  2006-2020, University of Amsterdam
                               VU University Amsterdam
     All rights reserved.
 
@@ -38,6 +38,7 @@
             win_register_emacs/0        % +Externsion
           ]).
 :- use_module(library(pce)).
+:- require([debug/3]).
 
 /** <module> Register PceEmacs with the Windows DDE services
 
@@ -56,13 +57,22 @@ DDE is nor provided.
 
 start_emacs_dde_server(_) :-
     dde_current_service('PceEmacs', control),
+    debug(emacs(server), 'PceEmacs DDE server is already running', []),
     !.
 start_emacs_dde_server(true) :-
     catch(close_other_dde_server, _, fail),
     fail.
 start_emacs_dde_server(false) :-
-    catch(ping_other_dde_server, _, fail),
+    get_time(T0),
+    (   catch(ping_other_dde_server, _, fail)
+    ->  Alive = alive
+    ;   Alive = dead
+    ),
     !,
+    get_time(T1),
+    _0T is T1-T0,
+    debug(emacs(server), 'Remote DDE server is ~w (~3f sec)', [Alive, _0T]),
+    Alive == alive,
     ignore(send(@emacs, report, status, 'Server on other PceEmacs')).
 start_emacs_dde_server(_) :-
     dde_register_service('PceEmacs'(control, Item),
