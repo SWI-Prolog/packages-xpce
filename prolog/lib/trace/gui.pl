@@ -93,7 +93,8 @@
 	     atomic_list_concat/3,
 	     file_name_extension/3,
 	     maplist/3,
-	     numbervars/4
+	     numbervars/4,
+             start_emacs/0
 	   ]).
 
 :- multifile
@@ -140,12 +141,22 @@ resource(Name,  image,  image(XPM)) :-
     gui/3.                          % +Thread, +BreakLevel, -Gui
 
 %!  prolog_tracer(+Thread, -Ref) is det.
-%!  prolog_tracer(+Thread, -Ref, Create) is semidet.
+%!  prolog_tracer(+Thread, -Ref, +Create) is semidet.
 %
 %   Get the Prolog debugger window for Thread.
 
 prolog_tracer(Thread, Ref) :-
     prolog_tracer(Thread, Ref, true).
+
+% (*) (Windows) we must start Emacs first because Emacs tries to setup a
+% DDE   service   on   Windows,   but    send_pce/1   eventually   calls
+% thread_get_message/2, which causes the  main  thread   to  block  on a
+% condition variable using SleepConditionVariableCS(),   which  does not
+% process Windows messages and sleeps for  15 seconds before continuing.
+% In contrast, start_emacs/0 uses  in_pce_thread_sync/1   which  uses  a
+% normal message loop to wait for xpce  to   do  its  job. Note that the
+% debugger cannot use in_pce_thread_sync/1 because  it requires a method
+% to wait that allows for callbacks.
 
 prolog_tracer(Thread, Ref, Create) :-
     break_level(Level),
@@ -154,6 +165,7 @@ prolog_tracer(Thread, Ref, Create) :-
     ;   Create == true
     ->  debug(gtrace(gui),
               'New GUI for thread ~p, break level ~p', [Thread, Level]),
+        start_emacs,		% see (*)
         send_pce(send(new(Ref, prolog_debugger(Level, Thread)), open))
     ).
 
