@@ -23,32 +23,34 @@ if(WIN32)
   set(XPCE_LINK_RC swipl-win)
 else()
   find_package(X11)
-  if(X11_FOUND)
-    set(HAVE_GUI 1)
+  if(X11_FOUND AND X11_Xpm_LIB)
     find_package(Freetype)
     find_package(FontConfig)
 
-    set(GUI_LIBRARIES
-	${X11_Xpm_LIB}
-	${X11_Xext_LIB}
-	${X11_Xt_LIB}
-	${X11_X11_LIB}
-	${X11_SM_LIB}
-	${X11_ICE_LIB}
-	${X11_Xft_LIB}
-	${FREETYPE_LIBRARIES}
-	${FONTCONFIG_LIBRARIES})
+    if(FREETYPE_FOUND AND Fontconfig_FOUND)
+      set(HAVE_GUI 1)
+      set(GUI_LIBRARIES
+	  ${X11_Xpm_LIB}
+	  ${X11_Xext_LIB}
+	  ${X11_Xt_LIB}
+	  ${X11_X11_LIB}
+	  ${X11_SM_LIB}
+	  ${X11_ICE_LIB}
+	  ${X11_Xft_LIB}
+	  ${FREETYPE_LIBRARIES}
+	  ${FONTCONFIG_LIBRARIES})
 
-    set(GUI_INCLUDE_DIRS
-	${X11_INCLUDE_DIR}
-	${FREETYPE_INCLUDE_DIRS}
-	${FONTCONFIG_INCLUDE_DIR})
-    set(XPCE_LINK_RC swipl)
-    has_package(swipl-win HAVE_SWIPL_WIN)
-    if(HAVE_SWIPL_WIN)
-      list(APPEND XPCE_LINK_RC swipl-win)
-      if(BUILD_MACOS_BUNDLE)
-        list(APPEND XPCE_LINK_RC SWI-Prolog)
+      set(GUI_INCLUDE_DIRS
+	  ${X11_INCLUDE_DIR}
+	  ${FREETYPE_INCLUDE_DIRS}
+	  ${FONTCONFIG_INCLUDE_DIR})
+      set(XPCE_LINK_RC swipl)
+      has_package(swipl-win HAVE_SWIPL_WIN)
+      if(HAVE_SWIPL_WIN)
+	list(APPEND XPCE_LINK_RC swipl-win)
+	if(BUILD_MACOS_BUNDLE)
+	  list(APPEND XPCE_LINK_RC SWI-Prolog)
+	endif()
       endif()
     endif()
   endif()
