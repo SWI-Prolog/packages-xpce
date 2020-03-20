@@ -30,7 +30,6 @@ else()
 
     set(GUI_LIBRARIES
 	${X11_Xpm_LIB}
-	${X11_Xinerama_LIB}
 	${X11_Xext_LIB}
 	${X11_Xt_LIB}
 	${X11_X11_LIB}
@@ -63,6 +62,9 @@ include(QLF)
 include(XPCESources)
 
 include(XPCEConfig)
+if(HAVE_X11_EXTENSIONS_XINERAMA_H)
+  set(GUI_LIBRARIES ${X11_Xinerama_LIB} ${GUI_LIBRARIES})
+endif()
 set(PCE_MACHINE ${SWIPL_ARCH})
 set(PCE_OS ${CMAKE_HOST_SYSTEM_NAME})
 set(PCE_VERSION 6.6.6)
