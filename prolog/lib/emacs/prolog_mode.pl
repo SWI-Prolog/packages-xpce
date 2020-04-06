@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2013, University of Amsterdam
+    Copyright (c)  1985-2020, University of Amsterdam
                               VU University Amsterdam
+                              CWI, Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -53,6 +54,7 @@
 	     manpce/1,
 	     prolog_ide/1,
 	     spypce/1,
+             trace/1,
 	     tracepce/1,
 	     atomic_list_concat/2,
 	     breakpoint_property/2,
@@ -1016,10 +1018,10 @@ do_trace(variable(Name, _Type, _Access, _Doc), M, (Class-Name)) :-
     tracepce((Class-Name)).
 do_trace((Head :- _Body), M, Spec) :-
     prolog_debug_spec(M, Head, Spec),
-    user:trace(Spec).
+    @(trace(Spec), user).
 do_trace(Head, M, Spec) :-
     prolog_debug_spec(M, Head, Spec),
-    user:trace(Spec).
+    @(trace(Spec), user).
 
 prolog_debug_spec(M, Head, Spec) :-
     catch(functor(Head, Name, Arity), _, fail),

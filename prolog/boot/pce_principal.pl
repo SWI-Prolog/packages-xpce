@@ -71,6 +71,9 @@
 :- autoload(library(swi_compatibility),[pce_info/1]).
 :- autoload(library(system),[unlock_predicate/1]).
 
+:- public
+    in_pce_thread_sync2/2.
+
 :- meta_predicate
     send_class(+, +, :),
     send(+, :),

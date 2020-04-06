@@ -51,6 +51,8 @@
 
 :- dynamic
     autoload/2.
+:- public
+    autoload/2.
 
 %!  pce_autoload(+ClassName, +FileSpec)
 %

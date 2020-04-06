@@ -65,6 +65,9 @@
     attribute/3,                    % ClassName, Attribute, Value
     verbose/0,
     recording/2.                    % items recorded
+:- public
+    attribute/3,
+    compiling/2.
 
 :- if(exists_source(library(quintus))).
 :- use_module(library(quintus), [genarg/3]).
