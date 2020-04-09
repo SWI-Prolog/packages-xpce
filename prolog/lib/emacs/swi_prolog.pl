@@ -128,8 +128,23 @@ make_message([Fmt-Args|T]) -->
     },
     dlist(Codes, Tail),
     make_message(T).
+make_message([ansi(_Attrs, Fmt, Args)|T]) -->
+    !,
+    { format(codes(Codes, Tail), Fmt, Args)
+    },
+    dlist(Codes, Tail),
+    make_message(T).
+make_message([Skip|T]) -->
+    { action_skip(Skip) },
+    !,
+    make_message(T).
 make_message([Fmt|T]) -->
     make_message([Fmt-[]|T]).
+
+action_skip(at_same_line).
+action_skip(flush).
+action_skip(begin(_Level, _Ctx)).
+action_skip(end(_Ctx)).
 
 dlist(Codes, Tail, Codes, Tail).
 
