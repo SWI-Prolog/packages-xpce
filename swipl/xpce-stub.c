@@ -32,7 +32,6 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define PL_ARITY_AS_SIZE 1
 #include <SWI-Stream.h>
 #include <SWI-Prolog.h>
 #include <windows.h>

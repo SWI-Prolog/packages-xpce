@@ -46,7 +46,6 @@
 #define O_SHAREDLIBRARY 1
 
 #ifdef SWI
-#define PL_ARITY_AS_SIZE 1
 #include <SWI-Stream.h>			/* get intptr_t, etc first */
 #include <SWI-Prolog.h>
 #endif
