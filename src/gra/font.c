@@ -153,21 +153,21 @@ XopenFont(FontObj f, DisplayObj d)
 
   makeBuiltinFonts();
 
-  if ( !ws_create_font(f, d) )
-  { errorPce(f, NAME_noRelatedXFont);
-    if ( XopenNesting <= 2 )
-    { status rc;
-
-      XopenNesting++;
-      rc = replaceFont(f, d);
-      XopenNesting--;
-      if ( rc )
-	succeed;
-    }
-
+  if ( XopenNesting > 1 )
     fail;
+
+  XopenNesting++;
+  if ( !ws_create_font(f, d) )
+  { status rc;
+
+    errorPce(f, NAME_noRelatedXFont);
+    rc = replaceFont(f, d);
+    XopenNesting--;
+
+    return rc;
   }
 
+  XopenNesting--;
   succeed;
 }
 
