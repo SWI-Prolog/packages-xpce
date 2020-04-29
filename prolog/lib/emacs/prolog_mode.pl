@@ -947,9 +947,7 @@ insert_dependencies(E) :->
 update_dependencies(E) :->
     "Update existing dependencies or add new block"::
     get(E, find_dependencies, point(From, To)),
-    get(E, text_buffer, TB),
-    get(TB, scan, To, line, 1, start, SOL),
-    update_dependencies(E, From, SOL).
+    update_dependencies(E, From, To).
 
 update_dependencies(E, From, To) :-
     read_terms_in_range(E, From, To, Terms),
@@ -1047,12 +1045,16 @@ find_dependencies(E, Range:point) :<-
         pce_open(E, read, In),
         find_dependencies(In, #{}, Dict),
         close(In)),
-    (   _{start:Start, end:End} :< Dict
-    ->  new(Range, point(Start, End))
-    ;   _{module_decl_end:Start} :< Dict
-    ->  new(Range, point(Start, Start))
-    ;   _{program_start:Start} :< Dict
-    ->  new(Range, point(Start, Start))
+    get(E, text_buffer, TB),
+    (   _{start:Start, end:End0} :< Dict
+    ->  get(TB, scan, End0, line, 1, start, End),
+        new(Range, point(Start, End))
+    ;   _{module_decl_end:Start0} :< Dict
+    ->  get(TB, scan, Start0, line, 1, start, Start),
+        new(Range, point(Start, Start))
+    ;   _{program_start:Start0} :< Dict
+    ->  get(TB, scan, Start0, line, -1, start, Start),
+        new(Range, point(Start, Start))
     ).
 
 find_dependencies(In, State0, State) :-
