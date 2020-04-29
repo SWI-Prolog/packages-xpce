@@ -53,8 +53,8 @@
 	     delete_breakpoint/1,
 	     manpce/1,
 	     prolog_ide/1,
+	     rational/1,
 	     spypce/1,
-             trace/1,
 	     tracepce/1,
 	     atomic_list_concat/2,
 	     breakpoint_property/2,
@@ -65,19 +65,24 @@
 	     set_stream/2,
 	     source_file_property/2,
 	     string_codes/2,
+	     term_string/2,
 	     term_to_atom/2,
 	     absolute_file_name/3,
 	     atomic_list_concat/3,
 	     between/3,
 	     compound_name_arity/3,
 	     default/3,
+	     file_autoload_directives/3,
 	     file_name_extension/3,
 	     get_dict/3,
 	     nb_setarg/3,
+	     rational/3,
 	     send_list/3,
 	     setup_call_cleanup/3,
+	     stream_position_data/3,
 	     strip_module/3,
 	     xref_prolog_flag/4,
+	     get_dict/5,
 	     sub_string/5
 	   ]).
 
@@ -112,6 +117,8 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
           view_threads                 = button(prolog),
           view_debug_messages          = button(prolog),
           -                            = button(prolog),
+          check_dependencies           = button(prolog),
+          update_dependencies          = key('\\C-c\\C-d') + button(prolog),
           check_clause                 = key('\\C-c\\C-s') + button(prolog),
           setup_auto_indent            = button(prolog),
           insert_full_stop             = key(.),
@@ -172,6 +179,13 @@ class_variable(show_syntax_errors, {never,typing,pause},
                typing).
 class_variable(auto_colourise_size_limit, int, 100000,
                "Auto-colourise if buffer is smaller then this").
+class_variable(dependency_directive,
+               { 'autoload/1',
+                 'autoload/2',
+                 'use_module/1',
+                 'use_module/2'
+               }, 'autoload/2',
+               "How to insert new dependencies").
 
 variable(varmark_style,    style*,       get, "How to mark variables").
 variable(has_var_marks,    bool := @off, get, "Optimise a bit").
@@ -187,13 +201,20 @@ variable(body_indentation, int,          both, "Indentation for body-goals").
 variable(cond_indentation, int,          get, "Indent step for conditional").
 variable(quasiquotation_syntax,
                            name*,        both, "Default quasiquotation syntax").
+variable(dependency_directive,
+         { 'autoload/1',
+           'autoload/2',
+           'use_module/1',
+           'use_module/2'
+         },
+         both,
+         "How to insert new dependencies").
 
 class_variable(quasiquotation_syntax, name*, @nil).
 class_variable(body_indentation,      int,   4).
 class_variable(cond_indentation,      int,   4).
 class_variable(indent_tabs,           bool,  @off,
                "Use tabs for indentation").
-
 
 icon(_, I:image) :<-
     "Return icon for mode"::
@@ -891,6 +912,184 @@ consult_selection(M) :->
     "Consult selected text"::
     get(M, selection, point(From, To)),
     send(M, consult_region, From, To).
+
+
+		 /*******************************
+		 *         DEPENDENCIES		*
+		 *******************************/
+
+:- meta_predicate
+    to_kill_buffer(0).
+
+check_dependencies(E) :->
+    "See whether any dependencies are missing"::
+    get(E, text_buffer, TB),
+    file_autoload_directives(TB, Directives, [missing(true)]),
+    count_dependencies(Directives, Count),
+    (   Directives == []
+    ->  send(E, report, status, 'No missing dependencies')
+    ;   to_kill_buffer(maplist(portray_clause, Directives)),
+        send(E, report, warning,
+             'WARNING: %d missing dependencies.  \c
+              Use ^Y to insert required directives at caret.',
+             Count)
+    ).
+
+insert_dependencies(E) :->
+    "Insert :- autoload/2 directives"::
+    (   get(E, mark_status, active)
+    ->  get(E, selection, point(From, To))
+    ;   From = 0,
+        To = 0
+    ),
+    update_dependencies(E, From, To).
+
+update_dependencies(E) :->
+    "Update existing dependencies or add new block"::
+    get(E, find_dependencies, point(From, To)),
+    get(E, text_buffer, TB),
+    get(TB, scan, To, line, 1, start, SOL),
+    update_dependencies(E, From, SOL).
+
+update_dependencies(E, From, To) :-
+    read_terms_in_range(E, From, To, Terms),
+    directive_options(E, Terms, DirOptions),
+    get(E, text_buffer, TB),
+    file_autoload_directives(TB, Directives, [update(Terms)|DirOptions]),
+    (   append(Terms, New, Directives)
+    ->  (   New == []
+        ->  send(E, report, status, 'No updates required')
+        ;   add_new_dependencies(E, New, To),
+            count_dependencies(New, Count),
+            send(E, report, status, 'Added %d new dependencies', Count)
+        )
+    ;   send(E, delete, From, To),
+        add_new_dependencies(E, Directives, From),
+        send(E, report, status, 'Updated dependencies')
+    ).
+
+add_new_dependencies(E, Directives, At) :-
+    send(@emacs, location_history),
+    send(E, caret, At),
+    send(@emacs, location_history, title := 'Update dependencies'),
+    setup_call_cleanup(
+        pce_open(E, update, Out),
+        ( seek(Out, At, bof, _),
+          with_output_to(Out, maplist(portray_clause, Directives))
+        ),
+        close(Out)),
+    get(E, caret, End),
+    send(E, selection, At, End, highlight),
+    send(E, auto_colourise_buffer).
+
+directive_options(_E, Terms, []) :-
+    member(:-(Directive), Terms),
+    is_dependency(Directive),
+    !.
+directive_options(E, _, [directive(Pred)]) :-
+    get(E, dependency_directive, Atom),
+    term_string(Pred, Atom).
+
+count_dependencies(Directives, Deps) :-
+    maplist(directive_deps, Directives, Counts),
+    sum_list(Counts, Deps).
+
+directive_deps((:- autoload(_, Preds)), Count) :-
+    !,
+    length(Preds, Count).
+directive_deps((:- use_module(_, Preds)), Count) :-
+    !,
+    length(Preds, Count).
+directive_deps(_, 1).
+
+to_kill_buffer(Goal) :-
+    new(E, editor),
+    setup_call_cleanup(
+        pce_open(E, write, Out),
+        with_output_to(Out, Goal),
+        close(Out)),
+    get(E?text_buffer, size, Size),
+    send(E, grab, 0, Size),
+    free(E).
+
+read_selection(E, Terms:prolog) :<-
+    "Read the selection as a list of terms"::
+    get(E, selection, point(From, To)),
+    read_terms_in_range(E, From, To, Terms).
+
+read_terms_in_range(E, From, To, Terms) :-
+    To > From,
+    !,
+    setup_call_cleanup(
+        pce_open(E, read, In),
+        ( seek(In, From, bof, _),
+          read_terms_to(In, To, Terms)
+        ),
+        close(In)).
+read_terms_in_range(_, _, _, []).
+
+read_terms_to(In, End, Terms) :-
+    quiet_read_next(In, Term, _, Here),
+    !,
+    (   Term == end_of_file
+    ->  Terms = []
+    ;   (   Here > End
+        ->  Terms = []
+        ;   Terms = [Term|Rest],
+            read_terms_to(In, End, Rest)
+        )
+    ).
+read_terms_to(_, _, []).
+
+find_dependencies(E, Range:point) :<-
+    "Get start and end of dependencies"::
+    setup_call_cleanup(
+        pce_open(E, read, In),
+        find_dependencies(In, #{}, Dict),
+        close(In)),
+    (   _{start:Start, end:End} :< Dict
+    ->  new(Range, point(Start, End))
+    ;   _{module_decl_end:Start} :< Dict
+    ->  new(Range, point(Start, Start))
+    ;   _{program_start:Start} :< Dict
+    ->  new(Range, point(Start, Start))
+    ).
+
+find_dependencies(In, State0, State) :-
+    quiet_read_next(In, Term, F, T),
+    (   Term = :-(Directive)
+    ->  update_dep_state(Directive, F, T, State0, State1),
+        find_dependencies(In, State1, State)
+    ;   State = State0.put(program_start, F)
+    ).
+
+update_dep_state(module(_,_), _, T, State0, State) :-
+    !,
+    State = State0.put(module_decl_end, T).
+update_dep_state(Decl, S, E, State0, State) :-
+    is_dependency(Decl),
+    !,
+    (   get_dict(end, State0, _, State, E)
+    ->  true
+    ;   State = State0.put(#{start:S, end:E})
+    ).
+update_dep_state(_, _, _, State, State).
+
+is_dependency(autoload(_)).
+is_dependency(use_module(_)).
+is_dependency(autoload(_,_)).
+is_dependency(use_module(_,_)).
+
+quiet_read_next(In, Term, From, To) :-
+    between(1, 10, _),
+    read_term(In, Term,
+              [ syntax_errors(quiet),
+                term_position(Pos)
+              ]),
+    nonvar(Term),
+    stream_position_data(char_count, Pos, From),
+    character_count(In, To),
+    !.
 
 
                  /*******************************
