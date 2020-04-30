@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2000-2011, University of Amsterdam
+    Copyright (c)  2000-2020, University of Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -104,7 +104,9 @@ element(p, Options, Content) -->        % <P Options>
       @br
     ].
 element(div, A, C) -->                  % <DIV>
-    element(p, A, C).               % TBD: Should force clearance of
+    element(p, A, C).                   % TBD: Should force clearance of
+element(span, _, C) -->
+    seq(C).
                                         % shape-graphicals!
 element(br, _, _) -->                   % <BR>
     [ @br,
@@ -326,7 +328,8 @@ element(a, Attr, Content) -->           % <A HREF=<URL>> ... </A>
         ]
     ).
 element(a, Attr, Content) -->           % <A NAME=<Label>> ... </A>
-    { memberchk(name=Label, Attr)
+    { memberchk(id=Label, Attr)
+    ; memberchk(name=Label, Attr)
     },
     !,
     [ \anchor(Label, Content)
@@ -360,7 +363,7 @@ element(col, Attr, _) -->               % <COL>
 %       Preformatted output
 
 element(pre, _, Content) -->            % <PRE>
-    [ @br,
+    [ \parskip,
       \group([ \setfont(fixed, @on),
                \pre(Content)
              ]),
@@ -381,6 +384,8 @@ element(title, _, Title) -->            % <TITLE>
 element(meta, _, _) -->                 % <META>
     [].
 element(link, _, _) -->                 % <LINK>
+    [].
+element(script, _, _) -->               % <SCRIPT>
     [].
 element(body, Attributes, Content) -->  % <BODY>
     [ \body(Attributes)
@@ -538,6 +543,9 @@ relative_width(Spec, Frac) :-
     atom_chars(NumAtom, Chars),
     catch(number_chars(Num, Chars), _, fail),
     Frac is Num/100.
+
+seq([])    --> [].
+seq([H|T]) --> [H], seq(T).
 
                  /*******************************
                  *            MESSAGES          *
