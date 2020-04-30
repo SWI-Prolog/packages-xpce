@@ -87,6 +87,7 @@ pce_ifhostproperty(prolog(swi),
 :- consult(language_mode).
 :- consult(outline_mode).
 :- consult(bookmarks).
+:- consult(help_buffer).
 
 
                  /*******************************

@@ -193,7 +193,8 @@ set(XPCE_DATA_prolog_lib_emacs annotate_mode.pl application.pl bookmarks.pl
     javascript_mode.pl language_mode.pl latex_mode.pl logtalk_mode.pl
     man_mode.pl outline_mode.pl prolog_mode.pl prompt.pl rdf_mode.pl
     script_mode.pl server.pl sgml_mode.pl shell.pl swi_prolog.pl
-    text_mode.pl turtle_mode.pl window.pl yaml_mode.pl cmake_mode.pl)
+    text_mode.pl turtle_mode.pl window.pl yaml_mode.pl cmake_mode.pl
+    help_buffer.pl)
 
 set(XPCE_DATA_prolog_lib_english pce_messages.pl)
 
@@ -386,4 +387,4 @@ set(XPCE_QLF_trace trace/clause.pl trace/util.pl trace/source.pl
 set(XPCE_QLF_emacs emacs/window.pl emacs/buffer.pl emacs/application.pl
     emacs/buffer_menu.pl emacs/server.pl emacs/history.pl
     emacs/fundamental_mode.pl emacs/language_mode.pl emacs/outline_mode.pl
-    emacs/bookmarks.pl)
+    emacs/bookmarks.pl emacs/help_buffer.pl)
