@@ -73,7 +73,7 @@ ws_create_font(FontObj f, DisplayObj d)
 
     XftPatternAddString(p, XFT_FAMILY, fam);
     XftPatternAddDouble(p, XFT_PIXEL_SIZE, (double)valInt(f->points)*fscale);
-    if ( f->style == NAME_italic )
+    if ( f->style == NAME_italic || f->style == NAME_oblique )
       XftPatternAddInteger(p, XFT_SLANT, XFT_SLANT_ITALIC);
     else if ( f->style == NAME_roman )
       XftPatternAddInteger(p, XFT_SLANT, XFT_SLANT_ROMAN);
