@@ -65,7 +65,9 @@ prolog_help:show_html_hook(HTMLString) :-
     send(B, clear),
     setup_call_cleanup(
         pce_open(B, write, Out),
-        with_output_to(Out, html_text(DOM, [])),
+        ( set_stream(Out, newline(posix)),
+          with_output_to(Out, html_text(DOM, []))
+        ),
         close(Out)),
     send(B, modified, @off),
     (   send(B?editors, empty)
