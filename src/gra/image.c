@@ -961,7 +961,7 @@ stdXPMImage(Name name, Image *global, char **bits)
 
 
 #ifdef XPM_PCEIMAGE
-#include "bitmaps/pce16.xpm"
+#include "bitmaps/swipl48.xpm"
 #include "bitmaps/hadjusttile.xpm"
 #include "bitmaps/vadjusttile.xpm"
 #include "bitmaps/up.xpm"
@@ -1035,7 +1035,7 @@ standardImages(void)
   stdImage(NAME_intItemImage, &INT_ITEM_IMAGE,
 	   (char*)intarrows_bits, intarrows_width, intarrows_height);
 #ifdef XPM_PCEIMAGE
-  stdXPMImage(NAME_pceImage,	     NULL,		  pce16_xpm);
+  stdXPMImage(NAME_pceImage,	     NULL,		  swipl48_xpm);
   stdXPMImage(NAME_hadjustTileImage, NULL,		  hadjusttile_xpm);
   stdXPMImage(NAME_vadjustTileImage, NULL,		  vadjusttile_xpm);
   stdXPMImage(NAME_scrollUpImage,    &SCROLL_UP_IMAGE,	  up_xpm);
