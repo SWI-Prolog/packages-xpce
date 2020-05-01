@@ -52,6 +52,8 @@
 :- pce_begin_class(emacs, application,
                    "PceEmacs main object").
 
+class_variable(icon_image, image*, @pce_image).
+
 variable(buffer_list,   dict,    get, "List of buffers maintained").
 variable(history,       history, get, "History of visited places").
 
