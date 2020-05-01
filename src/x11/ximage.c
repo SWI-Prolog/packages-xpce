@@ -153,6 +153,44 @@ ws_store_image(Image image, FileObj file)
 }
 
 
+unsigned long *
+ws_image_to_rgba(Image image, Image mask, size_t *lenp)
+{ XImage *img, *msk = NULL;
+  int img_free=FALSE;
+  int msk_free=FALSE;
+  DisplayObj d = image->display;
+  DisplayWsXref r;
+  unsigned long *data;
+
+  if ( isNil(d) )
+    d = CurrentDisplay(image);
+  r = d->ws_ref;
+
+  if ( isDefault(mask) )
+    mask = image->mask;
+
+  if ( !(img=getXImageImage(image)) )
+  { if ( (img = getXImageImageFromScreen(image)) )
+      img_free = TRUE;
+    else
+      return NULL;
+  }
+
+  if ( notNil(mask) )
+  { if ( !(msk=getXImageImage(mask)) )
+    { if ( (msk = getXImageImageFromScreen(mask)) )
+	msk_free = TRUE;
+    }
+  }
+
+  data = XImageToRGBA(img, msk, r->display_xref, 0, lenp);
+  if ( img_free ) XDestroyImage(img);
+  if ( msk_free ) XDestroyImage(msk);
+
+  return data;
+}
+
+
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Image memory must be allocated through malloc()  and will be freed using
 XDestroyImage(), which apparently calls XFree(). This is pretty dubious,

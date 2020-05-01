@@ -99,7 +99,7 @@ struct symbol
 };
 
 struct table
-{ int 		size;
+{ int		size;
   Symbol	symbols[1];
 };
 
@@ -835,7 +835,7 @@ write_pnm_file(IOSTREAM *fd, XImage *img,
 		c = pixelToColor(img, pixel, &info);
 		r = intensityXColor(c);
 		r = rescale(r, BRIGHT, scale);
-  		if ( Sputc(r, fd) == EOF )
+		if ( Sputc(r, fd) == EOF )
 		  return -1;
 	      }
 	    }
@@ -882,4 +882,93 @@ write_pnm_file(IOSTREAM *fd, XImage *img,
   }
 
   return 0;
+}
+
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Translate an XImage and an optional mask into  an RBGA image in a format
+that is suitable for _NET_WM_ICON.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+unsigned long *
+XImageToRGBA(XImage *img, XImage *msk,
+	     Display *disp, Colormap cmap, size_t *lenp)
+{ int width  = img->width;
+  int height = img->height;
+  XPixelInfo img_info;
+  XPixelInfo msk_info;
+  XColor img_cdata[256];
+  XColor msk_cdata[256];
+  int msk_is_bitmap = TRUE;
+  int x, y;
+  unsigned long *data, *p;
+  const int scale = 255;
+  size_t len;
+
+  if ( msk && (msk->height != height || msk->width != width) )
+    msk = NULL;
+
+  if ( img->format != XYBitmap )
+  { img_info.cinfo = img_cdata;
+    makeXPixelInfo(&img_info, img, disp, cmap);
+  }
+  if ( msk )
+  { if ( msk->format == XYBitmap ||
+	 (msk->format == ZPixmap && msk->bits_per_pixel == 1) )
+    { msk_is_bitmap = TRUE;
+    } else
+    { msk_is_bitmap = FALSE;
+      msk_info.cinfo = msk_cdata;
+      makeXPixelInfo(&msk_info, msk, disp, cmap);
+    }
+  }
+
+  len = 2+width*height;
+  if ( lenp )
+    *lenp = len;
+  if ( !(data = malloc(len*sizeof(*data))) )
+    return data;
+  p = data;
+  *p++ = width;
+  *p++ = height;
+
+  for(y=0; y<height; y++)
+  { for(x=0; x<width; x++)
+    { XColor *c;
+      unsigned int r, g, b, a;
+      union
+      { unsigned int i32;
+	char c32[4];
+      } upix;
+
+      c = pixelToColor(img, XGetPixel(img, x, y), &img_info);
+      r = rescale(c->red,   BRIGHT, scale);
+      g = rescale(c->green, BRIGHT, scale);
+      b = rescale(c->blue,  BRIGHT, scale);
+
+      if ( msk )
+      { unsigned long pixel = XGetPixel(msk, x, y);
+	if ( msk_is_bitmap )
+	{ a = pixel ? scale : 0;
+	} else
+	{ XColor *c;
+	  int r;
+
+	  c = pixelToColor(img, pixel, &msk_info);
+	  r = intensityXColor(c);
+	  a = rescale(r, BRIGHT, scale);
+	}
+      } else
+      { a = 255;
+      }
+
+      upix.c32[0] = b;			/* blue */
+      upix.c32[1] = g;			/* green */
+      upix.c32[2] = r;			/* red */
+      upix.c32[3] = a;
+      *p++ = upix.i32;
+    }
+  }
+
+  return data;
 }

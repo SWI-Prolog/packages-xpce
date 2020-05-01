@@ -268,12 +268,16 @@ COMMON(int)		write_jpeg_file(IOSTREAM *fd, XImage *img,
 COMMON(int)		write_gif_file(IOSTREAM *fd, XImage *img, XImage *msk,
 				       Display *disp, Colormap cmap);
 COMMON(XImage *)	attachXpmImageImage(Image image, XpmImage *xpm);
+COMMON(unsigned long *)	XImageToRGBA(XImage *img, XImage *msk,
+				     Display *disp, Colormap cmap, size_t *lenp);
 
 /* xcolour.c */
 COMMON(status)		allocNearestColour(Display *display, Colormap map,
 					   int depth, Name vt, XColor *c);
 
 extern XtAppContext ThePceXtAppContext;	/* X toolkit application context */
+
+COMMON(unsigned long*)	ws_image_to_rgba(Image image, Image mask, size_t *lenp);
 
 #endif /*_PCE_X11_INCLUDED*/
 

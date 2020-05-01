@@ -48,6 +48,7 @@ static void	destroyFrame(Widget, FrameObj, XtPointer);
 static status   updateAreaFrame(FrameObj fr, Int border);
 static int	ws_group_frame(FrameObj fr);
 static int	ws_set_pid_frame(FrameObj fr);
+static void	ws_set_net_icon_frame(FrameObj fr);
 
 #define MainWindow(fr)	     ( isNil(fr->members->head) ? (Any) fr : \
 			       fr->members->head->value )
@@ -265,6 +266,8 @@ ws_realise_frame(FrameObj fr)
   ws_frame_background(fr, fr->background); /* Why is this necessary? */
   ws_group_frame(fr);
   ws_set_pid_frame(fr);
+
+  ws_set_net_icon_frame(fr);
 }
 
 
@@ -1384,6 +1387,39 @@ ws_set_icon_frame(FrameObj fr)
     n++;
 
     XtSetValues(w, args, n);
+  }
+}
+
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+See https://stackoverflow.com/questions/10699927/xlib-argb-window-icon
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+static void
+ws_set_net_icon_frame(FrameObj fr)
+{ unsigned long *buffer;
+  size_t length;
+
+  if ( (buffer=ws_image_to_rgba(fr->icon_image, DEFAULT, &length)) )
+  { Widget w = widgetFrame(fr);
+    DisplayWsXref r = fr->display->ws_ref;
+    static Atom _net_wm_icon = 0;
+    static Atom cardinal     = 0;
+
+    if ( !_net_wm_icon ) {
+      _net_wm_icon = XInternAtom(r->display_xref,
+				 "_NET_WM_ICON",
+				 False);
+      cardinal = XInternAtom(r->display_xref, "CARDINAL", False);
+    }
+
+    XChangeProperty(r->display_xref,
+		    XtWindow(w),
+		    _net_wm_icon,
+		    cardinal, 32,
+		    PropModeReplace, (const unsigned char*) buffer, length);
+
+    free(buffer);
   }
 }
 
