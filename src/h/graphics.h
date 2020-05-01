@@ -814,6 +814,7 @@ NewClass(application)
   Chain		members;		/* its member frames */
   Name		kind;			/* {user,service} */
   Chain		modal;			/* Stack of modal frames */
+  Image		icon_image;		/* Image of the icon */
 End;
 
 

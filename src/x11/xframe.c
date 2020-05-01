@@ -149,6 +149,15 @@ ws_uncreate_frame(FrameObj fr)
 }
 
 
+static Image
+getIconFrame(FrameObj fr)
+{ if ( notNil(fr->application) && notNil(fr->application->icon_image) )
+    return fr->application->icon_image;
+
+  return fr->icon_image;
+}
+
+
 status
 ws_create_frame(FrameObj fr)
 { Arg args[25];
@@ -156,6 +165,7 @@ ws_create_frame(FrameObj fr)
   Widget w;
   DisplayObj d = fr->display;
   DisplayWsXref r = d->ws_ref;
+  Image icon;
 
   XtSetArg(args[n], XtNtitle,		  nameToMB(fr->label));   n++;
   XtSetArg(args[n], XtNmappedWhenManaged, False);                 n++;
@@ -179,13 +189,13 @@ ws_create_frame(FrameObj fr)
   { XtSetArg(args[n], XtNsaveUnder, True);
     n++;
   }
-  if ( notNil(fr->icon_image) )
+  if ( notNil(icon=getIconFrame(fr)) )
   { XtSetArg(args[n], XtNiconPixmap,
-	     getXrefObject(fr->icon_image, fr->display));
+	     getXrefObject(icon, fr->display));
     n++;
-    if ( notNil(fr->icon_image->mask) )
+    if ( notNil(icon->mask) )
     { XtSetArg(args[n], XtNiconMask,
-	       getXrefObject(fr->icon_image->mask, fr->display));
+	       getXrefObject(icon->mask, fr->display));
       n++;
     }
   }
@@ -265,7 +275,8 @@ ws_realise_frame(FrameObj fr)
 
   ws_frame_background(fr, fr->background); /* Why is this necessary? */
   ws_group_frame(fr);
-  ws_set_pid_frame(fr);
+  if ( notNil(fr->application) && notNil(fr->application->icon_image) )
+    ws_set_pid_frame(fr);		   /* group in Ubuntu dock */
 
   ws_set_net_icon_frame(fr);
 }
@@ -1399,8 +1410,11 @@ static void
 ws_set_net_icon_frame(FrameObj fr)
 { unsigned long *buffer;
   size_t length;
+  Image icon = getIconFrame(fr);
 
-  if ( (buffer=ws_image_to_rgba(fr->icon_image, DEFAULT, &length)) )
+  if ( notNil(icon) &&
+       getXrefObject(icon, fr->display) &&
+       (buffer=ws_image_to_rgba(icon, DEFAULT, &length)) )
   { Widget w = widgetFrame(fr);
     DisplayWsXref r = fr->display->ws_ref;
     static Atom _net_wm_icon = 0;
