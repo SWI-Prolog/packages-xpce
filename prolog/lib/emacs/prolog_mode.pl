@@ -117,8 +117,10 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
           view_threads                 = button(prolog),
           view_debug_messages          = button(prolog),
           -                            = button(prolog),
+          make_module                  = key('\\C-c\\C-o') + button(prolog),
           check_dependencies           = button(prolog),
           update_dependencies          = key('\\C-c\\C-d') + button(prolog),
+          -                            = button(prolog),
           check_clause                 = key('\\C-c\\C-s') + button(prolog),
           setup_auto_indent            = button(prolog),
           insert_full_stop             = key(.),
@@ -917,6 +919,23 @@ consult_selection(M) :->
 		 /*******************************
 		 *         DEPENDENCIES		*
 		 *******************************/
+
+make_module(E) :->
+    "Turn the current file into a module file"::
+    (   get(E, prolog_module, Module)
+    ->  send(E, report, status, 'File defines Prolog module "%s"', Module)
+    ;   get(E, text_buffer, TB),
+        get(TB, file, File),
+        File \== @nil
+    ->  get(File, base_name, BaseName),
+        file_name_extension(Module, _, BaseName),
+        get(TB, skip_comment, 0, skip_layout := @on, Where),
+        add_new_dependencies(
+            E,
+            [ :- module(Module, []) ],
+            Where)
+    ;   send(E, report, warning, 'No file')
+    ).
 
 :- meta_predicate
     to_kill_buffer(0).
