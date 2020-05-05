@@ -76,6 +76,7 @@
 	     file_name_extension/3,
 	     get_dict/3,
 	     nb_setarg/3,
+             pi_head/2,
 	     rational/3,
 	     send_list/3,
 	     setup_call_cleanup/3,
@@ -85,6 +86,7 @@
 	     get_dict/5,
 	     sub_string/5
 	   ]).
+:- autoload(library(pldoc/doc_process), [comment_modes/2]).
 
 resource(mode_pl_icon, image, image('32x32/doc_pl.xpm')).
 resource(breakpoint,   image, image('16x16/stop.xpm')).
@@ -118,6 +120,7 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
           view_debug_messages          = button(prolog),
           -                            = button(prolog),
           make_module                  = key('\\C-c\\C-o') + button(prolog),
+          export	               = key('\\C-c\\C-e') + button(prolog),
           check_dependencies           = button(prolog),
           update_dependencies          = key('\\C-c\\C-d') + button(prolog),
           -                            = button(prolog),
@@ -929,13 +932,140 @@ make_module(E) :->
         File \== @nil
     ->  get(File, base_name, BaseName),
         file_name_extension(Module, _, BaseName),
-        get(TB, skip_comment, 0, skip_layout := @on, Where),
+        (   send(E, looking_at, '(%[^%!]|/\\*)', 0)
+        ->  get(TB, skip_comment, 0, skip_layout := @on, Where)
+        ;   Where = 0
+        ),
         add_new_dependencies(
             E,
             [ :- module(Module, []) ],
             Where)
     ;   send(E, report, warning, 'No file')
     ).
+
+export(E) :->
+    "Export the current predicate"::
+    (   get(E, prolog_term, Clause),
+        clause_pi(Clause, PI)
+    ->  send(E, do_export, PI)
+    ;   send(E, report, warning,
+             'Could not find predicate to export from here')
+    ).
+
+clause_pi(Var, _) :-
+    var(Var),
+    !,
+    fail.
+clause_pi((Head :- _), PI) :-
+    callable(Head),
+    Head \= (_:_),
+    pi_head(PI, Head).
+clause_pi((Head --> _), Name//Arity) :-
+    callable(Head),
+    Head \= (_:_),
+    pi_head(Name/Arity, Head).
+clause_pi(:-(_), _) :-
+    !,
+    fail.
+clause_pi(Head, PI) :-
+    callable(Head),
+    Head \= (_:_),
+    pi_head(PI, Head).
+
+do_export(E, PI:prolog) :->
+    "Add PI to the export list of the module"::
+    send(E, mark),
+    get(E, text_buffer, TB),
+    pi_head(PI, Head),
+    (   xref_comment(TB, Head, _Summary, Comment),
+        comment_modes(Comment, Modes),
+        pi_mode_head(PI, MHead),
+        member(ModeAndDet, Modes),
+        strip_det(ModeAndDet, MHead),
+        MHead =.. [_|Args],
+        Head2 =.. ['DUMMY'|Args],
+        term_string(Head2, Syn0,
+                    [ module(pldoc_modes),
+                      quoted(false)
+                    ]),
+        sub_string(Syn0, 6, _, 1, Syn)
+    ->  true
+    ;   true
+    ),
+    term_string(PI, PIs, [priority(999)]),
+    insert_export_after(E, PI, IPos0, How),
+    (   send(E, looking_at, '\\[\\]', IPos0)
+    ->  IPos is IPos0+2,
+        send(E, caret, IPos0+1),
+        send(E, insert, ' '),
+        send(E, newline_and_indent),
+        send(E, previous_line),
+        send(E, caret, IPos)
+    ;   How == empty
+    ->  send(E, caret, IPos0+1),
+        send(E, insert, ' ')
+    ;   send(E, caret, IPos0),
+        send(E, insert, ','),
+        (   send(E, looking_at, '\\s*%')
+        ->  send(E, insert_line_comment)
+        ;   true
+        ),
+        get(TB, skip_comment, IPos0+2, skip_layout := @on, IPos),
+        send(E, caret, IPos),
+        send(E, newline_and_indent),
+        send(E, previous_line),
+        send(E, indent_line)
+    ),
+    send(E, insert, PIs),
+    (   nonvar(Syn)
+    ->  send(E, insert_line_comment),
+        send(E, insert, Syn)
+    ;   true
+    ),
+    send(E, exchange_point_and_mark),
+    send(E, mark_status, inactive),
+    send(E, auto_colourise_buffer).
+
+strip_det(Mode is _, Mode) :- !.
+strip_det(//(Mode), Mode) :- !.
+strip_det(Mode, Mode).
+
+pi_mode_head(Name/Arity, Head) :-
+    functor(Head, Name, Arity).
+pi_mode_head(Name//Arity, Head) :-
+    functor(Head, Name, Arity).
+
+
+%!  insert_export_after(+Editor, +PI, -InsertPos, -How)
+%
+%   Figure out the current export list and   find  a place to insert the
+%   PI. Currently always inserts at the  end. Future versions may insert
+%   alphabetically or in file-order. Ideally we   should  figure out the
+%   current ordering convention and maintain that.
+
+insert_export_after(E, _PI, InsertPos, How) :-
+    between(1,2,_),
+    (   get(E, prolog_term, 0, @off, Pos, ModuleTerm),
+        ModuleTerm = (:- module(_,_List))
+    ;   send(E, make_module),
+        fail
+    ),
+    !,
+    Pos  = term_position(_,_,_,_,[MPos]),
+    MPos = term_position(_,_,_,_,[_,LPos]),
+    (   LPos = F-_T
+    ->  InsertPos = F,
+        How = empty
+    ;   LPos = list_position(_,_,ElemPos,none)
+    ->  last(ElemPos, EPos),			% for now always at the end
+        arg(2, EPos, InsertPos),
+        How = after_last
+    ).
+
+%member(X, Y, [X|_], [Y|_]).
+%member(X, Y, [_|Xs], [_|Ys]) :-
+%    member(X, Y, Xs, Ys).
+
 
 :- meta_predicate
     to_kill_buffer(0).
@@ -996,6 +1126,10 @@ add_new_dependencies(E, Directives, At) :-
         ),
         close(Out)),
     get(E, caret, End),
+    (   send(E, looking_at, '\\s*$', End)
+    ->  true
+    ;   send(E, insert, '\n')
+    ),
     send(E, selection, At, End, highlight),
     send(E, auto_colourise_buffer).
 
