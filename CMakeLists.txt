@@ -143,6 +143,7 @@ add_swipl_target(
     xpce-predicate-index
     OUTPUT  ${XPCE_PREDICATE_INDEX}
     COMMAND "make_library_index('${XPCE_BUILD_LIBRARY}')"
+    DEPENDS library_index
     QUIET
     COMMENT "-- Building xpce predicate index")
 add_swipl_target(
