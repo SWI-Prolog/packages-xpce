@@ -122,7 +122,7 @@ Pointer to the parent frame.
     \item [choice-point frame]
 Pointer to the frame where execution continues if this frame fails.
 This is a simplification of the `real' WAM, where choicepoints and
-stack-frames are seperate entities.  It also introduces problems with
+stack-frames are separate entities.  It also introduces problems with
 choicepoints generated in a clause by \predref{;}/2.  This problem is
 solved by creating a dummy frame.
     \item [PC]

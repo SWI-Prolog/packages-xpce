@@ -61,7 +61,7 @@ running \quintus{} Prolog system using:
 ...
 \end{code}
 
-Regarding the size and loading time of \product{}, a seperate executable
+Regarding the size and loading time of \product{}, a separate executable
 named \program{pw3} is created that contains the \product{} kernel, and
 basic development and debugging libraries.  This is the executable that
 is normally used for interactive development and debugging.
