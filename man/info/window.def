@@ -17,7 +17,7 @@ purpose graphics window with scrollbars.  Class dialog is a window
 specialised for displaying dialog_item objects (menus, buttons,
 text-entry-fields, etc.), although dialog windows can also display
 normal graphical objects.  Class dialog and friends are described in a
-seperate chapter.  Class view and browser define window-versions of the
+separate chapter.  Class view and browser define window-versions of the
 classes editor (EMACS-like text editor) and list_browser (browser for a
 (long) list of objects).
 

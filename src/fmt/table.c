@@ -1027,7 +1027,7 @@ stages:
 	columns is computed, *only* considering non-spanned cells.
 
 	# Resolve spanning cells
-	This two considers rows and columns in seperate and similar
+	This two considers rows and columns in separate and similar
 	stages.  We first collect all spanning cells.  Then, we sort
 	them to increasing number of spanned rows/columns.  Then we
 	resolve each of the cells in turn, only making columns/cells

@@ -570,7 +570,7 @@ default arguments are handled inside a method.
 Next, the selection, which is  a chain  with  the selected shapes,  is
 cloned.  `Object <-clone'  creates  a  recursive clone. Note that  the
 selection as  a   whole is cloned   rather  than each member    of  it
-seperately.   This guarantees  proper kloning of relations  inside the
+separately.   This guarantees  proper kloning of relations  inside the
 selection (such as connections).
 
 NOTE:   Connections to objects outside the selection are not handled

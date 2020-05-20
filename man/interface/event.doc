@@ -95,7 +95,7 @@ If \arg{fd} equals -1 no file-descriptor is watched.  The argument
 `window_manager ->dispatch'.
 \end{description}
 
-When using a seperate threat to handle X-events for PCE, the following
+When using a separate threat to handle X-events for PCE, the following
 interface functions may be applicable.  
 
 \begin{description}
