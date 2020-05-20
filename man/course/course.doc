@@ -318,7 +318,7 @@ PCE demo applications.
 
 Prolog applications that want to manipulate data represented on the Prolog
 runtime stacks cannot use the event-driven approach presented above.
-Unlike with event-driven applications, a single-threat Prolog system
+Unlike with event-driven applications, a single-threaded Prolog system
 can only run one task.  The overall structure of such an application
 is:
 

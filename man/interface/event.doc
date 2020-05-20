@@ -4,7 +4,7 @@
 When PCE is active and has open windows it must process events it
 receives from the X-server.  It is desirable that the user can
 interact with the host-language while PCE is active.  The PCE/Host
-process can therefore be seen as a two-threat process:
+process can therefore be seen as a two-thread process:
 
 \begin{enumerate}
     \tick{Read and process the host toplevel}
@@ -73,9 +73,9 @@ pce_dispatch()
 }
 \end{code}
 
-    \tick{Use a threat in a multi-threat environment}
-If the host-language is a multi-threat system it is possible to have
-one or more threats that execute the interactive toplevel and one threat
+    \tick{Use a threat in a multi-thread environment}
+If the host-language is a multi-thread system it is possible to have
+one or more threats that execute the interactive toplevel and one thread
 that handles the X-window events for PCE.  This approach has been takes
 in the LispWorks interface.
 \end{itemize}
@@ -95,8 +95,8 @@ If \arg{fd} equals -1 no file-descriptor is watched.  The argument
 `window_manager ->dispatch'.
 \end{description}
 
-When using a separate threat to handle X-events for PCE, the following
-interface functions may be applicable.  
+When using a separate thread to handle X-events for PCE, the following
+interface functions may be applicable.
 
 \begin{description}
     \cfunction{void}{pceRedraw}{void}
