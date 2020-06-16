@@ -3213,7 +3213,7 @@ str_compute_lines(strTextLine *lines, int nlines, FontObj font,
   if ( vadjust == NAME_top )
     cy = y;
   else if ( vadjust == NAME_center )
-    cy = y + (h - nlines*th)/2;
+    cy = y + (1 + h - nlines*th)/2;
   else /*if ( vadjust == NAME_bottom )*/
     cy = y + h - nlines*th;
 

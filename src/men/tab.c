@@ -35,6 +35,7 @@
 #include <h/kernel.h>
 #include <h/dialog.h>
 
+#define HIDDEN_TAB_SHRINK 3
 
 		/********************************
 		*            CREATE		*
@@ -63,6 +64,8 @@ computeLabelTab(Tab t)
     int ex = valInt(getExFont(t->label_font));
 
     compute_label_size_dialog_group((DialogGroup) t, &w, &h);
+    if ( instanceOfObject(t->label, ClassCharArray) )
+      h += 2+HIDDEN_TAB_SHRINK;
     w += 2*ex;
     w = max(w, valInt(minsize->w));
     h = max(h, valInt(minsize->h));
@@ -240,6 +243,8 @@ statusTab(Tab t, Name stat)
 #define GOTO(p, a, b)	 p->x = (a), p->y = (b), p++
 #define RMOVE(p, dx, dy) p->x = p[-1].x + (dx), p->y = p[-1].y + (dy), p++
 
+#define LOWER_LABEL 2
+
 static status
 RedrawAreaTab(Tab t, Area a)
 { int x, y, w, h;
@@ -278,7 +283,7 @@ RedrawAreaTab(Tab t, Area a)
     r_3d_rectangular_polygon(p-pts, pts, e, DRAW_3D_FILLED|DRAW_3D_CLOSED);
 
     RedrawLabelDialogGroup((DialogGroup)t, 0,
-			   x+loff+ex, y, lw-2*ex, lh,
+			   x+loff+ex, y+HIDDEN_TAB_SHRINK+LOWER_LABEL, lw-2*ex, lh-HIDDEN_TAB_SHRINK,
 			   t->label_format, NAME_center,
 			   lflags);
 
@@ -308,23 +313,26 @@ RedrawAreaTab(Tab t, Area a)
     static Real dot9;
 
     if ( !dot9 )
-    { dot9 = CtoReal(0.9);
+    { dot9 = CtoReal(0.85);
       lockObject(dot9, ON);
     }
 
-    r_fill(x+loff+1, y+2, lw-1, lh-2, getReduceColour(obg, dot9));
+    y  += HIDDEN_TAB_SHRINK;
+    lh -= HIDDEN_TAB_SHRINK;
+
+    r_fill(x+loff+1, y, lw-1, lh, getReduceColour(obg, dot9));
 
     GOTO(p, x+loff, y+lh);		/* bottom-left */
     RMOVE(p, 0, -lh+r+1);		/* top-left */
     RMOVE(p, r, -r);
     RMOVE(p, lw-2*r, 0);		/* top-right */
     RMOVE(p, r, r);
-    RMOVE(p, 0, lh-r-2);		/* bottom-right */
+    RMOVE(p, 0, lh-r);			/* bottom-right */
 
     r_3d_rectangular_polygon(p-pts, pts, e, DRAW_3D_FILLED);
 
     RedrawLabelDialogGroup((DialogGroup)t, 0,
-			   x+loff+ex, y, lw-2*ex, lh,
+			   x+loff+ex, y+LOWER_LABEL, lw-2*ex, lh,
 			   t->label_format, NAME_center,
 			   lflags);
   }
@@ -517,7 +525,7 @@ static classvardecl rc_tab[] =
      "Font used to display the label"),
   RC(NAME_labelFormat, "{left,center,right}", "left",
      "Alignment of label in box"),
-  RC(NAME_labelSize, "size", "size(50, 20)",
+  RC(NAME_labelSize, "size", "size(50, 24)",
      "Size of box for label")
 };
 

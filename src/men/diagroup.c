@@ -425,7 +425,7 @@ RedrawLabelDialogGroup(DialogGroup g, int acc,
     if ( vadjust == NAME_top )
       iy = y;
     else if ( vadjust == NAME_center )
-      iy = y + (h-ih)/2;
+      iy = y + (1+h-ih)/2;
     else
       iy = y + h-ih;
 
