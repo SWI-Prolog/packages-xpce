@@ -1908,9 +1908,7 @@ put_prolog_argument(PceGoal g, term_t t, PceType type, term_t f)
   term_value_t val;
 					/* --> :prolog */
   if ( pceIncludesHostDataType(type, ClassProlog) )
-  { PutTerm(t, f);
-    return TRUE;
-  }
+    return PutTerm(t, f);
 
   switch(PL_get_term_value(f, &val))
   { case PL_ATOM:
@@ -1925,9 +1923,7 @@ put_prolog_argument(PceGoal g, term_t t, PceType type, term_t f)
       break;
     case PL_FLOAT:
       if ( pceCheckFloatType(type, val.f) )
-      { PutTerm(t, f);
-	return TRUE;
-      }
+	return PutTerm(t, f);
       break;
     case PL_TERM:
       if ( val.t.name == ATOM_ref && val.t.arity == 1 )
@@ -1940,9 +1936,11 @@ put_prolog_argument(PceGoal g, term_t t, PceType type, term_t f)
 
 	if ( (obj2 = pceCheckType(g, type, obj)) )
 	{ if ( obj2 == obj )
-	    PutTerm(t, f);
-	  else
-	    put_object(t, obj2);
+	  { if ( !PutTerm(t, f) )
+	      return FALSE;
+	  } else
+	  { put_object(t, obj2);
+	  }
 
 	  return TRUE;
 	}
@@ -2499,14 +2497,9 @@ put_object(term_t t, PceObject obj)
       break;
     }
     case PCE_HOSTDATA:
-    { PutTerm(t, getTermHandle(obj));	/* TBD: Use saved handle */
-      return TRUE;
-      break;
-    }
+      return PutTerm(t, getTermHandle(obj));	/* TBD: Use saved handle */
     case PCE_INTEGER:
       return PL_put_integer(t, value.integer);
-
-      break;
     case PCE_NAME:
       { PceITFSymbol symbol = value.itf_symbol;
 
