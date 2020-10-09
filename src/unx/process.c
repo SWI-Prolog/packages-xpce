@@ -113,9 +113,11 @@ extern char **environ;		/* Unix version */
 #define TCSETS TIOCSETA
 #endif
 
-#if HAVE_STROPTS_H && HAVE_GRANTPT	/* Solaris */
+#ifdef HAVE_GRANTPT
 #define USE_GRANTPT 1
+#ifdef HAVE_STROPTS_H			/* prototypes are now in stdlib.h */
 #include <stropts.h>
+#endif
 #ifdef __mips__				/* These prototypes are nowhere!? */
 extern int   grantpt(int filedes);
 extern char *ptsname(int fildes);
@@ -590,9 +592,11 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
 	{ Cprintf("[PCE: failed to get slave pty: %s]\n", strName(OsError()));
 	  exit(1);
 	}
+#ifdef I_PUSH
 	ioctl(slave, I_PUSH, "ptem");	/* don't worry it these fail */
 	ioctl(slave, I_PUSH, "ldterm");
 	ioctl(slave, I_PUSH, "ttcompat");
+#endif
 #endif /*USE_GRANTPT*/
 
 	DEBUG(NAME_process, Cprintf("Slave %s at %d\n", line, slave));
