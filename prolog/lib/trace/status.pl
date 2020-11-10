@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2011, University of Amsterdam
+    Copyright (c)  2001-2020, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -42,6 +43,9 @@
 :- use_module(library(prolog_breakpoints)).
 :- if(exists_source(library(prolog_trace))).
 :- use_module(library(prolog_trace)).
+:- endif.
+:- if(exists_source(library(threadutil))).
+:- use_module(library(threadutil)).
 :- endif.
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -91,7 +95,7 @@ initialise(D) :->
     send(D, append,
          new(Ch, menu(mode, choice, message(D, mode, @arg1))),
          right),
-    send_list(Ch, append, [ normal, debug, trace ]),
+    send_list(Ch, append, [ normal, debug ]),
     send(Ch, layout, horizontal),
     send(Ch, alignment, right),
     send(Ch, reference, point(0, Ch?height)),
@@ -112,10 +116,10 @@ initialise(D) :->
     send_list(TB2, append,
               [ tool_button(spy,
                             resource(spy),
-                            'Set spy point'),
+                            'Break on (spy) predicate'),
                 tool_button(trace,
                             resource(trace),
-                            'Set trace point'),
+                            'Log calls to predicate'),
                 tool_button(edit,
                             resource(edit),
                             'Edit predicate/show listing')
@@ -152,9 +156,7 @@ update(D) :->
     ;   true
     ),
     get(D, member, mode, Mode),
-    (   tracing
-    ->  send(Mode, selection, trace)
-    ;   current_prolog_flag(debug, true)
+    (   current_prolog_flag(debug, true)
     ->  send(Mode, selection, debug)
     ;   send(Mode, selection, normal)
     ).
@@ -213,7 +215,7 @@ spy(D) :->
     "Set spy point on predicate"::
     get(D, member, predicate, PI),
     (   get(PI, selection, What)
-    ->  user:spy(What)
+    ->  user:tspy(What)
     ;   send(D, report, warning, 'No predicate')
     ).
 
@@ -221,7 +223,7 @@ trace(D) :->
     "Set spy point on predicate"::
     get(D, member, predicate, PI),
     (   get(PI, selection, What)
-    ->  user:trace(What, +all)
+    ->  user:trace(What)
     ;   send(D, report, warning, 'No predicate')
     ).
 
@@ -293,12 +295,11 @@ delete(break, breakpoint(Id)) :-
     delete_breakpoint(Id).
 
 mode(_D, Mode:{normal,debug,trace}) :->
+    "Set the run mode for all threads"::
     (   Mode == normal
     ->  tnodebug
     ;   Mode == debug
     ->  tdebug
-    ;   Mode == trace
-    ->  guitracer
     ).
 
 :- pce_end_class.
@@ -350,16 +351,12 @@ user:message_hook(debug_mode(OnOff), _Level, _Lines) :-
     get(D, member, mode, Mode),
     (   OnOff == off
     ->  send(Mode, selection, normal)
-    ;   tracing
-    ->  send(Mode, selection, trace)
     ;   send(Mode, selection, debug)
     ).
-user:message_hook(trace_mode(OnOff), _Level, _Lines) :-
+user:message_hook(trace_mode(_OnOff), _Level, _Lines) :-
     debug_status_window(D),
     get(D, member, mode, Mode),
-    (   OnOff == on
-    ->  send(Mode, selection, trace)
-    ;   current_prolog_flag(debug, true)
+    (   current_prolog_flag(debug, true)
     ->  send(Mode, selection, debug)
     ;   send(Mode, selection, normal)
     ).
