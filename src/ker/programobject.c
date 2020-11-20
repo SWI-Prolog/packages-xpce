@@ -59,11 +59,11 @@ static unsigned long
 nameToTraceFlag(Name name)
 { if ( name == NAME_enter )
     return D_TRACE_ENTER;
-  if ( name == NAME_exit )
+  else if ( name == NAME_exit )
     return D_TRACE_EXIT;
-  if ( name == NAME_fail )
+  else if ( name == NAME_fail )
     return D_TRACE_FAIL;
-/*if ( name == NAME_full || isDefault(what) )*/
+  else /*if ( name == NAME_full || isDefault(what) )*/
     return D_TRACE;
 }
 
@@ -72,11 +72,11 @@ static unsigned long
 nameToBreakFlag(Name name)
 { if ( name == NAME_enter )
     return D_BREAK_ENTER;
-  if ( name == NAME_exit )
+  else if ( name == NAME_exit )
     return D_BREAK_EXIT;
-  if ( name == NAME_fail )
+  else if ( name == NAME_fail )
     return D_BREAK_FAIL;
-/*if ( name == NAME_full || isDefault(what) )*/
+  else /*if ( name == NAME_full || isDefault(what) )*/
     return D_BREAK;
 }
 
