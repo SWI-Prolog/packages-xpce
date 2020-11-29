@@ -28,7 +28,7 @@ COMMON(int)	ws_resolution_display(DisplayObj d, int *rx, int *ry);
 COMMON(void)	ws_activate_screen_saver(DisplayObj d);
 COMMON(void)	ws_deactivate_screen_saver(DisplayObj d);
 COMMON(void)	ws_init_display(DisplayObj d);
-COMMON(status)	ws_legal_display_name(char *s);
+COMMON(status)	ws_legal_display_name(const char *s);
 COMMON(status)	ws_opened_display(DisplayObj d);
 COMMON(void)	ws_open_display(DisplayObj d);
 COMMON(void)	ws_quit_display(DisplayObj d);

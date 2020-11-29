@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2020, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -177,15 +178,32 @@ ws_init_display(DisplayObj d)
 }
 
 
+const char *
+skipint(const char *s)
+{ const char *s0 = s;
+
+  while ( *s && isdigit(*s) )
+    s++;
+
+  return s > s0 ? s : NULL;
+}
+
 status
-ws_legal_display_name(char *s)
-{ char host[LINESIZE];
-  int display, screen;
+ws_legal_display_name(const char *s)
+{ while( *s && (isalnum(*s) || *s == '.') )
+    s++;
+  if ( *s != ':' )
+    fail;
+  s++;
+  if ( !(s = skipint(s)) )
+    fail;
+  if ( *s == '.' )
+  { s++;
+    if ( !(s = skipint(s)) )
+      fail;
+  }
 
-  if ( sscanf(s, "%[a-zA-Z0-9.]:%d.%d", host, &display, &screen) >= 2 )
-    succeed;
-
-  fail;
+  return *s == '\0';
 }
 
 
@@ -229,9 +247,10 @@ ws_open_display(DisplayObj d)
     char *theaddress = XDisplayName(address);
 
     if ( isDefault(d->address) && !getenv("DISPLAY") )
-      sprintf(problem, "no DISPLAY environment variable");
+      strcpy(problem, "no DISPLAY environment variable");
     else if ( !ws_legal_display_name(theaddress) )
-      sprintf(problem, "malformed address: %s", theaddress);
+      snprintf(problem, sizeof(problem), "malformed DISPLAY address: %s",
+	       theaddress);
     else
       strcpy(problem, "No permission to contact X-server?");
 
