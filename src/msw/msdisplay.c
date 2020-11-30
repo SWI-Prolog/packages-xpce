@@ -137,7 +137,7 @@ ws_init_display(DisplayObj d)
 
 
 status
-ws_legal_display_name(char *s)
+ws_legal_display_name(const char *s)
 { succeed;
 }
 
@@ -563,7 +563,7 @@ ws_provide_selection(int format)
 
       if ( ca )
       { PceString s = &ca->data;
-      	HGLOBAL mem = ws_string_to_global_mem(s);
+	HGLOBAL mem = ws_string_to_global_mem(s);
 
 	if ( mem )
 	  SetClipboardData(CF_UNICODETEXT, mem);
