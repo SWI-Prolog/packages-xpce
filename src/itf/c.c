@@ -678,24 +678,31 @@ XPCE_cell_value(XPCE_Object cell)
 		 *	       GLOBALS		*
 		 *******************************/
 
-Any XPCE_on;
-Any XPCE_off;
-Any XPCE_nil;
-Any XPCE_default;
-Any XPCE_arg1;
-Any XPCE_arg2;
-Any XPCE_arg3;
-Any XPCE_arg4;
-Any XPCE_arg5;
-Any XPCE_arg6;
-Any XPCE_arg7;
-Any XPCE_arg8;
-Any XPCE_arg9;
-Any XPCE_arg10;
-Any XPCE_event;
-Any XPCE_receiver;
-Any XPCE_pce;
-Any XPCE_display;
+#undef __pce_export
+#if defined(WIN32) || defined(__CYGWIN__)
+#define __pce_export __declspec(dllexport)
+#else
+#define __pce_export
+#endif
+
+__pce_export Any XPCE_on;
+__pce_export Any XPCE_off;
+__pce_export Any XPCE_nil;
+__pce_export Any XPCE_default;
+__pce_export Any XPCE_arg1;
+__pce_export Any XPCE_arg2;
+__pce_export Any XPCE_arg3;
+__pce_export Any XPCE_arg4;
+__pce_export Any XPCE_arg5;
+__pce_export Any XPCE_arg6;
+__pce_export Any XPCE_arg7;
+__pce_export Any XPCE_arg8;
+__pce_export Any XPCE_arg9;
+__pce_export Any XPCE_arg10;
+__pce_export Any XPCE_event;
+__pce_export Any XPCE_receiver;
+__pce_export Any XPCE_pce;
+__pce_export Any XPCE_display;
 
 void
 initCGlobals()

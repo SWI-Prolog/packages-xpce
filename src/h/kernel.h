@@ -74,7 +74,7 @@
 #endif
 
 #if defined(WIN32) || defined(__CYGWIN__)
-#define __pce_export __declspec(dllexport)
+#define __pce_export __declspec(dllexport) extern
 #else
 #define __pce_export extern
 #endif
