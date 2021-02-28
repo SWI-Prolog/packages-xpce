@@ -43,6 +43,7 @@
 
 :- multifile
     pce_message//1.
+:- '$hide'(pce_message//1).
 
 pce_message(error(pce(ErrorId, Args), _Context)) -->
     { Msg =.. [format|Args],
