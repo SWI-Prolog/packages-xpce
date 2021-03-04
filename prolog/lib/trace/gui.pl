@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog/projects/xpce/
-    Copyright (c)  2001-2016, University of Amsterdam
+    Copyright (c)  2001-2021, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -71,6 +72,7 @@
 	     notrace/1,
 	     pce_image_directory/1,
 	     portray_text/1,
+             set_portray_text/3,
 	     prolog_ide/1,
 	     thread_self/1,
 	     atomic_list_concat/2,
@@ -616,10 +618,15 @@ update_portray_text(_GUI, MI:menu_item) :->
     portraying_text(Bool),
     send(MI, selected, Bool).
 
+%!  portraying_text(-Bool) is det.
+%
+%   Whether or not portraying text is enabled. The first checks that the
+%   library is loaded.
+
 portraying_text(Bool) :-
-    current_predicate(portray_text:do_portray_text/1),
+    current_predicate(portray_text:set_portray_text/3),
     !,
-    portray_text:do_portray_text(Bool).
+    set_portray_text(enabled, Bool, Bool).
 portraying_text(false).
 
 trapped_location(GUI, StartFrame:int, Frame:int, Port:name) :->
