@@ -878,10 +878,12 @@ x_event_frame(Widget w, FrameObj fr, XEvent *event)
 
 static void
 xEventFrame(Widget w, FrameObj fr, XEvent *event)
-{ pceMTLock(LOCK_PCE);
-  ServiceMode(service_frame(fr),
-	      x_event_frame(w, fr, event));
-  pceMTUnlock(LOCK_PCE);
+{ if ( !isFreedObj(fr) )
+  { pceMTLock(LOCK_PCE);
+    ServiceMode(service_frame(fr),
+		x_event_frame(w, fr, event));
+    pceMTUnlock(LOCK_PCE);
+  }
 }
 
 
