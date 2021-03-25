@@ -40,6 +40,8 @@
 :- use_module(library(toc_filesystem)).
 :- use_module(library(pce_report)).
 :- use_module(library(toolbar)).
+% used in load hook: cannot be autoloaded.
+:- use_module(library(trace/util),[canonical_source_file/2]).
 
 :- autoload(browse_xref,
 	    [ x_browse_info/2,
@@ -63,7 +65,6 @@
 	    ]).
 :- autoload(library(prolog_trace),[trace/2,trace/1]).
 :- autoload(library(swi_ide),[prolog_ide/1]).
-:- autoload(library(trace/util),[canonical_source_file/2]).
 :- if(exists_source(library(pldoc/man_index))).
 :- autoload(library(pldoc/man_index),[man_object_property/2]).
 :- endif.
