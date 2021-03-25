@@ -960,7 +960,18 @@ clause_pi((Head :- _), PI) :-
     callable(Head),
     Head \= (_:_),
     pi_head(PI, Head).
+clause_pi((Left => _), PI) :-
+    !,
+    nonvar(Left),
+    (   Left = (Head,_Guard)
+    ->  true
+    ;   Head = Left
+    ),
+    callable(Head),
+    Head \= (_:_),
+    pi_head(PI, Head).
 clause_pi((Head --> _), Name//Arity) :-
+    !,
     callable(Head),
     Head \= (_:_),
     pi_head(Name/Arity, Head).
