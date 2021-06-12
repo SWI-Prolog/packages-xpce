@@ -67,8 +67,6 @@
 :- require([ make/0,
 	     acyclic_term/1,
 	     current_predicate/1,
-	     message_queue_create/1,
-	     message_queue_destroy/1,
 	     notrace/1,
 	     pce_image_directory/1,
 	     portray_text/1,
@@ -83,10 +81,6 @@
 	     prolog_unlisten/2,
 	     string_codes/2,
 	     term_attvars/2,
-	     thread_get_message/2,
-	     thread_property/2,
-	     thread_send_message/2,
-	     thread_signal/2,
 	     unify_with_occurs_check/2,
 	     with_mutex/2,
 	     '$factorize_term'/3,
@@ -98,6 +92,16 @@
 	     numbervars/4,
              start_emacs/0
 	   ]).
+
+:- if(current_prolog_flag(threads, true)).
+:- require([ message_queue_create/1,
+	     message_queue_destroy/1,
+	     thread_get_message/2,
+	     thread_property/2,
+	     thread_send_message/2,
+	     thread_signal/2
+           ]).
+:- endif.
 
 :- multifile
     user:message_hook/3.
