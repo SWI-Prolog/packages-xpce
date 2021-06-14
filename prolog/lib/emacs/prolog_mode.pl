@@ -3,9 +3,10 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2020, University of Amsterdam
+    Copyright (c)  1985-2021, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -53,7 +54,6 @@
 	     delete_breakpoint/1,
 	     manpce/1,
 	     prolog_ide/1,
-	     rational/1,
 	     spypce/1,
 	     tracepce/1,
 	     atomic_list_concat/2,
@@ -77,7 +77,6 @@
 	     get_dict/3,
 	     nb_setarg/3,
              pi_head/2,
-	     rational/3,
 	     send_list/3,
 	     setup_call_cleanup/3,
 	     stream_position_data/3,
@@ -86,6 +85,12 @@
 	     get_dict/5,
 	     sub_string/5
 	   ]).
+:- if(current_prolog_flag(bounded, false)).
+:- require([ rational/1,
+             rational/3
+           ]).
+:- endif.
+
 :- autoload(library(pldoc/doc_process), [comment_modes/2]).
 
 resource(mode_pl_icon, image, image('32x32/doc_pl.xpm')).
@@ -2284,6 +2289,12 @@ set_fragment_context(Fragment, P, Context) :-
     ;   true
     ).
 set_fragment_context(_, _, _).
+
+:- if(\+ current_predicate(rational/1)).
+rational(_) :- fail.
+rational(_,_,_) :- fail.
+:- endif.
+
 
 context_arg(1, context).
 context_arg(2, context_2).
