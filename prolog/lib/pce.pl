@@ -137,12 +137,6 @@ user:file_search_path(pce_boot, pce(prolog/boot)).
 :- dynamic
     pce_thread/1.
 
-start_dispatch :-
-    (   current_prolog_flag(xpce_threaded, true)
-    ->  pce_dispatch([])
-    ;   true
-    ).
-
 %!  in_pce_thread_sync(:Goal) is semidet.
 %
 %   Same as in_pce_thread/1, but wait  for   Goal  to  be completed.
@@ -162,6 +156,12 @@ in_pce_thread_sync(Goal) :-
 in_pce_thread_sync(Goal) :-
     term_variables(Goal, Vars),
     pce_principal:in_pce_thread_sync2(Goal-Vars, Vars).
+
+start_dispatch :-
+    (   current_predicate(pce_dispatch:start_dispatch/0)
+    ->  pce_dispatch:start_dispatch
+    ;   true
+    ).
 
 :- initialization
     start_dispatch.

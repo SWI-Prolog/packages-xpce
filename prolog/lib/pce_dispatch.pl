@@ -128,3 +128,12 @@ pce_end_dispatch :-
 
 pce_call(Goal) :-
     in_pce_thread(Goal).
+
+:- public start_dispatch/0.
+
+start_dispatch :-
+    (   current_prolog_flag(xpce_threaded, true),
+        current_predicate(pce_dispatch/1)
+    ->  pce_dispatch([])
+    ;   true
+    ).
