@@ -193,4 +193,6 @@ foreach(rc ${XPCE_LINK_RC})
 	  RENAME ${rc}.rc)
 endforeach()
 
+else(HAVE_GUI)
+add_custom_target(pl2xpce COMMENT "dummy target to avoid breaking build without GUI")
 endif(HAVE_GUI)
