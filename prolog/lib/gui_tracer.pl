@@ -49,8 +49,7 @@
 :- set_prolog_flag(generate_debug_info, false).
 :- meta_predicate
     gtrace(0),
-    gspy(:),
-    gtrap(:).
+    gspy(:).
 
 /** <module> Graphical debugger utilities
 
