@@ -701,9 +701,12 @@ postEventWindow(PceWindow sw, EventObj ev)
     goto out;
   }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
   if ( sw->focus != (Graphical) sw || notNil(sw->focus_recogniser) )
   { rval = send(sw, NAME_event, ev, EAV);
   }
+#pragma GCC diagnostic pop
 
   if ( !rval )
   { ScrollBar sb;
