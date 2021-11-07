@@ -41,7 +41,7 @@
 		 *******************************/
 
 #ifndef __pce_export
-#if defined(PCE_INCLUDED) && (defined(WIN32) || defined(__CYWIN32__))
+#if defined(PCE_INCLUDED) && defined(WIN32)
 #define __pce_export __declspec(dllexport) extern
 #else
 #define __pce_export extern

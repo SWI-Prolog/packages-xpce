@@ -679,7 +679,7 @@ XPCE_cell_value(XPCE_Object cell)
 		 *******************************/
 
 #undef __pce_export
-#if defined(WIN32) || defined(__CYGWIN__)
+#if defined(WIN32)
 #define __pce_export __declspec(dllexport)
 #else
 #define __pce_export

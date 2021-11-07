@@ -73,7 +73,7 @@
 #define PUBLIC_GLOBAL extern		/* exported global variables */
 #endif
 
-#if defined(WIN32) || defined(__CYGWIN__)
+#if defined(WIN32)
 #define __pce_export __declspec(dllexport) extern
 #else
 #define __pce_export extern
