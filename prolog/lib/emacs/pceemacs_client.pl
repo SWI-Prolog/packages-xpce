@@ -151,7 +151,9 @@ server_socket(Socket) :-
     server_base(Base),
     format(atom(Socket), '~w.~w', [Base, NS]).
 server_socket(Socket) :-
-    server_base(Socket).
+    gethostname(Local),
+    server_base(Base),
+    format(atom(Socket), '~w.~w', [Base, Local]).
 
 server_base(Socket) :-
     absolute_file_name(app_config(xpce), Dir,
