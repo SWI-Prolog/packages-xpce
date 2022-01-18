@@ -3029,6 +3029,18 @@ elements_to_string(List, String) :-
 element_to_string(Fmt-Args, String) :-
     !,
     format(string(String), Fmt, Args).
+element_to_string(ansi(_Style, Fmt, Args), String) :-
+    !,
+    format(string(String), Fmt, Args).
+element_to_string(url(File:Line:Pos), String) :-
+    !,
+    format(string(String), '~w:~w:~w', [File, Line, Pos]).
+element_to_string(url(File:Line), String) :-
+    !,
+    format(string(String), '~w:~w', [File, Line]).
+element_to_string(url(File), String) :-
+    !,
+    format(string(String), '~w', [File]).
 element_to_string(nl, '\n') :- !.
 element_to_string(Atom, Atom).
 
