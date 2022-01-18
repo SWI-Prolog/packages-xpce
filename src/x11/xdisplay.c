@@ -822,8 +822,12 @@ convert_selection_display(Widget w,
     if ( (ca = getForwardReceiverFunction(msg, h->to, which, tname, EAV)) &&
 	 (ca = checkType(ca, TypeCharArray, NIL)) )
     { PceString s = &ca->data;
+      static Name tplainutf8 = NULL;
 
-      if ( tname == NAME_utf8_string )
+      if ( !tplainutf8 )
+	tplainutf8 = CtoName("text/plain;charset=utf-8");
+
+      if ( tname == NAME_utf8_string || tname == tplainutf8 )
       { char *buf;
 	int length;
 	char *out;
@@ -832,6 +836,10 @@ convert_selection_display(Widget w,
 	  length = pce_utf8_enclenA((char*)s->s_textA, s->s_size);
 	else
 	  length = pce_utf8_enclenW(s->s_textW, s->s_size);
+
+	DEBUG(NAME_selection,
+	      Cprintf("\tRequest for UTF-8.  Found %d chars in selection\n",
+		      length));
 
 	out = buf = XtMalloc(length+1);
 	if ( isstrA(s) )
