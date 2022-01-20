@@ -890,8 +890,6 @@ extern int vsscanf(const char *, const char *, va_list);
 
 #if !(defined(HAVE_VSSCANF) && defined(HAVE_CAST_VA_LIST))
 #define NO_VSSCANF 1
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-security"
 #endif
 
 Int
@@ -1005,7 +1003,7 @@ scanstr(char *str, char *fmt, Any *r)
   ar = vsscanf(str, fmt, (va_list) ptrs);
 #else
   switch(argn)
-  { case 0:	ar = sscanf(str, fmt); break;
+  { case 0:	ar = 0; break;
     case 1:	ar = sscanf(str, fmt, ptrs[0]); break;
     case 2:	ar = sscanf(str, fmt, ptrs[0], ptrs[1]); break;
     case 3:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2]);
@@ -1157,10 +1155,6 @@ scanstr(char *str, char *fmt, Any *r)
 
   return toInt(ar);
 }
-
-#ifdef NO_VSSCANF
-#pragma GCC diagnostic pop
-#endif
 
 		/********************************
 		*         FATAL ERRORS		*
