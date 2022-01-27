@@ -518,7 +518,7 @@ int
 ws_message_box(Any msg, int flags)
 { CharArray n = msg;
   wchar_t *s = charArrayToWC(n, NULL);
-  UINT style = MB_TASKMODAL;
+  UINT style = MB_SYSTEMMODAL;
   wchar_t *title;
 
   if ( flags & MBX_INFORM )
