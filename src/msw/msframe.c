@@ -839,15 +839,21 @@ ws_place_frame(FrameObj fr)
 
 void
 ws_raise_frame(FrameObj fr)
-{ UINT flags = SWP_NOMOVE|SWP_NOSIZE;
+{ HWND hwnd;
 
-  if ( fr->sensitive == OFF )
-    flags |= SWP_NOACTIVATE;
+  if ( (hwnd = getHwndFrame(fr)) )
+  { UINT flags = SWP_NOMOVE|SWP_NOSIZE;
 
-  SetWindowPos(getHwndFrame(fr),
-	       HWND_TOP,
-	       0, 0, 0, 0,
-	       flags);
+    if ( fr->sensitive == OFF )
+      flags |= SWP_NOACTIVATE;
+
+    SetWindowPos(hwnd,
+		 HWND_TOP,
+		 0, 0, 0, 0,
+		 flags);
+
+    SetForegroundWindow(hwnd);
+  }
 }
 
 
