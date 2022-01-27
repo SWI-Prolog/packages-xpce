@@ -186,7 +186,8 @@ Any
 getConfirmFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
 { Any rval;
 
-  TRY( openFrame(fr, pos, grab, normalise) );
+  TRY( openFrame(fr, pos, grab, normalise) &&
+       exposeFrame(fr) );
   busyCursorDisplay(fr->display, NIL, DEFAULT);
 
   assign(fr, return_value, ConstantNotReturned);
