@@ -718,6 +718,18 @@ destroyFrame(Widget w, FrameObj fr, XtPointer data)
 }
 
 
+void
+x_frame_realize_geometry(FrameObj fr)
+{ FrameWsRef wsfr = fr->ws_ref;
+
+  if ( wsfr && wsfr->check_geometry_when_mapped &&
+       notNil(fr->geometry) )
+  { wsfr->check_geometry_when_mapped = FALSE;
+    ws_x_geometry_frame(fr, fr->geometry, DEFAULT);
+  }
+}
+
+
 static void
 x_event_frame(Widget w, FrameObj fr, XEvent *event)
 { FrameWsRef wsfr = fr->ws_ref;
@@ -768,9 +780,9 @@ x_event_frame(Widget w, FrameObj fr, XEvent *event)
       updateAreaFrame(fr, DEFAULT);
       send(fr, NAME_mapped, ON, EAV);
       if ( wsfr && wsfr->check_geometry_when_mapped &&
-	   notNil(fr->geometry) )	/* see ws_x_geometry_frame() */
-      { wsfr->check_geometry_when_mapped = FALSE;
-	ws_x_geometry_frame(fr, fr->geometry, DEFAULT);
+	   notNil(fr->geometry) &&	/* see ws_x_geometry_frame() */
+	   MappedFrames )
+      { appendChain(MappedFrames, fr);
       }
       assign(fr, status, NAME_window);
 

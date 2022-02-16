@@ -140,12 +140,31 @@ eventQueuedDisplayManager(DisplayManager dm)
 
 static status
 redrawDisplayManager(DisplayManager dm)
-{ if ( ChangedWindows && !emptyChain(ChangedWindows) )
+{ static int calls=0;
+
+  if ( MappedFrames && !emptyChain(MappedFrames) )
+  { FrameObj fr;
+
+    for_chain(MappedFrames, fr,
+	      { Cprintf("[%d] x_frame_realize_geometry(%s)\n",
+			(int)(time(NULL)%1000), pp(fr));
+		x_frame_realize_geometry(fr);
+		deleteChain(MappedFrames, fr);
+		Cprintf("[%d]   done\n",
+			(int)(time(NULL)%1000));
+	      });
+  }
+
+  if ( ChangedWindows && !emptyChain(ChangedWindows) )
   { PceWindow sw = WindowOfLastEvent();
+
+    Cprintf("[%d] redrawDisplayManager(): %d dirty\n",
+	     (int)(time(NULL)%1000),
+	    valInt(ChangedWindows->size));
 
     obtainClassVariablesObject(dm);
 
-    TestBreakDraw(dm);
+    TestBreakDraw(dm, "pre-test");
     if ( sw && memberChain(ChangedWindows, sw) )
       RedrawWindow(sw);
 

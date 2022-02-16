@@ -1097,6 +1097,7 @@ GLOBAL ClickGesture GESTURE_button;	/* Gesture for handling buttons */
 GLOBAL Recogniser   GESTURE_wheelMouse;	/* Wheelmouse translation */
 
 GLOBAL Chain ChangedWindows;		/* Windows that have changed */
+GLOBAL Chain MappedFrames;		/* Mapped frame that requires geometry */
 
 GLOBAL  int XrefsResolved;		/* succesful getXrefObject()'s */
 GLOBAL	HashTable ColourTable;		/* ColourName --> Colour */

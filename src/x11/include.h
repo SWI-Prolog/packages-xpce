@@ -250,6 +250,7 @@ COMMON(status)		postscriptXImage(XImage *im, XImage *mask,
 COMMON(int)		intensityXColor(XColor *c);
 COMMON(void)		x11_set_gc_foreground(DisplayObj d, Any fg,
 					      int gcs, GC *gc);
+COMMON(void)		x_frame_realize_geometry(FrameObj fr);
 #ifdef O_XDND
 COMMON(status)		setDndAwareFrame(FrameObj fr);
 #endif

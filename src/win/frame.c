@@ -116,6 +116,7 @@ unlinkFrame(FrameObj fr)
 
     ws_uncreate_frame(fr);
     deleteChain(fr->display->frames, fr);
+    deleteChain(MappedFrames, fr);
     if ( notNil(fr->application) )
       send(fr->application, NAME_delete, fr, EAV);
 
@@ -2031,6 +2032,9 @@ makeClassFrame(Class class)
 				     NAME_NotReturned,
 				     CtoString("Used for `frame <-confirm'"),
 				     EAV);
+
+  MappedFrames = globalObject(NAME_mappedFrames, ClassChain, EAV);
+
   succeed;
 }
 
