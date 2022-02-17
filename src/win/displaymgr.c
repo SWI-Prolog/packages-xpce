@@ -292,7 +292,7 @@ static getdecl get_displayManager[] =
 /* Resources */
 
 static classvardecl rc_displayManager[] =
-{ RC(NAME_testQueue, "bool", "@on", NULL)
+{ RC(NAME_testQueue, "bool", UXWIN("@off", "@on"), NULL)
 };
 
 /* Class Declaration */
