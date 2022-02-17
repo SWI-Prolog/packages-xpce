@@ -34,6 +34,10 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#ifndef WIN32_GRAPHICS
+#include <x11/include.h>
+#include <time.h>
+#endif
 
 static status
 initialiseDisplayManager(DisplayManager dm)
@@ -140,31 +144,30 @@ eventQueuedDisplayManager(DisplayManager dm)
 
 static status
 redrawDisplayManager(DisplayManager dm)
-{ static int calls=0;
-
+{
+#ifndef WIN32_GRAPHICS
   if ( MappedFrames && !emptyChain(MappedFrames) )
   { FrameObj fr;
 
     for_chain(MappedFrames, fr,
-	      { Cprintf("[%d] x_frame_realize_geometry(%s)\n",
-			(int)(time(NULL)%1000), pp(fr));
+	      { DEBUG(NAME_delay,
+		      Cprintf("[%d] x_frame_realize_geometry(%s)\n",
+			      (int)(time(NULL)%1000), pp(fr)));
 		x_frame_realize_geometry(fr);
 		deleteChain(MappedFrames, fr);
-		Cprintf("[%d]   done\n",
-			(int)(time(NULL)%1000));
+		DEBUG(NAME_delay,
+		      Cprintf("[%d]   done\n",
+			      (int)(time(NULL)%1000)));
 	      });
   }
+#endif
 
   if ( ChangedWindows && !emptyChain(ChangedWindows) )
   { PceWindow sw = WindowOfLastEvent();
 
-    Cprintf("[%d] redrawDisplayManager(): %d dirty\n",
-	     (int)(time(NULL)%1000),
-	    valInt(ChangedWindows->size));
-
     obtainClassVariablesObject(dm);
 
-    TestBreakDraw(dm, "pre-test");
+    TestBreakDraw(dm);
     if ( sw && memberChain(ChangedWindows, sw) )
       RedrawWindow(sw);
 
