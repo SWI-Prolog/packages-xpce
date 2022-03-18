@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2005-2018, University of Amsterdam
+    Copyright (c)  2005-2018-2022, University of Amsterdam
+                                   SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -32,6 +33,10 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
+:- module(test_xpce,
+          [ test_xpce/0
+          ]).
+
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 XPCE/SWI-Prolog test file.  A test is a clause of the form:
 
@@ -42,7 +47,7 @@ goals are supposed to  succeed.  The   predicate  testset/1  defines the
 available test sets. The public goals are:
 
         ?- runtest(+TestSet).
-        ?- test.
+        ?- test_xpce.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 % Load XPCE from the development environment
@@ -752,11 +757,11 @@ display_present :-
     failed/1,
     blocked/2.
 
-test :-
+test_xpce :-
     retractall(failed(_)),
     retractall(blocked(_,_)),
     forall(testset(Set),            % force XOCE incremental GC
-           send(@prolog, runtest, Set)),
+           send(@prolog, call, 'xpce_runtest', Set)),
     scripts,
     report_blocked,
     report_failed.
@@ -785,7 +790,7 @@ report_failed :-
     ;   format('~nAll tests passed~n', [])
     ).
 
-runtest(Name) :-
+user:xpce_runtest(Name) :-
     format('Running test set "~w" ', [Name]),
     flush,
     functor(Head, Name, 1),
@@ -802,7 +807,7 @@ runtest(Name) :-
     ;   test_failed(R, fail)
     ),
     fail.
-runtest(_) :-
+user:xpce_runtest(_) :-
     format(' done.~n').
 
 test_failed(R, Except) :-

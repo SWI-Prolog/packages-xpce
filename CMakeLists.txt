@@ -128,6 +128,11 @@ target_include_directories(
 install_dll(${JPEG_LIBRARIES})
 
 ################
+# Tests
+
+test_libs(xpce)
+
+################
 # Create indexes
 
 set(XPCE_BUILD_HOME      ${SWIPL_BUILD_HOME}/xpce)
