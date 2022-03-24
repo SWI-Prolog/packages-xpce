@@ -43,7 +43,7 @@
 #define SIZEOF_DOUBLE 8
 
 /* printf format for intptr_t */
-#define INTPTR_FORMAT "%I64d"
+#define INTPTR_FORMAT "%lld"
 
 #define PCE_OS "win64"
 

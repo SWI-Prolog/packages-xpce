@@ -394,8 +394,8 @@ test, conversion and computation macro's are provided.
 #define INTPTR_FORMAT "%d"
 #elif SIZEOF_LONG == SIZEOF_VOIDP
 #define INTPTR_FORMAT "%ld"
-#elif defined(__WIN64)
-#define INTPTR_FORMAT "%I64d"
+#elif SIZEOF_LONG_LONG == SIZEOF_VOIDP
+#define INTPTR_FORMAT "%lld"
 #else
 #error "Config needs INTPTR_FORMAT"
 #endif
