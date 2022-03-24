@@ -727,10 +727,10 @@ drawGraphical(Graphical gr, Point offset, Area area)
 }
 
 
-#define InitAreaA	int ax = valInt(a->x), ay = valInt(a->y), 	\
+#define InitAreaA	int ax = valInt(a->x), ay = valInt(a->y),	\
 			    aw = valInt(a->w), ah = valInt(a->h)
 
-#define InitAreaB	int bx = valInt(b->x), by = valInt(b->y), 	\
+#define InitAreaB	int bx = valInt(b->x), by = valInt(b->y),	\
 			    bw = valInt(b->w), bh = valInt(b->h)
 
 
@@ -1849,7 +1849,7 @@ status
 colourGraphical(Graphical gr, Any c)
 { if ( gr->colour != c )
   { CHANGING_GRAPHICAL(gr, assign(gr, colour, c);
-  			   changedEntireImageGraphical(gr));
+			   changedEntireImageGraphical(gr));
   }
 
   succeed;
@@ -2347,7 +2347,7 @@ forceRepel(int d, float C3)
 typedef struct
 { int		fx;			/* force in X-direction */
   int		fy;			/* force in Y-direction */
-  Connection 	c;			/* the connection */
+  Connection	c;			/* the connection */
   Int		ideal_len;		/* ideal length */
 } lg_relation;
 
@@ -2355,7 +2355,7 @@ typedef struct
 typedef struct
 { Graphical	gr;			/* the graphical */
   iarea		area;			/* its current area */
-  unsigned 	update : 1;		/* update position */
+  unsigned	update : 1;		/* update position */
   unsigned	moved : 1;		/* we moved it */
   unsigned	fixed : 1;		/* do not move this one */
 } lg_object;
