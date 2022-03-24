@@ -926,9 +926,9 @@ getCenterYMenuItemMenu(Menu m, Any obj)
   if ( isDefault(obj) )
   { if ( (mi = getItemSelectionMenu(m)) == FAIL )
     { if ( emptyChain(m->members) != SUCCEED )
-      	mi = getHeadChain(m->members);
+	mi = getHeadChain(m->members);
       else
-      	return ZERO;
+	return ZERO;
     }
   } else
     if ( (mi = findMenuItemMenu(m, obj)) == FAIL )
@@ -1953,17 +1953,17 @@ getModifiedMenu(Menu m)
   } else
   { Cell cell;
     int size = valInt(m->members->size);
+    char is_set_buffer[256];
     char *is_set;
-    int n, do_free;
+    int n;
 
     if ( !instanceOfObject(m->selection, ClassChain) )
       answer(ON);
 
-    if ( !(is_set = alloca(size*sizeof(char))) )
-    { is_set = pceMalloc(size*sizeof(char));
-      do_free = TRUE;
-    } else
-      do_free = FALSE;
+    if ( size+1 > sizeof(is_set_buffer) )
+      is_set = pceMalloc((size+1)*sizeof(char));
+    else
+      is_set = is_set_buffer;
 
     n = 1;
     for_cell(cell, m->members)
@@ -1981,7 +1981,7 @@ getModifiedMenu(Menu m)
 
       if ( (is_set[n] && mi->selected == OFF) ||
 	   (!is_set[n] && mi->selected == ON) )
-      { if ( do_free )
+      { if ( is_set != is_set_buffer )
 	  pceFree(is_set);
 
 	answer(ON);
@@ -1989,7 +1989,7 @@ getModifiedMenu(Menu m)
       n++;
     }
 
-    if ( do_free )
+    if ( is_set != is_set_buffer )
       pceFree(is_set);
 
     answer(OFF);
