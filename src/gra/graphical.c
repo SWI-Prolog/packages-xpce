@@ -160,7 +160,7 @@ status
 deviceGraphical(Any obj, Device dev)
 { Graphical gr = obj;
 
-  if ( isNil(dev->graphicals) )
+  if ( notNil(dev) && isNil(dev->graphicals) )
     return errorPce(dev, NAME_notInitialised);
   if ( !isObject(obj) || isFreedObj(obj) )
     return errorPce(PCE, NAME_freedObject, obj);
