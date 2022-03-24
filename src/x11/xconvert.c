@@ -742,6 +742,7 @@ write_gif_file(IOSTREAM *fd, XImage *img, XImage *msk,
   GSAMPLE *data, *s;
   GSAMPLE *maskdata;
   int bytes_per_line;			/* for the mask bits */
+  int msk_padding;
   int y;
 
   if ( depth <= 8 )
@@ -763,10 +764,12 @@ write_gif_file(IOSTREAM *fd, XImage *img, XImage *msk,
   s = data;
   if ( msk )
   { bytes_per_line = (width+7)/8;
+    msk_padding = width/8 != bytes_per_line;
     maskdata = pceMalloc(sizeof(GSAMPLE)*bytes_per_line*height);
   } else
   { bytes_per_line = 0;			/* make compiler happy */
     maskdata = NULL;
+    msk_padding = 0;
   }
 
   for(y=0; y<height; y++)
@@ -839,7 +842,7 @@ write_gif_file(IOSTREAM *fd, XImage *img, XImage *msk,
 	  }
 	}
       }
-      if ( msk )
+      if ( msk_padding && msk )
       { *mrow++ = bt;
       }
     }

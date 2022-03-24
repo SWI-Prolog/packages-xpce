@@ -224,7 +224,7 @@ static int WriteGIF(fp, pic, mask, ptype, w, h, rmap, gmap, bmap, numcols,
 	  *prow = Transparent;
 
 	m>>=1;
-	if ( !m )
+	if ( !m && x+1<w )
 	{ m = 0x80;
 	  b = *row++;
 	}
