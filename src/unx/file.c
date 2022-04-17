@@ -889,14 +889,23 @@ statFile(FileObj f, STAT_TYPE *buf)
 
 static Int
 getSizeFile(FileObj f)
-{ STAT_TYPE buf;
+{ if ( f->fd )
+  { int64_t size;
 
-  if ( statFile(f, &buf) == -1 )
-  { errorPce(f, NAME_cannotStat, getOsErrorPce(PCE));
-    fail;
+    if ( (size=Ssize(f->fd)) != -1 )
+      answer(toInt(size));
+    goto nosize;
+  } else
+  { STAT_TYPE buf;
+
+    if ( statFile(f, &buf) == -1 )
+    { nosize:
+      errorPce(f, NAME_cannotStat, getOsErrorPce(PCE));
+      fail;
+    }
+
+    answer(toInt(buf.st_size));
   }
-
-  answer(toInt(buf.st_size));
 }
 
 
