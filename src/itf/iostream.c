@@ -261,7 +261,7 @@ Sopen_object(Any obj, const char *mode)
   { Name name = getOsNameFile(obj);
     IOSTREAM *s;
 
-    if ( (s=Sopen_file(nameToFN(name), mode)) )
+    if ( (s=Sopen_iri_or_file(nameToFN(name), mode)) )
     { if ( !strchr(mode, 'b') )
       { FileObj f = obj;
 	Name oldstat = f->status;

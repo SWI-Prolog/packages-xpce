@@ -437,6 +437,7 @@ PL_EXPORT(int)		StryLock(IOSTREAM *s);
 PL_EXPORT(int)		Sunlock(IOSTREAM *s);
 PL_EXPORT(IOSTREAM *)	Snew(void *handle, int flags, IOFUNCTIONS *functions);
 PL_EXPORT(IOSTREAM *)	Sopen_file(const char *path, const char *how);
+PL_EXPORT(IOSTREAM *)	Sopen_iri_or_file(const char *path, const char *how);
 PL_EXPORT(IOSTREAM *)	Sfdopen(int fd, const char *type);
 PL_EXPORT(int)		Sfileno(IOSTREAM *s);
 #ifdef __WINDOWS__
@@ -457,6 +458,11 @@ PL_EXPORT(int)		Sseek64(IOSTREAM *s, int64_t pos, int whence);
 
 PL_EXPORT(int)		ScheckBOM(IOSTREAM *s);
 PL_EXPORT(int)		SwriteBOM(IOSTREAM *s);
+
+#ifdef _SWI_PROLOG_H
+PL_EXPORT(IOENC)	PL_atom_to_encoding(atom_t name);
+PL_EXPORT(atom_t)	PL_encoding_to_atom(IOENC enc);
+#endif
 
 #ifdef __cplusplus
 }
