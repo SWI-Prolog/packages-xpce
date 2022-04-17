@@ -646,7 +646,7 @@ openFile(FileObj f, Name mode, Name filter, CharArray extension)
   if ( isNil(filter) )
   { DEBUG(NAME_file, Cprintf("Opening %s (%s) using mode %s\n",
 			     pp(f->name), pp(f), fdmode));
-    f->fd = Sopen_file(charArrayToFN(path), fdmode);
+    f->fd = Sopen_iri_or_file(charArrayToFN(path), fdmode);
   } else
 #ifndef HAVE_POPEN
   { return errorPce(f, NAME_noPopen);
