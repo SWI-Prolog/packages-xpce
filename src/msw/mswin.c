@@ -362,8 +362,8 @@ get_logical_drive_strings(int bufsize, char *buf)
 #ifndef _MAX_PATH
 #define _MAX_PATH 1024
 #endif
-#ifndef MAXPATHLEN
-#define MAXPATHLEN _MAX_PATH
+#ifndef PATH_MAX
+#define PATH_MAX _MAX_PATH
 #endif
 #define strapp(s, q) \
 	{ size_t l = _tcslen(q); \
@@ -570,7 +570,7 @@ getWinFileNameDisplay(DisplayObj d,
     }
 
 #ifdef O_XOS				/* should always be true */
-  { char buf[MAXPATHLEN];
+  { char buf[PATH_MAX];
 
     if ( !_xos_canonical_filenameW(buffer, buf, sizeof(buf), 0) )
     { errorPce(TCHARToName(buffer), NAME_representation, NAME_nameTooLong);
@@ -641,7 +641,7 @@ getWinDirectoryDisplay(DisplayObj d,
     bi.lpszTitle = nameToTCHAR(title);
   bi.ulFlags = (BIF_RETURNONLYFSDIRS|BIF_USENEWUI);
   if ( notDefault(dir) )
-  { wchar_t windir[MAXPATHLEN];
+  { wchar_t windir[PATH_MAX];
 
     bi.lParam = (LPARAM)_xos_os_filenameW(nameToFN(dir->path),
 					  windir,
@@ -658,7 +658,7 @@ getWinDirectoryDisplay(DisplayObj d,
     if ( SHGetPathFromIDList(pidl, path) )
     {
 #ifdef O_XOS				/* should always be true */
-      char buf[MAXPATHLEN];
+      char buf[PATH_MAX];
 
       if ( _xos_canonical_filenameW(path, buf, sizeof(buf), 0) )
 	result = UTF8ToName(buf);

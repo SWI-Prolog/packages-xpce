@@ -45,8 +45,8 @@
 #define DEBUG(g) (void)0
 #endif
 
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 1024
+#ifndef PATH_MAX
+#define PATH_MAX 1024
 #endif
 
 static int   breakargs(char *program, char *line, char **argv);
@@ -358,7 +358,7 @@ bind_terminal(void)
 
 static void
 long_name(char *file)
-{ char buf[MAXPATHLEN];
+{ char buf[PATH_MAX];
   char *i = file;
   char *o = buf;
   char *ok = buf;
@@ -398,7 +398,7 @@ long_name(char *file)
 
 static char *
 program_name(HANDLE hInstance)
-{ char program[MAXPATHLEN];
+{ char program[PATH_MAX];
 
   GetModuleFileName(hInstance, program, sizeof(program));
   long_name(program);

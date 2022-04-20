@@ -40,8 +40,8 @@
 #define MAXCMDLINE 10240
 #endif
 
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 1024
+#ifndef PATH_MAX
+#define PATH_MAX 1024
 #endif
 
 static int
@@ -118,7 +118,7 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
     PROCESS_INFORMATION *processinfo;
     SECURITY_ATTRIBUTES sa;
     char cmdline[MAXCMDLINE];
-    char dirbuf[MAXPATHLEN];
+    char dirbuf[PATH_MAX];
     char *cwd = NULL;
     Any a;
     char *env = createWin32EnvriomentBlock(p);

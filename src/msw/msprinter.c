@@ -34,8 +34,8 @@
 
 #include "include.h"
 #include <h/unix.h>			/* file access */
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 1024
+#ifndef PATH_MAX
+#define PATH_MAX 1024
 #endif
 
 #define USE_PRINTDLG 1
@@ -295,7 +295,7 @@ openWinPrinter(WinPrinter prt)
 { if ( prt->ws_ref->hdc )
   { DOCINFO di;
     int job;
-    char fname[MAXPATHLEN];
+    char fname[PATH_MAX];
 
     di.cbSize       = sizeof(di);
     di.lpszDocName  = strName(prt->job_name);

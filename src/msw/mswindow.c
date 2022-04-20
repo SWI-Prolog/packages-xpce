@@ -39,8 +39,8 @@ static LRESULT WINAPI window_wnd_proc(HWND w, UINT m, WPARAM wP, LPARAM lP);
 static int clearing_update;		/* from ws_redraw_window() */
 static int invert_window = FALSE;	/* invert the window */
 
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 512			/* drag-and-drop */
+#ifndef PATH_MAX
+#define PATH_MAX 512			/* drag-and-drop */
 #endif
 
 static char *
@@ -125,7 +125,7 @@ do_window_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 	   (nfiles = DragQueryFile(hdrop, (UINT)-1, NULL, 0)) >= 0 )
       { Chain files;
 	Point pos;
-	wchar_t buf[MAXPATHLEN];
+	wchar_t buf[PATH_MAX];
 	AnswerMark mark;
 	int i;
 
@@ -138,7 +138,7 @@ do_window_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 		      for(i=0; i<nfiles; i++)
 		      { int namlen;
 
-			namlen = DragQueryFileW(hdrop, i, buf, MAXPATHLEN);
+			namlen = DragQueryFileW(hdrop, i, buf, PATH_MAX);
 			appendChain(files, WCToName(buf, namlen));
 		      }
 

@@ -46,8 +46,8 @@
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 1024
+#ifndef PATH_MAX
+#define PATH_MAX 1024
 #endif
 
 #if HAVE_SYS_ACCESS_H			/* AIX 3.2.5 */
@@ -153,17 +153,17 @@ initialiseFile(FileObj f, Name name, Name encoding)
 
 Name
 expandFileName(Name in)
-{ wchar_t expanded[MAXPATHLEN];
+{ wchar_t expanded[PATH_MAX];
   int len;
 
   if ( (len=expandFileNameW(charArrayToWC((CharArray)in, NULL),
-			    expanded, MAXPATHLEN)) > 0 )
+			    expanded, PATH_MAX)) > 0 )
   {
 #if O_XOS
-     wchar_t lng[MAXPATHLEN];
-     char buf[MAXPATHLEN];
+     wchar_t lng[PATH_MAX];
+     char buf[PATH_MAX];
 
-     if ( _xos_long_file_nameW(expanded, lng, MAXPATHLEN) &&
+     if ( _xos_long_file_nameW(expanded, lng, PATH_MAX) &&
 	  _xos_canonical_filenameW(lng, buf, sizeof(buf), 0) )
      { return UTF8ToName(buf);
      } else
@@ -331,7 +331,7 @@ sameFile(FileObj f1, FileObj f2)
 
 static status
 absolutePathFile(FileObj f)
-{ char path[MAXPATHLEN];
+{ char path[PATH_MAX];
 
   if ( absolutePath(charArrayToUTF8((CharArray)f->name), path, sizeof(path)) > 0 )
   { assign(f, path, UTF8ToName(path));
@@ -344,7 +344,7 @@ absolutePathFile(FileObj f)
 
 Name
 getAbsolutePathFile(FileObj f)
-{ char path[MAXPATHLEN];
+{ char path[PATH_MAX];
 
   if ( notDefault(f->path) )
     answer(f->path);
@@ -456,7 +456,7 @@ backup_name(const char *old, const char *ext, char *bak, size_t len)
 
 static Name
 getBackupFileNameFile(FileObj f, Name ext)
-{ char bak[MAXPATHLEN*2];
+{ char bak[PATH_MAX*2];
 
   if ( backup_name(nameToUTF8(f->name),
 		   isDefault(ext) ? "~" : nameToUTF8(ext),
@@ -544,7 +544,7 @@ getFilterFile(FileObj f)
   closeFile(f);
 
   for_cell(cell, FileFilters->attributes)
-  { char path[MAXPATHLEN];
+  { char path[PATH_MAX];
     Attribute a = cell->value;
     Name extension = a->name;
     STAT_TYPE buf;
@@ -938,7 +938,7 @@ getBaseNameFile(FileObj f)
 
 static Name
 getDirectoryNameFile(FileObj f)
-{ char dir[MAXPATHLEN];
+{ char dir[PATH_MAX];
 
   dirName(nameToUTF8(getOsNameFile(f)), dir, sizeof(dir));
 
@@ -1215,7 +1215,7 @@ waccess(const wchar_t *name, int m)
 status
 findFile(FileObj f, CharArray path, Name mode)
 { wchar_t *base;
-  wchar_t basebuf[MAXPATHLEN];
+  wchar_t basebuf[PATH_MAX];
   const wchar_t *pathstr;
   size_t bl;
   int m;
@@ -1237,7 +1237,7 @@ findFile(FileObj f, CharArray path, Name mode)
   if ( notDefault(f->path) && access(nameToFN(f->path), m) == 0 )
     succeed;
 
-  if ( bl+1 > MAXPATHLEN )
+  if ( bl+1 > PATH_MAX )
     return errorPce(f, NAME_representation, NAME_nameTooLong);
   wcscpy(basebuf, base);
   base = basebuf;
@@ -1248,8 +1248,8 @@ findFile(FileObj f, CharArray path, Name mode)
     pathstr = charArrayToWC(path, NULL);
 
   while( pathstr && *pathstr )
-  { wchar_t name[MAXPATHLEN];
-    wchar_t bin[MAXPATHLEN];
+  { wchar_t name[PATH_MAX];
+    wchar_t bin[PATH_MAX];
     const wchar_t *end = pathstr;
     size_t l;
 
@@ -1268,7 +1268,7 @@ findFile(FileObj f, CharArray path, Name mode)
     }
 
     if ( wcschr(name, L'$') || name[0] == L'~' )
-    { if ( (l=expandFileNameW(name, bin, MAXPATHLEN)) > 0 )
+    { if ( (l=expandFileNameW(name, bin, PATH_MAX)) > 0 )
 	wcsncpy(name, bin, l);
       else
 	continue;

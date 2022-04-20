@@ -53,8 +53,8 @@ typedef struct
 typedef APMFILEHEADER * PAPMFILEHEADER;
 #define APMSIZE 22
 
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 1024
+#ifndef PATH_MAX
+#define PATH_MAX 1024
 #endif
 
 Class ClassWinMF;			/* the class handle */
@@ -433,7 +433,7 @@ getMhfWinMF(WinMF mf)
     { char *rawfn = strName(getOsNameFile(mf->file));
 
 #if O_XOS
-      char fn[MAXPATHLEN];
+      char fn[PATH_MAX];
       if ( !_xos_os_filename(rawfn, fn, sizeof(fn)) )
 	return errorPce(mf, NAME_representation, NAME_nameTooLong);
 #else
@@ -708,7 +708,7 @@ static status
 saveWinMF(WinMF mf, FileObj file, Name format)
 { char *rawfn = strName(getOsNameFile(file));
 #if O_XOS
-  char fn[MAXPATHLEN];
+  char fn[PATH_MAX];
   if ( !_xos_os_filename(rawfn, fn, sizeof(fn)) )
     return errorPce(mf, NAME_representation, NAME_nameTooLong);
 #else

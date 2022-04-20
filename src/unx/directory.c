@@ -66,8 +66,8 @@
 #ifdef HAVE_SYS_PARAM_H
 #include <sys/param.h>
 #endif
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 1024
+#ifndef PATH_MAX
+#define PATH_MAX 1024
 #endif
 
 #ifdef HAVE_PWD_H
@@ -84,7 +84,7 @@ static Name	getWorkingDirectoryPce(Pce pce);
 
 static status
 initialiseDirectory(Directory d, Name name)
-{ char path[MAXPATHLEN];
+{ char path[PATH_MAX];
   Name expanded;
   const char *ufn;
 
@@ -302,7 +302,7 @@ getFilesDirectory(Directory d, Regex pattern, BoolObj all)
 
 static Directory
 getParentDirectory(Directory d)
-{ char parent[MAXPATHLEN];
+{ char parent[PATH_MAX];
   const char *here = nameToFN(d->path);
 
   if ( IsDirSep(here[0]) && here[1] == EOS ) /* the root */
@@ -325,14 +325,14 @@ static Chain
 getRootsDirectory(Directory dir)
 { Chain ch = answerObject(ClassChain, EAV);
 #ifdef __WINDOWS__
-  char buf[MAXPATHLEN];
+  char buf[PATH_MAX];
   extern int get_logical_drive_strings(int, char *);
 
   if ( get_logical_drive_strings(sizeof(buf)-1, buf) )
   { char *s = buf;
 
     while(*s)
-    { char buf2[MAXPATHLEN];
+    { char buf2[PATH_MAX];
       char *cnfn;
 
       if ( (cnfn=_xos_canonical_filename(s, buf2, sizeof(buf2), 0)) )
@@ -672,7 +672,7 @@ char *
 baseName(const char *f)
 { if ( f )
   { const char *base;
-    static char buf[MAXPATHLEN];
+    static char buf[PATH_MAX];
     int len;
 
     for(base = f; *f; f++)
@@ -693,7 +693,7 @@ baseName(const char *f)
 }
 
 
-static char   CWDdir[MAXPATHLEN];
+static char   CWDdir[PATH_MAX];
 
 static Name
 getWorkingDirectoryPce(Pce pce)
