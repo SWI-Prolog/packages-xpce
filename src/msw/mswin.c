@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1995-2013, University of Amsterdam
+    Copyright (c)  1995-2022, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -270,7 +271,7 @@ ws_user()
 
 Name
 ws_appdata(const char *sub)
-{ TCHAR buf[MAX_PATH];
+{ TCHAR buf[PATH_MAX];
 
   if ( SHGetSpecialFolderPath(0, buf, CSIDL_APPDATA, TRUE) )
   { wchar_t *p;
@@ -359,12 +360,7 @@ get_logical_drive_strings(int bufsize, char *buf)
 #define nameToFN(s) charArrayToFN((CharArray)(s))
 
 #include <h/unix.h>
-#ifndef _MAX_PATH
-#define _MAX_PATH 1024
-#endif
-#ifndef PATH_MAX
-#define PATH_MAX _MAX_PATH
-#endif
+
 #define strapp(s, q) \
 	{ size_t l = _tcslen(q); \
 	  if ( s+l+2 > filter+sizeof(filter)/sizeof(TCHAR) ) \
@@ -594,7 +590,7 @@ BrowseCallbackProc(HWND hwnd,
 		   UINT uMsg,
 		   LPARAM lp,
 		   LPARAM pData)
-{ TCHAR szDir[MAX_PATH];
+{ TCHAR szDir[PATH_MAX];
 
   switch(uMsg)
   { case BFFM_INITIALIZED:
@@ -653,7 +649,7 @@ getWinDirectoryDisplay(DisplayObj d,
   CoInitialize(NULL);
 
   if ( (pidl = SHBrowseForFolder(&bi)) )
-  { TCHAR path[MAX_PATH];
+  { TCHAR path[PATH_MAX];
 
     if ( SHGetPathFromIDList(pidl, path) )
     {

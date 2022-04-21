@@ -63,13 +63,6 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-#ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h>
-#endif
-#ifndef PATH_MAX
-#define PATH_MAX 1024
-#endif
-
 #ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif

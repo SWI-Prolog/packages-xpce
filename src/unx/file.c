@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2022, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -42,13 +43,6 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <string.h>
-
-#ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h>
-#endif
-#ifndef PATH_MAX
-#define PATH_MAX 1024
-#endif
 
 #if HAVE_SYS_ACCESS_H			/* AIX 3.2.5 */
 #include <sys/access.h>

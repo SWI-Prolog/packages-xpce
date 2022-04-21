@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2022, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -37,6 +38,28 @@
 
 #ifndef __XOS__
 #define __XOS__ 1
+#endif
+
+#include <limits.h>
+
+#ifndef PATH_MAX
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+#if defined(MAXPATHLEN)
+#define PATH_MAX MAXPATHLEN
+#elif defined(PATHSIZE)
+#define PATH_MAX PATHSIZE
+#endif
+#endif
+
+#if PATH_MAX < 1024
+#undef PATH_MAX
+#if WIN_PATH_MAX
+#define PATH_MAX WIN_PATH_MAX
+#else
+#define PATH_MAX 32768
+#endif
 #endif
 
 #include <direct.h>

@@ -40,10 +40,6 @@
 #define MAXCMDLINE 10240
 #endif
 
-#ifndef PATH_MAX
-#define PATH_MAX 1024
-#endif
-
 static int
 getEnvironmentSizeProcess(Process p)
 { int size = 0;

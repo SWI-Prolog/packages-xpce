@@ -34,9 +34,6 @@
 
 #include "include.h"
 #include <h/unix.h>			/* file access */
-#ifndef PATH_MAX
-#define PATH_MAX 1024
-#endif
 
 #define USE_PRINTDLG 1
 #ifdef USE_PRINTDLG

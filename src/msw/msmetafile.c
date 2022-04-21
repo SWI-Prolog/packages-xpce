@@ -46,16 +46,12 @@ typedef struct
 { DWORD		key;
   WORD		hmf;
   SMALL_RECT    bbox;
-  WORD    	inch;
-  DWORD   	reserved;
-  WORD    	checksum;
+  WORD		inch;
+  DWORD		reserved;
+  WORD		checksum;
 } APMFILEHEADER;
 typedef APMFILEHEADER * PAPMFILEHEADER;
 #define APMSIZE 22
-
-#ifndef PATH_MAX
-#define PATH_MAX 1024
-#endif
 
 Class ClassWinMF;			/* the class handle */
 

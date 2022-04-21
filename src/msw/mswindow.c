@@ -39,10 +39,6 @@ static LRESULT WINAPI window_wnd_proc(HWND w, UINT m, WPARAM wP, LPARAM lP);
 static int clearing_update;		/* from ws_redraw_window() */
 static int invert_window = FALSE;	/* invert the window */
 
-#ifndef PATH_MAX
-#define PATH_MAX 512			/* drag-and-drop */
-#endif
-
 static char *
 WinWindowClass()
 { static Name winclassname = NULL;
