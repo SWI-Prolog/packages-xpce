@@ -136,11 +136,11 @@ openProcess(Process p, CharArray cmd, int argc, CharArray *argv)
     }
 
     if ( notDefault(p->directory) )
-    { _xos_limited_os_filename(strName(p->directory->path), dirbuf);
+    { _xos_limited_os_filename(strName(p->directory->path), dirbuf, PATH_MAX);
       cwd = dirbuf;
     }
 
-    _xos_limited_os_filename(strName(p->name), cmdline);
+    _xos_limited_os_filename(strName(p->name), cmdline, MAXCMDLINE);
     for_vector(p->arguments, a,
 	       { strcat(cmdline, " ");
 		 strcat(cmdline, toCharp(a));
