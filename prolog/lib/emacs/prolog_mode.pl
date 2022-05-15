@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2021, University of Amsterdam
+    Copyright (c)  1985-2022, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
                               SWI-Prolog Solutions b.v.
@@ -52,6 +52,7 @@
 	     tdebug/0,
 	     auto_call/1,
 	     delete_breakpoint/1,
+             set_breakpoint_condition/2,
 	     manpce/1,
 	     prolog_ide/1,
 	     spypce/1,
@@ -117,6 +118,7 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
           (spy)                        = button(prolog),
           trace                        = button(prolog),
           break_at                     = key('\\C-cb') + button(prolog),
+          set_breakpoint_condition     = button(prolog),
           delete_breakpoint            = button(prolog),
           -                            = button(prolog),
           edit_breakpoints             = button(prolog),
@@ -1819,14 +1821,26 @@ break_at(M) :->
     ;   send(M, report, error, 'Source file is not loaded')
     ).
 
+set_breakpoint_condition(M, Goal:goal=name) :->
+    "Set a condition on the selected breakpoint"::
+    get(M, selected_breakpoint, Id),
+    set_breakpoint_condition(Id, Goal),
+    send(M, report, inform,
+         'Set condition for breakpoint %d to %s',
+         Id, Goal).
 
 delete_breakpoint(M) :->
     "Delete selected breakpoint"::
+    get(M, selected_breakpoint, Id),
+    delete_breakpoint(Id).
+
+selected_breakpoint(M, Id:int) :<-
+    "Get the Id of the selected breakpoint"::
     (   get(M, selected_fragment, F),
-        send(F, instance_of, break_fragment),
-        get(F, breakpoint_id, Id)
-    ->  delete_breakpoint(Id)
-    ;   send(M, report, warning, 'No selected breakpoint')
+        send(F, instance_of, break_fragment)
+    ->  get(F, breakpoint_id, Id)
+    ;   send(M, report, warning, 'No selected breakpoint'),
+        fail
     ).
 
 setup_margin(M) :->
