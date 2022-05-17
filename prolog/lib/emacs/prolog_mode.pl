@@ -84,7 +84,9 @@
 	     strip_module/3,
 	     xref_prolog_flag/4,
 	     get_dict/5,
-	     sub_string/5
+	     sub_string/5,
+             head_name_arity/3,
+             extend_goal/3
 	   ]).
 :- if(current_prolog_flag(bounded, false)).
 :- require([ rational/1,
@@ -1406,13 +1408,6 @@ prolog_debug_spec(Head, M, Spec) :-
     (   get(M, prolog_module, Module)
     ->  Spec = (Module:Name/Arity)
     ;   Spec = Name/Arity
-    ).
-
-dcg_debug_spec(M, Head, Spec) :-
-    catch(functor(Head, Name, Arity), _, fail),
-    (   get(M, prolog_module, Module)
-    ->  Spec = (Module:Name//Arity)
-    ;   Spec = Name//Arity
     ).
 
                  /*******************************
