@@ -1351,14 +1351,8 @@ do_spy(variable(Name, _Type, _Access), M, (Class-Name)) :-
 do_spy(variable(Name, _Type, _Access, _Doc), M, (Class-Name)) :-
     get(M, what_class, Class),
     spypce((Class-Name)).
-do_spy((Head :- _Body), M, Spec) :-
-    prolog_debug_spec(M, Head, Spec),
-    user:spy(Spec).
-do_spy((Head --> _Body), M, Spec) :-
-    dcg_debug_spec(M, Head, Spec),
-    user:spy(Spec).
-do_spy(Head, M, Spec) :-
-    prolog_debug_spec(M, Head, Spec),
+do_spy(Clause, M, Spec) :-
+    rule_debug_spec(Clause, M, Spec),
     user:spy(Spec).
 
 trace(M) :->
@@ -1388,15 +1382,27 @@ do_trace(variable(Name, _Type, _Access), M, (Class-Name)) :-
 do_trace(variable(Name, _Type, _Access, _Doc), M, (Class-Name)) :-
     get(M, what_class, Class),
     tracepce((Class-Name)).
-do_trace((Head :- _Body), M, Spec) :-
-    prolog_debug_spec(M, Head, Spec),
-    @(trace(Spec), user).
-do_trace(Head, M, Spec) :-
-    prolog_debug_spec(M, Head, Spec),
+do_trace(Clause, M, Spec) :-
+    rule_debug_spec(Clause, M, Spec),
     @(trace(Spec), user).
 
-prolog_debug_spec(M, Head, Spec) :-
-    catch(functor(Head, Name, Arity), _, fail),
+rule_debug_spec(((Head,_Guard) => _Body), M, Spec) =>
+    prolog_debug_spec(Head, M, Spec).
+rule_debug_spec((Head => _Body), M, Spec) =>
+    prolog_debug_spec(Head, M, Spec).
+rule_debug_spec((Head --> _Body), M, Spec) =>
+    extend_goal(Head, [_,_], DCGHead),
+    prolog_debug_spec(DCGHead, M, Spec).
+rule_debug_spec((Head :- _Body), M, Spec) =>
+    prolog_debug_spec(Head, M, Spec).
+rule_debug_spec(Head, M, Spec), callable(Head) =>
+    prolog_debug_spec(Head, M, Spec).
+rule_debug_spec(_, _, _) =>
+    fail.
+
+prolog_debug_spec(Head, M, Spec) :-
+    callable(Head),
+    head_name_arity(Head, Name, Arity),
     (   get(M, prolog_module, Module)
     ->  Spec = (Module:Name/Arity)
     ;   Spec = Name/Arity
