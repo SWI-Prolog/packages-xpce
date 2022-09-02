@@ -119,13 +119,18 @@ loadDirectory(Directory d, IOSTREAM *fd, ClassDef def)
 
 static status
 existsDirectory(Directory d)
-{ STAT_TYPE buf;
+{
+#ifdef O_XOS
+  return _xos_exists(nameToFN(d->path), _XOS_DIR);
+#else
+  STAT_TYPE buf;
 
   if ( STAT_FUNC(nameToFN(d->path), &buf) == -1 ||
        (buf.st_mode & S_IFMT) != S_IFDIR )
     fail;
 
   succeed;
+#endif
 }
 
 
@@ -210,12 +215,20 @@ scanDirectory(Directory d, Chain files, Chain dirs, Regex pattern, BoolObj all)
 
     for (dp=readdir(dirp); dp!=NULL; dp=readdir(dirp))
     { char *name = dp->d_name;
+#ifndef O_XOS
       STAT_TYPE buf;
 
       if ( STAT_FUNC(name, &buf) != 0 )
 	continue;
+#endif
 
-      if ( (notNil(files) && (buf.st_mode & S_IFMT) == S_IFREG) )
+      if ( notNil(files) &&
+#ifdef O_XOS
+	   _xos_exists(name, _XOS_FILE)
+#else
+	   (buf.st_mode & S_IFMT) == S_IFREG
+#endif
+	 )
       { if ( notDefault(pattern) )
 	{ CharArray ca = CtoScratchCharArray(name);
 					/* TBD: UNICODE */
@@ -230,7 +243,13 @@ scanDirectory(Directory d, Chain files, Chain dirs, Regex pattern, BoolObj all)
 	  continue;
 
 	appendChain(files, FNToName(name));
-      } else if ( (notNil(dirs) && (buf.st_mode & S_IFMT) == S_IFDIR) )
+      } else if ( notNil(dirs) &&
+#ifdef O_XOS
+		  _xos_exists(name, _XOS_DIR)
+#else
+		  (buf.st_mode & S_IFMT) == S_IFDIR
+#endif
+		)
       { if ( all != ON && name[0] == '.' )
 	  continue;
 
@@ -349,21 +368,30 @@ getBaseNameDirectory(Directory d)
 
 static Date
 getTimeDirectory(Directory d, Name which)
-{ STAT_TYPE buf;
-  Name name = d->path;
+{ Name name = d->path;
+
+#if O_XOS
+  double t;
+  int id = (which == NAME_modified ? XOS_TIME_MODIFIED : XOS_TIME_ACCESS);
+
+  if ( _xos_get_file_time(nameToFN(name), id, &t) == 0 )
+    answer(CtoDate((time_t)t));
+#else
+  STAT_TYPE buf;
 
   if ( isDefault(which) )
     which = NAME_modified;
 
-  if ( STAT_FUNC(nameToFN(name), &buf) < 0 )
-  { errorPce(d, NAME_cannotStat, getOsErrorPce(PCE));
-    fail;
+  if ( STAT_FUNC(nameToFN(name), &buf) == 0 )
+  { if ( which == NAME_modified )
+      answer(CtoDate(buf.st_mtime));
+    else
+      answer(CtoDate(buf.st_atime));
   }
+#endif
 
-  if ( which == NAME_modified )
-    answer(CtoDate(buf.st_mtime));
-  else
-    answer(CtoDate(buf.st_atime));
+  errorPce(d, NAME_cannotStat, getOsErrorPce(PCE));
+  fail;
 }
 
 
@@ -425,17 +453,29 @@ accessDirectory(Directory d, Name mode)
 
 static status
 changedDirectory(Directory d)
-{ STAT_TYPE buf;
+{ time_t t;
+
+#ifdef O_XOS
+  double time;
+
+  if ( _xos_get_file_time(nameToFN(d->path), XOS_TIME_MODIFIED, &time) == 0 )
+    t = (time_t)time;
+  else
+    succeed;
+#else
+  STAT_TYPE buf;
 
   if ( STAT_FUNC(nameToFN(d->path), &buf) < 0 )
     succeed;			/* we signal non-extistence as changed */
+  t = buf.st_mtime;
+#endif
 
   if ( d->modified == MODIFIED_NOT_SET )
-  { d->modified = buf.st_mtime;
+  { d->modified = t;
     fail;
   }
-  if ( buf.st_mtime > d->modified )
-  { d->modified = buf.st_mtime;
+  if ( t > d->modified )
+  { d->modified = t;
     succeed;
   }
 

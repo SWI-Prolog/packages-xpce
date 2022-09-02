@@ -267,9 +267,13 @@ closeFile(FileObj f)
 
 status
 existsFile(FileObj f, BoolObj mustbefile)
-{ STAT_TYPE buf;
-  const char *fn = charArrayToFN((CharArray)f->name);
+{ const char *fn = charArrayToFN((CharArray)f->name);
 
+#if O_XOS
+  int flag = (mustbefile == OFF ? 0 : _XOS_FILE);
+  return _xos_exists(fn, flag);
+#else
+  STAT_TYPE buf;
 #ifdef HAVE_ACCESS
   if ( mustbefile == OFF )
   { if ( access(fn, F_OK) == 0 )
@@ -282,6 +286,7 @@ existsFile(FileObj f, BoolObj mustbefile)
   if ( mustbefile != OFF && (buf.st_mode & S_IFMT) != S_IFREG )
     fail;
   succeed;
+#endif
 }
 
 
@@ -541,7 +546,6 @@ getFilterFile(FileObj f)
   { char path[PATH_MAX];
     Attribute a = cell->value;
     Name extension = a->name;
-    STAT_TYPE buf;
 
     if ( !isName(extension) )
     { errorPce(extension, NAME_unexpectedType, TypeName);
@@ -549,8 +553,13 @@ getFilterFile(FileObj f)
     }
 
     sprintf(path, "%s%s", strName(f->name), strName(extension));
+#if O_XOS
+    if ( _xos_exists(path, _XOS_FILE) )
+#else
+    STAT_TYPE buf;
     if ( STAT_FUNC(path, &buf) == 0 &&
 	 (buf.st_mode & S_IFMT) == S_IFREG )
+#endif
     { if ( !isName(a->value) )
       { errorPce(a->value, NAME_unexpectedType, TypeName);
 	fail;
@@ -856,29 +865,20 @@ flushFile(FileObj f)
 }
 
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-We can use the faster fstat() here, but confirmed by various messages on
-the web, MS-Windows implementation  of   _fstat()  is  broken, returning
-EBADF for perfectly valid filedescriptors.  Shouldn't make a difference,
-only slow ...
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
+#if !O_XOS
 static int
 statFile(FileObj f, STAT_TYPE *buf)
-{
-#ifndef __WINDOWS__
-  int fno;
+{ int fno;
 
   if ( f->fd != NULL && (fno = Sfileno(f->fd)) >= 0)
   { return FSTAT_FUNC(fno, buf);
   } else
-#endif
   { Name name = getOsNameFile(f);
 
     return STAT_FUNC(nameToFN(name), buf);
   }
 }
-
+#endif
 
 
 static Int
@@ -888,37 +888,52 @@ getSizeFile(FileObj f)
 
     if ( (size=Ssize(f->fd)) != -1 )
       answer(toInt(size));
-    goto nosize;
   } else
+#if O_XOS
+  { uint64_t size;
+    Name name = getOsNameFile(f);
+
+    if ( _xos_file_size(nameToFN(name), &size) == 0 )
+      answer(toInt(size));
+  }
+#else
   { STAT_TYPE buf;
 
-    if ( statFile(f, &buf) == -1 )
-    { nosize:
-      errorPce(f, NAME_cannotStat, getOsErrorPce(PCE));
-      fail;
-    }
-
-    answer(toInt(buf.st_size));
+    if ( statFile(f, &buf) == 0 )
+      answer(toInt(buf.st_size));
   }
+#endif
+
+  errorPce(f, NAME_cannotStat, getOsErrorPce(PCE));
+  fail;
 }
 
 
 static Date
 getTimeFile(FileObj f, Name which)
-{ STAT_TYPE buf;
+{
+#if O_XOS
+  Name name = getOsNameFile(f);
+  double t;
+  int id = (which == NAME_modified ? XOS_TIME_MODIFIED : XOS_TIME_ACCESS);
+
+  if ( _xos_get_file_time(nameToFN(name), id, &t) == 0 )
+    answer(CtoDate((time_t)t));
+#else
+  STAT_TYPE buf;
 
   if ( isDefault(which) )
     which = NAME_modified;
 
-  if ( statFile(f, &buf) < 0 )
-  { errorPce(f, NAME_cannotStat, getOsErrorPce(PCE));
-    fail;
+  if ( statFile(f, &buf) == 0 )
+  { if ( which == NAME_modified )
+      answer(CtoDate(buf.st_mtime));
+    else
+      answer(CtoDate(buf.st_atime));
   }
-
-  if ( which == NAME_modified )
-    answer(CtoDate(buf.st_mtime));
-  else
-    answer(CtoDate(buf.st_atime));
+#endif
+  errorPce(f, NAME_cannotStat, getOsErrorPce(PCE));
+  fail;
 }
 
 
