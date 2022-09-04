@@ -3,8 +3,8 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2005-2018-2022, University of Amsterdam
-                                   SWI-Prolog Solutions b.v.
+    Copyright (c)  2018-2022, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -36,6 +36,7 @@
 :- module(test_xpce,
           [ test_xpce/0
           ]).
+:- encoding(utf8).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 XPCE/SWI-Prolog test file.  A test is a clause of the form:
@@ -210,8 +211,7 @@ srcsink(read-1) :-
                  *             FILE             *
                  *******************************/
 
-foreign(Name) :-
-    atom_codes(Name, [1087, 1083, 1072, 1090, 1085, 1072, 1103]).
+foreign(привіт).
 
 file(env-1) :-
     new(F, file('$PCEHOME/Defaults')),
@@ -760,7 +760,7 @@ display_present :-
 test_xpce :-
     retractall(failed(_)),
     retractall(blocked(_,_)),
-    forall(testset(Set),            % force XOCE incremental GC
+    forall(testset(Set),            % force XPCE incremental GC
            send(@prolog, call, 'xpce_runtest', Set)),
     scripts,
     report_blocked,
