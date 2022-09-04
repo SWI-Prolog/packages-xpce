@@ -245,8 +245,14 @@ file(exists-1) :-
                  *         UNICODE FILE         *
                  *******************************/
 
+foreign_creatable(Name) :-
+    current_prolog_flag(tmp_dir, TmpDir),
+    current_prolog_flag(pid, PID),
+    foreign(Base),
+    format(atom(Name), '~w/swipl-~w-~d', [TmpDir,Base,PID]).
+
 unicode_file(utf8-1) :-
-    foreign(Name),
+    foreign_creatable(Name),
     Text = 'Hello world\n',
     new(F, file(Name)),
     send(F, open, write),
@@ -306,22 +312,24 @@ dir(members-3) :-
                  *******************************/
 
 unicode_dir(foreign-1) :-
-    foreign(Name),
+    foreign_creatable(Name),
     new(D, directory(Name)),
     send(D, make),
     send(D, exists),
     delete_directory(Name).
 unicode_dir(foreign-2) :-
-    foreign(Name),
+    foreign_creatable(Name),
     new(D, directory(Name)),
     send(D, make),
     send(D, exists),
-    new(D2, directory(.)),
+    file_directory_name(Name, Dir),
+    file_base_name(Name, Base),
+    new(D2, directory(Dir)),
     get_chain(D2, directories, Dirs),
-    member(Name, Dirs),
+    memberchk(Base, Dirs),
     delete_directory(Name).
 unicode_dir(foreign-3) :-
-    foreign(Name),
+    foreign_creatable(Name),
     new(D, directory(Name)),
     send(D, make),
     send(D, exists),
