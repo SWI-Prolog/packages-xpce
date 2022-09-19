@@ -99,10 +99,10 @@ endif()
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/h/names.ih
 	   ${CMAKE_CURRENT_BINARY_DIR}/h/names.ic
-    COMMAND mkdir -p ${CMAKE_CURRENT_BINARY_DIR}/h
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/h
     COMMAND find_names ${CMAKE_CURRENT_BINARY_DIR}/h/names.ic
-		       ${CMAKE_CURRENT_BINARY_DIR}/h/names.ih
-		       -- h/*.h ???/*.c
+                       ${CMAKE_CURRENT_BINARY_DIR}/h/names.ih
+                       -- h/*.h adt/*.c ari/*.c box/*.c evt/*.c fmt/*.c gnu/*.c gra/*.c img/*.c itf/*.c ker/*.c men/*.c msg/*.c msw/*.c prg/*.c rel/*.c rgx/*.c txt/*.c unx/*.c win/*.c x11/*.c
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src
     COMMENT "Collecting NAME_ declarations")
 
