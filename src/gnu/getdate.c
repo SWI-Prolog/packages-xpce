@@ -626,7 +626,9 @@ yyparse(YYPARSE_PARAM_ARG)
   YYSTYPE yyval;		/*  the variable used to return		*/
 				/*  semantic values from the action	*/
 				/*  routines				*/
-
+  yyval.Meridian = MER24;       /* suppress uninitialized warning */
+  yyval.Number = 0;
+  
   int yylen;
 
 #if YYDEBUG != 0
