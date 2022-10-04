@@ -2291,11 +2291,8 @@ set_fragment_context(_, _).
 
 set_fragment_context(Fragment, P, Context) :-
     send(Fragment, has_send_method, P),
-    (   rational(Context),
-        \+ integer(Context)
-    ->  rational(Context, Num, Den),
-        format(string(Ctx), '~d/~d', [Num, Den])
-    ->  send(Fragment, P, Ctx)
+    (   rational_context(Context, String)
+    ->  send(Fragment, P, String)
     ;   atomic(Context)
     ->  send(Fragment, P, Context)
     ;   ground(Context),
@@ -2305,9 +2302,14 @@ set_fragment_context(Fragment, P, Context) :-
     ).
 set_fragment_context(_, _, _).
 
-:- if(\+ current_predicate(rational/1)).
-rational(_) :- fail.
-rational(_,_,_) :- fail.
+:- if(current_predicate(rational/1)).
+rational_context(Context, String) :-
+    rational(Context),
+    \+ integer(Context),
+    rational(Context, Num, Den),
+    format(string(String), '~d/~d', [Num, Den]).
+:- else.
+rational_context(_,_) :- fail.
 :- endif.
 
 
@@ -2999,9 +3001,6 @@ identify(F) :->
     identify_fragment(Term, F, Summary),
     !,
     send(F, report, status, Summary).
-
-:- multifile
-    identify/2.
 
 identify_fragment(Term, _F, Text) :-
     phrase(syntax_message(Term), List),
