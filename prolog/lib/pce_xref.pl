@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        wielemak@science.uva.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2006-2020, University of Amsterdam
+    Copyright (c)  2006-2022, University of Amsterdam
                               SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -74,6 +74,9 @@
 	     xref_called/4,
              head_name_arity/3
 	   ]).
+
+:- multifile
+    gxref_called/2.
 
 gxref_version('0.1.1').
 
@@ -2124,6 +2127,8 @@ generated_callable(M:Term) :-
 %   the predicate should not exist.
 
 xref_called(Source, Callable) :-
+    gxref_called(Source, Callable).
+xref_called(Source, Callable) :-
     xref_called_cond(Source, Callable, _).
 
 xref_called_cond(Source, Callable, Cond) :-
@@ -2200,7 +2205,7 @@ included_if_defined((A;B), Callable) :-
 %   We first resolve all imports to   absolute  files. Localizing is
 %   done afterwards.  Imports is a list of
 %
-%!          use_module(FileSpec, Callables)
+%           use_module(FileSpec, Callables)
 
 xref_file_imports(FileSpec, Imports) :-
     canonical_filename(FileSpec, File),
