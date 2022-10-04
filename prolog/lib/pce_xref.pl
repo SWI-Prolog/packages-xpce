@@ -2014,7 +2014,8 @@ edit_callable(Callable, File) :-
     local_callable(Callable, File, Local),
     (   xref_defined(File, Local, How),
         xref_definition_line(How, Line)
-    ->  edit(file(File, line(Line)))
+    ->  edit_location(Line, File, Location),
+        edit(Location)
     ;   autoload_predicate(Local)
     ->  functor(Local, Name, Arity),
         edit(Name/Arity)
@@ -2045,6 +2046,12 @@ local_callable(M:Callable, File, Callable) :-
     xref_module(File, M),
     !.
 local_callable(Callable, _, Callable).
+
+edit_location(File:Line, _MainFile, Location) =>
+    edit_location(Line, File, Location).
+edit_location(Line, File, Location) =>
+    Location = file(File, line(Line)).
+
 
 
                  /*******************************
