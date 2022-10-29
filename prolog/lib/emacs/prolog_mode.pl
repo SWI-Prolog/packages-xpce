@@ -278,10 +278,7 @@ expand_path(X, X) :-
     atomic(X),
     !.
 expand_path(Term, D) :-
-    Term =.. [New, Sub],
-    user:file_search_path(New, D0),
-    expand_path(D0, D1),
-    atomic_list_concat([D1, /, Sub], D).
+   absolute_file_name(Term,D,[]).
 
 
 :- pce_group(indent).
