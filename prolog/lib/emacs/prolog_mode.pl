@@ -268,6 +268,8 @@ user_source_file(F) :-
 ignore_paths_from(library).
 ignore_paths_from(pce_boot).
 
+:- table lib_dir/1.
+
 lib_dir(D) :-
     ignore_paths_from(Category),
     user:file_search_path(Category, X),
@@ -278,10 +280,7 @@ expand_path(X, X) :-
     atomic(X),
     !.
 expand_path(Term, D) :-
-    Term =.. [New, Sub],
-    user:file_search_path(New, D0),
-    expand_path(D0, D1),
-    atomic_list_concat([D1, /, Sub], D).
+   absolute_file_name(Term,D,[solutions(all)]).
 
 
 :- pce_group(indent).
