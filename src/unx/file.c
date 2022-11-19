@@ -443,7 +443,7 @@ out:
 
 static status
 backup_name(const char *old, const char *ext, char *bak, size_t len)
-{ if ( strlen(old) + strlen(ext) + 1 <= len )
+{ if ( strlen(old) + strlen(ext) + 1 < len )
   { sprintf(bak, "%s%s", old, ext);
     succeed;
   } else
@@ -1098,7 +1098,7 @@ putstdw(unsigned long w, IOSTREAM *fd)
 
   cvrt.l = w;
   rval = (cvrt.c[0] << 24) |
-         (cvrt.c[1] << 16) |
+	 (cvrt.c[1] << 16) |
 	 (cvrt.c[2] << 8) |
 	  cvrt.c[3];
   Sputw(rval, fd);
@@ -1305,16 +1305,16 @@ findFile(FileObj f, CharArray path, Name mode)
 /* Type declarations */
 
 static char *T_seek[] =
-        { "byte=int", "from=[{start,here,end}]" };
+	{ "byte=int", "from=[{start,here,end}]" };
 static char *T_format[] =
-        { "format=char_array", "argument=any ..." };
+	{ "format=char_array", "argument=any ..." };
 static char *T_open[] =
-        { "mode={read,write,append}", "filter=[name]",
+	{ "mode={read,write,append}", "filter=[name]",
 	  "extension=[char_array]" };
 static char *T_find[] =
-        { "path=[char_array]", "access=[{read,write,append,execute}]" };
+	{ "path=[char_array]", "access=[{read,write,append,execute}]" };
 static char *T_initialise[] =
-        { "path=[name]",
+	{ "path=[name]",
 	  "encoding=[{text,binary,iso_latin_1,utf8,unicode_be,unicode_le}]"
 	};
 
@@ -1426,9 +1426,9 @@ static classvardecl rc_file[] =
 static Name file_termnames[] = { NAME_name };
 
 ClassDecl(file_decls,
-          var_file, send_file, get_file, rc_file,
-          1, file_termnames,
-          "$Rev$");
+	  var_file, send_file, get_file, rc_file,
+	  1, file_termnames,
+	  "$Rev$");
 
 status
 makeClassFile(Class class)
