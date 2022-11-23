@@ -49,7 +49,6 @@
 :- use_module(library(prolog_predicate)).       % class prolog_predicate
 :- use_module(library(prolog_source)).
 :- require([ guitracer/0,
-	     tdebug/0,
 	     auto_call/1,
 	     delete_breakpoint/1,
              set_breakpoint_condition/2,
@@ -88,6 +87,10 @@
              head_name_arity/3,
              extend_goal/3
 	   ]).
+:- if(current_prolog_flag(threads, true)).
+:- require([ tdebug/0
+           ]).
+:- endif.
 :- if(current_prolog_flag(bounded, false)).
 :- require([ rational/1,
              rational/3
@@ -3107,3 +3110,11 @@ atom_name(Name0, Name) :-
     Name = Name0.
 atom_name(Name0, Name) :-
     format(atom(Name), '~w', [Name0]).
+
+		 /*******************************
+		 *        SINGLE THREAD		*
+		 *******************************/
+
+:- if(\+current_predicate(tdebug/0)).
+tdebug :- debug.
+:- endif.
