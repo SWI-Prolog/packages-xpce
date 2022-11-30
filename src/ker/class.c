@@ -130,7 +130,7 @@ linkSubClass(Class super, Class sub)
       if ( class->name == sub->name )
       { if ( class != sub )
 	  deleteChain(super->sub_classes, class);
-        else
+	else
 	  done = TRUE;
       }
     }
@@ -318,16 +318,16 @@ fill_slots_class(Class class, Class super)
   class->c_declarations    = NULL;
 
   if ( notNil(super) )
-  { assign(class, term_names,	        super->term_names);
-    assign(class, delegate,	        getCopyChain(super->delegate));
+  { assign(class, term_names,		super->term_names);
+    assign(class, delegate,		getCopyChain(super->delegate));
     assign(class, instance_variables,   getCopyVector(super->instance_variables));
-    assign(class, cloneStyle,	        super->cloneStyle);
-    assign(class, saveStyle,	        super->saveStyle);
+    assign(class, cloneStyle,		super->cloneStyle);
+    assign(class, saveStyle,		super->saveStyle);
     assign(class, features,		getCopySheet(super->features));
-    assign(class, solid,	        super->solid);
-    assign(class, handles,	        getCopyChain(super->handles));
-    assign(class, un_answer,	        super->un_answer);
-    assign(class, slots,	        super->slots);
+    assign(class, solid,		super->solid);
+    assign(class, handles,		getCopyChain(super->handles));
+    assign(class, un_answer,		super->un_answer);
+    assign(class, slots,		super->slots);
 
     if ( !class->boot )
     { assign(class, instance_size,	super->instance_size);
@@ -349,16 +349,16 @@ fill_slots_class(Class class, Class super)
     class->changedFunction		= super->changedFunction;
     class->in_event_area_function	= super->in_event_area_function;
   } else
-  { assign(class, term_names,	        NIL);
-    assign(class, delegate,	        newObject(ClassChain, EAV));
+  { assign(class, term_names,		NIL);
+    assign(class, delegate,		newObject(ClassChain, EAV));
     assign(class, instance_variables,	newObject(ClassVector, EAV));
-    assign(class, cloneStyle,	        NAME_recursive);
-    assign(class, saveStyle,	        NAME_normal);
+    assign(class, cloneStyle,		NAME_recursive);
+    assign(class, saveStyle,		NAME_normal);
     assign(class, features,		NIL);
-    assign(class, solid,	        OFF);
+    assign(class, solid,		OFF);
     assign(class, instance_size,        toInt(sizeof(struct object)));
-    assign(class, slots,	        ZERO);
-    assign(class, un_answer,	        ON);
+    assign(class, slots,		ZERO);
+    assign(class, un_answer,		ON);
     assign(class, handles,		NIL);
     assign(class, changed_messages,	NIL);
     assign(class, resolve_method_message, NIL);
@@ -1039,7 +1039,7 @@ sendMethodv(Class class, Name name, Name group, int argc, va_list args)
   }
 
   tv = inBoot ? createVectorv(argc, (Any *)types)
-              : answerObjectv(ClassVector, argc, (Any *)types);
+	      : answerObjectv(ClassVector, argc, (Any *)types);
 
   if ( (rawdoc = va_arg(args, char *)) )
   { checkSummaryCharp(class->name, name, rawdoc);
@@ -1089,7 +1089,7 @@ storeMethod(Class class, Name name, SendFunc function)
     return sysPce("storeMethod(): no variable %s on class %s",
 		  pp(name), pp(class->name));
   tv = inBoot ? createVectorv(1, (Any *)(&var->type))
-              : answerObjectv(ClassVector, 1, (Any *)(&var->type));
+	      : answerObjectv(ClassVector, 1, (Any *)(&var->type));
 
   m = createSendMethod(name, tv, var->summary, function);
   assign(m, context, class);
@@ -1101,7 +1101,7 @@ storeMethod(Class class, Name name, SendFunc function)
 
 
 static status
-fetchMethod(Class class, Name name, void *function)
+fetchMethod(Class class, Name name, Any(*function)())
 { Variable var = getInstanceVariableClass(class, (Any) name);
   Vector tv;
   GetMethod m;
@@ -1110,7 +1110,7 @@ fetchMethod(Class class, Name name, void *function)
     return sysPce("fetchMethod(): no variable %s on class %s",
 		  pp(name), pp(class->name));
   tv = inBoot ? createVectorv(0, NULL)
-              : answerObjectv(ClassVector, 0, NULL);
+	      : answerObjectv(ClassVector, 0, NULL);
 
   m = createGetMethod(name, var->type, tv, var->summary, function);
   assign(m, context, class);
@@ -1145,7 +1145,7 @@ getMethodv(Class class, Name name, Name group,
 	     pp(class->name), pp(name), type);
   }
   tv = inBoot ? createVectorv(argc, (Any *)types)
-              : answerObjectv(ClassVector, argc, (Any *)types);
+	      : answerObjectv(ClassVector, argc, (Any *)types);
 
   if ( (rawdoc = va_arg(args, char *)) )
   { checkSummaryCharp(class->name, name, rawdoc);
@@ -1383,9 +1383,9 @@ declareClass(Class class, const classdecl *decls)
 		 iv->type, acs, iv->summary);
 
     if ( iv->flags & IV_STORE )
-      storeMethod(class, iv->name, (SendFunc) iv->context);
+      storeMethod(class, iv->name, (SendFunc)(intptr_t)iv->context);
     else if ( iv->flags & IV_FETCH )
-      fetchMethod(class, iv->name, (GetFunc) iv->context);
+      fetchMethod(class, iv->name, (GetFunc)(intptr_t)iv->context);
   }
 					/* should be delayed too? */
   for( i=decls->nclassvars, cv=decls->class_variables; i-- > 0; cv++ )
@@ -1569,7 +1569,7 @@ attachLazySendMethodClass(Class class, const senddecl *sm)
   }
 
   tv = inBoot ? createVectorv(sm->arity, (Any *)types)
-              : answerObjectv(ClassVector, sm->arity, (Any *)types);
+	      : answerObjectv(ClassVector, sm->arity, (Any *)types);
   doc = (sm->summary ? (Any) staticCtoString(sm->summary) : DEFAULT);
   m = createSendMethod(sm->name, tv, doc, sm->function);
   if ( notDefault(sm->group) )
@@ -1611,7 +1611,7 @@ attachLazyGetMethodClass(Class class, const getdecl *gm)
   }
 
   tv = inBoot ? createVectorv(gm->arity, (Any *)types)
-              : answerObjectv(ClassVector, gm->arity, (Any *)types);
+	      : answerObjectv(ClassVector, gm->arity, (Any *)types);
   doc = (gm->summary ? (Any) staticCtoString(gm->summary) : DEFAULT);
   m = createGetMethod(gm->name, rtype, tv, doc, gm->function);
   if ( notDefault(gm->group) )
@@ -2133,7 +2133,7 @@ getManSummaryClass(Class cl)
 status
 isAClass(Class class, Class super)
 { return class->tree_index >= super->tree_index &&
-         class->tree_index <  super->neighbour_index;
+	 class->tree_index <  super->neighbour_index;
 }
 
 
@@ -2402,8 +2402,8 @@ makeClassClass(Class class)
   saveStyleClass(class, NAME_external);
   cloneStyleClass(class, NAME_none);
 
-  fetchMethod(class, NAME_sendMethods, getSendMethodsClass);
-  fetchMethod(class, NAME_getMethods, getGetMethodsClass);
+  fetchMethod(class, NAME_sendMethods, (Any(*)())getSendMethodsClass);
+  fetchMethod(class, NAME_getMethods, (Any(*)())getGetMethodsClass);
 
   sendMethod(class, NAME_initialise, DEFAULT, 2, "name=name", "super=[class]*",
 	     "Create from name and super class",
@@ -2565,4 +2565,3 @@ makeClassClass(Class class)
 
   succeed;
 }
-

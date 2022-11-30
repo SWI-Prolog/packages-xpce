@@ -126,7 +126,7 @@ typedef void *	hostHandle;		/* Handle of host-language */
 struct pceITFSymbol
 { PceObject	object;			/* global object associated */
   PceName	name;			/* Pce name associated */
-#if __GNUC__ && !__STRICT_ANSI__
+#if __GNUC__ && !__STRICT_ANSI__ && !defined(PEDANTIC)
   hostHandle	handle[0];		/* Alien handles to operate on */
 #else
   hostHandle	handle[1];		/* Alien handles to operate on */

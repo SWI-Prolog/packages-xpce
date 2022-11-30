@@ -82,7 +82,7 @@ initialiseListBrowser(ListBrowser lb, Dict dict, Int w, Int h)
   assign(lb,   cancel_message,	      NIL);
   assign(lb,   multiple_selection,    OFF);
   assign(lb,   selection,             NIL);
-  assign(lb,   start,	              ZERO);
+  assign(lb,   start,		      ZERO);
   assign(lb,   search_string,         NIL);
   assign(lb,   search_origin,         ZERO);
   assign(lb,   search_hit,	      toInt(-1));
@@ -719,7 +719,7 @@ getExtendPrefixDict(Dict dict, CharArray pref, BoolObj ign_case)
     } else
     { if ( str_icase_prefix(name, &pref->data) )
       { if ( !hit++ )
-        { str_cpy(common, name);
+	{ str_cpy(common, name);
 	  str_downcase(common, 0, common->s_size);
 	} else
 	  common->s_size = str_icase_common_length(common, name);
@@ -738,8 +738,8 @@ extendPrefixListBrowser(ListBrowser lb)
 
     ext = getExtendPrefixDict(lb->dict,
 			      isNil(lb->search_string)
-			        ? (CharArray) CtoName("")
-			        : (CharArray) lb->search_string,
+				? (CharArray) CtoName("")
+				: (CharArray) lb->search_string,
 			      getClassVariableValueObject(lb,
 						     NAME_searchIgnoreCase));
 
@@ -1469,7 +1469,7 @@ multipleSelectionListBrowser(ListBrowser lb, BoolObj val)
 { if ( lb->multiple_selection != val )
   { if ( val == ON )
     { if ( isNil(lb->selection) )
-        assign(lb, selection, newObject(ClassChain, EAV));
+	assign(lb, selection, newObject(ClassChain, EAV));
       else
 	assign(lb, selection, newObject(ClassChain, lb->selection, EAV));
     } else
@@ -1633,20 +1633,20 @@ getMasterListBrowser(ListBrowser lb)
 /* Type declarations */
 
 static char *T_scrollVertical[] =
-        { "{forwards,backwards,goto}", "{file,page,line}", "int" };
+	{ "{forwards,backwards,goto}", "{file,page,line}", "int" };
 static char *T_showScrollBar[] =
-        { "show=[bool]", "which=[scroll_bar]" };
+	{ "show=[bool]", "which=[scroll_bar]" };
 static char *T_changeSelection[] =
-        { "action={set,toggle,extend,clear,cancel}",
+	{ "action={set,toggle,extend,clear,cancel}",
 	  "context=[dict_item|chain]" };
 static char *T_initialise[] =
-        { "dict=[dict]", "width=[int]", "height=[int]" };
+	{ "dict=[dict]", "width=[int]", "height=[int]" };
 static char *T_style[] =
-        { "style_name=name", "style=style" };
+	{ "style_name=name", "style=style" };
 static char *T_insertSelf[] =
-        { "times=[int]", "character=[char]" };
+	{ "times=[int]", "character=[char]" };
 static char *T_xADintD_yADintD_widthADintD_heightADintD[] =
-        { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
+	{ "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 
 /* Instance Variables */
 
@@ -1722,7 +1722,7 @@ static senddecl send_listBrowser[] =
      NAME_appearance, "Set style associated with name"),
   SM(NAME_tabStops, 1, "vector*", tabStopsListBrowser,
      NAME_appearance, "Set tab-stops (pixels)"),
-  SV(NAME_background, 1, "[colour|pixmap]", backgroundListBrowser,
+  SM(NAME_background, 1, "[colour|pixmap]", backgroundListBrowser,
      NAME_appearance, "Background colour"),
   SM(NAME_Size, 1, "pixels=size", SizeListBrowser,
      NAME_area, "Set size in pixels (trap window resize)"),
@@ -1867,9 +1867,9 @@ static classvardecl rc_listBrowser[] =
 static Name listBrowser_termnames[] = { NAME_dict, NAME_width, NAME_height };
 
 ClassDecl(listBrowser_decls,
-          var_listBrowser, send_listBrowser, get_listBrowser, rc_listBrowser,
-          3, listBrowser_termnames,
-          "$Rev$");
+	  var_listBrowser, send_listBrowser, get_listBrowser, rc_listBrowser,
+	  3, listBrowser_termnames,
+	  "$Rev$");
 
 
 status
@@ -1882,4 +1882,3 @@ makeClassListBrowser(Class class)
 
   succeed;
 }
-

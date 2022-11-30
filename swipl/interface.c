@@ -263,9 +263,9 @@ initPrologConstants()
 { ATOM_append			= AtomFromString("append");
   ATOM_argument			= AtomFromString("argument");
   ATOM_argument_count		= AtomFromString("argument_count");
-  ATOM_assign		        = AtomFromString(":=");
+  ATOM_assign			= AtomFromString(":=");
   ATOM_badIntegerReference	= AtomFromString("bad_integer_reference");
-  ATOM_badList		        = AtomFromString("bad_list");
+  ATOM_badList			= AtomFromString("bad_list");
   ATOM_badObjectDescription	= AtomFromString("bad_object_description");
   ATOM_badReference		= AtomFromString("bad_reference");
   ATOM_badSelector		= AtomFromString("bad_selector");
@@ -287,10 +287,10 @@ initPrologConstants()
   ATOM_named_argument		= AtomFromString("named_argument");
   ATOM_named_reference		= AtomFromString("named_reference");
   ATOM_new			= AtomFromString("new");
-  ATOM_object		        = AtomFromString("object");
-  ATOM_open		        = AtomFromString("open");
+  ATOM_object			= AtomFromString("object");
+  ATOM_open			= AtomFromString("open");
   ATOM_pce			= AtomFromString("pce");
-  ATOM_permission_error	        = AtomFromString("permission_error");
+  ATOM_permission_error		= AtomFromString("permission_error");
   ATOM_procedure		= AtomFromString("procedure");
   ATOM_proper_list		= AtomFromString("proper_list");
   ATOM_read			= AtomFromString("read");
@@ -1863,7 +1863,7 @@ get_pce_class(term_t t, PceClass *cl)
 
       if ( class )
       { *cl = class;
-        return TRUE;
+	return TRUE;
       }
     }
 
@@ -3146,7 +3146,7 @@ prof_activate(int active)
 
   memset(&hooks, 0, sizeof(hooks));
   if ( active )
-  { hooks.call   = (void*)PL_prof_call;
+  { hooks.call   = (void*(*)())PL_prof_call;
     hooks.exit   = PL_prof_exit;
     hooks.handle = &pceProfType;
   }

@@ -242,11 +242,11 @@ reinitTextImage(TextImage ti)
   ti->change_end   = INFINITE;
   ti->inserted     = 0;
 
-  ti->seek   = (SeekFunction)   get(obj, NAME_SeekFunction, EAV);
-  ti->scan   = (ScanFunction)   get(obj, NAME_ScanFunction, EAV);
-  ti->fetch  = (FetchFunction)  get(obj, NAME_FetchFunction, EAV);
-  ti->margin = (MarginFunction) get(obj, NAME_MarginFunction, EAV);
-  ti->rewind = (RewindFunction) get(obj, NAME_RewindFunction, EAV);
+  ti->seek   = (SeekFunction)   (intptr_t)get(obj, NAME_SeekFunction, EAV);
+  ti->scan   = (ScanFunction)   (intptr_t)get(obj, NAME_ScanFunction, EAV);
+  ti->fetch  = (FetchFunction)  (intptr_t)get(obj, NAME_FetchFunction, EAV);
+  ti->margin = (MarginFunction) (intptr_t)get(obj, NAME_MarginFunction, EAV);
+  ti->rewind = (RewindFunction) (intptr_t)get(obj, NAME_RewindFunction, EAV);
 
   if ( !ti->seek || !ti->scan || !ti->fetch )
     return errorPce(ti, NAME_noFetchFunction, obj);
@@ -402,7 +402,7 @@ fill_dimensions_line(TextLine l)
 	break;
       case CHAR_IMAGE:
 	ascent_and_descent_image(tc->value.image, &a, &d);
-        ascent  = max(ascent, a);
+	ascent  = max(ascent, a);
 	descent = max(descent, d);
 	break;
       case CHAR_ASCII:
@@ -415,7 +415,7 @@ fill_dimensions_line(TextLine l)
 	  ascent  = max(ascent, a);
 	  descent = max(descent, d);
 	}
-        break;
+	break;
     }
   }
 
@@ -496,20 +496,20 @@ do_fill_line(TextImage ti, TextLine l, long index)
 	    last_is_space = FALSE;
 	    break;
 	}
-        break;
+	break;
       case CHAR_GRAPHICAL:
 	ComputeGraphical(tc->value.graphical);
 
-        x += valInt(tc->value.graphical->area->w);
+	x += valInt(tc->value.graphical->area->w);
 	if ( last_is_space )
 	  last_break = i;
 	last_is_space = FALSE;
 	break;
       case CHAR_IMAGE:
 	x += valInt(tc->value.image->size->w);
-        if ( last_is_space )
+	if ( last_is_space )
 	  last_break = i;
-        last_is_space = FALSE;
+	last_is_space = FALSE;
 	break;
     }
 
@@ -962,7 +962,7 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
 			l->chars[e].value.graphical,
 			l->chars[e].x,
 			l->y + l->base);
-        e++;
+	e++;
 	paint_attributes(ti, l, s, e, c);
 	continue;
       case CHAR_IMAGE:
@@ -978,7 +978,7 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
 		    l->y + l->base);
 	e++;
 	paint_attributes(ti, l, s, e, c);
-        continue;
+	continue;
     }
 
     n = 0;
@@ -1260,10 +1260,10 @@ get_index_text_image(TextImage ti, int x, int y)
     { int i;
 
       if ( x < TXT_X_MARGIN )
-        return l->start;
+	return l->start;
 
       for(i = 0; i < l->length; i++)
-        if ( l->chars[i+1].x > x )
+	if ( l->chars[i+1].x > x )
 	  return l->start + l->chars[i].index; /* bsearch()! */
 
       return l->start + l->length - 1;
@@ -1686,7 +1686,7 @@ center_from_screen(TextImage ti, long int pos, int line)
   int l;
 
   if ( (l = locate_screen_line(map, pos)) >= 0 &&
-        l >= line )
+	l >= line )
   { int startline = l - line;
     int skip = 0;
 
@@ -1742,7 +1742,7 @@ centerTextImage(TextImage ti, Int position, Int screen_line)
 	idx = fill_line(ti, ln, idx, 0);
 	DEBUG(NAME_center, Cprintf("Filled line %d to %ld\n", ln-1, idx));
       } while ( idx <= here &&
-	        !(ti->map->lines[ln++].ends_because & END_EOF) );
+		!(ti->map->lines[ln++].ends_because & END_EOF) );
 
       if ( center_from_screen(ti, pos, line) )
 	succeed;
@@ -2247,7 +2247,7 @@ getUpDownCursorTextImage(TextImage ti, Int here, Int updown, Int column)
 	    break;			/* should not happen */
 	}
 
-        if ( i >= -ly )
+	if ( i >= -ly )
 	{ i += ly;
 
 	  for(here=idx; i-- >= 0; )
@@ -2396,13 +2396,13 @@ elevationTextImage(TextImage ti, Elevation z)
 /* Type declarations */
 
 static char *T_center[] =
-        { "index=int", "line=[int]" };
+	{ "index=int", "line=[int]" };
 static char *T_start[] =
-        { "start=[int]", "skip_lines=[int]" };
+	{ "start=[int]", "skip_lines=[int]" };
 static char *T_initialise[] =
-        { "text=object", "width=int", "height=int" };
+	{ "text=object", "width=int", "height=int" };
 static char *T_geometry[] =
-        { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
+	{ "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 
 /* Instance Variables */
 
@@ -2517,9 +2517,9 @@ static classvardecl rc_textImage[] =
 static Name textImage_termnames[] = { NAME_text, NAME_width, NAME_height };
 
 ClassDecl(textImage_decls,
-          var_textImage, send_textImage, get_textImage, rc_textImage,
-          3, textImage_termnames,
-          "$Rev$");
+	  var_textImage, send_textImage, get_textImage, rc_textImage,
+	  3, textImage_termnames,
+	  "$Rev$");
 
 
 status
@@ -2537,4 +2537,3 @@ makeClassTextImage(Class class)
 
   succeed;
 }
-

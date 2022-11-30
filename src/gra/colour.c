@@ -103,7 +103,7 @@ initialiseColour(Colour c, Name name, Int r, Int g, Int b, Name model)
     }
   } else
     return errorPce(c, NAME_instantiationFault,
-		    getMethodFromFunction(initialiseColour));
+		    getMethodFromFunction((Any(*)())initialiseColour));
 
   assign(c, red,   r);
   assign(c, green, g);
@@ -444,11 +444,11 @@ getIntensityColour(Colour c)
 /* Type declarations */
 
 static char *T_lookup[] =
-        { "[name|int]",
+	{ "[name|int]",
 	  "red=[0..65535]", "green=[0..65535]", "blue=[0..65535]",
 	  "model=[{rgb,hsv}]" };
 static char *T_initialise[] =
-        { "name=[name]",
+	{ "name=[name]",
 	  "red=[0..65535]", "green=[0..65535]", "blue=[0..65535]",
 	  "model=[{rgb,hsv}]" };
 
@@ -519,9 +519,9 @@ static classvardecl rc_colour[] =
 static Name colour_termnames[] = { NAME_name };
 
 ClassDecl(colour_decls,
-          var_colour, send_colour, get_colour, rc_colour,
-          1, colour_termnames,
-          "$Rev$");
+	  var_colour, send_colour, get_colour, rc_colour,
+	  1, colour_termnames,
+	  "$Rev$");
 
 
 status
@@ -549,4 +549,3 @@ makeClassColour(Class class)
 
   succeed;
 }
-

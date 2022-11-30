@@ -214,7 +214,7 @@ safeStringName(Name n)
   else
   { char buf[100];
 
-    sprintf(buf, "%p", n);
+    sprintf(buf, "%p", (void*)n);
     return ppsavestring(buf);
   }
 }
@@ -284,7 +284,7 @@ do_pp(Any obj)
     { Name name;
 
       if ( (name = getNameAssoc(obj)) )
-        sprintf(tmp, "@%s/%s", nameToUTF8(name), s);
+	sprintf(tmp, "@%s/%s", nameToUTF8(name), s);
       else
 	sprintf(tmp, "@" INTPTR_FORMAT "/%s", valInt(PointerToInt(obj)), s);
     }

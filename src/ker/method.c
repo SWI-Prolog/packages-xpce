@@ -402,21 +402,21 @@ rtSourceMethod(Method m, SourceLocation src)
 
 
 Method
-getMethodFromFunction(Any f)
+getMethodFromFunction(Any (*f)())
 { for_hash_table(classTable, s,
-	         { Class class = s->value;
+		 { Class class = s->value;
 
 		   if ( class->realised == ON )
 		   { Cell cell;
 
 		     for_cell(cell, class->send_methods)
 		     { Method m = cell->value;
-		       if ( (Any) m->function == f )
+		       if ( (intptr_t)m->function == (intptr_t)f )
 			 answer(m);
 		     }
 		     for_cell(cell, class->get_methods)
 		     { Method m = cell->value;
-		       if ( (Any) m->function == f )
+		       if ( (intptr_t) m->function == (intptr_t)f )
 			 answer(m);
 		     }
 		   }
@@ -445,7 +445,7 @@ getPrintNameMethod(Method m)
 /* Type declaractions */
 
 static char *T_initialise[] =
-        { "name=name", "types=[vector]",
+	{ "name=name", "types=[vector]",
 	  "implementation=code|c_pointer", "summary=[string]*",
 	  "source=[source_location]*", "group=[name]*" };
 
@@ -524,9 +524,9 @@ static classvardecl rc_method[] =
 static Name method_termnames[] = { NAME_name, NAME_types, NAME_message, NAME_summary, NAME_source };
 
 ClassDecl(method_decls,
-          var_method, send_method, get_method, rc_method,
-          5, method_termnames,
-          "$Rev$");
+	  var_method, send_method, get_method, rc_method,
+	  5, method_termnames,
+	  "$Rev$");
 
 
 status
@@ -540,4 +540,3 @@ makeClassMethod(Class class)
 
   succeed;
 }
-

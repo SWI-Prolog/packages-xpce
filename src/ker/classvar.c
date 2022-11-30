@@ -293,7 +293,7 @@ valueClassVariable(ClassVariable cv, Any value)
   }
 
   return errorTypeMismatch(cv,
-			   getMethodFromFunction((Any)valueClassVariable), 1,
+			   getMethodFromFunction((Any(*)())valueClassVariable), 1,
 			   cv->type,
 			   value);
 }
@@ -578,7 +578,7 @@ getGetClassVariable(ClassVariable var, Any rec)
 /* Type declarations */
 
 static char *T_initialise[] =
-        { "class=class", "name=name", "default=any",
+	{ "class=class", "name=name", "default=any",
 	  "type=[type]", "summary=[string]*" };
 
 /* Instance Variables */
@@ -642,9 +642,9 @@ static Name cv_termnames[] = { NAME_context, NAME_name, NAME_default,
 			       NAME_type, NAME_summary };
 
 ClassDecl(class_variable_decls,
-          var_class_variable, send_class_variable, get_class_variable, rc_class_variable,
-          5, cv_termnames,
-          "$Rev$");
+	  var_class_variable, send_class_variable, get_class_variable, rc_class_variable,
+	  5, cv_termnames,
+	  "$Rev$");
 
 
 status
@@ -947,4 +947,3 @@ getDefault(Class class, Name name, int accept_default)
 
   fail;					/* uses the default */
 }
-

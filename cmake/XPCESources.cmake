@@ -68,7 +68,7 @@ set(UNX_SRC	directory.c file.c process.c socket.c stream.c)
 
 set(WIN_SRC	browser.c decorate.c dialog.c display.c
 		displaymgr.c frame.c picture.c tileadjust.c
-		setup.c tile.c view.c window.c application.c
+		tile.c view.c window.c application.c
 		monitor.c)
 
 set(IMG_SRC	jdatasrc.c jdatadst.c jpegtoxpm.c gifread.c giftoxpm.c

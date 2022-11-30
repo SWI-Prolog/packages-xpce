@@ -269,7 +269,7 @@ XopenImage(Image image, DisplayObj d)
 				      image->bits->bits.xbm,
 				      valInt(image->size->w),
 				      valInt(image->size->h));
-        break;
+	break;
       case XPM_DATA:
 	ws_create_image_from_xpm_data(image,
 				      image->bits->bits.xpm,
@@ -408,7 +408,7 @@ clearImage(Image image)
 		 if ( image->size->w != ZERO && image->size->h != ZERO &&
 		      notNil(image->display) &&
 		      getExistingXrefObject(image, image->display) != NULL )
-	         { int w = valInt(image->size->w);
+		 { int w = valInt(image->size->w);
 		   int h = valInt(image->size->h);
 
 		   d_image(image, 0, 0, w, h);
@@ -920,13 +920,13 @@ getPostscriptFormatImage(Image image)
 #include "bitmaps/intarrows.bm"
 
 static Image
-stdImage(Name name, Image *global, char *bits, int w, int h)
+stdImage(Name name, Image *global, unsigned char *bits, int w, int h)
 { Image image = globalObject(name, ClassImage, name, toInt(w), toInt(h), EAV);
 
   assign(image, access, NAME_read);
   image->bits = alloc(sizeof(*image->bits));
   image->bits->type = XBM_DATA;
-  image->bits->bits.xbm = (unsigned char *)bits;
+  image->bits->bits.xbm = bits;
   if ( global )
     *global = image;
 
@@ -982,7 +982,7 @@ stdXPMImage(Name name, Image *global, char **bits)
 
 static void
 greyImage(Name name, int grey, Image *global,
-	  char *bits, int w, int h)
+	  unsigned char *bits, int w, int h)
 { Image image;
 
   image = stdImage(name, global, bits, w, h);
@@ -1013,11 +1013,11 @@ standardImages(void)
   stdImage(NAME_nomarkImage, &NOMARK_IMAGE,
 	   nomark_bm_bits, nomark_bm_width, nomark_bm_height);
   stdImage(NAME_msMarkImage, &MS_MARK_IMAGE,
-	   (char *)ms_mark_bits, ms_mark_width, ms_mark_height);
+	   ms_mark_bits, ms_mark_width, ms_mark_height);
   stdImage(NAME_msNomarkImage, &MS_NOMARK_IMAGE,
-	   (char *)ms_nomark_bits, ms_nomark_width, ms_nomark_height);
+	   ms_nomark_bits, ms_nomark_width, ms_nomark_height);
   stdImage(NAME_msLeftArrowImage, NULL,
-	   (char *)ms_left_arrow_bits, ms_left_arrow_width, ms_left_arrow_height);
+	   ms_left_arrow_bits, ms_left_arrow_width, ms_left_arrow_height);
   stdImage(NAME_pullRightImage, &PULLRIGHT_IMAGE,
 	   pullright_bm_bits, pullright_bm_width, pullright_bm_height);
   stdImage(NAME_markHandleImage, &MARK_HANDLE_IMAGE,
@@ -1029,11 +1029,11 @@ standardImages(void)
   stdImage(NAME_olCycleImage, NULL,
 	   ol_cycle_bits, ol_cycle_width, ol_cycle_height);
   stdImage(NAME_treeExpandedImage, NULL,
-	   (char*)enode_bits, enode_width, enode_height);
+	   enode_bits, enode_width, enode_height);
   stdImage(NAME_treeCollapsedImage, NULL,
-	   (char*)cnode_bits, cnode_width, cnode_height);
+	   cnode_bits, cnode_width, cnode_height);
   stdImage(NAME_intItemImage, &INT_ITEM_IMAGE,
-	   (char*)intarrows_bits, intarrows_width, intarrows_height);
+	   intarrows_bits, intarrows_width, intarrows_height);
 #ifdef XPM_PCEIMAGE
   stdXPMImage(NAME_pceImage,	     NULL,		  swipl48_xpm);
   stdXPMImage(NAME_hadjustTileImage, NULL,		  hadjusttile_xpm);
@@ -1062,26 +1062,26 @@ standardImages(void)
 /* Type declarations */
 
 static char *T_load[] =
-        { "from=[source_sink]", "path=[char_array]" };
+	{ "from=[source_sink]", "path=[char_array]" };
 static char *T_drawIn[] =
-        { "graphical", "at=[point]" };
+	{ "graphical", "at=[point]" };
 static char *T_fill[] =
-        { "image", "[area]" };
+	{ "image", "[area]" };
 static char *T_initialise[] =
 	{ "name=[source_sink]*", "width=[int]", "height=[int]",
 	  "kind=[{bitmap,pixmap}]" };
 static char *T_image_atADpointD[] =
-        { "image", "at=[point]" };
+	{ "image", "at=[point]" };
 static char *T_save[] =
-        { "in=[source_sink]", "format=[{xbm,xpm,pnm,pbm,pgm,ppm,jpeg,gif}]" };
+	{ "in=[source_sink]", "format=[{xbm,xpm,pnm,pbm,pgm,ppm,jpeg,gif}]" };
 static char *T_postscript[] =
-        { "landscape=[bool]", "maximum_area=[area]" };
+	{ "landscape=[bool]", "maximum_area=[area]" };
 static char *T_resize[] =
-        { "width=int", "height=int" };
+	{ "width=int", "height=int" };
 static char *T_xAint_yAint[] =
-        { "x=int", "y=int" };
+	{ "x=int", "y=int" };
 static char *T_pixel[] =
-        { "x=int", "y=int", "value=colour|bool" };
+	{ "x=int", "y=int", "value=colour|bool" };
 #ifdef O_XLI
 static char *T_loadXli[] =
 	{ "file=file", "bright=[0..]" };
@@ -1221,9 +1221,9 @@ static classvardecl rc_image[] =
 static Name image_termnames[] = { NAME_name };
 
 ClassDecl(image_decls,
-          var_image, send_image, get_image, rc_image,
-          1, image_termnames,
-          "$Rev$");
+	  var_image, send_image, get_image, rc_image,
+	  1, image_termnames,
+	  "$Rev$");
 
 
 status
@@ -1239,4 +1239,3 @@ makeClassImage(Class class)
 
   succeed;
 }
-

@@ -54,7 +54,7 @@ initialiseC(CObj h)
 static status
 callCv(CObj host, CPointer function, int argc, Any *argv)
 { status rval;
-  SendFunc f = (SendFunc) function->pointer;
+  SendFunc f = (SendFunc)(intptr_t)function->pointer;
   int n;
 
   for(n=0; n<argc; n++)
@@ -69,13 +69,13 @@ callCv(CObj host, CPointer function, int argc, Any *argv)
     case 4: rval = (*f)(argv[0], argv[1], argv[2], argv[3]); break;
     case 5: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4]); break;
     case 6: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-		        argv[5]); break;
+			argv[5]); break;
     case 7: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-		        argv[5], argv[6]); break;
+			argv[5], argv[6]); break;
     case 8: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-		        argv[5], argv[6], argv[7]); break;
+			argv[5], argv[6], argv[7]); break;
     case 9: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-		        argv[5], argv[6], argv[7], argv[8]); break;
+			argv[5], argv[6], argv[7], argv[8]); break;
     default:
       rval = errorPce(host, NAME_tooManyArguments, argc);
   }
@@ -91,7 +91,7 @@ callCv(CObj host, CPointer function, int argc, Any *argv)
 static Any
 getCallCv(CObj host, CPointer function, int argc, Any *argv)
 { Any rval;
-  GetFunc f = function->pointer;
+  GetFunc f = (GetFunc)(intptr_t)function->pointer;
   int n;
 
   for(n=0; n<argc; n++)
@@ -106,13 +106,13 @@ getCallCv(CObj host, CPointer function, int argc, Any *argv)
     case 4: rval = (*f)(argv[0], argv[1], argv[2], argv[3]); break;
     case 5: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4]); break;
     case 6: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-		        argv[5]); break;
+			argv[5]); break;
     case 7: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-		        argv[5], argv[6]); break;
+			argv[5], argv[6]); break;
     case 8: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-		        argv[5], argv[6], argv[7]); break;
+			argv[5], argv[6], argv[7]); break;
     case 9: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-		        argv[5], argv[6], argv[7], argv[8]); break;
+			argv[5], argv[6], argv[7], argv[8]); break;
     default:
       errorPce(host, NAME_tooManyArguments, argc);
       rval = FAIL;
@@ -418,7 +418,7 @@ XPCE_callv(XPCE_Procedure function, int argc, const XPCE_Object argv[])
 
   av[0] = XPCE_CHost();
   av[1] = NAME_call;
-  av[2] = CtoCPointer(function);
+  av[2] = CtoCPointer(functionToPtr(function));
   for(i=0; i<argc; i++)
     av[i+3] = argv[i];
 
@@ -433,7 +433,7 @@ XPCE_funcallv(XPCE_Function function, int argc, const XPCE_Object argv[])
 
   av[0] = XPCE_CHost();
   av[1] = NAME_call;
-  av[2] = CtoCPointer(function);
+  av[2] = CtoCPointer(functionToPtr(function));
   for(i=0; i<argc; i++)
     av[i+3] = argv[i];
 

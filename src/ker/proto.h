@@ -181,7 +181,7 @@ COMMON(status)	createMethod(Method m, Name name, Vector types, StringObj doc, Fu
 COMMON(status)	initialiseMethod(Method m, Name name, Vector types, Code msg, StringObj doc, SourceLocation loc, Name group);
 COMMON(Type)	getArgumentTypeMethod(Method m, Int n);
 COMMON(Method)	getInheritedFromMethod(Method m);
-COMMON(Method)	getMethodFromFunction(Any f);
+COMMON(Method)	getMethodFromFunction(Any (*f)());
 COMMON(status)	makeClassMethod(Class class);
 
 /* /home/jan/src/pl/packages/xpce/src/ker/name.c */

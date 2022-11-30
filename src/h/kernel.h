@@ -257,6 +257,10 @@ cpdata(to, from, type, n)
 #include O_EXTRA_SYSTEM_TYPES
 #endif
 
+#define functionToPtr(f)   ((void*)(intptr_t)(f))
+#define PtrToFunction(ptr) ((Any(*)())(intptr_t)(ptr))
+
+
 		 /*******************************
 		 * OS-IDENTIFIERS (STRICT_ANSI) *
 		 *******************************/
@@ -922,7 +926,7 @@ typedef struct _classdecl
 #define GM(n, a, r, t, f, g, s) { n, a, r, t, (GetFunc) f, (Name) g, s }
 #define RC(n, t, d, s)		{ n, t, d, s }
 #define IV(n, t, f, g, s)	{ n, t, f, NULL,        (Name) g, s }
-#define SV(n, t, f, c, g, s)	{ n, t, f, (void *)(c), (Name) g, s }
+#define SV(n, t, f, c, g, s)	{ n, t, f, functionToPtr(c), (Name) g, s }
 #define IVEntries(l)		(sizeof(l) / sizeof(vardecl))
 #define SMEntries(l)		(sizeof(l) / sizeof(senddecl))
 #define GMEntries(l)		(sizeof(l) / sizeof(getdecl))
@@ -1024,8 +1028,8 @@ NewClass(type)
 End;
 
 NewClass(constraint)
-  Any	        from;			/* 'From' object of constraint */
-  Any	        to;			/* 'To' object of constraint */
+  Any		from;			/* 'From' object of constraint */
+  Any		to;			/* 'To' object of constraint */
   Relation	relation;		/* relation they have */
   Name		locked;			/* locked fro further messages? */
 End;
@@ -1519,7 +1523,7 @@ struct var_extension
     } else \
     { _var_env.size = 0; \
       for(_i=0; _i<ac; _i++) \
-        assignVar(Arg(_i+1), (av)[_i], DEFAULT); \
+	assignVar(Arg(_i+1), (av)[_i], DEFAULT); \
     } \
  \
     code; \
