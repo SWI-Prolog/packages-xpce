@@ -911,7 +911,9 @@ getSizeFile(FileObj f)
 
 static Date
 getTimeFile(FileObj f, Name which)
-{
+{ if ( isDefault(which) )
+    which = NAME_modified;
+
 #if O_XOS
   Name name = getOsNameFile(f);
   double t;
@@ -921,9 +923,6 @@ getTimeFile(FileObj f, Name which)
     answer(CtoDate((time_t)t));
 #else
   STAT_TYPE buf;
-
-  if ( isDefault(which) )
-    which = NAME_modified;
 
   if ( statFile(f, &buf) == 0 )
   { if ( which == NAME_modified )
