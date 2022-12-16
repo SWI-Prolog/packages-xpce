@@ -444,7 +444,8 @@ out:
 static status
 backup_name(const char *old, const char *ext, char *bak, size_t len)
 { if ( strlen(old) + strlen(ext) + 1 < len )
-  { sprintf(bak, "%s%s", old, ext);
+  { strcpy(bak, old);
+    strcat(bak, ext);
     succeed;
   } else
   { errno = ENAMETOOLONG;
@@ -552,7 +553,17 @@ getFilterFile(FileObj f)
       fail;
     }
 
-    sprintf(path, "%s%s", strName(f->name), strName(extension));
+    char *fname = strName(f->name);
+    char *ext   = strName(extension);
+
+    if ( strlen(fname)+strlen(ext)+1 >= sizeof(path) )
+    { errorPce(f, NAME_representation, NAME_nameTooLong);
+      fail;
+    }
+
+    strcpy(path, fname);
+    strcat(path, ext);
+
 #if O_XOS
     if ( _xos_exists(path, _XOS_FILE) )
 #else
