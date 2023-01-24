@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2018-2022, University of Amsterdam
+    Copyright (c)  2018-2023, University of Amsterdam
                               SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -51,6 +51,7 @@ available test sets. The public goals are:
         ?- test_xpce.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+:- if(exists_source(library(pce))).
 % Load XPCE from the development environment
 
 :- use_module(library(pce)).
@@ -836,3 +837,9 @@ test_failed(R, Except) :-
 blocked(Reason) :-
     throw(blocked(Reason)).
 
+:- else.
+
+test_xpce :-
+    format('Cannot find library(pce); skipping xpce tests.~n').
+
+:- endif.
