@@ -806,7 +806,7 @@ getGeometryFrame(FrameObj fr)
     { Int n = getIndexChain(fr->display->monitors, mon);
 
       if ( n )
-	sprintf(buf+strlen(buf), "@" INTPTR_FORMAT, valInt(n)-1);
+	sprintf(buf+strlen(buf), "@%" PRIdPTR, valInt(n)-1);
     }
 
     answer(CtoName(buf));

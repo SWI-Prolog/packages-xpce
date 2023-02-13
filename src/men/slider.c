@@ -85,7 +85,7 @@ format_value(Slider s, char *buf, Any val)
 { int deffmt = isDefault(s->format);
 
   if ( isInteger(val) )
-    sprintf(buf, deffmt ? INTPTR_FORMAT : strName(s->format), valInt(val));
+    sprintf(buf, deffmt ? "%" PRIdPTR : strName(s->format), valInt(val));
   else
     sprintf(buf, deffmt ? "%g"  : strName(s->format), valReal(val));
 }
@@ -251,7 +251,7 @@ computeSlider(Slider s)
     { char buf[100];
       string str;
 
-      sprintf(buf, INTPTR_FORMAT, valInt(s->high));
+      sprintf(buf, "%" PRIdPTR, valInt(s->high));
       str_set_ascii(&str, buf);
       str_size(&str, s->value_font, &sw, &sh);
       w = hx + sw;

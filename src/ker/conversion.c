@@ -49,7 +49,7 @@ toString(Any obj, PceString s)
     s->s_text = ca->data.s_text;
     succeed;
   } else if ( isInteger(obj) )
-  { sprintf(tmp, INTPTR_FORMAT, valInt(obj));
+  { sprintf(tmp, "%" PRIdPTR, valInt(obj));
     str = ppsavestring(tmp);
     rval = SUCCEED;
   } else if ( instanceOfObject(obj, ClassReal) )
@@ -57,7 +57,7 @@ toString(Any obj, PceString s)
     str = ppsavestring(tmp);
     rval = SUCCEED;
   } else if ( instanceOfObject(obj, ClassNumber) )
-  { sprintf(tmp, INTPTR_FORMAT, ((Number)obj)->value);
+  { sprintf(tmp, "%" PRIdPTR, ((Number)obj)->value);
     str = ppsavestring(tmp);
     rval = SUCCEED;
   }
@@ -239,7 +239,7 @@ do_pp(Any obj)
     return ppsavestring("FAIL");
 
   if ( isInteger(obj) )
-  { sprintf(tmp, INTPTR_FORMAT, valInt(obj));
+  { sprintf(tmp, "%" PRIdPTR, valInt(obj));
     return ppsavestring(tmp);
   }
 
@@ -269,7 +269,7 @@ do_pp(Any obj)
     { sprintf(summary, "%g", valReal(obj));
       s = summary;
     } else if ( instanceOfObject(obj, ClassNumber) )
-    { sprintf(summary, INTPTR_FORMAT, ((Number)obj)->value);
+    { sprintf(summary, "%" PRIdPTR, ((Number)obj)->value);
       s = summary;
     } else if ( instanceOfObject(obj, ClassHostData) )
     { Any pn = qadGetv(obj, NAME_printName, 0, NULL);
@@ -286,7 +286,7 @@ do_pp(Any obj)
       if ( (name = getNameAssoc(obj)) )
 	sprintf(tmp, "@%s/%s", nameToUTF8(name), s);
       else
-	sprintf(tmp, "@" INTPTR_FORMAT "/%s", valInt(PointerToInt(obj)), s);
+	sprintf(tmp, "@%" PRIdPTR "/%s", valInt(PointerToInt(obj)), s);
     }
 
     if ( isFreedObj(obj) )

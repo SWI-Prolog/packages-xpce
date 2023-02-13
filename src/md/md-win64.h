@@ -42,9 +42,6 @@
 #define SIZEOF_LONG 4
 #define SIZEOF_DOUBLE 8
 
-/* printf format for intptr_t */
-#define INTPTR_FORMAT "%lld"
-
 #define PCE_OS "win64"
 
 #include "md-windows.h"

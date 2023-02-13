@@ -173,7 +173,7 @@ _output(char *fm, va_list args)
 			return;
 	  case 's':	putString(va_arg(args, char *));
 			continue;
-	  case 'd':	sprintf(tmp, INTPTR_FORMAT, valInt(va_arg(args, Int)));
+	  case 'd':	sprintf(tmp, "%" PRIdPTR, valInt(va_arg(args, Int)));
 			putString(tmp);
 			continue;
 	  case 'D':	sprintf(tmp, "%d", va_arg(args, int));
@@ -189,26 +189,26 @@ _output(char *fm, va_list args)
 			continue;
 		      }
 	  case 'm':   { Graphical gr = va_arg(args, Graphical);
-			sprintf(tmp, INTPTR_FORMAT " " INTPTR_FORMAT " moveto",
+			sprintf(tmp, "%" PRIdPTR " " "%" PRIdPTR " moveto",
 				valInt(gr->area->x),
 				valInt(gr->area->y));
 			putString(tmp);
 			continue;
 		      }
 	  case 'c':   { Point p = va_arg(args, Point);
-			sprintf(tmp, INTPTR_FORMAT " " INTPTR_FORMAT,
+			sprintf(tmp, "%" PRIdPTR " " "%" PRIdPTR,
 				valInt(p->x), valInt(p->y));
 			putString(tmp);
 			continue;
 		      }
 	  case 't':   { Figure f = va_arg(args, Figure);
-			sprintf(tmp, INTPTR_FORMAT " " INTPTR_FORMAT " translate",
+			sprintf(tmp, "%" PRIdPTR " " "%" PRIdPTR " translate",
 				valInt(f->offset->x), valInt(f->offset->y));
 			putString(tmp);
 			continue;
 		      }
 	  case 'p':   { Graphical gr = va_arg(args, Graphical);
-			sprintf(tmp, INTPTR_FORMAT, valInt(gr->pen));
+			sprintf(tmp, "%" PRIdPTR, valInt(gr->pen));
 			putString(tmp);
 			continue;
 		      }
@@ -262,25 +262,25 @@ _output(char *fm, va_list args)
 		      }
 	  case 'x':   { Graphical gr = va_arg(args, Graphical);
 
-			sprintf(tmp, INTPTR_FORMAT, valInt(gr->area->x));
+			sprintf(tmp, "%" PRIdPTR, valInt(gr->area->x));
 			putString(tmp);
 			continue;
 		      }
 	  case 'y':   { Graphical gr = va_arg(args, Graphical);
 
-			sprintf(tmp, INTPTR_FORMAT, valInt(gr->area->y));
+			sprintf(tmp, "%" PRIdPTR, valInt(gr->area->y));
 			putString(tmp);
 			continue;
 		      }
 	  case 'w':   { Graphical gr = va_arg(args, Graphical);
 
-			sprintf(tmp, INTPTR_FORMAT, valInt(gr->area->w));
+			sprintf(tmp, "%" PRIdPTR, valInt(gr->area->w));
 			putString(tmp);
 			continue;
 		      }
 	  case 'h':   { Graphical gr = va_arg(args, Graphical);
 
-			sprintf(tmp, INTPTR_FORMAT, valInt(gr->area->h));
+			sprintf(tmp, "%" PRIdPTR, valInt(gr->area->h));
 			putString(tmp);
 			continue;
 		      }

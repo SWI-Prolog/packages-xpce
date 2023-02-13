@@ -89,22 +89,22 @@ rangeIntItem(IntItem ii, Int low, Int high)
   if ( isDefault(low) )
   { if ( isDefault(high) )
     { t = TypeInt;
-      sprintf(s1, INTPTR_FORMAT, PCE_MIN_INT);
-      sprintf(s2, INTPTR_FORMAT, PCE_MAX_INT);
+      sprintf(s1, "%" PRIdPTR, PCE_MIN_INT);
+      sprintf(s2, "%" PRIdPTR, PCE_MAX_INT);
     } else
-    { sprintf(s1, INTPTR_FORMAT, PCE_MIN_INT);
-      sprintf(s2, INTPTR_FORMAT, valInt(high));
-      sprintf(buf, ".." INTPTR_FORMAT, valInt(high));
+    { sprintf(s1, "%" PRIdPTR, PCE_MIN_INT);
+      sprintf(s2, "%" PRIdPTR, valInt(high));
+      sprintf(buf, "..%" PRIdPTR, valInt(high));
     }
   } else
   { if ( isDefault(high) )
-    { sprintf(s1, INTPTR_FORMAT, valInt(low));
-      sprintf(s2, INTPTR_FORMAT, PCE_MAX_INT);
-      sprintf(buf, INTPTR_FORMAT "..", valInt(low));
+    { sprintf(s1, "%" PRIdPTR, valInt(low));
+      sprintf(s2, "%" PRIdPTR, PCE_MAX_INT);
+      sprintf(buf, "%" PRIdPTR "..", valInt(low));
     } else
-    { sprintf(s1, INTPTR_FORMAT, valInt(low));
-      sprintf(s2, INTPTR_FORMAT, valInt(high));
-      sprintf(buf, INTPTR_FORMAT ".." INTPTR_FORMAT,
+    { sprintf(s1, "%" PRIdPTR, valInt(low));
+      sprintf(s2, "%" PRIdPTR, valInt(high));
+      sprintf(buf, "%" PRIdPTR ".." "%" PRIdPTR,
 	      valInt(low), valInt(high));
     }
   }
