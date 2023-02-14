@@ -322,33 +322,14 @@ typedef struct dCell	      **DelegateList;   /* See msg-passing.c */
 
 #define INVOKE_FUNC ((SendFunc)~0L)
 
-		/********************************
-		*	    POINTERS		*
-		********************************/
-
-#ifdef VARIABLE_POINTER_OFFSET
-#undef POINTER_OFFSET
-GLOBAL uintptr_t pce_data_pointer_offset;
-#define POINTER_OFFSET pce_data_pointer_offset
-#else
-#ifndef POINTER_OFFSET
-#define POINTER_OFFSET (0L)
-#endif
-#endif
-
-#define PointerToCInt(p) (((uintptr_t)(p) - POINTER_OFFSET)/sizeof(void*))
-#define PointerToInt(p)	 toInt(PointerToCInt(p))
-#define longToPointer(i) ((Any) (i * sizeof(void*) + POINTER_OFFSET))
-#define IntToPointer(i)  longToPointer(valInt(i))
-
 
 		/********************************
 		*           TAG MASKS		*
 		********************************/
 
-#define INT_MASK	0x00000001	/* 10 mask for Int (integers) */
-#define MASK_MASK	0x00000001	/* 11 Mask Mask */
-#define TAG_BITS	1		/* number of mask bits for INT */
+#define INT_MASK	((uintptr_t)0x01) /* 01 mask for Int (integers) */
+#define MASK_MASK	((uintptr_t)0x01) /* 11 Mask Mask */
+#define TAG_BITS	1		  /* number of mask bits for INT */
 
 #define MaskOf(obj)		((uintptr_t)(obj) & MASK_MASK)
 #define UnMask(obj)		((uintptr_t)(obj) & ~MASK_MASK)
@@ -1556,6 +1537,32 @@ typedef intptr_t AnswerMark;
 #include "../msg/proto.h"
 #include "../adt/proto.h"
 #include "../rel/proto.h"
+
+/* Pointer <-> integer conversion */
+
+#ifdef VARIABLE_POINTER_OFFSET
+#undef POINTER_OFFSET
+GLOBAL uintptr_t pce_data_pointer_offset;
+#define POINTER_OFFSET pce_data_pointer_offset
+#else
+#ifndef POINTER_OFFSET
+#define POINTER_OFFSET (0L)
+#endif
+#endif
+
+#define longToPointer(i) ((Any) (i * sizeof(void*) + POINTER_OFFSET))
+#define IntToPointer(i)  longToPointer(valInt(i))
+
+static inline uintptr_t
+PointerToCInt(void *p)
+{ uintptr_t i = ((uintptr_t)(p) - POINTER_OFFSET)/sizeof(void*);
+
+  assert(longToPointer(i) == p);
+  return i;
+}
+
+#define PointerToInt(p)	 toInt(PointerToCInt(p))
+
 
 #define getSubName(n, f, t) (Name)getSubCharArray((CharArray)(n), f, t)
 
