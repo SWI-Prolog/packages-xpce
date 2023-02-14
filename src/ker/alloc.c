@@ -229,7 +229,7 @@ alloc(size_t n)
       assert((intptr_t) z >= allocBase && (intptr_t) z <= allocTop);
       assert(z->in_use == FALSE);
       assert(z->magic  == ALLOC_MAGIC_WORD);
-      assert((intptr_t)z->next % 4 == 0);
+      assert((intptr_t)z->next % sizeof(void*) == 0);
 
       z->in_use = TRUE;
 #endif
@@ -290,7 +290,7 @@ unalloc(size_t n, Any p)
     assert((uintptr_t)z >= allocBase && (uintptr_t)z <= allocTop);
 
 #if ALLOC_DEBUG
-    assert((uintptr_t)z % 4 == 0);
+    assert((uintptr_t)z % sizeof(void*) == 0);
 #if ALLOC_DEBUG > 1
     memset(p, ALLOC_MAGIC_FREE, n);
 #endif
@@ -332,11 +332,11 @@ pceInitAlloc(void)
     freeChains[t] = NULL;
 
   wastedbytes = allocbytes = 0;
-  allocTop  = 0L;
-  allocBase = 0xffffffff;
+  allocTop  = (uintptr_t)0;
+  allocBase = ~(uintptr_t)0;
   alloc(sizeof(intptr_t));			/* initialise Top/Base */
 #ifdef VARIABLE_POINTER_OFFSET
-  pce_data_pointer_offset = allocBase & 0xf0000000L;
+  pce_data_pointer_offset = ~((uintptr_t)0xfffffff);
 #endif
 }
 
