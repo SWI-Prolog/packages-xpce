@@ -2472,7 +2472,7 @@ put_object(term_t t, PceObject obj)
       term_t t2;
 
       return ( (t2 = PL_new_term_ref()) &&
-	       PL_put_integer(t2, value.integer) &&
+	       PL_put_int64(t2, value.integer) &&
 	       PL_cons_functor(t, FUNCTOR_ref1, t2) );
 #endif
       break;
@@ -2499,7 +2499,7 @@ put_object(term_t t, PceObject obj)
     case PCE_HOSTDATA:
       return PutTerm(t, getTermHandle(obj));	/* TBD: Use saved handle */
     case PCE_INTEGER:
-      return PL_put_integer(t, value.integer);
+      return PL_put_int64(t, value.integer);
     case PCE_NAME:
       { PceITFSymbol symbol = value.itf_symbol;
 
