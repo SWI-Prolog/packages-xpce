@@ -161,7 +161,7 @@ writePcev(Pce pce, int argc, Any *argv)
     if ( instanceOfObject(argv[i], ClassCharArray) )
       Cprintf("%Us", charArrayToUTF8(argv[i]));
     else if ( isInteger(argv[i]) )
-      Cprintf("%ld", valInt(argv[i]));
+      Cprintf("%" PRIdPTR , valInt(argv[i]));
     else if ( instanceOfObject(argv[i], ClassReal) )
       Cprintf("%g", valReal(argv[i]));
     else
