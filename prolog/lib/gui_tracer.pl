@@ -171,6 +171,8 @@ gdebug :-
 %
 %   Trap exceptions matching Exception using trap/1 and start the
 %   graphical tracer.
+%
+%   @see trap/1 for details.
 
 gtrap(Error) :-
     guitracer,
