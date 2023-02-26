@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2007-2015, VU University Amsterdam
+    Copyright (c)  2007-2023, VU University Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -64,13 +65,13 @@
 exception(ex1, error(_, _), true, false).
 
 :- dynamic
-    user:prolog_exception_hook/4.
+    prolog:prolog_exception_hook/5.
 
 %!  exception_hook(+ExIn, -ExOut, +Frame, +Catcher) is failure.
 %
 %   Trap exceptions and consider whether or not to start the tracer.
 
-exception_hook(Ex, Ex, _Frame, Catcher) :-
+exception_hook(Ex, Ex, _Frame, Catcher, _Debug) :-
     thread_self(Me),
     thread_property(Me, debug(true)),
     register(Ex),
@@ -97,8 +98,8 @@ install_exception_hook :-
         fail
     ).
 install_exception_hook :-
-    asserta((user:prolog_exception_hook(Ex, Out, Frame, Catcher) :-
-                    exception_hook(Ex, Out, Frame, Catcher)), Ref),
+    asserta((prolog:prolog_exception_hook(Ex, Out, Frame, Catcher, Debug) :-
+                    exception_hook(Ex, Out, Frame, Catcher, Debug)), Ref),
     assert(installed(Ref)).
 
 
