@@ -88,6 +88,7 @@ variable(ticks,            int,  get, "Total # ticks").
 variable(accounting_ticks, int,  get, "# ticks while accounting").
 variable(time,             real, get, "Total time").
 variable(nodes,            int,  get, "Nodes created").
+variable(ports,            {true,false,classic},  get, "Port mode").
 variable(time_view,        {percentage,seconds} := percentage,
                                  get, "How time is displayed").
 
@@ -142,6 +143,7 @@ load_profile(F, ProfData0:[prolog]) :->
     send(F, slot, accounting_ticks, Summary.accounting),
     send(F, slot, time, Summary.time),
     send(F, slot, nodes, Summary.nodes),
+    send(F, slot, ports, Summary.ports),
     get(F, member, prof_browser, B),
     send(F, report, progress, 'Loading profile data ...'),
     send(B, load_profile, ProfData.nodes),
@@ -394,23 +396,34 @@ title(W) :->
     get(W, tabular, T),
     BG = (background := khaki1),
     send(T, append, 'Time',   bold, center, colspan := 2, BG),
-    send(T, append, 'Port',   bold, center, colspan := 4, BG),
+    (   get(W?frame, ports, false)
+    ->  send(T, append, '# Calls', bold, center, colspan := 1,
+             valign := center, BG, rowspan := 2)
+    ;   send(T, append, 'Port',    bold, center, colspan := 4, BG)
+    ),
     send(T, append, 'Predicate', bold, center,
          valign := center, BG,
          rowspan := 2),
     send(T, next_row),
     send(T, append, 'Self',   bold, center, BG),
     send(T, append, 'Children',   bold, center, BG),
-    send(T, append, 'Call',   bold, center, BG),
-    send(T, append, 'Redo',   bold, center, BG),
-    send(T, append, 'Exit',   bold, center, BG),
-    send(T, append, 'Fail',   bold, center, BG),
+    (   get(W?frame, ports, false)
+    ->  true
+    ;   send(T, append, 'Call',   bold, center, BG),
+        send(T, append, 'Redo',   bold, center, BG),
+        send(T, append, 'Exit',   bold, center, BG),
+        send(T, append, 'Fail',   bold, center, BG)
+    ),
     send(T, next_row).
 
 cluster_title(W, Cycle:int) :->
     get(W, tabular, T),
+    (   get(W?frame, ports, false)
+    ->  Colspan = 4
+    ;   Colspan = 7
+    ),
     send(T, append, string('Cluster <%d>', Cycle),
-         bold, center, colspan := 7,
+         bold, center, colspan := Colspan,
          background := navyblue, colour := yellow),
     send(T, next_row).
 
@@ -553,10 +566,13 @@ show_predicate(W, Data:prolog,
     Fail is Call+Redo-Exit,
     send(T, append, Self, halign := right, BG),
     send(T, append, Children, halign := right, BG),
-    send(T, append, Call, halign := right, BG),
-    send(T, append, Redo, halign := right, BG),
-    send(T, append, Exit, halign := right, BG),
-    send(T, append, Fail, halign := right, BG),
+    (   get(W?frame, ports, false)
+    ->  send(T, append, Call, halign := right, BG)
+    ;   send(T, append, Call, halign := right, BG),
+        send(T, append, Redo, halign := right, BG),
+        send(T, append, Exit, halign := right, BG),
+        send(T, append, Fail, halign := right, BG)
+    ),
     (   object(Pred)
     ->  new(Txt, prof_node_text(Pred, self))
     ;   new(Txt, prof_predicate_text(Pred, self))
@@ -572,17 +588,23 @@ show_relative(W, Caller:prolog, Role:name) :->
     (   Pred == '<recursive>'
     ->  send(T, append, new(graphical), colspan := 2),
         send(T, append, Calls, halign := right),
-        send(T, append, new(graphical), colspan := 3),
+        (   get(W?frame, ports, false)
+        ->  true
+        ;   send(T, append, new(graphical), colspan := 3)
+        ),
         send(T, append, Pred, italic)
     ;   get(Frame, render_time, Ticks, Self),
         get(Frame, render_time, ChildTicks, Children),
         send(T, append, Self, halign := right),
         send(T, append, Children, halign := right),
-        Fails is Calls+Redos-Exits,
-        send(T, append, Calls, halign := right),
-        send(T, append, Redos, halign := right),
-        send(T, append, Exits, halign := right),
-        send(T, append, Fails, halign := right),
+        (   get(W?frame, ports, false)
+        ->  send(T, append, Calls, halign := right)
+        ;   Fails is Calls+Redos-Exits,
+            send(T, append, Calls, halign := right),
+            send(T, append, Redos, halign := right),
+            send(T, append, Exits, halign := right),
+            send(T, append, Fails, halign := right)
+        ),
         (   Pred == '<spontaneous>'
         ->  send(T, append, Pred, italic)
         ;   object(Pred)
