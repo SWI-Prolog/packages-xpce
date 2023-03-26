@@ -224,7 +224,7 @@ scanDirectory(Directory d, Chain files, Chain dirs, Regex pattern, BoolObj all)
 
       if ( notNil(files) &&
 #ifdef O_XOS
-	   _xos_exists(name, _XOS_FILE)
+	   _xos_exists(name, _XOS_FILE) == TRUE
 #else
 	   (buf.st_mode & S_IFMT) == S_IFREG
 #endif
@@ -245,7 +245,7 @@ scanDirectory(Directory d, Chain files, Chain dirs, Regex pattern, BoolObj all)
 	appendChain(files, FNToName(name));
       } else if ( notNil(dirs) &&
 #ifdef O_XOS
-		  _xos_exists(name, _XOS_DIR)
+		  _xos_exists(name, _XOS_DIR) == TRUE
 #else
 		  (buf.st_mode & S_IFMT) == S_IFDIR
 #endif
@@ -976,7 +976,3 @@ nouser:
 
   return expanded-bin;
 }
-
-
-
-
