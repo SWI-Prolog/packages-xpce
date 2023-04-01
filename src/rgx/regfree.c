@@ -45,8 +45,7 @@
  * Ignoring invocation with NULL is a convenience.
  */
 VOID
-regfree(re)
-regex_t *re;
+regfree(regex_t *re)
 {
 	if (re == NULL)
 		return;

@@ -562,8 +562,7 @@ static chr graphCharTable[] = {
  ^ static int nmcces(struct vars *);
  */
 static int
-nmcces(v)
-    struct vars *v;			/* context */
+nmcces(struct vars *v)
 {
     /*
      * No multi-character collating elements defined at the moment.
@@ -576,8 +575,7 @@ nmcces(v)
  ^ static int nleaders(struct vars *);
  */
 static int
-nleaders(v)
-    struct vars *v;			/* context */
+nleaders(struct vars *v)
 {
     return 0;
 }
@@ -587,9 +585,7 @@ nleaders(v)
  ^ static struct cvec *allmcces(struct vars *, struct cvec *);
  */
 static struct cvec *
-allmcces(v, cv)
-    struct vars *v;			/* context */
-    struct cvec *cv;			/* this is supposed to have enough room */
+allmcces(struct vars *v, struct cvec *cv)
 {
     return clearcvec(cv);
 }
@@ -614,10 +610,7 @@ strncmpAW(const char *a, const chr *w, size_t len)
  ^ static celt element(struct vars *, chr *, chr *);
  */
 static celt
-element(v, startp, endp)
-    struct vars *v;			/* context */
-    chr *startp;			/* points to start of name */
-    chr *endp;				/* points just past end of name */
+element(struct vars *v, chr *startp, chr *endp)
 {
     struct cname *cn;
     size_t len;
@@ -651,11 +644,7 @@ element(v, startp, endp)
  ^ static struct cvec *range(struct vars *, celt, celt, int);
  */
 static struct cvec *
-range(v, a, b, cases)
-    struct vars *v;			/* context */
-    celt a;				/* range start */
-    celt b;				/* range end, might equal a */
-    int cases;				/* case-independent? */
+range(struct vars *v, celt a, celt b, int cases)
 {
     int nchrs;
     struct cvec *cv;
@@ -716,8 +705,7 @@ range(v, a, b, cases)
  ^ static int before(celt, celt);
  */
 static int				/* predicate */
-before(x, y)
-    celt x, y;				/* collating elements */
+before(celt x, celt y)
 {
     /* trivial because no MCCEs */
     if (x < y) {
@@ -732,11 +720,7 @@ before(x, y)
  ^ static struct cvec *eclass(struct vars *, celt, int);
  */
 static struct cvec *
-eclass(v, c, cases)
-    struct vars *v;			/* context */
-    celt c;				/* Collating element representing
-					 * the equivalence class. */
-    int cases;				/* all cases? */
+eclass(struct vars *v, celt c, int cases)
 {
     struct cvec *cv;
 
@@ -768,11 +752,7 @@ eclass(v, c, cases)
  ^ static struct cvec *cclass(struct vars *, chr *, chr *, int);
  */
 static struct cvec *
-cclass(v, startp, endp, cases)
-    struct vars *v;			/* context */
-    chr *startp;			/* where the name starts */
-    chr *endp;				/* just past the end of the name */
-    int cases;				/* case-independent? */
+cclass(struct vars *v, chr *startp, chr *endp, int cases)
 {
     size_t len;
     struct cvec *cv = NULL;
@@ -979,9 +959,7 @@ cclass(v, startp, endp, cases)
  ^ static struct cvec *allcases(struct vars *, pchr);
  */
 static struct cvec *
-allcases(v, pc)
-    struct vars *v;			/* context */
-    pchr pc;				/* character to get case equivs of */
+allcases(struct vars *v, pchr pc)
 {
     struct cvec *cv;
     chr c = (chr)pc;

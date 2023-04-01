@@ -38,10 +38,7 @@
  - regcomp - compile regular expression
  */
 int
-regcomp(re, str, flags)
-regex_t *re;
-CONST char *str;
-int flags;
+regcomp(regex_t *re, CONST char *str, int flags)
 {
 	size_t len;
 	int f = flags;
@@ -59,12 +56,7 @@ int flags;
  - regexec - execute regular expression
  */
 int
-regexec(re, str, nmatch, pmatch, flags)
-regex_t *re;
-CONST char *str;
-size_t nmatch;
-regmatch_t pmatch[];
-int flags;
+regexec(regex_t *re, str, CONST char *str, size_t nmatch, regmatch_t pmatch[], int flags)
 {
 	CONST char *start;
 	size_t len;

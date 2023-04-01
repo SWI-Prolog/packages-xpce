@@ -279,11 +279,7 @@ static struct fns functions = {
  ^ int compile(regex_t *, CONST chr *, size_t, int);
  */
 int
-compile(re, string, len, flags)
-regex_t *re;
-CONST chr *string;
-size_t len;
-int flags;
+compile(regex_t *re, CONST chr *string,	size_t len, int flags)
 {
 	struct vars var;
 	struct vars *v = &var;
@@ -454,9 +450,7 @@ int flags;
  ^ static VOID moresubs(struct vars *, int);
  */
 static VOID
-moresubs(v, wanted)
-struct vars *v;
-int wanted;			/* want enough room for this one */
+moresubs(struct vars *v, int wanted)
 {
 	struct subre **p;
 	size_t n;
@@ -488,9 +482,7 @@ int wanted;			/* want enough room for this one */
  ^ static int freev(struct vars *, int);
  */
 static int
-freev(v, err)
-struct vars *v;
-int err;
+freev(struct vars *v, int err)
 {
 	if (v->re != NULL)
 		rfree(v->re);
@@ -521,9 +513,7 @@ int err;
  ^ static VOID makesearch(struct vars *, struct nfa *);
  */
 static VOID
-makesearch(v, nfa)
-struct vars *v;
-struct nfa *nfa;
+makesearch(struct vars *v, struct nfa *nfa)
 {
 	struct arc *a;
 	struct arc *b;
@@ -599,12 +589,7 @@ struct nfa *nfa;
  ^	struct state *);
  */
 static struct subre *
-parse(v, stopper, type, init, final)
-struct vars *v;
-int stopper;			/* EOS or ')' */
-int type;			/* LACON (lookahead subRE) or PLAIN */
-struct state *init;		/* initial state */
-struct state *final;		/* final state */
+parse(struct vars *v, int stopper, int type, struct state *init, struct state *final)
 {
 	struct state *left;	/* scaffolding for branch */
 	struct state *right;
@@ -674,13 +659,8 @@ struct state *final;		/* final state */
  ^	struct state *, int);
  */
 static struct subre *
-parsebranch(v, stopper, type, left, right, partial)
-struct vars *v;
-int stopper;			/* EOS or ')' */
-int type;			/* LACON (lookahead subRE) or PLAIN */
-struct state *left;		/* leftmost state */
-struct state *right;		/* rightmost state */
-int partial;			/* is this only part of a branch? */
+parsebranch(struct vars *v, int stopper, int type,
+	    struct state *left, struct state *right, int partial)
 {
 	struct state *lp;	/* left end of current construct */
 	int seencontent;	/* is there anything in this branch yet? */
@@ -729,13 +709,8 @@ int partial;			/* is this only part of a branch? */
  ^	struct state *, struct subre *);
  */
 static VOID
-parseqatom(v, stopper, type, lp, rp, top)
-struct vars *v;
-int stopper;			/* EOS or ')' */
-int type;			/* LACON (lookahead subRE) or PLAIN */
-struct state *lp;		/* left state to hang it on */
-struct state *rp;		/* right state to hang it on */
-struct subre *top;		/* subtree top */
+parseqatom(struct vars *v, int stopper, int type,
+	   struct state *lp, struct state *rp, struct subre *top)
 {
 	struct state *s;	/* temporaries for new states */
 	struct state *s2;
@@ -1127,11 +1102,7 @@ struct subre *top;		/* subtree top */
  ^ static VOID nonword(struct vars *, int, struct state *, struct state *);
  */
 static VOID
-nonword(v, dir, lp, rp)
-struct vars *v;
-int dir;			/* AHEAD or BEHIND */
-struct state *lp;
-struct state *rp;
+nonword(struct vars *v, int dir, struct state *lp, struct state *rp)
 {
 	int anchor = (dir == AHEAD) ? '$' : '^';
 
@@ -1147,11 +1118,7 @@ struct state *rp;
  ^ static VOID word(struct vars *, int, struct state *, struct state *);
  */
 static VOID
-word(v, dir, lp, rp)
-struct vars *v;
-int dir;			/* AHEAD or BEHIND */
-struct state *lp;
-struct state *rp;
+word(struct vars *v, int dir, struct state *lp, struct state *rp)
 {
 	assert(dir == AHEAD || dir == BEHIND);
 	cloneouts(v->nfa, v->wordchrs, lp, rp, dir);
@@ -1163,8 +1130,7 @@ struct state *rp;
  ^ static int scannum(struct vars *);
  */
 static int			/* value, <= DUPMAX */
-scannum(v)
-struct vars *v;
+scannum(struct vars *v)
 {
 	int n = 0;
 
@@ -1190,12 +1156,7 @@ struct vars *v;
  ^ static VOID repeat(struct vars *, struct state *, struct state *, int, int);
  */
 static VOID
-repeat(v, lp, rp, m, n)
-struct vars *v;
-struct state *lp;
-struct state *rp;
-int m;
-int n;
+repeat(struct vars *v, struct state *lp, struct state *rp, int m, int n)
 {
 #	define	SOME	2
 #	define	INF	3
@@ -1277,10 +1238,7 @@ int n;
  ^ static VOID bracket(struct vars *, struct state *, struct state *);
  */
 static VOID
-bracket(v, lp, rp)
-struct vars *v;
-struct state *lp;
-struct state *rp;
+bracket(struct vars *v, struct state *lp, struct state *rp)
 {
 	assert(SEE('['));
 	NEXT();
@@ -1298,10 +1256,7 @@ struct state *rp;
  ^ static VOID cbracket(struct vars *, struct state *, struct state *);
  */
 static VOID
-cbracket(v, lp, rp)
-struct vars *v;
-struct state *lp;
-struct state *rp;
+cbracket(struct vars *v, struct state *lp, struct state *rp)
 {
 	struct state *left = newstate(v->nfa);
 	struct state *right = newstate(v->nfa);
@@ -1382,10 +1337,7 @@ struct state *rp;
  ^ static VOID brackpart(struct vars *, struct state *, struct state *);
  */
 static VOID
-brackpart(v, lp, rp)
-struct vars *v;
-struct state *lp;
-struct state *rp;
+brackpart(struct vars *v, struct state *lp, struct state *rp)
 {
 	celt startc;
 	celt endc;
@@ -1492,8 +1444,7 @@ struct state *rp;
  ^ static chr *scanplain(struct vars *);
  */
 static chr *			/* just after end of sequence */
-scanplain(v)
-struct vars *v;
+scanplain(struct vars *v)
 {
 	chr *endp;
 
@@ -1519,9 +1470,7 @@ struct vars *v;
  ^ static VOID leaders(struct vars *, struct cvec *);
  */
 static VOID
-leaders(v, cv)
-struct vars *v;
-struct cvec *cv;
+leaders(struct vars *v, struct cvec *cv)
 {
 	int mcce;
 	chr *p;
@@ -1562,11 +1511,7 @@ struct cvec *cv;
  ^ static VOID onechr(struct vars *, pchr, struct state *, struct state *);
  */
 static VOID
-onechr(v, c, lp, rp)
-struct vars *v;
-pchr c;
-struct state *lp;
-struct state *rp;
+onechr(struct vars *v, pchr c, struct state *lp, struct state *rp)
 {
 	if (!(v->cflags&REG_ICASE)) {
 		newarc(v->nfa, PLAIN, subcolor(v->cm, c), lp, rp);
@@ -1584,11 +1529,7 @@ struct state *rp;
  ^	struct state *);
  */
 static VOID
-dovec(v, cv, lp, rp)
-struct vars *v;
-struct cvec *cv;
-struct state *lp;
-struct state *rp;
+dovec(struct vars *v, struct cvec *cv, struct state *lp, struct state *rp)
 {
 	chr ch, from, to;
 	celt ce;
@@ -1706,10 +1647,7 @@ struct state *rp;
  ^ static celt nextleader(struct vars *, pchr, pchr);
  */
 static celt			/* NOCELT means none */
-nextleader(v, from, to)
-struct vars *v;
-pchr from;
-pchr to;
+nextleader(struct vars *v, pchr from, pchr to)
 {
 	int i;
 	chr *p;
@@ -1738,8 +1676,7 @@ pchr to;
  ^ static VOID wordchrs(struct vars *);
  */
 static VOID
-wordchrs(v)
-struct vars *v;
+wordchrs(struct vars *v)
 {
 	struct state *left;
 	struct state *right;
@@ -1769,12 +1706,7 @@ struct vars *v;
  ^	struct state *);
  */
 static struct subre *
-subre(v, op, flags, begin, end)
-struct vars *v;
-int op;
-int flags;
-struct state *begin;
-struct state *end;
+subre(struct vars *v, int op, int flags, struct state *begin, struct state *end)
 {
 	struct subre *ret;
 
@@ -1812,9 +1744,7 @@ struct state *end;
  ^ static VOID freesubre(struct vars *, struct subre *);
  */
 static VOID
-freesubre(v, sr)
-struct vars *v;			/* might be NULL */
-struct subre *sr;
+freesubre(struct vars *v, struct subre *sr)
 {
 	if (sr == NULL)
 		return;
@@ -1832,9 +1762,7 @@ struct subre *sr;
  ^ static VOID freesrnode(struct vars *, struct subre *);
  */
 static VOID
-freesrnode(v, sr)
-struct vars *v;			/* might be NULL */
-struct subre *sr;
+freesrnode(struct vars *v, struct subre *sr)
 {
 	if (sr == NULL)
 		return;
@@ -1855,9 +1783,7 @@ struct subre *sr;
  ^ static VOID optst(struct vars *, struct subre *);
  */
 static VOID
-optst(v, t)
-struct vars *v;
-struct subre *t;
+optst(struct vars *v, struct subre *t)
 {
 	if (t == NULL)
 		return;
@@ -1874,9 +1800,7 @@ struct subre *t;
  ^ static int numst(struct subre *, int);
  */
 static int			/* next number */
-numst(t, start)
-struct subre *t;
-int start;			/* starting point for subtree numbers */
+numst(struct subre *t, int start)
 {
 	int i;
 
@@ -1896,8 +1820,7 @@ int start;			/* starting point for subtree numbers */
  ^ static VOID markst(struct subre *);
  */
 static VOID
-markst(t)
-struct subre *t;
+markst(struct subre *t)
 {
 	assert(t != NULL);
 
@@ -1913,8 +1836,7 @@ struct subre *t;
  ^ static VOID cleanst(struct vars *);
  */
 static VOID
-cleanst(v)
-struct vars *v;
+cleanst(struct vars *v)
 {
 	struct subre *t;
 	struct subre *next;
@@ -1933,10 +1855,7 @@ struct vars *v;
  ^ static long nfatree(struct vars *, struct subre *, FILE *);
  */
 static long			/* optimize results from top node */
-nfatree(v, t, f)
-struct vars *v;
-struct subre *t;
-FILE *f;			/* for debug output */
+nfatree(struct vars *v, struct subre *t, FILE *f)
 {
 	assert(t != NULL && t->begin != NULL);
 
@@ -1953,10 +1872,7 @@ FILE *f;			/* for debug output */
  ^ static long nfanode(struct vars *, struct subre *, FILE *);
  */
 static long			/* optimize results */
-nfanode(v, t, f)
-struct vars *v;
-struct subre *t;
-FILE *f;			/* for debug output */
+nfanode(struct vars *v, struct subre *t, FILE *f)
 {
 	struct nfa *nfa;
 	long ret = 0;
@@ -1990,11 +1906,7 @@ FILE *f;			/* for debug output */
  ^ static int newlacon(struct vars *, struct state *, struct state *, int);
  */
 static int			/* lacon number */
-newlacon(v, begin, end, pos)
-struct vars *v;
-struct state *begin;
-struct state *end;
-int pos;
+newlacon(struct vars *v, struct state *begin, struct state *end, int pos)
 {
 	int n;
 	struct subre *sub;
@@ -2025,9 +1937,7 @@ int pos;
  ^ static VOID freelacons(struct subre *, int);
  */
 static VOID
-freelacons(subs, n)
-struct subre *subs;
-int n;
+freelacons(struct subre *subs, int n)
 {
 	struct subre *sub;
 	int i;
@@ -2044,8 +1954,7 @@ int n;
  ^ static VOID rfree(regex_t *);
  */
 static VOID
-rfree(re)
-regex_t *re;
+rfree(regex_t *re)
 {
 	struct guts *g;
 
@@ -2113,10 +2022,7 @@ dump(regex_t *re, FILE *f)
  ^ static VOID dumpst(struct subre *, FILE *, int);
  */
 static VOID
-dumpst(t, f, nfapresent)
-struct subre *t;
-FILE *f;
-int nfapresent;			/* is the original NFA still around? */
+dumpst(struct subre *t, FILE *f, int nfapresent)
 {
 	if (t == NULL)
 		fprintf(f, "null tree\n");
@@ -2130,10 +2036,7 @@ int nfapresent;			/* is the original NFA still around? */
  ^ static VOID stdump(struct subre *, FILE *, int);
  */
 static VOID
-stdump(t, f, nfapresent)
-struct subre *t;
-FILE *f;
-int nfapresent;			/* is the original NFA still around? */
+stdump(struct subre *t, FILE *f, int nfapresent)
 {
 	char idbuf[50];
 
@@ -2180,10 +2083,7 @@ int nfapresent;			/* is the original NFA still around? */
  ^ static char *stid(struct subre *, char *, size_t);
  */
 static char *			/* points to buf or constant string */
-stid(t, buf, bufsize)
-struct subre *t;
-char *buf;
-size_t bufsize;
+stid(struct subre *t, char *buf, size_t bufsize)
 {
 	/* big enough for hex int or decimal t->retry? */
 	if (bufsize < sizeof(void*)*2 + 3 || bufsize < sizeof(t->retry)*3 + 1)

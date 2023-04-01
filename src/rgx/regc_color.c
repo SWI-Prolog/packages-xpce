@@ -46,9 +46,7 @@
  ^ static VOID initcm(struct vars *, struct colormap *);
  */
 static VOID
-initcm(v, cm)
-struct vars *v;
-struct colormap *cm;
+initcm(struct vars *v, struct colormap *cm)
 {
 	int i;
 	int j;
@@ -88,8 +86,7 @@ struct colormap *cm;
  ^ static VOID freecm(struct colormap *);
  */
 static VOID
-freecm(cm)
-struct colormap *cm;
+freecm(struct colormap *cm)
 {
 	size_t i;
 	union tree *cb;
@@ -112,10 +109,7 @@ struct colormap *cm;
  ^ static VOID cmtreefree(struct colormap *, union tree *, int);
  */
 static VOID
-cmtreefree(cm, tree, level)
-struct colormap *cm;
-union tree *tree;
-int level;			/* level number (top == 0) of this block */
+cmtreefree(struct colormap *cm, union tree *tree, int level)
 {
 	int i;
 	union tree *t;
@@ -144,10 +138,7 @@ int level;			/* level number (top == 0) of this block */
  ^ static color setcolor(struct colormap *, pchr, pcolor);
  */
 static color			/* previous color */
-setcolor(cm, c, co)
-struct colormap *cm;
-pchr c;
-pcolor co;
+setcolor(struct colormap *cm, pchr c, pcolor co)
 {
 	uchr uc = c;
 	int shift;
@@ -204,8 +195,7 @@ pcolor co;
  ^ static color maxcolor(struct colormap *);
  */
 static color
-maxcolor(cm)
-struct colormap *cm;
+maxcolor(struct colormap *cm)
 {
 	if (CISERR())
 		return COLORLESS;
@@ -219,8 +209,7 @@ struct colormap *cm;
  ^ static color newcolor(struct colormap *);
  */
 static color			/* COLORLESS for error */
-newcolor(cm)
-struct colormap *cm;
+newcolor(struct colormap *cm)
 {
 	struct colordesc *cd;
 	struct colordesc *new;
@@ -276,9 +265,7 @@ struct colormap *cm;
  ^ static VOID freecolor(struct colormap *, pcolor);
  */
 static VOID
-freecolor(cm, co)
-struct colormap *cm;
-pcolor co;
+freecolor(struct colormap *cm, pcolor co)
 {
 	struct colordesc *cd = &cm->cd[co];
 	color pco, nco;			/* for freelist scan */
@@ -328,8 +315,7 @@ pcolor co;
  ^ static color pseudocolor(struct colormap *);
  */
 static color
-pseudocolor(cm)
-struct colormap *cm;
+pseudocolor(struct colormap *cm)
 {
 	color co;
 
@@ -346,9 +332,7 @@ struct colormap *cm;
  ^ static color subcolor(struct colormap *, pchr c);
  */
 static color
-subcolor(cm, c)
-struct colormap *cm;
-pchr c;
+subcolor(struct colormap *cm, pchr c)
 {
 	color co;			/* current color of c */
 	color sco;			/* new subcolor */
@@ -372,9 +356,7 @@ pchr c;
  ^ static color newsub(struct colormap *, pcolor);
  */
 static color
-newsub(cm, co)
-struct colormap *cm;
-pcolor co;
+newsub(struct colormap *cm, pcolor co)
 {
 	color sco;			/* new subcolor */
 
@@ -398,15 +380,10 @@ pcolor co;
 /*
  - subrange - allocate new subcolors to this range of chrs, fill in arcs
  ^ static VOID subrange(struct vars *, pchr, pchr, struct state *,
- ^ 	struct state *);
+ ^	struct state *);
  */
 static VOID
-subrange(v, from, to, lp, rp)
-struct vars *v;
-pchr from;
-pchr to;
-struct state *lp;
-struct state *rp;
+subrange(struct vars *v, pchr from, pchr to, struct state *lp, struct state *rp)
 {
 	uchr uf;
 	int i;
@@ -435,11 +412,7 @@ struct state *rp;
  ^ static VOID subblock(struct vars *, pchr, struct state *, struct state *);
  */
 static VOID
-subblock(v, start, lp, rp)
-struct vars *v;
-pchr start;			/* first of BYTTAB chrs */
-struct state *lp;
-struct state *rp;
+subblock(struct vars *v, pchr start, struct state *lp, struct state *rp)
 {
 	uchr uc = start;
 	struct colormap *cm = v->cm;
@@ -526,9 +499,7 @@ struct state *rp;
  ^ static VOID okcolors(struct nfa *, struct colormap *);
  */
 static VOID
-okcolors(nfa, cm)
-struct nfa *nfa;
-struct colormap *cm;
+okcolors(struct nfa *nfa, struct colormap *cm)
 {
 	struct colordesc *cd;
 	struct colordesc *end = CDEND(cm);
@@ -580,9 +551,7 @@ struct colormap *cm;
  ^ static VOID colorchain(struct colormap *, struct arc *);
  */
 static VOID
-colorchain(cm, a)
-struct colormap *cm;
-struct arc *a;
+colorchain(struct colormap *cm, struct arc *a)
 {
 	struct colordesc *cd = &cm->cd[a->co];
 
@@ -595,9 +564,7 @@ struct arc *a;
  ^ static VOID uncolorchain(struct colormap *, struct arc *);
  */
 static VOID
-uncolorchain(cm, a)
-struct colormap *cm;
-struct arc *a;
+uncolorchain(struct colormap *cm, struct arc *a)
 {
 	struct colordesc *cd = &cm->cd[a->co];
 	struct arc *aa;
@@ -619,9 +586,7 @@ struct arc *a;
  ^ static int singleton(struct colormap *, pchr c);
  */
 static int			/* predicate */
-singleton(cm, c)
-struct colormap *cm;
-pchr c;
+singleton(struct colormap *cm, pchr c)
 {
 	color co;			/* color of c */
 
@@ -634,16 +599,11 @@ pchr c;
 /*
  - rainbow - add arcs of all full colors (but one) between specified states
  ^ static VOID rainbow(struct nfa *, struct colormap *, int, pcolor,
- ^ 	struct state *, struct state *);
+ ^	struct state *, struct state *);
  */
 static VOID
-rainbow(nfa, cm, type, but, from, to)
-struct nfa *nfa;
-struct colormap *cm;
-int type;
-pcolor but;			/* COLORLESS if no exceptions */
-struct state *from;
-struct state *to;
+rainbow(struct nfa *nfa, struct colormap *cm, int type, pcolor but,
+	struct state *from, struct state *to)
 {
 	struct colordesc *cd;
 	struct colordesc *end = CDEND(cm);
@@ -659,16 +619,11 @@ struct state *to;
  - colorcomplement - add arcs of complementary colors
  * The calling sequence ought to be reconciled with cloneouts().
  ^ static VOID colorcomplement(struct nfa *, struct colormap *, int,
- ^ 	struct state *, struct state *, struct state *);
+ ^	struct state *, struct state *, struct state *);
  */
 static VOID
-colorcomplement(nfa, cm, type, of, from, to)
-struct nfa *nfa;
-struct colormap *cm;
-int type;
-struct state *of;		/* complements of this guy's PLAIN outarcs */
-struct state *from;
-struct state *to;
+colorcomplement(struct nfa *nfa, struct colormap *cm, int type,
+		struct state *of, struct state *from, struct state *to)
 {
 	struct colordesc *cd;
 	struct colordesc *end = CDEND(cm);
@@ -693,9 +648,7 @@ struct state *to;
  ^ static VOID dumpcolors(struct colormap *, FILE *);
  */
 static VOID
-dumpcolors(cm, f)
-struct colormap *cm;
-FILE *f;
+dumpcolors(struct colormap *cm, FILE *f)
 {
 	struct colordesc *cd;
 	struct colordesc *end;
@@ -732,11 +685,7 @@ FILE *f;
  ^ static VOID fillcheck(struct colormap *, union tree *, int, FILE *);
  */
 static VOID
-fillcheck(cm, tree, level, f)
-struct colormap *cm;
-union tree *tree;
-int level;			/* level number (top == 0) of this block */
-FILE *f;
+fillcheck(struct colormap *cm, union tree *tree, int level, FILE *f)
 {
 	int i;
 	union tree *t;
@@ -760,9 +709,7 @@ FILE *f;
  ^ static VOID dumpchr(pchr, FILE *);
  */
 static VOID
-dumpchr(c, f)
-pchr c;
-FILE *f;
+dumpchr(pchr c, FILE *f)
 {
 	if (c == '\\')
 		fprintf(f, "\\\\");

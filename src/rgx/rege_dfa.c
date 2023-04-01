@@ -35,12 +35,7 @@
  ^ static chr *longest(struct vars *, struct dfa *, chr *, chr *, int *);
  */
 static chr *			/* endpoint, or NULL */
-longest(v, d, start, stop, hitstopp)
-struct vars *v;			/* used only for debug and exec flags */
-struct dfa *d;
-chr *start;			/* where the match should start */
-chr *stop;			/* match must end at or before here */
-int *hitstopp;			/* record whether hit v->stop, if non-NULL */
+longest(struct vars *v, struct dfa *d, chr *start, chr *stop, chr *hitstopp)
 {
 	chr *cp;
 	chr *realstop = (stop == v->stop) ? stop : stop + 1;
@@ -131,17 +126,11 @@ int *hitstopp;			/* record whether hit v->stop, if non-NULL */
 /*
  - shortest - shortest-preferred matching engine
  ^ static chr *shortest(struct vars *, struct dfa *, chr *, chr *, chr *,
- ^ 	chr **, int *);
+ ^	chr **, int *);
  */
 static chr *			/* endpoint, or NULL */
-shortest(v, d, start, min, max, coldp, hitstopp)
-struct vars *v;
-struct dfa *d;
-chr *start;			/* where the match should start */
-chr *min;			/* match must end at or after here */
-chr *max;			/* match must end at or before here */
-chr **coldp;			/* store coldstart pointer here, if nonNULL */
-int *hitstopp;			/* record whether hit v->stop, if non-NULL */
+shortest(struct vars *v, struct dfa *d,
+	 chr *start, chr *min, chr *max, chr **coldp, int *hitstopp)
 {
 	chr *cp;
 	chr *realmin = (min == v->stop) ? min : min + 1;
@@ -235,9 +224,7 @@ int *hitstopp;			/* record whether hit v->stop, if non-NULL */
  ^ static chr *lastcold(struct vars *, struct dfa *);
  */
 static chr *			/* endpoint, or NULL */
-lastcold(v, d)
-struct vars *v;
-struct dfa *d;
+lastcold(struct vars *v, struct dfa *d)
 {
 	struct sset *ss;
 	chr *nopr;
@@ -255,14 +242,10 @@ struct dfa *d;
 /*
  - newdfa - set up a fresh DFA
  ^ static struct dfa *newdfa(struct vars *, struct cnfa *,
- ^ 	struct colormap *, struct smalldfa *);
+ ^	struct colormap *, struct smalldfa *);
  */
 static struct dfa *
-newdfa(v, cnfa, cm, small)
-struct vars *v;
-struct cnfa *cnfa;
-struct colormap *cm;
-struct smalldfa *small;		/* preallocated space, may be NULL */
+newdfa(struct vars *v, struct cnfa *cnfa, struct colormap *cm, struct smalldfa *small)
 {
 	struct dfa *d;
 	size_t nss = cnfa->nstates * 2;
@@ -334,8 +317,7 @@ struct smalldfa *small;		/* preallocated space, may be NULL */
  ^ static VOID freedfa(struct dfa *);
  */
 static VOID
-freedfa(d)
-struct dfa *d;
+freedfa(struct dfa *d)
 {
 	if (d->cptsmalloced) {
 		if (d->ssets != NULL)
@@ -358,9 +340,7 @@ struct dfa *d;
  ^ static unsigned hash(unsigned *, int);
  */
 static unsigned
-hash(uv, n)
-unsigned *uv;
-int n;
+hash(unsigned *uv, int n)
 {
 	int i;
 	unsigned h;
@@ -376,10 +356,7 @@ int n;
  ^ static struct sset *initialize(struct vars *, struct dfa *, chr *);
  */
 static struct sset *
-initialize(v, d, start)
-struct vars *v;			/* used only for debug flags */
-struct dfa *d;
-chr *start;
+initialize(struct vars *v, struct dfa *d, chr *start)
 {
 	struct sset *ss;
 	int i;
@@ -409,16 +386,10 @@ chr *start;
 /*
  - miss - handle a cache miss
  ^ static struct sset *miss(struct vars *, struct dfa *, struct sset *,
- ^ 	pcolor, chr *, chr *);
+ ^	pcolor, chr *, chr *);
  */
 static struct sset *		/* NULL if goes to empty set */
-miss(v, d, css, co, cp, start)
-struct vars *v;			/* used only for debug flags */
-struct dfa *d;
-struct sset *css;
-pcolor co;
-chr *cp;			/* next chr */
-chr *start;			/* where the attempt got started */
+miss(struct vars *v, struct dfa *d, struct sset *css, pcolor co, chr *cp, chr *start)
 {
 	struct cnfa *cnfa = d->cnfa;
 	int i;
@@ -517,11 +488,7 @@ chr *start;			/* where the attempt got started */
  ^ static int lacon(struct vars *, struct cnfa *, chr *, pcolor);
  */
 static int			/* predicate:  constraint satisfied? */
-lacon(v, pcnfa, cp, co)
-struct vars *v;
-struct cnfa *pcnfa;		/* parent cnfa */
-chr *cp;
-pcolor co;			/* "color" of the lookahead constraint */
+lacon(struct vars *v, struct cnfa *pcnfa, chr *cp, pcolor co)
 {
 	int n;
 	struct subre *sub;
@@ -551,11 +518,7 @@ pcolor co;			/* "color" of the lookahead constraint */
  ^ static struct sset *getvacant(struct vars *, struct dfa *, chr *, chr *);
  */
 static struct sset *
-getvacant(v, d, cp, start)
-struct vars *v;			/* used only for debug flags */
-struct dfa *d;
-chr *cp;
-chr *start;
+getvacant(struct vars *v, struct dfa *d, chr *cp, chr *start)
 {
 	int i;
 	struct sset *ss;
@@ -618,11 +581,7 @@ chr *start;
  ^ static struct sset *pickss(struct vars *, struct dfa *, chr *, chr *);
  */
 static struct sset *
-pickss(v, d, cp, start)
-struct vars *v;			/* used only for debug flags */
-struct dfa *d;
-chr *cp;
-chr *start;
+pickss(struct vars *v, struct dfa *d, chr *cp, chr *start)
 {
 	int i;
 	struct sset *ss;

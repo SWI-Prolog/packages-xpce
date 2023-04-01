@@ -66,8 +66,7 @@
  ^ static VOID lexstart(struct vars *);
  */
 static VOID
-lexstart(v)
-struct vars *v;
+lexstart(struct vars *v)
 {
 	prefixes(v);			/* may turn on new type bits etc. */
 	NOERR();
@@ -92,8 +91,7 @@ struct vars *v;
  ^ static VOID prefixes(struct vars *);
  */
 static VOID
-prefixes(v)
-struct vars *v;
+prefixes(struct vars *v)
 {
 	/* literal string doesn't get any of this stuff */
 	if (v->cflags&REG_QUOTE)
@@ -193,10 +191,7 @@ struct vars *v;
  ^ static VOID lexnest(struct vars *, chr *, chr *);
  */
 static VOID
-lexnest(v, beginp, endp)
-struct vars *v;
-chr *beginp;				/* start of interpolation */
-chr *endp;				/* one past end of interpolation */
+lexnest(struct vars *v, chr *beginp, chr *endp)
 {
 	assert(v->savenow == NULL);	/* only one level of nesting */
 	v->savenow = v->now;
@@ -260,8 +255,7 @@ static chr brbackw[] = {	/* \w within brackets */
  ^ static VOID lexword(struct vars *);
  */
 static VOID
-lexword(v)
-struct vars *v;
+lexword(struct vars *v)
 {
 	lexnest(v, backw, ENDOF(backw));
 }
@@ -271,8 +265,7 @@ struct vars *v;
  ^ static int next(struct vars *);
  */
 static int			/* 1 normal, 0 failure */
-next(v)
-struct vars *v;
+next(struct vars *v)
 {
 	chr c;
 
@@ -658,8 +651,7 @@ struct vars *v;
  ^ static int lexescape(struct vars *);
  */
 static int			/* not actually used, but convenient for RETV */
-lexescape(v)
-struct vars *v;
+lexescape(struct vars *v)
 {
 	chr c;
 	static chr alert[] = {
@@ -815,11 +807,7 @@ struct vars *v;
  * if maxlen is large enough to make that possible.
  */
 static chr			/* chr value; errors signalled via ERR */
-lexdigits(v, base, minlen, maxlen)
-struct vars *v;
-int base;
-int minlen;
-int maxlen;
+lexdigits(struct vars *v, int base, int minlen, int maxlen)
 {
 	uchr n;			/* unsigned to avoid overflow misbehavior */
 	int len;
@@ -869,9 +857,7 @@ int maxlen;
  ^ static int brenext(struct vars *, pchr);
  */
 static int			/* 1 normal, 0 failure */
-brenext(v, pc)
-struct vars *v;
-pchr pc;
+brenext(struct vars *v, pchr pc)
 {
 	chr c = (chr)pc;
 
@@ -981,8 +967,7 @@ pchr pc;
  ^ static VOID skip(struct vars *);
  */
 static VOID
-skip(v)
-struct vars *v;
+skip(struct vars *v)
 {
 	chr *start = v->now;
 
@@ -1009,7 +994,7 @@ struct vars *v;
  ^ static chr newline(NOPARMS);
  */
 static chr
-newline()
+newline(void)
 {
 	return CHR('\n');
 }
@@ -1039,11 +1024,7 @@ ch()
  ^ static chr chrnamed(struct vars *, chr *, chr *, pchr);
  */
 static chr
-chrnamed(v, startp, endp, lastresort)
-struct vars *v;
-chr *startp;			/* start of name */
-chr *endp;			/* just past end of name */
-pchr lastresort;		/* what to return if name lookup fails */
+chrnamed(struct vars *v, chr *startp, chr *endp, pchr lastresort)
 {
 	celt c;
 	int errsave;

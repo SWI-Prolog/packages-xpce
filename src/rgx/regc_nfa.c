@@ -44,10 +44,7 @@
  ^ static struct nfa *newnfa(struct vars *, struct colormap *, struct nfa *);
  */
 static struct nfa *		/* the NFA, or NULL */
-newnfa(v, cm, parent)
-struct vars *v;
-struct colormap *cm;
-struct nfa *parent;		/* NULL if primary NFA */
+newnfa(struct vars *v, struct colormap *cm, struct nfa *parent)
 {
 	struct nfa *nfa;
 
@@ -92,8 +89,7 @@ struct nfa *parent;		/* NULL if primary NFA */
  ^ static VOID freenfa(struct nfa *);
  */
 static VOID
-freenfa(nfa)
-struct nfa *nfa;
+freenfa(struct nfa *nfa)
 {
 	struct state *s;
 
@@ -118,8 +114,7 @@ struct nfa *nfa;
  ^ static struct state *newstate(struct nfa *);
  */
 static struct state *		/* NULL on error */
-newstate(nfa)
-struct nfa *nfa;
+newstate(struct nfa *nfa)
 {
 	struct state *s;
 
@@ -162,9 +157,7 @@ struct nfa *nfa;
  ^ static struct state *newfstate(struct nfa *, int flag);
  */
 static struct state *		/* NULL on error */
-newfstate(nfa, flag)
-struct nfa *nfa;
-int flag;
+newfstate(struct nfa *nfa, int flag)
 {
 	struct state *s;
 
@@ -179,9 +172,7 @@ int flag;
  ^ static VOID dropstate(struct nfa *, struct state *);
  */
 static VOID
-dropstate(nfa, s)
-struct nfa *nfa;
-struct state *s;
+dropstate(struct nfa *nfa, struct state *s)
 {
 	struct arc *a;
 
@@ -197,9 +188,7 @@ struct state *s;
  ^ static VOID freestate(struct nfa *, struct state *);
  */
 static VOID
-freestate(nfa, s)
-struct nfa *nfa;
-struct state *s;
+freestate(struct nfa *nfa, struct state *s)
 {
 	assert(s != NULL);
 	assert(s->nins == 0 && s->nouts == 0);
@@ -228,9 +217,7 @@ struct state *s;
  ^ static VOID destroystate(struct nfa *, struct state *);
  */
 static VOID
-destroystate(nfa, s)
-struct nfa *nfa;
-struct state *s;
+destroystate(struct nfa *nfa, struct state *s)
 {
 	struct arcbatch *ab;
 	struct arcbatch *abnext;
@@ -252,12 +239,7 @@ struct state *s;
  ^	struct state *);
  */
 static VOID
-newarc(nfa, t, co, from, to)
-struct nfa *nfa;
-int t;
-pcolor co;
-struct state *from;
-struct state *to;
+newarc(struct nfa *nfa, int t, pcolor co, struct state *from, struct state *to)
 {
 	struct arc *a;
 
@@ -303,9 +285,7 @@ struct state *to;
  ^ static struct arc *allocarc(struct nfa *, struct state *);
  */
 static struct arc *		/* NULL for failure */
-allocarc(nfa, s)
-struct nfa *nfa;
-struct state *s;
+allocarc(struct nfa *nfa, struct state *s)
 {
 	struct arc *a;
 	struct arcbatch *new;
@@ -347,9 +327,7 @@ struct state *s;
  ^ static VOID freearc(struct nfa *, struct arc *);
  */
 static VOID
-freearc(nfa, victim)
-struct nfa *nfa;
-struct arc *victim;
+freearc(struct nfa *nfa, struct arc *victim)
 {
 	struct state *from = victim->from;
 	struct state *to = victim->to;
@@ -405,10 +383,7 @@ struct arc *victim;
  ^ static struct arc *findarc(struct state *, int, pcolor);
  */
 static struct arc *
-findarc(s, type, co)
-struct state *s;
-int type;
-pcolor co;
+findarc(struct state *s, int type, pcolor co)
 {
 	struct arc *a;
 
@@ -421,14 +396,10 @@ pcolor co;
 /*
  - cparc - allocate a new arc within an NFA, copying details from old one
  ^ static VOID cparc(struct nfa *, struct arc *, struct state *,
- ^ 	struct state *);
+ ^	struct state *);
  */
 static VOID
-cparc(nfa, oa, from, to)
-struct nfa *nfa;
-struct arc *oa;
-struct state *from;
-struct state *to;
+cparc(struct nfa *nfa, struct arc *oa, struct state *from, struct state *to)
 {
 	newarc(nfa, oa->type, oa->co, from, to);
 }
@@ -442,10 +413,7 @@ struct state *to;
  ^ static VOID moveins(struct nfa *, struct state *, struct state *);
  */
 static VOID
-moveins(nfa, old, new)
-struct nfa *nfa;
-struct state *old;
-struct state *new;
+moveins(struct nfa *nfa, struct state *old, struct state *new)
 {
 	struct arc *a;
 
@@ -464,10 +432,7 @@ struct state *new;
  ^ static VOID copyins(struct nfa *, struct state *, struct state *);
  */
 static VOID
-copyins(nfa, old, new)
-struct nfa *nfa;
-struct state *old;
-struct state *new;
+copyins(struct nfa *nfa, struct state *old, struct state *new)
 {
 	struct arc *a;
 
@@ -482,10 +447,7 @@ struct state *new;
  ^ static VOID moveouts(struct nfa *, struct state *, struct state *);
  */
 static VOID
-moveouts(nfa, old, new)
-struct nfa *nfa;
-struct state *old;
-struct state *new;
+moveouts(struct nfa *nfa, struct state *old, struct state *new)
 {
 	struct arc *a;
 
@@ -502,10 +464,7 @@ struct state *new;
  ^ static VOID copyouts(struct nfa *, struct state *, struct state *);
  */
 static VOID
-copyouts(nfa, old, new)
-struct nfa *nfa;
-struct state *old;
-struct state *new;
+copyouts(struct nfa *nfa, struct state *old, struct state *new)
 {
 	struct arc *a;
 
@@ -518,15 +477,11 @@ struct state *new;
 /*
  - cloneouts - copy out arcs of a state to another state pair, modifying type
  ^ static VOID cloneouts(struct nfa *, struct state *, struct state *,
- ^ 	struct state *, int);
+ ^	struct state *, int);
  */
 static VOID
-cloneouts(nfa, old, from, to, type)
-struct nfa *nfa;
-struct state *old;
-struct state *from;
-struct state *to;
-int type;
+cloneouts(struct nfa *nfa, struct state *old,
+	  struct state *from, struct state *to, int type)
 {
 	struct arc *a;
 
@@ -543,10 +498,7 @@ int type;
  ^ static VOID delsub(struct nfa *, struct state *, struct state *);
  */
 static VOID
-delsub(nfa, lp, rp)
-struct nfa *nfa;
-struct state *lp;	/* the sub-NFA goes from here... */
-struct state *rp;	/* ...to here, *not* inclusive */
+delsub(struct nfa *nfa, struct state *lp, struct state *rp)
 {
 	assert(lp != rp);
 
@@ -566,10 +518,7 @@ struct state *rp;	/* ...to here, *not* inclusive */
  ^ static VOID deltraverse(struct nfa *, struct state *, struct state *);
  */
 static VOID
-deltraverse(nfa, leftend, s)
-struct nfa *nfa;
-struct state *leftend;
-struct state *s;
+deltraverse(struct nfa *nfa, struct state *leftend, struct state *s)
 {
 	struct arc *a;
 	struct state *to;
@@ -605,15 +554,11 @@ struct state *s;
  * as well as mark already-seen states.  (You knew there was a reason why
  * it's a state pointer, didn't you? :-))
  ^ static VOID dupnfa(struct nfa *, struct state *, struct state *,
- ^ 	struct state *, struct state *);
+ ^	struct state *, struct state *);
  */
 static VOID
-dupnfa(nfa, start, stop, from, to)
-struct nfa *nfa;
-struct state *start;		/* duplicate of subNFA starting here */
-struct state *stop;		/* and stopping here */
-struct state *from;		/* stringing duplicate from here */
-struct state *to;		/* to here */
+dupnfa(struct nfa *nfa, struct state *start, struct state *stop,
+       struct state *from, struct state *to)
 {
 	if (start == stop) {
 		newarc(nfa, EMPTY, 0, from, to);
@@ -633,10 +578,7 @@ struct state *to;		/* to here */
  ^ static VOID duptraverse(struct nfa *, struct state *, struct state *);
  */
 static VOID
-duptraverse(nfa, s, stmp)
-struct nfa *nfa;
-struct state *s;
-struct state *stmp;		/* s's duplicate, or NULL */
+duptraverse(struct nfa *nfa, struct state *s, struct state *stmp)
 {
 	struct arc *a;
 
@@ -661,9 +603,7 @@ struct state *stmp;		/* s's duplicate, or NULL */
  ^ static VOID cleartraverse(struct nfa *, struct state *);
  */
 static VOID
-cleartraverse(nfa, s)
-struct nfa *nfa;
-struct state *s;
+cleartraverse(struct nfa *nfa, struct state *s)
 {
 	struct arc *a;
 
@@ -680,8 +620,7 @@ struct state *s;
  ^ static VOID specialcolors(struct nfa *);
  */
 static VOID
-specialcolors(nfa)
-struct nfa *nfa;
+specialcolors(struct nfa *nfa)
 {
 	/* false colors for BOS, BOL, EOS, EOL */
 	if (nfa->parent == NULL) {
@@ -706,9 +645,7 @@ struct nfa *nfa;
  ^ static long optimize(struct nfa *, FILE *);
  */
 static long			/* re_info bits */
-optimize(nfa, f)
-struct nfa *nfa;
-FILE *f;			/* for debug output; NULL none */
+optimize(struct nfa *nfa, FILE *f)
 {
 	int verbose = (f != NULL) ? 1 : 0;
 
@@ -735,9 +672,7 @@ FILE *f;			/* for debug output; NULL none */
  ^ static VOID pullback(struct nfa *, FILE *);
  */
 static VOID
-pullback(nfa, f)
-struct nfa *nfa;
-FILE *f;			/* for debug output; NULL none */
+pullback(struct nfa *nfa, FILE *f)
 {
 	struct state *s;
 	struct state *nexts;
@@ -782,9 +717,7 @@ FILE *f;			/* for debug output; NULL none */
  ^ static int pull(struct nfa *, struct arc *);
  */
 static int			/* 0 couldn't, 1 could */
-pull(nfa, con)
-struct nfa *nfa;
-struct arc *con;
+pull(struct nfa *nfa, struct arc *con)
 {
 	struct state *from = con->from;
 	struct state *to = con->to;
@@ -853,9 +786,7 @@ struct arc *con;
  ^ static VOID pushfwd(struct nfa *, FILE *);
  */
 static VOID
-pushfwd(nfa, f)
-struct nfa *nfa;
-FILE *f;			/* for debug output; NULL none */
+pushfwd(struct nfa *nfa, FILE *f)
 {
 	struct state *s;
 	struct state *nexts;
@@ -900,9 +831,7 @@ FILE *f;			/* for debug output; NULL none */
  ^ static int push(struct nfa *, struct arc *);
  */
 static int			/* 0 couldn't, 1 could */
-push(nfa, con)
-struct nfa *nfa;
-struct arc *con;
+push(struct nfa *nfa, struct arc *con)
 {
 	struct state *from = con->from;
 	struct state *to = con->to;
@@ -973,9 +902,7 @@ struct arc *con;
  ^ static int combine(struct arc *, struct arc *);
  */
 static int
-combine(con, a)
-struct arc *con;
-struct arc *a;
+combine(struct arc *con, struct arc *a)
 {
 #	define	CA(ct,at)	(((ct)<<CHAR_BIT) | (at))
 
@@ -1028,9 +955,7 @@ struct arc *a;
  ^ static VOID fixempties(struct nfa *, FILE *);
  */
 static VOID
-fixempties(nfa, f)
-struct nfa *nfa;
-FILE *f;			/* for debug output; NULL none */
+fixempties(struct nfa *nfa, FILE *f)
 {
 	struct state *s;
 	struct state *nexts;
@@ -1062,9 +987,7 @@ FILE *f;			/* for debug output; NULL none */
  ^ static int unempty(struct nfa *, struct arc *);
  */
 static int			/* 0 couldn't, 1 could */
-unempty(nfa, a)
-struct nfa *nfa;
-struct arc *a;
+unempty(struct nfa *nfa, struct arc *a)
 {
 	struct state *from = a->from;
 	struct state *to = a->to;
@@ -1113,8 +1036,7 @@ struct arc *a;
  ^ static VOID cleanup(struct nfa *);
  */
 static VOID
-cleanup(nfa)
-struct nfa *nfa;
+cleanup(struct nfa *nfa)
 {
 	struct state *s;
 	struct state *nexts;
@@ -1144,14 +1066,11 @@ struct nfa *nfa;
 /*
  - markreachable - recursive marking of reachable states
  ^ static VOID markreachable(struct nfa *, struct state *, struct state *,
- ^ 	struct state *);
+ ^	struct state *);
  */
 static VOID
-markreachable(nfa, s, okay, mark)
-struct nfa *nfa;
-struct state *s;
-struct state *okay;		/* consider only states with this mark */
-struct state *mark;		/* the value to mark with */
+markreachable(struct nfa *nfa,
+	      struct state *s, struct state *okay, struct state *mark)
 {
 	struct arc *a;
 
@@ -1166,14 +1085,11 @@ struct state *mark;		/* the value to mark with */
 /*
  - markcanreach - recursive marking of states which can reach here
  ^ static VOID markcanreach(struct nfa *, struct state *, struct state *,
- ^ 	struct state *);
+ ^	struct state *);
  */
 static VOID
-markcanreach(nfa, s, okay, mark)
-struct nfa *nfa;
-struct state *s;
-struct state *okay;		/* consider only states with this mark */
-struct state *mark;		/* the value to mark with */
+markcanreach(struct nfa *nfa,
+	     struct state *s, struct state *okay, struct state *mark)
 {
 	struct arc *a;
 
@@ -1190,8 +1106,7 @@ struct state *mark;		/* the value to mark with */
  ^ static long analyze(struct nfa *);
  */
 static long			/* re_info bits to be ORed in */
-analyze(nfa)
-struct nfa *nfa;
+analyze(struct nfa *nfa)
 {
 	struct arc *a;
 	struct arc *aa;
@@ -1210,9 +1125,7 @@ struct nfa *nfa;
  ^ static VOID compact(struct nfa *, struct cnfa *);
  */
 static VOID
-compact(nfa, cnfa)
-struct nfa *nfa;
-struct cnfa *cnfa;
+compact(struct nfa *nfa, struct cnfa *cnfa)
 {
 	struct state *s;
 	struct arc *a;
@@ -1297,9 +1210,7 @@ struct cnfa *cnfa;
  ^ static VOID carcsort(struct carc *, struct carc *);
  */
 static VOID
-carcsort(first, last)
-struct carc *first;
-struct carc *last;
+carcsort(struct carc *first, struct carc *last)
 {
 	struct carc *p;
 	struct carc *q;
@@ -1324,8 +1235,7 @@ struct carc *last;
  ^ static VOID freecnfa(struct cnfa *);
  */
 static VOID
-freecnfa(cnfa)
-struct cnfa *cnfa;
+freecnfa(struct cnfa *cnfa)
 {
 	assert(cnfa->nstates != 0);	/* not empty already */
 	cnfa->nstates = 0;
@@ -1338,9 +1248,7 @@ struct cnfa *cnfa;
  ^ static VOID dumpnfa(struct nfa *, FILE *);
  */
 static VOID
-dumpnfa(nfa, f)
-struct nfa *nfa;
-FILE *f;
+dumpnfa(struct nfa *nfa, FILE *f)
 {
 #ifdef REG_DEBUG
 	struct state *s;
@@ -1373,9 +1281,7 @@ FILE *f;
  ^ static VOID dumpstate(struct state *, FILE *);
  */
 static VOID
-dumpstate(s, f)
-struct state *s;
-FILE *f;
+dumpstate(struct state *s, FILE *f)
 {
 	struct arc *a;
 
@@ -1400,9 +1306,7 @@ FILE *f;
  ^ static VOID dumparcs(struct state *, FILE *);
  */
 static VOID
-dumparcs(s, f)
-struct state *s;
-FILE *f;
+dumparcs(struct state *s, FILE *f)
 {
 	int pos;
 
@@ -1418,11 +1322,7 @@ FILE *f;
  ^ static int dumprarcs(struct arc *, struct state *, FILE *, int);
  */
 static int			/* resulting print position */
-dumprarcs(a, s, f, pos)
-struct arc *a;
-struct state *s;
-FILE *f;
-int pos;			/* initial print position */
+dumprarcs(struct arc *a, struct state *s, FILE *f, int pos)
 {
 	if (a->outchain != NULL)
 		pos = dumprarcs(a->outchain, s, f, pos);
@@ -1440,10 +1340,7 @@ int pos;			/* initial print position */
  ^ static VOID dumparc(struct arc *, struct state *, FILE *);
  */
 static VOID
-dumparc(a, s, f)
-struct arc *a;
-struct state *s;
-FILE *f;
+dumparc(struct arc *a, struct state *s, FILE *f)
 {
 	struct arc *aa;
 	struct arcbatch *ab;
@@ -1507,9 +1404,7 @@ FILE *f;
  ^ static VOID dumpcnfa(struct cnfa *, FILE *);
  */
 static VOID
-dumpcnfa(cnfa, f)
-struct cnfa *cnfa;
-FILE *f;
+dumpcnfa(struct cnfa *cnfa, FILE *f)
 {
 	int st;
 
@@ -1539,11 +1434,7 @@ FILE *f;
  ^ static VOID dumpcstate(int, struct carc *, struct cnfa *, FILE *);
  */
 static VOID
-dumpcstate(st, ca, cnfa, f)
-int st;
-struct carc *ca;
-struct cnfa *cnfa;
-FILE *f;
+dumpcstate(int st, struct carc *ca, struct cnfa *cnfa, FILE *f)
 {
 	int i;
 	int pos;
