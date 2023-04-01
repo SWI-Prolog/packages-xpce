@@ -146,6 +146,8 @@ delCodeReference(Any obj)
 		*             CODE		*
 		********************************/
 
+typedef status (*exec_code_func)(Code c);
+
 INLINE status
 executeCode(Code c)
 { Class cl = classOfObject(c);
@@ -154,7 +156,8 @@ executeCode(Code c)
   addCodeReference(c);
   FixSendFunctionClass(cl, NAME_Execute);
   if ( onDFlag(c, D_SERVICE) )
-  { ServiceMode(PCE_EXEC_SERVICE, rval = (*cl->send_function)(c));
+  { exec_code_func func = (exec_code_func)cl->send_function;
+    ServiceMode(PCE_EXEC_SERVICE, rval = (*func)(c));
   } else
     rval = (*cl->send_function)(c);
   delCodeReference(c);
@@ -206,6 +209,8 @@ forwardCodev(Code c, int argc, const Any argv[])
 		*            FUNCTIONS		*
 		********************************/
 
+typedef Any (*code_get_func)(Function f);
+
 INLINE Any
 getExecuteFunction(Function f)
 { Class cl = classOfObject(f);
@@ -214,7 +219,8 @@ getExecuteFunction(Function f)
   addCodeReference(f);
   FixGetFunctionClass(cl, NAME_Execute);
   if ( onDFlag(f, D_SERVICE) )
-  { ServiceMode(PCE_EXEC_SERVICE, rval = (*cl->get_function)(f));
+  { code_get_func func = (code_get_func)cl->get_function;
+    ServiceMode(PCE_EXEC_SERVICE, rval = (*func)(f));
   } else
     rval = (*cl->get_function)(f);
   delCodeReference(f);
