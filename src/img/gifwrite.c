@@ -1101,9 +1101,8 @@ static void        ppm_freechash    (chash_table);
 
 
 /****************************************************************************/
-static int ppm_quant(pic24, cols, rows, pic8, rmap, gmap, bmap, newcolors)
-     byte *pic24, *pic8, *rmap, *gmap, *bmap;
-     int  cols, rows, newcolors;
+static int ppm_quant(byte *pic24, int cols, int rows, byte *pic8,
+		     byte *rmap, byte *gmap, byte *bmap, int newcolors)
 {
   pixel**          pixels;
   register pixel*  pP;
@@ -1263,10 +1262,8 @@ static int ppm_quant(pic24, cols, rows, pic8, rmap, gmap, bmap, newcolors)
 
 
 /****************************************************************************/
-static chist_vec mediancut( chv, colors, sum, maxval, newcolors )
-     chist_vec chv;
-     int colors, sum, newcolors;
-     int maxval;
+static chist_vec
+mediancut(chist_vec chv, int colors, int sum, int maxval, int newcolors)
 {
   chist_vec colormap;
   box_vector bv;
