@@ -155,11 +155,11 @@ executeCode(Code c)
 
   addCodeReference(c);
   FixSendFunctionClass(cl, NAME_Execute);
+  exec_code_func func = (exec_code_func)cl->send_function;
   if ( onDFlag(c, D_SERVICE) )
-  { exec_code_func func = (exec_code_func)cl->send_function;
-    ServiceMode(PCE_EXEC_SERVICE, rval = (*func)(c));
+  { ServiceMode(PCE_EXEC_SERVICE, rval = (*func)(c));
   } else
-    rval = (*cl->send_function)(c);
+    rval = (*func)(c);
   delCodeReference(c);
 
   return rval;
@@ -218,11 +218,11 @@ getExecuteFunction(Function f)
 
   addCodeReference(f);
   FixGetFunctionClass(cl, NAME_Execute);
+  code_get_func func = (code_get_func)cl->get_function;
   if ( onDFlag(f, D_SERVICE) )
-  { code_get_func func = (code_get_func)cl->get_function;
-    ServiceMode(PCE_EXEC_SERVICE, rval = (*func)(f));
+  { ServiceMode(PCE_EXEC_SERVICE, rval = (*func)(f));
   } else
-    rval = (*cl->get_function)(f);
+    rval = (*func)(f);
   delCodeReference(f);
 
   return rval;
