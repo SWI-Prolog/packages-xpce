@@ -86,7 +86,7 @@ for_cells_table(Table, CellVar, CellCode, EndRowCode)
 		} \
 	      } \
 	    } \
- 	    endrowcode; \
+	    endrowcode; \
 	  } \
 	}
 
@@ -120,7 +120,7 @@ which establishes all column objects.
 		} \
 	      } \
 	    } \
- 	    endrowcode; \
+	    endrowcode; \
 	  } \
 	}
 
@@ -1268,7 +1268,6 @@ computeRowsTable(Table tab)
   int cy;
   Chain spanned;
   int rowspacing = valInt(tab->cell_spacing->h);
-  int nrows = 0;
   int tborder, bborder;
 
   frame_border(tab, &tborder, NULL, &bborder, NULL);
@@ -1299,7 +1298,6 @@ computeRowsTable(Table tab)
       }
 
       cy += valInt(row->width) + rowspacing;
-      nrows++;
     }
   }
   cy += bborder;
@@ -1321,7 +1319,6 @@ computeColsTable(Table tab)
   int cx;
   Chain spanned;
   int colspacing = valInt(tab->cell_spacing->w);
-  int ncols = 0;
   int lborder, rborder;
 
   frame_border(tab, NULL, &rborder, NULL, &lborder);
@@ -1370,7 +1367,6 @@ computeColsTable(Table tab)
       { changedTable(tab);
 	assign(col, position, toInt(cx));
       }
-      ncols++;				/* real test for empty columns? */
       cx += valInt(col->width) + colspacing;
     }
   }

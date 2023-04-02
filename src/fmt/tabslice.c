@@ -324,7 +324,6 @@ computeTableColumn(TableColumn col)
 { Table tab = col->table;
   int ymin = valInt(getLowIndexVector(tab->rows));
   int ymax = valInt(getHighIndexVector(tab->rows));
-  int rows = 0;
   int l=0, r=0, w=0;
   int y;
 
@@ -350,9 +349,6 @@ computeTableColumn(TableColumn col)
       { w = max(w, 2*px+grw);
       }
     }
-
-    if ( cell )
-      rows++;
   }
 
   w = max(w, l+r);

@@ -965,15 +965,15 @@ NewClass(class)
   intptr_t	tree_index;		/* Index in depth-first tree */
   intptr_t	neighbour_index;	/* Index of my neighbour */
 
-  GetFunc	get_function;		/* `Get' on Code objects */
-  SendFunc	send_function;		/* `Send' on Code objects */
+  Any	      (*get_function)(Function); /* `Get' on Code objects */
+  status      (*send_function)(Code);	/* `Send' on Code objects */
   status      (*saveFunction)(Any obj, Any file); /* function handling saveFile */
   status      (*loadFunction)(Any obj, Any file, Any def); /* function handling loadFile */
-  SendFunc	cloneFunction;		/* function to clone object */
+  status      (*cloneFunction)(Instance, Instance); /* function to clone object */
   SendFunc	redrawFunction;		/* redraw a graphical */
-  SendFunc	changedFunction;	/* Trap instance changes */
+  status      (*changedFunction)(Instance, Any*);	/* Trap instance changes */
   status      (*in_event_area_function)(Any gr, Int xc, Int yc); /* Test if event is in area */
-  SendFunc	make_class_function;	/* makeClass function pointer */
+  status      (*make_class_function)(Class);	/* makeClass function pointer */
   intptr_t	boot;			/* When booting: #pce-slots; else 0 */
 
   classdecl    *c_declarations;		/* Non-object declarations */
@@ -988,7 +988,7 @@ NewClass(type)
   Any		context;		/* Context argument for functions */
   BoolObj	vector;			/* Method: vector of these */
   intptr_t	validate_function;	/* Function to check the type */
-  Func		translate_function;	/* Function to convert the type */
+  Any	      (*translate_function)(Type t, Any val, Any ctx);	/* Function to convert the type */
 End;
 
 NewClass(constraint)

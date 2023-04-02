@@ -204,7 +204,7 @@ defineClasses(struct class_definition *classes)
 
 
 static inline status
-call_make_function(SendFunc f, Class class)
+call_make_function(status (*f)(Class), Class class)
 { status rval;
 
   rval = (*f)(class);

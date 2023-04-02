@@ -221,9 +221,9 @@ ExecuteCode(Code c)
 
     if ( onDFlag(c, D_SERVICE) )
     { ServiceMode(PCE_EXEC_SERVICE,
-		  rval = ((*cl->get_function)(c) ? SUCCEED : FAIL));
+		  rval = ((*cl->get_function)((Function)c) ? SUCCEED : FAIL));
     } else
-      rval = (*cl->get_function)(c) ? SUCCEED : FAIL;
+      rval = (*cl->get_function)((Function)c) ? SUCCEED : FAIL;
 
     return rval;
   }
