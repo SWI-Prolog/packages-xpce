@@ -69,8 +69,7 @@ trapGdb(void)
 
 
 static int
-nextBucketSize(n)
-int n;
+nextBucketSize(int n)
 { n *= 2;
 
   if ( !(n % 2) )

@@ -967,12 +967,12 @@ NewClass(class)
 
   GetFunc	get_function;		/* `Get' on Code objects */
   SendFunc	send_function;		/* `Send' on Code objects */
-  SendFunc	saveFunction;		/* function handling saveFile */
-  SendFunc	loadFunction;		/* function handling loadFile */
+  status      (*saveFunction)(Any obj, Any file); /* function handling saveFile */
+  status      (*loadFunction)(Any obj, Any file, Any def); /* function handling loadFile */
   SendFunc	cloneFunction;		/* function to clone object */
   SendFunc	redrawFunction;		/* redraw a graphical */
   SendFunc	changedFunction;	/* Trap instance changes */
-  SendFunc	in_event_area_function;	/* Test if event is in area */
+  status      (*in_event_area_function)(Any gr, Int xc, Int yc); /* Test if event is in area */
   SendFunc	make_class_function;	/* makeClass function pointer */
   intptr_t	boot;			/* When booting: #pce-slots; else 0 */
 
@@ -1615,7 +1615,7 @@ COMMON(void)	initCGlobals(void);
 GLOBAL int	XPCE_initialised;	/* Is system initialised? */
 GLOBAL Pce	PCE;			/* the one and only Pce object */
 GLOBAL Host	HOST;			/* the one and only Host object */
-GLOBAL SendFunc	DispatchEvents;		/* Dispatch function */
+GLOBAL status	(*DispatchEvents)(int, int); /* Dispatch function */
 GLOBAL int	changedLevel;		/* Change forwarding levels */
 GLOBAL HashTable ErrorTable;		/* @error_database */
 GLOBAL int	XPCE_mt;		/* we are multi-threaded */

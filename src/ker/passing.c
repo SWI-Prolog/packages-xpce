@@ -673,6 +673,32 @@ status pceExecuteGoal(g)
 #define DEBUGGER(g) if ( PCEdebugging ) g
 #endif
 
+typedef Any (*ExecFunc0)(Any r, int vaac, Any *vaav);
+typedef Any (*ExecFunc1)(Any r, Any, int vaac, Any *vaav);
+typedef Any (*ExecFunc2)(Any r, Any, Any, int vaac, Any *vaav);
+typedef Any (*ExecFunc3)(Any r, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*ExecFunc4)(Any r, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*ExecFunc5)(Any r, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*ExecFunc6)(Any r, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*ExecFunc7)(Any r, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*ExecFunc8)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*ExecFunc9)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*ExecFunc10)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+
+typedef Any (*GetFunc0)(Any r);
+typedef Any (*GetFunc1)(Any r, Any);
+typedef Any (*GetFunc2)(Any r, Any, Any);
+typedef Any (*GetFunc3)(Any r, Any, Any, Any);
+typedef Any (*GetFunc4)(Any r, Any, Any, Any, Any);
+typedef Any (*GetFunc5)(Any r, Any, Any, Any, Any, Any);
+typedef Any (*GetFunc6)(Any r, Any, Any, Any, Any, Any, Any);
+typedef Any (*GetFunc7)(Any r, Any, Any, Any, Any, Any, Any, Any);
+typedef Any (*GetFunc8)(Any r, Any, Any, Any, Any, Any, Any, Any, Any);
+typedef Any (*GetFunc9)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any);
+typedef Any (*GetFunc10)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any);
+typedef Any (*GetFunc11)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any);
+
+
 status
 pceExecuteGoal(PceGoal g)
 { if ( !fillDefaultsGoal(g) )
@@ -704,41 +730,41 @@ pceExecuteGoal(PceGoal g)
 
 	switch(g->argc)
 	{ case 0:
-	    fval = (*f)(r, vaac, vaav);
+	    fval = (*(ExecFunc0)f)(r, vaac, vaav);
 	    break;
 	  case 1:
-	    fval = (*f)(r, a[0], vaac, vaav);
+	    fval = (*(ExecFunc1)f)(r, a[0], vaac, vaav);
 	    break;
 	  case 2:
-	    fval = (*f)(r, a[0], a[1], vaac, vaav);
+	    fval = (*(ExecFunc2)f)(r, a[0], a[1], vaac, vaav);
 	    break;
 	  case 3:
-	    fval = (*f)(r, a[0], a[1], a[2], vaac, vaav);
+	    fval = (*(ExecFunc3)f)(r, a[0], a[1], a[2], vaac, vaav);
 	    break;
 	  case 4:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3], vaac, vaav);
+	    fval = (*(ExecFunc4)f)(r, a[0], a[1], a[2], a[3], vaac, vaav);
 	    break;
 	  case 5:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3], a[4], vaac, vaav);
+	    fval = (*(ExecFunc5)f)(r, a[0], a[1], a[2], a[3], a[4], vaac, vaav);
 	    break;
 	  case 6:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3], a[4], a[5], vaac, vaav);
+	    fval = (*(ExecFunc6)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], vaac, vaav);
 	    break;
 	  case 7:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
-			   a[6], vaac, vaav);
+	    fval = (*(ExecFunc7)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
+				   a[6], vaac, vaav);
 	    break;
 	  case 8:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
-			   a[6], a[7], vaac, vaav);
+	    fval = (*(ExecFunc8)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
+				   a[6], a[7], vaac, vaav);
 	    break;
 	  case 9:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
-			   a[6], a[7], a[8], vaac, vaav);
+	    fval = (*(ExecFunc9)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
+				   a[6], a[7], a[8], vaac, vaav);
 	    break;
 	  case 10:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
-			   a[6], a[7], a[8], a[9], vaac, vaav);
+	    fval = (*(ExecFunc10)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
+				    a[6], a[7], a[8], a[9], vaac, vaav);
 	    break;
 	  default:
 	    fval = (Any)FAIL;
@@ -747,43 +773,43 @@ pceExecuteGoal(PceGoal g)
       } else
       { switch(g->argc)
 	{ case 0:
-	    fval = (*f)(r);
+	    fval = (*(GetFunc0)f)(r);
 	    break;
 	  case 1:
-	    fval = (*f)(r, a[0]);
+	    fval = (*(GetFunc1)f)(r, a[0]);
 	    break;
 	  case 2:
-	    fval = (*f)(r, a[0], a[1]);
+	    fval = (*(GetFunc2)f)(r, a[0], a[1]);
 	    break;
 	  case 3:
-	    fval = (*f)(r, a[0], a[1], a[2]);
+	    fval = (*(GetFunc3)f)(r, a[0], a[1], a[2]);
 	    break;
 	  case 4:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3]);
+	    fval = (*(GetFunc4)f)(r, a[0], a[1], a[2], a[3]);
 	    break;
 	  case 5:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3], a[4]);
+	    fval = (*(GetFunc5)f)(r, a[0], a[1], a[2], a[3], a[4]);
 	    break;
 	  case 6:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3], a[4], a[5]);
+	    fval = (*(GetFunc6)f)(r, a[0], a[1], a[2], a[3], a[4], a[5]);
 	    break;
 	  case 7:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6]);
+	    fval = (*(GetFunc7)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6]);
 	    break;
 	  case 8:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7]);
+	    fval = (*(GetFunc8)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7]);
 	    break;
 	  case 9:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
-			   a[8]);
+	    fval = (*(GetFunc9)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
+				  a[8]);
 	    break;
 	  case 10:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
-			a[8], a[9]);
+	    fval = (*(GetFunc10)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
+				   a[8], a[9]);
 	    break;
 	  case 11:
-	    fval = (*f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
-			a[8], a[9], a[10]);
+	    fval = (*(GetFunc11)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
+				   a[8], a[9], a[10]);
 	    break;
 	  default:
 	    fval = (Any)FAIL;
@@ -1285,6 +1311,14 @@ sendv(Any receiver, Name selector, int argc, Any *argv)
 }
 
 
+typedef status (*SendFunc0)(Any r);
+typedef status (*SendFunc1)(Any r, Any);
+typedef status (*SendFunc2)(Any r, Any, Any);
+typedef status (*SendFunc3)(Any r, Any, Any, Any);
+typedef status (*SendFunc4)(Any r, Any, Any, Any, Any);
+typedef status (*SendFunc5)(Any r, Any, Any, Any, Any, Any);
+typedef status (*SendFunc6)(Any r, Any, Any, Any, Any, Any, Any);
+
 status					/* QuickAndDirtySend */
 qadSendv(Any r, Name selector, int ac, Any *av)
 { SendMethod implementation = getSendMethodClass(classOfObject(r), selector);
@@ -1294,13 +1328,13 @@ qadSendv(Any r, Name selector, int ac, Any *av)
        (f=implementation->function) &&
        offDFlag(implementation, D_CXX|D_TRACE|D_BREAK))
   { switch(ac)
-    { case 0: return (*f)(r);
-      case 1: return (*f)(r, av[0]);
-      case 2: return (*f)(r, av[0],av[1]);
-      case 3: return (*f)(r, av[0],av[1],av[2]);
-      case 4: return (*f)(r, av[0],av[1],av[2],av[3]);
-      case 5: return (*f)(r, av[0],av[1],av[2],av[3],av[4]);
-      case 6: return (*f)(r, av[0],av[1],av[2],av[3],av[4],av[5]);
+    { case 0: return (*(SendFunc0)f)(r);
+      case 1: return (*(SendFunc1)f)(r, av[0]);
+      case 2: return (*(SendFunc2)f)(r, av[0],av[1]);
+      case 3: return (*(SendFunc3)f)(r, av[0],av[1],av[2]);
+      case 4: return (*(SendFunc4)f)(r, av[0],av[1],av[2],av[3]);
+      case 5: return (*(SendFunc5)f)(r, av[0],av[1],av[2],av[3],av[4]);
+      case 6: return (*(SendFunc6)f)(r, av[0],av[1],av[2],av[3],av[4],av[5]);
     }
   }
 
@@ -1314,7 +1348,6 @@ getv(Any receiver, Name selector, int argc, Any *argv)
 { return vm_get(receiver, selector, NULL, argc, argv);
 }
 
-
 Any					/* QuickAndDirtyGet */
 qadGetv(Any r, Name selector, int ac, Any *av)
 { GetMethod implementation = getGetMethodClass(classOfObject(r), selector);
@@ -1324,13 +1357,13 @@ qadGetv(Any r, Name selector, int ac, Any *av)
        (f=implementation->function) &&
        offDFlag(implementation, D_CXX|D_TRACE|D_BREAK) )
   { switch(ac)
-    { case 0: return (*f)(r);
-      case 1: return (*f)(r, av[0]);
-      case 2: return (*f)(r, av[0],av[1]);
-      case 3: return (*f)(r, av[0],av[1],av[2]);
-      case 4: return (*f)(r, av[0],av[1],av[2],av[3]);
-      case 5: return (*f)(r, av[0],av[1],av[2],av[3],av[4]);
-      case 6: return (*f)(r, av[0],av[1],av[2],av[3],av[4],av[5]);
+    { case 0: return (*(GetFunc0)f)(r);
+      case 1: return (*(GetFunc1)f)(r, av[0]);
+      case 2: return (*(GetFunc2)f)(r, av[0],av[1]);
+      case 3: return (*(GetFunc3)f)(r, av[0],av[1],av[2]);
+      case 4: return (*(GetFunc4)f)(r, av[0],av[1],av[2],av[3]);
+      case 5: return (*(GetFunc5)f)(r, av[0],av[1],av[2],av[3],av[4]);
+      case 6: return (*(GetFunc6)f)(r, av[0],av[1],av[2],av[3],av[4],av[5]);
     }
   }
 

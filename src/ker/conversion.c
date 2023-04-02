@@ -362,8 +362,7 @@ pcePP(Any obj)
 jmp_buf pp_env;
 
 static RETSIGTYPE
-pp_sig(sig)
-int sig;
+pp_sig(int sig)
 { longjmp(pp_env, 1);
 }
 
