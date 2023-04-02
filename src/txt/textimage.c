@@ -920,7 +920,7 @@ static void
 paint_line(TextImage ti, Area a, TextLine l, int from, int to)
 { charW buf[1000];
   charW *out;
-  int n, s = from, e;
+  int s = from, e;
   FontObj f;
   Colour c;
   Any bg;
@@ -981,7 +981,6 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
 	continue;
     }
 
-    n = 0;
     f      = l->chars[e].font;
     atts   = l->chars[e].attributes;
     out    = buf;
@@ -991,7 +990,7 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
     if ( chr == '\t' )			/* print tabs */
     { prt = FALSE;
 
-      for(n++, e++; e < to; n++, e++)
+      for(e++; e < to; e++)
       { if ( l->chars[e].type != CHAR_ASCII ||
 	     l->chars[e].attributes != atts ||
 	     l->chars[e].background != bg ||
@@ -1005,7 +1004,7 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
     } else				/* real text */
     { prt = TRUE;
 
-      for(n++, e++; e < to; n++, e++)
+      for(e++; e < to; e++)
       { if ( l->chars[e].font != f ||
 	     l->chars[e].colour != c ||
 	     l->chars[e].background != bg ||

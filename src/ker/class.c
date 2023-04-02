@@ -803,16 +803,18 @@ fixSendFunctionClass(Class class, Name selector)
 
 
 static Any
-codeGetExecuteCode(Code c)
+codeGetExecuteCode(Function c)
 { return vm_get(c, NAME_Execute, classOfObject(c), 0, NULL);
 }
 
+
+typedef Any (*GetFuncF)(Function);
 
 void
 fixGetFunctionClass(Class class, Name selector)
 { GetMethod m = getGetMethodClass(class, selector);
 
-  class->get_function = (m ? (GetFunc) m->function : (GetFunc) NULL);
+  class->get_function = (m ? (GetFuncF) m->function : (GetFuncF) NULL);
 
   if ( !class->get_function )
     class->get_function = codeGetExecuteCode;

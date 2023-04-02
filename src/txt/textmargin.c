@@ -190,7 +190,9 @@ NAME_forSome always succeeds;
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static Fragment
-scan_fragment_icons(TextMargin m, SendFunc func, Name how, Any ctx)
+scan_fragment_icons(TextMargin m,
+		    status (*func)(TextMargin, int x, int y, Fragment, Any ctx),
+		    Name how, Any ctx)
 { Editor e = m->editor;
   TextBuffer tb = e->text_buffer;
   TextImage  ti = e->image;

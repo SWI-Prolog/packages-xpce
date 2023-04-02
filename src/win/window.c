@@ -1731,7 +1731,7 @@ getUserWindow(PceWindow sw)
 
 
 static status
-for_all_tile(TileObj tile, SendFunc f, Any arg)
+for_all_tile(TileObj tile, status (*f)(PceWindow, FrameObj), Any arg)
 { if ( isNil(tile->members) )
     return (*f)(tile->object, arg);
   else
