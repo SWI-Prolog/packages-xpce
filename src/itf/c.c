@@ -51,10 +51,21 @@ initialiseC(CObj h)
 }
 
 
+typedef status (*SendFunc0)(void);
+typedef status (*SendFunc1)(Any);
+typedef status (*SendFunc2)(Any, Any);
+typedef status (*SendFunc3)(Any, Any, Any);
+typedef status (*SendFunc4)(Any, Any, Any, Any);
+typedef status (*SendFunc5)(Any, Any, Any, Any, Any);
+typedef status (*SendFunc6)(Any, Any, Any, Any, Any, Any);
+typedef status (*SendFunc7)(Any, Any, Any, Any, Any, Any, Any);
+typedef status (*SendFunc8)(Any, Any, Any, Any, Any, Any, Any, Any);
+typedef status (*SendFunc9)(Any, Any, Any, Any, Any, Any, Any, Any, Any);
+
 static status
 callCv(CObj host, CPointer function, int argc, Any *argv)
 { status rval;
-  SendFunc f = (SendFunc)(intptr_t)function->pointer;
+  SendFunc f = (void *)function->pointer;
   int n;
 
   for(n=0; n<argc; n++)
@@ -62,20 +73,20 @@ callCv(CObj host, CPointer function, int argc, Any *argv)
       addCodeReference(argv[n]);
 
   switch(argc)
-  { case 0: rval = (*f)(); break;
-    case 1: rval = (*f)(argv[0]); break;
-    case 2: rval = (*f)(argv[0], argv[1]); break;
-    case 3: rval = (*f)(argv[0], argv[1], argv[2]); break;
-    case 4: rval = (*f)(argv[0], argv[1], argv[2], argv[3]); break;
-    case 5: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4]); break;
-    case 6: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-			argv[5]); break;
-    case 7: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-			argv[5], argv[6]); break;
-    case 8: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-			argv[5], argv[6], argv[7]); break;
-    case 9: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-			argv[5], argv[6], argv[7], argv[8]); break;
+  { case 0: rval = (*(SendFunc0)f)(); break;
+    case 1: rval = (*(SendFunc1)f)(argv[0]); break;
+    case 2: rval = (*(SendFunc2)f)(argv[0], argv[1]); break;
+    case 3: rval = (*(SendFunc3)f)(argv[0], argv[1], argv[2]); break;
+    case 4: rval = (*(SendFunc4)f)(argv[0], argv[1], argv[2], argv[3]); break;
+    case 5: rval = (*(SendFunc5)f)(argv[0], argv[1], argv[2], argv[3], argv[4]); break;
+    case 6: rval = (*(SendFunc6)f)(argv[0], argv[1], argv[2], argv[3], argv[4],
+				   argv[5]); break;
+    case 7: rval = (*(SendFunc7)f)(argv[0], argv[1], argv[2], argv[3], argv[4],
+				   argv[5], argv[6]); break;
+    case 8: rval = (*(SendFunc8)f)(argv[0], argv[1], argv[2], argv[3], argv[4],
+				   argv[5], argv[6], argv[7]); break;
+    case 9: rval = (*(SendFunc9)f)(argv[0], argv[1], argv[2], argv[3], argv[4],
+				   argv[5], argv[6], argv[7], argv[8]); break;
     default:
       rval = errorPce(host, NAME_tooManyArguments, argc);
   }
@@ -87,6 +98,16 @@ callCv(CObj host, CPointer function, int argc, Any *argv)
   return rval ? SUCCEED : FAIL;
 }
 
+typedef Any (*GetFunc0)(void);
+typedef Any (*GetFunc1)(Any);
+typedef Any (*GetFunc2)(Any, Any);
+typedef Any (*GetFunc3)(Any, Any, Any);
+typedef Any (*GetFunc4)(Any, Any, Any, Any);
+typedef Any (*GetFunc5)(Any, Any, Any, Any, Any);
+typedef Any (*GetFunc6)(Any, Any, Any, Any, Any, Any);
+typedef Any (*GetFunc7)(Any, Any, Any, Any, Any, Any, Any);
+typedef Any (*GetFunc8)(Any, Any, Any, Any, Any, Any, Any, Any);
+typedef Any (*GetFunc9)(Any, Any, Any, Any, Any, Any, Any, Any, Any);
 
 static Any
 getCallCv(CObj host, CPointer function, int argc, Any *argv)
@@ -99,20 +120,20 @@ getCallCv(CObj host, CPointer function, int argc, Any *argv)
       addCodeReference(argv[n]);
 
   switch(argc)
-  { case 0: rval = (*f)(); break;
-    case 1: rval = (*f)(argv[0]); break;
-    case 2: rval = (*f)(argv[0], argv[1]); break;
-    case 3: rval = (*f)(argv[0], argv[1], argv[2]); break;
-    case 4: rval = (*f)(argv[0], argv[1], argv[2], argv[3]); break;
-    case 5: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4]); break;
-    case 6: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-			argv[5]); break;
-    case 7: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-			argv[5], argv[6]); break;
-    case 8: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-			argv[5], argv[6], argv[7]); break;
-    case 9: rval = (*f)(argv[0], argv[1], argv[2], argv[3], argv[4],
-			argv[5], argv[6], argv[7], argv[8]); break;
+  { case 0: rval = (*(GetFunc0)f)(); break;
+    case 1: rval = (*(GetFunc1)f)(argv[0]); break;
+    case 2: rval = (*(GetFunc2)f)(argv[0], argv[1]); break;
+    case 3: rval = (*(GetFunc3)f)(argv[0], argv[1], argv[2]); break;
+    case 4: rval = (*(GetFunc4)f)(argv[0], argv[1], argv[2], argv[3]); break;
+    case 5: rval = (*(GetFunc5)f)(argv[0], argv[1], argv[2], argv[3], argv[4]); break;
+    case 6: rval = (*(GetFunc6)f)(argv[0], argv[1], argv[2], argv[3], argv[4],
+				  argv[5]); break;
+    case 7: rval = (*(GetFunc7)f)(argv[0], argv[1], argv[2], argv[3], argv[4],
+				  argv[5], argv[6]); break;
+    case 8: rval = (*(GetFunc8)f)(argv[0], argv[1], argv[2], argv[3], argv[4],
+				  argv[5], argv[6], argv[7]); break;
+    case 9: rval = (*(GetFunc9)f)(argv[0], argv[1], argv[2], argv[3], argv[4],
+				  argv[5], argv[6], argv[7], argv[8]); break;
     default:
       errorPce(host, NAME_tooManyArguments, argc);
       rval = FAIL;
