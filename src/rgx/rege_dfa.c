@@ -35,7 +35,7 @@
  ^ static chr *longest(struct vars *, struct dfa *, chr *, chr *, int *);
  */
 static chr *			/* endpoint, or NULL */
-longest(struct vars *v, struct dfa *d, chr *start, chr *stop, chr *hitstopp)
+longest(struct vars *v, struct dfa *d, chr *start, chr *stop, int *hitstopp)
 {
 	chr *cp;
 	chr *realstop = (stop == v->stop) ? stop : stop + 1;
