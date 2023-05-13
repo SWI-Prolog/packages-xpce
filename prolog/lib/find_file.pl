@@ -142,11 +142,11 @@ get_file(F, Exists, Ext, Dir, Default, File) :-
 %
 %   Map old boolean mode to new named mode.
 
-mode(@on,     open).
-mode(@off,    save).
-mode(default, save).
-mode(save,    save).
-mode(open,    open).
+mode(@on,      open).
+mode(@off,     save).
+mode(@default, open).
+mode(save,     save).
+mode(open,     open).
 
 %!  win_filter(+Spec, -Filter)
 %
