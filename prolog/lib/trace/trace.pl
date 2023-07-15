@@ -80,14 +80,19 @@ user:prolog_trace_interception(Port, Frame, CHP, Action) :-
     with_access_user(prolog_trace_interception_gui(Port, Frame, CHP, Action)).
 
 prolog_trace_interception_gui(Port, Frame, CHP, Action) :-
+    State = state(0),
     current_prolog_flag(gui_tracer, true),
-    (   '$notrace'(intercept(Port, Frame, CHP, GuiAction)),
-        map_action(GuiAction, Frame, Action)
-    ->  true
-    ;   print_message(warning,
-                      guitracer(intercept_failed(Port, Frame,
-                                                 CHP, Action))),
-        Action = continue
+    (   (   '$notrace'(intercept(Port, Frame, CHP, GuiAction)),
+            map_action(GuiAction, Frame, Action)
+        ->  true
+        ;   print_message(warning,
+                          guitracer(intercept_failed(Port, Frame,
+                                                     CHP, Action))),
+            Action = continue
+        ),
+        nb_setarg(1, State, Action),
+        fail
+    ;   arg(1, State, Action)
     ).
 
 :- initialization
