@@ -60,6 +60,8 @@
 #ifndef __pce_export
 #if defined(PCE_INCLUDED) && defined(WIN32)
 #define __pce_export __declspec(dllexport) extern
+#elif defined(HAVE_VISIBILITY_ATTRIBUTE)
+#define __pce_export __attribute__((visibility("default")))
 #else
 #define __pce_export extern
 #endif /*PCE_INCLUDED*/

@@ -118,6 +118,8 @@ swipl_plugin(
     C_LIBS ${GUI_LIBRARIES} ${JPEG_LIBRARIES}
     PL_LIBS)
 add_dependencies(plugin_pl2xpce xpce_names)
+set_property(TARGET plugin_pl2xpce PROPERTY
+	     C_VISIBILITY_PRESET hidden)
 
 target_include_directories(
     plugin_pl2xpce BEFORE PRIVATE
