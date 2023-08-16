@@ -192,6 +192,9 @@ endforeach()
 install_src(pkg_xpce_defaults
 	    FILES Defaults Defaults.user
 	    DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce)
+install_src(pkg_xpce_rc
+	    FILES swipl/swipl-rc
+	    DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce/prolog)
 
 # Install the link file
 foreach(rc ${XPCE_LINK_RC})
