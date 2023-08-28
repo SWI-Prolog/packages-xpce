@@ -65,8 +65,14 @@ typedef status (*SendFunc9)(Any, Any, Any, Any, Any, Any, Any, Any, Any);
 static status
 callCv(CObj host, CPointer function, int argc, Any *argv)
 { status rval;
-  SendFunc f = (void *)function->pointer;
   int n;
+  union					/* C11 forbits casting void* to function */
+  { SendFunc f;
+    void *ptr;
+  } fp;
+
+  fp.ptr = function->pointer;
+  SendFunc f = fp.f;
 
   for(n=0; n<argc; n++)
     if ( isObject(argv[n]) )
