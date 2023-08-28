@@ -4,7 +4,7 @@ project(swipl-xpce)
 include("../cmake/PrologPackage.cmake")
 
 if(WIN32)
-  find_package(LibXpm)
+  add_subdirectory(deps/xpm)
   set(HAVE_GUI 1)
   set(WIN32_GRAPHICS 1)
   set(FOR_MSW 1)
@@ -18,7 +18,7 @@ if(WIN32)
       ole32.lib
       shell32.lib
       ws2_32.lib
-      ${XPM_LIBRARY})
+      libxpm)
   set(GUI_INCLUDE_DIRS)
   set(XPCE_LINK_RC swipl-win)
   find_package(JPEG)

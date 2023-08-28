@@ -1,0 +1,5 @@
+*.o
+*.a
+*~
+config.*
+autom4te.cache
