@@ -38,7 +38,10 @@
 
 #define X_MARGIN    3			/* Space from the border */
 
-forwards Fragment scan_fragment_icons(TextMargin, SendFunc, Name, Any);
+forwards Fragment scan_fragment_icons(
+		      TextMargin,
+		      status (*func)(TextMargin, int x, int y, Fragment, Any ctx),
+		      Name, Any);
 
 static status
 initialiseTextMargin(TextMargin m, Editor e, Int w, Int h)
@@ -67,10 +70,11 @@ fragment_style(TextMargin m, Fragment f)
 static int margin_x, margin_y;
 
 static status
-paint_fragment(TextMargin m, int x, int y, Fragment fragment)
+paint_fragment(TextMargin m, int x, int y, Fragment fragment, Any ctx)
 { Image icon;
   Style s;
   int w, h;
+  (void)ctx;
 
   if ( notNil(s = fragment_style(m, fragment)) && notNil(icon = s->icon) )
   { x += margin_x;
@@ -144,10 +148,11 @@ typedef struct
 
 
 static status
-find_fragment(TextMargin m, int x, int y, Fragment fragment, position *pos)
+find_fragment(TextMargin m, int x, int y, Fragment fragment, Any ctx)
 { Style s;
   Size sz;
   int ex, ey;
+  position *pos = ctx;
 
   if ( isNil(s = fragment_style(m, fragment)) || isNil(s->icon) )
     fail;

@@ -1658,7 +1658,7 @@ pceCheckType(PceGoal g, PceType t, PceObject val)
 
 
 int
-pceCheckIntType(PceType t, long val)
+pceCheckIntType(PceType t, intptr_t val)
 { return validateType(t, toInt(val), NIL);
 }
 

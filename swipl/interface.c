@@ -831,7 +831,7 @@ ThrowException(int id, ...)
 
       PL_put_atom(a1, ATOM_object);
       if ( !PL_cons_functor(a1, FUNCTOR_pce1, a1) ||
-	   !PL_put_integer(a2, ref) ||
+	   !PL_put_int64(a2, ref) ||
 	   !PL_cons_functor(a2, FUNCTOR_ref1, a2) ||
 	   !PL_cons_functor(err, FUNCTOR_existence_error2, a1, a2) )
 	goto error;
@@ -1626,7 +1626,7 @@ termToObject(term_t t, PceType type, atom_t assoc, int new)
 	  return PCE_FAIL;
       }
 
-      return pceNew(atomToAssoc(assoc), name, arity, argv);
+      return pceNew(atomToAssoc(assoc), name, (int)arity, argv);
     }
   } else				/* not a term */
   { double f;
@@ -1749,8 +1749,8 @@ unifyObject(term_t t, PceObject obj, int top)
 
   { atom_t name;
     size_t n, arity;
-    atom_t pname;				/* name of Pce object */
-    int parity;				/* its `arity' */
+    atom_t pname;			/* name of Pce object */
+    size_t parity;			/* its `arity' */
     PceObject got;			/* temp variable */
     term_t at = PL_new_term_ref();
 
@@ -3146,7 +3146,7 @@ prof_activate(int active)
 
   memset(&hooks, 0, sizeof(hooks));
   if ( active )
-  { hooks.call   = (void*(*)())PL_prof_call;
+  { hooks.call   = (void*(*)(void*, void*))PL_prof_call;
     hooks.exit   = PL_prof_exit;
     hooks.handle = &pceProfType;
   }

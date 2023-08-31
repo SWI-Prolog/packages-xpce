@@ -287,7 +287,7 @@ __pce_export void pcePrintReturnGoal(PceGoal goal, int rval);
 __pce_export int	pceIncludesType(PceType t, PceType super);
 __pce_export int	pceIncludesHostDataType(PceType t, PceClass hdclass);
 __pce_export PceObject	pceCheckType(PceGoal g, PceType t, PceObject in);
-__pce_export int	pceCheckIntType(PceType t, long val);
+__pce_export int	pceCheckIntType(PceType t, intptr_t val);
 __pce_export int	pceCheckNameType(PceType t, const char *s);
 __pce_export int	pceCheckFloatType(PceType t, double f);
 

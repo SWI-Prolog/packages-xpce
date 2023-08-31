@@ -105,7 +105,7 @@ COMMON(status)	computeWindow(PceWindow sw);
 COMMON(void)	changed_window(PceWindow sw, int x, int y, int w, int h, int clear);
 COMMON(void)	unlink_changes_data_window(PceWindow sw);
 COMMON(status)	redrawWindow(PceWindow sw, Area a);
-COMMON(status)	RedrawWindow(PceWindow sw);
+COMMON(status)	pceRedrawWindow(PceWindow sw);
 COMMON(status)	RedrawAreaWindow(PceWindow sw, IArea a, int clear);
 COMMON(status)	changedUnionWindow(PceWindow sw, Int ox, Int oy, Int ow, Int oh);
 COMMON(status)	pointerWindow(PceWindow sw, Point pos);

@@ -96,13 +96,22 @@ if(UNIX)
   add_compile_options(-DHAVE_CONFIG_H -DSWI)
 endif()
 
+set(cdirs adt ari box evt fmt gnu gra img itf ker men msg msw prg rel rgx txt unx win x11)
+file(GLOB files RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/src"
+     "${CMAKE_CURRENT_SOURCE_DIR}/src/h/*.h")
+foreach(d ${cdirs})
+  file(GLOB tmp RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/src"
+       "${CMAKE_CURRENT_SOURCE_DIR}/src/${d}/*.c")
+  list(APPEND files ${tmp})
+endforeach()
+
 add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/h/names.ih
 	   ${CMAKE_CURRENT_BINARY_DIR}/h/names.ic
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/h
     COMMAND find_names ${CMAKE_CURRENT_BINARY_DIR}/h/names.ic
                        ${CMAKE_CURRENT_BINARY_DIR}/h/names.ih
-                       -- h/*.h adt/*.c ari/*.c box/*.c evt/*.c fmt/*.c gnu/*.c gra/*.c img/*.c itf/*.c ker/*.c men/*.c msg/*.c msw/*.c prg/*.c rel/*.c rgx/*.c txt/*.c unx/*.c win/*.c x11/*.c
+                       -- ${files}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src
     COMMENT "Collecting NAME_ declarations")
 

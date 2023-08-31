@@ -342,7 +342,7 @@ pcePP(Any obj)
   { s = do_pp(obj);
   } __except(EXCEPTION_EXECUTE_HANDLER)
   { char tmp[100];
-    sprintf(tmp, "0x%lx", (unsigned long)obj);
+    sprintf(tmp, "0x%p", obj);
     s = ppsavestring(tmp);
   }
 

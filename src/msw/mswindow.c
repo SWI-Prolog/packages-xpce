@@ -109,7 +109,7 @@ do_window_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 
   switch(message)
   { case WM_PCE_REDRAW:
-      RedrawWindow(sw);
+      pceRedrawWindow(sw);
       return 0;
 
     case WM_DROPFILES:
@@ -586,8 +586,8 @@ ws_window_thread(PceWindow sw)
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Called from RedrawWindow(). If the window is owned by another thread, we
-post a message to this thread asking for the the redraw.
+Called from pceRedrawWindow(). If the window is owned by another thread,
+we post a message to this thread asking for the the redraw.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 int

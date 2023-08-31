@@ -2694,7 +2694,7 @@ inEventAreaGraphical(Graphical gr, Int xc, Int yc)
   { Class class = classOfObject(gr);
 
     if ( class->in_event_area_function )
-    { if ( class->in_event_area_function == INVOKE_FUNC )
+    { if ( (SendFunc)class->in_event_area_function == INVOKE_FUNC )
       { Any av[2];
 
 	av[0] = xc;

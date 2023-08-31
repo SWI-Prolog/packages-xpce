@@ -85,11 +85,16 @@ autoconf/config.h based machine-binding file.
 #ifdef _AIX
 #pragma alloca
 #else /* not _AIX */
-char *alloca ();
 #endif /* not _AIX */
 #endif /* not HAVE_ALLOCA_H */
 #endif /* not __GNUC__ */
 
+#if !defined(alloca) && defined(_MSC_VER)
+#include <malloc.h>
+#ifndef alloca
+#define alloca(size) _alloca(size)
+#endif
+#endif
 
 		 /*******************************
 		 *          STDC_HEADERS	*

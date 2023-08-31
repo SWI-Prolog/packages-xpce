@@ -119,7 +119,10 @@ struct vars {
 #define	OFF(p)	((p) - v->start)
 #define	LOFF(p)	((long)OFF(p))
 
-
+#ifdef _MSC_VER
+// Defined somewhere
+#undef small
+#endif
 
 /*
  * forward declarations
@@ -150,7 +153,7 @@ static int caltdissect _ANSI_ARGS_((struct vars *, struct subre *, chr *, chr *)
 static chr *longest _ANSI_ARGS_((struct vars *, struct dfa *, chr *, chr *, int *));
 static chr *shortest _ANSI_ARGS_((struct vars *, struct dfa *, chr *, chr *, chr *, chr **, int *));
 static chr *lastcold _ANSI_ARGS_((struct vars *, struct dfa *));
-static struct dfa *newdfa _ANSI_ARGS_((struct vars *, struct cnfa *, struct colormap *, struct smalldfa *));
+static struct dfa *newdfa(struct vars *v, struct cnfa *cnfa, struct colormap *cm, struct smalldfa *small);
 static VOID freedfa _ANSI_ARGS_((struct dfa *));
 static unsigned hash _ANSI_ARGS_((unsigned *, int));
 static struct sset *initialize _ANSI_ARGS_((struct vars *, struct dfa *, chr *));

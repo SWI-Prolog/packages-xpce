@@ -42,6 +42,15 @@
 #ifndef XPMI_h
 #define XPMI_h
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS
+#pragma warning(disable : 4996)	/* deprecate open() etc */
+#pragma warning(disable : 4244)	/* possible loss of data (int conversion) */
+#pragma warning(disable : 4267)	/* possible loss of data (int conversion) */
+#pragma warning(disable : 4018)	/* signed/unsigned comparison */
+#pragma warning(disable : 4146)	/* unary minus operator applied to unsigned type */
+#endif
+
 #include "xpm.h"
 
 /*

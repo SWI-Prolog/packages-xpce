@@ -245,7 +245,8 @@ lastcold(struct vars *v, struct dfa *d)
  ^	struct colormap *, struct smalldfa *);
  */
 static struct dfa *
-newdfa(struct vars *v, struct cnfa *cnfa, struct colormap *cm, struct smalldfa *small)
+newdfa(struct vars *v, struct cnfa *cnfa, struct colormap *cm,
+       struct smalldfa *small)
 {
 	struct dfa *d;
 	size_t nss = cnfa->nstates * 2;

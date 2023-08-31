@@ -160,7 +160,7 @@ defineClass(Name name, Name super, StringObj summary, SendFunc makefunction)
 { Class class, superclass;
 
   TRY(class = nameToTypeClass(name));
-  class->make_class_function = makefunction;
+  class->make_class_function = (status(*)(Class))makefunction;
   if ( notNil(super) )
   { TRY(superclass = nameToTypeClass(super));
     linkSubClass(superclass, class);
@@ -795,7 +795,7 @@ void
 fixSendFunctionClass(Class class, Name selector)
 { SendMethod m = getSendMethodClass(class, selector);
 
-  class->send_function = (m ? (SendFunc) m->function : (SendFunc) NULL);
+  class->send_function = (m ? (status(*)(Code)) m->function : (status(*)(Code)) NULL);
 
   if ( !class->send_function )
     class->send_function = codeExecuteCode;
@@ -836,7 +836,7 @@ fixSubClassSendMethodsClass(Class class, Method m)
     else if ( m->name == NAME_catchAll )
       assign(class, send_catch_all, DEFAULT);
     else if ( m->name == NAME_inEventArea )
-      class->in_event_area_function = INVOKE_FUNC;
+      class->in_event_area_function = (status(*)(Any gr, Int xc, Int yc))INVOKE_FUNC;
   }
 }
 
@@ -938,7 +938,7 @@ getMethodClass(Class class, GetMethod m)
 
 status
 setChangedFunctionClass(Class class, SendFunc func)
-{ class->changedFunction = func;
+{ class->changedFunction = (status(*)(Instance, Any*))func;
 
   succeed;
 }
@@ -946,7 +946,7 @@ setChangedFunctionClass(Class class, SendFunc func)
 
 status
 setInEventAreaFunctionClass(Class class, SendFunc func)
-{ class->in_event_area_function = func;
+{ class->in_event_area_function = (status(*)(Any gr, Int xc, Int yc))func;
 
 /* TBD, but implementation needs to be cleaned first
   sendMethod(class, NAME_inEventArea, NAME_event, 2, "x=int", "y=int",
@@ -1231,7 +1231,7 @@ saveStyleClass(Class class, Name style)
 
 status
 setCloneFunctionClass(Class class, SendFunc function)
-{ class->cloneFunction = function;
+{ class->cloneFunction = (status(*)(Instance, Instance))function;
   succeed;
 }
 
@@ -1249,8 +1249,8 @@ setRedrawFunctionClass(Class class, SendFunc function)
 
 status
 setLoadStoreFunctionClass(Class class, SendFunc load, SendFunc store)
-{ class->loadFunction = load;
-  class->saveFunction = store;
+{ class->loadFunction = (status(*)(Any obj, Any file, Any def))load;
+  class->saveFunction = (status(*)(Any obj, Any file))store;
   succeed;
 }
 

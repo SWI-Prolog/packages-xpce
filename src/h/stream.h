@@ -50,11 +50,9 @@
 #endif
 #endif
 
-#ifdef __MINGW32__
-#define RedrawWindow WinRedrawWindow
+#ifdef __WINDOWS__
 #include <winsock2.h>
 #include <windows.h>
-#undef RedrawWindow
 #undef V_ERROR
 #endif
 
@@ -63,10 +61,6 @@
 #include <stddef.h>
 #ifdef _MSC_VER
 typedef __int64 int64_t;
-#if (_MSC_VER < 1300)
-typedef long intptr_t;
-typedef unsigned long uintptr_t;
-#endif
 typedef intptr_t ssize_t;		/* signed version of size_t */
 #else
 #include <unistd.h>

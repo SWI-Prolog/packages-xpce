@@ -35,6 +35,12 @@
 **  This code is in the public domain and has no copyright.
 */
 
+#ifdef _MSC_VER
+#define _CRT_SECURE_NO_WARNINGS 1
+#pragma warning(disable : 4244)	/* possible loss of data (int conversion) */
+#pragma warning(disable : 4267)	/* possible loss of data (int conversion) */
+#endif
+
 #include "md.h"
 #include <time.h>
 #ifdef HAVE_SYS_TIMEB_H
@@ -628,7 +634,7 @@ yyparse(YYPARSE_PARAM_ARG)
 				/*  routines				*/
   yyval.Meridian = MER24;       /* suppress uninitialized warning */
   yyval.Number = 0;
-  
+
   int yylen;
 
 #if YYDEBUG != 0

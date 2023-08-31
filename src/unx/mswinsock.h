@@ -50,9 +50,6 @@
 #define NOKANJI
 */
 
-#define RedrawWindow WinRedrawWindow
-
 #include <winsock2.h>
 
-#undef RedrawWindow
 #undef hyper				/* don't need this */

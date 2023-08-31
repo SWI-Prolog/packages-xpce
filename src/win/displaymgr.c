@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1995-2011, University of Amsterdam
+    Copyright (c)  1995-2023, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -169,21 +170,21 @@ redrawDisplayManager(DisplayManager dm)
 
     TestBreakDraw(dm);
     if ( sw && memberChain(ChangedWindows, sw) )
-      RedrawWindow(sw);
+      pceRedrawWindow(sw);
 
     while( !emptyChain(ChangedWindows) )
     { TestBreakDraw(dm);
 
       for_chain(ChangedWindows, sw,
 		{ if ( !instanceOfObject(sw, ClassWindowDecorator) )
-		    RedrawWindow(sw);
+		    pceRedrawWindow(sw);
 		});
 
       TestBreakDraw(dm);
 
       for_chain(ChangedWindows, sw,
 		{ if ( instanceOfObject(sw, ClassWindowDecorator) )
-		    RedrawWindow(sw);
+		    pceRedrawWindow(sw);
 		});
     }
   }

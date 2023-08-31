@@ -1143,7 +1143,7 @@ redrawWindow(PceWindow sw, Area a)
 
 
 status
-RedrawWindow(PceWindow sw)
+pceRedrawWindow(PceWindow sw)
 { DEBUG(NAME_window, Cprintf("Redrawing %s\n", pp(sw)));
 
   if ( sw->displayed == ON && createdWindow(sw) )
@@ -2020,7 +2020,7 @@ flushWindow(PceWindow sw)
 { DisplayObj d = getDisplayGraphical((Graphical) sw);
 
   if ( d )
-  { RedrawWindow(sw);
+  { pceRedrawWindow(sw);
     ws_flush_display(d);
   }
 
