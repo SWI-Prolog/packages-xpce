@@ -49,7 +49,7 @@ M$-Windows).
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#ifdef __MSC_VER
+#ifdef _MSC_VER
 #define strdup _strdup
 #endif
 
