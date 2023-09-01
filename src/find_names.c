@@ -44,10 +44,14 @@ a plain C program to facilitate   building  on on-POSIX platforms (read:
 M$-Windows).
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+#define _CRT_SECURE_NO_WARNINGS 1
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#ifdef __MSC_VER
+#define strdup _strdup
+#endif
 
 #define LINESIZE 1024
 
