@@ -34,9 +34,6 @@
 */
 
 :- module(pce_host, []).
-:- require([ send/2,
-	     get/3
-	   ]).
 :- public
     property/1.
 
@@ -50,7 +47,7 @@ property(use_predicate_references).     % use direct predicate refs in methods
 property(register_source_locations).    % register the source locations
 property(string).                       % Supports string datatype
 property(runtime) :-
-    get(@(pce), is_runtime_system, @(on)).
+    pce:get(@(pce), is_runtime_system, @(on)).
 
 
                  /*******************************
@@ -71,5 +68,5 @@ property(runtime) :-
 
 user:message_hook('$aborted', _Kind, _Lines) :-
     current_prolog_flag(xpce, true),
-    send(@(display), reset),
+    pce:send(@(display), reset),
     fail.
