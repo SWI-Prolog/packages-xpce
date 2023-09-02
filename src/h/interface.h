@@ -84,7 +84,7 @@ typedef void *		PceHostData;	/* PCE's view of a host data handle */
 #define PCE_MAX_INT	((intptr_t)(((uintptr_t)1<<(sizeof(void*)*8 - INT_MASK_SHIFT-1))-1))
 #define PCE_MIN_INT	(-(PCE_MAX_INT-1))
 
-typedef long		AnswerMark;	/* Mark on AnswerStack */
+typedef intptr_t	AnswerMark;	/* Mark on AnswerStack */
 
 __pce_export void _markAnswerStack(AnswerMark *);
 __pce_export void _rewindAnswerStack(AnswerMark *, PceObject);
