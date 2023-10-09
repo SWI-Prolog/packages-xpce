@@ -1008,7 +1008,8 @@ do_export(E, PI:prolog) :->
         Head2 =.. ['DUMMY'|Args],
         term_string(Head2, Syn0,
                     [ module(pldoc_modes),
-                      quoted(false)
+                      quoted(false),
+                      spacing(next_argument)
                     ]),
         sub_string(Syn0, 6, _, 1, Syn)
     ->  true
