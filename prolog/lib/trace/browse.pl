@@ -49,7 +49,7 @@
 	      system_predicate/1,
 	      global_predicate/1
 	    ]).
-:- autoload(library(debug),[debug/3]).
+:- use_module(library(debug),[debug/3]).
 :- autoload(library(prolog_code), [head_name_arity/3]).
 :- autoload(library(prolog_debug), [nospy/1, spy/1]).
 :- autoload(library(edit),[edit/1]).
