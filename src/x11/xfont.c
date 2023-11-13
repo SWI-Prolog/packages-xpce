@@ -61,13 +61,11 @@ ws_create_font(FontObj f, DisplayObj d)
     FcResult fcrc;
     int i;
     char *fam;
-    int mono = FALSE;
     Real  scale  = getClassVariableValueObject(f, NAME_scale);
     double fscale = (scale ? valReal(scale) : 1.0);
 
     if ( f->family == NAME_screen )
     { fam = "monospace";
-      mono = TRUE;
     } else
       fam = strName(f->family);
 
@@ -79,11 +77,6 @@ ws_create_font(FontObj f, DisplayObj d)
       XftPatternAddInteger(p, XFT_SLANT, XFT_SLANT_ROMAN);
     else if ( f->style == NAME_bold )
       XftPatternAddInteger(p, XFT_WEIGHT, XFT_WEIGHT_BOLD);
-
-    if ( mono )
-    { DEBUG(NAME_font, Cprintf("Asking for fixed\n"));
-      XftPatternAddInteger(p, XFT_SPACING, XFT_MONO);
-    }
 
     if ( !(match = XftFontMatch(r->display_xref, r->screen, p, &fcrc)) )
     { DEBUG(NAME_font, Cprintf("XftFontMatch() failed. Calling replaceFont()\n"));
