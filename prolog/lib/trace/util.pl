@@ -3,9 +3,10 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2001-2020, University of Amsterdam
+    Copyright (c)  2001-2023, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -44,15 +45,15 @@
             find_source/3,              % +Head, -File|TextBuffer, -Line
             thread_self_id/1            % -Name|Int
           ]).
-:- use_module(library(pce),[send/2,pce_open/3,op(_,_,_)]).
-:- use_module(library(debug),[debug/3]).
-:- autoload(library(listing),[portray_clause/1]).
-:- autoload(library(lists),[member/2]).
-:- autoload(library(portray_text),[portray_text/1, '$portray_text_enabled'/1]).
-:- autoload(library(prolog_clause),[predicate_name/2]).
-:- autoload(library(readutil),[read_file_to_terms/3]).
+:- use_module(library(pce), [send/2, pce_open/3, op(_, _, _)]).
+:- use_module(library(debug), [debug/3]).
+:- autoload(library(listing), [portray_clause/1]).
+:- autoload(library(lists), [member/2]).
+:- autoload(library(portray_text), [portray_text/1, set_portray_text/3]).
+:- autoload(library(prolog_clause), [predicate_name/2]).
+:- autoload(library(readutil), [read_file_to_terms/3]).
+:- use_module(library(pce_config), []).
 
-:- use_module(library(pce_config), []). % Get config path alias
 :- meta_predicate
     find_source(:, -, -).
 
@@ -71,8 +72,10 @@ setting(list_max_clauses,  25).         % only list this amount of clauses
 setting(stack_depth,       10).         % # frames shown
 setting(choice_depth,      10).         % # choice-points shown
 setting(term_depth,        2).          % nesting for printing terms
-setting(portray_codes,     Val) :-
-    '$portray_text_enabled'(Val).
+setting(portray_text,      Enabled) :-
+    set_portray_text(enabled, Enabled, Enabled).
+setting(portray_text_length, Len) :-
+    set_portray_text(ellipsis, Len, Len).
 setting(auto_raise,        true).       % automatically raise the frame
 setting(auto_close,        true).       % automatically raise the frame
 setting(console_actions,   false).      % map actions from the console
@@ -85,10 +88,16 @@ trace_setting(Name, Old, New) :-
     setting(Name, Old),
     Old == New,
     !.
-trace_setting(portray_codes, Old, New) :-
+trace_setting(portray_codes, Old, New) :- % compatibility
     !,
-    setting(portray_codes, Old),
+    trace_setting(portray_text, Old, New).
+trace_setting(portray_text, Old, New) :-
+    !,
+    setting(portray_text, Old),
     portray_text(New).
+trace_setting(portray_text_length, Old, New) :-
+    !,
+    set_portray_text(ellipsis, Old, New).
 trace_setting(Name, Old, New) :-
     clause(setting(Name, Old), true, Ref),
     !,

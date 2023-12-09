@@ -49,9 +49,12 @@ setting(show_unbound,
 setting(cluster_variables,
         [true, false],
         '`Bindings'' window clusters variables with the same value').
-setting(portray_codes,
+setting(portray_text,
         [ true, false ],
         'Portray code-lists as text').
+setting(portray_text_length,
+        int(10, infinite),
+        'Show ellipses when longer').
 setting(stack_depth,
         int(2, infinite),
         'Number of stack-frames displayed').
