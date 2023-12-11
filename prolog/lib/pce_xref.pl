@@ -49,6 +49,7 @@
 :- use_module(pce_tagged_connection).
 :- use_module(dragdrop).
 :- use_module(pce_prolog_xref).
+:- use_module(library(prolog_xref)).
 :- use_module(print_graphics).
 :- use_module(tabular).
 :- use_module(library(lists)).

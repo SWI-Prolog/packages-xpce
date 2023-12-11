@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2003-2013, University of Amsterdam
+    Copyright (c)  2003-2023, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -33,30 +34,14 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(pce_prolog_xref,
-          [ xref_source/1,              % +Source
-            xref_source/2,              % +Source, +Options
-            xref_called/3,              % ?Source, ?Callable, ?By
-            xref_defined/3,             % ?Source. ?Callable, -How
-            xref_definition_line/2,     % +How, -Line
-            xref_exported/2,            % ?Source, ?Callable
-            xref_module/2,              % ?Source, ?Module
-            xref_op/2,                  % ?Source, ?Op
-            xref_clean/1,               % +Source
-            xref_current_source/1,      % ?Source
-            xref_done/2,                % +Source, -Time
-            xref_built_in/1,            % ?Callable
-            xref_source_file/3,         % +Spec, -Path, +Source
-            xref_source_file/4,         % +Spec, -Path, +Source, +Options
-            xref_public_list/4,         % +Path, -Export, +Src
-            xref_meta/2,                % +Goal, -Called
-            xref_hook/1,                % ?Callable
-                                        % XPCE class references
-            xref_used_class/2,          % ?Source, ?ClassName
-            xref_defined_class/3        % ?Source, ?ClassName, -How
-          ]).
+:- module(pce_prolog_xref, []).
 :- use_module(library(pce)).
-:- use_module(library(prolog_xref)).
+
+/** <module> XPCE plugin for library(prolog_xref)
+
+This library facilitates using  PceEmacs  editors   as  sources  for the
+Prolog cross referencer.
+*/
 
 :- multifile
     prolog:xref_source_identifier/2,        % +Source, -Id
