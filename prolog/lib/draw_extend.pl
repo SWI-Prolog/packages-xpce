@@ -32,17 +32,8 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(draw_extend,
-          [ draw_begin_shape/4,
-            draw_end_shape/0
-          ]).
+:- module(draw_extend, []).
 :- use_module(library(pce)).
-:- require([ concat/3
-           , ensure_prefix/2
-           , forall/2
-           , member/2
-           ]).
-
 
 :- pce_begin_class(draw_shape_class, class, "Handle class-level stuff").
 
@@ -74,23 +65,3 @@ recogniser(Class, Recogniser:recogniser) :->
     send(Recognisers, add, Recogniser).
 
 :- pce_end_class.
-
-
-draw_begin_shape(Name, Super, Summary, Recognisers) :-
-    ensure_prefix(Name, PceName),
-    ensure_prefix(Super, PceSuper),
-    make_pce_super(PceSuper),
-    pce_begin_class(PceName, PceSuper, Summary),
-    forall(member(R, Recognisers),
-           send(@class, recogniser, R)).
-
-make_pce_super(DrawClass) :-
-    get(@pce, convert, DrawClass, class, _),
-    !.
-make_pce_super(DrawClass) :-
-    concat(draw_, PceClass, DrawClass),
-    get(@pce, convert, PceClass, class, _),
-    new(_NewClass, draw_shape_class(DrawClass, PceClass)).
-
-draw_end_shape :-
-    pce_end_class.
