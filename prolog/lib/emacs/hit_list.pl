@@ -34,6 +34,7 @@
 
 :- module(emacs_hit_list, []).
 :- use_module(library(pce)).
+:- use_module(library(debug)).
 :- require([ default/3
            ]).
 
