@@ -200,7 +200,7 @@ write_byte(int byte)
 	prt = "\\b";
 	break;
       default:
-	sprintf(buf, "<%d>", byte);
+	snprintf(buf, sizeof(buf), "<%d>", byte);
     }
 
     Cprintf("%s", prt);
