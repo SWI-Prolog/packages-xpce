@@ -181,7 +181,7 @@ add_data_stream(Stream s, char *data, int len)
 
 
 static void
-write_byte(int byte)
+write_byte(unsigned char byte)
 { if ( byte < 32 || (byte >= 127 && byte < 128+32) || byte == 255 )
   { char buf[10];
     char *prt = buf;
@@ -210,16 +210,16 @@ write_byte(int byte)
 
 
 static void
-write_buffer(char *buf, int size)
+write_buffer(const char *buf, int size)
 { if ( size > 50 )
   { write_buffer(buf, 25);
     Cprintf(" ... ");
     write_buffer(buf + size - 25, 25);
   } else
-  { int n;
+  { const unsigned char *ubuf = (const unsigned char*)buf;
 
-    for(n=0; n<size; n++)
-    { write_byte(buf[n]);
+    for(int n=0; n<size; n++)
+    { write_byte(ubuf[n]);
     }
   }
 }
