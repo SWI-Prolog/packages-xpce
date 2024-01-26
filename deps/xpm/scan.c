@@ -422,7 +422,7 @@ ScanOtherColors(display, colors, ncolors, pixels, mask, cpp, attributes)
     XpmColor *color;
     XColor *xcolors = NULL, *xcolor;
     char *colorname, *s;
-    XpmColor *colorTable, **oldColorTable = NULL;
+    XpmColor *colorTable = NULL, **oldColorTable = NULL;
     unsigned int ancolors = 0;
     Pixel *apixels;
     unsigned int mask_pixel;
