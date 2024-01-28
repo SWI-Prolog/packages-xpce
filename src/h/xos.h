@@ -53,13 +53,17 @@
 #endif
 #endif
 
-#if PATH_MAX < 1024
+#if PATH_MAX < 1024 && defined(__WINDOWS__)
 #undef PATH_MAX
 #if WIN_PATH_MAX
 #define PATH_MAX WIN_PATH_MAX
 #else
 #define PATH_MAX 32768
 #endif
+#endif
+
+#ifndef PATH_MAX
+#define PATH_MAX 1024
 #endif
 
 #include <direct.h>

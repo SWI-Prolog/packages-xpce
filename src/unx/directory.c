@@ -66,6 +66,9 @@
 #ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif
+#ifndef PATH_MAX
+#define PATH_MAX 1024
+#endif
 
 static Chain DirectoryStack;
 static Name  ExpandProblem;
