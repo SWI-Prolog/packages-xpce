@@ -473,6 +473,7 @@ distanceColours(Name vt, XColor *c1, XColor *c2)
   }
 }
 
+#define TRIED ((char)-1)
 
 status
 allocNearestColour(Display *display, Colormap map, int depth, Name vt,
@@ -507,7 +508,7 @@ allocNearestColour(Display *display, Colormap map, int depth, Name vt,
       XColor *e = colors;
 
       for(i=0; i<entries; i++, e++)
-      { if ( e->flags != -1 )		/* tried this one */
+      { if ( e->flags != TRIED )		/* tried this one */
 	{ int d = distanceColours(vt, c, e);
 
 	  if ( d < badness )
@@ -528,7 +529,7 @@ allocNearestColour(Display *display, Colormap map, int depth, Name vt,
       { unalloc(entries * sizeof(XColor), colors);
 	succeed;
       } else
-      {	cb->flags = -1;			/* don't try this one anymore! */
+      {	cb->flags = TRIED;			/* don't try this one anymore! */
 	DEBUG(NAME_colour, Cprintf("Can't allocate, trying another one\n"));
       }
     }
@@ -1067,7 +1068,3 @@ void XtPopupSpringLoaded (widget)
 }
 
 #endif
-
-
-
-
