@@ -521,15 +521,15 @@ loadWord(IOSTREAM *fd)
   { unsigned int  l;
     unsigned char c[4];
   } cvrt;
-  int rval;
+  unsigned int rval;
 
   cvrt.l = Sgetw(fd);
-  rval = (cvrt.c[0] << 24) |
-         (cvrt.c[1] << 16) |
-	 (cvrt.c[2] << 8) |
-	  cvrt.c[3];
+  rval = ((unsigned int)cvrt.c[0] << 24) |
+         ((unsigned int)cvrt.c[1] << 16) |
+	 ((unsigned int)cvrt.c[2] << 8) |
+	  (unsigned int)cvrt.c[3];
   DEBUG(NAME_byteOrder, Cprintf("loadWord(0x%lx) --> %ld\n", cvrt.l, rval));
-  return rval;
+  return (int)rval;
 #else /*WORDS_BIGENDIAN*/
   return Sgetw(fd);
 #endif /*WORDS_BIGENDIAN*/

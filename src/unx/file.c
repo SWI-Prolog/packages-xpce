@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2022, University of Amsterdam
+    Copyright (c)  1985-2024, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -1100,30 +1100,40 @@ storeCharFile(FileObj f, int c)
 
 
 void
-putstdw(unsigned long w, IOSTREAM *fd)
+putstdw(uint32_t w, IOSTREAM *fd)
 {
 #ifndef WORDS_BIGENDIAN
   union
-  { unsigned long l;
+  { uint32_t l;
     unsigned char c[4];
   } cvrt;
-  unsigned long rval;
+  uint32_t rval;
 
   cvrt.l = w;
-  rval = (cvrt.c[0] << 24) |
-	 (cvrt.c[1] << 16) |
-	 (cvrt.c[2] << 8) |
-	  cvrt.c[3];
-  Sputw(rval, fd);
+  rval = ((unsigned int)cvrt.c[0] << 24) |
+	 ((unsigned int)cvrt.c[1] << 16) |
+	 ((unsigned int)cvrt.c[2] << 8) |
+	  (unsigned int)cvrt.c[3];
+  Sputw((int)rval, fd);
 #else /*WORDS_BIGENDIAN*/
-  Sputw(w, fd);
+  Sputw((int)w, fd);
 #endif /*WORDS_BIGENDIAN*/
 }
 
 
+/* TODO: using (eventally) Sputw(), this can only deal with 32 bits.
+ * For now we are happy if the sign-extended version of the 32
+ * bit truncated value is correct.   A real solution would be to
+ * changet he save/load version and adjust the save format, probably
+ * by using zigzag encoding as SWI-Prolog does.
+ */
+
 status
 storeWordFile(FileObj f, Any w)
-{ putstdw((uintptr_t) w, f->fd);
+{ uint32_t iw = (uint32_t)(uintptr_t)w;
+  assert((intptr_t)(int32_t) iw == (intptr_t)w);
+
+  putstdw(iw, f->fd);
 
   return checkErrorFile(f);
 }
