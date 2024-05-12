@@ -677,11 +677,10 @@ openFile(FileObj f, Name mode, Name filter, CharArray extension)
     if ( fdmode[0] == 'a' )
       fdmode[0] = 'w';
 
-    if ( strlen(fn)+strlen(pn)+7 > LINESIZE )
+    if ( snprintf(cmd, sizeof(cmd), "%s %s \"%s\"", fn, rn, pn) < sizeof(cmd) )
+      f->fd = Sopen_pipe(cmd, fdmode);
+    else
       return errorPce(f, NAME_representation, NAME_nameTooLong);
-
-    sprintf(cmd, "%s %s \"%s\"", fn, rn, pn);
-    f->fd = Sopen_pipe(cmd, fdmode);
   }
 #endif /*HAVE_POPEN*/
 
