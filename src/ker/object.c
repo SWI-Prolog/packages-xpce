@@ -226,7 +226,7 @@ static void
 updateInstanceProtoClass(Class class)
 { int slots = valInt(class->slots);
   int size = valInt(class->instance_size);
-  Variable *var = (Variable *) &class->instance_variables->elements[0];
+  Variable *var = (Variable*)class->instance_variables->elements;
   Any *field;
   Instance obj;
   Name init_variables = NAME_static;

@@ -673,17 +673,17 @@ status pceExecuteGoal(g)
 #define DEBUGGER(g) if ( PCEdebugging ) g
 #endif
 
-typedef Any (*ExecFunc0)(Any r, int vaac, Any *vaav);
-typedef Any (*ExecFunc1)(Any r, Any, int vaac, Any *vaav);
-typedef Any (*ExecFunc2)(Any r, Any, Any, int vaac, Any *vaav);
-typedef Any (*ExecFunc3)(Any r, Any, Any, Any, int vaac, Any *vaav);
-typedef Any (*ExecFunc4)(Any r, Any, Any, Any, Any, int vaac, Any *vaav);
-typedef Any (*ExecFunc5)(Any r, Any, Any, Any, Any, Any, int vaac, Any *vaav);
-typedef Any (*ExecFunc6)(Any r, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
-typedef Any (*ExecFunc7)(Any r, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
-typedef Any (*ExecFunc8)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
-typedef Any (*ExecFunc9)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
-typedef Any (*ExecFunc10)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*VAGetFunc0)(Any r, int vaac, Any *vaav);
+typedef Any (*VAGetFunc1)(Any r, Any, int vaac, Any *vaav);
+typedef Any (*VAGetFunc2)(Any r, Any, Any, int vaac, Any *vaav);
+typedef Any (*VAGetFunc3)(Any r, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*VAGetFunc4)(Any r, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*VAGetFunc5)(Any r, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*VAGetFunc6)(Any r, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*VAGetFunc7)(Any r, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*VAGetFunc8)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*VAGetFunc9)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef Any (*VAGetFunc10)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
 
 typedef Any (*GetFunc0)(Any r);
 typedef Any (*GetFunc1)(Any r, Any);
@@ -698,6 +698,30 @@ typedef Any (*GetFunc9)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any);
 typedef Any (*GetFunc10)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any);
 typedef Any (*GetFunc11)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any);
 
+typedef status (*VASendFunc0)(Any r, int vaac, Any *vaav);
+typedef status (*VASendFunc1)(Any r, Any, int vaac, Any *vaav);
+typedef status (*VASendFunc2)(Any r, Any, Any, int vaac, Any *vaav);
+typedef status (*VASendFunc3)(Any r, Any, Any, Any, int vaac, Any *vaav);
+typedef status (*VASendFunc4)(Any r, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef status (*VASendFunc5)(Any r, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef status (*VASendFunc6)(Any r, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef status (*VASendFunc7)(Any r, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef status (*VASendFunc8)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef status (*VASendFunc9)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+typedef status (*VASendFunc10)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, int vaac, Any *vaav);
+
+typedef status (*SendFunc0)(Any r);
+typedef status (*SendFunc1)(Any r, Any);
+typedef status (*SendFunc2)(Any r, Any, Any);
+typedef status (*SendFunc3)(Any r, Any, Any, Any);
+typedef status (*SendFunc4)(Any r, Any, Any, Any, Any);
+typedef status (*SendFunc5)(Any r, Any, Any, Any, Any, Any);
+typedef status (*SendFunc6)(Any r, Any, Any, Any, Any, Any, Any);
+typedef status (*SendFunc7)(Any r, Any, Any, Any, Any, Any, Any, Any);
+typedef status (*SendFunc8)(Any r, Any, Any, Any, Any, Any, Any, Any, Any);
+typedef status (*SendFunc9)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any);
+typedef status (*SendFunc10)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any);
+typedef status (*SendFunc11)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any);
 
 status
 pceExecuteGoal(PceGoal g)
@@ -718,113 +742,203 @@ pceExecuteGoal(PceGoal g)
     else
       prof_node = NULL;
 
-    if ( m->function )
+    if ( m->function )				/* C-function implemented */
     { Any r      = g->receiver;
       Func f     = m->function;
       Any *a     = g->argv;
-      Any fval;
 
-      if ( g->va_type )
-      { int  vaac = g->va_argc;
-	Any *vaav = g->va_argv;
+      if ( g->flags & PCE_GF_GET )		/* Get method */
+      { Any fval;
 
-	switch(g->argc)
-	{ case 0:
-	    fval = (*(ExecFunc0)f)(r, vaac, vaav);
-	    break;
-	  case 1:
-	    fval = (*(ExecFunc1)f)(r, a[0], vaac, vaav);
-	    break;
-	  case 2:
-	    fval = (*(ExecFunc2)f)(r, a[0], a[1], vaac, vaav);
-	    break;
-	  case 3:
-	    fval = (*(ExecFunc3)f)(r, a[0], a[1], a[2], vaac, vaav);
-	    break;
-	  case 4:
-	    fval = (*(ExecFunc4)f)(r, a[0], a[1], a[2], a[3], vaac, vaav);
-	    break;
-	  case 5:
-	    fval = (*(ExecFunc5)f)(r, a[0], a[1], a[2], a[3], a[4], vaac, vaav);
-	    break;
-	  case 6:
-	    fval = (*(ExecFunc6)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], vaac, vaav);
-	    break;
-	  case 7:
-	    fval = (*(ExecFunc7)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
-				   a[6], vaac, vaav);
-	    break;
-	  case 8:
-	    fval = (*(ExecFunc8)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
-				   a[6], a[7], vaac, vaav);
-	    break;
-	  case 9:
-	    fval = (*(ExecFunc9)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
-				   a[6], a[7], a[8], vaac, vaav);
-	    break;
-	  case 10:
-	    fval = (*(ExecFunc10)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
-				    a[6], a[7], a[8], a[9], vaac, vaav);
-	    break;
-	  default:
-	    fval = (Any)FAIL;
-	    assert(0);
+	if ( g->va_type )
+	{ int  vaac = g->va_argc;
+	  Any *vaav = g->va_argv;
+
+	  switch(g->argc)
+	  { case 0:
+	      fval = (*(VAGetFunc0)f)(r, vaac, vaav);
+	      break;
+	    case 1:
+	      fval = (*(VAGetFunc1)f)(r, a[0], vaac, vaav);
+	      break;
+	    case 2:
+	      fval = (*(VAGetFunc2)f)(r, a[0], a[1], vaac, vaav);
+	      break;
+	    case 3:
+	      fval = (*(VAGetFunc3)f)(r, a[0], a[1], a[2], vaac, vaav);
+	      break;
+	    case 4:
+	      fval = (*(VAGetFunc4)f)(r, a[0], a[1], a[2], a[3], vaac, vaav);
+	      break;
+	    case 5:
+	      fval = (*(VAGetFunc5)f)(r, a[0], a[1], a[2], a[3], a[4], vaac, vaav);
+	      break;
+	    case 6:
+	      fval = (*(VAGetFunc6)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], vaac, vaav);
+	      break;
+	    case 7:
+	      fval = (*(VAGetFunc7)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
+				     a[6], vaac, vaav);
+	      break;
+	    case 8:
+	      fval = (*(VAGetFunc8)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
+				     a[6], a[7], vaac, vaav);
+	      break;
+	    case 9:
+	      fval = (*(VAGetFunc9)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
+				     a[6], a[7], a[8], vaac, vaav);
+	      break;
+	    case 10:
+	      fval = (*(VAGetFunc10)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
+				      a[6], a[7], a[8], a[9], vaac, vaav);
+	      break;
+	    default:
+	      fval = (Any)FAIL;
+	      assert(0);
+	  }
+	} else
+	{ switch(g->argc)
+	  { case 0:
+	      fval = (*(GetFunc0)f)(r);
+	      break;
+	    case 1:
+	      fval = (*(GetFunc1)f)(r, a[0]);
+	      break;
+	    case 2:
+	      fval = (*(GetFunc2)f)(r, a[0], a[1]);
+	      break;
+	    case 3:
+	      fval = (*(GetFunc3)f)(r, a[0], a[1], a[2]);
+	      break;
+	    case 4:
+	      fval = (*(GetFunc4)f)(r, a[0], a[1], a[2], a[3]);
+	      break;
+	    case 5:
+	      fval = (*(GetFunc5)f)(r, a[0], a[1], a[2], a[3], a[4]);
+	      break;
+	    case 6:
+	      fval = (*(GetFunc6)f)(r, a[0], a[1], a[2], a[3], a[4], a[5]);
+	      break;
+	    case 7:
+	      fval = (*(GetFunc7)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6]);
+	      break;
+	    case 8:
+	      fval = (*(GetFunc8)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7]);
+	      break;
+	    case 9:
+	      fval = (*(GetFunc9)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
+				    a[8]);
+	      break;
+	    case 10:
+	      fval = (*(GetFunc10)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
+				     a[8], a[9]);
+	      break;
+	    case 11:
+	      fval = (*(GetFunc11)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
+				     a[8], a[9], a[10]);
+	      break;
+	    default:
+	      fval = (Any)FAIL;
+	      assert(0);
+	  }
 	}
-      } else
-      { switch(g->argc)
-	{ case 0:
-	    fval = (*(GetFunc0)f)(r);
-	    break;
-	  case 1:
-	    fval = (*(GetFunc1)f)(r, a[0]);
-	    break;
-	  case 2:
-	    fval = (*(GetFunc2)f)(r, a[0], a[1]);
-	    break;
-	  case 3:
-	    fval = (*(GetFunc3)f)(r, a[0], a[1], a[2]);
-	    break;
-	  case 4:
-	    fval = (*(GetFunc4)f)(r, a[0], a[1], a[2], a[3]);
-	    break;
-	  case 5:
-	    fval = (*(GetFunc5)f)(r, a[0], a[1], a[2], a[3], a[4]);
-	    break;
-	  case 6:
-	    fval = (*(GetFunc6)f)(r, a[0], a[1], a[2], a[3], a[4], a[5]);
-	    break;
-	  case 7:
-	    fval = (*(GetFunc7)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6]);
-	    break;
-	  case 8:
-	    fval = (*(GetFunc8)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7]);
-	    break;
-	  case 9:
-	    fval = (*(GetFunc9)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
-				  a[8]);
-	    break;
-	  case 10:
-	    fval = (*(GetFunc10)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
-				   a[8], a[9]);
-	    break;
-	  case 11:
-	    fval = (*(GetFunc11)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
-				   a[8], a[9], a[10]);
-	    break;
-	  default:
-	    fval = (Any)FAIL;
-	    assert(0);
+	g->rval = fval;
+	rval = !!fval;
+      } else					/* Send method */
+      {	if ( g->va_type )
+	{ int  vaac = g->va_argc;
+	  Any *vaav = g->va_argv;
+
+	  switch(g->argc)
+	  { case 0:
+	      rval = (*(VASendFunc0)f)(r, vaac, vaav);
+	      break;
+	    case 1:
+	      rval = (*(VASendFunc1)f)(r, a[0], vaac, vaav);
+	      break;
+	    case 2:
+	      rval = (*(VASendFunc2)f)(r, a[0], a[1], vaac, vaav);
+	      break;
+	    case 3:
+	      rval = (*(VASendFunc3)f)(r, a[0], a[1], a[2], vaac, vaav);
+	      break;
+	    case 4:
+	      rval = (*(VASendFunc4)f)(r, a[0], a[1], a[2], a[3], vaac, vaav);
+	      break;
+	    case 5:
+	      rval = (*(VASendFunc5)f)(r, a[0], a[1], a[2], a[3], a[4], vaac, vaav);
+	      break;
+	    case 6:
+	      rval = (*(VASendFunc6)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], vaac, vaav);
+	      break;
+	    case 7:
+	      rval = (*(VASendFunc7)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
+				     a[6], vaac, vaav);
+	      break;
+	    case 8:
+	      rval = (*(VASendFunc8)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
+				     a[6], a[7], vaac, vaav);
+	      break;
+	    case 9:
+	      rval = (*(VASendFunc9)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
+				     a[6], a[7], a[8], vaac, vaav);
+	      break;
+	    case 10:
+	      rval = (*(VASendFunc10)f)(r, a[0], a[1], a[2], a[3], a[4], a[5],
+				      a[6], a[7], a[8], a[9], vaac, vaav);
+	      break;
+	    default:
+	      rval = FAIL;
+	      assert(0);
+	  }
+	} else
+	{ switch(g->argc)
+	  { case 0:
+	      rval = (*(SendFunc0)f)(r);
+	      break;
+	    case 1:
+	      rval = (*(SendFunc1)f)(r, a[0]);
+	      break;
+	    case 2:
+	      rval = (*(SendFunc2)f)(r, a[0], a[1]);
+	      break;
+	    case 3:
+	      rval = (*(SendFunc3)f)(r, a[0], a[1], a[2]);
+	      break;
+	    case 4:
+	      rval = (*(SendFunc4)f)(r, a[0], a[1], a[2], a[3]);
+	      break;
+	    case 5:
+	      rval = (*(SendFunc5)f)(r, a[0], a[1], a[2], a[3], a[4]);
+	      break;
+	    case 6:
+	      rval = (*(SendFunc6)f)(r, a[0], a[1], a[2], a[3], a[4], a[5]);
+	      break;
+	    case 7:
+	      rval = (*(SendFunc7)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6]);
+	      break;
+	    case 8:
+	      rval = (*(SendFunc8)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7]);
+	      break;
+	    case 9:
+	      rval = (*(SendFunc9)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
+				    a[8]);
+	      break;
+	    case 10:
+	      rval = (*(SendFunc10)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
+				     a[8], a[9]);
+	      break;
+	    case 11:
+	      rval = (*(SendFunc11)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
+				     a[8], a[9], a[10]);
+	      break;
+	    default:
+	      rval = FAIL;
+	      assert(0);
+	  }
 	}
       }
-
-					/* end of function-implemation */
-
-      if ( fval )
-      { if ( g->flags & PCE_GF_GET )
-	  g->rval = fval;
-	rval = SUCCEED;
-      } else
-	rval = FAIL;
+					/* end of function-implementation */
     } else				/* not a C-function */
     { if ( objectIsInstanceOf(m->message, ClassCode) )
       {					/* A function object */
