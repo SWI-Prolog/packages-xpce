@@ -39,7 +39,7 @@
 static int	host_handles;		/* # handles */
 static long	itf_symbols;		/* # symbols */
 
-#define SizeOfSymbol ((size_t)(intptr_t)(&(((PceITFSymbol)NULL)->handle[host_handles])))
+#define SizeOfSymbol offsetof(struct pceITFSymbol, handle[host_handles])
 
 		/********************************
 		*            SYMBOLS		*

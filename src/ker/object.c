@@ -204,9 +204,6 @@ follows:
 	3) Otherwise the object is freed (argument)
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#undef offset
-#define offset(t, f) ((uintptr_t)(&((struct t *)0)->f))
-
 static status
 hasClassVariableVariable(Variable v, Class class)
 { for( ; notNil(class); class=class->super_class )
@@ -234,7 +231,7 @@ updateInstanceProtoClass(Class class)
   Instance obj;
   Name init_variables = NAME_static;
 
-  class->proto = alloc(offset(instance_proto, proto) + size);
+  class->proto = alloc(offsetof(struct instance_proto, proto) + size);
   class->proto->size = size;
   obj = (Instance) &class->proto->proto;
   initHeaderObj(obj, class);
@@ -268,7 +265,7 @@ updateInstanceProtoClass(Class class)
 void
 unallocInstanceProtoClass(Class class)
 { if ( class->proto )
-  { unalloc(offset(instance_proto, proto) + class->proto->size, class->proto);
+  { unalloc(offsetof(struct instance_proto, proto) + class->proto->size, class->proto);
     class->proto = NULL;
   }
 }
@@ -290,7 +287,7 @@ again:
 
   if ( class->boot )
   { int size = valInt(class->instance_size);
-    int slots = (size - offset(instance, slots[0])) / sizeof(Any);
+    int slots = (size - offsetof(struct instance, slots[0])) / sizeof(Any);
     int i;
 
     obj = alloc(size);
@@ -315,7 +312,7 @@ init_slots(Instance obj, int slots, Variable *var, Any *field)
 
     if ( notNil(f) )
     { if ( !(value = expandCodeArgument(f)) ||
-	   !sendVariable(*var, obj, value) ) 		/* assignField? */
+	   !sendVariable(*var, obj, value) )		/* assignField? */
 	return errorPce(*var, NAME_initVariableFailed, obj);
     }
   }
@@ -1367,7 +1364,7 @@ struct clone_field
 };
 
 static	HashTable	CloneTable;
-static  CloneField     	CloneFields;
+static  CloneField	CloneFields;
 
 static void
 addCloneField(Any obj, unsigned long flags, Any *field, Any old)
@@ -2283,7 +2280,7 @@ check_object(Any obj, BoolObj recursive, HashTable done, int errs)
 
       if ( var == FAIL )
       { errorPce(obj, NAME_noVariable, toInt(i));
-      	continue;
+	continue;
       }
 
       if ( isClassDefault(value) &&
@@ -2448,7 +2445,7 @@ for_slot_reference_object(Any obj, Code msg, BoolObj recursive, HashTable done)
 
       if ( var == FAIL )
       { errorPce(obj, NAME_noVariable, toInt(i));
-      	continue;
+	continue;
       }
 
       if ( isDefault(value) && getClassVariableClass(class, var->name) )

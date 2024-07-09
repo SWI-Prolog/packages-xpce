@@ -135,13 +135,11 @@ about  the same  relative numbers.    For  this reason  PCE addopts  a
 perfect fit strategy for memory allocation.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#define offset(structure, field) ((intptr_t) &(((structure *)NULL)->field))
-
 static inline Zone
 allocate(size_t size)
 { unsigned char *p;
   Zone z;
-  size_t alloc_size = size + offset(struct zone, start);
+  size_t alloc_size = size + offsetof(struct zone, start);
 
   if ( alloc_size <= spacefree )
   { z = (Zone) spaceptr;
