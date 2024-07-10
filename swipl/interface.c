@@ -115,7 +115,7 @@
 				  (type *) alloca((size)*sizeof(type))
 #endif
 
-typedef void (*OnExitFunction)(void);	/* HOST_ONEXIT function */
+typedef int (*OnExitFunction)(int rc);	/* HOST_ONEXIT function */
 
 		 /*******************************
 		 *    PROLOG ELEMENTARY TYPES	*
@@ -703,7 +703,7 @@ uninstall_pl2xpce(void)
   indirect_rlc_update_hook(old_update_hook);
 #endif
   if ( exitpce_hook )
-    (*exitpce_hook)();
+    (*exitpce_hook)(0);
 }
 
 #endif /*O_SHAREDLIBRARY*/
@@ -3031,7 +3031,13 @@ pl_Cgetline(char *buf, int size)
 		 *******************************/
 
 typedef void (*sighandler_t)(int);
-typedef int  (*halthandler_t)(int, void *);
+
+static int
+swi_halt_hook(int rc, void *closure)
+{ OnExitFunction f = closure;
+
+  return (*f)(rc);
+}
 
 static int
 PrologAction(int action, va_list args)
@@ -3069,7 +3075,7 @@ PrologAction(int action, va_list args)
     case HOST_ATEXIT:
     { OnExitFunction f = va_arg(args, OnExitFunction);
 
-      PL_on_halt((halthandler_t)f, NULL);
+      PL_on_halt(swi_halt_hook, f);
 
       return PCE_SUCCEED;
     }
