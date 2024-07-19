@@ -91,8 +91,11 @@ reduced to the facility to terminate the inferior process.
 #ifdef HAVE_SYS_WAIT_H
 #include <sys/wait.h>
 #endif
-#if defined(HAVE_SYS_IOCTL_H) && !defined(__sun__) /* leads to redefines */
+#ifdef HAVE_SYS_IOCTL_H
+/* MacOS 15 (beta) sys/ioctl.h pulls in socket.h */
+#undef send
 #include <sys/ioctl.h>
+#define send sendPCE
 #endif
 
 #ifdef __WINDOWS__
@@ -1114,4 +1117,3 @@ copyTty(Process p, char *pty, int fd)
 }
 
 #endif /*HAVE_PTYS*/
-
