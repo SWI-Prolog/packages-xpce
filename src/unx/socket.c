@@ -417,7 +417,6 @@ inet_address_socket(Socket s, struct sockaddr_in *address, int *len)
   if ( instanceOfObject(s->address, ClassTuple) ) /* client */
   { CharArray hostname;
     Int port;
-    struct hostent *hp;
     Tuple t = s->address;
 
     if ( !(hostname = checkType(t->first, TypeName, NIL)) )
@@ -425,11 +424,18 @@ inet_address_socket(Socket s, struct sockaddr_in *address, int *len)
     if ( !(port = checkType(t->second, TypeInt, NIL)) )
       return errorPce(t->second, NAME_unexpectedType, TypeInt);
 
-    if ( !(hp = gethostbyname(strName(hostname))) )
+    struct addrinfo hints;
+    struct addrinfo *res;
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    if ( getaddrinfo(strName(hostname), NULL, &hints, &res) != 0 )
       return errorPce(s, NAME_noHost, hostname);
-
+    assert(res && res->ai_family == AF_INET);
+    memcpy(&address->sin_addr,
+	   &((struct sockaddr_in*)res->ai_addr)->sin_addr,
+	   sizeof(address->sin_addr));
+    freeaddrinfo(res);
     address->sin_port = htons((unsigned short)valInt(port));
-    memcpy(&address->sin_addr, hp->h_addr, hp->h_length);
   } else if ( isInteger(s->address) )	/* server */
   { address->sin_port = htons((unsigned short)valInt(s->address));
     address->sin_addr.s_addr = htonl(INADDR_ANY);
