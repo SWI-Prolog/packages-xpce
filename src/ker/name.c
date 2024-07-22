@@ -48,17 +48,13 @@ static status	registerName(Name n);
 		*         BUILTIN NAMES		*
 		********************************/
 
-#define BUILTIN_NAME(s) { 0L, 0L, NULL, 0, s },
+#define BUILTIN_NAME_(s) { .data = { .text_union = { .textA = (unsigned char*)s } } }
+#define BUILTIN_NAME(s) BUILTIN_NAME_(s),
 
-NewClass(bname)
-  unsigned long str_header;
-  char *text;
-End;
-
-struct bname builtin_names[] =
+struct name builtin_names[] =
 {
 #include <h/names.ic>
-  { 0L, 0L, NULL, 0, NULL }
+  BUILTIN_NAME_(NULL)
 };
 
 
