@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2018, University of Amsterdam
+    Copyright (c)  1985-2024, University of Amsterdam
 			      CWI, Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -44,9 +45,9 @@
 
 #ifdef HAVE_WINSOCK
 #include "mswinsock.h"
+#include <ws2tcpip.h>
 #include <io.h>
 #include <fcntl.h>
-typedef size_t socklen_t;
 #else /*HAVE_WINSOCK*/
 
 #define HAVE_SYS_UN_H 1
