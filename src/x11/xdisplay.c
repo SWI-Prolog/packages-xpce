@@ -142,9 +142,18 @@ ws_depth_display(DisplayObj d)
 
 int
 ws_resolution_display(DisplayObj d, int *rx, int *ry)
-{ Cprintf("No support to get the screen-resolution for X11 yet\n");
+{ DisplayWsXref r = d->ws_ref;
+  int screen, wpx, wmm, hpx, hmm;
 
-  fail;
+  screen = XDefaultScreen(r->display_xref);
+  wpx = XDisplayWidth(r->display_xref,  screen);
+  hpx = XDisplayHeight(r->display_xref, screen);
+  wmm = XDisplayWidthMM(r->display_xref,  screen);
+  hmm = XDisplayHeightMM(r->display_xref, screen);
+  *rx = (int)((double)wpx*25.4 / (double)wmm + 0.5);
+  *ry = (int)((double)hpx*25.4 / (double)hmm + 0.5);
+
+  succeed;
 }
 
 
@@ -169,7 +178,7 @@ ws_init_display(DisplayObj d)
 { DisplayWsXref ref = alloc(sizeof(display_ws_ref));
 
   memset(ref, 0, sizeof(*ref));
-  ref->depth	        = 1;
+  ref->depth		= 1;
   ref->black_pixel      = 1L;
   ref->foreground_pixel = ref->black_pixel;
   ref->background_pixel = ref->white_pixel;
@@ -378,13 +387,13 @@ new_draw_context(DisplayObj d, Drawable drawable, Name kind)
 
 #undef GCALL
 
-  ctx->pen	        = -1;
-  ctx->dash	        = NAME_none;
-  ctx->fill	        = NIL;
+  ctx->pen		= -1;
+  ctx->dash		= NAME_none;
+  ctx->fill		= NIL;
   ctx->arcmode		= NAME_pieSlice;
   ctx->and_pattern      = NIL;
-  ctx->font	        = NIL;
-  ctx->colour	        = NIL;
+  ctx->font		= NIL;
+  ctx->colour		= NIL;
   ctx->background       = NIL;
   ctx->foreground_pixel = 0L;
   ctx->background_pixel = 0L;

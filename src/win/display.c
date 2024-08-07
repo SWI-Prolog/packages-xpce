@@ -366,6 +366,7 @@ static Size
 getDotsPerInchDisplay(DisplayObj d)
 { int rx, ry;
 
+  TRY(openDisplay(d));
   if ( ws_resolution_display(d, &rx, &ry) )
     answer(answerObject(ClassSize, toInt(rx), toInt(ry), EAV));
 
