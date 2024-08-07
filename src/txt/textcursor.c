@@ -113,7 +113,7 @@ fontTextCursor(TextCursor c, FontObj font)
 { Int h = getHeightFont(font);
   Int w = getExFont(font);
   Name style = getClassVariableValueObject(c, getFixedWidthFont(font) == ON ?
-				      		NAME_fixedFontStyle :
+						NAME_fixedFontStyle :
 						NAME_proportionalFontStyle);
 
   geometryGraphical(c, DEFAULT, DEFAULT, w, h);
@@ -134,6 +134,19 @@ character.
 
 #define OL_CURSOR_SIZE	9
 
+static int
+ol_cursor_size(TextCursor c)
+{ DisplayObj d = CurrentDisplay(c);
+  if ( d )
+  { double fscale = (double)valInt(getDPIDisplay(d)->w)/100.0;
+    int px = (double)OL_CURSOR_SIZE * fscale + 0.5;
+    if ( px % 2 == 0 )
+      px++;
+    return px;
+  }
+  return OL_CURSOR_SIZE;
+}
+
 status
 setTextCursor(TextCursor c, Int x, Int y, Int w, Int h, Int b)
 { if ( c->style == NAME_arrow )
@@ -144,11 +157,13 @@ setTextCursor(TextCursor c, Int x, Int y, Int w, Int h, Int b)
 			     sub(add(y, b), c->hot_spot->y),
 			     c->image->size->w, c->image->size->h);
   if ( c->style == NAME_openLook )
+  { int px = ol_cursor_size(c);
     return geometryGraphical(c,
-			     sub(x, toInt(OL_CURSOR_SIZE/2)),
+			     sub(x, toInt(px/2)),
 			     sub(add(y, b), ONE),
-			     toInt(OL_CURSOR_SIZE),
-			     toInt(OL_CURSOR_SIZE));
+			     toInt(px),
+			     toInt(px));
+  }
   return geometryGraphical(c, x, y, w, h);
 }
 
@@ -259,4 +274,3 @@ makeClassTextCursor(Class class)
 
   succeed;
 }
-
