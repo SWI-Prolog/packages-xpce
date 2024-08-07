@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2024, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -363,15 +364,31 @@ getVisualTypeDisplay(DisplayObj d)
 }
 
 static Size
-getDotsPerInchDisplay(DisplayObj d)
+getDPIDisplay(DisplayObj d)
 { int rx, ry;
+
+  if ( notNil(d->dpi) )
+    answer(d->dpi);
 
   TRY(openDisplay(d));
   if ( ws_resolution_display(d, &rx, &ry) )
-    answer(answerObject(ClassSize, toInt(rx), toInt(ry), EAV));
+  { assign(d, dpi, newObject(ClassSize, toInt(rx), toInt(ry), EAV));
+    answer(d->dpi);
+  }
 
   fail;
 }
+
+static status
+DPIDisplay(DisplayObj d, Any arg)
+{ if ( instanceOfObject(arg, ClassSize) )
+    assign(d, dpi, arg);
+  else
+    assign(d, dpi, newObject(ClassSize, arg, arg, EAV));
+
+  succeed;
+}
+
 
 Point
 getPointerLocationDisplay(DisplayObj d)
@@ -1167,6 +1184,8 @@ static char *T_win_directory[] =
 static vardecl var_display[] =
 { IV(NAME_size, "size*", IV_NONE,
      NAME_dimension, "Size (width, height) of display"),
+  IV(NAME_dpi, "size*", IV_NONE,
+     NAME_dimension, "Resolution (dots per inch)"),
   IV(NAME_address, "[name]", IV_BOTH,
      NAME_address, "Host/screen on which display resides"),
   IV(NAME_fontTable, "hash_table", IV_BOTH,
@@ -1263,7 +1282,9 @@ static senddecl send_display[] =
      NAME_x, "Setup X11 of multi-threading?"),
 #endif
   SM(NAME_screenSaver, 1, "bool", screenSaverDisplay,
-     NAME_x, "Activate (@on) or deactivate (@off) screensaver")
+     NAME_x, "Activate (@on) or deactivate (@off) screensaver"),
+  SM(NAME_dpi, 1, "size|int", DPIDisplay,
+     NAME_dimension, "Resolution in dots per inch")
 };
 
 /* Get Methods */
@@ -1289,7 +1310,7 @@ static getdecl get_display[] =
      NAME_dimension, "Size of the display"),
   GM(NAME_width, 0, "int", NULL, getWidthDisplay,
      NAME_dimension, "Width of the display in pixels"),
-  GM(NAME_dotsPerInch, 0, "size", NULL, getDotsPerInchDisplay,
+  GM(NAME_dpi, 0, "size", NULL, getDPIDisplay,
      NAME_dimension, "Resolution in dots per inch"),
   GM(NAME_pointerLocation, 0, "point", NULL, getPointerLocationDisplay,
      NAME_event, "Current location of the pointer"),

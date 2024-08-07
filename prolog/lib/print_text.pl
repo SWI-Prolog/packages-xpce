@@ -101,7 +101,7 @@ win_print(TB, From:int, To:int,
     ),
     get(E?area, width, Width),
     get(Prt, size, size(W,H)),
-    get(Prt, dots_per_inch, size(DPIX,DPIY)),
+    get(Prt, dpi, size(DPIX,DPIY)),
     InchW is W/DPIX,
     InchH is H/DPIY,
     PageW is round(Width*(InchW/(InchW-2))), % 1 inch margin

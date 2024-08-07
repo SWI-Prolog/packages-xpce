@@ -1209,12 +1209,12 @@ print_canvas(Canvas) :-
     send(Prt, setup, Canvas),
     send(Prt, open),
     get(Canvas, bounding_box, area(X, Y, W, H)),
-    get(@display, dots_per_inch, size(DX, DY)),
+    get(@display, dpi, size(DX, DY)),
     InchW is W/DX,
     InchH is H/DY,
 
     get(Prt, size, size(PW0, PH0)),
-    get(Prt, dots_per_inch, size(RX, RY)),
+    get(Prt, dpi, size(RX, RY)),
     MarX is RX,                     % default 1 inch margins
     MarY is RY,
     PrInchW is (PW0-MarX*2)/RX,
