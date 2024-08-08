@@ -363,12 +363,24 @@ getVisualTypeDisplay(DisplayObj d)
   answer(ws_get_visual_type_display(d));
 }
 
-static Size
+Size
 getDPIDisplay(DisplayObj d)
 { int rx, ry;
 
-  if ( notNil(d->dpi) )
+  if ( instanceOfObject(d->dpi, ClassSize) )
     answer(d->dpi);
+  if ( isInteger(d->dpi) )
+  { assign(d, dpi, newObject(ClassSize, d->dpi, d->dpi, EAV));
+    answer(d->dpi);
+  }
+  Any rc = getClassVariableValueObject(d, NAME_dpi);
+  if ( rc && !isDefault(rc) )
+  { if ( instanceOfObject(rc, ClassSize) )
+      assign(d, dpi, rc);
+    else
+      assign(d, dpi, newObject(ClassSize, rc, rc, EAV));
+    answer(d->dpi);
+  }
 
   TRY(openDisplay(d));
   if ( ws_resolution_display(d, &rx, &ry) )
@@ -1184,7 +1196,7 @@ static char *T_win_directory[] =
 static vardecl var_display[] =
 { IV(NAME_size, "size*", IV_NONE,
      NAME_dimension, "Size (width, height) of display"),
-  IV(NAME_dpi, "size*", IV_NONE,
+  IV(NAME_dpi, "[size|int]", IV_NONE,
      NAME_dimension, "Resolution (dots per inch)"),
   IV(NAME_address, "[name]", IV_BOTH,
      NAME_address, "Host/screen on which display resides"),
@@ -1352,7 +1364,9 @@ static getdecl get_display[] =
 /* Resources */
 
 static classvardecl rc_display[] =
-{ RC(NAME_background, "colour", "white",
+{ RC(NAME_dpi, "[size|int]", "@default",
+     "Screen resolution in Dots Per Inch"),
+  RC(NAME_background, "colour", "white",
      "Default background for windows"),
   RC(NAME_foreground, "colour", "black",
      "Default foreground for windows"),

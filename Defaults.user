@@ -127,3 +127,10 @@
 ! Scale all fonts with a constant factor.
 
 !font.scale: 1.4
+
+! Define the screen resolution.  This is normally obtained from the
+! window system, but is often wrong.   This overrules the value.  It
+! is either an integer or a size object to specify different X/Y
+! resolution.  The 227 is for a Macbook Air 13.3 inch.
+
+!display.dpi: 227

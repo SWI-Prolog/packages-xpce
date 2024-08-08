@@ -20,6 +20,7 @@ COMMON(status)	flushDisplay(DisplayObj d);
 COMMON(status)	synchroniseDisplay(DisplayObj d);
 COMMON(status)	bellDisplay(DisplayObj d, Int vol);
 COMMON(Size)	getSizeDisplay(DisplayObj d);
+COMMON(Size)	getDPIDisplay(DisplayObj d);
 COMMON(Int)	getWidthDisplay(DisplayObj d);
 COMMON(Int)	getHeightDisplay(DisplayObj d);
 COMMON(Point)	getPointerLocationDisplay(DisplayObj d);
