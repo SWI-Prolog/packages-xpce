@@ -53,6 +53,7 @@ initialiseImage(Image image, SourceSink data, Int w, Int h, Name kind)
 
   if ( isDefault(data) )
     data = (SourceSink) NIL;
+  obtainClassVariablesObject(image);
 
   if ( notNil(data) && hasGetMethodObject(data, NAME_name) )
     name = get(data, NAME_name, EAV);
@@ -283,7 +284,7 @@ XopenImage(Image image, DisplayObj d)
       succeed;
   }
 
-  return ws_open_image(image, d);
+  return ws_open_image(image, d, valReal(image->scale));
 }
 
 
@@ -421,6 +422,15 @@ clearImage(Image image)
   succeed;
 }
 
+
+static status
+scaleImage(Image image, Real factor)
+{ assign(image, scale, factor);
+  if ( notNil(image->mask) )
+    assign(image->mask, scale, factor);
+  /* TBD: Verify the image is not yet opened */
+  succeed;
+}
 
 static status
 resizeImage(Image image, Int w, Int h)
@@ -1106,6 +1116,8 @@ static vardecl var_image[] =
      NAME_colour, "Number of bits/pixel"),
   IV(NAME_size, "size", IV_GET,
      NAME_dimension, "Size of the image in pixels"),
+  SV(NAME_scale, "real", IV_GET|IV_STORE, scaleImage,
+     NAME_dimension, "Set scale factor for image"),
   IV(NAME_display, "display*", IV_GET,
      NAME_organisation, "X-Display this image belongs to"),
   IV(NAME_bitmap, "bitmap*", IV_GET,
@@ -1213,7 +1225,9 @@ static classvardecl rc_image[] =
 { RC(NAME_path, "string",
      "\".:bitmaps:~/lib/bitmaps:$PCEHOME/bitmaps:" /* concat */
      "/usr/include/X11/bitmaps\"",
-     "Search path for loading images")
+     "Search path for loading images"),
+  RC(NAME_scale, "real", "1.0",
+     "Scale factor for the image")
 };
 
 /* Class Declaration */

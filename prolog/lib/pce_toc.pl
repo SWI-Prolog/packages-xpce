@@ -313,7 +313,10 @@ initialise(TC) :->
     send(TC, slot, nodes, new(hash_table)),
     send_super(TC, initialise),
     send(TC, direction, list),
-    send(TC, level_gap, 17).
+    new(FImg, image(resource(file))),
+    get(FImg, size, size(W,_)),
+    LevelGap is W+1,
+    send(TC, level_gap, LevelGap).
 
 root(TC, Root:toc_node, Relink:[bool]) :->
     "Assign the root"::

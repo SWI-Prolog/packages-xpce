@@ -1072,7 +1072,7 @@ windows_bitmap_from_bits(Image image)
 
 
 status
-ws_open_image(Image image, DisplayObj d)
+ws_open_image(Image image, DisplayObj d, double scale)
 { HBITMAP bm;
   HBRUSH brush = 0;
   int w = valInt(image->size->w);
@@ -1348,7 +1348,7 @@ ws_scale_image(Image image, int w, int h)
 
 	      value = PALETTERGB(r, g, b);
 	      /* value |= 0x02000000; is the same, but there is no
-	         significant improvement, so lets keep it portable
+		 significant improvement, so lets keep it portable
 	       */
 	    }
 	    SetPixel(hdcdst, x, y, value);
@@ -1885,7 +1885,7 @@ ws_image_bits_for_cursor(Image image, Name kind, int w, int h)
 
 	DEBUG(NAME_cursor,
 	      if ( saidpad++ == 0 )
-	        Cprintf("mask = 0x%04x; ms = 0x%04x\n", mask, m2));
+		Cprintf("mask = 0x%04x; ms = 0x%04x\n", mask, m2));
 
 	c[-1] &= m2;
       }

@@ -450,20 +450,26 @@ read_sun_icon_file(IOSTREAM *fd, int *width, int *height)
 		 *          XPM SUPPORT		*
 		 *******************************/
 
+static inline int
+img_rescale(Image image, int px)
+{ return (int)((double)px*valReal(image->scale)+0.5);
+}
+
 static void
 setXpmAttributesImage(Image image, XImage *shape, XpmAttributes *atts)
 { if ( atts->valuemask & XpmHotspot )
     assign(image, hot_spot, newObject(ClassPoint,
-				      toInt(atts->x_hotspot),
-				      toInt(atts->y_hotspot), EAV));
+				      toInt(img_rescale(image, atts->x_hotspot)),
+				      toInt(img_rescale(image, atts->y_hotspot)), EAV));
   else
     assign(image, hot_spot, NIL);
 
   if ( shape )
   { assign(image, mask, newObject(ClassImage, NIL,
-				  toInt(shape->width),
-				  toInt(shape->height),
+				  toInt(img_rescale(image, shape->width)),
+				  toInt(img_rescale(image, shape->height)),
 				  NAME_bitmap, EAV));
+    assign(image->mask, scale, image->scale);
     setXImageImage(image->mask, shape);
   }
 }
@@ -857,6 +863,3 @@ write_gif_file(IOSTREAM *fd, XImage *img, XImage *msk,
 }
 
 #endif /*O_GIFWRITE*/
-
-
-

@@ -96,7 +96,7 @@ reason, the resource:
 
 describes an executable  (code)  object  that   will  be  converted  and
 executed by `display  ->open',  which  is   before  any  other  resource
-conversion will take place.  Below is   the defenition from the supplied
+conversion will take place.  Below is   the definition from the supplied
 `Pce' file:
 
     Pce.Display.initialise: \

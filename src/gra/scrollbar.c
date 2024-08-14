@@ -107,7 +107,7 @@ initialiseScrollBar(ScrollBar s, Any obj, Name orientation, Message msg)
   assign(s, bubble_start,  toInt(-1));
   assign(s, bubble_length, toInt(-1));
 
-  assign(s, message, 	   msg);
+  assign(s, message,	   msg);
   assign(s, object,	   obj);
 
   assign(s, drag,	   ON);
@@ -140,7 +140,7 @@ arrow_height_scrollbar(ScrollBar sb)
 
     if ( (ah = ws_arrow_height_scrollbar(sb)) < 0 )
     { ah = valInt(sb->orientation == NAME_vertical ? sb->area->w
-		  				   : sb->area->h);
+						   : sb->area->h);
     }
 
     return ah;
@@ -267,8 +267,8 @@ placeScrollBar(ScrollBar sb, Graphical gr)
     } else				/* vertical */
     { setGraphical(sb,
 		   memberChain(sb->placement, NAME_right)
-		        ? add(gr->area->x, add(gr->area->w, sb->distance))
-		        : sub(gr->area->x, add(sb->area->w, sb->distance)),
+			? add(gr->area->x, add(gr->area->w, sb->distance))
+			: sub(gr->area->x, add(sb->area->w, sb->distance)),
 		   gr->area->y,
 		   DEFAULT,
 		   gr->area->h);
@@ -313,8 +313,8 @@ compute_bubble(ScrollBar s, struct bubble_info *bi,
 					/* bar sizes */
   bi->bar_start   = bar_start;
   bi->bar_length  = (s->orientation == NAME_vertical
-		         ? valInt(s->area->h)
-		         : valInt(s->area->w));
+			 ? valInt(s->area->h)
+			 : valInt(s->area->w));
   bi->bar_length -= 2 * bi->bar_start;
 
 					/* bubble characteristics */
@@ -340,7 +340,7 @@ compute_bubble(ScrollBar s, struct bubble_info *bi,
       bi->start = (free * above) / (above + below);
   } else
   { double bubble_prom = (len != 0 ? (double)start/(double)len
-			           : 0.0);
+				   : 0.0);
     double bubble_lp   = (len != 0 ? (double)valInt(s->view)/(double)len
 				   : 1.0);
 
@@ -1464,15 +1464,14 @@ static getdecl get_scrollBar[] =
 
 static classvardecl rc_scrollBar[] =
 { RC(NAME_background, "[elevation|colour|pixmap]",
-/*   UXWIN("@_dialog_bg", "win_window"), */
-     UXWIN("elevation(@nil, -1, grey66)", "win_window"),
+     UXWIN("elevation(@nil, 0.25mm, grey66)", "win_window"),
      "Colour of background parts"),
   RC(NAME_colour, "[colour]", UXWIN("@_dialog_bg", "win_btnface"),
      "Colour of foreground parts"),
   RC(NAME_distance, "int", UXWIN("2", "0"),
      "Distance to graphical"),
   RC(NAME_elevation, "elevation*",
-     UXWIN("elevation(@nil, 1, @_dialog_bg)",
+     UXWIN("elevation(@nil, 0.25mm, @_dialog_bg)",
 	   "elevation(@nil, 2, win_menu)"),
      "3-D effect elevation"),
   RC(NAME_look, "{x,open_look,motif,gtk,win}", UXWIN("gtk", "win"),
@@ -1485,7 +1484,7 @@ static classvardecl rc_scrollBar[] =
      "OpenLook: time to wait until start of repeat"),
   RC(NAME_repeatInterval, "real", "0.06",
      "OpenLook: interval between repeats"),
-  RC(NAME_width, "[int]", UXWIN("18", "@default"),
+  RC(NAME_width, "[int]", UXWIN("4.5mm", "@default"),
      "Width of the scroll_bar"),
   RC(NAME_autoHide, "bool", "@on",
      "Automatically hide bar if all is shown"),

@@ -79,16 +79,16 @@ typedef struct colour_context *ColourContext; /* for selection/inactive */
 
 #define ABSTRACT_DEVICE \
   ABSTRACT_GRAPHICAL \
-  Int	        level;			/* Level from root */ \
-  Point	        offset;			/* Origin offset */ \
-  Area	        clip_area;		/* Visible subarea */ \
-  Chain	        graphicals;		/* Displayed graphicals */ \
-  Chain	        pointed;		/* Graphicals on last event */ \
+  Int		level;			/* Level from root */ \
+  Point		offset;			/* Origin offset */ \
+  Area		clip_area;		/* Visible subarea */ \
+  Chain		graphicals;		/* Displayed graphicals */ \
+  Chain		pointed;		/* Graphicals on last event */ \
   LayoutManager layout_manager;		/* Manage graphicals layout */ \
   Format        format;			/* Row/Column formatting */ \
   BoolObj       badFormat;		/* Formats needs to be recomputed */ \
   BoolObj       badBoundingBox;		/* BoundingBox needs recomputed */ \
-  Chain	        recompute;		/* Graphicals requesting recompute */
+  Chain		recompute;		/* Graphicals requesting recompute */
 
 #define ABSTRACT_FIGURE \
   ABSTRACT_DEVICE \
@@ -713,6 +713,7 @@ typedef struct
   Colour	foreground;		/* Foreground-colour (pixmap) */ \
   Int		depth;			/* Bits/pixel */ \
   Size		size;			/* Size of the image */ \
+  Real		scale;			/* Scale image at load time */ \
   DisplayObj	display;		/* Display of read-write's */ \
   BitmapObj	bitmap;			/* Bitmap for read-write's */ \
   Point		hot_spot;		/* Indication of hot-spot */ \
@@ -1165,5 +1166,3 @@ COMMON(int) image_type_from_data(char *data, int size);
 #include	"../evt/proto.h"
 
 #endif /*_PCE_GRA_INCLUDED*/
-
-

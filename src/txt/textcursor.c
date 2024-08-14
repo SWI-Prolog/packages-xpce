@@ -134,19 +134,6 @@ character.
 
 #define OL_CURSOR_SIZE	9
 
-static int
-ol_cursor_size(TextCursor c)
-{ DisplayObj d = CurrentDisplay(c);
-  if ( d )
-  { double fscale = (double)valInt(getDPIDisplay(d)->w)/100.0;
-    int px = (double)OL_CURSOR_SIZE * fscale + 0.5;
-    if ( px % 2 == 0 )
-      px++;
-    return px;
-  }
-  return OL_CURSOR_SIZE;
-}
-
 status
 setTextCursor(TextCursor c, Int x, Int y, Int w, Int h, Int b)
 { if ( c->style == NAME_arrow )
@@ -157,7 +144,7 @@ setTextCursor(TextCursor c, Int x, Int y, Int w, Int h, Int b)
 			     sub(add(y, b), c->hot_spot->y),
 			     c->image->size->w, c->image->size->h);
   if ( c->style == NAME_openLook )
-  { int px = ol_cursor_size(c);
+  { int px = dpi_scale(c, OL_CURSOR_SIZE, TRUE);
     return geometryGraphical(c,
 			     sub(x, toInt(px/2)),
 			     sub(add(y, b), ONE),

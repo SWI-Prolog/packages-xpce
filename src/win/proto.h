@@ -31,6 +31,8 @@ COMMON(status)	informDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv);
 COMMON(status)	busyCursorDisplay(DisplayObj d, CursorObj c, BoolObj block_events);
 COMMON(status)	inspectDisplay(DisplayObj d, Graphical gr, EventObj ev);
 COMMON(status)	makeClassDisplay(Class class);
+COMMON(int)	DPI(Any gr);
+COMMON(int)	dpi_scale(Any gr, int px, int odd);
 
 /* /staff/jan/src/pl/packages/xpce/src/win/displaymgr.c */
 COMMON(status)	appendDisplayManager(DisplayManager dm, DisplayObj d);

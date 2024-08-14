@@ -38,6 +38,9 @@
 #include <math.h>
 #include "include.h"
 
+static XImage *ZoomXImage(Display *dsp, Visual *v, XImage *oimage,
+			  unsigned xwidth, unsigned ywidth);
+
 #ifdef HAVE_LIBXPM
 #include <X11/xpm.h>
 #endif
@@ -76,6 +79,11 @@ ws_destroy_image(Image image)
 		 /*******************************
 		 *	    LOAD/STORE		*
 		 *******************************/
+
+static inline int
+rescale(Image image, int px)
+{ return (int)((double)px*valReal(image->scale)+0.5);
+}
 
 #define DataSize(Image) ((Image)->bytes_per_line * (Image)->height)
 
@@ -319,14 +327,15 @@ ws_load_image_file(Image image)
     assign(image, depth, toInt(i->depth));
     assign(image, kind, image->depth == ONE ? NAME_bitmap : NAME_pixmap);
     setXImageImage(image, i);
-    setSize(image->size, toInt(i->width), toInt(i->height));
+    setSize(image->size,
+	    toInt(rescale(image, i->width)),
+	    toInt(rescale(image, i->height)));
 
     succeed;
   }
 
   return errorPce(image->file, NAME_badFile, NAME_image);
 }
-
 
 status
 ws_create_image_from_xpm_data(Image image, char **data, DisplayObj d)
@@ -342,7 +351,9 @@ ws_create_image_from_xpm_data(Image image, char **data, DisplayObj d)
   { assign(image, depth, toInt(i->depth));
     assign(image, kind, image->depth == ONE ? NAME_bitmap : NAME_pixmap);
     setXImageImage(image, i);
-    setSize(image->size, toInt(i->width), toInt(i->height));
+    setSize(image->size,
+	    toInt(rescale(image, i->width)),
+	    toInt(rescale(image, i->height)));
   }
   XpmFreeXpmImage(&img);
 
@@ -550,7 +561,7 @@ ws_save_image_file(Image image, SourceSink into, Name fmt)
 
 
 status
-ws_open_image(Image image, DisplayObj d)
+ws_open_image(Image image, DisplayObj d, double scale)
 { int w = valInt(image->size->w);
   int h = valInt(image->size->h);
   Pixmap pixmap = 0;
@@ -560,17 +571,36 @@ ws_open_image(Image image, DisplayObj d)
   openDisplay(d);
   r = d->ws_ref;
 
+  DEBUG(NAME_scale,
+	Cprintf("Open %s %s %dx%d\n",
+		pcePP(image), pcePP(image->size), w, h));
+
   if ( (i=getXImageImage(image)) )
-  { if ( isDefault(image->depth) )
+  { XImage *ic;
+
+    if ( (w != i->width || h != i->height) && (w||h) )
+    { DEBUG(NAME_scale,
+	    Cprintf("Rescaling %s to %dx%d\n", pcePP(image), w, h));
+      ic = ZoomXImage(r->display_xref,
+		      DefaultVisual(r->display_xref,
+				    DefaultScreen(r->display_xref)),
+		      i, w, h);
+    } else
+    { ic = i;
+    }
+
+    if ( isDefault(image->depth) )
       assign(image, depth, toInt(i->depth));
     if ( (pixmap = XCreatePixmap(r->display_xref,
 				 XtWindow(r->shell_xref),
-				 w, h, i->depth)) != 0 )
+				 w, h, ic->depth)) != 0 )
     { XPutImage(r->display_xref, pixmap,
 		image->kind == NAME_bitmap ? r->bitmap_context->copyGC
 					   : r->pixmap_context->copyGC,
-		i, 0, 0, 0, 0, i->width, i->height);
+		ic, 0, 0, 0, 0, ic->width, ic->height);
     }
+    if ( ic != i )
+      XDestroyImage(ic);
   } else if ( notNil(image->file) )
   {
 #ifdef O_PPM
@@ -1162,6 +1192,12 @@ ws_create_image_from_x11_data(Image image,
 
   i = CreateXImageFromData(data, w, h);
   setXImageImage(image, i);
+  DEBUG(NAME_scale,
+	Cprintf("ws_create_image_from_x11_data: %s: scale = %f\n",
+		pcePP(image), valReal(image->scale)));
+  setSize(image->size,
+	  toInt(rescale(image, w)),
+	  toInt(rescale(image, h)));
 }
 
 

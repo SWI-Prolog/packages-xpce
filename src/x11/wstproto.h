@@ -189,7 +189,7 @@ COMMON(status)	ws_load_old_image(Image image, IOSTREAM *fd);
 COMMON(status)	ws_load_image_file(Image image);
 COMMON(status)	ws_create_image_from_xpm_data(Image image, char **data, DisplayObj d);
 COMMON(status)	ws_save_image_file(Image image, SourceSink into, Name fmt);
-COMMON(status)	ws_open_image(Image image, DisplayObj d);
+COMMON(status)	ws_open_image(Image image, DisplayObj d, double scale);
 COMMON(void)	ws_close_image(Image image, DisplayObj d);
 COMMON(status)	ws_resize_image(Image image, Int w, Int h);
 COMMON(Image)	ws_scale_image(Image image, int w, int h);

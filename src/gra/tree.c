@@ -49,8 +49,8 @@ initialiseTree(Tree t, Node node)
     node = NIL;
 
   initialiseFigure((Figure) t);
-  assign(t, auto_layout, 	ON);
-  assign(t, link, 		newObject(ClassLink,
+  assign(t, auto_layout,	ON);
+  assign(t, link,		newObject(ClassLink,
 					  NAME_parent, NAME_son, EAV));
   assign(t, rootHandlers,	newObject(ClassChain, EAV));
   assign(t, leafHandlers,	newObject(ClassChain, EAV));
@@ -254,7 +254,7 @@ RedrawAreaTree(Tree t, Area area)
     ExitRedrawAreaDevice((Device)t, area, &ctx);
   }
 
-  RedrawAreaGraphical(t, area);	/* selection and orther generic stuff*/
+  RedrawAreaGraphical(t, area);	/* selection and other generic stuff*/
 
   if ( obg )
     r_background(obg);
@@ -729,9 +729,9 @@ static getdecl get_tree[] =
 static classvardecl rc_tree[] =
 { RC(NAME_direction, "name", "horizontal",
      "Default style {horizontal,vertical,list}"),
-  RC(NAME_levelGap, "int", "50",
+  RC(NAME_levelGap, "int", "12.5mm",
      "Gap between levels"),
-  RC(NAME_linkGap, "int", "2",
+  RC(NAME_linkGap, "int", "0.5mm",
      "Gap between link-line and image"),
   RC(NAME_neighbourGap, "int", "0",
      "Gap between neighbours"),

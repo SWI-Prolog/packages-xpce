@@ -465,9 +465,21 @@ getTokenTokeniser(Tokeniser t)
       }
     }
   num_out:
-    UNGETC(t, c);
-
     *q = EOS;
+
+    if ( c == 'm' && PEEKC(t) == 'm' )
+    { char *e;
+      GETC(t);
+      double d = strtod(buf, &e);
+      if ( e != q )
+      { send(t, NAME_syntaxError, CtoName("Illegal length"), EAV);
+	fail;
+      }
+      return toInt((int)((double)DPI(NULL) * d/25.4 + 0.5));
+    } else
+    { UNGETC(t, c);
+    }
+
     if ( is_int )
     { char *e;
       long f = strtol(buf, &e, 10);

@@ -41,6 +41,7 @@ static status	backgroundDisplay(DisplayObj, Colour);
 static status	foregroundDisplay(DisplayObj d, Colour c);
 static void	attach_font_families(Class class);
 
+static DisplayObj TheDisplay;
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Create a display.  The display is not yet opened.
@@ -389,6 +390,39 @@ getDPIDisplay(DisplayObj d)
   }
 
   fail;
+}
+
+int
+DPI(Any gr)
+{ DisplayObj d = gr ? CurrentDisplay(gr) : TheDisplay;
+
+  if ( d )
+  { Size sz = getDPIDisplay(d);
+
+    return (int)((valInt(sz->w) + valInt(sz->h) + 1)/2);
+  } else
+  { return 100;
+  }
+}
+
+int
+dpi_scale(Any gr, int px, int odd)
+{ DisplayObj d = gr ? CurrentDisplay(gr) : TheDisplay;
+  double scale;
+
+  if ( d )
+  { Size sz = getDPIDisplay(d);
+
+    scale = (double)(valInt(sz->w) + valInt(sz->h)) / 200.0;
+  } else
+  { scale = 1.0;
+  }
+
+  px = (double)px*scale + 0.5;
+  if ( odd && px % 2 == 0 )
+    px++;
+
+  return px;
 }
 
 static status
@@ -1413,9 +1447,7 @@ ClassDecl(display_decls,
 
 status
 makeClassDisplay(Class class)
-{ DisplayObj TheDisplay;
-
-  declareClass(class, &display_decls);
+{ declareClass(class, &display_decls);
   saveStyleClass(class, NAME_external);
   cloneStyleClass(class, NAME_none);
 
