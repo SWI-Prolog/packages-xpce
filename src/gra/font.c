@@ -452,7 +452,7 @@ static getdecl get_font[] =
 /* Resources */
 
 static classvardecl rc_font[] =
-{ RC(NAME_scale, "real", UXWIN("1.0", "1.4"),
+{ RC(NAME_scale, "real", UXWIN("@display?dpi?width/100", "1.4"),
      "Multiplication factor for all fonts")
 };
 
