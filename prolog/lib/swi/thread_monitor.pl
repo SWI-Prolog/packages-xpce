@@ -623,8 +623,11 @@ thread_diagram(Win, TS:thread_status) :->
 axis_length(Win, Size:size) :<-
     "Axis length for diagram"::
     get(Win, size, size(W, H)),
-    DW is W-50,
-    DH is H-40,
+    get(@pce, convert, normal, font, Font),
+    get(Font, ex, Ex),
+    get(Font, height, FH),
+    DW is W-10*Ex,
+    DH is H-2*FH-10,
     new(Size, size(DW, DH)).
 
 resize(Win) :->
