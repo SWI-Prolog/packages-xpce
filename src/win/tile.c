@@ -478,7 +478,7 @@ distribute_stretches(stretch *s, int n, int w)
 	  grow_this = 0;
 	else
 	  grow_this = (total_shrink ==0 ? grow / is_pos
-				        : (grow * s[i].shrink) / total_shrink);
+					: (grow * s[i].shrink) / total_shrink);
       }
       s[i].size = s[i].ideal + grow_this;
       growed += grow_this;
@@ -1036,7 +1036,7 @@ static int
 adjust_pos(Int H, int bh)
 { int h  = valInt(H);
   int i1 = h*3/4;
-  int i2 = h - 30;
+  int i2 = h - dpi_scale(NULL, 30, FALSE);
   int i  = max(i1, i2);
 
   return i;
@@ -1257,4 +1257,3 @@ status
 makeClassTile(Class class)
 { return declareClass(class, &tile_decls);
 }
-
