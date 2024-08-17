@@ -123,10 +123,11 @@ display_levels([Y-Frames|T], Choice, Window) :-
     debug(gtrace(stack), 'Sorted frames: ~p', [SortedFrames]),
     SortedFrames = [frame(Frame, PC)|_],
     prolog_frame_attribute(Window, Frame, level, Level),
-    send(Window, display, text(Level, left, normal), point(5, Y)),
+    send(Window, display, new(Txt,text(Level, left, normal)), point(5, Y)),
+    get(Txt?font, ex, Ex),
     (   PC = choice(_)
-    ->  X0 is 30 + 150
-    ;   X0 is 30
+    ->  X0 is 4*Ex + 20*Ex
+    ;   X0 is 4*Ex
     ),
     display_frames(SortedFrames, Window, X0, Y),
     display_levels(T, Choice, Window).
@@ -147,7 +148,9 @@ display_frames([F|T], Window, X, Y) :-
     v_stack_frame(Window, F, V),
     send(V, set, X, Y),
     send(Window, append, V),
-    X2 is X + 150,
+    get(@pce, convert, normal, font, Font),
+    get(Font, ex, Ex),
+    X2 is X + 20*Ex,
     display_frames(T, Window, X2, Y).
 
 
