@@ -943,6 +943,10 @@ stdImage(Name name, Image *global, unsigned char *bits, int w, int h)
   return image;
 }
 
+static inline int
+rescale(Image image, int px)
+{ return (int)((double)px*valReal(image->scale)+0.5);
+}
 
 static void
 stdXPMImage(Name name, Image *global, char **bits)
@@ -959,6 +963,9 @@ stdXPMImage(Name name, Image *global, char **bits)
     }
 
     assign(image, access, NAME_read);
+    setSize(image->size,
+	    toInt(rescale(image, w)),
+	    toInt(rescale(image, h)));
     image->bits = alloc(sizeof(*image->bits));
     image->bits->type = XPM_DATA;
     image->bits->bits.xpm = bits;
