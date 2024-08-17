@@ -383,13 +383,17 @@ getDPIDisplay(DisplayObj d)
     answer(d->dpi);
   }
 
-  TRY(openDisplay(d));
-  if ( ws_resolution_display(d, &rx, &ry) )
+#ifndef __WINDOWS__
+  if ( getenv("DISPLAY") )
+#endif
+    TRY(openDisplay(d));
+  if ( ws_opened_display(d) && ws_resolution_display(d, &rx, &ry) )
   { assign(d, dpi, newObject(ClassSize, toInt(rx), toInt(ry), EAV));
     answer(d->dpi);
   }
 
-  fail;
+  assign(d, dpi, newObject(ClassSize, toInt(96), toInt(96), EAV));
+  answer(d->dpi);
 }
 
 int
