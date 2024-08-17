@@ -46,16 +46,16 @@ determined by a reference point on an imaginery line through the reference
 point and the tip:
 
 
-	         -     |\
-	         |     |  \
-	         |     |    \
+		 -     |\
+		 |     |  \
+		 |     |    \
 	wing >=  |     |      \    <= tip (point)
-	         |     |      /
-	         |     |    /
-	         |     |  /
-	         -     |/
+		 |     |      /
+		 |     |    /
+		 |     |  /
+		 -     |/
 
-	               |------|    <= length
+		       |------|    <= length
 
 Although arrows are a sub-class of graphical this feature (in particular the
 area of the graphical) should not be used.  Changing the area of an arrow
@@ -417,14 +417,14 @@ static getdecl get_arrow[] =
 static classvardecl rc_arrow[] =
 { RC(NAME_fillPattern, "image|colour", "@black_image",
      "Fill pattern for the triangle"),
-  RC(NAME_length, "int", "10",
-     "Distance tip to base (10)"),
+  RC(NAME_length, "int", "2.5mm",
+     "Distance tip to base (2.5mm)"),
   RC(NAME_style, "{open,closed}", "closed",
      "Whether or not the wing is closed"),
   RC(NAME_selectionHandles, RC_REFINE, "sides",
      NULL),
-  RC(NAME_wing, "int", "7",
-     "Width of wing (7)")
+  RC(NAME_wing, "int", "1.75mm",
+     "Width of wing (1.75mm)")
 };
 
 /* Class Declaration */
@@ -446,4 +446,3 @@ makeClassArrow(Class class)
 
   succeed;
 }
-
