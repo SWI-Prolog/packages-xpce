@@ -37,6 +37,16 @@
 #include <h/graphics.h>
 #include "include.h"
 
+#ifdef HAVE_X11_EXTENSIONS_XRANDR_H
+#ifdef HAVE_LIBXRANDR
+#define Connection XRRConnection
+#include <X11/extensions/Xrandr.h>
+#undef Connection
+#else
+#undef HAVE_X11_EXTENSIONS_XRANDR_H
+#endif
+#endif
+
 #define X11LastEventTime() ((Time)LastEventTime())
 #define utf8_get_uchar(s, chr) (unsigned char*)utf8_get_char((char *)(s), chr)
 
@@ -146,10 +156,24 @@ ws_resolution_display(DisplayObj d, int *rx, int *ry)
   int screen, wpx, wmm, hpx, hmm;
 
   screen = XDefaultScreen(r->display_xref);
-  wpx = XDisplayWidth(r->display_xref,  screen);
-  hpx = XDisplayHeight(r->display_xref, screen);
-  wmm = XDisplayWidthMM(r->display_xref,  screen);
-  hmm = XDisplayHeightMM(r->display_xref, screen);
+
+#ifdef HAVE_X11_EXTENSIONS_XRANDR_H
+  int nsizes = 0;
+  XRRScreenSize *ss = XRRSizes(r->display_xref,  screen, &nsizes);
+
+  if ( nsizes > 0 )
+  { wpx = ss[0].width;
+    hpx = ss[0].height;
+    wmm = ss[0].mwidth;
+    hmm = ss[0].mheight;
+  } else
+#endif
+  { wpx = XDisplayWidth(r->display_xref,  screen);
+    hpx = XDisplayHeight(r->display_xref, screen);
+    wmm = XDisplayWidthMM(r->display_xref,  screen);
+    hmm = XDisplayHeightMM(r->display_xref, screen);
+  }
+
   *rx = (int)((double)wpx*25.4 / (double)wmm + 0.5);
   *ry = (int)((double)hpx*25.4 / (double)hmm + 0.5);
 

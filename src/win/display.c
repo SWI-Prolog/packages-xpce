@@ -387,6 +387,8 @@ getDPIDisplay(DisplayObj d)
   if ( getenv("DISPLAY") )
 #endif
     TRY(openDisplay(d));
+  if ( instanceOfObject(d->dpi, ClassSize) )
+    answer(d->dpi);
   if ( ws_opened_display(d) && ws_resolution_display(d, &rx, &ry) )
   { assign(d, dpi, newObject(ClassSize, toInt(rx), toInt(ry), EAV));
     answer(d->dpi);

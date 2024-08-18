@@ -18,6 +18,7 @@ AC_CHECK_HEADERS(frame.h sys/timeb.h sys/times.h siginfo.h bstring.h)
 AC_CHECK_HEADERS(sys/socketvar.h conio.h sys/access.h termios.h termio.h)
 AC_CHECK_HEADERS(sched.h crt_externs.h poll.h jerror.h)
 AC_CHECK_HEADERS(X11/extensions/Xinerama.h)
+AC_CHECK_HEADERS(X11/extensions/Xrandr.h)
 
 AC_CHECK_FUNCS(vsscanf on_exit memmove select popen strerror timelocal)
 AC_CHECK_FUNCS(getdtablesize socket fork ftime getpid select getlogin)
@@ -47,6 +48,9 @@ if(X11_Xft_FOUND)
 endif()
 if(X11_Xinerama_FOUND)
   set(HAVE_LIBXINERAMA 1)
+endif()
+if(X11_Xrandr_FOUND)
+  set(HAVE_LIBXRANDR 1)
 endif()
 
 #FIXME usable siginfo
