@@ -1233,7 +1233,7 @@ static classvardecl rc_image[] =
      "\".:bitmaps:~/lib/bitmaps:$PCEHOME/bitmaps:" /* concat */
      "/usr/include/X11/bitmaps\"",
      "Search path for loading images"),
-  RC(NAME_scale, "real", UXWIN("when(@display?size?width > 150, 2, 1)", "1.0"),
+  RC(NAME_scale, "real", UXWIN("when(@display?dpi?width > 150, 2, 1)", "1.0"),
      "Scale factor for the image")
 };
 
