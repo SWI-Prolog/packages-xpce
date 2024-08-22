@@ -145,10 +145,11 @@ draw_generic_button_face(Button b,
 	    if ( !e )
 	      e = newObject(ClassElevation, ONE, EAV);
 
-	    bx -= GTK_BUTTON_MARGIN;
-	    by -= GTK_BUTTON_MARGIN;
-	    bw += GTK_BUTTON_MARGIN * 2;
-	    bh += GTK_BUTTON_MARGIN * 2;
+	    int gtk_margin = dpi_scale(b, GTK_BUTTON_MARGIN, FALSE);
+	    bx -= gtk_margin;
+	    by -= gtk_margin;
+	    bw += gtk_margin * 2;
+	    bh += gtk_margin * 2;
 	    r_3d_box(bx, by, bw, bh, r, e, FALSE);
 	  }
 	}
@@ -737,4 +738,3 @@ makeClassButton(Class class)
 
   succeed;
 }
-

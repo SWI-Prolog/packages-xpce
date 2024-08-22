@@ -762,11 +762,11 @@ static classvardecl rc_diagroup[] =
 { RC(NAME_alignment, "{column,left,center,right}", "column",
      "Alignment in the row"),
   RC(NAME_elevation, "elevation*",
-   "when(@colour_display, 1, @nil)",
+   "when(@colour_display, 0.25mm, @nil)",
      "Elevation above environment"),
   RC(NAME_radius, "0..", "0",
      "Radius for the corners"),
-  RC(NAME_gap, "size", "size(15,8)",
+  RC(NAME_gap, "size", "size(3.8mm,2mm)",
      "Distance between items in X and Y"),
   RC(NAME_border, "[size]", "@default",
      "Distance around the items in X and Y"),
@@ -793,4 +793,3 @@ makeClassDialogGroup(Class class)
 
   succeed;
 }
-

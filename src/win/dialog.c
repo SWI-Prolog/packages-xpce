@@ -137,7 +137,7 @@ ComputeDesiredSizeDialog(Dialog d)
 static status
 setDialog(Dialog d, Int x, Int y, Int w, Int h)
 { static Name given_names[] = { NAME_none,
-  				NAME_width,
+				NAME_width,
 				NAME_height,
 				NAME_both
 			      };
@@ -411,7 +411,7 @@ static getdecl get_dialog[] =
 /* Resources */
 
 static classvardecl rc_dialog[] =
-{ RC(NAME_gap, "size", "size(15,8)",
+{ RC(NAME_gap, "size", "size(3.8mm,2mm)",
      "Distance between items in X and Y"),
   RC(NAME_border, "[size]", "@default",
      "Distance between contents and edge"),
@@ -431,4 +431,3 @@ status
 makeClassDialog(Class class)
 { return declareClass(class, &dialog_decls);
 }
-

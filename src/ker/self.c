@@ -257,7 +257,7 @@ getUnresolvedTypesPce(Pce pce)
 { Chain ch = answerObject(ClassChain, EAV);
 
   for_hash_table(TypeTable, s,
-	         { Type t = s->value;
+		 { Type t = s->value;
 		   if ( t->kind == NAME_class )
 		   { Class class = t->context;
 		     if ( isNil(class->super_class) )
@@ -1432,7 +1432,7 @@ static classvardecl rc_pce[] =
 { RC(NAME_initialise, "code*",
      UXWIN(/*UNIX*/
 	   "and(_dialog_bg        @= colour(grey80),\n"
-	   "    _button_elevation @= elevation(button, 1, grey80,\n"
+	   "    _button_elevation @= elevation(button, 0.25mm, grey80,\n"
 	   "				       grey95, grey50,\n"
 	   "				      '3d', grey70),\n"
 	   "    _mark_elevation   @= elevation(mark, 0),\n"
@@ -1630,7 +1630,7 @@ pceInitialise(int handles, const char *home, const char *appdata,
 	      5,
 	      initialiseMethod,
 	      6, "name", "[vector]", "code|any", "[string]*",
-	         "[source_location]*", "[name]*");
+		 "[source_location]*", "[name]*");
 
   ClassSendMethod =
     bootClass(NAME_sendMethod,
@@ -1639,7 +1639,7 @@ pceInitialise(int handles, const char *home, const char *appdata,
 	      0,
 	      initialiseMethod,
 	      6, "name", "[vector]", "code|any",
-	         "[string]*", "[source_location]*", "[name]*");
+		 "[string]*", "[source_location]*", "[name]*");
 
   ClassGetMethod =
     bootClass(NAME_getMethod,
@@ -1648,7 +1648,7 @@ pceInitialise(int handles, const char *home, const char *appdata,
 	      0,
 	      initialiseGetMethod,
 	      7, "name", "[type]", "[vector]", "code|any",
-	         "[string]*", "[source_location]*", "[name]*");
+		 "[string]*", "[source_location]*", "[name]*");
 
   ClassCharArray =
     bootClass(NAME_charArray,

@@ -148,8 +148,8 @@ RedrawAreaTextItem(TextItem ti, Area a)
       }
     }
     if ( flags & (TEXTFIELD_COMBO|TEXTFIELD_COMBO_DOWN) )
-    { int trh = 8;
-      int trw = 9;
+    { int trh = dpi_scale(ti, 8, FALSE);
+      int trw = dpi_scale(ti, 9, TRUE);
       int trx, try;
       int up = (flags & TEXTFIELD_COMBO) ? TRUE : FALSE;
 
@@ -159,7 +159,7 @@ RedrawAreaTextItem(TextItem ti, Area a)
       r_3d_triangle(trx+trw/2, try+trh, trx, try, trx+trw, try, z, up, 0x3);
     }
     if ( flags & TEXTFIELD_STEPPER )
-    { int sw = STEPPER_BOX_W;
+    { int sw = dpi_scale(ti, STEPPER_BOX_W, TRUE);
       int bx = x+w-sw;
       int bh = (h+1)/2;
       int iw, ih, ix, dy;
@@ -1731,7 +1731,7 @@ static getdecl get_textItem[] =
 /* Resources */
 
 static classvardecl rc_textItem[] =
-{ RC(NAME_border, "0..", "4",
+{ RC(NAME_border, "0..", "1mm",
      "Border around <-value_text"),
   RC(NAME_length, "int", "25",
      "Width of area for selection (chars)"),
@@ -1749,7 +1749,8 @@ static classvardecl rc_textItem[] =
      "Interval between repeats"),
   RC(NAME_look, RC_REFINE, UXWIN("gtk", "win"), NULL),
   RC(NAME_elevation, RC_REFINE,
-     UXWIN("when(@colour_display, 1, @nil)", "@_txt_height"), NULL),
+     UXWIN("when(@colour_display, 0.25mm, @nil)", "@_txt_height"),
+     NULL),
   RC(NAME_comboBoxHeight, "1..", "6",
      "Maximum height of the combo-box shown for completions")
 };
@@ -1770,4 +1771,3 @@ makeClassTextItem(Class class)
 
   succeed;
 }
-
