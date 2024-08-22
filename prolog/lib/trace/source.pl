@@ -124,10 +124,15 @@ variable(source,        'name|emacs_buffer*', get, "Currently shown source").
 initialise(V) :->
     send(V, send_super, initialise),
     send(V, mode, prolog_debug),
-    send(V, margin_width, 22),
+    set_margin_width(V),
     forall(style(Name, Style), send(V, style, Name, Style)),
     send(V, editable, @off),
     send(V, update_label).
+
+set_margin_width(V) :-
+    get(image(resource(stop)), size, size(W,_)),
+    MarginWidth is W+6,
+    send(V, margin_width, MarginWidth).
 
 lost_text_buffer(V) :->
     "The textbuffer has been destroyed, replace by a new one"::
@@ -219,7 +224,7 @@ source(V, Source:'name|emacs_buffer*') :->
     ;   (   Source == @nil
         ->  send(V, text_buffer, emacs_buffer(@nil, '<no source>'))
         ;   send(Source, instance_of, emacs_buffer)
-        ->  send(Source, margin_width, 22),
+        ->  set_margin_width(Source),
             send(V, text_buffer, Source)
         ;   absolute_file_name(Source, Canonical),
             buffer(Canonical, B),
@@ -308,7 +313,7 @@ mark_special(_, Buffer) :-
 mark_special(File, Buffer) :-
     canonical_source_file(File, Source),
     send(Buffer, attribute, debugger_marks_done, @on),
-    send(Buffer, margin_width, 22),
+    set_margin_width(Buffer),
     mark_stop_points(Buffer, Source).
 
 mark_stop_points(_, Source) :-
