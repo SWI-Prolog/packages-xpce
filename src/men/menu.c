@@ -61,7 +61,7 @@ initialiseMenu(Menu m, Name name, Name kind, Code msg)
 { createDialogItem(m, name);
 
   assign(m, message,		msg);
-  assign(m, members,	        newObject(ClassChain, EAV));
+  assign(m, members,		newObject(ClassChain, EAV));
   assign(m, multiple_selection, OFF);
 
   assign(m, preview,		NIL);
@@ -266,7 +266,7 @@ computeItemsMenu(Menu m)
   { Image ci = getClassVariableValueObject(m, NAME_cycleIndicator);
 
     if ( (Name)ci == NAME_comboBox )
-      rm = ws_combo_box_width()+2;	/* 2 for the margin */
+      rm = ws_combo_box_width((Graphical)m)+2;	/* 2 for the margin */
   } else
   { if ( notNil(m->on_image) || notNil(m->off_image) )
     { int cw, ch;
@@ -415,7 +415,7 @@ getReferenceMenu(Menu m)
 	str_size(&((Name) mi->label)->data, f, &vw, &vh);
 	vy = (m->vertical_format == NAME_top    ? 0 :
 	      m->vertical_format == NAME_center ? (ih-vh)/2 :
-					          ih - vh);
+						  ih - vh);
         ry = vy + valInt(getAscentFont(f));
       } else
 	ry = valInt(m->item_offset->y) + valInt(m->item_size->h);
@@ -803,7 +803,7 @@ RedrawAreaMenu(Menu m, Area a)
   if ( m->show_label == ON )
   { int flags = (m->active == ON ? 0 : LABEL_INACTIVE);
     int lw = (isDefault(m->label_width) ? valInt(m->label_area->w)
-				        : valInt(m->label_width));
+					: valInt(m->label_width));
     if ( m->layout == NAME_horizontal )
       lw -= valInt(getExFont(m->label_font));
 
@@ -834,7 +834,7 @@ RedrawAreaMenu(Menu m, Area a)
       if ( mi && mi->active == ON && m->active == ON )
 	flags |= TEXTFIELD_EDITABLE;
 
-      ws_entry_field(cx, by, iw, ih, flags);
+      ws_entry_field((Graphical)m, cx, by, iw, ih, flags);
       /*fm = ws_entry_field_margin();*/
     } else if ( instanceOfObject(ci, ClassElevation) )
     { int bw = CYCLE_DROP_WIDTH;

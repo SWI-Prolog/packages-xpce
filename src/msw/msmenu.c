@@ -310,7 +310,7 @@ init_entry_resources()
 
 
 int
-ws_combo_box_width()
+ws_combo_box_width(Graphical gr)
 { init_entry_resources();
 
   return valInt(WinCombo->size->w) + 4;
@@ -318,7 +318,7 @@ ws_combo_box_width()
 
 
 int
-ws_stepper_width()
+ws_stepper_width(Graphical gr)
 { return ws_combo_box_width();
 }
 
@@ -330,7 +330,7 @@ now, this is indicated by `editable'.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 status
-ws_entry_field(int x, int y, int w, int h, int flags)
+ws_entry_field(Graphical gr, int x, int y, int w, int h, int flags)
 { init_entry_resources();
 
   if ( !(flags & TEXTFIELD_EDITABLE) )

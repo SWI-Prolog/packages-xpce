@@ -121,19 +121,19 @@ init_entry_resources()
 
 
 int
-ws_combo_box_width()
-{ return 14;
+ws_combo_box_width(Graphical gr)
+{ return dpi_scale(gr, 14, FALSE);
 }
 
 
 int
-ws_stepper_width()
-{ return ws_combo_box_width();
+ws_stepper_width(Graphical gr)
+{ return ws_combo_box_width(gr);
 }
 
 
 int
-ws_entry_field_margin()
+ws_entry_field_margin(void)
 { return 1;
 }
 
@@ -145,8 +145,8 @@ now, this is indicated by `editable'.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 status
-ws_entry_field(int x, int y, int w, int h, int flags)
-{  init_entry_resources();
+ws_entry_field(Graphical gr, int x, int y, int w, int h, int flags)
+{ init_entry_resources();
 
   if ( !(flags & TEXTFIELD_EDITABLE) )
   { r_3d_box(x, y, w, h, 0, noedit_elevation, TRUE);
@@ -157,17 +157,19 @@ ws_entry_field(int x, int y, int w, int h, int flags)
     { int iw = valInt(SCROLL_DOWN_IMAGE->size->w);
       int ih = valInt(SCROLL_DOWN_IMAGE->size->h);
       int iy = y+2 + (h-4-valInt(SCROLL_DOWN_IMAGE->size->h))/2;
-      int cw = ws_combo_box_width();
+      int cw = ws_combo_box_width(gr);
       int up = !(flags & TEXTFIELD_COMBO_DOWN);
 
+      if ( cw < 0 ) cw = dpi_scale(NULL, 14, FALSE);
       r_3d_box(x+w-cw-2, y+2, cw, h-4, 0, button_elevation, up);
       r_image(SCROLL_DOWN_IMAGE, 0, 0, x+w-cw+(cw-iw)/2-2, iy, iw, ih, ON);
     }
     if ( flags & TEXTFIELD_STEPPER )
-    { int cw = ws_stepper_width();
+    { int cw = ws_stepper_width(gr);
       int bh = (h-4)/2;
       int b1up, b2up;
 
+      if ( cw < 0 ) cw = dpi_scale(NULL, 14, FALSE);
       b1up = !(flags & TEXTFIELD_INCREMENT);
       b2up = !(flags & TEXTFIELD_DECREMENT);
 
