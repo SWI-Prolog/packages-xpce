@@ -162,20 +162,37 @@ ws_resolution_display(DisplayObj d, int *rx, int *ry)
   XRRScreenSize *ss = XRRSizes(r->display_xref,  screen, &nsizes);
 
   if ( nsizes > 0 )
-  { wpx = ss[0].width;
+  { DEBUG(NAME_scale, Cprintf("Getting dimensions from Xrandr extension\n"));
+    wpx = ss[0].width;
     hpx = ss[0].height;
     wmm = ss[0].mwidth;
     hmm = ss[0].mheight;
   } else
 #endif
-  { wpx = XDisplayWidth(r->display_xref,  screen);
+  { DEBUG(NAME_scale, Cprintf("Getting dimensions from Xlib\n"));
+    wpx = XDisplayWidth(r->display_xref,  screen);
     hpx = XDisplayHeight(r->display_xref, screen);
     wmm = XDisplayWidthMM(r->display_xref,  screen);
     hmm = XDisplayHeightMM(r->display_xref, screen);
   }
 
-  *rx = (int)((double)wpx*25.4 / (double)wmm + 0.5);
-  *ry = (int)((double)hpx*25.4 / (double)hmm + 0.5);
+  DEBUG(NAME_scale, Cprintf(" --> %dx%d pixels, %dx%dmm\n",
+			    wpx, hpx, wmm, hmm));
+
+  if ( wmm && hmm )
+  { int xdpi = (int)((double)wpx*25.4 / (double)wmm + 0.5);
+    int ydpi = (int)((double)hpx*25.4 / (double)hmm + 0.5);
+
+    double ratio = (double)xdpi/(double)ydpi;
+    if ( ratio > 0.9 && ratio < 1.1 )
+    { *rx = xdpi;
+      *ry = ydpi;
+      succeed;
+    }
+  }
+
+  DEBUG(NAME_scale, Cprintf("Dimensions seem bogus.  Assuming 100x100DPI\n"));
+  *rx = *ry = 100;
 
   succeed;
 }
