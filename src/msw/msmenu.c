@@ -319,7 +319,7 @@ ws_combo_box_width(Graphical gr)
 
 int
 ws_stepper_width(Graphical gr)
-{ return ws_combo_box_width();
+{ return ws_combo_box_width(gr);
 }
 
 
