@@ -364,12 +364,13 @@ repaintText(TextObj t, int x, int y, int w, int h)
     int active = (t->show_caret == ON);
     Any colour = getClassVariableValueClass(ClassTextCursor,
 					    active ? NAME_colour
-					           : NAME_inactiveColour);
+						   : NAME_inactiveColour);
     Any old = r_colour(colour);
+    int ols = dpi_scale(t, OL_CURSOR_SIZE, FALSE);
 
-    draw_caret(valInt(t->x_caret) - OL_CURSOR_SIZE/2 + x - b,
+    draw_caret(valInt(t->x_caret) - ols/2 + x - b,
 	       valInt(t->y_caret) + y + fh - b - 3,
-	       OL_CURSOR_SIZE, OL_CURSOR_SIZE,
+	       ols, ols,
 	       active);
 
     r_colour(old);
@@ -1842,4 +1843,3 @@ makeClassText(Class class)
 
   succeed;
 }
-
