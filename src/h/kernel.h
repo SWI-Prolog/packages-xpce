@@ -285,14 +285,6 @@ cpdata(to, from, type, n)
 #define unix 1
 #endif
 
-		 /*******************************
-		 *	 LIBRARY PROBLEMS	*
-		 *******************************/
-
-#ifndef StrTod
-#define StrTod(s, e)	strtod(s, e)
-#endif
-
 		/********************************
 		*         NAME CONFLICTS	*
 		********************************/

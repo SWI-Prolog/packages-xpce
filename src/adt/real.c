@@ -125,7 +125,7 @@ getConvertReal(Class class, Any obj)
     f = cstrtod(s, &end);
     if ( end == es )
       return CtoReal(f);
-    f = StrTod(s, &end);
+    f = strtod(s, &end);
     if ( end == es )
       return CtoReal(f);
   }

@@ -470,10 +470,13 @@ getTokenTokeniser(Tokeniser t)
     if ( c == 'm' && PEEKC(t) == 'm' )
     { char *e;
       GETC(t);
-      double d = strtod(buf, &e);
+      double d = cstrtod(buf, &e);
       if ( e != q )
-      { send(t, NAME_syntaxError, CtoName("Illegal length"), EAV);
-	fail;
+      { d = strtod(buf, &e);
+	if ( e != q )
+	{ send(t, NAME_syntaxError, CtoName("Illegal length"), EAV);
+	  fail;
+	}
       }
       return toInt((int)((double)DPI(NULL) * d/25.4 + 0.5));
     } else
