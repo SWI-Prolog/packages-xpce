@@ -474,8 +474,8 @@ test, conversion and computation macro's are provided.
 
 #define LocalString(name, iswide, size) \
   string _s_ ## name ## _hdr; \
-  void  *_s_ ## name ## _buf = (void *)alloca(iswide ? (size) * sizeof(charW) \
-						   : (size) * sizeof(charA)); \
+  void  *_s_ ## name ## _buf = alloca((iswide) ? (size) * sizeof(charW)	\
+					       : (size) * sizeof(charA)); \
   PceString name = fstr_inithdr(&_s_ ## name ## _hdr, iswide, _s_ ## name ## _buf, size)
 
 		/********************************

@@ -860,34 +860,31 @@ insertSelfListBrowser(ListBrowser lb, Int times, Int chr)
   } else
     c = valInt(chr);
 
-  { LocalString(s, c <= 0xff ? FALSE : TRUE, valInt(times));
-    int i;
+  LocalString(s, c > 0xff, valInt(times));
+  for(int i=0; i<valInt(times); )
+    str_store(s, i++, c);
 
-    for(i=0; i<valInt(times); )
-      str_store(s, i++, c);
+  if ( isNil(lb->search_string) )
+  { assign(lb, search_string, StringToString(s));
+    if ( getClassVariableValueObject(lb, NAME_clearSelectionOnSearch) == ON )
+      clearSelectionListBrowser(lb);
+  } else
+  { if ( !instanceOfObject(lb->search_string, ClassString) )
+      assign(lb, search_string,
+	     newObject(ClassString, name_procent_s, lb->search_string, EAV));
+    str_insert_string(lb->search_string, DEFAULT, s);
+  }
 
-    if ( isNil(lb->search_string) )
-    { assign(lb, search_string, StringToString(s));
-      if ( getClassVariableValueObject(lb, NAME_clearSelectionOnSearch) == ON )
-	clearSelectionListBrowser(lb);
-    } else
-    { if ( !instanceOfObject(lb->search_string, ClassString) )
-	assign(lb, search_string,
-	       newObject(ClassString, name_procent_s, lb->search_string, EAV));
-      str_insert_string(lb->search_string, DEFAULT, s);
-    }
+  if ( !executeSearchListBrowser(lb) )
+  { StringObj ss = lb->search_string;
+    int size = valInt(getSizeCharArray(ss));
 
-    if ( !executeSearchListBrowser(lb) )
-    { StringObj ss = lb->search_string;
-      int size = valInt(getSizeCharArray(ss));
+    if ( size > 1 )
+      deleteString(ss, toInt(size-1), DEFAULT);
+    else
+      cancelSearchListBrowser(lb);
 
-      if ( size > 1 )
-	deleteString(ss, toInt(size-1), DEFAULT);
-      else
-	cancelSearchListBrowser(lb);
-
-      fail;
-    }
+    fail;
   }
 
   succeed;
