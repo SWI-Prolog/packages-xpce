@@ -279,7 +279,7 @@ static getdecl get_popupGesture[] =
 static classvardecl rc_popupGesture[] =
 { RC(NAME_button, "button_name", "right",
      "Active on which button (right)"),
-  RC(NAME_cursor, "cursor", "right_ptr",
+  RC(NAME_cursor, "cursor", "arrow",
      "Cursor while active"),
   RC(NAME_modifier, "modifier", "",
      "Condition on shift, control and meta"),
@@ -311,4 +311,3 @@ popupGesture()
 
   return (Recogniser) GESTURE_popup;
 }
-

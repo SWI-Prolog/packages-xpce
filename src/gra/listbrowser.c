@@ -1833,7 +1833,7 @@ static classvardecl rc_listBrowser[] =
      "Colour/fill pattern of the background"),
   RC(NAME_clearSelectionOnSearch, "bool", "@on",
      "@on: clear selection when searching"),
-  RC(NAME_cursor, "cursor", "right_ptr",
+  RC(NAME_cursor, "cursor", "arrow",
      "Default cursor"),
   RC(NAME_font, "font", "normal",
      "Default font"),

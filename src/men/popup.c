@@ -495,7 +495,7 @@ typedPopup(PopupObj p, Any id)
 
 static status
 eventPopup(PopupObj p, EventObj ev)
-{ 					/* Showing PULLRIGHT menu */
+{					/* Showing PULLRIGHT menu */
   if ( notNil(p->pullright) )
   { status rval = postEvent(ev, (Graphical) p->pullright, DEFAULT);
 
@@ -531,9 +531,9 @@ eventPopup(PopupObj p, EventObj ev)
 		  !isAEvent(ev, NAME_cursor))) &&
 		isNil(p->pullright->pullright) )
     { if ( notNil(p->pullright->selected_item) )
-    	assign(p, selected_item, p->pullright);
+	assign(p, selected_item, p->pullright);
       else
-      	assign(p, selected_item, NIL);
+	assign(p, selected_item, NIL);
       assign(p, pullright, NIL);
       send(p, NAME_close, EAV);
     }
@@ -730,7 +730,7 @@ static classvardecl rc_popup[] =
      "Show the accelerators"),
   RC(NAME_border, "int", UXWIN("4", "5"),
      "Default border around items"),
-  RC(NAME_cursor, "cursor", "right_ptr",
+  RC(NAME_cursor, "cursor", "arrow",
      "Cursor when popup is active"),
   RC(NAME_defaultItem, "name*", "first",
      "Item to select as default"),
@@ -787,4 +787,3 @@ status
 makeClassPopup(Class class)
 { return declareClass(class, &popup_decls);
 }
-
