@@ -220,7 +220,7 @@ typedef struct {
 static int
 AllocColor(display, colormap, colorname, xcolor, closure)
     Display *display;
-    Colormap colormap;
+    Colormap *colormap;
     char *colorname;
     XColor *xcolor;
     void *closure;		/* not used */
