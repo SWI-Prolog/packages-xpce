@@ -220,16 +220,16 @@ typedef struct {
 static int
 AllocColor(display, colormap, colorname, xcolor, closure)
     Display *display;
-    Colormap *colormap;
+    Colormap colormap;
     char *colorname;
     XColor *xcolor;
     void *closure;		/* not used */
 {
     int status;
     if (colorname)
-	if (!XParseColor(display, colormap, colorname, xcolor))
+	if (!XParseColor(display, &colormap, colorname, xcolor))
 	    return -1;
-    status = XAllocColor(display, colormap, xcolor);
+    status = XAllocColor(display, &colormap, xcolor);
     return status != 0 ? 1 : 0;
 }
 
