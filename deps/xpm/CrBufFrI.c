@@ -34,28 +34,23 @@
 
 #include "XpmI.h"
 
-LFUNC(WriteColors, int, (char **dataptr, unsigned int *data_size,
+static int WriteColors(char **dataptr, unsigned int *data_size,
 			 unsigned int *used_size, XpmColor *colors,
-			 unsigned int ncolors, unsigned int cpp));
+			 unsigned int ncolors, unsigned int cpp);
 
-LFUNC(WritePixels, void, (char *dataptr, unsigned int *used_size,
+static void WritePixels(char *dataptr, unsigned int *used_size,
 			  unsigned int width, unsigned int height,
 			  unsigned int cpp, unsigned int *pixels,
-			  XpmColor *colors));
+			  XpmColor *colors);
 
-LFUNC(WriteExtensions, void, (char *dataptr, unsigned int *used_size,
-			      XpmExtension *ext, unsigned int num));
+static void WriteExtensions(char *dataptr, unsigned int *used_size,
+			      XpmExtension *ext, unsigned int num);
 
-LFUNC(ExtensionsSize, int, (XpmExtension *ext, unsigned int num));
-LFUNC(CommentsSize, int, (XpmInfo *info));
+static int ExtensionsSize(XpmExtension *ext, unsigned int num);
+static int CommentsSize(XpmInfo *info);
 
 int
-XpmCreateBufferFromImage(display, buffer_return, image, shapeimage, attributes)
-    Display *display;
-    char **buffer_return;
-    XImage *image;
-    XImage *shapeimage;
-    XpmAttributes *attributes;
+XpmCreateBufferFromImage(Display* display, char* *buffer_return, XImage* image, XImage* shapeimage, XpmAttributes* attributes)
 {
     XpmImage xpmimage;
     XpmInfo info;
@@ -95,10 +90,7 @@ XpmCreateBufferFromImage(display, buffer_return, image, shapeimage, attributes)
 }
 
 int
-XpmCreateBufferFromXpmImage(buffer_return, image, info)
-    char **buffer_return;
-    XpmImage *image;
-    XpmInfo *info;
+XpmCreateBufferFromXpmImage(char* *buffer_return, XpmImage* image, XpmInfo* info)
 {
     /* calculation variables */
     int ErrorStatus;
@@ -381,8 +373,7 @@ WriteExtensions(dataptr, used_size, ext, num)
 }
 
 static int
-CommentsSize(info)
-    XpmInfo *info;
+CommentsSize(XpmInfo* info)
 {
     int size = 0;
 

@@ -41,25 +41,9 @@
 
 #include "windows.h"			/* MS windows GDI types */
 
-/*
- * minimal portability layer between ansi and KR C
- */
-/* this comes from xpm.h, and is here again, to avoid complicated
-    includes, since this is included from xpm.h */
-/* these defines get undefed at the end of this file */
-#if __STDC__ || defined(__cplusplus) || defined(c_plusplus)
- /* ANSI || C++ */
-#define FUNC(f, t, p) extern t f p
-#define LFUNC(f, t, p) static t f p
-#else /* k&R */
-#define FUNC(f, t, p) extern t f()
-#define LFUNC(f, t, p) static t f()
-#endif
-
-
-FUNC(boundCheckingMalloc, void *, (long s));
-FUNC(boundCheckingCalloc, void *, (long num, long s));
-FUNC(boundCheckingRealloc, void *, (void *p, long s));
+extern void * boundCheckingMalloc(long s);
+extern void * boundCheckingCalloc(long num, long s);
+extern void * boundCheckingRealloc(void *p, long s);
 
 /* define MSW types for X window types,
    I don't know much about MSW, but the following defines do the job */
@@ -92,28 +76,28 @@ extern "C" {
 /* some replacements for X... functions */
 
 /* XDefaultXXX */
-    FUNC(XDefaultVisual, Visual *, (Display *display, Screen *screen));
-    FUNC(XDefaultScreen, Screen *, (Display *d));
-    FUNC(XDefaultColormap, Colormap, (Display *display, Screen *screen));
-    FUNC(XDefaultDepth, int, (Display *d, Screen *s));
+    extern Visual * XDefaultVisual(Display *display, Screen *screen);
+    extern Screen * XDefaultScreen(Display *d);
+    extern Colormap XDefaultColormap(Display *display, Screen *screen);
+    extern int XDefaultDepth(Display *d, Screen *s);
 
 /* color related */
-    FUNC(XParseColor, int, (Display *, Colormap *, char *, XColor *));
-    FUNC(XAllocColor, int, (Display *, Colormap *, XColor *));
-    FUNC(XQueryColors, void, (Display *display, Colormap colormap,
-			      XColor *xcolors, int ncolors));
-    FUNC(XFreeColors, int, (Display *d, Colormap cmap,
+    extern int XParseColor(Display *, Colormap *, char *, XColor *);
+    extern int XAllocColor(Display *, Colormap *, XColor *);
+    extern void XQueryColors(Display *display, Colormap colormap,
+			      XColor *xcolors, int ncolors);
+    extern int XFreeColors(Display *d, Colormap cmap,
 			    unsigned long pixels[],
-			    int npixels, unsigned long planes));
+			    int npixels, unsigned long planes);
 /* XImage */
-    FUNC(XCreateImage, XImage *, (Display *, Visual *, int depth, int format,
+    extern XImage * XCreateImage(Display *, Visual *, int depth, int format,
 				  int x, int y, int width, int height,
-				  int pad, int foo));
+				  int pad, int foo);
 
 /* free and destroy bitmap */
-    FUNC(XDestroyImage, void /* ? */ , (XImage *));
+    extern void /* ? */  XDestroyImage(XImage *);
 /* free only, bitmap remains */
-    FUNC(XImageFree, void, (XImage *));
+    extern void XImageFree(XImage *);
 #if defined(__cplusplus) || defined(c_plusplus)
 } /* end of extern "C" */
 #endif /* cplusplus */
@@ -128,9 +112,6 @@ extern "C" {
 #ifndef Bool
 typedef BOOL Bool;		/* take MSW bool */
 #endif
-/* make these local here, simx.c gets the same from xpm.h */
-#undef LFUNC
-#undef FUNC
 
 #endif /* def FOR_MSW */
 

@@ -44,8 +44,8 @@
 # endif
 #endif
 
-LFUNC(OpenReadFile, int, (char *filename, xpmData *mdata));
-LFUNC(xpmDataClose, void, (xpmData *mdata));
+static int OpenReadFile(char *filename, xpmData *mdata);
+static void xpmDataClose(xpmData *mdata);
 
 #ifndef CXPMPROG
 int
@@ -94,10 +94,7 @@ XpmReadFileToImage(display, filename,
 }
 
 int
-XpmReadFileToXpmImage(filename, image, info)
-    char *filename;
-    XpmImage *image;
-    XpmInfo *info;
+XpmReadFileToXpmImage(char* filename, XpmImage* image, XpmInfo* info)
 {
     xpmData mdata;
     int ErrorStatus;
@@ -123,9 +120,7 @@ XpmReadFileToXpmImage(filename, image, info)
  * open the given file to be read as an xpmData which is returned.
  */
 static int
-OpenReadFile(filename, mdata)
-    char *filename;
-    xpmData *mdata;
+OpenReadFile(char* filename, xpmData* mdata)
 {
 #ifndef NO_ZPIPE
     char buf[BUFSIZ];
@@ -206,8 +201,7 @@ OpenReadFile(filename, mdata)
  * close the file related to the xpmData if any
  */
 static void
-xpmDataClose(mdata)
-    xpmData *mdata;
+xpmDataClose(xpmData* mdata)
 {
     switch (mdata->type) {
     case XPMFILE:

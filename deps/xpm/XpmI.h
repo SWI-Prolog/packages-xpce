@@ -186,34 +186,34 @@ extern char *xpmColorKeys[];
 
 /* XPM internal routines */
 
-FUNC(xpmParseData, int, (xpmData *data, XpmImage *image, XpmInfo *info));
-FUNC(xpmParseDataAndCreate, int, (Display *display, xpmData *data,
+extern int xpmParseData(xpmData *data, XpmImage *image, XpmInfo *info);
+extern int xpmParseDataAndCreate(Display *display, xpmData *data,
 				  XImage **image_return,
 				  XImage **shapeimage_return,
 				  XpmImage *image, XpmInfo *info,
-				  XpmAttributes *attributes));
+				  XpmAttributes *attributes);
 
-FUNC(xpmFreeColorTable, void, (XpmColor *colorTable, int ncolors));
+extern void xpmFreeColorTable(XpmColor *colorTable, int ncolors);
 
-FUNC(xpmInitAttributes, void, (XpmAttributes *attributes));
+extern void xpmInitAttributes(XpmAttributes *attributes);
 
-FUNC(xpmInitXpmImage, void, (XpmImage *image));
+extern void xpmInitXpmImage(XpmImage *image);
 
-FUNC(xpmInitXpmInfo, void, (XpmInfo *info));
+extern void xpmInitXpmInfo(XpmInfo *info);
 
-FUNC(xpmSetInfoMask, void, (XpmInfo *info, XpmAttributes *attributes));
-FUNC(xpmSetInfo, void, (XpmInfo *info, XpmAttributes *attributes));
-FUNC(xpmSetAttributes, void, (XpmAttributes *attributes, XpmImage *image,
-			      XpmInfo *info));
+extern void xpmSetInfoMask(XpmInfo *info, XpmAttributes *attributes);
+extern void xpmSetInfo(XpmInfo *info, XpmAttributes *attributes);
+extern void xpmSetAttributes(XpmAttributes *attributes, XpmImage *image,
+			      XpmInfo *info);
 
 #if !defined(FOR_MSW) && !defined(AMIGA)
-FUNC(xpmCreatePixmapFromImage, void, (Display *display, Drawable d,
-				      XImage *ximage, Pixmap *pixmap_return));
+extern void xpmCreatePixmapFromImage(Display *display, Drawable d,
+				      XImage *ximage, Pixmap *pixmap_return);
 
-FUNC(xpmCreateImageFromPixmap, void, (Display *display, Pixmap pixmap,
+extern void xpmCreateImageFromPixmap(Display *display, Pixmap pixmap,
 				      XImage **ximage_return,
 				      unsigned int *width,
-				      unsigned int *height));
+				      unsigned int *height);
 #endif
 
 /* structures and functions related to hastable code */
@@ -230,10 +230,10 @@ typedef struct {
     xpmHashAtom *atomTable;
 }      xpmHashTable;
 
-FUNC(xpmHashTableInit, int, (xpmHashTable *table));
-FUNC(xpmHashTableFree, void, (xpmHashTable *table));
-FUNC(xpmHashSlot, xpmHashAtom *, (xpmHashTable *table, char *s));
-FUNC(xpmHashIntern, int, (xpmHashTable *table, char *tag, void *data));
+extern int xpmHashTableInit(xpmHashTable *table);
+extern void xpmHashTableFree(xpmHashTable *table);
+extern xpmHashAtom * xpmHashSlot(xpmHashTable *table, char *s);
+extern int xpmHashIntern(xpmHashTable *table, char *tag, void *data);
 
 #define HashAtomData(i) ((void *)(intptr_t)i)
 #define HashColorIndex(slot) ((unsigned int)(intptr_t)((*slot)->data))
@@ -241,46 +241,46 @@ FUNC(xpmHashIntern, int, (xpmHashTable *table, char *tag, void *data));
 
 /* I/O utility */
 
-FUNC(xpmNextString, int, (xpmData *mdata));
-FUNC(xpmNextUI, int, (xpmData *mdata, unsigned int *ui_return));
-FUNC(xpmGetString, int, (xpmData *mdata, char **sptr, unsigned int *l));
+extern int xpmNextString(xpmData *mdata);
+extern int xpmNextUI(xpmData *mdata, unsigned int *ui_return);
+extern int xpmGetString(xpmData *mdata, char **sptr, unsigned int *l);
 
 #define xpmGetC(mdata) \
 	((!mdata->type || mdata->type == XPMBUFFER) ? \
 	 (*mdata->cptr++) : (getc(mdata->stream.file)))
 
-FUNC(xpmNextWord, unsigned int,
-     (xpmData *mdata, char *buf, unsigned int buflen));
-FUNC(xpmGetCmt, int, (xpmData *mdata, char **cmt));
-FUNC(xpmParseHeader, int, (xpmData *mdata));
-FUNC(xpmParseValues, int, (xpmData *data, unsigned int *width,
+extern unsigned int xpmNextWord(xpmData *mdata, char *buf,
+				unsigned int buflen);
+extern int xpmGetCmt(xpmData *mdata, char **cmt);
+extern int xpmParseHeader(xpmData *mdata);
+extern int xpmParseValues(xpmData *data, unsigned int *width,
 			   unsigned int *height, unsigned int *ncolors,
 			   unsigned int *cpp, unsigned int *x_hotspot,
 			   unsigned int *y_hotspot, unsigned int *hotspot,
-			   unsigned int *extensions));
+			   unsigned int *extensions);
 
-FUNC(xpmParseColors, int, (xpmData *data, unsigned int ncolors,
+extern int xpmParseColors(xpmData *data, unsigned int ncolors,
 			   unsigned int cpp, XpmColor **colorTablePtr,
-			   xpmHashTable *hashtable));
+			   xpmHashTable *hashtable);
 
-FUNC(xpmParseExtensions, int, (xpmData *data, XpmExtension **extensions,
-			       unsigned int *nextensions));
+extern int xpmParseExtensions(xpmData *data, XpmExtension **extensions,
+			       unsigned int *nextensions);
 
 /* RGB utility */
 
-FUNC(xpmReadRgbNames, int, (char *rgb_fname, xpmRgbName *rgbn));
-FUNC(xpmGetRgbName, char *, (xpmRgbName *rgbn, int rgbn_max,
-			     int red, int green, int blue));
-FUNC(xpmFreeRgbNames, void, (xpmRgbName *rgbn, int rgbn_max));
+extern int xpmReadRgbNames(char *rgb_fname, xpmRgbName *rgbn);
+extern char * xpmGetRgbName(xpmRgbName *rgbn, int rgbn_max,
+			     int red, int green, int blue);
+extern void xpmFreeRgbNames(xpmRgbName *rgbn, int rgbn_max);
 #ifdef FOR_MSW
-FUNC(xpmGetRGBfromName,int, (char *name, int *r, int *g, int *b));
+extern int xpmGetRGBfromName(char *name, int *r, int *g, int *b);
 #endif
 
 #ifndef AMIGA
-FUNC(xpm_xynormalizeimagebits, void, (register unsigned char *bp,
-				      register XImage *img));
-FUNC(xpm_znormalizeimagebits, void, (register unsigned char *bp,
-				     register XImage *img));
+extern void xpm_xynormalizeimagebits(register unsigned char *bp,
+				      register XImage *img);
+extern void xpm_znormalizeimagebits(register unsigned char *bp,
+				     register XImage *img);
 
 /*
  * Macros
@@ -333,20 +333,20 @@ FUNC(xpm_znormalizeimagebits, void, (register unsigned char *bp,
 #endif
 
 #ifdef NEED_STRDUP
-FUNC(xpmstrdup, char *, (char *s1));
+extern char * xpmstrdup(char *s1);
 #else
 #undef xpmstrdup
 #define xpmstrdup strdup
 #endif
 
 #ifdef NEED_STRCASECMP
-FUNC(xpmstrcasecmp, int, (char *s1, char *s2));
+extern int xpmstrcasecmp(char *s1, char *s2);
 #else
 #undef xpmstrcasecmp
 #define xpmstrcasecmp strcasecmp
 #endif
 
-FUNC(xpmatoui, unsigned int,
-     (char *p, unsigned int l, unsigned int *ui_return));
+extern unsigned int xpmatoui(char *p, unsigned int l,
+			     unsigned int *ui_return);
 
 #endif

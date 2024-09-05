@@ -269,9 +269,7 @@ xpmNextWord(data, buf, buflen)
  * returns 1 if one is found and 0 if not
  */
 int
-xpmNextUI(data, ui_return)
-    xpmData *data;
-    unsigned int *ui_return;
+xpmNextUI(xpmData *data, unsigned int *ui_return)
 {
     char buf[BUFSIZ];
     int l;
@@ -284,10 +282,7 @@ xpmNextUI(data, ui_return)
  * return end of string - WARNING: malloc!
  */
 int
-xpmGetString(data, sptr, l)
-    xpmData *data;
-    char **sptr;
-    unsigned int *l;
+xpmGetString(xpmData *data, char **sptr, unsigned int *l)
 {
     unsigned int i, n = 0;
     int c;
@@ -368,9 +363,7 @@ xpmGetString(data, sptr, l)
  * get the current comment line
  */
 int
-xpmGetCmt(data, cmt)
-    xpmData *data;
-    char **cmt;
+xpmGetCmt(xpmData *data, char **cmt)
 {
     if (!data->type)
 	*cmt = NULL;
@@ -396,8 +389,7 @@ xpmDataType xpmDataTypes[] =
  * parse xpm header
  */
 int
-xpmParseHeader(data)
-    xpmData *data;
+xpmParseHeader(xpmData *data)
 {
     char buf[BUFSIZ];
     int l, n = 0;

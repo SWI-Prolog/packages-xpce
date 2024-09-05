@@ -34,29 +34,24 @@
 
 #include "XpmI.h"
 
-LFUNC(CreateColors, int, (char **dataptr, unsigned int *data_size,
+static int CreateColors(char **dataptr, unsigned int *data_size,
 			  XpmColor *colors, unsigned int ncolors,
-			  unsigned int cpp));
+			  unsigned int cpp);
 
-LFUNC(CreatePixels, void, (char **dataptr, unsigned int width,
+static void CreatePixels(char **dataptr, unsigned int width,
 			   unsigned int height, unsigned int cpp,
-			   unsigned int *pixels, XpmColor *colors));
+			   unsigned int *pixels, XpmColor *colors);
 
-LFUNC(CountExtensions, void, (XpmExtension *ext, unsigned int num,
+static void CountExtensions(XpmExtension *ext, unsigned int num,
 			      unsigned int *ext_size,
-			      unsigned int *ext_nlines));
+			      unsigned int *ext_nlines);
 
-LFUNC(CreateExtensions, void, (char **dataptr, unsigned int offset,
+static void CreateExtensions(char **dataptr, unsigned int offset,
 			       XpmExtension *ext, unsigned int num,
-			       unsigned int ext_nlines));
+			       unsigned int ext_nlines);
 
 int
-XpmCreateDataFromImage(display, data_return, image, shapeimage, attributes)
-    Display *display;
-    char ***data_return;
-    XImage *image;
-    XImage *shapeimage;
-    XpmAttributes *attributes;
+XpmCreateDataFromImage(Display* display, char* **data_return, XImage* image, XImage* shapeimage, XpmAttributes* attributes)
 {
     XpmImage xpmimage;
     XpmInfo info;
@@ -93,10 +88,7 @@ XpmCreateDataFromImage(display, data_return, image, shapeimage, attributes)
 }
 
 int
-XpmCreateDataFromXpmImage(data_return, image, info)
-    char ***data_return;
-    XpmImage *image;
-    XpmInfo *info;
+XpmCreateDataFromXpmImage(char* **data_return, XpmImage* image, XpmInfo* info)
 {
     /* calculation variables */
     int ErrorStatus;

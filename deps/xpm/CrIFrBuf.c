@@ -34,7 +34,7 @@
 
 #include "XpmI.h"
 
-LFUNC(OpenBuffer, void, (char *buffer, xpmData *mdata));
+static void OpenBuffer(char *buffer, xpmData *mdata);
 
 int
 XpmCreateImageFromBuffer(display, buffer, image_return,
@@ -80,10 +80,7 @@ XpmCreateImageFromBuffer(display, buffer, image_return,
 }
 
 int
-XpmCreateXpmImageFromBuffer(buffer, image, info)
-    char *buffer;
-    XpmImage *image;
-    XpmInfo *info;
+XpmCreateXpmImageFromBuffer(char* buffer, XpmImage* image, XpmInfo* info)
 {
     xpmData mdata;
     int ErrorStatus;
@@ -105,9 +102,7 @@ XpmCreateXpmImageFromBuffer(buffer, image, info)
  * open the given buffer to be read or written as an xpmData which is returned
  */
 static void
-OpenBuffer(buffer, mdata)
-    char *buffer;
-    xpmData *mdata;
+OpenBuffer(char* buffer, xpmData* mdata)
 {
     mdata->type = XPMBUFFER;
     mdata->cptr = buffer;

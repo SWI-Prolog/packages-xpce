@@ -40,8 +40,7 @@
  * which does the trick
  */
 char *
-xpmstrdup(s1)
-    char *s1;
+xpmstrdup(char* s1)
 {
     char *s2;
     int l = strlen(s1) + 1;
@@ -116,8 +115,7 @@ XpmLibraryVersion()
 #endif
 
 void
-XpmFree(ptr)
-    void *ptr;
+XpmFree(void* ptr)
 {
     free(ptr);
 }

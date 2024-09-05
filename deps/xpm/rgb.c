@@ -53,10 +53,7 @@
  * number of entries stored.
  */
 int
-xpmReadRgbNames(rgb_fname, rgbn)
-    char *rgb_fname;
-    xpmRgbName rgbn[];
-
+xpmReadRgbNames(char* rgb_fname, xpmRgbName rgbn[])
 {
     FILE *rgbf;
     int n, items, red, green, blue;
@@ -141,10 +138,7 @@ xpmGetRgbName(rgbn, rgbn_max, red, green, blue)
  * Free the strings which have been malloc'ed in xpmReadRgbNames
  */
 void
-xpmFreeRgbNames(rgbn, rgbn_max)
-    xpmRgbName rgbn[];
-    int rgbn_max;
-
+xpmFreeRgbNames(xpmRgbName rgbn[], int rgbn_max)
 {
     int i;
     xpmRgbName *rgb;
@@ -159,9 +153,7 @@ xpmFreeRgbNames(rgbn, rgbn_max)
 #include "rgbtab.h"			/* hard coded rgb.txt table */
 
 int
-xpmReadRgbNames(rgb_fname, rgbn)
-    char *rgb_fname;
-    xpmRgbName rgbn[];
+xpmReadRgbNames(char* rgb_fname, xpmRgbName rgbn[])
 {
     /*
      * check for consistency???
@@ -271,10 +263,7 @@ xpmGetRGBfromName(inname, r, g, b)
 }
 
 void
-xpmFreeRgbNames(rgbn, rgbn_max)
-    xpmRgbName rgbn[];
-    int rgbn_max;
-
+xpmFreeRgbNames(xpmRgbName rgbn[], int rgbn_max)
 {
     /* nothing to do */
 }

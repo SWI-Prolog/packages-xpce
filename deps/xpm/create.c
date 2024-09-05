@@ -46,120 +46,116 @@
 #include "XpmI.h"
 #include <ctype.h>
 
-LFUNC(xpmVisualType, int, (Visual *visual));
+static int xpmVisualType(Visual *visual);
 
-LFUNC(AllocColor, int, (Display *display, Colormap colormap,
-			char *colorname, XColor *xcolor, void *closure));
-LFUNC(FreeColors, int, (Display *display, Colormap colormap,
-			Pixel *pixels, int n, void *closure));
+static int AllocColor(Display *display, Colormap colormap,
+			char *colorname, XColor *xcolor, void *closure);
+static int FreeColors(Display *display, Colormap colormap,
+			Pixel *pixels, int n, void *closure);
 
 #ifndef FOR_MSW
-LFUNC(SetCloseColor, int, (Display *display, Colormap colormap,
+static int SetCloseColor(Display *display, Colormap colormap,
 			   Visual *visual, XColor *col,
 			   Pixel *image_pixel, Pixel *mask_pixel,
 			   Pixel *alloc_pixels, unsigned int *nalloc_pixels,
 			   XpmAttributes *attributes, XColor *cols, int ncols,
-			   XpmAllocColorFunc allocColor, void *closure));
+			   XpmAllocColorFunc allocColor, void *closure);
 #else
 /* let the window system take care of close colors */
 #endif
 
-LFUNC(SetColor, int, (Display *display, Colormap colormap, Visual *visual,
+static int SetColor(Display *display, Colormap colormap, Visual *visual,
 		      char *colorname, unsigned int color_index,
 		      Pixel *image_pixel, Pixel *mask_pixel,
 		      unsigned int *mask_pixel_index,
 		      Pixel *alloc_pixels, unsigned int *nalloc_pixels,
 		      Pixel *used_pixels, unsigned int *nused_pixels,
 		      XpmAttributes *attributes, XColor *cols, int ncols,
-		      XpmAllocColorFunc allocColor, void *closure));
+		      XpmAllocColorFunc allocColor, void *closure);
 
-LFUNC(CreateXImage, int, (Display *display, Visual *visual,
+static int CreateXImage(Display *display, Visual *visual,
 			  unsigned int depth, int format, unsigned int width,
-                          unsigned int height, XImage **image_return));
+                          unsigned int height, XImage **image_return);
 
-LFUNC(CreateColors, int, (Display *display, XpmAttributes *attributes,
+static int CreateColors(Display *display, XpmAttributes *attributes,
                           XpmColor *colors, unsigned int ncolors,
                           Pixel *image_pixels, Pixel *mask_pixels,
                           unsigned int *mask_pixel_index,
                           Pixel *alloc_pixels, unsigned int *nalloc_pixels,
-                          Pixel *used_pixels, unsigned int *nused_pixels));
+                          Pixel *used_pixels, unsigned int *nused_pixels);
 
-#ifndef FOR_MSW
-LFUNC(ParseAndPutPixels, int, (xpmData *data, unsigned int width,
-			       unsigned int height, unsigned int ncolors,
-			       unsigned int cpp, XpmColor *colorTable,
-			       xpmHashTable *hashtable,
-			       XImage *image, Pixel *image_pixels,
-			       XImage *mask, Pixel *mask_pixels));
-#else  /* FOR_MSW */
-LFUNC(ParseAndPutPixels, int, (Display *dc, xpmData *data, unsigned int width,
-			       unsigned int height, unsigned int ncolors,
-			       unsigned int cpp, XpmColor *colorTable,
-			       xpmHashTable *hashtable,
-			       XImage *image, Pixel *image_pixels,
-			       XImage *mask, Pixel *mask_pixels));
+#ifdef FOR_MSW
+#define MSW_DISPLAY_ARG Display *dc,
+#else
+#define MSW_DISPLAY_ARG
 #endif
+
+static int ParseAndPutPixels(MSW_DISPLAY_ARG xpmData *data, unsigned int width,
+			     unsigned int height, unsigned int ncolors,
+			     unsigned int cpp, XpmColor *colorTable,
+			     xpmHashTable *hashtable,
+			     XImage *image, Pixel *image_pixels,
+			     XImage *mask, Pixel *mask_pixels);
 
 #ifndef FOR_MSW
 # ifndef AMIGA
 /* XImage pixel routines */
-LFUNC(PutImagePixels, void, (XImage *image, unsigned int width,
+static void PutImagePixels(XImage *image, unsigned int width,
 			     unsigned int height, unsigned int *pixelindex,
-			     Pixel *pixels));
+			     Pixel *pixels);
 
-LFUNC(PutImagePixels32, void, (XImage *image, unsigned int width,
+static void PutImagePixels32(XImage *image, unsigned int width,
 			       unsigned int height, unsigned int *pixelindex,
-			       Pixel *pixels));
+			       Pixel *pixels);
 
-LFUNC(PutImagePixels16, void, (XImage *image, unsigned int width,
+static void PutImagePixels16(XImage *image, unsigned int width,
 			       unsigned int height, unsigned int *pixelindex,
-			       Pixel *pixels));
+			       Pixel *pixels);
 
-LFUNC(PutImagePixels8, void, (XImage *image, unsigned int width,
+static void PutImagePixels8(XImage *image, unsigned int width,
 			      unsigned int height, unsigned int *pixelindex,
-			      Pixel *pixels));
+			      Pixel *pixels);
 
-LFUNC(PutImagePixels1, void, (XImage *image, unsigned int width,
+static void PutImagePixels1(XImage *image, unsigned int width,
 			      unsigned int height, unsigned int *pixelindex,
-			      Pixel *pixels));
+			      Pixel *pixels);
 
-LFUNC(PutPixel1, int, (XImage *ximage, int x, int y, unsigned long pixel));
-LFUNC(PutPixel, int, (XImage *ximage, int x, int y, unsigned long pixel));
-LFUNC(PutPixel32, int, (XImage *ximage, int x, int y, unsigned long pixel));
-LFUNC(PutPixel32MSB, int, (XImage *ximage, int x, int y, unsigned long pixel));
-LFUNC(PutPixel32LSB, int, (XImage *ximage, int x, int y, unsigned long pixel));
-LFUNC(PutPixel16MSB, int, (XImage *ximage, int x, int y, unsigned long pixel));
-LFUNC(PutPixel16LSB, int, (XImage *ximage, int x, int y, unsigned long pixel));
-LFUNC(PutPixel8, int, (XImage *ximage, int x, int y, unsigned long pixel));
-LFUNC(PutPixel1MSB, int, (XImage *ximage, int x, int y, unsigned long pixel));
-LFUNC(PutPixel1LSB, int, (XImage *ximage, int x, int y, unsigned long pixel));
+static int PutPixel1(XImage *ximage, int x, int y, unsigned long pixel);
+static int PutPixel(XImage *ximage, int x, int y, unsigned long pixel);
+static int PutPixel32(XImage *ximage, int x, int y, unsigned long pixel);
+static int PutPixel32MSB(XImage *ximage, int x, int y, unsigned long pixel);
+static int PutPixel32LSB(XImage *ximage, int x, int y, unsigned long pixel);
+static int PutPixel16MSB(XImage *ximage, int x, int y, unsigned long pixel);
+static int PutPixel16LSB(XImage *ximage, int x, int y, unsigned long pixel);
+static int PutPixel8(XImage *ximage, int x, int y, unsigned long pixel);
+static int PutPixel1MSB(XImage *ximage, int x, int y, unsigned long pixel);
+static int PutPixel1LSB(XImage *ximage, int x, int y, unsigned long pixel);
 
 # else /* AMIGA */
-LFUNC(APutImagePixels, void, (XImage *ximage, unsigned int width,
+static void APutImagePixels(XImage *ximage, unsigned int width,
 			      unsigned int height, unsigned int *pixelindex,
-			      Pixel *pixels));
+			      Pixel *pixels);
 # endif/* AMIGA */
 #else  /* FOR_MSW */
 /* FOR_MSW pixel routine */
-LFUNC(MSWPutImagePixels, void, (Display *dc, XImage *image,
+static void MSWPutImagePixels(Display *dc, XImage *image,
 				unsigned int width, unsigned int height,
 				unsigned int *pixelindex, Pixel *pixels,
-			        unsigned int ncolors,
-			        Colormap hpal));
+				unsigned int ncolors,
+				Colormap hpal);
 #endif /* FOR_MSW */
 
 #ifdef NEED_STRCASECMP
-FUNC(xpmstrcasecmp, int, (char *s1, char *s2));
+extern int xpmstrcasecmp(char *s1, char *s2);
 
 /*
  * in case strcasecmp is not provided by the system here is one
  * which does the trick
  */
 int
-xpmstrcasecmp(s1, s2)
-    register char *s1, *s2;
+xpmstrcasecmp(char *s1, char *s2)
 {
-    register int c1, c2;
+    int c1, c2;
 
     while (*s1 && *s2) {
 	c1 = tolower(*s1);
@@ -178,8 +174,7 @@ xpmstrcasecmp(s1, s2)
  * return the default color key related to the given visual
  */
 static int
-xpmVisualType(visual)
-    Visual *visual;
+xpmVisualType(Visual* visual)
 {
 #ifndef FOR_MSW
 # ifndef AMIGA
@@ -218,12 +213,8 @@ typedef struct {
  *   call XAllocColor and return 0 if failure, positive otherwise
  */
 static int
-AllocColor(display, colormap, colorname, xcolor, closure)
-    Display *display;
-    Colormap *colormap;
-    char *colorname;
-    XColor *xcolor;
-    void *closure;		/* not used */
+AllocColor(Display *display, Colormap *colormap, char *colorname,
+	   XColor *xcolor, void *closure)
 {
     int status;
     if (colorname)
@@ -236,8 +227,7 @@ AllocColor(display, colormap, colorname, xcolor, closure)
 
 #ifndef FOR_MSW
 static int
-closeness_cmp(a, b)
-    Const void *a, *b;
+closeness_cmp(const void *a, const void *b)
 {
     CloseColor *x = (CloseColor *) a, *y = (CloseColor *) b;
 
@@ -251,21 +241,11 @@ closeness_cmp(a, b)
  */
 
 static int
-SetCloseColor(display, colormap, visual, col, image_pixel, mask_pixel,
-	      alloc_pixels, nalloc_pixels, attributes, cols, ncols,
-	      allocColor, closure)
-    Display *display;
-    Colormap colormap;
-    Visual *visual;
-    XColor *col;
-    Pixel *image_pixel, *mask_pixel;
-    Pixel *alloc_pixels;
-    unsigned int *nalloc_pixels;
-    XpmAttributes *attributes;
-    XColor *cols;
-    int ncols;
-    XpmAllocColorFunc allocColor;
-    void *closure;
+SetCloseColor(Display *display, Colormap colormap, Visual *visual,
+	      XColor *col, Pixel *image_pixel, Pixel *mask_pixel,
+	      Pixel *alloc_pixels, unsigned int *nalloc_pixels,
+	      XpmAttributes *attributes, XColor *cols, int ncols,
+	      XpmAllocColorFunc allocColor, void *closure)
 {
 
     /*
@@ -436,26 +416,13 @@ SetCloseColor(display, colormap, visual, col, image_pixel, mask_pixel,
  */
 
 static int
-SetColor(display, colormap, visual, colorname, color_index,
-	 image_pixel, mask_pixel, mask_pixel_index,
-	 alloc_pixels, nalloc_pixels, used_pixels, nused_pixels,
-	 attributes, cols, ncols, allocColor, closure)
-    Display *display;
-    Colormap colormap;
-    Visual *visual;
-    char *colorname;
-    unsigned int color_index;
-    Pixel *image_pixel, *mask_pixel;
-    unsigned int *mask_pixel_index;
-    Pixel *alloc_pixels;
-    unsigned int *nalloc_pixels;
-    Pixel *used_pixels;
-    unsigned int *nused_pixels;
-    XpmAttributes *attributes;
-    XColor *cols;
-    int ncols;
-    XpmAllocColorFunc allocColor;
-    void *closure;
+SetColor(Display *display, Colormap colormap, Visual *visual,
+	 char *colorname, unsigned int color_index,
+	 Pixel *image_pixel,  Pixel *mask_pixel, unsigned int *mask_pixel_index,
+	 Pixel *alloc_pixels, unsigned int *nalloc_pixels,
+	 Pixel *used_pixels, unsigned int *nused_pixels,
+	 XpmAttributes *attributes, XColor *cols, int ncols,
+	 XpmAllocColorFunc allocColor, void *closure)
 {
     XColor xcolor;
     int status;
@@ -500,20 +467,12 @@ SetColor(display, colormap, visual, colorname, color_index,
 
 
 static int
-CreateColors(display, attributes, colors, ncolors, image_pixels, mask_pixels,
-             mask_pixel_index, alloc_pixels, nalloc_pixels,
-             used_pixels, nused_pixels)
-    Display *display;
-    XpmAttributes *attributes;
-    XpmColor *colors;
-    unsigned int ncolors;
-    Pixel *image_pixels;
-    Pixel *mask_pixels;
-    unsigned int *mask_pixel_index;
-    Pixel *alloc_pixels;
-    unsigned int *nalloc_pixels;
-    Pixel *used_pixels;
-    unsigned int *nused_pixels;
+CreateColors(Display *display, XpmAttributes *attributes,
+	     XpmColor *colors, unsigned int ncolors,
+	     Pixel *image_pixels, Pixel *mask_pixels,
+             unsigned int *mask_pixel_index, Pixel *alloc_pixels,
+	     unsigned int *nalloc_pixels,
+             Pixel *used_pixels, unsigned int *nused_pixels)
 {
     /* variables stored in the XpmAttributes structure */
     Visual *visual;
@@ -752,13 +711,9 @@ FreeColors(display, colormap, pixels, n, closure)
 }
 
 int
-XpmCreateImageFromXpmImage(display, image,
-			   image_return, shapeimage_return, attributes)
-    Display *display;
-    XpmImage *image;
-    XImage **image_return;
-    XImage **shapeimage_return;
-    XpmAttributes *attributes;
+XpmCreateImageFromXpmImage(Display *display, XpmImage *image,
+			   XImage **image_return, XImage **shapeimage_return,
+			   XpmAttributes *attributes)
 {
     /* variables stored in the XpmAttributes structure */
     Visual *visual;
@@ -963,14 +918,9 @@ error:
  * Create an XImage with its data
  */
 static int
-CreateXImage(display, visual, depth, format, width, height, image_return)
-    Display *display;
-    Visual *visual;
-    unsigned int depth;
-    int format;
-    unsigned int width;
-    unsigned int height;
-    XImage **image_return;
+CreateXImage(Display *display, Visual *visual, unsigned int depth,
+	     int format, unsigned int width, unsigned int height,
+	     XImage **image_return)
 {
     int bitmap_pad;
 
@@ -1015,10 +965,10 @@ CreateXImage(display, visual, depth, format, width, height, image_return)
  * We also assume that we use only ZPixmap images with null offsets.
  */
 
-LFUNC(_putbits, void, (register char *src, int dstoffset,
-		       register int numbits, register char *dst));
+static void _putbits(register char *src, int dstoffset,
+		     register int numbits, register char *dst);
 
-LFUNC(_XReverse_Bytes, int, (register unsigned char *bpt, register int nb));
+static int _XReverse_Bytes(register unsigned char *bpt, register int nb);
 
 static unsigned char Const _reverse_byte[0x100] = {
     0x00, 0x80, 0x40, 0xc0, 0x20, 0xa0, 0x60, 0xe0,
@@ -1056,9 +1006,7 @@ static unsigned char Const _reverse_byte[0x100] = {
 };
 
 static int
-_XReverse_Bytes(bpt, nb)
-    register unsigned char *bpt;
-    register int nb;
+_XReverse_Bytes(unsigned char *bpt, int nb)
 {
     do {
 	*bpt = _reverse_byte[*bpt];
@@ -1069,11 +1017,9 @@ _XReverse_Bytes(bpt, nb)
 
 
 void
-xpm_xynormalizeimagebits(bp, img)
-    register unsigned char *bp;
-    register XImage *img;
+xpm_xynormalizeimagebits(unsigned char *bp, XImage *img)
 {
-    register unsigned char c;
+    unsigned char c;
 
     if (img->byte_order != img->bitmap_bit_order) {
 	switch (img->bitmap_unit) {
@@ -1099,11 +1045,9 @@ xpm_xynormalizeimagebits(bp, img)
 }
 
 void
-xpm_znormalizeimagebits(bp, img)
-    register unsigned char *bp;
-    register XImage *img;
+xpm_znormalizeimagebits(unsigned char *bp, XImage *img)
 {
-    register unsigned char c;
+    unsigned char c;
 
     switch (img->bits_per_pixel) {
 
@@ -1144,13 +1088,7 @@ static unsigned char Const _himask[0x09] = {
 0xff, 0xfe, 0xfc, 0xf8, 0xf0, 0xe0, 0xc0, 0x80, 0x00};
 
 static void
-_putbits(src, dstoffset, numbits, dst)
-    register char *src;			/* address of source bit string */
-    int dstoffset;			/* bit offset into destination;
-					 * range is 0-31 */
-    register int numbits;		/* number of bits to copy to
-					 * destination */
-    register char *dst;			/* address of destination bit string */
+_putbits(char *src, int dstoffset, int numbits, char *dst)
 {
     register unsigned char chlo, chhi;
     int hibits;
@@ -1192,12 +1130,8 @@ _putbits(src, dstoffset, numbits, dst)
  */
 
 static void
-PutImagePixels(image, width, height, pixelindex, pixels)
-    XImage *image;
-    unsigned int width;
-    unsigned int height;
-    unsigned int *pixelindex;
-    Pixel *pixels;
+PutImagePixels(XImage *image, unsigned int width, unsigned int height,
+	       unsigned int *pixelindex, Pixel *pixels)
 {
     register char *src;
     register char *dst;
@@ -1279,12 +1213,8 @@ static unsigned long byteorderpixel = MSBFirst << 24;
 */
 
 static void
-PutImagePixels32(image, width, height, pixelindex, pixels)
-    XImage *image;
-    unsigned int width;
-    unsigned int height;
-    unsigned int *pixelindex;
-    Pixel *pixels;
+PutImagePixels32(XImage *image, unsigned int width, unsigned int height,
+		 unsigned int *pixelindex, Pixel *pixels)
 {
     unsigned char *data;
     unsigned int *iptr;
@@ -1389,12 +1319,8 @@ PutImagePixels32(image, width, height, pixelindex, pixels)
  */
 
 static void
-PutImagePixels16(image, width, height, pixelindex, pixels)
-    XImage *image;
-    unsigned int width;
-    unsigned int height;
-    unsigned int *pixelindex;
-    Pixel *pixels;
+PutImagePixels16(XImage *image, unsigned int width, unsigned int height,
+		 unsigned int *pixelindex, Pixel *pixels)
 {
     unsigned char *data;
     unsigned int *iptr;
@@ -1470,12 +1396,8 @@ PutImagePixels16(image, width, height, pixelindex, pixels)
  */
 
 static void
-PutImagePixels8(image, width, height, pixelindex, pixels)
-    XImage *image;
-    unsigned int width;
-    unsigned int height;
-    unsigned int *pixelindex;
-    Pixel *pixels;
+PutImagePixels8(XImage *image, unsigned int width, unsigned int height,
+		unsigned int *pixelindex, Pixel *pixels)
 {
     char *data;
     unsigned int *iptr;
@@ -1517,12 +1439,8 @@ PutImagePixels8(image, width, height, pixelindex, pixels)
  */
 
 static void
-PutImagePixels1(image, width, height, pixelindex, pixels)
-    XImage *image;
-    unsigned int width;
-    unsigned int height;
-    unsigned int *pixelindex;
-    Pixel *pixels;
+PutImagePixels1(XImage *image, unsigned int width, unsigned int height,
+		unsigned int *pixelindex, Pixel *pixels)
 {
     if (image->byte_order != image->bitmap_bit_order)
 	PutImagePixels(image, width, height, pixelindex, pixels);
@@ -1631,14 +1549,9 @@ PutImagePixels1(image, width, height, pixelindex, pixels)
 }
 
 int
-XpmCreatePixmapFromXpmImage(display, d, image,
-			    pixmap_return, shapemask_return, attributes)
-    Display *display;
-    Drawable d;
-    XpmImage *image;
-    Pixmap *pixmap_return;
-    Pixmap *shapemask_return;
-    XpmAttributes *attributes;
+XpmCreatePixmapFromXpmImage(Display *display, Drawable d, XpmImage *image,
+			    Pixmap *pixmap_return, Pixmap *shapemask_return,
+			    XpmAttributes *attributes)
 {
     XImage *ximage, *shapeimage;
     int ErrorStatus;
@@ -1673,12 +1586,11 @@ XpmCreatePixmapFromXpmImage(display, d, image,
 # else /* AMIGA */
 
 static void
-APutImagePixels (
-    XImage        *image,
-    unsigned int   width,
-    unsigned int   height,
-    unsigned int  *pixelindex,
-    Pixel         *pixels)
+APutImagePixels (XImage        *image,
+		 unsigned int   width,
+		 unsigned int   height,
+		 unsigned int  *pixelindex,
+		 Pixel         *pixels)
 {
     unsigned int   *data = pixelindex;
     unsigned int    x, y;
@@ -1716,15 +1628,9 @@ APutImagePixels (
 # endif/* AMIGA */
 #else  /* FOR_MSW part follows */
 static void
-MSWPutImagePixels(dc, image, width, height, pixelindex, pixels, ncolors, hpal)
-    Display *dc;
-    XImage *image;
-    unsigned int width;
-    unsigned int height;
-    unsigned int *pixelindex;
-    Pixel *pixels;
-    unsigned int ncolors;
-    Colormap hpal;
+MSWPutImagePixels(Display *dc, XImage *image, unsigned int width, unsigned int height,
+		  unsigned int *pixelindex, Pixel *pixels,
+		  unsigned int ncolors, Colormap hpal)
 {
     unsigned int *data = pixelindex;
     unsigned int x, y;
@@ -1765,11 +1671,7 @@ MSWPutImagePixels(dc, image, width, height, pixelindex, pixels, ncolors, hpal)
 #if !defined(FOR_MSW) && !defined(AMIGA)
 
 static int
-PutPixel1(ximage, x, y, pixel)
-    register XImage *ximage;
-    int x;
-    int y;
-    unsigned long pixel;
+PutPixel1(XImage *ximage, int x, int y, unsigned long pixel)
 {
     register char *src;
     register char *dst;
@@ -1798,11 +1700,7 @@ PutPixel1(ximage, x, y, pixel)
 }
 
 static int
-PutPixel(ximage, x, y, pixel)
-    register XImage *ximage;
-    int x;
-    int y;
-    unsigned long pixel;
+PutPixel(XImage *ximage, int x, int y, unsigned long pixel)
 {
     register char *src;
     register char *dst;
@@ -1834,11 +1732,7 @@ PutPixel(ximage, x, y, pixel)
 }
 
 static int
-PutPixel32(ximage, x, y, pixel)
-    register XImage *ximage;
-    int x;
-    int y;
-    unsigned long pixel;
+PutPixel32(XImage *ximage, int x, int y, unsigned long pixel)
 {
     unsigned char *addr;
 
@@ -1848,11 +1742,7 @@ PutPixel32(ximage, x, y, pixel)
 }
 
 static int
-PutPixel32MSB(ximage, x, y, pixel)
-    register XImage *ximage;
-    int x;
-    int y;
-    unsigned long pixel;
+PutPixel32MSB(XImage *ximage, int x, int y, unsigned long pixel)
 {
     unsigned char *addr;
 
@@ -1865,11 +1755,7 @@ PutPixel32MSB(ximage, x, y, pixel)
 }
 
 static int
-PutPixel32LSB(ximage, x, y, pixel)
-    register XImage *ximage;
-    int x;
-    int y;
-    unsigned long pixel;
+PutPixel32LSB(XImage *ximage, int x, int y, unsigned long pixel)
 {
     unsigned char *addr;
 
@@ -1882,11 +1768,7 @@ PutPixel32LSB(ximage, x, y, pixel)
 }
 
 static int
-PutPixel16MSB(ximage, x, y, pixel)
-    register XImage *ximage;
-    int x;
-    int y;
-    unsigned long pixel;
+PutPixel16MSB(register XImage *ximage, int x, int y, unsigned long pixel)
 {
     unsigned char *addr;
 
@@ -1897,11 +1779,7 @@ PutPixel16MSB(ximage, x, y, pixel)
 }
 
 static int
-PutPixel16LSB(ximage, x, y, pixel)
-    register XImage *ximage;
-    int x;
-    int y;
-    unsigned long pixel;
+PutPixel16LSB(XImage *ximage, int x, int y, unsigned long pixel)
 {
     unsigned char *addr;
 
@@ -1912,22 +1790,14 @@ PutPixel16LSB(ximage, x, y, pixel)
 }
 
 static int
-PutPixel8(ximage, x, y, pixel)
-    register XImage *ximage;
-    int x;
-    int y;
-    unsigned long pixel;
+PutPixel8(XImage *ximage, int x, int y, unsigned long pixel)
 {
     ximage->data[ZINDEX8(x, y, ximage)] = pixel;
     return 1;
 }
 
 static int
-PutPixel1MSB(ximage, x, y, pixel)
-    register XImage *ximage;
-    int x;
-    int y;
-    unsigned long pixel;
+PutPixel1MSB(XImage *ximage, int x, int y, unsigned long pixel)
 {
     if (pixel & 1)
 	ximage->data[ZINDEX1(x, y, ximage)] |= 0x80 >> (x & 7);
@@ -1937,11 +1807,7 @@ PutPixel1MSB(ximage, x, y, pixel)
 }
 
 static int
-PutPixel1LSB(ximage, x, y, pixel)
-    register XImage *ximage;
-    int x;
-    int y;
-    unsigned long pixel;
+PutPixel1LSB(XImage *ximage, int x, int y, unsigned long pixel)
 {
     if (pixel & 1)
 	ximage->data[ZINDEX1(x, y, ximage)] |= 1 << (x & 7);
@@ -1956,15 +1822,9 @@ PutPixel1LSB(ximage, x, y, pixel)
  * This function parses an Xpm file or data and directly create an XImage
  */
 int
-xpmParseDataAndCreate(display, data, image_return, shapeimage_return,
-		      image, info, attributes)
-    Display *display;
-    xpmData *data;
-    XImage **image_return;
-    XImage **shapeimage_return;
-    XpmImage *image;
-    XpmInfo *info;
-    XpmAttributes *attributes;
+xpmParseDataAndCreate(Display *display, xpmData *data,
+		      XImage **image_return, XImage **shapeimage_return,
+		      XpmImage *image, XpmInfo *info, XpmAttributes *attributes)
 {
     /* variables stored in the XpmAttributes structure */
     Visual *visual;
@@ -2291,26 +2151,12 @@ error:
 }
 
 static int
-ParseAndPutPixels(
-#ifdef FOR_MSW
-		  dc,
-#endif
-		  data, width, height, ncolors, cpp, colorTable, hashtable,
-		  image, image_pixels, shapeimage, shape_pixels)
-#ifdef FOR_MSW
-    Display *dc;
-#endif
-    xpmData *data;
-    unsigned int width;
-    unsigned int height;
-    unsigned int ncolors;
-    unsigned int cpp;
-    XpmColor *colorTable;
-    xpmHashTable *hashtable;
-    XImage *image;
-    Pixel *image_pixels;
-    XImage *shapeimage;
-    Pixel *shape_pixels;
+ParseAndPutPixels(MSW_DISPLAY_ARG xpmData *data,
+		  unsigned int width, unsigned int height,
+		  unsigned int ncolors, unsigned int cpp,
+		  XpmColor *colorTable, xpmHashTable *hashtable,
+		  XImage *image, Pixel *image_pixels, XImage *shapeimage,
+		  Pixel *shape_pixels)
 {
     unsigned int a, x, y;
 
@@ -2328,7 +2174,7 @@ ParseAndPutPixels(
 		shapedc = CreateCompatibleDC(*dc);
 		sobm = SelectObject(shapedc, shapeimage->bitmap);
 	    } else {
-	        shapedc = NULL;
+		shapedc = NULL;
 	    }
 	    obm = SelectObject(*dc, image->bitmap);
 #endif
@@ -2361,7 +2207,7 @@ ParseAndPutPixels(
 	    }
 #ifdef FOR_MSW
 	    if ( shapedc ) {
-	        SelectObject(shapedc, sobm);
+		SelectObject(shapedc, sobm);
 		DeleteDC(shapedc);
 	    }
 	    SelectObject(*dc, obm);

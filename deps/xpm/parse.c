@@ -41,10 +41,10 @@
 #include "XpmI.h"
 #include <ctype.h>
 
-LFUNC(ParsePixels, int, (xpmData *data, unsigned int width,
+static int ParsePixels(xpmData *data, unsigned int width,
 			 unsigned int height, unsigned int ncolors,
 			 unsigned int cpp, XpmColor *colorTable,
-			 xpmHashTable *hashtable, unsigned int **pixels));
+			 xpmHashTable *hashtable, unsigned int **pixels);
 
 char *xpmColorKeys[] = {
     "s",				/* key #1: symbol */
@@ -602,10 +602,7 @@ xpmParseExtensions(data, extensions, nextensions)
  * in an an XpmImage structure which is returned.
  */
 int
-xpmParseData(data, image, info)
-    xpmData *data;
-    XpmImage *image;
-    XpmInfo *info;
+xpmParseData(xpmData* data, XpmImage* image, XpmInfo* info)
 {
     /* variables to return */
     unsigned int width, height, ncolors, cpp;
@@ -680,7 +677,6 @@ xpmParseData(data, image, info)
      */
     if (USE_HASHTABLE)
 	xpmHashTableFree(&hashtable);
-
     if (ErrorStatus != XpmSuccess)
 	RETURN(ErrorStatus);
 

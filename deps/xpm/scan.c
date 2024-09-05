@@ -67,45 +67,45 @@ typedef struct {
     unsigned int mask_pixel;		/* whether there is or not */
 }      PixelsMap;
 
-LFUNC(storePixel, int, (Pixel pixel, PixelsMap *pmap,
-			unsigned int *index_return));
+static int storePixel(Pixel pixel, PixelsMap *pmap,
+			unsigned int *index_return);
 
-LFUNC(storeMaskPixel, int, (Pixel pixel, PixelsMap *pmap,
-			    unsigned int *index_return));
+static int storeMaskPixel(Pixel pixel, PixelsMap *pmap,
+			    unsigned int *index_return);
 
 #ifndef FOR_MSW
 # ifndef AMIGA
-LFUNC(GetImagePixels, int, (XImage *image, unsigned int width,
-			    unsigned int height, PixelsMap *pmap));
+static int GetImagePixels(XImage *image, unsigned int width,
+			    unsigned int height, PixelsMap *pmap);
 
-LFUNC(GetImagePixels32, int, (XImage *image, unsigned int width,
-			      unsigned int height, PixelsMap *pmap));
+static int GetImagePixels32(XImage *image, unsigned int width,
+			      unsigned int height, PixelsMap *pmap);
 
-LFUNC(GetImagePixels16, int, (XImage *image, unsigned int width,
-			      unsigned int height, PixelsMap *pmap));
+static int GetImagePixels16(XImage *image, unsigned int width,
+			      unsigned int height, PixelsMap *pmap);
 
-LFUNC(GetImagePixels8, int, (XImage *image, unsigned int width,
-			     unsigned int height, PixelsMap *pmap));
+static int GetImagePixels8(XImage *image, unsigned int width,
+			     unsigned int height, PixelsMap *pmap);
 
-LFUNC(GetImagePixels1, int, (XImage *image, unsigned int width,
-			     unsigned int height, PixelsMap *pmap,
-			     int (*storeFunc) ()));
+static int GetImagePixels1(XImage *image, unsigned int width,
+			   unsigned int height, PixelsMap *pmap,
+			   int (*storeFunc) ());
 # else /* AMIGA */
-LFUNC(AGetImagePixels, int, (XImage *image, unsigned int width,
-			     unsigned int height, PixelsMap *pmap,
-			     int (*storeFunc) ()));
+static int AGetImagePixels(XImage *image, unsigned int width,
+			   unsigned int height, PixelsMap *pmap,
+			   int (*storeFunc) ());
 # endif/* AMIGA */
 #else  /* ndef FOR_MSW */
-LFUNC(MSWGetImagePixels, int, (Display *d, XImage *image, unsigned int width,
-			       unsigned int height, PixelsMap *pmap,
-			       int (*storeFunc) ()));
+static int MSWGetImagePixels(Display *d, XImage *image, unsigned int width,
+			     unsigned int height, PixelsMap *pmap,
+			     int (*storeFunc) ());
 #endif
-LFUNC(ScanTransparentColor, int, (XpmColor *color, unsigned int cpp,
-				  XpmAttributes *attributes));
+static int ScanTransparentColor(XpmColor *color, unsigned int cpp,
+				  XpmAttributes *attributes);
 
-LFUNC(ScanOtherColors, int, (Display *display, XpmColor *colors, int ncolors,
+static int ScanOtherColors(Display *display, XpmColor *colors, int ncolors,
 			     Pixel *pixels, unsigned int mask,
-			     unsigned int cpp, XpmAttributes *attributes));
+			     unsigned int cpp, XpmAttributes *attributes);
 
 /*
  * This function stores the given pixel in the given arrays which are grown

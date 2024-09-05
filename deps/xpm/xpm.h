@@ -84,16 +84,6 @@ typedef unsigned long Pixel;	/* Index into colormap */
 # define PIXEL_ALREADY_TYPEDEFED
 #endif
 
-/* make sure we know whether function prototypes are needed or not */
-#ifndef NeedFunctionPrototypes
-# if defined(__STDC__) || defined(__cplusplus) || defined(c_plusplus)
-#  define NeedFunctionPrototypes 1
-# else
-#  define NeedFunctionPrototypes 0
-# endif
-#endif
-
-
 /* Return ErrorStatus codes:
  * null     if full success
  * positive if partial success
@@ -149,23 +139,19 @@ typedef struct {
 }      XpmInfo;
 
 typedef int (*XpmAllocColorFunc)(
-#if NeedFunctionPrototypes
     Display*			/* display */,
     Colormap			/* colormap */,
     char*			/* colorname */,
     XColor*			/* xcolor */,
     void*			/* closure */
-#endif
 );
 
 typedef int (*XpmFreeColorsFunc)(
-#if NeedFunctionPrototypes
     Display*			/* display */,
     Colormap			/* colormap */,
     Pixel*			/* pixels */,
     int				/* npixels */,
     void*			/* closure */
-#endif
 );
 
 typedef struct {
@@ -216,7 +202,7 @@ typedef struct {
     int nalloc_pixels;			/* Returns the number of alloc'ed
 					   color pixels */
 
-    Bool alloc_close_colors;    	/* Specify whether close colors should
+    Bool alloc_close_colors;		/* Specify whether close colors should
 					   be allocated using XAllocColor
 					   or not */
     int bitmap_format;			/* Specify the format of 1bit depth
@@ -283,20 +269,9 @@ typedef struct {
 #define XPM_MONO	2
 #define XPM_GREY4	3
 #define XPM_GRAY4	3
-#define XPM_GREY 	4
-#define XPM_GRAY 	4
+#define XPM_GREY	4
+#define XPM_GRAY	4
 #define XPM_COLOR	5
-
-
-/* macros for forward declarations of functions with prototypes */
-#if NeedFunctionPrototypes
-#define FUNC(f, t, p) extern t f p
-#define LFUNC(f, t, p) static t f p
-#else
-#define FUNC(f, t, p) extern t f()
-#define LFUNC(f, t, p) static t f()
-#endif
-
 
 /*
  * functions declarations
@@ -310,153 +285,153 @@ extern "C" {
 /* Same for Amiga! */
 
 #if !defined(FOR_MSW) && !defined(AMIGA)
-    FUNC(XpmCreatePixmapFromData, int, (Display *display,
+    extern int XpmCreatePixmapFromData(Display *display,
 					Drawable d,
 					char **data,
 					Pixmap *pixmap_return,
 					Pixmap *shapemask_return,
-					XpmAttributes *attributes));
+					XpmAttributes *attributes);
 
-    FUNC(XpmCreateDataFromPixmap, int, (Display *display,
+    extern int XpmCreateDataFromPixmap(Display *display,
 					char ***data_return,
 					Pixmap pixmap,
 					Pixmap shapemask,
-					XpmAttributes *attributes));
+					XpmAttributes *attributes);
 
-    FUNC(XpmReadFileToPixmap, int, (Display *display,
+    extern int XpmReadFileToPixmap(Display *display,
 				    Drawable d,
 				    char *filename,
 				    Pixmap *pixmap_return,
 				    Pixmap *shapemask_return,
-				    XpmAttributes *attributes));
+				    XpmAttributes *attributes);
 
-    FUNC(XpmWriteFileFromPixmap, int, (Display *display,
+    extern int XpmWriteFileFromPixmap(Display *display,
 				       char *filename,
 				       Pixmap pixmap,
 				       Pixmap shapemask,
-				       XpmAttributes *attributes));
+				       XpmAttributes *attributes);
 #endif
 
-    FUNC(XpmCreateImageFromData, int, (Display *display,
+    extern int XpmCreateImageFromData(Display *display,
 				       char **data,
 				       XImage **image_return,
 				       XImage **shapemask_return,
-				       XpmAttributes *attributes));
+				       XpmAttributes *attributes);
 
-    FUNC(XpmCreateDataFromImage, int, (Display *display,
+    extern int XpmCreateDataFromImage(Display *display,
 				       char ***data_return,
 				       XImage *image,
 				       XImage *shapeimage,
-				       XpmAttributes *attributes));
+				       XpmAttributes *attributes);
 
-    FUNC(XpmReadFileToImage, int, (Display *display,
+    extern int XpmReadFileToImage(Display *display,
 				   char *filename,
 				   XImage **image_return,
 				   XImage **shapeimage_return,
-				   XpmAttributes *attributes));
+				   XpmAttributes *attributes);
 
-    FUNC(XpmWriteFileFromImage, int, (Display *display,
+    extern int XpmWriteFileFromImage(Display *display,
 				      char *filename,
 				      XImage *image,
 				      XImage *shapeimage,
-				      XpmAttributes *attributes));
+				      XpmAttributes *attributes);
 
-    FUNC(XpmCreateImageFromBuffer, int, (Display *display,
+    extern int XpmCreateImageFromBuffer(Display *display,
 					 char *buffer,
 					 XImage **image_return,
 					 XImage **shapemask_return,
-					 XpmAttributes *attributes));
+					 XpmAttributes *attributes);
 #if !defined(FOR_MSW) && !defined(AMIGA)
-    FUNC(XpmCreatePixmapFromBuffer, int, (Display *display,
+    extern int XpmCreatePixmapFromBuffer(Display *display,
 					  Drawable d,
 					  char *buffer,
 					  Pixmap *pixmap_return,
 					  Pixmap *shapemask_return,
-					  XpmAttributes *attributes));
+					  XpmAttributes *attributes);
 
-    FUNC(XpmCreateBufferFromImage, int, (Display *display,
+    extern int XpmCreateBufferFromImage(Display *display,
 					 char **buffer_return,
 					 XImage *image,
 					 XImage *shapeimage,
-					 XpmAttributes *attributes));
+					 XpmAttributes *attributes);
 
-    FUNC(XpmCreateBufferFromPixmap, int, (Display *display,
+    extern int XpmCreateBufferFromPixmap(Display *display,
 					  char **buffer_return,
 					  Pixmap pixmap,
 					  Pixmap shapemask,
-					  XpmAttributes *attributes));
+					  XpmAttributes *attributes);
 #endif
-    FUNC(XpmReadFileToBuffer, int, (char *filename, char **buffer_return));
-    FUNC(XpmWriteFileFromBuffer, int, (char *filename, char *buffer));
+    extern int XpmReadFileToBuffer(char *filename, char **buffer_return);
+    extern int XpmWriteFileFromBuffer(char *filename, char *buffer);
 
-    FUNC(XpmReadFileToData, int, (char *filename, char ***data_return));
-    FUNC(XpmWriteFileFromData, int, (char *filename, char **data));
+    extern int XpmReadFileToData(char *filename, char ***data_return);
+    extern int XpmWriteFileFromData(char *filename, char **data);
 
-    FUNC(XpmAttributesSize, int, ());
-    FUNC(XpmFreeAttributes, void, (XpmAttributes *attributes));
-    FUNC(XpmFreeExtensions, void, (XpmExtension *extensions,
-				   int nextensions));
+    extern int XpmAttributesSize();
+    extern void XpmFreeAttributes(XpmAttributes *attributes);
+    extern void XpmFreeExtensions(XpmExtension *extensions,
+				   int nextensions);
 
-    FUNC(XpmFreeXpmImage, void, (XpmImage *image));
-    FUNC(XpmFreeXpmInfo, void, (XpmInfo *info));
-    FUNC(XpmGetErrorString, char *, (int errcode));
-    FUNC(XpmLibraryVersion, int, ());
+    extern void XpmFreeXpmImage(XpmImage *image);
+    extern void XpmFreeXpmInfo(XpmInfo *info);
+    extern char * XpmGetErrorString(int errcode);
+    extern int XpmLibraryVersion();
 
     /* XpmImage functions */
-    FUNC(XpmReadFileToXpmImage, int, (char *filename,
+    extern int XpmReadFileToXpmImage(char *filename,
 				      XpmImage *image,
-				      XpmInfo *info));
+				      XpmInfo *info);
 
-    FUNC(XpmWriteFileFromXpmImage, int, (char *filename,
+    extern int XpmWriteFileFromXpmImage(char *filename,
 					 XpmImage *image,
-					 XpmInfo *info));
+					 XpmInfo *info);
 #if !defined(FOR_MSW) && !defined(AMIGA)
-    FUNC(XpmCreatePixmapFromXpmImage, int, (Display *display,
+    extern int XpmCreatePixmapFromXpmImage(Display *display,
 					    Drawable d,
 					    XpmImage *image,
 					    Pixmap *pixmap_return,
 					    Pixmap *shapemask_return,
-					    XpmAttributes *attributes));
+					    XpmAttributes *attributes);
 #endif
-    FUNC(XpmCreateImageFromXpmImage, int, (Display *display,
+    extern int XpmCreateImageFromXpmImage(Display *display,
 					   XpmImage *image,
 					   XImage **image_return,
 					   XImage **shapeimage_return,
-					   XpmAttributes *attributes));
+					   XpmAttributes *attributes);
 
-    FUNC(XpmCreateXpmImageFromImage, int, (Display *display,
+    extern int XpmCreateXpmImageFromImage(Display *display,
 					   XImage *image,
 					   XImage *shapeimage,
 					   XpmImage *xpmimage,
-					   XpmAttributes *attributes));
+					   XpmAttributes *attributes);
 #if !defined(FOR_MSW) && !defined(AMIGA)
-    FUNC(XpmCreateXpmImageFromPixmap, int, (Display *display,
+    extern int XpmCreateXpmImageFromPixmap(Display *display,
 					    Pixmap pixmap,
 					    Pixmap shapemask,
 					    XpmImage *xpmimage,
-					    XpmAttributes *attributes));
+					    XpmAttributes *attributes);
 #endif
-    FUNC(XpmCreateDataFromXpmImage, int, (char ***data_return,
+    extern int XpmCreateDataFromXpmImage(char ***data_return,
 					  XpmImage *image,
-					  XpmInfo *info));
+					  XpmInfo *info);
 
-    FUNC(XpmCreateXpmImageFromData, int, (char **data,
+    extern int XpmCreateXpmImageFromData(char **data,
 					  XpmImage *image,
-					  XpmInfo *info));
+					  XpmInfo *info);
 
-    FUNC(XpmCreateXpmImageFromBuffer, int, (char *buffer,
+    extern int XpmCreateXpmImageFromBuffer(char *buffer,
 					    XpmImage *image,
-					    XpmInfo *info));
+					    XpmInfo *info);
 
-    FUNC(XpmCreateBufferFromXpmImage, int, (char **buffer_return,
+    extern int XpmCreateBufferFromXpmImage(char **buffer_return,
 					    XpmImage *image,
-					    XpmInfo *info));
+					    XpmInfo *info);
 
-    FUNC(XpmGetParseError, int, (char *filename,
+    extern int XpmGetParseError(char *filename,
 				 int *linenum_return,
-				 int *charnum_return));
+				 int *charnum_return);
 
-    FUNC(XpmFree, void, (void *ptr));
+    extern void XpmFree(void *ptr);
 
 #ifdef __cplusplus
 } /* for C++ V2.0 */
