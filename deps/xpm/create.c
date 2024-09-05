@@ -49,9 +49,9 @@
 static int xpmVisualType(Visual *visual);
 
 static int AllocColor(Display *display, Colormap colormap,
-			char *colorname, XColor *xcolor, void *closure);
+		      char *colorname, XColor *xcolor, void *closure);
 static int FreeColors(Display *display, Colormap colormap,
-			Pixel *pixels, int n, void *closure);
+		      Pixel *pixels, int n, void *closure);
 
 #ifndef FOR_MSW
 static int SetCloseColor(Display *display, Colormap colormap,
@@ -213,14 +213,14 @@ typedef struct {
  *   call XAllocColor and return 0 if failure, positive otherwise
  */
 static int
-AllocColor(Display *display, Colormap *colormap, char *colorname,
+AllocColor(Display *display, Colormap colormap, char *colorname,
 	   XColor *xcolor, void *closure)
 {
     int status;
     if (colorname)
-	if (!XParseColor(display, colormap, colorname, xcolor))
+	if (!XParseColor(display, &colormap, colorname, xcolor))
 	    return -1;
-    status = XAllocColor(display, colormap, xcolor);
+    status = XAllocColor(display, &colormap, xcolor);
     return status != 0 ? 1 : 0;
 }
 
