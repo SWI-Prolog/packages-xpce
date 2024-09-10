@@ -50,7 +50,6 @@
            , member/2
            , random/3
            ]).
-:- license(gplv2).
 
 :- op(0, fx, l).
 
