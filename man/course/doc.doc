@@ -60,12 +60,12 @@ the XPCE/Prolog drawing tool.
 \vfil
 
 \noindent
-An electronic version of this manual is available using anonymous ftp
-to swi.psy.uva.nl (145.18.114.17), directory /pub/xpce/doc/course.
-\vfil
-\noindent
-Premission is granted to make and distribute verbatim copies of this
-manual provided this permission notice is preserved on all copies.
+\includegraphics[width=4cm]{figs/by-sa}\\[0mm]
+This work is licensed under the Creative Commons Attribution-ShareAlike
+3.0 Unported License. To view a copy of this license, visit
+\url{http://creativecommons.org/licenses/by-sa/3.0/} or send a letter to
+Creative Commons, 444 Castro Street, Suite 900, Mountain View,
+California, 94041, USA.
 \end{titlepage}
 
 {\parskip 0pt
