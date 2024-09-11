@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        wielemak@science.uva.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2011-2019, University of Amsterdam
+    Copyright (c)  2011-2024, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -685,6 +686,10 @@ install_pl2xpce(void)
 		      pl_pce_open, 0);
   PL_register_foreign("pce_postscript_stream", 1,
 		      pl_pce_postscript_stream, 0);
+
+#ifndef __WINDOWS__
+  PL_license("lgplv2+", "xpce (drag&drop library by Paul Sheer)");
+#endif
 
   install_pcecall();
 }

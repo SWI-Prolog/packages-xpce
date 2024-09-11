@@ -1,20 +1,29 @@
-/* xdnd.c, xdnd.h - C program library for handling the Xdnd protocol
-   Copyright (C) 1998 Paul Sheer
+/*
+   xdnd.c, xdnd.h - C program library for handling the Xdnd protocol
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
-   (at your option) any later version.
+   Copyright (C) 1998  Paul Sheer
 
-   This program is distributed in the hope that it will be useful,
+   This library is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Library General Public
+   License as published by the Free Software Foundation; either
+   version 2 of the License, or (at your option) any later version.
+
+   This library is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Library General Public License for more details.
 
-   You should have received a copy of the GNU Lesser General Public
-   License along with this library; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
- */
+   You should have received a copy of the GNU Library General Public
+   License along with this library; if not, write to the Free
+   Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111 USA.
+
+   http://www.cco.caltech.edu/~jafl/xdnd/
+
+   Further info can also be obtained by emailing the author at,
+       psheer@obsidian.co.za
+
+   Released 1998-08-07
+*/
 
 #ifndef _X_DND_H
 #define _X_DND_H
