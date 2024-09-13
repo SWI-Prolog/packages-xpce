@@ -254,7 +254,8 @@ initialise(B) :->
 
 resize(B) :->
     get(B?visible, width, W),
-    send(B, tab_stops, vector(W-80)),
+    get(B?font, ex, Ex),
+    send(B, tab_stops, vector(W-10*Ex)),
     send_super(B, resize).
 
 load_profile(B, Nodes:prolog) :->
