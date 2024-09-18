@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2024, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -35,6 +36,7 @@
 :- module(emacs_hit_list, []).
 :- use_module(library(pce)).
 :- use_module(library(debug)).
+:- autoload(library(emacs/swi_prolog), [message_ide/1]).
 :- require([ default/3
            ]).
 
@@ -64,14 +66,23 @@ initialise(L, Label:[string]) :->
     send(new(D, dialog), below, B),
     send(D, pen, 0),
     send(D, gap, size(10, 5)),
-    send(D, append, button(quit, message(L, destroy))),
-    send(D, append, label(reporter), right).
+    send(D, append,
+         button(close, message(L, destroy))),
+    send(D, append,
+         button(close_and_disable, message(L, close_this_session)), right),
+    send(D, append,
+         label(reporter), right).
 
 
 unlink(L) :->
     "Remove fragments from the buffers"::
     send(L, clear),
     send_super(L, unlink).
+
+close_this_session(L) :->
+    "Close and disable for this session"::
+    message_ide(false),
+    send(L, destroy).
 
 open(L) :->
     "Open, if possible as a transient window for PceEmacs"::

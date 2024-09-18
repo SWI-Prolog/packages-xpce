@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2011, University of Amsterdam
+    Copyright (c)  1985-2024, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -33,7 +34,9 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(swi_prolog_emacs_binding, []).
+:- module(swi_prolog_emacs_binding,
+          [ message_ide/1                 % +Bool
+          ]).
 :- use_module(library(pce)).
 :- require([ start_emacs/0
            ]).
@@ -54,6 +57,23 @@ controlled by the Prolog flag =message_ide=.
 */
 
 :- create_prolog_flag(message_ide, true, [keep(true)]).
+
+:- multifile message_ide_disabled/0.
+:- dynamic message_ide_disabled/0.
+
+%!  message_ide(+Bool)
+%
+%   Enable/disable the message IDE.  The message IDE can be disabled
+%   permanently by setting the `message_ide` flag to `false` in your
+%   `init.pl` file.
+
+message_ide(false) =>
+    (   message_ide_disabled
+    ->  true
+    ;   asserta(message_ide_disabled)
+    ).
+message_ide(true) =>
+    retractall(message_ide_disabled).
 
 
                  /*******************************
@@ -171,6 +191,7 @@ dlist(Codes, Tail, Codes, Tail).
 
 user:message_hook(Term, Level, Lines) :-
     current_prolog_flag(message_ide, true),
+    \+ message_ide_disabled,
     ide_message(Term, Level, Lines),
     fail.
 
