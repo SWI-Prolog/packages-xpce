@@ -502,7 +502,7 @@ indent_close_bracket_line(E, Brackets:[name], Base:[int]) :->
     ->  OpenPos >= Base
     ;   true
     ),
-    (   get(E, argument_indent, OpenPos, Col)
+    (   get(E, argument_indent, OpenPos, OpenPos, Col)
     ->  true
     ;   get(E, column, OpenPos, Col)
     ),
@@ -543,7 +543,7 @@ indent_expression_line(E, Brackets:[name], Base:[int]) :->
         ),
         (   send(E, looking_at, '[,|]')     % line starts with , or |
         ->  get(E, column, OpenPos, Col)
-        ;   get(E, argument_indent, OpenPos, StartCol)
+        ;   get(E, argument_indent, OpenPos, Base, StartCol)
         ->  get(E, parameter_indentation, PI),
             Col is StartCol+PI
         ;   get(TB, scan, OpenPos, line, 0, end, EOL),
@@ -554,14 +554,17 @@ indent_expression_line(E, Brackets:[name], Base:[int]) :->
     !.
 
 
-argument_indent(E, OpenPos:int, StartCol:int) :<-
+argument_indent(E, OpenPos:int, After:[int], StartCol:int) :<-
     "Get column for indented arguments from OpenPos"::
     get(E, text_buffer, TB),
     get(TB, scan, OpenPos, line, 0, end, EOL),
     get(TB, skip_comment, OpenPos+1, EOL, P1),
     P1 == EOL,
     get(E, scan, OpenPos, term, -1, start, SOT),
-    SOT > OpenPos,
+    (   After \== @default
+    ->  SOT > After
+    ;   true
+    ),
     get(E, column, SOT, StartCol).
 
 
