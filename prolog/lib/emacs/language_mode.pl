@@ -561,6 +561,7 @@ argument_indent(E, OpenPos:int, StartCol:int) :<-
     get(TB, skip_comment, OpenPos+1, EOL, P1),
     P1 == EOL,
     get(E, scan, OpenPos, term, -1, start, SOT),
+    SOT > OpenPos,
     get(E, column, SOT, StartCol).
 
 
