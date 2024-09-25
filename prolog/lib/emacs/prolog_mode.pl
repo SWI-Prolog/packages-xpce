@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2022, University of Amsterdam
+    Copyright (c)  1985-2024, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
                               SWI-Prolog Solutions b.v.
@@ -216,6 +216,7 @@ variable(warnings,         int := 0,     get, "Number of warnings").
 variable(errors,           int := 0,     get, "Number of errors").
 variable(body_indentation, int,          both, "Indentation for body-goals").
 variable(cond_indentation, int,          get, "Indent step for conditional").
+variable(dict_indentation, int,		 get, "Indent value on next line").
 variable(quasiquotation_syntax,
                            name*,        both, "Default quasiquotation syntax").
 variable(dependency_directive,
@@ -230,6 +231,7 @@ variable(dependency_directive,
 class_variable(quasiquotation_syntax, name*, @nil).
 class_variable(body_indentation,      int,   4).
 class_variable(cond_indentation,      int,   4).
+class_variable(dict_indentation,      int,   2).
 class_variable(indent_tabs,           bool,  @off,
                "Use tabs for indentation").
 
@@ -348,6 +350,7 @@ indent_line(E) :->
     (   send(E, indent_comment_line),                       W = comment
     ;   send(E, indent_close_bracket_line, ')}]', Base),    W = close_bracket
     ;   send(E, indent_if_then_else),                       W = if_then_else
+    ;   send(E, indent_dict_value_line, Base),		    W = dict_value
     ;   send(E, indent_expression_line, ')}]', Base),       W = expression
     ;   send(E, indent_clause_line),                        W = clause
     ;   get(E, body_indentation, Indent),                   W = body,
@@ -504,6 +507,25 @@ indent_clause(E) :->
     send(E, forward_char, Size),
     send(E, electric_caret, Start).
 
+indent_dict_value_line(E, Base:[int]) :->
+    "Indent current line if it is a dict value"::
+    get(E, text_buffer, TB),
+    pce_catch_error(mismatched_bracket,
+                    get(TB, matching_bracket, E?caret,
+                        0'}, OpenPos)),
+    (   Base \== @default
+    ->  OpenPos >= Base
+    ;   true
+    ),
+    get(TB, scan, OpenPos, line, 0, end, EOL),
+    get(TB, skip_comment, OpenPos+1, EOL, P1),
+    send(E, looking_at, '\\w+:', P1),		% is a dict
+    get(TB, scan, E?caret, line, 0, start, SOL),
+    get(TB, skip_comment, SOL, Base, SOK),
+    send(E, looking_at, '\\w+:', SOK+1, Base),
+    get(E, column, P1, ColKey),
+    get(E, dict_indentation, Indent),
+    send(E, align, ColKey+Indent).
 
 fill_paragraph(M, Justify:[int]) :->
     "Fill paragraph or indent clause"::
