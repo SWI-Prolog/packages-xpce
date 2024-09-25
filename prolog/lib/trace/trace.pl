@@ -146,10 +146,21 @@ traceall :-
 %
 %   Toplevel of the tracer interception.  Runs in debugged thread.
 
+:- dynamic
+    tracing_thread/1.
+
 intercept(Port, Frame, CHP, Action) :-
     with_access_user(intercept_(Port, Frame, CHP, Action)).
 
 intercept_(Port, Frame, CHP, Action) :-
+    thread_self_id(Self),
+    wait_if_tracing_other_thread(Self),
+    setup_call_cleanup(
+        asserta(tracing_thread(Self), Ref),
+        intercept__(Port, Frame, CHP, Action),
+        erase(Ref)).
+
+intercept__(Port, Frame, CHP, Action) :-
     prolog_frame_attribute(Frame, predicate_indicator, PI),
     debug(gtrace(intercept),
           '*** do_intercept ~w, ~w, ~w: ~q ...', [Port, Frame, CHP, PI]),
@@ -927,5 +938,27 @@ clustered_binding([Name=Val|BR], BT, Value, [Name|NT]) :-
 clustered_binding([B|BR], [B|BT], Value, C) :-
     clustered_binding(BR, BT, Value, C).
 
+
+wait_if_tracing_other_thread(Self) :-
+    not_tracing_other_thread(Self),
+    !.
+wait_if_tracing_other_thread(Self) :-
+    tracing_thread(Tracing),
+    !,
+    print_message(informational, gui_tracer(blocked(Self, Tracing))),
+    thread_wait(not_tracing_other_thread(Self),
+                [ wait_preds([tracing_thread/1])
+                ]).
+wait_if_tracing_other_thread(_).
+
+not_tracing_other_thread(Self) :-
+    \+ ( tracing_thread(Tracing),
+         Tracing \== Self ).
+
+:- multifile
+    prolog:message//1.
+
+prolog:message(gui_tracer(blocked(Self, Tracing))) -->
+    [ 'GUI tracer: blocking thread ~p while tracing thread ~p'-[Self, Tracing] ].
 
 :- create_prolog_flag(gui_tracer, true, []).
