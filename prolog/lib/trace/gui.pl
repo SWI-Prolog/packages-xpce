@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2001-2022, University of Amsterdam
+    Copyright (c)  2001-2024, University of Amsterdam
                               VU University Amsterdam
                               SWI-Prolog Solutions b.v.
     All rights reserved.
@@ -36,6 +36,7 @@
 
 :- module(prolog_gui,
           [ prolog_tracer/2,            % +Thread, -GUI
+            tracer_gui/3,               % ?Thread, ?Break, ?GUI
             send_tracer/2,              % +Thread, :Goal
             send_if_tracer/2,           % +Thread, :Goal
             get_tracer/3,               % +Thread, :Goal, -Result
@@ -45,7 +46,9 @@
             in_debug_thread/2,          % +ObjOrThread, :Goal
             thread_debug_queue/2,       % +Thread, -Queue
             prolog_frame_attribute/4,   % +GUI, +Frame, +Attr, -Value
-            prolog_choice_attribute/4   % +GUI, +Choice, +Attr, -Value
+            prolog_choice_attribute/4,  % +GUI, +Choice, +Attr, -Value
+            notify_gui/0,
+            prolog_tracer/3             % +Thread, -Ref, +Create
           ]).
 :- use_module(library(pce)).
 :- use_module(library(lists)).
@@ -146,7 +149,16 @@ resource(Name,  image,  image(XPM)) :-
                  *******************************/
 
 :- dynamic
-    gui/3.                          % +Thread, +BreakLevel, -Gui
+    gui/3,                          % +Thread, +BreakLevel, -Gui
+    notify/0.                       % see
+
+%!  notify_gui
+%
+%   Notify changes.  Currently used for blocked background threads.
+
+notify_gui :-
+    asserta(notify, Ref),
+    erase(Ref).
 
 %!  prolog_tracer(+Thread, -Ref) is det.
 %!  prolog_tracer(+Thread, -Ref, +Create) is semidet.
@@ -176,6 +188,13 @@ prolog_tracer(Thread, Ref, Create) :-
         start_emacs,		% see (*)
         send_pce(send(new(Ref, prolog_debugger(Level, Thread)), open))
     ).
+
+%!  tracer_gui(?Thread, ?BreakLevel, ?GUI) is nondet.
+%
+%   True when GUI (an xpce object) is tracing Thread at BreakLevel.
+
+tracer_gui(Thread, BreakLevel, GUI) :-
+    gui(Thread, BreakLevel, GUI).
 
 %!  break_level(-Level) is det.
 %

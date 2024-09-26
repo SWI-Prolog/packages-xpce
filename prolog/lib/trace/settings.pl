@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2013, University of Amsterdam
+    Copyright (c)  2001-2024, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -73,6 +74,9 @@ setting(auto_close,
 setting(use_pce_emacs,
         [true, false],
         'Use Built-in PceEmacs editor').
+setting(other_threads,
+        [trace, nodebug, block],
+        'How to handle other threads that trap the debugger?').
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 trace_setting/0

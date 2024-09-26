@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2001-2016, University of Amsterdam
+    Copyright (c)  2001-2024, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -154,11 +155,14 @@ intercept(Port, Frame, CHP, Action) :-
 
 intercept_(Port, Frame, CHP, Action) :-
     thread_self_id(Self),
-    wait_if_tracing_other_thread(Self),
-    setup_call_cleanup(
-        asserta(tracing_thread(Self), Ref),
-        intercept__(Port, Frame, CHP, Action),
-        erase(Ref)).
+    wait_if_tracing_other_thread(Self, WaitAction),
+    (   nonvar(WaitAction)
+    ->  Action = WaitAction
+    ;   setup_call_cleanup(
+            asserta(tracing_thread(Self), Ref),
+            intercept__(Port, Frame, CHP, Action),
+            erase(Ref))
+    ).
 
 intercept__(Port, Frame, CHP, Action) :-
     prolog_frame_attribute(Frame, predicate_indicator, PI),
@@ -938,27 +942,93 @@ clustered_binding([Name=Val|BR], BT, Value, [Name|NT]) :-
 clustered_binding([B|BR], [B|BT], Value, C) :-
     clustered_binding(BR, BT, Value, C).
 
+		 /*******************************
+		 *    DEAL WITH OTHER THREADS	*
+		 *******************************/
 
-wait_if_tracing_other_thread(Self) :-
-    not_tracing_other_thread(Self),
+%!  wait_if_tracing_other_thread(+Self, -Action) is det.
+
+wait_if_tracing_other_thread(Self, _Trace) :-
+    prolog_tracer(Self, _GUI, false),   % we already have a tracer.
     !.
-wait_if_tracing_other_thread(Self) :-
-    tracing_thread(Tracing),
-    !,
-    print_message(informational, gui_tracer(blocked(Self, Tracing))),
-    thread_wait(not_tracing_other_thread(Self),
-                [ wait_preds([tracing_thread/1])
-                ]).
-wait_if_tracing_other_thread(_).
+wait_if_tracing_other_thread(Self, Action) :-
+    tracing_other_thread(Self, Tracing),
+    trace_setting(other_threads, OnOtherThreads),
+    (   OnOtherThreads == nodebug
+    ->  print_message(informational, gui_tracer(nodebug(Self, Tracing))),
+        Action = nodebug
+    ;   OnOtherThreads == trace
+    ->  print_message(informational, gui_tracer(trace(Self, Tracing)))
+    ;   print_message(informational, gui_tracer(blocked(Self, Tracing))),
+        thread_wait(not_blocking(Self),
+                    [ module(prolog_gui),
+                      wait_preds([ gui/3,
+                                   +(notify/0)
+                                 ])
+                    ]),
+        unblocked_action(Action),
+        print_message(informational, gui_tracer(unblocked(Self, Tracing, Action)))
+    ).
+wait_if_tracing_other_thread(_, _).
 
-not_tracing_other_thread(Self) :-
-    \+ ( tracing_thread(Tracing),
-         Tracing \== Self ).
+tracing_other_thread(Me, Other) :-
+    tracer_gui(Other, _Level, _Obj),
+    Other \== Me.
+
+not_blocking(Me) :-
+    \+ tracing_other_thread(Me, _),
+    !.
+not_blocking(_Me) :-
+    trace_setting(other_threads, OnOtherThreads),
+    OnOtherThreads \== block.
+
+unblocked_action(nodebug) :-
+    trace_setting(other_threads, nodebug),
+    !.
+unblocked_action(_Trace).
+
+
+		 /*******************************
+		 *           MESSAGES		*
+		 *******************************/
 
 :- multifile
     prolog:message//1.
 
-prolog:message(gui_tracer(blocked(Self, Tracing))) -->
+:- dynamic
+    prev_message/2.
+
+prolog:message(gui_tracer(Msg)) -->
+    { hide_message(Msg) }.
+prolog:message(gui_tracer(Msg)) -->
+    message(Msg).
+
+hide_message(Msg) :-                    % avoid duplicate messages
+    arg(1, Msg, Thread),
+    (   prev_message(Thread, Msg)
+    ->  true
+    ;   retractall(prev_message(Thread,_)),
+        asserta(prev_message(Thread, Msg)),
+        fail
+    ).
+
+message(trace(Self, _Tracing)) -->
+    [ 'GUI tracer: started new tracer window for thread ~p.'-[Self], nl,
+      'Use "Tool/Settings/Other threads" for configuration.'
+    ].
+message(nodebug(Self, _Tracing)) -->
+    [ 'GUI tracer: thread ~p continues in nodebug mode'-[Self] ].
+message(blocked(Self, Tracing)) -->
     [ 'GUI tracer: blocking thread ~p while tracing thread ~p'-[Self, Tracing] ].
+message(unblocked(Self, _Tracing, Action)) -->
+    { var(Action) }, !,
+    [ 'GUI tracer: unblocking thread ~p for debugging'-[Self] ].
+message(unblocked(Self, _Tracing, nodebug)) -->
+    [ 'GUI tracer: continuing thread ~p in nodebug mode'-[Self] ].
+
+
+		 /*******************************
+		 *            REGISTER		*
+		 *******************************/
 
 :- create_prolog_flag(gui_tracer, true, []).

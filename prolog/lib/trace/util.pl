@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2001-2023, University of Amsterdam
+    Copyright (c)  2001-2024, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
                               SWI-Prolog Solutions b.v.
@@ -54,6 +54,8 @@
 :- autoload(library(readutil), [read_file_to_terms/3]).
 :- use_module(library(pce_config), []).
 
+:- autoload(gui, [notify_gui/0]).
+
 :- meta_predicate
     find_source(:, -, -).
 
@@ -80,6 +82,7 @@ setting(auto_raise,        true).       % automatically raise the frame
 setting(auto_close,        true).       % automatically raise the frame
 setting(console_actions,   false).      % map actions from the console
 setting(use_pce_emacs,     true).       % use PceEmacs editor
+setting(other_threads,     block).      % One of `trace`, `nodebug`, `block`
 
 trace_setting(Name, Value) :-
     setting(Name, Value).
@@ -102,7 +105,8 @@ trace_setting(Name, Old, New) :-
     clause(setting(Name, Old), true, Ref),
     !,
     erase(Ref),
-    assertz(setting(Name, New)).
+    assertz(setting(Name, New)),
+    notify_gui.
 trace_setting(Name, Old, _) :-
     setting(Name, Old).
 
