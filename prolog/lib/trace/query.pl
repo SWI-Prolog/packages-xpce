@@ -313,6 +313,9 @@ add_history(_, Text:name) :->
 user:message_hook('$aborted', _, _Lines) :-
     aborted,
     fail.
+user:message_hook(unwind(abort), _, _Lines) :-
+    aborted,
+    fail.
 
 aborted :-
     query_window(W),

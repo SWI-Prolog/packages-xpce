@@ -1446,6 +1446,9 @@ destroy_thread_debug_gui(Thread) :-
 user:message_hook('$aborted', _, _Lines) :-
     aborted,
     fail.
+user:message_hook(unwind(abort), _, _Lines) :-
+    aborted,
+    fail.
 user:message_hook(query(YesNo), _, _Lines) :-
     query_finished(YesNo),
     fail.

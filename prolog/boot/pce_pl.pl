@@ -66,7 +66,11 @@ property(runtime) :-
 :- dynamic
     user:message_hook/3.
 
-user:message_hook('$aborted', _Kind, _Lines) :-
+user:message_hook(Ex, _Kind, _Lines) :-
+    abort_exception(Ex),
     current_prolog_flag(xpce, true),
     pce:send(@(display), reset),
     fail.
+
+abort_exception('$aborted').
+abort_exception(unwind(abort)).

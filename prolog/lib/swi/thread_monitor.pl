@@ -434,6 +434,7 @@ report_status(TB, TS:thread_status) :->
 
 special_exception(error(_,_)).
 special_exception('$aborted').
+special_exception(unwind(abort)).
 
 :- pce_end_class(thread_browser).
 
