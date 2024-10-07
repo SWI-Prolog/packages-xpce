@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2001-2014, University of Amsterdam
+    Copyright (c)  2001-2024, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -38,6 +39,7 @@
             view_term/2                 % +Term, +Attributes
           ]).
 :- use_module(library(pce)).
+:- use_module(library(help_message)).
 :- require([ is_stream/1,
 	     current_blob/2,
 	     member/2,
@@ -58,6 +60,9 @@ This module implements an XPCE  widget   that  exploits  print_term/2 to
 display a Prolog term. The widget provides   buttons to control the most
 important options to control the output.
 */
+
+resource(pinned,        image, image('pinned.xpm')).
+resource(not_pinned,    image, image('pin.xpm')).
 
 %!  view_term(@Term) is det.
 %!  view_term(@Term, +Options) is det.
@@ -94,8 +99,7 @@ view_term(Term, Attributes0) :-
     merge_options(Attributes0, Defs, Attributes),
     tv(Term, Attributes).
 
-defaults([ view(@view_term),
-           clear(true),
+defaults([ clear(true),
            open(true),
            expose(false),
            write_options([ quoted(true),
@@ -107,7 +111,7 @@ defaults([ view(@view_term),
          ]).
 
 tv(Term,Opts) :-
-    option(view(V),Opts),
+    find_term_viewer(V, Opts),
     (option(clear(true),Opts)         -> send(V, clear)               ; true),
     (option(open(true),Opts)          -> send(V, open)                ; true),
     (option(expose(true),Opts)        -> send(V, expose)              ; true),
@@ -124,6 +128,21 @@ tv(Term,Opts) :-
     ;   true
     ).
 
+:- dynamic term_viewer/1 as volatile.
+
+%!  find_term_viewer(-V, +Options) is det.
+%
+%   True when V is the specified or an un-pinned viewer.
+
+find_term_viewer(V, Opts) :-
+    option(view(V), Opts),
+    !.
+find_term_viewer(V, _Opts) :-
+    term_viewer(V),
+    get(V, pinned, @off),
+    !.
+find_term_viewer(V, _Opts) :-
+    new(V, term_viewer).
 
 %!  emit_term(+Term, +Options) is det.
 %
@@ -198,18 +217,27 @@ print_clause_properties(Ref, Out) :-
                  *      CLASS TERM-VIEWER       *
                  *******************************/
 
-:- pce_global(@view_term, new(term_viewer)).
-
 :- pce_begin_class(term_viewer, frame,
                    "Pretty-print a Prolog term").
 
+variable(pinned, bool, get, "View is pinned").
+
 initialise(TV) :->
     send_super(TV, initialise),
+    send(TV, slot, pinned, @off),
     send(TV, append, new(TD, dialog)),
     send(new(view), below, TD),
-    send(TD, border, size(0,2)),
+    send(TD, border, size(5,2)),
+    send(TD, append, new(Pin, bitmap(image(resource(not_pinned))))),
+    send(Pin, name, pin),
+    get(@pce, convert, normal, font, Font),
+    get(Font, ascent, RefH),
+    send(Pin, reference, point(0, RefH)),
+    send(Pin, recogniser, click_gesture(left, '', single,
+                                        message(TV, toggle_pinned))),
+    send(Pin, help_message, tag, 'Pin to open next variable in new window'),
     send(TD, append, new(M, menu(options, toggle,
-                                 message(TV, update)))),
+                                 message(TV, update))), right),
     send(M, layout, horizontal),
     send_list(M, append,
               [ portray,
@@ -218,7 +246,12 @@ initialise(TV) :->
               ]),
     send(TD, append, int_item(max_depth, 100,
                               message(TV, update), 1),
-         right).
+         right),
+    assert(term_viewer(TV)).
+
+unlink(TV) :->
+    retractall(term_viewer(TV)),
+    send_super(TV, unlink).
 
 clear(TV) :->
     get(TV, member, view, View),
@@ -235,6 +268,21 @@ caret(TV, Caret:int) :->
 editable(TV, E:bool) :->
     get(TV, member, view, View),
     send(View, editable, E).
+
+toggle_pinned(TV) :->
+    get(TV, pinned, Pinned0),
+    get(Pinned0, negate, NewPinned),
+    send(TV, pinned, NewPinned).
+
+pinned(TV, Pinned:bool) :->
+    send(TV, slot, pinned, Pinned),
+    get(TV, member, dialog, D),
+    get(D, member, pin, BM),
+    (   Pinned == @off
+    ->  Image = not_pinned
+    ;   Image = pinned
+    ),
+    send(BM, image, image(resource(Image))).
 
 source_object(TV, Obj:object) :->
     send(TV, delete_hypers, source),
