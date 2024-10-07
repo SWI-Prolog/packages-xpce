@@ -44,8 +44,6 @@
              send_list/3
            ]).
 
-resource(pinned,        image, image('pinned.xpm')).
-resource(not_pinned,    image, image('pin.xpm')).
 resource(mode_x_icon,   image, image('32x32/doc_x.xpm')).
 
 
