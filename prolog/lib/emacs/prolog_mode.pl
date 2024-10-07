@@ -552,6 +552,85 @@ fill_comment(M,
     ;   true
     ).
 
+fill_comment_paragraph(M, Justify:justify=[bool|int], From:from=[int],
+                       Lead:lead=[char_array]) :->
+    "Handle auto-fill in comment"::
+    (   send(M, looking_at, '%[%!]\\s', From)
+    ->  send(M, fill_mode_line, From)
+    ;   send_super(M, fill_comment_paragraph(Justify, From, Lead))
+    ).
+
+fill_mode_line(M, From:int) :->
+    "Handle auto-fill in %! mode line"::
+    start_of_mode_line(M, From, Start),
+    end_of_mode_line(M, From, End),
+    get(M, text_buffer, TB),
+    new(EndF, fragment(TB, End, 0)),
+    unmode(M, Start, EndF, Lead, LeadCol),
+    get(M, right_margin, RM0),
+    RM is RM0 - LeadCol,
+    get(EndF, start, NewEnd),
+    send(M, fill, Start, NewEnd, 0, RM, @off),
+    remode(M, Start, EndF, Lead, LeadCol).
+
+start_of_mode_line(M, From, Start) :-
+    get(M, scan, From, line, -1, start, SOL),
+    SOL < From,
+    send(M, looking_at, '%[%!]\\s', SOL),
+    !,
+    start_of_mode_line(M, SOL, Start).
+start_of_mode_line(_, Start, Start).
+
+end_of_mode_line(M, From, Start) :-
+    send(M, looking_at, '%[%!]\\s', From),
+    get(M, scan, From, line, 1, start, SOL),
+    SOL > From,
+    !,
+    end_of_mode_line(M, SOL, Start).
+end_of_mode_line(_, Start, Start).
+
+unmode(M, Start, EndF, Lead, LeadCol) :-
+    get(M, text_buffer, TB),
+    get(regex('%[%!]\\s+\\w+\\('), match, TB, Start, Len),
+    get(M, column, Start+Len, LeadCol),
+    get(TB, contents, Start, Len, Lead),
+    send(TB, delete, Start, Len),
+    get(TB, scan, Start, line, 1, start, Next),
+    unmode_2(TB, Next, EndF).
+
+unmode_2(_TB, Here, EndF) :-
+    get(EndF, start, End),
+    Here >= End,
+    !.
+unmode_2(TB, Here, EndF) :-
+    get(regex('%[%!]\\s+'), match, TB, Here, Len),
+    send(TB, delete, Here, Len),
+    get(TB, scan, Here, line, 1, start, Next),
+    (   Next > Here
+    ->  unmode_2(TB, Next, EndF)
+    ;   true
+    ).
+
+remode(M, Start, EndF, Lead, LeadCol) :-
+    get(M, text_buffer, TB),
+    send(TB, insert, Start, Lead),
+    get(TB, contents, Start, 2, CommentStart),
+    get(TB, scan, Start, line, 1, start, Next),
+    remode_2(M, Next, EndF, LeadCol, CommentStart).
+
+remode_2(_M, Here, EndF, _LeadCol, _CommentStart) :-
+    get(EndF, start, End),
+    Here >= End,
+    !.
+remode_2(M, Here, EndF, LeadCol, CommentStart) :-
+    get(M, text_buffer, TB),
+    send(TB, insert, Here, CommentStart),
+    send(M, align, LeadCol, Here+2),
+    get(TB, scan, Here, line, 1, start, Next),
+    (   Next > Here
+    ->  remode_2(M, Next, EndF, LeadCol, CommentStart)
+    ;   true
+    ).
 
 insert_quote(E, Times:[int], Char:char) :->
     "Complete quote"::
