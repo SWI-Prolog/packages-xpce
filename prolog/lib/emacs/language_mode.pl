@@ -60,6 +60,7 @@
           insert_line_comment           = key('\\e;'),
           close_block_comment           = key('/'),
           find_tag                      = key('\\e.') + button(browse),
+          xref_go_back			= key('\\e,'),
           camelcase_word                = key('\\C-c\\C-c'),
           underscores_word              = key('\\C-c\\C--')
         ],
@@ -794,6 +795,10 @@ closest_element(A, B, Here, A) :-
     !.
 closest_element(A, B, Here, B) :-
     abs(B-Here) < abs(A-Here).
+
+xref_go_back(_E) :->
+    "Go back in the location history"::
+    send(@emacs?history, backward).
 
 
                  /*******************************

@@ -104,7 +104,9 @@
           prolog_preferences       = button(edit),
 
                                         % BROWSER menu
-          split_window             = key('\\C-x2') + button(browse),
+          prefix                   = key('\\C-x5'),
+
+          split_window             = key('\\C-x2') + key('\\C-x52') + button(browse),
           only_window              = key('\\C-x1') + button(browse),
           -                        = button(browse),
           bookmark_line            = button(browse),
