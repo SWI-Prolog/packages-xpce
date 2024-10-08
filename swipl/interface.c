@@ -236,26 +236,27 @@ static atom_t ATOM_named_argument;	/* "named_argument" */
 static atom_t ATOM_named_reference;	/* "named_reference" */
 static atom_t ATOM_new;			/* "new" */
 static atom_t ATOM_object;		/* "object" */
-static atom_t ATOM_open;			/* "open" */
+static atom_t ATOM_open;		/* "open" */
 static atom_t ATOM_pce;			/* "pce" */
 static atom_t ATOM_permission_error;	/* "permission_error" */
 static atom_t ATOM_procedure;		/* "procedure" */
 static atom_t ATOM_proper_list;		/* "proper_list" */
-static atom_t ATOM_read;			/* "read" */
+static atom_t ATOM_read;		/* "read" */
 static atom_t ATOM_ref;			/* "@" */
-static atom_t ATOM_send;			/* "send" */
-static atom_t ATOM_slash;			/* "/" */
+static atom_t ATOM_send;		/* "send" */
+static atom_t ATOM_slash;		/* "/" */
 static atom_t ATOM_spy;			/* "spy" */
 static atom_t ATOM_string;		/* "string" */
-static atom_t ATOM_trace;			/* "trace" */
-static atom_t ATOM_true;			/* "true" */
+static atom_t ATOM_trace;		/* "trace" */
+static atom_t ATOM_true;		/* "true" */
 static atom_t ATOM_type_error;		/* "type_error" */
 static atom_t ATOM_unknownReference;	/* "unknown_reference" */
 static atom_t ATOM_update;		/* "update" */
-static atom_t ATOM_user;			/* "user" */
-static atom_t ATOM_write;			/* "write" */
+static atom_t ATOM_user;		/* "user" */
+static atom_t ATOM_write;		/* "write" */
 static atom_t ATOM_prolog;		/* "prolog" */
-static atom_t ATOM_class;			/* "class" */
+static atom_t ATOM_class;		/* "class" */
+static atom_t ATOM_unwind;		/* "unwind" */
 
 static Module MODULE_user;		/* Handle for user-module */
 
@@ -309,6 +310,7 @@ initPrologConstants()
   ATOM_write			= AtomFromString("write");
   ATOM_prolog			= AtomFromString("prolog");
   ATOM_class			= AtomFromString("class");
+  ATOM_unwind			= AtomFromString("unwind");
 
   MODULE_user			= ModuleFromAtom(ATOM_user);
 }
@@ -522,6 +524,7 @@ static Functor  FUNCTOR_permission_error3;
 static Functor  FUNCTOR_type_error2;
 static Functor  FUNCTOR_domain_error2;
 static Functor  FUNCTOR_behaviour1;
+static Functor  FUNCTOR_unwind1;
 static predicate_t PREDICATE_send_implementation;
 static predicate_t PREDICATE_get_implementation;
 
@@ -594,6 +597,7 @@ initHostConstants()
   FUNCTOR_trace1	    = PL_new_functor(ATOM_trace, 1);
   FUNCTOR_type_error2       = PL_new_functor(ATOM_type_error, 2);
   FUNCTOR_domain_error2     = PL_new_functor(ATOM_domain_error, 2);
+  FUNCTOR_unwind1	    = PL_new_functor(ATOM_unwind, 1);
 
   PREDICATE_send_implementation = PL_predicate("send_implementation", 3,
 					       "pce_principal");
@@ -2588,11 +2592,11 @@ get/3 route methods defined in  Prolog   directly  back  to Prolog. This
 definition only comes into action if something   in  XPCE calls a method
 defined in Prolog.
 
-NOTE: if the return-type is accepts  prolog, we return a term-reference.
-Is this ok? Who is ensuring the consistency?   Should we throw it out of
-the context immediately? It is returned to  C-code from inside XPCE. Who
-says me what happens to it?
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+NOTE: if the  return-type accepts prolog, we  return a term-reference.
+Is this ok?  Who is ensuring the consistency?  Should  we throw it out
+of  the context  immediately? It  is  returned to  C-code from  inside
+XPCE. Who says me what happens to it?  - - - - - - - - - - - - - - - -
+- - - - - - - - - - - - - - - - - - - - - */
 
 static int
 PrologCall(PceGoal goal)
@@ -2636,10 +2640,10 @@ PrologCall(PceGoal goal)
 	goto error;
 
       if ( goal->flags & PCE_GF_SEND )
-	rval = PL_call_predicate(MODULE_user, DebugMode,
+      { rval = PL_call_predicate(MODULE_user, DebugMode|PL_Q_PASS_EXCEPTION,
 				 PREDICATE_send_implementation, av);
-      else
-      { rval = PL_call_predicate(MODULE_user, DebugMode,
+      } else
+      { rval = PL_call_predicate(MODULE_user, DebugMode|PL_Q_PASS_EXCEPTION,
 				 PREDICATE_get_implementation, av);
 	if ( rval )
 	{ if ( !get_answer_object(goal, av+3, goal->return_type, &goal->rval) )
@@ -2647,6 +2651,20 @@ PrologCall(PceGoal goal)
 	    rval = PCE_FAIL;
 	  }
 	}
+      }
+
+      term_t ex;
+      if ( !rval && (ex=PL_exception(0)) )
+      { bool rc;
+
+	if ( PL_is_functor(ex, FUNCTOR_unwind1) )
+	{ PL_close_foreign_frame(fid);
+	  return PCE_FAIL;
+	}
+
+	rc = PL_print_message(ATOM_error, PL_TERM, ex);
+	(void)rc;
+	PL_clear_exception();
       }
 
     error:
