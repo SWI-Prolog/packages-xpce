@@ -658,7 +658,7 @@ action_(Action) :-
 
 wait_error(E) :-
     message_to_string(E, Message),
-    format(user_error, 'Error while waiting for for user: ~w~n\c
+    format(user_error, 'Exception while waiting for user: ~w~n\c
                            Retrying~n', [Message]),
     fail.
 
