@@ -262,8 +262,14 @@ size(T, Size:size) :->
     "Adjust size of tab and window"::
     (   get(T, closing, @on)
     ->  true
-    ;   in_pce_thread(send(T, resize_window)),
+    ;   in_pce_thread(resize_window(T)),
         send_super(T, size, Size)
+    ).
+
+resize_window(T) :-
+    (   object(T)                             % but the window may be gone
+    ->  send(T, resize_window)
+    ;   true
     ).
 
 resize_window(T) :->
