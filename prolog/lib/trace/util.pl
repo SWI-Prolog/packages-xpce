@@ -54,8 +54,6 @@
 :- autoload(library(readutil), [read_file_to_terms/3]).
 :- use_module(library(pce_config), []).
 
-:- autoload(gui, [notify_gui/0]).
-
 :- meta_predicate
     find_source(:, -, -).
 
@@ -106,7 +104,10 @@ trace_setting(Name, Old, New) :-
     !,
     erase(Ref),
     assertz(setting(Name, New)),
-    notify_gui.
+    (   current_predicate(prolog_gui:notify_gui/0)
+    ->  prolog_gui:notify_gui
+    ;   true
+    ).
 trace_setting(Name, Old, _) :-
     setting(Name, Old).
 
