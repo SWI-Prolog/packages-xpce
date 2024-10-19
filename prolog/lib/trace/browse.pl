@@ -995,7 +995,7 @@ image(predicate,        unreferenced,   'unrefpred.xpm').
 image(predicate,        undefined,      'undefpred.xpm').
 image(predicate,        fact,           'fact.bm').
 image(predicate,        local,          'pred.bm').
-image(predicate,        dcg,            'grammar.xpm').
+image(predicate,        dcg,            'grammar.bm').
 
 
 

@@ -224,7 +224,7 @@ set(XPCE_DATA_prolog_lib_trace_icons abort.xpm breakpoint.xpm break.xpm bug.xpm
     builtin.xpm butterfly.xpm call.xpm classext.xpm classvar.xpm class.xpm
     closedir.xpm creep.xpm debug.xpm details.xpm det.xpm
     down.xpm dynamic.xpm dyn.xpm edit.xpm except.xpm exit.xpm export.xpm
-    eyes.xpm fact.bm fail.xpm finish.xpm foreign.xpm get.xpm grammar.xpm
+    eyes.xpm fact.bm fail.xpm finish.xpm foreign.xpm get.xpm grammar.bm
     import.xpm interactor.xpm interrupt.xpm into.xpm ivar.xpm leap.xpm
     list.xpm loadfailed.xpm loading.xpm locate.xpm meta.xpm mini-globe.xpm
     mini-run.xpm module.xpm ndet.xpm nodebug.xpm nospy.xpm nostopspy.xpm
