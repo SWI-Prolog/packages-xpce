@@ -3,9 +3,10 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2020, University of Amsterdam
+    Copyright (c)  2001-2024, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -136,6 +137,8 @@ directory(SB, Dir:directory) :->
 :- pce_begin_class(prolog_source_structure, toc_filesystem,
                    "Browser for (prolog) source-files").
 
+class_variable(background,   colour, white).
+class_variable(colour,       colour, black).
 class_variable(auto_refresh, int*, @nil).
 class_variable(size,    size,   size(200, 500),
                "Intial window size").
@@ -711,7 +714,7 @@ expand(MF) :->
             send(Entry, line, Line)
         ;   local_predicate_name(Head, Label),
             atom_concat('$export$', Label, Id),
-            new(Entry, toc_file(Label, Id, 'pred.xpm'))
+            new(Entry, toc_file(Label, Id, 'pred.bm'))
         ),
         send(TocWindow, son, NodeId, Entry),
         fail
@@ -990,8 +993,8 @@ image(predicate,        exported,       'export.xpm').
 image(predicate,        incomplete,     'warnpred.xpm').
 image(predicate,        unreferenced,   'unrefpred.xpm').
 image(predicate,        undefined,      'undefpred.xpm').
-image(predicate,        fact,           'fact.xpm').
-image(predicate,        local,          'pred.xpm').
+image(predicate,        fact,           'fact.bm').
+image(predicate,        local,          'pred.bm').
 image(predicate,        dcg,            'grammar.xpm').
 
 
