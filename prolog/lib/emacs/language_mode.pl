@@ -3,9 +3,10 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2018, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -55,8 +56,8 @@
           backward_delete_char_untabify = key(backspace),
           align_close_bracket           = key(']') + key('}') + key(')'),
           insert_file_header            = key('\\C-c\\C-f'),
-          insert_section_header         = key('\\eh'),
-          insert_comment_block          = key('\\C-c\\C-q'),
+          insert_section_comment        = key('\\C-c\\C-h'),
+          insert_long_comment           = key('\\C-c\\C-q'),
           insert_line_comment           = key('\\e;'),
           close_block_comment           = key('/'),
           find_tag                      = key('\\e.') + button(browse),
@@ -302,7 +303,7 @@ comment(M, Here, EndF, Lead, LeadCont, Col) :-
     comment(M, NextHere, EndF, LeadCont, LeadCont, Col).
 
 
-insert_comment_block(E) :->
+insert_long_comment(E) :->
     "Insert header/footer for long comment"::
     send(E, insert,
 '/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -312,13 +313,18 @@ insert_comment_block(E) :->
     send(E, previous_line, 2).
 
 
-insert_section_header(E) :->
-    "Insert Prolog/C section header"::
-    send(E, insert,
-'\t\t /*******************************
-\t\t *               C\t\t*
-\t\t *******************************/
-').
+insert_section_comment(E, Title:title=name) :->
+    "Insert /*...*/ comment for a code section"::
+    upcase_atom(Title, Upper),
+    format(string(Line), '*~t~w~t*~32|~n', [Upper]),
+    send(E, insert, '\n'),
+    send(E, align, 16),
+    send(E, insert, '/*******************************\n'),
+    send(E, align, 16),
+    send(E, insert, Line),
+    send(E, align, 16),
+    send(E, insert, '*******************************/\n\n').
+
 
                  /*******************************
                  *          FILE HEADER         *
