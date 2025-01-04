@@ -158,7 +158,7 @@ GIFReadFD(IOSTREAM *fd,
   { setGifError("not a valid .GIF file");
     return GIF_INVALID;
   }
-  strncpy(version, (char *) (buf + 3), 3);
+  memcpy(version, buf+3, 3);
   version[3] = '\0';
 
   /* only handle v 87a and 89a */
