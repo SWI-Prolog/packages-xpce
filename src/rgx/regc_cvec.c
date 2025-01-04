@@ -42,8 +42,7 @@ newcvec(int nchrs, int nranges, int nmcces)
     struct cvec *cv;
 
     nc = (size_t)nchrs + (size_t)nmcces*(MAXMCCE+1) + (size_t)nranges*2;
-    n = sizeof(struct cvec) + (size_t)(nmcces-1)*sizeof(chr *)
-	    + nc*sizeof(chr);
+    n = offsetof(struct cvec, mcces[nmcces]) + nc*sizeof(chr);
     cv = (struct cvec *)MALLOC(n);
     if (cv == NULL) {
 	return NULL;

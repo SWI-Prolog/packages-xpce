@@ -259,7 +259,7 @@ struct cvec {
 	int nmcces;		/* number of MCCEs */
 	int mccespace;		/* number of MCCEs possible */
 	int nmccechrs;		/* number of chrs used for MCCEs */
-	chr *mcces[1];		/* pointers to 0-terminated MCCEs */
+	chr *mcces[];		/* pointers to 0-terminated MCCEs */
 				/* and both batches of chrs are on the end */
 };
 

@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2024, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -1624,31 +1624,38 @@ default_font_list(Name fam, FontDef defs)
 { char buf[10240];
   char *s = buf;
 
+#define LEFT() (sizeof(buf)-(s-buf)-1)
+
   *s++ = '[';
 
   while(defs->style)
   {
     if ( defs->xname )
-    { sprintf(s, "font(%s, %s, %d, \"%s\")",
+    { snprintf(s, LEFT(),
+	       "font(%s, %s, %d, \"%s\")",
 	      strName(fam),
 	      strName(defs->style),
 	      defs->points,
 	      defs->xname);
     } else
-    { sprintf(s, "font(%s, %s, %d)",
+    { snprintf(s, LEFT(),
+	      "font(%s, %s, %d)",
 	      strName(fam),
 	      strName(defs->style),
 	      defs->points);
     }
     s += strlen(s);
     defs++;
-    if ( defs->style )
+    if ( defs->style && LEFT() >= 2 )
       strcpy(s, ",\n");
     s += strlen(s);
   }
 
-  *s++ = ']';
+  if ( LEFT() > 1 )
+    *s++ = ']';
   *s = EOS;
+
+  assert(LEFT() > 0);
 
   return save_string(buf);
 }
