@@ -783,6 +783,7 @@ ws_get_selection(DisplayObj d, Name which, Name target)
 
   selection_complete = FALSE;
   selection_error = NIL;
+  selection_value = NIL;
   XtGetSelectionValue(r->shell_xref,
 		      nameToSelectionAtom(d, which),
 		      nameToSelectionAtom(d, target),
@@ -790,12 +791,13 @@ ws_get_selection(DisplayObj d, Name which, Name target)
 		      d,
 		      X11LastEventTime());
 
-  while(!selection_complete)
-    dispatchDisplayManager(d->display_manager, DEFAULT, toInt(50));
+  for(int i=0; i<10 && !selection_complete; i++)
+  { dispatchDisplayManager(d->display_manager, DEFAULT, toInt(50));
 
-  if ( notNil(selection_error) )
-  { errorPce(d, NAME_getSelection, which, selection_error);
-    fail;
+    if ( notNil(selection_error) )
+    { errorPce(d, NAME_getSelection, which, selection_error);
+      fail;
+    }
   }
 
   answer(selection_value);
