@@ -766,9 +766,10 @@ collect_selection_display(Widget w, XtPointer xtp,
   { selection_error = NAME_timeout;
   } else
   { char buf[256];
+    char *s = DisplayAtomToString(d, *type);
 
-    DEBUG(NAME_selection, Cprintf("Bad type: Atom %d\n", *type));
-    sprintf(buf, "Bad type: %s", DisplayAtomToString(d, *type));
+    DEBUG(NAME_selection, Cprintf("Bad type: Atom %d (%s)\n", *type, s));
+    sprintf(buf, "Bad type: %s", s);
 
     selection_error = CtoName(buf);
   }
