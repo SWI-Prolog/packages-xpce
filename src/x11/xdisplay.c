@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2020, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -650,12 +650,18 @@ ws_get_cutbuffer(DisplayObj d, int n)
 static int	 selection_complete;
 static StringObj selection_value;
 static Name	 selection_error;
+static Atom	 XA_UTF8_STRING;
 
 static Atom
 nameToSelectionAtom(DisplayObj d, Name name)
 { if ( name == NAME_primary )	return XA_PRIMARY;
   if ( name == NAME_secondary ) return XA_SECONDARY;
   if ( name == NAME_string )	return XA_STRING;
+  if ( name == NAME_utf8_string )
+  { if ( !XA_UTF8_STRING )
+      XA_UTF8_STRING = DisplayAtom(d, getv(name, NAME_upcase, 0, NULL));
+    return XA_UTF8_STRING;
+  }
 
   return DisplayAtom(d, getv(name, NAME_upcase, 0, NULL));
 }
@@ -663,9 +669,10 @@ nameToSelectionAtom(DisplayObj d, Name name)
 
 static Name
 atomToSelectionName(DisplayObj d, Atom a)
-{ if ( a == XA_PRIMARY )   return NAME_primary;
-  if ( a == XA_SECONDARY ) return NAME_secondary;
-  if ( a == XA_STRING )    return NAME_string;
+{ if ( a == XA_PRIMARY )     return NAME_primary;
+  if ( a == XA_SECONDARY )   return NAME_secondary;
+  if ( a == XA_STRING )      return NAME_string;
+  if ( a == XA_UTF8_STRING ) return NAME_utf8_string;
 
   { Name xname = CtoName(DisplayAtomToString(d, a));
     Name lname = getv(xname, NAME_downcase, 0, NULL);
@@ -696,6 +703,13 @@ collect_selection_display(Widget w, XtPointer xtp,
 { DisplayObj d = xtp;
   string s;
 
+  DEBUG(NAME_selection,
+	Cprintf("collect_selection_display(): sel=%s; type=%s; "
+		"format=%d; len=%ld\n",
+		DisplayAtomToString(d, *selection),
+		DisplayAtomToString(d, *type),
+		*format, *len));
+
   if ( *type == XT_CONVERT_FAIL || *type == (Atom)0 )
   { selection_error = CtoName("Selection conversion failed");
     selection_complete = TRUE;
@@ -715,7 +729,7 @@ collect_selection_display(Widget w, XtPointer xtp,
 
     selection_value = StringToString(&s);
     XtFree(value);
-  } else if ( *type == DisplayAtom(d, CtoName("UTF8_STRING")) )
+  } else if ( *type == XA_UTF8_STRING )
   { if ( *format == 8 )
     { unsigned long l = *len;
       charA *bufA, *outA;
@@ -730,16 +744,19 @@ collect_selection_display(Widget w, XtPointer xtp,
       }
 
       outA = bufA = pceMalloc(l);
+      int iso_latin_1 = TRUE;
       while(in<end)
       { in = utf8_get_uchar(in, &chr);
 
 	if ( chr <= 0xff )
-	  *outA++ = chr;
-	else
+	{ *outA++ = chr;
+	} else
+	{ iso_latin_1 = FALSE;
 	  break;
+	}
       }
 
-      if ( in >= end )
+      if ( iso_latin_1 )
       { str_set_n_ascii(&s, outA-bufA, (char*)bufA);
 	selection_value = StringToString(&s);
 	pceFree(bufA);
@@ -781,6 +798,12 @@ collect_selection_display(Widget w, XtPointer xtp,
 Any
 ws_get_selection(DisplayObj d, Name which, Name target)
 { DisplayWsXref r = d->ws_ref;
+
+  if ( target == NAME_text )
+    target = NAME_utf8_string;
+
+  DEBUG(NAME_selection, Cprintf("ws_get_selection(d,%s,%s)\n",
+				strName(which), strName(target)));
 
   selection_complete = FALSE;
   selection_error = NIL;
