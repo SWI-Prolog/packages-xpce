@@ -129,11 +129,9 @@ map_action(nodebug, _, nodebug).
 map_action(abort, _, abort).
 map_action(halt, _, continue) :-
     halt.
-map_action(finish, _, continue) :-
+map_action(finish, _, skip(Frame)) :-
     get_tracer(selected_frame, Frame),
-    asserta(finished_frame(Frame)),
-    trace,
-    prolog_skip_frame(Frame).
+    asserta(finished_frame(Frame)).
 
 %!  traceall is det.
 %
