@@ -110,21 +110,14 @@ retract_frame(Frame) :-
 %
 %   @tbd    The argument frame is not used.  Delete?
 
-map_action(creep, _, continue) :-
-    traceall.
-map_action(skip, _Frame, skip) :-
-    trace.
+map_action(creep, _, continue).
+map_action(skip, _Frame, skip).
 map_action(into, _, continue) :-
-    visible(+unify),
-    traceall.
-map_action(leap, _, continue) :-
-    prolog_skip_level(_, very_deep),
-    notrace.
+    visible(+unify).
+map_action(leap, _, leap).
 map_action(retry, _, retry(Frame)) :-
-    traceall,
     get_tracer(selected_frame, Frame).
-map_action(fail, _, fail) :-
-    traceall.
+map_action(fail, _, fail).
 map_action(nodebug, _, nodebug).
 map_action(abort, _, abort).
 map_action(halt, _, continue) :-
@@ -132,14 +125,6 @@ map_action(halt, _, continue) :-
 map_action(finish, _, skip(Frame)) :-
     get_tracer(selected_frame, Frame),
     asserta(finished_frame(Frame)).
-
-%!  traceall is det.
-%
-%   Go into non-skipping trace mode.
-
-traceall :-
-    prolog_skip_level(_, very_deep),
-    trace.
 
 %!  intercept(+Port, +Frame, +Choice, -Action) is semidet.
 %
