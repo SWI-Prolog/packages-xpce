@@ -407,10 +407,6 @@ quant_rgb(RGB0, RGB) :-
                    "Completing item for colour-names").
 
 initialise(NI, Name:[name], Selection:[colour], Msg:[code]*) :->
-    (   Selection == @default
-    ->  CName = ''
-    ;   get(Selection, print_name, CName)
-    ),
     default(Name, colour, TheName),
     send(NI, send_super, initialise, TheName, Selection, Msg),
     send(NI, value_set, @colour_name_list).
