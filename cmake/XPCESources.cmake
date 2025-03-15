@@ -146,21 +146,20 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     keybinding.pl make_dialog.pl MKINDEX.pl Overview
     password_item.pl pce_arm.pl pce_arrow_item.pl pce_class_index.pl
     pce_colour_item.pl pce_configeditor.pl pce_config.pl pce_cxx_headers.pl
-    pce_debug.pl pce_dispatch.pl pce_drag_and_drop_dict_item.pl
-    pce_drag_and_drop.pl pcedraw.pl pce_editable_text.pl pce_edit.pl
+    pce_debug.pl pce_dispatch.pl pcedraw.pl pce_editable_text.pl pce_edit.pl
     pce_emacs.pl pce_float_item.pl pce_font_item.pl pce_grapher.pl
     pce_graphical_browser.pl pce_helper.pl pce_help_file.pl pce_history.pl
     pce_identifier_item.pl pce_image_browser.pl pce_image_item.pl
-    pce_image.pl pce_loadcxx.pl pce_main.pl pce_manual.pl pce_meta.pl
+    pce_image.pl pce_main.pl pce_manual.pl pce_meta.pl
     pce_objects.pl pce.pl pce_postscript.pl pce_progress.pl
     pce_prolog_xref.pl pce_prompter.pl pce_regex_compat.pl pce_renew.pl
-    pce_report.pl pce_require.pl pce_selection.pl pce_select_set_item.pl
+    pce_report.pl pce_require.pl pce_select_set_item.pl
     pce_server.pl pce_set_item.pl pce_shell.pl pce_style_item.pl
     pce_tagged_connection.pl pce_template.pl pce_tick_box.pl pce_toc.pl
     pce_type.pl pce_unclip.pl pce_util.pl pce_xref.pl persistent_frame.pl
     portray_object.pl print_graphics.pl print_text.pl
     prolog_predicate_item.pl prolog_predicate.pl qrecompile.pl
-    scaledbitmap.pl scan_arguments.pl sp_fcompile.pl splash_screen.pl
+    scaledbitmap.pl scan_arguments.pl splash_screen.pl
     stayup_popup.pl swi_compatibility.pl swi_edit.pl
     swi_hooks.pl swi_ide.pl swi_preferences.pl tabbed_window.pl tabular.pl
     toc_filesystem.pl toolbar.pl url_image.pl Xserver.pl)
