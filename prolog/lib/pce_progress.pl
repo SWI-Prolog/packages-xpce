@@ -245,7 +245,7 @@ resize(PD) :->
 
 update_can_abort(PD) :->
     (   get(PD, can_abort, @on)
-    ->  (   get(PD, member, abort, B)
+    ->  (   get(PD, member, abort, _)
         ->  true
         ;   send(PD, append, new(B, button(abort))),
             send(B, alignment, right)
