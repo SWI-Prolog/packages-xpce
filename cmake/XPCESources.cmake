@@ -118,7 +118,7 @@ set(XPCE_DATA_DIRS
     prolog/boot
 
     prolog/lib prolog/lib/compatibility prolog/lib/dialog prolog/lib/doc
-    prolog/lib/draw prolog/lib/emacs prolog/lib/english prolog/lib/http
+    prolog/lib/draw prolog/lib/emacs prolog/lib/english
     prolog/lib/man prolog/lib/math prolog/lib/plot prolog/lib/swi
     prolog/lib/trace prolog/lib/trace/icons prolog/lib/trace/icons/16x16
     prolog/lib/xref prolog/lib/dialog/bitmaps prolog/lib/doc/icons
@@ -196,9 +196,6 @@ set(XPCE_DATA_prolog_lib_emacs annotate_mode.pl application.pl bookmarks.pl
     help_buffer.pl)
 
 set(XPCE_DATA_prolog_lib_english pce_messages.pl)
-
-set(XPCE_DATA_prolog_lib_http html_hierarchy.pl html_refman.pl html_write.pl
-    httpd.pl http_image.pl http_man.pl README run.pl xref.pl)
 
 set(XPCE_DATA_prolog_lib_man behaviour_item.pl classification.dat classmap.pl
     man_index.pl p_card.pl pce_op.pl p_data.pl showevent.pl util.pl
