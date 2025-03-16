@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2000-2011, University of Amsterdam
+    Copyright (c)  2000-2025, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -35,6 +36,9 @@
 :- module(doc_table, []).
 :- use_module(library(pce)).
 :- use_module(doc(util)).
+:- use_module(library(debug)).
+:- autoload(library(lists), [select/3]).
+:- autoload(library(option), [option/3, option/2]).
 
 
                  /*******************************
@@ -342,9 +346,13 @@ stretched_cell(T, Cell:table_cell, W:int) :->
     (   get(Cell, col_span, 1)
     ->  image_width(Cell, W, IW),
         get(Cell, image, Image),
-        get(Cell, row, R),
-        get(Cell, column, C),
-        debug(table, '~p: Cell ~w,~w to width = ~w~n', [T, C, R, IW]),
+        (   debugging(table)
+        ->  get(Cell, row, R),
+            get(Cell, column, C),
+            debug(table, '~p: Cell ~w,~w to width = ~w~n',
+                  [T, C, R, IW])
+        ;   true
+        ),
         send(Image, auto_crop, @off),
         send(Image, line_width, IW)
     ;   true
