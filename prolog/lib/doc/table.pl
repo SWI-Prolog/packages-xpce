@@ -35,6 +35,9 @@
 :- module(doc_table, []).
 :- use_module(library(pce)).
 :- use_module(doc(util)).
+:- autoload(library(debug), [debug/3, debugging/1]).
+:- autoload(library(lists), [select/3]).
+:- autoload(library(option), [option/3, option/2]).
 
 
                  /*******************************
@@ -342,9 +345,12 @@ stretched_cell(T, Cell:table_cell, W:int) :->
     (   get(Cell, col_span, 1)
     ->  image_width(Cell, W, IW),
         get(Cell, image, Image),
-        get(Cell, row, R),
-        get(Cell, column, C),
-        debug(table, '~p: Cell ~w,~w to width = ~w~n', [T, C, R, IW]),
+        (   debugging(table)
+        ->  get(Cell, row, R),
+            get(Cell, column, C),
+            debug(table, '~p: Cell ~w,~w to width = ~w~n', [T, C, R, IW])
+        ;   true
+        ),
         send(Image, auto_crop, @off),
         send(Image, line_width, IW)
     ;   true
