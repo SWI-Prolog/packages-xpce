@@ -34,7 +34,7 @@
 
 :- module(doc_table, []).
 :- use_module(library(pce)).
-:- use_module(doc(util)).
+:- use_module(util).
 :- autoload(library(debug), [debug/3, debugging/1]).
 :- autoload(library(lists), [select/3]).
 :- autoload(library(option), [option/3, option/2]).
