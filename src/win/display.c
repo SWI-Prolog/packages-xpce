@@ -315,6 +315,20 @@ bellDisplay(DisplayObj d, Int vol)
 }
 
 
+/* See whether we can open graphics.  We try to avoid this if not
+ * really necessary for compiling xpce sources to .qlf
+ */
+static int
+hasDisplay(void)
+{
+#ifndef __WINDOWS__
+  char *dsp = getenv("DISPLAY");
+  return ( dsp && dsp[0] );
+#else
+  return TRUE;
+#endif
+}
+
 Size
 getSizeDisplay(DisplayObj d)
 { int w=0, h=0;
@@ -352,7 +366,10 @@ getBoundingBoxDisplay(DisplayObj d)
 
 static Int
 getDepthDisplay(DisplayObj d)
-{ TRY(openDisplay(d));
+{ if ( hasDisplay() )
+  { TRY(openDisplay(d));
+  } else
+    return toInt(24);
 
   answer(toInt(ws_depth_display(d)));
 }
@@ -383,9 +400,7 @@ getDPIDisplay(DisplayObj d)
     answer(d->dpi);
   }
 
-#ifndef __WINDOWS__
-  if ( getenv("DISPLAY") )
-#endif
+  if ( hasDisplay() )
     TRY(openDisplay(d));
   if ( instanceOfObject(d->dpi, ClassSize) )
     answer(d->dpi);
