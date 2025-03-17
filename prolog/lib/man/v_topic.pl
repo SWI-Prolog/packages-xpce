@@ -177,7 +177,7 @@ rename_node(TB, Node:node) :->
         send(Node, string, NewName),
         send(TB?dialog_member?name_member, clear)
     ),
-    get(TB?dialog_member?summary_member, selection, NewName),
+    get(TB?dialog_member?summary_member, selection, NewSumm),
     (   NewSumm == ''
     ->  true
     ;   send(Node?card, store, summary, NewSumm),
