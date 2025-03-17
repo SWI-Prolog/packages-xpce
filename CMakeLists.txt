@@ -173,6 +173,7 @@ add_swipl_target(
     COMMENT "-- Building xpce class index")
 add_swipl_target(
     xpce-manual-index
+    QUIET
     OUTPUT ${XPCE_MANINDEX}
     COMMAND "pce_make_manual_index('${XPCE_MANINDEX}')"
     SCRIPT  "${XPCE_BUILD_LIBRARY}/man/man_index.pl"
