@@ -33,7 +33,6 @@
 */
 
 :- module(expand_math, [expand_function/3]).
-:- use_module(expandgoal).
 :- require([ append/3
            , genarg/3
            ]).

@@ -36,7 +36,7 @@
           [ emacs_help/0
           ]).
 :- use_module(library(pce)).
-:- use_module(library(emacs), [emacs/1]).
+:- use_module(library(pce_emacs), [emacs/1]).
 :- require([ absolute_file_name/3
            ]).
 
