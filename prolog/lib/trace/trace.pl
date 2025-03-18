@@ -97,10 +97,12 @@ prolog_trace_interception_gui(Port, Frame, CHP, Action) :-
     ).
 
 :- initialization
-    prolog_unlisten(frame_finished, retract_frame),
-    prolog_listen(frame_finished, retract_frame).
+    prolog_listen(frame_finished, retract_frame,
+                  [ name(gui_tracer)
+                  ]).
 
 retract_frame(Frame) :-
+    current_prolog_flag(gui_tracer, true),
     retractall(finished_frame(Frame)).
 
 %!  map_action(+GuiAction, +Frame, -Action) is det.
