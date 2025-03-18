@@ -39,7 +39,7 @@
           pce_begin_recording/1,        % +- source|documentation
           pce_end_recording/0
         ]).
-:- use_module(pce_boot(pce_principal)).
+:- use_module(pce_principal).
 :- require([ pce_error/1
            , pce_info/1
            , pce_warn/1

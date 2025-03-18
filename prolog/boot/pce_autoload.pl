@@ -37,10 +37,10 @@
         , pce_autoload_all/0
         ]).
 
-:- use_module(pce_boot(pce_principal),
+:- use_module(pce_principal,
               [ get/3, send/2, op(_,_,_)
               ]).
-:- use_module(pce_boot(pce_realise),
+:- use_module(pce_realise,
               [ pce_realise_class/1,
                 pce_prolog_class/1
               ]).

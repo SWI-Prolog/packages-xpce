@@ -39,7 +39,7 @@
 :- meta_predicate
     pce_catch_error(+, 0).
 
-:- use_module(pce_boot(pce_principal)).
+:- use_module(pce_principal).
 
 
 %!  pce_catch_error(?Errors, :Goal)

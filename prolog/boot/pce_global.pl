@@ -39,7 +39,7 @@
 :- meta_predicate
       pce_global(+, :).
 
-:- use_module(pce_boot(pce_principal)).
+:- use_module(pce_principal).
 
 :- require([strip_module/3, gensym/2, append/3]).
 

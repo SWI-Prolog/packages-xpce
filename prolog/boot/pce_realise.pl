@@ -41,8 +41,8 @@
             pce_prolog_class/2          % ?ClassName, ?SuperName
           ]).
 
-:- use_module(pce_boot(pce_principal)).
-:- use_module(pce_boot(pce_global)).
+:- use_module(pce_principal).
+:- use_module(pce_global).
 :- require([ ignore/1
            , pce_error/1
            , call/3

@@ -33,7 +33,7 @@
 */
 
 :- module(pce_portray, []).
-:- use_module(pce_boot(pce_principal)).
+:- use_module(pce_principal).
 
 :- multifile
     user:portray/1,

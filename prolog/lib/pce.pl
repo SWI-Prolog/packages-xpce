@@ -104,21 +104,19 @@ reexports the content of these files.
 
 :- multifile user:file_search_path/2.
 
-user:file_search_path(pce_boot, pce(prolog/boot)).
-
-:- load_files([ pce_boot(pce_expand),
-		pce_boot(pce_pl),
-		pce_boot(pce_principal),
-		pce_boot(pce_error),
-		pce_boot(pce_global),
-		pce_boot(pce_expansion),
-		pce_boot(pce_realise),
-		pce_boot(pce_goal_expansion),
-		pce_boot(pce_autoload),
-		pce_boot(pce_editor),
-		pce_boot(pce_keybinding),
-		pce_boot(pce_portray),
-		'english/pce_messages'
+:- load_files([ '../boot/pce_expand',
+		'../boot/pce_pl',
+		'../boot/pce_principal',
+		'../boot/pce_error',
+		'../boot/pce_global',
+		'../boot/pce_expansion',
+		'../boot/pce_realise',
+		'../boot/pce_goal_expansion',
+		'../boot/pce_autoload',
+		'../boot/pce_editor',
+		'../boot/pce_keybinding',
+		'../boot/pce_portray',
+		english/pce_messages
 	      ],
 	      [ qcompile(part),         % compile boot files as part of pce.qlf
 		silent(true)

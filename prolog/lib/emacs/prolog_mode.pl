@@ -271,7 +271,6 @@ user_source_file(F) :-
     \+ (lib_dir(D), atom_concat(D, _, F)).
 
 ignore_paths_from(library).
-ignore_paths_from(pce_boot).
 
 :- table lib_dir/1.
 

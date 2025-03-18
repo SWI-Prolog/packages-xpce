@@ -34,8 +34,8 @@
 
 :- module(pce_goal_expansion, []).
 :- use_module(pce_realise).
-:- use_module(pce_boot(pce_expansion), [pce_compiling/1]).
-:- use_module(pce_boot(pce_principal)).
+:- use_module(pce_expansion, [pce_compiling/1]).
+:- use_module(pce_principal).
 :- require([ pce_error/1
            , append/3
            ]).

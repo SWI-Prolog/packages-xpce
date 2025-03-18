@@ -34,8 +34,8 @@
 */
 
 :- module(pce_keybinding, []).
-:- use_module(pce_boot(pce_principal)).
-:- use_module(pce_boot(pce_realise)).
+:- use_module(pce_principal).
+:- use_module(pce_realise).
 
 :- multifile
     binding/3.
