@@ -34,6 +34,7 @@
 
 :- module(emacs_cpp_mode, []).
 :- use_module(library(pce)).
+:- use_module(library(emacs_extend), []).
 :- require([ forall/2
            , ignore/1
            ]).

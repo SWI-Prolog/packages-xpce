@@ -35,6 +35,7 @@
 
 :- module(emacs_text_mode, []).
 :- use_module(library(pce)).
+:- use_module(library(emacs_extend), []).
 
 :- emacs_begin_mode(text, language,
                     "Edit plain text (sets fillmode)",

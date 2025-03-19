@@ -37,6 +37,7 @@
 
 :- module(emacs_language_mode, []).
 :- use_module(library(pce)).
+:- use_module(library(emacs_extend), []).
 :- use_module(library(hyper)).
 :- use_module(library(socket), [gethostname/1]).
 :- use_module(library(debug)).

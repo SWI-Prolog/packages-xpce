@@ -35,6 +35,7 @@
 
 :- module(emacs_xsb_mode, []).
 :- use_module(library(pce)).
+:- use_module(library(emacs_extend), []).
 :- use_module(prolog_mode).
 :- use_module(library(prolog_xref)).
 :- use_module(library(operators)).      % push/pop operators

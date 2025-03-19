@@ -35,6 +35,7 @@
 
 :- module(emacs_c_mode, []).
 :- use_module(library(pce)).
+:- use_module(library(emacs_extend), []).
 :- use_module(library(debug)).
 :- require([ between/3
            , default/3

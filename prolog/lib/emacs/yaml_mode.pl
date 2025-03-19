@@ -34,6 +34,7 @@
 
 :- module(emacs_yaml_mode, []).
 :- use_module(library(pce)).
+:- use_module(library(emacs_extend), []).
 
 :- emacs_begin_mode(yaml, script,
                     "Edit YAML files",

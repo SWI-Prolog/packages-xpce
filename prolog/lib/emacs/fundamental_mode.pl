@@ -34,6 +34,7 @@
 
 :- module(emacs_fundamental_mode, []).
 :- use_module(library(pce)).
+:- use_module(library(emacs_extend), []).
 :- use_module(library(print_text)).
 :- require([ append/3
            , auto_call/1

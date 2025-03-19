@@ -34,6 +34,7 @@
 
 :- module(emacs_outline_mode, []).
 :- use_module(library(pce)).
+:- use_module(library(emacs_extend), []).
 
 :- emacs_begin_mode(outline, language,
                     "Mode for viewing outlines",
