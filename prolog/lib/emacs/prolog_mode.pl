@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2024, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
                               SWI-Prolog Solutions b.v.
@@ -777,7 +777,8 @@ find_definition(M, For:prolog_predicate, Where:[{here,tab,window}]) :->
                  source_location(File, Line), tab)
         )
     ;   xref_defined(TB, Head, imported(File))      % imported
-    ->  new(B, emacs_buffer(File)),
+    ->  send(@emacs, ensure_source_file, File),
+        new(B, emacs_buffer(File)),
         get(B, open, Where, EmacsFrame),
         get(EmacsFrame, mode, Mode),
         send(Mode, instance_of, emacs_prolog_mode),
@@ -3019,13 +3020,13 @@ make_prolog_mode_module_popup(G) :-
     HasFile = (condition := message(@arg1, has_file)),
     send_list(G, append,
               [ menu_item(open_in_tab,
-                          message(@emacs, open_file, @arg1?file, tab),
+                          message(@arg1, open_file, @arg1?file, tab),
                           HasFile),
                 menu_item(open_in_window,
-                          message(@emacs, open_file, @arg1?file, window),
+                          message(@arg1, open_file, @arg1?file, window),
                           HasFile),
                 menu_item(open_here,
-                          message(@emacs, open_file, @arg1?file, here),
+                          message(@arg1, open_file, @arg1?file, here),
                           HasFile)
               ]).
 
@@ -3038,7 +3039,6 @@ make_prolog_mode_file_popup(G) :-
     send(R, update_message,
          message(@arg1, add_resolve_items, R)).
 
-
 file(F, File:name) :<-
     "Return associated file"::
     get(F, context, Context),
@@ -3048,6 +3048,12 @@ file(F, File:name) :<-
     ->  File = Context
     ;   get(F, classification, module)
     ->  module_property(Context, file(File))
+    ).
+
+open_file(_F, File:name, Where:{tab,window,here}) :->
+    (   send(@emacs, ensure_source_file, File)
+    ->  send(@emacs, open_file, File, Where)
+    ;   true
     ).
 
 has_file(F) :->

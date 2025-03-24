@@ -147,6 +147,7 @@ goto_source_location(Emacs,
     ;   send(Emacs, location_history)
     ),
     get(Location, file_name, File),
+    send(Emacs, ensure_source_file, File),
     new(B, emacs_buffer(File)),
     get(B, open, Where, Frame),
     send(B, check_modified_file),
@@ -165,6 +166,20 @@ goto_source_location(Emacs,
     (   Title == @nil
     ->  true
     ;   send(Mode, location_history, title := Title)
+    ).
+
+%   ->ensure_source_file: File
+%
+%   Verify the existence of File. In future  versions we can use this to
+%   lazily load source files for binary-only distributions.
+
+ensure_source_file(_Emacs, File) :->
+    "Verify that File exists"::
+    (   exists_file(File)
+    ->  true
+    ;   send(@pce, report, warning,
+             string('No source for %s', File)),
+        fail
     ).
 
 location_history(Emacs, Title:title=[char_array]) :->
