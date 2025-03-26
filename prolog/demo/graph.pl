@@ -118,13 +118,13 @@ generate(F, Generator:name) :->
     ).
 
 
-:- pce_global(@graph_link, new(link(link, link, line(0,0,0,0,second)))).
+:- pce_global(@demo_graph_link, new(link(link, link, line(0,0,0,0,second)))).
 
 display_arc(F, From:name, To:name) :->
     "Display arc From -> To"::
     get(F, node, From, NF),
     get(F, node, To, TF),
-    send(NF, connect, TF, @graph_link).
+    send(NF, connect, TF, @demo_graph_link).
 
 
 node(F, Name:name, Node:graph_node) :<-
@@ -162,7 +162,7 @@ name(Node, Name:name) :->
     send(Text, string, Name),
     send(Node, send_super, name, Name).
 
-:- pce_global(@graph_node_recogniser, make_graph_node_recogniser).
+:- pce_global(@demo_graph_node_recogniser, make_graph_node_recogniser).
 
 make_graph_node_recogniser(R) :-
     new(R, move_gesture(left)),
@@ -172,7 +172,7 @@ make_graph_node_recogniser(R) :-
 
 event(Node, Ev:event) :->
     "Make it movable"::
-    (   send(@graph_node_recogniser, event, Ev)
+    (   send(@demo_graph_node_recogniser, event, Ev)
     ->  true
     ;   send(Node, send_super, event, Ev)
     ).

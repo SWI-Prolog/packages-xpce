@@ -47,7 +47,7 @@ equal''.  The same relation object may   be  used by multiple constraint
 objects (e.i.  is *reusable*).
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-:- pce_global(@center, new(identity(center))).
+:- pce_global(@demo_center, new(identity(center))).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Create a graphical window with two boxes   that may be moved and resized
@@ -64,7 +64,7 @@ constraint_demo :-
     send_list([B1, B2], recogniser,
               handler_group(resize_gesture(left),
                             move_gesture(left))),
-    new(_, constraint(B1, B2, @center)),
+    new(_, constraint(B1, B2, @demo_center)),
 
     send(D, append, new(S1, slider(center_x, 0, 500, 200))),
     send(D, append, new(S2, slider(center_y, 0, 500, 100))),
