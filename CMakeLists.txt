@@ -183,6 +183,10 @@ add_swipl_target(
 set(SWIPL_COMMAND_DEPENDS ${SWIPL_COMMAND_DEPENDS}
     xpce-predicate-index xpce-class-index)
 
+if(INSTALL_QLF)
+  add_dependencies(library_qlf xpce-predicate-index xpce-class-index)
+endif()
+
 add_qcompile_target(pce               SOURCES ${XPCE_QLF_pce})
 add_qcompile_target(emacs/emacs	      SOURCES ${XPCE_QLF_emacs}
 				      DEPENDS qlf-pce)
