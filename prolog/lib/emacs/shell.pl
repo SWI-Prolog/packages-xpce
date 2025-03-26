@@ -35,6 +35,7 @@
 :- module(emacs_shell_mode,
           []).
 :- use_module(library(pce)).
+:- use_module(emacs).
 :- require([ between/3
            , default/3
            , forall/2

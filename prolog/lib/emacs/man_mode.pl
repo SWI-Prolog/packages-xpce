@@ -34,6 +34,7 @@
 
 :- module(emacs_man_mode, []).
 :- use_module(library(pce)).
+:- use_module(emacs).
 :- require([ member/2
            ]).
 
