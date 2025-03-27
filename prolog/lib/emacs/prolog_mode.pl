@@ -2168,10 +2168,17 @@ colour_item(_, _, _, _).
 setup_styles(M) :->
     "Associate defined syntax-styles"::
     get(M, editor, E),
-    (   get(E, attribute, styles_initialised, prolog)
+    (   predicate_property(prolog_colour:style(_,_),
+                           last_modified_generation(Gen))
+    ->  true
+    ;   Gen = 0
+    ),
+    (   get(E, attribute, styles_initialised, prolog),
+        get(E, attribute, style_generation, Gen)
     ->  true
     ;   send(M, reload_styles),
-        send(E, attribute, styles_initialised, prolog)
+        send(E, attribute, styles_initialised, prolog),
+        send(E, attribute, style_generation, Gen)
     ).
 
 reload_styles(M) :->
@@ -2217,8 +2224,8 @@ colourise_buffer(M) :->
     get(Class, no_created, @on, OldCreated),
 
     send_super(M, colourise_buffer),
-    send(M, setup_styles),
     send(M, xref_buffer),
+    send(M, setup_styles),
     send(M, slot, warnings, 0),
     send(M, slot, errors, 0),
     send(M, report, progress, 'Colourising buffer ...'),
