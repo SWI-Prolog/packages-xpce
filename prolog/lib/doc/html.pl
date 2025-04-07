@@ -92,8 +92,8 @@ join_paragraphs(P, T, P, T).
 element(p, [], Content) -->             % <P>
     [ \par,
       \ignorespaces
-    | Content
-    ].
+    ],
+    seq(Content).
 element(p, Options, Content) -->        % <P Options>
     [ \parskip,
       \parbox([\ignorespaces|Content],
@@ -342,8 +342,8 @@ element(table, Attr, Content) -->       % <TABLE>
     ].
 element(tbody, Attr, Content) -->       % <TBODY>
     [ \tbody(Attr)
-    | Content
-    ].
+    ],
+    seq(Content).
 element(thead, Attr, Content) -->       % <THEAD>
     [ \thead(Attr, Content)
     ].
@@ -387,10 +387,10 @@ element(link, _, _) -->                 % <LINK>
     [].
 element(script, _, _) -->               % <SCRIPT>
     [].
-element(body, Attributes, Content) -->  % <BODY>
+element(body, Attributes, Content) -->  % <BODY>gg343
     [ \body(Attributes)
-    | Content
-    ].
+    ],
+    seq(Content).
 
 element(base, Attrs, [], Mode) -->      % <BASE href=BaseURL>
     { (   option(href(BaseURL), Attrs)
