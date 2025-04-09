@@ -40,6 +40,9 @@
               ]).
 
 make_editor_recogniser(G) :-
+    object(G),
+    !.
+make_editor_recogniser(G) :-
     new(Editor, @event?receiver),
     new(G, handler_group(new(select_editor_text_gesture),
                          click_gesture(middle, '', single,
@@ -132,6 +135,5 @@ terminate(G, _Ev:event) :->
 
 :- pce_end_class.
 
-:- free(@editor_recogniser).
 :- initialization
     make_editor_recogniser(@editor_recogniser).
