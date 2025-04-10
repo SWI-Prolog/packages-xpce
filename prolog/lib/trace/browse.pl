@@ -68,6 +68,7 @@
 	    ]).
 :- autoload(library(prolog_trace),[trace/2,trace/1]).
 :- autoload(library(swi_ide),[prolog_ide/1]).
+:- autoload(library(apply), [convlist/3]).
 :- if(exists_source(library(pldoc/man_index))).
 :- autoload(library(pldoc/man_index),[man_object_property/2]).
 :- endif.
@@ -1022,14 +1023,17 @@ loading(What, How) :-
     (   file_name_extension(_, qlf, File)
     ->  debug(gtrace(qlf), 'Looking for ~q', [File]),
         '$qlf_sources'(File, Sources),
-        debug(gtrace(qlf), 'Contains ~q', [Sources]),
-        member(TheFile, Sources)
+        convlist(qlf_part, Sources, Files),
+        debug(gtrace(qlf), 'Contains ~p', [Files]),
+        member(TheFile, Files)
     ;   TheFile = File
     ),
     get(Win, file_node, TheFile, Node),
     image_of_load_state(Stage, How, Img),
     in_pce_thread(update_image(Node, Img)),
     fail.
+
+qlf_part(source(File), File).
 
 update_image(Node, Img) :-
     send(Node, image, Img),
