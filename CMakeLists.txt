@@ -191,8 +191,10 @@ add_qcompile_target(pce               SOURCES ${XPCE_QLF_pce})
 add_qcompile_target(emacs/emacs	      SOURCES ${XPCE_QLF_emacs}
 				      DEPENDS qlf-pce)
 add_qcompile_target(trace/trace       SOURCES ${XPCE_QLF_trace}
+				      EXPECTDEPS "library(debug)"
 				      DEPENDS qlf-emacs-emacs)
-add_qcompile_target(emacs/prolog_mode DEPENDS qlf-emacs-emacs)
+add_qcompile_target(emacs/prolog_mode DEPENDS qlf-emacs-emacs
+				      EXPECTDEPS "library(debug)")
 
 ################
 # Install
