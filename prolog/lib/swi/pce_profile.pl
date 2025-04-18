@@ -108,10 +108,7 @@ fill_dialog(F, TD:tool_dialog) :->
     send(TD, append, new(Time, popup(time))),
     send(TD, append, new(Help, popup(help))),
     send_list(File, append,
-              [ menu_item(statistics,
-                          message(F, show_statistics)),
-                gap,
-                menu_item(exit,
+              [ menu_item(quit,
                           message(F, destroy))
               ]),
     forall(sort_by(Label, Field, Order),
@@ -124,9 +121,7 @@ fill_dialog(F, TD:tool_dialog) :->
            send(Time, append,
                 menu_item(TimeView, message(F, time_view, TimeView)))),
     send_list(Help, append,
-              [ menu_item(about,
-                          message(F, about)),
-                menu_item(help,
+              [ menu_item(help,
                           message(F, help))
               ]).
 
@@ -220,18 +215,12 @@ render_time(F, Ticks:int, Rendered:any) :<-
         )
     ).
 
-about(_F) :->
-    send(@display, inform,
-         'SWI-Prolog execution profile viewer\n\c
-             By Jan Wielemaker').
-
 help(_F) :->
     send(@display, confirm,
          'No online help yet\n\c
-              The profiler is described in the SWI-Prolog Reference Manual\n\c
-              available from www.swi-prolog.org\n\n\c
-              Press OK to open the manual in your browser'),
-    www_open_url('http://www.swi.psy.uva.nl/projects/SWI-Prolog/Manual/profile.html').
+          The profiler is described on the SWI-Prolog web site\n\c
+          Press OK to open the page in your browser'),
+    www_open_url('https://www.swi-prolog.org/profile.html').
 
 :- pce_end_class(prof_frame).
 
