@@ -136,8 +136,7 @@ emacs(File) :-
     atom(File),
     !,
     start_emacs,
-    in_pce_thread(send(@emacs, goto_source_location,
-                       source_location(File), tab)).
+    in_pce_thread(send(@emacs, open_file, File, tab)).
 emacs(File) :-
     domain_error(location, File).
 
