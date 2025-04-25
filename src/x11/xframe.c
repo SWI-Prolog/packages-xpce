@@ -218,7 +218,7 @@ ws_create_frame(FrameObj fr)
 		    nameToMB(fr->label),
 		    fr->kind == NAME_popup     ? overrideFrameWidgetClass  :
 		    fr->kind == NAME_transient ? transientFrameWidgetClass :
-					         topLevelFrameWidgetClass,
+						 topLevelFrameWidgetClass,
 		    r->shell_xref,
 		    args, n);
 
@@ -269,7 +269,10 @@ ws_realise_frame(FrameObj fr)
   }
 #endif
   clhint.res_name  = nameToMB(fr->label);
-  clhint.res_class = nameToMB(get(fr->class->name, NAME_labelName, EAV));
+  if ( notDefault(fr->display->wm_class) )
+    clhint.res_class = nameToMB(fr->display->wm_class);
+  else
+    clhint.res_class = nameToMB(get(fr->class->name, NAME_labelName, EAV));
   XSetClassHint(r->display_xref, XtWindow(w), & clhint);
 
 
