@@ -1344,7 +1344,7 @@ static senddecl send_display[] =
      NAME_selection, "Set the (textual) selection"),
   SM(NAME_copy, 1, "char_array", copyDisplay,
      NAME_selection, "Copy to selection and cut_buffer"),
-#ifndef WIN32_GRAPHICS
+#if X11_GRAPHICS
   SM(NAME_metaModifier, 1, "name", metaModifierDisplay,
      NAME_x, "Set the X modifier that is associated with META-"),
   SM(NAME_x11Threads, 1, "bool", X11ThreadsDisplay,

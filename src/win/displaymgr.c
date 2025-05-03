@@ -146,7 +146,7 @@ eventQueuedDisplayManager(DisplayManager dm)
 static status
 redrawDisplayManager(DisplayManager dm)
 {
-#ifndef WIN32_GRAPHICS
+#ifdef X11_GRAPHICS
   if ( MappedFrames && !emptyChain(MappedFrames) )
   { FrameObj fr;
 

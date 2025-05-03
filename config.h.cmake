@@ -1,3 +1,7 @@
+#cmakedefine X11_GRAPHICS @X11_GRAPHICS@
+#cmakedefine WIN32_GRAPHICS @WIN32_GRAPHICS@
+#cmakedefine RAY_GRAPHICS @RAY_GRAPHICS@
+
 #cmakedefine PCE_OS "@PCE_OS@"
 #cmakedefine PCE_MACHINE "@PCE_MACHINE@"
 #cmakedefine PCE_VERSION "@PCE_VERSION@"
@@ -121,7 +125,6 @@
 #cmakedefine USE_SIGINFO @USE_SIGINFO@
 #cmakedefine USE_WINSOCK @USE_WINSOCK@2
 #cmakedefine USE_XFT @USE_XFT@
-#cmakedefine WIN32_GRAPHICS @WIN32_GRAPHICS@
 #cmakedefine WORDS_BIGENDIAN @WORDS_BIGENDIAN@
 #cmakedefine _REENTRANT @_REENTRANT@
 #cmakedefine __CHAR_UNSIGNED__ @__CHAR_UNSIGNED__@

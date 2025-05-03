@@ -3,7 +3,14 @@ project(swipl-xpce)
 
 include("../cmake/PrologPackage.cmake")
 
-if(WIN32)
+option(RAYLIB "Build with raylib backend instead of X11/MSW" OFF)
+
+if(RAYLIB)			# Raylib
+  find_package(raylib REQUIRED)
+  set(GUI_INCLUDE_DIRS ${raylib_INCLUDE_DIRS})
+  set(HAVE_GUI 1)
+  set(RAY_GRAPHICS 1)
+elseif(WIN32)				# Windows
   add_subdirectory(deps/xpm)
   set(HAVE_GUI 1)
   set(WIN32_GRAPHICS 1)
@@ -19,13 +26,11 @@ if(WIN32)
       shell32.lib
       ws2_32.lib
       libxpm)
-  set(GUI_INCLUDE_DIRS)
   set(XPCE_LINK_RC swipl-win)
   find_package(JPEG)
-  if(JPEG_FOUND)
-    set(HAVE_GUI 1)
-  endif()
-else()
+  set(GUI_INCLUDE_DIRS
+      ${JPEG_INCLUDE_DIR})
+else()					# X11
   find_package(X11)
   if(X11_FOUND AND X11_Xpm_LIB)
     find_package(Freetype)
@@ -34,6 +39,7 @@ else()
 
     if(FREETYPE_FOUND AND FONTCONFIG_FOUND AND JPEG_FOUND)
       set(HAVE_GUI 1)
+      set(X11_GRAPHICS 1)
       set(GUI_LIBRARIES
 	  ${X11_Xpm_LIB}
 	  ${X11_Xext_LIB}
@@ -48,7 +54,8 @@ else()
       set(GUI_INCLUDE_DIRS
 	  ${X11_INCLUDE_DIR}
 	  ${FREETYPE_INCLUDE_DIRS}
-	  ${FONTCONFIG_INCLUDE_DIR})
+	  ${FONTCONFIG_INCLUDE_DIR}
+	  ${JPEG_INCLUDE_DIR})
       set(XPCE_LINK_RC swipl)
       has_package(swipl-win HAVE_SWIPL_WIN)
       if(HAVE_SWIPL_WIN)
@@ -70,11 +77,9 @@ else()
       endif()
     endif()
   endif()
-endif()
+endif()				# RAY/MSW/X11
 
 if(HAVE_GUI)
-set(GUI_INCLUDE_DIRS ${GUI_INCLUDE_DIRS} ${JPEG_INCLUDE_DIR})
-
 include(QLF)
 include(XPCESources)
 
@@ -99,7 +104,8 @@ if(UNIX)
   add_compile_options(-DHAVE_CONFIG_H -DSWI)
 endif()
 
-set(cdirs adt ari box evt fmt gnu gra img itf ker men msg msw prg rel rgx txt unx win x11)
+set(cdirs adt ari box evt fmt gnu gra img itf ker men msg msw
+    prg rel rgx txt unx win x11 ray)
 file(GLOB files RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/src"
      "${CMAKE_CURRENT_SOURCE_DIR}/src/h/*.h")
 foreach(d ${cdirs})

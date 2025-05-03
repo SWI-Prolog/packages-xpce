@@ -948,6 +948,7 @@ rescale(Image image, int px)
 { return (int)((double)px*valReal(image->scale)+0.5);
 }
 
+#ifdef XPM_PCEIMAGE
 static void
 stdXPMImage(Name name, Image *global, char **bits)
 { int w, h, colours;
@@ -977,7 +978,6 @@ stdXPMImage(Name name, Image *global, char **bits)
 }
 
 
-#ifdef XPM_PCEIMAGE
 #include "bitmaps/swipl48.xpm"
 #include "bitmaps/hadjusttile.xpm"
 #include "bitmaps/vadjusttile.xpm"

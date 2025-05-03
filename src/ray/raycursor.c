@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
-    Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1995-2011, University of Amsterdam
+    Author:        Jan Wielemaker
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org
+    Copyright (c)  2025, SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -32,65 +32,52 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-typedef struct graphics_state *GraphicsState;
+#include <h/kernel.h>
+#include <h/graphics.h>
+#include "raycursor.h"
 
-struct graphics_state
-{ int		level;
-  int		thickness;
-  Name		texture;
-  Any		foreground;
-  Any		background;
-  GraphicsState savedstate;		/* previous state */
-};
-
-static GraphicsState statelist;
-long   statechange;
-
+/**
+ * Initialize the cursor font resources.
+ *
+ * This function sets up any necessary font resources required for cursor rendering.
+ * It should be called during the initialization phase of the application.
+ */
 void
-g_save()
-{ GraphicsState gs = alloc(sizeof(struct graphics_state));
-
-  gs->level	 = (statelist ? statelist->level+1 : 1);
-#if RAY_GRAPHICS
-#elif WIN32_GRAPHICS
-  gs->thickness  = context.thickness;
-  gs->texture    = context.texture;
-  gs->foreground = context.colour;
-  gs->background = context.background;
-#elif X11_GRAPHICS
-  gs->thickness  = context.gcs->pen;
-  gs->texture    = context.gcs->dash;
-  gs->foreground = context.gcs->colour;
-  gs->background = context.gcs->background;
-#else
-#error "No GUI library"
-#endif
-
-  gs->savedstate = statelist;
-  statelist = gs;
+ws_init_cursor_font(void)
+{
 }
 
-
-void
-g_restore()
-{ GraphicsState gs = statelist;
-
-  if ( !gs )
-  { errorPce(NAME_gRestore, NAME_nestMisMatch);
-    return;
-  }
-
-  r_thickness(gs->thickness);
-  r_dash(gs->texture);
-  r_colour(gs->foreground);
-  r_background(gs->background);
-
-  statelist = gs->savedstate;
-  unalloc(sizeof(struct graphics_state), gs);
+/**
+ * Retrieve the font index corresponding to a given cursor name.
+ *
+ * @param name Pointer to the Name object representing the cursor name.
+ * @return The font index associated with the specified cursor name.
+ */
+Int
+ws_cursor_font_index(Name name)
+{ return toInt(0);
 }
 
+/**
+ * Create a native cursor resource associated with the specified CursorObj on the given display.
+ *
+ * @param c Pointer to the CursorObj to be created.
+ * @param d Pointer to the DisplayObj representing the display context.
+ * @return SUCCEED on successful creation; otherwise, FAIL.
+ */
+status
+ws_create_cursor(CursorObj c, DisplayObj d)
+{
+    return SUCCEED;
+}
 
-int
-g_level()
-{ return statelist ? 0 : statelist->level;
+/**
+ * Destroy the native cursor resource associated with the specified CursorObj on the given display.
+ *
+ * @param c Pointer to the CursorObj to be destroyed.
+ * @param d Pointer to the DisplayObj representing the display context.
+ */
+void
+ws_destroy_cursor(CursorObj c, DisplayObj d)
+{
 }

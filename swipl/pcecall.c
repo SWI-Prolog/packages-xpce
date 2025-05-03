@@ -319,7 +319,7 @@ out:
 }
 
 
-#else /*!__WINDOWS__*/
+#elif X11_GRAPHICS
 
 
 		 /*******************************
@@ -487,8 +487,26 @@ in_pce_thread_sync2(term_t goal, term_t vars)
 #endif /*O_PLMT*/
 }
 
-#endif /*!__WINDOWS__*/
+#else /*Not __WINDOWS__ and not X11_GRAPHICS */
 
+static foreign_t
+in_pce_thread(term_t goal)
+{ Sdprintf("in_pce_thread(): stub\n");
+
+  (void)init_prolog_goal;		/* eventually we'll need these */
+  (void)call_prolog_goal;
+  (void)pce_dispatch_mutex;
+
+  return false;
+}
+
+static foreign_t
+in_pce_thread_sync2(term_t goal, term_t vars)
+{ Sdprintf("in_pce_thread_sync2(): stub\n");
+  return false;
+}
+
+#endif
 
 		 /*******************************
 		 *	CREATE/EXECUTE GOAL	*

@@ -71,10 +71,17 @@ set(WIN_SRC	browser.c decorate.c dialog.c display.c
 		tile.c view.c window.c application.c
 		monitor.c)
 
-set(IMG_SRC	jdatasrc.c jdatadst.c jpegtoxpm.c gifread.c giftoxpm.c
+set(IMG_SRC	jpegtoxpm.c gifread.c giftoxpm.c
 		gifwrite.c imgutil.c)
+if(NOT RAYLIB)
+  list(APPEND IMG_SRC jdatasrc.c jdatadst.c)
+endif()
 
-if(WIN32)
+if(RAYLIB)
+set(RAY_SRC	ray.c raydisplay.c rayfont.c raymenu.c raywindow.c
+		raycolour.c raydraw.c rayframe.c raystream.c
+		raycursor.c  rayevent.c    rayimage.c  raytimer.c)
+elseif(WIN32)
 set(MSW_SRC	mscolour.c mscursor.c msdisplay.c msdraw.c msevent.c
 		msfont.c msframe.c msimage.c msstream.c mstimer.c
 		mswindow.c msmenu.c mswin.c msppm.c msprinter.c
@@ -85,14 +92,16 @@ set(X11_SRC	canvas.c fshell.c xcommon.c xconvert.c x11-compat.c xppm.c
 		xcolour.c xcursor.c xdisplay.c xdraw.c xevent.c xfont.c
 		xframe.c ximage.c xstream.c xtimer.c xwindow.c x11.c xmenu.c
 		xdnd.c xunix.c xjpeg.c)
-endif(WIN32)
+endif(RAYLIB)
 
 set(XPCE_SUBDIRS adt ari evt gnu gra itf ker men fmt box msg prg rel rgx
 		 txt unx win img)
-if(WIN32)
-  set(XPCE_SUBDIRS ${XPCE_SUBDIRS} msw)
+if(RAYLIB)
+  list(APPEND XPCE_SUBDIRS ray)
+elseif(WIN32)
+  list(APPEND XPCE_SUBDIRS msw)
 else()
-  set(XPCE_SUBDIRS ${XPCE_SUBDIRS} x11)
+  list(APPEND XPCE_SUBDIRS x11)
 endif()
 
 set(XPCE_SOURCES)
