@@ -1,11 +1,11 @@
 #!/bin/sh
-# Generate Emacs tag table.  Either invoke as
+# Generate Emacs tag table.  Either invoke as one of
 #
 #	./mktags x11
-# or
 #	./mktags msw
+#	./mktags ray
 #
-# To create a tag-table for the proper environment.
+# To create a tag-table for the proper environment.   Default is `x11`
 
 if [ ! -z "$1" ]; then win="$1"; else win=x11; fi
 
