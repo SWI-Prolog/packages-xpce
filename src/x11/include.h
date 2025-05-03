@@ -268,7 +268,7 @@ COMMON(int)		write_jpeg_file(IOSTREAM *fd, XImage *img,
 					Image image);
 COMMON(int)		write_gif_file(IOSTREAM *fd, XImage *img, XImage *msk,
 				       Display *disp, Colormap cmap);
-#if !RAY_GRAPHICS
+#if X11_GRAPHICS || WIN32_GRAPHICS
 COMMON(XImage *)	attachXpmImageImage(Image image, XpmImage *xpm);
 #endif
 COMMON(unsigned long *)	XImageToRGBA(XImage *img, XImage *msk,

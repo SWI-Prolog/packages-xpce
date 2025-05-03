@@ -4,6 +4,7 @@
 #	./mktags x11
 #	./mktags msw
 #	./mktags ray
+#	./mktags sdl
 #
 # To create a tag-table for the proper environment.   Default is `x11`
 

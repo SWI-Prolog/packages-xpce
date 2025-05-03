@@ -51,7 +51,8 @@ g_save()
 { GraphicsState gs = alloc(sizeof(struct graphics_state));
 
   gs->level	 = (statelist ? statelist->level+1 : 1);
-#if RAY_GRAPHICS
+#if SDL_GRAPHICS
+#elif RAY_GRAPHICS
 #elif WIN32_GRAPHICS
   gs->thickness  = context.thickness;
   gs->texture    = context.texture;

@@ -1,5 +1,6 @@
 #cmakedefine X11_GRAPHICS @X11_GRAPHICS@
 #cmakedefine WIN32_GRAPHICS @WIN32_GRAPHICS@
+#cmakedefine SDL_GRAPHICS @SDL_GRAPHICS@
 #cmakedefine RAY_GRAPHICS @RAY_GRAPHICS@
 
 #cmakedefine PCE_OS "@PCE_OS@"

@@ -73,11 +73,15 @@ set(WIN_SRC	browser.c decorate.c dialog.c display.c
 
 set(IMG_SRC	jpegtoxpm.c gifread.c giftoxpm.c
 		gifwrite.c imgutil.c)
-if(NOT RAYLIB)
+if(NOT RAYLIB AND NOT SDL)
   list(APPEND IMG_SRC jdatasrc.c jdatadst.c)
 endif()
 
-if(RAYLIB)
+if(SDL)
+set(SDL_SRC	sdl.c sdldisplay.c sdlfont.c sdlmenu.c sdlwindow.c
+		sdlcolour.c sdldraw.c sdlframe.c sdlstream.c
+		sdlcursor.c  sdlevent.c    sdlimage.c  sdltimer.c)
+elseif(RAYLIB)
 set(RAY_SRC	ray.c raydisplay.c rayfont.c raymenu.c raywindow.c
 		raycolour.c raydraw.c rayframe.c raystream.c
 		raycursor.c  rayevent.c    rayimage.c  raytimer.c)
@@ -92,11 +96,13 @@ set(X11_SRC	canvas.c fshell.c xcommon.c xconvert.c x11-compat.c xppm.c
 		xcolour.c xcursor.c xdisplay.c xdraw.c xevent.c xfont.c
 		xframe.c ximage.c xstream.c xtimer.c xwindow.c x11.c xmenu.c
 		xdnd.c xunix.c xjpeg.c)
-endif(RAYLIB)
+endif(SDL)
 
 set(XPCE_SUBDIRS adt ari evt gnu gra itf ker men fmt box msg prg rel rgx
 		 txt unx win img)
-if(RAYLIB)
+if(SDL)
+  list(APPEND XPCE_SUBDIRS sdl)
+elseif(RAYLIB)
   list(APPEND XPCE_SUBDIRS ray)
 elseif(WIN32)
   list(APPEND XPCE_SUBDIRS msw)

@@ -4,8 +4,15 @@ project(swipl-xpce)
 include("../cmake/PrologPackage.cmake")
 
 option(RAYLIB "Build with raylib backend instead of X11/MSW" OFF)
+option(SDL    "Build with SDL backend instead of X11/MSW" OFF)
 
-if(RAYLIB)			# Raylib
+if(SDL)
+  find_package(SDL2 REQUIRED)
+  find_package(SDL2_image REQUIRED)
+  find_package(SDL2_ttf REQUIRED)
+  set(HAVE_GUI 1)
+  set(SDL_GRAPHICS 1)
+elseif(RAYLIB)			# Raylib
   find_package(raylib REQUIRED)
   set(GUI_INCLUDE_DIRS ${raylib_INCLUDE_DIRS})
   set(HAVE_GUI 1)
