@@ -34,7 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#include "rayevent.h"
+#include "sdlevent.h"
 
 /**
  * Reset the internal event dispatching state.

@@ -34,7 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#include "raystream.h"
+#include "sdlstream.h"
 
 /**
  * Close the input side of the specified stream.

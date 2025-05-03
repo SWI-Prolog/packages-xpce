@@ -34,7 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#include "raymenu.h"
+#include "sdlmenu.h"
 
 /**
  * Draw a scrollbar arrow at the specified location and direction.

@@ -34,7 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#include "raycursor.h"
+#include "sdlcursor.h"
 
 /**
  * Initialize the cursor font resources.

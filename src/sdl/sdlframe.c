@@ -34,7 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#include "rayframe.h"
+#include "sdlframe.h"
 
 /**
  * Check if the frame has been created.

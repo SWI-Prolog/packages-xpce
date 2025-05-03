@@ -34,7 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#include "raytimer.h"
+#include "sdltimer.h"
 
 /**
  * Set the status of the specified timer.

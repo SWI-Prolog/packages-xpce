@@ -34,7 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#include "raydraw.h"
+#include "sdldraw.h"
 
 #include <gra/graphstate.c>
 

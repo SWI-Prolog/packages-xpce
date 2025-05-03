@@ -1,7 +1,7 @@
-# Binding directory for raylib
+# Binding directory for SDL2
 
 This  directory  is  intended  to   provide  a  binding  for  xpce  on
-[raylib](https://www.raylib.com/).
+[SDL2](https://www.sdllib.com/).
 
 ## Empty binding
 

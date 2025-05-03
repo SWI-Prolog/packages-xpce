@@ -34,7 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#include "ray.h"
+#include "sdl.h"
 
 /**
  * Initialize the Raylib backend with the given command-line arguments.

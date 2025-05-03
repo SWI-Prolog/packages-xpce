@@ -34,7 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#include "raywindow.h"
+#include "sdlwindow.h"
 
 /**
  * Check if the specified window has been created.

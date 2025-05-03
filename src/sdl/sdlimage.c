@@ -34,7 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#include "rayimage.h"
+#include "sdlimage.h"
 
 /**
  * Initialize internal state for a new Image object.

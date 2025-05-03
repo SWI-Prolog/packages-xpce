@@ -34,7 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#include "raycolour.h"
+#include "sdlcolour.h"
 
 /**
  * Create a native color resource associated with the specified Colour object on the given display.

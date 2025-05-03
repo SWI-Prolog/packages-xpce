@@ -34,7 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#include "raydisplay.h"
+#include "sdldisplay.h"
 
 /**
  * Flush the display buffer, ensuring all pending drawing operations are executed.

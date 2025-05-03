@@ -34,7 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#include "rayfont.h"
+#include "sdlfont.h"
 
 /**
  * Create a native font resource associated with the specified FontObj on the given display.
