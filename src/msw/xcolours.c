@@ -800,5 +800,35 @@ static xcolourdef x11_colours[] =
  { 139,   0,   0, "DarkRed" },
  { 144, 238, 144, "light green" },
  { 144, 238, 144, "LightGreen" },
-  {   0,   0,   0, NULL }
+ {   0,   0,   0, NULL }
 };
+
+
+static HashTable
+LoadColourNames(void)
+{ if ( !ColourNames )
+  { xcolourdef *cd;
+
+    ColourNames = globalObject(NAME_colourNames, ClassHashTable, EAV);
+
+    for(cd = x11_colours; cd->name; cd++)
+    { COLORREF rgb = RGB(cd->red, cd->green, cd->blue);
+      char buf[100];
+      const char *s = cd->name;
+      char *q = buf;
+
+      for( ; *s; s++ )
+      { if ( *s == ' ' )
+	  *q++ = '_';
+	else
+	  *q++ = tolower(*s);
+      }
+      *q = '\0';
+      appendHashTable(ColourNames, CtoKeyword(buf), toInt(rgb));
+    }
+
+    ws_system_colours(CurrentDisplay(NIL));
+  }
+
+  return ColourNames;
+}

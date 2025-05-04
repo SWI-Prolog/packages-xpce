@@ -35,54 +35,23 @@
 #define USE_CONVERTED_COLOURS 1;
 
 #include "include.h"
+
+static HashTable ColourNames;		/* name --> rgb (packed in Int) */
+static HashTable X11ColourNames;	/* rgb --> X11-name */
+
 #ifdef USE_CONVERTED_COLOURS
 #include "xcolours.c"
 #else
 #include <h/unix.h>
 #endif
 
-static HashTable ColourNames;		/* name --> rgb (packed in Int) */
-static HashTable X11ColourNames;	/* rgb --> X11-name */
-
 static status	ws_alloc_colour(ColourMap cm, Colour c);
 static void	ws_unalloc_colour(ColourMap cm, Colour c);
 
-#ifdef USE_CONVERTED_COLOURS
+#ifndef USE_CONVERTED_COLOURS
 
 static HashTable
-LoadColourNames()
-{ if ( !ColourNames )
-  { xcolourdef *cd;
-
-    ColourNames = globalObject(NAME_colourNames, ClassHashTable, EAV);
-
-    for(cd = x11_colours; cd->name; cd++)
-    { COLORREF rgb = RGB(cd->red, cd->green, cd->blue);
-      char buf[100];
-      const char *s = cd->name;
-      char *q = buf;
-
-      for( ; *s; s++ )
-      { if ( *s == ' ' )
-	  *q++ = '_';
-	else
-	  *q++ = tolower(*s);
-      }
-      *q = '\0';
-      appendHashTable(ColourNames, CtoKeyword(buf), toInt(rgb));
-    }
-
-    ws_system_colours(CurrentDisplay(NIL));
-  }
-
-  return ColourNames;
-}
-
-
-#else /*USE_CONVERTED_COLOURS*/
-
-static HashTable
-LoadColourNames()
+LoadColourNames(void)
 { if ( !ColourNames )
   { FileObj f = answerObject(ClassFile, CtoName("$PCEHOME/lib/rgb.txt"), EAV);
     ColourNames = globalObject(NAME_colourNames, ClassHashTable, EAV);
@@ -416,7 +385,7 @@ static struct system_colour window_colours[] =
   { "win_windowtext",		   COLOR_WINDOWTEXT
  },
 
-  { NULL, 			   0 }
+  { NULL,			   0 }
 };
 
 
@@ -791,7 +760,3 @@ ws_has_colourmap(DisplayObj d)
    */
   return (rc & RC_PALETTE) != 0 && bits == 8;
 }
-
-
-
-
