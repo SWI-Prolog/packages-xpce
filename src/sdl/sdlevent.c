@@ -35,6 +35,84 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include "sdlevent.h"
+#ifdef HAVE_POLL
+#include <poll.h>
+#endif
+
+static Name
+button_to_name(bool press, Uint8 button)
+{ switch( button )
+  { case 1:	return press ? NAME_msLeftDown     : NAME_msLeftUp;
+    case 2:	return press ? NAME_msMiddleDown   : NAME_msMiddleUp;
+    case 3:	return press ? NAME_msRightDown    : NAME_msRightUp;
+    case 4:	return press ? NAME_msButton4Down  : NAME_msButton4Up;
+    case 5:	return press ? NAME_msButton5Down  : NAME_msButton5Up;
+  }
+
+  fail;
+}
+
+static Int
+state_to_buttons(SDL_MouseButtonFlags flags)
+{ int r = 0;
+
+  if ( flags & SDL_BUTTON_LMASK )  r |= BUTTON_ms_left;
+  if ( flags & SDL_BUTTON_MMASK )  r |= BUTTON_ms_middle;
+  if ( flags & SDL_BUTTON_RMASK )  r |= BUTTON_ms_right;
+  if ( flags & SDL_BUTTON_X1MASK ) r |= BUTTON_ms_button4;
+  if ( flags & SDL_BUTTON_X2MASK ) r |= BUTTON_ms_button5;
+#if 0
+  if ( state & ShiftMask )	r |= BUTTON_shift;
+  if ( state & ControlMask )	r |= BUTTON_control;
+  if ( state & MetaMask )	r |= BUTTON_meta;
+#endif
+
+  return toInt(r);
+}
+
+/**
+ * @see https://wiki.libsdl.org/SDL3/SDL_Event
+ */
+
+EventObj
+CtoEvent(SDL_Event *event)
+{ unsigned int time;
+  SDL_MouseButtonFlags mouse_flags = 0;
+  float fx, fy;
+  int x, y;
+  Any name = NULL;
+  Any window = NIL;		/* TODO */
+
+  mouse_flags = SDL_GetMouseState(&fx, &fy);
+
+  switch (event->type)
+  { case SDL_EVENT_MOUSE_BUTTON_DOWN:
+    case SDL_EVENT_MOUSE_BUTTON_UP:
+      /* https://wiki.libsdl.org/SDL3/SDL_MouseButtonEvent */
+      x = event->button.x;	/* these are floats */
+      y = event->button.y;
+      time = event->button.timestamp/1000000; // ns -> ms
+      name = button_to_name(event->button.down, event->button.button);
+      if ( !name )
+	fail;
+      break;
+    case SDL_EVENT_MOUSE_MOTION:
+    case SDL_EVENT_KEY_DOWN:
+      fail;			/* for now */
+  }
+
+  setLastEventTime(time);
+
+  EventObj ev = answerObject(ClassEvent,
+			     name,
+			     window,
+			     toInt(x), toInt(y),
+			     state_to_buttons(mouse_flags),
+			     EAV);
+
+  return ev;
+}
+
 
 /**
  * Reset the internal event dispatching state.
@@ -77,7 +155,8 @@ ws_dispatch(Int FD, Any timeout)
   { tmo = 256;
   }
 
-  (void)fd;			/* to be done */
+  if ( fd >= 0 )
+    dispatch_fd = fd;
 
   bool rc;
   SDL_Event ev;
@@ -87,7 +166,40 @@ ws_dispatch(Int FD, Any timeout)
   { rc = SDL_WaitEventTimeout(&ev, tmo);
   }
 
+  if ( rc )
+  { EventObj event = CtoEvent(&ev);
+    Cprintf("Got %s\n", pp(event));
+  }
+
   return rc;
+}
+
+static bool
+input_on_fd(int fd)
+{
+#ifdef HAVE_POLL
+  struct pollfd fds[1];
+
+  fds[0].fd = fd;
+  fds[0].events = POLLIN;
+
+  return poll(fds, 1, 0) != 0;
+#else
+#ifndef __WINDOWS__
+  if ( fd < FD_SETSIZE )
+#endif
+  { fd_set rfds;
+    struct timeval tv;
+
+    FD_ZERO(&rfds);
+    FD_SET(fd, &rfds);
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
+
+    return select(fd+1, &rfds, NULL, NULL, &tv) != 0;
+  } else
+    return true;
+#endif
 }
 
 /**
@@ -97,7 +209,15 @@ ws_dispatch(Int FD, Any timeout)
  */
 void
 ws_discard_input(const char *msg)
-{
+{ if ( dispatch_fd >= 0 && input_on_fd(dispatch_fd) )
+  { char buf[1024];
+
+    Cprintf("%s; discarding input ...", msg);
+    if ( read(dispatch_fd, buf, sizeof(buf)) >= 0 )
+      Cprintf("ok\n");
+    else
+      Cprintf("failed\n");
+  }
 }
 
 /**
