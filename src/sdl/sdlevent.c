@@ -172,6 +172,11 @@ ws_dispatch(Int FD, Any timeout)
   if ( fd >= 0 )
     dispatch_fd = fd;
 
+  if ( pceMTTryLock(LOCK_PCE) )
+  { RedrawDisplayManager(TheDisplayManager());
+    pceMTUnlock(LOCK_PCE);
+  }
+
   bool rc;
   SDL_Event ev;
   if ( tmo == -1 )
