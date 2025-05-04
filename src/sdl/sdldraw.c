@@ -133,8 +133,9 @@ d_flush(void)
  */
 status
 d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
-{
-    return SUCCEED;
+{ Cprintf("d_window(%s, %d, %d, %d, %d, %d, %d)\n",
+	  pp(sw), x, y, w, h, clear, limit);
+  succeed;
 }
 
 /**
@@ -193,7 +194,7 @@ d_clip(int x, int y, int w, int h)
  */
 void
 d_done(void)
-{
+{ Cprintf("d_done()\n");
 }
 
 /**
@@ -225,7 +226,7 @@ intersection_iarea(IArea a, IArea b)
  */
 void
 r_clear(int x, int y, int w, int h)
-{
+{ Cprintf("r_clear(%d, %d, %d, %d)\n", x, y, w, h);
 }
 
 /**
@@ -431,7 +432,7 @@ r_translate(int x, int y, int *ox, int *oy)
  */
 void
 r_box(int x, int y, int w, int h, int r, Any fill)
-{
+{ Cprintf("r_box(%d, %d, %d, %d, %s)\n", x, y, w, h, pp(fill));
 }
 
 /**
@@ -447,7 +448,7 @@ r_box(int x, int y, int w, int h, int r, Any fill)
  */
 void
 r_shadow_box(int x, int y, int w, int h, int r, int shadow, Image fill)
-{
+{ Cprintf("r_shadow_box(%d, %d, %d, %d, %s)\n", x, y, w, h, pp(fill));
 }
 
 /**

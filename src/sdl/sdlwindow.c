@@ -45,7 +45,8 @@
 status
 ws_created_window(PceWindow sw)
 { FrameObj fr = getFrameWindow(sw, OFF);
-  Cprintf("ws_created_window(%s) on %s\n", pp(sw), pp(fr));
+  DEBUG(NAME_window,
+	Cprintf("ws_created_window(%s) on %s\n", pp(sw), pp(fr)));
   return fr && ws_created_frame(fr);
 }
 
