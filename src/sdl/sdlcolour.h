@@ -34,6 +34,31 @@
 
 #ifndef RAYCOLOUR_H
 #define RAYCOLOUR_H
+#include <SDL3/SDL.h>
+
+typedef struct
+{ Uint8 r;
+  Uint8 g;
+  Uint8 b;
+  Uint8 a;
+} sdl_color;
+
+typedef union
+{ sdl_color color;
+  uint32_t  asint;
+} cvt_color;
+
+static inline WsRef
+color2wsref(uint32_t i)
+{ return (void*)(intptr_t)i;
+}
+
+static inline sdl_color
+wsref2color(WsRef r)
+{ cvt_color cvt = { .asint = (int32_t)(intptr_t)r };
+  return cvt.color;
+}
+
 
 status ws_create_colour(Colour c, DisplayObj d);
 void ws_uncreate_colour(Colour c, DisplayObj d);

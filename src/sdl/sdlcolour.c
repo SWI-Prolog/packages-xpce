@@ -36,6 +36,21 @@
 #include <h/graphics.h>
 #include "sdlcolour.h"
 
+/* Windows RGB emulation */
+typedef uint32_t COLORREF;
+#define RGB(r,g,b) (((COLORREF)r<<16)|((COLORREF)g<<8)|((COLORREF)r))
+#define GetRValue(rgb) (((rgb)>>16)&0xff)
+#define GetGValue(rgb) (((rgb)>> 8)&0xff)
+#define GetBValue(rgb) (((rgb)>> 0)&0xff)
+
+static HashTable ColourNames;		/* name --> rgb (packed in Int) */
+
+#define ws_system_colours(d) (void)0
+
+#include "../msw/xcolours.c"	/* get x11_colours */
+
+static Name	canonical_colour_name(Name in);
+
 /**
  * Create a native color resource associated with the specified Colour object on the given display.
  *
@@ -45,8 +60,35 @@
  */
 status
 ws_create_colour(Colour c, DisplayObj d)
-{
-    return SUCCEED;
+{ Int Rgb;
+  (void)d;
+
+  if ( c->kind == NAME_named )
+  { HashTable ht = LoadColourNames();
+
+    if ( (Rgb = getMemberHashTable(ht, c->name)) ||
+	 (Rgb = getMemberHashTable(ht, canonical_colour_name(c->name))) )
+    { COLORREF rgb = (COLORREF) valInt(Rgb);
+      int r = GetRValue(rgb) * 257;
+      int g = GetGValue(rgb) * 257;
+      int b = GetBValue(rgb) * 257;
+
+      assign(c, red,   toInt(r));
+      assign(c, green, toInt(g));
+      assign(c, blue,  toInt(b));
+
+      c->ws_ref = color2wsref(rgb);
+    } else
+      fail;
+  } else
+  { COLORREF rgb = RGB(valInt(c->red)/256,
+		       valInt(c->green)/256,
+		       valInt(c->blue)/256);
+
+    c->ws_ref = color2wsref(rgb);
+  }
+
+  succeed;
 }
 
 /**
@@ -60,6 +102,33 @@ ws_uncreate_colour(Colour c, DisplayObj d)
 {
 }
 
+static Name
+canonical_colour_name(Name in)
+{ char *s = strName(in);
+  char buf[100];
+  int left = sizeof(buf);
+  char *q = buf;
+  int changed = 0;
+
+  for( ; *s && --left > 0; s++, q++ )
+  { if ( *s == ' ' )
+    { *q = '_';
+      changed++;
+    } else if ( isupper(*s) )
+    { *q = tolower(*s);
+      changed++;
+    } else
+      *q = *s;
+  }
+
+  if ( left && changed )
+  { *q = EOS;
+    return CtoKeyword(buf);
+  }
+
+  return in;
+}
+
 /**
  * Retrieve a color by its name from the specified display.
  *
@@ -69,8 +138,10 @@ ws_uncreate_colour(Colour c, DisplayObj d)
  */
 status
 ws_colour_name(DisplayObj d, Name name)
-{
-    return SUCCEED;
+{ HashTable ht = LoadColourNames();
+
+  return ( getMemberHashTable(ht, name) ||
+	   getMemberHashTable(ht, canonical_colour_name(name)) );
 }
 
 /**
