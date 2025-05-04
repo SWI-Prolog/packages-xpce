@@ -464,7 +464,9 @@ static vardecl var_colour[] =
   SV(NAME_green, "[0..65535]", IV_NONE|IV_FETCH, getGreenColour,
      NAME_colour, "Green value"),
   SV(NAME_blue, "[0..65535]", IV_NONE|IV_FETCH, getBlueColour,
-     NAME_colour, "Blue value")
+     NAME_colour, "Blue value"),
+  IV(NAME_wsRef, "alien:WsRef", IV_NONE,
+     NAME_storage, "Window system handle")
 };
 
 /* Send Methods */

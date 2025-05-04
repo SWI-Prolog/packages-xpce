@@ -753,6 +753,7 @@ NewClass(colour)
   Int		red;			/* Red intensity */
   Int		green;			/* Green intensity */
   Int		blue;			/* Blue intensity */
+  WsRef		ws_ref;			/* Window system reference */
 End;
 
 
