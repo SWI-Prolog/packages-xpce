@@ -162,6 +162,8 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
     fail;
   }
 
+  SDL_RenderClear(context.renderer);
+
   if ( clear )
     r_clear(x, y, w, h);
 
@@ -721,6 +723,7 @@ r_fill(int x, int y, int w, int h, Any fill)
     fill = context.colour;
   if ( instanceOfObject(fill, ClassColour) )
   { sdl_color c = pceColour2SDL(fill);
+    Cprintf("  fill with %d %d %d [%d]\n", c.r, c.g, c.b, c.a);
     SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
     SDL_FRect rect = { (float)x, (float)y, (float)w, (float)h };
     SDL_RenderFillRect(context.renderer, &rect);
