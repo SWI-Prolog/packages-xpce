@@ -92,7 +92,13 @@ ws_create_frame(FrameObj fr)
     0);
 
   if ( w )
-  { sdl_frame(fr, true)->ws_window = w;
+  { SDL_Renderer *renderer = SDL_CreateRenderer(w, NULL);
+    assert(renderer);
+    SDL_RenderPresent(renderer); /* Probably temporary */
+
+    WsFrame f = sdl_frame(fr, true);
+    f->ws_window = w;
+    f->ws_renderer = renderer;
     succeed;
   }
 
