@@ -37,6 +37,18 @@
 #include <SDL3/SDL.h>
 #include <assert.h>
 
+/* Windows API Emulation */
+typedef uint32_t COLORREF;
+#define RGBA(r,g,b,a) ((((COLORREF)a)<<24)| \
+		       (((COLORREF)r)<<16)| \
+		       (((COLORREF)g)<<8) | \
+			((COLORREF)b))
+#define RGB(r,g,b) RGBA(r,g,b,255)
+#define GetRValue(rgb) (((rgb)>>16)&0xff)
+#define GetGValue(rgb) (((rgb)>> 8)&0xff)
+#define GetBValue(rgb) (((rgb)>> 0)&0xff)
+#define GetAValue(rgb) (((rgb)>>24)&0xff)
+
 #define WS_COLOR_CREATED (((uintptr_t)1) << 32)
 
 typedef struct
@@ -60,8 +72,10 @@ color2wsref(uint32_t i)
 
 static inline sdl_color
 wsref2color(WsRef r)
-{ cvt_color cvt = { .asint = (int32_t)(intptr_t)r };
-  return cvt.color;
+{ COLORREF rgb = (COLORREF)(intptr_t)r;
+  sdl_color c = {.r = GetRValue(rgb), .g = GetGValue(rgb), .b = GetBValue(rgb),
+		 .a = GetAValue(rgb) };
+  return c;
 }
 
 static inline sdl_color

@@ -36,13 +36,6 @@
 #include <h/graphics.h>
 #include "sdlcolour.h"
 
-/* Windows RGB emulation */
-typedef uint32_t COLORREF;
-#define RGB(r,g,b) ((((COLORREF)r)<<16)|(((COLORREF)g)<<8)|((COLORREF)b))
-#define GetRValue(rgb) (((rgb)>>16)&0xff)
-#define GetGValue(rgb) (((rgb)>> 8)&0xff)
-#define GetBValue(rgb) (((rgb)>> 0)&0xff)
-
 static HashTable ColourNames;		/* name --> rgb (packed in Int) */
 
 #define ws_system_colours(d) (void)0
