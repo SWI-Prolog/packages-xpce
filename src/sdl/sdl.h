@@ -34,6 +34,7 @@
 
 #ifndef RAY_H
 #define RAY_H
+#include <SDL3/SDL.h>
 
 void ws_initialise(int argc, char **argv);
 int ws_version(void);

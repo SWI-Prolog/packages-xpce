@@ -347,6 +347,11 @@ static const error_def errors[] =
     "%N: Failed to create X-application-shell" },
   { NAME_noApplicationContext,	ET_FATAL,
     "%N: Failed to create X-application-context" },
+#if SDL_GRAPHICS
+					/* SDL */
+  { NAME_sdlInitialize,	ET_FATAL,
+    "%N: Failed to initialize SDL" },
+#endif
 					/* Colour/Cursor/Font, etc */
   { NAME_noLocaleSupport,	ET_WARNING,
     "%N: X11 does not support locale %s" },

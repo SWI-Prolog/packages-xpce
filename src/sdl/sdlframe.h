@@ -34,6 +34,12 @@
 
 #ifndef RAYFRAME_H
 #define RAYFRAME_H
+#include <SDL3/SDL.h>
+
+typedef struct
+{ SDL_Window   *ws_window;	/* The SDL2 Window handle */
+  SDL_Renderer *ws_renderer;	/* The Window's renderer */
+} ws_frame, *WsFrame;
 
 status ws_created_frame(FrameObj fr);
 void ws_uncreate_frame(FrameObj fr);

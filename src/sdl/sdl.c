@@ -44,7 +44,8 @@
  */
 void
 ws_initialise(int argc, char **argv)
-{
+{ if ( !SDL_Init(SDL_INIT_EVENTS) )
+    errorPce(NIL, NAME_sdlInitialize);
 }
 
 /**
