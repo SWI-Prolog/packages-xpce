@@ -463,7 +463,14 @@ r_translate(int x, int y, int *ox, int *oy)
  */
 void
 r_box(int x, int y, int w, int h, int r, Any fill)
-{ Cprintf("r_box(%d, %d, %d, %d, %s)\n", x, y, w, h, pp(fill));
+{ Cprintf("r_box(%d, %d, %d, %d, %d, %s)\n", x, y, w, h, r, pp(fill));
+  int maxr = min(abs(w), abs(h))/2;
+
+  r = min(r, maxr);
+  if ( notNil(fill) && r == 0 )
+  { r_fill(x, y, w, h, fill);
+    fill = NIL;
+  }
 }
 
 /**
@@ -479,7 +486,13 @@ r_box(int x, int y, int w, int h, int r, Any fill)
  */
 void
 r_shadow_box(int x, int y, int w, int h, int r, int shadow, Image fill)
-{ Cprintf("r_shadow_box(%d, %d, %d, %d, %s)\n", x, y, w, h, pp(fill));
+{ NormaliseArea(x,y,w,h);
+
+  if ( !shadow )
+  { r_box(x, y, w, h, r, fill);
+  } else
+  { Cprintf("r_shadow_box(%d, %d, %d, %d, %s)\n", x, y, w, h, pp(fill));
+  }
 }
 
 /**
