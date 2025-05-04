@@ -35,6 +35,9 @@
 #ifndef RAYCOLOUR_H
 #define RAYCOLOUR_H
 #include <SDL3/SDL.h>
+#include <assert.h>
+
+#define WS_COLOR_CREATED (((uintptr_t)1) << 32)
 
 typedef struct
 { Uint8 r;
@@ -50,7 +53,9 @@ typedef union
 
 static inline WsRef
 color2wsref(uint32_t i)
-{ return (void*)(intptr_t)i;
+{ static_assert(sizeof(uintptr_t) > sizeof(uint32_t),
+		"Assumes 64 bits");
+  return (void*)(((uintptr_t)i)|WS_COLOR_CREATED);
 }
 
 static inline sdl_color
@@ -59,6 +64,17 @@ wsref2color(WsRef r)
   return cvt.color;
 }
 
+static inline sdl_color
+pceColour2SDL(Colour c)
+{ WsRef r = c->ws_ref;
+  if ( r == NULL )
+  { ws_create_colour(c, DEFAULT);
+    r = c->ws_ref;
+    assert(r);
+  }
+
+  return wsref2color(r);
+}
 
 status ws_create_colour(Colour c, DisplayObj d);
 void ws_uncreate_colour(Colour c, DisplayObj d);

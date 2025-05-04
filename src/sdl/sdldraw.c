@@ -35,15 +35,27 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include "sdldraw.h"
+#include "sdlcolour.h"
+#include "sdlframe.h"
+
+typedef struct
+{ PceWindow	window;			/* Pce's notion of the window */
+  FrameObj	frame;			/* Pce's frame of the window */
+  SDL_Renderer *renderer;		/* The SDL renderer for the window */
+  Any		colour;			/* Current colour */
+  Any		background;		/* Background colour */
+} sdl_draw_context;
 
 #include <gra/graphstate.c>
+
+static sdl_draw_context	context;	/* current context */
 
 /**
  * Reset the drawing state to its default values.
  */
 void
 resetDraw(void)
-{
+{ memset(&context, 0, sizeof(context));
 }
 
 /**
@@ -135,6 +147,24 @@ status
 d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
 { Cprintf("d_window(%s, %d, %d, %d, %d, %d, %d)\n",
 	  pp(sw), x, y, w, h, clear, limit);
+
+  context.window     = sw;
+  context.frame      = getFrameWindow(sw, OFF);
+  context.colour     = sw->colour;
+  context.background = sw->background;
+
+  if ( context.frame )
+  { WsFrame f = context.frame->ws_ref;
+
+    context.renderer = f->ws_renderer;
+  } else
+  { assert(0);
+    fail;
+  }
+
+  if ( clear )
+    r_clear(x, y, w, h);
+
   succeed;
 }
 
@@ -195,6 +225,7 @@ d_clip(int x, int y, int w, int h)
 void
 d_done(void)
 { Cprintf("d_done()\n");
+  SDL_RenderPresent(context.renderer);
 }
 
 /**
@@ -226,7 +257,7 @@ intersection_iarea(IArea a, IArea b)
  */
 void
 r_clear(int x, int y, int w, int h)
-{ Cprintf("r_clear(%d, %d, %d, %d)\n", x, y, w, h);
+{ r_fill(x, y, w, h, context.background);
 }
 
 /**
@@ -666,11 +697,23 @@ r_image(Image image, int sx, int sy, int x, int y, int w, int h, BoolObj transpa
  * @param y The y-coordinate of the top-left corner.
  * @param w The width of the rectangle.
  * @param h The height of the rectangle.
- * @param pattern The fill pattern or color.
+ * @param pattern The fill pattern or color.  If DEFAULT, use the
+ * current colour.
  */
 void
-r_fill(int x, int y, int w, int h, Any pattern)
-{
+r_fill(int x, int y, int w, int h, Any fill)
+{ Cprintf("r_fill(%d, %d, %d, %d, %s)\n", x, y, w, h, pp(fill));
+
+  if ( isDefault(fill) )
+    fill = context.colour;
+  if ( instanceOfObject(fill, ClassColour) )
+  { sdl_color c = pceColour2SDL(fill);
+    SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
+    SDL_FRect rect = { (float)x, (float)y, (float)w, (float)h };
+    SDL_RenderFillRect(context.renderer, &rect);
+  } else
+  { Cprintf("stub: r_fill(%s)\n", pp(fill));
+  }
 }
 
 /**

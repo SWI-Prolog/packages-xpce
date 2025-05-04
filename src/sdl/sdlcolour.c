@@ -99,7 +99,9 @@ ws_create_colour(Colour c, DisplayObj d)
  */
 void
 ws_uncreate_colour(Colour c, DisplayObj d)
-{
+{ (void)d;
+
+  c->ws_ref = NULL;
 }
 
 static Name
