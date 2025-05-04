@@ -36,6 +36,9 @@
 #include <h/graphics.h>
 #include "sdlframe.h"
 
+#define MainWindow(fr)	     ( isNil(fr->members->head) ? (Any) fr : \
+			       fr->members->head->value )
+
 WsFrame
 sdl_frame(FrameObj fr, bool create)
 { WsFrame f;
@@ -138,6 +141,33 @@ wsid_to_frame(SDL_WindowID id)
   }
 
   fail;
+}
+
+/**
+ * @see https://wiki.libsdl.org/SDL3/SDL_WindowEvent
+ */
+
+bool
+sdl_frame_event(SDL_Event *ev)
+{ FrameObj fr = wsid_to_frame(ev->window.windowID);
+
+  if ( fr )
+  { switch(ev->type)
+    { case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+      { Code msg;
+
+	if ( (msg = checkType(getValueSheet(fr->wm_protocols,
+					    CtoName("WM_DELETE_WINDOW")),
+			      TypeCode, fr)) )
+	{ return forwardReceiverCode(msg, fr, MainWindow(fr), EAV);
+	} else
+	{ return send(fr, NAME_destroy, EAV);
+	}
+      }
+    }
+  }
+
+  return false;
 }
 
 /**

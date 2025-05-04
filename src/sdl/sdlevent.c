@@ -99,6 +99,9 @@ CtoEvent(SDL_Event *event)
       if ( !name )
 	fail;
       break;
+    case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+      sdl_frame_event(event);
+      fail;
     case SDL_EVENT_MOUSE_MOTION:
     case SDL_EVENT_KEY_DOWN:
     default:

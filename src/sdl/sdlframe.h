@@ -43,6 +43,7 @@ typedef struct
 } ws_frame, *WsFrame;
 
 FrameObj wsid_to_frame(SDL_WindowID id);
+bool sdl_frame_event(SDL_Event *ev);
 
 status ws_created_frame(FrameObj fr);
 void ws_uncreate_frame(FrameObj fr);
