@@ -39,7 +39,10 @@
 typedef struct
 { SDL_Window   *ws_window;	/* The SDL2 Window handle */
   SDL_Renderer *ws_renderer;	/* The Window's renderer */
+  SDL_WindowID  ws_id;		/* Integer identifier for the event */
 } ws_frame, *WsFrame;
+
+FrameObj wsid_to_frame(SDL_WindowID id);
 
 status ws_created_frame(FrameObj fr);
 void ws_uncreate_frame(FrameObj fr);

@@ -72,8 +72,12 @@ ws_uncreate_frame(FrameObj fr)
 { WsFrame f = sdl_frame(fr, false);
 
   if ( f && f->ws_window )
-  { SDL_DestroyWindow(f->ws_window);
+  { SDL_DestroyRenderer(f->ws_renderer);
+    SDL_DestroyWindow(f->ws_window);
+    unregisterXrefObject(fr, fr->display);
+    f->ws_renderer = NULL;
     f->ws_window = NULL;
+    f->ws_id = 0;
   }
 }
 
@@ -99,10 +103,41 @@ ws_create_frame(FrameObj fr)
     WsFrame f = sdl_frame(fr, true);
     f->ws_window = w;
     f->ws_renderer = renderer;
+    f->ws_id = SDL_GetWindowID(w);
+
+    Cprintf("Registered window %p with id %d\n", w, f->ws_id);
     succeed;
   }
 
   return errorPce(fr, NAME_xOpen, fr->display);
+}
+
+/**
+ * Translate a SDL window id into a frame object.  For now this simply
+ * walks all frames.  That may  actually be good enough, especially if
+ * we would cache the frame that got the last event.
+ *
+ * @return Frame for id or NULL
+ */
+
+FrameObj
+wsid_to_frame(SDL_WindowID id)
+{ DisplayManager dm = TheDisplayManager();
+  Cell c1;
+
+  for_cell(c1, dm->members)
+  { DisplayObj d = c1->value;
+    Cell c2;
+
+    for_cell(c2, d->frames)
+    { FrameObj fr = c2->value;
+      WsFrame f = sdl_frame(fr, false);
+      if ( f && f->ws_id == id )
+	return fr;
+    }
+  }
+
+  fail;
 }
 
 /**

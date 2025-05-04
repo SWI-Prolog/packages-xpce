@@ -35,6 +35,7 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include "sdlevent.h"
+#include "sdlframe.h"
 #ifdef HAVE_POLL
 #include <poll.h>
 #endif
@@ -81,6 +82,7 @@ CtoEvent(SDL_Event *event)
   float fx, fy;
   int x, y;
   Any name = NULL;
+  SDL_WindowID wid = 0;
   Any window = NIL;		/* TODO */
 
   mouse_flags = SDL_GetMouseState(&fx, &fy);
@@ -91,6 +93,7 @@ CtoEvent(SDL_Event *event)
       /* https://wiki.libsdl.org/SDL3/SDL_MouseButtonEvent */
       x = event->button.x;	/* these are floats */
       y = event->button.y;
+      wid  = event->button.windowID;
       time = event->button.timestamp/1000000; // ns -> ms
       name = button_to_name(event->button.down, event->button.button);
       if ( !name )
@@ -98,8 +101,13 @@ CtoEvent(SDL_Event *event)
       break;
     case SDL_EVENT_MOUSE_MOTION:
     case SDL_EVENT_KEY_DOWN:
+    default:
       fail;			/* for now */
   }
+
+  Cprintf("Event on window with id %d\n", wid);
+  if ( !(window = wsid_to_frame(wid)) )
+    fail;
 
   setLastEventTime(time);
 
@@ -168,7 +176,8 @@ ws_dispatch(Int FD, Any timeout)
 
   if ( rc )
   { EventObj event = CtoEvent(&ev);
-    Cprintf("Got %s\n", pp(event));
+    if ( event )
+      Cprintf("Got %s\n", pp(event));
   }
 
   return rc;
