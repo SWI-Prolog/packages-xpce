@@ -894,7 +894,7 @@ button_to_name(int press, unsigned int button)
 
 EventObj
 CtoEvent(Any window, XEvent *event)	/* window or frame */
-{ Time time;
+{ Time time;				/* milliseconds since server start */
   int state = 0;
   int x;
   int y;
