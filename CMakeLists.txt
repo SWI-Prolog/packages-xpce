@@ -129,6 +129,7 @@ add_custom_command(
                        ${CMAKE_CURRENT_BINARY_DIR}/h/names.ih
                        -- ${files}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/namedb.txt
     COMMENT "Collecting NAME_ declarations")
 
 add_custom_target(

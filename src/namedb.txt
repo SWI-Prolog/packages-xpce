@@ -1,0 +1,5 @@
+# Name database version
+
+To trigger a rebuild of the name database, increment the version below.
+
+1
