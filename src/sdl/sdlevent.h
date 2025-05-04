@@ -34,6 +34,7 @@
 
 #ifndef RAYEVENT_H
 #define RAYEVENT_H
+#include <SDL3/SDL.h>
 
 void resetDispatch(void);
 status ws_dispatch(Int FD, Any timeout);

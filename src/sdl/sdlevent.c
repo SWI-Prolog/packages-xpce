@@ -53,12 +53,41 @@ resetDispatch(void)
  *
  * @param FD The file descriptor to monitor for events.
  * @param timeout The maximum time to wait for an event.
- * @return SUCCEED if an event was dispatched successfully; otherwise, FAIL.
+ * @return true if an event is ready, false on a timeout.
  */
+
+static int	  dispatch_fd = -1;
+
 status
 ws_dispatch(Int FD, Any timeout)
-{
-    return SUCCEED;
+{ int fd = (isDefault(FD) ? dispatch_fd :
+	    isNil(FD)	  ? -1
+			  : valInt(FD));
+  int tmo;
+
+  if ( isNil(timeout) )
+  { tmo = -1;
+  } else if ( isDefault(timeout) )
+  { tmo = 250;
+  } else if ( isInteger(timeout) )
+  { tmo = valInt(timeout);
+  } else if ( instanceOfObject(timeout, ClassReal) )
+  { tmo = (int)(valReal(timeout)*1000.0);
+  } else
+  { tmo = 256;
+  }
+
+  (void)fd;			/* to be done */
+
+  bool rc;
+  SDL_Event ev;
+  if ( tmo == -1 )
+  { rc = SDL_WaitEvent(&ev);
+  } else
+  { rc = SDL_WaitEventTimeout(&ev, tmo);
+  }
+
+  return rc;
 }
 
 /**
