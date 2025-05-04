@@ -1144,7 +1144,10 @@ redrawWindow(PceWindow sw, Area a)
 
 status
 pceRedrawWindow(PceWindow sw)
-{ DEBUG(NAME_window, Cprintf("Redrawing %s\n", pp(sw)));
+{ DEBUG(NAME_window,
+	Cprintf("Redrawing %s (displayed: %s %screated)\n",
+		pp(sw), pp(sw->displayed),
+		createdWindow(sw) ? "" : "not "));
 
   if ( sw->displayed == ON && createdWindow(sw) )
   { UpdateArea a, b;
