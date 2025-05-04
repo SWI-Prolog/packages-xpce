@@ -36,6 +36,19 @@
 #include <h/graphics.h>
 #include "sdlframe.h"
 
+WsFrame
+sdl_frame(FrameObj fr, bool create)
+{ WsFrame f;
+
+  if ( !(f=fr->ws_ref) && create )
+  { f = fr->ws_ref = alloc(sizeof(*f));
+    memset(f, 0, sizeof(*f));
+  }
+
+  return f;
+}
+
+
 /**
  * Check if the frame has been created.
  *
@@ -44,8 +57,9 @@
  */
 status
 ws_created_frame(FrameObj fr)
-{
-    return SUCCEED;
+{ WsFrame f = sdl_frame(fr, false);
+
+  return f && f->ws_window;
 }
 
 /**
@@ -55,7 +69,12 @@ ws_created_frame(FrameObj fr)
  */
 void
 ws_uncreate_frame(FrameObj fr)
-{
+{ WsFrame f = sdl_frame(fr, false);
+
+  if ( f && f->ws_window )
+  { SDL_DestroyWindow(f->ws_window);
+    f->ws_window = NULL;
+  }
 }
 
 /**
@@ -66,8 +85,18 @@ ws_uncreate_frame(FrameObj fr)
  */
 status
 ws_create_frame(FrameObj fr)
-{
-    return SUCCEED;
+{ SDL_Window *w = SDL_CreateWindow(
+    nameToMB(fr->label),
+    valInt(fr->area->w),
+    valInt(fr->area->h),
+    0);
+
+  if ( w )
+  { sdl_frame(fr, true)->ws_window = w;
+    succeed;
+  }
+
+  return errorPce(fr, NAME_xOpen, fr->display);
 }
 
 /**
