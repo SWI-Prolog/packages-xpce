@@ -44,8 +44,7 @@
  */
 status
 ws_created_window(PceWindow sw)
-{
-    return SUCCEED;
+{ return notNil(sw->frame) && ws_created_frame(sw->frame);
 }
 
 /**
@@ -67,8 +66,7 @@ ws_uncreate_window(PceWindow sw)
  */
 status
 ws_create_window(PceWindow sw, PceWindow parent)
-{
-    return SUCCEED;
+{ succeed;
 }
 
 /**

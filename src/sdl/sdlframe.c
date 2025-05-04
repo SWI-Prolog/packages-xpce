@@ -143,6 +143,18 @@ wsid_to_frame(SDL_WindowID id)
   fail;
 }
 
+static bool
+frame_displayed(FrameObj fr, BoolObj val)
+{ Cell cell;
+
+  for_cell(cell, fr->members)
+  { PceWindow sw = cell->value;
+    send(sw, NAME_displayed, val, EAV);
+  }
+
+  return true;
+}
+
 /**
  * @see https://wiki.libsdl.org/SDL3/SDL_WindowEvent
  */
@@ -164,6 +176,12 @@ sdl_frame_event(SDL_Event *ev)
 	{ return send(fr, NAME_destroy, EAV);
 	}
       }
+      case SDL_EVENT_WINDOW_SHOWN:
+	return frame_displayed(fr, ON);
+      case SDL_EVENT_WINDOW_HIDDEN:
+	return frame_displayed(fr, OFF);
+      case SDL_EVENT_WINDOW_EXPOSED:
+	return RedrawDisplayManager(TheDisplayManager());
     }
   }
 

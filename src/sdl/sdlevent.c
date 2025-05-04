@@ -100,6 +100,9 @@ CtoEvent(SDL_Event *event)
 	fail;
       break;
     case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+    case SDL_EVENT_WINDOW_SHOWN:
+    case SDL_EVENT_WINDOW_HIDDEN:
+    case SDL_EVENT_WINDOW_EXPOSED:
       sdl_frame_event(event);
       fail;
     case SDL_EVENT_MOUSE_MOTION:
