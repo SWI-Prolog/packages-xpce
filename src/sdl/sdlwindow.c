@@ -101,7 +101,8 @@ ws_create_window(PceWindow sw, PceWindow parent)
 				   wsw->w,  wsw->h);
   assert(wsw->backing);
 
-  Cprintf("ws_create_window(%s) for frame %s\b", pp(sw), pp(fr));
+  DEBUG(NAME_sdl,
+	Cprintf("ws_create_window(%s) for frame %s\n", pp(sw), pp(fr)));
 
   succeed;
 }
@@ -164,7 +165,7 @@ ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
 				       SDL_TEXTUREACCESS_TARGET,
 				       wsw->w,  wsw->h);
       assert(wsw->backing);
-      Cprintf("Resized %s to %dx%d\n", pp(sw), w, h);
+      DEBUG(NAME_sdl, Cprintf("Resized %s to %dx%d\n", pp(sw), w, h));
       changed_window(sw, 0, 0, w, h, TRUE);
       addChain(ChangedWindows, sw);
     }

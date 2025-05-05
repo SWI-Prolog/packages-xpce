@@ -114,7 +114,8 @@ ws_create_frame(FrameObj fr)
     f->ws_renderer = renderer;
     f->ws_id = SDL_GetWindowID(w);
 
-    Cprintf("Registered window %p with id %d\n", w, f->ws_id);
+    DEBUG(NAME_sdl,
+	  Cprintf("Registered window %p with id %d\n", w, f->ws_id));
     succeed;
   }
 
@@ -187,9 +188,10 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
 
     dstrect.x += off->x;
     dstrect.y += off->y;
-    Cprintf("Draw %s in %s %d %d %d %d\n",
-	    pp(sw), pp(fr),
-	    valInt(a->x), valInt(a->y), valInt(a->w), valInt(a->h));
+    DEBUG(NAME_sdl,
+	  Cprintf("Draw %s in %s %d %d %d %d\n",
+		  pp(sw), pp(fr),
+		  valInt(a->x), valInt(a->y), valInt(a->w), valInt(a->h)));
     SDL_RenderTexture(wfr->ws_renderer, wsw->backing,
 		      &srcrect, &dstrect);
 
@@ -260,7 +262,7 @@ sdl_frame_event(SDL_Event *ev)
 	}
       }
       case SDL_EVENT_WINDOW_SHOWN:
-	Cprintf("Mapped %s\n", pp(fr));
+	DEBUG(NAME_sdl, Cprintf("Mapped %s\n", pp(fr)));
 	return frame_displayed(fr, ON);
       case SDL_EVENT_WINDOW_HIDDEN:
 	return frame_displayed(fr, OFF);
