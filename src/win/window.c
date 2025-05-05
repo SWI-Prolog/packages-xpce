@@ -1149,7 +1149,8 @@ pceRedrawWindow(PceWindow sw)
 		pp(sw), pp(sw->displayed),
 		createdWindow(sw) ? "" : "not "));
 
-  if ( sw->displayed == ON && createdWindow(sw) )
+  if ( sw->displayed == ON && createdWindow(sw) &&
+       !instanceOfObject(sw, ClassWindowDecorator) )
   { UpdateArea a, b;
     AnswerMark mark;
     iarea visible;
@@ -2435,4 +2436,3 @@ makeClassWindow(Class class)
 
   succeed;
 }
-

@@ -155,6 +155,20 @@ frame_displayed(FrameObj fr, BoolObj val)
   return true;
 }
 
+static void
+changed_frame(FrameObj fr)
+{ Cell cell;
+
+  for_cell(cell, fr->members)
+  { PceWindow sw = cell->value;
+    Area a = sw->area;
+    changed_window(sw,
+		   valInt(a->x), valInt(a->y), valInt(a->w), valInt(a->y),
+		   true);
+  }
+}
+
+
 /**
  * @see https://wiki.libsdl.org/SDL3/SDL_WindowEvent
  */
@@ -177,10 +191,12 @@ sdl_frame_event(SDL_Event *ev)
 	}
       }
       case SDL_EVENT_WINDOW_SHOWN:
+	Cprintf("Mapped %s\n", pp(fr));
 	return frame_displayed(fr, ON);
       case SDL_EVENT_WINDOW_HIDDEN:
 	return frame_displayed(fr, OFF);
       case SDL_EVENT_WINDOW_EXPOSED:
+	changed_frame(fr);
 	return RedrawDisplayManager(TheDisplayManager());
     }
   }
