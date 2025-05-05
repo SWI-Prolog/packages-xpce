@@ -37,14 +37,17 @@
 #include <SDL3/SDL.h>
 
 typedef struct
-{ SDL_Window   *ws_window;	/* The SDL2 Window handle */
+{ SDL_Window   *ws_window;	/* The SDL3 Window handle */
   SDL_Renderer *ws_renderer;	/* The Window's renderer */
   SDL_WindowID  ws_id;		/* Integer identifier for the event */
 } ws_frame, *WsFrame;
 
+/* Functions shared with DSL backend */
 FrameObj wsid_to_frame(SDL_WindowID id);
 bool sdl_frame_event(SDL_Event *ev);
+void ws_redraw_changed_frames(void);
 
+/* Functions shared with core */
 status ws_created_frame(FrameObj fr);
 void ws_uncreate_frame(FrameObj fr);
 status ws_create_frame(FrameObj fr);

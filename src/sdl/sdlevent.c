@@ -174,6 +174,7 @@ ws_dispatch(Int FD, Any timeout)
 
   if ( pceMTTryLock(LOCK_PCE) )
   { RedrawDisplayManager(TheDisplayManager());
+    ws_redraw_changed_frames();
     pceMTUnlock(LOCK_PCE);
   }
 

@@ -46,17 +46,17 @@ void
 ws_initialise(int argc, char **argv)
 { if ( !SDL_Init(SDL_INIT_EVENTS) )
     errorPce(NIL, NAME_sdlInitialize);
+  ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
 }
 
 /**
- * Retrieve the major version number of the Raylib backend.
+ * Retrieve the major version number of the SDL backend.
  *
  * @return Integer representing the version number.
  */
 int
 ws_version(void)
-{
-    return 1;
+{ return 3;
 }
 
 /**

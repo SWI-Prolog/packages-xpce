@@ -76,12 +76,11 @@ ws_uncreate_frame(FrameObj fr)
 { WsFrame f = sdl_frame(fr, false);
 
   if ( f && f->ws_window )
-  { SDL_DestroyRenderer(f->ws_renderer);
+  { deleteChain(ChangedFrames, fr);
+    SDL_DestroyRenderer(f->ws_renderer);
     SDL_DestroyWindow(f->ws_window);
-    unregisterXrefObject(fr, fr->display);
-    f->ws_renderer = NULL;
-    f->ws_window = NULL;
-    f->ws_id = 0;
+    unalloc(sizeof(*f), f);
+    fr->ws_ref = NULL;
   }
 }
 
@@ -165,10 +164,10 @@ frame_displayed(FrameObj fr, BoolObj val)
     (float)valInt(a->w), (float)valInt(a->h)		\
   }
 
-static void
-draw_frame(FrameObj fr)
+static bool
+ws_draw_frame(FrameObj fr)
 { if ( !ws_created_frame(fr) )
-    return;
+    false;
 
   WsFrame wfr = fr->ws_ref;
   Cell cell;
@@ -188,6 +187,22 @@ draw_frame(FrameObj fr)
     }
   }
   SDL_RenderPresent(wfr->ws_renderer);
+
+  return true;
+}
+
+
+void
+ws_redraw_changed_frames(void)
+{ if ( ChangedFrames && !emptyChain(ChangedFrames) )
+  { Cell cell;
+
+    for_cell(cell, ChangedFrames)
+    { FrameObj fr = cell->value;
+      ws_draw_frame(fr);
+      deleteChain(ChangedFrames, fr);
+    }
+  }
 }
 
 
@@ -218,7 +233,8 @@ sdl_frame_event(SDL_Event *ev)
       case SDL_EVENT_WINDOW_HIDDEN:
 	return frame_displayed(fr, OFF);
       case SDL_EVENT_WINDOW_EXPOSED:
-	return RedrawDisplayManager(TheDisplayManager());
+	RedrawDisplayManager(TheDisplayManager());
+	return ws_draw_frame(fr);
     }
   }
 

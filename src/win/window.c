@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <stdbool.h>
 
 static status	uncreateWindow(PceWindow sw);
 static status   tileWindow(PceWindow sw, TileObj t);
@@ -1149,11 +1150,11 @@ pceRedrawWindow(PceWindow sw)
 		pp(sw), pp(sw->displayed),
 		createdWindow(sw) ? "" : "not "));
 
-  if ( sw->displayed == ON && createdWindow(sw) &&
-       !instanceOfObject(sw, ClassWindowDecorator) )
+  if ( sw->displayed == ON && createdWindow(sw) )
   { UpdateArea a, b;
     AnswerMark mark;
     iarea visible;
+    bool changed = false;
 
     if ( ws_delayed_redraw_window(sw) )
     { deleteChain(ChangedWindows, sw);
@@ -1180,16 +1181,25 @@ pceRedrawWindow(PceWindow sw)
 	      Cprintf("\tUpdate %d %d %d %d (%s)\n",
 		      a->area.x, a->area.y, a->area.w, a->area.h,
 		      a->clear ? "clear" : "no clear"));
-#ifdef WIN32_GRAPHICS
+#if WIN32_GRAPHICS
         ws_redraw_window(sw, &a->area, a->clear);
 #else
 	RedrawAreaWindow(sw, &a->area, a->clear);
 #endif
+	changed = true;
       }
       unalloc(sizeof(struct update_area), a);
     }
 
     rewindAnswerStack(mark, NIL);
+
+#ifdef SDL_GRAPHICS
+    if ( changed )
+    { FrameObj fr = getFrameWindow(sw, OFF);
+      if ( fr && !memberChain(ChangedFrames, fr) )
+	appendChain(ChangedFrames, fr);
+    }
+#endif
   }
 
   deleteChain(ChangedWindows, sw);
