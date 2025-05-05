@@ -59,11 +59,19 @@ ws_create_font(FontObj f, DisplayObj d)
   }
 
   assert(f->ws_ref == NULL);
-  f->ws_ref = TTF_OpenFont(
+  TTF_Font *ttf = f->ws_ref = TTF_OpenFont(
     "/usr/share/fonts/dejavu-sans-mono-fonts/DejaVuSansMono.ttf",
     (int)((double)valInt(f->points)*font_scale)+0.5);
+  if ( !ttf )
+    fail;
 
-  return !!f->ws_ref;
+  int xw, ww, xminy, xmaxy;
+  TTF_GetGlyphMetrics(ttf, 'x', NULL, NULL, &xminy, &xmaxy, &xw);
+  TTF_GetGlyphMetrics(ttf, 'w', NULL, NULL, NULL, NULL, &ww);
+  assign(f, ex, toInt(xmaxy-xminy));
+  assign(f, fixed_width, xw==ww ? ON : OFF);
+
+  succeed;
 }
 
 /**
