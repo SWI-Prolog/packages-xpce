@@ -70,7 +70,7 @@ fields.
 #define RING_SIZE 16
 
 typedef struct rcell
-{ char 		*data;			/* actual data */
+{ char		*data;			/* actual data */
   char		*bufp;			/* pointer in buffer */
   char		*limitp;		/* pointer to end */
   size_t	allocated;		/* bytes allocated */
@@ -123,13 +123,13 @@ addByte(rcell *c, int byte)
 
 
 		 /*******************************
-		 *	  CHARARRAY --> 	*
+		 *	  CHARARRAY -->		*
 		 *******************************/
 
 typedef const unsigned char cuchar;
 typedef const wchar_t       cwchar;
 
-static char *
+char *
 stringToUTF8(PceString str)
 { rcell *out;
 
@@ -278,7 +278,7 @@ nameToWC(Name nm, size_t *len)
 
 
 		 /*******************************
-		 *	    <-- NAME	  	*
+		 *	    <-- NAME		*
 		 *******************************/
 
 Name
