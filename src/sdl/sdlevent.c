@@ -40,6 +40,51 @@
 #include <poll.h>
 #endif
 
+#define InitAreaA	int ax = valInt(a->x), ay = valInt(a->y),	\
+			    aw = valInt(a->w), ah = valInt(a->h)
+
+
+static bool
+xy_in_area(Area a, int x, int y)
+{ InitAreaA;
+
+  NormaliseArea(ax, ay, aw, ah);
+  return ( x >= ax && x <= ax+aw &&
+	   y >= ay && y <= ay+ah );
+}
+
+static void event_window(Any *target, int *x, int *y);
+
+static bool
+descent_to_window(Any *target, PceWindow sw, int *x, int *y)
+{ if ( xy_in_area(sw->area, *x, *y) &&
+       ws_created_window(sw) )
+  { *x -= valInt(sw->area->x);
+    *y -= valInt(sw->area->y);
+    *target = sw;
+    event_window(target, x, y);
+    return true;
+  }
+
+  return false;
+}
+
+static void
+event_window(Any *target, int *x, int *y)
+{ if ( instanceOfObject(*target, ClassFrame) )
+  { FrameObj fr = *target;
+    Cell cell;
+
+    for_cell(cell, fr->members)
+    { if ( descent_to_window(target, cell->value, x, y) )
+	return;
+    }
+  } else if ( instanceOfObject(*target, ClassWindowDecorator) )
+  { WindowDecorator dm = *target;
+    descent_to_window(target, dm->window, x, y);
+  }
+}
+
 static Name
 button_to_name(bool press, Uint8 button)
 { switch( button )
@@ -80,7 +125,6 @@ CtoEvent(SDL_Event *event)
 { unsigned int time;
   SDL_MouseButtonFlags mouse_flags = 0;
   float fx, fy;
-  int x, y;
   Any name = NULL;
   SDL_WindowID wid = 0;
   Any window = NIL;		/* TODO */
@@ -93,8 +137,8 @@ CtoEvent(SDL_Event *event)
   { case SDL_EVENT_MOUSE_BUTTON_DOWN:
     case SDL_EVENT_MOUSE_BUTTON_UP:
       /* https://wiki.libsdl.org/SDL3/SDL_MouseButtonEvent */
-      x = event->button.x;	/* these are floats */
-      y = event->button.y;
+      fx = event->button.x;	/* these are floats */
+      fy = event->button.y;
       wid  = event->button.windowID;
       time = event->button.timestamp/1000000; // ns -> ms
       name = button_to_name(event->button.down, event->button.button);
@@ -112,6 +156,10 @@ CtoEvent(SDL_Event *event)
     fail;
 
   setLastEventTime(time);
+
+  int x = (int)(fx+0.5);
+  int y = (int)(fy+0.5);
+  event_window(&window, &x, &y);
 
   EventObj ev = answerObject(ClassEvent,
 			     name,
