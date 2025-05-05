@@ -1809,7 +1809,7 @@ status
 penGraphical(Graphical gr, Int pen)
 { if (gr->pen != pen)
   { CHANGING_GRAPHICAL(gr, assign(gr, pen, pen);
-		           changedEntireImageGraphical(gr));
+			   changedEntireImageGraphical(gr));
   }
 
   succeed;
@@ -1838,7 +1838,7 @@ static status
 textureGraphical(Graphical gr, Name texture)
 { if (gr->texture != texture)
   { CHANGING_GRAPHICAL(gr, assign(gr, texture, texture);
-		           changedEntireImageGraphical(gr));
+			   changedEntireImageGraphical(gr));
   }
 
   succeed;
@@ -1884,7 +1884,7 @@ static status
 selectedGraphical(Graphical gr, BoolObj val)
 { if (gr->selected != val)
   { CHANGING_GRAPHICAL(gr, assign(gr, selected, val);
-		           changedEntireImageGraphical(gr));
+			   changedEntireImageGraphical(gr));
   }
 
   succeed;
@@ -2223,7 +2223,7 @@ disconnectGraphical(Graphical gr, Graphical gr2,
     for_chain(ch, c,
 	      if ( (isDefault(gr2) || c->to == gr2 || c->from == gr2) &&
 		   match_connection(c, link, from, to) )
-	        freeObject(c));
+		freeObject(c));
   }
 
   succeed;
@@ -3698,4 +3698,3 @@ makeClassGraphical(Class class)
 
   succeed;
 }
-
