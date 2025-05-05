@@ -34,6 +34,13 @@
 
 #ifndef RAYWINDOW_H
 #define RAYWINDOW_H
+#include "SDL3/SDL.h"
+
+typedef struct
+{ SDL_Texture *backing;
+  int w;
+  int h;
+} ws_window, *WsWindow;
 
 status ws_created_window(PceWindow sw);
 void ws_uncreate_window(PceWindow sw);

@@ -35,6 +35,7 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include "sdlwindow.h"
+#include "sdlframe.h"
 
 /**
  * Check if the specified window has been created.
@@ -44,10 +45,15 @@
  */
 status
 ws_created_window(PceWindow sw)
-{ FrameObj fr = getFrameWindow(sw, OFF);
-  DEBUG(NAME_window,
-	Cprintf("ws_created_window(%s) on %s\n", pp(sw), pp(fr)));
-  return fr && ws_created_frame(fr);
+{ WsWindow wsw = sw->ws_ref;
+  if ( wsw && wsw->backing )
+  { FrameObj fr = getFrameWindow(sw, OFF);
+    DEBUG(NAME_window,
+	  Cprintf("ws_created_window(%s) on %s\n", pp(sw), pp(fr)));
+    return fr && ws_created_frame(fr);
+  }
+
+  fail;
 }
 
 /**
@@ -57,19 +63,47 @@ ws_created_window(PceWindow sw)
  */
 void
 ws_uncreate_window(PceWindow sw)
-{
+{ WsWindow wsw = sw->ws_ref;
+
+  if ( wsw )
+  { if ( wsw->backing )
+      SDL_DestroyTexture(wsw->backing);
+    unalloc(sizeof(*wsw), wsw);
+    sw->ws_ref = NULL;
+  }
 }
 
 /**
- * Create a native window for the specified PceWindow, optionally as a child of another.
+ * Create a native window for the specified PceWindow, optionally as a
+ * child of another.
  *
  * @param sw Pointer to the PceWindow object to be created.
- * @param parent Pointer to the parent PceWindow, or NULL for a top-level window.
+ * @param parent Pointer to the parent PceWindow, or NULL for
+ *        a top-level window.
  * @return SUCCEED on successful creation; otherwise, FAIL.
  */
 status
 ws_create_window(PceWindow sw, PceWindow parent)
-{ succeed;
+{ FrameObj fr = getFrameWindow(sw, OFF);
+  WsFrame wfr = fr->ws_ref;
+  WsWindow wsw = sw->ws_ref;
+
+  if ( !wsw )
+  { wsw = sw->ws_ref = alloc(sizeof(ws_window));
+    memset(wsw, 0, sizeof(ws_window));
+  }
+
+  wsw->w = valInt(sw->area->w);
+  wsw->h = valInt(sw->area->h);
+  wsw->backing = SDL_CreateTexture(wfr->ws_renderer,
+				   SDL_PIXELFORMAT_RGBA8888,
+				   SDL_TEXTUREACCESS_TARGET,
+				   wsw->w,  wsw->h);
+  assert(wsw->backing);
+
+  Cprintf("ws_create_window(%s) for frame %s\b", pp(sw), pp(fr));
+
+  succeed;
 }
 
 /**
