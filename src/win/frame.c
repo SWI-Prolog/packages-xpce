@@ -1406,7 +1406,9 @@ updateTileAdjustersFrame(FrameObj fr, TileObj t)
 
   if ( notNil(t) )
   { if ( notNil(t->super) && getCanResizeTile(t) == ON )
-    { if ( isNil(t->adjuster) )
+    {
+#if !SDL_GRAPHICS		/* not yet, but planning on an alternative */
+      if ( isNil(t->adjuster) )
       { PceWindow adj = newObject(ClassTileAdjuster, t, EAV);
 	assert(adj);
 
@@ -1417,8 +1419,8 @@ updateTileAdjustersFrame(FrameObj fr, TileObj t)
 		pp(adj->area->w), pp(adj->area->h));
 */
       }
-
       send(t, NAME_updateAdjusterPosition, EAV);
+#endif
     } else if ( notNil(t->adjuster) )
       freeObject(t->adjuster);
 
@@ -2037,4 +2039,3 @@ makeClassFrame(Class class)
 
   succeed;
 }
-
