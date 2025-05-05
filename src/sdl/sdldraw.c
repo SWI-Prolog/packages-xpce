@@ -37,12 +37,17 @@
 #include "sdldraw.h"
 #include "sdlcolour.h"
 #include "sdlfont.h"
+#include "sdldisplay.h"
 #include "sdlframe.h"
 #include "sdlwindow.h"
 
+#define MAX_CTX_DEPTH (10)		/* Max draw context depth */
+
 typedef struct
-{ PceWindow	window;			/* Pce's notion of the window */
+{ int		open;			/* Allow for nested open */
+  PceWindow	window;			/* Pce's notion of the window */
   FrameObj	frame;			/* Pce's frame of the window */
+  DisplayObj	display;		/* Pce's display for the frame */
   SDL_Renderer *renderer;		/* The SDL renderer for the window */
   SDL_Texture  *target;			/* Target for rendering to */
   Any		colour;			/* Current colour */
@@ -52,6 +57,24 @@ typedef struct
 #include <gra/graphstate.c>
 
 static sdl_draw_context	context;	/* current context */
+static sdl_draw_context	ctx_stack[MAX_CTX_DEPTH];  /* Context stack */
+static int		ctx_stacked;	/* Saved frames */
+
+static void
+reset_context(void)
+{ memset(&context, 0, sizeof(context));
+}
+
+static void
+push_context(void)
+{ if ( context.open )
+    ctx_stack[ctx_stacked++] = context;
+  if ( ctx_stacked >= MAX_CTX_DEPTH )
+    Cprintf("**************** ERROR: Draw Context Stack overflow\n");
+
+  reset_context();
+}
+
 
 /**
  * Reset the drawing state to its default values.
@@ -107,15 +130,16 @@ r_fillrestore(fill_state *state)
 }
 
 /**
- * Retrieve the display object associated with the given display.
+ * Switch to a new display, returning the old display
  *
  * @param d Pointer to the DisplayObj.
- * @return The associated DisplayObj.
+ * @return The previous DisplayObj.
  */
 DisplayObj
 d_display(DisplayObj d)
-{
-    return d;
+{ DisplayObj old = context.display;
+  context.display = d;
+  return old;
 }
 
 /**
@@ -123,8 +147,20 @@ d_display(DisplayObj d)
  */
 void
 d_ensure_display(void)
-{
+{ if ( context.display == NULL )
+    d_display(CurrentDisplay(NIL));
 }
+
+static void
+d_ensure_context(void)
+{ if ( !context.open++ )
+  { push_context();
+    d_ensure_display();
+    WsDisplay wsd = context.display->ws_ref;
+    context.renderer = wsd->hidden_renderer;
+  }
+}
+
 
 /**
  * Flush all pending drawing operations to the display.
@@ -149,11 +185,21 @@ d_flush(void)
 status
 d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
 { if ( !ws_created_window(sw) )
+  { Cprintf("d_window(%s): not created\n");
     fail;
+  }
 
   DEBUG(NAME_redraw,
 	Cprintf("d_window(%s, %d, %d, %d, %d, %d, %d)\n",
 		pp(sw), x, y, w, h, clear, limit));
+
+  if ( context.open && context.window == sw )
+  { context.open++;
+    succeed;
+  }
+
+  push_context();
+  context.open = 1;
 
   FrameObj  fr = getFrameWindow(sw, OFF);
   DisplayObj d = fr->display;
@@ -162,6 +208,7 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
 
   context.window     = sw;
   context.frame      = fr;
+  context.display    = d;
   context.renderer   = wfr->ws_renderer;
   context.target     = wsw->backing;
   context.colour     = notDefault(sw->colour) ? sw->colour : d->foreground;
@@ -233,8 +280,16 @@ d_clip(int x, int y, int w, int h)
  */
 void
 d_done(void)
-{ DEBUG(NAME_redraw, Cprintf("d_done()\n"));
-  SDL_SetRenderTarget(context.renderer, NULL);
+{ DEBUG(NAME_redraw, Cprintf("d_done(): open = %d\n", context.open));
+  if ( --context.open == 0 )
+  { if ( context.renderer )
+      SDL_SetRenderTarget(context.renderer, NULL);
+
+    if ( ctx_stacked )
+      context = ctx_stack[--ctx_stacked];
+    else
+      reset_context();
+  }
 }
 
 /**
@@ -1041,6 +1096,7 @@ str_size(PceString s, FontObj font, int *width, int *height)
   SDL_Surface *surf;
   const char *u = stringToUTF8(s);
 
+  d_ensure_context();
   surf = TTF_RenderText_Blended(ttf, u, 0, c);
   SDL_Texture *texture = SDL_CreateTextureFromSurface(context.renderer, surf);
   SDL_DestroySurface(surf);
@@ -1048,6 +1104,7 @@ str_size(PceString s, FontObj font, int *width, int *height)
   float tex_w, tex_h;
   SDL_GetTextureSize(texture, &tex_w, &tex_h);
   SDL_DestroyTexture(texture);
+  d_done();
   *width  = (int)(tex_w+0.5);
   *height = (int)(tex_h+0.5);
 }

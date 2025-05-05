@@ -177,7 +177,13 @@ ws_opened_display(DisplayObj d)
  */
 void
 ws_open_display(DisplayObj d)
-{ d->ws_ref = "open";
+{ WsDisplay wsd = d->ws_ref = alloc(sizeof(ws_display));
+  memset(wsd, 0, sizeof(*wsd));
+
+  wsd->hidden_window = SDL_CreateWindow(
+    "xpce hidden window", 64, 64,
+    SDL_WINDOW_HIDDEN);
+  wsd->hidden_renderer = SDL_CreateRenderer(wsd->hidden_window, NULL);
 }
 
 /**
@@ -187,7 +193,14 @@ ws_open_display(DisplayObj d)
  */
 void
 ws_quit_display(DisplayObj d)
-{
+{ WsDisplay wsd = d->ws_ref;
+
+  if ( wsd )
+  { d->ws_ref = NULL;
+    SDL_DestroyRenderer(wsd->hidden_renderer);
+    SDL_DestroyWindow(wsd->hidden_window);
+    unalloc(sizeof(*wsd), wsd);
+  }
 }
 
 /**

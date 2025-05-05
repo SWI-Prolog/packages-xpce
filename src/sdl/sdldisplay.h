@@ -34,6 +34,13 @@
 
 #ifndef RAYDISPLAY_H
 #define RAYDISPLAY_H
+#include <SDL3/SDL.h>
+
+typedef struct
+{ SDL_Window   *hidden_window;
+  SDL_Renderer *hidden_renderer;
+} ws_display, *WsDisplay;
+
 
 void ws_flush_display(DisplayObj d);
 void ws_synchronise_display(DisplayObj d);
