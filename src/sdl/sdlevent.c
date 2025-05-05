@@ -151,8 +151,9 @@ CtoEvent(SDL_Event *event)
       fail;			/* for now */
   }
 
-  Cprintf("Event on window with id %d\n", wid);
-  if ( !(window = wsid_to_frame(wid)) )
+  window = wsid_to_frame(wid);
+  DEBUG(NAME_event, Cprintf("Event on %s, id=%d\n", pp(window), wid));
+  if ( !window )
     fail;
 
   setLastEventTime(time);
@@ -169,6 +170,28 @@ CtoEvent(SDL_Event *event)
 			     EAV);
 
   return ev;
+}
+
+
+static bool
+dispatch_event(EventObj ev)
+{ Any sw = ev->window;
+  AnswerMark mark;
+  status rc;
+
+  DEBUG(NAME_event, Cprintf("Dispatching %s to %s\n", pp(ev), pp(sw)));
+
+  ServiceMode(is_service_window(sw),
+	      { markAnswerStack(mark);
+		addCodeReference(ev);
+		rc = postNamedEvent(ev, (Graphical) sw, DEFAULT, NAME_postEvent);
+		delCodeReference(ev);
+		freeableObj(ev);
+		rewindAnswerStack(mark, NIL);
+		RedrawDisplayManager(TheDisplayManager());
+	      });
+
+  return rc;
 }
 
 
@@ -233,7 +256,7 @@ ws_dispatch(Int FD, Any timeout)
   if ( rc )
   { EventObj event = CtoEvent(&ev);
     if ( event )
-      Cprintf("Got %s\n", pp(event));
+      dispatch_event(event);
   }
 
   return rc;
