@@ -138,7 +138,8 @@ ws_reassociate_ws_window(PceWindow from, PceWindow to)
 }
 
 /**
- * Set the geometry of the specified window, including position, size, and border width.
+ * Called when the geometry of the window is updated.  Current task
+ * is to adjust the size of the backing store texture.
  *
  * @param sw Pointer to the PceWindow object.
  * @param x The new x-coordinate of the window.
@@ -149,7 +150,25 @@ ws_reassociate_ws_window(PceWindow from, PceWindow to)
  */
 void
 ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
-{
+{ if ( ws_created_window(sw) )
+  { FrameObj fr = getFrameWindow(sw, OFF);
+    WsWindow wsw = sw->ws_ref;
+    WsFrame  wfr = fr->ws_ref;
+
+    if ( wsw->backing && (wsw->w != w || wsw->h != h) )
+    { wsw->w = w;
+      wsw->h = h;
+      SDL_DestroyTexture(wsw->backing);
+      wsw->backing = SDL_CreateTexture(wfr->ws_renderer,
+				       SDL_PIXELFORMAT_RGBA8888,
+				       SDL_TEXTUREACCESS_TARGET,
+				       wsw->w,  wsw->h);
+      assert(wsw->backing);
+      Cprintf("Resized %s to %dx%d\n", pp(sw), w, h);
+      changed_window(sw, 0, 0, w, h, TRUE);
+      addChain(ChangedWindows, sw);
+    }
+  }
 }
 
 /**

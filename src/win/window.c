@@ -1196,8 +1196,8 @@ pceRedrawWindow(PceWindow sw)
 #ifdef SDL_GRAPHICS
     if ( changed )
     { FrameObj fr = getFrameWindow(sw, OFF);
-      if ( fr && !memberChain(ChangedFrames, fr) )
-	appendChain(ChangedFrames, fr);
+      if ( fr )
+	addChain(ChangedFrames, fr);
     }
 #endif
   }
@@ -1629,7 +1629,7 @@ geometryWindow(PceWindow sw, Int X, Int Y, Int W, Int H)
 			 assign(sw->area, h, ONE);
 		     });
 
-  if ( notNil(sw->frame) && ws_created_window(sw) )
+  if ( getFrameWindow(sw, OFF) && ws_created_window(sw) )
   { int x, y, w, h;
     int pen = valInt(sw->pen);
 

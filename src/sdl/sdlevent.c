@@ -85,6 +85,8 @@ CtoEvent(SDL_Event *event)
   SDL_WindowID wid = 0;
   Any window = NIL;		/* TODO */
 
+  if ( sdl_frame_event(event) )
+    fail;
   mouse_flags = SDL_GetMouseState(&fx, &fy);
 
   switch (event->type)
@@ -99,12 +101,6 @@ CtoEvent(SDL_Event *event)
       if ( !name )
 	fail;
       break;
-    case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-    case SDL_EVENT_WINDOW_SHOWN:
-    case SDL_EVENT_WINDOW_HIDDEN:
-    case SDL_EVENT_WINDOW_EXPOSED:
-      sdl_frame_event(event);
-      fail;
     case SDL_EVENT_MOUSE_MOTION:
     case SDL_EVENT_KEY_DOWN:
     default:

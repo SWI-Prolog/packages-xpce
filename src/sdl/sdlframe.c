@@ -93,11 +93,16 @@ ws_uncreate_frame(FrameObj fr)
  */
 status
 ws_create_frame(FrameObj fr)
-{ SDL_Window *w = SDL_CreateWindow(
+{ SDL_WindowFlags flags = 0;
+
+  if ( fr->can_resize == ON )
+    flags |= SDL_WINDOW_RESIZABLE;
+
+  SDL_Window *w = SDL_CreateWindow(
     nameToMB(fr->label),
     valInt(fr->area->w),
     valInt(fr->area->h),
-    0);
+    flags);
 
   if ( w )
   { SDL_Renderer *renderer = SDL_CreateRenderer(w, NULL);
@@ -237,7 +242,7 @@ ws_redraw_changed_frames(void)
  * @see https://wiki.libsdl.org/SDL3/SDL_WindowEvent
  */
 
-bool
+bool				/* true when processed */
 sdl_frame_event(SDL_Event *ev)
 { FrameObj fr = wsid_to_frame(ev->window.windowID);
 
@@ -262,6 +267,29 @@ sdl_frame_event(SDL_Event *ev)
       case SDL_EVENT_WINDOW_EXPOSED:
 	RedrawDisplayManager(TheDisplayManager());
 	return ws_draw_frame(fr);
+      case SDL_EVENT_WINDOW_MOVED:
+      { int new_x = ev->window.data1;
+	int new_y = ev->window.data2;
+
+	assign(fr->area, x, toInt(new_x));
+	assign(fr->area, y, toInt(new_y));
+
+	return true;
+      }
+      case SDL_EVENT_WINDOW_RESIZED:
+      { int new_w = ev->window.data1;
+	int new_h = ev->window.data2;
+
+	if ( new_w != valInt(fr->area->w) ||
+	     new_h != valInt(fr->area->h) )
+	{ assign(fr->area, w, toInt(new_w));
+	  assign(fr->area, h, toInt(new_h));
+
+	  send(fr, NAME_resize, EAV);
+	}
+
+	return true;
+      }
     }
   }
 
