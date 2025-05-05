@@ -52,6 +52,7 @@ typedef struct
   SDL_Texture  *target;			/* Target for rendering to */
   Any		colour;			/* Current colour */
   Any		background;		/* Background colour */
+  int		pen;			/* Drawing thickness */
 } sdl_draw_context;
 
 #include <gra/graphstate.c>
@@ -358,7 +359,7 @@ r_and(int x, int y, int w, int h, Image pattern)
  */
 void
 r_thickness(int pen)
-{
+{ context.pen = pen;
 }
 
 /**
@@ -536,6 +537,16 @@ r_box(int x, int y, int w, int h, int r, Any fill)
   if ( notNil(fill) && r == 0 )
   { r_fill(x, y, w, h, fill);
     fill = NIL;
+  }
+
+  if ( context.pen )
+  { SDL_FRect r = { x, y, w, h };
+    SDL_Color c = pceColour2SDL_Color(context.colour);
+    SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
+    for(int i=0; i<context.pen; i++)
+    { SDL_RenderRect(context.renderer, &r);
+      r.x++, r.y++, r.w-=2, r.h-=2;
+    }
   }
 }
 

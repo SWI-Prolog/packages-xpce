@@ -37,7 +37,8 @@
 #include <stdbool.h>
 #include "sdlfont.h"
 
-static bool ttf_initialized = false;
+static bool   ttf_initialized = false;
+static double font_scale = 1.0;
 
 /**
  * Create a native font resource associated with the specified FontObj
@@ -52,12 +53,15 @@ ws_create_font(FontObj f, DisplayObj d)
 { if ( !ttf_initialized )
   { ttf_initialized = true;
     TTF_Init();
+    Real r = getClassVariableValueObject(f, NAME_scale);
+    if ( r )
+      font_scale = valReal(r);
   }
 
   assert(f->ws_ref == NULL);
   f->ws_ref = TTF_OpenFont(
     "/usr/share/fonts/dejavu-sans-mono-fonts/DejaVuSansMono.ttf",
-    valInt(f->points));
+    (int)((double)valInt(f->points)*font_scale)+0.5);
 
   return !!f->ws_ref;
 }
