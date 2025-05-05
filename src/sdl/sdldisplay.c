@@ -167,8 +167,7 @@ ws_legal_display_name(const char *s)
  */
 status
 ws_opened_display(DisplayObj d)
-{
-    return SUCCEED;
+{ return !!d->ws_ref;
 }
 
 /**
@@ -178,7 +177,7 @@ ws_opened_display(DisplayObj d)
  */
 void
 ws_open_display(DisplayObj d)
-{
+{ d->ws_ref = "open";
 }
 
 /**

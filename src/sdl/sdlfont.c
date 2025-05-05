@@ -34,10 +34,14 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <stdbool.h>
 #include "sdlfont.h"
 
+static bool ttf_initialized = false;
+
 /**
- * Create a native font resource associated with the specified FontObj on the given display.
+ * Create a native font resource associated with the specified FontObj
+ * on the given display.
  *
  * @param f Pointer to the FontObj to be created.
  * @param d Pointer to the DisplayObj representing the display context.
@@ -45,19 +49,32 @@
  */
 status
 ws_create_font(FontObj f, DisplayObj d)
-{
-    return SUCCEED;
+{ if ( !ttf_initialized )
+  { ttf_initialized = true;
+    TTF_Init();
+  }
+
+  assert(f->ws_ref == NULL);
+  f->ws_ref = TTF_OpenFont(
+    "/usr/share/fonts/dejavu-sans-mono-fonts/DejaVuSansMono.ttf",
+    valInt(f->points));
+
+  return !!f->ws_ref;
 }
 
 /**
- * Destroy the native font resource associated with the specified FontObj on the given display.
+ * Destroy the native font resource associated with the specified
+ * FontObj on the given display.
  *
  * @param f Pointer to the FontObj to be destroyed.
  * @param d Pointer to the DisplayObj representing the display context.
  */
 void
 ws_destroy_font(FontObj f, DisplayObj d)
-{
+{ if ( f->ws_ref )
+  { TTF_CloseFont(f->ws_ref);
+    f->ws_ref = NULL;
+  }
 }
 
 /**

@@ -36,6 +36,7 @@
 #include <h/graphics.h>
 #include "sdldraw.h"
 #include "sdlcolour.h"
+#include "sdlfont.h"
 #include "sdlframe.h"
 #include "sdlwindow.h"
 
@@ -154,7 +155,8 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
 	Cprintf("d_window(%s, %d, %d, %d, %d, %d, %d)\n",
 		pp(sw), x, y, w, h, clear, limit));
 
-  FrameObj fr = getFrameWindow(sw, OFF);
+  FrameObj  fr = getFrameWindow(sw, OFF);
+  DisplayObj d = fr->display;
   WsWindow wsw = sw->ws_ref;
   WsFrame  wfr = fr->ws_ref;
 
@@ -162,7 +164,7 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
   context.frame      = fr;
   context.renderer   = wfr->ws_renderer;
   context.target     = wsw->backing;
-  context.colour     = sw->colour;
+  context.colour     = notDefault(sw->colour) ? sw->colour : d->foreground;
   context.background = sw->background;
 
   SDL_SetRenderTarget(context.renderer, context.target);
@@ -732,7 +734,7 @@ r_fill(int x, int y, int w, int h, Any fill)
     fill = context.colour;
 
   if ( instanceOfObject(fill, ClassColour) )
-  { sdl_color c = pceColour2SDL(fill);
+  { SDL_Color c = pceColour2SDL_Color(fill);
     SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
     SDL_FRect rect = { (float)x, (float)y, (float)w, (float)h };
     SDL_RenderFillRect(context.renderer, &rect);
@@ -1034,14 +1036,26 @@ s_print_aligned(PceString s, int x, int y, FontObj f)
  */
 void
 str_size(PceString s, FontObj font, int *width, int *height)
-{
-    *width = 0;
-    *height = 0;
+{ TTF_Font *ttf = sdl_font(font);
+  SDL_Color   c = {0,0,0,255};	/* does not matter for the size */
+  SDL_Surface *surf;
+  const char *u = stringToUTF8(s);
+
+  surf = TTF_RenderText_Blended(ttf, u, 0, c);
+  SDL_Texture *texture = SDL_CreateTextureFromSurface(context.renderer, surf);
+  SDL_DestroySurface(surf);
+
+  float tex_w, tex_h;
+  SDL_GetTextureSize(texture, &tex_w, &tex_h);
+  SDL_DestroyTexture(texture);
+  *width  = (int)(tex_w+0.5);
+  *height = (int)(tex_h+0.5);
 }
 
 
 /**
- * Draw a string within a specified area, applying horizontal and vertical alignment.
+ * Draw a string within a specified area, applying horizontal and
+ * vertical alignment.
  *
  * @param s Pointer to the PceString object to be drawn.
  * @param font Pointer to the FontObj specifying the font to use.
@@ -1051,11 +1065,34 @@ str_size(PceString s, FontObj font, int *width, int *height)
  * @param h The height of the drawing area.
  * @param hadjust Name indicating horizontal alignment (e.g., left, center, right).
  * @param vadjust Name indicating vertical alignment (e.g., top, center, bottom).
- * @param flags Additional flags controlling rendering behavior.
+ * @param flags Additional flags controlling rendering behavior.  Defined flags:
+ *	  - TXT_UNDERLINED
  */
 void
-str_string(PceString s, FontObj font, int x, int y, int w, int h, Name hadjust, Name vadjust, int flags)
-{
+str_string(PceString s, FontObj font,
+	   int x, int y, int w, int h,
+	   Name hadjust, Name vadjust, int flags)
+{ TTF_Font *ttf = sdl_font(font);
+  SDL_Color   c = pceColour2SDL_Color(context.colour);
+  SDL_Surface *surf;
+  const char *u = stringToUTF8(s);
+
+  DEBUG(NAME_stub,
+	Cprintf("str_string(\"%s\", %s, %d, %d, %d, %d, %s, %s, %d) "
+		"(color: %s)\n",
+		u, pp(font), x, y, w, h,
+		pp(hadjust), pp(vadjust), flags, pp(context.colour)));
+  surf = TTF_RenderText_Blended(ttf, u, 0, c);
+
+  SDL_Texture *texture = SDL_CreateTextureFromSurface(context.renderer, surf);
+  SDL_DestroySurface(surf);
+
+  float tex_w, tex_h;
+  SDL_GetTextureSize(texture, &tex_w, &tex_h);
+  SDL_FRect dst = { (float)x, (float)y, tex_w, tex_h };
+
+  SDL_RenderTexture(context.renderer, texture, NULL, &dst);
+  SDL_DestroyTexture(texture);
 }
 
 /**

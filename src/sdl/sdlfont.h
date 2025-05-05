@@ -34,6 +34,14 @@
 
 #ifndef RAYFONT_H
 #define RAYFONT_H
+#include <SDL3_ttf/SDL_ttf.h>
+
+static inline TTF_Font *
+sdl_font(FontObj f)
+{ if ( !f->ws_ref && !ws_create_font(f, DEFAULT) )
+    return NULL;
+  return f->ws_ref;
+}
 
 status ws_create_font(FontObj f, DisplayObj d);
 void ws_destroy_font(FontObj f, DisplayObj d);

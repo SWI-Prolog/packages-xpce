@@ -70,16 +70,19 @@ color2wsref(uint32_t i)
   return (void*)(((uintptr_t)i)|WS_COLOR_CREATED);
 }
 
-static inline sdl_color
-wsref2color(WsRef r)
+static inline SDL_Color
+wsref2SDL_Color(WsRef r)
 { COLORREF rgb = (COLORREF)(intptr_t)r;
-  sdl_color c = {.r = GetRValue(rgb), .g = GetGValue(rgb), .b = GetBValue(rgb),
-		 .a = GetAValue(rgb) };
+  SDL_Color c = { .r = GetRValue(rgb),
+		  .g = GetGValue(rgb),
+		  .b = GetBValue(rgb),
+		  .a = GetAValue(rgb)
+                };
   return c;
 }
 
-static inline sdl_color
-pceColour2SDL(Colour c)
+static inline SDL_Color
+pceColour2SDL_Color(Colour c)
 { WsRef r = c->ws_ref;
   if ( r == NULL )
   { ws_create_colour(c, DEFAULT);
@@ -87,8 +90,9 @@ pceColour2SDL(Colour c)
     assert(r);
   }
 
-  return wsref2color(r);
+  return wsref2SDL_Color(r);
 }
+
 
 status ws_create_colour(Colour c, DisplayObj d);
 void ws_uncreate_colour(Colour c, DisplayObj d);

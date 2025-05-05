@@ -212,7 +212,7 @@ ws_draw_frame(FrameObj fr)
   WsFrame wfr = fr->ws_ref;
 
   assert(instanceOfObject(fr->background, ClassColour));
-  sdl_color c = pceColour2SDL(fr->background);
+  SDL_Color c = pceColour2SDL_Color(fr->background);
   SDL_SetRenderDrawColor(wfr->ws_renderer, c.r, c.g, c.b, c.a);
   SDL_RenderClear(wfr->ws_renderer);
   Cell cell;
@@ -280,6 +280,7 @@ sdl_frame_event(SDL_Event *ev)
       }
       case SDL_EVENT_WINDOW_RESIZED:
       { int new_w = ev->window.data1;
+
 	int new_h = ev->window.data2;
 
 	if ( new_w != valInt(fr->area->w) ||
