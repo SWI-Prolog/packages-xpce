@@ -778,6 +778,7 @@ NewClass(fontobj)
   BoolObj	iswide;			/* Font is 16-bit font */
   Name		postscript_font;	/* Name of PostScript font */
   Int		postscript_size;	/* Size in PostScript */
+  WsRef		ws_ref;			/* Window system reference */
 End;
 
 

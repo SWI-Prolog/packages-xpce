@@ -400,7 +400,9 @@ static vardecl var_font[] =
   IV(NAME_postscriptFont, "name", IV_BOTH,
      NAME_postscript, "PostScript-name of the font"),
   IV(NAME_postscriptSize, "int", IV_BOTH,
-     NAME_postscript, "PostScript point-size of the font")
+     NAME_postscript, "PostScript point-size of the font"),
+  IV(NAME_wsRef, "alien:WsRef", IV_NONE,
+     NAME_storage, "Window system handle")
 };
 
 /* Send Methods */
