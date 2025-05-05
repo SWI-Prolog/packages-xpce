@@ -9,11 +9,13 @@ option(SDL    "Build with SDL backend instead of X11/MSW" OFF)
 if(SDL)
   find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
   find_package(SDL3_image REQUIRED CONFIG)
+  find_package(SDL3_ttf REQUIRED CONFIG)
   set(HAVE_GUI 1)
   set(SDL_GRAPHICS 1)
   set(GUI_LIBRARIES
     SDL3::SDL3
-    SDL3_image::SDL3_image)
+    SDL3_image::SDL3_image
+    SDL3_ttf::SDL3_ttf)
 elseif(RAYLIB)			# Raylib
   find_package(raylib REQUIRED)
   set(GUI_INCLUDE_DIRS ${raylib_INCLUDE_DIRS})
