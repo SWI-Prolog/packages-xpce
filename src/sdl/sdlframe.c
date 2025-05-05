@@ -36,6 +36,7 @@
 #include <h/graphics.h>
 #include "sdlframe.h"
 #include "sdlwindow.h"
+#include "sdlcolour.h"
 
 #define MainWindow(fr)	     ( isNil(fr->members->head) ? (Any) fr : \
 			       fr->members->head->value )
@@ -164,27 +165,53 @@ frame_displayed(FrameObj fr, BoolObj val)
     (float)valInt(a->w), (float)valInt(a->h)		\
   }
 
+typedef struct
+{ float x;
+  float y;
+} foffset;
+
+static void
+ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
+{ WsFrame wfr  = fr->ws_ref;
+  WsWindow wsw = sw->ws_ref;
+
+  if ( wsw )
+  { Area a = sw->area;
+    SDL_FRect dstrect = Area2FRect(a);
+    SDL_FRect srcrect = AreaSize2FRect(a);
+
+    dstrect.x += off->x;
+    dstrect.y += off->y;
+    Cprintf("Draw %s in %s %d %d %d %d\n",
+	    pp(sw), pp(fr),
+	    valInt(a->x), valInt(a->y), valInt(a->w), valInt(a->h));
+    SDL_RenderTexture(wfr->ws_renderer, wsw->backing,
+		      &srcrect, &dstrect);
+
+    if ( instanceOfObject(sw, ClassWindowDecorator) )
+    { off->x += (float)valInt(sw->area->x);
+      off->y += (float)valInt(sw->area->y);
+      WindowDecorator dw = (WindowDecorator)sw;
+      ws_draw_window(fr, dw->window, off);
+    }
+  }
+}
+
 static bool
 ws_draw_frame(FrameObj fr)
 { if ( !ws_created_frame(fr) )
     false;
 
   WsFrame wfr = fr->ws_ref;
-  Cell cell;
 
+  assert(instanceOfObject(fr->background, ClassColour));
+  sdl_color c = pceColour2SDL(fr->background);
+  SDL_SetRenderDrawColor(wfr->ws_renderer, c.r, c.g, c.b, c.a);
   SDL_RenderClear(wfr->ws_renderer);
+  Cell cell;
   for_cell(cell, fr->members)
-  { PceWindow sw = cell->value;
-    WsWindow wsw = sw->ws_ref;
-
-    if ( wsw )
-    { Area a = sw->area;
-      SDL_FRect dstrect = Area2FRect(a);
-      SDL_FRect srcrect = AreaSize2FRect(a);
-
-      SDL_RenderTexture(wfr->ws_renderer, wsw->backing,
-			&srcrect, &dstrect);
-    }
+  { foffset off = {0.0f,0.0f};
+    ws_draw_window(fr, cell->value, &off);
   }
   SDL_RenderPresent(wfr->ws_renderer);
 
