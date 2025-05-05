@@ -35,6 +35,7 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include "sdlframe.h"
+#include "sdlwindow.h"
 
 #define MainWindow(fr)	     ( isNil(fr->members->head) ? (Any) fr : \
 			       fr->members->head->value )
@@ -155,17 +156,38 @@ frame_displayed(FrameObj fr, BoolObj val)
   return true;
 }
 
-static void
-changed_frame(FrameObj fr)
-{ Cell cell;
+#define Area2FRect(a)					\
+  { (float)valInt(a->x), (float)valInt(a->y),		\
+    (float)valInt(a->w), (float)valInt(a->h)		\
+  }
+#define AreaSize2FRect(a)				\
+  { 0.0f, 0.0f,						\
+    (float)valInt(a->w), (float)valInt(a->h)		\
+  }
 
+static void
+draw_frame(FrameObj fr)
+{ if ( !ws_created_frame(fr) )
+    return;
+
+  WsFrame wfr = fr->ws_ref;
+  Cell cell;
+
+  SDL_RenderClear(wfr->ws_renderer);
   for_cell(cell, fr->members)
   { PceWindow sw = cell->value;
-    Area a = sw->area;
-    changed_window(sw,
-		   valInt(a->x), valInt(a->y), valInt(a->w), valInt(a->y),
-		   true);
+    WsWindow wsw = sw->ws_ref;
+
+    if ( wsw )
+    { Area a = sw->area;
+      SDL_FRect dstrect = Area2FRect(a);
+      SDL_FRect srcrect = AreaSize2FRect(a);
+
+      SDL_RenderTexture(wfr->ws_renderer, wsw->backing,
+			&srcrect, &dstrect);
+    }
   }
+  SDL_RenderPresent(wfr->ws_renderer);
 }
 
 
@@ -196,7 +218,6 @@ sdl_frame_event(SDL_Event *ev)
       case SDL_EVENT_WINDOW_HIDDEN:
 	return frame_displayed(fr, OFF);
       case SDL_EVENT_WINDOW_EXPOSED:
-	changed_frame(fr);
 	return RedrawDisplayManager(TheDisplayManager());
     }
   }

@@ -37,11 +37,13 @@
 #include "sdldraw.h"
 #include "sdlcolour.h"
 #include "sdlframe.h"
+#include "sdlwindow.h"
 
 typedef struct
 { PceWindow	window;			/* Pce's notion of the window */
   FrameObj	frame;			/* Pce's frame of the window */
   SDL_Renderer *renderer;		/* The SDL renderer for the window */
+  SDL_Texture  *target;			/* Target for rendering to */
   Any		colour;			/* Current colour */
   Any		background;		/* Background colour */
 } sdl_draw_context;
@@ -145,25 +147,25 @@ d_flush(void)
  */
 status
 d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
-{ Cprintf("d_window(%s, %d, %d, %d, %d, %d, %d)\n",
+{ if ( !ws_created_window(sw) )
+    fail;
+
+  Cprintf("d_window(%s, %d, %d, %d, %d, %d, %d)\n",
 	  pp(sw), x, y, w, h, clear, limit);
 
+  FrameObj fr = getFrameWindow(sw, OFF);
+  WsWindow wsw = sw->ws_ref;
+  WsFrame  wfr = fr->ws_ref;
+
   context.window     = sw;
-  context.frame      = getFrameWindow(sw, OFF);
+  context.frame      = fr;
+  context.renderer   = wfr->ws_renderer;
+  context.target     = wsw->backing;
   context.colour     = sw->colour;
   context.background = sw->background;
 
-  if ( context.frame )
-  { WsFrame f = context.frame->ws_ref;
-
-    context.renderer = f->ws_renderer;
-  } else
-  { assert(0);
-    fail;
-  }
-
-//  SDL_RenderClear(context.renderer);
-  SDL_Rect crect = {x, y, w, h};
+  SDL_SetRenderTarget(context.renderer, context.target);
+  SDL_Rect crect = {(float)x, (float)y, (float)w, (float)h};
   SDL_SetRenderClipRect(context.renderer, &crect);
 
   if ( clear )
@@ -229,7 +231,7 @@ d_clip(int x, int y, int w, int h)
 void
 d_done(void)
 { Cprintf("d_done()\n");
-  SDL_RenderPresent(context.renderer);
+  SDL_SetRenderTarget(context.renderer, NULL);
 }
 
 /**
