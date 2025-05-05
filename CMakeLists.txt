@@ -114,7 +114,7 @@ if(UNIX)
 endif()
 
 set(cdirs adt ari box evt fmt gnu gra img itf ker men msg msw
-    prg rel rgx txt unx win x11 ray)
+    prg rel rgx txt unx win x11 sdl)
 file(GLOB files RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/src"
      "${CMAKE_CURRENT_SOURCE_DIR}/src/h/*.h")
 foreach(d ${cdirs})
