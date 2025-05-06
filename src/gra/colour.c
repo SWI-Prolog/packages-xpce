@@ -385,7 +385,7 @@ getHiliteColour(Colour c, Real h)
   hf = h ? valReal(h) : 0.9;
 
   if ( isDefault(c->green) )		/* realise the colour */
-    getXrefObject(c, CurrentDisplay(NIL));
+    XopenColour(c, CurrentDisplay(NIL));
 
   r = valInt(c->red);
   g = valInt(c->green);

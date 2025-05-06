@@ -53,6 +53,8 @@ typedef struct
   SDL_Texture  *target;			/* Target for rendering to */
   Any		colour;			/* Current colour */
   Any		background;		/* Background colour */
+  Any		default_colour;
+  Any		default_background;
   Any		fill_pattern;		/* Default for fill operations */
   int		pen;			/* Drawing thickness */
 } sdl_draw_context;
@@ -216,6 +218,8 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
   context.target     = wsw->backing;
   context.colour     = notDefault(sw->colour) ? sw->colour : d->foreground;
   context.background = sw->background;
+  context.default_colour = context.colour;
+  context.default_background = context.background;
 
   SDL_SetRenderTarget(context.renderer, context.target);
   SDL_Rect crect = {(float)x, (float)y, (float)w, (float)h};
@@ -465,20 +469,32 @@ r_default_colour(Any c)
  */
 Any
 r_colour(Any c)
-{
-    return NULL;
+{ Any old = context.colour;
+
+  if ( isDefault(c) )
+     c = context.default_colour;
+
+  context.colour = c;
+
+  return old;
 }
 
 /**
- * Retrieve the current background color.
+ * Set the background color.
  *
- * @param c The input color or identifier.
- * @return The current background color.
+ * @param c A color, DEFAULT or an image.
+ * @return The old background.
  */
 Any
 r_background(Any c)
-{
-    return NULL;
+{ Any old = context.background;
+
+  if ( isDefault(c) )
+     c = context.default_background;
+
+  context.background = c;
+
+  return old;
 }
 
 /**
@@ -720,8 +736,8 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
       if ( radius > 0 )			/* with rounded corners */
       { Cprintf("r_3d_box(): with radius\n");
       } else
-      { int r = x+w-1;
-	int b = y+h-1;
+      { int r = x+w;
+	int b = y+h;
 	SDL_Color c = pceColour2SDL_Color(top_left_color);
 	SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
 	for(int os=0; os<shadow; os++)
