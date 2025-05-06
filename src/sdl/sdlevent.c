@@ -99,26 +99,55 @@ button_to_name(bool press, Uint8 button)
 }
 
 static Int
-state_to_buttons(SDL_MouseButtonFlags flags)
+state_to_buttons(SDL_MouseButtonFlags flags, SDL_Keymod mod)
 { int r = 0;
+  const SDL_Keymod ShiftMask   = (SDL_KMOD_LSHIFT|SDL_KMOD_RSHIFT);
+  const SDL_Keymod ControlMask = (SDL_KMOD_LCTRL|SDL_KMOD_RCTRL);
+  const SDL_Keymod MetaMask    = (SDL_KMOD_LALT|SDL_KMOD_RALT);
 
   if ( flags & SDL_BUTTON_LMASK )  r |= BUTTON_ms_left;
   if ( flags & SDL_BUTTON_MMASK )  r |= BUTTON_ms_middle;
   if ( flags & SDL_BUTTON_RMASK )  r |= BUTTON_ms_right;
   if ( flags & SDL_BUTTON_X1MASK ) r |= BUTTON_ms_button4;
   if ( flags & SDL_BUTTON_X2MASK ) r |= BUTTON_ms_button5;
-#if 0
-  if ( state & ShiftMask )	r |= BUTTON_shift;
-  if ( state & ControlMask )	r |= BUTTON_control;
-  if ( state & MetaMask )	r |= BUTTON_meta;
-#endif
+  if ( mod & ShiftMask )	   r |= BUTTON_shift;
+  if ( mod & ControlMask )	   r |= BUTTON_control;
+  if ( mod & MetaMask )            r |= BUTTON_meta;
 
   return toInt(r);
+}
+
+static Any
+keycode_to_name(SDL_Event *event)
+{ if ( event->key.key >= 32 && event->key.key < 128 )
+    return toInt(event->key.key);
+
+  switch(event->key.key)
+  { case SDLK_RETURN:
+    case SDLK_ESCAPE:
+    case SDLK_TAB:
+      return toInt(event->key.key);
+    case SDLK_BACKSPACE:
+      return NAME_backspace;
+    case SDLK_PAUSE:	return NAME_pause;
+    case SDLK_HOME:	return NAME_cursorHome;
+    case SDLK_PAGEUP:	return NAME_pageUp;
+    case SDLK_END:	return NAME_end;
+    case SDLK_PAGEDOWN:	return NAME_pageDown;
+    case SDLK_RIGHT:	return NAME_cursorRight;
+    case SDLK_LEFT:	return NAME_cursorLeft;
+    case SDLK_DOWN:	return NAME_cursorDown;
+    case SDLK_UP:	return NAME_cursorUp;
+  }
+
+  fail;
 }
 
 /**
  * @see https://wiki.libsdl.org/SDL3/SDL_Event
  */
+
+static SDL_Keymod lastmod = SDL_KMOD_NONE;
 
 EventObj
 CtoEvent(SDL_Event *event)
@@ -146,13 +175,26 @@ CtoEvent(SDL_Event *event)
 	fail;
       break;
     case SDL_EVENT_MOUSE_MOTION:
+      fail;
+      /* https://wiki.libsdl.org/SDL3/SDL_KeyboardEvent */
+    case SDL_EVENT_KEY_UP:
+      lastmod = event->key.mod;
+      fail;		      /* only update modifiers */
+    case SDL_EVENT_TEXT_INPUT: /* Needed for input composition.  TBD */
+      fail;
     case SDL_EVENT_KEY_DOWN:
+      wid     = event->key.windowID;
+      time    = event->key.timestamp/1000000;
+      lastmod = event->key.mod;
+      name    = keycode_to_name(event);
+      if ( !name ) fail;
+      break;
     default:
       fail;			/* for now */
   }
 
   window = wsid_to_frame(wid);
-  DEBUG(NAME_event, Cprintf("Event on %s, id=%d\n", pp(window), wid));
+  DEBUG(NAME_event, Cprintf("Event %s on %s, id=%d\n", pp(name), pp(window), wid));
   if ( !window )
     fail;
 
@@ -166,7 +208,7 @@ CtoEvent(SDL_Event *event)
 			     name,
 			     window,
 			     toInt(x), toInt(y),
-			     state_to_buttons(mouse_flags),
+			     state_to_buttons(mouse_flags, lastmod),
 			     EAV);
 
   return ev;

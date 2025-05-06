@@ -293,6 +293,10 @@ sdl_frame_event(SDL_Event *ev)
 
 	return true;
       }
+      case SDL_EVENT_WINDOW_FOCUS_GAINED:
+	return send(fr, NAME_inputFocus, ON, EAV);
+      case SDL_EVENT_WINDOW_FOCUS_LOST:
+	return send(fr, NAME_inputFocus, OFF, EAV);
     }
   }
 
