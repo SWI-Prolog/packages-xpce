@@ -581,6 +581,44 @@ r_shadow_box(int x, int y, int w, int h, int r, int shadow, Image fill)
 }
 
 /**
+ * Sets  the  fill-pattern for  the  interior  of elevated  areas  and
+ * returns TRUE  if the  interior needs to  be filled.   Returns FALSE
+ * otherwise.   The special  colours `reduced'  and `highlighted'  are
+ * interpreted as relative colours to the background.
+*/
+
+static bool
+r_elevation_fillpattern(Elevation e, bool up)
+{ Any fill = NIL;
+
+  if ( up && notDefault(e->colour) )
+  { fill = e->colour;
+  } else if ( !up && notDefault(e->background) )
+  { fill = e->background;
+  }
+
+  if ( isNil(fill) )
+    return false;
+
+  if ( fill == NAME_reduced || fill == NAME_hilited )
+  { Any bg = context.background;
+
+    if ( instanceOfObject(bg, ClassColour) )
+    { if ( fill == NAME_reduced )
+	fill = getReduceColour(bg, DEFAULT);
+      else
+	fill = getHiliteColour(bg, DEFAULT);
+    } else
+      return false;
+  }
+
+  r_fillpattern(fill, NAME_background);
+
+  return true;
+}
+
+
+/**
  * Retrieve the shadow associated with a specific elevation level.
  *
  * @param e The elevation level.
@@ -588,8 +626,28 @@ r_shadow_box(int x, int y, int w, int h, int r, int shadow, Image fill)
  */
 Any
 r_elevation_shadow(Elevation e)
-{
-    return NULL;
+{ if ( isDefault(e->shadow) )
+  { Any bg = context.background;
+
+    if ( instanceOfObject(bg, ClassColour) )
+      return getReduceColour(bg, DEFAULT);
+    else
+      return BLACK_COLOUR;
+  } else
+    return e->shadow;
+}
+
+static Any
+r_elevation_relief(Elevation e)
+{ if ( isDefault(e->relief) )
+  { Any bg = context.background;
+
+    if ( instanceOfObject(bg, ClassColour) )
+      return getHiliteColour(bg, DEFAULT);
+    else
+      return WHITE_COLOUR;
+  } else
+    return e->relief;
 }
 
 /**
@@ -616,10 +674,74 @@ r_3d_segments(int n, ISegment s, Elevation e, int light)
  * @param e The elevation level for 3D effect.
  * @param up Boolean indicating if the box appears raised.
  */
+
+#define MAX_SHADOW 10
+
 void
 r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
-{ Cprintf("stub: r_3d_box(%d, %d, %d, %d, %d, %s, %d)\n",
-	  x, y, w, h, radius, pp(e), up);
+{ int shadow = valInt(e->height);
+
+  DEBUG(NAME_stub,
+	Cprintf("stub: r_3d_box(%d, %d, %d, %d, %d, %s, %d)\n",
+		x, y, w, h, radius, pp(e), up));
+
+  NormaliseArea(x, y, w, h);
+  if ( radius > 0 )
+  { int maxr = min(w,h)/2;
+
+    if ( radius > maxr )
+      radius = maxr;
+  }
+
+  if ( e->kind == NAME_shadow )
+  { Cprintf("r_3d_box(): shadow\n");
+  } else
+  { bool fill = r_elevation_fillpattern(e, up);
+
+    if ( !up  )
+      shadow = -shadow;
+
+    if ( shadow )
+    { Colour top_left_color;
+      Colour bottom_right_color;
+
+      if ( shadow > 0 )
+      { top_left_color     = r_elevation_relief(e);
+	bottom_right_color = r_elevation_shadow(e);
+      } else
+      { top_left_color     = r_elevation_shadow(e);
+	bottom_right_color = r_elevation_relief(e);
+	shadow             = -shadow;
+      }
+
+      if ( shadow > MAX_SHADOW )
+	shadow = MAX_SHADOW;
+
+      if ( radius > 0 )			/* with rounded corners */
+      { Cprintf("r_3d_box(): with radius\n");
+      } else
+      { int r = x+w-1;
+	int b = y+h-1;
+	SDL_Color c = pceColour2SDL_Color(top_left_color);
+	SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
+	for(int os=0; os<shadow; os++)
+	{ SDL_FPoint pts[3] =
+	    { { r-os, y-os }, { x+os, y+os }, { x+os, b-os } };
+	  SDL_RenderLines(context.renderer, pts, 3);
+	}
+	c = pceColour2SDL_Color(bottom_right_color);
+	SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
+	for(int os=0; os<shadow; os++)
+	{ SDL_FPoint pts[3] =
+	    { { r-os, y-os }, { r-os, b-os }, { x+os, b-os } };
+	  SDL_RenderLines(context.renderer, pts, 3);
+	}
+      }
+    }
+
+    if ( fill )
+      r_fill(x+shadow, y+shadow, w-2*shadow, h-2*shadow, NAME_current);
+  }
 }
 
 /**
@@ -801,21 +923,23 @@ r_image(Image image, int sx, int sy, int x, int y, int w, int h, BoolObj transpa
  */
 void
 r_fill(int x, int y, int w, int h, Any fill)
-{ DEBUG(NAME_stub,
-	Cprintf("r_fill(%d, %d, %d, %d, %s)\n",
-		x, y, w, h, pp(fill)));
+{ NormaliseArea(x, y, w, h);
+  if ( w > 0 && h > 0 )
+  { DEBUG(NAME_stub,
+	  Cprintf("r_fill(%d, %d, %d, %d, %s)\n",
+		  x, y, w, h, pp(fill)));
 
-  if ( isDefault(fill) )
-    fill = context.colour;
+    r_fillpattern(fill, NAME_foreground);
 
-  if ( instanceOfObject(fill, ClassColour) )
-  { SDL_Color c = pceColour2SDL_Color(fill);
-    SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
-    SDL_FRect rect = { (float)x, (float)y, (float)w, (float)h };
-    SDL_RenderFillRect(context.renderer, &rect);
+    if ( instanceOfObject(context.fill_pattern, ClassColour) )
+    { SDL_Color c = pceColour2SDL_Color(context.fill_pattern);
+      SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
+      SDL_FRect rect = { (float)x, (float)y, (float)w, (float)h };
+      SDL_RenderFillRect(context.renderer, &rect);
 
-  } else
-  { Cprintf("stub: r_fill(%s)\n", pp(fill));
+    } else
+    { Cprintf("stub: r_fill(%s)\n", pp(context.fill_pattern));
+    }
   }
 }
 
