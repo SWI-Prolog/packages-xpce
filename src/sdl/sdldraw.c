@@ -1076,12 +1076,15 @@ s_printA(charA *s, int l, int x, int y, FontObj f)
  * @param s The array of wide characters.
  * @param l The length of the character array.
  * @param x The x-coordinate for rendering.
- * @param y The y-coordinate for rendering.
- * @param f The font object.
+ * @param y The y-coordinate for the baseline.
+ * @param font The font object.
  */
 void
 s_printW(charW *s, int l, int x, int y, FontObj font)
-{ TTF_Font *ttf = sdl_font(font);
+{ if ( l <= 0 )
+    return;
+
+  TTF_Font *ttf = sdl_font(font);
   SDL_Color   c = pceColour2SDL_Color(context.colour);
   SDL_Surface *surf;
   string str = { .text_union = { .textW = s },
@@ -1095,6 +1098,8 @@ s_printW(charW *s, int l, int x, int y, FontObj font)
   DEBUG(NAME_stub,
 	Cprintf("s_printW(\"%s\", %d, %d, %d, %s) (color: %s)\n",
 		u, l, x, y, pp(font), pp(context.colour)));
+
+  y -= TTF_GetFontAscent(ttf);
   surf = TTF_RenderText_Blended(ttf, u, 0, c);
 
   SDL_Texture *texture = SDL_CreateTextureFromSurface(context.renderer, surf);
