@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <cairo/cairo.h>
 #include "sdldraw.h"
 #include "sdlcolour.h"
 #include "sdlfont.h"
@@ -818,6 +819,62 @@ r_fill(int x, int y, int w, int h, Any fill)
   }
 }
 
+static void
+cairo_set_source_color(cairo_t *cr, Colour pce)
+{ SDL_Color c = pceColour2SDL_Color(pce);
+  cairo_set_source_rgba(cr, c.r/255.0, c.g/255.0, c.b/255.0, c.a/255.0);
+}
+
+/**
+ * Draw a Cairo surface at x,y
+ *
+ * @param surface is the Cairo surface to draw
+ * @param x is the X coordinate of the top-left corner
+ * @param y is the Y coordinate of the top-left corner
+ */
+
+static void
+cairo_draw_surface(cairo_surface_t *surface, int x, int y)
+{ int width    = cairo_image_surface_get_width(surface);
+  int height   = cairo_image_surface_get_height(surface);
+  int stride   = cairo_image_surface_get_stride(surface);
+  Uint32 *data = (Uint32 *)cairo_image_surface_get_data(surface);
+  SDL_Surface *sdl_surf = SDL_CreateSurfaceFrom(width, height,
+						SDL_PIXELFORMAT_ARGB8888,
+						data, stride);
+  SDL_Texture *tex = SDL_CreateTextureFromSurface(context.renderer, sdl_surf);
+  SDL_DestroySurface(sdl_surf);
+
+  // 6. Copy texture to renderer
+  SDL_FRect dst = { (float)x, (float)y, (float)width, (float)height };
+  SDL_RenderTexture(context.renderer, tex, NULL, &dst);
+  SDL_DestroyTexture(tex);
+}
+
+/**
+ * Compute the bounding box of a set of points
+ */
+
+static void
+polygon_bb(IPoint pts, int n, SDL_Rect *bounds)
+{ int minx = pts[0].x, maxx = minx;
+  int miny = pts[0].y, maxy = miny;
+
+  for(int i=1; i<n; i++)
+  { int x = pts[i].x;
+    int y = pts[i].y;
+    if ( x < minx ) minx = x;
+    else if ( x > maxx ) maxx = x;
+    if ( y < miny ) miny = y;
+    else if ( y > maxy ) maxy = y;
+  }
+
+  bounds->x = minx;
+  bounds->y = miny;
+  bounds->w = maxx - minx;
+  bounds->h = maxy - miny;
+}
+
 /**
  * Fill a polygon defined by a series of points.
  *
@@ -826,7 +883,29 @@ r_fill(int x, int y, int w, int h, Any fill)
  */
 void
 r_fill_polygon(IPoint pts, int n)
-{
+{ if ( n <= 0 ) return;
+  SDL_Rect bounds;
+
+  polygon_bb(pts, n, &bounds);
+  cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+							bounds.w, bounds.h);
+  cairo_t *cr = cairo_create(surface);
+
+  // 2. Set background to transparent (optional)
+  cairo_set_source_rgba(cr, 0, 0, 0, 0);
+  cairo_paint(cr);
+
+  cairo_set_source_color(cr, context.fill_pattern);
+  cairo_move_to(cr, pts[0].x - bounds.x, pts[0].y - bounds.y);
+  for (int i = 1; i < n; i++)
+  { cairo_line_to(cr, pts[i].x - bounds.x, pts[i].y - bounds.y);
+  }
+  cairo_close_path(cr);
+  cairo_fill(cr);
+  cairo_destroy(cr);
+
+  cairo_draw_surface(surface, bounds.x, bounds.y);
+  cairo_surface_destroy(surface);
 }
 
 /**
