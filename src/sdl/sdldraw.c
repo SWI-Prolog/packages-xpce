@@ -931,21 +931,22 @@ r_get_pixel(int x, int y)
  */
 int
 s_has_char(FontObj f, unsigned int c)
-{
-    return 0;
+{ return c >=0 && c <= 0x10ffff;
 }
 
 /**
- * Retrieve the domain (bounding box) of a font.
+ * Retrieve the range of valid characters for a font.  We'll
+ * assume modern fonts are Unicode.
  *
  * @param f The font object.
- * @param which The aspect of the domain to retrieve.
- * @param x Pointer to store the x-dimension.
- * @param y Pointer to store the y-dimension.
+ * @param Either `x` or `y`.  What does this mean?
+ * @param a Pointer to first valid character
+ * @param z Pointer to last valid character
  */
 void
-f_domain(FontObj f, Name which, int *x, int *y)
-{
+f_domain(FontObj f, Name which, int *a, int *z)
+{ *a = 0;
+  *z = 0x10ffff;
 }
 
 /**
@@ -956,44 +957,43 @@ f_domain(FontObj f, Name which, int *x, int *y)
  */
 int
 s_default_char(FontObj font)
-{
-    return 0;
+{ return 'x';
 }
 
 /**
  * Retrieve the ascent (height above baseline) of a font.
  *
- * @param f The font object.
+ * @param font The font object.
  * @return The ascent value.
  */
 int
-s_ascent(FontObj f)
-{
-    return 0;
+s_ascent(FontObj font)
+{ TTF_Font *ttf = sdl_font(font);
+  return TTF_GetFontAscent(ttf);
 }
 
 /**
  * Retrieve the descent (depth below baseline) of a font.
  *
- * @param f The font object.
+ * @param font The font object.
  * @return The descent value.
  */
 int
-s_descent(FontObj f)
-{
-    return 0;
+s_descent(FontObj font)
+{ TTF_Font *ttf = sdl_font(font);
+  return TTF_GetFontDescent(ttf);
 }
 
 /**
  * Retrieve the total height of a font (ascent + descent).
  *
- * @param f The font object.
+ * @param font The font object.
  * @return The total height.
  */
 int
-s_height(FontObj f)
-{
-    return 0;
+s_height(FontObj font)
+{ TTF_Font *ttf = sdl_font(font);
+  return TTF_GetFontAscent(ttf) + TTF_GetFontDescent(ttf);
 }
 
 /**
@@ -1005,8 +1005,10 @@ s_height(FontObj f)
  */
 int
 c_width(wint_t c, FontObj font)
-{
-    return 0;
+{ TTF_Font *ttf = sdl_font(font);
+  int w;
+  TTF_GetGlyphMetrics(ttf, c, NULL, NULL, NULL, NULL, &w);
+  return w;
 }
 
 /**
@@ -1020,12 +1022,23 @@ c_width(wint_t c, FontObj font)
  */
 int
 str_width(PceString s, int from, int to, FontObj f)
-{
-    return 0;
+{ string s2 = *s;
+  if ( s2.s_iswide )
+  { s2.s_textW += from;
+  } else
+  { s2.s_textA += from;
+  }
+  s2.s_size = to-from;
+
+  int w, h;
+  str_size(&s2, f, &w, &h);
+
+  return w;
 }
 
 /**
- * Calculate the advance width (cursor movement) of a substring within a string using a specific font.
+ * Calculate the advance width (cursor movement) of a substring within
+ * a string using a specific font.
  *
  * @param s The string object.
  * @param from The starting index of the substring.
@@ -1035,7 +1048,9 @@ str_width(PceString s, int from, int to, FontObj f)
  */
 int
 str_advance(PceString s, int from, int to, FontObj f)
-{
+{ return str_width(s, from, to, f); /* for now */
+// TTF_SizeUTF8(font, "your string here", &width, &height);
+
     return 0;
 }
 
