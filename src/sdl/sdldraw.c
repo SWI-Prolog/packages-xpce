@@ -51,6 +51,8 @@ typedef struct
   DisplayObj	display;		/* Pce's display for the frame */
   SDL_Renderer *renderer;		/* The SDL renderer for the window */
   SDL_Texture  *target;			/* Target for rendering to */
+  int		offset_x;		/* Paint offset in X direction */
+  int		offset_y;		/* Paint offset in Y direction */
   Any		colour;			/* Current colour */
   Any		background;		/* Background colour */
   Any		default_colour;
@@ -58,6 +60,11 @@ typedef struct
   Any		fill_pattern;		/* Default for fill operations */
   int		pen;			/* Drawing thickness */
 } sdl_draw_context;
+
+#define X(x) ((x) + context.offset_x)
+#define Y(y) ((y) + context.offset_y)
+#define Translate(x, y)	 { (x) = X(x); (y) = Y(y); }
+#define InvTranslate(x, y) { x -= context.offset_x; y -= context.offset_y; }
 
 #include <gra/graphstate.c>
 
@@ -97,7 +104,10 @@ resetDraw(void)
  */
 void
 d_offset(int x, int y)
-{
+{ DEBUG(NAME_redraw, Cprintf("d_offset(%d, %d)\n", x, y));
+
+  context.offset_x = x;
+  context.offset_y = y;
 }
 
 /**
@@ -108,7 +118,8 @@ d_offset(int x, int y)
  */
 void
 r_offset(int x, int y)
-{
+{ context.offset_x += x;
+  context.offset_y += y;
 }
 
 /**
@@ -216,6 +227,8 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
   context.display    = d;
   context.renderer   = wfr->ws_renderer;
   context.target     = wsw->backing;
+  context.offset_x   = valInt(sw->scroll_offset->x);
+  context.offset_y   = valInt(sw->scroll_offset->y);
   context.colour     = notDefault(sw->colour) ? sw->colour : d->foreground;
   context.background = sw->background;
   context.default_colour = context.colour;
@@ -328,7 +341,10 @@ intersection_iarea(IArea a, IArea b)
  */
 void
 r_clear(int x, int y, int w, int h)
-{ r_fill(x, y, w, h, context.background);
+{ NormaliseArea(x, y, w, h);
+  Translate(x, y);
+
+  r_fill(x, y, w, h, context.background);
 }
 
 /**
@@ -457,8 +473,14 @@ r_unfix_colours(ColourContext ctx)
  */
 Any
 r_default_colour(Any c)
-{
-    return NULL;
+{ Any old = context.default_colour;
+
+  if ( notDefault(c) )
+    context.default_colour = c;
+
+  r_colour(context.default_colour);
+
+  return old;
 }
 
 /**
@@ -537,7 +559,10 @@ r_invert_mode(BoolObj val)
  */
 void
 r_translate(int x, int y, int *ox, int *oy)
-{
+{ Translate(x, y);
+
+  *ox = x;
+  *oy = y;
 }
 
 /**
@@ -552,10 +577,13 @@ r_translate(int x, int y, int *ox, int *oy)
  */
 void
 r_box(int x, int y, int w, int h, int r, Any fill)
-{ DEBUG(NAME_stub,
+{ Translate(x, y);
+  NormaliseArea(x, y, w, h);
+
+  DEBUG(NAME_stub,
 	Cprintf("r_box(%d, %d, %d, %d, %d, %s)\n",
 		x, y, w, h, r, pp(fill)));
-  int maxr = min(abs(w), abs(h))/2;
+  int maxr = min(w, h)/2;
 
   r = min(r, maxr);
   if ( notNil(fill) && r == 0 )
@@ -587,9 +615,7 @@ r_box(int x, int y, int w, int h, int r, Any fill)
  */
 void
 r_shadow_box(int x, int y, int w, int h, int r, int shadow, Image fill)
-{ NormaliseArea(x,y,w,h);
-
-  if ( !shadow )
+{ if ( !shadow )
   { r_box(x, y, w, h, r, fill);
   } else
   { Cprintf("r_shadow_box(%d, %d, %d, %d, %s)\n", x, y, w, h, pp(fill));
@@ -701,6 +727,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 	Cprintf("stub: r_3d_box(%d, %d, %d, %d, %d, %s, %d)\n",
 		x, y, w, h, radius, pp(e), up));
 
+  Translate(x, y)
   NormaliseArea(x, y, w, h);
   if ( radius > 0 )
   { int maxr = min(w,h)/2;
@@ -789,7 +816,8 @@ r_3d_line(int x1, int y1, int x2, int y2, Elevation e, int up)
  * @param map Additional mapping parameter for rendering.
  */
 void
-r_3d_triangle(int x1, int y1, int x2, int y2, int x3, int y3, Elevation e, int up, int map)
+r_3d_triangle(int x1, int y1, int x2, int y2, int x3, int y3,
+	      Elevation e, int up, int map)
 {
 }
 
@@ -1340,6 +1368,7 @@ s_printW(charW *s, int l, int x, int y, FontObj font)
 	Cprintf("s_printW(\"%s\", %d, %d, %d, %s) (color: %s)\n",
 		u, l, x, y, pp(font), pp(context.colour)));
 
+  Translate(x, y);
   y -= TTF_GetFontAscent(ttf);
   surf = TTF_RenderText_Blended(ttf, u, 0, c);
 
@@ -1443,6 +1472,8 @@ str_string(PceString s, FontObj font,
   SDL_Texture *texture = SDL_CreateTextureFromSurface(context.renderer, surf);
   SDL_DestroySurface(surf);
 
+  Translate(x, y);
+  NormaliseArea(x, y, w, h);
   float tex_w, tex_h;
   SDL_GetTextureSize(texture, &tex_w, &tex_h);
   SDL_FRect dst = { (float)x, (float)y, tex_w, tex_h };
