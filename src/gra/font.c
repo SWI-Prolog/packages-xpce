@@ -268,8 +268,8 @@ getAdvanceFont(FontObj f, CharArray txt)
 
 Int
 getExFont(FontObj f)
-{ if ( isNil(f->ex) )
-    assign(f, ex, toInt(c_width('x', f)));
+{ if ( isInteger(f->ex) )
+    XopenFont(f, CurrentDisplay(NIL));
 
   answer(f->ex);
 }
@@ -308,13 +308,7 @@ getSizeFont(FontObj f)
 BoolObj
 getFixedWidthFont(FontObj f)
 { if ( isDefault(f->fixed_width) )
-  { getXrefObject(f, CurrentDisplay(NIL));
-
-    if ( c_width('x', f) == c_width('W', f) )
-      assign(f, fixed_width, ON);
-    else
-      assign(f, fixed_width, OFF);
-  }
+    XopenFont(f, CurrentDisplay(NIL));
 
   answer(f->fixed_width);
 }

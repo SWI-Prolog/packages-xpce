@@ -58,7 +58,9 @@ ws_create_font(FontObj f, DisplayObj d)
       font_scale = valReal(r);
   }
 
-  assert(f->ws_ref == NULL);
+  if ( f->ws_ref )		/* already done */
+    succeed;
+
   TTF_Font *ttf = f->ws_ref = TTF_OpenFont(
     "/usr/share/fonts/dejavu-sans-mono-fonts/DejaVuSansMono.ttf",
     (int)((double)valInt(f->points)*font_scale)+0.5);

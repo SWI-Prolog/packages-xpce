@@ -610,7 +610,8 @@ r_3d_segments(int n, ISegment s, Elevation e, int light)
  */
 void
 r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
-{
+{ Cprintf("stub: r_3d_box(%d, %d, %d, %d, %d, %s, %d)\n",
+	  x, y, w, h, radius, pp(e), up);
 }
 
 /**
@@ -1053,7 +1054,9 @@ s_printA(charA *s, int l, int x, int y, FontObj f)
 }
 
 /**
- * Render a string of wide characters at a specified position using a specific font.
+ * Render a string of wide characters  at a specified position using a
+ * specific  font.   This   is  the  print  function   used  by  class
+ * `text_image`.
  *
  * @param s The array of wide characters.
  * @param l The length of the character array.
@@ -1062,8 +1065,32 @@ s_printA(charA *s, int l, int x, int y, FontObj f)
  * @param f The font object.
  */
 void
-s_printW(charW *s, int l, int x, int y, FontObj f)
-{
+s_printW(charW *s, int l, int x, int y, FontObj font)
+{ TTF_Font *ttf = sdl_font(font);
+  SDL_Color   c = pceColour2SDL_Color(context.colour);
+  SDL_Surface *surf;
+  string str = { .text_union = { .textW = s },
+                 .hdr.f = { .size = l,
+			    .iswide = true,
+			    .readonly = true
+			  }
+               };
+  const char *u = stringToUTF8(&str);
+
+  DEBUG(NAME_stub,
+	Cprintf("s_printW(\"%s\", %d, %d, %d, %s) (color: %s)\n",
+		u, l, x, y, pp(font), pp(context.colour)));
+  surf = TTF_RenderText_Blended(ttf, u, 0, c);
+
+  SDL_Texture *texture = SDL_CreateTextureFromSurface(context.renderer, surf);
+  SDL_DestroySurface(surf);
+
+  float tex_w, tex_h;
+  SDL_GetTextureSize(texture, &tex_w, &tex_h);
+  SDL_FRect dst = { (float)x, (float)y, tex_w, tex_h };
+
+  SDL_RenderTexture(context.renderer, texture, NULL, &dst);
+  SDL_DestroyTexture(texture);
 }
 
 /**
