@@ -936,8 +936,9 @@ r_fill_triangle(int x1, int y1, int x2, int y2, int x3, int y3)
   SDL_FColor fc = {.r = c.r/255.0f, .g = c.g/255.0f,
 		   .b = c.b/255.0f, .a = c.a/255.0f };
 
-  Cprintf("stub: r_fill_triangle(%d, %d, %d, %d, %d, %d, %s)\n",
-	  x1, y1, x2, y2, x3, y3, pp(context.fill_pattern));
+  DEBUG(NAME_stub,
+	Cprintf("stub: r_fill_triangle(%d, %d, %d, %d, %d, %d, %s)\n",
+		x1, y1, x2, y2, x3, y3, pp(context.fill_pattern)));
 
   // Create 3 vertices with positions and uniform color
   SDL_Vertex verts[3] = {
