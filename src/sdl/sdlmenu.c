@@ -49,9 +49,10 @@
  * @return SUCCEED on success; otherwise, FAIL.
  */
 status
-ws_draw_scrollbar_arrow(ScrollBar s, int x, int y, int w, int h, Name which, int up)
-{
-    return SUCCEED;
+ws_draw_scrollbar_arrow(ScrollBar s,
+			int x, int y, int w, int h,
+			Name which, int up)
+{ fail;
 }
 
 /**
@@ -62,8 +63,7 @@ ws_draw_scrollbar_arrow(ScrollBar s, int x, int y, int w, int h, Name which, int
  */
 int
 ws_arrow_height_scrollbar(ScrollBar s)
-{
-    return 10;
+{ return -1;
 }
 
 /**
@@ -77,8 +77,7 @@ ws_arrow_height_scrollbar(ScrollBar s)
  */
 status
 ws_draw_sb_thumb(int x, int y, int w, int h)
-{
-    return SUCCEED;
+{ fail;
 }
 
 /**
@@ -88,8 +87,12 @@ ws_draw_sb_thumb(int x, int y, int w, int h)
  */
 Colour
 ws_3d_grey(void)
-{
-    return NULL;
+{ static Colour c;
+
+  if ( !c )
+    c = newObject(ClassColour, CtoKeyword("grey60"), EAV);
+
+  return c;
 }
 
 /**
@@ -176,8 +179,7 @@ ws_entry_field(Graphical gr, int x, int y, int w, int h, int flags)
  */
 status
 ws_draw_checkbox(int x, int y, int w, int h, int b, int flags)
-{
-    return SUCCEED;
+{ fail;
 }
 
 /**
@@ -190,10 +192,10 @@ ws_draw_checkbox(int x, int y, int w, int h, int b, int flags)
  */
 status
 ws_checkbox_size(int flags, int *w, int *h)
-{
-    *w = 16;
-    *h = 16;
-    return SUCCEED;
+{ *w = 0;
+  *h = 0;
+
+  fail;
 }
 
 /**

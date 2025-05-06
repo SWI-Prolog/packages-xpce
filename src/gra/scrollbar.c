@@ -421,12 +421,14 @@ draw_arrow(ScrollBar s, int x, int y, int w, int h, Name which, int up)
       else if ( which == NAME_left )     img = SCROLL_LEFT_IMAGE;
       else /* ( which == NAME_right ) */ img = SCROLL_RIGHT_IMAGE;
 
-      iw = valInt(img->size->w);
-      ih = valInt(img->size->h);
+      if ( img )
+      { iw = valInt(img->size->w);
+	ih = valInt(img->size->h);
 
-      r_image(img, 0, 0, x+(w-iw)/2, y+(h-ih)/2, iw, ih, ON);
-    } else				/* motif */
-    {
+	r_image(img, 0, 0, x+(w-iw)/2, y+(h-ih)/2, iw, ih, ON);
+      } else
+      { Cprintf("No scroll_bar arrow image\n");
+      }
     }
   }
 }
