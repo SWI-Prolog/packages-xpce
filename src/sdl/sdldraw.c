@@ -52,6 +52,7 @@ typedef struct
   SDL_Texture  *target;			/* Target for rendering to */
   Any		colour;			/* Current colour */
   Any		background;		/* Background colour */
+  Any		fill_pattern;		/* Default for fill operations */
   int		pen;			/* Drawing thickness */
 } sdl_draw_context;
 
@@ -398,11 +399,17 @@ d_pen(Pen pen)
  * Set the fill pattern for subsequent drawing operations.
  *
  * @param fill The fill pattern to use.
- * @param which Identifier for the fill pattern.
+ * @param which One of `foreground` or `background` if `fixed_colours`
+ *        is active.   Currently ignored.
  */
 void
 r_fillpattern(Any fill, Name which)
-{
+{ if ( isDefault(fill) )
+    fill = context.colour;
+  else if ( fill == NAME_current )
+    return;
+
+  context.fill_pattern = fill;
 }
 
 /**
@@ -846,7 +853,21 @@ r_caret(int cx, int cy, FontObj font)
  */
 void
 r_fill_triangle(int x1, int y1, int x2, int y2, int x3, int y3)
-{
+{ SDL_Color   c = pceColour2SDL_Color(context.fill_pattern);
+  SDL_FColor fc = {.r = c.r/255.0f, .g = c.g/255.0f,
+		   .b = c.b/255.0f, .a = c.a/255.0f };
+
+  Cprintf("stub: r_fill_triangle(%d, %d, %d, %d, %d, %d, %s)\n",
+	  x1, y1, x2, y2, x3, y3, pp(context.fill_pattern));
+
+  // Create 3 vertices with positions and uniform color
+  SDL_Vertex verts[3] = {
+    { .position = { (float)x1, (float)y1 }, .color = fc },
+    { .position = { (float)x2, (float)y2 }, .color = fc },
+    { .position = { (float)x3, (float)y3 }, .color = fc },
+  };
+
+  SDL_RenderGeometry(context.renderer, NULL, verts, 3, NULL, 0);
 }
 
 /**
