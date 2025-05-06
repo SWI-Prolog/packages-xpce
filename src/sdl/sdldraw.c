@@ -234,12 +234,14 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
   context.default_colour = context.colour;
   context.default_background = context.background;
 
+  Translate(x, y);
+  NormaliseArea(x, y, w, h);
   SDL_SetRenderTarget(context.renderer, context.target);
   SDL_Rect crect = {(float)x, (float)y, (float)w, (float)h};
   SDL_SetRenderClipRect(context.renderer, &crect);
 
   if ( clear )
-    r_clear(x, y, w, h);
+    r_fill(x, y, w, h, context.background);
 
   succeed;
 }
