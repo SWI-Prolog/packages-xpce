@@ -268,7 +268,7 @@ getAdvanceFont(FontObj f, CharArray txt)
 
 Int
 getExFont(FontObj f)
-{ if ( isInteger(f->ex) )
+{ if ( !isInteger(f->ex) )
     XopenFont(f, CurrentDisplay(NIL));
 
   answer(f->ex);
