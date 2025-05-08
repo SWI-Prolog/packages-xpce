@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <h/text.h>
 #include <cairo/cairo.h>
 #include "sdldraw.h"
 #include "sdlcolour.h"
@@ -1323,10 +1324,12 @@ str_width(PceString s, int from, int to, FontObj font)
   { s2.s_textA += from;
   }
   s2.s_size = to-from;
-  const char *u = stringToUTF8(&s2);
+
+  size_t ulen;
+  const char *u = stringToUTF8(&s2, &ulen);
 
   int ext; size_t cnt;
-  TTF_MeasureString(ttf, u, strlen(u), 1000000, &ext, &cnt);
+  TTF_MeasureString(ttf, u, ulen, 1000000, &ext, &cnt);
 
   return ext;
 }
@@ -1358,7 +1361,7 @@ s_printU(const char *u, size_t len, int x, int y, FontObj font)
 
   Translate(x, y);
   y -= TTF_GetFontAscent(ttf);
-  surf = TTF_RenderText_Blended(ttf, u, 0, c);
+  surf = TTF_RenderText_Blended(ttf, u, len, c);
 
   SDL_Texture *texture = SDL_CreateTextureFromSurface(context.renderer, surf);
   SDL_DestroySurface(surf);
@@ -1392,8 +1395,9 @@ s_printA(charA *s, int l, int x, int y, FontObj font)
 			  }
                };
 
-  const char *u = stringToUTF8(&str);
-  s_printU(u, strlen(u), x, y, font);
+  size_t ulen;
+  const char *u = stringToUTF8(&str, &ulen);
+  s_printU(u, ulen, x, y, font);
 }
 
 /**
@@ -1418,8 +1422,9 @@ s_printW(charW *s, int l, int x, int y, FontObj font)
 			  }
                };
 
-  const char *u = stringToUTF8(&str);
-  s_printU(u, strlen(u), x, y, font);
+  size_t ulen;
+  const char *u = stringToUTF8(&str, &ulen);
+  s_printU(u, ulen, x, y, font);
 }
 
 /**
@@ -1637,29 +1642,33 @@ void
 str_string(PceString s, FontObj font,
 	   int x, int y, int w, int h,
 	   Name hadjust, Name vadjust, int flags)
-{ TTF_Font *ttf = sdl_font(font);
-  SDL_Color   c = pceColour2SDL_Color(context.colour);
-  SDL_Surface *surf;
-  const char *u = stringToUTF8(s);
+{ strTextLine lines[MAX_TEXT_LINES];
+  strTextLine *line;
+  int nlines, n;
+  int baseline;
 
-  DEBUG(NAME_stub,
-	Cprintf("str_string(\"%s\", %s, %d, %d, %d, %d, %s, %s, %d) "
-		"(color: %s)\n",
-		u, pp(font), x, y, w, h,
-		pp(hadjust), pp(vadjust), flags, pp(context.colour)));
-  surf = TTF_RenderText_Blended(ttf, u, 0, c);
-
-  SDL_Texture *texture = SDL_CreateTextureFromSurface(context.renderer, surf);
-  SDL_DestroySurface(surf);
+  if ( s->s_size == 0 )
+    return;
 
   Translate(x, y);
-  NormaliseArea(x, y, w, h);
-  float tex_w, tex_h;
-  SDL_GetTextureSize(texture, &tex_w, &tex_h);
-  SDL_FRect dst = { (float)x, (float)y, tex_w, tex_h };
+  baseline = s_ascent(font);
+  str_break_into_lines(s, lines, &nlines, MAX_TEXT_LINES);
+  str_compute_lines(lines, nlines, font, x, y, w, h, hadjust, vadjust);
 
-  SDL_RenderTexture(context.renderer, texture, NULL, &dst);
-  SDL_DestroyTexture(texture);
+  if ( flags & TXT_UNDERLINED )
+  { r_dash(NAME_none);
+    r_thickness(1);
+  }
+
+  for(n=0, line = lines; n++ < nlines; line++)
+  { str_text(font, &line->text, line->x, line->y+baseline);
+#if 0
+    if ( flags & TXT_UNDERLINED )
+      XDrawLine(context.display, context.drawable, context.gcs->workGC,
+		line->x, line->y+baseline+1,
+		line->x+line->width, line->y+baseline+1);
+#endif
+  }
 }
 
 /**
