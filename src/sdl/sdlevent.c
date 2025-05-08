@@ -177,8 +177,23 @@ CtoEvent(SDL_Event *event)
       if ( !name )
 	fail;
       break;
+      /* https://wiki.libsdl.org/SDL3/SDL_MouseMotionEvent */
     case SDL_EVENT_MOUSE_MOTION:
-      fail;
+      fx   = event->motion.x;	/* these are floats */
+      fy   = event->motion.y;
+      wid  = event->motion.windowID;
+      time = event->motion.timestamp/1000000; // ns -> ms
+      mouse_flags = event->motion.state;
+
+      if ( mouse_flags & SDL_BUTTON_LMASK )
+	name = NAME_msLeftDrag;
+      else if ( mouse_flags & SDL_BUTTON_MMASK )
+	name = NAME_msMiddleDrag;
+      else if ( mouse_flags & SDL_BUTTON_RMASK )
+	name = NAME_msRightDrag;
+      else
+	name = NAME_locMove;
+      break;
       /* https://wiki.libsdl.org/SDL3/SDL_KeyboardEvent */
     case SDL_EVENT_KEY_UP:
       lastmod = event->key.mod;

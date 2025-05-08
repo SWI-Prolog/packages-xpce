@@ -98,7 +98,7 @@ COMMON(void)	offset_window(PceWindow sw, int *x, int *y);
 COMMON(void)	compute_window(PceWindow sw, int *x, int *y, int *w, int *h);
 COMMON(status)	frame_offset_window(Any obj, FrameObj *fr, int *X, int *Y);
 COMMON(void)	offset_windows(PceWindow w1, Any w2, int *X, int *Y);
-COMMON(int)	is_service_window(PceWindow sw);
+COMMON(int)	is_service_window(Any from);
 COMMON(status)	postEventWindow(PceWindow sw, EventObj ev);
 COMMON(status)	typedWindow(PceWindow sw, EventId id, BoolObj delegate);
 COMMON(status)	inputFocusWindow(PceWindow sw, BoolObj val);

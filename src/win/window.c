@@ -593,13 +593,21 @@ offset_windows(PceWindow w1, Any w2, int *X, int *Y)
 		********************************/
 
 int
-is_service_window(PceWindow sw)
-{ Application app = getApplicationGraphical((Graphical)sw);
+is_service_window(Any from)
+{ Application app;
 
-  DEBUG(NAME_service, Cprintf("Event on %s app=%s\n", pp(sw), pp(app)));
+  if ( instanceOfObject(from, ClassGraphical) )
+  { app = getApplicationGraphical(from);
+  } else if ( instanceOfObject(from, ClassFrame) )
+  { FrameObj fr = from;
+    app = fr->application;
+  }
 
-  return (app && app->kind == NAME_service ? PCE_EXEC_SERVICE
-					   : PCE_EXEC_USER);
+  DEBUG(NAME_service, Cprintf("Event on %s app=%s\n", pp(from), pp(app)));
+
+  return (app && notNil(app) &&
+	  app->kind == NAME_service ? PCE_EXEC_SERVICE
+				    : PCE_EXEC_USER);
 }
 
 

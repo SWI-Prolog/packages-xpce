@@ -1470,7 +1470,7 @@ getAbsolutePositionGraphical(Graphical gr, Device dev)
 Point
 getFramePositionGraphical(Graphical gr)
 { Int x, y;
-  int ox, oy, wx, wy;
+  int ox, oy;
   PceWindow w = DEFAULT;
 
 					/* relative to window system */

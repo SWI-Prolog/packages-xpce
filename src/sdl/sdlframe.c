@@ -102,7 +102,7 @@ ws_create_frame(FrameObj fr)
   { flags |= SDL_WINDOW_POPUP_MENU;
     FrameObj pfr = getAttributeObject(fr, NAME_parent);
     WsFrame   pf = sdl_frame(pfr, false);
-    Cprintf("Opening popup for %s\n", pfr);
+    Cprintf("Opening popup for %s\n", pp(pfr));
     w = SDL_CreatePopupWindow(
       pf->ws_window,
       valInt(fr->area->x),
