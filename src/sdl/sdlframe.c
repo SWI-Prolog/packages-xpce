@@ -94,15 +94,29 @@ ws_uncreate_frame(FrameObj fr)
 status
 ws_create_frame(FrameObj fr)
 { SDL_WindowFlags flags = 0;
+  SDL_Window *w = NULL;
 
   if ( fr->can_resize == ON )
     flags |= SDL_WINDOW_RESIZABLE;
-
-  SDL_Window *w = SDL_CreateWindow(
-    nameToMB(fr->label),
-    valInt(fr->area->w),
-    valInt(fr->area->h),
-    flags);
+  if ( fr->kind == NAME_popup )
+  { flags |= SDL_WINDOW_POPUP_MENU;
+    FrameObj pfr = getAttributeObject(fr, NAME_parent);
+    WsFrame   pf = sdl_frame(pfr, false);
+    Cprintf("Opening popup for %s\n", pfr);
+    w = SDL_CreatePopupWindow(
+      pf->ws_window,
+      10, //valInt(fr->area->x),
+      10, //valInt(fr->area->y),
+      valInt(fr->area->w),
+      valInt(fr->area->h),
+      flags);
+  } else
+  { w = SDL_CreateWindow(
+      nameToMB(fr->label),
+      valInt(fr->area->w),
+      valInt(fr->area->h),
+      flags);
+  }
 
   if ( w )
   { SDL_Renderer *renderer = SDL_CreateRenderer(w, NULL);

@@ -57,35 +57,40 @@ initialisePopup(PopupObj p, Name label, Code msg)
 		********************************/
 
 
-static Chain windows = NIL;
 
 static PceWindow
 createPopupWindow(DisplayObj d)
-{ Cell cell;
-  PceWindow sw;
+{ PceWindow sw;
   Any frame;
 
+#if !SDL_GRAPHICS
+  static Chain windows = NIL;
   if ( isNil(windows) )
     windows = globalObject(NAME_PopupWindows, ClassChain, EAV);
 
+  Cell cell;
   for_cell(cell, windows)
   { sw = cell->value;
 
     if ( emptyChain(sw->graphicals) && sw->frame->display == d )
       return sw;
   }
-
+#endif
 
   sw = newObject(ClassDialog, NAME_popup, DEFAULT, d, EAV);
 
   send(sw, NAME_kind, NAME_popup, EAV);
   send(sw, NAME_pen, ZERO, EAV);
+#if !SDL_GRAPHICS
   send(sw, NAME_create, EAV);
+#endif
   frame = get(sw, NAME_frame, EAV);
   send(frame, NAME_border, ONE, EAV);
   send(getTileFrame(frame), NAME_border, ZERO, EAV);
 
+#if !SDL_GRAPHICS
   appendChain(windows, sw);
+#endif
 
   return sw;
 }
@@ -155,7 +160,8 @@ on which to display the popup.
 
 static status
 openPopup(PopupObj p, Graphical gr, Point pos,
-	  BoolObj pos_is_pointer, BoolObj warp_pointer, BoolObj ensure_on_display)
+	  BoolObj pos_is_pointer, BoolObj warp_pointer,
+	  BoolObj ensure_on_display)
 { PceWindow sw;
   int moved = FALSE;			/* Cursor needs be moved */
   int cx, cy;				/* mouse X-Y */
@@ -245,7 +251,9 @@ openPopup(PopupObj p, Graphical gr, Point pos,
   swfr = getFrameGraphical((Graphical) sw);
   fr   = getFrameGraphical(gr);
   if ( fr )
-    send(swfr, NAME_application, fr->application, EAV);
+  { send(swfr, NAME_application, fr->application, EAV);
+    attributeObject(swfr, NAME_parent, fr);
+  }
   send(swfr, NAME_set, toInt(px), toInt(py), toInt(pw), toInt(ph), EAV);
   send(sw, NAME_show, ON, EAV);
   ws_topmost_frame(swfr, ON);
@@ -263,19 +271,24 @@ openPopup(PopupObj p, Graphical gr, Point pos,
 
 static status
 closePopup(PopupObj p)
-{ PceWindow sw;
-
-  if ( notNil(p->pullright) )
+{ if ( notNil(p->pullright) )
   { send(p->pullright, NAME_close, EAV);
     assign(p, pullright, NIL);
   }
 
-  if ( notNil(sw = (PceWindow) p->device) )
+#if SDL_GRAPHICS
+  FrameObj fr = getFrameGraphical((Graphical)p);
+  if ( fr )
+    send(fr, NAME_destroy, EAV);
+#else
+  PceWindow sw = (PceWindow) p->device;
+  if ( notNil(sw) )
   { send(sw, NAME_show, OFF, EAV);
     send(sw, NAME_sensitive, OFF, EAV);
     send(sw, NAME_clear, EAV);
     assign(p, displayed, OFF);
   }
+#endif
 
   succeed;
 }
