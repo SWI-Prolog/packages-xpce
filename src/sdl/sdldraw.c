@@ -168,6 +168,7 @@ d_ensure_display(void)
     d_display(CurrentDisplay(NIL));
 }
 
+#if 0
 static void
 d_ensure_context(void)
 { if ( !context.open++ )
@@ -177,7 +178,7 @@ d_ensure_context(void)
     context.renderer = wsd->hidden_renderer;
   }
 }
-
+#endif
 
 /**
  * Flush all pending drawing operations to the display.
@@ -1324,8 +1325,8 @@ str_width(PceString s, int from, int to, FontObj font)
   s2.s_size = to-from;
   const char *u = stringToUTF8(&s2);
 
-  int ext, cnt;
-  TTF_MeasureString(ttf, u, 1000000, &ext, &cnt);
+  int ext; size_t cnt;
+  TTF_MeasureString(ttf, u, strlen(u), 1000000, &ext, &cnt);
 
   return ext;
 }
@@ -1345,50 +1346,15 @@ str_advance(PceString s, int from, int to, FontObj f)
 { return str_width(s, from, to, f); /* for now */
 }
 
-/**
- * Render a string of ASCII characters at a specified position using a specific font.
- *
- * @param s The array of ASCII characters.
- * @param l The length of the character array.
- * @param x The x-coordinate for rendering.
- * @param y The y-coordinate for rendering.
- * @param f The font object.
- */
-void
-s_printA(charA *s, int l, int x, int y, FontObj f)
-{
-}
-
-/**
- * Render a string of wide characters  at a specified position using a
- * specific  font.   This   is  the  print  function   used  by  class
- * `text_image`.
- *
- * @param s The array of wide characters.
- * @param l The length of the character array.
- * @param x The x-coordinate for rendering.
- * @param y The y-coordinate for the baseline.
- * @param font The font object.
- */
-void
-s_printW(charW *s, int l, int x, int y, FontObj font)
-{ if ( l <= 0 )
-    return;
-
-  TTF_Font *ttf = sdl_font(font);
+static void
+s_printU(const char *u, size_t len, int x, int y, FontObj font)
+{ TTF_Font *ttf = sdl_font(font);
   SDL_Color   c = pceColour2SDL_Color(context.colour);
   SDL_Surface *surf;
-  string str = { .text_union = { .textW = s },
-                 .hdr.f = { .size = l,
-			    .iswide = true,
-			    .readonly = true
-			  }
-               };
-  const char *u = stringToUTF8(&str);
 
   DEBUG(NAME_stub,
-	Cprintf("s_printW(\"%s\", %d, %d, %d, %s) (color: %s)\n",
-		u, l, x, y, pp(font), pp(context.colour)));
+	Cprintf("s_printU(\"%s\", %d, %d, %d, %s) (color: %s)\n",
+		u, len, x, y, pp(font), pp(context.colour)));
 
   Translate(x, y);
   y -= TTF_GetFontAscent(ttf);
@@ -1406,6 +1372,57 @@ s_printW(charW *s, int l, int x, int y, FontObj font)
 }
 
 /**
+ * Render a string of ISO-Latin-1 characters at a specified position
+ * using a specific font.
+ *
+ * @param s The array of ASCII characters.
+ * @param l The length of the character array.
+ * @param x The x-coordinate for rendering.
+ * @param y The y-coordinate for rendering.
+ * @param f The font object.
+ */
+void
+s_printA(charA *s, int l, int x, int y, FontObj font)
+{ if ( l <= 0 )
+    return;
+  string str = { .text_union = { .textA = s },
+                 .hdr.f = { .size = l,
+			    .iswide = false,
+			    .readonly = true
+			  }
+               };
+
+  const char *u = stringToUTF8(&str);
+  s_printU(u, strlen(u), x, y, font);
+}
+
+/**
+ * Render a string of wide characters  at a specified position using a
+ * specific  font.   This   is  the  print  function   used  by  class
+ * `text_image`.
+ *
+ * @param s The array of wide characters.
+ * @param l The length of the character array.
+ * @param x The x-coordinate for rendering.
+ * @param y The y-coordinate for the baseline.
+ * @param font The font object.
+ */
+void
+s_printW(charW *s, int l, int x, int y, FontObj font)
+{ if ( l <= 0 )
+    return;
+  string str = { .text_union = { .textW = s },
+                 .hdr.f = { .size = l,
+			    .iswide = true,
+			    .readonly = true
+			  }
+               };
+
+  const char *u = stringToUTF8(&str);
+  s_printU(u, strlen(u), x, y, font);
+}
+
+/**
  * Render a PceString at a specified position using a specific font.
  *
  * @param s The PceString object.
@@ -1415,11 +1432,15 @@ s_printW(charW *s, int l, int x, int y, FontObj font)
  */
 void
 s_print(PceString s, int x, int y, FontObj f)
-{
+{ if ( isstrA(s) )
+    s_printA(s->s_textA, s->s_size, x, y, f);
+  else
+    s_printW(s->s_textW, s->s_size, x, y, f);
 }
 
 /**
- * Render a PceString at a specified position with alignment using a specific font.
+ * Render a PceString at a specified position with alignment using a
+ * specific font.
  *
  * @param s The PceString object.
  * @param x The x-coordinate for rendering.
@@ -1428,7 +1449,47 @@ s_print(PceString s, int x, int y, FontObj f)
  */
 void
 s_print_aligned(PceString s, int x, int y, FontObj f)
-{
+{ if ( s->s_size > 0 )
+  { x += 0; //lbearing(str_fetch(s, 0));
+    s_print(s, x, y, f);
+  }
+}
+
+/**
+ * Print part of a PceString at x,y
+ */
+
+static void
+str_draw_text(FontObj font, PceString s, int offset, int len, int x, int y)
+{ if ( offset >= s->s_size )
+    return;
+
+  if ( offset < 0 )
+  { len += offset;
+    offset = 0;
+  }
+
+  if ( offset + len > s->s_size )
+    len = s->s_size - offset;
+
+  if ( s->s_size > 0 )
+  { InvTranslate(x, y);			/* Hack */
+
+    if ( isstrA(s) )
+    { s_printA(s->s_textA+offset, len, x, y, font);
+    } else
+    { s_printW(s->s_textW+offset, len, x, y, font);
+    }
+  }
+}
+
+static void
+str_text(FontObj font, PceString s, int x, int y)
+{ if ( s->s_size > 0 )
+  { x += 0; //lbearing(str_fetch(s, 0));
+
+    str_draw_text(font, s, 0, s->s_size, x, y);
+  }
 }
 
 		/********************************
@@ -1534,22 +1595,26 @@ str_compute_lines(strTextLine *lines, int nlines, FontObj font,
  */
 void
 str_size(PceString s, FontObj font, int *width, int *height)
-{ TTF_Font *ttf = sdl_font(font);
-  SDL_Color   c = {0,0,0,255};	/* does not matter for the size */
-  SDL_Surface *surf;
-  const char *u = stringToUTF8(s);
+{ strTextLine lines[MAX_TEXT_LINES];
+  strTextLine *line;
+  int nlines, n;
+  int w = 0;
 
-  d_ensure_context();
-  surf = TTF_RenderText_Blended(ttf, u, 0, c);
-  SDL_Texture *texture = SDL_CreateTextureFromSurface(context.renderer, surf);
-  SDL_DestroySurface(surf);
+  str_break_into_lines(s, lines, &nlines, MAX_TEXT_LINES);
+  for(n = 0, line = lines; n++ < nlines; line++)
+  { if ( line->text.s_size > 0 )
+    { int lw;
 
-  float tex_w, tex_h;
-  SDL_GetTextureSize(texture, &tex_w, &tex_h);
-  SDL_DestroyTexture(texture);
-  d_done();
-  *width  = (int)(tex_w+0.5);
-  *height = (int)(tex_h+0.5);
+      lw = 0; //lbearing(str_fetch(&line->text, 0));
+      lw += str_advance(&line->text, 0, line->text.s_size, font);
+
+      if ( w < lw )
+	w = lw;
+    }
+  }
+
+  *width  = w;
+  *height = nlines * s_height(font);
 }
 
 
@@ -1639,6 +1704,49 @@ ps_string(PceString s, FontObj font,
 }
 
 /**
+ * Draws a string, just like str_string(), but underscores the first
+ * character matching the accelerator (case-insensitive).
+ */
+
+static void
+str_draw_text_lines(int acc, FontObj font,
+		    int nlines, strTextLine *lines,
+		    int ox, int oy)
+{ strTextLine *line;
+  int n;
+  int baseline = s_ascent(font);
+
+  for(n=0, line = lines; n++ < nlines; line++)
+  { str_text(font, &line->text, line->x+ox, line->y+baseline+oy);
+
+#if 0
+    if ( acc )
+    { int cx = line->x;
+      int cn;
+
+      cx += 0; // lbearing(str_fetch(&line->text, 0));
+
+      for(cn=0; cn<line->text.s_size; cn++)
+      { int c  = str_fetch(&line->text, cn);
+	int cw = c_width(c, font);
+
+	if ( (int)tolower(c) == acc )
+	{			/* not r_line to avoid double Translate() */
+	  XDrawLine(context.display, context.drawable, context.gcs->workGC,
+		    cx, line->y+baseline+1, cx+cw-2, line->y+baseline+1);
+	  acc = 0;
+	  break;
+	}
+
+	cx += cw;
+      }
+    }
+#endif
+  }
+}
+
+
+/**
  * Draw a label with an optional accelerator key indicator within a
  * specified area.
  *
@@ -1657,5 +1765,27 @@ void
 str_label(PceString s, int acc, FontObj font,
 	  int x, int y, int w, int h,
 	  Name hadjust, Name vadjust, int flags)
-{
+{ strTextLine lines[MAX_TEXT_LINES];
+  int nlines;
+
+  if ( s->s_size == 0 )
+    return;
+
+  Translate(x, y);
+  str_break_into_lines(s, lines, &nlines, MAX_TEXT_LINES);
+  str_compute_lines(lines, nlines, font, x, y, w, h, hadjust, vadjust);
+  if ( acc )
+  { r_dash(NAME_none);
+    r_thickness(1);
+  }
+
+  if ( flags & LABEL_INACTIVE )
+  { Any old = r_colour(WHITE_COLOUR);
+
+    str_draw_text_lines(acc, font, nlines, lines, 1, 1);
+    r_colour(ws_3d_grey());
+    str_draw_text_lines(acc, font, nlines, lines, 0, 0);
+    r_colour(old);
+  } else
+    str_draw_text_lines(acc, font, nlines, lines, 0, 0);
 }
