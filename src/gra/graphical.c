@@ -1468,6 +1468,31 @@ getAbsolutePositionGraphical(Graphical gr, Device dev)
 
 
 Point
+getFramePositionGraphical(Graphical gr)
+{ Int x, y;
+  int ox, oy, wx, wy;
+  PceWindow w = DEFAULT;
+
+					/* relative to window system */
+  if ( instanceOfObject(gr, ClassWindow) )
+  { x = y = ZERO;
+    w = (PceWindow) gr;
+    ox = oy = 0;
+  } else
+  { get_absolute_xy_graphical(gr, (Device *)&w, &x, &y);
+    if ( !instanceOfObject(w, ClassWindow) )
+      fail;				/* not displayed */
+    offset_window(w, &ox, &oy);
+  }
+
+  x = toInt(valInt(x) + ox + valInt(w->area->x));
+  y = toInt(valInt(y) + oy + valInt(w->area->y));
+
+  answer(answerObject(ClassPoint, x, y, EAV));
+}
+
+
+Point
 getDisplayPositionGraphical(Graphical gr)
 { Int x, y;
   int ox, oy, wx, wy;

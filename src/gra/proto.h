@@ -149,6 +149,7 @@ COMMON(Point)	getPositionGraphical(Graphical gr);
 COMMON(status)	get_absolute_xy_graphical(Graphical gr, Device *dev, Int *X, Int *Y);
 COMMON(Int)	getAbsoluteXGraphical(Any gr, Device dev);
 COMMON(Int)	getAbsoluteYGraphical(Any gr, Device dev);
+COMMON(Point)	getFramePositionGraphical(Graphical gr);
 COMMON(Point)	getDisplayPositionGraphical(Graphical gr);
 COMMON(Size)	getSizeGraphical(Graphical gr);
 COMMON(status)	appendDialogItemNetworkDevice(Device dev, Graphical gr1);

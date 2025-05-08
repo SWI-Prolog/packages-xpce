@@ -183,7 +183,12 @@ openPopup(PopupObj p, Graphical gr, Point pos,
   sw = createPopupWindow(d);
   send(sw, NAME_display, p, EAV);
 
-  if ( !(offset = getDisplayPositionGraphical(gr)) )
+#ifdef SDL_GRAPHICS
+  offset = getFramePositionGraphical(gr);
+#else
+  offset = getDisplayPositionGraphical(gr);
+#endif
+  if ( !offset )
     return errorPce(p, NAME_graphicalNotDisplayed, gr);
 
   plusPoint(pos, offset);
@@ -227,6 +232,7 @@ openPopup(PopupObj p, Graphical gr, Point pos,
     moved = TRUE;
   }
 
+#ifndef SDL_GRAPHICS
   if ( ensure_on_display == ON )
   { Monitor mon;			/* Monitor displaying gr */
     int mx, my, mw, mh;			/* Monitor area */
@@ -247,6 +253,7 @@ openPopup(PopupObj p, Graphical gr, Point pos,
     if ( px + pw > mw+mx ) moved = TRUE, px = mw+mx - pw;
     if ( py + ph > mh+my ) moved = TRUE, py = mh+my - ph;
   }
+#endif
 
   swfr = getFrameGraphical((Graphical) sw);
   fr   = getFrameGraphical(gr);
