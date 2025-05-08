@@ -358,6 +358,9 @@ cairo_draw_surface(cairo_surface_t *surface, int x, int y)
   int height   = cairo_image_surface_get_height(surface);
   int stride   = cairo_image_surface_get_stride(surface);
   Uint32 *data = (Uint32 *)cairo_image_surface_get_data(surface);
+  DEBUG(NAME_cairo,
+	Cprintf("cairo_draw_surface(%d, %d, %dx%d, %d)\n",
+		x, y, width, height, stride));
   SDL_Surface *sdl_surf = SDL_CreateSurfaceFrom(width, height,
 						SDL_PIXELFORMAT_ARGB8888,
 						data, stride);
@@ -997,6 +1000,10 @@ void
 r_image(Image image, int sx, int sy,
 	int x, int y, int w, int h, BoolObj transparent)
 { cairo_surface_t *surface = pceImage2CairoSurface(image);
+
+  DEBUG(NAME_draw,
+	Cprintf("r_image(%s, %d, %d -> %d, %d, %d, %d, %s)\n",
+		pp(image), sx, sy, x, y, w, h, pp(transparent)));
 
   if ( surface )
     cairo_draw_surface(surface, x, y);
