@@ -38,6 +38,7 @@
 #include "sdldraw.h"
 #include "sdlcolour.h"
 #include "sdlfont.h"
+#include "sdlimage.h"
 #include "sdldisplay.h"
 #include "sdlframe.h"
 #include "sdlwindow.h"
@@ -332,6 +333,46 @@ void
 intersection_iarea(IArea a, IArea b)
 {
 }
+
+		 /*******************************
+		 *         CAIRO UTILS          *
+		 *******************************/
+
+static void
+cairo_set_source_color(cairo_t *cr, Colour pce)
+{ SDL_Color c = pceColour2SDL_Color(pce);
+  cairo_set_source_rgba(cr, c.r/255.0, c.g/255.0, c.b/255.0, c.a/255.0);
+}
+
+/**
+ * Draw a Cairo surface at x,y
+ *
+ * @param surface is the Cairo surface to draw
+ * @param x is the X coordinate of the top-left corner
+ * @param y is the Y coordinate of the top-left corner
+ */
+
+static void
+cairo_draw_surface(cairo_surface_t *surface, int x, int y)
+{ int width    = cairo_image_surface_get_width(surface);
+  int height   = cairo_image_surface_get_height(surface);
+  int stride   = cairo_image_surface_get_stride(surface);
+  Uint32 *data = (Uint32 *)cairo_image_surface_get_data(surface);
+  SDL_Surface *sdl_surf = SDL_CreateSurfaceFrom(width, height,
+						SDL_PIXELFORMAT_ARGB8888,
+						data, stride);
+  SDL_Texture *tex = SDL_CreateTextureFromSurface(context.renderer, sdl_surf);
+  SDL_DestroySurface(sdl_surf);
+
+  // 6. Copy texture to renderer
+  SDL_FRect dst = { (float)x, (float)y, (float)width, (float)height };
+  SDL_RenderTexture(context.renderer, tex, NULL, &dst);
+  SDL_DestroyTexture(tex);
+}
+
+		 /*******************************
+		 *      DRAWING PRIMITIVES      *
+		 *******************************/
 
 /**
  * Clear a rectangular area on the screen.
@@ -953,8 +994,12 @@ r_op_image(Image image, int sx, int sy, int x, int y, int w, int h, Name op)
  * @param transparent Boolean indicating whether to handle transparency.
  */
 void
-r_image(Image image, int sx, int sy, int x, int y, int w, int h, BoolObj transparent)
-{
+r_image(Image image, int sx, int sy,
+	int x, int y, int w, int h, BoolObj transparent)
+{ cairo_surface_t *surface = pceImage2CairoSurface(image);
+
+  if ( surface )
+    cairo_draw_surface(surface, x, y);
 }
 
 /**
@@ -987,38 +1032,6 @@ r_fill(int x, int y, int w, int h, Any fill)
     { Cprintf("stub: r_fill(%s)\n", pp(context.fill_pattern));
     }
   }
-}
-
-static void
-cairo_set_source_color(cairo_t *cr, Colour pce)
-{ SDL_Color c = pceColour2SDL_Color(pce);
-  cairo_set_source_rgba(cr, c.r/255.0, c.g/255.0, c.b/255.0, c.a/255.0);
-}
-
-/**
- * Draw a Cairo surface at x,y
- *
- * @param surface is the Cairo surface to draw
- * @param x is the X coordinate of the top-left corner
- * @param y is the Y coordinate of the top-left corner
- */
-
-static void
-cairo_draw_surface(cairo_surface_t *surface, int x, int y)
-{ int width    = cairo_image_surface_get_width(surface);
-  int height   = cairo_image_surface_get_height(surface);
-  int stride   = cairo_image_surface_get_stride(surface);
-  Uint32 *data = (Uint32 *)cairo_image_surface_get_data(surface);
-  SDL_Surface *sdl_surf = SDL_CreateSurfaceFrom(width, height,
-						SDL_PIXELFORMAT_ARGB8888,
-						data, stride);
-  SDL_Texture *tex = SDL_CreateTextureFromSurface(context.renderer, sdl_surf);
-  SDL_DestroySurface(sdl_surf);
-
-  // 6. Copy texture to renderer
-  SDL_FRect dst = { (float)x, (float)y, (float)width, (float)height };
-  SDL_RenderTexture(context.renderer, tex, NULL, &dst);
-  SDL_DestroyTexture(tex);
 }
 
 /**

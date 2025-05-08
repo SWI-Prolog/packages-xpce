@@ -44,8 +44,22 @@ static HashTable ColourNames;		/* name --> rgb (packed in Int) */
 
 static Name	canonical_colour_name(Name in);
 
+Int
+getNamedRGB(Name name)
+{ Int Rgb;
+
+  HashTable ht = LoadColourNames();
+
+  if ( (Rgb = getMemberHashTable(ht, name)) ||
+       (Rgb = getMemberHashTable(ht, canonical_colour_name(name))) )
+    return Rgb;
+
+  fail;
+}
+
 /**
- * Create a native color resource associated with the specified Colour object on the given display.
+ * Create a native color resource associated with the specified Colour
+ * object on the given display.
  *
  * @param c Pointer to the Colour object to be created.
  * @param d Pointer to the DisplayObj representing the display context.
@@ -53,14 +67,12 @@ static Name	canonical_colour_name(Name in);
  */
 status
 ws_create_colour(Colour c, DisplayObj d)
-{ Int Rgb;
-  (void)d;
+{ (void)d;
 
   if ( c->kind == NAME_named )
-  { HashTable ht = LoadColourNames();
+  { Int Rgb = getNamedRGB(c->name);
 
-    if ( (Rgb = getMemberHashTable(ht, c->name)) ||
-	 (Rgb = getMemberHashTable(ht, canonical_colour_name(c->name))) )
+    if ( Rgb )
     { COLORREF rgb = (COLORREF) valInt(Rgb);
       int r = GetRValue(rgb) * 257;
       int g = GetGValue(rgb) * 257;

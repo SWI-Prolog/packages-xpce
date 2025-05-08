@@ -93,6 +93,7 @@ pceColour2SDL_Color(Colour c)
   return wsref2SDL_Color(r);
 }
 
+Int getNamedRGB(Name name);
 
 status ws_create_colour(Colour c, DisplayObj d);
 void ws_uncreate_colour(Colour c, DisplayObj d);

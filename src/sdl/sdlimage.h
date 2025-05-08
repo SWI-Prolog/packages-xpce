@@ -34,6 +34,17 @@
 
 #ifndef RAYIMAGE_H
 #define RAYIMAGE_H
+#include <SDL3/SDL.h>
+#include <cairo/cairo.h>
+
+static inline cairo_surface_t *
+pceImage2CairoSurface(Image image)
+{ if ( !image->ws_ref )
+  { if ( !XopenImage(image, CurrentDisplay(NIL)) )
+      return NULL;
+  }
+  return image->ws_ref;
+}
 
 void ws_init_image(Image image);
 void ws_destroy_image(Image image);

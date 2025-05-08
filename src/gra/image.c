@@ -910,7 +910,7 @@ getPostscriptFormatImage(Image image)
 		*       PREDEFINED IMAGES	*
 		********************************/
 
-#if defined(__WINDOWS__) || defined(HAVE_LIBXPM)
+#if __WINDOWS__ || HAVE_LIBXPM || SDL_GRAPHICS
 #define XPM_PCEIMAGE 1			/* use an XPM image */
 #endif
 

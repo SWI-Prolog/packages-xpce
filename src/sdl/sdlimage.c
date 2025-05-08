@@ -35,6 +35,7 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include "sdlimage.h"
+#include "sdlcolour.h"
 
 /**
  * Initialize internal state for a new Image object.
@@ -124,14 +125,64 @@ ws_load_image_file(Image image)
  * Create an image from XPM (X PixMap) data.
  *
  * @param image Pointer to the Image object.
- * @param data Array of XPM strings.
+ * @param xpm Array of XPM strings.
  * @param d Display on which to create the image.
  * @return SUCCEED if creation succeeds; otherwise, FAIL.
  */
 status
-ws_create_image_from_xpm_data(Image image, char **data, DisplayObj d)
-{
-    return SUCCEED;
+ws_create_image_from_xpm_data(Image image, char **xpm, DisplayObj d)
+{ int width, height, ncolors, cpp;
+  sscanf(xpm[0], "%d %d %d %d", &width, &height, &ncolors, &cpp);
+
+  assert(image->ws_ref == NULL);
+
+  if ( cpp != 1 )  // simple support only
+    fail;
+
+  // Allocate palette
+  uint32_t palette[256] = {0};
+
+  for (int i = 0; i < ncolors; i++)
+  { char symbol;
+    char color[32];
+    sscanf(xpm[1 + i], "%c c %s", &symbol, color);
+
+    uint32_t rgb = 0xFF000000;  // default alpha
+
+    if (strcmp(color, "None") == 0)
+    { rgb = 0x00000000;
+    } else if (color[0] == '#')
+    { unsigned int r, g, b;
+      sscanf(color + 1, "%02x%02x%02x", &r, &g, &b);
+      rgb |= (r << 16) | (g << 8) | b;
+    } else
+    { Int Rgb = getNamedRGB(CtoName(color));
+      if ( Rgb )
+	rgb |= valInt(Rgb);
+      else
+	Cprintf("XPM: Unknown colour name: %s\n", color);
+    }
+    palette[(unsigned char)symbol] = rgb;
+  }
+
+  // Allocate pixel buffer
+  int stride = width * 4;
+  uint32_t *pixels = calloc(width * height, sizeof(uint32_t));
+
+  for (int y = 0; y < height; y++)
+  { const char *row = xpm[1 + ncolors + y];
+    for (int x = 0; x < width; x++) {
+      pixels[y * width + x] = palette[(unsigned char)row[x]];
+    }
+  }
+
+  // Create Cairo surface
+  cairo_surface_t *surf = cairo_image_surface_create_for_data(
+    (unsigned char *)pixels, CAIRO_FORMAT_ARGB32, width, height, stride);
+
+  image->ws_ref = surf;
+
+  succeed;
 }
 
 /**
