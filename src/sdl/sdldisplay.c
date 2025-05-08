@@ -223,8 +223,26 @@ ws_init_graphics_display(DisplayObj d)
  */
 status
 ws_init_monitors_display(DisplayObj d)
-{
-    return SUCCEED;
+{ int count;
+  SDL_DisplayID *displays = SDL_GetDisplays(&count);
+
+  assign(d, monitors, newObject(ClassChain, EAV));
+
+  for(int i=0; i<count; i++)
+  { SDL_Rect rect;
+    SDL_GetDisplayBounds(displays[i], &rect);
+    const char *name = SDL_GetDisplayName(displays[i]);
+    appendChain(d->monitors,
+		newObject(ClassMonitor, UTF8ToName(name),
+			  newObject(ClassArea,
+				    toInt(rect.x),
+				    toInt(rect.y),
+				    toInt(rect.w),
+				    toInt(rect.h), EAV), EAV));
+  }
+  SDL_free(displays);
+
+  succeed;
 }
 
 /**
