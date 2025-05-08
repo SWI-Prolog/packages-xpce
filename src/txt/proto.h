@@ -220,7 +220,7 @@ COMMON(size_t)  F_UTF8_ENCLENA(const char *s, size_t len);
 
 /* /swi40/jan/src/pl/packages/xpce/src/txt/i18n.c */
 COMMON(wchar_t *) charArrayToWC(CharArray ca, size_t *len);
-COMMON(char *)	stringToUTF8(PceString s);
+COMMON(char *)	stringToUTF8(PceString s, size_t *len);
 COMMON(char *)	charArrayToUTF8(CharArray ca);
 COMMON(char *)	charArrayToMB(CharArray ca);
 COMMON(char *)	nameToMB(Name nm);

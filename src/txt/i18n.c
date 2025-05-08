@@ -130,7 +130,7 @@ typedef const unsigned char cuchar;
 typedef const wchar_t       cwchar;
 
 char *
-stringToUTF8(PceString str)
+stringToUTF8(PceString str, size_t *olen)
 { rcell *out;
 
   if ( isstrA(str) )
@@ -142,7 +142,10 @@ stringToUTF8(PceString str)
 	break;
     }
     if ( s == e )
+    { if ( olen )
+	*olen = str->s_size;
       return (char *)str->s_textA;	/* no */
+    }
 
     out = find_ring();
     for(s = (cuchar*) str->s_textA; s<e; s++ )
@@ -162,6 +165,8 @@ stringToUTF8(PceString str)
     }
   }
 
+  if ( olen )
+    *olen = out->bufp - out->data;
   addByte(out, 0);
 
   return out->data;
@@ -249,7 +254,7 @@ charArrayToWC(CharArray ca, size_t *len)
 
 char *
 charArrayToUTF8(CharArray ca)
-{ return stringToUTF8(&ca->data);
+{ return stringToUTF8(&ca->data, NULL);
 }
 
 
@@ -267,7 +272,7 @@ nameToMB(Name nm)
 
 char *
 nameToUTF8(Name nm)
-{ return stringToUTF8(&nm->data);
+{ return stringToUTF8(&nm->data, NULL);
 }
 
 
@@ -474,7 +479,7 @@ char *
 stringToFN(PceString s)
 {
 #ifdef O_XOS
-   return stringToUTF8(s);
+  return stringToUTF8(s, NULL);
 #else
    return stringToMB(s);
 #endif
