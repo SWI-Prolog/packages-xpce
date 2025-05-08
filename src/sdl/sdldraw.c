@@ -1276,7 +1276,8 @@ s_descent(FontObj font)
 }
 
 /**
- * Retrieve the total height of a font (ascent + descent).
+ * Retrieve the line height for the font.  Note that older version sum
+ * the ascent and descent.
  *
  * @param font The font object.
  * @return The total height.
@@ -1284,7 +1285,7 @@ s_descent(FontObj font)
 int
 s_height(FontObj font)
 { TTF_Font *ttf = sdl_font(font);
-  return TTF_GetFontAscent(ttf) + TTF_GetFontDescent(ttf);
+  return TTF_GetFontLineSkip(ttf);
 }
 
 /**
@@ -1308,23 +1309,25 @@ c_width(wint_t c, FontObj font)
  * @param s The string object.
  * @param from The starting index of the substring.
  * @param to The ending index of the substring.
- * @param f The font object.
+ * @param font The font object.
  * @return The width of the substring.
  */
 int
-str_width(PceString s, int from, int to, FontObj f)
-{ string s2 = *s;
+str_width(PceString s, int from, int to, FontObj font)
+{ TTF_Font *ttf = sdl_font(font);
+  string s2 = *s;
   if ( s2.s_iswide )
   { s2.s_textW += from;
   } else
   { s2.s_textA += from;
   }
   s2.s_size = to-from;
+  const char *u = stringToUTF8(&s2);
 
-  int w, h;
-  str_size(&s2, f, &w, &h);
+  int ext, cnt;
+  TTF_MeasureString(ttf, u, 1000000, &ext, &cnt);
 
-  return w;
+  return ext;
 }
 
 /**
@@ -1340,9 +1343,6 @@ str_width(PceString s, int from, int to, FontObj f)
 int
 str_advance(PceString s, int from, int to, FontObj f)
 { return str_width(s, from, to, f); /* for now */
-// TTF_SizeUTF8(font, "your string here", &width, &height);
-
-    return 0;
 }
 
 /**
@@ -1429,6 +1429,99 @@ s_print(PceString s, int x, int y, FontObj f)
 void
 s_print_aligned(PceString s, int x, int y, FontObj f)
 {
+}
+
+		/********************************
+		*         MULTILINE TEXT	*
+		********************************/
+
+#define MAX_TEXT_LINES 200		/* lines in a text object */
+
+typedef struct
+{ int	x;				/* origin x offset */
+  int	y;				/* origin y offset */
+  int	width;				/* pixel width of line */
+  int	height;				/* pixel height of line */
+  string text;				/* text of the line */
+} strTextLine;
+
+/**
+ * Break a string into multiple lines.
+ */
+
+static void
+str_break_into_lines(PceString s, strTextLine *line, int *nlines, int maxlines)
+{ int here = 0;
+  int size = s->s_size;
+  int nls = 0;
+
+  *nlines = 0;
+
+  if ( size == 0 )			/* totally empty: report one line */
+  { str_cphdr(&line->text, s);
+    line->text.s_text = s->s_text;
+    line->text.s_size = 0;
+    *nlines = 1;
+    return;
+  }
+
+  for( ; here < size && nls < maxlines; line++, nls++ )
+  { int el;
+
+    str_cphdr(&line->text, s);
+    line->text.s_text = str_textp(s, here);
+
+    if ( (el = str_next_index(s, here, '\n')) >= 0 )
+    { line->text.s_size = el - here;
+      here = el + 1;
+      if ( here == size )		/* last char is newline: add a line */
+      { line++, nls++;
+	str_cphdr(&line->text, s);
+	line->text.s_text = str_textp(s, here);
+	line->text.s_size = 0;
+      }
+    } else
+    { line->text.s_size = size - here;
+      here = size;
+    }
+  }
+
+  *nlines = nls;
+}
+
+/**
+ * Given a string  broken into lines, compute the  dimensions for each
+ * of the lines given the target area and adjustment.
+ */
+
+static void
+str_compute_lines(strTextLine *lines, int nlines, FontObj font,
+		  int x, int y, int w, int h,
+		  Name hadjust, Name vadjust)
+{ int cy;
+  int th = s_height(font);
+  strTextLine *line;
+  int n;
+
+  if ( vadjust == NAME_top )
+    cy = y;
+  else if ( vadjust == NAME_center )
+    cy = y + (1 + h - nlines*th)/2;
+  else /*if ( vadjust == NAME_bottom )*/
+    cy = y + h - nlines*th;
+
+  for( n = 0, line = lines; n++ < nlines; line++, cy += th )
+  { line->y      = cy;
+    line->height = th;
+    line->width  = str_width(&line->text, 0, line->text.s_size, font);
+
+    if ( hadjust == NAME_left )
+      line->x = x;
+    else if ( hadjust == NAME_center )
+      line->x = x + (w - line->width)/2;
+    else /*if ( hadjust == NAME_right )*/
+      line->x = x + w - line->width;
+  }
 }
 
 /**
@@ -1520,7 +1613,10 @@ str_string(PceString s, FontObj font,
  * @param vadjust Name indicating vertical alignment.
  */
 void
-str_selected_string(PceString s, FontObj font, int f, int t, Style style, int x, int y, int w, int h, Name hadjust, Name vadjust)
+str_selected_string(PceString s, FontObj font,
+		    int f, int t, Style style,
+		    int x, int y, int w, int h,
+		    Name hadjust, Name vadjust)
 {
 }
 
@@ -1536,12 +1632,15 @@ str_selected_string(PceString s, FontObj font, int f, int t, Style style, int x,
  * @param flags Additional flags controlling rendering behavior.
  */
 void
-ps_string(PceString s, FontObj font, int x, int y, int w, Name format, int flags)
+ps_string(PceString s, FontObj font,
+	  int x, int y, int w,
+	  Name format, int flags)
 {
 }
 
 /**
- * Draw a label with an optional accelerator key indicator within a specified area.
+ * Draw a label with an optional accelerator key indicator within a
+ * specified area.
  *
  * @param s Pointer to the PceString object representing the label text.
  * @param acc The index of the character to underline as the accelerator key.
@@ -1555,6 +1654,8 @@ ps_string(PceString s, FontObj font, int x, int y, int w, Name format, int flags
  * @param flags Additional flags controlling rendering behavior.
  */
 void
-str_label(PceString s, int acc, FontObj font, int x, int y, int w, int h, Name hadjust, Name vadjust, int flags)
+str_label(PceString s, int acc, FontObj font,
+	  int x, int y, int w, int h,
+	  Name hadjust, Name vadjust, int flags)
 {
 }
