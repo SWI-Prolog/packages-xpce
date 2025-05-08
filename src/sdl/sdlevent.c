@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include "../../swipl/pcecall.h"
 #include "sdlevent.h"
 #include "sdlframe.h"
 #ifdef HAVE_POLL
@@ -158,6 +159,8 @@ CtoEvent(SDL_Event *event)
   SDL_WindowID wid = 0;
   Any window = NIL;		/* TODO */
 
+  if ( sdl_call_event(event) )
+    fail;
   if ( sdl_frame_event(event) )
     fail;
   mouse_flags = SDL_GetMouseState(&fx, &fy);

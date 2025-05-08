@@ -39,6 +39,7 @@
 #endif
 
 #include <stdio.h>
+#include <assert.h>
 #include <SWI-Stream.h>
 #include <SWI-Prolog.h>
 
@@ -70,7 +71,7 @@
 #include <unistd.h>
 #endif
 
-#ifdef _REENTRANT
+#if O_PLMT && X11_GRAPHICS
 #include <pthread.h>
 
 static pthread_mutex_t pce_dispatch_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -86,6 +87,8 @@ static pthread_mutex_t pce_dispatch_mutex = PTHREAD_MUTEX_INITIALIZER;
 #ifdef HAVE_SCHED_H
 #include <sched.h>
 #endif
+
+#include "pcecall.h"
 
 
 		 /*******************************
@@ -466,23 +469,96 @@ in_pce_thread_sync2(term_t goal, term_t vars)
 #endif /*O_PLMT*/
 }
 
-#else /*Not __WINDOWS__ and not X11_GRAPHICS */
+#elif SDL_GRAPHICS
 
 static foreign_t
 in_pce_thread(term_t goal)
-{ Sdprintf("in_pce_thread(): stub\n");
+{ prolog_goal *g = malloc(sizeof(*g));
 
-  (void)init_prolog_goal;		/* eventually we'll need these */
-  (void)call_prolog_goal;
-  (void)pce_dispatch_mutex;
+  if ( !g )
+    return PL_resource_error("memory");
+
+  if ( !init_prolog_goal(g, goal, FALSE) )
+  { free(g);
+    return FALSE;
+  }
+
+  SDL_Event event = {0};
+  event.type = MY_EVENT_CALL;
+  event.user.code = CALL_MAGIC;
+  event.user.data1 = g;
+  SDL_PushEvent(&event);
+
+  return true;
+}
+
+bool
+sdl_call_event(SDL_Event *event)
+{ if ( event->type == MY_EVENT_CALL )
+  { assert(event->user.code == CALL_MAGIC);
+    prolog_goal *g = (prolog_goal *)event->user.data1;
+
+    call_prolog_goal(g);
+    if ( !g->acknowledge )
+      free(g);
+
+    return true;
+  }
 
   return false;
 }
 
+
 static foreign_t
 in_pce_thread_sync2(term_t goal, term_t vars)
-{ Sdprintf("in_pce_thread_sync2(): stub\n");
-  return false;
+{ prolog_goal *g = malloc(sizeof(*g));
+
+  if ( !g )
+    return PL_resource_error("memory");
+
+  if ( !init_prolog_goal(g, goal, TRUE) )
+  { free(g);
+    return FALSE;
+  }
+
+  SDL_Event event = {0};
+  event.type = MY_EVENT_CALL;
+  event.user.code = CALL_MAGIC;
+  event.user.data1 = g;
+  SDL_PushEvent(&event);
+
+  bool rc = false;
+  while(true)
+  { pceDispatch(-1, 250);
+    if ( PL_handle_signals() < 0 )
+      return false;
+
+    switch(g->state)
+    { case G_TRUE:
+      { term_t v = PL_new_term_ref();
+
+	rc = PL_recorded(g->result, v) && PL_unify(vars, v);
+	PL_erase(g->result);
+        goto out;
+      }
+      case G_FALSE:
+	goto out;
+      case G_ERROR:
+      { term_t ex = PL_new_term_ref();
+
+	if ( PL_recorded(g->result, ex) )
+	  rc = PL_raise_exception(ex);
+	PL_erase(g->result);
+	goto out;
+      }
+      default:
+	continue;
+    }
+  }
+
+out:
+  free(g);
+  return rc;
 }
 
 #endif
@@ -502,7 +578,7 @@ init_prolog_goal(prolog_goal *g, term_t goal, int acknowledge)
   if ( !PL_strip_module(goal, &g->module, plain) )
     return FALSE;
   if ( !(PL_is_compound(plain) || PL_is_atom(plain)) )
-    return type_error("callable", goal);
+    return PL_type_error("callable", goal);
   g->goal = PL_record(plain);
 
   return TRUE;
