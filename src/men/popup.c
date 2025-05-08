@@ -286,7 +286,10 @@ closePopup(PopupObj p)
 #if SDL_GRAPHICS
   FrameObj fr = getFrameGraphical((Graphical)p);
   if ( fr )
+  { if ( notNil(p->device) )
+      eraseDevice(p->device, (Graphical)p);
     send(fr, NAME_destroy, EAV);
+  }
 #else
   PceWindow sw = (PceWindow) p->device;
   if ( notNil(sw) )

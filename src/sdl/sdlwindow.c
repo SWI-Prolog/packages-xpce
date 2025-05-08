@@ -294,16 +294,17 @@ ws_lower_window(PceWindow sw)
 }
 
 /**
- * Enable or disable the specified window.
+ * Enable or disable the specified window.  An enabled window
+ * processed keyboard and mouse events.
  *
  * @param sw Pointer to the PceWindow object.
- * @param enable An integer indicating whether to enable (non-zero) or disable (zero) the window.
- * @return The previous enable state of the window.
+ * @param enable An integer indicating whether to enable
+ *        (non-zero) or disable (zero) the window.
+ * @return TRUE or FALSE
  */
 int
 ws_enable_window(PceWindow sw, int enable)
-{
-    return 1;
+{ succeed;
 }
 
 /**
