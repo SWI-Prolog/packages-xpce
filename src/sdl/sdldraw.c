@@ -1655,19 +1655,12 @@ str_string(PceString s, FontObj font,
   str_break_into_lines(s, lines, &nlines, MAX_TEXT_LINES);
   str_compute_lines(lines, nlines, font, x, y, w, h, hadjust, vadjust);
 
-  if ( flags & TXT_UNDERLINED )
-  { r_dash(NAME_none);
-    r_thickness(1);
-  }
-
   for(n=0, line = lines; n++ < nlines; line++)
   { str_text(font, &line->text, line->x, line->y+baseline);
-#if 0
     if ( flags & TXT_UNDERLINED )
-      XDrawLine(context.display, context.drawable, context.gcs->workGC,
-		line->x, line->y+baseline+1,
-		line->x+line->width, line->y+baseline+1);
-#endif
+      SDL_RenderLine(context.renderer,
+		     line->x, line->y+baseline+1,
+		     line->x+line->width, line->y+baseline+1);
   }
 }
 
