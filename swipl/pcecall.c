@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2011-2015, University of Amsterdam
+    Copyright (c)  2011-2025, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -135,28 +136,6 @@ static void call_prolog_goal(prolog_goal *g);
 
 static context_t context;
 
-
-		 /*******************************
-		 *	       ERRORS		*
-		 *******************************/
-
-#ifdef O_PLMT
-static int
-type_error(term_t actual, const char *expected)
-{ term_t ex = PL_new_term_ref();
-
-  if ( (ex = PL_new_term_ref()) &&
-       PL_unify_term(ex,
-		     PL_FUNCTOR_CHARS, "error", 2,
-		       PL_FUNCTOR_CHARS, "type_error", 2,
-		         PL_CHARS, expected,
-		         PL_TERM, actual,
-		       PL_VARIABLE) )
-    return PL_raise_exception(ex);
-
-  return FALSE;
-}
-#endif
 
 #ifdef __WINDOWS__
 
@@ -523,7 +502,7 @@ init_prolog_goal(prolog_goal *g, term_t goal, int acknowledge)
   if ( !PL_strip_module(goal, &g->module, plain) )
     return FALSE;
   if ( !(PL_is_compound(plain) || PL_is_atom(plain)) )
-    return type_error(goal, "callable");
+    return type_error("callable", goal);
   g->goal = PL_record(plain);
 
   return TRUE;
