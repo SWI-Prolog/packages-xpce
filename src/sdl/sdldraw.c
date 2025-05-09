@@ -213,7 +213,9 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
 		pp(sw), x, y, w, h, clear, limit));
 
   if ( context.open && context.window == sw )
-  { context.open++;
+  { Cprintf("d_window(%s): Context is already open\n",
+	    pp(sw));
+    context.open++;
     succeed;
   }
 
@@ -250,17 +252,18 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
 }
 
 /**
- * Draw an image at the specified location with given dimensions.
+ * Draw into an image at the specified location with given dimensions.
  *
  * @param i Pointer to the Image object.
- * @param x The x-coordinate where the image will be drawn.
- * @param y The y-coordinate where the image will be drawn.
- * @param w The width to draw the image.
- * @param h The height to draw the image.
+ * @param x
+ * @param y
+ * @param w
+ * @param h Area of the image that will be affected.
  */
-void
+status
 d_image(Image i, int x, int y, int w, int h)
-{
+{ Cprintf("stub: d_image(%s)\n", pp(i));
+  fail;
 }
 
 /**
@@ -268,9 +271,10 @@ d_image(Image i, int x, int y, int w, int h)
  *
  * @param d Pointer to the DisplayObj.
  */
-void
+status
 d_screen(DisplayObj d)
-{
+{ Cprintf("stub: d_screen(%s)\n", pp(d));
+  fail;
 }
 
 /**
@@ -282,9 +286,10 @@ d_screen(DisplayObj d)
  * @param w The width of the frame.
  * @param h The height of the frame.
  */
-void
+status
 d_frame(FrameObj fr, int x, int y, int w, int h)
-{
+{ Cprintf("stub: d_frame(%s)\n", pp(fr));
+  fail;
 }
 
 /**
