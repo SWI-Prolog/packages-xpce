@@ -212,7 +212,8 @@ CtoEvent(SDL_Event *event)
   }
 
   window = wsid_to_frame(wid);
-  DEBUG(NAME_event, Cprintf("Event %s on %s, id=%d\n", pp(name), pp(window), wid));
+  DEBUG(NAME_event, Cprintf("Event %s on %s at %1f,%1f, id=%d\n",
+			    pp(name), pp(window), wid, fx, fy));
   if ( !window )
     fail;
 
