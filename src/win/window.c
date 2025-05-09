@@ -430,7 +430,11 @@ displayedWindow(PceWindow sw, BoolObj val)
     displayedWindow(sw->decoration, val);
 
   if ( val == ON )
+  { changed_window(sw,
+		   0, 0,
+		   valInt(sw->area->w), valInt(sw->area->h), TRUE);
     addChain(ChangedWindows, sw);
+  }
 
   succeed;
 }
