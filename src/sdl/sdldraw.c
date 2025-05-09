@@ -572,8 +572,7 @@ r_background(Any c)
 { Any old = context.background;
 
   if ( isDefault(c) )
-     c = context.default_background;
-
+    return old;
   context.background = c;
 
   return old;
