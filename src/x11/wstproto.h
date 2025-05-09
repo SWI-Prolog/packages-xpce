@@ -159,6 +159,7 @@ COMMON(status)	ws_attach_wm_prototols_frame(FrameObj fr);
 COMMON(status)	setDndAwareFrame(FrameObj fr);
 COMMON(void)	ws_frame_cursor(FrameObj fr, CursorObj cursor);
 COMMON(void)	ws_grab_frame_pointer(FrameObj fr, BoolObj grab, CursorObj cursor);
+COMMON(status)	ws_enable_text_input(Graphical gr, BoolObj enable);
 COMMON(status)	ws_frame_bb(FrameObj fr, int *x, int *y, int *w, int *h);
 COMMON(void)	ws_x_geometry_frame(FrameObj fr, Name spec, Monitor mon);
 COMMON(void)	ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, Monitor mon);

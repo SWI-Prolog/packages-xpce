@@ -1036,7 +1036,7 @@ fetch_editor(Any obj, TextChar tc)
 
     if ( gr )
     { tc->value.graphical = gr;
-      tc->type	         = CHAR_GRAPHICAL;
+      tc->type		 = CHAR_GRAPHICAL;
 
       indexFragmentCache(e->fragment_cache, e, index+3);
       return fc->index;
@@ -1426,9 +1426,12 @@ static status
 event_editor(Editor e, EventObj ev)
 { if ( isAEvent(ev, NAME_focus) )
   { if ( isAEvent(ev, NAME_activateKeyboardFocus) )
-      send(e->text_cursor, NAME_active, ON, EAV);
-    else if ( isAEvent(ev, NAME_deactivateKeyboardFocus) )
-      send(e->text_cursor, NAME_active, OFF, EAV);
+    { send(e->text_cursor, NAME_active, ON, EAV);
+      ws_enable_text_input((Graphical)e, ON);
+    } else if ( isAEvent(ev, NAME_deactivateKeyboardFocus) )
+    { send(e->text_cursor, NAME_active, OFF, EAV);
+      ws_enable_text_input((Graphical)e, OFF);
+    }
 
     succeed;
   }

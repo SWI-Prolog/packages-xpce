@@ -99,12 +99,13 @@ button_to_name(bool press, Uint8 button)
   fail;
 }
 
+#define ShiftMask   (SDL_KMOD_LSHIFT|SDL_KMOD_RSHIFT)
+#define ControlMask (SDL_KMOD_LCTRL|SDL_KMOD_RCTRL)
+#define MetaMask    (SDL_KMOD_LALT|SDL_KMOD_RALT)
+
 static Int
 state_to_buttons(SDL_MouseButtonFlags flags, SDL_Keymod mod)
 { int r = 0;
-  const SDL_Keymod ShiftMask   = (SDL_KMOD_LSHIFT|SDL_KMOD_RSHIFT);
-  const SDL_Keymod ControlMask = (SDL_KMOD_LCTRL|SDL_KMOD_RCTRL);
-  const SDL_Keymod MetaMask    = (SDL_KMOD_LALT|SDL_KMOD_RALT);
 
   if ( flags & SDL_BUTTON_LMASK )  r |= BUTTON_ms_left;
   if ( flags & SDL_BUTTON_MMASK )  r |= BUTTON_ms_middle;
@@ -121,7 +122,11 @@ state_to_buttons(SDL_MouseButtonFlags flags, SDL_Keymod mod)
 static Any
 keycode_to_name(SDL_Event *event)
 { if ( event->key.key >= 32 && event->key.key < 128 )
-    return toInt(event->key.key);
+  { if ( event->key.mod & MetaMask )
+      return toInt(Meta(event->key.key));
+    if ( event->key.mod & ControlMask )
+      return toInt(Control(event->key.key));
+  }
 
   switch(event->key.key)
   { case SDLK_RETURN:
@@ -139,6 +144,7 @@ keycode_to_name(SDL_Event *event)
     case SDLK_LEFT:	return NAME_cursorLeft;
     case SDLK_DOWN:	return NAME_cursorDown;
     case SDLK_UP:	return NAME_cursorUp;
+    case SDLK_AT:	if ( event->key.mod & ControlMask ) return ZERO;
   }
 
   fail;
@@ -198,8 +204,18 @@ CtoEvent(SDL_Event *event)
     case SDL_EVENT_KEY_UP:
       lastmod = event->key.mod;
       fail;		      /* only update modifiers */
+      /* https://wiki.libsdl.org/SDL3/SDL_TextInputEvent */
     case SDL_EVENT_TEXT_INPUT: /* Needed for input composition.  TBD */
-      fail;
+    { int codepoint;
+      char const *u = event->text.text;
+      u = utf8_get_char(u, &codepoint);
+      if ( *u )
+        Cprintf("SDL_EVENT_TEXT_INPUT: multi-char input not yet supported\n");
+      wid     = event->text.windowID;
+      time    = event->text.timestamp/1000000;
+      name    = toInt(codepoint);
+      break;
+    }
     case SDL_EVENT_KEY_DOWN:
       wid     = event->key.windowID;
       time    = event->key.timestamp/1000000;

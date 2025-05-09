@@ -398,12 +398,35 @@ ws_frame_cursor(FrameObj fr, CursorObj cursor)
  * Grab or release the pointer for the specified frame.
  *
  * @param fr Pointer to the FrameObj.
- * @param grab Boolean indicating whether to grab (TRUE) or release (FALSE) the pointer.
+ * @param grab Boolean indicating whether to grab (ON) or release (OFF)
+ *        the pointer.
  * @param cursor Pointer to the CursorObj to use during the grab.
  */
 void
 ws_grab_frame_pointer(FrameObj fr, BoolObj grab, CursorObj cursor)
 {
+}
+
+/**
+ * Enable/disable the (virtual) keyboard for the window in
+ * which gr is displayed.
+ */
+
+status
+ws_enable_text_input(Graphical gr, BoolObj enable)
+{ FrameObj fr = getFrameGraphical(gr);
+  if ( fr )
+  { WsFrame wfr = fr->ws_ref;
+
+    if ( wfr && wfr->ws_window )
+    { if ( isOn(enable) )
+	return SDL_StartTextInput(wfr->ws_window);
+      else
+	return SDL_StopTextInput(wfr->ws_window);
+    }
+  }
+
+  fail;
 }
 
 /**
