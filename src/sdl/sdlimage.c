@@ -34,8 +34,10 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <h/unix.h>
 #include "sdlimage.h"
 #include "sdlcolour.h"
+#include <SDL3_image/SDL_image.h>
 
 /**
  * Initialize internal state for a new Image object.
@@ -117,8 +119,60 @@ ws_load_old_image(Image image, IOSTREAM *fd)
  */
 status
 ws_load_image_file(Image image)
-{
-    return SUCCEED;
+{ assert(image->ws_ref == NULL);
+  SDL_Surface *surf0 = NULL;
+
+  if ( instanceOfObject(image->file, ClassFile) )
+  { FileObj f = (FileObj)image->file;
+    char *fname = charArrayToFN((CharArray)f->name);
+    surf0 = IMG_Load(fname);
+    if ( !surf0 )
+    { Cprintf("Failed to load %s: %s\n", fname, SDL_GetError());
+      fail;
+    }
+  } else
+  { IOSTREAM *fd;
+    if ( !(fd = Sopen_object(image->file, "rbr")) )
+      fail;
+    int64_t size = Ssize(fd);
+    if ( size != -1 )
+    { char *data = malloc(size);
+      if ( data )
+      { fd->encoding = ENC_OCTET;
+	Sfread(data, 1, size, fd);
+	Sclose(fd);
+	SDL_IOStream *io = SDL_IOFromConstMem(data, size);
+	surf0 = IMG_Load_IO(io, true);
+	if ( !surf0 )
+	{ Cprintf("Failed to load image from %s: %s\n",
+		  pp(image->file), SDL_GetError());
+	  fail;
+	}
+      } else
+      { assert(0);
+      }
+    } else
+    { Cprintf("Cannot load images from %s yet\n", pp(image->file));
+      fail;
+    }
+  }
+
+  SDL_Surface *surf1 = SDL_ConvertSurface(surf0,
+					  SDL_PIXELFORMAT_ARGB8888);
+  SDL_DestroySurface(surf0);
+  if ( !surf1 )
+  { Cprintf("Failed to convert %s: %s\n", pp(image), SDL_GetError());
+    fail;
+  }
+  cairo_surface_t *surf = cairo_image_surface_create_for_data(
+    (unsigned char *)surf1->pixels,
+    CAIRO_FORMAT_ARGB32,
+    surf1->w,
+    surf1->h,
+    surf1->pitch);
+
+  image->ws_ref = surf;
+  succeed;
 }
 
 /**
