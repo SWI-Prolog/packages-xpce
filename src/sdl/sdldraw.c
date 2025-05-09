@@ -351,6 +351,13 @@ cairo_set_source_color(cairo_t *cr, Colour pce)
   cairo_set_source_rgba(cr, c.r/255.0, c.g/255.0, c.b/255.0, c.a/255.0);
 }
 
+static void
+sdl_set_draw_color(Colour pce)
+{ SDL_Color c = pceColour2SDL_Color(isDefault(pce) ? context.colour : pce);
+  SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
+}
+
+
 /**
  * Draw a Cairo surface at x,y
  *
@@ -646,8 +653,7 @@ r_box(int x, int y, int w, int h, int r, Any fill)
 
   if ( context.pen )
   { SDL_FRect r = { x, y, w, h };
-    SDL_Color c = pceColour2SDL_Color(context.colour);
-    SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
+    sdl_set_draw_color(DEFAULT);
     for(int i=0; i<context.pen; i++)
     { SDL_RenderRect(context.renderer, &r);
       r.x++, r.y++, r.w-=2, r.h-=2;
@@ -1321,22 +1327,25 @@ c_width(wint_t c, FontObj font)
  */
 int
 str_width(PceString s, int from, int to, FontObj font)
-{ TTF_Font *ttf = sdl_font(font);
-  string s2 = *s;
-  if ( s2.s_iswide )
-  { s2.s_textW += from;
+{ if ( to > from )
+  { TTF_Font *ttf = sdl_font(font);
+    string s2 = *s;
+    if ( s2.s_iswide )
+    { s2.s_textW += from;
+    } else
+    { s2.s_textA += from;
+    }
+    s2.s_size = to-from;
+
+    size_t ulen;
+    const char *u = stringToUTF8(&s2, &ulen);
+
+    int ext; size_t cnt;
+    TTF_MeasureString(ttf, u, ulen, 1000000, &ext, &cnt);
+
+    return ext;
   } else
-  { s2.s_textA += from;
-  }
-  s2.s_size = to-from;
-
-  size_t ulen;
-  const char *u = stringToUTF8(&s2, &ulen);
-
-  int ext; size_t cnt;
-  TTF_MeasureString(ttf, u, ulen, 1000000, &ext, &cnt);
-
-  return ext;
+    return 0;
 }
 
 /**
@@ -1726,29 +1735,27 @@ str_draw_text_lines(int acc, FontObj font,
   for(n=0, line = lines; n++ < nlines; line++)
   { str_text(font, &line->text, line->x+ox, line->y+baseline+oy);
 
-#if 0
     if ( acc )
-    { int cx = line->x;
+    { int cx = line->x+ox;
       int cn;
 
       cx += 0; // lbearing(str_fetch(&line->text, 0));
 
       for(cn=0; cn<line->text.s_size; cn++)
       { int c  = str_fetch(&line->text, cn);
-	int cw = c_width(c, font);
 
 	if ( (int)tolower(c) == acc )
-	{			/* not r_line to avoid double Translate() */
-	  XDrawLine(context.display, context.drawable, context.gcs->workGC,
-		    cx, line->y+baseline+1, cx+cw-2, line->y+baseline+1);
+	{ cx += str_advance(&line->text, 0, cn, font);
+	  int cw = str_advance(&line->text, cn, cn+1, font);
+	  int cy = line->y+baseline+oy+2;
+
+	  sdl_set_draw_color(DEFAULT);
+	  SDL_RenderLine(context.renderer, cx, cy, cx+cw-2, cy);
 	  acc = 0;
 	  break;
 	}
-
-	cx += cw;
       }
     }
-#endif
   }
 }
 
@@ -1781,10 +1788,6 @@ str_label(PceString s, int acc, FontObj font,
   Translate(x, y);
   str_break_into_lines(s, lines, &nlines, MAX_TEXT_LINES);
   str_compute_lines(lines, nlines, font, x, y, w, h, hadjust, vadjust);
-  if ( acc )
-  { r_dash(NAME_none);
-    r_thickness(1);
-  }
 
   if ( flags & LABEL_INACTIVE )
   { Any old = r_colour(WHITE_COLOUR);

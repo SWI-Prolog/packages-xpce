@@ -528,9 +528,6 @@ eventPopup(PopupObj p, EventObj ev)
 	Cprintf("eventPopup: %s at %s,%s\n",
 		pp(ev->id), pp(ev->x), pp(ev->y)));
 
-  if ( getWindowGraphical((Graphical)p) == WindowOfEvent(ev) )
-    Cprintf("Not grabbed!\n");
-
   if ( notNil(p->pullright) )
   { status rval = postEvent(ev, (Graphical) p->pullright, DEFAULT);
 
