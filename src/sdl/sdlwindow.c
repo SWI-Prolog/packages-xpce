@@ -198,13 +198,18 @@ ws_grab_pointer_window(PceWindow sw, BoolObj val)
   { WsFrame wfr = fr->ws_ref;
     if ( wfr )
     { if ( !SDL_CaptureMouse(val == ON) )
-	Cprintf("ws_grab_pointer_window(%s, %s) failed: %s\n",
-		pp(sw), pp(val), SDL_GetError());
+	DEBUG(NAME_capture,
+	      Cprintf("ws_grab_pointer_window(%s, %s) failed: %s\n",
+		      pp(sw), pp(val), SDL_GetError()));
       if ( val == ON )
-      { Cprintf("Grabbed mouse for %s (%s)\n", pp(fr), pp(sw));
-	if ( !SDL_SetWindowMouseRect(wfr->ws_window, NULL) )
-	  Cprintf("SDL_SetWindowMouseRect(%s, %s) failed\n",
-		  pp(sw), pp(val));
+      { if ( SDL_SetWindowMouseRect(wfr->ws_window, NULL) )
+	{ DEBUG(NAME_capture,
+		Cprintf("Grabbed mouse for %s (%s)\n", pp(fr), pp(sw)));
+	} else
+	{ DEBUG(NAME_capture,
+		Cprintf("SDL_SetWindowMouseRect(%s, %s) failed\n",
+			pp(sw), pp(val)));
+	}
       }
     }
   }
