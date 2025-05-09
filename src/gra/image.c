@@ -453,12 +453,12 @@ copyImage(Image image, Image i2)
   CHANGING_IMAGE(image,
     TRY(resizeImage(image, w, h));
 
-    d_image(image, 0, 0, valInt(w), valInt(h));
-    d_modify();
-    r_image(i2, 0, 0, 0, 0, valInt(w), valInt(h), OFF);
-    d_done();
-    changedEntireImageImage(image););
-
+    if ( d_image(image, 0, 0, valInt(w), valInt(h)) )
+    { d_modify();
+      r_image(i2, 0, 0, 0, 0, valInt(w), valInt(h), OFF);
+      d_done();
+      changedEntireImageImage(image);
+    });
 
   succeed;
 }
