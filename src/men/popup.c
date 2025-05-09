@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <stdbool.h>
 
 static status closePopup(PopupObj);
 
@@ -287,7 +288,9 @@ closePopup(PopupObj p)
   FrameObj fr = getFrameGraphical((Graphical)p);
   if ( fr )
   { if ( notNil(p->device) )
-      eraseDevice(p->device, (Graphical)p);
+    { eraseDevice(p->device, (Graphical)p);
+      assign(p, displayed, OFF);
+    }
     send(fr, NAME_destroy, EAV);
   }
 #else
@@ -516,9 +519,18 @@ typedPopup(PopupObj p, Any id)
 }
 
 
+#define WindowOfEvent(ev) ((PceWindow)(ev)->window)
+
 static status
 eventPopup(PopupObj p, EventObj ev)
 {					/* Showing PULLRIGHT menu */
+  DEBUG(NAME_popup,
+	Cprintf("eventPopup: %s at %s,%s\n",
+		pp(ev->id), pp(ev->x), pp(ev->y)));
+
+  if ( getWindowGraphical((Graphical)p) == WindowOfEvent(ev) )
+    Cprintf("Not grabbed!\n");
+
   if ( notNil(p->pullright) )
   { status rval = postEvent(ev, (Graphical) p->pullright, DEFAULT);
 
@@ -577,7 +589,19 @@ eventPopup(PopupObj p, EventObj ev)
     { send(p, NAME_showPullrightMenu, p->preview, EAV);
     } else if ( getButtonEvent(ev) == p->button )
     { assign(p, selected_item, p->preview);
+      PceWindow sw = getWindowGraphical((Graphical)p);
+      PceWindow ew = WindowOfEvent(ev);
+      bool ngrab = (sw == ew);
+      DEBUG(NAME_popup,
+	    Cprintf("Selected %s; context = %s (%s == %s)\n",
+		    pp(p->preview), pp(p->context), pp(sw), pp(ew)));
       send(p, NAME_close, EAV);
+      if ( instanceOfObject(p->context, ClassMenuBar) && ngrab )
+      { DEBUG(NAME_popup, Cprintf("Not grabbed; executing\n"));
+	currentMenuBar(p->context, NIL);
+	send(p, NAME_execute, p->context, EAV);
+      }
+
       succeed;
     }
   } else if ( isDownEvent(ev) )		/* DOWN: set button */

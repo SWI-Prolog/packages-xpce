@@ -35,8 +35,6 @@
 #include <h/kernel.h>
 #include <h/dialog.h>
 
-static status	currentMenuBar(MenuBar mb, PopupObj p);
-
 static status
 initialiseMenuBar(MenuBar mb, Name name)
 { assign(mb, pen,     CLASSDEFAULT);	/* not a resource for graphical! */
@@ -66,7 +64,7 @@ RedrawAreaMenuBar(MenuBar mb, Area a)
       assign(b, device, mb->device);
       assign(b, active, ba ? ON : OFF);
       assign(b, status, b->popup == mb->current ? NAME_preview
-	     					: NAME_inactive);
+						: NAME_inactive);
       RedrawAreaButton(b, a);
       assign(b, device, NIL);
     }
@@ -268,6 +266,10 @@ eventMenuBar(MenuBar mb, EventObj ev)
 
   if ( mb->active == OFF )
     fail;
+
+  DEBUG(NAME_popup,
+	Cprintf("eventMenuBar: %s at %s/%s\n",
+		pp(ev->id), pp(ev->x), pp(ev->y)));
 
   if ( isDownEvent(ev) )
     assign(mb, button, getButtonEvent(ev));
@@ -515,7 +517,7 @@ getMemberMenuBar(MenuBar mb, Any obj)
     for_cell(cell, mb->members)
     { PopupObj p = cell->value;
       if ( p->name == obj )
-      	answer(p);
+	answer(p);
     }
     fail;
   } else if ( memberChain(mb->members, obj) )
@@ -595,14 +597,25 @@ allOffMenuBar(MenuBar mb, PopupObj p)
 }
 
 
-static status
+status
 currentMenuBar(MenuBar mb, PopupObj p)
 { if ( mb->current != p )
   { changedMenuBarButton(mb, mb->current);
+    if ( notNil(mb->current) )
+      assign(mb->current, context, NIL);
     assign(mb, current, p);
+    if ( notNil(p) )
+	 assign(p, context, mb);
     if ( notNil(p) && notNil(mb->button) )
       assign(mb->current, button, mb->button);
     changedMenuBarButton(mb, mb->current);
+    if ( isNil(p) )
+    { PceWindow sw = getWindowGraphical((Graphical)mb);
+      if ( sw && !onFlag(sw, F_FREED|F_FREEING) )
+	focusWindow(sw, NIL, NIL, NIL, NIL);
+      if ( !onFlag(mb, F_FREED|F_FREEING) )
+	deleteAttributeObject(mb, NAME_Stayup);
+    }
   }
 
   succeed;
