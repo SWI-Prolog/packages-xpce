@@ -1070,15 +1070,13 @@ typedef struct
 
 GLOBAL Image BLACK_IMAGE;
 GLOBAL Image WHITE_IMAGE;
-GLOBAL Image GREY12_IMAGE;
-GLOBAL Image GREY25_IMAGE;
 GLOBAL Image GREY50_IMAGE;
-GLOBAL Image GREY75_IMAGE;
 
-GLOBAL Colour BLACK_COLOUR;
 GLOBAL Colour WHITE_COLOUR;
+GLOBAL Colour GREY25_COLOUR;
+GLOBAL Colour GREY50_COLOUR;
+GLOBAL Colour BLACK_COLOUR;
 
-GLOBAL Image CYCLE_IMAGE;		/* image of a cycle */
 GLOBAL Image MARK_IMAGE;		/* images for toggle and marked */
 GLOBAL Image NOMARK_IMAGE;
 GLOBAL Image MS_MARK_IMAGE;		/* MS images for toggle and marked */

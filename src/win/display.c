@@ -128,8 +128,10 @@ openDisplay(DisplayObj d)
   ws_init_graphics_display(d);
   ws_init_monitors_display(d);
 
-  BLACK_COLOUR = newObject(ClassColour, NAME_black, EAV);
-  WHITE_COLOUR = newObject(ClassColour, NAME_white, EAV);
+  WHITE_COLOUR  = newObject(ClassColour, NAME_white,  EAV);
+  GREY25_COLOUR = newObject(ClassColour, NAME_grey25, EAV);
+  GREY50_COLOUR = newObject(ClassColour, NAME_grey50, EAV);
+  BLACK_COLOUR  = newObject(ClassColour, NAME_black,  EAV);
 
   attachCacheDisplay(d);
 

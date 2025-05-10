@@ -714,7 +714,7 @@ sb_box(int x, int y, int w, int h,
 
   if ( !z )
   { if ( use_shadow )
-      r_shadow_box(x, y, w, h, 0, 1, active ? BLACK_IMAGE : NIL);
+      r_shadow_box(x, y, w, h, 0, 1, active ? BLACK_COLOUR : NIL);
     else
       r_box(x, y, w, h, 0, active ? BLACK_IMAGE : NIL);
   } else

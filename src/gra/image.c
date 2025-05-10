@@ -914,7 +914,6 @@ getPostscriptFormatImage(Image image)
 #define XPM_PCEIMAGE 1			/* use an XPM image */
 #endif
 
-#include "bitmaps/cycle_bm"
 #include "bitmaps/mark_bm"
 #include "bitmaps/nomark_bm"
 #include "bitmaps/pullright_bm"
@@ -986,15 +985,10 @@ stdXPMImage(Name name, Image *global, char **bits)
 #include "bitmaps/left.xpm"
 #include "bitmaps/right.xpm"
 #include "bitmaps/exclamation.xpm"
-#else
-#include "bitmaps/pce.bm"
 #endif
 
 #include "bitmaps/white_bm"
-#include "bitmaps/grey12_bm"
-#include "bitmaps/grey25_bm"
 #include "bitmaps/grey50_bm"
-#include "bitmaps/grey75_bm"
 #include "bitmaps/black_bm"
 
 static void
@@ -1012,19 +1006,11 @@ static void
 standardImages(void)
 { greyImage(NAME_whiteImage,  0,  &WHITE_IMAGE,
 	    white_bm_bits, white_bm_width, white_bm_height);
-  greyImage(NAME_grey12Image, 12, &GREY12_IMAGE,
-	    grey12_bm_bits, grey12_bm_width, grey12_bm_height);
-  greyImage(NAME_grey25Image, 25, &GREY25_IMAGE,
-	    grey25_bm_bits, grey25_bm_width, grey25_bm_height);
   greyImage(NAME_grey50Image, 50, &GREY50_IMAGE,
 	    grey50_bm_bits, grey50_bm_width, grey50_bm_height);
-  greyImage(NAME_grey75Image, 75, &GREY75_IMAGE,
-	    grey75_bm_bits, grey75_bm_width, grey75_bm_height);
   greyImage(NAME_blackImage, 100, &BLACK_IMAGE,
 	    black_bm_bits, black_bm_width, black_bm_height);
 
-  stdImage(NAME_cycleImage, &CYCLE_IMAGE,
-	   cycle_bm_bits, cycle_bm_width, cycle_bm_height);
   stdImage(NAME_markImage, &MARK_IMAGE,
 	   mark_bm_bits, mark_bm_width, mark_bm_height);
   stdImage(NAME_nomarkImage, &NOMARK_IMAGE,
@@ -1060,9 +1046,6 @@ standardImages(void)
   stdXPMImage(NAME_scrollLeftImage,  &SCROLL_LEFT_IMAGE,  left_xpm);
   stdXPMImage(NAME_scrollRightImage, &SCROLL_RIGHT_IMAGE, right_xpm);
   stdXPMImage(NAME_exclamationImage, &EXCLAMATION_IMAGE,  exclamation_xpm);
-#else
-  stdImage(NAME_pceImage, NULL,
-	   pce_bm_bits, pce_bm_width, pce_bm_height);
 #endif
 
   stdImage(NAME_nullImage, &NULL_IMAGE,

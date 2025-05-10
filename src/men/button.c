@@ -196,10 +196,10 @@ draw_generic_button_face(Button b,
     if ( up )
     { r_shadow_box(x, y, w, h, radius, shadow, NIL);
     } else if ( b->status == NAME_preview )
-    { r_shadow_box(x, y, w, h, radius, shadow, BLACK_IMAGE);
+    { r_shadow_box(x, y, w, h, radius, shadow, BLACK_COLOUR);
       swapc = TRUE;
     } else if ( b->status == NAME_execute )
-    { r_shadow_box(x, y, w, h, radius, shadow, GREY25_IMAGE);
+    { r_shadow_box(x, y, w, h, radius, shadow, GREY25_COLOUR);
     }
 
     if ( swapc )

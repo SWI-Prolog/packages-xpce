@@ -91,7 +91,7 @@ COMMON(BoolObj)	r_subwindow_mode(BoolObj val);
 COMMON(void)	r_invert_mode(BoolObj val);
 COMMON(void)	r_translate(int x, int y, int *ox, int *oy);
 COMMON(void)	r_box(int x, int y, int w, int h, int r, Any fill);
-COMMON(void)	r_shadow_box(int x, int y, int w, int h, int r, int shadow, Image fill);
+COMMON(void)	r_shadow_box(int x, int y, int w, int h, int r, int shadow, Any fill);
 COMMON(Any)	r_elevation_shadow(Elevation e);
 COMMON(void)	r_3d_segments(int n, ISegment s, Elevation e, int light);
 COMMON(void)	r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up);

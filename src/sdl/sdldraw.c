@@ -672,7 +672,7 @@ r_box(int x, int y, int w, int h, int r, Any fill)
  * @param fill The fill pattern or image.
  */
 void
-r_shadow_box(int x, int y, int w, int h, int r, int shadow, Image fill)
+r_shadow_box(int x, int y, int w, int h, int r, int shadow, Any fill)
 { if ( !shadow )
   { r_box(x, y, w, h, r, fill);
   } else
