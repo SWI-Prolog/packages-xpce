@@ -53,13 +53,13 @@
                 *        ICON GENERATION        *
                 ********************************/
 
-resource(builtin_class,       image, image('16x16/builtin_class.xpm')).
-resource(user_class,          image, image('16x16/user_class.xpm')).
-resource(builtin_class_flash, image, image('16x16/builtin_classflash.xpm')).
-resource(user_class_flash,    image, image('16x16/user_classflash.xpm')).
-resource(help,                image, image('16x16/help.xpm')).
-resource(grab,                image, image('16x16/handpoint.xpm')).
-resource(vishier,             image, image('32x32/vishier.xpm')).
+resource(builtin_class,       image, image('16x16/builtin_class.png')).
+resource(user_class,          image, image('16x16/user_class.png')).
+resource(builtin_class_flash, image, image('16x16/builtin_classflash.png')).
+resource(user_class_flash,    image, image('16x16/user_classflash.png')).
+resource(help,                image, image('16x16/help.png')).
+resource(grab,                image, image('16x16/handpoint.png')).
+resource(vishier,             image, image('32x32/vishier.png')).
 
 :- pce_extend_class(visual).
 
@@ -264,7 +264,7 @@ object_details(V) :->
 initialise(F, Manual:man_manual) :->
     F*>>initialise(Manual, 'Visual Hierarchy'),
     F->>icon(resource(vishier)),
-%   F->>icon(image('32x32/vishier.xpm')),
+%   F->>icon(image('32x32/vishier.png')),
 %   send(F, icon, resource(vishier)),
     F->>append(new(TD, tool_dialog)),
     send_list(TD, append,

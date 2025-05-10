@@ -133,10 +133,10 @@ layout_dialog(AI) :->
 %       and more flexible then direct sending of messages.  Also, fix_label
 %       takes care of the case where the image cannot be located.
 
-label(wing,             '16x16/arrow_wing.xpm').
-label(length,           '16x16/arrow_length.xpm').
-label(select_colour,    '16x16/cpalette2.xpm').
-label(pen,              '16x16/pen.xpm').
+label(wing,             '16x16/arrow_wing.png').
+label(length,           '16x16/arrow_length.png').
+label(select_colour,    '16x16/cpalette2.png').
+label(pen,              '16x16/pen.png').
 
 resource(Name, image, image(File)) :-
     label(Name, File).

@@ -430,9 +430,9 @@ prolog_pce_bool(false, @off).
 :- pce_end_class(prolog_exception_table).
 
 
-resource(up,     image, image('16x16/up.xpm')).
-resource(down,   image, image('16x16/down.xpm')).
-resource(delete, image, image('16x16/delete.xpm')).
+resource(up,     image, image('16x16/up.png')).
+resource(down,   image, image('16x16/down.png')).
+resource(delete, image, image('16x16/delete.png')).
 
 :- pce_begin_class(pte_img_button, button).
 

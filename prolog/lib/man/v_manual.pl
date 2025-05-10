@@ -46,7 +46,7 @@
            , send_list/3
            ]).
 
-resource(man_icon, image, image('32x32/books.xpm')).
+resource(man_icon, image, image('32x32/books.png')).
 
 :- pce_autoload(event_viewer, library('man/showevent')).
 

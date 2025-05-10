@@ -41,8 +41,8 @@
 :- pce_autoload(prolog_predicate_item, library(prolog_predicate_item)).
 :- pce_autoload(emacs_tag_item,        library(emacs_tags)).
 
-resource(back,  image, image('16x16/fatleft_arrow.xpm')).
-resource(forw,  image, image('16x16/fatright_arrow.xpm')).
+resource(back,  image, image('16x16/fatleft_arrow.png')).
+resource(forw,  image, image('16x16/fatright_arrow.png')).
 
 %!  make_item(+Mode, +Label, +Default, +Type, +History, -Item)
 %

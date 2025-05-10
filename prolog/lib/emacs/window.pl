@@ -44,7 +44,7 @@
              send_list/3
            ]).
 
-resource(mode_x_icon,   image, image('32x32/doc_x.xpm')).
+resource(mode_x_icon,   image, image('32x32/doc_x.png')).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

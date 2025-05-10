@@ -55,8 +55,8 @@ image_viewer :-
     get(@pce, home, Home),
     atom_concat(Home, '/bitmaps', DefDir),
     send(D, append, new(Dir, directory_item(directory, DefDir))),
-    send(D, append, new(File, text_item(file_pattern, '*.bm'))),
-    new(ValueSet, chain('*.bm', '*.xpm', '*.gif', '*.jpg', '*.jpeg')),
+    send(D, append, new(File, text_item(file_pattern, '*.png'))),
+    new(ValueSet, chain('*.png', '*.gif', '*.jpg', '*.jpeg')),
     (   get(@pce, window_system, windows)
     ->  send_list(ValueSet, append, ['*.ico', '*.cur'])
     ;   true

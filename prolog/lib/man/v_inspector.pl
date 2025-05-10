@@ -50,9 +50,9 @@
 :- dynamic
     inspector_window/1.
 
-resource(clear, image, image('16x16/trashcan.xpm')).
-resource(help,  image, image('16x16/help.xpm')).
-resource(grab,  image, image('16x16/handpoint.xpm')).
+resource(clear, image, image('16x16/trashcan.png')).
+resource(help,  image, image('16x16/help.png')).
+resource(grab,  image, image('16x16/handpoint.png')).
 
 
                 /********************************

@@ -130,7 +130,7 @@ cursor(G, Gr:graphical, Cursor:cursor) :<-
         ),
         new(BM, image(@nil, W, H)),
         send(BM, draw_in, Gr, point(0,0)),
-        send(BM, or, image('cross.bm'), point(HotSpot?x-8, HotSpot?y-8)),
+        send(BM, or, image('cross.png'), point(HotSpot?x-8, HotSpot?y-8)),
         new(Cursor, cursor(@nil, BM, @default, HotSpot))
     ).
 

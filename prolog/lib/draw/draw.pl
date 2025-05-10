@@ -147,16 +147,16 @@ draw(File) :-
                 *           CLASS DRAW          *
                 ********************************/
 
-resource(draw,       image, image('32x32/drawing.xpm')).
-resource(open,       image, image('16x16/open.xpm')).
-resource(save,       image, image('16x16/save.xpm')).
-resource(print,      image, image('16x16/print.xpm')).
-resource(undo,       image, image('16x16/undo.xpm')).
-resource(cut,        image, image('16x16/cut.xpm')).
-resource(copy,       image, image('16x16/copy.xpm')).
-resource(paste,      image, image('16x16/paste.xpm')).
-resource(duplicate,  image, image('16x16/duplicate.xpm')).
-resource(distribute, image, image('16x16/distribute.xpm')).
+resource(draw,       image, image('32x32/drawing.png')).
+resource(open,       image, image('16x16/open.png')).
+resource(save,       image, image('16x16/save.png')).
+resource(print,      image, image('16x16/print.png')).
+resource(undo,       image, image('16x16/undo.png')).
+resource(cut,        image, image('16x16/cut.png')).
+resource(copy,       image, image('16x16/copy.png')).
+resource(paste,      image, image('16x16/paste.png')).
+resource(duplicate,  image, image('16x16/duplicate.png')).
+resource(distribute, image, image('16x16/distribute.png')).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Class `draw' defines and manages  the entire tool.  Its initialisation

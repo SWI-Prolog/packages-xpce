@@ -57,14 +57,14 @@
                  *             STYLES           *
                  *******************************/
 
-resource(call,   image, image('call.xpm')).
-resource(exit,   image, image('exit.xpm')).
-resource(redo,   image, image('redo.xpm')).
-resource(fail,   image, image('fail.xpm')).
-resource(except, image, image('except.xpm')).
-resource(ndet,   image, image('ndet.xpm')).
-resource(stack,  image, image('stack.xpm')).
-resource(stop,   image, image('stop.xpm')).
+resource(call,   image, image('call.png')).
+resource(exit,   image, image('exit.png')).
+resource(redo,   image, image('redo.png')).
+resource(fail,   image, image('fail.png')).
+resource(except, image, image('except.png')).
+resource(ndet,   image, image('ndet.png')).
+resource(stack,  image, image('stack.png')).
+resource(stop,   image, image('stop.png')).
 
 style(Port, Style) :-
     def_style(Port, DefAttrs),

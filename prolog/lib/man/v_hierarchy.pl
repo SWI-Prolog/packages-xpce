@@ -38,8 +38,8 @@
            , send_list/3
            ]).
 
-resource(builtin_class, image, image('16x16/builtin_class.xpm')).
-resource(user_class,    image, image('16x16/user_class.xpm')).
+resource(builtin_class, image, image('16x16/builtin_class.png')).
+resource(user_class,    image, image('16x16/user_class.png')).
 
 :- pce_autoload(toc_window, library(pce_toc)).
 

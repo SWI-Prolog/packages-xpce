@@ -191,5 +191,5 @@ shift_clicked(B, Ev:event) :->
 test :-
         send(new(B, graphical_browser), open),
         send(B, members,
-             chain(box(100,100), bitmap('pce.bm'), circle(10))).
+             chain(box(100,100), bitmap('pce.png'), circle(10))).
 */

@@ -40,11 +40,11 @@
 
 :- pce_autoload(tool_bar, library(toolbar)).
 
-resource(open,      image, image('16x16/open.xpm')).
-resource(saveall,   image, image('16x16/saveall.xpm')).
-resource(help,      image, image('16x16/help.xpm')).
-resource(bookmarks, image, image('16x16/bookmarks.xpm')).
-resource(buffers,   image, image('32x32/buffers.xpm')).
+resource(open,      image, image('16x16/open.png')).
+resource(saveall,   image, image('16x16/saveall.png')).
+resource(help,      image, image('16x16/help.png')).
+resource(bookmarks, image, image('16x16/bookmarks.png')).
+resource(buffers,   image, image('32x32/buffers.png')).
 
 :- pce_begin_class(emacs_buffer_menu, persistent_frame,
                    "List showing all PceEmacs buffers").

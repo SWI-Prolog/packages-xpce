@@ -139,7 +139,7 @@ version('2.0').
                  *            RESOURCES         *
                  *******************************/
 
-resource(debug, image,  image('debug.xpm')).
+resource(debug, image,  image('debug.png')).
 resource(Name,  image,  image(XPM)) :-
     button(_, _, XPM, _),
     file_name_extension(Name, xpm, XPM).
@@ -1018,32 +1018,32 @@ mode(F, Mode:name) :->
 %       If action is +Action, send message Action to the frame.  Otherwise
 %       return Action to the caller.
 
-button(into,           "i",   'into.xpm',            'Show unification').
-button(creep,          "\n ", 'creep.xpm',           'Step').
-button(skip,           "s",   'skip.xpm',            'Skip over this goal').
-button(finish,         "f",   'finish.xpm',          'Finish selected goal').
+button(into,           "i",   'into.png',            'Show unification').
+button(creep,          "\n ", 'creep.png',           'Step').
+button(skip,           "s",   'skip.png',            'Skip over this goal').
+button(finish,         "f",   'finish.png',          'Finish selected goal').
 button(gap,            -,     -,                     -).
-button(retry,          "r",   'retry.xpm',           'Retry selected goal').
+button(retry,          "r",   'retry.png',           'Retry selected goal').
 button(gap,            -,     -,                     -).
-button(+nodebug,       "n",   'nodebug.xpm',         'Continue without debugging').
-button(+abort,         "a",   'abort.xpm',           'Abort to the Prolog toplevel').
-button(+interrupt,     "t",   'interrupt.xpm',       'Interrupt (trace)').
-button(+query,         "b",   'break.xpm',           'Enter a query (in debugged thread)').
-button(+interactor,    "B",   'interactor.xpm',      'Enter a query (in new thread)').
-button(fail,           "F",   'fail.xpm',            'Force query to fail').
+button(+nodebug,       "n",   'nodebug.png',         'Continue without debugging').
+button(+abort,         "a",   'abort.png',           'Abort to the Prolog toplevel').
+button(+interrupt,     "t",   'interrupt.png',       'Interrupt (trace)').
+button(+query,         "b",   'break.png',           'Enter a query (in debugged thread)').
+button(+interactor,    "B",   'interactor.png',      'Enter a query (in new thread)').
+button(fail,           "F",   'fail.png',            'Force query to fail').
 button(gap,            -,     -,                     -).
-button(+up,            "u",   'up.xpm',              'Select parent frame').
-button(+down,          "d",   'down.xpm',            'Select child frame').
+button(+up,            "u",   'up.png',              'Select parent frame').
+button(+down,          "d",   'down.png',            'Select child frame').
 button(gap,            -,     -,                     -).
-button(+browse,        "",    '16x16/butterfly.xpm', 'Browse program structure').
+button(+browse,        "",    '16x16/butterfly.png', 'Browse program structure').
 button(gap,            -,     -,                     -).
-button(leap,           "l",   'leap.xpm',            'Continue to spy- or breakpoint').
-button(+breakpoints,   "+",   'spy.xpm',             'Edit spy- and breakpoints').
-button(+stop_at,       "!",   'stop.xpm',            'Set Stop at caret').
-button(+nostop_or_spy, "-",   'nostopspy.xpm',       'Delete break- or spy-point').
+button(leap,           "l",   'leap.png',            'Continue to spy- or breakpoint').
+button(+breakpoints,   "+",   'spy.png',             'Edit spy- and breakpoints').
+button(+stop_at,       "!",   'stop.png',            'Set Stop at caret').
+button(+nostop_or_spy, "-",   'nostopspy.png',       'Delete break- or spy-point').
 button(gap,            -,     -,                     -).
-button(+details,       "v",   'details.xpm',         'Show (variable) details').
-button(+edit,          "e",   'edit.xpm',            'Toggle read-only/edit-mode').
+button(+details,       "v",   'details.png',         'Show (variable) details').
+button(+edit,          "e",   'edit.png',            'Toggle read-only/edit-mode').
 
 
 tag_balloon(Balloon0, Keys, Balloon) :-

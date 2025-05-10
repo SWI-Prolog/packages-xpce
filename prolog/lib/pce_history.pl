@@ -40,8 +40,8 @@
 :- require([ default/3
            ]).
 
-resource(back, image, image('16x16/back.xpm')).
-resource(forw, image, image('16x16/forward.xpm')).
+resource(back, image, image('16x16/back.png')).
+resource(forw, image, image('16x16/forward.png')).
 
 :- pce_begin_class(history, object,
                    "Manage a location history").

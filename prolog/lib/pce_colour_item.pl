@@ -49,8 +49,8 @@
             ceiling/2
            ]).
 
-resource(cpalette,      image,  image('16x16/cpalette1.xpm')).
-resource(trash,         image,  image('16x16/trashcan.xpm')).
+resource(cpalette,      image,  image('16x16/cpalette1.png')).
+resource(trash,         image,  image('16x16/trashcan.png')).
 
 default_palette_colour(red).
 default_palette_colour(darkorange).

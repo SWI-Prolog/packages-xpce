@@ -35,7 +35,7 @@
 :- module(url_image, []).
 :- use_module(library(pce)).
 
-resource(noimg, image, image('16x16/noimg.xpm')).
+resource(noimg, image, image('16x16/noimg.png')).
 
 :- pce_autoload(http_client, library(http_client)).
 

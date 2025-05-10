@@ -269,10 +269,10 @@ undoable :-
                  *         GRAPHER WINDOW       *
                  *******************************/
 
-resource(forward,      image, image('16x16/vcr_forward.xpm')).
-resource(fast_forward, image, image('16x16/vcr_fast_forward.xpm')).
-resource(layout,       image, image('16x16/graph.xpm')).
-resource(abort,        image, library('trace/icons/abort.xpm')).
+resource(forward,      image, image('16x16/vcr_forward.png')).
+resource(fast_forward, image, image('16x16/vcr_fast_forward.png')).
+resource(layout,       image, image('16x16/graph.png')).
+resource(abort,        image, library('trace/icons/abort.png')).
 
 
 :- pce_begin_class(grapher, picture,

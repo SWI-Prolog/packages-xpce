@@ -45,7 +45,7 @@
 Prepend the given  directory  to  the   image  search-path.  Useful  for
 applications defining a private image directory.
 
-Typically one would put all images required   by an application in *.xpm
+Typically one would put all images required   by an application in *.png
 files in a directory called bitmaps. The   load  file of the application
 makes a call
 
@@ -54,7 +54,7 @@ makes a call
 after which the images from the  directory   may  be accessed using -for
 example-:
 
-        send(Box, fill_pattern, image('my_image.bm')).
+        send(Box, fill_pattern, image('my_image.png')).
 
 See also the ImageViewer demo  tool  to   get  an  overview of available
 images in a directory.
@@ -67,7 +67,7 @@ file_search_path/2 declarations using the alias   `image'. Especially if
 the application should (eventually)  be  turned   into  a  runtime,  the
 following skeleton for using images as program resources is adviced:
 
-resource(cute,  image, image('cute.xpm')).
+resource(cute,  image, image('cute.png')).
 
         ...
         new(I, image(resource(cute)),

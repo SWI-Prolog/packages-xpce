@@ -55,8 +55,8 @@
 :- pce_begin_class(find_file_dialog, dialog,
                    "Browse for a file").
 
-resource(up, image, image('16x16/up.xpm')).
-resource(newdir, image, image('16x16/newdir.xpm')).
+resource(up, image, image('16x16/up.png')).
+resource(newdir, image, image('16x16/newdir.png')).
 
 variable(directory,    directory*,  get,  "Current directory").
 variable(message,      [code]*,     both, "Message executed on ok").

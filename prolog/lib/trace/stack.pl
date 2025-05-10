@@ -403,14 +403,14 @@ resource(Name, image, image(File)) :-
     style_image(_, File),
     file_name_extension(Name, xpm, File).
 
-style_image(deterministic,      'det.xpm').
-style_image(choicepoint,        'ndet.xpm').
-style_image(built_in,           'builtin.xpm').
-style_image(foreign,            'foreign.xpm').
-style_image(dynamic,            'dynamic.xpm').
-style_image(undefined,          'undefined.xpm').
-style_image(transparent,        'meta.xpm').
-style_image(user,               'user.xpm').
+style_image(deterministic,      'det.png').
+style_image(choicepoint,        'ndet.png').
+style_image(built_in,           'builtin.png').
+style_image(foreign,            'foreign.png').
+style_image(dynamic,            'dynamic.png').
+style_image(undefined,          'undefined.png').
+style_image(transparent,        'meta.png').
+style_image(user,               'user.png').
 
 variable(frame_reference,  int,         get, "Reference of Prolog frame").
 variable(pc,               'int|name',  get, "Location in the frame").

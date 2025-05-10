@@ -349,7 +349,7 @@ action(thead(_Options, Content), Table, Mode) :-
 
 action(footnote(Text), PB, Mode) :-
     send(PB, append,
-         new(T, grbox(bitmap('16x16/note.xpm')))),
+         new(T, grbox(bitmap('16x16/note.png')))),
 %        new(T, tbox('\247\', @symbol_style))),
     new(FN, pbox(500, left)),
     get(Mode, clone, Clone),

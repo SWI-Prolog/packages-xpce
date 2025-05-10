@@ -66,9 +66,9 @@ Some issues to consider:
 
 :- pce_global(@emacs_mark_list, new(emacs_bookmark_editor)).
 
-resource(save, image, image('16x16/save.xpm')).
-resource(cut,  image, image('16x16/cut.xpm')).
-resource(open, image, image('16x16/book2.xpm')).
+resource(save, image, image('16x16/save.png')).
+resource(cut,  image, image('16x16/cut.png')).
+resource(open, image, image('16x16/book2.png')).
 
 :- pce_begin_class(emacs_bookmark_editor, persistent_frame,
                    "PceEmacs bookmark administration and viewing").

@@ -308,7 +308,7 @@ simplify_attributes(Term, Term).
                  *            CLASSES           *
                  *******************************/
 
-resource(drawing, image, image('16x16/drawing.xpm')).
+resource(drawing, image, image('16x16/drawing.png')).
 
 :- pce_begin_class(draw_drag_drawing, bitmap,
                    "Draw to drop the drawing in a PceEmacs Window").

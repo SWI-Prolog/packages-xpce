@@ -79,7 +79,7 @@ cursor(G, LB:list_browser, Ev:event, Cursor:cursor) :<-
             ( HX > W-8 -> send(HotSpot, x, W-8) ; true ),
             ( HY > H -> send(HotSpot, y, H) ; true )
         ),
-        send(BM, or, image('cross.bm'), point(HotSpot?x-8, HotSpot?y-8)),
+        send(BM, or, image('cross.png'), point(HotSpot?x-8, HotSpot?y-8)),
         new(Cursor, cursor(@nil, BM, @default, HotSpot))
     ).
 

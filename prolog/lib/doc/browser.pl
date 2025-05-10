@@ -41,10 +41,10 @@
 
 :- pce_image_directory(icons).
 
-resource(backward, image, image('back.xpm')).
-resource(forward,  image, image('forward.xpm')).
-resource(reload,   image, image('reload.xpm')).
-resource(source,   image, image('source.xpm')).
+resource(backward, image, image('back.png')).
+resource(forward,  image, image('forward.png')).
+resource(reload,   image, image('reload.png')).
+resource(source,   image, image('source.png')).
 
 
                  /*******************************

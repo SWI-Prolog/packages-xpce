@@ -41,9 +41,9 @@
 
 :- pce_autoload(drag_and_drop_gesture, library(dragdrop)).
 
-resource(file,          image, image('16x16/doc.xpm')).
-resource(opendir,       image, image('opendir.xpm')).
-resource(closedir,      image, image('closedir.xpm')).
+resource(file,          image, image('16x16/doc.png')).
+resource(opendir,       image, image('opendir.png')).
+resource(closedir,      image, image('closedir.png')).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Status and aim
