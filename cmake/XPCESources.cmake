@@ -190,16 +190,16 @@ set(XPCE_DATA_prolog_lib_doc browser.pl emit.pl form.pl html.pl
     layout.pl load.pl objects.pl README sp_errors.pl t2.pl table.pl test.pl
     url_fetch.pl util.pl vfont.pl window.pl xml_browse.pl xml_hierarchy.pl)
 
-set(XPCE_DATA_prolog_lib_doc_icons back.xpm forward.xpm reload.xpm
-    source.xpm)
+set(XPCE_DATA_prolog_lib_doc_icons back.png forward.png reload.png
+    source.png)
 
 set(XPCE_DATA_prolog_lib_dialog attribute.pl behaviour.pl dialog.pl
     generate.pl image_item.pl label.pl layout.pl load.pl menuitem.pl
     meta.pl pretty_print.pl proto.pl README util.pl)
 
-set(XPCE_DATA_prolog_lib_dialog_bitmaps button.bm choice.bm cycle.bm
-    editor.bm image.bm label.bm list.bm reporter.bm slider.bm text_item.bm
-    toggle.bm)
+set(XPCE_DATA_prolog_lib_dialog_bitmaps button.png choice.png cycle.png
+    editor.png image.png label.png list.png reporter.png slider.png text_item.png
+    toggle.png)
 
 set(XPCE_DATA_prolog_lib_draw align.pl attribute.pl canvas.pl config.pl draw.pl
     exportpl.pl gesture.pl importpl.pl menu.pl README shapes.pl undo.pl)
@@ -235,20 +235,20 @@ set(XPCE_DATA_prolog_lib_trace browse.pl browse_xref.pl clause.pl
     query.pl README settings.pl source.pl stack.pl status.pl test.pl
     trace.pl util.pl viewterm.pl)
 
-set(XPCE_DATA_prolog_lib_trace_icons abort.xpm breakpoint.xpm break.xpm bug.xpm
-    builtin.xpm butterfly.xpm call.xpm classext.xpm classvar.xpm class.xpm
-    closedir.xpm creep.xpm debug.xpm details.xpm det.xpm
-    down.xpm dynamic.xpm dyn.xpm edit.xpm except.xpm exit.xpm export.xpm
-    eyes.xpm fact.bm fail.xpm finish.xpm foreign.xpm get.xpm grammar.bm
-    import.xpm interactor.xpm interrupt.xpm into.xpm ivar.xpm leap.xpm
-    list.xpm loadfailed.xpm loading.xpm locate.xpm meta.xpm mini-globe.xpm
-    mini-run.xpm module.xpm ndet.xpm nodebug.xpm nospy.xpm nostopspy.xpm
-    nostop.xpm opendir.xpm openmodule.xpm plfile.xpm plincludedfile.xpm
-    plloadedfile.xpm pred.bm redo.xpm retry.xpm send.xpm skip.xpm spy.xpm
-    stack.xpm stop.xpm undefined.xpm undefpred.xpm unrefpred.xpm up.xpm
-    user.xpm warnpred.xpm)
+set(XPCE_DATA_prolog_lib_trace_icons abort.png breakpoint.png break.png bug.png
+    builtin.png butterfly.png call.png classext.png classvar.png class.png
+    closedir.png creep.png debug.png details.png det.png
+    down.png dynamic.png dyn.png edit.png except.png exit.png export.png
+    eyes.png fact.png fail.png finish.png foreign.png get.png grammar.png
+    import.png interactor.png interrupt.png into.png ivar.png leap.png
+    list.png loadfailed.png loading.png locate.png meta.png mini-globe.png
+    mini-run.png module.png ndet.png nodebug.png nospy.png nostopspy.png
+    nostop.png opendir.png openmodule.png plfile.png plincludedfile.png
+    plloadedfile.png pred.png redo.png retry.png send.png skip.png spy.png
+    stack.png stop.png undefined.png undefpred.png unrefpred.png up.png
+    user.png warnpred.png)
 
-set(XPCE_DATA_prolog_lib_trace_icons_16x16 butterfly.xpm dbgsettings.xpm)
+set(XPCE_DATA_prolog_lib_trace_icons_16x16 butterfly.png dbgsettings.png)
 
 set(XPCE_DATA_prolog_lib_xref common.pl mkcommon.pl quintus.pl sicstus.pl)
 
@@ -260,45 +260,45 @@ set(XPCE_DATA_prolog_demo chess.pl colour.pl constraint.pl cursor.pl
     event_hierarchy.pl fontviewer.pl ftplog.pl graph.pl hsvcolour.pl
     imageviewer.pl ispell.pl juggler.pl kangaroo.pl pce_demo.pl)
 
-set(XPCE_DATA_bitmaps bishop.bm box.bm bullet.bm bullseye.bm busy_bee.bm
-    cassette.bm chessboard.bm chesssquare.bm close.bm closedir.xpm
-    concept.bm conceptLink.bm confirm.bm confirm_name.bm console_tile.bm
-    creating.bm cross.bm cycle.bm desktop.bm dir.bm domain.bm
-    draw_cconnect.bm draw_connect.bm draw_edit.bm draw_line.bm draw_path.bm
-    draw_proto.bm draw_resize.bm draw_text.bm ellipse.bm fatleft_arrow.bm
-    fatright_arrow.bm file.bm folder.bm fragment.bm globe.bm go.bm group.bm
-    hand.bm happy.bm help.bm hierarchy.bm hourgl10.bm hourgl1.bm hourgl2.bm
-    hourgl3.bm hourgl4.bm hourgl5.bm hourgl6.bm hourgl7.bm hourgl8.bm
-    hourgl9.bm hourgl.bm juggler1.bm juggler2.bm juggler3.bm juggler4.bm
-    juggler5.bm kangro10.bm kangro11.bm kangro1.bm kangro2.bm kangro3.bm
-    kangro4.bm kangro5.bm kangro6.bm kangro7.bm kangro8.bm kangro9.bm
-    king.bm knight.bm left_arrow.bm line.bm link.bm linking.bm magnify.xpm
-    main_link.bm mark.bm ms_down_arrow.bm ms_left_arrow.bm ms_right_arrow.bm
-    ms_up_arrow.bm nomark.bm nosticky.bm note.bm off_marked.bm off_toggle.bm
-    ol_cycle.bm ol_pulldown.bm ol_pullright.bm on_marked.bm on_toggle.bm
-    opendir.xpm other_link.bm paste.bm pawn.bm pce16.xpm pce.bm
-    pinned.xpm pin.xpm printer.bm queen.bm question.bm README right_arrow.bm
-    rook_64.bm rook.bm sad.bm select.bm selecting.bm slant_left.bm
-    slant_right.bm sticky.bm support.bm text.bm textedit.bm thermo.bm
-    toggle_off.bm toggle_on.bm transcript.bm trash.bm typing.bm web.bm)
+set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png busy_bee.png
+    cassette.png chessboard.png chesssquare.png close.png closedir.png
+    concept.png conceptLink.png confirm.png confirm_name.png console_tile.png
+    creating.png cross.png cycle.png desktop.png dir.png domain.png
+    draw_cconnect.png draw_connect.png draw_edit.png draw_line.png draw_path.png
+    draw_proto.png draw_resize.png draw_text.png ellipse.png fatleft_arrow.png
+    fatright_arrow.png file.png folder.png fragment.png globe.png go.png group.png
+    hand.png happy.png help.png hierarchy.png hourgl10.png hourgl1.png hourgl2.png
+    hourgl3.png hourgl4.png hourgl5.png hourgl6.png hourgl7.png hourgl8.png
+    hourgl9.png hourgl.png juggler1.png juggler2.png juggler3.png juggler4.png
+    juggler5.png kangro10.png kangro11.png kangro1.png kangro2.png kangro3.png
+    kangro4.png kangro5.png kangro6.png kangro7.png kangro8.png kangro9.png
+    king.png knight.png left_arrow.png line.png link.png linking.png magnify.png
+    main_link.png mark.png ms_down_arrow.png ms_left_arrow.png ms_right_arrow.png
+    ms_up_arrow.png nomark.png nosticky.png note.png off_marked.png off_toggle.png
+    ol_cycle.png ol_pulldown.png ol_pullright.png on_marked.png on_toggle.png
+    opendir.png other_link.png paste.png pawn.png pce16.png pce.png
+    pinned.png pin.png printer.png queen.png question.png README right_arrow.png
+    rook_64.png rook.png sad.png select.png selecting.png slant_left.png
+    slant_right.png sticky.png support.png text.png textedit.png thermo.png
+    toggle_off.png toggle_on.png transcript.png trash.png typing.png web.png)
 
-set(XPCE_DATA_bitmaps_16x16 alert.xpm arrow_length.xpm arrows.bm
-    arrow_wing.xpm back.xpm binocular.xpm book2.xpm bookmarks.xpm
-    builtin_classflash.xpm builtin_class.xpm closedir.xpm copy.xpm
-    cpalette1.xpm cpalette2.xpm cut.xpm delete.xpm distribute.xpm doc.xpm
-    done.xpm down.xpm drawing.xpm drive.xpm duplicate.xpm edit.xpm error.xpm
-    exclamation.xpm eye.xpm false.xpm fatleft_arrow.xpm fatright_arrow.xpm
-    fillpattern.bm font.xpm foot.xpm forward.xpm funcdoc.xpm ghost.xpm
-    graph.xpm handpoint.xpm help.xpm hierarchy.xpm manual.xpm newdir.xpm
-    new.xpm noimg.xpm note.xpm ok.xpm opendir.xpm open.xpm paste.xpm pce.xpm
-    pen.xpm preddoc.xpm print.xpm profiler.xpm redo.xpm refresh.xpm
-    saveall.xpm save.xpm stop.xpm trashcan.xpm undo.xpm up.xpm
-    user_classflash.xpm user_class.xpm user.xpm valign.xpm
-    vcr_fast_forward.xpm vcr_forward.xpm vga16.xpm wipeall.xpm)
+set(XPCE_DATA_bitmaps_16x16 alert.png arrow_length.png arrows.png
+    arrow_wing.png back.png binocular.png book2.png bookmarks.png
+    builtin_classflash.png builtin_class.png closedir.png copy.png
+    cpalette1.png cpalette2.png cut.png delete.png distribute.png doc.png
+    done.png down.png drawing.png drive.png duplicate.png edit.png error.png
+    exclamation.png eye.png false.png fatleft_arrow.png fatright_arrow.png
+    fillpattern.png font.png foot.png forward.png funcdoc.png ghost.png
+    graph.png handpoint.png help.png hierarchy.png manual.png newdir.png
+    new.png noimg.png note.png ok.png opendir.png open.png paste.png pce.png
+    pen.png preddoc.png print.png profiler.png redo.png refresh.png
+    saveall.png save.png stop.png trashcan.png undo.png up.png
+    user_classflash.png user_class.png user.png valign.png
+    vcr_fast_forward.png vcr_forward.png vga16.png wipeall.png)
 
-set(XPCE_DATA_bitmaps_32x32 books.xpm buffers.xpm dbgsettings.xpm
-    doc_pl.xpm doc_x.xpm drawing.xpm help.xpm pensil.xpm viewer.xpm
-    vishier.xpm)
+set(XPCE_DATA_bitmaps_32x32 books.png buffers.png dbgsettings.png
+    doc_pl.png doc_x.png drawing.png help.png pensil.png viewer.png
+    vishier.png)
 
 set(XPCE_DATA_bitmaps_patterns Arches.xbm Balls.xbm Bats.xbm brick_2.xbm
     brick_block.xbm brick_cobble.xbm brick_diag_block.xbm
