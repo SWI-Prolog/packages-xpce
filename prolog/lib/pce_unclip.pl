@@ -119,6 +119,7 @@ attach(W, To) :-
     ->  Border = 0                  % TBD: Fix inside kernel
     ;   get(W, border, Border)
     ),
+    send(W?frame, attribute, parent, ToWindow?frame),
     send(W, open, point(X-Border,Y-Border)),
     send(W, expose).
 
@@ -150,7 +151,8 @@ detach(W) :->
 
 detach(W) :-
     (   get(W, hypered, mirroring, Gr)
-    ->  send(W, delete_hypers, mirroring),
+    ->  send(W?frame, delete_attribute, parent),
+        send(W, delete_hypers, mirroring),
         send(W, clear),
         send(W, show, @off),
         get(W, handler, H),
