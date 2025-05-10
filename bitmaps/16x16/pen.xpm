@@ -9,7 +9,7 @@ static char * pen_xpm[] = {
 "+	c yellow",
 "@	c gray85",
 "#	c blue",
-"$	c burlywood2",
+"$	c #eec591",
 "           ...  ",
 " XXXXXXXXXo.... ",
 " XXXXXXXXXO.... ",

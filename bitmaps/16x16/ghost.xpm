@@ -87,7 +87,7 @@ static char * ghost_xpm[] = {
 "/	c #5A5A5A",
 "(	c #818181",
 ")	c #C8C8C8",
-"_	c dark grey",
+"_	c #a9a9a9",
 "`	c gray50",
 /* pixels */
 "      ....      ",

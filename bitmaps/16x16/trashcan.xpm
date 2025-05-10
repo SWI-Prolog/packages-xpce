@@ -5,7 +5,7 @@ static char * trashcan_xpm[] = {
 ".	c black",
 "X	c #808080",
 "o	c #808000",
-"O	c yellow1",
+"O	c yellow",
 "      ..        ",
 "    ..XX..      ",
 "  .XX...XX..    ",

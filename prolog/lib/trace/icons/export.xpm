@@ -3,7 +3,7 @@ static char * export_xpm[] = {
 "16 16 5 1",
 " 	s None	c None",
 ".	c black",
-"X	c slateblue3",
+"X	c #6959cd",
 "o	c white",
 "O	c grey50",
 "                ",

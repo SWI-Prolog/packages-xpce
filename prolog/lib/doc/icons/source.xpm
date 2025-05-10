@@ -8,7 +8,7 @@ static char * source_xpm[] = {
 "O	c NavyBlue",
 "+	c #008080",
 "@	c #c0c0c0",
-"#	c blue1",
+"#	c blue",
 "$	c #008000",
 "%	c #800080",
 " .......................",

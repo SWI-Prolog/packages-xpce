@@ -2,7 +2,7 @@
 static char * dyn_xpm[] = {
 "16 12 5 1",
 " 	s None	c None",
-".	c tan2",
+".	c #ee9a49",
 "X	c black",
 "o	c gold",
 "O	c firebrick",

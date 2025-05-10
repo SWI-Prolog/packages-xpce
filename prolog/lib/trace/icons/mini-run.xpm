@@ -3,7 +3,7 @@ static char * mini_run_xpm[] = {
 "16 12 4 1",
 " 	s None	c None",
 ".	c black",
-"X	c tan2",
+"X	c #ee9a49",
 "o	c red",
 "         ..     ",
 "        XXX     ",

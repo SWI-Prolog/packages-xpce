@@ -5,7 +5,7 @@ static char * drive_xpm[] = {
 ".	c #808080",
 "X	c #c0c0c0",
 "o	c white",
-"O	c red1",
+"O	c red",
 "+	c black",
 "                ",
 "                ",
