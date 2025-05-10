@@ -949,7 +949,12 @@ r_3d_ellipse(int x, int y, int w, int h, Elevation z, int up)
  */
 void
 r_line(int x1, int y1, int x2, int y2)
-{
+{ Translate(x1, y1);
+  Translate(x2, y2);
+  DEBUG(NAME_draw, Cprintf("r_line(%d, %d, %d, %d)\n",
+			   x1, y1, x2, y2));
+  sdl_set_draw_color(DEFAULT);
+  SDL_RenderLine(context.renderer, x1, y1, x2, y2);
 }
 
 /**
@@ -1013,6 +1018,7 @@ r_image(Image image, int sx, int sy,
 	int x, int y, int w, int h, BoolObj transparent)
 { cairo_surface_t *surface = pceImage2CairoSurface(image);
 
+  Translate(x, y);
   DEBUG(NAME_draw,
 	Cprintf("r_image(%s, %d, %d -> %d, %d, %d, %d, %s)\n",
 		pp(image), sx, sy, x, y, w, h, pp(transparent)));
