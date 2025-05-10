@@ -924,8 +924,6 @@ getPostscriptFormatImage(Image image)
 #include "bitmaps/ol_pulldown.bm"
 #include "bitmaps/ol_pullright.bm"
 #include "bitmaps/ol_cycle.bm"
-#include "bitmaps/cnode.bm"
-#include "bitmaps/enode.bm"
 #include "bitmaps/intarrows.bm"
 
 static Image
@@ -985,6 +983,8 @@ stdXPMImage(Name name, Image *global, char **bits)
 #include "bitmaps/left.xpm"
 #include "bitmaps/right.xpm"
 #include "bitmaps/exclamation.xpm"
+#include "bitmaps/cnode.xpm"
+#include "bitmaps/enode.xpm"
 #endif
 
 #include "bitmaps/white_bm"
@@ -1031,21 +1031,19 @@ standardImages(void)
 	   ol_pulldown_bits, ol_pulldown_width, ol_pulldown_height);
   stdImage(NAME_olCycleImage, NULL,
 	   ol_cycle_bits, ol_cycle_width, ol_cycle_height);
-  stdImage(NAME_treeExpandedImage, NULL,
-	   enode_bits, enode_width, enode_height);
-  stdImage(NAME_treeCollapsedImage, NULL,
-	   cnode_bits, cnode_width, cnode_height);
   stdImage(NAME_intItemImage, &INT_ITEM_IMAGE,
 	   intarrows_bits, intarrows_width, intarrows_height);
 #ifdef XPM_PCEIMAGE
-  stdXPMImage(NAME_pceImage,	     NULL,		  swipl48_xpm);
-  stdXPMImage(NAME_hadjustTileImage, NULL,		  hadjusttile_xpm);
-  stdXPMImage(NAME_vadjustTileImage, NULL,		  vadjusttile_xpm);
-  stdXPMImage(NAME_scrollUpImage,    &SCROLL_UP_IMAGE,	  up_xpm);
-  stdXPMImage(NAME_scrollDownImage,  &SCROLL_DOWN_IMAGE,  down_xpm);
-  stdXPMImage(NAME_scrollLeftImage,  &SCROLL_LEFT_IMAGE,  left_xpm);
-  stdXPMImage(NAME_scrollRightImage, &SCROLL_RIGHT_IMAGE, right_xpm);
-  stdXPMImage(NAME_exclamationImage, &EXCLAMATION_IMAGE,  exclamation_xpm);
+  stdXPMImage(NAME_pceImage,	       NULL,		    swipl48_xpm);
+  stdXPMImage(NAME_hadjustTileImage,   NULL,		    hadjusttile_xpm);
+  stdXPMImage(NAME_vadjustTileImage,   NULL,		    vadjusttile_xpm);
+  stdXPMImage(NAME_scrollUpImage,      &SCROLL_UP_IMAGE,    up_xpm);
+  stdXPMImage(NAME_scrollDownImage,    &SCROLL_DOWN_IMAGE,  down_xpm);
+  stdXPMImage(NAME_scrollLeftImage,    &SCROLL_LEFT_IMAGE,  left_xpm);
+  stdXPMImage(NAME_scrollRightImage,   &SCROLL_RIGHT_IMAGE, right_xpm);
+  stdXPMImage(NAME_exclamationImage,   &EXCLAMATION_IMAGE,  exclamation_xpm);
+  stdXPMImage(NAME_treeExpandedImage,  NULL,		    enode_xpm);
+  stdXPMImage(NAME_treeCollapsedImage, NULL,		    cnode_xpm);
 #endif
 
   stdImage(NAME_nullImage, &NULL_IMAGE,
