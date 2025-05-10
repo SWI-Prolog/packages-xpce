@@ -124,7 +124,7 @@ ws_load_image_file(Image image)
 
   if ( instanceOfObject(image->file, ClassFile) )
   { FileObj f = (FileObj)image->file;
-    char *fname = charArrayToFN((CharArray)f->name);
+    char *fname = charArrayToFN((CharArray)f->path);
     surf0 = IMG_Load(fname);
     if ( !surf0 )
     { Cprintf("Failed to load %s: %s\n", fname, SDL_GetError());
@@ -170,7 +170,12 @@ ws_load_image_file(Image image)
     surf1->w,
     surf1->h,
     surf1->pitch);
+  /* TODO: data of surf is owned by surf1 */
 
+  assign(image, kind, NAME_pixmap);
+  assign(image, depth, toInt(32));
+  assign(image->size, w, toInt(surf1->w));
+  assign(image->size, h, toInt(surf1->h));
   image->ws_ref = surf;
   succeed;
 }
