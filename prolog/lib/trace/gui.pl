@@ -119,7 +119,7 @@
 register_directories :-
     (   member(SpyBase, ['icons/nospy', library('trace/icons/nospy')]),
         absolute_file_name(SpyBase,
-                           [ extensions([xpm]), access(read)],
+                           [ extensions([png]), access(read)],
                            SpyIcon)
     ->  file_directory_name(SpyIcon, Icons),
         pce_image_directory(Icons)
