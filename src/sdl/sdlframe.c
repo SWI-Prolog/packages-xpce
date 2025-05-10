@@ -100,16 +100,21 @@ ws_create_frame(FrameObj fr)
     flags |= SDL_WINDOW_RESIZABLE;
   if ( fr->kind == NAME_popup )
   { flags |= SDL_WINDOW_POPUP_MENU;
-    FrameObj pfr = getAttributeObject(fr, NAME_parent);
-    WsFrame   pf = sdl_frame(pfr, false);
-    DEBUG(NAME_popup, Cprintf("Opening popup for %s\n", pp(pfr)));
-    w = SDL_CreatePopupWindow(
-      pf->ws_window,
-      valInt(fr->area->x),
-      valInt(fr->area->y),
-      valInt(fr->area->w),
-      valInt(fr->area->h),
-      flags);
+    Any pfr = getAttributeObject(fr, NAME_parent);
+    if ( pfr && instanceOfObject(pfr, ClassFrame) )
+    { WsFrame   pf = sdl_frame(pfr, false);
+      DEBUG(NAME_popup, Cprintf("Opening popup for %s\n", pp(pfr)));
+      w = SDL_CreatePopupWindow(
+	pf->ws_window,
+	valInt(fr->area->x),
+	valInt(fr->area->y),
+	valInt(fr->area->w),
+	valInt(fr->area->h),
+	flags);
+    } else
+    { Cprintf("a popup frame can only be created with a parent\n");
+      fail;
+    }
   } else
   { w = SDL_CreateWindow(
       nameToMB(fr->label),
@@ -566,11 +571,15 @@ ws_enable_modal(FrameObj fr, BoolObj val)
  * Set the status of the specified frame.
  *
  * @param fr Pointer to the FrameObj.
- * @param status Name object representing the status.
+ * @param Status of the frame.  One of `unmapped`, `hidden`,
+ * `iconic`, `window` or `full_screen`
  */
 void
 ws_status_frame(FrameObj fr, Name status)
-{
+{ if ( fr->kind == NAME_popup )
+  { if ( status == NAME_hidden )
+      ws_uncreate_frame(fr);	/* TODO: also uncreate the windows? */
+  }
 }
 
 /**
