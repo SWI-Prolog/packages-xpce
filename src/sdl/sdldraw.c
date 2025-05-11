@@ -1311,7 +1311,22 @@ str_width(PceString s, int from, int to, FontObj font)
     cairo_t *cr = cairo_create(context.target);
     cairo_set_font(cr, font);
     cairo_text_extents_t extents;
-    cairo_text_extents(cr, u, &extents);
+    if ( strlen(u) == ulen )
+    { cairo_text_extents(cr, u, &extents);
+    } else
+    { char buf[1000];
+      char *tmp;
+      if ( ulen < 1000 )
+	tmp = buf;
+      else
+	tmp = malloc(ulen+1);
+      memcpy(tmp, u, ulen);
+      tmp[ulen] = 0;
+      assert(strlen(tmp) == ulen);	/* TODO: What if there are 0-bytes */
+      cairo_text_extents(cr, tmp, &extents);
+      if ( tmp != buf )
+	free(tmp);
+    }
     cairo_destroy(cr);
 
     return extents.width;
@@ -1345,7 +1360,20 @@ s_printU(const char *u, size_t len, int x, int y, FontObj font)
   cairo_set_font(cr, font);
   cairo_set_source_color(cr, context.colour);
   cairo_move_to(cr, x, y);
-  cairo_show_text(cr, u);
+  if ( strlen(u) == len )
+  { cairo_show_text(cr, u);
+  } else
+  { char buf[1000];
+    char *tmp;
+    if ( len < 1000 )
+      tmp = buf;
+    else
+      tmp = malloc(len+1);
+    memcpy(tmp, u, len);
+    tmp[len] = 0;
+    assert(strlen(tmp) == len);	/* TODO: What if there are 0-bytes */
+    cairo_show_text(cr, tmp);
+  }
   cairo_destroy(cr);
 }
 
