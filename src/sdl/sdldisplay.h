@@ -41,6 +41,7 @@ typedef struct
 { SDL_Window      *hidden_window;
   SDL_Renderer    *hidden_renderer;
   cairo_surface_t *hidden_surface;
+  cairo_t         *hidden_cairo;
 } ws_display, *WsDisplay;
 
 

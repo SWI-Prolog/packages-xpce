@@ -186,6 +186,7 @@ ws_open_display(DisplayObj d)
   wsd->hidden_renderer = SDL_CreateRenderer(wsd->hidden_window, NULL);
   wsd->hidden_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
 						   64, 64);
+  wsd->hidden_cairo = cairo_create(wsd->hidden_surface);
 }
 
 /**
@@ -201,6 +202,8 @@ ws_quit_display(DisplayObj d)
   { d->ws_ref = NULL;
     SDL_DestroyRenderer(wsd->hidden_renderer);
     SDL_DestroyWindow(wsd->hidden_window);
+    cairo_destroy(wsd->hidden_cairo);
+    cairo_surface_destroy(wsd->hidden_surface);
     unalloc(sizeof(*wsd), wsd);
   }
 }

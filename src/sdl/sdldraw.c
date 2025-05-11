@@ -53,6 +53,7 @@ typedef struct
   FrameObj	frame;			/* Pce's frame of the window */
   DisplayObj	display;		/* Pce's display for the frame */
   cairo_surface_t *target;		/* Target for rendering to */
+  cairo_t      *cr;			/* Cairo context */
   int		offset_x;		/* Paint offset in X direction */
   int		offset_y;		/* Paint offset in Y direction */
   Any		colour;			/* Current colour */
@@ -67,6 +68,7 @@ typedef struct
 #define Y(y) ((y) + context.offset_y)
 #define Translate(x, y)	 { (x) = X(x); (y) = Y(y); }
 #define InvTranslate(x, y) { x -= context.offset_x; y -= context.offset_y; }
+#define CR (context.cr)
 
 #include <gra/graphstate.c>
 
@@ -230,6 +232,7 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
   context.frame      = fr;
   context.display    = d;
   context.target     = wsw->backing;
+  context.cr         = cairo_create(context.target);
   context.offset_x   = valInt(sw->scroll_offset->x);
   context.offset_y   = valInt(sw->scroll_offset->y);
   context.colour     = notDefault(sw->colour) ? sw->colour : d->foreground;
@@ -309,7 +312,9 @@ void
 d_done(void)
 { DEBUG(NAME_redraw, Cprintf("d_done(): open = %d\n", context.open));
   if ( --context.open == 0 )
-  { if ( ctx_stacked )
+  { cairo_destroy(context.cr);
+    context.cr = NULL;
+    if ( ctx_stacked )
       context = ctx_stack[--ctx_stacked];
     else
       reset_context();
@@ -628,22 +633,21 @@ r_box(int x, int y, int w, int h, int r, Any fill)
 	Cprintf("r_box(%d, %d, %d, %d, %d, %s)\n",
 		x, y, w, h, r, pp(fill)));
 
-  cairo_t *cr = cairo_create(context.target);
-  cairo_set_line_width(cr, context.pen);
+  cairo_new_path(CR);
+  cairo_set_line_width(CR, context.pen);
   if ( r )
-    my_cairo_rounded_rectangle(cr, x, y, w, h, r);
+    my_cairo_rounded_rectangle(CR, x, y, w, h, r);
   else
-    cairo_rectangle(cr, x, y, w, h);
+    cairo_rectangle(CR, x, y, w, h);
   if ( notNil(fill) )
   { r_fillpattern(fill, NAME_foreground);
-    cairo_set_source_color(cr, context.fill_pattern);
-    cairo_fill_preserve(cr);
+    cairo_set_source_color(CR, context.fill_pattern);
+    cairo_fill_preserve(CR);
   }
   if ( context.pen )
-  { cairo_set_source_color(cr, context.colour);
-    cairo_stroke(cr);
+  { cairo_set_source_color(CR, context.colour);
+    cairo_stroke(CR);
   }
-  cairo_destroy(cr);
 }
 
 /**
@@ -945,13 +949,12 @@ r_line(int x1, int y1, int x2, int y2)
   DEBUG(NAME_draw, Cprintf("r_line(%d, %d, %d, %d)\n",
 			   x1, y1, x2, y2));
 
-  cairo_t *cr = cairo_create(context.target);
-  cairo_set_source_color(cr, context.colour);
-  cairo_set_line_width(cr, context.pen);
-  cairo_move_to(cr, x1, y1);
-  cairo_line_to(cr, x2, y2);
-  cairo_stroke(cr);
-  cairo_destroy(cr);
+  cairo_new_path(CR);
+  cairo_set_source_color(CR, context.colour);
+  cairo_set_line_width(CR, context.pen);
+  cairo_move_to(CR, x1, y1);
+  cairo_line_to(CR, x2, y2);
+  cairo_stroke(CR);
 }
 
 /**
@@ -1021,10 +1024,9 @@ r_image(Image image, int sx, int sy,
 		pp(image), sx, sy, x, y, w, h, pp(transparent)));
 
   if ( surface )
-  { cairo_t *cr = cairo_create(context.target);
-    cairo_set_source_surface(cr, surface, x, y);
-    cairo_paint(cr);
-    cairo_destroy(cr);
+  { cairo_new_path(CR);
+    cairo_set_source_surface(CR, surface, x, y);
+    cairo_paint(CR);
   }
 }
 
@@ -1049,11 +1051,10 @@ r_fill(int x, int y, int w, int h, Any fill)
     r_fillpattern(fill, NAME_foreground);
 
     if ( instanceOfObject(context.fill_pattern, ClassColour) )
-    { cairo_t *cr = cairo_create(context.target);
-      cairo_set_source_color(cr, context.fill_pattern);
-      cairo_rectangle(cr, x, y, w, h);
-      cairo_fill(cr);
-      cairo_destroy(cr);
+    { cairo_new_path(CR);
+      cairo_set_source_color(CR, context.fill_pattern);
+      cairo_rectangle(CR, x, y, w, h);
+      cairo_fill(CR);
     } else
     { Cprintf("stub: r_fill(%s)\n", pp(context.fill_pattern));
     }
@@ -1069,30 +1070,26 @@ r_fill(int x, int y, int w, int h, Any fill)
 void
 r_fill_polygon(IPoint pts, int n)
 { if ( n <= 0 ) return;
-#if 0
-  SDL_Rect bounds;
 
-  polygon_bb(pts, n, &bounds);
-  cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
-							bounds.w, bounds.h);
-  cairo_t *cr = cairo_create(surface);
+  cairo_new_path(CR);
 
   // 2. Set background to transparent (optional)
-  cairo_set_source_rgba(cr, 0, 0, 0, 0);
-  cairo_paint(cr);
+  cairo_set_source_rgba(CR, 0, 0, 0, 0);
+  cairo_paint(CR);
 
-  cairo_set_source_color(cr, context.fill_pattern);
-  cairo_move_to(cr, pts[0].x - bounds.x, pts[0].y - bounds.y);
+  cairo_set_source_color(CR, context.fill_pattern);
+  int x = pts[0].x;
+  int y = pts[0].y;
+  Translate(x, y);
+  cairo_move_to(CR, x, y);
   for (int i = 1; i < n; i++)
-  { cairo_line_to(cr, pts[i].x - bounds.x, pts[i].y - bounds.y);
+  { int x = pts[i].x;
+    int y = pts[i].y;
+    Translate(x, y);
+    cairo_line_to(CR, x, y);
   }
-  cairo_close_path(cr);
-  cairo_fill(cr);
-  cairo_destroy(cr);
-
-  cairo_draw_surface(surface, bounds.x, bounds.y);
-  cairo_surface_destroy(surface);
-#endif
+  cairo_close_path(CR);
+  cairo_fill(CR);
 }
 
 /**
@@ -1289,14 +1286,16 @@ s_height(FontObj font)
 }
 
 static
-cairo_surface_t *
-ws_font_surface(void)
-{ if ( context.target )
-    return context.target;
+cairo_t *
+ws_font_context(void)
+{ if ( context.cr )
+  { assert(context.open);
+    return context.cr;
+  }
 
   DisplayObj d = CurrentDisplay(NIL);
   WsDisplay wsd = d->ws_ref;
-  return wsd->hidden_surface;
+  return wsd->hidden_cairo;
 }
 
 /**
@@ -1308,12 +1307,11 @@ ws_font_surface(void)
  */
 int
 c_width(wint_t c, FontObj font)
-{ cairo_t *cr = cairo_create(ws_font_surface());
+{ cairo_t *cr = ws_font_context();
   cairo_set_font(cr, font);
   cairo_text_extents_t extents;
   char s[2] = {c};
   cairo_text_extents(cr, s, &extents);
-  cairo_destroy(cr);
 
   return extents.width;
 }
@@ -1341,7 +1339,7 @@ str_width(PceString s, int from, int to, FontObj font)
     size_t ulen;
     const char *u = stringToUTF8(&s2, &ulen);
 
-    cairo_t *cr = cairo_create(ws_font_surface());
+    cairo_t *cr = ws_font_context();
     cairo_set_font(cr, font);
     cairo_text_extents_t extents;
     if ( strlen(u) == ulen )
@@ -1360,7 +1358,6 @@ str_width(PceString s, int from, int to, FontObj font)
       if ( tmp != buf )
 	free(tmp);
     }
-    cairo_destroy(cr);
 
     int w = (int)(extents.width+0.9);  /* round up */
     return w;
@@ -1390,12 +1387,12 @@ s_printU(const char *u, size_t len, int x, int y, FontObj font)
 		u, len, x, y, pp(font), pp(context.colour)));
 
   Translate(x, y);
-  cairo_t *cr = cairo_create(context.target);
-  cairo_set_font(cr, font);
-  cairo_set_source_color(cr, context.colour);
-  cairo_move_to(cr, x, y);
+  cairo_new_path(CR);
+  cairo_set_font(CR, font);
+  cairo_set_source_color(CR, context.colour);
+  cairo_move_to(CR, x, y);
   if ( strlen(u) == len )
-  { cairo_show_text(cr, u);
+  { cairo_show_text(CR, u);
   } else
   { char buf[1000];
     char *tmp;
@@ -1406,9 +1403,8 @@ s_printU(const char *u, size_t len, int x, int y, FontObj font)
     memcpy(tmp, u, len);
     tmp[len] = 0;
     assert(strlen(tmp) == len);	/* TODO: What if there are 0-bytes */
-    cairo_show_text(cr, tmp);
+    cairo_show_text(CR, tmp);
   }
-  cairo_destroy(cr);
 }
 
 /**
