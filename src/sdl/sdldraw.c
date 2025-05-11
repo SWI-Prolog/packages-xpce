@@ -989,12 +989,12 @@ r_image(Image image, int sx, int sy,
 	Cprintf("r_image(%s, %d, %d -> %d, %d, %d, %d, %s)\n",
 		pp(image), sx, sy, x, y, w, h, pp(transparent)));
 
-#if 0
   if ( surface )
-    cairo_draw_surface(surface, x, y);
-#else
-  (void)surface;
-#endif
+  { cairo_t *cr = cairo_create(context.target);
+    cairo_set_source_surface(cr, surface, x, y);
+    cairo_paint(cr);
+    cairo_destroy(cr);
+  }
 }
 
 /**
