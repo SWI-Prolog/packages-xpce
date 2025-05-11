@@ -51,8 +51,7 @@ typedef struct
   PceWindow	window;			/* Pce's notion of the window */
   FrameObj	frame;			/* Pce's frame of the window */
   DisplayObj	display;		/* Pce's display for the frame */
-  SDL_Renderer *renderer;		/* The SDL renderer for the window */
-  SDL_Texture  *target;			/* Target for rendering to */
+  cairo_surface_t *target;		/* Target for rendering to */
   int		offset_x;		/* Paint offset in X direction */
   int		offset_y;		/* Paint offset in Y direction */
   Any		colour;			/* Current colour */
@@ -225,12 +224,10 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
   FrameObj  fr = getFrameWindow(sw, OFF);
   DisplayObj d = fr->display;
   WsWindow wsw = sw->ws_ref;
-  WsFrame  wfr = fr->ws_ref;
 
   context.window     = sw;
   context.frame      = fr;
   context.display    = d;
-  context.renderer   = wfr->ws_renderer;
   context.target     = wsw->backing;
   context.offset_x   = valInt(sw->scroll_offset->x);
   context.offset_y   = valInt(sw->scroll_offset->y);
@@ -241,9 +238,8 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
 
   Translate(x, y);
   NormaliseArea(x, y, w, h);
-  SDL_SetRenderTarget(context.renderer, context.target);
-  SDL_Rect crect = {(float)x, (float)y, (float)w, (float)h};
-  SDL_SetRenderClipRect(context.renderer, &crect);
+  // SDL_Rect crect = {(float)x, (float)y, (float)w, (float)h};
+  // SDL_SetRenderClipRect(context.renderer, &crect);
 
   if ( clear )
     r_fill(x, y, w, h, context.background);
@@ -312,10 +308,7 @@ void
 d_done(void)
 { DEBUG(NAME_redraw, Cprintf("d_done(): open = %d\n", context.open));
   if ( --context.open == 0 )
-  { if ( context.renderer )
-      SDL_SetRenderTarget(context.renderer, NULL);
-
-    if ( ctx_stacked )
+  { if ( ctx_stacked )
       context = ctx_stack[--ctx_stacked];
     else
       reset_context();
@@ -348,43 +341,7 @@ intersection_iarea(IArea a, IArea b)
 static void
 cairo_set_source_color(cairo_t *cr, Colour pce)
 { SDL_Color c = pceColour2SDL_Color(pce);
-  cairo_set_source_rgba(cr, c.r/255.0, c.g/255.0, c.b/255.0, c.a/255.0);
-}
-
-static void
-sdl_set_draw_color(Colour pce)
-{ SDL_Color c = pceColour2SDL_Color(isDefault(pce) ? context.colour : pce);
-  SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
-}
-
-
-/**
- * Draw a Cairo surface at x,y
- *
- * @param surface is the Cairo surface to draw
- * @param x is the X coordinate of the top-left corner
- * @param y is the Y coordinate of the top-left corner
- */
-
-static void
-cairo_draw_surface(cairo_surface_t *surface, int x, int y)
-{ int width    = cairo_image_surface_get_width(surface);
-  int height   = cairo_image_surface_get_height(surface);
-  int stride   = cairo_image_surface_get_stride(surface);
-  Uint32 *data = (Uint32 *)cairo_image_surface_get_data(surface);
-  DEBUG(NAME_cairo,
-	Cprintf("cairo_draw_surface(%d, %d, %dx%d, %d)\n",
-		x, y, width, height, stride));
-  SDL_Surface *sdl_surf = SDL_CreateSurfaceFrom(width, height,
-						SDL_PIXELFORMAT_ARGB8888,
-						data, stride);
-  SDL_Texture *tex = SDL_CreateTextureFromSurface(context.renderer, sdl_surf);
-  SDL_DestroySurface(sdl_surf);
-
-  // 6. Copy texture to renderer
-  SDL_FRect dst = { (float)x, (float)y, (float)width, (float)height };
-  SDL_RenderTexture(context.renderer, tex, NULL, &dst);
-  SDL_DestroyTexture(tex);
+  cairo_set_source_rgba(cr, c.r/256.0, c.g/256.0, c.b/256.0, c.a/256.0);
 }
 
 		 /*******************************
@@ -650,6 +607,7 @@ r_box(int x, int y, int w, int h, int r, Any fill)
     fill = NIL;
   }
 
+#if 0
   if ( context.pen )
   { SDL_FRect r = { x, y, w, h };
     sdl_set_draw_color(DEFAULT);
@@ -658,6 +616,7 @@ r_box(int x, int y, int w, int h, int r, Any fill)
       r.x++, r.y++, r.w-=2, r.h-=2;
     }
   }
+#endif
 }
 
 /**
@@ -820,6 +779,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 
       if ( radius > 0 )			/* with rounded corners */
       { Cprintf("r_3d_box(): with radius\n");
+#if 0
       } else
       { int r = x+w;
 	int b = y+h;
@@ -837,6 +797,10 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 	    { { r-os, y-os }, { r-os, b-os }, { x+os, b-os } };
 	  SDL_RenderLines(context.renderer, pts, 3);
 	}
+#else
+	(void)top_left_color;
+	(void)bottom_right_color;
+#endif
       }
     }
 
@@ -953,8 +917,10 @@ r_line(int x1, int y1, int x2, int y2)
   Translate(x2, y2);
   DEBUG(NAME_draw, Cprintf("r_line(%d, %d, %d, %d)\n",
 			   x1, y1, x2, y2));
+#if 0
   sdl_set_draw_color(DEFAULT);
   SDL_RenderLine(context.renderer, x1, y1, x2, y2);
+#endif
 }
 
 /**
@@ -1023,8 +989,12 @@ r_image(Image image, int sx, int sy,
 	Cprintf("r_image(%s, %d, %d -> %d, %d, %d, %d, %s)\n",
 		pp(image), sx, sy, x, y, w, h, pp(transparent)));
 
+#if 0
   if ( surface )
     cairo_draw_surface(surface, x, y);
+#else
+  (void)surface;
+#endif
 }
 
 /**
@@ -1048,39 +1018,15 @@ r_fill(int x, int y, int w, int h, Any fill)
     r_fillpattern(fill, NAME_foreground);
 
     if ( instanceOfObject(context.fill_pattern, ClassColour) )
-    { SDL_Color c = pceColour2SDL_Color(context.fill_pattern);
-      SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
-      SDL_FRect rect = { (float)x, (float)y, (float)w, (float)h };
-      SDL_RenderFillRect(context.renderer, &rect);
-
+    { cairo_t *cr = cairo_create(context.target);
+      cairo_set_source_color(cr, context.fill_pattern);
+      cairo_rectangle(cr, x, y, w, h);
+      cairo_fill(cr);
+      cairo_destroy(cr);
     } else
     { Cprintf("stub: r_fill(%s)\n", pp(context.fill_pattern));
     }
   }
-}
-
-/**
- * Compute the bounding box of a set of points
- */
-
-static void
-polygon_bb(IPoint pts, int n, SDL_Rect *bounds)
-{ int minx = pts[0].x, maxx = minx;
-  int miny = pts[0].y, maxy = miny;
-
-  for(int i=1; i<n; i++)
-  { int x = pts[i].x;
-    int y = pts[i].y;
-    if ( x < minx ) minx = x;
-    else if ( x > maxx ) maxx = x;
-    if ( y < miny ) miny = y;
-    else if ( y > maxy ) maxy = y;
-  }
-
-  bounds->x = minx;
-  bounds->y = miny;
-  bounds->w = maxx - minx;
-  bounds->h = maxy - miny;
 }
 
 /**
@@ -1092,6 +1038,7 @@ polygon_bb(IPoint pts, int n, SDL_Rect *bounds)
 void
 r_fill_polygon(IPoint pts, int n)
 { if ( n <= 0 ) return;
+#if 0
   SDL_Rect bounds;
 
   polygon_bb(pts, n, &bounds);
@@ -1114,6 +1061,7 @@ r_fill_polygon(IPoint pts, int n)
 
   cairo_draw_surface(surface, bounds.x, bounds.y);
   cairo_surface_destroy(surface);
+#endif
 }
 
 /**
@@ -1140,7 +1088,9 @@ r_caret(int cx, int cy, FontObj font)
  */
 void
 r_fill_triangle(int x1, int y1, int x2, int y2, int x3, int y3)
-{ SDL_Color   c = pceColour2SDL_Color(context.fill_pattern);
+{
+#if 0
+  SDL_Color   c = pceColour2SDL_Color(context.fill_pattern);
   SDL_FColor fc = {.r = c.r/255.0f, .g = c.g/255.0f,
 		   .b = c.b/255.0f, .a = c.a/255.0f };
 
@@ -1156,6 +1106,7 @@ r_fill_triangle(int x1, int y1, int x2, int y2, int x3, int y3)
   };
 
   SDL_RenderGeometry(context.renderer, NULL, verts, 3, NULL, 0);
+#endif
 }
 
 /**
@@ -1372,7 +1323,6 @@ static void
 s_printU(const char *u, size_t len, int x, int y, FontObj font)
 { TTF_Font *ttf = sdl_font(font);
   SDL_Color   c = pceColour2SDL_Color(context.colour);
-  SDL_Surface *surf;
 
   DEBUG(NAME_stub,
 	Cprintf("s_printU(\"%s\", %d, %d, %d, %s) (color: %s)\n",
@@ -1380,6 +1330,7 @@ s_printU(const char *u, size_t len, int x, int y, FontObj font)
 
   Translate(x, y);
   y -= TTF_GetFontAscent(ttf);
+#if 0
   surf = TTF_RenderText_Blended(ttf, u, len, c);
 
   SDL_Texture *texture = SDL_CreateTextureFromSurface(context.renderer, surf);
@@ -1391,6 +1342,9 @@ s_printU(const char *u, size_t len, int x, int y, FontObj font)
 
   SDL_RenderTexture(context.renderer, texture, NULL, &dst);
   SDL_DestroyTexture(texture);
+#else
+  (void)c;
+#endif
 }
 
 /**
@@ -1676,10 +1630,12 @@ str_string(PceString s, FontObj font,
 
   for(n=0, line = lines; n++ < nlines; line++)
   { str_text(font, &line->text, line->x, line->y+baseline);
+#if 0
     if ( flags & TXT_UNDERLINED )
       SDL_RenderLine(context.renderer,
 		     line->x, line->y+baseline+1,
 		     line->x+line->width, line->y+baseline+1);
+#endif
   }
 }
 
@@ -1754,8 +1710,13 @@ str_draw_text_lines(int acc, FontObj font,
 	  int cw = str_advance(&line->text, cn, cn+1, font);
 	  int cy = line->y+baseline+oy+2;
 
+#if 0
 	  sdl_set_draw_color(DEFAULT);
 	  SDL_RenderLine(context.renderer, cx, cy, cx+cw-2, cy);
+#else
+	  (void)cw;
+	  (void)cy;
+#endif
 	  acc = 0;
 	  break;
 	}

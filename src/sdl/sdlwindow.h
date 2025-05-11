@@ -35,9 +35,10 @@
 #ifndef RAYWINDOW_H
 #define RAYWINDOW_H
 #include "SDL3/SDL.h"
+#include <cairo/cairo.h>
 
 typedef struct
-{ SDL_Texture *backing;
+{ cairo_surface_t *backing;
   int w;
   int h;
 } ws_window, *WsWindow;

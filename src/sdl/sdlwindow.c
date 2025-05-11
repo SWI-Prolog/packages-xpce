@@ -67,7 +67,7 @@ ws_uncreate_window(PceWindow sw)
 
   if ( wsw )
   { if ( wsw->backing )
-      SDL_DestroyTexture(wsw->backing);
+      cairo_surface_destroy(wsw->backing);
     unalloc(sizeof(*wsw), wsw);
     sw->ws_ref = NULL;
   }
@@ -95,10 +95,8 @@ ws_create_window(PceWindow sw, PceWindow parent)
 
   wsw->w = valInt(sw->area->w);
   wsw->h = valInt(sw->area->h);
-  wsw->backing = SDL_CreateTexture(wfr->ws_renderer,
-				   SDL_PIXELFORMAT_RGBA8888,
-				   SDL_TEXTUREACCESS_TARGET,
-				   wsw->w,  wsw->h);
+  wsw->backing = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+					    wsw->w,  wsw->h);
   assert(wsw->backing);
 
   DEBUG(NAME_sdl,
@@ -159,11 +157,9 @@ ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
     if ( wsw->backing && (wsw->w != w || wsw->h != h) )
     { wsw->w = w;
       wsw->h = h;
-      SDL_DestroyTexture(wsw->backing);
-      wsw->backing = SDL_CreateTexture(wfr->ws_renderer,
-				       SDL_PIXELFORMAT_RGBA8888,
-				       SDL_TEXTUREACCESS_TARGET,
-				       wsw->w,  wsw->h);
+      cairo_surface_destroy(wsw->backing);
+      wsw->backing = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+						wsw->w,  wsw->h);
       assert(wsw->backing);
       DEBUG(NAME_sdl, Cprintf("Resized %s to %dx%d\n", pp(sw), w, h));
       changed_window(sw, 0, 0, w, h, TRUE);

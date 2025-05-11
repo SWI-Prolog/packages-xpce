@@ -197,13 +197,12 @@ typedef struct
 
 static void
 ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
-{ WsFrame wfr  = fr->ws_ref;
+{ WsFrame  wfr = fr->ws_ref;
   WsWindow wsw = sw->ws_ref;
 
   if ( wsw )
   { Area a = sw->area;
     SDL_FRect dstrect = Area2FRect(a);
-    SDL_FRect srcrect = AreaSize2FRect(a);
 
     dstrect.x += off->x;
     dstrect.y += off->y;
@@ -211,8 +210,19 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
 	  Cprintf("Draw %s in %s %d %d %d %d\n",
 		  pp(sw), pp(fr),
 		  valInt(a->x), valInt(a->y), valInt(a->w), valInt(a->h)));
-    SDL_RenderTexture(wfr->ws_renderer, wsw->backing,
-		      &srcrect, &dstrect);
+
+    int width    = cairo_image_surface_get_width(wsw->backing);
+    int height   = cairo_image_surface_get_height(wsw->backing);
+    int stride   = cairo_image_surface_get_stride(wsw->backing);
+    Uint32 *data = (Uint32 *)cairo_image_surface_get_data(wsw->backing);
+    SDL_Surface *sdl_surf = SDL_CreateSurfaceFrom(width, height,
+						  SDL_PIXELFORMAT_ARGB8888,
+						  data, stride);
+    SDL_Texture *tex = SDL_CreateTextureFromSurface(wfr->ws_renderer,
+						    sdl_surf);
+    SDL_DestroySurface(sdl_surf);
+    SDL_RenderTexture(wfr->ws_renderer, tex, NULL, &dstrect);
+    SDL_DestroyTexture(tex);
 
     if ( instanceOfObject(sw, ClassWindowDecorator) )
     { off->x += (float)valInt(sw->area->x);
