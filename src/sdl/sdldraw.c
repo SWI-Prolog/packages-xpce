@@ -36,6 +36,7 @@
 #include <h/graphics.h>
 #include <h/text.h>
 #include <cairo/cairo.h>
+#include <math.h>
 #include "sdldraw.h"
 #include "sdlcolour.h"
 #include "sdlfont.h"
@@ -590,6 +591,24 @@ r_translate(int x, int y, int *ox, int *oy)
   *oy = y;
 }
 
+void
+my_cairo_rounded_rectangle(cairo_t *cr, double x, double y, double w, double h,
+			   double r)
+{ double x0 = x,     y0 = y;
+  double x1 = x + w, y1 = y + h;
+
+  if (r > w / 2) r = w / 2;
+  if (r > h / 2) r = h / 2;
+
+  cairo_new_sub_path(cr);
+  cairo_arc(cr, x1 - r, y0 + r, r, -90 * M_PI/180.0,   0 * M_PI/180.0);
+  cairo_arc(cr, x1 - r, y1 - r, r,   0 * M_PI/180.0,  90 * M_PI/180.0);
+  cairo_arc(cr, x0 + r, y1 - r, r,  90 * M_PI/180.0, 180 * M_PI/180.0);
+  cairo_arc(cr, x0 + r, y0 + r, r, 180 * M_PI/180.0, 270 * M_PI/180.0);
+  cairo_close_path(cr);
+}
+
+
 /**
  * Draw a rectangle (box) with optional rounded corners and fill.
  *
@@ -605,16 +624,16 @@ r_box(int x, int y, int w, int h, int r, Any fill)
 { Translate(x, y);
   NormaliseArea(x, y, w, h);
 
-  DEBUG(NAME_stub,
+  DEBUG(NAME_draw,
 	Cprintf("r_box(%d, %d, %d, %d, %d, %s)\n",
 		x, y, w, h, r, pp(fill)));
-  int maxr = min(w, h)/2;
-
-  r = min(r, maxr);
 
   cairo_t *cr = cairo_create(context.target);
   cairo_set_line_width(cr, context.pen);
-  cairo_rectangle(cr, x, y, w, h);
+  if ( r )
+    my_cairo_rounded_rectangle(cr, x, y, w, h, r);
+  else
+    cairo_rectangle(cr, x, y, w, h);
   if ( notNil(fill) )
   { r_fillpattern(fill, NAME_foreground);
     cairo_set_source_color(cr, context.fill_pattern);
