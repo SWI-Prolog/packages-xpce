@@ -6,10 +6,9 @@ include("../cmake/PrologPackage.cmake")
 option(RAYLIB "Build with raylib backend instead of X11/MSW" OFF)
 option(SDL    "Build with SDL backend instead of X11/MSW" OFF)
 
-if(SDL)
+if(SDL)				# SDL3 + Cairo
   find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
   find_package(SDL3_image REQUIRED CONFIG)
-  find_package(SDL3_ttf REQUIRED CONFIG)
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(CAIRO REQUIRED cairo)
   set(HAVE_GUI 1)
@@ -17,7 +16,6 @@ if(SDL)
   set(GUI_LIBRARIES
     SDL3::SDL3
     SDL3_image::SDL3_image
-    SDL3_ttf::SDL3_ttf
     ${CAIRO_LIBRARIES})
 elseif(RAYLIB)			# Raylib
   find_package(raylib REQUIRED)
