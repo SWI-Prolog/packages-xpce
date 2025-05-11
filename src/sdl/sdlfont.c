@@ -74,7 +74,7 @@ ws_create_font(FontObj f, DisplayObj d)
     fail;
 
   WsDisplay wsd = d->ws_ref;
-  cairo_t *cr = cairo_create(wsd->hidden_surface);
+  cairo_t *cr = wsd->hidden_cairo;
   cairo_set_font_face(cr, face);
   cairo_set_font_size(cr, (double)valInt(f->points)*font_scale);
   cairo_scaled_font_t *ttf = cairo_get_scaled_font(cr);
@@ -84,7 +84,6 @@ ws_create_font(FontObj f, DisplayObj d)
   cairo_font_extents(cr, &extents);
   cairo_text_extents(cr, "x", &xextents);
   cairo_text_extents(cr, "w", &wextents);
-  cairo_destroy(cr);
 
   WsFont wsf = alloc(sizeof(ws_font));
   memset(wsf, 0, sizeof(ws_font));

@@ -1301,7 +1301,48 @@ c_width(wint_t c, FontObj font)
   char s[2] = {c};
   cairo_text_extents(cr, s, &extents);
 
-  return extents.width;
+  int w = (int)extents.x_advance;
+
+  return w;
+}
+
+void
+s_extents(PceString s, int from, int to, FontObj font,
+	  cairo_text_extents_t * extents)
+{ string s2 = *s;
+  if ( from > s2.s_size )
+    from = s2.s_size;
+  if ( from+to > s2.s_size )
+    to = s2.s_size - from;
+
+  if ( s2.s_iswide )
+  { s2.s_textW += from;
+  } else
+  { s2.s_textA += from;
+  }
+  s2.s_size = to-from;
+
+  size_t ulen;
+  const char *u = stringToUTF8(&s2, &ulen);
+
+  cairo_t *cr = ws_font_context();
+  cairo_set_font(cr, font);
+  if ( strlen(u) == ulen )
+  { cairo_text_extents(cr, u, extents);
+  } else
+  { char buf[1000];
+    char *tmp;
+    if ( ulen < 1000 )
+      tmp = buf;
+    else
+      tmp = malloc(ulen+1);
+    memcpy(tmp, u, ulen);
+    tmp[ulen] = 0;
+    assert(strlen(tmp) == ulen);	/* TODO: What if there are 0-bytes */
+    cairo_text_extents(cr, tmp, extents);
+    if ( tmp != buf )
+      free(tmp);
+  }
 }
 
 /**
@@ -1316,37 +1357,9 @@ c_width(wint_t c, FontObj font)
 int
 str_width(PceString s, int from, int to, FontObj font)
 { if ( to > from )
-  { string s2 = *s;
-    if ( s2.s_iswide )
-    { s2.s_textW += from;
-    } else
-    { s2.s_textA += from;
-    }
-    s2.s_size = to-from;
+  { cairo_text_extents_t extents;
 
-    size_t ulen;
-    const char *u = stringToUTF8(&s2, &ulen);
-
-    cairo_t *cr = ws_font_context();
-    cairo_set_font(cr, font);
-    cairo_text_extents_t extents;
-    if ( strlen(u) == ulen )
-    { cairo_text_extents(cr, u, &extents);
-    } else
-    { char buf[1000];
-      char *tmp;
-      if ( ulen < 1000 )
-	tmp = buf;
-      else
-	tmp = malloc(ulen+1);
-      memcpy(tmp, u, ulen);
-      tmp[ulen] = 0;
-      assert(strlen(tmp) == ulen);	/* TODO: What if there are 0-bytes */
-      cairo_text_extents(cr, tmp, &extents);
-      if ( tmp != buf )
-	free(tmp);
-    }
-
+    s_extents(s, from, to, font, &extents);
     int w = (int)(extents.width+0.9);  /* round up */
     return w;
   } else
@@ -1360,12 +1373,19 @@ str_width(PceString s, int from, int to, FontObj font)
  * @param s The string object.
  * @param from The starting index of the substring.
  * @param to The ending index of the substring.
- * @param f The font object.
+ * @param font The font object.
  * @return The advance width of the substring.
  */
 int
-str_advance(PceString s, int from, int to, FontObj f)
-{ return str_width(s, from, to, f); /* for now */
+str_advance(PceString s, int from, int to, FontObj font)
+{ if ( to > from )
+  { cairo_text_extents_t extents;
+
+    s_extents(s, from, to, font, &extents);
+    int w = (int)(extents.x_advance+0.5);
+    return w;
+  } else
+    return 0;
 }
 
 static void
