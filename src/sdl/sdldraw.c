@@ -175,7 +175,7 @@ d_ensure_context(void)
   { push_context();
     d_ensure_display();
     WsDisplay wsd = context.display->ws_ref;
-    context.renderer = wsd->hidden_renderer;
+    context.target = wsd->hidden_surface;
   }
 }
 #endif
@@ -1266,6 +1266,17 @@ s_height(FontObj font)
   return wsf ? wsf->height : 0;
 }
 
+static
+cairo_surface_t *
+ws_font_surface(void)
+{ if ( context.target )
+    return context.target;
+
+  DisplayObj d = CurrentDisplay(NIL);
+  WsDisplay wsd = d->ws_ref;
+  return wsd->hidden_surface;
+}
+
 /**
  * Retrieve the width of a specific character in a font.
  *
@@ -1275,7 +1286,7 @@ s_height(FontObj font)
  */
 int
 c_width(wint_t c, FontObj font)
-{ cairo_t *cr = cairo_create(context.target);
+{ cairo_t *cr = cairo_create(ws_font_surface());
   cairo_set_font(cr, font);
   cairo_text_extents_t extents;
   char s[2] = {c};
@@ -1308,7 +1319,7 @@ str_width(PceString s, int from, int to, FontObj font)
     size_t ulen;
     const char *u = stringToUTF8(&s2, &ulen);
 
-    cairo_t *cr = cairo_create(context.target);
+    cairo_t *cr = cairo_create(ws_font_surface());
     cairo_set_font(cr, font);
     cairo_text_extents_t extents;
     if ( strlen(u) == ulen )
@@ -1329,7 +1340,8 @@ str_width(PceString s, int from, int to, FontObj font)
     }
     cairo_destroy(cr);
 
-    return extents.width;
+    int w = (int)(extents.width+0.9);  /* round up */
+    return w;
   } else
     return 0;
 }
@@ -1611,10 +1623,7 @@ str_size(PceString s, FontObj font, int *width, int *height)
   str_break_into_lines(s, lines, &nlines, MAX_TEXT_LINES);
   for(n = 0, line = lines; n++ < nlines; line++)
   { if ( line->text.s_size > 0 )
-    { int lw;
-
-      lw = 0; //lbearing(str_fetch(&line->text, 0));
-      lw += str_advance(&line->text, 0, line->text.s_size, font);
+    { int lw = str_width(&line->text, 0, line->text.s_size, font);
 
       if ( w < lw )
 	w = lw;
