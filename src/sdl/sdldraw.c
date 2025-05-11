@@ -1116,25 +1116,13 @@ r_caret(int cx, int cy, FontObj font)
  */
 void
 r_fill_triangle(int x1, int y1, int x2, int y2, int x3, int y3)
-{
-#if 0
-  SDL_Color   c = pceColour2SDL_Color(context.fill_pattern);
-  SDL_FColor fc = {.r = c.r/255.0f, .g = c.g/255.0f,
-		   .b = c.b/255.0f, .a = c.a/255.0f };
+{ ipoint pts[3] =
+    { {.x = x1, .y = y1 },
+      {.x = x2, .y = y2 },
+      {.x = x3, .y = y3 }
+    };
 
-  DEBUG(NAME_stub,
-	Cprintf("stub: r_fill_triangle(%d, %d, %d, %d, %d, %d, %s)\n",
-		x1, y1, x2, y2, x3, y3, pp(context.fill_pattern)));
-
-  // Create 3 vertices with positions and uniform color
-  SDL_Vertex verts[3] = {
-    { .position = { (float)x1, (float)y1 }, .color = fc },
-    { .position = { (float)x2, (float)y2 }, .color = fc },
-    { .position = { (float)x3, (float)y3 }, .color = fc },
-  };
-
-  SDL_RenderGeometry(context.renderer, NULL, verts, 3, NULL, 0);
-#endif
+  r_fill_polygon(pts, 3);
 }
 
 /**

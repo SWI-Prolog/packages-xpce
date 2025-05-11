@@ -94,7 +94,7 @@ RedrawAreaTextCursor(TextCursor c, Area a)
       pts[i].x = cx;  pts[i].y = y+h; i++;
       pts[i].x = x+w; pts[i].y = cy;  i++;
 
-      r_fillpattern(GREY50_IMAGE, NAME_foreground);
+      r_fillpattern(GREY50_COLOUR, NAME_foreground);
       r_fill_polygon(pts, i);
     }
   } else /*if ( c->style == NAME_block )*/
