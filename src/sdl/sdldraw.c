@@ -944,10 +944,14 @@ r_line(int x1, int y1, int x2, int y2)
   Translate(x2, y2);
   DEBUG(NAME_draw, Cprintf("r_line(%d, %d, %d, %d)\n",
 			   x1, y1, x2, y2));
-#if 0
-  sdl_set_draw_color(DEFAULT);
-  SDL_RenderLine(context.renderer, x1, y1, x2, y2);
-#endif
+
+  cairo_t *cr = cairo_create(context.target);
+  cairo_set_source_color(cr, context.colour);
+  cairo_set_line_width(cr, context.pen);
+  cairo_move_to(cr, x1, y1);
+  cairo_line_to(cr, x2, y2);
+  cairo_stroke(cr);
+  cairo_destroy(cr);
 }
 
 /**
