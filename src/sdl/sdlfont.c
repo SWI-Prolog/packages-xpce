@@ -36,6 +36,7 @@
 #include <h/graphics.h>
 #include <stdbool.h>
 #include "sdlfont.h"
+#include "sdldisplay.h"
 
 static bool   ttf_initialized = false;
 static double font_scale = 1.0;
@@ -51,8 +52,12 @@ static double font_scale = 1.0;
 status
 ws_create_font(FontObj f, DisplayObj d)
 { if ( !ttf_initialized )
-  { ttf_initialized = true;
-    TTF_Init();
+  { if ( isDefault(d) )
+      d = CurrentDisplay(NIL);
+    if ( !openDisplay(d) )
+      fail;
+
+    ttf_initialized = true;
     Real r = getClassVariableValueObject(f, NAME_scale);
     if ( r )
       font_scale = valReal(r);
@@ -61,17 +66,35 @@ ws_create_font(FontObj f, DisplayObj d)
   if ( f->ws_ref )		/* already done */
     succeed;
 
-  TTF_Font *ttf = f->ws_ref = TTF_OpenFont(
-    "/usr/share/fonts/dejavu-sans-mono-fonts/DejaVuSansMono.ttf",
-    (int)((double)valInt(f->points)*font_scale)+0.5);
-  if ( !ttf )
+  cairo_font_face_t *face = cairo_toy_font_face_create(
+    "monospace",
+    CAIRO_FONT_SLANT_NORMAL,
+    CAIRO_FONT_WEIGHT_NORMAL);
+  if ( !face )
     fail;
 
-  int xw, ww, xminy, xmaxy;
-  TTF_GetGlyphMetrics(ttf, 'x', NULL, NULL, &xminy, &xmaxy, &xw);
-  TTF_GetGlyphMetrics(ttf, 'w', NULL, NULL, NULL, NULL, &ww);
-  assign(f, ex, toInt(xmaxy-xminy));
-  assign(f, fixed_width, xw==ww ? ON : OFF);
+  WsDisplay wsd = d->ws_ref;
+  cairo_t *cr = cairo_create(wsd->hidden_surface);
+  cairo_set_font_face(cr, face);
+  cairo_set_font_size(cr, (double)valInt(f->points)*font_scale);
+  cairo_scaled_font_t *ttf = cairo_get_scaled_font(cr);
+  ttf = cairo_scaled_font_reference(ttf);
+  cairo_font_extents_t extents;
+  cairo_text_extents_t xextents, wextents;
+  cairo_font_extents(cr, &extents);
+  cairo_text_extents(cr, "x", &xextents);
+  cairo_text_extents(cr, "w", &wextents);
+  cairo_destroy(cr);
+
+  WsFont wsf = alloc(sizeof(ws_font));
+  memset(wsf, 0, sizeof(ws_font));
+  wsf->font    = ttf;
+  wsf->ascent  = extents.ascent;
+  wsf->descent = extents.descent;
+  wsf->height  = extents.height;
+  f->ws_ref = wsf;
+  assign(f, ex, toInt(xextents.height));
+  assign(f, fixed_width, xextents.width==wextents.width ? ON : OFF);
 
   succeed;
 }
@@ -85,9 +108,11 @@ ws_create_font(FontObj f, DisplayObj d)
  */
 void
 ws_destroy_font(FontObj f, DisplayObj d)
-{ if ( f->ws_ref )
-  { TTF_CloseFont(f->ws_ref);
-    f->ws_ref = NULL;
+{ WsFont wsf = f->ws_ref;
+  if ( wsf )
+  { f->ws_ref = NULL;
+    cairo_scaled_font_destroy(wsf->font);
+    unalloc(sizeof(ws_font), wsf);
   }
 }
 

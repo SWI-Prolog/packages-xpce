@@ -35,12 +35,27 @@
 #ifndef RAYFONT_H
 #define RAYFONT_H
 #include <SDL3_ttf/SDL_ttf.h>
+#include <cairo/cairo.h>
 
-static inline TTF_Font *
-sdl_font(FontObj f)
-{ if ( !f->ws_ref && !ws_create_font(f, DEFAULT) )
+typedef struct
+{ cairo_scaled_font_t *font;
+  double ascent;
+  double descent;
+  double height;
+} ws_font, *WsFont;
+
+static inline WsFont
+ws_get_font(FontObj f)
+{ WsFont wsf = f->ws_ref;
+  if ( !wsf && !ws_create_font(f, DEFAULT) )
     return NULL;
   return f->ws_ref;
+}
+
+static inline cairo_scaled_font_t *
+cairo_font(FontObj f)
+{ WsFont wsf = ws_get_font(f);
+  return wsf ? wsf->font : NULL;
 }
 
 status ws_create_font(FontObj f, DisplayObj d);

@@ -344,6 +344,15 @@ cairo_set_source_color(cairo_t *cr, Colour pce)
   cairo_set_source_rgba(cr, c.r/256.0, c.g/256.0, c.b/256.0, c.a/256.0);
 }
 
+static void
+cairo_set_font(cairo_t *cr, FontObj pce)
+{ WsFont wsf = ws_get_font(pce);
+  if ( wsf )
+    cairo_set_scaled_font(cr, wsf->font);
+}
+
+
+
 		 /*******************************
 		 *      DRAWING PRIMITIVES      *
 		 *******************************/
@@ -1228,8 +1237,8 @@ s_default_char(FontObj font)
  */
 int
 s_ascent(FontObj font)
-{ TTF_Font *ttf = sdl_font(font);
-  return TTF_GetFontAscent(ttf);
+{ WsFont wsf = ws_get_font(font);
+  return wsf ? wsf->ascent : 0;
 }
 
 /**
@@ -1240,8 +1249,8 @@ s_ascent(FontObj font)
  */
 int
 s_descent(FontObj font)
-{ TTF_Font *ttf = sdl_font(font);
-  return TTF_GetFontDescent(ttf);
+{ WsFont wsf = ws_get_font(font);
+  return wsf ? wsf->descent : 0;
 }
 
 /**
@@ -1253,8 +1262,8 @@ s_descent(FontObj font)
  */
 int
 s_height(FontObj font)
-{ TTF_Font *ttf = sdl_font(font);
-  return TTF_GetFontLineSkip(ttf);
+{ WsFont wsf = ws_get_font(font);
+  return wsf ? wsf->height : 0;
 }
 
 /**
@@ -1266,10 +1275,14 @@ s_height(FontObj font)
  */
 int
 c_width(wint_t c, FontObj font)
-{ TTF_Font *ttf = sdl_font(font);
-  int w;
-  TTF_GetGlyphMetrics(ttf, c, NULL, NULL, NULL, NULL, &w);
-  return w;
+{ cairo_t *cr = cairo_create(context.target);
+  cairo_set_font(cr, font);
+  cairo_text_extents_t extents;
+  char s[2] = {c};
+  cairo_text_extents(cr, s, &extents);
+  cairo_destroy(cr);
+
+  return extents.width;
 }
 
 /**
@@ -1284,8 +1297,7 @@ c_width(wint_t c, FontObj font)
 int
 str_width(PceString s, int from, int to, FontObj font)
 { if ( to > from )
-  { TTF_Font *ttf = sdl_font(font);
-    string s2 = *s;
+  { string s2 = *s;
     if ( s2.s_iswide )
     { s2.s_textW += from;
     } else
@@ -1296,10 +1308,13 @@ str_width(PceString s, int from, int to, FontObj font)
     size_t ulen;
     const char *u = stringToUTF8(&s2, &ulen);
 
-    int ext; size_t cnt;
-    TTF_MeasureString(ttf, u, ulen, 1000000, &ext, &cnt);
+    cairo_t *cr = cairo_create(context.target);
+    cairo_set_font(cr, font);
+    cairo_text_extents_t extents;
+    cairo_text_extents(cr, u, &extents);
+    cairo_destroy(cr);
 
-    return ext;
+    return extents.width;
   } else
     return 0;
 }
@@ -1321,30 +1336,17 @@ str_advance(PceString s, int from, int to, FontObj f)
 
 static void
 s_printU(const char *u, size_t len, int x, int y, FontObj font)
-{ TTF_Font *ttf = sdl_font(font);
-  SDL_Color   c = pceColour2SDL_Color(context.colour);
-
-  DEBUG(NAME_stub,
+{ DEBUG(NAME_stub,
 	Cprintf("s_printU(\"%s\", %d, %d, %d, %s) (color: %s)\n",
 		u, len, x, y, pp(font), pp(context.colour)));
 
   Translate(x, y);
-  y -= TTF_GetFontAscent(ttf);
-#if 0
-  surf = TTF_RenderText_Blended(ttf, u, len, c);
-
-  SDL_Texture *texture = SDL_CreateTextureFromSurface(context.renderer, surf);
-  SDL_DestroySurface(surf);
-
-  float tex_w, tex_h;
-  SDL_GetTextureSize(texture, &tex_w, &tex_h);
-  SDL_FRect dst = { (float)x, (float)y, tex_w, tex_h };
-
-  SDL_RenderTexture(context.renderer, texture, NULL, &dst);
-  SDL_DestroyTexture(texture);
-#else
-  (void)c;
-#endif
+  cairo_t *cr = cairo_create(context.target);
+  cairo_set_font(cr, font);
+  cairo_set_source_color(cr, context.colour);
+  cairo_move_to(cr, x, y);
+  cairo_show_text(cr, u);
+  cairo_destroy(cr);
 }
 
 /**

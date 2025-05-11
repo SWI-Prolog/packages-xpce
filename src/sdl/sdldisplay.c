@@ -184,6 +184,8 @@ ws_open_display(DisplayObj d)
     "xpce hidden window", 64, 64,
     SDL_WINDOW_HIDDEN);
   wsd->hidden_renderer = SDL_CreateRenderer(wsd->hidden_window, NULL);
+  wsd->hidden_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+						   64, 64);
 }
 
 /**
