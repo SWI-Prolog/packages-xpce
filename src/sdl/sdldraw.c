@@ -611,21 +611,20 @@ r_box(int x, int y, int w, int h, int r, Any fill)
   int maxr = min(w, h)/2;
 
   r = min(r, maxr);
-  if ( notNil(fill) && r == 0 )
-  { r_fill(x, y, w, h, fill);
-    fill = NIL;
-  }
 
-#if 0
-  if ( context.pen )
-  { SDL_FRect r = { x, y, w, h };
-    sdl_set_draw_color(DEFAULT);
-    for(int i=0; i<context.pen; i++)
-    { SDL_RenderRect(context.renderer, &r);
-      r.x++, r.y++, r.w-=2, r.h-=2;
-    }
+  cairo_t *cr = cairo_create(context.target);
+  cairo_set_line_width(cr, context.pen);
+  cairo_rectangle(cr, x, y, w, h);
+  if ( notNil(fill) )
+  { r_fillpattern(fill, NAME_foreground);
+    cairo_set_source_color(cr, context.fill_pattern);
+    cairo_fill_preserve(cr);
   }
-#endif
+  if ( context.pen )
+  { cairo_set_source_color(cr, context.colour);
+    cairo_stroke(cr);
+  }
+  cairo_destroy(cr);
 }
 
 /**
