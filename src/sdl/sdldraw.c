@@ -1314,8 +1314,12 @@ s_extents(PceString s, int from, int to, FontObj font,
 { string s2 = *s;
   if ( from > s2.s_size )
     from = s2.s_size;
-  if ( from+to > s2.s_size )
-    to = s2.s_size - from;
+  if ( to > s2.s_size )
+    to = s2.s_size;
+  if ( to <= from )
+  { memset(extents, 0, sizeof(*extents));
+    return;
+  }
 
   if ( s2.s_iswide )
   { s2.s_textW += from;

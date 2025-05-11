@@ -85,7 +85,6 @@ ws_uncreate_window(PceWindow sw)
 status
 ws_create_window(PceWindow sw, PceWindow parent)
 { FrameObj fr = getFrameWindow(sw, OFF);
-  WsFrame wfr = fr->ws_ref;
   WsWindow wsw = sw->ws_ref;
 
   if ( !wsw )
@@ -150,9 +149,7 @@ ws_reassociate_ws_window(PceWindow from, PceWindow to)
 void
 ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
 { if ( ws_created_window(sw) )
-  { FrameObj fr = getFrameWindow(sw, OFF);
-    WsWindow wsw = sw->ws_ref;
-    WsFrame  wfr = fr->ws_ref;
+  { WsWindow wsw = sw->ws_ref;
 
     if ( wsw->backing && (wsw->w != w || wsw->h != h) )
     { wsw->w = w;

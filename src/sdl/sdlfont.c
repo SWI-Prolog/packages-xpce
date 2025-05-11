@@ -51,10 +51,11 @@ static double font_scale = 1.0;
  */
 status
 ws_create_font(FontObj f, DisplayObj d)
-{ if ( !ttf_initialized )
-  { if ( isDefault(d) )
-      d = CurrentDisplay(NIL);
-    if ( !openDisplay(d) )
+{ if ( isDefault(d) )
+    d = CurrentDisplay(NIL);
+
+  if ( !ttf_initialized )
+  { if ( !openDisplay(d) )
       fail;
 
     ttf_initialized = true;
