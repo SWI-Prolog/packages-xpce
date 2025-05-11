@@ -46,6 +46,8 @@
 #include "sdlwindow.h"
 
 #define MAX_CTX_DEPTH (10)		/* Max draw context depth */
+#define UNDERLINE_PEN 1.0
+#define UNDERLINE_SEP 2.0
 
 typedef struct
 { int		open;			/* Allow for nested open */
@@ -1695,12 +1697,14 @@ str_string(PceString s, FontObj font,
 
   for(n=0, line = lines; n++ < nlines; line++)
   { str_text(font, &line->text, line->x, line->y+baseline);
-#if 0
     if ( flags & TXT_UNDERLINED )
-      SDL_RenderLine(context.renderer,
-		     line->x, line->y+baseline+1,
-		     line->x+line->width, line->y+baseline+1);
-#endif
+    { cairo_new_path(CR);
+      cairo_set_line_width(CR, UNDERLINE_PEN);
+      double y = line->y+baseline+UNDERLINE_SEP;
+      cairo_move_to(CR, line->x, y);
+      cairo_line_to(CR, line->x+line->width, y);
+      cairo_stroke(CR);
+    }
   }
 }
 
@@ -1772,16 +1776,15 @@ str_draw_text_lines(int acc, FontObj font,
 
 	if ( (int)tolower(c) == acc )
 	{ cx += str_advance(&line->text, 0, cn, font);
-	  int cw = str_advance(&line->text, cn, cn+1, font);
-	  int cy = line->y+baseline+oy+2;
+	  int cw = str_width(&line->text, cn, cn+1, font);
+	  int cy = line->y+baseline+oy+UNDERLINE_SEP;
 
-#if 0
-	  sdl_set_draw_color(DEFAULT);
-	  SDL_RenderLine(context.renderer, cx, cy, cx+cw-2, cy);
-#else
-	  (void)cw;
-	  (void)cy;
-#endif
+	  cairo_new_path(CR);
+	  cairo_set_line_width(CR, UNDERLINE_PEN);
+	  cairo_move_to(CR, cx, cy);
+	  cairo_line_to(CR, cx+cw, cy);
+	  cairo_stroke(CR);
+
 	  acc = 0;
 	  break;
 	}
