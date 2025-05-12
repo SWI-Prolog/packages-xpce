@@ -159,6 +159,7 @@ ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
 						wsw->w,  wsw->h);
       assert(wsw->backing);
       DEBUG(NAME_sdl, Cprintf("Resized %s to %dx%d\n", pp(sw), w, h));
+      send(sw, NAME_resize, EAV);
       changed_window(sw, 0, 0, w, h, TRUE);
       addChain(ChangedWindows, sw);
     }
