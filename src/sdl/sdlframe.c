@@ -85,6 +85,18 @@ ws_uncreate_frame(FrameObj fr)
   }
 }
 
+static SDL_Window *
+sdl_parent_window(FrameObj fr)
+{ Any pfr = getAttributeObject(fr, NAME_parent);
+  if ( pfr && instanceOfObject(pfr, ClassFrame) )
+  { WsFrame pf = sdl_frame(pfr, false);
+    if ( pf )
+      return pf->ws_window;
+  }
+
+  return NULL;
+}
+
 /**
  * Create the specified frame.
  *
@@ -95,26 +107,21 @@ status
 ws_create_frame(FrameObj fr)
 { SDL_WindowFlags flags = 0;
   SDL_Window *w = NULL;
+  SDL_Window *parent = NULL;
 
   if ( fr->can_resize == ON )
     flags |= SDL_WINDOW_RESIZABLE;
-  if ( fr->kind == NAME_popup )
-  { flags |= SDL_WINDOW_POPUP_MENU;
-    Any pfr = getAttributeObject(fr, NAME_parent);
-    if ( pfr && instanceOfObject(pfr, ClassFrame) )
-    { WsFrame   pf = sdl_frame(pfr, false);
-      DEBUG(NAME_popup, Cprintf("Opening popup for %s\n", pp(pfr)));
-      w = SDL_CreatePopupWindow(
-	pf->ws_window,
-	valInt(fr->area->x),
-	valInt(fr->area->y),
-	valInt(fr->area->w),
-	valInt(fr->area->h),
-	flags);
-    } else
-    { Cprintf("a popup frame can only be created with a parent\n");
-      fail;
-    }
+
+  if ( fr->kind == NAME_popup && (parent=sdl_parent_window(fr)) )
+  { DEBUG(NAME_popup, Cprintf("Creating popup frame %s\n", pp(fr)));
+    flags |= SDL_WINDOW_POPUP_MENU;
+    w = SDL_CreatePopupWindow(
+      parent,
+      valInt(fr->area->x),
+      valInt(fr->area->y),
+      valInt(fr->area->w),
+      valInt(fr->area->h),
+      flags);
   } else
   { w = SDL_CreateWindow(
       nameToMB(fr->label),
