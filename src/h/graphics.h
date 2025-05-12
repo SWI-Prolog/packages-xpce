@@ -662,6 +662,8 @@ End;
   ABSTRACT_DEVICE \
   FrameObj	frame;			/* Frame we are member of */ \
   PceWindow	decoration;		/* Window holding decorations */ \
+  Chain		subwindows;		/* Displayed sub windows */ \
+  PceWindow	parent;			/* Window I'm a subwindow of */ \
   Area		bounding_box;		/* Union of graphicals */ \
   TileObj	tile;			/* Area managing tile */ \
   Code		resize_message;		/* Message send after a resize */ \

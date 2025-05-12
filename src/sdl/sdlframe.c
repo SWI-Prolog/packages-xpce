@@ -225,10 +225,31 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
     SDL_DestroyTexture(tex);
 
     if ( instanceOfObject(sw, ClassWindowDecorator) )
-    { off->x += (float)valInt(sw->area->x);
-      off->y += (float)valInt(sw->area->y);
+    { foffset off2;
+      off2.x = off->x + (float)valInt(sw->area->x);
+      off2.y = off->y + (float)valInt(sw->area->y);
       WindowDecorator dw = (WindowDecorator)sw;
-      ws_draw_window(fr, dw->window, off);
+      ws_draw_window(fr, dw->window, &off2);
+    }
+    if ( notNil(sw->subwindows) && !emptyChain(sw->subwindows) )
+    { Cell cell;
+
+      for_cell(cell, sw->subwindows)
+      { PceWindow sub = cell->value;
+	PceWindow me = DEFAULT;
+	Int x, y;
+	get_absolute_xy_graphical((Graphical)sub, (Device *)&me, &x, &y);
+	assert(me == sw);
+
+	foffset off2;
+	off2.x = off->x + (float)(valInt(sw->area->x) + valInt(x));
+	off2.y = off->y + (float)(valInt(sw->area->y) + valInt(y));
+	DEBUG(NAME_sdl,
+	      Cprintf("Drawing subwindow %s of %s at %f,%f\n",
+		      pp(sub), pp(sw), pp(me), off2.x, off2.y));
+
+	ws_draw_window(fr, sub, &off2);
+      }
     }
   }
 }
@@ -240,6 +261,8 @@ ws_draw_frame(FrameObj fr)
 
   WsFrame wfr = fr->ws_ref;
 
+  DEBUG(NAME_sdl,
+	Cprintf("BEGIN ws_draw_frame(%s)\n", pp(fr)));
   assert(instanceOfObject(fr->background, ClassColour));
   SDL_Color c = pceColour2SDL_Color(fr->background);
   SDL_SetRenderDrawColor(wfr->ws_renderer, c.r, c.g, c.b, c.a);
@@ -250,6 +273,8 @@ ws_draw_frame(FrameObj fr)
     ws_draw_window(fr, cell->value, &off);
   }
   SDL_RenderPresent(wfr->ws_renderer);
+  DEBUG(NAME_sdl,
+	Cprintf("END ws_draw_frame(%s)\n", pp(fr)));
 
   return true;
 }

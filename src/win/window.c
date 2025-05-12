@@ -111,7 +111,17 @@ uncreateWindow(PceWindow sw)
 { DEBUG(NAME_window, Cprintf("uncreateWindow(%s)\n", pp(sw)));
 
   deleteChain(ChangedWindows, sw);
-  ws_uncreate_window(sw);
+
+  if ( ws_created_window(sw) )
+  { ws_uncreate_window(sw);
+    PceWindow parent;
+    if ( notNil((parent=sw->parent)) && notNil(parent->subwindows) )
+    { DEBUG(NAME_window,
+	    Cprintf("Delete subwindow %s of %s\n", pp(sw), pp(parent)));
+      deleteChain(parent->subwindows, sw);
+      assign(sw, parent, NIL);
+    }
+  }
 
   succeed;
 }
@@ -250,6 +260,15 @@ createWindow(PceWindow sw, PceWindow parent)
       assign(sw, colour, parent->colour);
     if ( isDefault(sw->background) )
       assign(sw, background, parent->background);
+    if ( !instanceOfObject(parent, ClassWindowDecorator) )
+    { DEBUG(NAME_window,
+	    Cprintf("Make %s a subwindow of %s\n", pp(sw), pp(parent)));
+      if ( isNil(parent->subwindows) )
+	assign(parent, subwindows, newObject(ClassChain, sw, EAV));
+      else
+	addChain(parent->subwindows, sw);
+      assign(sw, parent, parent);
+    }
   } else
   { DisplayObj d;
 
@@ -2224,6 +2243,10 @@ static vardecl var_window[] =
      NAME_organisation, "Frame the window is member of"),
   IV(NAME_decoration, "window_decorator*", IV_GET,
      NAME_appearance, "Window displaying me and my decorations"),
+  IV(NAME_subwindows, "chain*", IV_GET,
+     NAME_organisation, "Windows displayed on me"),
+  IV(NAME_parent, "window*", IV_GET,
+     NAME_organisation, "Window on which I am displayed"),
   IV(NAME_boundingBox, "area", IV_NONE,
      NAME_area, "Union of graphicals"),
   IV(NAME_tile, "tile*", IV_NONE,
