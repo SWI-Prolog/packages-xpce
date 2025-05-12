@@ -594,10 +594,21 @@ eventPopup(PopupObj p, EventObj ev)
 		    pp(p->preview), pp(p->context), pp(sw), pp(ew)));
       send(p, NAME_close, EAV);
       if ( ngrab )
-      { DEBUG(NAME_popup, Cprintf("Not grabbed; executing\n"));
+      { DEBUG(NAME_popup, Cprintf("Not grabbed; executing, context = %s\n",
+				  pp(p->context)));
+	Any exec_context = EAV;
 	if ( instanceOfObject(p->context, ClassMenuBar) )
-	  currentMenuBar(p->context, NIL);
-	send(p, NAME_execute, p->context, EAV);
+	{ currentMenuBar(p->context, NIL);
+	  exec_context = p->context;
+	} else if ( instanceOfObject(p->context, ClassPopupGesture) )
+	{ PopupGesture g = p->context;
+	  Cprintf("Popup context = %s\n", pp(g));
+	  exec_context = g->context;
+	} else
+	{ Cprintf("Popup execution has no context\n");
+	}
+	Cprintf("exec_context = %s\n", pp(exec_context));
+	send(p, NAME_execute, exec_context, EAV);
       }
 
       succeed;
