@@ -286,6 +286,7 @@ createWindow(PceWindow sw, PceWindow parent)
   ws_create_window(sw, parent);
   qadSendv(sw, NAME_resize, 0, NULL);
 
+  changed_window(sw, 0, 0, valInt(sw->area->w), valInt(sw->area->h), TRUE);
   addChain(ChangedWindows, sw);		/* force initial update */
 
   succeed;
