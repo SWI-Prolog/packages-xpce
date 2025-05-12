@@ -997,7 +997,9 @@ MotifEventScrollBar(ScrollBar s, EventObj ev)
       ah = (vertical ? valInt(w) : valInt(h));
 
     if ( isAEvent(ev, NAME_msLeftDown) )
-    { DEBUG(NAME_comboBox, Cprintf("%s: received ms_left_down\n", pp(s)));
+    { DEBUG(NAME_scrollBar,
+	    Cprintf("%s: received ms_left_down at %d of %d\n",
+		    pp(s), offset, len));
 
       if ( offset < ah )		/* line-up */
       { assign(s, unit,      NAME_line);
