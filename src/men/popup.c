@@ -593,9 +593,10 @@ eventPopup(PopupObj p, EventObj ev)
 	    Cprintf("Selected %s; context = %s (%s == %s)\n",
 		    pp(p->preview), pp(p->context), pp(sw), pp(ew)));
       send(p, NAME_close, EAV);
-      if ( instanceOfObject(p->context, ClassMenuBar) && ngrab )
+      if ( ngrab )
       { DEBUG(NAME_popup, Cprintf("Not grabbed; executing\n"));
-	currentMenuBar(p->context, NIL);
+	if ( instanceOfObject(p->context, ClassMenuBar) )
+	  currentMenuBar(p->context, NIL);
 	send(p, NAME_execute, p->context, EAV);
       }
 
