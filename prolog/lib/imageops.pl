@@ -60,6 +60,12 @@ active(Img, Active:bool, Img2:image) :<-
     ).
 
 
+:- if(true).
+greyed(Img, Grey:image) :<-
+    "Created a greyed version of a colour image"::
+    format(user_error, 'stub: image<-greyed\n', []),
+    Grey = Img.
+:- else.
 greyed(Img, Grey:image) :<-
     "Created a greyed version of a colour image"::
     (   get(Img, hypered, inactive, Grey)
@@ -87,5 +93,6 @@ greyed(Img, Grey:image) :<-
         send(Grey, draw_in, B2),
         new(_, hyper(Img, Grey, inactive, active))
     ).
+:- endif.
 
 :- pce_end_class.
