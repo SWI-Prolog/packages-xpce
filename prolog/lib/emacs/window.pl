@@ -172,14 +172,17 @@ input_focus(F, Val:bool) :->
 
 on_current_desktop(F) :->
     "True if F for more than half on the current desktop"::
-    get(F, area, FArea),
-    (   object(FArea, area(-32000, -32000, _, _))
-    ->  true                    % MS-Windows iconized
-    ;   get(F?display, size, size(DW,DH)),
-        get(FArea, intersection, area(0,0,DW,DH), Intersection),
-        get(FArea, measure, MA),
-        get(Intersection, measure, IA),
-        IA > MA/2
+    (   get(@pce, window_system, sdl)
+    ->  true
+    ;   get(F, area, FArea),
+        (   object(FArea, area(-32000, -32000, _, _))
+        ->  true                    % MS-Windows iconized
+        ;   get(F?display, size, size(DW,DH)),
+            get(FArea, intersection, area(0,0,DW,DH), Intersection),
+            get(FArea, measure, MA),
+            get(Intersection, measure, IA),
+            IA > MA/2
+        )
     ).
 
 tab(F, B:buffer=emacs_buffer, Expose:expose=[bool]) :->
