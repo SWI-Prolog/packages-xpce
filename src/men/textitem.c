@@ -1055,8 +1055,10 @@ eventTextItem(TextItem ti, EventObj ev)
   } else if ( isAEvent(ev, NAME_focus) )
   { if ( isAEvent(ev, NAME_obtainKeyboardFocus) )
     { send(ti, NAME_status, NAME_active, EAV);
+      ws_enable_text_input((Graphical)ti, ON);
     } else if ( isAEvent(ev, NAME_releaseKeyboardFocus) )
     { send(ti, NAME_status, NAME_inactive, EAV);
+      ws_enable_text_input((Graphical)ti, OFF);
     }
 
     return updateShowCaretTextItem(ti);

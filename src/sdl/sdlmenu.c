@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <stdbool.h>
 #include "sdlmenu.h"
 
 /**
@@ -109,9 +110,34 @@ ws_3d_grey(void)
  * @return SUCCEED on success; otherwise, FAIL.
  */
 status
-ws_draw_button_face(DialogItem di, int x, int y, int w, int h, int up, int defb, int focus)
-{
-    return SUCCEED;
+ws_draw_button_face(DialogItem di, int x, int y, int w, int h,
+		    int up, int defb, int focus)
+{ fail;
+}
+
+		 /*******************************
+		 *	      TEXTITEM		*
+		 *******************************/
+
+static Elevation noedit_elevation;
+static Elevation edit_elevation;
+static Elevation button_elevation;
+
+
+static void
+init_entry_resources()
+{ static bool done = false;
+
+  if ( !done )
+  { done = true;
+
+    noedit_elevation = globalObject(NIL, ClassElevation, NIL,
+				    toInt(-1), EAV);
+    edit_elevation   = globalObject(NIL, ClassElevation, NIL,
+				    toInt(-1), WHITE_COLOUR, EAV);
+    button_elevation = getClassVariableValueClass(ClassButton,
+						  NAME_elevation);
+  }
 }
 
 /**
@@ -122,8 +148,7 @@ ws_draw_button_face(DialogItem di, int x, int y, int w, int h, int up, int defb,
  */
 int
 ws_combo_box_width(Graphical gr)
-{
-    return 20;
+{ return dpi_scale(gr, 14, FALSE);
 }
 
 /**
@@ -134,8 +159,7 @@ ws_combo_box_width(Graphical gr)
  */
 int
 ws_stepper_width(Graphical gr)
-{
-    return 16;
+{ return ws_combo_box_width(gr);
 }
 
 /**
@@ -145,12 +169,13 @@ ws_stepper_width(Graphical gr)
  */
 int
 ws_entry_field_margin(void)
-{
-    return 4;
+{ return 1;
 }
 
 /**
- * Render an entry field box.
+ * ws_entry_field() is used by classes that need to create an editable
+ * field  of specified  dimensions. If  the  field happens  to be  not
+ * editable now, this is indicated by `editable'.
  *
  * @param gr Pointer to the Graphical object.
  * @param x The x-coordinate.
@@ -160,10 +185,51 @@ ws_entry_field_margin(void)
  * @param flags Rendering flags.
  * @return SUCCEED on success; otherwise, FAIL.
  */
+
 status
 ws_entry_field(Graphical gr, int x, int y, int w, int h, int flags)
-{
-    return SUCCEED;
+{ init_entry_resources();
+
+  if ( !(flags & TEXTFIELD_EDITABLE) )
+  { r_3d_box(x, y, w, h, 0, noedit_elevation, TRUE);
+  } else
+  { r_3d_box(x, y, w, h, 0, edit_elevation, TRUE);
+
+    if ( flags & TEXTFIELD_COMBO )
+    { int iw = valInt(SCROLL_DOWN_IMAGE->size->w);
+      int ih = valInt(SCROLL_DOWN_IMAGE->size->h);
+      int iy = y+2 + (h-4-valInt(SCROLL_DOWN_IMAGE->size->h))/2;
+      int cw = ws_combo_box_width(gr);
+      int up = !(flags & TEXTFIELD_COMBO_DOWN);
+
+      if ( cw < 0 ) cw = dpi_scale(NULL, 14, FALSE);
+      r_3d_box(x+w-cw-2, y+2, cw, h-4, 0, button_elevation, up);
+      r_image(SCROLL_DOWN_IMAGE, 0, 0, x+w-cw+(cw-iw)/2-2, iy, iw, ih, ON);
+    }
+    if ( flags & TEXTFIELD_STEPPER )
+    { int cw = ws_stepper_width(gr);
+      int bh = (h-4)/2;
+      int b1up, b2up;
+
+      if ( cw < 0 ) cw = dpi_scale(NULL, 14, FALSE);
+      b1up = !(flags & TEXTFIELD_INCREMENT);
+      b2up = !(flags & TEXTFIELD_DECREMENT);
+
+      r_3d_box(x+w-cw-2, y+2,    cw, bh, 0, button_elevation, b1up);
+      r_3d_box(x+w-cw-2, y+2+bh, cw, bh, 0, button_elevation, b2up);
+
+      { int iw = valInt(INT_ITEM_IMAGE->size->w)/2;
+	int ih = valInt(INT_ITEM_IMAGE->size->h);
+	int ix = x+w-2-(cw+iw)/2;
+	int dy = (bh-ih+1)/2;
+
+	r_image(INT_ITEM_IMAGE, 0,  0, ix, y+2+dy,      iw, ih, ON);
+	r_image(INT_ITEM_IMAGE, iw, 0, ix, y+h-2-dy-ih, iw, ih, ON);
+      }
+    }
+  }
+
+  succeed;
 }
 
 /**
