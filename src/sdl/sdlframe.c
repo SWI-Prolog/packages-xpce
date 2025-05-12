@@ -319,7 +319,8 @@ sdl_frame_event(SDL_Event *ev)
 	DEBUG(NAME_sdl, Cprintf("Mapped %s\n", pp(fr)));
 	return frame_displayed(fr, ON);
       case SDL_EVENT_WINDOW_HIDDEN:
-	return frame_displayed(fr, OFF);
+	//return frame_displayed(fr, OFF);
+	return true;
       case SDL_EVENT_WINDOW_EXPOSED:
 	RedrawDisplayManager(TheDisplayManager());
 	return ws_draw_frame(fr);
