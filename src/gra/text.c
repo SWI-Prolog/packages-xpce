@@ -259,8 +259,9 @@ static void
 draw_caret(int x, int y, int w, int h, int active)
 { if ( active )
   { int cx = x + w/2;
+    Colour c = getClassVariableValueClass(ClassTextCursor, NAME_colour);
 
-    r_fillpattern(BLACK_IMAGE, NAME_foreground);
+    r_fillpattern(c, NAME_foreground);
     r_fill_triangle(cx, y, x, y+h, x+w, y+h);
   } else
   { ipoint pts[4];
@@ -274,7 +275,7 @@ draw_caret(int x, int y, int w, int h, int active)
     pts[i].x = cx;  pts[i].y = y+h; i++;
     pts[i].x = x+w; pts[i].y = cy;  i++;
 
-    r_fillpattern(GREY50_IMAGE, NAME_foreground);
+    r_fillpattern(GREY50_COLOUR, NAME_foreground);
     r_fill_polygon(pts, i);
   }
 }

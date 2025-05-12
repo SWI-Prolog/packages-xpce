@@ -241,7 +241,7 @@ static classvardecl rc_textCursor[] =
   RC(NAME_proportionalFontStyle, "name", "open_look",
      "->style for proportional fonts"),
   RC(NAME_style, NULL, "open_look", NULL),
-  RC(NAME_colour, RC_REFINE, "when(@colour_display, red, black)", NULL),
+  RC(NAME_colour, RC_REFINE, "red", NULL),
   RC(NAME_inactiveColour, RC_REFINE, "black", NULL)
 };
 
