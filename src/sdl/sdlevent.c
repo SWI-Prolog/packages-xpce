@@ -185,6 +185,8 @@ CtoEvent(SDL_Event *event)
   SDL_MouseButtonFlags mouse_flags = 0;
   float fx, fy;
   Any name = NULL;
+  Name ctx_name = NULL;
+  Any ctx = NULL;
   SDL_WindowID wid = 0;
   Any window = NIL;		/* TODO */
 
@@ -222,6 +224,23 @@ CtoEvent(SDL_Event *event)
 	name = NAME_msRightDrag;
       else
 	name = NAME_locMove;
+      break;
+    case SDL_EVENT_MOUSE_WHEEL:
+      wid  = event->wheel.windowID;
+      time = event->wheel.timestamp/1000000;
+      name = NAME_wheel;
+      ctx_name = NAME_rotation;
+      int dx = event->wheel.x;
+      int dy = event->wheel.y;
+
+      if ( event->wheel.direction == SDL_MOUSEWHEEL_FLIPPED )
+      { dx = -dx;
+        dy = -dy;
+      }
+      if ( dy > 0 )
+	ctx = toInt(120);
+      else
+	ctx = toInt(-120);
       break;
       /* https://wiki.libsdl.org/SDL3/SDL_KeyboardEvent */
     case SDL_EVENT_KEY_UP:
@@ -268,6 +287,9 @@ CtoEvent(SDL_Event *event)
 			     toInt(x), toInt(y),
 			     state_to_buttons(mouse_flags, lastmod),
 			     EAV);
+
+  if ( ctx_name )
+    attributeObject(ev, ctx_name, ctx);
 
   return ev;
 }
