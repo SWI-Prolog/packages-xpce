@@ -83,6 +83,29 @@ event_window(Any *target, int *x, int *y)
   } else if ( instanceOfObject(*target, ClassWindowDecorator) )
   { WindowDecorator dm = *target;
     descent_to_window(target, dm->window, x, y);
+  } else
+  { assert(instanceOfObject(*target, ClassWindow));
+    PceWindow sw = *target;
+    if ( notNil(sw->subwindows) && !emptyChain(sw->subwindows) )
+    { Cell cell;
+
+      /* TBD: overlapping windows? */
+      for_cell(cell, sw->subwindows)
+      { PceWindow sub = cell->value;
+	PceWindow me = DEFAULT;
+	Int wx, wy;
+	get_absolute_xy_graphical((Graphical)sub, (Device *)&me, &wx, &wy);
+	assert(me == sw);
+	if ( *x >= valInt(wx) && *x <= valInt(wx) + valInt(sub->area->w) &&
+	     *y >= valInt(wy) && *y <= valInt(wy) + valInt(sub->area->h) )
+	{ *x -= valInt(wx);
+	  *y -= valInt(wy);
+	  *target = sub;
+	  event_window(target, x, y);
+	  break;
+	}
+      }
+    }
   }
 }
 
@@ -256,7 +279,9 @@ dispatch_event(EventObj ev)
   AnswerMark mark;
   status rc;
 
-  DEBUG(NAME_event, Cprintf("Dispatching %s to %s\n", pp(ev), pp(sw)));
+  DEBUG(NAME_event, Cprintf("Dispatching %s (%s at %d,%d) to %s\n",
+			    pp(ev), pp(ev->id), valInt(ev->x), valInt(ev->y),
+			    pp(sw)));
 
   ServiceMode(is_service_window(sw),
 	      { markAnswerStack(mark);
