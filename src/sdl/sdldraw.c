@@ -304,7 +304,11 @@ d_frame(FrameObj fr, int x, int y, int w, int h)
  */
 void
 d_clip(int x, int y, int w, int h)
-{
+{ NormaliseArea(x, y, w, h);
+  Translate(x, y);
+  cairo_reset_clip(CR);
+  cairo_rectangle(CR, x, y, w, h);
+  cairo_clip(CR);
 }
 
 /**
@@ -328,7 +332,7 @@ d_done(void)
  */
 void
 d_clip_done(void)
-{
+{ cairo_reset_clip(CR);
 }
 
 /**
