@@ -36,6 +36,7 @@
 #include <h/graphics.h>
 #include "sdlwindow.h"
 #include "sdlframe.h"
+#include "sdlevent.h"
 
 /**
  * Check if the specified window has been created.
@@ -71,6 +72,8 @@ ws_uncreate_window(PceWindow sw)
     unalloc(sizeof(*wsw), wsw);
     sw->ws_ref = NULL;
   }
+
+  ws_event_destroyed_target(sw);
 }
 
 /**

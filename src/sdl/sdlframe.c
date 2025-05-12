@@ -37,6 +37,7 @@
 #include "sdlframe.h"
 #include "sdlwindow.h"
 #include "sdlcolour.h"
+#include "sdlevent.h"
 
 #define MainWindow(fr)	     ( isNil(fr->members->head) ? (Any) fr : \
 			       fr->members->head->value )
@@ -83,6 +84,8 @@ ws_uncreate_frame(FrameObj fr)
     unalloc(sizeof(*f), f);
     fr->ws_ref = NULL;
   }
+
+  ws_event_destroyed_target(fr);
 }
 
 static SDL_Window *
@@ -187,6 +190,50 @@ frame_displayed(FrameObj fr, BoolObj val)
 
   return true;
 }
+
+/**
+ * Find  the x,y  offset of  a window,  possibly the  frame itself,  a
+ * direct window, a  window inside a decorator or a  subwindow of some
+ * other window, relative to the frame.
+ */
+
+void
+ws_window_frame_position(Any window, int *ox, int *oy)
+{ if ( instanceOfObject(window, ClassFrame) )
+    return;
+
+  if ( instanceOfObject(window, ClassWindow) )
+  { PceWindow sw = window;
+    if ( notNil(sw->frame) )
+    { *ox += valInt(sw->area->x);
+      *oy += valInt(sw->area->y);
+      return;
+    }
+
+    if ( notNil(sw->parent) )
+    { PceWindow me = DEFAULT;
+      Int x, y;
+      get_absolute_xy_graphical((Graphical)sw, (Device *)&me, &x, &y);
+      assert(me == sw->parent);
+      *ox += valInt(x);
+      *oy += valInt(y);
+      ws_window_frame_position(sw->parent, ox, oy);
+      return;
+    }
+
+    if ( instanceOfObject(sw->device, ClassWindowDecorator) )
+    { WindowDecorator dw = (WindowDecorator)sw->device;
+      if ( notNil(dw->frame) )
+      { *ox += valInt(dw->area->x) + valInt(sw->area->x);
+	*ox += valInt(dw->area->y) + valInt(sw->area->y);
+	return;
+      }
+    }
+  }
+
+  Cprintf("ws_window_frame_position(%s) failed\n", pp(window));
+}
+
 
 #define Area2FRect(a)					\
   { (float)valInt(a->x), (float)valInt(a->y),		\

@@ -178,6 +178,14 @@ keycode_to_name(SDL_Event *event)
  */
 
 static SDL_Keymod lastmod = SDL_KMOD_NONE;
+static Any mouse_tracking_window = NIL;
+static Uint8 mouse_tracking_button;
+
+void
+ws_event_destroyed_target(Any window)
+{ if ( mouse_tracking_window == window )
+    mouse_tracking_window = NIL;
+}
 
 EventObj
 CtoEvent(SDL_Event *event)
@@ -270,8 +278,10 @@ CtoEvent(SDL_Event *event)
   }
 
   window = wsid_to_frame(wid);
-  DEBUG(NAME_event, Cprintf("Event %s on %s at %1f,%1f, id=%d\n",
-			    pp(name), pp(window), wid, fx, fy));
+  DEBUG(NAME_event,
+	if ( name != NAME_locMove )
+	  Cprintf("Event %s on %s at %1f,%1f, id=%d\n",
+		  pp(name), pp(window), wid, fx, fy));
   if ( !window )
     fail;
 
@@ -279,7 +289,22 @@ CtoEvent(SDL_Event *event)
 
   int x = (int)(fx+0.5);
   int y = (int)(fy+0.5);
-  event_window(&window, &x, &y);
+  if ( notNil(mouse_tracking_window) )
+  { int ox=0, oy=0;
+    ws_window_frame_position(mouse_tracking_window, &ox, &oy);
+    window = mouse_tracking_window;
+    x -= ox;
+    y -= oy;
+    if ( event->type == SDL_EVENT_MOUSE_BUTTON_UP &&
+	 mouse_tracking_button == event->button.button )
+      mouse_tracking_window = NIL;
+  } else
+  { event_window(&window, &x, &y);
+    if ( event->type == SDL_EVENT_MOUSE_BUTTON_DOWN )
+    { mouse_tracking_window = window;
+      mouse_tracking_button = event->button.button;
+    }
+  }
 
   EventObj ev = answerObject(ClassEvent,
 			     name,
@@ -301,9 +326,11 @@ dispatch_event(EventObj ev)
   AnswerMark mark;
   status rc;
 
-  DEBUG(NAME_event, Cprintf("Dispatching %s (%s at %d,%d) to %s\n",
-			    pp(ev), pp(ev->id), valInt(ev->x), valInt(ev->y),
-			    pp(sw)));
+  DEBUG(NAME_event,
+	if ( ev->id != NAME_locMove )
+	  Cprintf("Dispatching %s (%s at %d,%d) to %s\n",
+		  pp(ev), pp(ev->id), valInt(ev->x), valInt(ev->y),
+		  pp(sw)));
 
   ServiceMode(is_service_window(sw),
 	      { markAnswerStack(mark);

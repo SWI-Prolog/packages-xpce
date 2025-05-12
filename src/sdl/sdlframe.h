@@ -46,6 +46,7 @@ typedef struct
 FrameObj wsid_to_frame(SDL_WindowID id);
 bool sdl_frame_event(SDL_Event *ev);
 void ws_redraw_changed_frames(void);
+void ws_window_frame_position(Any window, int *ox, int *oy);
 
 /* Functions shared with core */
 status ws_created_frame(FrameObj fr);

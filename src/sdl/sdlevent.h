@@ -36,6 +36,8 @@
 #define RAYEVENT_H
 #include <SDL3/SDL.h>
 
+void ws_event_destroyed_target(Any window);
+
 void resetDispatch(void);
 status ws_dispatch(Int FD, Any timeout);
 void ws_discard_input(const char *msg);
