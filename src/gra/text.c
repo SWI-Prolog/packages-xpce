@@ -597,7 +597,7 @@ get_char_pos_helper(TextObj t, PceString s, int caret, int *cx, int *cy)
     *cy += (str_lineno(s, sl)-1) * ch;
   }
 
-  lw = str_width(s, sl, caret, t->font);
+  lw = str_advance(s, sl, caret, t->font);
   w -= 2 * b;
 
   if ( t->format == NAME_left )
