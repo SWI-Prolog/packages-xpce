@@ -462,7 +462,8 @@ displayedWindow(PceWindow sw, BoolObj val)
 status
 resizeWindow(PceWindow sw)
 { if ( notNil(sw->resize_message) )
-    forwardReceiverCode(sw->resize_message, sw, sw, getSizeArea(sw->area), EAV);
+    forwardReceiverCode(sw->resize_message, sw, sw,
+			getSizeArea(sw->area), EAV);
 
   succeed;
 }

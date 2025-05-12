@@ -129,8 +129,12 @@ initialisePce(Pce pce)
   assign(pce, operating_system,       CtoName(PCE_OS));
 #ifdef WIN32_GRAPHICS
   assign(pce, window_system,	      NAME_windows);
+#elif X11_GRAPHICS
+  assign(pce, window_system,	      NAME_x11);
+#elif SDL_GRAPHICS
+  assign(pce, window_system,	      NAME_sdl);
 #else
-  assign(pce, window_system,	      CtoName("X"));
+  assign(pce, window_system,	      NAME_unknown);
 #endif
   assign(pce, window_system_version,  toInt(ws_version()));
   assign(pce, window_system_revision, toInt(ws_revision()));
@@ -664,14 +668,17 @@ infoPce(Pce pce)
   writef("	Release:            %s\n", pce->version);
   writef("	System:             %s\n", pce->machine);
   writef("	Operating System:   %s\n", pce->operating_system);
-#ifdef __WINDOWS__
+#if WIN32_GRAPHICS
   writef("	Window System:      windows %s.%s\n",
 	 pce->window_system_version,
 	 pce->window_system_revision);
-#else
+#elif X11_GRAPHICS
   writef("	Window System:      X%sR%s\n",
 	 pce->window_system_version,
 	 pce->window_system_revision);
+#else
+  writef("	Window System:      SDL%s\n",
+	 pce->window_system_version);
 #endif
   writef("\n");
   writef("Memory allocation:\n");
