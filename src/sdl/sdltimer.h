@@ -32,9 +32,14 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef RAYTIMER_H
-#define RAYTIMER_H
+#ifndef SDLTIMER_H
+#define SDLTIMER_H
+#include <SDL3/SDL.h>
 
+/* internal binding interface */
+bool sdl_timer_event(SDL_Event *ev);
+
+/* public interface */
 void ws_status_timer(Timer tm, Name status);
 
-#endif /* RAYTIMER_H */
+#endif /* SDLTIMER_H */
