@@ -3579,6 +3579,8 @@ static getdecl get_graphical[] =
      NAME_area, "Y-coordinate of corner"),
   GM(NAME_displayedCursor, 0, "cursor*", NULL, getDisplayedCursorGraphical,
      NAME_cursor, "Currently displayed cursor"),
+  GM(NAME_framePosition, 0, "point", NULL, getFramePositionGraphical,
+     NAME_area, "Position relative to frame"),
   GM(NAME_displayPosition, 0, "point", NULL, getDisplayPositionGraphical,
      NAME_area, "Position relative to display"),
   GM(NAME_height, 0, "int", NULL, getHeightGraphical,
