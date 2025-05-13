@@ -998,7 +998,40 @@ r_polygon(IPoint pts, int n, int close)
  */
 void
 r_path(Chain points, int ox, int oy, int radius, int closed, Image fill)
-{
+{ if ( radius )
+    Cprintf("stub: r_path(): radius ignored\n");
+
+  cairo_new_path(CR);
+  Cell cell;
+  bool first = true;
+  for_cell(cell, points)
+  { Point p = cell->value;
+    int x = valInt(p->x)+ox;
+    int y = valInt(p->y)+oy;
+    Translate(x,y);
+    if ( first )
+    { cairo_move_to(CR, x, y);
+      first = false;
+    } else
+    { cairo_line_to(CR, x, y);
+    }
+  }
+  if ( closed )
+    cairo_close_path(CR);
+
+  if ( notNil(fill) )
+  { r_fillpattern(fill, NAME_foreground);
+    cairo_set_source_color(CR, context.fill_pattern);
+    cairo_fill_preserve(CR);
+  }
+
+  if ( context.pen )
+  { cairo_set_source_color(CR, context.colour);
+    cairo_set_line_width(CR, context.pen);
+    cairo_stroke(CR);
+  }
+
+  cairo_stroke(CR);
 }
 
 /**
