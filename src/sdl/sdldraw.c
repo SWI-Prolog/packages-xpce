@@ -264,8 +264,19 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
  */
 status
 d_image(Image i, int x, int y, int w, int h)
-{ Cprintf("stub: d_image(%s)\n", pp(i));
-  fail;
+{ ws_open_image(i, CurrentDisplay(NIL), valReal(i->scale));
+
+  push_context();
+  context.open = 1;
+
+  context.target             = i->ws_ref;
+  context.cr                 = cairo_create(context.target);
+  context.background         = i->background;
+  context.colour             = i->foreground;
+  context.default_colour     = context.colour;
+  context.default_background = context.background;
+
+  succeed;
 }
 
 /**

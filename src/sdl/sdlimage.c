@@ -334,8 +334,20 @@ ws_save_image_file(Image image, SourceSink into, Name fmt)
  */
 status
 ws_open_image(Image image, DisplayObj d, double scale)
-{
-    return SUCCEED;
+{ if ( !image->ws_ref )
+  { int w = valInt(image->size->w);
+    int h = valInt(image->size->h);
+
+    cairo_surface_t *surf =
+      cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+
+    image->ws_ref = surf;
+    d_image(image, 0, 0, w, h);
+    r_clear(0, 0, w, h);
+    d_done();
+  }
+
+  succeed;
 }
 
 /**
