@@ -63,6 +63,7 @@ typedef struct
   Any		default_colour;
   Any		default_background;
   Any		fill_pattern;		/* Default for fill operations */
+  Name		dash;			/* Dash pattern */
   int		pen;			/* Drawing thickness */
 } sdl_draw_context;
 
@@ -450,9 +451,35 @@ r_transformed(int val)
  *
  * @param name The name of the dash pattern to apply.
  */
+static struct dashpattern
+{ Name	  dash;
+  double  *dash_list;
+  int	  dash_list_length;
+} dash_patterns[] =
+{ { NAME_none,	     NULL,					  0},
+  { NAME_dotted,     (double[]){1.0,2.0},			  2},
+  { NAME_dashed,     (double[]){7.0,7.0},			  2},
+  { NAME_dashdot,    (double[]){7.0,3.0,1.0,7.0},		  4},
+  { NAME_dashdotted, (double[]){9.0,3.0,1.0,3.0,1.0,3.0,1.0,3.0}, 8},
+  { NAME_longdash,   (double[]){13.0,7.0},			  2},
+  { 0,		     NULL,					  0},
+};
+
 void
 r_dash(Name name)
-{
+{ if ( name != context.dash )
+  { struct dashpattern *dp = dash_patterns;
+
+    for( ; dp->dash != 0; dp++ )
+    { if ( dp->dash == name )
+      { cairo_set_dash(CR, dp->dash_list, dp->dash_list_length, 0);
+
+	context.dash = name;
+	return;
+      }
+    }
+    errorPce(name, NAME_badTexture);
+  }
 }
 
 /**
