@@ -208,6 +208,8 @@ ws_grab_pointer_window(PceWindow sw, BoolObj val)
 			pp(sw), pp(val)));
 	}
       }
+
+      ev_event_grab_window(val == ON ? sw : NIL);
     }
   }
 }

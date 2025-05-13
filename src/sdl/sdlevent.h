@@ -36,8 +36,11 @@
 #define RAYEVENT_H
 #include <SDL3/SDL.h>
 
+/* SDL binding interface */
+void ev_event_grab_window(Any window);
 void ws_event_destroyed_target(Any window);
 
+/* Public interface */
 void resetDispatch(void);
 status ws_dispatch(Int FD, Any timeout);
 void ws_discard_input(const char *msg);

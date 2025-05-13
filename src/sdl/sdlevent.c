@@ -178,13 +178,21 @@ keycode_to_name(SDL_Event *event)
  */
 
 static SDL_Keymod lastmod = SDL_KMOD_NONE;
+static Any grabbing_window = NIL;
 static Any mouse_tracking_window = NIL;
 static Uint8 mouse_tracking_button;
 
 void
+ev_event_grab_window(Any window)
+{ grabbing_window = window;
+}
+
+void
 ws_event_destroyed_target(Any window)
-{ if ( mouse_tracking_window == window )
+{ if ( window == mouse_tracking_window )
     mouse_tracking_window = NIL;
+  if ( window == grabbing_window )
+    grabbing_window = NIL;
 }
 
 EventObj
@@ -198,9 +206,9 @@ CtoEvent(SDL_Event *event)
   SDL_WindowID wid = 0;
   Any window = NIL;		/* TODO */
 
-  if ( sdl_call_event(event) )
+  if ( sdl_call_event(event) )	/* support in_pce_thread/1 */
     fail;
-  if ( sdl_frame_event(event) )
+  if ( sdl_frame_event(event) )	/* window events (close/open/size/...) */
     fail;
   mouse_flags = SDL_GetMouseState(&fx, &fy);
 
@@ -322,20 +330,25 @@ CtoEvent(SDL_Event *event)
 
 static bool
 dispatch_event(EventObj ev)
-{ Any sw = ev->window;
+{ Any target;
   AnswerMark mark;
   status rc;
+
+  if ( notNil(grabbing_window) )
+    target = grabbing_window;
+  else
+    target = ev->window;
 
   DEBUG(NAME_event,
 	if ( ev->id != NAME_locMove )
 	  Cprintf("Dispatching %s (%s at %d,%d) to %s\n",
 		  pp(ev), pp(ev->id), valInt(ev->x), valInt(ev->y),
-		  pp(sw)));
+		  pp(target)));
 
-  ServiceMode(is_service_window(sw),
+  ServiceMode(is_service_window(target),
 	      { markAnswerStack(mark);
 		addCodeReference(ev);
-		rc = postNamedEvent(ev, (Graphical) sw, DEFAULT, NAME_postEvent);
+		rc = postNamedEvent(ev, target, DEFAULT, NAME_postEvent);
 		delCodeReference(ev);
 		freeableObj(ev);
 		rewindAnswerStack(mark, NIL);
