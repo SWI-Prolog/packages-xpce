@@ -409,7 +409,7 @@ getReduceColour(Colour c, Real re)
   rf = re ? valReal(re) : 0.6;
 
   if ( isDefault(c->green) )		/* realise the colour */
-    getXrefObject(c, CurrentDisplay(NIL));
+    XopenColour(c, CurrentDisplay(NIL));
 
   r = valInt(c->red);
   g = valInt(c->green);
