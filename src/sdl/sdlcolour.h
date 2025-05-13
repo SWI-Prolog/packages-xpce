@@ -87,7 +87,11 @@ pceColour2SDL_Color(Colour c)
   if ( r == NULL )
   { ws_create_colour(c, DEFAULT);
     r = c->ws_ref;
-    assert(r);
+    if ( !r )
+    { Cprintf("Failed to get colour from %s\n", pp(c));
+      SDL_Color replace = {.b=255, .a=255};
+      return replace;
+    }
   }
 
   return wsref2SDL_Color(r);

@@ -5420,7 +5420,7 @@ static classvardecl rc_editor[] =
   RC(NAME_isearchStyle, "style",
      UXWIN("when(@colour_display,\n"
 	   "     style(background := green),\n"
-	   "     style(background:= @grey25_image))",
+	   "     style(background := @grey25_image))",
 	   "@_isearch_style"),
      "Style for incremental search"),
   RC(NAME_isearchOtherStyle, "style",

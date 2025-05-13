@@ -76,7 +76,16 @@ ws_bell_display(DisplayObj d, int volume)
  */
 void
 ws_get_size_display(DisplayObj d, int *w, int *h)
-{
+{ Monitor mon;
+
+  if ( openDisplay(d) &&
+       (mon = getHeadChain(d->monitors)) &&
+       instanceOfObject(mon, ClassMonitor) )
+  { *w = valInt(mon->area->w);
+    *h = valInt(mon->area->h);
+  } else
+  { *w = *h = 0;
+  }
 }
 
 /**
@@ -99,8 +108,7 @@ ws_get_visual_type_display(DisplayObj d)
  */
 int
 ws_depth_display(DisplayObj d)
-{
-    return 0;
+{ return 32;			/* 8-bit RGBA */
 }
 
 /**
