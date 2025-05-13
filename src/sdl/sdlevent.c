@@ -314,7 +314,7 @@ CtoEvent(SDL_Event *event)
       mouse_tracking_window = NIL;
   } else if ( notNil(grabbing_window) )
   { int ox=0, oy=0;
-    bool rc = ws_window_frame_position(mouse_tracking_window, frame, &ox, &oy);
+    bool rc = ws_window_frame_position(grabbing_window, frame, &ox, &oy);
     if ( rc )			/* grabbing window on same frame */
     { x -= ox;
       y -= oy;
