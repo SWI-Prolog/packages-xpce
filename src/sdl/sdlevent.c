@@ -204,7 +204,8 @@ CtoEvent(SDL_Event *event)
   Name ctx_name = NULL;
   Any ctx = NULL;
   SDL_WindowID wid = 0;
-  Any window = NIL;		/* TODO */
+  FrameObj frame = NIL;		/* ev->frame */
+  Any window;			/* ev->window */
 
   if ( sdl_call_event(event) )	/* support in_pce_thread/1 */
     fail;
@@ -285,12 +286,12 @@ CtoEvent(SDL_Event *event)
       fail;			/* for now */
   }
 
-  window = wsid_to_frame(wid);
+  frame = wsid_to_frame(wid);
   DEBUG(NAME_event,
 	if ( name != NAME_locMove )
 	  Cprintf("Event %s on %s at %1f,%1f, id=%d\n",
-		  pp(name), pp(window), wid, fx, fy));
-  if ( !window )
+		  pp(name), pp(frame), wid, fx, fy));
+  if ( !frame )
     fail;
 
   setLastEventTime(time);
@@ -299,15 +300,26 @@ CtoEvent(SDL_Event *event)
   int y = (int)(fy+0.5);
   if ( notNil(mouse_tracking_window) )
   { int ox=0, oy=0;
-    ws_window_frame_position(mouse_tracking_window, &ox, &oy);
+    bool rc = ws_window_frame_position(mouse_tracking_window, frame, &ox, &oy);
+    assert(rc);
+    (void)rc;
     window = mouse_tracking_window;
     x -= ox;
     y -= oy;
     if ( event->type == SDL_EVENT_MOUSE_BUTTON_UP &&
 	 mouse_tracking_button == event->button.button )
       mouse_tracking_window = NIL;
+  } else if ( notNil(grabbing_window) )
+  { int ox=0, oy=0;
+    bool rc = ws_window_frame_position(mouse_tracking_window, frame, &ox, &oy);
+    if ( rc )			/* grabbing window on same frame */
+    { x -= ox;
+      y -= oy;
+    }
+    window = grabbing_window;
   } else
-  { event_window(&window, &x, &y);
+  { window = frame;
+    event_window(&window, &x, &y);
     if ( event->type == SDL_EVENT_MOUSE_BUTTON_DOWN )
     { mouse_tracking_window = window;
       mouse_tracking_button = event->button.button;
@@ -320,6 +332,7 @@ CtoEvent(SDL_Event *event)
 			     toInt(x), toInt(y),
 			     state_to_buttons(mouse_flags, lastmod),
 			     EAV);
+  assign(ev, frame, frame);
 
   if ( ctx_name )
     attributeObject(ev, ctx_name, ctx);
@@ -330,14 +343,9 @@ CtoEvent(SDL_Event *event)
 
 static bool
 dispatch_event(EventObj ev)
-{ Any target;
+{ Any target = ev->window;
   AnswerMark mark;
   status rc;
-
-  if ( notNil(grabbing_window) )
-    target = grabbing_window;
-  else
-    target = ev->window;
 
   DEBUG(NAME_event,
 	if ( ev->id != NAME_locMove )

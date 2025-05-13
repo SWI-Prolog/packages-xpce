@@ -205,7 +205,8 @@ getPopupFromEventMenuBar(MenuBar mb, EventObj ev)
   Int EX, EY;
   Cell cell;
 
-  get_xy_event(ev, mb, ON, &EX, &EY);
+  if ( !get_xy_event(ev, mb, ON, &EX, &EY) )
+    fail;
   ex = valInt(EX); ey = valInt(EY);
 
   if ( ey < 0 || ey >= valInt(mb->area->h) )
@@ -268,8 +269,9 @@ eventMenuBar(MenuBar mb, EventObj ev)
     fail;
 
   DEBUG(NAME_popup,
-	Cprintf("eventMenuBar: %s at %s/%s\n",
-		pp(ev->id), pp(ev->x), pp(ev->y)));
+	if ( ev->id != NAME_locMove )
+	  Cprintf("eventMenuBar: %s at %s,%s\n",
+		  pp(ev->id), pp(ev->x), pp(ev->y)));
 
   if ( isDownEvent(ev) )
     assign(mb, button, getButtonEvent(ev));

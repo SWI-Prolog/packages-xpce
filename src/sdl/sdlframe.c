@@ -195,19 +195,28 @@ frame_displayed(FrameObj fr, BoolObj val)
  * Find  the x,y  offset of  a window,  possibly the  frame itself,  a
  * direct window, a  window inside a decorator or a  subwindow of some
  * other window, relative to the frame.
+ *
+ * @returns `false` if `window` is not displayed on `fr`
+ * @todo  We   should  unify  the  subwindow   notion  between  window
+ * decorators and "normal" subwindows.
  */
 
-void
-ws_window_frame_position(Any window, int *ox, int *oy)
-{ if ( instanceOfObject(window, ClassFrame) )
-    return;
+static bool
+ws_window_frame_position_(Any window, FrameObj fr, int *ox, int *oy)
+{ if ( window == fr )
+    return true;
+  if ( instanceOfObject(window, ClassFrame) )
+    return false;
 
   if ( instanceOfObject(window, ClassWindow) )
   { PceWindow sw = window;
     if ( notNil(sw->frame) )
-    { *ox += valInt(sw->area->x);
-      *oy += valInt(sw->area->y);
-      return;
+    { if ( sw->frame == fr )
+      { *ox += valInt(sw->area->x);
+	*oy += valInt(sw->area->y);
+	return true;
+      }
+      return false;
     }
 
     if ( notNil(sw->parent) )
@@ -217,23 +226,37 @@ ws_window_frame_position(Any window, int *ox, int *oy)
       assert(me == sw->parent);
       *ox += valInt(x);
       *oy += valInt(y);
-      ws_window_frame_position(sw->parent, ox, oy);
-      return;
+      return ws_window_frame_position_(sw->parent, fr, ox, oy);
     }
 
     if ( instanceOfObject(sw->device, ClassWindowDecorator) )
     { WindowDecorator dw = (WindowDecorator)sw->device;
       if ( notNil(dw->frame) )
-      { *ox += valInt(dw->area->x) + valInt(sw->area->x);
-	*ox += valInt(dw->area->y) + valInt(sw->area->y);
-	return;
+      { if ( dw->frame == fr )
+	{ *ox += valInt(dw->area->x) + valInt(sw->area->x);
+	  *ox += valInt(dw->area->y) + valInt(sw->area->y);
+	  return true;
+	}
+	return false;
       }
     }
   }
 
   Cprintf("ws_window_frame_position(%s) failed\n", pp(window));
+  return false;
 }
 
+bool
+ws_window_frame_position(Any window, FrameObj fr, int *ox, int *oy)
+{ int x = *ox, y = *oy;
+  if ( ws_window_frame_position_(window, fr, &x, &y) )
+  { *ox = x;
+    *oy = y;
+    return true;
+  }
+
+  return false;
+}
 
 #define Area2FRect(a)					\
   { (float)valInt(a->x), (float)valInt(a->y),		\

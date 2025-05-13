@@ -369,7 +369,7 @@ eventTab(Tab t, EventObj ev)
 { Int X, Y;
   int x, y;
 
-  get_xy_event(ev, t, OFF, &X, &Y);
+  TRY(get_xy_event(ev, t, OFF, &X, &Y));
   x = valInt(X), y = valInt(Y);
 
   if ( y < 0 )				/* tab-bar */
@@ -546,4 +546,3 @@ makeClassTab(Class class)
 
   succeed;
 }
-

@@ -1541,8 +1541,8 @@ pceInitialise(int handles, const char *home, const char *appdata,
   allocRange(&ConstantNil,          sizeof(struct constant));
   allocRange(&ConstantDefault,      sizeof(struct constant));
   allocRange(&ConstantClassDefault, sizeof(struct constant));
-  allocRange(&BoolOff,              sizeof(struct bool));
-  allocRange(&BoolOn,               sizeof(struct bool));
+  allocRange(&BoolOff,              sizeof(struct boolean));
+  allocRange(&BoolOn,               sizeof(struct boolean));
   initNamesPass1();
   DEBUG_BOOT(Cprintf("Types ...\n"));
   initTypes();

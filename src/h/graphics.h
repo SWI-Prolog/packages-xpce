@@ -860,7 +860,8 @@ End;
 
 
 NewClass(eventobj)
-  Any		window;			/* Original window */
+  Any		frame;			/* Original frame */
+  Any		window;			/* Targeted window */
   Any		receiver;		/* Receiver of the event */
   Any		id;			/* Event identifier */
   Int		buttons;		/* Bit mask of button positions */

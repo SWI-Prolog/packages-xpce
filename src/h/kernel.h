@@ -1276,7 +1276,8 @@ NewClass(constant)			/* @nil, @default */
   ABSTRACT_CONSTANT
 End;
 
-NewClass(bool)				/* @on, @off */
+NewClass(boolean)
+/* @on, @off */
   ABSTRACT_CONSTANT
 End;
 
@@ -1626,8 +1627,8 @@ GLOBAL int	XPCE_mt;		/* we are multi-threaded */
 GLOBAL struct constant ConstantNil;	/* MUST be first! */
 GLOBAL struct constant ConstantDefault;
 GLOBAL struct constant ConstantClassDefault;
-GLOBAL struct bool     BoolOn;
-GLOBAL struct bool     BoolOff;
+GLOBAL struct boolean  BoolOn;
+GLOBAL struct boolean  BoolOff;
 
 GLOBAL Var	RECEIVER;		/* @receiver */
 GLOBAL Var	RECEIVER_CLASS;		/* @receiver_class */

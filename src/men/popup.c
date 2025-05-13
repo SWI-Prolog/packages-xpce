@@ -434,7 +434,8 @@ inPullRigthPopup(PopupObj p, MenuItem mi, EventObj ev)
     rx = ix+iw-8;
   rx -= 2*valInt(p->border);
 
-  get_xy_event(ev, p, ON, &ex, &ey);
+  if ( !get_xy_event(ev, p, ON, &ex, &ey) )
+    fail;
   if ( valInt(ex) >= rx )
     succeed;
 

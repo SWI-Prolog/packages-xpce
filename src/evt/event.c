@@ -48,13 +48,13 @@ static Int	 last_x		  = TOINT(ZERO);
 static Int	 last_y		  = TOINT(ZERO);
 static unsigned long last_time	  = 0L;
 
-static Int	         last_down_bts    = ZERO;
-static int	         last_down_x      = -1000; /* multiclick detection */
-static int	         last_down_y	  = -1000;
+static Int		 last_down_bts    = ZERO;
+static int		 last_down_x      = -1000; /* multiclick detection */
+static int		 last_down_y	  = -1000;
 static unsigned long     last_down_time   = 0;
 static unsigned int	 multi_click_time = 400;
-static int	         multi_click_diff = 4;
-static int	         last_click_type  = CLICK_TYPE_triple;
+static int		 multi_click_diff = 4;
+static int		 last_click_type  = CLICK_TYPE_triple;
 static int		 loc_still_posted = TRUE;
 static unsigned long	 host_last_time   = 0;
 static int		 loc_still_time	  = 400;
@@ -510,21 +510,6 @@ get_xy_event_frame(EventObj ev, FrameObj fr, int *rx, int *ry)
 
 
 static void
-get_xy_event_display(EventObj ev, DisplayObj d, int *rx, int *ry)
-{ FrameObj fr;
-  int frx, fry;
-
-  get_xy_event_window(ev, ev->window, ON, rx, ry);
-  DEBUG(NAME_position, Cprintf("Ev at %d,%d relative to %s\n",
-			       *rx, *ry, pp(ev->window)));
-  frame_offset_window(ev->window, &fr, &frx, &fry);
-  DEBUG(NAME_position, Cprintf("Frame offset: %d,%d\n", frx, fry));
-  *rx += frx + valInt(fr->area->x);
-  *ry += fry + valInt(fr->area->y);
-}
-
-
-static void
 get_xy_event_device(EventObj ev, Device dev, int *rx, int *ry)
 { int ox, oy;
   PceWindow sw = getWindowGraphical((Graphical) dev);
@@ -566,6 +551,22 @@ get_xy_event_node(EventObj ev, Node node, int *rx, int *ry)
 }
 
 
+/**
+ * Get the  X,Y coordinate of  `ev` relative  to `obj`.  If  `area` is
+ * `ON`, get  it relative to  the bounding box  of `obj`, else  get it
+ * relative to the coordinate system of `obj`.
+ *
+ * Given SDL,  we can (in  general) not get  the position of  a frame.
+ * Neither can we force to grab the pointer to a window.  We have some
+ * scenarios:
+ *
+ *   - If `ev->window` is displayed on `ev->frame` and `obj` is inside
+ *     `ev->frame`, all offsets are fine.
+ *   - If `obj` is displayed on `ev->frame`, the X,Y of `ev` are relative
+ *     to `ev->frame`.
+ *   - Otherwise, we do not know.
+ */
+
 status
 get_xy_event(EventObj ev, Any obj, BoolObj area, Int *rx, Int *ry)
 { int x = 0, y = 0;
@@ -573,23 +574,83 @@ get_xy_event(EventObj ev, Any obj, BoolObj area, Int *rx, Int *ry)
   if ( isNil(ev->window) || onFlag(ev->window, F_FREEING|F_FREED) )
   { *rx = ev->x;
     *ry = ev->y;
-    succeed;
-  } else if ( instanceOfObject(obj, ClassDisplay) )
-    get_xy_event_display(ev, obj, &x, &y);
-  else if ( instanceOfObject(obj, ClassFrame) )
-    get_xy_event_frame(ev, obj, &x, &y);
-  else if ( instanceOfObject(obj, ClassWindow) )
-    get_xy_event_window(ev, obj, area, &x, &y);
-  else if ( instanceOfObject(obj, ClassDevice) )
-    get_xy_event_device(ev, obj, &x, &y);
-  else if ( instanceOfObject(obj, ClassGraphical) )
-    get_xy_event_graphical(ev, obj, &x, &y);
-  else if ( instanceOfObject(obj, ClassNode) )
-    get_xy_event_node(ev, obj, &x, &y);
+    succeed;			/* fail? */
+  }
+
+  if ( instanceOfObject(obj, ClassDisplay) )
+  { Cprintf("Cannot get event location relative to %s\n", pp(obj));
+    *rx = *ry = toInt(-1);
+    fail;
+  }
+
+  FrameObj objfr;
+  if ( instanceOfObject(obj, ClassFrame) )
+    objfr = obj;
   else
-  { *rx = ev->x;
-    *ry = ev->y;
-    succeed;
+    objfr = getFrameGraphical(obj);
+
+  if ( objfr == ev->frame )
+  { if ( instanceOfObject(ev->window, ClassWindow) &&
+	 getFrameWindow(ev->window, OFF) == ev->frame )
+    { if ( instanceOfObject(obj, ClassFrame) )
+	get_xy_event_frame(ev, obj, &x, &y);
+      else if ( instanceOfObject(obj, ClassWindow) )
+	get_xy_event_window(ev, obj, area, &x, &y);
+      else if ( instanceOfObject(obj, ClassDevice) )
+	get_xy_event_device(ev, obj, &x, &y);
+      else if ( instanceOfObject(obj, ClassGraphical) )
+	get_xy_event_graphical(ev, obj, &x, &y);
+      else if ( instanceOfObject(obj, ClassNode) )
+	get_xy_event_node(ev, obj, &x, &y);
+      else
+      { *rx = ev->x;
+	*ry = ev->y;
+	succeed;
+      }
+    } else
+    { if ( instanceOfObject(obj, ClassFrame) )
+      { x = valInt(ev->x);
+	y = valInt(ev->y);
+      } else
+      { PceWindow sw = getWindowGraphical(obj);
+	int ox=0, oy=0;
+	if ( ws_window_frame_position(sw, ev->frame, &ox, &oy) )
+	{ x = valInt(ev->x) - ox;
+	  y = valInt(ev->y) - oy;
+	} else
+	{ Cprintf("Could not get event X,Y of %s relative to %s\n",
+		  pp(ev), pp(obj));
+	  *rx = *ry = toInt(-1);
+	  fail;
+	}
+	if ( obj != sw )
+	{ if ( instanceOfObject(obj, ClassNode) )
+	    obj = ((Node)obj)->image;
+
+	  if ( instanceOfObject(obj, ClassDevice) )
+	  { Device dev = obj;
+	    int ox, oy;
+	    offsetDeviceGraphical(obj, &ox, &oy);
+	    x -= ox + valInt(dev->offset->x);
+	    y -= oy + valInt(dev->offset->y);
+	  } else if ( instanceOfObject(obj, ClassGraphical) )
+	  { Graphical gr = obj;
+	    int ox, oy;
+	    offsetDeviceGraphical(obj, &ox, &oy);
+	    x -= ox + valInt(gr->area->x);
+	    y -= oy + valInt(gr->area->y);
+	  } else
+	  { assert(0);
+	  }
+	}
+      }
+    }
+  } else
+  { DEBUG(NAME_event,
+	  Cprintf("Could not get event X,Y of %s relative to %s\n",
+		  pp(ev), pp(obj)));
+    *rx = *ry = toInt(-1);
+    fail;
   }
 
   if ( area == ON &&
@@ -895,8 +956,10 @@ static char *T_post[] =
 /* Instance Variables */
 
 static vardecl var_event[] =
-{ IV(NAME_window, "window|frame", IV_GET,
-     NAME_context, "Window that generated event"),
+{ IV(NAME_frame, "frame", IV_GET,
+     NAME_context, "Frame that received the event"),
+  IV(NAME_window, "window|frame", IV_GET,
+     NAME_context, "Window or frame that receives the event"),
   IV(NAME_receiver, "graphical|frame", IV_GET,
      NAME_context, "Object receiving event"),
   IV(NAME_id, "event_id", IV_GET,

@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #define COMMON(type) SO_LOCAL type
 
 /* ../src/x11/xcolour.c */
@@ -148,6 +149,9 @@ COMMON(void)	ws_destroy_font(FontObj f, DisplayObj d);
 COMMON(status)	ws_system_fonts(DisplayObj d);
 
 /* ../src/x11/xframe.c */
+COMMON(bool)	ws_window_frame_position(Any window, FrameObj fr,
+					 int *ox, int *oy);
+
 COMMON(status)	ws_created_frame(FrameObj fr);
 COMMON(void)	ws_uncreate_frame(FrameObj fr);
 COMMON(status)	ws_create_frame(FrameObj fr);
