@@ -90,7 +90,10 @@ ws_uncreate_frame(FrameObj fr)
 
 static SDL_Window *
 sdl_parent_window(FrameObj fr)
-{ Any pfr = getAttributeObject(fr, NAME_parent);
+{ Any pfr = fr->transient_for;
+
+  if ( isNil(pfr) )
+    pfr = getAttributeObject(fr, NAME_parent);
   if ( pfr && instanceOfObject(pfr, ClassFrame) )
   { WsFrame pf = sdl_frame(pfr, false);
     if ( pf )
@@ -115,7 +118,8 @@ ws_create_frame(FrameObj fr)
   if ( fr->can_resize == ON )
     flags |= SDL_WINDOW_RESIZABLE;
 
-  if ( fr->kind == NAME_popup && (parent=sdl_parent_window(fr)) )
+  if ( (fr->kind == NAME_popup || notNil(fr->transient_for)) &&
+       (parent=sdl_parent_window(fr)) )
   { DEBUG(NAME_popup, Cprintf("Creating popup frame %s\n", pp(fr)));
     flags |= SDL_WINDOW_POPUP_MENU;
     w = SDL_CreatePopupWindow(

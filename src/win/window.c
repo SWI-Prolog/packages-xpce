@@ -215,7 +215,7 @@ openCenteredWindow(PceWindow sw, Point pos, BoolObj grab, Monitor mon)
 
 
 static Any
-getConfirmWindow(PceWindow sw, Point pos, BoolObj grab, BoolObj normalise)
+getConfirmWindow(PceWindow sw, Any pos, BoolObj grab, BoolObj normalise)
 { TRY( send(sw, NAME_create, EAV) );
 
   answer(getConfirmFrame(getFrameWindow(sw, DEFAULT), pos, grab, normalise));
@@ -223,7 +223,7 @@ getConfirmWindow(PceWindow sw, Point pos, BoolObj grab, BoolObj normalise)
 
 
 static Any
-getConfirmCenteredWindow(PceWindow sw, Point pos, BoolObj grab, Monitor mon)
+getConfirmCenteredWindow(PceWindow sw, Any pos, BoolObj grab, Monitor mon)
 { TRY( send(sw, NAME_create, EAV) );
 
   answer(getConfirmCenteredFrame(getFrameWindow(sw, DEFAULT),
@@ -2218,7 +2218,7 @@ static char *T_scrollHV[] =
 static char *T_decorate[] =
         { "area=[{grow,shrink}]", "left_margin=[int]", "right_margin=[int]", "top_margin=[int]", "bottom_margin=[int]", "decorator=[window]" };
 static char *T_confirmCentered[] =
-        { "center=[point]", "grab=[bool]", "monitor=[monitor]" };
+        { "center=[point|frame]", "grab=[bool]", "monitor=[monitor]" };
 static char *T_typed[] =
         { "event|event_id", "delegate=[bool]" };
 static char *T_focus[] =
@@ -2435,7 +2435,8 @@ static getdecl get_window[] =
   GM(NAME_winHandle, 0, "int", NULL, getWinHandleWindow,
      NAME_windows, "Fetch the MS-Windows HWND of the window (if any)"),
 #endif
-  GM(NAME_confirmCentered, 3, "any", T_confirmCentered, getConfirmCenteredWindow,
+  GM(NAME_confirmCentered, 3, "any", T_confirmCentered,
+     getConfirmCenteredWindow,
      NAME_modal, "->confirm with frame centered around point"),
   GM(NAME_thread, 0, "int", NULL, getThreadWindow,
      NAME_thread, "Return system thread-id that owns the window")

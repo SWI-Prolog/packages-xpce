@@ -476,7 +476,7 @@ selectCompletionDialogItem(Any item, Chain matches,
   bh = lines * valInt(getHeightFont(c->list_browser->font));
   bh += 2 * TXT_X_MARGIN + 2;
 
-  send((pos = get(di, NAME_displayPosition, EAV)), NAME_offset,
+  send((pos = get(di, NAME_framePosition, EAV)), NAME_offset,
        toInt(lw), di->area->h, EAV);
   send(c, NAME_transientFor, getFrameGraphical((Graphical) di), EAV);
   send(c->frame, NAME_set, pos->x, pos->y, toInt(fw), toInt(bh), EAV);

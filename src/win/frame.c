@@ -216,20 +216,19 @@ getConfirmFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
 
 
 Any
-getConfirmCenteredFrame(FrameObj fr, Point pos, BoolObj grab, Monitor mon)
-{ int x, y;
-  Point p2;
-  Any rval;
+getConfirmCenteredFrame(FrameObj fr, Any where, BoolObj grab, Monitor mon)
+{ TRY( send(fr, NAME_create, EAV) );
 
-  TRY( send(fr, NAME_create, EAV) );
+  if ( instanceOfObject(where, ClassFrame) )
+  { FrameObj rfr = where;
+    int ox = (valInt(rfr->area->w)-valInt(fr->area->w))/2;
+    int oy = (valInt(rfr->area->h)-valInt(fr->area->y))/2;
+    assign(fr->area, x, toInt(ox));
+    assign(fr->area, y, toInt(oy));
+    send(fr, NAME_transientFor, rfr, EAV);
+  }
 
-  get_position_from_center_frame(fr, mon, pos, &x, &y);
-  ensure_on_display(fr, mon, &x, &y);
-  p2 = tempObject(ClassPoint, toInt(x), toInt(y), EAV);
-
-  rval = getConfirmFrame(fr, p2, grab, OFF);
-  considerPreserveObject(p2);
-  return rval;
+  return getConfirmFrame(fr, DEFAULT, grab, OFF);
 }
 
 
@@ -1715,7 +1714,7 @@ getThreadFrame(FrameObj fr)
 /* Type declarations */
 
 static char *T_openCentered[] =
-        { "center=[point]", "grab=[bool]", "monitor=[monitor]" };
+        { "center=[point|frame]", "grab=[bool]", "monitor=[monitor]" };
 static char *T_busyCursor[] =
         { "cursor=[cursor]*", "block_input=[bool]" };
 static char *T_icon[] =
@@ -1962,9 +1961,11 @@ static getdecl get_frame[] =
      NAME_icon, "(Current) position of the icon"),
   GM(NAME_tile, 0, "tile", NULL, getTileFrame,
      NAME_layout, "Find tile managing object"),
-  GM(NAME_confirm, 3, "return_value=any", T_positionADpointD_grabADboolD_normaliseADboolD, getConfirmFrame,
+  GM(NAME_confirm, 3, "return_value=any",
+     T_positionADpointD_grabADboolD_normaliseADboolD, getConfirmFrame,
      NAME_modal, "Start sub-eventloop until ->return"),
-  GM(NAME_confirmCentered, 3, "return_value=any", T_openCentered, getConfirmCenteredFrame,
+  GM(NAME_confirmCentered, 3, "return_value=any",
+     T_openCentered, getConfirmCenteredFrame,
      NAME_modal, "As <-confirm, but centered around point"),
   GM(NAME_catchAll, 1, "window", "window_name=name", getCatchAllFramev,
      NAME_organisation, "Get named window"),
