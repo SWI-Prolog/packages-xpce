@@ -994,9 +994,12 @@ eventText(TextObj t, EventObj ev)
 
   if ( isAEvent(ev, NAME_focus) )
   { if ( isAEvent(ev, NAME_obtainKeyboardFocus) )
-      showCaretText(t, ON);
-    else if ( isAEvent(ev, NAME_releaseKeyboardFocus) )
-      showCaretText(t, OFF);
+    { showCaretText(t, ON);
+      ws_enable_text_input((Graphical)t, ON);
+    } else if ( isAEvent(ev, NAME_releaseKeyboardFocus) )
+    { showCaretText(t, OFF);
+      ws_enable_text_input((Graphical)t, OFF);
+    }
 
     return updateShowCaretText(t);
   }
