@@ -1346,19 +1346,19 @@ inputWindowFrame(FrameObj fr, PceWindow iw)
 static status
 inputFocusFrame(FrameObj fr, BoolObj val)
 { if ( fr->input_focus != val )
-  { Cell cell;
+  { PceWindow iw;
 
     assign(fr, input_focus, val);
     if ( val == ON )
-    { PceWindow iw;
-
-      if ( (iw = getKeyboardFocusFrame(fr)) ||
+    { if ( (iw = getKeyboardFocusFrame(fr)) ||
 	   (iw = ws_window_holding_point_frame(fr)) )
 	inputWindowFrame(fr, iw);
+    } else if ( (iw = getKeyboardFocusFrame(fr)) )
+    { inputFocusWindow(iw, OFF);
     } else
-    { for_cell(cell, fr->members)
-      { inputFocusWindow(cell->value, OFF);
-      }
+    { Cell cell;
+      for_cell(cell, fr->members)
+	inputFocusWindow(cell->value, OFF);
     }
   }
 
@@ -1476,7 +1476,7 @@ blockedByModalFrame(FrameObj fr)
 
 static status
 postEventFrame(FrameObj fr, EventObj ev)
-{ fail;
+{ return qadSendv(fr, NAME_event, 1, (Any*)&ev);
 }
 
 
@@ -1490,13 +1490,18 @@ eventFrame(FrameObj fr, EventObj ev)
     if ( (bfr=blockedByModalFrame(fr)) )
     {
     blocked:
+      DEBUG(NAME_modal, Cprintf("%s: forwarding %s to modal frame %s\n",
+				pp(fr), pp(ev), pp(bfr)));
       send(bfr, NAME_expose, EAV);
       send(bfr, NAME_event, ev, EAV);
       fail;
     }
 
     if ( (sw = getKeyboardFocusFrame(fr)) )
+    { DEBUG(NAME_keyboard, Cprintf("%s: forward %s to focussed %s\n",
+				   pp(fr), pp(ev->id), pp(sw)));
       return postNamedEvent(ev, (Graphical) sw, DEFAULT, NAME_postEvent);
+    }
 
     return send(fr, NAME_typed, ev, EAV);
   }

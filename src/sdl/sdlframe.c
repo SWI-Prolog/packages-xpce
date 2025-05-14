@@ -162,6 +162,12 @@ ws_create_frame(FrameObj fr)
     succeed;
   }
 
+  if ( parent )
+  { if ( !SDL_RaiseWindow(w) )
+      Cprintf("Could not set input focus to %s: %s\n",
+	      pp(fr), SDL_GetError());
+  }
+
   return errorPce(fr, NAME_xOpen, fr->display);
 }
 
@@ -440,8 +446,10 @@ sdl_frame_event(SDL_Event *ev)
 	return true;
       }
       case SDL_EVENT_WINDOW_FOCUS_GAINED:
+	DEBUG(NAME_keyboard, Cprintf("Input focus on %s\n", pp(fr)));
 	return send(fr, NAME_inputFocus, ON, EAV);
       case SDL_EVENT_WINDOW_FOCUS_LOST:
+	DEBUG(NAME_keyboard, Cprintf("Input focus lost for %s\n", pp(fr)));
 	return send(fr, NAME_inputFocus, OFF, EAV);
     }
   }

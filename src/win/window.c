@@ -833,7 +833,10 @@ operation, this appears necessary. Otherwise, I don't know.
 
 status
 keyboardFocusWindow(PceWindow sw, Graphical gr)
-{ if ( !isNil(gr) && sw->input_focus == OFF )
+{ DEBUG(NAME_keyboard,
+	Cprintf("keyboardFocusWindow(%s, %s)\n", pp(sw), pp(gr)));
+
+  if ( !isNil(gr) && sw->input_focus == OFF )
   { FrameObj fr = getFrameWindow(sw, OFF);
 
     if ( fr )
