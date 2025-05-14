@@ -115,9 +115,6 @@ ws_create_frame(FrameObj fr)
   SDL_Window *w = NULL;
   SDL_Window *parent = NULL;
 
-  if ( fr->can_resize == ON )
-    flags |= SDL_WINDOW_RESIZABLE;
-
   if ( (fr->kind == NAME_popup || notNil(fr->transient_for)) &&
        (parent=sdl_parent_window(fr)) )
   { DEBUG(NAME_popup, Cprintf("Creating popup frame %s\n", pp(fr)));
@@ -130,11 +127,17 @@ ws_create_frame(FrameObj fr)
       valInt(fr->area->h),
       flags);
   } else
-  { w = SDL_CreateWindow(
-      nameToMB(fr->label),
-      valInt(fr->area->w),
-      valInt(fr->area->h),
-      flags);
+  { SDL_PropertiesID props = SDL_CreateProperties();
+    SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING,
+			  nameToUTF8(fr->label));
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER,
+			  valInt(fr->area->w));
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
+			  valInt(fr->area->h));
+    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN,
+			   fr->can_resize == ON);
+    w = SDL_CreateWindowWithProperties(props);
+    SDL_DestroyProperties(props);
   }
 
   if ( w )
