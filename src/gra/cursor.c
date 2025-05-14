@@ -168,7 +168,9 @@ static vardecl var_cursor[] =
   IV(NAME_foreground, "[colour]*", IV_GET,
      NAME_appearance, "Foreground colour of the cursor"),
   IV(NAME_background, "[colour]*", IV_GET,
-     NAME_appearance, "Background colour of the cursor")
+     NAME_appearance, "Background colour of the cursor"),
+  IV(NAME_wsRef, "alien:WsRef", IV_NONE,
+     NAME_storage, "Window System Reference")
 };
 
 /* Send Methods */
@@ -222,5 +224,3 @@ makeClassCursor(Class class)
 
   succeed;
 }
-
-

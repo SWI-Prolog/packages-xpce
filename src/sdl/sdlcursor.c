@@ -36,15 +36,52 @@
 #include <h/graphics.h>
 #include "sdlcursor.h"
 
+static Sheet	cursorNames = NIL;
+
+static struct standardCursor
+{ char *name;				/* X name of the cursor */
+  int	id;				/* X font id of the cursor */
+} standard_cursors[] =
+{
+					/* Native SDL names */
+  { "default",	   SDL_SYSTEM_CURSOR_DEFAULT },
+  { "text",	   SDL_SYSTEM_CURSOR_TEXT },
+  { "wait",	   SDL_SYSTEM_CURSOR_WAIT },
+  { "crosshair",   SDL_SYSTEM_CURSOR_CROSSHAIR },
+  { "progress",	   SDL_SYSTEM_CURSOR_PROGRESS },
+  { "nwse_resize", SDL_SYSTEM_CURSOR_NWSE_RESIZE },
+  { "nesw_resize", SDL_SYSTEM_CURSOR_NESW_RESIZE },
+  { "ew_resize",   SDL_SYSTEM_CURSOR_EW_RESIZE },
+  { "ns_resize",   SDL_SYSTEM_CURSOR_NS_RESIZE },
+  { "move",	   SDL_SYSTEM_CURSOR_MOVE },
+  { "not_allowed", SDL_SYSTEM_CURSOR_NOT_ALLOWED },
+  { "pointer",	   SDL_SYSTEM_CURSOR_POINTER },
+  { "nw_resize",   SDL_SYSTEM_CURSOR_NW_RESIZE },
+  { "n_resize",	   SDL_SYSTEM_CURSOR_N_RESIZE },
+  { "ne_resize",   SDL_SYSTEM_CURSOR_NE_RESIZE },
+  { "e_resize",	   SDL_SYSTEM_CURSOR_E_RESIZE },
+  { "se_resize",   SDL_SYSTEM_CURSOR_SE_RESIZE },
+  { "s_resize",	   SDL_SYSTEM_CURSOR_S_RESIZE },
+  { "sw_resize",   SDL_SYSTEM_CURSOR_SW_RESIZE },
+  { "w_resize",	   SDL_SYSTEM_CURSOR_W_RESIZE },
+  { NULL,	   0 }
+};
+
 /**
  * Initialize the cursor font resources.
  *
- * This function sets up any necessary font resources required for cursor rendering.
- * It should be called during the initialization phase of the application.
+ * This function sets up any necessary font resources required for
+ * cursor rendering.  It should be called during the initialization
+ * phase of the application.
  */
 void
 ws_init_cursor_font(void)
-{
+{ struct standardCursor *sc;
+
+  cursorNames = globalObject(NAME_cursorNames, ClassSheet, EAV);
+
+  for(sc = standard_cursors; sc->name; sc++)
+    valueSheet(cursorNames, (Any) CtoName(sc->name), toInt(sc->id));
 }
 
 /**
@@ -53,9 +90,10 @@ ws_init_cursor_font(void)
  * @param name Pointer to the Name object representing the cursor name.
  * @return The font index associated with the specified cursor name.
  */
+
 Int
 ws_cursor_font_index(Name name)
-{ return toInt(0);
+{ return getValueSheet(cursorNames, name);
 }
 
 /**
@@ -67,8 +105,20 @@ ws_cursor_font_index(Name name)
  */
 status
 ws_create_cursor(CursorObj c, DisplayObj d)
-{
-    return SUCCEED;
+{ if ( !c->ws_ref )
+  { if ( isNil(c->image) )
+    { Int idx = ws_cursor_font_index(c->name);
+      assert(idx);
+      SDL_Cursor *cursor = SDL_CreateSystemCursor(valInt(idx));
+      c->ws_ref = cursor;
+    } else
+    { Cprintf("stub: No image cursors yet\n");
+      /* Use SDL_CreateColorCursor() */
+      fail;
+    }
+  }
+
+  succeed;
 }
 
 /**
@@ -79,5 +129,8 @@ ws_create_cursor(CursorObj c, DisplayObj d)
  */
 void
 ws_destroy_cursor(CursorObj c, DisplayObj d)
-{
+{ if ( c->ws_ref )
+  { SDL_DestroyCursor(c->ws_ref);
+    c->ws_ref = NULL;
+  }
 }

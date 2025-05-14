@@ -32,12 +32,20 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef RAYCURSOR_H
-#define RAYCURSOR_H
+#ifndef SDLCURSOR_H
+#define SDLCURSOR_H
+#include <SDL3/SDL.h>
+
+static inline SDL_Cursor *
+pceCursor2SDL_Cursor(CursorObj c)
+{ if ( !c->ws_ref )
+    ws_destroy_cursor(c, CurrentDisplay(NIL));
+  return c->ws_ref;
+}
 
 void ws_init_cursor_font(void);
 Int ws_cursor_font_index(Name name);
 status ws_create_cursor(CursorObj c, DisplayObj d);
 void ws_destroy_cursor(CursorObj c, DisplayObj d);
 
-#endif /* RAYCURSOR_H */
+#endif /* SDLCURSOR_H */
