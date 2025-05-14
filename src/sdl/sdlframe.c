@@ -693,9 +693,17 @@ ws_enable_modal(FrameObj fr, BoolObj val)
  */
 void
 ws_status_frame(FrameObj fr, Name status)
-{ if ( fr->kind == NAME_popup )
-  { if ( status == NAME_hidden )
-      ws_uncreate_frame(fr);	/* TODO: also uncreate the windows? */
+{ if ( status == NAME_unmapped ||
+       status == NAME_hidden )
+  { ws_uncreate_frame(fr);
+  } else if ( status == NAME_window || status == NAME_fullScreen )
+  { if ( ws_created_frame(fr) )
+    { WsFrame wfr = fr->ws_ref;
+      SDL_SetWindowFullscreen(wfr->ws_window, status == NAME_fullScreen);
+    } else
+    { assign(fr, status, status);
+      ws_create_frame(fr);
+    }
   }
 }
 

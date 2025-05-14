@@ -78,7 +78,10 @@ ws_uncreate_window(PceWindow sw)
 
 /**
  * Create a native window for the specified PceWindow, optionally as a
- * child of another.
+ * child of  another.  In  SDL, native windows  are not  window system
+ * windows.  They are merely areas  that have a Cairo surface attached
+ * in  which  the  drawing  takes  place.   This  implies  that  their
+ * "created" state is independent from a frame.
  *
  * @param sw Pointer to the PceWindow object to be created.
  * @param parent Pointer to the parent PceWindow, or NULL for
@@ -87,8 +90,7 @@ ws_uncreate_window(PceWindow sw)
  */
 status
 ws_create_window(PceWindow sw, PceWindow parent)
-{ FrameObj fr = getFrameWindow(sw, OFF);
-  WsWindow wsw = sw->ws_ref;
+{ WsWindow wsw = sw->ws_ref;
 
   if ( !wsw )
   { wsw = sw->ws_ref = alloc(sizeof(ws_window));
@@ -101,8 +103,7 @@ ws_create_window(PceWindow sw, PceWindow parent)
 					    wsw->w,  wsw->h);
   assert(wsw->backing);
 
-  DEBUG(NAME_sdl,
-	Cprintf("ws_create_window(%s) for frame %s\n", pp(sw), pp(fr)));
+  DEBUG(NAME_sdl, Cprintf("ws_create_window(%s)\n", pp(sw)));
 
   succeed;
 }

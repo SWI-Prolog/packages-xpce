@@ -410,20 +410,17 @@ mappedFrame(FrameObj fr, BoolObj val)
 }
 
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-To create a frame:
-
-  1) Give all children the change to request a size.
-  2) Fit the the windows in the frame and give them the size they should
-     do with.
-  3) Create the shell widget
-  4) Create the children
-  5) Manage the children
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/**
+ * Create a frame.  In the pre-SDL  days, this would create the system
+ * windows without showing them.  In SDL, windows are no longer system
+ * windows  and we  only create  the SDL  window when  it is  visible.
+ * Creating a frame now implies realizing the embedded windows and the
+ * layout.  The actual mapping is done by statusFrame()
+ */
 
 status
 createdFrame(FrameObj fr)
-{ return ws_created_frame(fr);
+{ return fr->status != NAME_unmapped;
 }
 
 
@@ -440,13 +437,9 @@ createFrame(FrameObj fr)
 
   TRY(send(fr, NAME_fit, EAV));
 
-  ws_create_frame(fr);
-
+  assign(fr, status, NAME_hidden);
   for_cell(cell, fr->members)
     send(cell->value, NAME_create, EAV);
-
-  ws_realise_frame(fr);
-  assign(fr, status, NAME_hidden);
 
   attachWmProtocolsFrame(fr);
 
