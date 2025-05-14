@@ -626,15 +626,15 @@ get_char_pos_text(TextObj t, Int chr, int *X, int *Y)
   PceString s = &t->string->data;
   int b = valInt(t->border);
 
-  if ( Wrapped(t) )
-  { LocalString(buf, s->s_iswide, Wrapped(t) ? s->s_size + MAX_WRAP_LINES : 0);
-
-    str_format(buf, s, valInt(t->margin), t->font);
-    get_char_pos_helper(t, s, caret, &cx, &cy);
-  } else if ( t->wrap == NAME_clip )
+  if ( t->wrap == NAME_clip )
   { LocalString(buf, s->s_iswide, s->s_size + 1);
 
     str_one_line(buf, s);
+    get_char_pos_helper(t, s, caret, &cx, &cy);
+  } else
+  { LocalString(buf, s->s_iswide, Wrapped(t) ? s->s_size + MAX_WRAP_LINES : s->s_size+1);
+
+    str_format(buf, s, valInt(t->margin), t->font);
     get_char_pos_helper(t, s, caret, &cx, &cy);
   }
 
