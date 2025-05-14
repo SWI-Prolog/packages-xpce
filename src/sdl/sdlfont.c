@@ -67,10 +67,26 @@ ws_create_font(FontObj f, DisplayObj d)
   if ( f->ws_ref )		/* already done */
     succeed;
 
+  cairo_font_slant_t slant   = CAIRO_FONT_SLANT_NORMAL;
+  cairo_font_weight_t weight = CAIRO_FONT_WEIGHT_NORMAL;
+  const char *family = "sans-serif";
+
+  if ( f->style == NAME_bold )
+    weight = CAIRO_FONT_WEIGHT_BOLD;
+  else if ( f->style == NAME_oblique )
+    slant = CAIRO_FONT_SLANT_ITALIC;
+
+  if ( f->family == NAME_courier || f->family == NAME_screen )
+    family = "monospace";
+  else if ( f->family == NAME_times )
+    family = "serif";
+  else
+    family = nameToUTF8(f->family);
+
   cairo_font_face_t *face = cairo_toy_font_face_create(
-    "monospace",
-    CAIRO_FONT_SLANT_NORMAL,
-    CAIRO_FONT_WEIGHT_NORMAL);
+    family,
+    slant,
+    weight);
   if ( !face )
     fail;
 
