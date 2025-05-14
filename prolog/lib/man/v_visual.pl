@@ -306,6 +306,7 @@ vis_expandable(_V) :->
 grab(F) :->
     "Add a new object from the screen"::
     new(D, select_graphical('Select object from screen')),
+    D->>transient_for(F),
     D->>attribute(report_to, F),
     Obj = D->>select(@arg1?frame \== F, F?area?center),
     D->>destroy,

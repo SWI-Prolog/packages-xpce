@@ -484,7 +484,11 @@ ws_discard_input(const char *msg)
 }
 
 /**
- * Determine if an event occurred within a subwindow.
+ * Find a  target window  when the  pointer has  left the  window that
+ * grabbed the  pointer.  This is used  for drag and drop  and well as
+ * for example  the Visual Hierarchy  tool to find the  target window.
+ * If root  is @default, find the  frame, else find the  window inside
+ * the frame that is below the pointer.
  *
  * @param ev The event object to examine.
  * @param root The root window to compare against.
@@ -492,8 +496,21 @@ ws_discard_input(const char *msg)
  */
 Any
 ws_event_in_subwindow(EventObj ev, Any root)
-{
-    return NULL;
+{ if ( isDefault(root) )
+  { return ev->frame;
+  } else if ( instanceOfObject(root, ClassFrame) )
+  { if ( getFrameWindow(ev->window, OFF) == ev->frame )
+    { return ev->window;
+    } else
+    { Any window = root;
+      int x = valInt(ev->x);
+      int y = valInt(ev->y);
+
+      event_window(&window, &x, &y);
+      return window;
+    }
+  } else
+    fail;
 }
 
 /**
