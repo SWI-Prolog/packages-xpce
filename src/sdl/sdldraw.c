@@ -391,10 +391,7 @@ cairo_set_font(cairo_t *cr, FontObj pce)
  */
 void
 r_clear(int x, int y, int w, int h)
-{ NormaliseArea(x, y, w, h);
-  Translate(x, y);
-
-  r_fill(x, y, w, h, context.background);
+{ r_fill(x, y, w, h, context.background);
 }
 
 /**
@@ -1125,6 +1122,7 @@ r_fill(int x, int y, int w, int h, Any fill)
 	  Cprintf("r_fill(%d, %d, %d, %d, %s)\n",
 		  x, y, w, h, pp(fill)));
 
+    Translate(x, y);
     r_fillpattern(fill, NAME_foreground);
 
     if ( instanceOfObject(context.fill_pattern, ClassColour) )
