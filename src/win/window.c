@@ -1635,16 +1635,19 @@ getDisplayedCursorWindow(PceWindow sw)
 
 status
 updateCursorWindow(PceWindow sw)
-{ if ( ws_created_window(sw) )
+{ DEBUG(NAME_cursor, Cprintf("Updating cursor for %s\n", pp(sw)));
+
+  if ( ws_created_window(sw) )
   { CursorObj cursor = getDisplayedCursorWindow(sw);
 
+    DEBUG(NAME_cursor, Cprintf("Cursor for %s is %s\n", pp(sw), pp(cursor)));
     if ( !cursor )
       cursor = NIL;
 
     if ( sw->displayed_cursor != cursor )
     { assign(sw, displayed_cursor, cursor);
-      ws_window_cursor(sw, cursor);
     }
+    ws_window_cursor(sw, cursor);
   }
 
   succeed;

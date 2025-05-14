@@ -42,7 +42,12 @@ static struct standardCursor
 { char *name;				/* X name of the cursor */
   int	id;				/* X font id of the cursor */
 } standard_cursors[] =
-{
+{					/* Map X11 names to SDL */
+  { "arrow",       SDL_SYSTEM_CURSOR_DEFAULT },
+  { "top_left_arrow", SDL_SYSTEM_CURSOR_DEFAULT },
+  { "watch",       SDL_SYSTEM_CURSOR_WAIT },
+  { "hand2",       SDL_SYSTEM_CURSOR_POINTER },
+  { "xterm",       SDL_SYSTEM_CURSOR_TEXT },
 					/* Native SDL names */
   { "default",	   SDL_SYSTEM_CURSOR_DEFAULT },
   { "text",	   SDL_SYSTEM_CURSOR_TEXT },
@@ -93,7 +98,13 @@ ws_init_cursor_font(void)
 
 Int
 ws_cursor_font_index(Name name)
-{ return getValueSheet(cursorNames, name);
+{ Int idx = getValueSheet(cursorNames, name);
+  if ( !idx )
+  { Cprintf("Unknown cursor %s\n", pp(name));
+    return toInt(SDL_SYSTEM_CURSOR_DEFAULT);
+  }
+
+  return idx;
 }
 
 /**

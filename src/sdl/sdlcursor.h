@@ -39,7 +39,7 @@
 static inline SDL_Cursor *
 pceCursor2SDL_Cursor(CursorObj c)
 { if ( !c->ws_ref )
-    ws_destroy_cursor(c, CurrentDisplay(NIL));
+    ws_create_cursor(c, CurrentDisplay(NIL));
   return c->ws_ref;
 }
 

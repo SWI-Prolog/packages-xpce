@@ -37,6 +37,7 @@
 #include "sdlwindow.h"
 #include "sdlframe.h"
 #include "sdlevent.h"
+#include "sdlcursor.h"
 
 /**
  * Check if the specified window has been created.
@@ -273,14 +274,17 @@ ws_move_pointer(PceWindow sw, int x, int y)
 }
 
 /**
- * Set the cursor shape for the specified window.
+ * Set the cursor  shape for the specified window. In  SDL, the cursor
+ * is global for the application, i.e., it is _not_ set for a window.
  *
  * @param sw Pointer to the PceWindow object.
  * @param cursor The CursorObj representing the new cursor shape.
  */
 void
 ws_window_cursor(PceWindow sw, CursorObj cursor)
-{
+{ SDL_Cursor *c = pceCursor2SDL_Cursor(cursor);
+  if ( c )
+    SDL_SetCursor(c);
 }
 
 /**
