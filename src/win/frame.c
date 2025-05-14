@@ -222,7 +222,7 @@ getConfirmCenteredFrame(FrameObj fr, Any where, BoolObj grab, Monitor mon)
   if ( instanceOfObject(where, ClassFrame) )
   { FrameObj rfr = where;
     int ox = (valInt(rfr->area->w)-valInt(fr->area->w))/2;
-    int oy = (valInt(rfr->area->h)-valInt(fr->area->y))/2;
+    int oy = (valInt(rfr->area->h)-valInt(fr->area->h))/2;
     assign(fr->area, x, toInt(ox));
     assign(fr->area, y, toInt(oy));
     send(fr, NAME_transientFor, rfr, EAV);

@@ -111,13 +111,12 @@ sdl_parent_window(FrameObj fr)
  */
 status
 ws_create_frame(FrameObj fr)
-{ SDL_WindowFlags flags = 0;
-  SDL_Window *w = NULL;
-  SDL_Window *parent = NULL;
+{ SDL_Window *w = NULL;
+  SDL_Window *parent = sdl_parent_window(fr);
 
-  if ( (fr->kind == NAME_popup || notNil(fr->transient_for)) &&
-       (parent=sdl_parent_window(fr)) )
-  { DEBUG(NAME_popup, Cprintf("Creating popup frame %s\n", pp(fr)));
+  if ( fr->kind == NAME_popup && parent )
+  { SDL_WindowFlags flags = 0;
+    DEBUG(NAME_popup, Cprintf("Creating popup frame %s\n", pp(fr)));
     flags |= SDL_WINDOW_POPUP_MENU;
     w = SDL_CreatePopupWindow(
       parent,
@@ -136,6 +135,14 @@ ws_create_frame(FrameObj fr)
 			  valInt(fr->area->h));
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN,
 			   fr->can_resize == ON);
+    if ( parent )
+    { SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_PARENT_POINTER,
+			     parent);
+      SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER,
+			    valInt(fr->area->x));
+      SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER,
+			    valInt(fr->area->y));
+    }
     w = SDL_CreateWindowWithProperties(props);
     SDL_DestroyProperties(props);
   }
