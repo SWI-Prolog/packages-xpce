@@ -69,6 +69,7 @@ void ws_ungrab_server(DisplayObj d);
 Int ws_display_connection_number(DisplayObj d);
 status ws_events_queued_display(DisplayObj d);
 status ws_pointer_location_display(DisplayObj d, int *x, int *y);
+status ws_selection_display(DisplayObj d, Name which, StringObj data);
 status ws_set_cutbuffer(DisplayObj d, int n, PceString s);
 StringObj ws_get_cutbuffer(DisplayObj d, int n);
 unsigned long ws_get_selection_timeout(void);

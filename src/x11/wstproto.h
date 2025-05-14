@@ -43,6 +43,7 @@ COMMON(void)	ws_ungrab_server(DisplayObj d);
 COMMON(Int)	ws_display_connection_number(DisplayObj d);
 COMMON(status)	ws_events_queued_display(DisplayObj d);
 COMMON(status)	ws_pointer_location_display(DisplayObj d, int *x, int *y);
+COMMON(status)	ws_selection_display(DisplayObj d, Name which, StringObj data);
 COMMON(status)	ws_set_cutbuffer(DisplayObj d, int n, PceString s);
 COMMON(StringObj) ws_get_cutbuffer(DisplayObj d, int n);
 COMMON(unsigned long)ws_get_selection_timeout(void);

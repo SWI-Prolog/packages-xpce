@@ -351,6 +351,18 @@ ws_pointer_location_display(DisplayObj d, int *x, int *y)
     return SUCCEED;
 }
 
+status
+ws_selection_display(DisplayObj d, Name which, StringObj data)
+{ char *u8 = charArrayToUTF8((CharArray)data);
+
+  if ( which == NAME_primary )
+    return SDL_SetPrimarySelectionText(u8);
+  if ( which == NAME_clipboard )
+    return SDL_SetClipboardText(u8);
+
+  fail;
+}
+
 /**
  * Set the contents of the specified cut buffer.
  *
@@ -403,14 +415,29 @@ ws_set_selection_timeout(unsigned long time)
  * Retrieve the current selection for the specified type and target.
  *
  * @param d Pointer to the DisplayObj representing the display context.
- * @param which Name object specifying the selection type.
- * @param target Name object specifying the target format.
- * @return Pointer to the Any object containing the selection data; NULL if unavailable.
+ * @param which Name object specifying the selection source as one of
+ *        NAME_clipboard or NAME_primary.
+ * @param target Name object specifying the target format.  Normally
+ *        NAME_text
+ * @return Object representing the selection.
  */
 Any
 ws_get_selection(DisplayObj d, Name which, Name target)
-{
-    return NULL;
+{ if ( target == NAME_text )
+  { const char *text = NULL;
+
+    if ( which == NAME_clipboard )
+      text = SDL_GetClipboardText();
+    else if ( which == NAME_primary )
+      text = SDL_GetPrimarySelectionText();
+
+    if ( text )
+      return UTF8ToString(text);
+  }
+
+  Cprintf("ws_get_selection(%s, %s, %s): not supported\n",
+	  pp(d), pp(which), pp(target));
+  fail;
 }
 
 /**

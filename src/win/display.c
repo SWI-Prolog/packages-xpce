@@ -691,21 +691,7 @@ selectionOwnerDisplay(DisplayObj d, Any owner, Name selection,
 
 static status
 selectionDisplay(DisplayObj d, Name which, StringObj data)
-{ StringObj s2 = get(data, NAME_copy, EAV);
-
-  if ( s2 )
-  { lockObject(s2, ON);
-
-    return selectionOwnerDisplay(d,
-				 s2, which,
-				 newObject(ClassObtain,
-					   RECEIVER, NAME_self, EAV),
-				 newObject(ClassMessage,
-					   RECEIVER, NAME_free, EAV),
-				 NAME_text);
-  }
-
-  fail;
+{ return ws_selection_display(d, which, data);
 }
 
 
@@ -722,31 +708,10 @@ copyDisplay(DisplayObj d, StringObj data)
 
 static StringObj
 getPasteDisplay(DisplayObj d, Name which)
-{ static Name formats[] = { NAME_utf8_string,
-			    NAME_text,
-			    NAME_string,
-			    NULL
-			  };
-  StringObj s = NULL;
-  Name *fmt;
-
-  if ( isDefault(which) )
+{ if ( isDefault(which) )
     which = NAME_clipboard;
 
-  catchErrorPce(PCE, NAME_getSelection);
-  for(fmt = formats; *fmt; fmt++)
-  { if ( (s=get(d, NAME_selection, which, *fmt, EAV)) )
-      break;
-  }
-  if ( ! (*fmt) )
-    s = get(d, NAME_cutBuffer, ZERO, EAV);
-
-  catchPopPce(PCE);
-
-  if ( s )
-    answer(s);
-
-  fail;
+  return getSelectionDisplay(d, which, DEFAULT, DEFAULT);
 }
 
 
