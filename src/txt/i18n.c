@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/utf8.h>
+#include <stdbool.h>
 
 #define utf8_get_uchar(s, chr) (unsigned char*)utf8_get_char((char *)(s), chr)
 
@@ -286,12 +287,12 @@ nameToWC(Name nm, size_t *len)
 		 *	    <-- NAME		*
 		 *******************************/
 
-Name
-UTF8ToName(const char *utf8)
+static Any
+UTF8ToCharArray(const char *utf8, bool asname)
 { cuchar *in;
   cuchar *e;
-  int len;
-  int wide;
+  size_t len;
+  bool wide;
 
   for(in=(cuchar*)utf8; *in; in++)
   { if ( (*in)&0x80 )
@@ -307,22 +308,22 @@ UTF8ToName(const char *utf8)
 
     in = utf8_get_uchar(in, &chr);
     if ( chr > 0xff )
-      wide = TRUE;
+      wide = true;
     len++;
   }
 
   if ( wide )
   { wchar_t *ws, *o;
-    int mlcd;
+    bool mlcd;
     string s;
-    Name nm;
+    Any nm;
 
     if ( len < 1024 )
     { ws = alloca((len+1)*sizeof(wchar_t));
-      mlcd = FALSE;
+      mlcd = false;
     } else
     { ws = pceMalloc((len+1)*sizeof(wchar_t));
-      mlcd = TRUE;
+      mlcd = true;
     }
 
     for(in=(cuchar*)utf8, o=ws; in < e; )
@@ -333,7 +334,7 @@ UTF8ToName(const char *utf8)
     }
 
     str_set_n_wchar(&s, len, ws);
-    nm = StringToName(&s);
+    nm = asname ? (Any)StringToName(&s) : (Any)StringToString(&s);
 
     if ( mlcd )
       pceFree(ws);
@@ -341,16 +342,16 @@ UTF8ToName(const char *utf8)
     return nm;
   } else
   { char *as, *o;
-    int mlcd;
+    bool mlcd;
     string s;
-    Name nm;
+    Any nm;
 
     if ( len < 1024 )
     { as = alloca((len+1));
-      mlcd = FALSE;
+      mlcd = false;
     } else
     { as = pceMalloc((len+1));
-      mlcd = TRUE;
+      mlcd = true;
     }
 
     for(in=(cuchar*)utf8, o=as; in < e; )
@@ -361,7 +362,7 @@ UTF8ToName(const char *utf8)
     }
 
     str_set_n_ascii(&s, len, as);
-    nm = StringToName(&s);
+    nm = asname ? (Any)StringToName(&s) : (Any)StringToString(&s);
 
     if ( mlcd )
       pceFree(as);
@@ -370,6 +371,16 @@ UTF8ToName(const char *utf8)
   }
 }
 
+Name
+UTF8ToName(const char *utf8)
+{ return UTF8ToCharArray(utf8, true);
+}
+
+
+StringObj
+UTF8ToString(const char *utf8)
+{ return UTF8ToCharArray(utf8, false);
+}
 
 Name
 MBToName(const char *mb)

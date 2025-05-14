@@ -230,6 +230,7 @@ COMMON(Name)	UTF8ToName(const char *utf8);
 COMMON(Name)	MBToName(const char *mb);
 COMMON(Name)	WCToName(const wchar_t *wc, size_t len);
 COMMON(StringObj) WCToString(const wchar_t *wc, size_t len);
+COMMON(StringObj) UTF8ToString(const char *utf8);
 COMMON(Name)	FNToName(const char *name);
 COMMON(char *)	charArrayToFN(CharArray ca);
 COMMON(char *)	stringToFN(PceString s);
