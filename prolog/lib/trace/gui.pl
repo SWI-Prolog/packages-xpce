@@ -140,9 +140,9 @@ version('2.0').
                  *******************************/
 
 resource(debug, image,  image('debug.png')).
-resource(Name,  image,  image(XPM)) :-
-    button(_, _, XPM, _),
-    file_name_extension(Name, xpm, XPM).
+resource(Name,  image,  image(PNG)) :-
+    button(_, _, PNG, _),
+    file_name_extension(Name, png, PNG).
 
                  /*******************************
                  *           TOPLEVEL           *

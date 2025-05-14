@@ -401,7 +401,7 @@ handle(w+5, h/2, link, west).
 
 resource(Name, image, image(File)) :-
     style_image(_, File),
-    file_name_extension(Name, xpm, File).
+    file_name_extension(Name, png, File).
 
 style_image(deterministic,      'det.png').
 style_image(choicepoint,        'ndet.png').
