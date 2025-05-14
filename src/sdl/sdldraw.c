@@ -1269,8 +1269,22 @@ r_get_mono_pixel(int x, int y)
  */
 unsigned long
 r_get_pixel(int x, int y)
-{
-    return 0;
+{ unsigned char *data = cairo_image_surface_get_data(context.target);
+  int stride = cairo_image_surface_get_stride(context.target);
+  cairo_format_t format = cairo_image_surface_get_format(context.target);
+
+  assert(format == CAIRO_FORMAT_ARGB32);
+
+  unsigned char *p = data + y * stride + x * 4;
+  uint8_t b = p[0];
+  uint8_t g = p[1];
+  uint8_t r = p[2];
+  uint8_t a = p[3];
+
+  Cprintf("Pixel at %d,%d = %d %d %d %d\n",
+	  x, y, r, g, b, a);
+
+  return RGBA(r,g,b,a);
 }
 
 /**
