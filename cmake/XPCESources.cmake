@@ -79,7 +79,7 @@ endif()
 
 if(SDL)
 set(SDL_SRC	sdl.c sdldisplay.c sdlfont.c sdlmenu.c sdlwindow.c
-		sdlcolour.c sdldraw.c sdlframe.c sdlstream.c
+		sdlcolour.c sdldraw.c sdlframe.c sdlstream.c sdlinput.c
 		sdlcursor.c  sdlevent.c    sdlimage.c  sdltimer.c)
 elseif(RAYLIB)
 set(RAY_SRC	ray.c raydisplay.c rayfont.c raymenu.c raywindow.c

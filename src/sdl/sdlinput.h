@@ -32,77 +32,10 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <h/kernel.h>
-#include <h/graphics.h>
-#include "sdltimer.h"
-#include "sdluserevent.h"
+#ifndef SDL_INPUT_H_INCLUDED
+#define SDL_INPUT_H_INCLUDED
 
-static Uint32
-tm_callback(void *udata, SDL_TimerID id, Uint32 interval)
-{ Timer tm = udata;
-
-  if ( onFlag(tm, F_FREEING|F_FREED) )
-    return 0;
-
-  SDL_Event ev;
-  SDL_zero(ev);
-  ev.type = MY_EVENT_TIMER;
-  ev.user.data1 = tm;
-  SDL_PushEvent(&ev);
-
-  if ( tm->status == NAME_once )
-  { assign(tm, status, NAME_idle);
-    return 0;
-  }
-  return interval;
-}
-
-bool
-sdl_timer_event(SDL_Event *event)
-{ if ( event->type == MY_EVENT_TIMER )
-  { Timer tm = event->user.data1;
-
-    if ( !onFlag(tm, F_FREEING|F_FREED) &&
-	 instanceOfObject(tm, ClassTimer) )
-    { pceMTLock(LOCK_PCE);
-      if ( tm->service == ON )
-      { ServiceMode(PCE_EXEC_SERVICE, executeTimer(tm));
-      } else
-      { executeTimer(tm);
-      }
-      pceMTUnlock(LOCK_PCE);
-    }
-    return true;
-  }
-
-  return false;
-}
-
-
-static void
-start_timer(Timer tm)
-{ Uint32 ms = valReal(tm->interval)*1000.0+0.5;
-  Uint32 id = SDL_AddTimer(ms, tm_callback, tm);
-  tm->ws_ref = (void*)(intptr_t)id;
-}
-
-
-/**
- * Set the  status of the  specified timer.  This function  enables or
- * disables the timer based on the given status.
- *
- * @param tm Pointer to the Timer object.
- * @param status Name indicating the desired status.  One of
- * NAME_idle, NAME_once or NAME_repeat.
- */
-void
-ws_status_timer(Timer tm, Name status)
-{ if ( tm->ws_ref )
-  { Uint32 id = (Uint32)(intptr_t)tm->ws_ref;
-    SDL_RemoveTimer(id);
-    tm->ws_ref = NULL;
-  }
-
-  if ( status == NAME_repeat || status == NAME_once )
-    start_timer(tm);
-}
+bool	start_fd_watcher_thread(void);
+void	add_fd_to_watch(int fd, uintptr_t userdata);
+void	remove_fd_from_watch(int fd);
+#endif /*SDL_INPUT_H_INCLUDED*/
