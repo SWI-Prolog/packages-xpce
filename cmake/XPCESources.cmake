@@ -183,7 +183,7 @@ if(NOT WIN32)
   list(APPEND XPCE_DATA_prolog_lib Xserver.pl)
 endif()
 
-set(XPCE_DATA_prolog_lib_compatibility bitmap.pl event_speak.pl frozen.pl
+set(XPCE_DATA_prolog_lib_compatibility event_speak.pl frozen.pl
     global.pl resource.pl send.pl)
 
 set(XPCE_DATA_prolog_lib_doc browser.pl emit.pl form.pl html.pl

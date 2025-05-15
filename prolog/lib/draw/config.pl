@@ -93,10 +93,6 @@ config(resources/fill_palette,
        [ type(setof(image)),
          comment('Images used for filling'),
          default([ @white_image,
-                   @grey12_image,
-                   @grey25_image,
-                   @grey50_image,
-                   @grey75_image,
                    @black_image
                  ])
        ]).
