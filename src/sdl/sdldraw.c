@@ -707,7 +707,13 @@ r_shadow_box(int x, int y, int w, int h, int r, int shadow, Any fill)
 { if ( !shadow )
   { r_box(x, y, w, h, r, fill);
   } else
-  { Cprintf("r_shadow_box(%d, %d, %d, %d, %s)\n", x, y, w, h, pp(fill));
+  { if ( shadow > h ) shadow = h;
+    if ( shadow > w ) shadow = w;
+
+    r_colour(BLACK_COLOUR);
+    r_box(x+shadow, y+shadow, w-shadow, h-shadow, r, BLACK_COLOUR);
+    r_colour(DEFAULT);
+    r_box(x, y, w-shadow, h-shadow, r, isNil(fill) ? WHITE_COLOUR : fill);
   }
 }
 
@@ -816,7 +822,6 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 	Cprintf("stub: r_3d_box(%d, %d, %d, %d, %d, %s, %d)\n",
 		x, y, w, h, radius, pp(e), up));
 
-  Translate(x, y)
   NormaliseArea(x, y, w, h);
   if ( radius > 0 )
   { int maxr = min(w,h)/2;
@@ -826,13 +831,37 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
   }
 
   if ( e->kind == NAME_shadow )
-  { Cprintf("r_3d_box(): shadow\n");
+  { shadow = abs(shadow);
+    shadow = min(shadow, min(w, h));
+    if ( shadow > MAX_SHADOW )
+      shadow = MAX_SHADOW;
+    r_box(x, y, w-shadow, h-shadow, radius-shadow, e->colour);
+
+    int xt = x, yt = y;
+    Translate(xt, yt);
+
+    if ( radius > 0 )
+    { Cprintf("stub: r_3d_box(): shadow and radius;\n");
+    } else
+    { w -= shadow;
+      h -= shadow;
+
+      cairo_set_source_color(CR, r_elevation_shadow(e));
+      cairo_set_line_width(CR, 1);
+      for( int os=0; os < shadow; os++ )
+      { cairo_move_to(CR, xt+w+os,   yt+shadow);
+	cairo_line_to(CR, xt+w+os,   yt+h+os);
+	cairo_line_to(CR, xt+shadow, yt+h+os);
+	cairo_stroke(CR);
+      }
+    }
   } else
   { bool fill = r_elevation_fillpattern(e, up);
 
     if ( !up  )
       shadow = -shadow;
 
+    Translate(x, y);
     if ( shadow )
     { Colour top_left_color;
       Colour bottom_right_color;
