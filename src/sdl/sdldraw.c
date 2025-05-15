@@ -205,15 +205,18 @@ d_flush(void)
 }
 
 /**
- * Define a drawing window with specified dimensions and properties.
+ * Start  drawing in  a window.   The x,y,w,h  describe the  region to
+ * paint in  window client  coordinates.  The drawing  code translates
+ * this  to  window coordinates  using  Translate(x,y),  based on  the
+ * window `scroll_offset`.
  *
  * @param sw Pointer to the PceWindow object.
- * @param x The x-coordinate of the window.
- * @param y The y-coordinate of the window.
- * @param w The width of the window.
- * @param h The height of the window.
- * @param clear Flag indicating whether to clear the window.
- * @param limit Flag indicating whether to limit drawing to the window bounds.
+ * @param x X offset of the region we will paint
+ * @param y Y offset of the region we will paint
+ * @param w The width of the region we will paint.
+ * @param h The height of the region we will paint.
+ * @param clear Flag indicating whether to clear the region
+ * @param limit is unused and always TRUE.
  * @return SUCCEED on success; otherwise, FAIL.
  */
 status
