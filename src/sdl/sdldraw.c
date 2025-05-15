@@ -284,12 +284,10 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
   context.default_colour = context.colour;
   context.default_background = context.background;
 
-  Translate(x, y);
-  NormaliseArea(x, y, w, h);
+  r_clear_outside(sw);
   /* do we need to clip? */
 
-  r_clear_outside(sw);
-
+  d_clip(x, y, w, h);
   if ( clear )
     r_fill(x, y, w, h, context.background);
 
