@@ -206,7 +206,10 @@ d_flush(void)
 
 static void
 r_clear_raw(int x, int y, int w, int h)
-{ InvTranslate(x, y);
+{ DEBUG(NAME_redraw,
+	Cprintf("Clear background %d, %d, %d, %d\n",
+		x, y, w, h));
+  InvTranslate(x, y);
   r_clear(x, y, w, h);
 }
 
@@ -215,12 +218,15 @@ r_clear_outside(PceWindow sw)
 { Area a  = sw->bounding_box;
   int bbx = valInt(a->x), bby = valInt(a->y),
       bbw = valInt(a->w), bbh = valInt(a->h);
-  int bbr = bbx+bbw;
-  int bbb = bby+bbh;
-  int ww  = valInt(sw->area->w);
-  int wh  = valInt(sw->area->h);
 
   Translate(bbx, bby);
+
+  int ww  = valInt(sw->area->w);
+  int wh  = valInt(sw->area->h);
+  int bbr = bbx+bbw;
+  int bbb = bby+bbh;
+
+  DEBUG(NAME_redraw, Cprintf("bb=%d %d %d %d\n", bbx, bby, bbw, bbh));
   if ( bbx > 0 )
     r_clear_raw(0, 0, bbx, wh);
   if ( bby > 0 )
@@ -255,8 +261,10 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
   }
 
   DEBUG(NAME_redraw,
-	Cprintf("d_window(%s, %d, %d, %d, %d, %d, %d)\n",
-		pp(sw), x, y, w, h, clear, limit));
+	Cprintf("d_window(%s, %d, %d, %d, %d, %d) off=%d,%d\n",
+		pp(sw), x, y, w, h, clear,
+		valInt(sw->scroll_offset->x),
+		valInt(sw->scroll_offset->y)));
 
   if ( context.open && context.window == sw )
   { Cprintf("d_window(%s): Context is already open\n",
