@@ -37,6 +37,6 @@
 #include "sdluserevent.h"
 
 bool	start_fd_watcher_thread(void);
-void	add_fd_to_watch(int fd, uintptr_t userdata);
+void	add_fd_to_watch(int fd, int32_t code, void *userdata);
 void	remove_fd_from_watch(int fd);
 #endif /*SDL_INPUT_H_INCLUDED*/

@@ -393,7 +393,7 @@ set_watch(int fd)
   { if ( fd != watched_fd )
     { if ( watched_fd != -1 )
 	remove_fd_from_watch(watched_fd);
-      add_fd_to_watch(fd, 0);
+      add_fd_to_watch(fd, FD_READY_DISPATCH, NULL);
       watched_fd = fd;
     }
   }

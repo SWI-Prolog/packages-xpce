@@ -33,8 +33,9 @@
 */
 
 #include <h/kernel.h>
-#include <h/graphics.h>
+#include <h/unix.h>
 #include "sdlstream.h"
+#include "sdlinput.h"
 
 /**
  * Close the input side of the specified stream.
@@ -67,23 +68,31 @@ ws_close_stream(Stream s)
 }
 
 /**
- * Mark the specified stream as having input available.
+ * Prepare the stream to handle new input through messages.
  *
  * @param s Pointer to the Stream object.
  */
 void
 ws_input_stream(Stream s)
-{
+{ if ( s->rdfd >= 0 )
+  { add_fd_to_watch(s->rdfd, FD_READY_STREAM_INPUT, s);
+    DEBUG(NAME_stream,
+	  Cprintf("Registered %s for asynchronous input\n", pp(s)));
+  }
 }
 
 /**
- * Mark the specified stream as having no input available.
+ * Unprepare the stream.
  *
  * @param s Pointer to the Stream object.
  */
 void
 ws_no_input_stream(Stream s)
-{
+{ if ( s->rdfd >= 0 )
+  { remove_fd_from_watch(s->rdfd);
+    DEBUG(NAME_stream,
+	  Cprintf("Un-registered %s for asynchronous input\n", pp(s)));
+  }
 }
 
 /**
@@ -93,7 +102,7 @@ ws_no_input_stream(Stream s)
  */
 void
 ws_listen_socket(Socket s)
-{
+{ add_fd_to_watch(s->rdfd, FD_READY_STREAM_ACCEPT, s);
 }
 
 /**

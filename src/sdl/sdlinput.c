@@ -53,8 +53,9 @@
 #define MAX_FDS 64
 
 typedef struct
-{ int fd;
-  uintptr_t userdata;
+{ int   fd;			/* FD we are watching */
+  int   code;			/* SDL3 event.user.code */
+  void *userdata;		/* SDL3 event.user.data1 */
 } FDWatch;
 
 static struct pollfd poll_fds[MAX_FDS];
@@ -69,13 +70,15 @@ static void
 handle_control_message(const char *msg)
 { if ( msg[0] == '+' )
   { int fd = 0;
-    uintptr_t userdata = 0;
-    sscanf(msg+1, "%d:%zd", &fd, &userdata);
+    int32_t code = 0;
+    size_t userdata = 0;
+    sscanf(msg+1, "%d:%u:%zu", &fd, &code, &userdata);
     if ( nfds < MAX_FDS )
     { poll_fds[nfds].fd = fd;
       poll_fds[nfds].events = POLLIN;
       fd_meta[nfds].fd = fd;
-      fd_meta[nfds].userdata = userdata;
+      fd_meta[nfds].code     = code;
+      fd_meta[nfds].userdata = (void*)userdata;
       nfds++;
     }
   } else if (msg[0] == '-')
@@ -116,8 +119,9 @@ poll_thread_fn(void *unused)
     { if (poll_fds[i].revents & POLLIN) {
 	SDL_Event ev = {0};
 	ev.type = MY_EVENT_FD_READY;
+	ev.user.code  = fd_meta[i].code;
 	ev.user.data1 = (void*)(uintptr_t)fd_meta[i].fd;
-	ev.user.data2 = (void*)(uintptr_t)fd_meta[i].userdata;
+	ev.user.data2 = fd_meta[i].userdata;
 	SDL_PushEvent(&ev);
       }
     }
@@ -141,9 +145,9 @@ start_fd_watcher_thread(void)
 }
 
 void
-add_fd_to_watch(int fd, uintptr_t userdata)
+add_fd_to_watch(int fd, int32_t code, void *userdata)
 { char msg[64];
-  snprintf(msg, sizeof(msg), "+%d:%zd", fd, userdata);
+  snprintf(msg, sizeof(msg), "+%d:%u:%zu", fd, code, (size_t)userdata);
   write(control_pipe[1], msg, strlen(msg));
 }
 
