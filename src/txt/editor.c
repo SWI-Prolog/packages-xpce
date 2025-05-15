@@ -5418,15 +5418,11 @@ static classvardecl rc_editor[] =
   RC(NAME_indentIncrement, "int", "2",
      "Indent/undent amount"),
   RC(NAME_isearchStyle, "style",
-     UXWIN("when(@colour_display,\n"
-	   "     style(background := green),\n"
-	   "     style(background := @grey25_image))",
+     UXWIN("style(background := green)",
 	   "@_isearch_style"),
      "Style for incremental search"),
   RC(NAME_isearchOtherStyle, "style",
-     "when(@colour_display,\n"
-     "     style(background := pale_turquoise),\n"
-     "     style(background:= @grey12_image))",
+     "style(background := pale_turquoise)",
      "Style for `other matches' in incremental search"),
   RC(NAME_keyBinding, "string", "",
      "`Key = selector' binding list"),
@@ -5437,9 +5433,7 @@ static classvardecl rc_editor[] =
   RC(NAME_selectModifier, "modifier", "s",
      "Modify selection using this modifier"),
   RC(NAME_selectionStyle, "[style]",
-     UXWIN("when(@colour_display,\n"
-	   "     style(background := yellow),\n"
-	   "     style(highlight := @on))",
+     UXWIN("style(background := yellow)",
 	   "@_select_style"),
      "Style for <-selection"),
   RC(NAME_insertDeletesSelection, "bool", "@on",
