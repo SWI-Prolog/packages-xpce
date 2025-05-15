@@ -254,7 +254,7 @@ ws_window_frame_position_(Any window, FrameObj fr, int *ox, int *oy)
       if ( notNil(dw->frame) )
       { if ( dw->frame == fr )
 	{ *ox += valInt(dw->area->x) + valInt(sw->area->x);
-	  *ox += valInt(dw->area->y) + valInt(sw->area->y);
+	  *oy += valInt(dw->area->y) + valInt(sw->area->y);
 	  return true;
 	}
 	return false;
