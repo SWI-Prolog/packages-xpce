@@ -38,6 +38,7 @@
 #include "sdlframe.h"
 #include "sdlevent.h"
 #include "sdlcursor.h"
+#include "sdldraw.h"
 
 /**
  * Check if the specified window has been created.
@@ -103,6 +104,7 @@ ws_create_window(PceWindow sw, PceWindow parent)
   wsw->backing = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
 					    wsw->w,  wsw->h);
   assert(wsw->backing);
+  d_init_surface(wsw->backing, sw->background);
 
   DEBUG(NAME_sdl, Cprintf("ws_create_window(%s)\n", pp(sw)));
 

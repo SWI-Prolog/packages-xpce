@@ -35,6 +35,10 @@
 #ifndef RAYDRAW_H
 #define RAYDRAW_H
 
+/* private SDL interface */
+void d_init_surface(cairo_surface_t *surf, Any background);
+
+/* public interface */
 void resetDraw(void);
 void d_offset(int x, int y);
 void r_offset(int x, int y);

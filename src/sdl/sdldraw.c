@@ -73,6 +73,12 @@ typedef struct
 #define InvTranslate(x, y) { x -= context.offset_x; y -= context.offset_y; }
 #define CR (context.cr)
 
+static void pce_cairo_set_source_color(cairo_t *cr, Colour pce);
+
+		 /*******************************
+		 *        CONTEXT STACK         *
+		 *******************************/
+
 #include <gra/graphstate.c>
 
 static sdl_draw_context	context;	/* current context */
@@ -101,6 +107,22 @@ push_context(void)
 void
 resetDraw(void)
 { memset(&context, 0, sizeof(context));
+}
+
+void
+d_init_surface(cairo_surface_t *surf, Any background)
+{ int width   = cairo_image_surface_get_width(surf);
+  int height  = cairo_image_surface_get_height(surf);
+  cairo_t *cr = cairo_create(surf);
+  cairo_new_path(cr);
+  if ( instanceOfObject(background, ClassColour) )
+  { pce_cairo_set_source_color(cr, background);
+  } else
+  { Cprintf("stub: non-colour background: %s\n", pp(background));
+  }
+  cairo_rectangle(cr, 0, 0, width, height);
+  cairo_fill(cr);
+  cairo_destroy(cr);
 }
 
 /**
@@ -173,18 +195,6 @@ d_ensure_display(void)
 { if ( context.display == NULL )
     d_display(CurrentDisplay(NIL));
 }
-
-#if 0
-static void
-d_ensure_context(void)
-{ if ( !context.open++ )
-  { push_context();
-    d_ensure_display();
-    WsDisplay wsd = context.display->ws_ref;
-    context.target = wsd->hidden_surface;
-  }
-}
-#endif
 
 /**
  * Flush all pending drawing operations to the display.
@@ -363,7 +373,7 @@ intersection_iarea(IArea a, IArea b)
 		 *******************************/
 
 static void
-cairo_set_source_color(cairo_t *cr, Colour pce)
+pce_cairo_set_source_color(cairo_t *cr, Colour pce)
 { SDL_Color c = pceColour2SDL_Color(pce);
   cairo_set_source_rgba(cr, c.r/256.0, c.g/256.0, c.b/256.0, c.a/256.0);
 }
@@ -682,11 +692,11 @@ r_box(int x, int y, int w, int h, int r, Any fill)
     cairo_rectangle(CR, x, y, w, h);
   if ( notNil(fill) )
   { r_fillpattern(fill, NAME_foreground);
-    cairo_set_source_color(CR, context.fill_pattern);
+    pce_cairo_set_source_color(CR, context.fill_pattern);
     cairo_fill_preserve(CR);
   }
   if ( context.pen )
-  { cairo_set_source_color(CR, context.colour);
+  { pce_cairo_set_source_color(CR, context.colour);
     cairo_stroke(CR);
   }
 }
@@ -846,7 +856,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
     { w -= shadow;
       h -= shadow;
 
-      cairo_set_source_color(CR, r_elevation_shadow(e));
+      pce_cairo_set_source_color(CR, r_elevation_shadow(e));
       cairo_set_line_width(CR, 1);
       for( int os=0; os < shadow; os++ )
       { cairo_move_to(CR, xt+w+os,   yt+shadow);
@@ -884,7 +894,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
       { int r = x+w;
 	int b = y+h;
 
-	cairo_set_source_color(CR, top_left_color);
+	pce_cairo_set_source_color(CR, top_left_color);
 	cairo_set_line_width(CR, 1);
 	for(int os=0; os<shadow; os++)
 	{ cairo_move_to(CR, r-os, y-os);
@@ -892,7 +902,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 	  cairo_line_to(CR, x+os, b-os);
 	  cairo_stroke(CR);
 	}
-	cairo_set_source_color(CR, bottom_right_color);
+	pce_cairo_set_source_color(CR, bottom_right_color);
 	for(int os=0; os<shadow; os++)
 	{ cairo_move_to(CR, r-os, y-os);
 	  cairo_line_to(CR, r-os, b-os);
@@ -1017,7 +1027,7 @@ r_line(int x1, int y1, int x2, int y2)
 			   x1, y1, x2, y2));
 
   cairo_new_path(CR);
-  cairo_set_source_color(CR, context.colour);
+  pce_cairo_set_source_color(CR, context.colour);
   cairo_set_line_width(CR, context.pen);
   cairo_move_to(CR, x1, y1);
   cairo_line_to(CR, x2, y2);
@@ -1071,12 +1081,12 @@ r_path(Chain points, int ox, int oy, int radius, int closed, Image fill)
 
   if ( notNil(fill) )
   { r_fillpattern(fill, NAME_foreground);
-    cairo_set_source_color(CR, context.fill_pattern);
+    pce_cairo_set_source_color(CR, context.fill_pattern);
     cairo_fill_preserve(CR);
   }
 
   if ( context.pen )
-  { cairo_set_source_color(CR, context.colour);
+  { pce_cairo_set_source_color(CR, context.colour);
     cairo_set_line_width(CR, context.pen);
     cairo_stroke(CR);
   }
@@ -1153,7 +1163,7 @@ r_fill(int x, int y, int w, int h, Any fill)
 
     if ( instanceOfObject(context.fill_pattern, ClassColour) )
     { cairo_new_path(CR);
-      cairo_set_source_color(CR, context.fill_pattern);
+      pce_cairo_set_source_color(CR, context.fill_pattern);
       cairo_rectangle(CR, x, y, w, h);
       cairo_fill(CR);
     } else
@@ -1178,7 +1188,7 @@ r_fill_polygon(IPoint pts, int n)
   cairo_set_source_rgba(CR, 0, 0, 0, 0);
   cairo_paint(CR);
 
-  cairo_set_source_color(CR, context.fill_pattern);
+  pce_cairo_set_source_color(CR, context.fill_pattern);
   int x = pts[0].x;
   int y = pts[0].y;
   Translate(x, y);
@@ -1516,7 +1526,7 @@ s_printU(const char *u, size_t len, int x, int y, FontObj font)
   Translate(x, y);
   cairo_new_path(CR);
   cairo_set_font(CR, font);
-  cairo_set_source_color(CR, context.colour);
+  pce_cairo_set_source_color(CR, context.colour);
   cairo_move_to(CR, x, y);
   if ( strlen(u) == len )
   { cairo_show_text(CR, u);
