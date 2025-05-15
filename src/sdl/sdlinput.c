@@ -48,7 +48,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdbool.h>
-#include "sdluserevent.h"
+#include "sdlinput.h"
 
 #define MAX_FDS 64
 

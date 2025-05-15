@@ -34,6 +34,7 @@
 
 #ifndef SDL_INPUT_H_INCLUDED
 #define SDL_INPUT_H_INCLUDED
+#include "sdluserevent.h"
 
 bool	start_fd_watcher_thread(void);
 void	add_fd_to_watch(int fd, uintptr_t userdata);

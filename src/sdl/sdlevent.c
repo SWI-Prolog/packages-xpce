@@ -36,6 +36,7 @@
 #include <h/graphics.h>
 #include "../../swipl/pcecall.h"
 #include "sdlevent.h"
+#include "sdlinput.h"
 #include "sdlframe.h"
 #include "sdltimer.h"
 #ifdef HAVE_POLL
@@ -383,21 +384,66 @@ resetDispatch(void)
 {
 }
 
+static int dispatch_fd = -1;
+static int watched_fd  = -1;
+
+static void
+set_watch(int fd)
+{ if ( fd >= 0 )
+  { if ( fd != watched_fd )
+    { if ( watched_fd != -1 )
+	remove_fd_from_watch(watched_fd);
+      add_fd_to_watch(fd, 0);
+      watched_fd = fd;
+    }
+  }
+}
+
+static bool
+dispatch_ready_event(void)
+{ SDL_Event ev;
+
+  if ( SDL_PollEvent(&ev) )
+  { EventObj event = CtoEvent(&ev);
+    if ( event )
+      dispatch_event(event);
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Dispatch events from the event queue.
  *
  * @param FD The file descriptor to monitor for events.
  * @param timeout The maximum time to wait for an event.
- * @return true if an event is ready, false on a timeout.
+ * @return true if an event was processed.  false on timeout.
  */
-
-static int	  dispatch_fd = -1;
 
 status
 ws_dispatch(Int FD, Any timeout)
 { int fd = (isDefault(FD) ? dispatch_fd :
 	    isNil(FD)	  ? -1
 			  : valInt(FD));
+  if ( fd >= 0 )
+    dispatch_fd = fd;
+
+  if ( dispatch_ready_event() )
+    succeed;
+
+  if ( pceMTTryLock(LOCK_PCE) )
+  { RedrawDisplayManager(TheDisplayManager());
+    ws_redraw_changed_frames();
+    pceMTUnlock(LOCK_PCE);
+  }
+
+  if ( dispatch_ready_event() )
+    succeed;
+
+  if ( fd >= 0 )
+    set_watch(fd);
+
   int tmo;
 
   if ( isNil(timeout) )
@@ -409,16 +455,7 @@ ws_dispatch(Int FD, Any timeout)
   } else if ( instanceOfObject(timeout, ClassReal) )
   { tmo = (int)(valReal(timeout)*1000.0);
   } else
-  { tmo = 256;
-  }
-
-  if ( fd >= 0 )
-    dispatch_fd = fd;
-
-  if ( pceMTTryLock(LOCK_PCE) )
-  { RedrawDisplayManager(TheDisplayManager());
-    ws_redraw_changed_frames();
-    pceMTUnlock(LOCK_PCE);
+  { tmo = 250;
   }
 
   bool rc;
@@ -430,7 +467,11 @@ ws_dispatch(Int FD, Any timeout)
   }
 
   if ( rc )
-  { EventObj event = CtoEvent(&ev);
+  { if ( ev.type == MY_EVENT_FD_READY &&
+	 ev.user.data1 == (void*)(intptr_t)fd )
+      succeed;
+
+    EventObj event = CtoEvent(&ev);
     if ( event )
       dispatch_event(event);
   }

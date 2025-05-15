@@ -35,6 +35,7 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include "sdl.h"
+#include "sdlinput.h"
 
 /**
  * Initialize the Raylib backend with the given command-line arguments.
@@ -47,6 +48,7 @@ ws_initialise(int argc, char **argv)
 { if ( !SDL_Init(SDL_INIT_EVENTS) )
     errorPce(NIL, NAME_sdlInitialize);
   ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
+  start_fd_watcher_thread();
 }
 
 /**
