@@ -1900,7 +1900,6 @@ static status
 relateWindow(PceWindow sw, Name how, Any to)
 { PceWindow w2 = instanceOfObject(to, ClassWindow) ? to : NIL;
   PceWindow wto = w2;
-  FrameObj fr;
 
   if ( notNil(sw->decoration) )
     return relateWindow(sw->decoration, how, to);
@@ -1944,9 +1943,6 @@ relateWindow(PceWindow sw, Name how, Any to)
   }
 
   mergeFramesWindow(sw, w2);
-
-  if ( (fr=getFrameWindow(sw, OFF)) && createdFrame(fr) )
-    send(fr, NAME_updateTileAdjusters, EAV);
 
   succeed;
 }

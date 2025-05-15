@@ -43,11 +43,13 @@ static struct standardCursor
   int	id;				/* X font id of the cursor */
 } standard_cursors[] =
 {					/* Map X11 names to SDL */
-  { "arrow",       SDL_SYSTEM_CURSOR_DEFAULT },
-  { "top_left_arrow", SDL_SYSTEM_CURSOR_DEFAULT },
-  { "watch",       SDL_SYSTEM_CURSOR_WAIT },
-  { "hand2",       SDL_SYSTEM_CURSOR_POINTER },
-  { "xterm",       SDL_SYSTEM_CURSOR_TEXT },
+  { "arrow",             SDL_SYSTEM_CURSOR_DEFAULT },
+  { "top_left_arrow",    SDL_SYSTEM_CURSOR_DEFAULT },
+  { "watch",             SDL_SYSTEM_CURSOR_WAIT },
+  { "hand2",             SDL_SYSTEM_CURSOR_POINTER },
+  { "xterm",             SDL_SYSTEM_CURSOR_TEXT },
+  { "sb_h_double_arrow", SDL_SYSTEM_CURSOR_EW_RESIZE },
+  { "sb_v_double_arrow", SDL_SYSTEM_CURSOR_NS_RESIZE },
 					/* Native SDL names */
   { "default",	   SDL_SYSTEM_CURSOR_DEFAULT },
   { "text",	   SDL_SYSTEM_CURSOR_TEXT },

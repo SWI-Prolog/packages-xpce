@@ -67,7 +67,7 @@ set(TXT_SRC	chararray.c editor.c fragment.c keybinding.c
 set(UNX_SRC	directory.c file.c process.c socket.c stream.c)
 
 set(WIN_SRC	browser.c decorate.c dialog.c display.c
-		displaymgr.c frame.c picture.c tileadjust.c
+		displaymgr.c frame.c picture.c
 		tile.c view.c window.c application.c
 		monitor.c)
 

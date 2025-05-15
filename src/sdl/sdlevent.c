@@ -307,6 +307,7 @@ CtoEvent(SDL_Event *event)
     assert(rc);
     (void)rc;
     window = mouse_tracking_window;
+
     x -= ox;
     y -= oy;
     if ( event->type == SDL_EVENT_MOUSE_BUTTON_UP &&

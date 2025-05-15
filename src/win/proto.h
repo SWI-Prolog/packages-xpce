@@ -64,9 +64,6 @@ COMMON(status)	makeClassFrame(Class class);
 /* /staff/jan/src/pl/packages/xpce/src/win/picture.c */
 COMMON(status)	makeClassPicture(Class class);
 
-/* /staff/jan/src/pl/packages/xpce/src/win/tileadjust.c */
-COMMON(status)	makeClassTileAdjuster(Class class);
-
 /* /staff/jan/src/pl/packages/xpce/src/win/setup.c */
 
 /* /staff/jan/src/pl/packages/xpce/src/win/tile.c */

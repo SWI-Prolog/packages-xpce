@@ -38,6 +38,7 @@
 #include "sdlwindow.h"
 #include "sdlcolour.h"
 #include "sdlevent.h"
+#include "sdlcursor.h"
 
 #define MainWindow(fr)	     ( isNil(fr->members->head) ? (Any) fr : \
 			       fr->members->head->value )
@@ -524,14 +525,17 @@ setDndAwareFrame(FrameObj fr)
 }
 
 /**
- * Set the cursor for the specified frame.
+ * Set the cursor  shape for the specified window. In  SDL, the cursor
+ * is global for the application, i.e., it is _not_ set for a window.
  *
- * @param fr Pointer to the FrameObj.
- * @param cursor Pointer to the CursorObj to set.
+ * @param sw Pointer to the PceWindow object.
+ * @param cursor The CursorObj representing the new cursor shape.
  */
 void
 ws_frame_cursor(FrameObj fr, CursorObj cursor)
-{
+{ SDL_Cursor *c = pceCursor2SDL_Cursor(cursor);
+  if ( c )
+    SDL_SetCursor(c);
 }
 
 /**

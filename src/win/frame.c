@@ -1383,11 +1383,13 @@ redrawFrame(FrameObj fr, Area a)
 { succeed;
 }
 
-
 		 /*******************************
 		 *	  SUBTILE LAYOUT	*
 		 *******************************/
 
+/* This  used  to  update  small  adjuster  widgets.   Now  it  merely
+ * establishes the can_resize attribute of all subtiles.
+ */
 
 static status
 updateTileAdjustersFrame(FrameObj fr, TileObj t)
@@ -1397,24 +1399,9 @@ updateTileAdjustersFrame(FrameObj fr, TileObj t)
   }
 
   if ( notNil(t) )
-  { if ( notNil(t->super) && getCanResizeTile(t) == ON )
-    {
-#if !SDL_GRAPHICS		/* not yet, but planning on an alternative */
-      if ( isNil(t->adjuster) )
-      { PceWindow adj = newObject(ClassTileAdjuster, t, EAV);
-	assert(adj);
-
-	appendFrame(fr, adj);
-	ws_topmost_window(adj, ON);
-/*	Cprintf("%s: Area = %s, %s, %s, %s\n", pp(adj),
-		pp(adj->area->x), pp(adj->area->y),
-		pp(adj->area->w), pp(adj->area->h));
-*/
-      }
-      send(t, NAME_updateAdjusterPosition, EAV);
-#endif
-    } else if ( notNil(t->adjuster) )
-      freeObject(t->adjuster);
+  { if ( notNil(t->super) )
+    { (void) getCanResizeTile(t);
+    }
 
     if ( notNil(t->members) )
     { Cell cell;
@@ -1426,8 +1413,6 @@ updateTileAdjustersFrame(FrameObj fr, TileObj t)
 
   succeed;
 }
-
-
 
 		 /*******************************
 		 *	       MODAL		*
@@ -1473,6 +1458,69 @@ blockedByModalFrame(FrameObj fr)
   fail;
 }
 
+static TileObj resizingTile = NIL;
+
+static status
+tileResizeEvent(EventObj ev)
+{ if ( ev->window == ev->frame )
+  { if ( ev->id == NAME_locMove || ev->id == NAME_msLeftDown )
+    { TileObj tile = getTileFrame(ev->frame);
+
+      if ( tile )
+      { Point pt = tempObject(ClassPoint, ev->x, ev->y, EAV);
+	TileObj sub = getSubTileToResizeTile(tile, pt);
+	considerPreserveObject(pt);
+	if ( sub )
+	{ static CursorObj hresize = NULL;
+	  static CursorObj vresize = NULL;
+	  static CursorObj cursor;
+
+	  if ( !hresize )
+	    hresize = getClassVariableValueObject(ev->frame,
+						  NAME_horizontalResizeCursor);
+	  if ( !vresize )
+	    vresize = getClassVariableValueObject(ev->frame,
+						  NAME_verticalResizeCursor);
+
+	  if ( sub->super->orientation == NAME_vertical )
+	    cursor = vresize;
+	  else
+	    cursor = hresize;
+
+	  ws_frame_cursor(ev->frame, cursor);
+	  if ( ev->id == NAME_msLeftDown )
+	  { DEBUG(NAME_tile, Cprintf("Start resizing %s\n", pp(sub)));
+	    resizingTile = sub;
+	  }
+
+	  DEBUG(NAME_tile,
+		Cprintf("Resize for %s (%s) at %d,%d; cursor = %s\n",
+			pp(sub), pp(sub->super->orientation),
+			valInt(sub->area->x), valInt(sub->area->y),
+			pp(cursor)));
+
+	  succeed;
+	}
+      }
+    } else if ( notNil(resizingTile) &&
+		(ev->id == NAME_msLeftDrag || ev->id == NAME_msLeftUp) )
+    { TileObj sub = resizingTile;
+      if ( sub->super->orientation == NAME_vertical )
+      { int h = valInt(ev->y) - valInt(sub->area->y);
+	send(sub, NAME_height, toInt(h), EAV);
+      } else
+      { int w = valInt(ev->x) - valInt(sub->area->x);
+	send(sub, NAME_width, toInt(w), EAV);
+      }
+
+      if ( ev->id == NAME_msLeftUp )
+	resizingTile = NIL;
+
+      succeed;
+    }
+  }
+  fail;
+}
 
 static status
 postEventFrame(FrameObj fr, EventObj ev)
@@ -1505,6 +1553,8 @@ eventFrame(FrameObj fr, EventObj ev)
 
     return send(fr, NAME_typed, ev, EAV);
   }
+
+  tileResizeEvent(ev);
 
   if ( isDownEvent(ev) && (bfr=blockedByModalFrame(fr)) )
     goto blocked;
