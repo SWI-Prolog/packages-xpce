@@ -851,28 +851,25 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 
       if ( radius > 0 )			/* with rounded corners */
       { Cprintf("r_3d_box(): with radius\n");
-#if 0
       } else
       { int r = x+w;
 	int b = y+h;
-	SDL_Color c = pceColour2SDL_Color(top_left_color);
-	SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
+
+	cairo_set_source_color(CR, top_left_color);
+	cairo_set_line_width(CR, 1);
 	for(int os=0; os<shadow; os++)
-	{ SDL_FPoint pts[3] =
-	    { { r-os, y-os }, { x+os, y+os }, { x+os, b-os } };
-	  SDL_RenderLines(context.renderer, pts, 3);
+	{ cairo_move_to(CR, r-os, y-os);
+	  cairo_line_to(CR, x+os, y+os);
+	  cairo_line_to(CR, x+os, b-os);
+	  cairo_stroke(CR);
 	}
-	c = pceColour2SDL_Color(bottom_right_color);
-	SDL_SetRenderDrawColor(context.renderer, c.r, c.g, c.b, c.a);
+	cairo_set_source_color(CR, bottom_right_color);
 	for(int os=0; os<shadow; os++)
-	{ SDL_FPoint pts[3] =
-	    { { r-os, y-os }, { r-os, b-os }, { x+os, b-os } };
-	  SDL_RenderLines(context.renderer, pts, 3);
+	{ cairo_move_to(CR, r-os, y-os);
+	  cairo_line_to(CR, r-os, b-os);
+	  cairo_line_to(CR, x+os, b-os);
+	  cairo_stroke(CR);
 	}
-#else
-	(void)top_left_color;
-	(void)bottom_right_color;
-#endif
       }
     }
 
