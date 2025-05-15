@@ -39,6 +39,7 @@
  * - Accepts dynamic add/remove via a control pipe
  */
 
+#include <h/kernel.h>
 #include <SDL3/SDL.h>
 #include <poll.h>
 #include <unistd.h>
@@ -51,78 +52,73 @@
 #include "sdlinput.h"
 
 #define MAX_FDS 64
-
-typedef struct
-{ int   fd;			/* FD we are watching */
-  int   code;			/* SDL3 event.user.code */
-  void *userdata;		/* SDL3 event.user.data1 */
-} FDWatch;
+#define WATCH_FREE     0
+#define WATCH_RESERVED 1
+#define WATCH_ACTIVE   2
+#define WATCH_PENDING  3
+#define WATCH_REMOVE   4
 
 static struct pollfd poll_fds[MAX_FDS];
-static FDWatch fd_meta[MAX_FDS];
-static int nfds = 1; // 0 = control pipe, 1+ = user fds
+static int meta_id[MAX_FDS];
+static FDWatch fd_meta[MAX_FDS] = {0};
 static int control_pipe[2];
+static int watch_max = 0;
 static SDL_Thread *watcher_thread = NULL;
-
-// Message format: "+42:1234" to add fd 42 with userdata 1234
-//                "-42" to remove fd 42
-static void
-handle_control_message(const char *msg)
-{ if ( msg[0] == '+' )
-  { int fd = 0;
-    int32_t code = 0;
-    size_t userdata = 0;
-    sscanf(msg+1, "%d:%u:%zu", &fd, &code, &userdata);
-    if ( nfds < MAX_FDS )
-    { poll_fds[nfds].fd = fd;
-      poll_fds[nfds].events = POLLIN;
-      fd_meta[nfds].fd = fd;
-      fd_meta[nfds].code     = code;
-      fd_meta[nfds].userdata = (void*)userdata;
-      nfds++;
-    }
-  } else if (msg[0] == '-')
-  { int fd = 0;
-    sscanf(msg+1, "%d", &fd);
-    for (int i = 1; i < nfds; ++i)
-    { if ( poll_fds[i].fd == fd )
-      { // remove by swapping last
-	poll_fds[i] = poll_fds[nfds-1];
-	fd_meta[i] = fd_meta[nfds-1];
-	nfds--;
-	break;
-      }
-    }
-  }
-}
 
 static int
 poll_thread_fn(void *unused)
-{ char buffer[128];
+{ while (true)
+  { int nfds = 1;		/* 0 is for our control pipe */
+    bool removed = false;
 
-  while (true)
-  { int rc = poll(poll_fds, nfds, -1);
+    for(int i=0; i<=watch_max; i++)
+    { if ( fd_meta[i].state == WATCH_ACTIVE )
+      { poll_fds[nfds].fd = fd_meta[i].fd;
+	poll_fds[nfds].events = POLLIN;
+	poll_fds[nfds].revents = 0;
+	meta_id[nfds] = i;
+	nfds++;
+      } else if ( fd_meta[i].state == WATCH_REMOVE )
+      { fd_meta[i].state = WATCH_FREE;
+	removed = true;
+      }
+    }
+    if ( removed )
+    { for(int i=MAX_FDS-1; i>=0; i--)
+      { if ( fd_meta[i].state != WATCH_FREE )
+	{ int expected = watch_max;
+	  if ( i < watch_max )
+	    atomic_compare_exchange_strong(&watch_max, &expected, i);
+	}
+      }
+    }
+
+    int rc = poll(poll_fds, nfds, -1);
     if (rc < 0)
     { perror("poll");
       break;
     }
 
     if ( poll_fds[0].revents & POLLIN )
-    { ssize_t len = read(control_pipe[0], buffer, sizeof(buffer)-1);
-      if ( len > 0 )
-      { buffer[len] = '\0';
-	handle_control_message(buffer);
-      }
+    { char buffer[128];
+      read(control_pipe[0], buffer, sizeof(buffer));
     }
 
     for (int i = 1; i < nfds; ++i)
-    { if (poll_fds[i].revents & POLLIN) {
-	SDL_Event ev = {0};
-	ev.type = MY_EVENT_FD_READY;
-	ev.user.code  = fd_meta[i].code;
-	ev.user.data1 = (void*)(uintptr_t)fd_meta[i].fd;
-	ev.user.data2 = fd_meta[i].userdata;
-	SDL_PushEvent(&ev);
+    { if ( (poll_fds[i].revents & POLLIN) )
+      { FDWatch *watch = &fd_meta[meta_id[i]];
+
+	DEBUG(NAME_stream, Cprintf("Input on %d\n", watch->fd));
+	if ( watch->state == WATCH_ACTIVE )
+	{ watch->state = WATCH_PENDING;
+	  DEBUG(NAME_stream, Cprintf("Posting %d\n", watch->fd));
+	  SDL_Event ev = {0};
+	  ev.type = MY_EVENT_FD_READY;
+	  ev.user.code  = watch->code;
+	  ev.user.data1 = watch;
+	  ev.user.data2 = watch->userdata;
+	  SDL_PushEvent(&ev);
+	}
       }
     }
   }
@@ -138,22 +134,48 @@ start_fd_watcher_thread(void)
   fcntl(control_pipe[0], F_SETFL, O_NONBLOCK);
   poll_fds[0].fd = control_pipe[0];
   poll_fds[0].events = POLLIN;
-  nfds = 1;
 
   watcher_thread = SDL_CreateThread(poll_thread_fn, "fd-watcher", NULL);
   return watcher_thread != NULL;
 }
 
-void
+FDWatch *
 add_fd_to_watch(int fd, int32_t code, void *userdata)
-{ char msg[64];
-  snprintf(msg, sizeof(msg), "+%d:%u:%zu", fd, code, (size_t)userdata);
-  write(control_pipe[1], msg, strlen(msg));
+{ for(int i=0; i<MAX_FDS; i++)
+  { int free = WATCH_FREE;
+
+    if ( atomic_compare_exchange_strong(
+	   &fd_meta[i].state, &free, WATCH_RESERVED) )
+    { FDWatch *watch = &fd_meta[i];
+      watch->fd       = fd;
+      watch->code     = code;
+      watch->userdata = userdata;
+      watch->state    = WATCH_ACTIVE;
+      if ( i > watch_max )
+	watch_max = i;
+      write(control_pipe[1], "+", 1);
+      return watch;
+    }
+  }
+
+  return NULL;
 }
 
 void
-remove_fd_from_watch(int fd)
-{ char msg[32];
-  snprintf(msg, sizeof(msg), "-%d", fd);
-  write(control_pipe[1], msg, strlen(msg));
+remove_fd_watch(FDWatch *watch)
+{ if ( watch )
+  { watch->state = WATCH_REMOVE;
+    write(control_pipe[1], "-", 1);
+  }
+}
+
+void
+processed_fd_watch(FDWatch *watch)
+{ if ( watch )
+  { DEBUG(NAME_stream,
+	  if ( watch->fd != 0 )
+	    Cprintf("Re-enabling %d\n", watch->fd));
+    watch->state = WATCH_ACTIVE;
+    write(control_pipe[1], "=", 1);
+  }
 }

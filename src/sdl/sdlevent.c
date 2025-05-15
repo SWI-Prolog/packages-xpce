@@ -39,6 +39,7 @@
 #include "sdlinput.h"
 #include "sdlframe.h"
 #include "sdltimer.h"
+#include "sdlstream.h"
 #ifdef HAVE_POLL
 #include <poll.h>
 #endif
@@ -215,6 +216,8 @@ CtoEvent(SDL_Event *event)
     fail;
   if ( sdl_timer_event(event) )	/* Timer event */
     fail;
+  if ( sdl_stream_event(event) ) /* I/O stream event */
+    fail;
   mouse_flags = SDL_GetMouseState(&fx, &fy);
 
   switch (event->type)
@@ -385,16 +388,20 @@ resetDispatch(void)
 }
 
 static int dispatch_fd = -1;
-static int watched_fd  = -1;
+static FDWatch *watch  = NULL;
 
 static void
 set_watch(int fd)
 { if ( fd >= 0 )
-  { if ( fd != watched_fd )
-    { if ( watched_fd != -1 )
-	remove_fd_from_watch(watched_fd);
-      add_fd_to_watch(fd, FD_READY_DISPATCH, NULL);
-      watched_fd = fd;
+  { if ( watch )
+    { if ( watch->fd != fd )
+      { remove_fd_watch(watch);
+	watch = add_fd_to_watch(fd, FD_READY_DISPATCH, NULL);
+      } else
+      { processed_fd_watch(watch); /* re-enable */
+      }
+    } else
+    { watch = add_fd_to_watch(fd, FD_READY_DISPATCH, NULL);
     }
   }
 }
@@ -468,7 +475,7 @@ ws_dispatch(Int FD, Any timeout)
 
   if ( rc )
   { if ( ev.type == MY_EVENT_FD_READY &&
-	 ev.user.data1 == (void*)(intptr_t)fd )
+	 ev.user.code == FD_READY_DISPATCH )
       succeed;
 
     EventObj event = CtoEvent(&ev);

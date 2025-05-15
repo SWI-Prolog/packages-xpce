@@ -32,10 +32,64 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include <sys/socket.h>
 #include <h/kernel.h>
 #include <h/unix.h>
+#include <errno.h>
 #include "sdlstream.h"
 #include "sdlinput.h"
+#ifdef HAVE_POLL
+#include <poll.h>
+#endif
+
+#ifndef SHUT_RD
+#define SHUT_RD 0
+#define SHUT_WR 1
+#endif
+
+static FDWatch *
+getStreamWatch(Stream s)
+{ return s->ws_ref;
+}
+
+static void
+setStreamWatch(Stream s, FDWatch *watch)
+{ s->ws_ref = watch;
+}
+
+
+bool
+sdl_stream_event(SDL_Event *event)
+{ if ( event->type == MY_EVENT_FD_READY )
+  { FDWatch *watch = event->user.data1;
+
+    if ( event->user.code != FD_READY_DISPATCH )
+      DEBUG(NAME_stream, Cprintf("Data on %d (code = %d)\n",
+				 watch->fd, event->user.code));
+
+    if ( event->user.code == FD_READY_STREAM_INPUT )
+    { Stream s = event->user.data2;
+      assert(instanceOfObject(s, ClassStream));
+      pceMTLock(LOCK_PCE);
+      DEBUG(NAME_stream, Cprintf("handleInputStream(%s)\n", pp(s)));
+      bool rc = handleInputStream(s);
+      pceMTUnlock(LOCK_PCE);
+      if ( rc )
+	processed_fd_watch(watch);
+      else
+	ws_no_input_stream(s);
+    } else if ( event->user.code == FD_READY_STREAM_ACCEPT )
+    { Socket s = event->user.data2;
+      assert(instanceOfObject(s, ClassSocket));
+      acceptSocket(s);
+      processed_fd_watch(watch);
+    }
+
+    return true;
+  }
+
+  return false;
+}
 
 /**
  * Close the input side of the specified stream.
@@ -44,7 +98,23 @@
  */
 void
 ws_close_input_stream(Stream s)
-{
+{ if ( s->rdstream )
+  { fclose(s->rdstream);
+    s->rdstream = NULL;
+  }
+
+  if ( s->rdfd >= 0 )
+  {
+#ifdef HAVE_SHUTDOWN
+    if ( instanceOfObject(s, ClassSocket) )
+      shutdown(s->rdfd, SHUT_RD);
+    else
+#endif
+      close(s->rdfd);
+    s->rdfd = -1;
+  }
+
+  ws_no_input_stream(s);
 }
 
 /**
@@ -54,7 +124,16 @@ ws_close_input_stream(Stream s)
  */
 void
 ws_close_output_stream(Stream s)
-{
+{ if ( s->wrfd >= 0 )
+  {
+#ifdef HAVE_SHUTDOWN
+    if ( instanceOfObject(s, ClassSocket) )
+      shutdown(s->wrfd, SHUT_WR);
+/*    else		Seems we must do both to free the descriptor */
+#endif
+      close(s->wrfd);
+    s->wrfd = -1;
+  }
 }
 
 /**
@@ -75,9 +154,11 @@ ws_close_stream(Stream s)
 void
 ws_input_stream(Stream s)
 { if ( s->rdfd >= 0 )
-  { add_fd_to_watch(s->rdfd, FD_READY_STREAM_INPUT, s);
+  { FDWatch *watch = add_fd_to_watch(s->rdfd, FD_READY_STREAM_INPUT, s);
     DEBUG(NAME_stream,
-	  Cprintf("Registered %s for asynchronous input\n", pp(s)));
+	  Cprintf("Registered %s for async input (fd=%d)\n",
+		  pp(s), s->rdfd));
+    setStreamWatch(s, watch);
   }
 }
 
@@ -89,9 +170,11 @@ ws_input_stream(Stream s)
 void
 ws_no_input_stream(Stream s)
 { if ( s->rdfd >= 0 )
-  { remove_fd_from_watch(s->rdfd);
+  { FDWatch *watch = getStreamWatch(s);
+    remove_fd_watch(watch);
     DEBUG(NAME_stream,
-	  Cprintf("Un-registered %s for asynchronous input\n", pp(s)));
+	  Cprintf("Un-registered %s for async input\n", pp(s)));
+    setStreamWatch(s, NULL);
   }
 }
 
@@ -102,7 +185,11 @@ ws_no_input_stream(Stream s)
  */
 void
 ws_listen_socket(Socket s)
-{ add_fd_to_watch(s->rdfd, FD_READY_STREAM_ACCEPT, s);
+{ FDWatch *watch = add_fd_to_watch(s->rdfd, FD_READY_STREAM_ACCEPT, s);
+  setStreamWatch((Stream)s, watch);
+  DEBUG(NAME_stream,
+	  Cprintf("Registered %s for async listen (fd=%d)\n",
+		  pp(s), s->rdfd));
 }
 
 /**
@@ -115,23 +202,63 @@ ws_listen_socket(Socket s)
  */
 status
 ws_write_stream_data(Stream s, void *data, int len)
-{
-    return SUCCEED;
+{ if ( s->wrfd < 0 )
+    return errorPce(s, NAME_notOpen);
+  if ( write(s->wrfd, data, len) != len )
+    return errorPce(s, NAME_ioError, getOsErrorPce(PCE));
+
+  succeed;
 }
 
 /**
- * Read raw data from the specified stream, with optional timeout.
+ * Read input  from stream s into  data, which is len  bytes long.  If
+ * timeout is not DEFAULT, the read waits at most timeout milliseconds
+ * before doing the system read.
  *
  * @param s Pointer to the Stream object.
  * @param data Pointer to the buffer to read into.
  * @param len Number of bytes to read.
  * @param timeout Timeout value in seconds.
- * @return Number of bytes read, or -1 on error.
+ * @return -2: timeout; -1: error; 0: end-of-file; >0: bytes read
  */
 int
 ws_read_stream_data(Stream s, void *data, int len, Real timeout)
-{
-    return 0;
+{ if ( s->rdfd < 0 )
+  { errno = EINVAL;
+    return -1;
+  }
+
+  if ( notDefault(timeout) )
+  {
+#ifdef HAVE_POLL
+    double v = valReal(timeout);
+    int to = (int)(v*1000.0);
+    struct pollfd fds[1];
+
+    fds[0].fd = s->rdfd;
+    fds[0].events = POLLIN;
+    if ( poll(fds, 1, to) == 0 )
+      return -2;
+#else
+#ifndef __WINDOWS__
+    if ( s->rdfd < FD_SETSIZE )
+#endif
+    { fd_set readfds;
+      struct timeval to;
+      double v = valReal(timeout);
+
+      to.tv_sec  = (long)v;
+      to.tv_usec = (long)(v * 1000000.0) % 1000000;
+
+      FD_ZERO(&readfds);
+      FD_SET(s->rdfd, &readfds);
+      if ( select(s->rdfd+1, &readfds, NULL, NULL, &to) == 0 )
+	return -2;
+    }
+#endif
+  }
+
+  return read(s->rdfd, data, len);
 }
 
 /**

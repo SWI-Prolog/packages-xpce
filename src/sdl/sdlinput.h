@@ -35,8 +35,17 @@
 #ifndef SDL_INPUT_H_INCLUDED
 #define SDL_INPUT_H_INCLUDED
 #include "sdluserevent.h"
+#include <stdatomic.h>
 
-bool	start_fd_watcher_thread(void);
-void	add_fd_to_watch(int fd, int32_t code, void *userdata);
-void	remove_fd_from_watch(int fd);
+typedef struct
+{ int		fd;		/* FD we are watching */
+  int		code;		/* SDL3 event.user.code */
+  atomic_int	state;		/* WATCH_* */
+  void	       *userdata;	/* SDL3 event.user.data1 */
+} FDWatch;
+
+bool	 start_fd_watcher_thread(void);
+FDWatch *add_fd_to_watch(int fd, int32_t code, void *userdata);
+void	 remove_fd_watch(FDWatch *watch);
+void	 processed_fd_watch(FDWatch *watch);
 #endif /*SDL_INPUT_H_INCLUDED*/

@@ -34,7 +34,12 @@
 
 #ifndef RAYSTREAM_H
 #define RAYSTREAM_H
+#include <SDL3/SDL.h>
 
+/* Private interface */
+bool sdl_stream_event(SDL_Event *event);
+
+/* Public interface */
 void ws_close_input_stream(Stream s);
 void ws_close_output_stream(Stream s);
 void ws_close_stream(Stream s);
