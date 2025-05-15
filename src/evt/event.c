@@ -88,6 +88,17 @@ initialiseEvent(EventObj e, Name id, Any window,
   last_x         = x;
   last_y         = y;
 
+  FrameObj fr;
+  if ( instanceOfObject(window, ClassWindow) )
+    fr = getFrameWindow(window, OFF);
+  else if ( instanceOfObject(window, ClassFrame) )
+    fr = window;
+  else
+  { Cprintf("Event window is nor window nor frame: %s\n", pp(window));
+    fr = NIL;
+  }
+
+  assign(e, frame,      fr);
   assign(e, window,	window);
   assign(e, receiver,	window);
   assign(e, id,		id);
