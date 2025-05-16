@@ -51,7 +51,7 @@ active(Img, Active:bool, Img2:image) :<-
         ->  true
         ;   get(Img, hypered, active, _)
         ->  Img2 = Img
-        ;   get(Img, grayscale, Img2)
+        ;   get(Img, greyed, Img2)
         )
     ;   (   get(Img, hypered, active, Img2)
         ->  true
@@ -59,40 +59,12 @@ active(Img, Active:bool, Img2:image) :<-
         )
     ).
 
-
-:- if(true).
-greyed(Img, Grey:image) :<-
-    "Created a greyed version of a colour image"::
-    format(user_error, 'stub: image<-greyed\n', []),
-    Grey = Img.
-:- else.
 greyed(Img, Grey:image) :<-
     "Created a greyed version of a colour image"::
     (   get(Img, hypered, inactive, Grey)
     ->  true
-    ;   get(Img, size, size(W, H)),
-        new(Grey, image(@nil, W, H, pixmap)),
-        (   get(Img, mask, Mask),
-            send(Mask, instance_of, image)
-        ->  send(Grey, mask, new(M, image(@nil, W, H, bitmap))),
-            new(MB, bitmap(Mask)),
-            send(MB, transparent, @on),
-            send(M, draw_in, MB),
-            send(M, draw_in, MB, point(1,1))
-        ;   true
-        ),
-        get(Img, monochrome, I2),
-        send(Grey, background, black),
-        new(B2, bitmap(I2)),
-        send(B2, transparent, @on),
-        send(B2, colour, white),
-        send(Grey, draw_in, B2, point(1,1)),
-        get(class(menu), class_variable, inactive_colour, ClassVar),
-        get(ClassVar, value, GreyColour),
-        send(B2, colour, GreyColour),
-        send(Grey, draw_in, B2),
+    ;   get(Img, grayscale, Grey),
         new(_, hyper(Img, Grey, inactive, active))
     ).
-:- endif.
 
 :- pce_end_class.
