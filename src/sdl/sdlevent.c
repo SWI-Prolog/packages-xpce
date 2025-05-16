@@ -483,6 +483,8 @@ ws_dispatch(Int FD, Any timeout)
       dispatch_event(event);
   }
 
+  considerLocStillEvent();
+
   return rc;
 }
 
