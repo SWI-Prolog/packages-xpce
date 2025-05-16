@@ -106,9 +106,12 @@ ws_create_font(FontObj f, DisplayObj d)
   WsFont wsf = alloc(sizeof(ws_font));
   memset(wsf, 0, sizeof(ws_font));
   wsf->font    = ttf;
+  wsf->options = cairo_font_options_create();
   wsf->ascent  = extents.ascent;
   wsf->descent = extents.descent;
   wsf->height  = extents.height;
+  cairo_get_font_options(cr, wsf->options);
+  cairo_get_font_matrix(cr, &wsf->matrix);
   f->ws_ref = wsf;
   assign(f, ex, toInt(xextents.height));
   assign(f, fixed_width, xextents.width==wextents.width ? ON : OFF);
@@ -130,6 +133,7 @@ ws_destroy_font(FontObj f, DisplayObj d)
   if ( wsf )
   { f->ws_ref = NULL;
     cairo_scaled_font_destroy(wsf->font);
+    cairo_font_options_destroy(wsf->options);
     unalloc(sizeof(ws_font), wsf);
   }
 }

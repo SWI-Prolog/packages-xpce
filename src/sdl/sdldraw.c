@@ -74,7 +74,9 @@ typedef struct
 #define CR (context.cr)
 
 static void pce_cairo_set_source_color(cairo_t *cr, Colour pce);
+#if 0
 static bool validate_cairo_text_consistency(cairo_t *draw_cr);
+#endif
 
 
 		 /*******************************
@@ -425,19 +427,12 @@ pce_cairo_set_font(cairo_t *cr, FontObj pce)
 { WsFont wsf = ws_get_font(pce);
   if ( wsf )
   { cairo_set_scaled_font(cr, wsf->font);
-    DisplayObj  d = context.display;
-    if ( !d )
-      d = CurrentDisplay(NIL);
-    WsDisplay wsd = d->ws_ref;
-    cairo_matrix_t matrix;
-    cairo_get_font_matrix(wsd->hidden_cairo, &matrix);
-    cairo_set_font_matrix(cr, &matrix);
-    validate_cairo_text_consistency(cr);
+    cairo_set_font_matrix(cr, &wsf->matrix);
   } else
     Cprintf("stub: No font for %s\n", pp(pce));
 }
 
-
+#if 0
 static bool
 ctm_equal(cairo_t *cr1, cairo_t *cr2)
 { cairo_matrix_t m1, m2;
@@ -493,6 +488,7 @@ validate_cairo_text_consistency(cairo_t *draw_cr)
     return true;
   }
 }
+#endif
 
 
 		 /*******************************

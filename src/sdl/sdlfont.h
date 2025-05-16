@@ -39,6 +39,8 @@
 
 typedef struct
 { cairo_scaled_font_t *font;
+  cairo_matrix_t matrix;
+  cairo_font_options_t *options;
   double ascent;
   double descent;
   double height;
