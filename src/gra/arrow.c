@@ -37,7 +37,7 @@
 #include "math.h"
 
 static status	drawArrow(int x1, int y1, int x2, int y2, int x3, int y3,
-			  Image fill, int pen, Name texture, Name style);
+			  Any fill, int pen, Name texture, Name style);
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Arrows are defined in terms of the point at the tip the length of the arrow
@@ -202,9 +202,10 @@ RedrawAreaArrow(Arrow a, Area area)
 
 static status
 drawArrow(int x1, int y1, int x2, int y2, int x3, int y3,
-	  Image fill, int pen, Name texture, Name style)
+	  Any fill, int pen, Name texture, Name style)
 { ipoint pts[3];
 
+  /* TBD: Cairo can paint the line and fill from the same path */
   if ( notNil(fill) )
   { pts[0].x = x1;
     pts[0].y = y1;
@@ -415,7 +416,7 @@ static getdecl get_arrow[] =
 /* Resources */
 
 static classvardecl rc_arrow[] =
-{ RC(NAME_fillPattern, "image|colour", "@black_image",
+{ RC(NAME_fillPattern, "image|colour", "black",
      "Fill pattern for the triangle"),
   RC(NAME_length, "int", "2.5mm",
      "Distance tip to base (2.5mm)"),
