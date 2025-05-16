@@ -74,6 +74,8 @@ typedef struct
 #define CR (context.cr)
 
 static void pce_cairo_set_source_color(cairo_t *cr, Colour pce);
+static bool validate_cairo_text_consistency(cairo_t *draw_cr);
+
 
 		 /*******************************
 		 *        CONTEXT STACK         *
@@ -313,11 +315,13 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
  */
 status
 d_image(Image i, int x, int y, int w, int h)
-{ ws_open_image(i, CurrentDisplay(NIL), valReal(i->scale));
+{ DisplayObj d =  CurrentDisplay(NIL);
+  ws_open_image(i, d, valReal(i->scale));
 
   push_context();
   context.open = 1;
 
+  context.display            = d;
   context.target             = i->ws_ref;
   context.cr                 = cairo_create(context.target);
   context.background         = i->background;
@@ -417,12 +421,78 @@ pce_cairo_set_source_color(cairo_t *cr, Colour pce)
 }
 
 static void
-cairo_set_font(cairo_t *cr, FontObj pce)
+pce_cairo_set_font(cairo_t *cr, FontObj pce)
 { WsFont wsf = ws_get_font(pce);
   if ( wsf )
-    cairo_set_scaled_font(cr, wsf->font);
+  { cairo_set_scaled_font(cr, wsf->font);
+    DisplayObj  d = context.display;
+    if ( !d )
+      d = CurrentDisplay(NIL);
+    WsDisplay wsd = d->ws_ref;
+    cairo_matrix_t matrix;
+    cairo_get_font_matrix(wsd->hidden_cairo, &matrix);
+    cairo_set_font_matrix(cr, &matrix);
+    validate_cairo_text_consistency(cr);
+  } else
+    Cprintf("stub: No font for %s\n", pp(pce));
 }
 
+
+static bool
+ctm_equal(cairo_t *cr1, cairo_t *cr2)
+{ cairo_matrix_t m1, m2;
+  cairo_get_matrix(cr1, &m1);
+  cairo_get_matrix(cr2, &m2);
+  return memcmp(&m1, &m2, sizeof(cairo_matrix_t)) == 0;
+}
+
+static bool
+font_options_equal(cairo_t *cr1, cairo_t *cr2)
+{ cairo_font_options_t *fo1 = cairo_font_options_create();
+  cairo_font_options_t *fo2 = cairo_font_options_create();
+
+  cairo_get_font_options(cr1, fo1);
+  cairo_get_font_options(cr2, fo2);
+
+  bool same = cairo_font_options_equal(fo1, fo2);
+
+  cairo_font_options_destroy(fo1);
+  cairo_font_options_destroy(fo2);
+  return same;
+}
+
+static bool
+font_matrix_equal(cairo_t *cr1, cairo_t *cr2)
+{ cairo_matrix_t fm1, fm2;
+  cairo_get_font_matrix(cr1, &fm1);
+  cairo_get_font_matrix(cr2, &fm2);
+  return memcmp(&fm1, &fm2, sizeof(cairo_matrix_t)) == 0;
+}
+
+static bool
+validate_cairo_text_consistency(cairo_t *draw_cr)
+{ DisplayObj d = context.display;
+  if ( !d )
+    d = CurrentDisplay(NIL);
+  if ( d )
+  { WsDisplay wsd = d->ws_ref;
+    cairo_t *hidden_cr = wsd->hidden_cairo;
+
+    bool ctm_ok = ctm_equal(draw_cr, hidden_cr);
+    bool opt_ok = font_options_equal(draw_cr, hidden_cr);
+    bool mtx_ok = font_matrix_equal(draw_cr, hidden_cr);
+    bool rc = ctm_ok&&opt_ok&&mtx_ok;
+
+    if ( !rc )
+    { Cprintf("Inconsistent text context for %s: %d %d %d\n",
+	      pp(context.window), ctm_ok, opt_ok, mtx_ok);
+    }
+    return rc;
+  } else
+  { Cprintf("validate_cairo_text_consistency(): no display\n");
+    return true;
+  }
+}
 
 
 		 /*******************************
@@ -1459,7 +1529,7 @@ ws_font_context(void)
 int
 c_width(wint_t c, FontObj font)
 { cairo_t *cr = ws_font_context();
-  cairo_set_font(cr, font);
+  pce_cairo_set_font(cr, font);
   cairo_text_extents_t extents;
   char s[2] = {c};
   cairo_text_extents(cr, s, &extents);
@@ -1493,7 +1563,7 @@ s_extents(PceString s, int from, int to, FontObj font,
   const char *u = stringToUTF8(&s2, &ulen);
 
   cairo_t *cr = ws_font_context();
-  cairo_set_font(cr, font);
+  pce_cairo_set_font(cr, font);
   if ( strlen(u) == ulen )
   { cairo_text_extents(cr, u, extents);
   } else
@@ -1563,7 +1633,7 @@ s_printU(const char *u, size_t len, int x, int y, FontObj font)
 
   Translate(x, y);
   cairo_new_path(CR);
-  cairo_set_font(CR, font);
+  pce_cairo_set_font(CR, font);
   pce_cairo_set_source_color(CR, context.colour);
   cairo_move_to(CR, x, y);
   if ( strlen(u) == len )
