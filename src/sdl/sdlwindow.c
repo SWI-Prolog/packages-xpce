@@ -155,22 +155,20 @@ ws_reassociate_ws_window(PceWindow from, PceWindow to)
  */
 void
 ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
-{ if ( ws_created_window(sw) )
-  { WsWindow wsw = sw->ws_ref;
+{ WsWindow wsw = sw->ws_ref;
 
-    if ( wsw->backing && (wsw->w != w || wsw->h != h) )
-    { wsw->w = w;
-      wsw->h = h;
-      cairo_surface_destroy(wsw->backing);
-      wsw->backing = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
-						wsw->w,  wsw->h);
-      assert(wsw->backing);
-      d_init_surface(wsw->backing, sw->background);
-      DEBUG(NAME_sdl, Cprintf("Resized %s to %dx%d\n", pp(sw), w, h));
-      send(sw, NAME_resize, EAV);
-      changed_window(sw, 0, 0, w, h, TRUE);
-      addChain(ChangedWindows, sw);
-    }
+  if ( wsw && wsw->backing && (wsw->w != w || wsw->h != h) )
+  { wsw->w = w;
+    wsw->h = h;
+    cairo_surface_destroy(wsw->backing);
+    wsw->backing = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+					      wsw->w,  wsw->h);
+    assert(wsw->backing);
+    d_init_surface(wsw->backing, sw->background);
+    DEBUG(NAME_sdl, Cprintf("Resized %s to %dx%d\n", pp(sw), w, h));
+    send(sw, NAME_resize, EAV);
+    changed_window(sw, 0, 0, w, h, TRUE);
+    addChain(ChangedWindows, sw);
   }
 }
 

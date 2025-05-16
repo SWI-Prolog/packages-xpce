@@ -1668,17 +1668,15 @@ geometryWindow(PceWindow sw, Int X, Int Y, Int W, Int H)
 			 assign(sw->area, h, ONE);
 		     });
 
-  if ( getFrameWindow(sw, OFF) && ws_created_window(sw) )
-  { int x, y, w, h;
-    int pen = valInt(sw->pen);
+  int x, y, w, h;
+  int pen = valInt(sw->pen);
 
-    x = valInt(sw->area->x);
-    y = valInt(sw->area->y);
-    w = valInt(sw->area->w);
-    h = valInt(sw->area->h);
+  x = valInt(sw->area->x);
+  y = valInt(sw->area->y);
+  w = valInt(sw->area->w);
+  h = valInt(sw->area->h);
 
-    ws_geometry_window(sw, x, y, w, h, pen);
-  }
+  ws_geometry_window(sw, x, y, w, h, pen);
 
   succeed;
 }
