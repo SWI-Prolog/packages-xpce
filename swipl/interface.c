@@ -3023,30 +3023,44 @@ PrologQuery(int what, PceCValue *value)
 		 *	    CONSOLE I/O		*
 		 *******************************/
 
-#define XPCE_OUTPUT Suser_output	/* log in current console */
-#define XPCE_INPUT Suser_input
+static IOSTREAM *
+XPCE_OUTPUT(void)
+{ IOSTREAM *s = Suser_output;
+  if ( !s )
+    s = Soutput;
+  return s;
+}
+
+static IOSTREAM *
+XPCE_INPUT(void)
+{ IOSTREAM *s = Suser_input;
+  if ( !s )
+    s = Sinput;
+  return s;
+}
+
 
 void
 pl_Cvprintf(const char *fmt, va_list args)
-{ Svfprintf(XPCE_OUTPUT, fmt, args);
+{ Svfprintf(XPCE_OUTPUT(), fmt, args);
 }
 
 
 static int
 pl_Cputchar(int c)
-{ return Sputcode(c, XPCE_OUTPUT);
+{ return Sputcode(c, XPCE_OUTPUT());
 }
 
 
 static void
 pl_Cflush(void)
-{ Sflush(XPCE_OUTPUT);
+{ Sflush(XPCE_OUTPUT());
 }
 
 
 static char *
 pl_Cgetline(char *buf, int size)
-{ return Sfgets(buf, size, XPCE_INPUT);
+{ return Sfgets(buf, size, XPCE_INPUT());
 }
 
 
