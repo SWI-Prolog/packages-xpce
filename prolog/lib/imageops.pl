@@ -51,7 +51,7 @@ active(Img, Active:bool, Img2:image) :<-
         ->  true
         ;   get(Img, hypered, active, _)
         ->  Img2 = Img
-        ;   get(Img, greyed, Img2)
+        ;   get(Img, grayscale, Img2)
         )
     ;   (   get(Img, hypered, active, Img2)
         ->  true

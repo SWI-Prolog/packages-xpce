@@ -796,6 +796,12 @@ getMonochromeImage(Image image)
 
 
 static Image
+getGrayscaleImage(Image image)
+{ answer(ws_grayscale_image(image));
+}
+
+
+static Image
 getScaleImage(Image image, Size size)
 { Image i2;
 
@@ -1186,6 +1192,8 @@ static getdecl get_image[] =
      NAME_copy, "Get a subimage"),
   GM(NAME_monochrome, 0, "image", NULL, getMonochromeImage,
      NAME_copy, "Get monochrome version of pixmap image"),
+  GM(NAME_grayscale, 0, "image", NULL, getGrayscaleImage,
+     NAME_copy, "Get grayscale version of image"),
   GM(NAME_scale, 1, "image", "size", getScaleImage,
      NAME_copy, "Get copy with different dimensions"),
   GM(NAME_rotate, 1, "image", "degrees=real", getRotateImage,

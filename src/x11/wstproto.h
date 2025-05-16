@@ -201,6 +201,7 @@ COMMON(status)	ws_resize_image(Image image, Int w, Int h);
 COMMON(Image)	ws_scale_image(Image image, int w, int h);
 COMMON(Image)	ws_rotate_image(Image image, float angle);
 COMMON(Image)	ws_monochrome_image(Image image);
+COMMON(Image)	ws_grayscale_image(Image image);
 COMMON(void)	ws_postscript_image(Image image, Int depth, int iscolor);
 COMMON(status)	loadXliImage(Image image, FileObj file, Int bright);
 COMMON(void)	ws_create_image_from_x11_data(Image image, unsigned char *data, int w, int h);

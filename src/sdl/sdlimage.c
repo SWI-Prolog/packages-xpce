@@ -415,6 +415,53 @@ ws_monochrome_image(Image image)
 }
 
 /**
+ * Create a greyscale version of the image.
+ *
+ * @param image Pointer to the source Image.
+ * @return A new monochrome Image; NULL on failure.
+ */
+Image
+ws_grayscale_image(Image image)
+{ if ( !image->ws_ref && !XopenImage(image, CurrentDisplay(NIL)) )
+    fail;
+
+  Int w = image->size->w;
+  Int h = image->size->h;
+  Image img_gray = answerObject(ClassImage, NIL, w, h, NAME_pixmap, EAV);
+  cairo_surface_t *gray =
+    cairo_image_surface_create(CAIRO_FORMAT_ARGB32, valInt(w), valInt(h));
+  cairo_surface_t *orig = image->ws_ref;
+  int stride = cairo_image_surface_get_stride(orig);
+  unsigned char *src = cairo_image_surface_get_data(orig);
+  unsigned char *dst = cairo_image_surface_get_data(gray);
+
+  for(int y = 0; y < valInt(h); y++)
+  { for(int x = 0; x < valInt(w); x++)
+    { unsigned char *s = src + y * stride + x * 4;
+      unsigned char *d = dst + y * stride + x * 4;
+
+      unsigned char a = s[3];
+      if (a == 0)
+      { // Fully transparent, keep transparent
+	d[0] = d[1] = d[2] = 0;
+	d[3] = 0;
+      } else
+      { // Convert to grayscale using luminosity method
+	uint8_t r = s[2], g = s[1], b = s[0]; // BGRA
+	uint8_t gray = (uint8_t)(0.3 * r + 0.59 * g + 0.11 * b);
+
+	d[0] = d[1] = d[2] = gray;  // B = G = R
+	d[3] = a;
+      }
+    }
+  }
+
+  img_gray->ws_ref = gray;
+
+  answer(img_gray);
+}
+
+/**
  * Render the image to PostScript.
  *
  * @param image Pointer to the Image object.
