@@ -92,6 +92,7 @@ ws_create_font(FontObj f, DisplayObj d)
 
   WsDisplay wsd = d->ws_ref;
   cairo_t *cr = wsd->hidden_cairo;
+  cairo_save(cr);
   cairo_set_font_face(cr, face);
   cairo_set_font_size(cr, (double)valInt(f->points)*font_scale);
   cairo_scaled_font_t *ttf = cairo_get_scaled_font(cr);
@@ -111,6 +112,7 @@ ws_create_font(FontObj f, DisplayObj d)
   f->ws_ref = wsf;
   assign(f, ex, toInt(xextents.height));
   assign(f, fixed_width, xextents.width==wextents.width ? ON : OFF);
+  cairo_restore(cr);
 
   succeed;
 }

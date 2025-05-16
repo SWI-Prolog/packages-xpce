@@ -1528,11 +1528,13 @@ ws_font_context(void)
  */
 int
 c_width(wint_t c, FontObj font)
-{ cairo_t *cr = ws_font_context();
-  pce_cairo_set_font(cr, font);
-  cairo_text_extents_t extents;
+{ cairo_text_extents_t extents;
   char s[2] = {c};
+  cairo_t *cr = ws_font_context();
+  cairo_save(cr);
+  pce_cairo_set_font(cr, font);
   cairo_text_extents(cr, s, &extents);
+  cairo_restore(cr);
 
   int w = (int)extents.x_advance;
 
@@ -1563,6 +1565,7 @@ s_extents(PceString s, int from, int to, FontObj font,
   const char *u = stringToUTF8(&s2, &ulen);
 
   cairo_t *cr = ws_font_context();
+  cairo_save(cr);
   pce_cairo_set_font(cr, font);
   if ( strlen(u) == ulen )
   { cairo_text_extents(cr, u, extents);
@@ -1580,6 +1583,7 @@ s_extents(PceString s, int from, int to, FontObj font,
     if ( tmp != buf )
       free(tmp);
   }
+  cairo_restore(cr);
 }
 
 /**
@@ -1627,7 +1631,7 @@ str_advance(PceString s, int from, int to, FontObj font)
 
 static void
 s_printU(const char *u, size_t len, int x, int y, FontObj font)
-{ DEBUG(NAME_stub,
+{ DEBUG(NAME_redraw,
 	Cprintf("s_printU(\"%s\", %d, %d, %d, %s) (color: %s)\n",
 		u, len, x, y, pp(font), pp(context.colour)));
 
