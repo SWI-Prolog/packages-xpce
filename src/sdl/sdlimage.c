@@ -431,9 +431,13 @@ ws_grayscale_image(Image image)
   cairo_surface_t *gray =
     cairo_image_surface_create(CAIRO_FORMAT_ARGB32, valInt(w), valInt(h));
   cairo_surface_t *orig = image->ws_ref;
+
   int stride = cairo_image_surface_get_stride(orig);
   unsigned char *src = cairo_image_surface_get_data(orig);
   unsigned char *dst = cairo_image_surface_get_data(gray);
+
+  assert(valInt(w) == cairo_image_surface_get_width(orig));
+  assert(valInt(h) == cairo_image_surface_get_height(orig));
 
   for(int y = 0; y < valInt(h); y++)
   { for(int x = 0; x < valInt(w); x++)
@@ -448,14 +452,15 @@ ws_grayscale_image(Image image)
       } else
       { // Convert to grayscale using luminosity method
 	uint8_t r = s[2], g = s[1], b = s[0]; // BGRA
-	uint8_t gray = (uint8_t)(0.3 * r + 0.59 * g + 0.11 * b);
+	uint8_t G = (uint8_t)(0.3 * r + 0.59 * g + 0.11 * b);
 
-	d[0] = d[1] = d[2] = gray;  // B = G = R
+	d[0] = d[1] = d[2] = G;  // B = G = R
 	d[3] = a;
       }
     }
   }
 
+  cairo_surface_mark_dirty(gray);
   img_gray->ws_ref = gray;
 
   answer(img_gray);
