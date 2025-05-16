@@ -169,9 +169,9 @@ ws_input_stream(Stream s)
  */
 void
 ws_no_input_stream(Stream s)
-{ if ( s->rdfd >= 0 )
-  { FDWatch *watch = getStreamWatch(s);
-    remove_fd_watch(watch);
+{ FDWatch *watch = getStreamWatch(s);
+  if ( watch )
+  { remove_fd_watch(watch);
     DEBUG(NAME_stream,
 	  Cprintf("Un-registered %s for async input\n", pp(s)));
     setStreamWatch(s, NULL);
