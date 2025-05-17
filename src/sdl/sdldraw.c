@@ -326,6 +326,13 @@ status
 d_image(Image i, int x, int y, int w, int h)
 { DisplayObj d =  CurrentDisplay(NIL);
   ws_open_image(i, d, valReal(i->scale));
+  Any colour = i->foreground;
+  Any background = i->background;
+
+  if ( isDefault(colour) )
+    colour = d->foreground;
+  if ( isDefault(background) )
+    background = d->background;
 
   push_context();
   context.open = 1;
@@ -333,8 +340,8 @@ d_image(Image i, int x, int y, int w, int h)
   context.display            = d;
   context.target             = i->ws_ref;
   context.cr                 = cairo_create(context.target);
-  context.background         = i->background;
-  context.colour             = i->foreground;
+  context.background         = background;
+  context.colour             = colour;
   context.default_colour     = context.colour;
   context.default_background = context.background;
 
