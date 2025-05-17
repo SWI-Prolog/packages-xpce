@@ -416,7 +416,7 @@ static getdecl get_arrow[] =
 /* Resources */
 
 static classvardecl rc_arrow[] =
-{ RC(NAME_fillPattern, "image|colour", "black",
+{ RC(NAME_fillPattern, TYPE_FILL, "foreground",
      "Fill pattern for the triangle"),
   RC(NAME_length, "int", "2.5mm",
      "Distance tip to base (2.5mm)"),
