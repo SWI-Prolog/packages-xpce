@@ -1097,7 +1097,27 @@ r_arc(int x, int y, int w, int h, int s, int e, Any fill)
  */
 void
 r_ellipse(int x, int y, int w, int h, Any fill)
-{
+{ Translate(x, y);
+  NormaliseArea(x, y, w, h);
+
+  DEBUG(NAME_draw,
+	Cprintf("r_ellipse(%d, %d, %d, %d, %s)\n",
+		x, y, w, h, pp(fill)));
+
+  cairo_save(CR);
+  cairo_translate(CR, x + w / 2.0, y + h / 2.0);  // Move to center
+  cairo_scale(CR, w / 2.0, h / 2.0);              // Scale unit circle
+  cairo_arc(CR, 0, 0, 1.0, 0, 2 * M_PI);
+  cairo_restore(CR);
+  if ( notNil(fill) )
+  { r_fillpattern(fill, NAME_foreground);
+    pce_cairo_set_source_color(CR, context.fill_pattern);
+    cairo_fill_preserve(CR);
+  }
+  if ( context.pen )
+  { pce_cairo_set_source_color(CR, context.colour);
+    cairo_stroke(CR);
+  }
 }
 
 /**
