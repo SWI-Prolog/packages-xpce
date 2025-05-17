@@ -1198,15 +1198,39 @@ r_line(int x1, int y1, int x2, int y2)
 }
 
 /**
- * Draw a polygon defined by a series of points.
+ * Draw a polygon defined by a series of points.  Used for
+ * class `bezier` and `graphical->draw_poly`.
  *
  * @param pts An array of points defining the polygon.
  * @param n The number of points in the array.
  * @param close Boolean indicating whether to close the polygon.
+ * @todo  Combine with r_fill_polygon().  This avoids creating the
+ *        Cairo path twice.
+ * @todo  Use Cairo's native Bezier curve support.
  */
 void
 r_polygon(IPoint pts, int n, int close)
-{
+{ if ( context.pen > 0 )
+  { cairo_new_path(CR);
+    bool first = true;
+    for(int i=0; i<n; i++)
+    { int x = pts[i].x;
+      int y = pts[i].y;
+      Translate(x,y);
+      if ( first )
+      { cairo_move_to(CR, x, y);
+	first = false;
+      } else
+      { cairo_line_to(CR, x, y);
+      }
+    }
+    if ( close )
+      cairo_close_path(CR);
+
+    pce_cairo_set_source_color(CR, context.colour);
+    cairo_set_line_width(CR, context.pen);
+    cairo_stroke(CR);
+  }
 }
 
 /**
@@ -1253,8 +1277,6 @@ r_path(Chain points, int ox, int oy, int radius, int closed, Image fill)
     cairo_set_line_width(CR, context.pen);
     cairo_stroke(CR);
   }
-
-  cairo_stroke(CR);
 }
 
 /**
