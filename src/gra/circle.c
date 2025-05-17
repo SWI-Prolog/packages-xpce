@@ -115,7 +115,7 @@ static char *T_geometry[] =
 /* Instance Variables */
 
 static vardecl var_circle[] =
-{ SV(NAME_fillPattern, "image|colour*", IV_GET|IV_STORE, fillPatternGraphical,
+{ SV(NAME_fillPattern, TYPE_FILL, IV_GET|IV_STORE, fillPatternGraphical,
      NAME_appearance, "Fill pattern for internals")
 };
 

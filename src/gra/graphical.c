@@ -1848,7 +1848,7 @@ shadowGraphical(Graphical gr, Int s)
 
 
 status
-fillPatternGraphical(Graphical gr, Image pattern)
+fillPatternGraphical(Graphical gr, Any pattern)
 { return assignGraphical(gr, NAME_fillPattern, pattern);
 }
 
@@ -1859,7 +1859,7 @@ fillOffsetGraphical(Graphical gr, Point pattern)
 }
 
 
-static status
+static status			/* must be renamed to dash */
 textureGraphical(Graphical gr, Name texture)
 { if (gr->texture != texture)
   { CHANGING_GRAPHICAL(gr, assign(gr, texture, texture);

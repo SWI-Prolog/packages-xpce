@@ -367,7 +367,7 @@ static vardecl var_arrow[] =
      NAME_area, "Distance tip to base"),
   SV(NAME_wing, "int", IV_GET|IV_STORE, wingArrow,
      NAME_area, "Length of base"),
-  SV(NAME_fillPattern, "image|colour*", IV_GET|IV_STORE, fillPatternGraphical,
+  SV(NAME_fillPattern, TYPE_FILL, IV_GET|IV_STORE, fillPatternGraphical,
      NAME_appearance, "How it is filled"),
   SV(NAME_style, "{open,closed}", IV_GET|IV_STORE, styleArrow,
      NAME_appearance, "If `closed', the triangle is closed"),

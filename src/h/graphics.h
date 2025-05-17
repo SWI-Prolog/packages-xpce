@@ -36,6 +36,12 @@
 #define _PCE_GRA_INCLUDED
 
 		 /*******************************
+		 *        REUSABLE TYPES        *
+		 *******************************/
+
+#define TYPE_FILL "image|colour|{foreground,background}*"
+
+		 /*******************************
 		 *     STRETCHABLE OBJECTS	*
 		 *******************************/
 

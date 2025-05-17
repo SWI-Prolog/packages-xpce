@@ -628,6 +628,10 @@ void
 r_fillpattern(Any fill, Name which)
 { if ( isDefault(fill) )
     fill = context.colour;
+  else if ( fill == NAME_foreground )
+    fill = context.colour;
+  else if ( fill == NAME_background )
+    fill = context.background;
   else if ( fill == NAME_current )
     return;
 

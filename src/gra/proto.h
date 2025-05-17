@@ -160,7 +160,7 @@ COMMON(status)	leftGraphical(Graphical gr1, Graphical gr2);
 COMMON(status)	referenceGraphical(Graphical gr, Point ref);
 COMMON(status)	penGraphical(Graphical gr, Int pen);
 COMMON(status)	shadowGraphical(Graphical gr, Int s);
-COMMON(status)	fillPatternGraphical(Graphical gr, Image pattern);
+COMMON(status)	fillPatternGraphical(Graphical gr, Any pattern);
 COMMON(status)	fillOffsetGraphical(Graphical gr, Point pattern);
 COMMON(status)	colourGraphical(Graphical gr, Any c);
 COMMON(Any)	getDisplayColourGraphical(Graphical gr);

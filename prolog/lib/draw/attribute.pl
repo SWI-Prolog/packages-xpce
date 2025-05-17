@@ -324,7 +324,7 @@ colour(_, colour(black)).
 
 make_colour_menu(Draw, Menu) :-
     new(Proto, box(30, 16)),
-    send(Proto, fill_pattern, @black_image),
+    send(Proto, fill_pattern, foreground),
     findall(Colour, colour(Draw, Colour), Colours),
     make_proto_menu(Menu, Proto, colour, [@default|Colours]),
     send(Proto, done).
