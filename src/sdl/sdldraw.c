@@ -73,6 +73,13 @@ typedef struct
 #define InvTranslate(x, y) { x -= context.offset_x; y -= context.offset_y; }
 #define CR (context.cr)
 
+#define FloatArea(x, y, w, h)		     \
+  double _lw = (double)context.pen/2.0;	     \
+  double fx = (x)+_lw/2.0;		     \
+  double fy = (y)+_lw/2.02;		     \
+  double fw = (w)-_lw;			     \
+  double fh = (h)-_lw;
+
 static void pce_cairo_set_source_color(cairo_t *cr, Colour pce);
 #if 0
 static bool validate_cairo_text_consistency(cairo_t *draw_cr);
@@ -783,6 +790,7 @@ void
 r_box(int x, int y, int w, int h, int r, Any fill)
 { Translate(x, y);
   NormaliseArea(x, y, w, h);
+  FloatArea(x, y, w, h);	/* reduce by pen */
 
   DEBUG(NAME_draw,
 	Cprintf("r_box(%d, %d, %d, %d, %d, %s)\n",
@@ -791,9 +799,9 @@ r_box(int x, int y, int w, int h, int r, Any fill)
   cairo_new_path(CR);
   cairo_set_line_width(CR, context.pen);
   if ( r )
-    my_cairo_rounded_rectangle(CR, x, y, w, h, r);
+    my_cairo_rounded_rectangle(CR, fx, fy, fw, fh, r);
   else
-    cairo_rectangle(CR, x, y, w, h);
+    cairo_rectangle(CR, fx, fy, fw, fh);
   if ( notNil(fill) )
   { r_fillpattern(fill, NAME_foreground);
     pce_cairo_set_source_color(CR, context.fill_pattern);
@@ -1099,14 +1107,15 @@ void
 r_ellipse(int x, int y, int w, int h, Any fill)
 { Translate(x, y);
   NormaliseArea(x, y, w, h);
+  FloatArea(x, y, w, h);
 
   DEBUG(NAME_draw,
 	Cprintf("r_ellipse(%d, %d, %d, %d, %s)\n",
 		x, y, w, h, pp(fill)));
 
   cairo_save(CR);
-  cairo_translate(CR, x + w / 2.0, y + h / 2.0);  // Move to center
-  cairo_scale(CR, w / 2.0, h / 2.0);              // Scale unit circle
+  cairo_translate(CR, fx + fw / 2.0, fy + fh / 2.0);  // Move to center
+  cairo_scale(CR, fw / 2.0, fh / 2.0);              // Scale unit circle
   cairo_arc(CR, 0, 0, 1.0, 0, 2 * M_PI);
   cairo_restore(CR);
   if ( notNil(fill) )
