@@ -58,6 +58,7 @@ typedef struct
   cairo_t      *cr;			/* Cairo context */
   int		offset_x;		/* Paint offset in X direction */
   int		offset_y;		/* Paint offset in Y direction */
+  int		fixed_colours;		/* Colours are fixed */
   Any		colour;			/* Current colour */
   Any		background;		/* Background colour */
   Any		default_colour;
@@ -510,19 +511,6 @@ validate_cairo_text_consistency(cairo_t *draw_cr)
 		 *******************************/
 
 /**
- * Clear a rectangular area on the screen.
- *
- * @param x The x-coordinate of the top-left corner of the rectangle.
- * @param y The y-coordinate of the top-left corner of the rectangle.
- * @param w The width of the rectangle.
- * @param h The height of the rectangle.
- */
-void
-r_clear(int x, int y, int w, int h)
-{ r_fill(x, y, w, h, context.background);
-}
-
-/**
  * Invert the colors within a specified rectangular area.
  *
  * @param x The x-coordinate of the top-left corner of the rectangle.
@@ -626,7 +614,10 @@ d_pen(Pen pen)
  */
 void
 r_fillpattern(Any fill, Name which)
-{ if ( isDefault(fill) )
+{ if ( context.fixed_colours && !instanceOfObject(fill, ClassImage) )
+  { fill = (which == NAME_foreground ? context.colour
+				     : context.background);
+  } else if ( isDefault(fill) )
     fill = context.colour;
   else if ( fill == NAME_foreground )
     fill = context.colour;
@@ -649,15 +640,29 @@ r_arcmode(Name mode)
 }
 
 /**
- * Apply foreground and background colors within a specific color context.
+ * Fix the foreground and background colours.  This is used to draw
+ * selected or (de-)activated objects with a particular colour.
  *
  * @param fg The foreground color.
  * @param bg The background color.
- * @param ctx The color context to apply the colors to.
+ * @param ctx Context to save current setting to be restored
+ *        by r_unfix_colours()
  */
 void
 r_fix_colours(Any fg, Any bg, ColourContext ctx)
-{
+{ ctx->foreground = context.colour;
+  ctx->background = context.background;
+  ctx->lock	  = context.fixed_colours;
+
+  if ( !context.fixed_colours )
+  { if ( !fg || isNil(fg) ) fg = DEFAULT;
+    if ( !bg || isNil(bg) ) bg = DEFAULT;
+
+    r_default_colour(fg);
+    r_background(bg);
+  }
+
+  context.fixed_colours++;
 }
 
 /**
@@ -667,7 +672,10 @@ r_fix_colours(Any fg, Any bg, ColourContext ctx)
  */
 void
 r_unfix_colours(ColourContext ctx)
-{
+{ if ( (context.fixed_colours = ctx->lock) == 0 )
+  { r_default_colour(ctx->foreground);
+    r_background(ctx->background);
+  }
 }
 
 /**
@@ -680,10 +688,12 @@ Any
 r_default_colour(Any c)
 { Any old = context.default_colour;
 
-  if ( notDefault(c) )
-    context.default_colour = c;
+  if ( !context.fixed_colours )
+  { if ( notDefault(c) )
+      context.default_colour = c;
 
-  r_colour(context.default_colour);
+    r_colour(context.default_colour);
+  }
 
   return old;
 }
@@ -697,6 +707,9 @@ r_default_colour(Any c)
 Any
 r_colour(Any c)
 { Any old = context.colour;
+
+  if ( context.fixed_colours )
+    return old;
 
   if ( isDefault(c) )
      c = context.default_colour;
@@ -716,7 +729,7 @@ Any
 r_background(Any c)
 { Any old = context.background;
 
-  if ( isDefault(c) )
+  if ( isDefault(c) || context.fixed_colours )
     return old;
   context.background = c;
 
@@ -728,7 +741,10 @@ r_background(Any c)
  */
 void
 r_swap_background_and_foreground(void)
-{
+{ Any tmp = context.background;
+
+  context.background = context.colour;
+  context.colour = tmp;
 }
 
 /**
@@ -816,7 +832,7 @@ r_box(int x, int y, int w, int h, int r, Any fill)
   else
     cairo_rectangle(CR, fx, fy, fw, fh);
   if ( notNil(fill) )
-  { r_fillpattern(fill, NAME_foreground);
+  { r_fillpattern(fill, NAME_background);
     pce_cairo_set_source_color(CR, context.fill_pattern);
     cairo_fill_preserve(CR);
   }
@@ -954,7 +970,7 @@ void
 r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 { int shadow = valInt(e->height);
 
-  DEBUG(NAME_stub,
+  DEBUG(NAME_draw,
 	Cprintf("stub: r_3d_box(%d, %d, %d, %d, %d, %s, %d)\n",
 		x, y, w, h, radius, pp(e), up));
 
@@ -1287,26 +1303,16 @@ r_image(Image image, int sx, int sy,
   }
 }
 
-/**
- * Fill a rectangular area with a specified pattern.
- *
- * @param x The x-coordinate of the top-left corner.
- * @param y The y-coordinate of the top-left corner.
- * @param w The width of the rectangle.
- * @param h The height of the rectangle.
- * @param pattern The fill pattern or color.  If DEFAULT, use the
- * current colour.
- */
 void
-r_fill(int x, int y, int w, int h, Any fill)
+r_fill_fgbg(int x, int y, int w, int h, Any fill, Name which)
 { NormaliseArea(x, y, w, h);
   if ( w > 0 && h > 0 )
-  { DEBUG(NAME_stub,
-	  Cprintf("r_fill(%d, %d, %d, %d, %s)\n",
-		  x, y, w, h, pp(fill)));
+  { r_fillpattern(fill, which);
+    DEBUG(NAME_draw,
+	  Cprintf("r_fill(%d, %d, %d, %d, %s->%s)\n",
+		  x, y, w, h, pp(fill), pp(context.fill_pattern)));
 
     Translate(x, y);
-    r_fillpattern(fill, NAME_foreground);
 
     if ( instanceOfObject(context.fill_pattern, ClassColour) )
     { cairo_new_path(CR);
@@ -1318,6 +1324,36 @@ r_fill(int x, int y, int w, int h, Any fill)
     }
   }
 }
+
+/**
+ * Clear a rectangular area on the screen.  This
+ *
+ * @param x The x-coordinate of the top-left corner of the rectangle.
+ * @param y The y-coordinate of the top-left corner of the rectangle.
+ * @param w The width of the rectangle.
+ * @param h The height of the rectangle.
+ */
+void
+r_clear(int x, int y, int w, int h)
+{ r_fill_fgbg(x, y, w, h, NAME_background, NAME_background);
+}
+
+/**
+ * Fill a rectangular area with a specified pattern.
+ *
+ * @param x The x-coordinate of the top-left corner.
+ * @param y The y-coordinate of the top-left corner.
+ * @param w The width of the rectangle.
+ * @param h The height of the rectangle.
+ * @param pattern The fill pattern or color.  If DEFAULT, use the
+ *        current colour.
+ */
+
+void
+r_fill(int x, int y, int w, int h, Any fill)
+{ r_fill_fgbg(x, y, w, h, fill, NAME_foreground);
+}
+
 
 /**
  * Fill a polygon defined by a series of points.
@@ -1670,7 +1706,7 @@ str_advance(PceString s, int from, int to, FontObj font)
 
 static void
 s_printU(const char *u, size_t len, int x, int y, FontObj font)
-{ DEBUG(NAME_redraw,
+{ DEBUG(NAME_draw,
 	Cprintf("s_printU(\"%s\", %d, %d, %d, %s) (color: %s)\n",
 		u, len, x, y, pp(font), pp(context.colour)));
 
