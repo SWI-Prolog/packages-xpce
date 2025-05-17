@@ -487,7 +487,9 @@ ws_window_holding_point_frame(FrameObj fr)
  */
 void
 ws_raise_frame(FrameObj fr)
-{
+{ WsFrame wfr = fr->ws_ref;
+  if ( wfr && wfr->ws_window )
+    SDL_RaiseWindow(wfr->ws_window);
 }
 
 /**
@@ -747,7 +749,10 @@ ws_topmost_frame(FrameObj fr, BoolObj topmost)
  */
 void
 ws_set_label_frame(FrameObj fr)
-{
+{ WsFrame wfr = fr->ws_ref;
+  if ( wfr && wfr->ws_window )
+  { SDL_SetWindowTitle(wfr->ws_window, nameToUTF8(fr->label));
+  }
 }
 
 /**
