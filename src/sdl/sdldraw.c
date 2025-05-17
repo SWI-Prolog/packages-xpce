@@ -798,6 +798,8 @@ r_box(int x, int y, int w, int h, int r, Any fill)
 
   cairo_new_path(CR);
   cairo_set_line_width(CR, context.pen);
+  cairo_save(CR);
+  cairo_set_antialias(CR, CAIRO_ANTIALIAS_NONE);
   if ( r )
     my_cairo_rounded_rectangle(CR, fx, fy, fw, fh, r);
   else
@@ -811,6 +813,7 @@ r_box(int x, int y, int w, int h, int r, Any fill)
   { pce_cairo_set_source_color(CR, context.colour);
     cairo_stroke(CR);
   }
+  cairo_restore(CR);
 }
 
 /**
