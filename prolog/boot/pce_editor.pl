@@ -38,6 +38,7 @@
               [ pce_register_class/1,
                 pce_begin_class_definition/4
               ]).
+:- use_module(library(pce), [pce_global/2]).
 
 make_editor_recogniser(G) :-
     object(G),
@@ -135,5 +136,4 @@ terminate(G, _Ev:event) :->
 
 :- pce_end_class.
 
-:- initialization
-    make_editor_recogniser(@editor_recogniser).
+:- pce_global(@editor_recogniser, make_editor_recogniser).
