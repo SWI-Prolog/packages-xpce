@@ -139,11 +139,11 @@ ws_create_frame(FrameObj fr)
     if ( parent )
     { SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_PARENT_POINTER,
 			     parent);
-      SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER,
-			    valInt(fr->area->x));
-      SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER,
-			    valInt(fr->area->y));
     }
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER,
+			  valInt(fr->area->x));
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER,
+			  valInt(fr->area->y));
     w = SDL_CreateWindowWithProperties(props);
     SDL_DestroyProperties(props);
   }
