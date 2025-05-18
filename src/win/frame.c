@@ -305,7 +305,7 @@ openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
 #endif
 
   if ( !isOpenFrameStatus(fr->status) )
-    return send(fr, NAME_status, NAME_window, EAV);
+    return sdl_send(fr, NAME_status, false, NAME_window, EAV);
 
   succeed;
 }

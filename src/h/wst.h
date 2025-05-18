@@ -39,6 +39,8 @@
 
 #ifdef WIN32_GRAPHICS			/* additional ones */
 #include <msw/msproto.h>
+#elif SDL_GRAPHICS
+#include <sdl/sdl.h>			/* TODO: this must replace x11/wstproto.h */
 #else
 COMMON(status)	metaModifierDisplay(DisplayObj d, Name name);
 COMMON(status)	X11ThreadsDisplay(DisplayObj d, BoolObj val);

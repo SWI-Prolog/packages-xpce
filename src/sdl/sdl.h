@@ -36,6 +36,8 @@
 #define RAY_H
 #include <SDL3/SDL.h>
 
+status	sdl_send(Any receiver, Name selector, bool sync, ...);
+
 void ws_initialise(int argc, char **argv);
 int ws_version(void);
 int ws_revision(void);

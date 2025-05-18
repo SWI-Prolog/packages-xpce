@@ -127,3 +127,100 @@ int
 pceMTdetach(void)
 { return TRUE;
 }
+
+		 /*******************************
+		 *   SEND TO SDL MAIN THREAD    *
+		 *******************************/
+
+typedef struct
+{ Any receiver;
+  Name selector;
+  Class class;
+  status status;
+  int argc;
+  const Any *argv;
+} send_data_sync;
+
+static void
+sdl_in_main_sync_sendv(void *udata)
+{ send_data_sync *data = udata;
+  Any receiver    = data->receiver;
+  Name selector   = data->selector;
+  Class class     = data->class;
+  int argc        = data->argc;
+  const Any *argv = data->argv;
+  data->status = vm_send(receiver, selector, class, argc, argv);
+}
+
+typedef struct
+{ Any receiver;
+  Name selector;
+  Class class;
+  status status;
+  int argc;
+  Any argv[VA_PCE_MAX_ARGS];
+} send_data_async;
+
+static void
+sdl_in_main_async_sendv(void *udata)
+{ send_data_async *data = udata;
+  data->status = vm_send(data->receiver, data->selector,
+			 data->class, data->argc, data->argv);
+  for(int i=0; i<data->argc; i++)
+  { if ( isObject(data->argv[i]) )
+      delCodeReference(data->argv[i]);
+  }
+}
+
+status
+sdl_sendv(Any receiver, Name selector, bool sync, Class class,
+	  int argc, const Any argv[])
+{ if ( SDL_IsMainThread() )
+  { return vm_send(receiver, selector, class, argc, argv);
+  } else if ( sync )
+  { send_data_sync data =
+      { .receiver = receiver, .selector = selector,
+        .class = class,
+        .argc = argc, .argv = argv
+      };
+    if ( !SDL_RunOnMainThread(sdl_in_main_sync_sendv, &data, true) )
+      Cprintf("SDL_RunOnMainThread(): %s\n", SDL_GetError());
+    return data.status;
+  } else
+  { send_data_async *data = malloc(sizeof(*data));
+    if ( !data )
+      return errorPce(PCE, NAME_notEnoughMemory);
+    data->receiver = receiver;
+    data->selector = selector;
+    data->class    = class;
+    data->argc     = argc;
+    for(int i=0; i<argc; i++)
+    { data->argv[i] = argv[i];
+      if ( isObject(data->argv[i]) )
+	addCodeReference(data->argv[i]);
+    }
+    bool rc = SDL_RunOnMainThread(sdl_in_main_async_sendv, data, false);
+    if ( !rc )
+      Cprintf("SDL_RunOnMainThread(): %s\n", SDL_GetError());
+    return rc;
+  }
+}
+
+/**
+ * Send  a message,  executing it  in the  SDL main  thread.  This  is
+ * required  for methods  that call  SDL  functions that  may only  be
+ * called in the main thread.
+ */
+status
+sdl_send(Any receiver, Name selector, bool sync, ...)
+{ va_list args;
+  Any argv[VA_PCE_MAX_ARGS];
+  int argc;
+
+  va_start(args, sync);
+  for(argc=0; (argv[argc] = va_arg(args, Any)) != NULL; argc++)
+    assert(argc <= VA_PCE_MAX_ARGS);
+  va_end(args);
+
+  return sdl_sendv(receiver, selector, sync, NULL, argc, argv);
+}
