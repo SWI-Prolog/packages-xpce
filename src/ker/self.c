@@ -1281,12 +1281,12 @@ static vardecl var_pce[] =
      NAME_version, "Name of this machine/architecture"),
   IV(NAME_operatingSystem, "name", IV_GET,
      NAME_version, "Name of operating system"),
-  IV(NAME_windowSystem, "{X,windows}", IV_GET,
+  IV(NAME_windowSystem, "{x11,windows,sdl}", IV_GET,
      NAME_version, "Basic window system used"),
   IV(NAME_windowSystemVersion, "int", IV_GET,
-     NAME_version, "Version of Xt library used to compile xpce"),
+     NAME_version, "Major version of the window system"),
   IV(NAME_windowSystemRevision, "int", IV_GET,
-     NAME_version, "Revision of Xt library used to compile xpce"),
+     NAME_version, "Minor version of the window system"),
   IV(NAME_features, "chain", IV_GET,
      NAME_version, "List of installed features")
 };

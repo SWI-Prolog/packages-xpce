@@ -4970,7 +4970,7 @@ static vardecl var_editor[] =
      NAME_internal, "Caret index at start of dabbrev"),
   IV(NAME_dabbrevOrigin, "int*", IV_NONE,
      NAME_internal, "Caret index of start of target"),
-  IV(NAME_dabbrevMode, "{backwards,forwards,user1,user2,user3}", IV_NONE,
+  IV(NAME_dabbrevMode, "{backwards,forwards,user1,user2,user3}*", IV_NONE,
      NAME_internal, "Current dabbrev search mode"),
   IV(NAME_dabbrevCandidates, "chain*", IV_NONE,
      NAME_internal, "Current dabbrev candidates"),
