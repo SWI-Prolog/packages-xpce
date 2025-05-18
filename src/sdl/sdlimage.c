@@ -56,7 +56,11 @@ ws_init_image(Image image)
  */
 void
 ws_destroy_image(Image image)
-{
+{ cairo_surface_t *s = image->ws_ref;
+  if ( s )
+  { image->ws_ref = NULL;
+    cairo_surface_destroy(s);
+  }
 }
 
 /**
@@ -109,6 +113,37 @@ status
 ws_load_old_image(Image image, IOSTREAM *fd)
 {
     return SUCCEED;
+}
+
+/**
+ * Copy a Cairo surface such that the data is always owned
+ * by Cairo.
+ */
+
+static cairo_surface_t *
+my_cairo_copy_surface(cairo_surface_t *src)
+{ int width  = cairo_image_surface_get_width(src);
+  int height = cairo_image_surface_get_height(src);
+  cairo_surface_t *dst = cairo_image_surface_create(
+    CAIRO_FORMAT_ARGB32, width, height);
+  if ( dst )
+  { cairo_t *cr = cairo_create(dst);
+    cairo_set_source_surface(cr, src, 0, 0);
+    cairo_paint(cr);
+    cairo_destroy(cr);
+  }
+
+  return dst;
+}
+
+static status
+my_cairo_check_surface(Any ctx, cairo_surface_t *s)
+{ if ( cairo_surface_status(s) != CAIRO_STATUS_SUCCESS )
+  { Cprintf("%s: cairo surface error: %s\n",
+	    pp(ctx), cairo_status_to_string(cairo_surface_status(s)));
+    fail;
+  }
+  succeed;
 }
 
 /**
@@ -170,13 +205,18 @@ ws_load_image_file(Image image)
     surf1->w,
     surf1->h,
     surf1->pitch);
-  /* TODO: data of surf is owned by surf1 */
+  if ( !my_cairo_check_surface(image, surf) )
+    fail;
+  cairo_surface_t *final = my_cairo_copy_surface(surf);
+  cairo_surface_destroy(surf);
+  if ( !my_cairo_check_surface(final, surf) )
+    fail;
 
   assign(image, kind, NAME_pixmap);
   assign(image, depth, toInt(32));
   assign(image->size, w, toInt(surf1->w));
   assign(image->size, h, toInt(surf1->h));
-  image->ws_ref = surf;
+  image->ws_ref = final;
   succeed;
 }
 
