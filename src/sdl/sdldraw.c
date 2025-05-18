@@ -216,40 +216,6 @@ d_flush(void)
 {
 }
 
-static void
-r_clear_raw(int x, int y, int w, int h)
-{ DEBUG(NAME_redraw,
-	Cprintf("Clear background %d, %d, %d, %d\n",
-		x, y, w, h));
-  InvTranslate(x, y);
-  r_clear(x, y, w, h);
-}
-
-static void
-r_clear_outside(PceWindow sw)
-{ Area a  = sw->bounding_box;
-  int bbx = valInt(a->x), bby = valInt(a->y),
-      bbw = valInt(a->w), bbh = valInt(a->h);
-
-  Translate(bbx, bby);
-
-  int ww  = valInt(sw->area->w);
-  int wh  = valInt(sw->area->h);
-  int bbr = bbx+bbw;
-  int bbb = bby+bbh;
-
-  DEBUG(NAME_redraw, Cprintf("bb=%d %d %d %d\n", bbx, bby, bbw, bbh));
-  if ( bbx > 0 )
-    r_clear_raw(0, 0, bbx, wh);
-  if ( bby > 0 )
-    r_clear_raw(0, 0, ww, bby);
-  if ( bbr < ww )
-    r_clear_raw(bbr, 0, ww-bbr, wh);
-  if ( bbb < wh )
-    r_clear_raw(0, bbb, ww, wh-bbb);
-}
-
-
 /**
  * Start  drawing in  a window.   The x,y,w,h  describe the  region to
  * paint in  window client  coordinates.  The drawing  code translates
@@ -304,7 +270,6 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
   context.default_colour = context.colour;
   context.default_background = context.background;
 
-  r_clear_outside(sw);
   /* do we need to clip? */
 
   d_clip(x, y, w, h);

@@ -309,6 +309,13 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
 		  pp(sw), pp(fr),
 		  valInt(a->x), valInt(a->y), valInt(a->w), valInt(a->h)));
 
+    SDL_FRect rect = { (float)valInt(a->x)+off->x, (float)valInt(a->y)+off->y,
+		       valInt(a->w), valInt(a->h)
+                     };
+    SDL_Color  bg = pceColour2SDL_Color(sw->background);
+    SDL_SetRenderDrawColor(wfr->ws_renderer, bg.r, bg.g, bg.b, bg.a);
+    SDL_RenderRect(wfr->ws_renderer, &rect);
+
     int width    = cairo_image_surface_get_width(wsw->backing);
     int height   = cairo_image_surface_get_height(wsw->backing);
     int stride   = cairo_image_surface_get_stride(wsw->backing);
