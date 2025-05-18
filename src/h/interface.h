@@ -308,7 +308,9 @@ __pce_export void	pceMTLock(int lock);
 __pce_export void	pceMTUnlock(int lock);
 __pce_export int	pceMTTryLock(int lock);
 __pce_export int	pceMTdetach(void);
-#ifdef __WINDOWS__
+#if SDL_GRAPHICS
+__pce_export int	setPceThread(void);
+#elif WIN32_SDL_GRAPHICS
 __pce_export unsigned	setPceThread(unsigned id);
 #endif
 

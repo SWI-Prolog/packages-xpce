@@ -135,5 +135,5 @@ start_dispatch :-
     (   current_prolog_flag(xpce_threaded, true),
         current_predicate(pce_dispatch/1)
     ->  pce_dispatch([])
-    ;   true
+    ;   set_pce_thread
     ).

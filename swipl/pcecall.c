@@ -664,10 +664,23 @@ set_menu_thread(void)
 #endif
 
 
+static int sdl_thread = 0;
+
 static foreign_t
 set_pce_thread(void)
 { int tid = PL_thread_self();
 
+#if SDL_GRAPHICS
+  if ( sdl_thread && tid != sdl_thread )
+  { term_t culprit = PL_new_term_ref();
+    return ( PL_unify_term(culprit, PL_FUNCTOR_CHARS, "@", 1,
+				      PL_CHARS, "pce") &&
+	     PL_permission_error("modify", "pce_thread", culprit) );
+    sdl_thread = tid;
+  }
+
+  return setPceThread();
+#else
   if ( tid != context.pce_thread )
   { context.pce_thread = tid;
 
@@ -699,6 +712,7 @@ set_pce_thread(void)
   }
 
   return TRUE;
+#endif
 }
 
 

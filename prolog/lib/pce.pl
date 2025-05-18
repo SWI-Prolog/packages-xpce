@@ -162,7 +162,7 @@ in_pce_thread_sync(Goal) :-
 start_dispatch :-
     (   current_predicate(pce_dispatch:start_dispatch/0)
     ->  pce_dispatch:start_dispatch
-    ;   true
+    ;   set_pce_thread
     ).
 
 :- initialization

@@ -188,8 +188,6 @@ ws_open_display(DisplayObj d)
 { WsDisplay wsd = d->ws_ref = alloc(sizeof(ws_display));
   memset(wsd, 0, sizeof(*wsd));
 
-  if ( !sdl_initialised() )
-    sdl_initialise();
   wsd->hidden_window = SDL_CreateWindow(
     "xpce hidden window", 64, 64,
     SDL_WINDOW_HIDDEN);

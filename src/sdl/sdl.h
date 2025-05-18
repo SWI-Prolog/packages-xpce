@@ -39,7 +39,7 @@
 
 status	sdl_send(Any receiver, Name selector, bool sync, ...);
 bool	sdl_initialised(void);
-bool	sdl_initialise(void);
+int	setPceThread(void);
 
 void ws_initialise(int argc, char **argv);
 int ws_version(void);
