@@ -35,8 +35,11 @@
 #ifndef RAY_H
 #define RAY_H
 #include <SDL3/SDL.h>
+#include <SWI-Prolog.h>		/* Debugging: PL_thread_self() */
 
 status	sdl_send(Any receiver, Name selector, bool sync, ...);
+bool	sdl_initialised(void);
+bool	sdl_initialise(void);
 
 void ws_initialise(int argc, char **argv);
 int ws_version(void);

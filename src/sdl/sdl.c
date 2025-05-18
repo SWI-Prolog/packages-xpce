@@ -45,11 +45,31 @@
  */
 void
 ws_initialise(int argc, char **argv)
-{ if ( !SDL_Init(SDL_INIT_EVENTS) )
-    errorPce(NIL, NAME_sdlInitialize);
-  ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
-  start_fd_watcher_thread();
+{
 }
+
+static bool sdl_initialised_b = false;
+
+bool
+sdl_initialise(void)
+{ if ( !sdl_initialised_b )
+  { sdl_initialised_b = true;
+
+    if ( !SDL_Init(SDL_INIT_EVENTS) )
+      return errorPce(NIL, NAME_sdlInitialize);
+    Cprintf("SDL_Init() on thread %d\n", PL_thread_self());
+    ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
+    start_fd_watcher_thread();
+  }
+
+  return true;
+}
+
+bool
+sdl_initialised(void)
+{ return sdl_initialised_b;
+}
+
 
 /**
  * Retrieve the major version number of the SDL backend.

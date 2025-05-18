@@ -378,9 +378,9 @@ dispatch_event(EventObj ev)
 /**
  * Reset the internal event dispatching state.
  *
- * This function clears any pending events and resets the dispatching mechanism
- * to its initial state. It is typically called before starting a new event loop
- * or when reinitializing the event system.
+ * This function clears any pending events and resets the dispatching
+ * mechanism to its initial state. It is typically called before
+ * starting a new event loop or when reinitializing the event system.
  */
 void
 resetDispatch(void)
@@ -430,28 +430,12 @@ dispatch_ready_event(void)
 
 status
 ws_dispatch(Int FD, Any timeout)
-{ int fd = (isDefault(FD) ? dispatch_fd :
+{ int tmo;
+  int fd = (isDefault(FD) ? dispatch_fd :
 	    isNil(FD)	  ? -1
 			  : valInt(FD));
   if ( fd >= 0 )
     dispatch_fd = fd;
-
-  if ( dispatch_ready_event() )
-    succeed;
-
-  if ( pceMTTryLock(LOCK_PCE) )
-  { RedrawDisplayManager(TheDisplayManager());
-    ws_redraw_changed_frames();
-    pceMTUnlock(LOCK_PCE);
-  }
-
-  if ( dispatch_ready_event() )
-    succeed;
-
-  if ( fd >= 0 )
-    set_watch(fd);
-
-  int tmo;
 
   if ( isNil(timeout) )
   { tmo = -1;
@@ -465,27 +449,65 @@ ws_dispatch(Int FD, Any timeout)
   { tmo = 250;
   }
 
-  bool rc;
-  SDL_Event ev;
-  if ( tmo == -1 )
-  { rc = SDL_WaitEvent(&ev);
-  } else
-  { rc = SDL_WaitEventTimeout(&ev, tmo);
-  }
-
-  if ( rc )
-  { if ( ev.type == MY_EVENT_FD_READY &&
-	 ev.user.code == FD_READY_DISPATCH )
+  if ( sdl_initialised() )
+  { if ( dispatch_ready_event() )
       succeed;
 
-    EventObj event = CtoEvent(&ev);
-    if ( event )
-      dispatch_event(event);
+    if ( pceMTTryLock(LOCK_PCE) )
+    { RedrawDisplayManager(TheDisplayManager());
+      ws_redraw_changed_frames();
+      pceMTUnlock(LOCK_PCE);
+    }
+
+    if ( dispatch_ready_event() )
+      succeed;
+
+    if ( fd >= 0 )
+      set_watch(fd);
+
+    bool rc;
+    SDL_Event ev;
+    if ( tmo == -1 )
+    { rc = SDL_WaitEvent(&ev);
+    } else
+    { rc = SDL_WaitEventTimeout(&ev, tmo);
+    }
+
+    if ( rc )
+    { if ( ev.type == MY_EVENT_FD_READY &&
+	   ev.user.code == FD_READY_DISPATCH )
+	succeed;
+
+      EventObj event = CtoEvent(&ev);
+      if ( event )
+	dispatch_event(event);
+    }
+
+    considerLocStillEvent();
+
+    return rc;
+  } else			/* SDL not yet initialised */
+  { int ready;
+    int to;
+    struct pollfd fds[1];
+
+    if ( isNil(timeout) )
+    { to = -1;
+    } else if ( isDefault(timeout) )
+    { to = 250;
+    } else if ( isInteger(timeout) )
+    { to = valInt(timeout);
+    } else if ( instanceOfObject(timeout, ClassReal) )
+    { to = (int)(valReal(timeout)*1000.0);
+    } else
+      to = 256;
+
+    fds[0].fd = fd;
+    fds[0].events = POLLIN;
+
+    ready = poll(fds, 1, to);
+    return ready > 0;
   }
-
-  considerLocStillEvent();
-
-  return rc;
 }
 
 static bool
