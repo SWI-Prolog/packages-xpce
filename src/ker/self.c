@@ -136,8 +136,6 @@ initialisePce(Pce pce)
 #else
   assign(pce, window_system,	      NAME_unknown);
 #endif
-  assign(pce, window_system_version,  toInt(ws_version()));
-  assign(pce, window_system_revision, toInt(ws_revision()));
   assign(pce, features,		      newObject(ClassChain, EAV));
 
   at_pce_exit(exit_pce, ATEXIT_FIFO);
@@ -619,12 +617,14 @@ static status
 bannerPce(Pce pce)
 { Name host = get(HostObject(), NAME_system, EAV);
 
-#ifdef __WINDOWS__
+#if WIN32_GRAPHICS
 #ifdef WIN64
   writef("XPCE %s for %I%IWin64: XP 64-bit edition%I%I\n",
 #else
   writef("XPCE %s for %I%IWin32: NT,2000,XP%I%I\n",
 #endif
+#elif SDL_GRAPHICS
+  writef("XPCE %s for %s-%s and SDL%d.%d on %s\n",
 #else
   writef("XPCE %s for %s-%s and X%dR%d\n",
 #endif
@@ -632,8 +632,12 @@ bannerPce(Pce pce)
 	 pce->machine,
 	 pce->operating_system,
 	 pce->window_system_version,
-	 pce->window_system_revision);
-  writef("Copyright (C) 1993-2009 University of Amsterdam.\n"
+	 pce->window_system_revision
+#if SDL_GRAPHICS
+	,pce->window_system_driver
+#endif
+    );
+  writef("Copyright (C) 1993-2025 University of Amsterdam, SWI-Prolog Solutions b.v.\n"
 	 "XPCE comes with ABSOLUTELY NO WARRANTY. "
 	 "This is free software,\nand you are welcome to redistribute it "
 	 "under certain conditions.\n");
@@ -677,8 +681,11 @@ infoPce(Pce pce)
 	 pce->window_system_version,
 	 pce->window_system_revision);
 #else
-  writef("	Window System:      SDL%s\n",
-	 pce->window_system_version);
+  writef("	Window System:      SDL%s.%s\n",
+	 pce->window_system_version,
+	 pce->window_system_revision);
+  writef("	SDL driver:         %s\n",
+	 pce->window_system_driver),
 #endif
   writef("\n");
   writef("Memory allocation:\n");
@@ -1283,10 +1290,12 @@ static vardecl var_pce[] =
      NAME_version, "Name of operating system"),
   IV(NAME_windowSystem, "{x11,windows,sdl}", IV_GET,
      NAME_version, "Basic window system used"),
-  IV(NAME_windowSystemVersion, "int", IV_GET,
+  IV(NAME_windowSystemVersion, "int*", IV_GET,
      NAME_version, "Major version of the window system"),
-  IV(NAME_windowSystemRevision, "int", IV_GET,
+  IV(NAME_windowSystemRevision, "int*", IV_GET,
      NAME_version, "Minor version of the window system"),
+  IV(NAME_windowSystemDriver, "name*", IV_GET,
+     NAME_version, "Video driver used by SDL"),
   IV(NAME_features, "chain", IV_GET,
      NAME_version, "List of installed features")
 };

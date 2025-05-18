@@ -54,13 +54,18 @@ int
 setPceThread(void)
 { if ( !sdl_main_thread )
   { sdl_main_thread = PL_thread_self();
-    Cprintf("SDL_Init() on thread %d\n", sdl_main_thread);
+    DEBUG(NAME_thread,
+	  Cprintf("SDL_Init() on thread %d\n", sdl_main_thread));
     if ( !SDL_Init(SDL_INIT_EVENTS|SDL_INIT_VIDEO) )
       return errorPce(NIL, NAME_sdlInitialize);
     ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
     start_fd_watcher_thread();
     if ( !openDisplay(CurrentDisplay(NIL)) )
       return errorPce(CurrentDisplay(NIL), NAME_sdlInitialize);
+
+    assign(PCE, window_system_version,  toInt(ws_version()));
+    assign(PCE, window_system_revision, toInt(ws_revision()));
+    assign(PCE, window_system_driver,   CtoName(ws_driver()));
   }
 
   return true;
@@ -79,7 +84,7 @@ sdl_initialised(void)
  */
 int
 ws_version(void)
-{ return 3;
+{ return SDL_GetVersion() / 1000000;
 }
 
 /**
@@ -89,7 +94,12 @@ ws_version(void)
  */
 int
 ws_revision(void)
-{ return 2;
+{ return (SDL_GetVersion() / 1000)%100;
+}
+
+const char *
+ws_driver(void)
+{ return SDL_GetCurrentVideoDriver();
 }
 
 /**

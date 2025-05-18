@@ -1158,9 +1158,10 @@ NewClass(pce)
   Name		version;		/* Version number of PCE */
   Name		machine;		/* Architecture */
   Name		operating_system;	/* Name of operating system*/
-  Name		window_system;		/* X or windows */
-  Int		window_system_version;	/* Version of Xt library used */
-  Int		window_system_revision;	/* Revision of Xt library used */
+  Name		window_system;		/* x11, windows or sdl */
+  Int		window_system_version;	/* Major version of window system */
+  Int		window_system_revision;	/* Minor version of window_system */
+  Name		window_system_driver;	/* Backend driver */
   Chain		features;		/* Installed features */
 End;
 
