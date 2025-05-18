@@ -68,8 +68,7 @@ ws_version(void)
  */
 int
 ws_revision(void)
-{
-    return 0;
+{ return 2;
 }
 
 /**
