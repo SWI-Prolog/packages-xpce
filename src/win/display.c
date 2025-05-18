@@ -120,6 +120,13 @@ openDisplay(DisplayObj d)
     succeed;
 
   DEBUG(NAME_display, Cprintf("Opening display %s\n", pp(d)));
+  return sdl_send(d, NAME_SyncOpen, true, EAV);
+}
+
+static status
+SyncOpenDisplay(DisplayObj d)
+{ if ( ws_opened_display(d) )
+    succeed;
 
   ws_open_display(d);			/* generate exception on failure */
   obtainClassVariablesObject(d);
@@ -1286,7 +1293,9 @@ static senddecl send_display[] =
   SM(NAME_ConfirmPressed, 1, "event", ConfirmPressedDisplay,
      NAME_internal, "Handle confirmer events"),
   SM(NAME_open, 0, NULL, openDisplay,
-     NAME_open, "Open connection to X-server and initialise"),
+     NAME_open, "Prepare display for graphics operations"),
+  SM(NAME_SyncOpen, 0, NULL, SyncOpenDisplay,
+     NAME_open, "Run ->open in the SDL main thread"),
   SM(NAME_Postscript, 1, "{head,body}", postscriptDisplay,
      NAME_postscript, "Create PostScript"),
   SM(NAME_quit, 0, NULL, quitDisplay,

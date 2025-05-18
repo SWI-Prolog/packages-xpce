@@ -48,17 +48,17 @@ ws_initialise(int argc, char **argv)
 {
 }
 
-static bool sdl_initialised_b = false;
+static int sdl_main_thread = 0;
 
 int
 setPceThread(void)
-{ if ( !sdl_initialised_b )
-  { if ( !SDL_Init(SDL_INIT_EVENTS) )
+{ if ( !sdl_main_thread )
+  { sdl_main_thread = PL_thread_self();
+    Cprintf("SDL_Init() on thread %d\n", sdl_main_thread);
+    if ( !SDL_Init(SDL_INIT_EVENTS|SDL_INIT_VIDEO) )
       return errorPce(NIL, NAME_sdlInitialize);
-    Cprintf("SDL_Init() on thread %d\n", PL_thread_self());
     ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
     start_fd_watcher_thread();
-    sdl_initialised_b = true;
   }
 
   return true;
@@ -66,7 +66,7 @@ setPceThread(void)
 
 bool
 sdl_initialised(void)
-{ return sdl_initialised_b;
+{ return !!sdl_main_thread;
 }
 
 

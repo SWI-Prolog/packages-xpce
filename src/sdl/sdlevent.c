@@ -449,7 +449,7 @@ ws_dispatch(Int FD, Any timeout)
   { tmo = 250;
   }
 
-  if ( sdl_initialised() )
+  if ( SDL_IsMainThread() )
   { if ( dispatch_ready_event() )
       succeed;
 
