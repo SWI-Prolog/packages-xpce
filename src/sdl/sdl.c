@@ -59,6 +59,8 @@ setPceThread(void)
       return errorPce(NIL, NAME_sdlInitialize);
     ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
     start_fd_watcher_thread();
+    if ( !openDisplay(CurrentDisplay(NIL)) )
+      return errorPce(CurrentDisplay(NIL), NAME_sdlInitialize);
   }
 
   return true;
