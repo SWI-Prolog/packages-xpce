@@ -91,20 +91,6 @@ getConvertDisplay(Class class, Any obj)
 }
 
 
-static status
-attachCacheDisplay(DisplayObj d)
-{ Size sz = getClassVariableValueObject(d, NAME_graphicsCache);
-
-  if ( isDefault(sz) )
-    sz = getSizeDisplay(d);
-
-  send(d, NAME_cache, newObject(ClassImage, DEFAULT, sz->w, sz->h,
-				NAME_pixmap, EAV), EAV);
-
-  succeed;
-}
-
-
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Open a display.  If necessary, the X toolkit is initialised first and
 a context for the application is created.
@@ -119,15 +105,6 @@ openDisplay(DisplayObj d)
 { if ( ws_opened_display(d) )
     succeed;
 
-  DEBUG(NAME_display, Cprintf("Opening display %s\n", pp(d)));
-  return sdl_send(d, NAME_SyncOpen, true, EAV);
-}
-
-static status
-SyncOpenDisplay(DisplayObj d)
-{ if ( ws_opened_display(d) )
-    succeed;
-
   ws_open_display(d);			/* generate exception on failure */
   obtainClassVariablesObject(d);
   ws_foreground_display(d, d->foreground);
@@ -139,8 +116,6 @@ SyncOpenDisplay(DisplayObj d)
   GREY25_COLOUR = newObject(ClassColour, NAME_grey25, EAV);
   GREY50_COLOUR = newObject(ClassColour, NAME_grey50, EAV);
   BLACK_COLOUR  = newObject(ClassColour, NAME_black,  EAV);
-
-  attachCacheDisplay(d);
 
   succeed;
 }
@@ -1294,8 +1269,6 @@ static senddecl send_display[] =
      NAME_internal, "Handle confirmer events"),
   SM(NAME_open, 0, NULL, openDisplay,
      NAME_open, "Prepare display for graphics operations"),
-  SM(NAME_SyncOpen, 0, NULL, SyncOpenDisplay,
-     NAME_open, "Run ->open in the SDL main thread"),
   SM(NAME_Postscript, 1, "{head,body}", postscriptDisplay,
      NAME_postscript, "Create PostScript"),
   SM(NAME_quit, 0, NULL, quitDisplay,
