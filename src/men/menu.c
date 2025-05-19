@@ -52,6 +52,7 @@ static MenuItem getMemberMenu(Menu m, Any obj);
 #define CYCLE_TRIANGLE_HEIGHT 8
 #define CYCLE_DROP_DISTANCE 5
 
+#define MARK_IMAGE_SIZE	  16
 #define MARK_DIAMOND_SIZE 14
 #define MARK_BOX_SIZE     13
 #define MARK_CIRCLE_SIZE  8
@@ -206,8 +207,7 @@ computeLabelMenu(Menu m)
     } else if ( instanceOfObject(ci, ClassElevation) )
     { iox += CYCLE_DROP_WIDTH + CYCLE_DROP_DISTANCE;
     } else /* if ( instanceOfObject(ci, ClassImage) ) */
-    { Image i = ci;
-      iox += valInt(i->size->w) + CYCLE_DROP_DISTANCE;
+    { iox += MARK_IMAGE_SIZE + CYCLE_DROP_DISTANCE;
     }
   }
 
@@ -272,14 +272,14 @@ computeItemsMenu(Menu m)
     { int cw, ch;
 
       if ( instanceOfObject(m->on_image, ClassImage) )
-	lm = valInt(m->on_image->size->w);
+	lm = MARK_IMAGE_SIZE;
       else if ( (Name)m->on_image == NAME_marked )
       { ws_checkbox_size(0, &cw, &ch);
 	lm = cw;
       }
 
       if ( instanceOfObject(m->off_image, ClassImage) )
-	lm = max(lm, valInt(m->off_image->size->w));
+	lm = max(lm, MARK_IMAGE_SIZE);
       else if ( (Name)m->off_image == NAME_marked )
       { ws_checkbox_size(0, &cw, &ch);
 	lm = max(lm, cw);
@@ -668,8 +668,8 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
     { int bw, bh, by;
       Elevation mz = getClassVariableValueObject(m, NAME_markElevation);
 
-      bw = valInt(leftmark->size->w);
-      bh = valInt(leftmark->size->h);
+      bw = MARK_IMAGE_SIZE;	/* scale to DPI */
+      bh = MARK_IMAGE_SIZE;
       by = item_mark_y(m, y, h, bh);
 
       if ( instanceOfObject(mz, ClassElevation) && mz->height != ZERO )
