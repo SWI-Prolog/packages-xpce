@@ -117,7 +117,9 @@ ws_create_frame(FrameObj fr)
 
   if ( fr->kind == NAME_popup && parent )
   { SDL_WindowFlags flags = 0;
-    DEBUG(NAME_popup, Cprintf("Creating popup frame %s\n", pp(fr)));
+    DEBUG(NAME_popup,
+	  Cprintf("Creating popup frame %s %dx%d\n",
+		  pp(fr), valInt(fr->area->w), valInt(fr->area->h)));
     flags |= SDL_WINDOW_POPUP_MENU;
     w = SDL_CreatePopupWindow(
       parent,
