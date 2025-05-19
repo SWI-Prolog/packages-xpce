@@ -594,20 +594,130 @@ ws_enable_text_input(Graphical gr, BoolObj enable)
  */
 status
 ws_frame_bb(FrameObj fr, int *x, int *y, int *w, int *h)
-{
-    return SUCCEED;
+{ *x = valInt(fr->area->x);
+  *y = valInt(fr->area->y);
+  *w = valInt(fr->area->w);
+  *h = valInt(fr->area->h);
+
+  succeed;
 }
 
 /**
- * Set the geometry of the frame using a specification string.
+ * Set the geometry  of the frame using a  specification string.  This
+ * is used by e.g. class `persistent_frame` for restoring the size and
+ * position of a frame.  As SDL does not allow restoring the position,
+ * most of this  is worthless and overly complicated.  We  keep it for
+ * now.   Eventually  we  should   simplify  this  and  modernise  the
+ * interface.
  *
  * @param fr Pointer to the FrameObj.
  * @param spec Name object containing the geometry specification.
  * @param mon Monitor object representing the target monitor.
  */
+#define MIN_VISIBLE 32			/* pixels that must be visible */
+#define SWP_NOMOVE 0x1
+#define SWP_NOSIZE 0x2
+
 void
 ws_x_geometry_frame(FrameObj fr, Name spec, Monitor mon)
-{
+{ char *e, *s = strName(spec);
+  int x, y, w, h, w0, h0;
+  int eh;
+  int dw, dh;
+  int flags = 0;
+  char signx[10], signy[10];
+  bool ok = false;
+  Int X,Y,W,H;
+  int offX=0;			/* window manager frame offset */
+
+  if ( isDefault(mon) && (e=strchr(s, '@')) )
+  { int n = atoi(e+1);
+
+    if ( !(mon = getNth0Chain(fr->display->monitors, toInt(n))) )
+      mon = (Monitor)DEFAULT;
+  }
+
+  if ( instanceOfObject(mon, ClassMonitor) )
+  { Area a = (notNil(mon->work_area) ? mon->work_area : mon->area);
+
+    dw = valInt(a->w);
+    dh = valInt(a->h);
+  } else
+  { dw = valInt(getWidthDisplay(fr->display));
+    dh = valInt(getHeightDisplay(fr->display));
+  }
+
+  if ( !ws_frame_bb(fr, &x, &y, &w0, &h0) )
+    return;
+  w = w0;
+  h = h0;
+  eh = h - valInt(fr->area->h);		/* height of decorations */
+
+  switch(sscanf(s, "%dx%d%[+-]%d%[+-]%d", &w, &h, signx, &x, signy, &y))
+  { case 2:
+      /*w += ew; h += eh;*/
+      flags |= SWP_NOMOVE;
+      ok = true;
+      break;
+    case 6:
+      /*w += ew; h += eh;*/
+      if ( signx[1] == '-' )
+	x = -x;
+      if ( signy[1] == '-' )
+	y = -y;
+      if ( signx[0] == '-' )
+	x = dw - x - w - offX;
+      if ( signy[0] == '-' )
+	y = dh - y - h - eh;		/* why not offY */
+      ok = true;
+      break;
+    default:				/* [<Sign>]X<Sign>Y */
+      if ( sscanf(s, "%[+-]%d%[+-]%d", signx, &x, signy, &y) != 4 )
+      { signx[0] = '+';
+	if ( sscanf(s, "%d%[+-]%d", &x, signy, &y) != 3 )
+	  break;
+      }
+
+      DEBUG(NAME_frame,
+	    Cprintf("signx = %s, x = %d, signy = %s,"
+		    "y = %d, w0 = %d, h0 = %d\n",
+		    signx, x, signy, y, w0, h0));
+
+      flags |= SWP_NOSIZE;
+      if ( signx[1] == '-' )
+	x = -x;
+      if ( signy[1] == '-' )
+	y = -y;
+      if ( signx[0] == '-' )
+	x = dw - x - w0 - offX;
+      if ( signy[0] == '-' )
+	y = dh - y - h0 - eh;
+      ok = true;
+      break;
+  }
+
+  if ( ok )
+  { if ( y < 1 )			/* above the screen */
+      y = 1;
+    else if ( y > dh-MIN_VISIBLE )	/* below the screen */
+      y = dh - MIN_VISIBLE;
+    if ( x < 1 )			/* left of the screen */
+      x = 1;
+    else if ( x > dw-MIN_VISIBLE )	/* right of the screen */
+      x = dw - MIN_VISIBLE;
+  }
+
+  X = Y = W = H = (Int)DEFAULT;
+  if ( !(flags & SWP_NOMOVE) )
+  { X = toInt(x);
+    Y = toInt(y);
+  }
+  if ( !(flags & SWP_NOSIZE) )
+  { W = toInt(w);
+    H = toInt(h);
+  }
+
+  send(fr, NAME_set, X, Y, W, H, mon, EAV);
 }
 
 /**
