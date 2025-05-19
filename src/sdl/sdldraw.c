@@ -936,7 +936,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 { int shadow = valInt(e->height);
 
   DEBUG(NAME_draw,
-	Cprintf("stub: r_3d_box(%d, %d, %d, %d, %d, %s, %d)\n",
+	Cprintf("r_3d_box(%d, %d, %d, %d, %d, %s, %d)\n",
 		x, y, w, h, radius, pp(e), up));
 
   NormaliseArea(x, y, w, h);
@@ -1036,7 +1036,33 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
  */
 void
 r_3d_line(int x1, int y1, int x2, int y2, Elevation e, int up)
-{
+{ int z = valInt(e->height);
+  Colour up_color, down_color;
+
+  Translate(x1, y1);
+  Translate(x2, y2);
+
+  if ( up )
+  { up_color   = r_elevation_relief(e);
+    down_color = r_elevation_shadow(e);
+  } else
+  { down_color = r_elevation_shadow(e);
+    up_color   = r_elevation_relief(e);
+  }
+
+  if ( abs(y1-y2) < abs(x1-x2) )
+  { cairo_set_line_width(CR, z);
+    pce_cairo_set_source_color(CR, down_color);
+    cairo_move_to(CR, x1, (double)y1-(double)z/2);
+    cairo_line_to(CR, x2, (double)y2-(double)z/2);
+    cairo_stroke(CR);
+    pce_cairo_set_source_color(CR, up_color);
+    cairo_move_to(CR, x1, (double)y1+(double)z/2);
+    cairo_line_to(CR, x2, (double)y2+(double)z/2);
+    cairo_stroke(CR);
+  } else
+  { Cprintf("stub: r_3d_line() (not horizontal)\n");
+  }
 }
 
 /**
@@ -1050,12 +1076,67 @@ r_3d_line(int x1, int y1, int x2, int y2, Elevation e, int up)
  * @param y3 The y-coordinate of the third vertex.
  * @param e The elevation level for 3D effect.
  * @param up Boolean indicating if the triangle appears raised.
- * @param map Additional mapping parameter for rendering.
+ * @param map Bitmap of up/down edges
  */
+static inline void
+step_to(int *x1, int *y1, int tx, int ty)
+{ if ( tx > *x1 )
+    (*x1)++;
+  else if ( tx < *x1 )
+    (*x1)--;
+
+  if ( ty > *y1 )
+    (*y1)++;
+  else if ( ty < *y1 )
+    (*y1)--;
+}
+
 void
 r_3d_triangle(int x1, int y1, int x2, int y2, int x3, int y3,
 	      Elevation e, int up, int map)
-{
+{ int shadow = valInt(e->height);
+  Colour up_color, down_color;
+
+  DEBUG(NAME_draw,
+	Cprintf("r_3d_triangle(%d,%d, %d,%d, %d,%d %s, %d)\n",
+		x1,y1, x2,y2, x3,y3, pp(e), up));
+
+  if ( !up  )
+    shadow = -shadow;
+  if ( shadow > 0 )
+  { up_color   = r_elevation_relief(e);
+    down_color = r_elevation_shadow(e);
+  } else
+  { down_color = r_elevation_shadow(e);
+    up_color   = r_elevation_relief(e);
+  }
+
+  int cx = (x1 + x2 + x3)/3;
+  int cy = (y1 + y2 + y3)/3;
+
+  cairo_set_line_width(CR, 1);
+  for(int os=0; os<shadow; os++)
+  { if ( map == 0x3 )		/* line 1 and 3 up */
+    { pce_cairo_set_source_color(CR, up_color);
+      cairo_move_to(CR, X(x1), Y(y1));
+      cairo_line_to(CR, X(x2), Y(y2));
+      cairo_line_to(CR, X(x3), Y(y3));
+      cairo_stroke(CR);
+      pce_cairo_set_source_color(CR, down_color);
+      cairo_move_to(CR, X(x3), Y(y3));
+      cairo_line_to(CR, X(x1), Y(y1));
+      cairo_stroke(CR);
+    } else
+    { Cprintf("stub: r_3d_triangle(): map=0x%x\n", map);
+    }
+
+    step_to(&x1, &y1, cx, cy);
+    step_to(&x2, &y2, cx, cy);
+    step_to(&x3, &y3, cx, cy);
+  }
+
+  if ( r_elevation_fillpattern(e, up) )
+    r_fill_triangle(x1, y1, x2, y2, x3, y3);
 }
 
 /**
