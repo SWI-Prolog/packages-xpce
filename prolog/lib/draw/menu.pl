@@ -450,8 +450,8 @@ paint_proto(MI) :->
     "Paint a small version of the prototype"::
     get(MI, slot, proto, Proto),
     item_size(IW, IH),
-    send(MI, label, new(I, image(@nil, IW, IH))),
-    send(MI, paint_outline),
+    new(I, image(@nil, IW, IH)),
+    send(MI, paint_outline, I),
     (   Proto == @nil
     ->  true
     ;   send(Proto, instance_of, link)
@@ -517,9 +517,9 @@ bitmap file named `Mode.png' in PCE's bitmap search-path.  We copy this
 image in the bitmap.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-paint_outline(MI) :->
+paint_outline(MI, I) :->
     "Paint the mode indicating bitmap"::
-    get(MI, label, I),
+    send(I, background, @nil),
     get(MI, mode, Mode),
     outline_image(Mode, ImageFile),
     send(I, copy, image(resource(ImageFile))).
