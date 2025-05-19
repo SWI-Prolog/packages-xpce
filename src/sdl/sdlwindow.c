@@ -167,7 +167,9 @@ ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
     d_init_surface(wsw->backing, sw->background);
     DEBUG(NAME_sdl, Cprintf("Resized %s to %dx%d\n", pp(sw), w, h));
     send(sw, NAME_resize, EAV);
-    changed_window(sw, 0, 0, w, h, TRUE);
+    changed_window(sw,
+		   -valInt(sw->scroll_offset->x),
+		   -valInt(sw->scroll_offset->y), w, h, TRUE);
     addChain(ChangedWindows, sw);
   }
 }
