@@ -920,8 +920,6 @@ getPostscriptFormatImage(Image image)
 #define XPM_PCEIMAGE 1			/* use an XPM image */
 #endif
 
-#include "bitmaps/mark_bm"
-#include "bitmaps/nomark_bm"
 #include "bitmaps/pullright_bm"
 #include "bitmaps/mark_handle_bm"
 #include "bitmaps/ms_mark.bm"
@@ -991,6 +989,8 @@ stdXPMImage(Name name, Image *global, char **bits)
 #include "bitmaps/exclamation.xpm"
 #include "bitmaps/cnode.xpm"
 #include "bitmaps/enode.xpm"
+#include "bitmaps/mark.xpm"
+#include "bitmaps/nomark.xpm"
 #endif
 
 #include "bitmaps/white_bm"
@@ -1017,10 +1017,6 @@ standardImages(void)
   greyImage(NAME_blackImage, 100, &BLACK_IMAGE,
 	    black_bm_bits, black_bm_width, black_bm_height);
 
-  stdImage(NAME_markImage, &MARK_IMAGE,
-	   mark_bm_bits, mark_bm_width, mark_bm_height);
-  stdImage(NAME_nomarkImage, &NOMARK_IMAGE,
-	   nomark_bm_bits, nomark_bm_width, nomark_bm_height);
   stdImage(NAME_msMarkImage, &MS_MARK_IMAGE,
 	   ms_mark_bits, ms_mark_width, ms_mark_height);
   stdImage(NAME_msNomarkImage, &MS_NOMARK_IMAGE,
@@ -1050,6 +1046,8 @@ standardImages(void)
   stdXPMImage(NAME_exclamationImage,   &EXCLAMATION_IMAGE,  exclamation_xpm);
   stdXPMImage(NAME_treeExpandedImage,  NULL,		    enode_xpm);
   stdXPMImage(NAME_treeCollapsedImage, NULL,		    cnode_xpm);
+  stdXPMImage(NAME_markImage,          &MARK_IMAGE,	    mark_xpm);
+  stdXPMImage(NAME_nomarkImage,        &NOMARK_IMAGE,	    nomark_xpm);
 #endif
 
   stdImage(NAME_nullImage, &NULL_IMAGE,
