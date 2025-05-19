@@ -77,7 +77,7 @@ typedef struct
 #define FloatArea(x, y, w, h)		     \
   double _lw = (double)context.pen/2.0;	     \
   double fx = (x)+_lw/2.0;		     \
-  double fy = (y)+_lw/2.02;		     \
+  double fy = (y)+_lw/2.0;		     \
   double fw = (w)-_lw;			     \
   double fh = (h)-_lw;
 
@@ -85,6 +85,9 @@ static void pce_cairo_set_source_color(cairo_t *cr, Colour pce);
 #if 0
 static bool validate_cairo_text_consistency(cairo_t *draw_cr);
 #endif
+
+static void r_fill_fgbg(double x, double y, double w, double h,
+			Any fill, Name which);
 
 
 		 /*******************************
@@ -940,6 +943,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 		x, y, w, h, radius, pp(e), up));
 
   NormaliseArea(x, y, w, h);
+  FloatArea(x, y, w, h);
   if ( radius > 0 )
   { int maxr = min(w,h)/2;
 
@@ -978,7 +982,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
     if ( !up  )
       shadow = -shadow;
 
-    Translate(x, y);
+    Translate(fx, fy);
     if ( shadow )
     { Colour top_left_color;
       Colour bottom_right_color;
@@ -998,29 +1002,30 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
       if ( radius > 0 )			/* with rounded corners */
       { Cprintf("r_3d_box(): with radius\n");
       } else
-      { int r = x+w;
-	int b = y+h;
+      { double fr = fx+fw;
+	double fb = fy+fh;
 
 	pce_cairo_set_source_color(CR, top_left_color);
 	cairo_set_line_width(CR, 1);
 	for(int os=0; os<shadow; os++)
-	{ cairo_move_to(CR, r-os, y-os);
-	  cairo_line_to(CR, x+os, y+os);
-	  cairo_line_to(CR, x+os, b-os);
+	{ cairo_move_to(CR, fr-os, fy-os);
+	  cairo_line_to(CR, fx+os, fy+os);
+	  cairo_line_to(CR, fx+os, fb-os);
 	  cairo_stroke(CR);
 	}
 	pce_cairo_set_source_color(CR, bottom_right_color);
 	for(int os=0; os<shadow; os++)
-	{ cairo_move_to(CR, r-os, y-os);
-	  cairo_line_to(CR, r-os, b-os);
-	  cairo_line_to(CR, x+os, b-os);
+	{ cairo_move_to(CR, fr-os, fy-os);
+	  cairo_line_to(CR, fr-os, fb-os);
+	  cairo_line_to(CR, fx+os, fb-os);
 	  cairo_stroke(CR);
 	}
       }
     }
 
-    if ( fill )
-      r_fill(x+shadow, y+shadow, w-2*shadow, h-2*shadow, NAME_current);
+    if ( fill )			/* r_fill_fgbg() uses floats  */
+      r_fill_fgbg(fx+shadow, fy+shadow, fw-2*shadow,
+		  fh-2*shadow, NAME_current, NAME_foreground);
   }
 }
 
@@ -1386,8 +1391,8 @@ r_image(Image image, int sx, int sy,
   }
 }
 
-void
-r_fill_fgbg(int x, int y, int w, int h, Any fill, Name which)
+static void
+r_fill_fgbg(double x, double y, double w, double h, Any fill, Name which)
 { NormaliseArea(x, y, w, h);
   if ( w > 0 && h > 0 )
   { r_fillpattern(fill, which);
