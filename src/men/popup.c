@@ -588,20 +588,10 @@ eventPopup(PopupObj p, EventObj ev)
     { send(p, NAME_showPullrightMenu, p->preview, EAV);
     } else if ( getButtonEvent(ev) == p->button )
     { assign(p, selected_item, p->preview);
-      PceWindow sw = getWindowGraphical((Graphical)p);
-      PceWindow ew = WindowOfEvent(ev);
-      bool ngrab = (sw == ew);
       DEBUG(NAME_popup,
-	    Cprintf("Selected %s; context = %s (%s == %s)\n",
-		    pp(p->preview), pp(p->context), pp(sw), pp(ew)));
+	    Cprintf("Selected %s; context = %s\n",
+		    pp(p->preview), pp(p->context)));
       send(p, NAME_close, EAV);
-      if ( ngrab )
-      { DEBUG(NAME_popup, Cprintf("Not grabbed; executing\n"));
-	if ( instanceOfObject(p->context, ClassMenuBar) )
-	  currentMenuBar(p->context, NIL);
-	send(p, NAME_execute, p->context, EAV);
-      }
-
       succeed;
     }
   } else if ( isDownEvent(ev) )		/* DOWN: set button */
