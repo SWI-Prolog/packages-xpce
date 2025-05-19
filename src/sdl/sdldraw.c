@@ -1397,7 +1397,7 @@ r_fill_fgbg(double x, double y, double w, double h, Any fill, Name which)
   if ( w > 0 && h > 0 )
   { r_fillpattern(fill, which);
     DEBUG(NAME_draw,
-	  Cprintf("r_fill(%d, %d, %d, %d, %s->%s)\n",
+	  Cprintf("r_fill(%.1f, %.1f, %.1f, %.1f, %s->%s)\n",
 		  x, y, w, h, pp(fill), pp(context.fill_pattern)));
 
     Translate(x, y);
