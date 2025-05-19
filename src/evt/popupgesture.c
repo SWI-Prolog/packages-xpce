@@ -50,9 +50,7 @@ initialisePopupGesture(PopupGesture g, PopupObj popup,
 
 static status
 cancelPopupGesture(PopupGesture g, EventObj ev)
-{ if ( notNil(g->current) )
-    assign(g->current, context, NIL);
-  assign(g, current, NIL);
+{ assign(g, current, NIL);
   assign(g, context, NIL);
 
   return cancelGesture((Gesture)g, ev);
@@ -102,8 +100,7 @@ eventPopupGesture(PopupGesture g, EventObj ev)
       sw = ev->window;
 
     if ( notNil(g->current) && g->current->displayed == OFF )
-    { assign(g->current, context, g);
-      send(g->current, NAME_open, ev->receiver,
+    { send(g->current, NAME_open, ev->receiver,
 	   getAreaPositionEvent(ev, DEFAULT), EAV);
       attributeObject(g, NAME_Stayup, ON);
       grabPointerWindow(sw, ON);
@@ -168,9 +165,6 @@ initiatePopupGesture(PopupGesture g, EventObj ev)
 { if ( isNil(g->max_drag_distance) )
   { send(g->current, NAME_open, ev->receiver,
 	 getAreaPositionEvent(ev, DEFAULT), EAV);
-    assign(g->current, context, g);
-    Cprintf("Set context of %s to %s with context %s\n",
-	    pp(g->current), pp(g), pp(g->context));
     postEvent(ev, (Graphical) g->current, DEFAULT);
   }
 
