@@ -384,8 +384,6 @@ changedEntireImageImage(Image image)
     return changedImageGraphical(image->bitmap, ZERO, ZERO,
 				 image->size->w, image->size->h);
 
-  ws_destroy_image(image);		/* remove memory copy */
-
   succeed;
 }
 
