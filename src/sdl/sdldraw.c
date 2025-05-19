@@ -1403,8 +1403,12 @@ r_fill_fgbg(double x, double y, double w, double h, Any fill, Name which)
     Translate(x, y);
 
     if ( instanceOfObject(context.fill_pattern, ClassColour) )
-    { cairo_new_path(CR);
-      pce_cairo_set_source_color(CR, context.fill_pattern);
+    { pce_cairo_set_source_color(CR, context.fill_pattern);
+      cairo_rectangle(CR, x, y, w, h);
+      cairo_fill(CR);
+    } else if ( isNil(context.fill_pattern) )
+    { //Cprintf("r_fill(): Transparent\n");
+      cairo_set_source_rgba(CR, 0, 0, 0, 0);
       cairo_rectangle(CR, x, y, w, h);
       cairo_fill(CR);
     } else
