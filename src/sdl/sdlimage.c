@@ -115,6 +115,34 @@ ws_load_old_image(Image image, IOSTREAM *fd)
     return SUCCEED;
 }
 
+static void
+premultiply_alpha(SDL_Surface *surface)
+{ if ( !SDL_LockSurface(surface) )
+    return;
+
+  Uint8 *pixels = surface->pixels;
+  int pitch = surface->pitch;
+  int width = surface->w;
+  int height = surface->h;
+  const SDL_PixelFormatDetails *format_details =
+    SDL_GetPixelFormatDetails(surface->format);
+
+  for (int y = 0; y < height; y++)
+  { Uint32 *row = (Uint32 *)(pixels + y * pitch);
+    for (int x = 0; x < width; x++)
+    { Uint8 r, g, b, a;
+      SDL_GetRGBA(row[x], format_details, NULL, &r, &g, &b, &a);
+      r = (r * a) / 255;
+      g = (g * a) / 255;
+      b = (b * a) / 255;
+      row[x] = SDL_MapRGBA(format_details, NULL, r, g, b, a);
+    }
+  }
+
+  SDL_UnlockSurface(surface);
+}
+
+
 /**
  * Copy a Cairo surface such that the data is always owned
  * by Cairo.
@@ -199,6 +227,7 @@ ws_load_image_file(Image image)
   { Cprintf("Failed to convert %s: %s\n", pp(image), SDL_GetError());
     fail;
   }
+  premultiply_alpha(surf1);
   cairo_surface_t *surf = cairo_image_surface_create_for_data(
     (unsigned char *)surf1->pixels,
     CAIRO_FORMAT_ARGB32,
