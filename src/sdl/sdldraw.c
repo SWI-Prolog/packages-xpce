@@ -1279,14 +1279,29 @@ r_image(Image image, int sx, int sy,
 { cairo_surface_t *surface = pceImage2CairoSurface(image);
 
   Translate(x, y);
+  NormaliseArea(x, y, w, h);
+  if ( w == 0 || h == 0 )
+    return;
+
   DEBUG(NAME_draw,
 	Cprintf("r_image(%s, %d, %d -> %d, %d, %d, %d, %s)\n",
 		pp(image), sx, sy, x, y, w, h, pp(transparent)));
 
   if ( surface )
-  { cairo_new_path(CR);
-    cairo_set_source_surface(CR, surface, x, y);
-    cairo_paint(CR);
+  { int width  = cairo_image_surface_get_width(surface);
+    int height = cairo_image_surface_get_height(surface);
+    if ( w == width && h == height )
+    { cairo_new_path(CR);
+      cairo_set_source_surface(CR, surface, x, y);
+      cairo_paint(CR);
+    } else
+    { cairo_save(CR);
+      cairo_translate(CR, x, y);
+      cairo_scale(CR, (float)w/(float)width, (float)h/(float)height);
+      cairo_set_source_surface(CR, surface, 0, 0);
+      cairo_paint(CR);
+      cairo_restore(CR);
+    }
   }
 }
 
