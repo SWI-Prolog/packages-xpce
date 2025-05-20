@@ -659,7 +659,7 @@ defaultPopupImages(PopupObj p)
   { if ( p->multiple_selection == ON && p->look == NAME_win )
       assign(p, on_image, NAME_marked);
     else
-      assign(p, on_image, MS_MARK_IMAGE);
+      assign(p, on_image, MARK_IMAGE);
   } else
     assign(p, on_image, NIL);
 

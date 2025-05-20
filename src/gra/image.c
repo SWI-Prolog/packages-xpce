@@ -919,8 +919,6 @@ getPostscriptFormatImage(Image image)
 #endif
 
 #include "bitmaps/mark_handle_bm"
-#include "bitmaps/ms_mark.bm"
-#include "bitmaps/ms_nomark.bm"
 #include "bitmaps/ms_left_arrow.bm"
 #include "bitmaps/ol_pulldown.bm"
 #include "bitmaps/ol_pullright.bm"
@@ -1014,10 +1012,6 @@ standardImages(void)
   greyImage(NAME_blackImage, 100, &BLACK_IMAGE,
 	    black_bm_bits, black_bm_width, black_bm_height);
 
-  stdImage(NAME_msMarkImage, &MS_MARK_IMAGE,
-	   ms_mark_bits, ms_mark_width, ms_mark_height);
-  stdImage(NAME_msNomarkImage, &MS_NOMARK_IMAGE,
-	   ms_nomark_bits, ms_nomark_width, ms_nomark_height);
   stdImage(NAME_msLeftArrowImage, NULL,
 	   ms_left_arrow_bits, ms_left_arrow_width, ms_left_arrow_height);
   stdImage(NAME_markHandleImage, &MARK_HANDLE_IMAGE,
