@@ -35,6 +35,7 @@
 
 #ifndef _TERMINAL_H_INCLUDED
 #define _TERMINAL_H_INCLUDED
+#include "../sdl/sdlcolour.h"
 
 typedef uint32_t TCHAR;
 
@@ -59,9 +60,10 @@ typedef struct
   int		mark_y;
 } rlc_mark, *RlcMark;
 
+typedef struct rlc_data * rlc_console; /* they are the same; rename! */
+
 typedef void	(*RlcUpdateHook)(void);	/* Graphics update hook */
 typedef void	(*RlcTimerHook)(int);	/* Timer fireing hook */
-typedef int	(*RlcRenderHook)(WPARAM);	/* Render one format */
 typedef void	(*RlcRenderAllHook)(void); /* Render all formats */
 typedef int	(*RlcMain)(rlc_console c, int, TCHAR**); /* main() */
 typedef void	(*RlcInterruptHook)(rlc_console, int); /* Hook for Control-C */
@@ -70,43 +72,42 @@ typedef void	(*RlcMenuHook)(rlc_console, const TCHAR *id); /* Hook for menu-sele
 typedef void	(*RlcFreeDataHook)(uintptr_t data); /* release data */
 typedef bool	(*RlcLinkHook)(rlc_console, const TCHAR *); /* link href */
 
-_export RlcUpdateHook	rlc_update_hook(RlcUpdateHook updatehook);
-_export RlcTimerHook	rlc_timer_hook(RlcTimerHook timerhook);
-_export RlcRenderHook   rlc_render_hook(RlcRenderHook renderhook);
-_export RlcRenderAllHook rlc_render_all_hook(RlcRenderAllHook renderallhook);
-_export RlcInterruptHook rlc_interrupt_hook(RlcInterruptHook interrupthook);
-_export RlcResizeHook	rlc_resize_hook(RlcResizeHook resizehook);
-_export RlcMenuHook	rlc_menu_hook(RlcMenuHook menuhook);
-_export RlcLinkHook	rlc_link_hook(RlcLinkHook linkhook);
-_export int		rlc_copy_output_to_debug_output(int docopy);
+RlcUpdateHook	rlc_update_hook(RlcUpdateHook updatehook);
+RlcTimerHook	rlc_timer_hook(RlcTimerHook timerhook);
+#if TODO
+RlcRenderHook   rlc_render_hook(RlcRenderHook renderhook);
+#endif
+RlcRenderAllHook rlc_render_all_hook(RlcRenderAllHook renderallhook);
+RlcInterruptHook rlc_interrupt_hook(RlcInterruptHook interrupthook);
+RlcResizeHook	rlc_resize_hook(RlcResizeHook resizehook);
+RlcMenuHook	rlc_menu_hook(RlcMenuHook menuhook);
+RlcLinkHook	rlc_link_hook(RlcLinkHook linkhook);
+int		rlc_copy_output_to_debug_output(int docopy);
 
-_export rlc_console	rlc_create_console(rlc_console_attr *attr);
-_export void		rlc_title(rlc_console c,
-				  TCHAR *title, TCHAR *old, int size);
-_export void		rlc_yield(void);
-_export void		rlc_word_char(int chr, int isword);
-_export int		rlc_is_word_char(int chr);
-_export int		rlc_iswin32s(void);	/* check for Win32S */
+void		rlc_yield(void);
+void		rlc_word_char(int chr, int isword);
+int		rlc_is_word_char(int chr);
+int		rlc_iswin32s(void);	/* check for Win32S */
 
-_export void		rlc_free(void *ptr);
-_export void *		rlc_malloc(size_t size);
-_export void *		rlc_realloc(void *ptr, size_t size);
+void		rlc_free(void *ptr);
+void *		rlc_malloc(size_t size);
+void *		rlc_realloc(void *ptr, size_t size);
 
-_export size_t		rlc_read(rlc_console c, TCHAR *buf, size_t cnt);
-_export size_t		rlc_write(rlc_console c, TCHAR *buf, size_t cnt);
-_export int		rlc_close(rlc_console c);
-_export int		rlc_flush_output(rlc_console c);
+size_t		rlc_read(rlc_console c, TCHAR *buf, size_t cnt);
+size_t		rlc_write(rlc_console c, TCHAR *buf, size_t cnt);
+int		rlc_close(rlc_console c);
+int		rlc_flush_output(rlc_console c);
 
-_export wchar_t	       *rlc_clipboard_text(rlc_console c);
+wchar_t	       *rlc_clipboard_text(rlc_console c);
 
-_export int		getch(rlc_console c);
-_export int		getche(rlc_console c);
-_export int		getkey(rlc_console c);
-_export int		kbhit(rlc_console c);
-_export void		ScreenGetCursor(rlc_console c, int *row, int *col);
-_export void		ScreenSetCursor(rlc_console c, int row, int col);
-_export int		ScreenCols(rlc_console c);
-_export int		ScreenRows(rlc_console c);
+int		getch(rlc_console c);
+int		getche(rlc_console c);
+int		getkey(rlc_console c);
+int		kbhit(rlc_console c);
+void		ScreenGetCursor(rlc_console c, int *row, int *col);
+void		ScreenSetCursor(rlc_console c, int row, int col);
+int		ScreenCols(rlc_console c);
+int		ScreenRows(rlc_console c);
 
 		 /*******************************
 		 *	 LINE EDIT STUFF	*
@@ -124,7 +125,7 @@ typedef struct _line
   int		reprompt;		/* repeat the prompt */
   TCHAR	       *data;			/* the data (malloc'ed) */
   rlc_console	console;		/* console I belong to */
-} line, *Line;
+} rlc_line, *RlcLine;
 
 #define COMPLETE_MAX_WORD_LEN 256
 #define COMPLETE_MAX_MATCHES 100
@@ -138,7 +139,7 @@ struct _complete_data;
 typedef int (*RlcCompleteFunc)(struct _complete_data *);
 
 typedef struct _complete_data
-{ Line		line;			/* line we are completing */
+{ RlcLine	line;			/* line we are completing */
   int		call_type;		/* COMPLETE_* */
   int		replace_from;		/* index to start replacement */
   int		quote;			/* closing quote */
@@ -150,14 +151,14 @@ typedef struct _complete_data
   intptr_t	num_handle;		/* numeric handle for client */
 } rlc_complete_data, *RlcCompleteData;
 
-_export RlcCompleteFunc rlc_complete_hook(RlcCompleteFunc func);
+RlcCompleteFunc rlc_complete_hook(RlcCompleteFunc func);
 
-_export TCHAR	*read_line(rlc_console console);
-_export int	rlc_complete_file_function(RlcCompleteData data);
-_export void	rlc_init_history(rlc_console c, int size);
-_export void	rlc_add_history(rlc_console c, const TCHAR *line);
-_export bool	rlc_bind(int chr, const char *fname);
-_export int	rlc_for_history(
+TCHAR	*read_line(rlc_console console);
+int	rlc_complete_file_function(RlcCompleteData data);
+void	rlc_init_history(rlc_console c, int size);
+void	rlc_add_history(rlc_console c, const TCHAR *line);
+bool	rlc_bind(int chr, const char *fname);
+int	rlc_for_history(
 		    rlc_console b,
 		    int (*handler)(void *ctx, int no, const TCHAR *line),
 		    void *ctx);
@@ -237,7 +238,7 @@ typedef struct
   unsigned	 changed : 1;		/* line needs redraw */
   unsigned	 softreturn : 1;	/* wrapped line */
   int		 line_no;		/* The number of the line */
-} text_line, *TextLine;
+} rlc_text_line, *RlcTextLine;
 
 typedef struct
 { uintptr_t	data;			/* the data itself */
@@ -259,7 +260,7 @@ typedef struct rlc_data
   int		caret_y;		/* its line */
   int		window_start;		/* start line of the window */
   int		window_size;		/* #lines on the window */
-  TextLine	lines;			/* the actual lines */
+  RlcTextLine	lines;			/* the actual lines */
   int		sel_unit;		/* SEL_CHAR, SEL_WORD, SEL_LINE */
   int		sel_org_line;		/* line origin of the selection */
   int		sel_org_char;		/* char origin of the selection */
@@ -282,12 +283,12 @@ typedef struct rlc_data
   HFONT		hfont_bold_underlined;  /* bold + underlined */
 #endif
   int		fixedfont;		/* Font is fixed */
-#if TODO
   COLORREF	foreground;		/* Foreground (text) color */
   COLORREF	background;		/* Background color */
   COLORREF	sel_foreground;		/* Selection foreground */
   COLORREF	sel_background;		/* Selection background */
   COLORREF	ansi_color[16];		/* ANSI colors (8 normal + 8 bright) */
+#if TODO
   HANDLE	cursor;			/* Default cursor */
   HANDLE	link_cursor;		/* Cursor when hovering a link */
 #endif
@@ -327,7 +328,6 @@ typedef struct rlc_data
 		 *	    FUNCTIONS		*
 		 *******************************/
 
-extern void	rlc_assert(const TCHAR *msg);
 int		rlc_at_head_history(RlcData b);
 const TCHAR *	rlc_bwd_history(RlcData b);
 const TCHAR *	rlc_fwd_history(RlcData b);
@@ -358,8 +358,6 @@ qrlc_get_data(rlc_console c)
     }
     return NULL;
   }
-
-  return _rlc_stdio;
 }
 
 
