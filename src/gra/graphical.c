@@ -1484,6 +1484,13 @@ getFramePositionGraphical(Graphical gr)
       fail;				/* not displayed */
     offset_window(w, &ox, &oy);
   }
+  FrameObj fr = getFrameWindow(w, OFF);
+  if ( fr )
+  { int fox = 0, foy = 0;
+    ws_window_frame_position(w, fr, &fox, &foy);
+    ox += fox;
+    oy += foy;
+  }
 
   x = toInt(valInt(x) + ox + valInt(w->area->x));
   y = toInt(valInt(y) + oy + valInt(w->area->y));
