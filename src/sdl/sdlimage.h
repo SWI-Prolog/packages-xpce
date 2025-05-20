@@ -37,15 +37,10 @@
 #include <SDL3/SDL.h>
 #include <cairo/cairo.h>
 
-static inline cairo_surface_t *
-pceImage2CairoSurface(Image image)
-{ if ( !image->ws_ref )
-  { if ( !XopenImage(image, CurrentDisplay(NIL)) )
-      return NULL;
-  }
-  return image->ws_ref;
-}
+/* private interface (to sdldraw.c) */
+cairo_surface_t *pceImage2CairoSurface(Image image);
 
+/* Public interface to core */
 void ws_init_image(Image image);
 void ws_destroy_image(Image image);
 status ws_store_image(Image image, FileObj file);
@@ -68,5 +63,6 @@ void ws_create_image_from_x11_data(Image image, unsigned char *data, int w, int 
 ColourMap ws_colour_map_for_image(Image image);
 void ws_system_images(void);
 void ws_prepare_image_mask(Image image);
+status ws_has_alpha_image(Image image);
 
 #endif /* RAYIMAGE_H */

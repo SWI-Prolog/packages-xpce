@@ -39,6 +39,15 @@
 #include "sdlcolour.h"
 #include <SDL3_image/SDL_image.h>
 
+cairo_surface_t *
+pceImage2CairoSurface(Image image)
+{ if ( !image->ws_ref )
+  { if ( !XopenImage(image, CurrentDisplay(NIL)) )
+      return NULL;
+  }
+  return image->ws_ref;
+}
+
 /**
  * Initialize internal state for a new Image object.
  *
@@ -602,4 +611,9 @@ ws_system_images(void)
 void
 ws_prepare_image_mask(Image image)
 {
+}
+
+status
+ws_has_alpha_image(Image image)
+{ succeed;			/* TODO: really verify */
 }

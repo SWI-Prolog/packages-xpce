@@ -203,6 +203,11 @@ getConvertImage(Class class, Any obj)
     } \
   }
 
+status
+hasAlphaImage(Image image)
+{ return ws_has_alpha_image(image);
+}
+
 
 		/********************************
 		*           LOAD/STORE		*
@@ -1124,6 +1129,8 @@ static senddecl send_image[] =
      DEFAULT, "Create from name, [width, height, kind]"),
   SM(NAME_unlink, 0, NULL, unlinkImage,
      DEFAULT, "Destroy private memory and window-system resources"),
+  SM(NAME_hasAlpha, 0, NULL, hasAlphaImage,
+     NAME_colour, "True if the image is not completely opaque"),
   SM(NAME_copy, 1, "from=image", copyImage,
      NAME_copy, "Copy contents of argument in image"),
   SM(NAME_drawIn, 2, T_drawIn, drawInImage,

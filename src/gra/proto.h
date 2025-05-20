@@ -206,6 +206,7 @@ COMMON(Image)	getConvertImage(Class class, Any obj);
 COMMON(status)	XopenImage(Image image, DisplayObj d);
 COMMON(status)	XcloseImage(Image image, DisplayObj d);
 COMMON(status)	loadImage(Image image, SourceSink file, CharArray path);
+COMMON(status)	hasAlphaImage(Image image);
 COMMON(status)	fillImage(Image image, Any pattern, Area area);
 COMMON(Image)	getMonochromeImage(Image image);
 COMMON(status)	makeClassImage(Class class);
