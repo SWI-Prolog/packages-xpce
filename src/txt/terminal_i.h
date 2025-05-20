@@ -193,15 +193,6 @@ typedef struct
   int		closing;		/* closing status */
   int		modified_options;	/* OPT_ */
   history	history;		/* history for this console */
-					/* Thread handles */
-  HANDLE	console_thread;		/* I/O thread  */
-  HANDLE	application_thread;	/* The application I work for */
-  DWORD		console_thread_id;	/* I/O thread id */
-  DWORD		application_thread_id;
-  HWND		kill_window;		/* window in app thread for destroy */
-  CRITICAL_SECTION lock;		/* Serialized actions */
-
-  user_data	values[MAX_USER_VALUES]; /* associated user data */
 } rlc_data, *RlcData;
 
 
@@ -236,14 +227,8 @@ void		rlc_clearprompt(rlc_console c);
 		 *	 INLINE FUNCTIONS	*
 		 *******************************/
 
-#ifdef _DEBUG
-#define assert(g) if ( !(g) ) rlc_assert(_T(#g))
-#else
-#define assert(g) (void)0
-#endif
-
 static __inline RlcData
-rlc_get_data(rlc_console c)
+qrlc_get_data(rlc_console c)
 { if ( c )
   { RlcData b = c;
 

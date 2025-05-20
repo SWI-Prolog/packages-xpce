@@ -36,30 +36,6 @@
 #ifndef _CONSOLE_H_INCLUDED
 #define _CONSOLE_H_INCLUDED
 
-#ifndef RLC_VENDOR
-#define RLC_VENDOR TEXT("SWI")
-#endif
-
-#define RLC_TITLE_MAX 256		/* max length of window title */
-
-#ifndef _export
-#ifdef _MAKE_DLL
-#define _export __declspec(dllexport)
-#else
-#define _export extern
-#endif
-#endif
-
-#include <signal.h>
-#include <stddef.h>
-#include <stdbool.h>
-#ifdef _MSC_VER
-#include <stdint.h>
-#pragma warning(disable : 4996)	/* deprecate open() etc */
-#endif
-
-#define RLC_APPTIMER_ID	100		/* >=100: application timer */
-
 typedef struct
 { int		 first;
   int		 last;
@@ -90,7 +66,7 @@ typedef struct
   int		font_char_set;
 } rlc_console_attr;
 
-typedef void * rlc_console;		/* console handle */
+typedef void * rlc_console;		/* same as rlc_data */
 
 typedef void	(*RlcUpdateHook)(void);	/* Graphics update hook */
 typedef void	(*RlcTimerHook)(int);	/* Timer fireing hook */
