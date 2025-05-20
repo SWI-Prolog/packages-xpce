@@ -195,7 +195,52 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h, FontObj font)
   // compute width in characters from w
   cw = w/16;
 
-  ti->lines = rlc_make_buffer(cw, valInt(ti->savelines));
+  ti->lines = rlc_make_buffer(cw, valInt(ti->save_lines));
+  succeed;
+}
+
+static status
+RedrawAreaTerminalImage(TerminalImage ti)
+{ succeed;
+}
+
+static vardecl var_terminal_image[] =
+{ SV(NAME_font, "font", IV_GET|IV_STORE, fontText,
+     NAME_appearance, "Font used to draw the string"),
+  SV(NAME_saveLines, "int", IV_GET|IV_STORE, saveLinesText,
+     NAME_memory, "How many lines are saved for scroll back"),
+  IV(NAME_data, "alien:RlcData", IV_NONE,
+     NAME_cache, "Line buffer and related data")
+};
+
+static senddecl send_terminal_image[] =
+{
+};
+
+static getdecl get_terminal_image[] =
+{
+};
+
+static classvardecl rc_terminal_image[] =
+{ RC(NAME_saveLines, "int", "1000",
+     How many lines are saved for scroll back")
+};
+
+static Name terminal_image_termnames[] =
+	{  };
+
+ClassDecl(terminal_image_decls,
+          var_terminal_image, send_terminal_image, get_terminal_image, rc_terminal_image,
+          0, terminal_image_termnames,
+          "$Rev$");
+
+status
+makeClassTerminalImage(Class class)
+{ declareClass(class, &terminal_image_decls);
+
+  setCloneFunctionClass(class, cloneEditor);
+  setRedrawFunctionClass(class, RedrawAreaTerminalImage);
+
   succeed;
 }
 
