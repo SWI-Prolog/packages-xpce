@@ -33,9 +33,15 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef _CONSOLE_H_INCLUDED
-#define _CONSOLE_H_INCLUDED
+#ifndef _TERMINAL_H_INCLUDED
+#define _TERMINAL_H_INCLUDED
 
+typedef uint32_t TCHAR;
+
+/* Queue for handling input typed by the user.  I.e., keyboard events
+ * push characters into this queue to be read by the client of the
+ * terminal.
+ */
 typedef struct
 { int		 first;
   int		 last;
@@ -46,12 +52,12 @@ typedef struct
 
 #define RLC_EOF	0x1			/* Flags on the queue */
 
+/* Marks a location in the line buffer
+ */
 typedef struct
 { int		mark_x;
   int		mark_y;
 } rlc_mark, *RlcMark;
-
-typedef void * rlc_console;		/* same as rlc_data */
 
 typedef void	(*RlcUpdateHook)(void);	/* Graphics update hook */
 typedef void	(*RlcTimerHook)(int);	/* Timer fireing hook */
@@ -63,30 +69,6 @@ typedef void	(*RlcResizeHook)(int, int); /* Hook for window change */
 typedef void	(*RlcMenuHook)(rlc_console, const TCHAR *id); /* Hook for menu-selection */
 typedef void	(*RlcFreeDataHook)(uintptr_t data); /* release data */
 typedef bool	(*RlcLinkHook)(rlc_console, const TCHAR *); /* link href */
-
-#ifdef __WINDOWS__			/* <windows.h> is included */
-					/* rlc_color(which, ...) */
-#define RLC_WINDOW	  (0)		/* window background */
-#define RLC_TEXT	  (1)		/* text color */
-#define RLC_HIGHLIGHT	  (2)		/* selected text background */
-#define RLC_HIGHLIGHTTEXT (3)		/* selected text */
-
-_export HANDLE	rlc_hinstance(void);	/* hInstance of WinMain() */
-_export HWND	rlc_hwnd(rlc_console c); /* HWND of console window */
-_export bool	rlc_window_pos(rlc_console c,
-			       HWND hWndInsertAfter,
-			       int x, int y, int w, int h,
-			       UINT flags); /* resize/reposition window */
-_export int	rlc_main(HANDLE hI, HANDLE hPrevI,
-			 LPTSTR cmd, int show, RlcMain main, HICON icon);
-_export void	rlc_icon(rlc_console c, HICON icon);	/* Change icon */
-_export COLORREF rlc_color(rlc_console c, int which, COLORREF color);
-
-typedef LRESULT	(*RlcMessageHook)(HWND hwnd, UINT message,
-				  WPARAM wParam, LPARAM lParam);
-_export RlcMessageHook  rlc_message_hook(RlcMessageHook hook);
-
-#endif /*__WINDOWS__*/
 
 _export RlcUpdateHook	rlc_update_hook(RlcUpdateHook updatehook);
 _export RlcTimerHook	rlc_timer_hook(RlcTimerHook timerhook);
@@ -126,33 +108,12 @@ _export void		ScreenSetCursor(rlc_console c, int row, int col);
 _export int		ScreenCols(rlc_console c);
 _export int		ScreenRows(rlc_console c);
 
-_export int		rlc_insert_menu_item(rlc_console c,
-					     const TCHAR *menu,
-					     const TCHAR *label,
-					     const TCHAR *before);
-_export int		rlc_insert_menu(rlc_console c,
-					const TCHAR *label,
-					const TCHAR *before);
-
-		 /*******************************
-		 *	  GET/SET VALUES	*
-		 *******************************/
-
-#define RLC_APPLICATION_THREAD		0 /* thread-handle of application */
-#define RLC_APPLICATION_THREAD_ID	1 /* thread id of application */
-#define RLC_VALUE(N)			(1000+(N))
-
-_export int		rlc_get(rlc_console c, int what,
-				uintptr_t *val);
-_export int		rlc_set(rlc_console c, int what,
-				uintptr_t val,
-				RlcFreeDataHook hook);
-
-
 		 /*******************************
 		 *	 LINE EDIT STUFF	*
 		 *******************************/
 
+/* Represent the line currently being typed in "cooked" mode
+ */
 typedef struct _line
 { rlc_mark	origin;			/* origin of edit */
   size_t	point;			/* location of the caret */
@@ -205,6 +166,9 @@ _export int	rlc_for_history(
 		 *	       HISTORY		*
 		 *******************************/
 
+/* a ring buffer that stores the history of commands typed into
+ * the terminal
+ */
 typedef struct _history
 { int		size;			/* size of the history */
   int		tail;			/* oldest position */
@@ -215,7 +179,7 @@ typedef struct _history
 
 
 		 /*******************************
-		 *	    CONSOLE DATA	*
+		 *	    TERMINAL DATA	*
 		 *******************************/
 
 #define ANSI_MAX_ARGC     10		/* Ansi-escape sequence argv */
@@ -282,7 +246,10 @@ typedef struct
 
 #define RLC_MAGIC	0x3b75df1e	/* magic number to verify */
 
-typedef struct
+/* This struct holds all data related to the terminal image, i.e.,
+   the lines, selection, etc.
+ */
+typedef struct rlc_data
 { int		magic;
   int		height;			/* number of lines in buffer */
   int		width;			/* #characters ler line */
@@ -308,11 +275,14 @@ typedef struct
   int		scaret_x;		/* saved-caret X */
   int		scaret_y;		/* saved-caret Y */
   int		has_focus;		/* Application has the focus */
+#if TODO
   HFONT		hfont;			/* Windows font handle */
   HFONT		hfont_bold;		/* bold */
   HFONT		hfont_underlined;	/* underlined */
   HFONT		hfont_bold_underlined;  /* bold + underlined */
+#endif
   int		fixedfont;		/* Font is fixed */
+#if TODO
   COLORREF	foreground;		/* Foreground (text) color */
   COLORREF	background;		/* Background color */
   COLORREF	sel_foreground;		/* Selection foreground */
@@ -320,6 +290,7 @@ typedef struct
   COLORREF	ansi_color[16];		/* ANSI colors (8 normal + 8 bright) */
   HANDLE	cursor;			/* Default cursor */
   HANDLE	link_cursor;		/* Cursor when hovering a link */
+#endif
   text_flags	sgr_flags;		/* Current SGR flags */
   int		cw;			/* character width */
   int		ch;			/* character height */
@@ -392,4 +363,4 @@ qrlc_get_data(rlc_console c)
 }
 
 
-#endif /* _CONSOLE_H_INCLUDED */
+#endif /* _TERMINAL_H_INCLUDED */

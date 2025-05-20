@@ -35,8 +35,8 @@
 */
 
 #include <h/kernel.h>
-#include <h/graphics.h>
-#include "console.h"
+#include <h/text.h>
+#include "terminal.h"
 
 #ifndef isletter
 #define isletter(c) (iswalpha(c) || (c) == '_')
@@ -69,13 +69,6 @@
 
 #define ESC 27				/* the escape character */
 
-#define WM_RLC_INPUT	 WM_USER+10	/* Just somewhere ... */
-#define WM_RLC_WRITE	 WM_USER+11	/* write data */
-#define WM_RLC_FLUSH	 WM_USER+12	/* flush buffered data */
-#define WM_RLC_READY	 WM_USER+13	/* Window thread is ready */
-#define WM_RLC_CLOSEWIN  WM_USER+14	/* Close the window */
-/*#define WM_RLC_MENU	 WM_USER+15	   Insert a menu (defined in menu.h) */
-
 #define IMODE_RAW	1		/* char-by-char */
 #define IMODE_COOKED	2		/* line-by-line */
 
@@ -89,23 +82,8 @@
 #define OPT_POSITION	0x02
 
 		 /*******************************
-		 *	       DATA		*
-		 *******************************/
-
-       RlcData  _rlc_stdio = NULL;	/* the main buffer */
-static int      _rlc_show;		/* initial show */
-static char	_rlc_word_chars[CHAR_MAX]; /* word-characters (selection) */
-static const TCHAR *	_rlc_program;		/* name of the program */
-static HANDLE   _rlc_hinstance;		/* Global instance */
-static HICON    _rlc_hicon;		/* Global icon */
-
-
-
-		 /*******************************
 		 *	     FUNCTIONS		*
 		 *******************************/
-
-static LRESULT WINAPI rlc_wnd_proc(HWND win, UINT msg, WPARAM wP, LPARAM lP);
 
 static void	rcl_setup_ansi_colors(RlcData b);
 static void	rlc_place_caret(RlcData b);
@@ -157,12 +135,12 @@ static int	rlc_is_empty_queue(RlcQueue q);
 		 *        DEBUG SUPPORT         *
 		 *******************************/
 
-void
+static void
 rlc_assert(const char *msg)
 { Cprintf("Console assertion failed: %s\n", msg);
 }
 
-void
+static void
 rlc_check_assertions(RlcData b)
 { int window_last = rlc_add_lines(b, b->window_start, b->window_size-1);
   int y;
@@ -204,6 +182,11 @@ RedrawAreaTerminalImage(TerminalImage ti)
 { succeed;
 }
 
+/* Type declarations */
+
+static char *T_initialise[] =
+{ "width=[int]", "height=[int]", "font=[font]" };
+
 static vardecl var_terminal_image[] =
 { SV(NAME_font, "font", IV_GET|IV_STORE, fontText,
      NAME_appearance, "Font used to draw the string"),
@@ -214,24 +197,28 @@ static vardecl var_terminal_image[] =
 };
 
 static senddecl send_terminal_image[] =
-{
+{ SM(NAME_initialise, 2, T_initialise, initialiseTerminalImage,
+     DEFAULT, "Create terminal_image from width and height and font")
 };
 
+#define get_terminal_image NULL;
+/*
 static getdecl get_terminal_image[] =
 {
 };
+*/
 
 static classvardecl rc_terminal_image[] =
 { RC(NAME_saveLines, "int", "1000",
-     How many lines are saved for scroll back")
+     "How many lines are saved for scroll back")
 };
 
 static Name terminal_image_termnames[] =
-	{  };
+	{ NAME_width, NAME_height };
 
 ClassDecl(terminal_image_decls,
           var_terminal_image, send_terminal_image, get_terminal_image, rc_terminal_image,
-          0, terminal_image_termnames,
+          2, terminal_image_termnames,
           "$Rev$");
 
 status

@@ -478,6 +478,9 @@ static struct class_definition classdefs[] =
   { NAME_textImage, NAME_graphical, makeClassTextImage,
     &ClassTextImage, "(Re)display large text fields" },
 
+  { NAME_terminalImage, NAME_graphical, makeClassTerminalImage,
+    &ClassTerminalImage, "Display text for a terminal" },
+
   { NAME_textItem, NAME_dialogItem, makeClassTextItem,
     &ClassTextItem, "Text entry field" },
 
@@ -632,4 +635,3 @@ initTypeAliases(void)
   for(; alias->alias; alias++)
     defineType(alias->alias, alias->description);
 }
-

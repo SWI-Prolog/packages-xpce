@@ -62,7 +62,8 @@ set(RGX_SRC	regcompW.c regexecW.c
 set(TXT_SRC	chararray.c editor.c fragment.c keybinding.c
 		regex.c str.c string.c style.c syntax.c
 		textbuffer.c textcursor.c textimage.c
-		textmargin.c undo.c utf8.c i18n.c)
+		textmargin.c undo.c terminal.c
+		utf8.c i18n.c)
 
 set(UNX_SRC	directory.c file.c process.c socket.c stream.c)
 

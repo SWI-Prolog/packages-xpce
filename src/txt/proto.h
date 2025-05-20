@@ -196,6 +196,9 @@ COMMON(Int)	getEndOfLineCursorTextImage(TextImage ti, Int here);
 COMMON(status)	ensureVisibleTextImage(TextImage ti, Int caret);
 COMMON(status)	makeClassTextImage(Class class);
 
+/* txt/terminal.c */
+COMMON(status)	makeClassTerminalImage(Class class);
+
 /* /swi40/jan/src/pl/packages/xpce/src/txt/textmargin.c */
 COMMON(status)	makeClassTextMargin(Class class);
 

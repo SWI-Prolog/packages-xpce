@@ -271,4 +271,11 @@ NewClass(text_image)			/* TBD: subclass of bitmap? */
   TextScreen	map;			/* Describes the text object */
 End;
 
+NewClass(terminal_image)
+  ABSTRACT_GRAPHICAL
+  FontObj	font;			/* Basic font */
+  Int		save_lines;		/* # saved lines */
+  struct rlc_data *data;		/* The buffered data */
+End;
+
 #endif /* _PCE_TXT_INCLUDED */
