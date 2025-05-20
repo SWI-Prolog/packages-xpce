@@ -39,13 +39,14 @@
 typedef enum
 { FD_READY_DISPATCH = 1,
   FD_READY_STREAM_INPUT,
-  FD_READY_STREAM_ACCEPT
+  FD_READY_STREAM_ACCEPT,
 } fd_ready_codes;
 
 typedef enum
 { MY_EVENT_CALL = SDL_EVENT_USER+1,
   MY_EVENT_TIMER,
-  MY_EVENT_FD_READY
+  MY_EVENT_FD_READY,
+  MY_EVENT_HIGHEST		/* for ws_events_queued_display() */
 } pce_user_events;
 
 #endif /* SDLUSEREVENT_H */

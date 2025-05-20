@@ -35,6 +35,7 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include "sdldisplay.h"
+#include "sdluserevent.h"
 
 /**
  * Flush the display buffer, ensuring all pending drawing operations are executed.
@@ -333,8 +334,7 @@ ws_display_connection_number(DisplayObj d)
  */
 status
 ws_events_queued_display(DisplayObj d)
-{
-    return SUCCEED;
+{ return SDL_HasEvents(0, MY_EVENT_HIGHEST);
 }
 
 /**
