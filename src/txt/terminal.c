@@ -107,11 +107,12 @@ static void	rlc_free_link(href *hr);
 static void	rcl_check_links(RlcTextLine tl);
 static void	rlc_copy(RlcData b);
 static void	rlc_request_redraw(RlcData b);
-static void	rlc_redraw(RlcData b);
+static void	rlc_redraw(RlcData b, int x, int y, int w, int h);
 static void	rlc_resize(RlcData b, int w, int h);
 static void	rlc_adjust_line(RlcData b, int line);
 static int	text_width(RlcData b, const text_char *text, int len);
-static int	tchar_width(RlcData b, const TCHAR *text, int len);
+static int	tchar_width(RlcData b, const char *text,
+			    size_t ulen, size_t len, FontObj font);
 static void     rlc_do_write(RlcData b, TCHAR *buf, int count);
 static void     rlc_reinit_line(RlcData b, int line);
 static void	rlc_free_line(RlcData b, int line);
@@ -193,9 +194,14 @@ computeTerminalImage(TerminalImage ti)
 }
 
 static status
-RedrawAreaTerminalImage(TerminalImage ti)
-{ rlc_redraw(ti->data);
-  succeed;
+RedrawAreaTerminalImage(TerminalImage ti, Area a)
+{ int x, y, w, h;
+
+  initialiseDeviceGraphical(ti, &x, &y, &w, &h);
+
+  rlc_redraw(ti->data, x, y, w, h);
+
+  return RedrawAreaGraphical(ti, a);
 }
 
 static status
@@ -961,14 +967,16 @@ rlc_update_scrollbar(RlcData b)
 }
 
 
+/* Draw the text */
+
 static void
 rcl_paint_text(RlcData b,
 	       RlcTextLine tl, int from, int to,
 	       int ty, int *cx, int insel)
-{ text_char *chars, *s;
+{ TerminalImage ti = b->object;
+  text_char *chars, *s;
   text_char buf[MAXLINE];
-  TCHAR text[MAXLINE];
-  TCHAR *t;
+  char text[MAXLINE*4];		/* UTF-8 */
   int len = to-from;
   int i;
 
@@ -992,25 +1000,33 @@ rcl_paint_text(RlcData b,
     }
   }
 
-  for(t=text, s=chars, i=0; i < len; i++, t++, s++)
-    *t = s->code;
+  char *t;
+  for(t=text, s=chars, i=0; i < len; i++, s++)
+    t = utf8_put_char(t, s->code);
+  *t = 0;
 
   if ( insel )					/* TBD: Cache */
   { //SetBkColor(hdc, b->sel_background);
     //SetTextColor(hdc, b->sel_foreground);
     //TextOut(hdc, *cx, ty, text, len);
-    *cx += tchar_width(b, text, len);
+    *cx += tchar_width(b, text, t-text, len, ti->font);
   } else
-  { int start, segment;
+  { int start, segment, ulen;
 
     for(start=0, s=chars, t=text;
 	start<len;
-	start+=segment, s+=segment, t+=segment)
+	start+=segment, s+=segment, t+=ulen)
     { text_flags flags = s->flags;
       int left = len-start;
 
-      for(segment=0; s[segment].flags == flags && segment<left; segment++)
-	;
+      char *ut = t;
+      for(segment=0;
+	  s[segment].flags == flags && segment<left;
+	  segment++)
+      { int chr;		/* TODO: just skip UTF8 is easier */
+	ut = utf8_get_char(ut, &chr);
+      }
+      ulen = ut-t;
 
 #if TODO
       if ( TF_FG(flags) == ANSI_COLOR_DEFAULT )
@@ -1023,6 +1039,9 @@ rcl_paint_text(RlcData b,
       else
 	SetBkColor(hdc, b->ansi_color[TF_BG(flags)]);
 #endif
+
+      s_print_utf8(t, ulen, *cx, ty, ti->font);
+      *cx += tchar_width(b, t, ulen, segment, ti->font);
 
 #if TODO
       HFONT font = NULL, old_font = NULL;
@@ -1039,7 +1058,7 @@ rcl_paint_text(RlcData b,
 	old_font = (HFONT)SelectObject(hdc, font);
 
       TextOut(hdc, *cx, ty, t, segment);
-      *cx += tchar_width(b, hdc, t, segment);
+      *cx += tchar_width(b, t, segment);
 
       if ( old_font )
 	SelectObject(hdc, old_font);
@@ -1050,9 +1069,10 @@ rcl_paint_text(RlcData b,
 
 
 static void
-rlc_redraw(RlcData b)
-{ int sl = 0; //max(0, ps.rcPaint.top/b->ch);
-  int el = 0; //min(b->window_size, ps.rcPaint.bottom/b->ch);
+rlc_redraw(RlcData b, int x, int y, int w, int h)
+{ //TerminalImage ti = b->object;
+  int sl = 0;
+  int el = b->window_size;
   int l = rlc_add_lines(b, b->window_start, sl);
   int pl = sl;				/* physical line */
   int insel = false;			/* selected lines? */
@@ -1085,8 +1105,8 @@ rlc_redraw(RlcData b)
 
   for(; pl <= el; l = NextLine(b, l), pl++)
   { RlcTextLine tl = &b->lines[l];
-    int ty = b->ch * pl;
-    int cx = b->cw;
+    int ty = y + b->ch * pl;
+    int cx = x + b->cw;
 
     //rect.top    = ty;
     //rect.bottom = rect.top + b->ch;
@@ -1116,28 +1136,15 @@ rlc_redraw(RlcData b)
     }
 
 					/* clear remainder of line */
-#if TODO
-    if ( cx < b->width * (b->cw+1) )
-    { rect.left   = cx;
-      rect.right  = b->width * (b->cw+1);
-      rect.top    = b->ch * pl;
-      rect.bottom = rect.top + b->ch;
-      FillRect(hdc, &rect, bg);
+    if ( cx < x+b->width * (b->cw+1) )
+    { r_clear(cx, y+b->ch*pl, x+w-cx, b->ch);
     }
-#endif
 
     tl->changed = CHG_RESET;
 
     if ( l == b->last )			/* clear to end of window */
-    {
-#if TODO
-      rect.left   = b->cw;
-      rect.right  = b->width * (b->cw+1);
-      rect.top    = b->ch * (pl+1);
-      rect.bottom = b->ch * (el+1);
-      FillRect(hdc, &rect, bg);
-#endif
-
+    { int yb = y+b->ch * (pl+1);
+      r_clear(x, yb, w, h-yb);
       break;
     }
   }
@@ -1266,20 +1273,19 @@ text_width(RlcData b, const text_char *text, int len)
 }
 
 
-static int
-tchar_width(RlcData b, const TCHAR *text, int len)
-{ if ( b->fixedfont )
-  { return len * b->cw;
-  } else
-  { Cprintf("stub: tchar_width() for proportional font\n");
-    return len * b->cw;
-#if TODO
-    SIZE size;
+/**
+ * Determine the x-advance of printing `text`
+ *
+ * @param ulen is the length in bytes
+ * @param len is the number of UTF-8 characters, __not__ bytes!
+ */
 
-    GetTextExtentPoint32(hdc, text, len, &size);
-    return size.cx;
-#endif
-  }
+static int
+tchar_width(RlcData b, const char *text, size_t ulen, size_t len, FontObj font)
+{ if ( b->fixedfont )
+    return len * b->cw;
+  else
+    return str_advance_utf8(text, ulen, font);
 }
 
 

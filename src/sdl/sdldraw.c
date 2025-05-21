@@ -1708,30 +1708,10 @@ c_width(wint_t c, FontObj font)
   return w;
 }
 
-void
-s_extents(PceString s, int from, int to, FontObj font,
-	  cairo_text_extents_t * extents)
-{ string s2 = *s;
-  if ( from > s2.s_size )
-    from = s2.s_size;
-  if ( to > s2.s_size )
-    to = s2.s_size;
-  if ( to <= from )
-  { memset(extents, 0, sizeof(*extents));
-    return;
-  }
-
-  if ( s2.s_iswide )
-  { s2.s_textW += from;
-  } else
-  { s2.s_textA += from;
-  }
-  s2.s_size = to-from;
-
-  size_t ulen;
-  const char *u = stringToUTF8(&s2, &ulen);
-
-  cairo_t *cr = ws_font_context();
+static void
+s_extents_utf8(const char *u, size_t ulen, FontObj font,
+	       cairo_text_extents_t *extents)
+{ cairo_t *cr = ws_font_context();
   cairo_save(cr);
   pce_cairo_set_font(cr, font);
   if ( strlen(u) == ulen )
@@ -1751,6 +1731,32 @@ s_extents(PceString s, int from, int to, FontObj font,
       free(tmp);
   }
   cairo_restore(cr);
+}
+
+
+static void
+s_extents(PceString s, int from, int to, FontObj font,
+	  cairo_text_extents_t *extents)
+{ string s2 = *s;
+  if ( from > s2.s_size )
+    from = s2.s_size;
+  if ( to > s2.s_size )
+    to = s2.s_size;
+  if ( to <= from )
+  { memset(extents, 0, sizeof(*extents));
+    return;
+  }
+
+  if ( s2.s_iswide )
+  { s2.s_textW += from;
+  } else
+  { s2.s_textA += from;
+  }
+  s2.s_size = to-from;
+
+  size_t ulen;
+  const char *u = stringToUTF8(&s2, &ulen);
+  s_extents_utf8(u, ulen, font, extents);
 }
 
 /**
@@ -1796,8 +1802,20 @@ str_advance(PceString s, int from, int to, FontObj font)
     return 0;
 }
 
-static void
-s_printU(const char *u, size_t len, int x, int y, FontObj font)
+int
+str_advance_utf8(const char *u, int ulen, FontObj font)
+{ if ( ulen > 0 )
+  { cairo_text_extents_t extents;
+
+    s_extents_utf8(u, ulen, font, &extents);
+    return (int)(extents.x_advance+0.5);
+  }
+
+  return 0;
+}
+
+void
+s_print_utf8(const char *u, size_t len, int x, int y, FontObj font)
 { DEBUG(NAME_draw,
 	Cprintf("s_printU(\"%s\", %d, %d, %d, %s) (color: %s)\n",
 		u, len, x, y, pp(font), pp(context.colour)));
@@ -1846,7 +1864,7 @@ s_printA(charA *s, int l, int x, int y, FontObj font)
 
   size_t ulen;
   const char *u = stringToUTF8(&str, &ulen);
-  s_printU(u, ulen, x, y, font);
+  s_print_utf8(u, ulen, x, y, font);
 }
 
 /**
@@ -1873,7 +1891,7 @@ s_printW(charW *s, int l, int x, int y, FontObj font)
 
   size_t ulen;
   const char *u = stringToUTF8(&str, &ulen);
-  s_printU(u, ulen, x, y, font);
+  s_print_utf8(u, ulen, x, y, font);
 }
 
 /**
