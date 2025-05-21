@@ -99,8 +99,8 @@ static void	rlc_word_selection(RlcData b, int x, int y);
 static int	rlc_has_selection(RlcData b);
 static void	rlc_set_selection(RlcData b, int sl, int sc, int el, int ec);
 static bool	rlc_clicked_link(RlcData b, int x, int y);
-static const char *rlc_over_link(RlcData b, int x, int y);
-static href    *rlc_add_link(RlcTextLine tl, const char *link,
+static const TCHAR *rlc_over_link(RlcData b, int x, int y);
+static href    *rlc_add_link(RlcTextLine tl, const TCHAR *link,
 			     int start, int len);
 static void	rlc_free_link(href *hr);
 static void	rcl_check_links(RlcTextLine tl);
@@ -112,12 +112,10 @@ static void	rlc_resize(RlcData b, int w, int h);
 static void	rlc_adjust_line(RlcData b, int line);
 static int	text_width(RlcData b, const text_char *text, int len);
 static int	tchar_width(RlcData b, const TCHAR *text, int len);
-static void	rlc_queryfont(RlcData b);
 static void     rlc_do_write(RlcData b, TCHAR *buf, int count);
 static void     rlc_reinit_line(RlcData b, int line);
 static void	rlc_free_line(RlcData b, int line);
 static int	rlc_between(RlcData b, int f, int t, int v);
-static void	free_user_data(RlcData b);
 static RlcQueue	rlc_make_queue(int size);
 static int	rlc_from_queue(RlcQueue q);
 static int	rlc_is_empty_queue(RlcQueue q);
@@ -302,9 +300,58 @@ ucslen(const TCHAR *s)
   return len;
 }
 
-static const TCHAR*
+static void
+ucscpy(TCHAR *dst, const TCHAR *src)
+{ while(*src)
+    *dst++ = *src++;
+  *dst = 0;
+}
+
+static void
+ucsncpy(TCHAR *dst, const TCHAR *src, size_t len)
+{ while(*src && len-- > 0)
+    *dst++ = *src++;
+  *dst = 0;
+}
+
+static int
+cuncmp(const char *s1, const TCHAR *s2, size_t len)
+{ const unsigned char *u1 = (const unsigned char*)s1;
+  while(len-- > 0)
+  { if ( *u1 != *s1 )
+      return *u1 - *s1;
+  }
+  return 0;
+}
+
+static int
+ucscmp(const TCHAR *s1, const TCHAR *s2)
+{ while(*s1 == *s2 && *s1)
+  { s1++;
+    s2++;
+  }
+
+  return *s1-*s2;
+}
 
 
+static TCHAR *
+ucstr(const TCHAR *haystack, const char *needle)
+{ for(; *haystack; haystack++)
+  { const unsigned char *n = (const unsigned char*)needle;
+    const TCHAR *h = haystack;
+    for(; *n; n++, h++)
+    { if ( *n != *h )
+	break;
+      if ( !*h )
+	return NULL;
+    }
+    if ( !*n )
+      return (TCHAR*)haystack;
+  }
+
+  return NULL;
+}
 
 
 		 /*******************************
@@ -550,7 +597,7 @@ rlc_clicked_link(RlcData b, int x, int y)
   return false;
 }
 
-static const char *
+static const TCHAR *
 rlc_over_link(RlcData b, int x, int y)
 { //if ( _rlc_link_hook )
   { int l, c;
@@ -1119,6 +1166,7 @@ text_width(RlcData b, const text_char *text, int len)
     //GetTextExtentPoint32(hdc, tmp, len, &size);
     return size.cx;
 #endif
+    return 0;
   }
 }
 
@@ -1135,6 +1183,7 @@ tchar_width(RlcData b, const TCHAR *text, int len)
     GetTextExtentPoint32(hdc, text, len, &size);
     return size.cx;
 #endif
+    return 0;
   }
 }
 
@@ -1280,7 +1329,7 @@ move_links(RlcTextLine from, RlcTextLine to)
     unlink_href(from, hr);
     for(href *hr2 = to->links; hr2; hr2=hr2->next)
     { if ( hr->start+hr->length == hr2->start &&
-	   strcmp(hr->link, hr2->link) == 0 )
+	   ucscmp(hr->link, hr2->link) == 0 )
       {	Cprintf("Rejoin split link\n");
 	hr2->start = hr->start;
 	hr2->length += hr->length;
@@ -1312,7 +1361,7 @@ move_links_soft(RlcTextLine from, RlcTextLine to)
       hr->start -= from->size;
       for(href *hr2 = to->links; hr2; hr2=hr2->next)
       { if ( hr->start+hr->length == hr2->start &&
-	     strcmp(hr->link, hr2->link) == 0 )
+	     ucscmp(hr->link, hr2->link) == 0 )
 	{ Cprintf("Rejoin split link\n");
 	  hr2->start = hr->start;
 	  hr2->length += hr->length;
@@ -1805,11 +1854,11 @@ rcl_check_links(RlcTextLine tl)
 }
 
 static href *
-rlc_add_link(RlcTextLine tl, const char *link, int start, int len)
+rlc_add_link(RlcTextLine tl, const TCHAR *link, int start, int len)
 { href *hr = rlc_malloc(sizeof(*hr));
 
-  hr->link = rlc_malloc((strlen(link)+1)*sizeof(*link));
-  strcpy(hr->link, link);
+  hr->link = rlc_malloc((ucslen(link)+1)*sizeof(*link));
+  ucscpy(hr->link, link);
   hr->start = start;
   hr->length = len;
   hr->next = tl->links;
@@ -1818,13 +1867,13 @@ rlc_add_link(RlcTextLine tl, const char *link, int start, int len)
 }
 
 static href *
-rlc_register_link(RlcData b, const char *link, size_t len)
+rlc_register_link(RlcData b, const TCHAR *link, size_t len)
 { RlcTextLine tl = &b->lines[b->caret_y];
   return rlc_add_link(tl, link, b->caret_x, len);
 }
 
 static void
-rlc_put_link(RlcData b, const TCHAR *label, const char *link)
+rlc_put_link(RlcData b, const TCHAR *label, const TCHAR *link)
 { text_flags flags0 = b->sgr_flags;
   rlc_sgr(b, 34);	/* blue */
   rlc_sgr(b, 4);	/* underline */
@@ -1915,20 +1964,20 @@ rlc_putansi(RlcData b, int chr)
       }
     case CMD_LINKARG:
       if ( b->link_len < ANSI_MAX_LINK-1 )
-      { const TCHAR *end = _T("\e]8;;\e\\");
-	const TCHAR *sep = _T("\e\\");
-	const size_t endl = wcslen(end);
-	const size_t sepl = wcslen(sep);
+      { const char *end = "\e]8;;\e\\";
+	const char *sep = "\e\\";
+	const size_t endl = strlen(end);
+	const size_t sepl = strlen(sep);
 	b->link[b->link_len++] = chr;
 	b->link[b->link_len] = 0;
 	if ( chr == '\\' &&
 	     b->link_len >= endl &&
-	     memcmp(end, &b->link[b->link_len-endl],
-		    endl*sizeof(end[0])) == 0 )
+	     cuncmp(end, &b->link[b->link_len-endl],
+		   endl*sizeof(end[0])) == 0 )
 	{ b->link_len -= endl;
 	  b->cmdstat = CMD_INITIAL;
 	  b->link[b->link_len] = 0;
-	  TCHAR *label = wcsstr(b->link, sep);
+	  TCHAR *label = ucstr(b->link, sep);
 	  TCHAR *link;
 	  if ( label )
 	  { *label = 0;
@@ -1938,7 +1987,8 @@ rlc_putansi(RlcData b, int chr)
 	  { label = b->link;
 	    link = NULL;
 	  }
-	  DEBUG(Dprintf(_T("Link: \"%ls\", Label \"%ls\"\n"), link, label));
+	  DEBUG(NAME_term,
+		Cprintf("Link: \"%ls\", Label \"%ls\"\n", link, label));
 	  if ( link )
 	  { rlc_put_link(b, label, link);
 	  } else
@@ -1955,7 +2005,7 @@ rlc_putansi(RlcData b, int chr)
 	break;
       }
     case CMD_ANSI:			/* ESC [ */
-      if ( _istdigit((wint_t)chr) )
+      if ( chr >= '0' && chr <= '9' )
       { if ( !b->argstat )
 	{ b->argv[b->argc] = (chr - '0');
 	  b->argstat = 1;		/* positive */
@@ -2040,7 +2090,9 @@ rlc_putansi(RlcData b, int chr)
 
 wchar_t *
 rlc_clipboard_text(rlc_console c)
-{ RlcData b = rlc_get_data(c);
+{
+#if TODO
+  RlcData b = rlc_get_data(c);
 
   if ( OpenClipboard(b->window) )
   { wchar_t *str = NULL;
@@ -2063,6 +2115,7 @@ rlc_clipboard_text(rlc_console c)
     CloseClipboard();
     return str;
   }
+#endif
 
   return NULL;
 }
@@ -2072,7 +2125,7 @@ rlc_paste(RlcData b)
 { RlcQueue q = b->queue;
   wchar_t *text = NULL;
 
-  if ( b->window && q && (text=rlc_clipboard_text(b)) )
+  if ( q && (text=rlc_clipboard_text(b)) )
   { for(int i=0; text[i]; i++)
       rlc_add_queue(b, q, text[i]);
     rlc_free(text);
@@ -2159,17 +2212,16 @@ void
 rlc_update(rlc_console c)
 { RlcData b = rlc_get_data(c);
 
-  if ( b->window )
-  { rlc_normalise(b);
-    rlc_request_redraw(b);
-    UpdateWindow(b->window);
-  }
+  rlc_normalise(b);
+  rlc_request_redraw(b);
+  // UpdateWindow(b->window);
 }
 
 		 /*******************************
 		 *	  UPDATE THREAD		*
 		 *******************************/
 
+#if TODO
 DWORD WINAPI
 window_loop(LPVOID arg)
 { RlcData b = (RlcData) arg;
@@ -2246,117 +2298,7 @@ out:
 }
   return 0;
 }
-
-
-		 /*******************************
-		 *	  WATCOM/DOS I/O	*
-		 *******************************/
-
-int
-getch(rlc_console c)
-{ RlcData b = rlc_get_data(c);
-  RlcQueue q = b->queue;
-  int fromcon = (GetCurrentThreadId() == b->console_thread_id);
-
-  while( rlc_is_empty_queue(q) )
-  { if ( q->flags & RLC_EOF )
-      return EOF;
-
-    if ( !fromcon )
-    { MSG msg;
-
-      if ( rlc_get_message(&msg, NULL, 0, 0) )
-      { TranslateMessage(&msg);
-	DispatchMessage(&msg);
-      } else
-	return EOF;
-    } else
-    { rlc_dispatch(b);
-      if ( b->imodeswitch )
-      { b->imodeswitch = false;
-	return IMODE_SWITCH_CHAR;
-      }
-    }
-  }
-
-  return rlc_from_queue(q);
-}
-
-
-int
-getche(rlc_console c)
-{ RlcData b = rlc_get_data(c);
-  int chr = getch(b);
-
-  rlc_putansi(b, chr);
-  return chr;
-}
-
-
-		 /*******************************
-		 *        GO32 FUNCTIONS	*
-		 *******************************/
-
-int
-getkey(rlc_console con)
-{ int c;
-  RlcData b = rlc_get_data(con);
-  int fromcon = (GetCurrentThreadId() == b->console_thread_id);
-
-  if ( !fromcon && b->imode != IMODE_RAW )
-  { int old = b->imode;
-
-    b->imode = IMODE_RAW;
-    b->imodeswitch = true;
-    c = getch(b);
-    b->imode = old;
-    b->imodeswitch = true;
-  } else
-    c = getch(b);
-
-  return c;
-}
-
-
-int
-kbhit(rlc_console c)
-{ RlcData b = rlc_get_data(c);
-
-  return !rlc_is_empty_queue(b->queue);
-}
-
-
-void
-ScreenGetCursor(rlc_console c, int *row, int *col)
-{ RlcData b = rlc_get_data(c);
-
-  *row = rlc_count_lines(b, b->window_start, b->caret_y) + 1;
-  *col = b->caret_x + 1;
-}
-
-
-void
-ScreenSetCursor(rlc_console c, int row, int col)
-{ RlcData b = rlc_get_data(c);
-
-  rlc_set_caret(b, col-1, row-1);
-}
-
-
-int
-ScreenCols(rlc_console c)
-{ RlcData b = rlc_get_data(c);
-
-  return b->width;
-}
-
-
-int
-ScreenRows(rlc_console c)
-{ RlcData b = rlc_get_data(c);
-
-  return b->window_size;
-}
+#endif
 
 		 /*******************************
 		 *	      QUEUE		*
@@ -2418,7 +2360,7 @@ rlc_add_queue(RlcData b, RlcQueue q, int chr)
       q->last = QN(q, q->last);
 
       if ( empty )
-	PostThreadMessage(b->application_thread_id, WM_RLC_INPUT, 0, 0);
+	//PostThreadMessage(b->application_thread_id, WM_RLC_INPUT, 0, 0);
 
       return true;
     }
@@ -2460,6 +2402,7 @@ rlc_from_queue(RlcQueue q)
 When using UNICODE, count is in bytes!
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+#if TODO
 size_t
 rlc_read(rlc_console c, TCHAR *buf, size_t count)
 { RlcData d = rlc_get_data(c);
@@ -2521,6 +2464,7 @@ rlc_read(rlc_console c, TCHAR *buf, size_t count)
 
   return give;
 }
+#endif
 
 
 static void
@@ -2538,9 +2482,9 @@ rlc_do_write(RlcData b, TCHAR *buf, int count)
     }
 
     rlc_normalise(b);
-    if ( b->window )
+    //if ( b->window )
     { rlc_request_redraw(b);
-      UpdateWindow(b->window);
+      // UpdateWindow(b->window);
     }
   }
 }
@@ -2565,22 +2509,22 @@ rlc_flush_output(rlc_console c)
 
 size_t
 rlc_write(rlc_console c, TCHAR *buf, size_t count)
-{ DWORD_PTR result;
-  TCHAR *e, *s;
+{ TCHAR *e, *s;
   RlcData b = rlc_get_data(c);
 
   if ( !b )
     return -1;
 
-  EnterCriticalSection(&b->lock);
+  //EnterCriticalSection(&b->lock);
   for(s=buf, e=&buf[count]; s<e; s++)
   { if ( *s == '\n' )
       b->promptlen = 0;
     else if ( b->promptlen < MAXPROMPT-1 )
       b->promptbuf[b->promptlen++] = *s;
   }
-  LeaveCriticalSection(&b->lock);
+  //LeaveCriticalSection(&b->lock);
 
+#if TODO
   if ( b->window )
   { if ( SendMessageTimeout(b->window,
 			    WM_RLC_WRITE,
@@ -2595,6 +2539,7 @@ rlc_write(rlc_console c, TCHAR *buf, size_t count)
       return count;
     }
   }
+#endif
 
   return -1;				/* I/O error */
 }
@@ -2616,7 +2561,6 @@ free_rlc_data(RlcData b)
   }
   if ( b->read_buffer.line )
     free(b->read_buffer.line);
-  DeleteCriticalSection(&b->lock);
 
   free(b);
 }
@@ -2633,7 +2577,9 @@ and proved to be sound on Windows-NT, but not on 95 and '98.
 
 int
 rlc_close(rlc_console c)
-{ RlcData b = (RlcData)c;
+{
+#if TODO
+  RlcData b = (RlcData)c;
   MSG msg;
   int i;
 
@@ -2654,6 +2600,7 @@ rlc_close(rlc_console c)
   b->magic = 0;
   free_user_data(c);
   free_rlc_data(b);
+#endif
 
   return 0;
 }
@@ -2665,14 +2612,14 @@ rlc_prompt(rlc_console c, const TCHAR *new)
 
   if ( b )
   { if ( new )
-    { _tcsncpy(b->prompt, new, MAXPROMPT);
+    { ucsncpy(b->prompt, new, MAXPROMPT);
       b->prompt[MAXPROMPT-1] = EOS;
     }
 
     return b->prompt;
   }
 
-  return _T("");
+  return NULL;
 }
 
 
@@ -2683,135 +2630,6 @@ rlc_clearprompt(rlc_console c)
   if ( b )
   { b->promptlen = 0;
     b->prompt[0] = EOS;
-  }
-}
-
-
-		 /*******************************
-		 *	 SETTING OPTIONS	*
-		 *******************************/
-
-RlcUpdateHook
-rlc_update_hook(RlcUpdateHook new)
-{ RlcUpdateHook old = _rlc_update_hook;
-
-  _rlc_update_hook = new;
-  return old;
-}
-
-RlcTimerHook
-rlc_timer_hook(RlcTimerHook new)
-{ RlcTimerHook old = _rlc_timer_hook;
-
-  _rlc_timer_hook = new;
-  return old;
-}
-
-RlcRenderHook
-rlc_render_hook(RlcRenderHook new)
-{ RlcRenderHook old = _rlc_render_hook;
-
-  _rlc_render_hook = new;
-  return old;
-}
-
-RlcRenderAllHook
-rlc_render_all_hook(RlcRenderAllHook new)
-{ RlcRenderAllHook old = _rlc_render_all_hook;
-
-  _rlc_render_all_hook = new;
-  return old;
-}
-
-RlcInterruptHook
-rlc_interrupt_hook(RlcInterruptHook new)
-{ RlcInterruptHook old = _rlc_interrupt_hook;
-
-  _rlc_interrupt_hook = new;
-  return old;
-}
-
-RlcLinkHook
-rlc_link_hook(RlcLinkHook new)
-{ RlcLinkHook old = _rlc_link_hook;
-
-  _rlc_link_hook = new;
-  return old;
-}
-
-RlcResizeHook
-rlc_resize_hook(RlcResizeHook new)
-{ RlcResizeHook old = _rlc_resize_hook;
-
-  _rlc_resize_hook = new;
-  return old;
-}
-
-RlcMessageHook
-rlc_message_hook(RlcMessageHook new)
-{ RlcMessageHook old = _rlc_message_hook;
-
-  _rlc_message_hook = new;
-  return old;
-}
-
-
-int
-rlc_set(rlc_console c, int what, uintptr_t data, RlcFreeDataHook hook)
-{ RlcData b = rlc_get_data(c);
-
-  switch(what)
-  { default:
-      if ( what >= RLC_VALUE(0) &&
-	   what <= RLC_VALUE(MAX_USER_VALUES) )
-      { b->values[what-RLC_VALUE(0)].data = data;
-	b->values[what-RLC_VALUE(0)].hook = hook;
-        return true;
-      }
-      return false;
-  }
-}
-
-
-int
-rlc_get(rlc_console c, int what, uintptr_t *data)
-{ RlcData b = (RlcData)c;
-
-  if ( !b )
-    return false;
-
-  switch(what)
-  { case RLC_APPLICATION_THREAD:
-      *data = (uintptr_t)b->application_thread;
-      return true;
-    case RLC_APPLICATION_THREAD_ID:
-      *data = (uintptr_t)b->application_thread_id;
-      return true;
-    default:
-      if ( what >= RLC_VALUE(0) &&
-	   what <= RLC_VALUE(MAX_USER_VALUES) )
-      { *data = b->values[what-RLC_VALUE(0)].data;
-        return true;
-      }
-      return false;
-  }
-}
-
-
-static void
-free_user_data(RlcData b)
-{ user_data *d = b->values;
-  int i;
-
-  for(i=0; i<MAX_USER_VALUES; i++, d++)
-  { RlcFreeDataHook hook;
-
-    if ( (hook=d->hook) )
-    { uintptr_t data = d->data;
-      d->hook = NULL;
-      d->data = 0L;
-      (*hook)(data);
-    }
   }
 }
 

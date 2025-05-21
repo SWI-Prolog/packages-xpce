@@ -224,7 +224,7 @@ typedef struct
 } text_char;
 
 typedef struct href
-{ char		*link;			/* Hyperlink target */
+{ TCHAR		*link;			/* Hyperlink target */
   int		 start;			/* start of label */
   int		 length;		/* #chars of label */
   struct href   *next;			/* Next in chain */
@@ -350,16 +350,16 @@ void		rlc_clearprompt(rlc_console c);
 		 *******************************/
 
 static __inline RlcData
-qrlc_get_data(rlc_console c)
+rlc_get_data(rlc_console c)
 { if ( c )
   { RlcData b = c;
 
     assert(b->magic == RLC_MAGIC);
     if ( b->magic == RLC_MAGIC )
-    { return b;
-    }
-    return NULL;
+      return b;
   }
+
+  return NULL;
 }
 
 
