@@ -263,6 +263,17 @@ insertTerminalImage(TerminalImage ti, CharArray ca)
   succeed;
 }
 
+static status
+printTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+  int from = b->window_start;
+  int to = from;
+  for(int i=0; i<b->window_size; i++)
+    to = NextLine(b, to);
+  Dprint_lines(b, from, to);
+
+  succeed;
+}
 
 void				/* call unused functions.  temporary! */
 unusedTerminalImage(TerminalImage ti)
@@ -300,6 +311,8 @@ static senddecl send_terminal_image[] =
      NAME_event, "Handle a general event"),
   SM(NAME_insert, 1, "text=char_array", insertTerminalImage,
      NAME_insert, "Insert text at caret (moves caret)"),
+  SM(NAME_print, 0, NULL, printTerminalImage,
+     NAME_debug, "Print content of the window"),
 };
 
 #define get_terminal_image NULL
@@ -2722,7 +2735,7 @@ rlc_clearprompt(rlc_console c)
 static void
 Dprint_links(RlcTextLine tl, const char *msg)
 { if ( tl->links )
-  { Cprintf("%03d %ls:", tl->line_no, msg);
+  { Cprintf("%03d %s:", tl->line_no, msg);
     for(href *hr = tl->links; hr; hr=hr->next)
       Cprintf(" %p = %d(%d) -> %ls", hr, hr->start, hr->length, hr->link);
     Cprintf("\n");
@@ -2731,13 +2744,13 @@ Dprint_links(RlcTextLine tl, const char *msg)
 
 static void
 Dprint_line(RlcTextLine tl, bool links)
-{ TCHAR buf[4096];
-  TCHAR *o = buf;
+{ char buf[4096];
+  char *o = buf;
 
-  for(int x=0; x<tl->size; x++)
-    *o++ = tl->text[x].code;
+  for(int x=0; x<tl->size && o<buf+sizeof(buf)-1; x++)
+    o = utf8_put_char(o, tl->text[x].code);
   *o = EOS;
-  Cprintf("%03d: (%03d) \"%ls\"\n", tl->line_no, tl->size, buf);
+  Cprintf("%03d: (%03d) \"%s\"\n", tl->line_no, tl->size, buf);
   if ( links && tl->links )
     Dprint_links(tl, "  links");
 }
