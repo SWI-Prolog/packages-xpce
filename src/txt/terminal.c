@@ -81,6 +81,7 @@
 		 *	     FUNCTIONS		*
 		 *******************************/
 
+static void	free_rlc_data(RlcData b);
 static void	rcl_setup_ansi_colors(RlcData b);
 static void	rlc_place_caret(RlcData b);
 static void	rlc_resize_pixel_units(RlcData b, int w, int h);
@@ -105,7 +106,6 @@ static href    *rlc_add_link(RlcTextLine tl, const TCHAR *link,
 static void	rlc_free_link(href *hr);
 static void	rcl_check_links(RlcTextLine tl);
 static void	rlc_copy(RlcData b);
-static void	rlc_destroy(RlcData b);
 static void	rlc_request_redraw(RlcData b);
 static void	rlc_redraw(RlcData b);
 static void	rlc_resize(RlcData b, int w, int h);
@@ -119,6 +119,8 @@ static int	rlc_between(RlcData b, int f, int t, int v);
 static RlcQueue	rlc_make_queue(int size);
 static int	rlc_from_queue(RlcQueue q);
 static int	rlc_is_empty_queue(RlcQueue q);
+static void	typed_char(RlcData b, int chr);
+
 
 		 /*******************************
 		 *        DEBUG SUPPORT         *
@@ -127,11 +129,6 @@ static int	rlc_is_empty_queue(RlcQueue q);
 static void Dprint_links(RlcTextLine tl, const char *msg);
 static void Dprint_lines(RlcData b, int from, int to);
 
-
-static void
-rlc_assert(const char *msg)
-{ Cprintf("Console assertion failed: %s\n", msg);
-}
 
 static void
 rlc_check_assertions(RlcData b)
@@ -167,12 +164,50 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h, FontObj font)
   int cw = valInt(w)/16;
 
   ti->data = rlc_make_buffer(cw, valInt(ti->save_lines));
+  rcl_setup_ansi_colors(ti->data);
+
+  succeed;
+}
+
+static status
+unlinkTerminalImage(TerminalImage ti)
+{ if ( ti->data )
+  { free_rlc_data(ti->data);
+    ti->data = NULL;
+  }
+
+  succeed;
+}
+
+static status
+computeTerminalImage(TerminalImage ti)
+{ if ( notNil(ti->request_compute) )
+  { rlc_init_text_dimensions(ti->data, NULL); /* font */
+    rlc_resize_pixel_units(ti->data, 80, 25); /* just to call it */
+  }
+
   succeed;
 }
 
 static status
 RedrawAreaTerminalImage(TerminalImage ti)
-{ succeed;
+{ rlc_redraw(ti->data);
+  succeed;
+}
+
+static status
+eventTerminalImage(TerminalImage ti, EventObj ev)
+{ int x = valInt(ev->x);
+  int y = valInt(ev->y);
+
+  rlc_start_selection(ti->data, x, y);
+  rlc_extend_selection(ti->data, x, y);
+  rlc_word_selection(ti->data, x, y);
+  rlc_over_link(ti->data, x, y);
+  rlc_clicked_link(ti->data, x, y);
+  typed_char(ti->data, 'a');
+
+  succeed;
 }
 
 static status
@@ -186,6 +221,13 @@ fontTerminalImage(TerminalImage ti, FontObj font)
 { assign(ti, font, font);
   succeed;
 }
+
+void
+unusedTerminalImage(TerminalImage ti)
+{ RlcQueue q = rlc_make_queue(10);
+  rlc_is_empty_queue(q);
+}
+
 
 /* Type declarations */
 
@@ -203,7 +245,13 @@ static vardecl var_terminal_image[] =
 
 static senddecl send_terminal_image[] =
 { SM(NAME_initialise, 2, T_initialise, initialiseTerminalImage,
-     DEFAULT, "Create terminal_image from width and height and font")
+     DEFAULT, "Create terminal_image from width and height and font"),
+  SM(NAME_unlink, 0, NULL, unlinkTerminalImage,
+     DEFAULT, "Destroy data"),
+  SM(NAME_compute, 0, NULL, computeTerminalImage,
+     NAME_repaint, "Recompute the terminal image"),
+  SM(NAME_event, 1, "event", eventTerminalImage,
+     NAME_event, "Handle a general event"),
 };
 
 #define get_terminal_image NULL
@@ -231,7 +279,7 @@ makeClassTerminalImage(Class class)
 { declareClass(class, &terminal_image_decls);
 
 //  setCloneFunctionClass(class, cloneEditor);
-//  setRedrawFunctionClass(class, RedrawAreaTerminalImage);
+  setRedrawFunctionClass(class, RedrawAreaTerminalImage);
 
   succeed;
 }
@@ -389,22 +437,6 @@ typed_char(RlcData b, int chr)
 
 
 		 /*******************************
-		 *	 WINDOW PROCEDURE	*
-		 *******************************/
-
-static void
-rlc_destroy(RlcData b)
-{
-#if TODO
-  if ( b && b->window )
-  { DestroyWindow(b->window);
-    b->window = NULL;
-    b->closing = 3;
-  }
-#endif
-}
-
-		 /*******************************
 		 *	 CHARACTER TYPES	*
 		 *******************************/
 
@@ -546,7 +578,7 @@ rlc_translate_mouse(RlcData b, int x, int y, int *line, int *chr)
 
       w = text_width(b, s, m);
       if ( x > w )
-      { int cw;
+      { int cw = 0;
 
 	//GetCharWidth32(hdc, s[m].code, s[m].code, &cw);
 	if ( x < w+cw )
