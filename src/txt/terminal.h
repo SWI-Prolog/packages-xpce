@@ -49,6 +49,11 @@ typedef struct
   int		 size;			/* size of the buffer */
   TCHAR		*buffer;		/* character buffer */
   int		 flags;			/* flags for the queue */
+#ifdef HAVE_PIPE
+  int		 pipefd[2];		/* Synchronization pipe */
+#else
+#error "No queue synchronization"
+#endif
 } rlc_queue, *RlcQueue;
 
 #define RLC_EOF	0x1			/* Flags on the queue */

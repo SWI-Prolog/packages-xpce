@@ -1,8 +1,8 @@
 /*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker
-    E-mail:        J.Wielemaker@vu.nl
-    WWW:           http://www.swi-prolog.org
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org
     Copyright (c)  1999-2025, University of Amsterdam
                               VU University Amsterdam
                               SWI-Prolog Solutions b.v.
@@ -37,6 +37,22 @@
 #include <h/kernel.h>
 #include <h/text.h>
 #include "terminal.h"
+#ifdef HAVE_POLL
+#include <poll.h>
+#endif
+
+/* This file  implements a terminal  emulator in XPCE.  A  terminal is
+ * connected to a Prolog thread, the _client_.
+ *
+ * ## I/O Handling
+ *
+ * Typed  characters are  added to  the terminal's  input queue  using
+ * rlc_add_queue().   The _client_  reads input  using getch().   This
+ * returns the  next character  from the input  queue or  blocks until
+ * input  becomes available.   The blocking  mechanism depends  on the
+ * platform.   On Unix  systems we  use a  pipe as  this allows  us to
+ * process signals.  On Windows we use an event (TBD).
+ */
 
 #ifndef isletter
 #define isletter(c) (iswalpha(c) || (c) == '_')
@@ -92,7 +108,7 @@ static void	rlc_open_line(RlcData b);
 static void	rlc_update_scrollbar(RlcData b);
 static void	rlc_paste(RlcData b);
 static void	rlc_init_text_dimensions(RlcData b, FontObj f);
-static int	rlc_add_queue(RlcData b, RlcQueue q, int chr);
+static bool	rlc_add_queue(RlcData b, RlcQueue q, int chr);
 static int	rlc_add_lines(RlcData b, int here, int add);
 static void	rlc_start_selection(RlcData b, int x, int y);
 static void	rlc_extend_selection(RlcData b, int x, int y);
@@ -2494,6 +2510,11 @@ rlc_make_queue(int size)
 
     if ( (q->buffer = rlc_malloc(sizeof(TCHAR) * size)) )
       return q;
+#ifdef HAVE_PIPE
+    if ( pipe(q->pipefd) != 0 )
+      Cprintf("Failed to create pipe\n");
+    /* TODO: set O_CLOEXEC */
+#endif
   }
 
   return NULL;				/* not enough memory */
@@ -2525,7 +2546,12 @@ rlc_resize_queue(RlcQueue q, int size)
 }
 
 
-static int
+/**
+ * Called on typed characters.  These  are added to the terminal input
+ * queue and  if the queue changes  from empty to non-empty  we inform
+ * the terminal's client.
+ */
+static bool
 rlc_add_queue(RlcData b, RlcQueue q, int chr)
 { int empty = (q->first == q->last);
 
@@ -2535,7 +2561,11 @@ rlc_add_queue(RlcData b, RlcQueue q, int chr)
       q->last = QN(q, q->last);
 
       if ( empty )
-	//PostThreadMessage(b->application_thread_id, WM_RLC_INPUT, 0, 0);
+      {
+#ifdef HAVE_PIPE
+	write(q->pipefd[1], "+", 1);
+#endif
+      }
 
       return true;
     }
@@ -2568,6 +2598,28 @@ rlc_from_queue(RlcQueue q)
 
   return -1;
 }
+
+int
+getch(RlcData b)
+{ RlcQueue q = b->queue;
+  while( rlc_is_empty_queue(q) )
+  {
+#ifdef HAVE_POLL
+    struct pollfd fds[1];
+    fds[0].fd = q->pipefd[0];
+    fds[0].events = POLLIN;
+    fds[0].revents = 0;
+    if ( poll(fds, 1, -1) < 0 )
+    { Cprintf("poll() error\n");
+    }
+#else
+#error "No wait mechanism"
+#endif
+  }
+
+  return rlc_from_queue(q);
+}
+
 
 		 /*******************************
 		 *	   BUFFERED I/O		*

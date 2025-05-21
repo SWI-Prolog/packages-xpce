@@ -26,6 +26,7 @@ AC_CHECK_FUNCS(getcwd setsid grantpt gethostname fstat gettimeofday)
 AC_CHECK_FUNCS(rename atexit on_exit tmpnam sysinfo sigaction getpwnam)
 AC_CHECK_FUNCS(shutdown mkstemp sched_yield mktime timegm nanosleep)
 AC_CHECK_FUNCS(clock_gettime tempnam _NSGetEnviron poll signal sigaction)
+AC_CHECK_FUNCS(pipe)
 
 AC_CHECK_FUNCS(XtPopupSpringLoaded XftNameUnparse XmIsMotifWMRunning
 	       XInitThreads)
