@@ -122,6 +122,7 @@ static int	rlc_from_queue(RlcQueue q);
 static int	rlc_is_empty_queue(RlcQueue q);
 static void	typed_char(RlcData b, int chr);
 static void	rlc_putansi(RlcData b, int chr);
+static void	rlc_update(rlc_console c);
 
 
 		 /*******************************
@@ -230,17 +231,7 @@ geometryTerminalImage(TerminalImage ti, Int x, Int y, Int w, Int h)
 
 static status
 eventTerminalImage(TerminalImage ti, EventObj ev)
-{ int x = valInt(ev->x);
-  int y = valInt(ev->y);
-
-  rlc_start_selection(ti->data, x, y);
-  rlc_extend_selection(ti->data, x, y);
-  rlc_word_selection(ti->data, x, y);
-  rlc_over_link(ti->data, x, y);
-  rlc_clicked_link(ti->data, x, y);
-  typed_char(ti->data, 'a');
-
-  succeed;
+{ fail;
 }
 
 static status
@@ -266,6 +257,7 @@ insertTerminalImage(TerminalImage ti, CharArray ca)
   { for(size_t i=0; i<s->s_size; i++)
       rlc_putansi(ti->data, s->s_textA[i]);
   }
+  rlc_update(ti->data);
 
   succeed;
 }
@@ -286,6 +278,16 @@ void				/* call unused functions.  temporary! */
 unusedTerminalImage(TerminalImage ti)
 { RlcQueue q = rlc_make_queue(10);
   rlc_is_empty_queue(q);
+
+  int x = 0;
+  int y = 0;
+
+  rlc_start_selection(ti->data, x, y);
+  rlc_extend_selection(ti->data, x, y);
+  rlc_word_selection(ti->data, x, y);
+  rlc_over_link(ti->data, x, y);
+  rlc_clicked_link(ti->data, x, y);
+  typed_char(ti->data, 'a');
 }
 
 
@@ -1180,7 +1182,8 @@ rlc_request_redraw(RlcData b)
     { RlcTextLine l = &b->lines[i];
 
       if ( l->changed & CHG_CHANGED )
-      { if ( first )
+      { Cprintf("Line %p is changed\n", l);
+	if ( first )
 	{ ymin = y * b->ch;
 	  ymax = ymin + b->ch;
 	  first = false;
@@ -1193,9 +1196,9 @@ rlc_request_redraw(RlcData b)
     }
 
     if ( !first )
-      changedImageGraphical(ti, ZERO, toInt(ymin),
+    { changedImageGraphical(ti, ZERO, toInt(ymin),
 			    ti->area->w, toInt(ymax-ymin));
-    else if ( b->changed & CHG_CARET )
+    } else if ( b->changed & CHG_CARET )
       rlc_place_caret(b);
   }
 }
