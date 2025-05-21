@@ -162,7 +162,7 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h, FontObj font)
   obtainClassVariablesObject(ti);
 
   // compute width in characters from w
-  int cw = valInt(w)/16;
+  int cw = valInt(w)/c_width('m', ti->font);
 
   ti->data = rlc_make_buffer(cw, valInt(ti->save_lines));
   ti->data->object = ti;
@@ -274,7 +274,7 @@ unusedTerminalImage(TerminalImage ti)
 /* Type declarations */
 
 static char *T_initialise[] =
-{ "width=[int]", "height=[int]", "font=[font]" };
+{ "width=int", "height=int", "font=[font]" };
 static char *T_geometry[] =
 { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 
@@ -288,7 +288,7 @@ static vardecl var_terminal_image[] =
 };
 
 static senddecl send_terminal_image[] =
-{ SM(NAME_initialise, 2, T_initialise, initialiseTerminalImage,
+{ SM(NAME_initialise, 3, T_initialise, initialiseTerminalImage,
      DEFAULT, "Create terminal_image from width and height and font"),
   SM(NAME_unlink, 0, NULL, unlinkTerminalImage,
      DEFAULT, "Destroy data"),
@@ -1222,7 +1222,7 @@ rlc_resize_pixel_units(RlcData b, int w, int h)
 
 static void
 rlc_init_text_dimensions(RlcData b, FontObj font)
-{ b->cw = c_width('x', font);
+{ b->cw = c_width('m', font);
   b->cb = s_ascent(font);
   b->ch = s_height(font);
   b->fixedfont = font->fixed_width == ON;
