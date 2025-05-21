@@ -189,7 +189,7 @@ static status
 computeTerminalImage(TerminalImage ti)
 { if ( notNil(ti->request_compute) )
   { rlc_init_text_dimensions(ti->data, ti->font);
-    rlc_resize_pixel_units(ti->data, 80, 25); /* just to call it */
+    rlc_resize_pixel_units(ti->data, valInt(ti->area->w), valInt(ti->area->h));
   }
 
   succeed;
@@ -949,7 +949,7 @@ rlc_draw_caret(RlcData b, int x, int y)
     int cx = x + b->caret_px - ols/2;
     int cy = y + b->caret_py + b->cb - 3;
 
-    Cprintf("Drawing caret at %d,%d\n", cx, cy);
+    DEBUG(NAME_caret, Cprintf("Drawing caret at %d,%d\n", cx, cy));
     draw_caret(cx, cy, ols, ols, b->has_focus);
 
     r_colour(old);
@@ -974,9 +974,8 @@ static void
 rlc_place_caret(RlcData b)
 { int x, y;
 
-  Cprintf("Placing caret\n");
   if ( rlc_caret_xy(b, &x, &y) )
-  { Cprintf("Caret at %d,%d\n", x, y);
+  { DEBUG(NAME_caret, Cprintf("Caret at %d,%d\n", x, y));
     if ( b->caret_is_shown && b->caret_px == x && b->caret_py == y )
     { return;
     } else if ( b->caret_is_shown )
