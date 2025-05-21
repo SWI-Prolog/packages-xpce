@@ -946,11 +946,11 @@ rlc_draw_caret(RlcData b, int x, int y)
 							 : NAME_inactiveColour);
     Any old = r_colour(colour);
     int ols = dpi_scale(ti, OL_CURSOR_SIZE, FALSE);
+    int cx = x + b->caret_px - ols/2;
+    int cy = y + b->caret_py + b->cb - 3;
 
-    draw_caret(x + b->caret_px - ols/2,
-	       y + b->caret_py + b->cb - 3,
-	       ols, ols,
-	       b->has_focus);
+    Cprintf("Drawing caret at %d,%d\n", cx, cy);
+    draw_caret(cx, cy, ols, ols, b->has_focus);
 
     r_colour(old);
   }
@@ -974,8 +974,10 @@ static void
 rlc_place_caret(RlcData b)
 { int x, y;
 
+  Cprintf("Placing caret\n");
   if ( rlc_caret_xy(b, &x, &y) )
-  { if ( b->caret_is_shown && b->caret_px == x && b->caret_py == y )
+  { Cprintf("Caret at %d,%d\n", x, y);
+    if ( b->caret_is_shown && b->caret_px == x && b->caret_py == y )
     { return;
     } else if ( b->caret_is_shown )
     { changed_caret(b);
@@ -1197,6 +1199,7 @@ rlc_request_redraw(RlcData b)
 
   if ( b->changed & CHG_CHANGED )
   { changedEntireImageGraphical(ti);
+    rlc_place_caret(b);
   } else
   { int i = b->window_start;
     int y = 0;
@@ -1223,7 +1226,8 @@ rlc_request_redraw(RlcData b)
     if ( !first )
     { changedImageGraphical(ti, ZERO, toInt(ymin),
 			    ti->area->w, toInt(ymax-ymin));
-    } else if ( b->changed & CHG_CARET )
+    }
+    if ( b->changed & CHG_CARET )
     { rlc_place_caret(b);
     }
   }
