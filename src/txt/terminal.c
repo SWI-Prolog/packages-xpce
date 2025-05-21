@@ -1536,8 +1536,8 @@ rlc_resize(RlcData b, int w, int h)
     if ( tl->text && tl->adjusted == false )
       rlc_adjust_line(b, i);
 
-    Cprintf("%03d: sz=%d %s\n", i, tl->size,
-	    tl->softreturn ? "(soft)" : "");
+    DEBUG(NAME_term, Cprintf("%03d: sz=%d %s\n", i, tl->size,
+			     tl->softreturn ? "(soft)" : ""));
     if ( tl->size > w )
     { Cprintf("  Truncate\n");
       if ( !tl->softreturn )		/* hard --> soft */
