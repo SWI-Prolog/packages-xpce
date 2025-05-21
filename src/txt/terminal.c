@@ -182,7 +182,7 @@ unlinkTerminalImage(TerminalImage ti)
 static status
 computeTerminalImage(TerminalImage ti)
 { if ( notNil(ti->request_compute) )
-  { rlc_init_text_dimensions(ti->data, NULL); /* font */
+  { rlc_init_text_dimensions(ti->data, ti->font);
     rlc_resize_pixel_units(ti->data, 80, 25); /* just to call it */
   }
 
@@ -192,6 +192,29 @@ computeTerminalImage(TerminalImage ti)
 static status
 RedrawAreaTerminalImage(TerminalImage ti)
 { rlc_redraw(ti->data);
+  succeed;
+}
+
+static status
+ChangedEntireTerminalImage(TerminalImage ti)
+{ requestComputeGraphical(ti, DEFAULT);
+
+  succeed;
+}
+
+static status
+geometryTerminalImage(TerminalImage ti, Int x, Int y, Int w, Int h)
+{
+#define Changed(a) ( notDefault(a) && (a) != ti->area->a )
+
+  if ( Changed(w) || Changed(h) )	/* resize */
+  { geometryGraphical(ti, x, y, w, h);
+    rlc_resize_pixel_units(ti->data, valInt(ti->area->w), valInt(ti->area->h));
+    ChangedEntireTerminalImage(ti);
+  } else
+    geometryGraphical(ti, x, y, DEFAULT, DEFAULT); /* move only */
+#undef Changed
+
   succeed;
 }
 
@@ -233,6 +256,8 @@ unusedTerminalImage(TerminalImage ti)
 
 static char *T_initialise[] =
 { "width=[int]", "height=[int]", "font=[font]" };
+static char *T_geometry[] =
+{ "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 
 static vardecl var_terminal_image[] =
 { SV(NAME_font, "font", IV_GET|IV_STORE, fontTerminalImage,
@@ -248,6 +273,8 @@ static senddecl send_terminal_image[] =
      DEFAULT, "Create terminal_image from width and height and font"),
   SM(NAME_unlink, 0, NULL, unlinkTerminalImage,
      DEFAULT, "Destroy data"),
+  SM(NAME_geometry, 4, T_geometry, geometryTerminalImage,
+     DEFAULT, "Change geometry"),
   SM(NAME_compute, 0, NULL, computeTerminalImage,
      NAME_repaint, "Recompute the terminal image"),
   SM(NAME_event, 1, "event", eventTerminalImage,
