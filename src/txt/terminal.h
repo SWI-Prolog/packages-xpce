@@ -273,7 +273,7 @@ typedef struct rlc_data
   int		link_len;		/* # chars in `link` */
   int		scaret_x;		/* saved-caret X */
   int		scaret_y;		/* saved-caret Y */
-  int		has_focus;		/* Application has the focus */
+  bool		has_focus;		/* Application has the focus */
 #if TODO
   HFONT		hfont;			/* Windows font handle */
   HFONT		hfont_bold;		/* bold */
@@ -297,7 +297,9 @@ typedef struct rlc_data
   int		changed;		/* changes to the whole screen */
   int		sb_lines;		/* #lines the scrollbar thinks */
   int		sb_start;		/* start-line scrollbar thinks */
-  int		caret_is_shown;		/* is caret in the window? */
+  bool		caret_is_shown;		/* is caret in the window? */
+  int		caret_px;		/* Position of the caret in pixels */
+  int		caret_py;		/* Position of the caret in pixels */
 					/* status */
 					/* output queue */
   TCHAR		output_queue[OQSIZE];	/* The output queue */

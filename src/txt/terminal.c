@@ -83,7 +83,7 @@
 
 static void	free_rlc_data(RlcData b);
 static void	rcl_setup_ansi_colors(RlcData b);
-static void	rlc_place_caret(RlcData b);
+static bool	rlc_caret_xy(RlcData b, int *x, int *y);
 static void	rlc_resize_pixel_units(RlcData b, int w, int h);
 static RlcData	rlc_make_buffer(int w, int h);
 static int	rlc_count_lines(RlcData b, int from, int to);
@@ -913,42 +913,81 @@ rlc_copy(RlcData b)
 		 *           REPAINT		*
 		 *******************************/
 
-static void
-rlc_place_caret(RlcData b)
-{ if ( b->has_focus )
-  { int line = rlc_count_lines(b, b->window_start, b->caret_y);
+#ifndef OL_CURSOR_SIZE
+#define OL_CURSOR_SIZE	9
+#endif
 
-    if ( line < b->window_size )
-    { if ( b->fixedfont )
-      { //SetCaretPos((b->caret_x + 1) * b->cw, line * b->ch);
-      } else
-      { int tw;
-	RlcTextLine tl = &b->lines[b->caret_y];
-//	HFONT old;
+static bool
+rlc_caret_xy(RlcData b, int *x, int *y)
+{ int line = rlc_count_lines(b, b->window_start, b->caret_y);
 
-//	old = SelectObject(hdc, b->hfont);
-	tw = text_width(b, tl->text, b->caret_x);
-	(void)tw;
-//	SelectObject(hdc, old);
-//	ReleaseDC(b->window, hdc);
-
-//	SetCaretPos(b->cw + tw, line * b->ch);
-      }
-      if ( !b->caret_is_shown )
-      { //ShowCaret(b->window);
-	b->caret_is_shown = true;
-
-	return;
-      }
+  if ( line < b->window_size )
+  { *y = line * b->ch;
+    if ( b->fixedfont )
+    { *x = (b->caret_x + 1) * b->cw;
     } else
-    { if ( b->caret_is_shown == true )
-      { //HideCaret(b->window);
-	b->caret_is_shown = false;
-      }
+    { int tw;
+      RlcTextLine tl = &b->lines[b->caret_y];
+      tw = text_width(b, tl->text, b->caret_x);
+      *x = b->cw + tw;
     }
+    return true;
   }
 
-  b->caret_is_shown = false;
+  return false;
+}
+
+static void
+rlc_draw_caret(RlcData b, int x, int y)
+{ if ( b->caret_is_shown )
+  { TerminalImage ti = b->object;
+    Any colour = getClassVariableValueClass(ClassTextCursor,
+					    b->has_focus ? NAME_colour
+							 : NAME_inactiveColour);
+    Any old = r_colour(colour);
+    int ols = dpi_scale(ti, OL_CURSOR_SIZE, FALSE);
+
+    draw_caret(x + b->caret_px - ols/2,
+	       y + b->caret_py + b->cb - 3,
+	       ols, ols,
+	       b->has_focus);
+
+    r_colour(old);
+  }
+}
+
+
+/* change the image area where the caret is */
+static void
+changed_caret(RlcData b)
+{ if (  b->caret_is_shown )
+  { TerminalImage ti = b->object;
+    int ols = dpi_scale(ti, OL_CURSOR_SIZE, FALSE);
+    changedImageGraphical(b->object,
+			  toInt(b->caret_px - ols/2),
+			  toInt(b->caret_py + b->cb - 3),
+			  toInt(ols), toInt(ols));
+  }
+}
+
+static void
+rlc_place_caret(RlcData b)
+{ int x, y;
+
+  if ( rlc_caret_xy(b, &x, &y) )
+  { if ( b->caret_is_shown && b->caret_px == x && b->caret_py == y )
+    { return;
+    } else if ( b->caret_is_shown )
+    { changed_caret(b);
+    }
+    b->caret_is_shown = true;
+    b->caret_px = x;
+    b->caret_py = y;
+    changed_caret(b);
+  } else if ( b->caret_is_shown )
+  { changed_caret(b);
+    b->caret_is_shown = false;
+  }
 }
 
 
@@ -1091,11 +1130,6 @@ rlc_redraw(RlcData b, int x, int y, int w, int h)
   { //bg = CreateSolidBrush(b->background);
   }
 
-  if ( b->has_focus && b->caret_is_shown )
-  { //HideCaret(b->window);
-    b->caret_is_shown = false;
-  }
-
   if ( rlc_count_lines(b, b->first, b->sel_start_line) <
        rlc_count_lines(b, b->first, l) &&
        rlc_count_lines(b, b->first, b->sel_end_line) >=
@@ -1111,9 +1145,6 @@ rlc_redraw(RlcData b, int x, int y, int w, int h)
   { RlcTextLine tl = &b->lines[l];
     int ty = y + b->cb + b->ch * pl;
     int cx = x + b->cw;
-
-    //rect.top    = ty;
-    //rect.bottom = rect.top + b->ch;
 
 					/* compute selection */
     if ( l == b->sel_start_line )
@@ -1152,15 +1183,9 @@ rlc_redraw(RlcData b, int x, int y, int w, int h)
       break;
     }
   }
-  rlc_place_caret(b);
+  rlc_draw_caret(b, x, y);
 
   b->changed = CHG_RESET;
-#if TODO
-  if ( !stockbg )
-    DeleteObject(bg);
-
-  EndPaint(b->window, &ps);
-#endif
 
   rlc_update_scrollbar(b);
 }
@@ -1199,7 +1224,8 @@ rlc_request_redraw(RlcData b)
     { changedImageGraphical(ti, ZERO, toInt(ymin),
 			    ti->area->w, toInt(ymax-ymin));
     } else if ( b->changed & CHG_CARET )
-      rlc_place_caret(b);
+    { rlc_place_caret(b);
+    }
   }
 }
 
@@ -1265,19 +1291,14 @@ text_width(RlcData b, const text_char *text, int len)
 { if ( b->fixedfont )
   { return len * b->cw;
   } else
-  { Cprintf("stub: text_width() for proportional font\n");
-    return len * b->cw;
-#if TODO
-    SIZE size;
-    TCHAR tmp[MAXLINE];
-    int i;
+  { TerminalImage ti = b->object;
+    char tmp[MAXLINE*4];
+    char *o;
 
-    for(i=0; i<len; i++)
-      tmp[i] = text[i].code;
+    for(int i=0; i<len; i++)
+      o = utf8_put_char(o, text[i].code);
 
-    //GetTextExtentPoint32(hdc, tmp, len, &size);
-    return size.cx;
-#endif
+    return str_advance_utf8(tmp, o-tmp, ti->font);
   }
 }
 

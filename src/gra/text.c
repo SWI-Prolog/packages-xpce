@@ -255,8 +255,8 @@ str_one_line(PceString to, PceString from)
 }
 
 
-static void
-draw_caret(int x, int y, int w, int h, int active)
+void
+draw_caret(int x, int y, int w, int h, bool active)
 { if ( active )
   { int cx = x + w/2;
     Colour c = getClassVariableValueClass(ClassTextCursor, NAME_colour);
