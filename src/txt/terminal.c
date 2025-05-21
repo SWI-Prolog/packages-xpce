@@ -120,6 +120,7 @@ static RlcQueue	rlc_make_queue(int size);
 static int	rlc_from_queue(RlcQueue q);
 static int	rlc_is_empty_queue(RlcQueue q);
 static void	typed_char(RlcData b, int chr);
+static void	rlc_put(RlcData b, int chr);
 
 
 		 /*******************************
@@ -247,7 +248,23 @@ fontTerminalImage(TerminalImage ti, FontObj font)
   succeed;
 }
 
-void
+static status
+insertTerminalImage(TerminalImage ti, CharArray ca)
+{ PceString s = &ca->data;
+
+  if ( s->s_iswide )
+  { for(size_t i=0; i<s->s_size; i++)
+      rlc_put(ti->data, s->s_textW[i]);
+  } else
+  { for(size_t i=0; i<s->s_size; i++)
+      rlc_put(ti->data, s->s_textA[i]);
+  }
+
+  succeed;
+}
+
+
+void				/* call unused functions.  temporary! */
 unusedTerminalImage(TerminalImage ti)
 { RlcQueue q = rlc_make_queue(10);
   rlc_is_empty_queue(q);
@@ -281,6 +298,8 @@ static senddecl send_terminal_image[] =
      NAME_repaint, "Recompute the terminal image"),
   SM(NAME_event, 1, "event", eventTerminalImage,
      NAME_event, "Handle a general event"),
+  SM(NAME_insert, 1, "text=char_array", insertTerminalImage,
+     NAME_insert, "Insert text at caret (moves caret)"),
 };
 
 #define get_terminal_image NULL
