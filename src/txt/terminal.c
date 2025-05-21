@@ -167,10 +167,12 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h, FontObj font)
   // compute width in characters from w
   int cw = valInt(w)/c_width('m', ti->font);
 
-  ti->data = rlc_make_buffer(cw, valInt(ti->save_lines));
-  ti->data->object = ti;
-  rcl_setup_ansi_colors(ti->data);
-  rlc_init_text_dimensions(ti->data, ti->font); /* to ->compute? */
+  RlcData b = rlc_make_buffer(cw, valInt(ti->save_lines));
+  ti->data = b;
+  b->object = ti;
+  rcl_setup_ansi_colors(b);
+  b->queue = rlc_make_queue(256);
+  rlc_init_text_dimensions(b, ti->font);
 
   succeed;
 }
@@ -257,8 +259,13 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
 }
 
 static status
-typedTerminalImage(Editor e, EventObj ev)
-{ fail;
+typedTerminalImage(TerminalImage ti, EventObj ev)
+{ if ( isInteger(ev->id) )
+  { typed_char(ti->data, valInt(ev->id));
+    succeed;
+  }
+
+  fail;
 }
 
 static status
@@ -540,6 +547,10 @@ rlc_interrupt(RlcData b)
 }
 
 
+/**
+ * Handle  an typed  character.  C-c  and C-v  are handled  here.  All
+ * other characters are added to the queue of this terminal.
+ */
 static void
 typed_char(RlcData b, int chr)
 { if ( chr == Control('C') && rlc_has_selection(b) )
