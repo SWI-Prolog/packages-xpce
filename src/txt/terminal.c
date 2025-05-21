@@ -120,7 +120,7 @@ static RlcQueue	rlc_make_queue(int size);
 static int	rlc_from_queue(RlcQueue q);
 static int	rlc_is_empty_queue(RlcQueue q);
 static void	typed_char(RlcData b, int chr);
-static void	rlc_put(RlcData b, int chr);
+static void	rlc_putansi(RlcData b, int chr);
 
 
 		 /*******************************
@@ -254,10 +254,10 @@ insertTerminalImage(TerminalImage ti, CharArray ca)
 
   if ( s->s_iswide )
   { for(size_t i=0; i<s->s_size; i++)
-      rlc_put(ti->data, s->s_textW[i]);
+      rlc_putansi(ti->data, s->s_textW[i]);
   } else
   { for(size_t i=0; i<s->s_size; i++)
-      rlc_put(ti->data, s->s_textA[i]);
+      rlc_putansi(ti->data, s->s_textA[i]);
   }
 
   succeed;
