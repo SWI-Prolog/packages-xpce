@@ -123,6 +123,7 @@ static int	rlc_is_empty_queue(RlcQueue q);
 static void	typed_char(RlcData b, int chr);
 static void	rlc_putansi(RlcData b, int chr);
 static void	rlc_update(rlc_console c);
+static void	changed_caret(RlcData b);
 
 
 		 /*******************************
@@ -231,6 +232,32 @@ geometryTerminalImage(TerminalImage ti, Int x, Int y, Int w, Int h)
 
 static status
 eventTerminalImage(TerminalImage ti, EventObj ev)
+{ DEBUG(NAME_event,
+	if ( ev->id != NAME_locMove )
+	  Cprintf("Event: %s\n", pp(ev->id)));
+
+  if ( isAEvent(ev, NAME_focus) )
+  { RlcData b = ti->data;
+    if ( isAEvent(ev, NAME_activateKeyboardFocus) )
+    { ws_enable_text_input((Graphical)ti, ON);
+      b->has_focus = true;
+    } else if ( isAEvent(ev, NAME_deactivateKeyboardFocus) )
+    { ws_enable_text_input((Graphical)ti, OFF);
+      b->has_focus = false;
+    }
+    changed_caret(b);
+
+    succeed;
+  }
+
+  if ( isAEvent(ev, NAME_keyboard) )
+    return send(ti, NAME_typed, ev, EAV);
+
+  fail;
+}
+
+static status
+typedTerminalImage(Editor e, EventObj ev)
 { fail;
 }
 
@@ -316,8 +343,12 @@ static senddecl send_terminal_image[] =
      DEFAULT, "Change geometry"),
   SM(NAME_compute, 0, NULL, computeTerminalImage,
      NAME_repaint, "Recompute the terminal image"),
+  SM(NAME_WantsKeyboardFocus, 0, NULL, succeedObject,
+     NAME_event, "Test if ready to accept input (true)"),
   SM(NAME_event, 1, "event", eventTerminalImage,
      NAME_event, "Handle a general event"),
+  SM(NAME_typed, 1, "event", typedTerminalImage,
+     NAME_event, "Process a keystroke"),
   SM(NAME_insert, 1, "text=char_array", insertTerminalImage,
      NAME_insert, "Insert text at caret (moves caret)"),
   SM(NAME_print, 0, NULL, printTerminalImage,
