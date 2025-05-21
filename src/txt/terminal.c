@@ -164,6 +164,7 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h, FontObj font)
   int cw = valInt(w)/16;
 
   ti->data = rlc_make_buffer(cw, valInt(ti->save_lines));
+  ti->data->object = ti;
   rcl_setup_ansi_colors(ti->data);
 
   succeed;
@@ -172,7 +173,8 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h, FontObj font)
 static status
 unlinkTerminalImage(TerminalImage ti)
 { if ( ti->data )
-  { free_rlc_data(ti->data);
+  { ti->data->object = NULL;
+    free_rlc_data(ti->data);
     ti->data = NULL;
   }
 
@@ -290,7 +292,9 @@ static getdecl get_terminal_image[] =
 
 static classvardecl rc_terminal_image[] =
 { RC(NAME_saveLines, "int", "1000",
-     "How many lines are saved for scroll back")
+     "How many lines are saved for scroll back"),
+  RC(NAME_font, "font", "fixed",
+     "Default font")
 };
 
 static Name terminal_image_termnames[] =
@@ -309,6 +313,25 @@ makeClassTerminalImage(Class class)
   setRedrawFunctionClass(class, RedrawAreaTerminalImage);
 
   succeed;
+}
+
+		 /*******************************
+		 *            MALLOC            *
+		 *******************************/
+
+static void *
+rlc_malloc(size_t bytes)
+{ return malloc(bytes);
+}
+
+static void *
+rlc_realloc(void *ptr, size_t size)
+{ return realloc(ptr, size);
+}
+
+static void
+rlc_free(void *ptr)
+{ free(ptr);
 }
 
 
@@ -1180,31 +1203,12 @@ rlc_resize_pixel_units(RlcData b, int w, int h)
 
 static void
 rlc_init_text_dimensions(RlcData b, FontObj font)
-{ if ( font )
-  { // b->hfont = font;
-  }
-					/* test for fixed?*/
-#if TODO
-  hdc = GetDC(NULL);
-  SelectObject(hdc, b->hfont);
-  GetTextMetrics(hdc, &tm);
-  b->cw = tm.tmAveCharWidth;
-  b->cb = tm.tmHeight;
-  b->ch = tm.tmHeight + tm.tmExternalLeading;
-  b->fixedfont = (tm.tmPitchAndFamily & TMPF_FIXED_PITCH ? false : true);
-  ReleaseDC(NULL, hdc);
-#endif
+{ b->cw = c_width('x', font);
+  b->cb = s_ascent(font);
+  b->ch = s_height(font);
+  b->fixedfont = font->fixed_width == ON;
 
-  { //RECT rect;
-
-    if ( b->has_focus == true )
-    { //CreateCaret(b->window, NULL, b->fixedfont ? b->cw : 3, b->ch-1);
-      rlc_place_caret(b);
-    }
-
-    //GetClientRect(b->window, &rect);
-    //rlc_resize_pixel_units(b, rect.right - rect.left, rect.bottom - rect.top);
-  }
+  //rlc_resize_pixel_units(b, rect.right - rect.left, rect.bottom - rect.top);
 }
 
 
@@ -1213,7 +1217,8 @@ text_width(RlcData b, const text_char *text, int len)
 { if ( b->fixedfont )
   { return len * b->cw;
   } else
-  {
+  { Cprintf("stub: text_width() for proportional font\n");
+    return len * b->cw;
 #if TODO
     SIZE size;
     TCHAR tmp[MAXLINE];
@@ -1225,7 +1230,6 @@ text_width(RlcData b, const text_char *text, int len)
     //GetTextExtentPoint32(hdc, tmp, len, &size);
     return size.cx;
 #endif
-    return 0;
   }
 }
 
@@ -1235,14 +1239,14 @@ tchar_width(RlcData b, const TCHAR *text, int len)
 { if ( b->fixedfont )
   { return len * b->cw;
   } else
-  {
+  { Cprintf("stub: tchar_width() for proportional font\n");
+    return len * b->cw;
 #if TODO
     SIZE size;
 
     GetTextExtentPoint32(hdc, text, len, &size);
     return size.cx;
 #endif
-    return 0;
   }
 }
 

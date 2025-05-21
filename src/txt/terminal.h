@@ -87,11 +87,6 @@ int		rlc_copy_output_to_debug_output(int docopy);
 void		rlc_yield(void);
 void		rlc_word_char(int chr, int isword);
 int		rlc_is_word_char(int chr);
-int		rlc_iswin32s(void);	/* check for Win32S */
-
-void		rlc_free(void *ptr);
-void *		rlc_malloc(size_t size);
-void *		rlc_realloc(void *ptr, size_t size);
 
 size_t		rlc_read(rlc_console c, TCHAR *buf, size_t cnt);
 size_t		rlc_write(rlc_console c, TCHAR *buf, size_t cnt);
@@ -252,6 +247,7 @@ typedef struct
  */
 typedef struct rlc_data
 { int		magic;
+  TerminalImage object;			/* Pointer back to object */
   int		height;			/* number of lines in buffer */
   int		width;			/* #characters ler line */
   int		first;			/* first line of ring */
