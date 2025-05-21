@@ -336,7 +336,6 @@ void		rlc_erase_from_caret(rlc_console c);
 void		rlc_putchar(rlc_console c, int chr);
 TCHAR *		rlc_read_screen(rlc_console c,
 				RlcMark from, RlcMark to);
-void		rlc_update(rlc_console c);
 const TCHAR *	rlc_prompt(rlc_console c, const TCHAR *prompt);
 void		rlc_clearprompt(rlc_console c);
 

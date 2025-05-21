@@ -1166,47 +1166,51 @@ rlc_redraw(RlcData b, int x, int y, int w, int h)
 
 static void
 rlc_request_redraw(RlcData b)
-{ if ( b->changed & CHG_CHANGED )
-  { //InvalidateRect(b->window, NULL, false);
+{ TerminalImage ti = b->object;
+
+  if ( b->changed & CHG_CHANGED )
+  { changedEntireImageGraphical(ti);
   } else
   { int i = b->window_start;
     int y = 0;
-    //RECT rect;
-    int first = true;
-
-    //rect.left = b->cw;
-    //rect.right = (b->width+1) * b->cw;
+    int ymin, ymax;
+    bool first = true;
 
     for(; y < b->window_size; y++, i = NextLine(b, i))
     { RlcTextLine l = &b->lines[i];
 
       if ( l->changed & CHG_CHANGED )
       { if ( first )
-	{ //rect.top = y * b->ch;
-	  //rect.bottom = rect.top + b->ch;
+	{ ymin = y * b->ch;
+	  ymax = ymin + b->ch;
 	  first = false;
 	} else
-	  (void)0; //rect.bottom = (y+1) * b->ch;
+	{ ymax = (y+1) * b->ch;
+	}
       }
       if ( i == b->last )
 	break;
     }
 
     if ( !first )
-      (void)0; //InvalidateRect(b->window, &rect, false);
+      changedImageGraphical(ti, ZERO, toInt(ymin),
+			    ti->area->w, toInt(ymax-ymin));
     else if ( b->changed & CHG_CARET )
       rlc_place_caret(b);
   }
 }
 
 
-static void
+static bool
 rlc_normalise(RlcData b)
 { if ( rlc_count_lines(b, b->window_start, b->caret_y) >= b->window_size )
   { b->window_start = rlc_add_lines(b, b->caret_y, -(b->window_size-1));
     b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
     rlc_request_redraw(b);
+    return true;
   }
+
+  return false;
 }
 
 
@@ -2311,13 +2315,12 @@ rlc_read_screen(rlc_console c, RlcMark f, RlcMark t)
 }
 
 
-void
+static void
 rlc_update(rlc_console c)
 { RlcData b = rlc_get_data(c);
 
-  rlc_normalise(b);
-  rlc_request_redraw(b);
-  // UpdateWindow(b->window);
+  if ( !rlc_normalise(b) )
+    rlc_request_redraw(b);
 }
 
 		 /*******************************
@@ -2584,11 +2587,7 @@ rlc_do_write(RlcData b, TCHAR *buf, int count)
       rlc_putansi(b, chr);
     }
 
-    rlc_normalise(b);
-    //if ( b->window )
-    { rlc_request_redraw(b);
-      // UpdateWindow(b->window);
-    }
+    rlc_update(b);
   }
 }
 
