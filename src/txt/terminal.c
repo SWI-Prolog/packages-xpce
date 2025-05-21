@@ -168,6 +168,7 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h, FontObj font)
   ti->data = rlc_make_buffer(cw, valInt(ti->save_lines));
   ti->data->object = ti;
   rcl_setup_ansi_colors(ti->data);
+  rlc_init_text_dimensions(ti->data, ti->font); /* to ->compute? */
 
   succeed;
 }
@@ -1040,6 +1041,7 @@ rcl_paint_text(RlcData b,
 	SetBkColor(hdc, b->ansi_color[TF_BG(flags)]);
 #endif
 
+      //Cprintf("Print \"%s\" at %d,%d using %s\n", t, *cx, ty, pp(ti->font));
       s_print_utf8(t, ulen, *cx, ty, ti->font);
       *cx += tchar_width(b, t, ulen, segment, ti->font);
 
@@ -1105,7 +1107,7 @@ rlc_redraw(RlcData b, int x, int y, int w, int h)
 
   for(; pl <= el; l = NextLine(b, l), pl++)
   { RlcTextLine tl = &b->lines[l];
-    int ty = y + b->ch * pl;
+    int ty = y + b->cb + b->ch * pl;
     int cx = x + b->cw;
 
     //rect.top    = ty;
