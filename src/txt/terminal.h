@@ -224,7 +224,7 @@ typedef struct
 } text_char;
 
 typedef struct href
-{ TCHAR		*link;			/* Hyperlink target */
+{ char		*link;			/* Hyperlink target */
   int		 start;			/* start of label */
   int		 length;		/* #chars of label */
   struct href   *next;			/* Next in chain */
@@ -271,6 +271,8 @@ typedef struct rlc_data
   int		cmdstat;		/* for parsing ANSI escape */
   int		argstat;		/* argument status ANSI */
   char const   *must_see;		/* \e]8;; link decoding */
+  int		argc;			/* argument count for ANSI */
+  int		argv[ANSI_MAX_ARGC];	/* argument vector for ANSI */
   TCHAR		link[ANSI_MAX_LINK];	/* Max URL length */
   int		link_len;		/* # chars in `link` */
   int		scaret_x;		/* saved-caret X */
