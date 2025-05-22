@@ -173,10 +173,8 @@ rlc_check_assertions(RlcData b)
 		 *******************************/
 
 static status
-initialiseTerminalImage(TerminalImage ti, Int w, Int h, FontObj font)
+initialiseTerminalImage(TerminalImage ti, Int w, Int h)
 { initialiseGraphical(ti, ZERO, ZERO, w, h);
-  if ( notDefault(font) )
-    assign(ti, font, font);
   obtainClassVariablesObject(ti);
 
   // compute width in characters from w
@@ -328,13 +326,19 @@ saveLinesTerminalImage(TerminalImage ti, Int lines)
 static status
 fontTerminalImage(TerminalImage ti, FontObj font)
 { assign(ti, font, font);
-  succeed;
+  succeed;			/* TBD: Update, refresh */
 }
 
 static status
 boldFontTerminalImage(TerminalImage ti, FontObj font)
 { assign(ti, bold_font, font);
   succeed;
+}
+
+static status
+backgroundTerminalImage(TerminalImage ti, Colour bg)
+{ assign(ti, background, bg);
+  succeed;			/* force redraw */
 }
 
 static status
@@ -401,7 +405,7 @@ unusedTerminalImage(TerminalImage ti)
 /* Type declarations */
 
 static char *T_initialise[] =
-{ "width=int", "height=int", "font=[font]" };
+{ "width=int", "height=int" };
 static char *T_geometry[] =
 { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 
@@ -410,16 +414,18 @@ static vardecl var_terminal_image[] =
      NAME_appearance, "Font used to draw the string"),
   SV(NAME_boldFont, "font*", IV_GET|IV_STORE, boldFontTerminalImage,
      NAME_appearance, "Font for bold text"),
-  SV(NAME_saveLines, "int", IV_GET|IV_STORE, saveLinesTerminalImage,
-     NAME_memory, "How many lines are saved for scroll back"),
+  SV(NAME_background, "[colour]", IV_GET|IV_STORE, backgroundTerminalImage,
+     NAME_appearance, "Terminal background colour"),
   SV(NAME_ansiColours, "vector*", IV_GET|IV_STORE, ansiColoursTerminalImage,
      NAME_appearance, "The 16 ansi colours"),
+  SV(NAME_saveLines, "int", IV_GET|IV_STORE, saveLinesTerminalImage,
+     NAME_memory, "How many lines are saved for scroll back"),
   IV(NAME_data, "alien:RlcData", IV_NONE,
      NAME_cache, "Line buffer and related data")
 };
 
 static senddecl send_terminal_image[] =
-{ SM(NAME_initialise, 3, T_initialise, initialiseTerminalImage,
+{ SM(NAME_initialise, 2, T_initialise, initialiseTerminalImage,
      DEFAULT, "Create terminal_image from width and height and font"),
   SM(NAME_unlink, 0, NULL, unlinkTerminalImage,
      DEFAULT, "Destroy data"),
@@ -451,7 +457,7 @@ static classvardecl rc_terminal_image[] =
      "How many lines are saved for scroll back"),
   RC(NAME_font, "font", "font(screen,roman,13)",
      "Default font"),
-  RC(NAME_boldFont, "font", "font(screen,bold,13)",
+  RC(NAME_boldFont, "font*", "font(screen,bold,13)",
      "Bold font"),
   RC(NAME_ansiColours, "vector*",
      "vector("
@@ -480,7 +486,8 @@ static Name terminal_image_termnames[] =
 	{ NAME_width, NAME_height };
 
 ClassDecl(terminal_image_decls,
-          var_terminal_image, send_terminal_image, get_terminal_image, rc_terminal_image,
+          var_terminal_image, send_terminal_image, get_terminal_image,
+	  rc_terminal_image,
           2, terminal_image_termnames,
           "$Rev$");
 
@@ -1171,25 +1178,34 @@ rcl_paint_text(RlcData b,
       ulen = ut-t;
 
       Colour ofg = DEFAULT;
+      Colour obg = DEFAULT;
       int ifg = TF_FG(flags);
+      int ibg = TF_BG(flags);
       if ( ifg != ANSI_COLOR_DEFAULT )
       { Colour fg = getElementVector(ti->ansi_colours, toInt(ifg+1));
 	if ( fg )
 	  ofg = r_colour(fg);
       }
-
-#if TODO
-      if ( TF_BG(flags) == ANSI_COLOR_DEFAULT )
-	SetBkColor(hdc, b->background);
-      else
-	SetBkColor(hdc, b->ansi_color[TF_BG(flags)]);
-#endif
+      if ( ibg != ANSI_COLOR_DEFAULT )
+      { Colour bg = getElementVector(ti->ansi_colours, toInt(ifg+1));
+	if ( bg )
+	  obg = r_background(bg);
+      }
+      FontObj font = ti->font;
+      if ( TF_BOLD(flags) )
+      { if ( notNil(ti->bold_font) )
+	  font = ti->bold_font;
+	else
+	  Cprintf("No bold font\n");
+      }
 
       //Cprintf("Print \"%s\" at %d,%d using %s\n", t, *cx, ty, pp(ti->font));
-      s_print_utf8(t, ulen, *cx, ty, ti->font);
+      s_print_utf8(t, ulen, *cx, ty, font);
       *cx += tchar_width(b, t, ulen, segment, ti->font);
       if ( notDefault(ofg) )
 	r_colour(ofg);
+      if ( notDefault(obg) )
+	r_background(obg);
 
 #if TODO
       HFONT font = NULL, old_font = NULL;
