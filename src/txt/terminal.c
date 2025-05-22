@@ -128,7 +128,6 @@ static void	rlc_adjust_line(RlcData b, int line);
 static int	text_width(RlcData b, const text_char *text, int len);
 static int	tchar_width(RlcData b, const char *text,
 			    size_t ulen, size_t len, FontObj font);
-static void     rlc_do_write(RlcData b, TCHAR *buf, int count);
 static void     rlc_reinit_line(RlcData b, int line);
 static void	rlc_free_line(RlcData b, int line);
 static int	rlc_between(RlcData b, int f, int t, int v);
@@ -492,12 +491,14 @@ ucscpy(TCHAR *dst, const TCHAR *src)
   *dst = 0;
 }
 
+#if 0
 static void
 ucsncpy(TCHAR *dst, const TCHAR *src, size_t len)
 { while(*src && len-- > 0)
     *dst++ = *src++;
   *dst = 0;
 }
+#endif
 
 static int
 cuncmp(const char *s1, const TCHAR *s2, size_t len)
@@ -1390,13 +1391,6 @@ rlc_make_buffer(int w, int h)
   b->lines          = rlc_malloc(sizeof(rlc_text_line) * h);
   b->cmdstat	    = CMD_INITIAL;
   b->changed	    = CHG_CARET|CHG_CHANGED|CHG_CLEAR;
-  b->imode	    = IMODE_COOKED;	/* switch on first rlc_read() call */
-  b->imodeswitch    = false;
-  b->lhead	    = NULL;
-  b->ltail	    = NULL;
-  //b->cursor         = LoadCursor(NULL, IDC_IBEAM);
-  //b->link_cursor    = LoadCursor(NULL, IDC_HAND);
-  //InitializeCriticalSection(&b->lock);
 
   memset(b->lines, 0, sizeof(rlc_text_line) * h);
   for(i=0; i<h; i++)
@@ -2408,156 +2402,6 @@ rlc_update(rlc_console c)
 		 *******************************/
 
 
-
-
-
-		 /*******************************
-		 *	   BUFFERED I/O		*
-		 *******************************/
-
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-When using UNICODE, count is in bytes!
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-#if TODO
-size_t
-rlc_read(rlc_console c, TCHAR *buf, size_t count)
-{ RlcData d = rlc_get_data(c);
-  size_t give;
-  MSG msg;
-
-  if ( d->closing )
-    return 0;				/* signal EOF when closing */
-
-  PostThreadMessage(d->console_thread_id,
-		    WM_RLC_FLUSH,
-		    0, 0);
-  if ( _rlc_update_hook )
-    (*_rlc_update_hook)();
-
-  d->promptbuf[d->promptlen] = EOS;
-  _tcscpy(d->prompt, d->promptbuf);
-
-  if ( d->read_buffer.given >= d->read_buffer.length )
-  { if ( d->read_buffer.line )
-    { rlc_free(d->read_buffer.line);
-      d->read_buffer.line = NULL;
-    }
-
-    if ( d->imode != IMODE_COOKED )
-    { d->imode = IMODE_COOKED;
-      d->imodeswitch = true;
-    }
-
-    while(!d->lhead)
-    { if ( rlc_get_message(&msg, NULL, 0, 0) )
-      { TranslateMessage(&msg);
-	DispatchMessage(&msg);
-      } else
-	return -1;
-    }
-
-    { LQueued lq = d->lhead;
-      d->read_buffer.line = lq->line;
-      if ( lq->next )
-	d->lhead = lq->next;
-      else
-	d->lhead = d->ltail = NULL;
-
-      rlc_free(lq);
-    }
-
-    d->read_buffer.length = _tcslen(d->read_buffer.line);
-    d->read_buffer.given = 0;
-  }
-
-  if ( d->read_buffer.length - d->read_buffer.given > count )
-    give = count;
-  else
-    give = d->read_buffer.length - d->read_buffer.given;
-
-  _tcsncpy(buf, d->read_buffer.line+d->read_buffer.given, give);
-  d->read_buffer.given += give;
-
-  return give;
-}
-#endif
-
-
-static void
-rlc_do_write(RlcData b, TCHAR *buf, int count)
-{ if ( count > 0 )
-  { int n = 0;
-    TCHAR *s = buf;
-
-    while(n++ < count)
-    { int chr = *s++;
-
-      if ( chr == '\n' )
-	rlc_putansi(b, '\r');
-      rlc_putansi(b, chr);
-    }
-
-    rlc_update(b);
-  }
-}
-
-
-int
-rlc_flush_output(rlc_console c)
-{ RlcData b = rlc_get_data(c);
-
-  if ( !b )
-    return -1;
-
-  if ( b->output_queued )
-  { rlc_do_write(b, b->output_queue, b->output_queued);
-
-    b->output_queued = 0;
-  }
-
-  return 0;
-}
-
-
-size_t
-rlc_write(rlc_console c, TCHAR *buf, size_t count)
-{ TCHAR *e, *s;
-  RlcData b = rlc_get_data(c);
-
-  if ( !b )
-    return -1;
-
-  //EnterCriticalSection(&b->lock);
-  for(s=buf, e=&buf[count]; s<e; s++)
-  { if ( *s == '\n' )
-      b->promptlen = 0;
-    else if ( b->promptlen < MAXPROMPT-1 )
-      b->promptbuf[b->promptlen++] = *s;
-  }
-  //LeaveCriticalSection(&b->lock);
-
-#if TODO
-  if ( b->window )
-  { if ( SendMessageTimeout(b->window,
-			    WM_RLC_WRITE,
-			    (WPARAM)count,
-			    (LPARAM)buf,
-			    SMTO_NORMAL,
-			    10000,
-			    &result) )
-    { PostMessage(b->window,
-		  WM_RLC_FLUSH,
-		  0, 0);
-      return count;
-    }
-  }
-#endif
-
-  return -1;				/* I/O error */
-}
-
-
 static void
 free_rlc_data(RlcData b)
 { b->magic = 42;			/* so next gets errors */
@@ -2572,79 +2416,10 @@ free_rlc_data(RlcData b)
 
     free(b->lines);
   }
-  if ( b->read_buffer.line )
-    free(b->read_buffer.line);
 
   free(b);
 }
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-rlc_close() tries to gracefully get rid of   the console thread. It does
-so by posting WM_RLC_CLOSEWIN and then waiting for a WM_RLC_READY reply.
-It waits for a maximum of  1.5  second,   which  should  be  fine as the
-console thread should not have intptr_t-lasting activities.
-
-If the timeout expires it hopes for the best. This was the old situation
-and proved to be sound on Windows-NT, but not on 95 and '98.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-int
-rlc_close(rlc_console c)
-{
-#if TODO
-  RlcData b = (RlcData)c;
-  MSG msg;
-  int i;
-
-  if ( b->magic != RLC_MAGIC )
-    return -1;
-
-  rlc_save_options(b);
-  b->closing = 3;
-  PostMessage(b->window, WM_RLC_CLOSEWIN, 0, 0);
-
-					/* wait for termination */
-  for(i=0; i<30; i++)
-  { if ( PeekMessage(&msg, NULL, WM_RLC_READY, WM_RLC_READY, PM_REMOVE) )
-      break;
-    Sleep(50);
-  }
-
-  b->magic = 0;
-  free_user_data(c);
-  free_rlc_data(b);
-#endif
-
-  return 0;
-}
-
-
-const TCHAR *
-rlc_prompt(rlc_console c, const TCHAR *new)
-{ RlcData b = rlc_get_data(c);
-
-  if ( b )
-  { if ( new )
-    { ucsncpy(b->prompt, new, MAXPROMPT);
-      b->prompt[MAXPROMPT-1] = EOS;
-    }
-
-    return b->prompt;
-  }
-
-  return NULL;
-}
-
-
-void
-rlc_clearprompt(rlc_console c)
-{ RlcData b = rlc_get_data(c);
-
-  if ( b )
-  { b->promptlen = 0;
-    b->prompt[0] = EOS;
-  }
-}
 
 		 /*******************************
 		 *         DEBUG PRINT          *

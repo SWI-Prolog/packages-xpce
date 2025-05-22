@@ -286,26 +286,6 @@ typedef struct rlc_data
   bool		caret_is_shown;		/* is caret in the window? */
   int		caret_px;		/* Position of the caret in pixels */
   int		caret_py;		/* Position of the caret in pixels */
-					/* status */
-					/* output queue */
-  TCHAR		output_queue[OQSIZE];	/* The output queue */
-  int		output_queued;		/* # characters in the queue */
-  struct
-  { TCHAR *line;			/* buffered line */
-    size_t length;			/* length of line */
-    size_t given;			/* how much we passed */
-  } read_buffer;
-					/* input queuing */
-  int		imode;			/* input mode */
-  int		imodeswitch;		/* switching imode */
-  LQueued	lhead;			/* line-queue head */
-  LQueued	ltail;			/* line-queue tail */
-  TCHAR		promptbuf[MAXPROMPT];	/* Buffer for building prompt */
-  TCHAR		prompt[MAXPROMPT];	/* The prompt */
-  int		promptlen;		/* length of the prompt */
-  int		closing;		/* closing status */
-  int		modified_options;	/* OPT_ */
-  history	history;		/* history for this console */
 } rlc_data, *RlcData;
 
 
