@@ -663,6 +663,32 @@ TCHAR2Name(const TCHAR *str)
   return nm;
 }
 
+static StringObj
+TCHAR2String(const TCHAR *str)
+{ char tmp[MAXLINE*4];
+  char *u8 = tmp;
+  char *end = tmp+sizeof(tmp)-8;
+
+again:
+  char *o = u8;
+  for(const TCHAR *s = str; *s; s++)
+  { if ( o < end )
+    { o = utf8_put_char(o, *s);
+    } else
+    { size_t len = ucslen(str);
+      u8 = rlc_malloc(len*4);
+      end = u8+len*4-8;
+      goto again;
+    }
+  }
+  *o = 0;
+
+  StringObj s = UTF8ToString(u8);
+  if ( u8 != tmp )
+    rlc_free(u8);
+  return s;
+}
+
 
 		 /*******************************
 		 *         HANDLE INPUT         *
@@ -1077,12 +1103,14 @@ rlc_copy(RlcData b)
 { TCHAR *sel = rlc_selection(b);
 
   if ( sel )
-  { // copy to clipboard
+  { StringObj str = TCHAR2String(sel);
+    addCodeReference(str);
+    send(CurrentDisplay(b->object), NAME_selection, NAME_clipboard, str, EAV);
+    considerPreserveObject(str);
 
     rlc_free(sel);
   }
 }
-
 
 
 		 /*******************************
