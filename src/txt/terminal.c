@@ -1116,12 +1116,13 @@ rlc_update_scrollbar(RlcData b)
 }
 
 
-/* Draw the text */
+/** Draw a line of the terminal
+ */
 
 static void
 rcl_paint_text(RlcData b,
 	       RlcTextLine tl, int from, int to,
-	       int ty, int *cx, int insel)
+	       int ty, int *cx, bool insel)
 { TerminalImage ti = b->object;
   text_char *chars, *s;
   text_char buf[MAXLINE];
@@ -1213,27 +1214,6 @@ rcl_paint_text(RlcData b,
 	r_colour(ofg);
       if ( notDefault(obg) )
 	r_background(obg);
-
-#if TODO
-      HFONT font = NULL, old_font = NULL;
-      if ( TF_UNDERLINE(flags) )
-      { if ( TF_BOLD(flags) )
-	  font = b->hfont_bold_underlined;
-	else
-	  font = b->hfont_underlined;
-      } else if ( TF_BOLD(flags) )
-      { font = b->hfont_bold;
-      }
-
-      if ( font )
-	old_font = (HFONT)SelectObject(hdc, font);
-
-      TextOut(hdc, *cx, ty, t, segment);
-      *cx += tchar_width(b, t, segment);
-
-      if ( old_font )
-	SelectObject(hdc, old_font);
-#endif
     }
   }
 }
@@ -1246,7 +1226,7 @@ rlc_redraw(RlcData b, int x, int y, int w, int h)
   int el = b->window_size;
   int l = rlc_add_lines(b, b->window_start, sl);
   int pl = sl;				/* physical line */
-  int insel = false;			/* selected lines? */
+  bool insel = false;			/* selected lines? */
 
   //SelectObject(hdc, b->hfont);
   //SetTextColor(hdc, b->foreground);
