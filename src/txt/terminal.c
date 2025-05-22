@@ -559,9 +559,10 @@ ucsncpy(TCHAR *dst, const TCHAR *src, size_t len)
 static int
 cuncmp(const char *s1, const TCHAR *s2, size_t len)
 { const unsigned char *u1 = (const unsigned char*)s1;
-  while(len-- > 0)
-  { if ( *u1 != *s1 )
-      return *u1 - *s1;
+  for(; len-- > 0; u1++, s2++)
+  { int d = *u1 - *s2;
+    if ( d )
+      return d;
   }
   return 0;
 }
@@ -630,7 +631,7 @@ typed_char(RlcData b, int chr)
   else if ( chr == Control('V') )
     rlc_paste(b);
   else
-  { Cprintf("Send %d to client\n", chr);
+  { DEBUG(NAME_term, Cprintf("Send %d to client\n", chr));
     char buf[6];
     char *e = utf8_put_char(buf, chr);
     size_t count = e-buf;
@@ -2229,8 +2230,7 @@ rlc_putansi(RlcData b, int chr)
 	b->link[b->link_len] = 0;
 	if ( chr == '\\' &&
 	     b->link_len >= endl &&
-	     cuncmp(end, &b->link[b->link_len-endl],
-		   endl*sizeof(end[0])) == 0 )
+	     cuncmp(end, &b->link[b->link_len-endl], endl) == 0 )
 	{ b->link_len -= endl;
 	  b->cmdstat = CMD_INITIAL;
 	  b->link[b->link_len] = 0;
@@ -2523,7 +2523,6 @@ rlc_open_pty_pair(RlcData b)
 #endif
 
   strncpy(b->pty.slave_name, slave, sizeof(b->pty.slave_name) - 1);
-  Cprintf("pty = %s\n", b->pty.slave_name);
   b->pty.slave_fd = open(b->pty.slave_name, O_RDWR | O_NOCTTY);
   if ( b->pty.slave_fd < 0 )
   { close(b->pty.master_fd);
@@ -2572,14 +2571,16 @@ receiveTerminalImage(TerminalImage ti)
   ssize_t count = read(b->pty.master_fd, buf, sizeof(buf));
   if ( count > 0 )
   { char *i = buf;
-    Cprintf("Received (%d bytes):",count);
+    bool debug = false;
+    DEBUG(NAME_term, debug = true);
+    if ( debug ) Cprintf("Received (%d bytes):", count);
     while( i < &buf[count] )
     { int chr;
       i = utf8_get_char(i, &chr);
       rlc_putansi(b, chr);
-      Cprintf(" %d", chr);
+      if ( debug ) Cprintf(" %d", chr);
     }
-    Cprintf("\n");
+    if ( debug ) Cprintf("\n");
     rlc_update(b);
     succeed;
   } else if ( count == 0 )
@@ -2602,7 +2603,7 @@ rlc_resize_pty(RlcData b, int cols, int rows)
         .ws_ypixel = valInt(b->object->area->h)
       };
       if ( ioctl(fd, TIOCSWINSZ, &ws) == 0 )
-      { Cprintf("Updated size to %dx%d\n", cols, rows);
+      { DEBUG(NAME_term, Cprintf("Updated size to %dx%d\n", cols, rows));
       }
       close(fd);
     }
