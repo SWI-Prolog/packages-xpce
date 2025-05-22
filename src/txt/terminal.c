@@ -279,15 +279,30 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
 static status
 typedTerminalImage(TerminalImage ti, EventObj ev)
 { int chr;
+  const char *seq = NULL;
 
   if ( isInteger(ev->id) )
   { chr = valInt(ev->id);
   } else if ( ev->id == NAME_backspace )
   { chr = 127;
+  } else if ( ev->id == NAME_cursorUp )
+  { seq = "\e[A";
+  } else if ( ev->id == NAME_cursorDown )
+  { seq = "\e[B";
+  } else if ( ev->id == NAME_cursorLeft )
+  { seq = "\e[C";
+  } else if ( ev->id == NAME_cursorRight )
+  { seq = "\e[D";
+  } else if ( ev->id == NAME_delete )
+  { seq = "\e[3~";
   } else
     fail;
 
-  typed_char(ti->data, chr);
+  if ( seq )
+    rlc_send(ti->data, seq, strlen(seq));
+  else
+    typed_char(ti->data, chr);
+
   succeed;
 }
 
@@ -1963,6 +1978,14 @@ rlc_set_caret(RlcData b, int x, int y)
 
 
 static void
+rlc_set_caret_x(RlcData b, int x)
+{ b->caret_x = Bounds(x-1, 0, b->width-1);
+
+  b->changed |= CHG_CARET;
+}
+
+
+static void
 rlc_save_caret_position(RlcData b)
 { b->scaret_y = rlc_count_lines(b, b->window_start, b->caret_y);
   b->scaret_x = b->caret_x;
@@ -2146,8 +2169,9 @@ rlc_putansi(RlcData b, int chr)
       { case '\b':
 	  CMD(rlc_caret_backward(b, 1));
 	  break;
-        case Control('G'):
+        case 0x7:
 	  //MessageBeep(MB_ICONEXCLAMATION);
+	  Cprintf("Beep!\n");
 	  break;
 	case '\r':
 	  CMD(rlc_cariage_return(b));
@@ -2282,6 +2306,10 @@ rlc_putansi(RlcData b, int chr)
 	case 'D':
 	  rlc_need_arg(b, 1, 1);
 	  CMD(rlc_caret_backward(b, b->argv[0]));
+	  break;
+	case 'G':
+	  rlc_need_arg(b, 1, 0);
+	  CMD(rlc_set_caret_x(b, b->argv[0]));
 	  break;
 	case 's':
 	  CMD(rlc_save_caret_position(b));
@@ -2544,11 +2572,14 @@ receiveTerminalImage(TerminalImage ti)
   ssize_t count = read(b->pty.master_fd, buf, sizeof(buf));
   if ( count > 0 )
   { char *i = buf;
+    Cprintf("Received (%d bytes):",count);
     while( i < &buf[count] )
     { int chr;
       i = utf8_get_char(i, &chr);
       rlc_putansi(b, chr);
+      Cprintf(" %d", chr);
     }
+    Cprintf("\n");
     rlc_update(b);
     succeed;
   } else if ( count == 0 )
