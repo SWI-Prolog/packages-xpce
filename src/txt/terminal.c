@@ -97,7 +97,7 @@
 		 *	     FUNCTIONS		*
 		 *******************************/
 
-static void	free_rlc_data(RlcData b);
+static void	rlc_destroy_buffer(RlcData b);
 static void	rcl_setup_ansi_colors(RlcData b);
 static bool	rlc_caret_xy(RlcData b, int *x, int *y);
 static void	rlc_resize_pixel_units(RlcData b, int w, int h);
@@ -191,7 +191,7 @@ static status
 unlinkTerminalImage(TerminalImage ti)
 { if ( ti->data )
   { ti->data->object = NULL;
-    free_rlc_data(ti->data);
+    rlc_destroy_buffer(ti->data);
     ti->data = NULL;
   }
 
@@ -1399,6 +1399,23 @@ rlc_make_buffer(int w, int h)
   return b;
 }
 
+static void
+rlc_destroy_buffer(RlcData b)
+{ b->magic = 42;			/* so next gets errors */
+
+  if ( b->lines )
+  { int i;
+
+    for(i=0; i<b->height; i++)
+    { if ( b->lines[i].text )
+	free(b->lines[i].text);
+    }
+
+    free(b->lines);
+  }
+
+  free(b);
+}
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Copy all lines one `back' (i.e.  towards   older  lines).  If the oldest
@@ -2400,25 +2417,6 @@ rlc_update(rlc_console c)
 		 /*******************************
 		 *           PTY CODE           *
 		 *******************************/
-
-
-static void
-free_rlc_data(RlcData b)
-{ b->magic = 42;			/* so next gets errors */
-
-  if ( b->lines )
-  { int i;
-
-    for(i=0; i<b->height; i++)
-    { if ( b->lines[i].text )
-	free(b->lines[i].text);
-    }
-
-    free(b->lines);
-  }
-
-  free(b);
-}
 
 
 		 /*******************************
