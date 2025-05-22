@@ -161,6 +161,8 @@ keycode_to_name(SDL_Event *event)
       return toInt(event->key.key);
     case SDLK_BACKSPACE:
       return NAME_backspace;
+    case SDLK_DELETE:
+      return NAME_delete;
     case SDLK_PAUSE:	return NAME_pause;
     case SDLK_HOME:	return NAME_cursorHome;
     case SDLK_PAGEUP:	return NAME_pageUp;

@@ -138,7 +138,9 @@ static void	rlc_update(rlc_console c);
 static void	changed_caret(RlcData b);
 static bool	rlc_open_pty_pair(RlcData b);
 static void	rlc_close_connection(RlcData b);
-static ssize_t	rlc_send(RlcData b, char *buffer, size_t count);
+static ssize_t	rlc_send(RlcData b, const char *buffer, size_t count);
+static void	rlc_resize_pty(RlcData b, int cols, int rows);
+
 
 		 /*******************************
 		 *        DEBUG SUPPORT         *
@@ -268,18 +270,40 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
 
   if ( isAEvent(ev, NAME_keyboard) )
     return send(ti, NAME_typed, ev, EAV);
+  if ( isAEvent(ev, NAME_msMiddleUp) )
+    return send(ti, NAME_paste, EAV);
 
   fail;
 }
 
 static status
 typedTerminalImage(TerminalImage ti, EventObj ev)
-{ if ( isInteger(ev->id) )
-  { typed_char(ti->data, valInt(ev->id));
-    succeed;
+{ int chr;
+
+  if ( isInteger(ev->id) )
+  { chr = valInt(ev->id);
+  } else if ( ev->id == NAME_backspace )
+  { chr = 127;
+  } else
+    fail;
+
+  typed_char(ti->data, chr);
+  succeed;
+}
+
+static status
+pasteTerminalImage(TerminalImage ti, Name which)
+{ if ( isDefault(which) )
+    which = NAME_primary;
+  StringObj str = get(CurrentDisplay(ti), NAME_paste, which, EAV);
+  size_t ulen;
+  const char *u = stringToUTF8(&str->data, &ulen);
+  if ( rlc_send(ti->data, u, ulen) != ulen )
+  { Cprintf("Failed to send %s\n", u);
+    fail;
   }
 
-  fail;
+  succeed;
 }
 
 static status
@@ -309,6 +333,20 @@ insertTerminalImage(TerminalImage ti, CharArray ca)
 
   succeed;
 }
+
+
+#ifdef HAVE_POSIX_OPENPT
+static Name
+getPtyNameTerminalImage(TerminalImage ti)
+{ if ( ti->data->pty.slave_name[0] )
+    return CtoName(ti->data->pty.slave_name);
+  fail;
+}
+#endif
+
+		 /*******************************
+		 *       TEMPORARY STUFF        *
+		 *******************************/
 
 static status
 printTerminalImage(TerminalImage ti)
@@ -366,18 +404,18 @@ static senddecl send_terminal_image[] =
      NAME_event, "Handle a general event"),
   SM(NAME_typed, 1, "event", typedTerminalImage,
      NAME_event, "Process a keystroke"),
+  SM(NAME_paste, 1, "which=[{primary,clipboard}]", pasteTerminalImage,
+     NAME_event, "Paste content of clipboard or primary selection"),
   SM(NAME_insert, 1, "text=char_array", insertTerminalImage,
      NAME_insert, "Insert text at caret (moves caret)"),
   SM(NAME_print, 0, NULL, printTerminalImage,
      NAME_debug, "Print content of the window"),
 };
 
-#define get_terminal_image NULL
-/*
 static getdecl get_terminal_image[] =
-{
+{ GM(NAME_ptyName, 0, "pty=name", NULL, getPtyNameTerminalImage,
+     NAME_process, "Path name for the pty")
 };
-*/
 
 static classvardecl rc_terminal_image[] =
 { RC(NAME_saveLines, "int", "1000",
@@ -1319,19 +1357,8 @@ rlc_resize_pixel_units(RlcData b, int w, int h)
     return;				/* no real change */
 
   rlc_resize(b, nw, nh);
-
-#if 0
-  if ( _rlc_resize_hook )
-  { (*_rlc_resize_hook)(b->width, b->window_size);
-  } else
-  {
-#ifdef SIGWINCH
-    raise(SIGWINCH);
-#endif
-  }
-#endif
-
   rlc_request_redraw(b);
+  rlc_resize_pty(b, nw, nh);
 }
 
 		 /*******************************
@@ -2460,10 +2487,12 @@ rlc_open_pty_pair(RlcData b)
   }
 
   char *slave = ptsname(b->pty.master_fd);
+#if 0
   if ( !slave )
   { close(b->pty.master_fd);
     return errorPce(b->object, NAME_cannotPtsname);
   }
+#endif
 
   strncpy(b->pty.slave_name, slave, sizeof(b->pty.slave_name) - 1);
   Cprintf("pty = %s\n", b->pty.slave_name);
@@ -2498,7 +2527,7 @@ rlc_close_connection(RlcData b)
 }
 
 static ssize_t
-rlc_send(RlcData b, char *buffer, size_t count)
+rlc_send(RlcData b, const char *buffer, size_t count)
 { if ( b->pty.master_fd )
   { return write(b->pty.master_fd, buffer, count);
   } else
@@ -2529,6 +2558,26 @@ receiveTerminalImage(TerminalImage ti)
   }
   fail;
 }
+
+static void
+rlc_resize_pty(RlcData b, int cols, int rows)
+{ if ( b->pty.open && b->pty.slave_name[0] )
+  { int fd = open(b->pty.slave_name, O_RDWR|O_NOCTTY);
+    if ( fd >= 0 )
+    { struct winsize ws = {
+        .ws_row = rows,
+        .ws_col = cols,
+        .ws_xpixel = valInt(b->object->area->w),
+        .ws_ypixel = valInt(b->object->area->h)
+      };
+      if ( ioctl(fd, TIOCSWINSZ, &ws) == 0 )
+      { Cprintf("Updated size to %dx%d\n", cols, rows);
+      }
+      close(fd);
+    }
+  }
+}
+
 
 #endif/*HAVE_POSIX_OPENPT*/
 
