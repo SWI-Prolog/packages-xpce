@@ -283,7 +283,10 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
   { RlcData b = ti->data;
     Int x, y;
     get_xy_event(ev, ti, ON, &x, &y);
-    rlc_start_selection(b, valInt(x), valInt(y));
+    if ( getMulticlickEvent(ev) == NAME_double )
+      rlc_word_selection(b, valInt(x), valInt(y));
+    else
+      rlc_start_selection(b, valInt(x), valInt(y));
     succeed;
   }
   if ( isAEvent(ev, NAME_msLeftUp) )
@@ -295,8 +298,16 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     { Name href = TCHAR2Name(lnk);
       Cprintf("Clicked %s\n", pp(href));
     }
+    succeed;
   }
   if ( isAEvent(ev, NAME_msLeftDrag) )
+  { RlcData b = ti->data;
+    Int x, y;
+    get_xy_event(ev, ti, ON, &x, &y);
+    rlc_extend_selection(b, valInt(x), valInt(y));
+    succeed;
+  }
+  if ( isAEvent(ev, NAME_msRightDown) )
   { RlcData b = ti->data;
     Int x, y;
     get_xy_event(ev, ti, ON, &x, &y);
@@ -431,19 +442,6 @@ printTerminalImage(TerminalImage ti)
 
   succeed;
 }
-
-void				/* call unused functions.  temporary! */
-unusedTerminalImage(TerminalImage ti)
-{ int x = 0;
-  int y = 0;
-
-  rlc_start_selection(ti->data, x, y);
-  rlc_extend_selection(ti->data, x, y);
-  rlc_word_selection(ti->data, x, y);
-  rlc_over_link(ti->data, x, y);
-  rlc_clicked_link(ti->data, x, y);
-}
-
 
 /* Type declarations */
 
