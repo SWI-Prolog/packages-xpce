@@ -782,6 +782,12 @@ getMclockPce(Pce pce)
 }
 
 
+static status
+openUrlPce(Pce pce, CharArray url)
+{ return ws_open_url(&url->data);
+}
+
+
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Linux sysinfo() is something completely  different from Solaris sysinfo,
 for which this code was designed.
@@ -1371,6 +1377,8 @@ static senddecl send_pce[] =
      NAME_report, "Write arguments, separated by spaces"),
   SM(NAME_writeLn, 1, "argument=any ...", writeLnPcev,
      NAME_report, "Write arguments, separated by spaces, add nl"),
+  SM(NAME_openUrl, 1, "url=char_array", openUrlPce,
+     NAME_environment, "Open a URL using the platform defaults"),
   SM(NAME_feature, 1, "any", featurePce,
      NAME_version, "Define new feature"),
   SM(NAME_hasFeature, 1, "any", hasFeaturePce,

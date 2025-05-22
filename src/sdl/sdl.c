@@ -159,6 +159,13 @@ pceMTdetach(void)
 { return TRUE;
 }
 
+
+status
+ws_open_url(PceString url)
+{ const char *u = stringToUTF8(url, NULL);
+  return SDL_OpenURL(u);
+}
+
 		 /*******************************
 		 *   SEND TO SDL MAIN THREAD    *
 		 *******************************/
