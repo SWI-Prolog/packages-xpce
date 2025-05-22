@@ -34,6 +34,7 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
+#define _XOPEN_SOURCE 600
 #include <h/kernel.h>
 #include <h/text.h>
 #include "terminal.h"
@@ -135,7 +136,9 @@ static void	typed_char(RlcData b, int chr);
 static void	rlc_putansi(RlcData b, int chr);
 static void	rlc_update(rlc_console c);
 static void	changed_caret(RlcData b);
-
+static bool	rlc_open_pty_pair(RlcData b);
+static void	rlc_close_connection(RlcData b);
+static ssize_t	rlc_send(RlcData b, char *buffer, size_t count);
 
 		 /*******************************
 		 *        DEBUG SUPPORT         *
@@ -183,6 +186,7 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h, FontObj font)
   b->object = ti;
   rcl_setup_ansi_colors(b);
   rlc_init_text_dimensions(b, ti->font);
+  rlc_open_pty_pair(b);
 
   succeed;
 }
@@ -574,7 +578,13 @@ typed_char(RlcData b, int chr)
   else if ( chr == Control('V') )
     rlc_paste(b);
   else
-    Cprintf("Send %d to client\n", chr);
+  { Cprintf("Send %d to client\n", chr);
+    char buf[6];
+    char *e = utf8_put_char(buf, chr);
+    size_t count = e-buf;
+    if ( rlc_send(b, buf, count) != count )
+      Cprintf("Failed to send %d\n", chr);
+  }
 }
 
 
@@ -1413,6 +1423,8 @@ rlc_destroy_buffer(RlcData b)
 
     free(b->lines);
   }
+
+  rlc_close_connection(b);
 
   free(b);
 }
@@ -2414,10 +2426,84 @@ rlc_update(rlc_console c)
     rlc_request_redraw(b);
 }
 
+#ifdef HAVE_POSIX_OPENPT
 		 /*******************************
 		 *           PTY CODE           *
 		 *******************************/
 
+#include <fcntl.h>
+#include <termios.h>
+#include <sys/ioctl.h>
+
+/**
+ * Establish  a pty  pair between  the xpce  terminal and  the client.
+ * Normally,  the client  is a  Prolog  thread, but  this design  also
+ * allows  forking and  attaching  an arbitrary  process  to our  xpce
+ * terminal.
+ */
+
+static bool
+rlc_open_pty_pair(RlcData b)
+{ memset(&b->pty, 0, sizeof(b->pty));
+
+  b->pty.master_fd = posix_openpt(O_RDWR | O_NOCTTY);
+  if ( b->pty.master_fd < 0 )
+    return errorPce(b->object, NAME_cannotOpenPty);
+
+  if ( grantpt(b->pty.master_fd) < 0 )
+  { close(b->pty.master_fd);
+    return errorPce(b->object, NAME_cannotGrantPty);
+  }
+
+  if ( unlockpt(b->pty.master_fd) < 0 )
+  { close(b->pty.master_fd);
+    return errorPce(b->object, NAME_cannotUnlockPty);
+  }
+
+  char *slave = ptsname(b->pty.master_fd);
+  if ( !slave )
+  { close(b->pty.master_fd);
+    return errorPce(b->object, NAME_cannotPtsname);
+  }
+
+  strncpy(b->pty.slave_name, slave, sizeof(b->pty.slave_name) - 1);
+  Cprintf("pty = %s\n", b->pty.slave_name);
+  b->pty.slave_fd = open(b->pty.slave_name, O_RDWR | O_NOCTTY);
+  if ( b->pty.slave_fd < 0 )
+  { close(b->pty.master_fd);
+    return errorPce(b->object, NAME_cannotOpenPty);
+  }
+  b->pty.open = true;
+
+  return true;
+}
+
+static ssize_t
+rlc_send(RlcData b, char *buffer, size_t count)
+{ if ( b->pty.master_fd )
+  { return write(b->pty.master_fd, buffer, count);
+  } else
+  { Cprintf("Nowhere to send data\n");
+    return -1;
+  }
+}
+
+static void
+rlc_close_connection(RlcData b)
+{ if ( b->pty.open )
+  { if ( b->pty.master_fd >= 0 )
+    { close(b->pty.master_fd);
+      b->pty.master_fd = -1;
+    }
+    if ( b->pty.slave_fd >= 0 )	/* leave to the client? */
+    { close(b->pty.slave_fd);
+      b->pty.slave_fd = -1;
+    }
+    b->pty.open = false;
+  }
+}
+
+#endif/*HAVE_POSIX_OPENPT*/
 
 		 /*******************************
 		 *         DEBUG PRINT          *

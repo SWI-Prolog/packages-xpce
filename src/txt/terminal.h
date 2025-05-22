@@ -286,6 +286,16 @@ typedef struct rlc_data
   bool		caret_is_shown;		/* is caret in the window? */
   int		caret_px;		/* Position of the caret in pixels */
   int		caret_py;		/* Position of the caret in pixels */
+#ifdef HAVE_POSIX_OPENPT
+  struct
+  { bool open;
+    int  master_fd;
+    int  slave_fd;
+    char slave_name[128];
+  } pty;
+#else
+#error "No terminal I/O mechanism"
+#endif
 } rlc_data, *RlcData;
 
 
