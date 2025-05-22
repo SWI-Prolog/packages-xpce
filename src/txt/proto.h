@@ -198,6 +198,7 @@ COMMON(status)	makeClassTextImage(Class class);
 
 /* txt/terminal.c */
 COMMON(status)	makeClassTerminalImage(Class class);
+COMMON(status)	receiveTerminalImage(TerminalImage ti);
 
 /* /swi40/jan/src/pl/packages/xpce/src/txt/textmargin.c */
 COMMON(status)	makeClassTextMargin(Class class);

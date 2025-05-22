@@ -83,6 +83,10 @@ sdl_stream_event(SDL_Event *event)
       assert(instanceOfObject(s, ClassSocket));
       acceptSocket(s);
       processed_fd_watch(watch);
+    } else if ( event->user.code == FD_READY_TERMINAL )
+    { TerminalImage ti = event->user.data2;
+      receiveTerminalImage(ti);
+      processed_fd_watch(watch);
     }
 
     return true;

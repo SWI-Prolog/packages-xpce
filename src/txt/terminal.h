@@ -289,9 +289,10 @@ typedef struct rlc_data
 #ifdef HAVE_POSIX_OPENPT
   struct
   { bool open;
-    int  master_fd;
-    int  slave_fd;
-    char slave_name[128];
+    int  master_fd;			/* Terminal side */
+    int  slave_fd;			/* Client side */
+    char slave_name[128];		/* PTY name */
+    FDWatch *watch;			/* Watch for write to terminal */
   } pty;
 #else
 #error "No terminal I/O mechanism"

@@ -2474,8 +2474,28 @@ rlc_open_pty_pair(RlcData b)
     return errorPce(b->object, NAME_cannotOpenPty);
   }
   b->pty.open = true;
+  b->pty.watch = add_fd_to_watch(b->pty.master_fd, FD_READY_TERMINAL, b->object);
 
   return true;
+}
+
+static void
+rlc_close_connection(RlcData b)
+{ if ( b->pty.open )
+  { if ( b->pty.watch )
+    { remove_fd_watch(b->pty.watch);
+      b->pty.watch = NULL;
+    }
+    if ( b->pty.master_fd >= 0 )
+    { close(b->pty.master_fd);
+      b->pty.master_fd = -1;
+    }
+    if ( b->pty.slave_fd >= 0 )	/* leave to the client? */
+    { close(b->pty.slave_fd);
+      b->pty.slave_fd = -1;
+    }
+    b->pty.open = false;
+  }
 }
 
 static ssize_t
@@ -2488,19 +2508,27 @@ rlc_send(RlcData b, char *buffer, size_t count)
   }
 }
 
-static void
-rlc_close_connection(RlcData b)
-{ if ( b->pty.open )
-  { if ( b->pty.master_fd >= 0 )
-    { close(b->pty.master_fd);
-      b->pty.master_fd = -1;
+status
+receiveTerminalImage(TerminalImage ti)
+{ char buf[4096];
+  RlcData b = ti->data;
+
+  ssize_t count = read(b->pty.master_fd, buf, sizeof(buf));
+  if ( count > 0 )
+  { char *i = buf;
+    while( i < &buf[count] )
+    { int chr;
+      i = utf8_get_char(i, &chr);
+      rlc_putansi(b, chr);
     }
-    if ( b->pty.slave_fd >= 0 )	/* leave to the client? */
-    { close(b->pty.slave_fd);
-      b->pty.slave_fd = -1;
-    }
-    b->pty.open = false;
+    rlc_update(b);
+    succeed;
+  } else if ( count == 0 )
+  { Cprintf("EOF\n");
+  } else
+  { Cprintf("Error\n");
   }
+  fail;
 }
 
 #endif/*HAVE_POSIX_OPENPT*/

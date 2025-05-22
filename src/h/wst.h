@@ -43,6 +43,7 @@
 #include <sdl/sdl.h>			/* TODO: this must replace x11/wstproto.h */
 #include <sdl/sdlimage.h>
 #include <sdl/sdldraw.h>
+#include <sdl/sdlinput.h>
 COMMON(status)	metaModifierDisplay(DisplayObj d, Name name);
 COMMON(status)	X11ThreadsDisplay(DisplayObj d, BoolObj val);
 #endif

@@ -40,6 +40,7 @@ typedef enum
 { FD_READY_DISPATCH = 1,
   FD_READY_STREAM_INPUT,
   FD_READY_STREAM_ACCEPT,
+  FD_READY_TERMINAL
 } fd_ready_codes;
 
 typedef enum
