@@ -114,7 +114,7 @@ static void	rlc_extend_selection(RlcData b, int x, int y);
 static void	rlc_word_selection(RlcData b, int x, int y);
 static int	rlc_has_selection(RlcData b);
 static void	rlc_set_selection(RlcData b, int sl, int sc, int el, int ec);
-static bool	rlc_clicked_link(RlcData b, int x, int y);
+static const TCHAR *rlc_clicked_link(RlcData b, int x, int y);
 static const TCHAR *rlc_over_link(RlcData b, int x, int y);
 static href    *rlc_add_link(RlcTextLine tl, const TCHAR *link,
 			     int start, int len);
@@ -139,6 +139,7 @@ static bool	rlc_open_pty_pair(RlcData b);
 static void	rlc_close_connection(RlcData b);
 static ssize_t	rlc_send(RlcData b, const char *buffer, size_t count);
 static void	rlc_resize_pty(RlcData b, int cols, int rows);
+static Name	TCHAR2Name(const TCHAR *str);
 
 
 		 /*******************************
@@ -278,6 +279,30 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     return send(ti, NAME_typed, ev, EAV);
   if ( isAEvent(ev, NAME_msMiddleUp) )
     return send(ti, NAME_paste, EAV);
+  if ( isAEvent(ev, NAME_msLeftDown) )
+  { RlcData b = ti->data;
+    Int x, y;
+    get_xy_event(ev, ti, ON, &x, &y);
+    rlc_start_selection(b, valInt(x), valInt(y));
+    succeed;
+  }
+  if ( isAEvent(ev, NAME_msLeftUp) )
+  { RlcData b = ti->data;
+    Int x, y;
+    get_xy_event(ev, ti, ON, &x, &y);
+    static const TCHAR *lnk;
+    if ( (lnk=rlc_clicked_link(b, valInt(x), valInt(y))) )
+    { Name href = TCHAR2Name(lnk);
+      Cprintf("Clicked %s\n", pp(href));
+    }
+  }
+  if ( isAEvent(ev, NAME_msLeftDrag) )
+  { RlcData b = ti->data;
+    Int x, y;
+    get_xy_event(ev, ti, ON, &x, &y);
+    rlc_extend_selection(b, valInt(x), valInt(y));
+    succeed;
+  }
 
   fail;
 }
@@ -616,6 +641,25 @@ ucstr(const TCHAR *haystack, const char *needle)
 }
 
 
+static Name
+TCHAR2Name(const TCHAR *str)
+{ char tmp[MAXLINE*4];
+  char *u8 = tmp;
+
+  char *o = u8;
+  for(const TCHAR *s = str; *s; s++)
+  { if ( o < tmp+sizeof(tmp)-8 )
+      o = utf8_put_char(o, *s);
+    else
+      break;			/* for now, truncate  */
+  }
+  *o = 0;
+
+  Name nm = UTF8ToName(tmp);
+  return nm;
+}
+
+
 		 /*******************************
 		 *         HANDLE INPUT         *
 		 *******************************/
@@ -831,45 +875,40 @@ rlc_start_selection(RlcData b, int x, int y)
   rlc_set_selection(b, l, c, l, c);
 }
 
-static bool
+static const TCHAR *
 rlc_clicked_link(RlcData b, int x, int y)
-{ //if ( _rlc_link_hook )
-  { int l, c;
+{ int l, c;
 
-    rlc_translate_mouse(b, x, y, &l, &c);
-    if ( b->sel_unit == SEL_CHAR &&
-	 b->sel_org_line == l &&
-	 b->sel_org_char == c )
-    { RlcTextLine tl = &b->lines[l];
-      for(href *hr=tl->links; hr; hr = hr->next)
-      { if ( c >= hr->start && c <= hr->start + hr->length )
-	{ //DEBUG(Cprintf(("Clicked link %s\n", hr->link));
-	  //return (*_rlc_link_hook)(b, hr->link);
-	}
+  rlc_translate_mouse(b, x, y, &l, &c);
+  if ( b->sel_unit == SEL_CHAR &&
+       b->sel_org_line == l &&
+       b->sel_org_char == c )
+  { RlcTextLine tl = &b->lines[l];
+    for(href *hr=tl->links; hr; hr = hr->next)
+    { if ( c >= hr->start && c <= hr->start + hr->length )
+      { return hr->link;
       }
     }
   }
 
-  return false;
+  return NULL;
 }
 
 static const TCHAR *
 rlc_over_link(RlcData b, int x, int y)
-{ //if ( _rlc_link_hook )
-  { int l, c;
+{ int l, c;
 
-    rlc_translate_mouse(b, x, y, &l, &c);
-    { RlcTextLine tl = &b->lines[l];
-      if ( c < tl->size )
-      { text_char *chr = &tl->text[c];
-	if ( TF_LINK(chr->flags) )
-	{ //DEBUG(Dprintf(_T("On link at %d,%d\n"), l, c));
-	  for(href *hr=tl->links; hr; hr = hr->next)
-	  { if ( c >= hr->start && c <= hr->start + hr->length )
-	    { //DEBUG(Dprintf(_T("  link: %d(%d) -> \"%ls\"\n"),
-	      //	    hr->start, hr->length, hr->link));
-	      return hr->link;
-	    }
+  rlc_translate_mouse(b, x, y, &l, &c);
+  { RlcTextLine tl = &b->lines[l];
+    if ( c < tl->size )
+    { text_char *chr = &tl->text[c];
+      if ( TF_LINK(chr->flags) )
+      { //DEBUG(Dprintf(_T("On link at %d,%d\n"), l, c));
+	for(href *hr=tl->links; hr; hr = hr->next)
+	{ if ( c >= hr->start && c <= hr->start + hr->length )
+	  { //DEBUG(Dprintf(_T("  link: %d(%d) -> \"%ls\"\n"),
+	    //	    hr->start, hr->length, hr->link));
+	    return hr->link;
 	  }
 	}
       }
