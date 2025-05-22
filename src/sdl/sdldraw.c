@@ -46,8 +46,6 @@
 #include "sdlwindow.h"
 
 #define MAX_CTX_DEPTH (10)		/* Max draw context depth */
-#define UNDERLINE_PEN 1.0
-#define UNDERLINE_SEP 2.0
 
 typedef struct
 { int		open;			/* Allow for nested open */
@@ -65,7 +63,7 @@ typedef struct
   Any		default_background;
   Any		fill_pattern;		/* Default for fill operations */
   Name		dash;			/* Dash pattern */
-  int		pen;			/* Drawing thickness */
+  double	pen;			/* Drawing thickness */
 } sdl_draw_context;
 
 #define X(x) ((x) + context.offset_x)
@@ -510,9 +508,11 @@ r_and(int x, int y, int w, int h, Image pattern)
  *
  * @param pen The desired pen thickness.
  */
-void
-r_thickness(int pen)
-{ context.pen = pen;
+double
+r_thickness(double pen)
+{ double old = context.pen;
+  context.pen = pen;
+  return old;
 }
 
 /**

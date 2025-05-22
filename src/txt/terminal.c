@@ -1200,8 +1200,15 @@ rcl_paint_text(RlcData b,
       }
 
       //Cprintf("Print \"%s\" at %d,%d using %s\n", t, *cx, ty, pp(ti->font));
-      s_print_utf8(t, ulen, *cx, ty, font);
+      int x0 = *cx;
+      s_print_utf8(t, ulen, x0, ty, font);
       *cx += tchar_width(b, t, ulen, segment, ti->font);
+      if ( TF_UNDERLINE(flags) )
+      { double o_pen = r_thickness(UNDERLINE_PEN);
+	r_line(x0, ty+UNDERLINE_SEP, *cx, ty+UNDERLINE_SEP);
+	r_thickness(o_pen);
+      }
+
       if ( notDefault(ofg) )
 	r_colour(ofg);
       if ( notDefault(obg) )

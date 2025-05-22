@@ -35,6 +35,9 @@
 #ifndef RAYDRAW_H
 #define RAYDRAW_H
 
+#define UNDERLINE_PEN 1.0
+#define UNDERLINE_SEP 2.0
+
 /* private SDL interface */
 void d_init_surface(cairo_surface_t *surf, Any background);
 
@@ -58,7 +61,7 @@ void intersection_iarea(IArea a, IArea b);
 void r_clear(int x, int y, int w, int h);
 void r_complement(int x, int y, int w, int h);
 void r_and(int x, int y, int w, int h, Image pattern);
-void r_thickness(int pen);
+double r_thickness(double pen);
 int r_transformed(int val);
 void r_dash(Name name);
 void d_pen(Pen pen);

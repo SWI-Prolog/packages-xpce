@@ -77,7 +77,6 @@ COMMON(void)	intersection_iarea(IArea a, IArea b);
 COMMON(void)	r_clear(int x, int y, int w, int h);
 COMMON(void)	r_complement(int x, int y, int w, int h);
 COMMON(void)	r_and(int x, int y, int w, int h, Image pattern);
-COMMON(void)	r_thickness(int pen);
 COMMON(int)	r_transformed(int val);
 COMMON(void)	r_dash(Name name);
 COMMON(void)	d_pen(Pen pen);
