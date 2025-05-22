@@ -246,9 +246,19 @@ geometryTerminalImage(TerminalImage ti, Int x, Int y, Int w, Int h)
 
 static status
 eventTerminalImage(TerminalImage ti, EventObj ev)
-{ DEBUG(NAME_event,
-	if ( ev->id != NAME_locMove )
-	  Cprintf("Event: %s\n", pp(ev->id)));
+{ if ( ev->id == NAME_locMove )
+  { Int x, y;
+    get_xy_event(ev, ti, ON, &x, &y);
+    if ( rlc_over_link(ti->data, valInt(x), valInt(y)) )
+    { assign(ti, armed_link, ON);
+    } else
+    { assign(ti, armed_link, OFF);
+    }
+
+    fail;
+  }
+
+  DEBUG(NAME_event, Cprintf("Event: %s\n", pp(ev->id)));
 
   if ( isAEvent(ev, NAME_focus) )
   { RlcData b = ti->data;
@@ -300,6 +310,14 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
     typed_char(ti->data, chr);
 
   succeed;
+}
+
+static CursorObj
+getDisplayedCursorTerminalImage(TerminalImage ti)
+{ if ( isOn(ti->armed_link) )
+    return getClassVariableValueObject(ti, NAME_linkCursor);
+  else
+    return ti->cursor;
 }
 
 static status
@@ -418,6 +436,8 @@ static vardecl var_terminal_image[] =
      NAME_appearance, "Terminal background colour"),
   SV(NAME_ansiColours, "vector*", IV_GET|IV_STORE, ansiColoursTerminalImage,
      NAME_appearance, "The 16 ansi colours"),
+  IV(NAME_armedLink, "bool", IV_GET,
+     NAME_event, "Hovering a link"),
   SV(NAME_saveLines, "int", IV_GET|IV_STORE, saveLinesTerminalImage,
      NAME_memory, "How many lines are saved for scroll back"),
   IV(NAME_data, "alien:RlcData", IV_NONE,
@@ -449,11 +469,18 @@ static senddecl send_terminal_image[] =
 
 static getdecl get_terminal_image[] =
 { GM(NAME_ptyName, 0, "pty=name", NULL, getPtyNameTerminalImage,
-     NAME_process, "Path name for the pty")
+     NAME_process, "Path name for the pty"),
+  GM(NAME_displayedCursor, 0, "cursor=cursor", NULL,
+     getDisplayedCursorTerminalImage,
+     NAME_event, "Indicate normal cursor or link")
 };
 
 static classvardecl rc_terminal_image[] =
-{ RC(NAME_saveLines, "int", "1000",
+{ RC(NAME_cursor, "cursor", "xterm",
+     "Default cursor"),
+  RC(NAME_linkCursor, "cursor", "pointer",
+     "Default cursor when hovering a link"),
+  RC(NAME_saveLines, "int", "1000",
      "How many lines are saved for scroll back"),
   RC(NAME_font, "font", "font(screen,roman,13)",
      "Default font"),

@@ -277,6 +277,7 @@ NewClass(terminal_image)
   FontObj	bold_font;		/* Boldened font */
   Colour	background;		/* Background colour */
   Vector	ansi_colours;		/* The 16 ANSI colour codes */
+  BoolObj	armed_link;		/* Hovering over link */
   Int		save_lines;		/* # saved lines */
   struct rlc_data *data;		/* The buffered data */
 End;
