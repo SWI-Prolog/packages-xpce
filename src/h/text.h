@@ -276,6 +276,7 @@ NewClass(terminal_image)
   FontObj	font;			/* Basic font */
   FontObj	bold_font;		/* Boldened font */
   Colour	background;		/* Background colour */
+  Style		selection_style;	/* Style for selected text  */
   Vector	ansi_colours;		/* The 16 ANSI colour codes */
   BoolObj	armed_link;		/* Hovering over link */
   Int		save_lines;		/* # saved lines */
