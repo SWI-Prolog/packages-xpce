@@ -99,7 +99,6 @@
 		 *******************************/
 
 static void	rlc_destroy_buffer(RlcData b);
-static void	rcl_setup_ansi_colors(RlcData b);
 static bool	rlc_caret_xy(RlcData b, int *x, int *y);
 static void	rlc_resize_pixel_units(RlcData b, int w, int h);
 static RlcData	rlc_make_buffer(int w, int h);
@@ -186,7 +185,6 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h, FontObj font)
   RlcData b = rlc_make_buffer(cw, valInt(ti->save_lines));
   ti->data = b;
   b->object = ti;
-  rcl_setup_ansi_colors(b);
   rlc_init_text_dimensions(b, ti->font);
   rlc_open_pty_pair(b);
 
@@ -334,6 +332,12 @@ fontTerminalImage(TerminalImage ti, FontObj font)
 }
 
 static status
+ansiColoursTerminalImage(TerminalImage ti, Vector colours)
+{ assign(ti, ansi_colours, colours);
+  succeed;			/* force redraw */
+}
+
+static status
 insertTerminalImage(TerminalImage ti, CharArray ca)
 { PceString s = &ca->data;
 
@@ -400,6 +404,8 @@ static vardecl var_terminal_image[] =
      NAME_appearance, "Font used to draw the string"),
   SV(NAME_saveLines, "int", IV_GET|IV_STORE, saveLinesTerminalImage,
      NAME_memory, "How many lines are saved for scroll back"),
+  SV(NAME_ansiColours, "vector*", IV_GET|IV_STORE, ansiColoursTerminalImage,
+     NAME_appearance, "The 16 ansi colours"),
   IV(NAME_data, "alien:RlcData", IV_NONE,
      NAME_cache, "Line buffer and related data")
 };
@@ -436,7 +442,28 @@ static classvardecl rc_terminal_image[] =
 { RC(NAME_saveLines, "int", "1000",
      "How many lines are saved for scroll back"),
   RC(NAME_font, "font", "fixed",
-     "Default font")
+     "Default font"),
+  RC(NAME_ansiColours, "vector*",
+     "vector("
+     "colour(black),"
+     "colour(red3),"
+     "colour(green3),"
+     "colour(yellow3),"
+     "colour(blue2),"
+     "colour(magenta3),"
+     "colour(cyan3),"
+     "colour(gray90),"
+     /* Bright versions */
+     "colour(gray50),"
+     "colour(red),"
+     "colour(green),"
+     "colour(yellow),"
+     "colour(blue),"		/* TBD: 92,92,255 */
+     "colour(magenta),"
+     "colour(cyan),"
+     "colour(white)"
+     ")",
+     "The ANSI colours")
 };
 
 static Name terminal_image_termnames[] =
@@ -474,58 +501,6 @@ rlc_realloc(void *ptr, size_t size)
 static void
 rlc_free(void *ptr)
 { free(ptr);
-}
-
-
-		 /*******************************
-		 *	    ANSI COLORS		*
-		 *******************************/
-
-/* See http://en.wikipedia.org/wiki/ANSI_escape_code */
-
-static void
-rcl_setup_ansi_colors(RlcData b)
-{ b->sgr_flags = TF_DEFAULT;
-
-#ifdef ANSI_VGA_COLORS
-					/* normal versions */
-  b->ansi_color[0]  = RGB(  0,  0,  0);	/* black */
-  b->ansi_color[1]  = RGB(170,  0,  0);	/* red */
-  b->ansi_color[2]  = RGB(0,  170,  0);	/* green */
-  b->ansi_color[3]  = RGB(170, 85,  0);	/* yellow */
-  b->ansi_color[4]  = RGB(  0,  0,170);	/* blue */
-  b->ansi_color[5]  = RGB(170,  0,170);	/* magenta */
-  b->ansi_color[6]  = RGB(  0,170,170);	/* cyan */
-  b->ansi_color[7]  = RGB(170,170,170);	/* white */
-					/* bright/light versions */
-  b->ansi_color[8]  = RGB( 85, 85, 85);	/* black */
-  b->ansi_color[9]  = RGB(255, 85, 85);	/* red */
-  b->ansi_color[10] = RGB( 85,255, 85);	/* green */
-  b->ansi_color[11] = RGB(255,255, 85);	/* yellow */
-  b->ansi_color[12] = RGB( 85, 85,255);	/* blue */
-  b->ansi_color[13] = RGB(255, 85,255);	/* magenta */
-  b->ansi_color[14] = RGB( 85,255,255);	/* cyan */
-  b->ansi_color[15] = RGB(255,255,255);	/* white */
-#else /*XTERM*/
-					/* normal versions */
-  b->ansi_color[0]  = RGB(  0,  0,  0);	/* black */
-  b->ansi_color[1]  = RGB(205,  0,  0);	/* red */
-  b->ansi_color[2]  = RGB(0,  205,  0);	/* green */
-  b->ansi_color[3]  = RGB(205,205,  0);	/* yellow */
-  b->ansi_color[4]  = RGB(  0,  0,238);	/* blue */
-  b->ansi_color[5]  = RGB(205,  0,205);	/* magenta */
-  b->ansi_color[6]  = RGB(  0,205,205);	/* cyan */
-  b->ansi_color[7]  = RGB(229,229,229);	/* white */
-					/* bright/light versions */
-  b->ansi_color[8]  = RGB(127,127,127);	/* black */
-  b->ansi_color[9]  = RGB(255,  0,  0);	/* red */
-  b->ansi_color[10] = RGB(  0,255,  0);	/* green */
-  b->ansi_color[11] = RGB(255,255,  0);	/* yellow */
-  b->ansi_color[12] = RGB( 92, 92,255);	/* blue */
-  b->ansi_color[13] = RGB(255,  0,255);	/* magenta */
-  b->ansi_color[14] = RGB(  0,255,255);	/* cyan */
-  b->ansi_color[15] = RGB(255,255,255);	/* white */
-#endif
 }
 
 		 /*******************************
