@@ -1160,12 +1160,15 @@ rcl_paint_text(RlcData b,
       }
       ulen = ut-t;
 
-#if TODO
-      if ( TF_FG(flags) == ANSI_COLOR_DEFAULT )
-	//SetTextColor(hdc, b->foreground);
-      else
-	//SetTextColor(hdc, b->ansi_color[TF_FG(flags)]);
+      Colour ofg = DEFAULT;
+      int ifg = TF_FG(flags);
+      if ( ifg != ANSI_COLOR_DEFAULT )
+      { Colour fg = getElementVector(ti->ansi_colours, toInt(ifg+1));
+	if ( fg )
+	  ofg = r_colour(fg);
+      }
 
+#if TODO
       if ( TF_BG(flags) == ANSI_COLOR_DEFAULT )
 	SetBkColor(hdc, b->background);
       else
@@ -1175,6 +1178,8 @@ rcl_paint_text(RlcData b,
       //Cprintf("Print \"%s\" at %d,%d using %s\n", t, *cx, ty, pp(ti->font));
       s_print_utf8(t, ulen, *cx, ty, ti->font);
       *cx += tchar_width(b, t, ulen, segment, ti->font);
+      if ( notDefault(ofg) )
+	r_colour(ofg);
 
 #if TODO
       HFONT font = NULL, old_font = NULL;
