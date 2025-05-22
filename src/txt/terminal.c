@@ -332,6 +332,12 @@ fontTerminalImage(TerminalImage ti, FontObj font)
 }
 
 static status
+boldFontTerminalImage(TerminalImage ti, FontObj font)
+{ assign(ti, bold_font, font);
+  succeed;
+}
+
+static status
 ansiColoursTerminalImage(TerminalImage ti, Vector colours)
 { assign(ti, ansi_colours, colours);
   succeed;			/* force redraw */
@@ -402,6 +408,8 @@ static char *T_geometry[] =
 static vardecl var_terminal_image[] =
 { SV(NAME_font, "font", IV_GET|IV_STORE, fontTerminalImage,
      NAME_appearance, "Font used to draw the string"),
+  SV(NAME_boldFont, "font*", IV_GET|IV_STORE, boldFontTerminalImage,
+     NAME_appearance, "Font for bold text"),
   SV(NAME_saveLines, "int", IV_GET|IV_STORE, saveLinesTerminalImage,
      NAME_memory, "How many lines are saved for scroll back"),
   SV(NAME_ansiColours, "vector*", IV_GET|IV_STORE, ansiColoursTerminalImage,
@@ -441,8 +449,10 @@ static getdecl get_terminal_image[] =
 static classvardecl rc_terminal_image[] =
 { RC(NAME_saveLines, "int", "1000",
      "How many lines are saved for scroll back"),
-  RC(NAME_font, "font", "fixed",
+  RC(NAME_font, "font", "font(screen,roman,13)",
      "Default font"),
+  RC(NAME_boldFont, "font", "font(screen,bold,13)",
+     "Bold font"),
   RC(NAME_ansiColours, "vector*",
      "vector("
      "colour(black),"

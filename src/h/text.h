@@ -274,6 +274,7 @@ End;
 NewClass(terminal_image)
   ABSTRACT_GRAPHICAL
   FontObj	font;			/* Basic font */
+  FontObj	bold_font;		/* Boldened font */
   Int		save_lines;		/* # saved lines */
   Vector	ansi_colours;
   struct rlc_data *data;		/* The buffered data */
