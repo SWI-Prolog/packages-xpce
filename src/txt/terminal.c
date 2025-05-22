@@ -2404,87 +2404,12 @@ rlc_update(rlc_console c)
 }
 
 		 /*******************************
-		 *	  UPDATE THREAD		*
+		 *           PTY CODE           *
 		 *******************************/
 
-#if TODO
-DWORD WINAPI
-window_loop(LPVOID arg)
-{ RlcData b = (RlcData) arg;
 
-  rlc_create_window(b);
-					/* if we do not do this, all windows */
-					/* created by Prolog (XPCE) will be */
-					/* in the background and inactive! */
-  if ( !AttachThreadInput(b->application_thread_id,
-			  b->console_thread_id, true) )
-    rlc_putansi(b, '!');
 
-  PostThreadMessage(b->application_thread_id, WM_RLC_READY, 0, 0);
 
-  while(!b->closing)
-  { switch( b->imode )
-    { case IMODE_COOKED:
-      { TCHAR *line = read_line(b);
-
-	if ( line != RL_CANCELED_CHARP )
-	{ LQueued lq = rlc_malloc(sizeof(lqueued));
-
-	  lq->next = NULL;
-	  lq->line = line;
-
-	  if ( b->ltail )
-	  { b->ltail->next = lq;
-	    b->ltail = lq;
-	  } else
-	  { b->lhead = b->ltail = lq;
-					      /* awake main thread */
-	    PostThreadMessage(b->application_thread_id, WM_RLC_INPUT, 0, 0);
-	  }
-	}
-
-	break;
-      }
-      case IMODE_RAW:
-      { MSG msg;
-
-	if ( rlc_get_message(&msg, NULL, 0, 0) )
-	{ TranslateMessage(&msg);
-	  DispatchMessage(&msg);
-	  rlc_flush_output(b);
-	} else
-	  goto out;
-
-	if ( b->imodeswitch )
-	{ b->imodeswitch = false;
-	}
-      }
-    }
-  }
-
-  if ( b->closing <= 2 )
-  { MSG msg;
-    TCHAR *waiting = _T("\r\nWaiting for Prolog. ")
-		     _T("Close again to force termination ..");
-
-    rlc_write(b, waiting, _tcslen(waiting));
-
-    while ( b->closing <= 2 && rlc_get_message(&msg, NULL, 0, 0) )
-    { TranslateMessage(&msg);
-      DispatchMessage(&msg);
-      rlc_flush_output(b);
-    }
-  }
-
-out:
-{ DWORD appthread = b->application_thread_id;
-  rlc_destroy(b);
-
-  PostThreadMessage(appthread, WM_RLC_READY, 0, 0);
-}
-  return 0;
-}
-#endif
 
 		 /*******************************
 		 *	   BUFFERED I/O		*
