@@ -39,25 +39,6 @@
 
 typedef uint32_t TCHAR;
 
-/* Queue for handling input typed by the user.  I.e., keyboard events
- * push characters into this queue to be read by the client of the
- * terminal.
- */
-typedef struct
-{ int		 first;
-  int		 last;
-  int		 size;			/* size of the buffer */
-  TCHAR		*buffer;		/* character buffer */
-  int		 flags;			/* flags for the queue */
-#ifdef HAVE_PIPE
-  int		 pipefd[2];		/* Synchronization pipe */
-#else
-#error "No queue synchronization"
-#endif
-} rlc_queue, *RlcQueue;
-
-#define RLC_EOF	0x1			/* Flags on the queue */
-
 /* Marks a location in the line buffer
  */
 typedef struct
@@ -317,7 +298,6 @@ typedef struct rlc_data
 					/* input queuing */
   int		imode;			/* input mode */
   int		imodeswitch;		/* switching imode */
-  RlcQueue	queue;			/* input stream */
   LQueued	lhead;			/* line-queue head */
   LQueued	ltail;			/* line-queue tail */
   TCHAR		promptbuf[MAXPROMPT];	/* Buffer for building prompt */

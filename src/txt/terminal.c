@@ -108,7 +108,6 @@ static void	rlc_open_line(RlcData b);
 static void	rlc_update_scrollbar(RlcData b);
 static void	rlc_paste(RlcData b);
 static void	rlc_init_text_dimensions(RlcData b, FontObj f);
-static bool	rlc_add_queue(RlcData b, RlcQueue q, int chr);
 static int	rlc_add_lines(RlcData b, int here, int add);
 static void	rlc_start_selection(RlcData b, int x, int y);
 static void	rlc_extend_selection(RlcData b, int x, int y);
@@ -133,9 +132,6 @@ static void     rlc_do_write(RlcData b, TCHAR *buf, int count);
 static void     rlc_reinit_line(RlcData b, int line);
 static void	rlc_free_line(RlcData b, int line);
 static int	rlc_between(RlcData b, int f, int t, int v);
-static RlcQueue	rlc_make_queue(int size);
-static int	rlc_from_queue(RlcQueue q);
-static int	rlc_is_empty_queue(RlcQueue q);
 static void	typed_char(RlcData b, int chr);
 static void	rlc_putansi(RlcData b, int chr);
 static void	rlc_update(rlc_console c);
@@ -187,7 +183,6 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h, FontObj font)
   ti->data = b;
   b->object = ti;
   rcl_setup_ansi_colors(b);
-  b->queue = rlc_make_queue(256);
   rlc_init_text_dimensions(b, ti->font);
 
   succeed;
@@ -326,10 +321,7 @@ printTerminalImage(TerminalImage ti)
 
 void				/* call unused functions.  temporary! */
 unusedTerminalImage(TerminalImage ti)
-{ RlcQueue q = rlc_make_queue(10);
-  rlc_is_empty_queue(q);
-
-  int x = 0;
+{ int x = 0;
   int y = 0;
 
   rlc_start_selection(ti->data, x, y);
@@ -580,8 +572,8 @@ typed_char(RlcData b, int chr)
     rlc_interrupt(b);
   else if ( chr == Control('V') )
     rlc_paste(b);
-  else if ( b->queue )
-    rlc_add_queue(b, b->queue, chr);
+  else
+    Cprintf("Send %d to client\n", chr);
 }
 
 
@@ -2314,7 +2306,9 @@ rlc_clipboard_text(rlc_console c)
 
 static void
 rlc_paste(RlcData b)
-{ RlcQueue q = b->queue;
+{
+#if TODO
+  RlcQueue q = b->queue;
   wchar_t *text = NULL;
 
   if ( q && (text=rlc_clipboard_text(b)) )
@@ -2322,6 +2316,7 @@ rlc_paste(RlcData b)
       rlc_add_queue(b, q, text[i]);
     rlc_free(text);
   }
+#endif
 }
 
 		 /*******************************
@@ -2490,136 +2485,6 @@ out:
   return 0;
 }
 #endif
-
-		 /*******************************
-		 *	      QUEUE		*
-		 *******************************/
-
-#define QN(q, i) ((i)+1 >= (q)->size ? 0 : (i)+1)
-#define QP(q, i) ((i)-1 < 0 ? (q)->size-1 : (i)-1)
-
-
-RlcQueue
-rlc_make_queue(int size)
-{ RlcQueue q;
-
-  if ( (q = rlc_malloc(sizeof(rlc_queue))) )
-  { q->first = q->last = 0;
-    q->size = size;
-    q->flags = 0;
-
-    if ( (q->buffer = rlc_malloc(sizeof(TCHAR) * size)) )
-      return q;
-#ifdef HAVE_PIPE
-    if ( pipe(q->pipefd) != 0 )
-      Cprintf("Failed to create pipe\n");
-    /* TODO: set O_CLOEXEC */
-#endif
-  }
-
-  return NULL;				/* not enough memory */
-}
-
-
-static int
-rlc_resize_queue(RlcQueue q, int size)
-{ TCHAR *newbuf;
-
-  if ( (newbuf = rlc_malloc(size*sizeof(TCHAR))) )
-  { TCHAR *o = newbuf;
-    int c;
-
-    while( (c=rlc_from_queue(q)) != -1 )
-      *o++ = c;
-
-    if ( q->buffer )
-      rlc_free(q->buffer);
-    q->buffer = newbuf;
-    q->first = 0;
-    q->last  = (int)(o-newbuf);
-    q->size  = size;
-
-    return true;
-  }
-
-  return false;
-}
-
-
-/**
- * Called on typed characters.  These  are added to the terminal input
- * queue and  if the queue changes  from empty to non-empty  we inform
- * the terminal's client.
- */
-static bool
-rlc_add_queue(RlcData b, RlcQueue q, int chr)
-{ int empty = (q->first == q->last);
-
-  while(q->size < 50000)
-  { if ( QN(q, q->last) != q->first )
-    { q->buffer[q->last] = chr;
-      q->last = QN(q, q->last);
-
-      if ( empty )
-      {
-#ifdef HAVE_PIPE
-	write(q->pipefd[1], "+", 1);
-#endif
-      }
-
-      return true;
-    }
-
-    rlc_resize_queue(q, q->size*2);
-  }
-
-  return false;
-}
-
-
-int
-rlc_is_empty_queue(RlcQueue q)
-{ if ( q->first == q->last )
-    return true;
-
-  return false;
-}
-
-
-static int
-rlc_from_queue(RlcQueue q)
-{ if ( q->first != q->last )
-  { int chr = q->buffer[q->first];
-
-    q->first = QN(q, q->first);
-
-    return chr;
-  }
-
-  return -1;
-}
-
-int
-getch(RlcData b)
-{ RlcQueue q = b->queue;
-  while( rlc_is_empty_queue(q) )
-  {
-#ifdef HAVE_POLL
-    struct pollfd fds[1];
-    fds[0].fd = q->pipefd[0];
-    fds[0].events = POLLIN;
-    fds[0].revents = 0;
-    if ( poll(fds, 1, -1) < 0 )
-    { Cprintf("poll() error\n");
-    }
-#else
-#error "No wait mechanism"
-#endif
-  }
-
-  return rlc_from_queue(q);
-}
-
 
 		 /*******************************
 		 *	   BUFFERED I/O		*
