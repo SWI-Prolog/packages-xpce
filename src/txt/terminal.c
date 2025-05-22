@@ -332,7 +332,6 @@ unusedTerminalImage(TerminalImage ti)
   rlc_word_selection(ti->data, x, y);
   rlc_over_link(ti->data, x, y);
   rlc_clicked_link(ti->data, x, y);
-  typed_char(ti->data, 'a');
 }
 
 
@@ -1270,7 +1269,7 @@ rlc_request_redraw(RlcData b)
     { RlcTextLine l = &b->lines[i];
 
       if ( l->changed & CHG_CHANGED )
-      { Cprintf("Line %p is changed\n", l);
+      { // Cprintf("Line %p is changed\n", l);
 	if ( first )
 	{ ymin = y * b->ch;
 	  ymax = ymin + b->ch;
