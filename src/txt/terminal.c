@@ -1228,10 +1228,12 @@ rcl_paint_text(RlcData b,
   *t = 0;
 
   if ( insel )					/* TBD: Cache */
-  { //SetBkColor(hdc, b->sel_background);
-    //SetTextColor(hdc, b->sel_foreground);
-    //TextOut(hdc, *cx, ty, text, len);
+  { r_colour(ti->selection_style->colour);
+    r_background(ti->selection_style->background);
+    int x0 = *cx;
     *cx += tchar_width(b, text, t-text, len, ti->font);
+    r_clear(x0, ty-b->cb, *cx-x0, b->ch);
+    s_print_utf8(text, t-text, x0, ty, ti->font);
   } else
   { int start, segment, ulen;
 
@@ -1293,22 +1295,14 @@ rcl_paint_text(RlcData b,
 
 static void
 rlc_redraw(RlcData b, int x, int y, int w, int h)
-{ //TerminalImage ti = b->object;
+{ TerminalImage ti = b->object;
   int sl = 0;
   int el = b->window_size;
   int l = rlc_add_lines(b, b->window_start, sl);
   int pl = sl;				/* physical line */
   bool insel = false;			/* selected lines? */
 
-  //SelectObject(hdc, b->hfont);
-  //SetTextColor(hdc, b->foreground);
-  //SetBkColor(hdc, b->background);
-
-  if ( b->background == RGB(255, 255, 255) )
-  { //bg = GetStockObject(WHITE_BRUSH);
-  } else
-  { //bg = CreateSolidBrush(b->background);
-  }
+  r_background(ti->background);
 
   if ( rlc_count_lines(b, b->first, b->sel_start_line) <
        rlc_count_lines(b, b->first, l) &&
@@ -1317,8 +1311,8 @@ rlc_redraw(RlcData b, int x, int y, int w, int h)
     insel = true;
 
   if ( insel )
-  { //SetBkColor(hdc, b->sel_background);
-    //SetTextColor(hdc, b->sel_foreground);
+  { r_colour(ti->selection_style->colour);
+    r_background(ti->selection_style->background);
   }
 
   for(; pl <= el; l = NextLine(b, l), pl++)
