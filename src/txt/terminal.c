@@ -139,6 +139,8 @@ static void	rlc_close_connection(RlcData b);
 static ssize_t	rlc_send(RlcData b, const char *buffer, size_t count);
 static void	rlc_resize_pty(RlcData b, int cols, int rows);
 static Name	TCHAR2Name(const TCHAR *str);
+static void	rlc_scroll_bubble(RlcData b,
+				  int *length, int *start, int *view);
 
 
 		 /*******************************
@@ -243,6 +245,17 @@ geometryTerminalImage(TerminalImage ti, Int x, Int y, Int w, Int h)
 
   succeed;
 }
+
+static status
+bubbleScrollBarTerminalImage(TerminalImage ti, ScrollBar sb)
+{ int length, start, view;
+  rlc_scroll_bubble(ti->data, &length, &start, &view);
+  send(sb, NAME_bubble,
+       toInt(length), toInt(start), toInt(view), EAV);
+
+  succeed;
+}
+
 
 static status
 clickedLinkTerminalImage(TerminalImage ti, Name href)
@@ -477,6 +490,8 @@ static vardecl var_terminal_image[] =
      NAME_event, "Hovering a link"),
   IV(NAME_linkMessage, "code*", IV_BOTH,
      NAME_event, "Hovering a link"),
+  IV(NAME_scrollBar, "scroll_bar*", IV_BOTH,
+     NAME_event, "Associated scroll_bar"),
   SV(NAME_saveLines, "int", IV_GET|IV_STORE, saveLinesTerminalImage,
      NAME_memory, "How many lines are saved for scroll back"),
   IV(NAME_data, "alien:RlcData", IV_NONE,
@@ -492,6 +507,8 @@ static senddecl send_terminal_image[] =
      DEFAULT, "Change geometry"),
   SM(NAME_compute, 0, NULL, computeTerminalImage,
      NAME_repaint, "Recompute the terminal image"),
+  SM(NAME_bubbleScrollBar, 1, "scroll_bar", bubbleScrollBarTerminalImage,
+     NAME_scroll, "Update bubble of given scroll_bar object"),
   SM(NAME_WantsKeyboardFocus, 0, NULL, succeedObject,
      NAME_event, "Test if ready to accept input (true)"),
   SM(NAME_event, 1, "event", eventTerminalImage,
@@ -1213,19 +1230,22 @@ rlc_place_caret(RlcData b)
 
 static void
 rlc_update_scrollbar(RlcData b)
-{ //if ( b->window )
-  { int nsb_lines = rlc_count_lines(b, b->first, b->last);
-    int nsb_start = rlc_count_lines(b, b->first, b->window_start);
+{ TerminalImage ti = b->object;
+  if ( notNil(ti->scroll_bar) )
+    requestComputeGraphical(ti->scroll_bar, DEFAULT);
+}
 
-    if ( nsb_lines != b->sb_lines ||
-	 nsb_start != b->sb_start )
-    { //SetScrollRange(b->window, SB_VERT, 0, nsb_lines, false);
-      //SetScrollPos(  b->window, SB_VERT, nsb_start, true);
+static void
+rlc_scroll_bubble(RlcData b, int *length, int *start, int *view)
+{ int nsb_lines = rlc_count_lines(b, b->first, b->last);
+  int nsb_start = rlc_count_lines(b, b->first, b->window_start);
+  int nsb_view  = rlc_count_lines(b, b->window_start, b->last);
+  if ( nsb_view > b->height )
+    nsb_view = b->height;
 
-      b->sb_lines = nsb_lines;
-      b->sb_start = nsb_start;
-    }
-  }
+  *length = nsb_lines;
+  *start  = nsb_start;
+  *view   = nsb_view;
 }
 
 
