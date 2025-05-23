@@ -271,7 +271,7 @@ scrollVerticalTerminalImage(TerminalImage ti,
       lines = -lines;
     rlc_scroll_lines(b, lines);
   } else if ( unit == NAME_page )
-  { int lines = b->height*valInt(amount)/1000;
+  { int lines = b->window_size*valInt(amount)/1000;
     if ( dir == NAME_backwards )
       lines = -lines;
     rlc_scroll_lines(b, lines);
@@ -1272,8 +1272,8 @@ rlc_scroll_bubble(RlcData b, int *length, int *start, int *view)
 { int nsb_lines = rlc_count_lines(b, b->first, b->last);
   int nsb_start = rlc_count_lines(b, b->first, b->window_start);
   int nsb_view  = rlc_count_lines(b, b->window_start, b->last);
-  if ( nsb_view > b->height )
-    nsb_view = b->height;
+  if ( nsb_view > b->window_size )
+    nsb_view = b->window_size;
 
   *length = nsb_lines;
   *start  = nsb_start;
@@ -1292,8 +1292,9 @@ rlc_scroll_lines(RlcData b, int lines)
   { for( ; lines && b->window_start != b->first; lines++)
       b->window_start = PrevLine(b, b->window_start);
   }
+
   b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
-  rlc_update(b);
+  rlc_request_redraw(b);
 }
 
 /** Draw a line of the terminal
