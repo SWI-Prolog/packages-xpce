@@ -141,6 +141,7 @@ static void	rlc_resize_pty(RlcData b, int cols, int rows);
 static Name	TCHAR2Name(const TCHAR *str);
 static void	rlc_scroll_bubble(RlcData b,
 				  int *length, int *start, int *view);
+static void	rlc_scroll_lines(RlcData b, int lines);
 
 
 		 /*******************************
@@ -252,6 +253,32 @@ bubbleScrollBarTerminalImage(TerminalImage ti, ScrollBar sb)
   rlc_scroll_bubble(ti->data, &length, &start, &view);
   send(sb, NAME_bubble,
        toInt(length), toInt(start), toInt(view), EAV);
+
+  succeed;
+}
+
+static status
+scrollVerticalTerminalImage(TerminalImage ti,
+			    Name dir, Name unit, Int amount)
+{ RlcData b = ti->data;
+
+  Cprintf("scroll: %s %s %s\n", pp(dir), pp(unit), pp(amount));
+  if ( unit == NAME_file )
+  {
+  } else if ( unit == NAME_line )
+  { int lines = valInt(amount);
+    if ( dir == NAME_backwards )
+      lines = -lines;
+    rlc_scroll_lines(b, lines);
+  } else if ( unit == NAME_page )
+  { int lines = b->height*valInt(amount)/1000;
+    if ( dir == NAME_backwards )
+      lines = -lines;
+    rlc_scroll_lines(b, lines);
+  } else
+  { Cprintf("scroll unit is %s\n", pp(unit));
+    fail;
+  }
 
   succeed;
 }
@@ -474,6 +501,9 @@ static char *T_initialise[] =
 { "width=int", "height=int" };
 static char *T_geometry[] =
 { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
+static char *T_scrollVertical[] =
+        { "direction={forwards,backwards,goto}",
+	  "unit={file,page,line}", "amount=int" };
 
 static vardecl var_terminal_image[] =
 { SV(NAME_font, "font", IV_GET|IV_STORE, fontTerminalImage,
@@ -509,6 +539,8 @@ static senddecl send_terminal_image[] =
      NAME_repaint, "Recompute the terminal image"),
   SM(NAME_bubbleScrollBar, 1, "scroll_bar", bubbleScrollBarTerminalImage,
      NAME_scroll, "Update bubble of given scroll_bar object"),
+  SM(NAME_scrollVertical, 3, T_scrollVertical, scrollVerticalTerminalImage,
+     NAME_scroll, "Trap scroll_bar request"),
   SM(NAME_WantsKeyboardFocus, 0, NULL, succeedObject,
      NAME_event, "Test if ready to accept input (true)"),
   SM(NAME_event, 1, "event", eventTerminalImage,
@@ -1248,6 +1280,21 @@ rlc_scroll_bubble(RlcData b, int *length, int *start, int *view)
   *view   = nsb_view;
 }
 
+static void
+rlc_scroll_lines(RlcData b, int lines)
+{ if ( lines == 0 )
+    return;
+
+  if ( lines > 0 )
+  { for( ; lines && b->window_start != b->last; lines--)
+      b->window_start = NextLine(b, b->window_start);
+  } else
+  { for( ; lines && b->window_start != b->first; lines++)
+      b->window_start = PrevLine(b, b->window_start);
+  }
+  b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
+  rlc_update(b);
+}
 
 /** Draw a line of the terminal
  */
