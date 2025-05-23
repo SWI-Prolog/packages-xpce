@@ -89,6 +89,7 @@ poll_thread_fn(void *unused)
 	{ int expected = watch_max;
 	  if ( i < watch_max )
 	    atomic_compare_exchange_strong(&watch_max, &expected, i);
+	  break;
 	}
       }
     }
