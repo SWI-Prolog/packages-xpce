@@ -279,6 +279,7 @@ NewClass(terminal_image)
   Style		selection_style;	/* Style for selected text  */
   Vector	ansi_colours;		/* The 16 ANSI colour codes */
   BoolObj	armed_link;		/* Hovering over link */
+  Code		link_message;		/* Handle a clicked link */
   Int		save_lines;		/* # saved lines */
   struct rlc_data *data;		/* The buffered data */
 End;

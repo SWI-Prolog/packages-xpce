@@ -245,8 +245,15 @@ geometryTerminalImage(TerminalImage ti, Int x, Int y, Int w, Int h)
 }
 
 static status
+clickedLinkTerminalImage(TerminalImage ti, Name href)
+{ if ( ti->link_message )
+    forwardReceiverCode(ti->link_message, ti, href, EAV);
+  succeed;
+}
+
+static status
 eventTerminalImage(TerminalImage ti, EventObj ev)
-{ if ( ev->id == NAME_locMove )
+{ if ( ev->id == NAME_locMove && notNil(ti->link_message) )
   { Int x, y;
     get_xy_event(ev, ti, ON, &x, &y);
     if ( rlc_over_link(ti->data, valInt(x), valInt(y)) )
@@ -295,9 +302,10 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     Int x, y;
     get_xy_event(ev, ti, ON, &x, &y);
     static const TCHAR *lnk;
-    if ( (lnk=rlc_clicked_link(b, valInt(x), valInt(y))) )
+    if ( (lnk=rlc_clicked_link(b, valInt(x), valInt(y))) &&
+	 notNil(ti->link_message) )
     { Name href = TCHAR2Name(lnk);
-      Cprintf("Clicked %s\n", pp(href));
+      clickedLinkTerminalImage(ti, href);
     } else if ( rlc_has_selection(b) )
       rlc_copy(b, NAME_primary);
     succeed;
@@ -466,6 +474,8 @@ static vardecl var_terminal_image[] =
   SV(NAME_ansiColours, "vector*", IV_GET|IV_STORE, ansiColoursTerminalImage,
      NAME_appearance, "The 16 ansi colours"),
   IV(NAME_armedLink, "bool", IV_GET,
+     NAME_event, "Hovering a link"),
+  IV(NAME_linkMessage, "code*", IV_BOTH,
      NAME_event, "Hovering a link"),
   SV(NAME_saveLines, "int", IV_GET|IV_STORE, saveLinesTerminalImage,
      NAME_memory, "How many lines are saved for scroll back"),
