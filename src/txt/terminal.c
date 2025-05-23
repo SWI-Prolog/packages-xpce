@@ -262,9 +262,12 @@ scrollVerticalTerminalImage(TerminalImage ti,
 			    Name dir, Name unit, Int amount)
 { RlcData b = ti->data;
 
-  Cprintf("scroll: %s %s %s\n", pp(dir), pp(unit), pp(amount));
   if ( unit == NAME_file )
-  {
+  { int lines = rlc_count_lines(b, b->first, b->last);
+    int start = lines*valInt(amount)/1000;
+    b->window_start = rlc_add_lines(b, b->first, start);
+    b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
+    rlc_request_redraw(b);
   } else if ( unit == NAME_line )
   { int lines = valInt(amount);
     if ( dir == NAME_backwards )
@@ -306,6 +309,9 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
   }
 
   DEBUG(NAME_event, Cprintf("Event: %s\n", pp(ev->id)));
+
+  if ( mapWheelMouseEvent(ev, ti) )
+    succeed;
 
   if ( isAEvent(ev, NAME_focus) )
   { RlcData b = ti->data;
