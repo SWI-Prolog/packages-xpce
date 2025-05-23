@@ -144,7 +144,7 @@ static void	rlc_scroll_lines(RlcData b, int lines);
 
 static void Dprint_links(RlcTextLine tl, const char *msg);
 static void Dprint_lines(RlcData b, int from, int to);
-
+static void Dprint_chr(int chr);
 
 static void
 rlc_check_assertions(RlcData b)
@@ -2316,6 +2316,33 @@ rlc_clear_dec_mode(RlcData b, int mode)
 {
 }
 
+/** The "ST" sequence is either \e\\ or \a
+ */
+static bool
+osc8_end(RlcData b)
+{ const char *end1 = "\e]8;;\a";	/* new OSC 8 standard */
+  const char *end2 = "\e]8;;\e\\";	/* old */
+  const size_t end1l = strlen(end1);
+  const size_t end2l = strlen(end2);
+
+  int chr = b->link[b->link_len-1];
+  if ( chr == '\a' &&
+       b->link_len >= end1l &&
+       cuncmp(end1, &b->link[b->link_len-end1l], end1l) == 0 )
+  { b->link_len -= end1l;
+    return true;
+  }
+  if ( chr == '\\' &&
+       b->link_len >= end2l &&
+       cuncmp(end2, &b->link[b->link_len-end2l], end2l) == 0 )
+  { b->link_len -= end2l;
+    return true;
+  }
+
+  return false;
+}
+
+
 static void
 rlc_put_link(RlcData b, const TCHAR *label, const TCHAR *link)
 { text_flags flags0 = b->sgr_flags;
@@ -2409,23 +2436,27 @@ rlc_putansi(RlcData b, int chr)
       }
     case CMD_LINKARG:
       if ( b->link_len < ANSI_MAX_LINK-1 )
-      { const char *end = "\e]8;;\e\\";
-	const char *sep = "\e\\";
-	const size_t endl = strlen(end);
-	const size_t sepl = strlen(sep);
+      { const char *sep1   = "\a"; /* OSC8 "ST" sequence */
+	const size_t sep1l = strlen(sep1);
+	const char *sep2   = "\e\\";
+	const size_t sep2l = strlen(sep2);
+
 	b->link[b->link_len++] = chr;
 	b->link[b->link_len] = 0;
-	if ( chr == '\\' &&
-	     b->link_len >= endl &&
-	     cuncmp(end, &b->link[b->link_len-endl], endl) == 0 )
-	{ b->link_len -= endl;
+	if ( osc8_end(b) )
+	{ TCHAR *link;
+
 	  b->cmdstat = CMD_INITIAL;
 	  b->link[b->link_len] = 0;
-	  TCHAR *label = ucstr(b->link, sep);
-	  TCHAR *link;
+
+	  TCHAR *label = ucstr(b->link, sep1);
 	  if ( label )
 	  { *label = 0;
-	    label += sepl;
+	    label += sep1l;
+	    link = b->link;
+	  } else if ( (label=ucstr(b->link, sep2)) )
+	  { *label = 0;
+	    label += sep2l;
 	    link = b->link;
 	  } else
 	  { label = b->link;
@@ -2762,12 +2793,12 @@ receiveTerminalImage(TerminalImage ti)
   { char *i = buf;
     bool debug = false;
     DEBUG(NAME_term, debug = true);
-    if ( debug ) Cprintf("Received (%d bytes):", count);
+    if ( debug ) Cprintf("Received (%d bytes): ", count);
     while( i < &buf[count] )
     { int chr;
       i = utf8_get_char(i, &chr);
       rlc_putansi(b, chr);
-      if ( debug ) Cprintf(" %d", chr);
+      if ( debug ) Dprint_chr(chr);
     }
     if ( debug ) Cprintf("\n");
     rlc_update(b);
@@ -2837,4 +2868,20 @@ Dprint_lines(RlcData b, int from, int to)
     if ( from == to )
       break;
   }
+}
+
+static void
+Dprint_chr(int chr)
+{ if ( chr >= ' ' && chr <= 127 )
+    Cprintf("%c", chr);
+  else if ( chr == 27 )
+    Cprintf("\\\\e");
+  else if ( chr == 13 )
+    Cprintf("\\\\r");
+  else if ( chr == 10 )
+    Cprintf("\\\\n");
+  else if ( chr == 9 )
+    Cprintf("\\\\t");
+  else
+    Cprintf("\\\\u%04x", chr);
 }
