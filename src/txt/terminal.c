@@ -2346,7 +2346,7 @@ rlc_putansi(RlcData b, int chr)
 	  break;
         case 0x7:
 	  //MessageBeep(MB_ICONEXCLAMATION);
-	  Cprintf("Beep!\n");
+	  send(b->object, NAME_flash, EAV);
 	  break;
 	case '\r':
 	  CMD(rlc_cariage_return(b));

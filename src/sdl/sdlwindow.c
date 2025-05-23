@@ -258,10 +258,15 @@ ws_flash_area_window(PceWindow sw, int x, int y, int w, int h, int msecs)
  *
  * @param sw Pointer to the PceWindow object.
  * @param msecs The duration to flash the window, in milliseconds.
+ * @todo  This flashes the entire frame as in SDL only the frame is
+ * an SDL window.
  */
 void
 ws_flash_window(PceWindow sw, int msecs)
-{
+{ FrameObj fr = getFrameWindow(sw, OFF);
+  WsFrame wfr = fr->ws_ref;
+  if ( wfr->ws_window )
+    SDL_FlashWindow(wfr->ws_window, SDL_FLASH_BRIEFLY);
 }
 
 /**
