@@ -226,6 +226,15 @@ typedef struct
   RlcFreeDataHook hook;			/* call when destroying console */
 } user_data;
 
+typedef enum
+{ CMD_INITIAL = 0,
+  CMD_ESC,
+  CMD_ANSI,
+  CMD_LINK,
+  CMD_LINKARG,
+  CMD_DEC_PRIVATE
+} ansi_state;
+
 #define RLC_MAGIC	0x3b75df1e	/* magic number to verify */
 
 /* This struct holds all data related to the terminal image, i.e.,
@@ -250,7 +259,7 @@ typedef struct rlc_data
   int		sel_start_char;		/* starting char for selection */
   int		sel_end_line;		/* ending line for selection */
   int		sel_end_char;		/* ending char for selection */
-  int		cmdstat;		/* for parsing ANSI escape */
+  ansi_state    cmdstat;		/* for parsing ANSI escape */
   int		argstat;		/* argument status ANSI */
   char const   *must_see;		/* \e]8;; link decoding */
   int		argc;			/* argument count for ANSI */

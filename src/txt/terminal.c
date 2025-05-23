@@ -61,12 +61,6 @@
 
 #define MAXLINE	     1024		/* max chars per line */
 
-#define CMD_INITIAL	0
-#define CMD_ESC		1
-#define CMD_ANSI	2
-#define CMD_LINK	3
-#define CMD_LINKARG	4
-
 #define GWL_DATA	0		/* offset for client data */
 
 #define CHG_RESET	0		/* unchanged */
@@ -177,7 +171,11 @@ rlc_check_assertions(RlcData b)
 
 static status
 initialiseTerminalImage(TerminalImage ti, Int w, Int h)
-{ initialiseGraphical(ti, ZERO, ZERO, w, h);
+{ if ( isDefault(w) )
+    w = toInt(200);
+  if ( isDefault(h) )
+    h = toInt(100);
+  initialiseGraphical(ti, ZERO, ZERO, w, h);
   obtainClassVariablesObject(ti);
 
   // compute width in characters from w
@@ -286,6 +284,11 @@ scrollVerticalTerminalImage(TerminalImage ti,
   succeed;
 }
 
+
+static status
+interruptTerminalImage(TerminalImage ti)
+{ succeed;
+}
 
 static status
 clickedLinkTerminalImage(TerminalImage ti, Name href)
@@ -504,7 +507,7 @@ printTerminalImage(TerminalImage ti)
 /* Type declarations */
 
 static char *T_initialise[] =
-{ "width=int", "height=int" };
+{ "width=[int]", "height=[int]" };
 static char *T_geometry[] =
 { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 static char *T_scrollVertical[] =
@@ -555,6 +558,8 @@ static senddecl send_terminal_image[] =
      NAME_event, "Process a keystroke"),
   SM(NAME_paste, 1, "which=[{primary,clipboard}]", pasteTerminalImage,
      NAME_event, "Paste content of clipboard or primary selection"),
+  SM(NAME_interrupt, 0, NULL, interruptTerminalImage,
+     NAME_event, "Virtual method called on Ctrl-C"),
   SM(NAME_insert, 1, "text=char_array", insertTerminalImage,
      NAME_insert, "Insert text at caret (moves caret)"),
   SM(NAME_print, 0, NULL, printTerminalImage,
@@ -765,13 +770,7 @@ again:
 
 static void
 rlc_interrupt(RlcData b)
-{
-#if TODO
-  if ( _rlc_interrupt_hook )
-    (*_rlc_interrupt_hook)((rlc_console)b, SIGINT);
-  else
-    raise(SIGINT);
-#endif
+{ send(b->object, NAME_interrupt, EAV);
 }
 
 
@@ -2303,6 +2302,20 @@ rlc_register_link(RlcData b, const TCHAR *link, size_t len)
   return rlc_add_link(tl, link, b->caret_x, len);
 }
 
+/** Set/clear DEC primate modes.  2004 means do (not) emit
+ *  ESC [ 200 ~ ... ESC [ 201 ~ around pasted text.  Not yet
+term *  implemented.
+ */
+static void
+rlc_set_dec_mode(RlcData b, int mode)
+{
+}
+
+static void
+rlc_clear_dec_mode(RlcData b, int mode)
+{
+}
+
 static void
 rlc_put_link(RlcData b, const TCHAR *label, const TCHAR *link)
 { text_flags flags0 = b->sgr_flags;
@@ -2436,6 +2449,7 @@ rlc_putansi(RlcData b, int chr)
 	break;
       }
     case CMD_ANSI:			/* ESC [ */
+    case CMD_DEC_PRIVATE:		/* ESC [ ? */
       if ( chr >= '0' && chr <= '9' )
       { if ( !b->argstat )
 	{ b->argv[b->argc] = (chr - '0');
@@ -2508,6 +2522,21 @@ rlc_putansi(RlcData b, int chr)
 	      CMD(rlc_sgr(b, b->argv[i]));
 	    break;
 	  }
+	case '?':
+	  b->cmdstat = CMD_DEC_PRIVATE;
+	  return;
+	case 'l':
+	  if ( b->cmdstat == CMD_DEC_PRIVATE )
+	  { rlc_need_arg(b, 1, 0);
+	    rlc_clear_dec_mode(b, b->argv[0]);
+	  }
+	  break;
+	case 'h':
+	  if ( b->cmdstat == CMD_DEC_PRIVATE )
+	  { rlc_need_arg(b, 1, 0);
+	    rlc_set_dec_mode(b, b->argv[0]);
+	  }
+	  break;
       }
       b->cmdstat = CMD_INITIAL;
   }
