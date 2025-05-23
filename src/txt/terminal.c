@@ -106,7 +106,6 @@ static int	rlc_count_lines(RlcData b, int from, int to);
 static void	rlc_add_line(RlcData b);
 static void	rlc_open_line(RlcData b);
 static void	rlc_update_scrollbar(RlcData b);
-static void	rlc_paste(RlcData b);
 static void	rlc_init_text_dimensions(RlcData b, FontObj f);
 static int	rlc_add_lines(RlcData b, int here, int add);
 static void	rlc_start_selection(RlcData b, int x, int y);
@@ -120,7 +119,7 @@ static href    *rlc_add_link(RlcTextLine tl, const TCHAR *link,
 			     int start, int len);
 static void	rlc_free_link(href *hr);
 static void	rcl_check_links(RlcTextLine tl);
-static void	rlc_copy(RlcData b);
+static void	rlc_copy(RlcData b, Name to);
 static void	rlc_request_redraw(RlcData b);
 static void	rlc_redraw(RlcData b, int x, int y, int w, int h);
 static void	rlc_resize(RlcData b, int w, int h);
@@ -278,14 +277,16 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
   if ( isAEvent(ev, NAME_keyboard) )
     return send(ti, NAME_typed, ev, EAV);
   if ( isAEvent(ev, NAME_msMiddleUp) )
-    return send(ti, NAME_paste, EAV);
+    return send(ti, NAME_paste, NAME_primary, EAV);
   if ( isAEvent(ev, NAME_msLeftDown) )
   { RlcData b = ti->data;
     Int x, y;
     get_xy_event(ev, ti, ON, &x, &y);
     if ( getMulticlickEvent(ev) == NAME_double )
-      rlc_word_selection(b, valInt(x), valInt(y));
-    else
+    { rlc_word_selection(b, valInt(x), valInt(y));
+      if ( rlc_has_selection(b) )
+	rlc_copy(b, NAME_primary);
+    } else
       rlc_start_selection(b, valInt(x), valInt(y));
     succeed;
   }
@@ -297,7 +298,8 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     if ( (lnk=rlc_clicked_link(b, valInt(x), valInt(y))) )
     { Name href = TCHAR2Name(lnk);
       Cprintf("Clicked %s\n", pp(href));
-    }
+    } else if ( rlc_has_selection(b) )
+      rlc_copy(b, NAME_primary);
     succeed;
   }
   if ( isAEvent(ev, NAME_msLeftDrag) )
@@ -312,6 +314,8 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     Int x, y;
     get_xy_event(ev, ti, ON, &x, &y);
     rlc_extend_selection(b, valInt(x), valInt(y));
+    if ( rlc_has_selection(b) )
+      rlc_copy(ti->data, NAME_primary);
     succeed;
   }
 
@@ -713,7 +717,7 @@ rlc_interrupt(RlcData b)
 static void
 typed_char(RlcData b, int chr)
 { if ( chr == Control('C') && rlc_has_selection(b) )
-  { rlc_copy(b);
+  { rlc_copy(b, NAME_clipboard);
     return;
   }
 
@@ -722,7 +726,7 @@ typed_char(RlcData b, int chr)
   if ( chr == Control('C') )
     rlc_interrupt(b);
   else if ( chr == Control('V') )
-    rlc_paste(b);
+    send(b->object, NAME_paste, NAME_clipboard, EAV);
   else
   { DEBUG(NAME_term, Cprintf("Send %d to client\n", chr));
     char buf[6];
@@ -1099,13 +1103,14 @@ rlc_selection(RlcData b)
 
 
 static void
-rlc_copy(RlcData b)
+rlc_copy(RlcData b, Name to)	/* NAME_clipboard or NAME_primary */
 { TCHAR *sel = rlc_selection(b);
 
   if ( sel )
   { StringObj str = TCHAR2String(sel);
     addCodeReference(str);
-    send(CurrentDisplay(b->object), NAME_selection, NAME_clipboard, str, EAV);
+    send(CurrentDisplay(b->object), NAME_selection, to, str, EAV);
+    Cprintf("Copy to %s: \"%s\"\n", pp(to), pp(str));
     considerPreserveObject(str);
 
     rlc_free(sel);
@@ -2466,20 +2471,6 @@ rlc_clipboard_text(rlc_console c)
   return NULL;
 }
 
-static void
-rlc_paste(RlcData b)
-{
-#if TODO
-  RlcQueue q = b->queue;
-  wchar_t *text = NULL;
-
-  if ( q && (text=rlc_clipboard_text(b)) )
-  { for(int i=0; text[i]; i++)
-      rlc_add_queue(b, q, text[i]);
-    rlc_free(text);
-  }
-#endif
-}
 
 		 /*******************************
 		 *	LINE-READ SUPPORT	*
