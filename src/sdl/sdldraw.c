@@ -1836,8 +1836,14 @@ s_print_utf8(const char *u, size_t len, int x, int y, FontObj font)
       tmp = malloc(len+1);
     memcpy(tmp, u, len);
     tmp[len] = 0;
-    assert(strlen(tmp) == len);	/* TODO: What if there are 0-bytes */
+    if ( strlen(tmp) != len )
+    { for(size_t i=0; i<len; i++)
+	if ( !tmp[i] )
+	  tmp[i] = 1;
+    }
     cairo_show_text(CR, tmp);
+    if ( tmp != buf )
+      free(tmp);
   }
 }
 
