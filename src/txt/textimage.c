@@ -1040,13 +1040,14 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
     }
 
     if ( prt )
-    { r_colour(c);
+    { size_t len = out-buf;
 
-      s_printW(buf, e - s, l->chars[s].x, l->y + l->base, f);
+      r_colour(c);
+      s_printW(buf, len, l->chars[s].x, l->y + l->base, f);
 
       if ( atts & TXT_BOLDEN )
-      { s_printW(buf, e - s, l->chars[s].x+1, l->y   + l->base, f);
-	s_printW(buf, e - s, l->chars[s].x,   l->y-1 + l->base, f);
+      { s_printW(buf, len, l->chars[s].x+1, l->y   + l->base, f);
+	s_printW(buf, len, l->chars[s].x,   l->y-1 + l->base, f);
       }
     }
 
