@@ -192,13 +192,19 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h)
 
 static status
 unlinkTerminalImage(TerminalImage ti)
-{ if ( ti->data )
+{ ScrollBar sb = ti->scroll_bar;
+
+  if ( sb )
+  { assign(ti, scroll_bar, NIL);
+    send(sb, NAME_destroy, EAV);
+  }
+  if ( ti->data )
   { ti->data->object = NULL;
     rlc_destroy_buffer(ti->data);
     ti->data = NULL;
   }
 
-  succeed;
+  return unlinkGraphical((Graphical)ti);
 }
 
 static status

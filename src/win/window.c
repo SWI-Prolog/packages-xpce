@@ -841,14 +841,17 @@ keyboardFocusWindow(PceWindow sw, Graphical gr)
 
     if ( fr )
       send(fr, NAME_keyboardFocus, sw, EAV);
-
   }
 
-  if ( sw->keyboard_focus != gr )
+  Graphical focus = sw->keyboard_focus;
+  if ( focus != gr )
   { Button defb;
 
-    if ( notNil(sw->keyboard_focus) )
-      generateEventGraphical(sw->keyboard_focus, NAME_releaseKeyboardFocus);
+    if ( notNil(focus) &&
+	 !onFlag(focus, F_FREED|F_FREEING) )
+    { assign(sw, keyboard_focus, NIL);
+      generateEventGraphical(focus, NAME_releaseKeyboardFocus);
+    }
 
     if ( instanceOfObject(gr, ClassButton) !=
 	 instanceOfObject(sw->keyboard_focus, ClassButton) &&
