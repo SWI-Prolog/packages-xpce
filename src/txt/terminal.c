@@ -399,9 +399,9 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   } else if ( ev->id == NAME_cursorDown )
   { seq = "\e[B";
   } else if ( ev->id == NAME_cursorLeft )
-  { seq = "\e[C";
-  } else if ( ev->id == NAME_cursorRight )
   { seq = "\e[D";
+  } else if ( ev->id == NAME_cursorRight )
+  { seq = "\e[C";
   } else if ( ev->id == NAME_delete )
   { seq = "\e[3~";
   } else
