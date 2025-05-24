@@ -1749,30 +1749,31 @@ static void
 move_links(RlcTextLine from, RlcTextLine to)
 { href *next;
 
-  Cprintf("Move links from %p to %p\n", from, to);
-  Dprint_links(from, "On from");
-  Dprint_links(to, "On to");
+  DEBUG(NAME_term,
+	Cprintf("Move links from %p to %p\n", from, to);
+	Dprint_links(from, "On from");
+	Dprint_links(to, "On to"));
   for(href *hr = from->links; hr; hr=next)
   { next = hr->next;
     unlink_href(from, hr);
     for(href *hr2 = to->links; hr2; hr2=hr2->next)
     { if ( hr->start+hr->length == hr2->start &&
 	   ucscmp(hr->link, hr2->link) == 0 )
-      {	Cprintf("Rejoin split link\n");
+      {	DEBUG(NAME_term, Cprintf("Rejoin split link\n"));
 	hr2->start = hr->start;
 	hr2->length += hr->length;
 	rlc_free_link(hr);
 	goto next_link;
       }
     }
-    Cprintf("Moved %p\n", hr);
+    DEBUG(NAME_term, Cprintf("Moved %p\n", hr));
     hr->next = to->links;
     to->links = hr;
   next_link:
     ;
   }
 
-  Dprint_links(to, "After move");
+  DEBUG(NAME_term, Dprint_links(to, "After move"));
 }
 
 static void
@@ -1879,7 +1880,7 @@ rlc_resize(RlcData b, int w, int h)
     } else if ( tl->text && tl->softreturn && tl->size < w )
     { RlcTextLine nl;
 
-      Cprintf("  Merge\n");
+      DEBUG(NAME_term, Cprintf("  Merge\n"));
       if ( i == b->last )
 	rlc_add_line(b);
       nl = &b->lines[NextLine(b, i)];
