@@ -37,10 +37,10 @@
 #include <SDL3/SDL.h>
 
 typedef enum
-{ FD_READY_DISPATCH = 1,
-  FD_READY_STREAM_INPUT,
-  FD_READY_STREAM_ACCEPT,
-  FD_READY_TERMINAL
+{ FD_READY_DISPATCH = 1,	/* main tty input (shared with SDL dispatch) */
+  FD_READY_STREAM_INPUT,	/* Data arrives on a process or socket */
+  FD_READY_STREAM_ACCEPT,	/* Socket is accepted */
+  FD_READY_TERMINAL		/* TerminalImage pty received data */
 } fd_ready_codes;
 
 typedef enum

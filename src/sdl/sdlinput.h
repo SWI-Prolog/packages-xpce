@@ -37,12 +37,23 @@
 #include "sdluserevent.h"
 #include <stdatomic.h>
 
+typedef enum
+{ WATCH_FREE = 0,		/* free to be allocated */
+  WATCH_RESERVED,		/* Being installed */
+  WATCH_ACTIVE,			/* Fully installed */
+  WATCH_PENDING,		/* Sent SDL Event */
+  WATCH_PROCESSING,		/* Processing SDL event */
+  WATCH_REMOVE			/* Ready to be removed */
+} watch_state;
+
 typedef struct
 { int		fd;		/* FD we are watching */
-  int		code;		/* SDL3 event.user.code */
+  fd_ready_codes code;		/* SDL3 event.user.code */
   atomic_int	state;		/* WATCH_* */
-  void	       *userdata;	/* SDL3 event.user.data1 */
+  Any		userdata;	/* SDL3 event.user.data2 */
 } FDWatch;
+
+bool cmp_and_set_watch(FDWatch *watch, watch_state old, watch_state new);
 
 bool	 start_fd_watcher_thread(void);
 FDWatch *add_fd_to_watch(int fd, int32_t code, void *userdata);

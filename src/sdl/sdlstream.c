@@ -63,29 +63,40 @@ sdl_stream_event(SDL_Event *event)
 { if ( event->type == MY_EVENT_FD_READY )
   { FDWatch *watch = event->user.data1;
 
+    if ( !cmp_and_set_watch(watch, WATCH_PENDING, WATCH_PROCESSING) )
+      return true;		/* watch was removed */
+
     if ( event->user.code != FD_READY_DISPATCH )
       DEBUG(NAME_stream, Cprintf("Data on %d (code = %d)\n",
 				 watch->fd, event->user.code));
 
     if ( event->user.code == FD_READY_STREAM_INPUT )
     { Stream s = event->user.data2;
-      assert(instanceOfObject(s, ClassStream));
-      pceMTLock(LOCK_PCE);
-      DEBUG(NAME_stream, Cprintf("handleInputStream(%s)\n", pp(s)));
-      bool rc = handleInputStream(s);
-      pceMTUnlock(LOCK_PCE);
-      if ( rc )
-	processed_fd_watch(watch);
-      else
-	ws_no_input_stream(s);
+      if ( !onFlag(s, F_FREED|F_FREEING) )
+      { assert(instanceOfObject(s, ClassStream));
+	pceMTLock(LOCK_PCE);
+	DEBUG(NAME_stream, Cprintf("handleInputStream(%s)\n", pp(s)));
+	bool rc = handleInputStream(s);
+	pceMTUnlock(LOCK_PCE);
+	if ( !rc )
+	  ws_no_input_stream(s);
+      }
+      processed_fd_watch(watch);
     } else if ( event->user.code == FD_READY_STREAM_ACCEPT )
     { Socket s = event->user.data2;
-      assert(instanceOfObject(s, ClassSocket));
-      acceptSocket(s);
+      if ( !onFlag(s, F_FREED|F_FREEING) )
+      { assert(instanceOfObject(s, ClassSocket));
+	pceMTLock(LOCK_PCE);
+	acceptSocket(s);
+	pceMTUnlock(LOCK_PCE);
+      }
       processed_fd_watch(watch);
     } else if ( event->user.code == FD_READY_TERMINAL )
     { TerminalImage ti = event->user.data2;
-      receiveTerminalImage(ti);
+      if ( !onFlag(ti, F_FREED|F_FREEING) )
+      { assert(instanceOfObject(ti, ClassTerminalImage));
+	receiveTerminalImage(ti);
+      }
       processed_fd_watch(watch);
     }
 

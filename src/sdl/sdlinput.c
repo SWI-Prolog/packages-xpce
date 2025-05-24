@@ -52,11 +52,6 @@
 #include "sdlinput.h"
 
 #define MAX_FDS 64
-#define WATCH_FREE     0
-#define WATCH_RESERVED 1
-#define WATCH_ACTIVE   2
-#define WATCH_PENDING  3
-#define WATCH_REMOVE   4
 
 static struct pollfd poll_fds[MAX_FDS];
 static int meta_id[MAX_FDS];
@@ -64,6 +59,15 @@ static FDWatch fd_meta[MAX_FDS] = {0};
 static int control_pipe[2];
 static int watch_max = 0;
 static SDL_Thread *watcher_thread = NULL;
+
+static void lock_watch_userdata(FDWatch *watch);
+static void unlock_watch_userdata(FDWatch *watch);
+
+bool
+cmp_and_set_watch(FDWatch *watch, watch_state old, watch_state new)
+{ return atomic_compare_exchange_strong(&watch->state, &old, new);
+}
+
 
 static int
 poll_thread_fn(void *unused)
@@ -110,14 +114,14 @@ poll_thread_fn(void *unused)
       { FDWatch *watch = &fd_meta[meta_id[i]];
 
 	DEBUG(NAME_stream, Cprintf("Input on %d\n", watch->fd));
-	if ( watch->state == WATCH_ACTIVE )
-	{ watch->state = WATCH_PENDING;
-	  DEBUG(NAME_stream, Cprintf("Posting %d\n", watch->fd));
+	if ( cmp_and_set_watch(watch, WATCH_ACTIVE, WATCH_PENDING) )
+	{ DEBUG(NAME_stream, Cprintf("Posting %d\n", watch->fd));
 	  SDL_Event ev = {0};
 	  ev.type = MY_EVENT_FD_READY;
 	  ev.user.code  = watch->code;
 	  ev.user.data1 = watch;
 	  ev.user.data2 = watch->userdata;
+	  lock_watch_userdata(watch);
 	  SDL_PushEvent(&ev);
 	}
       }
@@ -142,13 +146,11 @@ start_fd_watcher_thread(void)
 
 FDWatch *
 add_fd_to_watch(int fd, int32_t code, void *userdata)
-{ for(int i=0; i<MAX_FDS; i++)
-  { int free = WATCH_FREE;
+{ FDWatch *watch = fd_meta;
 
-    if ( atomic_compare_exchange_strong(
-	   &fd_meta[i].state, &free, WATCH_RESERVED) )
-    { FDWatch *watch = &fd_meta[i];
-      watch->fd       = fd;
+  for(int i=0; i<MAX_FDS; i++, watch++)
+  { if ( cmp_and_set_watch(watch, WATCH_FREE, WATCH_RESERVED) )
+    { watch->fd       = fd;
       watch->code     = code;
       watch->userdata = userdata;
       watch->state    = WATCH_ACTIVE;
@@ -164,19 +166,56 @@ add_fd_to_watch(int fd, int32_t code, void *userdata)
 
 void
 remove_fd_watch(FDWatch *watch)
-{ if ( watch )
-  { watch->state = WATCH_REMOVE;
-    write(control_pipe[1], "-", 1);
+{ while ( watch && watch->state != WATCH_REMOVE )
+  { if ( cmp_and_set_watch(watch, WATCH_ACTIVE, WATCH_REMOVE) )
+    { write(control_pipe[1], "-", 1);
+    } else if ( cmp_and_set_watch(watch, WATCH_PENDING, WATCH_REMOVE) )
+    { unlock_watch_userdata(watch);
+      write(control_pipe[1], "-", 1);
+    } else if ( cmp_and_set_watch(watch, WATCH_PROCESSING, WATCH_REMOVE) )
+    { (void)0;			/* delete in processed_fd_watch */
+    }
   }
 }
 
 void
 processed_fd_watch(FDWatch *watch)
 { if ( watch )
-  { DEBUG(NAME_stream,
-	  if ( watch->fd != 0 )
-	    Cprintf("Re-enabling %d\n", watch->fd));
-    watch->state = WATCH_ACTIVE;
-    write(control_pipe[1], "=", 1);
+  { if ( cmp_and_set_watch(watch, WATCH_PROCESSING, WATCH_ACTIVE) )
+    { DEBUG(NAME_stream,
+	    if ( watch->fd != 0 )
+	      Cprintf("Re-enabling %d\n", watch->fd));
+      unlock_watch_userdata(watch);
+      write(control_pipe[1], "=", 1);
+    } else if ( watch->state == WATCH_REMOVE )
+    { unlock_watch_userdata(watch);
+      write(control_pipe[1], "-", 1);
+    }
+  }
+}
+
+static void
+lock_watch_userdata(FDWatch *watch)
+{ switch(watch->code)
+  { case FD_READY_STREAM_INPUT:
+    case FD_READY_STREAM_ACCEPT:
+    case FD_READY_TERMINAL:
+      addCodeReference(watch->userdata);
+      break;
+    case FD_READY_DISPATCH:
+      break;
+  }
+}
+
+static void
+unlock_watch_userdata(FDWatch *watch)
+{ switch(watch->code)
+  { case FD_READY_STREAM_INPUT:
+    case FD_READY_STREAM_ACCEPT:
+    case FD_READY_TERMINAL:
+      delCodeReference(watch->userdata);
+      break;
+    case FD_READY_DISPATCH:
+      break;
   }
 }
