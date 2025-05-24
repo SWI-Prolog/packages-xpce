@@ -34,7 +34,6 @@
 
 #ifndef RAYFONT_H
 #define RAYFONT_H
-#include <SDL3_ttf/SDL_ttf.h>
 #include <cairo/cairo.h>
 
 typedef struct
