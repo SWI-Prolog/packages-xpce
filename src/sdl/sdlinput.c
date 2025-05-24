@@ -166,7 +166,8 @@ add_fd_to_watch(int fd, int32_t code, void *userdata)
 
 void
 remove_fd_watch(FDWatch *watch)
-{ while ( watch && watch->state != WATCH_REMOVE )
+{ while ( watch &&
+	  !(watch->state == WATCH_REMOVE || watch->state == WATCH_FREE) )
   { if ( cmp_and_set_watch(watch, WATCH_ACTIVE, WATCH_REMOVE) )
     { write(control_pipe[1], "-", 1);
     } else if ( cmp_and_set_watch(watch, WATCH_PENDING, WATCH_REMOVE) )
