@@ -1229,7 +1229,7 @@ rlc_caret_xy(RlcData b, int *x, int *y)
 
 static void
 rlc_draw_caret(RlcData b, int x, int y)
-{ if ( b->caret_is_shown )
+{ if ( b->caret_is_shown && !b->hide_caret )
   { TerminalImage ti = b->object;
     Any colour = getClassVariableValueClass(ClassTextCursor,
 					    b->has_focus ? NAME_colour
@@ -2438,6 +2438,13 @@ rlc_set_dec_mode(RlcData b, int mode)
   { case 1:
       b->app_escape = true;
       break;
+    case 12:
+      DEBUG(NAME_term, Cprintf("stub: enable blinking cursor\n"));
+      break;
+    case 25:
+      b->hide_caret = false;
+      changed_caret(b);
+      break;
     case 1049:
       Cprintf("Save screen\n");
       rlc_save_screen(b);
@@ -2453,6 +2460,13 @@ rlc_clear_dec_mode(RlcData b, int mode)
 { switch(mode)
   { case 1:
       b->app_escape = false;
+      break;
+    case 12:
+      DEBUG(NAME_term, Cprintf("stub: enable static cursor\n"));
+      break;
+    case 25:
+      b->hide_caret = true;
+      changed_caret(b);
       break;
     case 1049:
       Cprintf("Restore saved screen\n");

@@ -282,7 +282,7 @@ typedef struct rlc_data
   int		scaret_x;		/* saved-caret X */
   int		scaret_y;		/* saved-caret Y */
   bool		has_focus;		/* Application has the focus */
-  int		fixedfont;		/* Font is fixed */
+  bool		fixedfont;		/* Font is fixed */
   COLORREF	foreground;		/* Foreground (text) color */
   COLORREF	background;		/* Background color */
   COLORREF	sel_foreground;		/* Selection foreground */
@@ -296,6 +296,7 @@ typedef struct rlc_data
   int		sb_lines;		/* #lines the scrollbar thinks */
   int		sb_start;		/* start-line scrollbar thinks */
   bool		caret_is_shown;		/* is caret in the window? */
+  bool		hide_caret;		/* DEC Private Mode 25 */
   int		caret_px;		/* Position of the caret in pixels */
   int		caret_py;		/* Position of the caret in pixels */
 #ifdef HAVE_POSIX_OPENPT
