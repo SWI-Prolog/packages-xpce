@@ -71,7 +71,7 @@ epilog(Title) :-
 :- pce_begin_class(prolog_terminal, terminal_image,
                    "Terminal for running a Prolog thread").
 
-variable(goal_init, prolog := version, both, "Goal to run for initialization").
+variable(goal_init, prolog := version, both, "Goal to run for init").
 variable(goal,      prolog := prolog,  both, "Main goal").
 
 initialise(PT) :->
@@ -115,7 +115,9 @@ terminated :-
     close_io.
 
 close_io :-
-    catch(thread_util:disable_line_editing(user_input, user_output, user_error),
+    catch(thread_util:disable_line_editing(user_input,
+                                           user_output,
+                                           user_error),
           error(_,_), true),
     close(user_input, [force(true)]),
     close(user_output, [force(true)]),
