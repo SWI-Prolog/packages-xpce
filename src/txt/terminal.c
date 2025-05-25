@@ -145,6 +145,7 @@ static void	rlc_scroll_lines(RlcData b, int lines);
 static void Dprint_links(RlcTextLine tl, const char *msg);
 static void Dprint_lines(RlcData b, int from, int to);
 static void Dprint_chr(int chr);
+static void Dprint_csi(RlcData b, int chr);
 
 static void
 rlc_check_assertions(RlcData b)
@@ -2591,6 +2592,8 @@ rlc_putansi(RlcData b, int chr)
 	    CMD(rlc_erase_display(b));
 	  else if ( b->argv[0] == 3 )
 	    CMD(rlc_erase_saved_lines(b));
+	  else
+	    Dprint_csi(b, chr);
 	  break;
 	case 'K':
 	  CMD(rlc_erase_line(b));
@@ -2627,9 +2630,16 @@ rlc_putansi(RlcData b, int chr)
 	    rlc_set_dec_mode(b, b->argv[0]);
 	  }
 	  break;
+	case 't':
+	  if ( b->argv[0] == 22 )
+	  { DEBUG(NAME_term, Cprintf("ESC[22;0;0t: un-minimize\n"));
+	  } else if ( b->argv[0] == 23 )
+	  { DEBUG(NAME_term, Cprintf("ESC[23;0;0t: minimize\n"));
+	  } else
+	    Dprint_csi(b, chr);
+	  break;
 	default:
-	  Cprintf("Unknown ANSI escape: %c (%d args)\n",
-		  chr, b->argc);
+	  Dprint_csi(b, chr);
       }
       b->cmdstat = CMD_INITIAL;
   }
@@ -2946,4 +2956,12 @@ Dprint_chr(int chr)
     Cprintf("\\\\t");
   else
     Cprintf("\\\\u%04x", chr);
+}
+
+static void
+Dprint_csi(RlcData b, int chr)
+{ Cprintf("Unknown ANSI CSI: \\\\e[");
+  for(int i=0; i<b->argc; i++)
+    Cprintf("%s%d", i==0?"":";", b->argv[i]);
+  Cprintf("%c\n", chr);
 }
