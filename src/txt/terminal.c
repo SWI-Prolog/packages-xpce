@@ -1854,10 +1854,11 @@ rlc_resize(RlcData b, int w, int h)
     DEBUG(NAME_term, Cprintf("%03d: sz=%d %s\n", i, tl->size,
 			     tl->softreturn ? "(soft)" : ""));
     if ( tl->size > w )
-    { Cprintf("  Truncate\n");
+    { DEBUG(NAME_term, Cprintf("  Truncate\n"));
       if ( !tl->softreturn )		/* hard --> soft */
-      { Cprintf("    hard -> soft\n");
-	Dprint_lines(b, i, i);
+      { DEBUG(NAME_term,
+	      Cprintf("    hard -> soft\n");
+	      Dprint_lines(b, i, i));
 	rlc_shift_lines_down(b, i);
 	DEBUG(NAME_term,
 	      Cprintf("b->first = %d, b->last = %d\n", b->first, b->last));
@@ -1882,7 +1883,7 @@ rlc_resize(RlcData b, int w, int h)
       { RlcTextLine nl;
 	int move = tl->size - w;
 
-	Cprintf("    soft\n");
+	DEBUG(NAME_term, Cprintf("    soft\n"));
 	if ( i == b->last )
 	  rlc_add_line(b);
 	nl = &b->lines[NextLine(b, i)];
@@ -2338,7 +2339,7 @@ rcl_check_links(RlcTextLine tl)
 	  break;
       }
       if ( !hr )
-      { Dprintf(_T("CHECK: %03d could not find href for %d(%d); got: "),
+      { Cprintf("CHECK: %03d could not find href for %d(%d); got: ",
 		tl->line_no, start, len);
 	for(hr = tl->links; hr; hr=hr->next)
 	  Dprintf(_T(" %d(%d)"), hr->start, hr->length);
@@ -2351,7 +2352,7 @@ rcl_check_links(RlcTextLine tl)
   for(href *hr = tl->links; hr; hr=hr->next)
     refs++;
   if ( refs != links )
-  { Dprintf(_T("CHECK: %03d found %d links; expected %d\n"),
+  { Dprintf("CHECK: %03d found %d links; expected %d\n",
 	    tl->line_no, links, refs);
     Dprint_line(tl, true);
   }
