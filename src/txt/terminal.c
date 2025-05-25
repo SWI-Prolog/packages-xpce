@@ -413,6 +413,18 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   { seq = b->app_escape ? "\e0D" : "\e[D";
   } else if ( ev->id == NAME_cursorRight )
   { seq = b->app_escape ? "\e0C" : "\e[C";
+  } else if ( ev->id == NAME_cursorHome )
+  { seq = b->app_escape ? "\e0H" : "\e[H";
+  } else if ( ev->id == NAME_end )
+  { seq = b->app_escape ? "\e0F" : "\e[F";
+  } else if ( ev->id == NAME_pageUp )
+  { // seq = "\e[5~";
+    send(ti, NAME_scrollVertical, NAME_backwards, NAME_page, toInt(900), EAV);
+    succeed;
+  } else if ( ev->id == NAME_pageDown )
+  { // seq = "\e[6~";
+    send(ti, NAME_scrollVertical, NAME_forwards, NAME_page, toInt(900), EAV);
+    succeed;
   } else if ( ev->id == NAME_delete )
   { seq = "\e[3~";
   } else
