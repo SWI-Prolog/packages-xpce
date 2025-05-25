@@ -129,6 +129,14 @@ open_link(_T, Href:name) :->
     tty_link(Href).
 
 
+connect(PT) :->
+    "Connect a Prolog thread to the terminal"::
+    (   current_prolog_terminal(_Thread, PT)
+    ->  true
+    ;   connect(PT, _Title)
+    ).
+
+
                 /*******************************
                 *     MANAGE PROLOG THREAD     *
                 *******************************/
@@ -247,10 +255,47 @@ resize(T) :->
     get(T, member, terminal, TI),
     send(TI, set, 0, 0, TW-SBW, TH).
 
-open(T) :->
-    "Open the terminal and attach a Prolog thread to it"::
-    send_super(T, open),
+create(T) :->
+    "Create the terminal and attach a Prolog thread to it"::
+    send_super(T, create),
     get(T, member, terminal, TI),
-    connect(TI, _Title).
+    send(TI, connect).
 
 :- pce_end_class(terminal).
+
+
+                /*******************************
+                *       CLASS TERMINATOR       *
+                *******************************/
+
+:- pce_begin_class(terminator, frame,
+                   "Multiple terminals and menu").
+
+initialise(T, Title:title=[name],
+           Width:width=[integer], Height:height=[integer]) :->
+    default(Title, "SWI-Prolog console", TheTitle),
+    send_super(T, initialise, TheTitle),
+    send(T, append, new(D, terminator_dialog)),
+    send(terminal(Width, Height), below, D).
+
+quit(_T) :->
+    "Quit Prolog"::
+    format("Quit Prolog\n").
+
+:- pce_end_class(terminator).
+
+:- pce_begin_class(terminator_dialog, dialog, "Prolog terminator menu").
+
+initialise(D) :->
+    send_super(D, initialise),
+    send(D, gap, size(0,0)),
+    send(D, pen, 0),
+    send(D, append, new(MB, menu_bar)),
+    send(MB, append, new(File, popup(file))),
+    Frame = @event?receiver?frame,
+    send_list(File, append,
+              [ menu_item(quit,
+                          message(Frame, quit))
+              ]).
+
+:- pce_end_class(terminator_dialog).
