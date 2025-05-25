@@ -71,6 +71,9 @@ epilog(Title) :-
 :- pce_begin_class(prolog_terminal, terminal_image,
                    "Terminal for running a Prolog thread").
 
+variable(goal_init, prolog := version, both, "Goal to run for initialization").
+variable(goal,      prolog := prolog,  both, "Main goal").
+
 initialise(PT) :->
     "Create Prolog terminal"::
     send_super(PT, initialise),
@@ -133,7 +136,9 @@ connect(PT) :->
     "Connect a Prolog thread to the terminal"::
     (   current_prolog_terminal(_Thread, PT)
     ->  true
-    ;   connect(PT, _Title)
+    ;   get(PT, goal_init, Init),
+        get(PT, goal, Goal),
+        connect(PT, Init, Goal, _Title)
     ).
 
 :- pce_group(event).
@@ -156,11 +161,14 @@ typed_epilog(5, T, Ev) :-              % Shift+Ctrl+e
                 *     MANAGE PROLOG THREAD     *
                 *******************************/
 
-connect(TI, Title) :-
+%!  connect(+TI, :Init, :Goal, -Title) is det.
+
+connect(TI, Init, Goal, Title) :-
     gensym(con, Alias),
     get(TI, pty_name, PTY),
     thread_self(Me),
-    thread_create(thread_run_interactor(Me, PTY, Title), Thread,
+    thread_create(thread_run_interactor(Me, PTY, Init, Goal, Title),
+                  Thread,
                   [ detached(true),
                     alias(Alias),
                     at_exit(terminated)
@@ -175,14 +183,14 @@ connect(TI, Title) :-
     ->  fail
     ).
 
-thread_run_interactor(Creator, PTY, Title) :-
+thread_run_interactor(Creator, PTY, Init, Goal, Title) :-
     set_prolog_flag(query_debug_settings, debug(false, false)),
     Error = error(Formal,_),
     (   catch(attach_terminal(PTY, Title), Error, true)
     ->  (   var(Formal)
         ->  thread_send_message(Creator, title(Title)),
-            print_message(banner, thread_welcome),
-            prolog
+            call(Init),
+            call(Goal)
         ;   thread_send_message(Creator, throw(Error))
         )
     ;   thread_send_message(Creator, false)
@@ -240,7 +248,8 @@ fragment_location(Fragment, File, File:Line) :-
 
 :- pce_begin_class(epilog_window, window, "Implement an embedded terminal").
 
-variable(thread_id, int, none, "Thread alias or integer id").
+variable(terminal, prolog_terminal, get, "The terminal_image").
+delegate_to(terminal).
 
 initialise(T, Title:title=[name],
            Width:width=[integer], Height:height=[integer]) :->
@@ -257,6 +266,7 @@ initialise(T, Title:title=[name],
     WH is round(TheHeight*FH),
     WW is round((TheWidth+2)*EM+SBW),
     send_super(T, initialise, TheTitle, size(WW,WH)),
+    send(T, slot, terminal, TI),
     send(T, display, SB),
     send(T, display, TI),
     send(T, keyboard_focus, TI).
@@ -278,7 +288,9 @@ create(T) :->
 
 split_horizontally(T) :->
     "Add a new terminal below me"::
-    send(new(_W, epilog_window), below, T).
+    new(W, epilog_window),
+    send(W, goal_init, true),
+    send(W, below, T).
 
 split_vertically(T) :->
     "Add a new terminal right of me"::
@@ -300,9 +312,9 @@ initialise(T, Title:title=[name],
     send(T, append, new(D, epilog_dialog)),
     send(epilog_window(@default, Width, Height), below, D).
 
-quit(_T) :->
-    "Quit Prolog"::
-    format("Quit Prolog\n").
+quit(T) :->
+    "Quit this terminal.  Optionally should terminate Prolog"::
+    send(T, destroy).
 
 delete_epilog(T, W:window) :->
     "Remove an individual terminal"::
