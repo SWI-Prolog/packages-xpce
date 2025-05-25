@@ -160,7 +160,7 @@ keycode_to_name(SDL_Event *event)
     case SDLK_TAB:
       return toInt(event->key.key);
     case SDLK_BACKSPACE:
-      if ( event->key.mod & MetaMask )
+      if ( event->key.mod & MetaMask ) /* dubious */
 	return toInt(Meta(Control('H')));
       return NAME_backspace;
     case SDLK_DELETE:
