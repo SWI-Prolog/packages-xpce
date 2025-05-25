@@ -1796,9 +1796,10 @@ static void
 move_links_soft(RlcTextLine from, RlcTextLine to)
 { href *next;
 
-  Cprintf("Move links from %p to %p\n", from, to);
-  Dprint_links(from, "On from");
-  Dprint_links(to, "On to");
+  DEBUG(NAME_term,
+	Cprintf("Move links from %p to %p\n", from, to);
+	Dprint_links(from, "On from");
+	Dprint_links(to, "On to"));
   for(href *hr = from->links; hr; hr=next)
   { next = hr->next;
     if ( hr->start >= from->size )
@@ -1807,14 +1808,14 @@ move_links_soft(RlcTextLine from, RlcTextLine to)
       for(href *hr2 = to->links; hr2; hr2=hr2->next)
       { if ( hr->start+hr->length == hr2->start &&
 	     ucscmp(hr->link, hr2->link) == 0 )
-	{ Cprintf("Rejoin split link\n");
+	{ DEBUG(NAME_term, Cprintf("Rejoin split link\n"));
 	  hr2->start = hr->start;
 	  hr2->length += hr->length;
 	  rlc_free_link(hr);
 	  goto next_link;
 	}
       }
-      Cprintf("Moved %p\n", hr);
+      DEBUG(NAME_term, Cprintf("Moved %p\n", hr));
       hr->next = to->links;
       to->links = hr;
     } else if ( hr->start + hr->length > from->size )
