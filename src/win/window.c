@@ -626,7 +626,8 @@ is_service_window(Any from)
   } else if ( instanceOfObject(from, ClassFrame) )
   { FrameObj fr = from;
     app = fr->application;
-  }
+  } else
+    app = NIL;
 
   DEBUG(NAME_service, Cprintf("Event on %s app=%s\n", pp(from), pp(app)));
 

@@ -779,7 +779,8 @@ again:
     { o = utf8_put_char(o, *s);
     } else
     { size_t len = ucslen(str);
-      u8 = rlc_malloc(len*4);
+      if ( !(u8=rlc_malloc(len*4)) )
+	fail;
       end = u8+len*4-8;
       goto again;
     }
@@ -1601,10 +1602,11 @@ text_width(RlcData b, const text_char *text, int len)
   } else
   { TerminalImage ti = b->object;
     char tmp[MAXLINE*4];
-    char *o;
+    char *o = tmp;
 
-    for(int i=0; i<len; i++)
+    for(int i=0; i<len && o<&tmp[sizeof(tmp)-7]; i++)
       o = utf8_put_char(o, text[i].code);
+    *o = 0;
 
     return str_advance_utf8(tmp, o-tmp, ti->font);
   }
