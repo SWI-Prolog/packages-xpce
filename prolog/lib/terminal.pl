@@ -227,15 +227,16 @@ initialise(T, Title:title=[name],
     default(Height, 25, TheHeight),
     new(TI, prolog_terminal),
     get(TI, class_variable_value, font, Font),
+    send(TI, scroll_bar, new(SB, scroll_bar(TI, vertical))),
     get(Font, height, FH),
     get(Font, width, m, EM),
+    get(SB, width, SBW),
     WH is round(TheHeight*FH),
-    WW is round(TheWidth*EM),
+    WW is round((TheWidth+2)*EM+SBW),
     send_super(T, initialise, TheTitle, size(WW,WH)),
-    send(T, display, new(SB, scroll_bar(TI, vertical))),
+    send(T, display, SB),
     send(T, display, TI),
-    send(T, keyboard_focus, TI),
-    send(TI, scroll_bar, SB).
+    send(T, keyboard_focus, TI).
 
 resize(T) :->
     "Place terminal and scrollbar"::
