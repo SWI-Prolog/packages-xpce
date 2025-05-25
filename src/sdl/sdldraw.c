@@ -1714,7 +1714,7 @@ s_extents_utf8(const char *u, size_t ulen, FontObj font,
 { cairo_t *cr = ws_font_context();
   cairo_save(cr);
   pce_cairo_set_font(cr, font);
-  if ( strlen(u) == ulen )
+  if ( u[ulen] == 0 && strlen(u) == ulen )
   { cairo_text_extents(cr, u, extents);
   } else
   { char buf[1000];
@@ -1825,7 +1825,7 @@ s_print_utf8(const char *u, size_t len, int x, int y, FontObj font)
   pce_cairo_set_font(CR, font);
   pce_cairo_set_source_color(CR, context.colour);
   cairo_move_to(CR, x, y);
-  if ( strlen(u) == len )
+  if ( u[len] == 0 && strlen(u) == len )
   { cairo_show_text(CR, u);
   } else
   { char buf[1000];

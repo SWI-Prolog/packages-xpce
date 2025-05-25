@@ -1015,7 +1015,7 @@ rlc_over_link(RlcData b, int x, int y)
 
   rlc_translate_mouse(b, x, y, &l, &c);
   { RlcTextLine tl = &b->lines[l];
-    if ( c < tl->size )
+    if ( c >= 0 && c < tl->size )
     { text_char *chr = &tl->text[c];
       if ( TF_LINK(chr->flags) )
       { //DEBUG(Dprintf(_T("On link at %d,%d\n"), l, c));
@@ -1376,7 +1376,7 @@ rcl_paint_text(RlcData b,
 
       char *ut = t;
       for(segment=0;
-	  s[segment].flags == flags && segment<left;
+	  segment<left && s[segment].flags == flags;
 	  segment++)
       { int chr;		/* TODO: just skip UTF8 is easier */
 	ut = utf8_get_char(ut, &chr);
