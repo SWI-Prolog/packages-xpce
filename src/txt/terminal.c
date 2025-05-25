@@ -2228,9 +2228,8 @@ rlc_sgr(RlcData b, int sgr)
   }
 }
 
-
-static void
-rlc_put(RlcData b, int chr)
+static RlcTextLine
+rlc_prepare_line(RlcData b, int y)
 { RlcTextLine tl = &b->lines[b->caret_y];
   text_char *tc;
 
@@ -2241,7 +2240,15 @@ rlc_put(RlcData b, int chr)
     tc->code  = ' ';
     tc->flags = b->sgr_flags;
   }
-  tc = &tl->text[b->caret_x];
+
+  return tl;
+}
+
+
+static void
+rlc_put(RlcData b, int chr)
+{ RlcTextLine tl = rlc_prepare_line(b, b->caret_y);
+  text_char *tc = &tl->text[b->caret_x];
   tc->code = chr;
   tc->flags = b->sgr_flags;
   if ( tl->size <= b->caret_x )
@@ -2249,6 +2256,30 @@ rlc_put(RlcData b, int chr)
   tl->changed |= CHG_CHANGED;
 
   rlc_caret_forward(b, 1);
+}
+
+static void
+rlc_insert(RlcData b, int chr)
+{ RlcTextLine tl = rlc_prepare_line(b, b->caret_y);
+  if ( tl->size < b->width )
+    tl->size++;
+  for(int i=tl->size-1; i>b->caret_x; i--)
+    tl->text[i] = tl->text[i-1];
+  text_char *tc = &tl->text[b->caret_x];
+  tc->code = chr;
+  tc->flags = b->sgr_flags;
+  tl->changed |= CHG_CHANGED;
+}
+
+static void
+rlc_delete_chars(RlcData b, int count)
+{ RlcTextLine tl = rlc_prepare_line(b, b->caret_y);
+  if ( count > tl->size - b->caret_x )
+    count = tl->size - b->caret_x;
+  tl->size -= count;
+  for(int i=b->caret_x; i<tl->size; i++)
+    tl->text[i] = tl->text[i+count];
+  tl->changed |= CHG_CHANGED;
 }
 
 static void
@@ -2560,6 +2591,15 @@ rlc_putansi(RlcData b, int chr)
 	      CMD(rlc_sgr(b, b->argv[i]));
 	    break;
 	  }
+	case '@':		/* \e[<n>@: insert <n> spaces */
+	  rlc_need_arg(b, 1, 0);
+	  for(int i=0; i<b->argv[0]; i++)
+	    rlc_insert(b, ' ');
+	  break;
+	case 'P':		/* CSI Ps P — Delete Character(s) (DCH) */
+	  rlc_need_arg(b, 1, 1);
+	  CMD(rlc_delete_chars(b, b->argv[0]));
+	  break;
 	case '?':
 	  b->cmdstat = CMD_DEC_PRIVATE;
 	  return;
@@ -2575,6 +2615,9 @@ rlc_putansi(RlcData b, int chr)
 	    rlc_set_dec_mode(b, b->argv[0]);
 	  }
 	  break;
+	default:
+	  Cprintf("Unknown ANSI escape: %c (%d args)\n",
+		  chr, b->argc);
       }
       b->cmdstat = CMD_INITIAL;
   }
