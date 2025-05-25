@@ -2181,13 +2181,18 @@ rlc_restore_caret_position(RlcData b)
 
 static void
 rlc_erase_saved_lines(RlcData b)
-{ b->first = b->window_start;
+{ if ( b->last == b->window_start )
+    b->window_start = b->first = b->last = 0;
+  else
+    b->first = b->window_start;
 }
 
 static void
 rlc_erase_display(RlcData b)
-{ RlcTextLine tl = &b->lines[b->window_start];
+{ if ( b->first == b->window_start ) /* no saved lines */
+    b->window_start = b->first = b->last = 0;
 
+  RlcTextLine tl = &b->lines[b->window_start];
   tl->size = 0;
   b->last = b->window_start;
   b->changed |= CHG_CHANGED|CHG_CLEAR|CHG_CARET;
