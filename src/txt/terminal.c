@@ -391,6 +391,7 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
 { int chr;
   const char *seq = NULL;
   char buf[10];
+  RlcData b = ti->data;
 
   if ( isInteger(ev->id) )
   { chr = valInt(ev->id);
@@ -403,13 +404,13 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   } else if ( ev->id == NAME_backspace )
   { chr = 127;
   } else if ( ev->id == NAME_cursorUp )
-  { seq = "\e[A";
+  { seq = b->app_escape ? "\e0A" : "\e[A";
   } else if ( ev->id == NAME_cursorDown )
-  { seq = "\e[B";
+  { seq = b->app_escape ? "\e0B" : "\e[B";
   } else if ( ev->id == NAME_cursorLeft )
-  { seq = "\e[D";
+  { seq = b->app_escape ? "\e0D" : "\e[D";
   } else if ( ev->id == NAME_cursorRight )
-  { seq = "\e[C";
+  { seq = b->app_escape ? "\e0C" : "\e[C";
   } else if ( ev->id == NAME_delete )
   { seq = "\e[3~";
   } else
@@ -2359,12 +2360,30 @@ term *  implemented.
  */
 static void
 rlc_set_dec_mode(RlcData b, int mode)
-{
+{ switch(mode)
+  { case 1:
+      b->app_escape = true;
+      break;
+    case 1049:
+      Cprintf("Save screen\n");
+      break;
+    default:
+      Cprintf("Set unknown DEC private mode %d\n", mode);
+  }
 }
 
 static void
 rlc_clear_dec_mode(RlcData b, int mode)
-{
+{ switch(mode)
+  { case 1:
+      b->app_escape = false;
+      break;
+    case 1049:
+      Cprintf("Restore saved screen\n");
+      break;
+    default:
+      Cprintf("Clear unknown DEC private mode %d\n", mode);
+  }
 }
 
 /** The "ST" sequence is either \e\\ or \a

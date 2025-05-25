@@ -259,6 +259,7 @@ typedef struct rlc_data
   int		sel_start_char;		/* starting char for selection */
   int		sel_end_line;		/* ending line for selection */
   int		sel_end_char;		/* ending char for selection */
+  bool		app_escape;		/* Send ESC 0 instead of ESC [ */
   ansi_state    cmdstat;		/* for parsing ANSI escape */
   int		argstat;		/* argument status ANSI */
   char const   *must_see;		/* \e]8;; link decoding */
@@ -269,22 +270,12 @@ typedef struct rlc_data
   int		scaret_x;		/* saved-caret X */
   int		scaret_y;		/* saved-caret Y */
   bool		has_focus;		/* Application has the focus */
-#if TODO
-  HFONT		hfont;			/* Windows font handle */
-  HFONT		hfont_bold;		/* bold */
-  HFONT		hfont_underlined;	/* underlined */
-  HFONT		hfont_bold_underlined;  /* bold + underlined */
-#endif
   int		fixedfont;		/* Font is fixed */
   COLORREF	foreground;		/* Foreground (text) color */
   COLORREF	background;		/* Background color */
   COLORREF	sel_foreground;		/* Selection foreground */
   COLORREF	sel_background;		/* Selection background */
   COLORREF	ansi_color[16];		/* ANSI colors (8 normal + 8 bright) */
-#if TODO
-  HANDLE	cursor;			/* Default cursor */
-  HANDLE	link_cursor;		/* Cursor when hovering a link */
-#endif
   text_flags	sgr_flags;		/* Current SGR flags */
   int		cw;			/* character width */
   int		ch;			/* character height */
