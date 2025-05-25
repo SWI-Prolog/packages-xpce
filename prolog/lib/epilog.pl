@@ -33,8 +33,8 @@
 */
 
 :- module(terminal,
-          [ terminal/1,                 % +Title
-            terminal/0
+          [ epilog/1,                 % +Title
+            epilog/0
           ]).
 :- use_module(library(pce)).
 :- use_module(library(threadutil), []).
@@ -55,15 +55,15 @@ library(thread_util). Eventually, this should be properly merged.
     split horizontal/vertical, like terminator.
 */
 
-%!  terminal is det.
-%!  terminal(+Title) is det.
+%!  epilog is det.
+%!  epilog(+Title) is det.
 %
-%   Create a new terminal and open it.
+%   Create a new terminal manager and open it.
 
-terminal :-
-    terminal(@default).
-terminal(Title) :-
-    send(new(terminal(Title)), open).
+epilog :-
+    epilog(@default).
+epilog(Title) :-
+    send(new(epilog(Title)), open).
 
 :- dynamic
     current_prolog_terminal/2.          % Thread, Terminal
@@ -106,7 +106,7 @@ clean_exit :-
 terminated :-
     thread_self(Me),
     (   retract(current_prolog_terminal(Me, PT))
-    ->  in_pce_thread(send(PT?window, destroy))
+    ->  in_pce_thread(send(PT?frame, delete_epilog, PT?window))
     ;   true
     ),
     close_io.
@@ -136,6 +136,21 @@ connect(PT) :->
     ;   connect(PT, _Title)
     ).
 
+:- pce_group(event).
+
+typed(T, Ev:event) :->
+    (   get(Ev, id, Id),
+        typed_epilog(Id, T, Ev)
+    ->  true
+    ;   send_super(T, typed, Ev)
+    ).
+
+typed_epilog(15, T, Ev) :-              % Shift+Ctrl+o
+    send(Ev, has_modifier, sc),
+    send(T?window, split_horizontally).
+typed_epilog(5, T, Ev) :-              % Shift+Ctrl+e
+    send(Ev, has_modifier, sc),
+    send(T?window, split_vertically).
 
                 /*******************************
                 *     MANAGE PROLOG THREAD     *
@@ -223,7 +238,7 @@ fragment_location(Fragment, File, File:Line) :-
                 *           TERMINAL           *
                 *******************************/
 
-:- pce_begin_class(terminal, window, "Implement an embedded terminal").
+:- pce_begin_class(epilog_window, window, "Implement an embedded terminal").
 
 variable(thread_id, int, none, "Thread alias or integer id").
 
@@ -261,30 +276,49 @@ create(T) :->
     get(T, member, terminal, TI),
     send(TI, connect).
 
-:- pce_end_class(terminal).
+split_horizontally(T) :->
+    "Add a new terminal below me"::
+    send(new(_W, epilog_window), below, T).
 
+split_vertically(T) :->
+    "Add a new terminal right of me"::
+    send(new(_W, epilog_window), right, T).
+
+:- pce_end_class(epilog_window).
 
                 /*******************************
-                *       CLASS TERMINATOR       *
+                *            EPILOG            *
                 *******************************/
 
-:- pce_begin_class(terminator, frame,
+:- pce_begin_class(epilog, frame,
                    "Multiple terminals and menu").
 
 initialise(T, Title:title=[name],
            Width:width=[integer], Height:height=[integer]) :->
     default(Title, "SWI-Prolog console", TheTitle),
     send_super(T, initialise, TheTitle),
-    send(T, append, new(D, terminator_dialog)),
-    send(terminal(Width, Height), below, D).
+    send(T, append, new(D, epilog_dialog)),
+    send(epilog_window(@default, Width, Height), below, D).
 
 quit(_T) :->
     "Quit Prolog"::
     format("Quit Prolog\n").
 
-:- pce_end_class(terminator).
+delete_epilog(T, W:window) :->
+    "Remove an individual terminal"::
+    (   send(W, instance_of, epilog_window),
+        get(T?members, find_all,
+            message(@arg1, instance_of, epilog_window),
+            Terminals),
+        send(Terminals, delete, W),
+        \+ send(Terminals, empty)
+    ->  send(T, delete, W)
+    ;   send(T, destroy)
+    ).
 
-:- pce_begin_class(terminator_dialog, dialog, "Prolog terminator menu").
+:- pce_end_class(epilog).
+
+:- pce_begin_class(epilog_dialog, dialog, "Prolog terminator menu").
 
 initialise(D) :->
     send_super(D, initialise),
@@ -292,10 +326,10 @@ initialise(D) :->
     send(D, pen, 0),
     send(D, append, new(MB, menu_bar)),
     send(MB, append, new(File, popup(file))),
-    Frame = @event?receiver?frame,
+    Epilog = @event?receiver?frame,
     send_list(File, append,
               [ menu_item(quit,
-                          message(Frame, quit))
+                          message(Epilog, quit))
               ]).
 
-:- pce_end_class(terminator_dialog).
+:- pce_end_class(epilog_dialog).
