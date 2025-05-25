@@ -2546,6 +2546,12 @@ rlc_putansi(RlcData b, int chr)
 	case 27:			/* ESC */
 	  b->cmdstat = CMD_ESC;
 	  break;
+	case 0x0F:			/* SI (Shift In) */
+	  b->shift_in = true;
+	  break;
+	case 0x0E:			/* SO (Shift Out */
+	  b->shift_in = false;
+	  break;
 	default:
 	  CMD(rlc_put(b, chr));
 	  break;
@@ -2562,10 +2568,38 @@ rlc_putansi(RlcData b, int chr)
 	  b->cmdstat = CMD_LINK;
 	  b->must_see = "8;;";
 	  break;
+	case '(':
+	  b->cmdstat = CMD_G0;
+	  break;
+	case ')':
+	  b->cmdstat = CMD_G1;
+	  break;
 	default:
 	  b->cmdstat = CMD_INITIAL;
 	  break;
       }
+      break;
+    case CMD_G0:
+      switch(chr)
+      { case 'B':
+	  b->G0 = G_ASCII;
+	  break;
+	case '0':
+	  b->G0 = G_GRAPHICS;
+	  break;
+      }
+      b->cmdstat = CMD_INITIAL;
+      break;
+    case CMD_G1:
+      switch(chr)
+      { case 'B':
+	  b->G1 = G_ASCII;
+	  break;
+	case '0':
+	  b->G1 = G_GRAPHICS;
+	  break;
+      }
+      b->cmdstat = CMD_INITIAL;
       break;
     case CMD_LINK:
       if ( b->must_see && b->must_see[0] == chr )

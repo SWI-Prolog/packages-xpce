@@ -229,11 +229,18 @@ typedef struct
 typedef enum
 { CMD_INITIAL = 0,
   CMD_ESC,
+  CMD_G0,
+  CMD_G1,
   CMD_ANSI,
   CMD_LINK,
   CMD_LINKARG,
   CMD_DEC_PRIVATE
 } ansi_state;
+
+typedef enum
+{ G_ASCII = 0,
+  G_GRAPHICS
+} G_state;
 
 #define RLC_MAGIC	0x3b75df1e	/* magic number to verify */
 
@@ -268,6 +275,9 @@ typedef struct rlc_data
   int		argc;			/* argument count for ANSI */
   int		argv[ANSI_MAX_ARGC];	/* argument vector for ANSI */
   TCHAR		link[ANSI_MAX_LINK];	/* Max URL length */
+  bool		shift_in;		/* select G1 */
+  G_state	G0;			/* Character set slot 0 */
+  G_state	G1;			/* Character set slot 1 */
   int		link_len;		/* # chars in `link` */
   int		scaret_x;		/* saved-caret X */
   int		scaret_y;		/* saved-caret Y */
