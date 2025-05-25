@@ -389,9 +389,16 @@ static status
 typedTerminalImage(TerminalImage ti, EventObj ev)
 { int chr;
   const char *seq = NULL;
+  char buf[10];
 
   if ( isInteger(ev->id) )
   { chr = valInt(ev->id);
+    if ( chr >= META_OFFSET )
+    { buf[0] = '\e';
+      buf[1] = chr-META_OFFSET;
+      buf[2] = 0;
+      seq = buf;
+    }
   } else if ( ev->id == NAME_backspace )
   { chr = 127;
   } else if ( ev->id == NAME_cursorUp )
