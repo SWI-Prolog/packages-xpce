@@ -112,6 +112,7 @@ static const TCHAR *rlc_over_link(RlcData b, int x, int y);
 static href    *rlc_add_link(RlcTextLine tl, const TCHAR *link,
 			     int start, int len);
 static void	rlc_free_link(href *hr);
+static void	rlc_free_links(href *links);
 static void	rcl_check_links(RlcTextLine tl);
 static void	rlc_copy(RlcData b, Name to);
 static void	rlc_request_redraw(RlcData b);
@@ -123,6 +124,7 @@ static int	tchar_width(RlcData b, const char *text,
 			    size_t ulen, size_t len, FontObj font);
 static void     rlc_reinit_line(RlcData b, int line);
 static void	rlc_free_line(RlcData b, int line);
+static void	rlc_destroy_saved_screen(RlcData b);
 static int	rlc_between(RlcData b, int f, int t, int v);
 static void	typed_char(RlcData b, int chr);
 static void	rlc_putansi(RlcData b, int chr);
@@ -1647,13 +1649,18 @@ rlc_destroy_buffer(RlcData b)
   { int i;
 
     for(i=0; i<b->height; i++)
-    { if ( b->lines[i].text )
-	free(b->lines[i].text);
+    { RlcTextLine tl = &b->lines[i];
+      if ( tl->text )
+	rlc_free(tl->text);
+      href *links = tl->links;
+      if ( links )
+	rlc_free_links(links);
     }
 
-    free(b->lines);
+    rlc_free(b->lines);
   }
 
+  rlc_destroy_saved_screen(b);
   rlc_close_connection(b);
 
   free(b);
@@ -1932,12 +1939,7 @@ rlc_resize(RlcData b, int w, int h)
 static void
 rlc_reinit_line(RlcData b, int line)
 { RlcTextLine tl = &b->lines[line];
-
-  tl->text	 = NULL;
-  tl->links      = NULL;
-  tl->adjusted   = false;
-  tl->size       = 0;
-  tl->softreturn = false;
+  memset(tl, 0, sizeof(*tl));
 }
 
 static void
@@ -1955,6 +1957,26 @@ rlc_free_links(href *links)
     rlc_free_link(links);
   }
 }
+
+static href*
+rlc_copy_links(const href *links)
+{ href *copy = NULL;
+  href **tail = &copy;
+
+  for( ; links; links = links->next )
+  { href *new = rlc_malloc(sizeof(href));
+    *tail = new;
+    new->next = NULL;
+    tail = &new->next;
+    new->start = links->start;
+    new->length = links->length;
+    new->link = rlc_malloc((ucslen(links->link)+1)*sizeof(*new->link));
+    ucscpy(new->link, links->link);
+  }
+
+  return copy;
+}
+
 
 static void
 rlc_free_line(RlcData b, int line)
@@ -2354,6 +2376,57 @@ rlc_register_link(RlcData b, const TCHAR *link, size_t len)
   return rlc_add_link(tl, link, b->caret_x, len);
 }
 
+static void
+rlc_destroy_saved_screen(RlcData b)
+{ RlcTextLine tls = b->saved_screen;
+
+  if ( tls )
+  { int count = b->saved_screen_lines;
+    b->saved_screen = NULL;
+    b->saved_screen_lines = 0;
+    for(int i=0; i<count; i++)
+    { RlcTextLine tl = &tls[i];
+      if ( tl->text )
+	rlc_free(tl->text);
+      href *links = tl->links;
+      if ( links )
+	rlc_free_links(links);
+    }
+    rlc_free(tls);
+  }
+}
+
+static void
+rlc_copy_line(RlcTextLine dst, const RlcTextLine src)
+{ memset(dst, 0, sizeof(*dst));
+  if ( src->size )
+  { size_t bytes = src->size * sizeof(text_char);
+    dst->text = rlc_malloc(bytes);
+    dst->size = src->size;
+    memcpy(dst->text, src->text, bytes);
+    dst->changed = false;
+    dst->softreturn = src->softreturn;
+  }
+  if ( src->links )
+    dst->links = rlc_copy_links(src->links);
+}
+
+static void
+rlc_save_screen(RlcData b)
+{ rlc_destroy_saved_screen(b);
+  int lines = rlc_count_lines(b, b->window_start, b->last);
+  if ( lines > b->window_size )
+    lines = b->window_size;
+  b->saved_screen_lines = lines;
+  b->saved_screen = rlc_malloc(sizeof(rlc_text_line) * lines);
+  int src = b->window_start;
+  for(int i=0; i<lines; i++)
+  { rlc_copy_line(&b->saved_screen[i], &b->lines[src]);
+    src = NextLine(b, src);
+  }
+}
+
+
 /** Set/clear DEC primate modes.  2004 means do (not) emit
  *  ESC [ 200 ~ ... ESC [ 201 ~ around pasted text.  Not yet
 term *  implemented.
@@ -2366,6 +2439,8 @@ rlc_set_dec_mode(RlcData b, int mode)
       break;
     case 1049:
       Cprintf("Save screen\n");
+      rlc_save_screen(b);
+      rlc_erase_display(b);
       break;
     default:
       Cprintf("Set unknown DEC private mode %d\n", mode);
@@ -2667,43 +2742,6 @@ rlc_putansi(RlcData b, int chr)
 #ifdef _DEBUG
   (void)cmd;
 #endif
-}
-
-
-		 /*******************************
-		 *	      CUT/PASTE		*
-		 *******************************/
-
-wchar_t *
-rlc_clipboard_text(rlc_console c)
-{
-#if TODO
-  RlcData b = rlc_get_data(c);
-
-  if ( OpenClipboard(b->window) )
-  { wchar_t *str = NULL;
-    HGLOBAL mem;
-
-    if ( (mem = GetClipboardData(CF_UNICODETEXT)) )
-    { wchar_t *data = GlobalLock(mem);
-      int o = 0;
-
-      str = rlc_malloc(sizeof(*str)*(wcslen(data)+1));
-      for(int i=0; data[i]; i++)
-      { str[o++] = data[i];
-	if ( data[i] == '\r' && data[i+1] == '\n' )
-	  i++;
-      }
-      str[o] = EOS;
-
-      GlobalUnlock(mem);
-    }
-    CloseClipboard();
-    return str;
-  }
-#endif
-
-  return NULL;
 }
 
 
