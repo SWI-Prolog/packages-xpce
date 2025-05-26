@@ -154,10 +154,10 @@ typed(T, Ev:event) :->
 
 typed_epilog(15, T, Ev) :-              % Shift+Ctrl+o
     send(Ev, has_modifier, sc),
-    send(T?window, split_horizontally).
+    send(T?window, split, horizontally).
 typed_epilog(5, T, Ev) :-              % Shift+Ctrl+e
     send(Ev, has_modifier, sc),
-    send(T?window, split_vertically).
+    send(T?window, split, vertically).
 
                 /*******************************
                 *     MANAGE PROLOG THREAD     *
@@ -288,15 +288,16 @@ create(T) :->
     get(T, member, terminal, TI),
     send(TI, connect).
 
-split_horizontally(T) :->
+split(T, Dir:{horizontally,vertically}) :->
     "Add a new terminal below me"::
     new(W, epilog_window),
     send(W, goal_init, true),
-    send(W, below, T).
-
-split_vertically(T) :->
-    "Add a new terminal right of me"::
-    send(new(_W, epilog_window), right, T).
+    get(T, tile, Tile),
+    send(Tile, can_resize, @on),
+    (   Dir == horizontally
+    ->  send(W, below, T)
+    ;   send(W, right, T)
+    ).
 
 :- pce_end_class(epilog_window).
 
