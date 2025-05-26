@@ -32,9 +32,11 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(terminal,
+:- module(epilog,
           [ epilog/1,                 % +Title
-            epilog/0
+            epilog/0,
+            win_window_color/2,       % +Which, +Color
+            window_title/1
           ]).
 :- use_module(library(pce)).
 :- use_module(library(threadutil), []).
@@ -84,7 +86,10 @@ initialise(PT) :->
     send(PT, popup, new(P, popup)),
     Terminal = @event?receiver,
     send_list(P, append,
-              [ menu_item(split_horizontally,
+              [ menu_item(paste,
+                          message(Terminal, paste),
+                          accelerator := 'Ctrl+V'),
+                menu_item(split_horizontally,
                           message(Terminal, split, horizontally),
                           accelerator := 'Shift+ctrl+O'),
                 menu_item(split_vertically,
@@ -397,3 +402,47 @@ initialise(D) :->
               ]).
 
 :- pce_end_class(epilog_dialog).
+
+                /*******************************
+                *        COMPATIBILITY         *
+                *******************************/
+
+%!  win_window_color(+Which, +Color) is det.
+%
+%   Set console colours.
+
+win_window_color(Which, Color) :-
+    pce_colour(Color, Object),
+    terminal(Term),
+    set_colour(Which, Term, Object).
+
+pce_colour(rgb(R,G,B), Name) =>
+    format(atom(Name), '#~|~`0t~16r~2+~`0t~16r~2+~`0t~16r~2+',
+           [R,G,B]).
+pce_colour(Atom, Name), atom(Atom) =>
+    Name = Atom.
+
+terminal(Term) :-
+    thread_self(Me),
+    current_prolog_terminal(Me, Term).
+
+set_colour(foreground, Term, Color) =>
+    send(Term, colour, Color).
+set_colour(background, Term, Color) =>
+    send(Term, background, Color).
+set_colour(selection_foreground, Term, Color) =>
+    get(Term, selection_style, Style),
+    get(Style, clone, NewStyle),
+    send(NewStyle, colour, Color),
+    send(Term, selection_style, NewStyle).
+set_colour(selection_background, Term, Color) =>
+    get(Term, selection_style, Style),
+    get(Style, clone, NewStyle),
+    send(NewStyle, background, Color),
+    send(Term, selection_style, NewStyle).
+
+%!  window_title(+Title) is det.
+
+window_title(Title) :-
+    terminal(Term),
+    send(Term?frame, label, Title).

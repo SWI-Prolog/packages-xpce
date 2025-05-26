@@ -471,27 +471,45 @@ saveLinesTerminalImage(TerminalImage ti, Int lines)
 }
 
 static status
-fontTerminalImage(TerminalImage ti, FontObj font)
-{ assign(ti, font, font);
-  succeed;			/* TBD: Update, refresh */
+refreshTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+  if ( b )
+  { b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
+    rlc_request_redraw(b);
+  }
+  succeed;
 }
 
 static status
-boldFontTerminalImage(TerminalImage ti, FontObj font)
-{ assign(ti, bold_font, font);
-  succeed;
+fontTerminalImage(TerminalImage ti, FontObj font, FontObj bold)
+{ assign(ti, font, font);
+  if ( isDefault(bold) )
+    bold = newObject(ClassFont, font->family, NAME_bold, font->points, EAV);
+  CharArray cmp = (CharArray)NAME_x;
+  if ( getAdvanceFont(font, cmp) != getAdvanceFont(bold, cmp) )
+  { Cprintf("Fonts need to have the same pitch\n");
+    bold = NIL;
+  }
+  assign(ti, bold_font, bold);
+  return refreshTerminalImage(ti);
 }
 
 static status
 backgroundTerminalImage(TerminalImage ti, Colour bg)
 { assign(ti, background, bg);
-  succeed;			/* force redraw */
+  return refreshTerminalImage(ti);
+}
+
+static status
+selectionStyleTerminalImage(TerminalImage ti, Style sel)
+{ assign(ti, selection_style, sel);
+  return refreshTerminalImage(ti);
 }
 
 static status
 ansiColoursTerminalImage(TerminalImage ti, Vector colours)
 { assign(ti, ansi_colours, colours);
-  succeed;			/* force redraw */
+  return refreshTerminalImage(ti);
 }
 
 static status
@@ -543,17 +561,20 @@ static char *T_initialise[] =
 static char *T_geometry[] =
 { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 static char *T_scrollVertical[] =
-        { "direction={forwards,backwards,goto}",
-	  "unit={file,page,line}", "amount=int" };
+{ "direction={forwards,backwards,goto}",
+  "unit={file,page,line}", "amount=int" };
+static char *T_font[] =
+{ "font=font", "bold=[font]" };
 
 static vardecl var_terminal_image[] =
-{ SV(NAME_font, "font", IV_GET|IV_STORE, fontTerminalImage,
+{ IV(NAME_font, "font", IV_GET,
      NAME_appearance, "Font used to draw the string"),
-  SV(NAME_boldFont, "font*", IV_GET|IV_STORE, boldFontTerminalImage,
+  IV(NAME_boldFont, "font*", IV_GET,
      NAME_appearance, "Font for bold text"),
   SV(NAME_background, "[colour]", IV_GET|IV_STORE, backgroundTerminalImage,
      NAME_appearance, "Terminal background colour"),
-  IV(NAME_selectionStyle, "[style]", IV_GET,
+  SV(NAME_selectionStyle, "[style]", IV_GET|IV_STORE,
+     selectionStyleTerminalImage,
      NAME_appearance, "Feedback for the selection"),
   SV(NAME_ansiColours, "vector*", IV_GET|IV_STORE, ansiColoursTerminalImage,
      NAME_appearance, "The 16 ansi colours"),
@@ -576,6 +597,8 @@ static senddecl send_terminal_image[] =
      DEFAULT, "Destroy data"),
   SM(NAME_geometry, 4, T_geometry, geometryTerminalImage,
      DEFAULT, "Change geometry"),
+  SM(NAME_font, 2, T_font, fontTerminalImage,
+     NAME_appearance, "Set font and bold font"),
   SM(NAME_compute, 0, NULL, computeTerminalImage,
      NAME_repaint, "Recompute the terminal image"),
   SM(NAME_bubbleScrollBar, 1, "scroll_bar", bubbleScrollBarTerminalImage,
@@ -1376,12 +1399,14 @@ rcl_paint_text(RlcData b,
   *t = 0;
 
   if ( insel )					/* TBD: Cache */
-  { r_colour(ti->selection_style->colour);
-    r_background(ti->selection_style->background);
+  { Any ofg = r_colour(ti->selection_style->colour);
+    Any obg = r_background(ti->selection_style->background);
     int x0 = *cx;
     *cx += tchar_width(b, text, t-text, len, ti->font);
     r_clear(x0, ty-b->cb, *cx-x0, b->ch);
     s_print_utf8(text, t-text, x0, ty, ti->font);
+    r_colour(ofg);
+    r_background(obg);
   } else
   { int start, segment, ulen;
 
@@ -1424,8 +1449,9 @@ rcl_paint_text(RlcData b,
 
       //Cprintf("Print \"%s\" at %d,%d using %s\n", t, *cx, ty, pp(ti->font));
       int x0 = *cx;
-      s_print_utf8(t, ulen, x0, ty, font);
       *cx += tchar_width(b, t, ulen, segment, ti->font);
+      r_clear(x0, ty-b->cb, *cx-x0, b->ch);
+      s_print_utf8(t, ulen, x0, ty, font);
       if ( TF_UNDERLINE(flags) )
       { double o_pen = r_thickness(UNDERLINE_PEN);
 	r_line(x0, ty+UNDERLINE_SEP, *cx, ty+UNDERLINE_SEP);
@@ -1440,7 +1466,6 @@ rcl_paint_text(RlcData b,
   }
 }
 
-
 static void
 rlc_redraw(RlcData b, int x, int y, int w, int h)
 { TerminalImage ti = b->object;
@@ -1450,23 +1475,20 @@ rlc_redraw(RlcData b, int x, int y, int w, int h)
   int pl = sl;				/* physical line */
   bool insel = false;			/* selected lines? */
 
-  r_background(ti->background);
-
   if ( rlc_count_lines(b, b->first, b->sel_start_line) <
        rlc_count_lines(b, b->first, l) &&
        rlc_count_lines(b, b->first, b->sel_end_line) >=
        rlc_count_lines(b, b->first, l) )
     insel = true;
 
-  if ( insel )
-  { r_colour(ti->selection_style->colour);
-    r_background(ti->selection_style->background);
-  }
+  r_background(ti->background);
 
   for(; pl <= el; l = NextLine(b, l), pl++)
   { RlcTextLine tl = &b->lines[l];
     int ty = y + b->cb + b->ch * pl;
     int cx = x + b->cw;
+
+    r_clear(x, ty-b->cb, b->cw, b->ch); /* clear margin */
 
 					/* compute selection */
     if ( l == b->sel_start_line )
@@ -1651,6 +1673,7 @@ rlc_make_buffer(int w, int h)
   b->lines          = rlc_malloc(sizeof(rlc_text_line) * h);
   b->cmdstat	    = CMD_INITIAL;
   b->changed	    = CHG_CARET|CHG_CHANGED|CHG_CLEAR;
+  b->sgr_flags	    = TF_DEFAULT;
 
   memset(b->lines, 0, sizeof(rlc_text_line) * h);
   for(i=0; i<h; i++)
