@@ -458,6 +458,19 @@ quit(T) :->
     "Quit this terminal.  Optionally should terminate Prolog"::
     send(T, destroy).
 
+interrupt(Epilog) :->
+    "Interrupt running thread"::
+    get(Epilog, current_terminal, Term),
+    send(Term, interrupt).
+
+ide(_T, Tool:name) :->
+    "Open an IDE tool"::
+    call(user:prolog_ide(Tool)).
+
+preferences(_T, Which:{prolog,xpce}) :->
+    "Edit Prolog or GUI preferences"::
+    call(prolog_edit_preferences(Which)).
+
 :- pce_end_class(epilog).
 
 :- pce_begin_class(epilog_dialog, dialog, "Prolog terminator menu").
@@ -467,7 +480,10 @@ initialise(D) :->
     send(D, gap, size(0,0)),
     send(D, pen, 0),
     send(D, append, new(MB, menu_bar)),
-    send(MB, append, new(File, popup(file))),
+    send(MB, append, new(File,     popup(file))),
+    send(MB, append, new(Settings, popup(settings))),
+    send(MB, append, new(Run,      popup(run))),
+    send(MB, append, new(Tools,    popup(tools))),
     Epilog = @event?receiver?frame,
     send_list(File, append,
               [ menu_item(consult,
@@ -482,6 +498,27 @@ initialise(D) :->
                           end_group := @on),
                 menu_item(quit,
                           message(Epilog, quit))
+              ]),
+    send_list(Run, append,
+              [ menu_item(interrupt,
+                          message(Epilog, interrupt),
+                          accelerator := 'Ctrl-C')
+              ]),
+    send_list(Settings, append,
+              [ menu_item(user_init_file,
+                          message(Epilog, preferences, prolog)),
+                menu_item('GUI_preferences',
+                          message(Epilog, preferences, xpce))
+              ]),
+    send_list(Tools, append,
+              [ menu_item(navigator,
+                          message(Epilog, ide, open_navigator)),
+                menu_item(view_threads,
+                          message(Epilog, ide, thread_monitor)),
+                menu_item(debug_messages,
+                          message(Epilog, ide, debug_monitor)),
+                menu_item(cross_referencer,
+                          message(Epilog, ide, xref))
               ]).
 
 :- pce_end_class(epilog_dialog).
