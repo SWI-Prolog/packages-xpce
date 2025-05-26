@@ -86,8 +86,13 @@ initialise(PT) :->
     send(PT, popup, new(P, popup)),
     Terminal = @event?receiver,
     send_list(P, append,
-              [ menu_item(paste,
+              [ menu_item(copy,
+                          message(Terminal, copy),
+                          condition := message(Terminal, has_selection),
+                          accelerator := 'Ctrl+C'),
+                menu_item(paste,
                           message(Terminal, paste),
+                          end_group := @on,
                           accelerator := 'Ctrl+V'),
                 menu_item(split_horizontally,
                           message(Terminal, split, horizontally),
@@ -183,6 +188,10 @@ typed_epilog(15, T, Ev) :-              % Shift+Ctrl+o
 typed_epilog(5, T, Ev) :-              % Shift+Ctrl+e
     send(Ev, has_modifier, sc),
     send(T, split, vertically).
+
+copy(T) :->
+    "Copy selection to clipboard"::
+    send(T?display, copy, T?selected).
 
 split(T, Dir:{horizontally,vertically}) :->
     "Split this terminal"::

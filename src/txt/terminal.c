@@ -106,6 +106,7 @@ static void	rlc_start_selection(RlcData b, int x, int y);
 static void	rlc_extend_selection(RlcData b, int x, int y);
 static void	rlc_word_selection(RlcData b, int x, int y);
 static bool	rlc_has_selection(RlcData b);
+static TCHAR   *rlc_selection(RlcData b);
 static void	rlc_set_selection(RlcData b, int sl, int sc, int el, int ec);
 static const TCHAR *rlc_clicked_link(RlcData b, int x, int y);
 static const TCHAR *rlc_over_link(RlcData b, int x, int y);
@@ -135,6 +136,7 @@ static void	rlc_close_connection(RlcData b);
 static ssize_t	rlc_send(RlcData b, const char *buffer, size_t count);
 static void	rlc_resize_pty(RlcData b, int cols, int rows);
 static Name	TCHAR2Name(const TCHAR *str);
+static StringObj TCHAR2String(const TCHAR *str);
 static void	rlc_scroll_bubble(RlcData b,
 				  int *length, int *start, int *view);
 static void	rlc_scroll_lines(RlcData b, int lines);
@@ -375,7 +377,7 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     rlc_extend_selection(b, valInt(x), valInt(y));
     succeed;
   }
-  if ( isAEvent(ev, NAME_msRightDown) )
+  if ( isAEvent(ev, NAME_msRightUp) )
   { RlcData b = ti->data;
     if ( rlc_has_selection(b) )
     { Int x, y;
@@ -448,6 +450,28 @@ getDisplayedCursorTerminalImage(TerminalImage ti)
   else
     return ti->cursor;
 }
+
+static status
+hasSelectionTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+  return rlc_has_selection(b);
+}
+
+static StringObj
+getSelectedTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+  TCHAR *sel = rlc_selection(b);
+
+  if ( sel )
+  { StringObj str = TCHAR2String(sel);
+    if ( str )
+      pushAnswerObject(str);
+    answer(str);
+  }
+
+  fail;
+}
+
 
 static status
 pasteTerminalImage(TerminalImage ti, Name which)
@@ -615,6 +639,8 @@ static senddecl send_terminal_image[] =
      NAME_event, "Paste content of clipboard or primary selection"),
   SM(NAME_interrupt, 0, NULL, interruptTerminalImage,
      NAME_event, "Virtual method called on Ctrl-C"),
+  SM(NAME_hasSelection, 0, NULL, hasSelectionTerminalImage,
+     NAME_selection, "True if the image has a non-empty selection"),
   SM(NAME_insert, 1, "text=char_array", insertTerminalImage,
      NAME_insert, "Insert text at caret (moves caret)"),
   SM(NAME_print, 0, NULL, printTerminalImage,
@@ -626,7 +652,10 @@ static getdecl get_terminal_image[] =
      NAME_process, "Path name for the pty"),
   GM(NAME_displayedCursor, 0, "cursor=cursor", NULL,
      getDisplayedCursorTerminalImage,
-     NAME_event, "Indicate normal cursor or link")
+     NAME_event, "Indicate normal cursor or link"),
+  GM(NAME_selected, 0, "string", NULL,
+     getSelectedTerminalImage,
+     NAME_selection, "New string with contents of selection")
 };
 
 static classvardecl rc_terminal_image[] =
