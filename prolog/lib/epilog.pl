@@ -46,6 +46,10 @@
 :- use_module(library(www_browser)).
 :- use_module(library(gensym)).
 
+:- pce_autoload(finder, library(find_file)).
+:- pce_global(@finder, new(finder)).
+
+
 /** <module> XPCE Embedded terminals
 
 This module implements embedded terminals   for XPCE. Embedded terminals
@@ -173,6 +177,12 @@ event(T, Ev:event) :->
     ->  true
     ;   send(Ev, is_a, ms_right_down)
     ->  send(T, show_popup, Ev)
+    ;   send(Ev, is_a, focus)
+    ->  send_super(T, event, Ev),
+        (   send(Ev, is_a, activate_keyoard_focus)
+        ->  send(T?frame, current_terminal, T)
+        ;   true
+        )
     ).
 
 typed(T, Ev:event) :->
@@ -221,6 +231,7 @@ show_popup(T, Ev:event) :->
 
 connect(TI, Init, Goal, Title) :-
     gensym(con, Alias),
+    send(TI?window, name, Alias),
     get(TI, pty_name, PTY),
     thread_self(Me),
     thread_create(thread_run_interactor(Me, PTY, Init, Goal, Title),
@@ -371,16 +382,14 @@ split(T, Dir:{horizontally,vertically}) :->
 :- pce_begin_class(epilog, frame,
                    "Multiple terminals and menu").
 
+variable(current_window, name*, both, "Name of the current window").
+
 initialise(T, Title:title=[name],
            Width:width=[integer], Height:height=[integer]) :->
     default(Title, "SWI-Prolog console", TheTitle),
     send_super(T, initialise, TheTitle),
     send(T, append, new(D, epilog_dialog)),
     send(epilog_window(@default, Width, Height), below, D).
-
-quit(T) :->
-    "Quit this terminal.  Optionally should terminate Prolog"::
-    send(T, destroy).
 
 delete_epilog(T, W:window) :->
     "Remove an individual terminal"::
@@ -394,6 +403,61 @@ delete_epilog(T, W:window) :->
     ;   send(T, destroy)
     ).
 
+:- pce_group(actions).
+
+% Run several actions.  These should have output redirected to the
+% current terminal.  How to do that?
+
+current_terminal(Epilog, Terminal:prolog_terminal) :->
+    "Set the current terminal"::
+    send(Epilog, current_window, Terminal?window?name).
+
+current_terminal(Epilog, Terminal:prolog_terminal) :<-
+    "Get the current terminal of this frame"::
+    (   get(Epilog, current_window, WindowName),
+        WindowName \== @nil,
+        get(Epilog, member, WindowName, Window)
+    ->  true
+    ;   get(Epilog?members, find,
+            message(@arg1, instance_of, epilog_window), Window)
+    ),
+    get(Window, terminal, Terminal).
+
+inject(Epilog, Command:prolog) :->
+    "Inject a command into the current terminal"::
+    get(Epilog, current_terminal, Term),
+    format(string(Cmd), '~q.\r', [Command]),
+    send(Term, send, Cmd).
+
+consult(T) :->
+    "Ask for a file and consult it"::
+    findall(Ext, user:prolog_file_type(Ext, prolog), Exts),
+    chain_list(Filter, Exts),
+    get(@finder, file, open, tuple('Prolog file', Filter), File),
+    send(T, inject, consult(File)).
+
+edit_file(_T) :->
+    "Ask for a file and edit it"::
+    findall(Ext, user:prolog_file_type(Ext, source), Exts),
+    chain_list(Filter, Exts),
+    get(@finder, file, open, tuple('Source', Filter), File),
+    edit(file(File)).
+
+new_file(_T) :->
+    "Ask for a file and create it"::
+    findall(Ext, user:prolog_file_type(Ext, source), Exts),
+    chain_list(Filter, Exts),
+    get(@finder, file, save, tuple('Source', Filter), File),
+    edit(file(File)).
+
+make(T) :->
+    "Run make/0"::
+    send(T, inject, make).
+
+quit(T) :->
+    "Quit this terminal.  Optionally should terminate Prolog"::
+    send(T, destroy).
+
 :- pce_end_class(epilog).
 
 :- pce_begin_class(epilog_dialog, dialog, "Prolog terminator menu").
@@ -406,7 +470,17 @@ initialise(D) :->
     send(MB, append, new(File, popup(file))),
     Epilog = @event?receiver?frame,
     send_list(File, append,
-              [ menu_item(quit,
+              [ menu_item(consult,
+                          message(Epilog, consult)),
+                menu_item(edit,
+                          message(Epilog, edit_file)),
+                menu_item(new,
+                          message(Epilog, new_file),
+                          end_group := @on),
+                menu_item(reload_modified_files,
+                          message(Epilog, make),
+                          end_group := @on),
+                menu_item(quit,
                           message(Epilog, quit))
               ]).
 

@@ -552,6 +552,13 @@ insertTerminalImage(TerminalImage ti, CharArray ca)
   succeed;
 }
 
+static status
+sendTerminalImage(TerminalImage ti, CharArray ca)
+{ size_t ulen;
+  const char *u8 = stringToUTF8(&ca->data, &ulen);
+
+  return rlc_send(ti->data, u8, ulen) == ulen;
+}
 
 #ifdef HAVE_POSIX_OPENPT
 static Name
@@ -641,6 +648,8 @@ static senddecl send_terminal_image[] =
      NAME_event, "Virtual method called on Ctrl-C"),
   SM(NAME_hasSelection, 0, NULL, hasSelectionTerminalImage,
      NAME_selection, "True if the image has a non-empty selection"),
+  SM(NAME_send, 1, "text=char_array", sendTerminalImage,
+     NAME_insert, "Send text to the connected process"),
   SM(NAME_insert, 1, "text=char_array", insertTerminalImage,
      NAME_insert, "Insert text at caret (moves caret)"),
   SM(NAME_print, 0, NULL, printTerminalImage,
