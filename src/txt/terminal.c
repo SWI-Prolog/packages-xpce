@@ -105,7 +105,7 @@ static int	rlc_add_lines(RlcData b, int here, int add);
 static void	rlc_start_selection(RlcData b, int x, int y);
 static void	rlc_extend_selection(RlcData b, int x, int y);
 static void	rlc_word_selection(RlcData b, int x, int y);
-static int	rlc_has_selection(RlcData b);
+static bool	rlc_has_selection(RlcData b);
 static void	rlc_set_selection(RlcData b, int sl, int sc, int el, int ec);
 static const TCHAR *rlc_clicked_link(RlcData b, int x, int y);
 static const TCHAR *rlc_over_link(RlcData b, int x, int y);
@@ -377,12 +377,15 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
   }
   if ( isAEvent(ev, NAME_msRightDown) )
   { RlcData b = ti->data;
-    Int x, y;
-    get_xy_event(ev, ti, ON, &x, &y);
-    rlc_extend_selection(b, valInt(x), valInt(y));
     if ( rlc_has_selection(b) )
-      rlc_copy(ti->data, NAME_primary);
-    succeed;
+    { Int x, y;
+
+      get_xy_event(ev, ti, ON, &x, &y);
+      rlc_extend_selection(b, valInt(x), valInt(y));
+      if ( rlc_has_selection(b) )
+	rlc_copy(ti->data, NAME_primary);
+      succeed;
+    }
   }
 
   fail;
@@ -1178,7 +1181,7 @@ rlc_read_from_window(RlcData b, int sl, int sc, int el, int ec)
 }
 
 
-static int
+static bool
 rlc_has_selection(RlcData b)
 { if ( SelEQ(b->sel_start_line, b->sel_start_char,
 	     b->sel_end_line,   b->sel_end_char) )
@@ -1205,7 +1208,7 @@ rlc_copy(RlcData b, Name to)	/* NAME_clipboard or NAME_primary */
   { StringObj str = TCHAR2String(sel);
     addCodeReference(str);
     send(CurrentDisplay(b->object), NAME_selection, to, str, EAV);
-    Cprintf("Copy to %s: \"%s\"\n", pp(to), pp(str));
+    DEBUG(NAME_term, Cprintf("Copy to %s: \"%s\"\n", pp(to), pp(str)));
     considerPreserveObject(str);
 
     rlc_free(sel);
