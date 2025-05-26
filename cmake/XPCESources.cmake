@@ -72,10 +72,11 @@ set(WIN_SRC	browser.c decorate.c dialog.c display.c
 		tile.c view.c window.c application.c
 		monitor.c)
 
-set(IMG_SRC	jpegtoxpm.c gifread.c giftoxpm.c
-		gifwrite.c imgutil.c)
+set(IMG_SRC)
 if(NOT RAYLIB AND NOT SDL)
-  list(APPEND IMG_SRC jdatasrc.c jdatadst.c)
+  list(APPEND IMG_SRC
+  	      jpegtoxpm.c gifread.c giftoxpm.c
+	      gifwrite.c imgutil.c jdatasrc.c jdatadst.c)
 endif()
 
 if(SDL)

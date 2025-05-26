@@ -35,7 +35,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#ifndef WIN32_GRAPHICS
+#ifdef X11_GRAPHICS
 #include <x11/include.h>
 #include <time.h>
 #endif
@@ -314,4 +314,3 @@ makeClassDisplayManager(Class class)
 
   succeed;
 }
-

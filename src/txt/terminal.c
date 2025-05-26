@@ -771,9 +771,10 @@ TCHAR2String(const TCHAR *str)
 { char tmp[MAXLINE*4];
   char *u8 = tmp;
   char *end = tmp+sizeof(tmp)-8;
+  char *o;
 
 again:
-  char *o = u8;
+  o = u8;
   for(const TCHAR *s = str; *s; s++)
   { if ( o < end )
     { o = utf8_put_char(o, *s);
