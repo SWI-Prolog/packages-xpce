@@ -1750,8 +1750,9 @@ static void
 update_links(RlcTextLine l1, RlcTextLine l2, int moved)
 { href *next;
 
-  Dprint_links(l1, "l1");
-  Dprint_links(l2, "l2");
+  DEBUG(NAME_term,
+	Dprint_links(l1, "l1");
+	Dprint_links(l2, "l2"));
   for(href *hr = l1->links; hr; hr=next)
   { next = hr->next;
 
@@ -1763,8 +1764,9 @@ update_links(RlcTextLine l1, RlcTextLine l2, int moved)
       hr->length = l1->size - hr->start;
     }
   }
-  Dprint_links(l1, "l1 (after)");
-  Dprint_links(l2, "l2 (after)");
+  DEBUG(NAME_term,
+	Dprint_links(l1, "l1 (after)");
+	Dprint_links(l2, "l2 (after)"));
 
   rcl_check_links(l1);
   rcl_check_links(l2);
