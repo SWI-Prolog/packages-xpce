@@ -71,14 +71,21 @@ epilog(Title) :-
 :- pce_begin_class(prolog_terminal, terminal_image,
                    "Terminal for running a Prolog thread").
 
-variable(goal_init, prolog := version, both, "Goal to run for init").
-variable(goal,      prolog := prolog,  both, "Main goal").
+variable(goal_init,     prolog :=       version, both, "Goal to run for init").
+variable(goal,          prolog :=       prolog,  both, "Main goal").
+variable(popup,         popup*,         get,     "Terminal popup").
+variable(popup_gesture, popup_gesture*, none,    "Gesture to show menu").
 
 initialise(PT) :->
     "Create Prolog terminal"::
     send_super(PT, initialise),
     send(PT, name, terminal),
-    send(PT, link_message, message(@receiver, open_link, @arg1)).
+    send(PT, link_message, message(@receiver, open_link, @arg1)),
+    send(PT, popup, new(P, popup)),
+    send_list(P, append,
+              [ menu_item(demo,
+                          message(@prolog, writeln, demo))
+              ]).
 
 unlink(PT) :->
     (   retract(current_prolog_terminal(Thread, PT))
@@ -145,6 +152,14 @@ connect(PT) :->
 
 :- pce_group(event).
 
+event(T, Ev:event) :->
+    "Handle popup"::
+    (   send_super(T, event, Ev)
+    ->  true
+    ;   send(Ev, is_a, ms_right_down)
+    ->  send(T, show_popup, Ev)
+    ).
+
 typed(T, Ev:event) :->
     (   get(Ev, id, Id),
         typed_epilog(Id, T, Ev)
@@ -158,6 +173,22 @@ typed_epilog(15, T, Ev) :-              % Shift+Ctrl+o
 typed_epilog(5, T, Ev) :-              % Shift+Ctrl+e
     send(Ev, has_modifier, sc),
     send(T?window, split, vertically).
+
+popup(T, Popup:popup*) :->
+    "Associate a menu"::
+    send(T, slot, popup, Popup),
+    (   Popup == @nil
+    ->  send(T, slot, popup_gesture, @nil)
+    ;   send(T, slot, popup_gesture, popup_gesture(Popup))
+    ).
+
+show_popup(T, Ev:event) :->
+    "Open popup if this is defined"::
+    (   get(T, slot, popup_gesture, G),
+        G \== @nil
+    ->  send(G, event, Ev)
+    ).
+
 
                 /*******************************
                 *     MANAGE PROLOG THREAD     *
