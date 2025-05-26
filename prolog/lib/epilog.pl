@@ -71,8 +71,8 @@ epilog(Title) :-
 :- pce_begin_class(prolog_terminal, terminal_image,
                    "Terminal for running a Prolog thread").
 
-variable(goal_init,     prolog :=       version, both, "Goal to run for init").
-variable(goal,          prolog :=       prolog,  both, "Main goal").
+variable(goal_init,     prolog := version, both, "Goal to run for init").
+variable(goal,          prolog := prolog,  both, "Main goal").
 variable(popup,         popup*,         get,     "Terminal popup").
 variable(popup_gesture, popup_gesture*, none,    "Gesture to show menu").
 
@@ -82,9 +82,14 @@ initialise(PT) :->
     send(PT, name, terminal),
     send(PT, link_message, message(@receiver, open_link, @arg1)),
     send(PT, popup, new(P, popup)),
+    Terminal = @event?receiver,
     send_list(P, append,
-              [ menu_item(demo,
-                          message(@prolog, writeln, demo))
+              [ menu_item(split_horizontally,
+                          message(Terminal, split, horizontally),
+                          accelerator := 'Shift+ctrl+O'),
+                menu_item(split_vertically,
+                          message(Terminal, split, vertically),
+                          accelerator := 'Shift+ctrl+E')
               ]).
 
 unlink(PT) :->
@@ -122,10 +127,10 @@ terminated :-
     close_io.
 
 close_io :-
-    catch(thread_util:disable_line_editing(user_input,
-                                           user_output,
-                                           user_error),
-          error(_,_), true),
+    (   current_predicate(el_unwrap/1)
+    ->  catch(el_unwrap(user_input), error(_,_), true)
+    ;   true
+    ),
     close(user_input, [force(true)]),
     close(user_output, [force(true)]),
     close(user_error, [force(true)]).
@@ -169,10 +174,14 @@ typed(T, Ev:event) :->
 
 typed_epilog(15, T, Ev) :-              % Shift+Ctrl+o
     send(Ev, has_modifier, sc),
-    send(T?window, split, horizontally).
+    send(T, split, horizontally).
 typed_epilog(5, T, Ev) :-              % Shift+Ctrl+e
     send(Ev, has_modifier, sc),
-    send(T?window, split, vertically).
+    send(T, split, vertically).
+
+split(T, Dir:{horizontally,vertically}) :->
+    "Split this terminal"::
+    send(T?window, split, Dir).
 
 popup(T, Popup:popup*) :->
     "Associate a menu"::
@@ -230,6 +239,9 @@ thread_run_interactor(Creator, PTY, Init, Goal, Title) :-
     ).
 
 attach_terminal(PTY, _Title) :-
+    exists_source(library(editline)),
+    use_module(library(editline)),
+    !,
     open(PTY, read,  In,  [encoding(utf8), bom(false)]),
     open(PTY, write, Out, [encoding(utf8)]),
     open(PTY, write, Err, [encoding(utf8)]),
@@ -245,7 +257,13 @@ attach_terminal(PTY, _Title) :-
     set_stream(Err, alias(user_error)),
     set_stream(In,  alias(current_input)),
     set_stream(Out, alias(current_output)),
-    thread_util:enable_line_editing(In,Out,Err).
+    call(el_wrap).
+attach_terminal(PTY, _Title) :-
+    open(PTY, read,  In,  [encoding(utf8), bom(false)]),
+    open(PTY, write, Out, [encoding(utf8)]),
+    open(PTY, write, Err, [encoding(utf8)]),
+    set_stream(In,  file_name('')),
+    set_prolog_IO(In, Out, Err).
 
 %!  tty_link(+Link) is det.
 %
@@ -326,8 +344,8 @@ split(T, Dir:{horizontally,vertically}) :->
     get(T, tile, Tile),
     send(Tile, can_resize, @on),
     (   Dir == horizontally
-    ->  send(W, below, T)
-    ;   send(W, right, T)
+    ->  send(W, below, Tile)
+    ;   send(W, right, Tile)
     ).
 
 :- pce_end_class(epilog_window).
