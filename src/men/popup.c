@@ -193,6 +193,11 @@ openPopup(PopupObj p, Graphical gr, Point pos,
   if ( !offset )
     return errorPce(p, NAME_graphicalNotDisplayed, gr);
 
+  DEBUG(NAME_popup,
+	Cprintf("Show %s on %s at %d,%d offset = %d,%d\n",
+		pp(p), pp(gr), valInt(pos->x), valInt(pos->y),
+		valInt(offset->x), valInt(offset->y)));
+
   plusPoint(pos, offset);
   doneObject(offset);
 

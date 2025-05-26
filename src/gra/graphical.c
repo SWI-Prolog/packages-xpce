@@ -1482,7 +1482,7 @@ getFramePositionGraphical(Graphical gr)
   { get_absolute_xy_graphical(gr, (Device *)&w, &x, &y);
     if ( !instanceOfObject(w, ClassWindow) )
       fail;				/* not displayed */
-    offset_window(w, &ox, &oy);
+    offset_window(w, &ox, &oy);		/* scroll offset */
   }
   FrameObj fr = getFrameWindow(w, OFF);
   if ( fr )
@@ -1492,8 +1492,8 @@ getFramePositionGraphical(Graphical gr)
     oy += foy;
   }
 
-  x = toInt(valInt(x) + ox + valInt(w->area->x));
-  y = toInt(valInt(y) + oy + valInt(w->area->y));
+  x = toInt(valInt(x) + ox);
+  y = toInt(valInt(y) + oy);
 
   answer(answerObject(ClassPoint, x, y, EAV));
 }
