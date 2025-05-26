@@ -471,27 +471,39 @@ saveLinesTerminalImage(TerminalImage ti, Int lines)
 }
 
 static status
-fontTerminalImage(TerminalImage ti, FontObj font)
-{ assign(ti, font, font);
-  succeed;			/* TBD: Update, refresh */
+refreshTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+  if ( b )
+  { b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
+    rlc_request_redraw(b);
+  }
+  succeed;
 }
 
 static status
-boldFontTerminalImage(TerminalImage ti, FontObj font)
-{ assign(ti, bold_font, font);
-  succeed;
+fontTerminalImage(TerminalImage ti, FontObj font, FontObj bold)
+{ assign(ti, font, font);
+  if ( isDefault(bold) )
+    bold = newObject(ClassFont, font->family, NAME_bold, font->points, EAV);
+  CharArray cmp = (CharArray)NAME_x;
+  if ( getAdvanceFont(font, cmp) != getAdvanceFont(bold, cmp) )
+  { Cprintf("Fonts need to have the same pitch\n");
+    bold = NIL;
+  }
+  assign(ti, bold_font, bold);
+  return refreshTerminalImage(ti);
 }
 
 static status
 backgroundTerminalImage(TerminalImage ti, Colour bg)
 { assign(ti, background, bg);
-  succeed;			/* force redraw */
+  return refreshTerminalImage(ti);
 }
 
 static status
 ansiColoursTerminalImage(TerminalImage ti, Vector colours)
 { assign(ti, ansi_colours, colours);
-  succeed;			/* force redraw */
+  return refreshTerminalImage(ti);
 }
 
 static status
@@ -543,13 +555,15 @@ static char *T_initialise[] =
 static char *T_geometry[] =
 { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 static char *T_scrollVertical[] =
-        { "direction={forwards,backwards,goto}",
-	  "unit={file,page,line}", "amount=int" };
+{ "direction={forwards,backwards,goto}",
+  "unit={file,page,line}", "amount=int" };
+static char *T_font[] =
+{ "font=font", "bold=[font]" };
 
 static vardecl var_terminal_image[] =
-{ SV(NAME_font, "font", IV_GET|IV_STORE, fontTerminalImage,
+{ IV(NAME_font, "font", IV_GET,
      NAME_appearance, "Font used to draw the string"),
-  SV(NAME_boldFont, "font*", IV_GET|IV_STORE, boldFontTerminalImage,
+  IV(NAME_boldFont, "font*", IV_GET,
      NAME_appearance, "Font for bold text"),
   SV(NAME_background, "[colour]", IV_GET|IV_STORE, backgroundTerminalImage,
      NAME_appearance, "Terminal background colour"),
@@ -576,6 +590,8 @@ static senddecl send_terminal_image[] =
      DEFAULT, "Destroy data"),
   SM(NAME_geometry, 4, T_geometry, geometryTerminalImage,
      DEFAULT, "Change geometry"),
+  SM(NAME_font, 2, T_font, fontTerminalImage,
+     NAME_appearance, "Set font and bold font"),
   SM(NAME_compute, 0, NULL, computeTerminalImage,
      NAME_repaint, "Recompute the terminal image"),
   SM(NAME_bubbleScrollBar, 1, "scroll_bar", bubbleScrollBarTerminalImage,
