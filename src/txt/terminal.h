@@ -183,13 +183,16 @@ typedef unsigned short text_flags;
  *   - 5 bit (0..4) foreground color
  *   - 5 bit (5..9) background color
  *   - 1 bit (10)   bold
- *   - 1 bit (11)   underline (not implemented)
+ *   - 1 bit (11)   underline
+ *   - 1 bit (12)   inverse video
+ *   - 1 bit (13)   (hyper)link
  */
 #define TF_FG(f)	((f)&0x1f)	/* foreground */
 #define TF_BG(f)	(((f)>>5)&0x1f)	/* background */
 #define TF_BOLD(f)	((f)&(1<<10))	/* bold */
 #define TF_UNDERLINE(f)	((f)&(1<<11))	/* underline */
-#define TF_LINK(f)	((f)&(1<<12))	/* inside a link */
+#define TF_INVERSE(f)	((f)&(1<<12))	/* inverse video */
+#define TF_LINK(f)	((f)&(1<<13))	/* inside a link */
 
 #define TF_DEFAULT (ANSI_COLOR_DEFAULT | ANSI_COLOR_DEFAULT<<5)
 
@@ -197,7 +200,8 @@ typedef unsigned short text_flags;
 #define TF_SET_BG(f,c)		(((f)&~(0x1f<<5))|((c)<<5))
 #define TF_SET_BOLD(f,v)	(((f)&~(1<<10))|((v)<<10))
 #define TF_SET_UNDERLINE(f,v)	(((f)&~(1<<11))|((v)<<11))
-#define TF_SET_LINK(f,v)	(((f)&~(1<<12))|((v)<<12))
+#define TF_SET_INVERSE(f,v)	(((f)&~(1<<12))|((v)<<12))
+#define TF_SET_LINK(f,v)	(((f)&~(1<<13))|((v)<<13))
 
 typedef struct
 { TCHAR		 code;			/* character code */
