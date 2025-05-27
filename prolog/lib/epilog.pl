@@ -174,15 +174,12 @@ connect(PT) :->
 event(T, Ev:event) :->
     "Handle popup"::
     (   send_super(T, event, Ev)
-    ->  true
-    ;   send(Ev, is_a, ms_right_down)
-    ->  send(T, show_popup, Ev)
-    ;   send(Ev, is_a, focus)
-    ->  send_super(T, event, Ev),
-        (   send(Ev, is_a, activate_keyoard_focus)
+    ->  (   send(Ev, is_a, activate_keyboard_focus)
         ->  send(T?frame, current_terminal, T)
         ;   true
         )
+    ;   send(Ev, is_a, ms_right_down)
+    ->  send(T, show_popup, Ev)
     ).
 
 typed(T, Ev:event) :->
