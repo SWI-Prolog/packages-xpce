@@ -2782,9 +2782,9 @@ rlc_putansi(RlcData b, int chr)
 	  return;			/* wait for more args */
 	case 'H':
 	case 'f':
-	  rlc_need_arg(b, 1, 0);
-	  rlc_need_arg(b, 2, 0);
-	  CMD(rlc_set_caret(b, b->argv[0], b->argv[1]));
+	  rlc_need_arg(b, 1, 0); /* row */
+	  rlc_need_arg(b, 2, 0); /* col */
+	  CMD(rlc_set_caret(b, b->argv[1], b->argv[0]));
 	  break;
 	case 'A':
 	  rlc_need_arg(b, 1, 1);
