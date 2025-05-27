@@ -147,6 +147,7 @@ static void	rlc_scroll_lines(RlcData b, int lines);
 		 *******************************/
 
 static void Dprint_links(RlcTextLine tl, const char *msg);
+static void Dprint_line(RlcTextLine tl, bool links);
 static void Dprint_lines(RlcData b, int from, int to);
 static void Dprint_chr(int chr);
 static void Dprint_csi(RlcData b, int chr);
@@ -2023,6 +2024,8 @@ static void
 rlc_reinit_line(RlcData b, int line)
 { RlcTextLine tl = &b->lines[line];
   memset(tl, 0, sizeof(*tl));
+  tl->line_no = line;
+  tl->adjusted = true;
 }
 
 static void
@@ -2175,6 +2178,41 @@ rlc_caret_up(RlcData b, int arg)
     b->caret_y = PrevLine(b, b->caret_y);
 
   b->changed |= CHG_CARET;
+}
+
+
+/** Move caret up.  When already on first line, push screen down
+ *  one line and clean first line.  Bound to `\eM`
+ */
+
+static void
+rlc_reverse_index(RlcData b)
+{ if ( b->caret_y == b->window_start )
+  { int lines = rlc_count_lines(b, b->window_start, b->last)+1;
+    int bottom;
+    if ( lines > b->window_size )
+    { bottom = rlc_add_lines(b, b->window_start, b->window_size-1);
+    } else
+    { bottom = NextLine(b, b->last);
+      b->last = bottom;
+    }
+
+    rlc_free_line(b, bottom);
+    while(bottom != b->window_start)
+    { int before = PrevLine(b, bottom);
+      b->lines[bottom] = b->lines[before];
+      b->lines[bottom].changed |= CHG_CHANGED;
+      b->lines[bottom].line_no = bottom;
+      bottom = before;
+    }
+    rlc_reinit_line(b, bottom);
+    b->lines[bottom].changed |= CHG_CHANGED;
+
+    b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
+  } else
+  { b->caret_y = PrevLine(b, b->caret_y);
+    b->changed |= CHG_CARET;
+  }
 }
 
 
@@ -2669,6 +2707,10 @@ rlc_putansi(RlcData b, int chr)
 	  break;
 	case ')':
 	  b->cmdstat = CMD_G1;
+	  break;
+	case 'M':
+	  CMD(rlc_reverse_index(b));
+	  b->cmdstat = CMD_INITIAL;
 	  break;
 	default:
 	  b->cmdstat = CMD_INITIAL;
