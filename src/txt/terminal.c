@@ -2293,6 +2293,11 @@ rlc_tab(RlcData b)
 }
 
 
+/**
+ * @param x is the 0-based column
+ * @param y is the 0-based row
+ */
+
 static void
 rlc_set_caret(RlcData b, int x, int y)
 { int cy = rlc_count_lines(b, b->window_start, b->caret_y);
@@ -2824,9 +2829,11 @@ rlc_putansi(RlcData b, int chr)
 	  return;			/* wait for more args */
 	case 'H':
 	case 'f':
-	  rlc_need_arg(b, 1, 0); /* row */
-	  rlc_need_arg(b, 2, 0); /* col */
-	  CMD(rlc_set_caret(b, b->argv[1], b->argv[0]));
+	  rlc_need_arg(b, 1, 1); /* row */
+	  rlc_need_arg(b, 2, 1); /* col */
+	  int row = Bounds(b->argv[0], 1, b->window_size)-1;
+	  int col = Bounds(b->argv[1], 1, b->width)-1;
+	  CMD(rlc_set_caret(b, col, row));
 	  break;
 	case 'A':
 	  rlc_need_arg(b, 1, 1);
