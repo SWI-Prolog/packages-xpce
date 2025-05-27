@@ -140,6 +140,7 @@ static StringObj TCHAR2String(const TCHAR *str);
 static void	rlc_scroll_bubble(RlcData b,
 				  int *length, int *start, int *view);
 static void	rlc_scroll_lines(RlcData b, int lines);
+static void	rlc_shift_up(RlcData b, int shift);
 
 
 		 /*******************************
@@ -2235,9 +2236,15 @@ rlc_caret_down(RlcData b, int arg)
   }
   b->changed |= CHG_CARET;
 					/* scroll? */
-  if ( rlc_count_lines(b, b->window_start, b->caret_y) >= b->window_size )
-  { b->window_start = rlc_add_lines(b, b->caret_y, -(b->window_size-1));
-    b->changed |= CHG_CHANGED|CHG_CLEAR;
+  int row = rlc_count_lines(b, b->window_start, b->caret_y);
+  if ( row >= b->window_size )
+  { if ( b->saved.lines )
+    { rlc_shift_up(b, row-(b->window_size-1));
+      b->caret_y = rlc_add_lines(b, b->window_start, b->window_size-1);
+    } else
+    { b->window_start = rlc_add_lines(b, b->caret_y, -(b->window_size-1));
+      b->changed |= CHG_CHANGED|CHG_CLEAR;
+    }
   }
 
   rlc_check_assertions(b);
@@ -2360,6 +2367,7 @@ rlc_erase_display(RlcData b)
 
   RlcTextLine tl = &b->lines[b->window_start];
   tl->size = 0;
+  tl->adjusted = false;
   b->last = b->window_start;
   b->changed |= CHG_CHANGED|CHG_CLEAR|CHG_CARET;
 
@@ -2519,6 +2527,45 @@ rlc_register_link(RlcData b, const TCHAR *link, size_t len)
   return rlc_add_link(tl, link, b->caret_x, len);
 }
 
+		 /*******************************
+		 *     SAVED SCREEN SUPPORT     *
+		 *******************************/
+
+/**
+ * Handle scrolling up on a cursor down in saved-screen-mode.  In that
+ * case we  do not push  the lines to the  saved lines, but  we simply
+ * remove them.
+ */
+
+static void
+rlc_shift_up(RlcData b, int shift)
+{ int line = b->window_start;
+  int last = rlc_add_lines(b, b->window_start, b->window_size-1);
+  int src = rlc_add_lines(b, line, shift);
+
+  if ( shift < b->window_size )
+  { int done = 0;
+    for(;;)
+    { if ( done++ < shift )
+	rlc_free_line(b, line);
+      b->lines[line] = b->lines[src];
+      b->lines[line].changed = CHG_CHANGED;
+      if ( src == last )
+	break;
+      line = NextLine(b, line);
+      src  = NextLine(b, src);
+    }
+  }
+
+  do
+  { line = NextLine(b, line);
+    rlc_reinit_line(b, line);
+  } while( line != last );
+
+  b->changed |= CHG_CHANGED|CHG_CLEAR;
+}
+
+
 static void
 rlc_destroy_saved_line(RlcTextLine tl)
 { if ( tl->text )
@@ -2612,9 +2659,9 @@ rlc_restore_screen(RlcData b)
   }
 }
 
-
-
-
+		 /*******************************
+		 *      DEC PRIVATE MODES       *
+		 *******************************/
 
 /** Set/clear DEC primate modes.  2004 means do (not) emit
  *  ESC [ 200 ~ ... ESC [ 201 ~ around pasted text.  Not yet
