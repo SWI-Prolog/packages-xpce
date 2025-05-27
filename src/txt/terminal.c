@@ -2387,6 +2387,10 @@ rlc_sgr(RlcData b, int sgr)
   { b->sgr_flags = TF_SET_BOLD(b->sgr_flags, 1);
   } else if ( sgr == 4 )
   { b->sgr_flags = TF_SET_UNDERLINE(b->sgr_flags, 1);
+  } else if ( sgr == 22 )	/* also clears "faint" */
+  { b->sgr_flags = TF_SET_BOLD(b->sgr_flags, 0);
+  } else if ( sgr == 24 )
+  { b->sgr_flags = TF_SET_UNDERLINE(b->sgr_flags, 0);
   }
 }
 
