@@ -2515,21 +2515,24 @@ rlc_register_link(RlcData b, const TCHAR *link, size_t len)
 }
 
 static void
+rlc_destroy_saved_line(RlcTextLine tl)
+{ if ( tl->text )
+    rlc_free(tl->text);
+  href *links = tl->links;
+  if ( links )
+    rlc_free_links(links);
+}
+
+static void
 rlc_destroy_saved_screen(RlcData b)
-{ RlcTextLine tls = b->saved_screen;
+{ RlcTextLine tls = b->saved.lines;
 
   if ( tls )
-  { int count = b->saved_screen_lines;
-    b->saved_screen = NULL;
-    b->saved_screen_lines = 0;
+  { int count = b->saved.height;
+    b->saved.lines = NULL;
+    b->saved.height = 0;
     for(int i=0; i<count; i++)
-    { RlcTextLine tl = &tls[i];
-      if ( tl->text )
-	rlc_free(tl->text);
-      href *links = tl->links;
-      if ( links )
-	rlc_free_links(links);
-    }
+      rlc_destroy_saved_line(&tls[i]);
     rlc_free(tls);
   }
 }
@@ -2555,14 +2558,57 @@ rlc_save_screen(RlcData b)
   int lines = rlc_count_lines(b, b->window_start, b->last);
   if ( lines > b->window_size )
     lines = b->window_size;
-  b->saved_screen_lines = lines;
-  b->saved_screen = rlc_malloc(sizeof(rlc_text_line) * lines);
+  b->saved.height = lines;
+  b->saved.lines = rlc_malloc(sizeof(rlc_text_line) * lines);
+  b->saved.caret_x = b->caret_x;
+  b->saved.caret_y = rlc_count_lines(b, b->window_start, b->caret_y);
   int src = b->window_start;
   for(int i=0; i<lines; i++)
-  { rlc_copy_line(&b->saved_screen[i], &b->lines[src]);
+  { rlc_copy_line(&b->saved.lines[i], &b->lines[src]);
     src = NextLine(b, src);
   }
 }
+
+
+static void
+rlc_restore_screen(RlcData b)
+{ RlcTextLine tls = b->saved.lines;
+
+  if ( tls )
+  { int line = b->window_start;
+    int count = b->saved.height;
+    b->saved.lines = NULL;
+    b->saved.height = 0;
+
+    for(int i=0; i<count; i++)
+    { if ( i < b->window_size )
+      { rlc_free_line(b, line);
+	RlcTextLine nl = &b->lines[line];
+	*nl = tls[i];
+	nl->line_no = line;
+	nl->changed = CHG_CHANGED;
+	if ( nl->size > b->width ) /* TODO: we should re-flush */
+	{ nl->size = b->width;
+	  nl->softreturn = false;
+	  rlc_adjust_line(b, i);
+	}
+	line = NextLine(b, line);
+      } else
+      { rlc_destroy_saved_line(&tls[i]);
+      }
+    }
+    rlc_free(tls);
+
+    if ( rlc_count_lines(b, b->window_start, b->last) < count )
+      b->last = rlc_add_lines(b, b->window_start, count);
+    b->caret_x = Bounds(b->saved.caret_x, 0, b->width-1);
+    b->caret_y = rlc_add_lines(b, b->window_start,
+			       Bounds(b->saved.caret_y, 0, b->window_size));
+  }
+}
+
+
+
 
 
 /** Set/clear DEC primate modes.  2004 means do (not) emit
@@ -2583,7 +2629,6 @@ rlc_set_dec_mode(RlcData b, int mode)
       changed_caret(b);
       break;
     case 1049:
-      Cprintf("Save screen\n");
       rlc_save_screen(b);
       rlc_erase_display(b);
       break;
@@ -2606,7 +2651,8 @@ rlc_clear_dec_mode(RlcData b, int mode)
       changed_caret(b);
       break;
     case 1049:
-      Cprintf("Restore saved screen\n");
+      rlc_erase_display(b);
+      rlc_restore_screen(b);
       break;
     default:
       Cprintf("Clear unknown DEC private mode %d\n", mode);

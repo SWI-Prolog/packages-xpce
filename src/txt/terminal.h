@@ -263,8 +263,12 @@ typedef struct rlc_data
   int		window_start;		/* start line of the window */
   int		window_size;		/* #lines on the window */
   RlcTextLine	lines;			/* the actual lines */
-  RlcTextLine	saved_screen;		/* ESC ? 1049 [hl] */
-  int		saved_screen_lines;	/* # lines saved */
+  struct				/* ESC ? 1049 [hl] */
+  { RlcTextLine	lines;			/* The saved lines */
+    int		height;			/* # lines saved */
+    int		caret_x;		/* Caret location */
+    int		caret_y;
+  } saved;
   int		sel_unit;		/* SEL_CHAR, SEL_WORD, SEL_LINE */
   int		sel_org_line;		/* line origin of the selection */
   int		sel_org_char;		/* char origin of the selection */
