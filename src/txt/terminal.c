@@ -575,13 +575,16 @@ getPtyNameTerminalImage(TerminalImage ti)
 		 *******************************/
 
 static status
-printTerminalImage(TerminalImage ti)
+printTerminalImage(TerminalImage ti, Int start, Int count)
 { RlcData b = ti->data;
-  int from = b->window_start;
-  int to = from;
-  for(int i=0; i<b->window_size; i++)
-    to = NextLine(b, to);
-  Dprint_lines(b, from, to);
+  Cprintf("################\n");
+  Cprintf("# first = %d; last = %d; window_start = %d\n",
+	  b->first, b->last, b->window_start);
+
+  int from  = isDefault(start) ? b->window_start : valInt(start);
+  int lines = isDefault(count) ? b->window_size  : valInt(count);
+
+  Dprint_lines(b, from, rlc_add_lines(b, from, lines));
 
   succeed;
 }
@@ -597,6 +600,8 @@ static char *T_scrollVertical[] =
   "unit={file,page,line}", "amount=int" };
 static char *T_font[] =
 { "font=font", "bold=[font]" };
+static char *T_print[] =
+{ "start=[int]", "count=[int]" };
 
 static vardecl var_terminal_image[] =
 { IV(NAME_font, "font", IV_GET,
@@ -653,7 +658,7 @@ static senddecl send_terminal_image[] =
      NAME_insert, "Send text to the connected process"),
   SM(NAME_insert, 1, "text=char_array", insertTerminalImage,
      NAME_insert, "Insert text at caret (moves caret)"),
-  SM(NAME_print, 0, NULL, printTerminalImage,
+  SM(NAME_print, 2, T_print, printTerminalImage,
      NAME_debug, "Print content of the window"),
 };
 
@@ -2775,7 +2780,16 @@ rlc_putansi(RlcData b, int chr)
 	  CMD(rlc_reverse_index(b));
 	  b->cmdstat = CMD_INITIAL;
 	  break;
+	case '=':
+	  b->app_keypad_mode = true;
+	  b->cmdstat = CMD_INITIAL;
+	  break;
+	case '>':
+	  b->app_keypad_mode = true;
+	  b->cmdstat = CMD_INITIAL;
+	  break;
 	default:
+	  Cprintf("ESC%c\n", chr);
 	  b->cmdstat = CMD_INITIAL;
 	  break;
       }
