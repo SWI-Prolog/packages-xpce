@@ -49,7 +49,7 @@ typedef enum
 typedef struct
 { int		fd;		/* FD we are watching */
   fd_ready_codes code;		/* SDL3 event.user.code */
-  atomic_int	state;		/* WATCH_* */
+  _Atomic watch_state	state;	/* WATCH_* */
   Any		userdata;	/* SDL3 event.user.data2 */
 } FDWatch;
 
