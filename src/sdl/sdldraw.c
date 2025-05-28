@@ -1025,7 +1025,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 
     if ( fill )			/* r_fill_fgbg() uses floats  */
       r_fill_fgbg(fx+shadow, fy+shadow, fw-2*shadow,
-		  fh-2*shadow, NAME_current, NAME_foreground);
+		  fh-2*shadow, NAME_current, NAME_background);
   }
 }
 
