@@ -57,7 +57,7 @@ static struct pollfd poll_fds[MAX_FDS];
 static int meta_id[MAX_FDS];
 static FDWatch fd_meta[MAX_FDS] = {0};
 static int control_pipe[2];
-static int watch_max = 0;
+static atomic_int watch_max = 0;
 static SDL_Thread *watcher_thread = NULL;
 
 static void lock_watch_userdata(FDWatch *watch);
