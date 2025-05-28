@@ -72,15 +72,19 @@ epilog(Title) :-
     send(new(epilog(Title)), open).
 
 :- dynamic
-    current_prolog_terminal/2.          % Thread, Terminal
+    current_prolog_terminal/2,  % ?Thread, ?TerminalObject
+    terminal_input/6.           % TerminalObject, PTY, In, Out, Error,
+                                % EditLine
 
 :- pce_begin_class(prolog_terminal, terminal_image,
                    "Terminal for running a Prolog thread").
 
-variable(goal_init,     prolog := version, both, "Goal to run for init").
-variable(goal,          prolog := prolog,  both, "Main goal").
-variable(popup,         popup*,         get,     "Terminal popup").
-variable(popup_gesture, popup_gesture*, none,    "Gesture to show menu").
+variable(goal_init,     prolog := version,    both, "Goal to run for init").
+variable(goal,          prolog := prolog,     both, "Main goal").
+variable(popup,         popup*,               get,  "Terminal popup").
+variable(popup_gesture, popup_gesture*,       none, "Gesture to show menu").
+variable(history,       {on,off,copy} := off, none, "Support history").
+variable(save_history,  bool := @off,         none, "Save history on exit").
 
 initialise(PT) :->
     "Create Prolog terminal"::
@@ -133,12 +137,16 @@ clean_exit :-
 %   Called from at_exit(Goal) option of the created thread.
 
 terminated :-
-    thread_self(Me),
-    (   retract(current_prolog_terminal(Me, PT))
-    ->  in_pce_thread(send(PT?frame, delete_epilog, PT?window))
-    ;   true
-    ),
+    delete_window,
     close_io.
+
+delete_window :-
+    thread_self(Me),
+    retract(current_prolog_terminal(Me, PT)),
+    !,
+    save_history(PT),
+    in_pce_thread(send(PT?frame, delete_epilog, PT?window)).
+delete_window.
 
 close_io :-
     (   current_predicate(el_unwrap/1)
@@ -149,25 +157,81 @@ close_io :-
     close(user_output, [force(true)]),
     close(user_error, [force(true)]).
 
+open_link(_T, Href:name) :->
+    "Open a clicked hyperlink"::
+    tty_link(Href).
+
+:- pce_group(prolog).
+
+connect(PT) :->
+    "Connect a Prolog thread to the terminal"::
+    (   current_prolog_terminal(_Thread, PT)
+    ->  true
+    ;   connect(PT, _Title)
+    ).
+
 interrupt(PT) :->
     "Interrupt client Prolog process"::
     current_prolog_terminal(Thread, PT),
     current_signal(int, SIGINT, debug),
     thread_signal(Thread, SIGINT).
 
-open_link(_T, Href:name) :->
-    "Open a clicked hyperlink"::
-    tty_link(Href).
+save_history(PT) :-
+    retract(terminal_input(PT, _PTY, In, _Out, _Err, EditLine)),
+    EditLine == true,
+    !,
+    in_pce_thread(writeln(save_history(In))).
+save_history(_).
 
+history_events(PT, Events:prolog) :<-
+    "Get the CLI history of this terminal"::
+    terminal_input(PT, _PTY, In, _Out, _Err, true),
+    stream_property(In, file_no(Fd)),
+    el_history_events(Fd, Events).
 
-connect(PT) :->
-    "Connect a Prolog thread to the terminal"::
-    (   current_prolog_terminal(_Thread, PT)
-    ->  true
-    ;   get(PT, goal_init, Init),
-        get(PT, goal, Goal),
-        connect(PT, Init, Goal, _Title)
+history_events(PT, Events:prolog) :->
+    "Insert history events"::
+    history_events(PT, Events).
+
+history_events(PT, Events) :-
+    terminal_input(PT, _PTY, In, _Out, _Err, true),
+    stream_property(In, file_no(Fd)),
+    reverse(Events, OldFirst),
+    forall(member(_N-Line, OldFirst),
+           el_add_history(Fd, Line)),
+    editline:load_history_events(Events).
+
+history(PT, Enabled:enable={on,off,copy}, Save:save=[bool]) :->
+    "Enable/disable history"::
+    default(Enabled, on, TheEnabled),
+    default(Save, @off, TheSave),
+    send(PT, slot, history, TheEnabled),
+    send(PT, slot, save_history, TheSave),
+    ignore(activate_history(PT)).
+
+activate_history(PT) :-
+    terminal_input(PT, _PTY, _In, _Out, _Err, _EditLine),
+    get(PT, slot, history, Enabled),
+    get(PT, slot, save_history, Save),
+    (   Enabled == off
+    ->  prolog_history(disable)
+    ;   Enabled == on
+    ->  prolog_history(enable),
+        '$load_history',
+        (   Save \== @on
+        ->  set_prolog_flag(save_history, false)
+        ;   true
+        )
+    ;   true                            % e.g., `copy`
     ).
+
+parent_history(PT, Events) :-
+    get(PT, slot, history, copy),
+    get(PT?window, hypered, parent, Parent),
+    get(Parent, history_events, Events),
+    !.
+parent_history(_PT, []).
+
 
 :- pce_group(event).
 
@@ -224,20 +288,24 @@ show_popup(T, Ev:event) :->
                 *     MANAGE PROLOG THREAD     *
                 *******************************/
 
-%!  connect(+TI, :Init, :Goal, -Title) is det.
+%!  connect(+PT, -Title) is det.
 
-connect(TI, Init, Goal, Title) :-
+connect(PT, Title) :-
+    get(PT, goal_init, Init),
+    get(PT, goal, Goal),
     gensym(con, Alias),
-    send(TI?window, name, Alias),
-    get(TI, pty_name, PTY),
+    send(PT?window, name, Alias),
+    get(PT, pty_name, PTY),
     thread_self(Me),
-    thread_create(thread_run_interactor(Me, PTY, Init, Goal, Title),
+    parent_history(PT, Events),
+    thread_create(thread_run_interactor(PT, Me, PTY, Init, Goal, Title,
+                                        Events),
                   Thread,
                   [ detached(true),
                     alias(Alias),
                     at_exit(terminated)
                   ]),
-    asserta(current_prolog_terminal(Thread, TI)),
+    asserta(current_prolog_terminal(Thread, PT)),
     thread_get_message(Msg),
     (   Msg = title(Title0)
     ->  Title = Title0
@@ -247,10 +315,10 @@ connect(TI, Init, Goal, Title) :-
     ->  fail
     ).
 
-thread_run_interactor(Creator, PTY, Init, Goal, Title) :-
+thread_run_interactor(PT, Creator, PTY, Init, Goal, Title, History) :-
     set_prolog_flag(query_debug_settings, debug(false, false)),
     Error = error(Formal,_),
-    (   catch(attach_terminal(PTY, Title), Error, true)
+    (   catch(attach_terminal(PT, PTY, Title, History), Error, true)
     ->  (   var(Formal)
         ->  thread_send_message(Creator, title(Title)),
             call(Init),
@@ -260,7 +328,7 @@ thread_run_interactor(Creator, PTY, Init, Goal, Title) :-
     ;   thread_send_message(Creator, false)
     ).
 
-attach_terminal(PTY, _Title) :-
+attach_terminal(PT, PTY, _Title, History) :-
     exists_source(library(editline)),
     use_module(library(editline)),
     !,
@@ -279,13 +347,23 @@ attach_terminal(PTY, _Title) :-
     set_stream(Err, alias(user_error)),
     set_stream(In,  alias(current_input)),
     set_stream(Out, alias(current_output)),
-    call(el_wrap).
-attach_terminal(PTY, _Title) :-
+    call(el_wrap),
+    register_input(PT, PTY, true, History).
+attach_terminal(PT, PTY, _Title, History) :-
     open(PTY, read,  In,  [encoding(utf8), bom(false)]),
     open(PTY, write, Out, [encoding(utf8)]),
     open(PTY, write, Err, [encoding(utf8)]),
     set_stream(In,  file_name('')),
-    set_prolog_IO(In, Out, Err).
+    set_prolog_IO(In, Out, Err),
+    register_input(PT, PTY, false, History).
+
+register_input(PT, PTY, EditLine, History) :-
+    stream_property(In, alias(user_input)),
+    stream_property(Out, alias(user_output)),
+    stream_property(Err, alias(user_error)),
+    asserta(terminal_input(PT, PTY, In, Out, Err, EditLine)),
+    history_events(PT, History).
+
 
 %!  tty_link(+Link) is det.
 %
@@ -362,6 +440,8 @@ create(T) :->
 split(T, Dir:{horizontally,vertically}) :->
     "Add a new terminal below me"::
     new(W, epilog_window),
+    new(_, hyper(W, T, parent, child)),
+    send(W, history, copy),
     send(W, goal_init, true),
     get(T, tile, Tile),
     send(Tile, can_resize, @on),
