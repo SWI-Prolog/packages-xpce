@@ -2254,12 +2254,13 @@ str_label(PceString s, int acc, FontObj font,
   str_compute_lines(lines, nlines, font, x, y, w, h, hadjust, vadjust);
 
   if ( flags & LABEL_INACTIVE )
-  { Any old = r_colour(WHITE_COLOUR);
+  { Colour old = context.colour; /* ignore "fixed_colours" */
+    context.colour = WHITE_COLOUR;
 
     str_draw_text_lines(acc, font, nlines, lines, 1, 1);
-    r_colour(ws_3d_grey());
+    context.colour = ws_3d_grey();
     str_draw_text_lines(acc, font, nlines, lines, 0, 0);
-    r_colour(old);
+    context.colour = old;
   } else
     str_draw_text_lines(acc, font, nlines, lines, 0, 0);
 }
