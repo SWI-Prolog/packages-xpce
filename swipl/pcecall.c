@@ -69,7 +69,7 @@ typedef struct
 
 
 #ifdef O_PLMT
-static int init_prolog_goal(prolog_goal *g, term_t goal, int acknowledge);
+static bool init_prolog_goal(prolog_goal *g, term_t goal, bool acknowledge);
 static void call_prolog_goal(prolog_goal *g);
 #endif
 
@@ -82,7 +82,7 @@ in_pce_thread(term_t goal)
   if ( !g )
     return PL_resource_error("memory");
 
-  if ( !init_prolog_goal(g, goal, FALSE) )
+  if ( !init_prolog_goal(g, goal, false) )
   { free(g);
     return FALSE;
   }
@@ -113,56 +113,45 @@ sdl_call_event(SDL_Event *event)
 }
 
 
+static void
+sdl_in_main_sync(void *udata)
+{ prolog_goal *g = udata;
+  call_prolog_goal(g);
+}
+
 static foreign_t
 in_pce_thread_sync2(term_t goal, term_t vars)
-{ prolog_goal *g = malloc(sizeof(*g));
+{ prolog_goal g;
 
-  if ( !g )
-    return PL_resource_error("memory");
+  if ( !init_prolog_goal(&g, goal, true) )
+    return false;
 
-  if ( !init_prolog_goal(g, goal, TRUE) )
-  { free(g);
-    return FALSE;
+  if ( !SDL_RunOnMainThread(sdl_in_main_sync, &g, true) )
+  { Cprintf("SDL_RunOnMainThread(): %s\n", SDL_GetError());
+    return false;		/* TBD: exception */
   }
 
-  SDL_Event event = {0};
-  event.type = MY_EVENT_CALL;
-  event.user.code = CALL_MAGIC;
-  event.user.data1 = g;
-  SDL_PushEvent(&event);
+  switch(g.state)
+  { case G_TRUE:
+    { term_t v = PL_new_term_ref();
 
-  bool rc = false;
-  while(true)
-  { pceDispatch(-1, 250);
-    if ( PL_handle_signals() < 0 )
-      return false;
-
-    switch(g->state)
-    { case G_TRUE:
-      { term_t v = PL_new_term_ref();
-
-	rc = PL_recorded(g->result, v) && PL_unify(vars, v);
-	PL_erase(g->result);
-        goto out;
-      }
-      case G_FALSE:
-	goto out;
-      case G_ERROR:
-      { term_t ex = PL_new_term_ref();
-
-	if ( PL_recorded(g->result, ex) )
-	  rc = PL_raise_exception(ex);
-	PL_erase(g->result);
-	goto out;
-      }
-      default:
-	continue;
+      bool rc = PL_recorded(g.result, v) && PL_unify(vars, v);
+      PL_erase(g.result);
+      return rc;
     }
-  }
+    case G_FALSE:
+      return false;
+    case G_ERROR:
+    { term_t ex = PL_new_term_ref();
 
-out:
-  free(g);
-  return rc;
+      if ( PL_recorded(g.result, ex) )
+	PL_raise_exception(ex);
+      PL_erase(g.result);
+      return false;
+    }
+    default:
+      assert(0);
+  }
 }
 
 #endif
@@ -172,8 +161,8 @@ out:
 		 *******************************/
 
 #if O_PLMT
-static int
-init_prolog_goal(prolog_goal *g, term_t goal, int acknowledge)
+static bool
+init_prolog_goal(prolog_goal *g, term_t goal, bool acknowledge)
 { term_t plain = PL_new_term_ref();
 
   g->module	 = NULL;
