@@ -87,7 +87,7 @@ initialise(PT) :->
     send_super(PT, initialise),
     send(PT, name, terminal),
     send(PT, link_message, message(@receiver, open_link, @arg1)),
-    send(PT, popup, new(P, popup)),
+    send(PT, popup, new(P, epilog_popup)),
     Terminal = @event?receiver,
     send_list(P, append,
               [ menu_item(copy,
@@ -468,6 +468,10 @@ preferences(_T, Which:{prolog,xpce}) :->
     "Edit Prolog or GUI preferences"::
     call(prolog_edit_preferences(Which)).
 
+open_url(_T, URL:name) :->
+    "Open a URL"::
+    www_open_url(URL).
+
 :- pce_end_class(epilog).
 
 :- pce_begin_class(epilog_dialog, dialog, "Prolog terminator menu").
@@ -481,6 +485,7 @@ initialise(D) :->
     send(MB, append, new(Settings, popup(settings))),
     send(MB, append, new(Run,      popup(run))),
     send(MB, append, new(Tools,    popup(tools))),
+    send(MB, append, new(Help,     popup(help))),
     Epilog = @event?receiver?frame,
     send_list(File, append,
               [ menu_item(consult,
@@ -516,9 +521,33 @@ initialise(D) :->
                           message(Epilog, ide, debug_monitor)),
                 menu_item(cross_referencer,
                           message(Epilog, ide, xref))
+              ]),
+    send_list(Help, append,
+              [ menu_item('SWI-Prolog documentation',
+                          message(Epilog, open_url,
+                                  'https://www.swi-prolog.org')),
+                menu_item('SWI-Prolog Discourse forum',
+                          message(Epilog, open_url,
+                                  'https://swi-prolog.discourse.group/'),
+                          end_group := @on),
+                menu_item('XPCE on SDL+Cairo',
+                          message(Epilog, open_url,
+                                  'https://github.com/SWI-Prolog/packages-xpce/wiki'))
               ]).
 
 :- pce_end_class(epilog_dialog).
+
+:- pce_begin_class(epilog_popup, popup, "Epilog styled popup").
+
+class_variable(accelerator_font, font, small).
+
+assign_accelerators(_) :->
+    "Accelerators are defined by the window"::
+    true.
+
+:- pce_end_class(epilog_popup).
+
+
 
                 /*******************************
                 *        COMPATIBILITY         *
