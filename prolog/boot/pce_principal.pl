@@ -195,6 +195,12 @@ missing_(Dir, [Dir|T]) :-
                 *           LOAD C-PART         *
                 ********************************/
 
+:- dynamic
+    pce:pce_thread/1.
+
+init_pce :-
+    pce:pce_thread(_),
+    !.
 init_pce :-
     catch(use_foreign_library(foreign(pl2xpce)),
           error(Error, _Context),           % suppress stack trace

@@ -160,6 +160,13 @@ in_pce_thread_sync(Goal) :-
 
 :- if(current_prolog_flag(threads, true)).
 start_dispatch :-
+    get(@pce, window_system, sdl),
+    !,
+    (   thread_self(main)
+    ->  set_pce_thread
+    ;   true
+    ).
+start_dispatch :-
     (   current_predicate(pce_dispatch:start_dispatch/0)
     ->  pce_dispatch:start_dispatch
     ;   set_pce_thread
