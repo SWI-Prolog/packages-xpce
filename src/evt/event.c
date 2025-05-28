@@ -589,7 +589,8 @@ get_xy_event(EventObj ev, Any obj, BoolObj area, Int *rx, Int *ry)
   }
 
   if ( instanceOfObject(obj, ClassDisplay) )
-  { Cprintf("Cannot get event location relative to %s\n", pp(obj));
+  { DEBUG(NAME_event,
+	  Cprintf("Cannot get event location relative to %s\n", pp(obj)));
     *rx = *ry = toInt(-1);
     fail;
   }
