@@ -248,9 +248,13 @@ sdl_sendv(Any receiver, Name selector, bool sync, Class class,
  * Send  a message,  executing it  in the  SDL main  thread.  This  is
  * required  for methods  that call  SDL  functions that  may only  be
  * called in the main thread.
+ *
+ * @param sync defines whether the method is executed synchronously.  This
+ * is an int rather than a bool because bool is not allowed as argument to
+ * va_start().
  */
 status
-sdl_send(Any receiver, Name selector, bool sync, ...)
+sdl_send(Any receiver, Name selector, int sync, ...)
 { va_list args;
   Any argv[VA_PCE_MAX_ARGS];
   int argc;

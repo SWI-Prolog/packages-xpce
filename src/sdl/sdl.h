@@ -37,7 +37,7 @@
 #include <SDL3/SDL.h>
 #include <SWI-Prolog.h>		/* Debugging: PL_thread_self() */
 
-status	sdl_send(Any receiver, Name selector, bool sync, ...);
+status	sdl_send(Any receiver, Name selector, int sync, ...);
 bool	sdl_initialised(void);
 int	setPceThread(void);
 
