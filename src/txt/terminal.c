@@ -2652,7 +2652,9 @@ rlc_restore_screen(RlcData b)
     rlc_free(tls);
 
     if ( rlc_count_lines(b, b->window_start, b->last) < count )
-      b->last = rlc_add_lines(b, b->window_start, count);
+    { b->last = rlc_add_lines(b, b->window_start, count);
+      rlc_free_line(b, b->last);
+    }
     b->caret_x = Bounds(b->saved.caret_x, 0, b->width-1);
     b->caret_y = rlc_add_lines(b, b->window_start,
 			       Bounds(b->saved.caret_y, 0, b->window_size));
