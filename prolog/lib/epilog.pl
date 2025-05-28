@@ -69,7 +69,18 @@ library(thread_util). Eventually, this should be properly merged.
 epilog :-
     epilog(@default).
 epilog(Title) :-
+    setup_history,
     send(new(epilog(Title)), open).
+
+%!  setup_history
+%
+%   Whether or not to transfer the history.
+
+setup_history :-
+    current_prolog_terminal(_,_),
+    !.
+setup_history :-
+    set_prolog_flag(save_history, false).
 
 :- dynamic
     current_prolog_terminal/2,  % ?Thread, ?TerminalObject
@@ -177,10 +188,10 @@ interrupt(PT) :->
     thread_signal(Thread, SIGINT).
 
 save_history(PT) :-
-    retract(terminal_input(PT, _PTY, In, _Out, _Err, EditLine)),
+    retract(terminal_input(PT, _PTY, _In, _Out, _Err, EditLine)),
     EditLine == true,
     !,
-    in_pce_thread(writeln(save_history(In))).
+    prolog_history(save).               % If loaded and `save_history` is `true`
 save_history(_).
 
 history_events(PT, Events:prolog) :<-
@@ -193,6 +204,27 @@ history_events(PT, Events:prolog) :->
     "Insert history events"::
     history_events(PT, Events).
 
+%!  history_events(+PT, +History) is det.
+%
+%   Activate the history of the new thread.  History is one of
+%
+%     - []
+%       No history
+%     - load
+%       Load the saved history for this directory
+%     - list(Events)
+%       Start with a list of events.  This is used if we split a window
+%       to copy the contents of the parent.
+%
+%    Note that this runs in the newly   created thread and cannot invoke
+%    methods on XPCE as that will deadlock.
+
+history_events(_PT, []) :-
+    !.
+history_events(_PT, load) :-
+    !,
+    prolog_history(enable),
+    '$load_history'.
 history_events(PT, Events) :-
     terminal_input(PT, _PTY, In, _Out, _Err, true),
     stream_property(In, file_no(Fd)),
@@ -230,6 +262,9 @@ parent_history(PT, Events) :-
     get(PT?window, hypered, parent, Parent),
     get(Parent, history_events, Events),
     !.
+parent_history(PT, Events) :-
+    get(PT, slot, history, on),
+    Events = load.
 parent_history(_PT, []).
 
 
@@ -466,7 +501,12 @@ initialise(T, Title:title=[name],
     default(Title, "SWI-Prolog console", TheTitle),
     send_super(T, initialise, TheTitle),
     send(T, append, new(D, epilog_dialog)),
-    send(epilog_window(@default, Width, Height), below, D).
+    new(W, epilog_window(@default, Width, Height)),
+    (   current_prolog_terminal(_, _)
+    ->  true
+    ;   send(W, history, on)            % Use history on the first
+    ),
+    send(W, below, D).
 
 delete_epilog(T, W:window) :->
     "Remove an individual terminal"::
