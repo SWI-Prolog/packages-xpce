@@ -151,6 +151,7 @@ in_pce_thread_sync2(term_t goal, term_t vars)
     }
     default:
       assert(0);
+      return false;
   }
 }
 
