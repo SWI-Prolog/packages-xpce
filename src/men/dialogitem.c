@@ -669,7 +669,7 @@ static classvardecl rc_dialogItem[] =
      "Alignment in the row"),
   RC(NAME_background, "colour|pixmap*", "@_dialog_bg",
      "Background of the item"),
-  RC(NAME_elevation, "elevation*", "when(@colour_display, 1, 0)",
+  RC(NAME_elevation, "elevation*", "1",
      "3-D elevation"),
   RC(NAME_labelFont, "font", "bold",
      "Default font for labels"),
@@ -699,4 +699,3 @@ status
 makeClassDialogItem(Class class)
 { return declareClass(class, &dialogItem_decls);
 }
-
