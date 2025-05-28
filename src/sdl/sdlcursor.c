@@ -45,6 +45,7 @@ static struct standardCursor
 {					/* Map X11 names to SDL */
   { "arrow",               SDL_SYSTEM_CURSOR_DEFAULT },
   { "top_left_arrow",      SDL_SYSTEM_CURSOR_DEFAULT },
+  { "cross_reverse",       SDL_SYSTEM_CURSOR_DEFAULT },
   { "watch",               SDL_SYSTEM_CURSOR_WAIT },
   { "hand2",               SDL_SYSTEM_CURSOR_POINTER },
   { "xterm",               SDL_SYSTEM_CURSOR_TEXT },
