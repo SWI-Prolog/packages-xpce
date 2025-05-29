@@ -312,8 +312,12 @@ CtoEvent(SDL_Event *event)
   if ( notNil(mouse_tracking_window) )
   { int ox=0, oy=0;
     bool rc = ws_window_frame_position(mouse_tracking_window, frame, &ox, &oy);
-    assert(rc);
-    (void)rc;
+    if ( !rc )
+    { Cprintf("Mouse tracking window (%s) is lost?\n",
+	      pp(mouse_tracking_window));
+      mouse_tracking_window = NIL;
+      fail;
+    }
     window = mouse_tracking_window;
 
     x -= ox;
