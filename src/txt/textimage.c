@@ -434,7 +434,8 @@ do_fill_line(TextImage ti, TextLine l, long index)
 { short last_break = -1;
   int last_is_space = FALSE;
   TextChar tc;
-  int x, i, left_margin, right_margin;
+  float x;
+  int i, left_margin, right_margin;
   long start;
 
   l->ends_because = 0;

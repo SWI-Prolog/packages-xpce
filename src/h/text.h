@@ -218,7 +218,7 @@ struct text_char
   Colour	colour;			/* Colour of this character */
   Any		background;		/* Background for the characters */
   intptr_t	index;			/* Index in line (relative) */
-  short		x;			/* X-position in line (pixels) */
+  float		x;			/* X-position in line (pixels) */
   unsigned char attributes;		/* Its attributes */
   unsigned	type : 2;		/* type of character */
 };
