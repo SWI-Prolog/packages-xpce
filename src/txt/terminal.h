@@ -298,7 +298,7 @@ typedef struct rlc_data
   COLORREF	sel_background;		/* Selection background */
   COLORREF	ansi_color[16];		/* ANSI colors (8 normal + 8 bright) */
   text_flags	sgr_flags;		/* Current SGR flags */
-  int		cw;			/* character width */
+  double	cw;			/* character width */
   int		ch;			/* character height */
   int		cb;			/* baseline */
   int		changed;		/* changes to the whole screen */

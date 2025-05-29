@@ -186,7 +186,7 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h)
   obtainClassVariablesObject(ti);
 
   // compute width in characters from w
-  int cw = valInt(w)/c_width('m', ti->font);
+  int cw = (double)valInt(w)/c_width('m', ti->font);
 
   RlcData b = rlc_make_buffer(cw, valInt(ti->save_lines));
   ti->data = b;

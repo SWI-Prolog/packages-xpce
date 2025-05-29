@@ -114,7 +114,7 @@ ws_create_font(FontObj f, DisplayObj d)
   cairo_get_font_matrix(cr, &wsf->matrix);
   f->ws_ref = wsf;
   assign(f, ex, toInt(xextents.height));
-  assign(f, fixed_width, xextents.width==wextents.width ? ON : OFF);
+  assign(f, fixed_width, xextents.x_advance==wextents.x_advance ? ON : OFF);
   cairo_restore(cr);
 
   succeed;

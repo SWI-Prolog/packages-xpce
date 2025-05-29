@@ -123,7 +123,6 @@ COMMON(int)	s_default_char(FontObj font);
 COMMON(int)	s_ascent(FontObj f);
 COMMON(int)	s_descent(FontObj f);
 COMMON(int)	s_height(FontObj f);
-COMMON(int)	c_width(wint_t c, FontObj font);
 COMMON(int)	str_width(PceString s, int from, int to, FontObj f);
 COMMON(int)	str_advance(PceString s, int from, int to, FontObj f);
 COMMON(void)	s_printA(charA *s, int l, int x, int y, FontObj f);

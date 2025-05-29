@@ -1693,7 +1693,7 @@ ws_font_context(void)
  * @param font The font object.
  * @return The width of the character.
  */
-int
+double
 c_width(wint_t c, FontObj font)
 { cairo_text_extents_t extents;
   char s[2] = {c};
@@ -1703,9 +1703,7 @@ c_width(wint_t c, FontObj font)
   cairo_text_extents(cr, s, &extents);
   cairo_restore(cr);
 
-  int w = (int)extents.x_advance;
-
-  return w;
+  return extents.x_advance;
 }
 
 static void

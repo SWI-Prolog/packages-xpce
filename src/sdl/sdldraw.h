@@ -108,7 +108,7 @@ int s_default_char(FontObj font);
 int s_ascent(FontObj f);
 int s_descent(FontObj f);
 int s_height(FontObj f);
-int c_width(wint_t c, FontObj font);
+double c_width(wint_t c, FontObj font);
 int str_width(PceString s, int from, int to, FontObj f);
 int str_advance(PceString s, int from, int to, FontObj f);
 int str_advance_utf8(const char *u, int ulen, FontObj font);
