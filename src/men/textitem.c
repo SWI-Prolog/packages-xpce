@@ -1752,7 +1752,7 @@ static classvardecl rc_textItem[] =
      "Interval between repeats"),
   RC(NAME_look, RC_REFINE, UXWIN("gtk", "win"), NULL),
   RC(NAME_elevation, RC_REFINE,
-     UXWIN("when(@colour_display, 0.25mm, @nil)", "@_txt_height"),
+     UXWIN("0.25mm", "@_txt_height"),
      NULL),
   RC(NAME_comboBoxHeight, "1..", "6",
      "Maximum height of the combo-box shown for completions")
