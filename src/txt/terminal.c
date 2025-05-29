@@ -1918,8 +1918,9 @@ move_links_soft(RlcTextLine from, RlcTextLine to)
     ;
   }
 
-  Dprint_links(from, "From after move");
-  Dprint_links(to, "To after move");
+  DEBUG(NAME_term,
+	Dprint_links(from, "From after move");
+	Dprint_links(to, "To after move"));
 }
 
 
