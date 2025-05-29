@@ -111,14 +111,21 @@ initialise(PT) :->
                           accelerator := 'Ctrl+C'),
                 menu_item(paste,
                           message(Terminal, paste),
-                          end_group := @on,
                           accelerator := 'Ctrl+V'),
+                menu_item(paste_quoted,
+                          message(Terminal, paste_quoted),
+                          end_group := @on,
+                          accelerator := 'Ctrl+Y'),
                 menu_item(split_horizontally,
                           message(Terminal, split, horizontally),
                           accelerator := 'Shift+ctrl+O'),
                 menu_item(split_vertically,
                           message(Terminal, split, vertically),
-                          accelerator := 'Shift+ctrl+E')
+                          end_group := @on,
+                          accelerator := 'Shift+ctrl+E'),
+                menu_item(interrupt,
+                          message(Terminal, interrupt),
+                          accelerator := 'Ctrl+C')
               ]).
 
 unlink(PT) :->
@@ -267,6 +274,9 @@ parent_history(PT, Events) :-
     Events = load.
 parent_history(_PT, []).
 
+paste_quoted(PT) :->
+    "Paste as quoted material"::
+    send(PT, send, "\u0019").         % Ctrl-Y
 
 :- pce_group(event).
 
@@ -603,7 +613,6 @@ initialise(D) :->
     send(D, append, new(MB, menu_bar)),
     send(MB, append, new(File,     popup(file))),
     send(MB, append, new(Settings, popup(settings))),
-    send(MB, append, new(Run,      popup(run))),
     send(MB, append, new(Tools,    popup(tools))),
     send(MB, append, new(Help,     popup(help))),
     Epilog = @event?receiver?frame,
@@ -620,11 +629,6 @@ initialise(D) :->
                           end_group := @on),
                 menu_item(quit,
                           message(Epilog, quit))
-              ]),
-    send_list(Run, append,
-              [ menu_item(interrupt,
-                          message(Epilog, interrupt),
-                          accelerator := 'Ctrl-C')
               ]),
     send_list(Settings, append,
               [ menu_item(user_init_file,
