@@ -35,6 +35,7 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <stdbool.h>
+#include <math.h>
 #include "sdlfont.h"
 #include "sdldisplay.h"
 
@@ -83,18 +84,17 @@ ws_create_font(FontObj f, DisplayObj d)
   else
     family = nameToUTF8(f->family);
 
-  cairo_font_face_t *face = cairo_toy_font_face_create(
-    family,
-    slant,
-    weight);
+  cairo_font_face_t *face =
+    cairo_toy_font_face_create(family, slant, weight);
   if ( !face )
     fail;
+  double fsize = (double)valInt(f->points)*font_scale;
 
   WsDisplay wsd = d->ws_ref;
   cairo_t *cr = wsd->hidden_cairo;
   cairo_save(cr);
   cairo_set_font_face(cr, face);
-  cairo_set_font_size(cr, (double)valInt(f->points)*font_scale);
+  cairo_set_font_size(cr, rint(fsize));
   cairo_scaled_font_t *ttf = cairo_get_scaled_font(cr);
   ttf = cairo_scaled_font_reference(ttf);
   cairo_font_extents_t extents;
