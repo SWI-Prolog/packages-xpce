@@ -258,17 +258,19 @@ CtoEvent(SDL_Event *event)
       time = event->wheel.timestamp/1000000;
       name = NAME_wheel;
       ctx_name = NAME_rotation;
-      int dx = event->wheel.x;
-      int dy = event->wheel.y;
+      float dx = event->wheel.x;
+      float dy = event->wheel.y;
 
       if ( event->wheel.direction == SDL_MOUSEWHEEL_FLIPPED )
       { dx = -dx;
         dy = -dy;
       }
-      if ( dy > 0 )
+      if ( dy > 0.0 )
 	ctx = toInt(120);
-      else
+      else if ( dy < 0.0 )
 	ctx = toInt(-120);
+      else
+	fail;
       break;
       /* https://wiki.libsdl.org/SDL3/SDL_KeyboardEvent */
     case SDL_EVENT_KEY_UP:
