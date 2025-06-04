@@ -403,74 +403,17 @@ pce_cairo_set_source_color(cairo_t *cr, Colour pce)
   cairo_set_source_rgba(cr, c.r/256.0, c.g/256.0, c.b/256.0, c.a/256.0);
 }
 
-static void
+static PangoLayout *
 pce_cairo_set_font(cairo_t *cr, FontObj pce)
 { WsFont wsf = ws_get_font(pce);
   if ( wsf )
-  { cairo_set_scaled_font(cr, wsf->font);
-    cairo_set_font_matrix(cr, &wsf->matrix);
+  { pango_cairo_update_layout(cr, wsf->layout);
+    return wsf->layout;
   } else
-    Cprintf("stub: No font for %s\n", pp(pce));
-}
-
-#if 0
-static bool
-ctm_equal(cairo_t *cr1, cairo_t *cr2)
-{ cairo_matrix_t m1, m2;
-  cairo_get_matrix(cr1, &m1);
-  cairo_get_matrix(cr2, &m2);
-  return memcmp(&m1, &m2, sizeof(cairo_matrix_t)) == 0;
-}
-
-static bool
-font_options_equal(cairo_t *cr1, cairo_t *cr2)
-{ cairo_font_options_t *fo1 = cairo_font_options_create();
-  cairo_font_options_t *fo2 = cairo_font_options_create();
-
-  cairo_get_font_options(cr1, fo1);
-  cairo_get_font_options(cr2, fo2);
-
-  bool same = cairo_font_options_equal(fo1, fo2);
-
-  cairo_font_options_destroy(fo1);
-  cairo_font_options_destroy(fo2);
-  return same;
-}
-
-static bool
-font_matrix_equal(cairo_t *cr1, cairo_t *cr2)
-{ cairo_matrix_t fm1, fm2;
-  cairo_get_font_matrix(cr1, &fm1);
-  cairo_get_font_matrix(cr2, &fm2);
-  return memcmp(&fm1, &fm2, sizeof(cairo_matrix_t)) == 0;
-}
-
-static bool
-validate_cairo_text_consistency(cairo_t *draw_cr)
-{ DisplayObj d = context.display;
-  if ( !d )
-    d = CurrentDisplay(NIL);
-  if ( d )
-  { WsDisplay wsd = d->ws_ref;
-    cairo_t *hidden_cr = wsd->hidden_cairo;
-
-    bool ctm_ok = ctm_equal(draw_cr, hidden_cr);
-    bool opt_ok = font_options_equal(draw_cr, hidden_cr);
-    bool mtx_ok = font_matrix_equal(draw_cr, hidden_cr);
-    bool rc = ctm_ok&&opt_ok&&mtx_ok;
-
-    if ( !rc )
-    { Cprintf("Inconsistent text context for %s: %d %d %d\n",
-	      pp(context.window), ctm_ok, opt_ok, mtx_ok);
-    }
-    return rc;
-  } else
-  { Cprintf("validate_cairo_text_consistency(): no display\n");
-    return true;
+  { Cprintf("stub: No font for %s\n", pp(pce));
+    return NULL;
   }
 }
-#endif
-
 
 		 /*******************************
 		 *      DRAWING PRIMITIVES      *
@@ -1847,29 +1790,11 @@ s_print_utf8(const char *u, size_t len, int x, int y, FontObj font)
 
   Translate(x, y);
   cairo_new_path(CR);
-  pce_cairo_set_font(CR, font);
+  PangoLayout *layout = pce_cairo_set_font(CR, font);
   pce_cairo_set_source_color(CR, context.colour);
   cairo_move_to(CR, x, y);
-  if ( u[len] == 0 && strlen(u) == len )
-  { cairo_show_text(CR, u);
-  } else
-  { char buf[1000];
-    char *tmp;
-    if ( len < 1000 )
-      tmp = buf;
-    else
-      tmp = malloc(len+1);
-    memcpy(tmp, u, len);
-    tmp[len] = 0;
-    if ( strlen(tmp) != len )
-    { for(size_t i=0; i<len; i++)
-	if ( !tmp[i] )
-	  tmp[i] = 1;
-    }
-    cairo_show_text(CR, tmp);
-    if ( tmp != buf )
-      free(tmp);
-  }
+  pango_layout_set_text(layout, u, len);
+  pango_cairo_show_layout(CR, layout);
 }
 
 /**

@@ -96,12 +96,15 @@ ws_create_font(FontObj f, DisplayObj d)
 
   PangoFont *pf = pango_font_map_load_font(fontmap, context, desc);
   PangoFontMetrics *metrics = pango_font_get_metrics(font, NULL);
+  PangoLayout *layout = pango_layout_new(context);
+  pango_layout_set_font_description(layout, desc);
 
   assign(f, fixed_width, pango_font_metrics_get_is_monospace(metrics) ? ON : OFF);
 
   WsFont wsf = alloc(sizeof(ws_font));
   memset(wsf, 0, sizeof(ws_font));
   wsf->font    = desc;
+  wsf->layout  = layout;
   wsf->ascent  = pango_font_metrics_get_ascent(metrics)/PANGO_SCALE;
   wsf->descent = pango_font_metrics_get_descent(metrics)/PANGO_SCALE;
   wsf->height  = wsf->ascent + wsf->descent;
@@ -125,6 +128,7 @@ ws_destroy_font(FontObj f, DisplayObj d)
   if ( wsf )
   { f->ws_ref = NULL;
     pango_font_description_free(wsf->font);
+    g_object_unref(wsf->layout);
     unalloc(sizeof(ws_font), wsf);
   }
 }

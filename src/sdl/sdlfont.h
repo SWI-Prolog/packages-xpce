@@ -32,14 +32,15 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef RAYFONT_H
-#define RAYFONT_H
+#ifndef SDLFONT_H
+#define SDLFONT_H
 #include <cairo/cairo.h>
 #include <pango/pango.h>
 #include <pango/pangocairo.h>
 
 typedef struct
 { PangoFontDescription *font;
+  PangoLayout *layout;		/* Should be per display/surface type */
   double ascent;
   double descent;
   double height;
@@ -53,14 +54,14 @@ ws_get_font(FontObj f)
   return f->ws_ref;
 }
 
-static inline cairo_scaled_font_t *
+static inline PangoLayout *
 cairo_font(FontObj f)
 { WsFont wsf = ws_get_font(f);
-  return wsf ? wsf->font : NULL;
+  return wsf ? wsf->layout : NULL;
 }
 
 status ws_create_font(FontObj f, DisplayObj d);
 void ws_destroy_font(FontObj f, DisplayObj d);
 status ws_system_fonts(DisplayObj d);
 
-#endif /* RAYFONT_H */
+#endif /* SDLFONT_H */
