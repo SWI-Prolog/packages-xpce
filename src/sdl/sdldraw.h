@@ -35,7 +35,7 @@
 #ifndef RAYDRAW_H
 #define RAYDRAW_H
 
-#define UNDERLINE_PEN 1.0
+#define UNDERLINE_PEN 1.0	/* These are Pango metrics properties */
 #define UNDERLINE_SEP 2.0
 
 /* private SDL interface */
@@ -106,13 +106,13 @@ unsigned long r_get_pixel(int x, int y);
 int s_has_char(FontObj f, unsigned int c);
 void f_domain(FontObj f, Name which, int *x, int *y);
 int s_default_char(FontObj font);
-int s_ascent(FontObj f);
-int s_descent(FontObj f);
-int s_height(FontObj f);
+double s_ascent(FontObj f);
+double s_descent(FontObj f);
+double s_height(FontObj f);
 double c_width(wint_t c, FontObj font);
-int str_width(PceString s, int from, int to, FontObj f);
-int str_advance(PceString s, int from, int to, FontObj f);
-int str_advance_utf8(const char *u, int ulen, FontObj font);
+double str_width(PceString s, int from, int to, FontObj f);
+double str_advance(PceString s, int from, int to, FontObj f);
+double str_advance_utf8(const char *u, int ulen, FontObj font);
 void s_print_utf8(const char *u, size_t len, int x, int y, FontObj font);
 void s_printA(charA *s, int l, int x, int y, FontObj f);
 void s_printW(charW *s, int l, int x, int y, FontObj f);
