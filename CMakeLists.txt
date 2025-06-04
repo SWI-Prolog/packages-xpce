@@ -12,13 +12,15 @@ if(SDL)				# SDL3 + Cairo
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(CAIRO REQUIRED IMPORTED_TARGET cairo)
   pkg_check_modules(PANGO REQUIRED IMPORTED_TARGET pango)
+  pkg_check_modules(PANGOCAIRO REQUIRED IMPORTED_TARGET pangocairo)
   set(HAVE_GUI 1)
   set(SDL_GRAPHICS 1)
   set(GUI_LIBRARIES
     SDL3::SDL3
     SDL3_image::SDL3_image
     PkgConfig::CAIRO
-    PkgConfig::PANGO)
+    PkgConfig::PANGO
+    PkgConfig::PANGOCAIRO)
 elseif(RAYLIB)			# Raylib
   find_package(raylib REQUIRED)
   set(GUI_INCLUDE_DIRS ${raylib_INCLUDE_DIRS})
