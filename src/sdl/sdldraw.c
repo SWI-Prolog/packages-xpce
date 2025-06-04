@@ -1552,9 +1552,9 @@ unsigned long
 r_get_pixel(int x, int y)
 { unsigned char *data = cairo_image_surface_get_data(context.target);
   int stride = cairo_image_surface_get_stride(context.target);
-  cairo_format_t format = cairo_image_surface_get_format(context.target);
 
-  assert(format == CAIRO_FORMAT_ARGB32);
+  assert(cairo_image_surface_get_format(context.target)
+	 == CAIRO_FORMAT_ARGB32);
 
   unsigned char *p = data + y * stride + x * 4;
   uint8_t b = p[0];
@@ -1612,10 +1612,10 @@ s_default_char(FontObj font)
  * @param font The font object.
  * @return The ascent value.
  */
-int
+double
 s_ascent(FontObj font)
 { WsFont wsf = ws_get_font(font);
-  return wsf ? wsf->ascent : 0;
+  return wsf ? wsf->ascent : 0.0;
 }
 
 /**
@@ -1624,10 +1624,10 @@ s_ascent(FontObj font)
  * @param font The font object.
  * @return The descent value.
  */
-int
+double
 s_descent(FontObj font)
 { WsFont wsf = ws_get_font(font);
-  return wsf ? wsf->descent : 0;
+  return wsf ? wsf->descent : 0.0;
 }
 
 /**
@@ -1637,10 +1637,10 @@ s_descent(FontObj font)
  * @param font The font object.
  * @return The total height.
  */
-int
+double
 s_height(FontObj font)
 { WsFont wsf = ws_get_font(font);
-  return wsf ? wsf->height : 0;
+  return wsf ? wsf->height : 0.0;
 }
 
 static
@@ -1677,7 +1677,8 @@ s_extents(PceString s, int from, int to, FontObj font,
   if ( to > s2.s_size )
     to = s2.s_size;
   if ( to <= from )
-  { memset(extents, 0, sizeof(*extents));
+  { if ( ink ) memset(ink, 0, sizeof(*ink));
+    if ( logical ) memset(logical, 0, sizeof(*logical));
     return;
   }
 
@@ -1740,7 +1741,7 @@ str_advance_utf8(const char *u, int ulen, FontObj font)
 { if ( ulen > 0 )
   { PangoRectangle logical;
 
-    s_extents_utf8(s, from, to, font, NULL, &logical);
+    s_extents_utf8(u, ulen, font, NULL, &logical);
     return logical.width/(double)PANGO_SCALE;
   }
 

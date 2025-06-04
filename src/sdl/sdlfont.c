@@ -78,6 +78,7 @@ ws_create_font(FontObj f, DisplayObj d)
   PangoStyle   slant = PANGO_STYLE_NORMAL;
   PangoWeight weight = PANGO_WEIGHT_NORMAL;
   const char *family = "sans";
+  BoolObj fixed = OFF;
 
   if ( f->style == NAME_bold )
     weight = PANGO_WEIGHT_BOLD;
@@ -85,8 +86,9 @@ ws_create_font(FontObj f, DisplayObj d)
     slant = PANGO_STYLE_ITALIC;
 
   if ( f->family == NAME_courier || f->family == NAME_screen )
-    family = "monospace";
-  else if ( f->family == NAME_times )
+  { family = "monospace";
+    fixed = ON;
+  } else if ( f->family == NAME_times )
     family = "serif";
   else
     family = nameToUTF8(f->family);
@@ -97,11 +99,11 @@ ws_create_font(FontObj f, DisplayObj d)
   pango_font_description_set_size(desc, valInt(f->points)*PANGO_SCALE*font_scale);
 
   PangoFont *pf = pango_font_map_load_font(fontmap, context, desc);
-  PangoFontMetrics *metrics = pango_font_get_metrics(font, NULL);
+  PangoFontMetrics *metrics = pango_font_get_metrics(pf, NULL);
   PangoLayout *layout = pango_layout_new(context);
   pango_layout_set_font_description(layout, desc);
 
-  assign(f, fixed_width, pango_font_metrics_get_is_monospace(metrics) ? ON : OFF);
+  assign(f, fixed_width, fixed);
 
   WsFont wsf = alloc(sizeof(ws_font));
   memset(wsf, 0, sizeof(ws_font));
