@@ -64,6 +64,7 @@ ws_create_font(FontObj f, DisplayObj d)
     ttf_initialized = true;
     fontmap = pango_cairo_font_map_get_default();
     context = pango_font_map_create_context(fontmap);
+    pango_cairo_context_set_resolution(context, 96.0); /* TBD: Get from SDL */
     g_object_ref(context);
     Real r = getClassVariableValueObject(f, NAME_scale);
     if ( r )
@@ -93,6 +94,7 @@ ws_create_font(FontObj f, DisplayObj d)
   pango_font_description_set_family(desc, family);
   pango_font_description_set_style(desc, slant);
   pango_font_description_set_weight(desc, weight);
+  pango_font_description_set_size(desc, valInt(f->points)*PANGO_SCALE*font_scale);
 
   PangoFont *pf = pango_font_map_load_font(fontmap, context, desc);
   PangoFontMetrics *metrics = pango_font_get_metrics(font, NULL);
@@ -105,8 +107,8 @@ ws_create_font(FontObj f, DisplayObj d)
   memset(wsf, 0, sizeof(ws_font));
   wsf->font    = desc;
   wsf->layout  = layout;
-  wsf->ascent  = pango_font_metrics_get_ascent(metrics)/PANGO_SCALE;
-  wsf->descent = pango_font_metrics_get_descent(metrics)/PANGO_SCALE;
+  wsf->ascent  = pango_font_metrics_get_ascent(metrics)/(double)PANGO_SCALE;
+  wsf->descent = pango_font_metrics_get_descent(metrics)/(double)PANGO_SCALE;
   wsf->height  = wsf->ascent + wsf->descent;
   f->ws_ref = wsf;
   assign(f, ex, toInt(wsf->height/2)); /* approximation */
