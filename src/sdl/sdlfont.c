@@ -39,7 +39,9 @@
 #include "sdlfont.h"
 #include "sdldisplay.h"
 
-static bool   ttf_initialized = false;
+static bool ttf_initialized = false;
+static PangoFontMap *fontmap;	/* Per surface type (screen, PDF, ... */
+static PangoContext *context;	/* Per DPI and fontmap */
 static double font_scale = 1.0;
 
 /**
@@ -60,6 +62,9 @@ ws_create_font(FontObj f, DisplayObj d)
       fail;
 
     ttf_initialized = true;
+    fontmap = pango_cairo_font_map_get_default();
+    context = pango_font_map_create_context(fontmap);
+    g_object_ref(context);
     Real r = getClassVariableValueObject(f, NAME_scale);
     if ( r )
       font_scale = valReal(r);
@@ -68,14 +73,15 @@ ws_create_font(FontObj f, DisplayObj d)
   if ( f->ws_ref )		/* already done */
     succeed;
 
-  cairo_font_slant_t slant   = CAIRO_FONT_SLANT_NORMAL;
-  cairo_font_weight_t weight = CAIRO_FONT_WEIGHT_NORMAL;
-  const char *family = "sans-serif";
+  PangoFontDescription *desc = pango_font_description_new();
+  PangoStyle   slant = PANGO_STYLE_NORMAL;
+  PangoWeight weight = PANGO_WEIGHT_NORMAL;
+  const char *family = "sans";
 
   if ( f->style == NAME_bold )
-    weight = CAIRO_FONT_WEIGHT_BOLD;
+    weight = PANGO_WEIGHT_BOLD;
   else if ( f->style == NAME_oblique )
-    slant = CAIRO_FONT_SLANT_ITALIC;
+    slant = PANGO_STYLE_ITALIC;
 
   if ( f->family == NAME_courier || f->family == NAME_screen )
     family = "monospace";
@@ -84,38 +90,24 @@ ws_create_font(FontObj f, DisplayObj d)
   else
     family = nameToUTF8(f->family);
 
-  cairo_font_face_t *face =
-    cairo_toy_font_face_create(family, slant, weight);
-  if ( !face )
-    fail;
-  double fsize = (double)valInt(f->points)*font_scale;
+  pango_font_description_set_family(desc, family);
+  pango_font_description_set_style(desc, slant);
+  pango_font_description_set_weight(desc, weight);
 
-  WsDisplay wsd = d->ws_ref;
-  cairo_t *cr = wsd->hidden_cairo;
-  cairo_save(cr);
-  cairo_set_font_face(cr, face);
-  cairo_set_font_size(cr, rint(fsize));
-  cairo_scaled_font_t *ttf = cairo_get_scaled_font(cr);
-  ttf = cairo_scaled_font_reference(ttf);
-  cairo_font_extents_t extents;
-  cairo_text_extents_t xextents, wextents;
-  cairo_font_extents(cr, &extents);
-  cairo_text_extents(cr, "x", &xextents);
-  cairo_text_extents(cr, "w", &wextents);
+  PangoFont *pf = pango_font_map_load_font(fontmap, context, desc);
+  PangoFontMetrics *metrics = pango_font_get_metrics(font, NULL);
+
+  assign(f, fixed_width, pango_font_metrics_get_is_monospace(metrics) ? ON : OFF);
 
   WsFont wsf = alloc(sizeof(ws_font));
   memset(wsf, 0, sizeof(ws_font));
-  wsf->font    = ttf;
-  wsf->options = cairo_font_options_create();
-  wsf->ascent  = extents.ascent;
-  wsf->descent = extents.descent;
-  wsf->height  = extents.height;
-  cairo_get_font_options(cr, wsf->options);
-  cairo_get_font_matrix(cr, &wsf->matrix);
+  wsf->font    = desc;
+  wsf->ascent  = pango_font_metrics_get_ascent(metrics)/PANGO_SCALE;
+  wsf->descent = pango_font_metrics_get_descent(metrics)/PANGO_SCALE;
+  wsf->height  = wsf->ascent + wsf->descent;
   f->ws_ref = wsf;
-  assign(f, ex, toInt(xextents.height));
-  assign(f, fixed_width, xextents.x_advance==wextents.x_advance ? ON : OFF);
-  cairo_restore(cr);
+  assign(f, ex, toInt(wsf->height/2)); /* approximation */
+  pango_font_metrics_unref(metrics);
 
   succeed;
 }
@@ -132,8 +124,7 @@ ws_destroy_font(FontObj f, DisplayObj d)
 { WsFont wsf = f->ws_ref;
   if ( wsf )
   { f->ws_ref = NULL;
-    cairo_scaled_font_destroy(wsf->font);
-    cairo_font_options_destroy(wsf->options);
+    pango_font_description_free(wsf->font);
     unalloc(sizeof(ws_font), wsf);
   }
 }

@@ -35,11 +35,11 @@
 #ifndef RAYFONT_H
 #define RAYFONT_H
 #include <cairo/cairo.h>
+#include <pango/pango.h>
+#include <pango/pangocairo.h>
 
 typedef struct
-{ cairo_scaled_font_t *font;
-  cairo_matrix_t matrix;
-  cairo_font_options_t *options;
+{ PangoFontDescription *font;
   double ascent;
   double descent;
   double height;
