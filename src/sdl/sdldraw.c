@@ -1656,55 +1656,21 @@ ws_font_context(void)
   return wsd->hidden_cairo;
 }
 
-/**
- * Retrieve the width of a specific character in a font.
- *
- * @param c The character code.
- * @param font The font object.
- * @return The width of the character.
- */
-double
-c_width(wint_t c, FontObj font)
-{ cairo_text_extents_t extents;
-  char s[2] = {c};
-  cairo_t *cr = ws_font_context();
-  cairo_save(cr);
-  pce_cairo_set_font(cr, font);
-  cairo_text_extents(cr, s, &extents);
-  cairo_restore(cr);
-
-  return extents.x_advance;
-}
-
 static void
 s_extents_utf8(const char *u, size_t ulen, FontObj font,
-	       cairo_text_extents_t *extents)
+	       PangoRectangle *ink, PangoRectangle *logical)
 { cairo_t *cr = ws_font_context();
   cairo_save(cr);
-  pce_cairo_set_font(cr, font);
-  if ( u[ulen] == 0 && strlen(u) == ulen )
-  { cairo_text_extents(cr, u, extents);
-  } else
-  { char buf[1000];
-    char *tmp;
-    if ( ulen < 1000 )
-      tmp = buf;
-    else
-      tmp = malloc(ulen+1);
-    memcpy(tmp, u, ulen);
-    tmp[ulen] = 0;
-    assert(strlen(tmp) == ulen);	/* TODO: What if there are 0-bytes */
-    cairo_text_extents(cr, tmp, extents);
-    if ( tmp != buf )
-      free(tmp);
-  }
+  PangoLayout *layout = pce_cairo_set_font(cr, font);
+  pango_layout_set_text(layout, u, ulen);
+  pango_layout_get_extents(layout, ink, logical);
   cairo_restore(cr);
 }
 
 
 static void
 s_extents(PceString s, int from, int to, FontObj font,
-	  cairo_text_extents_t *extents)
+	  PangoRectangle *ink, PangoRectangle *logical)
 { string s2 = *s;
   if ( from > s2.s_size )
     from = s2.s_size;
@@ -1724,8 +1690,9 @@ s_extents(PceString s, int from, int to, FontObj font,
 
   size_t ulen;
   const char *u = stringToUTF8(&s2, &ulen);
-  s_extents_utf8(u, ulen, font, extents);
+  s_extents_utf8(u, ulen, font, ink, logical);
 }
+
 
 /**
  * Calculate the width of a substring within a string using a specific font.
@@ -1736,16 +1703,15 @@ s_extents(PceString s, int from, int to, FontObj font,
  * @param font The font object.
  * @return The width of the substring.
  */
-int
+double
 str_width(PceString s, int from, int to, FontObj font)
 { if ( to > from )
-  { cairo_text_extents_t extents;
+  { PangoRectangle ink;
 
-    s_extents(s, from, to, font, &extents);
-    int w = (int)(extents.width+0.9);  /* round up */
-    return w;
+    s_extents(s, from, to, font, &ink, NULL);
+    return ink.width/(double)PANGO_SCALE;
   } else
-    return 0;
+    return 0.0;
 }
 
 /**
@@ -1758,28 +1724,42 @@ str_width(PceString s, int from, int to, FontObj font)
  * @param font The font object.
  * @return The advance width of the substring.
  */
-int
+double
 str_advance(PceString s, int from, int to, FontObj font)
 { if ( to > from )
-  { cairo_text_extents_t extents;
+  { PangoRectangle logical;
 
-    s_extents(s, from, to, font, &extents);
-    int w = (int)(extents.x_advance+0.5);
-    return w;
+    s_extents(s, from, to, font, NULL, &logical);
+    return logical.width/(double)PANGO_SCALE;
   } else
-    return 0;
+    return 0.0;
 }
 
-int
+double
 str_advance_utf8(const char *u, int ulen, FontObj font)
 { if ( ulen > 0 )
-  { cairo_text_extents_t extents;
+  { PangoRectangle logical;
 
-    s_extents_utf8(u, ulen, font, &extents);
-    return (int)(extents.x_advance+0.5);
+    s_extents_utf8(s, from, to, font, NULL, &logical);
+    return logical.width/(double)PANGO_SCALE;
   }
 
-  return 0;
+  return 0.0;
+}
+
+/**
+ * Retrieve the width of a specific character in a font.
+ *
+ * @param c The character code.
+ * @param font The font object.
+ * @return The width of the character.
+ * @todo: cache for fixed-width fonts
+ */
+double
+c_width(wint_t c, FontObj font)
+{ char s[10];
+  char *o = utf8_put_char(s, c);
+  return str_advance_utf8(s, o-s, font);
 }
 
 void
