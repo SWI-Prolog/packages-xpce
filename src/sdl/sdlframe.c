@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include "sdldisplay.h"
 #include "sdlframe.h"
 #include "sdlwindow.h"
 #include "sdlcolour.h"
@@ -112,30 +113,44 @@ sdl_parent_window(FrameObj fr)
  */
 status
 ws_create_frame(FrameObj fr)
-{ SDL_Window *w = NULL;
+{ SDL_Window *win = NULL;
   SDL_Window *parent = sdl_parent_window(fr);
+  int x = valInt(fr->area->x);
+  int y = valInt(fr->area->y);
+  int w = valInt(fr->area->w);
+  int h = valInt(fr->area->h);
 
   if ( fr->kind == NAME_popup && parent )
   { SDL_WindowFlags flags = 0;
+
+#if O_HDP
+    flags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
+    float scale = SDL_GetWindowPixelDensity(parent);
+    x = x/scale; y = y/scale; w = w/scale; h = h/scale;
+#endif
     DEBUG(NAME_popup,
-	  Cprintf("Creating popup frame %s %dx%d\n",
-		  pp(fr), valInt(fr->area->w), valInt(fr->area->h)));
+	  Cprintf("Creating popup frame %s %dx%d\n", pp(fr), w, h));
     flags |= SDL_WINDOW_POPUP_MENU;
-    w = SDL_CreatePopupWindow(
-      parent,
-      valInt(fr->area->x),
-      valInt(fr->area->y),
-      valInt(fr->area->w),
-      valInt(fr->area->h),
-      flags);
+    win = SDL_CreatePopupWindow(parent, x, y, w, h, flags);
   } else
-  { SDL_PropertiesID props = SDL_CreateProperties();
+  {
+#if O_HDP
+    SDL_DisplayID display_id = SDL_GetPrimaryDisplay();
+    float scale = SDL_GetDisplayContentScale(display_id);
+    DisplayObj d = fr->display;
+    if ( isNil(d) ) d = CurrentDisplay(NIL);
+    WsDisplay wsd = d->ws_ref;
+    if ( wsd )
+      scale = SDL_GetWindowPixelDensity(wsd->hidden_window);
+    DEBUG(NAME_sdl, Cprintf("%s: scale = %.2f\n", pp(d), scale));
+    x = x/scale; y = y/scale; w = w/scale; h = h/scale;
+#endif
+
+    SDL_PropertiesID props = SDL_CreateProperties();
     SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING,
 			  nameToUTF8(fr->label));
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER,
-			  valInt(fr->area->w));
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER,
-			  valInt(fr->area->h));
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, w);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, h);
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN,
 			   fr->can_resize == ON);
 #if O_HDP
@@ -146,31 +161,29 @@ ws_create_frame(FrameObj fr)
     { SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_PARENT_POINTER,
 			     parent);
     }
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER,
-			  valInt(fr->area->x));
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER,
-			  valInt(fr->area->y));
-    w = SDL_CreateWindowWithProperties(props);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y);
+    win = SDL_CreateWindowWithProperties(props);
     SDL_DestroyProperties(props);
   }
 
-  if ( w )
-  { SDL_Renderer *renderer = SDL_CreateRenderer(w, NULL);
+  if ( win )
+  { SDL_Renderer *renderer = SDL_CreateRenderer(win, NULL);
     assert(renderer);
     SDL_RenderPresent(renderer); /* Probably temporary */
 
     WsFrame f = sdl_frame(fr, true);
-    f->ws_window = w;
+    f->ws_window = win;
     f->ws_renderer = renderer;
-    f->ws_id = SDL_GetWindowID(w);
+    f->ws_id = SDL_GetWindowID(win);
 
     DEBUG(NAME_sdl,
-	  Cprintf("Registered window %p with id %d\n", w, f->ws_id));
+	  Cprintf("Registered window %p with id %d\n", win, f->ws_id));
     succeed;
   }
 
   if ( parent )
-  { if ( !SDL_RaiseWindow(w) )
+  { if ( !SDL_RaiseWindow(win) )
       Cprintf("Could not set input focus to %s: %s\n",
 	      pp(fr), SDL_GetError());
   }

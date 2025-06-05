@@ -188,10 +188,15 @@ void
 ws_open_display(DisplayObj d)
 { WsDisplay wsd = d->ws_ref = alloc(sizeof(ws_display));
   memset(wsd, 0, sizeof(*wsd));
+  SDL_WindowFlags flags = SDL_WINDOW_HIDDEN;
+
+#if O_HDP
+  flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
+#endif
 
   wsd->hidden_window = SDL_CreateWindow(
     "xpce hidden window", 64, 64,
-    SDL_WINDOW_HIDDEN);
+    flags);
   wsd->hidden_renderer = SDL_CreateRenderer(wsd->hidden_window, NULL);
   wsd->hidden_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
 						   64, 64);
