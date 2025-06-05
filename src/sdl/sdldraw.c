@@ -1766,7 +1766,7 @@ c_width(wint_t c, FontObj font)
 void
 s_print_utf8(const char *u, size_t len, int x, int y, FontObj font)
 { DEBUG(NAME_draw,
-	Cprintf("s_printU(\"%s\", %d, %d, %d, %s) (color: %s)\n",
+	Cprintf("s_print_utf8(\"%s\", %d, %d, %d, %s) (color: %s)\n",
 		u, len, x, y, pp(font), pp(context.colour)));
 
   Translate(x, y);
