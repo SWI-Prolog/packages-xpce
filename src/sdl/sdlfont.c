@@ -63,6 +63,7 @@ ws_create_font(FontObj f, DisplayObj d)
 
     ttf_initialized = true;
     fontmap = pango_cairo_font_map_get_default();
+    // fontmap = pango_ft2_font_map_new();
     context = pango_font_map_create_context(fontmap);
     pango_cairo_context_set_resolution(context, 96.0); /* TBD: Get from SDL */
     g_object_ref(context);
