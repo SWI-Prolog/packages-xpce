@@ -44,6 +44,7 @@ typedef struct
   cairo_t         *hidden_cairo;
 } ws_display, *WsDisplay;
 
+float ws_pixel_density_display(Any obj);
 
 void ws_flush_display(DisplayObj d);
 void ws_synchronise_display(DisplayObj d);

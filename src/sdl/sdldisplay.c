@@ -222,6 +222,25 @@ ws_quit_display(DisplayObj d)
   }
 }
 
+float
+ws_pixel_density_display(Any obj)
+{ SDL_DisplayID display_id = SDL_GetPrimaryDisplay();
+  float scale = SDL_GetDisplayContentScale(display_id);
+  DisplayObj d;
+
+  if ( instanceOfObject(obj, ClassDisplay) )
+    d = obj;
+  else
+    d = CurrentDisplay(obj);
+
+  WsDisplay wsd = d->ws_ref;
+  if ( wsd )
+    scale = SDL_GetWindowPixelDensity(wsd->hidden_window);
+
+  return scale;
+}
+
+
 /**
  * Initialize graphics-related resources for the display.
  *

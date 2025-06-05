@@ -135,14 +135,8 @@ ws_create_frame(FrameObj fr)
   } else
   {
 #if O_HDP
-    SDL_DisplayID display_id = SDL_GetPrimaryDisplay();
-    float scale = SDL_GetDisplayContentScale(display_id);
-    DisplayObj d = fr->display;
-    if ( isNil(d) ) d = CurrentDisplay(NIL);
-    WsDisplay wsd = d->ws_ref;
-    if ( wsd )
-      scale = SDL_GetWindowPixelDensity(wsd->hidden_window);
-    DEBUG(NAME_sdl, Cprintf("%s: scale = %.2f\n", pp(d), scale));
+    float scale = ws_pixel_density_display(fr);
+    DEBUG(NAME_sdl, Cprintf("%s: scale = %.2f\n", pp(fr), scale));
     x = x/scale; y = y/scale; w = w/scale; h = h/scale;
 #endif
 
