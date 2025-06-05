@@ -120,10 +120,12 @@ ws_depth_display(DisplayObj d)
  * @param ry Pointer to an integer to store the vertical resolution.
  * @return Integer status code indicating success or failure.
  */
-int
+bool
 ws_resolution_display(DisplayObj d, int *rx, int *ry)
-{ // Use SDL_GetDisplayContentScale()
-  fail;
+{ float scale = ws_pixel_density_display(d);
+  *rx = 96*scale;
+  *ry = 96*scale;
+  return true;
 }
 
 /**

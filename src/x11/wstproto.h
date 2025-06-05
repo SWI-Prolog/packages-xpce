@@ -25,7 +25,7 @@ COMMON(void)	ws_bell_display(DisplayObj d, int volume);
 COMMON(void)	ws_get_size_display(DisplayObj d, int *w, int *h);
 COMMON(Name)	ws_get_visual_type_display(DisplayObj d);
 COMMON(int)	ws_depth_display(DisplayObj d);
-COMMON(int)	ws_resolution_display(DisplayObj d, int *rx, int *ry);
+COMMON(bool)	ws_resolution_display(DisplayObj d, int *rx, int *ry);
 COMMON(void)	ws_activate_screen_saver(DisplayObj d);
 COMMON(void)	ws_deactivate_screen_saver(DisplayObj d);
 COMMON(void)	ws_init_display(DisplayObj d);

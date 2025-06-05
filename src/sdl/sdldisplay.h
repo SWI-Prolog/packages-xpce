@@ -52,7 +52,7 @@ void ws_bell_display(DisplayObj d, int volume);
 void ws_get_size_display(DisplayObj d, int *w, int *h);
 Name ws_get_visual_type_display(DisplayObj d);
 int ws_depth_display(DisplayObj d);
-int ws_resolution_display(DisplayObj d, int *rx, int *ry);
+bool ws_resolution_display(DisplayObj d, int *rx, int *ry);
 void ws_activate_screen_saver(DisplayObj d);
 void ws_deactivate_screen_saver(DisplayObj d);
 void ws_init_display(DisplayObj d);
