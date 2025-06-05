@@ -37,6 +37,8 @@
 #include <SDL3/SDL.h>
 #include <SWI-Prolog.h>		/* Debugging: PL_thread_self() */
 
+#define O_HDP 1			/* High Density Display support */
+
 status	sdl_send(Any receiver, Name selector, int sync, ...);
 bool	sdl_initialised(void);
 int	setPceThread(void);

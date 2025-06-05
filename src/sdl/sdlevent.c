@@ -309,8 +309,15 @@ CtoEvent(SDL_Event *event)
 
   setLastEventTime(time);
 
-  int x = (int)(fx+0.5);
-  int y = (int)(fy+0.5);
+#if O_HDP
+  WsFrame wfr = sdl_frame(frame, false);
+  float scale = SDL_GetWindowPixelDensity(wfr->ws_window);
+#else
+  float scale = 1.0;
+#endif
+
+  int x = (int)(fx*scale+0.5);
+  int y = (int)(fy*scale+0.5);
   if ( notNil(mouse_tracking_window) )
   { int ox=0, oy=0;
     bool rc = ws_window_frame_position(mouse_tracking_window, frame, &ox, &oy);

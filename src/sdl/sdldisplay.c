@@ -122,8 +122,8 @@ ws_depth_display(DisplayObj d)
  */
 int
 ws_resolution_display(DisplayObj d, int *rx, int *ry)
-{
-    return 0;
+{ // Use SDL_GetDisplayContentScale()
+  fail;
 }
 
 /**

@@ -138,6 +138,10 @@ ws_create_frame(FrameObj fr)
 			  valInt(fr->area->h));
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN,
 			   fr->can_resize == ON);
+#if O_HDP
+    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN,
+			   true);
+#endif
     if ( parent )
     { SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_PARENT_POINTER,
 			     parent);
@@ -441,9 +445,15 @@ sdl_frame_event(SDL_Event *ev)
 	return true;
       }
       case SDL_EVENT_WINDOW_RESIZED:
-      { int new_w = ev->window.data1;
+      { int new_w, new_h;
 
-	int new_h = ev->window.data2;
+#if O_HDP
+	WsFrame f = sdl_frame(fr, false);
+	SDL_GetWindowSizeInPixels(f->ws_window, &new_w, &new_h);
+#else
+	new_w = ev->window.data1;
+	new_h = ev->window.data2;
+#endif
 
 	if ( new_w != valInt(fr->area->w) ||
 	     new_h != valInt(fr->area->h) )
