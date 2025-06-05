@@ -1575,9 +1575,13 @@ r_get_pixel(int x, int y)
  * @param c The character code to check.
  * @return Non-zero if the character is present; otherwise, zero.
  */
-int
+bool
 s_has_char(FontObj f, unsigned int c)
-{ return c >=0 && c <= 0x10ffff;
+{ if ( c > 0x10ffff )
+    return false;
+  WsFont wsf = ws_get_font(f);
+
+  return wsf && wsf->font && pango_font_has_char(wsf->font, c);
 }
 
 /**

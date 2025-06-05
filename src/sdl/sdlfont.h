@@ -39,7 +39,8 @@
 #include <pango/pangocairo.h>
 
 typedef struct
-{ PangoFontDescription *font;
+{ PangoFont *font;
+  PangoFontDescription *desc;
   PangoLayout *layout;		/* Should be per display/surface type */
   double ascent;
   double descent;

@@ -103,7 +103,7 @@ void r_complement_pixel(int x, int y);
 void d_modify(void);
 int r_get_mono_pixel(int x, int y);
 unsigned long r_get_pixel(int x, int y);
-int s_has_char(FontObj f, unsigned int c);
+bool s_has_char(FontObj f, unsigned int c);
 void f_domain(FontObj f, Name which, int *x, int *y);
 int s_default_char(FontObj font);
 double s_ascent(FontObj f);

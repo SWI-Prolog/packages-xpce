@@ -117,7 +117,6 @@ COMMON(void)	r_complement_pixel(int x, int y);
 COMMON(void)	d_modify(void);
 COMMON(int)	r_get_mono_pixel(int x, int y);
 COMMON(unsigned long) r_get_pixel(int x, int y);
-COMMON(int)	s_has_char(FontObj f, unsigned int c);
 COMMON(void)	f_domain(FontObj f, Name which, int *x, int *y);
 COMMON(int)	s_default_char(FontObj font);
 COMMON(void)	s_printA(charA *s, int l, int x, int y, FontObj f);
