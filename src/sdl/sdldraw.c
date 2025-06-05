@@ -1772,9 +1772,10 @@ s_print_utf8(const char *u, size_t len, int x, int y, FontObj font)
   Translate(x, y);
   cairo_new_path(CR);
   PangoLayout *layout = pce_cairo_set_font(CR, font);
+  int baseline = pango_layout_get_baseline(layout);
   pce_cairo_set_source_color(CR, context.colour);
-  cairo_move_to(CR, x, y);
   pango_layout_set_text(layout, u, len);
+  cairo_move_to(CR, x, y-baseline/PANGO_SCALE);
   pango_cairo_show_layout(CR, layout);
 }
 
