@@ -348,16 +348,29 @@ computeBezier(Bezier b)
 static status
 RedrawAreaBezier(Bezier b, Area a)
 { int x, y, w, h;
-  ipoint pts[MAXPTS];
-  int npts = MAXPTS;
+    ipoint start = {valInt(b->start->x), valInt(b->start->y)};
+    ipoint end = {valInt(b->end->x), valInt(b->end->y)};
+    ipoint control1 = {valInt(b->control1->x), valInt(b->control1->y)};
+    ipoint control2;
+
+    if ( notNil(b->control2) )
+    {
+      control2 = (ipoint){valInt(b->control2->x), valInt(b->control2->y)};
+    } else
+    {
+      control2 = (ipoint){(2*control1.x + end.x) / 3,
+			  (2*control1.y + end.y) / 3};
+      control1 = (ipoint){(start.x + 2*control1.x) / 3,
+			  (start.y + 2*control1.y) / 3};
+    }
+
 
   initialiseDeviceGraphical(b, &x, &y, &w, &h);
 
   r_thickness(valInt(b->pen));
   r_dash(b->texture);
 
-  compute_points_bezier(b, pts, &npts);
-  r_polygon(pts, npts, FALSE);
+  r_bezier(start, control1, control2, end);
 
   if ( adjustFirstArrowBezier(b) )
     RedrawArea(b->first_arrow, a);
