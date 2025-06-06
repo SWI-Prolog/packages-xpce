@@ -263,7 +263,7 @@ openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
       int fw = valInt(fr->area->w), fh = valInt(fr->area->h);
       Area a;
       Area tmp = tempObject(ClassArea,
-			    toInt(x), toInt(y), fr->area->w, fr->area->h, EAV);
+			    x, y, fr->area->w, fr->area->h, EAV);
       Monitor mon = getMonitorDisplay(fr->display, tmp);
 
       considerPreserveObject(tmp);
