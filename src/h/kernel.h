@@ -387,20 +387,15 @@ typedef union
 static inline Int
 fToInt(double v)
 { cvt_double c = {.d = v};
-  uintptr_t u = c.u;
-  return (Int)((u<<TAG_BITS)|INT_MASK);
+  Int i = (Int)(c.u|INT_MASK);
+  return i;
 }
 
 static double
 valNum(Int i)
 { cvt_double c = {.I = i};
-  c.i >>= TAG_BITS;
+  c.u &= ~INT_MASK;
   return c.d;
-}
-
-static inline Int
-toInt(intptr_t i)
-{ return fToInt((double)i);
 }
 
 static inline intptr_t
@@ -408,9 +403,12 @@ valInt(Int i)
 { return (intptr_t)valNum(i);
 }
 
+static inline Int
+toInt(intptr_t i)
+{ return fToInt((double)i);
+}
+
 #define isInteger(i)	((uintptr_t)(i) & INT_MASK)
-#define toInt(i)	((Int)(((uintptr_t)(i)<<TAG_BITS)|INT_MASK))
-#define valInt(i)	(((intptr_t)(i))>>TAG_BITS)
 #define incrInt(i)	((i) = toInt(valInt(i)+1))
 #define decrInt(i)	((i) = toInt(valInt(i)-1))
 #define addInt(i, j)	((i) = toInt(valInt(i) + valInt(j)))
@@ -431,7 +429,7 @@ valInt(Int i)
 #define dec(i)		(toInt(valInt(i) - 1))
 #define minInt(i)	(toInt(-valInt(i)))
 
-#define ZERO		toInt(0)	/* PCE Int 0 */
+#define ZERO		((Int)(uintptr_t)1)
 #define ONE		toInt(1)	/* PCE Int 1 */
 #define TWO		toInt(2)	/* PCE Int 2 */
 
