@@ -130,8 +130,8 @@ generate warnings on accidental use of them.
 #define METHOD_MAX_ARGS		16	/* maximum # args for C-method */
 #define FWD_PCE_MAX_ARGS	10	/* @arg1 ... @arg10 */
 #define SCAN_MAX_ARGS		32	/* scanstr maximum arguments */
-#define PCE_MAX_INT		((intptr_t)(((intptr_t)1<<(sizeof(Any)*8 - TAG_BITS-1))-1))
-#define PCE_MIN_INT		(-(PCE_MAX_INT-1))
+#define PCE_MAX_INT		((intptr_t)1<<51)
+#define PCE_MIN_INT		(-PCE_MAX_INT)
 #ifndef INT_MAX
 #define INT_MAX			((int)(((unsigned int)1<<(sizeof(int)*8-1))-1))
 #define INT_MIN			(-(INT_MIN)-1)
@@ -376,6 +376,37 @@ test, conversion and computation macro's are provided.
 #undef min
 #define max(a, b)	((a) > (b) ? (a) : (b))
 #define min(a, b)	((a) < (b) ? (a) : (b))
+
+typedef union
+{ double d;
+  uintptr_t u;
+  intptr_t i;
+  Int I;
+} cvt_double;
+
+static inline Int
+fToInt(double v)
+{ cvt_double c = {.d = v};
+  uintptr_t u = c.u;
+  return (Int)((u<<TAG_BITS)|INT_MASK);
+}
+
+static double
+valNum(Int i)
+{ cvt_double c = {.I = i};
+  c.i >>= TAG_BITS;
+  return c.d;
+}
+
+static inline Int
+toInt(intptr_t i)
+{ return fToInt((double)i);
+}
+
+static inline intptr_t
+valInt(Int i)
+{ return (intptr_t)valNum(i);
+}
 
 #define isInteger(i)	((uintptr_t)(i) & INT_MASK)
 #define toInt(i)	((Int)(((uintptr_t)(i)<<TAG_BITS)|INT_MASK))
