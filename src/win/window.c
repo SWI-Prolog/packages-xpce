@@ -48,6 +48,7 @@ status
 initialiseWindow(PceWindow sw, Name label, Size size, DisplayObj display)
 { initialiseDevice((Device) sw);
 
+  assign(sw, scale,                toNum(1.0));
   assign(sw, scroll_offset,	   newObject(ClassPoint, EAV));
   assign(sw, input_focus,	   OFF);
   assign(sw, has_pointer,	   OFF);
@@ -459,6 +460,16 @@ displayedWindow(PceWindow sw, BoolObj val)
   succeed;
 }
 
+
+status
+scaleWindow(PceWindow sw, Int scale)
+{ if ( sw->scale != scale )
+  { assign(sw, scale, scale);
+    Cprintf("Rescaling to %s\n", pp(scale));
+  }
+
+  succeed;
+}
 
 status
 resizeWindow(PceWindow sw)
@@ -2245,7 +2256,9 @@ static char *T_normalise[] =
 /* Instance Variables */
 
 static vardecl var_window[] =
-{ IV(NAME_frame, "frame*", IV_NONE,
+{ SV(NAME_scale, "int", IV_GET|IV_STORE, scaleWindow,
+     NAME_area, "Scaling from logical units to pixels"),
+  IV(NAME_frame, "frame*", IV_NONE,
      NAME_organisation, "Frame the window is member of"),
   IV(NAME_decoration, "window_decorator*", IV_GET,
      NAME_appearance, "Window displaying me and my decorations"),

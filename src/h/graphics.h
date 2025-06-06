@@ -665,6 +665,7 @@ End;
 
 #define ABSTRACT_WINDOW \
   ABSTRACT_DEVICE \
+  Int		scale;			/* Scaling */ \
   FrameObj	frame;			/* Frame we are member of */ \
   PceWindow	decoration;		/* Window holding decorations */ \
   Chain		subwindows;		/* Displayed sub windows */ \
