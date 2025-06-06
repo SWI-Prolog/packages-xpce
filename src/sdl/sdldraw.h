@@ -89,6 +89,7 @@ void r_ellipse(int x, int y, int w, int h, Any fill);
 void r_3d_ellipse(int x, int y, int w, int h, Elevation z, int up);
 void r_line(int x1, int y1, int x2, int y2);
 void r_polygon(IPoint pts, int n, int close);
+void r_bezier(ipoint start, ipoint end, ipoint control1, ipoint control2);
 void r_path(Chain points, int ox, int oy, int radius, int closed, Image fill);
 void r_op_image(Image image, int sx, int sy, int x, int y, int w, int h, Name op);
 void r_image(Image image, int sx, int sy, int x, int y, int w, int h, BoolObj transparent);

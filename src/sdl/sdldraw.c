@@ -1285,6 +1285,33 @@ r_polygon(IPoint pts, int n, int close)
 }
 
 /**
+ * Draw a cubic Bezier curve using Cairo.
+ * The coordinates are translated by the current drawing offset.
+ *
+ * @param start The starting point of the curve.
+ * @param control1 The first control point for the cubic Bezier.
+ * @param control2 The second control point for the cubic Bezier.
+ * @param end The end point of the curve.
+ */
+void
+r_bezier(ipoint start, ipoint control1, ipoint control2, ipoint end)
+{ if ( context.pen > 0 )
+  { cairo_new_path(CR);
+    Translate(start.x, start.y);
+    Translate(end.x, end.y);
+    Translate(control1.x, control1.y);
+    Translate(control2.x, control2.y);
+
+    cairo_move_to(CR, start.x, start.y);
+    cairo_curve_to(CR, control1.x, control1.y, control2.x, control2.y, end.x, end.y);
+
+    pce_cairo_set_source_color(CR, context.colour);
+    cairo_set_line_width(CR, context.pen);
+    cairo_stroke(CR);
+  }
+}
+
+/**
  * Draw a path defined by a chain of points.
  *
  * @param points The chain of points defining the path.
