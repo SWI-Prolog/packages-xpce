@@ -72,7 +72,7 @@ cToPceInteger(intptr_t i)
 
 Any
 cToPceReal(double f)
-{ return CtoReal(f);
+{ return toNum(f);
 }
 
 
@@ -382,8 +382,14 @@ pceToCReference(Any obj, PceCValue *rval)
 int
 pceToC(Any obj, PceCValue *rval)
 { if ( isInteger(obj) )
-  { rval->integer = valInt((Int) obj);
-    return PCE_INTEGER;
+  { double v = valNum(obj);
+    rval->integer = (intptr_t)v;
+    if ( (double)rval->integer == v )
+    { return PCE_INTEGER;
+    } else
+    { rval->real = v;
+      return PCE_REAL;
+    }
   }
 
   assert(obj);
@@ -972,7 +978,7 @@ pceEnumElements(PceObject collection,
 
     for_chain(ch, e,
 	      if ( !(*enumfunc)(e, closure) )
-	        fail;
+		fail;
 	     );
     succeed;
   }
@@ -983,7 +989,7 @@ pceEnumElements(PceObject collection,
 
     for_vector(v, e,
 	       if ( !(*enumfunc)(e, closure) )
-	         fail;
+		 fail;
 	      );
     succeed;
   }
