@@ -66,7 +66,7 @@ initialiseTree(Tree t, Node node)
 
   assign(t, sonHandle,
 	 newObject(ClassHandle,
-		   minInt(t->linkGap),
+		   neg(t->linkGap),
 		   div_h_2,
 		   NAME_son, EAV));
   assign(t, parentHandle,
@@ -524,7 +524,7 @@ updateHandlesTree(Tree t)
   { send(t->parentHandle, NAME_xPosition,
 	 newObject(ClassPlus, NAME_w, t->linkGap, EAV), EAV);
     send(t->parentHandle, NAME_yPosition, div_h_2, EAV);
-    send(t->sonHandle,    NAME_xPosition, minInt(t->linkGap), EAV);
+    send(t->sonHandle,    NAME_xPosition, neg(t->linkGap), EAV);
     send(t->sonHandle,    NAME_yPosition, div_h_2, EAV);
     send(t->parentHandle, NAME_kind,      NAME_parent, EAV);
     send(t->sonHandle,    NAME_kind,      NAME_son, EAV);
@@ -538,7 +538,7 @@ updateHandlesTree(Tree t)
     send(t->parentHandle, NAME_yPosition,
 	 newObject(ClassPlus, NAME_h, t->linkGap, EAV), EAV);
     send(t->sonHandle,    NAME_xPosition, div_w_2, EAV);
-    send(t->sonHandle,    NAME_yPosition, minInt(t->linkGap), EAV);
+    send(t->sonHandle,    NAME_yPosition, neg(t->linkGap), EAV);
     send(t->parentHandle, NAME_kind,      NAME_parent, EAV);
     send(t->sonHandle,    NAME_kind,      NAME_son, EAV);
   } else

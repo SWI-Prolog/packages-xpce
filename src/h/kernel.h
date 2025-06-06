@@ -385,7 +385,7 @@ typedef union
 } cvt_double;
 
 static inline Int
-fToInt(double v)
+toNum(double v)
 { cvt_double c = {.d = v};
   Int i = (Int)(c.u|INT_MASK);
   return i;
@@ -405,7 +405,7 @@ valInt(Int i)
 
 static inline Int
 toInt(intptr_t i)
-{ return fToInt((double)i);
+{ return toNum((double)i);
 }
 
 #define isInteger(i)	((uintptr_t)(i) & INT_MASK)
@@ -427,7 +427,6 @@ toInt(intptr_t i)
 #define dif(i, j)	(toInt((valInt(i) - valInt(j)/2)))
 #define inc(i)		(toInt(valInt(i) + 1))
 #define dec(i)		(toInt(valInt(i) - 1))
-#define minInt(i)	(toInt(-valInt(i)))
 
 #define ZERO		((Int)(uintptr_t)1)
 #define ONE		toInt(1)	/* PCE Int 1 */

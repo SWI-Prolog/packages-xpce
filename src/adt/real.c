@@ -96,7 +96,7 @@ initialiseReal(Real r, Any arg)
   setFlag(r, F_ISREAL);
 
   if ( isInteger(arg) )
-  { v = (double)valInt(arg);
+  { v = valNum(arg);
   } else if ( instanceOfObject(arg, ClassNumber) )
   { v = (double)((Number)arg)->value;
   } else if ( instanceOfObject(arg, ClassReal) )
@@ -417,4 +417,3 @@ makeClassReal(Class class)
 
   succeed;
 }
-

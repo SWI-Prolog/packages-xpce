@@ -170,12 +170,12 @@ getMarginScrollBar(ScrollBar sb)
   { if ( memberChain(sb->placement, NAME_bottom) )
       answer(add(sb->area->h, sb->distance));
     else
-      answer(minInt(add(sb->area->h, sb->distance)));
+      answer(neg(add(sb->area->h, sb->distance)));
   } else				/* vertical */
   { if ( memberChain(sb->placement, NAME_right) )
       answer(add(sb->area->w, sb->distance));
     else
-      answer(minInt(add(sb->area->w, sb->distance)));
+      answer(neg(add(sb->area->w, sb->distance)));
   }
 }
 
