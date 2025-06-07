@@ -272,6 +272,7 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
   context.default_background = context.background;
 
   /* do we need to clip? */
+  cairo_scale(context.cr, wsw->scale, wsw->scale);
 
   d_clip(x, y, w, h);
   if ( clear )
