@@ -591,7 +591,7 @@ geometry(D, X:[int], Y:[int], W:[int], H:[int]) :->
     "Change size, center contents vertically"::
     send(D, send_super, geometry, X, Y, W, H),
     get(D, height, DH),
-    DH2 is DH//2,
+    DH2 is round(DH/2),
     send(D?graphicals, for_all,
          message(@arg1, center_y, DH2)).
 
@@ -609,7 +609,7 @@ prompter(D, Prompter:dialog_item*) :->
     ;   send(Reporter, displayed, @off),
         get(Prompter, height, H),
         get(D, height, DH),
-        PY is (DH-H)//2,
+        PY is (DH-H)/2,
         send(D, display, Prompter, point(25, PY)),
         get(Prompter, height, H),
         MinH is H,
