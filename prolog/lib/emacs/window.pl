@@ -151,9 +151,8 @@ confirm(F, Format:char_array, Args:any...) :->
     send(D, append, label(message, String)),
     send(D, append, button(ok, message(D, return, ok))),
     send(D, append, button(cancel, message(D, return, cancel))),
-    send(D, transient_for, F),
     send(D, modal, transient),
-    get(D, confirm_centered, F?area?center, Rval),
+    get(D, confirm_centered, F, Rval),
     send(D, destroy),
     Rval == ok.
 

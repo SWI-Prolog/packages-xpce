@@ -140,6 +140,10 @@ ws_create_frame(FrameObj fr)
     x = x/scale; y = y/scale; w = w/scale; h = h/scale;
 #endif
 
+    DEBUG(NAME_sdl, Cprintf("Create %s as transient for %p at %d %d %dx%d\n",
+			    pp(fr), parent, x, y, w, h));
+
+
     SDL_PropertiesID props = SDL_CreateProperties();
     SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING,
 			  nameToUTF8(fr->label));
