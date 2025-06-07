@@ -292,14 +292,23 @@ ws_window_frame_position(Any window, FrameObj fr, int *ox, int *oy)
   return false;
 }
 
-#define Area2FRect(a)					\
-  { (float)valInt(a->x), (float)valInt(a->y),		\
-    (float)valInt(a->w), (float)valInt(a->h)		\
+#define Area2FRect(a)			\
+  { valNum(a->x), valNum(a->y),		\
+    valNum(a->w), valNum(a->h)		\
   }
-#define AreaSize2FRect(a)				\
-  { 0.0f, 0.0f,						\
-    (float)valInt(a->w), (float)valInt(a->h)		\
+#define AreaSize2FRect(a)		\
+  { 0.0f, 0.0f,				\
+    valNum(a->w), valNum(a->h)		\
   }
+
+#define scaleFRect(r, scale)		\
+  do					\
+  { r.x *= scale;			\
+    r.y *= scale;			\
+    r.w *= scale;			\
+    r.h *= scale;			\
+  } while(0)
+
 
 typedef struct
 { float x;
@@ -314,15 +323,17 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
   if ( wsw )
   { Area a = sw->area;
     SDL_FRect dstrect = Area2FRect(a);
+    double scale = SDL_GetWindowPixelDensity(wfr->ws_window);
 
     dstrect.x += off->x;
     dstrect.y += off->y;
+    scaleFRect(dstrect, scale);
     DEBUG(NAME_sdl,
 	  Cprintf("Draw %s in %s %d %d %d %d\n",
 		  pp(sw), pp(fr),
 		  valInt(a->x), valInt(a->y), valInt(a->w), valInt(a->h)));
 
-    SDL_FRect rect = { (float)valInt(a->x)+off->x, (float)valInt(a->y)+off->y,
+    SDL_FRect rect = { valNum(a->x)+off->x, valNum(a->y)+off->y,
 		       valInt(a->w), valInt(a->h)
                      };
     SDL_Color  bg = pceColour2SDL_Color(sw->background);
@@ -344,8 +355,8 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
 
     if ( instanceOfObject(sw, ClassWindowDecorator) )
     { foffset off2;
-      off2.x = off->x + (float)valInt(sw->area->x);
-      off2.y = off->y + (float)valInt(sw->area->y);
+      off2.x = off->x + valNum(sw->area->x);
+      off2.y = off->y + valNum(sw->area->y);
       WindowDecorator dw = (WindowDecorator)sw;
       ws_draw_window(fr, dw->window, &off2);
     }
@@ -454,7 +465,7 @@ sdl_frame_event(SDL_Event *ev)
       case SDL_EVENT_WINDOW_RESIZED:
       { int new_w, new_h;
 
-#if O_HDP
+#if O_HDPX
 	WsFrame f = sdl_frame(fr, false);
 	SDL_GetWindowSizeInPixels(f->ws_window, &new_w, &new_h);
 #else

@@ -309,7 +309,7 @@ CtoEvent(SDL_Event *event)
 
   setLastEventTime(time);
 
-#if O_HDP
+#if O_HDPX
   WsFrame wfr = sdl_frame(frame, false);
   float scale = SDL_GetWindowPixelDensity(wfr->ws_window);
 #else

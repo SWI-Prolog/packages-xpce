@@ -39,6 +39,7 @@
 
 typedef struct
 { cairo_surface_t *backing;
+  double scale;			/* pixel density */
   int w;
   int h;
 } ws_window, *WsWindow;

@@ -36,6 +36,7 @@
 #include <h/graphics.h>
 #include "sdlwindow.h"
 #include "sdlframe.h"
+#include "sdldisplay.h"
 #include "sdlevent.h"
 #include "sdlcursor.h"
 #include "sdldraw.h"
@@ -99,8 +100,9 @@ ws_create_window(PceWindow sw, PceWindow parent)
     memset(wsw, 0, sizeof(ws_window));
   }
 
-  wsw->w = valInt(sw->area->w);
-  wsw->h = valInt(sw->area->h);
+  wsw->scale   = ws_pixel_density_display(sw);
+  wsw->w       = valInt(sw->area->w)*wsw->scale;
+  wsw->h       = valInt(sw->area->h)*wsw->scale;
   wsw->backing = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
 					    wsw->w,  wsw->h);
   assert(wsw->backing);
@@ -156,10 +158,12 @@ ws_reassociate_ws_window(PceWindow from, PceWindow to)
 void
 ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
 { WsWindow wsw = sw->ws_ref;
+  double scale = ws_pixel_density_display(sw);
 
-  if ( wsw && wsw->backing && (wsw->w != w || wsw->h != h) )
-  { wsw->w = w;
-    wsw->h = h;
+  if ( wsw && wsw->backing && (wsw->w != w*scale || wsw->h != h*scale) )
+  { wsw->scale = scale;
+    wsw->w = w*scale;
+    wsw->h = h*scale;
     cairo_surface_destroy(wsw->backing);
     wsw->backing = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
 					      wsw->w,  wsw->h);
