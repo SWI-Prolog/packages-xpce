@@ -861,7 +861,32 @@ r_elevation_relief(Elevation e)
  */
 void
 r_3d_segments(int n, ISegment s, Elevation e, int light)
-{
+{ Any colour;
+
+  if ( light )
+    colour = r_elevation_relief(e);
+  else
+    colour = r_elevation_shadow(e);
+  r_thickness(1);
+
+  DEBUG(NAME_draw, Cprintf("Drawing %d segments with %s (pen=%.1f)\n", n, pp(colour), context.pen));
+
+  pce_cairo_set_source_color(CR, colour);
+  cairo_set_line_width(CR, context.pen);
+
+  ISegment p = s;
+  ISegment end = &s[n];
+  while(p<end)
+  { cairo_new_path(CR);
+    cairo_move_to(CR, X(p->x1), Y(p->y1));
+    cairo_line_to(CR, X(p->x2), Y(p->y2));
+    while ( p < end && p[1].x1 == p->x2 && p[1].y1 == p->y2 )
+    { p++;
+      cairo_line_to(CR, X(p->x2), Y(p->y2));
+    }
+    cairo_stroke(CR);
+    p++;
+  }
 }
 
 /**
