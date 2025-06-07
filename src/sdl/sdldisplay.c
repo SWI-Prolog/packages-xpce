@@ -203,6 +203,8 @@ ws_open_display(DisplayObj d)
   wsd->hidden_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
 						   64, 64);
   wsd->hidden_cairo = cairo_create(wsd->hidden_surface);
+  float scale = SDL_GetWindowPixelDensity(wsd->hidden_window);
+  cairo_scale(wsd->hidden_cairo, scale, scale);
 }
 
 /**
