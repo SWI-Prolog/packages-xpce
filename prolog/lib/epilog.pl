@@ -33,7 +33,8 @@
 */
 
 :- module(epilog,
-          [ epilog/1,                 % +Title
+          [ ep_main/0,
+            epilog/1,                 % +Title
             epilog/0,
             win_window_color/2,       % +Which, +Color
             window_title/1
@@ -60,6 +61,26 @@ library(thread_util). Eventually, this should be properly merged.
 @tbd Add a frame with menu bar and tabbed windows for the terminals. Or,
     split horizontal/vertical, like terminator.
 */
+
+%!  ep_main
+%
+%   Run epilog as main goal
+
+:- dynamic quit_requested/0.
+
+ep_main :-
+    epilog,
+    repeat,
+      send(@display, dispatch),
+      ep_main_end,
+    !,
+    halt.
+
+ep_main_end :-
+    send(@display?frames, empty),
+    !.
+ep_main_end :-
+    quit_requested.
 
 %!  epilog is det.
 %!  epilog(+Title) is det.
@@ -591,9 +612,13 @@ make(T) :->
     "Run make/0"::
     send(T, inject, make).
 
-quit(T) :->
+quit(T, Prolog:prolog=[bool]) :->
     "Quit this terminal.  Optionally should terminate Prolog"::
-    send(T, destroy).
+    send(T, destroy),
+    (   Prolog == @on
+    ->  assert(quit_requested)
+    ;   true
+    ).
 
 interrupt(Epilog) :->
     "Interrupt running thread"::
@@ -638,7 +663,9 @@ initialise(D) :->
                           message(Epilog, make),
                           end_group := @on),
                 menu_item(quit,
-                          message(Epilog, quit))
+                          message(Epilog, quit)),
+                menu_item(quit_prolog,
+                          message(Epilog, quit, @on))
               ]),
     send_list(Settings, append,
               [ menu_item(user_init_file,
