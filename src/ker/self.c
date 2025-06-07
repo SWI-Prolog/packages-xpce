@@ -1456,7 +1456,7 @@ static classvardecl rc_pce[] =
 { RC(NAME_initialise, "code*",
      UXWIN(/*UNIX*/
 	   "and(_dialog_bg        @= colour(grey80),\n"
-	   "    _button_elevation @= elevation(button, 0.25mm, grey80,\n"
+	   "    _button_elevation @= elevation(button, 1, grey80,\n"
 	   "				       grey95, grey50,\n"
 	   "				      '3d', grey70),\n"
 	   "    _mark_elevation   @= elevation(mark, 0),\n"
