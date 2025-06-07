@@ -144,9 +144,9 @@ setTextCursor(TextCursor c, Int x, Int y, Int w, Int h, Int b)
 			     sub(add(y, b), c->hot_spot->y),
 			     c->image->size->w, c->image->size->h);
   if ( c->style == NAME_openLook )
-  { int px = dpi_scale(c, OL_CURSOR_SIZE, TRUE);
+  { double px = dpi_scale(c, OL_CURSOR_SIZE);
     return geometryGraphical(c,
-			     sub(x, toInt(px/2)),
+			     sub(x, toNum(px/2.0)),
 			     sub(add(y, b), ONE),
 			     toInt(px),
 			     toInt(px));

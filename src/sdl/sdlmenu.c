@@ -148,7 +148,7 @@ init_entry_resources()
  */
 int
 ws_combo_box_width(Graphical gr)
-{ return dpi_scale(gr, 14, FALSE);
+{ return dpi_scale(gr, 14);
 }
 
 /**
@@ -202,7 +202,7 @@ ws_entry_field(Graphical gr, int x, int y, int w, int h, int flags)
       int cw = ws_combo_box_width(gr);
       int up = !(flags & TEXTFIELD_COMBO_DOWN);
 
-      if ( cw < 0 ) cw = dpi_scale(NULL, 14, FALSE);
+      if ( cw < 0 ) cw = dpi_scale(NULL, 14);
       r_3d_box(x+w-cw-2, y+2, cw, h-4, 0, button_elevation, up);
       r_image(SCROLL_DOWN_IMAGE, 0, 0, x+w-cw+(cw-iw)/2-2, iy, iw, ih, ON);
     }
@@ -211,7 +211,7 @@ ws_entry_field(Graphical gr, int x, int y, int w, int h, int flags)
       int bh = (h-4)/2;
       int b1up, b2up;
 
-      if ( cw < 0 ) cw = dpi_scale(NULL, 14, FALSE);
+      if ( cw < 0 ) cw = dpi_scale(NULL, 14);
       b1up = !(flags & TEXTFIELD_INCREMENT);
       b2up = !(flags & TEXTFIELD_DECREMENT);
 

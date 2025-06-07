@@ -406,28 +406,13 @@ DPI(Any gr)
 
     return (int)((valInt(sz->w) + valInt(sz->h) + 1)/2);
   } else
-  { return 100;
+  { return 96;
   }
 }
 
-int
-dpi_scale(Any gr, int px, int odd)
-{ DisplayObj d = gr ? CurrentDisplay(gr) : TheDisplay;
-  double scale;
-
-  if ( d )
-  { Size sz = getDPIDisplay(d);
-
-    scale = (double)(valInt(sz->w) + valInt(sz->h)) / 200.0;
-  } else
-  { scale = 1.0;
-  }
-
-  px = (double)px*scale + 0.5;
-  if ( odd && px % 2 == 0 )
-    px++;
-
-  return px;
+double
+dpi_scale(Any gr, double px)
+{ return px;
 }
 
 static status

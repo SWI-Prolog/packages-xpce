@@ -149,10 +149,10 @@ RedrawAreaTextItem(TextItem ti, Area a)
       }
     }
     if ( flags & (TEXTFIELD_COMBO|TEXTFIELD_COMBO_DOWN) )
-    { int trh = dpi_scale(ti, 8, FALSE);
-      int trw = dpi_scale(ti, 9, TRUE);
-      int trx, try;
-      int up = (flags & TEXTFIELD_COMBO) ? TRUE : FALSE;
+    { double trh = dpi_scale(ti, 8);
+      double trw = dpi_scale(ti, 9);
+      double trx, try;
+      bool up = !!(flags & TEXTFIELD_COMBO);
 
       trx = tx+tw+5;
       try = y + (h-trh)/2;
@@ -160,19 +160,19 @@ RedrawAreaTextItem(TextItem ti, Area a)
       r_3d_triangle(trx+trw/2, try+trh, trx, try, trx+trw, try, z, up, 0x3);
     }
     if ( flags & TEXTFIELD_STEPPER )
-    { int sw = dpi_scale(ti, STEPPER_BOX_W, TRUE);
-      int bx = x+w-sw;
-      int bh = (h+1)/2;
-      int iw, ih, ix, dy;
+    { double sw = dpi_scale(ti, STEPPER_BOX_W);
+      double bx = x+w-sw;
+      double bh = (h+1)/2.0;
+      double iw, ih, ix, dy;
       Elevation e = getClassVariableValueClass(ClassButton, NAME_elevation);
 
       r_3d_box(bx, y,    sw, bh,   0, e, !(flags & TEXTFIELD_INCREMENT));
       r_3d_box(bx, y+bh, sw, h-bh, 0, e, !(flags & TEXTFIELD_DECREMENT));
 
-      iw = valInt(INT_ITEM_IMAGE->size->w)/2;
-      ih = valInt(INT_ITEM_IMAGE->size->h);
-      ix = x + w - (sw+iw+1)/2;
-      dy = (bh-ih+1)/2;
+      iw = valNum(INT_ITEM_IMAGE->size->w)/2.0;
+      ih = valNum(INT_ITEM_IMAGE->size->h);
+      ix = x + w - (sw+iw+1)/2.0;
+      dy = (bh-ih+1)/2.0;
 
       r_image(INT_ITEM_IMAGE, 0,  0, ix, y+dy,      iw, ih, ON);
       r_image(INT_ITEM_IMAGE, iw, 0, ix, y+h-dy-ih, iw, ih, ON);
@@ -805,11 +805,11 @@ text_item_combo_width(TextItem ti)
 { if ( ti->style == NAME_comboBox )
   { int w = ws_combo_box_width((Graphical)ti);
 
-    return w >= 0 ? w : dpi_scale(ti, 14, FALSE);
+    return w >= 0 ? w : dpi_scale(ti, 14);
   } else if ( ti->style == NAME_stepper )
   { int w = ws_stepper_width((Graphical)ti);
 
-    return w >= 0 ? w :  dpi_scale(ti, (STEPPER_BOX_W+STEPPER_BOX_GAP), FALSE);
+    return w >= 0 ? w :  dpi_scale(ti, (STEPPER_BOX_W+STEPPER_BOX_GAP));
   }
 
   return 0;

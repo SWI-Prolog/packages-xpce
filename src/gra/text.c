@@ -361,16 +361,16 @@ repaintText(TextObj t, int x, int y, int w, int h)
     d_clip_done();
 
   if ( t->show_caret != OFF )
-  { int fh = valInt(getAscentFont(t->font));
-    int active = (t->show_caret == ON);
+  { double fh = valNum(getAscentFont(t->font));
+    bool active = (t->show_caret == ON);
     Any colour = getClassVariableValueClass(ClassTextCursor,
 					    active ? NAME_colour
 						   : NAME_inactiveColour);
     Any old = r_colour(colour);
-    int ols = dpi_scale(t, OL_CURSOR_SIZE, FALSE);
+    double ols = dpi_scale(t, OL_CURSOR_SIZE);
 
-    draw_caret(valInt(t->x_caret) - ols/2 + x - b,
-	       valInt(t->y_caret) + y + fh - b - 3,
+    draw_caret(valNum(t->x_caret) - ols/2.0 + x - b,
+	       valNum(t->y_caret) + y + fh - b - 3.0,
 	       ols, ols,
 	       active);
 

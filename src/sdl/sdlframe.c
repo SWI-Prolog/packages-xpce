@@ -125,8 +125,8 @@ ws_create_frame(FrameObj fr)
 
 #if O_HDP
     flags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
-    float scale = SDL_GetWindowPixelDensity(parent);
-    x = x/scale; y = y/scale; w = w/scale; h = h/scale;
+    //float scale = SDL_GetWindowPixelDensity(parent);
+    //x = x/scale; y = y/scale; w = w/scale; h = h/scale;
 #endif
     DEBUG(NAME_popup,
 	  Cprintf("Creating popup frame %s %dx%d\n", pp(fr), w, h));
@@ -134,7 +134,7 @@ ws_create_frame(FrameObj fr)
     win = SDL_CreatePopupWindow(parent, x, y, w, h, flags);
   } else
   {
-#if O_HDP
+#if O_HDPX
     float scale = ws_pixel_density_display(fr);
     DEBUG(NAME_sdl, Cprintf("%s: scale = %.2f\n", pp(fr), scale));
     x = x/scale; y = y/scale; w = w/scale; h = h/scale;
@@ -333,12 +333,9 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
 		  pp(sw), pp(fr),
 		  valInt(a->x), valInt(a->y), valInt(a->w), valInt(a->h)));
 
-    SDL_FRect rect = { valNum(a->x)+off->x, valNum(a->y)+off->y,
-		       valInt(a->w), valInt(a->h)
-                     };
     SDL_Color  bg = pceColour2SDL_Color(sw->background);
     SDL_SetRenderDrawColor(wfr->ws_renderer, bg.r, bg.g, bg.b, bg.a);
-    SDL_RenderRect(wfr->ws_renderer, &rect);
+    SDL_RenderRect(wfr->ws_renderer, &dstrect);
 
     int width    = cairo_image_surface_get_width(wsw->backing);
     int height   = cairo_image_surface_get_height(wsw->backing);

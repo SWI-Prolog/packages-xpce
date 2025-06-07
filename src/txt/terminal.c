@@ -1324,9 +1324,9 @@ rlc_draw_caret(RlcData b, int x, int y)
 					    b->has_focus ? NAME_colour
 							 : NAME_inactiveColour);
     Any old = r_colour(colour);
-    int ols = dpi_scale(ti, OL_CURSOR_SIZE, FALSE);
-    int cx = x + b->caret_px - ols/2;
-    int cy = y + b->caret_py + b->cb - 3;
+    double ols = dpi_scale(ti, OL_CURSOR_SIZE);
+    double cx = x + b->caret_px - ols/2.0;
+    double cy = y + b->caret_py + b->cb - 3.0;
 
     DEBUG(NAME_caret, Cprintf("Drawing caret at %d,%d\n", cx, cy));
     draw_caret(cx, cy, ols, ols, b->has_focus);
@@ -1341,11 +1341,11 @@ static void
 changed_caret(RlcData b)
 { if (  b->caret_is_shown )
   { TerminalImage ti = b->object;
-    int ols = dpi_scale(ti, OL_CURSOR_SIZE, FALSE);
+    double ols = dpi_scale(ti, OL_CURSOR_SIZE);
     changedImageGraphical(b->object,
-			  toInt(b->caret_px - ols/2),
-			  toInt(b->caret_py + b->cb - 3),
-			  toInt(ols), toInt(ols));
+			  toNum(b->caret_px - ols/2.0),
+			  toNum(b->caret_py + b->cb - 3),
+			  toNum(ols), toNum(ols));
   }
 }
 
