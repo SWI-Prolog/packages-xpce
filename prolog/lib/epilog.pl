@@ -150,6 +150,12 @@ clean_exit :-
     set_prolog_flag(debug_on_error, false),
     thread_exit(console).
 
+log(Fmt, Argv) :-
+    setup_call_cleanup(
+        open('epilog.log', append, Out),
+        format(Out, Fmt, Argv),
+        close(Out)).
+
 %!  terminated
 %
 %   Called from at_exit(Goal) option of the created thread.
@@ -163,11 +169,15 @@ delete_window :-
     retract(current_prolog_terminal(Me, PT)),
     !,
     save_history(PT),
-    in_pce_thread(send(PT?frame, delete_epilog, PT?window)).
+    (   '$run_state'(normal)
+    ->  in_pce_thread(send(PT?frame, delete_epilog, PT?window))
+    ;   true
+    ).
 delete_window.
 
 close_io :-
-    (   current_predicate(el_unwrap/1)
+    (   current_predicate(el_unwrap/1),
+        '$run_state'(normal)            % hangs in el_end() on MacOS
     ->  catch(el_unwrap(user_input), error(_,_), true)
     ;   true
     ),
