@@ -36,8 +36,9 @@
 #include <h/graphics.h>
 #include "math.h"
 
-static status	drawArrow(int x1, int y1, int x2, int y2, int x3, int y3,
-			  Any fill, int pen, Name texture, Name style);
+static status	drawArrow(double x1, double y1, double x2, double y2,
+			  double x3, double y3,
+			  Any fill, double pen, Name texture, Name style);
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Arrows are defined in terms of the point at the tip the length of the arrow
@@ -92,60 +93,60 @@ initialiseArrow(Arrow a, Int length, Int wing, Name style, Any fill)
 static status
 computeArrow(Arrow a)
 { if ( notNil(a->request_compute) )
-  { int x1, y1, x2, y2;
-    int x, y, w, h;
-    int sx, sy, rx, ry;
-    int xdiff, ydiff;
-    int cdl1, sdl1, cl2, sl2;
-    float l1, l2, d;
-    float sin_theta, cos_theta;
-    int changed = 0;
+  { double x1, y1, x2, y2;
+    double x, y, w, h;
+    double sx, sy, rx, ry;
+    double xdiff, ydiff;
+    double cdl1, sdl1, cl2, sl2;
+    double l1, l2, d;
+    double sin_theta, cos_theta;
+    bool changed = false;
 
-    x1 = valInt(a->reference->x);
-    y1 = valInt(a->reference->y);
-    x2 = valInt(a->tip->x);
-    y2 = valInt(a->tip->y);
+    x1 = valNum(a->reference->x);
+    y1 = valNum(a->reference->y);
+    x2 = valNum(a->tip->x);
+    y2 = valNum(a->tip->y);
 
-    l1 = (float) (valInt(a->length));
-    l2 = (float) (valInt(a->wing))/2.0;
+    l1 = valNum(a->length);
+    l2 = valNum(a->wing)/2.0;
 
     xdiff = x2 - x1;
     ydiff = y2 - y1;
 
-    d = sqrt((float) (xdiff*xdiff + ydiff*ydiff));
+    d = sqrt(xdiff*xdiff + ydiff*ydiff);
     if (d < 0.0000001)
     { cos_theta = 1.0;
       sin_theta = 0.0;
     } else
-    { cos_theta = (float) xdiff / d;
-      sin_theta = (float) ydiff / d;
+    { cos_theta = xdiff / d;
+      sin_theta = ydiff / d;
     }
 
-    cdl1 = rfloat(cos_theta * (d-l1));
-    sdl1 = rfloat(sin_theta * (d-l1));
-    cl2 = rfloat(cos_theta * l2);
-    sl2 = rfloat(sin_theta * l2);
+    cdl1 = cos_theta * (d-l1);
+    sdl1 = sin_theta * (d-l1);
+    cl2  = cos_theta * l2;
+    sl2  = sin_theta * l2;
 
     sx = x1 + cdl1 - sl2;
     sy = y1 + sdl1 + cl2;
     rx = x1 + cdl1 + sl2;
     ry = y1 + sdl1 - cl2;
 
-    if ( a->left->x != toInt(sx) )
-    { assign(a->left, x, toInt(sx));
-      changed++;
+    if ( a->left->x != toNum(sx) )
+    { assign(a->left, x, toNum(sx));
+      changed = true;
     }
-    if ( a->left->y != toInt(sy) )
-    { assign(a->left, y, toInt(sy));
-      changed++;
+    if ( a->left->y != toNum(sy) )
+    { assign(a->left, y, toNum(sy));
+      changed = true;
     }
-    if ( a->right->x != toInt(rx) )
-    { assign(a->right, x, toInt(rx));
-      changed++;
+    if ( a->right->x != toNum(rx) )
+    { assign(a->right, x, toNum(rx));
+      changed = true;
     }
-    if ( a->right->y != toInt(ry) )
-    { assign(a->right, y, toInt(ry));
-      changed++;
+    if ( a->right->y != toNum(ry) )
+    { assign(a->right, y, toNum(ry));
+      changed = true;
     }
 
     x = min(x2, min(sx, rx));
@@ -170,16 +171,16 @@ computeArrow(Arrow a)
 static status
 geometryArrow(Arrow a, Int x, Int y, Int w, Int h)
 { if ( notDefault(x) || notDefault(y) )
-  { int dx, dy;
+  { double dx, dy;
 
     ComputeGraphical(a);
-    dx = valInt(x)-valInt(a->area->x);
-    dy = valInt(y)-valInt(a->area->y);
+    dx = valNum(x)-valNum(a->area->x);
+    dy = valNum(y)-valNum(a->area->y);
 
-    pointsArrow(a, toInt(valInt(a->tip->x)+dx),
-		   toInt(valInt(a->tip->y)+dy),
-		   toInt(valInt(a->reference->x)+dx),
-		   toInt(valInt(a->reference->y)+dy));
+    pointsArrow(a, toNum(valNum(a->tip->x)+dx),
+		   toNum(valNum(a->tip->y)+dy),
+		   toNum(valNum(a->reference->x)+dx),
+		   toNum(valNum(a->reference->y)+dy));
   }
 
   succeed;
@@ -188,11 +189,11 @@ geometryArrow(Arrow a, Int x, Int y, Int w, Int h)
 
 static status
 RedrawAreaArrow(Arrow a, Area area)
-{ drawArrow(valInt(a->left->x),  valInt(a->left->y),
-	    valInt(a->tip->x),   valInt(a->tip->y),
-	    valInt(a->right->x), valInt(a->right->y),
+{ drawArrow(valNum(a->left->x),  valNum(a->left->y),
+	    valNum(a->tip->x),   valNum(a->tip->y),
+	    valNum(a->right->x), valNum(a->right->y),
 	    a->fill_pattern,
-	    valInt(a->pen),
+	    valNum(a->pen),
 	    a->texture,
 	    a->style);
 
@@ -201,8 +202,8 @@ RedrawAreaArrow(Arrow a, Area area)
 
 
 static status
-drawArrow(int x1, int y1, int x2, int y2, int x3, int y3,
-	  Any fill, int pen, Name texture, Name style)
+drawArrow(double x1, double y1, double x2, double y2, double x3, double y3,
+	  Any fill, double pen, Name texture, Name style)
 { ipoint pts[3];
 
   /* TBD: Cairo can paint the line and fill from the same path */
