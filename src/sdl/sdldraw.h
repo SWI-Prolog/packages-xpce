@@ -96,7 +96,7 @@ void r_image(Image image, int sx, int sy, int x, int y, int w, int h, BoolObj tr
 void r_fill(int x, int y, int w, int h, Any pattern);
 void r_fill_polygon(FPoint pts, int n);
 void r_caret(int cx, int cy, FontObj font);
-void r_fill_triangle(int x1, int y1, int x2, int y2, int x3, int y3);
+void r_fill_triangle(double x1, double y1, double x2, double y2, double x3, double y3);
 void r_triangle(int x1, int y1, int x2, int y2, int x3, int y3, Any fill);
 void r_pixel(int x, int y, Any val);
 void r_complement_pixel(int x, int y);

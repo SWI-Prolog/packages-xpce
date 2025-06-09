@@ -108,7 +108,6 @@ COMMON(void)	r_op_image(Image image, int sx, int sy, int x, int y, int w, int h,
 COMMON(void)	r_image(Image image, int sx, int sy, int x, int y, int w, int h, BoolObj transparent);
 COMMON(void)	r_fill(int x, int y, int w, int h, Any pattern);
 COMMON(void)	r_caret(int cx, int cy, FontObj font);
-COMMON(void)	r_fill_triangle(int x1, int y1, int x2, int y2, int x3, int y3);
 COMMON(void)	r_triangle(int x1, int y1, int x2, int y2, int x3, int y3, Any fill);
 COMMON(void)	r_pixel(int x, int y, Any val);
 COMMON(void)	r_complement_pixel(int x, int y);

@@ -1497,7 +1497,7 @@ r_caret(int cx, int cy, FontObj font)
  * @param y3 The y-coordinate of the third vertex.
  */
 void
-r_fill_triangle(int x1, int y1, int x2, int y2, int x3, int y3)
+r_fill_triangle(double x1, double y1, double x2, double y2, double x3, double y3)
 { fpoint pts[3] =
     { {.x = x1, .y = y1 },
       {.x = x2, .y = y2 },
