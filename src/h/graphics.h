@@ -1021,8 +1021,8 @@ the optimal redisplay behaviour.
 #define DRAW_3D_FILLED	0x4
 
 typedef struct
-{ int x, y;
-} ipoint, *IPoint;
+{ double x, y;
+} fpoint, *FPoint;
 
 
 typedef struct

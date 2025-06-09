@@ -65,7 +65,7 @@ static const edge edges[3][3] =
 
 
 void
-r_3d_rectangular_polygon(int n, IPoint pts, Elevation e, int flags)
+r_3d_rectangular_polygon(int n, FPoint pts, Elevation e, int flags)
 { int h = valInt(e->height);
   int up = !(flags & DRAW_3D_DOWN);
 
@@ -80,7 +80,7 @@ r_3d_rectangular_polygon(int n, IPoint pts, Elevation e, int flags)
     ISegment last  = NULL;
     int ndark = 0, nlight = 0;
     int m;
-    IPoint p1, p2;
+    FPoint p1, p2;
 
     for(m=0; m<h; m++)
     { int i;

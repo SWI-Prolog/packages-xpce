@@ -58,7 +58,7 @@ RedrawAreaTextCursor(TextCursor c, Area a)
 
   if ( c->style == NAME_arrow )
   { int cx = x+w/2;			/* TBD: consider r_caret()! */
-    ipoint pts[3];
+    fpoint pts[3];
 
     r_thickness(1);
     r_dash(NAME_none);
@@ -69,7 +69,7 @@ RedrawAreaTextCursor(TextCursor c, Area a)
     pts[1].x = x + w;
     pts[1].y = y+h;
     pts[2].x = cx;
-    pts[2].y = y + h - (h+2)/3;
+    pts[2].y = y + h - (h+2)/3.0;
 
     r_fillpattern(c->active == ON ? BLACK_IMAGE : GREY50_IMAGE,
 		  NAME_foreground);
@@ -84,9 +84,9 @@ RedrawAreaTextCursor(TextCursor c, Area a)
       r_fillpattern(colour ? colour : (Any) BLACK_IMAGE, NAME_foreground);
       r_fill_triangle(cx, y, x, y+h, x+w, y+h);
     } else
-    { ipoint pts[4];
-      int cx = x + w/2;
-      int cy = y + h/2;
+    { fpoint pts[4];
+      double cx = x + w/2.0;
+      double cy = y + h/2.0;
       int i = 0;
 
       pts[i].x = cx;  pts[i].y = y;   i++;

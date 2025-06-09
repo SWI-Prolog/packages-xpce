@@ -339,7 +339,7 @@ COMMON(status)	makeClassElevation(Class class);
 COMMON(status)	makeClassPen(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/draw.c */
-COMMON(void)	r_3d_rectangular_polygon(int n, IPoint pts, Elevation e, int flags);
+COMMON(void)	r_3d_rectangular_polygon(int n, FPoint pts, Elevation e, int flags);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/colourmap.c */
 COMMON(status)	makeClassColourMap(Class class);

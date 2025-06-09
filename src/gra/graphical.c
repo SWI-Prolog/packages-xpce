@@ -3107,20 +3107,20 @@ drawLineGraphical(Graphical gr, Int x1, Int y1, Int x2, Int y2)
 
 static status
 drawPolyGraphical(Graphical gr, Any points, BoolObj closed, Any fill)
-{ IPoint pts;
+{ FPoint pts;
   int npts = 0;
 
   if ( instanceOfObject(points, ClassChain) )
   { Chain ch = points;
     Cell cell;
 
-    pts = (IPoint)alloca(sizeof(ipoint) * valInt(ch->size));
+    pts = (FPoint)alloca(sizeof(fpoint) * valInt(ch->size));
     for_cell(cell, ch)
     { Point pt = cell->value;
 
       if ( instanceOfObject(pt, ClassPoint) )
-      {	pts[npts].x = valInt(pt->x);
-	pts[npts].y = valInt(pt->y);
+      {	pts[npts].x = valNum(pt->x);
+	pts[npts].y = valNum(pt->y);
 	npts++;
       } else
       { return errorPce(pt, NAME_unexpectedType, nameToType(NAME_point));
@@ -3130,12 +3130,12 @@ drawPolyGraphical(Graphical gr, Any points, BoolObj closed, Any fill)
   { Vector vector = points;
     Point pt;
 
-    pts = (IPoint) alloca(sizeof(ipoint) * valInt(vector->size));
+    pts = (FPoint) alloca(sizeof(fpoint) * valInt(vector->size));
 
     for_vector(vector, pt,
 	       { if ( instanceOfObject(pt, ClassPoint) )
-		 { pts[npts].x = valInt(pt->x);
-		   pts[npts].y = valInt(pt->y);
+		 { pts[npts].x = valNum(pt->x);
+		   pts[npts].y = valNum(pt->y);
 		   npts++;
 		 } else
 		 { return errorPce(pt, NAME_unexpectedType,

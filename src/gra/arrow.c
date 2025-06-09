@@ -204,7 +204,7 @@ RedrawAreaArrow(Arrow a, Area area)
 static status
 drawArrow(double x1, double y1, double x2, double y2, double x3, double y3,
 	  Any fill, double pen, Name texture, Name style)
-{ ipoint pts[3];
+{ fpoint pts[3];
 
   /* TBD: Cairo can paint the line and fill from the same path */
   if ( notNil(fill) )

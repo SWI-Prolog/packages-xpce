@@ -1229,13 +1229,13 @@ r_line(int x1, int y1, int x2, int y2)
  * @todo  Use Cairo's native Bezier curve support.
  */
 void
-r_polygon(IPoint pts, int n, int close)
+r_polygon(FPoint pts, int n, int close)
 { if ( context.pen > 0 )
   { cairo_new_path(CR);
     bool first = true;
     for(int i=0; i<n; i++)
-    { int x = pts[i].x;
-      int y = pts[i].y;
+    { double x = pts[i].x;
+      double y = pts[i].y;
       Translate(x,y);
       if ( first )
       { cairo_move_to(CR, x, y);
@@ -1263,7 +1263,7 @@ r_polygon(IPoint pts, int n, int close)
  * @param end The end point of the curve.
  */
 void
-r_bezier(ipoint start, ipoint control1, ipoint control2, ipoint end)
+r_bezier(fpoint start, fpoint control1, fpoint control2, fpoint end)
 { if ( context.pen > 0 )
   { cairo_new_path(CR);
     Translate(start.x, start.y);
@@ -1450,7 +1450,7 @@ r_fill(int x, int y, int w, int h, Any fill)
  * @param n The number of points in the array.
  */
 void
-r_fill_polygon(IPoint pts, int n)
+r_fill_polygon(FPoint pts, int n)
 { if ( n <= 0 ) return;
 
   cairo_new_path(CR);
@@ -1460,13 +1460,13 @@ r_fill_polygon(IPoint pts, int n)
   cairo_paint(CR);
 
   pce_cairo_set_source_color(CR, context.fill_pattern);
-  int x = pts[0].x;
-  int y = pts[0].y;
+  double x = pts[0].x;
+  double y = pts[0].y;
   Translate(x, y);
   cairo_move_to(CR, x, y);
   for (int i = 1; i < n; i++)
-  { int x = pts[i].x;
-    int y = pts[i].y;
+  { double x = pts[i].x;
+    double y = pts[i].y;
     Translate(x, y);
     cairo_line_to(CR, x, y);
   }
@@ -1498,7 +1498,7 @@ r_caret(int cx, int cy, FontObj font)
  */
 void
 r_fill_triangle(int x1, int y1, int x2, int y2, int x3, int y3)
-{ ipoint pts[3] =
+{ fpoint pts[3] =
     { {.x = x1, .y = y1 },
       {.x = x2, .y = y2 },
       {.x = x3, .y = y3 }

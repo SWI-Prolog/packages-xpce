@@ -262,8 +262,8 @@ RedrawAreaTab(Tab t, Area a)
   h -= 1;
 
   if ( t->status == NAME_onTop )
-  { ipoint pts[10];
-    IPoint p = pts;
+  { fpoint pts[10];
+    FPoint p = pts;
 
     if ( loff == 0 )
     { GOTO(p, x, y+r);			/* top-left of label */
@@ -307,8 +307,8 @@ RedrawAreaTab(Tab t, Area a)
       assign(a, y, ay);
     }
   } else /* if ( t->status == NAME_hidden ) */
-  { ipoint pts[6];
-    IPoint p = pts;
+  { fpoint pts[6];
+    FPoint p = pts;
     Colour obg = r_background(DEFAULT);
     static Real dot9;
 

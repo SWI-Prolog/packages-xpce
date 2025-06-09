@@ -264,7 +264,7 @@ draw_caret(int x, int y, int w, int h, bool active)
     r_fillpattern(c, NAME_foreground);
     r_fill_triangle(cx, y, x, y+h, x+w, y+h);
   } else
-  { ipoint pts[4];
+  { fpoint pts[4];
     int cx = x + w/2;
 
     int cy = y + h/2;

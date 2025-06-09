@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <math.h>
 
 #define MAXPTS 100
 
@@ -122,7 +123,7 @@ adjustSecondArrowBezier(Bezier b)
 		 *******************************/
 
 static void
-shiftpts(IPoint pts, int to, int shift)
+shiftpts(FPoint pts, int to, int shift)
 {
   DEBUG(NAME_bezier, Cprintf("Shift to %d\n", to));
   to--;
@@ -137,15 +138,15 @@ shiftpts(IPoint pts, int to, int shift)
 	}
 
 static int
-splitQuadratic(IPoint pts, int i, int *n)
-{ ipoint m;
+splitQuadratic(FPoint pts, int i, int *n)
+{ fpoint m;
   int md = 1;
 
   pts += i;
   mkmid(m, pts[0], pts[2]);
 
-  if ( abs(m.x-pts[1].x) > md || abs(m.y-pts[1].y) > md )
-  { ipoint p1;
+  if ( fabs(m.x-pts[1].x) > md || fabs(m.y-pts[1].y) > md )
+  { fpoint p1;
 
     p1 = pts[1];
 
@@ -164,14 +165,14 @@ splitQuadratic(IPoint pts, int i, int *n)
 
 
 static int
-splitCubic(IPoint pts, int i, int *n)
+splitCubic(FPoint pts, int i, int *n)
 { pts += i;
 
   if ( distanceLineToPoint(pts[0].x, pts[0].y, pts[3].x, pts[3].y,
 			   pts[1].x, pts[1].y, TRUE) > 1 ||
        distanceLineToPoint(pts[0].x, pts[0].y, pts[3].x, pts[3].y,
 			   pts[2].x, pts[2].y, TRUE) > 1 )
-  { ipoint p1, p2, p12;
+  { fpoint p1, p2, p12;
 
     p1 = pts[1];
     p2 = pts[2];
@@ -206,25 +207,25 @@ printPts(IPoint pts, int n)
 */
 
 static void
-compute_points_bezier(Bezier b, IPoint pts, int *mx)
+compute_points_bezier(Bezier b, FPoint pts, int *mx)
 { int mxpts = *mx;
   int npts;
   int i;
-  IPoint p = pts;
+  FPoint p = pts;
 
-  p->x = valInt(b->start->x);
-  p->y = valInt(b->start->y);
+  p->x = valNum(b->start->x);
+  p->y = valNum(b->start->y);
   p++;
-  p->x = valInt(b->control1->x);
-  p->y = valInt(b->control1->y);
+  p->x = valNum(b->control1->x);
+  p->y = valNum(b->control1->y);
   p++;
   if ( notNil(b->control2) )
-  { p->x = valInt(b->control2->x);
-    p->y = valInt(b->control2->y);
+  { p->x = valNum(b->control2->x);
+    p->y = valNum(b->control2->y);
     p++;
   }
-  p->x = valInt(b->end->x);
-  p->y = valInt(b->end->y);
+  p->x = valNum(b->end->x);
+  p->y = valNum(b->end->y);
   p++;
 
   npts = p-pts;
@@ -288,8 +289,8 @@ computeBoundingBoxBezier(Bezier b)
     r.miny -= (mh+1)/2;
     r.maxy += (mh+1)/2;
   } else
-  { ipoint ptsbuf[MAXPTS];
-    IPoint pts = ptsbuf;
+  { fpoint ptsbuf[MAXPTS];
+    FPoint pts = ptsbuf;
     int npts = MAXPTS;
     int i;
 
@@ -348,26 +349,23 @@ computeBezier(Bezier b)
 static status
 RedrawAreaBezier(Bezier b, Area a)
 { int x, y, w, h;
-    ipoint start = {valInt(b->start->x), valInt(b->start->y)};
-    ipoint end = {valInt(b->end->x), valInt(b->end->y)};
-    ipoint control1 = {valInt(b->control1->x), valInt(b->control1->y)};
-    ipoint control2;
+  fpoint start = {valNum(b->start->x), valNum(b->start->y)};
+  fpoint end = {valNum(b->end->x), valNum(b->end->y)};
+  fpoint control1 = {valNum(b->control1->x), valNum(b->control1->y)};
+  fpoint control2;
 
-    if ( notNil(b->control2) )
-    {
-      control2 = (ipoint){valInt(b->control2->x), valInt(b->control2->y)};
-    } else
-    {
-      control2 = (ipoint){(2*control1.x + end.x) / 3,
-			  (2*control1.y + end.y) / 3};
-      control1 = (ipoint){(start.x + 2*control1.x) / 3,
-			  (start.y + 2*control1.y) / 3};
-    }
-
+  if ( notNil(b->control2) )
+  { control2 = (fpoint){valNum(b->control2->x), valNum(b->control2->y)};
+  } else
+  { control2 = (fpoint){(2*control1.x + end.x) / 3.0,
+			(2*control1.y + end.y) / 3.0};
+    control1 = (fpoint){(start.x + 2*control1.x) / 3.0,
+			(start.y + 2*control1.y) / 3.0};
+  }
 
   initialiseDeviceGraphical(b, &x, &y, &w, &h);
 
-  r_thickness(valInt(b->pen));
+  r_thickness(valNum(b->pen));
   r_dash(b->texture);
 
   r_bezier(start, control1, control2, end);
