@@ -309,6 +309,19 @@ paste_quoted(PT) :->
     "Paste as quoted material"::
     send(PT, send, "\u0019").         % Ctrl-Y
 
+%!  parent_thread(+PT, -Thread) is det.
+%
+%   Find the thread of the terminal splitted.   We use this to clone its
+%   Prolog flags.
+
+parent_thread(PT, Thread) :-
+    get(PT?window, hypered, parent, ParentEpilog),
+    get(ParentEpilog, terminal, ParentPT),
+    current_prolog_terminal(Thread, ParentPT),
+    !.
+parent_thread(_, main).
+
+
 :- pce_group(event).
 
 event(T, Ev:event) :->
@@ -374,10 +387,12 @@ connect(PT, Title) :-
     get(PT, pty_name, PTY),
     thread_self(Me),
     parent_history(PT, Events),
+    parent_thread(PT, Parent),
     thread_create(thread_run_interactor(PT, Me, PTY, Init, Goal, Title,
                                         Events),
                   Thread,
-                  [ detached(true),
+                  [ inherit_from(Parent),
+                    detached(true),
                     alias(Alias),
                     at_exit(terminated)
                   ]),
