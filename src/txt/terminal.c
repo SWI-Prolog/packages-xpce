@@ -2980,12 +2980,20 @@ rlc_putansi(RlcData b, int chr)
 	  return;			/* wait for more args */
 	case 'H':
 	case 'f':
-	  rlc_need_arg(b, 1, 1); /* row */
+	{ rlc_need_arg(b, 1, 1); /* row */
 	  rlc_need_arg(b, 2, 1); /* col */
 	  int row = Bounds(b->argv[0], 1, b->window_size)-1;
 	  int col = Bounds(b->argv[1], 1, b->width)-1;
 	  CMD(rlc_set_caret(b, col, row));
 	  break;
+	}
+	case 'd':
+	{ rlc_need_arg(b, 1, 1); /* row */
+	  int row = Bounds(b->argv[0], 1, b->window_size)-1;
+	  int col = b->caret_x;
+	  CMD(rlc_set_caret(b, col, row));
+	  break;
+	}
 	case 'r':
 	  if ( b->argc == 0 )
 	  { DEBUG(NAME_term, Cprintf("Unlimit scroll\n"));
@@ -3073,6 +3081,23 @@ rlc_putansi(RlcData b, int chr)
 	  } else
 	    Dprint_csi(b, chr);
 	  break;
+	case 'n':
+	  /* \e[6n: report row and column */
+	  if ( b->argc == 1 && b->argv[0] == 6 )
+	  { int row = rlc_count_lines(b, b->window_start, b->caret_y)+1;
+	    int col = b->caret_x+1;
+	    char buf[100];
+	    snprintf(buf, sizeof(buf), "\e[%d;%dR", row, col);
+	    rlc_send(b, buf, strlen(buf));
+	  } else
+	  { Dprint_csi(b, chr);
+	  }
+	  break;
+	case 'c':		/* Identify as VT100+ANSI */
+	{ const char *id = "\e[?1;2c";
+	  rlc_send(b, id, strlen(id));
+	  break;
+	}
 	default:
 	  Dprint_csi(b, chr);
       }
