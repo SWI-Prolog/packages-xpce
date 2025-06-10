@@ -482,10 +482,17 @@ pasteTerminalImage(TerminalImage ti, Name which)
   StringObj str = get(CurrentDisplay(ti), NAME_paste, which, EAV);
   size_t ulen;
   const char *u = stringToUTF8(&str->data, &ulen);
+  const char *bsm_start = "\e[200~";
+  const char *bsm_end = "\e[201~";
+
+  if ( ti->data->bracketed_paste_mode )
+    rlc_send(ti->data, bsm_start, strlen(bsm_start));
   if ( rlc_send(ti->data, u, ulen) != ulen )
   { Cprintf("Failed to send %s\n", u);
     fail;
   }
+  if ( ti->data->bracketed_paste_mode )
+    rlc_send(ti->data, bsm_end, strlen(bsm_end));
 
   succeed;
 }
@@ -2691,6 +2698,9 @@ rlc_set_dec_mode(RlcData b, int mode)
       rlc_save_screen(b);
       rlc_erase_display(b);
       break;
+    case 2004:
+      b->bracketed_paste_mode = true;
+      break;
     default:
       Cprintf("Set unknown DEC private mode %d\n", mode);
   }
@@ -2712,6 +2722,9 @@ rlc_clear_dec_mode(RlcData b, int mode)
     case 1049:
       rlc_erase_display(b);
       rlc_restore_screen(b);
+      break;
+    case 2004:
+      b->bracketed_paste_mode = false;
       break;
     default:
       Cprintf("Clear unknown DEC private mode %d\n", mode);
