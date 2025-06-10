@@ -307,6 +307,7 @@ typedef struct rlc_data
   bool		caret_is_shown;		/* is caret in the window? */
   bool		hide_caret;		/* DEC Private Mode 25 */
   bool		bracketed_paste_mode;	/* DEC Private Mode 2004 */
+  bool		focus_inout_events;	/* Dec Private Mode 1004 */
   int		caret_px;		/* Position of the caret in pixels */
   int		caret_py;		/* Position of the caret in pixels */
 #ifdef HAVE_POSIX_OPENPT

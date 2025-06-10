@@ -334,9 +334,17 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     if ( isAEvent(ev, NAME_activateKeyboardFocus) )
     { ws_enable_text_input((Graphical)ti, ON);
       b->has_focus = true;
+      if ( b->focus_inout_events )
+      { const char *focus_in = "\e[I";
+	rlc_send(b, focus_in, strlen(focus_in));
+      }
     } else if ( isAEvent(ev, NAME_deactivateKeyboardFocus) )
     { ws_enable_text_input((Graphical)ti, OFF);
       b->has_focus = false;
+      if ( b->focus_inout_events )
+      { const char *focus_out = "\e[O";
+	rlc_send(b, focus_out, strlen(focus_out));
+      }
     }
     changed_caret(b);
 
@@ -2677,9 +2685,7 @@ rlc_restore_screen(RlcData b)
 		 *      DEC PRIVATE MODES       *
 		 *******************************/
 
-/** Set/clear DEC primate modes.  2004 means do (not) emit
- *  ESC [ 200 ~ ... ESC [ 201 ~ around pasted text.  Not yet
-term *  implemented.
+/** Set/clear DEC primate modes.
  */
 static void
 rlc_set_dec_mode(RlcData b, int mode)
@@ -2693,6 +2699,9 @@ rlc_set_dec_mode(RlcData b, int mode)
     case 25:
       b->hide_caret = false;
       changed_caret(b);
+      break;
+    case 1004:
+      b->focus_inout_events = true;
       break;
     case 1049:
       rlc_save_screen(b);
@@ -2718,6 +2727,9 @@ rlc_clear_dec_mode(RlcData b, int mode)
     case 25:
       b->hide_caret = true;
       changed_caret(b);
+      break;
+    case 1004:
+      b->focus_inout_events = false;
       break;
     case 1049:
       rlc_erase_display(b);
