@@ -2961,6 +2961,15 @@ rlc_putansi(RlcData b, int chr)
 	  int col = Bounds(b->argv[1], 1, b->width)-1;
 	  CMD(rlc_set_caret(b, col, row));
 	  break;
+	case 'r':
+	  if ( b->argc == 0 )
+	  { DEBUG(NAME_term, Cprintf("Unlimit scroll\n"));
+	  } else
+	  { rlc_need_arg(b, 1, 1); /* row */
+	    rlc_need_arg(b, 2, 1); /* col */
+	    DEBUG(NAME_term, Cprintf("Limit scroll\n"));
+	  }
+	  break;
 	case 'A':
 	  rlc_need_arg(b, 1, 1);
 	  CMD(rlc_caret_up(b, b->argv[0]));
@@ -3016,6 +3025,7 @@ rlc_putansi(RlcData b, int chr)
 	  CMD(rlc_delete_chars(b, b->argv[0]));
 	  break;
 	case '?':
+	case '>':
 	  b->cmdstat = CMD_DEC_PRIVATE;
 	  return;
 	case 'l':
