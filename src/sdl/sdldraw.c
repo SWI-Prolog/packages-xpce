@@ -1129,7 +1129,7 @@ r_3d_diamond(int x, int y, int w, int h, Elevation e, int up)
 }
 
 /**
- * Draw an arc within a specified rectangle.
+ * Draw an arc within a specified rectangle in the clockwise direction.
  *
  * @param x The x-coordinate of the top-left corner of the bounding rectangle.
  * @param y The y-coordinate of the top-left corner of the bounding rectangle.
@@ -1137,11 +1137,37 @@ r_3d_diamond(int x, int y, int w, int h, Elevation e, int up)
  * @param h The height of the bounding rectangle.
  * @param s The starting angle of the arc.
  * @param e The ending angle of the arc.
+ * @param close {none, chord, pie_slice}
  * @param fill The fill pattern or color.
  */
 void
-r_arc(int x, int y, int w, int h, int s, int e, Any fill)
-{
+r_arc(int x, int y, int w, int h, int s, int e, Name close, Any fill)
+{ Translate(x, y);
+  NormaliseArea(x, y, w, h);
+  FloatArea(x, y, w, h);
+  double fs = s * M_PI / 180.0;
+  double fe = e * M_PI / 180.0;
+
+  cairo_save(CR);
+  cairo_translate(CR, fx + fw / 2.0, fy + fh / 2.0);  // Move to center
+  cairo_scale(CR, fw / 2.0, fh / 2.0);              // Scale unit circle
+  if (close == NAME_pieSlice)
+  { cairo_move_to(CR, 0, 0);
+  }
+  cairo_arc(CR, 0, 0, 1.0, fs, fe);
+  cairo_restore(CR);
+  if (close == NAME_pieSlice || close == NAME_chord)
+  { cairo_close_path(CR);
+  }
+  if ( notNil(fill) )
+  { r_fillpattern(fill, NAME_foreground);
+    pce_cairo_set_source_color(CR, context.fill_pattern);
+    cairo_fill_preserve(CR);
+  }
+  if ( context.pen )
+  { pce_cairo_set_source_color(CR, context.colour);
+    cairo_stroke(CR);
+  }
 }
 
 /**
@@ -1155,28 +1181,7 @@ r_arc(int x, int y, int w, int h, int s, int e, Any fill)
  */
 void
 r_ellipse(int x, int y, int w, int h, Any fill)
-{ Translate(x, y);
-  NormaliseArea(x, y, w, h);
-  FloatArea(x, y, w, h);
-
-  DEBUG(NAME_draw,
-	Cprintf("r_ellipse(%d, %d, %d, %d, %s)\n",
-		x, y, w, h, pp(fill)));
-
-  cairo_save(CR);
-  cairo_translate(CR, fx + fw / 2.0, fy + fh / 2.0);  // Move to center
-  cairo_scale(CR, fw / 2.0, fh / 2.0);              // Scale unit circle
-  cairo_arc(CR, 0, 0, 1.0, 0, 2 * M_PI);
-  cairo_restore(CR);
-  if ( notNil(fill) )
-  { r_fillpattern(fill, NAME_foreground);
-    pce_cairo_set_source_color(CR, context.fill_pattern);
-    cairo_fill_preserve(CR);
-  }
-  if ( context.pen )
-  { pce_cairo_set_source_color(CR, context.colour);
-    cairo_stroke(CR);
-  }
+{ r_arc(x, y, w, h, 0, 360, NAME_none, fill);
 }
 
 /**

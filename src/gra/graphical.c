@@ -3158,13 +3158,13 @@ static status
 drawArcGraphical(Graphical gr,		/* has to handle mode */
 		 Int x, Int y, Int w, Int h,
 		 Real start, Real end, Any fill)
-{ int s = (isDefault(start) ? 0      : rfloat(valReal(start) * 64.0));
-  int e = (isDefault(end)   ? 360*64 : rfloat(valReal(end) * 64.0));
+{ int s = (isDefault(start) ? 0   : rfloat(valReal(start)));
+  int e = (isDefault(end)   ? 360 : rfloat(valReal(end)));
 
   if ( isDefault(fill) )
     fill = NIL;
 
-  r_arc(valInt(x), valInt(y), valInt(w), valInt(h), s, e, fill);
+  r_arc(valInt(x), valInt(y), valInt(w), valInt(h), s, e, NAME_none, fill);
 
   succeed;
 }
