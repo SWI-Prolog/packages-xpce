@@ -99,7 +99,7 @@ COMMON(void)	r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int u
 COMMON(void)	r_3d_line(int x1, int y1, int x2, int y2, Elevation e, int up);
 COMMON(void)	r_3d_triangle(int x1, int y1, int x2, int y2, int x3, int y3, Elevation e, int up, int map);
 COMMON(void)	r_3d_diamond(int x, int y, int w, int h, Elevation e, int up);
-COMMON(void)	r_arc(int x, int y, int w, int h, int s, int e, Any fill);
+COMMON(void)	r_arc(int x, int y, int w, int h, int s, int e, Name close, Any fill);
 COMMON(void)	r_ellipse(int x, int y, int w, int h, Any fill);
 COMMON(void)	r_3d_ellipse(int x, int y, int w, int h, Elevation z, int up);
 COMMON(void)	r_line(int x1, int y1, int x2, int y2);

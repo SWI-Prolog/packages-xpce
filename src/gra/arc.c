@@ -99,43 +99,11 @@ RedrawAreaArc(ArcObj a, Area area)
   r_thickness(valInt(a->pen));
   r_dash(a->texture);
 
-#ifndef WIN32_GRAPHICS
-  r_arcmode(a->close == NAME_none ? NAME_pieSlice : a->close);
-  r_arc(valInt(a->position->x) - aw, valInt(a->position->y) - ah,
+  r_arc(cx - aw, cy - ah,
 	2*aw, 2*ah,
-	rfloat(valReal(a->start_angle)*64.0), rfloat(valReal(a->size_angle)*64.0),
+	rfloat(valReal(a->start_angle)), rfloat(valReal(a->size_angle)),
+	a->close,
 	a->fill_pattern);
-
-  if ( a->close != NAME_none && a->pen != ZERO )
-  { if ( a->close == NAME_chord )
-    { r_line(sx, sy, ex, ey);
-    } else /* if ( a->close == NAME_pieSlice ) */
-    { r_line(cx, cy, sx, sy);
-      r_line(cx, cy, ex, ey);
-    }
-  }
-
-#else /*WIN32_GRAPHICS*/
-
-{ int ax, ay, bx, by;
-  double sa = valReal(a->size_angle);
-  int large;
-
-  if ( sa >= 0.0 )
-  { ax = sx, ay = sy, bx = ex, by = ey;
-    large = (sa >= 180.0);
-  } else
-  { ax = ex, ay = ey, bx = sx, by = sy;
-    large = (sa <= -180.0);
-  }
-
-  r_msarc(valInt(a->position->x) - aw, valInt(a->position->y) - ah,
-	  2*aw, 2*ah,
-	  ax, ay, bx, by, large,
-	  a->close, a->fill_pattern);
-}
-
-#endif /* __WINDOWS__ */
 
   if (notNil(a->first_arrow))
   { Any av[4];
