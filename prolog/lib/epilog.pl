@@ -46,6 +46,12 @@
 :- use_module(library(uri)).
 :- use_module(library(www_browser)).
 :- use_module(library(gensym)).
+:- use_module(library(editline),
+              [el_unwrap/1, el_history_events/2, el_add_history/2, el_wrap/0]).
+:- use_module(library(lists), [reverse/2, member/2]).
+:- use_module(library(option), [meta_options/3, option/3, option/2]).
+:- use_module(library(prolog_history), [prolog_history/1]).
+:- use_module(library(swi_preferences), [prolog_edit_preferences/1]).
 
 :- meta_predicate
     epilog(:).
@@ -73,6 +79,9 @@ library(thread_util). Eventually, this should be properly merged.
 
 ep_main :-
     epilog,
+    ep_wait.
+
+ep_wait :-
     repeat,
       send(@display, dispatch),
       ep_main_end,
@@ -100,6 +109,8 @@ ep_main_end :-
 %       first and `true` for subsequent terminals.
 %     - goal(:Goal)
 %       Run Goal as REPL loop.  Default is `prolog`.
+%     - main(+Bool)
+%       If `true`, act as main window.
 
 epilog :-
     epilog([]).
@@ -120,7 +131,11 @@ epilog(Options0) :-
     ->  send(PT, goal, Goal)
     ;   true
     ),
-    send(Epilog, open).
+    send(Epilog, open),
+    (   option(main(true), Options)
+    ->  ep_wait
+    ;   true
+    ).
 
 is_meta(goal).
 is_meta(init).
