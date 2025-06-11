@@ -256,18 +256,18 @@ str_one_line(PceString to, PceString from)
 
 
 void
-draw_caret(int x, int y, int w, int h, bool active)
+draw_caret(double x, double y, double w, double h, bool active)
 { if ( active )
-  { int cx = x + w/2;
+  { double cx = x + w/2.0;
     Colour c = getClassVariableValueClass(ClassTextCursor, NAME_colour);
 
     r_fillpattern(c, NAME_foreground);
     r_fill_triangle(cx, y, x, y+h, x+w, y+h);
   } else
   { fpoint pts[4];
-    int cx = x + w/2;
+    double cx = x + w/2.0;
 
-    int cy = y + h/2;
+    double cy = y + h/2.0;
     int i = 0;
 
     pts[i].x = cx;  pts[i].y = y;   i++;
