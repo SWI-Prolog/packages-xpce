@@ -47,7 +47,9 @@
 :- use_module(library(www_browser)).
 :- use_module(library(gensym)).
 :- use_module(library(editline),
-              [el_unwrap/1, el_history_events/2, el_add_history/2, el_wrap/0]).
+              [ el_unwrap/1, el_history_events/2,
+                el_add_history/2, el_wrap/0
+              ]).
 :- use_module(library(lists), [reverse/2, member/2]).
 :- use_module(library(option), [meta_options/3, option/3, option/2]).
 :- use_module(library(prolog_history), [prolog_history/1]).
@@ -189,11 +191,17 @@ initialise(PT) :->
                           accelerator := 'Shift+ctrl+O'),
                 menu_item(split_vertically,
                           message(Terminal, split, vertically),
-                          end_group := @on,
                           accelerator := 'Shift+ctrl+E'),
+                menu_item(new_window,
+                          message(Terminal, new_window),
+                          end_group := @on,
+                          accelerator := 'Shift+ctrl+I'),
                 menu_item(interrupt,
                           message(Terminal, interrupt),
-                          accelerator := 'Ctrl+C')
+                          end_group := @on,
+                          accelerator := 'Ctrl+C'),
+                menu_item(close,
+                          message(Terminal, close))
               ]).
 
 unlink(PT) :->
@@ -271,6 +279,11 @@ interrupt(PT) :->
     current_prolog_terminal(Thread, PT),
     current_signal(int, SIGINT, debug),
     thread_signal(Thread, SIGINT).
+
+close(PT) :->
+    "Close this Prolog shell"::
+    get(PT, window, Window),
+    send(PT?frame, delete_epilog, Window, @on).
 
 save_history(PT) :-
     retract(terminal_input(PT, _PTY, _In, _Out, _Err, EditLine)),
@@ -392,9 +405,12 @@ typed(T, Ev:event) :->
 typed_epilog(15, T, Ev) :-              % Shift+Ctrl+o
     send(Ev, has_modifier, sc),
     send(T, split, horizontally).
-typed_epilog(5, T, Ev) :-              % Shift+Ctrl+e
+typed_epilog(5, T, Ev) :-               % Shift+Ctrl+e
     send(Ev, has_modifier, sc),
     send(T, split, vertically).
+typed_epilog(9, T, Ev) :-               % Shift+Ctrl+i
+    send(Ev, has_modifier, sc),
+    send(T, new_window).
 
 copy(T) :->
     "Copy selection to clipboard"::
@@ -403,6 +419,10 @@ copy(T) :->
 split(T, Dir:{horizontally,vertically}) :->
     "Split this terminal"::
     send(T?window, split, Dir).
+
+new_window(_T) :->
+    "Open a new window"::
+    epilog.
 
 popup(T, Popup:popup*) :->
     "Associate a menu"::
@@ -612,7 +632,7 @@ initialise(T, Title:title=[name],
     ),
     send(W, below, D).
 
-delete_epilog(T, W:window) :->
+delete_epilog(T, W:window, Destroy:[bool]) :->
     "Remove an individual terminal"::
     (   send(W, instance_of, epilog_window),
         get(T?members, find_all,
@@ -620,7 +640,11 @@ delete_epilog(T, W:window) :->
             Terminals),
         send(Terminals, delete, W),
         \+ send(Terminals, empty)
-    ->  send(T, delete, W)
+    ->  send(T, delete, W),
+        (   Destroy == @on
+        ->  send(W, destroy)
+        ;   true
+        )
     ;   send(T, destroy)
     ).
 
