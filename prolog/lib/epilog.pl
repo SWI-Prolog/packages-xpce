@@ -34,7 +34,7 @@
 
 :- module(epilog,
           [ ep_main/0,
-            epilog/1,                 % +Title
+            epilog/1,                 % :Options
             epilog/0,
             win_window_color/2,       % +Which, +Color
             window_title/1
@@ -46,6 +46,9 @@
 :- use_module(library(uri)).
 :- use_module(library(www_browser)).
 :- use_module(library(gensym)).
+
+:- meta_predicate
+    epilog(:).
 
 :- pce_autoload(finder, library(find_file)).
 :- pce_global(@finder, new(finder)).
@@ -83,15 +86,44 @@ ep_main_end :-
     quit_requested.
 
 %!  epilog is det.
-%!  epilog(+Title) is det.
+%!  epilog(:Options) is det.
 %
-%   Create a new terminal manager and open it.
+%   Create a new terminal and open it.  Options:
+%
+%     - title(+Title)
+%     - rows(+Rows)
+%       Height of the initial terminal in lines (default 25)
+%     - cols(+Cols)
+%       Width of the initial terminal in characters (default 80)
+%     - init(:Goal)
+%       Run Goal as initialization goal. Default is `version` for the
+%       first and `true` for subsequent terminals.
+%     - goal(:Goal)
+%       Run Goal as REPL loop.  Default is `prolog`.
 
 epilog :-
-    epilog(@default).
-epilog(Title) :-
+    epilog([]).
+
+epilog(Options0) :-
+    meta_options(is_meta, Options0, Options),
     setup_history,
-    send(new(epilog(Title)), open).
+    option(title(Title), Options, @default),
+    option(rows(Height), Options, @default),
+    option(cols(Width), Options, @default),
+    new(Epilog, epilog(Title, Width, Height)),
+    get(Epilog, current_terminal, PT),
+    (   option(init(Init), Options)
+    ->  send(PT, goal_init, Init)
+    ;   true
+    ),
+    (   option(goal(Goal), Options)
+    ->  send(PT, goal, Goal)
+    ;   true
+    ),
+    send(Epilog, open).
+
+is_meta(goal).
+is_meta(init).
 
 %!  setup_history
 %
@@ -558,6 +590,7 @@ initialise(T, Title:title=[name],
     send_super(T, initialise, TheTitle),
     send(T, append, new(D, epilog_dialog)),
     new(W, epilog_window(@default, Width, Height)),
+    send(T, current_window, W?name),
     (   current_prolog_terminal(_, _)
     ->  true
     ;   send(W, history, on)            % Use history on the first
