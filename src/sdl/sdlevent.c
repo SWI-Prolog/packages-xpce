@@ -496,7 +496,10 @@ ws_dispatch(Int FD, Any timeout)
     if ( rc )
     { if ( ev.type == MY_EVENT_FD_READY &&
 	   ev.user.code == FD_READY_DISPATCH )
+      { FDWatch *watch = ev.user.data1;
+	cmp_and_set_watch(watch, WATCH_PENDING, WATCH_PROCESSING);
 	succeed;
+      }
 
       EventObj event = CtoEvent(&ev);
       if ( event )
