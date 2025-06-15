@@ -85,7 +85,7 @@ ep_main :-
 
 ep_wait :-
     repeat,
-      send(@display, dispatch),
+      pce_principal:pce_dispatch(-1, 0.25),         % fd, timeout
       ep_main_end,
     !,
     halt.

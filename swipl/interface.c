@@ -185,6 +185,7 @@ static foreign_t	pl_object2(term_t ref, term_t description);
 static foreign_t	pl_pce_method_implementation(term_t id, term_t msg);
 static foreign_t	pl_pce_open(term_t t, term_t mode, term_t plhandle);
 static foreign_t	pl_pce_postscript_stream(term_t ps);
+static foreign_t	pl_pce_dispatch_event(term_t Fd, term_t timeout);
 
 extern install_t	install_pcecall(void);
 
@@ -691,9 +692,11 @@ install_pl2xpce(void)
 		      pl_pce_open, 0);
   PL_register_foreign("pce_postscript_stream", 1,
 		      pl_pce_postscript_stream, 0);
+  PL_register_foreign("pce_dispatch", 2,
+		      pl_pce_dispatch_event, 0);
 
 #ifndef __WINDOWS__
-  PL_license("lgplv2+", "xpce (drag&drop library by Paul Sheer)");
+  PL_license("lgplv2+", "xpce (pango library)");
 #endif
 
   install_pcecall();
@@ -2829,6 +2832,20 @@ pl_pce_postscript_stream(term_t ps)
     return PL_unify_stream(ps, s);
 
   return FALSE;
+}
+
+static foreign_t
+pl_pce_dispatch_event(term_t Fd, term_t timeout)
+{ double tmo;
+  int fd;
+
+  if ( PL_get_float_ex(timeout, &tmo) &&
+       PL_get_integer_ex(Fd, &fd) )
+  { pceDispatch(fd, tmo*1000.0);
+    return true;
+  }
+
+  return false;
 }
 
 #endif /*SWI*/
