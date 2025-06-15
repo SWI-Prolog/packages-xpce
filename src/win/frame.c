@@ -219,10 +219,16 @@ Any
 getConfirmCenteredFrame(FrameObj fr, Any where, BoolObj grab, Monitor mon)
 { TRY( send(fr, NAME_create, EAV) );
 
+  if ( isDefault(where) && notNil(fr->transient_for) )
+    where = fr->transient_for;
+  DEBUG(NAME_confirm, Cprintf("%s <-confirm_centered(%s)\n", pp(fr), pp(where)));
+
   if ( instanceOfObject(where, ClassFrame) )
   { FrameObj rfr = where;
     int ox = (valInt(rfr->area->w)-valInt(fr->area->w))/2;
     int oy = (valInt(rfr->area->h)-valInt(fr->area->h))/2;
+    ox += valInt(rfr->area->x);	/* SDL pos sometimes seems relative to parent */
+    oy += valInt(rfr->area->y);
     assign(fr->area, x, toInt(ox));
     assign(fr->area, y, toInt(oy));
     send(fr, NAME_transientFor, rfr, EAV);
