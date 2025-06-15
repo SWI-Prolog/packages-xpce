@@ -196,7 +196,7 @@ ws_load_image_file(Image image)
 
   if ( instanceOfObject(image->file, ClassFile) )
   { FileObj f = (FileObj)image->file;
-    char *fname = charArrayToFN((CharArray)f->path);
+    char *fname = charArrayToFN((CharArray)getOsNameFile(f));
     surf0 = IMG_Load(fname);
     if ( !surf0 )
     { Cprintf("Failed to load %s: %s\n", fname, SDL_GetError());
