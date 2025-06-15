@@ -358,9 +358,7 @@ prompt(D, V:emacs_view, Argv:vector) :->
     "Prompt on behalf of the given window"::
     send(D, transient_for, V),
     send(D, modal, transient),
-    get(V?editor, display_position, point(X,Y)),
-    get(V?editor?area, size, size(W, H)),
-    get(D, confirm_centered, point(X+W/2, Y+H/2), Ok),
+    get(D, confirm_centered, Ok),
     (   Ok == ok
     ->  send(D, collect, Argv)
     ;   send(D, destroy),
