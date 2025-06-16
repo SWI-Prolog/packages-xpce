@@ -63,11 +63,14 @@ This module can be deactivated by setting the flag `xpce_threaded`:
 
 %!  pce_dispatch(+Options) is det.
 %
-%   Create a new thread =pce= that takes   care  of the XPCE message
+%   Create a new thread `pce` that takes   care  of the XPCE message
 %   loop. This predicate has no effect  if dispatching is already on
-%   another thread than the =main=.  The   loop  can  be ended using
+%   another thread than the `main`.  The   loop  can  be ended using
 %   pce_end_dispatch/0.
 
+pce_dispatch(_Options) :-
+    get(@pce, window_system, sdl),
+    !.
 pce_dispatch(Options) :-
     with_mutex(pce_dispatch, pce_dispatch_(Options)).
 
