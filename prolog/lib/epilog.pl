@@ -186,6 +186,9 @@ initialise(PT) :->
                           message(Terminal, paste_quoted),
                           end_group := @on,
                           accelerator := 'Ctrl+Y'),
+                menu_item(clear_screen,
+                          message(Terminal, clear_screen),
+                          end_group := @on),
                 menu_item(split_horizontally,
                           message(Terminal, split, horizontally),
                           accelerator := 'Shift+ctrl+O'),
@@ -273,6 +276,11 @@ connect(PT) :->
     ->  true
     ;   connect(PT, _Title)
     ).
+
+clear_screen(PT) :->
+    "Clean all output (cls)"::
+    send(PT, insert, "\e[3J\e[H\e[2J\e[3J\r"),
+    send(PT, send, "\f").               % Ctrl-L: re-prompt.
 
 interrupt(PT) :->
     "Interrupt client Prolog process"::
