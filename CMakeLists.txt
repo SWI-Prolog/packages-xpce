@@ -3,112 +3,31 @@ project(swipl-xpce)
 
 include("../cmake/PrologPackage.cmake")
 
-option(RAYLIB "Build with raylib backend instead of X11/MSW" OFF)
-option(SDL    "Build with SDL backend instead of X11/MSW" OFF)
+option(SDL    "Build with SDL backend instead of X11/MSW" ON)
 
-if(SDL)				# SDL3 + Cairo
-  find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
-  find_package(SDL3_image REQUIRED CONFIG)
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(CAIRO REQUIRED IMPORTED_TARGET cairo)
-  pkg_check_modules(PANGO REQUIRED IMPORTED_TARGET pango)
-  pkg_check_modules(PANGOCAIRO REQUIRED IMPORTED_TARGET pangocairo)
-  set(HAVE_GUI 1)
-  set(SDL_GRAPHICS 1)
-  set(GUI_LIBRARIES
+find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
+find_package(SDL3_image REQUIRED CONFIG)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(CAIRO REQUIRED IMPORTED_TARGET cairo)
+pkg_check_modules(PANGO REQUIRED IMPORTED_TARGET pango)
+pkg_check_modules(PANGOCAIRO REQUIRED IMPORTED_TARGET pangocairo)
+set(HAVE_GUI 1)
+set(SDL_GRAPHICS 1)
+set(GUI_LIBRARIES
     SDL3::SDL3
     SDL3_image::SDL3_image
     PkgConfig::CAIRO
     PkgConfig::PANGO
     PkgConfig::PANGOCAIRO)
-elseif(RAYLIB)			# Raylib
-  find_package(raylib REQUIRED)
-  set(GUI_INCLUDE_DIRS ${raylib_INCLUDE_DIRS})
-  set(HAVE_GUI 1)
-  set(RAY_GRAPHICS 1)
-elseif(WIN32)				# Windows
-  add_subdirectory(deps/xpm)
-  set(HAVE_GUI 1)
-  set(WIN32_GRAPHICS 1)
-  set(FOR_MSW 1)
-  set(O_XOS 1)
-  set(O_DOSFILENAMES 1)
-  set(O_HASSHARES 1)
-  set(HAVE_WINSOCK 1)
-  set(GUI_LIBRARIES
-      gdi32.lib
-      comdlg32.lib
-      ole32.lib
-      shell32.lib
-      ws2_32.lib
-      libxpm)
-  set(XPCE_LINK_RC swipl-win)
-  find_package(JPEG)
-  set(GUI_INCLUDE_DIRS
-      ${JPEG_INCLUDE_DIR})
-else()					# X11
-  find_package(X11)
-  if(X11_FOUND AND X11_Xpm_LIB)
-    find_package(Freetype)
-    find_package(FontConfig)
-    find_package(JPEG)
-
-    if(FREETYPE_FOUND AND FONTCONFIG_FOUND AND JPEG_FOUND)
-      set(HAVE_GUI 1)
-      set(X11_GRAPHICS 1)
-      set(GUI_LIBRARIES
-	  ${X11_Xpm_LIB}
-	  ${X11_Xext_LIB}
-	  ${X11_Xt_LIB}
-	  ${X11_X11_LIB}
-	  ${X11_SM_LIB}
-	  ${X11_ICE_LIB}
-	  ${X11_Xft_LIB}
-	  ${FREETYPE_LIBRARIES}
-	  ${FONTCONFIG_LIBRARIES})
-
-      set(GUI_INCLUDE_DIRS
-	  ${X11_INCLUDE_DIR}
-	  ${FREETYPE_INCLUDE_DIRS}
-	  ${FONTCONFIG_INCLUDE_DIR}
-	  ${JPEG_INCLUDE_DIR})
-      set(XPCE_LINK_RC swipl)
-      has_package(swipl-win HAVE_SWIPL_WIN)
-      if(HAVE_SWIPL_WIN)
-	list(APPEND XPCE_LINK_RC swipl-win)
-	if(BUILD_MACOS_BUNDLE)
-	  list(APPEND XPCE_LINK_RC SWI-Prolog)
-	endif()
-      endif()
-    else()
-      message("Dropped xpce")
-      if(NOT JPEG_FOUND)
-        message("  Could not find JPEG")
-      endif()
-      if(NOT FONTCONFIG_FOUND)
-        message("  Could not find FontConfig")
-      endif()
-      if(NOT FREETYPE_FOUND)
-        message("  Could not find Freetype")
-      endif()
-    endif()
-  endif()
-endif()				# RAY/MSW/X11
 
 if(HAVE_GUI)
 include(QLF)
 include(XPCESources)
 
 include(XPCEConfig)
-if(HAVE_X11_EXTENSIONS_XINERAMA_H)
-  set(GUI_LIBRARIES ${X11_Xinerama_LIB} ${GUI_LIBRARIES})
-endif()
-if(X11_Xrandr_FOUND)
-  set(GUI_LIBRARIES ${X11_Xrandr_LIB} ${GUI_LIBRARIES})
-endif()
 set(PCE_MACHINE ${SWIPL_ARCH})
 set(PCE_OS ${CMAKE_HOST_SYSTEM_NAME})
-set(PCE_VERSION 6.6.6)
+set(PCE_VERSION 7.0.0)
 
 configure_file(config.h.cmake config.h)
 
