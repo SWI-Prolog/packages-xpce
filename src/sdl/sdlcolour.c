@@ -73,7 +73,7 @@ ws_create_colour(Colour c, DisplayObj d)
   { Int Rgb = getNamedRGB(c->name);
 
     if ( Rgb )
-    { COLORREF rgb = (COLORREF) valInt(Rgb);
+    { COLORRGBA rgb = (COLORRGBA) valInt(Rgb);
       int r = GetRValue(rgb) * 257;
       int g = GetGValue(rgb) * 257;
       int b = GetBValue(rgb) * 257;
@@ -86,7 +86,7 @@ ws_create_colour(Colour c, DisplayObj d)
     } else
       fail;
   } else
-  { COLORREF rgb = RGB(valInt(c->red)/256,
+  { COLORRGBA rgb = RGB(valInt(c->red)/256,
 		       valInt(c->green)/256,
 		       valInt(c->blue)/256);
 

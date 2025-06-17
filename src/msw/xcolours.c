@@ -812,7 +812,7 @@ LoadColourNames(void)
     ColourNames = globalObject(NAME_colourNames, ClassHashTable, EAV);
 
     for(cd = x11_colours; cd->name; cd++)
-    { COLORREF rgb = RGB(cd->red, cd->green, cd->blue);
+    { COLORRGBA rgb = RGB(cd->red, cd->green, cd->blue);
       char buf[100];
       const char *s = cd->name;
       char *q = buf;

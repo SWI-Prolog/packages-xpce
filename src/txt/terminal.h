@@ -292,11 +292,11 @@ typedef struct rlc_data
   int		scaret_y;		/* saved-caret Y */
   bool		has_focus;		/* Application has the focus */
   bool		fixedfont;		/* Font is fixed */
-  COLORREF	foreground;		/* Foreground (text) color */
-  COLORREF	background;		/* Background color */
-  COLORREF	sel_foreground;		/* Selection foreground */
-  COLORREF	sel_background;		/* Selection background */
-  COLORREF	ansi_color[16];		/* ANSI colors (8 normal + 8 bright) */
+  COLORRGBA	foreground;		/* Foreground (text) color */
+  COLORRGBA	background;		/* Background color */
+  COLORRGBA	sel_foreground;		/* Selection foreground */
+  COLORRGBA	sel_background;		/* Selection background */
+  COLORRGBA	ansi_color[16];		/* ANSI colors (8 normal + 8 bright) */
   text_flags	sgr_flags;		/* Current SGR flags */
   double	cw;			/* character width */
   int		ch;			/* character height */
