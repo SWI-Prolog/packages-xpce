@@ -106,11 +106,11 @@ static void	rlc_start_selection(RlcData b, int x, int y);
 static void	rlc_extend_selection(RlcData b, int x, int y);
 static void	rlc_word_selection(RlcData b, int x, int y);
 static bool	rlc_has_selection(RlcData b);
-static TCHAR   *rlc_selection(RlcData b);
+static uchar_t   *rlc_selection(RlcData b);
 static void	rlc_set_selection(RlcData b, int sl, int sc, int el, int ec);
-static const TCHAR *rlc_clicked_link(RlcData b, int x, int y);
-static const TCHAR *rlc_over_link(RlcData b, int x, int y);
-static href    *rlc_add_link(RlcTextLine tl, const TCHAR *link,
+static const uchar_t *rlc_clicked_link(RlcData b, int x, int y);
+static const uchar_t *rlc_over_link(RlcData b, int x, int y);
+static href    *rlc_add_link(RlcTextLine tl, const uchar_t *link,
 			     int start, int len);
 static void	rlc_free_link(href *hr);
 static void	rlc_free_links(href *links);
@@ -135,8 +135,8 @@ static bool	rlc_open_pty_pair(RlcData b);
 static void	rlc_close_connection(RlcData b);
 static ssize_t	rlc_send(RlcData b, const char *buffer, size_t count);
 static void	rlc_resize_pty(RlcData b, int cols, int rows);
-static Name	TCHAR2Name(const TCHAR *str);
-static StringObj TCHAR2String(const TCHAR *str);
+static Name	TCHAR2Name(const uchar_t *str);
+static StringObj TCHAR2String(const uchar_t *str);
 static void	rlc_scroll_bubble(RlcData b,
 				  int *length, int *start, int *view);
 static void	rlc_scroll_lines(RlcData b, int lines);
@@ -371,7 +371,7 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
   { RlcData b = ti->data;
     Int x, y;
     get_xy_event(ev, ti, ON, &x, &y);
-    static const TCHAR *lnk;
+    static const uchar_t *lnk;
     if ( (lnk=rlc_clicked_link(b, valInt(x), valInt(y))) &&
 	 notNil(ti->link_message) )
     { Name href = TCHAR2Name(lnk);
@@ -470,7 +470,7 @@ hasSelectionTerminalImage(TerminalImage ti)
 static StringObj
 getSelectedTerminalImage(TerminalImage ti)
 { RlcData b = ti->data;
-  TCHAR *sel = rlc_selection(b);
+  uchar_t *sel = rlc_selection(b);
 
   if ( sel )
   { StringObj str = TCHAR2String(sel);
@@ -774,7 +774,7 @@ rlc_free(void *ptr)
 		 *******************************/
 
 static size_t
-ucslen(const TCHAR *s)
+ucslen(const uchar_t *s)
 { size_t len = 0;
   for( ; *s; s++ )
     len++;
@@ -782,7 +782,7 @@ ucslen(const TCHAR *s)
 }
 
 static void
-ucscpy(TCHAR *dst, const TCHAR *src)
+ucscpy(uchar_t *dst, const uchar_t *src)
 { while(*src)
     *dst++ = *src++;
   *dst = 0;
@@ -790,7 +790,7 @@ ucscpy(TCHAR *dst, const TCHAR *src)
 
 #if 0
 static void
-ucsncpy(TCHAR *dst, const TCHAR *src, size_t len)
+ucsncpy(uchar_t *dst, const uchar_t *src, size_t len)
 { while(*src && len-- > 0)
     *dst++ = *src++;
   *dst = 0;
@@ -798,7 +798,7 @@ ucsncpy(TCHAR *dst, const TCHAR *src, size_t len)
 #endif
 
 static int
-cuncmp(const char *s1, const TCHAR *s2, size_t len)
+cuncmp(const char *s1, const uchar_t *s2, size_t len)
 { const unsigned char *u1 = (const unsigned char*)s1;
   for(; len-- > 0; u1++, s2++)
   { int d = *u1 - *s2;
@@ -809,7 +809,7 @@ cuncmp(const char *s1, const TCHAR *s2, size_t len)
 }
 
 static int
-ucscmp(const TCHAR *s1, const TCHAR *s2)
+ucscmp(const uchar_t *s1, const uchar_t *s2)
 { while(*s1 == *s2 && *s1)
   { s1++;
     s2++;
@@ -819,11 +819,11 @@ ucscmp(const TCHAR *s1, const TCHAR *s2)
 }
 
 
-static TCHAR *
-ucstr(const TCHAR *haystack, const char *needle)
+static uchar_t *
+ucstr(const uchar_t *haystack, const char *needle)
 { for(; *haystack; haystack++)
   { const unsigned char *n = (const unsigned char*)needle;
-    const TCHAR *h = haystack;
+    const uchar_t *h = haystack;
     for(; *n; n++, h++)
     { if ( *n != *h )
 	break;
@@ -831,7 +831,7 @@ ucstr(const TCHAR *haystack, const char *needle)
 	return NULL;
     }
     if ( !*n )
-      return (TCHAR*)haystack;
+      return (uchar_t*)haystack;
   }
 
   return NULL;
@@ -839,12 +839,12 @@ ucstr(const TCHAR *haystack, const char *needle)
 
 
 static Name
-TCHAR2Name(const TCHAR *str)
+TCHAR2Name(const uchar_t *str)
 { char tmp[MAXLINE*4];
   char *u8 = tmp;
 
   char *o = u8;
-  for(const TCHAR *s = str; *s; s++)
+  for(const uchar_t *s = str; *s; s++)
   { if ( o < tmp+sizeof(tmp)-8 )
       o = utf8_put_char(o, *s);
     else
@@ -857,7 +857,7 @@ TCHAR2Name(const TCHAR *str)
 }
 
 static StringObj
-TCHAR2String(const TCHAR *str)
+TCHAR2String(const uchar_t *str)
 { char tmp[MAXLINE*4];
   char *u8 = tmp;
   char *end = tmp+sizeof(tmp)-8;
@@ -865,7 +865,7 @@ TCHAR2String(const TCHAR *str)
 
 again:
   o = u8;
-  for(const TCHAR *s = str; *s; s++)
+  for(const uchar_t *s = str; *s; s++)
   { if ( o < end )
     { o = utf8_put_char(o, *s);
     } else
@@ -1094,7 +1094,7 @@ rlc_start_selection(RlcData b, int x, int y)
   rlc_set_selection(b, l, c, l, c);
 }
 
-static const TCHAR *
+static const uchar_t *
 rlc_clicked_link(RlcData b, int x, int y)
 { int l, c;
 
@@ -1113,7 +1113,7 @@ rlc_clicked_link(RlcData b, int x, int y)
   return NULL;
 }
 
-static const TCHAR *
+static const uchar_t *
 rlc_over_link(RlcData b, int x, int y)
 { int l, c;
 
@@ -1221,15 +1221,15 @@ rlc_extend_selection(RlcData b, int x, int y)
 }
 
 
-static TCHAR *
+static uchar_t *
 rlc_read_from_window(RlcData b, int sl, int sc, int el, int ec)
 { int bufsize = 256;
-  TCHAR *buf;
+  uchar_t *buf;
   int i = 0;
 
   if ( el < sl || (el == sl && ec < sc) )
     return NULL;			/* invalid region */
-  if ( !(buf = rlc_malloc(bufsize * sizeof(TCHAR))) )
+  if ( !(buf = rlc_malloc(bufsize * sizeof(uchar_t))) )
     return NULL;			/* not enough memory */
 
   for( ; ; sc = 0, sl = NextLine(b, sl))
@@ -1243,7 +1243,7 @@ rlc_read_from_window(RlcData b, int sl, int sc, int el, int ec)
       while(sc < e)
       { if ( i+1 >= bufsize )
 	{ bufsize *= 2;
-	  if ( !(buf = rlc_realloc(buf, bufsize * sizeof(TCHAR))) )
+	  if ( !(buf = rlc_realloc(buf, bufsize * sizeof(uchar_t))) )
 	    return NULL;		/* not enough memory */
 	}
 	buf[i++] = tl->text[sc++].code;
@@ -1258,7 +1258,7 @@ rlc_read_from_window(RlcData b, int sl, int sc, int el, int ec)
     if ( tl && !tl->softreturn )
     { if ( i+2 >= bufsize )
       { bufsize *= 2;
-	if ( !(buf = rlc_realloc(buf, bufsize * sizeof(TCHAR))) )
+	if ( !(buf = rlc_realloc(buf, bufsize * sizeof(uchar_t))) )
 	  return NULL;			/* not enough memory */
       }
       buf[i++] = '\r';			/* Bill ... */
@@ -1277,7 +1277,7 @@ rlc_has_selection(RlcData b)
 }
 
 
-static TCHAR *
+static uchar_t *
 rlc_selection(RlcData b)
 { if ( rlc_has_selection(b) )
     return rlc_read_from_window(b,
@@ -1289,7 +1289,7 @@ rlc_selection(RlcData b)
 
 static void
 rlc_copy(RlcData b, Name to)	/* NAME_clipboard or NAME_primary */
-{ TCHAR *sel = rlc_selection(b);
+{ uchar_t *sel = rlc_selection(b);
 
   if ( sel )
   { StringObj str = TCHAR2String(sel);
@@ -2529,7 +2529,7 @@ rcl_check_links(RlcTextLine tl)
 }
 
 static href *
-rlc_add_link(RlcTextLine tl, const TCHAR *link, int start, int len)
+rlc_add_link(RlcTextLine tl, const uchar_t *link, int start, int len)
 { href *hr = rlc_malloc(sizeof(*hr));
 
   hr->link = rlc_malloc((ucslen(link)+1)*sizeof(*link));
@@ -2542,7 +2542,7 @@ rlc_add_link(RlcTextLine tl, const TCHAR *link, int start, int len)
 }
 
 static href *
-rlc_register_link(RlcData b, const TCHAR *link, size_t len)
+rlc_register_link(RlcData b, const uchar_t *link, size_t len)
 { RlcTextLine tl = &b->lines[b->caret_y];
   return rlc_add_link(tl, link, b->caret_x, len);
 }
@@ -2771,7 +2771,7 @@ osc8_end(RlcData b)
 
 
 static void
-rlc_put_link(RlcData b, const TCHAR *label, const TCHAR *link)
+rlc_put_link(RlcData b, const uchar_t *label, const uchar_t *link)
 { text_flags flags0 = b->sgr_flags;
   rlc_sgr(b, 34);	/* blue */
   rlc_sgr(b, 4);	/* underline */
@@ -2802,7 +2802,7 @@ static void
 rlc_putansi(RlcData b, int chr)
 {
 #ifdef _DEBUG
-  TCHAR *cmd;
+  uchar_t *cmd;
 #endif
 
   switch(b->cmdstat)
@@ -2918,12 +2918,12 @@ rlc_putansi(RlcData b, int chr)
 	b->link[b->link_len++] = chr;
 	b->link[b->link_len] = 0;
 	if ( osc8_end(b) )
-	{ TCHAR *link;
+	{ uchar_t *link;
 
 	  b->cmdstat = CMD_INITIAL;
 	  b->link[b->link_len] = 0;
 
-	  TCHAR *label = ucstr(b->link, sep1);
+	  uchar_t *label = ucstr(b->link, sep1);
 	  if ( label )
 	  { *label = 0;
 	    label += sep1l;
@@ -2949,7 +2949,7 @@ rlc_putansi(RlcData b, int chr)
       } else			/* too long; process as text */
       { b->cmdstat = CMD_INITIAL;
 	b->link[b->link_len] = 0;
-	for(TCHAR *split=b->link; *split; split++)
+	for(uchar_t *split=b->link; *split; split++)
 	  rlc_put(b, *split);
 	break;
       }
@@ -3125,7 +3125,7 @@ rlc_get_mark(rlc_console c, RlcMark m)
 
 
 void
-rlc_goto_mark(rlc_console c, RlcMark m, const TCHAR *data, size_t offset)
+rlc_goto_mark(rlc_console c, RlcMark m, const uchar_t *data, size_t offset)
 { RlcData b = rlc_get_data(c);
 
   b->caret_x = m->mark_x;
@@ -3176,10 +3176,10 @@ rlc_putchar(rlc_console c, int chr)
 }
 
 
-TCHAR *
+uchar_t *
 rlc_read_screen(rlc_console c, RlcMark f, RlcMark t)
 { RlcData b = rlc_get_data(c);
-  TCHAR *buf;
+  uchar_t *buf;
 
   buf = rlc_read_from_window(b, f->mark_y, f->mark_x, t->mark_y, t->mark_x);
 

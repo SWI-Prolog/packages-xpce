@@ -37,7 +37,7 @@
 #define _TERMINAL_H_INCLUDED
 #include "../sdl/sdlcolour.h"
 
-typedef uint32_t TCHAR;
+typedef uint32_t uchar_t;
 
 /* Marks a location in the line buffer
  */
@@ -51,12 +51,12 @@ typedef struct rlc_data * rlc_console; /* they are the same; rename! */
 typedef void	(*RlcUpdateHook)(void);	/* Graphics update hook */
 typedef void	(*RlcTimerHook)(int);	/* Timer fireing hook */
 typedef void	(*RlcRenderAllHook)(void); /* Render all formats */
-typedef int	(*RlcMain)(rlc_console c, int, TCHAR**); /* main() */
+typedef int	(*RlcMain)(rlc_console c, int, uchar_t**); /* main() */
 typedef void	(*RlcInterruptHook)(rlc_console, int); /* Hook for Control-C */
 typedef void	(*RlcResizeHook)(int, int); /* Hook for window change */
-typedef void	(*RlcMenuHook)(rlc_console, const TCHAR *id); /* Hook for menu-selection */
+typedef void	(*RlcMenuHook)(rlc_console, const uchar_t *id); /* Hook for menu-selection */
 typedef void	(*RlcFreeDataHook)(uintptr_t data); /* release data */
-typedef bool	(*RlcLinkHook)(rlc_console, const TCHAR *); /* link href */
+typedef bool	(*RlcLinkHook)(rlc_console, const uchar_t *); /* link href */
 
 RlcUpdateHook	rlc_update_hook(RlcUpdateHook updatehook);
 RlcTimerHook	rlc_timer_hook(RlcTimerHook timerhook);
@@ -74,8 +74,8 @@ void		rlc_yield(void);
 void		rlc_word_char(int chr, int isword);
 int		rlc_is_word_char(int chr);
 
-size_t		rlc_read(rlc_console c, TCHAR *buf, size_t cnt);
-size_t		rlc_write(rlc_console c, TCHAR *buf, size_t cnt);
+size_t		rlc_read(rlc_console c, uchar_t *buf, size_t cnt);
+size_t		rlc_write(rlc_console c, uchar_t *buf, size_t cnt);
 int		rlc_close(rlc_console c);
 int		rlc_flush_output(rlc_console c);
 
@@ -104,7 +104,7 @@ typedef struct _line
   size_t	change_start;		/* start of change */
   int		complete;		/* line is completed */
   int		reprompt;		/* repeat the prompt */
-  TCHAR	       *data;			/* the data (malloc'ed) */
+  uchar_t	       *data;			/* the data (malloc'ed) */
   rlc_console	console;		/* console I belong to */
 } rlc_line, *RlcLine;
 
@@ -125,8 +125,8 @@ typedef struct _complete_data
   int		replace_from;		/* index to start replacement */
   int		quote;			/* closing quote */
   int		case_insensitive;	/* if true: insensitive match */
-  TCHAR		candidate[COMPLETE_MAX_WORD_LEN];
-  TCHAR		buf_handle[COMPLETE_MAX_WORD_LEN];
+  uchar_t		candidate[COMPLETE_MAX_WORD_LEN];
+  uchar_t		buf_handle[COMPLETE_MAX_WORD_LEN];
   RlcCompleteFunc function;		/* function for continuation */
   void	       *ptr_handle;		/* pointer handle for client */
   intptr_t	num_handle;		/* numeric handle for client */
@@ -134,14 +134,14 @@ typedef struct _complete_data
 
 RlcCompleteFunc rlc_complete_hook(RlcCompleteFunc func);
 
-TCHAR	*read_line(rlc_console console);
+uchar_t	*read_line(rlc_console console);
 int	rlc_complete_file_function(RlcCompleteData data);
 void	rlc_init_history(rlc_console c, int size);
-void	rlc_add_history(rlc_console c, const TCHAR *line);
+void	rlc_add_history(rlc_console c, const uchar_t *line);
 bool	rlc_bind(int chr, const char *fname);
 int	rlc_for_history(
 		    rlc_console b,
-		    int (*handler)(void *ctx, int no, const TCHAR *line),
+		    int (*handler)(void *ctx, int no, const uchar_t *line),
 		    void *ctx);
 
 		 /*******************************
@@ -156,7 +156,7 @@ typedef struct _history
   int		tail;			/* oldest position */
   int		head;			/* newest position */
   int		current;		/* for retrieval */
-  TCHAR **	lines;			/* the lines */
+  uchar_t **	lines;			/* the lines */
 } history, *History;
 
 
@@ -171,7 +171,7 @@ typedef struct _history
 #define MAX_USER_VALUES	  10		/* max user data-handles */
 
 typedef struct lqueued
-{ TCHAR *	  line;			/* Lines in queue */
+{ uchar_t *	  line;			/* Lines in queue */
   struct lqueued* next;			/* Next in queue */
 } lqueued, *LQueued;
 
@@ -204,12 +204,12 @@ typedef unsigned short text_flags;
 #define TF_SET_LINK(f,v)	(((f)&~(1<<13))|((v)<<13))
 
 typedef struct
-{ TCHAR		 code;			/* character code */
+{ uchar_t		 code;			/* character code */
   text_flags	 flags;			/* flags for the text */
 } text_char;
 
 typedef struct href
-{ TCHAR		*link;			/* Hyperlink target */
+{ uchar_t		*link;			/* Hyperlink target */
   int		 start;			/* start of label */
   int		 length;		/* #chars of label */
   struct href   *next;			/* Next in chain */
@@ -283,7 +283,7 @@ typedef struct rlc_data
   char const   *must_see;		/* \e]8;; link decoding */
   int		argc;			/* argument count for ANSI */
   int		argv[ANSI_MAX_ARGC];	/* argument vector for ANSI */
-  TCHAR		link[ANSI_MAX_LINK];	/* Max URL length */
+  uchar_t		link[ANSI_MAX_LINK];	/* Max URL length */
   bool		shift_in;		/* select G1 */
   G_state	G0;			/* Character set slot 0 */
   G_state	G1;			/* Character set slot 1 */
@@ -329,16 +329,16 @@ typedef struct rlc_data
 		 *******************************/
 
 int		rlc_at_head_history(RlcData b);
-const TCHAR *	rlc_bwd_history(RlcData b);
-const TCHAR *	rlc_fwd_history(RlcData b);
+const uchar_t *	rlc_bwd_history(RlcData b);
+const uchar_t *	rlc_fwd_history(RlcData b);
 void		rlc_get_mark(rlc_console c, RlcMark mark);
 void		rlc_goto_mark(rlc_console c, RlcMark mark,
-			      const TCHAR *data, size_t offset);
+			      const uchar_t *data, size_t offset);
 void		rlc_erase_from_caret(rlc_console c);
 void		rlc_putchar(rlc_console c, int chr);
-TCHAR *		rlc_read_screen(rlc_console c,
+uchar_t *		rlc_read_screen(rlc_console c,
 				RlcMark from, RlcMark to);
-const TCHAR *	rlc_prompt(rlc_console c, const TCHAR *prompt);
+const uchar_t *	rlc_prompt(rlc_console c, const uchar_t *prompt);
 void		rlc_clearprompt(rlc_console c);
 
 
