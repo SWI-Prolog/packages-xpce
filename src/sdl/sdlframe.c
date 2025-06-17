@@ -646,8 +646,8 @@ ws_frame_bb(FrameObj fr, int *x, int *y, int *w, int *h)
  * @param mon Monitor object representing the target monitor.
  */
 #define MIN_VISIBLE 32			/* pixels that must be visible */
-#define SWP_NOMOVE 0x1
-#define SWP_NOSIZE 0x2
+#define WIN_NOMOVE 0x1
+#define WIN_NOSIZE 0x2
 
 void
 ws_x_geometry_frame(FrameObj fr, Name spec, Monitor mon)
@@ -687,7 +687,7 @@ ws_x_geometry_frame(FrameObj fr, Name spec, Monitor mon)
   switch(sscanf(s, "%dx%d%[+-]%d%[+-]%d", &w, &h, signx, &x, signy, &y))
   { case 2:
       /*w += ew; h += eh;*/
-      flags |= SWP_NOMOVE;
+      flags |= WIN_NOMOVE;
       ok = true;
       break;
     case 6:
@@ -714,7 +714,7 @@ ws_x_geometry_frame(FrameObj fr, Name spec, Monitor mon)
 		    "y = %d, w0 = %d, h0 = %d\n",
 		    signx, x, signy, y, w0, h0));
 
-      flags |= SWP_NOSIZE;
+      flags |= WIN_NOSIZE;
       if ( signx[1] == '-' )
 	x = -x;
       if ( signy[1] == '-' )
@@ -739,11 +739,11 @@ ws_x_geometry_frame(FrameObj fr, Name spec, Monitor mon)
   }
 
   X = Y = W = H = (Int)DEFAULT;
-  if ( !(flags & SWP_NOMOVE) )
+  if ( !(flags & WIN_NOMOVE) )
   { X = toInt(x);
     Y = toInt(y);
   }
-  if ( !(flags & SWP_NOSIZE) )
+  if ( !(flags & WIN_NOSIZE) )
   { W = toInt(w);
     H = toInt(h);
   }
