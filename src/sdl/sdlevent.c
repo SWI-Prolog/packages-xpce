@@ -528,7 +528,9 @@ ws_dispatch(Int FD, Any timeout)
     fds[0].fd = fd;
     fds[0].events = POLLIN;
 
+#if HAVE_POLL
     ready = poll(fds, 1, to);
+#endif
     return ready > 0;
   }
 }

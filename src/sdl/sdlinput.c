@@ -41,7 +41,9 @@
 
 #include <h/kernel.h>
 #include <SDL3/SDL.h>
+#if HAVE_POLL
 #include <poll.h>
+#endif
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -53,14 +55,18 @@
 
 #define MAX_FDS 64
 
+#if HAVE_POLL
 static struct pollfd poll_fds[MAX_FDS];
+#endif
 static int meta_id[MAX_FDS];
 static FDWatch fd_meta[MAX_FDS] = {0};
 static int control_pipe[2];
 static atomic_int watch_max = 0;
 static SDL_Thread *watcher_thread = NULL;
 
+#if HAVE_POLL			/* for now */
 static void lock_watch_userdata(FDWatch *watch);
+#endif
 static void unlock_watch_userdata(FDWatch *watch);
 
 bool
@@ -77,11 +83,14 @@ poll_thread_fn(void *unused)
 
     for(int i=0; i<=watch_max; i++)
     { if ( fd_meta[i].state == WATCH_ACTIVE )
-      { poll_fds[nfds].fd = fd_meta[i].fd;
-	poll_fds[nfds].events = POLLIN;
-	poll_fds[nfds].revents = 0;
-	meta_id[nfds] = i;
-	nfds++;
+      {
+#if HAVE_POLL
+        poll_fds[nfds].fd = fd_meta[i].fd;
+        poll_fds[nfds].events = POLLIN;
+        poll_fds[nfds].revents = 0;
+#endif
+        meta_id[nfds] = i;
+        nfds++;
       } else if ( fd_meta[i].state == WATCH_REMOVE )
       { fd_meta[i].state = WATCH_FREE;
 	removed = true;
@@ -98,6 +107,7 @@ poll_thread_fn(void *unused)
       }
     }
 
+#if HAVE_POLL
     int rc = poll(poll_fds, nfds, -1);
     if (rc < 0)
     { perror("poll");
@@ -126,6 +136,7 @@ poll_thread_fn(void *unused)
 	}
       }
     }
+#endif	/* HAVE_POLL */
   }
 
   return 0;
@@ -133,12 +144,15 @@ poll_thread_fn(void *unused)
 
 bool
 start_fd_watcher_thread(void)
-{ if ( pipe(control_pipe) < 0 )
+{
+#if HAVE_POLL
+  if ( pipe(control_pipe) < 0 )
     return false;
 
   fcntl(control_pipe[0], F_SETFL, O_NONBLOCK);
   poll_fds[0].fd = control_pipe[0];
   poll_fds[0].events = POLLIN;
+#endif
 
   watcher_thread = SDL_CreateThread(poll_thread_fn, "fd-watcher", NULL);
   return watcher_thread != NULL;
@@ -195,6 +209,7 @@ processed_fd_watch(FDWatch *watch)
   }
 }
 
+#if HAVE_POLL			/* for now unused */
 static void
 lock_watch_userdata(FDWatch *watch)
 { switch(watch->code)
@@ -207,6 +222,7 @@ lock_watch_userdata(FDWatch *watch)
       break;
   }
 }
+#endif
 
 static void
 unlock_watch_userdata(FDWatch *watch)
