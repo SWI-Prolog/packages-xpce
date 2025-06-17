@@ -451,7 +451,7 @@ ws_set_selection_timeout(unsigned long time)
  */
 Any
 ws_get_selection(DisplayObj d, Name which, Name target)
-{ if ( target == NAME_text )
+{ if ( target == NAME_text || target == NAME_utf8_string )
   { const char *text = NULL;
 
     if ( which == NAME_clipboard )
