@@ -529,7 +529,7 @@ static struct class_definition classdefs[] =
   { NAME_while, NAME_code, makeClassWhile,
     &ClassWhile, "While-loop control structure" },
 
-#ifdef __WINDOWS__
+#if WIN32_GRAPHICS
   { NAME_winMetafile, NAME_graphical, makeClassWinMF,
     &ClassWinMF, "Windows .WMF based figure" },
   { NAME_winPrinter, NAME_object, makeClassWinPrinter,

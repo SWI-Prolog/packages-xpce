@@ -47,6 +47,7 @@
 #include <errno.h>
 
 #ifdef __WINDOWS__
+#include <msw/mswin.h>
 #undef PCE_MACHINE
 #ifdef WIN64
 #define PCE_MACHINE "x86_64"

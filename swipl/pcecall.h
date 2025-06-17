@@ -35,13 +35,11 @@
 #ifndef PCE_CALL_H_INCLUDED
 #define PCE_CALL_H_INCLUDED 1
 
-#if SDL_GRAPHICS
 #include <SDL3/SDL.h>
 #include "../src/sdl/sdluserevent.h"
 
 #define CALL_MAGIC 0x7832a752
 
 bool sdl_call_event(SDL_Event *event);
-#endif
 
 #endif /*PCE_CALL_H_INCLUDED*/

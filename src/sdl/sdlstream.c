@@ -32,7 +32,9 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <sys/socket.h>
+#ifndef __WINDOWS__
+#include <sys/socket.h>		/* must be first to avoid conflict on send() */
+#endif
 #include <h/kernel.h>
 #include <h/unix.h>
 #include <errno.h>

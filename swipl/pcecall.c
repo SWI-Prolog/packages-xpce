@@ -68,12 +68,8 @@ typedef struct
 } prolog_goal;
 
 
-#ifdef O_PLMT
 static bool init_prolog_goal(prolog_goal *g, term_t goal, bool acknowledge);
 static void call_prolog_goal(prolog_goal *g);
-#endif
-
-#if SDL_GRAPHICS
 
 static foreign_t
 in_pce_thread(term_t goal)
@@ -155,13 +151,10 @@ in_pce_thread_sync2(term_t goal, term_t vars)
   }
 }
 
-#endif
-
 		 /*******************************
 		 *	CREATE/EXECUTE GOAL	*
 		 *******************************/
 
-#if O_PLMT
 static bool
 init_prolog_goal(prolog_goal *g, term_t goal, bool acknowledge)
 { term_t plain = PL_new_term_ref();
@@ -236,7 +229,6 @@ call_prolog_goal(prolog_goal *g)
   } else
     PL_warning("ERROR: pce: out of global stack");
 }
-#endif
 
 static int sdl_thread = 0;
 

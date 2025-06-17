@@ -90,6 +90,7 @@ extern int errno;
 static status	closeSocket(Socket);
 
 #ifdef HAVE_WINSOCK
+#include <msw/mswin.h>
 #define NO_WINERR 1			/* there really isn't a way !!!! */
 #ifdef NO_WINERR
 
@@ -140,7 +141,7 @@ static wsock_err wsock_err_list[] =
 
 
 Name
-SockError()
+SockError(void)
 {
 #ifdef NO_WINERR
   int err = WSAGetLastError();

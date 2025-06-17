@@ -44,8 +44,10 @@ typedef enum
   NT
 } os_platform;
 
-os_platform	ws_platform(void);	/* yield windows platform */
+os_platform	ws_platform(void);		/* yield windows platform */
 char *		ws_os(void);		/* platform by name */
 Name		ws_appdata(const char* sub);	/* User application dir */
+int		ws_getpid(void);
+Name		WinStrError(int error, ...);
 
 #endif /*MSWIN_H_INCLUDED*/
