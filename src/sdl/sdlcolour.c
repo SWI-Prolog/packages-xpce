@@ -74,9 +74,9 @@ ws_create_colour(Colour c, DisplayObj d)
 
     if ( Rgb )
     { COLORRGBA rgb = (COLORRGBA) valInt(Rgb);
-      int r = GetRValue(rgb) * 257;
-      int g = GetGValue(rgb) * 257;
-      int b = GetBValue(rgb) * 257;
+      int r = ColorRValue(rgb) * 257;
+      int g = ColorGValue(rgb) * 257;
+      int b = ColorBValue(rgb) * 257;
 
       assign(c, red,   toInt(r));
       assign(c, green, toInt(g));
@@ -86,9 +86,10 @@ ws_create_colour(Colour c, DisplayObj d)
     } else
       fail;
   } else
-  { COLORRGBA rgb = RGB(valInt(c->red)/256,
-		       valInt(c->green)/256,
-		       valInt(c->blue)/256);
+  { COLORRGBA rgb = RGBA(valInt(c->red)/256,
+			 valInt(c->green)/256,
+			 valInt(c->blue)/256,
+			 255);
 
     c->ws_ref = color2wsref(rgb);
   }

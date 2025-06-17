@@ -43,11 +43,10 @@ typedef uint32_t COLORRGBA;
 		       (((COLORRGBA)r)<<16)| \
 		       (((COLORRGBA)g)<<8) | \
 			((COLORRGBA)b))
-#define RGB(r,g,b) RGBA(r,g,b,255)
-#define GetRValue(rgb) (((rgb)>>16)&0xff)
-#define GetGValue(rgb) (((rgb)>> 8)&0xff)
-#define GetBValue(rgb) (((rgb)>> 0)&0xff)
-#define GetAValue(rgb) (((rgb)>>24)&0xff)
+#define ColorRValue(rgb) (((rgb)>>16)&0xff)
+#define ColorGValue(rgb) (((rgb)>> 8)&0xff)
+#define ColorBValue(rgb) (((rgb)>> 0)&0xff)
+#define ColorAValue(rgb) (((rgb)>>24)&0xff)
 
 #define WS_COLOR_CREATED (((uintptr_t)1) << 32)
 
@@ -73,10 +72,10 @@ color2wsref(uint32_t i)
 static inline SDL_Color
 wsref2SDL_Color(WsRef r)
 { COLORRGBA rgb = (COLORRGBA)(intptr_t)r;
-  SDL_Color c = { .r = GetRValue(rgb),
-		  .g = GetGValue(rgb),
-		  .b = GetBValue(rgb),
-		  .a = GetAValue(rgb)
+  SDL_Color c = { .r = ColorRValue(rgb),
+		  .g = ColorGValue(rgb),
+		  .b = ColorBValue(rgb),
+		  .a = ColorAValue(rgb)
                 };
   return c;
 }

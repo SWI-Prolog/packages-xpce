@@ -512,7 +512,6 @@ ws_dispatch(Int FD, Any timeout)
   } else			/* SDL not yet initialised */
   { int ready;
     int to;
-    struct pollfd fds[1];
 
     if ( isNil(timeout) )
     { to = -1;
@@ -525,11 +524,15 @@ ws_dispatch(Int FD, Any timeout)
     } else
       to = 256;
 
+#if HAVE_POLL
+    struct pollfd fds[1];
     fds[0].fd = fd;
     fds[0].events = POLLIN;
 
-#if HAVE_POLL
     ready = poll(fds, 1, to);
+#else
+    ready = 1;
+    (void)to;
 #endif
     return ready > 0;
   }
@@ -546,9 +549,7 @@ input_on_fd(int fd)
 
   return poll(fds, 1, 0) != 0;
 #else
-#ifndef __WINDOWS__
   if ( fd < FD_SETSIZE )
-#endif
   { fd_set rfds;
     struct timeval tv;
 

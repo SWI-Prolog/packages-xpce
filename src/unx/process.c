@@ -99,6 +99,7 @@ reduced to the facility to terminate the inferior process.
 #endif
 
 #ifdef __WINDOWS__
+#include <msw/msprocess.h>
 #define environ _environ	/* declared in STDLIB.H */
 #else
 #ifdef HAVE__NSGETENVIRON
