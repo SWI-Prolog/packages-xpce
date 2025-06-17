@@ -150,7 +150,9 @@ static void	rlc_shift_up(RlcData b, int shift);
 static void Dprint_links(RlcTextLine tl, const char *msg);
 static void Dprint_line(RlcTextLine tl, bool links);
 static void Dprint_lines(RlcData b, int from, int to);
+#if HAVE_POSIX_OPENPT
 static void Dprint_chr(int chr);
+#endif
 static void Dprint_csi(RlcData b, int chr);
 
 static void
@@ -577,7 +579,7 @@ sendTerminalImage(TerminalImage ti, CharArray ca)
   return rlc_send(ti->data, u8, ulen) == ulen;
 }
 
-#ifdef HAVE_POSIX_OPENPT
+#if HAVE_POSIX_OPENPT
 static Name
 getPtyNameTerminalImage(TerminalImage ti)
 { if ( ti->data->pty.slave_name[0] )
@@ -679,8 +681,11 @@ static senddecl send_terminal_image[] =
 };
 
 static getdecl get_terminal_image[] =
-{ GM(NAME_ptyName, 0, "pty=name", NULL, getPtyNameTerminalImage,
+{
+#if HAVE_POSIX_OPENPT
+  GM(NAME_ptyName, 0, "pty=name", NULL, getPtyNameTerminalImage,
      NAME_process, "Path name for the pty"),
+#endif
   GM(NAME_displayedCursor, 0, "cursor=cursor", NULL,
      getDisplayedCursorTerminalImage,
      NAME_event, "Indicate normal cursor or link"),
@@ -870,7 +875,7 @@ again:
     { o = utf8_put_char(o, *s);
     } else
     { size_t len = ucslen(str);
-      if ( !(u8=rlc_malloc(len*4)) )
+      if ( !(u8=rlc_malloc((len+1)*4)) )
 	fail;
       end = u8+len*4-8;
       goto again;
@@ -3195,7 +3200,7 @@ rlc_update(rlc_console c)
     rlc_request_redraw(b);
 }
 
-#ifdef HAVE_POSIX_OPENPT
+#if HAVE_POSIX_OPENPT
 		 /*******************************
 		 *           PTY CODE           *
 		 *******************************/
@@ -3325,6 +3330,29 @@ rlc_resize_pty(RlcData b, int cols, int rows)
   }
 }
 
+#else/*HAVE_POSIX_OPENPT*/
+
+static bool
+rlc_open_pty_pair(RlcData b)
+{ Cprintf("stub: rlc_open_pty_pair()\n");
+  return false;
+}
+
+static void
+rlc_close_connection(RlcData b)
+{ Cprintf("stub: rlc_close_connection()\n");
+}
+
+static ssize_t
+rlc_send(RlcData b, const char *buffer, size_t count)
+{ Cprintf("stub: rlc_send()\n");
+  return -1;
+}
+
+static void
+rlc_resize_pty(RlcData b, int cols, int rows)
+{ Cprintf("stub: rlc_resize_pty()\n");
+}
 
 #endif/*HAVE_POSIX_OPENPT*/
 
@@ -3365,6 +3393,7 @@ Dprint_lines(RlcData b, int from, int to)
   }
 }
 
+#if HAVE_POSIX_OPENPT		/* used in stubs */
 static void
 Dprint_chr(int chr)
 { if ( chr >= ' ' && chr <= 127 )
@@ -3380,6 +3409,7 @@ Dprint_chr(int chr)
   else
     Cprintf("\\\\u%04x", chr);
 }
+#endif
 
 static void
 Dprint_csi(RlcData b, int chr)

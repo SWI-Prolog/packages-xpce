@@ -319,7 +319,7 @@ typedef struct rlc_data
     FDWatch *watch;			/* Watch for write to terminal */
   } pty;
 #else
-#error "No terminal I/O mechanism"
+//#error "No terminal I/O mechanism"
 #endif
 } rlc_data, *RlcData;
 
