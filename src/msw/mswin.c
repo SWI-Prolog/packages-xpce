@@ -72,6 +72,7 @@ DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
 }
 
 
+#if NOSTUB
 int
 pceMTdetach(void)
 {
@@ -89,18 +90,7 @@ pceMTdetach(void)
 
   return TRUE;
 }
-
-
-unsigned					/* interface.h cannot depend */
-setPceThread(unsigned id)			/* on DWORD due to conflicts */
-{ DWORD old = ThePceThread;
-
-  assert(sizeof(unsigned) == sizeof(DWORD));
-
-  ThePceThread = id;
-
-  return old;
-}
+#endif
 
 
 		 /*******************************
@@ -111,6 +101,7 @@ setPceThread(unsigned id)			/* on DWORD due to conflicts */
 Get Windows Version/Revision info
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+#if NOSTUB
 int
 ws_version(void)
 { DWORD dwv = GetVersion();
@@ -125,7 +116,7 @@ ws_revision(void)
 
   return HIBYTE(LOWORD(dwv));
 }
-
+#endif
 
 os_platform
 ws_platform(void)
@@ -197,6 +188,7 @@ HostConsoleHWND()
 }
 
 
+#if NOSTUB
 status
 ws_show_console(Name how)
 { HWND hwnd = HostConsoleHWND();
@@ -230,7 +222,7 @@ ws_console_label(CharArray label)
 
   succeed;
 }
-
+#endif
 
 void
 ws_check_intr()
@@ -251,7 +243,7 @@ ws_getpid()
   return (int) GetCurrentProcessId();
 }
 
-
+#if NOSTUB
 char *
 ws_user()
 { TCHAR buf[256];
@@ -265,6 +257,7 @@ ws_user()
   else
     return NULL;
 }
+#endif
 
 
 #include <shlobj.h>
@@ -310,19 +303,23 @@ remove_ilerrout(int status)
 #endif
 
 
+#if NOSTUB
 void
 ws_initialise(int argc, char **argv)
 { if ( ws_mousebuttons() == 2 )
     ws_emulate_three_buttons(100);
 }
+#endif
 
 
+#if NOSTUB
 Int
 ws_default_scrollbar_width()
 { int w = GetSystemMetrics(SM_CXHSCROLL);	/* Is this the right one? */
 
   return toInt(w);
 }
+#endif
 
 
 #define MAXMESSAGE 1024
@@ -356,6 +353,18 @@ get_logical_drive_strings(int bufsize, char *buf)
 		 /*******************************
 		 *      COMMON DIALOG STUFF	*
 		 *******************************/
+
+HWND
+getHwndFrame(FrameObj fr)
+{ Cprintf("stub: getHwndFrame()\n");
+  return 0;
+}
+
+HWND
+getHwndWindow(PceWindow sw)
+{ Cprintf("stub: getHwndWindow()\n");
+  return 0;
+}
 
 #define nameToFN(s) charArrayToFN((CharArray)(s))
 

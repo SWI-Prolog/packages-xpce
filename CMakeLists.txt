@@ -20,6 +20,14 @@ set(GUI_LIBRARIES
     PkgConfig::PANGO
     PkgConfig::PANGOCAIRO)
 
+if(WIN32)
+  set(O_XOS 1)
+  set(O_DOSFILENAMES 1)
+  set(O_HASSHARES 1)
+  set(HAVE_WINSOCK 1)
+  list(APPEND GUI_LIBRARIES ws2_32.lib)
+endif()
+
 if(HAVE_GUI)
 include(QLF)
 include(XPCESources)

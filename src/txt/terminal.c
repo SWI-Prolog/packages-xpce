@@ -3349,6 +3349,12 @@ rlc_send(RlcData b, const char *buffer, size_t count)
   return -1;
 }
 
+status
+receiveTerminalImage(TerminalImage ti)
+{ Cprintf("stub: receiveTerminalImage()\n");
+  fail;
+}
+
 static void
 rlc_resize_pty(RlcData b, int cols, int rows)
 { Cprintf("stub: rlc_resize_pty()\n");

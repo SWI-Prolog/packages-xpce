@@ -210,6 +210,7 @@ ws_kill_process(Process p, int sig)
 }
 
 
+#if NOSTUB
 void
 ws_done_process(Process p)
 { PROCESS_INFORMATION *pi;
@@ -220,3 +221,4 @@ ws_done_process(Process p)
     p->ws_ref = NULL;
   }
 }
+#endif
