@@ -171,7 +171,7 @@ ws_close_stream(Stream s)
 void
 ws_input_stream(Stream s)
 { if ( s->rdfd >= 0 )
-  { FDWatch *watch = add_fd_to_watch(s->rdfd, FD_READY_STREAM_INPUT, s);
+  { FDWatch *watch = add_socket_to_watch(s->rdfd, FD_READY_STREAM_INPUT, s);
     DEBUG(NAME_stream,
 	  Cprintf("Registered %s for async input (fd=%d)\n",
 		  pp(s), s->rdfd));
@@ -202,7 +202,7 @@ ws_no_input_stream(Stream s)
  */
 void
 ws_listen_socket(Socket s)
-{ FDWatch *watch = add_fd_to_watch(s->rdfd, FD_READY_STREAM_ACCEPT, s);
+{ FDWatch *watch = add_socket_to_watch(s->rdfd, FD_READY_STREAM_ACCEPT, s);
   setStreamWatch((Stream)s, watch);
   DEBUG(NAME_stream,
 	  Cprintf("Registered %s for async listen (fd=%d)\n",

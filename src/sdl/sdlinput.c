@@ -52,9 +52,6 @@
 #include <errno.h>
 #include <stdbool.h>
 #include "sdlinput.h"
-#ifdef __WINDOWS__
-#include <windows.h>
-#endif
 
 #define MAX_FDS 64
 
@@ -164,7 +161,7 @@ start_fd_watcher_thread(void)
 }
 
 FDWatch *
-add_fd_to_watch(int fd, int32_t code, void *userdata)
+add_fd_to_watch(waitable_t fd, int32_t code, void *userdata)
 { FDWatch *watch = fd_meta;
 
   for(int i=0; i<MAX_FDS; i++, watch++)
@@ -182,6 +179,32 @@ add_fd_to_watch(int fd, int32_t code, void *userdata)
 
   return NULL;
 }
+
+FDWatch *
+add_socket_to_watch(socket_t fd, int32_t code, void *userdata)
+{ FDWatch *watch = fd_meta;
+
+  for(int i=0; i<MAX_FDS; i++, watch++)
+  { if ( cmp_and_set_watch(watch, WATCH_FREE, WATCH_RESERVED) )
+    {
+#ifdef __WINDOWS__
+      watch->sock     = fd;
+#else
+      watch->fd       = fd;
+#endif
+      watch->code     = code;
+      watch->userdata = userdata;
+      watch->state    = WATCH_ACTIVE;
+      if ( i > watch_max )
+	watch_max = i;
+      write(control_pipe[1], "+", 1);
+      return watch;
+    }
+  }
+
+  return NULL;
+}
+
 
 void
 remove_fd_watch(FDWatch *watch)

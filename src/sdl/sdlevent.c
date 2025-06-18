@@ -407,11 +407,11 @@ resetDispatch(void)
 {
 }
 
-static int dispatch_fd = -1;
+static waitable_t dispatch_fd = NO_WAITABLE;
 static FDWatch *watch  = NULL;
 
 static void
-set_watch(int fd)
+set_watch(waitable_t fd)
 { if ( fd >= 0 )
   { if ( watch )
     { if ( watch->fd != fd )
@@ -451,9 +451,9 @@ dispatch_ready_event(void)
 status
 ws_dispatch(Int FD, Any timeout)
 { int tmo;
-  int fd = (isDefault(FD) ? dispatch_fd :
-	    isNil(FD)	  ? -1
-			  : valInt(FD));
+  waitable_t fd = (isDefault(FD) ? dispatch_fd :
+		   isNil(FD)	 ? NO_WAITABLE
+				 : (waitable_t)valInt(FD));
   if ( fd >= 0 )
     dispatch_fd = fd;
 
@@ -482,7 +482,7 @@ ws_dispatch(Int FD, Any timeout)
     if ( dispatch_ready_event() )
       succeed;
 
-    if ( fd >= 0 )
+    if ( fd != NO_WAITABLE )
       set_watch(fd);
 
     bool rc;
@@ -539,9 +539,12 @@ ws_dispatch(Int FD, Any timeout)
 }
 
 static bool
-input_on_fd(int fd)
+input_on_fd(waitable_t fd)
 {
-#ifdef HAVE_POLL
+#ifdef __WINDOWS__
+  Cprintf("sub:input_on_fd()\n");
+  return true;
+#elif HAVE_POLL
   struct pollfd fds[1];
 
   fds[0].fd = fd;
@@ -571,14 +574,17 @@ input_on_fd(int fd)
  */
 void
 ws_discard_input(const char *msg)
-{ if ( dispatch_fd >= 0 && input_on_fd(dispatch_fd) )
-  { char buf[1024];
-
-    Cprintf("%s; discarding input ...", msg);
+{ if ( dispatch_fd != NO_WAITABLE && input_on_fd(dispatch_fd) )
+  { Cprintf("%s; discarding input ...", msg);
+#ifdef __WINDOWS__
+    Cprintf("sub: ws_discard_input()\n");
+#else
+    char buf[1024];
     if ( read(dispatch_fd, buf, sizeof(buf)) >= 0 )
       Cprintf("ok\n");
     else
       Cprintf("failed\n");
+#endif
   }
 }
 

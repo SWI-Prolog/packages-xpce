@@ -36,6 +36,17 @@
 #define SDL_INPUT_H_INCLUDED
 #include "sdluserevent.h"
 #include <stdatomic.h>
+#ifdef __WINDOWS__
+#include <windows.h>
+typedef HANDLE waitable_t;
+typedef SOCKET socket_t;
+#define NO_WAITABLE (NULL)
+#else
+typedef int waitable_t;
+typedef int socket_t;
+#define NO_WAITABLE (-1)
+#endif
+
 
 typedef enum
 { WATCH_FREE = 0,		/* free to be allocated */
@@ -47,7 +58,10 @@ typedef enum
 } watch_state;
 
 typedef struct
-{ int		fd;		/* FD we are watching */
+{ waitable_t	 fd;		/* FD/HANDLE we are watching */
+#ifdef __WINDOWS__
+  socket_t       sock;		/* socket we are watching */
+#endif
   fd_ready_codes code;		/* SDL3 event.user.code */
   _Atomic watch_state	state;	/* WATCH_* */
   Any		userdata;	/* SDL3 event.user.data2 */
@@ -56,7 +70,8 @@ typedef struct
 bool cmp_and_set_watch(FDWatch *watch, watch_state old, watch_state new);
 
 bool	 start_fd_watcher_thread(void);
-FDWatch *add_fd_to_watch(int fd, int32_t code, void *userdata);
+FDWatch *add_fd_to_watch(waitable_t fd, int32_t code, void *userdata);
+FDWatch *add_socket_to_watch(socket_t fd, int32_t code, void *userdata);
 void	 remove_fd_watch(FDWatch *watch);
 void	 processed_fd_watch(FDWatch *watch);
 #endif /*SDL_INPUT_H_INCLUDED*/

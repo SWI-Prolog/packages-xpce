@@ -87,7 +87,7 @@ ws_create_font(FontObj f, DisplayObj d)
     slant = PANGO_STYLE_ITALIC;
 
   if ( f->family == NAME_courier || f->family == NAME_screen )
-  { family = "monospace";
+  { family = "monospace,Noto Sans Mono";
     fixed = ON;
   } else if ( f->family == NAME_times )
   { family = "serif";
