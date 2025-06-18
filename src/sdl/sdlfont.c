@@ -90,9 +90,14 @@ ws_create_font(FontObj f, DisplayObj d)
   { family = "monospace";
     fixed = ON;
   } else if ( f->family == NAME_times )
-    family = "serif";
-  else
-    family = nameToUTF8(f->family);
+  { family = "serif";
+#ifdef __WINDOWS__
+  } else if ( f->family == NAME_helvetica )
+  { family = "Segoe UI,Noto Sans";
+#endif
+  } else
+  { family = nameToUTF8(f->family);
+  }
 
   pango_font_description_set_family(desc, family);
   pango_font_description_set_style(desc, slant);
