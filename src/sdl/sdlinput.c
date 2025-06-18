@@ -53,20 +53,26 @@
 #include <stdbool.h>
 #include "sdlinput.h"
 
+#ifdef __WINDOWS__
+#define Pri_WAIT "%p"
+#else
+#define Pri_WAIT "%d"
+#endif
+
 #define MAX_FDS 64
 
-#if HAVE_POLL
+#ifdef __WINDOWS__
+static HANDLE handles[MAX_FDS];
+#else
 static struct pollfd poll_fds[MAX_FDS];
 #endif
 static int meta_id[MAX_FDS];
 static FDWatch fd_meta[MAX_FDS] = {0};
-static int control_pipe[2];
+static waitable_t control_pipe[2];
 static atomic_int watch_max = 0;
 static SDL_Thread *watcher_thread = NULL;
 
-#if HAVE_POLL			/* for now */
 static void lock_watch_userdata(FDWatch *watch);
-#endif
 static void unlock_watch_userdata(FDWatch *watch);
 
 bool
@@ -74,6 +80,21 @@ cmp_and_set_watch(FDWatch *watch, watch_state old, watch_state new)
 { return atomic_compare_exchange_strong(&watch->state, &old, new);
 }
 
+
+static void
+sdl_signal_watch(FDWatch *watch)
+{ DEBUG(NAME_stream, Cprintf("Input on " Pri_WAIT "\n", watch->fd));
+  if ( cmp_and_set_watch(watch, WATCH_ACTIVE, WATCH_PENDING) )
+  { DEBUG(NAME_stream, Cprintf("Posting " Pri_WAIT "\n", watch->fd));
+    SDL_Event ev = {0};
+    ev.type = MY_EVENT_FD_READY;
+    ev.user.code  = watch->code;
+    ev.user.data1 = watch;
+    ev.user.data2 = watch->userdata;
+    lock_watch_userdata(watch);
+    SDL_PushEvent(&ev);
+  }
+}
 
 static int
 poll_thread_fn(void *unused)
@@ -84,8 +105,10 @@ poll_thread_fn(void *unused)
     for(int i=0; i<=watch_max; i++)
     { if ( fd_meta[i].state == WATCH_ACTIVE )
       {
-#if HAVE_POLL
-        poll_fds[nfds].fd = fd_meta[i].fd;
+#ifdef __WINDOWS__
+	handles[nfds] = fd_meta[i].fd;
+#else
+	poll_fds[nfds].fd = fd_meta[i].fd;
         poll_fds[nfds].events = POLLIN;
         poll_fds[nfds].revents = 0;
 #endif
@@ -107,7 +130,27 @@ poll_thread_fn(void *unused)
       }
     }
 
-#if HAVE_POLL
+#ifdef __WINDOWS__
+    DWORD rc = MsgWaitForMultipleObjects(
+      nfds,
+      handles,
+      FALSE,
+      INFINITE,
+      0);			/* QS_* flags. See GetQueueStatus() */
+
+    if ( rc >= WAIT_OBJECT_0 && rc < WAIT_OBJECT_0+nfds )
+    { if ( rc == WAIT_OBJECT_0 ||
+	   WaitForSingleObject(handles[0],0) == WAIT_OBJECT_0 )
+      { char buffer[128];
+	ReadFile(control_pipe[0], buffer, sizeof(buffer), NULL, NULL);
+      }
+      if ( rc > WAIT_OBJECT_0 )
+      { int i = rc-WAIT_OBJECT_0;
+	FDWatch *watch = &fd_meta[meta_id[i]];
+	sdl_signal_watch(watch);
+      }
+    }
+#else/*!__WINDOWS__*/
     int rc = poll(poll_fds, nfds, -1);
     if (rc < 0)
     { perror("poll");
@@ -122,23 +165,10 @@ poll_thread_fn(void *unused)
     for (int i = 1; i < nfds; ++i)
     { if ( (poll_fds[i].revents & POLLIN) )
       { FDWatch *watch = &fd_meta[meta_id[i]];
-
-	DEBUG(NAME_stream, Cprintf("Input on %d\n", watch->fd));
-	if ( cmp_and_set_watch(watch, WATCH_ACTIVE, WATCH_PENDING) )
-	{ DEBUG(NAME_stream, Cprintf("Posting %d\n", watch->fd));
-	  SDL_Event ev = {0};
-	  ev.type = MY_EVENT_FD_READY;
-	  ev.user.code  = watch->code;
-	  ev.user.data1 = watch;
-	  ev.user.data2 = watch->userdata;
-	  lock_watch_userdata(watch);
-	  SDL_PushEvent(&ev);
-	}
+	sdl_signal_watch(watch);
       }
     }
-#else
-    Sleep(250);
-#endif	/* HAVE_POLL */
+#endif/*__WINDOWS__*/
   }
 
   return 0;
@@ -147,7 +177,10 @@ poll_thread_fn(void *unused)
 bool
 start_fd_watcher_thread(void)
 {
-#if HAVE_POLL
+#if __WINDOWS__
+  CreatePipe(&control_pipe[0], &control_pipe[1], NULL, 512);
+  handles[0] = control_pipe[0];
+#else
   if ( pipe(control_pipe) < 0 )
     return false;
 
@@ -158,6 +191,17 @@ start_fd_watcher_thread(void)
 
   watcher_thread = SDL_CreateThread(poll_thread_fn, "fd-watcher", NULL);
   return watcher_thread != NULL;
+}
+
+
+static void
+signal_watcher(char c)
+{
+#ifdef __WINDOWS__
+  WriteFile(control_pipe[1], &c, 1, NULL, NULL);
+#else
+  write(control_pipe[1], &c, 1);
+#endif
 }
 
 FDWatch *
@@ -172,7 +216,7 @@ add_fd_to_watch(waitable_t fd, int32_t code, void *userdata)
       watch->state    = WATCH_ACTIVE;
       if ( i > watch_max )
 	watch_max = i;
-      write(control_pipe[1], "+", 1);
+      signal_watcher('+');
       return watch;
     }
   }
@@ -197,7 +241,7 @@ add_socket_to_watch(socket_t fd, int32_t code, void *userdata)
       watch->state    = WATCH_ACTIVE;
       if ( i > watch_max )
 	watch_max = i;
-      write(control_pipe[1], "+", 1);
+      signal_watcher('+');
       return watch;
     }
   }
@@ -211,10 +255,10 @@ remove_fd_watch(FDWatch *watch)
 { while ( watch &&
 	  !(watch->state == WATCH_REMOVE || watch->state == WATCH_FREE) )
   { if ( cmp_and_set_watch(watch, WATCH_ACTIVE, WATCH_REMOVE) )
-    { write(control_pipe[1], "-", 1);
+    { signal_watcher('-');
     } else if ( cmp_and_set_watch(watch, WATCH_PENDING, WATCH_REMOVE) )
     { unlock_watch_userdata(watch);
-      write(control_pipe[1], "-", 1);
+      signal_watcher('-');
     } else if ( cmp_and_set_watch(watch, WATCH_PROCESSING, WATCH_REMOVE) )
     { (void)0;			/* delete in processed_fd_watch */
     }
@@ -229,15 +273,14 @@ processed_fd_watch(FDWatch *watch)
 	    if ( watch->fd != 0 )
 	      Cprintf("Re-enabling %d\n", watch->fd));
       unlock_watch_userdata(watch);
-      write(control_pipe[1], "=", 1);
+      signal_watcher('=');
     } else if ( watch->state == WATCH_REMOVE )
     { unlock_watch_userdata(watch);
-      write(control_pipe[1], "-", 1);
+      signal_watcher('-');
     }
   }
 }
 
-#if HAVE_POLL			/* for now unused */
 static void
 lock_watch_userdata(FDWatch *watch)
 { switch(watch->code)
@@ -250,7 +293,6 @@ lock_watch_userdata(FDWatch *watch)
       break;
   }
 }
-#endif
 
 static void
 unlock_watch_userdata(FDWatch *watch)
