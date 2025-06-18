@@ -97,7 +97,7 @@ ws_create_font(FontObj f, DisplayObj d)
   pango_font_description_set_family(desc, family);
   pango_font_description_set_style(desc, slant);
   pango_font_description_set_weight(desc, weight);
-  pango_font_description_set_size(desc, valInt(f->points)*PANGO_SCALE*font_scale);
+  pango_font_description_set_size(desc, valNum(f->points)*PANGO_SCALE*font_scale);
 
   PangoFont *pf = pango_font_map_load_font(fontmap, context, desc);
   PangoFontMetrics *metrics = pango_font_get_metrics(pf, NULL);
