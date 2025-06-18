@@ -139,11 +139,12 @@ ws_console_label(CharArray label)
  *
  * @return The default scrollbar width as an Int.
  */
+#ifndef __WINDOWS__
 Int
 ws_default_scrollbar_width(void)
-{
-    return (Int)16;
+{ return toInt(16);
 }
+#endif
 
 /**
  * Retrieve the current username.

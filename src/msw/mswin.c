@@ -312,14 +312,12 @@ ws_initialise(int argc, char **argv)
 #endif
 
 
-#if NOSTUB
 Int
-ws_default_scrollbar_width()
+ws_default_scrollbar_width(void)
 { int w = GetSystemMetrics(SM_CXHSCROLL);	/* Is this the right one? */
 
   return toInt(w);
 }
-#endif
 
 
 #define MAXMESSAGE 1024
@@ -690,4 +688,3 @@ getWinDirectoryDisplay(DisplayObj d,
 
   return result;
 }
-

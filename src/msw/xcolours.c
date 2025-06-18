@@ -32,13 +32,6 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Note: This file is GENERATED from  /usr/lib/X11/rgb.txt   on  a  Unix machine using the
-command mkxcolours from the xpce/src/msw directory.
-
-DO NOT EDIT!
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
 typedef struct
 { unsigned char red;
   unsigned char green;
@@ -827,7 +820,7 @@ LoadColourNames(void)
       appendHashTable(ColourNames, CtoKeyword(buf), toInt(rgb));
     }
 
-    ws_system_colours(CurrentDisplay(NIL));
+    ws_system_colours(ColourNames);
   }
 
   return ColourNames;

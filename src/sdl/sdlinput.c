@@ -52,6 +52,9 @@
 #include <errno.h>
 #include <stdbool.h>
 #include "sdlinput.h"
+#ifdef __WINDOWS__
+#include <windows.h>
+#endif
 
 #define MAX_FDS 64
 
@@ -136,6 +139,8 @@ poll_thread_fn(void *unused)
 	}
       }
     }
+#else
+    Sleep(250);
 #endif	/* HAVE_POLL */
   }
 

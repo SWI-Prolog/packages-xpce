@@ -35,10 +35,13 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include "sdlcolour.h"
+#ifdef __WINDOWS__
+#include <msw/mscolour.h>
+#else
+#define ws_system_colours(cn) (void)0
+#endif
 
 static HashTable ColourNames;		/* name --> rgb (packed in Int) */
-
-#define ws_system_colours(d) (void)0
 
 #include "../msw/xcolours.c"	/* get x11_colours */
 

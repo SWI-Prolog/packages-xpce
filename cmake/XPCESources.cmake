@@ -84,7 +84,7 @@ set(SDL_SRC	sdl.c sdldisplay.c sdlfont.c sdlmenu.c sdlwindow.c
 		sdlcolour.c sdldraw.c sdlframe.c sdlstream.c sdlinput.c
 		sdlcursor.c  sdlevent.c    sdlimage.c  sdltimer.c)
 if(WIN32)
-set(MSW_SRC	mswin.c msprocess.c msuxnt.c)
+set(MSW_SRC	mswin.c msprocess.c msuxnt.c mscolour.c)
 endif()
 elseif(WIN32)
 set(MSW_SRC	mscolour.c mscursor.c msdisplay.c msdraw.c msevent.c
