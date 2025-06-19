@@ -51,6 +51,7 @@ typedef unsigned long uintptr_t;
 #endif
 #include <inttypes.h>			/* more portable than stdint.h */
 #endif
+typedef struct io_stream IOSTREAM;
 #include <h/interface.h>
 #include "stub.h"
 
@@ -166,4 +167,3 @@ Stub__HostCall(PceGoal goal)
 
   return PCE_FAIL;
 }
-

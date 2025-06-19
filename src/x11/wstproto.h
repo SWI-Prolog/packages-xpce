@@ -128,7 +128,6 @@ COMMON(void)	str_label(PceString s, int acc, FontObj font, int x, int y, int w, 
 
 /* ../src/x11/xevent.c */
 COMMON(void)	resetDispatch(void);
-COMMON(status)	ws_dispatch(Int FD, Any timeout);
 COMMON(void)	ws_discard_input(const char *msg);
 COMMON(Any)	ws_event_in_subwindow(EventObj ev, Any root);
 COMMON(int)	ws_wait_for_key(int maxwait);

@@ -42,7 +42,7 @@ void ws_event_destroyed_target(Any window);
 
 /* Public interface */
 void resetDispatch(void);
-status ws_dispatch(Int FD, Any timeout);
+status ws_dispatch(IOSTREAM *input, Any timeout);
 void ws_discard_input(const char *msg);
 Any ws_event_in_subwindow(EventObj ev, Any root);
 int ws_wait_for_key(int maxwait);

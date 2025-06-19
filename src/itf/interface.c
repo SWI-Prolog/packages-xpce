@@ -629,38 +629,43 @@ pceGet(Any receiver, Name classname, Name selector, int argc, Any *argv)
 #endif
 
 int
-pceDispatch(int fd, int time)
+pceDispatch(IOSTREAM *input, int time)
 { if ( DispatchEvents != NULL )
   { int rval;
 
-    rval = (*DispatchEvents)(fd, time);
+    rval = (*DispatchEvents)(input, time);
 
     return (rval == SUCCEED ? PCE_DISPATCH_INPUT : PCE_DISPATCH_TIMEOUT);
   } else
   {
 #ifndef HAVE_SELECT
-    ws_dispatch(toInt(fd), toInt(time));
+    ws_dispatch(input, toInt(time));
     return PCE_DISPATCH_TIMEOUT;
 #else
-    if ( time > 0 )
-    { struct timeval timeout;
-      fd_set readfds;
+    int fd = Sfileno(input);
+    if ( fd >= 0 )
+    { if ( time > 0 )
+      { struct timeval timeout;
+	fd_set readfds;
 
-      timeout.tv_sec = time / 1000;
-      timeout.tv_usec = (time % 1000) * 1000;
+	timeout.tv_sec = time / 1000;
+	timeout.tv_usec = (time % 1000) * 1000;
 
-      FD_ZERO(&readfds);
-      FD_SET(fd, &readfds);
-      if ( select(fd+1, &readfds, NULL, NULL, &timeout) > 0 )
+	FD_ZERO(&readfds);
+	FD_SET(fd, &readfds);
+	if ( select(fd+1, &readfds, NULL, NULL, &timeout) > 0 )
+	  return PCE_DISPATCH_INPUT;
+	else
+	  return PCE_DISPATCH_TIMEOUT;
+      } else
+      { fd_set readfds;
+	FD_ZERO(&readfds);
+	FD_SET(fd, &readfds);
+	select(fd+1, &readfds, NULL, NULL, NULL);
 	return PCE_DISPATCH_INPUT;
-      else
-	return PCE_DISPATCH_TIMEOUT;
+      }
     } else
-    { fd_set readfds;
-      FD_ZERO(&readfds);
-      FD_SET(fd, &readfds);
-      select(fd+1, &readfds, NULL, NULL, NULL);
-      return PCE_DISPATCH_INPUT;
+    { return PCE_DISPATCH_INPUT;
     }
 #endif /*HAVE_SELECT*/
   }

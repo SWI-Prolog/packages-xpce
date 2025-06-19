@@ -1648,7 +1648,7 @@ COMMON(void)	initCGlobals(void);
 GLOBAL int	XPCE_initialised;	/* Is system initialised? */
 GLOBAL Pce	PCE;			/* the one and only Pce object */
 GLOBAL Host	HOST;			/* the one and only Host object */
-GLOBAL status	(*DispatchEvents)(int, int); /* Dispatch function */
+GLOBAL status	(*DispatchEvents)(IOSTREAM*, int); /* Dispatch function */
 GLOBAL int	changedLevel;		/* Change forwarding levels */
 GLOBAL HashTable ErrorTable;		/* @error_database */
 GLOBAL int	XPCE_mt;		/* we are multi-threaded */

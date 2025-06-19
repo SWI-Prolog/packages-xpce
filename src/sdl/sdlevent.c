@@ -449,12 +449,21 @@ dispatch_ready_event(void)
  */
 
 status
-ws_dispatch(Int FD, Any timeout)
+ws_dispatch(IOSTREAM *input, Any timeout)
 { int tmo;
-  waitable_t fd = (isDefault(FD) ? dispatch_fd :
-		   isNil(FD)	 ? NO_WAITABLE
-				 : (waitable_t)valInt(FD));
-  if ( fd >= 0 )
+  waitable_t fd;
+
+  if ( !input )
+  { fd = NO_WAITABLE;
+  } else
+  {
+#if __WINDOWS__
+#else
+    fd = Sfileno(input);
+#endif
+  }
+
+  if ( fd != NO_WAITABLE )
     dispatch_fd = fd;
 
   if ( isNil(timeout) )

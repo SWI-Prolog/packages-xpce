@@ -2837,15 +2837,18 @@ pl_pce_postscript_stream(term_t ps)
 static foreign_t
 pl_pce_dispatch_event(term_t Fd, term_t timeout)
 { double tmo;
-  int fd;
+  IOSTREAM *fd;
+  int i;
 
-  if ( PL_get_float_ex(timeout, &tmo) &&
-       PL_get_integer_ex(Fd, &fd) )
-  { pceDispatch(fd, tmo*1000.0);
-    return true;
-  }
+  if ( !PL_get_float_ex(timeout, &tmo) )
+    return false;
+  if ( PL_get_integer(Fd, &i) && i == -1 )
+    fd = NULL;
+  else if ( !PL_get_stream(Fd, &fd, SIO_INPUT) )
+    return false;
 
-  return false;
+  pceDispatch(fd, tmo*1000.0);
+  return true;
 }
 
 #endif /*SWI*/
@@ -2877,7 +2880,7 @@ the possibility of reentrance at moments this is not allowed in PCE ...
 #endif
 
 static int
-pce_dispatch(int fd)
+pce_dispatch(IOSTREAM *fd)
 { if ( pceDispatch(fd, TIMEOUT) == PCE_DISPATCH_INPUT )
     return PROLOG_DISPATCH_INPUT;
 
