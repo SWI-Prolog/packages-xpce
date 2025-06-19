@@ -82,14 +82,12 @@ is_timeout(XtPointer ctx, XtIntervalId *id)
 static int	  dispatch_fd = -1;
 
 status
-ws_dispatch(Int FD, Any timeout)
+ws_dispatch(IOSTREAM *watch, Any timeout)
 { XtIntervalId tid = 0;
   XtInputId iid = 0;
   status rval = SUCCEED;
   int ofd = dispatch_fd;
-  int fd = (isDefault(FD) ? dispatch_fd :
-	    isNil(FD)	  ? -1
-			  : valInt(FD));
+  int fd = watch ? Sfileno(watch) : -1;
 
 					/* No context: wait for input */
 					/* timeout */

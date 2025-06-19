@@ -631,7 +631,7 @@ set_pce_thread(void)
 
 static foreign_t
 pl_pce_dispatch(void)
-{ pceDispatch(-1, 250);
+{ pceDispatch(NULL, 250);
 
   if ( PL_handle_signals() == -1 || PL_exception(0) )
     return FALSE;

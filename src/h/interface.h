@@ -438,7 +438,7 @@ __pce_export int	pceInstanceOf(PceObject obj, PceObject class);
 #define PCE_DISPATCH_INPUT	(0)
 #define PCE_DISPATCH_TIMEOUT	(1)
 
-__pce_export int	pceDispatch(int fd, int msecs);
+__pce_export int	pceDispatch(IOSTREAM *fd, int msecs);
 __pce_export void	pceRedraw(int);
 				/* context is an XtAppContext pointer */
 __pce_export void *     pceXtAppContext(void * context);

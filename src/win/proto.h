@@ -39,7 +39,7 @@ COMMON(status)	appendDisplayManager(DisplayManager dm, DisplayObj d);
 COMMON(DisplayObj) getMemberDisplayManager(DisplayManager dm, Name address);
 COMMON(DisplayObj) CurrentDisplay(Any obj);
 COMMON(status)	RedrawDisplayManager(DisplayManager dm);
-COMMON(status)	dispatchDisplayManager(DisplayManager dm, Int fd, Int timeout);
+COMMON(status)	dispatchDisplayManager(DisplayManager dm, IOSTREAM *fd, Int timeout);
 COMMON(DisplayManager) TheDisplayManager(void);
 COMMON(status)	makeClassDisplayManager(Class class);
 

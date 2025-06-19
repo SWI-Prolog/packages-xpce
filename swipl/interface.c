@@ -2860,7 +2860,7 @@ the possibility of reentrance at moments this is not allowed in PCE ...
 #endif
 
 static int
-pce_dispatch(int fd)
+pce_dispatch(IOSTREAM *fd)
 { if ( pceDispatch(fd, TIMEOUT) == PCE_DISPATCH_INPUT )
     return PROLOG_DISPATCH_INPUT;
 

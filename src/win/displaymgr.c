@@ -200,7 +200,7 @@ RedrawDisplayManager(DisplayManager dm)
 
 
 status
-dispatchDisplayManager(DisplayManager dm, Int fd, Int timeout)
+dispatchDisplayManager(DisplayManager dm, IOSTREAM *fd, Int timeout)
 { if ( isDefault(timeout) )
     timeout = toInt(250);
 
@@ -209,9 +209,9 @@ dispatchDisplayManager(DisplayManager dm, Int fd, Int timeout)
 
 
 static status
-dispatch_events(int fd, int timeout)
+dispatch_events(IOSTREAM *fd, int timeout)
 { return dispatchDisplayManager(TheDisplayManager(),
-				fd >= 0 ? toInt(fd) : NIL,
+				fd,
 				toInt(timeout));
 }
 
@@ -244,11 +244,6 @@ TheDisplayManager()
 		 *	 CLASS DECLARATION	*
 		 *******************************/
 
-/* Type declarations */
-
-static char *T_dispatch[] =
-        { "file_descriptor=[int]", "milliseconds=[int]*" };
-
 /* Instance Variables */
 
 static vardecl var_displayManager[] =
@@ -271,8 +266,6 @@ static senddecl send_displayManager[] =
      NAME_current, "Pop the current stack"),
   SM(NAME_append, 1, "display", appendDisplayManager,
      NAME_display, "Attach a new display to the manager"),
-  SM(NAME_dispatch, 2, T_dispatch, dispatchDisplayManager,
-     NAME_event, "Dispatch events for 1/4th second"),
   SM(NAME_redraw, 0, NULL, redrawDisplayManager,
      NAME_event, "Flush all pending changes to the screen")
 };

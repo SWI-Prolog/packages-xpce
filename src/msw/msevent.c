@@ -45,7 +45,7 @@ the loc_still timer expires (250 milliseconds).
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 status
-ws_dispatch(Int FD, Any timeout)
+ws_dispatch(IOSTREAM *watch, Any timeout)
 { MSG msg;
 
   if ( GetMessage(&msg, NULL, 0, 0) )

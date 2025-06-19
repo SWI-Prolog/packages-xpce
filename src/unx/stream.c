@@ -480,7 +480,7 @@ getReadLineStream(Stream s, Real timeout)
     } else
       left = 0;				/* keep compiler happy */
 
-    if ( !ws_dispatch(DEFAULT, use_timeout ? toInt(left) : NIL) )
+    if ( !ws_dispatch(NULL, use_timeout ? toInt(left) : NIL) )
       return (StringObj) NIL;
   }
 
@@ -714,4 +714,3 @@ makeClassStream(Class class)
 }
 
 #endif /*O_NO_PROCESS && O_NO_SOCKET*/
-
