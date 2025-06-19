@@ -32,6 +32,7 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
+#define SWIPL_WINDOWS_NATIVE_ACCESS 1 /* get Swinhandle() */
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include "../../swipl/pcecall.h"
@@ -440,6 +441,35 @@ dispatch_ready_event(void)
   return false;
 }
 
+static bool
+win_wait_for_handle(HANDLE hConsole, int tmo)
+{ if ( !hConsole )
+    return true;
+
+  for(;;)
+  { DWORD rc = MsgWaitForMultipleObjects(1,
+					 &hConsole,
+					 false,	/* wait for either event */
+					 tmo,
+					 QS_ALLINPUT);
+
+    if ( rc == WAIT_OBJECT_0+1 )
+    { MSG msg;
+
+      while( PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) )
+      { TranslateMessage(&msg);
+	DispatchMessage(&msg);
+      }
+      return false;
+    } else if ( rc == WAIT_OBJECT_0 )
+    { return true;
+    } else
+    { DEBUG(NAME_stream,
+	    Sdprintf("MsgWaitForMultipleObjects(): 0x%x\n", rc));
+    }
+  }
+}
+
 /**
  * Dispatch events from the event queue.
  *
@@ -458,6 +488,7 @@ ws_dispatch(IOSTREAM *input, Any timeout)
   } else
   {
 #if __WINDOWS__
+    fd = Swinhandle(input);
 #else
     fd = Sfileno(input);
 #endif
@@ -519,8 +550,7 @@ ws_dispatch(IOSTREAM *input, Any timeout)
 
     return rc;
   } else			/* SDL not yet initialised */
-  { int ready;
-    int to;
+  { int to;
 
     if ( isNil(timeout) )
     { to = -1;
@@ -534,16 +564,19 @@ ws_dispatch(IOSTREAM *input, Any timeout)
       to = 256;
 
 #if HAVE_POLL
+    int ready;
     struct pollfd fds[1];
     fds[0].fd = fd;
     fds[0].events = POLLIN;
 
     ready = poll(fds, 1, to);
-#else
-    ready = 1;
-    (void)to;
-#endif
     return ready > 0;
+#elif __WINDOWS__
+    return win_wait_for_handle(fd, to);
+#else
+    (void)to;
+    return true;
+#endif
   }
 }
 

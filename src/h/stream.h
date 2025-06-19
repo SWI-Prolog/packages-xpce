@@ -212,7 +212,7 @@ typedef struct io_stream
   IOFUNCTIONS	       *functions;	/* open/close/read/write/seek */
   int			timeout;	/* timeout (milliseconds) */
   IOENC			encoding;	/* character encoding used */
-  int		        locks;		/* lock/unlock count */
+  int			locks;		/* lock/unlock count */
   int			references;	/* Reference-count */
   IOLOCK *		mutex;		/* stream mutex */
   void			(*close_hook)(void* closure);
@@ -435,6 +435,9 @@ PL_EXPORT(IOSTREAM *)	Sopen_iri_or_file(const char *path, const char *how);
 PL_EXPORT(IOSTREAM *)	Sfdopen(int fd, const char *type);
 PL_EXPORT(int)		Sfileno(IOSTREAM *s);
 #ifdef __WINDOWS__
+#ifdef SWIPL_WINDOWS_NATIVE_ACCESS
+PL_EXPORT(HANDLE)	Swinhandle(IOSTREAM *s);
+#endif
 #if defined(_WINSOCKAPI_) || defined(NEEDS_SWINSOCK) /* have SOCKET */
 PL_EXPORT(SOCKET)	Swinsock(IOSTREAM *s);
 #endif

@@ -565,13 +565,8 @@ static PL_dispatch_hook_t	old_dispatch_hook;
 #define DebugMode		(pceExecuteMode() == PCE_EXEC_USER \
 					? PL_Q_NORMAL : PL_Q_NODEBUG)
 
-#if defined(__WINDOWS__)
-#define PROLOG_INSTALL_DISPATCH_FUNCTION(f) {}
-#else
 #define PROLOG_INSTALL_DISPATCH_FUNCTION(f) \
 	(old_dispatch_hook = PL_dispatch_hook(f))
-#endif
-
 #define PROLOG_INSTALL_RESET_FUNCTION(f) \
 				{ PL_abort_hook(f); }
 
@@ -579,7 +574,7 @@ static PL_dispatch_hook_t	old_dispatch_hook;
 #define PROLOG_DISPATCH_TIMEOUT PL_DISPATCH_TIMEOUT
 
 static void
-initHostConstants()
+initHostConstants(void)
 { FUNCTOR_behaviour1        = PL_new_functor(ATOM_behaviour, 1);
   FUNCTOR_error2	    = PL_new_functor(ATOM_error, 2);
   FUNCTOR_existence_error2  = PL_new_functor(ATOM_existence_error, 2);
@@ -2869,7 +2864,6 @@ better solution for signal handling is to be searched for (also avoiding
 the possibility of reentrance at moments this is not allowed in PCE ...
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#ifndef __WINDOWS__
 #ifndef PROLOG_DISPATCH_INPUT
 #define PROLOG_DISPATCH_INPUT 1
 #define PROLOG_DISPATCH_TIMEOUT 0
@@ -2886,7 +2880,6 @@ pce_dispatch(IOSTREAM *fd)
 
   return PROLOG_DISPATCH_TIMEOUT;
 }
-#endif /*__WINDOWS__*/
 
 #ifdef SICSTUS
 
