@@ -441,6 +441,7 @@ dispatch_ready_event(void)
   return false;
 }
 
+#ifdef __WINDOWS__
 static bool
 win_wait_for_handle(HANDLE hConsole, int tmo)
 { if ( !hConsole )
@@ -469,6 +470,7 @@ win_wait_for_handle(HANDLE hConsole, int tmo)
     }
   }
 }
+#endif
 
 /**
  * Dispatch events from the event queue.
