@@ -306,8 +306,8 @@ CtoEvent(SDL_Event *event)
   frame = wsid_to_frame(wid);
   DEBUG(NAME_event,
 	if ( name != NAME_locMove )
-	  Cprintf("Event %s on %s at %1f,%1f, id=%d\n",
-		  pp(name), pp(frame), wid, fx, fy));
+	  Cprintf("Event %s on %s at %1f,%1f, SDL window-id=%d\n",
+		  pp(name), pp(frame), fx, fy, wid));
   if ( !frame )
     fail;
 
