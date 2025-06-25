@@ -203,7 +203,9 @@ ws_grab_pointer_window(PceWindow sw, BoolObj val)
   if ( fr )
   { WsFrame wfr = fr->ws_ref;
     if ( wfr )
-    { if ( !SDL_CaptureMouse(val == ON) )
+    {
+#if 0
+      if ( !SDL_CaptureMouse(val == ON) )
 	DEBUG(NAME_capture,
 	      Cprintf("ws_grab_pointer_window(%s, %s) failed: %s\n",
 		      pp(sw), pp(val), SDL_GetError()));
@@ -217,6 +219,7 @@ ws_grab_pointer_window(PceWindow sw, BoolObj val)
 			pp(sw), pp(val)));
 	}
       }
+#endif
 
       ev_event_grab_window(val == ON ? sw : NIL);
     }

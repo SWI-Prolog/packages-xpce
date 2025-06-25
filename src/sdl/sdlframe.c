@@ -159,8 +159,15 @@ ws_create_frame(FrameObj fr)
     { SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_PARENT_POINTER,
 			     parent);
     }
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x);
-    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y);
+    if ( fr->placed == ON )
+    {
+#ifdef __WINDOWS__
+      x += GetSystemMetrics(SM_CXBORDER);
+      y += GetSystemMetrics(SM_CYBORDER) + GetSystemMetrics(SM_CYCAPTION);
+#endif
+      SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x);
+      SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y);
+    }
     win = SDL_CreateWindowWithProperties(props);
     SDL_DestroyProperties(props);
   }

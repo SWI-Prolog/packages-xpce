@@ -71,6 +71,7 @@ initialiseFrame(FrameObj fr, Name label, Name kind,
   assign(fr, display,		    display);
   assign(fr, border,		    DEFAULT);
   assign(fr, area,		    newObject(ClassArea, EAV));
+  assign(fr, placed,		    OFF);
   assign(fr, members,		    newObject(ClassChain, EAV));
   assign(fr, kind,		    kind);
   assign(fr, status,		    NAME_unmapped);
@@ -256,6 +257,8 @@ openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
 
   if ( isDefault(pos) && isOpenFrameStatus(fr->status) )
     succeed;
+  if ( notDefault(pos) )
+    assign(fr, placed, ON);
 
   if ( notDefault(pos) )		/* X11 transient is done by WM */
   { x = pos->x;
@@ -827,6 +830,7 @@ getImageFrame(FrameObj fr)
 static status
 geometryFrame(FrameObj fr, Name spec, Monitor mon)
 { assign(fr, geometry, spec);
+  assign(fr, placed, ON);
 
   ws_x_geometry_frame(fr, spec, mon);
 
@@ -849,6 +853,8 @@ setFrame(FrameObj fr, Int x, Int y, Int w, Int h, Monitor mon)
     mon = DEFAULT;
   }
 
+  if ( notDefault(x) || notDefault(y) )
+    assign(fr, placed, ON);
   setArea(a, x, y, w, h);
   if ( valInt(a->w) <= 0 )		/* Window systems don't like that */
     assign(a, w, ONE);
@@ -1825,6 +1831,8 @@ static vardecl var_frame[] =
      NAME_area, "Area of the opened frame on the display"),
   IV(NAME_geometry, "name*", IV_NONE,
      NAME_area, "X-window geometry specification"),
+  IV(NAME_placed, "bool", IV_GET,
+     NAME_area, "If @on, desired position is set explicitly"),
   IV(NAME_members, "chain", IV_NONE,
      NAME_organisation, "Windows in the frame"),
   SV(NAME_kind, "{toplevel,transient,popup}", IV_GET|IV_STORE, kindFrame,

@@ -846,6 +846,7 @@ NewClass(frameobj)
   ColourMap	colour_map;		/* Attached colourmap */
   Area		area;			/* Area of the frame */
   Name		geometry;		/* X-Window geometry spec */
+  BoolObj	placed;			/* User tried to fix placement */
   Chain		members;		/* Windows displayed */
   Name		kind;			/* Kind of frame */
   FrameObj	transient_for;		/* Sub frame of who? */
