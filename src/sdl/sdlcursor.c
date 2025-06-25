@@ -50,6 +50,7 @@ static struct standardCursor
   { "watch",               SDL_SYSTEM_CURSOR_WAIT },
   { "hand2",               SDL_SYSTEM_CURSOR_POINTER },
   { "xterm",               SDL_SYSTEM_CURSOR_TEXT },
+  { "win_ibeam",           SDL_SYSTEM_CURSOR_TEXT },
   { "sb_h_double_arrow",   SDL_SYSTEM_CURSOR_EW_RESIZE },
   { "win_sizewe",          SDL_SYSTEM_CURSOR_EW_RESIZE },
   { "sb_v_double_arrow",   SDL_SYSTEM_CURSOR_NS_RESIZE },

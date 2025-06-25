@@ -492,6 +492,8 @@ ws_dispatch(IOSTREAM *input, Any timeout)
 
   if ( !input )
   { fd = NO_WAITABLE;
+  } else if ( input == DEFAULT )
+  { fd = dispatch_fd;
   } else
   {
 #if __WINDOWS__
@@ -587,12 +589,17 @@ ws_dispatch(IOSTREAM *input, Any timeout)
   }
 }
 
+/**
+ * @param fd is a file descriptor on POSIX systems and a HANDLE on
+ * Windows.
+ * @return true if there is input in `fd`.
+ */
+
 static bool
 input_on_fd(waitable_t fd)
 {
 #ifdef __WINDOWS__
-  Cprintf("sub:input_on_fd()\n");
-  return true;
+  return WaitForSingleObject(fd, 0) == WAIT_OBJECT_0;
 #elif HAVE_POLL
   struct pollfd fds[1];
 
@@ -616,6 +623,15 @@ input_on_fd(waitable_t fd)
 #endif
 }
 
+#ifdef __WINDOWS__
+static bool
+isconsole(HANDLE h)
+{ DWORD mode;
+
+  return GetConsoleMode(h, &mode);
+}
+#endif
+
 /**
  * Discard any pending input events.
  *
@@ -626,7 +642,8 @@ ws_discard_input(const char *msg)
 { if ( dispatch_fd != NO_WAITABLE && input_on_fd(dispatch_fd) )
   { Cprintf("%s; discarding input ...", msg);
 #ifdef __WINDOWS__
-    Cprintf("sub: ws_discard_input()\n");
+    if ( isconsole(dispatch_fd) )
+      FlushConsoleInputBuffer(dispatch_fd);
 #else
     char buf[1024];
     if ( read(dispatch_fd, buf, sizeof(buf)) >= 0 )

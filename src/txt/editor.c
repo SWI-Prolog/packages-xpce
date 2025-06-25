@@ -5403,7 +5403,7 @@ static classvardecl rc_editor[] =
      "Colour/fill pattern of the background"),
   RC(NAME_caretModifier, "modifier", "",
      "Modify caret using this modifier"),
-  RC(NAME_cursor, "cursor", UXWIN("xterm", "win_ibeam"),
+  RC(NAME_cursor, "cursor", "text",
      "Default cursor"),
   RC(NAME_exactCase, "bool", "@off",
      "Search/replace case"),
