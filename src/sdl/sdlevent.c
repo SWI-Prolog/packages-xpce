@@ -382,6 +382,11 @@ dispatch_event(EventObj ev)
 		  pp(ev), pp(ev->id), valInt(ev->x), valInt(ev->y),
 		  pp(target)));
 
+  if ( onFlag(target, F_FREED|F_FREEING) )
+  { Cprintf("Event on %s; ignored\n", pp(target));
+    return false;
+  }
+
   ServiceMode(is_service_window(target),
 	      { markAnswerStack(mark);
 		addCodeReference(ev);
