@@ -1793,9 +1793,17 @@ str_advance_utf8(const char *u, int ulen, FontObj font)
  */
 double
 c_width(wint_t c, FontObj font)
-{ char s[10];
-  char *o = utf8_put_char(s, c);
-  return str_advance_utf8(s, o-s, font);
+{ float cw;
+
+  if ( s_cwidth(c, font, &cw) )
+  { return cw;
+  } else
+  { char s[10];
+    char *o = utf8_put_char(s, c);
+    double w = str_advance_utf8(s, o-s, font);
+    s_setcwidth(c, font, w);
+    return w;
+  }
 }
 
 void

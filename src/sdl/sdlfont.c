@@ -44,6 +44,8 @@ static PangoFontMap *fontmap;	/* Per surface type (screen, PDF, ... */
 static PangoContext *context;	/* Per DPI and fontmap */
 static double font_scale = 1.0;
 
+static void clean_width_cache(charwidth_cache *wcache);
+
 /**
  * Create a native font resource associated with the specified FontObj
  * on the given display.
@@ -138,12 +140,74 @@ ws_destroy_font(FontObj f, DisplayObj d)
 { WsFont wsf = f->ws_ref;
   if ( wsf )
   { f->ws_ref = NULL;
+    clean_width_cache(&wsf->wcache);
     g_object_unref(wsf->font);
     pango_font_description_free(wsf->desc);
     g_object_unref(wsf->layout);
     unalloc(sizeof(ws_font), wsf);
   }
 }
+
+		 /*******************************
+		 *            CACHE             *
+		 *******************************/
+
+static void
+clean_width_cache(charwidth_cache *wcache)
+{ for(int page=0; page<256; page++)
+  { float *wpage;
+    if ( (wpage=wcache->pages[page]) )
+    { wcache->pages[page] = NULL;
+      unalloc(256*sizeof(*wpage), wpage);
+    }
+  }
+}
+
+bool
+s_cwidth(uint32_t c, FontObj font, float *wp)
+{ WsFont wsf = font->ws_ref;
+  if ( wsf && c <= 0xffff )
+  { int page = c/256;
+    int idx  = c%256;
+    float *wpage = wsf->wcache.pages[page];
+    if ( wpage )
+    { float w = wpage[idx];
+      if ( w >= 0.0 )
+      { *wp = w;
+	return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool
+s_setcwidth(uint32_t c, FontObj font, float w)
+{ WsFont wsf = font->ws_ref;
+  if ( wsf && c <= 0xffff )
+  { int page = c/256;
+    int idx  = c%256;
+    float *wpage = wsf->wcache.pages[page];
+    if ( !wpage )
+    { wpage = wsf->wcache.pages[page] = alloc(256*sizeof(*wpage));
+      if ( wpage )
+      { for(int i=0; i<256; i++)
+	  wpage[i] = -1.0;
+      }
+    }
+    if ( wpage )
+    { wpage[idx] = w;
+      return true;
+    }
+  }
+  return false;
+}
+
+
+		 /*******************************
+		 *         SYSTEM FONTS         *
+		 *******************************/
 
 /**
  * Initialize or enumerate the system fonts available on the specified display.

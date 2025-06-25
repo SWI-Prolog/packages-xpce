@@ -39,12 +39,17 @@
 #include <pango/pangocairo.h>
 
 typedef struct
+{ float *pages[256];
+} charwidth_cache;
+
+typedef struct
 { PangoFont *font;
   PangoFontDescription *desc;
   PangoLayout *layout;		/* Should be per display/surface type */
   double ascent;
   double descent;
   double height;
+  charwidth_cache wcache;
 } ws_font, *WsFont;
 
 static inline WsFont
@@ -62,7 +67,9 @@ cairo_font(FontObj f)
 }
 
 status ws_create_font(FontObj f, DisplayObj d);
-void ws_destroy_font(FontObj f, DisplayObj d);
+void   ws_destroy_font(FontObj f, DisplayObj d);
+bool   s_cwidth(uint32_t c, FontObj font, float *wp);
+bool   s_setcwidth(uint32_t c, FontObj font, float w);
 status ws_system_fonts(DisplayObj d);
 
 #endif /* SDLFONT_H */
