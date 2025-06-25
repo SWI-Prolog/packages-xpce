@@ -2462,14 +2462,12 @@ static getdecl get_window[] =
 /* Resources */
 
 static classvardecl rc_window[] =
-{ RC(NAME_background, "colour|pixmap", UXWIN("white", "@_graph_bg"), NULL),
-  RC(NAME_cursor, "cursor", UXWIN("top_left_arrow", "win_arrow"), NULL),
-  RC(NAME_pen,              "0..",	     "@_win_pen",      NULL),
-  RC(NAME_selectionHandles, RC_REFINE,	     "@nil",	       NULL),
-  RC(NAME_size,		    "size",	     "size(200,100)",  NULL),
-  RC(NAME_selectionFeedback, NULL,
-     "when(@colour_display,  colour,  invert)",
-     NULL),
+{ RC(NAME_background,        "colour|pixmap",  UXWIN("white", "@_graph_bg"), NULL),
+  RC(NAME_cursor,            "cursor",        "arrow",                       NULL),
+  RC(NAME_pen,               "0..",	      "@_win_pen",                   NULL),
+  RC(NAME_selectionHandles,  RC_REFINE,	      "@nil",	                 NULL),
+  RC(NAME_size,	         "size",	      "size(200,100)",               NULL),
+  RC(NAME_selectionFeedback, NULL,            "colour",                      NULL)
 };
 
 /* Class Declaration */

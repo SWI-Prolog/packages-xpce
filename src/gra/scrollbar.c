@@ -1019,7 +1019,7 @@ static classvardecl rc_scrollBar[] =
      "Width of the scroll_bar"),
   RC(NAME_autoHide, "bool", "@on",
      "Automatically hide bar if all is shown"),
-  RC(NAME_cursor, "cursor", UXWIN("top_left_arrow", "win_arrow"), NULL)
+  RC(NAME_cursor, "cursor", "arrow", NULL)
 };
 
 /* Class Declaration */

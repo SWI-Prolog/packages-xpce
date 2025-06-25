@@ -44,13 +44,16 @@ static struct standardCursor
 } standard_cursors[] =
 {					/* Map X11 names to SDL */
   { "arrow",               SDL_SYSTEM_CURSOR_DEFAULT },
+  { "win_arrow",           SDL_SYSTEM_CURSOR_DEFAULT },
   { "top_left_arrow",      SDL_SYSTEM_CURSOR_DEFAULT },
   { "cross_reverse",       SDL_SYSTEM_CURSOR_DEFAULT },
   { "watch",               SDL_SYSTEM_CURSOR_WAIT },
   { "hand2",               SDL_SYSTEM_CURSOR_POINTER },
   { "xterm",               SDL_SYSTEM_CURSOR_TEXT },
   { "sb_h_double_arrow",   SDL_SYSTEM_CURSOR_EW_RESIZE },
+  { "win_sizewe",          SDL_SYSTEM_CURSOR_EW_RESIZE },
   { "sb_v_double_arrow",   SDL_SYSTEM_CURSOR_NS_RESIZE },
+  { "win_sizens",          SDL_SYSTEM_CURSOR_NS_RESIZE },
   { "bottom_right_corner", SDL_SYSTEM_CURSOR_SE_RESIZE },
 					/* Native SDL names */
   { "default",	   SDL_SYSTEM_CURSOR_DEFAULT },
