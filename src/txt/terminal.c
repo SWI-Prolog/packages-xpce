@@ -35,6 +35,8 @@
 */
 
 #define _XOPEN_SOURCE 600
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0B00
 #include <h/kernel.h>
 #include <h/text.h>
 #include "terminal.h"
@@ -131,7 +133,7 @@ static void	typed_char(RlcData b, int chr);
 static void	rlc_putansi(RlcData b, int chr);
 static void	rlc_update(rlc_console c);
 static void	changed_caret(RlcData b);
-static bool	rlc_open_pty_pair(RlcData b);
+static bool	rlc_open_pty_pair(RlcData b, int cols, int rows);
 static void	rlc_close_connection(RlcData b);
 static ssize_t	rlc_send(RlcData b, const char *buffer, size_t count);
 static void	rlc_resize_pty(RlcData b, int cols, int rows);
@@ -150,9 +152,7 @@ static void	rlc_shift_up(RlcData b, int shift);
 static void Dprint_links(RlcTextLine tl, const char *msg);
 static void Dprint_line(RlcTextLine tl, bool links);
 static void Dprint_lines(RlcData b, int from, int to);
-#if HAVE_POSIX_OPENPT
 static void Dprint_chr(int chr);
-#endif
 static void Dprint_csi(RlcData b, int chr);
 
 static void
@@ -178,6 +178,10 @@ rlc_check_assertions(RlcData b)
 		 *         XPCE BINDING         *
 		 *******************************/
 
+#ifdef __WINDOWS__
+static status launchTerminalImage(TerminalImage ti, CharArray cmdline);
+#endif
+
 static status
 initialiseTerminalImage(TerminalImage ti, Int w, Int h)
 { if ( isDefault(w) )
@@ -194,7 +198,7 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h)
   ti->data = b;
   b->object = ti;
   rlc_init_text_dimensions(b, ti->font);
-  rlc_open_pty_pair(b);
+  rlc_open_pty_pair(b, 80, 25);
 
   succeed;
 }
@@ -688,6 +692,10 @@ static senddecl send_terminal_image[] =
      NAME_debug, "Print content of the window"),
   SM(NAME_windowLabel, 1, "char_array", windowLabelTerminalImage,
      NAME_label, "Called on OSC 0 <window title>"),
+#ifdef __WINDOWS__
+  SM(NAME_launch, 1, "char_array", launchTerminalImage,
+     NAME_process, "Run process in the terminal"),
+#endif
 };
 
 static getdecl get_terminal_image[] =
@@ -3278,6 +3286,33 @@ rlc_update(rlc_console c)
     rlc_request_redraw(b);
 }
 
+static status
+processClientOutputTerminalImage(TerminalImage ti,
+				 const char *buf, ssize_t count)
+{ if ( count > 0 )
+  { RlcData b = ti->data;
+    const char *i = buf;
+    bool debug = false;
+    DEBUG(NAME_term, debug = true);
+    if ( debug ) Cprintf("Received (%d bytes): ", count);
+    while( i < &buf[count] )
+    { int chr;
+      i = utf8_get_char(i, &chr);
+      rlc_putansi(b, chr);
+      if ( debug ) Dprint_chr(chr);
+    }
+    if ( debug ) Cprintf("\n");
+    rlc_update(b);
+    succeed;
+  } else if ( count == 0 )
+  { Cprintf("EOF\n");
+  } else
+  { Cprintf("Error\n");
+  }
+  fail;
+}
+
+
 #if HAVE_POSIX_OPENPT
 		 /*******************************
 		 *           PTY CODE           *
@@ -3295,7 +3330,7 @@ rlc_update(rlc_console c)
  */
 
 static bool
-rlc_open_pty_pair(RlcData b)
+rlc_open_pty_pair(RlcData b, int cols, int rows)
 { memset(&b->pty, 0, sizeof(b->pty));
 
   b->pty.master_fd = posix_openpt(O_RDWR | O_NOCTTY);
@@ -3367,26 +3402,7 @@ receiveTerminalImage(TerminalImage ti)
   RlcData b = ti->data;
 
   ssize_t count = read(b->pty.master_fd, buf, sizeof(buf));
-  if ( count > 0 )
-  { char *i = buf;
-    bool debug = false;
-    DEBUG(NAME_term, debug = true);
-    if ( debug ) Cprintf("Received (%d bytes): ", count);
-    while( i < &buf[count] )
-    { int chr;
-      i = utf8_get_char(i, &chr);
-      rlc_putansi(b, chr);
-      if ( debug ) Dprint_chr(chr);
-    }
-    if ( debug ) Cprintf("\n");
-    rlc_update(b);
-    succeed;
-  } else if ( count == 0 )
-  { Cprintf("EOF\n");
-  } else
-  { Cprintf("Error\n");
-  }
-  fail;
+  return processClientOutputTerminalImage(ti, buf, count);
 }
 
 static void
@@ -3408,37 +3424,119 @@ rlc_resize_pty(RlcData b, int cols, int rows)
   }
 }
 
-#else/*HAVE_POSIX_OPENPT*/
+#elif __WINDOWS__
+#include <msw/mswin.h>
 
 static bool
-rlc_open_pty_pair(RlcData b)
-{ Cprintf("stub: rlc_open_pty_pair()\n");
-  return false;
+rlc_open_pty_pair(RlcData b, int cols, int rows)
+{ HANDLE hPout, hPin;		/* Process side handles */
+
+  if ( !CreatePipeEx(&b->ptycon.hIn,  &hPout, NULL, 0, FILE_FLAG_OVERLAPPED, 0) ||
+       !CreatePipeEx(&hPin, &b->ptycon.hOut,  NULL, 0, 0, 0) )
+  { Cprintf("Failed to create ptyCon pipes\n");
+    return false;
+  }
+
+  COORD size = { cols, rows };
+  if ( CreatePseudoConsole(size, hPin, hPout, 0, &b->ptycon.hPC) != S_OK )
+  { Cprintf("Failed to create PtyCon\n");
+    return false;
+  }
+  CloseHandle(hPin);
+  CloseHandle(hPout);
+
+  b->ptycon.watch = add_pipe_to_watch(b->ptycon.hIn, FD_READY_TERMINAL, b->object);
+
+  DEBUG(NAME_term, Cprintf("Created PtyCon for %s\n", pp(b->object)));
+  return true;
 }
 
 static void
 rlc_close_connection(RlcData b)
-{ Cprintf("stub: rlc_close_connection()\n");
+{ HANDLE h;
+  if ( (h=b->ptycon.hPC)  ) { b->ptycon.hPC  = NULL; ClosePseudoConsole(h); }
+  if ( (h=b->ptycon.hIn)  ) { b->ptycon.hIn  = NULL; CloseHandle(h); }
+  if ( (h=b->ptycon.hOut) ) { b->ptycon.hOut = NULL; CloseHandle(h); }
 }
 
 static ssize_t
 rlc_send(RlcData b, const char *buffer, size_t count)
-{ Cprintf("stub: rlc_send()\n");
-  return -1;
+{ DWORD written;
+
+  DEBUG(NAME_term, Cprintf("Sending %zd bytes to %p\n",
+			   count, b->ptycon.hOut));
+  if ( b->ptycon.hOut )
+  { if ( WriteFile(b->ptycon.hOut, buffer, count, &written, NULL) )
+    { return written;
+    } else
+    { Cprintf("Send failed: %s\n", pp(WinStrError(GetLastError())));
+      return -1;
+    }
+  } else
+  { Cprintf("%s: nowhere to send data\n", pp(b->object));
+    return -1;
+  }
 }
 
 status
 receiveTerminalImage(TerminalImage ti)
-{ Cprintf("stub: receiveTerminalImage()\n");
-  fail;
+{ char buf[PIPE_READ_CHUNK];
+  RlcData b = ti->data;
+  ssize_t rc = read_watch(b->ptycon.watch, buf, sizeof(buf));
+
+  return processClientOutputTerminalImage(ti, buf, rc);
 }
 
 static void
 rlc_resize_pty(RlcData b, int cols, int rows)
-{ Cprintf("stub: rlc_resize_pty()\n");
+{ if ( b->ptycon.hPC )
+  { COORD size = { cols, rows };
+    ResizePseudoConsole(b->ptycon.hPC, size);
+  }
 }
 
-#endif/*HAVE_POSIX_OPENPT*/
+static status
+launchTerminalImage(TerminalImage ti, CharArray cmdline)
+{ RlcData b = ti->data;
+  STARTUPINFOEXW siEx = { .StartupInfo = { .cb = sizeof(siEx) } };
+  SIZE_T attrSize = 0;
+
+  InitializeProcThreadAttributeList(NULL, 1, 0, &attrSize);
+  siEx.lpAttributeList = HeapAlloc(GetProcessHeap(), 0, attrSize);
+  if ( !InitializeProcThreadAttributeList(siEx.lpAttributeList,
+					  1, 0, &attrSize) )
+  { Cprintf("Failed to create thread attribute list\n");
+    fail;
+  }
+  if ( !UpdateProcThreadAttribute(
+	 siEx.lpAttributeList,
+	 0,
+	 PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE,
+	 b->ptycon.hPC,
+	 sizeof(b->ptycon.hPC),
+	 NULL,
+	 NULL))
+  { Cprintf("Failed to set hPC in thread attribute list\n");
+    fail;
+  }
+
+  PROCESS_INFORMATION piClient;
+  BOOL ok = CreateProcessW(
+    NULL,
+    charArrayToWC(cmdline, NULL),
+    NULL, NULL, TRUE,
+    EXTENDED_STARTUPINFO_PRESENT,
+    NULL, NULL,
+    &siEx.StartupInfo,
+    &piClient);
+
+  DeleteProcThreadAttributeList(siEx.lpAttributeList);
+  DEBUG(NAME_term, Cprintf("Started process %s on %s\n",
+			   pp(cmdline), pp(ti)));
+  return ok;
+}
+
+#endif
 
 		 /*******************************
 		 *         DEBUG PRINT          *
@@ -3477,7 +3575,6 @@ Dprint_lines(RlcData b, int from, int to)
   }
 }
 
-#if HAVE_POSIX_OPENPT		/* used in stubs */
 static void
 Dprint_chr(int chr)
 { if ( chr >= ' ' && chr <= 127 )
@@ -3493,7 +3590,6 @@ Dprint_chr(int chr)
   else
     Cprintf("\\\\u%04x", chr);
 }
-#endif
 
 static void
 Dprint_csi(RlcData b, int chr)

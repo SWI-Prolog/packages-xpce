@@ -41,6 +41,7 @@
 typedef HANDLE waitable_t;
 typedef SOCKET socket_t;
 #define NO_WAITABLE (NULL)
+#define PIPE_READ_CHUNK 4096
 #else
 typedef int waitable_t;
 typedef int socket_t;
@@ -58,12 +59,16 @@ typedef enum
 } watch_state;
 
 typedef struct
-{ waitable_t	 fd;		/* FD/HANDLE we are watching */
+{ _Atomic watch_state	state;	/* WATCH_* */
+  waitable_t	 fd;		/* FD/HANDLE we are watching */
 #ifdef __WINDOWS__
   socket_t       sock;		/* socket we are watching */
+  HANDLE	 hPipe;		/* Pipe handle */
+  OVERLAPPED	 overlapped;	/* ReadFile() overlapped struct */
+  char		*buffer;	/* Overlapped data buffer */
+  bool		 pending;	/* We started a ReadFile() */
 #endif
   fd_ready_codes code;		/* SDL3 event.user.code */
-  _Atomic watch_state	state;	/* WATCH_* */
   Any		userdata;	/* SDL3 event.user.data2 */
 } FDWatch;
 
@@ -74,4 +79,10 @@ FDWatch *add_fd_to_watch(waitable_t fd, int32_t code, void *userdata);
 FDWatch *add_socket_to_watch(socket_t fd, int32_t code, void *userdata);
 void	 remove_fd_watch(FDWatch *watch);
 void	 processed_fd_watch(FDWatch *watch);
+
+#ifdef __WINDOWS__
+FDWatch *add_pipe_to_watch(HANDLE hPipe, int32_t code, void *userdata);
+ssize_t  read_watch(FDWatch *watch, char *buffer, size_t size);
+#endif
+
 #endif /*SDL_INPUT_H_INCLUDED*/

@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1995-2022, University of Amsterdam
+    Copyright (c)  1995-2025, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -685,6 +685,77 @@ getWinDirectoryDisplay(DisplayObj d,
   }
 
   CoUninitialize();
+
+  return result;
+}
+
+		 /*******************************
+		 *            PIPES             *
+		 *******************************/
+
+/*
+ * CreatePipeEx - create an anonymous-like pipe with optional overlapped support.
+ * Works by creating a local named pipe with a unique name and connecting both ends.
+ *
+ * Parameters:
+ *   hReadPipe    - Receives the read handle
+ *   hWritePipe   - Receives the write handle
+ *   lpPipeAttributes - Security attributes
+ *   nSize        - Buffer size
+ *   dwReadMode   - Flags for read handle (e.g., FILE_FLAG_OVERLAPPED)
+ *   dwWriteMode  - Flags for write handle (e.g., FILE_FLAG_OVERLAPPED)
+ *
+ * Returns:
+ *   TRUE on success, FALSE on failure (call GetLastError()).
+ */
+
+static volatile long pipe_gensym = 0;
+
+BOOL
+CreatePipeEx(PHANDLE hReadPipe,
+	     PHANDLE hWritePipe,
+	     LPSECURITY_ATTRIBUTES lpPipeAttributes,
+	     DWORD nSize,
+	     DWORD dwReadMode,
+	     DWORD dwWriteMode)
+{ BOOL result = FALSE;
+  HANDLE hReadTmp = INVALID_HANDLE_VALUE, hWriteTmp = INVALID_HANDLE_VALUE;
+  CHAR pipeName[MAX_PATH];
+
+  // Generate a unique name using process ID + tick count
+  sprintf(pipeName, "\\\\.\\Pipe\\anon.%lu.%lu",
+	  GetCurrentProcessId(), InterlockedIncrement(&pipe_gensym));
+
+  hReadTmp = CreateNamedPipeA(pipeName,
+			      PIPE_ACCESS_INBOUND | dwReadMode,
+			      PIPE_TYPE_BYTE | PIPE_WAIT,
+			      1,           // max instances
+			      nSize, nSize,
+			      0,           // default timeout
+			      lpPipeAttributes);
+  if (hReadTmp == INVALID_HANDLE_VALUE)
+    goto cleanup;
+
+  hWriteTmp = CreateFileA(pipeName,
+			  GENERIC_WRITE,
+			  0,                      // no sharing
+			  lpPipeAttributes,
+			  OPEN_EXISTING,
+			  FILE_ATTRIBUTE_NORMAL | dwWriteMode,
+			  NULL);
+  if (hWriteTmp == INVALID_HANDLE_VALUE)
+    goto cleanup;
+
+  *hReadPipe = hReadTmp;
+  *hWritePipe = hWriteTmp;
+  result = TRUE;
+  hReadTmp = hWriteTmp = INVALID_HANDLE_VALUE; // ownership transferred
+
+cleanup:
+  if (hReadTmp != INVALID_HANDLE_VALUE)
+    CloseHandle(hReadTmp);
+  if (hWriteTmp != INVALID_HANDLE_VALUE)
+    CloseHandle(hWriteTmp);
 
   return result;
 }

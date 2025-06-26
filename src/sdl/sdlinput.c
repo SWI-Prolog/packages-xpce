@@ -52,6 +52,9 @@
 #include <errno.h>
 #include <stdbool.h>
 #include "sdlinput.h"
+#ifdef __WINDOWS__
+#include "../msw/mswin.h"
+#endif
 
 #ifdef __WINDOWS__
 #define Pri_WAIT "%p"
@@ -63,12 +66,13 @@
 
 #ifdef __WINDOWS__
 static HANDLE handles[MAX_FDS];
+static HANDLE control_event;
 #else
 static struct pollfd poll_fds[MAX_FDS];
+static waitable_t control_pipe[2];
 #endif
 static int meta_id[MAX_FDS];
 static FDWatch fd_meta[MAX_FDS] = {0};
-static waitable_t control_pipe[2];
 static atomic_int watch_max = 0;
 static SDL_Thread *watcher_thread = NULL;
 
@@ -93,7 +97,29 @@ sdl_signal_watch(FDWatch *watch)
     ev.user.data2 = watch->userdata;
     lock_watch_userdata(watch);
     SDL_PushEvent(&ev);
+#ifdef __WINDOWS__
+    watch->pending = false;
+#endif
   }
+}
+
+static void
+releaseWatch(FDWatch *watch)
+{
+#ifdef __WINDOWS__
+  if ( watch->hPipe )
+  { HANDLE h;
+    if ( (h=watch->overlapped.hEvent) )
+    { watch->overlapped.hEvent = NULL;
+      CloseHandle(watch->overlapped.hEvent);
+    }
+    if ( watch->buffer )
+    { unalloc(PIPE_READ_CHUNK, watch->buffer);
+      watch->buffer = NULL;
+    }
+  }
+#endif
+  watch->state = WATCH_FREE;
 }
 
 static int
@@ -101,27 +127,45 @@ poll_thread_fn(void *unused)
 { while (true)
   { int nfds = 1;		/* 0 is for our control pipe */
     bool removed = false;
+    FDWatch *watch = fd_meta;
 
-    for(int i=0; i<=watch_max; i++)
-    { if ( fd_meta[i].state == WATCH_ACTIVE )
+    for(int i=0; i<=watch_max; i++, watch++)
+    { if ( watch->state == WATCH_ACTIVE )
       {
 #ifdef __WINDOWS__
-	handles[nfds] = fd_meta[i].fd;
+	if ( watch->hPipe )	/* A pipe/...: use overlapped I/O */
+	{ if ( !watch->pending )
+	  { if ( ReadFile(watch->hPipe, watch->buffer, PIPE_READ_CHUNK,
+			  NULL, &watch->overlapped) )
+	    { DEBUG(NAME_stream, Cprintf("Pipe %d immediately ready\n", i));
+	      sdl_signal_watch(watch);
+	      continue;
+	    } else
+	    { assert(GetLastError() == ERROR_IO_PENDING);
+	      watch->pending = true;
+	      DEBUG(NAME_stream, Cprintf("Pipe %d pending\n", i));
+	    }
+	  }
+	  if ( watch->pending )
+	    handles[nfds] = watch->fd;
+	} else
+	{ handles[nfds] = watch->fd; /* A normal waitable handle */
+	}
 #else
-	poll_fds[nfds].fd = fd_meta[i].fd;
+	poll_fds[nfds].fd = watch->fd;
         poll_fds[nfds].events = POLLIN;
         poll_fds[nfds].revents = 0;
 #endif
         meta_id[nfds] = i;
         nfds++;
-      } else if ( fd_meta[i].state == WATCH_REMOVE )
-      { fd_meta[i].state = WATCH_FREE;
+      } else if ( watch->state == WATCH_REMOVE )
+      { releaseWatch(watch);
 	removed = true;
       }
     }
     if ( removed )
     { for(int i=MAX_FDS-1; i>=0; i--)
-      { if ( fd_meta[i].state != WATCH_FREE )
+      { if ( watch->state != WATCH_FREE )
 	{ int expected = watch_max;
 	  if ( i < watch_max )
 	    atomic_compare_exchange_strong(&watch_max, &expected, i);
@@ -131,22 +175,19 @@ poll_thread_fn(void *unused)
     }
 
 #ifdef __WINDOWS__
-    DWORD rc = MsgWaitForMultipleObjects(
-      nfds,
-      handles,
-      FALSE,
-      INFINITE,
-      0);			/* QS_* flags. See GetQueueStatus() */
+    //Cprintf("Waiting for %d handles\n", nfds);
+    DWORD rc = WaitForMultipleObjects(nfds,
+				      handles,
+				      FALSE,
+				      INFINITE);
 
     if ( rc >= WAIT_OBJECT_0 && rc < WAIT_OBJECT_0+nfds )
-    { if ( rc == WAIT_OBJECT_0 ||
-	   WaitForSingleObject(handles[0],0) == WAIT_OBJECT_0 )
-      { char buffer[128];
-	ReadFile(control_pipe[0], buffer, sizeof(buffer), NULL, NULL);
-      }
-      if ( rc > WAIT_OBJECT_0 )
-      { int i = rc-WAIT_OBJECT_0;
-	FDWatch *watch = &fd_meta[meta_id[i]];
+    { int i = rc-WAIT_OBJECT_0;
+      if ( i == 0  )
+      { //Cprintf("Control event\n");
+	ResetEvent(control_event);
+      } else
+      { FDWatch *watch = &fd_meta[meta_id[i]];
 	sdl_signal_watch(watch);
       }
     }
@@ -178,8 +219,9 @@ bool
 start_fd_watcher_thread(void)
 {
 #if __WINDOWS__
-  CreatePipe(&control_pipe[0], &control_pipe[1], NULL, 512);
-  handles[0] = control_pipe[0];
+  if ( !(control_event = CreateEvent(NULL, TRUE, FALSE, 0)) )
+    return false;
+  handles[0] = control_event;
 #else
   if ( pipe(control_pipe) < 0 )
     return false;
@@ -198,51 +240,103 @@ static void
 signal_watcher(char c)
 {
 #ifdef __WINDOWS__
-  WriteFile(control_pipe[1], &c, 1, NULL, NULL);
+  SetEvent(control_event);
 #else
   write(control_pipe[1], &c, 1);
 #endif
 }
+
+static bool
+claim_watch(FDWatch *watch)
+{ if ( cmp_and_set_watch(watch, WATCH_FREE, WATCH_RESERVED) )
+  { memset(&watch->fd, 0, sizeof(*watch)-offsetof(FDWatch, fd));
+    DEBUG(NAME_stream, Cprintf("Claimed %d\n", watch-fd_meta));
+    return true;
+  }
+
+  return false;
+}
+
+static FDWatch *
+start_watch(FDWatch *watch, int32_t code, void *userdata)
+{ int i = watch-fd_meta;
+
+  watch->code     = code;
+  watch->userdata = userdata;
+  watch->state    = WATCH_ACTIVE;
+  if ( i > watch_max )
+    watch_max = i;
+  signal_watcher('+');
+  return watch;
+}
+
 
 FDWatch *
 add_fd_to_watch(waitable_t fd, int32_t code, void *userdata)
 { FDWatch *watch = fd_meta;
 
   for(int i=0; i<MAX_FDS; i++, watch++)
-  { if ( cmp_and_set_watch(watch, WATCH_FREE, WATCH_RESERVED) )
+  { if ( claim_watch(watch) )
     { watch->fd       = fd;
-      watch->code     = code;
-      watch->userdata = userdata;
-      watch->state    = WATCH_ACTIVE;
-      if ( i > watch_max )
-	watch_max = i;
-      signal_watcher('+');
-      return watch;
+      return start_watch(watch, code, userdata);
     }
   }
 
   return NULL;
 }
 
+#ifdef __WINDOWS__
+FDWatch *
+add_pipe_to_watch(HANDLE hPipe, int32_t code, void *userdata)
+{ FDWatch *watch = fd_meta;
+
+  for(int i=0; i<MAX_FDS; i++, watch++)
+  { if ( claim_watch(watch) )
+    { watch->hPipe = hPipe;
+      memset(&watch->overlapped, 0, sizeof(watch->overlapped));
+      watch->overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+      watch->fd = watch->overlapped.hEvent;
+      watch->buffer = alloc(PIPE_READ_CHUNK);
+      return start_watch(watch, code, userdata);
+    }
+  }
+
+  return NULL;
+}
+
+ssize_t
+read_watch(FDWatch *watch, char *buffer, size_t size)
+{ DWORD bytes;
+  if ( GetOverlappedResult(watch->hPipe, &watch->overlapped, &bytes, FALSE) )
+  { assert(bytes <= size);
+    memcpy(buffer, watch->buffer, bytes);
+    if ( bytes == 0 )
+    { Cprintf("Got 0 bytes?\n");
+      exit(1);
+    }
+    return bytes;
+  } else
+  { Cprintf("No overlapped result: %s\n", pp(WinStrError(GetLastError())));
+    return -1;
+  }
+}
+
+
+#endif
+
 FDWatch *
 add_socket_to_watch(socket_t fd, int32_t code, void *userdata)
 { FDWatch *watch = fd_meta;
 
   for(int i=0; i<MAX_FDS; i++, watch++)
-  { if ( cmp_and_set_watch(watch, WATCH_FREE, WATCH_RESERVED) )
+  { if ( claim_watch(watch) )
     {
 #ifdef __WINDOWS__
       watch->sock     = fd;
 #else
       watch->fd       = fd;
 #endif
-      watch->code     = code;
-      watch->userdata = userdata;
-      watch->state    = WATCH_ACTIVE;
-      if ( i > watch_max )
-	watch_max = i;
-      signal_watcher('+');
-      return watch;
+      return start_watch(watch, code, userdata);
     }
   }
 
