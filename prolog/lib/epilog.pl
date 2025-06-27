@@ -481,6 +481,13 @@ connect(PT, Title) :-
     ->  fail
     ).
 
+%!  thread_run_interactor(+PrologTerminal, +CreatorThread, +PTY, +Init,
+%!                        +Goal, +Title, +History) is det.
+%
+%   Run the Prolog terminal main thread. Note that this code cannot talk
+%   to xpce as  it  will  deadlock.  That   is  why  all  relevant  xpce
+%   interaction is done in connect/2 above.
+
 thread_run_interactor(PT, Creator, PTY, Init, Goal, Title, History) :-
     set_prolog_flag(query_debug_settings, debug(false, false)),
     Error = error(Formal,_),
