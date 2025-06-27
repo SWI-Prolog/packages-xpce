@@ -236,7 +236,10 @@ typedef enum
   CMD_G0,
   CMD_G1,
   CMD_ANSI,
-  CMD_LINK,
+  CMD_OSC,			/* \e] */
+  CMD_OSCARG,			/* \e]<digit> */
+  CMD_OSCTEXT,			/* \e]param; */
+  CMD_LINK,			/* \e]8 */
   CMD_LINKARG,
   CMD_DEC_PRIVATE
 } ansi_state;

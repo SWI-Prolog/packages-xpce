@@ -556,6 +556,14 @@ ansiColoursTerminalImage(TerminalImage ti, Vector colours)
 }
 
 static status
+windowLabelTerminalImage(TerminalImage ti, CharArray label)
+{ PceWindow sw = getWindowGraphical((Graphical)ti);
+  if ( sw )
+    return send(sw, NAME_label, label, EAV);
+  fail;
+}
+
+static status
 insertTerminalImage(TerminalImage ti, CharArray ca)
 { PceString s = &ca->data;
 
@@ -678,6 +686,8 @@ static senddecl send_terminal_image[] =
      NAME_insert, "Insert text at caret (moves caret)"),
   SM(NAME_print, 2, T_print, printTerminalImage,
      NAME_debug, "Print content of the window"),
+  SM(NAME_windowLabel, 1, "char_array", windowLabelTerminalImage,
+     NAME_label, "Called on OSC 0 <window title>"),
 };
 
 static getdecl get_terminal_image[] =
@@ -2748,6 +2758,25 @@ rlc_clear_dec_mode(RlcData b, int mode)
   }
 }
 
+static void
+osc_command(RlcData b, int param, const uchar_t *link)
+{ switch(param)
+  { case 0:
+    { AnswerMark mark;
+      StringObj s = TCHAR2String(link);
+      markAnswerStack(mark);
+      addCodeReference(s);
+      send(b->object, NAME_windowLabel, s, EAV);
+      delCodeReference(s);
+      freeableObj(s);
+      rewindAnswerStack(mark, NIL);
+      break;
+    }
+    default:
+      Cprintf("Unknown OSC command: %d\n", param);
+  }
+}
+
 /** The "ST" sequence is either \e\\ or \a
  */
 static bool
@@ -2851,8 +2880,7 @@ rlc_putansi(RlcData b, int chr)
 	  b->argstat = 0;		/* no arg */
 	  break;
 	case ']':
-	  b->cmdstat = CMD_LINK;
-	  b->must_see = "8;;";
+	  b->cmdstat = CMD_OSC;
 	  break;
 	case '(':
 	  b->cmdstat = CMD_G0;
@@ -2899,6 +2927,51 @@ rlc_putansi(RlcData b, int chr)
 	  break;
       }
       b->cmdstat = CMD_INITIAL;
+      break;
+    case CMD_OSC:
+      switch ( chr )
+      { case '8':
+	{ b->must_see = ";;";
+	  b->cmdstat = CMD_LINK;
+	  break;
+	}
+	default:
+	{ if ( chr >= '0' && chr <= '9' )
+	  { b->cmdstat = CMD_OSCARG;
+	    b->argc    = 0;
+	    b->argstat = 1;
+	    b->argv[b->argc] = (chr - '0');
+	    break;
+	  }
+	  b->cmdstat = CMD_INITIAL;
+	}
+      }
+      break;
+    case CMD_OSCTEXT:
+      if ( b->link_len < ANSI_MAX_LINK-1 )
+      { bool end = false;
+	b->link[b->link_len++] = chr;
+	b->link[b->link_len] = 0;
+	if ( chr == '\a' )
+	{ b->link_len--;
+	  end = true;
+	} else if ( chr == '\\' && b->link_len >= 2 &&
+		    b->link[b->link_len-2] == '\e' )
+	{ b->link_len -= 2;
+	  end = true;
+	}
+	if ( end )
+	{ b->link[b->link_len] = 0;
+	  osc_command(b, b->argv[0], b->link);
+	  b->cmdstat = CMD_INITIAL;
+	}
+	break;
+      } else			/* too long, emit as text */
+      { b->cmdstat = CMD_INITIAL;
+	b->link[b->link_len] = 0;
+	for(uchar_t *split=b->link; *split; split++)
+	  rlc_put(b, *split);
+      }
       break;
     case CMD_LINK:
       if ( b->must_see && b->must_see[0] == chr )
@@ -2960,6 +3033,7 @@ rlc_putansi(RlcData b, int chr)
       }
     case CMD_ANSI:			/* ESC [ */
     case CMD_DEC_PRIVATE:		/* ESC [ ? */
+    case CMD_OSCARG:			/* ESC ] <digit> */
       if ( chr >= '0' && chr <= '9' )
       { if ( !b->argstat )
 	{ b->argv[b->argc] = (chr - '0');
@@ -2982,6 +3056,10 @@ rlc_putansi(RlcData b, int chr)
       }
       switch(chr)
       { case ';':
+	  if ( b->cmdstat == CMD_OSCARG )
+	  { b->cmdstat = CMD_OSCTEXT;
+	    b->link_len = 0;
+	  }
 	  return;			/* wait for more args */
 	case 'H':
 	case 'f':
