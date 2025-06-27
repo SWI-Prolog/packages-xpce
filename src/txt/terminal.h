@@ -326,6 +326,9 @@ typedef struct rlc_data
   { HANDLE hPC;				/* The pseudo console */
     HANDLE hIn;				/* For reading from the process */
     HANDLE hOut;			/* For writing to the process */
+    HANDLE hTaskIn;			/* The client read handle */
+    HANDLE hTaskOut;			/* The client output handle */
+    HANDLE hTaskError;			/* The client error handle */
     FDWatch *watch;			/* Watch for write to terminal */
   } ptycon;
 #endif

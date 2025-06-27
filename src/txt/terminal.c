@@ -34,15 +34,17 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define _XOPEN_SOURCE 600
+#define _XOPEN_SOURCE 600	/* Get PTY API */
 #undef _WIN32_WINNT
-#define _WIN32_WINNT 0x0B00
+#define _WIN32_WINNT 0x0B00	/* Get PseudoConsole API */
+#define SWIPL_WINDOWS_NATIVE_ACCESS 1
 #include <h/kernel.h>
 #include <h/text.h>
 #include "terminal.h"
 #ifdef HAVE_POLL
 #include <poll.h>
 #endif
+#include <SWI-Stream.h>
 
 /* This file  implements a terminal  emulator in XPCE.  A  terminal is
  * connected to a Prolog thread, the _client_.
@@ -3434,37 +3436,98 @@ rlc_resize_pty(RlcData b, int cols, int rows)
 #include <msw/mswin.h>
 
 static bool
-rlc_open_pty_pair(RlcData b, int cols, int rows)
-{ HANDLE hPout, hPin;		/* Process side handles */
+rlc_create_pipes(RlcData b)
+{ if ( b->ptycon.hIn && b->ptycon.hOut )
+    return true;
 
-  if ( !CreatePipeEx(&b->ptycon.hIn,  &hPout, NULL,
+  if ( !CreatePipeEx(&b->ptycon.hIn, &b->ptycon.hTaskOut, NULL,
 		     0, FILE_FLAG_OVERLAPPED, 0) ||
-       !CreatePipeEx(&hPin, &b->ptycon.hOut,  NULL,
+       !CreatePipeEx(&b->ptycon.hTaskIn, &b->ptycon.hOut,  NULL,
 		     0, 0, 0) )
   { Cprintf("Failed to create ptyCon pipes\n");
     return false;
   }
 
+  b->ptycon.watch = add_pipe_to_watch(b->ptycon.hIn, FD_READY_TERMINAL,
+				      b->object);
+
+  return true;
+}
+
+static bool
+rlc_open_pty_pair(RlcData b, int cols, int rows)
+{ if ( !rlc_create_pipes(b) )
+    return false;
+
   COORD size = { cols, rows };
-  if ( CreatePseudoConsole(size, hPin, hPout, 0, &b->ptycon.hPC) != S_OK )
+  if ( CreatePseudoConsole(size, b->ptycon.hTaskIn, b->ptycon.hTaskOut,
+			   0, &b->ptycon.hPC) != S_OK )
   { Cprintf("Failed to create PtyCon\n");
     return false;
   }
-  CloseHandle(hPin);
-  CloseHandle(hPout);
-
-  b->ptycon.watch = add_pipe_to_watch(b->ptycon.hIn, FD_READY_TERMINAL, b->object);
 
   DEBUG(NAME_term, Cprintf("Created PtyCon for %s\n", pp(b->object)));
   return true;
 }
 
+/**
+ * Get the Prolog streams for the terminal I/O.
+ */
+
+bool
+getPrologStreamTerminalImage(TerminalImage ti,
+			     IOSTREAM **in, IOSTREAM **out, IOSTREAM **error)
+{ RlcData b = ti->data;
+
+  if ( !rlc_create_pipes(b) )
+    return false;
+  if ( !b->ptycon.hTaskError )
+  { if ( !DuplicateHandle(GetCurrentProcess(), b->ptycon.hTaskOut,
+			  GetCurrentProcess(), &b->ptycon.hTaskError,
+			  0, TRUE, DUPLICATE_SAME_ACCESS) )
+    { Cprintf("Failed to dup out to error\n");
+      return false;
+    }
+
+    *in    = Swin_open_handle(b->ptycon.hTaskIn,    "r");
+    *out   = Swin_open_handle(b->ptycon.hTaskOut,   "r");
+    *error = Swin_open_handle(b->ptycon.hTaskError, "r");
+    (*in)->encoding    = ENC_UTF8;
+    (*out)->encoding   = ENC_UTF8;
+    (*error)->encoding = ENC_UTF8;
+    (*in)->flags &= ~(SIO_BOM);
+    return true;
+  }
+
+  return false;
+}
+
+
+static void
+closeHandlePtr(HANDLE *ph)
+{ HANDLE h = *ph;
+  if ( h )
+  { *ph = NULL;
+    CloseHandle(h);
+  }
+}
+
 static void
 rlc_close_connection(RlcData b)
 { HANDLE h;
-  if ( (h=b->ptycon.hPC)  ) { b->ptycon.hPC  = NULL; ClosePseudoConsole(h); }
-  if ( (h=b->ptycon.hIn)  ) { b->ptycon.hIn  = NULL; CloseHandle(h); }
-  if ( (h=b->ptycon.hOut) ) { b->ptycon.hOut = NULL; CloseHandle(h); }
+  if ( b->ptycon.watch )
+  { remove_fd_watch(b->ptycon.watch);
+    b->ptycon.watch = NULL;
+  }
+  if ( (h=b->ptycon.hPC) )
+  { b->ptycon.hPC = NULL;
+    ClosePseudoConsole(h);
+  }
+  closeHandlePtr(&b->ptycon.hIn);
+  closeHandlePtr(&b->ptycon.hOut);
+  closeHandlePtr(&b->ptycon.hTaskIn);
+  closeHandlePtr(&b->ptycon.hTaskOut);
+  closeHandlePtr(&b->ptycon.hTaskError);
 }
 
 static ssize_t
