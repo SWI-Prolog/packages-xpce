@@ -198,7 +198,6 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h)
   ti->data = b;
   b->object = ti;
   rlc_init_text_dimensions(b, ti->font);
-  rlc_open_pty_pair(b, 80, 25);
 
   succeed;
 }
@@ -594,9 +593,14 @@ sendTerminalImage(TerminalImage ti, CharArray ca)
 #if HAVE_POSIX_OPENPT
 static Name
 getPtyNameTerminalImage(TerminalImage ti)
-{ if ( ti->data->pty.slave_name[0] )
-    return CtoName(ti->data->pty.slave_name);
-  fail;
+{ RlcData b = ti->data;
+
+  if ( !b->pty.slave_name[0] )
+  { if ( !rlc_open_pty_pair(b, 80, 25) )
+      fail;
+  }
+
+  return CtoName(b->pty.slave_name);
 }
 #endif
 
@@ -3433,8 +3437,10 @@ static bool
 rlc_open_pty_pair(RlcData b, int cols, int rows)
 { HANDLE hPout, hPin;		/* Process side handles */
 
-  if ( !CreatePipeEx(&b->ptycon.hIn,  &hPout, NULL, 0, FILE_FLAG_OVERLAPPED, 0) ||
-       !CreatePipeEx(&hPin, &b->ptycon.hOut,  NULL, 0, 0, 0) )
+  if ( !CreatePipeEx(&b->ptycon.hIn,  &hPout, NULL,
+		     0, FILE_FLAG_OVERLAPPED, 0) ||
+       !CreatePipeEx(&hPin, &b->ptycon.hOut,  NULL,
+		     0, 0, 0) )
   { Cprintf("Failed to create ptyCon pipes\n");
     return false;
   }
@@ -3502,6 +3508,10 @@ launchTerminalImage(TerminalImage ti, CharArray cmdline)
 { RlcData b = ti->data;
   STARTUPINFOEXW siEx = { .StartupInfo = { .cb = sizeof(siEx) } };
   SIZE_T attrSize = 0;
+
+  if ( !b->ptycon.hPC &&
+       !rlc_open_pty_pair(b, 80, 25) )
+    fail;
 
   InitializeProcThreadAttributeList(NULL, 1, 0, &attrSize);
   siEx.lpAttributeList = HeapAlloc(GetProcessHeap(), 0, attrSize);
