@@ -3169,6 +3169,8 @@ rlc_putansi(RlcData b, int chr)
 	  { DEBUG(NAME_term, Cprintf("ESC[22;0;0t: un-minimize\n"));
 	  } else if ( b->argv[0] == 23 )
 	  { DEBUG(NAME_term, Cprintf("ESC[23;0;0t: minimize\n"));
+	  } else if ( b->argv[0] == 8 )
+	  { DEBUG(NAME_term, Cprintf("ESC[8;rows;colst: set size\n"));
 	  } else
 	    Dprint_csi(b, chr);
 	  break;
