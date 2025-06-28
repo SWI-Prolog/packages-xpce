@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        wielemak@science.uva.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2011-2024, University of Amsterdam
+    Copyright (c)  2011-2025, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -186,6 +186,8 @@ static foreign_t	pl_pce_method_implementation(term_t id, term_t msg);
 static foreign_t	pl_pce_open(term_t t, term_t mode, term_t plhandle);
 static foreign_t	pl_pce_postscript_stream(term_t ps);
 static foreign_t	pl_pce_dispatch_event(term_t Fd, term_t timeout);
+static foreign_t	pl_pce_open_terminal_image(term_t ti, term_t in,
+						   term_t out, term_t err);
 
 extern install_t	install_pcecall(void);
 
@@ -689,6 +691,8 @@ install_pl2xpce(void)
 		      pl_pce_postscript_stream, 0);
   PL_register_foreign("pce_dispatch", 2,
 		      pl_pce_dispatch_event, 0);
+  PL_register_foreign("pce_open_terminal_image", 4,
+		      pl_pce_open_terminal_image, 0);
 
 #ifndef __WINDOWS__
   PL_license("lgplv2+", "xpce (pango library)");
@@ -2844,6 +2848,28 @@ pl_pce_dispatch_event(term_t Fd, term_t timeout)
 
   pceDispatch(fd, tmo*1000.0);
   return true;
+}
+
+static foreign_t
+pl_pce_open_terminal_image(term_t ti,
+			   term_t in, term_t out, term_t err)
+{ PceObject obj;
+  if ( (obj = termToReceiver(ti)) )
+  { IOSTREAM *i, *o, *e;
+
+    if ( getPrologStreamTerminalImage(obj, &i, &o, &e) )
+    { if ( PL_unify_stream(in, i) &&
+	   PL_unify_stream(out, o) &&
+	   PL_unify_stream(err, e) )
+	return true;
+
+      Sclose(i);
+      Sclose(o);
+      Sclose(e);
+    }
+  }
+
+  return false;
 }
 
 #endif /*SWI*/

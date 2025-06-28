@@ -61,6 +61,7 @@
             pce_dispatch/0,
 
             pce_postscript_stream/1,    % -Stream
+            pce_open_terminal_image/4,  % +TerminalImage, -In, -Out, -Error
 
             op(200, fy,  @),
             op(250, yfx, ?),

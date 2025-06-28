@@ -459,7 +459,7 @@ connect(PT, Title) :-
     get(PT, goal, Goal),
     gensym(con, Alias),
     send(PT?window, name, Alias),
-    get(PT, pty_name, PTY),
+    get(PT, pty_name, PTY),             % /dev/pty* on Unix, @nil on Windows
     thread_self(Me),
     parent_history(PT, Events),
     parent_thread(PT, Parent),
@@ -504,17 +504,10 @@ thread_run_interactor(PT, Creator, PTY, Init, Goal, Title, History) :-
 attach_terminal(PT, PTY, _Title, History) :-
     exists_source(library(editline)),
     use_module(library(editline)),
+    \+ current_prolog_flag(windows, true), % for now
     !,
-    open(PTY, read,  In,  [encoding(utf8), bom(false)]),
-    open(PTY, write, Out, [encoding(utf8)]),
-    open(PTY, write, Err, [encoding(utf8)]),
-    set_stream(In,  file_name('')),     % kill source_location/2
-    set_stream(Out, buffer(line)),
-    set_stream(Err, buffer(false)),
+    pce_open_terminal_image(PT, In, Out, Err),
     set_stream(In,  eof_action(reset)),
-    set_stream(In,  tty(true)),
-    set_stream(Out, tty(true)),
-    set_stream(Err, tty(true)),
     set_stream(In,  alias(user_input)),
     set_stream(Out, alias(user_output)),
     set_stream(Err, alias(user_error)),
@@ -523,10 +516,7 @@ attach_terminal(PT, PTY, _Title, History) :-
     call(el_wrap),
     register_input(PT, PTY, true, History).
 attach_terminal(PT, PTY, _Title, History) :-
-    open(PTY, read,  In,  [encoding(utf8), bom(false)]),
-    open(PTY, write, Out, [encoding(utf8)]),
-    open(PTY, write, Err, [encoding(utf8)]),
-    set_stream(In,  file_name('')),
+    pce_open_terminal_image(PT, In, Out, Err),
     set_prolog_IO(In, Out, Err),
     register_input(PT, PTY, false, History).
 

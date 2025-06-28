@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -34,6 +35,7 @@
 
 #ifndef _XPCE_INTERFACE_H_INCLUDED
 #define _XPCE_INTERFACE_H_INCLUDED
+#include <stdbool.h>
 
 
 		/********************************
@@ -41,7 +43,7 @@
 		********************************/
 
 #ifndef PCE_VERSION
-#define PCE_VERSION "6.6.66, July 2009"
+#define PCE_VERSION "7.0.0, June 2025"
 #endif
 
 #ifndef OS_VERSION
@@ -440,6 +442,15 @@ __pce_export void	pceRedraw(int);
 				/* context is an XtAppContext pointer */
 __pce_export void *     pceXtAppContext(void * context);
 
+
+		 /*******************************
+		 *           TERMINAL           *
+		 *******************************/
+
+__pce_export bool	getPrologStreamTerminalImage(PceObject obj,
+						     IOSTREAM **in,
+						     IOSTREAM **out,
+						     IOSTREAM **error);
 
 		/********************************
 		*       DEBUGGER INTERFACE	*

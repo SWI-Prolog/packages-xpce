@@ -592,10 +592,11 @@ sendTerminalImage(TerminalImage ti, CharArray ca)
   return rlc_send(ti->data, u8, ulen) == ulen;
 }
 
-#if HAVE_POSIX_OPENPT
 static Name
 getPtyNameTerminalImage(TerminalImage ti)
-{ RlcData b = ti->data;
+{
+#if HAVE_POSIX_OPENPT
+  RlcData b = ti->data;
 
   if ( !b->pty.slave_name[0] )
   { if ( !rlc_open_pty_pair(b, 80, 25) )
@@ -603,8 +604,10 @@ getPtyNameTerminalImage(TerminalImage ti)
   }
 
   return CtoName(b->pty.slave_name);
-}
+#else
+  return NIL;
 #endif
+}
 
 		 /*******************************
 		 *       TEMPORARY STUFF        *
@@ -706,10 +709,8 @@ static senddecl send_terminal_image[] =
 
 static getdecl get_terminal_image[] =
 {
-#if HAVE_POSIX_OPENPT
-  GM(NAME_ptyName, 0, "pty=name", NULL, getPtyNameTerminalImage,
+  GM(NAME_ptyName, 0, "pty=name*", NULL, getPtyNameTerminalImage,
      NAME_process, "Path name for the pty"),
-#endif
   GM(NAME_displayedCursor, 0, "cursor=cursor", NULL,
      getDisplayedCursorTerminalImage,
      NAME_event, "Indicate normal cursor or link"),
@@ -3320,6 +3321,30 @@ processClientOutputTerminalImage(TerminalImage ti,
   fail;
 }
 
+/**
+ * Prepare  the terminal's  client  streams by  setting the  encoding,
+ * buffering and claim them to be tty streams.
+ */
+
+static void
+set_stream_flags(IOSTREAM *s, unsigned int flags)
+{ const unsigned int SIO_ABUF = (SIO_FBUF|SIO_LBUF|SIO_NBUF);
+  s->flags &= ~SIO_ABUF;
+  s->flags |= flags;
+}
+
+static void
+set_stream_properties(IOSTREAM *i, IOSTREAM *o, IOSTREAM *e)
+{ i->encoding = ENC_UTF8;
+  o->encoding = ENC_UTF8;
+  e->encoding = ENC_UTF8;
+
+  i->flags &= ~(SIO_BOM);
+  i->flags |= SIO_ISATTY;
+
+  set_stream_flags(o, SIO_LBUF|SIO_ISATTY);
+  set_stream_flags(e, SIO_NBUF|SIO_ISATTY);
+}
 
 #if HAVE_POSIX_OPENPT
 		 /*******************************
@@ -3432,6 +3457,42 @@ rlc_resize_pty(RlcData b, int cols, int rows)
   }
 }
 
+bool
+getPrologStreamTerminalImage(Any obj,
+			     IOSTREAM **in, IOSTREAM **out, IOSTREAM **err)
+{ TerminalImage ti = obj;
+
+  if ( instanceOfObject(ti, ClassTerminalImage) )
+  { RlcData b = ti->data;
+    IOSTREAM *i = NULL;
+    IOSTREAM *o = NULL;
+    IOSTREAM *e = NULL;
+
+    if ( !b->pty.open &&
+	 !rlc_open_pty_pair(b, 80, 25) )
+      return false;
+
+    i = Sopen_file(b->pty.slave_name, "r");
+    o = Sopen_file(b->pty.slave_name, "w");
+    e = Sopen_file(b->pty.slave_name, "w");
+
+    if ( i && o && e )
+    { set_stream_properties(i,o,e);
+
+      *in = i; *out = o; *err = e;
+      return true;
+    }
+
+    if ( i ) Sclose(i);
+    if ( o ) Sclose(o);
+    if ( e ) Sclose(e);
+  }
+
+  return false;
+}
+
+
+
 #elif __WINDOWS__
 #include <msw/mswin.h>
 
@@ -3475,28 +3536,42 @@ rlc_open_pty_pair(RlcData b, int cols, int rows)
  */
 
 bool
-getPrologStreamTerminalImage(TerminalImage ti,
-			     IOSTREAM **in, IOSTREAM **out, IOSTREAM **error)
-{ RlcData b = ti->data;
+getPrologStreamTerminalImage(Any obj,
+			     IOSTREAM **in, IOSTREAM **out, IOSTREAM **err)
+{ TerminalImage ti = obj;
 
-  if ( !rlc_create_pipes(b) )
-    return false;
-  if ( !b->ptycon.hTaskError )
-  { if ( !DuplicateHandle(GetCurrentProcess(), b->ptycon.hTaskOut,
-			  GetCurrentProcess(), &b->ptycon.hTaskError,
-			  0, TRUE, DUPLICATE_SAME_ACCESS) )
-    { Cprintf("Failed to dup out to error\n");
+  if ( instanceOfObject(ti, ClassTerminalImage) )
+  { RlcData b = ti->data;
+    IOSTREAM *i = NULL;
+    IOSTREAM *o = NULL;
+    IOSTREAM *e = NULL;
+
+    if ( !rlc_create_pipes(b) )
       return false;
+
+    if ( !b->ptycon.hTaskError )
+    { if ( !DuplicateHandle(GetCurrentProcess(), b->ptycon.hTaskOut,
+			    GetCurrentProcess(), &b->ptycon.hTaskError,
+			    0, TRUE, DUPLICATE_SAME_ACCESS) )
+      { Cprintf("Failed to dup out to error\n");
+	return false;
+      }
+
+      i = Swin_open_handle(b->ptycon.hTaskIn,    "r");
+      o = Swin_open_handle(b->ptycon.hTaskOut,   "w");
+      e = Swin_open_handle(b->ptycon.hTaskError, "w");
+
+      if ( i && o && e )
+      { set_stream_properties(i,o,e);
+
+	*in = i; *out = o; *err = e;
+	return true;
+      }
     }
 
-    *in    = Swin_open_handle(b->ptycon.hTaskIn,    "r");
-    *out   = Swin_open_handle(b->ptycon.hTaskOut,   "r");
-    *error = Swin_open_handle(b->ptycon.hTaskError, "r");
-    (*in)->encoding    = ENC_UTF8;
-    (*out)->encoding   = ENC_UTF8;
-    (*error)->encoding = ENC_UTF8;
-    (*in)->flags &= ~(SIO_BOM);
-    return true;
+    if ( i ) Sclose(i);
+    if ( o ) Sclose(o);
+    if ( e ) Sclose(e);
   }
 
   return false;

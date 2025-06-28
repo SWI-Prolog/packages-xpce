@@ -85,6 +85,8 @@ reexports the content of these files.
 	    pce_thread/1,               % -Thread
 	    pce_dispatch/0,
 
+              pce_open_terminal_image/4,  % +TerminalImage, -In, -Out, -Error
+
 	    op(200, fy,  @),
 	    op(250, yfx, ?),
 	    op(800, xfx, :=)
