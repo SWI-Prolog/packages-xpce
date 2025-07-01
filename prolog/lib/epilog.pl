@@ -504,7 +504,6 @@ thread_run_interactor(PT, Creator, PTY, Init, Goal, Title, History) :-
 attach_terminal(PT, PTY, _Title, History) :-
     exists_source(library(editline)),
     use_module(library(editline)),
-    \+ current_prolog_flag(windows, true), % for now
     !,
     pce_open_terminal_image(PT, In, Out, Err),
     set_stream(In,  eof_action(reset)),
@@ -513,7 +512,7 @@ attach_terminal(PT, PTY, _Title, History) :-
     set_stream(Err, alias(user_error)),
     set_stream(In,  alias(current_input)),
     set_stream(Out, alias(current_output)),
-    call(el_wrap),
+    call(el_wrap([pipes(true)])),        % Option only for Windows
     register_input(PT, PTY, true, History).
 attach_terminal(PT, PTY, _Title, History) :-
     pce_open_terminal_image(PT, In, Out, Err),
