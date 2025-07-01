@@ -2433,6 +2433,12 @@ rlc_erase_line(RlcData b)
   tl->changed |= CHG_CHANGED|CHG_CLEAR;
 }
 
+static void
+rlc_clear_from_cursor(RlcData b)
+{ rlc_erase_line(b);
+  b->last = b->caret_y;
+  b->changed |= CHG_CHANGED|CHG_CLEAR|CHG_CARET;
+}
 
 static void
 rlc_sgr(RlcData b, int sgr)
@@ -3128,7 +3134,10 @@ rlc_putansi(RlcData b, int chr)
 	  CMD(rlc_restore_caret_position(b));
 	  break;
 	case 'J':
-	  if ( b->argv[0] == 2 )
+	  rlc_need_arg(b, 1, 0);
+	  if ( b->argv[0] == 0 )
+	    CMD(rlc_clear_from_cursor(b));
+	  else if ( b->argv[0] == 2 )
 	    CMD(rlc_erase_display(b));
 	  else if ( b->argv[0] == 3 )
 	    CMD(rlc_erase_saved_lines(b));
