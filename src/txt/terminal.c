@@ -1369,7 +1369,7 @@ rlc_draw_caret(RlcData b, int x, int y)
     double cx = x + b->caret_px - ols/2.0;
     double cy = y + b->caret_py + b->cb - 3.0;
 
-    DEBUG(NAME_caret, Cprintf("Drawing caret at %d,%d\n", cx, cy));
+    DEBUG(NAME_caret, Cprintf("Drawing caret at %.1f,%.1f\n", cx, cy));
     draw_caret(cx, cy, ols, ols, b->has_focus);
 
     r_colour(old);
