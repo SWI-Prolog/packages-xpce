@@ -1082,13 +1082,10 @@ rlc_translate_mouse(RlcData b, int x, int y, int *line, int *chr)
   { *chr = 0;
   } else
   { text_char *s = tl->text;
-    //HDC hdc = GetDC(b->window);
     int f = 0;
     int t = tl->size;
     int m = (f+t)/2;
     int i;
-
-    //SelectObject(hdc, b->hfont);
 
     for(i=10; --i > 0; m=(f+t)/2)
     { int w;
@@ -1097,7 +1094,6 @@ rlc_translate_mouse(RlcData b, int x, int y, int *line, int *chr)
       if ( x > w )
       { int cw = 0;
 
-	//GetCharWidth32(hdc, s[m].code, s[m].code, &cw);
 	if ( x < w+cw )
 	{ *chr = m;
 	  return;
