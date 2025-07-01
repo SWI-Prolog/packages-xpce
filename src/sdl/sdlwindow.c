@@ -72,6 +72,8 @@ ws_uncreate_window(PceWindow sw)
   if ( wsw )
   { if ( wsw->backing )
       cairo_surface_destroy(wsw->backing);
+    if ( wsw->texture )
+      SDL_DestroyTexture(wsw->texture);
     unalloc(sizeof(*wsw), wsw);
     sw->ws_ref = NULL;
   }
@@ -169,6 +171,10 @@ ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
 					      wsw->w,  wsw->h);
     assert(wsw->backing);
     d_init_surface(wsw->backing, sw->background);
+    if ( wsw->texture )
+    { SDL_DestroyTexture(wsw->texture);
+      wsw->texture = NULL;
+    }
     DEBUG(NAME_sdl, Cprintf("Resized %s to %dx%d\n", pp(sw), w, h));
     send(sw, NAME_resize, EAV);
     changed_window(sw,

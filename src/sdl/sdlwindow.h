@@ -39,6 +39,7 @@
 
 typedef struct
 { cairo_surface_t *backing;
+  SDL_Texture *texture;
   double scale;			/* pixel density */
   int w;
   int h;

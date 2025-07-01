@@ -356,11 +356,16 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
     SDL_Surface *sdl_surf = SDL_CreateSurfaceFrom(width, height,
 						  SDL_PIXELFORMAT_ARGB8888,
 						  data, stride);
-    SDL_Texture *tex = SDL_CreateTextureFromSurface(wfr->ws_renderer,
-						    sdl_surf);
+    if ( !wsw->texture )
+      wsw->texture = SDL_CreateTexture(wfr->ws_renderer,
+				       SDL_PIXELFORMAT_ARGB8888,
+				       SDL_TEXTUREACCESS_STREAMING,
+				       width, height);
+
+    SDL_UpdateTexture(wsw->texture, NULL, data, stride);
+    //tset->textures[tset->count++] = tex;
+    SDL_RenderTexture(wfr->ws_renderer, wsw->texture, NULL, &dstrect);
     SDL_DestroySurface(sdl_surf);
-    SDL_RenderTexture(wfr->ws_renderer, tex, NULL, &dstrect);
-    SDL_DestroyTexture(tex);
 
     if ( instanceOfObject(sw, ClassWindowDecorator) )
     { foffset off2;
