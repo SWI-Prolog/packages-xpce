@@ -348,6 +348,7 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
     SDL_SetRenderDrawColor(wfr->ws_renderer, bg.r, bg.g, bg.b, bg.a);
     SDL_RenderRect(wfr->ws_renderer, &dstrect);
 
+    cairo_surface_flush(wsw->backing);
     int width    = cairo_image_surface_get_width(wsw->backing);
     int height   = cairo_image_surface_get_height(wsw->backing);
     int stride   = cairo_image_surface_get_stride(wsw->backing);
