@@ -67,6 +67,7 @@ typedef struct
   OVERLAPPED	 overlapped;	/* ReadFile() overlapped struct */
   char		*buffer;	/* Overlapped data buffer */
   bool		 pending;	/* We started a ReadFile() */
+  DWORD		 last_error;	/* ReadFile() failed with this code */
 #endif
   fd_ready_codes code;		/* SDL3 event.user.code */
   Any		userdata;	/* SDL3 event.user.data2 */

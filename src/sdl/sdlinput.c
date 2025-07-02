@@ -140,10 +140,15 @@ poll_thread_fn(void *unused)
 	    { DEBUG(NAME_stream, Cprintf("Pipe %d immediately ready\n", i));
 	      sdl_signal_watch(watch);
 	      continue;
-	    } else
-	    { assert(GetLastError() == ERROR_IO_PENDING);
-	      watch->pending = true;
+	    } else if ( GetLastError() == ERROR_IO_PENDING )
+	    { watch->pending = true;
 	      DEBUG(NAME_stream, Cprintf("Pipe %d pending\n", i));
+	    } else
+	    { watch->last_error = GetLastError();
+	      if ( watch->last_error != ERROR_BROKEN_PIPE )
+		Cprintf("Pipe %d: error: %s\n", i,
+			pp(WinStrError(watch->last_error)));
+	      sdl_signal_watch(watch);
 	    }
 	  }
 	  if ( watch->pending )
@@ -297,6 +302,7 @@ add_pipe_to_watch(HANDLE hPipe, int32_t code, void *userdata)
       watch->overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
       watch->fd = watch->overlapped.hEvent;
       watch->buffer = alloc(PIPE_READ_CHUNK);
+      watch->last_error = ERROR_SUCCESS;
       return start_watch(watch, code, userdata);
     }
   }
@@ -307,7 +313,10 @@ add_pipe_to_watch(HANDLE hPipe, int32_t code, void *userdata)
 ssize_t
 read_watch(FDWatch *watch, char *buffer, size_t size)
 { DWORD bytes;
-  if ( GetOverlappedResult(watch->hPipe, &watch->overlapped, &bytes, FALSE) )
+  if ( watch->last_error != ERROR_SUCCESS )
+  { return -1;
+  } else if ( GetOverlappedResult(watch->hPipe, &watch->overlapped,
+				  &bytes, FALSE) )
   { assert(bytes <= size);
     memcpy(buffer, watch->buffer, bytes);
     if ( bytes == 0 )
