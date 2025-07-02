@@ -70,6 +70,7 @@ extern DWORD	 ThePceThread;
 
 typedef char	cwidth;			/* width of a character */
 
+#if 0
 typedef struct
 { HFONT		hfont;			/* Windows font handle */
   cwidth *	widths;			/* Character widths */
@@ -77,7 +78,6 @@ typedef struct
   int		descent;		/* tmDescent */
   int		from_stock;		/* TRUE: from GetStockObject() */
 } ws_font, *WsFont;
-
 
 typedef struct
 { int w;				/* width of image */
@@ -107,6 +107,7 @@ typedef struct
   DWORD		style;			/* style of MS-Windows window */
   DWORD		styleex;		/* extended style */
 } ws_frame, *WsFrame;
+#endif
 
 		 /*******************************
 		 *	     COLOURMAP		*

@@ -1105,6 +1105,12 @@ getFontAliasDisplay(DisplayObj d, Name name)
 }
 
 
+static status
+listFontsDisplay(DisplayObj d, BoolObj mono)
+{ return ws_list_fonts(d, mono);
+}
+
+
 		/********************************
 		*             VISUAL		*
 		********************************/
@@ -1250,6 +1256,8 @@ static senddecl send_display[] =
      NAME_font, "Create predefined fonts from family"),
   SM(NAME_loadFonts, 0, NULL, loadFontsDisplay,
      NAME_font, "Create predefined font set from defaults"),
+  SM(NAME_listFonts, 1, "[bool]", listFontsDisplay,
+     NAME_font, "List available fonts to console"),
   SM(NAME_ConfirmPressed, 1, "event", ConfirmPressedDisplay,
      NAME_internal, "Handle confirmer events"),
   SM(NAME_open, 0, NULL, openDisplay,

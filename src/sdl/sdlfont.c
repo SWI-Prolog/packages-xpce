@@ -46,16 +46,8 @@ static double font_scale = 1.0;
 
 static void clean_width_cache(charwidth_cache *wcache);
 
-/**
- * Create a native font resource associated with the specified FontObj
- * on the given display.
- *
- * @param f Pointer to the FontObj to be created.
- * @param d Pointer to the DisplayObj representing the display context.
- * @return SUCCEED on successful creation; otherwise, FAIL.
- */
-status
-ws_create_font(FontObj f, DisplayObj d)
+static status
+ws_init_fonts(DisplayObj d)
 { if ( isDefault(d) )
     d = CurrentDisplay(NIL);
 
@@ -69,13 +61,28 @@ ws_create_font(FontObj f, DisplayObj d)
     context = pango_font_map_create_context(fontmap);
     pango_cairo_context_set_resolution(context, 96.0); /* TBD: Get from SDL */
     g_object_ref(context);
-    Real r = getClassVariableValueObject(f, NAME_scale);
+    Real r = getClassVariableValueClass(ClassFont, NAME_scale);
     if ( r )
       font_scale = valReal(r);
   }
 
-  if ( f->ws_ref )		/* already done */
+  succeed;
+}
+
+/**
+ * Create a native font resource associated with the specified FontObj
+ * on the given display.
+ *
+ * @param f Pointer to the FontObj to be created.
+ * @param d Pointer to the DisplayObj representing the display context.
+ * @return SUCCEED on successful creation; otherwise, FAIL.
+ */
+status
+ws_create_font(FontObj f, DisplayObj d)
+{ if ( f->ws_ref )		/* already done */
     succeed;
+
+  ws_init_fonts(d);
 
   PangoFontDescription *desc = pango_font_description_new();
   PangoStyle   slant = PANGO_STYLE_NORMAL;
@@ -219,4 +226,57 @@ status
 ws_system_fonts(DisplayObj d)
 {
     return SUCCEED;
+}
+
+status
+ws_list_fonts(DisplayObj d, BoolObj mono)
+{ PangoFontFamily **families;
+  int n_families;
+
+  ws_init_fonts(d);
+
+  pango_font_map_list_families(fontmap, &families, &n_families);
+  Cprintf("Found %d font families:\n", n_families);
+
+  for(int i = 0; i < n_families; i++)
+  { PangoFontFamily *family = families[i];
+    bool is_monospace = pango_font_family_is_monospace(family);
+
+    if ( notDefault(mono) && isOn(mono) != is_monospace )
+      continue;
+
+    const char *family_name = pango_font_family_get_name(family);
+#if PANGO_VERSION_CHECK(1,44,0)
+    bool is_variable = pango_font_family_is_variable(family);
+#endif
+
+    Cprintf("\nFamily: %s\n", family_name);
+    Cprintf("  Monospace: %s\n", is_monospace ? "yes" : "no");
+#if PANGO_VERSION_CHECK(1,44,0)
+    Cprintf("   Variable: %s\n", is_variable ? "yes" : "no");
+#endif
+
+    PangoFontFace **faces;
+    int n_faces;
+    pango_font_family_list_faces(family, &faces, &n_faces);
+
+    Cprintf("  Faces (%d):\n", n_faces);
+    for(int j = 0; j < n_faces; j++)
+    { const char *face_name = pango_font_face_get_face_name(faces[j]);
+      bool is_synthesized = pango_font_face_is_synthesized(faces[j]);
+
+      Cprintf("    - %s%s\n", face_name, is_synthesized ? " (synthesized)" : "");
+
+      PangoFontDescription *desc = pango_font_face_describe(faces[j]);
+      gchar *desc_str = pango_font_description_to_string(desc);
+      Cprintf("        Description: %s\n", desc_str);
+      g_free(desc_str);
+      pango_font_description_free(desc);
+    }
+
+    g_free(faces);
+  }
+
+  g_free(families);
+  succeed;
 }
