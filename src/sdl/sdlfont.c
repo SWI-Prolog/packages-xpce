@@ -96,13 +96,21 @@ ws_create_font(FontObj f, DisplayObj d)
     slant = PANGO_STYLE_ITALIC;
 
   if ( f->family == NAME_courier || f->family == NAME_screen )
-  { family = "monospace,Noto Sans Mono";
+  { family = "Noto Sans Mono,monospace";
+#ifdef __WINDOWS__
+    if ( PL_w32_running_under_wine() )
+      family = "Courier New,Noto Sans Mono";
+    else
+      family = "Consolas,Courier New";
+#endif
     fixed = ON;
   } else if ( f->family == NAME_times )
   { family = "serif";
 #ifdef __WINDOWS__
   } else if ( f->family == NAME_helvetica )
-  { family = "Segoe UI,Noto Sans";
+  { family = "Noto Sans,Segoe UI,Verdana";
+    if ( PL_w32_running_under_wine() )
+      family = "Verdana";
 #endif
   } else
   { family = nameToUTF8(f->family);
