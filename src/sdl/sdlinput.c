@@ -78,6 +78,10 @@ static SDL_Thread *watcher_thread = NULL;
 
 static void lock_watch_userdata(FDWatch *watch);
 static void unlock_watch_userdata(FDWatch *watch);
+#ifdef __WINDOWS__
+static ssize_t start_async_write(FDWatch *watch, bool signal);
+#endif
+
 
 bool
 cmp_and_set_watch(FDWatch *watch, watch_state old, watch_state new)
@@ -87,19 +91,47 @@ cmp_and_set_watch(FDWatch *watch, watch_state old, watch_state new)
 
 static void
 sdl_signal_watch(FDWatch *watch)
-{ DEBUG(NAME_stream, Cprintf("Input on " Pri_WAIT "\n", watch->fd));
-  if ( cmp_and_set_watch(watch, WATCH_ACTIVE, WATCH_PENDING) )
-  { DEBUG(NAME_stream, Cprintf("Posting " Pri_WAIT "\n", watch->fd));
-    SDL_Event ev = {0};
-    ev.type = MY_EVENT_FD_READY;
-    ev.user.code  = watch->code;
-    ev.user.data1 = watch;
-    ev.user.data2 = watch->userdata;
-    lock_watch_userdata(watch);
-    SDL_PushEvent(&ev);
+{
 #ifdef __WINDOWS__
-    watch->pending = false;
+  if ( watch->code == FD_ASYNC_WRITE )
+  { if ( GetOverlappedResult(watch->hPipe, &watch->overlapped,
+			     NULL, FALSE) )
+    { EnterCriticalSection(&watch->lock);
+      free(watch->buffer);
+      watch->buffer      = watch->queue;
+      watch->buffer_size = watch->queue_size;
+      watch->queue       = NULL;
+      watch->queue_size  = 0;
+      if ( watch->buffer )
+	start_async_write(watch, false);
+      else
+	watch->pending = false;
+      LeaveCriticalSection(&watch->lock);
+    } else
+    { DWORD error = GetLastError();
+      if ( error != ERROR_IO_PENDING )
+      {	EnterCriticalSection(&watch->lock);
+	watch->pending = false;
+	watch->last_error = error;
+	LeaveCriticalSection(&watch->lock);
+      }
+    }
+  } else
+#endif/*__WINDOWS__*/
+  { DEBUG(NAME_stream, Cprintf("Input on " Pri_WAIT "\n", watch->fd));
+    if ( cmp_and_set_watch(watch, WATCH_ACTIVE, WATCH_PENDING) )
+    { DEBUG(NAME_stream, Cprintf("Posting " Pri_WAIT "\n", watch->fd));
+      SDL_Event ev = {0};
+      ev.type = MY_EVENT_FD_READY;
+      ev.user.code  = watch->code;
+      ev.user.data1 = watch;
+      ev.user.data2 = watch->userdata;
+      lock_watch_userdata(watch);
+      SDL_PushEvent(&ev);
+#ifdef __WINDOWS__
+      watch->pending = false;
 #endif
+    }
   }
 }
 
@@ -109,14 +141,20 @@ releaseWatch(FDWatch *watch)
 #ifdef __WINDOWS__
   if ( watch->hPipe )
   { HANDLE h;
-    if ( (h=watch->overlapped.hEvent) )
-    { watch->overlapped.hEvent = NULL;
-      CloseHandle(watch->overlapped.hEvent);
+    if ( (h=watch->fd) )
+    { watch->fd = NULL;
+      CloseHandle(h);
     }
     if ( watch->buffer )
-    { unalloc(PIPE_READ_CHUNK, watch->buffer);
+    { free(watch->buffer);
       watch->buffer = NULL;
     }
+    if ( watch->queue )
+    { free(watch->queue);
+      watch->queue = NULL;
+    }
+    if ( watch->code == FD_ASYNC_WRITE )
+      DeleteCriticalSection(&watch->lock);
   }
 #endif
   watch->state = WATCH_FREE;
@@ -134,27 +172,35 @@ poll_thread_fn(void *unused)
       {
 #ifdef __WINDOWS__
 	if ( watch->hPipe )	/* A pipe/...: use overlapped I/O */
-	{ if ( !watch->pending )
-	  { memset(&watch->overlapped, 0, sizeof(watch->overlapped));
-	    watch->overlapped.hEvent = watch->fd;
-	    if ( ReadFile(watch->hPipe, watch->buffer, PIPE_READ_CHUNK,
-			  NULL, &watch->overlapped) )
-	    { DEBUG(NAME_stream, Cprintf("Pipe %d immediately ready\n", i));
-	      sdl_signal_watch(watch);
-	      continue;
-	    } else if ( GetLastError() == ERROR_IO_PENDING )
-	    { watch->pending = true;
-	      DEBUG(NAME_stream, Cprintf("Pipe %d pending\n", i));
-	    } else
-	    { watch->last_error = GetLastError();
-	      if ( watch->last_error != ERROR_BROKEN_PIPE )
-		Cprintf("Pipe %d: error: %s\n", i,
-			pp(WinStrError(watch->last_error)));
-	      sdl_signal_watch(watch);
+	{ if ( watch->code == FD_ASYNC_WRITE )
+	  { if ( watch->pending )
+	      DEBUG(NAME_stream, Cprintf("Wait for output pipe %d\n", i));
+	  } else		/* Input pipe */
+	  { if ( !watch->pending )
+	    { memset(&watch->overlapped, 0, sizeof(watch->overlapped));
+	      watch->overlapped.hEvent = watch->fd;
+	      if ( ReadFile(watch->hPipe, watch->buffer, PIPE_READ_CHUNK,
+			    NULL, &watch->overlapped) )
+	      { DEBUG(NAME_stream, Cprintf("Pipe %d immediately ready\n", i));
+		sdl_signal_watch(watch);
+		continue;
+	      } else if ( GetLastError() == ERROR_IO_PENDING )
+	      { watch->pending = true;
+		DEBUG(NAME_stream, Cprintf("Pipe %d pending\n", i));
+	      } else
+	      { watch->last_error = GetLastError();
+		if ( watch->last_error != ERROR_BROKEN_PIPE )
+		  Cprintf("Pipe %d: error: %s\n", i,
+			  pp(WinStrError(watch->last_error)));
+		sdl_signal_watch(watch);
+	      }
 	    }
 	  }
 	  if ( watch->pending )
-	    handles[nfds] = watch->fd;
+	  { handles[nfds] = watch->fd;
+	  } else
+	  { continue;
+	  }
 	} else
 	{ handles[nfds] = watch->fd; /* A normal waitable handle */
 	}
@@ -182,12 +228,10 @@ poll_thread_fn(void *unused)
     }
 
 #ifdef __WINDOWS__
-    //Cprintf("Waiting for %d handles\n", nfds);
     DWORD rc = WaitForMultipleObjects(nfds,
 				      handles,
 				      FALSE,
 				      INFINITE);
-
     if ( rc >= WAIT_OBJECT_0 && rc < WAIT_OBJECT_0+nfds )
     { int i = rc-WAIT_OBJECT_0;
       if ( i == 0  )
@@ -197,6 +241,9 @@ poll_thread_fn(void *unused)
       { FDWatch *watch = &fd_meta[meta_id[i]];
 	sdl_signal_watch(watch);
       }
+    } else
+    { Cprintf("WaitForMultipleObjects(): %s\n",
+	      pp(WinStrError(GetLastError())));
     }
 #else/*!__WINDOWS__*/
     int rc = poll(poll_fds, nfds, -1);
@@ -301,7 +348,8 @@ add_pipe_to_watch(HANDLE hPipe, int32_t code, void *userdata)
   { if ( claim_watch(watch) )
     { watch->hPipe = hPipe;
       watch->fd = CreateEvent(NULL, TRUE, FALSE, NULL);
-      watch->buffer = alloc(PIPE_READ_CHUNK);
+      watch->buffer = malloc(PIPE_READ_CHUNK);
+      watch->buffer_size = PIPE_READ_CHUNK;
       watch->last_error = ERROR_SUCCESS;
       return start_watch(watch, code, userdata);
     }
@@ -330,9 +378,91 @@ read_watch(FDWatch *watch, char *buffer, size_t size)
   }
 }
 
+FDWatch *
+add_out_pipe_to_watch(HANDLE hPipe)
+{ FDWatch *watch = fd_meta;
 
+  for(int i=0; i<MAX_FDS; i++, watch++)
+  { if ( claim_watch(watch) )
+    { watch->hPipe = hPipe;
+      watch->fd = CreateEvent(NULL, TRUE, FALSE, NULL);
+      InitializeCriticalSection(&watch->lock);
+      watch->last_error = ERROR_SUCCESS;
+      DEBUG(NAME_stream, Cprintf("Async write watch on %d; event = %p\n",
+				 i, watch->fd));
+      return start_watch(watch, FD_ASYNC_WRITE, NULL);
+    }
+  }
+
+  return NULL;
+}
+
+static ssize_t
+start_async_write(FDWatch *watch, bool signal)
+{ DWORD written;
+
+  memset(&watch->overlapped, 0, sizeof(watch->overlapped));
+  watch->overlapped.hEvent = watch->fd;
+
+  if ( WriteFile(watch->hPipe, watch->buffer, watch->buffer_size,
+		 &written, &watch->overlapped) )
+  { watch->pending = false;
+    DEBUG(NAME_stream, Cprintf("Pipe %d: immediate write of %zd bytes\n",
+			       watch-fd_meta, watch->buffer_size));
+    return written;		/* all done immediately */
+  } else
+  { DWORD error = GetLastError();
+
+    if ( error == ERROR_IO_PENDING )
+    { watch->pending = true;
+      if ( signal )
+	signal_watcher('w');
+      DEBUG(NAME_stream, Cprintf("Pipe %d: async write of %zd bytes\n",
+				 watch-fd_meta, watch->buffer_size));
+      return watch->buffer_size;
+    } else
+    { DEBUG(NAME_stream, Cprintf("Pipe %d: error %s\n",
+				 watch-fd_meta, pp(WinStrError(error))));
+      watch->last_error = error;
+      watch->pending = false;
+      return -1;
+    }
+  }
+}
+
+ssize_t
+write_watch(FDWatch *watch, const char *buffer, size_t size)
+{ ssize_t rval;
+  if ( watch->last_error != ERROR_SUCCESS )
+    return -1;
+
+  EnterCriticalSection(&watch->lock);
+  if ( watch->pending )
+  { char *newbuf = realloc(watch->queue, watch->queue_size+size);
+    if ( newbuf )
+    { memcpy(&watch->queue[watch->queue_size], buffer, size);
+      watch->queue = newbuf;
+      watch->queue_size += size;
+      DEBUG(NAME_stream,
+	    Cprintf("Pipe %d: queued write of %zd bytes (qlen = %zd)\n",
+		    watch-fd_meta, size, watch->queue_size));
+      rval = size;
+    } else
+      rval = -1;		/* ENOMEM */
+  } else
+  { watch->buffer = realloc(watch->buffer, size);
+    watch->buffer_size = size;
+    memcpy(watch->buffer, buffer, size);
+
+    rval = start_async_write(watch, true);
+  }
+  LeaveCriticalSection(&watch->lock);
+
+  return rval;
+}
 
 #endif/*__WINDOWS__*/
+
 FDWatch *
 add_socket_to_watch(socket_t fd, int32_t code, void *userdata)
 { FDWatch *watch = fd_meta;
@@ -393,6 +523,7 @@ lock_watch_userdata(FDWatch *watch)
       addCodeReference(watch->userdata);
       break;
     case FD_READY_DISPATCH:
+    case FD_ASYNC_WRITE:
       break;
   }
 }
@@ -406,6 +537,7 @@ unlock_watch_userdata(FDWatch *watch)
       delCodeReference(watch->userdata);
       break;
     case FD_READY_DISPATCH:
+    case FD_ASYNC_WRITE:
       break;
   }
 }

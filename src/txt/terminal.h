@@ -329,7 +329,8 @@ typedef struct rlc_data
     HANDLE hTaskIn;			/* The client read handle */
     HANDLE hTaskOut;			/* The client output handle */
     HANDLE hTaskError;			/* The client error handle */
-    FDWatch *watch;			/* Watch for write to terminal */
+    FDWatch *watchIn;			/* Watch on hIn */
+    FDWatch *watchOut;			/* Watch on hOut rlc_send() */
   } ptycon;
 #endif
 } rlc_data, *RlcData;

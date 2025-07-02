@@ -500,6 +500,7 @@ pasteTerminalImage(TerminalImage ti, Name which)
   const char *bsm_start = "\e[200~";
   const char *bsm_end = "\e[201~";
 
+  DEBUG(NAME_paste, Cprintf("Paste %zd bytes\n", ulen));
   if ( ti->data->bracketed_paste_mode )
     rlc_send(ti->data, bsm_start, strlen(bsm_start));
   if ( rlc_send(ti->data, u, ulen) != ulen )
@@ -3509,13 +3510,14 @@ rlc_create_pipes(RlcData b)
   if ( !CreatePipeEx(&b->ptycon.hIn, &b->ptycon.hTaskOut, NULL,
 		     0, FILE_FLAG_OVERLAPPED, 0) ||
        !CreatePipeEx(&b->ptycon.hTaskIn, &b->ptycon.hOut,  NULL,
-		     0, 0, 0) )
+		     FILE_FLAG_OVERLAPPED, 0, 0) )
   { Cprintf("Failed to create ptyCon pipes\n");
     return false;
   }
 
-  b->ptycon.watch = add_pipe_to_watch(b->ptycon.hIn, FD_READY_TERMINAL,
-				      b->object);
+  b->ptycon.watchIn  = add_pipe_to_watch(b->ptycon.hIn, FD_READY_TERMINAL,
+					b->object);
+  b->ptycon.watchOut = add_out_pipe_to_watch(b->ptycon.hOut);
 
   return true;
 }
@@ -3595,9 +3597,13 @@ closeHandlePtr(HANDLE *ph)
 static void
 rlc_close_connection(RlcData b)
 { HANDLE h;
-  if ( b->ptycon.watch )
-  { remove_fd_watch(b->ptycon.watch);
-    b->ptycon.watch = NULL;
+  if ( b->ptycon.watchIn )
+  { remove_fd_watch(b->ptycon.watchIn);
+    b->ptycon.watchIn = NULL;
+  }
+  if ( b->ptycon.watchOut )
+  { remove_fd_watch(b->ptycon.watchOut);
+    b->ptycon.watchOut = NULL;
   }
   if ( (h=b->ptycon.hPC) )
   { b->ptycon.hPC = NULL;
@@ -3612,17 +3618,10 @@ rlc_close_connection(RlcData b)
 
 static ssize_t
 rlc_send(RlcData b, const char *buffer, size_t count)
-{ DWORD written;
-
-  DEBUG(NAME_term, Cprintf("Sending %zd bytes to %p\n",
+{ DEBUG(NAME_term, Cprintf("Sending %zd bytes to %p\n",
 			   count, b->ptycon.hOut));
   if ( b->ptycon.hOut )
-  { if ( WriteFile(b->ptycon.hOut, buffer, count, &written, NULL) )
-    { return written;
-    } else
-    { Cprintf("Send failed: %s\n", pp(WinStrError(GetLastError())));
-      return -1;
-    }
+  { return write_watch(b->ptycon.watchOut, buffer, count);
   } else
   { Cprintf("%s: nowhere to send data\n", pp(b->object));
     return -1;
@@ -3633,7 +3632,7 @@ status
 receiveTerminalImage(TerminalImage ti)
 { char buf[PIPE_READ_CHUNK];
   RlcData b = ti->data;
-  ssize_t rc = read_watch(b->ptycon.watch, buf, sizeof(buf));
+  ssize_t rc = read_watch(b->ptycon.watchIn, buf, sizeof(buf));
 
   return processClientOutputTerminalImage(ti, buf, rc);
 }

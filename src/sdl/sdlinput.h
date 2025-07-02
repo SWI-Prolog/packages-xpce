@@ -65,8 +65,12 @@ typedef struct
   socket_t       sock;		/* socket we are watching */
   HANDLE	 hPipe;		/* Pipe handle */
   OVERLAPPED	 overlapped;	/* ReadFile() overlapped struct */
+  size_t	 buffer_size;	/* Size of the buffer */
   char		*buffer;	/* Overlapped data buffer */
+  size_t	 queue_size;	/* write_watch() */
+  char          *queue;		/* write_watch() */
   bool		 pending;	/* We started a ReadFile() */
+  CRITICAL_SECTION lock;	/* Lock for async write */
   DWORD		 last_error;	/* ReadFile() failed with this code */
 #endif
   fd_ready_codes code;		/* SDL3 event.user.code */
@@ -83,7 +87,9 @@ void	 processed_fd_watch(FDWatch *watch);
 
 #ifdef __WINDOWS__
 FDWatch *add_pipe_to_watch(HANDLE hPipe, int32_t code, void *userdata);
+FDWatch *add_out_pipe_to_watch(HANDLE hPipe);
 ssize_t  read_watch(FDWatch *watch, char *buffer, size_t size);
+ssize_t	 write_watch(FDWatch *watch, const char *buffer, size_t size);
 #endif
 
 #endif /*SDL_INPUT_H_INCLUDED*/
