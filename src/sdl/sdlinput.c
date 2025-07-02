@@ -135,7 +135,9 @@ poll_thread_fn(void *unused)
 #ifdef __WINDOWS__
 	if ( watch->hPipe )	/* A pipe/...: use overlapped I/O */
 	{ if ( !watch->pending )
-	  { if ( ReadFile(watch->hPipe, watch->buffer, PIPE_READ_CHUNK,
+	  { memset(&watch->overlapped, 0, sizeof(watch->overlapped));
+	    watch->overlapped.hEvent = watch->fd;
+	    if ( ReadFile(watch->hPipe, watch->buffer, PIPE_READ_CHUNK,
 			  NULL, &watch->overlapped) )
 	    { DEBUG(NAME_stream, Cprintf("Pipe %d immediately ready\n", i));
 	      sdl_signal_watch(watch);
@@ -298,9 +300,7 @@ add_pipe_to_watch(HANDLE hPipe, int32_t code, void *userdata)
   for(int i=0; i<MAX_FDS; i++, watch++)
   { if ( claim_watch(watch) )
     { watch->hPipe = hPipe;
-      memset(&watch->overlapped, 0, sizeof(watch->overlapped));
-      watch->overlapped.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-      watch->fd = watch->overlapped.hEvent;
+      watch->fd = CreateEvent(NULL, TRUE, FALSE, NULL);
       watch->buffer = alloc(PIPE_READ_CHUNK);
       watch->last_error = ERROR_SUCCESS;
       return start_watch(watch, code, userdata);
@@ -331,8 +331,8 @@ read_watch(FDWatch *watch, char *buffer, size_t size)
 }
 
 
-#endif
 
+#endif/*__WINDOWS__*/
 FDWatch *
 add_socket_to_watch(socket_t fd, int32_t code, void *userdata)
 { FDWatch *watch = fd_meta;
