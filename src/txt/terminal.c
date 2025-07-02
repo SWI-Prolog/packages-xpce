@@ -3303,12 +3303,14 @@ rlc_update(rlc_console c)
 
 static status
 processClientOutputTerminalImage(TerminalImage ti,
-				 const char *buf, ssize_t count)
-{ if ( count > 0 )
-  { RlcData b = ti->data;
-    const char *i = buf;
+			   const char *buf, ssize_t count)
+{ RlcData b = ti->data;
+  bool debug = false;
+  DEBUG(NAME_term, debug = true);
+
+  if ( count > 0 )
+  { const char *i = buf;
     bool debug = false;
-    DEBUG(NAME_term, debug = true);
     if ( debug ) Cprintf("Received (%d bytes): ", count);
     while( i < &buf[count] )
     { int chr;
@@ -3320,10 +3322,14 @@ processClientOutputTerminalImage(TerminalImage ti,
     rlc_update(b);
     succeed;
   } else if ( count == 0 )
-  { Cprintf("EOF\n");
+  { if ( debug )
+      Cprintf("%s: EOF\n", pp(ti));
   } else
-  { Cprintf("Error\n");
+  { if ( debug )
+      Cprintf("%s: Error\n", pp(ti));
   }
+
+  rlc_close_connection(b);
   fail;
 }
 
@@ -3516,7 +3522,7 @@ rlc_create_pipes(RlcData b)
   }
 
   b->ptycon.watchIn  = add_pipe_to_watch(b->ptycon.hIn, FD_READY_TERMINAL,
-					b->object);
+					 b->object);
   b->ptycon.watchOut = add_out_pipe_to_watch(b->ptycon.hOut);
 
   return true;
