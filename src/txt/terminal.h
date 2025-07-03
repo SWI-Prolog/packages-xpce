@@ -331,6 +331,7 @@ typedef struct rlc_data
     HANDLE hTaskError;			/* The client error handle */
     FDWatch *watchIn;			/* Watch on hIn */
     FDWatch *watchOut;			/* Watch on hOut rlc_send() */
+    IOSTREAM *pl_streams[3];		/* Stdin/Stdout/Stderr */
   } ptycon;
 #endif
 } rlc_data, *RlcData;

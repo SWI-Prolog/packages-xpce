@@ -3576,6 +3576,9 @@ getPrologStreamTerminalImage(Any obj,
 
       if ( i && o && e )
       { set_stream_properties(i,o,e);
+	b->ptycon.pl_streams[0] = i;
+	b->ptycon.pl_streams[1] = o;
+	b->ptycon.pl_streams[2] = e;
 
 	*in = i; *out = o; *err = e;
 	return true;
@@ -3620,6 +3623,9 @@ rlc_close_connection(RlcData b)
   closeHandlePtr(&b->ptycon.hTaskIn);
   closeHandlePtr(&b->ptycon.hTaskOut);
   closeHandlePtr(&b->ptycon.hTaskError);
+  b->ptycon.pl_streams[0] = NULL;
+  b->ptycon.pl_streams[1] = NULL;
+  b->ptycon.pl_streams[2] = NULL;
 }
 
 static ssize_t
@@ -3648,6 +3654,10 @@ rlc_resize_pty(RlcData b, int cols, int rows)
 { if ( b->ptycon.hPC )
   { COORD size = { cols, rows };
     ResizePseudoConsole(b->ptycon.hPC, size);
+  } else
+  { if ( b->ptycon.pl_streams[1] )
+      Ssetttysize(b->ptycon.pl_streams[1], cols, rows);
+    Cprintf("%s: resized to %dx%d\n", pp(b->object), cols, rows);
   }
 }
 
