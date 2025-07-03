@@ -47,6 +47,8 @@
 #define HAVE_LIBXPM 1
 #define HAVE_LIBJPEG 1
 
+#define SIZEOF_WCHAR_T 2
+
 #define export __declspec(dllexport)
 
 #ifdef _MSC_VER

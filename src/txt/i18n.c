@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2005-2013, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org
+    Copyright (c)  2005-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -81,7 +82,7 @@ static rcell ring[RING_SIZE] = {{0}};
 static int   ring_index = 0;
 
 static rcell *
-find_ring()
+find_ring(void)
 { rcell *c = &ring[ring_index++];
 
   if ( ring_index == RING_SIZE )
@@ -159,10 +160,12 @@ stringToUTF8(PceString str, size_t *olen)
     cwchar *e = &s[str->s_size];
 
     out = find_ring();
-    for( ; s<e; s++ )
-    { roomBuffer(out, 6);		/* max bytes per UTF-8 */
+    while( s < e )
+    { int c;
 
-      out->bufp = utf8_put_char(out->bufp, *s);
+      roomBuffer(out, 6);		/* max bytes per UTF-8 */
+      s = get_wchar(s, &c);
+      out->bufp = utf8_put_char(out->bufp, c);
     }
   }
 
@@ -310,6 +313,10 @@ UTF8ToCharArray(const char *utf8, bool asname)
     if ( chr > 0xff )
       wide = true;
     len++;
+#if SIZEOF_WCHAR_T == 2
+    if ( chr > 0xffff )
+      len++;
+#endif
   }
 
   if ( wide )
@@ -330,7 +337,7 @@ UTF8ToCharArray(const char *utf8, bool asname)
     { int chr;
 
       in = utf8_get_uchar(in, &chr);
-      *o++ = chr;
+      o = utf16_put_char(o, chr);
     }
 
     str_set_n_wchar(&s, len, ws);
