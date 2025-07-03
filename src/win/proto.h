@@ -67,6 +67,8 @@ COMMON(status)	makeClassPicture(Class class);
 /* /staff/jan/src/pl/packages/xpce/src/win/setup.c */
 
 /* /staff/jan/src/pl/packages/xpce/src/win/tile.c */
+typedef void *(*for_tile_func)(Any ctx, TileObj t, Int x, Int y, Int w, Int h);
+
 COMMON(status)	unrelateTile(TileObj t);
 COMMON(TileObj)	getRootTile(TileObj t);
 COMMON(status)	distribute_stretches(stretch *s, int n, int w);
@@ -78,6 +80,7 @@ COMMON(BoolObj)	getCanResizeTile(TileObj t);
 COMMON(status)	updateAdjusterPositionTile(TileObj t);
 COMMON(TileObj)	getSubTileToResizeTile(TileObj t, Point pos);
 COMMON(status)	makeClassTile(Class class);
+COMMON(void *)	forResizeAreaTile(TileObj t, for_tile_func func, Any ctx);
 
 /* /staff/jan/src/pl/packages/xpce/src/win/view.c */
 COMMON(status)	makeClassView(Class class);

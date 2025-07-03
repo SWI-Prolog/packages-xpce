@@ -1029,6 +1029,53 @@ out:
   answer(t->canResize);
 }
 
+void *
+forResizeAreaTile(TileObj t, for_tile_func func, Any ctx)
+{ if ( notNil(t->members) )
+  { Cell cell;
+
+    for_cell(cell, t->members)
+    { TileObj t2 = cell->value;
+      TileObj t3;
+      void *rc = forResizeAreaTile(t2, func, ctx);
+
+      if ( rc )
+	return rc;
+
+      if ( notNil(cell->next) )
+	t3 = cell->next->value;
+      else
+	break;
+
+      if ( t->orientation == NAME_horizontal )
+      { if ( getCanResizeTile(t2) == ON )
+	{ int x0 = valInt(t2->area->x) + valInt(t2->area->w);
+	  int x1 = valInt(t3->area->x);
+	  void *rc = (*func)(ctx, t2,
+			     toInt(x0), t->area->y,
+			     toInt(x1-x0), t->area->h);
+
+	  if ( rc )
+	    return rc;
+	}
+      } else
+      { if ( getCanResizeTile(t2) == ON )
+	{ int y0 = valInt(t2->area->y) + valInt(t2->area->h);
+	  int y1 = valInt(t3->area->y);
+	  void *rc = (*func)(ctx, t2,
+			     t->area->x, toInt(y0),
+			     t->area->w, toInt(y1-y0));
+
+	  if ( rc  )
+	    return rc;
+	}
+      }
+    }
+  }
+
+  return NULL;
+}
+
 
 TileObj
 getSubTileToResizeTile(TileObj t, Point pos)

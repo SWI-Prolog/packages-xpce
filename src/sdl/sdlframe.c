@@ -326,6 +326,46 @@ typedef struct
   float y;
 } foffset;
 
+static void*
+ws_draw_resize_area_frame(Any ctx, TileObj t, Int x, Int y, Int w, Int h)
+{ FrameObj fr = ctx;
+  WsFrame wfr = fr->ws_ref;
+  float x1, y1, x2, y2;
+
+  //Cprintf("Resize area %s: %d %d %d %d\n", pp(fr),
+  //valInt(x), valInt(y), valInt(w), valInt(h));
+
+  if ( t->super->orientation == NAME_horizontal )
+  { x1 = valNum(x) + valNum(w)/2.0;
+    y1 = valNum(y);
+    x2 = x1;
+    y2 = valInt(y) + valNum(h);
+  } else
+  { x1 = valNum(x);
+    y1 = valNum(y) + valNum(h)/2.0;
+    x2 = valNum(x) + valNum(w);
+    y2 = y1;
+  }
+  SDL_RenderLine(wfr->ws_renderer, x1, y1, x2, y2);
+
+  return NULL;			/* continue */
+}
+
+static void
+ws_draw_resize_frame(FrameObj fr)
+{ TileObj tile = getTileFrame(fr);
+
+  if ( tile )
+  { WsFrame wfr = fr->ws_ref;
+    Colour fg = fr->display->foreground;
+    SDL_Color c = pceColour2SDL_Color(fg);
+
+    SDL_SetRenderDrawColor(wfr->ws_renderer, c.r, c.g, c.b, c.a);
+    forResizeAreaTile(tile, ws_draw_resize_area_frame, fr);
+  }
+}
+
+
 static void
 ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
 { WsFrame  wfr = fr->ws_ref;
@@ -363,7 +403,6 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
 				       width, height);
 
     SDL_UpdateTexture(wsw->texture, NULL, data, stride);
-    //tset->textures[tset->count++] = tex;
     SDL_RenderTexture(wfr->ws_renderer, wsw->texture, NULL, &dstrect);
     SDL_DestroySurface(sdl_surf);
 
@@ -415,6 +454,7 @@ ws_draw_frame(FrameObj fr)
   { foffset off = {0.0f,0.0f};
     ws_draw_window(fr, cell->value, &off);
   }
+  ws_draw_resize_frame(fr);
   SDL_RenderPresent(wfr->ws_renderer);
   DEBUG(NAME_sdl,
 	Cprintf("END ws_draw_frame(%s)\n", pp(fr)));
