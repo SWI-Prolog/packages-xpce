@@ -89,7 +89,12 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${GUI_INCLUDE_DIRS})
 
-install_dll(${JPEG_LIBRARIES})
+if(MINGW_ROOT)
+get_target_mingw_dlls(DirectDLLS plugin_pl2xpce)
+message("Direct deps: ${DirectDLLS}")
+add_mingw_indirect_deps(DLLS ${DirectDLLS})
+install_dll(${DLLS})
+endif()
 
 ################
 # Tests
