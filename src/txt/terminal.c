@@ -3657,7 +3657,8 @@ rlc_resize_pty(RlcData b, int cols, int rows)
   } else
   { if ( b->ptycon.pl_streams[1] )
       Ssetttysize(b->ptycon.pl_streams[1], cols, rows);
-    Cprintf("%s: resized to %dx%d\n", pp(b->object), cols, rows);
+    DEBUG(NAME_term, Cprintf("%s: resized to %dx%d\n",
+			     pp(b->object), cols, rows));
   }
 }
 
