@@ -169,6 +169,15 @@ install_src(pkg_xpce_rc
 	    FILES swipl/swipl-rc
 	    DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce/prolog)
 
+set(XPCE_LINK_RC swipl)
+has_package(swipl-win HAVE_SWIPL_WIN)
+if(HAVE_SWIPL_WIN)
+  list(APPEND XPCE_LINK_RC swipl-win)
+  if(BUILD_MACOS_BUNDLE)
+    list(APPEND XPCE_LINK_RC SWI-Prolog)
+  endif()
+endif()
+
 # Install the link file
 foreach(rc ${XPCE_LINK_RC})
   install(FILES swipl/swipl-rc
