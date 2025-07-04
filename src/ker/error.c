@@ -407,7 +407,7 @@ static const error_def errors[] =
   { NAME_cannotConvertDefault,	ET_WARNING|EF_PRINT,
     "%N: Failed to convert %s.  Trying program default" },
   { NAME_cannotConvertProgramDefault,	ET_FATAL,
-    "%N: Failed to convert program default %O" },
+    "%N: Failed to convert program default \"%s\"" },
   { NAME_winMetafile,		ET_WARNING,
     "%O: API operation %s failed: %s" },
   { NAME_x11Threads,		ET_WARNING,
