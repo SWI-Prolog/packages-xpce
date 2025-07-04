@@ -51,29 +51,7 @@ on Unix/X11 platforms.
 :- multifile
 	user:file_search_path/2.
 
-:- dynamic
-	pcehomestore_/1.
-:- volatile
-	pcehomestore_/1.
-
-pcehome_(Home) :-
-	pcehomestore_(Home), !.
-pcehome_(Home) :-
-	(   getenv('XPCEHOME', RawHome)
-	;   current_prolog_flag(home, PlHome),
-	    (   current_prolog_flag(xpce_version, Version),
-		atom_concat('/xpce-', Version, Suffix)
-	    ;   Suffix = '/xpce'
-	    ),
-	    atom_concat(PlHome, Suffix, RawHome)
-	),
-	exists_directory(RawHome), !,
-	absolute_file_name(RawHome, Home),
-	asserta(pcehomestore_(Home)).
-
-user:file_search_path(pce, PceHome) :-
-	current_prolog_flag(xpce, true),
-	pcehome_(PceHome).
+user:file_search_path(pce, swi(xpce)).
 user:file_search_path(library, pce('prolog/lib')).
 user:file_search_path(foreign, pce(ArchLib)) :-
 	current_prolog_flag(arch, Arch),
@@ -86,18 +64,29 @@ user:file_search_path(foreign, pce(ArchLib)) :-
 gui_setup_ :-
 	current_prolog_flag(gui, true), !.
 gui_setup_ :-
-	(   getenv('DISPLAY', D), D \== ''
-	;   current_prolog_flag(windows, true)
-	), !,
+	has_display,
 	create_prolog_flag(gui, true, []),
-	menu_setup_,
+	epilog_setup,
 	editor_setup,
 	load_files(user:library(swi_hooks), [silent(true)]).	% help, etc.
 
-menu_setup_ :-					% plwin.exe menus
-	current_prolog_flag(console_menu, true),
-	load_files(user:library(win_menu), [silent(true)]).
-menu_setup_.
+has_display :- current_prolog_flag(windows, true), !.
+has_display :- current_prolog_flag(apple, true), !.
+has_display :- getenv('WAYLAND_DISPLAY', D), D \== '', !.
+has_display :- getenv('DISPLAY', D), D \== '', !.
+
+epilog_setup :-
+	source_file(gui_setup_, File),
+	file_base_name(File, Base),
+	downcase_atom(Base, Lwr),
+	file_name_extension(Name, rc, Lwr),
+	epilog_name(Name),
+	!,
+	set_prolog_flag(epilog, true).
+
+epilog_name('swipl-win').
+epilog_name('swipl-gui').
+epilog_name('swipl-epilog').
 
 editor_setup :-
 	current_prolog_flag(editor, default), !,
@@ -112,8 +101,6 @@ pce_setup_ :-
 pce_setup_ :-
 	current_prolog_flag(xpce, false), !.
 pce_setup_ :-
-	pcehome_(PceHome),
-	exists_directory(PceHome),
 	(   current_prolog_flag(xpce, true)
 	->  Preload = true
 	;   Preload = false
