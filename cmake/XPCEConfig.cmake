@@ -17,8 +17,6 @@ AC_CHECK_HEADERS(sys/select.h sys/param.h malloc.h sys/resource.h stropts.h)
 AC_CHECK_HEADERS(frame.h sys/timeb.h sys/times.h siginfo.h bstring.h)
 AC_CHECK_HEADERS(sys/socketvar.h conio.h sys/access.h termios.h termio.h)
 AC_CHECK_HEADERS(sched.h crt_externs.h poll.h jerror.h sys/socket.h)
-AC_CHECK_HEADERS(X11/extensions/Xinerama.h)
-AC_CHECK_HEADERS(X11/extensions/Xrandr.h)
 
 AC_CHECK_FUNCS(vsscanf on_exit memmove select popen strerror timelocal)
 AC_CHECK_FUNCS(getdtablesize socket fork ftime getpid select getlogin)
