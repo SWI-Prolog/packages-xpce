@@ -1461,9 +1461,13 @@ static classvardecl rc_pce[] =
 	   "				       grey95, grey50,\n"
 	   "				      '3d', grey70),\n"
 	   "    _mark_elevation   @= elevation(mark, 0),\n"
-	   "    _win_pen	  @= number(0))",
+	   "    _win_pen	      @= number(0))",
 	   /*__WINDOWS__*/
-           "and(_dialog_bg     @= colour(win_btnface),\n"
+           "and(_dialog_bg       @= colour(win_btnface),\n"
+	   "    _button_elevation @= elevation(button, 1, grey80,\n"
+	   "				       grey95, grey50,\n"
+	   "				      '3d', grey70),\n"
+	   "    _mark_elevation   @= elevation(mark, 0),\n"
 	   "    _graph_bg      @= colour(win_window),\n"
 	   "    _win_pen       @= number(1),\n"
 	   "    _isearch_style @= style(background := green),\n"
