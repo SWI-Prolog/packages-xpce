@@ -1669,8 +1669,8 @@ kindMenu(Menu m, Name kind)
     }
   } else if ( m->look == NAME_motif )
   { if ( kind == NAME_marked || kind == NAME_toggle )
-    { assign(m, on_image, NAME_marked);
-      assign(m, off_image, NAME_marked);
+    { assign(m, on_image, MARK_IMAGE);
+      assign(m, off_image, NOMARK_IMAGE);
       assign(m, feedback, NAME_image);
       assign(m, pen, ZERO);
       assign(m, border, toInt(3));
@@ -1693,13 +1693,8 @@ kindMenu(Menu m, Name kind)
     }
   } else if ( m->look == NAME_win )
   { if ( kind == NAME_marked || kind == NAME_toggle )
-    { if ( kind == NAME_marked )
-      { assign(m, on_image, NAME_marked);
-	assign(m, off_image, NAME_marked);
-      } else
-      { assign(m, on_image, NAME_marked);
-	assign(m, off_image, NAME_marked);
-      }
+    { assign(m, on_image, MARK_IMAGE);
+      assign(m, off_image, NOMARK_IMAGE);
       assign(m, feedback, NAME_image);
       assign(m, pen, ZERO);
       assign(m, border, toInt(3));
@@ -2274,11 +2269,9 @@ static classvardecl rc_menu[] =
      "Adjust items {left,center,right} in their box"),
   RC(NAME_gap, "size", "size(0,0)",
      "Gap between items (XxY)"),
-  RC(NAME_itemElevation, "elevation*",
-     UXWIN("button", "2"),
+  RC(NAME_itemElevation, "elevation*", "button",
      "Elevation of items in the menu"),
-  RC(NAME_markElevation, "elevation*",
-     UXWIN("mark", "elevation(mark, 2, colour := white)"),
+  RC(NAME_markElevation, "elevation*", "mark",
      "Elevation of marks"),
   RC(NAME_kind, "name", "marked",
      "Default menu kind"),
@@ -2286,13 +2279,11 @@ static classvardecl rc_menu[] =
      "Layout of the menu: {horizontal,vertical}"),
   RC(NAME_margin, "0..", "0",
      "Margin to the left and right"),
-  RC(NAME_offImage, "{marked}|image*",
-     UXWIN("@nomark_image", "marked"),
+  RC(NAME_offImage, "{marked}|image*", "@nomark_image",
      "Marker for items not in selection"),
-  RC(NAME_onImage, "{marked}|image*",
-     UXWIN("@mark_image", "marked"),
+  RC(NAME_onImage, "{marked}|image*", "@mark_image",
      "Marker for items in selection"),
-  RC(NAME_pen, "int", "1",
+  RC(NAME_pen, "int", "0",
      "Thickness of pen around items"),
   RC(NAME_popupImage, "image*", "@nil",
      "Marker for items with popup"),
@@ -2312,8 +2303,7 @@ static classvardecl rc_menu[] =
   RC(NAME_selectedBackground, "colour|pixmap",
      UXWIN("black", "win_highlight"),
      "Background colour for selected item"),
-  RC(NAME_elevation, RC_REFINE,
-     UXWIN("0", "@nil"), NULL),
+  RC(NAME_elevation, RC_REFINE, "0", NULL),
   RC(NAME_valueFont, RC_REFINE, "normal", NULL),
   RC(NAME_comboBoxHeight, "1..", "6",
      "Maximum height of the combo-box shown for completions")
