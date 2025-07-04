@@ -977,7 +977,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 	pce_cairo_set_source_color(CR, top_left_color);
 	cairo_set_line_width(CR, 1);
 	for(int os=0; os<shadow; os++)
-	{ cairo_move_to(CR, fr-os, fy-os);
+	{ cairo_move_to(CR, fr-os, fy+os);
 	  cairo_line_to(CR, fx+os, fy+os);
 	  cairo_line_to(CR, fx+os, fb-os);
 	  cairo_stroke(CR);
