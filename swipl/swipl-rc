@@ -64,7 +64,6 @@ user:file_search_path(foreign, pce(ArchLib)) :-
 gui_setup_ :-
 	current_prolog_flag(gui, true), !.
 gui_setup_ :-
-	has_display,
 	create_prolog_flag(gui, true, []),
 	epilog_setup,
 	editor_setup,
@@ -76,6 +75,9 @@ has_display :- getenv('WAYLAND_DISPLAY', D), D \== '', !.
 has_display :- getenv('DISPLAY', D), D \== '', !.
 
 epilog_setup :-
+	current_prolog_flag(epilog, true),
+	!.
+epilog_setup :-
 	source_file(gui_setup_, File),
 	file_base_name(File, Base),
 	downcase_atom(Base, Lwr),
@@ -83,6 +85,7 @@ epilog_setup :-
 	epilog_name(Name),
 	!,
 	set_prolog_flag(epilog, true).
+epilog_setup.
 
 epilog_name('swipl-win').
 epilog_name('swipl-gui').
