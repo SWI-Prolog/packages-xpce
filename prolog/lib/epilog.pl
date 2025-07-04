@@ -48,7 +48,7 @@
 :- use_module(library(gensym)).
 :- use_module(library(editline),
               [ el_unwrap/1, el_history_events/2,
-                el_add_history/2, el_wrap/0
+                el_add_history/2, el_wrap/1
               ]).
 :- use_module(library(lists), [reverse/2, member/2]).
 :- use_module(library(option), [meta_options/3, option/3, option/2]).
@@ -512,6 +512,7 @@ attach_terminal(PT, PTY, _Title, History) :-
     set_stream(Err, alias(user_error)),
     set_stream(In,  alias(current_input)),
     set_stream(Out, alias(current_output)),
+    set_prolog_flag(tty_control, true),
     call(el_wrap([pipes(true)])),        % Option only for Windows
     register_input(PT, PTY, true, History).
 attach_terminal(PT, PTY, _Title, History) :-
