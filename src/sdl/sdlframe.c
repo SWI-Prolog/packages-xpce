@@ -184,13 +184,10 @@ ws_create_frame(FrameObj fr)
 
     DEBUG(NAME_sdl,
 	  Cprintf("Registered window %p with id %d\n", win, f->ws_id));
-    succeed;
-  }
 
-  if ( parent )
-  { if ( !SDL_RaiseWindow(win) )
-      Cprintf("Could not set input focus to %s: %s\n",
-	      pp(fr), SDL_GetError());
+    SDL_RaiseWindow(win);
+
+    succeed;
   }
 
   return errorPce(fr, NAME_xOpen, fr->display);
