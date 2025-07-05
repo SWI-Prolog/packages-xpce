@@ -181,6 +181,13 @@ ws_create_frame(FrameObj fr)
     f->ws_window = win;
     f->ws_renderer = renderer;
     f->ws_id = SDL_GetWindowID(win);
+#ifdef __WINDOWS__
+    SDL_PropertiesID props = SDL_GetWindowProperties(win);
+    f->hwnd = SDL_GetPointerProperty(
+      props,
+      SDL_PROP_WINDOW_WIN32_HWND_POINTER,
+      NULL);
+#endif
 
     DEBUG(NAME_sdl,
 	  Cprintf("Registered window %p with id %d\n", win, f->ws_id));
@@ -462,7 +469,15 @@ ws_redraw_changed_frames(void)
 
     for_cell(cell, ChangedFrames)
     { FrameObj fr = cell->value;
+#if __WINDOWS__
+      WsFrame wfr = fr->ws_ref;
+      if ( wfr && wfr->hwnd )
+      { DEBUG(NAME_sdl, Cprintf("Invalidate %p\n", wfr->hwnd));
+	InvalidateRect(wfr->hwnd, NULL, FALSE);
+      }
+#else
       ws_draw_frame(fr);
+#endif
       deleteChain(ChangedFrames, fr);
     }
   }

@@ -40,6 +40,9 @@ typedef struct
 { SDL_Window   *ws_window;	/* The SDL3 Window handle */
   SDL_Renderer *ws_renderer;	/* The Window's renderer */
   SDL_WindowID  ws_id;		/* Integer identifier for the event */
+#ifdef __WINDOWS__
+  HWND		hwnd;		/* Windows handle */
+#endif
 } ws_frame, *WsFrame;
 
 /* Functions shared with DSL backend */
