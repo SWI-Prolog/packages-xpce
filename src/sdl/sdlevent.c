@@ -394,7 +394,6 @@ dispatch_event(EventObj ev)
 		delCodeReference(ev);
 		freeableObj(ev);
 		rewindAnswerStack(mark, NIL);
-		RedrawDisplayManager(TheDisplayManager());
 	      });
 
   return rc;
