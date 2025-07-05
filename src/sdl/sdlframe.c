@@ -275,15 +275,10 @@ ws_window_frame_position_(Any window, FrameObj fr, int *ox, int *oy)
     }
 
     if ( instanceOfObject(sw->device, ClassWindowDecorator) )
-    { WindowDecorator dw = (WindowDecorator)sw->device;
-      if ( notNil(dw->frame) )
-      { if ( dw->frame == fr )
-	{ *ox += valInt(dw->area->x) + valInt(sw->area->x);
-	  *oy += valInt(dw->area->y) + valInt(sw->area->y);
-	  return true;
-	}
-	return false;
-      }
+    { *ox += valInt(sw->area->x);
+      *oy += valInt(sw->area->y);
+
+      return ws_window_frame_position_(sw->device, fr, ox, oy);
     }
   }
 
