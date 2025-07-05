@@ -116,7 +116,8 @@ ws_cursor_font_index(Name name)
 }
 
 /**
- * Create a native cursor resource associated with the specified CursorObj on the given display.
+ * Create a native cursor resource associated with the specified
+ * CursorObj on the given display.
  *
  * @param c Pointer to the CursorObj to be created.
  * @param d Pointer to the DisplayObj representing the display context.
@@ -131,9 +132,12 @@ ws_create_cursor(CursorObj c, DisplayObj d)
       SDL_Cursor *cursor = SDL_CreateSystemCursor(valInt(idx));
       c->ws_ref = cursor;
     } else
-    { Cprintf("stub: No image cursors yet\n");
-      /* Use SDL_CreateColorCursor() */
-      fail;
+    { SDL_Surface *sdl_surf = pceImage2SDL_Surface(c->image);
+      SDL_Cursor *cursor = SDL_CreateColorCursor(sdl_surf,
+						 valInt(c->hot_spot->x),
+						 valInt(c->hot_spot->y));
+      /* SDL surface is owned by cursor */
+      c->ws_ref = cursor;
     }
   }
 

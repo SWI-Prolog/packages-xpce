@@ -39,6 +39,7 @@
 
 /* private interface (to sdldraw.c) */
 cairo_surface_t *pceImage2CairoSurface(Image image);
+SDL_Surface     *pceImage2SDL_Surface(Image image);
 
 /* Public interface to core */
 void ws_init_image(Image image);

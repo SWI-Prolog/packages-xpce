@@ -77,9 +77,10 @@ initialiseCursor(CursorObj c, Name name,
 	mask = image;
     }
     if ( isDefault(hot) )
-      hot  = newObject(ClassPoint, EAV);
-    if ( notNil(image->hot_spot) )
-      copyPoint(hot, image->hot_spot);
+    { hot = newObject(ClassPoint, EAV);
+      if ( notNil(image->hot_spot) )
+	copyPoint(hot, image->hot_spot);
+    }
 
     assign(c, image,      image);
     assign(c, mask,       mask);

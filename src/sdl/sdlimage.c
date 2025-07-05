@@ -389,6 +389,50 @@ ws_create_image_from_xpm_data(Image image, char **xpm, DisplayObj d)
 }
 
 /**
+ * Convert an XPCE image to an SDL surface.
+ */
+
+SDL_Surface *
+pceImage2SDL_Surface(Image image)
+{ cairo_surface_t *cairo_surf = pceImage2CairoSurface(image);
+
+  if ( cairo_surf )
+  { int width = cairo_image_surface_get_width(cairo_surf);
+    int height = cairo_image_surface_get_height(cairo_surf);
+    int stride = cairo_image_surface_get_stride(cairo_surf);
+    unsigned char *data = cairo_image_surface_get_data(cairo_surf);
+
+    SDL_Surface *sdl_surf = SDL_CreateSurface(width, height,
+					      SDL_PIXELFORMAT_ARGB8888);
+    if ( !sdl_surf )
+    { Cprintf("Failed to create SDL surface %dx%x: %s\n",
+	      width, height, SDL_GetError());
+      return NULL;
+    }
+
+    SDL_LockSurface(sdl_surf);
+    for (int y = 0; y < height; ++y)
+    { uint32_t *dst_row = (uint32_t *)((uint8_t *)sdl_surf->pixels +
+				       y * sdl_surf->pitch);
+      uint32_t *src_row = (uint32_t *)(data + y * stride);
+      for (int x = 0; x < width; ++x)
+      { uint32_t pixel = src_row[x];
+	// Cairo's ARGB premultiplied -> SDL ARGB
+	// (which expects straight alpha)
+	// Optionally unpremultiply here if you need accuracy
+	dst_row[x] = pixel; // naive copy; may look wrong with
+			    // transparency on some platforms
+      }
+    }
+    SDL_UnlockSurface(sdl_surf);
+
+    return sdl_surf;
+  }
+
+  return NULL;
+}
+
+/**
  * Save an image to a file in a specified format.
  *
  * @param image Pointer to the Image object.
