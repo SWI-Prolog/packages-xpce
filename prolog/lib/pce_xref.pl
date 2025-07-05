@@ -221,7 +221,10 @@ browser(F, Which:name, Browser:browser) :<-
 
 update(F) :->
     "Update all windows"::
-    send(F, xref_all),
+    thread_create(xref_all(F), _, [detached(true)]).
+
+update_browsers(F) :->
+    "Update the browsers"::
     get(F, member, browsers, Tabs),
     send(Tabs?members, for_some,
          message(@arg1, update)),
@@ -229,22 +232,29 @@ update(F) :->
     send(WSs?members, for_some,
          message(@arg1, update)).
 
-xref_all(F) :->
-    "Run X-referencer on all files"::
+xref_all(F) :-
     forall(( source_file(File),
              exists_file(File)
            ),
-           send(F, xref_file, File)).
+           xref_file(F, File)),
+    object(F),
+    !,
+    in_pce_thread(send(F, update_browsers)).
+xref_all(_).                                          % Cancelled
 
 xref_file(F, File:name) :->
-    "XREF a single file if not already done"::
+    "Method version to update the xref data for File"::
+    xref_file(F, File).
+
+xref_file(F, File) :-
+    object(F),                                        % Verify the window is not closed.
     (   xref_done(File, Time),
         catch(time_file(File, Modified), _, fail),
         Modified == Time
     ->  true
-    ;   send(F, report, progress, 'XREF %s', File),
+    ;   in_pce_thread(send(F, report, progress, 'XREF %s', File)),
         xref_source(File, [silent(true)]),
-        send(F, report, done)
+        in_pce_thread(send(F, report, done))
     ).
 
 :- pce_group(actions).
