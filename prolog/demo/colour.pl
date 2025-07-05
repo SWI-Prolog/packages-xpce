@@ -147,9 +147,9 @@ make_colour_browser(CB, DataBase) :-
 
 append_colour(CB, Name, RGB) :-
 %   A is (RGB >> 24),
-    B is (RGB >> 16) /\ 255,
+    R is (RGB >> 16) /\ 255,
     G is (RGB >> 8) /\ 255,
-    R is (RGB /\ 255),
+    B is (RGB /\ 255),
     format(atom(HexName), '#~|~`0t~16r~2+~`0t~16r~2+~`0t~16r~2+', [R,G,B]),
     send(CB, append, string('%s\t%3d %3d %3d %s', Name, R, G, B, HexName)).
 
