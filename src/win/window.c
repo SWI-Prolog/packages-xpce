@@ -1135,61 +1135,15 @@ combine_changes_window(PceWindow sw)
 }
 
 
-
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Redraw an area of the picture due to an exposure or resize.  The area is
-given in the coordinate system of the widget realizing the picture.
-
-WIN32_GRAPHICS note: this function is   called both from resize/exposure
-(in the X11 version) and from global  changes to the window that require
-it to be repainted entirely. In the  Windows version, the first bypasses
-this function, so we just trap the latter  to cause the entire window to
-be repainted.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
 status
 redrawWindow(PceWindow sw, Area a)
-{
-#ifdef WIN32_GRAPHICS
-  ws_invalidate_window(sw, DEFAULT);
-#else
-  int ox, oy, dw, dh;
-  int tmp = FALSE;
-  iarea ia;
+{ changed_window(sw,
+		 -valInt(sw->scroll_offset->x),
+		 -valInt(sw->scroll_offset->y),
+		 valInt(sw->area->w),
+		 valInt(sw->area->h), TRUE);
 
-  if ( sw->displayed == OFF || !createdWindow(sw) )
-    succeed;
-
-  compute_window(sw, &ox, &oy, &dw, &dh);
-
-  if ( isDefault(a) )
-  { ia.x = 0;
-    ia.y = 0;
-    ia.w = valInt(sw->area->w);
-    ia.h = valInt(sw->area->h);
-  } else
-  { ia.x = valInt(a->x);
-    ia.y = valInt(a->y);
-    ia.w = valInt(a->w);
-    ia.h = valInt(a->h);
-  }
-
-  DEBUG(NAME_redraw, Cprintf("redrawWindow: w=%d, h=%d\n",
-			     valInt(sw->area->w),
-			     valInt(sw->area->h)));
-
-  ox += valInt(sw->scroll_offset->x);
-  oy += valInt(sw->scroll_offset->y);
-
-  ia.x -= ox;
-  ia.y -= oy;
-
-  RedrawAreaWindow(sw, &ia, TRUE);	/* clear */
-
-  if ( tmp )
-    considerPreserveObject(a);
-#endif
-
+  addChain(ChangedWindows, sw);
   succeed;
 }
 
