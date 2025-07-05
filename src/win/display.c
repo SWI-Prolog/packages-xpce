@@ -305,12 +305,17 @@ bellDisplay(DisplayObj d, Int vol)
 static int
 hasDisplay(void)
 {
-#ifndef __WINDOWS__
-  char *dsp = getenv("DISPLAY");
-  return ( dsp && dsp[0] );
-#else
+#if defined(__WINDOWS__) || defined(__APPLE__)
   return TRUE;
+#else
+  char *dsp = getenv("DISPLAY");
+  if ( dsp && dsp[0] )
+    return TRUE;
+  dsp = getenv("WAYLAND_DISPLAY");
+  if ( dsp && dsp[0] )
+    return TRUE;
 #endif
+  return FALSE;
 }
 
 Size
@@ -437,6 +442,23 @@ getPointerLocationDisplay(DisplayObj d)
   fail;
 }
 
+
+static status
+hasVisibleFramesDisplay(DisplayObj d)
+{ if ( notNil(d->frames) )
+  { Cell cell;
+
+    for_cell(cell, d->frames)
+    { FrameObj fr = cell->value;
+      if ( !onFlag(fr, F_FREED|F_FREEING) )
+      { if ( fr->status != NAME_unmapped && fr->status != NAME_hidden )
+	  succeed;
+      }
+    }
+  }
+
+  fail;
+}
 
 
 		 /*******************************
@@ -1295,7 +1317,9 @@ static senddecl send_display[] =
   SM(NAME_screenSaver, 1, "bool", screenSaverDisplay,
      NAME_x, "Activate (@on) or deactivate (@off) screensaver"),
   SM(NAME_dpi, 1, "size|int", DPIDisplay,
-     NAME_dimension, "Resolution in dots per inch")
+     NAME_dimension, "Resolution in dots per inch"),
+  SM(NAME_hasVisibleFrames, 0, NULL, hasVisibleFramesDisplay,
+     NAME_organisation, "True if there is at least one visible frame")
 };
 
 /* Get Methods */

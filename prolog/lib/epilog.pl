@@ -91,7 +91,7 @@ ep_wait :-
     halt.
 
 ep_main_end :-
-    send(@display?frames, empty),
+    \+ send(@display, has_visible_frames),
     !.
 ep_main_end :-
     quit_requested.
