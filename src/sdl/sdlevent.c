@@ -670,16 +670,12 @@ ws_event_in_subwindow(EventObj ev, Any root)
 { if ( isDefault(root) )
   { return ev->frame;
   } else if ( instanceOfObject(root, ClassFrame) )
-  { if ( getFrameWindow(ev->window, OFF) == ev->frame )
-    { return ev->window;
-    } else
-    { Any window = root;
-      int x = valInt(ev->x);
-      int y = valInt(ev->y);
+  { Any window = root;
+    int x = valInt(ev->x);
+    int y = valInt(ev->y);
 
-      event_window(&window, &x, &y);
-      return window;
-    }
+    event_window(&window, &x, &y);
+    return window;
   } else
     fail;
 }
