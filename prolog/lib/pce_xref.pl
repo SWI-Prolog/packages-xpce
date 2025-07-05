@@ -1441,7 +1441,7 @@ popup(_, Popup:popup) :<-
     send_list(Popup, append,
               [ menu_item(edit, message(@arg1, edit)),
                 menu_item(info, message(@arg1, info)),
-                menu_item(header, message(@arg1, header))
+                menu_item(generate_module_header, message(@arg1, header))
               ]).
 
 event(T, Ev:event) :->
