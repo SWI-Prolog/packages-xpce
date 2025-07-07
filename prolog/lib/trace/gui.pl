@@ -1028,7 +1028,7 @@ button(gap,            -,     -,                     -).
 button(+nodebug,       "n",   'nodebug.png',         'Continue without debugging').
 button(+abort,         "a",   'abort.png',           'Abort to the Prolog toplevel').
 button(+interrupt,     "t",   'interrupt.png',       'Interrupt (trace)').
-button(+query,         "b",   'break.png',           'Enter a query (in debugged thread)').
+% button(+query, "b", 'break.png', 'Enter a query (in debugged thread)').
 button(+interactor,    "B",   'interactor.png',      'Enter a query (in new thread)').
 button(fail,           "F",   'fail.png',            'Force query to fail').
 button(gap,            -,     -,                     -).
