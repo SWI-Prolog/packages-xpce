@@ -323,18 +323,24 @@ CtoEvent(SDL_Event *event)
   int x = (int)(fx*scale+0.5);
   int y = (int)(fy*scale+0.5);
   if ( notNil(mouse_tracking_window) )
-  { int ox=0, oy=0;
-    bool rc = ws_window_frame_position(mouse_tracking_window, frame, &ox, &oy);
-    if ( !rc )
+  { if ( onFlag(mouse_tracking_window, F_FREED|F_FREEING) ||
+	 !ws_created_window(mouse_tracking_window) )
     { Cprintf("Mouse tracking window (%s) is lost?\n",
 	      pp(mouse_tracking_window));
       mouse_tracking_window = NIL;
       fail;
     }
-    window = mouse_tracking_window;
 
-    x -= ox;
-    y -= oy;
+    int ox=0, oy=0;
+    bool rc = ws_window_frame_position(mouse_tracking_window, frame, &ox, &oy);
+    if ( rc )
+    { window = mouse_tracking_window;
+      x -= ox;
+      y -= oy;
+    } else
+    { window = frame;
+      event_window(&window, &x, &y);
+    }
     if ( event->type == SDL_EVENT_MOUSE_BUTTON_UP &&
 	 mouse_tracking_button == event->button.button )
       mouse_tracking_window = NIL;
