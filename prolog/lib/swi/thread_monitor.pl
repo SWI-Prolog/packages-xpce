@@ -694,7 +694,7 @@ fill_tool_dialog(TM, TD:tool_dialog) :->
     send_list(File, append,
               [ menu_item(settings, message(TM, settings)),
                 gap,
-                menu_item(exit, message(TM, destroy))
+                menu_item(quit, message(TM, destroy))
               ]),
     send_list(Threads, append,
               [ menu_item(new,
