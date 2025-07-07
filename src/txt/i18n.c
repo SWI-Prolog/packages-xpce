@@ -337,7 +337,7 @@ UTF8ToCharArray(const char *utf8, bool asname)
     { int chr;
 
       in = utf8_get_uchar(in, &chr);
-      o = utf16_put_char(o, chr);
+      o = put_wchar(o, chr);
     }
 
     str_set_n_wchar(&s, len, ws);
