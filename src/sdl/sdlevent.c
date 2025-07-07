@@ -189,6 +189,7 @@ static SDL_Keymod lastmod = SDL_KMOD_NONE;
 static Any grabbing_window = NIL;
 static Any mouse_tracking_window = NIL;
 static Uint8 mouse_tracking_button;
+static SDL_WindowID mouse_tracking_wid = 0;
 
 void
 ev_event_grab_window(Any window)
@@ -227,8 +228,14 @@ CtoEvent(SDL_Event *event)
 
   switch (event->type)
   { case SDL_EVENT_MOUSE_BUTTON_DOWN:
+      mouse_tracking_wid = event->button.windowID;
+      goto mouse_cont;
     case SDL_EVENT_MOUSE_BUTTON_UP:
       /* https://wiki.libsdl.org/SDL3/SDL_MouseButtonEvent */
+      if ( !event->button.windowID ) /* Seems to happen on MacOS */
+	event->button.windowID = mouse_tracking_wid;
+      mouse_tracking_wid = 0;
+    mouse_cont:
       fx = event->button.x;	/* these are floats */
       fy = event->button.y;
       wid  = event->button.windowID;
