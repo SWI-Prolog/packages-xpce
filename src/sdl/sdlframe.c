@@ -40,6 +40,7 @@
 #include "sdlcolour.h"
 #include "sdlevent.h"
 #include "sdlcursor.h"
+#include <math.h>
 
 #define MainWindow(fr)	     ( isNil(fr->members->head) ? (Any) fr : \
 			       fr->members->head->value )
@@ -345,6 +346,12 @@ ws_draw_resize_area_frame(Any ctx, TileObj t, Int x, Int y, Int w, Int h)
     x2 = valNum(x) + valNum(w);
     y2 = y1;
   }
+  float scale = SDL_GetWindowPixelDensity(wfr->ws_window);
+  x1 = rintf(x1*scale);
+  y1 = rintf(y1*scale);
+  x2 = rintf(x2*scale);
+  y2 = rintf(y2*scale);
+
   SDL_RenderLine(wfr->ws_renderer, x1, y1, x2, y2);
 
   return NULL;			/* continue */
@@ -373,7 +380,7 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
   if ( wsw )
   { Area a = sw->area;
     SDL_FRect dstrect = Area2FRect(a);
-    double scale = SDL_GetWindowPixelDensity(wfr->ws_window);
+    float scale = SDL_GetWindowPixelDensity(wfr->ws_window);
 
     dstrect.x += off->x;
     dstrect.y += off->y;
