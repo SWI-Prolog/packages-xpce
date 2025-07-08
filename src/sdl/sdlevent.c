@@ -334,6 +334,7 @@ CtoEvent(SDL_Event *event)
 	 !ws_created_window(mouse_tracking_window) )
     { Cprintf("Mouse tracking window (%s) is lost?\n",
 	      pp(mouse_tracking_window));
+      delCodeReference(mouse_tracking_window);
       mouse_tracking_window = NIL;
       fail;
     }
@@ -350,7 +351,9 @@ CtoEvent(SDL_Event *event)
     }
     if ( event->type == SDL_EVENT_MOUSE_BUTTON_UP &&
 	 mouse_tracking_button == event->button.button )
+    { delCodeReference(mouse_tracking_window);
       mouse_tracking_window = NIL;
+    }
   } else if ( notNil(grabbing_window) )
   { int ox=0, oy=0;
     bool rc = ws_window_frame_position(grabbing_window, frame, &ox, &oy);
@@ -365,6 +368,7 @@ CtoEvent(SDL_Event *event)
     if ( event->type == SDL_EVENT_MOUSE_BUTTON_DOWN )
     { mouse_tracking_window = window;
       mouse_tracking_button = event->button.button;
+      addCodeReference(mouse_tracking_window);
     }
   }
 
