@@ -169,7 +169,8 @@ install_src(pkg_xpce_rc
 	    FILES swipl/swipl-rc
 	    DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce/prolog)
 
-set(XPCE_LINK_RC swipl swipl-win)
+set(XPCE_LINK_RC swipl swipl-win ${EPILOG_APP})
+list(REMOVE_DUPLICATES XPCE_LINK_RC)
 
 # Install the link file
 foreach(rc ${XPCE_LINK_RC})
