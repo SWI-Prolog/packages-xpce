@@ -231,10 +231,17 @@ call_prolog_goal(prolog_goal *g)
 }
 
 static int sdl_thread = 0;
+static PL_option_t set_pce_thread_options[] =
+{ PL_OPTION("app_name", OPT_STRING),
+  PL_OPTIONS_END
+};
+
 
 static foreign_t
-set_pce_thread(void)
+set_pce_thread(term_t options)
 { int tid = PL_thread_self();
+  char *app_name = "swipl";
+  bool rc;
 
   if ( sdl_thread && tid != sdl_thread )
   { term_t culprit = PL_new_term_ref();
@@ -244,7 +251,15 @@ set_pce_thread(void)
     sdl_thread = tid;
   }
 
-  return setPceThread();
+  PL_STRINGS_MARK();
+  if ( !PL_scan_options(options, 0, "set_pce_thread_options", set_pce_thread_options,
+                        &app_name) )
+    return FALSE;
+
+  rc = setPceThread(app_name);
+  PL_STRINGS_RELEASE();
+
+  return rc;
 }
 
 
@@ -269,6 +284,6 @@ install_pcecall(void)
 { PL_register_foreign("in_pce_thread",      1,
 		      in_pce_thread, PL_FA_META, "0");
   PL_register_foreign("in_pce_thread_sync2", 2, in_pce_thread_sync2, 0);
-  PL_register_foreign("set_pce_thread",      0, set_pce_thread,      0);
+  PL_register_foreign("set_pce_thread",      1, set_pce_thread,      0);
   PL_register_foreign("pce_dispatch",        0, pl_pce_dispatch,     0);
 }

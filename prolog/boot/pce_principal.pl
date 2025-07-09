@@ -57,7 +57,7 @@
 
             pce_open/3,                 % +Object, +Mode, -Stream
             in_pce_thread/1,            % :Goal
-            set_pce_thread/0,
+            set_pce_thread/1,		% +Options
             pce_dispatch/0,
 
             pce_postscript_stream/1,    % -Stream

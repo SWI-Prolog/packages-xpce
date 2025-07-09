@@ -50,19 +50,25 @@ ws_initialise(int argc, char **argv)
 
 static int sdl_main_thread = 0;
 
-int
-setPceThread(void)
+bool
+setPceThread(const char *app_name)
 { if ( !sdl_main_thread )
   { sdl_main_thread = PL_thread_self();
     DEBUG(NAME_thread,
 	  Cprintf("SDL_Init() on thread %d\n", sdl_main_thread));
 
-    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_NAME_STRING, "xpce");
-    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_VERSION_STRING, PCE_VERSION);
-    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_IDENTIFIER_STRING, "org.swi_prolog.xpce");
-    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_CREATOR_STRING, "Jan Wielemaker,Anjo Anjewierden");
-    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_COPYRIGHT_STRING, "Copyright 1992-2007, University of Amsterdam");
-    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_URL_STRING, "http://www.swi-prolog.org/packages/xpce/");
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_NAME_STRING,
+			       app_name);
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_VERSION_STRING,
+			       PCE_VERSION);
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_IDENTIFIER_STRING,
+			       "org.swi_prolog.xpce");
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_CREATOR_STRING,
+			       "Jan Wielemaker, Anjo Anjewierden");
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_COPYRIGHT_STRING,
+			       "Copyright 1992-2025, University of Amsterdam, SWI-Prolog Solutions b.v");
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_URL_STRING,
+			       "https://www.swi-prolog.org");
 
     if ( !SDL_Init(SDL_INIT_EVENTS|SDL_INIT_VIDEO) )
       return errorPce(NIL, NAME_sdlInitialize);

@@ -90,7 +90,7 @@ pce_dispatch_(Options) :-
     end_pce_dispatcher/1.
 
 pce_dispatcher(Origin) :-
-    set_pce_thread,
+    set_pce_thread([]),
     thread_self(Me),
     retractall(pce:pce_thread(_)),
     assert(pce:pce_thread(Me)),
@@ -118,7 +118,7 @@ pce_end_dispatch :-
     thread_self(Me),
     in_pce_thread(end(Me)),
     thread_get_message(end_pce_dispatcher),
-    set_pce_thread,
+    set_pce_thread([]),
     thread_self(Me),
     retractall(pce:pce_thread(_)),
     assert(pce:pce_thread(Me)).
@@ -138,5 +138,5 @@ start_dispatch :-
     (   current_prolog_flag(xpce_threaded, true),
         current_predicate(pce_dispatch/1)
     ->  pce_dispatch([])
-    ;   set_pce_thread
+    ;   set_pce_thread([])
     ).

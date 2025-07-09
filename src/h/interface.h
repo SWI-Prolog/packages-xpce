@@ -309,7 +309,7 @@ __pce_export void	pceMTLock(int lock);
 __pce_export void	pceMTUnlock(int lock);
 __pce_export int	pceMTTryLock(int lock);
 __pce_export int	pceMTdetach(void);
-__pce_export int	setPceThread(void);
+__pce_export bool	setPceThread(const char *app_name);
 
 		/********************************
 		*          PCE CALLING C	*
