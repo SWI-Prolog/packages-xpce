@@ -119,6 +119,7 @@ epilog :-
 
 epilog(Options0) :-
     meta_options(is_meta, Options0, Options),
+    fix_term,
     setup_history,
     option(title(Title), Options, @default),
     option(rows(Height), Options, @default),
@@ -141,6 +142,21 @@ epilog(Options0) :-
 
 is_meta(goal).
 is_meta(init).
+
+%!  fix_term
+%
+%   Ensure a sensible ``TERM`` setting. We  have   a  problem  if we use
+%   `swipl` in a terminal that is not compatible with `xterm`.
+
+fix_term :-
+    current_prolog_flag(windows, true),
+    !.
+fix_term :-
+    \+ current_prolog_flag(epilog, true),
+    getenv('TERM', _),
+    !.
+fix_term :-
+    setenv('TERM', xterm).
 
 %!  setup_history
 %
