@@ -118,6 +118,7 @@ epilog :-
     epilog([]).
 
 epilog(Options0) :-
+    setup_theme,
     meta_options(is_meta, Options0, Options),
     fix_term,
     setup_history,
@@ -142,6 +143,21 @@ epilog(Options0) :-
 
 is_meta(goal).
 is_meta(init).
+
+%!  setup_theme
+%
+%   Set the theme based on `@display<-system_theme`.   This is only used
+%   if the theme is not set using ``-Dtheme=<theme>``.
+
+setup_theme :-
+    current_prolog_flag(theme, _),
+    !.
+setup_theme :-
+    get(@display, system_theme, Theme),
+    exists_source(library(theme/Theme)),
+    !,
+    use_module(library(theme/Theme)).
+setup_theme.
 
 %!  fix_term
 %
