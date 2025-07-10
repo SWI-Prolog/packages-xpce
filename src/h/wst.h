@@ -37,10 +37,8 @@
 
 #include <x11/wstproto.h>
 
-#ifdef WIN32_GRAPHICS			/* additional ones */
-#include <msw/msproto.h>
-#elif SDL_GRAPHICS
-#include <sdl/sdl.h>			/* TODO: this must replace x11/wstproto.h */
+#include <sdl/sdl.h>
+#include <sdl/sdldisplay.h>
 #include <sdl/sdlimage.h>
 #include <sdl/sdldraw.h>
 #include <sdl/sdlinput.h>
@@ -48,7 +46,5 @@
 #include <sdl/sdlfont.h>
 COMMON(status)	metaModifierDisplay(DisplayObj d, Name name);
 COMMON(status)	X11ThreadsDisplay(DisplayObj d, BoolObj val);
-#endif
-
 
 #endif /* _PCE_WST_INCLUDED */

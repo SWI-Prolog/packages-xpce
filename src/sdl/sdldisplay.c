@@ -553,3 +553,19 @@ ws_grab_image_display(DisplayObj d, int x, int y, int width, int height)
 {
     return NULL;
 }
+
+Name
+ws_get_system_theme_display(DisplayObj d)
+{ SDL_SystemTheme theme = SDL_GetSystemTheme();
+
+  switch(theme)
+  { case SDL_SYSTEM_THEME_UNKNOWN:
+      fail;
+    case SDL_SYSTEM_THEME_LIGHT:
+      return NAME_light;
+    case SDL_SYSTEM_THEME_DARK:
+      return NAME_dark;
+  }
+
+  fail;
+}

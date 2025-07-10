@@ -370,6 +370,13 @@ getVisualTypeDisplay(DisplayObj d)
   answer(ws_get_visual_type_display(d));
 }
 
+static Name
+getSystemThemeDisplay(DisplayObj d)
+{ TRY(openDisplay(d));
+
+  answer(ws_get_system_theme_display(d));
+}
+
 Size
 getDPIDisplay(DisplayObj d)
 { int rx, ry;
@@ -1339,6 +1346,9 @@ static getdecl get_display[] =
      "{monochrome,static_grey,grey_scale,static_colour,pseudo_colour,true_colour,direct_colour}",
      NULL, getVisualTypeDisplay,
      NAME_colour, "Type of display attached"),
+  GM(NAME_systemTheme, 0, "{light,dark}",
+     NULL, getSystemThemeDisplay,
+     NAME_colour, "The OS system theme"),
   GM(NAME_height, 0, "int", NULL, getHeightDisplay,
      NAME_dimension, "Height of the display in pixels"),
   GM(NAME_size, 0, "size", NULL, getSizeDisplay,
