@@ -52,6 +52,13 @@ typedef struct
   charwidth_cache wcache;
 } ws_font, *WsFont;
 
+status ws_create_font(FontObj f, DisplayObj d);
+void   ws_destroy_font(FontObj f, DisplayObj d);
+bool   s_cwidth(uint32_t c, FontObj font, float *wp);
+bool   s_setcwidth(uint32_t c, FontObj font, float w);
+status ws_system_fonts(DisplayObj d);
+status ws_list_fonts(DisplayObj d, BoolObj mono);
+
 static inline WsFont
 ws_get_font(FontObj f)
 { WsFont wsf = f->ws_ref;
@@ -65,12 +72,5 @@ cairo_font(FontObj f)
 { WsFont wsf = ws_get_font(f);
   return wsf ? wsf->layout : NULL;
 }
-
-status ws_create_font(FontObj f, DisplayObj d);
-void   ws_destroy_font(FontObj f, DisplayObj d);
-bool   s_cwidth(uint32_t c, FontObj font, float *wp);
-bool   s_setcwidth(uint32_t c, FontObj font, float w);
-status ws_system_fonts(DisplayObj d);
-status ws_list_fonts(DisplayObj d, BoolObj mono);
 
 #endif /* SDLFONT_H */
