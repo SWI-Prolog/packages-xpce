@@ -49,12 +49,15 @@
  */
 status
 ws_created_window(PceWindow sw)
-{ WsWindow wsw = sw->ws_ref;
-  if ( wsw && wsw->backing )
-  { FrameObj fr = getFrameWindow(sw, OFF);
-//    DEBUG(NAME_window,
-//	  Cprintf("ws_created_window(%s) on %s\n", pp(sw), pp(fr)));
-    return fr && ws_created_frame(fr);
+{ if ( instanceOfObject(sw, ClassFrame) )
+  {  return ws_created_frame((FrameObj)sw);
+  } else
+  { WsWindow wsw = sw->ws_ref;
+    assert(instanceOfObject(sw, ClassWindow));
+    if ( wsw && wsw->backing )
+    { FrameObj fr = getFrameWindow(sw, OFF);
+      return fr && ws_created_frame(fr);
+    }
   }
 
   fail;

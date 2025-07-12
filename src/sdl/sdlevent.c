@@ -187,7 +187,7 @@ keycode_to_name(SDL_Event *event)
 
 static SDL_Keymod lastmod = SDL_KMOD_NONE;
 static Any grabbing_window = NIL;
-static Any mouse_tracking_window = NIL;
+static Any mouse_tracking_window = NIL; /* Window or Frame */
 static Uint8 mouse_tracking_button;
 static SDL_WindowID mouse_tracking_wid = 0;
 
