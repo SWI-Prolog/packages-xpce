@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1999-2012, University of Amsterdam
+    Copyright (c)  1999-2025, University of Amsterdam
+				 SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -95,6 +96,7 @@ event_property(y,  right,    [length(4), alignment(left)]).
 modifier(s, shift).
 modifier(c, control).
 modifier(m, meta).
+modifier(g, gui).
 
 fill_dialog(V) :->
     get(V, member, dialog, Dialog),
