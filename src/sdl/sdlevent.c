@@ -142,6 +142,7 @@ state_to_buttons(SDL_MouseButtonFlags flags, SDL_Keymod mod)
   if ( mod & ShiftMask )	   r |= BUTTON_shift;
   if ( mod & ControlMask )	   r |= BUTTON_control;
   if ( mod & MetaMask )            r |= BUTTON_meta;
+  if ( mod & SDL_KMOD_GUI )        r |= BUTTON_gui;
 
   return toInt(r);
 }

@@ -952,20 +952,21 @@ End;
 		 *	      EVENTS		*
 		 *******************************/
 
-#define BUTTON_mask		(0x0ff)
-#define BUTTON_control		(0x001)
-#define BUTTON_shift		(0x002)
-#define BUTTON_meta		(0x004)
-#define BUTTON_ms_left		(0x008)
-#define BUTTON_ms_middle	(0x010)
-#define BUTTON_ms_right		(0x020)
-#define BUTTON_ms_button4	(0x040)
-#define BUTTON_ms_button5	(0x080)
+#define BUTTON_mask		(0x0ffff)
+#define BUTTON_control		(0x00001)
+#define BUTTON_shift		(0x00002)
+#define BUTTON_meta		(0x00004)
+#define BUTTON_gui		(0x00008) /* Windows key/Apple Command key */
+#define BUTTON_ms_left		(0x00010)
+#define BUTTON_ms_middle	(0x00020)
+#define BUTTON_ms_right		(0x00040)
+#define BUTTON_ms_button4	(0x00080)
+#define BUTTON_ms_button5	(0x00100)
 					/* buttons bit mask */
-#define CLICK_TYPE_mask		(0x700)
-#define CLICK_TYPE_single	(0x100)
-#define CLICK_TYPE_double	(0x200)
-#define CLICK_TYPE_triple	(0x400)
+#define CLICK_TYPE_mask		(0x070000)
+#define CLICK_TYPE_single	(0x010000)
+#define CLICK_TYPE_double	(0x020000)
+#define CLICK_TYPE_triple	(0x040000)
 
 		/********************************
 		*      X-WINDOW REFERENCES	*

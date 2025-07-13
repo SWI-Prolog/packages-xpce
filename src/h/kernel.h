@@ -1080,6 +1080,7 @@ NewClass(modifier)
   Name		shift;			/* {up,down,@default} */
   Name		control;		/* {up,down,@default} */
   Name		meta;			/* {up,down,@default} */
+  Name		gui;			/* {up,down,@default} */
 End;
 
 
