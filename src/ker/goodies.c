@@ -378,6 +378,21 @@ stpcpy(char *dst, const char *src)
 }
 #endif
 
+static Name
+chrName(int chr)
+{ switch(chr)
+  { case ESC:	return NAME_ESC;
+    case ' ':   return NAME_SPC;
+    case '\t':  return NAME_TAB;
+    case '\b':  return NAME_BS;
+    case '\r':  return NAME_RET;
+    case '\n':  return NAME_LFD;
+    case DEL:   return NAME_DEL;
+    default:
+      fail;
+  }
+}
+
 /** Emacs character name mapping (in this order)
 
 C-  (Control)
@@ -396,72 +411,57 @@ characterName(Any chr)
   bool ctrl  = false;
   bool shift = false;
   bool gui   = false;
-  int c;
+  bool meta  = false;
+  Name name  = NULL;
+  int c = EOF;
 
   if ( instanceOfObject(chr, ClassEvent) )
   { EventObj ev = chr;
 
-    if ( !isInteger(ev->id) )
-    { return ev->id;
-    } else
+    if ( isInteger(ev->id) )
     { c = valInt(ev->id);
-      int btns = valInt(ev->buttons);
-      ctrl  = (btns & BUTTON_control);
-      shift = (btns & BUTTON_shift);
-      gui   = (btns & BUTTON_gui);
+      if ( c == ' ' )
+	name = NAME_SPC;
+    } else
+    { name = ev->id;
     }
-  } else
-  { if ( !isInteger(chr) )
-      return chr;
 
-    c = valInt(chr);
-    ctrl = (c < ' ');
+    int btns = valInt(ev->buttons);
+    ctrl  = (btns & BUTTON_control);
+    meta  = (btns & BUTTON_meta);
+    shift = (btns & BUTTON_shift);
+    gui   = (btns & BUTTON_gui);
+  } else
+  { if ( isInteger(chr) )
+    { c = valInt(chr);
+      name = chrName(c);
+      ctrl = (c < ' ');
+      meta = ( c >= META_OFFSET );
+    } else
+      return chr;
   }
 
   if ( c >= META_OFFSET )
-  { out = stpcpy(out, "\\e");
     c -= META_OFFSET;
-  }
 
+  if ( meta )
+    out = stpcpy(out, "\\e");	/* TBD: Turn into M- and use as second */
   if ( ctrl )
-    goto ctrl;
+    out = stpcpy(out, "\\C-");
+  if ( shift && (ctrl || meta || name) )
+    out = stpcpy(out, "\\S-");
+  if ( gui )
+    out = stpcpy(out, "\\s-");
 
-  switch(c)
-  { case ESC:
-      out = stpcpy(out, "\\e");
-      break;
-    case ' ':
-      out = stpcpy(out, "SPC");
-      break;
-    case '\t':
-      out = stpcpy(out, "TAB");
-      break;
-    case '\b':
-      out = stpcpy(out, "BS");
-      break;
-    case '\r':
-      out = stpcpy(out, "RET");
-      break;
-    case '\n':
-      out = stpcpy(out, "LFD");
-      break;
-    case DEL:
-      out = stpcpy(out, "DEL");
-      break;
-    default:
-    ctrl:
-      if ( ctrl )
-	out = stpcpy(out, "\\C-");
-      if ( shift && (c < ' ' || c >= META_OFFSET) )
-	out = stpcpy(out, "\\S-");
-      if ( gui )
-	out = stpcpy(out, "\\s-");
-      if ( c < ' ' )
-      { int c2 = tolower(c + '@');
-	*out++ = c2;
-      } else
-      { out = utf8_put_char(out, c);
-      }
+  if ( name )
+  { out = stpcpy(out, nameToUTF8(name));
+  } else
+  { if ( c < ' ' )
+    { int c2 = tolower(c + '@');
+      *out++ = c2;
+    } else
+    { out = utf8_put_char(out, c);
+    }
   }
 
   *out = 0;

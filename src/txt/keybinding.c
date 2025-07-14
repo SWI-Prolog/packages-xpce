@@ -684,7 +684,7 @@ static kbDef emacs_caret_basics[] =
 static kbDef emacs_edit_basics[] =
 { { SUPER,		NAME_insert },
 
-  { "backspace",	NAME_cutOrBackwardDeleteChar },
+  { "BS",		NAME_cutOrBackwardDeleteChar },
   { "\\C-d",		NAME_deleteChar },
   { "DEL",		NAME_cutOrDeleteChar },
   { "\\C-t",		NAME_transposeChars },
@@ -692,7 +692,7 @@ static kbDef emacs_edit_basics[] =
   { "\\C-o",		NAME_openLine },
 
   { "\\ed",		NAME_killWord },
-  { "\\ebackspace",	NAME_backwardKillWord },
+  { "\\eBS",		NAME_backwardKillWord },
   { "\\e\\C-h",		NAME_backwardKillWord }, /* TBD: better abstraction */
 
   { NULL,		NULL }
@@ -843,7 +843,7 @@ static kbDef editor[] =
 
   { DEFAULT_FUNCTION,	NAME_undefined },
 
-  { NULL,	        NULL }
+  { NULL,		NULL }
 };
 
 

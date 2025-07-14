@@ -1177,8 +1177,11 @@ static struct namepair
   { NAME_help,		NAME_namedFunction },
   { NAME_break,		NAME_namedFunction },
   { NAME_pause,		NAME_namedFunction },
-  { NAME_backspace,	NAME_namedFunction },
-  { NAME_delete,	NAME_namedFunction },
+  { NAME_BS,		NAME_namedFunction }, /* Add node for these ASCII? */
+  { NAME_TAB,		NAME_namedFunction },
+  { NAME_DEL,		NAME_namedFunction },
+  { NAME_ESC,		NAME_namedFunction },
+  { NAME_RET,		NAME_namedFunction },
 
   { NAME_cursorHome,	NAME_cursor },
   { NAME_cursorLeft,	NAME_cursor },

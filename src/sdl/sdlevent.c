@@ -149,7 +149,7 @@ state_to_buttons(SDL_MouseButtonFlags flags, SDL_Keymod mod)
 
 static Any
 keycode_to_name(SDL_Event *event)
-{ if ( event->key.key >= 32 && event->key.key < 128 )
+{ if ( event->key.key >= 32 && event->key.key < DEL )
   { if ( event->key.mod & MetaMask )
       return toInt(Meta(event->key.key));
     if ( event->key.mod & ControlMask )
@@ -160,15 +160,15 @@ keycode_to_name(SDL_Event *event)
 
   switch(event->key.key)
   { case SDLK_RETURN:
+      return NAME_RET;
     case SDLK_ESCAPE:
+      return NAME_ESC;
     case SDLK_TAB:
-      return toInt(event->key.key);
+      return NAME_TAB;
     case SDLK_BACKSPACE:
-      if ( event->key.mod & MetaMask ) /* dubious */
-	return toInt(Meta(Control('H')));
-      return NAME_backspace;
+      return NAME_BS;
     case SDLK_DELETE:
-      return NAME_delete;
+      return NAME_DEL;
     case SDLK_PAUSE:	return NAME_pause;
     case SDLK_HOME:	return NAME_cursorHome;
     case SDLK_PAGEUP:	return NAME_pageUp;
@@ -381,10 +381,14 @@ CtoEvent(SDL_Event *event)
 			     toInt(x), toInt(y),
 			     state_to_buttons(mouse_flags, lastmod),
 			     EAV);
-  assign(ev, frame, frame);
+  if ( ev )
+  { assign(ev, frame, frame);
 
-  if ( ctx_name )
-    attributeObject(ev, ctx_name, ctx);
+    if ( ctx_name )
+      attributeObject(ev, ctx_name, ctx);
+  } else
+  { Cprintf("Failed to create event with id %s\n", pp(name));
+  }
 
   return ev;
 }
