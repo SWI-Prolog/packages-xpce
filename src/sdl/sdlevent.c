@@ -290,7 +290,7 @@ CtoEvent(SDL_Event *event)
       /* https://wiki.libsdl.org/SDL3/SDL_TextInputEvent */
     case SDL_EVENT_TEXT_INPUT: /* Needed for input composition.  TBD */
     { SDL_Keymod mod = SDL_GetModState();
-      if ( mod & (ControlMask|MetaMask) )
+      if ( mod & (ControlMask|MetaMask|SDL_KMOD_GUI) )
 	fail;
       int codepoint;
       char const *u = event->text.text;
