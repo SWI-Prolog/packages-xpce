@@ -153,32 +153,32 @@ keycode_to_name(SDL_Event *event)
   { if ( event->key.mod & MetaMask )
       return toInt(Meta(event->key.key));
     if ( event->key.mod & ControlMask )
-      return toInt(Control(event->key.key));
+    { if ( event->key.key >= 'a' && event->key.key <= 'z' )
+	return toInt(Control(event->key.key));
+      else if ( event->key.key == SDLK_AT )
+	return ZERO;
+      else
+	return toInt(event->key.key);
+    }
     if ( event->key.mod & SDL_KMOD_GUI )
       return toInt(event->key.key);
   }
 
   switch(event->key.key)
-  { case SDLK_RETURN:
-      return NAME_RET;
-    case SDLK_ESCAPE:
-      return NAME_ESC;
-    case SDLK_TAB:
-      return NAME_TAB;
-    case SDLK_BACKSPACE:
-      return NAME_BS;
-    case SDLK_DELETE:
-      return NAME_DEL;
-    case SDLK_PAUSE:	return NAME_pause;
-    case SDLK_HOME:	return NAME_cursorHome;
-    case SDLK_PAGEUP:	return NAME_pageUp;
-    case SDLK_END:	return NAME_end;
-    case SDLK_PAGEDOWN:	return NAME_pageDown;
-    case SDLK_RIGHT:	return NAME_cursorRight;
-    case SDLK_LEFT:	return NAME_cursorLeft;
-    case SDLK_DOWN:	return NAME_cursorDown;
-    case SDLK_UP:	return NAME_cursorUp;
-    case SDLK_AT:	if ( event->key.mod & ControlMask ) return ZERO;
+  { case SDLK_RETURN:    return NAME_RET;
+    case SDLK_ESCAPE:    return NAME_ESC;
+    case SDLK_TAB:       return NAME_TAB;
+    case SDLK_BACKSPACE: return NAME_BS;
+    case SDLK_DELETE:    return NAME_DEL;
+    case SDLK_PAUSE:	 return NAME_pause;
+    case SDLK_HOME:	 return NAME_cursorHome;
+    case SDLK_PAGEUP:	 return NAME_pageUp;
+    case SDLK_END:	 return NAME_end;
+    case SDLK_PAGEDOWN:	 return NAME_pageDown;
+    case SDLK_RIGHT:	 return NAME_cursorRight;
+    case SDLK_LEFT:	 return NAME_cursorLeft;
+    case SDLK_DOWN:	 return NAME_cursorDown;
+    case SDLK_UP:	 return NAME_cursorUp;
   }
 
   fail;
