@@ -2647,13 +2647,22 @@ eventGraphical(Any obj, EventObj ev)
 
   if ( gr->active != OFF )
   { Chain recognisers;
-    Cell cell;
 
-    TRY( recognisers = getAllRecognisersGraphical(gr, OFF) );
+    if ( (recognisers=getAllRecognisersGraphical(gr, OFF)) )
+    { Cell cell;
 
-    for_cell(cell, recognisers)
-      if ( qadSendv(cell->value, NAME_event, 1, (Any*)&ev) )
-	succeed;
+      for_cell(cell, recognisers)
+      { if ( qadSendv(cell->value, NAME_event, 1, (Any*)&ev) )
+	  succeed;
+      }
+    }
+
+    if ( isAEvent(ev, NAME_focus) )
+    { if ( isAEvent(ev, NAME_obtainKeyboardFocus) )
+	ws_enable_text_input(gr, ON);
+      else if ( isAEvent(ev, NAME_releaseKeyboardFocus) )
+	ws_enable_text_input(gr, OFF);
+    }
   }
 
   fail;
