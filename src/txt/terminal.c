@@ -425,8 +425,14 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
       buf[2] = 0;
       seq = buf;
     }
-  } else if ( ev->id == NAME_backspace )
+  } else if ( ev->id == NAME_BS )
   { chr = 127;
+  } else if ( ev->id == NAME_TAB )
+  { chr = '\t';
+  } else if ( ev->id == NAME_RET )
+  { chr = '\r';
+  } else if ( ev->id == NAME_ESC )
+  { chr = '\e';
   } else if ( ev->id == NAME_cursorUp )
   { seq = b->app_escape ? "\e0A" : "\e[A";
   } else if ( ev->id == NAME_cursorDown )
