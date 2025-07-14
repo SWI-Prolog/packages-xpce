@@ -629,7 +629,7 @@ get_xy_event(EventObj ev, Any obj, BoolObj area, Int *rx, Int *ry)
 	y = valInt(ev->y);
       } else
       { PceWindow sw = getWindowGraphical(obj);
-	int ox=0, oy=0;
+	float ox=0, oy=0;
 	if ( ws_window_frame_position(sw, ev->frame, &ox, &oy) )
 	{ x = valInt(ev->x) - ox;
 	  y = valInt(ev->y) - oy;

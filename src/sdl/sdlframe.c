@@ -252,7 +252,7 @@ frame_displayed(FrameObj fr, BoolObj val)
  */
 
 static bool
-ws_window_frame_position_(Any window, FrameObj fr, int *ox, int *oy)
+ws_window_frame_position_(Any window, FrameObj fr, float *ox, float *oy)
 { if ( window == fr )
     return true;
   if ( instanceOfObject(window, ClassFrame) )
@@ -262,8 +262,8 @@ ws_window_frame_position_(Any window, FrameObj fr, int *ox, int *oy)
   { PceWindow sw = window;
     if ( notNil(sw->frame) )
     { if ( sw->frame == fr )
-      { *ox += valInt(sw->area->x);
-	*oy += valInt(sw->area->y);
+      { *ox += valNum(sw->area->x);
+	*oy += valNum(sw->area->y);
 	return true;
       }
       return false;
@@ -274,14 +274,14 @@ ws_window_frame_position_(Any window, FrameObj fr, int *ox, int *oy)
       Int x, y;
       get_absolute_xy_graphical((Graphical)sw, (Device *)&me, &x, &y);
       assert(me == sw->parent);
-      *ox += valInt(x);
-      *oy += valInt(y);
+      *ox += valNum(x);
+      *oy += valNum(y);
       return ws_window_frame_position_(sw->parent, fr, ox, oy);
     }
 
     if ( instanceOfObject(sw->device, ClassWindowDecorator) )
-    { *ox += valInt(sw->area->x);
-      *oy += valInt(sw->area->y);
+    { *ox += valNum(sw->area->x);
+      *oy += valNum(sw->area->y);
 
       return ws_window_frame_position_(sw->device, fr, ox, oy);
     }
@@ -292,8 +292,8 @@ ws_window_frame_position_(Any window, FrameObj fr, int *ox, int *oy)
 }
 
 bool
-ws_window_frame_position(Any window, FrameObj fr, int *ox, int *oy)
-{ int x = *ox, y = *oy;
+ws_window_frame_position(Any window, FrameObj fr, float *ox, float *oy)
+{ float x = *ox, y = *oy;
   if ( ws_window_frame_position_(window, fr, &x, &y) )
   { *ox = x;
     *oy = y;

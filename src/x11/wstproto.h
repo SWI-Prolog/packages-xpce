@@ -19,9 +19,6 @@ COMMON(status)	ws_create_cursor(CursorObj c, DisplayObj d);
 COMMON(void)	ws_destroy_cursor(CursorObj c, DisplayObj d);
 
 /* ../src/x11/xframe.c */
-COMMON(bool)	ws_window_frame_position(Any window, FrameObj fr,
-					 int *ox, int *oy);
-
 COMMON(status)	ws_created_frame(FrameObj fr);
 COMMON(void)	ws_uncreate_frame(FrameObj fr);
 COMMON(status)	ws_create_frame(FrameObj fr);

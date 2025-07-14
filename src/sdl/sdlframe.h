@@ -50,7 +50,7 @@ FrameObj wsid_to_frame(SDL_WindowID id);
 WsFrame sdl_frame(FrameObj fr, bool create);
 bool sdl_frame_event(SDL_Event *ev);
 void ws_redraw_changed_frames(void);
-bool ws_window_frame_position(Any window, FrameObj fr, int *ox, int *oy);
+bool ws_window_frame_position(Any window, FrameObj fr, float *ox, float *oy);
 
 /* Functions shared with core */
 status ws_created_frame(FrameObj fr);

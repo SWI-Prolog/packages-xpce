@@ -1486,7 +1486,7 @@ getFramePositionGraphical(Graphical gr)
   }
   FrameObj fr = getFrameWindow(w, OFF);
   if ( fr )
-  { int fox = 0, foy = 0;
+  { float fox = 0.0, foy = 0.0;
     ws_window_frame_position(w, fr, &fox, &foy);
     ox += fox;
     oy += foy;

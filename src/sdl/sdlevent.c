@@ -58,14 +58,14 @@ xy_in_area(Area a, int x, int y)
 	   y >= ay && y <= ay+ah );
 }
 
-static void event_window(Any *target, int *x, int *y);
+static void event_window(Any *target, float *x, float *y);
 
 static bool
-descent_to_window(Any *target, PceWindow sw, int *x, int *y)
+descent_to_window(Any *target, PceWindow sw, float *x, float *y)
 { if ( xy_in_area(sw->area, *x, *y) &&
        ws_created_window(sw) )
-  { *x -= valInt(sw->area->x);
-    *y -= valInt(sw->area->y);
+  { *x -= valNum(sw->area->x);
+    *y -= valNum(sw->area->y);
     *target = sw;
     event_window(target, x, y);
     return true;
@@ -75,7 +75,7 @@ descent_to_window(Any *target, PceWindow sw, int *x, int *y)
 }
 
 static void
-event_window(Any *target, int *x, int *y)
+event_window(Any *target, float *x, float *y)
 { if ( instanceOfObject(*target, ClassFrame) )
   { FrameObj fr = *target;
     Cell cell;
@@ -100,10 +100,10 @@ event_window(Any *target, int *x, int *y)
 	Int wx, wy;
 	get_absolute_xy_graphical((Graphical)sub, (Device *)&me, &wx, &wy);
 	assert(me == sw);
-	if ( *x >= valInt(wx) && *x <= valInt(wx) + valInt(sub->area->w) &&
-	     *y >= valInt(wy) && *y <= valInt(wy) + valInt(sub->area->h) )
-	{ *x -= valInt(wx);
-	  *y -= valInt(wy);
+	if ( *x >= valNum(wx) && *x <= valNum(wx) + valNum(sub->area->w) &&
+	     *y >= valNum(wy) && *y <= valNum(wy) + valNum(sub->area->h) )
+	{ *x -= valNum(wx);
+	  *y -= valNum(wy);
 	  *target = sub;
 	  event_window(target, x, y);
 	  break;
@@ -330,8 +330,8 @@ CtoEvent(SDL_Event *event)
   float scale = 1.0;
 #endif
 
-  int x = (int)(fx*scale+0.5);
-  int y = (int)(fy*scale+0.5);
+  float x = fx*scale;
+  float y = fy*scale;
   if ( notNil(mouse_tracking_window) )
   { if ( onFlag(mouse_tracking_window, F_FREED|F_FREEING) ||
 	 !ws_created_window(mouse_tracking_window) )
@@ -342,7 +342,7 @@ CtoEvent(SDL_Event *event)
       fail;
     }
 
-    int ox=0, oy=0;
+    float ox=0, oy=0;
     bool rc = ws_window_frame_position(mouse_tracking_window, frame, &ox, &oy);
     if ( rc )
     { window = mouse_tracking_window;
@@ -358,7 +358,7 @@ CtoEvent(SDL_Event *event)
       mouse_tracking_window = NIL;
     }
   } else if ( notNil(grabbing_window) )
-  { int ox=0, oy=0;
+  { float ox=0, oy=0;
     bool rc = ws_window_frame_position(grabbing_window, frame, &ox, &oy);
     if ( rc )			/* grabbing window on same frame */
     { x -= ox;
@@ -402,8 +402,8 @@ dispatch_event(EventObj ev)
 
   DEBUG(NAME_event,
 	if ( ev->id != NAME_locMove )
-	  Cprintf("Dispatching %s (%s at %d,%d) to %s\n",
-		  pp(ev), pp(ev->id), valInt(ev->x), valInt(ev->y),
+	  Cprintf("Dispatching %s (%s at %.1f,%.1f) to %s\n",
+		  pp(ev), pp(ev->id), valNum(ev->x), valNum(ev->y),
 		  pp(target)));
 
   if ( onFlag(target, F_FREED|F_FREEING) )
@@ -694,8 +694,8 @@ ws_event_in_subwindow(EventObj ev, Any root)
   { return ev->frame;
   } else if ( instanceOfObject(root, ClassFrame) )
   { Any window = root;
-    int x = valInt(ev->x);
-    int y = valInt(ev->y);
+    float x = valNum(ev->x);
+    float y = valNum(ev->y);
 
     event_window(&window, &x, &y);
     return window;
