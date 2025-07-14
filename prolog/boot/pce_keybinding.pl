@@ -1,10 +1,11 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@vu.nl
-    WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2002-2013, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/packages/xpce/
+    Copyright (c)  2002-2025, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -52,9 +53,9 @@ message_level(silent).
 %
 %   Specify bindings for alternative key-binding-styles.
 %
-%   @param ModeName         Name of the key-binding-style
-%   @param TableName        Syntax table to modify
-%   @param Modifications    List of Key-Method
+%   @arg ModeName         Name of the key-binding-style
+%   @arg TableName        Syntax table to modify
+%   @arg Modifications    List of Key-Method
 
 binding(cua, editor,
         [ '\\C-v' = paste,
@@ -67,15 +68,15 @@ binding(cua, 'emacs$fundamental',
           '\\C-p' = print
         ]).
 binding(apple, editor,
-        [ '\\es'  = save_buffer,
-          '\\ez'  = undo
+        [ '\\s-s'  = save_buffer,
+          '\\s-z'  = undo
         ]).
 binding(apple, 'emacs$fundamental',
-        [ '\\ec'  = copy_or_capitalize_word,
-          '\\ex'  = cut_or_execute_extended_command
+        [ '\\s-c' = copy,
+          '\\s-x' = cut
         ]).
 binding(apple, emacs_page,
-        [ '\\ev'  = paste_or_scroll_down
+        [ '\\s-V' = paste
         ]).
 
 
@@ -265,45 +266,3 @@ make_key_binding_style_type :-
     send(Type, slot, context, Styles).
 
 :- initialization make_key_binding_style_type.
-
-
-                 /*******************************
-                 *             APPLE            *
-                 *******************************/
-
-:- pce_extend_class(editor).
-
-copy_or_capitalize_word(E, Arg:[int]) :->
-    "Command-c copies; ESC c capitalizes word"::
-    (   Arg == @default,
-        send(@event, has_modifier, m)
-    ->  send(E, copy)
-    ;   send(E, capitalize_word, Arg)
-    ).
-
-cut_or_execute_extended_command(E, Arg:[int]) :->
-    "Command-X cut; ESC-x starts extended command"::
-    (   Arg == @default,
-        send(@event, has_modifier, m)
-    ->  send(E, cut)
-    ;   send(E, noarg_call, execute_extended_command, Arg)
-    ).
-
-
-paste_or_scroll_down(E, Arg:[int]) :->
-    "Command-v pasts; ESC v scrolls down"::
-    (   Arg == @default,
-        send(@event, has_modifier, m)
-    ->  send(E, paste)
-    ;   send(E, scroll_down, Arg)
-    ).
-
-:- pce_end_class(editor).
-
-:- pce_extend_class(list_browser).
-
-paste_or_scroll_down(LB, Arg:[int]) :->
-    "Forward to ->scroll_down (Apple keybinding)"::
-    send(LB, scroll_down, Arg).
-
-:- pce_end_class(list_browser).
