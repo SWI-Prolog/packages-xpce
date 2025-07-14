@@ -70,6 +70,8 @@ setPceThread(const char *app_name)
     SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_URL_STRING,
 			       "https://www.swi-prolog.org");
 
+    SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
+
     if ( !SDL_Init(SDL_INIT_EVENTS|SDL_INIT_VIDEO) )
       return errorPce(NIL, NAME_sdlInitialize);
     ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
