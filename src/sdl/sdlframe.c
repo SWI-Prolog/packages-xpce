@@ -670,7 +670,10 @@ ws_enable_text_input(Graphical gr, BoolObj enable)
   { WsFrame wfr = fr->ws_ref;
 
     if ( wfr && wfr->ws_window )
-    { if ( isOn(enable) )
+    { DEBUG(NAME_keyboard,
+	    Cprintf("ws_enable_text_input() %s -> %s: %s\n",
+		    pp(gr), pp(fr), pp(enable)));
+      if ( isOn(enable) )
 	return SDL_StartTextInput(wfr->ws_window);
       else
 	return SDL_StopTextInput(wfr->ws_window);
