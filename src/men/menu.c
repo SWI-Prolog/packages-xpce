@@ -301,7 +301,7 @@ computeItemsMenu(Menu m)
     { MenuItem mi = cell->value;
       int aw, ah;
 
-      if ( notNil(mi->accelerator) )
+      if ( isName(mi->accelerator) )
       { str_size(&mi->accelerator->data, f, &aw, &ah);
 	am = max(am, aw);
       }
@@ -711,7 +711,7 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
     }
   }
 
-  if ( notNil(m->accelerator_font) && notNil(mi->accelerator) )
+  if ( notNil(m->accelerator_font) && isName(mi->accelerator) )
   { FontObj f = m->accelerator_font;
     int fw = valInt(getExFont(f));
 

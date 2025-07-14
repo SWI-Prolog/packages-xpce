@@ -63,6 +63,7 @@ createDialogItem(Any obj, Name name)
   assign(di, auto_label_align,	 ON);
   assign(di, auto_value_align,	 ON);
   assign(di, auto_align,	 ON);
+  assign(di, accelerator,	 DEFAULT);
 
   succeed;
 }
@@ -471,6 +472,17 @@ acc_index(Abin a, unsigned char *used)
   fail;
 }
 
+static bool
+wantsAccelerator(Any obj)
+{ if ( hasSendMethodObject(obj, NAME_accelerator) &&
+       hasGetMethodObject(obj, NAME_accelerator) )
+  { Any acc0 = get(obj, NAME_accelerator, EAV);
+    return !isNil(acc0);
+  }
+
+  return false;
+}
+
 
 status
 assignAccelerators(Chain objects, Name prefix, Name label_method)
@@ -494,7 +506,7 @@ assignAccelerators(Chain objects, Name prefix, Name label_method)
   { Any lbl;
     const char *s;
 
-    if ( !hasSendMethodObject(cell->value, NAME_accelerator) )
+    if ( !wantsAccelerator(cell->value) )
       continue;
 
     if ( hasGetMethodObject(cell->value, label_method) &&
@@ -608,7 +620,7 @@ static vardecl var_dialogItem[] =
      NAME_layout, "Automatically align label"),
   IV(NAME_autoValueAlign, "bool", IV_BOTH,
      NAME_layout, "Automatically align value"),
-  SV(NAME_accelerator, "name*", IV_GET|IV_STORE, acceleratorDialogItem,
+  SV(NAME_accelerator, "[name]*", IV_GET|IV_STORE, acceleratorDialogItem,
      NAME_layout, "Automatically align value")
 };
 
