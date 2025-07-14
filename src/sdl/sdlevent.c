@@ -401,7 +401,7 @@ dispatch_event(EventObj ev)
 		  pp(target)));
 
   if ( onFlag(target, F_FREED|F_FREEING) )
-  { Cprintf("Event on %s; ignored\n", pp(target));
+  { Cprintf("Event %s on %s; ignored\n", pp(ev->id), pp(target));
     return false;
   }
 
