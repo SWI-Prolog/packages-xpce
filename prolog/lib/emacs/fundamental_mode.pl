@@ -62,7 +62,7 @@
 
           prefix                   = key('\\eg'),
 
-          font_magnify             = key('\\C-+'),
+          font_magnify             = key('\\C-\\S-='), % assumes + is shift-=.
           font_reduce              = key('\\C--'),
           font_default             = key('\\C-='),
 
