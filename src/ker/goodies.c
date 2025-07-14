@@ -441,6 +441,9 @@ characterName(Any chr)
       return chr;
   }
 
+  if ( name == NAME_ESC )
+    return UTF8ToName("\\e");
+
   if ( c >= META_OFFSET )
     c -= META_OFFSET;
 
