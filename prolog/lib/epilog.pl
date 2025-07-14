@@ -436,20 +436,18 @@ event(T, Ev:event) :->
     ).
 
 typed(T, Ev:event) :->
-    (   get(Ev, id, Id),
-        typed_epilog(Id, T, Ev)
+    (   send(Ev, is_a, keyboard),
+        get(Ev, key, Key),
+        typed_epilog(Key, T)
     ->  true
     ;   send_super(T, typed, Ev)
     ).
 
-typed_epilog(15, T, Ev) :-              % Shift+Ctrl+o
-    send(Ev, has_modifier, sc),
+typed_epilog('\\C-\\S-o', T) :-
     send(T, split, horizontally).
-typed_epilog(5, T, Ev) :-               % Shift+Ctrl+e
-    send(Ev, has_modifier, sc),
+typed_epilog('\\C-\\S-e', T) :-
     send(T, split, vertically).
-typed_epilog(9, T, Ev) :-               % Shift+Ctrl+i
-    send(Ev, has_modifier, sc),
+typed_epilog('\\C-\\S-i', T) :-
     send(T, new_window).
 
 copy(T) :->
