@@ -368,78 +368,104 @@ checkSummaryCharp(Name classname, Name name, char *s)
     sysPce("%s (%s): Bad summary string: %s", pp(classname), pp(name), s);
 }
 
+#ifndef HAVE_STPCPY
+#define stpcpy my_stpcpy	/* avoid name conflicts */
+static char *
+stpcpy(char *dst, const char *src)
+{ char *p = mempcpy(dst, src, strlen(src));
+  *p = '\0';
+  return p;
+}
+#endif
 
+/** Emacs character name mapping (in this order)
+
+C-  (Control)
+M-  (Meta)
+S-  (Shift)
+s-  (Super)	// SDL3 "GUI" key: Window key or Apple Command key
+H-  (Hyper)
+A-  (Alt)
+
+*/
 
 Name
 characterName(Any chr)
-{ wchar_t buf[10];
-  int ctrl;
+{ char buf[100];
+  char *out  = buf;
+  bool ctrl  = false;
+  bool shift = false;
+  bool gui   = false;
   int c;
 
   if ( instanceOfObject(chr, ClassEvent) )
   { EventObj ev = chr;
 
     if ( !isInteger(ev->id) )
-      return ev->id;
-    else
+    { return ev->id;
+    } else
     { c = valInt(ev->id);
-      ctrl = (valInt(ev->buttons) & BUTTON_control);
+      int btns = valInt(ev->buttons);
+      ctrl  = (btns & BUTTON_control);
+      shift = (btns & BUTTON_shift);
+      gui   = (btns & BUTTON_gui);
     }
   } else
   { if ( !isInteger(chr) )
       return chr;
 
     c = valInt(chr);
-    ctrl = FALSE;
+    ctrl = (c < ' ');
   }
 
   if ( c >= META_OFFSET )
-  { wcscpy(buf, L"\\e");
+  { out = stpcpy(out, "\\e");
     c -= META_OFFSET;
-  } else
-    buf[0] = EOS;
+  }
 
   if ( ctrl )
     goto ctrl;
 
   switch(c)
   { case ESC:
-      wcscat(buf, L"\\e");
+      out = stpcpy(out, "\\e");
       break;
     case ' ':
-      wcscat(buf, L"SPC");
+      out = stpcpy(out, "SPC");
       break;
     case '\t':
-      wcscat(buf, L"TAB");
+      out = stpcpy(out, "TAB");
+      break;
+    case '\b':
+      out = stpcpy(out, "BS");
       break;
     case '\r':
-      wcscat(buf, L"RET");
+      out = stpcpy(out, "RET");
       break;
     case '\n':
-      wcscat(buf, L"LFD");
+      out = stpcpy(out, "LFD");
       break;
     case DEL:
-      wcscat(buf, L"DEL");
+      out = stpcpy(out, "DEL");
       break;
     default:
     ctrl:
+      if ( ctrl )
+	out = stpcpy(out, "\\C-");
+      if ( shift && (c < ' ' || c >= META_OFFSET) )
+	out = stpcpy(out, "\\S-");
+      if ( gui )
+	out = stpcpy(out, "\\s-");
       if ( c < ' ' )
-      {	size_t l;
-
-	wcscat(buf, L"\\C-");
-	buf[l=wcslen(buf)] = tolower(c + '@');
-	buf[l+1] = EOS;
+      { int c2 = tolower(c + '@');
+	*out++ = c2;
       } else
-      { size_t l;
-
-	if ( ctrl )
-	  wcscat(buf, L"\\C-");
-        buf[l=wcslen(buf)] = c;
-	buf[l+1] = EOS;
+      { out = utf8_put_char(out, c);
       }
   }
 
-  return WCToName(buf, wcslen(buf));
+  *out = 0;
+  return UTF8ToName(buf);
 }
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -650,7 +676,7 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 	      else
 	      { if ( (i = checkType(argv[0], TypeInt, NIL)) )
 		  a = valInt(i);
-	        else
+		else
 		{ PutString(pp(argv[0]));
 		  argc--, argv++;
 
@@ -708,7 +734,7 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 	      else
 	      { if ( (f = checkType(argv[0], TypeReal, NIL)) )
 		  a = valReal(f);
-	        else
+		else
 		{ PutString(pp(argv[0]));
 		  argc--, argv++;
 
@@ -961,7 +987,7 @@ scanstr(char *str, char *fmt, Any *r)
 	    if ( !supress )
 	    { types[argn] = length|T_FLOAT;
 	      ptrs[argn]  = (void *)alloca(length == L_LONG ? sizeof(double)
-				                            : sizeof(float));
+							    : sizeof(float));
 	      argn++;
 	    }
 	    s++;
@@ -1009,91 +1035,91 @@ scanstr(char *str, char *fmt, Any *r)
     case 3:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2]);
 				      break;
     case 4:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3]); break;
+				      ptrs[3]); break;
     case 5:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4]); break;
+				      ptrs[3], ptrs[4]); break;
     case 6:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5]);
+				      ptrs[3], ptrs[4], ptrs[5]);
 				      break;
     case 7:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5],
-			              ptrs[6]); break;
+				      ptrs[3], ptrs[4], ptrs[5],
+				      ptrs[6]); break;
     case 8:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5],
-			              ptrs[6], ptrs[7]); break;
+				      ptrs[3], ptrs[4], ptrs[5],
+				      ptrs[6], ptrs[7]); break;
     case 9:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5],
-			              ptrs[6], ptrs[7], ptrs[8]);
+				      ptrs[3], ptrs[4], ptrs[5],
+				      ptrs[6], ptrs[7], ptrs[8]);
 				      break;
     case 10:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5],
-			              ptrs[6], ptrs[7], ptrs[8],
+				      ptrs[3], ptrs[4], ptrs[5],
+				      ptrs[6], ptrs[7], ptrs[8],
 				      ptrs[9]);
 				      break;
     case 11:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5],
-			              ptrs[6], ptrs[7], ptrs[8],
+				      ptrs[3], ptrs[4], ptrs[5],
+				      ptrs[6], ptrs[7], ptrs[8],
 				      ptrs[9], ptrs[10]);
 				      break;
     case 12:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5],
-			              ptrs[6], ptrs[7], ptrs[8],
+				      ptrs[3], ptrs[4], ptrs[5],
+				      ptrs[6], ptrs[7], ptrs[8],
 				      ptrs[9], ptrs[10], ptrs[11]);
 				      break;
     case 13:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5],
-			              ptrs[6], ptrs[7], ptrs[8],
+				      ptrs[3], ptrs[4], ptrs[5],
+				      ptrs[6], ptrs[7], ptrs[8],
 				      ptrs[9], ptrs[10], ptrs[11],
 				      ptrs[12]);
 				      break;
     case 14:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5],
-			              ptrs[6], ptrs[7], ptrs[8],
+				      ptrs[3], ptrs[4], ptrs[5],
+				      ptrs[6], ptrs[7], ptrs[8],
 				      ptrs[9], ptrs[10], ptrs[11],
 				      ptrs[12], ptrs[13]);
 				      break;
     case 15:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5],
-			              ptrs[6], ptrs[7], ptrs[8],
+				      ptrs[3], ptrs[4], ptrs[5],
+				      ptrs[6], ptrs[7], ptrs[8],
 				      ptrs[9], ptrs[10], ptrs[11],
 				      ptrs[12], ptrs[13], ptrs[14]);
 				      break;
     case 16:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5],
-			              ptrs[6], ptrs[7], ptrs[8],
+				      ptrs[3], ptrs[4], ptrs[5],
+				      ptrs[6], ptrs[7], ptrs[8],
 				      ptrs[9], ptrs[10], ptrs[11],
 				      ptrs[12], ptrs[13], ptrs[14],
 				      ptrs[15]);
 				      break;
     case 17:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5],
-			              ptrs[6], ptrs[7], ptrs[8],
+				      ptrs[3], ptrs[4], ptrs[5],
+				      ptrs[6], ptrs[7], ptrs[8],
 				      ptrs[9], ptrs[10], ptrs[11],
 				      ptrs[12], ptrs[13], ptrs[14],
 				      ptrs[15], ptrs[16]);
 				      break;
     case 18:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5],
-			              ptrs[6], ptrs[7], ptrs[8],
+				      ptrs[3], ptrs[4], ptrs[5],
+				      ptrs[6], ptrs[7], ptrs[8],
 				      ptrs[9], ptrs[10], ptrs[11],
 				      ptrs[12], ptrs[13], ptrs[14],
 				      ptrs[15], ptrs[16], ptrs[17]);
 				      break;
     case 19:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5],
-			              ptrs[6], ptrs[7], ptrs[8],
+				      ptrs[3], ptrs[4], ptrs[5],
+				      ptrs[6], ptrs[7], ptrs[8],
 				      ptrs[9], ptrs[10], ptrs[11],
 				      ptrs[12], ptrs[13], ptrs[14],
 				      ptrs[15], ptrs[16], ptrs[17],
 				      ptrs[18]);
 				      break;
     case 20:	ar = sscanf(str, fmt, ptrs[0], ptrs[1], ptrs[2],
-			              ptrs[3], ptrs[4], ptrs[5],
-			              ptrs[6], ptrs[7], ptrs[8],
+				      ptrs[3], ptrs[4], ptrs[5],
+				      ptrs[6], ptrs[7], ptrs[8],
 				      ptrs[9], ptrs[10], ptrs[11],
 				      ptrs[12], ptrs[13], ptrs[14],
 				      ptrs[15], ptrs[16], ptrs[17],
-			              ptrs[18], ptrs[19]);
+				      ptrs[18], ptrs[19]);
 				      break;
     default:	errorPce(NIL, NAME_tooManyArguments);
 		fail;
@@ -1405,4 +1431,3 @@ run_pce_exit_hooks(int rval)
 
   return 0;
 }
-

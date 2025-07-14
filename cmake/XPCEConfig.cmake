@@ -24,7 +24,7 @@ AC_CHECK_FUNCS(getcwd setsid grantpt gethostname fstat gettimeofday)
 AC_CHECK_FUNCS(rename atexit on_exit tmpnam sysinfo sigaction getpwnam)
 AC_CHECK_FUNCS(shutdown mkstemp sched_yield mktime timegm nanosleep)
 AC_CHECK_FUNCS(clock_gettime tempnam _NSGetEnviron poll signal sigaction)
-AC_CHECK_FUNCS(pipe posix_openpt)
+AC_CHECK_FUNCS(pipe posix_openpt stpcpy)
 
 check_struct_has_member("struct tm" tm_gmtoff time.h HAVE_TM_GMTOFF)
 check_struct_has_member("struct termios" c_line termios.h TERMIOS_HAS_C_LINE)

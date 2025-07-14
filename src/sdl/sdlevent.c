@@ -154,6 +154,8 @@ keycode_to_name(SDL_Event *event)
       return toInt(Meta(event->key.key));
     if ( event->key.mod & ControlMask )
       return toInt(Control(event->key.key));
+    if ( event->key.mod & SDL_KMOD_GUI )
+      return toInt(event->key.key);
   }
 
   switch(event->key.key)

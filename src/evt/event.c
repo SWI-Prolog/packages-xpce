@@ -415,6 +415,10 @@ hasModifierEvent(EventObj ev, Modifier m)
        ((m->meta == NAME_down && UP(BUTTON_meta)) ||
 	(m->meta == NAME_up   && DOWN(BUTTON_meta))) )
     fail;
+  if ( notDefault(m->gui) &&
+       ((m->gui == NAME_down && UP(BUTTON_gui)) ||
+	(m->gui == NAME_up   && DOWN(BUTTON_gui))) )
+    fail;
 #undef UP
 #undef DOWN
 
