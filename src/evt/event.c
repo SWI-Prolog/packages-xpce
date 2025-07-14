@@ -815,7 +815,9 @@ getReceiverEvent(EventObj ev)
 
 static Name
 getKeyEvent(EventObj ev)
-{ answer(characterName(ev));
+{ if ( isAEvent(ev, NAME_keyboard) )
+    answer(characterName(ev));
+  fail;
 }
 
 

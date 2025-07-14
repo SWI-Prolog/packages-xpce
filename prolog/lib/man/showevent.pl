@@ -93,10 +93,10 @@ event_property(id, next_row, []).
 event_property(x,  next_row, [length(4)]).
 event_property(y,  right,    [length(4), alignment(left)]).
 
-modifier(s, shift).
-modifier(c, control).
-modifier(m, meta).
-modifier(g, gui).
+modifier('C(ontrol)', control).
+modifier('M(eta)',    meta).
+modifier('S(hift)',   shift).
+modifier('s (gui)',   gui).
 
 fill_dialog(V) :->
     get(V, member, dialog, Dialog),
@@ -112,7 +112,7 @@ fill_dialog(V) :->
     ;   true
     ),
     send(Dialog, append, new(I, menu(modifiers, marked))),
-    forall(modifier(M, _), send(I, append, M)).
+    forall(modifier(M, _), send(I, append, menu_item(M, label:=M, accelerator := @nil))).
 
 update_dialog(V, Ev:event) :->
     get(V, member, dialog, Dialog),
@@ -148,19 +148,11 @@ append_event(V, Ev:event) :->
     send(EL, append, Ev),
     send(V, show_event, Ev).
 
-event(V, Ev:event) :->
-    (   send(Ev, is_a, keyboard)
-    ->  send(V, append_event, Ev)
-    ;   send_super(V, event, Ev)
-    ).
-
 fill_picture(V) :->
     get(V, member, picture, P),
-    send(P, display, new(B, box(100,100))),
-    send(B, fill_pattern, colour(dark_green)),
-    send(P, resize_message, message(V, resize_box, B)),
-    send(B, recogniser,
-         handler(any, message(V, append_event, @arg1))).
+    send(P, display, new(B, event_landing)),
+    send(P, keyboard_focus, B),
+    send(P, resize_message, message(V, resize_box, B)).
 
 resize_box(_V, B:box) :->
     get(B, device, P),
@@ -168,6 +160,22 @@ resize_box(_V, B:box) :->
     send(B, set, X+W/5, Y+H/5, 3*W/5, 3*H/5).
 
 :- pce_end_class.
+
+:- pce_begin_class(event_landing, box,
+                   "The event-sensitive area").
+
+initialise(B) :->
+    send_super(B, initialise, 100, 100),
+    send(B, fill_pattern, colour(dark_green)).
+
+'_wants_keyboard_focus'(_) :->
+    true.
+
+event(B, Ev:event) :->
+    ignore(send_super(B, event, Ev)),
+    send(B?frame, append_event, Ev).
+
+:- pce_end_class(event_landing).
 
 :- pce_begin_class(event_hierarchy_window, toc_window,
                    "Show event-hierarchy").
@@ -246,7 +254,11 @@ initialise(EL) :->
 
 append(EL, Ev:event) :->
     get(Ev, clone, Clone),
-    send_super(EL, append, new(DI, dict_item(Clone?key, @default, Clone))),
+    (   send(Clone, is_a, keyboard)
+    ->  get(Clone, key, Label)
+    ;   get(Clone, id, Label)
+    ),
+    send_super(EL, append, new(DI, dict_item(Label, @default, Clone))),
     send(EL, normalise, DI),
     send(EL, selection, DI).
 
