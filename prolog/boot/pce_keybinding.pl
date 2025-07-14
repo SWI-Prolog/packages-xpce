@@ -51,7 +51,9 @@ message_level(silent).
 
 %!  binding(+ModeName, +TableName, +Modifications)
 %
-%   Specify bindings for alternative key-binding-styles.
+%   Specify bindings for alternative key-binding-styles.   Note  that on
+%   Apple, the command key is  mapped  to   the  SDL3  GUI key, which is
+%   mapped to Emacs ``\s-`` (super).
 %
 %   @arg ModeName         Name of the key-binding-style
 %   @arg TableName        Syntax table to modify
@@ -73,12 +75,9 @@ binding(apple, editor,
         ]).
 binding(apple, 'emacs$fundamental',
         [ '\\s-c' = copy,
-          '\\s-x' = cut
+          '\\s-x' = cut,
+          '\\s-v' = paste
         ]).
-binding(apple, emacs_page,
-        [ '\\s-V' = paste
-        ]).
-
 
                  /*******************************
                  *       CHANGE BINDINGS        *
