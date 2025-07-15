@@ -199,9 +199,30 @@ variable(popup_gesture, popup_gesture*,       none, "Gesture to show menu").
 variable(history,       {on,off,copy} := off, none, "Support history").
 variable(save_history,  bool := @off,         none, "Save history on exit").
 
+%!  binding(?Key, ?Method)
+%
+%   Epilog specific bindings. These are  used   to  create  the `epilog`
+%   key_binding object.
+
+binding('\\C-y',     paste_quoted).
+binding('\\C-\\S-o', split_horizontally).
+binding('\\C-\\S-e', split_vertically).
+binding('\\C-\\S-i', new_window).
+binding('\\C-\\S-w', close).
+
+key_binding(KB) :-
+    get(@key_bindings, member, epilog, KB),
+    !.
+key_binding(KB) :-
+    new(KB, key_binding(epilog, terminal)),
+    forall(binding(Key, Method),
+           send(KB, function, Key, Method)).
+
 initialise(PT) :->
     "Create Prolog terminal"::
     send_super(PT, initialise),
+    key_binding(KB),
+    send(PT, bindings, KB),
     send(PT, name, terminal),
     send(PT, link_message, message(@receiver, open_link, @arg1)),
     send(PT, popup, new(P, epilog_popup)),
@@ -222,10 +243,10 @@ initialise(PT) :->
                           message(Terminal, clear_screen),
                           end_group := @on),
                 menu_item(split_horizontally,
-                          message(Terminal, split, horizontally),
+                          message(Terminal, split_horizontally),
                           accelerator := 'Shift+ctrl+O'),
                 menu_item(split_vertically,
-                          message(Terminal, split, vertically),
+                          message(Terminal, split_vertically),
                           accelerator := 'Shift+ctrl+E'),
                 menu_item(new_window,
                           message(Terminal, new_window),
@@ -238,6 +259,10 @@ initialise(PT) :->
                 menu_item(close,
                           message(Terminal, close))
               ]).
+
+
+
+
 
 unlink(PT) :->
     (   retract(current_prolog_terminal(Thread, PT))
@@ -435,24 +460,17 @@ event(T, Ev:event) :->
     ->  send(T, show_popup, Ev)
     ).
 
-typed(T, Ev:event) :->
-    (   send(Ev, is_a, keyboard),
-        get(Ev, key, Key),
-        typed_epilog(Key, T)
-    ->  true
-    ;   send_super(T, typed, Ev)
-    ).
-
-typed_epilog('\\C-\\S-o', T) :-
-    send(T, split, horizontally).
-typed_epilog('\\C-\\S-e', T) :-
-    send(T, split, vertically).
-typed_epilog('\\C-\\S-i', T) :-
-    send(T, new_window).
-
 split(T, Dir:{horizontally,vertically}) :->
     "Split this terminal"::
     send(T?window, split, Dir).
+
+split_horizontally(T) :->
+    "Split terminal horizontally"::
+    send(T, split, horizontally).
+
+split_vertically(T) :->
+    "Split terminal vertically"::
+    send(T, split, vertically).
 
 new_window(_T) :->
     "Open a new window"::
