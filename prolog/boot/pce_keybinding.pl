@@ -70,13 +70,35 @@ binding(cua, 'emacs$fundamental',
           '\\C-p' = print
         ]).
 binding(apple, editor,
-        [ '\\s-s'  = save_buffer,
-          '\\s-z'  = undo
+        [ '\\s-s'      = save_buffer,
+          '\\S-\\s-s'  = save_as,
+          '\\s-w'      = quit,
+          '\\s-z'      = undo,
+          '\\s-a'      = select_all,
+          '\\s-f'      = find,
+%         '\\s-g'      = find_next,
+%         '\\S-\\s-g'  = find_previous,
+	'\\s-cursor_left'  = beginning_of_line,
+	'\\s-cursor_right' = end_of_line,
+	'\\s-cursor_up'    = point_to_top_of_file,
+	'\\s-cursor_down'  = point_to_bottom_of_file,
+          '\\s-/'	         = comment_region,
+          '\\s-['	         = undent_region, % TODO: If no region, current line
+          '\\s-]'	         = indent_region,
+          '\\s-k'	         = kill_line,
+          '\\s-t'	         = transpose_chars
         ]).
 binding(apple, 'emacs$fundamental',
-        [ '\\s-c' = copy,
-          '\\s-x' = cut,
-          '\\s-v' = paste
+        [ '\\s-c'     = copy,
+          '\\s-x'     = cut,
+          '\\s-v'     = paste,
+
+          '\\s-\\S-=' = font_magnify,  % assumes + is shift-=.
+          '\\s--'     = font_reduce,
+          '\\s-='     = font_default,
+
+          '\\s-n'     = new,
+          '\\s-o'     = open
         ]).
 
                  /*******************************
