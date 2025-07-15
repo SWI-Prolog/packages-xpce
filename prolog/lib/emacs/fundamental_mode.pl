@@ -1092,7 +1092,7 @@ show_key_bindings(M) :->
 describe_function(M, CmdName:command=emacs_mode_command) :->
     "Give help on command"::
     get(M, send_method, CmdName, tuple(_, Impl)),
-    auto_call(help(Impl)).
+    autoload_call(manpce(Impl)).
 
 describe_key(M) :->
     "Read key and write its action"::
