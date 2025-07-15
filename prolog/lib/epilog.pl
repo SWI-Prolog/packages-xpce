@@ -210,6 +210,11 @@ binding('\\C-\\S-e', split_vertically).
 binding('\\C-\\S-i', new_window).
 binding('\\C-\\S-k', clear_screen).       % Gnome terminal
 binding('\\C-\\S-w', close).
+:- if(current_prolog_flag(apple, true)).
+binding(Key, Method) :-
+    pce_keybinding:binding(apple, epilog, Bindings),
+    member(Key = Method, Bindings).
+:- endif.
 
 key_binding(KB) :-
     get(@key_bindings, member, epilog, KB),

@@ -41,8 +41,8 @@
 :- use_module(library(pce_util)).
 
 :- multifile
-    binding/3,
-    alt_binding_function/2.                       % Func, AltFunc
+    binding/3,                                    % +Style, +TableName, -Bindings
+    alt_binding_function/2.                       % +Func, -AltFunc
 
 message_level(silent).
 %message_level(informational).
@@ -96,7 +96,7 @@ binding(apple, 'emacs$fundamental',
           '\\s-x'     = cut,
           '\\s-v'     = paste,
 
-          '\\s-\\S-=' = font_magnify,  % assumes + is shift-=.
+          '\\S-\\s-=' = font_magnify,  % assumes + is shift-=.
           '\\s--'     = font_reduce,
           '\\s-='     = font_default,
 
@@ -104,11 +104,12 @@ binding(apple, 'emacs$fundamental',
           '\\s-o'     = open
         ]).
 binding(apple, terminal,
-        [ '\\s-c'     = copy_or_interrupt,
+        [ '\\C-c'     = interrupt,
+          '\\s-c'     = copy,
           '\\s-v'     = paste
         ]).
 binding(apple, epilog,
-        [ '\\s-\\S-d' = split_horizontally,
+        [ '\\S-\\s-d' = split_horizontally,
           '\\s-d'     = split_vertically,
           '\\s-n'     = new_window,
           '\\s-k'     = clear_screen,
