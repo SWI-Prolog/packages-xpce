@@ -358,7 +358,12 @@ CtoEvent(SDL_Event *event)
       mouse_tracking_window = NIL;
     }
   } else if ( notNil(grabbing_window) )
-  { float ox=0, oy=0;
+  { if ( onFlag(grabbing_window, F_FREED|F_FREEING) )
+    { Cprintf("Grabbing window %s lost?\n", pp(grabbing_window));
+      grabbing_window = NIL;
+      goto not_grabbing;
+    }
+    float ox=0, oy=0;
     bool rc = ws_window_frame_position(grabbing_window, frame, &ox, &oy);
     if ( rc )			/* grabbing window on same frame */
     { x -= ox;
@@ -366,7 +371,8 @@ CtoEvent(SDL_Event *event)
     }
     window = grabbing_window;
   } else
-  { window = frame;
+  { not_grabbing:
+    window = frame;
     event_window(&window, &x, &y);
     if ( event->type == SDL_EVENT_MOUSE_BUTTON_DOWN )
     { mouse_tracking_window = window;
@@ -408,6 +414,7 @@ dispatch_event(EventObj ev)
 
   if ( onFlag(target, F_FREED|F_FREEING) )
   { Cprintf("Event %s on %s; ignored\n", pp(ev->id), pp(target));
+    ws_event_destroyed_target(target);
     return false;
   }
 
