@@ -718,7 +718,7 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
     str_label(&mi->accelerator->data,
 	      0,
 	      f,
-	      x, y, w-fw/2, h,
+	      x, y, w-fw, h,
 	      NAME_right, m->vertical_format,
 	      lblflags);
   }
