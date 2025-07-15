@@ -457,7 +457,14 @@ characterName(Any chr)
     out = stpcpy(out, "\\s-");
 
   if ( name )
-  { out = stpcpy(out, nameToUTF8(name));
+  { const char *s = nameToUTF8(name);
+    if ( strlen(s) > 1 && islower(s[0]) )
+    { *out++ = '<';
+      out = stpcpy(out, s);
+      *out++ = '>';
+    } else
+    { out = stpcpy(out, s);
+    }
   } else
   { if ( c < ' ' )
     { int c2 = tolower(c + '@');

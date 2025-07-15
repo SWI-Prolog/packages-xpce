@@ -676,10 +676,10 @@ static kbDef emacs_caret_basics[] =
   { "\\eb",		NAME_backwardWord },
   { "\\ef",		NAME_forwardWord },
 
-  { "cursor_up",	NAME_previousLine },
-  { "cursor_down",	NAME_nextLine },
-  { "cursor_right",	NAME_forwardChar },
-  { "cursor_left",	NAME_backwardChar },
+  { "<cursor_up>",	NAME_previousLine },
+  { "<cursor_down>",	NAME_nextLine },
+  { "<cursor_right>",	NAME_forwardChar },
+  { "<cursor_left>",	NAME_backwardChar },
 
   { NULL,		NULL }
 };
@@ -771,9 +771,9 @@ static kbDef list_browser[] =
   { "\\C-w",		NAME_extendToCurrent },
   { "\\C-s",		NAME_repeatSearch },
   { "\\C-n",		NAME_nextLine },
-  { "cursor_down",	NAME_nextLine },
+  { "<cursor_down>",	NAME_nextLine },
   { "\\C-p",		NAME_previousLine },
-  { "cursor_up",	NAME_previousLine },
+  { "<cursor_up>",	NAME_previousLine },
 
 /*{ DEFAULT_FUNCTION,	NAME_alert },*/
 
@@ -784,8 +784,8 @@ static kbDef emacs_page[] =
 { { "\\C-v",		NAME_scrollUp },
   { "\\ev",		NAME_scrollDown },
   { "\\C-l",		NAME_recenter },
-  { "page_up",		NAME_scrollDown },
-  { "page_down",	NAME_scrollUp },
+  { "<page_up>",	NAME_scrollDown },
+  { "<page_down>",	NAME_scrollUp },
 
   { NULL,		NULL }
 };
@@ -794,21 +794,21 @@ static kbDef editor[] =
 { { SUPER,		NAME_emacsBasics },
   { SUPER,		NAME_emacsPage },
 
-  { "cursor_up",	NAME_cursorUp },
-  { "cursor_down",	NAME_cursorDown },
-  { "cursor_right",	NAME_cursorRight },
-  { "cursor_left",	NAME_cursorLeft },
-  { "end",		NAME_cursorEnd },
-  { "cursor_home",	NAME_cursorHome },
-  { "page_up",		NAME_cursorPageUp },
-  { "page_down",	NAME_cursorPageDown },
+  { "<cursor_up>",	NAME_cursorUp },
+  { "<cursor_down>",	NAME_cursorDown },
+  { "<cursor_right>",	NAME_cursorRight },
+  { "<cursor_left>",	NAME_cursorLeft },
+  { "<end>",		NAME_cursorEnd },
+  { "<cursor_home>",	NAME_cursorHome },
+  { "<page_up>",	NAME_cursorPageUp },
+  { "<page_down>",	NAME_cursorPageDown },
 
   { "\\C-SPC",		NAME_setMark },
   { "LFD",		NAME_newlineAndIndent },
   { "\\C-j",		NAME_newlineAndIndent },
   { "\\C-r",		NAME_isearchBackward },
   { "\\C-s",		NAME_isearchForward },
-  { "key_top_3",	NAME_isearchForward },
+  { "<f3>",		NAME_isearchForward },
   { "\\C-w",		NAME_killOrGrabRegion },
   { "\\C-y",		NAME_yank },
   { "\\C-_",		NAME_undo },
