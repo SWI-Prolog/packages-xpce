@@ -432,14 +432,18 @@ append_item(P, Mode:emacs_mode, Item:any) :->
 %       Copy/cut are hacked due to the tricky combination of CUA and
 %       native Emacs mode.
 
-%accelerator(copy, _, 'Control-c') :- !.
-%accelerator(cut,  _, 'Control-x') :- !.
 accelerator(Cmd,  Mode, Accell) :-
     get(Mode, bindings, KeyBindings),
-    get(KeyBindings, binding, Cmd, KeyChain),
+    alt_function(Cmd, Command),
+    get(KeyBindings, binding, Command, KeyChain),
     chain_list(KeyChain, Keys),
     preferred_key(Keys, Key),
-    human_accelerator(Key, Accell).
+    human_accelerator(Key, Accell),
+    !.
+
+alt_function(Func, Func).
+alt_function(copy, prefix_or_copy).     % Ctrl-V can be bound to prefix_or_copy.
+alt_function(cut,  prefix_or_cut).
 
 preferred_key(Keys, Key) :-             % Prefer returning Apple Command keys
     member(Key, Keys),
@@ -481,10 +485,10 @@ key_name('\\S-\\s-', '⌘⇧').             % Get Apple ordering
 key_name('\\S-',     '⇧').
 key_name('\\s-',     '⌘').
 :- endif.
-key_name('\\C-', 'Ctrl-').
-key_name('\\e',  'Alt-').
-key_name('\\S-', 'Shift-').
-key_name('\\s-', 'Super-').
+key_name('\\C-', '\u2009Ctrl-').
+key_name('\\e',  '\u2009Alt-').
+key_name('\\S-', '\u2009Shift-').
+key_name('\\s-', '\u2009Super-').
 
 %!  capitalise_key(+Post0, -Post)
 %
