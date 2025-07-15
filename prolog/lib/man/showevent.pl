@@ -287,9 +287,7 @@ description(meta,                      'Meta (ALT) key-press event').
 description(control,                   'Non-printable key-press event').
 description(printable,                 'Printable key-press event').
 description(function,                  'Function-key key-press event').
-description(key_left,                  'Left function-keypad key-press event').
-description(key_right,                 'Right function-keypad key-press event').
-description(key_top,                   'Top function-keypad key-press event').
+description(function_key,              'The F<n> keys').
 description(cursor,                    'Cursor-keypad key-press event').
 description(named_function,            'Named function key-press event').
 description(cursor_up,                 'Cursor-up key-press event').

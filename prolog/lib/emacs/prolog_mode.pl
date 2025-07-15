@@ -168,7 +168,7 @@ resource(breakpoint,   image, image('16x16/stop.png')).
           prolog_navigator             = button(browse) + key('\\C-c\\C-n'),
 
           colourise_or_recenter        = key('\\C-l'),
-          colourise_buffer             = key(key_top_5)
+          colourise_buffer             = key('<f5>')
         ],
                                         % SYNTAX TABLE
         [ ($)  = symbol,

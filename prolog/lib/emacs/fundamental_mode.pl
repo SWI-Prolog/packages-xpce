@@ -98,7 +98,7 @@
           -                        = button(edit),
           goto_line                = button(edit) +
                                      key('\\eg\\eg') + key('\\egg'),
-          find                     = key(key_top_4) + button(edit),
+          find                     = key('<f4>') + button(edit),
           replace                  = button(edit),
           -                        = button(edit),
           editor_preferences       = button(edit),
@@ -124,7 +124,7 @@
           help_on_mode             = button(help),
           customise                = button(help),
           -                        = button(help),
-          show_key_bindings        = key(key_top_1)
+          show_key_bindings        = key('<f1>')
                                         + key('\\C-hb')
                                         + button(help),
           describe_key             = key('\\C-hk') + button(help),

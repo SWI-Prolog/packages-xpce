@@ -179,6 +179,18 @@ keycode_to_name(SDL_Event *event)
     case SDLK_LEFT:	 return NAME_cursorLeft;
     case SDLK_DOWN:	 return NAME_cursorDown;
     case SDLK_UP:	 return NAME_cursorUp;
+    case SDLK_F1:	 return NAME_f1;
+    case SDLK_F2:	 return NAME_f2;
+    case SDLK_F3:	 return NAME_f3;
+    case SDLK_F4:	 return NAME_f4;
+    case SDLK_F5:	 return NAME_f5;
+    case SDLK_F6:	 return NAME_f6;
+    case SDLK_F7:	 return NAME_f7;
+    case SDLK_F8:	 return NAME_f8;
+    case SDLK_F9:	 return NAME_f9;
+    case SDLK_F10:	 return NAME_f10;
+    case SDLK_F11:	 return NAME_f11;
+    case SDLK_F12:	 return NAME_f12;
   }
 
   fail;
