@@ -450,10 +450,6 @@ typed_epilog('\\C-\\S-e', T) :-
 typed_epilog('\\C-\\S-i', T) :-
     send(T, new_window).
 
-copy(T) :->
-    "Copy selection to clipboard"::
-    send(T?display, copy, T?selected).
-
 split(T, Dir:{horizontally,vertically}) :->
     "Split this terminal"::
     send(T?window, split, Dir).

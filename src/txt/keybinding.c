@@ -851,7 +851,8 @@ static kbDef editor[] =
 };
 
 static kbDef terminal[] =
-{ { "\\C-v",		NAME_paste },
+{ { "\\C-c",		NAME_copyOrInterrupt },
+  { "\\C-v",		NAME_paste },
   { NULL,		NULL }
 };
 

@@ -119,7 +119,7 @@ static href    *rlc_add_link(RlcTextLine tl, const uchar_t *link,
 static void	rlc_free_link(href *hr);
 static void	rlc_free_links(href *links);
 static void	rcl_check_links(RlcTextLine tl);
-static void	rlc_copy(RlcData b, Name to);
+static bool	rlc_copy(RlcData b, Name to);
 static void	rlc_request_redraw(RlcData b);
 static void	rlc_redraw(RlcData b, int x, int y, int w, int h);
 static void	rlc_resize(RlcData b, int w, int h);
@@ -303,12 +303,6 @@ scrollVerticalTerminalImage(TerminalImage ti,
   }
 
   succeed;
-}
-
-
-static status
-interruptTerminalImage(TerminalImage ti)
-{ succeed;
 }
 
 static status
@@ -499,6 +493,11 @@ getSelectedTerminalImage(TerminalImage ti)
   fail;
 }
 
+static status
+clearSelectionTerminalImage(TerminalImage ti)
+{ rlc_set_selection(ti->data, 0, 0, 0, 0);
+  succeed;
+}
 
 static status
 pasteTerminalImage(TerminalImage ti, Name which)
@@ -510,6 +509,7 @@ pasteTerminalImage(TerminalImage ti, Name which)
   const char *bsm_start = "\e[200~";
   const char *bsm_end = "\e[201~";
 
+  clearSelectionTerminalImage(ti);
   DEBUG(NAME_paste, Cprintf("Paste %zd bytes from %s\n", ulen, pp(which)));
   if ( ti->data->bracketed_paste_mode )
     rlc_send(ti->data, bsm_start, strlen(bsm_start));
@@ -521,6 +521,26 @@ pasteTerminalImage(TerminalImage ti, Name which)
     rlc_send(ti->data, bsm_end, strlen(bsm_end));
 
   succeed;
+}
+
+static status
+copyTerminalImage(TerminalImage ti, Name which)
+{ if ( isDefault(which) )
+    which = NAME_clipboard;
+
+  return rlc_copy(ti->data, which);
+}
+
+static status
+interruptTerminalImage(TerminalImage ti)
+{ succeed;
+}
+
+static status
+copyOrInterruptTerminalImage(TerminalImage ti)
+{ if ( send(ti, NAME_copy, NAME_clipboard, EAV) )
+    succeed;
+  return send(ti, NAME_interrupt, EAV);
 }
 
 static status
@@ -700,10 +720,14 @@ static senddecl send_terminal_image[] =
      NAME_event, "Handle a general event"),
   SM(NAME_typed, 1, "event", typedTerminalImage,
      NAME_event, "Process a keystroke"),
+  SM(NAME_copy, 1, "which=[{primary,clipboard}]", copyTerminalImage,
+     NAME_selection, "Copy selected text to clipboard or primary selection"),
   SM(NAME_paste, 1, "which=[{primary,clipboard}]", pasteTerminalImage,
-     NAME_event, "Paste content of clipboard or primary selection"),
+     NAME_selection, "Paste content of clipboard or primary selection"),
   SM(NAME_interrupt, 0, NULL, interruptTerminalImage,
      NAME_event, "Virtual method called on Ctrl-C"),
+  SM(NAME_copyOrInterrupt, 0, NULL, copyOrInterruptTerminalImage,
+     NAME_selection, "Copy if there is selected text; else interrupt"),
   SM(NAME_hasSelection, 0, NULL, hasSelectionTerminalImage,
      NAME_selection, "True if the image has a non-empty selection"),
   SM(NAME_send, 1, "text=char_array", sendTerminalImage,
@@ -932,35 +956,20 @@ again:
 		 *         HANDLE INPUT         *
 		 *******************************/
 
-static void
-rlc_interrupt(RlcData b)
-{ send(b->object, NAME_interrupt, EAV);
-}
-
-
 /**
  * Handle  an typed  character.  C-c  and C-v  are handled  here.  All
  * other characters are added to the queue of this terminal.
  */
 static void
 typed_char(RlcData b, int chr)
-{ if ( chr == Control('C') && rlc_has_selection(b) )
-  { rlc_copy(b, NAME_clipboard);
-    return;
-  }
+{ rlc_set_selection(b, 0, 0, 0, 0);
 
-  rlc_set_selection(b, 0, 0, 0, 0);
-
-  if ( chr == Control('C') )
-  { rlc_interrupt(b);
-  } else
-  { DEBUG(NAME_term, Cprintf("Send %d to client\n", chr));
-    char buf[6];
-    char *e = utf8_put_char(buf, chr);
-    size_t count = e-buf;
-    if ( rlc_send(b, buf, count) != count )
-      Cprintf("Failed to send %d\n", chr);
-  }
+  DEBUG(NAME_term, Cprintf("Send %d to client\n", chr));
+  char buf[6];
+  char *e = utf8_put_char(buf, chr);
+  size_t count = e-buf;
+  if ( rlc_send(b, buf, count) != count )
+    Cprintf("Failed to send %d\n", chr);
 }
 
 
@@ -1324,7 +1333,7 @@ rlc_selection(RlcData b)
 }
 
 
-static void
+static bool
 rlc_copy(RlcData b, Name to)	/* NAME_clipboard or NAME_primary */
 { uchar_t *sel = rlc_selection(b);
 
@@ -1336,7 +1345,10 @@ rlc_copy(RlcData b, Name to)	/* NAME_clipboard or NAME_primary */
     considerPreserveObject(str);
 
     rlc_free(sel);
+    return true;
   }
+
+  return false;
 }
 
 
