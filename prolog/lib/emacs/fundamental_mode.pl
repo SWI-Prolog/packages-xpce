@@ -95,9 +95,9 @@
                                         % EDIT menu
           undo                     = button(edit),
           -                        = button(edit),
-          copy                     = button(edit),
-          cut                      = button(edit),
-          paste                    = button(edit),
+          copy                     = button(edit) + key('\\C-\\S-c'),
+          cut                      = button(edit) + key('\\C-\\S-x'),
+          paste                    = button(edit) + key('\\C-\\S-v'),
           -                        = button(edit),
           goto_line                = button(edit) +
                                      key('\\eg\\eg') + key('\\egg'),
