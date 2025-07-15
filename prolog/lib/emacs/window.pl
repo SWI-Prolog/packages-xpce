@@ -37,6 +37,9 @@
 :- use_module(library(pce)).
 :- use_module(library(tabbed_window)).
 :- use_module(prompt).
+:- use_module(library(lists)).
+:- use_module(library(pce_util)).
+
 :- require([ between/3,
              atomic_list_concat/2,
              default/3,
@@ -431,8 +434,16 @@ accelerator(copy, _, 'Control-c') :- !.
 accelerator(cut,  _, 'Control-x') :- !.
 accelerator(Cmd,  Mode, Accell) :-
     get(Mode, bindings, KeyBindings),
-    get(KeyBindings, binding, Cmd, Key),
+    get(KeyBindings, binding, Cmd, KeyChain),
+    chain_list(KeyChain, Keys),
+    preferred_key(Keys, Key),
     human_accelerator(Key, Accell).
+
+preferred_key(Keys, Key) :-             % Prefer returning Apple Command keys
+    member(Key, Keys),
+    sub_atom(Key, _, _, _, '\\s-'),
+    !.
+preferred_key([Key|_], Key).
 
 %!      human_accelerator(+Key, -Human)
 %
