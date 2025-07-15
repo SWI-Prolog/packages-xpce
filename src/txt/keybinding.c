@@ -176,22 +176,26 @@ getFunctionKeyBinding(KeyBinding kb, EventId id)
 }
 
 
-static Name
-getBindingKeyBinding(KeyBinding kb, Any function)
+static void
+add_matching_bindings(KeyBinding kb, Any function, Chain ch)
 { Cell cell;
-  Name binding;
 
   for_cell(cell, kb->bindings->attributes)
   { Attribute a = cell->value;
-    if ( a->value == function )
-      answer(a->name);
+    if ( a->value == function && !memberChain(ch, a->name) )
+      appendChain(ch, a->name);
   }
   for_cell(cell, kb->defaults)
-  { if ( (binding = getBindingKeyBinding(cell->value, function)) )
-      answer(binding);
+  { add_matching_bindings(cell->value, function, ch);
   }
+}
 
-  fail;
+static Chain
+getBindingKeyBinding(KeyBinding kb, Any function)
+{ Chain ch = answerObject(ClassChain, EAV);
+
+  add_matching_bindings(kb, function, ch);
+  answer(ch);
 }
 
 
@@ -557,8 +561,8 @@ static getdecl get_keyBinding[] =
      NAME_client, "Client of the key_binding object"),
   GM(NAME_convert, 1, "key_binding", "name", getConvertKeyBinding,
      NAME_conversion, "Lookup existing table or create new named table"),
-  GM(NAME_binding, 1, "name", "function=name|code", getBindingKeyBinding,
-     NAME_meta, "Find key-binding from function"),
+  GM(NAME_binding, 1, "chain", "function=name|code", getBindingKeyBinding,
+     NAME_meta, "Find key-bindings from function"),
   GM(NAME_function, 1, "name|code", "event|name|event_id", getFunctionKeyBinding,
      NAME_meta, "Get function for given event-id"),
   GM(NAME_lookup, 2, "key_binding", T_lookup, getLookupKeyBinding,
