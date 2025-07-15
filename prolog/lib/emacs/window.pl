@@ -436,6 +436,11 @@ accelerator(Cmd,  Mode, Accell) :-
     get(Mode, bindings, KeyBindings),
     get(KeyBindings, accelerator_label, Cmd, Accell).
 
+:- multifile pce_keybinding:alt_binding_function/2.
+
+pce_keybinding:alt_binding_function(copy, prefix_or_copy). % Ctrl-V can be bound to prefix_or_copy.
+pce_keybinding:alt_binding_function(cut,  prefix_or_cut).
+
 :- pce_end_class(emacs_popup).
 
 

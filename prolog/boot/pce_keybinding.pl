@@ -17,7 +17,7 @@
 
     2. Redistributions in binary form must reproduce the above copyright
        notice, this list of conditions and the following disclaimer in
-       the documentation and/or other materials provided with the
+       the documentation and/or other materits provided with the
        distribution.
 
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -37,9 +37,12 @@
 :- module(pce_keybinding, []).
 :- use_module(pce_principal).
 :- use_module(pce_realise).
+:- use_module(library(lists)).
+:- use_module(library(pce_util)).
 
 :- multifile
-    binding/3.
+    binding/3,
+    alt_binding_function/2.                       % Func, AltFunc
 
 message_level(silent).
 %message_level(informational).
@@ -250,18 +253,23 @@ accelerator_label(KB, Cmd:'name|code', Accell:name) :<-
     human_accelerator(Key, Accell),
     !.
 
-:- multifile
-    alt_function/2.
-
 alt_function(Func, Func).
-alt_function(copy, prefix_or_copy).     % Ctrl-V can be bound to prefix_or_copy.
-alt_function(cut,  prefix_or_cut).
+alt_function(Func, Alt) :-
+    alt_binding_function(Func, Alt).
 
 preferred_key(Keys, Key) :-             % Prefer returning Apple Command keys
     member(Key, Keys),
     sub_atom(Key, _, _, _, '\\s-'),
     !.
+preferred_key(Keys, Key) :-
+    member(K, Keys),
+    select(Alt, Keys, Keys1),
+    preferred(K, Alt),
+    !,
+    preferred_key(Keys1, Key).
 preferred_key([Key|_], Key).
+
+preferred('\\C-z', '\\C-_').
 
 %!      human_accelerator(+Key, -Human)
 %
