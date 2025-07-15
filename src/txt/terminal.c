@@ -417,18 +417,18 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
 
   if ( isInteger(ev->id) )
   { chr = valInt(ev->id);
-    if ( chr >= META_OFFSET )
-    { buf[0] = '\e';
-      buf[1] = chr-META_OFFSET;
-      buf[2] = 0;
-      seq = buf;
-    }
   } else if ( ev->id == NAME_BS )
   { chr = 127;
+    if ( valInt(ev->buttons) & BUTTON_meta )
+      chr += META_OFFSET;
   } else if ( ev->id == NAME_TAB )
   { chr = '\t';
+    if ( valInt(ev->buttons) & BUTTON_meta )
+      chr += META_OFFSET;
   } else if ( ev->id == NAME_RET )
   { chr = '\r';
+    if ( valInt(ev->buttons) & BUTTON_meta )
+      chr += META_OFFSET;
   } else if ( ev->id == NAME_ESC )
   { chr = '\e';
   } else if ( ev->id == NAME_cursorUp )
@@ -443,6 +443,13 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   { seq = "\e[3~";
   } else
     fail;
+
+  if ( !seq && chr >= META_OFFSET )
+  { buf[0] = '\e';
+    buf[1] = chr-META_OFFSET;
+    buf[2] = 0;
+    seq = buf;
+  }
 
   if ( seq )
     rlc_send(ti->data, seq, strlen(seq));
