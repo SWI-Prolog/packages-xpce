@@ -404,6 +404,13 @@ delete_rectangle(M) :->
 dabbrev_candidates(_M, _Mode:name, _Target:char_array, _Completions:chain) :<-
     fail.
 
+select_all(M) :->
+    "Select all text"::
+    get(M, text_buffer, TB),
+    get(TB, size, Size),
+    send(M, selection, 0, Size, active).
+
+
                  /*******************************
                  *            LOAD/SAVE         *
                  *******************************/
