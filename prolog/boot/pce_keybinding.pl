@@ -259,9 +259,12 @@ unbind(KB, Key:name, Command:[name|code]*) :->
 
 accelerator_label(KB, Cmd:'name|code', Accell:name) :<-
     "Get a string to use as accelerator label in a menu"::
-    alt_function(Cmd, Command),
-    get(KB, binding, Command, KeyChain),
-    chain_list(KeyChain, Keys),
+    findall(KeySet,
+            ( alt_function(Cmd, Command),
+              get(KB, binding, Command, KeyChain),
+              chain_list(KeyChain, KeySet)
+            ), KeySets),
+    append(KeySets, Keys),
     preferred_key(Keys, Key),
     human_accelerator(Key, Accell),
     !.
@@ -283,6 +286,10 @@ preferred_key(Keys, Key) :-
 preferred_key([Key|_], Key).
 
 preferred('\\C-z', '\\C-_').
+preferred(Short, Long) :-
+    atom_length(Short, ShortLen),
+    atom_length(Long, LongLen),
+    ShortLen < LongLen.
 
 %!      human_accelerator(+Key, -Human)
 %
