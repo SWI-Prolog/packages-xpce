@@ -411,8 +411,8 @@ append_item(P, Mode:emacs_mode, Item:any) :->
         ;   true
         ),
         (   get(Mode, send_method, Item, tuple(_, Impl))
-        ->  (   forall((between(1, 10, ArgN),
-                    get(Impl, argument_type, ArgN, ArgType)),
+        ->  (   forall(( between(1, 10, ArgN),
+                         get(Impl, argument_type, ArgN, ArgType)),
                 send(ArgType, includes, default))
             ->  true
             ;   send(MI, label, string('%s ...', Item?label_name))
@@ -422,7 +422,7 @@ append_item(P, Mode:emacs_mode, Item:any) :->
     ;   send(P, append, Item?clone)
     ).
 
-%       accelerator(+Command, +Mode, -Accelerator)
+%!      accelerator(+Command, +Mode, -Accelerator)
 %
 %       Copy/cut are hacked due to the tricky combination of CUA and
 %       native Emacs mode.
@@ -434,7 +434,7 @@ accelerator(Cmd,  Mode, Accell) :-
     get(KeyBindings, binding, Cmd, Key),
     human_accelerator(Key, Accell).
 
-%       human_accelerator(+Key, -Human)
+%!      human_accelerator(+Key, -Human)
 %
 %       Translate XPCE key-sequences in conventional notation.  Should be
 %       part of the XPCE kernel someday.
@@ -448,9 +448,13 @@ human_accelerator(Key, Text) :-
 human_accelerator(Key, Text) :-
     new(S, string('%s', Key)),
     send(regex('\\\\C-(.)'), for_all, S,
-         message(@arg1, replace, @arg2, 'Control-\\1 ')),
+         message(@arg1, replace, @arg2, 'Ctrl-\\1 ')),
     send(regex('\\\\e'), for_all, S,
          message(@arg1, replace, @arg2, 'Alt-')),
+    send(regex('\\\\S'), for_all, S,
+         message(@arg1, replace, @arg2, 'Shift-')),
+    send(regex('\\\\s'), for_all, S,
+         message(@arg1, replace, @arg2, 'Cmd-')),
     get(S, value, Text),
     assert(accel_cache(Key, Text)).
 
