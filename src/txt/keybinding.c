@@ -812,7 +812,7 @@ static kbDef editor[] =
   { "\\C-w",		NAME_killOrGrabRegion },
   { "\\C-y",		NAME_yank },
   { "\\C-_",		NAME_undo },
-  { "\\C-z",		NAME_undo },		/* Windows compatibility */
+  { "\\C-z",		NAME_undo },
 
   { "\\e\\C-b",		NAME_backwardTerm },
   { "\\e\\C-f",		NAME_forwardTerm },
@@ -851,7 +851,11 @@ static kbDef editor[] =
 };
 
 static kbDef terminal[] =
-{ { "\\C-c",		NAME_copyOrInterrupt },
+{ { "<end>",		NAME_cursorEnd },
+  { "<cursor_home>",	NAME_cursorHome },
+  { "<page_up>",	NAME_cursorPageUp },
+  { "<page_down>",	NAME_cursorPageDown },
+  { "\\C-c",		NAME_copyOrInterrupt },
   { "\\C-v",		NAME_paste },
   { NULL,		NULL }
 };

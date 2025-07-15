@@ -439,18 +439,6 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   { seq = b->app_escape ? "\e0D" : "\e[D";
   } else if ( ev->id == NAME_cursorRight )
   { seq = b->app_escape ? "\e0C" : "\e[C";
-  } else if ( ev->id == NAME_cursorHome )
-  { seq = b->app_escape ? "\e0H" : "\e[H";
-  } else if ( ev->id == NAME_end )
-  { seq = b->app_escape ? "\e0F" : "\e[F";
-  } else if ( ev->id == NAME_pageUp )
-  { // seq = "\e[5~";
-    send(ti, NAME_scrollVertical, NAME_backwards, NAME_page, toInt(900), EAV);
-    succeed;
-  } else if ( ev->id == NAME_pageDown )
-  { // seq = "\e[6~";
-    send(ti, NAME_scrollVertical, NAME_forwards, NAME_page, toInt(900), EAV);
-    succeed;
   } else if ( ev->id == NAME_delete )
   { seq = "\e[3~";
   } else
@@ -542,6 +530,35 @@ copyOrInterruptTerminalImage(TerminalImage ti)
     succeed;
   return send(ti, NAME_interrupt, EAV);
 }
+
+static status
+cursorEndTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+  const char *seq = b->app_escape ? "\e0F" : "\e[F";
+  rlc_send(ti->data, seq, strlen(seq));
+  succeed;
+}
+
+static status
+cursorHomeTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+  const char *seq = b->app_escape ? "\e0H" : "\e[H";
+  rlc_send(ti->data, seq, strlen(seq));
+  succeed;
+}
+
+static status
+cursorPageUpTerminalImage(TerminalImage ti)
+{ return send(ti, NAME_scrollVertical, NAME_backwards,
+	      NAME_page, toInt(900), EAV);
+}
+
+static status
+cursorPageDownTerminalImage(TerminalImage ti)
+{ return send(ti, NAME_scrollVertical, NAME_forwards,
+	      NAME_page, toInt(900), EAV);
+}
+
 
 static status
 saveLinesTerminalImage(TerminalImage ti, Int lines)
@@ -728,6 +745,14 @@ static senddecl send_terminal_image[] =
      NAME_event, "Virtual method called on Ctrl-C"),
   SM(NAME_copyOrInterrupt, 0, NULL, copyOrInterruptTerminalImage,
      NAME_selection, "Copy if there is selected text; else interrupt"),
+  SM(NAME_cursorEnd, 0, NULL, cursorEndTerminalImage,
+     NAME_event, "Handle 'end'-key"),
+  SM(NAME_cursorHome, 0, NULL, cursorHomeTerminalImage,
+     NAME_event, "Handle 'home'-key"),
+  SM(NAME_cursorPageUp, 0, NULL, cursorPageUpTerminalImage,
+     NAME_event, "Handle 'page-up'-key"),
+  SM(NAME_cursorPageDown, 0, NULL, cursorPageDownTerminalImage,
+     NAME_event, "Handle 'page-down'-key"),
   SM(NAME_hasSelection, 0, NULL, hasSelectionTerminalImage,
      NAME_selection, "True if the image has a non-empty selection"),
   SM(NAME_send, 1, "text=char_array", sendTerminalImage,
