@@ -273,6 +273,7 @@ End;
 
 NewClass(terminal_image)
   ABSTRACT_GRAPHICAL
+  KeyBinding	bindings;		/* Key bindings */
   FontObj	font;			/* Basic font */
   FontObj	bold_font;		/* Boldened font */
   Colour	background;		/* Background colour */

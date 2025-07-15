@@ -850,6 +850,10 @@ static kbDef editor[] =
   { NULL,		NULL }
 };
 
+static kbDef terminal[] =
+{ { "\\C-v",		NAME_paste },
+  { NULL,		NULL }
+};
 
 static status
 bindResourcesKeyBinding(KeyBinding kb, Name name)
@@ -909,6 +913,8 @@ initPredefinedKeyBinding(KeyBinding kb)
     table = emacs_view_basics;
   else if ( kb->name == NAME_editor )
     table = editor;
+  else if ( kb->name == NAME_terminal )
+    table = terminal;
   else if ( kb->name == NAME_text )
     table = text;
   else if ( kb->name == NAME_textItem )

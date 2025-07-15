@@ -191,6 +191,7 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h)
   if ( isDefault(h) )
     h = toInt(100);
   initialiseGraphical(ti, ZERO, ZERO, w, h);
+  assign(ti, bindings, newObject(ClassKeyBinding, NIL, NAME_terminal, EAV));
   obtainClassVariablesObject(ti);
 
   // compute width in characters from w
@@ -417,6 +418,9 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   char buf[10];
   RlcData b = ti->data;
 
+  if ( typedKeyBinding(ti->bindings, ev, (Graphical)ti) )
+    succeed;
+
   if ( isInteger(ev->id) )
   { chr = valInt(ev->id);
     if ( chr >= META_OFFSET )
@@ -499,14 +503,14 @@ getSelectedTerminalImage(TerminalImage ti)
 static status
 pasteTerminalImage(TerminalImage ti, Name which)
 { if ( isDefault(which) )
-    which = NAME_primary;
+    which = NAME_clipboard;
   StringObj str = get(CurrentDisplay(ti), NAME_paste, which, EAV);
   size_t ulen;
   const char *u = stringToUTF8(&str->data, &ulen);
   const char *bsm_start = "\e[200~";
   const char *bsm_end = "\e[201~";
 
-  DEBUG(NAME_paste, Cprintf("Paste %zd bytes\n", ulen));
+  DEBUG(NAME_paste, Cprintf("Paste %zd bytes from %s\n", ulen, pp(which)));
   if ( ti->data->bracketed_paste_mode )
     rlc_send(ti->data, bsm_start, strlen(bsm_start));
   if ( rlc_send(ti->data, u, ulen) != ulen )
@@ -650,7 +654,9 @@ static char *T_print[] =
 { "start=[int]", "count=[int]" };
 
 static vardecl var_terminal_image[] =
-{ IV(NAME_font, "font", IV_GET,
+{ IV(NAME_bindings, "key_binding", IV_BOTH,
+     NAME_accelerator, "key_binding table"),
+  IV(NAME_font, "font", IV_GET,
      NAME_appearance, "Font used to draw the string"),
   IV(NAME_boldFont, "font*", IV_GET,
      NAME_appearance, "Font for bold text"),
@@ -946,10 +952,8 @@ typed_char(RlcData b, int chr)
   rlc_set_selection(b, 0, 0, 0, 0);
 
   if ( chr == Control('C') )
-    rlc_interrupt(b);
-  else if ( chr == Control('V') )
-    send(b->object, NAME_paste, NAME_clipboard, EAV);
-  else
+  { rlc_interrupt(b);
+  } else
   { DEBUG(NAME_term, Cprintf("Send %d to client\n", chr));
     char buf[6];
     char *e = utf8_put_char(buf, chr);
