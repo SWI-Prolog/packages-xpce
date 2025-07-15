@@ -451,7 +451,7 @@ characterName(Any chr)
     out = stpcpy(out, "\\e");	/* TBD: Turn into M- and use as second */
   if ( ctrl )
     out = stpcpy(out, "\\C-");
-  if ( shift && (ctrl || meta || name) )
+  if ( shift && (ctrl || meta || gui || name) )
     out = stpcpy(out, "\\S-");
   if ( gui )
     out = stpcpy(out, "\\s-");
