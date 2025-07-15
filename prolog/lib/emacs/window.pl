@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2017, University of Amsterdam,
+    Copyright (c)  1985-2025, University of Amsterdam,
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -46,6 +47,7 @@
              send_list/2,
              send_list/3
            ]).
+:- encoding(utf8).
 
 resource(mode_x_icon,   image, image('32x32/doc_x.png')).
 
@@ -430,8 +432,8 @@ append_item(P, Mode:emacs_mode, Item:any) :->
 %       Copy/cut are hacked due to the tricky combination of CUA and
 %       native Emacs mode.
 
-accelerator(copy, _, 'Control-c') :- !.
-accelerator(cut,  _, 'Control-x') :- !.
+%accelerator(copy, _, 'Control-c') :- !.
+%accelerator(cut,  _, 'Control-x') :- !.
 accelerator(Cmd,  Mode, Accell) :-
     get(Mode, bindings, KeyBindings),
     get(KeyBindings, binding, Cmd, KeyChain),
@@ -457,17 +459,53 @@ human_accelerator(Key, Text) :-
     accel_cache(Key, Text),
     !.
 human_accelerator(Key, Text) :-
-    new(S, string('%s', Key)),
-    send(regex('\\\\C-(.)'), for_all, S,
-         message(@arg1, replace, @arg2, 'Ctrl-\\1 ')),
-    send(regex('\\\\e'), for_all, S,
-         message(@arg1, replace, @arg2, 'Alt-')),
-    send(regex('\\\\S'), for_all, S,
-         message(@arg1, replace, @arg2, 'Shift-')),
-    send(regex('\\\\s'), for_all, S,
-         message(@arg1, replace, @arg2, 'Cmd-')),
-    get(S, value, Text),
+    human_keys(Key, String),
+    atom_string(Text, String),
     assert(accel_cache(Key, Text)).
+
+human_keys(Acc, String) :-
+    key_name(Key, Human),
+    sub_string(Acc, B, _, A, Key),
+    !,
+    sub_string(Acc, 0, B, _, Pre),
+    sub_string(Acc, _, A, 0, Post0),
+    capitalise_key(Post0, Post),
+    atomics_to_string([Pre,Human,Post], String0),
+    human_keys(String0, String).
+human_keys(Acc, Acc).
+
+:- if(current_prolog_flag(apple, true)).
+key_name('\\C-',     '⌃').
+key_name('\\e',      '⌥').
+key_name('\\S-\\s-', '⌘⇧').             % Get Apple ordering
+key_name('\\S-',     '⇧').
+key_name('\\s-',     '⌘').
+:- endif.
+key_name('\\C-', 'Ctrl-').
+key_name('\\e',  'Alt-').
+key_name('\\S-', 'Shift-').
+key_name('\\s-', 'Super-').
+
+%!  capitalise_key(+Post0, -Post)
+%
+%   Given we matched  a  modifier   sequence,  capitalise  the  modified
+%   character. We must avoid capitalizing function names.
+%
+%   @tbd Eventually we probably move to Emacs function names enclosed in
+%   angle brackets.
+
+capitalise_key(S0, S) :-
+    string_length(S0, 1),
+    !,
+    string_upper(S0, S).
+capitalise_key(S0, S) :-
+    sub_string(S0, 1, 1, _, "\\"),
+    !,
+    sub_string(S0, 0, 1, _, Char),
+    string_upper(Char, Up),
+    sub_string(S0, 1, _, 0, Rest),
+    string_concat(Up, Rest, S).
+capitalise_key(S, S).
 
 :- pce_end_class(emacs_popup).
 
