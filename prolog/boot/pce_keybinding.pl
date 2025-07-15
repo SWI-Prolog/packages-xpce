@@ -241,6 +241,92 @@ unbind(KB, Key:name, Command:[name|code]*) :->
                              [Table, KB, Key, Command]))
     ).
 
+accelerator_label(KB, Cmd:'name|code', Accell:name) :<-
+    "Get a string to use as accelerator label in a menu"::
+    alt_function(Cmd, Command),
+    get(KB, binding, Command, KeyChain),
+    chain_list(KeyChain, Keys),
+    preferred_key(Keys, Key),
+    human_accelerator(Key, Accell),
+    !.
+
+:- multifile
+    alt_function/2.
+
+alt_function(Func, Func).
+alt_function(copy, prefix_or_copy).     % Ctrl-V can be bound to prefix_or_copy.
+alt_function(cut,  prefix_or_cut).
+
+preferred_key(Keys, Key) :-             % Prefer returning Apple Command keys
+    member(Key, Keys),
+    sub_atom(Key, _, _, _, '\\s-'),
+    !.
+preferred_key([Key|_], Key).
+
+%!      human_accelerator(+Key, -Human)
+%
+%       Translate XPCE key-sequences in conventional notation.  Should be
+%       part of the XPCE kernel someday.
+
+:- dynamic
+    accel_cache/2.
+
+human_accelerator(Key, Text) :-
+    accel_cache(Key, Text),
+    !.
+human_accelerator(Key, Text) :-
+    human_keys(Key, String),
+    atom_string(Text, String),
+    assert(accel_cache(Key, Text)).
+
+human_keys(Acc, String) :-
+    key_name(Key, Human),
+    sub_string(Acc, B, _, A, Key),
+    !,
+    sub_string(Acc, 0, B, _, Pre),
+    sub_string(Acc, _, A, 0, Post0),
+    capitalise_key(Post0, Post),
+    atomics_to_string([Pre,Human,Post], String0),
+    human_keys(String0, String).
+human_keys(Acc, Acc).
+
+:- if(current_prolog_flag(apple, true)).
+key_name('\\C-',     '⌃').
+key_name('\\e',      '⌥').
+key_name('\\S-\\s-', '⌘⇧').             % Get Apple ordering
+key_name('\\S-',     '⇧').
+key_name('\\s-',     '⌘').
+:- endif.
+key_name('\\C-', '\u2009Ctrl-').
+key_name('\\e',  '\u2009Alt-').
+key_name('\\S-', '\u2009Shift-').
+key_name('\\s-', '\u2009Super-').
+
+%!  capitalise_key(+Post0, -Post)
+%
+%   Given we matched  a  modifier   sequence,  capitalise  the  modified
+%   character. We must avoid capitalizing function names.
+%
+%   @tbd Eventually we probably move to Emacs function names enclosed in
+%   angle brackets.
+
+capitalise_key(S0, S) :-
+    string_length(S0, 1),
+    !,
+    string_upper(S0, S).
+capitalise_key(S0, S) :-
+    sub_string(S0, 0, 1, _, "<"),
+    !,                                  % Named function keys.  remove angled brackets?
+    S = S0.
+capitalise_key(S0, S) :-
+    sub_string(S0, 0, 1, _, Char),
+    char_type(Char, lower),
+    !,
+    string_upper(Char, Up),
+    sub_string(S0, 1, _, 0, Rest),
+    atomics_to_string([Up, '\u2009', Rest], S).
+capitalise_key(S, S).
+
 :- pce_end_class(key_binding).
 
 
