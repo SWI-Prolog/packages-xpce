@@ -503,12 +503,16 @@ capitalise_key(S0, S) :-
     !,
     string_upper(S0, S).
 capitalise_key(S0, S) :-
-    sub_string(S0, 1, 1, _, "\\"),
-    !,
+    sub_string(S0, 0, 1, _, "<"),
+    !,                                  % Named function keys.  remove angled brackets?
+    S = S0.
+capitalise_key(S0, S) :-
     sub_string(S0, 0, 1, _, Char),
+    char_type(Char, lower),
+    !,
     string_upper(Char, Up),
     sub_string(S0, 1, _, 0, Rest),
-    string_concat(Up, Rest, S).
+    atomics_to_string([Up, '\u2009', Rest], S).
 capitalise_key(S, S).
 
 :- pce_end_class(emacs_popup).
