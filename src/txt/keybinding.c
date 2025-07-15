@@ -799,7 +799,7 @@ static kbDef editor[] =
   { "page_up",		NAME_cursorPageUp },
   { "page_down",	NAME_cursorPageDown },
 
-  { "\\C-@",		NAME_setMark },
+  { "\\C-SPC",		NAME_setMark },
   { "LFD",		NAME_newlineAndIndent },
   { "\\C-j",		NAME_newlineAndIndent },
   { "\\C-r",		NAME_isearchBackward },
