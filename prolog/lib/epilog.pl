@@ -186,8 +186,9 @@ setup_history :-
 
 :- dynamic
     current_prolog_terminal/2,  % ?Thread, ?TerminalObject
-    terminal_input/6.           % TerminalObject, PTY, In, Out, Error,
+    terminal_input/6,           % TerminalObject, PTY, In, Out, Error,
                                 % EditLine
+    closed_epilog/2.            % Frame, Time
 
 :- pce_begin_class(prolog_terminal, terminal_image,
                    "Terminal for running a Prolog thread").
@@ -359,7 +360,10 @@ interrupt(PT) :->
 close(PT) :->
     "Close this Prolog shell"::
     get(PT, window, Window),
-    send(PT?frame, delete_epilog, Window, @on).
+    get(PT, frame, Epilog),
+    send(Epilog, delete_epilog, Window, @on),
+    get_time(Now),
+    asserta(closed_epilog(Epilog, Now)).
 
 save_history(PT) :-
     retract(terminal_input(PT, _PTY, _In, _Out, _Err, EditLine)),
@@ -683,6 +687,7 @@ initialise(T, Title:title=[name],
            Width:width=[integer], Height:height=[integer]) :->
     default(Title, "SWI-Prolog console", TheTitle),
     send_super(T, initialise, TheTitle),
+    send(T, done_message, message(@receiver, wm_close_requested)),
     send(T, append, new(D, epilog_dialog)),
     new(W, epilog_window(@default, Width, Height)),
     send(T, current_window, W?name),
@@ -691,6 +696,20 @@ initialise(T, Title:title=[name],
     ;   send(W, history, on)            % Use history on the first
     ),
     send(W, below, D).
+
+% ->wm_close_requested
+%
+% This  is  a  hack  around  MacOS,    where   Command-W  also  triggers
+% SDL_EVENT_WINDOW_CLOSE_REQUESTED
+
+wm_close_requested(T) :->
+    "Handle close-request"::
+    (   retract(closed_epilog(T, Time)),
+        get_time(Now),
+        Now-Time < 0.5
+    ->  true
+    ;   send(T, destroy)
+    ).
 
 delete_epilog(T, W:window, Destroy:[bool]) :->
     "Remove an individual terminal"::
