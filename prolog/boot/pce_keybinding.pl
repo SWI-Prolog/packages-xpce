@@ -103,6 +103,18 @@ binding(apple, 'emacs$fundamental',
           '\\s-n'     = new,
           '\\s-o'     = open
         ]).
+binding(apple, terminal,
+        [ '\\s-c'     = copy_or_interrupt,
+          '\\s-v'     = paste
+        ]).
+binding(apple, epilog,
+        [ '\\s-\\S-d' = split_horizontally,
+          '\\s-d'     = split_vertically,
+          '\\s-n'     = new_window,
+          '\\s-k'     = clear_screen,
+          '\\s-w'     = close
+        ]).
+
 
                  /*******************************
                  *       CHANGE BINDINGS        *
