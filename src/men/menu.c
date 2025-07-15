@@ -714,13 +714,18 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
   if ( notNil(m->accelerator_font) && isName(mi->accelerator) )
   { FontObj f = m->accelerator_font;
     int fw = valInt(getExFont(f));
+    Colour old = NULL;
 
+    if ( notDefault(m->accelerator_colour) )
+      old = r_colour(m->accelerator_colour);
     str_label(&mi->accelerator->data,
 	      0,
 	      f,
 	      x, y, w-fw, h,
 	      NAME_right, m->vertical_format,
 	      lblflags);
+    if ( old )
+      r_colour(old);
   }
 
   ix = x + lm;
@@ -2133,6 +2138,8 @@ static vardecl var_menu[] =
      NAME_appearance, "Right mark if popup not equal @nil"),
   IV(NAME_acceleratorFont, "font=font*", IV_GET,
      NAME_appearance, "When not @nil, font for accelerators"),
+  IV(NAME_acceleratorColour, "colour=[colour]", IV_BOTH,
+     NAME_appearance, "Colour used to draw accelerators"),
   SV(NAME_margin, "margin=0..", IV_GET|IV_STORE, marginMenu,
      NAME_appearance, "Extra margin at left and right side of values (for popup)"),
   IV(NAME_leftOffset, "offset=0..", IV_GET,
@@ -2258,6 +2265,8 @@ static getdecl get_menu[] =
 static classvardecl rc_menu[] =
 { RC(NAME_acceleratorFont, "font*", "@nil",
      "Show the accelerators"),
+  RC(NAME_acceleratorColour, "colour", "grey30",
+     "Colour to draw the accelerators"),
   RC(NAME_border, "int", "2",
      "Border around each item"),
   RC(NAME_cycleIndicator, "{combo_box}|image|elevation",

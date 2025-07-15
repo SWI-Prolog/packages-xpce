@@ -443,6 +443,7 @@ End;
   Image	     off_image;			/* Image if selected == @off */ \
   Image	     popup_image;		/* Image if popup != @nil */ \
   FontObj    accelerator_font;		/* Font for accelerators */ \
+  Colour     accelerator_colour;	/* Colour for accelerators */ \
   Int	     margin;			/* Margin at the left/right */ \
   Int	     left_offset;		/* Space box and item-image */ \
   Int	     right_offset;		/* Same at right side */ \
