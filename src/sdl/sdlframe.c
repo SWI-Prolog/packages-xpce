@@ -505,7 +505,7 @@ sdl_frame_event(SDL_Event *ev)
       { Code msg;
 
 	if ( (msg = checkType(getValueSheet(fr->wm_protocols,
-					    CtoName("WM_DELETE_WINDOW")),
+					    NAME_WM_DELETE_WINDOW),
 			      TypeCode, fr)) )
 	{ return forwardReceiverCode(msg, fr, MainWindow(fr), EAV);
 	} else

@@ -400,13 +400,13 @@ wmDeleteFrame(FrameObj fr)
 
 static status
 doneMessageFrame(FrameObj fr, Code msg)
-{ return wmProtocolFrame(fr, CtoName("WM_DELETE_WINDOW"), msg);
+{ return wmProtocolFrame(fr, NAME_WM_DELETE_WINDOW, msg);
 }
 
 
 static status
 saveMessageFrame(FrameObj fr, Code msg)
-{ return wmProtocolFrame(fr, CtoName("WM_SAVE_YOURSELF"), msg);
+{ return wmProtocolFrame(fr, NAME_WM_SAVE_YOURSELF, msg);
 }
 
 
