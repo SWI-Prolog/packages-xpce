@@ -205,9 +205,10 @@ variable(save_history,  bool := @off,         none, "Save history on exit").
 %   key_binding object.
 
 binding('\\C-y',     paste_quoted).
-binding('\\C-\\S-o', split_horizontally).
+binding('\\C-\\S-o', split_horizontally). % Terminator compatibility
 binding('\\C-\\S-e', split_vertically).
 binding('\\C-\\S-i', new_window).
+binding('\\C-\\S-k', clear_screen).       % Gnome terminal
 binding('\\C-\\S-w', close).
 
 key_binding(KB) :-
@@ -217,6 +218,21 @@ key_binding(KB) :-
     new(KB, key_binding(epilog, terminal)),
     forall(binding(Key, Method),
            send(KB, function, Key, Method)).
+
+:- multifile pce_keybinding:alt_binding_function/2.
+
+pce_keybinding:alt_binding_function(copy,      copy_or_interrupt).
+pce_keybinding:alt_binding_function(interrupt, copy_or_interrupt).
+
+epilog_accelerators(Popup, KeyBinding) :-
+    get_chain(Popup, members, Items),
+    (   member(Item, Items),
+        get(Item, value, MethodName),
+        get(KeyBinding, accelerator_label, MethodName, Accell),
+        send(Item, accelerator, Accell),
+        fail
+    ;   true
+    ).
 
 initialise(PT) :->
     "Create Prolog terminal"::
@@ -230,39 +246,29 @@ initialise(PT) :->
     send_list(P, append,
               [ menu_item(copy,
                           message(Terminal, copy),
-                          condition := message(Terminal, has_selection),
-                          accelerator := 'Ctrl+C'),
+                          condition := message(Terminal, has_selection)),
                 menu_item(paste,
-                          message(Terminal, paste),
-                          accelerator := 'Ctrl+V'),
+                          message(Terminal, paste)),
                 menu_item(paste_quoted,
                           message(Terminal, paste_quoted),
-                          end_group := @on,
-                          accelerator := 'Ctrl+Y'),
+                          end_group := @on),
                 menu_item(clear_screen,
                           message(Terminal, clear_screen),
                           end_group := @on),
                 menu_item(split_horizontally,
-                          message(Terminal, split_horizontally),
-                          accelerator := 'Shift+ctrl+O'),
+                          message(Terminal, split_horizontally)),
                 menu_item(split_vertically,
-                          message(Terminal, split_vertically),
-                          accelerator := 'Shift+ctrl+E'),
+                          message(Terminal, split_vertically)),
                 menu_item(new_window,
                           message(Terminal, new_window),
-                          end_group := @on,
-                          accelerator := 'Shift+ctrl+I'),
+                          end_group := @on),
                 menu_item(interrupt,
                           message(Terminal, interrupt),
-                          end_group := @on,
-                          accelerator := 'Ctrl+C'),
+                          end_group := @on),
                 menu_item(close,
                           message(Terminal, close))
-              ]).
-
-
-
-
+              ]),
+    epilog_accelerators(P, KB).
 
 unlink(PT) :->
     (   retract(current_prolog_terminal(Thread, PT))
