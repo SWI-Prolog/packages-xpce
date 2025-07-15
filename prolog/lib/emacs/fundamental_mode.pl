@@ -3,8 +3,10 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2010, University of Amsterdam, VU University Amsterdam
-    All rights reserved.
+    Copyright (c) 1985-2025, University of Amsterdam,
+                             VU University
+                             SWI-Prolog Solutions b.v.
+    Amsterdam All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -36,6 +38,7 @@
 :- use_module(library(pce)).
 :- use_module(library(emacs_extend), []).
 :- use_module(library(print_text)).
+:- use_module(window, [emacs_register_closed_tab/1]).
 :- require([ append/3
            , auto_call/1
            , between/3
@@ -87,7 +90,7 @@
                                      button(file, @emacs_mode?modes),
           properties               = button(file),
           -                        = button(file),
-          quit                     = key('\\C-x\\C-c') + button(file),
+          close                    = key('\\C-x\\C-c') + button(file),
 
                                         % EDIT menu
           undo                     = button(edit),
@@ -246,9 +249,11 @@ remove_condition(From, To, Style,
                  *      GLOBAL UTILITIES        *
                  *******************************/
 
-quit(M) :->
+close(M) :->
     "Destroy the editor"::
     ignore(send(M?text_buffer, save_if_modified)),
+    get(M, frame, Frame),
+    emacs_register_closed_tab(Frame),
     send(M, destroy).
 
 editor_preferences(_M) :->
@@ -729,7 +734,7 @@ properties(M, V:view) :<-
     ),
     send(V, caret, 0),
     send(new(D, dialog), below, V),
-    send(D, append, button(quit, message(V, destroy))),
+    send(D, append, button(close, message(V, destroy))),
     send(V, open_centered, M?frame?area?center).
 
 
@@ -945,7 +950,7 @@ only_window(M) :->
     get(M, editor, Editor),
     send(Buffer?editors, for_all,
          if(@arg1 \== Editor,
-            message(@arg1, quit))).
+            message(@arg1, close))).
 
 
 save_and_kill(M) :->
@@ -955,7 +960,7 @@ save_and_kill(M) :->
     send(TB, save),
     (   get(Editor, hypered, server, _Server)
     ->  send(TB, kill)
-    ;   send(M, quit)
+    ;   send(M, close)
     ).
 
 

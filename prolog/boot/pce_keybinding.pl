@@ -75,7 +75,7 @@ binding(cua, 'emacs$fundamental',
 binding(apple, editor,
         [ '\\s-s'      = save_buffer,
           '\\S-\\s-s'  = save_as,
-          '\\s-w'      = quit,
+          '\\s-w'      = close,
           '\\s-z'      = undo,
           '\\s-a'      = select_all,
           '\\s-f'      = find,
@@ -96,7 +96,7 @@ binding(apple, 'emacs$fundamental',
           '\\s-x'     = cut,
           '\\s-v'     = paste,
 
-          '\\S-\\s-=' = font_magnify,  % assumes + is shift-=.
+          '\\s-0'     = font_magnify,
           '\\s--'     = font_reduce,
           '\\s-='     = font_default,
 

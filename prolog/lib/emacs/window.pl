@@ -34,11 +34,12 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(emacs_frame, []).
+:- module(emacs_frame,
+          [ emacs_register_closed_tab/1
+          ]).
 :- use_module(library(pce)).
 :- use_module(library(tabbed_window)).
 :- use_module(prompt).
-:- use_module(library(lists)).
 :- use_module(library(pce_util)).
 
 :- require([ between/3,
@@ -112,7 +113,7 @@ initialise(F, For:'emacs_buffer|emacs_view') :->
     "Create window for buffer"::
     send(F, send_super, initialise, 'PceEmacs', application := @emacs),
     send(F, icon, image(resource(mode_x_icon))),
-    send(F, done_message, message(F, quit)),
+    send(F, done_message, message(F, close)),
     send(F, append, new(MBD, emacs_mode_dialog)),
 
     send(new(TW, emacs_tabbed_window), below, MBD),
@@ -138,15 +139,32 @@ initialise(F, For:'emacs_buffer|emacs_view') :->
     get(E, mode, Mode),
     ignore(send(Mode, new_buffer)).
 
-quit(F) :->
-    "User-initiated quit"::
-    get(F, member, emacs_tabbed_window, TW),
-    get(TW?members, size, Count),
-    (   Count == 1
-    ->  send(F, destroy)
-    ;   send(F, confirm, 'Close %d tabs?', Count)
-    ->  send(F, destroy)
-    ;   true
+:- dynamic
+    closed_tab_in_frame/2.
+
+%!  emacs_register_closed_tab(+Frame) is det.
+%
+%   Register that we closed a tab in this frame.  Used to prevent
+%   Command-W on MacOS from killing all tabs.
+
+emacs_register_closed_tab(Frame) :-
+    get_time(Now),
+    asserta(closed_tab_in_frame(Frame, Now)).
+
+close(F) :->
+    "User-initiated close"::
+    (   retract(closed_tab_in_frame(F, Time)),
+        get_time(Now),
+        Now-Time < 0.5
+    ->  true
+    ;   get(F, member, emacs_tabbed_window, TW),
+        get(TW?members, size, Count),
+        (   Count == 1
+        ->  send(F, destroy)
+        ;   send(F, confirm, 'Close %d tabs?', Count)
+        ->  send(F, destroy)
+        ;   true
+        )
     ).
 
 confirm(F, Format:char_array, Args:any...) :->
