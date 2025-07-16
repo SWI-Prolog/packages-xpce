@@ -435,7 +435,7 @@ characterName(Any chr)
   { if ( isInteger(chr) )
     { c = valInt(chr);
       name = chrName(c);
-      ctrl = (c < ' ');
+      ctrl = (c < ' ' && !name);
       meta = ( c >= META_OFFSET );
     } else
       return chr;
