@@ -111,6 +111,8 @@ ws_create_font(FontObj f, DisplayObj d)
   { family = "Noto Sans,Segoe UI,Verdana";
     if ( PL_w32_running_under_wine() )
       family = "Verdana";
+#elif !defined(__APPLE__)
+    family = "Noto Sans,sans";
 #endif
   } else
   { family = nameToUTF8(f->family);
