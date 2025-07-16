@@ -73,7 +73,9 @@ setPceThread(const char *app_name)
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
 
     if ( !SDL_Init(SDL_INIT_EVENTS|SDL_INIT_VIDEO) )
+    { Cprintf("SDL_Init() failed: %s\n", SDL_GetError());
       return errorPce(NIL, NAME_sdlInitialize);
+    }
     ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
     start_fd_watcher_thread();
     if ( !openDisplay(CurrentDisplay(NIL)) )

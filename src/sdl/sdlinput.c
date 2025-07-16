@@ -254,7 +254,8 @@ poll_thread_fn(void *unused)
 
     if ( poll_fds[0].revents & POLLIN )
     { char buffer[128];
-      read(control_pipe[0], buffer, sizeof(buffer));
+      if ( read(control_pipe[0], buffer, sizeof(buffer)) < 0 )
+	Cprintf("Read control message failed: %s\n", strerror(errno));
     }
 
     for (int i = 1; i < nfds; ++i)
@@ -296,7 +297,8 @@ signal_watcher(char c)
 #ifdef __WINDOWS__
   SetEvent(control_event);
 #else
-  write(control_pipe[1], &c, 1);
+  if ( write(control_pipe[1], &c, 1) < 0 )
+    Cprintf("Write control message failed: %s\n", strerror(errno));
 #endif
 }
 
