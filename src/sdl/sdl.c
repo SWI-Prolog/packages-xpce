@@ -74,6 +74,7 @@ setPceThread(const char *app_name)
 
     if ( !SDL_Init(SDL_INIT_EVENTS|SDL_INIT_VIDEO) )
     { Cprintf("SDL_Init() failed: %s\n", SDL_GetError());
+      Cprintf("SDL_VIDEODRIVER=%s\n", getenv("SDL_VIDEODRIVER"));
       return errorPce(NIL, NAME_sdlInitialize);
     }
     ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
