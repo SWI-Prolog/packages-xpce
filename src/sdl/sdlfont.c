@@ -44,6 +44,8 @@ static PangoFontMap *fontmap;	/* Per surface type (screen, PDF, ... */
 static PangoContext *context;	/* Per DPI and fontmap */
 static double font_scale = 1.0;
 
+#define P2D(i) ((i)/(double)PANGO_SCALE)
+
 static void clean_width_cache(charwidth_cache *wcache);
 
 static status
@@ -68,6 +70,46 @@ ws_init_fonts(DisplayObj d)
 
   succeed;
 }
+
+#define TRUST_PANGO_METRICS 0
+
+#if !TRUST_PANGO_METRICS
+
+static void
+dynamic_metrics(FontObj f)
+{ WsFont wsf = f->ws_ref;
+  PangoGlyphString *glyphs = pango_glyph_string_new();
+  PangoAnalysis analysis = {0};
+  PangoRectangle ink;
+  const char *sample = "blpqgyÉÂ";
+
+  analysis.font = wsf->font;
+  pango_shape(sample, -1, &analysis, glyphs);
+
+  int max_ascent = 0;
+  int max_descent = 0;
+
+  for (int i = 0; i < glyphs->num_glyphs; ++i)
+  { PangoGlyphInfo *gi = &glyphs->glyphs[i];
+    pango_font_get_glyph_extents(wsf->font, gi->glyph, &ink, NULL);
+
+    int a = -ink.y;
+    int d = (ink.y + ink.height);
+
+    if ( a > max_ascent ) max_ascent = a;
+    if ( d > max_descent ) max_descent = d;
+  }
+
+  DEBUG(NAME_font,
+	Cprintf("%s: Ascent = %.1f; descent = %.1f\n",
+		pp(f), P2D(max_ascent), P2D(max_descent)));
+
+  pango_glyph_string_free(glyphs);
+  wsf->ascent  = P2D(max_ascent)  + 2.0;
+  wsf->descent = P2D(max_descent) + 1.0;
+}
+
+#endif/*TRUST_PANGO_METRICS*/
 
 /**
  * Create a native font resource associated with the specified FontObj
@@ -135,10 +177,16 @@ ws_create_font(FontObj f, DisplayObj d)
   wsf->font    = pf;
   wsf->desc    = desc;
   wsf->layout  = layout;
+  f->ws_ref = wsf;
+
+#if TRUST_PANGO_METRICS
   wsf->ascent  = pango_font_metrics_get_ascent(metrics)/(double)PANGO_SCALE;
   wsf->descent = pango_font_metrics_get_descent(metrics)/(double)PANGO_SCALE;
+#else
+  dynamic_metrics(f);
+#endif
+
   wsf->height  = wsf->ascent + wsf->descent;
-  f->ws_ref = wsf;
   assign(f, ex, toInt(wsf->height/2)); /* approximation */
   pango_font_metrics_unref(metrics);
 
