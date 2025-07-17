@@ -105,7 +105,7 @@ dynamic_metrics(FontObj f)
 		pp(f), P2D(max_ascent), P2D(max_descent)));
 
   pango_glyph_string_free(glyphs);
-  wsf->ascent  = P2D(max_ascent)  + 2.0;
+  wsf->ascent  = P2D(max_ascent)  + 1.0;
   wsf->descent = P2D(max_descent) + 1.0;
 }
 
