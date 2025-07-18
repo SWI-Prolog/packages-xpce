@@ -125,8 +125,9 @@ static Elevation button_elevation;
 
 
 static void
-init_entry_resources()
+init_entry_resources(void)
 { static bool done = false;
+  DisplayObj d = CurrentDisplay(NIL);
 
   if ( !done )
   { done = true;
@@ -134,7 +135,7 @@ init_entry_resources()
     noedit_elevation = globalObject(NIL, ClassElevation, NIL,
 				    toInt(-1), EAV);
     edit_elevation   = globalObject(NIL, ClassElevation, NIL,
-				    toInt(-1), WHITE_COLOUR, EAV);
+				    toInt(-1), d->background, EAV);
     button_elevation = getClassVariableValueClass(ClassButton,
 						  NAME_elevation);
   }
