@@ -938,7 +938,7 @@ rescale(Image image, int px)
 
 #ifdef XPM_PCEIMAGE
 static void
-stdXPMImage(Name name, Image *global, char **bits)
+stdXPMImage(Name name, Name kind, Image *global, char **bits)
 { int w, h, colours;
 
   if ( sscanf(bits[0], "%d %d %d", &w, &h, &colours) == 3 )
@@ -946,7 +946,7 @@ stdXPMImage(Name name, Image *global, char **bits)
 
     if ( colours == 2 )
     { assign(image, depth, ONE);
-      assign(image, kind, NAME_bitmap);
+      assign(image, kind, kind);
     } else
     { assign(image, kind, NAME_pixmap);
     }
@@ -967,8 +967,6 @@ stdXPMImage(Name name, Image *global, char **bits)
 
 
 #include "bitmaps/swipl48.xpm"
-#include "bitmaps/hadjusttile.xpm"
-#include "bitmaps/vadjusttile.xpm"
 #include "bitmaps/up.xpm"
 #include "bitmaps/down.xpm"
 #include "bitmaps/left.xpm"
@@ -1017,18 +1015,20 @@ standardImages(void)
   stdImage(NAME_intItemImage, &INT_ITEM_IMAGE,
 	   intarrows_bits, intarrows_width, intarrows_height);
 #ifdef XPM_PCEIMAGE
-  stdXPMImage(NAME_pceImage,	       NULL,		    swipl48_xpm);
-  stdXPMImage(NAME_hadjustTileImage,   NULL,		    hadjusttile_xpm);
-  stdXPMImage(NAME_vadjustTileImage,   NULL,		    vadjusttile_xpm);
-  stdXPMImage(NAME_scrollUpImage,      &SCROLL_UP_IMAGE,    up_xpm);
-  stdXPMImage(NAME_scrollDownImage,    &SCROLL_DOWN_IMAGE,  down_xpm);
-  stdXPMImage(NAME_scrollLeftImage,    &SCROLL_LEFT_IMAGE,  left_xpm);
-  stdXPMImage(NAME_scrollRightImage,   &SCROLL_RIGHT_IMAGE, right_xpm);
-  stdXPMImage(NAME_exclamationImage,   &EXCLAMATION_IMAGE,  exclamation_xpm);
-  stdXPMImage(NAME_treeExpandedImage,  NULL,		    enode_xpm);
-  stdXPMImage(NAME_treeCollapsedImage, NULL,		    cnode_xpm);
-  stdXPMImage(NAME_markImage,          &MARK_IMAGE,	    mark_xpm);
-  stdXPMImage(NAME_nomarkImage,        &NOMARK_IMAGE,	    nomark_xpm);
+#define P NAME_pixmap
+#define B NAME_bitmap
+  stdXPMImage(NAME_pceImage,	       P, NULL,		       swipl48_xpm);
+  stdXPMImage(NAME_scrollUpImage,      P, &SCROLL_UP_IMAGE,    up_xpm);
+  stdXPMImage(NAME_scrollDownImage,    P, &SCROLL_DOWN_IMAGE,  down_xpm);
+  stdXPMImage(NAME_scrollLeftImage,    P, &SCROLL_LEFT_IMAGE,  left_xpm);
+  stdXPMImage(NAME_scrollRightImage,   P, &SCROLL_RIGHT_IMAGE, right_xpm);
+  stdXPMImage(NAME_exclamationImage,   P, &EXCLAMATION_IMAGE,  exclamation_xpm);
+  stdXPMImage(NAME_treeExpandedImage,  B, NULL,		       enode_xpm);
+  stdXPMImage(NAME_treeCollapsedImage, B, NULL,		       cnode_xpm);
+  stdXPMImage(NAME_markImage,          P, &MARK_IMAGE,	       mark_xpm);
+  stdXPMImage(NAME_nomarkImage,        P, &NOMARK_IMAGE,       nomark_xpm);
+#undef P
+#undef B
 #endif
 
   stdImage(NAME_nullImage, &NULL_IMAGE,

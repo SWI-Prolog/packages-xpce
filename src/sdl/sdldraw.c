@@ -1348,6 +1348,54 @@ r_op_image(Image image, int sx, int sy, int x, int y, int w, int h, Name op)
 {
 }
 
+static cairo_surface_t *
+recolor_bw_surface(cairo_surface_t* input,
+		   Colour foreground,
+		   Colour background)
+{ uint32_t fg, bg;
+
+  ws_named_colour(foreground);
+  ws_named_colour(background);
+  fg = valInt(foreground->rgba);
+  bg = valInt(background->rgba);
+
+  int width = cairo_image_surface_get_width(input);
+  int height = cairo_image_surface_get_height(input);
+
+  cairo_surface_t* output =
+    cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
+  if ( cairo_surface_status(output) != CAIRO_STATUS_SUCCESS )
+    return NULL;
+
+  uint32_t* in_data = (uint32_t*)cairo_image_surface_get_data(input);
+  uint32_t* out_data = (uint32_t*)cairo_image_surface_get_data(output);
+  int stride = cairo_image_surface_get_stride(input) / 4;
+
+  for (int y = 0; y < height; ++y)
+  { for (int x = 0; x < width; ++x)
+    { uint32_t px = in_data[y * stride + x];
+      uint8_t a = (px >> 24) & 0xFF;
+      uint8_t r = (px >> 16) & 0xFF;
+      uint8_t g = (px >> 8) & 0xFF;
+      uint8_t b = px & 0xFF;
+
+      uint32_t out_px;
+
+      if (r < 128 && g < 128 && b < 128)
+      { out_px = (fg & 0xFFFFFF) | (0xff << 24);
+      } else
+      { out_px = (bg & 0xFFFFFF) | (a << 24);
+      }
+
+      out_data[y * stride + x] = out_px;
+    }
+  }
+
+  cairo_surface_mark_dirty(output);
+  return output;
+}
+
+
 /**
  * Draw an image onto the display.
  *
@@ -1364,6 +1412,23 @@ void
 r_image(Image image, int sx, int sy,
 	int x, int y, int w, int h, BoolObj transparent)
 { cairo_surface_t *surface = pceImage2CairoSurface(image);
+  bool free_surface = false;
+
+  if ( !surface )
+    return;
+
+  if ( image->kind == NAME_bitmap &&
+       ( context.colour != BLACK_COLOUR ||
+	 context.background != WHITE_COLOUR ) )
+  { cairo_surface_t *copy = recolor_bw_surface(surface,
+					       context.colour,
+					       context.background);
+    if ( copy )
+    { DEBUG(NAME_bitmap, Cprintf("%s: re-coloured\n", pp(image)));
+      surface = copy;
+      free_surface = true;
+    }
+  }
 
   Translate(x, y);
   NormaliseArea(x, y, w, h);
@@ -1374,22 +1439,23 @@ r_image(Image image, int sx, int sy,
 	Cprintf("r_image(%s, %d, %d -> %d, %d, %d, %d, %s)\n",
 		pp(image), sx, sy, x, y, w, h, pp(transparent)));
 
-  if ( surface )
-  { int width  = cairo_image_surface_get_width(surface);
-    int height = cairo_image_surface_get_height(surface);
-    if ( w == width && h == height )
-    { cairo_new_path(CR);
-      cairo_set_source_surface(CR, surface, x, y);
-      cairo_paint(CR);
-    } else
-    { cairo_save(CR);
-      cairo_translate(CR, x, y);
-      cairo_scale(CR, (float)w/(float)width, (float)h/(float)height);
-      cairo_set_source_surface(CR, surface, 0, 0);
-      cairo_paint(CR);
-      cairo_restore(CR);
-    }
+  int width  = cairo_image_surface_get_width(surface);
+  int height = cairo_image_surface_get_height(surface);
+  if ( w == width && h == height )
+  { cairo_new_path(CR);
+    cairo_set_source_surface(CR, surface, x, y);
+    cairo_paint(CR);
+  } else
+  { cairo_save(CR);
+    cairo_translate(CR, x, y);
+    cairo_scale(CR, (float)w/(float)width, (float)h/(float)height);
+    cairo_set_source_surface(CR, surface, 0, 0);
+    cairo_paint(CR);
+    cairo_restore(CR);
   }
+
+  if ( free_surface )
+    cairo_surface_destroy(surface);
 }
 
 static void
