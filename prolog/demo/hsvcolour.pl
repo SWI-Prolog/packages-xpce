@@ -80,7 +80,7 @@ initialise(D, Init:[colour]) :->
     send(D, resize_message, message(D, layout, @arg2)),
     (   Init \== @default
     ->  send(D, current_colour, Init)
-    ;   send(D, current_colour, colour(@default, 180, 50, 50, hsv))
+    ;   send(D, current_colour, colour(@default, 180, 50, 50, model := hsv))
     ).
 
 quit(D) :->
@@ -137,17 +137,17 @@ hue(D, H:'0..360') :->
     H2 is min(H, 359),
     get(D, value, saturnation, S),
     get(D, value, value, V),
-    send(D, current_colour, colour(@default, H2, S, V, hsv), hsv).
+    send(D, current_colour, colour(@default, H2, S, V, model := hsv), hsv).
 
 saturnation(D, S:'0..100') :->
     get(D, value, hue, H),
     get(D, value, value, V),
-    send(D, current_colour, colour(@default, H, S, V, hsv), hsv).
+    send(D, current_colour, colour(@default, H, S, V, model := hsv), hsv).
 
 value(D, V:'0..360') :->
     get(D, value, hue, H),
     get(D, value, saturnation, S),
-    send(D, current_colour, colour(@default, H, S, V, hsv), hsv).
+    send(D, current_colour, colour(@default, H, S, V, model := hsv), hsv).
 
 :- pce_group(rgb).
 

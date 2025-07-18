@@ -36,6 +36,8 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 
+static Int getAlphaColour(Colour c);
+
 static status
 toRBG(Int *r, Int *g, Int *b, Name model)
 { if ( isDefault(*r) || isDefault(*g) || isDefault(*b) )
@@ -67,14 +69,21 @@ toRBG(Int *r, Int *g, Int *b, Name model)
 
 
 static Name
-defcolourname(Int r, Int g, Int b)
+defcolourname(Int r, Int g, Int b, Int a)
 { if ( notDefault(r) && notDefault(g) && notDefault(b) )
   { char buf[50];
 
-    sprintf(buf, "#%02x%02x%02x",
-	    (unsigned int)valInt(r),
-	    (unsigned int)valInt(g),
-	    (unsigned int)valInt(b));
+    if ( isDefault(a) || a == toInt(255) )
+      sprintf(buf, "#%02x%02x%02x",
+	      (unsigned int)valInt(r),
+	      (unsigned int)valInt(g),
+	      (unsigned int)valInt(b));
+    else
+      sprintf(buf, "#%02x%02x%02x%02x",
+	      (unsigned int)valInt(r),
+	      (unsigned int)valInt(g),
+	      (unsigned int)valInt(b),
+	      (unsigned int)valInt(a));
 
     return CtoName(buf);
   }
@@ -84,13 +93,21 @@ defcolourname(Int r, Int g, Int b)
 
 
 static status
-initialiseColour(Colour c, Name name, Int r, Int g, Int b, Name model)
+initialiseColour(Colour c, Name name, Int r, Int g, Int b, Int a, Name model)
 { if ( notDefault(name) )
     assign(c, name, name);
 
+  if ( isDefault(a) )
+    a = toInt(255);
+
   if ( isDefault(r) && isDefault(g) && isDefault(b) )
   { assign(c, kind, NAME_named);
-    assign(c, rgba, DEFAULT);
+    if ( a == toInt(255) )
+    { assign(c, rgba, DEFAULT);
+    } else
+    { ws_named_colour(c);
+      assign(c, rgba, toInt(valInt(c->rgba)|(valInt(a)<<24)));
+    }
   } else if ( notDefault(r) && notDefault(g) && notDefault(b) )
   { assign(c, kind, NAME_rgb);
 
@@ -98,10 +115,10 @@ initialiseColour(Colour c, Name name, Int r, Int g, Int b, Name model)
       fail;
 
     if ( isDefault(name) )
-    { name = defcolourname(r, g, b);
+    { name = defcolourname(r, g, b, a);
       assign(c, name, name);
     }
-    COLORRGBA rgba = RGBA(valInt(r), valInt(g), valInt(b), 255);
+    COLORRGBA rgba = RGBA(valInt(r), valInt(g), valInt(b), valInt(a));
     assign(c, rgba, toInt(rgba));
   } else
     return errorPce(c, NAME_instantiationFault,
@@ -122,12 +139,15 @@ unlinkColour(Colour c)
 
 
 static Colour
-getLookupColour(Class class, Name name, Int r, Int g, Int b, Name model)
-{ if ( isDefault(name) && notDefault(r) && notDefault(g) && notDefault(b) )
+getLookupColour(Class class, Name name, Int r, Int g, Int b, Int a, Name model)
+{ if ( isDefault(a) )
+    a = toInt(255);
+
+  if ( isDefault(name) && notDefault(r) && notDefault(g) && notDefault(b) )
   { if ( !toRBG(&r, &g, &b, model) )
       fail;
 
-    name = defcolourname(r, g, b);
+    name = defcolourname(r, g, b, a);
   }
 
   if ( name )
@@ -144,7 +164,8 @@ getStorageReferenceColour(Colour c)
   else
     answer(defcolourname(getRedColour(c),
 			 getGreenColour(c),
-			 getBlueColour(c)));
+			 getBlueColour(c),
+			 getAlphaColour(c)));
 }
 
 
@@ -175,7 +196,7 @@ static status
 loadColour(Colour c, IOSTREAM *fd, ClassDef def)
 { TRY( loadSlotsObject(c, fd, def) );
 
-  if ( c->kind == NAME_named )
+  if ( c->kind == NAME_named && !isInteger(c->rgba) )
     assign(c, rgba, DEFAULT);
 
   succeed;
@@ -210,37 +231,44 @@ getConvertColour(Class class, Name name)
     answer(c);
 
   if ( (s=strName(name))[0] == '#' )
-  { int r, g, b;
+  { int r, g, b, a = 255;
     int dgs = 0;
     size_t l = strlen(s);
+    bool has_alpha = false;
 
-    if ( l == 4 )
-      dgs = 1;
-    else if ( l == 7 )
-      dgs = 2;
-    else if ( l == 13 )
-      dgs = 4;
+    switch(l-1)
+    { case 4:			/* #RGBA */
+	has_alpha = true;
+      case 3:			/* #RGB */
+	dgs = 1;
+	break;
+      case 8:			/* #RRGGBBAA */
+	has_alpha = true;
+      case 6:			/* #RRGGBB */
+	dgs = 2;
+	break;
+      default:
+	fail;
+    }
 
-    if ( dgs )
-    { s++;				/* skip # */
-      r = take_hex(s, dgs); s+= dgs;
-      g = take_hex(s, dgs); s+= dgs;
-      b = take_hex(s, dgs);
+    s++;				/* skip # */
+    r = take_hex(s, dgs); s+= dgs;
+    g = take_hex(s, dgs); s+= dgs;
+    b = take_hex(s, dgs); s+= dgs;
+    if ( has_alpha )
+      a = take_hex(s, dgs);
 
-      if ( r >= 0 && g >= 0 && b >= 0 )
-      { if ( dgs == 1 )
-	{ r = r*16 + r;
-	  g = g*16 + g;
-	  b = b*16 + b;
-	} else if ( dgs == 4 )
-	{ r /= 256;
-	  g /= 256;
-	  b /= 256;
-	}
-
-	answer(answerObject(ClassColour, name,
-			    toInt(r), toInt(g), toInt(b), EAV));
+    if ( r >= 0 && g >= 0 && b >= 0 && a >= 0 )
+    { if ( dgs == 1 )
+      { r = r*16 + r;
+	g = g*16 + g;
+	b = b*16 + b;
+	if ( has_alpha )
+	  a = b*16 + a;
       }
+
+      answer(answerObject(ClassColour, name,
+			  toInt(r), toInt(g), toInt(b), toInt(a), EAV));
     }
 
     fail;
@@ -275,6 +303,13 @@ getBlueColour(Colour c)
   return toInt(ColorBValue(valInt(c->rgba)));
 }
 
+static Int
+getAlphaColour(Colour c)
+{ if ( isDefault(c->rgba) )
+    ws_named_colour(c);
+
+  return toInt(ColorAValue(valInt(c->rgba)));
+}
 
 static status
 get_hsv_colour(Colour c, float *h, float *s, float *v)
@@ -329,14 +364,14 @@ they remain in existence as long as the main colour.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static Colour
-associateColour(Colour c, Int r, Int g, Int b)
+associateColour(Colour c, Int r, Int g, Int b, Int a)
 { Name name;
   Colour c2;
   Chain ch;
 
-  name = defcolourname(r, g, b);
+  name = defcolourname(r, g, b, a);
   if ( !(c2=getMemberHashTable(ColourTable, name)) )
-    c2 = newObject(ClassColour, name, r, g, b, EAV);
+    c2 = newObject(ClassColour, name, r, g, b, a, EAV);
 
   if ( !(ch=getAttributeObject(c, NAME_associates)) )
     attributeObject(c, NAME_associates, newObject(ClassChain, c2, EAV));
@@ -368,7 +403,7 @@ getHiliteColour(Colour c, Real h)
   g = g + (int)((float)(255 - g) * hf);
   b = b + (int)((float)(255 - b) * hf);
 
-  return associateColour(c, toInt(r), toInt(g), toInt(b));
+  return associateColour(c, toInt(r), toInt(g), toInt(b), getAlphaColour(c));
 }
 
 
@@ -392,7 +427,7 @@ getReduceColour(Colour c, Real re)
   g = (int)((float)g * rf);
   b = (int)((float)b * rf);
 
-  return associateColour(c, toInt(r), toInt(g), toInt(b));
+  return associateColour(c, toInt(r), toInt(g), toInt(b), getAlphaColour(c));
 }
 
 
@@ -418,11 +453,11 @@ getIntensityColour(Colour c)
 static char *T_lookup[] =
 	{ "[name|int]",
 	  "red=[0..360]", "green=[0..255]", "blue=[0..255]",
-	  "model=[{rgb,hsv}]" };
+	  "alpha=[0..255]", "model=[{rgb,hsv}]" };
 static char *T_initialise[] =
 	{ "name=[name]",
 	  "red=[0..360]", "green=[0..255]", "blue=[0..255]",
-	  "model=[{rgb,hsv}]" };
+	  "alpha=[0..255]", "model=[{rgb,hsv}]" };
 
 /* Instance Variables */
 
@@ -438,7 +473,7 @@ static vardecl var_colour[] =
 /* Send Methods */
 
 static senddecl send_colour[] =
-{ SM(NAME_initialise, 5, T_initialise, initialiseColour,
+{ SM(NAME_initialise, 6, T_initialise, initialiseColour,
      DEFAULT, "Create from name and optional rgb"),
   SM(NAME_unlink, 0, NULL, unlinkColour,
      DEFAULT, "Deallocate the colour object"),
@@ -459,7 +494,7 @@ static getdecl get_colour[] =
      NAME_file, "Description name for ->save_in_file"),
   GM(NAME_intensity, 0, "0..65535", NULL, getIntensityColour,
      NAME_grey, "Total light intensity of the colour"),
-  GM(NAME_lookup, 5, "colour", T_lookup, getLookupColour,
+  GM(NAME_lookup, 6, "colour", T_lookup, getLookupColour,
      NAME_oms, "Lookup in @colours table"),
   GM(NAME_red, 0, "0..255", NULL, getRedColour,
      NAME_colour, "RGB red component"),
@@ -467,6 +502,8 @@ static getdecl get_colour[] =
      NAME_colour, "RGB red component"),
   GM(NAME_blue, 0, "0..255", NULL, getBlueColour,
      NAME_colour, "RGB red component"),
+  GM(NAME_alpha, 0, "0..255", NULL, getAlphaColour,
+     NAME_colour, "RGBA alpha component"),
   GM(NAME_hue, 0, "0..360", NULL, getHueColour,
      NAME_colour, "Hue from the HSV-model"),
   GM(NAME_saturnation, 0, "0..100", NULL, getSaturationColour,
