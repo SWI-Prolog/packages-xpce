@@ -22,8 +22,7 @@ set(GRA_SRC	arc.c arrow.c bitmap.c box.c circle.c colour.c
 		font.c format.c graphical.c handle.c image.c
 		joint.c line.c link.c listbrowser.c node.c path.c
 		postscript.c scrollbar.c text.c tree.c visual.c
-		pixmap.c elevation.c pen.c draw.c colourmap.c
-		bezier.c hsv.c)
+		pixmap.c elevation.c pen.c draw.c bezier.c hsv.c)
 
 set(ITF_SRC	c.c host.c interface.c cpointer.c asfile.c console.c
 		stub.c xmalloc.c iostream.c srcsink.c rc.c hostdata.c
@@ -362,7 +361,7 @@ set(XPCE_DATA_man_reference_class and.doc application.doc arc.doc
     bitmap.doc block.doc bool.doc box.doc browser.doc
     browser_select_gesture.doc button.doc chain.doc chain_hyper.doc
     chain_table.doc char_array.doc circle.doc class.doc class_variable.doc
-    click_gesture.doc code.doc code_vector.doc colour.doc colour_map.doc
+    click_gesture.doc code.doc code_vector.doc colour.doc
     connect_gesture.doc connection.doc constant.doc constraint.doc
     c_pointer.doc create.doc cursor.doc date.doc device.doc dialog.doc
     dialog_group.doc dialog_item.doc dict.doc dict_item.doc directory.doc

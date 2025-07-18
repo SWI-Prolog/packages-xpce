@@ -300,19 +300,6 @@ XcloseImage(Image image, DisplayObj d)
   succeed;
 }
 
-		 /*******************************
-		 *	    COLOURMAP		*
-		 *******************************/
-
-static ColourMap
-getColourMapImage(Image image)
-{ if ( image->kind != NAME_bitmap )
-    return ws_colour_map_for_image(image);
-
-  fail;
-}
-
-
 		/********************************
 		*         FILE OPERATIONS	*
 		********************************/
@@ -1196,8 +1183,6 @@ static getdecl get_image[] =
      NAME_oms, "Lookup in @images table"),
   GM(NAME_pixel, 2, "value=bool|colour", T_xAint_yAint, getPixelImage,
      NAME_pixel, "Get 0-1 (image) or colour for x-y"),
-  GM(NAME_colourMap, 0, "colour_map", NULL, getColourMapImage,
-     NAME_colour, "New colour_map for best display of image"),
   GM(NAME_boundingBox, 0, "area", NULL, getBoundingBoxImage,
      NAME_postscript, "BoundingBox for PostScript generation"),
   GM(NAME_postscript, 2, "string", T_postscript, getPostscriptObject,

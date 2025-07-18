@@ -694,13 +694,6 @@ End;
   UpdateArea	changes_data;		/* Recorded changes */ \
   WsRef		ws_ref;			/* Window system reference */
 
-NewClass(colour_map)
-  Name		name;			/* name of the map */
-  Vector	colours;		/* colours in the map */
-  BoolObj	read_only;		/* colourmap cannot be changed */
-  WsRef		ws_ref;			/* Window system reference */
-End;
-
 typedef struct
 { enum
   { XBM_DATA,
@@ -803,7 +796,6 @@ NewClass(displayobj)
   Chain		inspect_handlers;	/* Event-handlers for inspector */
   Colour	foreground;		/* Window default foreground */
   Colour	background;		/* Window default background */
-  ColourMap	colour_map;		/* Default colour_map for frames */
   Name		wm_class;		/* WM_CLASS hint */
   BoolObj	quick_and_dirty;	/* Use quick_and_dirty drawing */
   Image		cache;			/* Graphics cache */
@@ -844,7 +836,6 @@ NewClass(frameobj)
   DisplayObj	display;		/* Display it is displayed on */
   Int		border;			/* Border width */
   Any		background;		/* Frames background */
-  ColourMap	colour_map;		/* Attached colourmap */
   Area		area;			/* Area of the frame */
   Name		geometry;		/* X-Window geometry spec */
   BoolObj	placed;			/* User tried to fix placement */

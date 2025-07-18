@@ -61,7 +61,6 @@ Image ws_grayscale_image(Image image);
 void ws_postscript_image(Image image, Int depth, int iscolor);
 status loadXliImage(Image image, FileObj file, Int bright);
 void ws_create_image_from_x11_data(Image image, unsigned char *data, int w, int h);
-ColourMap ws_colour_map_for_image(Image image);
 void ws_system_images(void);
 void ws_prepare_image_mask(Image image);
 status ws_has_alpha_image(Image image);

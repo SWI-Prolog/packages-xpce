@@ -57,7 +57,6 @@ initialiseDisplay(DisplayObj d, Name address)
   assign(d, frames,		newObject(ClassChain, EAV));
   assign(d, inspect_handlers,	newObject(ClassChain, EAV));
   assign(d, cache,		NIL);
-  assign(d, colour_map,		DEFAULT);
   assign(d, display_manager,	dm);
   assign(d, busy_locks,		ZERO);
 
@@ -140,14 +139,6 @@ static status
 backgroundDisplay(DisplayObj d, Colour c)
 { assign(d, background, c);
   ws_background_display(d, c);
-
-  succeed;
-}
-
-
-static status
-colourMapDisplay(DisplayObj d, ColourMap cm)
-{ assign(d, colour_map, cm);
 
   succeed;
 }
@@ -1236,8 +1227,6 @@ static vardecl var_display[] =
      NAME_appearance, "Windows default foreground colour"),
   SV(NAME_background, "colour", IV_GET|IV_STORE, backgroundDisplay,
      NAME_appearance, "Windows default background colour"),
-  SV(NAME_colourMap, "[colour_map]*", IV_GET|IV_STORE, colourMapDisplay,
-     NAME_appearance, "Default for `frame ->colour_map'"),
   IV(NAME_wmClass, "[name]", IV_BOTH,
      NAME_appearance, "Override WM_CLASS for all X11 frames"),
   IV(NAME_quickAndDirty, "bool", IV_BOTH,

@@ -102,10 +102,5 @@ status ws_create_colour(Colour c, DisplayObj d);
 void ws_uncreate_colour(Colour c, DisplayObj d);
 status ws_colour_name(DisplayObj d, Name name);
 Colour ws_pixel_to_colour(DisplayObj d, unsigned long pixel);
-void ws_colour_cube(ColourMap cm, int size);
-void ws_colour_map_colours(ColourMap cm);
-status ws_create_colour_map(ColourMap cm, DisplayObj d);
-status ws_uncreate_colour_map(ColourMap cm, DisplayObj d);
-status ws_unlink_colour_map(ColourMap cm);
 
 #endif /* RAYCOLOUR_H */

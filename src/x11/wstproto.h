@@ -6,11 +6,6 @@ COMMON(status)	ws_create_colour(Colour c, DisplayObj d);
 COMMON(void)	ws_uncreate_colour(Colour c, DisplayObj d);
 COMMON(status)	ws_colour_name(DisplayObj d, Name name);
 COMMON(Colour)	ws_pixel_to_colour(DisplayObj d, unsigned long pixel);
-COMMON(void)	ws_colour_cube(ColourMap cm, int size);
-COMMON(void)	ws_colour_map_colours(ColourMap cm);
-COMMON(status)	ws_create_colour_map(ColourMap cm, DisplayObj d);
-COMMON(status)	ws_uncreate_colour_map(ColourMap cm, DisplayObj d);
-COMMON(status)	ws_unlink_colour_map(ColourMap cm);
 
 /* ../src/x11/xcursor.c */
 COMMON(void)	ws_init_cursor_font(void);

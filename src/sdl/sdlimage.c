@@ -628,18 +628,6 @@ ws_create_image_from_x11_data(Image image, unsigned char *data, int w, int h)
 }
 
 /**
- * Retrieve the colour map used for the image.
- *
- * @param image Pointer to the Image object.
- * @return The associated ColourMap.
- */
-ColourMap
-ws_colour_map_for_image(Image image)
-{
-    return NULL;
-}
-
-/**
  * Initialize system image resources (e.g., built-in icons).
  */
 void
