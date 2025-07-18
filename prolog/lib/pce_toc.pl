@@ -507,6 +507,7 @@ make_toc_drag_and_drop_recogniser(G) :-
 
 make_toc_node_format(F) :-
     new(F, format(vertical, 1, @on)),
+    send(F, adjustment, vector(center)),
     send(F, row_sep, 5).
 
                  /*******************************
