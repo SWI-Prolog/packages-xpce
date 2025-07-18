@@ -492,7 +492,7 @@ static getdecl get_colour[] =
      NAME_conversion, "Convert X-colour name"),
   GM(NAME_storageReference, 0, "name", NULL, getStorageReferenceColour,
      NAME_file, "Description name for ->save_in_file"),
-  GM(NAME_intensity, 0, "0..65535", NULL, getIntensityColour,
+  GM(NAME_intensity, 0, "0..255", NULL, getIntensityColour,
      NAME_grey, "Total light intensity of the colour"),
   GM(NAME_lookup, 6, "colour", T_lookup, getLookupColour,
      NAME_oms, "Lookup in @colours table"),
