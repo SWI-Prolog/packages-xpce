@@ -326,7 +326,7 @@ initialise(AV, Title:name, TitleValue:[name]) :->
 
     send(AV, send_super, initialise),
     send(AV, border, 5),
-    send(AV, background, colour(white)),
+    send(AV, background, @display?background),
     send(AV, pen, 1),
     send(AV, shadow, 2),
     send(AV, format, @isp_attribute_value_sheet_format),
