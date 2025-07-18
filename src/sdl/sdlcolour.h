@@ -50,6 +50,8 @@ typedef uint32_t COLORRGBA;
 
 #define WS_COLOR_CREATED (((uintptr_t)1) << 32)
 
+status ws_named_colour(Colour c);
+
 typedef struct
 { Uint8 r;
   Uint8 g;
@@ -62,17 +64,9 @@ typedef union
   uint32_t  asint;
 } cvt_color;
 
-static inline WsRef
-color2wsref(uint32_t i)
-{ static_assert(sizeof(uintptr_t) > sizeof(uint32_t),
-		"Assumes 64 bits");
-  return (void*)(((uintptr_t)i)|WS_COLOR_CREATED);
-}
-
 static inline SDL_Color
-wsref2SDL_Color(WsRef r)
-{ COLORRGBA rgb = (COLORRGBA)(intptr_t)r;
-  SDL_Color c = { .r = ColorRValue(rgb),
+rgba2SDL_Color(COLORRGBA rgb)
+{ SDL_Color c = { .r = ColorRValue(rgb),
 		  .g = ColorGValue(rgb),
 		  .b = ColorBValue(rgb),
 		  .a = ColorAValue(rgb)
@@ -82,25 +76,13 @@ wsref2SDL_Color(WsRef r)
 
 static inline SDL_Color
 pceColour2SDL_Color(Colour c)
-{ WsRef r = c->ws_ref;
-  if ( r == NULL )
-  { ws_create_colour(c, DEFAULT);
-    r = c->ws_ref;
-    if ( !r )
-    { Cprintf("Failed to get colour from %s\n", pp(c));
-      SDL_Color replace = {.b=255, .a=255};
-      return replace;
-    }
-  }
+{ ws_named_colour(c);
 
-  return wsref2SDL_Color(r);
+  return rgba2SDL_Color(valInt(c->rgba));
 }
 
 Int getNamedRGB(Name name);
 
-status ws_create_colour(Colour c, DisplayObj d);
-void ws_uncreate_colour(Colour c, DisplayObj d);
-status ws_colour_name(DisplayObj d, Name name);
 Colour ws_pixel_to_colour(DisplayObj d, unsigned long pixel);
 
 #endif /* RAYCOLOUR_H */

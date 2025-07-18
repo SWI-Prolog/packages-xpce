@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2011, University of Amsterdam
+    Copyright (c)  2001-2025, University of Amsterdam
+			    SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -120,8 +121,7 @@ update(D, Name, Colour, Selector) :-
     send(Item, selection, Value).
 
 update_rgb(D, Name, Colour, Selector) :-
-    get(Colour, Selector, Value),
-    RGB is Value // 256,
+    get(Colour, Selector, RGB),
     get(D, member, Name, Item),
     send(Item, selection, RGB).
 
@@ -169,9 +169,6 @@ blue(D, B:'0..255') :->
     rgb(R, G, B, Colour),
     send(D, current_colour, Colour, rgb).
 
-rgb(R,G,B, colour(@default, Red, Green, Blue)) :-
-    Red is R * 257,
-    Green is G * 257,
-    Blue is B * 257.
+rgb(R,G,B, colour(@default, R, G, B)).
 
 :- pce_end_class(hsv_browser).

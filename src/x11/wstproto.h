@@ -1,12 +1,6 @@
 #include <stdbool.h>
 #define COMMON(type) SO_LOCAL type
 
-/* ../src/x11/xcolour.c */
-COMMON(status)	ws_create_colour(Colour c, DisplayObj d);
-COMMON(void)	ws_uncreate_colour(Colour c, DisplayObj d);
-COMMON(status)	ws_colour_name(DisplayObj d, Name name);
-COMMON(Colour)	ws_pixel_to_colour(DisplayObj d, unsigned long pixel);
-
 /* ../src/x11/xcursor.c */
 COMMON(void)	ws_init_cursor_font(void);
 COMMON(Int)	ws_cursor_font_index(Name name);

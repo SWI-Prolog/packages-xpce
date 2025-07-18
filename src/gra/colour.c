@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog-org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -35,8 +36,6 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 
-static status XCloseColour(Colour c, DisplayObj d);
-
 static status
 toRBG(Int *r, Int *g, Int *b, Name model)
 { if ( isDefault(*r) || isDefault(*g) || isDefault(*b) )
@@ -58,9 +57,9 @@ toRBG(Int *r, Int *g, Int *b, Name model)
 
     HSVToRGB((float)ih/360.0, (float)is/100.0, (float)iv/100.0,
 	     &R, &G, &B);
-    *r = toInt((int)(R*65535));
-    *g = toInt((int)(G*65535));
-    *b = toInt((int)(B*65535));
+    *r = toInt((int)(R*255+0.5));
+    *g = toInt((int)(G*255+0.5));
+    *b = toInt((int)(B*255+0.5));
   }
 
   succeed;
@@ -73,9 +72,9 @@ defcolourname(Int r, Int g, Int b)
   { char buf[50];
 
     sprintf(buf, "#%02x%02x%02x",
-	    (unsigned int)valInt(r)>>8,
-	    (unsigned int)valInt(g)>>8,
-	    (unsigned int)valInt(b)>>8);
+	    (unsigned int)valInt(r),
+	    (unsigned int)valInt(g),
+	    (unsigned int)valInt(b));
 
     return CtoName(buf);
   }
@@ -91,6 +90,7 @@ initialiseColour(Colour c, Name name, Int r, Int g, Int b, Name model)
 
   if ( isDefault(r) && isDefault(g) && isDefault(b) )
   { assign(c, kind, NAME_named);
+    assign(c, rgba, DEFAULT);
   } else if ( notDefault(r) && notDefault(g) && notDefault(b) )
   { assign(c, kind, NAME_rgb);
 
@@ -101,13 +101,11 @@ initialiseColour(Colour c, Name name, Int r, Int g, Int b, Name model)
     { name = defcolourname(r, g, b);
       assign(c, name, name);
     }
+    COLORRGBA rgba = RGBA(valInt(r), valInt(g), valInt(b), 255);
+    assign(c, rgba, toInt(rgba));
   } else
     return errorPce(c, NAME_instantiationFault,
 		    getMethodFromFunction((Any(*)())initialiseColour));
-
-  assign(c, red,   r);
-  assign(c, green, g);
-  assign(c, blue,  b);
 
   appendHashTable(ColourTable, c->name, c);
 
@@ -118,7 +116,6 @@ initialiseColour(Colour c, Name name, Int r, Int g, Int b, Name model)
 static status
 unlinkColour(Colour c)
 { deleteHashTable(ColourTable, c->name);
-  XCloseColour(c, DEFAULT);
 
   succeed;
 }
@@ -145,7 +142,9 @@ getStorageReferenceColour(Colour c)
 { if ( c->kind == NAME_named )
     answer(c->name);
   else
-    answer(defcolourname(c->red, c->green, c->blue));
+    answer(defcolourname(getRedColour(c),
+			 getGreenColour(c),
+			 getBlueColour(c)));
 }
 
 
@@ -158,14 +157,7 @@ equalColour(Colour c1, Colour c2)
   { if ( c1->name == c2->name )
       succeed;
 
-    if ( isDefault(c1->red) )		/* `open' both colours */
-      getXrefObject(c1, CurrentDisplay(NIL));
-    if ( isDefault(c2->red) )
-      getXrefObject(c2, CurrentDisplay(NIL));
-
-    if ( c1->red   == c2->red &&	/* tolerance? */
-	 c1->green == c2->green &&
-	 c1->blue  == c2->blue )
+    if ( c1->rgba == c2->rgba )
       succeed;
   }
 
@@ -184,10 +176,7 @@ loadColour(Colour c, IOSTREAM *fd, ClassDef def)
 { TRY( loadSlotsObject(c, fd, def) );
 
   if ( c->kind == NAME_named )
-  { assign(c, red, DEFAULT);
-    assign(c, green, DEFAULT);
-    assign(c, blue, DEFAULT);
-  }
+    assign(c, rgba, DEFAULT);
 
   succeed;
 }
@@ -225,7 +214,9 @@ getConvertColour(Class class, Name name)
     int dgs = 0;
     size_t l = strlen(s);
 
-    if ( l == 7 )
+    if ( l == 4 )
+      dgs = 1;
+    else if ( l == 7 )
       dgs = 2;
     else if ( l == 13 )
       dgs = 4;
@@ -237,10 +228,14 @@ getConvertColour(Class class, Name name)
       b = take_hex(s, dgs);
 
       if ( r >= 0 && g >= 0 && b >= 0 )
-      { if ( dgs == 2 )
-	{ r = r*256 + r;
-	  g = g*256 + g;
-	  b = b*256 + b;
+      { if ( dgs == 1 )
+	{ r = r*16 + r;
+	  g = g*16 + g;
+	  b = b*16 + b;
+	} else if ( dgs == 4 )
+	{ r /= 256;
+	  g /= 256;
+	  b /= 256;
 	}
 
 	answer(answerObject(ClassColour, name,
@@ -254,66 +249,44 @@ getConvertColour(Class class, Name name)
   answer(answerObject(ClassColour, name, EAV));
 }
 
-
-static status
-XopenColour(Colour c, DisplayObj d)
-{ if ( c->kind == NAME_named )
-  { DisplayObj d;
-
-    if ( (d = CurrentDisplay(NIL)) && !ws_colour_name(d, c->name) )
-    { errorPce(c, NAME_noNamedColour, c->name);
-      assign(c, name, NAME_black);
-    }
-  }
-
-  return ws_create_colour(c, d);
-}
-
-
-static status
-XCloseColour(Colour c, DisplayObj d)
-{ ws_uncreate_colour(c, d);
-
-  succeed;
-}
-
-
 Int
 getRedColour(Colour c)
-{ if ( isDefault(c->red) )
-    getXrefObject(c, CurrentDisplay(NIL));
+{ if ( isDefault(c->rgba) )
+    ws_named_colour(c);
 
-  return c->red;
+  return toInt(ColorRValue(valInt(c->rgba)));
 }
 
 
 Int
 getGreenColour(Colour c)
-{ if ( isDefault(c->green) )
-    getXrefObject(c, CurrentDisplay(NIL));
+{ if ( isDefault(c->rgba) )
+    ws_named_colour(c);
 
-  return c->green;
+  return toInt(ColorGValue(valInt(c->rgba)));
 }
 
 
 Int
 getBlueColour(Colour c)
-{ if ( isDefault(c->blue) )
-    getXrefObject(c, CurrentDisplay(NIL));
+{ if ( isDefault(c->rgba) )
+    ws_named_colour(c);
 
-  return c->blue;
+  return toInt(ColorBValue(valInt(c->rgba)));
 }
 
 
 static status
 get_hsv_colour(Colour c, float *h, float *s, float *v)
-{ if ( isDefault(c->red) )
-  { TRY(getXrefObject(c, CurrentDisplay(NIL)));
-  }
+{ if ( isDefault(c->rgba) )
+    ws_named_colour(c);
 
-  RGBToHSV((float)valInt(c->red)/65535.0,
-	   (float)valInt(c->green)/65535.0,
-	   (float)valInt(c->blue)/65535.0,
+  float r = (float)ColorRValue(valInt(c->rgba))/255.0;
+  float g = (float)ColorGValue(valInt(c->rgba))/255.0;
+  float b = (float)ColorBValue(valInt(c->rgba))/255.0;
+
+
+  RGBToHSV(r, g, b,
 	   h, s, v);
 
   succeed;
@@ -326,7 +299,7 @@ getHueColour(Colour c)
 
   TRY(get_hsv_colour(c, &h, &s, &v));
 
-  return toInt((int)(h*360.0));
+  return toNum(h*360.0);
 }
 
 
@@ -336,7 +309,7 @@ getSaturationColour(Colour c)
 
   TRY(get_hsv_colour(c, &h, &s, &v));
 
-  return toInt((int)(s*100.0));
+  return toNum(s*100.0);
 }
 
 
@@ -346,7 +319,7 @@ getValueColour(Colour c)
 
   TRY(get_hsv_colour(c, &h, &s, &v));
 
-  return toInt((int)(v*100.0));
+  return toNum(v*100.0);
 }
 
 
@@ -377,23 +350,23 @@ associateColour(Colour c, Int r, Int g, Int b)
 
 Colour
 getHiliteColour(Colour c, Real h)
-{ int r, g, b;
-  float hf;
+{ float hf;
 
   if ( isDefault(h) )
     h = getClassVariableValueObject(c, NAME_hiliteFactor);
   hf = h ? valReal(h) : 0.9;
 
-  if ( isDefault(c->green) )		/* realise the colour */
-    XopenColour(c, CurrentDisplay(NIL));
+  if ( isDefault(c->rgba) )
+    ws_named_colour(c);
 
-  r = valInt(c->red);
-  g = valInt(c->green);
-  b = valInt(c->blue);
+  COLORRGBA rgb = valInt(c->rgba);
+  int r = ColorRValue(rgb);
+  int g = ColorGValue(rgb);
+  int b = ColorBValue(rgb);
 
-  r = r + (int)((float)(65535 - r) * hf);
-  g = g + (int)((float)(65535 - g) * hf);
-  b = b + (int)((float)(65535 - b) * hf);
+  r = r + (int)((float)(255 - r) * hf);
+  g = g + (int)((float)(255 - g) * hf);
+  b = b + (int)((float)(255 - b) * hf);
 
   return associateColour(c, toInt(r), toInt(g), toInt(b));
 }
@@ -401,19 +374,19 @@ getHiliteColour(Colour c, Real h)
 
 Colour
 getReduceColour(Colour c, Real re)
-{ int r, g, b;
-  float rf;
+{ float rf;
 
   if ( isDefault(re) )
     re = getClassVariableValueObject(c, NAME_reduceFactor);
   rf = re ? valReal(re) : 0.6;
 
-  if ( isDefault(c->green) )		/* realise the colour */
-    XopenColour(c, CurrentDisplay(NIL));
+  if ( isDefault(c->rgba) )
+    ws_named_colour(c);
 
-  r = valInt(c->red);
-  g = valInt(c->green);
-  b = valInt(c->blue);
+  COLORRGBA rgb = valInt(c->rgba);
+  int r = ColorRValue(rgb);
+  int g = ColorGValue(rgb);
+  int b = ColorBValue(rgb);
 
   r = (int)((float)r * rf);
   g = (int)((float)g * rf);
@@ -425,14 +398,13 @@ getReduceColour(Colour c, Real re)
 
 static Int
 getIntensityColour(Colour c)
-{ int r, g, b;
+{ if ( isDefault(c->rgba) )
+    ws_named_colour(c);
 
-  if ( isDefault(c->green) )
-    getXrefObject(c, CurrentDisplay(NIL));
-
-  r = valInt(c->red);
-  g = valInt(c->green);
-  b = valInt(c->blue);
+  COLORRGBA rgb = valInt(c->rgba);
+  int r = ColorRValue(rgb);
+  int g = ColorGValue(rgb);
+  int b = ColorBValue(rgb);
 
   answer(toInt((r*20 + g*32 + b*18)/(20+32+18)));
 }
@@ -445,11 +417,11 @@ getIntensityColour(Colour c)
 
 static char *T_lookup[] =
 	{ "[name|int]",
-	  "red=[0..65535]", "green=[0..65535]", "blue=[0..65535]",
+	  "red=[0..360]", "green=[0..255]", "blue=[0..255]",
 	  "model=[{rgb,hsv}]" };
 static char *T_initialise[] =
 	{ "name=[name]",
-	  "red=[0..65535]", "green=[0..65535]", "blue=[0..65535]",
+	  "red=[0..360]", "green=[0..255]", "blue=[0..255]",
 	  "model=[{rgb,hsv}]" };
 
 /* Instance Variables */
@@ -459,14 +431,8 @@ static vardecl var_colour[] =
      NAME_name, "Name of the colour"),
   IV(NAME_kind, "{named,rgb}", IV_GET,
      NAME_kind, "From colour-name database or user-defined"),
-  SV(NAME_red, "[0..65535]", IV_NONE|IV_FETCH, getRedColour,
-     NAME_colour, "Red value"),
-  SV(NAME_green, "[0..65535]", IV_NONE|IV_FETCH, getGreenColour,
-     NAME_colour, "Green value"),
-  SV(NAME_blue, "[0..65535]", IV_NONE|IV_FETCH, getBlueColour,
-     NAME_colour, "Blue value"),
-  IV(NAME_wsRef, "alien:WsRef", IV_NONE,
-     NAME_storage, "Window system handle")
+  IV(NAME_rgba, "int", IV_GET,
+     NAME_colour, "Encoded RGBA tuple")
 };
 
 /* Send Methods */
@@ -476,10 +442,6 @@ static senddecl send_colour[] =
      DEFAULT, "Create from name and optional rgb"),
   SM(NAME_unlink, 0, NULL, unlinkColour,
      DEFAULT, "Deallocate the colour object"),
-  SM(NAME_Xclose, 1, "display", XCloseColour,
-     NAME_x, "Destroy window-system counterpart"),
-  SM(NAME_Xopen, 1, "display", XopenColour,
-     NAME_x, "Create window-system counterpart"),
   SM(NAME_equal, 1, "colour", equalColour,
      DEFAULT, "Test if colours have equal RGB")
 };
@@ -499,6 +461,12 @@ static getdecl get_colour[] =
      NAME_grey, "Total light intensity of the colour"),
   GM(NAME_lookup, 5, "colour", T_lookup, getLookupColour,
      NAME_oms, "Lookup in @colours table"),
+  GM(NAME_red, 0, "0..255", NULL, getRedColour,
+     NAME_colour, "RGB red component"),
+  GM(NAME_green, 0, "0..255", NULL, getGreenColour,
+     NAME_colour, "RGB red component"),
+  GM(NAME_blue, 0, "0..255", NULL, getBlueColour,
+     NAME_colour, "RGB red component"),
   GM(NAME_hue, 0, "0..360", NULL, getHueColour,
      NAME_colour, "Hue from the HSV-model"),
   GM(NAME_saturnation, 0, "0..100", NULL, getSaturationColour,
@@ -535,19 +503,6 @@ makeClassColour(Class class)
 
   ColourTable = globalObject(NAME_colours, ClassHashTable, toInt(32), EAV);
   assign(ColourTable, refer, NAME_none);
-
-/* Don't know why this is done, it cannot be here as it is the reason why
-   the X11 display is opened during XPCE's initialisation.  Possibly related
-   to the variable BLACK_COLOUR, set when opening the display
-
-   Well, it has to initialise the emulated colour resources on Windows.
-   There is no harm in this, so we'll just call it then.  Maybe some day
-   we should make this more lazy.
-*/
-
-#ifdef WIN32_GRAPHICS
-  ws_colour_name(CurrentDisplay(NIL), NAME_black);
-#endif
 
   succeed;
 }

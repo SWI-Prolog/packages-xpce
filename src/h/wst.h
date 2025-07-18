@@ -38,6 +38,7 @@
 #include <x11/wstproto.h>
 
 #include <sdl/sdl.h>
+#include <sdl/sdlcolour.h>
 #include <sdl/sdldisplay.h>
 #include <sdl/sdlimage.h>
 #include <sdl/sdldraw.h>

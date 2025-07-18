@@ -753,10 +753,7 @@ End;
 NewClass(colour)
   Name		name;			/* Name of the colour (red, ...) */
   Name		kind;			/* `named' or `rgb' */
-  Int		red;			/* Red intensity */
-  Int		green;			/* Green intensity */
-  Int		blue;			/* Blue intensity */
-  WsRef		ws_ref;			/* Window system reference */
+  Int		rgba;			/* 32-bit encoded RGBA */
 End;
 
 

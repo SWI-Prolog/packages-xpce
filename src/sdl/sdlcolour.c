@@ -61,56 +61,30 @@ getNamedRGB(Name name)
 }
 
 /**
- * Create a native color resource associated with the specified Colour
- * object on the given display.
+ * If a colour is a named colour, fill its rgba.
  *
  * @param c Pointer to the Colour object to be created.
- * @param d Pointer to the DisplayObj representing the display context.
  * @return SUCCEED on successful creation; otherwise, FAIL.
  */
 status
-ws_create_colour(Colour c, DisplayObj d)
-{ (void)d;
+ws_named_colour(Colour c)
+{ if ( isDefault(c->rgba) )
+  { if ( c->kind == NAME_named )
+    { Int Rgb = getNamedRGB(c->name);
 
-  if ( c->kind == NAME_named )
-  { Int Rgb = getNamedRGB(c->name);
+      if ( Rgb )
+      { assign(c, rgba, Rgb);
+	succeed;
+      }
+    }
 
-    if ( Rgb )
-    { COLORRGBA rgb = (COLORRGBA) valInt(Rgb);
-      int r = ColorRValue(rgb) * 257;
-      int g = ColorGValue(rgb) * 257;
-      int b = ColorBValue(rgb) * 257;
+    Cprintf("%s: not named or no existing name (using grey50)\n", pp(c));
+    assign(c, rgba, RGBA(127,127,127,255));
 
-      assign(c, red,   toInt(r));
-      assign(c, green, toInt(g));
-      assign(c, blue,  toInt(b));
-
-      c->ws_ref = color2wsref(rgb);
-    } else
-      fail;
-  } else
-  { COLORRGBA rgb = RGBA(valInt(c->red)/256,
-			 valInt(c->green)/256,
-			 valInt(c->blue)/256,
-			 255);
-
-    c->ws_ref = color2wsref(rgb);
+    fail;
   }
 
   succeed;
-}
-
-/**
- * Destroy the native color resource associated with the specified Colour object on the given display.
- *
- * @param c Pointer to the Colour object to be destroyed.
- * @param d Pointer to the DisplayObj representing the display context.
- */
-void
-ws_uncreate_colour(Colour c, DisplayObj d)
-{ (void)d;
-
-  c->ws_ref = NULL;
 }
 
 static Name
@@ -141,22 +115,8 @@ canonical_colour_name(Name in)
 }
 
 /**
- * Retrieve a color by its name from the specified display.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @param name Pointer to the Name object representing the color name.
- * @return SUCCEED if the color is found; otherwise, FAIL.
- */
-status
-ws_colour_name(DisplayObj d, Name name)
-{ HashTable ht = LoadColourNames();
-
-  return ( getMemberHashTable(ht, name) ||
-	   getMemberHashTable(ht, canonical_colour_name(name)) );
-}
-
-/**
- * Convert a pixel value to its corresponding Colour object on the specified display.
+ * Convert a pixel value to its corresponding Colour object on the
+ * specified display.
  *
  * @param d Pointer to the DisplayObj representing the display context.
  * @param pixel The pixel value to be converted.
