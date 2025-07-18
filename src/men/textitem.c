@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -78,6 +79,11 @@ initialiseTextItem(TextItem ti, Name name, Any val, Code msg)
   assign(ti, auto_value_align, OFF);
   assign(ti, hor_stretch,      toInt(100));
   assign(ti, style,	       NAME_normal);
+
+  Colour c;
+  if ( (c=getClassVariableValueObject(ti, NAME_textColour)) &&
+       notDefault(c) )
+    assign(ti->value_text, colour, c);
 
   if ( (str = get(ti, NAME_printNameOfValue, val, EAV)) )
     valueString(ti->print_name, str);
@@ -1754,6 +1760,8 @@ static classvardecl rc_textItem[] =
   RC(NAME_elevation, RC_REFINE,
      UXWIN("0.25mm", "@_txt_height"),
      NULL),
+  RC(NAME_textColour, "[colour]", "@default",
+     "Colour to use for the text"),
   RC(NAME_comboBoxHeight, "1..", "6",
      "Maximum height of the combo-box shown for completions")
 };
