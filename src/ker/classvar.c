@@ -334,7 +334,11 @@ appendClassVariableClass(Class class, ClassVariable cv)
     }
   }
 
-  return appendChain(class->class_variables, cv);
+  appendChain(class->class_variables, cv);
+  if ( notNil(class->class_variable_table) )
+    appendHashTable(class->class_variable_table, cv->name, cv);
+
+  succeed;
 }
 
 
