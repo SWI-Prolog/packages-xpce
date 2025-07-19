@@ -571,13 +571,14 @@ deleteRowsTable(Table tab, Int from, Int to, BoolObj keep)
 
       if ( r )
       { for_vector_i(r, TableCell cell, i,
-		 { if ( i == valInt(cell->column) &&
-			cell->row == r->index &&
-			notNil(cell->image) )
-		   { removeCellImageTable(tab, cell, keep);
-		     freeObject(cell);
-		   }
-		 });
+		     { if ( notNil(cell) &&
+			    i == valInt(cell->column) &&
+			    cell->row == r->index &&
+			    notNil(cell->image) )
+		       { removeCellImageTable(tab, cell, keep);
+			 freeObject(cell);
+		       }
+		     });
 	assign(r, table, NIL);
 	freeObject(r);
       }
@@ -2010,4 +2011,3 @@ status
 makeClassTable(Class class)
 { return declareClass(class, &table_decls);
 }
-
