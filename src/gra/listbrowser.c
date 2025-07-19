@@ -257,6 +257,10 @@ statusListBrowser(ListBrowser lb, Name stat)
   { Elevation z;
 
     assign(lb, status, stat);
+    if ( stat == NAME_active )
+      ws_enable_text_input((Graphical)lb, ON);
+    else
+      ws_enable_text_input((Graphical)lb, OFF);
 
 				/* avoid unnecessary flickering (hack) */
     if ( !((z = getClassVariableValueObject(lb->image, NAME_elevation)) &&
