@@ -614,7 +614,7 @@ variable(connection, xref_export_connection, get, "Related connection").
 initialise(Tag, C:xref_export_connection, N:int) :->
     send(Tag, slot, connection, C),
     send_super(Tag, initialise, string('(%d)', N)),
-    send(Tag, colour, blue),
+    send(Tag, colour, dodger_blue),
     send(Tag, underline, @on).
 
 :- pce_global(@xref_export_connection_tag_recogniser,
@@ -906,8 +906,8 @@ initialise(DN, Dir:name, Label:[name]) :->
     "Create a directory node"::
     (   Label \== @default
     ->  Name = Label
-    ;   file_alias_path(Name, Dir)
-    ->  true
+    ;   file_alias_path(Alias, Dir)
+    ->  tag_alias(Dir, Alias, Name)
     ;   file_base_name(Dir, Name)
     ),
     send_super(DN, initialise, xref_directory_text(Dir, Name), Dir).
@@ -946,6 +946,41 @@ set_flags(DN) :->
         send(DN, slot, flags, ok)
     ),
     send(@display, synchronise).
+
+%!  tag_alias(+Dir, +Alias, -Label)
+%
+%   Tag the Alias with the basename of the directory when not unique.
+
+tag_alias(Dir, Alias, Label) :-
+    alias_is_ambiguous(Dir, Alias),
+    !,
+    (   split_string(Dir, "/", "/", Segments),
+        reverse(Segments, RevSegments),
+        append(RevTagSegments, _, RevSegments),
+        last(RevTagSegments, Last),
+        \+ common_name(Last)
+    ->  reverse(RevTagSegments, TagSegments),
+        atomics_to_string(TagSegments, "/", Tag)
+    ;   Tag = Dir
+    ),
+    format(atom(Label), '~w<...~w>', [Alias, Tag]).
+tag_alias(_, Alias, Alias).
+
+common_name("lib").
+common_name("prolog").
+
+alias_is_ambiguous(Dir, Alias) :-
+    DirTerm =.. [Alias, '.'],
+    absolute_file_name(DirTerm, Dir2,
+                       [ access(read),
+                         file_type(directory),
+                         solutions(all),
+                         file_errors(fail)
+                       ]),
+    Dir2 \== Dir,
+    source_file(File),
+    sub_atom(File, 0, _, _, Dir2),
+    !.
 
 :- pce_end_class(prolog_directory_node).
 
@@ -1051,6 +1086,9 @@ make_xref_image([First|More], Image) :-
 variable(tabular,     tabular, get, "Displayed table").
 variable(prolog_file, name*,   get, "Displayed Prolog file").
 
+class_variable(header_colour,     colour, black,  "Predicate header colour").
+class_variable(header_background, colour, khaki1, "Predicate header background").
+
 initialise(W, File:[name]*) :->
     send_super(W, initialise),
     send(W, pen, 0),
@@ -1110,12 +1148,15 @@ module(W, Module:name) :<-
 :- pce_group(info).
 
 show_info(W) :->
+    get(W, class_variable_value, header_colour, HC),
+    get(W, class_variable_value, header_background, HBG),
+    BG = (background := HBG),
+    FG = (colour := HC),
     get(W, tabular, T),
-    BG = (background := khaki1),
     get(W, prolog_file, File),
-    new(FG, xref_file_text(File)),
-    send(FG, font, huge),
-    send(T, append, FG, halign := center, colspan := 2, BG),
+    new(FT, xref_file_text(File)),
+    send(FT, font, huge),
+    send(T, append, FT, halign := center, colspan := 2, BG, FG),
     send(T, next_row),
     send(W, show_module),
     send(W, show_modified),
@@ -1169,10 +1210,13 @@ show_exports(W) :->
     ).
 
 show_export_header(W, Left:name, Right:name) :->
+    get(W, class_variable_value, header_colour, HC),
+    get(W, class_variable_value, header_background, HBG),
+    BG = (background := HBG),
+    FG = (colour := HC),
     get(W, tabular, T),
-    BG = (background := khaki1),
-    send(T, append, Left?label_name, bold, center, BG),
-    send(T, append, Right?label_name, bold, center, BG),
+    send(T, append, Left?label_name, bold, center, BG, FG),
+    send(T, append, Right?label_name, bold, center, BG, FG),
     send(T, next_row).
 
 show_module_export(W, File:name, Module:name, Callable:prolog) :->
@@ -1260,14 +1304,17 @@ show_undefined(W) :->
     findall(Undef, undefined(File, Undef), UndefList),
     (   UndefList == []
     ->  true
-    ;   BG = (background := khaki1),
+    ;   get(W, class_variable_value, header_colour, HC),
+        get(W, class_variable_value, header_background, HBG),
+        BG = (background := HBG),
+        FG = (colour := HC),
         get(W, tabular, T),
         (   setting(warn_autoload, true)
         ->  Label = 'Undefined/autoload'
         ;   Label = 'Undefined'
         ),
-        send(T, append, Label, bold, center, BG),
-        send(T, append, 'Called by', bold, center, BG),
+        send(T, append, Label, bold, center, BG, FG),
+        send(T, append, 'Called by', bold, center, BG, FG),
         send(T, next_row),
         sort_callables(UndefList, Sorted),
         forall(member(Callable, Sorted),
@@ -1295,9 +1342,12 @@ show_not_called(W) :->
     findall(NotCalled, not_called(File, NotCalled), NotCalledList),
     (   NotCalledList == []
     ->  true
-    ;   BG = (background := khaki1),
+    ;   get(W, class_variable_value, header_colour, HC),
+        get(W, class_variable_value, header_background, HBG),
+        BG = (background := HBG),
+        FG = (colour := HC),
         get(W, tabular, T),
-        send(T, append, 'Not called', bold, center, colspan := 2, BG),
+        send(T, append, 'Not called', bold, center, colspan := 2, BG, FG),
          send(T, next_row),
         sort_callables(NotCalledList, Sorted),
         forall(member(Callable, Sorted),
@@ -1320,11 +1370,16 @@ show_not_called_pred(W, Callable:prolog) :->
 :- pce_begin_class(xref_predicate_text, text,
                    "Text representing a predicate").
 
-class_variable(colour, colour, dark_green).
-
 variable(callable,       prolog, get, "Predicate indicator").
 variable(classification, [name], get, "Classification of the predicate").
 variable(file,           name*,  get, "File of predicate").
+
+class_variable(colour,            colour, dark_green).
+class_variable(colour_autoload,   colour, navy_blue).
+class_variable(colour_global,     colour, navy_blue).
+class_variable(colour_undefined,  colour, red).
+class_variable(colour_not_called, colour, red).
+
 
 initialise(T, Callable0:prolog,
            Class:[{undefined,called_by,not_called}],
@@ -1364,15 +1419,19 @@ classification(T, Class:[name]) :->
     ->  get(T, callable, Callable),
         strip_module(Callable, _, Plain),
         (   autoload_predicate(Plain)
-        ->  send(T, colour, navy_blue),
+        ->  get(T, class_variable_value, colour_autoload, Colour),
+            send(T, colour, Colour),
             send(T, slot, classification, autoload)
         ;   global_predicate(Plain)
-        ->  send(T, colour, navy_blue),
+        ->  get(T, class_variable_value, colour_global, Colour),
+            send(T, colour, Colour),
             send(T, slot, classification, global)
-        ;   send(T, colour, red)
+        ;   get(T, class_variable_value, colour_undefined, Colour),
+            send(T, colour, Colour)
         )
     ;   Class == not_called
-    ->  send(T, colour, red)
+    ->  get(T, class_variable_value, colour_not_called, Colour),
+        send(T, colour, Colour)
     ;   true
     ).
 
@@ -1570,7 +1629,7 @@ show_called_by(IT) :->
     send(T, name, called_count),
     (   N > 0
     ->  send(T, underline, @on),
-        send(T, colour, blue),
+        send(T, colour, dodger_blue),
         send(T, recogniser, @xref_called_by_recogniser)
     ;   send(T, colour, grey60)
     ).
