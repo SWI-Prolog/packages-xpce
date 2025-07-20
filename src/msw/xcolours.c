@@ -148,6 +148,7 @@ static xcolourdef x11_colours[] =
  {  72, 209, 204, "MediumTurquoise" },
  {  64, 224, 208, "turquoise" },
  {   0, 255, 255, "cyan" },
+ {   0, 255, 255, "aqua" },
  { 224, 255, 255, "light cyan" },
  { 224, 255, 255, "LightCyan" },
  {  95, 158, 160, "cadet blue" },
