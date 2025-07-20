@@ -1388,10 +1388,6 @@ rlc_copy(RlcData b, Name to)	/* NAME_clipboard or NAME_primary */
 		 *           REPAINT		*
 		 *******************************/
 
-#ifndef OL_CURSOR_SIZE
-#define OL_CURSOR_SIZE	9
-#endif
-
 static bool
 rlc_caret_xy(RlcData b, int *x, int *y)
 { int line = rlc_count_lines(b, b->window_start, b->caret_y);
@@ -1415,19 +1411,14 @@ rlc_caret_xy(RlcData b, int *x, int *y)
 static void
 rlc_draw_caret(RlcData b, int x, int y)
 { if ( b->caret_is_shown && !b->hide_caret )
-  { TerminalImage ti = b->object;
-    Any colour = getClassVariableValueClass(ClassTextCursor,
-					    b->has_focus ? NAME_colour
-							 : NAME_inactiveColour);
-    Any old = r_colour(colour);
-    double ols = dpi_scale(ti, OL_CURSOR_SIZE);
+  { Int h = getClassVariableValueClass(ClassTextCursor, NAME_height);
+
+    double ols = h ? valNum(h) : 11;
     double cx = x + b->caret_px - ols/2.0;
     double cy = y + b->caret_py + b->cb - 3.0;
 
     DEBUG(NAME_caret, Cprintf("Drawing caret at %.1f,%.1f\n", cx, cy));
     draw_caret(cx, cy, ols, ols, b->has_focus);
-
-    r_colour(old);
   }
 }
 
@@ -1436,8 +1427,9 @@ rlc_draw_caret(RlcData b, int x, int y)
 static void
 changed_caret(RlcData b)
 { if (  b->caret_is_shown )
-  { TerminalImage ti = b->object;
-    double ols = dpi_scale(ti, OL_CURSOR_SIZE);
+  { Int h = getClassVariableValueClass(ClassTextCursor, NAME_height);
+
+    double ols = h ? valNum(h) : 11;
     changedImageGraphical(b->object,
 			  toNum(b->caret_px - ols/2.0),
 			  toNum(b->caret_py + b->cb - 3),

@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -132,8 +133,6 @@ is  the  baseline  of the line.   w is the width   of the font  of the
 character.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#define OL_CURSOR_SIZE	9
-
 status
 setTextCursor(TextCursor c, Int x, Int y, Int w, Int h, Int b)
 { if ( c->style == NAME_arrow )
@@ -144,7 +143,8 @@ setTextCursor(TextCursor c, Int x, Int y, Int w, Int h, Int b)
 			     sub(add(y, b), c->hot_spot->y),
 			     c->image->size->w, c->image->size->h);
   if ( c->style == NAME_openLook )
-  { double px = dpi_scale(c, OL_CURSOR_SIZE);
+  { Int h = getClassVariableValueObject(c, NAME_height);
+    double px = h ? valNum(h) : 11;
     return geometryGraphical(c,
 			     sub(x, toNum(px/2.0)),
 			     sub(add(y, b), ONE),
@@ -169,7 +169,10 @@ styleTextCursor(TextCursor c, Name style)
     return errorPce(c, NAME_needImageAndHotSpot);
 
   if ( style == NAME_openLook )
-    w = h = toInt(OL_CURSOR_SIZE);
+  { Int o = getClassVariableValueObject(c, NAME_height);
+
+    w = h = o ? o : toInt(11);
+  }
 
   CHANGING_GRAPHICAL(c,
 		     geometryGraphical(c, DEFAULT, DEFAULT, w, h);
@@ -241,8 +244,10 @@ static classvardecl rc_textCursor[] =
   RC(NAME_proportionalFontStyle, "name", "open_look",
      "->style for proportional fonts"),
   RC(NAME_style, NULL, "open_look", NULL),
+  RC(NAME_style, NULL, "open_look", NULL),
   RC(NAME_colour, RC_REFINE, "red", NULL),
-  RC(NAME_inactiveColour, RC_REFINE, "black", NULL)
+  RC(NAME_inactiveColour, RC_REFINE, "grey50", NULL),
+  RC(NAME_height, "int", "11", "Height as open_look cursor")
 };
 
 /* Class Declaration */

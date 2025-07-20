@@ -266,6 +266,7 @@ draw_caret(double x, double y, double w, double h, bool active)
   } else
   { fpoint pts[4];
     double cx = x + w/2.0;
+    Colour c = getClassVariableValueClass(ClassTextCursor, NAME_inactiveColour);
 
     double cy = y + h/2.0;
     int i = 0;
@@ -275,15 +276,11 @@ draw_caret(double x, double y, double w, double h, bool active)
     pts[i].x = cx;  pts[i].y = y+h; i++;
     pts[i].x = x+w; pts[i].y = cy;  i++;
 
-    r_fillpattern(GREY50_COLOUR, NAME_foreground);
+    r_fillpattern(c, NAME_foreground);
     r_fill_polygon(pts, i);
   }
 }
 
-
-#ifndef OL_CURSOR_SIZE
-#define OL_CURSOR_SIZE	9
-#endif
 
 status
 repaintText(TextObj t, int x, int y, int w, int h)
@@ -367,7 +364,8 @@ repaintText(TextObj t, int x, int y, int w, int h)
 					    active ? NAME_colour
 						   : NAME_inactiveColour);
     Any old = r_colour(colour);
-    double ols = dpi_scale(t, OL_CURSOR_SIZE);
+    Int h = getClassVariableValueClass(ClassTextCursor, NAME_height);
+    double ols = h ? valNum(h) : 11;
 
     draw_caret(valNum(t->x_caret) - ols/2.0 + x - b,
 	       valNum(t->y_caret) + y + fh - b - 3.0,
