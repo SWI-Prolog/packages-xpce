@@ -1063,10 +1063,9 @@ set_flags(FN) :->
                                 image('16x16/alert.png')
                               ])).
 
-make_xref_image([First|More], Image) :-
-    new(Image, image(@nil, 0, 0, pixmap)),
-    send(Image, copy, First),
-    forall(member(I2, More),
+make_xref_image(Images, Image) :-
+    new(Image, image(@nil, 16, 16, pixmap)),
+    forall(member(I2, Images),
            send(Image, draw_in, bitmap(I2))).
 
 :- pce_end_class(prolog_file_node).
