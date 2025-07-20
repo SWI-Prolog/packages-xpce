@@ -461,10 +461,18 @@ preview_drop(G, Obj:object*, Pos:point) :->
 :- send(@class, handle, handle(w/2, h, link, south)).
 :- send(@class, handle, handle(0, h/2, link, east)).
 
+class_variable(background, colour, grey80, "Default background colour").
+class_variable(colour,     colour, black,  "Default colour").
+class_variable(font,       font,   bold,   "Default font").
+
 initialise(N, File:name) :->
     send_super(N, initialise, File),
-    send(N, font, bold),
-    send(N, background, grey80).
+    get(N, class_variable_value, background, BG),
+    get(N, class_variable_value, colour, FG),
+    get(N, class_variable_value, font, Font),
+    send(N, font, Font),
+    send(N, background, BG),
+    send(N, colour, FG).
 
 create_export_links(N, Add:[bool]) :->
     "Create the export links to other files"::
