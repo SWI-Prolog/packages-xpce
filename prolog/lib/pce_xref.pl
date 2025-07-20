@@ -85,7 +85,8 @@ gxref_version('0.1.1').
     setting/2.
 
 setting_menu([ warn_autoload,
-               warn_not_called
+               warn_not_called,
+               hide_system_files
              ]).
 
 setting(warn_autoload,      false).
@@ -233,9 +234,7 @@ update_browsers(F) :->
          message(@arg1, update)).
 
 xref_all(F) :-
-    forall(( source_file(File),
-             exists_file(File)
-           ),
+    forall(dep_source(File),
            xref_file(F, File)),
     object(F),
     !,
@@ -358,6 +357,7 @@ sources(_, Sources:prolog) :<-
 
 dep_source(Src) :-
     source_file(Src),
+    exists_file(Src),
     (   setting(hide_system_files, true)
     ->  \+ library_file(Src)
     ;   true
@@ -791,7 +791,7 @@ update(FL) :->
 
 append_all_sourcefiles(FL) :->
     "Append all files loaded into Prolog"::
-    forall(source_file(File),
+    forall(dep_source(File),
            send(FL, append, File)),
     send(FL, sort).
 
