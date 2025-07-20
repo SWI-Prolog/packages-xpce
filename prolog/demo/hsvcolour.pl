@@ -60,7 +60,7 @@ item('B', blue,        0-255).
 
 initialise(D, Init:[colour]) :->
     send_super(D, initialise, 'Demonstrate HSV'),
-    send(D, append, new(hsv_candidate(hex, 'Exact'))),
+    send(D, append, new(hsv_candidate(hex, ' Exact: '))),
     send(D, append, new(hsv_candidate(named_1, ' Named 1: '))),
     send(D, append, new(hsv_candidate(named_2, ' Named 2: '))),
     send(D, append, new(hsv_candidate(named_3, ' Named 3: '))),
@@ -78,7 +78,7 @@ initialise(D, Init:[colour]) :->
     send(D, resize_message, message(D, layout, @arg2)),
     (   Init \== @default
     ->  send(D, current_colour, Init)
-    ;   send(D, current_colour, colour(@default, 180, 50, 50, model := hsv))
+    ;   send(D, current_colour, @display?foreground)
     ).
 
 close(D) :->
