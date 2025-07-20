@@ -50,14 +50,14 @@ colour_browser :-
     send(CB, open).
 
 make_colour_browser(CB) :-
-    make_colour_browser(CB, @colour_names).
+    make_colour_browser(CB, @colour_list).
 
 make_colour_browser(CB, DataBase) :-
     new(D, dialog),
     send(D, append, new(M, menu(which, choice))),
     send_list(M, append, [foreground, background]),
     send(M, selection, background),
-    send(new(CB, browser('XPCE (X11) named colours')), below, D),
+    send(new(CB, browser('XPCE (CSS) named colours')), below, D),
     send(CB, width, 40),
     send(CB, font, fixed),
 
@@ -95,10 +95,10 @@ make_colour_browser(CB, DataBase) :-
     send(CB?image, tab_stops, vector(200)),
                                     % scan de database
     send(DataBase, for_all,
-         message(@prolog, append_colour, CB, @arg1, @arg2)),
-    send(CB, sort).
+         message(@prolog, append_colour, CB, @arg1)).
 
-append_colour(CB, Name, RGB) :-
+append_colour(CB, Name) :-
+    get(@colour_names, member, Name, RGB),
 %   A is (RGB >> 24),
     R is (RGB >> 16) /\ 255,
     G is (RGB >> 8) /\ 255,
