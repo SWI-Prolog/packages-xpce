@@ -35,6 +35,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <math.h>
 
 static Int getAlphaColour(Colour c);
 
@@ -445,6 +446,194 @@ getIntensityColour(Colour c)
 }
 
 		 /*******************************
+		 *       COLOUR DISTANCE        *
+		 *******************************/
+
+// Forward declarations
+static void rgb_to_lab(double r, double g, double b,
+                       double *L, double *a, double *b_);
+static double cie_de2000(double L1, double a1, double b1,
+                         double L2, double a2, double b2);
+
+// Convert 8-bit RGB to CIE Lab
+static void rgb_to_lab(double r, double g, double b,
+                       double *L, double *a, double *bp)
+{ // Normalize and linearize sRGB
+  double rs = r / 255.0, gs = g / 255.0, bs = b / 255.0;
+  double R = (rs <= 0.04045) ? rs / 12.92 : pow((rs + 0.055)/1.055, 2.4);
+  double G = (gs <= 0.04045) ? gs / 12.92 : pow((gs + 0.055)/1.055, 2.4);
+  double B = (bs <= 0.04045) ? bs / 12.92 : pow((bs + 0.055)/1.055, 2.4);
+
+  // Convert to XYZ (D65)
+  double X = R*0.4124564 + G*0.3575761 + B*0.1804375;
+  double Y = R*0.2126729 + G*0.7151522 + B*0.0721750;
+  double Z = R*0.0193339 + G*0.1191920 + B*0.9503041;
+
+  // Normalize to reference white
+  X /= 0.95047; Y /= 1.00000; Z /= 1.08883;
+
+  // XYZ to Lab helper
+  double fx = (X > 0.008856) ? cbrt(X) : (7.787 * X + 16.0/116.0);
+  double fy = (Y > 0.008856) ? cbrt(Y) : (7.787 * Y + 16.0/116.0);
+  double fz = (Z > 0.008856) ? cbrt(Z) : (7.787 * Z + 16.0/116.0);
+
+  *L  =  (116.0 * fy) - 16.0;
+  *a  =  500.0 * (fx - fy);
+  *bp =  200.0 * (fy - fz);
+}
+
+/* Copied from https://stackoverflow.com/questions/6630599/are-there-known-implementations-of-the-ciede2000-or-cie94-delta-e-color-differen
+
+   Code is in the public domain.
+
+However, the results are dubious.   The same post provides test cases.  Translated to C:
+
+typedef struct
+{ double l1, a1, b1, l2, a2, b2, r;
+} test;
+#define T(L1, A1, B1, L2, A2, B2, R) {L1, A1, B1, L2, A2, B2, R}
+
+test tests[] =
+{
+T(53.0, 0.65, 0.15, 33.0, -0.45, -0.1, 20.03112),
+T(42.0, -0.3, 0.1, 74.0, -0.2, -0.15, 32.001118),
+T(12.0, -1.0, -0.45, 32.0, 0.3, 0.9, 20.084782),
+T(94.0, -0.1, -0.55, 77.0, 0.5, 0.45, 17.03928),
+T(75.0, -0.8, 0.35, 46.0, -0.6, -0.85, 29.02483),
+T(83.0, -0.65, -0.7, 67.0, 0.75, 0.0, 16.074173),
+T(70.0, -0.7, 0.9, 54.0, 0.35, -0.95, 16.13608),
+T(81.0, 0.45, -0.8, 53.0, -0.35, 0.05, 28.023375),
+T(40.0, -0.2, -0.65, 25.0, -1.0, 0.8, 15.088856),
+T(66.0, 0.85, -0.7, 93.0, 0.55, 0.15, 27.014244),
+T(44.0, -0.5, 0.5, 23.0, -0.9, 0.5, 21.00363),
+T(67.0, 0.4, 0.25, 42.0, -0.25, 0.6, 25.010727),
+T(32.0, 0.6, 0.55, 86.0, 0.0, 0.25, 54.003925),
+T(96.0, -0.15, -0.9, 87.0, 0.25, -0.3, 9.027307),
+T(100.0, -0.6, 0.3, 61.0, -0.25, -0.75, 39.015385),
+T(2.0, -0.2, -0.65, 73.0, -0.3, 0.65, 71.01173),
+T(74.0, 0.1, -0.65, 96.0, -0.5, 0.8, 22.05474),
+T(22.0, -0.3, -0.85, 64.0, -0.65, -0.95, 42.0015),
+T(73.0, -0.35, 0.3, 38.0, 0.25, -1.0, 35.02875),
+T(91.0, 0.6, 0.45, 82.0, -0.25, 0.2, 9.042115),
+T(0, 0, 0, 0, 0, 0, 0)
+};
+
+
+int main(void)
+{ for(test *t = tests; t->l1 > 0; t++)
+  { const double delta_e = cie_de2000(t->l1, t->a1, t->b1, t->l2, t->a2, t->b2);
+
+    printf("l_1 = %g; a_1 = %g; b_1 = %g; l_2 = %g; a_2 = %g; b_2 = %g -> delta_e = %g (exp %g)\n",
+            t->l1, t->a1, t->b1, t->l2, t->a2, t->b2, delta_e, t->r);
+  }
+  return 0;
+}
+*/
+
+static double
+cie_de2000(const double l_1, const double a_1, const double b_1,
+	   const double l_2, const double a_2, const double b_2)
+{ // Working in C with the CIEDE2000 color-difference formula.
+  // k_l, k_c, k_h are parametric factors to be adjusted according to
+  // different viewing parameters such as textures, backgrounds...
+  const double k_l = 1.0;
+  const double k_c = 1.0;
+  const double k_h = 1.0;
+  double n = (hypot(a_1, b_1) + hypot(a_2, b_2)) * 0.5;
+  n = n * n * n * n * n * n * n;
+  // A factor involving chroma raised to the power of 7 designed to make
+  // the influence of chroma on the total color difference more accurate.
+  n = 1.0 + 0.5 * (1.0 - sqrt(n / (n + 6103515625.0)));
+  // hypot calculates the Euclidean distance while avoiding overflow/underflow.
+  const double c_1 = hypot(a_1 * n, b_1);
+  const double c_2 = hypot(a_2 * n, b_2);
+  // atan2 is preferred over atan because it accurately computes the angle of
+  // a point (x, y) in all quadrants, handling the signs of both coordinates.
+  double h_1 = atan2(b_1, a_1 * n);
+  double h_2 = atan2(b_2, a_2 * n);
+  if (h_1 < 0.0)
+    h_1 += 2.0 * M_PI;
+  if (h_2 < 0.0)
+    h_2 += 2.0 * M_PI;
+  n = fabs(h_2 - h_1);
+  // Cross-implementation consistent rounding.
+  if (M_PI - 1E-14 < n && n < M_PI + 1E-14)
+    n = M_PI;
+  // When the hue angles lie in different quadrants, the straightforward
+  // average can produce a mean that incorrectly suggests a hue angle in
+  // the wrong quadrant, the next lines handle this issue.
+  double h_m = (h_1 + h_2) * 0.5;
+  double h_d = (h_2 - h_1) * 0.5;
+  if (M_PI < n)
+  { if (0.0 < h_d)
+      h_d -= M_PI;
+    else
+      h_d += M_PI;
+    h_m += M_PI;
+  }
+  const double p = 36.0 * h_m - 55.0 * M_PI;
+  n = (c_1 + c_2) * 0.5;
+  n = n * n * n * n * n * n * n;
+  // The hue rotation correction term is designed to account for the
+  // non-linear behavior of hue differences in the blue region.
+  const double r_t = -2.0 * sqrt(n / (n + 6103515625.0))
+                          * sin(M_PI / 3.0 * exp(p * p / (-25.0 * M_PI * M_PI)));
+  n = (l_1 + l_2) * 0.5;
+  n = (n - 50.0) * (n - 50.0);
+  // Lightness.
+  const double l = (l_2 - l_1) / (k_l * (1.0 + 0.015 * n / sqrt(20.0 + n)));
+  // These coefficients adjust the impact of different harmonic
+  // components on the hue difference calculation.
+  const double t = 1.0 + 0.24 * sin(2.0 * h_m + M_PI / 2.0)
+                     + 0.32 * sin(3.0 * h_m + 8.0 * M_PI / 15.0)
+                     - 0.17 * sin(h_m + M_PI / 3.0)
+                     - 0.20 * sin(4.0 * h_m + 3.0 * M_PI / 20.0);
+  n = c_1 + c_2;
+  // Hue.
+  const double h = 2.0 * sqrt(c_1 * c_2) * sin(h_d) / (k_h * (1.0 + 0.0075 * n * t));
+  // Chroma.
+  const double c = (c_2 - c_1) / (k_c * (1.0 + 0.0225 * n));
+  // Returning the square root ensures that the result represents
+  // the "true" geometric distance in the color space.
+  return sqrt(l * l + h * h + c * c + c * h * r_t);
+}
+
+// Public API: Compute DeltaE between two RGB colors
+static double
+deltaE_rgb(uint8_t r1, uint8_t g1, uint8_t b1,
+	   uint8_t r2, uint8_t g2, uint8_t b2)
+{ double L1,a1,b_1, L2,a2,b_2;
+  rgb_to_lab(r1,g1,b1, &L1,&a1,&b_1);
+  rgb_to_lab(r2,g2,b2, &L2,&a2,&b_2);
+  return cie_de2000(L1,a1,b_1, L2,a2,b_2);
+}
+
+static Int
+getDistanceColour(Colour me, Any to)
+{ ws_named_colour(me);
+  int me_rgb = valInt(me->rgba) & 0xffffff;
+  int to_rgb;
+
+  if ( instanceOfObject(to, ClassColour) )
+  { Colour toc = to;
+    ws_named_colour(toc);
+    to_rgb = valInt(toc->rgba) & 0xffffff;
+  } else
+    to_rgb = valInt(to) & 0xffffff;
+
+  uint8_t r1 = ColorRValue(me_rgb);
+  uint8_t g1 = ColorGValue(me_rgb);
+  uint8_t b1 = ColorBValue(me_rgb);
+
+  uint8_t r2 = ColorRValue(to_rgb);
+  uint8_t g2 = ColorGValue(to_rgb);
+  uint8_t b2 = ColorBValue(to_rgb);
+
+  return toNum(deltaE_rgb(r1, g1, b1, r2, g2, b2));
+}
+
+
+		 /*******************************
 		 *	 CLASS DECLARATION	*
 		 *******************************/
 
@@ -494,6 +683,8 @@ static getdecl get_colour[] =
      NAME_file, "Description name for ->save_in_file"),
   GM(NAME_intensity, 0, "0..255", NULL, getIntensityColour,
      NAME_grey, "Total light intensity of the colour"),
+  GM(NAME_distance, 1, "int", "colour|int", getDistanceColour,
+     NAME_grey, "Similarity using CIEDE2000 (ΔE₀₀)"),
   GM(NAME_lookup, 6, "colour", T_lookup, getLookupColour,
      NAME_oms, "Lookup in @colours table"),
   GM(NAME_red, 0, "0..255", NULL, getRedColour,
