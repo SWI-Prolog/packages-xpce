@@ -1808,10 +1808,10 @@ s_extents(PceString s, int from, int to, FontObj font,
 double
 str_width(PceString s, int from, int to, FontObj font)
 { if ( to > from )
-  { PangoRectangle ink;
+  { PangoRectangle logical;
 
-    s_extents(s, from, to, font, &ink, NULL);
-    return ink.width/(double)PANGO_SCALE;
+    s_extents(s, from, to, font, NULL, &logical);
+    return logical.width/(double)PANGO_SCALE;
   } else
     return 0.0;
 }
