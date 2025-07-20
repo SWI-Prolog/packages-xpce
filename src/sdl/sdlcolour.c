@@ -43,7 +43,7 @@
 
 static HashTable ColourNames;		/* name --> rgb (packed in Int) */
 
-#include "../msw/xcolours.c"	/* get x11_colours */
+#include "csscolours.c"			/* get X11/CSS colour names */
 
 static Name	canonical_colour_name(Name in);
 
