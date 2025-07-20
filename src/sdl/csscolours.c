@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1999-2011, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1999-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -39,7 +40,7 @@ typedef struct
   const char   *name;
 } xcolourdef;
 
-static xcolourdef x11_colours[] =
+static const xcolourdef x11_colours[] =
 {
  { 255, 250, 250, "snow" },
  { 248, 248, 255, "ghost white" },
@@ -801,9 +802,10 @@ static xcolourdef x11_colours[] =
 static HashTable
 LoadColourNames(void)
 { if ( !ColourNames )
-  { xcolourdef *cd;
+  { const xcolourdef *cd;
 
-    ColourNames = globalObject(NAME_colourNames, ClassHashTable, EAV);
+    ColourNames   = globalObject(NAME_colourNames, ClassHashTable, EAV);
+    CSSColourList = globalObject(NAME_colourList,  ClassChain, EAV);
 
     for(cd = x11_colours; cd->name; cd++)
     { COLORRGBA rgb = RGBA(cd->red, cd->green, cd->blue, 255);
@@ -818,7 +820,13 @@ LoadColourNames(void)
 	  *q++ = tolower(*s);
       }
       *q = '\0';
-      appendHashTable(ColourNames, CtoKeyword(buf), toInt(rgb));
+
+      Name name = CtoKeyword(buf);
+
+      if ( !getMemberHashTable(ColourNames, name) )
+      { appendHashTable(ColourNames, name, toInt(rgb));
+	appendChain(CSSColourList, name);
+      }
     }
 
     ws_system_colours(ColourNames);
