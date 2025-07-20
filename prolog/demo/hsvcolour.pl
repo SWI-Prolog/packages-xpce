@@ -60,38 +60,30 @@ item('B', blue,        0-255).
 
 initialise(D, Init:[colour]) :->
     send_super(D, initialise, 'Demonstrate HSV'),
-    send(D, append, new(Box, box(100, 20))),
-    send(Box, attribute, hor_stretch, 100),
+    send(D, append, new(hsv_candidate(hex, 'Exact'))),
+    send(D, append, new(hsv_candidate(named_1, ' Named 1: '))),
+    send(D, append, new(hsv_candidate(named_2, ' Named 2: '))),
+    send(D, append, new(hsv_candidate(named_3, ' Named 3: '))),
     (   item(Label, Selector, Low-High),
         send(D, append,
              new(Slider, slider(Label, Low, High, Low,
                                 message(D, Selector, @arg1)))),
         send(Slider, drag, @on),
         send(Slider, attribute, hor_stretch, 100),
+        send(Slider, width, 300),
         fail
     ;   true
     ),
-    send(D, append, new(HT, text_item(hex_triplet))),
-    send(HT, length, 8),
-    send(HT, alignment, right),
-    send(HT, editable, @off),
-    send(D, append, button(quit)),
-    send(D, append, button(copy)),
+    send(D, append, button(close)),
     send(D, resize_message, message(D, layout, @arg2)),
     (   Init \== @default
     ->  send(D, current_colour, Init)
     ;   send(D, current_colour, colour(@default, 180, 50, 50, model := hsv))
     ).
 
-quit(D) :->
-    "Quit the demo tool"::
+close(D) :->
+    "Close the demo tool"::
     send(D, destroy).
-
-copy(D) :->
-    "Copy triplet to cpliboard"::
-    get(D, member, hex_triplet, HT),
-    get(HT, selection, Triplet),
-    send(D?display, copy, Triplet).
 
 :- pce_group(update).
 
@@ -110,10 +102,21 @@ current_colour(D, C:colour, From:[{rgb,hsv}]) :->
         update_rgb(D, 'B', C, blue)
     ;   true
     ),
-    get(D, member, box, Box),
-    send(Box, fill_pattern, C),
-    get(D, member, hex_triplet, HT),
-    send(HT, selection, C?name).
+    send(D, show, hex, C),
+    send(D, show_named, C).
+
+show(D, As:name, C:colour) :->
+    "Show colour in item named As"::
+    get(D, member, As, Item),
+    send(Item, value, C).
+
+show_named(D, C:colour) :->
+    "Show close named colour"::
+    closest_named_colour(C, 3, Closest),
+    pairs_values(Closest, [C1,C2,C3]),
+    send(D, show, named_1, C1),
+    send(D, show, named_2, C2),
+    send(D, show, named_3, C3).
 
 update(D, Name, Colour, Selector) :-
     get(Colour, Selector, Value),
@@ -172,3 +175,54 @@ blue(D, B:'0..255') :->
 rgb(R,G,B, colour(@default, R, G, B)).
 
 :- pce_end_class(hsv_browser).
+
+:- pce_begin_class(hsv_candidate, dialog_group).
+
+initialise(Candidate, Name:name, Label:name) :->
+    send_super(Candidate, initialise, Name, group),
+    send(Candidate, append, new(Btn, button(copy))),
+    send(Btn, label, image('16x16/copy.png')),
+    send(Candidate, append, new(Nme, text('#xxxxxx')), right),
+    send(Candidate, append, new(Txt,  text(Label)), right),
+    send(Candidate, append, new(Box,  box(100, 20)), right),
+    send(Box, alignment, right), % attribute, hor_stretch, 100),
+    send(Btn, alignment, left),
+    send(Nme, alignment, left),
+    send(Nme, name, colour_name),
+    send(Txt, alignment, right),
+    send(Txt, name, label),
+    send(Txt, background, @display?background),
+    send(Candidate, attribute, hor_stretch, 100).
+
+value(Candidate, Value:colour) :->
+    "Set the selected colour"::
+    get(Candidate, member, box, Box),
+    send(Box, fill_pattern, Value),
+    get(Candidate, member, colour_name, Text1),
+    send(Text1, string, Value?name),
+    get(Candidate, member, label, Text2),
+    send(Text2, colour, Value).
+
+copy(Candidate) :->
+    "Copy current selection as colour name"::
+    get(Candidate, member, colour_name, Text),
+    send(@display, copy, Text?string).
+
+:- pce_end_class(hsv_candidate).
+
+:- dynamic
+    colour_distance_to/2.
+
+
+closest_named_colour(From, Top, Closest) :-
+    retractall(colour_distance_to(_,_)),
+    send(@colour_names, for_all,
+         message(@prolog, distance, From, @arg1, @arg2)),
+    findall(D-C, retract(colour_distance_to(C,D)), Pairs),
+    sort(1, =<, Pairs, Sorted),
+    length(Closest, Top),
+    append(Closest, _, Sorted).
+
+distance(Colour, To, RGB) :-
+    get(Colour, distance, RGB, D),
+    asserta(colour_distance_to(To, D)).
