@@ -32,20 +32,11 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef SDLCURSOR_H
-#define SDLCURSOR_H
-#include <SDL3/SDL.h>
+#ifndef GRAPHSTATE_H_INCLUDED
+#define GRAPHSTATE_H_INCLUDED
 
-void ws_init_cursor_font(void);
-Int ws_cursor_font_index(Name name);
-status ws_create_cursor(CursorObj c, DisplayObj d);
-void ws_destroy_cursor(CursorObj c, DisplayObj d);
+void	g_save(void);
+void	g_restore(void);
+int	g_level(void);
 
-static inline SDL_Cursor *
-pceCursor2SDL_Cursor(CursorObj c)
-{ if ( !c->ws_ref )
-    ws_create_cursor(c, CurrentDisplay(NIL));
-  return c->ws_ref;
-}
-
-#endif /* SDLCURSOR_H */
+#endif/*GRAPHSTATE_H_INCLUDED*/

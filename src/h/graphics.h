@@ -1164,9 +1164,9 @@ COMMON(int) image_type_from_data(char *data, int size);
 		*          PROTOTYPES		*
 		********************************/
 
-#include	"wst.h"
 #include	"../gra/proto.h"
 #include	"../win/proto.h"
 #include	"../evt/proto.h"
+#include	"wst.h"
 
 #endif /*_PCE_GRA_INCLUDED*/

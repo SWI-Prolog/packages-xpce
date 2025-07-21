@@ -51,6 +51,7 @@ WsFrame sdl_frame(FrameObj fr, bool create);
 bool sdl_frame_event(SDL_Event *ev);
 void ws_redraw_changed_frames(void);
 bool ws_window_frame_position(Any window, FrameObj fr, float *ox, float *oy);
+status ws_enable_text_input(Graphical gr, BoolObj enable);
 
 /* Functions shared with core */
 status ws_created_frame(FrameObj fr);

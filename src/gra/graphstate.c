@@ -47,7 +47,7 @@ static GraphicsState statelist;
 long   statechange;
 
 void
-g_save()
+g_save(void)
 { GraphicsState gs = alloc(sizeof(struct graphics_state));
 
   gs->level	 = (statelist ? statelist->level+1 : 1);
@@ -73,7 +73,7 @@ g_save()
 
 
 void
-g_restore()
+g_restore(void)
 { GraphicsState gs = statelist;
 
   if ( !gs )
@@ -92,6 +92,6 @@ g_restore()
 
 
 int
-g_level()
+g_level(void)
 { return statelist ? 0 : statelist->level;
 }
