@@ -2351,9 +2351,11 @@ PrologSend(PceObject prolog, PceObject sel, int argc, PceObject *argv)
     for(i=0; i<argc; i++)
       put_object(terms+i, argv[i]);
 
+    int locks = pceMTUnlockAll();
     qid  = PL_open_query(m, DebugMode|PL_Q_PASS_EXCEPTION, pred, terms);
     rval = PL_next_solution(qid);
     PL_cut_query(qid);
+    pceMTRelock(locks);
   } else
   { if ( argc > 0 )
       rval = FALSE;			/* TBD */
@@ -2418,9 +2420,11 @@ PrologGet(PceObject prolog, PceObject sel, int argc, PceObject *argv)
     }
   }
 
+  int locks = pceMTUnlockAll();
   qid  = PL_open_query(m, DebugMode, pred, terms);
   rval = PL_next_solution(qid);
   PL_cut_query(qid);
+  pceMTRelock(locks);
   if ( rval )
     obj = termToObject(terms+argc, NULL, NULLATOM, FALSE);
   else
@@ -2642,6 +2646,7 @@ PrologCall(PceGoal goal)
 	   !put_object(av+2, goal->receiver) )
 	goto error;
 
+      int locks = pceMTUnlockAll();
       if ( goal->flags & PCE_GF_SEND )
       { rval = PL_call_predicate(MODULE_user, DebugMode|PL_Q_PASS_EXCEPTION,
 				 PREDICATE_send_implementation, av);
@@ -2655,6 +2660,7 @@ PrologCall(PceGoal goal)
 	  }
 	}
       }
+      pceMTRelock(locks);
 
       term_t ex;
       if ( !rval && (ex=PL_exception(0)) )

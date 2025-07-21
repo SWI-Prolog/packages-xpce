@@ -307,6 +307,8 @@ __pce_export void pceMTLock(void);
 __pce_export void pceMTUnlock(void);
 __pce_export bool pceMTTryLock(void);
 __pce_export bool pceMTdetach(void);
+__pce_export int  pceMTUnlockAll(void);
+__pce_export void pceMTRelock(int count);
 __pce_export bool setPceThread(const char *app_name);
 
 		/********************************
