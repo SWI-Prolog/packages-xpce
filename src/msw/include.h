@@ -110,22 +110,6 @@ typedef struct
 #endif
 
 		 /*******************************
-		 *	     COLOURMAP		*
-		 *******************************/
-
-typedef struct jpeg_colour_map *JpegColourMap; /* JPEG <-> DIB colourmap */
-
-typedef struct ws_cmdata		/* colour_map data */
-{ HPALETTE      hpal;			/* Windows palette */
-  JpegColourMap jpeg_cmap;		/* JPEG <-> DIB colourmap */
-} *WsCmdata;
-
-extern WsCmdata getWsCmdata(ColourMap cm);
-extern void	free_jpeg_cmap(JpegColourMap map);
-
-#define EXACT_COLOUR_MASK 0x80000000L	/* Avoid rounding the colour */
-
-		 /*******************************
 		 *	    PROTOTYPES		*
 		 *******************************/
 
@@ -177,8 +161,6 @@ status		d_winmf(const wchar_t *fn,
 HENHMETAFILE	d_winmfdone(void);
 void		r_winmf(HENHMETAFILE hmf, int x, int y, int w, int h);
 void		ws_init_loc_still_timer(void);
-void		setPaletteColourMap(ColourMap cm, HPALETTE hpal);
-HPALETTE	getPaletteColourMap(ColourMap cm);
 HDC		d_current_hdc(void);
 status		postscriptDC(HDC hdc, int fx, int fy, int w, int h, int depth, int iscolor);
 HBRUSH		standardWindowsBrush(Any obj);
