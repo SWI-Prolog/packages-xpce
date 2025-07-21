@@ -310,7 +310,7 @@ warn_big_region(M, Action:name, N:int) :->
     "Warn if region exceeds size"::
     get(M, region, tuple(Start, End)),
     (   End - Start > N
-    ->  send(@display, confirm,
+    ->  send(@display, confirm, M?editor, "PceEmacs",
              'Region is > %d characters; %s?', N, Action)
     ;   true
     ).
@@ -322,7 +322,7 @@ warn_big_paragraph(M, Action:name, N:int) :->
     get(TB, scan, Caret+1, paragraph, 0, start, SP),
     get(TB, scan, Caret-1, paragraph, 0, end, EP),
     (   EP - SP > N
-    ->  send(@display, confirm,
+    ->  send(@display, confirm, M?editor, "PceEmacs",
              'Paragraph is > %d characters; %s?', N, Action)
     ;   true
     ).

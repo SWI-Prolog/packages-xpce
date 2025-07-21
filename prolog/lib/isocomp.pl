@@ -783,9 +783,9 @@ save(F) :->
 
 quit(F) :->
     (   get(F?editor, modified, @on)
-    ->  (   send(@display, confirm, 'Save changes?')
+    ->  (   send(@display, confirm, F, @default, 'Save changes?')
         ->  send(F, save)
-        ;   send(@display, confirm, 'Quit, discarding changes?')
+        ;   send(@display, confirm, F, @default, 'Quit, discarding changes?')
         )
     ;   true
     ),

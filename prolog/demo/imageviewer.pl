@@ -109,7 +109,7 @@ make_image_recogniser(R) :-
                           message(@prolog, convert, Bitmap),
                           @default, @off)
               , menu_item(remove,
-                          and(message(@display, confirm,
+                          and(message(@display, confirm, R, @default,
                                       'Remove %s', BitmapName),
                               message(@prolog, remove, Bitmap)),
                           @default, @on)

@@ -492,7 +492,7 @@ save_if_modified(B, Confirm:[bool]) :->
     (   get(B, modified, @on),
         get(B, file, File), File \== @nil
     ->  (   (   Confirm == @off
-            ;   send(@display, confirm,
+            ;   send(@display, confirm, B, "PceEmacs",
                      '%s is modified.  Save?', File?name)
             )
         ->  send(B, save)

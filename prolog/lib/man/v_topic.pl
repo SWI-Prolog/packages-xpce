@@ -191,7 +191,8 @@ rename_node(TB, Node:node) :->
 delete_card(TB, Node:node) :->
     "Destroy a card"::
     get(Node, card, Card),
-    send(@display, confirm, 'Really delete card `%s''', Card?name),
+    send(@display, confirm, TB, "XPCE Manual",
+         'Really delete card `%s''', Card?name),
     (   get(Card, related, subs, Subs),
         \+ send(Subs, empty)
     ->  send(@display, inform, TB, "XPCE Manual",

@@ -68,7 +68,7 @@ pce_edit_preferences(What) :-
     locate_preferences(What, File),
     auto_call(start_emacs),
     (   \+ access_file(File, exist)
-    ->  send(@display, confirm,
+    ->  send(@display, confirm, @default, @default,
              'Preferences file %s doesn''t exist.\nCreate it?', File),
         (   default_preferences(What, DefFile)
         ->  copy_file(DefFile, File)

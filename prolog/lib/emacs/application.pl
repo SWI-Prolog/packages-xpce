@@ -229,8 +229,8 @@ save_some_buffers(BM, Confirm:[bool]) :->
     ->  send(BM?buffer_list, for_some,
              and(ModifiedItem,
                  or(Confirm == @off,
-                    message(@display, confirm, 'Save %s?',
-                            @arg1?object?file?name)),
+                    message(@display, confirm, BM, "PceEmacs",
+                            'Save %s?', @arg1?object?file?name)),
                  message(@arg1?object, save, @arg1?object?file)))
     ;   send(@event, instance_of, event) % GUI initiated
     ->  send(@pce, report, status, 'No buffers need saving')
@@ -274,7 +274,8 @@ check_saved_at_exit(BM) :->
         and(@arg1?object?file \== @nil,
             @arg1?object?modified == @on)),
     (   get(BM?buffer_list, find, ModifiedItem, _)
-    ->  send(@display, confirm, 'Discard modified buffers?')
+    ->  send(@display, confirm, BM, "PceEmacs",
+             'Discard modified buffers?')
     ;   true
     ).
 

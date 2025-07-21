@@ -259,7 +259,7 @@ edit_or_list(Module:Name/Arity) :-
     functor(Head, Name, Arity),
     predicate_property(Module:Head, dynamic),
     predicate_property(Module:Head, number_of_clauses(N)),
-    send(@display, confirm,
+    send(@display, confirm, @default, @default,
          '%s:%s/%d is a dynamic predicate with %d clauses.  Show listing?',
          Module, Name, Arity, N),
     !,

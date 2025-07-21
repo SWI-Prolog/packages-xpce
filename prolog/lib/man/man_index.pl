@@ -168,7 +168,7 @@ make_man_tmp_view(V) :-
     send(Quit, active, @off),
     send(D, append,
          button(abort,
-                and(message(@display, confirm,
+                and(message(@display, confirm, V, @default,
                             'Abort generation of search index?'),
                     message(@prolog, halt)))),
     send(D, append, label(reporter), right),

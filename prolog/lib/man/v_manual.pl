@@ -417,7 +417,7 @@ destroy_tool(M, Tool:man_frame) :->
 quit(M) :->
     "Quit Manual Tool"::
     send(M, save_if_modified),
-%   send(@display, confirm, 'Quit all manual tools?'),
+%   send(@display, confirm, M, "XPCE Manual", 'Quit all manual tools?'),
     send(M?tools, for_all, message(@arg1?value, quit)),
     send(M, destroy).
 
@@ -425,7 +425,7 @@ quit(M) :->
 quit_pce(M) :->
     "Exit from PCE process"::
     send(M, save_if_modified),
-    send(@display, confirm, 'Really exit PCE?'),
+    send(@display, confirm, M, "XPCE Manual", 'Really exit PCE?'),
     send(@pce, die).
 
 
@@ -448,7 +448,8 @@ save_if_modified(M, Ask:[bool]) :->
     "Save if some part has been modified"::
     (   get(M, modified, @on)
     ->  (   Ask \== @on
-        ;   send(@display, confirm, 'Manual Database is modified. Save?')
+        ;   send(@display, confirm, M, "XPCE Manual",
+                 'Manual Database is modified. Save?')
         ),
         !,
         send(M?space, save_some),
@@ -870,7 +871,7 @@ relate(M, _-_, create, Obj, Obj) :-
     send(@display, inform, M, "XPCE Manual",
          'Can''t relate %s to itself', Obj?man_name).
 relate(M, _-_, CD, Selection, Obj) :-
-    send(@display, confirm,
+    send(@display, confirm, M, "XPCE Manual",
          '%s %s <-> %s', CD, Selection?man_name, Obj?man_name),
     send(M, create_relation, CD, Selection, see_also, Obj),
     send(M, create_relation, CD, Obj, see_also, Selection).
@@ -915,7 +916,7 @@ inherit(M, create, Obj, Obj) :-
     send(@display, inform, M, "XPCE Manual",
          'Can''t inherit %s from myself', Obj?man_name).
 inherit(M, CD, Selection, Obj) :-
-    send(@display, confirm,
+    send(@display, confirm, M, "XPCE Manual",
          '%s description of %s from %s',
          when(CD == relate, 'Inherit', 'UnInherit'),
          Obj?man_name, Selection?man_name),
@@ -1063,7 +1064,7 @@ give_help(Manual, Frame, ToolName) :-
         get(Manual, selection, ToolCard),
         ToolCard \== @nil,
         send(ToolCard, instance_of, man_browser_card),
-        send(@display, confirm, 'Assign %s to browser %s',
+        send(@display, confirm, Manual, "XPCE Manual", 'Assign %s to browser %s',
              ToolCard?man_name, ToolName)
     ->  send(ToolCard, store, tool_name, ToolName)
     ;   send(@display, inform, Manual, "XPCE Manual",

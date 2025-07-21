@@ -215,8 +215,8 @@ render_time(F, Ticks:int, Rendered:any) :<-
         )
     ).
 
-help(_F) :->
-    send(@display, confirm,
+help(F) :->
+    send(@display, confirm, F, @default,
          'No online help yet\n\c
           The profiler is described on the SWI-Prolog web site\n\c
           Press OK to open the page in your browser'),

@@ -131,7 +131,7 @@ make_index(IV, @Ref) :-
                        IndexDir),
     !,
     atomic_list_concat([IndexDir, /, 'index.obj'], IndexFile),
-    send(@display, confirm,
+    send(@display, confirm, IV, "XPCE Manual",
          '%s\n%s %s',
          'Cannot find PCE manual index file.',
          'Create', IndexFile),

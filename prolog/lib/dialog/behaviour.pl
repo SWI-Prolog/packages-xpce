@@ -844,7 +844,8 @@ simulate(P, ArgV:any ...) :->
 verify_predicate(Host, Head) :-
     source_file(Head, Path),
     pce_host:modified_since_last_loaded(Path),
-    send(@display, confirm, 'Reconsult modified file\n%s?', Path),
+    send(@display, confirm, @default, @default,
+         'Reconsult modified file\n%s?', Path),
     !,
     user:consult(Path),
     verify_predicate(Host, Head).
@@ -856,14 +857,16 @@ verify_predicate(Host, Head) :-
     get(File, absolute_path, Path),
     (   source_file(Path)
     ->  (   pce_host:modified_since_last_loaded(Path)
-        ->  send(@display, confirm, 'Reconsult modified file\n%s?', Path),
+        ->  send(@display, confirm, @default, @default,
+                 'Reconsult modified file\n%s?', Path),
             user:consult(Path),
             verify_predicate(Host, Head)
         ;   report_undefined(Host, Head),
             fail
         )
     ;   (   send(File, exists)
-        ->  send(@display, confirm, 'Consult file %s?', Path),
+        ->  send(@display, confirm, @default, @default,
+                 'Consult file %s?', Path),
             user:consult(Path),
             verify_predicate(Host, Head)
         ;   report_undefined(Host, Head),
