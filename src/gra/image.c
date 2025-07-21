@@ -68,17 +68,17 @@ initialiseImage(Image image, SourceSink data, Int w, Int h, Name kind)
   if ( isNil(data) || notDefault(w) || notDefault(h) || notDefault(kind) )
   { if ( isDefault(w) )    w = toInt(16);
     if ( isDefault(h) )    h = toInt(16);
-    if ( isDefault(kind) ) kind = NAME_bitmap;
+    if ( isDefault(kind) ) kind = NAME_pixmap;
 
     assign(image, kind,   kind);
     assign(image, file,   NIL);
-    assign(image, depth,  kind == NAME_bitmap ? ONE : (Int) DEFAULT);
+    assign(image, depth,  toInt(32));
     assign(image, size,	  newObject(ClassSize, w, h, EAV));
     assign(image, access, NAME_both);
   } else
-  { assign(image, kind,	  NAME_bitmap);
+  { assign(image, kind,	  NAME_pixmap);
     assign(image, file,	  data);
-    assign(image, depth,  ONE);
+    assign(image, depth,  toInt(32));
     assign(image, size,	  newObject(ClassSize, EAV));
     TRY(loadImage(image, DEFAULT, DEFAULT));
     assign(image, access, NAME_read);
