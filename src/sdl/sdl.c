@@ -62,13 +62,17 @@ setPceThread(const char *app_name)
     SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_VERSION_STRING,
 			       PCE_VERSION);
     SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_IDENTIFIER_STRING,
-			       "org.swi_prolog.xpce");
+			       "org.swi_prolog.swipl-win");
     SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_CREATOR_STRING,
 			       "Jan Wielemaker, Anjo Anjewierden");
     SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_COPYRIGHT_STRING,
-			       "Copyright 1992-2025, University of Amsterdam, SWI-Prolog Solutions b.v");
+			       "Copyright 1992-2025, "
+			       "University of Amsterdam, "
+			       "SWI-Prolog Solutions b.v");
     SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_URL_STRING,
 			       "https://www.swi-prolog.org");
+    SDL_SetAppMetadataProperty(SDL_PROP_APP_METADATA_TYPE_STRING,
+			       "application");
 
     SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
 
