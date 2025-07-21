@@ -98,7 +98,7 @@ void r_fill_polygon(FPoint pts, int n);
 void r_caret(int cx, int cy, FontObj font);
 void r_fill_triangle(double x1, double y1, double x2, double y2, double x3, double y3);
 void r_triangle(int x1, int y1, int x2, int y2, int x3, int y3, Any fill);
-void r_pixel(int x, int y, Any val);
+bool r_pixel(int x, int y, Any val);
 void r_complement_pixel(int x, int y);
 void d_modify(void);
 int r_get_mono_pixel(int x, int y);

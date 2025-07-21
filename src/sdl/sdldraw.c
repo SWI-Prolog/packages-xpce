@@ -1617,9 +1617,38 @@ r_triangle(int x1, int y1, int x2, int y2, int x3, int y3, Any fill)
  * @param y The y-coordinate of the pixel.
  * @param val The color value to set.
  */
-void
+bool
 r_pixel(int x, int y, Any val)
-{
+{ int width  = cairo_image_surface_get_width(context.target);
+  int height = cairo_image_surface_get_height(context.target);
+  int stride = cairo_image_surface_get_stride(context.target);
+  uint8_t *data = cairo_image_surface_get_data(context.target);
+
+  assert(cairo_image_surface_get_format(context.target) == CAIRO_FORMAT_ARGB32);
+
+  if ( x >= 0 && x <= width && y >= 0 && y <= height )
+  { uint32_t *p = (uint32_t*)(data + y * stride + x * 4);
+    uint32_t rgba;
+
+    if ( instanceOfObject(val, ClassColour) )
+    { Colour c = val;
+      ws_named_colour(c);
+      rgba = (uint32_t)valInt(c->rgba);
+    } else
+    { if ( isOn(val) )
+	rgba = 0xff000000;
+      else
+	rgba = 0xffffffff;
+    }
+
+    if ( *p != rgba )
+    { *p = rgba;
+      cairo_surface_mark_dirty(context.target);
+    }
+    return true;
+  } else
+  { return false;
+  }
 }
 
 /**
@@ -1663,22 +1692,24 @@ r_get_mono_pixel(int x, int y)
  */
 unsigned long
 r_get_pixel(int x, int y)
-{ unsigned char *data = cairo_image_surface_get_data(context.target);
+{ int width  = cairo_image_surface_get_width(context.target);
+  int height = cairo_image_surface_get_height(context.target);
   int stride = cairo_image_surface_get_stride(context.target);
+  unsigned char *data = cairo_image_surface_get_data(context.target);
 
-  assert(cairo_image_surface_get_format(context.target)
-	 == CAIRO_FORMAT_ARGB32);
+  assert(cairo_image_surface_get_format(context.target) == CAIRO_FORMAT_ARGB32);
 
-  unsigned char *p = data + y * stride + x * 4;
-  uint8_t b = p[0];
-  uint8_t g = p[1];
-  uint8_t r = p[2];
-  uint8_t a = p[3];
+  if ( x >= 0 && x <= width && y >= 0 && y <= height )
+  { unsigned char *p = data + y * stride + x * 4;
+    uint8_t b = p[0];
+    uint8_t g = p[1];
+    uint8_t r = p[2];
+    uint8_t a = p[3];
 
-  Cprintf("Pixel at %d,%d = %d %d %d %d\n",
-	  x, y, r, g, b, a);
-
-  return RGBA(r,g,b,a);
+    return RGBA(r,g,b,a);
+  } else
+  { return 0;
+  }
 }
 
 /**
