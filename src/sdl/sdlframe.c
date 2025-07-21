@@ -72,6 +72,42 @@ ws_created_frame(FrameObj fr)
 }
 
 /**
+ * Uncreate the windows  in a frame after we unmap  the frame.  We can
+ * leave the window  backing in place (we could also  destroy it), but
+ * we must delete the SDL texture  as that is connected to the frame's
+ * texture.
+ */
+
+static void
+uncreate_window_frame(PceWindow sw)
+{ WsWindow wsw = sw->ws_ref;
+
+  if ( wsw->texture )
+  { SDL_DestroyTexture(wsw->texture);
+    wsw->texture = NULL;
+  }
+
+  if ( instanceOfObject(sw, ClassWindowDecorator) )
+  { WindowDecorator dw = (WindowDecorator)sw;
+    uncreate_window_frame(dw->window);
+  }
+  if ( notNil(sw->subwindows) && !emptyChain(sw->subwindows) )
+  { Cell cell;
+
+    for_cell(cell, sw->subwindows)
+      uncreate_window_frame(cell->value);
+  }
+}
+
+static void
+uncreate_windows_frame(FrameObj fr)
+{ Cell cell;
+  for_cell(cell, fr->members)
+  { uncreate_window_frame(cell->value);
+  }
+}
+
+/**
  * Uncreate or destroy the specified frame.
  *
  * @param fr Pointer to the FrameObj to uncreate.
@@ -86,6 +122,7 @@ ws_uncreate_frame(FrameObj fr)
     SDL_DestroyWindow(f->ws_window);
     unalloc(sizeof(*f), f);
     fr->ws_ref = NULL;
+    uncreate_windows_frame(fr);
   }
 
   ws_event_destroyed_target(fr);
