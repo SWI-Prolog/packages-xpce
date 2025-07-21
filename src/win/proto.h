@@ -26,8 +26,10 @@ COMMON(Int)	getHeightDisplay(DisplayObj d);
 COMMON(Point)	getPointerLocationDisplay(DisplayObj d);
 COMMON(Monitor) getMonitorDisplay(DisplayObj d, Any obj);
 COMMON(status)	looseSelectionDisplay(DisplayObj d, Name which);
-COMMON(status)	confirmDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv);
-COMMON(status)	informDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv);
+COMMON(status)	confirmDisplay(DisplayObj d, Any client, CharArray title,
+			       CharArray fmt, int argc, Any *argv);
+COMMON(status)	informDisplay(DisplayObj d, Any client, CharArray title,
+			      CharArray fmt, int argc, Any *argv);
 COMMON(status)	busyCursorDisplay(DisplayObj d, CursorObj c, BoolObj block_events);
 COMMON(status)	inspectDisplay(DisplayObj d, Graphical gr, EventObj ev);
 COMMON(status)	makeClassDisplay(Class class);

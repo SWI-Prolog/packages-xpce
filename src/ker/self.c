@@ -927,7 +927,7 @@ informPce(Pce pce, CharArray fmt, int argc, Any *argv)
 { Any d = CurrentDisplay(NIL);
 
   if ( d != NULL && getOpenDisplay(d) == ON )
-    return informDisplay(d, fmt, argc, argv);
+    return informDisplay(d, DEFAULT, DEFAULT, fmt, argc, argv);
 
   return formatPcev(pce, fmt, argc, argv);
 }
@@ -939,7 +939,7 @@ confirmPce(Pce pce, CharArray fmt, int argc, Any *argv)
   int try;
 
   if ( d != NULL && getOpenDisplay(d) == ON )
-    return confirmDisplay(d, fmt, argc, argv);
+    return confirmDisplay(d, DEFAULT, DEFAULT, fmt, argc, argv);
 
   for(try = 0; try < 3; try++)
   { char line[256];

@@ -274,7 +274,7 @@ ws_checkbox_size(int flags, int *w, int *h)
  * is returned if the system message box fails.
  */
 int
-ws_message_box(CharArray msg, int flags)
+ws_message_box(Any client, CharArray title, CharArray msg, int flags)
 { SDL_MessageBoxButtonData btns[2];
   SDL_MessageBoxData data =
     { .flags = SDL_MESSAGEBOX_BUTTONS_LEFT_TO_RIGHT,
@@ -283,6 +283,18 @@ ws_message_box(CharArray msg, int flags)
     };
 
   data.message = stringToUTF8(&msg->data, NULL);
+  if ( notDefault(title) )
+    data.title = stringToUTF8(&title->data, NULL);
+
+  FrameObj fr = getFrameVisual(client);
+  DEBUG(NAME_inform,
+	Cprintf("client: %s; frame: %s\n", pp(client), pp(fr)));
+  if ( fr )
+  { WsFrame f = sdl_frame(fr, false);
+    if ( f )
+      data.window = f->ws_window;
+  }
+
   switch(flags)
   { case MBX_INFORM:
       data.flags |= SDL_MESSAGEBOX_INFORMATION;

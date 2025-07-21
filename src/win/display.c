@@ -830,8 +830,9 @@ display_help(DisplayObj d, StringObj hlp, Name msg)
 
 
 status
-confirmDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv)
-{ StringObj str;
+confirmDisplay(DisplayObj d, Any client, CharArray title,
+	       CharArray fmt, int argc, Any *argv)
+{ StringObj message;
   ArgVector(av, argc+1);
   int i;
   Name button;
@@ -840,9 +841,9 @@ confirmDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv)
   for(i=0; i<argc; i++)
     av[i+1] = argv[i];
 
-  TRY(str = answerObjectv(ClassString, argc+1, av));
+  TRY(message = answerObjectv(ClassString, argc+1, av));
 
-  switch( ws_message_box((CharArray)str, MBX_CONFIRM) )
+  switch( ws_message_box(client, title, (CharArray)message, MBX_CONFIRM) )
   { case MBX_OK:
       succeed;
     case MBX_CANCEL:
@@ -851,8 +852,8 @@ confirmDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv)
     { Name msg;
 
       msg = CtoName("Press LEFT button to confirm, RIGHT button to cancel");
-      TRY(button = display_help(d, str, msg));
-      doneObject(str);
+      TRY(button = display_help(d, message, msg));
+      doneObject(message);
 
       if ( button == NAME_left )
 	succeed;
@@ -864,35 +865,40 @@ confirmDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv)
 
 
 status
-informDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv)
-{ StringObj str;
+informDisplay(DisplayObj d, Any client, CharArray title,
+	      CharArray fmt, int argc, Any *argv)
+{ StringObj message;
   ArgVector(av, argc+1);
   int i;
   Name button;
+  status rc = SUCCEED;
 
   av[0] = (Any) fmt;
   for(i=0; i<argc; i++)
     av[i+1] = argv[i];
 
-  TRY(str = answerObjectv(ClassString, argc+1, av));
+  TRY(message = answerObjectv(ClassString, argc+1, av));
 
-  switch( ws_message_box((CharArray)str, MBX_INFORM) )
+  switch( ws_message_box(client, title, (CharArray)message, MBX_INFORM) )
   { case MBX_NOTHANDLED:
     { Name msg;
 
       msg = CtoName("Press any button to remove message");
-      TRY(button = display_help(d, str, msg));
-      doneObject(str);
+      if ( !(button = display_help(d, message, msg)) )
+	rc = FAIL;
     }
   }
+  doneObject(message);
 
-  succeed;
+  return rc;
 }
 
 
 static status
 reportDisplay(DisplayObj d, Name kind, CharArray fmt, int argc, Any *argv)
-{ if ( kind == NAME_error || kind == NAME_inform )
+{ status rc = SUCCEED;
+
+  if ( kind == NAME_error || kind == NAME_inform )
   { ArgVector(av, argc+1);
     StringObj str;
 
@@ -902,19 +908,20 @@ reportDisplay(DisplayObj d, Name kind, CharArray fmt, int argc, Any *argv)
     if ( kind == NAME_error )
       alertReporteeVisual(d);
 
-    switch( ws_message_box((CharArray)str, MBX_ERROR) )
+    switch( ws_message_box(DEFAULT, DEFAULT, (CharArray)str, MBX_ERROR) )
     { case MBX_NOTHANDLED:
       { Name msg, button;
 
 	msg = CtoName("Press any button to remove message");
-	TRY(button = display_help(d, str, msg));
-	doneObject(str);
+	if ( !(button = display_help(d, str, msg)) )
+	  rc = FAIL;
       }
     }
+    doneObject(str);
   } else if ( kind == NAME_warning )
     alertReporteeVisual(d);
 
-  succeed;
+  return rc;
 }
 
 
@@ -1162,8 +1169,8 @@ static char *T_postscript[] =
         { "landscape=[bool]", "max_area=[area]" };
 static char *T_fontAlias[] =
         { "name=name", "font=font", "force=[bool]" };
-static char *T_name_any_XXX[] =
-        { "name", "any ..." };
+static char *T_inform[] =
+        { "for=[visual]", "title=[char_array]", "message=char_array", "any ..." };
 static char *T_selectionOwner[] =
         { "owner=object*", "which=[name]", "convert=[function]",
 	  "loose=[code]",
@@ -1286,9 +1293,9 @@ static senddecl send_display[] =
      NAME_quit, "Destroy all window-system references"),
   SM(NAME_bell, 1, "volume=[int]", bellDisplay,
      NAME_report, "Ring the bell at volume"),
-  SM(NAME_confirm, 2, T_name_any_XXX, confirmDisplay,
+  SM(NAME_confirm, 4, T_inform, confirmDisplay,
      NAME_report, "Test if the user confirms string"),
-  SM(NAME_inform, 2, T_name_any_XXX, informDisplay,
+  SM(NAME_inform, 4, T_inform, informDisplay,
      NAME_report, "Inform the user of something"),
   SM(NAME_report, 3, T_report, reportDisplay,
      NAME_report, "Report message using ->inform"),

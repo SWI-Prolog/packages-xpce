@@ -135,11 +135,11 @@ destroyVisual(VisualObj v)
 
 
 
-static Any
+FrameObj
 getFrameVisual(VisualObj v)
 { for(;;)
   { if ( instanceOfObject(v, ClassFrame) )
-      answer(v);
+      answer((FrameObj)v);
     if ( !instanceOfObject(v, ClassVisual) ||
          !(v = get(v, NAME_containedIn, EAV)) )
       fail;
@@ -263,4 +263,3 @@ makeClassVisual(Class class)
 
   succeed;
 }
-

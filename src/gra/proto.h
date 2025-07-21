@@ -322,6 +322,7 @@ COMMON(status)	makeClassTree(Class class);
 /* /swi40/jan/src/pl/packages/xpce/src/gra/visual.c */
 COMMON(status)	resetVisual(VisualObj v);
 COMMON(status)	destroyVisual(VisualObj v);
+COMMON(FrameObj)getFrameVisual(VisualObj v);
 COMMON(Any)	getReportToVisual(VisualObj v);
 COMMON(status)	reportVisual(VisualObj v, Name kind, CharArray fmt, int argc, Any *argv);
 COMMON(status)	alertReporteeVisual(Any v);
