@@ -72,7 +72,6 @@ int		rlc_copy_output_to_debug_output(int docopy);
 
 void		rlc_yield(void);
 void		rlc_word_char(int chr, int isword);
-int		rlc_is_word_char(int chr);
 
 size_t		rlc_read(rlc_console c, uchar_t *buf, size_t cnt);
 size_t		rlc_write(rlc_console c, uchar_t *buf, size_t cnt);

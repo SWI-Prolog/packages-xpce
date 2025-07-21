@@ -283,6 +283,7 @@ NewClass(terminal_image)
   Code		link_message;		/* Handle a clicked link */
   ScrollBar	scroll_bar;		/* Associated scrollbar */
   Int		save_lines;		/* # saved lines */
+  SyntaxTable	syntax;			/* Word description */
   struct rlc_data *data;		/* The buffered data */
 End;
 

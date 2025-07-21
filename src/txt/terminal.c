@@ -59,10 +59,6 @@
  * process signals.  On Windows we use an event (TBD).
  */
 
-#ifndef isletter
-#define isletter(c) (iswalpha(c) || (c) == '_')
-#endif
-
 #define MAXLINE	     1024		/* max chars per line */
 
 #define GWL_DATA	0		/* offset for client data */
@@ -734,6 +730,8 @@ static vardecl var_terminal_image[] =
      NAME_event, "Associated scroll_bar"),
   SV(NAME_saveLines, "int", IV_GET|IV_STORE, saveLinesTerminalImage,
      NAME_memory, "How many lines are saved for scroll back"),
+  IV(NAME_syntax, "syntax_table", IV_BOTH,
+     NAME_language, "Description of the used syntax"),
   IV(NAME_data, "alien:RlcData", IV_NONE,
      NAME_cache, "Line buffer and related data")
 };
@@ -820,6 +818,8 @@ static classvardecl rc_terminal_image[] =
      "Style for <-selection"),
   RC(NAME_saveLines, "int", "1000",
      "How many lines are saved for scroll back"),
+  RC(NAME_syntax, "[syntax_table]", "default",
+     "Syntax definition"),
   RC(NAME_font, "font", "font(screen,roman,13)",
      "Default font"),
   RC(NAME_boldFont, "font*", "font(screen,bold,13)",
@@ -1026,13 +1026,11 @@ typed_char(RlcData b, int chr)
 		 *	 CHARACTER TYPES	*
 		 *******************************/
 
-int
-rlc_is_word_char(int chr)
-{ //if ( chr > 0 && chr < CHAR_MAX )
-  //  return _rlc_word_chars[chr];
-  // TODO: sync with editor class
+static bool
+rlc_is_word_char(RlcData b, int chr)
+{ TerminalImage ti = b->object;
 
-  return iswalnum((wint_t)chr);
+  return tisalnum(ti->syntax, chr);
 }
 
 
@@ -1252,12 +1250,12 @@ rlc_word_selection(RlcData b, int x, int y)
   if ( rlc_between(b, b->first, b->last, l) )
   { RlcTextLine tl = &b->lines[l];
 
-    if ( c < tl->size && rlc_is_word_char(tl->text[c].code) )
+    if ( c < tl->size && rlc_is_word_char(b, tl->text[c].code) )
     { int f, t;
 
-      for(f=c; f>0 && rlc_is_word_char(tl->text[f-1].code); f--)
+      for(f=c; f>0 && rlc_is_word_char(b, tl->text[f-1].code); f--)
 	;
-      for(t=c; t<tl->size && rlc_is_word_char(tl->text[t].code); t++)
+      for(t=c; t<tl->size && rlc_is_word_char(b, tl->text[t].code); t++)
 	;
       rlc_set_selection(b, l, f, l, t);
     }
@@ -1293,15 +1291,15 @@ rlc_extend_selection(RlcData b, int x, int y)
     { if ( rlc_between(b, b->first, b->last, l) )
       { RlcTextLine tl = &b->lines[l];
 
-	if ( c < tl->size && rlc_is_word_char(tl->text[c].code) )
-	  for(; c > 0 && rlc_is_word_char(tl->text[c-1].code); c--)
+	if ( c < tl->size && rlc_is_word_char(b, tl->text[c].code) )
+	  for(; c > 0 && rlc_is_word_char(b, tl->text[c-1].code); c--)
 	    ;
       }
       if ( rlc_between(b, b->first, b->last, el) )
       { RlcTextLine tl = &b->lines[el];
 
-	if ( ec < tl->size && rlc_is_word_char(tl->text[ec].code) )
-	  for(; ec < tl->size && rlc_is_word_char(tl->text[ec].code); ec++)
+	if ( ec < tl->size && rlc_is_word_char(b, tl->text[ec].code) )
+	  for(; ec < tl->size && rlc_is_word_char(b, tl->text[ec].code); ec++)
 	    ;
       }
     } else if ( b->sel_unit == SEL_LINE )
@@ -1315,15 +1313,15 @@ rlc_extend_selection(RlcData b, int x, int y)
     { if ( rlc_between(b, b->first, b->last, l) )
       { RlcTextLine tl = &b->lines[l];
 
-	if ( c < tl->size && rlc_is_word_char(tl->text[c].code) )
-	  for(; c < tl->size && rlc_is_word_char(tl->text[c].code); c++)
+	if ( c < tl->size && rlc_is_word_char(b, tl->text[c].code) )
+	  for(; c < tl->size && rlc_is_word_char(b, tl->text[c].code); c++)
 	    ;
       }
       if ( rlc_between(b, b->first, b->last, el) )
       { RlcTextLine tl = &b->lines[el];
 
-	if ( ec < tl->size && rlc_is_word_char(tl->text[ec].code) )
-	  for(; ec > 0 && rlc_is_word_char(tl->text[ec-1].code); ec--)
+	if ( ec < tl->size && rlc_is_word_char(b, tl->text[ec].code) )
+	  for(; ec > 0 && rlc_is_word_char(b, tl->text[ec-1].code); ec--)
 	    ;
       }
     } else if ( b->sel_unit == SEL_LINE )
