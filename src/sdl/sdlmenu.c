@@ -269,11 +269,46 @@ ws_checkbox_size(int flags, int *w, int *h)
  * Show a message box with the specified message and flags.
  *
  * @param msg Message to display.
- * @param flags Style and modality flags.
- * @return Selected button code or -1 on failure.
+ * @param MBX_INFORM, MBX_ERROR or MBX_CONFIRM
+ * @return MBX_OK, MBX_CANCEL or MBX_NOTHANDLED.   The latter
+ * is returned if the system message box fails.
  */
 int
-ws_message_box(Any msg, int flags)
-{
-    return 0;
+ws_message_box(CharArray msg, int flags)
+{ SDL_MessageBoxButtonData btns[2];
+  SDL_MessageBoxData data =
+    { .flags = SDL_MESSAGEBOX_BUTTONS_LEFT_TO_RIGHT,
+      .title = "SWI-Prolog",
+      .buttons = btns
+    };
+
+  data.message = stringToUTF8(&msg->data, NULL);
+  switch(flags)
+  { case MBX_INFORM:
+      data.flags |= SDL_MESSAGEBOX_INFORMATION;
+      btns[0].text = "OK";
+      btns[0].buttonID = MBX_OK;
+      data.numbuttons = 1;
+      break;
+    case MBX_ERROR:
+      data.flags |= SDL_MESSAGEBOX_INFORMATION;
+      btns[0].text = "OK";
+      btns[0].buttonID = MBX_OK;
+      data.numbuttons = 1;
+      break;
+    case MBX_CONFIRM:
+      data.flags |= SDL_MESSAGEBOX_WARNING;
+      btns[0].text = "OK";
+      btns[0].buttonID = MBX_OK;
+      btns[1].text = "Cancel";
+      btns[1].buttonID = MBX_CANCEL;
+      data.numbuttons = 2;
+      break;
+  }
+
+  int buttonid = MBX_NOTHANDLED;
+  if ( SDL_ShowMessageBox(&data, &buttonid) )
+    return buttonid;
+
+  return MBX_NOTHANDLED;
 }

@@ -842,7 +842,7 @@ confirmDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv)
 
   TRY(str = answerObjectv(ClassString, argc+1, av));
 
-  switch( ws_message_box(str, MBX_CONFIRM) )
+  switch( ws_message_box((CharArray)str, MBX_CONFIRM) )
   { case MBX_OK:
       succeed;
     case MBX_CANCEL:
@@ -876,7 +876,7 @@ informDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv)
 
   TRY(str = answerObjectv(ClassString, argc+1, av));
 
-  switch( ws_message_box(str, MBX_INFORM) )
+  switch( ws_message_box((CharArray)str, MBX_INFORM) )
   { case MBX_NOTHANDLED:
     { Name msg;
 
@@ -902,7 +902,7 @@ reportDisplay(DisplayObj d, Name kind, CharArray fmt, int argc, Any *argv)
     if ( kind == NAME_error )
       alertReporteeVisual(d);
 
-    switch( ws_message_box(str, MBX_ERROR) )
+    switch( ws_message_box((CharArray)str, MBX_ERROR) )
     { case MBX_NOTHANDLED:
       { Name msg, button;
 

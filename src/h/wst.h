@@ -46,6 +46,7 @@
 #include <sdl/sdlevent.h>
 #include <sdl/sdlfont.h>
 #include <sdl/sdlframe.h>
+#include <sdl/sdlmenu.h>
 
 COMMON(status)	metaModifierDisplay(DisplayObj d, Name name);
 COMMON(status)	X11ThreadsDisplay(DisplayObj d, BoolObj val);

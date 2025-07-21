@@ -88,20 +88,6 @@ COMMON(status)	ws_console_label(CharArray label);
 COMMON(Int)	ws_default_scrollbar_width(void);
 COMMON(char *)	ws_user(void);
 
-/* ../src/x11/xmenu.c */
-COMMON(status)	ws_draw_scrollbar_arrow(ScrollBar s, int x, int y, int w, int h, Name which, int up);
-COMMON(int)	ws_arrow_height_scrollbar(ScrollBar s);
-COMMON(status)	ws_draw_sb_thumb(int x, int y, int w, int h);
-COMMON(Colour)	ws_3d_grey(void);
-COMMON(status)	ws_draw_button_face(DialogItem di, int x, int y, int w, int h, int up, int defb, int focus);
-COMMON(int)	ws_combo_box_width(Graphical gr);
-COMMON(int)	ws_stepper_width(Graphical gr);
-COMMON(int)	ws_entry_field_margin(void);
-COMMON(status)	ws_entry_field(Graphical gr, int x, int y, int w, int h, int flags);
-COMMON(status)	ws_draw_checkbox(int x, int y, int w, int h, int b, int flags);
-COMMON(status)	ws_checkbox_size(int flags, int *w, int *h);
-COMMON(int)	ws_message_box(Any msg, int flags);
-
 /* ../src/gra/graphstate.c */
 COMMON(void)	g_save(void);
 COMMON(void)	g_restore(void);
