@@ -35,7 +35,8 @@
 
 #define UNICODE 1
 #define _UNICODE 1
-#include "include.h"
+#define PceHInstance ThePceHInstance
+#include <h/kernel.h>
 #include "mswin.h"
 #include <h/interface.h>
 #include <tchar.h>
@@ -260,7 +261,11 @@ ws_user()
 #endif
 
 
+#undef End
 #include <shlobj.h>
+#define End \
+  }
+
 
 Name
 ws_appdata(const char *sub)

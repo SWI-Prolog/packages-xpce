@@ -32,13 +32,16 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include "include.h"
+#include "h/kernel.h"
+#include "mswin.h"
 #include <h/unix.h>
 #include <h/interface.h>
 
 #ifndef MAXCMDLINE
 #define MAXCMDLINE 10240
 #endif
+
+#define APIError() WinStrError(GetLastError())
 
 static int
 getEnvironmentSizeProcess(Process p)
