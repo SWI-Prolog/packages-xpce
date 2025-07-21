@@ -592,10 +592,10 @@ settings(_F) :->
     trace_settings.
 
 
-about(_) :->
+about(F) :->
     "Display aout message"::
     version(Version),
-    send(@display, inform,
+    send(@display, inform, F, "GUI Tracer",
          'SWI-Prolog debugger version %s\n\c
               By Jan Wielemaker',
          Version).
@@ -890,7 +890,7 @@ check_console(F) :->
     "See whether the debugged thread has a console"::
     (   in_debug_thread(F, thread_has_console)
     ->  true
-    ;   send(@display, inform,
+    ;   send(@display, inform, F, "GUI Tracer",
              'The debugged thread is not attached to a console.\n\c
                   Cannot run an interactive session in the debuggee.'),
         fail
@@ -901,11 +901,11 @@ interactor(F) :->
     send(F, warn_windows_thread),
     prolog_ide(open_interactor).
 
-warn_windows_thread(_F) :->
+warn_windows_thread(F) :->
     "Warn to run in a separate thread"::
     (   current_prolog_flag(windows, true),
         pce_thread(main)
-    ->  send(@display, inform,
+    ->  send(@display, inform, F, "GUI Tracer",
              'Opening a new interactor from the debugger requires\n\c
                   for the tools to run in a separate thread.  Please set\n\c
                   the flag "xpce_threaded" to "true" in your Prolog startup\n\c

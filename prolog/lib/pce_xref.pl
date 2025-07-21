@@ -79,7 +79,7 @@
 :- multifile
     gxref_called/2.
 
-gxref_version('0.1.1').
+gxref_version('1.0').
 
 :- dynamic
     setting/2.
@@ -176,7 +176,7 @@ fill_toolbar(F, TD:tool_dialog) :->
     send(TD, append, new(View, popup(view))),
     send(TD, append, new(Help, popup(help))),
     send_list(File, append,
-              [ menu_item(exit, message(F, destroy))
+              [ menu_item(close, message(F, destroy))
               ]),
     send_list(View, append,
               [ menu_item(refresh, message(F, update))
@@ -188,11 +188,11 @@ fill_toolbar(F, TD:tool_dialog) :->
     send(Settings, multiple_selection, @on),
     send(F, update_setting_menu).
 
-about(_F) :->
+about(F) :->
     gxref_version(Version),
-    send(@display, inform,
-         string('SWI-Prolog cross-referencer version %s\n\c
-                    By Jan Wielemaker', Version)).
+    send(@display, inform, F, "Cross-referencer",
+         'SWI-Prolog cross-referencer version %s\n\c
+         By Jan Wielemaker', Version).
 
 :- pce_group(parts).
 

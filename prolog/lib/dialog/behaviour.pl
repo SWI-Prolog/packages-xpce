@@ -283,7 +283,7 @@ simulate(C) :->
         invert(Tag, get(C, argument, Arg)),
         portray_object(Arg, Term),
         term_to_atom(Term, Atom),
-        send(@display, inform,
+        send(@display, inform, C, "Dialog editor",
              '%s relation returns %s', Type, Atom)
     ).
 
@@ -1116,7 +1116,7 @@ value(P, Value:'any|function') :<-
             ;   Value = Term,
                 send(D, destroy)
             )
-        ;   send(@display, inform, 'Syntax error'),
+        ;   send(@display, inform, P, "Dialog editor", 'Syntax error'),
             fail
         )
     ).

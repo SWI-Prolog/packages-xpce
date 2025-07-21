@@ -149,7 +149,8 @@ create_topic(TB, Name:string, Summary:string, Super:[man_topic_card]) :->
     (   Super == @default
     ->  get(TB, selection, SuperTopic),
         (   SuperTopic == @nil
-        ->  send(@display, inform, 'Please first select a super-topic'),
+        ->  send(@display, inform, TB, "XPCE Manual",
+                 'Please first select a super-topic'),
             fail
         ;   true
         )
@@ -157,7 +158,8 @@ create_topic(TB, Name:string, Summary:string, Super:[man_topic_card]) :->
     ),
     send(Name, strip),
     (   get(Name, size, 0)
-    ->  send(@display, inform, 'Please enter a topic name first')
+    ->  send(@display, inform, TB, "XPCE Manual",
+             'Please enter a topic name first')
     ;   new(Topic, man_topic_card(TB?topics, Name)),
         send(Topic, store, summary, Summary),
         send(SuperTopic, relate, subs, Topic),
@@ -172,7 +174,8 @@ rename_node(TB, Node:node) :->
     "Rename node to name in dialog"::
     get(TB?dialog_member?name_member, selection, NewName),
     (   NewName == ''
-    ->  send(@display, inform, 'First type a name in ''Name''')
+    ->  send(@display, inform, TB, "XPCE Manual",
+             'First type a name in ''Name''')
     ;   send(Node?card, store, name, NewName),
         send(Node, string, NewName),
         send(TB?dialog_member?name_member, clear)
@@ -185,13 +188,14 @@ rename_node(TB, Node:node) :->
     ).
 
 
-delete_card(_TB, Node:node) :->
+delete_card(TB, Node:node) :->
     "Destroy a card"::
     get(Node, card, Card),
     send(@display, confirm, 'Really delete card `%s''', Card?name),
     (   get(Card, related, subs, Subs),
         \+ send(Subs, empty)
-    ->  send(@display, inform, 'Only leaf-nodes can be deleted')
+    ->  send(@display, inform, TB, "XPCE Manual",
+             'Only leaf-nodes can be deleted')
     ;   send(Node, delete_tree),
         send(Card, free)
     ).

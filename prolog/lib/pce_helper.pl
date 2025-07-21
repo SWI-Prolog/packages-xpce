@@ -862,7 +862,8 @@ what_fragments(E) :->
          message(S, append,
                  create(string, '"%s" fragment "%s" holding "%s"\n',
                         @arg1?style, @arg1?label, @arg1?string))),
-    send(@display, inform, 'Fragments around point:\n\n%s', S).
+    send(@display, inform, E, "XPCE Manual",
+         'Fragments around point:\n\n%s', S).
 
 
                  /*******************************

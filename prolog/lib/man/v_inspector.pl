@@ -225,7 +225,7 @@ pretty_print(T) :->
     flash(Object),
     portray_object(Object, Term),
     term_to_atom(Term, Atom),
-    send(T, report, inform, '%s', Atom).
+    send(T, report, inform, T, "Object", '%s', Atom).
 
 %               LINKS
 

@@ -183,10 +183,10 @@ check_directory(M, Dir:directory) :->
     ).
 
 
-check_runtime(_M) :->
+check_runtime(M) :->
     "Check for runtime system"::
     (   get(@pce, is_runtime_system, @on)
-    ->  send(@display, inform,
+    ->  send(@display, inform, M, "XPCE Manual",
              '%s.  %s\n%s %s',
              'This is a runtime version of XPCE',
              'Most of the manual will not work.',
@@ -350,7 +350,7 @@ start_tool(M, ToolName:name, Tool:frame) :<-
     ;   create_tool(M, ToolName, Tool),
         send(Tool, open)
     ->  send(M, register_tool, ToolName, Tool)
-    ;   send(@display, inform, 'Failed to start %s', ToolName)
+    ;   send(@display, inform, M, "XPCE Manual", 'Failed to start %s', ToolName)
     ).
 
 start_tool(M, ToolName:name) :->
@@ -596,7 +596,7 @@ goto_url(Url) :-
     send(@display, busy_cursor),
     (   catch(www_open_url(Url), _, fail)
     ->  true
-    ;   send(@display, inform, 'Failed to open URL')
+    ;   send(@display, inform, @default, "XPCE Manual", 'Failed to open URL')
     ),
     send(@display, busy_cursor, @nil).
 
@@ -627,10 +627,10 @@ start_demo(M) :->
                 *            CHECKING           *
                 ********************************/
 
-check_object_base(_M) :->
+check_object_base(M) :->
     (   auto_call(checkpce)
-    ->  send(@display, inform, 'Object base is consistent')
-    ;   send(@display, inform, '%s\n%s',
+    ->  send(@display, inform, M, "Check object base", 'Object base is consistent')
+    ;   send(@display, inform, M, "Check object base", '%s\n%s',
              'Object base is corrupted',
              'See Prolog window for details')
     ).
@@ -750,7 +750,7 @@ request_selection(M, Frame:man_frame*, Obj:any*, Open:[bool]) :->
     (   OldHolder \== @nil
     ->  (   send(OldHolder, release_selection)
         ->  true
-        ;   send(@display, inform,
+        ;   send(@display, inform, M, "XPCE Manual",
                  '%s does not release selection', OldHolder)
         )
     ;   true
@@ -860,14 +860,15 @@ request_relate(M, CD, Obj) :-
         ->  get(Selection, class_name, SClass),
             get(Obj, class_name, OClass),
             relate(M, SClass-OClass, CD, Selection, Obj)
-        ;   send(@display, inform, 'First make a selection')
+        ;   send(@display, inform, M, "XPCE Manual", 'First make a selection')
         )
-    ;   send(@display, inform, 'Manual is in read-only mode')
+    ;   send(@display, inform, M, "XPCE Manual", 'Manual is in read-only mode')
     ).
 
-relate(_, _-_, create, Obj, Obj) :-
+relate(M, _-_, create, Obj, Obj) :-
     !,
-    send(@display, inform, 'Can''t relate %s to itself', Obj?man_name).
+    send(@display, inform, M, "XPCE Manual",
+         'Can''t relate %s to itself', Obj?man_name).
 relate(M, _-_, CD, Selection, Obj) :-
     send(@display, confirm,
          '%s %s <-> %s', CD, Selection?man_name, Obj?man_name),
@@ -904,14 +905,15 @@ request_inherit(M, CD, Obj) :-
     ->  (   get(M, selection, Selection),
             Selection \== @nil
         ->  inherit(M, CD, Selection, Obj)
-        ;   send(@display, inform, 'First make a selection')
+        ;   send(@display, inform, M, "XPCE Manual", 'First make a selection')
         )
-    ;   send(@display, inform, 'Manual is in read-only mode')
+    ;   send(@display, inform, M, "XPCE Manual", 'Manual is in read-only mode')
     ).
 
-inherit(_, create, Obj, Obj) :-
+inherit(M, create, Obj, Obj) :-
     !,
-    send(@display, inform, 'Can''t inherit %s from myself', Obj?man_name).
+    send(@display, inform, M, "XPCE Manual",
+         'Can''t inherit %s from myself', Obj?man_name).
 inherit(M, CD, Selection, Obj) :-
     send(@display, confirm,
          '%s description of %s from %s',
@@ -926,12 +928,12 @@ inherit(M, CD, Selection, Obj) :-
                 *            SOURCES            *
                 ********************************/
 
-request_source(_M, Obj:object) :->
+request_source(M, Obj:object) :->
     "Display source of object"::
     (   get(Obj, source, Location)
     ->  auto_call(start_emacs),
         send(@emacs, goto_source_location, Location)
-    ;   send(@display, inform, 'Can''t find source')
+    ;   send(@display, inform, M, "XPCE Manual", 'Can''t find source')
     ).
 
 
@@ -1064,6 +1066,7 @@ give_help(Manual, Frame, ToolName) :-
         send(@display, confirm, 'Assign %s to browser %s',
              ToolCard?man_name, ToolName)
     ->  send(ToolCard, store, tool_name, ToolName)
-    ;   send(@display, inform, 'Sorry, Can''t find help card ...')
+    ;   send(@display, inform, Manual, "XPCE Manual",
+             'Sorry, Can''t find help card ...')
     ).
 

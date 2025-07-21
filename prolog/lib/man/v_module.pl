@@ -183,14 +183,15 @@ create_card(MB, Name:string, Summary:string) :->
     "Add a card to the module"::
     send(Name, strip),
     (   get(Name, size, 0)
-    ->  send(@display, inform, 'Please enter a card name first')
+    ->  send(@display, inform, MB, "XPCE Manual",
+             'Please enter a card name first')
     ;   get(MB, create_class, ClassName),
         (   ClassName \== @nil
         ->  Term =.. [ClassName, MB?module, Name],
             new(Card, Term),
             send(Card, store, summary, Summary),
             send(MB?browser, append_card, Card)
-        ;   send(@display, inform, 'What class?')
+        ;   send(@display, inform, MB, "XPCE Manual", 'What class?')
         )
     ).
 
@@ -199,7 +200,7 @@ rename(MB, Card:man_card, Name:string) :->
     "Change name to value in dialog"::
     send(Name, strip),
     (   get(Name, size, 0)
-    ->  send(@display, inform, 'Please enter a card name first')
+    ->  send(@display, inform, MB, "XPCE Manual", 'Please enter a card name first')
     ;   send(Card, store, name, Name),
         send(MB?browser, update_card, Card)
     ).
@@ -209,7 +210,7 @@ summary(MB, Card:man_card, Summary:string) :->
     "Change summary to value in dialog"::
     send(Summary, strip),
     (   get(Summary, size, 0)
-    ->  send(@display, inform, 'Please enter a card name first')
+    ->  send(@display, inform, MB, "XPCE Manual", 'Please enter a card name first')
     ;   send(Card, store, summary, Summary),
         send(MB?browser, update_card, Card)
     ).

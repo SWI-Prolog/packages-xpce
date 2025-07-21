@@ -80,9 +80,9 @@ fill_menu_bar(V) :->
                           message(V, help))
               ]).
 
-about(_) :->
+about(V) :->
     program_version(Version),
-    send(@display, inform,
+    send(@display, inform, V, @default,
          'XPCE event-monitor\nversion %s\n\nBy Jan Wielemaker',
          Version).
 

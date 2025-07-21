@@ -257,7 +257,8 @@ delete(M, Icon0:[draw_icon]) :->
     ->  get(M, current, Icon),
         (   send(Icon, can_delete)
         ->  send(M, activate_select)
-        ;   send(@display, inform, 'Can''t delete this prototype'),
+        ;   send(@display, inform, M, "PceDraw",
+                 'Can''t delete this prototype'),
             fail
         )
     ;   Icon = Icon0

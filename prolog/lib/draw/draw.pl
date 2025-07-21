@@ -694,14 +694,15 @@ About simply sends a message  to  @display   to  inform  the user of the
 package.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-about(_Draw) :->
+about(Draw) :->
     "Print `about' message"::
     draw_version(Version),
-    send(@display, inform, '%s%.1f\n\n%s\n%s\n',
+    send(@display, inform, Draw, "PceDraw",
+         '%s%.1f\n\n%s\n%s\n',
          'PceDraw version ',
          Version,
          'Author: Jan Wielemaker',
-         'E-mail: jan@swi.psy.uva.nl').
+         'E-mail: jan@swi-prolog.org').
 
 
 update_label(Draw) :->

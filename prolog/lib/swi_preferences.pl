@@ -76,7 +76,7 @@ pce_edit_preferences(What) :-
         )
     ;   access_file(File, write)
     ->  true
-    ;   send(@display, inform,
+    ;   send(@display, inform, @default, @default,
              'You cannot modify the preferences file %s', File)
     ),
     send(@emacs, goto_source_location, File).

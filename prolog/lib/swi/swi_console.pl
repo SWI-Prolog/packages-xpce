@@ -146,16 +146,16 @@ goto_url(Url) :-
     send(@display, busy_cursor),
     (   catch(www_open_url(Url), _, fail)
     ->  true
-    ;   send(@display, inform, 'Failed to open URL')
+    ;   send(@display, inform, @default, @default, 'Failed to open URL')
     ),
     send(@display, busy_cursor, @nil).
 
-help(_Con) :->
+help(Con) :->
     "Open help (www)"::
     URL = 'http://www.swi-prolog.org/pldoc/index.html',
     (   catch(www_open_url(URL), _, fail)
     ->  true
-    ;   send(@display, inform, 'Failed to open: ', URL)
+    ;   send(@display, inform, Con, @default, 'Failed to open: ', URL)
     ).
 
 :- pce_end_class.

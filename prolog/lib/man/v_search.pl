@@ -139,14 +139,14 @@ make_index(IV, @Ref) :-
     get(new(man_index_manager), make_index, IndexFile, TmpTable),
     send(IV, busy_cursor, @nil),
     send(TmpTable, name_reference, Ref),
-    send(@display, inform,
+    send(@display, inform, IV, "XPCE Manual",
          '%s\n%s\n%s\n%s',
          'Creating the manual index has loaded the entire manual',
          'and introduced considerable fragmentation in XPCE''s',
          'memory management.  If you are tight on memory, please',
          'quit and restart XPCE').
-make_index(_, Ref) :-
-    send(@display, inform,
+make_index(IV, Ref) :-
+    send(@display, inform, IV, "XPCE Manual",
          'Sorry, no manual index and no permission to write one.'),
     new(Ref, chain_table).
 

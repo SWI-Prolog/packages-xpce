@@ -86,7 +86,7 @@ submit(F) :->
         send(S, prepend, Action),
         get(F, hypered, parbox, PB),
         send(PB?window, goto_url, S)                % @browser
-    ;   send(@display, inform, 'No support for POST forms yet')
+    ;   send(@display, inform, F, @default, 'No support for POST forms yet')
     ).
 
 add_field(String, Name, Value) :-
