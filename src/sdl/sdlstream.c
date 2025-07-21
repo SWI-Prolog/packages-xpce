@@ -76,10 +76,10 @@ sdl_stream_event(SDL_Event *event)
     { Stream s = event->user.data2;
       if ( !onFlag(s, F_FREED|F_FREEING) )
       { assert(instanceOfObject(s, ClassStream));
-	pceMTLock(LOCK_PCE);
+	pceMTLock();
 	DEBUG(NAME_stream, Cprintf("handleInputStream(%s)\n", pp(s)));
 	bool rc = handleInputStream(s);
-	pceMTUnlock(LOCK_PCE);
+	pceMTUnlock();
 	if ( !rc )
 	  ws_no_input_stream(s);
       }
@@ -88,9 +88,9 @@ sdl_stream_event(SDL_Event *event)
     { Socket s = event->user.data2;
       if ( !onFlag(s, F_FREED|F_FREEING) )
       { assert(instanceOfObject(s, ClassSocket));
-	pceMTLock(LOCK_PCE);
+	pceMTLock();
 	acceptSocket(s);
-	pceMTUnlock(LOCK_PCE);
+	pceMTUnlock();
       }
       processed_fd_watch(watch);
     } else if ( event->user.code == FD_READY_TERMINAL )

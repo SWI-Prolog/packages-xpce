@@ -302,14 +302,12 @@ __pce_export int	pceEnumElements(PceObject collection,
 		 *    MULTI-THREADING SUPPORT	*
 		 *******************************/
 
-#define LOCK_PCE	0
-
-__pce_export int	pceMTinit(void);
-__pce_export void	pceMTLock(int lock);
-__pce_export void	pceMTUnlock(int lock);
-__pce_export int	pceMTTryLock(int lock);
-__pce_export int	pceMTdetach(void);
-__pce_export bool	setPceThread(const char *app_name);
+__pce_export bool pceMTinit(void);
+__pce_export void pceMTLock(void);
+__pce_export void pceMTUnlock(void);
+__pce_export bool pceMTTryLock(void);
+__pce_export bool pceMTdetach(void);
+__pce_export bool setPceThread(const char *app_name);
 
 		/********************************
 		*          PCE CALLING C	*

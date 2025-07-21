@@ -49,6 +49,7 @@
 
 #define O_NOX11RESOURCES 1		/* use own resource parser */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -1652,7 +1653,7 @@ GLOBAL Host	HOST;			/* the one and only Host object */
 GLOBAL status	(*DispatchEvents)(IOSTREAM*, int); /* Dispatch function */
 GLOBAL int	changedLevel;		/* Change forwarding levels */
 GLOBAL HashTable ErrorTable;		/* @error_database */
-GLOBAL int	XPCE_mt;		/* we are multi-threaded */
+GLOBAL bool	XPCE_mt;			/* we are multi-threaded */
 
 GLOBAL struct constant ConstantNil;	/* MUST be first! */
 GLOBAL struct constant ConstantDefault;

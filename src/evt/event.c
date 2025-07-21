@@ -180,7 +180,7 @@ considerLocStillEvent()
       return;
     }
 
-    if ( !pceMTTryLock(LOCK_PCE) )
+    if ( !pceMTTryLock() )
       return;
     if ( instanceOfObject(last_window, ClassWindow) &&
 	 !onFlag(last_window, F_FREED|F_FREEING) &&
@@ -202,7 +202,7 @@ considerLocStillEvent()
 		  })
     }
     loc_still_posted = TRUE;
-    pceMTUnlock(LOCK_PCE);
+    pceMTUnlock();
   }
 }
 

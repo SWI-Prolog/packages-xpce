@@ -196,7 +196,7 @@ out:
 
     DEBUG(NAME_thread,
 	  Cprintf("Thread has associated windows; destroying ...\n"));
-    pceMTLock(LOCK_PCE);
+    pceMTLock();
     ch = newObject(ClassChain, EAV);
 
     for(i=0; i<WINASSOC_TABLESIZE; i++)
@@ -215,7 +215,7 @@ out:
 		sendv(obj, NAME_destroy, 0, NULL);
 	      });
     freeObject(ch);
-    pceMTUnlock(LOCK_PCE);
+    pceMTUnlock();
   }
 }
 

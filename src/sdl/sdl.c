@@ -174,9 +174,9 @@ ws_user(void)
  * @return `TRUE` on success
  */
 
-int
+bool
 pceMTdetach(void)
-{ return TRUE;
+{ return true;
 }
 
 

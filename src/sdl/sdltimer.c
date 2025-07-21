@@ -64,13 +64,13 @@ sdl_timer_event(SDL_Event *event)
 
     if ( !onFlag(tm, F_FREEING|F_FREED) &&
 	 instanceOfObject(tm, ClassTimer) )
-    { pceMTLock(LOCK_PCE);
+    { pceMTLock();
       if ( tm->service == ON )
       { ServiceMode(PCE_EXEC_SERVICE, executeTimer(tm));
       } else
       { executeTimer(tm);
       }
-      pceMTUnlock(LOCK_PCE);
+      pceMTUnlock();
     }
     return true;
   }

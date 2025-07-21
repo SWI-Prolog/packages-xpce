@@ -77,7 +77,7 @@ static void
 trapTimer(XtPointer xtm, XtIntervalId *id)
 { Timer tm = (Timer) xtm;
 
-  pceMTLock(LOCK_PCE);
+  pceMTLock();
   DEBUG(NAME_timer, Cprintf("trapTimer(%s, %p) (tm->id = %p)\n",
 			    pp(tm), *id, getIdTimer(tm)));
 
@@ -87,7 +87,7 @@ trapTimer(XtPointer xtm, XtIntervalId *id)
     } else
       doTrapTimer(tm);
   }
-  pceMTUnlock(LOCK_PCE);
+  pceMTUnlock();
 }
 
 

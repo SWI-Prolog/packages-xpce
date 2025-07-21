@@ -50,23 +50,23 @@ static CRITICAL_SECTION mutex;
 int lock_count;
 DWORD lock_owner;
 
-int
-pceMTTryLock(int lock)
-{ if ( XPCE_mt == TRUE )
+bool
+pceMTTryLock(void)
+{ if ( XPCE_mt )
   { if ( TryEnterCriticalSection(&mutex) )	/* NT 4 and later! */
     { if ( lock_count++ == 0 )
 	lock_owner = GetCurrentThreadId();
-      return TRUE;
+      return true;
     } else
-      return FALSE;
+      return false;
   }
 
-  return TRUE;
+  return true;
 }
 
 static inline void
-LOCK()
-{ if ( XPCE_mt == TRUE )
+LOCK(void)
+{ if ( XPCE_mt )
   { EnterCriticalSection(&mutex);
     if ( lock_count++ == 0 )
       lock_owner = GetCurrentThreadId();
@@ -74,8 +74,8 @@ LOCK()
 }
 
 static inline void
-UNLOCK()
-{ if ( XPCE_mt == TRUE )
+UNLOCK(void)
+{ if ( XPCE_mt )
   { if ( --lock_count == 0 )
       lock_owner = 0;
     LeaveCriticalSection(&mutex);
@@ -88,19 +88,19 @@ static foreign_t
 pce_lock_owner(term_t owner, term_t count)
 { if ( PL_unify_integer(owner, lock_owner) &&
        PL_unify_integer(count, lock_count) )
-    return TRUE;
+    return true;
 
-  return FALSE;
+  return false;
 }
 
-int
-pceMTinit()
+bool
+pceMTinit(void)
 { InitializeCriticalSection(&mutex);
-  XPCE_mt = TRUE;
+  XPCE_mt = true;
 
   PL_register_foreign("pce_lock_owner", 2, pce_lock_owner, 0);
 
-  succeed;
+  return true;
 }
 
 #endif /*USE_WIN32_CRITICAL_SECTION*/
@@ -113,27 +113,6 @@ pceMTinit()
 #include <pthread.h>
 #undef var
 
-#ifdef PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP
-
-static pthread_mutex_t mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
-
-#define LOCK() \
-	if ( XPCE_mt ) pthread_mutex_lock(&mutex)
-#define UNLOCK() \
-	if ( XPCE_mt ) pthread_mutex_unlock(&mutex)
-
-int
-pceMTTryLock(int lock)
-{ if ( XPCE_mt == TRUE )
-  { if ( pthread_mutex_trylock(&mutex) != 0 )
-      return FALSE;
-  }
-
-  return TRUE;
-}
-
-#else /*PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP*/
-
 typedef struct _mutex_t
 { pthread_t		owner;
   int			count;
@@ -145,7 +124,7 @@ typedef struct _mutex_t
 static recursive_mutex_t mutex = RECURSIVE_MUTEX_INIT;
 
 static inline void
-LOCK()
+LOCK(void)
 { if ( XPCE_mt )
   { if ( mutex.owner != pthread_self() )
     { pthread_mutex_lock(&(mutex.lock));
@@ -158,7 +137,7 @@ LOCK()
 
 
 static inline void
-UNLOCK()
+UNLOCK(void)
 { if ( XPCE_mt )
   { if ( mutex.owner == pthread_self() )
     { if ( --mutex.count < 1 )
@@ -171,12 +150,12 @@ UNLOCK()
 }
 
 
-int
-pceMTTryLock(int lock)
+bool
+pceMTTryLock(void)
 { if ( XPCE_mt )
   { if ( mutex.owner != pthread_self() )
     { if ( pthread_mutex_trylock(&(mutex.lock)) != 0 )
-	return FALSE;
+	return false;
 
       mutex.owner = pthread_self();
       mutex.count = 1;
@@ -184,16 +163,13 @@ pceMTTryLock(int lock)
       mutex.count++;
   }
 
-  return TRUE;
+  return true;
 }
 
-#endif /*PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP*/
-
-int
-pceMTinit()
+bool
+pceMTinit(void)
 { XPCE_mt = TRUE;
-
-  succeed;
+  return true;
 }
 
 #endif /*_REENTRANT*/
@@ -204,7 +180,7 @@ pceMTinit()
 #define UNLOCK()
 
 int					/* signal we can't do this */
-pceMTinit()
+pceMTinit(void)
 { fail;
 }
 
@@ -216,12 +192,12 @@ pceMTTryLock(int lock)
 #endif
 
 void
-pceMTLock(int lock)
+pceMTLock()
 { LOCK();
 }
 
 void
-pceMTUnlock(int lock)
+pceMTUnlock()
 { UNLOCK();
 }
 
@@ -1558,5 +1534,3 @@ resolveGetMethodObject(Any obj, Class class, Name sel, Any *receiver)
 
   fail;
 }
-
-

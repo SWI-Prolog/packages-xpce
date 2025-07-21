@@ -70,18 +70,18 @@ timer_proc(HWND hwnd, UINT msg, UINT id, DWORD now)
   if ( TimerTable )
   { Timer tm;
 
-    pceMTLock(LOCK_PCE);
+    pceMTLock();
     if ( (tm = getMemberHashTable(TimerTable, toInt(id))) )
     { if ( tm->service == ON )
       { ServiceMode(PCE_EXEC_SERVICE, do_timer_proc(tm, id));
       } else
 	do_timer_proc(tm, id);
 
-      pceMTUnlock(LOCK_PCE);
+      pceMTUnlock();
 
       return;
     }
-    pceMTUnlock(LOCK_PCE);
+    pceMTUnlock();
   }
 
   KillTimer(NULL, id);			/* Unexpected timer.  Get rid of it */

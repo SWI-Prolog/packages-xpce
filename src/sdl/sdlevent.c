@@ -564,10 +564,10 @@ ws_dispatch(IOSTREAM *input, Any timeout)
   { if ( dispatch_ready_event() )
       succeed;
 
-    if ( pceMTTryLock(LOCK_PCE) )
+    if ( pceMTTryLock() )
     { RedrawDisplayManager(TheDisplayManager());
       ws_redraw_changed_frames();
-      pceMTUnlock(LOCK_PCE);
+      pceMTUnlock();
     }
 
     if ( dispatch_ready_event() )

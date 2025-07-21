@@ -74,8 +74,8 @@
 #endif
 
 #ifdef _REENTRANT
-#define LOCK()   pceMTLock(LOCK_PCE)
-#define UNLOCK() pceMTUnlock(LOCK_PCE)
+#define LOCK()   pceMTLock()
+#define UNLOCK() pceMTUnlock()
 #else
 #define LOCK()
 #define UNLOCK()

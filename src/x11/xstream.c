@@ -121,11 +121,11 @@ static void
 ws_handle_stream_data(XtPointer xp, int *source, XtInputId *id)
 { Stream s = (Stream)xp;
 
-  pceMTLock(LOCK_PCE);
+  pceMTLock();
   assert(isProperObject(s));
   DEBUG(NAME_stream, Cprintf("handleInputStream(%s)\n", pp(s)));
   handleInputStream(s);
-  pceMTUnlock(LOCK_PCE);
+  pceMTUnlock();
 }
 
 

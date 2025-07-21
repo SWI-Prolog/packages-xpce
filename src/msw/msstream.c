@@ -236,9 +236,9 @@ static int WINAPI
 socket_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 { int rval;
 
-  pceMTLock(LOCK_PCE);
+  pceMTLock();
   rval = do_socket_wnd_proc(hwnd, message, wParam, lParam);
-  pceMTUnlock(LOCK_PCE);
+  pceMTUnlock();
 
   return rval;
 }

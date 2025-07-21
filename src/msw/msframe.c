@@ -493,7 +493,7 @@ frame_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
   assert(isProperObject(fr));
 
   if ( InSendMessage() )
-  { if ( pceMTTryLock(LOCK_PCE) )
+  { if ( pceMTTryLock() )
     { goto has_lock;
     } else
     { FrameObj fr = getObjectFromHWND(hwnd);
@@ -503,11 +503,11 @@ frame_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
       return DefWindowProc(hwnd, message, wParam, lParam);
     }
   } else
-  { pceMTLock(LOCK_PCE);
+  { pceMTLock();
   has_lock:
     ServiceMode(service_frame(fr),
 		rval = do_frame_wnd_proc(fr, hwnd, message, wParam, lParam));
-    pceMTUnlock(LOCK_PCE);
+    pceMTUnlock();
   }
 
   return rval;

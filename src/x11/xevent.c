@@ -176,9 +176,9 @@ ws_dispatch(Int FD, Any timeout)
   DEBUG(NAME_dispatch, Cprintf("Dispatch: timeout = %s, tid = %p\n",
 			       pp(timeout), (void*)tid));
 
-  if ( pceMTTryLock(LOCK_PCE) )
+  if ( pceMTTryLock() )
   { RedrawDisplayManager(TheDisplayManager());
-    pceMTUnlock(LOCK_PCE);
+    pceMTUnlock();
   }
 					/* All callbacks must be locked! */
   XtAppProcessEvent(ThePceXtAppContext,

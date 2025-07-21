@@ -386,9 +386,9 @@ window_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 { int rval;
 
   if ( InSendMessage() )
-  { if ( pceMTTryLock(LOCK_PCE) )
+  { if ( pceMTTryLock() )
     { rval = do_window_wnd_proc(hwnd, message, wParam, lParam);
-      pceMTUnlock(LOCK_PCE);
+      pceMTUnlock();
     } else
     { PceWindow sw = getObjectFromHWND(hwnd);
       DEBUG(NAME_thread,
@@ -397,9 +397,9 @@ window_wnd_proc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
       return DefWindowProc(hwnd, message, wParam, lParam);
     }
   } else
-  { pceMTLock(LOCK_PCE);
+  { pceMTLock();
     rval = do_window_wnd_proc(hwnd, message, wParam, lParam);
-    pceMTUnlock(LOCK_PCE);
+    pceMTUnlock();
   }
 
   return rval;
@@ -545,7 +545,7 @@ ws_invalidate_window(PceWindow sw, Area a)
 { int clear = FALSE;
   HWND hwnd;
 
-  pceMTLock(LOCK_PCE);
+  pceMTLock();
   hwnd = getHwndWindow(sw);
   clearing_update = FALSE;
 
@@ -567,7 +567,7 @@ ws_invalidate_window(PceWindow sw, Area a)
   } else
   { DEBUG(NAME_redraw, Cprintf("%s: hwnd %p invisible\n", pp(sw), hwnd));
   }
-  pceMTUnlock(LOCK_PCE);
+  pceMTUnlock();
 }
 
 

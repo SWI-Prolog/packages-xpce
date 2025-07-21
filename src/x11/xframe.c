@@ -709,7 +709,7 @@ service_frame(FrameObj fr)
 
 static void
 destroyFrame(Widget w, FrameObj fr, XtPointer data)
-{ pceMTLock(LOCK_PCE);
+{ pceMTLock();
   if ( fr->ws_ref )
   { unalloc(sizeof(frame_ws_ref), fr->ws_ref);
     fr->ws_ref = NULL;
@@ -717,7 +717,7 @@ destroyFrame(Widget w, FrameObj fr, XtPointer data)
 
   ServiceMode(service_frame(fr),
 	      freeObject(fr));
-  pceMTUnlock(LOCK_PCE);
+  pceMTUnlock();
 }
 
 
@@ -894,10 +894,10 @@ x_event_frame(Widget w, FrameObj fr, XEvent *event)
 static void
 xEventFrame(Widget w, FrameObj fr, XEvent *event)
 { if ( !isFreedObj(fr) )
-  { pceMTLock(LOCK_PCE);
+  { pceMTLock();
     ServiceMode(service_frame(fr),
 		x_event_frame(w, fr, event));
-    pceMTUnlock(LOCK_PCE);
+    pceMTUnlock();
   }
 }
 
@@ -906,7 +906,7 @@ static void
 expose_frame(Widget w, FrameObj fr, Region region)
 { XRectangle rect;
 
-  pceMTLock(LOCK_PCE);
+  pceMTLock();
   XClipBox(region, &rect);
   DEBUG(NAME_frame, Cprintf("expose_frame(%s, %d,%d,%d,%d)\n",
 			    pp(fr), rect.x, rect.y, rect.width, rect.height));
@@ -919,7 +919,7 @@ expose_frame(Widget w, FrameObj fr, Region region)
 		redrawFrame(fr, a);
 		considerPreserveObject(a);
 	      });
-  pceMTUnlock(LOCK_PCE);
+  pceMTUnlock();
 }
 
 
