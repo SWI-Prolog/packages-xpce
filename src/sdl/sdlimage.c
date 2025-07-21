@@ -125,7 +125,7 @@ ws_load_old_image(Image image, IOSTREAM *fd)
 }
 
 static void
-premultiply_alpha(SDL_Surface *surface)
+premultiply_alpha(SDL_Surface *surface, bool *pisbitmap)
 { if ( !SDL_LockSurface(surface) )
     return;
 
@@ -135,12 +135,19 @@ premultiply_alpha(SDL_Surface *surface)
   int height = surface->h;
   const SDL_PixelFormatDetails *format_details =
     SDL_GetPixelFormatDetails(surface->format);
+  bool isbitmap = true;
 
   for (int y = 0; y < height; y++)
   { Uint32 *row = (Uint32 *)(pixels + y * pitch);
     for (int x = 0; x < width; x++)
     { Uint8 r, g, b, a;
       SDL_GetRGBA(row[x], format_details, NULL, &r, &g, &b, &a);
+      if ( isbitmap )
+      { if ( !( ((r|g|b) == 0   && a == 255) ||
+		((r&g&b) == 255 && a == 0) ) )
+	  isbitmap = false;
+      }
+
       r = (r * a) / 255;
       g = (g * a) / 255;
       b = (b * a) / 255;
@@ -148,6 +155,7 @@ premultiply_alpha(SDL_Surface *surface)
     }
   }
 
+  *pisbitmap = isbitmap;
   SDL_UnlockSurface(surface);
 }
 
@@ -236,7 +244,8 @@ ws_load_image_file(Image image)
   { Cprintf("Failed to convert %s: %s\n", pp(image), SDL_GetError());
     fail;
   }
-  premultiply_alpha(surf1);
+  bool isbitmap = false;
+  premultiply_alpha(surf1, &isbitmap);
   cairo_surface_t *surf = cairo_image_surface_create_for_data(
     (unsigned char *)surf1->pixels,
     CAIRO_FORMAT_ARGB32,
@@ -250,7 +259,9 @@ ws_load_image_file(Image image)
   if ( !my_cairo_check_surface(final, surf) )
     fail;
 
-  assign(image, kind, NAME_pixmap);
+  if ( isbitmap )
+    DEBUG(NAME_bitmap, Cprintf("%s: bitmap\n", pp(image)));
+  assign(image, kind, isbitmap ? NAME_bitmap : NAME_pixmap);
   assign(image, depth, toInt(32));
   assign(image->size, w, toInt(surf1->w));
   assign(image->size, h, toInt(surf1->h));

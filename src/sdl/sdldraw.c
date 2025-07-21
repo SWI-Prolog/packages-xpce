@@ -1351,13 +1351,17 @@ r_op_image(Image image, int sx, int sy, int x, int y, int w, int h, Name op)
 static cairo_surface_t *
 recolor_bw_surface(cairo_surface_t* input,
 		   Colour foreground,
-		   Colour background)
+		   Colour background,
+		   bool dbg)
 { uint32_t fg, bg;
 
   ws_named_colour(foreground);
   ws_named_colour(background);
   fg = valInt(foreground->rgba);
   bg = valInt(background->rgba);
+  uint8_t bg_r = ColorRValue(bg);
+  uint8_t bg_g = ColorGValue(bg);
+  uint8_t bg_b = ColorBValue(bg);
 
   int width = cairo_image_surface_get_width(input);
   int height = cairo_image_surface_get_height(input);
@@ -1372,7 +1376,8 @@ recolor_bw_surface(cairo_surface_t* input,
   int stride = cairo_image_surface_get_stride(input) / 4;
 
   for (int y = 0; y < height; ++y)
-  { for (int x = 0; x < width; ++x)
+  { if ( dbg ) Cprintf("\ny=%d", y);
+    for (int x = 0; x < width; ++x)
     { uint32_t px = in_data[y * stride + x];
       uint8_t a = (px >> 24) & 0xFF;
       uint8_t r = (px >> 16) & 0xFF;
@@ -1381,15 +1386,23 @@ recolor_bw_surface(cairo_surface_t* input,
 
       uint32_t out_px;
 
-      if (r < 128 && g < 128 && b < 128)
+      if ( a == 0 )
+      { out_px = 0;
+      } else if ( r < 128 && g < 128 && b < 128 )
       { out_px = (fg & 0xFFFFFF) | (0xff << 24);
       } else
-      { out_px = (bg & 0xFFFFFF) | (a << 24);
+      { uint8_t r = (bg_r*a)/255; /* pre-multiply alpha */
+	uint8_t g = (bg_g*a)/255;
+	uint8_t b = (bg_b*a)/255;
+	out_px = RGBA(r,g,b,a);
       }
+
+      if ( dbg ) Cprintf(" 0x%08x->0x%08x", px, out_px);
 
       out_data[y * stride + x] = out_px;
     }
   }
+  if ( dbg ) Cprintf("\n");
 
   cairo_surface_mark_dirty(output);
   return output;
@@ -1420,12 +1433,15 @@ r_image(Image image, int sx, int sy,
   if ( image->kind == NAME_bitmap &&
        ( context.colour != BLACK_COLOUR ||
 	 context.background != WHITE_COLOUR ) )
-  { cairo_surface_t *copy = recolor_bw_surface(surface,
+  { bool dbg = false;
+    DEBUG(NAME_bitmap, dbg = true);
+    if ( dbg ) Cprintf("%s: re-colouring\n", pp(image));
+    cairo_surface_t *copy = recolor_bw_surface(surface,
 					       context.colour,
-					       context.background);
+					       context.background,
+					       dbg);
     if ( copy )
-    { DEBUG(NAME_bitmap, Cprintf("%s: re-coloured\n", pp(image)));
-      surface = copy;
+    { surface = copy;
       free_surface = true;
     }
   }
