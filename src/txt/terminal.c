@@ -109,6 +109,7 @@ static int	rlc_add_lines(RlcData b, int here, int add);
 static void	rlc_start_selection(RlcData b, int x, int y);
 static void	rlc_extend_selection(RlcData b, int x, int y);
 static void	rlc_word_selection(RlcData b, int x, int y);
+static void	rlc_line_selection(RlcData b, int x, int y);
 static bool	rlc_has_selection(RlcData b);
 static uchar_t   *rlc_selection(RlcData b);
 static void	rlc_set_selection(RlcData b, int sl, int sc, int el, int ec);
@@ -361,8 +362,14 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
   { RlcData b = ti->data;
     Int x, y;
     get_xy_event(ev, ti, ON, &x, &y);
-    if ( getMulticlickEvent(ev) == NAME_double )
+    Name multi = getMulticlickEvent(ev);
+
+    if ( multi == NAME_double )
     { rlc_word_selection(b, valInt(x), valInt(y));
+      if ( rlc_has_selection(b) )
+	rlc_copy(b, NAME_primary);
+    } else if ( multi == NAME_triple )
+    { rlc_line_selection(b, valInt(x), valInt(y));
       if ( rlc_has_selection(b) )
 	rlc_copy(b, NAME_primary);
     } else
@@ -1249,6 +1256,19 @@ rlc_word_selection(RlcData b, int x, int y)
   b->sel_unit = SEL_WORD;
 }
 
+static void
+rlc_line_selection(RlcData b, int x, int y)
+{ int l, c;
+
+  rlc_translate_mouse(b, x, y, &l, &c);
+  if ( rlc_between(b, b->first, b->last, l) )
+  { RlcTextLine tl = &b->lines[l];
+
+    rlc_set_selection(b, l, 0, l, tl->size);
+  }
+
+  b->sel_unit = SEL_LINE;
+}
 
 static void
 rlc_extend_selection(RlcData b, int x, int y)
@@ -1258,7 +1278,8 @@ rlc_extend_selection(RlcData b, int x, int y)
 
   rlc_translate_mouse(b, x, y, &l, &c);
   if ( SelLT(l, c, b->sel_org_line, b->sel_org_char) )
-  { if ( b->sel_unit == SEL_WORD )
+  {				/* Backward */
+    if ( b->sel_unit == SEL_WORD )
     { if ( rlc_between(b, b->first, b->last, l) )
       { RlcTextLine tl = &b->lines[l];
 
@@ -1274,10 +1295,13 @@ rlc_extend_selection(RlcData b, int x, int y)
 	    ;
       }
     } else if ( b->sel_unit == SEL_LINE )
+    { ec = b->width;
       c = 0;
+    }
     rlc_set_selection(b, l, c, el, ec);
   } else if ( SelLT(b->sel_org_line, b->sel_org_char, l, c) )
-  { if ( b->sel_unit == SEL_WORD )
+  {				/* forward */
+    if ( b->sel_unit == SEL_WORD )
     { if ( rlc_between(b, b->first, b->last, l) )
       { RlcTextLine tl = &b->lines[l];
 
@@ -1293,7 +1317,10 @@ rlc_extend_selection(RlcData b, int x, int y)
 	    ;
       }
     } else if ( b->sel_unit == SEL_LINE )
+    { ec = 0;
       c = b->width;
+    }
+
     rlc_set_selection(b, el, ec, l, c);
   }
 }
