@@ -111,6 +111,7 @@ static void	rlc_extend_selection(RlcData b, int x, int y);
 static void	rlc_word_selection(RlcData b, int x, int y);
 static void	rlc_line_selection(RlcData b, int x, int y);
 static bool	rlc_has_selection(RlcData b);
+static void	rlc_select_all(RlcData b);
 static uchar_t   *rlc_selection(RlcData b);
 static void	rlc_set_selection(RlcData b, int sl, int sc, int el, int ec);
 static const uchar_t *rlc_clicked_link(RlcData b, int x, int y);
@@ -480,6 +481,13 @@ hasSelectionTerminalImage(TerminalImage ti)
   return rlc_has_selection(b);
 }
 
+static status
+selectAllTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+  rlc_select_all(b);
+  succeed;
+}
+
 static StringObj
 getSelectedTerminalImage(TerminalImage ti)
 { RlcData b = ti->data;
@@ -769,6 +777,8 @@ static senddecl send_terminal_image[] =
      NAME_event, "Handle 'page-down'-key"),
   SM(NAME_hasSelection, 0, NULL, hasSelectionTerminalImage,
      NAME_selection, "True if the image has a non-empty selection"),
+  SM(NAME_selectAll, 0, NULL, selectAllTerminalImage,
+     NAME_selection, "Select all text in the buffer"),
   SM(NAME_send, 1, "text=char_array", sendTerminalImage,
      NAME_insert, "Send text to the connected process"),
   SM(NAME_insert, 1, "text=char_array", insertTerminalImage,
@@ -1325,6 +1335,10 @@ rlc_extend_selection(RlcData b, int x, int y)
   }
 }
 
+static void
+rlc_select_all(RlcData b)
+{ rlc_set_selection(b, b->first, 0, b->last, b->width);
+}
 
 static uchar_t *
 rlc_read_from_window(RlcData b, int sl, int sc, int el, int ec)

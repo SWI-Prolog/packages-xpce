@@ -857,6 +857,8 @@ static kbDef terminal[] =
   { "<page_down>",	NAME_cursorPageDown },
   { "\\C-c",		NAME_copyOrInterrupt },
   { "\\C-v",		NAME_paste },
+  { "\\C-v",		NAME_paste },
+  { "\\C-\\S-a",	NAME_selectAll },
   { NULL,		NULL }
 };
 

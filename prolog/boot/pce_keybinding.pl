@@ -106,7 +106,8 @@ binding(apple, 'emacs$fundamental',
 binding(apple, terminal,
         [ '\\C-c'     = interrupt,
           '\\s-c'     = copy,
-          '\\s-v'     = paste
+          '\\s-v'     = paste,
+          '\\s-a'     = select_all
         ]).
 binding(apple, epilog,
         [ '\\S-\\s-d' = split_horizontally,
