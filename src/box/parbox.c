@@ -353,6 +353,7 @@ getLocateEventParBox(ParBox pb, EventObj ev)
 	  answer(toInt(here));
 	}
       }
+      (void)content;
 
       fail;
     }

@@ -896,6 +896,7 @@ str_writefv(PceString s, CharArray format, int argc, const Any *argv)
   s->s_size = 0;		/* dubious */
   swritefv(put_str, s, &format->data, argc, argv);
   assert(s->s_size == len);
+  (void)len;
 
   succeed;
 }
