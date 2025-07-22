@@ -13,6 +13,12 @@
 !	as a Prolog list.  Values spanning multiple lines use \<NL> to continue
 !	on the next line
 
+! SWI-Prolog  theme.  The  default is  derived from  the SDL  function
+! SDL_GetSystemTheme().  This  causes use_module(library(theme/Theme))
+! to be loaded.  Set to `default` to stop loading a theme file.
+
+! display.theme:	dark
+
 ! Basic style for keyboard accelerators.  On Windows the default is `cua'.
 ! (Common User Access), on Unix the default is `emacs'.  On Apple, the
 ! default is `apple', which is `emacs', but giving Command-v, Command-c
@@ -124,25 +130,7 @@
 !			  symbol    := font(symbol,    roman,   12)  \
 !			]
 
-! Define the  screen resolution.  This  is normally obtained  from the
-! window  system,  but  the  returned  value  is  often  wrong.   This
-! overrules the  value.  It is either  an integer or a  size object to
-! specify different X/Y resolution.  The 227 is for a Macbook Air 13.3
-! inch.
+! Scale all fonts with a constant factor.  The value is a float 
 
-!display.dpi: 227
-
-! Scale all fonts with a constant factor.  The value is a float that is
-! here computed from the screen resolution.
-
-!font.scale: @display?dpi?width/75
-
-! Scale all  built-in images and  images loaded  from a file  with the
-! specified factor.   Default is 1  (no scaling).  Hi-res  screens may
-! typicall want to  set this to 2.  The definition  below uses scale 1
-! for screens with  a DPI <= 150  and 2 otherwise.  Scale  is a float,
-! but  typically  results  get  less pretty  when  using  non-integral
-! values.
-
-!image.scale: when(@display?dpi?width > 150, 2, 1)
+!font.scale: 1.2
 

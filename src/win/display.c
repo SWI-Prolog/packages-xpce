@@ -368,6 +368,18 @@ getSystemThemeDisplay(DisplayObj d)
   answer(ws_get_system_theme_display(d));
 }
 
+static Name
+getThemeDisplay(DisplayObj d)
+{ Name theme;
+
+  if ( (theme=getClassVariableValueObject(d, NAME_theme)) &&
+       notDefault(theme) )
+    return theme;
+
+  return getSystemThemeDisplay(d);
+}
+
+
 Size
 getDPIDisplay(DisplayObj d)
 { int rx, ry;
@@ -1345,6 +1357,8 @@ static getdecl get_display[] =
   GM(NAME_systemTheme, 0, "{light,dark}",
      NULL, getSystemThemeDisplay,
      NAME_colour, "The OS system theme"),
+  GM(NAME_theme, 0, "name", NULL, getThemeDisplay,
+     NAME_colour, "Use specified or OS theme"),
   GM(NAME_height, 0, "int", NULL, getHeightDisplay,
      NAME_dimension, "Height of the display in pixels"),
   GM(NAME_size, 0, "size", NULL, getSizeDisplay,
@@ -1395,6 +1409,8 @@ static getdecl get_display[] =
 static classvardecl rc_display[] =
 { RC(NAME_dpi, "[size|int]", "@default",
      "Screen resolution in Dots Per Inch"),
+  RC(NAME_theme, "[name]", "@default",
+     "SWI-Prolog theme library to load"),
   RC(NAME_background, "colour", "white",
      "Default background for windows"),
   RC(NAME_foreground, "colour", "black",

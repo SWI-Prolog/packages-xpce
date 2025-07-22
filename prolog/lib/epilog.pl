@@ -146,17 +146,21 @@ is_meta(init).
 
 %!  setup_theme
 %
-%   Set the theme based on `@display<-system_theme`.   This is only used
+%   Set the theme based on `@display<-theme`.   This is only used
 %   if the theme is not set using ``-Dtheme=<theme>``.
 
 setup_theme :-
     current_prolog_flag(theme, _),
     !.
 setup_theme :-
-    get(@display, system_theme, Theme),
-    exists_source(library(theme/Theme)),
+    get(@display, theme, Theme),
     !,
-    use_module(library(theme/Theme)).
+    (   exists_source(library(theme/Theme))
+    ->  use_module(library(theme/Theme))
+    ;   Theme == default
+    ->  true
+    ;   print_message(warning, error(existence_error(theme, Theme),_))
+    ).
 setup_theme.
 
 %!  fix_term
