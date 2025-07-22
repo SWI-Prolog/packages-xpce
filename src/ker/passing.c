@@ -93,6 +93,7 @@ pceMTUnlockAll(void)
   { if ( mutex.owner == GetCurrentThreadId() )
     { assert(mutex.count);
       mutex.owner = 0;
+      mutex.count = 0;
       LeaveCriticalSection(&mutex.lock);
     }
   }
@@ -212,6 +213,7 @@ pceMTUnlockAll(void)
   { if ( mutex.owner == pthread_self() )
     { assert(mutex.count);
       mutex.owner = 0;
+      mutex.count = 0;
       pthread_mutex_unlock(&(mutex.lock));
     }
   }
