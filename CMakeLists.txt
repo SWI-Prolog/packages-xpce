@@ -3,8 +3,6 @@ project(swipl-xpce)
 
 include("../cmake/PrologPackage.cmake")
 
-option(SDL    "Build with SDL backend instead of X11/MSW" ON)
-
 find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
 find_package(SDL3_image REQUIRED CONFIG)
 find_package(PkgConfig REQUIRED)
