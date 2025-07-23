@@ -42,6 +42,7 @@ COMMON(status)	makeClassMenu(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/men/menubar.c */
 COMMON(status)	makeClassMenuBar(Class class);
+COMMON(status)	currentMenuBar(MenuBar mb, PopupObj p);
 
 /* /staff/jan/src/pl/packages/xpce/src/men/menuitem.c */
 COMMON(status)	selectedMenuItem(MenuItem mi, BoolObj val);

@@ -255,18 +255,20 @@ str_one_line(PceString to, PceString from)
 }
 
 
-static void
-draw_caret(int x, int y, int w, int h, int active)
+void
+draw_caret(double x, double y, double w, double h, bool active)
 { if ( active )
-  { int cx = x + w/2;
+  { double cx = x + w/2.0;
+    Colour c = getClassVariableValueClass(ClassTextCursor, NAME_colour);
 
-    r_fillpattern(BLACK_IMAGE, NAME_foreground);
+    r_fillpattern(c, NAME_foreground);
     r_fill_triangle(cx, y, x, y+h, x+w, y+h);
   } else
-  { ipoint pts[4];
-    int cx = x + w/2;
+  { fpoint pts[4];
+    double cx = x + w/2.0;
+    Colour c = getClassVariableValueClass(ClassTextCursor, NAME_inactiveColour);
 
-    int cy = y + h/2;
+    double cy = y + h/2.0;
     int i = 0;
 
     pts[i].x = cx;  pts[i].y = y;   i++;
@@ -274,15 +276,11 @@ draw_caret(int x, int y, int w, int h, int active)
     pts[i].x = cx;  pts[i].y = y+h; i++;
     pts[i].x = x+w; pts[i].y = cy;  i++;
 
-    r_fillpattern(GREY50_IMAGE, NAME_foreground);
+    r_fillpattern(c, NAME_foreground);
     r_fill_polygon(pts, i);
   }
 }
 
-
-#ifndef OL_CURSOR_SIZE
-#define OL_CURSOR_SIZE	9
-#endif
 
 status
 repaintText(TextObj t, int x, int y, int w, int h)
@@ -360,16 +358,17 @@ repaintText(TextObj t, int x, int y, int w, int h)
     d_clip_done();
 
   if ( t->show_caret != OFF )
-  { int fh = valInt(getAscentFont(t->font));
-    int active = (t->show_caret == ON);
+  { double fh = valNum(getAscentFont(t->font));
+    bool active = (t->show_caret == ON);
     Any colour = getClassVariableValueClass(ClassTextCursor,
 					    active ? NAME_colour
 						   : NAME_inactiveColour);
     Any old = r_colour(colour);
-    int ols = dpi_scale(t, OL_CURSOR_SIZE, FALSE);
+    Int h = getClassVariableValueClass(ClassTextCursor, NAME_height);
+    double ols = h ? valNum(h) : 11;
 
-    draw_caret(valInt(t->x_caret) - ols/2 + x - b,
-	       valInt(t->y_caret) + y + fh - b - 3,
+    draw_caret(valNum(t->x_caret) - ols/2.0 + x - b,
+	       valNum(t->y_caret) + y + fh - b - 3.0,
 	       ols, ols,
 	       active);
 
@@ -596,7 +595,7 @@ get_char_pos_helper(TextObj t, PceString s, int caret, int *cx, int *cy)
     *cy += (str_lineno(s, sl)-1) * ch;
   }
 
-  lw = str_width(s, sl, caret, t->font);
+  lw = str_advance(s, sl, caret, t->font);
   w -= 2 * b;
 
   if ( t->format == NAME_left )
@@ -625,15 +624,15 @@ get_char_pos_text(TextObj t, Int chr, int *X, int *Y)
   PceString s = &t->string->data;
   int b = valInt(t->border);
 
-  if ( Wrapped(t) )
-  { LocalString(buf, s->s_iswide, Wrapped(t) ? s->s_size + MAX_WRAP_LINES : 0);
-
-    str_format(buf, s, valInt(t->margin), t->font);
-    get_char_pos_helper(t, s, caret, &cx, &cy);
-  } else if ( t->wrap == NAME_clip )
+  if ( t->wrap == NAME_clip )
   { LocalString(buf, s->s_iswide, s->s_size + 1);
 
     str_one_line(buf, s);
+    get_char_pos_helper(t, s, caret, &cx, &cy);
+  } else
+  { LocalString(buf, s->s_iswide, Wrapped(t) ? s->s_size + MAX_WRAP_LINES : s->s_size+1);
+
+    str_format(buf, s, valInt(t->margin), t->font);
     get_char_pos_helper(t, s, caret, &cx, &cy);
   }
 

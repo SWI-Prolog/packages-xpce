@@ -308,7 +308,7 @@ image_option(alt(Alt), GrBox) :-
     !,
     send(GrBox?graphical, help_message, tag, Alt).
 
-resource(noimage, image, image('16x16/pce.xpm')).
+resource(noimage, image, image('16x16/pce.png')).
 
 :- pce_global(@noimage, new(image(resource(noimage)))).
 

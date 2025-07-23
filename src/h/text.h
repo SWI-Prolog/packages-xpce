@@ -218,7 +218,7 @@ struct text_char
   Colour	colour;			/* Colour of this character */
   Any		background;		/* Background for the characters */
   intptr_t	index;			/* Index in line (relative) */
-  short		x;			/* X-position in line (pixels) */
+  float		x;			/* X-position in line (pixels) */
   unsigned char attributes;		/* Its attributes */
   unsigned	type : 2;		/* type of character */
 };
@@ -269,6 +269,22 @@ NewClass(text_image)			/* TBD: subclass of bitmap? */
   MarginFunction margin;		/* Function to fetch margins */
   RewindFunction rewind;		/* Rewind (prepare) input */
   TextScreen	map;			/* Describes the text object */
+End;
+
+NewClass(terminal_image)
+  ABSTRACT_GRAPHICAL
+  KeyBinding	bindings;		/* Key bindings */
+  FontObj	font;			/* Basic font */
+  FontObj	bold_font;		/* Boldened font */
+  Colour	background;		/* Background colour */
+  Style		selection_style;	/* Style for selected text  */
+  Vector	ansi_colours;		/* The 16 ANSI colour codes */
+  BoolObj	armed_link;		/* Hovering over link */
+  Code		link_message;		/* Handle a clicked link */
+  ScrollBar	scroll_bar;		/* Associated scrollbar */
+  Int		save_lines;		/* # saved lines */
+  SyntaxTable	syntax;			/* Word description */
+  struct rlc_data *data;		/* The buffered data */
 End;
 
 #endif /* _PCE_TXT_INCLUDED */

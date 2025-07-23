@@ -694,7 +694,7 @@ clear(Canvas, Confirm:[bool]) :->
     "Clear and reset <->file attribute"::
     (   Confirm == @on,
         \+ send(Canvas?graphicals, empty)
-    ->  send(@display, confirm, 'Clear drawing?')
+    ->  send(@display, confirm, Canvas, "PceDraw", 'Clear drawing?')
     ;   true
     ),
     send(Canvas, send_super, clear),

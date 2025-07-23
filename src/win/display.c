@@ -57,7 +57,6 @@ initialiseDisplay(DisplayObj d, Name address)
   assign(d, frames,		newObject(ClassChain, EAV));
   assign(d, inspect_handlers,	newObject(ClassChain, EAV));
   assign(d, cache,		NIL);
-  assign(d, colour_map,		DEFAULT);
   assign(d, display_manager,	dm);
   assign(d, busy_locks,		ZERO);
 
@@ -91,20 +90,6 @@ getConvertDisplay(Class class, Any obj)
 }
 
 
-static status
-attachCacheDisplay(DisplayObj d)
-{ Size sz = getClassVariableValueObject(d, NAME_graphicsCache);
-
-  if ( isDefault(sz) )
-    sz = getSizeDisplay(d);
-
-  send(d, NAME_cache, newObject(ClassImage, DEFAULT, sz->w, sz->h,
-				NAME_pixmap, EAV), EAV);
-
-  succeed;
-}
-
-
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Open a display.  If necessary, the X toolkit is initialised first and
 a context for the application is created.
@@ -119,8 +104,6 @@ openDisplay(DisplayObj d)
 { if ( ws_opened_display(d) )
     succeed;
 
-  DEBUG(NAME_display, Cprintf("Opening display %s\n", pp(d)));
-
   ws_open_display(d);			/* generate exception on failure */
   obtainClassVariablesObject(d);
   ws_foreground_display(d, d->foreground);
@@ -128,10 +111,10 @@ openDisplay(DisplayObj d)
   ws_init_graphics_display(d);
   ws_init_monitors_display(d);
 
-  BLACK_COLOUR = newObject(ClassColour, NAME_black, EAV);
-  WHITE_COLOUR = newObject(ClassColour, NAME_white, EAV);
-
-  attachCacheDisplay(d);
+  WHITE_COLOUR  = newObject(ClassColour, NAME_white,  EAV);
+  GREY25_COLOUR = newObject(ClassColour, NAME_grey25, EAV);
+  GREY50_COLOUR = newObject(ClassColour, NAME_grey50, EAV);
+  BLACK_COLOUR  = newObject(ClassColour, NAME_black,  EAV);
 
   succeed;
 }
@@ -156,14 +139,6 @@ static status
 backgroundDisplay(DisplayObj d, Colour c)
 { assign(d, background, c);
   ws_background_display(d, c);
-
-  succeed;
-}
-
-
-static status
-colourMapDisplay(DisplayObj d, ColourMap cm)
-{ assign(d, colour_map, cm);
 
   succeed;
 }
@@ -321,12 +296,17 @@ bellDisplay(DisplayObj d, Int vol)
 static int
 hasDisplay(void)
 {
-#ifndef __WINDOWS__
-  char *dsp = getenv("DISPLAY");
-  return ( dsp && dsp[0] );
-#else
+#if defined(__WINDOWS__) || defined(__APPLE__)
   return TRUE;
+#else
+  char *dsp = getenv("DISPLAY");
+  if ( dsp && dsp[0] )
+    return TRUE;
+  dsp = getenv("WAYLAND_DISPLAY");
+  if ( dsp && dsp[0] )
+    return TRUE;
 #endif
+  return FALSE;
 }
 
 Size
@@ -381,6 +361,25 @@ getVisualTypeDisplay(DisplayObj d)
   answer(ws_get_visual_type_display(d));
 }
 
+static Name
+getSystemThemeDisplay(DisplayObj d)
+{ TRY(openDisplay(d));
+
+  answer(ws_get_system_theme_display(d));
+}
+
+static Name
+getThemeDisplay(DisplayObj d)
+{ Name theme;
+
+  if ( (theme=getClassVariableValueObject(d, NAME_theme)) &&
+       notDefault(theme) )
+    return theme;
+
+  return getSystemThemeDisplay(d);
+}
+
+
 Size
 getDPIDisplay(DisplayObj d)
 { int rx, ry;
@@ -422,28 +421,13 @@ DPI(Any gr)
 
     return (int)((valInt(sz->w) + valInt(sz->h) + 1)/2);
   } else
-  { return 100;
+  { return 96;
   }
 }
 
-int
-dpi_scale(Any gr, int px, int odd)
-{ DisplayObj d = gr ? CurrentDisplay(gr) : TheDisplay;
-  double scale;
-
-  if ( d )
-  { Size sz = getDPIDisplay(d);
-
-    scale = (double)(valInt(sz->w) + valInt(sz->h)) / 200.0;
-  } else
-  { scale = 1.0;
-  }
-
-  px = (double)px*scale + 0.5;
-  if ( odd && px % 2 == 0 )
-    px++;
-
-  return px;
+double
+dpi_scale(Any gr, double px)
+{ return px;
 }
 
 static status
@@ -468,6 +452,23 @@ getPointerLocationDisplay(DisplayObj d)
   fail;
 }
 
+
+static status
+hasVisibleFramesDisplay(DisplayObj d)
+{ if ( notNil(d->frames) )
+  { Cell cell;
+
+    for_cell(cell, d->frames)
+    { FrameObj fr = cell->value;
+      if ( !onFlag(fr, F_FREED|F_FREEING) )
+      { if ( fr->status != NAME_unmapped && fr->status != NAME_hidden )
+	  succeed;
+      }
+    }
+  }
+
+  fail;
+}
 
 
 		 /*******************************
@@ -689,21 +690,7 @@ selectionOwnerDisplay(DisplayObj d, Any owner, Name selection,
 
 static status
 selectionDisplay(DisplayObj d, Name which, StringObj data)
-{ StringObj s2 = get(data, NAME_copy, EAV);
-
-  if ( s2 )
-  { lockObject(s2, ON);
-
-    return selectionOwnerDisplay(d,
-				 s2, which,
-				 newObject(ClassObtain,
-					   RECEIVER, NAME_self, EAV),
-				 newObject(ClassMessage,
-					   RECEIVER, NAME_free, EAV),
-				 NAME_text);
-  }
-
-  fail;
+{ return ws_selection_display(d, which, data);
 }
 
 
@@ -720,31 +707,10 @@ copyDisplay(DisplayObj d, StringObj data)
 
 static StringObj
 getPasteDisplay(DisplayObj d, Name which)
-{ static Name formats[] = { NAME_utf8_string,
-			    NAME_text,
-			    NAME_string,
-			    NULL
-			  };
-  StringObj s = NULL;
-  Name *fmt;
-
-  if ( isDefault(which) )
+{ if ( isDefault(which) )
     which = NAME_clipboard;
 
-  catchErrorPce(PCE, NAME_getSelection);
-  for(fmt = formats; *fmt; fmt++)
-  { if ( (s=get(d, NAME_selection, which, *fmt, EAV)) )
-      break;
-  }
-  if ( ! (*fmt) )
-    s = get(d, NAME_cutBuffer, ZERO, EAV);
-
-  catchPopPce(PCE);
-
-  if ( s )
-    answer(s);
-
-  fail;
+  return getSelectionDisplay(d, which, DEFAULT, DEFAULT);
 }
 
 
@@ -876,8 +842,9 @@ display_help(DisplayObj d, StringObj hlp, Name msg)
 
 
 status
-confirmDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv)
-{ StringObj str;
+confirmDisplay(DisplayObj d, Any client, CharArray title,
+	       CharArray fmt, int argc, Any *argv)
+{ StringObj message;
   ArgVector(av, argc+1);
   int i;
   Name button;
@@ -886,9 +853,9 @@ confirmDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv)
   for(i=0; i<argc; i++)
     av[i+1] = argv[i];
 
-  TRY(str = answerObjectv(ClassString, argc+1, av));
+  TRY(message = answerObjectv(ClassString, argc+1, av));
 
-  switch( ws_message_box(str, MBX_CONFIRM) )
+  switch( ws_message_box(client, title, (CharArray)message, MBX_CONFIRM) )
   { case MBX_OK:
       succeed;
     case MBX_CANCEL:
@@ -897,8 +864,8 @@ confirmDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv)
     { Name msg;
 
       msg = CtoName("Press LEFT button to confirm, RIGHT button to cancel");
-      TRY(button = display_help(d, str, msg));
-      doneObject(str);
+      TRY(button = display_help(d, message, msg));
+      doneObject(message);
 
       if ( button == NAME_left )
 	succeed;
@@ -910,35 +877,40 @@ confirmDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv)
 
 
 status
-informDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv)
-{ StringObj str;
+informDisplay(DisplayObj d, Any client, CharArray title,
+	      CharArray fmt, int argc, Any *argv)
+{ StringObj message;
   ArgVector(av, argc+1);
   int i;
   Name button;
+  status rc = SUCCEED;
 
   av[0] = (Any) fmt;
   for(i=0; i<argc; i++)
     av[i+1] = argv[i];
 
-  TRY(str = answerObjectv(ClassString, argc+1, av));
+  TRY(message = answerObjectv(ClassString, argc+1, av));
 
-  switch( ws_message_box(str, MBX_INFORM) )
+  switch( ws_message_box(client, title, (CharArray)message, MBX_INFORM) )
   { case MBX_NOTHANDLED:
     { Name msg;
 
       msg = CtoName("Press any button to remove message");
-      TRY(button = display_help(d, str, msg));
-      doneObject(str);
+      if ( !(button = display_help(d, message, msg)) )
+	rc = FAIL;
     }
   }
+  doneObject(message);
 
-  succeed;
+  return rc;
 }
 
 
 static status
 reportDisplay(DisplayObj d, Name kind, CharArray fmt, int argc, Any *argv)
-{ if ( kind == NAME_error || kind == NAME_inform )
+{ status rc = SUCCEED;
+
+  if ( kind == NAME_error || kind == NAME_inform )
   { ArgVector(av, argc+1);
     StringObj str;
 
@@ -948,19 +920,20 @@ reportDisplay(DisplayObj d, Name kind, CharArray fmt, int argc, Any *argv)
     if ( kind == NAME_error )
       alertReporteeVisual(d);
 
-    switch( ws_message_box(str, MBX_ERROR) )
+    switch( ws_message_box(DEFAULT, DEFAULT, (CharArray)str, MBX_ERROR) )
     { case MBX_NOTHANDLED:
       { Name msg, button;
 
 	msg = CtoName("Press any button to remove message");
-	TRY(button = display_help(d, str, msg));
-	doneObject(str);
+	if ( !(button = display_help(d, str, msg)) )
+	  rc = FAIL;
       }
     }
+    doneObject(str);
   } else if ( kind == NAME_warning )
     alertReporteeVisual(d);
 
-  succeed;
+  return rc;
 }
 
 
@@ -1171,6 +1144,12 @@ getFontAliasDisplay(DisplayObj d, Name name)
 }
 
 
+static status
+listFontsDisplay(DisplayObj d, BoolObj mono)
+{ return ws_list_fonts(d, mono);
+}
+
+
 		/********************************
 		*             VISUAL		*
 		********************************/
@@ -1202,8 +1181,8 @@ static char *T_postscript[] =
         { "landscape=[bool]", "max_area=[area]" };
 static char *T_fontAlias[] =
         { "name=name", "font=font", "force=[bool]" };
-static char *T_name_any_XXX[] =
-        { "name", "any ..." };
+static char *T_inform[] =
+        { "for=[visual]", "title=[char_array]", "message=char_array", "any ..." };
 static char *T_selectionOwner[] =
         { "owner=object*", "which=[name]", "convert=[function]",
 	  "loose=[code]",
@@ -1267,8 +1246,6 @@ static vardecl var_display[] =
      NAME_appearance, "Windows default foreground colour"),
   SV(NAME_background, "colour", IV_GET|IV_STORE, backgroundDisplay,
      NAME_appearance, "Windows default background colour"),
-  SV(NAME_colourMap, "[colour_map]*", IV_GET|IV_STORE, colourMapDisplay,
-     NAME_appearance, "Default for `frame ->colour_map'"),
   IV(NAME_wmClass, "[name]", IV_BOTH,
      NAME_appearance, "Override WM_CLASS for all X11 frames"),
   IV(NAME_quickAndDirty, "bool", IV_BOTH,
@@ -1316,19 +1293,21 @@ static senddecl send_display[] =
      NAME_font, "Create predefined fonts from family"),
   SM(NAME_loadFonts, 0, NULL, loadFontsDisplay,
      NAME_font, "Create predefined font set from defaults"),
+  SM(NAME_listFonts, 1, "[bool]", listFontsDisplay,
+     NAME_font, "List available fonts to console"),
   SM(NAME_ConfirmPressed, 1, "event", ConfirmPressedDisplay,
      NAME_internal, "Handle confirmer events"),
   SM(NAME_open, 0, NULL, openDisplay,
-     NAME_open, "Open connection to X-server and initialise"),
+     NAME_open, "Prepare display for graphics operations"),
   SM(NAME_Postscript, 1, "{head,body}", postscriptDisplay,
      NAME_postscript, "Create PostScript"),
   SM(NAME_quit, 0, NULL, quitDisplay,
      NAME_quit, "Destroy all window-system references"),
   SM(NAME_bell, 1, "volume=[int]", bellDisplay,
      NAME_report, "Ring the bell at volume"),
-  SM(NAME_confirm, 2, T_name_any_XXX, confirmDisplay,
+  SM(NAME_confirm, 4, T_inform, confirmDisplay,
      NAME_report, "Test if the user confirms string"),
-  SM(NAME_inform, 2, T_name_any_XXX, informDisplay,
+  SM(NAME_inform, 4, T_inform, informDisplay,
      NAME_report, "Inform the user of something"),
   SM(NAME_report, 3, T_report, reportDisplay,
      NAME_report, "Report message using ->inform"),
@@ -1344,7 +1323,7 @@ static senddecl send_display[] =
      NAME_selection, "Set the (textual) selection"),
   SM(NAME_copy, 1, "char_array", copyDisplay,
      NAME_selection, "Copy to selection and cut_buffer"),
-#ifndef WIN32_GRAPHICS
+#if X11_GRAPHICS
   SM(NAME_metaModifier, 1, "name", metaModifierDisplay,
      NAME_x, "Set the X modifier that is associated with META-"),
   SM(NAME_x11Threads, 1, "bool", X11ThreadsDisplay,
@@ -1353,7 +1332,9 @@ static senddecl send_display[] =
   SM(NAME_screenSaver, 1, "bool", screenSaverDisplay,
      NAME_x, "Activate (@on) or deactivate (@off) screensaver"),
   SM(NAME_dpi, 1, "size|int", DPIDisplay,
-     NAME_dimension, "Resolution in dots per inch")
+     NAME_dimension, "Resolution in dots per inch"),
+  SM(NAME_hasVisibleFrames, 0, NULL, hasVisibleFramesDisplay,
+     NAME_organisation, "True if there is at least one visible frame")
 };
 
 /* Get Methods */
@@ -1373,6 +1354,11 @@ static getdecl get_display[] =
      "{monochrome,static_grey,grey_scale,static_colour,pseudo_colour,true_colour,direct_colour}",
      NULL, getVisualTypeDisplay,
      NAME_colour, "Type of display attached"),
+  GM(NAME_systemTheme, 0, "{light,dark}",
+     NULL, getSystemThemeDisplay,
+     NAME_colour, "The OS system theme"),
+  GM(NAME_theme, 0, "name", NULL, getThemeDisplay,
+     NAME_colour, "Use specified or OS theme"),
   GM(NAME_height, 0, "int", NULL, getHeightDisplay,
      NAME_dimension, "Height of the display in pixels"),
   GM(NAME_size, 0, "size", NULL, getSizeDisplay,
@@ -1423,6 +1409,8 @@ static getdecl get_display[] =
 static classvardecl rc_display[] =
 { RC(NAME_dpi, "[size|int]", "@default",
      "Screen resolution in Dots Per Inch"),
+  RC(NAME_theme, "[name]", "@default",
+     "SWI-Prolog theme library to load"),
   RC(NAME_background, "colour", "white",
      "Default background for windows"),
   RC(NAME_foreground, "colour", "black",

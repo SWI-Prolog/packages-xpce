@@ -1,10 +1,11 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@vu.nl
-    WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2002-2013, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/packages/xpce/
+    Copyright (c)  2002-2025, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -16,7 +17,7 @@
 
     2. Redistributions in binary form must reproduce the above copyright
        notice, this list of conditions and the following disclaimer in
-       the documentation and/or other materials provided with the
+       the documentation and/or other materits provided with the
        distribution.
 
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
@@ -36,9 +37,12 @@
 :- module(pce_keybinding, []).
 :- use_module(pce_principal).
 :- use_module(pce_realise).
+:- use_module(library(lists)).
+:- use_module(library(pce_util)).
 
 :- multifile
-    binding/3.
+    binding/3,                                    % +Style, +TableName, -Bindings
+    alt_binding_function/2.                       % +Func, -AltFunc
 
 message_level(silent).
 %message_level(informational).
@@ -50,11 +54,13 @@ message_level(silent).
 
 %!  binding(+ModeName, +TableName, +Modifications)
 %
-%   Specify bindings for alternative key-binding-styles.
+%   Specify bindings for alternative key-binding-styles.   Note  that on
+%   Apple, the command key is  mapped  to   the  SDL3  GUI key, which is
+%   mapped to Emacs ``\s-`` (super).
 %
-%   @param ModeName         Name of the key-binding-style
-%   @param TableName        Syntax table to modify
-%   @param Modifications    List of Key-Method
+%   @arg ModeName         Name of the key-binding-style
+%   @arg TableName        Syntax table to modify
+%   @arg Modifications    List of Key-Method
 
 binding(cua, editor,
         [ '\\C-v' = paste,
@@ -67,15 +73,48 @@ binding(cua, 'emacs$fundamental',
           '\\C-p' = print
         ]).
 binding(apple, editor,
-        [ '\\es'  = save_buffer,
-          '\\ez'  = undo
+        [ '\\s-s'      = save_buffer,
+          '\\S-\\s-s'  = save_as,
+          '\\s-w'      = close,
+          '\\s-z'      = undo,
+          '\\s-a'      = select_all,
+          '\\s-f'      = find,
+%         '\\s-g'      = find_next,
+%         '\\S-\\s-g'  = find_previous,
+	'\\s-cursor_left'  = beginning_of_line,
+	'\\s-cursor_right' = end_of_line,
+	'\\s-cursor_up'    = point_to_top_of_file,
+	'\\s-cursor_down'  = point_to_bottom_of_file,
+          '\\s-/'	         = comment_region,
+          '\\s-['	         = undent_region, % TODO: If no region, current line
+          '\\s-]'	         = indent_region,
+          '\\s-k'	         = kill_line,
+          '\\s-t'	         = transpose_chars
         ]).
 binding(apple, 'emacs$fundamental',
-        [ '\\ec'  = copy_or_capitalize_word,
-          '\\ex'  = cut_or_execute_extended_command
+        [ '\\s-c'     = copy,
+          '\\s-x'     = cut,
+          '\\s-v'     = paste,
+
+          '\\s-0'     = font_magnify,
+          '\\s--'     = font_reduce,
+          '\\s-='     = font_default,
+
+          '\\s-n'     = new,
+          '\\s-o'     = open
         ]).
-binding(apple, emacs_page,
-        [ '\\ev'  = paste_or_scroll_down
+binding(apple, terminal,
+        [ '\\C-c'     = interrupt,
+          '\\s-c'     = copy,
+          '\\s-v'     = paste,
+          '\\s-a'     = select_all
+        ]).
+binding(apple, epilog,
+        [ '\\S-\\s-d' = split_horizontally,
+          '\\s-d'     = split_vertically,
+          '\\s-n'     = new_window,
+          '\\s-k'     = clear_screen,
+          '\\s-w'     = close
         ]).
 
 
@@ -219,6 +258,104 @@ unbind(KB, Key:name, Command:[name|code]*) :->
                              [Table, KB, Key, Command]))
     ).
 
+accelerator_label(KB, Cmd:'name|code', Accell:name) :<-
+    "Get a string to use as accelerator label in a menu"::
+    findall(KeySet,
+            ( alt_function(Cmd, Command),
+              get(KB, binding, Command, KeyChain),
+              chain_list(KeyChain, KeySet)
+            ), KeySets),
+    append(KeySets, Keys),
+    preferred_key(Keys, Key),
+    human_accelerator(Key, Accell),
+    !.
+
+alt_function(Func, Func).
+alt_function(Func, Alt) :-
+    alt_binding_function(Func, Alt).
+
+preferred_key(Keys, Key) :-             % Prefer returning Apple Command keys
+    member(Key, Keys),
+    sub_atom(Key, _, _, _, '\\s-'),
+    !.
+preferred_key(Keys, Key) :-
+    member(K, Keys),
+    select(Alt, Keys, Keys1),
+    preferred(K, Alt),
+    !,
+    preferred_key(Keys1, Key).
+preferred_key([Key|_], Key).
+
+preferred('\\C-z', '\\C-_').
+preferred(Short, Long) :-
+    atom_length(Short, ShortLen),
+    atom_length(Long, LongLen),
+    ShortLen < LongLen.
+
+%!      human_accelerator(+Key, -Human)
+%
+%       Translate XPCE key-sequences in conventional notation.  Should be
+%       part of the XPCE kernel someday.
+
+:- dynamic
+    accel_cache/2.
+
+human_accelerator(Key, Text) :-
+    accel_cache(Key, Text),
+    !.
+human_accelerator(Key, Text) :-
+    human_keys(Key, String),
+    atom_string(Text, String),
+    assert(accel_cache(Key, Text)).
+
+human_keys(Acc, String) :-
+    key_name(Key, Human),
+    sub_string(Acc, B, _, A, Key),
+    !,
+    sub_string(Acc, 0, B, _, Pre),
+    sub_string(Acc, _, A, 0, Post0),
+    capitalise_key(Post0, Post),
+    atomics_to_string([Pre,Human,Post], String0),
+    human_keys(String0, String).
+human_keys(Acc, Acc).
+
+:- if(current_prolog_flag(apple, true)).
+key_name('\\C-',     '⌃').
+key_name('\\e',      '⌥').
+key_name('\\S-\\s-', '⌘⇧').             % Get Apple ordering
+key_name('\\S-',     '⇧').
+key_name('\\s-',     '⌘').
+:- endif.
+key_name('\\C-', '\u2009Ctrl-').
+key_name('\\e',  '\u2009Alt-').
+key_name('\\S-', '\u2009Shift-').
+key_name('\\s-', '\u2009Super-').
+
+%!  capitalise_key(+Post0, -Post)
+%
+%   Given we matched  a  modifier   sequence,  capitalise  the  modified
+%   character. We must avoid capitalizing function names.
+%
+%   @tbd Eventually we probably move to Emacs function names enclosed in
+%   angle brackets.
+
+capitalise_key(S0, S) :-
+    string_length(S0, 1),
+    !,
+    string_upper(S0, S).
+capitalise_key(S0, S) :-
+    sub_string(S0, 0, 1, _, "<"),
+    !,                                  % Named function keys.  remove angled brackets?
+    S = S0.
+capitalise_key(S0, S) :-
+    sub_string(S0, 0, 1, _, Char),
+    char_type(Char, lower),
+    !,
+    string_upper(Char, Up),
+    sub_string(S0, 1, _, 0, Rest),
+    atomics_to_string([Up, '\u2009', Rest], S).
+capitalise_key(S, S).
+
 :- pce_end_class(key_binding).
 
 
@@ -265,45 +402,3 @@ make_key_binding_style_type :-
     send(Type, slot, context, Styles).
 
 :- initialization make_key_binding_style_type.
-
-
-                 /*******************************
-                 *             APPLE            *
-                 *******************************/
-
-:- pce_extend_class(editor).
-
-copy_or_capitalize_word(E, Arg:[int]) :->
-    "Command-c copies; ESC c capitalizes word"::
-    (   Arg == @default,
-        send(@event, has_modifier, m)
-    ->  send(E, copy)
-    ;   send(E, capitalize_word, Arg)
-    ).
-
-cut_or_execute_extended_command(E, Arg:[int]) :->
-    "Command-X cut; ESC-x starts extended command"::
-    (   Arg == @default,
-        send(@event, has_modifier, m)
-    ->  send(E, cut)
-    ;   send(E, noarg_call, execute_extended_command, Arg)
-    ).
-
-
-paste_or_scroll_down(E, Arg:[int]) :->
-    "Command-v pasts; ESC v scrolls down"::
-    (   Arg == @default,
-        send(@event, has_modifier, m)
-    ->  send(E, paste)
-    ;   send(E, scroll_down, Arg)
-    ).
-
-:- pce_end_class(editor).
-
-:- pce_extend_class(list_browser).
-
-paste_or_scroll_down(LB, Arg:[int]) :->
-    "Forward to ->scroll_down (Apple keybinding)"::
-    send(LB, scroll_down, Arg).
-
-:- pce_end_class(list_browser).

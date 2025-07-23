@@ -48,7 +48,7 @@
            , sformat/3
            ]).
 
-resource(help,  image, image('32x32/help.xpm')).
+resource(help,  image, image('32x32/help.png')).
 
 :- pce_global(@helper, new(helper)).
 :- pce_global(@finder, new(finder)).
@@ -136,7 +136,7 @@ buffer(Helper, Database:name, Interactive:[bool], Buffer:hlp_buffer) :<-
             ->  send(@display, inform,
                      'No help available for "%s"', Database),
                 fail
-            ;   send(@display, confirm,
+            ;   send(@display, confirm, Helper, @default,
                      'No help-database "%s"\n\nCreate it?', Database),
                 new(Buffer, hlp_buffer),
                 send(Buffer, file, File)
@@ -841,7 +841,7 @@ delete_fragment(E) :->
         Fragments),
     send(Fragments, sort, ?(@arg1?length, compare, @arg1?length)),
     get(Fragments, find,
-        and(message(E?display, confirm,
+        and(message(E?display, confirm, E, "XPCE Manual",
                     'Delete %s fragment', @arg1?style)),
         F),
     free(F).
@@ -862,7 +862,8 @@ what_fragments(E) :->
          message(S, append,
                  create(string, '"%s" fragment "%s" holding "%s"\n',
                         @arg1?style, @arg1?label, @arg1?string))),
-    send(@display, inform, 'Fragments around point:\n\n%s', S).
+    send(@display, inform, E, "XPCE Manual",
+         'Fragments around point:\n\n%s', S).
 
 
                  /*******************************
@@ -918,7 +919,8 @@ save_if_modified(E) :->
     "Save to current file if modified"::
     (   get(E, modified, @off)
     ->  true
-    ;   send(@display, confirm, 'Save help-file "%s"?', E?file?name),
+    ;   send(@display, confirm, E, "XPCE Manual",
+             'Save help-file "%s"?', E?file?name),
         send(E, save)
     ).
 

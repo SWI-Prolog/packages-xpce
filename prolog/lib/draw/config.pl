@@ -72,7 +72,7 @@ config(edit/auto_align,
          comment(['Startup default for `Settings/Auto Align'': ',
                   'Automatically align new and modified objects']),
          default(true),
-         icon('16x16/valign.xpm')
+         icon('16x16/valign.png')
        ]).
 config(resources/default_font,
        [ type(font),
@@ -93,10 +93,6 @@ config(resources/fill_palette,
        [ type(setof(image)),
          comment('Images used for filling'),
          default([ @white_image,
-                   @grey12_image,
-                   @grey25_image,
-                   @grey50_image,
-                   @grey75_image,
                    @black_image
                  ])
        ]).
@@ -178,8 +174,8 @@ config(history/geometry/attributes,
          editable(false)
        ]).
 
-resource(arrows,        image, image('16x16/arrows.bm')).
-resource(fillpattern,   image, image('16x16/fillpattern.bm')).
+resource(arrows,        image, image('16x16/arrows.png')).
+resource(fillpattern,   image, image('16x16/fillpattern.png')).
 
 :- register_config_type(arrow,          [ editor(arrow_item),
                                           term([ length,

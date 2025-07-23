@@ -80,7 +80,7 @@ variable(icon_label_text,text,  get, "Text for iconic representation").
 resource(label_font,    font,   '@helvetica_bold_14').
 resource(pen,           int,    '3').
 resource(cursor,        cursor, 'hand2').
-resource(icon,          bitmap, 'pce.bm').
+resource(icon,          bitmap, 'pce.png').
 
 initialise(F, Label:char_array) :->
     "Create from Label"::
@@ -210,7 +210,7 @@ open(F, W:device, Pos:[point]) :->
 
 button(F, Op:'name|code', Image:[image], Place:[{left,right}]) :->
     "Attach a button to the titlebar"::
-    default(Image, ?(Op, append, '.bm'), Img),
+    default(Image, ?(Op, append, '.png'), Img),
 
     new(Image16, image(@nil, 18, 18)),
     new(Bm, bitmap(Img)),
@@ -302,21 +302,21 @@ test :-
     send_list(@b, append, [aap, noot, mies]),
 
     new(@f, subframe('Hello')),
-    send(@f, button, iconify, 'iconify.bm', left),
-    send(@f, button, destroy, 'delete.bm', left),
-    send(@f, button, resize, 'resize.bm', right),
+    send(@f, button, iconify, 'iconify.png', left),
+    send(@f, button, destroy, 'delete.png', left),
+    send(@f, button, resize, 'resize.png', right),
 
     send(@f, append, @p2),
     send(@f, open, @p, point(50,50)),
 
-    send(@p2, display, new(B, bitmap('pce.bm'))),
+    send(@p2, display, new(B, bitmap('pce.png'))),
     send(B, recogniser, new(move_gesture)),
 
     new(@f2, subframe('I am small')),
     send(@f2, append, new(@p3, picture)),
 
-    send(@f2, button, iconify, 'iconify.bm', left),
-    send(@f2, button, destroy, 'delete.bm', left),
-    send(@f2, button, resize, 'resize.bm', right),
+    send(@f2, button, iconify, 'iconify.png', left),
+    send(@f2, button, destroy, 'delete.png', left),
+    send(@f2, button, resize, 'resize.png', right),
 
     send(@f2, open, @p, point(200, 200)).

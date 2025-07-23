@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -34,6 +35,7 @@
 
 #ifndef _XPCE_INTERFACE_H_INCLUDED
 #define _XPCE_INTERFACE_H_INCLUDED
+#include <stdbool.h>
 
 
 		/********************************
@@ -41,7 +43,7 @@
 		********************************/
 
 #ifndef PCE_VERSION
-#define PCE_VERSION "6.6.66, July 2009"
+#define PCE_VERSION "7.0.0, June 2025"
 #endif
 
 #ifndef OS_VERSION
@@ -80,9 +82,8 @@ typedef void *		PceType;	/* PCE's view of a type */
 typedef void *		PceClass;	/* PCE's view of a class */
 typedef void *		PceHostData;	/* PCE's view of a host data handle */
 
-#define INT_MASK_SHIFT	1
-#define PCE_MAX_INT	((intptr_t)(((uintptr_t)1<<(sizeof(void*)*8 - INT_MASK_SHIFT-1))-1))
-#define PCE_MIN_INT	(-(PCE_MAX_INT-1))
+#define PCE_MAX_INT		((intptr_t)1<<51)
+#define PCE_MIN_INT		(-PCE_MAX_INT)
 
 typedef intptr_t	AnswerMark;	/* Mark on AnswerStack */
 
@@ -301,16 +302,14 @@ __pce_export int	pceEnumElements(PceObject collection,
 		 *    MULTI-THREADING SUPPORT	*
 		 *******************************/
 
-#define LOCK_PCE	0
-
-__pce_export int	pceMTinit(void);
-__pce_export void	pceMTLock(int lock);
-__pce_export void	pceMTUnlock(int lock);
-__pce_export int	pceMTTryLock(int lock);
-__pce_export int	pceMTdetach(void);
-#ifdef __WINDOWS__
-__pce_export unsigned	setPceThread(unsigned id);
-#endif
+__pce_export bool pceMTinit(void);
+__pce_export void pceMTLock(void);
+__pce_export void pceMTUnlock(void);
+__pce_export bool pceMTTryLock(void);
+__pce_export bool pceMTdetach(void);
+__pce_export int  pceMTUnlockAll(void);
+__pce_export void pceMTRelock(int count);
+__pce_export bool setPceThread(const char *app_name);
 
 		/********************************
 		*          PCE CALLING C	*
@@ -443,6 +442,15 @@ __pce_export void	pceRedraw(int);
 				/* context is an XtAppContext pointer */
 __pce_export void *     pceXtAppContext(void * context);
 
+
+		 /*******************************
+		 *           TERMINAL           *
+		 *******************************/
+
+__pce_export bool	getPrologStreamTerminalImage(PceObject obj,
+						     IOSTREAM **in,
+						     IOSTREAM **out,
+						     IOSTREAM **error);
 
 		/********************************
 		*       DEBUGGER INTERFACE	*

@@ -70,7 +70,7 @@ static status
 radiusBox(Box b, Int r)
 { if (r != b->radius)
   { CHANGING_GRAPHICAL(b, assign(b, radius, r);
-		          changedEntireImageGraphical(b));
+			  changedEntireImageGraphical(b));
   }
 
   succeed;
@@ -93,7 +93,7 @@ static vardecl var_box[] =
      NAME_appearance, "Rounding radius for corners"),
   SV(NAME_shadow, "int", IV_GET|IV_STORE, shadowGraphical,
      NAME_appearance, "Shadow at bottom-right of box"),
-  SV(NAME_fillPattern, "image|colour*", IV_GET|IV_STORE, fillPatternGraphical,
+  SV(NAME_fillPattern, TYPE_FILL, IV_GET|IV_STORE, fillPatternGraphical,
      NAME_appearance, "Fill pattern for internals"),
   SV(NAME_fillOffset, "point*", IV_GET|IV_STORE, fillOffsetGraphical,
      NAME_appearance, "Offset for using <-fill_pattern")

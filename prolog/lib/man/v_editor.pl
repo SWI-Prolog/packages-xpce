@@ -86,14 +86,10 @@ class_variable(title_font,   font,   bold,   "Font for titles").
 class_variable(section_font, font,   huge,   "Font for sections").
 class_variable(tag_font,     font,   italic, "Font for tags").
 class_variable(code_font,    font,   fixed,  "Font for code att").
-class_variable(jump_style,   style,  when(@colour_display,
-                                          style(colour := dark_green,
-                                                underline := @on),
-                                          style(font := bold)),
+class_variable(jump_style,   style,  style(colour := dark_green,
+                                           underline := @on),
                "Style for `jump' fragment").
-class_variable(search_style, style,  when(@colour_display,
-                                          style(background := green),
-                                          style(highlight := @on))).
+class_variable(search_style, style,  style(background := green)).
 class_variable(size,         size,   size(80,15), "Size in chars").
 
 initialise(E) :->

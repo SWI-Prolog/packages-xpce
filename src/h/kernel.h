@@ -49,6 +49,7 @@
 
 #define O_NOX11RESOURCES 1		/* use own resource parser */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -130,8 +131,8 @@ generate warnings on accidental use of them.
 #define METHOD_MAX_ARGS		16	/* maximum # args for C-method */
 #define FWD_PCE_MAX_ARGS	10	/* @arg1 ... @arg10 */
 #define SCAN_MAX_ARGS		32	/* scanstr maximum arguments */
-#define PCE_MAX_INT		((intptr_t)(((intptr_t)1<<(sizeof(Any)*8 - TAG_BITS-1))-1))
-#define PCE_MIN_INT		(-(PCE_MAX_INT-1))
+#define PCE_MAX_INT		((intptr_t)1<<51)
+#define PCE_MIN_INT		(-PCE_MAX_INT)
 #ifndef INT_MAX
 #define INT_MAX			((int)(((unsigned int)1<<(sizeof(int)*8-1))-1))
 #define INT_MIN			(-(INT_MIN)-1)
@@ -377,9 +378,38 @@ test, conversion and computation macro's are provided.
 #define max(a, b)	((a) > (b) ? (a) : (b))
 #define min(a, b)	((a) < (b) ? (a) : (b))
 
+typedef union
+{ double d;
+  uintptr_t u;
+  intptr_t i;
+  Int I;
+} cvt_double;
+
+static inline Int
+toNum(double v)
+{ cvt_double c = {.d = v};
+  Int i = (Int)(c.u|INT_MASK);
+  return i;
+}
+
+static double
+valNum(Int i)
+{ cvt_double c = {.I = i};
+  c.u &= ~INT_MASK;
+  return c.d;
+}
+
+static inline intptr_t
+valInt(Int i)
+{ return (intptr_t)valNum(i);
+}
+
+static inline Int
+toInt(intptr_t i)
+{ return toNum((double)i);
+}
+
 #define isInteger(i)	((uintptr_t)(i) & INT_MASK)
-#define toInt(i)	((Int)(((uintptr_t)(i)<<TAG_BITS)|INT_MASK))
-#define valInt(i)	(((intptr_t)(i))>>TAG_BITS)
 #define incrInt(i)	((i) = toInt(valInt(i)+1))
 #define decrInt(i)	((i) = toInt(valInt(i)-1))
 #define addInt(i, j)	((i) = toInt(valInt(i) + valInt(j)))
@@ -398,9 +428,8 @@ test, conversion and computation macro's are provided.
 #define dif(i, j)	(toInt((valInt(i) - valInt(j)/2)))
 #define inc(i)		(toInt(valInt(i) + 1))
 #define dec(i)		(toInt(valInt(i) - 1))
-#define minInt(i)	(toInt(-valInt(i)))
 
-#define ZERO		toInt(0)	/* PCE Int 0 */
+#define ZERO		((Int)(uintptr_t)1)
 #define ONE		toInt(1)	/* PCE Int 1 */
 #define TWO		toInt(2)	/* PCE Int 2 */
 
@@ -1052,6 +1081,7 @@ NewClass(modifier)
   Name		shift;			/* {up,down,@default} */
   Name		control;		/* {up,down,@default} */
   Name		meta;			/* {up,down,@default} */
+  Name		gui;			/* {up,down,@default} */
 End;
 
 
@@ -1158,9 +1188,10 @@ NewClass(pce)
   Name		version;		/* Version number of PCE */
   Name		machine;		/* Architecture */
   Name		operating_system;	/* Name of operating system*/
-  Name		window_system;		/* X or windows */
-  Int		window_system_version;	/* Version of Xt library used */
-  Int		window_system_revision;	/* Revision of Xt library used */
+  Name		window_system;		/* x11, windows or sdl */
+  Int		window_system_version;	/* Major version of window system */
+  Int		window_system_revision;	/* Minor version of window_system */
+  Name		window_system_driver;	/* Backend driver */
   Chain		features;		/* Installed features */
 End;
 
@@ -1276,7 +1307,8 @@ NewClass(constant)			/* @nil, @default */
   ABSTRACT_CONSTANT
 End;
 
-NewClass(bool)				/* @on, @off */
+NewClass(boolean)
+/* @on, @off */
   ABSTRACT_CONSTANT
 End;
 
@@ -1621,13 +1653,13 @@ GLOBAL Host	HOST;			/* the one and only Host object */
 GLOBAL status	(*DispatchEvents)(IOSTREAM*, int); /* Dispatch function */
 GLOBAL int	changedLevel;		/* Change forwarding levels */
 GLOBAL HashTable ErrorTable;		/* @error_database */
-GLOBAL int	XPCE_mt;		/* we are multi-threaded */
+GLOBAL bool	XPCE_mt;			/* we are multi-threaded */
 
 GLOBAL struct constant ConstantNil;	/* MUST be first! */
 GLOBAL struct constant ConstantDefault;
 GLOBAL struct constant ConstantClassDefault;
-GLOBAL struct bool     BoolOn;
-GLOBAL struct bool     BoolOff;
+GLOBAL struct boolean  BoolOn;
+GLOBAL struct boolean  BoolOff;
 
 GLOBAL Var	RECEIVER;		/* @receiver */
 GLOBAL Var	RECEIVER_CLASS;		/* @receiver_class */

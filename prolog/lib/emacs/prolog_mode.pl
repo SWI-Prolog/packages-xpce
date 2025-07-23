@@ -99,8 +99,8 @@
 
 :- autoload(library(pldoc/doc_process), [comment_modes/2]).
 
-resource(mode_pl_icon, image, image('32x32/doc_pl.xpm')).
-resource(breakpoint,   image, image('16x16/stop.xpm')).
+resource(mode_pl_icon, image, image('32x32/doc_pl.png')).
+resource(breakpoint,   image, image('16x16/stop.png')).
 
 :- emacs_begin_mode(prolog, language,
                     "Mode for editing XPCE/Prolog sources",
@@ -168,7 +168,7 @@ resource(breakpoint,   image, image('16x16/stop.xpm')).
           prolog_navigator             = button(browse) + key('\\C-c\\C-n'),
 
           colourise_or_recenter        = key('\\C-l'),
-          colourise_buffer             = key(key_top_5)
+          colourise_buffer             = key('<f5>')
         ],
                                         % SYNTAX TABLE
         [ ($)  = symbol,

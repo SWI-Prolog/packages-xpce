@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        wielemak@science.uva.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2011-2024, University of Amsterdam
+    Copyright (c)  2011-2025, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -74,8 +74,8 @@
 #endif
 
 #ifdef _REENTRANT
-#define LOCK()   pceMTLock(LOCK_PCE)
-#define UNLOCK() pceMTUnlock(LOCK_PCE)
+#define LOCK()   pceMTLock()
+#define UNLOCK() pceMTUnlock()
 #else
 #define LOCK()
 #define UNLOCK()
@@ -185,6 +185,9 @@ static foreign_t	pl_object2(term_t ref, term_t description);
 static foreign_t	pl_pce_method_implementation(term_t id, term_t msg);
 static foreign_t	pl_pce_open(term_t t, term_t mode, term_t plhandle);
 static foreign_t	pl_pce_postscript_stream(term_t ps);
+static foreign_t	pl_pce_dispatch_event(term_t Fd, term_t timeout);
+static foreign_t	pl_pce_open_terminal_image(term_t ti, term_t in,
+						   term_t out, term_t err);
 
 extern install_t	install_pcecall(void);
 
@@ -564,13 +567,8 @@ static PL_dispatch_hook_t	old_dispatch_hook;
 #define DebugMode		(pceExecuteMode() == PCE_EXEC_USER \
 					? PL_Q_NORMAL : PL_Q_NODEBUG)
 
-#if defined(__WINDOWS__)
-#define PROLOG_INSTALL_DISPATCH_FUNCTION(f) {}
-#else
 #define PROLOG_INSTALL_DISPATCH_FUNCTION(f) \
 	(old_dispatch_hook = PL_dispatch_hook(f))
-#endif
-
 #define PROLOG_INSTALL_RESET_FUNCTION(f) \
 				{ PL_abort_hook(f); }
 
@@ -578,7 +576,7 @@ static PL_dispatch_hook_t	old_dispatch_hook;
 #define PROLOG_DISPATCH_TIMEOUT PL_DISPATCH_TIMEOUT
 
 static void
-initHostConstants()
+initHostConstants(void)
 { FUNCTOR_behaviour1        = PL_new_functor(ATOM_behaviour, 1);
   FUNCTOR_error2	    = PL_new_functor(ATOM_error, 2);
   FUNCTOR_existence_error2  = PL_new_functor(ATOM_existence_error, 2);
@@ -691,9 +689,13 @@ install_pl2xpce(void)
 		      pl_pce_open, 0);
   PL_register_foreign("pce_postscript_stream", 1,
 		      pl_pce_postscript_stream, 0);
+  PL_register_foreign("pce_dispatch", 2,
+		      pl_pce_dispatch_event, 0);
+  PL_register_foreign("pce_open_terminal_image", 4,
+		      pl_pce_open_terminal_image, 0);
 
 #ifndef __WINDOWS__
-  PL_license("lgplv2+", "xpce (drag&drop library by Paul Sheer)");
+  PL_license("lgplv2+", "xpce (pango library)");
 #endif
 
   install_pcecall();
@@ -2349,9 +2351,11 @@ PrologSend(PceObject prolog, PceObject sel, int argc, PceObject *argv)
     for(i=0; i<argc; i++)
       put_object(terms+i, argv[i]);
 
+    int locks = pceMTUnlockAll();
     qid  = PL_open_query(m, DebugMode|PL_Q_PASS_EXCEPTION, pred, terms);
     rval = PL_next_solution(qid);
     PL_cut_query(qid);
+    pceMTRelock(locks);
   } else
   { if ( argc > 0 )
       rval = FALSE;			/* TBD */
@@ -2416,9 +2420,11 @@ PrologGet(PceObject prolog, PceObject sel, int argc, PceObject *argv)
     }
   }
 
+  int locks = pceMTUnlockAll();
   qid  = PL_open_query(m, DebugMode, pred, terms);
   rval = PL_next_solution(qid);
   PL_cut_query(qid);
+  pceMTRelock(locks);
   if ( rval )
     obj = termToObject(terms+argc, NULL, NULLATOM, FALSE);
   else
@@ -2640,6 +2646,7 @@ PrologCall(PceGoal goal)
 	   !put_object(av+2, goal->receiver) )
 	goto error;
 
+      int locks = pceMTUnlockAll();
       if ( goal->flags & PCE_GF_SEND )
       { rval = PL_call_predicate(MODULE_user, DebugMode|PL_Q_PASS_EXCEPTION,
 				 PREDICATE_send_implementation, av);
@@ -2653,6 +2660,7 @@ PrologCall(PceGoal goal)
 	  }
 	}
       }
+      pceMTRelock(locks);
 
       term_t ex;
       if ( !rval && (ex=PL_exception(0)) )
@@ -2831,6 +2839,45 @@ pl_pce_postscript_stream(term_t ps)
   return FALSE;
 }
 
+static foreign_t
+pl_pce_dispatch_event(term_t Fd, term_t timeout)
+{ double tmo;
+  IOSTREAM *fd;
+  int i;
+
+  if ( !PL_get_float_ex(timeout, &tmo) )
+    return false;
+  if ( PL_get_integer(Fd, &i) && i == -1 )
+    fd = NULL;
+  else if ( !PL_get_stream(Fd, &fd, SIO_INPUT) )
+    return false;
+
+  pceDispatch(fd, tmo*1000.0);
+  return true;
+}
+
+static foreign_t
+pl_pce_open_terminal_image(term_t ti,
+			   term_t in, term_t out, term_t err)
+{ PceObject obj;
+  if ( (obj = termToReceiver(ti)) )
+  { IOSTREAM *i, *o, *e;
+
+    if ( getPrologStreamTerminalImage(obj, &i, &o, &e) )
+    { if ( PL_unify_stream(in, i) &&
+	   PL_unify_stream(out, o) &&
+	   PL_unify_stream(err, e) )
+	return true;
+
+      Sclose(i);
+      Sclose(o);
+      Sclose(e);
+    }
+  }
+
+  return false;
+}
+
 #endif /*SWI*/
 
 		 /*******************************
@@ -2849,7 +2896,6 @@ better solution for signal handling is to be searched for (also avoiding
 the possibility of reentrance at moments this is not allowed in PCE ...
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#ifndef __WINDOWS__
 #ifndef PROLOG_DISPATCH_INPUT
 #define PROLOG_DISPATCH_INPUT 1
 #define PROLOG_DISPATCH_TIMEOUT 0
@@ -2866,7 +2912,6 @@ pce_dispatch(IOSTREAM *fd)
 
   return PROLOG_DISPATCH_TIMEOUT;
 }
-#endif /*__WINDOWS__*/
 
 #ifdef SICSTUS
 
@@ -3023,30 +3068,44 @@ PrologQuery(int what, PceCValue *value)
 		 *	    CONSOLE I/O		*
 		 *******************************/
 
-#define XPCE_OUTPUT Suser_output	/* log in current console */
-#define XPCE_INPUT Suser_input
+static IOSTREAM *
+XPCE_OUTPUT(void)
+{ IOSTREAM *s = Suser_output;
+  if ( !s )
+    s = Soutput;
+  return s;
+}
+
+static IOSTREAM *
+XPCE_INPUT(void)
+{ IOSTREAM *s = Suser_input;
+  if ( !s )
+    s = Sinput;
+  return s;
+}
+
 
 void
 pl_Cvprintf(const char *fmt, va_list args)
-{ Svfprintf(XPCE_OUTPUT, fmt, args);
+{ Svfprintf(XPCE_OUTPUT(), fmt, args);
 }
 
 
 static int
 pl_Cputchar(int c)
-{ return Sputcode(c, XPCE_OUTPUT);
+{ return Sputcode(c, XPCE_OUTPUT());
 }
 
 
 static void
 pl_Cflush(void)
-{ Sflush(XPCE_OUTPUT);
+{ Sflush(XPCE_OUTPUT());
 }
 
 
 static char *
 pl_Cgetline(char *buf, int size)
-{ return Sfgets(buf, size, XPCE_INPUT);
+{ return Sfgets(buf, size, XPCE_INPUT());
 }
 
 

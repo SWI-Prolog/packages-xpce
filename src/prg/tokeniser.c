@@ -478,7 +478,7 @@ getTokenTokeniser(Tokeniser t)
 	  fail;
 	}
       }
-      return toInt((int)((double)DPI(NULL) * d/25.4 + 0.5));
+      return toNum(96.0 * d/25.4); /* logical coordinates */
     } else
     { UNGETC(t, c);
     }

@@ -46,61 +46,89 @@
 #ifdef USE_WIN32_CRITICAL_SECTION
 #define HAS_LOCK 1
 
-static CRITICAL_SECTION mutex;
-int lock_count;
-DWORD lock_owner;
+typedef struct _mutex_t
+{ DWORD			owner;
+  int			count;
+  CRITICAL_SECTION	lock;
+} recursive_mutex_t;
+
+static recursive_mutex_t mutex = {0};
+bool
+pceMTTryLock(void)
+{ if ( XPCE_mt )
+  { if ( TryEnterCriticalSection(&mutex.lock) )	/* NT 4 and later! */
+    { if ( mutex.count++ == 0 )
+	mutex.owner = GetCurrentThreadId();
+      return true;
+    } else
+      return false;
+  }
+
+  return true;
+}
+
+static inline void
+LOCK(void)
+{ if ( XPCE_mt )
+  { EnterCriticalSection(&mutex.lock);
+    if ( mutex.count++ == 0 )
+      mutex.owner = GetCurrentThreadId();
+  }
+}
+
+static inline void
+UNLOCK(void)
+{ if ( XPCE_mt )
+  { if ( --mutex.count == 0 )
+      mutex.owner = 0;
+    LeaveCriticalSection(&mutex.lock);
+  }
+}
 
 int
-pceMTTryLock(int lock)
-{ if ( XPCE_mt == TRUE )
-  { if ( TryEnterCriticalSection(&mutex) )	/* NT 4 and later! */
-    { if ( lock_count++ == 0 )
-	lock_owner = GetCurrentThreadId();
-      return TRUE;
-    } else
-      return FALSE;
+pceMTUnlockAll(void)
+{ int rc = mutex.count;
+
+  if ( XPCE_mt )
+  { if ( mutex.owner == GetCurrentThreadId() )
+    { assert(mutex.count);
+      mutex.owner = 0;
+      mutex.count = 0;
+      LeaveCriticalSection(&mutex.lock);
+    }
   }
 
-  return TRUE;
+  return rc;
 }
 
-static inline void
-LOCK()
-{ if ( XPCE_mt == TRUE )
-  { EnterCriticalSection(&mutex);
-    if ( lock_count++ == 0 )
-      lock_owner = GetCurrentThreadId();
+void
+pceMTRelock(int count)
+{ if ( XPCE_mt && count )
+  { LOCK();
+    mutex.count = count;
   }
 }
 
-static inline void
-UNLOCK()
-{ if ( XPCE_mt == TRUE )
-  { if ( --lock_count == 0 )
-      lock_owner = 0;
-    LeaveCriticalSection(&mutex);
-  }
-}
 
 #define Code SWI_Code
 #include <SWI-Prolog.h>
 static foreign_t
 pce_lock_owner(term_t owner, term_t count)
-{ if ( PL_unify_integer(owner, lock_owner) &&
-       PL_unify_integer(count, lock_count) )
-    return TRUE;
+{ if ( PL_unify_integer(owner, mutex.owner) &&
+       PL_unify_integer(count, mutex.count) )
+    return true;
 
-  return FALSE;
+  return false;
 }
 
-int
-pceMTinit()
-{ InitializeCriticalSection(&mutex);
-  XPCE_mt = TRUE;
+bool
+pceMTinit(void)
+{ InitializeCriticalSection(&mutex.lock);
+  XPCE_mt = true;
 
   PL_register_foreign("pce_lock_owner", 2, pce_lock_owner, 0);
 
-  succeed;
+  return true;
 }
 
 #endif /*USE_WIN32_CRITICAL_SECTION*/
@@ -113,27 +141,6 @@ pceMTinit()
 #include <pthread.h>
 #undef var
 
-#ifdef PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP
-
-static pthread_mutex_t mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
-
-#define LOCK() \
-	if ( XPCE_mt ) pthread_mutex_lock(&mutex)
-#define UNLOCK() \
-	if ( XPCE_mt ) pthread_mutex_unlock(&mutex)
-
-int
-pceMTTryLock(int lock)
-{ if ( XPCE_mt == TRUE )
-  { if ( pthread_mutex_trylock(&mutex) != 0 )
-      return FALSE;
-  }
-
-  return TRUE;
-}
-
-#else /*PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP*/
-
 typedef struct _mutex_t
 { pthread_t		owner;
   int			count;
@@ -145,7 +152,7 @@ typedef struct _mutex_t
 static recursive_mutex_t mutex = RECURSIVE_MUTEX_INIT;
 
 static inline void
-LOCK()
+LOCK(void)
 { if ( XPCE_mt )
   { if ( mutex.owner != pthread_self() )
     { pthread_mutex_lock(&(mutex.lock));
@@ -158,7 +165,7 @@ LOCK()
 
 
 static inline void
-UNLOCK()
+UNLOCK(void)
 { if ( XPCE_mt )
   { if ( mutex.owner == pthread_self() )
     { if ( --mutex.count < 1 )
@@ -171,12 +178,12 @@ UNLOCK()
 }
 
 
-int
-pceMTTryLock(int lock)
+bool
+pceMTTryLock(void)
 { if ( XPCE_mt )
   { if ( mutex.owner != pthread_self() )
     { if ( pthread_mutex_trylock(&(mutex.lock)) != 0 )
-	return FALSE;
+	return false;
 
       mutex.owner = pthread_self();
       mutex.count = 1;
@@ -184,16 +191,42 @@ pceMTTryLock(int lock)
       mutex.count++;
   }
 
-  return TRUE;
+  return true;
 }
 
-#endif /*PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP*/
+bool
+pceMTinit(void)
+{ XPCE_mt = TRUE;
+  return true;
+}
+
+/**
+ * Unlock/relock when we do a callback to Prolog.  This provides
+ * similar multi-threading as using the Python GIL.
+ */
 
 int
-pceMTinit()
-{ XPCE_mt = TRUE;
+pceMTUnlockAll(void)
+{ int rc = mutex.count;
 
-  succeed;
+  if ( XPCE_mt )
+  { if ( mutex.owner == pthread_self() )
+    { assert(mutex.count);
+      mutex.owner = 0;
+      mutex.count = 0;
+      pthread_mutex_unlock(&(mutex.lock));
+    }
+  }
+
+  return rc;
+}
+
+void
+pceMTRelock(int count)
+{ if ( XPCE_mt && count )
+  { LOCK();
+    mutex.count = count;
+  }
 }
 
 #endif /*_REENTRANT*/
@@ -204,7 +237,7 @@ pceMTinit()
 #define UNLOCK()
 
 int					/* signal we can't do this */
-pceMTinit()
+pceMTinit(void)
 { fail;
 }
 
@@ -216,12 +249,12 @@ pceMTTryLock(int lock)
 #endif
 
 void
-pceMTLock(int lock)
+pceMTLock()
 { LOCK();
 }
 
 void
-pceMTUnlock(int lock)
+pceMTUnlock()
 { UNLOCK();
 }
 
@@ -1558,5 +1591,3 @@ resolveGetMethodObject(Any obj, Class class, Name sel, Any *receiver)
 
   fail;
 }
-
-

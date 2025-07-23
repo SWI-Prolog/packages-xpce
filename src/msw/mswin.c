@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1995-2022, University of Amsterdam
+    Copyright (c)  1995-2025, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -35,7 +35,8 @@
 
 #define UNICODE 1
 #define _UNICODE 1
-#include "include.h"
+#define PceHInstance ThePceHInstance
+#include <h/kernel.h>
 #include "mswin.h"
 #include <h/interface.h>
 #include <tchar.h>
@@ -72,6 +73,7 @@ DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
 }
 
 
+#if NOSTUB
 int
 pceMTdetach(void)
 {
@@ -89,18 +91,7 @@ pceMTdetach(void)
 
   return TRUE;
 }
-
-
-unsigned					/* interface.h cannot depend */
-setPceThread(unsigned id)			/* on DWORD due to conflicts */
-{ DWORD old = ThePceThread;
-
-  assert(sizeof(unsigned) == sizeof(DWORD));
-
-  ThePceThread = id;
-
-  return old;
-}
+#endif
 
 
 		 /*******************************
@@ -111,6 +102,7 @@ setPceThread(unsigned id)			/* on DWORD due to conflicts */
 Get Windows Version/Revision info
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+#if NOSTUB
 int
 ws_version(void)
 { DWORD dwv = GetVersion();
@@ -125,7 +117,7 @@ ws_revision(void)
 
   return HIBYTE(LOWORD(dwv));
 }
-
+#endif
 
 os_platform
 ws_platform(void)
@@ -197,6 +189,7 @@ HostConsoleHWND()
 }
 
 
+#if NOSTUB
 status
 ws_show_console(Name how)
 { HWND hwnd = HostConsoleHWND();
@@ -230,7 +223,7 @@ ws_console_label(CharArray label)
 
   succeed;
 }
-
+#endif
 
 void
 ws_check_intr()
@@ -251,7 +244,7 @@ ws_getpid()
   return (int) GetCurrentProcessId();
 }
 
-
+#if NOSTUB
 char *
 ws_user()
 { TCHAR buf[256];
@@ -265,9 +258,14 @@ ws_user()
   else
     return NULL;
 }
+#endif
 
 
+#undef End
 #include <shlobj.h>
+#define End \
+  }
+
 
 Name
 ws_appdata(const char *sub)
@@ -310,15 +308,17 @@ remove_ilerrout(int status)
 #endif
 
 
+#if NOSTUB
 void
 ws_initialise(int argc, char **argv)
 { if ( ws_mousebuttons() == 2 )
     ws_emulate_three_buttons(100);
 }
+#endif
 
 
 Int
-ws_default_scrollbar_width()
+ws_default_scrollbar_width(void)
 { int w = GetSystemMetrics(SM_CXHSCROLL);	/* Is this the right one? */
 
   return toInt(w);
@@ -356,6 +356,18 @@ get_logical_drive_strings(int bufsize, char *buf)
 		 /*******************************
 		 *      COMMON DIALOG STUFF	*
 		 *******************************/
+
+HWND
+getHwndFrame(FrameObj fr)
+{ Cprintf("stub: getHwndFrame()\n");
+  return 0;
+}
+
+HWND
+getHwndWindow(PceWindow sw)
+{ Cprintf("stub: getHwndWindow()\n");
+  return 0;
+}
 
 #define nameToFN(s) charArrayToFN((CharArray)(s))
 
@@ -682,3 +694,73 @@ getWinDirectoryDisplay(DisplayObj d,
   return result;
 }
 
+		 /*******************************
+		 *            PIPES             *
+		 *******************************/
+
+/*
+ * CreatePipeEx - create an anonymous-like pipe with optional overlapped support.
+ * Works by creating a local named pipe with a unique name and connecting both ends.
+ *
+ * Parameters:
+ *   hReadPipe    - Receives the read handle
+ *   hWritePipe   - Receives the write handle
+ *   lpPipeAttributes - Security attributes
+ *   nSize        - Buffer size
+ *   dwReadMode   - Flags for read handle (e.g., FILE_FLAG_OVERLAPPED)
+ *   dwWriteMode  - Flags for write handle (e.g., FILE_FLAG_OVERLAPPED)
+ *
+ * Returns:
+ *   TRUE on success, FALSE on failure (call GetLastError()).
+ */
+
+static volatile long pipe_gensym = 0;
+
+BOOL
+CreatePipeEx(PHANDLE hReadPipe,
+	     PHANDLE hWritePipe,
+	     LPSECURITY_ATTRIBUTES lpPipeAttributes,
+	     DWORD nSize,
+	     DWORD dwReadMode,
+	     DWORD dwWriteMode)
+{ BOOL result = FALSE;
+  HANDLE hReadTmp = INVALID_HANDLE_VALUE, hWriteTmp = INVALID_HANDLE_VALUE;
+  CHAR pipeName[MAX_PATH];
+
+  // Generate a unique name using process ID + tick count
+  sprintf(pipeName, "\\\\.\\Pipe\\anon.%lu.%lu",
+	  GetCurrentProcessId(), InterlockedIncrement(&pipe_gensym));
+
+  hReadTmp = CreateNamedPipeA(pipeName,
+			      PIPE_ACCESS_INBOUND | dwReadMode,
+			      PIPE_TYPE_BYTE | PIPE_WAIT,
+			      1,           // max instances
+			      nSize, nSize,
+			      0,           // default timeout
+			      lpPipeAttributes);
+  if (hReadTmp == INVALID_HANDLE_VALUE)
+    goto cleanup;
+
+  hWriteTmp = CreateFileA(pipeName,
+			  GENERIC_WRITE,
+			  0,                      // no sharing
+			  lpPipeAttributes,
+			  OPEN_EXISTING,
+			  FILE_ATTRIBUTE_NORMAL | dwWriteMode,
+			  NULL);
+  if (hWriteTmp == INVALID_HANDLE_VALUE)
+    goto cleanup;
+
+  *hReadPipe = hReadTmp;
+  *hWritePipe = hWriteTmp;
+  result = TRUE;
+  hReadTmp = hWriteTmp = INVALID_HANDLE_VALUE; // ownership transferred
+
+cleanup:
+  if (hReadTmp != INVALID_HANDLE_VALUE)
+    CloseHandle(hReadTmp);
+  if (hWriteTmp != INVALID_HANDLE_VALUE)
+    CloseHandle(hWriteTmp);
+
+  return result;
+}

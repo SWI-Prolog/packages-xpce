@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -79,6 +80,11 @@ initialiseTextItem(TextItem ti, Name name, Any val, Code msg)
   assign(ti, hor_stretch,      toInt(100));
   assign(ti, style,	       NAME_normal);
 
+  Colour c;
+  if ( (c=getClassVariableValueObject(ti, NAME_textColour)) &&
+       notDefault(c) )
+    assign(ti->value_text, colour, c);
+
   if ( (str = get(ti, NAME_printNameOfValue, val, EAV)) )
     valueString(ti->print_name, str);
   resetTextItem(ti);
@@ -149,10 +155,10 @@ RedrawAreaTextItem(TextItem ti, Area a)
       }
     }
     if ( flags & (TEXTFIELD_COMBO|TEXTFIELD_COMBO_DOWN) )
-    { int trh = dpi_scale(ti, 8, FALSE);
-      int trw = dpi_scale(ti, 9, TRUE);
-      int trx, try;
-      int up = (flags & TEXTFIELD_COMBO) ? TRUE : FALSE;
+    { double trh = dpi_scale(ti, 8);
+      double trw = dpi_scale(ti, 9);
+      double trx, try;
+      bool up = !!(flags & TEXTFIELD_COMBO);
 
       trx = tx+tw+5;
       try = y + (h-trh)/2;
@@ -160,19 +166,19 @@ RedrawAreaTextItem(TextItem ti, Area a)
       r_3d_triangle(trx+trw/2, try+trh, trx, try, trx+trw, try, z, up, 0x3);
     }
     if ( flags & TEXTFIELD_STEPPER )
-    { int sw = dpi_scale(ti, STEPPER_BOX_W, TRUE);
-      int bx = x+w-sw;
-      int bh = (h+1)/2;
-      int iw, ih, ix, dy;
+    { double sw = dpi_scale(ti, STEPPER_BOX_W);
+      double bx = x+w-sw;
+      double bh = (h+1)/2.0;
+      double iw, ih, ix, dy;
       Elevation e = getClassVariableValueClass(ClassButton, NAME_elevation);
 
       r_3d_box(bx, y,    sw, bh,   0, e, !(flags & TEXTFIELD_INCREMENT));
       r_3d_box(bx, y+bh, sw, h-bh, 0, e, !(flags & TEXTFIELD_DECREMENT));
 
-      iw = valInt(INT_ITEM_IMAGE->size->w)/2;
-      ih = valInt(INT_ITEM_IMAGE->size->h);
-      ix = x + w - (sw+iw+1)/2;
-      dy = (bh-ih+1)/2;
+      iw = valNum(INT_ITEM_IMAGE->size->w)/2.0;
+      ih = valNum(INT_ITEM_IMAGE->size->h);
+      ix = x + w - (sw+iw+1)/2.0;
+      dy = (bh-ih+1)/2.0;
 
       r_image(INT_ITEM_IMAGE, 0,  0, ix, y+dy,      iw, ih, ON);
       r_image(INT_ITEM_IMAGE, iw, 0, ix, y+h-dy-ih, iw, ih, ON);
@@ -476,7 +482,7 @@ selectCompletionDialogItem(Any item, Chain matches,
   bh = lines * valInt(getHeightFont(c->list_browser->font));
   bh += 2 * TXT_X_MARGIN + 2;
 
-  send((pos = get(di, NAME_displayPosition, EAV)), NAME_offset,
+  send((pos = get(di, NAME_framePosition, EAV)), NAME_offset,
        toInt(lw), di->area->h, EAV);
   send(c, NAME_transientFor, getFrameGraphical((Graphical) di), EAV);
   send(c->frame, NAME_set, pos->x, pos->y, toInt(fw), toInt(bh), EAV);
@@ -805,11 +811,11 @@ text_item_combo_width(TextItem ti)
 { if ( ti->style == NAME_comboBox )
   { int w = ws_combo_box_width((Graphical)ti);
 
-    return w >= 0 ? w : dpi_scale(ti, 14, FALSE);
+    return w >= 0 ? w : dpi_scale(ti, 14);
   } else if ( ti->style == NAME_stepper )
   { int w = ws_stepper_width((Graphical)ti);
 
-    return w >= 0 ? w :  dpi_scale(ti, (STEPPER_BOX_W+STEPPER_BOX_GAP), FALSE);
+    return w >= 0 ? w :  dpi_scale(ti, (STEPPER_BOX_W+STEPPER_BOX_GAP));
   }
 
   return 0;
@@ -1055,8 +1061,10 @@ eventTextItem(TextItem ti, EventObj ev)
   } else if ( isAEvent(ev, NAME_focus) )
   { if ( isAEvent(ev, NAME_obtainKeyboardFocus) )
     { send(ti, NAME_status, NAME_active, EAV);
+      ws_enable_text_input((Graphical)ti, ON);
     } else if ( isAEvent(ev, NAME_releaseKeyboardFocus) )
     { send(ti, NAME_status, NAME_inactive, EAV);
+      ws_enable_text_input((Graphical)ti, OFF);
     }
 
     return updateShowCaretTextItem(ti);
@@ -1750,8 +1758,10 @@ static classvardecl rc_textItem[] =
      "Interval between repeats"),
   RC(NAME_look, RC_REFINE, UXWIN("gtk", "win"), NULL),
   RC(NAME_elevation, RC_REFINE,
-     UXWIN("when(@colour_display, 0.25mm, @nil)", "@_txt_height"),
+     UXWIN("0.25mm", "@_txt_height"),
      NULL),
+  RC(NAME_textColour, "[colour]", "@default",
+     "Colour to use for the text"),
   RC(NAME_comboBoxHeight, "1..", "6",
      "Maximum height of the combo-box shown for completions")
 };

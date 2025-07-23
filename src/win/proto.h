@@ -26,13 +26,15 @@ COMMON(Int)	getHeightDisplay(DisplayObj d);
 COMMON(Point)	getPointerLocationDisplay(DisplayObj d);
 COMMON(Monitor) getMonitorDisplay(DisplayObj d, Any obj);
 COMMON(status)	looseSelectionDisplay(DisplayObj d, Name which);
-COMMON(status)	confirmDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv);
-COMMON(status)	informDisplay(DisplayObj d, CharArray fmt, int argc, Any *argv);
+COMMON(status)	confirmDisplay(DisplayObj d, Any client, CharArray title,
+			       CharArray fmt, int argc, Any *argv);
+COMMON(status)	informDisplay(DisplayObj d, Any client, CharArray title,
+			      CharArray fmt, int argc, Any *argv);
 COMMON(status)	busyCursorDisplay(DisplayObj d, CursorObj c, BoolObj block_events);
 COMMON(status)	inspectDisplay(DisplayObj d, Graphical gr, EventObj ev);
 COMMON(status)	makeClassDisplay(Class class);
 COMMON(int)	DPI(Any gr);
-COMMON(int)	dpi_scale(Any gr, int px, int odd);
+COMMON(double)	dpi_scale(Any gr, double px);
 
 /* /staff/jan/src/pl/packages/xpce/src/win/displaymgr.c */
 COMMON(status)	appendDisplayManager(DisplayManager dm, DisplayObj d);
@@ -45,7 +47,7 @@ COMMON(status)	makeClassDisplayManager(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/win/frame.c */
 COMMON(Any)	getConfirmFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise);
-COMMON(Any)	getConfirmCenteredFrame(FrameObj fr, Point pos, BoolObj grab, Monitor mon);
+COMMON(Any)	getConfirmCenteredFrame(FrameObj fr, Any where, BoolObj grab, Monitor mon);
 COMMON(status)	createdFrame(FrameObj fr);
 COMMON(status)	exposeFrame(FrameObj fr);
 COMMON(status)	hideFrame(FrameObj fr);
@@ -64,12 +66,11 @@ COMMON(status)	makeClassFrame(Class class);
 /* /staff/jan/src/pl/packages/xpce/src/win/picture.c */
 COMMON(status)	makeClassPicture(Class class);
 
-/* /staff/jan/src/pl/packages/xpce/src/win/tileadjust.c */
-COMMON(status)	makeClassTileAdjuster(Class class);
-
 /* /staff/jan/src/pl/packages/xpce/src/win/setup.c */
 
 /* /staff/jan/src/pl/packages/xpce/src/win/tile.c */
+typedef void *(*for_tile_func)(Any ctx, TileObj t, Int x, Int y, Int w, Int h);
+
 COMMON(status)	unrelateTile(TileObj t);
 COMMON(TileObj)	getRootTile(TileObj t);
 COMMON(status)	distribute_stretches(stretch *s, int n, int w);
@@ -81,6 +82,7 @@ COMMON(BoolObj)	getCanResizeTile(TileObj t);
 COMMON(status)	updateAdjusterPositionTile(TileObj t);
 COMMON(TileObj)	getSubTileToResizeTile(TileObj t, Point pos);
 COMMON(status)	makeClassTile(Class class);
+COMMON(void *)	forResizeAreaTile(TileObj t, for_tile_func func, Any ctx);
 
 /* /staff/jan/src/pl/packages/xpce/src/win/view.c */
 COMMON(status)	makeClassView(Class class);
@@ -98,7 +100,7 @@ COMMON(void)	offset_window(PceWindow sw, int *x, int *y);
 COMMON(void)	compute_window(PceWindow sw, int *x, int *y, int *w, int *h);
 COMMON(status)	frame_offset_window(Any obj, FrameObj *fr, int *X, int *Y);
 COMMON(void)	offset_windows(PceWindow w1, Any w2, int *X, int *Y);
-COMMON(int)	is_service_window(PceWindow sw);
+COMMON(int)	is_service_window(Any from);
 COMMON(status)	postEventWindow(PceWindow sw, EventObj ev);
 COMMON(status)	typedWindow(PceWindow sw, EventId id, BoolObj delegate);
 COMMON(status)	inputFocusWindow(PceWindow sw, BoolObj val);

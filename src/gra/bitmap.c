@@ -117,8 +117,7 @@ getCopyBitmap(BitmapObj bm)
 static status
 imageBitmap(BitmapObj bm, Image image)
 { if ( bm->image != image )
-  { if ( (notNil(bm->image) && notNil(bm->image->mask)) ||
-	 notNil(image->mask) )
+  { if ( hasAlphaImage(bm->image) )
       clearFlag(bm, F_SOLID);
 
     CHANGING_GRAPHICAL(bm,
@@ -324,4 +323,3 @@ makeClassBitmap(Class class)
 
   succeed;
 }
-

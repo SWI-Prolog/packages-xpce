@@ -35,14 +35,23 @@
 #ifndef _PCE_WST_INCLUDED
 #define _PCE_WST_INCLUDED
 
-#include <x11/wstproto.h>
+#include <sdl/sdl.h>
+#include <sdl/sdlcolour.h>
+#include <sdl/sdldisplay.h>
+#include <sdl/sdlwindow.h>
+#include <sdl/sdlimage.h>
+#include <sdl/sdldraw.h>
+#include <sdl/sdlinput.h>
+#include <sdl/sdlevent.h>
+#include <sdl/sdlfont.h>
+#include <sdl/sdlframe.h>
+#include <sdl/sdlmenu.h>
+#include <sdl/sdlcursor.h>
+#include <sdl/sdltimer.h>
+#include <sdl/sdlstream.h>
+#include <gra/graphstate.h>
 
-#ifdef WIN32_GRAPHICS			/* additional ones */
-#include <msw/msproto.h>
-#else
 COMMON(status)	metaModifierDisplay(DisplayObj d, Name name);
 COMMON(status)	X11ThreadsDisplay(DisplayObj d, BoolObj val);
-#endif
-
 
 #endif /* _PCE_WST_INCLUDED */

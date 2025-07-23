@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <stdbool.h>
 
 static status	uncreateWindow(PceWindow sw);
 static status   tileWindow(PceWindow sw, TileObj t);
@@ -47,6 +48,7 @@ status
 initialiseWindow(PceWindow sw, Name label, Size size, DisplayObj display)
 { initialiseDevice((Device) sw);
 
+  assign(sw, scale,                toNum(1.0));
   assign(sw, scroll_offset,	   newObject(ClassPoint, EAV));
   assign(sw, input_focus,	   OFF);
   assign(sw, has_pointer,	   OFF);
@@ -110,7 +112,17 @@ uncreateWindow(PceWindow sw)
 { DEBUG(NAME_window, Cprintf("uncreateWindow(%s)\n", pp(sw)));
 
   deleteChain(ChangedWindows, sw);
-  ws_uncreate_window(sw);
+
+  if ( ws_created_window(sw) )
+  { ws_uncreate_window(sw);
+    PceWindow parent;
+    if ( notNil((parent=sw->parent)) && notNil(parent->subwindows) )
+    { DEBUG(NAME_window,
+	    Cprintf("Delete subwindow %s of %s\n", pp(sw), pp(parent)));
+      deleteChain(parent->subwindows, sw);
+      assign(sw, parent, NIL);
+    }
+  }
 
   succeed;
 }
@@ -204,7 +216,7 @@ openCenteredWindow(PceWindow sw, Point pos, BoolObj grab, Monitor mon)
 
 
 static Any
-getConfirmWindow(PceWindow sw, Point pos, BoolObj grab, BoolObj normalise)
+getConfirmWindow(PceWindow sw, Any pos, BoolObj grab, BoolObj normalise)
 { TRY( send(sw, NAME_create, EAV) );
 
   answer(getConfirmFrame(getFrameWindow(sw, DEFAULT), pos, grab, normalise));
@@ -212,7 +224,7 @@ getConfirmWindow(PceWindow sw, Point pos, BoolObj grab, BoolObj normalise)
 
 
 static Any
-getConfirmCenteredWindow(PceWindow sw, Point pos, BoolObj grab, Monitor mon)
+getConfirmCenteredWindow(PceWindow sw, Any pos, BoolObj grab, Monitor mon)
 { TRY( send(sw, NAME_create, EAV) );
 
   answer(getConfirmCenteredFrame(getFrameWindow(sw, DEFAULT),
@@ -249,6 +261,15 @@ createWindow(PceWindow sw, PceWindow parent)
       assign(sw, colour, parent->colour);
     if ( isDefault(sw->background) )
       assign(sw, background, parent->background);
+    if ( !instanceOfObject(parent, ClassWindowDecorator) )
+    { DEBUG(NAME_window,
+	    Cprintf("Make %s a subwindow of %s\n", pp(sw), pp(parent)));
+      if ( isNil(parent->subwindows) )
+	assign(parent, subwindows, newObject(ClassChain, sw, EAV));
+      else
+	addChain(parent->subwindows, sw);
+      assign(sw, parent, parent);
+    }
   } else
   { DisplayObj d;
 
@@ -266,6 +287,7 @@ createWindow(PceWindow sw, PceWindow parent)
   ws_create_window(sw, parent);
   qadSendv(sw, NAME_resize, 0, NULL);
 
+  changed_window(sw, 0, 0, valInt(sw->area->w), valInt(sw->area->h), TRUE);
   addChain(ChangedWindows, sw);		/* force initial update */
 
   succeed;
@@ -429,16 +451,31 @@ displayedWindow(PceWindow sw, BoolObj val)
     displayedWindow(sw->decoration, val);
 
   if ( val == ON )
+  { changed_window(sw,
+		   0, 0,
+		   valInt(sw->area->w), valInt(sw->area->h), TRUE);
     addChain(ChangedWindows, sw);
+  }
 
   succeed;
 }
 
 
 status
+scaleWindow(PceWindow sw, Int scale)
+{ if ( sw->scale != scale )
+  { assign(sw, scale, scale);
+    Cprintf("Rescaling to %s\n", pp(scale));
+  }
+
+  succeed;
+}
+
+status
 resizeWindow(PceWindow sw)
 { if ( notNil(sw->resize_message) )
-    forwardReceiverCode(sw->resize_message, sw, sw, getSizeArea(sw->area), EAV);
+    forwardReceiverCode(sw->resize_message, sw, sw,
+			getSizeArea(sw->area), EAV);
 
   succeed;
 }
@@ -592,13 +629,22 @@ offset_windows(PceWindow w1, Any w2, int *X, int *Y)
 		********************************/
 
 int
-is_service_window(PceWindow sw)
-{ Application app = getApplicationGraphical((Graphical)sw);
+is_service_window(Any from)
+{ Application app;
 
-  DEBUG(NAME_service, Cprintf("Event on %s app=%s\n", pp(sw), pp(app)));
+  if ( instanceOfObject(from, ClassGraphical) )
+  { app = getApplicationGraphical(from);
+  } else if ( instanceOfObject(from, ClassFrame) )
+  { FrameObj fr = from;
+    app = fr->application;
+  } else
+    app = NIL;
 
-  return (app && app->kind == NAME_service ? PCE_EXEC_SERVICE
-					   : PCE_EXEC_USER);
+  DEBUG(NAME_service, Cprintf("Event on %s app=%s\n", pp(from), pp(app)));
+
+  return (app && notNil(app) &&
+	  app->kind == NAME_service ? PCE_EXEC_SERVICE
+				    : PCE_EXEC_USER);
 }
 
 
@@ -799,19 +845,25 @@ operation, this appears necessary. Otherwise, I don't know.
 
 status
 keyboardFocusWindow(PceWindow sw, Graphical gr)
-{ if ( !isNil(gr) && sw->input_focus == OFF )
+{ DEBUG(NAME_keyboard,
+	Cprintf("keyboardFocusWindow(%s, %s)\n", pp(sw), pp(gr)));
+
+  if ( !isNil(gr) && sw->input_focus == OFF )
   { FrameObj fr = getFrameWindow(sw, OFF);
 
     if ( fr )
       send(fr, NAME_keyboardFocus, sw, EAV);
-
   }
 
-  if ( sw->keyboard_focus != gr )
+  Graphical focus = sw->keyboard_focus;
+  if ( focus != gr )
   { Button defb;
 
-    if ( notNil(sw->keyboard_focus) )
-      generateEventGraphical(sw->keyboard_focus, NAME_releaseKeyboardFocus);
+    if ( notNil(focus) &&
+	 !onFlag(focus, F_FREED|F_FREEING) )
+    { assign(sw, keyboard_focus, NIL);
+      generateEventGraphical(focus, NAME_releaseKeyboardFocus);
+    }
 
     if ( instanceOfObject(gr, ClassButton) !=
 	 instanceOfObject(sw->keyboard_focus, ClassButton) &&
@@ -1083,73 +1135,31 @@ combine_changes_window(PceWindow sw)
 }
 
 
-
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Redraw an area of the picture due to an exposure or resize.  The area is
-given in the coordinate system of the widget realizing the picture.
-
-WIN32_GRAPHICS note: this function is   called both from resize/exposure
-(in the X11 version) and from global  changes to the window that require
-it to be repainted entirely. In the  Windows version, the first bypasses
-this function, so we just trap the latter  to cause the entire window to
-be repainted.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
 status
 redrawWindow(PceWindow sw, Area a)
-{
-#ifdef WIN32_GRAPHICS
-  ws_invalidate_window(sw, DEFAULT);
-#else
-  int ox, oy, dw, dh;
-  int tmp = FALSE;
-  iarea ia;
+{ changed_window(sw,
+		 -valInt(sw->scroll_offset->x),
+		 -valInt(sw->scroll_offset->y),
+		 valInt(sw->area->w),
+		 valInt(sw->area->h), TRUE);
 
-  if ( sw->displayed == OFF || !createdWindow(sw) )
-    succeed;
-
-  compute_window(sw, &ox, &oy, &dw, &dh);
-
-  if ( isDefault(a) )
-  { ia.x = 0;
-    ia.y = 0;
-    ia.w = valInt(sw->area->w);
-    ia.h = valInt(sw->area->h);
-  } else
-  { ia.x = valInt(a->x);
-    ia.y = valInt(a->y);
-    ia.w = valInt(a->w);
-    ia.h = valInt(a->h);
-  }
-
-  DEBUG(NAME_redraw, Cprintf("redrawWindow: w=%d, h=%d\n",
-			     valInt(sw->area->w),
-			     valInt(sw->area->h)));
-
-  ox += valInt(sw->scroll_offset->x);
-  oy += valInt(sw->scroll_offset->y);
-
-  ia.x -= ox;
-  ia.y -= oy;
-
-  RedrawAreaWindow(sw, &ia, TRUE);	/* clear */
-
-  if ( tmp )
-    considerPreserveObject(a);
-#endif
-
+  addChain(ChangedWindows, sw);
   succeed;
 }
 
 
 status
 pceRedrawWindow(PceWindow sw)
-{ DEBUG(NAME_window, Cprintf("Redrawing %s\n", pp(sw)));
+{ DEBUG(NAME_window,
+	Cprintf("Redrawing %s (displayed: %s %screated)\n",
+		pp(sw), pp(sw->displayed),
+		createdWindow(sw) ? "" : "not "));
 
   if ( sw->displayed == ON && createdWindow(sw) )
   { UpdateArea a, b;
     AnswerMark mark;
     iarea visible;
+    bool changed = false;
 
     if ( ws_delayed_redraw_window(sw) )
     { deleteChain(ChangedWindows, sw);
@@ -1176,16 +1186,25 @@ pceRedrawWindow(PceWindow sw)
 	      Cprintf("\tUpdate %d %d %d %d (%s)\n",
 		      a->area.x, a->area.y, a->area.w, a->area.h,
 		      a->clear ? "clear" : "no clear"));
-#ifdef WIN32_GRAPHICS
+#if WIN32_GRAPHICS
         ws_redraw_window(sw, &a->area, a->clear);
 #else
 	RedrawAreaWindow(sw, &a->area, a->clear);
 #endif
+	changed = true;
       }
       unalloc(sizeof(struct update_area), a);
     }
 
     rewindAnswerStack(mark, NIL);
+
+#ifdef SDL_GRAPHICS
+    if ( changed )
+    { FrameObj fr = getFrameWindow(sw, OFF);
+      if ( fr )
+	addChain(ChangedFrames, fr);
+    }
+#endif
   }
 
   deleteChain(ChangedWindows, sw);
@@ -1585,16 +1604,19 @@ getDisplayedCursorWindow(PceWindow sw)
 
 status
 updateCursorWindow(PceWindow sw)
-{ if ( ws_created_window(sw) )
+{ DEBUG(NAME_cursor, Cprintf("Updating cursor for %s\n", pp(sw)));
+
+  if ( ws_created_window(sw) )
   { CursorObj cursor = getDisplayedCursorWindow(sw);
 
+    DEBUG(NAME_cursor, Cprintf("Cursor for %s is %s\n", pp(sw), pp(cursor)));
     if ( !cursor )
       cursor = NIL;
 
     if ( sw->displayed_cursor != cursor )
     { assign(sw, displayed_cursor, cursor);
-      ws_window_cursor(sw, cursor);
     }
+    ws_window_cursor(sw, cursor);
   }
 
   succeed;
@@ -1615,17 +1637,15 @@ geometryWindow(PceWindow sw, Int X, Int Y, Int W, Int H)
 			 assign(sw->area, h, ONE);
 		     });
 
-  if ( notNil(sw->frame) && ws_created_window(sw) )
-  { int x, y, w, h;
-    int pen = valInt(sw->pen);
+  int x, y, w, h;
+  int pen = valInt(sw->pen);
 
-    x = valInt(sw->area->x);
-    y = valInt(sw->area->y);
-    w = valInt(sw->area->w);
-    h = valInt(sw->area->h);
+  x = valInt(sw->area->x);
+  y = valInt(sw->area->y);
+  w = valInt(sw->area->w);
+  h = valInt(sw->area->h);
 
-    ws_geometry_window(sw, x, y, w, h, pen);
-  }
+  ws_geometry_window(sw, x, y, w, h, pen);
 
   succeed;
 }
@@ -1847,7 +1867,6 @@ static status
 relateWindow(PceWindow sw, Name how, Any to)
 { PceWindow w2 = instanceOfObject(to, ClassWindow) ? to : NIL;
   PceWindow wto = w2;
-  FrameObj fr;
 
   if ( notNil(sw->decoration) )
     return relateWindow(sw->decoration, how, to);
@@ -1891,9 +1910,6 @@ relateWindow(PceWindow sw, Name how, Any to)
   }
 
   mergeFramesWindow(sw, w2);
-
-  if ( (fr=getFrameWindow(sw, OFF)) && createdFrame(fr) )
-    send(fr, NAME_updateTileAdjusters, EAV);
 
   succeed;
 }
@@ -2171,7 +2187,7 @@ static char *T_scrollHV[] =
 static char *T_decorate[] =
         { "area=[{grow,shrink}]", "left_margin=[int]", "right_margin=[int]", "top_margin=[int]", "bottom_margin=[int]", "decorator=[window]" };
 static char *T_confirmCentered[] =
-        { "center=[point]", "grab=[bool]", "monitor=[monitor]" };
+        { "center=[point|frame]", "grab=[bool]", "monitor=[monitor]" };
 static char *T_typed[] =
         { "event|event_id", "delegate=[bool]" };
 static char *T_focus[] =
@@ -2194,10 +2210,16 @@ static char *T_normalise[] =
 /* Instance Variables */
 
 static vardecl var_window[] =
-{ IV(NAME_frame, "frame*", IV_NONE,
+{ SV(NAME_scale, "int", IV_GET|IV_STORE, scaleWindow,
+     NAME_area, "Scaling from logical units to pixels"),
+  IV(NAME_frame, "frame*", IV_NONE,
      NAME_organisation, "Frame the window is member of"),
   IV(NAME_decoration, "window_decorator*", IV_GET,
      NAME_appearance, "Window displaying me and my decorations"),
+  IV(NAME_subwindows, "chain*", IV_GET,
+     NAME_organisation, "Windows displayed on me"),
+  IV(NAME_parent, "window*", IV_GET,
+     NAME_organisation, "Window on which I am displayed"),
   IV(NAME_boundingBox, "area", IV_NONE,
      NAME_area, "Union of graphicals"),
   IV(NAME_tile, "tile*", IV_NONE,
@@ -2384,7 +2406,8 @@ static getdecl get_window[] =
   GM(NAME_winHandle, 0, "int", NULL, getWinHandleWindow,
      NAME_windows, "Fetch the MS-Windows HWND of the window (if any)"),
 #endif
-  GM(NAME_confirmCentered, 3, "any", T_confirmCentered, getConfirmCenteredWindow,
+  GM(NAME_confirmCentered, 3, "any", T_confirmCentered,
+     getConfirmCenteredWindow,
      NAME_modal, "->confirm with frame centered around point"),
   GM(NAME_thread, 0, "int", NULL, getThreadWindow,
      NAME_thread, "Return system thread-id that owns the window")
@@ -2393,14 +2416,12 @@ static getdecl get_window[] =
 /* Resources */
 
 static classvardecl rc_window[] =
-{ RC(NAME_background, "colour|pixmap", UXWIN("white", "@_graph_bg"), NULL),
-  RC(NAME_cursor, "cursor", UXWIN("top_left_arrow", "win_arrow"), NULL),
-  RC(NAME_pen,              "0..",	     "@_win_pen",      NULL),
-  RC(NAME_selectionHandles, RC_REFINE,	     "@nil",	       NULL),
-  RC(NAME_size,		    "size",	     "size(200,100)",  NULL),
-  RC(NAME_selectionFeedback, NULL,
-     "when(@colour_display,  colour,  invert)",
-     NULL),
+{ RC(NAME_background,        "colour|pixmap",  UXWIN("white", "@_graph_bg"), NULL),
+  RC(NAME_cursor,            "cursor",        "arrow",                       NULL),
+  RC(NAME_pen,               "0..",	      "@_win_pen",                   NULL),
+  RC(NAME_selectionHandles,  RC_REFINE,	      "@nil",	                 NULL),
+  RC(NAME_size,	         "size",	      "size(200,100)",               NULL),
+  RC(NAME_selectionFeedback, NULL,            "colour",                      NULL)
 };
 
 /* Class Declaration */
@@ -2432,4 +2453,3 @@ makeClassWindow(Class class)
 
   succeed;
 }
-

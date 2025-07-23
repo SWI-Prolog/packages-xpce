@@ -65,7 +65,8 @@ variable(modified,      bool,           both,
 initialise(S, Name:name, Dir:directory) :->
     "Initialise from name and directory"::
     (   get(@man_space_table, member, Name, _)
-    ->  send(@display, inform, 'Space %s already exists', Name)
+    ->  send(@display, inform, S, "XPCE Manual",
+             'Space %s already exists', Name)
     ;   send(S, slot, name,      Name),
         send(S, slot, modified,  @off),
         send(S, slot, directory, Dir),
@@ -193,7 +194,8 @@ variable(current_id,    number,         both,   "Numeric id for next card").
 initialise(M, Space:man_space, Name:name) :->
     "Create from space and name"::
     (   get(Space?modules, member, Name, _)
-    ->  send(@display, inform, 'Module %s already exists', Name)
+    ->  send(@display, inform, M, "XPCE Manual",
+             'Module %s already exists', Name)
     ;   send(M, slot, name,     Name),
         send(M, slot, id_table, new(hash_table)),
         send(M, slot, space,    Space?name),

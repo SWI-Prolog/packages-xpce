@@ -134,7 +134,7 @@ browse(II) :->
 /*
 test :-
         new(D, dialog),
-        send(D, append, new(II, image_item(image, 'pce.bm'))),
+        send(D, append, new(II, image_item(image, 'pce.png'))),
         send(II, directory, '$PCEHOME/bitmaps/16x16'),
         send(D, open).
 */

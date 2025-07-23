@@ -114,6 +114,7 @@ try_hide(W, Ev:event) :->
 
 hide(W) :->
     "Remove from the display"::
+    send(W, transient_for, @nil),
     send(W, show, @off),
     get(W, handler, H),
     send(W?display?inspect_handlers, delete, H).
@@ -136,10 +137,11 @@ feedback(W, S:string*, Ev:event, For:[any]*) :->
 
 adjust_position(W, Ev:event) :->
     "Fix the position of the feedback window"::
-    get(Ev, position, W?display, P),
-    get(P, plus, point(5,5), point(FX, FY)),
-    send(W?frame, set, FX, FY),
-    send(W?frame, expose).
+    get(Ev, frame, Frame),
+    get(Ev, position, Frame, P),
+    get(P, plus, point(5,5), Pt),
+    send(W, transient_for, Frame),
+    send(W?frame, open, Pt).
 
 :- pce_end_class.
 

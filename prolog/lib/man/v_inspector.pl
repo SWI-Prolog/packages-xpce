@@ -50,9 +50,9 @@
 :- dynamic
     inspector_window/1.
 
-resource(clear, image, image('16x16/trashcan.xpm')).
-resource(help,  image, image('16x16/help.xpm')).
-resource(grab,  image, image('16x16/handpoint.xpm')).
+resource(clear, image, image('16x16/trashcan.png')).
+resource(help,  image, image('16x16/help.png')).
+resource(grab,  image, image('16x16/handpoint.png')).
 
 
                 /********************************
@@ -225,7 +225,7 @@ pretty_print(T) :->
     flash(Object),
     portray_object(Object, Term),
     term_to_atom(Term, Atom),
-    send(T, report, inform, '%s', Atom).
+    send(T, report, inform, T, "Object", '%s', Atom).
 
 %               LINKS
 
@@ -326,7 +326,7 @@ initialise(AV, Title:name, TitleValue:[name]) :->
 
     send(AV, send_super, initialise),
     send(AV, border, 5),
-    send(AV, background, colour(white)),
+    send(AV, background, @display?background),
     send(AV, pen, 1),
     send(AV, shadow, 2),
     send(AV, format, @isp_attribute_value_sheet_format),

@@ -1468,6 +1468,38 @@ getAbsolutePositionGraphical(Graphical gr, Device dev)
 
 
 Point
+getFramePositionGraphical(Graphical gr)
+{ Int x, y;
+  int ox, oy;
+  PceWindow w = DEFAULT;
+
+					/* relative to window system */
+  if ( instanceOfObject(gr, ClassWindow) )
+  { x = y = ZERO;
+    w = (PceWindow) gr;
+    ox = oy = 0;
+  } else
+  { get_absolute_xy_graphical(gr, (Device *)&w, &x, &y);
+    if ( !instanceOfObject(w, ClassWindow) )
+      fail;				/* not displayed */
+    offset_window(w, &ox, &oy);		/* scroll offset */
+  }
+  FrameObj fr = getFrameWindow(w, OFF);
+  if ( fr )
+  { float fox = 0.0, foy = 0.0;
+    ws_window_frame_position(w, fr, &fox, &foy);
+    ox += fox;
+    oy += foy;
+  }
+
+  x = toInt(valInt(x) + ox);
+  y = toInt(valInt(y) + oy);
+
+  answer(answerObject(ClassPoint, x, y, EAV));
+}
+
+
+Point
 getDisplayPositionGraphical(Graphical gr)
 { Int x, y;
   int ox, oy, wx, wy;
@@ -1809,7 +1841,7 @@ status
 penGraphical(Graphical gr, Int pen)
 { if (gr->pen != pen)
   { CHANGING_GRAPHICAL(gr, assign(gr, pen, pen);
-		           changedEntireImageGraphical(gr));
+			   changedEntireImageGraphical(gr));
   }
 
   succeed;
@@ -1823,7 +1855,7 @@ shadowGraphical(Graphical gr, Int s)
 
 
 status
-fillPatternGraphical(Graphical gr, Image pattern)
+fillPatternGraphical(Graphical gr, Any pattern)
 { return assignGraphical(gr, NAME_fillPattern, pattern);
 }
 
@@ -1834,11 +1866,11 @@ fillOffsetGraphical(Graphical gr, Point pattern)
 }
 
 
-static status
+static status			/* must be renamed to dash */
 textureGraphical(Graphical gr, Name texture)
 { if (gr->texture != texture)
   { CHANGING_GRAPHICAL(gr, assign(gr, texture, texture);
-		           changedEntireImageGraphical(gr));
+			   changedEntireImageGraphical(gr));
   }
 
   succeed;
@@ -1884,7 +1916,7 @@ static status
 selectedGraphical(Graphical gr, BoolObj val)
 { if (gr->selected != val)
   { CHANGING_GRAPHICAL(gr, assign(gr, selected, val);
-		           changedEntireImageGraphical(gr));
+			   changedEntireImageGraphical(gr));
   }
 
   succeed;
@@ -2223,7 +2255,7 @@ disconnectGraphical(Graphical gr, Graphical gr2,
     for_chain(ch, c,
 	      if ( (isDefault(gr2) || c->to == gr2 || c->from == gr2) &&
 		   match_connection(c, link, from, to) )
-	        freeObject(c));
+		freeObject(c));
   }
 
   succeed;
@@ -2615,13 +2647,22 @@ eventGraphical(Any obj, EventObj ev)
 
   if ( gr->active != OFF )
   { Chain recognisers;
-    Cell cell;
 
-    TRY( recognisers = getAllRecognisersGraphical(gr, OFF) );
+    if ( (recognisers=getAllRecognisersGraphical(gr, OFF)) )
+    { Cell cell;
 
-    for_cell(cell, recognisers)
-      if ( qadSendv(cell->value, NAME_event, 1, (Any*)&ev) )
-	succeed;
+      for_cell(cell, recognisers)
+      { if ( qadSendv(cell->value, NAME_event, 1, (Any*)&ev) )
+	  succeed;
+      }
+    }
+
+    if ( isAEvent(ev, NAME_focus) )
+    { if ( isAEvent(ev, NAME_obtainKeyboardFocus) )
+	ws_enable_text_input(gr, ON);
+      else if ( isAEvent(ev, NAME_releaseKeyboardFocus) )
+	ws_enable_text_input(gr, OFF);
+    }
   }
 
   fail;
@@ -3075,20 +3116,20 @@ drawLineGraphical(Graphical gr, Int x1, Int y1, Int x2, Int y2)
 
 static status
 drawPolyGraphical(Graphical gr, Any points, BoolObj closed, Any fill)
-{ IPoint pts;
+{ FPoint pts;
   int npts = 0;
 
   if ( instanceOfObject(points, ClassChain) )
   { Chain ch = points;
     Cell cell;
 
-    pts = (IPoint)alloca(sizeof(ipoint) * valInt(ch->size));
+    pts = (FPoint)alloca(sizeof(fpoint) * valInt(ch->size));
     for_cell(cell, ch)
     { Point pt = cell->value;
 
       if ( instanceOfObject(pt, ClassPoint) )
-      {	pts[npts].x = valInt(pt->x);
-	pts[npts].y = valInt(pt->y);
+      {	pts[npts].x = valNum(pt->x);
+	pts[npts].y = valNum(pt->y);
 	npts++;
       } else
       { return errorPce(pt, NAME_unexpectedType, nameToType(NAME_point));
@@ -3098,12 +3139,12 @@ drawPolyGraphical(Graphical gr, Any points, BoolObj closed, Any fill)
   { Vector vector = points;
     Point pt;
 
-    pts = (IPoint) alloca(sizeof(ipoint) * valInt(vector->size));
+    pts = (FPoint) alloca(sizeof(fpoint) * valInt(vector->size));
 
     for_vector(vector, pt,
 	       { if ( instanceOfObject(pt, ClassPoint) )
-		 { pts[npts].x = valInt(pt->x);
-		   pts[npts].y = valInt(pt->y);
+		 { pts[npts].x = valNum(pt->x);
+		   pts[npts].y = valNum(pt->y);
 		   npts++;
 		 } else
 		 { return errorPce(pt, NAME_unexpectedType,
@@ -3126,13 +3167,13 @@ static status
 drawArcGraphical(Graphical gr,		/* has to handle mode */
 		 Int x, Int y, Int w, Int h,
 		 Real start, Real end, Any fill)
-{ int s = (isDefault(start) ? 0      : rfloat(valReal(start) * 64.0));
-  int e = (isDefault(end)   ? 360*64 : rfloat(valReal(end) * 64.0));
+{ int s = (isDefault(start) ? 0   : rfloat(valReal(start)));
+  int e = (isDefault(end)   ? 360 : rfloat(valReal(end)));
 
   if ( isDefault(fill) )
     fill = NIL;
 
-  r_arc(valInt(x), valInt(y), valInt(w), valInt(h), s, e, fill);
+  r_arc(valInt(x), valInt(y), valInt(w), valInt(h), s, e, NAME_none, fill);
 
   succeed;
 }
@@ -3554,6 +3595,8 @@ static getdecl get_graphical[] =
      NAME_area, "Y-coordinate of corner"),
   GM(NAME_displayedCursor, 0, "cursor*", NULL, getDisplayedCursorGraphical,
      NAME_cursor, "Currently displayed cursor"),
+  GM(NAME_framePosition, 0, "point", NULL, getFramePositionGraphical,
+     NAME_area, "Position relative to frame"),
   GM(NAME_displayPosition, 0, "point", NULL, getDisplayPositionGraphical,
      NAME_area, "Position relative to display"),
   GM(NAME_height, 0, "int", NULL, getHeightGraphical,
@@ -3698,4 +3741,3 @@ makeClassGraphical(Class class)
 
   succeed;
 }
-

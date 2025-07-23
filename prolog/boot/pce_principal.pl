@@ -57,10 +57,11 @@
 
             pce_open/3,                 % +Object, +Mode, -Stream
             in_pce_thread/1,            % :Goal
-            set_pce_thread/0,
+            set_pce_thread/1,		% +Options
             pce_dispatch/0,
 
             pce_postscript_stream/1,    % -Stream
+            pce_open_terminal_image/4,  % +TerminalImage, -In, -Out, -Error
 
             op(200, fy,  @),
             op(250, yfx, ?),
@@ -195,6 +196,12 @@ missing_(Dir, [Dir|T]) :-
                 *           LOAD C-PART         *
                 ********************************/
 
+:- dynamic
+    pce:pce_thread/1.
+
+init_pce :-
+    pce:pce_thread(_),
+    !.
 init_pce :-
     catch(use_foreign_library(foreign(pl2xpce)),
           error(Error, _Context),           % suppress stack trace

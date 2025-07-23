@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1996-2013, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1996-2025, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -36,51 +37,27 @@
           [ colour_browser/0
           ]).
 :- use_module(library(pce)).
-:- require([ absolute_file_name/3
-           , send_list/3
+:- require([ send_list/3
            ]).
 
-:- multifile
-    user:file_search_path/2.
-:- dynamic
-    user:file_search_path/2.
+/** <module> Colour browse demo
 
-user:file_search_path(x11, OpenWin) :-
-    get(@pce, environment_variable, 'OPENWINHOME', OpenWin).
-user:file_search_path(x11, '/usr/lib/X11').
-user:file_search_path(x11, '/usr/share/X11').
-user:file_search_path(x11, PceLib) :-
-    get(@pce, window_system, windows),
-    get(@pce, home, PceHome),
-    atom_concat(PceHome, '/lib', PceLib).
-
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-This demo implements a  browser  for   the  X11  predefined colours. The
-colour  browser  assumes  the  X11  colour    database   is  located  in
-x11('lib/rgb.txt').
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+This demo implements a browser for the predefined colours.
+*/
 
 colour_browser :-
     make_colour_browser(CB),
     send(CB, open).
 
 make_colour_browser(CB) :-
-    absolute_file_name(x11(rgb),
-                       [ extensions([txt]),
-                         access(read),
-                         file_errors(fail)
-                       ], DataBase),
-    !,
-    make_colour_browser(CB, DataBase).
-make_colour_browser(CB) :-
-    make_colour_browser(CB, @colour_names).
+    make_colour_browser(CB, @colour_list).
 
 make_colour_browser(CB, DataBase) :-
     new(D, dialog),
     send(D, append, new(M, menu(which, choice))),
     send_list(M, append, [foreground, background]),
     send(M, selection, background),
-    send(new(CB, browser('XPCE (X11) named colours')), below, D),
+    send(new(CB, browser('XPCE (CSS) named colours')), below, D),
     send(CB, width, 40),
     send(CB, font, fixed),
 
@@ -105,7 +82,7 @@ make_colour_browser(CB, DataBase) :-
     send(P, display, text(hello, left, bold)),
     send(P, display, new(Box, box(30, 12))),
     send(P, display, line(0, 0, 30, 0)),
-    send(Box, fill_pattern, @black_image),
+    send(Box, fill_pattern, foreground),
 
                                     % A colour is selected; call
                                     % selected_colour/3, using the
@@ -115,40 +92,17 @@ make_colour_browser(CB, DataBase) :-
          message(@prolog, selected_colour, P, M?selection, @arg1?label)),
 
                                     % set tab-stops for nice alignment
-    send(CB?image, tab_stops, vector(170)),
+    send(CB?image, tab_stops, vector(200)),
                                     % scan de database
-    (   send(DataBase, instance_of, hash_table)
-    ->  send(DataBase, for_all,
-             message(@prolog, append_colour, CB, @arg1, @arg2)),
-        send(CB, sort)
-    ;   new(F, file(DataBase)),
-        (   send(F, open, read)
-        ->  repeat,
-            (   get(F, read_line, String)
-            ->  get(String, scan, '%d%d%d%*[ \t]%[a-zA-Z0-9_ ]',
-                    vector(R, G, B, Name)),
-                format(atom(HexName), '#~|~`0t~16r~2+~`0t~16r~2+~`0t~16r~2+', [R,G,B]),
-                send(Name, translate, ' ', '_'),
-                send(Name, downcase),
-                get(Name, value, Atom),
-                (   get(CB, member, Atom, _)
-                ->  true
-                ;   send(CB, append,
-                         dict_item(Name,
-                                   string('%s\t%3d %3d %3d %s',
-                                          Name, R, G, B, HexName)))
-                ),
-                fail
-            ;   !,
-                send(F, close)
-            )
-        )
-    ).
+    send(DataBase, for_all,
+         message(@prolog, append_colour, CB, @arg1)).
 
-append_colour(CB, Name, RGB) :-
-    B is RGB >> 16,
+append_colour(CB, Name) :-
+    get(@colour_names, member, Name, RGB),
+%   A is (RGB >> 24),
+    R is (RGB >> 16) /\ 255,
     G is (RGB >> 8) /\ 255,
-    R is (RGB /\ 255),
+    B is (RGB /\ 255),
     format(atom(HexName), '#~|~`0t~16r~2+~`0t~16r~2+~`0t~16r~2+', [R,G,B]),
     send(CB, append, string('%s\t%3d %3d %3d %s', Name, R, G, B, HexName)).
 
@@ -159,7 +113,4 @@ A colour was selected.  Change the colour attribute of the picture window.
 selected_colour(P, Which, Label) :-
     get(Label, scan, '%s%d%d%d', vector(NameStr, R, G, B)),
     send(@display, cut_buffer, 0, NameStr),
-    XR is R * 257,
-    XG is G * 257,
-    XB is B * 257,
-    send(P, Which, colour(@default, XR, XG, XB)).
+    send(P, Which, colour(@default, R, G, B)).

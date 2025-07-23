@@ -166,10 +166,6 @@ global_object(@classes).
 global_object(@cursor_names).
 global_object(@event_tree).
 global_object(@white_image).
-global_object(@grey12_image).
-global_object(@grey25_image).
-global_object(@grey50_image).
-global_object(@grey75_image).
 global_object(@black_image).
 global_object(@on).
 global_object(@off).

@@ -149,6 +149,7 @@ COMMON(Point)	getPositionGraphical(Graphical gr);
 COMMON(status)	get_absolute_xy_graphical(Graphical gr, Device *dev, Int *X, Int *Y);
 COMMON(Int)	getAbsoluteXGraphical(Any gr, Device dev);
 COMMON(Int)	getAbsoluteYGraphical(Any gr, Device dev);
+COMMON(Point)	getFramePositionGraphical(Graphical gr);
 COMMON(Point)	getDisplayPositionGraphical(Graphical gr);
 COMMON(Size)	getSizeGraphical(Graphical gr);
 COMMON(status)	appendDialogItemNetworkDevice(Device dev, Graphical gr1);
@@ -159,7 +160,7 @@ COMMON(status)	leftGraphical(Graphical gr1, Graphical gr2);
 COMMON(status)	referenceGraphical(Graphical gr, Point ref);
 COMMON(status)	penGraphical(Graphical gr, Int pen);
 COMMON(status)	shadowGraphical(Graphical gr, Int s);
-COMMON(status)	fillPatternGraphical(Graphical gr, Image pattern);
+COMMON(status)	fillPatternGraphical(Graphical gr, Any pattern);
 COMMON(status)	fillOffsetGraphical(Graphical gr, Point pattern);
 COMMON(status)	colourGraphical(Graphical gr, Any c);
 COMMON(Any)	getDisplayColourGraphical(Graphical gr);
@@ -205,6 +206,7 @@ COMMON(Image)	getConvertImage(Class class, Any obj);
 COMMON(status)	XopenImage(Image image, DisplayObj d);
 COMMON(status)	XcloseImage(Image image, DisplayObj d);
 COMMON(status)	loadImage(Image image, SourceSink file, CharArray path);
+COMMON(status)	hasAlphaImage(Image image);
 COMMON(status)	fillImage(Image image, Any pattern, Area area);
 COMMON(Image)	getMonochromeImage(Image image);
 COMMON(status)	makeClassImage(Class class);
@@ -297,6 +299,7 @@ COMMON(status)	makeClassScrollBar(Class class);
 /* /swi40/jan/src/pl/packages/xpce/src/gra/text.c */
 COMMON(void)	str_format(PceString out, const PceString in, const int width, const FontObj font);
 COMMON(void)	str_one_line(PceString to, PceString from);
+COMMON(void)	draw_caret(double x, double y, double w, double h, bool active);
 COMMON(status)	repaintText(TextObj t, int x, int y, int w, int h);
 COMMON(Int)	get_pointed_text(TextObj t, int x, int y);
 COMMON(status)	transparentText(TextObj t, BoolObj val);
@@ -319,6 +322,7 @@ COMMON(status)	makeClassTree(Class class);
 /* /swi40/jan/src/pl/packages/xpce/src/gra/visual.c */
 COMMON(status)	resetVisual(VisualObj v);
 COMMON(status)	destroyVisual(VisualObj v);
+COMMON(FrameObj)getFrameVisual(VisualObj v);
 COMMON(Any)	getReportToVisual(VisualObj v);
 COMMON(status)	reportVisual(VisualObj v, Name kind, CharArray fmt, int argc, Any *argv);
 COMMON(status)	alertReporteeVisual(Any v);
@@ -336,10 +340,7 @@ COMMON(status)	makeClassElevation(Class class);
 COMMON(status)	makeClassPen(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/draw.c */
-COMMON(void)	r_3d_rectangular_polygon(int n, IPoint pts, Elevation e, int flags);
-
-/* /swi40/jan/src/pl/packages/xpce/src/gra/colourmap.c */
-COMMON(status)	makeClassColourMap(Class class);
+COMMON(void)	r_3d_rectangular_polygon(int n, FPoint pts, Elevation e, int flags);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/bezier.c */
 COMMON(status)	adjustFirstArrowBezier(Bezier b);

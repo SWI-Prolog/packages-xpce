@@ -3,8 +3,10 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2010, University of Amsterdam, VU University Amsterdam
-    All rights reserved.
+    Copyright (c) 1985-2025, University of Amsterdam,
+                             VU University
+                             SWI-Prolog Solutions b.v.
+    Amsterdam All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions
@@ -36,6 +38,7 @@
 :- use_module(library(pce)).
 :- use_module(library(emacs_extend), []).
 :- use_module(library(print_text)).
+:- use_module(window, [emacs_register_closed_tab/1]).
 :- require([ append/3
            , auto_call/1
            , between/3
@@ -62,7 +65,7 @@
 
           prefix                   = key('\\eg'),
 
-          font_magnify             = key('\\C-+'),
+          font_magnify             = key('\\C-\\S-='), % assumes + is shift-=.
           font_reduce              = key('\\C--'),
           font_default             = key('\\C-='),
 
@@ -87,18 +90,18 @@
                                      button(file, @emacs_mode?modes),
           properties               = button(file),
           -                        = button(file),
-          quit                     = key('\\C-x\\C-c') + button(file),
+          close                    = key('\\C-x\\C-c') + button(file),
 
                                         % EDIT menu
           undo                     = button(edit),
           -                        = button(edit),
-          copy                     = button(edit),
-          cut                      = button(edit),
-          paste                    = button(edit),
+          copy                     = button(edit) + key('\\C-\\S-c'),
+          cut                      = button(edit) + key('\\C-\\S-x'),
+          paste                    = button(edit) + key('\\C-\\S-v'),
           -                        = button(edit),
           goto_line                = button(edit) +
                                      key('\\eg\\eg') + key('\\egg'),
-          find                     = key(key_top_4) + button(edit),
+          find                     = key('<f4>') + button(edit),
           replace                  = button(edit),
           -                        = button(edit),
           editor_preferences       = button(edit),
@@ -124,7 +127,7 @@
           help_on_mode             = button(help),
           customise                = button(help),
           -                        = button(help),
-          show_key_bindings        = key(key_top_1)
+          show_key_bindings        = key('<f1>')
                                         + key('\\C-hb')
                                         + button(help),
           describe_key             = key('\\C-hk') + button(help),
@@ -246,9 +249,11 @@ remove_condition(From, To, Style,
                  *      GLOBAL UTILITIES        *
                  *******************************/
 
-quit(M) :->
+close(M) :->
     "Destroy the editor"::
     ignore(send(M?text_buffer, save_if_modified)),
+    get(M, frame, Frame),
+    emacs_register_closed_tab(Frame),
     send(M, destroy).
 
 editor_preferences(_M) :->
@@ -305,7 +310,7 @@ warn_big_region(M, Action:name, N:int) :->
     "Warn if region exceeds size"::
     get(M, region, tuple(Start, End)),
     (   End - Start > N
-    ->  send(@display, confirm,
+    ->  send(@display, confirm, M?editor, "PceEmacs",
              'Region is > %d characters; %s?', N, Action)
     ;   true
     ).
@@ -317,7 +322,7 @@ warn_big_paragraph(M, Action:name, N:int) :->
     get(TB, scan, Caret+1, paragraph, 0, start, SP),
     get(TB, scan, Caret-1, paragraph, 0, end, EP),
     (   EP - SP > N
-    ->  send(@display, confirm,
+    ->  send(@display, confirm, M?editor, "PceEmacs",
              'Paragraph is > %d characters; %s?', N, Action)
     ;   true
     ).
@@ -403,6 +408,13 @@ delete_rectangle(M) :->
 
 dabbrev_candidates(_M, _Mode:name, _Target:char_array, _Completions:chain) :<-
     fail.
+
+select_all(M) :->
+    "Select all text"::
+    get(M, text_buffer, TB),
+    get(TB, size, Size),
+    send(M, selection, 0, Size, active).
+
 
                  /*******************************
                  *            LOAD/SAVE         *
@@ -722,7 +734,7 @@ properties(M, V:view) :<-
     ),
     send(V, caret, 0),
     send(new(D, dialog), below, V),
-    send(D, append, button(quit, message(V, destroy))),
+    send(D, append, button(close, message(V, destroy))),
     send(V, open_centered, M?frame?area?center).
 
 
@@ -938,7 +950,7 @@ only_window(M) :->
     get(M, editor, Editor),
     send(Buffer?editors, for_all,
          if(@arg1 \== Editor,
-            message(@arg1, quit))).
+            message(@arg1, close))).
 
 
 save_and_kill(M) :->
@@ -948,7 +960,7 @@ save_and_kill(M) :->
     send(TB, save),
     (   get(Editor, hypered, server, _Server)
     ->  send(TB, kill)
-    ;   send(M, quit)
+    ;   send(M, close)
     ).
 
 
@@ -1085,7 +1097,7 @@ show_key_bindings(M) :->
 describe_function(M, CmdName:command=emacs_mode_command) :->
     "Give help on command"::
     get(M, send_method, CmdName, tuple(_, Impl)),
-    auto_call(help(Impl)).
+    autoload_call(manpce(Impl)).
 
 describe_key(M) :->
     "Read key and write its action"::

@@ -68,17 +68,17 @@ initialiseImage(Image image, SourceSink data, Int w, Int h, Name kind)
   if ( isNil(data) || notDefault(w) || notDefault(h) || notDefault(kind) )
   { if ( isDefault(w) )    w = toInt(16);
     if ( isDefault(h) )    h = toInt(16);
-    if ( isDefault(kind) ) kind = NAME_bitmap;
+    if ( isDefault(kind) ) kind = NAME_pixmap;
 
     assign(image, kind,   kind);
     assign(image, file,   NIL);
-    assign(image, depth,  kind == NAME_bitmap ? ONE : (Int) DEFAULT);
+    assign(image, depth,  toInt(32));
     assign(image, size,	  newObject(ClassSize, w, h, EAV));
     assign(image, access, NAME_both);
   } else
-  { assign(image, kind,	  NAME_bitmap);
+  { assign(image, kind,	  NAME_pixmap);
     assign(image, file,	  data);
-    assign(image, depth,  ONE);
+    assign(image, depth,  toInt(32));
     assign(image, size,	  newObject(ClassSize, EAV));
     TRY(loadImage(image, DEFAULT, DEFAULT));
     assign(image, access, NAME_read);
@@ -203,6 +203,11 @@ getConvertImage(Class class, Any obj)
     } \
   }
 
+status
+hasAlphaImage(Image image)
+{ return ws_has_alpha_image(image);
+}
+
 
 		/********************************
 		*           LOAD/STORE		*
@@ -295,19 +300,6 @@ XcloseImage(Image image, DisplayObj d)
   succeed;
 }
 
-		 /*******************************
-		 *	    COLOURMAP		*
-		 *******************************/
-
-static ColourMap
-getColourMapImage(Image image)
-{ if ( image->kind != NAME_bitmap )
-    return ws_colour_map_for_image(image);
-
-  fail;
-}
-
-
 		/********************************
 		*         FILE OPERATIONS	*
 		********************************/
@@ -384,8 +376,6 @@ changedEntireImageImage(Image image)
     return changedImageGraphical(image->bitmap, ZERO, ZERO,
 				 image->size->w, image->size->h);
 
-  ws_destroy_image(image);		/* remove memory copy */
-
   succeed;
 }
 
@@ -453,12 +443,12 @@ copyImage(Image image, Image i2)
   CHANGING_IMAGE(image,
     TRY(resizeImage(image, w, h));
 
-    d_image(image, 0, 0, valInt(w), valInt(h));
-    d_modify();
-    r_image(i2, 0, 0, 0, 0, valInt(w), valInt(h), OFF);
-    d_done();
-    changedEntireImageImage(image););
-
+    if ( d_image(image, 0, 0, valInt(w), valInt(h)) )
+    { d_modify();
+      r_image(i2, 0, 0, 0, 0, valInt(w), valInt(h), OFF);
+      d_done();
+      changedEntireImageImage(image);
+    });
 
   succeed;
 }
@@ -796,6 +786,12 @@ getMonochromeImage(Image image)
 
 
 static Image
+getGrayscaleImage(Image image)
+{ answer(ws_grayscale_image(image));
+}
+
+
+static Image
 getScaleImage(Image image, Size size)
 { Image i2;
 
@@ -910,23 +906,15 @@ getPostscriptFormatImage(Image image)
 		*       PREDEFINED IMAGES	*
 		********************************/
 
-#if defined(__WINDOWS__) || defined(HAVE_LIBXPM)
+#if __WINDOWS__ || HAVE_LIBXPM || SDL_GRAPHICS
 #define XPM_PCEIMAGE 1			/* use an XPM image */
 #endif
 
-#include "bitmaps/cycle_bm"
-#include "bitmaps/mark_bm"
-#include "bitmaps/nomark_bm"
-#include "bitmaps/pullright_bm"
 #include "bitmaps/mark_handle_bm"
-#include "bitmaps/ms_mark.bm"
-#include "bitmaps/ms_nomark.bm"
 #include "bitmaps/ms_left_arrow.bm"
 #include "bitmaps/ol_pulldown.bm"
 #include "bitmaps/ol_pullright.bm"
 #include "bitmaps/ol_cycle.bm"
-#include "bitmaps/cnode.bm"
-#include "bitmaps/enode.bm"
 #include "bitmaps/intarrows.bm"
 
 static Image
@@ -948,8 +936,9 @@ rescale(Image image, int px)
 { return (int)((double)px*valReal(image->scale)+0.5);
 }
 
+#ifdef XPM_PCEIMAGE
 static void
-stdXPMImage(Name name, Image *global, char **bits)
+stdXPMImage(Name name, Name kind, Image *global, char **bits)
 { int w, h, colours;
 
   if ( sscanf(bits[0], "%d %d %d", &w, &h, &colours) == 3 )
@@ -957,7 +946,7 @@ stdXPMImage(Name name, Image *global, char **bits)
 
     if ( colours == 2 )
     { assign(image, depth, ONE);
-      assign(image, kind, NAME_bitmap);
+      assign(image, kind, kind);
     } else
     { assign(image, kind, NAME_pixmap);
     }
@@ -977,24 +966,20 @@ stdXPMImage(Name name, Image *global, char **bits)
 }
 
 
-#ifdef XPM_PCEIMAGE
 #include "bitmaps/swipl48.xpm"
-#include "bitmaps/hadjusttile.xpm"
-#include "bitmaps/vadjusttile.xpm"
 #include "bitmaps/up.xpm"
 #include "bitmaps/down.xpm"
 #include "bitmaps/left.xpm"
 #include "bitmaps/right.xpm"
 #include "bitmaps/exclamation.xpm"
-#else
-#include "bitmaps/pce.bm"
+#include "bitmaps/cnode.xpm"
+#include "bitmaps/enode.xpm"
+#include "bitmaps/mark.xpm"
+#include "bitmaps/nomark.xpm"
 #endif
 
 #include "bitmaps/white_bm"
-#include "bitmaps/grey12_bm"
-#include "bitmaps/grey25_bm"
 #include "bitmaps/grey50_bm"
-#include "bitmaps/grey75_bm"
 #include "bitmaps/black_bm"
 
 static void
@@ -1012,31 +997,13 @@ static void
 standardImages(void)
 { greyImage(NAME_whiteImage,  0,  &WHITE_IMAGE,
 	    white_bm_bits, white_bm_width, white_bm_height);
-  greyImage(NAME_grey12Image, 12, &GREY12_IMAGE,
-	    grey12_bm_bits, grey12_bm_width, grey12_bm_height);
-  greyImage(NAME_grey25Image, 25, &GREY25_IMAGE,
-	    grey25_bm_bits, grey25_bm_width, grey25_bm_height);
   greyImage(NAME_grey50Image, 50, &GREY50_IMAGE,
 	    grey50_bm_bits, grey50_bm_width, grey50_bm_height);
-  greyImage(NAME_grey75Image, 75, &GREY75_IMAGE,
-	    grey75_bm_bits, grey75_bm_width, grey75_bm_height);
   greyImage(NAME_blackImage, 100, &BLACK_IMAGE,
 	    black_bm_bits, black_bm_width, black_bm_height);
 
-  stdImage(NAME_cycleImage, &CYCLE_IMAGE,
-	   cycle_bm_bits, cycle_bm_width, cycle_bm_height);
-  stdImage(NAME_markImage, &MARK_IMAGE,
-	   mark_bm_bits, mark_bm_width, mark_bm_height);
-  stdImage(NAME_nomarkImage, &NOMARK_IMAGE,
-	   nomark_bm_bits, nomark_bm_width, nomark_bm_height);
-  stdImage(NAME_msMarkImage, &MS_MARK_IMAGE,
-	   ms_mark_bits, ms_mark_width, ms_mark_height);
-  stdImage(NAME_msNomarkImage, &MS_NOMARK_IMAGE,
-	   ms_nomark_bits, ms_nomark_width, ms_nomark_height);
   stdImage(NAME_msLeftArrowImage, NULL,
 	   ms_left_arrow_bits, ms_left_arrow_width, ms_left_arrow_height);
-  stdImage(NAME_pullRightImage, &PULLRIGHT_IMAGE,
-	   pullright_bm_bits, pullright_bm_width, pullright_bm_height);
   stdImage(NAME_markHandleImage, &MARK_HANDLE_IMAGE,
 	   mark_handle_bm_bits, mark_handle_bm_width, mark_handle_bm_height);
   stdImage(NAME_olPullrightImage, NULL,
@@ -1045,24 +1012,23 @@ standardImages(void)
 	   ol_pulldown_bits, ol_pulldown_width, ol_pulldown_height);
   stdImage(NAME_olCycleImage, NULL,
 	   ol_cycle_bits, ol_cycle_width, ol_cycle_height);
-  stdImage(NAME_treeExpandedImage, NULL,
-	   enode_bits, enode_width, enode_height);
-  stdImage(NAME_treeCollapsedImage, NULL,
-	   cnode_bits, cnode_width, cnode_height);
   stdImage(NAME_intItemImage, &INT_ITEM_IMAGE,
 	   intarrows_bits, intarrows_width, intarrows_height);
 #ifdef XPM_PCEIMAGE
-  stdXPMImage(NAME_pceImage,	     NULL,		  swipl48_xpm);
-  stdXPMImage(NAME_hadjustTileImage, NULL,		  hadjusttile_xpm);
-  stdXPMImage(NAME_vadjustTileImage, NULL,		  vadjusttile_xpm);
-  stdXPMImage(NAME_scrollUpImage,    &SCROLL_UP_IMAGE,	  up_xpm);
-  stdXPMImage(NAME_scrollDownImage,  &SCROLL_DOWN_IMAGE,  down_xpm);
-  stdXPMImage(NAME_scrollLeftImage,  &SCROLL_LEFT_IMAGE,  left_xpm);
-  stdXPMImage(NAME_scrollRightImage, &SCROLL_RIGHT_IMAGE, right_xpm);
-  stdXPMImage(NAME_exclamationImage, &EXCLAMATION_IMAGE,  exclamation_xpm);
-#else
-  stdImage(NAME_pceImage, NULL,
-	   pce_bm_bits, pce_bm_width, pce_bm_height);
+#define P NAME_pixmap
+#define B NAME_bitmap
+  stdXPMImage(NAME_pceImage,	       P, NULL,		       swipl48_xpm);
+  stdXPMImage(NAME_scrollUpImage,      P, &SCROLL_UP_IMAGE,    up_xpm);
+  stdXPMImage(NAME_scrollDownImage,    P, &SCROLL_DOWN_IMAGE,  down_xpm);
+  stdXPMImage(NAME_scrollLeftImage,    P, &SCROLL_LEFT_IMAGE,  left_xpm);
+  stdXPMImage(NAME_scrollRightImage,   P, &SCROLL_RIGHT_IMAGE, right_xpm);
+  stdXPMImage(NAME_exclamationImage,   P, &EXCLAMATION_IMAGE,  exclamation_xpm);
+  stdXPMImage(NAME_treeExpandedImage,  B, NULL,		       enode_xpm);
+  stdXPMImage(NAME_treeCollapsedImage, B, NULL,		       cnode_xpm);
+  stdXPMImage(NAME_markImage,          P, &MARK_IMAGE,	       mark_xpm);
+  stdXPMImage(NAME_nomarkImage,        P, &NOMARK_IMAGE,       nomark_xpm);
+#undef P
+#undef B
 #endif
 
   stdImage(NAME_nullImage, &NULL_IMAGE,
@@ -1115,10 +1081,10 @@ static vardecl var_image[] =
      NAME_file, "Source (file,resource) from which to load"),
   IV(NAME_access, "{read,both}", IV_GET,
      NAME_permission, "One of {read, both}"),
-  IV(NAME_background, "[colour|pixmap]", IV_BOTH,
-     NAME_colour, "Colour of background (pixmap)"),
-  IV(NAME_foreground, "[colour|pixmap]", IV_BOTH,
-     NAME_colour, "Colour of foreground (pixmap)"),
+  IV(NAME_background, "[colour]*", IV_BOTH,
+     NAME_colour, "Colour of background"),
+  IV(NAME_foreground, "[colour]", IV_BOTH,
+     NAME_colour, "Colour of foreground"),
   IV(NAME_depth, "[int]", IV_GET,
      NAME_colour, "Number of bits/pixel"),
   IV(NAME_size, "size", IV_GET,
@@ -1150,6 +1116,8 @@ static senddecl send_image[] =
      DEFAULT, "Create from name, [width, height, kind]"),
   SM(NAME_unlink, 0, NULL, unlinkImage,
      DEFAULT, "Destroy private memory and window-system resources"),
+  SM(NAME_hasAlpha, 0, NULL, hasAlphaImage,
+     NAME_colour, "True if the image is not completely opaque"),
   SM(NAME_copy, 1, "from=image", copyImage,
      NAME_copy, "Copy contents of argument in image"),
   SM(NAME_drawIn, 2, T_drawIn, drawInImage,
@@ -1205,6 +1173,8 @@ static getdecl get_image[] =
      NAME_copy, "Get a subimage"),
   GM(NAME_monochrome, 0, "image", NULL, getMonochromeImage,
      NAME_copy, "Get monochrome version of pixmap image"),
+  GM(NAME_grayscale, 0, "image", NULL, getGrayscaleImage,
+     NAME_copy, "Get grayscale version of image"),
   GM(NAME_scale, 1, "image", "size", getScaleImage,
      NAME_copy, "Get copy with different dimensions"),
   GM(NAME_rotate, 1, "image", "degrees=real", getRotateImage,
@@ -1213,8 +1183,6 @@ static getdecl get_image[] =
      NAME_oms, "Lookup in @images table"),
   GM(NAME_pixel, 2, "value=bool|colour", T_xAint_yAint, getPixelImage,
      NAME_pixel, "Get 0-1 (image) or colour for x-y"),
-  GM(NAME_colourMap, 0, "colour_map", NULL, getColourMapImage,
-     NAME_colour, "New colour_map for best display of image"),
   GM(NAME_boundingBox, 0, "area", NULL, getBoundingBoxImage,
      NAME_postscript, "BoundingBox for PostScript generation"),
   GM(NAME_postscript, 2, "string", T_postscript, getPostscriptObject,
@@ -1233,7 +1201,7 @@ static classvardecl rc_image[] =
      "\".:bitmaps:~/lib/bitmaps:$PCEHOME/bitmaps:" /* concat */
      "/usr/include/X11/bitmaps\"",
      "Search path for loading images"),
-  RC(NAME_scale, "real", UXWIN("when(@display?dpi?width > 150, 2, 1)", "1.0"),
+  RC(NAME_scale, "real", "1.0",
      "Scale factor for the image")
 };
 

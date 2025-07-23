@@ -519,13 +519,14 @@ selection(cutpaste-2) :-
                  *             IMAGE            *
                  *******************************/
 
+/* Must be changed to pixmap example
 image(bitmap-1) :-
     new(I, image(@nil, 100, 100, bitmap)),
     get(I, pixel, 10, 10, @off),
     send(I, pixel, 10, 10, @on),
     get(I, pixel, 10, 10, @on),
     free(I).
-
+*/
 
                  /*******************************
                  *             REGEX            *

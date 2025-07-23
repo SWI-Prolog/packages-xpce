@@ -54,7 +54,7 @@
                     "Edit (programming) languages",
         [ indent_line                   = key('TAB'),
           newline_and_indent		= key('\\ej'),
-          backward_delete_char_untabify = key(backspace),
+          backward_delete_char_untabify = key('BS'),
           align_close_bracket           = key(']') + key('}') + key(')'),
           insert_file_header            = key('\\C-c\\C-f'),
           insert_section_comment        = key('\\C-c\\C-h'),
@@ -62,7 +62,7 @@
           insert_line_comment           = key('\\e;'),
           close_block_comment           = key('/'),
           find_tag                      = key('\\e.') + button(browse),
-          xref_go_back			= key('\\e,'),
+          xref_go_back		= key('\\e,'),
           camelcase_word                = key('\\C-c\\C-c'),
           underscores_word              = key('\\C-c\\C--')
         ],

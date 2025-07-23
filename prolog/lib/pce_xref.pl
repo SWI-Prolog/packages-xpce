@@ -79,13 +79,14 @@
 :- multifile
     gxref_called/2.
 
-gxref_version('0.1.1').
+gxref_version('1.0').
 
 :- dynamic
     setting/2.
 
 setting_menu([ warn_autoload,
-               warn_not_called
+               warn_not_called,
+               hide_system_files
              ]).
 
 setting(warn_autoload,      false).
@@ -175,7 +176,7 @@ fill_toolbar(F, TD:tool_dialog) :->
     send(TD, append, new(View, popup(view))),
     send(TD, append, new(Help, popup(help))),
     send_list(File, append,
-              [ menu_item(exit, message(F, destroy))
+              [ menu_item(close, message(F, destroy))
               ]),
     send_list(View, append,
               [ menu_item(refresh, message(F, update))
@@ -187,11 +188,11 @@ fill_toolbar(F, TD:tool_dialog) :->
     send(Settings, multiple_selection, @on),
     send(F, update_setting_menu).
 
-about(_F) :->
+about(F) :->
     gxref_version(Version),
-    send(@display, inform,
-         string('SWI-Prolog cross-referencer version %s\n\c
-                    By Jan Wielemaker', Version)).
+    send(@display, inform, F, "Cross-referencer",
+         'SWI-Prolog cross-referencer version %s\n\c
+         By Jan Wielemaker', Version).
 
 :- pce_group(parts).
 
@@ -221,7 +222,10 @@ browser(F, Which:name, Browser:browser) :<-
 
 update(F) :->
     "Update all windows"::
-    send(F, xref_all),
+    thread_create(xref_all(F), _, [detached(true)]).
+
+update_browsers(F) :->
+    "Update the browsers"::
     get(F, member, browsers, Tabs),
     send(Tabs?members, for_some,
          message(@arg1, update)),
@@ -229,22 +233,27 @@ update(F) :->
     send(WSs?members, for_some,
          message(@arg1, update)).
 
-xref_all(F) :->
-    "Run X-referencer on all files"::
-    forall(( source_file(File),
-             exists_file(File)
-           ),
-           send(F, xref_file, File)).
+xref_all(F) :-
+    forall(dep_source(File),
+           xref_file(F, File)),
+    object(F),
+    !,
+    in_pce_thread(send(F, update_browsers)).
+xref_all(_).                                          % Cancelled
 
 xref_file(F, File:name) :->
-    "XREF a single file if not already done"::
+    "Method version to update the xref data for File"::
+    xref_file(F, File).
+
+xref_file(F, File) :-
+    object(F),                                        % Verify the window is not closed.
     (   xref_done(File, Time),
         catch(time_file(File, Modified), _, fail),
         Modified == Time
     ->  true
-    ;   send(F, report, progress, 'XREF %s', File),
+    ;   in_pce_thread(send(F, report, progress, 'XREF %s', File)),
         xref_source(File, [silent(true)]),
-        send(F, report, done)
+        in_pce_thread(send(F, report, done))
     ).
 
 :- pce_group(actions).
@@ -348,6 +357,7 @@ sources(_, Sources:prolog) :<-
 
 dep_source(Src) :-
     source_file(Src),
+    exists_file(Src),
     (   setting(hide_system_files, true)
     ->  \+ library_file(Src)
     ;   true
@@ -451,10 +461,18 @@ preview_drop(G, Obj:object*, Pos:point) :->
 :- send(@class, handle, handle(w/2, h, link, south)).
 :- send(@class, handle, handle(0, h/2, link, east)).
 
+class_variable(background, colour, grey80, "Default background colour").
+class_variable(colour,     colour, black,  "Default colour").
+class_variable(font,       font,   bold,   "Default font").
+
 initialise(N, File:name) :->
     send_super(N, initialise, File),
-    send(N, font, bold),
-    send(N, background, grey80).
+    get(N, class_variable_value, background, BG),
+    get(N, class_variable_value, colour, FG),
+    get(N, class_variable_value, font, Font),
+    send(N, font, Font),
+    send(N, background, BG),
+    send(N, colour, FG).
 
 create_export_links(N, Add:[bool]) :->
     "Create the export links to other files"::
@@ -604,7 +622,7 @@ variable(connection, xref_export_connection, get, "Related connection").
 initialise(Tag, C:xref_export_connection, N:int) :->
     send(Tag, slot, connection, C),
     send_super(Tag, initialise, string('(%d)', N)),
-    send(Tag, colour, blue),
+    send(Tag, colour, dodger_blue),
     send(Tag, underline, @on).
 
 :- pce_global(@xref_export_connection_tag_recogniser,
@@ -781,7 +799,7 @@ update(FL) :->
 
 append_all_sourcefiles(FL) :->
     "Append all files loaded into Prolog"::
-    forall(source_file(File),
+    forall(dep_source(File),
            send(FL, append, File)),
     send(FL, sort).
 
@@ -896,8 +914,8 @@ initialise(DN, Dir:name, Label:[name]) :->
     "Create a directory node"::
     (   Label \== @default
     ->  Name = Label
-    ;   file_alias_path(Name, Dir)
-    ->  true
+    ;   file_alias_path(Alias, Dir)
+    ->  tag_alias(Dir, Alias, Name)
     ;   file_base_name(Dir, Name)
     ),
     send_super(DN, initialise, xref_directory_text(Dir, Name), Dir).
@@ -936,6 +954,41 @@ set_flags(DN) :->
         send(DN, slot, flags, ok)
     ),
     send(@display, synchronise).
+
+%!  tag_alias(+Dir, +Alias, -Label)
+%
+%   Tag the Alias with the basename of the directory when not unique.
+
+tag_alias(Dir, Alias, Label) :-
+    alias_is_ambiguous(Dir, Alias),
+    !,
+    (   split_string(Dir, "/", "/", Segments),
+        reverse(Segments, RevSegments),
+        append(RevTagSegments, _, RevSegments),
+        last(RevTagSegments, Last),
+        \+ common_name(Last)
+    ->  reverse(RevTagSegments, TagSegments),
+        atomics_to_string(TagSegments, "/", Tag)
+    ;   Tag = Dir
+    ),
+    format(atom(Label), '~w<...~w>', [Alias, Tag]).
+tag_alias(_, Alias, Alias).
+
+common_name("lib").
+common_name("prolog").
+
+alias_is_ambiguous(Dir, Alias) :-
+    DirTerm =.. [Alias, '.'],
+    absolute_file_name(DirTerm, Dir2,
+                       [ access(read),
+                         file_type(directory),
+                         solutions(all),
+                         file_errors(fail)
+                       ]),
+    Dir2 \== Dir,
+    source_file(File),
+    sub_atom(File, 0, _, _, Dir2),
+    !.
 
 :- pce_end_class(prolog_directory_node).
 
@@ -992,36 +1045,35 @@ set_flags(FN) :->
     send(@display, synchronise).
 
 :- pce_global(@xref_ok_file,
-              make_xref_image([ image('16x16/doc.xpm'),
-                                image('16x16/ok.xpm')
+              make_xref_image([ image('16x16/doc.png'),
+                                image('16x16/ok.png')
                               ])).
 :- pce_global(@xref_alert_file,
-              make_xref_image([ image('16x16/doc.xpm'),
-                                image('16x16/alert.xpm')
+              make_xref_image([ image('16x16/doc.png'),
+                                image('16x16/alert.png')
                               ])).
 
 :- pce_global(@xref_ok_opendir,
-              make_xref_image([ image('16x16/opendir.xpm'),
-                                image('16x16/ok.xpm')
+              make_xref_image([ image('16x16/opendir.png'),
+                                image('16x16/ok.png')
                               ])).
 :- pce_global(@xref_alert_opendir,
-              make_xref_image([ image('16x16/opendir.xpm'),
-                                image('16x16/alert.xpm')
+              make_xref_image([ image('16x16/opendir.png'),
+                                image('16x16/alert.png')
                               ])).
 
 :- pce_global(@xref_ok_closedir,
-              make_xref_image([ image('16x16/closedir.xpm'),
-                                image('16x16/ok.xpm')
+              make_xref_image([ image('16x16/closedir.png'),
+                                image('16x16/ok.png')
                               ])).
 :- pce_global(@xref_alert_closedir,
-              make_xref_image([ image('16x16/closedir.xpm'),
-                                image('16x16/alert.xpm')
+              make_xref_image([ image('16x16/closedir.png'),
+                                image('16x16/alert.png')
                               ])).
 
-make_xref_image([First|More], Image) :-
-    new(Image, image(@nil, 0, 0, pixmap)),
-    send(Image, copy, First),
-    forall(member(I2, More),
+make_xref_image(Images, Image) :-
+    new(Image, image(@nil, 16, 16, pixmap)),
+    forall(member(I2, Images),
            send(Image, draw_in, bitmap(I2))).
 
 :- pce_end_class(prolog_file_node).
@@ -1040,6 +1092,9 @@ make_xref_image([First|More], Image) :-
 
 variable(tabular,     tabular, get, "Displayed table").
 variable(prolog_file, name*,   get, "Displayed Prolog file").
+
+class_variable(header_colour,     colour, black,  "Predicate header colour").
+class_variable(header_background, colour, khaki1, "Predicate header background").
 
 initialise(W, File:[name]*) :->
     send_super(W, initialise),
@@ -1100,12 +1155,15 @@ module(W, Module:name) :<-
 :- pce_group(info).
 
 show_info(W) :->
+    get(W, class_variable_value, header_colour, HC),
+    get(W, class_variable_value, header_background, HBG),
+    BG = (background := HBG),
+    FG = (colour := HC),
     get(W, tabular, T),
-    BG = (background := khaki1),
     get(W, prolog_file, File),
-    new(FG, xref_file_text(File)),
-    send(FG, font, huge),
-    send(T, append, FG, halign := center, colspan := 2, BG),
+    new(FT, xref_file_text(File)),
+    send(FT, font, huge),
+    send(T, append, FT, halign := center, colspan := 2, BG, FG),
     send(T, next_row),
     send(W, show_module),
     send(W, show_modified),
@@ -1159,10 +1217,13 @@ show_exports(W) :->
     ).
 
 show_export_header(W, Left:name, Right:name) :->
+    get(W, class_variable_value, header_colour, HC),
+    get(W, class_variable_value, header_background, HBG),
+    BG = (background := HBG),
+    FG = (colour := HC),
     get(W, tabular, T),
-    BG = (background := khaki1),
-    send(T, append, Left?label_name, bold, center, BG),
-    send(T, append, Right?label_name, bold, center, BG),
+    send(T, append, Left?label_name, bold, center, BG, FG),
+    send(T, append, Right?label_name, bold, center, BG, FG),
     send(T, next_row).
 
 show_module_export(W, File:name, Module:name, Callable:prolog) :->
@@ -1250,14 +1311,17 @@ show_undefined(W) :->
     findall(Undef, undefined(File, Undef), UndefList),
     (   UndefList == []
     ->  true
-    ;   BG = (background := khaki1),
+    ;   get(W, class_variable_value, header_colour, HC),
+        get(W, class_variable_value, header_background, HBG),
+        BG = (background := HBG),
+        FG = (colour := HC),
         get(W, tabular, T),
         (   setting(warn_autoload, true)
         ->  Label = 'Undefined/autoload'
         ;   Label = 'Undefined'
         ),
-        send(T, append, Label, bold, center, BG),
-        send(T, append, 'Called by', bold, center, BG),
+        send(T, append, Label, bold, center, BG, FG),
+        send(T, append, 'Called by', bold, center, BG, FG),
         send(T, next_row),
         sort_callables(UndefList, Sorted),
         forall(member(Callable, Sorted),
@@ -1285,9 +1349,12 @@ show_not_called(W) :->
     findall(NotCalled, not_called(File, NotCalled), NotCalledList),
     (   NotCalledList == []
     ->  true
-    ;   BG = (background := khaki1),
+    ;   get(W, class_variable_value, header_colour, HC),
+        get(W, class_variable_value, header_background, HBG),
+        BG = (background := HBG),
+        FG = (colour := HC),
         get(W, tabular, T),
-        send(T, append, 'Not called', bold, center, colspan := 2, BG),
+        send(T, append, 'Not called', bold, center, colspan := 2, BG, FG),
          send(T, next_row),
         sort_callables(NotCalledList, Sorted),
         forall(member(Callable, Sorted),
@@ -1310,11 +1377,16 @@ show_not_called_pred(W, Callable:prolog) :->
 :- pce_begin_class(xref_predicate_text, text,
                    "Text representing a predicate").
 
-class_variable(colour, colour, dark_green).
-
 variable(callable,       prolog, get, "Predicate indicator").
 variable(classification, [name], get, "Classification of the predicate").
 variable(file,           name*,  get, "File of predicate").
+
+class_variable(colour,            colour, dark_green).
+class_variable(colour_autoload,   colour, navy_blue).
+class_variable(colour_global,     colour, navy_blue).
+class_variable(colour_undefined,  colour, red).
+class_variable(colour_not_called, colour, red).
+
 
 initialise(T, Callable0:prolog,
            Class:[{undefined,called_by,not_called}],
@@ -1354,15 +1426,19 @@ classification(T, Class:[name]) :->
     ->  get(T, callable, Callable),
         strip_module(Callable, _, Plain),
         (   autoload_predicate(Plain)
-        ->  send(T, colour, navy_blue),
+        ->  get(T, class_variable_value, colour_autoload, Colour),
+            send(T, colour, Colour),
             send(T, slot, classification, autoload)
         ;   global_predicate(Plain)
-        ->  send(T, colour, navy_blue),
+        ->  get(T, class_variable_value, colour_global, Colour),
+            send(T, colour, Colour),
             send(T, slot, classification, global)
-        ;   send(T, colour, red)
+        ;   get(T, class_variable_value, colour_undefined, Colour),
+            send(T, colour, Colour)
         )
     ;   Class == not_called
-    ->  send(T, colour, red)
+    ->  get(T, class_variable_value, colour_not_called, Colour),
+        send(T, colour, Colour)
     ;   true
     ).
 
@@ -1431,7 +1507,7 @@ popup(_, Popup:popup) :<-
     send_list(Popup, append,
               [ menu_item(edit, message(@arg1, edit)),
                 menu_item(info, message(@arg1, info)),
-                menu_item(header, message(@arg1, header))
+                menu_item(generate_module_header, message(@arg1, header))
               ]).
 
 event(T, Ev:event) :->
@@ -1560,7 +1636,7 @@ show_called_by(IT) :->
     send(T, name, called_count),
     (   N > 0
     ->  send(T, underline, @on),
-        send(T, colour, blue),
+        send(T, colour, dodger_blue),
         send(T, recogniser, @xref_called_by_recogniser)
     ;   send(T, colour, grey60)
     ).

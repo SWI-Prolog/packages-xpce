@@ -36,12 +36,17 @@
 #include <h/graphics.h>
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+This maps  an xpce object to  a Window handle per  display.  This only
+needs to be used on systems  where handles are specific for a display,
+such as X11.
+
+
 TBD:	handle destruction of these objects.  Not that important as they
 	are generally not destroyed and only a bit of memory is wasted
 	if they are.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-#define XREF_TABLESIZE 		256
+#define XREF_TABLESIZE		256
 #define HashValue(obj)		(int)(((uintptr_t)(obj) & (XREF_TABLESIZE-1)))
 
 static Xref XrefTable[XREF_TABLESIZE];

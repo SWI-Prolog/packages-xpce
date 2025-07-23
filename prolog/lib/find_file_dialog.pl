@@ -55,8 +55,8 @@
 :- pce_begin_class(find_file_dialog, dialog,
                    "Browse for a file").
 
-resource(up, image, image('16x16/up.xpm')).
-resource(newdir, image, image('16x16/newdir.xpm')).
+resource(up, image, image('16x16/up.png')).
+resource(newdir, image, image('16x16/newdir.png')).
 
 variable(directory,    directory*,  get,  "Current directory").
 variable(message,      [code]*,     both, "Message executed on ok").
@@ -129,7 +129,7 @@ layout(D, Size:[size]) :->
     get(D, width, DW),
     get(D?border, width, BW),
     get(D?gap, width, GW),
-    BrW is (DW-2*BW-GW)//2,
+    BrW is (DW-2*BW-GW)/2,
     send(SubDirs, do_set, BW, @default, BrW),
     send(Files, do_set, BW+BrW+GW, @default, BrW),
     Right is DW-BW,
@@ -588,4 +588,3 @@ ext_pattern(Ext, Ext, Pattern) :-
     atomic_list_concat(['^.*\\.', Ext, '$'], Pattern).
 
 :- pce_end_class(finder_filter_item).
-

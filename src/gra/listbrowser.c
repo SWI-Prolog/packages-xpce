@@ -257,6 +257,10 @@ statusListBrowser(ListBrowser lb, Name stat)
   { Elevation z;
 
     assign(lb, status, stat);
+    if ( stat == NAME_active )
+      ws_enable_text_input((Graphical)lb, ON);
+    else
+      ws_enable_text_input((Graphical)lb, OFF);
 
 				/* avoid unnecessary flickering (hack) */
     if ( !((z = getClassVariableValueObject(lb->image, NAME_elevation)) &&
@@ -1838,9 +1842,7 @@ static classvardecl rc_listBrowser[] =
   RC(NAME_font, "font", "normal",
      "Default font"),
   RC(NAME_isearchStyle, "[style]",
-     UXWIN("when(@colour_display,\n"
-	   "     style(background := green),\n"
-	   "     style(background:= @grey25_image))",
+     UXWIN("style(background := green)",
 	   "@_isearch_style"),
      "Style for incremental search"),
   RC(NAME_labelFont, "font", "bold",
@@ -1850,9 +1852,7 @@ static classvardecl rc_listBrowser[] =
   RC(NAME_searchIgnoreCase, "bool", "@on",
      "@on: ignore case when searching"),
   RC(NAME_selectionStyle, "[style]",
-     UXWIN("when(@colour_display,\n"
-	   "     style(background := black, colour := white),\n"
-	   "     style(highlight  := @on))",
+     UXWIN("style(background := black, colour := white)",
 	   "@_select_style"),
      "Style object for <-selection"),
   RC(NAME_size, "size", "size(15,10)",

@@ -40,8 +40,8 @@
            , nth1/3
            ]).
 
-resource(open,  image, image('16x16/book2.xpm')).
-resource(close, image, image('16x16/manual.xpm')).
+resource(open,  image, image('16x16/book2.png')).
+resource(close, image, image('16x16/manual.png')).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Show hierarchy of elements as produced   by library(sgml). This class is

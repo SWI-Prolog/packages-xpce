@@ -94,7 +94,8 @@ scan_file(const char *file)
   { const char *s;
 
     for(s = buf; *s; s++)
-    { if ( s[0] == 'N' && strncmp(name, s, len) == 0 )
+    { if ( s[0] == 'N' && strncmp(name, s, len) == 0 &&
+	   (s == buf || !(isalnum(s[-1]&0xff) || s[-1] == '_')) )
       { const char *start = s = s + len;
 	char nbuf[200];
 
@@ -148,15 +149,21 @@ emit_names(FILE *ic, FILE *ih)
     const char *s;
     char *q;
 
-    for(s=name, q=prolog; *s; s++)
-    { if ( isupper(*s & 0xff) )
-      { *q++ = '_';
-	*q++ = *s + 'a' - 'A';
-      } else
-      { *q++ = *s;
+    for(s=name; *s && isupper(*s & 0xff); s++)
+      ;;
+    if ( !*s )			/* all upper */
+    { strcpy(prolog, name);
+    } else
+    { for(s=name, q=prolog; *s; s++)
+      { if ( isupper(*s & 0xff) )
+	{ *q++ = '_';
+	  *q++ = *s + 'a' - 'A';
+	} else
+	{ *q++ = *s;
+	}
       }
+      *q = '\0';
     }
-    *q = '\0';
 
     fprintf(ic, "  BUILTIN_NAME(\"%s\")\n", prolog);
     fprintf(ih, "#define NAME_%s (&builtin_names[%d])\n", name, i);

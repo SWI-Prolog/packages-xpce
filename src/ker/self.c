@@ -47,6 +47,7 @@
 #include <errno.h>
 
 #ifdef __WINDOWS__
+#include <msw/mswin.h>
 #undef PCE_MACHINE
 #ifdef WIN64
 #define PCE_MACHINE "x86_64"
@@ -129,11 +130,13 @@ initialisePce(Pce pce)
   assign(pce, operating_system,       CtoName(PCE_OS));
 #ifdef WIN32_GRAPHICS
   assign(pce, window_system,	      NAME_windows);
+#elif X11_GRAPHICS
+  assign(pce, window_system,	      NAME_x11);
+#elif SDL_GRAPHICS
+  assign(pce, window_system,	      NAME_sdl);
 #else
-  assign(pce, window_system,	      CtoName("X"));
+  assign(pce, window_system,	      NAME_unknown);
 #endif
-  assign(pce, window_system_version,  toInt(ws_version()));
-  assign(pce, window_system_revision, toInt(ws_revision()));
   assign(pce, features,		      newObject(ClassChain, EAV));
 
   at_pce_exit(exit_pce, ATEXIT_FIFO);
@@ -615,12 +618,14 @@ static status
 bannerPce(Pce pce)
 { Name host = get(HostObject(), NAME_system, EAV);
 
-#ifdef __WINDOWS__
+#if WIN32_GRAPHICS
 #ifdef WIN64
   writef("XPCE %s for %I%IWin64: XP 64-bit edition%I%I\n",
 #else
   writef("XPCE %s for %I%IWin32: NT,2000,XP%I%I\n",
 #endif
+#elif SDL_GRAPHICS
+  writef("XPCE %s for %s-%s and SDL%d.%d on %s\n",
 #else
   writef("XPCE %s for %s-%s and X%dR%d\n",
 #endif
@@ -628,8 +633,12 @@ bannerPce(Pce pce)
 	 pce->machine,
 	 pce->operating_system,
 	 pce->window_system_version,
-	 pce->window_system_revision);
-  writef("Copyright (C) 1993-2009 University of Amsterdam.\n"
+	 pce->window_system_revision
+#if SDL_GRAPHICS
+	,pce->window_system_driver
+#endif
+    );
+  writef("Copyright (C) 1993-2025 University of Amsterdam, SWI-Prolog Solutions b.v.\n"
 	 "XPCE comes with ABSOLUTELY NO WARRANTY. "
 	 "This is free software,\nand you are welcome to redistribute it "
 	 "under certain conditions.\n");
@@ -664,14 +673,20 @@ infoPce(Pce pce)
   writef("	Release:            %s\n", pce->version);
   writef("	System:             %s\n", pce->machine);
   writef("	Operating System:   %s\n", pce->operating_system);
-#ifdef __WINDOWS__
+#if WIN32_GRAPHICS
   writef("	Window System:      windows %s.%s\n",
 	 pce->window_system_version,
 	 pce->window_system_revision);
-#else
+#elif X11_GRAPHICS
   writef("	Window System:      X%sR%s\n",
 	 pce->window_system_version,
 	 pce->window_system_revision);
+#else
+  writef("	Window System:      SDL%s.%s\n",
+	 pce->window_system_version,
+	 pce->window_system_revision);
+  writef("	SDL driver:         %s\n",
+	 pce->window_system_driver),
 #endif
   writef("\n");
   writef("Memory allocation:\n");
@@ -765,6 +780,12 @@ getDatePce(Pce pce)
 static Int
 getMclockPce(Pce pce)
 { return toInt(mclock());
+}
+
+
+static status
+openUrlPce(Pce pce, CharArray url)
+{ return ws_open_url(&url->data);
 }
 
 
@@ -906,7 +927,7 @@ informPce(Pce pce, CharArray fmt, int argc, Any *argv)
 { Any d = CurrentDisplay(NIL);
 
   if ( d != NULL && getOpenDisplay(d) == ON )
-    return informDisplay(d, fmt, argc, argv);
+    return informDisplay(d, DEFAULT, DEFAULT, fmt, argc, argv);
 
   return formatPcev(pce, fmt, argc, argv);
 }
@@ -918,7 +939,7 @@ confirmPce(Pce pce, CharArray fmt, int argc, Any *argv)
   int try;
 
   if ( d != NULL && getOpenDisplay(d) == ON )
-    return confirmDisplay(d, fmt, argc, argv);
+    return confirmDisplay(d, DEFAULT, DEFAULT, fmt, argc, argv);
 
   for(try = 0; try < 3; try++)
   { char line[256];
@@ -1274,12 +1295,14 @@ static vardecl var_pce[] =
      NAME_version, "Name of this machine/architecture"),
   IV(NAME_operatingSystem, "name", IV_GET,
      NAME_version, "Name of operating system"),
-  IV(NAME_windowSystem, "{X,windows}", IV_GET,
+  IV(NAME_windowSystem, "{x11,windows,sdl}", IV_GET,
      NAME_version, "Basic window system used"),
-  IV(NAME_windowSystemVersion, "int", IV_GET,
-     NAME_version, "Version of Xt library used to compile xpce"),
-  IV(NAME_windowSystemRevision, "int", IV_GET,
-     NAME_version, "Revision of Xt library used to compile xpce"),
+  IV(NAME_windowSystemVersion, "int*", IV_GET,
+     NAME_version, "Major version of the window system"),
+  IV(NAME_windowSystemRevision, "int*", IV_GET,
+     NAME_version, "Minor version of the window system"),
+  IV(NAME_windowSystemDriver, "name*", IV_GET,
+     NAME_version, "Video driver used by SDL"),
   IV(NAME_features, "chain", IV_GET,
      NAME_version, "List of installed features")
 };
@@ -1355,6 +1378,8 @@ static senddecl send_pce[] =
      NAME_report, "Write arguments, separated by spaces"),
   SM(NAME_writeLn, 1, "argument=any ...", writeLnPcev,
      NAME_report, "Write arguments, separated by spaces, add nl"),
+  SM(NAME_openUrl, 1, "url=char_array", openUrlPce,
+     NAME_environment, "Open a URL using the platform defaults"),
   SM(NAME_feature, 1, "any", featurePce,
      NAME_version, "Define new feature"),
   SM(NAME_hasFeature, 1, "any", hasFeaturePce,
@@ -1432,13 +1457,17 @@ static classvardecl rc_pce[] =
 { RC(NAME_initialise, "code*",
      UXWIN(/*UNIX*/
 	   "and(_dialog_bg        @= colour(grey80),\n"
-	   "    _button_elevation @= elevation(button, 0.25mm, grey80,\n"
+	   "    _button_elevation @= elevation(button, 1, grey80,\n"
 	   "				       grey95, grey50,\n"
 	   "				      '3d', grey70),\n"
 	   "    _mark_elevation   @= elevation(mark, 0),\n"
-	   "    _win_pen	  @= number(0))",
+	   "    _win_pen	      @= number(0))",
 	   /*__WINDOWS__*/
-           "and(_dialog_bg     @= colour(win_btnface),\n"
+           "and(_dialog_bg       @= colour(win_btnface),\n"
+	   "    _button_elevation @= elevation(button, 1, grey80,\n"
+	   "				       grey95, grey50,\n"
+	   "				      '3d', grey70),\n"
+	   "    _mark_elevation   @= elevation(mark, 0),\n"
 	   "    _graph_bg      @= colour(win_window),\n"
 	   "    _win_pen       @= number(1),\n"
 	   "    _isearch_style @= style(background := green),\n"
@@ -1534,8 +1563,8 @@ pceInitialise(int handles, const char *home, const char *appdata,
   allocRange(&ConstantNil,          sizeof(struct constant));
   allocRange(&ConstantDefault,      sizeof(struct constant));
   allocRange(&ConstantClassDefault, sizeof(struct constant));
-  allocRange(&BoolOff,              sizeof(struct bool));
-  allocRange(&BoolOn,               sizeof(struct bool));
+  allocRange(&BoolOff,              sizeof(struct boolean));
+  allocRange(&BoolOn,               sizeof(struct boolean));
   initNamesPass1();
   DEBUG_BOOT(Cprintf("Types ...\n"));
   initTypes();

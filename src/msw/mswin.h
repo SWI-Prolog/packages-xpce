@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2011, University of Amsterdam
+    Copyright (c)  2001-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -44,8 +45,17 @@ typedef enum
   NT
 } os_platform;
 
-os_platform	ws_platform(void);	/* yield windows platform */
+os_platform	ws_platform(void);		/* yield windows platform */
 char *		ws_os(void);		/* platform by name */
 Name		ws_appdata(const char* sub);	/* User application dir */
+int		ws_getpid(void);
+Name		WinStrError(int error, ...);
+
+BOOL		CreatePipeEx(PHANDLE hReadPipe,
+			     PHANDLE hWritePipe,
+			     LPSECURITY_ATTRIBUTES lpPipeAttributes,
+			     DWORD nSize,
+			     DWORD dwReadMode,
+			     DWORD dwWriteMode);
 
 #endif /*MSWIN_H_INCLUDED*/

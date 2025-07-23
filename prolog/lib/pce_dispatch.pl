@@ -63,11 +63,14 @@ This module can be deactivated by setting the flag `xpce_threaded`:
 
 %!  pce_dispatch(+Options) is det.
 %
-%   Create a new thread =pce= that takes   care  of the XPCE message
+%   Create a new thread `pce` that takes   care  of the XPCE message
 %   loop. This predicate has no effect  if dispatching is already on
-%   another thread than the =main=.  The   loop  can  be ended using
+%   another thread than the `main`.  The   loop  can  be ended using
 %   pce_end_dispatch/0.
 
+pce_dispatch(_Options) :-
+    get(@pce, window_system, sdl),
+    !.
 pce_dispatch(Options) :-
     with_mutex(pce_dispatch, pce_dispatch_(Options)).
 
@@ -87,7 +90,7 @@ pce_dispatch_(Options) :-
     end_pce_dispatcher/1.
 
 pce_dispatcher(Origin) :-
-    set_pce_thread,
+    set_pce_thread([]),
     thread_self(Me),
     retractall(pce:pce_thread(_)),
     assert(pce:pce_thread(Me)),
@@ -115,7 +118,7 @@ pce_end_dispatch :-
     thread_self(Me),
     in_pce_thread(end(Me)),
     thread_get_message(end_pce_dispatcher),
-    set_pce_thread,
+    set_pce_thread([]),
     thread_self(Me),
     retractall(pce:pce_thread(_)),
     assert(pce:pce_thread(Me)).
@@ -135,5 +138,5 @@ start_dispatch :-
     (   current_prolog_flag(xpce_threaded, true),
         current_predicate(pce_dispatch/1)
     ->  pce_dispatch([])
-    ;   true
+    ;   set_pce_thread([])
     ).

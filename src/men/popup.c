@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <stdbool.h>
 
 static status closePopup(PopupObj);
 
@@ -57,35 +58,41 @@ initialisePopup(PopupObj p, Name label, Code msg)
 		********************************/
 
 
-static Chain windows = NIL;
 
 static PceWindow
 createPopupWindow(DisplayObj d)
-{ Cell cell;
-  PceWindow sw;
+{ PceWindow sw;
   Any frame;
 
+#if !SDL_GRAPHICS
+  static Chain windows = NIL;
   if ( isNil(windows) )
     windows = globalObject(NAME_PopupWindows, ClassChain, EAV);
 
+  Cell cell;
   for_cell(cell, windows)
   { sw = cell->value;
 
     if ( emptyChain(sw->graphicals) && sw->frame->display == d )
       return sw;
   }
-
+#endif
 
   sw = newObject(ClassDialog, NAME_popup, DEFAULT, d, EAV);
 
   send(sw, NAME_kind, NAME_popup, EAV);
   send(sw, NAME_pen, ZERO, EAV);
+  send(sw, NAME_gap, newObject(ClassSize, ZERO, ZERO, EAV), EAV);
+#if !SDL_GRAPHICS
   send(sw, NAME_create, EAV);
+#endif
   frame = get(sw, NAME_frame, EAV);
   send(frame, NAME_border, ONE, EAV);
   send(getTileFrame(frame), NAME_border, ZERO, EAV);
 
+#if !SDL_GRAPHICS
   appendChain(windows, sw);
+#endif
 
   return sw;
 }
@@ -155,7 +162,8 @@ on which to display the popup.
 
 static status
 openPopup(PopupObj p, Graphical gr, Point pos,
-	  BoolObj pos_is_pointer, BoolObj warp_pointer, BoolObj ensure_on_display)
+	  BoolObj pos_is_pointer, BoolObj warp_pointer,
+	  BoolObj ensure_on_display)
 { PceWindow sw;
   int moved = FALSE;			/* Cursor needs be moved */
   int cx, cy;				/* mouse X-Y */
@@ -177,8 +185,18 @@ openPopup(PopupObj p, Graphical gr, Point pos,
   sw = createPopupWindow(d);
   send(sw, NAME_display, p, EAV);
 
-  if ( !(offset = getDisplayPositionGraphical(gr)) )
+#ifdef SDL_GRAPHICS
+  offset = getFramePositionGraphical(gr);
+#else
+  offset = getDisplayPositionGraphical(gr);
+#endif
+  if ( !offset )
     return errorPce(p, NAME_graphicalNotDisplayed, gr);
+
+  DEBUG(NAME_popup,
+	Cprintf("Show %s on %s at %d,%d offset = %d,%d\n",
+		pp(p), pp(gr), valInt(pos->x), valInt(pos->y),
+		valInt(offset->x), valInt(offset->y)));
 
   plusPoint(pos, offset);
   doneObject(offset);
@@ -221,6 +239,7 @@ openPopup(PopupObj p, Graphical gr, Point pos,
     moved = TRUE;
   }
 
+#ifndef SDL_GRAPHICS
   if ( ensure_on_display == ON )
   { Monitor mon;			/* Monitor displaying gr */
     int mx, my, mw, mh;			/* Monitor area */
@@ -241,13 +260,16 @@ openPopup(PopupObj p, Graphical gr, Point pos,
     if ( px + pw > mw+mx ) moved = TRUE, px = mw+mx - pw;
     if ( py + ph > mh+my ) moved = TRUE, py = mh+my - ph;
   }
+#endif
 
   swfr = getFrameGraphical((Graphical) sw);
   fr   = getFrameGraphical(gr);
   if ( fr )
-    send(swfr, NAME_application, fr->application, EAV);
+  { send(swfr, NAME_application, fr->application, EAV);
+    attributeObject(swfr, NAME_parent, fr);
+  }
   send(swfr, NAME_set, toInt(px), toInt(py), toInt(pw), toInt(ph), EAV);
-  send(sw, NAME_show, ON, EAV);
+  send(swfr, NAME_show, ON, EAV);
   ws_topmost_frame(swfr, ON);
   if ( moved && warp_pointer == ON )
   { Point pos = tempObject(ClassPoint, toInt(dx), toInt(dy), EAV);
@@ -263,19 +285,29 @@ openPopup(PopupObj p, Graphical gr, Point pos,
 
 static status
 closePopup(PopupObj p)
-{ PceWindow sw;
-
-  if ( notNil(p->pullright) )
+{ if ( notNil(p->pullright) )
   { send(p->pullright, NAME_close, EAV);
     assign(p, pullright, NIL);
   }
 
-  if ( notNil(sw = (PceWindow) p->device) )
+#if SDL_GRAPHICS
+  FrameObj fr = getFrameGraphical((Graphical)p);
+  if ( fr )
+  { if ( notNil(p->device) )
+    { eraseDevice(p->device, (Graphical)p);
+      assign(p, displayed, OFF);
+    }
+    send(fr, NAME_destroy, EAV);
+  }
+#else
+  PceWindow sw = (PceWindow) p->device;
+  if ( notNil(sw) )
   { send(sw, NAME_show, OFF, EAV);
     send(sw, NAME_sensitive, OFF, EAV);
     send(sw, NAME_clear, EAV);
     assign(p, displayed, OFF);
   }
+#endif
 
   succeed;
 }
@@ -408,7 +440,8 @@ inPullRigthPopup(PopupObj p, MenuItem mi, EventObj ev)
     rx = ix+iw-8;
   rx -= 2*valInt(p->border);
 
-  get_xy_event(ev, p, ON, &ex, &ey);
+  if ( !get_xy_event(ev, p, ON, &ex, &ey) )
+    fail;
   if ( valInt(ex) >= rx )
     succeed;
 
@@ -493,9 +526,15 @@ typedPopup(PopupObj p, Any id)
 }
 
 
+#define WindowOfEvent(ev) ((PceWindow)(ev)->window)
+
 static status
 eventPopup(PopupObj p, EventObj ev)
 {					/* Showing PULLRIGHT menu */
+  DEBUG(NAME_popup,
+	Cprintf("eventPopup: %s at %s,%s\n",
+		pp(ev->id), pp(ev->x), pp(ev->y)));
+
   if ( notNil(p->pullright) )
   { status rval = postEvent(ev, (Graphical) p->pullright, DEFAULT);
 
@@ -554,6 +593,9 @@ eventPopup(PopupObj p, EventObj ev)
     { send(p, NAME_showPullrightMenu, p->preview, EAV);
     } else if ( getButtonEvent(ev) == p->button )
     { assign(p, selected_item, p->preview);
+      DEBUG(NAME_popup,
+	    Cprintf("Selected %s; context = %s\n",
+		    pp(p->preview), pp(p->context)));
       send(p, NAME_close, EAV);
       succeed;
     }
@@ -622,7 +664,7 @@ defaultPopupImages(PopupObj p)
   { if ( p->multiple_selection == ON && p->look == NAME_win )
       assign(p, on_image, NAME_marked);
     else
-      assign(p, on_image, MS_MARK_IMAGE);
+      assign(p, on_image, MARK_IMAGE);
   } else
     assign(p, on_image, NIL);
 

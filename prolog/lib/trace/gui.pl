@@ -119,7 +119,7 @@
 register_directories :-
     (   member(SpyBase, ['icons/nospy', library('trace/icons/nospy')]),
         absolute_file_name(SpyBase,
-                           [ extensions([xpm]), access(read)],
+                           [ extensions([png]), access(read)],
                            SpyIcon)
     ->  file_directory_name(SpyIcon, Icons),
         pce_image_directory(Icons)
@@ -139,10 +139,10 @@ version('2.0').
                  *            RESOURCES         *
                  *******************************/
 
-resource(debug, image,  image('debug.xpm')).
-resource(Name,  image,  image(XPM)) :-
-    button(_, _, XPM, _),
-    file_name_extension(Name, xpm, XPM).
+resource(debug, image,  image('debug.png')).
+resource(Name,  image,  image(PNG)) :-
+    button(_, _, PNG, _),
+    file_name_extension(Name, png, PNG).
 
                  /*******************************
                  *           TOPLEVEL           *
@@ -592,10 +592,10 @@ settings(_F) :->
     trace_settings.
 
 
-about(_) :->
+about(F) :->
     "Display aout message"::
     version(Version),
-    send(@display, inform,
+    send(@display, inform, F, "GUI Tracer",
          'SWI-Prolog debugger version %s\n\c
               By Jan Wielemaker',
          Version).
@@ -890,7 +890,7 @@ check_console(F) :->
     "See whether the debugged thread has a console"::
     (   in_debug_thread(F, thread_has_console)
     ->  true
-    ;   send(@display, inform,
+    ;   send(@display, inform, F, "GUI Tracer",
              'The debugged thread is not attached to a console.\n\c
                   Cannot run an interactive session in the debuggee.'),
         fail
@@ -901,11 +901,11 @@ interactor(F) :->
     send(F, warn_windows_thread),
     prolog_ide(open_interactor).
 
-warn_windows_thread(_F) :->
+warn_windows_thread(F) :->
     "Warn to run in a separate thread"::
     (   current_prolog_flag(windows, true),
         pce_thread(main)
-    ->  send(@display, inform,
+    ->  send(@display, inform, F, "GUI Tracer",
              'Opening a new interactor from the debugger requires\n\c
                   for the tools to run in a separate thread.  Please set\n\c
                   the flag "xpce_threaded" to "true" in your Prolog startup\n\c
@@ -1018,32 +1018,32 @@ mode(F, Mode:name) :->
 %       If action is +Action, send message Action to the frame.  Otherwise
 %       return Action to the caller.
 
-button(into,           "i",   'into.xpm',            'Show unification').
-button(creep,          "\n ", 'creep.xpm',           'Step').
-button(skip,           "s",   'skip.xpm',            'Skip over this goal').
-button(finish,         "f",   'finish.xpm',          'Finish selected goal').
+button(into,           "i",   'into.png',            'Show unification').
+button(creep,          "\n ", 'creep.png',           'Step').
+button(skip,           "s",   'skip.png',            'Skip over this goal').
+button(finish,         "f",   'finish.png',          'Finish selected goal').
 button(gap,            -,     -,                     -).
-button(retry,          "r",   'retry.xpm',           'Retry selected goal').
+button(retry,          "r",   'retry.png',           'Retry selected goal').
 button(gap,            -,     -,                     -).
-button(+nodebug,       "n",   'nodebug.xpm',         'Continue without debugging').
-button(+abort,         "a",   'abort.xpm',           'Abort to the Prolog toplevel').
-button(+interrupt,     "t",   'interrupt.xpm',       'Interrupt (trace)').
-button(+query,         "b",   'break.xpm',           'Enter a query (in debugged thread)').
-button(+interactor,    "B",   'interactor.xpm',      'Enter a query (in new thread)').
-button(fail,           "F",   'fail.xpm',            'Force query to fail').
+button(+nodebug,       "n",   'nodebug.png',         'Continue without debugging').
+button(+abort,         "a",   'abort.png',           'Abort to the Prolog toplevel').
+button(+interrupt,     "t",   'interrupt.png',       'Interrupt (trace)').
+% button(+query, "b", 'break.png', 'Enter a query (in debugged thread)').
+button(+interactor,    "B",   'interactor.png',      'Enter a query (in new thread)').
+button(fail,           "F",   'fail.png',            'Force query to fail').
 button(gap,            -,     -,                     -).
-button(+up,            "u",   'up.xpm',              'Select parent frame').
-button(+down,          "d",   'down.xpm',            'Select child frame').
+button(+up,            "u",   'up.png',              'Select parent frame').
+button(+down,          "d",   'down.png',            'Select child frame').
 button(gap,            -,     -,                     -).
-button(+browse,        "",    '16x16/butterfly.xpm', 'Browse program structure').
+button(+browse,        "",    '16x16/butterfly.png', 'Browse program structure').
 button(gap,            -,     -,                     -).
-button(leap,           "l",   'leap.xpm',            'Continue to spy- or breakpoint').
-button(+breakpoints,   "+",   'spy.xpm',             'Edit spy- and breakpoints').
-button(+stop_at,       "!",   'stop.xpm',            'Set Stop at caret').
-button(+nostop_or_spy, "-",   'nostopspy.xpm',       'Delete break- or spy-point').
+button(leap,           "l",   'leap.png',            'Continue to spy- or breakpoint').
+button(+breakpoints,   "+",   'spy.png',             'Edit spy- and breakpoints').
+button(+stop_at,       "!",   'stop.png',            'Set Stop at caret').
+button(+nostop_or_spy, "-",   'nostopspy.png',       'Delete break- or spy-point').
 button(gap,            -,     -,                     -).
-button(+details,       "v",   'details.xpm',         'Show (variable) details').
-button(+edit,          "e",   'edit.xpm',            'Toggle read-only/edit-mode').
+button(+details,       "v",   'details.png',         'Show (variable) details').
+button(+edit,          "e",   'edit.png',            'Toggle read-only/edit-mode').
 
 
 tag_balloon(Balloon0, Keys, Balloon) :-

@@ -87,7 +87,7 @@ dispatch_for_frames([]) :- !.
 dispatch_for_frames(Frames) :-
     (   catch(send(@display, dispatch), E,
               (   message_to_string(E, Msg),
-                  send(@display, inform, Msg)
+                  send(@display, inform, @default, @default, Msg)
               ))
     ->  true
     ;   true

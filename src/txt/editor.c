@@ -1036,7 +1036,7 @@ fetch_editor(Any obj, TextChar tc)
 
     if ( gr )
     { tc->value.graphical = gr;
-      tc->type	         = CHAR_GRAPHICAL;
+      tc->type		 = CHAR_GRAPHICAL;
 
       indexFragmentCache(e->fragment_cache, e, index+3);
       return fc->index;
@@ -1426,9 +1426,12 @@ static status
 event_editor(Editor e, EventObj ev)
 { if ( isAEvent(ev, NAME_focus) )
   { if ( isAEvent(ev, NAME_activateKeyboardFocus) )
-      send(e->text_cursor, NAME_active, ON, EAV);
-    else if ( isAEvent(ev, NAME_deactivateKeyboardFocus) )
-      send(e->text_cursor, NAME_active, OFF, EAV);
+    { send(e->text_cursor, NAME_active, ON, EAV);
+      ws_enable_text_input((Graphical)e, ON);
+    } else if ( isAEvent(ev, NAME_deactivateKeyboardFocus) )
+    { send(e->text_cursor, NAME_active, OFF, EAV);
+      ws_enable_text_input((Graphical)e, OFF);
+    }
 
     succeed;
   }
@@ -4967,7 +4970,7 @@ static vardecl var_editor[] =
      NAME_internal, "Caret index at start of dabbrev"),
   IV(NAME_dabbrevOrigin, "int*", IV_NONE,
      NAME_internal, "Caret index of start of target"),
-  IV(NAME_dabbrevMode, "{backwards,forwards,user1,user2,user3}", IV_NONE,
+  IV(NAME_dabbrevMode, "{backwards,forwards,user1,user2,user3}*", IV_NONE,
      NAME_internal, "Current dabbrev search mode"),
   IV(NAME_dabbrevCandidates, "chain*", IV_NONE,
      NAME_internal, "Current dabbrev candidates"),
@@ -5400,7 +5403,7 @@ static classvardecl rc_editor[] =
      "Colour/fill pattern of the background"),
   RC(NAME_caretModifier, "modifier", "",
      "Modify caret using this modifier"),
-  RC(NAME_cursor, "cursor", UXWIN("xterm", "win_ibeam"),
+  RC(NAME_cursor, "cursor", "text",
      "Default cursor"),
   RC(NAME_exactCase, "bool", "@off",
      "Search/replace case"),
@@ -5415,15 +5418,11 @@ static classvardecl rc_editor[] =
   RC(NAME_indentIncrement, "int", "2",
      "Indent/undent amount"),
   RC(NAME_isearchStyle, "style",
-     UXWIN("when(@colour_display,\n"
-	   "     style(background := green),\n"
-	   "     style(background:= @grey25_image))",
+     UXWIN("style(background := green)",
 	   "@_isearch_style"),
      "Style for incremental search"),
   RC(NAME_isearchOtherStyle, "style",
-     "when(@colour_display,\n"
-     "     style(background := pale_turquoise),\n"
-     "     style(background:= @grey12_image))",
+     "style(background := pale_turquoise)",
      "Style for `other matches' in incremental search"),
   RC(NAME_keyBinding, "string", "",
      "`Key = selector' binding list"),
@@ -5434,9 +5433,7 @@ static classvardecl rc_editor[] =
   RC(NAME_selectModifier, "modifier", "s",
      "Modify selection using this modifier"),
   RC(NAME_selectionStyle, "[style]",
-     UXWIN("when(@colour_display,\n"
-	   "     style(background := yellow),\n"
-	   "     style(highlight := @on))",
+     UXWIN("style(background := yellow)",
 	   "@_select_style"),
      "Style for <-selection"),
   RC(NAME_insertDeletesSelection, "bool", "@on",

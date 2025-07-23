@@ -40,8 +40,8 @@
 :- require([ default/3
            ]).
 
-resource(back, image, image('16x16/back.xpm')).
-resource(forw, image, image('16x16/forward.xpm')).
+resource(back, image, image('16x16/back.png')).
+resource(forw, image, image('16x16/forward.png')).
 
 :- pce_begin_class(history, object,
                    "Manage a location history").
@@ -196,7 +196,7 @@ initialise(G,
            Message:message=[code]*,
            Preview:preview=[code]*,
            Cancel:cancel=[code]*,
-           Time:time=[float]) :->
+           Time:time=[real]) :->
     "Initialise as click_gesture with timeout"::
     default(Time, 0.3, TheTime),
     send_super(G, initialise,

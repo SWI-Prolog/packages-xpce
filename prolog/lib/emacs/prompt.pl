@@ -41,8 +41,8 @@
 :- pce_autoload(prolog_predicate_item, library(prolog_predicate_item)).
 :- pce_autoload(emacs_tag_item,        library(emacs_tags)).
 
-resource(back,  image, image('16x16/fatleft_arrow.xpm')).
-resource(forw,  image, image('16x16/fatright_arrow.xpm')).
+resource(back,  image, image('16x16/fatleft_arrow.png')).
+resource(forw,  image, image('16x16/fatright_arrow.png')).
 
 %!  make_item(+Mode, +Label, +Default, +Type, +History, -Item)
 %
@@ -358,9 +358,7 @@ prompt(D, V:emacs_view, Argv:vector) :->
     "Prompt on behalf of the given window"::
     send(D, transient_for, V),
     send(D, modal, transient),
-    get(V?editor, display_position, point(X,Y)),
-    get(V?editor?area, size, size(W, H)),
-    get(D, confirm_centered, point(X+W/2, Y+H/2), Ok),
+    get(D, confirm_centered, Ok),
     (   Ok == ok
     ->  send(D, collect, Argv)
     ;   send(D, destroy),

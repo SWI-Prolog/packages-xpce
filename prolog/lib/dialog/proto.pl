@@ -50,7 +50,7 @@ proto(reporter,         label(reporter, 'I report warnings, etc.'),
 proto(label,            label(name, 'I am a label'),
       [],
       []).
-proto(image,            label(identifier, image('happy.bm')),
+proto(image,            label(identifier, image('happy.png')),
       [ fixed_reference := @off ],
       []).
 proto(button,           button(button),
@@ -88,17 +88,17 @@ proto(editor,           editor(@default, 30, 5),
                  *             ICONS            *
                  *******************************/
 
-icon(reporter,          'reporter.bm').
-icon(label,             'label.bm').
-icon(image,             'image.bm').
-icon(button,            'button.bm').
-icon(text_item,         'text_item.bm').
-icon(slider,            'slider.bm').
-icon(choice,            'choice.bm').
-icon(toggle,            'toggle.bm').
-icon(cycle,             'cycle.bm').
-icon(list_browser,      'list.bm').
-icon(editor,            'editor.bm').
+icon(reporter,          'reporter.png').
+icon(label,             'label.png').
+icon(image,             'image.png').
+icon(button,            'button.png').
+icon(text_item,         'text_item.png').
+icon(slider,            'slider.png').
+icon(choice,            'choice.png').
+icon(toggle,            'toggle.png').
+icon(cycle,             'cycle.png').
+icon(list_browser,      'list.png').
+icon(editor,            'editor.png').
 
 
 summary(reporter,       'Label to report messages').

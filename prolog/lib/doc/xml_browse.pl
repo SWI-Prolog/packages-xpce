@@ -124,8 +124,8 @@ dialect(xml,  xml).
 dialect(sgml, sgml).
 dialect(sgm,  sgml).
 
-about(_B) :->
-    send(@display, inform,
+about(B) :->
+    send(@display, inform, B, @default,
          'Visualise HTML/XML/SGML DOM structure\n\c
               as produced by library(sgml)\n\n\c
               By Jan Wielemaker\n\c

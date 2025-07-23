@@ -196,6 +196,10 @@ COMMON(Int)	getEndOfLineCursorTextImage(TextImage ti, Int here);
 COMMON(status)	ensureVisibleTextImage(TextImage ti, Int caret);
 COMMON(status)	makeClassTextImage(Class class);
 
+/* txt/terminal.c */
+COMMON(status)	makeClassTerminalImage(Class class);
+COMMON(status)	receiveTerminalImage(TerminalImage ti);
+
 /* /swi40/jan/src/pl/packages/xpce/src/txt/textmargin.c */
 COMMON(status)	makeClassTextMargin(Class class);
 
@@ -220,6 +224,7 @@ COMMON(size_t)  F_UTF8_ENCLENA(const char *s, size_t len);
 
 /* /swi40/jan/src/pl/packages/xpce/src/txt/i18n.c */
 COMMON(wchar_t *) charArrayToWC(CharArray ca, size_t *len);
+COMMON(char *)	stringToUTF8(PceString s, size_t *len);
 COMMON(char *)	charArrayToUTF8(CharArray ca);
 COMMON(char *)	charArrayToMB(CharArray ca);
 COMMON(char *)	nameToMB(Name nm);
@@ -229,6 +234,7 @@ COMMON(Name)	UTF8ToName(const char *utf8);
 COMMON(Name)	MBToName(const char *mb);
 COMMON(Name)	WCToName(const wchar_t *wc, size_t len);
 COMMON(StringObj) WCToString(const wchar_t *wc, size_t len);
+COMMON(StringObj) UTF8ToString(const char *utf8);
 COMMON(Name)	FNToName(const char *name);
 COMMON(char *)	charArrayToFN(CharArray ca);
 COMMON(char *)	stringToFN(PceString s);

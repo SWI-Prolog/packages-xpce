@@ -71,6 +71,7 @@ initialiseFrame(FrameObj fr, Name label, Name kind,
   assign(fr, display,		    display);
   assign(fr, border,		    DEFAULT);
   assign(fr, area,		    newObject(ClassArea, EAV));
+  assign(fr, placed,		    OFF);
   assign(fr, members,		    newObject(ClassChain, EAV));
   assign(fr, kind,		    kind);
   assign(fr, status,		    NAME_unmapped);
@@ -216,20 +217,25 @@ getConfirmFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
 
 
 Any
-getConfirmCenteredFrame(FrameObj fr, Point pos, BoolObj grab, Monitor mon)
-{ int x, y;
-  Point p2;
-  Any rval;
+getConfirmCenteredFrame(FrameObj fr, Any where, BoolObj grab, Monitor mon)
+{ TRY( send(fr, NAME_create, EAV) );
 
-  TRY( send(fr, NAME_create, EAV) );
+  if ( isDefault(where) && notNil(fr->transient_for) )
+    where = fr->transient_for;
+  DEBUG(NAME_confirm, Cprintf("%s <-confirm_centered(%s)\n", pp(fr), pp(where)));
 
-  get_position_from_center_frame(fr, mon, pos, &x, &y);
-  ensure_on_display(fr, mon, &x, &y);
-  p2 = tempObject(ClassPoint, toInt(x), toInt(y), EAV);
+  if ( instanceOfObject(where, ClassFrame) )
+  { FrameObj rfr = where;
+    int ox = (valInt(rfr->area->w)-valInt(fr->area->w))/2;
+    int oy = (valInt(rfr->area->h)-valInt(fr->area->h))/2;
+    ox += valInt(rfr->area->x);	/* SDL pos sometimes seems relative to parent */
+    oy += valInt(rfr->area->y);
+    assign(fr->area, x, toInt(ox));
+    assign(fr->area, y, toInt(oy));
+    send(fr, NAME_transientFor, rfr, EAV);
+  }
 
-  rval = getConfirmFrame(fr, p2, grab, OFF);
-  considerPreserveObject(p2);
-  return rval;
+  return getConfirmFrame(fr, DEFAULT, grab, OFF);
 }
 
 
@@ -251,12 +257,14 @@ openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
 
   if ( isDefault(pos) && isOpenFrameStatus(fr->status) )
     succeed;
+  if ( notDefault(pos) )
+    assign(fr, placed, ON);
 
   if ( notDefault(pos) )		/* X11 transient is done by WM */
   { x = pos->x;
     y = pos->y;
 
-#ifdef __WINDOWS__
+#ifdef WIN32_GRAPHICS
   setpos:
 #endif
     if ( normalise == ON )
@@ -264,7 +272,7 @@ openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
       int fw = valInt(fr->area->w), fh = valInt(fr->area->h);
       Area a;
       Area tmp = tempObject(ClassArea,
-			    toInt(x), toInt(y), fr->area->w, fr->area->h, EAV);
+			    x, y, fr->area->w, fr->area->h, EAV);
       Monitor mon = getMonitorDisplay(fr->display, tmp);
 
       considerPreserveObject(tmp);
@@ -290,7 +298,7 @@ openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
   } else if ( notNil(fr->geometry) )
   { ws_x_geometry_frame(fr, fr->geometry, DEFAULT);
   }
-#ifdef __WINDOWS__				/* But in Windows `do-it-yourself' */
+#ifdef WIN32_GRAPHICS			/* But in Windows `do-it-yourself' */
   else if ( notNil(fr->transient_for) )
   { Area pa = fr->transient_for->area;
     int xb, yb, ycap;
@@ -306,7 +314,7 @@ openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
 #endif
 
   if ( !isOpenFrameStatus(fr->status) )
-    return send(fr, NAME_status, NAME_window, EAV);
+    return sdl_send(fr, NAME_status, false, NAME_window, EAV);
 
   succeed;
 }
@@ -392,13 +400,13 @@ wmDeleteFrame(FrameObj fr)
 
 static status
 doneMessageFrame(FrameObj fr, Code msg)
-{ return wmProtocolFrame(fr, CtoName("WM_DELETE_WINDOW"), msg);
+{ return wmProtocolFrame(fr, NAME_WM_DELETE_WINDOW, msg);
 }
 
 
 static status
 saveMessageFrame(FrameObj fr, Code msg)
-{ return wmProtocolFrame(fr, CtoName("WM_SAVE_YOURSELF"), msg);
+{ return wmProtocolFrame(fr, NAME_WM_SAVE_YOURSELF, msg);
 }
 
 
@@ -411,20 +419,17 @@ mappedFrame(FrameObj fr, BoolObj val)
 }
 
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-To create a frame:
-
-  1) Give all children the change to request a size.
-  2) Fit the the windows in the frame and give them the size they should
-     do with.
-  3) Create the shell widget
-  4) Create the children
-  5) Manage the children
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/**
+ * Create a frame.  In the pre-SDL  days, this would create the system
+ * windows without showing them.  In SDL, windows are no longer system
+ * windows  and we  only create  the SDL  window when  it is  visible.
+ * Creating a frame now implies realizing the embedded windows and the
+ * layout.  The actual mapping is done by statusFrame()
+ */
 
 status
 createdFrame(FrameObj fr)
-{ return ws_created_frame(fr);
+{ return fr->status != NAME_unmapped;
 }
 
 
@@ -441,13 +446,9 @@ createFrame(FrameObj fr)
 
   TRY(send(fr, NAME_fit, EAV));
 
-  ws_create_frame(fr);
-
+  assign(fr, status, NAME_hidden);
   for_cell(cell, fr->members)
     send(cell->value, NAME_create, EAV);
-
-  ws_realise_frame(fr);
-  assign(fr, status, NAME_hidden);
 
   attachWmProtocolsFrame(fr);
 
@@ -829,6 +830,7 @@ getImageFrame(FrameObj fr)
 static status
 geometryFrame(FrameObj fr, Name spec, Monitor mon)
 { assign(fr, geometry, spec);
+  assign(fr, placed, ON);
 
   ws_x_geometry_frame(fr, spec, mon);
 
@@ -851,6 +853,8 @@ setFrame(FrameObj fr, Int x, Int y, Int w, Int h, Monitor mon)
     mon = DEFAULT;
   }
 
+  if ( notDefault(x) || notDefault(y) )
+    assign(fr, placed, ON);
   setArea(a, x, y, w, h);
   if ( valInt(a->w) <= 0 )		/* Window systems don't like that */
     assign(a, w, ONE);
@@ -949,43 +953,6 @@ backgroundFrame(FrameObj fr, Any bg)
 
   succeed;
 }
-
-
-static void
-forwardColourMapChange(Device d)
-{ Cell cell;
-
-  if ( instanceOfObject(d, ClassWindow) )
-    redrawWindow((PceWindow)d, DEFAULT);
-
-  for_cell(cell, d->graphicals)
-  { if ( instanceOfObject(cell->value, ClassDevice) )
-      forwardColourMapChange(cell->value);
-  }
-}
-
-
-status
-forwardColourMapChangeFrame(FrameObj fr)
-{ if ( !(isFreedObj(fr) || isFreeingObj(fr)) )
-  { Cell cell;
-
-    for_cell(cell, fr->members)
-    { forwardColourMapChange(cell->value);
-    }
-  }
-
-  succeed;
-}
-
-
-static status
-colourMapFrame(FrameObj fr, ColourMap cm)
-{ assign(fr, colour_map, cm);
-
-  return forwardColourMapChangeFrame(fr);
-}
-
 
 		 /*******************************
 		 *	     CURSORS		*
@@ -1354,19 +1321,19 @@ inputWindowFrame(FrameObj fr, PceWindow iw)
 static status
 inputFocusFrame(FrameObj fr, BoolObj val)
 { if ( fr->input_focus != val )
-  { Cell cell;
+  { PceWindow iw;
 
     assign(fr, input_focus, val);
     if ( val == ON )
-    { PceWindow iw;
-
-      if ( (iw = getKeyboardFocusFrame(fr)) ||
+    { if ( (iw = getKeyboardFocusFrame(fr)) ||
 	   (iw = ws_window_holding_point_frame(fr)) )
 	inputWindowFrame(fr, iw);
+    } else if ( (iw = getKeyboardFocusFrame(fr)) )
+    { inputFocusWindow(iw, OFF);
     } else
-    { for_cell(cell, fr->members)
-      { inputFocusWindow(cell->value, OFF);
-      }
+    { Cell cell;
+      for_cell(cell, fr->members)
+	inputFocusWindow(cell->value, OFF);
     }
   }
 
@@ -1391,11 +1358,13 @@ redrawFrame(FrameObj fr, Area a)
 { succeed;
 }
 
-
 		 /*******************************
 		 *	  SUBTILE LAYOUT	*
 		 *******************************/
 
+/* This  used  to  update  small  adjuster  widgets.   Now  it  merely
+ * establishes the can_resize attribute of all subtiles.
+ */
 
 static status
 updateTileAdjustersFrame(FrameObj fr, TileObj t)
@@ -1405,22 +1374,9 @@ updateTileAdjustersFrame(FrameObj fr, TileObj t)
   }
 
   if ( notNil(t) )
-  { if ( notNil(t->super) && getCanResizeTile(t) == ON )
-    { if ( isNil(t->adjuster) )
-      { PceWindow adj = newObject(ClassTileAdjuster, t, EAV);
-	assert(adj);
-
-	appendFrame(fr, adj);
-	ws_topmost_window(adj, ON);
-/*	Cprintf("%s: Area = %s, %s, %s, %s\n", pp(adj),
-		pp(adj->area->x), pp(adj->area->y),
-		pp(adj->area->w), pp(adj->area->h));
-*/
-      }
-
-      send(t, NAME_updateAdjusterPosition, EAV);
-    } else if ( notNil(t->adjuster) )
-      freeObject(t->adjuster);
+  { if ( notNil(t->super) )
+    { (void) getCanResizeTile(t);
+    }
 
     if ( notNil(t->members) )
     { Cell cell;
@@ -1432,8 +1388,6 @@ updateTileAdjustersFrame(FrameObj fr, TileObj t)
 
   succeed;
 }
-
-
 
 		 /*******************************
 		 *	       MODAL		*
@@ -1479,10 +1433,73 @@ blockedByModalFrame(FrameObj fr)
   fail;
 }
 
+static TileObj resizingTile = NIL;
+
+static status
+tileResizeEvent(EventObj ev)
+{ if ( ev->window == ev->frame )
+  { if ( ev->id == NAME_locMove || ev->id == NAME_msLeftDown )
+    { TileObj tile = getTileFrame(ev->frame);
+
+      if ( tile )
+      { Point pt = tempObject(ClassPoint, ev->x, ev->y, EAV);
+	TileObj sub = getSubTileToResizeTile(tile, pt);
+	considerPreserveObject(pt);
+	if ( sub )
+	{ static CursorObj hresize = NULL;
+	  static CursorObj vresize = NULL;
+	  static CursorObj cursor;
+
+	  if ( !hresize )
+	    hresize = getClassVariableValueObject(ev->frame,
+						  NAME_horizontalResizeCursor);
+	  if ( !vresize )
+	    vresize = getClassVariableValueObject(ev->frame,
+						  NAME_verticalResizeCursor);
+
+	  if ( sub->super->orientation == NAME_vertical )
+	    cursor = vresize;
+	  else
+	    cursor = hresize;
+
+	  ws_frame_cursor(ev->frame, cursor);
+	  if ( ev->id == NAME_msLeftDown )
+	  { DEBUG(NAME_tile, Cprintf("Start resizing %s\n", pp(sub)));
+	    resizingTile = sub;
+	  }
+
+	  DEBUG(NAME_tile,
+		Cprintf("Resize for %s (%s) at %d,%d; cursor = %s\n",
+			pp(sub), pp(sub->super->orientation),
+			valInt(sub->area->x), valInt(sub->area->y),
+			pp(cursor)));
+
+	  succeed;
+	}
+      }
+    } else if ( notNil(resizingTile) &&
+		(ev->id == NAME_msLeftDrag || ev->id == NAME_msLeftUp) )
+    { TileObj sub = resizingTile;
+      if ( sub->super->orientation == NAME_vertical )
+      { int h = valInt(ev->y) - valInt(sub->area->y);
+	send(sub, NAME_height, toInt(h), EAV);
+      } else
+      { int w = valInt(ev->x) - valInt(sub->area->x);
+	send(sub, NAME_width, toInt(w), EAV);
+      }
+
+      if ( ev->id == NAME_msLeftUp )
+	resizingTile = NIL;
+
+      succeed;
+    }
+  }
+  fail;
+}
 
 static status
 postEventFrame(FrameObj fr, EventObj ev)
-{ fail;
+{ return qadSendv(fr, NAME_event, 1, (Any*)&ev);
 }
 
 
@@ -1496,16 +1513,23 @@ eventFrame(FrameObj fr, EventObj ev)
     if ( (bfr=blockedByModalFrame(fr)) )
     {
     blocked:
+      DEBUG(NAME_modal, Cprintf("%s: forwarding %s to modal frame %s\n",
+				pp(fr), pp(ev), pp(bfr)));
       send(bfr, NAME_expose, EAV);
       send(bfr, NAME_event, ev, EAV);
       fail;
     }
 
     if ( (sw = getKeyboardFocusFrame(fr)) )
+    { DEBUG(NAME_keyboard, Cprintf("%s: forward %s to focussed %s\n",
+				   pp(fr), pp(ev->id), pp(sw)));
       return postNamedEvent(ev, (Graphical) sw, DEFAULT, NAME_postEvent);
+    }
 
     return send(fr, NAME_typed, ev, EAV);
   }
+
+  tileResizeEvent(ev);
 
   if ( isDownEvent(ev) && (bfr=blockedByModalFrame(fr)) )
     goto blocked;
@@ -1713,7 +1737,7 @@ getThreadFrame(FrameObj fr)
 /* Type declarations */
 
 static char *T_openCentered[] =
-        { "center=[point]", "grab=[bool]", "monitor=[monitor]" };
+        { "center=[point|frame]", "grab=[bool]", "monitor=[monitor]" };
 static char *T_busyCursor[] =
         { "cursor=[cursor]*", "block_input=[bool]" };
 static char *T_icon[] =
@@ -1764,12 +1788,12 @@ static vardecl var_frame[] =
      NAME_appearance, "Width of border"),
   SV(NAME_background, "colour|pixmap", IV_GET|IV_STORE, backgroundFrame,
      NAME_appearance, "Background of the frame"),
-  SV(NAME_colourMap, "[colour_map]*", IV_GET|IV_STORE, colourMapFrame,
-     NAME_appearance, "Colourmap for the window's frame"),
   SV(NAME_area, "area", IV_GET|IV_STORE, areaFrame,
      NAME_area, "Area of the opened frame on the display"),
   IV(NAME_geometry, "name*", IV_NONE,
      NAME_area, "X-window geometry specification"),
+  IV(NAME_placed, "bool", IV_GET,
+     NAME_area, "If @on, desired position is set explicitly"),
   IV(NAME_members, "chain", IV_NONE,
      NAME_organisation, "Windows in the frame"),
   SV(NAME_kind, "{toplevel,transient,popup}", IV_GET|IV_STORE, kindFrame,
@@ -1960,9 +1984,11 @@ static getdecl get_frame[] =
      NAME_icon, "(Current) position of the icon"),
   GM(NAME_tile, 0, "tile", NULL, getTileFrame,
      NAME_layout, "Find tile managing object"),
-  GM(NAME_confirm, 3, "return_value=any", T_positionADpointD_grabADboolD_normaliseADboolD, getConfirmFrame,
+  GM(NAME_confirm, 3, "return_value=any",
+     T_positionADpointD_grabADboolD_normaliseADboolD, getConfirmFrame,
      NAME_modal, "Start sub-eventloop until ->return"),
-  GM(NAME_confirmCentered, 3, "return_value=any", T_openCentered, getConfirmCenteredFrame,
+  GM(NAME_confirmCentered, 3, "return_value=any",
+     T_openCentered, getConfirmCenteredFrame,
      NAME_modal, "As <-confirm, but centered around point"),
   GM(NAME_catchAll, 1, "window", "window_name=name", getCatchAllFramev,
      NAME_organisation, "Get named window"),
@@ -1999,11 +2025,9 @@ static classvardecl rc_frame[] =
      "Label displayed in the icon"),
   RC(NAME_canResize, "bool", "@on",
      "Window can be resized by user"),
-  RC(NAME_horizontalResizeCursor, "cursor",
-     UXWIN("sb_h_double_arrow", "win_sizewe"),
+  RC(NAME_horizontalResizeCursor, "cursor", "ew_resize",
      "Cursor for horizontally resizing tile"),
-  RC(NAME_verticalResizeCursor, "cursor",
-     UXWIN("sb_v_double_arrow", "win_sizens"),
+  RC(NAME_verticalResizeCursor, "cursor", "ns_resize",
      "Cursor for vertically resizing tile"),
   RC(NAME_fitAfterAppend, "bool", "@off",
      "Automatically ->fit the frame after a subwindow was added"),
@@ -2037,4 +2061,3 @@ makeClassFrame(Class class)
 
   succeed;
 }
-

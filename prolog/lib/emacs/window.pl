@@ -3,8 +3,9 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2017, University of Amsterdam,
+    Copyright (c)  1985-2025, University of Amsterdam,
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -33,18 +34,23 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(emacs_frame, []).
+:- module(emacs_frame,
+          [ emacs_register_closed_tab/1
+          ]).
 :- use_module(library(pce)).
 :- use_module(library(tabbed_window)).
 :- use_module(prompt).
+:- use_module(library(pce_util)).
+
 :- require([ between/3,
              atomic_list_concat/2,
              default/3,
              send_list/2,
              send_list/3
            ]).
+:- encoding(utf8).
 
-resource(mode_x_icon,   image, image('32x32/doc_x.xpm')).
+resource(mode_x_icon,   image, image('32x32/doc_x.png')).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -107,7 +113,7 @@ initialise(F, For:'emacs_buffer|emacs_view') :->
     "Create window for buffer"::
     send(F, send_super, initialise, 'PceEmacs', application := @emacs),
     send(F, icon, image(resource(mode_x_icon))),
-    send(F, done_message, message(F, quit)),
+    send(F, done_message, message(F, close)),
     send(F, append, new(MBD, emacs_mode_dialog)),
 
     send(new(TW, emacs_tabbed_window), below, MBD),
@@ -133,15 +139,32 @@ initialise(F, For:'emacs_buffer|emacs_view') :->
     get(E, mode, Mode),
     ignore(send(Mode, new_buffer)).
 
-quit(F) :->
-    "User-initiated quit"::
-    get(F, member, emacs_tabbed_window, TW),
-    get(TW?members, size, Count),
-    (   Count == 1
-    ->  send(F, destroy)
-    ;   send(F, confirm, 'Close %d tabs?', Count)
-    ->  send(F, destroy)
-    ;   true
+:- dynamic
+    closed_tab_in_frame/2.
+
+%!  emacs_register_closed_tab(+Frame) is det.
+%
+%   Register that we closed a tab in this frame.  Used to prevent
+%   Command-W on MacOS from killing all tabs.
+
+emacs_register_closed_tab(Frame) :-
+    get_time(Now),
+    asserta(closed_tab_in_frame(Frame, Now)).
+
+close(F) :->
+    "User-initiated close"::
+    (   retract(closed_tab_in_frame(F, Time)),
+        get_time(Now),
+        Now-Time < 0.5
+    ->  true
+    ;   get(F, member, emacs_tabbed_window, TW),
+        get(TW?members, size, Count),
+        (   Count == 1
+        ->  send(F, destroy)
+        ;   send(F, confirm, 'Close %d tabs?', Count)
+        ->  send(F, destroy)
+        ;   true
+        )
     ).
 
 confirm(F, Format:char_array, Args:any...) :->
@@ -151,9 +174,8 @@ confirm(F, Format:char_array, Args:any...) :->
     send(D, append, label(message, String)),
     send(D, append, button(ok, message(D, return, ok))),
     send(D, append, button(cancel, message(D, return, cancel))),
-    send(D, transient_for, F),
     send(D, modal, transient),
-    get(D, confirm_centered, F?area?center, Rval),
+    get(D, confirm_centered, F, Rval),
     send(D, destroy),
     Rval == ok.
 
@@ -172,14 +194,17 @@ input_focus(F, Val:bool) :->
 
 on_current_desktop(F) :->
     "True if F for more than half on the current desktop"::
-    get(F, area, FArea),
-    (   object(FArea, area(-32000, -32000, _, _))
-    ->  true                    % MS-Windows iconized
-    ;   get(F?display, size, size(DW,DH)),
-        get(FArea, intersection, area(0,0,DW,DH), Intersection),
-        get(FArea, measure, MA),
-        get(Intersection, measure, IA),
-        IA > MA/2
+    (   get(@pce, window_system, sdl)
+    ->  true
+    ;   get(F, area, FArea),
+        (   object(FArea, area(-32000, -32000, _, _))
+        ->  true                    % MS-Windows iconized
+        ;   get(F?display, size, size(DW,DH)),
+            get(FArea, intersection, area(0,0,DW,DH), Intersection),
+            get(FArea, measure, MA),
+            get(Intersection, measure, IA),
+            IA > MA/2
+        )
     ).
 
 tab(F, B:buffer=emacs_buffer, Expose:expose=[bool]) :->
@@ -409,8 +434,8 @@ append_item(P, Mode:emacs_mode, Item:any) :->
         ;   true
         ),
         (   get(Mode, send_method, Item, tuple(_, Impl))
-        ->  (   forall((between(1, 10, ArgN),
-                    get(Impl, argument_type, ArgN, ArgType)),
+        ->  (   forall(( between(1, 10, ArgN),
+                         get(Impl, argument_type, ArgN, ArgType)),
                 send(ArgType, includes, default))
             ->  true
             ;   send(MI, label, string('%s ...', Item?label_name))
@@ -420,37 +445,19 @@ append_item(P, Mode:emacs_mode, Item:any) :->
     ;   send(P, append, Item?clone)
     ).
 
-%       accelerator(+Command, +Mode, -Accelerator)
+%!      accelerator(+Command, +Mode, -Accelerator)
 %
 %       Copy/cut are hacked due to the tricky combination of CUA and
 %       native Emacs mode.
 
-accelerator(copy, _, 'Control-c') :- !.
-accelerator(cut,  _, 'Control-x') :- !.
 accelerator(Cmd,  Mode, Accell) :-
     get(Mode, bindings, KeyBindings),
-    get(KeyBindings, binding, Cmd, Key),
-    human_accelerator(Key, Accell).
+    get(KeyBindings, accelerator_label, Cmd, Accell).
 
-%       human_accelerator(+Key, -Human)
-%
-%       Translate XPCE key-sequences in conventional notation.  Should be
-%       part of the XPCE kernel someday.
+:- multifile pce_keybinding:alt_binding_function/2.
 
-:- dynamic
-    accel_cache/2.
-
-human_accelerator(Key, Text) :-
-    accel_cache(Key, Text),
-    !.
-human_accelerator(Key, Text) :-
-    new(S, string('%s', Key)),
-    send(regex('\\\\C-(.)'), for_all, S,
-         message(@arg1, replace, @arg2, 'Control-\\1 ')),
-    send(regex('\\\\e'), for_all, S,
-         message(@arg1, replace, @arg2, 'Alt-')),
-    get(S, value, Text),
-    assert(accel_cache(Key, Text)).
+pce_keybinding:alt_binding_function(copy, prefix_or_copy). % Ctrl-V can be bound to prefix_or_copy.
+pce_keybinding:alt_binding_function(cut,  prefix_or_cut).
 
 :- pce_end_class(emacs_popup).
 
@@ -588,7 +595,7 @@ geometry(D, X:[int], Y:[int], W:[int], H:[int]) :->
     "Change size, center contents vertically"::
     send(D, send_super, geometry, X, Y, W, H),
     get(D, height, DH),
-    DH2 is DH//2,
+    DH2 is round(DH/2),
     send(D?graphicals, for_all,
          message(@arg1, center_y, DH2)).
 
@@ -606,7 +613,7 @@ prompter(D, Prompter:dialog_item*) :->
     ;   send(Reporter, displayed, @off),
         get(Prompter, height, H),
         get(D, height, DH),
-        PY is (DH-H)//2,
+        PY is (DH-H)/2,
         send(D, display, Prompter, point(25, PY)),
         get(Prompter, height, H),
         MinH is H,

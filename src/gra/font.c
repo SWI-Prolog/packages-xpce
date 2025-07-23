@@ -254,7 +254,7 @@ getWidthFont(FontObj f, CharArray txt)
 
   d_ensure_display();			/* TBD */
 
-  answer(toInt(str_width(&txt->data, 0, txt->data.s_size, f)));
+  answer(toNum(str_width(&txt->data, 0, txt->data.s_size, f)));
 }
 
 
@@ -262,14 +262,14 @@ Int
 getAdvanceFont(FontObj f, CharArray txt)
 { d_ensure_display();			/* TBD */
 
-  return toInt(str_advance(&txt->data, 0, txt->data.s_size, f));
+  return toNum(str_advance(&txt->data, 0, txt->data.s_size, f));
 }
 
 
 Int
 getExFont(FontObj f)
-{ if ( isNil(f->ex) )
-    assign(f, ex, toInt(c_width('x', f)));
+{ if ( !isInteger(f->ex) )
+    XopenFont(f, CurrentDisplay(NIL));
 
   answer(f->ex);
 }
@@ -308,13 +308,7 @@ getSizeFont(FontObj f)
 BoolObj
 getFixedWidthFont(FontObj f)
 { if ( isDefault(f->fixed_width) )
-  { getXrefObject(f, CurrentDisplay(NIL));
-
-    if ( c_width('x', f) == c_width('W', f) )
-      assign(f, fixed_width, ON);
-    else
-      assign(f, fixed_width, OFF);
-  }
+    XopenFont(f, CurrentDisplay(NIL));
 
   answer(f->fixed_width);
 }
@@ -400,7 +394,9 @@ static vardecl var_font[] =
   IV(NAME_postscriptFont, "name", IV_BOTH,
      NAME_postscript, "PostScript-name of the font"),
   IV(NAME_postscriptSize, "int", IV_BOTH,
-     NAME_postscript, "PostScript point-size of the font")
+     NAME_postscript, "PostScript point-size of the font"),
+  IV(NAME_wsRef, "alien:WsRef", IV_NONE,
+     NAME_storage, "Window system handle")
 };
 
 /* Send Methods */
@@ -452,7 +448,7 @@ static getdecl get_font[] =
 /* Resources */
 
 static classvardecl rc_font[] =
-{ RC(NAME_scale, "real", UXWIN("@display?dpi?width/100", "1.4"),
+{ RC(NAME_scale, "real",  "1.0",
      "Multiplication factor for all fonts")
 };
 

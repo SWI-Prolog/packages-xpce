@@ -596,9 +596,9 @@ make_fragment(Pos, Fragment) :-
 :- use_module(library(hyper)).
 :- use_module(library(toolbar)).
 
-resource(save,    image, image('16x16/save.xpm')).
-resource(replace, image, image('16x16/redo.xpm')).
-resource(undo,    image, image('16x16/undo.xpm')).
+resource(save,    image, image('16x16/save.png')).
+resource(replace, image, image('16x16/redo.png')).
+resource(undo,    image, image('16x16/undo.png')).
 
 :- pce_begin_class(change_fragment, fragment,
                    "Indicate suggested change").
@@ -783,9 +783,9 @@ save(F) :->
 
 quit(F) :->
     (   get(F?editor, modified, @on)
-    ->  (   send(@display, confirm, 'Save changes?')
+    ->  (   send(@display, confirm, F, @default, 'Save changes?')
         ->  send(F, save)
-        ;   send(@display, confirm, 'Quit, discarding changes?')
+        ;   send(@display, confirm, F, @default, 'Quit, discarding changes?')
         )
     ;   true
     ),

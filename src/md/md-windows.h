@@ -32,7 +32,7 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define WIN32_GRAPHICS 1		/* Use Win32 graphics API */
+#define SDL_GRAPHICS 1		/* Use SDL graphics API */
 #define _REENTRANT 1			/* Only multi-threading support */
 #define UXWIN(unx, win) win
 
@@ -46,6 +46,8 @@
 #define HAVE_STRTOUL 1			/* strtoul() function */
 #define HAVE_LIBXPM 1
 #define HAVE_LIBJPEG 1
+
+#define SIZEOF_WCHAR_T 2
 
 #define export __declspec(dllexport)
 

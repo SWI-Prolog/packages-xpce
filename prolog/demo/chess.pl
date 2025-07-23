@@ -91,7 +91,7 @@ white piece on a white square, a white piece on a black square, etc.
 
 The PCE bitmap library defines bitmaps for the various chess-pieces in
 both colours and with both a black- and a white background.  The image
-`bishop.bm' is a $64\times64$ image.  See figure~\ref{fig:bishop}.
+`bishop.png' is a $64\times64$ image.  See figure~\ref{fig:bishop}.
 
 \postscriptfig{bishop}{Library bitmap for a bishop}
 
@@ -172,13 +172,13 @@ square_image(Piece, PieceColour, SquareColour, Image) :-
 
 %       image_name(?PieceName, ?ChessProgram Id, ?ImageName)
 
-image_name(empty,       _, 'chesssquare.bm').
-image_name(pawn,        p, 'pawn.bm').
-image_name(rook,        r, 'rook.bm').
-image_name(knight,      n, 'knight.bm').
-image_name(bishop,      b, 'bishop.bm').
-image_name(king,        k, 'king.bm').
-image_name(queen,       q, 'queen.bm').
+image_name(empty,       _, 'chesssquare.png').
+image_name(pawn,        p, 'pawn.png').
+image_name(rook,        r, 'rook.png').
+image_name(knight,      n, 'knight.png').
+image_name(bishop,      b, 'bishop.png').
+image_name(king,        k, 'king.png').
+image_name(queen,       q, 'queen.png').
 
 %       sub_area(+PieceColour, +SquareColour, -AreaTerm)
 

@@ -87,7 +87,7 @@ static char *T_initialise[] =
 static vardecl var_ellipse[] =
 { SV(NAME_shadow, "int", IV_GET|IV_STORE, shadowGraphical,
      NAME_appearance, "Shadow painted below/right"),
-  SV(NAME_fillPattern, "image|colour*", IV_GET|IV_STORE, fillPatternGraphical,
+  SV(NAME_fillPattern, TYPE_FILL, IV_GET|IV_STORE, fillPatternGraphical,
      NAME_appearance, "Fill pattern for internals")
 };
 

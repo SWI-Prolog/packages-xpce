@@ -55,12 +55,12 @@ to alter the state of the  debugger   by  changing  the mode and editing
 trace, spy and break-points.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-resource(delete, image, image('16x16/cut.xpm')).
-resource(stop,   image, image('16x16/stop.xpm')).
-resource(trace,  image, image('16x16/eye.xpm')).
-resource(edit,   image, image('16x16/edit.xpm')).
-resource(spy,    image, library('trace/icons/spy.xpm')).
-resource(icon,   image, image('32x32/dbgsettings.xpm')).
+resource(delete, image, image('16x16/cut.png')).
+resource(stop,   image, image('16x16/stop.png')).
+resource(trace,  image, image('16x16/eye.png')).
+resource(edit,   image, image('16x16/edit.png')).
+resource(spy,    image, library('trace/icons/spy.png')).
+resource(icon,   image, image('32x32/dbgsettings.png')).
 
 :- dynamic
     debug_status_window/1.
@@ -259,7 +259,7 @@ edit_or_list(Module:Name/Arity) :-
     functor(Head, Name, Arity),
     predicate_property(Module:Head, dynamic),
     predicate_property(Module:Head, number_of_clauses(N)),
-    send(@display, confirm,
+    send(@display, confirm, @default, @default,
          '%s:%s/%d is a dynamic predicate with %d clauses.  Show listing?',
          Module, Name, Arity, N),
     !,

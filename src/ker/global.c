@@ -43,13 +43,13 @@ struct global
   { NAME_displayManager,	NAME_displayManager },
   { NAME_ModifierShift,		NAME_modifier },
   { NAME_ModifierAllUp,		NAME_modifier },
-  { NAME_modifiers, 		NAME_modifier },
-  { NAME_PopupGesture, 		NAME_popupGesture },
-  { NAME_defaultLink, 		NAME_link },
-  { NAME_changedWindows, 	NAME_window },
+  { NAME_modifiers,		NAME_modifier },
+  { NAME_PopupGesture,		NAME_popupGesture },
+  { NAME_defaultLink,		NAME_link },
+  { NAME_changedWindows,	NAME_window },
   { NAME_DocumentFonts,		NAME_font },
   { NAME_scrollBarRepeatTimer,  NAME_scrollBar},
-  { NAME_c, 			NAME_c},
+  { NAME_c,			NAME_c},
   { NAME_host,			NAME_host },
   { NAME_ButtonGesture,		NAME_clickGesture },
   { NAME_PopupWindows,		NAME_popup },
@@ -78,7 +78,6 @@ struct global
   { NAME_runningProcesses,	NAME_process },
   { NAME_openSockets,		NAME_socket },
   { NAME_colours,		NAME_colour },
-  { NAME_colourMaps,		NAME_colourMap },
   { NAME_cursors,		NAME_cursor },
   { NAME_cursorNames,		NAME_cursor },
   { NAME_eventTree,		NAME_event },
@@ -102,7 +101,7 @@ struct global
   { NAME_notObtained,		NAME_classVariable },
   { NAME_spaceRubber,		NAME_rubber },
 
-  { NULL,	  		NULL}
+  { NULL,			NULL}
 };
 
 

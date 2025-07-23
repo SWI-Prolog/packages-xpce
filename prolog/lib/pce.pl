@@ -81,9 +81,11 @@ reexports the content of these files.
 	    pce_open/3,
 	    in_pce_thread/1,            % :Goal
 	    in_pce_thread_sync/1,       % :Goal
-	    set_pce_thread/0,
+	    set_pce_thread/1,		% +Options
 	    pce_thread/1,               % -Thread
 	    pce_dispatch/0,
+
+              pce_open_terminal_image/4,  % +TerminalImage, -In, -Out, -Error
 
 	    op(200, fy,  @),
 	    op(250, yfx, ?),
@@ -160,10 +162,26 @@ in_pce_thread_sync(Goal) :-
 
 :- if(current_prolog_flag(threads, true)).
 start_dispatch :-
-    (   current_predicate(pce_dispatch:start_dispatch/0)
-    ->  pce_dispatch:start_dispatch
+    get(@pce, window_system, sdl),
+    !,
+    (   thread_self(main)
+    ->  app_name(AppName),
+	set_pce_thread([app_name(AppName)])
     ;   true
     ).
+start_dispatch :-
+    (   current_predicate(pce_dispatch:start_dispatch/0)
+    ->  pce_dispatch:start_dispatch
+    ;   set_pce_thread
+    ).
+
+app_name('SWI-Prolog') :-
+    current_prolog_flag(bundle, true),
+    !.
+app_name('swipl-win') :-
+    current_prolog_flag(epilog, true),
+    !.
+app_name('swipl').
 
 :- initialization
     start_dispatch.

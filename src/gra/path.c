@@ -971,7 +971,7 @@ static vardecl var_path[] =
      NAME_interpolation, "Interpolation intervals between points"),
   SV(NAME_points, "chain", IV_GET|IV_STORE, pointsPath,
      NAME_points, "Chain of points"),
-  SV(NAME_fillPattern, "image|colour*", IV_GET|IV_STORE, fillPatternGraphical,
+  SV(NAME_fillPattern, TYPE_FILL, IV_GET|IV_STORE, fillPatternGraphical,
      NAME_appearance, "Fill pattern"),
   SV(NAME_mark, "image*", IV_GET|IV_STORE, markPath,
      NAME_appearance, "Mark used for points"),

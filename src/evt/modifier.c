@@ -38,10 +38,12 @@
 static HashTable ModifierTable;
 
 static status
-initialiseModifier(Modifier m, Name shift, Name ctrl, Name meta)
+initialiseModifier(Modifier m,
+		   Name shift, Name ctrl, Name meta, Name gui)
 { assign(m, shift,   shift);
   assign(m, control, ctrl);
   assign(m, meta,    meta);
+  assign(m, gui,     gui);
 
   succeed;
 }
@@ -59,6 +61,7 @@ getConvertModifier(Class class, Name name)
     Name shift   = NAME_up;
     Name control = NAME_up;
     Name meta    = NAME_up;
+    Name gui     = NAME_up;
 
     for(i=0; i<size; i++)
     { wint_t c = str_fetch(s, i);
@@ -73,12 +76,15 @@ getConvertModifier(Class class, Name name)
 	case 'm':
 	  meta = NAME_down;
 	  break;
+	case 'g':
+	  gui = NAME_down;
+	  break;
 	default:
 	  fail;
       }
     }
 
-    m = answerObject(ClassModifier, shift, control, meta, EAV);
+    m = answerObject(ClassModifier, shift, control, meta, gui, EAV);
     protectObject(m);
     appendHashTable(ModifierTable, name, m);
 
@@ -94,7 +100,8 @@ getConvertModifier(Class class, Name name)
 /* Type declarations */
 
 static char *T_initialise[] =
-        { "shift=[{up,down}]", "control=[{up,down}]", "meta=[{up,down}]" };
+        { "shift=[{up,down}]", "control=[{up,down}]",
+	  "meta=[{up,down}]", "gui=[{up,down}]" };
 
 /* Instance Variables */
 
@@ -104,14 +111,16 @@ static vardecl var_modifier[] =
   IV(NAME_control, "[{up,down}]", IV_BOTH,
      NAME_modifier, "Condition on control"),
   IV(NAME_meta, "[{up,down}]", IV_BOTH,
-     NAME_modifier, "Condition on meta")
+     NAME_modifier, "Condition on meta"),
+  IV(NAME_gui, "[{up,down}]", IV_BOTH,
+     NAME_modifier, "Condition on gui key (Windows key/Apple Command key)")
 };
 
 /* Send Methods */
 
 static senddecl send_modifier[] =
-{ SM(NAME_initialise, 3, T_initialise, initialiseModifier,
-     DEFAULT, "Create from shift, control and meta")
+{ SM(NAME_initialise, 4, T_initialise, initialiseModifier,
+     DEFAULT, "Create from shift, control, meta and gui")
 };
 
 /* Get Methods */
@@ -132,11 +141,12 @@ static classvardecl rc_modifier[] =
 
 /* Class Declaration */
 
-static Name modifier_termnames[] = { NAME_shift, NAME_control, NAME_meta };
+static Name modifier_termnames[] =
+{ NAME_shift, NAME_control, NAME_meta, NAME_gui };
 
 ClassDecl(modifier_decls,
           var_modifier, send_modifier, get_modifier, rc_modifier,
-          3, modifier_termnames,
+          4, modifier_termnames,
           "$Rev$");
 
 status
@@ -153,4 +163,3 @@ makeClassModifier(Class class)
 
   succeed;
 }
-

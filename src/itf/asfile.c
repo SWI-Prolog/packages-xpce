@@ -173,9 +173,9 @@ int
 pceOpen(Any obj, int flags, void *encoding)
 { int rc;
 
-  pceMTLock(LOCK_PCE);
+  pceMTLock();
   rc = pceOpen_nolock(obj, flags, encoding);
-  pceMTUnlock(LOCK_PCE);
+  pceMTUnlock();
 
   return rc;
 }
@@ -204,9 +204,9 @@ int
 pceClose(int handle)
 { int rc;
 
-  pceMTLock(LOCK_PCE);
+  pceMTLock();
   rc = pceClose_nolock(handle);
-  pceMTUnlock(LOCK_PCE);
+  pceMTUnlock();
 
   return rc;
 }
@@ -294,9 +294,9 @@ ssize_t
 pceWrite(int handle, const char *buf, size_t size)
 { ssize_t rc;
 
-  pceMTLock(LOCK_PCE);
+  pceMTLock();
   rc = pceWrite_nolock(handle, buf, size);
-  pceMTUnlock(LOCK_PCE);
+  pceMTUnlock();
 
   return rc;
 }
@@ -354,9 +354,9 @@ long
 pceSeek(int handle, long offset, int whence)
 { long rc;
 
-  pceMTLock(LOCK_PCE);
+  pceMTLock();
   rc = pceSeek_nolock(handle, offset, whence);
-  pceMTUnlock(LOCK_PCE);
+  pceMTUnlock();
 
   return rc;
 }
@@ -420,9 +420,9 @@ ssize_t
 pceRead(int handle, char *buf, size_t size)
 { ssize_t rc;
 
-  pceMTLock(LOCK_PCE);
+  pceMTLock();
   rc = pceRead_nolock(handle, buf, size);
-  pceMTUnlock(LOCK_PCE);
+  pceMTUnlock();
 
   return rc;
 }
@@ -449,9 +449,9 @@ int
 pceControl(int handle, int cmd, void *closure)
 { int rc;
 
-  pceMTLock(LOCK_PCE);
+  pceMTLock();
   rc = pceControl_nolock(handle, cmd, closure);
-  pceMTUnlock(LOCK_PCE);
+  pceMTUnlock();
 
   return rc;
 }

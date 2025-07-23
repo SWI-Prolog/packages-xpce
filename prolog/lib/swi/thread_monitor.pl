@@ -52,12 +52,12 @@ This library defines  the  class   prolog_thread_monitor,  a  frame that
 displays the status of threads.
 */
 
-resource(running,   image, library('trace/icons/mini-run.xpm')).
-resource(true,      image, image('16x16/ok.xpm')).
-resource(false,     image, image('16x16/false.xpm')).
-resource(exception, image, image('16x16/error.xpm')).
-resource(exited,    image, image('16x16/done.xpm')).
-resource(profiling, image, image('16x16/profiler.xpm')).
+resource(running,   image, library('trace/icons/mini-run.png')).
+resource(true,      image, image('16x16/ok.png')).
+resource(false,     image, image('16x16/false.png')).
+resource(exception, image, image('16x16/error.png')).
+resource(exited,    image, image('16x16/done.png')).
+resource(profiling, image, image('16x16/profiler.png')).
 
 
 :- pce_begin_class(thread_statistics, object,
@@ -694,7 +694,7 @@ fill_tool_dialog(TM, TD:tool_dialog) :->
     send_list(File, append,
               [ menu_item(settings, message(TM, settings)),
                 gap,
-                menu_item(exit, message(TM, destroy))
+                menu_item(quit, message(TM, destroy))
               ]),
     send_list(Threads, append,
               [ menu_item(new,

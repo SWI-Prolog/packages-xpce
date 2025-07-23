@@ -48,13 +48,13 @@ static Int	 last_x		  = TOINT(ZERO);
 static Int	 last_y		  = TOINT(ZERO);
 static unsigned long last_time	  = 0L;
 
-static Int	         last_down_bts    = ZERO;
-static int	         last_down_x      = -1000; /* multiclick detection */
-static int	         last_down_y	  = -1000;
+static Int		 last_down_bts    = ZERO;
+static int		 last_down_x      = -1000; /* multiclick detection */
+static int		 last_down_y	  = -1000;
 static unsigned long     last_down_time   = 0;
 static unsigned int	 multi_click_time = 400;
-static int	         multi_click_diff = 4;
-static int	         last_click_type  = CLICK_TYPE_triple;
+static int		 multi_click_diff = 4;
+static int		 last_click_type  = CLICK_TYPE_triple;
 static int		 loc_still_posted = TRUE;
 static unsigned long	 host_last_time   = 0;
 static int		 loc_still_time	  = 400;
@@ -88,6 +88,17 @@ initialiseEvent(EventObj e, Name id, Any window,
   last_x         = x;
   last_y         = y;
 
+  FrameObj fr;
+  if ( instanceOfObject(window, ClassWindow) )
+    fr = getFrameWindow(window, OFF);
+  else if ( instanceOfObject(window, ClassFrame) )
+    fr = window;
+  else
+  { Cprintf("Event window is nor window nor frame: %s\n", pp(window));
+    fr = NIL;
+  }
+
+  assign(e, frame,      fr);
   assign(e, window,	window);
   assign(e, receiver,	window);
   assign(e, id,		id);
@@ -169,7 +180,7 @@ considerLocStillEvent()
       return;
     }
 
-    if ( !pceMTTryLock(LOCK_PCE) )
+    if ( !pceMTTryLock() )
       return;
     if ( instanceOfObject(last_window, ClassWindow) &&
 	 !onFlag(last_window, F_FREED|F_FREEING) &&
@@ -191,7 +202,7 @@ considerLocStillEvent()
 		  })
     }
     loc_still_posted = TRUE;
-    pceMTUnlock(LOCK_PCE);
+    pceMTUnlock();
   }
 }
 
@@ -404,6 +415,10 @@ hasModifierEvent(EventObj ev, Modifier m)
        ((m->meta == NAME_down && UP(BUTTON_meta)) ||
 	(m->meta == NAME_up   && DOWN(BUTTON_meta))) )
     fail;
+  if ( notDefault(m->gui) &&
+       ((m->gui == NAME_down && UP(BUTTON_gui)) ||
+	(m->gui == NAME_up   && DOWN(BUTTON_gui))) )
+    fail;
 #undef UP
 #undef DOWN
 
@@ -510,21 +525,6 @@ get_xy_event_frame(EventObj ev, FrameObj fr, int *rx, int *ry)
 
 
 static void
-get_xy_event_display(EventObj ev, DisplayObj d, int *rx, int *ry)
-{ FrameObj fr;
-  int frx, fry;
-
-  get_xy_event_window(ev, ev->window, ON, rx, ry);
-  DEBUG(NAME_position, Cprintf("Ev at %d,%d relative to %s\n",
-			       *rx, *ry, pp(ev->window)));
-  frame_offset_window(ev->window, &fr, &frx, &fry);
-  DEBUG(NAME_position, Cprintf("Frame offset: %d,%d\n", frx, fry));
-  *rx += frx + valInt(fr->area->x);
-  *ry += fry + valInt(fr->area->y);
-}
-
-
-static void
 get_xy_event_device(EventObj ev, Device dev, int *rx, int *ry)
 { int ox, oy;
   PceWindow sw = getWindowGraphical((Graphical) dev);
@@ -566,6 +566,22 @@ get_xy_event_node(EventObj ev, Node node, int *rx, int *ry)
 }
 
 
+/**
+ * Get the  X,Y coordinate of  `ev` relative  to `obj`.  If  `area` is
+ * `ON`, get  it relative to  the bounding box  of `obj`, else  get it
+ * relative to the coordinate system of `obj`.
+ *
+ * Given SDL,  we can (in  general) not get  the position of  a frame.
+ * Neither can we force to grab the pointer to a window.  We have some
+ * scenarios:
+ *
+ *   - If `ev->window` is displayed on `ev->frame` and `obj` is inside
+ *     `ev->frame`, all offsets are fine.
+ *   - If `obj` is displayed on `ev->frame`, the X,Y of `ev` are relative
+ *     to `ev->frame`.
+ *   - Otherwise, we do not know.
+ */
+
 status
 get_xy_event(EventObj ev, Any obj, BoolObj area, Int *rx, Int *ry)
 { int x = 0, y = 0;
@@ -573,23 +589,84 @@ get_xy_event(EventObj ev, Any obj, BoolObj area, Int *rx, Int *ry)
   if ( isNil(ev->window) || onFlag(ev->window, F_FREEING|F_FREED) )
   { *rx = ev->x;
     *ry = ev->y;
-    succeed;
-  } else if ( instanceOfObject(obj, ClassDisplay) )
-    get_xy_event_display(ev, obj, &x, &y);
-  else if ( instanceOfObject(obj, ClassFrame) )
-    get_xy_event_frame(ev, obj, &x, &y);
-  else if ( instanceOfObject(obj, ClassWindow) )
-    get_xy_event_window(ev, obj, area, &x, &y);
-  else if ( instanceOfObject(obj, ClassDevice) )
-    get_xy_event_device(ev, obj, &x, &y);
-  else if ( instanceOfObject(obj, ClassGraphical) )
-    get_xy_event_graphical(ev, obj, &x, &y);
-  else if ( instanceOfObject(obj, ClassNode) )
-    get_xy_event_node(ev, obj, &x, &y);
+    succeed;			/* fail? */
+  }
+
+  if ( instanceOfObject(obj, ClassDisplay) )
+  { DEBUG(NAME_event,
+	  Cprintf("Cannot get event location relative to %s\n", pp(obj)));
+    *rx = *ry = toInt(-1);
+    fail;
+  }
+
+  FrameObj objfr;
+  if ( instanceOfObject(obj, ClassFrame) )
+    objfr = obj;
   else
-  { *rx = ev->x;
-    *ry = ev->y;
-    succeed;
+    objfr = getFrameGraphical(obj);
+
+  if ( objfr == ev->frame )
+  { if ( instanceOfObject(ev->window, ClassWindow) &&
+	 getFrameWindow(ev->window, OFF) == ev->frame )
+    { if ( instanceOfObject(obj, ClassFrame) )
+	get_xy_event_frame(ev, obj, &x, &y);
+      else if ( instanceOfObject(obj, ClassWindow) )
+	get_xy_event_window(ev, obj, area, &x, &y);
+      else if ( instanceOfObject(obj, ClassDevice) )
+	get_xy_event_device(ev, obj, &x, &y);
+      else if ( instanceOfObject(obj, ClassGraphical) )
+	get_xy_event_graphical(ev, obj, &x, &y);
+      else if ( instanceOfObject(obj, ClassNode) )
+	get_xy_event_node(ev, obj, &x, &y);
+      else
+      { *rx = ev->x;
+	*ry = ev->y;
+	succeed;
+      }
+    } else
+    { if ( instanceOfObject(obj, ClassFrame) )
+      { x = valInt(ev->x);
+	y = valInt(ev->y);
+      } else
+      { PceWindow sw = getWindowGraphical(obj);
+	float ox=0, oy=0;
+	if ( ws_window_frame_position(sw, ev->frame, &ox, &oy) )
+	{ x = valInt(ev->x) - ox;
+	  y = valInt(ev->y) - oy;
+	} else
+	{ Cprintf("Could not get event X,Y of %s relative to %s\n",
+		  pp(ev), pp(obj));
+	  *rx = *ry = toInt(-1);
+	  fail;
+	}
+	if ( obj != sw )
+	{ if ( instanceOfObject(obj, ClassNode) )
+	    obj = ((Node)obj)->image;
+
+	  if ( instanceOfObject(obj, ClassDevice) )
+	  { Device dev = obj;
+	    int ox, oy;
+	    offsetDeviceGraphical(obj, &ox, &oy);
+	    x -= ox + valInt(dev->offset->x);
+	    y -= oy + valInt(dev->offset->y);
+	  } else if ( instanceOfObject(obj, ClassGraphical) )
+	  { Graphical gr = obj;
+	    int ox, oy;
+	    offsetDeviceGraphical(obj, &ox, &oy);
+	    x -= ox + valInt(gr->area->x);
+	    y -= oy + valInt(gr->area->y);
+	  } else
+	  { assert(0);
+	  }
+	}
+      }
+    }
+  } else
+  { DEBUG(NAME_event,
+	  Cprintf("Could not get event X,Y of %s relative to %s\n",
+		  pp(ev), pp(obj)));
+    *rx = *ry = toInt(-1);
+    fail;
   }
 
   if ( area == ON &&
@@ -738,7 +815,9 @@ getReceiverEvent(EventObj ev)
 
 static Name
 getKeyEvent(EventObj ev)
-{ answer(characterName(ev));
+{ if ( isAEvent(ev, NAME_keyboard) )
+    answer(characterName(ev));
+  fail;
 }
 
 
@@ -895,8 +974,10 @@ static char *T_post[] =
 /* Instance Variables */
 
 static vardecl var_event[] =
-{ IV(NAME_window, "window|frame", IV_GET,
-     NAME_context, "Window that generated event"),
+{ IV(NAME_frame, "frame", IV_GET,
+     NAME_context, "Frame that received the event"),
+  IV(NAME_window, "window|frame", IV_GET,
+     NAME_context, "Window or frame that receives the event"),
   IV(NAME_receiver, "graphical|frame", IV_GET,
      NAME_context, "Object receiving event"),
   IV(NAME_id, "event_id", IV_GET,
@@ -1019,46 +1100,22 @@ static struct namepair
   { NAME_function,	NAME_keyboard },
   { NAME_control,	NAME_ascii },
   { NAME_printable,	NAME_ascii },
-  { NAME_keyLeft,	NAME_function },
-  { NAME_keyRight,	NAME_function },
-  { NAME_keyTop,	NAME_function },
+  { NAME_functionKey,	NAME_function },
   { NAME_cursor,	NAME_function },
   { NAME_namedFunction, NAME_function },
-  { NAME_keyLeft_1,	NAME_keyLeft },
-  { NAME_keyLeft_2,	NAME_keyLeft },
-  { NAME_keyLeft_3,	NAME_keyLeft },
-  { NAME_keyLeft_4,	NAME_keyLeft },
-  { NAME_keyLeft_5,	NAME_keyLeft },
-  { NAME_keyLeft_6,	NAME_keyLeft },
-  { NAME_keyLeft_7,	NAME_keyLeft },
-  { NAME_keyLeft_8,	NAME_keyLeft },
-  { NAME_keyLeft_9,	NAME_keyLeft },
-  { NAME_keyLeft_10,	NAME_keyLeft },
-  { NAME_keyRight_1,	NAME_keyRight },
-  { NAME_keyRight_2,	NAME_keyRight },
-  { NAME_keyRight_3,	NAME_keyRight },
-  { NAME_keyRight_4,	NAME_keyRight },
-  { NAME_keyRight_5,	NAME_keyRight },
-  { NAME_keyRight_6,	NAME_keyRight },
-  { NAME_keyRight_7,	NAME_keyRight },
-  { NAME_keyRight_8,	NAME_keyRight },
-  { NAME_keyRight_9,	NAME_keyRight },
-  { NAME_keyRight_10,	NAME_keyRight },
-  { NAME_keyRight_11,	NAME_keyRight },
-  { NAME_keyRight_12,	NAME_keyRight },
-  { NAME_keyRight_13,	NAME_keyRight },
-  { NAME_keyRight_14,	NAME_keyRight },
-  { NAME_keyRight_15,	NAME_keyRight },
-  { NAME_keyTop_1,	NAME_keyTop },
-  { NAME_keyTop_2,	NAME_keyTop },
-  { NAME_keyTop_3,	NAME_keyTop },
-  { NAME_keyTop_4,	NAME_keyTop },
-  { NAME_keyTop_5,	NAME_keyTop },
-  { NAME_keyTop_6,	NAME_keyTop },
-  { NAME_keyTop_7,	NAME_keyTop },
-  { NAME_keyTop_8,	NAME_keyTop },
-  { NAME_keyTop_9,	NAME_keyTop },
-  { NAME_keyTop_10,	NAME_keyTop },
+
+  { NAME_f1,		NAME_functionKey },
+  { NAME_f2,		NAME_functionKey },
+  { NAME_f3,		NAME_functionKey },
+  { NAME_f4,		NAME_functionKey },
+  { NAME_f5,		NAME_functionKey },
+  { NAME_f6,		NAME_functionKey },
+  { NAME_f7,		NAME_functionKey },
+  { NAME_f8,		NAME_functionKey },
+  { NAME_f9,		NAME_functionKey },
+  { NAME_f10,		NAME_functionKey },
+  { NAME_f11,		NAME_functionKey },
+  { NAME_f12,		NAME_functionKey },
 					/* Mouse button events */
   { NAME_button,	NAME_mouse },
   { NAME_wheel,		NAME_mouse },
@@ -1096,7 +1153,11 @@ static struct namepair
   { NAME_help,		NAME_namedFunction },
   { NAME_break,		NAME_namedFunction },
   { NAME_pause,		NAME_namedFunction },
-  { NAME_backspace,	NAME_namedFunction },
+  { NAME_BS,		NAME_namedFunction }, /* Add node for these ASCII? */
+  { NAME_TAB,		NAME_namedFunction },
+  { NAME_DEL,		NAME_namedFunction },
+  { NAME_ESC,		NAME_namedFunction },
+  { NAME_RET,		NAME_namedFunction },
 
   { NAME_cursorHome,	NAME_cursor },
   { NAME_cursorLeft,	NAME_cursor },

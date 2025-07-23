@@ -78,11 +78,11 @@
 :- dynamic
     prolog_overview_window/1.
 
-resource(edit,        image, image('16x16/edit.xpm')).
-resource(up,          image, image('16x16/up.xpm')).
-resource(refresh,     image, image('16x16/refresh.xpm')).
-resource(butterfly,   image, image('butterfly.xpm')).
-resource(dbgsettings, image, image('16x16/dbgsettings.xpm')).
+resource(edit,        image, image('16x16/edit.png')).
+resource(up,          image, image('16x16/up.png')).
+resource(refresh,     image, image('16x16/refresh.png')).
+resource(butterfly,   image, image('butterfly.png')).
+resource(dbgsettings, image, image('16x16/dbgsettings.png')).
 
 :- pce_begin_class(prolog_navigator, persistent_frame,
                    "Prolog source navigator").
@@ -309,13 +309,13 @@ included(TF) :->
     get(TF, identifier, Path),
     included_file(Path).
 
-file_image(Path, 'plloadedfile.xpm') :-
+file_image(Path, 'plloadedfile.png') :-
     source_file(Path),
     !.
-file_image(Path, 'plincludedfile.xpm') :-
+file_image(Path, 'plincludedfile.png') :-
     included_file(Path),
     !.
-file_image(_, 'plfile.xpm').
+file_image(_, 'plfile.png').
 
 included_file(Path) :-
     source_file_property(Path, included_in(_,_)).
@@ -386,11 +386,11 @@ make_file_toc_entry(xpce_class(Class, _Super, Doc), TE) :-
     to_summary(Doc, PceDoc),
     new(TE, toc_xpce_class(Class, PceDoc)).
 make_file_toc_entry(xpce_class_extension(Class), TE) :-
-    new(TE, toc_xpce_class(Class, @default, 'classext.xpm')).
+    new(TE, toc_xpce_class(Class, @default, 'classext.png')).
 make_file_toc_entry(module(Module), TE) :-
-    new(TE, toc_module(Module, @default, 'module.xpm')).
+    new(TE, toc_module(Module, @default, 'module.png')).
 make_file_toc_entry(dynamic, TE) :-
-    new(TE, sb_predicate_list(dynamic, @default, 'mini-run.xpm')).
+    new(TE, sb_predicate_list(dynamic, @default, 'mini-run.png')).
 
 to_summary(Doc, String) :-
     catch(string_codes(String, Doc), _, fail),
@@ -609,7 +609,7 @@ variable(summary,       string*, get, "Summary documentation").
 initialise(CF, Class:name, Summary:[string], Image:[image]) :->
     "Create from ClassName, Summary and Image"::
     default(Summary, @nil, Sum),
-    default(Image, 'class.xpm', Img),
+    default(Image, 'class.png', Img),
     send_super(CF, initialise, Class, @default, Img),
     send(CF, slot, class_id, Class),
     send(CF, slot, summary, Sum).
@@ -638,16 +638,16 @@ make_class_toc_enter(Term, Class, _Key, TE) :-
 
 make_class_toc_enter(xpce_method(send(Class, Name, _Doc)), Class, TE) :-
     atomic_list_concat([send, Name, Class], $, Id),
-    new(TE, toc_xpce_entity(Name, Id, 'send.xpm')).
+    new(TE, toc_xpce_entity(Name, Id, 'send.png')).
 make_class_toc_enter(xpce_method(get(Class, Name, _Doc)), Class, TE) :-
     atomic_list_concat([get, Name, Class], $, Id),
-    new(TE, toc_xpce_entity(Name, Id, 'get.xpm')).
+    new(TE, toc_xpce_entity(Name, Id, 'get.png')).
 make_class_toc_enter(xpce_variable(Class, Name, _Doc), Class, TE) :-
     atomic_list_concat([var, Name, Class], $, Id),
-    new(TE, toc_xpce_entity(Name, Id, 'ivar.xpm')).
+    new(TE, toc_xpce_entity(Name, Id, 'ivar.png')).
 make_class_toc_enter(xpce_class_variable(Class, Name, _Doc), Class, TE) :-
     atomic_list_concat([cvar, Name, Class], $, Id),
-    new(TE, toc_xpce_entity(Name, Id, 'classvar.xpm')).
+    new(TE, toc_xpce_entity(Name, Id, 'classvar.png')).
 
 identify(CF) :->
     "Report who I am"::
@@ -715,7 +715,7 @@ expand(MF) :->
             send(Entry, line, Line)
         ;   local_predicate_name(Head, Label),
             atom_concat('$export$', Label, Id),
-            new(Entry, toc_file(Label, Id, 'pred.bm'))
+            new(Entry, toc_file(Label, Id, 'pred.png'))
         ),
         send(TocWindow, son, NodeId, Entry),
         fail
@@ -980,23 +980,23 @@ popup(_, Popup:popup) :<-
 :- pce_end_class(sb_predicate).
 
 
-image(module,           open,           'openmodule.xpm').
-image(module,           closed,         'module.xpm').
+image(module,           open,           'openmodule.png').
+image(module,           closed,         'module.png').
 
-image(dynamic,          open,           'mini-run.xpm').
-image(dynamic,          closed,         'mini-run.xpm').
+image(dynamic,          open,           'mini-run.png').
+image(dynamic,          closed,         'mini-run.png').
 
-image(predicate,        built_in,       'builtin.xpm').
-image(predicate,        global,         'mini-globe.xpm').
-image(predicate,        dynamic,        'mini-run.xpm').
-image(predicate,        imported,       'import.xpm').
-image(predicate,        exported,       'export.xpm').
-image(predicate,        incomplete,     'warnpred.xpm').
-image(predicate,        unreferenced,   'unrefpred.xpm').
-image(predicate,        undefined,      'undefpred.xpm').
-image(predicate,        fact,           'fact.bm').
-image(predicate,        local,          'pred.bm').
-image(predicate,        dcg,            'grammar.bm').
+image(predicate,        built_in,       'builtin.png').
+image(predicate,        global,         'mini-globe.png').
+image(predicate,        dynamic,        'mini-run.png').
+image(predicate,        imported,       'import.png').
+image(predicate,        exported,       'export.png').
+image(predicate,        incomplete,     'warnpred.png').
+image(predicate,        unreferenced,   'unrefpred.png').
+image(predicate,        undefined,      'undefpred.png').
+image(predicate,        fact,           'fact.png').
+image(predicate,        local,          'pred.png').
+image(predicate,        dcg,            'grammar.png').
 
 
 
@@ -1007,10 +1007,10 @@ image(predicate,        dcg,            'grammar.bm').
 :- multifile
     user:message_hook/3.
 
-image_of_load_state(start, _,       'loading.xpm').
-image_of_load_state(true,  load,    'plloadedfile.xpm').
-image_of_load_state(true,  include, 'plincludedfile.xpm').
-image_of_load_state(false, _,       'loadfailed.xpm').
+image_of_load_state(start, _,       'loading.png').
+image_of_load_state(true,  load,    'plloadedfile.png').
+image_of_load_state(true,  include, 'plincludedfile.png').
+image_of_load_state(false, _,       'loadfailed.png').
 
 user:message_hook(load_file(What), _Kind, _Lines) :-
     loading(What, load).

@@ -176,22 +176,26 @@ getFunctionKeyBinding(KeyBinding kb, EventId id)
 }
 
 
-static Name
-getBindingKeyBinding(KeyBinding kb, Any function)
+static void
+add_matching_bindings(KeyBinding kb, Any function, Chain ch)
 { Cell cell;
-  Name binding;
 
   for_cell(cell, kb->bindings->attributes)
   { Attribute a = cell->value;
-    if ( a->value == function )
-      answer(a->name);
+    if ( a->value == function && !memberChain(ch, a->name) )
+      appendChain(ch, a->name);
   }
   for_cell(cell, kb->defaults)
-  { if ( (binding = getBindingKeyBinding(cell->value, function)) )
-      answer(binding);
+  { add_matching_bindings(cell->value, function, ch);
   }
+}
 
-  fail;
+static Chain
+getBindingKeyBinding(KeyBinding kb, Any function)
+{ Chain ch = answerObject(ClassChain, EAV);
+
+  add_matching_bindings(kb, function, ch);
+  answer(ch);
 }
 
 
@@ -557,8 +561,8 @@ static getdecl get_keyBinding[] =
      NAME_client, "Client of the key_binding object"),
   GM(NAME_convert, 1, "key_binding", "name", getConvertKeyBinding,
      NAME_conversion, "Lookup existing table or create new named table"),
-  GM(NAME_binding, 1, "name", "function=name|code", getBindingKeyBinding,
-     NAME_meta, "Find key-binding from function"),
+  GM(NAME_binding, 1, "chain", "function=name|code", getBindingKeyBinding,
+     NAME_meta, "Find key-bindings from function"),
   GM(NAME_function, 1, "name|code", "event|name|event_id", getFunctionKeyBinding,
      NAME_meta, "Get function for given event-id"),
   GM(NAME_lookup, 2, "key_binding", T_lookup, getLookupKeyBinding,
@@ -672,10 +676,10 @@ static kbDef emacs_caret_basics[] =
   { "\\eb",		NAME_backwardWord },
   { "\\ef",		NAME_forwardWord },
 
-  { "cursor_up",	NAME_previousLine },
-  { "cursor_down",	NAME_nextLine },
-  { "cursor_right",	NAME_forwardChar },
-  { "cursor_left",	NAME_backwardChar },
+  { "<cursor_up>",	NAME_previousLine },
+  { "<cursor_down>",	NAME_nextLine },
+  { "<cursor_right>",	NAME_forwardChar },
+  { "<cursor_left>",	NAME_backwardChar },
 
   { NULL,		NULL }
 };
@@ -684,7 +688,7 @@ static kbDef emacs_caret_basics[] =
 static kbDef emacs_edit_basics[] =
 { { SUPER,		NAME_insert },
 
-  { "backspace",	NAME_cutOrBackwardDeleteChar },
+  { "BS",		NAME_cutOrBackwardDeleteChar },
   { "\\C-d",		NAME_deleteChar },
   { "DEL",		NAME_cutOrDeleteChar },
   { "\\C-t",		NAME_transposeChars },
@@ -692,7 +696,7 @@ static kbDef emacs_edit_basics[] =
   { "\\C-o",		NAME_openLine },
 
   { "\\ed",		NAME_killWord },
-  { "\\ebackspace",	NAME_backwardKillWord },
+  { "\\eBS",		NAME_backwardKillWord },
   { "\\e\\C-h",		NAME_backwardKillWord }, /* TBD: better abstraction */
 
   { NULL,		NULL }
@@ -767,9 +771,9 @@ static kbDef list_browser[] =
   { "\\C-w",		NAME_extendToCurrent },
   { "\\C-s",		NAME_repeatSearch },
   { "\\C-n",		NAME_nextLine },
-  { "cursor_down",	NAME_nextLine },
+  { "<cursor_down>",	NAME_nextLine },
   { "\\C-p",		NAME_previousLine },
-  { "cursor_up",	NAME_previousLine },
+  { "<cursor_up>",	NAME_previousLine },
 
 /*{ DEFAULT_FUNCTION,	NAME_alert },*/
 
@@ -780,8 +784,8 @@ static kbDef emacs_page[] =
 { { "\\C-v",		NAME_scrollUp },
   { "\\ev",		NAME_scrollDown },
   { "\\C-l",		NAME_recenter },
-  { "page_up",		NAME_scrollDown },
-  { "page_down",	NAME_scrollUp },
+  { "<page_up>",	NAME_scrollDown },
+  { "<page_down>",	NAME_scrollUp },
 
   { NULL,		NULL }
 };
@@ -790,25 +794,25 @@ static kbDef editor[] =
 { { SUPER,		NAME_emacsBasics },
   { SUPER,		NAME_emacsPage },
 
-  { "cursor_up",	NAME_cursorUp },
-  { "cursor_down",	NAME_cursorDown },
-  { "cursor_right",	NAME_cursorRight },
-  { "cursor_left",	NAME_cursorLeft },
-  { "end",		NAME_cursorEnd },
-  { "cursor_home",	NAME_cursorHome },
-  { "page_up",		NAME_cursorPageUp },
-  { "page_down",	NAME_cursorPageDown },
+  { "<cursor_up>",	NAME_cursorUp },
+  { "<cursor_down>",	NAME_cursorDown },
+  { "<cursor_right>",	NAME_cursorRight },
+  { "<cursor_left>",	NAME_cursorLeft },
+  { "<end>",		NAME_cursorEnd },
+  { "<cursor_home>",	NAME_cursorHome },
+  { "<page_up>",	NAME_cursorPageUp },
+  { "<page_down>",	NAME_cursorPageDown },
 
-  { "\\C-@",		NAME_setMark },
+  { "\\C-SPC",		NAME_setMark },
   { "LFD",		NAME_newlineAndIndent },
   { "\\C-j",		NAME_newlineAndIndent },
   { "\\C-r",		NAME_isearchBackward },
   { "\\C-s",		NAME_isearchForward },
-  { "key_top_3",	NAME_isearchForward },
+  { "<f3>",		NAME_isearchForward },
   { "\\C-w",		NAME_killOrGrabRegion },
   { "\\C-y",		NAME_yank },
   { "\\C-_",		NAME_undo },
-  { "\\C-z",		NAME_undo },		/* Windows compatibility */
+  { "\\C-z",		NAME_undo },
 
   { "\\e\\C-b",		NAME_backwardTerm },
   { "\\e\\C-f",		NAME_forwardTerm },
@@ -843,9 +847,20 @@ static kbDef editor[] =
 
   { DEFAULT_FUNCTION,	NAME_undefined },
 
-  { NULL,	        NULL }
+  { NULL,		NULL }
 };
 
+static kbDef terminal[] =
+{ { "<end>",		NAME_cursorEnd },
+  { "<cursor_home>",	NAME_cursorHome },
+  { "<page_up>",	NAME_cursorPageUp },
+  { "<page_down>",	NAME_cursorPageDown },
+  { "\\C-c",		NAME_copyOrInterrupt },
+  { "\\C-v",		NAME_paste },
+  { "\\C-v",		NAME_paste },
+  { "\\C-\\S-a",	NAME_selectAll },
+  { NULL,		NULL }
+};
 
 static status
 bindResourcesKeyBinding(KeyBinding kb, Name name)
@@ -905,6 +920,8 @@ initPredefinedKeyBinding(KeyBinding kb)
     table = emacs_view_basics;
   else if ( kb->name == NAME_editor )
     table = editor;
+  else if ( kb->name == NAME_terminal )
+    table = terminal;
   else if ( kb->name == NAME_text )
     table = text;
   else if ( kb->name == NAME_textItem )

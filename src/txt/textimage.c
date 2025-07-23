@@ -434,7 +434,8 @@ do_fill_line(TextImage ti, TextLine l, long index)
 { short last_break = -1;
   int last_is_space = FALSE;
   TextChar tc;
-  int x, i, left_margin, right_margin;
+  float x;
+  int i, left_margin, right_margin;
   long start;
 
   l->ends_because = 0;
@@ -758,6 +759,7 @@ dumpMapTextImage(TextImage ti)
 		*      PAINTING PRIMITIVES	*
 		********************************/
 
+/* TBD: Use Pango hints for offset and thickness of the line */
 static void
 t_underline(int x, int y, int w, Colour c)
 { static int ex = 0, ey = 0, ew = 0;
@@ -773,24 +775,6 @@ t_underline(int x, int y, int w, Colour c)
     ex = x, ey = y, ew = w;
     cc = c;
   }
-}
-
-
-static void
-t_invert(int x, int y, int w, int h)
-{ static int ix=0, iy=0, iw=0, ih=0;
-
-  if ( iw == 0 && ih == 0 )
-  { ix = x, iy = y, iw = w, ih = h;
-  } else
-  { if ( iy == y && ih == h && ix + iw == x )
-    { iw += w;
-      return;
-    }
-  }
-
-  r_complement(ix, iy, iw, ih);
-  ix=0, iy=0, iw=0, ih=0;
 }
 
 
@@ -901,14 +885,9 @@ paint_attributes(TextImage ti, TextLine l, int from, int to, Colour c)
   { t_underline(l->chars[from].x, l->y + l->h - 1,
 		l->chars[to].x - l->chars[from].x, c);
   }
-  if ( atts & TXT_HIGHLIGHTED )
-  { int w = (to == l->length ? ti->w - TXT_X_MARGIN : l->chars[to].x);
-
-    t_invert(l->chars[from].x, l->y,
-	     w - l->chars[from].x, l->h);
-  }
   if ( atts & TXT_GREYED )
-  { t_grey(l->chars[from].x, l->y,
+  { Cprintf("Greyed text not yet supported\n");
+    t_grey(l->chars[from].x, l->y,
 	   l->chars[to].x - l->chars[from].x, l->h);
   }
 }
@@ -943,7 +922,7 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
   }
 
   for( s = from; s < to; s = e )
-  { int prt;
+  { bool prt;
     int chr = l->chars[s].value.c;
 
     e = s;
@@ -988,7 +967,7 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
     PutBuf(chr);
 
     if ( chr == '\t' )			/* print tabs */
-    { prt = FALSE;
+    { prt = false;
 
       for(e++; e < to; e++)
       { if ( l->chars[e].type != CHAR_ASCII ||
@@ -998,11 +977,11 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
 	  break;
       }
     } else if ( chr == '\n' )		/* newline */
-    { prt = FALSE;
+    { prt = false;
 
       e++;
     } else				/* real text */
-    { prt = TRUE;
+    { prt = true;
 
       for(e++; e < to; e++)
       { if ( l->chars[e].font != f ||
@@ -1017,6 +996,8 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
       }
     }
 
+#define SWAP_COLORS(a,b) do { Any _tmp = a; a = b; b = _tmp; } while(0)
+
     if ( notDefault(bg) )
     { if ( instanceOfObject(bg, ClassElevation) )
       { int f, t, x, tx;
@@ -1029,24 +1010,35 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
 
 	x  = l->chars[f].x;
 	tx = l->chars[t].x;
+	if ( atts & TXT_HIGHLIGHTED )
+	  SWAP_COLORS(c, bg);
 	r_3d_box(x, l->y, tx-x, l->h, 0, bg, TRUE);
       } else
       { int x  = l->chars[s].x;
 	int tx = l->chars[e].x;
 
 	if ( tx > rmargin ) tx = rmargin;
+	if ( atts & TXT_HIGHLIGHTED )
+	  SWAP_COLORS(c, bg);
 	r_fill(x, l->y, tx-x, l->h, bg);
       }
+    } else if ( atts & TXT_HIGHLIGHTED )
+    { int x  = l->chars[s].x;
+      int tx = l->chars[e].x;
+      bg = r_background(DEFAULT);
+      SWAP_COLORS(c, bg);
+      r_fill(x, l->y, tx-x, l->h, bg);
     }
 
     if ( prt )
-    { r_colour(c);
+    { size_t len = out-buf;
 
-      s_printW(buf, e - s, l->chars[s].x, l->y + l->base, f);
+      r_colour(c);
+      s_printW(buf, len, l->chars[s].x, l->y + l->base, f);
 
       if ( atts & TXT_BOLDEN )
-      { s_printW(buf, e - s, l->chars[s].x+1, l->y   + l->base, f);
-	s_printW(buf, e - s, l->chars[s].x,   l->y-1 + l->base, f);
+      { s_printW(buf, len, l->chars[s].x+1, l->y   + l->base, f);
+	s_printW(buf, len, l->chars[s].x,   l->y-1 + l->base, f);
       }
     }
 

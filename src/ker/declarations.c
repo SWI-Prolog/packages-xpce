@@ -140,9 +140,6 @@ static struct class_definition classdefs[] =
   { NAME_colour, NAME_object, makeClassColour,
     &ClassColour, "Colour (RGB) definition" },
 
-  { NAME_colourMap, NAME_object, makeClassColourMap,
-    &ClassColourMap, "Colour map (palette)" },
-
   { NAME_connectGesture, NAME_gesture, makeClassConnectGesture,
     &ClassConnectGesture, "Gesture to connect two objects by dragging" },
 
@@ -478,6 +475,9 @@ static struct class_definition classdefs[] =
   { NAME_textImage, NAME_graphical, makeClassTextImage,
     &ClassTextImage, "(Re)display large text fields" },
 
+  { NAME_terminalImage, NAME_graphical, makeClassTerminalImage,
+    &ClassTerminalImage, "Display text for a terminal" },
+
   { NAME_textItem, NAME_dialogItem, makeClassTextItem,
     &ClassTextItem, "Text entry field" },
 
@@ -489,9 +489,6 @@ static struct class_definition classdefs[] =
 
   { NAME_tile, NAME_object, makeClassTile,
     &ClassTile, "Manage non-overlapping areas" },
-
-  { NAME_tileAdjuster, NAME_window, makeClassTileAdjuster,
-    &ClassTileAdjuster, "Adjust size of a tile" },
 
   { NAME_timer, NAME_object, makeClassTimer,
     &ClassTimer, "Generate messages at intervals" },
@@ -529,7 +526,7 @@ static struct class_definition classdefs[] =
   { NAME_while, NAME_code, makeClassWhile,
     &ClassWhile, "While-loop control structure" },
 
-#ifdef __WINDOWS__
+#if WIN32_GRAPHICS
   { NAME_winMetafile, NAME_graphical, makeClassWinMF,
     &ClassWinMF, "Windows .WMF based figure" },
   { NAME_winPrinter, NAME_object, makeClassWinPrinter,
@@ -635,4 +632,3 @@ initTypeAliases(void)
   for(; alias->alias; alias++)
     defineType(alias->alias, alias->description);
 }
-

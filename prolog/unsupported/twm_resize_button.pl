@@ -52,7 +52,7 @@ frames-in-windows.
 
 initialise(BM, Image:[image]) :->
     "Create from image"::
-    default(Image, 'resize.bm', Img),
+    default(Image, 'resize.png', Img),
     send(BM, send_super, initialise, Img).
 
 

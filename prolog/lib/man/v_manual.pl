@@ -46,7 +46,7 @@
            , send_list/3
            ]).
 
-resource(man_icon, image, image('32x32/books.xpm')).
+resource(man_icon, image, image('32x32/books.png')).
 
 :- pce_autoload(event_viewer, library('man/showevent')).
 
@@ -183,10 +183,10 @@ check_directory(M, Dir:directory) :->
     ).
 
 
-check_runtime(_M) :->
+check_runtime(M) :->
     "Check for runtime system"::
     (   get(@pce, is_runtime_system, @on)
-    ->  send(@display, inform,
+    ->  send(@display, inform, M, "XPCE Manual",
              '%s.  %s\n%s %s',
              'This is a runtime version of XPCE',
              'Most of the manual will not work.',
@@ -350,7 +350,7 @@ start_tool(M, ToolName:name, Tool:frame) :<-
     ;   create_tool(M, ToolName, Tool),
         send(Tool, open)
     ->  send(M, register_tool, ToolName, Tool)
-    ;   send(@display, inform, 'Failed to start %s', ToolName)
+    ;   send(@display, inform, M, "XPCE Manual", 'Failed to start %s', ToolName)
     ).
 
 start_tool(M, ToolName:name) :->
@@ -417,7 +417,7 @@ destroy_tool(M, Tool:man_frame) :->
 quit(M) :->
     "Quit Manual Tool"::
     send(M, save_if_modified),
-%   send(@display, confirm, 'Quit all manual tools?'),
+%   send(@display, confirm, M, "XPCE Manual", 'Quit all manual tools?'),
     send(M?tools, for_all, message(@arg1?value, quit)),
     send(M, destroy).
 
@@ -425,7 +425,7 @@ quit(M) :->
 quit_pce(M) :->
     "Exit from PCE process"::
     send(M, save_if_modified),
-    send(@display, confirm, 'Really exit PCE?'),
+    send(@display, confirm, M, "XPCE Manual", 'Really exit PCE?'),
     send(@pce, die).
 
 
@@ -448,7 +448,8 @@ save_if_modified(M, Ask:[bool]) :->
     "Save if some part has been modified"::
     (   get(M, modified, @on)
     ->  (   Ask \== @on
-        ;   send(@display, confirm, 'Manual Database is modified. Save?')
+        ;   send(@display, confirm, M, "XPCE Manual",
+                 'Manual Database is modified. Save?')
         ),
         !,
         send(M?space, save_some),
@@ -596,7 +597,7 @@ goto_url(Url) :-
     send(@display, busy_cursor),
     (   catch(www_open_url(Url), _, fail)
     ->  true
-    ;   send(@display, inform, 'Failed to open URL')
+    ;   send(@display, inform, @default, "XPCE Manual", 'Failed to open URL')
     ),
     send(@display, busy_cursor, @nil).
 
@@ -627,10 +628,10 @@ start_demo(M) :->
                 *            CHECKING           *
                 ********************************/
 
-check_object_base(_M) :->
+check_object_base(M) :->
     (   auto_call(checkpce)
-    ->  send(@display, inform, 'Object base is consistent')
-    ;   send(@display, inform, '%s\n%s',
+    ->  send(@display, inform, M, "Check object base", 'Object base is consistent')
+    ;   send(@display, inform, M, "Check object base", '%s\n%s',
              'Object base is corrupted',
              'See Prolog window for details')
     ).
@@ -750,7 +751,7 @@ request_selection(M, Frame:man_frame*, Obj:any*, Open:[bool]) :->
     (   OldHolder \== @nil
     ->  (   send(OldHolder, release_selection)
         ->  true
-        ;   send(@display, inform,
+        ;   send(@display, inform, M, "XPCE Manual",
                  '%s does not release selection', OldHolder)
         )
     ;   true
@@ -860,16 +861,17 @@ request_relate(M, CD, Obj) :-
         ->  get(Selection, class_name, SClass),
             get(Obj, class_name, OClass),
             relate(M, SClass-OClass, CD, Selection, Obj)
-        ;   send(@display, inform, 'First make a selection')
+        ;   send(@display, inform, M, "XPCE Manual", 'First make a selection')
         )
-    ;   send(@display, inform, 'Manual is in read-only mode')
+    ;   send(@display, inform, M, "XPCE Manual", 'Manual is in read-only mode')
     ).
 
-relate(_, _-_, create, Obj, Obj) :-
+relate(M, _-_, create, Obj, Obj) :-
     !,
-    send(@display, inform, 'Can''t relate %s to itself', Obj?man_name).
+    send(@display, inform, M, "XPCE Manual",
+         'Can''t relate %s to itself', Obj?man_name).
 relate(M, _-_, CD, Selection, Obj) :-
-    send(@display, confirm,
+    send(@display, confirm, M, "XPCE Manual",
          '%s %s <-> %s', CD, Selection?man_name, Obj?man_name),
     send(M, create_relation, CD, Selection, see_also, Obj),
     send(M, create_relation, CD, Obj, see_also, Selection).
@@ -904,16 +906,17 @@ request_inherit(M, CD, Obj) :-
     ->  (   get(M, selection, Selection),
             Selection \== @nil
         ->  inherit(M, CD, Selection, Obj)
-        ;   send(@display, inform, 'First make a selection')
+        ;   send(@display, inform, M, "XPCE Manual", 'First make a selection')
         )
-    ;   send(@display, inform, 'Manual is in read-only mode')
+    ;   send(@display, inform, M, "XPCE Manual", 'Manual is in read-only mode')
     ).
 
-inherit(_, create, Obj, Obj) :-
+inherit(M, create, Obj, Obj) :-
     !,
-    send(@display, inform, 'Can''t inherit %s from myself', Obj?man_name).
+    send(@display, inform, M, "XPCE Manual",
+         'Can''t inherit %s from myself', Obj?man_name).
 inherit(M, CD, Selection, Obj) :-
-    send(@display, confirm,
+    send(@display, confirm, M, "XPCE Manual",
          '%s description of %s from %s',
          when(CD == relate, 'Inherit', 'UnInherit'),
          Obj?man_name, Selection?man_name),
@@ -926,12 +929,12 @@ inherit(M, CD, Selection, Obj) :-
                 *            SOURCES            *
                 ********************************/
 
-request_source(_M, Obj:object) :->
+request_source(M, Obj:object) :->
     "Display source of object"::
     (   get(Obj, source, Location)
     ->  auto_call(start_emacs),
         send(@emacs, goto_source_location, Location)
-    ;   send(@display, inform, 'Can''t find source')
+    ;   send(@display, inform, M, "XPCE Manual", 'Can''t find source')
     ).
 
 
@@ -1061,9 +1064,10 @@ give_help(Manual, Frame, ToolName) :-
         get(Manual, selection, ToolCard),
         ToolCard \== @nil,
         send(ToolCard, instance_of, man_browser_card),
-        send(@display, confirm, 'Assign %s to browser %s',
+        send(@display, confirm, Manual, "XPCE Manual", 'Assign %s to browser %s',
              ToolCard?man_name, ToolName)
     ->  send(ToolCard, store, tool_name, ToolName)
-    ;   send(@display, inform, 'Sorry, Can''t find help card ...')
+    ;   send(@display, inform, Manual, "XPCE Manual",
+             'Sorry, Can''t find help card ...')
     ).
 

@@ -3,7 +3,8 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi.psy.uva.nl
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -56,9 +57,7 @@ initialiseMenuItem(MenuItem m, Any value, Message msg, Any label,
   assign(m, active,    ON);
   assign(m, condition, cond);
   assign(m, end_group, eg);
-
-  if ( notDefault(acc) )
-    assign(m, accelerator, acc);
+  assign(m, accelerator, acc);
 
   return labelMenuItem(m, label);
 }
@@ -306,7 +305,7 @@ getContainedInMenuItem(MenuItem mi)
 static char *T_value[] =
         { "value=any", "label=[name|image]" };
 static char *T_initialise[] =
-        { "value=any", "message=[code]*", "label=[name|image]", "end_group=[bool]", "condition=[code]*", "accelerator=[name]" };
+        { "value=any", "message=[code]*", "label=[name|image]", "end_group=[bool]", "condition=[code]*", "accelerator=[name]*" };
 
 /* Instance Variables */
 
@@ -335,7 +334,7 @@ static vardecl var_menuItem[] =
      NAME_group, "Popup: add separation-line"),
   SV(NAME_popup, "popup*", IV_GET|IV_STORE, popupMenuItem,
      NAME_menu, "Associated popup (pull-right)"),
-  IV(NAME_accelerator, "name*", IV_BOTH,
+  IV(NAME_accelerator, "[name]*", IV_BOTH,
      NAME_accelerator, "Activate when ->key: name is received")
 };
 
@@ -392,4 +391,3 @@ status
 makeClassMenuItem(Class class)
 { return declareClass(class, &menuItem_decls);
 }
-

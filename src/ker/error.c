@@ -347,6 +347,11 @@ static const error_def errors[] =
     "%N: Failed to create X-application-shell" },
   { NAME_noApplicationContext,	ET_FATAL,
     "%N: Failed to create X-application-context" },
+#if SDL_GRAPHICS
+					/* SDL */
+  { NAME_sdlInitialize,	ET_FATAL,
+    "%N: Failed to initialize SDL" },
+#endif
 					/* Colour/Cursor/Font, etc */
   { NAME_noLocaleSupport,	ET_WARNING,
     "%N: X11 does not support locale %s" },
@@ -402,7 +407,7 @@ static const error_def errors[] =
   { NAME_cannotConvertDefault,	ET_WARNING|EF_PRINT,
     "%N: Failed to convert %s.  Trying program default" },
   { NAME_cannotConvertProgramDefault,	ET_FATAL,
-    "%N: Failed to convert program default %O" },
+    "%N: Failed to convert program default \"%s\"" },
   { NAME_winMetafile,		ET_WARNING,
     "%O: API operation %s failed: %s" },
   { NAME_x11Threads,		ET_WARNING,

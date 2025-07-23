@@ -36,6 +36,12 @@
 #define _PCE_GRA_INCLUDED
 
 		 /*******************************
+		 *        REUSABLE TYPES        *
+		 *******************************/
+
+#define TYPE_FILL "image|colour|{foreground,background}*"
+
+		 /*******************************
 		 *     STRETCHABLE OBJECTS	*
 		 *******************************/
 
@@ -209,7 +215,6 @@ NewClass(tileobj)
   Int		verStretch;		/* Vertical stretchability */
   Int		verShrink;		/* Vertical shrinkability */
   BoolObj	canResize;		/* Can be resized by user? */
-  TileAdjuster	adjuster;		/* Object that resizes me */
   Int		border;			/* Border between subtiles */
   Name		orientation;		/* none, horizontal, vertical */
   Chain		members;		/* subtiles */
@@ -438,6 +443,7 @@ End;
   Image	     off_image;			/* Image if selected == @off */ \
   Image	     popup_image;		/* Image if popup != @nil */ \
   FontObj    accelerator_font;		/* Font for accelerators */ \
+  Colour     accelerator_colour;	/* Colour for accelerators */ \
   Int	     margin;			/* Margin at the left/right */ \
   Int	     left_offset;		/* Space box and item-image */ \
   Int	     right_offset;		/* Same at right side */ \
@@ -660,8 +666,11 @@ End;
 
 #define ABSTRACT_WINDOW \
   ABSTRACT_DEVICE \
+  Int		scale;			/* Scaling */ \
   FrameObj	frame;			/* Frame we are member of */ \
   PceWindow	decoration;		/* Window holding decorations */ \
+  Chain		subwindows;		/* Displayed sub windows */ \
+  PceWindow	parent;			/* Window I'm a subwindow of */ \
   Area		bounding_box;		/* Union of graphicals */ \
   TileObj	tile;			/* Area managing tile */ \
   Code		resize_message;		/* Message send after a resize */ \
@@ -684,13 +693,6 @@ End;
 					/* Alien stuff */ \
   UpdateArea	changes_data;		/* Recorded changes */ \
   WsRef		ws_ref;			/* Window system reference */
-
-NewClass(colour_map)
-  Name		name;			/* name of the map */
-  Vector	colours;		/* colours in the map */
-  BoolObj	read_only;		/* colourmap cannot be changed */
-  WsRef		ws_ref;			/* Window system reference */
-End;
 
 typedef struct
 { enum
@@ -744,15 +746,14 @@ NewClass(cursorobj)
   Point		hot_spot;		/* User-defined hot_spot */
   Colour	foreground;		/* User-defined foreground */
   Colour	background;		/* User-defined background */
+  WsRef		ws_ref;			/* Window system reference */
 End;
 
 
 NewClass(colour)
   Name		name;			/* Name of the colour (red, ...) */
   Name		kind;			/* `named' or `rgb' */
-  Int		red;			/* Red intensity */
-  Int		green;			/* Green intensity */
-  Int		blue;			/* Blue intensity */
+  Int		rgba;			/* 32-bit encoded RGBA */
 End;
 
 
@@ -777,6 +778,7 @@ NewClass(fontobj)
   BoolObj	iswide;			/* Font is 16-bit font */
   Name		postscript_font;	/* Name of PostScript font */
   Int		postscript_size;	/* Size in PostScript */
+  WsRef		ws_ref;			/* Window system reference */
 End;
 
 
@@ -791,7 +793,6 @@ NewClass(displayobj)
   Chain		inspect_handlers;	/* Event-handlers for inspector */
   Colour	foreground;		/* Window default foreground */
   Colour	background;		/* Window default background */
-  ColourMap	colour_map;		/* Default colour_map for frames */
   Name		wm_class;		/* WM_CLASS hint */
   BoolObj	quick_and_dirty;	/* Use quick_and_dirty drawing */
   Image		cache;			/* Graphics cache */
@@ -832,9 +833,9 @@ NewClass(frameobj)
   DisplayObj	display;		/* Display it is displayed on */
   Int		border;			/* Border width */
   Any		background;		/* Frames background */
-  ColourMap	colour_map;		/* Attached colourmap */
   Area		area;			/* Area of the frame */
   Name		geometry;		/* X-Window geometry spec */
+  BoolObj	placed;			/* User tried to fix placement */
   Chain		members;		/* Windows displayed */
   Name		kind;			/* Kind of frame */
   FrameObj	transient_for;		/* Sub frame of who? */
@@ -856,7 +857,8 @@ End;
 
 
 NewClass(eventobj)
-  Any		window;			/* Original window */
+  Any		frame;			/* Original frame */
+  Any		window;			/* Targeted window */
   Any		receiver;		/* Receiver of the event */
   Any		id;			/* Event identifier */
   Int		buttons;		/* Bit mask of button positions */
@@ -939,20 +941,21 @@ End;
 		 *	      EVENTS		*
 		 *******************************/
 
-#define BUTTON_mask		(0x0ff)
-#define BUTTON_control		(0x001)
-#define BUTTON_shift		(0x002)
-#define BUTTON_meta		(0x004)
-#define BUTTON_ms_left		(0x008)
-#define BUTTON_ms_middle	(0x010)
-#define BUTTON_ms_right		(0x020)
-#define BUTTON_ms_button4	(0x040)
-#define BUTTON_ms_button5	(0x080)
+#define BUTTON_mask		(0x0ffff)
+#define BUTTON_control		(0x00001)
+#define BUTTON_shift		(0x00002)
+#define BUTTON_meta		(0x00004)
+#define BUTTON_gui		(0x00008) /* Windows key/Apple Command key */
+#define BUTTON_ms_left		(0x00010)
+#define BUTTON_ms_middle	(0x00020)
+#define BUTTON_ms_right		(0x00040)
+#define BUTTON_ms_button4	(0x00080)
+#define BUTTON_ms_button5	(0x00100)
 					/* buttons bit mask */
-#define CLICK_TYPE_mask		(0x700)
-#define CLICK_TYPE_single	(0x100)
-#define CLICK_TYPE_double	(0x200)
-#define CLICK_TYPE_triple	(0x400)
+#define CLICK_TYPE_mask		(0x070000)
+#define CLICK_TYPE_single	(0x010000)
+#define CLICK_TYPE_double	(0x020000)
+#define CLICK_TYPE_triple	(0x040000)
 
 		/********************************
 		*      X-WINDOW REFERENCES	*
@@ -1009,8 +1012,8 @@ the optimal redisplay behaviour.
 #define DRAW_3D_FILLED	0x4
 
 typedef struct
-{ int x, y;
-} ipoint, *IPoint;
+{ double x, y;
+} fpoint, *FPoint;
 
 
 typedef struct
@@ -1068,20 +1071,17 @@ typedef struct
 
 GLOBAL Image BLACK_IMAGE;
 GLOBAL Image WHITE_IMAGE;
-GLOBAL Image GREY12_IMAGE;
-GLOBAL Image GREY25_IMAGE;
 GLOBAL Image GREY50_IMAGE;
-GLOBAL Image GREY75_IMAGE;
 
-GLOBAL Colour BLACK_COLOUR;
 GLOBAL Colour WHITE_COLOUR;
+GLOBAL Colour GREY25_COLOUR;
+GLOBAL Colour GREY50_COLOUR;
+GLOBAL Colour BLACK_COLOUR;
 
-GLOBAL Image CYCLE_IMAGE;		/* image of a cycle */
 GLOBAL Image MARK_IMAGE;		/* images for toggle and marked */
 GLOBAL Image NOMARK_IMAGE;
 GLOBAL Image MS_MARK_IMAGE;		/* MS images for toggle and marked */
 GLOBAL Image MS_NOMARK_IMAGE;
-GLOBAL Image PULLRIGHT_IMAGE;		/* Popup menu pullright marker */
 GLOBAL Image MARK_HANDLE_IMAGE;		/* connect_gesture */
 GLOBAL Image NULL_IMAGE;		/* empty image */
 GLOBAL Image INT_ITEM_IMAGE;
@@ -1100,7 +1100,10 @@ GLOBAL ClickGesture GESTURE_button;	/* Gesture for handling buttons */
 GLOBAL Recogniser   GESTURE_wheelMouse;	/* Wheelmouse translation */
 
 GLOBAL Chain ChangedWindows;		/* Windows that have changed */
-GLOBAL Chain MappedFrames;		/* Mapped frame that requires geometry */
+GLOBAL Chain MappedFrames;		/* Mapped frame that need geometry */
+#if SDL_GRAPHICS
+GLOBAL Chain ChangedFrames;		/* Frames that have changed */
+#endif
 
 GLOBAL  int XrefsResolved;		/* succesful getXrefObject()'s */
 GLOBAL	HashTable ColourTable;		/* ColourName --> Colour */
@@ -1161,9 +1164,9 @@ COMMON(int) image_type_from_data(char *data, int size);
 		*          PROTOTYPES		*
 		********************************/
 
-#include	"wst.h"
 #include	"../gra/proto.h"
 #include	"../win/proto.h"
 #include	"../evt/proto.h"
+#include	"wst.h"
 
 #endif /*_PCE_GRA_INCLUDED*/

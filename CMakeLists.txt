@@ -3,91 +3,37 @@ project(swipl-xpce)
 
 include("../cmake/PrologPackage.cmake")
 
+find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
+find_package(SDL3_image REQUIRED CONFIG)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(CAIRO REQUIRED IMPORTED_TARGET cairo)
+pkg_check_modules(PANGO REQUIRED IMPORTED_TARGET pango)
+pkg_check_modules(PANGOCAIRO REQUIRED IMPORTED_TARGET pangocairo)
+set(HAVE_GUI 1)
+set(SDL_GRAPHICS 1)
+set(GUI_LIBRARIES
+    SDL3::SDL3
+    SDL3_image::SDL3_image
+    PkgConfig::CAIRO
+    PkgConfig::PANGO
+    PkgConfig::PANGOCAIRO)
+
 if(WIN32)
-  add_subdirectory(deps/xpm)
-  set(HAVE_GUI 1)
-  set(WIN32_GRAPHICS 1)
-  set(FOR_MSW 1)
   set(O_XOS 1)
   set(O_DOSFILENAMES 1)
   set(O_HASSHARES 1)
   set(HAVE_WINSOCK 1)
-  set(GUI_LIBRARIES
-      gdi32.lib
-      comdlg32.lib
-      ole32.lib
-      shell32.lib
-      ws2_32.lib
-      libxpm)
-  set(GUI_INCLUDE_DIRS)
-  set(XPCE_LINK_RC swipl-win)
-  find_package(JPEG)
-  if(JPEG_FOUND)
-    set(HAVE_GUI 1)
-  endif()
-else()
-  find_package(X11)
-  if(X11_FOUND AND X11_Xpm_LIB)
-    find_package(Freetype)
-    find_package(FontConfig)
-    find_package(JPEG)
-
-    if(FREETYPE_FOUND AND FONTCONFIG_FOUND AND JPEG_FOUND)
-      set(HAVE_GUI 1)
-      set(GUI_LIBRARIES
-	  ${X11_Xpm_LIB}
-	  ${X11_Xext_LIB}
-	  ${X11_Xt_LIB}
-	  ${X11_X11_LIB}
-	  ${X11_SM_LIB}
-	  ${X11_ICE_LIB}
-	  ${X11_Xft_LIB}
-	  ${FREETYPE_LIBRARIES}
-	  ${FONTCONFIG_LIBRARIES})
-
-      set(GUI_INCLUDE_DIRS
-	  ${X11_INCLUDE_DIR}
-	  ${FREETYPE_INCLUDE_DIRS}
-	  ${FONTCONFIG_INCLUDE_DIR})
-      set(XPCE_LINK_RC swipl)
-      has_package(swipl-win HAVE_SWIPL_WIN)
-      if(HAVE_SWIPL_WIN)
-	list(APPEND XPCE_LINK_RC swipl-win)
-	if(BUILD_MACOS_BUNDLE)
-	  list(APPEND XPCE_LINK_RC SWI-Prolog)
-	endif()
-      endif()
-    else()
-      message("Dropped xpce")
-      if(NOT JPEG_FOUND)
-        message("  Could not find JPEG")
-      endif()
-      if(NOT FONTCONFIG_FOUND)
-        message("  Could not find FontConfig")
-      endif()
-      if(NOT FREETYPE_FOUND)
-        message("  Could not find Freetype")
-      endif()
-    endif()
-  endif()
+  list(APPEND GUI_LIBRARIES ws2_32.lib)
 endif()
 
 if(HAVE_GUI)
-set(GUI_INCLUDE_DIRS ${GUI_INCLUDE_DIRS} ${JPEG_INCLUDE_DIR})
-
 include(QLF)
 include(XPCESources)
 
 include(XPCEConfig)
-if(HAVE_X11_EXTENSIONS_XINERAMA_H)
-  set(GUI_LIBRARIES ${X11_Xinerama_LIB} ${GUI_LIBRARIES})
-endif()
-if(X11_Xrandr_FOUND)
-  set(GUI_LIBRARIES ${X11_Xrandr_LIB} ${GUI_LIBRARIES})
-endif()
 set(PCE_MACHINE ${SWIPL_ARCH})
 set(PCE_OS ${CMAKE_HOST_SYSTEM_NAME})
-set(PCE_VERSION 6.6.6)
+set(PCE_VERSION 7.0.0)
 
 configure_file(config.h.cmake config.h)
 
@@ -99,7 +45,8 @@ if(UNIX)
   add_compile_options(-DHAVE_CONFIG_H -DSWI)
 endif()
 
-set(cdirs adt ari box evt fmt gnu gra img itf ker men msg msw prg rel rgx txt unx win x11)
+set(cdirs adt ari box evt fmt gnu gra img itf ker men msg msw
+    prg rel rgx txt unx win x11 sdl)
 file(GLOB files RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/src"
      "${CMAKE_CURRENT_SOURCE_DIR}/src/h/*.h")
 foreach(d ${cdirs})
@@ -116,6 +63,7 @@ add_custom_command(
                        ${CMAKE_CURRENT_BINARY_DIR}/h/names.ih
                        -- ${files}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/namedb.txt
     COMMENT "Collecting NAME_ declarations")
 
 add_custom_target(
@@ -139,7 +87,11 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${GUI_INCLUDE_DIRS})
 
-install_dll(${JPEG_LIBRARIES})
+if(MINGW_ROOT)
+get_target_mingw_dlls(DirectDLLS plugin_pl2xpce)
+add_mingw_indirect_deps(DLLS ${DirectDLLS})
+install_dll(${DLLS})
+endif()
 
 ################
 # Tests
@@ -214,6 +166,9 @@ install_src(pkg_xpce_defaults
 install_src(pkg_xpce_rc
 	    FILES swipl/swipl-rc
 	    DESTINATION ${SWIPL_INSTALL_PREFIX}/xpce/prolog)
+
+set(XPCE_LINK_RC swipl swipl-win ${EPILOG_APP})
+list(REMOVE_DUPLICATES XPCE_LINK_RC)
 
 # Install the link file
 foreach(rc ${XPCE_LINK_RC})

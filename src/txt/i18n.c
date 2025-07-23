@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2005-2013, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org
+    Copyright (c)  2005-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -34,6 +35,7 @@
 
 #include <h/kernel.h>
 #include <h/utf8.h>
+#include <stdbool.h>
 
 #define utf8_get_uchar(s, chr) (unsigned char*)utf8_get_char((char *)(s), chr)
 
@@ -70,7 +72,7 @@ fields.
 #define RING_SIZE 16
 
 typedef struct rcell
-{ char 		*data;			/* actual data */
+{ char		*data;			/* actual data */
   char		*bufp;			/* pointer in buffer */
   char		*limitp;		/* pointer to end */
   size_t	allocated;		/* bytes allocated */
@@ -80,7 +82,7 @@ static rcell ring[RING_SIZE] = {{0}};
 static int   ring_index = 0;
 
 static rcell *
-find_ring()
+find_ring(void)
 { rcell *c = &ring[ring_index++];
 
   if ( ring_index == RING_SIZE )
@@ -123,14 +125,14 @@ addByte(rcell *c, int byte)
 
 
 		 /*******************************
-		 *	  CHARARRAY --> 	*
+		 *	  CHARARRAY -->		*
 		 *******************************/
 
 typedef const unsigned char cuchar;
 typedef const wchar_t       cwchar;
 
-static char *
-stringToUTF8(PceString str)
+char *
+stringToUTF8(PceString str, size_t *olen)
 { rcell *out;
 
   if ( isstrA(str) )
@@ -142,7 +144,10 @@ stringToUTF8(PceString str)
 	break;
     }
     if ( s == e )
+    { if ( olen )
+	*olen = str->s_size;
       return (char *)str->s_textA;	/* no */
+    }
 
     out = find_ring();
     for(s = (cuchar*) str->s_textA; s<e; s++ )
@@ -155,13 +160,17 @@ stringToUTF8(PceString str)
     cwchar *e = &s[str->s_size];
 
     out = find_ring();
-    for( ; s<e; s++ )
-    { roomBuffer(out, 6);		/* max bytes per UTF-8 */
+    while( s < e )
+    { int c;
 
-      out->bufp = utf8_put_char(out->bufp, *s);
+      roomBuffer(out, 6);		/* max bytes per UTF-8 */
+      s = get_wchar(s, &c);
+      out->bufp = utf8_put_char(out->bufp, c);
     }
   }
 
+  if ( olen )
+    *olen = out->bufp - out->data;
   addByte(out, 0);
 
   return out->data;
@@ -249,7 +258,7 @@ charArrayToWC(CharArray ca, size_t *len)
 
 char *
 charArrayToUTF8(CharArray ca)
-{ return stringToUTF8(&ca->data);
+{ return stringToUTF8(&ca->data, NULL);
 }
 
 
@@ -267,7 +276,7 @@ nameToMB(Name nm)
 
 char *
 nameToUTF8(Name nm)
-{ return stringToUTF8(&nm->data);
+{ return stringToUTF8(&nm->data, NULL);
 }
 
 
@@ -278,15 +287,15 @@ nameToWC(Name nm, size_t *len)
 
 
 		 /*******************************
-		 *	    <-- NAME	  	*
+		 *	    <-- NAME		*
 		 *******************************/
 
-Name
-UTF8ToName(const char *utf8)
+static Any
+UTF8ToCharArray(const char *utf8, bool asname)
 { cuchar *in;
   cuchar *e;
-  int len;
-  int wide;
+  size_t len;
+  bool wide;
 
   for(in=(cuchar*)utf8; *in; in++)
   { if ( (*in)&0x80 )
@@ -302,33 +311,37 @@ UTF8ToName(const char *utf8)
 
     in = utf8_get_uchar(in, &chr);
     if ( chr > 0xff )
-      wide = TRUE;
+      wide = true;
     len++;
+#if SIZEOF_WCHAR_T == 2
+    if ( chr > 0xffff )
+      len++;
+#endif
   }
 
   if ( wide )
   { wchar_t *ws, *o;
-    int mlcd;
+    bool mlcd;
     string s;
-    Name nm;
+    Any nm;
 
     if ( len < 1024 )
     { ws = alloca((len+1)*sizeof(wchar_t));
-      mlcd = FALSE;
+      mlcd = false;
     } else
     { ws = pceMalloc((len+1)*sizeof(wchar_t));
-      mlcd = TRUE;
+      mlcd = true;
     }
 
     for(in=(cuchar*)utf8, o=ws; in < e; )
     { int chr;
 
       in = utf8_get_uchar(in, &chr);
-      *o++ = chr;
+      o = put_wchar(o, chr);
     }
 
     str_set_n_wchar(&s, len, ws);
-    nm = StringToName(&s);
+    nm = asname ? (Any)StringToName(&s) : (Any)StringToString(&s);
 
     if ( mlcd )
       pceFree(ws);
@@ -336,16 +349,16 @@ UTF8ToName(const char *utf8)
     return nm;
   } else
   { char *as, *o;
-    int mlcd;
+    bool mlcd;
     string s;
-    Name nm;
+    Any nm;
 
     if ( len < 1024 )
     { as = alloca((len+1));
-      mlcd = FALSE;
+      mlcd = false;
     } else
     { as = pceMalloc((len+1));
-      mlcd = TRUE;
+      mlcd = true;
     }
 
     for(in=(cuchar*)utf8, o=as; in < e; )
@@ -356,7 +369,7 @@ UTF8ToName(const char *utf8)
     }
 
     str_set_n_ascii(&s, len, as);
-    nm = StringToName(&s);
+    nm = asname ? (Any)StringToName(&s) : (Any)StringToString(&s);
 
     if ( mlcd )
       pceFree(as);
@@ -365,6 +378,16 @@ UTF8ToName(const char *utf8)
   }
 }
 
+Name
+UTF8ToName(const char *utf8)
+{ return UTF8ToCharArray(utf8, true);
+}
+
+
+StringObj
+UTF8ToString(const char *utf8)
+{ return UTF8ToCharArray(utf8, false);
+}
 
 Name
 MBToName(const char *mb)
@@ -474,7 +497,7 @@ char *
 stringToFN(PceString s)
 {
 #ifdef O_XOS
-   return stringToUTF8(s);
+  return stringToUTF8(s, NULL);
 #else
    return stringToMB(s);
 #endif

@@ -239,7 +239,12 @@ do_pp(Any obj)
     return ppsavestring("FAIL");
 
   if ( isInteger(obj) )
-  { sprintf(tmp, "%" PRIdPTR, valInt(obj));
+  { double v = valNum(obj);
+    intptr_t i = v;
+    if ( (double)i == v )
+      sprintf(tmp, "%" PRIdPTR, i);
+    else
+      sprintf(tmp, "%.3f", v);
     return ppsavestring(tmp);
   }
 

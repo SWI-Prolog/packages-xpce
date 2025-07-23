@@ -108,7 +108,7 @@ fill_dialog(F, TD:tool_dialog) :->
     send(TD, append, new(Time, popup(time))),
     send(TD, append, new(Help, popup(help))),
     send_list(File, append,
-              [ menu_item(quit,
+              [ menu_item(close,
                           message(F, destroy))
               ]),
     forall(sort_by(Label, Field, Order),
@@ -215,8 +215,8 @@ render_time(F, Ticks:int, Rendered:any) :<-
         )
     ).
 
-help(_F) :->
-    send(@display, confirm,
+help(F) :->
+    send(@display, confirm, F, @default,
          'No online help yet\n\c
           The profiler is described on the SWI-Prolog web site\n\c
           Press OK to open the page in your browser'),
@@ -365,11 +365,14 @@ details(DI) :->
 variable(tabular, tabular, get, "Displayed table").
 variable(node,    prolog,  get, "Currently shown node").
 
+class_variable(background,        colour, grey80).
+class_variable(header_colour,     colour, black,  "Predicate header colour").
+class_variable(header_background, colour, khaki1, "Predicate header background").
+
 initialise(W) :->
     send_super(W, initialise),
     send(W, pen, 0),
     send(W, label, 'Details'),
-    send(W, background, colour(grey80)),
     send(W, scrollbars, vertical),
     send(W, display, new(T, tabular)),
     send(T, rules, all),
@@ -383,26 +386,29 @@ resize(W) :->
 
 title(W) :->
     "Show title-rows"::
+    get(W, class_variable_value, header_colour, HC),
+    get(W, class_variable_value, header_background, HBG),
     get(W, tabular, T),
-    BG = (background := khaki1),
-    send(T, append, 'Time',   bold, center, colspan := 2, BG),
+    BG = (background := HBG),
+    FG = (colour := HC),
+    send(T, append, 'Time',   bold, center, colspan := 2, BG, FG),
     (   get(W?frame, ports, false)
     ->  send(T, append, '# Calls', bold, center, colspan := 1,
-             valign := center, BG, rowspan := 2)
-    ;   send(T, append, 'Port',    bold, center, colspan := 4, BG)
+             valign := center, BG, FG, rowspan := 2)
+    ;   send(T, append, 'Port',    bold, center, colspan := 4, BG, FG)
     ),
     send(T, append, 'Predicate', bold, center,
-         valign := center, BG,
+         valign := center, BG, FG,
          rowspan := 2),
     send(T, next_row),
-    send(T, append, 'Self',   bold, center, BG),
-    send(T, append, 'Children',   bold, center, BG),
+    send(T, append, 'Self',   bold, center, BG, FG),
+    send(T, append, 'Children',   bold, center, BG, FG),
     (   get(W?frame, ports, false)
     ->  true
-    ;   send(T, append, 'Call',   bold, center, BG),
-        send(T, append, 'Redo',   bold, center, BG),
-        send(T, append, 'Exit',   bold, center, BG),
-        send(T, append, 'Fail',   bold, center, BG)
+    ;   send(T, append, 'Call',   bold, center, BG, FG),
+        send(T, append, 'Redo',   bold, center, BG, FG),
+        send(T, append, 'Exit',   bold, center, BG, FG),
+        send(T, append, 'Fail',   bold, center, BG, FG)
     ),
     send(T, next_row).
 
@@ -547,27 +553,30 @@ show_predicate(W, Data:prolog,
                Ticks:int, ChildTicks:int,
                Call:int, Redo:int, Exit:int) :->
     "Show the predicate we have details on"::
+    get(W, class_variable_value, header_colour, HC),
+    get(W, class_variable_value, header_background, HBG),
+    BG = (background := HBG),
+    FG = (colour := HC),
     Pred = Data.predicate,
     get(W, frame, Frame),
     get(Frame, render_time, Ticks, Self),
     get(Frame, render_time, ChildTicks, Children),
     get(W, tabular, T),
-    BG = (background := khaki1),
     Fail is Call+Redo-Exit,
-    send(T, append, Self, halign := right, BG),
-    send(T, append, Children, halign := right, BG),
+    send(T, append, Self, halign := right, BG, FG),
+    send(T, append, Children, halign := right, BG, FG),
     (   get(W?frame, ports, false)
-    ->  send(T, append, Call, halign := right, BG)
-    ;   send(T, append, Call, halign := right, BG),
-        send(T, append, Redo, halign := right, BG),
-        send(T, append, Exit, halign := right, BG),
-        send(T, append, Fail, halign := right, BG)
+    ->  send(T, append, Call, halign := right, BG, FG)
+    ;   send(T, append, Call, halign := right, BG, FG),
+        send(T, append, Redo, halign := right, BG, FG),
+        send(T, append, Exit, halign := right, BG, FG),
+        send(T, append, Fail, halign := right, BG, FG)
     ),
     (   object(Pred)
     ->  new(Txt, prof_node_text(Pred, self))
     ;   new(Txt, prof_predicate_text(Pred, self))
     ),
-    send(T, append, Txt, BG),
+    send(T, append, Txt, BG, FG),
     send(W, label, string('Details -- %s', Txt?string)),
     send(T, next_row).
 
@@ -614,6 +623,8 @@ show_relative(W, Caller:prolog, Role:name) :->
 variable(context,   any,                 get, "Represented executable").
 variable(role,      {parent,self,child}, get, "Represented role").
 
+class_variable(colour, colour, blue).
+
 initialise(T, Context:any, Role:{parent,self,child}, Cycle:[int]) :->
     send(T, slot, context, Context),
     send(T, slot, role, Role),
@@ -626,7 +637,8 @@ initialise(T, Context:any, Role:{parent,self,child}, Cycle:[int]) :->
         TheLabel = string('%s <%d>', Label, N)
     ),
     send_super(T, initialise, TheLabel),
-    send(T, colour, blue),
+    get(T, class_variable_value, colour, FG),
+    send(T, colour, FG),
     send(T, underline, @on),
     (   Role == self
     ->  send(T, font, bold)

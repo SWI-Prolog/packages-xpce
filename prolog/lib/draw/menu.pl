@@ -257,7 +257,8 @@ delete(M, Icon0:[draw_icon]) :->
     ->  get(M, current, Icon),
         (   send(Icon, can_delete)
         ->  send(M, activate_select)
-        ;   send(@display, inform, 'Can''t delete this prototype'),
+        ;   send(@display, inform, M, "PceDraw",
+                 'Can''t delete this prototype'),
             fail
         )
     ;   Icon = Icon0
@@ -450,8 +451,8 @@ paint_proto(MI) :->
     "Paint a small version of the prototype"::
     get(MI, slot, proto, Proto),
     item_size(IW, IH),
-    send(MI, label, new(I, image(@nil, IW, IH))),
-    send(MI, paint_outline),
+    new(I, image(@nil, IW, IH)),
+    send(MI, paint_outline, I),
     (   Proto == @nil
     ->  true
     ;   send(Proto, instance_of, link)
@@ -513,26 +514,26 @@ paint_proto(MI) :->
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Paint the outline in the bitmap.  For each of the outlines, there is a
-bitmap file named `Mode.bm' in PCE's bitmap search-path.  We copy this
+bitmap file named `Mode.png' in PCE's bitmap search-path.  We copy this
 image in the bitmap.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-paint_outline(MI) :->
+paint_outline(MI, I) :->
     "Paint the mode indicating bitmap"::
-    get(MI, label, I),
+    send(I, background, @nil),
     get(MI, mode, Mode),
     outline_image(Mode, ImageFile),
     send(I, copy, image(resource(ImageFile))).
 
-outline_image(select,        'select.bm').
-outline_image(draw_text,     'draw_text.bm').
-outline_image(draw_resize,   'draw_resize.bm').
-outline_image(draw_line,     'draw_line.bm').
-outline_image(draw_bezier,   'draw_line.bm').
-outline_image(draw_path,     'draw_path.bm').
-outline_image(draw_connect,  'draw_connect.bm').
-outline_image(draw_cconnect, 'draw_cconnect.bm').
-outline_image(draw_proto,    'draw_proto.bm').
+outline_image(select,        'select.png').
+outline_image(draw_text,     'draw_text.png').
+outline_image(draw_resize,   'draw_resize.png').
+outline_image(draw_line,     'draw_line.png').
+outline_image(draw_bezier,   'draw_line.png').
+outline_image(draw_path,     'draw_path.png').
+outline_image(draw_connect,  'draw_connect.png').
+outline_image(draw_cconnect, 'draw_cconnect.png').
+outline_image(draw_proto,    'draw_proto.png').
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Hook to find the resource.
