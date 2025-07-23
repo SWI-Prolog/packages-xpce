@@ -71,47 +71,17 @@ set(WIN_SRC	browser.c decorate.c dialog.c display.c
 		tile.c view.c window.c application.c
 		monitor.c)
 
-set(IMG_SRC)
-if(NOT RAYLIB AND NOT SDL)
-  list(APPEND IMG_SRC
-	      jpegtoxpm.c gifread.c giftoxpm.c
-	      gifwrite.c imgutil.c jdatasrc.c jdatadst.c)
-endif()
-
-if(SDL)
 set(SDL_SRC	sdl.c sdldisplay.c sdlfont.c sdlmenu.c sdlwindow.c
 		sdlcolour.c sdldraw.c sdlframe.c sdlstream.c sdlinput.c
 		sdlcursor.c  sdlevent.c    sdlimage.c  sdltimer.c)
 if(WIN32)
-set(MSW_SRC	mswin.c msprocess.c msuxnt.c mscolour.c)
-endif()
-elseif(WIN32)
-set(MSW_SRC	mscolour.c mscursor.c msdisplay.c msdraw.c msevent.c
-		msfont.c msframe.c msimage.c msstream.c mstimer.c
-		mswindow.c msmenu.c mswin.c msppm.c msprinter.c
-		mscommon.c msmetafile.c msreadimage.c msjpeg.c
-		msprocess.c msuxnt.c)
+  set(MSW_SRC	mswin.c msprocess.c msuxnt.c mscolour.c)
 else()
-set(X11_SRC	canvas.c fshell.c xcommon.c xconvert.c x11-compat.c xppm.c
-		xcolour.c xcursor.c xdisplay.c xdraw.c xevent.c xfont.c
-		xframe.c ximage.c xstream.c xtimer.c xwindow.c x11.c xmenu.c
-		xdnd.c xunix.c xjpeg.c)
-endif(SDL)
+  set(MSW_SRC)
+endif()
 
 set(XPCE_SUBDIRS adt ari evt gnu gra itf ker men fmt box msg prg rel rgx
-		 txt unx win img)
-if(SDL)
-  list(APPEND XPCE_SUBDIRS sdl)
-if(WIN32)
-  list(APPEND XPCE_SUBDIRS msw)
-endif()
-elseif(RAYLIB)
-  list(APPEND XPCE_SUBDIRS ray)
-elseif(WIN32)
-  list(APPEND XPCE_SUBDIRS msw)
-else()
-  list(APPEND XPCE_SUBDIRS x11)
-endif()
+		 txt unx win img sdl)
 
 set(XPCE_SOURCES)
 foreach(d ${XPCE_SUBDIRS})
