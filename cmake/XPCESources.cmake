@@ -82,6 +82,9 @@ endif()
 
 set(XPCE_SUBDIRS adt ari evt gnu gra itf ker men fmt box msg prg rel rgx
 		 txt unx win img sdl)
+if(WIN32)
+  list(APPEND XPCE_SUBDIRS msw)
+endif()
 
 set(XPCE_SOURCES)
 foreach(d ${XPCE_SUBDIRS})
