@@ -197,11 +197,33 @@ get_pce_version :-
 
 :- initialization get_pce_version.
 
+on_load :-
+    setup_theme.
+
 run_on_load :-
     forall(on_load, true).
 
 :- initialization run_on_load.
 
+
+%!  setup_theme
+%
+%   Set the theme based on `@display<-theme`.   This is only used
+%   if the theme is not set using ``-Dtheme=<theme>``.
+
+setup_theme :-
+    current_prolog_flag(theme, _),
+    !.
+setup_theme :-
+    get(@display, theme, Theme),
+    !,
+    (   exists_source(library(theme/Theme))
+    ->  use_module(library(theme/Theme))
+    ;   Theme == default
+    ->  true
+    ;   print_message(warning, error(existence_error(theme, Theme),_))
+    ).
+setup_theme.
 
 		 /*******************************
 		 *           CONSOLE            *
