@@ -34,6 +34,7 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
+:- encoding(utf8).
 :- module(pce_keybinding, []).
 :- use_module(pce_principal).
 :- use_module(pce_realise).
