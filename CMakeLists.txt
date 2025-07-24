@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(swipl-xpce)
 
 include("../cmake/PrologPackage.cmake")
+include(XPCEConfig)
 
 find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
 find_package(SDL3_image REQUIRED CONFIG)
@@ -30,7 +31,6 @@ if(HAVE_GUI)
 include(QLF)
 include(XPCESources)
 
-include(XPCEConfig)
 set(PCE_MACHINE ${SWIPL_ARCH})
 set(PCE_OS ${CMAKE_HOST_SYSTEM_NAME})
 set(PCE_VERSION 7.0.0)
