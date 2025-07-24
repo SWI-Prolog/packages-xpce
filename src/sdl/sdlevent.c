@@ -282,7 +282,7 @@ CtoEvent(SDL_Event *event)
       time = event->wheel.timestamp/1000000;
       name = NAME_wheel;
       ctx_name = NAME_rotation;
-      float dx = event->wheel.x;
+      //float dx = event->wheel.x;
       float dy = event->wheel.y;
 
       DEBUG(NAME_wheel,
