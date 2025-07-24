@@ -277,7 +277,7 @@ CtoEvent(SDL_Event *event)
 	name = NAME_locMove;
       break;
     case SDL_EVENT_MOUSE_WHEEL:
-      static int last_time = 0;
+    { static int last_time = 0;
       wid  = event->wheel.windowID;
       time = event->wheel.timestamp/1000000;
       name = NAME_wheel;
@@ -299,6 +299,7 @@ CtoEvent(SDL_Event *event)
       else
 	fail;
       break;
+    }
       /* https://wiki.libsdl.org/SDL3/SDL_KeyboardEvent */
     case SDL_EVENT_KEY_UP:
       lastmod = event->key.mod;
