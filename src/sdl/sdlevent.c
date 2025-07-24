@@ -277,6 +277,7 @@ CtoEvent(SDL_Event *event)
 	name = NAME_locMove;
       break;
     case SDL_EVENT_MOUSE_WHEEL:
+      static int last_time = 0;
       wid  = event->wheel.windowID;
       time = event->wheel.timestamp/1000000;
       name = NAME_wheel;
@@ -288,6 +289,9 @@ CtoEvent(SDL_Event *event)
       { dx = -dx;
         dy = -dy;
       }
+      DEBUG(NAME_wheel, Cprintf("Mouse wheel event.  dy=%.6f, dt=%dms\n",
+				dy, time-last_time));
+      last_time = time;
       if ( dy > 0.0 )
 	ctx = toInt(120);
       else if ( dy < 0.0 )
