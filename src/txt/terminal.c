@@ -1725,7 +1725,7 @@ rlc_request_redraw(RlcData b)
   } else
   { int i = b->window_start;
     int y = 0;
-    int ymin, ymax;
+    int ymin=0, ymax;
     bool first = true;
 
     for(; y < b->window_size; y++, i = NextLine(b, i))
