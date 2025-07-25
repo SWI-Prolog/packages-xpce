@@ -90,18 +90,6 @@ ws_get_size_display(DisplayObj d, int *w, int *h)
 }
 
 /**
- * Get the visual type of the display (e.g., TrueColor, PseudoColor).
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @return Name object representing the visual type.
- */
-Name
-ws_get_visual_type_display(DisplayObj d)
-{
-    return NULL;
-}
-
-/**
  * Retrieve the color depth (bits per pixel) of the display.
  *
  * @param d Pointer to the DisplayObj representing the display context.

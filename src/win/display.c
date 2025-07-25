@@ -252,13 +252,6 @@ getDepthDisplay(DisplayObj d)
 }
 
 static Name
-getVisualTypeDisplay(DisplayObj d)
-{ TRY(openDisplay(d));
-
-  answer(ws_get_visual_type_display(d));
-}
-
-static Name
 getSystemThemeDisplay(DisplayObj d)
 { TRY(openDisplay(d));
 
@@ -999,10 +992,6 @@ static getdecl get_display[] =
      NAME_colour, "Number of bits/pixel"),
   GM(NAME_open, 0, "bool", NULL, getOpenDisplay,
      NAME_open, "Query connected status of the display"),
-  GM(NAME_visualType, 0,
-     "{monochrome,static_grey,grey_scale,static_colour,pseudo_colour,true_colour,direct_colour}",
-     NULL, getVisualTypeDisplay,
-     NAME_colour, "Type of display attached"),
   GM(NAME_systemTheme, 0, "{light,dark}",
      NULL, getSystemThemeDisplay,
      NAME_colour, "The OS system theme"),

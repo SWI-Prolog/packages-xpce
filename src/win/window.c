@@ -2036,9 +2036,7 @@ flushWindow(PceWindow sw)
 { DisplayObj d = getDisplayGraphical((Graphical) sw);
 
   if ( d )
-  { pceRedrawWindow(sw);
-    ws_flush_display(d);
-  }
+    pceRedrawWindow(sw);
 
   succeed;
 }
@@ -2419,8 +2417,8 @@ static classvardecl rc_window[] =
 { RC(NAME_background,        "colour|pixmap",  UXWIN("white", "@_graph_bg"), NULL),
   RC(NAME_cursor,            "cursor",        "arrow",                       NULL),
   RC(NAME_pen,               "0..",	      "@_win_pen",                   NULL),
-  RC(NAME_selectionHandles,  RC_REFINE,	      "@nil",	                 NULL),
-  RC(NAME_size,	         "size",	      "size(200,100)",               NULL),
+  RC(NAME_selectionHandles,  RC_REFINE,	      "@nil",			 NULL),
+  RC(NAME_size,		 "size",	      "size(200,100)",               NULL),
   RC(NAME_selectionFeedback, NULL,            "colour",                      NULL)
 };
 
