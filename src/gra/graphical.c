@@ -389,29 +389,6 @@ getDisplayGraphical(Graphical gr)
 }
 
 
-Monitor
-getMonitorGraphical(Graphical gr)
-{ DisplayObj d = getDisplayGraphical(gr);
-  Point pt = NIL;
-  Monitor mon = NULL;
-
-  ComputeGraphical(gr);
-
-  if ( (d  = getDisplayGraphical(gr)) &&
-       (pt = getDisplayPositionGraphical(gr)) )
-  { Area a = tempObject(ClassArea,
-			pt->x, pt->y, gr->area->w, gr->area->h,
-			EAV);
-
-    mon = getMonitorDisplay(d, a);
-    considerPreserveObject(a);
-  }
-  doneObject(pt);
-
-  answer(mon);
-}
-
-
 Application
 getApplicationGraphical(Graphical gr)
 { FrameObj fr = getFrameGraphical(gr);
@@ -3618,8 +3595,6 @@ static getdecl get_graphical[] =
      NAME_organisation, "Deepest device both are displayed on"),
   GM(NAME_display, 0, "display", NULL, getDisplayGraphical,
      NAME_organisation, "Display graphical is displayed on"),
-  GM(NAME_monitor, 0, "monitor", NULL, getMonitorGraphical,
-     NAME_organisation, "Monitor graphical is displayed on"),
   GM(NAME_application, 0, "application", NULL, getApplicationGraphical,
      NAME_organisation, "Application my frame belongs too"),
   GM(NAME_distance, 1, "int", "graphical", getDistanceGraphical,

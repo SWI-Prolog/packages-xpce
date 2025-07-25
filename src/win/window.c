@@ -205,10 +205,10 @@ openWindow(PceWindow sw, Point pos, BoolObj normalise)
 
 
 static status
-openCenteredWindow(PceWindow sw, Point pos, BoolObj grab, Monitor mon)
+openCenteredWindow(PceWindow sw, Point pos, BoolObj grab, DisplayObj dsp)
 { if ( send(sw, NAME_create, EAV) &&
        send(getFrameWindow(sw, DEFAULT), NAME_openCentered,
-	    pos, grab, mon, EAV) )
+	    pos, grab, dsp, EAV) )
     succeed;
 
   fail;
@@ -224,11 +224,11 @@ getConfirmWindow(PceWindow sw, Any pos, BoolObj grab, BoolObj normalise)
 
 
 static Any
-getConfirmCenteredWindow(PceWindow sw, Any pos, BoolObj grab, Monitor mon)
+getConfirmCenteredWindow(PceWindow sw, Any pos, BoolObj grab, DisplayObj dsp)
 { TRY( send(sw, NAME_create, EAV) );
 
   answer(getConfirmCenteredFrame(getFrameWindow(sw, DEFAULT),
-				 pos, grab, mon));
+				 pos, grab, dsp));
 }
 
 
@@ -489,31 +489,6 @@ resizeMessageWindow(PceWindow sw, Code msg)
     qadSendv(sw, NAME_resize, 0, NULL);
 
   succeed;
-}
-
-
-static Monitor
-getMonitorWindow(PceWindow sw)
-{ if ( isNil(sw->device) )
-  { DisplayObj d = getDisplayGraphical((Graphical)sw);
-
-    if ( d )
-    { FrameObj fr;
-      int dx, dy;
-      struct area a;
-
-      frame_offset_window(sw, &fr, &dx, &dy);
-      a = *fr->area;
-      a.x = toInt(valInt(a.x)+dx);
-      a.y = toInt(valInt(a.y)+dy);
-
-      answer(getMonitorDisplay(d, &a));
-    }
-
-    fail;
-  }
-
-  return getMonitorGraphical((Graphical)sw);
 }
 
 
@@ -2394,8 +2369,6 @@ static getdecl get_window[] =
      NAME_area, "New area representing visible part"),
   GM(NAME_size, 0, "size", NULL, getSizeGraphical,
      NAME_area, "New size representing size (avoid class-variable)"),
-  GM(NAME_monitor, 0, "monitor", NULL, getMonitorWindow,
-     NAME_organisation, "Monitor window is displayed on"),
   GM(NAME_displayedCursor, 0, "cursor*", NULL, getDisplayedCursorDevice,
      NAME_cursor, "Currently displayed cursor"),
   GM(NAME_confirm, 3, "any", T_confirm, getConfirmWindow,

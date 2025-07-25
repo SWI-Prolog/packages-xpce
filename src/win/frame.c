@@ -36,13 +36,13 @@
 #include <h/graphics.h>
 
 TileObj		getTileFrame(FrameObj);
-forwards int	get_position_from_center_frame(FrameObj, Monitor, Point, int *, int *);
-static void	ensure_on_display(FrameObj, Monitor, int *, int *);
+forwards int	get_position_from_center_frame(FrameObj, DisplayObj, Point, int *, int *);
+static void	ensure_on_display(FrameObj, DisplayObj, int *, int *);
 static status	closedFrame(FrameObj, BoolObj);
 static status	openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise);
 static status	doneMessageFrame(FrameObj fr, Code msg);
-static status	geometryFrame(FrameObj fr, Name spec, Monitor mon);
-static status	setFrame(FrameObj fr, Int x, Int y, Int w, Int h, Monitor mon);
+static status	geometryFrame(FrameObj fr, Name spec, DisplayObj mon);
+static status	setFrame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj mon);
 static status	kindFrame(FrameObj fr, Name kind);
 static status	informTransientsFramev(FrameObj fr, Name selector,
 				       int argc, Any *argv);
@@ -215,7 +215,7 @@ getConfirmFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
 
 
 Any
-getConfirmCenteredFrame(FrameObj fr, Any where, BoolObj grab, Monitor mon)
+getConfirmCenteredFrame(FrameObj fr, Any where, BoolObj grab, DisplayObj dsp)
 { TRY( send(fr, NAME_create, EAV) );
 
   if ( isDefault(where) && notNil(fr->transient_for) )
@@ -268,18 +268,10 @@ openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
     if ( normalise == ON )
     { int mx, my, mw, mh;
       int fw = valInt(fr->area->w), fh = valInt(fr->area->h);
+      DisplayObj d = fr->display;
       Area a;
-      Area tmp = tempObject(ClassArea,
-			    x, y, fr->area->w, fr->area->h, EAV);
-      Monitor mon = getMonitorDisplay(fr->display, tmp);
 
-      considerPreserveObject(tmp);
-
-      if ( !mon )
-	mon = getMonitorDisplay(fr->display, DEFAULT);
-      if ( !mon )
-	mon = getHeadChain(fr->display->monitors);
-      a = isNil(mon->work_area) ? mon->area : mon->work_area;
+      a = isNil(d->work_area) ? d->area : d->work_area;
 
       mx = valInt(a->x);
       my = valInt(a->y);
@@ -319,14 +311,14 @@ openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
 
 
 static status
-openCenteredFrame(FrameObj fr, Point pos, BoolObj grab, Monitor mon)
+openCenteredFrame(FrameObj fr, Point pos, BoolObj grab, DisplayObj dsp)
 { int x, y;
   int rval;
   Point p2;
 
   TRY( send(fr, NAME_create, EAV) );
 
-  get_position_from_center_frame(fr, mon, pos, &x, &y);
+  get_position_from_center_frame(fr, dsp, pos, &x, &y);
   ensure_on_display(fr, DEFAULT, &x, &y);
   p2 = answerObject(ClassPoint, toInt(x), toInt(y), EAV);
   rval = openFrame(fr, p2, grab, OFF);
@@ -623,54 +615,25 @@ hiddenFrame(FrameObj fr)
 }
 
 		/********************************
-		*       AREA MANAGEMENENT	*
+		*       AREA MANAGENENT		*
 		********************************/
-
-static Monitor
-CurrentMonitor(FrameObj fr)
-{ DisplayObj d = fr->display;
-  Monitor mon;
-
-  if ( isOpenFrameStatus(fr->status) )
-  { if ( notNil(d) && (mon=getMonitorDisplay(d, fr->area)) )
-      return mon;
-  } else if ( notNil(d) && instanceOfObject(EVENT->value, ClassEvent) )
-  { EventObj ev = EVENT->value;
-    Point pt = NULL;
-
-    if ( notNil(ev->window) && offFlag(ev->window, F_FREEING|F_FREED) )
-      pt = getPositionEvent(ev, d);
-
-    if ( pt && (mon=getMonitorDisplay(d, pt)) )
-      return mon;
-  }
-
-  if ( isNil(d) )
-    d = CurrentDisplay(fr);
-
-  if ( notNil(d->monitors) )
-    return getHeadChain(d->monitors);
-
-  return NULL;
-}
-
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Get XY coordinate of frame if  its  center   must  be  at pos. If Pos is
-DEFAULT it is centered in the given   monitor. If the monitor is default
+DEFAULT it is centered in the given   display. If the monitor is default
 too, we deduce the most recent monitor from the event.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static int
-get_position_from_center_frame(FrameObj fr, Monitor mon, Point pos,
+get_position_from_center_frame(FrameObj fr, DisplayObj d, Point pos,
 			       int *x, int *y)
 { if ( isDefault(pos) )
-  { if ( isDefault(mon) )
-      mon = CurrentMonitor(fr);
+  { if ( isDefault(d) )
+      d = fr->display;
 
-    if ( mon )
-    { *x = valInt(mon->area->x) + valInt(mon->area->w)/2;
-      *y = valInt(mon->area->y) + valInt(mon->area->h)/2;
+    if ( d )
+    { *x = valInt(d->area->x) + valInt(d->area->w)/2;
+      *y = valInt(d->area->y) + valInt(d->area->h)/2;
     } else
     { *x = *y = 0;
     }
@@ -687,23 +650,23 @@ get_position_from_center_frame(FrameObj fr, Monitor mon, Point pos,
 
 
 static void
-ensure_on_display(FrameObj fr, Monitor mon, int *x, int *y)
+ensure_on_display(FrameObj fr, DisplayObj dsp, int *x, int *y)
 { int rm, bm;
 
-  if ( isDefault(mon) )
-    mon = CurrentMonitor(fr);
+  if ( isDefault(dsp) )
+    dsp = CurrentDisplay(fr);
 
-  rm = valInt(mon->area->x) + valInt(mon->area->w);
-  bm = valInt(mon->area->y) + valInt(mon->area->h);
+  rm = valInt(dsp->area->x) + valInt(dsp->area->w);
+  bm = valInt(dsp->area->y) + valInt(dsp->area->h);
 
   if ( *x + valInt(fr->area->w) > rm )
     *x -= *x + valInt(fr->area->w) - rm;
   if ( *y + valInt(fr->area->h) > bm )
     *y -= *y + valInt(fr->area->h) - bm;
-  if ( *x < valInt(mon->area->x) )
-    *x = valInt(mon->area->x);
-  if ( *y < valInt(mon->area->y) )
-    *y = valInt(mon->area->y);
+  if ( *x < valInt(dsp->area->x) )
+    *x = valInt(dsp->area->x);
+  if ( *y < valInt(dsp->area->y) )
+    *y = valInt(dsp->area->y);
 }
 
 
@@ -733,16 +696,6 @@ getBoundingBoxFrame(FrameObj fr)
 
 
 
-static Monitor
-getMonitorFrame(FrameObj fr)
-{ if ( notNil(fr->display) )
-    answer(getMonitorDisplay(fr->display, fr->area));
-
-  fail;
-}
-
-
-
 static Name
 getGeometryFrame(FrameObj fr)
 { int x, y, ww, wh;
@@ -751,29 +704,15 @@ getGeometryFrame(FrameObj fr)
   { int mx, my, mw, mh;
     int xn=FALSE, yn=FALSE;
     char buf[100];
-    Monitor mon;
+    DisplayObj d = fr->display;
     int cw, ch;
 
     cw = valInt(fr->area->w);			/* Client area */
     ch = valInt(fr->area->h);
 
-    if ( (mon=getMonitorFrame(fr)) )
-    { Area a = (isNil(mon->work_area) ? mon->area : mon->work_area);
-
-      mx = valInt(a->x);
-      my = valInt(a->y);
-      mw = valInt(a->w);
-      mh = valInt(a->h);
-
-      DEBUG(NAME_geometry, Cprintf("%s on %s: %d %d %d %d\n", pp(fr), pp(mon),
-				   mx, my, mw, mh));
-    } else
-    { Size size = getSizeDisplay(fr->display);
-
-      mx = my = 0;
-      mw = valInt(size->w);
-      mh = valInt(size->h);
-    }
+    mx = my = 0;
+    mw = valInt(d->area->w);
+    mh = valInt(d->area->h);
 
     if ( x-mx > ((mx+mw) - (x+ww))*2 )	/* over 2/3th */
     { x = (mx+mw) - (x+ww);
@@ -796,12 +735,10 @@ getGeometryFrame(FrameObj fr)
     sprintf(buf+strlen(buf),
 	    "%s%d%s%d", xn ? "-" : "+", x, yn ? "-" : "+", y);
 
-    if ( mon && fr->display->monitors->size != ONE )
-    { Int n = getIndexChain(fr->display->monitors, mon);
+    Int n = getIndexChain(d->display_manager->members, d);
 
-      if ( n )
-	sprintf(buf+strlen(buf), "@%" PRIdPTR, valInt(n)-1);
-    }
+    if ( n != ONE )
+      sprintf(buf+strlen(buf), "@%" PRIdPTR, valInt(n)-1);
 
     answer(CtoName(buf));
   }
@@ -821,29 +758,29 @@ getImageFrame(FrameObj fr)
 
 
 static status
-geometryFrame(FrameObj fr, Name spec, Monitor mon)
+geometryFrame(FrameObj fr, Name spec, DisplayObj dsp)
 { assign(fr, geometry, spec);
   assign(fr, placed, ON);
 
-  ws_x_geometry_frame(fr, spec, mon);
+  ws_x_geometry_frame(fr, spec, dsp);
 
   succeed;
 }
 
 
 static status
-setFrame(FrameObj fr, Int x, Int y, Int w, Int h, Monitor mon)
+setFrame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
 { Area a = fr->area;
   Int ow = a->w;
   Int oh = a->h;
 
-  if ( notDefault(mon) )
+  if ( notDefault(dsp) )
   { if ( notDefault(x) )
-      x = add(x, mon->area->x);
+      x = add(x, dsp->area->x);
     if ( notDefault(y) )
-      y = add(y, mon->area->y);
+      y = add(y, dsp->area->y);
 
-    mon = DEFAULT;
+    dsp = DEFAULT;
   }
 
   if ( notDefault(x) || notDefault(y) )
@@ -855,7 +792,7 @@ setFrame(FrameObj fr, Int x, Int y, Int w, Int h, Monitor mon)
     assign(a, h, ONE);
 
   if ( createdFrame(fr) )
-  { ws_geometry_frame(fr, x, y, w, h, mon);
+  { ws_geometry_frame(fr, x, y, w, h, dsp);
 
     if ( ow != a->w || oh != a->h )
       resizeFrame(fr);
@@ -902,10 +839,10 @@ positionFrame(FrameObj fr, Point pos)
 
 
 static status
-centerFrame(FrameObj fr, Point pos, Monitor mon)
+centerFrame(FrameObj fr, Point pos, DisplayObj dsp)
 { int x, y;
 
-  get_position_from_center_frame(fr, mon, pos, &x, &y);
+  get_position_from_center_frame(fr, dsp, pos, &x, &y);
   return setFrame(fr, toInt(x), toInt(y), DEFAULT, DEFAULT, DEFAULT);
 }
 
@@ -1718,7 +1655,7 @@ getThreadFrame(FrameObj fr)
 /* Type declarations */
 
 static char *T_openCentered[] =
-        { "center=[point|frame]", "grab=[bool]", "monitor=[monitor]" };
+        { "center=[point|frame]", "grab=[bool]", "display=[display]" };
 static char *T_busyCursor[] =
         { "cursor=[cursor]*", "block_input=[bool]" };
 static char *T_icon[] =
@@ -1740,13 +1677,13 @@ static char *T_convertOldSlot[] =
         { "slot=name", "value=any" };
 static char *T_set[] =
         { "x=[int]", "y=[int]", "width=[int]", "height=[int]",
-	  "monitor=[monitor]" };
+	  "display=[display]" };
 static char *T_grab_pointer[] =
 	{ "grab=bool", "cursor=[cursor]" };
 static char *T_center[] =
-	{ "center=[point]", "monitor=[monitor]" };
+	{ "center=[point]", "display=[display]" };
 static char *T_geometry[] =
-	{ "geometry=name", "monitor=[monitor]" };
+	{ "geometry=name", "display=[display]" };
 
 /* Instance Variables */
 
@@ -1947,8 +1884,6 @@ static getdecl get_frame[] =
      NAME_area, "Position on the display"),
   GM(NAME_size, 0, "size", NULL, getSizeFrame,
      NAME_area, "Size on the display"),
-  GM(NAME_monitor, 0, "monitor", NULL, getMonitorFrame,
-     NAME_organisation, "Monitor frame is displayed on"),
   GM(NAME_image, 1, "image", "[{bitmap,pixmap}]", getImageFrame,
      NAME_conversion, "Image with the pixels of the frame"),
   GM(NAME_keyboardFocus, 0, "window", NULL, getKeyboardFocusFrame,

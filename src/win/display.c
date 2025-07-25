@@ -297,66 +297,6 @@ hasVisibleFramesDisplay(DisplayObj d)
 
 
 		 /*******************************
-		 *	     MONITORS		*
-		 *******************************/
-
-static Chain
-getMonitorsDisplay(DisplayObj d)
-{ openDisplay(d);
-
-  answer(d->monitors);
-}
-
-
-Monitor
-getMonitorDisplay(DisplayObj d, Any obj)
-{ Cell cell;
-
-  openDisplay(d);
-
-  if ( isDefault(obj) )
-    fail;
-
-  if ( instanceOfObject(obj, ClassPoint) )
-  { Point pt = obj;
-
-    for_cell(cell, d->monitors)
-    { Monitor mon = cell->value;
-
-      if ( pointInArea(mon->area, pt) )
-	return mon;
-    }
-  } else
-  { Area a = obj;
-    Monitor best = NULL;
-    Area tmp = tempObject(ClassArea, EAV);
-    int overlap = 0;
-
-    for_cell(cell, d->monitors)
-    { Monitor mon = cell->value;
-
-      copyArea(tmp, a);
-      if ( intersectionArea(tmp, mon->area) )
-      { int val = valInt(tmp->w)*valInt(tmp->h);
-
-	if ( val < 0 )
-	  val = -val;
-	if ( val > overlap )
-	{ best = mon;
-	  overlap = val;
-	}
-      }
-    }
-
-    considerPreserveObject(tmp);
-    return best;
-  }
-
-  fail;
-}
-
-
-		 /*******************************
 		 *	SELECTION INTERFACE	*
 		 *******************************/
 
@@ -857,14 +797,14 @@ static vardecl var_display[] =
      NAME_organisation, "@on if this is the primary display"),
   IV(NAME_area, "area*", IV_NONE,
      NAME_dimension, "Area occupied by this display"),
+  IV(NAME_workArea, "area*", IV_NONE,
+     NAME_dimension, "Area available for applications"),
   IV(NAME_dpi, "[size|int]", IV_NONE,
      NAME_dimension, "Resolution (dots per inch)"),
   IV(NAME_fontTable, "hash_table", IV_BOTH,
      NAME_font, "Mapping for logical font-names to fonts"),
   IV(NAME_frames, "chain", IV_GET,
      NAME_organisation, "Frames displayed on this display"),
-  IV(NAME_monitors, "chain", IV_NONE,
-     NAME_organisation, "Physical monitors attached"),
   IV(NAME_inspectHandlers, "chain", IV_GET,
      NAME_event, "Chain of handlers to support inspector tools"),
   SV(NAME_foreground, "colour", IV_GET|IV_STORE, foregroundDisplay,
@@ -954,10 +894,6 @@ static getdecl get_display[] =
      NAME_dimension, "Width of the display in pixels"),
   GM(NAME_dpi, 0, "size", NULL, getDPIDisplay,
      NAME_dimension, "Resolution in dots per inch"),
-  GM(NAME_monitors, 0, "chain*", NULL, getMonitorsDisplay,
-     NAME_monitor, "Physical monitors attached"),
-  GM(NAME_monitor, 1, "monitor", "[point|area]", getMonitorDisplay,
-     NAME_monitor, "Find monitor at position"),
   GM(NAME_fontAlias, 1, "font", "name=name", getFontAliasDisplay,
      NAME_font, "Lookup logical name"),
   GM(NAME_postscript, 2, "string", T_postscript, getPostscriptObject,

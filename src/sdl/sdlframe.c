@@ -750,14 +750,14 @@ ws_frame_bb(FrameObj fr, int *x, int *y, int *w, int *h)
  *
  * @param fr Pointer to the FrameObj.
  * @param spec Name object containing the geometry specification.
- * @param mon Monitor object representing the target monitor.
+ * @param dsp Display object representing the target monitor.
  */
 #define MIN_VISIBLE 32			/* pixels that must be visible */
 #define WIN_NOMOVE 0x1
 #define WIN_NOSIZE 0x2
 
 void
-ws_x_geometry_frame(FrameObj fr, Name spec, Monitor mon)
+ws_x_geometry_frame(FrameObj fr, Name spec, DisplayObj dsp)
 { char *e, *s = strName(spec);
   int x, y, w, h, w0, h0;
   int eh;
@@ -768,15 +768,15 @@ ws_x_geometry_frame(FrameObj fr, Name spec, Monitor mon)
   Int X,Y,W,H;
   int offX=0;			/* window manager frame offset */
 
-  if ( isDefault(mon) && (e=strchr(s, '@')) )
+  if ( isDefault(dsp) && (e=strchr(s, '@')) )
   { int n = atoi(e+1);
 
-    if ( !(mon = getNth0Chain(fr->display->monitors, toInt(n))) )
-      mon = (Monitor)DEFAULT;
+    if ( !(dsp=getNth0Chain(fr->display->display_manager->members, toInt(n))) )
+      dsp = DEFAULT;
   }
 
-  if ( instanceOfObject(mon, ClassMonitor) )
-  { Area a = (notNil(mon->work_area) ? mon->work_area : mon->area);
+  if ( instanceOfObject(dsp, ClassDisplay) )
+  { Area a = (notNil(dsp->work_area) ? dsp->work_area : dsp->area);
 
     dw = valInt(a->w);
     dh = valInt(a->h);
@@ -855,7 +855,7 @@ ws_x_geometry_frame(FrameObj fr, Name spec, Monitor mon)
     H = toInt(h);
   }
 
-  send(fr, NAME_set, X, Y, W, H, mon, EAV);
+  send(fr, NAME_set, X, Y, W, H, dsp, EAV);
 }
 
 /**
@@ -866,10 +866,10 @@ ws_x_geometry_frame(FrameObj fr, Name spec, Monitor mon)
  * @param y Y-coordinate position.
  * @param w Width of the frame.
  * @param h Height of the frame.
- * @param mon Monitor object representing the target monitor.
+ * @param dsp Display object representing the target monitor.
  */
 void
-ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, Monitor mon)
+ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
 {
 }
 

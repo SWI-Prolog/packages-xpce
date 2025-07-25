@@ -787,10 +787,10 @@ NewClass(displayobj)
   Name		name;			/* Human name of the display */
   BoolObj	primary;		/* Display is the primary display */
   Area		area;			/* Area occupied by this display */
+  Area		work_area;		/* Area for applications */
   Size		dpi;			/* Resolution (dots per inch) */
   HashTable	font_table;		/* Table holding font-mappings */
   Chain		frames;			/* Created frames on this display */
-  Chain		monitors;		/* Physical monitors attached */
   Chain		inspect_handlers;	/* Event-handlers for inspector */
   Colour	foreground;		/* Window default foreground */
   Colour	background;		/* Window default background */
@@ -923,15 +923,8 @@ NewClass(timer)
   Real		interval;		/* interval as a real value */
   Code		message;		/* message when timer fires */
   Name		status;			/* {idle,interval,once} */
-  BoolObj		service;		/* Operating in service mode? */
+  BoolObj	service;		/* Operating in service mode? */
   WsRef		ws_ref;			/* Window System Reference */
-End;
-
-NewClass(monitor)
-  Any		name;			/* Name of the physical monitor */
-  Area		area;			/* Area on the display */
-  Area		work_area;		/* Application area */
-  BoolObj	primary;		/* Monitor is primary */
 End;
 
 		 /*******************************

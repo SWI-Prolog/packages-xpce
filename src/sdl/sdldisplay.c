@@ -62,6 +62,10 @@ ws_init_displays(void)
 
     if ( dsp )
     { ws_open_display(dsp, id);
+      SDL_GetDisplayUsableBounds(id, &rect);
+      assign(dsp, work_area,
+	     newObject(ClassArea, toInt(rect.x), toInt(rect.y),
+				  toInt(rect.w), toInt(rect.h), EAV));
 
       if ( isOn(isprimary) )
 	nameReferenceObject(dsp, NAME_display);
@@ -81,27 +85,6 @@ ws_init_displays(void)
 void
 ws_bell_display(DisplayObj d, int volume)
 {
-}
-
-/**
- * Retrieve the size of the display in pixels.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @param w Pointer to an integer to store the width.
- * @param h Pointer to an integer to store the height.
- */
-void
-ws_get_size_display(DisplayObj d, int *w, int *h)
-{ Monitor mon;
-
-  if ( openDisplay(d) &&
-       (mon = getHeadChain(d->monitors)) &&
-       instanceOfObject(mon, ClassMonitor) )
-  { *w = valInt(mon->area->w);
-    *h = valInt(mon->area->h);
-  } else
-  { *w = *h = 0;
-  }
 }
 
 /**

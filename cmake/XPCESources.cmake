@@ -68,8 +68,7 @@ set(UNX_SRC	directory.c file.c process.c socket.c stream.c)
 
 set(WIN_SRC	browser.c decorate.c dialog.c display.c
 		displaymgr.c frame.c picture.c
-		tile.c view.c window.c application.c
-		monitor.c)
+		tile.c view.c window.c application.c)
 
 set(SDL_SRC	sdl.c sdldisplay.c sdlfont.c sdlmenu.c sdlwindow.c
 		sdlcolour.c sdldraw.c sdlframe.c sdlstream.c sdlinput.c

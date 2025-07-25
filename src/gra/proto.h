@@ -110,7 +110,6 @@ COMMON(Graphical) getRootGraphical(Graphical gr);
 COMMON(PceWindow) getWindowGraphical(Graphical gr);
 COMMON(FrameObj) getFrameGraphical(Graphical gr);
 COMMON(DisplayObj) getDisplayGraphical(Graphical gr);
-COMMON(Monitor)	getMonitorGraphical(Graphical gr);
 COMMON(Application) getApplicationGraphical(Graphical gr);
 COMMON(Device)	getCommonDeviceGraphical(Graphical gr1, Graphical gr2);
 COMMON(int)	get_extension_margin_graphical(Graphical gr);

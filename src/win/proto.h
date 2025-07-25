@@ -24,7 +24,6 @@ COMMON(Size)	getDPIDisplay(DisplayObj d);
 COMMON(Int)	getWidthDisplay(DisplayObj d);
 COMMON(Int)	getHeightDisplay(DisplayObj d);
 COMMON(Point)	getPointerLocationDisplay(DisplayObj d);
-COMMON(Monitor) getMonitorDisplay(DisplayObj d, Any obj);
 COMMON(status)	looseSelectionDisplay(DisplayObj d, Name which);
 COMMON(status)	confirmDisplay(DisplayObj d, Any client, CharArray title,
 			       CharArray fmt, int argc, Any *argv);
@@ -47,7 +46,7 @@ COMMON(status)	makeClassDisplayManager(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/win/frame.c */
 COMMON(Any)	getConfirmFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise);
-COMMON(Any)	getConfirmCenteredFrame(FrameObj fr, Any where, BoolObj grab, Monitor mon);
+COMMON(Any)	getConfirmCenteredFrame(FrameObj fr, Any where, BoolObj grab, DisplayObj dsp);
 COMMON(status)	createdFrame(FrameObj fr);
 COMMON(status)	exposeFrame(FrameObj fr);
 COMMON(status)	hideFrame(FrameObj fr);
@@ -130,7 +129,3 @@ COMMON(status)	makeClassWindow(Class class);
 /* /staff/jan/src/pl/packages/xpce/src/win/application.c */
 COMMON(void)	resetApplications(void);
 COMMON(status)	makeClassApplication(Class class);
-
-/* /staff/jan/src/pl/packages/xpce/src/win/monitor.c */
-COMMON(status)	initialiseMonitor(Monitor m, Name name, Area a);
-COMMON(status)	makeClassMonitor(Class class);
