@@ -287,7 +287,6 @@ COMMON(status)	drawPostScriptBitmap(BitmapObj bm, Name hb);
 COMMON(status)	drawPostScriptImage(Image image, Name hb);
 COMMON(status)	drawPostScriptText(TextObj t, Name hb);
 COMMON(status)	postscriptFrame(FrameObj fr, Name hb);
-COMMON(status)	postscriptDisplay(DisplayObj d, Name hb);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/scrollbar.c */
 COMMON(Int)	getMarginScrollBar(ScrollBar sb);

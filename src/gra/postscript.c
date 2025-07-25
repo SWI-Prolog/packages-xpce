@@ -1753,13 +1753,3 @@ postscriptFrame(FrameObj fr, Name hb)
   } else
     return ws_postscript_frame(fr, TRUE);
 }
-
-
-status
-postscriptDisplay(DisplayObj d, Name hb)
-{ if ( hb == NAME_head )
-  { psdef(NAME_rgbimage);
-    succeed;
-  } else
-    return ws_postscript_display(d, TRUE);
-}

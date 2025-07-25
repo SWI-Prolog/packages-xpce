@@ -1,5 +1,4 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
-
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
@@ -757,8 +756,6 @@ static char *T_initialise[] =
 	{ "name=name", "area=area" };
 static char *T_busyCursor[] =
         { "cursor=[cursor]*", "block_input=[bool]" };
-static char *T_postscript[] =
-        { "landscape=[bool]", "max_area=[area]" };
 static char *T_fontAlias[] =
         { "name=name", "font=font", "force=[bool]" };
 static char *T_inform[] =
@@ -860,8 +857,6 @@ static senddecl send_display[] =
      NAME_internal, "Handle confirmer events"),
   SM(NAME_open, 0, NULL, openDisplay,
      NAME_open, "Prepare display for graphics operations"),
-  SM(NAME_Postscript, 1, "{head,body}", postscriptDisplay,
-     NAME_postscript, "Create PostScript"),
   SM(NAME_bell, 1, "volume=[int]", bellDisplay,
      NAME_report, "Ring the bell at volume"),
   SM(NAME_confirm, 4, T_inform, confirmDisplay,
@@ -908,8 +903,6 @@ static getdecl get_display[] =
      NAME_dimension, "Resolution in dots per inch"),
   GM(NAME_fontAlias, 1, "font", "name=name", getFontAliasDisplay,
      NAME_font, "Lookup logical name"),
-  GM(NAME_postscript, 2, "string", T_postscript, getPostscriptObject,
-     NAME_postscript, "Get PostScript or (area of) display"),
   GM(NAME_selection, 3, "any", T_getSelection, getSelectionDisplay,
      NAME_selection, "Query value of the X-window selection"),
   GM(NAME_paste, 1, "string", "which=[{primary,clipboard}]", getPasteDisplay,
