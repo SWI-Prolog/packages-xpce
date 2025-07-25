@@ -138,9 +138,13 @@ getConvertFrame(Class class, PceWindow sw)
 static status
 displayFrame(FrameObj fr, DisplayObj d)
 { if ( fr->display != d )
-  { deleteChain(fr->display->frames, fr);
+  { DisplayObj odsp = fr->display;
+
     appendChain(d->frames, fr);
     assign(fr, display, d);
+    deleteChain(odsp->frames, fr);
+    if ( emptyChain(odsp->frames) && isOn(odsp->removed) )
+      send(odsp, NAME_removed, EAV);
   }
 
   succeed;

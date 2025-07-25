@@ -40,6 +40,7 @@ COMMON(status)	hasVisibleFramesDisplay(DisplayObj d);
 COMMON(status)	appendDisplayManager(DisplayManager dm, DisplayObj d);
 COMMON(DisplayObj) getMemberDisplayManager(DisplayManager dm, Name address);
 COMMON(DisplayObj) CurrentDisplay(Any obj);
+COMMON(status)	deleteDisplayManager(DisplayManager dm, DisplayObj d);
 COMMON(status)	RedrawDisplayManager(DisplayManager dm);
 COMMON(status)	dispatchDisplayManager(DisplayManager dm, IOSTREAM *fd, Int timeout);
 COMMON(DisplayManager) TheDisplayManager(void);

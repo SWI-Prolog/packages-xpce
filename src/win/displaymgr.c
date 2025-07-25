@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1995-2024, University of Amsterdam
+    Copyright (c)  1995-2025, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -73,6 +73,12 @@ getMemberDisplayManager(DisplayManager dm, Name name)
   }
 
   fail;
+}
+
+
+status
+deleteDisplayManager(DisplayManager dm, DisplayObj d)
+{ return deleteChain(dm->members, d);
 }
 
 

@@ -52,6 +52,7 @@ initialiseDisplay(DisplayObj d, Name name, Area a)
   assign(d, name,		name);
   assign(d, primary,		DEFAULT);
   assign(d, area,		a);
+  assign(d, removed,		OFF);
   assign(d, font_table,		newObject(ClassHashTable, EAV));
   assign(d, frames,		newObject(ClassChain, EAV));
   assign(d, inspect_handlers,	newObject(ClassChain, EAV));
@@ -60,7 +61,6 @@ initialiseDisplay(DisplayObj d, Name name, Area a)
   obtainClassVariablesObject(d);
 
   appendDisplayManager(dm, d);
-  protectObject(d);
 
   succeed;
 }
@@ -80,6 +80,21 @@ getConvertDisplay(Class class, Any obj)
     answer(get(obj, NAME_display, EAV));
 
   fail;
+}
+
+
+static status
+unlinkDisplay(DisplayObj d)
+{ deleteDisplayManager(d->display_manager, d);
+  ws_close_display(d);
+
+  succeed;
+}
+
+
+static status
+removedDisplay(DisplayObj d)
+{ return freeObject(d);
 }
 
 
@@ -606,13 +621,6 @@ inspectDisplay(DisplayObj d, Graphical gr, EventObj ev)
   fail;
 }
 
-static status
-quitDisplay(DisplayObj d)
-{ ws_quit_display(d);
-
-  succeed;
-}
-
 		/********************************
 		*          FONT TABLES		*
 		********************************/
@@ -795,10 +803,12 @@ static vardecl var_display[] =
      NAME_name, "Human name of the display"),
   IV(NAME_primary, "bool", IV_BOTH,
      NAME_organisation, "@on if this is the primary display"),
-  IV(NAME_area, "area*", IV_NONE,
+  IV(NAME_area, "area", IV_GET,
      NAME_dimension, "Area occupied by this display"),
-  IV(NAME_workArea, "area*", IV_NONE,
+  IV(NAME_workArea, "area", IV_GET,
      NAME_dimension, "Area available for applications"),
+  IV(NAME_removed, "bool", IV_NONE,
+     NAME_organisation, "Display is removed, but not yet empty"),
   IV(NAME_dpi, "[size|int]", IV_NONE,
      NAME_dimension, "Resolution (dots per inch)"),
   IV(NAME_fontTable, "hash_table", IV_BOTH,
@@ -824,6 +834,10 @@ static vardecl var_display[] =
 static senddecl send_display[] =
 { SM(NAME_initialise, 2, T_initialise, initialiseDisplay,
      DEFAULT, "Create from name and area"),
+  SM(NAME_unlink, 0, NULL, unlinkDisplay,
+     DEFAULT, "Remove from display_manager"),
+  SM(NAME_removed, 0, NULL, removedDisplay,
+     NAME_oms, "Hotplug display was removed"),
   SM(NAME_busyCursor, 2, T_busyCursor, busyCursorDisplay,
      NAME_event, "Define (temporary) cursor for all frames on the display"),
   SM(NAME_dispatch, 0, NULL, dispatchDisplay,
@@ -848,8 +862,6 @@ static senddecl send_display[] =
      NAME_open, "Prepare display for graphics operations"),
   SM(NAME_Postscript, 1, "{head,body}", postscriptDisplay,
      NAME_postscript, "Create PostScript"),
-  SM(NAME_quit, 0, NULL, quitDisplay,
-     NAME_quit, "Destroy all window-system references"),
   SM(NAME_bell, 1, "volume=[int]", bellDisplay,
      NAME_report, "Ring the bell at volume"),
   SM(NAME_confirm, 4, T_inform, confirmDisplay,

@@ -788,6 +788,7 @@ NewClass(displayobj)
   BoolObj	primary;		/* Display is the primary display */
   Area		area;			/* Area occupied by this display */
   Area		work_area;		/* Area for applications */
+  BoolObj	removed;		/* Display is being removed */
   Size		dpi;			/* Resolution (dots per inch) */
   HashTable	font_table;		/* Table holding font-mappings */
   Chain		frames;			/* Created frames on this display */

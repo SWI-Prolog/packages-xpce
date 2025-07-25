@@ -132,9 +132,10 @@ sdl_display_event(SDL_Event *ev)
       DisplayObj dsp = dsp_id_to_display(id);
       DEBUG(NAME_display, Cprintf("Removed display %s\n", pp(dsp)));
       if ( emptyChain(dsp->frames) )
-      { send(dsp, NAME_destroy, EAV);
+      { send(dsp, NAME_removed, EAV);
       } else
-      { Cprintf("Cannot destroy display %s: has frames\n", pp(dsp));
+      { assign(dsp, removed, ON);
+	Cprintf("Cannot destroy display %s: has frames\n", pp(dsp));
       }
       return true;
     }
@@ -239,12 +240,12 @@ ws_open_display(DisplayObj d, SDL_DisplayID id)
 }
 
 /**
- * Close the display, terminating the connection.
+ * Close the SDL resources for a display
  *
  * @param d Pointer to the DisplayObj representing the display context.
  */
 void
-ws_quit_display(DisplayObj d)
+ws_close_display(DisplayObj d)
 { WsDisplay wsd = d->ws_ref;
 
   if ( wsd )

@@ -57,7 +57,7 @@ int ws_depth_display(DisplayObj d);
 bool ws_resolution_display(DisplayObj d, int *rx, int *ry);
 void ws_activate_screen_saver(DisplayObj d);
 void ws_deactivate_screen_saver(DisplayObj d);
-void ws_quit_display(DisplayObj d);
+void ws_close_display(DisplayObj d);
 void ws_foreground_display(DisplayObj d, Colour c);
 void ws_background_display(DisplayObj d, Colour c);
 status ws_events_queued_display(DisplayObj d);
