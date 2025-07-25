@@ -38,7 +38,8 @@
 #include <cairo/cairo.h>
 
 typedef struct
-{ SDL_Window      *hidden_window;
+{ SDL_DisplayID    id;
+  SDL_Window      *hidden_window;
   SDL_Renderer    *hidden_renderer;
   cairo_surface_t *hidden_surface;
   cairo_t         *hidden_cairo;
@@ -54,11 +55,7 @@ int ws_depth_display(DisplayObj d);
 bool ws_resolution_display(DisplayObj d, int *rx, int *ry);
 void ws_activate_screen_saver(DisplayObj d);
 void ws_deactivate_screen_saver(DisplayObj d);
-status ws_opened_display(DisplayObj d);
-void ws_open_display(DisplayObj d);
 void ws_quit_display(DisplayObj d);
-status ws_init_graphics_display(DisplayObj d);
-status ws_init_monitors_display(DisplayObj d);
 void ws_foreground_display(DisplayObj d, Colour c);
 void ws_background_display(DisplayObj d, Colour c);
 status ws_events_queued_display(DisplayObj d);

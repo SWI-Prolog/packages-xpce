@@ -732,5 +732,10 @@ makeClassColour(Class class)
   ColourTable = globalObject(NAME_colours, ClassHashTable, toInt(32), EAV);
   assign(ColourTable, refer, NAME_none);
 
+  WHITE_COLOUR  = newObject(ClassColour, NAME_white,  EAV);
+  GREY25_COLOUR = newObject(ClassColour, NAME_grey25, EAV);
+  GREY50_COLOUR = newObject(ClassColour, NAME_grey50, EAV);
+  BLACK_COLOUR  = newObject(ClassColour, NAME_black,  EAV);
+
   succeed;
 }

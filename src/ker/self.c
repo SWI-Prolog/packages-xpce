@@ -926,7 +926,7 @@ static status
 informPce(Pce pce, CharArray fmt, int argc, Any *argv)
 { Any d = CurrentDisplay(NIL);
 
-  if ( d != NULL && getOpenDisplay(d) == ON )
+  if ( d )
     return informDisplay(d, DEFAULT, DEFAULT, fmt, argc, argv);
 
   return formatPcev(pce, fmt, argc, argv);
@@ -938,7 +938,7 @@ confirmPce(Pce pce, CharArray fmt, int argc, Any *argv)
 { Any d = CurrentDisplay(NIL);
   int try;
 
-  if ( d != NULL && getOpenDisplay(d) == ON )
+  if ( d )
     return confirmDisplay(d, DEFAULT, DEFAULT, fmt, argc, argv);
 
   for(try = 0; try < 3; try++)

@@ -57,6 +57,7 @@ initialiseDisplay(DisplayObj d, Name name, Area a, BoolObj isprimary)
   assign(d, inspect_handlers,	newObject(ClassChain, EAV));
   assign(d, display_manager,	dm);
   assign(d, busy_locks,		ZERO);
+  obtainClassVariablesObject(d);
 
   appendDisplayManager(dm, d);
   protectObject(d);
@@ -93,28 +94,7 @@ shells.  This widget is never realised (page 35 of Xt manual).
 
 status
 openDisplay(DisplayObj d)
-{ if ( ws_opened_display(d) )
-    succeed;
-
-  ws_open_display(d);			/* generate exception on failure */
-  obtainClassVariablesObject(d);
-  ws_foreground_display(d, d->foreground);
-  ws_background_display(d, d->background);
-  ws_init_graphics_display(d);
-  ws_init_monitors_display(d);
-
-  WHITE_COLOUR  = newObject(ClassColour, NAME_white,  EAV);
-  GREY25_COLOUR = newObject(ClassColour, NAME_grey25, EAV);
-  GREY50_COLOUR = newObject(ClassColour, NAME_grey50, EAV);
-  BLACK_COLOUR  = newObject(ClassColour, NAME_black,  EAV);
-
-  succeed;
-}
-
-
-BoolObj
-getOpenDisplay(Any d)
-{ answer(ws_opened_display(d) ? ON : OFF);
+{ succeed;
 }
 
 
@@ -138,13 +118,9 @@ backgroundDisplay(DisplayObj d, Colour c)
 
 static status
 eventQueuedDisplay(DisplayObj d)
-{ if ( ws_opened_display(d) )
-  { RedrawDisplayManager(d->display_manager);
+{ RedrawDisplayManager(d->display_manager);
 
-    return ws_events_queued_display(d);
-  }
-
-  fail;
+  return ws_events_queued_display(d);
 }
 
 
@@ -264,7 +240,7 @@ getDPIDisplay(DisplayObj d)
     TRY(openDisplay(d));
   if ( instanceOfObject(d->dpi, ClassSize) )
     answer(d->dpi);
-  if ( ws_opened_display(d) && ws_resolution_display(d, &rx, &ry) )
+  if ( ws_resolution_display(d, &rx, &ry) )
   { assign(d, dpi, newObject(ClassSize, toInt(rx), toInt(ry), EAV));
     answer(d->dpi);
   }
@@ -965,8 +941,6 @@ static getdecl get_display[] =
      DEFAULT, "Convert graphical or `host:display[.screen]'"),
   GM(NAME_depth, 0, "bits_per_pixel=int", NULL, getDepthDisplay,
      NAME_colour, "Number of bits/pixel"),
-  GM(NAME_open, 0, "bool", NULL, getOpenDisplay,
-     NAME_open, "Query connected status of the display"),
   GM(NAME_systemTheme, 0, "{light,dark}",
      NULL, getSystemThemeDisplay,
      NAME_colour, "The OS system theme"),

@@ -37,6 +37,8 @@
 #include "sdldisplay.h"
 #include "sdluserevent.h"
 
+static void	ws_open_display(DisplayObj d, SDL_DisplayID id);
+
 bool
 ws_init_displays(void)
 { int count;
@@ -44,10 +46,11 @@ ws_init_displays(void)
   SDL_DisplayID primary = SDL_GetPrimaryDisplay();
 
   for(int i=0; i<count; i++)
-  { SDL_Rect rect;
-    SDL_GetDisplayBounds(displays[i], &rect);
-    const char *name = SDL_GetDisplayName(displays[i]);
-    BoolObj isprimary = (displays[i] == primary ? ON : OFF);
+  { SDL_DisplayID id = displays[i];
+    SDL_Rect rect;
+    SDL_GetDisplayBounds(id, &rect);
+    const char *name = SDL_GetDisplayName(id);
+    BoolObj isprimary = (id == primary ? ON : OFF);
     DisplayObj dsp;
 
     dsp = newObject(ClassDisplay,
@@ -56,8 +59,13 @@ ws_init_displays(void)
 					 toInt(rect.w), toInt(rect.h), EAV),
 		    isprimary,
 		    EAV);
-    if ( isOn(isprimary) )
-      nameReferenceObject(dsp, NAME_display);
+
+    if ( dsp )
+    { ws_open_display(dsp, id);
+
+      if ( isOn(isprimary) )
+	nameReferenceObject(dsp, NAME_display);
+    }
   }
   SDL_free(displays);
 
@@ -154,23 +162,12 @@ ws_init_display(DisplayObj d)
 }
 
 /**
- * Check if the display has been successfully opened.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @return SUCCEED if the display is open; otherwise, FAIL.
- */
-status
-ws_opened_display(DisplayObj d)
-{ return !!d->ws_ref;
-}
-
-/**
  * Open the display, establishing a connection for graphical operations.
  *
  * @param d Pointer to the DisplayObj representing the display context.
  */
-void
-ws_open_display(DisplayObj d)
+static void
+ws_open_display(DisplayObj d, SDL_DisplayID id)
 { WsDisplay wsd = d->ws_ref = alloc(sizeof(ws_display));
   memset(wsd, 0, sizeof(*wsd));
   SDL_WindowFlags flags = SDL_WINDOW_HIDDEN;
@@ -179,6 +176,7 @@ ws_open_display(DisplayObj d)
   flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 #endif
 
+  wsd->id = id;
   wsd->hidden_window = SDL_CreateWindow(
     "xpce hidden window", 64, 64,
     flags);
@@ -227,48 +225,6 @@ ws_pixel_density_display(Any obj)
   return scale;
 }
 
-
-/**
- * Initialize graphics-related resources for the display.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @return SUCCEED on successful initialization; otherwise, FAIL.
- */
-status
-ws_init_graphics_display(DisplayObj d)
-{
-    return SUCCEED;
-}
-
-/**
- * Initialize monitor-related information for the display.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @return SUCCEED on successful initialization; otherwise, FAIL.
- */
-status
-ws_init_monitors_display(DisplayObj d)
-{ int count;
-  SDL_DisplayID *displays = SDL_GetDisplays(&count);
-
-  assign(d, monitors, newObject(ClassChain, EAV));
-
-  for(int i=0; i<count; i++)
-  { SDL_Rect rect;
-    SDL_GetDisplayBounds(displays[i], &rect);
-    const char *name = SDL_GetDisplayName(displays[i]);
-    appendChain(d->monitors,
-		newObject(ClassMonitor, UTF8ToName(name),
-			  newObject(ClassArea,
-				    toInt(rect.x),
-				    toInt(rect.y),
-				    toInt(rect.w),
-				    toInt(rect.h), EAV), EAV));
-  }
-  SDL_free(displays);
-
-  succeed;
-}
 
 /**
  * Set the foreground color for the display.
