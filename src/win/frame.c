@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -133,6 +134,18 @@ static FrameObj
 getConvertFrame(Class class, PceWindow sw)
 { answer(getFrameWindow(sw, DEFAULT));
 }
+
+static status
+displayFrame(FrameObj fr, DisplayObj d)
+{ if ( fr->display != d )
+  { deleteChain(fr->display->frames, fr);
+    appendChain(d->frames, fr);
+    assign(fr, display, d);
+  }
+
+  succeed;
+}
+
 
 		 /*******************************
 		 *	     SAVE-LOAD		*
@@ -1753,6 +1766,8 @@ static senddecl send_frame[] =
      DEFAULT, "Convert old `show' slot"),
   SM(NAME_initialise, 4, T_initialise, initialiseFrame,
      DEFAULT, "Create from label, kind and display"),
+  SM(NAME_display, 1, "display", displayFrame,
+     NAME_organisation, "The display of the frame has changed"),
   SM(NAME_initialiseNewSlot, 1, "var=variable", initialiseNewSlotFrame,
      DEFAULT, "Initialise <-background"),
   SM(NAME_reset, 0, NULL, resetFrame,

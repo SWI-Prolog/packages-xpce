@@ -76,6 +76,22 @@ ws_init_displays(void)
   succeed;
 }
 
+DisplayObj
+dsp_id_to_display(SDL_DisplayID id)
+{ DisplayManager dm = TheDisplayManager();
+  Cell cell;
+
+  for_cell(cell, dm->members)
+  { DisplayObj d = cell->value;
+    WsDisplay wsd = d->ws_ref;
+
+    if ( wsd && wsd->id == id )
+      return d;
+  }
+
+  return NULL;
+}
+
 /**
  * Sound the system bell with the specified volume.
  *

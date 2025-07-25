@@ -594,6 +594,12 @@ sdl_frame_event(SDL_Event *ev)
       case SDL_EVENT_WINDOW_FOCUS_LOST:
 	DEBUG(NAME_keyboard, Cprintf("Input focus lost for %s\n", pp(fr)));
 	return send(fr, NAME_inputFocus, OFF, EAV);
+      case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
+      { DisplayObj new_display = dsp_id_to_display(ev->window.data1);
+	DEBUG(NAME_display, Cprintf("%s moved to %s\n",
+				    pp(fr), pp(new_display)));
+	return send(fr, NAME_display, new_display, EAV);
+      }
     }
   }
 
