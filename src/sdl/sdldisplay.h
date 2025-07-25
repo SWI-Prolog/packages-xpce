@@ -47,13 +47,13 @@ typedef struct
 float ws_pixel_density_display(Any obj);
 Name  ws_get_system_theme_display(DisplayObj d);
 
+bool ws_init_displays(void);
 void ws_bell_display(DisplayObj d, int volume);
 void ws_get_size_display(DisplayObj d, int *w, int *h);
 int ws_depth_display(DisplayObj d);
 bool ws_resolution_display(DisplayObj d, int *rx, int *ry);
 void ws_activate_screen_saver(DisplayObj d);
 void ws_deactivate_screen_saver(DisplayObj d);
-void ws_init_display(DisplayObj d);
 status ws_opened_display(DisplayObj d);
 void ws_open_display(DisplayObj d);
 void ws_quit_display(DisplayObj d);

@@ -41,25 +41,23 @@ static status	backgroundDisplay(DisplayObj, Colour);
 static status	foregroundDisplay(DisplayObj d, Colour c);
 static void	attach_font_families(Class class);
 
-static DisplayObj TheDisplay;
-
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Create a display.  The display is not yet opened.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static status
-initialiseDisplay(DisplayObj d, Name name)
+initialiseDisplay(DisplayObj d, Name name, Area a, BoolObj isprimary)
 { DisplayManager dm = TheDisplayManager();
 
   assign(d, name,		name);
-  assign(d, size,		NIL);
+  assign(d, primary,		isprimary);
+  assign(d, area,		a);
   assign(d, font_table,		newObject(ClassHashTable, EAV));
   assign(d, frames,		newObject(ClassChain, EAV));
   assign(d, inspect_handlers,	newObject(ClassChain, EAV));
   assign(d, display_manager,	dm);
   assign(d, busy_locks,		ZERO);
 
-  ws_init_display(d);
   appendDisplayManager(dm, d);
   protectObject(d);
 
@@ -203,47 +201,25 @@ hasDisplay(void)
 
 Size
 getSizeDisplay(DisplayObj d)
-{ int w=0, h=0;
-
-  if ( notNil(d->size) )
-    answer(d->size);
-
-  openDisplay(d);
-  ws_get_size_display(d, &w, &h);
-  assign(d, size, newObject(ClassSize, toInt(w), toInt(h), EAV));
-
-  answer(d->size);
+{ answer(getSizeArea(d->area));
 }
 
 
 Int
 getWidthDisplay(DisplayObj d)
-{ answer(getSizeDisplay(d)->w);
+{ answer(d->area->w);
 }
 
 
 Int
 getHeightDisplay(DisplayObj d)
-{ answer(getSizeDisplay(d)->h);
-}
-
-
-static Area
-getBoundingBoxDisplay(DisplayObj d)
-{ Size s = getSizeDisplay(d);
-
-  answer( answerObject(ClassArea, ZERO, ZERO, s->w, s->h, EAV) );
+{ answer(d->area->h);
 }
 
 
 static Int
 getDepthDisplay(DisplayObj d)
-{ if ( hasDisplay() )
-  { TRY(openDisplay(d));
-  } else
-    return toInt(24);
-
-  answer(toInt(ws_depth_display(d)));
+{ answer(toInt(ws_depth_display(d)));
 }
 
 static Name
@@ -299,7 +275,7 @@ getDPIDisplay(DisplayObj d)
 
 int
 DPI(Any gr)
-{ DisplayObj d = gr ? CurrentDisplay(gr) : TheDisplay;
+{ DisplayObj d = CurrentDisplay(gr ? gr : NIL);
 
   if ( d )
   { Size sz = getDPIDisplay(d);
@@ -533,8 +509,8 @@ display_help(DisplayObj d, StringObj hlp, Name msg)
   fw = max(valInt(hlp_text->area->w), valInt(msg_text->area->w)) + 40;
   fh = valInt(hlp_text->area->h) + valInt(msg_text->area->h) + 50;
   getSizeDisplay(d);			/* initialise size argument */
-  fx = (valInt(d->size->w) - fw) / 2;
-  fy = (valInt(d->size->h) - fh) / 2;
+  fx = (valInt(d->area->w) - fw) / 2;
+  fy = (valInt(d->area->h) - fh) / 2;
 
   tx = (fw - 12 - valInt(hlp_text->area->w)) / 2;
   send(hlp_text, NAME_set, toInt(tx), toInt(20), DEFAULT, DEFAULT, EAV);
@@ -853,6 +829,8 @@ getContainedInDisplay(DisplayObj d)
 
 /* Type declarations */
 
+static char *T_initialise[] =
+	{ "name=name", "area=area", "primary=bool" };
 static char *T_busyCursor[] =
         { "cursor=[cursor]*", "block_input=[bool]" };
 static char *T_postscript[] =
@@ -899,8 +877,10 @@ static char *T_win_directory[] =
 static vardecl var_display[] =
 { IV(NAME_name, "name*", IV_GET,
      NAME_name, "Human name of the display"),
-  IV(NAME_size, "size*", IV_NONE,
-     NAME_dimension, "Size (width, height) of display"),
+  IV(NAME_primary, "bool", IV_GET,
+     NAME_organisation, "@on if this is the primary display"),
+  IV(NAME_area, "area*", IV_NONE,
+     NAME_dimension, "Area occupied by this display"),
   IV(NAME_dpi, "[size|int]", IV_NONE,
      NAME_dimension, "Resolution (dots per inch)"),
   IV(NAME_fontTable, "hash_table", IV_BOTH,
@@ -926,7 +906,7 @@ static vardecl var_display[] =
 /* Send Methods */
 
 static senddecl send_display[] =
-{ SM(NAME_initialise, 1, "address=[name]", initialiseDisplay,
+{ SM(NAME_initialise, 3, T_initialise, initialiseDisplay,
      DEFAULT, "Create at given address (<host>:<screen>)"),
   SM(NAME_busyCursor, 2, T_busyCursor, busyCursorDisplay,
      NAME_event, "Define (temporary) cursor for all frames on the display"),
@@ -1006,8 +986,6 @@ static getdecl get_display[] =
      NAME_monitor, "Find monitor at position"),
   GM(NAME_fontAlias, 1, "font", "name=name", getFontAliasDisplay,
      NAME_font, "Lookup logical name"),
-  GM(NAME_boundingBox, 0, "area", NULL, getBoundingBoxDisplay,
-     NAME_postscript, "PostScript bounding box for the display"),
   GM(NAME_postscript, 2, "string", T_postscript, getPostscriptObject,
      NAME_postscript, "Get PostScript or (area of) display"),
   GM(NAME_selection, 3, "any", T_getSelection, getSelectionDisplay,
@@ -1061,14 +1039,12 @@ static classvardecl rc_display[] =
 
 /* Class Declaration */
 
-static Name display_termnames[] = { NAME_address };
+static Name display_termnames[] = { NAME_name };
 
 ClassDecl(display_decls,
           var_display, send_display, get_display, rc_display,
           1, display_termnames,
           "$Rev$");
-
-
 
 status
 makeClassDisplay(Class class)
@@ -1076,10 +1052,8 @@ makeClassDisplay(Class class)
   saveStyleClass(class, NAME_external);
   cloneStyleClass(class, NAME_none);
 
-  TheDisplay = globalObject(NAME_display, ClassDisplay, EAV);
-  globalObject(NAME_colourDisplay, ClassGreater,
-	       newObject(ClassObtain, TheDisplay, NAME_depth, EAV),
-	       ONE, EAV);
+  /* @colour_display is always true now */
+  globalObject(NAME_colourDisplay, ClassAnd, EAV);
 
   attach_font_families(class);
 

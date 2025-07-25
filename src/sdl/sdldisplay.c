@@ -37,24 +37,31 @@
 #include "sdldisplay.h"
 #include "sdluserevent.h"
 
-/**
- * Flush the display buffer, ensuring all pending drawing operations are executed.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- */
-void
-ws_flush_display(DisplayObj d)
-{
-}
+bool
+ws_init_displays(void)
+{ int count;
+  SDL_DisplayID *displays = SDL_GetDisplays(&count);
+  SDL_DisplayID primary = SDL_GetPrimaryDisplay();
 
-/**
- * Synchronize the display, ensuring all operations are completed.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- */
-void
-ws_synchronise_display(DisplayObj d)
-{
+  for(int i=0; i<count; i++)
+  { SDL_Rect rect;
+    SDL_GetDisplayBounds(displays[i], &rect);
+    const char *name = SDL_GetDisplayName(displays[i]);
+    BoolObj isprimary = (displays[i] == primary ? ON : OFF);
+    DisplayObj dsp;
+
+    dsp = newObject(ClassDisplay,
+		    UTF8ToName(name),
+		    newObject(ClassArea, toInt(rect.x), toInt(rect.y),
+					 toInt(rect.w), toInt(rect.h), EAV),
+		    isprimary,
+		    EAV);
+    if ( isOn(isprimary) )
+      nameReferenceObject(dsp, NAME_display);
+  }
+  SDL_free(displays);
+
+  succeed;
 }
 
 /**

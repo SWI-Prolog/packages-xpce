@@ -785,7 +785,8 @@ End;
 NewClass(displayobj)
   ABSTRACT_VISUAL
   Name		name;			/* Human name of the display */
-  Size		size;			/* size of the display in pixels */
+  BoolObj	primary;		/* Display is the primary display */
+  Area		area;			/* Area occupied by this display */
   Size		dpi;			/* Resolution (dots per inch) */
   HashTable	font_table;		/* Table holding font-mappings */
   Chain		frames;			/* Created frames on this display */

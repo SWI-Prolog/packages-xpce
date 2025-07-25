@@ -83,8 +83,7 @@ setPceThread(const char *app_name)
     }
     ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
     start_fd_watcher_thread();
-    if ( !openDisplay(CurrentDisplay(NIL)) )
-      return errorPce(CurrentDisplay(NIL), NAME_sdlInitialize);
+    TRY(ws_init_displays());
 
     assign(PCE, window_system_version,  toInt(ws_version()));
     assign(PCE, window_system_revision, toInt(ws_revision()));
