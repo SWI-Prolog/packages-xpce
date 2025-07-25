@@ -123,9 +123,7 @@ reexports the content of these files.
 	      [ qcompile(part),         % compile boot files as part of pce.qlf
 		silent(true)
 	      ]).
-:- if(current_prolog_flag(threads, true)).
 :- use_module(pce_dispatch).
-:- endif.
 
 %!  pce_thread(-Thread) is det.
 %
@@ -133,9 +131,6 @@ reexports the content of these files.
 %   message loop.
 %
 %   @see pce_dispatch/1.
-
-:- current_prolog_flag(threads, HasThreads),
-   create_prolog_flag(xpce_threaded, HasThreads, [keep(true)]).
 
 :- dynamic
     pce_thread/1.
@@ -160,7 +155,6 @@ in_pce_thread_sync(Goal) :-
     term_variables(Goal, Vars),
     pce_principal:in_pce_thread_sync2(Goal-Vars, Vars).
 
-:- if(current_prolog_flag(threads, true)).
 start_dispatch :-
     (   thread_self(main)
     ->  app_name(AppName),
@@ -176,17 +170,11 @@ app_name('swipl-win') :-
     !.
 app_name('swipl').
 
-:- initialization
-    start_dispatch.
-:- endif.
-
 set_version :-
     current_prolog_flag(version_data, swi(Major, Minor, Patch, _)),
     format(string(PlId),
 	   'SWI-Prolog version ~w.~w.~w', [Major, Minor, Patch]),
     send(@prolog, system, PlId).
-
-:- initialization set_version.
 
 get_pce_version :-
     (   current_prolog_flag(xpce_version, _)
@@ -195,16 +183,11 @@ get_pce_version :-
 	create_prolog_flag(xpce_version, Version, [])
     ).
 
-:- initialization get_pce_version.
-
 on_load :-
     setup_theme.
 
 run_on_load :-
     forall(on_load, true).
-
-:- initialization run_on_load.
-
 
 %!  setup_theme
 %
@@ -224,6 +207,20 @@ setup_theme :-
     ;   print_message(warning, error(existence_error(theme, Theme),_))
     ).
 setup_theme.
+
+%!  init_pce
+%
+%   Get the ball running
+
+init_pce :-
+    set_version,
+    get_pce_version,
+    start_dispatch,
+    run_on_load.
+
+:- initialization
+       init_pce.
+
 
 		 /*******************************
 		 *           CONSOLE            *
