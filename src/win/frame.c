@@ -1963,9 +1963,7 @@ static classvardecl rc_frame[] =
   RC(NAME_fitAfterAppend, "bool", "@off",
      "Automatically ->fit the frame after a subwindow was added"),
   RC(NAME_decorateTransient, "bool", "@on",
-     "Decorate transient windows (if possible)"),
-  RC(NAME_colourMap, "[colour_map]*", "@default",
-     "Colourmap for the window's frame")
+     "Decorate transient windows (if possible)")
 };
 
 /* Class Declaration */

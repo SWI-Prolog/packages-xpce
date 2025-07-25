@@ -611,7 +611,7 @@ variable(terminal, prolog_terminal, get, "The terminal_image").
 delegate_to(terminal).
 
 initialise(T, Title:title=[name],
-           Width:width=[integer], Height:height=[integer]) :->
+           Width:width=[int], Height:height=[int]) :->
     "Create from title, width and height"::
     default(Title, "SWI-Prolog console", TheTitle),
     default(Width, 80, TheWidth),
@@ -670,7 +670,7 @@ split(T, Dir:{horizontally,vertically}) :->
 variable(current_window, name*, both, "Name of the current window").
 
 initialise(T, Title:title=[name],
-           Width:width=[integer], Height:height=[integer]) :->
+           Width:width=[int], Height:height=[int]) :->
     default(Title, "SWI-Prolog console", TheTitle),
     send_super(T, initialise, TheTitle),
     send(T, done_message, message(@receiver, wm_close_requested)),

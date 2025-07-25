@@ -655,7 +655,7 @@ static vardecl var_colour[] =
      NAME_name, "Name of the colour"),
   IV(NAME_kind, "{named,rgb}", IV_GET,
      NAME_kind, "From colour-name database or user-defined"),
-  IV(NAME_rgba, "int", IV_GET,
+  IV(NAME_rgba, "[int]", IV_GET,
      NAME_colour, "Encoded RGBA tuple")
 };
 
