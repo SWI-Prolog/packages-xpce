@@ -233,6 +233,8 @@ CtoEvent(SDL_Event *event)
 
   if ( sdl_call_event(event) )	/* support in_pce_thread/1 */
     fail;
+  if ( sdl_display_event(event) ) /* display events (add/delete/change) */
+    fail;
   if ( sdl_frame_event(event) )	/* window events (close/open/size/...) */
     fail;
   if ( sdl_timer_event(event) )	/* Timer event */

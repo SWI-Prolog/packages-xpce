@@ -39,39 +39,64 @@
 
 static void	ws_open_display(DisplayObj d, SDL_DisplayID id);
 
+static DisplayObj
+ws_create_display(SDL_DisplayID id)
+{ SDL_Rect rect;
+  SDL_GetDisplayBounds(id, &rect);
+  const char *name = SDL_GetDisplayName(id);
+  DisplayObj dsp;
+
+  dsp = newObject(ClassDisplay,
+		  UTF8ToName(name),
+		  newObject(ClassArea, toInt(rect.x), toInt(rect.y),
+				       toInt(rect.w), toInt(rect.h), EAV),
+		  EAV);
+
+  if ( dsp )
+  { ws_open_display(dsp, id);
+    SDL_GetDisplayUsableBounds(id, &rect);
+    assign(dsp, work_area,
+	   newObject(ClassArea, toInt(rect.x), toInt(rect.y),
+				toInt(rect.w), toInt(rect.h), EAV));
+  }
+
+  return dsp;
+}
+
+static DisplayObj
+ws_update_primary_display(DisplayManager dm)
+{ SDL_DisplayID pid = SDL_GetPrimaryDisplay();
+  Cell cell;
+  DisplayObj primary = NULL;
+
+  for_cell(cell, dm->members)
+  { DisplayObj dsp = cell->value;
+    WsDisplay  wsd = dsp->ws_ref;
+    BoolObj isprimary = ( wsd && wsd->id == pid) ? ON : OFF;
+    if ( isDefault(dsp->primary) )
+      assign(dsp, primary, isprimary);
+    else if ( dsp->primary != isprimary )
+      send(dsp, NAME_primary, isprimary, EAV);
+    if ( isOn(isprimary) )
+      primary = dsp;
+  }
+
+  return primary;
+}
+
 bool
 ws_init_displays(void)
 { int count;
   SDL_DisplayID *displays = SDL_GetDisplays(&count);
-  SDL_DisplayID primary = SDL_GetPrimaryDisplay();
 
   for(int i=0; i<count; i++)
-  { SDL_DisplayID id = displays[i];
-    SDL_Rect rect;
-    SDL_GetDisplayBounds(id, &rect);
-    const char *name = SDL_GetDisplayName(id);
-    BoolObj isprimary = (id == primary ? ON : OFF);
-    DisplayObj dsp;
+    ws_create_display(displays[i]);
 
-    dsp = newObject(ClassDisplay,
-		    UTF8ToName(name),
-		    newObject(ClassArea, toInt(rect.x), toInt(rect.y),
-					 toInt(rect.w), toInt(rect.h), EAV),
-		    isprimary,
-		    EAV);
-
-    if ( dsp )
-    { ws_open_display(dsp, id);
-      SDL_GetDisplayUsableBounds(id, &rect);
-      assign(dsp, work_area,
-	     newObject(ClassArea, toInt(rect.x), toInt(rect.y),
-				  toInt(rect.w), toInt(rect.h), EAV));
-
-      if ( isOn(isprimary) )
-	nameReferenceObject(dsp, NAME_display);
-    }
-  }
   SDL_free(displays);
+
+  DisplayObj primary = ws_update_primary_display(TheDisplayManager());
+  if ( primary )
+    nameReferenceObject(primary, NAME_display);
 
   succeed;
 }
@@ -90,6 +115,32 @@ dsp_id_to_display(SDL_DisplayID id)
   }
 
   return NULL;
+}
+
+bool
+sdl_display_event(SDL_Event *ev)
+{ switch(ev->type)
+  { case SDL_EVENT_DISPLAY_ADDED:
+    { SDL_DisplayID id = ev->display.displayID;
+      DisplayObj dsp = ws_create_display(id);
+      ws_update_primary_display(TheDisplayManager());
+      DEBUG(NAME_display, Cprintf("Added display %s\n", pp(dsp)));
+      return true;
+    }
+    case SDL_EVENT_DISPLAY_REMOVED:
+    { SDL_DisplayID id = ev->display.displayID;
+      DisplayObj dsp = dsp_id_to_display(id);
+      DEBUG(NAME_display, Cprintf("Removed display %s\n", pp(dsp)));
+      if ( emptyChain(dsp->frames) )
+      { send(dsp, NAME_destroy, EAV);
+      } else
+      { Cprintf("Cannot destroy display %s: has frames\n", pp(dsp));
+      }
+      return true;
+    }
+  }
+
+  fail;
 }
 
 /**

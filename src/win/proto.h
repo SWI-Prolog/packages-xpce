@@ -34,6 +34,7 @@ COMMON(status)	inspectDisplay(DisplayObj d, Graphical gr, EventObj ev);
 COMMON(status)	makeClassDisplay(Class class);
 COMMON(int)	DPI(Any gr);
 COMMON(double)	dpi_scale(Any gr, double px);
+COMMON(status)	hasVisibleFramesDisplay(DisplayObj d);
 
 /* /staff/jan/src/pl/packages/xpce/src/win/displaymgr.c */
 COMMON(status)	appendDisplayManager(DisplayManager dm, DisplayObj d);

@@ -50,6 +50,7 @@ Name  ws_get_system_theme_display(DisplayObj d);
 
 bool ws_init_displays(void);
 DisplayObj dsp_id_to_display(SDL_DisplayID id);
+bool sdl_display_event(SDL_Event *ev);
 void ws_bell_display(DisplayObj d, int volume);
 void ws_get_size_display(DisplayObj d, int *w, int *h);
 int ws_depth_display(DisplayObj d);

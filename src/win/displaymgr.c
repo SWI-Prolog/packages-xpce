@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1995-2023, University of Amsterdam
+    Copyright (c)  1995-2024, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -230,7 +230,7 @@ getContainsDisplayManager(DisplayManager dm)
 		 *******************************/
 
 DisplayManager
-TheDisplayManager()
+TheDisplayManager(void)
 { static DisplayManager dm = NULL;
 
   if ( !dm )
@@ -238,6 +238,24 @@ TheDisplayManager()
 
   return dm;
 }
+
+static status
+hasVisibleFramesDisplayManager(DisplayManager dm)
+{ if ( notNil(dm->members) )
+  { Cell cell;
+
+    for_cell(cell, dm->members)
+    { DisplayObj dsp = cell->value;
+      if ( !onFlag(dsp, F_FREED|F_FREEING) )
+      { if ( hasVisibleFramesDisplay(dsp) )
+	  succeed;
+      }
+    }
+  }
+
+  fail;
+}
+
 
 
 		 /*******************************
@@ -267,7 +285,9 @@ static senddecl send_displayManager[] =
   SM(NAME_append, 1, "display", appendDisplayManager,
      NAME_display, "Attach a new display to the manager"),
   SM(NAME_redraw, 0, NULL, redrawDisplayManager,
-     NAME_event, "Flush all pending changes to the screen")
+     NAME_event, "Flush all pending changes to the screen"),
+  SM(NAME_hasVisibleFrames, 0, NULL, hasVisibleFramesDisplayManager,
+     NAME_organisation, "True if there is at least one visible frame")
 };
 
 /* Get Methods */

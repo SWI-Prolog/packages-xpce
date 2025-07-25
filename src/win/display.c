@@ -46,11 +46,11 @@ Create a display.  The display is not yet opened.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static status
-initialiseDisplay(DisplayObj d, Name name, Area a, BoolObj isprimary)
+initialiseDisplay(DisplayObj d, Name name, Area a)
 { DisplayManager dm = TheDisplayManager();
 
   assign(d, name,		name);
-  assign(d, primary,		isprimary);
+  assign(d, primary,		DEFAULT);
   assign(d, area,		a);
   assign(d, font_table,		newObject(ClassHashTable, EAV));
   assign(d, frames,		newObject(ClassChain, EAV));
@@ -278,7 +278,7 @@ DPIDisplay(DisplayObj d, Any arg)
 }
 
 
-static status
+status
 hasVisibleFramesDisplay(DisplayObj d)
 { if ( notNil(d->frames) )
   { Cell cell;
@@ -746,7 +746,7 @@ getContainedInDisplay(DisplayObj d)
 /* Type declarations */
 
 static char *T_initialise[] =
-	{ "name=name", "area=area", "primary=bool" };
+	{ "name=name", "area=area" };
 static char *T_busyCursor[] =
         { "cursor=[cursor]*", "block_input=[bool]" };
 static char *T_postscript[] =
@@ -791,9 +791,9 @@ static char *T_win_directory[] =
 /* Instance Variables */
 
 static vardecl var_display[] =
-{ IV(NAME_name, "name*", IV_GET,
+{ IV(NAME_name, "name", IV_GET,
      NAME_name, "Human name of the display"),
-  IV(NAME_primary, "bool", IV_GET,
+  IV(NAME_primary, "bool", IV_BOTH,
      NAME_organisation, "@on if this is the primary display"),
   IV(NAME_area, "area*", IV_NONE,
      NAME_dimension, "Area occupied by this display"),
@@ -822,8 +822,8 @@ static vardecl var_display[] =
 /* Send Methods */
 
 static senddecl send_display[] =
-{ SM(NAME_initialise, 3, T_initialise, initialiseDisplay,
-     DEFAULT, "Create at given address (<host>:<screen>)"),
+{ SM(NAME_initialise, 2, T_initialise, initialiseDisplay,
+     DEFAULT, "Create from name and area"),
   SM(NAME_busyCursor, 2, T_busyCursor, busyCursorDisplay,
      NAME_event, "Define (temporary) cursor for all frames on the display"),
   SM(NAME_dispatch, 0, NULL, dispatchDisplay,
