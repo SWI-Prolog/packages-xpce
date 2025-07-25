@@ -1,7 +1,7 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
     Copyright (c)  1985-2025, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
@@ -56,7 +56,6 @@ initialiseDisplay(DisplayObj d, Name address)
   assign(d, font_table,		newObject(ClassHashTable, EAV));
   assign(d, frames,		newObject(ClassChain, EAV));
   assign(d, inspect_handlers,	newObject(ClassChain, EAV));
-  assign(d, cache,		NIL);
   assign(d, display_manager,	dm);
   assign(d, busy_locks,		ZERO);
 
@@ -928,14 +927,6 @@ static vardecl var_display[] =
      NAME_appearance, "Windows default foreground colour"),
   SV(NAME_background, "colour", IV_GET|IV_STORE, backgroundDisplay,
      NAME_appearance, "Windows default background colour"),
-  IV(NAME_wmClass, "[name]", IV_BOTH,
-     NAME_appearance, "Override WM_CLASS for all X11 frames"),
-  IV(NAME_quickAndDirty, "bool", IV_BOTH,
-     NAME_cache, "Painting quick or correct?"),
-  IV(NAME_cache, "image*", IV_BOTH,
-     NAME_cache, "Scratch image to avoid flickering"),
-  IV(NAME_windowManager, "[{twm,olwm,mwm}|name]", IV_SEND,
-     NAME_windowManager, "Window manager running on this display"),
   IV(NAME_displayManager, "display_manager", IV_GET,
      NAME_organisation, "The global display manager (@display_manager)"),
   IV(NAME_busyLocks, "0..", IV_NONE,
@@ -1058,8 +1049,6 @@ static classvardecl rc_display[] =
      "Default background for windows"),
   RC(NAME_foreground, "colour", "black",
      "Default foreground for windows"),
-  RC(NAME_graphicsCache, "[size]", "@default",
-     "Size of cache image to avoid flickering"),
   RC(NAME_labelFont, "font", "bold",
      "Label font for confirm/inform"),
   RC(NAME_systemFonts, "chain",
@@ -1078,10 +1067,6 @@ static classvardecl rc_display[] =
      "Predefined font-aliases"),
   RC(NAME_noFont, "font", "normal",
      "Replacement for undefined fonts"),
-  RC(NAME_wmClass, "[name]", "'SWI-Prolog'",
-     "WM_CLASS to use for all X11 frames"),
-  RC(NAME_quickAndDirty, "bool", "@on",
-     "Draw quick or correct"),
   RC(NAME_valueFont, "font", "normal",
      "Text font for confirm/inform"),
   RC(NAME_volume, "int", "0",

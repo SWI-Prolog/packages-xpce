@@ -793,10 +793,6 @@ NewClass(displayobj)
   Chain		inspect_handlers;	/* Event-handlers for inspector */
   Colour	foreground;		/* Window default foreground */
   Colour	background;		/* Window default background */
-  Name		wm_class;		/* WM_CLASS hint */
-  BoolObj	quick_and_dirty;	/* Use quick_and_dirty drawing */
-  Image		cache;			/* Graphics cache */
-  Name		window_manager;		/* name of the window manager */
   DisplayManager display_manager;	/* Global display manager */
   Int		busy_locks;		/* Lock count of ->busy_cursor */
   WsRef		ws_ref;			/* Window System Reference */
