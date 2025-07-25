@@ -333,27 +333,6 @@ ws_selection_display(DisplayObj d, Name which, StringObj data)
 }
 
 /**
- * Get the current selection timeout value.
- *
- * @return Unsigned long representing the selection timeout in milliseconds.
- */
-unsigned long
-ws_get_selection_timeout(void)
-{
-    return 0;
-}
-
-/**
- * Set the selection timeout value.
- *
- * @param time Unsigned long representing the new selection timeout in milliseconds.
- */
-void
-ws_set_selection_timeout(unsigned long time)
-{
-}
-
-/**
  * Retrieve the current selection for the specified type and target.
  *
  * @param d Pointer to the DisplayObj representing the display context.

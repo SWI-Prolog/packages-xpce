@@ -421,22 +421,6 @@ getMonitorDisplay(DisplayObj d, Any obj)
 		 *	SELECTION INTERFACE	*
 		 *******************************/
 
-static Real
-getSelectionTimeoutDisplay(DisplayObj d)
-{ unsigned long time = ws_get_selection_timeout();
-
-  answer(CtoReal((float)time/1000.0));
-}
-
-
-static status
-selectionTimeoutDisplay(DisplayObj d, Real time)
-{ ws_set_selection_timeout((unsigned long)(valReal(time) * 1000.0));
-
-  succeed;
-}
-
-
 static Any
 getSelectionDisplay(DisplayObj d, Name which, Name target, Type type)
 { Any sel;
@@ -451,94 +435,6 @@ getSelectionDisplay(DisplayObj d, Name which, Name target, Type type)
     answer(checkType(sel, type, NIL));
 
   fail;
-}
-
-
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-The owner of a selection is related using a hyper-object to the display.
-This will inform the display if the selection onwner is deleted.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-static Any
-getSelectionOwnerDisplay(DisplayObj d, Name which)
-{ if ( isDefault(which) )
-    which = NAME_primary;
-
-  answer(getHyperedObject(d,
-			  getAppendName(which, NAME_selectionOwner),
-			  DEFAULT));
-}
-
-
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-TBD: * multiple hypers for the various selection-types.
-     * proper call-back if the owner is unlinked.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-
-status
-looseSelectionDisplay(DisplayObj d, Name which)
-{ Hyper h;
-  Code msg;
-  Name hypername = getAppendName(which, NAME_selectionOwner);
-
-  if ( (h = getFindHyperObject(d, hypername, DEFAULT)) &&
-       (msg = getAttributeObject(h, NAME_looseMessage)) &&
-       (msg = checkType(msg, TypeCode, NIL)) )
-    forwardReceiverCode(msg, h->to, which, EAV);
-
-  freeHypersObject(d, hypername, DEFAULT);
-
-  succeed;
-}
-
-
-static status
-selectionOwnerDisplay(DisplayObj d, Any owner, Name selection,
-		      Function convert, Code loose, Name type)
-{ TRY(openDisplay(d));
-
-  if ( isDefault(selection) )
-    selection = NAME_primary;
-  if ( isDefault(type) )
-    type = NAME_text;
-
-  if ( isNil(owner) )
-  { Any old = getSelectionOwnerDisplay(d, selection);
-
-    if ( old )
-    { looseSelectionDisplay(d, selection);
-      ws_disown_selection(d, selection);
-    }
-  } else
-  { Any old = getSelectionOwnerDisplay(d, selection);
-    Hyper h = NIL;
-    Name hypername = getAppendName(selection, NAME_selectionOwner);
-
-    if ( old && old != owner )
-      looseSelectionDisplay(d, selection);
-
-    if ( old != owner )
-      h = newObject(ClassHyper, d, owner, hypername, EAV);
-    else
-      h = getFindHyperObject(d, hypername, DEFAULT);
-
-    attributeObject(h, NAME_convertFunction,
-		     newObject(ClassQuoteFunction, convert, EAV));
-    attributeObject(h, NAME_looseMessage, loose);
-    attributeObject(h, NAME_type, type);
-
-#ifndef WIN32_GRAPHICS
-    if ( !old )
-#endif
-    { if ( !ws_own_selection(d, selection, type) )
-      { freeHypersObject(d, hypername, DEFAULT);
-	return errorPce(owner, NAME_cannotBecomeSelectionOwner, selection);
-      }
-    }
-  }
-
-  succeed;
 }
 
 		 /*******************************
@@ -567,30 +463,6 @@ getPasteDisplay(DisplayObj d, Name which)
     which = NAME_clipboard;
 
   return getSelectionDisplay(d, which, DEFAULT, DEFAULT);
-}
-
-
-		/********************************
-		*  WINDOW_MANAGER/LOOK-AND-FEEL	*
-		********************************/
-
-static Name
-getWindowManagerDisplay(DisplayObj d)
-{ Name wm;
-
-  if ( notDefault(d->window_manager) )
-    answer(d->window_manager);
-
-  if ( (wm = getClassVariableValueObject(d, NAME_windowManager)) &&
-       notDefault(wm) )
-  { assign(d, window_manager, wm);
-    answer(d->window_manager);
-  }
-
-  if ( (wm = ws_window_manager(d)) )
-    assign(d, window_manager, wm);
-
-  answer(d->window_manager);
 }
 
 
@@ -1002,15 +874,6 @@ static char *T_fontAlias[] =
         { "name=name", "font=font", "force=[bool]" };
 static char *T_inform[] =
         { "for=[visual]", "title=[char_array]", "message=char_array", "any ..." };
-static char *T_selectionOwner[] =
-        { "owner=object*", "which=[name]", "convert=[function]",
-	  "loose=[code]",
-#ifdef WIN32_GRAPHICS
-	  "type=[{text,emf,wmf}]"	/* metafile types */
-#else
-	  "type=[{text}]"
-#endif
-	};
 static char *T_getSelection[] =
         { "which=[name]", "target=[name]", "type=[type]" };
 static char *T_selection[] =
@@ -1120,10 +983,6 @@ static senddecl send_display[] =
      NAME_report, "Inform the user of something"),
   SM(NAME_report, 3, T_report, reportDisplay,
      NAME_report, "Report message using ->inform"),
-  SM(NAME_selectionOwner, 5, T_selectionOwner, selectionOwnerDisplay,
-     NAME_selection, "Define the owner of the X11 selection"),
-  SM(NAME_selectionTimeout, 1, "real", selectionTimeoutDisplay,
-     NAME_selection, "Set the timeout-time for getting the selection value"),
   SM(NAME_selection, 2, T_selection, selectionDisplay,
      NAME_selection, "Set the (textual) selection"),
   SM(NAME_copy, 1, "char_array", copyDisplay,
@@ -1178,10 +1037,6 @@ static getdecl get_display[] =
      NAME_postscript, "Get PostScript or (area of) display"),
   GM(NAME_selection, 3, "any", T_getSelection, getSelectionDisplay,
      NAME_selection, "Query value of the X-window selection"),
-  GM(NAME_selectionOwner, 1, "object", "which=[name]", getSelectionOwnerDisplay,
-     NAME_selection, "Current object owning the X11 selection"),
-  GM(NAME_selectionTimeout, 0, "real", NULL, getSelectionTimeoutDisplay,
-     NAME_selection, "Get the current selection timeout time (seconds)"),
   GM(NAME_paste, 1, "string", "which=[{primary,clipboard}]", getPasteDisplay,
      NAME_selection, "Simple interface to get clipboard value"),
 #ifdef WIN32_GRAPHICS
@@ -1190,9 +1045,6 @@ static getdecl get_display[] =
   GM(NAME_winDirectory, 3, "name", T_win_directory, getWinDirectoryDisplay,
      NAME_prompt, "Ask for a directory (folder) using Windows standard dialog"),
 #endif
-  GM(NAME_windowManager, 0, "[{twm,olwm,mwm,fvwm}|name]", NULL,
-     getWindowManagerDisplay,
-     NAME_windowManager, "Window manager running on this display")
 };
 
 /* Resources */
