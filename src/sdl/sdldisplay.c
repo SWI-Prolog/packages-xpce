@@ -147,18 +147,6 @@ ws_init_display(DisplayObj d)
 }
 
 /**
- * Check if the provided display name is legal and can be used.
- *
- * @param s Pointer to a string representing the display name.
- * @return SUCCEED if the name is legal; otherwise, FAIL.
- */
-status
-ws_legal_display_name(const char *s)
-{
-    return SUCCEED;
-}
-
-/**
  * Check if the display has been successfully opened.
  *
  * @param d Pointer to the DisplayObj representing the display context.

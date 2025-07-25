@@ -69,8 +69,7 @@ initialiseDisplay(DisplayObj d, Name name)
 
 static DisplayObj
 getConvertDisplay(Class class, Any obj)
-{ Name address;
-  DisplayObj d;
+{ DisplayObj d;
 
   if ( (d = getMemberDisplayManager(TheDisplayManager(), obj)) )
     answer(d);
@@ -80,10 +79,6 @@ getConvertDisplay(Class class, Any obj)
 
   if ( instanceOfObject(obj, ClassVisual) )
     answer(get(obj, NAME_display, EAV));
-
-  if ( (address = checkType(obj, TypeName, class)) &&
-       ws_legal_display_name(strName(address)) )
-    answer(answerObject(ClassDisplay, address, EAV));
 
   fail;
 }

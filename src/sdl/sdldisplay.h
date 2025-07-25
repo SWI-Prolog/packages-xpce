@@ -54,7 +54,6 @@ bool ws_resolution_display(DisplayObj d, int *rx, int *ry);
 void ws_activate_screen_saver(DisplayObj d);
 void ws_deactivate_screen_saver(DisplayObj d);
 void ws_init_display(DisplayObj d);
-status ws_legal_display_name(const char *s);
 status ws_opened_display(DisplayObj d);
 void ws_open_display(DisplayObj d);
 void ws_quit_display(DisplayObj d);
