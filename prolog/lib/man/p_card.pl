@@ -342,7 +342,8 @@ inherited_fetch(C, Slot:name, Tuple:tuple) :<-
         get(Chain, find, ?(@arg1, fetch, Slot), From),
         get(From, fetch, Slot, Value),
         Value \== @nil,
-        new(Tuple, tuple(From?object, Value))
+        get(From, object, Object),
+        new(Tuple, tuple(Object, Value))
     ).
 
 
