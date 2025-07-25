@@ -88,11 +88,6 @@ pce_image_directory(Dir) :-
                              access(read)
                            ])
     ),
-    (   compiling,
-        get(@display, open, @off)   % don't force the display
-                                    % when compiling
-    ->  true
-    ;   get(class(image), class_variable, path, PathVar),
-        get(PathVar, value, Path),
-        send(PathVar, value, string('%s:%s', DirPath, Path))
-    ).
+    get(class(image), class_variable, path, PathVar),
+    get(PathVar, value, Path),
+    send(PathVar, value, string('%s:%s', DirPath, Path)).
