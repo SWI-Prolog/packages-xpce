@@ -698,7 +698,6 @@ prepare_action(Frame) :->
     send(Frame, open),              % make sure
     get(Frame, display, Display),
     send(Display, busy_cursor, @nil),
-    send(Display, synchronise),
     send(Frame, mode, wait_user).
 
 action(Frame, Action:name) :<-
@@ -881,7 +880,6 @@ query(F) :->
     send(F, check_console),
     send(F, report, status,
          'Started toplevel in console.  Type Control-D to resume debugging'),
-    send(F, synchronise),
     in_debug_thread(F, prolog),
     send(F, report, status,
          'Toplevel has terminated; resuming debugger').

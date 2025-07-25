@@ -563,7 +563,6 @@ step(G) :->
 
 prompt_step(G, Reply:{forward,fast_forward,abort}) :<-
     "Prompt for single step operation"::
-    send(@display, synchronise),
     new(D, dialog('Step grapher')),
     send(D, gap, size(0,0)),
     send(D, border, size(3,3)),

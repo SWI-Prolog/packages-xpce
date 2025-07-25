@@ -792,7 +792,6 @@ update(FL) :->
     send(FL, report, progress, 'Building source tree ...'),
     send(FL, append_all_sourcefiles),
     send(FL, expand_ids, Chain),
-    send(@display, synchronise),
     send(FL, report, progress, 'Flagging files ...'),
     send(FL, set_flags),
     send(FL, report, done).
@@ -952,8 +951,7 @@ set_flags(DN) :->
     ;   send(DN, collapsed_image, @xref_ok_closedir),
         send(DN, expanded_image, @xref_ok_opendir),
         send(DN, slot, flags, ok)
-    ),
-    send(@display, synchronise).
+    ).
 
 %!  tag_alias(+Dir, +Alias, -Label)
 %
@@ -1041,8 +1039,7 @@ set_flags(FN) :->
         send(FN, slot, flags, alert)
     ;   send(FN, image, @xref_ok_file),
         send(FN, slot, flags, ok)
-    ),
-    send(@display, synchronise).
+    ).
 
 :- pce_global(@xref_ok_file,
               make_xref_image([ image('16x16/doc.png'),

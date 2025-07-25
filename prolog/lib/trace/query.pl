@@ -85,8 +85,7 @@ qstatus(PQ, Status:{fill,ready,run,alt}) :->
     send(PQ, slot, qstatus, Status),
     active(Status, Buttons, Default),
     set_active(Buttons, PQ),
-    send(PQ, default_button, Default),
-    send(PQ, synchronise).
+    send(PQ, default_button, Default).
 
 active(fill,  [run(@off), next(@off), done(@off)], @nil).
 active(ready, [run(@on),  next(@off), done(@off)], run).
