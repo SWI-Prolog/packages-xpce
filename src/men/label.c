@@ -127,12 +127,9 @@ static status
 executeLabel(Label lb)
 { if ( notNil(lb->message) && notDefault(lb->message) )
   { statusLabel(lb, NAME_execute);
-    flushGraphical(lb);
     forwardReceiverCode(lb->message, lb, EAV);
     if ( !isFreedObj(lb) )
-    { statusLabel(lb, NAME_inactive);
-      flushGraphical(lb);
-    }
+      statusLabel(lb, NAME_inactive);
   }
 
   succeed;
@@ -360,15 +357,11 @@ reportLabel(Label lb, Name kind, CharArray fmt, int argc, Any *argv)
       doneObject(t1);
     } else
       TRY(formatLabel(lb, fmt, argc, argv));
-
-    flushGraphical(lb);
   } else
   { TRY(formatLabel(lb, fmt, argc, argv));
 
     if ( kind == NAME_error || kind == NAME_warning )
       alertReporteeVisual((VisualObj) lb);
-    else if ( kind == NAME_progress )
-      flushGraphical(lb);
   }
 
   succeed;
@@ -469,4 +462,3 @@ makeClassLabel(Class class)
 
   succeed;
 }
-

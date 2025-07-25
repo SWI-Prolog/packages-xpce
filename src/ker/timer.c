@@ -100,7 +100,6 @@ delayTimer(Timer tm)
 { DisplayObj d = CurrentDisplay(NIL);
 
   statusTimer(tm, NAME_once);
-  synchroniseDisplay(d);
   while( tm->status == NAME_once )
   { if ( dispatchDisplay(d) )
       ws_discard_input("Timer running");
@@ -204,4 +203,3 @@ status
 makeClassTimer(Class class)
 { return declareClass(class, &timer_decls);
 }
-

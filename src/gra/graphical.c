@@ -904,38 +904,6 @@ RedrawAreaGraphical(Any obj, Area area)
   succeed;
 }
 
-
-status
-flushGraphical(Any gr)
-{ PceWindow sw;
-
-  if ( (sw = getWindowGraphical(gr)) )
-    flushWindow(sw);
-
-  succeed;
-}
-
-
-status
-synchroniseGraphical(Graphical gr, BoolObj always)
-{ DisplayObj d;
-  static long last;
-
-  if ( always != ON )
-  { long now = mclock();
-
-    if ( now - last < 50 )
-      succeed;
-
-    last = now;
-  }
-
-  if ( (d = getDisplayGraphical(gr)) )
-    synchroniseDisplay(d);
-
-  succeed;
-}
-
 	      /********************************
 	      *          HIDE/EXPOSE	      *
 	      ********************************/
@@ -2090,8 +2058,6 @@ cursorGraphical(Graphical gr, CursorObj cursor)
 
   if ( w )
     updateCursorWindow(w);
-
-  flushGraphical(gr);
 
   succeed;
 }
@@ -3382,10 +3348,6 @@ static senddecl send_graphical[] =
      DEFAULT, "Erase from device"),
   SM(NAME_key, 1, "name", keyGraphical,
      NAME_accelerator, "Accelerator-key pressed (fail)"),
-  SM(NAME_flush, 0, NULL, flushGraphical,
-     NAME_animate, "Flush changes to the display"),
-  SM(NAME_synchronise, 1, "[always=bool]", synchroniseGraphical,
-     NAME_animate, "->flush and process all events"),
   SM(NAME_apply, 1, "[bool]", virtualObject,
      NAME_apply, "Virtual method"),
   SM(NAME_restore, 0, NULL, virtualObject,

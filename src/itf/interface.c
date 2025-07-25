@@ -673,22 +673,13 @@ pceDispatch(IOSTREAM *input, int time)
 
 
 void
-pceRedraw(int sync)
-{ if ( sync )
-  { static DisplayObj d = NULL;
+pceRedraw(void)
+{ static DisplayManager dm = NULL;
 
-    if ( !d && !(d = CurrentDisplay(NIL)) )
-      return;
+  if ( !dm && !(dm = getObjectAssoc(NAME_displayManager)) )
+    return;
 
-    synchroniseDisplay(d);
-  } else
-  { static DisplayManager dm = NULL;
-
-    if ( !dm && !(dm = getObjectAssoc(NAME_displayManager)) )
-      return;
-
-    RedrawDisplayManager(dm);
-  }
+  RedrawDisplayManager(dm);
 }
 
 		/********************************

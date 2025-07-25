@@ -310,38 +310,6 @@ ws_background_display(DisplayObj d, Colour c)
 }
 
 /**
- * Grab the server, preventing other clients from accessing it.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- */
-void
-ws_grab_server(DisplayObj d)
-{
-}
-
-/**
- * Release the server, allowing other clients to access it.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- */
-void
-ws_ungrab_server(DisplayObj d)
-{
-}
-
-/**
- * Retrieve the connection number for the display.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @return Int representing the connection number.
- */
-Int
-ws_display_connection_number(DisplayObj d)
-{
-    return (Int)0;
-}
-
-/**
  * Check if there are events queued on the display.
  *
  * @param d Pointer to the DisplayObj representing the display context.

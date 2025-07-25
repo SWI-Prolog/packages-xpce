@@ -43,7 +43,6 @@ static status	openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
 static status	doneMessageFrame(FrameObj fr, Code msg);
 static status	geometryFrame(FrameObj fr, Name spec, Monitor mon);
 static status	setFrame(FrameObj fr, Int x, Int y, Int w, Int h, Monitor mon);
-static status	flushFrame(FrameObj fr);
 static status	kindFrame(FrameObj fr, Name kind);
 static status	informTransientsFramev(FrameObj fr, Name selector,
 				       int argc, Any *argv);
@@ -193,7 +192,6 @@ getConfirmFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
   busyCursorDisplay(fr->display, NIL, DEFAULT);
 
   assign(fr, return_value, ConstantNotReturned);
-  synchroniseDisplay(fr->display);
   while( offFlag(fr, F_FREED|F_FREEING) &&
 	 fr->return_value == ConstantNotReturned )
   { dispatchDisplay(fr->display);
@@ -526,9 +524,7 @@ statusFrame(FrameObj fr, Name stat)
     assign(fr, status, stat);
 
     if ( opened )
-    { resizeFrame(fr);
-      flushFrame(fr);
-    }
+      resizeFrame(fr);
   }
 
   succeed;
@@ -1050,18 +1046,6 @@ getClosedFrame(FrameObj fr)
 		/********************************
 		*          MISCELENEOUS		*
 		********************************/
-
-static status
-flushFrame(FrameObj fr)
-{ return flushDisplay(fr->display);
-}
-
-
-static status
-synchroniseFrame(FrameObj fr)
-{ return synchroniseDisplay(fr->display);
-}
-
 
 static status
 bellFrame(FrameObj fr, Int volume)
@@ -1845,10 +1829,6 @@ static senddecl send_frame[] =
      statusFrame, DEFAULT, "Current visibility of the frame"),
   SM(NAME_typed, 1, "event|event_id", typedFrame,
      NAME_accelerator, "Dispatch over available windows"),
-  SM(NAME_flush, 0, NULL, flushFrame,
-     NAME_animate, "Flush X-server"),
-  SM(NAME_synchronise, 0, NULL, synchroniseFrame,
-     NAME_animate, "->flush and process pending events"),
   SM(NAME_border, 1, "thickness=int", borderFrame,
      NAME_appearance, "X-border width"),
   SM(NAME_showLabel, 1, "show=bool", showLabelFrame,

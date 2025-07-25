@@ -545,7 +545,6 @@ repeatScrollBar(ScrollBar s)
       }
     }
     forwardScrollBar(s);
-    synchroniseGraphical((Graphical) s, ON);
     if ( Repeating(s) )		/* synchroniseGraphical() can handle up */
     { Real t = getClassVariableValueObject(s, NAME_repeatInterval);
       int ct = (int)(valReal(t) * 1000.0) - (float)(mclock() - clk);

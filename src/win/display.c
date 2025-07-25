@@ -144,50 +144,6 @@ backgroundDisplay(DisplayObj d, Colour c)
 }
 
 
-static Image
-getImageDisplay(DisplayObj d, Area a)
-{ int x, y, w, h;
-
-  openDisplay(d);
-  if ( isDefault(a) )
-  { Size sz = getSizeDisplay(d);
-
-    x = y = 0;
-    w = valInt(sz->w);
-    h = valInt(sz->h);
-  } else
-  { x = valInt(a->x);
-    y = valInt(a->y);
-    w = valInt(a->w);
-    h = valInt(a->h);
-  }
-
-  return ws_grab_image_display(d, x, y, w, h);
-}
-
-
-status
-grabServerDisplay(DisplayObj d, BoolObj val)
-{ if ( ws_opened_display(d) )
-  { if ( val == ON )
-      ws_grab_server(d);
-    else
-      ws_ungrab_server(d);
-  }
-
-  succeed;
-}
-
-
-static Int
-getConnectionFdDisplay(DisplayObj d)
-{ if ( ws_opened_display(d) )
-    answer(ws_display_connection_number(d));
-
-  fail;
-}
-
-
 static status
 eventQueuedDisplay(DisplayObj d)
 { if ( ws_opened_display(d) )
@@ -203,29 +159,6 @@ eventQueuedDisplay(DisplayObj d)
 status
 dispatchDisplay(DisplayObj d)
 { answer(dispatchDisplayManager(d->display_manager, DEFAULT, DEFAULT));
-}
-
-
-status
-flushDisplay(DisplayObj d)
-{ if ( ws_opened_display(d) )
-  { RedrawDisplayManager(d->display_manager);
-    ws_flush_display(d);
-  }
-
-  succeed;
-}
-
-
-status
-synchroniseDisplay(DisplayObj d)
-{ if ( ws_opened_display(d) )
-  { RedrawDisplayManager(d->display_manager);
-
-    ws_synchronise_display(d);
-  }
-
-  succeed;
 }
 
 
@@ -919,7 +852,6 @@ busyCursorDisplay(DisplayObj d, CursorObj c, BoolObj block_events)
 
       for_cell(cell, d->frames)
 	busyCursorFrame(cell->value, c, block_events);
-      flushDisplay(d);
     }
   } else
   { assign(d, busy_locks, sub(d->busy_locks, ONE));
@@ -964,38 +896,6 @@ inspectDisplay(DisplayObj d, Graphical gr, EventObj ev)
 
   fail;
 }
-
-
-static status
-synchronousDisplay(DisplayObj d, BoolObj val)
-{ TRY(openDisplay(d));
-
-  if ( val == OFF )
-    ws_asynchronous(d);
-  else
-    ws_synchronous(d);
-
-  succeed;
-}
-
-
-static status
-resetDisplay(DisplayObj d)
-{ PceWindow sw;
-
-  grabServerDisplay(d, OFF);
-
-  if ( (sw = getAttributeObject(d, NAME_confirmer)) )
-    send(sw, NAME_show, OFF, EAV);
-
-  if ( d->busy_locks != ZERO )
-  { assign(d, busy_locks, ONE);
-    busyCursorDisplay(d, NIL, DEFAULT);
-  }
-
-  return resetVisual((VisualObj) d);
-}
-
 
 static status
 quitDisplay(DisplayObj d)
@@ -1230,16 +1130,6 @@ static vardecl var_display[] =
 static senddecl send_display[] =
 { SM(NAME_initialise, 1, "address=[name]", initialiseDisplay,
      DEFAULT, "Create at given address (<host>:<screen>)"),
-  SM(NAME_reset, 0, NULL, resetDisplay,
-     NAME_abort, "Closedown informer/confirmer"),
-  SM(NAME_flush, 0, NULL, flushDisplay,
-     NAME_animate, "Flush pending commands to X-server"),
-  SM(NAME_grabServer, 1, "grab=bool", grabServerDisplay,
-     NAME_animate, "Freeze all other applications"),
-  SM(NAME_synchronise, 0, NULL, synchroniseDisplay,
-     NAME_animate, "->flush and process pending events"),
-  SM(NAME_synchronous, 1, "[bool]", synchronousDisplay,
-     NAME_debugging, "Make communication to X-server synchronous"),
   SM(NAME_busyCursor, 2, T_busyCursor, busyCursorDisplay,
      NAME_event, "Define (temporary) cursor for all frames on the display"),
   SM(NAME_dispatch, 0, NULL, dispatchDisplay,
@@ -1284,12 +1174,6 @@ static senddecl send_display[] =
      NAME_selection, "Set the (textual) selection"),
   SM(NAME_copy, 1, "char_array", copyDisplay,
      NAME_selection, "Copy to selection and cut_buffer"),
-#if X11_GRAPHICS
-  SM(NAME_metaModifier, 1, "name", metaModifierDisplay,
-     NAME_x, "Set the X modifier that is associated with META-"),
-  SM(NAME_x11Threads, 1, "bool", X11ThreadsDisplay,
-     NAME_x, "Setup X11 of multi-threading?"),
-#endif
   SM(NAME_screenSaver, 1, "bool", screenSaverDisplay,
      NAME_x, "Activate (@on) or deactivate (@off) screensaver"),
   SM(NAME_dpi, 1, "size|int", DPIDisplay,
@@ -1336,14 +1220,10 @@ static getdecl get_display[] =
      NAME_monitor, "Find monitor at position"),
   GM(NAME_fontAlias, 1, "font", "name=name", getFontAliasDisplay,
      NAME_font, "Lookup logical name"),
-  GM(NAME_connectionFd, 0, "int", NULL, getConnectionFdDisplay,
-     NAME_host, "Unix file descriptor for X-display connection"),
   GM(NAME_boundingBox, 0, "area", NULL, getBoundingBoxDisplay,
      NAME_postscript, "PostScript bounding box for the display"),
   GM(NAME_postscript, 2, "string", T_postscript, getPostscriptObject,
      NAME_postscript, "Get PostScript or (area of) display"),
-  GM(NAME_image, 1, "image", "[area]", getImageDisplay,
-     NAME_conversion, "Image with the pixels of a region from the display"),
   GM(NAME_cutBuffer, 1, "string", "buffer=[0..7]", getCutBufferDisplay,
      NAME_selection, "New string with value of cut-buffer"),
   GM(NAME_selection, 3, "any", T_getSelection, getSelectionDisplay,

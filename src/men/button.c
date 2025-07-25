@@ -488,7 +488,6 @@ executeButton(Button b)
     if ( d )
       busyCursorDisplay(d, DEFAULT, DEFAULT);
     statusButton(b, NAME_execute);
-    flushGraphical(b);
     send(b, NAME_forward, EAV);
     if ( d )
       busyCursorDisplay(d, NIL, DEFAULT);

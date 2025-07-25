@@ -1054,7 +1054,6 @@ static status
 selectedCompletionMenu(Menu m, DictItem di)
 { selectionMenu(m, di->key);
   quitCompleterDialogItem(m);
-  flushGraphical(m);
   if ( !send(m->device, NAME_modifiedItem, m, ON, EAV) )
     forwardMenu(m, m->message, EVENT->value);
 
@@ -1105,7 +1104,6 @@ static status
 executeMenuItem(Menu m, MenuItem mi, EventObj ev)
 { if ( m->multiple_selection == ON )
   { toggleMenu(m, mi);
-    flushGraphical(m);
     send(m->device, NAME_modifiedItem, m, ON, EAV);
 
     if ( notDefault(mi->message) )
@@ -1120,7 +1118,6 @@ executeMenuItem(Menu m, MenuItem mi, EventObj ev)
     }
   } else
   { selectionMenu(m, mi);
-    flushGraphical(m);
     send(m->device, NAME_modifiedItem, m, ON, EAV);
 
     if ( notDefault(mi->message) )
@@ -1146,7 +1143,6 @@ executeMenu(Menu m, EventObj ev)
       return openComboBoxMenu(m);
     else
     { nextMenu(m);
-      flushGraphical(m);
       if ( !send(m->device, NAME_modifiedItem, m, ON, EAV) )
 	forwardMenu(m, m->message, ev);
       succeed;

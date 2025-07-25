@@ -318,7 +318,6 @@ scrollGesture(Gesture g)
     ComputeGraphical(gr);
     restrictAreaEvent(ev, gr);		/* Normalise to area of rec */
     send(g, NAME_drag, ev, EAV);
-    synchroniseGraphical(gr, ON);
     doneObject(ev);
   }
 

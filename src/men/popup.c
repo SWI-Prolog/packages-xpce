@@ -351,7 +351,6 @@ executePopup(PopupObj p, Any context)
     if ( instanceOfObject(m, ClassMenu) )
     { if ( notNil(p->selected_item) )
       { selectionMenu(m, p->selected_item);
-	flushGraphical(m);
 	BUSY(forwardMenu(m, m->message, EVENT->value));
       }
     } else
