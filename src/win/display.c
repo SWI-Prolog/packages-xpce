@@ -144,41 +144,6 @@ backgroundDisplay(DisplayObj d, Colour c)
 }
 
 
-status
-drawInDisplay(DisplayObj d, Graphical gr, Point pos, BoolObj invert, BoolObj subtoo)
-{ Int oldx, oldy;
-  Device dev;
-
-  if ( isDefault(invert) )
-    invert = OFF;
-  if ( isDefault(subtoo) )
-    subtoo = OFF;
-
-  if ( notDefault(pos) )
-  { oldx = gr->area->x;
-    oldy = gr->area->y;
-    dev = gr->device;
-    gr->device = NIL;
-    setGraphical(gr, pos->x, pos->y, DEFAULT, DEFAULT);
-  } else
-  { oldx = oldy = (Int) DEFAULT;
-    dev = NIL;				/* keep compiler happy */
-  }
-
-  ComputeGraphical(gr);
-  openDisplay(d);
-
-  ws_draw_in_display(d, gr, invert, subtoo);
-
-  if ( notDefault(oldx) )
-  { setGraphical(gr, oldx, oldy, DEFAULT, DEFAULT);
-    gr->device = dev;
-  }
-
-  succeed;
-}
-
-
 static Image
 getImageDisplay(DisplayObj d, Area a)
 { int x, y, w, h;
@@ -1175,8 +1140,6 @@ static char *T_cutBuffer[] =
         { "buffer=[0..7]", "value=string" };
 static char *T_busyCursor[] =
         { "cursor=[cursor]*", "block_input=[bool]" };
-static char *T_drawIn[] =
-        { "graphical", "at=[point]", "invert=[bool]", "subwindow=[bool]" };
 static char *T_postscript[] =
         { "landscape=[bool]", "max_area=[area]" };
 static char *T_fontAlias[] =
@@ -1311,8 +1274,6 @@ static senddecl send_display[] =
      NAME_report, "Inform the user of something"),
   SM(NAME_report, 3, T_report, reportDisplay,
      NAME_report, "Report message using ->inform"),
-  SM(NAME_drawIn, 4, T_drawIn, drawInDisplay,
-     NAME_root, "Draw graphical in root window"),
   SM(NAME_cutBuffer, 2, T_cutBuffer, cutBufferDisplay,
      NAME_selection, "Set value of numbered X-cut buffer"),
   SM(NAME_selectionOwner, 5, T_selectionOwner, selectionOwnerDisplay,

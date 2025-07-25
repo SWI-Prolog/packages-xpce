@@ -310,19 +310,6 @@ ws_background_display(DisplayObj d, Colour c)
 }
 
 /**
- * Draw a graphical object on the display.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @param gr Pointer to the Graphical object to be drawn.
- * @param invert BoolObj indicating whether to invert the drawing.
- * @param subtoo BoolObj indicating whether to include subcomponents.
- */
-void
-ws_draw_in_display(DisplayObj d, Graphical gr, BoolObj invert, BoolObj subtoo)
-{
-}
-
-/**
  * Grab the server, preventing other clients from accessing it.
  *
  * @param d Pointer to the DisplayObj representing the display context.
