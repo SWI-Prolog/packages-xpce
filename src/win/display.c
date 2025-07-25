@@ -48,11 +48,11 @@ Create a display.  The display is not yet opened.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static status
-initialiseDisplay(DisplayObj d, Name address)
+initialiseDisplay(DisplayObj d, Name name)
 { DisplayManager dm = TheDisplayManager();
 
+  assign(d, name,		name);
   assign(d, size,		NIL);
-  assign(d, address,		address);
   assign(d, font_table,		newObject(ClassHashTable, EAV));
   assign(d, frames,		newObject(ClassChain, EAV));
   assign(d, inspect_handlers,	newObject(ClassChain, EAV));
@@ -902,12 +902,12 @@ static char *T_win_directory[] =
 /* Instance Variables */
 
 static vardecl var_display[] =
-{ IV(NAME_size, "size*", IV_NONE,
+{ IV(NAME_name, "name*", IV_GET,
+     NAME_name, "Human name of the display"),
+  IV(NAME_size, "size*", IV_NONE,
      NAME_dimension, "Size (width, height) of display"),
   IV(NAME_dpi, "[size|int]", IV_NONE,
      NAME_dimension, "Resolution (dots per inch)"),
-  IV(NAME_address, "[name]", IV_BOTH,
-     NAME_address, "Host/screen on which display resides"),
   IV(NAME_fontTable, "hash_table", IV_BOTH,
      NAME_font, "Mapping for logical font-names to fonts"),
   IV(NAME_frames, "chain", IV_GET,

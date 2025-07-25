@@ -784,9 +784,9 @@ End;
 
 NewClass(displayobj)
   ABSTRACT_VISUAL
+  Name		name;			/* Human name of the display */
   Size		size;			/* size of the display in pixels */
   Size		dpi;			/* Resolution (dots per inch) */
-  Name		address;		/* Display address specification */
   HashTable	font_table;		/* Table holding font-mappings */
   Chain		frames;			/* Created frames on this display */
   Chain		monitors;		/* Physical monitors attached */
