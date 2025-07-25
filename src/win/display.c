@@ -339,18 +339,6 @@ DPIDisplay(DisplayObj d, Any arg)
 }
 
 
-Point
-getPointerLocationDisplay(DisplayObj d)
-{ int x, y;
-
-  TRY(openDisplay(d));
-  if ( ws_pointer_location_display(d, &x, &y) )
-    answer(answerObject(ClassPoint, toInt(x), toInt(y), EAV));
-
-  fail;
-}
-
-
 static status
 hasVisibleFramesDisplay(DisplayObj d)
 { if ( notNil(d->frames) )
@@ -388,9 +376,7 @@ getMonitorDisplay(DisplayObj d, Any obj)
   openDisplay(d);
 
   if ( isDefault(obj) )
-  { if ( !(obj = getPointerLocationDisplay(d)) )
-      fail;
-  }
+    fail;
 
   if ( instanceOfObject(obj, ClassPoint) )
   { Point pt = obj;
@@ -430,33 +416,6 @@ getMonitorDisplay(DisplayObj d, Any obj)
   fail;
 }
 
-
-		/********************************
-		*          CUT BUFFERS		*
-		********************************/
-
-static status
-cutBufferDisplay(DisplayObj d, Int n, CharArray str)
-{ PceString s = &str->data;
-  TRY(openDisplay(d));
-
-  if ( isDefault(n) )
-    n = ZERO;
-
-  return ws_set_cutbuffer(d, valInt(n), s);
-}
-
-
-static StringObj
-getCutBufferDisplay(DisplayObj d, Int n)
-{ TRY(openDisplay(d));
-
-  if ( isDefault(n) )
-    n = ZERO;
-
-  return ws_get_cutbuffer(d, valInt(n));
-
-}
 
 		 /*******************************
 		 *	SELECTION INTERFACE	*
@@ -594,8 +553,7 @@ selectionDisplay(DisplayObj d, Name which, StringObj data)
 
 static status
 copyDisplay(DisplayObj d, StringObj data)
-{ int rval = (send(d, NAME_cutBuffer, ZERO, data, EAV) |
-	      send(d, NAME_selection, NAME_primary, data, EAV) |
+{ int rval = (send(d, NAME_selection, NAME_primary, data, EAV) |
 	      send(d, NAME_selection, NAME_clipboard, data, EAV));
 
 
@@ -1036,8 +994,6 @@ getContainedInDisplay(DisplayObj d)
 
 /* Type declarations */
 
-static char *T_cutBuffer[] =
-        { "buffer=[0..7]", "value=string" };
 static char *T_busyCursor[] =
         { "cursor=[cursor]*", "block_input=[bool]" };
 static char *T_postscript[] =
@@ -1164,8 +1120,6 @@ static senddecl send_display[] =
      NAME_report, "Inform the user of something"),
   SM(NAME_report, 3, T_report, reportDisplay,
      NAME_report, "Report message using ->inform"),
-  SM(NAME_cutBuffer, 2, T_cutBuffer, cutBufferDisplay,
-     NAME_selection, "Set value of numbered X-cut buffer"),
   SM(NAME_selectionOwner, 5, T_selectionOwner, selectionOwnerDisplay,
      NAME_selection, "Define the owner of the X11 selection"),
   SM(NAME_selectionTimeout, 1, "real", selectionTimeoutDisplay,
@@ -1212,8 +1166,6 @@ static getdecl get_display[] =
      NAME_dimension, "Width of the display in pixels"),
   GM(NAME_dpi, 0, "size", NULL, getDPIDisplay,
      NAME_dimension, "Resolution in dots per inch"),
-  GM(NAME_pointerLocation, 0, "point", NULL, getPointerLocationDisplay,
-     NAME_event, "Current location of the pointer"),
   GM(NAME_monitors, 0, "chain*", NULL, getMonitorsDisplay,
      NAME_monitor, "Physical monitors attached"),
   GM(NAME_monitor, 1, "monitor", "[point|area]", getMonitorDisplay,
@@ -1224,8 +1176,6 @@ static getdecl get_display[] =
      NAME_postscript, "PostScript bounding box for the display"),
   GM(NAME_postscript, 2, "string", T_postscript, getPostscriptObject,
      NAME_postscript, "Get PostScript or (area of) display"),
-  GM(NAME_cutBuffer, 1, "string", "buffer=[0..7]", getCutBufferDisplay,
-     NAME_selection, "New string with value of cut-buffer"),
   GM(NAME_selection, 3, "any", T_getSelection, getSelectionDisplay,
      NAME_selection, "Query value of the X-window selection"),
   GM(NAME_selectionOwner, 1, "object", "which=[name]", getSelectionOwnerDisplay,

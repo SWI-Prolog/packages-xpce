@@ -636,13 +636,10 @@ CurrentMonitor(FrameObj fr)
       return mon;
   } else if ( notNil(d) && instanceOfObject(EVENT->value, ClassEvent) )
   { EventObj ev = EVENT->value;
-    Point pt;
+    Point pt = NULL;
 
     if ( notNil(ev->window) && offFlag(ev->window, F_FREEING|F_FREED) )
-    { pt = getPositionEvent(ev, d);
-    } else
-    { pt = getPointerLocationDisplay(d);
-    }
+      pt = getPositionEvent(ev, d);
 
     if ( pt && (mon=getMonitorDisplay(d, pt)) )
       return mon;

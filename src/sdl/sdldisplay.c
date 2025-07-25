@@ -320,20 +320,6 @@ ws_events_queued_display(DisplayObj d)
 { return SDL_HasEvents(0, MY_EVENT_HIGHEST);
 }
 
-/**
- * Get the current pointer (mouse) location on the display.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @param x Pointer to an integer to store the x-coordinate.
- * @param y Pointer to an integer to store the y-coordinate.
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-ws_pointer_location_display(DisplayObj d, int *x, int *y)
-{
-    return SUCCEED;
-}
-
 status
 ws_selection_display(DisplayObj d, Name which, StringObj data)
 { char *u8 = charArrayToUTF8((CharArray)data);
@@ -344,33 +330,6 @@ ws_selection_display(DisplayObj d, Name which, StringObj data)
     return SDL_SetClipboardText(u8);
 
   fail;
-}
-
-/**
- * Set the contents of the specified cut buffer.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @param n The cut buffer number to set.
- * @param s Pointer to the PceString containing the data.
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-ws_set_cutbuffer(DisplayObj d, int n, PceString s)
-{
-    return SUCCEED;
-}
-
-/**
- * Retrieve the contents of the specified cut buffer.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @param n The cut buffer number to retrieve.
- * @return Pointer to the StringObj containing the data; NULL if unavailable.
- */
-StringObj
-ws_get_cutbuffer(DisplayObj d, int n)
-{
-    return NULL;
 }
 
 /**
