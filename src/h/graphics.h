@@ -773,9 +773,9 @@ NewClass(fontobj)
   Name		style;			/* Style */
   Int		points;			/* Point size */
   Int		ex;			/* Width of an x in this font */
-  Name          x_name;			/* X-Name of the font */
+  Int		avg_char_width;		/* Average char width */
+  Name          pango_name;		/* Pango description for font */
   BoolObj	fixed_width;		/* Is this a fixed width font? */
-  BoolObj	iswide;			/* Font is 16-bit font */
   Name		postscript_font;	/* Name of PostScript font */
   Int		postscript_size;	/* Size in PostScript */
   WsRef		ws_ref;			/* Window system reference */

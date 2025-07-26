@@ -77,16 +77,15 @@ COMMON(Any)	RedrawBoxFigure(Figure f, Area area);
 COMMON(status)	makeClassFigure(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/font.c */
-COMMON(status)	replaceFont(FontObj f, DisplayObj d);
 COMMON(status)	makeBuiltinFonts(void);
 COMMON(Int)	getWidthFont(FontObj f, CharArray txt);
 COMMON(Int)	getAdvanceFont(FontObj f, CharArray txt);
 COMMON(Int)	getExFont(FontObj f);
+COMMON(Int)	getAvgCharWidthFont(FontObj f);
 COMMON(Int)	getHeightFont(FontObj f);
 COMMON(Int)	getAscentFont(FontObj f);
 COMMON(Int)	getDescentFont(FontObj f);
 COMMON(BoolObj)	getFixedWidthFont(FontObj f);
-COMMON(BoolObj)	getB16Font(FontObj f);
 COMMON(status)	makeClassFont(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/format.c */

@@ -197,7 +197,8 @@ initialiseEditor(Editor e, TextBuffer tb, Int w, Int h, Int tmw)
 
   send(e->image, NAME_cursor, getClassVariableValueObject(e, NAME_cursor), EAV);
   send(e->image, NAME_set, e->scroll_bar->area->w, ZERO, EAV);
-  tabDistanceTextImage(e->image, mul(e->tab_distance, getExFont(e->font)));
+  double td = valNum(e->tab_distance) * valNum(getAvgCharWidthFont(e->font));
+  tabDistanceTextImage(e->image, toNum(td));
   heightGraphical((Graphical) e->scroll_bar, ih);
   displayDevice(e, e->scroll_bar, DEFAULT);
   displayDevice(e, e->image, DEFAULT);
@@ -4656,7 +4657,8 @@ static status
 tabDistanceEditor(Editor e, Int tab)
 { if ( e->tab_distance != tab )
   { assign(e, tab_distance, tab);
-    tabDistanceTextImage(e->image, mul(tab, getExFont(e->font)));
+    double d = valNum(tab) * valNum(getAvgCharWidthFont(e->font));
+    tabDistanceTextImage(e->image, toNum(d));
     ChangedEditor(e);
   }
 

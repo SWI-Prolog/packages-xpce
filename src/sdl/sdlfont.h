@@ -50,10 +50,11 @@ typedef struct
   double descent;
   double height;
   charwidth_cache wcache;
+  int references;		/* for cloning */
 } ws_font, *WsFont;
 
-status ws_create_font(FontObj f, DisplayObj d);
-void   ws_destroy_font(FontObj f, DisplayObj d);
+status ws_create_font(FontObj f);
+void   ws_destroy_font(FontObj f);
 bool   s_cwidth(uint32_t c, FontObj font, float *wp);
 bool   s_setcwidth(uint32_t c, FontObj font, float w);
 status ws_list_fonts(BoolObj mono);
@@ -61,9 +62,15 @@ status ws_list_fonts(BoolObj mono);
 static inline WsFont
 ws_get_font(FontObj f)
 { WsFont wsf = f->ws_ref;
-  if ( !wsf && !ws_create_font(f, DEFAULT) )
+  if ( !wsf && !ws_create_font(f) )
     return NULL;
   return f->ws_ref;
+}
+
+static inline WsFont
+ws_clone_ws_font(WsFont wsf)
+{ wsf->references++;
+  return wsf;
 }
 
 static inline PangoLayout *

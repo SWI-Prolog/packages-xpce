@@ -70,8 +70,7 @@ initialiseFont(FontObj f, Name family, Name style, Int points, Name xname)
   assign(f, style,       style);
   assign(f, points,      points);
   assign(f, fixed_width, DEFAULT);
-  assign(f, iswide,	 DEFAULT);
-  assign(f, x_name,      xname);
+  assign(f, pango_name,  xname);
 
   defaultPostScriptFont(f);
 
@@ -118,7 +117,7 @@ getConvertFont(Class class, Name name)
     } else
     { for_hash_table(FontTable, sy,
 		     { FontObj f = sy->value;
-		       if ( f->x_name == fn ) /* case? */
+		       if ( f->pango_name == fn ) /* case? */
 			 answer(f);
 		     })
     }
@@ -129,20 +128,21 @@ getConvertFont(Class class, Name name)
 
 
 status
-replaceFont(FontObj f, DisplayObj d)
+replaceFont(FontObj f)
 { FontObj nofont;
   void *wsref;
 
-  if ( !(nofont = getClassVariableValueObject(d, NAME_noFont)) )
+  if ( !(nofont = getClassVariableValueClass(ClassFont, NAME_noFont)) )
     errorPce(f, NAME_noDefaultFont);
 
-  if ( !(wsref = getXrefObject(nofont, d)) )
+  if ( !(wsref = ws_get_font(nofont)) )
     fail;
 
   errorPce(f, NAME_replacedFont, nofont);
-  registerXrefObject(f, d, wsref);
+  f->ws_ref = ws_clone_ws_font(wsref);
 
   assign(f, fixed_width, nofont->fixed_width);
+  assign(f, ex,          nofont->ex);
 
   succeed;
 }
@@ -152,20 +152,17 @@ static int XopenNesting = 0;
 
 static status
 XopenFont(FontObj f, DisplayObj d)
-{ if ( isDefault(d) )
-    d = CurrentDisplay(f);
-
-  makeBuiltinFonts();
+{ makeBuiltinFonts();
 
   if ( XopenNesting > 1 )
     fail;
 
   XopenNesting++;
-  if ( !ws_create_font(f, d) )
+  if ( !ws_create_font(f) )
   { status rc;
 
     errorPce(f, NAME_noRelatedXFont);
-    rc = replaceFont(f, d);
+    rc = replaceFont(f);
     XopenNesting--;
 
     return rc;
@@ -178,7 +175,7 @@ XopenFont(FontObj f, DisplayObj d)
 
 static status
 XcloseFont(FontObj f, DisplayObj d)
-{ ws_destroy_font(f, d);
+{ ws_destroy_font(f);
 
   succeed;
 }
@@ -186,11 +183,11 @@ XcloseFont(FontObj f, DisplayObj d)
 
 status
 makeBuiltinFonts(void)
-{ static int done = FALSE;
+{ static bool done = false;
 
   if ( done )
     succeed;
-  done = TRUE;
+  done = true;
 
   if ( loadFonts() &&			/* XPCE predefined fonts */
        loadFontAliases(NAME_systemFonts) )
@@ -275,28 +272,36 @@ getExFont(FontObj f)
   answer(f->ex);
 }
 
+Int
+getAvgCharWidthFont(FontObj f)
+{ if ( !isInteger(f->avg_char_width) )
+  { const char *sample =
+      "0123456789"
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      "abcdefghijklmnopqrstuvwxyz";
+    size_t len = strlen(sample);
+    double avg = str_advance_utf8(sample, len, f)/(double)len;
+    assign(f, avg_char_width, toNum(avg));
+  }
+
+  answer(f->avg_char_width);
+}
 
 Int
 getHeightFont(FontObj f)
-{ d_ensure_display();
-
-  answer(toInt(s_height(f)));
+{ answer(toNum(s_height(f)));
 }
 
 
 Int
 getAscentFont(FontObj f)
-{ d_ensure_display();
-
-  answer(toInt(s_ascent(f)));
+{ answer(toNum(s_ascent(f)));
 }
 
 
 Int
 getDescentFont(FontObj f)
-{ d_ensure_display();
-
-  answer(toInt(s_descent(f)));
+{ answer(toNum(s_descent(f)));
 }
 
 
@@ -312,15 +317,6 @@ getFixedWidthFont(FontObj f)
     XopenFont(f, CurrentDisplay(NIL));
 
   answer(f->fixed_width);
-}
-
-
-BoolObj
-getB16Font(FontObj f)
-{ if ( isDefault(f->iswide) )
-    XopenFont(f, CurrentDisplay(NIL));
-
-  answer(f->iswide);
 }
 
 
@@ -482,13 +478,13 @@ static vardecl var_font[] =
   IV(NAME_points, "[int]", IV_NONE,
      NAME_name, "Point-size of the font"),
   IV(NAME_ex, "int*", IV_NONE,
-     NAME_dimension, "Width of the letter `x' in this font"),
-  IV(NAME_xName, "[name]", IV_GET,
-     NAME_x, "Window-system name for the font"),
+     NAME_dimension, "Height of the letter `x' in this font"),
+  IV(NAME_avgCharWidth, "int*", IV_NONE,
+     NAME_dimension, "Average char width"),
+  IV(NAME_pangoName, "[name]", IV_GET,
+     NAME_pango, "Pango description for font"),
   IV(NAME_fixedWidth, "[bool]", IV_NONE,
      NAME_property, "If @off, font is proportional"),
-  IV(NAME_b16, "[bool]", IV_NONE,
-     NAME_property, "If @on, font is a 16-bit font"),
   IV(NAME_postscriptFont, "name", IV_BOTH,
      NAME_postscript, "PostScript-name of the font"),
   IV(NAME_postscriptSize, "int", IV_BOTH,
@@ -522,7 +518,9 @@ static getdecl get_font[] =
   GM(NAME_descent, 0, "int", NULL, getDescentFont,
      NAME_dimension, "Lowest point below baseline"),
   GM(NAME_ex, 0, "int", NULL, getExFont,
-     NAME_dimension, "Width of the letter `x'"),
+     NAME_dimension, "Height of the letter `x'"),
+  GM(NAME_avgCharWidth, 0, "int", NULL, getAvgCharWidthFont,
+     NAME_dimension, "Average char width"),
   GM(NAME_height, 0, "int", NULL, getHeightFont,
      NAME_dimension, "Height of highest character in font"),
   GM(NAME_size, 0, "size", NULL, getSizeFont,
@@ -531,8 +529,6 @@ static getdecl get_font[] =
      NAME_dimension, "Width of string (default \"x\")"),
   GM(NAME_advance, 1, "int", "char_array", getAdvanceFont,
      NAME_dimension, "X-origin advancement of string"),
-  GM(NAME_b16, 0, "bool", NULL, getB16Font,
-     NAME_encoding, "Boolean to indicate font is 16-bits"),
   GM(NAME_lookup, 3, "font", T_lookup, getLookupFont,
      NAME_oms, "Lookup in @fonts table"),
   GM(NAME_defaultCharacter, 0, "char", NULL, getDefaultCharacterFont,

@@ -114,7 +114,7 @@ dynamic_metrics(FontObj f)
  * @return SUCCEED on successful creation; otherwise, FAIL.
  */
 status
-ws_create_font(FontObj f, DisplayObj d)
+ws_create_font(FontObj f)
 { if ( f->ws_ref )		/* already done */
     succeed;
 
@@ -168,9 +168,10 @@ ws_create_font(FontObj f, DisplayObj d)
 
   WsFont wsf = alloc(sizeof(ws_font));
   memset(wsf, 0, sizeof(ws_font));
-  wsf->font    = pf;
-  wsf->desc    = desc;
-  wsf->layout  = layout;
+  wsf->references = 1;
+  wsf->font       = pf;
+  wsf->desc       = desc;
+  wsf->layout     = layout;
   f->ws_ref = wsf;
 
 #if TRUST_PANGO_METRICS
@@ -181,7 +182,7 @@ ws_create_font(FontObj f, DisplayObj d)
 #endif
 
   wsf->height  = wsf->ascent + wsf->descent;
-  assign(f, ex, toInt(wsf->height/2)); /* approximation */
+  assign(f, ex, toNum(wsf->height/2.0)); /* approximated height of "x" */
   pango_font_metrics_unref(metrics);
 
   succeed;
@@ -195,15 +196,17 @@ ws_create_font(FontObj f, DisplayObj d)
  * @param d Pointer to the DisplayObj representing the display context.
  */
 void
-ws_destroy_font(FontObj f, DisplayObj d)
+ws_destroy_font(FontObj f)
 { WsFont wsf = f->ws_ref;
   if ( wsf )
   { f->ws_ref = NULL;
-    clean_width_cache(&wsf->wcache);
-    g_object_unref(wsf->font);
-    pango_font_description_free(wsf->desc);
-    g_object_unref(wsf->layout);
-    unalloc(sizeof(ws_font), wsf);
+    if ( --wsf->references == 0 )
+    { clean_width_cache(&wsf->wcache);
+      g_object_unref(wsf->font);
+      pango_font_description_free(wsf->desc);
+      g_object_unref(wsf->layout);
+      unalloc(sizeof(ws_font), wsf);
+    }
   }
 }
 

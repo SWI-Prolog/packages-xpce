@@ -357,31 +357,29 @@ ChangedEntireTextImage(TextImage ti)
 		*         FILLING INFO		*
 		********************************/
 
-static int
-tab(TextImage ti, int x)
+static float
+tab(TextImage ti, float x)
 { x -= TXT_X_MARGIN;
-  x++;
+  x += 1.0;
 
   if ( isNil(ti->tab_stops) )
-  { int td = valInt(ti->tab_distance);
+  { float td = valNum(ti->tab_distance);
 
-    x = Round(x, td);
+    int stop = (x+td-1.0)/td;
+    return (float)stop*td + TXT_X_MARGIN;
   } else
   { int i;
 
     for(i=1; i<=valInt(ti->tab_stops->size); i++)
-    { int s = valInt(getElementVector(ti->tab_stops, toInt(i)));
+    { float s = valNum(getElementVector(ti->tab_stops, toInt(i)));
 
       if ( s >= x )
 	return s + TXT_X_MARGIN;
     }
 
-    x += 5;
+    x += 5.0;			/* thin space */
+    return x + TXT_X_MARGIN;
   }
-
-  x += TXT_X_MARGIN;
-
-  return x;
 }
 
 
