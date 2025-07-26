@@ -10,7 +10,7 @@
 ! Binding for the logical font-names.  You can bind any name to any
 ! font here.
 
-display.system_fonts:	[ normal    := font(helvetica, roman,   12), \
+font.system_fonts:	[ normal    := font(helvetica, roman,   12), \
 			  bold      := font(helvetica, bold,    12), \
 			  italic    := font(helvetica, oblique, 12), \
 			  small     := font(helvetica, roman,   10), \
