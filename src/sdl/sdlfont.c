@@ -49,15 +49,9 @@ static double font_scale = 1.0;
 static void clean_width_cache(charwidth_cache *wcache);
 
 static status
-ws_init_fonts(DisplayObj d)
-{ if ( isDefault(d) )
-    d = CurrentDisplay(NIL);
-
-  if ( !ttf_initialized )
-  { if ( !openDisplay(d) )
-      fail;
-
-    ttf_initialized = true;
+ws_init_fonts(void)
+{ if ( !ttf_initialized )
+  { ttf_initialized = true;
     fontmap = pango_cairo_font_map_get_default();
     // fontmap = pango_ft2_font_map_new();
     context = pango_font_map_create_context(fontmap);
@@ -124,7 +118,7 @@ ws_create_font(FontObj f, DisplayObj d)
 { if ( f->ws_ref )		/* already done */
     succeed;
 
-  ws_init_fonts(d);
+  ws_init_fonts();
 
   PangoFontDescription *desc = pango_font_description_new();
   PangoStyle   slant = PANGO_STYLE_NORMAL;
@@ -275,23 +269,17 @@ s_setcwidth(uint32_t c, FontObj font, float w)
 		 *******************************/
 
 /**
- * Initialize or enumerate the system fonts available on the specified display.
+ * List the font information as available from Pango.
  *
- * @param d Pointer to the DisplayObj representing the display context.
- * @return SUCCEED if fonts were successfully enumerated or loaded; otherwise, FAIL.
+ * @param mono If @on, only show fixed-width fonts.
  */
-status
-ws_system_fonts(DisplayObj d)
-{
-    return SUCCEED;
-}
 
 status
-ws_list_fonts(DisplayObj d, BoolObj mono)
+ws_list_fonts(BoolObj mono)
 { PangoFontFamily **families;
   int n_families;
 
-  ws_init_fonts(d);
+  ws_init_fonts();
 
   pango_font_map_list_families(fontmap, &families, &n_families);
   Cprintf("Found %d font families:\n", n_families);
