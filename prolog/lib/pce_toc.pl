@@ -462,7 +462,6 @@ select(Node, Modified:[bool]) :->
     ->  send(Node, toggle_selected)
     ;   get(Node, tree, Tree),
         send(Tree, selection, Node?image),
-        send(Node, flush),
         send(Tree?window, select_node, Node?identifier)
     ).
 
