@@ -148,33 +148,8 @@ replaceFont(FontObj f)
 }
 
 
-static int XopenNesting = 0;
-
 static status
-XopenFont(FontObj f, DisplayObj d)
-{ makeBuiltinFonts();
-
-  if ( XopenNesting > 1 )
-    fail;
-
-  XopenNesting++;
-  if ( !ws_create_font(f) )
-  { status rc;
-
-    errorPce(f, NAME_noRelatedXFont);
-    rc = replaceFont(f);
-    XopenNesting--;
-
-    return rc;
-  }
-
-  XopenNesting--;
-  succeed;
-}
-
-
-static status
-XcloseFont(FontObj f, DisplayObj d)
+unlinkFont(FontObj f)
 { ws_destroy_font(f);
 
   succeed;
@@ -258,16 +233,13 @@ getWidthFont(FontObj f, CharArray txt)
 
 Int
 getAdvanceFont(FontObj f, CharArray txt)
-{ d_ensure_display();			/* TBD */
-
-  return toNum(str_advance(&txt->data, 0, txt->data.s_size, f));
+{ return toNum(str_advance(&txt->data, 0, txt->data.s_size, f));
 }
 
 
 Int
 getExFont(FontObj f)
-{ if ( !isInteger(f->ex) )
-    XopenFont(f, CurrentDisplay(NIL));
+{ ws_create_font(f);
 
   answer(f->ex);
 }
@@ -314,7 +286,14 @@ getSizeFont(FontObj f)
 BoolObj
 getFixedWidthFont(FontObj f)
 { if ( isDefault(f->fixed_width) )
-    XopenFont(f, CurrentDisplay(NIL));
+  { ws_create_font(f);
+
+    if ( isDefault(f->fixed_width) )
+    { BoolObj fixed = ( getAdvanceFont(f, (CharArray)NAME_i) ==
+			getAdvanceFont(f, (CharArray)NAME_w) ) ? ON : OFF;
+      assign(f, fixed_width, fixed);
+    }
+  }
 
   answer(f->fixed_width);
 }
@@ -322,9 +301,7 @@ getFixedWidthFont(FontObj f)
 
 static status
 memberFont(FontObj f, Int chr)
-{ d_ensure_display();
-
-  if ( s_has_char(f, valInt(chr)) )
+{ if ( s_has_char(f, valInt(chr)) )
     succeed;
 
   fail;
@@ -333,9 +310,7 @@ memberFont(FontObj f, Int chr)
 
 static Int
 getDefaultCharacterFont(FontObj f)
-{ d_ensure_display();
-
-  answer(toInt(s_default_char(f)));
+{ answer(toInt(s_default_char(f)));
 }
 
 
@@ -497,13 +472,11 @@ static vardecl var_font[] =
 
 static senddecl send_font[] =
 { SM(NAME_initialise, 4, T_initialise, initialiseFont,
-     DEFAULT, "Create from fam, style, points, name"),
+     DEFAULT, "Create from fam, style, points, Pango name"),
+  SM(NAME_unlink, 0, NULL, unlinkFont,
+     DEFAULT, "Destroy the font"),
   SM(NAME_member, 1, "char", memberFont,
-     NAME_set, "Test if font defines character"),
-  SM(NAME_Xclose, 1, "display", XcloseFont,
-     NAME_x, "Destroy associated window-system resources"),
-  SM(NAME_Xopen, 1, "display", XopenFont,
-     NAME_x, "Open the associated window-system resources")
+     NAME_set, "Test if font defines character")
 };
 
 /* Get Methods */
