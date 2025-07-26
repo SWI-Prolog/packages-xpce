@@ -796,7 +796,7 @@ static char *T_win_directory[] =
 /* Instance Variables */
 
 static vardecl var_display[] =
-{ IV(NAME_name, "name", IV_GET,
+{ IV(NAME_name, "name", IV_BOTH,
      NAME_name, "Human name of the display"),
   IV(NAME_primary, "bool", IV_BOTH,
      NAME_organisation, "@on if this is the primary display"),
