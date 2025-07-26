@@ -454,21 +454,9 @@ fontAlias(Name name, FontObj font, BoolObj force)
 }
 
 
-static FontObj
-getFontAlias(Name name)
-{ FontObj f;
-
-  if ( (f = getMemberHashTable(FontAliasTable, name)) )
-    answer(f);
-
-  makeBuiltinFonts();
-
-  answer(getMemberHashTable(FontAliasTable, name));
-}
-
-
+/* Implements class(font)->list_fonts */
 static status
-listFonts(BoolObj mono)
+listFonts(Class class, BoolObj mono)
 { return ws_list_fonts(mono);
 }
 
@@ -599,6 +587,13 @@ makeClassFont(Class class)
   FontAliasTable = globalObject(NAME_fontAliases, ClassHashTable, toInt(16), EAV);
 
   attach_font_families(class);
+  /* Create a class method */
+  sendMethodObject(
+    class,
+    createSendMethod(NAME_listFonts,
+		     newObject(ClassVector, CtoName("[bool]"), EAV),
+		     CtoString("List Pango font families"),
+		     listFonts));
 
   succeed;
 }

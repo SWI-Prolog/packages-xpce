@@ -592,7 +592,7 @@ unlinkObject(Any obj)
   }
 
   if ( onFlag(obj, F_ATTRIBUTE|F_CONSTRAINT|F_SENDMETHOD|
-	           F_GETMETHOD|F_RECOGNISER) )
+		   F_GETMETHOD|F_RECOGNISER) )
   { if ( onFlag(obj, F_CONSTRAINT) )
     { Chain ch = getAllConstraintsObject(obj, ON);
       Constraint c;
@@ -939,8 +939,8 @@ deleteConstraintObject(Any obj, Constraint c)
 }
 
 
-static status
-sendMethodObject(Any obj, Method m)
+status
+sendMethodObject(Any obj, SendMethod m)
 { Chain ch = getAllSendMethodsObject(obj, ON);
 
   return prependChain(ch, m);
@@ -1227,7 +1227,7 @@ mergeSendMethodsObject(Any obj, Chain ch, HashTable done, Code cond)
     mergeMethods(ch, getSendMethodsClass(class), done, cond);
     for_vector(class->instance_variables, var,
 	       if ( sendAccessVariable(var) )
-	         mergeMethod(ch, var, done, cond));
+		 mergeMethod(ch, var, done, cond));
   }
 
   for_cell(cell, classOfObject(obj)->delegate)
@@ -2218,7 +2218,7 @@ checkExtensonsObject(Any obj, BoolObj recursive, HashTable done, int errs)
   }
 
   if ( onFlag(obj, F_CONSTRAINT|F_ATTRIBUTE|F_SENDMETHOD|F_GETMETHOD|
-	           F_HYPER|F_RECOGNISER) )
+		   F_HYPER|F_RECOGNISER) )
   { CheckExt(F_CONSTRAINT, getAllConstraintsObject, NAME_allConstraints);
     CheckExt(F_ATTRIBUTE,  getAllAttributesObject,  NAME_allAttributes);
     CheckExt(F_SENDMETHOD, getAllSendMethodsObject, NAME_allSendMethods);
@@ -2939,5 +2939,3 @@ makeClassObject(Class class)
 
   succeed;
 }
-
-

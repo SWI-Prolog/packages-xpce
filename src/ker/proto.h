@@ -254,6 +254,7 @@ COMMON(Chain)	getAllHypersObject(Any obj, BoolObj create);
 COMMON(Chain)	getAllAttributesObject(Any obj, BoolObj create);
 COMMON(Chain)	getAllSendMethodsObject(Any obj, BoolObj create);
 COMMON(Chain)	getAllGetMethodsObject(Any obj, BoolObj create);
+COMMON(status)  sendMethodObject(Any obj, SendMethod m);
 COMMON(Any)	getCloneObject(Any obj);
 COMMON(status)	clonePceSlots(Any org, Any Clone);
 COMMON(Any)	getClone2Object(Any obj);
