@@ -790,7 +790,6 @@ NewClass(displayobj)
   Area		work_area;		/* Area for applications */
   BoolObj	removed;		/* Display is being removed */
   Size		dpi;			/* Resolution (dots per inch) */
-  HashTable	font_table;		/* Table holding font-mappings */
   Chain		frames;			/* Created frames on this display */
   Chain		inspect_handlers;	/* Event-handlers for inspector */
   Colour	foreground;		/* Window default foreground */
@@ -1100,6 +1099,7 @@ GLOBAL  int XrefsResolved;		/* succesful getXrefObject()'s */
 GLOBAL	HashTable ColourTable;		/* ColourName --> Colour */
 GLOBAL  HashTable CursorTable;		/* CursorName --> Cursor */
 GLOBAL	HashTable FontTable;		/* FontName --> Font */
+GLOBAL  HashTable FontAliasTable;	/* Alias -> font */
 GLOBAL	HashTable ImageTable;		/* ImageName --> Image */
 GLOBAL  HashTable WindowTable;		/* X-Window --> PceWindow|FrameObj */
 GLOBAL  Class ClassImage;		/* @image_class */

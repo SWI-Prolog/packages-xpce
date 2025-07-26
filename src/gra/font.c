@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        wielemak@science.uva.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2005, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -105,11 +106,10 @@ getConvertFont(Class class, Name name)
 
     answer(getMemberHashTable(FontTable, ref_name));
   } else
-  { DisplayObj d = CurrentDisplay(NIL);
-    FontObj f;
+  { FontObj f;
     Name fn = (syntax.uppercase ? CtoKeyword(s) : name);
 
-    if ( d && (f = getMemberHashTable(d->font_table, fn)) )
+    if ( (f=getMemberHashTable(FontAliasTable, fn)) )
     { answer(f);
     } else
     { for_hash_table(FontTable, sy,
@@ -469,7 +469,8 @@ makeClassFont(Class class)
   saveStyleClass(class, NAME_external);
   cloneStyleClass(class, NAME_none);
 
-  FontTable = globalObject(NAME_fonts, ClassHashTable, toInt(101), EAV);
+  FontTable      = globalObject(NAME_fonts, ClassHashTable, toInt(32), EAV);
+  FontAliasTable = globalObject(NAME_fontAliases, ClassHashTable, toInt(16), EAV);
 
   succeed;
 }

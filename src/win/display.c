@@ -52,7 +52,6 @@ initialiseDisplay(DisplayObj d, Name name, Area a)
   assign(d, primary,		DEFAULT);
   assign(d, area,		a);
   assign(d, removed,		OFF);
-  assign(d, font_table,		newObject(ClassHashTable, EAV));
   assign(d, frames,		newObject(ClassChain, EAV));
   assign(d, inspect_handlers,	newObject(ClassChain, EAV));
   assign(d, display_manager,	dm);
@@ -705,8 +704,8 @@ loadFontAliasesDisplay(DisplayObj d, Name res)
 
 static status
 fontAliasDisplay(DisplayObj d, Name name, FontObj font, BoolObj force)
-{ if ( force == ON || !getMemberHashTable(d->font_table, name) )
-    appendHashTable(d->font_table, name, font);
+{ if ( force == ON || !getMemberHashTable(FontAliasTable, name) )
+    appendHashTable(FontAliasTable, name, font);
 
   succeed;
 }
@@ -716,12 +715,12 @@ static FontObj
 getFontAliasDisplay(DisplayObj d, Name name)
 { FontObj f;
 
-  if ( (f = getMemberHashTable(d->font_table, name)) )
+  if ( (f = getMemberHashTable(FontAliasTable, name)) )
     answer(f);
 
   makeBuiltinFonts();
 
-  answer(getMemberHashTable(d->font_table, name));
+  answer(getMemberHashTable(FontAliasTable, name));
 }
 
 
@@ -808,8 +807,6 @@ static vardecl var_display[] =
      NAME_organisation, "Display is removed, but not yet empty"),
   IV(NAME_dpi, "[size|int]", IV_NONE,
      NAME_dimension, "Resolution (dots per inch)"),
-  IV(NAME_fontTable, "hash_table", IV_BOTH,
-     NAME_font, "Mapping for logical font-names to fonts"),
   IV(NAME_frames, "chain", IV_GET,
      NAME_organisation, "Frames displayed on this display"),
   IV(NAME_inspectHandlers, "chain", IV_GET,
