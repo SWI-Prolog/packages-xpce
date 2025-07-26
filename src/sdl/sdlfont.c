@@ -115,56 +115,77 @@ dynamic_metrics(FontObj f)
  */
 status
 ws_create_font(FontObj f)
-{ if ( f->ws_ref )		/* already done */
+{ PangoFontDescription *desc = NULL;
+  BoolObj fixed = DEFAULT;
+
+  if ( f->ws_ref )		/* already done */
     succeed;
 
   ws_init_fonts();
 
-  PangoFontDescription *desc = pango_font_description_new();
-  PangoStyle   slant = PANGO_STYLE_NORMAL;
-  PangoWeight weight = PANGO_WEIGHT_NORMAL;
-  const char *family = "sans";
-  BoolObj fixed = OFF;
-
-  if ( f->style == NAME_bold )
-    weight = PANGO_WEIGHT_BOLD;
-  else if ( f->style == NAME_oblique )
-    slant = PANGO_STYLE_ITALIC;
-
-  if ( f->family == NAME_courier || f->family == NAME_screen )
-  { family = "Noto Sans Mono,monospace";
-#ifdef __WINDOWS__
-    if ( PL_w32_running_under_wine() )
-      family = "Courier New,Noto Sans Mono";
-    else
-      family = "Consolas,Courier New";
-#endif
-    fixed = ON;
-  } else if ( f->family == NAME_times )
-  { family = "serif";
-#ifdef __WINDOWS__
-  } else if ( f->family == NAME_helvetica )
-  { family = "Noto Sans,Segoe UI,Verdana";
-    if ( PL_w32_running_under_wine() )
-      family = "Verdana";
-#elif !defined(__APPLE__)
-    family = "Noto Sans,sans";
-#endif
-  } else
-  { family = nameToUTF8(f->family);
+  if ( notDefault(f->pango_name) )
+  { const char *pname = stringToUTF8(&f->pango_name->data, NULL);
+    desc = pango_font_description_from_string(pname);
+    if ( !desc )
+      Cprintf("Failed to parse Pango font name %s\n", pname);
   }
 
-  pango_font_description_set_family(desc, family);
-  pango_font_description_set_style(desc, slant);
-  pango_font_description_set_weight(desc, weight);
-  pango_font_description_set_size(desc, valNum(f->points)*PANGO_SCALE*font_scale);
+  if ( !desc )
+  { desc = pango_font_description_new();
+    PangoStyle   slant = PANGO_STYLE_NORMAL;
+    PangoWeight weight = PANGO_WEIGHT_NORMAL;
+    const char *family = "sans";
+
+    fixed = OFF;
+    if ( f->style == NAME_bold )
+      weight = PANGO_WEIGHT_BOLD;
+    else if ( f->style == NAME_oblique )
+      slant = PANGO_STYLE_ITALIC;
+
+    if ( f->family == NAME_courier || f->family == NAME_screen )
+    { family = "Noto Sans Mono,monospace";
+#ifdef __WINDOWS__
+      if ( PL_w32_running_under_wine() )
+	family = "Courier New,Noto Sans Mono";
+      else
+	family = "Consolas,Courier New";
+#endif
+      fixed = ON;
+    } else if ( f->family == NAME_times )
+    { family = "serif";
+#ifdef __WINDOWS__
+    } else if ( f->family == NAME_helvetica )
+    { family = "Noto Sans,Segoe UI,Verdana";
+      if ( PL_w32_running_under_wine() )
+	family = "Verdana";
+#elif !defined(__APPLE__)
+      family = "Noto Sans,sans";
+#endif
+    } else
+    { family = nameToUTF8(f->family);
+    }
+
+    pango_font_description_set_family(desc, family);
+    pango_font_description_set_style(desc, slant);
+    pango_font_description_set_weight(desc, weight);
+    pango_font_description_set_size(desc, valNum(f->points)*PANGO_SCALE*font_scale);
+  }
 
   PangoFont *pf = pango_font_map_load_font(fontmap, context, desc);
   PangoFontMetrics *metrics = pango_font_get_metrics(pf, NULL);
   PangoLayout *layout = pango_layout_new(context);
   pango_layout_set_font_description(layout, desc);
 
-  assign(f, fixed_width, fixed);
+  if ( isDefault(f->pango_name) )
+  { PangoFontDescription *d2 = pango_font_describe(pf);
+    char *pname = pango_font_description_to_string(d2);
+    assign(f, pango_name, UTF8ToName(pname));
+    g_free(pname);
+    pango_font_description_free(d2);
+  }
+
+  if ( notDefault(fixed) )
+    assign(f, fixed_width, fixed);
 
   WsFont wsf = alloc(sizeof(ws_font));
   memset(wsf, 0, sizeof(ws_font));
