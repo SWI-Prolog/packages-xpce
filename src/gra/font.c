@@ -616,144 +616,78 @@ typedef struct
   char *xname;
 } fontdef, *FontDef;
 
-#if defined(WIN32_GRAPHICS) || defined(USE_XFT)
-#define XNAME(x) NULL
-#else
 #define XNAME(x) x
-#endif
 
-#ifndef FIXED_FAMILY
-#define FIXED_FAMILY "*"
-#endif
-
+/* @screen_<Style>_<Points> */
 static fontdef screen_fonts[] =
-{ PFONT(NAME_roman, 10,
-	"-" FIXED_FAMILY "-fixed-medium-r-normal--10-*-*-*-*-*-iso10646-*"),
-  PFONT(NAME_roman, 12,
-	"-" FIXED_FAMILY "-fixed-medium-r-normal--12-*-*-*-*-*-iso10646-*"),
-  PFONT(NAME_roman, 14,
-	"-" FIXED_FAMILY "-fixed-medium-r-normal--14-*-*-*-*-*-iso10646-*"),
-  PFONT(NAME_roman, 16,
-	"-" FIXED_FAMILY "-fixed-medium-r-normal--16-*-*-*-*-*-iso10646-*"),
-  PFONT(NAME_bold, 10,
-	"-" FIXED_FAMILY "-fixed-bold-r-normal--10-*-*-*-*-*-iso10646-*"),
-  PFONT(NAME_bold, 12,
-	"-" FIXED_FAMILY "-fixed-bold-r-normal--12-*-*-*-*-*-iso10646-*"),
-  PFONT(NAME_bold, 14,
-	"-" FIXED_FAMILY "-fixed-bold-r-normal--14-*-*-*-*-*-iso10646-*"),
-  PFONT(NAME_bold, 16,
-	"-" FIXED_FAMILY "-fixed-bold-r-normal--16-*-*-*-*-*-iso10646-*"),
+{ PFONT(NAME_roman, 10, ""),
+  PFONT(NAME_roman, 12, ""),
+  PFONT(NAME_roman, 14, ""),
+  PFONT(NAME_roman, 16, ""),
+  PFONT(NAME_bold,  10, ""),
+  PFONT(NAME_bold,  12, ""),
+  PFONT(NAME_bold,  14, ""),
+  PFONT(NAME_bold,  16, ""),
   ENDFONTLIST
 };
 
-#undef XNAME
-#if defined(WIN32_GRAPHICS) || defined(USE_XFT)
-#define XNAME(x) NULL
-#else
-#define XNAME(x) x
-#endif
-
+/* @courier_<Style>_<Points> */
 static fontdef courier_fonts[] =
-{ PFONT(NAME_roman, 10,
-	"-*-courier new-medium-r-normal--10-*-*-*-*-*-*-*"),
-  PFONT(NAME_roman, 12,
-	"-*-courier new-medium-r-normal--12-*-*-*-*-*-*-*"),
-  PFONT(NAME_roman, 14,
-	"-*-courier new-medium-r-normal--14-*-*-*-*-*-*-*"),
-  PFONT(NAME_roman, 18,
-	"-*-courier new-medium-r-normal--18-*-*-*-*-*-*-*"),
-  PFONT(NAME_roman, 24,
-	"-*-courier new-medium-r-normal--24-*-*-*-*-*-*-*"),
-  PFONT(NAME_bold, 10,
-	"-*-courier new-bold-r-normal--10-*-*-*-*-*-*-*"),
-  PFONT(NAME_bold, 12,
-	"-*-courier new-bold-r-normal--12-*-*-*-*-*-*-*"),
-  PFONT(NAME_bold, 14,
-	"-*-courier new-bold-r-normal--14-*-*-*-*-*-*-*"),
-  PFONT(NAME_bold, 18,
-	"-*-courier new-bold-r-normal--18-*-*-*-*-*-*-*"),
-  PFONT(NAME_bold, 24,
-	"-*-courier new-bold-r-normal--24-*-*-*-*-*-*-*"),
-  PFONT(NAME_oblique, 10,
-	"-*-courier new-medium-o-normal--10-*-*-*-*-*-*-*"),
-  PFONT(NAME_oblique, 12,
-	"-*-courier new-medium-o-normal--12-*-*-*-*-*-*-*"),
-  PFONT(NAME_oblique, 14,
-	"-*-courier new-medium-o-normal--14-*-*-*-*-*-*-*"),
-  PFONT(NAME_oblique, 18,
-	"-*-courier new-medium-o-normal--18-*-*-*-*-*-*-*"),
-  PFONT(NAME_oblique, 24,
-	"-*-courier new-medium-o-normal--24-*-*-*-*-*-*-*"),
+{ PFONT(NAME_roman,   10, ""),
+  PFONT(NAME_roman,   12, ""),
+  PFONT(NAME_roman,   14, ""),
+  PFONT(NAME_roman,   18, ""),
+  PFONT(NAME_roman,   24, ""),
+  PFONT(NAME_bold,    10, ""),
+  PFONT(NAME_bold,    12, ""),
+  PFONT(NAME_bold,    14, ""),
+  PFONT(NAME_bold,    18, ""),
+  PFONT(NAME_bold,    24, ""),
+  PFONT(NAME_oblique, 10, ""),
+  PFONT(NAME_oblique, 12, ""),
+  PFONT(NAME_oblique, 14, ""),
+  PFONT(NAME_oblique, 18, ""),
+  PFONT(NAME_oblique, 24, ""),
   ENDFONTLIST
 };
 
 
 static fontdef helvetica_fonts[] =
-{ PFONT(NAME_bold, 10,
-	"-*-helvetica-bold-r-normal--10-*-*-*-*-*-*-*"),
-  PFONT(NAME_bold, 12,
-	"-*-helvetica-bold-r-normal--12-*-*-*-*-*-*-*"),
-  PFONT(NAME_bold, 14,
-	"-*-helvetica-bold-r-normal--14-*-*-*-*-*-*-*"),
-  PFONT(NAME_bold, 18,
-	"-*-helvetica-bold-r-normal--18-*-*-*-*-*-*-*"),
-  PFONT(NAME_bold, 24,
-	"-*-helvetica-bold-r-normal--24-*-*-*-*-*-*-*"),
-  PFONT(NAME_roman, 10,
-	"-*-helvetica-medium-r-normal--10-*-*-*-*-*-*-*"),
-  PFONT(NAME_roman, 12,
-	"-*-helvetica-medium-r-normal--12-*-*-*-*-*-*-*"),
-  PFONT(NAME_roman, 14,
-	"-*-helvetica-medium-r-normal--14-*-*-*-*-*-*-*"),
-  PFONT(NAME_roman, 18,
-	"-*-helvetica-medium-r-normal--18-*-*-*-*-*-*-*"),
-  PFONT(NAME_roman, 24,
-	"-*-helvetica-medium-r-normal--24-*-*-*-*-*-*-*"),
-  PFONT(NAME_oblique, 10,
-	"-*-helvetica-medium-o-normal--10-*-*-*-*-*-*-*"),
-  PFONT(NAME_oblique, 12,
-	"-*-helvetica-medium-o-normal--12-*-*-*-*-*-*-*"),
-  PFONT(NAME_oblique, 14,
-	"-*-helvetica-medium-o-normal--14-*-*-*-*-*-*-*"),
-  PFONT(NAME_oblique, 18,
-	"-*-helvetica-medium-o-normal--18-*-*-*-*-*-*-*"),
-  PFONT(NAME_oblique, 24,
-	"-*-helvetica-medium-o-normal--24-*-*-*-*-*-*-*"),
+{ PFONT(NAME_bold,    10, ""),
+  PFONT(NAME_bold,    12, ""),
+  PFONT(NAME_bold,    14, ""),
+  PFONT(NAME_bold,    18, ""),
+  PFONT(NAME_bold,    24, ""),
+  PFONT(NAME_roman,   10, ""),
+  PFONT(NAME_roman,   12, ""),
+  PFONT(NAME_roman,   14, ""),
+  PFONT(NAME_roman,   18, ""),
+  PFONT(NAME_roman,   24, ""),
+  PFONT(NAME_oblique, 10, ""),
+  PFONT(NAME_oblique, 12, ""),
+  PFONT(NAME_oblique, 14, ""),
+  PFONT(NAME_oblique, 18, ""),
+  PFONT(NAME_oblique, 24, ""),
   ENDFONTLIST
 };
 
 
 static fontdef times_fonts[] =
-{ PFONT(NAME_roman, 10,
-	"-*-times-medium-r-normal--10-*-*-*-*-*-*-*"),
-  PFONT(NAME_roman, 12,
-	"-*-times-medium-r-normal--12-*-*-*-*-*-*-*"),
-  PFONT(NAME_roman, 14,
-	"-*-times-medium-r-normal--14-*-*-*-*-*-*-*"),
-  PFONT(NAME_roman, 18,
-	"-*-times-medium-r-normal--18-*-*-*-*-*-*-*"),
-  PFONT(NAME_roman, 24,
-	"-*-times-medium-r-normal--24-*-*-*-*-*-*-*"),
-  PFONT(NAME_bold, 10,
-	"-*-times-bold-r-normal--10-*-*-*-*-*-*-*"),
-  PFONT(NAME_bold, 12,
-	"-*-times-bold-r-normal--12-*-*-*-*-*-*-*"),
-  PFONT(NAME_bold, 14,
-	"-*-times-bold-r-normal--14-*-*-*-*-*-*-*"),
-  PFONT(NAME_bold, 18,
-	"-*-times-bold-r-normal--18-*-*-*-*-*-*-*"),
-  PFONT(NAME_bold, 24,
-	"-*-times-bold-r-normal--24-*-*-*-*-*-*-*"),
-  PFONT(NAME_italic, 10,
-	"-*-times-medium-i-normal--10-*-*-*-*-*-*-*"),
-  PFONT(NAME_italic, 12,
-	"-*-times-medium-i-normal--12-*-*-*-*-*-*-*"),
-  PFONT(NAME_italic, 14,
-	"-*-times-medium-i-normal--14-*-*-*-*-*-*-*"),
-  PFONT(NAME_italic, 18,
-	"-*-times-medium-i-normal--18-*-*-*-*-*-*-*"),
-  PFONT(NAME_italic, 24,
-	"-*-times-medium-i-normal--24-*-*-*-*-*-*-*"),
+{ PFONT(NAME_roman,  10, ""),
+  PFONT(NAME_roman,  12, ""),
+  PFONT(NAME_roman,  14, ""),
+  PFONT(NAME_roman,  18, ""),
+  PFONT(NAME_roman,  24, ""),
+  PFONT(NAME_bold,   10, ""),
+  PFONT(NAME_bold,   12, ""),
+  PFONT(NAME_bold,   14, ""),
+  PFONT(NAME_bold,   18, ""),
+  PFONT(NAME_bold,   24, ""),
+  PFONT(NAME_italic, 10, ""),
+  PFONT(NAME_italic, 12, ""),
+  PFONT(NAME_italic, 14, ""),
+  PFONT(NAME_italic, 18, ""),
+  PFONT(NAME_italic, 24, ""),
   ENDFONTLIST
 };
 
@@ -769,7 +703,7 @@ default_font_list(Name fam, FontDef defs)
 
   while(defs->style)
   {
-    if ( defs->xname )
+    if ( defs->xname && defs->xname[0] )
     { snprintf(s, LEFT(),
 	       "font(%s, %s, %d, \"%s\")",
 	      strName(fam),
@@ -815,8 +749,8 @@ attach_font_families(Class class)
 			"helvetica_fonts,times_fonts]",
 			"Predefined font families");
 
-  attach_fonts(class, "courier_fonts",	 NAME_courier,	 courier_fonts);
+  attach_fonts(class, "courier_fonts",   NAME_courier,   courier_fonts);
   attach_fonts(class, "helvetica_fonts", NAME_helvetica, helvetica_fonts);
-  attach_fonts(class, "times_fonts",	 NAME_times,	 times_fonts);
-  attach_fonts(class, "screen_fonts",	 NAME_screen,	 screen_fonts);
+  attach_fonts(class, "times_fonts",     NAME_times,     times_fonts);
+  attach_fonts(class, "screen_fonts",    NAME_screen,    screen_fonts);
 }
