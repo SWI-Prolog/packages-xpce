@@ -1171,7 +1171,8 @@ initialise(M) :->
     send(M, send_super, initialise),
     send(M, slot, name, Name),
     send(M, slot, syntax, Name),              % converts to object
-    send(M, bindings).
+    send(M, bindings),
+    send(M, obtain_class_variables).
 
 
 icon(_, I:image) :<-

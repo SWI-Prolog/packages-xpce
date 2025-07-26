@@ -2160,7 +2160,7 @@ static char *T_scrollHV[] =
 static char *T_decorate[] =
         { "area=[{grow,shrink}]", "left_margin=[int]", "right_margin=[int]", "top_margin=[int]", "bottom_margin=[int]", "decorator=[window]" };
 static char *T_confirmCentered[] =
-        { "center=[point|frame]", "grab=[bool]", "monitor=[monitor]" };
+        { "center=[point|frame]", "grab=[bool]", "display=[display]" };
 static char *T_typed[] =
         { "event|event_id", "delegate=[bool]" };
 static char *T_focus[] =
