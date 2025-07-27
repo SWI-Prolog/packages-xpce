@@ -2139,9 +2139,11 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
 	  else
 	    prof_node = NULL;
 	  if ( ret )
-	  { rval = PL_call_predicate(MODULE_user,
+	  { int locks = pceMTUnlockAll();
+	    rval = PL_call_predicate(MODULE_user,
 				     DebugMode|PL_Q_PASS_EXCEPTION,
 				     PREDICATE_get_implementation, av);
+	    pceMTRelock(locks);
 	    if ( rval )
 	    { if ( IsFunctor(av+3, FUNCTOR_ref1) )
 	      { if ( !get_object_from_refterm(av+3, &goal.rval) )
@@ -2155,9 +2157,11 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
 		rval = PL_unify(ret, av+3);
 	    }
 	  } else
-	  { rval = PL_call_predicate(MODULE_user,
+	  { int locks = pceMTUnlockAll();
+	    rval = PL_call_predicate(MODULE_user,
 				     DebugMode|PL_Q_PASS_EXCEPTION,
 				     PREDICATE_send_implementation, av);
+	    pceMTRelock(locks);
 	  }
 	  if ( prof_node )
 	    PL_prof_exit(prof_node);
