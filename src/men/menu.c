@@ -733,6 +733,11 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
   iy = y;
   ih = h;
 
+  if ( isDefault(colour) && m->feedback == NAME_showSelectionOnly )
+  { Any c2 = getClassVariableValueObject(m, NAME_textColour);
+    if ( instanceOfObject(c2, ClassColour) )
+      colour = c2;
+  }
   if ( notDefault(colour) )
     r_colour(colour);
   if ( notDefault(mi->background) )
@@ -2300,6 +2305,8 @@ static classvardecl rc_menu[] =
      "Show the label"),
   RC(NAME_valueWidth, "int", "0",
      "Minimum width for popup menu"),
+  RC(NAME_textColour, "[colour]", "@default",
+     "Colour to use for the text"),
   RC(NAME_verticalFormat, "{top,center,bottom}", "center",
      "Adjust items {top,center,bottom} in their box"),
   RC(NAME_selectedForeground, "colour|pixmap",
