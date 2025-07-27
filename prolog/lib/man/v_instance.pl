@@ -116,15 +116,13 @@ created(IB, Obj:object) :->
     Obj = @Ref,
     atom_concat(@, Ref, Key),
     send(IB?browser, append, dict_item(Key, @default, Ref)),
-    send(IB?browser, normalise, Key),
-    send(IB, flush).
+    send(IB?browser, normalise, Key).
 
 
 freed(IB, Obj:object) :->
     "Delete object from browser"::
     Obj = @Ref,
     atom_concat(@, Ref, Key),
-    send(IB?browser, delete, Key),
-    send(IB, flush).
+    send(IB?browser, delete, Key).
 
 :- pce_end_class.

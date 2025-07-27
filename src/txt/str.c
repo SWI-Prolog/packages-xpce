@@ -311,6 +311,23 @@ str_downcase(PceString str, int from, int to)
   }
 }
 
+void
+str_translate(PceString str, int from, int to)
+{ if ( isstrA(str) )
+  { charA *s = str->s_textA;
+    for(int i=0; i<str->s_size; i++, s++)
+    { if ( ((*s)&0xff) == from )
+	*s = to;
+    }
+  } else
+  { charW *s = str->s_textW;
+    for(int i=0; i<str->s_size; i++, s++)
+    { if ( *s == from )
+	*s = to;
+    }
+  }
+}
+
 
 		 /*******************************
 		 *	      COMPARE		*

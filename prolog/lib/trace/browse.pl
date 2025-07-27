@@ -1036,8 +1036,7 @@ loading(What, How) :-
 qlf_part(source(File), File).
 
 update_image(Node, Img) :-
-    send(Node, image, Img),
-    send(Node, flush).
+    send(Node, image, Img).
 
 load_info(start(_Level, file(_, Path)),
           Path, start).

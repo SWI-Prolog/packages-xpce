@@ -116,19 +116,18 @@
 ! Binding for the logical font-names.  You can bind any name to any
 ! font here.
 
-!font.system_fonts:	[ normal    := font(helvetica, roman,   12), \
-!			  bold      := font(helvetica, bold,    12), \
-!			  italic    := font(helvetica, oblique, 12), \
-!			  small     := font(helvetica, roman,   10), \
-!			  large     := font(helvetica, roman,   14), \
-!			  boldlarge := font(helvetica, bold,    14), \
-!			  huge      := font(helvetica, roman,   18), \
-!			  boldhuge  := font(helvetica, bold,    18), \
-!			  fixed     := font(screen,    roman,   13), \
-!			  tt        := font(screen,    roman,   13), \
-!			  boldtt    := font(screen,    bold,    13), \
-!			  symbol    := font(symbol,    roman,   12)  \
-!			]
+! font.system_fonts:	[ normal    := font(sans, normal, 12), \
+! 			  bold      := font(sans, bold,   12), \
+! 			  italic    := font(sans, italic, 12), \
+! 			  small     := font(sans, normal, 10), \
+! 			  large     := font(sans, normal, 14), \
+! 			  boldlarge := font(sans, bold,   14), \
+! 			  huge      := font(sans, normal, 18), \
+! 			  boldhuge  := font(sans, bold,   18), \
+! 			  fixed     := font(mono, normal, 14), \
+! 			  tt        := font(mono, normal, 14), \
+! 			  boldtt    := font(mono, bold,   14)  \
+! 			]
 
 ! Scale all fonts with a constant factor.  The value is a float 
 

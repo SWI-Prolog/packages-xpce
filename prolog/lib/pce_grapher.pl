@@ -223,8 +223,7 @@ grapher(Message) :-
 grapher(G, Message) :-
     append(Actions, [persist], Message),
     !,
-    actions(Actions, G),
-    send(G, flush).
+    actions(Actions, G).
 grapher(G, Message) :-
     new(Undo, chain),
     (   send(@grapher_undo, assign, Undo),
@@ -233,8 +232,7 @@ grapher(G, Message) :-
     ;   send(Undo, for_all,
              message(@arg1, execute)),
         fail
-    ),
-    notrace(send(G, flush)).
+    ).
 
 actions([], _) :- !.
 actions([H|T], G) :-
@@ -487,9 +485,7 @@ layout(D, All, Animate) :-
                  move_only := MoveOnly),
             (   get(D, request_compute, @nil)
             ->  true                % No object has been moved
-            ;   send(D, flush),
-                sleep(0.01),
-                fail
+            ;   fail
             )
         ;   true
         )
@@ -548,7 +544,6 @@ create_popup(G) :->
 
 step(G) :->
     "Step for next action"::
-    send(G, flush),
     (   get(G, mode, step)
     ->  get(G, prompt_step, Action),
         (   Action == forward

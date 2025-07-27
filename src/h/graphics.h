@@ -771,10 +771,10 @@ End;
 NewClass(fontobj)
   Name		family;			/* Font family */
   Name		style;			/* Style */
+  Any		weight;			/* Weight */
   Int		points;			/* Point size */
   Int		ex;			/* Width of an x in this font */
   Int		avg_char_width;		/* Average char width */
-  Name          pango_name;		/* Pango description for font */
   BoolObj	fixed_width;		/* Is this a fixed width font? */
   Name		postscript_font;	/* Name of PostScript font */
   Int		postscript_size;	/* Size in PostScript */
@@ -1100,6 +1100,7 @@ GLOBAL	HashTable ColourTable;		/* ColourName --> Colour */
 GLOBAL  HashTable CursorTable;		/* CursorName --> Cursor */
 GLOBAL	HashTable FontTable;		/* FontName --> Font */
 GLOBAL  HashTable FontAliasTable;	/* Alias -> font */
+GLOBAL  HashTable FontFamilyTable;	/* Family -> Pango family */
 GLOBAL	HashTable ImageTable;		/* ImageName --> Image */
 GLOBAL  HashTable WindowTable;		/* X-Window --> PceWindow|FrameObj */
 GLOBAL  Class ClassImage;		/* @image_class */

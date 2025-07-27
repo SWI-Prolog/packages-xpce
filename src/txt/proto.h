@@ -78,6 +78,7 @@ COMMON(void)	str_cpy(PceString dest, PceString src);
 COMMON(charA *)	str_textp(PceString s, int i);
 COMMON(void)	str_upcase(PceString str, int from, int to);
 COMMON(void)	str_downcase(PceString str, int from, int to);
+COMMON(void)	str_translate(PceString str, int chrfrom, int chrto);
 COMMON(int)	str_cmp(PceString s1, PceString s2);
 COMMON(int)	str_icase_cmp(PceString s1, PceString s2);
 COMMON(int)	str_eq(PceString s1, PceString s2);

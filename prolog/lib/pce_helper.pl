@@ -279,7 +279,7 @@ open(TB) :->
 
 :- pce_begin_class(hlp_editor, editor, "Simple hyper-text editor").
 
-class_variable(title_font,            font,  font(helvetica, bold, 24)).
+class_variable(title_font,            font,  boldhuge).
 class_variable(section_font,          font,  boldhuge).
 class_variable(subsection_font,       font,  boldlarge).
 class_variable(subsubsection_font,    font,  bold).

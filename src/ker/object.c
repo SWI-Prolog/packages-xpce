@@ -946,8 +946,8 @@ sendMethodObject(Any obj, SendMethod m)
   return prependChain(ch, m);
 }
 
-static status
-getMethodObject(Any obj, Method m)
+status
+getMethodObject(Any obj, GetMethod m)
 { Chain ch = getAllGetMethodsObject(obj, ON);
 
   return prependChain(ch, m);

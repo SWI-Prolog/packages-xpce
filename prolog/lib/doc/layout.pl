@@ -299,7 +299,7 @@ initialise(M) :->
     send(M, slot, link_colour, colour(dark_green)),
     send(M, slot, style, style(font := VFont?font)),
     send(M, slot, ignore_blanks, @default),
-    send(M, set_font, family, helvetica),
+    send(M, set_font, family, sans),
     send(M, slot, parsep, hbox(0,8)),       % vertical skip
     send(M, slot, parindent, hbox(0,0)),    % horizontal skip
     send(M, space_mode, canonical).

@@ -1739,8 +1739,30 @@ s_has_char(FontObj f, unsigned int c)
  */
 void
 f_domain(FontObj f, Name which, int *a, int *z)
-{ *a = 0;
-  *z = 0x10ffff;
+{ WsFont wsf = ws_get_font(f);
+
+  PangoCoverage *cov = pango_font_get_coverage(wsf->font, NULL);
+  gunichar first = 0, last = 0;
+  bool found_first = false;
+
+  for (gunichar wc = 0; wc <= 0x10FFFF; wc++)
+  { PangoCoverageLevel cov_level = pango_coverage_get(cov, wc);
+    if ( cov_level != PANGO_COVERAGE_NONE )
+    { if ( !found_first )
+      { first = wc;
+	found_first = true;
+      }
+      last = wc;
+    }
+  }
+  g_object_unref(cov);
+  if ( found_first )
+  { *a = first;
+    *z = last;
+  } else
+  { *a = 0;
+    *z = 0x10ffff;
+  }
 }
 
 /**

@@ -236,7 +236,6 @@ execute(TB) :->
     get(TB, value, Value),
     get(Value, negate, NewValue),
     send(TB, value, NewValue),
-    send(TB, flush),
     get(TB, message, Message),
     (   Message == @default
     ->  get(TB, client, Client),

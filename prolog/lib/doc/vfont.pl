@@ -69,7 +69,7 @@ variable(size,     '1..7',        both, "Size index").
 
 initialise(VF) :->
     "Create with default attributes"::
-    send(VF, family,   helvetica),
+    send(VF, family,   sans),
     send(VF, encoding, latin1),
     send(VF, slant,    r),
     send(VF, weight,   medium),

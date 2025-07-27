@@ -820,9 +820,9 @@ static classvardecl rc_terminal_image[] =
      "How many lines are saved for scroll back"),
   RC(NAME_syntax, "[syntax_table]", "default",
      "Syntax definition"),
-  RC(NAME_font, "font", "font(screen,roman,13)",
+  RC(NAME_font, "font", "tt",
      "Default font"),
-  RC(NAME_boldFont, "font*", "font(screen,bold,13)",
+  RC(NAME_boldFont, "font*", "boldtt",
      "Bold font"),
   RC(NAME_ansiColours, "vector*",
      "vector("

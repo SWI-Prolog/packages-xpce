@@ -502,7 +502,7 @@ list_modules(M) :->
     send(D, append, button(quit, message(D?frame, free))),
     send(D, below, V),
     send(V, tab_stops, vector(200)),
-    send(V, font, font(helvetica, roman, 12)),
+    send(V, font, normal),
     send(V, format, '%s\t%s\n\n', 'Module Name', 'Number of Cards'),
     new(NM, number(0)),
     new(NC, number(0)),

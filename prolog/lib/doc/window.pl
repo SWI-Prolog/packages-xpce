@@ -111,8 +111,7 @@ clear(DW) :->
     get(DW, parbox, PB),
     send(PB, clear),
     send(PB, append, hbox(0, 10)),
-    send(DW, scroll_to, point(0, 0)),
-    send(DW, flush).
+    send(DW, scroll_to, point(0, 0)).
 
 show(DW, Tokens:prolog, Mode:[doc_mode]) :->
     "Show parsed document"::

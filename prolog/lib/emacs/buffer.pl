@@ -528,7 +528,6 @@ auto_save(B) :->
     "Auto-save the buffer (when file)"::
     (   get(B, auto_save_file, File)
     ->  send(B, report, status, 'Auto saving ...'),
-        send(@display, flush),
         ignore(send(B, send_super, save, File, 0, B?size)),
         send(B?auto_save_count, value, 300),
         send(B, report, status, 'Auto saving ... done')

@@ -57,7 +57,8 @@ status ws_create_font(FontObj f);
 void   ws_destroy_font(FontObj f);
 bool   s_cwidth(uint32_t c, FontObj font, float *wp);
 bool   s_setcwidth(uint32_t c, FontObj font, float w);
-status ws_list_fonts(BoolObj mono);
+Sheet  ws_font_families(BoolObj mono);
+Any    ws_get_pango_property(FontObj f, Name property);
 
 static inline WsFont
 ws_get_font(FontObj f)
@@ -78,5 +79,31 @@ cairo_font(FontObj f)
 { WsFont wsf = ws_get_font(f);
   return wsf ? wsf->layout : NULL;
 }
+
+		 /*******************************
+		 *        FONT FAMILIES         *
+		 *******************************/
+
+#ifndef MONO_FAMILY
+#ifdef __WINDOWS__
+#define MONO_FAMILY "Consolas,Courier New,monospace"
+#else
+#define MONO_FAMILY "Noto Sans Mono,monospace"
+#endif
+#endif
+
+#ifndef SANS_FAMILY
+#ifdef __WINDOWS__
+#define SANS_FAMILY "Segoe UI,Verdana,sans"
+#elif __APPLE__
+#define SANS_FAMILY "sans"
+#else
+#define SANS_FAMILY "Noto Sans,sans"
+#endif
+#endif
+
+#ifndef SERIF_FAMILY
+#define SERIF_FAMILY "Noto Serif,serif"
+#endif
 
 #endif /* SDLFONT_H */

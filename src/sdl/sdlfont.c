@@ -105,6 +105,27 @@ dynamic_metrics(FontObj f)
 
 #endif/*TRUST_PANGO_METRICS*/
 
+typedef struct
+{ PangoWeight pango;
+  Name        name;
+} weight_name;
+
+static const weight_name weight_names[] =
+{ { PANGO_WEIGHT_THIN,       NAME_thin },
+  { PANGO_WEIGHT_ULTRALIGHT, NAME_ultralight },
+  { PANGO_WEIGHT_LIGHT,      NAME_light },
+  { PANGO_WEIGHT_SEMILIGHT,  NAME_semilight },
+  { PANGO_WEIGHT_BOOK,       NAME_book },
+  { PANGO_WEIGHT_NORMAL,     NAME_normal },
+  { PANGO_WEIGHT_MEDIUM,     NAME_medium },
+  { PANGO_WEIGHT_BOLD,       NAME_bold },
+  { PANGO_WEIGHT_ULTRABOLD,  NAME_ultrabold },
+  { PANGO_WEIGHT_HEAVY,      NAME_heavy },
+  { PANGO_WEIGHT_ULTRAHEAVY, NAME_ultraheavy },
+  { 0, (Name)NULL }
+};
+
+
 /**
  * Create a native font resource associated with the specified FontObj
  * on the given display.
@@ -115,74 +136,52 @@ dynamic_metrics(FontObj f)
  */
 status
 ws_create_font(FontObj f)
-{ PangoFontDescription *desc = NULL;
-  BoolObj fixed = DEFAULT;
+{ BoolObj fixed = DEFAULT;
 
   if ( f->ws_ref )		/* already done */
     succeed;
 
   ws_init_fonts();
 
-  if ( notDefault(f->pango_name) )
-  { const char *pname = stringToUTF8(&f->pango_name->data, NULL);
-    desc = pango_font_description_from_string(pname);
-    if ( !desc )
-      Cprintf("Failed to parse Pango font name %s\n", pname);
-  }
+  PangoFontDescription *desc = pango_font_description_new();
+  PangoStyle   slant = PANGO_STYLE_NORMAL;
+  PangoWeight weight = PANGO_WEIGHT_NORMAL;
+  const char *family = "sans";
 
-  if ( !desc )
-  { desc = pango_font_description_new();
-    PangoStyle   slant = PANGO_STYLE_NORMAL;
-    PangoWeight weight = PANGO_WEIGHT_NORMAL;
-    const char *family = "sans";
+  fixed = OFF;
+  if ( f->style == NAME_normal )
+    slant = PANGO_STYLE_NORMAL;
+  else if ( f->style == NAME_italic )
+    slant = PANGO_STYLE_ITALIC;
+  else if ( f->style == NAME_oblique )
+    slant = PANGO_STYLE_OBLIQUE;
 
-    fixed = OFF;
-    if ( f->style == NAME_bold )
-      weight = PANGO_WEIGHT_BOLD;
-    else if ( f->style == NAME_oblique )
-      slant = PANGO_STYLE_ITALIC;
-
-    if ( f->family == NAME_courier || f->family == NAME_screen )
-    { family = "Noto Sans Mono,monospace";
-#ifdef __WINDOWS__
-      if ( PL_w32_running_under_wine() )
-	family = "Courier New,Noto Sans Mono";
-      else
-	family = "Consolas,Courier New";
-#endif
-      fixed = ON;
-    } else if ( f->family == NAME_times )
-    { family = "serif";
-#ifdef __WINDOWS__
-    } else if ( f->family == NAME_helvetica )
-    { family = "Noto Sans,Segoe UI,Verdana";
-      if ( PL_w32_running_under_wine() )
-	family = "Verdana";
-#elif !defined(__APPLE__)
-      family = "Noto Sans,sans";
-#endif
-    } else
-    { family = nameToUTF8(f->family);
+  if ( isName(f->weight) )
+  { weight = PANGO_WEIGHT_NORMAL;
+    for(const weight_name *wn = weight_names; wn->name; wn++)
+    { if ( wn->name == f->weight )
+      { weight = wn->pango;
+	break;
+      }
     }
-
-    pango_font_description_set_family(desc, family);
-    pango_font_description_set_style(desc, slant);
-    pango_font_description_set_weight(desc, weight);
-    pango_font_description_set_size(desc, valNum(f->points)*PANGO_SCALE*font_scale);
+  } else
+  { weight = valInt(f->weight);
   }
+
+  Name fam = getMemberHashTable(FontFamilyTable, f->family);
+  if ( !fam )
+    fam = f->family;
+  family = nameToUTF8(fam);
+
+  pango_font_description_set_family(desc, family);
+  pango_font_description_set_style(desc, slant);
+  pango_font_description_set_weight(desc, weight);
+  pango_font_description_set_size(desc, valNum(f->points)*PANGO_SCALE*font_scale);
 
   PangoFont *pf = pango_font_map_load_font(fontmap, context, desc);
   PangoFontMetrics *metrics = pango_font_get_metrics(pf, NULL);
   PangoLayout *layout = pango_layout_new(context);
   pango_layout_set_font_description(layout, desc);
-
-  if ( isDefault(f->pango_name) )
-  { PangoFontDescription *d2 = pango_font_describe(pf);
-    char *pname = pango_font_description_to_string(d2);
-    assign(f, pango_name, UTF8ToName(pname));
-    g_free(pname);
-    pango_font_description_free(d2);
-  }
 
   if ( notDefault(fixed) )
     assign(f, fixed_width, fixed);
@@ -287,26 +286,83 @@ s_setcwidth(uint32_t c, FontObj font, float w)
   return false;
 }
 
+Any
+ws_get_pango_property(FontObj f, Name property)
+{ WsFont wsf = ws_get_font(f);
+  PangoFontDescription *desc = pango_font_describe(wsf->font);
+  Any rval = NULL;
+
+  if ( property == NAME_description )
+  { char *pname = pango_font_description_to_string(desc);
+    rval = UTF8ToName(pname);
+    g_free(pname);
+  } else if ( property == NAME_family )
+  { const char *family = pango_font_description_get_family(desc);
+    rval = UTF8ToName(family);
+  } else if ( property == NAME_style )
+  { PangoStyle style = pango_font_description_get_style(desc);
+    switch(style)
+    { case PANGO_STYLE_NORMAL:  rval = NAME_normal;  break;
+      case PANGO_STYLE_OBLIQUE: rval = NAME_oblique; break;
+      case PANGO_STYLE_ITALIC:  rval = NAME_italic;  break;
+      default: break;
+    }
+  } else if ( property == NAME_weight )
+  { PangoWeight weight = pango_font_description_get_weight(desc);
+    for(const weight_name *wn = weight_names; wn->name; wn++)
+    { if ( wn->pango == weight )
+      { rval = wn->name;
+	break;
+      }
+    }
+    if ( !rval )
+      rval = toInt(weight);
+  } else if ( property == NAME_size )
+  { int size = pango_font_description_get_size(desc);
+    bool size_is_absolute = pango_font_description_get_size_is_absolute(desc);
+
+    if ( size_is_absolute )
+    { rval = toInt(size);
+    } else
+    { rval = toNum(P2D(size));
+    }
+  }
+  pango_font_description_free(desc);
+
+  return rval;
+}
+
+
 
 		 /*******************************
-		 *         SYSTEM FONTS         *
+		 *         LIST FONTS           *
 		 *******************************/
 
 /**
- * List the font information as available from Pango.
- *
- * @param mono If @on, only show fixed-width fonts.
+ * Get information about all available fonts.
+ * @return a sheet mapping family names to their properties.  Each
+ * family is a sheet with the properties
+ *   - monospace: @on
+ *     Present if this is a monospace font
+ *   - variable: @on
+ *     Present if this is a variable font
+ *   - faces: sheet
+ *     This sheet maps face nams to a face description sheet with
+ *     properties
+ *     - synthesized: @on
+ *       Present if the face is synthesized.
+ *     - description: a `name` holding the Pango description
  */
 
-status
-ws_list_fonts(BoolObj mono)
-{ PangoFontFamily **families;
+Sheet
+ws_font_families(BoolObj mono)
+{ Sheet xfonts = answerObject(ClassSheet, EAV);
+  PangoFontFamily **families;
   int n_families;
 
   ws_init_fonts();
 
   pango_font_map_list_families(fontmap, &families, &n_families);
-  Cprintf("Found %d font families:\n", n_families);
 
   for(int i = 0; i < n_families; i++)
   { PangoFontFamily *family = families[i];
@@ -320,26 +376,34 @@ ws_list_fonts(BoolObj mono)
     bool is_variable = pango_font_family_is_variable(family);
 #endif
 
-    Cprintf("\nFamily: %s\n", family_name);
-    Cprintf("  Monospace: %s\n", is_monospace ? "yes" : "no");
+    Sheet xfaces = newObject(ClassSheet, EAV);
+    Sheet xfam = newObject(ClassSheet, EAV);
+    valueSheet(xfam, NAME_faces, xfaces);
+    valueSheet(xfonts, UTF8ToName(family_name), xfam);
+
+    if ( is_monospace )
+      valueSheet(xfam, NAME_monospace, ON);
 #if PANGO_VERSION_CHECK(1,44,0)
-    Cprintf("   Variable: %s\n", is_variable ? "yes" : "no");
+    if ( is_variable )
+      valueSheet(xfam, NAME_variable, ON);
 #endif
 
     PangoFontFace **faces;
     int n_faces;
     pango_font_family_list_faces(family, &faces, &n_faces);
 
-    Cprintf("  Faces (%d):\n", n_faces);
     for(int j = 0; j < n_faces; j++)
     { const char *face_name = pango_font_face_get_face_name(faces[j]);
       bool is_synthesized = pango_font_face_is_synthesized(faces[j]);
-
-      Cprintf("    - %s%s\n", face_name, is_synthesized ? " (synthesized)" : "");
-
       PangoFontDescription *desc = pango_font_face_describe(faces[j]);
       gchar *desc_str = pango_font_description_to_string(desc);
-      Cprintf("        Description: %s\n", desc_str);
+
+      Sheet xface = newObject(ClassSheet, EAV);
+      valueSheet(xfaces, UTF8ToName(face_name), xface);
+      valueSheet(xface, NAME_description, UTF8ToName(desc_str));
+      if ( is_synthesized )
+	valueSheet(xface, NAME_synthesized, ON);
+
       g_free(desc_str);
       pango_font_description_free(desc);
     }
@@ -348,5 +412,5 @@ ws_list_fonts(BoolObj mono)
   }
 
   g_free(families);
-  succeed;
+  answer(xfonts);
 }

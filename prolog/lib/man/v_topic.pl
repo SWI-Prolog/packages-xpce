@@ -165,7 +165,7 @@ create_topic(TB, Name:string, Summary:string, Super:[man_topic_card]) :->
         send(SuperTopic, relate, subs, Topic),
         send(Topic, relate, super, SuperTopic),
         get(TB, node, SuperTopic, SuperNode),
-        send(SuperNode, font, font(helvetica, bold, 12)),
+        send(SuperNode, font, bold),
         add_card(SuperNode, Topic)
     ).
 
@@ -330,8 +330,8 @@ create_node(Card, Node) :-
     (   get(Card, related, subs, Subs),
         Subs \== @nil,
         \+ send(Subs, empty)
-    ->  Font = font(helvetica, bold,  12)
-    ;   Font = font(helvetica, roman, 12)
+    ->  Font = bold
+    ;   Font = normal
     ),
     new(Node, node(text(Card?name, left, Font))),
     send(Node, attribute, attribute(card, Card)).

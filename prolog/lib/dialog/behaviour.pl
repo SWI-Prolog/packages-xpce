@@ -2088,11 +2088,9 @@ feedback(Gr, Attr := Value, Goal) :-
     get(Gr, frame, Editor),
     get(Gr, Attr, OldValue),
     send(Gr, Attr, Value),
-    send(Gr, flush),
     send(Editor, animation_sleep),
     yesno(Goal, RVal),
     send(Gr, Attr, OldValue),
-    send(Gr, flush),
     (   RVal
     ->  true
     ;   (   flashed

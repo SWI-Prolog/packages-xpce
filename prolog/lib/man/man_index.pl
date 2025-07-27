@@ -198,7 +198,7 @@ format(_, Fmt:char_array, Args:any ...) :->
     ->  true
     ;   Msg =.. [format, Fmt | Args],
         send(@pce, Msg),
-        flush
+        flush_output
     ).
 
 frame(_, _) :<-

@@ -112,7 +112,7 @@ variable(reference,     'name|int*',    get).
 handle(w-6, h/2, link).
 
 initialise(T, Value:unchecked) :->
-    send(T, send_super, initialise, '', left, font(helvetica, roman, 12)),
+    send(T, send_super, initialise, '', left, normal),
     send(T, display_value, Value).
 
 
@@ -276,7 +276,7 @@ link(T, Gr:graphical) :->
 
 initialise(T, String:string) :->
     send(T, send_super,
-         initialise, String, left, font(helvetica, bold, 14)).
+         initialise, String, left, bold).
 
 object(T, Object) :<-
     get(T, device, Dev),
@@ -293,7 +293,7 @@ reference(T, Ref) :<-
 
 initialise(T, Label:name) :->
     send(T, send_super,
-         initialise, Label, left, font(helvetica, roman, 12)).
+         initialise, Label, left, normal).
 
 label(T, Label:name) :->
     send(T, string, Label),

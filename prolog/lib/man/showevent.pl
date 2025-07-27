@@ -140,7 +140,6 @@ show_event(V, Ev:event) :->
     "Show last event"::
     get(V, member, event_hierarchy_window, EH),
     send(V, update_dialog, Ev),
-    send(V, flush),
     send(EH, show, Ev).
 
 append_event(V, Ev:event) :->
@@ -229,7 +228,6 @@ show(W, Ev:event) :->
     get(Node?tree, window, Window),
     send(Window, normalise, Node),
     get(Node, member, bitmap, BM),
-    send(BM, flush),
     send(BM, flash),
     send(Node?tree, selection, Node).
 

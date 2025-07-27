@@ -38,23 +38,34 @@
 
 static status	defaultPostScriptFont(FontObj f);
 static Int	getPointsFont(FontObj f);
-static void	attach_font_families(Class class);
-static status	loadFonts(void);
+static status	loadFontFamilies(void);
 static status	loadFontAliases(Name res);
 static status	fontAlias(Name name, FontObj font, BoolObj force);
 
 static Name
-fontName(Name family, Name style, Int points)
+fontName(Name family, Name style, Int points, Name weight)
 { string s;
-  Any av[3];
+  Any av[4];
   Name rc;
 
-  av[0] = family;
-  av[1] = style;
-  av[2] = points;
+  if ( (weight == NAME_normal || weight == toInt(400)) ||
+       (style == NAME_bold && (weight == NAME_bold || weight == toInt(700))) )
+  { av[0] = family;
+    av[1] = style;
+    av[2] = points;
 
-  str_writefv(&s, (CharArray)CtoTempString("%s_%s_%d"), 3, av);
+    str_writefv(&s, (CharArray)CtoTempString("%s_%s_%d"), 3, av);
+  } else
+  { av[0] = family;
+    av[1] = weight;
+    av[2] = style;
+    av[3] = points;
 
+    str_writefv(&s, (CharArray)CtoTempString("%s_%s_%s_%d"), 4, av);
+  }
+
+  str_downcase(&s, 0, s.s_size);
+  str_translate(&s, ' ', '_');
   rc = StringToName(&s);
   str_unalloc(&s);
 
@@ -63,18 +74,20 @@ fontName(Name family, Name style, Int points)
 
 
 static status
-initialiseFont(FontObj f, Name family, Name style, Int points, Name xname)
-{ Name name = fontName(family, style, points);
+initialiseFont(FontObj f, Name family, Name style, Int points, Name weight)
+{ if ( isDefault(weight) )
+    weight = style == NAME_bold ? NAME_bold : NAME_normal;
 
   assign(f, family,      family);
   assign(f, style,       style);
+  assign(f, weight,	 weight);
   assign(f, points,      points);
   assign(f, fixed_width, DEFAULT);
-  assign(f, pango_name,  xname);
 
   defaultPostScriptFont(f);
+  protectObject(f);		/* Still needed? */
 
-  protectObject(f);
+  Name name = fontName(family, style, points, weight);
   newAssoc(name, f);
 
   return appendHashTable(FontTable, name, f);
@@ -82,8 +95,10 @@ initialiseFont(FontObj f, Name family, Name style, Int points, Name xname)
 
 
 static FontObj
-getLookupFont(Class class, Name family, Name style, Int points)
-{ Name name = fontName(family, style, points);
+getLookupFont(Class class, Name family, Name style, Int points, Name weight)
+{ if ( isDefault(weight) )
+    weight = style == NAME_bold ? NAME_bold : NAME_normal;
+  Name name = fontName(family, style, points, weight);
   FontObj f2;
 
   makeBuiltinFonts();
@@ -114,12 +129,6 @@ getConvertFont(Class class, Name name)
 
     if ( (f=getMemberHashTable(FontAliasTable, fn)) )
     { answer(f);
-    } else
-    { for_hash_table(FontTable, sy,
-		     { FontObj f = sy->value;
-		       if ( f->pango_name == fn ) /* case? */
-			 answer(f);
-		     })
     }
   }
 
@@ -164,7 +173,7 @@ makeBuiltinFonts(void)
     succeed;
   done = true;
 
-  if ( loadFonts() &&			/* XPCE predefined fonts */
+  if ( loadFontFamilies() &&	/* Family -> Pango Family */
        loadFontAliases(NAME_systemFonts) )
   { loadFontAliases(NAME_userFonts);
     succeed;
@@ -334,37 +343,33 @@ getPointsFont(FontObj f)
   answer(getHeightFont(f));
 }
 
+static Any
+getPangoPropertyFont(FontObj f, Name property)
+{ return ws_get_pango_property(f, property);
+}
+
 
 		/********************************
 		*          FONT TABLES		*
 		********************************/
 
 static status
-loadFontFamily(Name fam)
-{ if ( !getClassVariableClass(ClassFont, fam) )
-    attach_class_variable(ClassFont, fam, "chain", "[]", "Font family set");
-
-  if ( !getClassVariableValueClass(ClassFont, fam) )
-    return errorPce(ClassFont, NAME_noFontsInFamily, fam);
-
-  succeed;
-}
-
-
-static status
-loadFonts(void)
-{ Chain fams;
-  static bool done = false;
-
-  if ( done )
-    succeed;
-  done = true;
-
-  if ( (fams = getClassVariableValueClass(ClassFont, NAME_fontFamilies)) )
-  { Cell cell;
-
-    for_cell(cell, fams)
-      loadFontFamily(cell->value);
+getPair(Any obj, Any *key, Any *value)
+{ if ( instanceOfObject(obj, ClassBinding) )
+  { Binding b = obj;
+    *key   = b->name;
+    *value = b->value;
+  } else if ( instanceOfObject(obj, ClassTuple) )
+  { Tuple t = obj;
+    *key   = t->first;
+    *value = t->second;
+  } else if ( instanceOfObject(obj, ClassAttribute) )
+  { Attribute a = obj;
+    *key = a->name;
+    *value = a->value;
+  } else
+  { return errorPce(obj, NAME_unexpectedType,
+		    CtoType(":=|tuple|attribute"));
   }
 
   succeed;
@@ -384,23 +389,8 @@ loadFontAliases(Name res)
       FontObj font;
       Any n, f;
 
-      if ( instanceOfObject(cell->value, ClassBinding) )
-      { Binding b = cell->value;
-	n = b->name;
-	f = b->value;
-      } else if ( instanceOfObject(cell->value, ClassTuple) )
-      { Tuple t = cell->value;
-	n = t->first;
-	f = t->second;
-      } else if ( instanceOfObject(cell->value, ClassAttribute) )
-      { Attribute a = cell->value;
-	n = a->name;
-	f = a->value;
-      } else
-      { errorPce(cell->value, NAME_unexpectedType,
-		 CtoType(":=|tuple|attribute"));
+      if ( !getPair(cell->value, &n, &f) )
 	continue;
-      }
 
       if ( !(name = checkType(n, TypeName, ClassFont)) ||
 	   !(font = checkType(f, type_font, ClassFont)) )
@@ -425,12 +415,42 @@ fontAlias(Name name, FontObj font, BoolObj force)
 }
 
 
-/* Implements class(font)->list_fonts */
 static status
-listFonts(Class class, BoolObj mono)
-{ return ws_list_fonts(mono);
+loadFontFamilies(void)
+{ Chain ch = getClassVariableValueClass(ClassFont, NAME_pangoFamilies);
+
+  if ( ch )
+  { Cell cell;
+
+    for_cell(cell, ch)
+    { Name name;
+      Name pname;
+      Any n, f;
+
+      if ( !getPair(cell->value, &n, &f) )
+	continue;
+
+      if ( !(name  = checkType(n, TypeName, ClassFont)) ||
+	   !(pname = checkType(f, TypeName, ClassFont)) )
+      { errorPce(ClassFont, NAME_badPangoFamily, n, f);
+      } else
+      { if ( !getMemberHashTable(FontFamilyTable, name) )
+	  appendHashTable(FontFamilyTable, name, pname);
+      }
+    }
+
+    succeed;
+  }
+
+  fail;
 }
 
+
+/* Implements class(font)<-font_families */
+static Sheet
+getFontFamilies(Class class, BoolObj mono)
+{ answer(ws_font_families(mono));
+}
 
 		 /*******************************
 		 *	 CLASS DECLARATION	*
@@ -438,26 +458,27 @@ listFonts(Class class, BoolObj mono)
 
 /* Type declarations */
 
+#define WEIGHT_NAMES "{thin,ultralight,light,semilight,book,normal,medium,bold,ultrabold,heavy,ultraheavy}"
+#define WEIGHT_TYPE WEIGHT_NAMES "|100..1000"
 static char *T_initialise[] =
-        { "family=name", "style=name", "points=[int]", "x_name=[name]" };
-static char *T_lookup[] =
-        { "name", "name", "[int]" };
+        { "family=name", "style=name", "points=[int]",
+	  "weight=["WEIGHT_TYPE"]" };
 
 /* Instance Variables */
 
 static vardecl var_font[] =
 { IV(NAME_family, "name", IV_GET,
      NAME_name, "Family the font belongs to (times, etc.)"),
-  IV(NAME_style, "name", IV_GET,
-     NAME_name, "Style of the font (bold, italic, etc.)"),
+  IV(NAME_style, "{normal,italic,oblique,bold}", IV_GET,
+     NAME_name, "Style of the font"),
+  IV(NAME_weight, WEIGHT_TYPE, IV_GET,
+     NAME_name, "Weight of the font"),
   IV(NAME_points, "[int]", IV_NONE,
      NAME_name, "Point-size of the font"),
   IV(NAME_ex, "int*", IV_NONE,
      NAME_dimension, "Height of the letter `x' in this font"),
   IV(NAME_avgCharWidth, "int*", IV_NONE,
      NAME_dimension, "Average char width"),
-  IV(NAME_pangoName, "[name]", IV_GET,
-     NAME_pango, "Pango description for font"),
   IV(NAME_fixedWidth, "[bool]", IV_NONE,
      NAME_property, "If @off, font is proportional"),
   IV(NAME_postscriptFont, "name", IV_BOTH,
@@ -472,7 +493,7 @@ static vardecl var_font[] =
 
 static senddecl send_font[] =
 { SM(NAME_initialise, 4, T_initialise, initialiseFont,
-     DEFAULT, "Create from fam, style, points, Pango name"),
+     DEFAULT, "Create from fam, style, points, weigth"),
   SM(NAME_unlink, 0, NULL, unlinkFont,
      DEFAULT, "Destroy the font"),
   SM(NAME_member, 1, "char", memberFont,
@@ -502,14 +523,17 @@ static getdecl get_font[] =
      NAME_dimension, "Width of string (default \"x\")"),
   GM(NAME_advance, 1, "int", "char_array", getAdvanceFont,
      NAME_dimension, "X-origin advancement of string"),
-  GM(NAME_lookup, 3, "font", T_lookup, getLookupFont,
+  GM(NAME_lookup, 4, "font", T_initialise, getLookupFont,
      NAME_oms, "Lookup in @fonts table"),
   GM(NAME_defaultCharacter, 0, "char", NULL, getDefaultCharacterFont,
      NAME_property, "Character painted for non-existing entries"),
   GM(NAME_domain, 1, "tuple", "[{x,y}]", getDomainFont,
      NAME_property, "Range of valid characters"),
   GM(NAME_fixedWidth, 0, "bool", NULL, getFixedWidthFont,
-     NAME_property, "Boolean to indicate font is fixed-width")
+     NAME_property, "Boolean to indicate font is fixed-width"),
+  GM(NAME_pangoProperty, 1, "{description,family,style,weight,size}",
+     "int|name", getPangoPropertyFont,
+     NAME_property, "Property of the Pango font"),
 };
 
 /* Resources */
@@ -518,19 +542,28 @@ static classvardecl rc_font[] =
 { RC(NAME_scale, "real",  "1.0",
      "Multiplication factor for all fonts"),
   RC(NAME_systemFonts, "chain",
-     "[ normal    := font(helvetica, roman, 12),\n"
-     "  bold      := font(helvetica, bold, 12),\n"
-     "  italic    := font(helvetica, oblique, 12),\n"
-     "  small     := font(helvetica, roman, 10),\n"
-     "  large     := font(helvetica, roman, 14),\n"
-     "  boldlarge := font(helvetica, bold, 14),\n"
-     "  huge      := font(helvetica, roman, 18),\n"
-     "  boldhuge  := font(helvetica, bold, 18),\n"
-     "  fixed     := font(courier, roman, 12),\n"
-     "  tt        := font(courier, roman, 12),\n"
-     "  boldtt    := font(courier, bold, 12)\n"
+     "[ normal    := font(sans, normal, 12),\n"
+     "  bold      := font(sans, bold,   12),\n"
+     "  italic    := font(sans, italic, 12),\n"
+     "  small     := font(sans, normal, 10),\n"
+     "  large     := font(sans, normal, 14),\n"
+     "  boldlarge := font(sans, bold,   14),\n"
+     "  huge      := font(sans, normal, 18),\n"
+     "  boldhuge  := font(sans, bold,   18),\n"
+     "  fixed     := font(mono, normal, 12),\n"
+     "  tt        := font(mono, normal, 12),\n"
+     "  boldtt    := font(mono, bold,   12)\n"
      "]",
      "Predefined font-aliases"),
+  RC(NAME_pangoFamilies, "chain",
+     "[ mono      := '"MONO_FAMILY"',\n"
+     "  sans      := '"SANS_FAMILY"',\n"
+     "  serif     := '"SERIF_FAMILY"',\n"
+     "  screen    := '"MONO_FAMILY"',\n" /* Backward compatibility */
+     "  helvetica := '"SANS_FAMILY"',\n"
+     "  times     := '"SERIF_FAMILY"'\n"
+     "]",
+     "Mapping from generic family to Pango family"),
   RC(NAME_noFont, "font", "normal",
      "Replacement for undefined fonts")
 };
@@ -552,169 +585,18 @@ makeClassFont(Class class)
   saveStyleClass(class, NAME_external);
   cloneStyleClass(class, NAME_none);
 
-  FontTable      = globalObject(NAME_fonts, ClassHashTable, toInt(32), EAV);
-  FontAliasTable = globalObject(NAME_fontAliases, ClassHashTable, toInt(16), EAV);
+  FontTable       = globalObject(NAME_fonts, ClassHashTable, EAV);
+  FontAliasTable  = globalObject(NAME_fontAliases, ClassHashTable, EAV);
+  FontFamilyTable = globalObject(NAME_fontFamilies, ClassHashTable, EAV);
 
-  attach_font_families(class);
   /* Create a class method */
-  sendMethodObject(
+  getMethodObject(
     class,
-    createSendMethod(NAME_listFonts,
-		     newObject(ClassVector, CtoName("[bool]"), EAV),
-		     CtoString("List Pango font families"),
-		     listFonts));
+    createGetMethod(NAME_fontFamilies,
+		    toType(NAME_sheet),
+		    newObject(ClassVector, CtoName("[monospace=bool]"), EAV),
+		    CtoString("Get Pango font families"),
+		    (void*)getFontFamilies));
 
   succeed;
-}
-
-		 /*******************************
-		 *        DEFAULT FONTS         *
-		 *******************************/
-
-#define PFONT(n, p, x) { n, p, XNAME(x) }
-#define ENDFONTLIST    { NULL, 0, NULL }
-
-typedef struct
-{ Name style;
-  int  points;
-  char *xname;
-} fontdef, *FontDef;
-
-#define XNAME(x) x
-
-/* @screen_<Style>_<Points> */
-static fontdef screen_fonts[] =
-{ PFONT(NAME_roman, 10, ""),
-  PFONT(NAME_roman, 12, ""),
-  PFONT(NAME_roman, 14, ""),
-  PFONT(NAME_roman, 16, ""),
-  PFONT(NAME_bold,  10, ""),
-  PFONT(NAME_bold,  12, ""),
-  PFONT(NAME_bold,  14, ""),
-  PFONT(NAME_bold,  16, ""),
-  ENDFONTLIST
-};
-
-/* @courier_<Style>_<Points> */
-static fontdef courier_fonts[] =
-{ PFONT(NAME_roman,   10, ""),
-  PFONT(NAME_roman,   12, ""),
-  PFONT(NAME_roman,   14, ""),
-  PFONT(NAME_roman,   18, ""),
-  PFONT(NAME_roman,   24, ""),
-  PFONT(NAME_bold,    10, ""),
-  PFONT(NAME_bold,    12, ""),
-  PFONT(NAME_bold,    14, ""),
-  PFONT(NAME_bold,    18, ""),
-  PFONT(NAME_bold,    24, ""),
-  PFONT(NAME_oblique, 10, ""),
-  PFONT(NAME_oblique, 12, ""),
-  PFONT(NAME_oblique, 14, ""),
-  PFONT(NAME_oblique, 18, ""),
-  PFONT(NAME_oblique, 24, ""),
-  ENDFONTLIST
-};
-
-
-static fontdef helvetica_fonts[] =
-{ PFONT(NAME_bold,    10, ""),
-  PFONT(NAME_bold,    12, ""),
-  PFONT(NAME_bold,    14, ""),
-  PFONT(NAME_bold,    18, ""),
-  PFONT(NAME_bold,    24, ""),
-  PFONT(NAME_roman,   10, ""),
-  PFONT(NAME_roman,   12, ""),
-  PFONT(NAME_roman,   14, ""),
-  PFONT(NAME_roman,   18, ""),
-  PFONT(NAME_roman,   24, ""),
-  PFONT(NAME_oblique, 10, ""),
-  PFONT(NAME_oblique, 12, ""),
-  PFONT(NAME_oblique, 14, ""),
-  PFONT(NAME_oblique, 18, ""),
-  PFONT(NAME_oblique, 24, ""),
-  ENDFONTLIST
-};
-
-
-static fontdef times_fonts[] =
-{ PFONT(NAME_roman,  10, ""),
-  PFONT(NAME_roman,  12, ""),
-  PFONT(NAME_roman,  14, ""),
-  PFONT(NAME_roman,  18, ""),
-  PFONT(NAME_roman,  24, ""),
-  PFONT(NAME_bold,   10, ""),
-  PFONT(NAME_bold,   12, ""),
-  PFONT(NAME_bold,   14, ""),
-  PFONT(NAME_bold,   18, ""),
-  PFONT(NAME_bold,   24, ""),
-  PFONT(NAME_italic, 10, ""),
-  PFONT(NAME_italic, 12, ""),
-  PFONT(NAME_italic, 14, ""),
-  PFONT(NAME_italic, 18, ""),
-  PFONT(NAME_italic, 24, ""),
-  ENDFONTLIST
-};
-
-
-static char *
-default_font_list(Name fam, FontDef defs)
-{ char buf[10240];
-  char *s = buf;
-
-#define LEFT() (sizeof(buf)-(s-buf)-1)
-
-  *s++ = '[';
-
-  while(defs->style)
-  {
-    if ( defs->xname && defs->xname[0] )
-    { snprintf(s, LEFT(),
-	       "font(%s, %s, %d, \"%s\")",
-	      strName(fam),
-	      strName(defs->style),
-	      defs->points,
-	      defs->xname);
-    } else
-    { snprintf(s, LEFT(),
-	      "font(%s, %s, %d)",
-	      strName(fam),
-	      strName(defs->style),
-	      defs->points);
-    }
-    s += strlen(s);
-    defs++;
-    if ( defs->style && LEFT() >= 2 )
-      strcpy(s, ",\n");
-    s += strlen(s);
-  }
-
-  if ( LEFT() > 1 )
-    *s++ = ']';
-  *s = EOS;
-
-  assert(LEFT() > 0);
-
-  return save_string(buf);
-}
-
-
-static void
-attach_fonts(Class class, char *res, Name fam, FontDef defs)
-{ attach_class_variable(class, CtoName(res), "chain",
-			default_font_list(fam, defs),
-			"Font family set");
-}
-
-
-static void
-attach_font_families(Class class)
-{ attach_class_variable(class, NAME_fontFamilies,  "chain",
-			"[screen_fonts,courier_fonts,"
-			"helvetica_fonts,times_fonts]",
-			"Predefined font families");
-
-  attach_fonts(class, "courier_fonts",   NAME_courier,   courier_fonts);
-  attach_fonts(class, "helvetica_fonts", NAME_helvetica, helvetica_fonts);
-  attach_fonts(class, "times_fonts",     NAME_times,     times_fonts);
-  attach_fonts(class, "screen_fonts",    NAME_screen,    screen_fonts);
 }

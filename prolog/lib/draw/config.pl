@@ -77,13 +77,8 @@ config(edit/auto_align,
 config(resources/default_font,
        [ type(font),
          comment('Default font for text objects'),
-         default(Default)
-       ]) :-
-    (   get(@pce, convert, normal, font, Normal),
-        get(Normal, family, win)
-    ->  Default = font(helvetica, roman, 12)
-    ;   Default = normal
-    ).
+         default(normal)
+       ]).
 config(resources/colour_palette,
        [ type(setof(colour)),
          comment('Set of colours available in attribute viewer'),

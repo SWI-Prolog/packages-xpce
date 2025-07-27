@@ -129,13 +129,15 @@ ws_uncreate_frame(FrameObj fr)
 }
 
 static SDL_Window *
-sdl_parent_window(FrameObj fr)
+sdl_parent_window(FrameObj fr, FrameObj *frp)
 { Any pfr = fr->transient_for;
 
   if ( isNil(pfr) )
     pfr = getAttributeObject(fr, NAME_parent);
   if ( pfr && instanceOfObject(pfr, ClassFrame) )
-  { WsFrame pf = sdl_frame(pfr, false);
+  { if ( frp )
+      *frp = pfr;
+    WsFrame pf = sdl_frame(pfr, false);
     if ( pf )
       return pf->ws_window;
   }
@@ -152,7 +154,8 @@ sdl_parent_window(FrameObj fr)
 status
 ws_create_frame(FrameObj fr)
 { SDL_Window *win = NULL;
-  SDL_Window *parent = sdl_parent_window(fr);
+  FrameObj pfr = NIL;
+  SDL_Window *parent = sdl_parent_window(fr, &pfr);
   int x = valInt(fr->area->x);
   int y = valInt(fr->area->y);
   int w = valInt(fr->area->w);
@@ -167,7 +170,8 @@ ws_create_frame(FrameObj fr)
     //x = x/scale; y = y/scale; w = w/scale; h = h/scale;
 #endif
     DEBUG(NAME_popup,
-	  Cprintf("Creating popup frame %s %dx%d\n", pp(fr), w, h));
+	  Cprintf("Creating popup frame %s for %s %dx%d at %d,%d\n",
+		  pp(fr), pp(pfr), w, h, x, y));
     flags |= SDL_WINDOW_POPUP_MENU;
     win = SDL_CreatePopupWindow(parent, x, y, w, h, flags);
   } else

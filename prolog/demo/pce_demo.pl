@@ -69,7 +69,7 @@ pcedemo :-
     send(D, default_button, open),
 
     send(B, open_message, message(O, execute)),
-    send(B, style, title, style(font := font(helvetica, bold, 14))),
+    send(B, style, title, style(font := boldlarge)),
 
     send(B, open).
 
