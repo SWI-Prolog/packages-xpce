@@ -538,7 +538,7 @@ argType(const Type t, const Any val, const Any ctx)
 
 static inline status
 charType(const Type t, const Any val, const Any ctx)
-{ return isInteger(val) && valInt(val) >= 0 && valInt(val) <= 2*META_OFFSET;
+{ return isInteger(val) && valInt(val) >= 0 && valInt(val) <= UNICODE_MAX;
 }
 
 
@@ -1769,4 +1769,3 @@ pceCheckFloatType(PceType t, double f)
 
   return validateType(t, tmp, NIL);
 }
-

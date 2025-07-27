@@ -75,6 +75,7 @@ End;
 
 #define streq(s, t)	((s) && (t) && (strcmp((s), (t)) == 0))
 
+#define UNICODE_MAX		(0x10FFFF)
 #define META_OFFSET		(1L<<16)
 
 #define EOS	0			/* end of string */
@@ -164,4 +165,3 @@ GLOBAL struct
 { int	uppercase;			/* keywords mapped to uppercase */
   char	word_separator;			/* current word separator */
 } syntax;
-
