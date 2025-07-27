@@ -839,7 +839,9 @@ Cprintf(const char *fmt, ...)
   { va_list args;
 
     va_start(args, fmt);
+    int locks = pceMTUnlockAll();
     (*TheCallbackFunctions.vCprintf)(fmt, args);
+    pceMTRelock(locks);
     va_end(args);
   }
 }
@@ -847,16 +849,21 @@ Cprintf(const char *fmt, ...)
 
 void
 Cvprintf(const char *fmt, va_list args)
-{ if ( TheCallbackFunctions.vCprintf )
+{ int locks = pceMTUnlockAll();
+  if ( TheCallbackFunctions.vCprintf )
     (*TheCallbackFunctions.vCprintf)(fmt, args);
+  pceMTRelock(locks);
 }
 
 
 int
 Cputchar(int chr)
 { if ( TheCallbackFunctions.Cputchar )
-    return (*TheCallbackFunctions.Cputchar)(chr);
-  else
+  { int locks = pceMTUnlockAll();
+    int rc = (*TheCallbackFunctions.Cputchar)(chr);
+    pceMTRelock(locks);
+    return rc;
+  } else
   { Cprintf("%c", chr);
     return chr;
   }
@@ -868,9 +875,11 @@ Cputstr(PceString s)
 { if ( TheCallbackFunctions.Cputchar )
   { int i;
 
+    int locks = pceMTUnlockAll();
     for(i=0; i<s->s_size; i++)
     { (*TheCallbackFunctions.Cputchar)(str_fetch(s, i));
     }
+    pceMTRelock(locks);
 
     return s->s_size;
   } else if ( isstrA(s) )
@@ -883,17 +892,22 @@ Cputstr(PceString s)
 
 
 void
-Cflush()
-{ if ( TheCallbackFunctions.Cflush )
+Cflush(void)
+{ int locks = pceMTUnlockAll();
+  if ( TheCallbackFunctions.Cflush )
     (*TheCallbackFunctions.Cflush)();
+  pceMTRelock(locks);
 }
 
 
 char *
 Cgetline(char *line, int size)
 { if ( TheCallbackFunctions.Cgetline )
-    return (*TheCallbackFunctions.Cgetline)(line, size);
-  else
+  { int locks = pceMTUnlockAll();
+    char *rc = (*TheCallbackFunctions.Cgetline)(line, size);
+    pceMTRelock(locks);
+    return rc;
+  } else
   { size = 0;				/* signal end-of-file */
     line[0] = '\0';
     return NULL;
