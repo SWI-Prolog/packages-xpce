@@ -95,7 +95,7 @@ reexports the content of these files.
 :- multifile
     on_load/0.
 
-:- set_prolog_flag(generate_debug_info, false).
+%:- set_prolog_flag(generate_debug_info, false).
 
 :- meta_predicate
     in_pce_thread_sync(0).
