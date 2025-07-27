@@ -194,10 +194,10 @@ unlinkWindow(PceWindow sw)
 		********************************/
 
 static status
-openWindow(PceWindow sw, Point pos, BoolObj normalise)
+openWindow(PceWindow sw, Point pos)
 { if ( send(sw, NAME_create, EAV) &&
        send(getFrameWindow(sw, DEFAULT), NAME_open,
-	    pos, DEFAULT, normalise, EAV) )
+	    pos, DEFAULT, EAV) )
   succeed;
 
   fail;
@@ -216,10 +216,10 @@ openCenteredWindow(PceWindow sw, Point pos, BoolObj grab, DisplayObj dsp)
 
 
 static Any
-getConfirmWindow(PceWindow sw, Any pos, BoolObj grab, BoolObj normalise)
+getConfirmWindow(PceWindow sw, Any pos, BoolObj grab)
 { TRY( send(sw, NAME_create, EAV) );
 
-  answer(getConfirmFrame(getFrameWindow(sw, DEFAULT), pos, grab, normalise));
+  answer(getConfirmFrame(getFrameWindow(sw, DEFAULT), pos, grab));
 }
 
 
@@ -2172,7 +2172,7 @@ static char *T_catchAll[] =
 static char *T_changedUnion[] =
         { "ox=int", "oy=int", "ow=int", "oh=int" };
 static char *T_confirm[] =
-        { "position=[point]", "grab=[bool]", "normalise=[bool]" };
+        { "position=[point]", "grab=[bool]" };
 static char *T_geometry[] =
         { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 static char *T_flash[] =
@@ -2371,7 +2371,7 @@ static getdecl get_window[] =
      NAME_area, "New size representing size (avoid class-variable)"),
   GM(NAME_displayedCursor, 0, "cursor*", NULL, getDisplayedCursorDevice,
      NAME_cursor, "Currently displayed cursor"),
-  GM(NAME_confirm, 3, "any", T_confirm, getConfirmWindow,
+  GM(NAME_confirm, 2, "any", T_confirm, getConfirmWindow,
      NAME_modal, "Run sub event-loop until ->return"),
 #ifdef WIN32_GRAPHICS
   GM(NAME_winHandle, 0, "int", NULL, getWinHandleWindow,

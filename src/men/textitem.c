@@ -439,7 +439,6 @@ selectCompletionDialogItem(Any item, Chain matches,
 { Browser c = CompletionBrowser();
   DialogItem di = item;
   Any val;
-  Point pos;
   int lw;
   int fw;
   PceWindow sw;
@@ -482,12 +481,20 @@ selectCompletionDialogItem(Any item, Chain matches,
   bh = lines * valInt(getHeightFont(c->list_browser->font));
   bh += 2 * TXT_X_MARGIN + 2;
 
-  send((pos = get(di, NAME_framePosition, EAV)), NAME_offset,
-       toInt(lw), di->area->h, EAV);
-  send(c, NAME_transientFor, getFrameGraphical((Graphical) di), EAV);
+  FrameObj fr = getFrameGraphical((Graphical) di);
+  Point pos = get(di, NAME_framePosition, EAV);
+  offsetPoint(pos, toInt(lw), di->area->h);
+
+  send(c, NAME_transientFor, fr, EAV);
   send(c->frame, NAME_set, pos->x, pos->y, toInt(fw), toInt(bh), EAV);
+  DEBUG(NAME_completer,
+	Cprintf("Completer %s, frame %s at %d,%d; frame at %d,%d\n",
+		pp(c), pp(c->frame),
+		valInt(pos->x), valInt(pos->y),
+		valInt(c->frame->area->x), valInt(c->frame->area->y)));
+
   ws_topmost_frame(c->frame, ON);
-  send(c, NAME_open, pos, ON, EAV);	/* pos, normalise */
+  send(c, NAME_open, EAV);
   if ( (sw = getWindowGraphical((Graphical)di)) )
   { grabPointerWindow(sw, ON);
     focusWindow(sw, (Graphical)di, DEFAULT, DEFAULT, NIL);

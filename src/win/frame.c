@@ -40,7 +40,7 @@ TileObj		getTileFrame(FrameObj);
 forwards int	get_position_from_center_frame(FrameObj, DisplayObj, Point, int *, int *);
 static void	ensure_on_display(FrameObj, DisplayObj, int *, int *);
 static status	closedFrame(FrameObj, BoolObj);
-static status	openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise);
+static status	openFrame(FrameObj fr, Point pos, BoolObj grab);
 static status	doneMessageFrame(FrameObj fr, Code msg);
 static status	geometryFrame(FrameObj fr, Name spec, DisplayObj mon);
 static status	setFrame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj mon);
@@ -201,10 +201,10 @@ initialiseNewSlotFrame(FrameObj fr, Variable var)
 static Constant ConstantNotReturned;
 
 Any
-getConfirmFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
+getConfirmFrame(FrameObj fr, Point pos, BoolObj grab)
 { Any rval;
 
-  TRY( openFrame(fr, pos, grab, normalise) &&
+  TRY( openFrame(fr, pos, grab) &&
        exposeFrame(fr) );
   busyCursorDisplay(fr->display, NIL, DEFAULT);
 
@@ -250,7 +250,7 @@ getConfirmCenteredFrame(FrameObj fr, Any where, BoolObj grab, DisplayObj dsp)
     send(fr, NAME_transientFor, rfr, EAV);
   }
 
-  return getConfirmFrame(fr, DEFAULT, grab, OFF);
+  return getConfirmFrame(fr, DEFAULT, grab);
 }
 
 
@@ -263,7 +263,7 @@ returnFrame(FrameObj fr, Any obj)
 
 
 static status
-openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
+openFrame(FrameObj fr, Point pos, BoolObj grab)
 { Int x, y;
   Int w = DEFAULT, h = DEFAULT;
 
@@ -279,46 +279,10 @@ openFrame(FrameObj fr, Point pos, BoolObj grab, BoolObj normalise)
   { x = pos->x;
     y = pos->y;
 
-#ifdef WIN32_GRAPHICS
-  setpos:
-#endif
-    if ( normalise == ON )
-    { int mx, my, mw, mh;
-      int fw = valInt(fr->area->w), fh = valInt(fr->area->h);
-      DisplayObj d = fr->display;
-      Area a;
-
-      a = isNil(d->work_area) ? d->area : d->work_area;
-
-      mx = valInt(a->x);
-      my = valInt(a->y);
-      mw = valInt(a->w);
-      mh = valInt(a->h);
-
-      if ( valInt(x) + fw > mx+mw ) x = toInt(mx+mw - fw);
-      if ( valInt(y) + fh > my+mh ) y = toInt(my+mh - fh);
-      if ( valInt(x) < mx ) x = toInt(mx);
-      if ( valInt(y) < my ) y = toInt(my);
-    }
-
     setFrame(fr, x, y, w, h, DEFAULT);
   } else if ( notNil(fr->geometry) )
   { ws_x_geometry_frame(fr, fr->geometry, DEFAULT);
   }
-#ifdef WIN32_GRAPHICS			/* But in Windows `do-it-yourself' */
-  else if ( notNil(fr->transient_for) )
-  { Area pa = fr->transient_for->area;
-    int xb, yb, ycap;
-
-    ws_frame_border(fr, &xb, &yb, &ycap);
-
-    x = toInt(valInt(pa->x) + xb*2);
-    y = toInt(valInt(pa->y) + yb*2 + ycap);
-    if ( isDefault(normalise) )
-      normalise = ON;
-    goto setpos;
-  }
-#endif
 
   if ( !isOpenFrameStatus(fr->status) )
     return sdl_send(fr, NAME_status, false, NAME_window, EAV);
@@ -338,7 +302,7 @@ openCenteredFrame(FrameObj fr, Point pos, BoolObj grab, DisplayObj dsp)
   get_position_from_center_frame(fr, dsp, pos, &x, &y);
   ensure_on_display(fr, DEFAULT, &x, &y);
   p2 = answerObject(ClassPoint, toInt(x), toInt(y), EAV);
-  rval = openFrame(fr, p2, grab, OFF);
+  rval = openFrame(fr, p2, grab);
   doneObject(p2);
 
   return rval;
@@ -1686,8 +1650,8 @@ static char *T_label[] =
         { "label=name", "icon_label=[name]" };
 static char *T_postscript[] =
         { "landscape=[bool]", "scale_in=[area]" };
-static char *T_positionADpointD_grabADboolD_normaliseADboolD[] =
-        { "position=[point]", "grab=[bool]", "normalise=[bool]" };
+static char *T_open[] =
+        { "position=[point]", "grab=[bool]" };
 static char *T_wmProtocol[] =
         { "protocol=name", "action=code" };
 static char *T_convertOldSlot[] =
@@ -1830,7 +1794,7 @@ static senddecl send_frame[] =
      NAME_open, "Establish window-system counterpart (internal)"),
   SM(NAME_mapped, 1, "bool", mappedFrame,
      NAME_open, "Inform transients using ->show"),
-  SM(NAME_open, 3, T_positionADpointD_grabADboolD_normaliseADboolD, openFrame,
+  SM(NAME_open, 2, T_open, openFrame,
      NAME_open, "->create and map on the display"),
   SM(NAME_openCentered, 3, T_openCentered, openCenteredFrame,
      NAME_open, "Open centered around point"),
@@ -1915,8 +1879,7 @@ static getdecl get_frame[] =
      NAME_icon, "(Current) position of the icon"),
   GM(NAME_tile, 0, "tile", NULL, getTileFrame,
      NAME_layout, "Find tile managing object"),
-  GM(NAME_confirm, 3, "return_value=any",
-     T_positionADpointD_grabADboolD_normaliseADboolD, getConfirmFrame,
+  GM(NAME_confirm, 2, "return_value=any", T_open, getConfirmFrame,
      NAME_modal, "Start sub-eventloop until ->return"),
   GM(NAME_confirmCentered, 3, "return_value=any",
      T_openCentered, getConfirmCenteredFrame,
