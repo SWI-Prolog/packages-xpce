@@ -194,21 +194,18 @@ unlinkWindow(PceWindow sw)
 		********************************/
 
 static status
-openWindow(PceWindow sw, Point pos)
-{ if ( send(sw, NAME_create, EAV) &&
-       send(getFrameWindow(sw, DEFAULT), NAME_open,
-	    pos, DEFAULT, EAV) )
-  succeed;
-
-  fail;
+openWindow(PceWindow sw, Point pos, DisplayObj dsp)
+{ return ( send(sw, NAME_create, EAV) &&
+	   send(getFrameWindow(sw, DEFAULT), NAME_open,
+		pos, EAV) );
 }
 
 
 static status
-openCenteredWindow(PceWindow sw, Point pos, BoolObj grab, DisplayObj dsp)
+openCenteredWindow(PceWindow sw, Point pos, DisplayObj dsp, BoolObj grab)
 { if ( send(sw, NAME_create, EAV) &&
        send(getFrameWindow(sw, DEFAULT), NAME_openCentered,
-	    pos, grab, dsp, EAV) )
+	    pos, dsp, grab, EAV) )
     succeed;
 
   fail;
@@ -224,7 +221,7 @@ getConfirmWindow(PceWindow sw, Any pos, BoolObj grab)
 
 
 static Any
-getConfirmCenteredWindow(PceWindow sw, Any pos, BoolObj grab, DisplayObj dsp)
+getConfirmCenteredWindow(PceWindow sw, Any pos, DisplayObj dsp, BoolObj grab)
 { TRY( send(sw, NAME_create, EAV) );
 
   answer(getConfirmCenteredFrame(getFrameWindow(sw, DEFAULT),
@@ -2150,7 +2147,7 @@ getThreadWindow(PceWindow sw)
 /* Type declarations */
 
 static char *T_open[] =
-        { "[point]", "normalise=[bool]" };
+        { "[point]", "display=[display]" };
 static char *T_scrollHV[] =
         { "direction={forwards,backwards,goto}",
 	  "unit={page,file,line}",
@@ -2160,7 +2157,7 @@ static char *T_scrollHV[] =
 static char *T_decorate[] =
         { "area=[{grow,shrink}]", "left_margin=[int]", "right_margin=[int]", "top_margin=[int]", "bottom_margin=[int]", "decorator=[window]" };
 static char *T_confirmCentered[] =
-        { "center=[point|frame]", "grab=[bool]", "display=[display]" };
+        { "center=[point|frame]", "display=[display]", "grab=[bool]" };
 static char *T_typed[] =
         { "event|event_id", "delegate=[bool]" };
 static char *T_focus[] =

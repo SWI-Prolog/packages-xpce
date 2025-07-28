@@ -40,7 +40,8 @@ TileObj		getTileFrame(FrameObj);
 forwards int	get_position_from_center_frame(FrameObj, DisplayObj, Point, int *, int *);
 static void	ensure_on_display(FrameObj, DisplayObj, int *, int *);
 static status	closedFrame(FrameObj, BoolObj);
-static status	openFrame(FrameObj fr, Point pos, BoolObj grab);
+static status	openFrame(FrameObj fr, Point pos, DisplayObj dsp,
+			  BoolObj grab);
 static status	doneMessageFrame(FrameObj fr, Code msg);
 static status	geometryFrame(FrameObj fr, Name spec, DisplayObj mon);
 static status	setFrame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj mon);
@@ -55,8 +56,7 @@ static status   statusFrame(FrameObj fr, Name stat);
 
 static status
 initialiseFrame(FrameObj fr, Name label, Name kind,
-		DisplayObj display,
-		Application app)
+		DisplayObj display, Application app)
 { if ( isDefault(kind) )
     kind = NAME_toplevel;
   if ( isDefault(display) )
@@ -204,7 +204,7 @@ Any
 getConfirmFrame(FrameObj fr, Point pos, BoolObj grab)
 { Any rval;
 
-  TRY( openFrame(fr, pos, grab) &&
+  TRY( openFrame(fr, pos, DEFAULT, grab) &&
        exposeFrame(fr) );
   busyCursorDisplay(fr->display, NIL, DEFAULT);
 
@@ -263,7 +263,7 @@ returnFrame(FrameObj fr, Any obj)
 
 
 static status
-openFrame(FrameObj fr, Point pos, BoolObj grab)
+openFrame(FrameObj fr, Point pos, DisplayObj dsp, BoolObj grab)
 { Int x, y;
   Int w = DEFAULT, h = DEFAULT;
 
@@ -275,7 +275,7 @@ openFrame(FrameObj fr, Point pos, BoolObj grab)
   if ( notDefault(pos) )
     assign(fr, placed, ON);
 
-  if ( notDefault(pos) )		/* X11 transient is done by WM */
+  if ( notDefault(pos) )
   { x = pos->x;
     y = pos->y;
 
@@ -292,7 +292,7 @@ openFrame(FrameObj fr, Point pos, BoolObj grab)
 
 
 static status
-openCenteredFrame(FrameObj fr, Point pos, BoolObj grab, DisplayObj dsp)
+openCenteredFrame(FrameObj fr, Point pos, DisplayObj dsp, BoolObj grab)
 { int x, y;
   int rval;
   Point p2;
@@ -302,7 +302,7 @@ openCenteredFrame(FrameObj fr, Point pos, BoolObj grab, DisplayObj dsp)
   get_position_from_center_frame(fr, dsp, pos, &x, &y);
   ensure_on_display(fr, DEFAULT, &x, &y);
   p2 = answerObject(ClassPoint, toInt(x), toInt(y), EAV);
-  rval = openFrame(fr, p2, grab);
+  rval = openFrame(fr, p2, dsp, grab);
   doneObject(p2);
 
   return rval;
@@ -1636,7 +1636,7 @@ getThreadFrame(FrameObj fr)
 /* Type declarations */
 
 static char *T_openCentered[] =
-        { "center=[point|frame]", "grab=[bool]", "display=[display]" };
+        { "center=[point|frame]", "display=[display]", "grab=[bool]" };
 static char *T_busyCursor[] =
         { "cursor=[cursor]*", "block_input=[bool]" };
 static char *T_icon[] =
@@ -1651,7 +1651,7 @@ static char *T_label[] =
 static char *T_postscript[] =
         { "landscape=[bool]", "scale_in=[area]" };
 static char *T_open[] =
-        { "position=[point]", "grab=[bool]" };
+        { "position=[point]", "display=[display]", "grab=[bool]" };
 static char *T_wmProtocol[] =
         { "protocol=name", "action=code" };
 static char *T_convertOldSlot[] =
@@ -1794,7 +1794,7 @@ static senddecl send_frame[] =
      NAME_open, "Establish window-system counterpart (internal)"),
   SM(NAME_mapped, 1, "bool", mappedFrame,
      NAME_open, "Inform transients using ->show"),
-  SM(NAME_open, 2, T_open, openFrame,
+  SM(NAME_open, 3, T_open, openFrame,
      NAME_open, "->create and map on the display"),
   SM(NAME_openCentered, 3, T_openCentered, openCenteredFrame,
      NAME_open, "Open centered around point"),
