@@ -65,7 +65,7 @@ initialise(FB) :->
     new(FontMsg, message(FB, font_selected)),
     new(StyleMsg, message(FB, style_selected)),
     new(FilterMsg, message(FB, filter)),
-    new(ChartMsg,  message(FB, show_chart, @arg1)),
+    new(ChartMsg,  message(FB, show_block, @arg1)),
     new(AliasMsg,  message(FB, alias_selected, @arg1)),
 
     send(D, append, new(_Filter, text_item(filter, '', FilterMsg))),
@@ -76,7 +76,7 @@ initialise(FB) :->
     send(D, append, new(Style,  menu(style,  cycle, StyleMsg)),  right),
     send(D, append, new(Weight, menu(weight, cycle, FontMsg)), right),
     send(D, append, new(Points, menu(points, cycle, FontMsg)), right),
-    send(new(ChartMenu, menu(unicode_chart, cycle, ChartMsg)), below, Family),
+    send(new(ChartMenu, menu(unicode_block, cycle, ChartMsg)), below, Family),
     send_list([Type, Style,Weight,Points,ALBL], alignment, left),
 
     send_list(Type, append, [any, proportional, monospace]),
@@ -211,15 +211,15 @@ font_selected(FB) :->
     get(D, member, points,        PtsItem), get(PtsItem, selection, Points),
     new(Font, font(Family,Style,Points,Weight)),
     send(FB, slot, selection, Font),
-    send(FB, update_chart_menu, Font),
-    get(D, member, unicode_chart, CrtItem), get(CrtItem, selection, Chart),
+    send(FB, update_block_menu, Font),
+    get(D, member, unicode_block, CrtItem), get(CrtItem, selection, Chart),
     send(FB, show_font, Font, Chart).
 
 
-update_chart_menu(FB, Font:font) :->
-    "Update chart menu with pages covered by the font"::
+update_block_menu(FB, Font:font) :->
+    "Update block menu with pages covered by the font"::
     get(FB, member, dialog, D),
-    get(D, member, unicode_chart, CrtItem), get(CrtItem, selection, Chart0),
+    get(D, member, unicode_block, CrtItem), get(CrtItem, selection, Chart0),
     send(CrtItem, clear),
     forall(font_supports_unicode_block(Font, Page),
            send(CrtItem, append, Page)),
@@ -228,7 +228,7 @@ update_chart_menu(FB, Font:font) :->
     ;   true
     ).
 
-show_chart(FB, Chart:name) :->
+show_block(FB, Chart:name) :->
     "Show Unicode named page"::
     get(FB, selection, Font),
     send(FB, show_font, Font, Chart).
