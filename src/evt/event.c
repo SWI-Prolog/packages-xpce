@@ -212,7 +212,7 @@ considerLocStillEvent()
 		 *******************************/
 
 PceWindow
-WindowOfLastEvent()
+WindowOfLastEvent(void)
 { if ( !isProperObject(last_window) )
   { Cprintf("Warning: last_window = %s\n", pp(last_window));
     fail;

@@ -43,7 +43,6 @@
 static status
 initialiseDisplayManager(DisplayManager dm)
 { assign(dm, members, newObject(ClassChain, EAV));
-  assign(dm, current, newObject(ClassChain, EAV));
 
   protectObject(dm);
 
@@ -53,11 +52,7 @@ initialiseDisplayManager(DisplayManager dm)
 
 status
 appendDisplayManager(DisplayManager dm, DisplayObj d)
-{ appendChain(dm->members, d);
-  if ( emptyChain(dm->current) )
-    prependChain(dm->current, d);
-
-  succeed;
+{ return appendChain(dm->members, d);
 }
 
 
@@ -82,45 +77,40 @@ deleteDisplayManager(DisplayManager dm, DisplayObj d)
 }
 
 
-static status
-currentDisplayManager(DisplayManager dm, DisplayObj d)
-{ return prependChain(dm->current, d);
+static DisplayObj
+getPrimaryDisplayManager(DisplayManager dm)
+{ Cell cell;
+
+  for_cell(cell, dm->members)
+  { DisplayObj dsp = cell->value;
+
+    if ( isOn(dsp->primary) )
+      answer(dsp);
+  }
+
+  answer(getHeadChain(dm->members));
 }
 
 
 static DisplayObj
 getCurrentDisplayManager(DisplayManager dm)
-{ if ( emptyChain(dm->current) )
-  { realiseClass(ClassDisplay);
+{ DisplayObj dsp = ws_last_display_from_event();
 
-    if ( emptyChain(dm->current) )
-    { errorPce(dm, NAME_noCurrentDisplay);
-      fail;
-    }
-  }
-
-  answer(dm->current->head->value);
-}
-
-
-static status
-popCurrentDisplayManager(DisplayManager dm)
-{ if ( getSizeChain(dm->current) == ONE )
-    return errorPce(dm, NAME_stackEmpty, NAME_current);
-
-  return deleteHeadChain(dm->current);
+  if ( dsp )
+    answer(dsp);
+  answer(getPrimaryDisplayManager(dm));
 }
 
 
 DisplayObj
 CurrentDisplay(Any obj)
-{ DisplayObj d;
+{ DisplayObj dsp;
 
   if ( instanceOfObject(obj, ClassGraphical) &&
-       (d = getDisplayGraphical((Graphical) obj)) )
-    return d;
+       (dsp = getDisplayGraphical((Graphical) obj)) )
+    return dsp;
 
-  return getCurrentDisplayManager(TheDisplayManager());
+  answer(getCurrentDisplayManager(TheDisplayManager()));
 }
 
 
@@ -273,8 +263,6 @@ hasVisibleFramesDisplayManager(DisplayManager dm)
 static vardecl var_displayManager[] =
 { IV(NAME_members, "chain", IV_GET,
      NAME_display, "Available displays"),
-  IV(NAME_current, "chain", IV_NONE,
-     NAME_current, "Stack with current displays"),
   IV(NAME_testQueue, "bool", IV_BOTH,
      NAME_event, "Test queue in event-loop")
 };
@@ -284,10 +272,6 @@ static vardecl var_displayManager[] =
 static senddecl send_displayManager[] =
 { SM(NAME_initialise, 0, NULL, initialiseDisplayManager,
      DEFAULT, "Create the display manager"),
-  SM(NAME_current, 1, "display", currentDisplayManager,
-     NAME_current, "Make display the current display"),
-  SM(NAME_popCurrent, 0, NULL, popCurrentDisplayManager,
-     NAME_current, "Pop the current stack"),
   SM(NAME_append, 1, "display", appendDisplayManager,
      NAME_display, "Attach a new display to the manager"),
   SM(NAME_redraw, 0, NULL, redrawDisplayManager,
@@ -301,11 +285,14 @@ static senddecl send_displayManager[] =
 static getdecl get_displayManager[] =
 { GM(NAME_contains, 0, "chain", NULL, getContainsDisplayManager,
      DEFAULT, "Contained displays"),
+  GM(NAME_primary, 0, "display", NULL, getPrimaryDisplayManager,
+     NAME_display, "Get the primary display"),
   GM(NAME_current, 0, "display", NULL, getCurrentDisplayManager,
      NAME_current, "Get the current display"),
   GM(NAME_member, 1, "display", "name", getMemberDisplayManager,
      NAME_display, "Find display from name"),
-  GM(NAME_windowOfLastEvent, 0, "window", NULL, getWindowOfLastEventDisplayManager,
+  GM(NAME_windowOfLastEvent, 0, "window", NULL,
+     getWindowOfLastEventDisplayManager,
      NAME_event, "Find window that received last event")
 };
 

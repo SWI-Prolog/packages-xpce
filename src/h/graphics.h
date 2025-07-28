@@ -803,7 +803,6 @@ End;
 NewClass(display_manager)
   ABSTRACT_VISUAL
   Chain		members;		/* Available displays */
-  Chain		current;		/* Stack for current display */
   BoolObj	test_queue;		/* Test queue during redraw */
 End;
 

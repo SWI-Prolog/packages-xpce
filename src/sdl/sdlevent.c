@@ -205,6 +205,7 @@ static Any grabbing_window = NIL;
 static Any mouse_tracking_window = NIL; /* Window or Frame */
 static Uint8 mouse_tracking_button;
 static SDL_WindowID mouse_tracking_wid = 0;
+static SDL_DisplayID last_display_id = 0;
 
 void
 ev_event_grab_window(Any window)
@@ -217,6 +218,11 @@ ws_event_destroyed_target(Any window)
     mouse_tracking_window = NIL;
   if ( window == grabbing_window )
     grabbing_window = NIL;
+}
+
+DisplayObj
+ws_last_display_from_event(void)
+{ return dsp_id_to_display(last_display_id);
 }
 
 EventObj
@@ -348,6 +354,11 @@ CtoEvent(SDL_Event *event)
 #else
   float scale = 1.0;
 #endif
+
+  if ( name != NAME_locMove )
+  { WsFrame wfr = sdl_frame(frame, false);
+    last_display_id = SDL_GetDisplayForWindow(wfr->ws_window);
+  }
 
   float x = fx*scale;
   float y = fy*scale;
