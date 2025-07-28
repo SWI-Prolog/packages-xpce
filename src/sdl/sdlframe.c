@@ -201,14 +201,25 @@ ws_create_frame(FrameObj fr)
     { SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_PARENT_POINTER,
 			     parent);
     }
-    if ( fr->placed == ON )
+    if ( isOn(fr->placed) )
     {
 #ifdef __WINDOWS__
       x += GetSystemMetrics(SM_CXBORDER);
       y += GetSystemMetrics(SM_CYBORDER) + GetSystemMetrics(SM_CYCAPTION);
 #endif
+      DisplayObj dsp = fr->display;
+      x += valInt(dsp->work_area->x);
+      y += valInt(dsp->work_area->y);
       SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x);
       SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y);
+    } else
+    { DisplayObj dsp = fr->display;
+      if ( !isOn(dsp->primary) )
+      { x = valInt(dsp->work_area->x) + (valInt(dsp->work_area->w)-w)/2;
+	y = valInt(dsp->work_area->y) + (valInt(dsp->work_area->h)-h)/2;
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x);
+	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y);
+      }
     }
     win = SDL_CreateWindowWithProperties(props);
     SDL_DestroyProperties(props);
@@ -555,6 +566,15 @@ sdl_frame_event(SDL_Event *ev)
       }
       case SDL_EVENT_WINDOW_SHOWN:
 	DEBUG(NAME_sdl, Cprintf("Mapped %s\n", pp(fr)));
+	WsFrame wfr = fr->ws_ref;
+	if ( wfr )
+	{ SDL_DisplayID did = SDL_GetDisplayForWindow(wfr->ws_window);
+	  DisplayObj dsp = dsp_id_to_display(did);
+	  if ( dsp && dsp != fr->display )
+	  { DEBUG(NAME_display, Cprintf("Opened %s on %s\n", pp(fr), pp(dsp)));
+	    assign(fr, display, dsp);
+	  }
+	}
 	return frame_displayed(fr, ON);
       case SDL_EVENT_WINDOW_HIDDEN:
 	//return frame_displayed(fr, OFF);
