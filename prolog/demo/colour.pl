@@ -112,5 +112,5 @@ A colour was selected.  Change the colour attribute of the picture window.
 
 selected_colour(P, Which, Label) :-
     get(Label, scan, '%s%d%d%d', vector(NameStr, R, G, B)),
-    send(@display, cut_buffer, 0, NameStr),
+    send(@display, copy, NameStr),
     send(P, Which, colour(@default, R, G, B)).

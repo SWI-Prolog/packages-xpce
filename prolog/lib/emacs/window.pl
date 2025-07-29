@@ -968,7 +968,7 @@ auto_fill(E, Caret:[int], Regex:[regex]) :->
 
 
 import_selection(E) :->
-    "Import the (primary) selection or the cut_buffer"::
+    "Import the (primary) selection"::
     get(E, display, Display),
     get(Display, selected_text, String),
     (   get(E, frame, Frame),
