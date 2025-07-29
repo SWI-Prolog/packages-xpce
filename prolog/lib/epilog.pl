@@ -84,15 +84,19 @@ ep_main :-
     ep_wait.
 
 ep_wait :-
+    capture_messages,
+    ep_wait_.
+
+ep_wait_ :-
     E = error(Formal,_),
-    catch_with_backtrace(ep_wait_, E, true),
+    catch_with_backtrace(ep_wait__, E, true),
     (   var(Formal)
     ->  true
     ;   print_message(warning, E),
-        ep_wait
+        ep_wait_
     ).
 
-ep_wait_ :-
+ep_wait__ :-
     repeat,
       pce_principal:pce_dispatch(-1, 0.25),         % fd, timeout
       ep_main_end,
@@ -181,7 +185,8 @@ setup_history :-
     current_prolog_terminal/2,  % ?Thread, ?TerminalObject
     terminal_input/6,           % TerminalObject, PTY, In, Out, Error,
                                 % EditLine
-    closed_epilog/2.            % Frame, Time
+    closed_epilog/2,            % Frame, Time
+    active_terminal/1.          % TerminalObject
 
 :- pce_begin_class(prolog_terminal, terminal_image,
                    "Terminal for running a Prolog thread").
@@ -464,8 +469,12 @@ event(T, Ev:event) :->
     (   send_super(T, event, Ev)
     ->  (   send(Ev, is_a, activate_keyboard_focus)
         ->  send(T?frame, current_terminal, T)
+        ;   send(Ev, is_a, 'RET')
+        ->  retractall(active_terminal(_)),
+            asserta(active_terminal(T))
         ;   true
         )
+
     ;   send(Ev, is_a, ms_right_down)
     ->  send(T, show_popup, Ev)
     ).
@@ -871,6 +880,54 @@ assign_accelerators(_) :->
     true.
 
 :- pce_end_class(epilog_popup).
+
+
+                /*******************************
+                *     XPCE CONSOLE OUTPUT      *
+                *******************************/
+
+%!  capture_messages
+%
+%   Capture messages from XPCE's main thread in an Epilog console.
+
+capture_messages :-
+    asserta(( user:thread_message_hook(Term,Kind,Lines) :-
+                 xpce_message(Term,Kind,Lines))).
+
+:- public xpce_message/3.
+xpce_message(_Term, Kind, Lines) :-
+    report_kind(Kind),
+    xpce_epilog_console(_In,_Out,Error),
+    print_message_lines(Error, kind(Kind), Lines).
+
+report_kind(warning).
+report_kind(error).
+
+%!  pce:xpce_console(-In,-Out,-Error) is semidet.
+%
+%   Tell xpce where to write console output.   If  this fails, output is
+%   written to the `user_output` of the   calling  thread or the process
+%   `stdout`.
+
+:- multifile
+    pce:xpce_console/3.
+
+pce:xpce_console(In,Out,Error) :-
+    current_prolog_flag(epilog, true),
+    xpce_epilog_console(In,Out,Error),
+    !.
+
+xpce_epilog_console(In,Out,Error) :-
+    thread_self(Me),
+    current_prolog_terminal(Me, TerminalImage),
+    terminal_input(TerminalImage, _PTY, In,Out,Error, _EditLine),
+    !.
+xpce_epilog_console(In,Out,Error) :-
+    active_terminal(TerminalImage),
+    terminal_input(TerminalImage,_PTY,In,Out,Error,_EditLine),
+    !.
+xpce_epilog_console(In,Out,Error) :-
+    terminal_input(_Obj,_PTY,In,Out,Error,_EditLine).
 
 
 

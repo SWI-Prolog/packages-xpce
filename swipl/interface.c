@@ -3074,10 +3074,36 @@ PrologQuery(int what, PceCValue *value)
 
 static IOSTREAM *
 XPCE_OUTPUT(void)
-{ IOSTREAM *s = Suser_output;
+{ if ( PL_thread_self() > 0 )
+  { static predicate_t pred = NULL;
+
+    if ( !pred )
+      pred = PL_predicate("xpce_console", 3, "pce");
+
+    fid_t fid = PL_open_foreign_frame();
+    IOSTREAM *s = NULL;
+    if ( fid )
+    { term_t av = PL_new_term_refs(3);
+      if ( PL_call_predicate(NULL, PL_Q_NODEBUG, pred, av) )
+      { IOSTREAM *tmp;
+
+	if ( PL_get_stream(av+1, &tmp, SIO_OUTPUT) )
+	  s = tmp;
+	else
+	  Sdprintf("Could not extract stdout from pce:xpce_console/3\n");
+      }
+      PL_close_foreign_frame(fid);
+    }
+
+    if ( s )
+      return s;
+  }
+
+
+  IOSTREAM *s = Suser_output;
   if ( !s )
     s = Soutput;
-  return s;
+  return PL_acquire_stream(s);
 }
 
 static IOSTREAM *
@@ -3091,19 +3117,26 @@ XPCE_INPUT(void)
 
 void
 pl_Cvprintf(const char *fmt, va_list args)
-{ Svfprintf(XPCE_OUTPUT(), fmt, args);
+{ IOSTREAM *s = XPCE_OUTPUT();
+  Svfprintf(s, fmt, args);
+  PL_release_stream(s);
 }
 
 
 static int
 pl_Cputchar(int c)
-{ return Sputcode(c, XPCE_OUTPUT());
+{ IOSTREAM *s = XPCE_OUTPUT();
+  int rc = Sputcode(c, s);
+  PL_release_stream(s);
+  return rc;
 }
 
 
 static void
 pl_Cflush(void)
-{ Sflush(XPCE_OUTPUT());
+{ IOSTREAM *s = XPCE_OUTPUT();
+  Sflush(s);
+  PL_release_stream(s);
 }
 
 
