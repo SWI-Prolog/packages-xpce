@@ -130,7 +130,7 @@ might be a cleaner solution than the one choosen here.
 
 draw :-
     new(Draw, draw),
-    send(Draw, open, normalise := @on).
+    send(Draw, open).
 
 draw(File) :-
     file_name_extension(File, pd, PdFile),
