@@ -532,9 +532,12 @@ connect(PT, Title) :-
 %   Run the Prolog terminal main thread. Note that this code cannot talk
 %   to xpce as  it  will  deadlock.  That   is  why  all  relevant  xpce
 %   interaction is done in connect/2 above.
+%
+%   Q: Will this still deadlock after changes to the XPCE "GIL"?
 
 thread_run_interactor(PT, Creator, PTY, Init, Goal, Title, History) :-
     set_prolog_flag(query_debug_settings, debug(false, false)),
+    set_prolog_flag(hyperlink_term, true),
     Error = error(Formal,_),
     (   catch(attach_terminal(PT, PTY, Title, History), Error, true)
     ->  (   var(Formal)
