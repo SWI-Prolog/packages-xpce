@@ -162,18 +162,29 @@ ws_create_frame(FrameObj fr)
   int h = valInt(fr->area->h);
 
   if ( fr->kind == NAME_popup && parent )
-  { SDL_WindowFlags flags = 0;
-
-#if O_HDP
-    flags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
-    //float scale = SDL_GetWindowPixelDensity(parent);
-    //x = x/scale; y = y/scale; w = w/scale; h = h/scale;
+  { SDL_PropertiesID props = SDL_CreateProperties();
+    SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_PARENT_POINTER,
+			   parent);
+    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_MENU_BOOLEAN, true);
+#if defined(__APPLE__) && defined(SDL_PROP_WINDOW_CREATE_CONSTRAIN_POPUP_BOOLEAN)
+    /* SDL on MacOS does not handle popup placement correctly on secondary displays */
+    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_CONSTRAIN_POPUP_BOOLEAN, false);
 #endif
-    DEBUG(NAME_popup,
-	  Cprintf("Creating popup frame %s for %s %dx%d at %d,%d\n",
-		  pp(fr), pp(pfr), w, h, x, y));
-    flags |= SDL_WINDOW_POPUP_MENU;
-    win = SDL_CreatePopupWindow(parent, x, y, w, h, flags);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, w);
+    SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, h);
+#if O_HDP
+    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_HIGH_PIXEL_DENSITY_BOOLEAN,
+			   true);
+#endif
+
+    win = SDL_CreateWindowWithProperties(props);
+    SDL_DestroyProperties(props);
+#ifdef __APPLE__
+    if ( win )
+      SDL_SetWindowPosition(win, x, y);
+#endif
   } else
   {
 #if O_HDPX
