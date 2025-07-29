@@ -37,7 +37,8 @@
 
 static FontObj	getFontMenuItemMenu(Menu m, MenuItem mi);
 static MenuItem	getItemSelectionMenu(Menu m);
-static status	nextMenu(Menu m);
+static MenuItem	getNextMenu(Menu m, Name direction);
+static status	nextMenu(Menu m, Name direction);
 static status	kindMenu(Menu m, Name kind);
 static status	ensureSingleSelectionMenu(Menu m);
 static status	multipleSelectionMenu(Menu m, BoolObj val);
@@ -1022,12 +1023,29 @@ eventMenu(Menu m, EventObj ev)
   if ( m->active == ON )
   { makeButtonGesture();
 
+    if ( m->feedback == NAME_showSelectionOnly && ev->id == NAME_wheel )
+    { Int rot = getAttributeObject(ev, NAME_rotation);
+
+      if ( rot )
+      { if ( nextMenu(m, valInt(rot) < 0 ? NAME_up : NAME_down) )
+	{ if ( !send(m->device, NAME_modifiedItem, m, ON, EAV) )
+	    forwardMenu(m, m->message, ev);
+	  succeed;
+	}
+      }
+    }
+
     return eventGesture(GESTURE_button, ev);
   }
 
   fail;
 }
 
+
+static status
+WantsKeyboardFocusMenu(Menu m)
+{ return m->feedback == NAME_showSelectionOnly;
+}
 
 status
 forwardMenu(Menu m, Code msg, EventObj ev)
@@ -1147,7 +1165,7 @@ executeMenu(Menu m, EventObj ev)
     if ( img == NAME_comboBox )
       return openComboBoxMenu(m);
     else
-    { nextMenu(m);
+    { nextMenu(m, NAME_up);
       if ( !send(m->device, NAME_modifiedItem, m, ON, EAV) )
 	forwardMenu(m, m->message, ev);
       succeed;
@@ -1398,35 +1416,61 @@ toggleMenu(Menu m, MenuItem mi)
 }
 
 
-static status
-nextMenu(Menu m)
+static MenuItem
+getNextMenu(Menu m, Name direction)
 { Cell cell;
-  MenuItem current = NIL;
-  MenuItem next = NIL;
-  int skipping = TRUE;
+  bool skipping = true;
 
-  for_cell(cell, m->members)
-  { MenuItem mi = cell->value;
+  if ( direction == NAME_up || isDefault(direction) )
+  { MenuItem next = NIL;
 
-    if ( skipping )
-    { if ( mi->active == ON && isNil(next) )
-        next = mi;
-      if ( mi->selected == ON )
-      { skipping = FALSE;
-        current = mi;
+    for_cell(cell, m->members)
+    { MenuItem mi = cell->value;
+
+      if ( skipping )
+      { if ( mi->active == ON && isNil(next) )
+	  next = mi;
+	if ( mi->selected == ON )
+	  skipping = false;
+      } else if ( mi->active == ON )
+      { next = mi;
+	break;
       }
-    } else if ( mi->active == ON )
-    { next = mi;
-      break;
     }
+
+    if ( notNil(next) )
+      return next;
+  } else
+  { MenuItem prev = NIL;
+
+    for_cell(cell, m->members)
+    { MenuItem mi = cell->value;
+
+      if ( mi->selected == ON )
+      { if ( notNil(prev) )
+	  return prev;
+      }
+      if ( mi->active == ON )
+	prev = mi;
+    }
+    if ( notNil(prev) )
+      return prev;
   }
 
-  if ( current != next )
-    selectionMenu(m, next);
-
-  succeed;
+  fail;
 }
 
+static status
+nextMenu(Menu m, Name direction)
+{ MenuItem next = getNextMenu(m, direction);
+  if ( next )
+  { if ( next->selected != ON )
+      return selectionMenu(m, next);
+    succeed;
+  }
+
+  fail;
+}
 
 
 		/********************************
@@ -2164,6 +2208,8 @@ static senddecl send_menu[] =
      DEFAULT, "Status for event-processing"),
   SM(NAME_event, 1, "event", eventMenu,
      DEFAULT, "Process an event"),
+  SM(NAME_WantsKeyboardFocus, 0, NULL, WantsKeyboardFocusMenu,
+     NAME_event, "Test if ready to accept keyboard input"),
   SM(NAME_initialise, 3, T_initialise, initialiseMenu,
      DEFAULT, "Create from label, kind and message"),
   SM(NAME_unlink, 0, NULL, unlinkMenu,
@@ -2222,7 +2268,7 @@ static senddecl send_menu[] =
      NAME_repaint, "Handle change of item"),
   SM(NAME_clearSelection, 0, NULL, clearSelectionMenu,
      NAME_selection, "Clear the selection"),
-  SM(NAME_next, 0, NULL, nextMenu,
+  SM(NAME_next, 1, "direction=[{down,up}]", nextMenu,
      NAME_selection, "Set selection to next (`cycle')"),
   SM(NAME_selected, 2, T_selected, selectedMenu,
      NAME_selection, "(De)select a single menu_item or value"),
