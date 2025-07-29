@@ -146,7 +146,7 @@ ws_create_font(FontObj f)
   PangoFontDescription *desc = pango_font_description_new();
   PangoStyle   slant = PANGO_STYLE_NORMAL;
   PangoWeight weight = PANGO_WEIGHT_NORMAL;
-  const char *family = "sans";
+  const char *family;
 
   fixed = OFF;
   if ( f->style == NAME_normal )
@@ -173,6 +173,8 @@ ws_create_font(FontObj f)
     fam = f->family;
   family = nameToUTF8(fam);
 
+  DEBUG(NAME_font, Cprintf("Creating %s using Pango font %s\n",
+			   pp(f), family));
   pango_font_description_set_family(desc, family);
   pango_font_description_set_style(desc, slant);
   pango_font_description_set_weight(desc, weight);
