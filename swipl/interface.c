@@ -2857,7 +2857,7 @@ pl_pce_dispatch_event(term_t Fd, term_t timeout)
     return false;
 
   pceDispatch(fd, tmo*1000.0);
-  return true;
+  return !PL_exception(0);
 }
 
 static foreign_t

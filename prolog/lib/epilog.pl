@@ -84,6 +84,15 @@ ep_main :-
     ep_wait.
 
 ep_wait :-
+    E = error(Formal,_),
+    catch_with_backtrace(ep_wait_, E, true),
+    (   var(Formal)
+    ->  true
+    ;   print_message(warning, E),
+        ep_wait
+    ).
+
+ep_wait_ :-
     repeat,
       pce_principal:pce_dispatch(-1, 0.25),         % fd, timeout
       ep_main_end,
