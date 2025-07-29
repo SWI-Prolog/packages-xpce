@@ -404,7 +404,7 @@ statusButton(Button b, Name stat)
 
 
 status
-makeButtonGesture()
+makeButtonGesture(void)
 { if ( GESTURE_button != NULL )
     succeed;
 
