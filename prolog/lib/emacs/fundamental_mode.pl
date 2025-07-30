@@ -1025,24 +1025,22 @@ count_chars_region(M) :->
 resize_font(M, Factor:int) :->
     "Resize font to percentage, keep size in chars"::
     get(M, font, Font),
-    get(Font, family, Family),
-    get(Font, style, Style),
-    get(Font, points, Points0),
-    Points is round(Points0*Factor/100),
-    send(M, font, font(Family, Style, Points)),
+    get(Font, rescale, Factor, NewFont),
+    send(M, font, NewFont),
+    get(NewFont, points, Points),
     get(@pce, convert, fixed, font, Default),
     get(Default, points, DefPoints),
     Perc is round(Points*100/DefPoints),
     send(M, report, status, 'Resized to %d percent', Perc).
 
 font_magnify(M) :->
-    "Increase font 20%"::
-    send(M, resize_font, 110).
+    "Increase font 10%"::
+    send(M, resize_font, 1.1).
 
 font_reduce(M) :->
-    "Decrease font 20%"::
-    A is round(100*100/110),
-    send(M, resize_font, A).
+    "Decrease font 10%"::
+    F is 1/1.1,
+    send(M, resize_font, F).
 
 font_default(M) :->
     "Use default font (size)"::
