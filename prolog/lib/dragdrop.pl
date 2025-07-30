@@ -131,7 +131,7 @@ cursor(G, Gr:graphical, Cursor:cursor) :<-
         new(BM, image(@nil, W, H)),
         send(BM, draw_in, Gr, point(0,0)),
         send(BM, draw_in, bitmap('cross.png'), point(HotSpot?x-8, HotSpot?y-8)),
-        new(Cursor, cursor(@nil, BM, @default, HotSpot))
+        new(Cursor, cursor(@nil, BM, HotSpot))
     ).
 
 

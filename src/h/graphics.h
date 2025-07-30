@@ -740,9 +740,7 @@ End;
 
 NewClass(cursorobj)
   Name		name;			/* Name of the cursor */
-  Int		font_id;		/* Identifier in X-cursor-font */
   Image		image;			/* User-defined image */
-  Image		mask;			/* User-defined mask */
   Point		hot_spot;		/* User-defined hot_spot */
   Colour	foreground;		/* User-defined foreground */
   Colour	background;		/* User-defined background */

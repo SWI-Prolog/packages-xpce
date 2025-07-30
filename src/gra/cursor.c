@@ -59,31 +59,21 @@ This because they are limited resources on the X-server.
 
 static status
 initialiseCursor(CursorObj c, Name name,
-		 Image image, Image mask,
-		 Point hot,
+		 Image image, Point hot,
 		 Colour foreground, Colour background)
 { assign(c, name, name);
 
   if ( isDefault(image) )
   { if ( !ws_cursor_font_index(name) )
       return errorPce(NAME_noNamedCursor, name);
-
-    assign(c, font_id, DEFAULT);
   } else
-  { if ( isDefault(mask) )
-    { if ( notNil(image->mask) )
-	mask = image->mask;
-      else
-	mask = image;
-    }
-    if ( isDefault(hot) )
+  { if ( isDefault(hot) )
     { hot = newObject(ClassPoint, EAV);
       if ( notNil(image->hot_spot) )
 	copyPoint(hot, image->hot_spot);
     }
 
     assign(c, image,      image);
-    assign(c, mask,       mask);
     assign(c, hot_spot,   hot);
     assign(c, foreground, foreground);
     assign(c, background, background);
@@ -151,19 +141,15 @@ getConvertCursor(Class class, Name name)
 /* Type declarations */
 
 static char *T_initialise[] =
-        { "name=name*", "image=[image]", "mask=[image]", "hot_spot=[point]", "foreground=[colour]", "background=[colour]" };
+        { "name=name*", "image=[image]", "hot_spot=[point]", "foreground=[colour]", "background=[colour]" };
 
 /* Instance Variables */
 
 static vardecl var_cursor[] =
 { IV(NAME_name, "name*", IV_GET,
      NAME_name, "Name of the cursor"),
-  IV(NAME_fontId, "[int]*", IV_GET,
-     NAME_appearance, "Id in X-cursor font"),
   IV(NAME_image, "image*", IV_GET,
      NAME_appearance, "User-defined image"),
-  IV(NAME_mask, "image*", IV_GET,
-     NAME_appearance, "User-defined mask"),
   IV(NAME_hotSpot, "point*", IV_GET,
      NAME_appearance, "User-defined hot spot"),
   IV(NAME_foreground, "[colour]*", IV_GET,
@@ -177,8 +163,8 @@ static vardecl var_cursor[] =
 /* Send Methods */
 
 static senddecl send_cursor[] =
-{ SM(NAME_initialise, 6, T_initialise, initialiseCursor,
-     DEFAULT, "Create from name or name, image, mask, hot_spot"),
+{ SM(NAME_initialise, 5, T_initialise, initialiseCursor,
+     DEFAULT, "Create from name or name, image, hot_spot"),
   SM(NAME_unlink, 0, NULL, unlinkCursor,
      DEFAULT, "Destroy the cursor"),
   SM(NAME_Xclose, 1, "display", XcloseCursor,
