@@ -95,6 +95,11 @@ removedDisplay(DisplayObj d)
 }
 
 
+static status
+pollDimensionsDisplay(DisplayObj d)
+{ return ws_poll_dimensions_display(d);
+}
+
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Open a display.  If necessary, the X toolkit is initialised first and
 a context for the application is created.
@@ -719,6 +724,8 @@ static senddecl send_display[] =
      DEFAULT, "Remove from display_manager"),
   SM(NAME_removed, 0, NULL, removedDisplay,
      NAME_oms, "Hotplug display was removed"),
+  SM(NAME_pollDimensions, 0, NULL, pollDimensionsDisplay,
+     NAME_dimension, "Query the OS for possible changes"),
   SM(NAME_busyCursor, 2, T_busyCursor, busyCursorDisplay,
      NAME_event, "Define (temporary) cursor for all frames on the display"),
   SM(NAME_dispatch, 0, NULL, dispatchDisplay,

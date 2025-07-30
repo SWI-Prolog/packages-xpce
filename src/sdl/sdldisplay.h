@@ -47,6 +47,7 @@ typedef struct
 
 float ws_pixel_density_display(Any obj);
 Name  ws_get_system_theme_display(DisplayObj d);
+status ws_poll_dimensions_display(DisplayObj d);
 
 bool ws_init_displays(void);
 DisplayObj dsp_id_to_display(SDL_DisplayID id);

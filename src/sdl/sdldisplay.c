@@ -117,6 +117,31 @@ dsp_id_to_display(SDL_DisplayID id)
   return NULL;
 }
 
+static void
+update_area(Area a, SDL_Rect *rect)
+{ assign(a, x, toInt(rect->x));
+  assign(a, y, toInt(rect->y));
+  assign(a, w, toInt(rect->w));
+  assign(a, h, toInt(rect->h));
+}
+
+status
+ws_poll_dimensions_display(DisplayObj dsp)
+{ WsDisplay wsd = dsp->ws_ref;
+
+  if ( wsd )
+  { SDL_DisplayID id = wsd->id;
+    SDL_Rect rect;
+    SDL_GetDisplayBounds(id, &rect);
+    update_area(dsp->area, &rect);
+    SDL_GetDisplayUsableBounds(id, &rect);
+    update_area(dsp->work_area, &rect);
+  }
+
+  return true;
+}
+
+
 bool
 sdl_display_event(SDL_Event *ev)
 { switch(ev->type)
@@ -138,6 +163,12 @@ sdl_display_event(SDL_Event *ev)
 	Cprintf("Cannot destroy display %s: has frames\n", pp(dsp));
       }
       return true;
+    }
+    case SDL_EVENT_DISPLAY_MOVED:
+    { SDL_DisplayID id = ev->display.displayID;
+      DisplayObj dsp = dsp_id_to_display(id);
+      DEBUG(NAME_display, Cprintf("Moved display %s\n", pp(dsp)));
+      return ws_poll_dimensions_display(dsp);
     }
   }
 
