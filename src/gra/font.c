@@ -144,7 +144,7 @@ getConvertFont(Class class, Name name)
 
 
 static FontObj
-getRescaleFont(FontObj f, Int scale)
+getRescaleFont(FontObj f, Num scale)
 { double pts = valNum(f->points)*valNum(scale);
 
   return answerObject(getClassObject(f),
@@ -536,7 +536,7 @@ static getdecl get_font[] =
      NAME_dimension, "New size from <-width and <-height"),
   GM(NAME_width, 1, "int", "[char_array]", getWidthFont,
      NAME_dimension, "Width of string (default \"x\")"),
-  GM(NAME_rescale, 1, "font", "int", getRescaleFont,
+  GM(NAME_rescale, 1, "font", "num", getRescaleFont,
      NAME_dimension, "Get scaled version of font"),
   GM(NAME_advance, 1, "int", "char_array", getAdvanceFont,
      NAME_dimension, "X-origin advancement of string"),
