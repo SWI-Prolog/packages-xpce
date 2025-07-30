@@ -604,59 +604,6 @@ initHostConstants(void)
 					       "pce_principal");
 }
 
-
-#ifdef __WINDOWS__
-#include <console.h>
-
-static RlcUpdateHook old_update_hook;
-
-static void *
-getConsoleFunction(const char *name)
-{ HMODULE hconsole;
-
-  if ( (hconsole=GetModuleHandle("plterm")) )
-  { return GetProcAddress(hconsole, name);
-  }
-
-  return NULL;
-}
-
-
-RlcUpdateHook
-indirect_rlc_update_hook(RlcUpdateHook hook)
-{ RlcUpdateHook (*sethook)(RlcUpdateHook new);
-
-  if ( (sethook = getConsoleFunction("rlc_update_hook")) )
-    return (*sethook)(hook);
-
-  return NULL;
-}
-
-
-static HWND
-indirect_rlc_hwnd()
-{ HWND (*f)(void *console);
-
-  if ( (f = getConsoleFunction("rlc_hwnd")) )
-    return (*f)(NULL);
-
-  return 0;
-}
-
-
-#define PROLOG_ITF_INIT() \
-	{ }
-#define PROLOG_INSTALL_REDRAW_FUNCTION(f) \
-	{ old_update_hook = indirect_rlc_update_hook(f); }
-#ifndef O_SHAREDLIBRARY
-#define O_SHAREDLIBRARY
-#endif
-#endif
-
-#ifdef O_SHAREDLIBRARY
-#ifndef PROLOG_ITF_INIT
-#define PROLOG_ITF_INIT() { }
-#endif
 #define PROLOG_ONEXIT(f)	{ exitpce_hook = (OnExitFunction) f; }
 
 static OnExitFunction		exitpce_hook;
@@ -694,9 +641,7 @@ install_pl2xpce(void)
   PL_register_foreign("pce_open_terminal_image", 4,
 		      pl_pce_open_terminal_image, 0);
 
-#ifndef __WINDOWS__
   PL_license("lgplv2+", "xpce (pango library)");
-#endif
 
   install_pcecall();
 }
@@ -711,16 +656,11 @@ uninstall_pl2xpce(void)
 		 old_dispatch_hook, old_update_hook));
 
   PL_dispatch_hook(old_dispatch_hook);
-#ifdef __WINDOWS__
-  indirect_rlc_update_hook(old_update_hook);
-#endif
   if ( exitpce_hook )
     (*exitpce_hook)(0);
 }
 
-#endif /*O_SHAREDLIBRARY*/
-
-#endif /*SWI*/
+#endif/*SWI*/
 
 		 /*******************************
 		 *         EXCEPTIONS		*
@@ -3383,9 +3323,6 @@ static pce_callback_functions callbackfunction =
 #ifndef PROLOG_INSTALL_REINIT_FUNCTION
 #define PROLOG_INSTALL_REINIT_FUNCTION(x)
 #endif
-#ifndef PROLOG_ITF_INIT
-#define PROLOG_ITF_INIT()
-#endif
 #ifndef PROLOG_INSTALL_CALLBACKS
 #define PROLOG_INSTALL_CALLBACKS()
 #endif
@@ -3395,10 +3332,6 @@ static pce_callback_functions callbackfunction =
 #ifndef PROLOG_INSTALL_RESET_FUNCTION
 #define PROLOG_INSTALL_RESET_FUNCTION(f)
 #endif
-#ifndef PROLOG_INSTALL_REDRAW_FUNCTION
-#define PROLOG_INSTALL_REDRAW_FUNCTION(f)
-#endif
-
 
 static void
 do_reset(void)
@@ -3406,13 +3339,6 @@ do_reset(void)
   rewindHostHandles(NULL);		/* invalidate them all */
 }
 
-
-#ifdef __WINDOWS__
-static void
-do_redraw(void)
-{ pceRedraw(FALSE);			/* FALSE: do not sync Xserver */
-}
-#endif
 
 static int
 hasThreadsProlog()
@@ -3471,7 +3397,6 @@ pl_pce_init(term_t Home, term_t AppDir)
     }
 
     PROLOG_INSTALL_REINIT_FUNCTION(pl_pce_init);
-    PROLOG_ITF_INIT();
 
     pceRegisterCallbacks(&callbackfunction);
     initNameAtomTable();
@@ -3487,7 +3412,6 @@ pl_pce_init(term_t Home, term_t AppDir)
     pceSend(PROLOG, NULL, cToPceName("name_reference"), 1, &plname);
     PROLOG_INSTALL_DISPATCH_FUNCTION(pce_dispatch);
     PROLOG_INSTALL_RESET_FUNCTION(do_reset);
-    PROLOG_INSTALL_REDRAW_FUNCTION(do_redraw);
   }
 
   return TRUE;
