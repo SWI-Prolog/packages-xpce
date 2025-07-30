@@ -244,7 +244,7 @@ defaultPostScriptFont(FontObj f)
 		********************************/
 
 
-Int
+Num
 getWidthFont(FontObj f, CharArray txt)
 { if ( isDefault(txt) )
     txt = (CharArray) NAME_x;
@@ -255,20 +255,20 @@ getWidthFont(FontObj f, CharArray txt)
 }
 
 
-Int
+Num
 getAdvanceFont(FontObj f, CharArray txt)
 { return toNum(str_advance(&txt->data, 0, txt->data.s_size, f));
 }
 
 
-Int
+Num
 getExFont(FontObj f)
 { ws_create_font(f);
 
   answer(f->ex);
 }
 
-Int
+Num
 getAvgCharWidthFont(FontObj f)
 { if ( !isInteger(f->avg_char_width) )
   { const char *sample =
@@ -283,19 +283,19 @@ getAvgCharWidthFont(FontObj f)
   answer(f->avg_char_width);
 }
 
-Int
+Num
 getHeightFont(FontObj f)
 { answer(toNum(s_height(f)));
 }
 
 
-Int
+Num
 getAscentFont(FontObj f)
 { answer(toNum(s_ascent(f)));
 }
 
 
-Int
+Num
 getDescentFont(FontObj f)
 { answer(toNum(s_descent(f)));
 }
@@ -350,7 +350,7 @@ getDomainFont(FontObj f, Name which)
 }
 
 
-static Int
+static Num
 getPointsFont(FontObj f)
 { if ( notDefault(f->points) )
     answer(f->points);
@@ -488,11 +488,11 @@ static vardecl var_font[] =
      NAME_name, "Style of the font"),
   IV(NAME_weight, WEIGHT_TYPE, IV_GET,
      NAME_name, "Weight of the font"),
-  IV(NAME_points, "[int]", IV_NONE,
+  IV(NAME_points, "[num]", IV_NONE,
      NAME_name, "Point-size of the font"),
-  IV(NAME_ex, "int*", IV_NONE,
+  IV(NAME_ex, "num*", IV_NONE,
      NAME_dimension, "Height of the letter `x' in this font"),
-  IV(NAME_avgCharWidth, "int*", IV_NONE,
+  IV(NAME_avgCharWidth, "num*", IV_NONE,
      NAME_dimension, "Average char width"),
   IV(NAME_fixedWidth, "[bool]", IV_NONE,
      NAME_property, "If @off, font is proportional"),
@@ -518,27 +518,27 @@ static senddecl send_font[] =
 /* Get Methods */
 
 static getdecl get_font[] =
-{ GM(NAME_points, 0, "int", NULL, getPointsFont,
+{ GM(NAME_points, 0, "num", NULL, getPointsFont,
      DEFAULT, "Specified point-size or <-height"),
   GM(NAME_convert, 1, "font", "name", getConvertFont,
      NAME_conversion, "Convert logical font-name and @family_style_points"),
-  GM(NAME_ascent, 0, "int", NULL, getAscentFont,
+  GM(NAME_ascent, 0, "num", NULL, getAscentFont,
      NAME_dimension, "Highest point above baseline"),
-  GM(NAME_descent, 0, "int", NULL, getDescentFont,
+  GM(NAME_descent, 0, "num", NULL, getDescentFont,
      NAME_dimension, "Lowest point below baseline"),
-  GM(NAME_ex, 0, "int", NULL, getExFont,
+  GM(NAME_ex, 0, "num", NULL, getExFont,
      NAME_dimension, "Height of the letter `x'"),
-  GM(NAME_avgCharWidth, 0, "int", NULL, getAvgCharWidthFont,
+  GM(NAME_avgCharWidth, 0, "num", NULL, getAvgCharWidthFont,
      NAME_dimension, "Average char width"),
-  GM(NAME_height, 0, "int", NULL, getHeightFont,
+  GM(NAME_height, 0, "num", NULL, getHeightFont,
      NAME_dimension, "Height of highest character in font"),
   GM(NAME_size, 0, "size", NULL, getSizeFont,
      NAME_dimension, "New size from <-width and <-height"),
-  GM(NAME_width, 1, "int", "[char_array]", getWidthFont,
+  GM(NAME_width, 1, "num", "[char_array]", getWidthFont,
      NAME_dimension, "Width of string (default \"x\")"),
   GM(NAME_rescale, 1, "font", "num", getRescaleFont,
      NAME_dimension, "Get scaled version of font"),
-  GM(NAME_advance, 1, "int", "char_array", getAdvanceFont,
+  GM(NAME_advance, 1, "num", "char_array", getAdvanceFont,
      NAME_dimension, "X-origin advancement of string"),
   GM(NAME_lookup, 4, "font", T_initialise, getLookupFont,
      NAME_oms, "Lookup in @fonts table"),
