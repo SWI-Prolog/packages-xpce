@@ -209,6 +209,9 @@ binding('\\C-\\S-e', split_vertically).
 binding('\\C-\\S-i', new_window).
 binding('\\C-\\S-k', clear_screen).       % Gnome terminal
 binding('\\C-\\S-w', close).
+binding('\\C-\\S-=', font_magnify).
+binding('\\C--',     font_reduce).
+binding('\\C-=',     font_default).
 :- if(current_prolog_flag(apple, true)).
 binding(Key, Method) :-
     pce_keybinding:binding(apple, epilog, Bindings),
@@ -510,6 +513,34 @@ show_popup(T, Ev:event) :->
     ->  send(G, event, Ev)
     ).
 
+:- pce_group(font).
+
+resize_font(T, Factor:int) :->
+    "Resize font to percentage, keep size in chars"::
+    get(T, font, Font),
+    get(Font, rescale, Factor, NewFont),
+    send(T, font, NewFont),
+    get(NewFont, points, Points),
+    get(T, class_variable_value, font, DefaultFont),
+    get(DefaultFont, points, DefPoints),
+    Perc is round(Points*100/DefPoints),
+    send(T, report, status, 'Resized to %d percent', Perc).
+
+font_magnify(T) :->
+    "Increase font 10%"::
+    send(T, resize_font, 1.1).
+
+font_reduce(T) :->
+    "Decrease font 10%"::
+    F is 1/1.1,
+    send(T, resize_font, F).
+
+font_default(T) :->
+    "Use default font (size)"::
+    get(T, class_variable_value, font, DefaultFont),
+    send(T, font, DefaultFont),
+    send(T, report, status, 'Resized to 100 percent').
+
 
                 /*******************************
                 *     MANAGE PROLOG THREAD     *
@@ -680,6 +711,7 @@ split(T, Dir:{horizontally,vertically}) :->
     ).
 
 :- pce_end_class(epilog_window).
+
 
                 /*******************************
                 *            EPILOG            *

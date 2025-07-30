@@ -108,7 +108,11 @@ binding(apple, terminal,
         [ '\\C-c'     = interrupt,
           '\\s-c'     = copy,
           '\\s-v'     = paste,
-          '\\s-a'     = select_all
+          '\\s-a'     = select_all,
+
+          '\\s-0'     = font_magnify,
+          '\\s--'     = font_reduce,
+          '\\s-='     = font_default
         ]).
 binding(apple, epilog,
         [ '\\S-\\s-d' = split_horizontally,
