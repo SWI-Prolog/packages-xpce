@@ -97,9 +97,9 @@ binding(apple, 'emacs$fundamental',
           '\\s-x'     = cut,
           '\\s-v'     = paste,
 
-          '\\s-0'     = font_magnify,
+          '\\s-0'     = font_default,
           '\\s--'     = font_reduce,
-          '\\s-='     = font_default,
+          '\\s-='     = font_magnify,
 
           '\\s-n'     = new,
           '\\s-o'     = open
@@ -110,9 +110,9 @@ binding(apple, terminal,
           '\\s-v'     = paste,
           '\\s-a'     = select_all,
 
-          '\\s-0'     = font_magnify,
+          '\\s-0'     = font_default,
           '\\s--'     = font_reduce,
-          '\\s-='     = font_default
+          '\\s-='     = font_magnify
         ]).
 binding(apple, epilog,
         [ '\\S-\\s-d' = split_horizontally,
