@@ -54,18 +54,25 @@ fontName(Name family, Name style, Int points, Name weight)
     av[1] = style;
     av[2] = points;
 
-    str_writefv(&s, (CharArray)CtoTempString("%s_%s_%d"), 3, av);
+    str_writefv(&s, (CharArray)CtoTempString("%s_%s_%.2f"), 3, av);
   } else
   { av[0] = family;
     av[1] = weight;
     av[2] = style;
     av[3] = points;
 
-    str_writefv(&s, (CharArray)CtoTempString("%s_%s_%s_%d"), 4, av);
+    str_writefv(&s, (CharArray)CtoTempString("%s_%s_%s_%.2f"), 4, av);
   }
 
   str_downcase(&s, 0, s.s_size);
   str_translate(&s, ' ', '_');
+  if ( str_fetch(&s, s.s_size-1) == '0' &&
+       str_fetch(&s, s.s_size-2) == '0' )
+    s.s_size -= 3;
+  else
+    str_store(&s, s.s_size-3, '_');
+
+
   rc = StringToName(&s);
   str_unalloc(&s);
 
@@ -135,6 +142,14 @@ getConvertFont(Class class, Name name)
   fail;
 }
 
+
+static FontObj
+getRescaleFont(FontObj f, Int scale)
+{ double pts = valNum(f->points)*valNum(scale);
+
+  return answerObject(getClassObject(f),
+		      f->family, f->style, toNum(pts), f->weight, EAV);
+}
 
 status
 replaceFont(FontObj f)
@@ -521,6 +536,8 @@ static getdecl get_font[] =
      NAME_dimension, "New size from <-width and <-height"),
   GM(NAME_width, 1, "int", "[char_array]", getWidthFont,
      NAME_dimension, "Width of string (default \"x\")"),
+  GM(NAME_rescale, 1, "font", "int", getRescaleFont,
+     NAME_dimension, "Get scaled version of font"),
   GM(NAME_advance, 1, "int", "char_array", getAdvanceFont,
      NAME_dimension, "X-origin advancement of string"),
   GM(NAME_lookup, 4, "font", T_initialise, getLookupFont,
