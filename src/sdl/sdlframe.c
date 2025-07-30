@@ -909,9 +909,45 @@ ws_x_geometry_frame(FrameObj fr, Name spec, DisplayObj dsp)
  * @param h Height of the frame.
  * @param dsp Display object representing the target monitor.
  */
-void
+status
 ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
-{
+{ WsFrame wsf = fr->ws_ref;
+
+  if ( wsf )
+  { if ( notDefault(w) || notDefault(h) )
+    { int iw = isDefault(w) ? valInt(fr->area->w) : valInt(w);
+      int ih = isDefault(h) ? valInt(fr->area->h) : valInt(h);
+
+#if O_HDPX
+      float scale = ws_pixel_density_display(fr);
+      iw = iw/scale; ih = ih/scale;
+#endif
+      DEBUG(NAME_set,
+	    Cprintf("SDL_SetWindowSize(%s, %d, %d)\n",
+		    pp(fr), iw, ih));
+      if ( !SDL_SetWindowSize(wsf->ws_window, iw, ih) )
+	Cprintf("Could not set size of %s: %s\n",
+		pp(fr), SDL_GetError());
+    }
+
+    if ( notDefault(x) || notDefault(y) )
+    { int ix = isDefault(x) ? valInt(fr->area->x) : valInt(x);
+      int iy = isDefault(y) ? valInt(fr->area->y) : valInt(y);
+
+#if O_HDPX
+      float scale = ws_pixel_density_display(fr);
+      ix = ix/scale; iy = iy/scale;
+#endif
+      DEBUG(NAME_set,
+	    Cprintf("SDL_SetWindowPosition(%s, %d, %d)\n",
+		    pp(fr), ix, iy));
+      if ( !SDL_SetWindowPosition(wsf->ws_window, ix, iy) )
+	Cprintf("Could not set size of %s: %s\n",
+		pp(fr), SDL_GetError());
+    }
+  }
+
+  succeed;
 }
 
 /**

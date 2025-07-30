@@ -752,36 +752,33 @@ geometryFrame(FrameObj fr, Name spec, DisplayObj dsp)
 static status
 setFrame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
 { Area a = fr->area;
-  Int ow = a->w;
-  Int oh = a->h;
 
   if ( notDefault(dsp) )
   { if ( notDefault(x) )
-      x = add(x, dsp->area->x);
+      x = add(x, dsp->work_area->x);
     if ( notDefault(y) )
-      y = add(y, dsp->area->y);
-
-    dsp = DEFAULT;
+      y = add(y, dsp->work_area->y);
   }
 
-  if ( notDefault(x) || notDefault(y) )
-    assign(fr, placed, ON);
-  setArea(a, x, y, w, h);
-  if ( valInt(a->w) <= 0 )		/* Window systems don't like that */
-    assign(a, w, ONE);
-  if ( valInt(a->h) <= 0 )
-    assign(a, h, ONE);
-
   if ( createdFrame(fr) )
-  { ws_geometry_frame(fr, x, y, w, h, dsp);
-
-    if ( ow != a->w || oh != a->h )
-      resizeFrame(fr);
+  { sdl_send(fr, NAME_SdlSet, false, x, y, w, h, dsp, EAV);
+  } else
+  { if ( notDefault(x) || notDefault(y) )
+      assign(fr, placed, ON);
+    setArea(a, x, y, w, h);
+    if ( valInt(a->w) <= 0 )		/* Window systems don't like that */
+      assign(a, w, ONE);
+    if ( valInt(a->h) <= 0 )
+      assign(a, h, ONE);
   }
 
   succeed;
 }
 
+static status
+SdlSetFrame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
+{ return ws_geometry_frame(fr, x, y, w, h, dsp);
+}
 
 static status
 xFrame(FrameObj fr, Int x)
@@ -1760,6 +1757,8 @@ static senddecl send_frame[] =
      NAME_area, "Move the frame on the display"),
   SM(NAME_set, 5, T_set, setFrame,
      NAME_area, "Set XYWH of frame on display"),
+  SM(NAME_SdlSet, 5, T_set, SdlSetFrame,
+     NAME_area, "Update open frame position and size"),
   SM(NAME_size, 1, "size=size", sizeFrame,
      NAME_area, "Resize the frame"),
   SM(NAME_width, 1, "width=int", widthFrame,

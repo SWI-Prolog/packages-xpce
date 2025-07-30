@@ -66,7 +66,7 @@ status setDndAwareFrame(FrameObj fr);
 void ws_grab_frame_pointer(FrameObj fr, BoolObj grab, CursorObj cursor);
 status ws_frame_bb(FrameObj fr, int *x, int *y, int *w, int *h);
 void ws_x_geometry_frame(FrameObj fr, Name spec, DisplayObj dsp);
-void ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp);
+status ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp);
 void ws_border_frame(FrameObj fr, int b);
 void ws_busy_cursor_frame(FrameObj fr, CursorObj c);
 void ws_frame_cursor(FrameObj fr, CursorObj cursor);
