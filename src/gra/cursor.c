@@ -35,32 +35,10 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 
-forwards status XcloseCursor(CursorObj, DisplayObj);
-
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Creating cursors.
-
-In X, cursors can be created two ways: from the cursor  font  and from
-two pixmaps.  PCE  supports both ways  to create a   cursor.  For this
-reason various instantiation patterns for cursors exist.
-
-?- new(C, cursor(Name))
-	Create cursor from cursor font
-?- new(C, cursor(Name, Source, [Mask], [X, Y]
-	Create cursor from an image.  If Mask is not supplied it defaults
-	to Source.  If X and Y are not supplied they default to (0,0) This
-	function is in the first place meant to maintain compatibility with
-	the SunView version of cursors.
-
-Cursors from now on are shared objects like fonts.  That  is, a second
-`new' to a  cursor of the  same name returns  the same  cursor object.
-This because they are limited resources on the X-server.
--  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+static status XcloseCursor(CursorObj, DisplayObj);
 
 static status
-initialiseCursor(CursorObj c, Name name,
-		 Image image, Point hot,
-		 Colour foreground, Colour background)
+initialiseCursor(CursorObj c, Name name, Image image, Point hot)
 { assign(c, name, name);
 
   if ( isDefault(image) )
@@ -75,8 +53,6 @@ initialiseCursor(CursorObj c, Name name,
 
     assign(c, image,      image);
     assign(c, hot_spot,   hot);
-    assign(c, foreground, foreground);
-    assign(c, background, background);
   }
 
   if ( notNil(name) )
@@ -141,7 +117,7 @@ getConvertCursor(Class class, Name name)
 /* Type declarations */
 
 static char *T_initialise[] =
-        { "name=name*", "image=[image]", "hot_spot=[point]", "foreground=[colour]", "background=[colour]" };
+        { "name=name*", "image=[image]", "hot_spot=[point]" };
 
 /* Instance Variables */
 
@@ -152,10 +128,6 @@ static vardecl var_cursor[] =
      NAME_appearance, "User-defined image"),
   IV(NAME_hotSpot, "point*", IV_GET,
      NAME_appearance, "User-defined hot spot"),
-  IV(NAME_foreground, "[colour]*", IV_GET,
-     NAME_appearance, "Foreground colour of the cursor"),
-  IV(NAME_background, "[colour]*", IV_GET,
-     NAME_appearance, "Background colour of the cursor"),
   IV(NAME_wsRef, "alien:WsRef", IV_NONE,
      NAME_storage, "Window System Reference")
 };
@@ -163,8 +135,8 @@ static vardecl var_cursor[] =
 /* Send Methods */
 
 static senddecl send_cursor[] =
-{ SM(NAME_initialise, 5, T_initialise, initialiseCursor,
-     DEFAULT, "Create from name or name, image, hot_spot"),
+{ SM(NAME_initialise, 3, T_initialise, initialiseCursor,
+     DEFAULT, "Create from name or name or image & hot_spot"),
   SM(NAME_unlink, 0, NULL, unlinkCursor,
      DEFAULT, "Destroy the cursor"),
   SM(NAME_Xclose, 1, "display", XcloseCursor,
