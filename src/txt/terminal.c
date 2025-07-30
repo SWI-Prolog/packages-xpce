@@ -605,7 +605,10 @@ fontTerminalImage(TerminalImage ti, FontObj font, FontObj bold)
     bold = NIL;
   }
   assign(ti, bold_font, bold);
-  return refreshTerminalImage(ti);
+  requestComputeGraphical(ti, DEFAULT);
+  changedEntireImageGraphical(ti);
+
+  succeed;
 }
 
 static status
@@ -1792,12 +1795,10 @@ rlc_resize_pixel_units(RlcData b, int w, int h)
 
 static void
 rlc_init_text_dimensions(RlcData b, FontObj font)
-{ b->cw = c_width('m', font);
+{ b->cw = valNum(getAvgCharWidthFont(font));
   b->cb = s_ascent(font);
   b->ch = s_height(font);
   b->fixedfont = font->fixed_width == ON;
-
-  //rlc_resize_pixel_units(b, rect.right - rect.left, rect.bottom - rect.top);
 }
 
 
