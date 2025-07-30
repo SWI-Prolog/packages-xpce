@@ -259,6 +259,7 @@ GLOBAL Type TypeFunction;
 GLOBAL Type TypeGetMethod;
 GLOBAL Type TypeGraphical;
 GLOBAL Type TypeInt;
+GLOBAL Type TypeNum;
 GLOBAL Type TypeImage;
 GLOBAL Type TypeName;
 GLOBAL Type TypeNil;

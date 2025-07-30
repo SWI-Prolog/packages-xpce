@@ -88,6 +88,7 @@ COMMON(status)	makeClassClass(Class class);
 COMMON(status)	toString(Any obj, PceString s);
 COMMON(char *)	toCharp(Any obj);
 COMMON(Int)	toInteger(Any obj);
+COMMON(Num)	convertToNum(Any obj);
 COMMON(Real)	toReal(Any obj);
 COMMON(BoolObj)	toBool(Any obj);
 COMMON(Name)	toName(Any obj);

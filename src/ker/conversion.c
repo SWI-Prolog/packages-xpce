@@ -107,6 +107,36 @@ toInteger(Any obj)
 }
 
 
+Num
+convertToNum(Any obj)
+{ if ( isInteger(obj) )					/* int */
+  { return (Num) obj;
+  } else if ( instanceOfObject(obj, ClassNumber) )	/* number */
+  { return toNum(((Number)obj)->value);
+  } else if ( instanceOfObject(obj, ClassReal) )	/* real */
+  { return toNum(valReal(obj));
+  } else if ( instanceOfObject(obj, ClassCharArray) )	/* char_array */
+  { CharArray ca = obj;
+    PceString str = &ca->data;
+
+    if ( isstrA(str) && str->s_size > 0 )
+    { char *s = (char *)str->s_textA;
+      char *end, *es = &s[str->s_size];
+      double f;
+
+      f = cstrtod(s, &end);
+      if ( end == es )
+	return toNum(f);
+      f = strtod(s, &end);
+      if ( end == es )
+	return toNum(f);
+    }
+  }
+
+  fail;
+}
+
+
 Real
 toReal(Any obj)
 { if ( instanceOfObject(obj, ClassReal) )

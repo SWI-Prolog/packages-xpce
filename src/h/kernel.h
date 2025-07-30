@@ -311,6 +311,7 @@ typedef int			status;		/* FAIL, SUCCEED */
 typedef void *			Any;		/* Arbitrary object */
 
 typedef Any			Int;		/* ZERO, ONE, ... */
+typedef Any			Num;		/* tagged doubles */
 typedef Any			(*Func)();	/* Absolete GetFunc (TBD) */
 typedef Any			(*GetFunc)();	/* GetMethod implementation */
 typedef status			(*SendFunc)();	/* SendMethod implementation */

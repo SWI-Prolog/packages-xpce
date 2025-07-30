@@ -46,21 +46,22 @@ static status	kindType(Type t, Name kind);
 #define TV_CLASS	0
 #define TV_OBJECT	1
 #define TV_INT		2
-#define TV_ARG		3
-#define TV_VALUE	4
-#define TV_VALUESET	5
-#define TV_UNCHECKED	6
-#define TV_ANY		7
-#define TV_ALIEN	8
-#define TV_NAMEOF	9
-#define TV_INTRANGE	10
-#define TV_REALRANGE	11
-#define TV_MEMBER	12
-#define TV_COMPOUND	13
-#define TV_ALIAS	14
-#define TV_CHAR		15
-#define TV_EVENTID	16
-#define TV_ATOMIC	17
+#define TV_NUM		3
+#define TV_ARG		4
+#define TV_VALUE	5
+#define TV_VALUESET	6
+#define TV_UNCHECKED	7
+#define TV_ANY		8
+#define TV_ALIEN	9
+#define TV_NAMEOF	10
+#define TV_INTRANGE	11
+#define TV_REALRANGE	12
+#define TV_MEMBER	13
+#define TV_COMPOUND	14
+#define TV_ALIAS	15
+#define TV_CHAR		16
+#define TV_EVENTID	17
+#define TV_ATOMIC	18
 
 status
 initialiseType(Type t, Name name, Name kind, Any context, Chain supers)
@@ -496,6 +497,10 @@ intType(const Type t, const Any val, const Any ctx)
 { return isInteger(val);
 }
 
+static inline status
+numType(const Type t, const Any val, const Any ctx)
+{ return isInteger(val);
+}
 
 static inline status
 classType(const Type t, const Any val, const Any ctx)
@@ -647,6 +652,7 @@ validateType(Type t, const Any val, const Any ctx)
   { case TV_CLASS:	rval = classType(t, val, ctx);		break;
     case TV_OBJECT:	rval = objectType(t, val, ctx);		break;
     case TV_INT:	rval = intType(t, val, ctx);		break;
+    case TV_NUM:	rval = numType(t, val, ctx);		break;
     case TV_ARG:	rval = argType(t, val, ctx);		break;
     case TV_VALUE:	rval = valueType(t, val, ctx);		break;
     case TV_VALUESET:	rval = valueSetType(t, val, ctx);	break;
@@ -707,6 +713,10 @@ getIntType(const Type t, const Any val, const Any ctx)
 { return (Any) toInteger(val);
 }
 
+static Any
+getNumType(const Type t, const Any val, const Any ctx)
+{ return (Any) convertToNum(val);
+}
 
 static int
 charpToChar(char *s)
@@ -926,6 +936,9 @@ kindType(Type t, Name kind)
   } else if ( equalName(kind, NAME_int) )
   { t->validate_function  = TV_INT;
     t->translate_function = getIntType;
+  } else if ( equalName(kind, NAME_num) )
+  { t->validate_function  = TV_NUM;
+    t->translate_function = getNumType;
   } else if ( equalName(kind, NAME_arg) )
   { t->validate_function  = TV_ARG;
     t->translate_function = getFailType;
@@ -1519,6 +1532,7 @@ struct built_in_type
   { &TypeDefault,   NAME_default,   NAME_value,     DEFAULT },
   { &TypeArg,       NAME_arg,       NAME_arg,	    NIL },
   { &TypeInt,       NAME_int,       NAME_int,	    NIL },
+  { &TypeNum,       NAME_num,       NAME_num,	    NIL },
   { &TypeChar,      NAME_char,      NAME_char,	    NIL },
   { &TypeEventId,   NAME_eventId,   NAME_eventId,   NIL },
   { &TypeAtomic,    NAME_atomic,    NAME_atomic,    NIL },
