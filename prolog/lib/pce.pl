@@ -85,7 +85,7 @@ reexports the content of these files.
 	    pce_thread/1,               % -Thread
 	    pce_dispatch/0,
 
-              pce_open_terminal_image/4,  % +TerminalImage, -In, -Out, -Error
+            pce_open_terminal_image/4,  % +TerminalImage, -In, -Out, -Error
 
 	    op(200, fy,  @),
 	    op(250, yfx, ?),
@@ -156,6 +156,22 @@ in_pce_thread_sync(Goal) :-
     term_variables(Goal, Vars),
     pce_principal:in_pce_thread_sync2(Goal-Vars, Vars).
 
+%!  set_sdl_video_driver
+%
+%   Set the SDL video driver   using ``swipl -DSDL_VIDEODRIVER=Driver``.
+%   This allows controlling the video   driver without using environment
+%   variables, simplifying the build.
+
+set_sdl_video_driver :-
+    current_prolog_flag('SDL_VIDEODRIVER', Driver),
+    !,
+    setenv('SDL_VIDEODRIVER', Driver).
+set_sdl_video_driver.
+
+%!  start_dispatch
+%
+%   Start SDL event dispatching.
+
 start_dispatch :-
     (   thread_self(main)
     ->  app_name(AppName),
@@ -171,11 +187,19 @@ app_name('swipl-win') :-
     !.
 app_name('swipl').
 
+%!  set_version
+%
+%   Set the version for @prolog
+
 set_version :-
     current_prolog_flag(version_data, swi(Major, Minor, Patch, _)),
     format(string(PlId),
 	   'SWI-Prolog version ~w.~w.~w', [Major, Minor, Patch]),
     send(@prolog, system, PlId).
+
+%!  get_pce_version
+%
+%   Set the Prolog flag `xpce_version` from the XPCE version info
 
 get_pce_version :-
     (   current_prolog_flag(xpce_version, _)
@@ -184,8 +208,17 @@ get_pce_version :-
 	create_prolog_flag(xpce_version, Version, [])
     ).
 
+%!  on_load is multi
+%
+%   This multifile predicate is  called   during  xpce initialization as
+%   forall(on_load, true).   The default initializes xpce's theme.
+
 on_load :-
     setup_theme.
+
+%!  run_on_load
+%
+%   Run further initialization when xpce is being loaded.
 
 run_on_load :-
     forall(on_load, true).
@@ -214,6 +247,7 @@ setup_theme.
 %   Get the ball running
 
 init_pce :-
+    set_sdl_video_driver,
     set_version,
     get_pce_version,
     start_dispatch,
@@ -221,13 +255,6 @@ init_pce :-
 
 :- initialization
        init_pce.
-
-
-		 /*******************************
-		 *           CONSOLE            *
-		 *******************************/
-
-%:- send(@pce, console_label, 'XPCE/SWI-Prolog').
 
 
 		/********************************
