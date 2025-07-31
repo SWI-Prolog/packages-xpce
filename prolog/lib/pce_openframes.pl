@@ -32,10 +32,14 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(openwin,
+:- module(pce_openframes,
           [ confirm_open_frames/1
           ]).
 :- use_module(library(pce)).
+:- autoload(library(apply), [maplist/3, include/3]).
+:- autoload(library(lists), [nth1/3, append/2]).
+:- autoload(library(option), [option/2, option/3]).
+:- autoload(library(pce_util), [get_chain/3]).
 
 %!  confirm_open_frames(+Options)
 %
