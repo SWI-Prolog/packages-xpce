@@ -224,6 +224,8 @@ ws_create_frame(FrameObj fr)
       DisplayObj dsp = fr->display;
       x += valInt(dsp->work_area->x);
       y += valInt(dsp->work_area->y);
+      DEBUG(NAME_frame,
+	    Cprintf("%s: passing position %d,%d\n", pp(fr), x, y));
       SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x);
       SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y);
     } else

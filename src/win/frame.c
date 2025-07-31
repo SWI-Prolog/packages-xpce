@@ -267,9 +267,6 @@ openFrame(FrameObj fr, Point pos, DisplayObj dsp, BoolObj grab)
 { Int x, y;
   Int w = DEFAULT, h = DEFAULT;
 
-  if ( !createdFrame(fr) )
-    TRY( send(fr, NAME_create, EAV) );
-
   if ( isDefault(pos) && isOpenFrameStatus(fr->status) )
     succeed;
   if ( notDefault(pos) )
@@ -282,6 +279,11 @@ openFrame(FrameObj fr, Point pos, DisplayObj dsp, BoolObj grab)
     setFrame(fr, x, y, w, h, DEFAULT);
   } else if ( notNil(fr->geometry) )
   { ws_x_geometry_frame(fr, fr->geometry, DEFAULT);
+  }
+
+  if ( !createdFrame(fr) )
+  { DEBUG(NAME_frame, Cprintf("Creating %s\n", pp(fr)));
+    TRY( send(fr, NAME_create, EAV) );
   }
 
   if ( !isOpenFrameStatus(fr->status) )
@@ -302,7 +304,6 @@ openCenteredFrame(FrameObj fr, Point pos, DisplayObj dsp, BoolObj grab)
   get_position_from_center_frame(fr, dsp, pos, &x, &y);
   ensure_on_display(fr, DEFAULT, &x, &y);
   p2 = answerObject(ClassPoint, toInt(x), toInt(y), EAV);
-  assign(fr, placed, ON);
   rval = openFrame(fr, p2, dsp, grab);
   doneObject(p2);
 
@@ -610,12 +611,12 @@ static int
 get_position_from_center_frame(FrameObj fr, DisplayObj d, Point pos,
 			       int *x, int *y)
 { if ( isDefault(pos) )
-  { if ( isDefault(d) )
-      d = fr->display;
+  { d = CurrentDisplay(fr);
 
     if ( d )
-    { *x = valInt(d->area->x) + valInt(d->area->w)/2;
-      *y = valInt(d->area->y) + valInt(d->area->h)/2;
+    { Area a = d->work_area;
+      *x = valInt(a->x) + valInt(a->w)/2;
+      *y = valInt(a->y) + valInt(a->h)/2;
     } else
     { *x = *y = 0;
     }
@@ -638,8 +639,9 @@ ensure_on_display(FrameObj fr, DisplayObj dsp, int *x, int *y)
   if ( isDefault(dsp) )
     dsp = CurrentDisplay(fr);
 
-  rm = valInt(dsp->area->x) + valInt(dsp->area->w);
-  bm = valInt(dsp->area->y) + valInt(dsp->area->h);
+  Area a = dsp->work_area;
+  rm = valInt(a->x) + valInt(a->w);
+  bm = valInt(a->y) + valInt(a->h);
 
   if ( *x + valInt(fr->area->w) > rm )
     *x -= *x + valInt(fr->area->w) - rm;
@@ -762,7 +764,8 @@ setFrame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
   }
 
   if ( createdFrame(fr) )
-  { sdl_send(fr, NAME_SdlSet, false, x, y, w, h, dsp, EAV);
+  { setArea(a, x, y, DEFAULT, DEFAULT);
+    sdl_send(fr, NAME_SdlSet, false, x, y, w, h, dsp, EAV);
   } else
   { if ( notDefault(x) || notDefault(y) )
       assign(fr, placed, ON);
