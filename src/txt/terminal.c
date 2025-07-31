@@ -2865,7 +2865,8 @@ rlc_clear_dec_mode(RlcData b, int mode)
 static void
 osc_command(RlcData b, int param, const uchar_t *link)
 { switch(param)
-  { case 0:
+  { case 0:			/* should set title and icon name */
+    case 2:			/* only sets title */
     { AnswerMark mark;
       StringObj s = TCHAR2String(link);
       markAnswerStack(mark);
