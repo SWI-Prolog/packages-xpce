@@ -54,6 +54,7 @@
 :- use_module(library(option), [meta_options/3, option/3, option/2]).
 :- use_module(library(prolog_history), [prolog_history/1]).
 :- use_module(library(swi_preferences), [prolog_edit_preferences/1]).
+:- use_module(library(pce_openframes), [confirm_open_frames/1]).
 
 :- meta_predicate
     epilog(:).
@@ -149,7 +150,8 @@ epilog(Options0) :-
     ),
     send(Epilog, open),
     (   option(main(true), Options)
-    ->  ep_wait
+    ->  send(Epilog, main, @on),
+        ep_wait
     ;   true
     ).
 
@@ -720,7 +722,8 @@ split(T, Dir:{horizontally,vertically}) :->
 :- pce_begin_class(epilog, frame,
                    "Multiple terminals and menu").
 
-variable(current_window, name*, both, "Name of the current window").
+variable(current_window, name*,        both, "Name of the current window").
+variable(main,		 bool := @off, both, "True if this is the main window").
 
 initialise(T, Title:title=[name],
            Width:width=[int], Height:height=[int]) :->
@@ -763,6 +766,17 @@ delete_epilog(T, W:window, Destroy:[bool]) :->
         ->  send(W, destroy)
         ;   true
         )
+    ;   send(T, terminate)
+    ).
+
+terminate(T) :->
+    "Destroy this Epilog window"::
+    (   get(T, main, @on)
+    ->  send(T, destroy),
+        confirm_open_frames(
+            [ message("The main Prolog console was closed\n\c
+                       while there are open windows")
+            ])
     ;   send(T, destroy)
     ).
 
