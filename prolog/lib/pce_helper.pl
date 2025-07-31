@@ -289,10 +289,8 @@ class_variable(text_font,             font,  normal).
 class_variable(bold_font,             font,  bold).
 class_variable(emphasize_font,        font,  italic).
 class_variable(size,                  size,  size(88, 20)).
-class_variable(jump_style,            style, when(@colour_display,
-                                                  style(colour := dark_green,
-                                                        underline := @on),
-                                                  style(underline := @on))).
+class_variable(jump_style,            style, style(colour := dodgerblue,
+                                                   underline := @on)).
 class_variable(keyword_style,         style, style(font := bold)).
 
 
