@@ -71,7 +71,7 @@ fill_tool_dialog(_M, D:tool_dialog) :->
                 gap,
                 menu_item(save_as),
                 gap,
-                menu_item(quit)
+                menu_item(close)
               ]),
     send(D, append, new(View, popup(view))),
     send_list(View, append,
@@ -103,7 +103,7 @@ save_as(M) :->
     get(M, member, view, View),
     send(View, save, FileName).
 
-quit(M) :->
+close(M) :->
     send(M, destroy).
 
 disable_all(B) :->
@@ -120,7 +120,7 @@ enable_all(B) :->
 
 help(_) :->
     "Start help on predicate"::
-    auto_call(help(debug/3)).
+    autoload_call(www_open_url('https://www.swi-prolog.org/pldoc/man?section=debug')).
 
 :- pce_end_class(prolog_debug_monitor).
 
@@ -147,6 +147,8 @@ update_monitor_browsers :-
 :- pce_begin_class(prolog_debug_browser, browser,
                    "Show current debug topics").
 
+class_variable(enabled_style, style, style(background := green)).
+
 initialise(B) :->
     send_super(B, initialise),
     send(B, select_message, message(B, selected, @arg1)),
@@ -157,9 +159,8 @@ initialise(B) :->
               [ menu_item(enable,  message(B, enable, @arg1)),
                 menu_item(disable, message(B, disable, @arg1))
               ]),
-    send_list(B,
-              [ style(true, style(background := green))
-              ]),
+    get(B, class_variable_value, enabled_style, EnabledStyle),
+    send(B, style, true, EnabledStyle),
     send(@prolog_debug_monitor_browsers, append, B).
 
 unlink(B) :->
