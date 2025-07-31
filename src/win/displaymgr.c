@@ -106,6 +106,8 @@ DisplayObj
 CurrentDisplay(Any obj)
 { DisplayObj dsp;
 
+  if ( instanceOfObject(obj, ClassDisplay) )
+    return obj;
   if ( instanceOfObject(obj, ClassGraphical) &&
        (dsp = getDisplayGraphical((Graphical) obj)) )
     return dsp;

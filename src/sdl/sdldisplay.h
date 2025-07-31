@@ -39,6 +39,7 @@
 
 typedef struct
 { SDL_DisplayID    id;
+  float		   scale;
   SDL_Window      *hidden_window;
   SDL_Renderer    *hidden_renderer;
   cairo_surface_t *hidden_surface;

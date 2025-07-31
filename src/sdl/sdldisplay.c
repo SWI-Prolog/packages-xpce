@@ -266,11 +266,11 @@ ws_open_display(DisplayObj d, SDL_DisplayID id)
     "xpce hidden window", 64, 64,
     flags);
   wsd->hidden_renderer = SDL_CreateRenderer(wsd->hidden_window, NULL);
-  wsd->hidden_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
-						   64, 64);
+  wsd->hidden_surface = cairo_image_surface_create(
+    CAIRO_FORMAT_ARGB32, 64, 64);
   wsd->hidden_cairo = cairo_create(wsd->hidden_surface);
-  float scale = SDL_GetWindowPixelDensity(wsd->hidden_window);
-  cairo_scale(wsd->hidden_cairo, scale, scale);
+  wsd->scale = SDL_GetWindowPixelDensity(wsd->hidden_window);
+  cairo_scale(wsd->hidden_cairo, wsd->scale, wsd->scale);
 }
 
 /**
@@ -295,21 +295,16 @@ ws_close_display(DisplayObj d)
 
 float
 ws_pixel_density_display(Any obj)
-{ ASSERT_SDL_MAIN();
-  SDL_DisplayID display_id = SDL_GetPrimaryDisplay();
-  float scale = SDL_GetDisplayContentScale(display_id);
-  DisplayObj d;
+{ DisplayObj dsp = CurrentDisplay(obj);
 
-  if ( instanceOfObject(obj, ClassDisplay) )
-    d = obj;
-  else
-    d = CurrentDisplay(obj);
-
-  WsDisplay wsd = d->ws_ref;
-  if ( wsd )
-    scale = SDL_GetWindowPixelDensity(wsd->hidden_window);
-
-  return scale;
+  if ( dsp && dsp->ws_ref )
+  { WsDisplay wsd = dsp->ws_ref;
+    return wsd->scale;
+  } else
+  { ASSERT_SDL_MAIN();
+    SDL_DisplayID display_id = SDL_GetPrimaryDisplay();
+    return SDL_GetDisplayContentScale(display_id);
+  }
 }
 
 
