@@ -76,7 +76,9 @@ ws_uncreate_window(PceWindow sw)
   { if ( wsw->backing )
       cairo_surface_destroy(wsw->backing);
     if ( wsw->texture )
+    { ASSERT_SDL_MAIN();
       SDL_DestroyTexture(wsw->texture);
+    }
     unalloc(sizeof(*wsw), wsw);
     sw->ws_ref = NULL;
   }
@@ -175,7 +177,8 @@ ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
     assert(wsw->backing);
     d_init_surface(wsw->backing, sw->background);
     if ( wsw->texture )
-    { SDL_DestroyTexture(wsw->texture);
+    { ASSERT_SDL_MAIN();
+      SDL_DestroyTexture(wsw->texture);
       wsw->texture = NULL;
     }
     DEBUG(NAME_sdl, Cprintf("Resized %s to %dx%d\n", pp(sw), w, h));
@@ -214,6 +217,7 @@ ws_grab_pointer_window(PceWindow sw, BoolObj val)
     if ( wfr )
     {
 #if 0
+      ASSERT_SDL_MAIN();
       if ( !SDL_CaptureMouse(val == ON) )
 	DEBUG(NAME_capture,
 	      Cprintf("ws_grab_pointer_window(%s, %s) failed: %s\n",
@@ -282,7 +286,9 @@ ws_flash_window(PceWindow sw, int msecs)
 { FrameObj fr = getFrameWindow(sw, OFF);
   WsFrame wfr = fr->ws_ref;
   if ( wfr->ws_window )
+  { ASSERT_SDL_MAIN();
     SDL_FlashWindow(wfr->ws_window, SDL_FLASH_BRIEFLY);
+  }
 }
 
 /**
@@ -308,7 +314,9 @@ void
 ws_window_cursor(PceWindow sw, CursorObj cursor)
 { SDL_Cursor *c = pceCursor2SDL_Cursor(cursor);
   if ( c )
+  { ASSERT_SDL_MAIN();
     SDL_SetCursor(c);
+  }
 }
 
 /**

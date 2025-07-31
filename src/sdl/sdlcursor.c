@@ -132,10 +132,12 @@ ws_create_cursor(CursorObj c, DisplayObj d)
   { if ( isNil(c->image) )
     { Int idx = ws_cursor_font_index(c->name);
       assert(idx);
+      ASSERT_SDL_MAIN();
       SDL_Cursor *cursor = SDL_CreateSystemCursor(valInt(idx));
       c->ws_ref = cursor;
     } else
     { SDL_Surface *sdl_surf = pceImage2SDL_Surface(c->image);
+      ASSERT_SDL_MAIN();
       SDL_Cursor *cursor = SDL_CreateColorCursor(sdl_surf,
 						 valInt(c->hot_spot->x),
 						 valInt(c->hot_spot->y));
@@ -156,7 +158,8 @@ ws_create_cursor(CursorObj c, DisplayObj d)
 void
 ws_destroy_cursor(CursorObj c, DisplayObj d)
 { if ( c->ws_ref )
-  { SDL_DestroyCursor(c->ws_ref);
+  { ASSERT_SDL_MAIN();
+    SDL_DestroyCursor(c->ws_ref);
     c->ws_ref = NULL;
   }
 }

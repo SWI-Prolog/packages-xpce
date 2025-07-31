@@ -41,7 +41,8 @@ static void	ws_open_display(DisplayObj d, SDL_DisplayID id);
 
 static DisplayObj
 ws_create_display(SDL_DisplayID id)
-{ SDL_Rect rect;
+{ ASSERT_SDL_MAIN();
+  SDL_Rect rect;
   SDL_GetDisplayBounds(id, &rect);
   const char *name = SDL_GetDisplayName(id);
   DisplayObj dsp;
@@ -130,7 +131,8 @@ ws_poll_dimensions_display(DisplayObj dsp)
 { WsDisplay wsd = dsp->ws_ref;
 
   if ( wsd )
-  { SDL_DisplayID id = wsd->id;
+  { ASSERT_SDL_MAIN();
+    SDL_DisplayID id = wsd->id;
     SDL_Rect rect;
     SDL_GetDisplayBounds(id, &rect);
     update_area(dsp->area, &rect);
@@ -250,7 +252,8 @@ ws_init_display(DisplayObj d)
  */
 static void
 ws_open_display(DisplayObj d, SDL_DisplayID id)
-{ WsDisplay wsd = d->ws_ref = alloc(sizeof(ws_display));
+{ ASSERT_SDL_MAIN();
+  WsDisplay wsd = d->ws_ref = alloc(sizeof(ws_display));
   memset(wsd, 0, sizeof(*wsd));
   SDL_WindowFlags flags = SDL_WINDOW_HIDDEN;
 
@@ -280,7 +283,8 @@ ws_close_display(DisplayObj d)
 { WsDisplay wsd = d->ws_ref;
 
   if ( wsd )
-  { d->ws_ref = NULL;
+  { ASSERT_SDL_MAIN();
+    d->ws_ref = NULL;
     SDL_DestroyRenderer(wsd->hidden_renderer);
     SDL_DestroyWindow(wsd->hidden_window);
     cairo_destroy(wsd->hidden_cairo);
@@ -291,7 +295,8 @@ ws_close_display(DisplayObj d)
 
 float
 ws_pixel_density_display(Any obj)
-{ SDL_DisplayID display_id = SDL_GetPrimaryDisplay();
+{ ASSERT_SDL_MAIN();
+  SDL_DisplayID display_id = SDL_GetPrimaryDisplay();
   float scale = SDL_GetDisplayContentScale(display_id);
   DisplayObj d;
 
@@ -338,12 +343,14 @@ ws_background_display(DisplayObj d, Colour c)
  */
 status
 ws_events_queued_display(DisplayObj d)
-{ return SDL_HasEvents(0, MY_EVENT_HIGHEST);
+{ /* may be called from any thread */
+  return SDL_HasEvents(0, MY_EVENT_HIGHEST);
 }
 
 status
 ws_selection_display(DisplayObj d, Name which, StringObj data)
-{ char *u8 = charArrayToUTF8((CharArray)data);
+{ ASSERT_SDL_MAIN();
+  char *u8 = charArrayToUTF8((CharArray)data);
 
   if ( which == NAME_primary )
     return SDL_SetPrimarySelectionText(u8);
@@ -365,7 +372,8 @@ ws_selection_display(DisplayObj d, Name which, StringObj data)
  */
 Any
 ws_get_selection(DisplayObj d, Name which, Name target)
-{ if ( target == NAME_text || target == NAME_utf8_string )
+{ ASSERT_SDL_MAIN();
+  if ( target == NAME_text || target == NAME_utf8_string )
   { const char *text = NULL;
 
     if ( which == NAME_clipboard )
@@ -470,7 +478,8 @@ ws_grab_image_display(DisplayObj d, int x, int y, int width, int height)
 
 Name
 ws_get_system_theme_display(DisplayObj d)
-{ SDL_SystemTheme theme = SDL_GetSystemTheme();
+{ ASSERT_SDL_MAIN();
+  SDL_SystemTheme theme = SDL_GetSystemTheme();
 
   switch(theme)
   { case SDL_SYSTEM_THEME_UNKNOWN:

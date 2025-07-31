@@ -98,6 +98,12 @@ sdl_initialised(void)
 { return !!sdl_main_thread;
 }
 
+void
+not_on_sdl_main_thread(void)
+{ Cprintf("Put gdb breakpoint on %s for debugging\n",
+	  __FUNCTION__);
+}
+
 
 /**
  * Retrieve the major version number of the SDL backend.
@@ -121,7 +127,8 @@ ws_revision(void)
 
 const char *
 ws_driver(void)
-{ return SDL_GetCurrentVideoDriver();
+{ ASSERT_SDL_MAIN();
+  return SDL_GetCurrentVideoDriver();
 }
 
 /**

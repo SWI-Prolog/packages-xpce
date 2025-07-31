@@ -227,7 +227,8 @@ ws_last_display_from_event(void)
 
 EventObj
 CtoEvent(SDL_Event *event)
-{ unsigned int time;
+{ ASSERT_SDL_MAIN();
+  unsigned int time;
   SDL_MouseButtonFlags mouse_flags = 0;
   float fx, fy;
   Any name = NULL;
@@ -494,7 +495,8 @@ set_watch(waitable_t fd)
 
 static bool
 dispatch_ready_event(void)
-{ SDL_Event ev;
+{ ASSERT_SDL_MAIN();
+  SDL_Event ev;
 
   if ( SDL_PollEvent(&ev) )
   { EventObj event = CtoEvent(&ev);

@@ -80,7 +80,8 @@ ws_created_frame(FrameObj fr)
 
 static void
 uncreate_window_frame(PceWindow sw)
-{ WsWindow wsw = sw->ws_ref;
+{ ASSERT_SDL_MAIN();
+  WsWindow wsw = sw->ws_ref;
 
   if ( wsw->texture )
   { SDL_DestroyTexture(wsw->texture);
@@ -117,7 +118,8 @@ ws_uncreate_frame(FrameObj fr)
 { WsFrame f = sdl_frame(fr, false);
 
   if ( f && f->ws_window )
-  { deleteChain(ChangedFrames, fr);
+  { ASSERT_SDL_MAIN();
+    deleteChain(ChangedFrames, fr);
     SDL_DestroyRenderer(f->ws_renderer);
     SDL_DestroyWindow(f->ws_window);
     unalloc(sizeof(*f), f);
@@ -153,7 +155,8 @@ sdl_parent_window(FrameObj fr, FrameObj *frp)
  */
 status
 ws_create_frame(FrameObj fr)
-{ SDL_Window *win = NULL;
+{ ASSERT_SDL_MAIN();
+  SDL_Window *win = NULL;
   FrameObj pfr = NIL;
   SDL_Window *parent = sdl_parent_window(fr, &pfr);
   int x = valInt(fr->area->x);
@@ -391,7 +394,8 @@ typedef struct
 
 static void*
 ws_draw_resize_area_frame(Any ctx, TileObj t, Int x, Int y, Int w, Int h)
-{ FrameObj fr = ctx;
+{ ASSERT_SDL_MAIN();
+  FrameObj fr = ctx;
   WsFrame wfr = fr->ws_ref;
   float x1, y1, x2, y2;
 
@@ -422,7 +426,8 @@ ws_draw_resize_area_frame(Any ctx, TileObj t, Int x, Int y, Int w, Int h)
 
 static void
 ws_draw_resize_frame(FrameObj fr)
-{ TileObj tile = getTileFrame(fr);
+{ ASSERT_SDL_MAIN();
+  TileObj tile = getTileFrame(fr);
 
   if ( tile )
   { WsFrame wfr = fr->ws_ref;
@@ -441,7 +446,8 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
   WsWindow wsw = sw->ws_ref;
 
   if ( wsw )
-  { Area a = sw->area;
+  { ASSERT_SDL_MAIN();
+    Area a = sw->area;
     SDL_FRect dstrect = Area2FRect(a);
     float scale = SDL_GetWindowPixelDensity(wfr->ws_window);
 
@@ -511,6 +517,7 @@ ws_draw_frame(FrameObj fr)
     false;
 
   WsFrame wfr = fr->ws_ref;
+  ASSERT_SDL_MAIN();
 
   DEBUG(NAME_sdl,
 	Cprintf("BEGIN ws_draw_frame(%s)\n", pp(fr)));
@@ -672,7 +679,9 @@ void
 ws_raise_frame(FrameObj fr)
 { WsFrame wfr = fr->ws_ref;
   if ( wfr && wfr->ws_window )
+  { ASSERT_SDL_MAIN();
     SDL_RaiseWindow(wfr->ws_window);
+  }
 }
 
 /**
@@ -720,7 +729,9 @@ void
 ws_frame_cursor(FrameObj fr, CursorObj cursor)
 { SDL_Cursor *c = pceCursor2SDL_Cursor(cursor);
   if ( c )
+  { ASSERT_SDL_MAIN();
     SDL_SetCursor(c);
+  }
 }
 
 /**
@@ -748,7 +759,8 @@ ws_enable_text_input(Graphical gr, BoolObj enable)
   { WsFrame wfr = fr->ws_ref;
 
     if ( wfr && wfr->ws_window )
-    { DEBUG(NAME_keyboard,
+    { ASSERT_SDL_MAIN();
+      DEBUG(NAME_keyboard,
 	    Cprintf("ws_enable_text_input() %s -> %s: %s\n",
 		    pp(gr), pp(fr), pp(enable)));
       if ( isOn(enable) )
@@ -914,7 +926,7 @@ ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
 { WsFrame wsf = fr->ws_ref;
 
   if ( wsf )
-  { if ( notDefault(w) || notDefault(h) )
+  {  if ( notDefault(w) || notDefault(h) )
     { int iw = isDefault(w) ? valInt(fr->area->w) : valInt(w);
       int ih = isDefault(h) ? valInt(fr->area->h) : valInt(h);
 
@@ -925,6 +937,7 @@ ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
       DEBUG(NAME_set,
 	    Cprintf("SDL_SetWindowSize(%s, %d, %d)\n",
 		    pp(fr), iw, ih));
+      ASSERT_SDL_MAIN();
       if ( !SDL_SetWindowSize(wsf->ws_window, iw, ih) )
 	Cprintf("Could not set size of %s: %s\n",
 		pp(fr), SDL_GetError());
@@ -941,6 +954,7 @@ ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
       DEBUG(NAME_set,
 	    Cprintf("SDL_SetWindowPosition(%s, %d, %d)\n",
 		    pp(fr), ix, iy));
+      ASSERT_SDL_MAIN();
       if ( !SDL_SetWindowPosition(wsf->ws_window, ix, iy) )
 	Cprintf("Could not set size of %s: %s\n",
 		pp(fr), SDL_GetError());
@@ -1055,6 +1069,7 @@ ws_status_frame(FrameObj fr, Name status)
   } else if ( status == NAME_window || status == NAME_fullScreen )
   { if ( ws_created_frame(fr) )
     { WsFrame wfr = fr->ws_ref;
+      ASSERT_SDL_MAIN();
       SDL_SetWindowFullscreen(wfr->ws_window, status == NAME_fullScreen);
     } else
     { assign(fr, status, status);
@@ -1083,7 +1098,8 @@ void
 ws_set_label_frame(FrameObj fr)
 { WsFrame wfr = fr->ws_ref;
   if ( wfr && wfr->ws_window )
-  { SDL_SetWindowTitle(wfr->ws_window, nameToUTF8(fr->label));
+  { ASSERT_SDL_MAIN();
+    SDL_SetWindowTitle(wfr->ws_window, nameToUTF8(fr->label));
   }
 }
 

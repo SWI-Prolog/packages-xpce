@@ -32,15 +32,25 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef RAY_H
-#define RAY_H
+#ifndef SDL_H
+#define SDL_H
 #include <SDL3/SDL.h>
 #include <SWI-Prolog.h>		/* Debugging: PL_thread_self() */
 
 #define O_HDP 1			/* High Density Display support */
 
+#define ASSERT_SDL_MAIN()					 \
+  do {								 \
+    if ( !SDL_IsMainThread() ) {				 \
+      Cprintf("Warning: %s:%d: Not called in SDL main thread\n", \
+	      __FILE__, __LINE__);				 \
+      not_on_sdl_main_thread();	/* Allow GDB breakpoint */	 \
+    }								 \
+  } while(0)
+
 status	sdl_send(Any receiver, Name selector, int sync, ...);
 bool	sdl_initialised(void);
+void	not_on_sdl_main_thread(void);
 
 void ws_initialise(int argc, char **argv);
 int ws_version(void);
@@ -53,4 +63,4 @@ char *ws_user(void);
 bool pceMTdetach(void);
 status ws_open_url(PceString url);
 
-#endif /* RAY_H */
+#endif /* SDL_H */
