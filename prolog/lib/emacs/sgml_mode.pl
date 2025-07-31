@@ -523,17 +523,17 @@ colour_item(_, _, _, _, @nil).
                  *             STYLES           *
                  *******************************/
 
-style(tag(begin, shortref),     style(colour := blue,
+style(tag(begin, shortref),     style(colour := dodgerblue,
                                       background := grey90,
                                       bold   := @on)).
-style(tag(begin, _),            style(colour := blue,
+style(tag(begin, _),            style(colour := dodgerblue,
                                       bold   := @on)).
-%style(tag(end, shorttag),      style(colour := blue,
+%style(tag(end, shorttag),      style(colour := dodgerblue,
 %                                     bold   := @on)).
-style(tag(end, shortref),       style(colour := blue,
+style(tag(end, shortref),       style(colour := dodgerblue,
                                       background := grey90,
                                       bold   := @on)).
-style(tag(end, _),              style(colour := blue)).
+style(tag(end, _),              style(colour := dodgerblue)).
 style(cdata(cdata),             style(colour := sea_green)).
 style(doctype,                  style(bold := @on)).
 style(comment,                  style(colour := dark_green,
