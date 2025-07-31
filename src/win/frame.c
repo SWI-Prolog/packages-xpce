@@ -302,6 +302,7 @@ openCenteredFrame(FrameObj fr, Point pos, DisplayObj dsp, BoolObj grab)
   get_position_from_center_frame(fr, dsp, pos, &x, &y);
   ensure_on_display(fr, DEFAULT, &x, &y);
   p2 = answerObject(ClassPoint, toInt(x), toInt(y), EAV);
+  assign(fr, placed, ON);
   rval = openFrame(fr, p2, dsp, grab);
   doneObject(p2);
 
