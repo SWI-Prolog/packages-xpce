@@ -565,12 +565,18 @@ getShowFrame(FrameObj fr)
 
 status
 exposeFrame(FrameObj fr)
+{ sdl_send(fr, NAME_SdlExpose, false, EAV);
+
+  succeed;
+}
+
+static status
+SdlExposeFrame(FrameObj fr)
 { showFrame(fr, ON);
   ws_raise_frame(fr);
 
   succeed;
 }
-
 
 status
 hideFrame(FrameObj fr)
@@ -1817,6 +1823,8 @@ static senddecl send_frame[] =
      NAME_report, "Report message (send to <-members)"),
   SM(NAME_expose, 0, NULL, exposeFrame,
      NAME_stacking, "Put frame above all others on the display"),
+  SM(NAME_SdlExpose, 0, NULL, SdlExposeFrame,
+     NAME_stacking, "SDL Thread support message"),
   SM(NAME_exposed, 0, NULL, exposedFrame,
      NAME_stacking, "Inform transient windows to expose"),
   SM(NAME_hidden, 0, NULL, hiddenFrame,
