@@ -61,6 +61,7 @@
 
 :- pce_autoload(finder, library(find_file)).
 :- pce_global(@finder, new(finder)).
+:- pce_global(@epilog, new(epilog)).
 
 
 /** <module> XPCE Embedded terminals
@@ -126,7 +127,9 @@ ep_main_end :-
 %     - goal(:Goal)
 %       Run Goal as REPL loop.  Default is `prolog`.
 %     - main(+Bool)
-%       If `true`, act as main window.
+%       If `true`, act as main window.   In this case epilog/1
+%       runs the main thread and returns after all windows have
+%       been closed.
 
 epilog :-
     epilog([]).
@@ -135,10 +138,12 @@ epilog(Options0) :-
     meta_options(is_meta, Options0, Options),
     fix_term,
     setup_history,
+    option(name(Name),   Options, @default),
     option(title(Title), Options, @default),
     option(rows(Height), Options, @default),
-    option(cols(Width), Options, @default),
-    new(Epilog, epilog(Title, Width, Height)),
+    option(cols(Width),  Options, @default),
+    option(main(IsMain), Options, @off),
+    new(Epilog, epilog_frame(Name, Title, Width, Height, IsMain)),
     get(Epilog, current_terminal, PT),
     (   option(init(Init), Options)
     ->  send(PT, goal_init, Init)
@@ -149,9 +154,8 @@ epilog(Options0) :-
     ;   true
     ),
     send(Epilog, open),
-    (   option(main(true), Options)
-    ->  send(Epilog, main, @on),
-        ep_wait
+    (   get(Epilog, main, @on)
+    ->  ep_wait
     ;   true
     ).
 
@@ -719,16 +723,21 @@ split(T, Dir:{horizontally,vertically}) :->
                 *            EPILOG            *
                 *******************************/
 
-:- pce_begin_class(epilog, frame,
+:- pce_begin_class(epilog_frame, frame,
                    "Multiple terminals and menu").
 
 variable(current_window, name*,        both, "Name of the current window").
 variable(main,		 bool := @off, both, "True if this is the main window").
 
-initialise(T, Title:title=[name],
-           Width:width=[int], Height:height=[int]) :->
+initialise(T, Name:[name], Title:title=[name],
+           Width:width=[int], Height:height=[int], Main:main=[bool]) :->
     default(Title, "SWI-Prolog console", TheTitle),
     send_super(T, initialise, TheTitle),
+    default(Main, @off, IsMain),
+    send(T, slot, main, IsMain),
+    epilog_name(Name, IsMain, TheName),
+    send(T, name, TheName),
+    send(T, application, @epilog),
     send(T, done_message, message(@receiver, wm_close_requested)),
     send(T, append, new(D, epilog_dialog)),
     new(W, epilog_window(@default, Width, Height)),
@@ -738,6 +747,13 @@ initialise(T, Title:title=[name],
     ;   send(W, history, on)            % Use history on the first
     ),
     send(W, below, D).
+
+epilog_name(@default, @on, main) :-
+    !.
+epilog_name(@default, _, Name) :-
+    gensym(epilog, Name).
+epilog_name(Name, _, Name).
+
 
 % ->wm_close_requested
 %
@@ -856,7 +872,7 @@ open_url(_T, URL:name) :->
     "Open a URL"::
     www_open_url(URL).
 
-:- pce_end_class(epilog).
+:- pce_end_class(epilog_frame).
 
 :- pce_begin_class(epilog_dialog, dialog, "Prolog terminator menu").
 
@@ -926,6 +942,16 @@ assign_accelerators(_) :->
     true.
 
 :- pce_end_class(epilog_popup).
+
+
+:- pce_begin_class(epilog, application,
+                   "The Epilog terminal application").
+
+initialise(E) :->
+    send_super(E, initialise, epilog).
+
+:- pce_end_class(epilog).
+
 
 
                 /*******************************
