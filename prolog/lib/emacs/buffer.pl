@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2022, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
                               VU University Amsterdam
                               SWI-Prolog Solutions b.v.
     All rights reserved.
@@ -492,13 +492,20 @@ save_if_modified(B, Confirm:[bool]) :->
     (   get(B, modified, @on),
         get(B, file, File), File \== @nil
     ->  (   (   Confirm == @off
-            ;   send(@display, confirm, B, "PceEmacs",
+            ;   send(@display, confirm, B?visual, "PceEmacs",
                      '%s is modified.  Save?', File?name)
             )
         ->  send(B, save)
         ;   fail
         )
     ;   true
+    ).
+
+visual(B, V:[visual]) :<-
+    "Get visual for reporting"::
+    (   get(B?editors, head, V)
+    ->  true
+    ;   V = @default
     ).
 
 
