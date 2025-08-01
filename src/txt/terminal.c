@@ -3594,6 +3594,7 @@ getPrologStreamTerminalImage(Any obj,
 
 #elif __WINDOWS__
 #include <msw/mswin.h>
+#define PIPE_SIZE 8192
 
 static bool
 rlc_create_pipes(RlcData b)
@@ -3601,9 +3602,9 @@ rlc_create_pipes(RlcData b)
     return true;
 
   if ( !CreatePipeEx(&b->ptycon.hIn, &b->ptycon.hTaskOut, NULL,
-		     0, FILE_FLAG_OVERLAPPED, 0) ||
+		     PIPE_SIZE, 0, FILE_FLAG_OVERLAPPED) ||
        !CreatePipeEx(&b->ptycon.hTaskIn, &b->ptycon.hOut,  NULL,
-		     FILE_FLAG_OVERLAPPED, 0, 0) )
+		     PIPE_SIZE, FILE_FLAG_OVERLAPPED, 0) )
   { Cprintf("Failed to create ptyCon pipes\n");
     return false;
   }
