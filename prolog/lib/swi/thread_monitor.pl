@@ -323,7 +323,7 @@ running_styles(TB) :->
     get(TB, font, Font),
     get(Font, ascent, Ascent),
     get(Font, descent, Descent),
-    H is Ascent+Descent,
+    H is floor(Ascent+Descent),
     send(TB, slot, cpu_height, H),
     new(Running, image(resource(running))),
     get(Running, size, size(W,_IH)),
