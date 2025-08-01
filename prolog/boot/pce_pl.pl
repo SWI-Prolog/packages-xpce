@@ -66,11 +66,17 @@ property(runtime) :-
 :- dynamic
     user:message_hook/3.
 
+%!  user:message_hook(+Term, +Kind, +Lines)
+%
+%   Trap abort messages. If an abort happens in the xpce thread we reset
+%   the display. This restores grabbed focus, etc.
+
 user:message_hook(Ex, _Kind, _Lines) :-
     abort_exception(Ex),
     current_prolog_flag(xpce, true),
+    pce:pce_thread(PceThread),
+    thread_self(PceThread),
     pce:send(@(display), reset),
     fail.
 
-abort_exception('$aborted').
 abort_exception(unwind(abort)).
