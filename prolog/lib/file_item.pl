@@ -183,7 +183,8 @@ selection(FI, Warn:[bool], FileName:name) :<-
             )
         ;   Exists == save
         ->  (   send(FI, check_existence, FileName)
-            ->  send(FI?display, confirm, 'Overwrite file %s?', FileName)
+            ->  send(FI?display, confirm, FI, 'File finder',
+                     'Overwrite file %s?', FileName)
             ;   true
             )
         ;   true

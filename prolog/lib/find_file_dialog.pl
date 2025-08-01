@@ -357,7 +357,8 @@ check_save_file(D, FileName:name) :->
 
 ask_overwrite(D, FileName:name) :->
     "Ask user to overwrite file"::
-    send(D?display, confirm, 'Overwrite file %s?', FileName).
+    send(D?display, confirm, D, 'File finder',
+         'Overwrite file %s?', FileName).
 
 :- pce_group(button).
 
