@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -1055,10 +1056,10 @@ static getdecl get_event[] =
 /* Resources */
 
 static classvardecl rc_event[] =
-{ RC(NAME_x11WheelMouse, "bool", UXWIN("@on", "@off"),
-     "Enable/disable wheel-mouse emulation on button 4 and 5"),
-  RC(NAME_locStillTime, "int", "400",
-     "Time before generating a loc_still event in milliseconds")
+{ RC(NAME_locStillTime, "int", "400",
+     "Time before generating a loc_still event in milliseconds"),
+  RC(NAME_macosOptionCharacters, "string", "\"€\"",
+     "Characters in addition to 32..126 that must be passed as text")
 };
 
 /* Class Declaration */

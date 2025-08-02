@@ -46,8 +46,9 @@ typedef enum
 
 typedef enum
 { MY_EVENT_CALL = SDL_EVENT_USER+1,
-  MY_EVENT_TIMER,
-  MY_EVENT_FD_READY,
+  MY_EVENT_TIMER,		/* xpce timer, see sdlevent.c */
+  MY_EVENT_FD_READY,		/* see sdlinput.c */
+  MY_EVENT_KEYDOWN_TIMEOUT,	/* Keydown wait period ended */
   MY_EVENT_HIGHEST		/* for ws_events_queued_display() */
 } pce_user_events;
 

@@ -206,6 +206,59 @@ static Any mouse_tracking_window = NIL; /* Window or Frame */
 static Uint8 mouse_tracking_button;
 static SDL_WindowID mouse_tracking_wid = 0;
 static SDL_DisplayID last_display_id = 0;
+static Uint32 keyboard_timer = 0;
+static SDL_Event keydown_event = {0};
+static Uint64 keyinput_time = 0;
+
+static Uint32
+tm_keyboard_timeout(void *udata, SDL_TimerID id, Uint32 interval)
+{ keyboard_timer = 0;
+
+  if ( keyinput_time < keydown_event.key.timestamp )
+  { SDL_Event ev;
+
+    SDL_zero(ev);
+    ev.type = MY_EVENT_KEYDOWN_TIMEOUT;
+    SDL_PushEvent(&ev);
+    DEBUG(NAME_keyboard,
+	  Cprintf("%"PRIu64" < %"PRIu64": Pushed delayed keyboard event\n",
+		  keyinput_time, keydown_event.key.timestamp));
+  }
+
+  return 0;
+}
+
+/** True if the character should be passed as a printable
+ *  character rather than a keydown event with a modifier.
+ */
+
+static StringObj macOSOptionCharacters = NULL;
+
+static bool
+isOptionPrintCharacter(int code)
+{ if ( code >= 32 && code <= 126 )
+    return true;
+
+  if ( !macOSOptionCharacters &&
+       !isNil(macOSOptionCharacters) )
+  { macOSOptionCharacters = getClassVariableValueClass(
+      ClassEvent,
+      NAME_macosOptionCharacters);
+    if ( macOSOptionCharacters )
+    { DEBUG(NAME_keyboard,
+	    Cprintf("macOSOptionCharacters = %s\n",
+		    pp(macOSOptionCharacters)));
+    } else
+    { macOSOptionCharacters = (StringObj)NIL;
+    }
+  }
+
+  if ( notNil(macOSOptionCharacters) )
+    return str_index(&macOSOptionCharacters->data, code) != -1;
+
+  return false;
+}
+
 
 void
 ev_event_grab_window(Any window)
@@ -314,7 +367,7 @@ CtoEvent(SDL_Event *event)
       lastmod = event->key.mod;
       fail;		      /* only update modifiers */
       /* https://wiki.libsdl.org/SDL3/SDL_TextInputEvent */
-    case SDL_EVENT_TEXT_INPUT: /* Needed for input composition.  TBD */
+    case SDL_EVENT_TEXT_INPUT:
     { int codepoint;
       char const *u = event->text.text;
       u = utf8_get_char(u, &codepoint);
@@ -325,23 +378,52 @@ CtoEvent(SDL_Event *event)
 	    Cprintf("SDL_EVENT_TEXT_INPUT: %s at %" PRIu64 "\n",
 		    event->text.text, event->text.timestamp));
 
-      SDL_Keymod mod = SDL_GetModState();
-      if ( mod & (ControlMask|MetaMask|SDL_KMOD_GUI) )
-	fail;
+      if ( keyboard_timer )
+      { if ( isOptionPrintCharacter(codepoint) )
+	{ SDL_RemoveTimer(keyboard_timer);
+	  keyboard_timer = 0;
+	  keyinput_time = event->text.timestamp;
+	} else
+	{ fail;			/* process as key-down */
+	}
+      }
+
       wid     = event->text.windowID;
       time    = event->text.timestamp/1000000;
       name    = toInt(codepoint);
       break;
     }
     case SDL_EVENT_KEY_DOWN:
+    { SDL_Keymod isdown = (SDL_KMOD_LCTRL|SDL_KMOD_RCTRL|SDL_KMOD_GUI);
+#ifndef __APPLE__
+      isdown |= SDL_KMOD_LALT|SDL_KMOD_RALT;
+#endif
+
+      name = keycode_to_name(event);
+      if ( !name ) fail;
+
+      if ( event->key.mod & isdown )
+	goto immediate_down_event;
+
+      keydown_event  = *event;
+      keyinput_time  = 0;
+      keyboard_timer = SDL_AddTimer(10, tm_keyboard_timeout, NULL);
+      DEBUG(NAME_keyboard,
+	    Cprintf("Delaying keyboard down event at %" PRIu64 "\n"));
+      fail;
+    }
+    case MY_EVENT_KEYDOWN_TIMEOUT:
+      event   = &keydown_event;
+    immediate_down_event:
       wid     = event->key.windowID;
       time    = event->key.timestamp/1000000;
       lastmod = event->key.mod;
       name    = keycode_to_name(event);
       DEBUG(NAME_keyboard,
-	    Cprintf("SDL_EVENT_KEY_DOWN: %s at %" PRIu64 "\n",
-		    pp(name), event->text.timestamp));
-      if ( !name ) fail;
+	    bool delayed = (&keydown_event == event);
+	    Cprintf("SDL_EVENT_KEY_DOWN: %s at %"PRIu64"%s\n",
+		    pp(name), event->text.timestamp,
+		    delayed ? " (delayed)" : ""));
       break;
     default:
       fail;			/* for now */
