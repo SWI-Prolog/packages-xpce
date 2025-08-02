@@ -143,7 +143,7 @@ open(A, Pos:[point]) :->
         send(Pos1, plus, Diff)
     ;   Pos1 = Pos
     ),
-    send(A, send_super, open, Pos1, normalise := @on).
+    send(A, send_super, open, Pos1).
 
 
 unlink(A) :->
