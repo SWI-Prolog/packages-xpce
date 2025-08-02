@@ -315,14 +315,19 @@ CtoEvent(SDL_Event *event)
       fail;		      /* only update modifiers */
       /* https://wiki.libsdl.org/SDL3/SDL_TextInputEvent */
     case SDL_EVENT_TEXT_INPUT: /* Needed for input composition.  TBD */
-    { SDL_Keymod mod = SDL_GetModState();
-      if ( mod & (ControlMask|MetaMask|SDL_KMOD_GUI) )
-	fail;
-      int codepoint;
+    { int codepoint;
       char const *u = event->text.text;
       u = utf8_get_char(u, &codepoint);
       if ( *u )
         Cprintf("SDL_EVENT_TEXT_INPUT: multi-char input not yet supported\n");
+
+      DEBUG(NAME_keyboard,
+	    Cprintf("SDL_EVENT_TEXT_INPUT: %s at %" PRIu64 "\n",
+		    event->text.text, event->text.timestamp));
+
+      SDL_Keymod mod = SDL_GetModState();
+      if ( mod & (ControlMask|MetaMask|SDL_KMOD_GUI) )
+	fail;
       wid     = event->text.windowID;
       time    = event->text.timestamp/1000000;
       name    = toInt(codepoint);
@@ -333,6 +338,9 @@ CtoEvent(SDL_Event *event)
       time    = event->key.timestamp/1000000;
       lastmod = event->key.mod;
       name    = keycode_to_name(event);
+      DEBUG(NAME_keyboard,
+	    Cprintf("SDL_EVENT_KEY_DOWN: %s at %" PRIu64 "\n",
+		    pp(name), event->text.timestamp));
       if ( !name ) fail;
       break;
     default:
