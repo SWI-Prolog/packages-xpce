@@ -55,6 +55,7 @@ variable(selection, font*, get, "Currently selected font").
 
 initialise(FB) :->
     send_super(FB, initialise, 'Font Browser'),
+    get(@pce, convert, font, normal, _Normal), % Initialise class font.
     get(class(font), font_families, Fonts),
     send(FB, slot, fonts, Fonts),
     send(FB, append, new(D, dialog)),
