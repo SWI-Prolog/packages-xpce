@@ -401,17 +401,17 @@ getTokenTokeniser(Tokeniser t)
 	    fail;
 	  }
 	  if ( c2 != open )
-	    *q++ = c;
-	  *q++ = c2;
+	    q = utf8_put_char(q, c);
+	  q = utf8_put_char(q, c2);
 	  continue;
 	}
       }
 
       if ( c == open )
       { *q = EOS;
-        answer(CtoString(buf));
+        answer(UTF8ToString(buf));
       } else
-	*q++ = c;
+	q = utf8_put_char(q, c);
     }
   } else if ( tisdigit(s, c) || c == '-' ) /* int, real */
   { char buf[LINESIZE];

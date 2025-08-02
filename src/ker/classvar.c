@@ -142,7 +142,7 @@ static struct TAGop
 
 
 static Parser
-TheObjectParser()
+TheObjectParser(void)
 { static Parser p;
 
   if ( !p )
@@ -399,6 +399,16 @@ getClassVariableValueClass(Class cl, Name name)
 }
 
 
+static bool
+hasutf8(const char *s)
+{ for(; *s; s++)
+  { if ( (*s)&0x80 )
+      return true;
+  }
+
+  return false;
+}
+
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 NOTE: default value is *NOT* copied, so   the  caller must pass a string
 that will not be deleted: either a   character constant or a value saved
@@ -417,7 +427,10 @@ attach_class_variable(Class cl,
 					/* TBD: Default value! */
   if ( (cv = newObject(ClassClassVariable,
 		       cl, name, DEFAULT, tp, s, EAV)) )
-  { assign(cv, cv_default, staticCtoString(def));
+  { if ( hasutf8(def) )
+      assign(cv, cv_default, UTF8ToString(def));
+    else
+      assign(cv, cv_default, staticCtoString(def));
     setDFlag(cv, DCV_TEXTUAL);		/* value is textual */
 
     succeed;
