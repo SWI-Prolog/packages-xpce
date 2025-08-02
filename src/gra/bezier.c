@@ -384,7 +384,7 @@ drawControlPt(Point pt)
 { int bx = valInt(pt->x);
   int by = valInt(pt->y);
 
-  r_complement(bx-2, by-2, 5, 5);
+  r_fill(bx-2, by-2, 5, 5, NAME_foreground);
 }
 
 
