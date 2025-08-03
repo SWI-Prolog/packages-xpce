@@ -87,8 +87,10 @@ cairo_font(FontObj f)
 #ifndef MONO_FAMILY
 #ifdef __WINDOWS__
 #define MONO_FAMILY "Consolas,Courier New,monospace"
+#elif __APPLE__
+#define MONO_FAMILY "Menlo,monospace"
 #else
-#define MONO_FAMILY "Noto Sans Mono,monospace"
+#define MONO_FAMILY "Noto Sans Mono,DejaVu Sans Mono,monospace"
 #endif
 #endif
 
@@ -98,12 +100,18 @@ cairo_font(FontObj f)
 #elif __APPLE__
 #define SANS_FAMILY "sans"
 #else
-#define SANS_FAMILY "Noto Sans,sans"
+#define SANS_FAMILY "Noto Sans,DejaVu Sans,sans"
 #endif
 #endif
 
 #ifndef SERIF_FAMILY
-#define SERIF_FAMILY "Noto Serif,serif"
+#ifdef __WINDOWS__
+#define SERIF_FAMILY "Georgia,Times New Roman,serif"
+#elif __APPLE__
+#define SERIF_FAMILY "serif"
+#else
+#define SERIF_FAMILY "Noto Serif,DejaVu Serif,serif"
+#endif
 #endif
 
 #endif /* SDLFONT_H */

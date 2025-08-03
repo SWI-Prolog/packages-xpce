@@ -134,3 +134,6 @@
 #cmakedefine WORDS_BIGENDIAN @WORDS_BIGENDIAN@
 #cmakedefine _REENTRANT @_REENTRANT@
 #cmakedefine __CHAR_UNSIGNED__ @__CHAR_UNSIGNED__@
+#cmakedefine MONO_FAMILY @MONO_FAMILY@
+#cmakedefine SANS_FAMILY @SANS_FAMILY@
+#cmakedefine SERIF_FAMILY @SERIF_FAMILY@
