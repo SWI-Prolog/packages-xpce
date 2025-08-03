@@ -117,19 +117,33 @@
 ! font here.
 
 ! font.system_fonts:	[ normal    := font(sans, normal, 12), \
-! 			  bold      := font(sans, bold,   12), \
-! 			  italic    := font(sans, italic, 12), \
-! 			  small     := font(sans, normal, 10), \
-! 			  large     := font(sans, normal, 14), \
-! 			  boldlarge := font(sans, bold,   14), \
-! 			  huge      := font(sans, normal, 18), \
-! 			  boldhuge  := font(sans, bold,   18), \
-! 			  fixed     := font(mono, normal, 14), \
-! 			  tt        := font(mono, normal, 14), \
-! 			  boldtt    := font(mono, bold,   14)  \
-! 			]
+!			  bold      := font(sans, bold,   12), \
+!			  italic    := font(sans, italic, 12), \
+!			  small     := font(sans, normal, 10), \
+!			  large     := font(sans, normal, 14), \
+!			  boldlarge := font(sans, bold,   14), \
+!			  huge      := font(sans, normal, 18), \
+!			  boldhuge  := font(sans, bold,   18), \
+!			  fixed     := font(mono, normal, 14), \
+!			  tt        := font(mono, normal, 14), \
+!			  boldtt    := font(mono, bold,   14)  \
+!			]
 
-! Scale all fonts with a constant factor.  The value is a float 
+! XPCE uses `sans`, `serif` and `mono` for all its named fonts
+! using the table above.   Before these are passed to Pango, the
+! table @font_families is consulted that is initialized from the
+! resource below.  The system default table depends on the OS.
+! You can use XPCE's font viewer to find a pleasant font and
+! modify this table.  The value is a ,-separated list of Pango
+! font families that are tried in order. "Noto" is the default
+! on Linux.
+
+! font.pango_families:	[ sans  := "Noto Sans,sans", \
+!			  serif := "Noto Serif,serif", \
+!			  mono  := "Noto Sans Mono,monospace" \
+!			]
+
+! Scale all fonts with a constant factor.  The value is a float
 
 !font.scale: 1.2
 
