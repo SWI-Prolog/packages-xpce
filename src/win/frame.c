@@ -621,8 +621,8 @@ get_position_from_center_frame(FrameObj fr, DisplayObj d, Point pos,
 
     if ( d )
     { Area a = d->area;
-      *x = valInt(a->x) + valInt(a->w)/2;
-      *y = valInt(a->y) + valInt(a->h)/2;
+      *x = valInt(a->w)/2;
+      *y = valInt(a->h)/2;
     } else
     { *x = *y = 0;
     }
@@ -698,8 +698,6 @@ getGeometryFrame(FrameObj fr)
     int cw, ch;
 
     Area a = d->area;		/* work area seems unreliable */
-    x -= valInt(a->x);
-    y -= valInt(a->y);
     cw = valInt(fr->area->w);			/* Client area */
     ch = valInt(fr->area->h);
 
@@ -762,23 +760,14 @@ static status
 setFrame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
 { Area a = fr->area;
 
-  if ( createdFrame(fr) )
-  { Int frx = x;
-    Int fry = y;
-
-    if ( fr->kind != NAME_popup )
-    { if ( isDefault(dsp) )
-	dsp = fr->display;
-
-      if ( notDefault(frx) )
-	frx = add(frx, dsp->area->x);
-      if ( notDefault(fry) )
-	fry = add(fry, dsp->area->y);
-    }
-    setArea(a, frx, fry, DEFAULT, DEFAULT);
+  if ( ws_created_frame(fr) )
+  { setArea(a, x, y, DEFAULT, DEFAULT);
     sdl_send(fr, NAME_SdlSet, false, x, y, w, h, dsp, EAV);
   } else
-  { if ( notDefault(x) || notDefault(y) )
+  { if ( notDefault(dsp) && dsp != fr->display )
+      assign(fr, display, dsp);
+
+    if ( notDefault(x) || notDefault(y) )
       assign(fr, placed, ON);
     setArea(a, x, y, w, h);
     if ( valInt(a->w) <= 0 )		/* Window systems don't like that */

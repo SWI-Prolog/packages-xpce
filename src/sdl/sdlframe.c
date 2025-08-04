@@ -611,6 +611,10 @@ sdl_frame_event(SDL_Event *ev)
       case SDL_EVENT_WINDOW_MOVED:
       { int new_x = ev->window.data1;
 	int new_y = ev->window.data2;
+	Area da = fr->display->area;
+
+	new_x -= valInt(da->x);
+	new_y -= valInt(da->y);
 
 	assign(fr->area, x, toInt(new_x));
 	assign(fr->area, y, toInt(new_y));
@@ -960,21 +964,12 @@ ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
     }
 
     if ( notDefault(x) || notDefault(y) )
-    { int ix, iy;
+    { int ix = isDefault(x) ? valInt(fr->area->x) : valInt(x);
+      int iy = isDefault(y) ? valInt(fr->area->y) : valInt(y);
 
-      if ( isDefault(x) )
-      { ix = valInt(fr->area->x);
-      } else
-      { ix = valInt(x);
-	if ( notDefault(dsp) )
-	  ix += valInt(dsp->area->x);
-      }
-      if ( isDefault(y) )
-      { iy = valInt(fr->area->y);
-      } else
-      { iy = valInt(y);
-	if ( notDefault(dsp) )
-	  iy += valInt(dsp->area->y);
+      if ( notDefault(dsp) )
+      { ix += valInt(dsp->area->x);
+	iy += valInt(dsp->area->y);
       }
 
 #if O_HDPX
