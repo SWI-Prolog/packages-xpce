@@ -396,7 +396,7 @@ CtoEvent(SDL_Event *event)
     case SDL_EVENT_KEY_DOWN:
     { SDL_Keymod isdown = (SDL_KMOD_LCTRL|SDL_KMOD_RCTRL|SDL_KMOD_GUI);
 #ifndef __APPLE__
-      isdown |= SDL_KMOD_LALT|SDL_KMOD_RALT;
+      isdown |= SDL_KMOD_LALT;
 #endif
 
       name = keycode_to_name(event);
