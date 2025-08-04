@@ -400,7 +400,12 @@ CtoEvent(SDL_Event *event)
 #endif
 
       name = keycode_to_name(event);
-      if ( !name ) fail;
+      if ( !name )
+      { DEBUG(NAME_keyboard,
+	      Cprintf("Ignoring keydown.  Mod=0x%x, scancode=%d, key=0x%x\n",
+		      event->key.mod, event->key.scancode, event->key.key));
+	fail;
+      }
 
       if ( event->key.mod & isdown )
 	goto immediate_down_event;
