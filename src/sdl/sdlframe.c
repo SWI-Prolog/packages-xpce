@@ -851,8 +851,9 @@ ws_x_geometry_frame(FrameObj fr, Name spec, DisplayObj dsp)
 
   x -= valInt(a->x);			/* relative to display origin */
   y -= valInt(a->y);
-  Cprintf("%s at %d,%d,%d,%d on %s\n",
-	  pp(fr), x, y, w0, h0, pp(dsp));
+  DEBUG(NAME_geometry,
+	Cprintf("%s at %d,%d,%d,%d on %s\n",
+		pp(fr), x, y, w0, h0, pp(dsp)));
 
   w = w0;
   h = h0;
@@ -866,8 +867,6 @@ ws_x_geometry_frame(FrameObj fr, Name spec, DisplayObj dsp)
       break;
     case 6:
       /*w += ew; h += eh;*/
-      Cprintf("6 values; x=%d, y=%d, signx=%s, signy=%s\n",
-	      x, y, signx, signy);
       if ( signx[1] == '-' )
 	x = -x;
       if ( signy[1] == '-' )
@@ -969,8 +968,6 @@ ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
       { ix = valInt(x);
 	if ( notDefault(dsp) )
 	  ix += valInt(dsp->area->x);
-	Cprintf("ix = %d + %d = %d\n",
-		valInt(x), isDefault(dsp) ? 0 : valInt(dsp->area->x), ix);
       }
       if ( isDefault(y) )
       { iy = valInt(fr->area->y);
@@ -984,9 +981,9 @@ ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
       float scale = ws_pixel_density_display(fr);
       ix = ix/scale; iy = iy/scale;
 #endif
-//      DEBUG(NAME_set,
+      DEBUG(NAME_set,
 	    Cprintf("SDL_SetWindowPosition(%s, %d, %d)\n",
-		    pp(fr), ix, iy);
+		    pp(fr), ix, iy));
       ASSERT_SDL_MAIN();
       if ( !SDL_SetWindowPosition(wsf->ws_window, ix, iy) )
 	Cprintf("Could not set size of %s: %s\n",

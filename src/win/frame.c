@@ -761,26 +761,26 @@ geometryFrame(FrameObj fr, Name spec, DisplayObj dsp)
 static status
 setFrame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
 { Area a = fr->area;
-  Int frx = x;
-  Int fry = y;
-
-  if ( fr->kind != NAME_popup )
-  { if ( isDefault(dsp) )
-      dsp = fr->display;
-
-    if ( notDefault(frx) )
-      frx = add(frx, dsp->area->x);
-    if ( notDefault(fry) )
-      fry = add(fry, dsp->area->y);
-  }
 
   if ( createdFrame(fr) )
-  { setArea(a, frx, fry, DEFAULT, DEFAULT);
+  { Int frx = x;
+    Int fry = y;
+
+    if ( fr->kind != NAME_popup )
+    { if ( isDefault(dsp) )
+	dsp = fr->display;
+
+      if ( notDefault(frx) )
+	frx = add(frx, dsp->area->x);
+      if ( notDefault(fry) )
+	fry = add(fry, dsp->area->y);
+    }
+    setArea(a, frx, fry, DEFAULT, DEFAULT);
     sdl_send(fr, NAME_SdlSet, false, x, y, w, h, dsp, EAV);
   } else
   { if ( notDefault(x) || notDefault(y) )
       assign(fr, placed, ON);
-    setArea(a, frx, fry, w, h);
+    setArea(a, x, y, w, h);
     if ( valInt(a->w) <= 0 )		/* Window systems don't like that */
       assign(a, w, ONE);
     if ( valInt(a->h) <= 0 )
