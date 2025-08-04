@@ -45,6 +45,9 @@
 #define MainWindow(fr)	     ( isNil(fr->members->head) ? (Any) fr : \
 			       fr->members->head->value )
 
+static bool	ws_draw_frame(FrameObj fr);
+
+
 WsFrame
 sdl_frame(FrameObj fr, bool create)
 { WsFrame f;
@@ -169,6 +172,7 @@ ws_create_frame(FrameObj fr)
     SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_PARENT_POINTER,
 			   parent);
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_MENU_BOOLEAN, true);
+    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
 #if defined(__APPLE__) && defined(SDL_PROP_WINDOW_CREATE_CONSTRAIN_POPUP_BOOLEAN)
     /* SDL on MacOS does not handle popup placement correctly on secondary displays */
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_CONSTRAIN_POPUP_BOOLEAN, false);
@@ -203,6 +207,7 @@ ws_create_frame(FrameObj fr)
     SDL_PropertiesID props = SDL_CreateProperties();
     SDL_SetStringProperty(props, SDL_PROP_WINDOW_CREATE_TITLE_STRING,
 			  nameToUTF8(fr->label));
+    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, w);
     SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, h);
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_RESIZABLE_BOOLEAN,
@@ -261,6 +266,8 @@ ws_create_frame(FrameObj fr)
     DEBUG(NAME_sdl,
 	  Cprintf("Registered window %p with id %d\n", win, f->ws_id));
 
+    ws_draw_frame(fr);
+    SDL_ShowWindow(win);
     SDL_RaiseWindow(win);
 
     succeed;
