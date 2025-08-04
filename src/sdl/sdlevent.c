@@ -191,6 +191,25 @@ keycode_to_name(SDL_Event *event)
     case SDLK_F10:	 return NAME_f10;
     case SDLK_F11:	 return NAME_f11;
     case SDLK_F12:	 return NAME_f12;
+
+      /* The keypad sends SDLK_KP_* events, with or without
+	 numlock.   Here we assign the functions.  Next, we
+	 use the text input distinction to see whether the
+	 keypad sends a number or a command.
+
+	 But, what is the correct mapping from keypad numbers
+	 to functions?   This works on a default US keyboard.
+       */
+    case SDLK_KP_8:	 return NAME_cursorUp;
+    case SDLK_KP_4:	 return NAME_cursorLeft;
+    case SDLK_KP_6:	 return NAME_cursorRight;
+    case SDLK_KP_2:	 return NAME_cursorDown;
+    case SDLK_KP_7:	 return NAME_cursorHome;
+    case SDLK_KP_1:	 return NAME_end;
+    case SDLK_KP_9:	 return NAME_pageUp;
+    case SDLK_KP_3:	 return NAME_pageDown;
+    case SDLK_KP_PERIOD: return NAME_DEL;
+    case SDLK_KP_ENTER:	 return NAME_RET;
   }
 
   fail;
