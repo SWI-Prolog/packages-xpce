@@ -1198,7 +1198,7 @@ getKeyboardFocusFrame(FrameObj fr)
       sw2 = dw->window;
     }
 
-    if ( notNil(sw2->focus) )
+    if ( notNil(sw2->focus) || notNil(sw2->keyboard_focus) )
       answer(sw2);
   }
 
