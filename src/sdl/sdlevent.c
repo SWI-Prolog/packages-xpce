@@ -401,7 +401,7 @@ CtoEvent(SDL_Event *event)
 
       name = keycode_to_name(event);
       if ( !name )
-      { DEBUG(NAME_keyboard,
+      { DEBUG(NAME_scancode,
 	      Cprintf("Ignoring keydown.  Mod=0x%x, scancode=%d, key=0x%x\n",
 		      event->key.mod, event->key.scancode, event->key.key));
 	fail;
