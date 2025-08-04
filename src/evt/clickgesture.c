@@ -62,8 +62,12 @@ initialiseClickGesture(ClickGesture g, Name button,
 static status
 verifyClickGesture(ClickGesture g, EventObj ev)
 { if ( isDefault(g->multiclick) || getMulticlickEvent(ev) == g->multiclick )
-  { copyPoint(g->down_position, getPositionEvent(ev, DEFAULT));
-    succeed;
+  { Point pt = getPositionEvent(ev, DEFAULT);
+
+    if ( pt )
+    { copyPoint(g->down_position, pt);
+      succeed;
+    }
   }
 
   fail;
