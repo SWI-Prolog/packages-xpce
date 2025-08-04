@@ -38,7 +38,7 @@ COMMON(status)	hasVisibleFramesDisplay(DisplayObj d);
 
 /* /staff/jan/src/pl/packages/xpce/src/win/displaymgr.c */
 COMMON(status)	appendDisplayManager(DisplayManager dm, DisplayObj d);
-COMMON(DisplayObj) getMemberDisplayManager(DisplayManager dm, Name address);
+COMMON(DisplayObj) getMemberDisplayManager(DisplayManager dm, Any name);
 COMMON(DisplayObj) CurrentDisplay(Any obj);
 COMMON(status)	deleteDisplayManager(DisplayManager dm, DisplayObj d);
 COMMON(status)	RedrawDisplayManager(DisplayManager dm);

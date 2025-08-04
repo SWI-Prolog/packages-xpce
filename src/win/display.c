@@ -48,6 +48,7 @@ initialiseDisplay(DisplayObj d, Name name, Area a)
 { DisplayManager dm = TheDisplayManager();
 
   assign(d, name,		name);
+  assign(d, number,		DEFAULT);
   assign(d, primary,		DEFAULT);
   assign(d, area,		a);
   assign(d, removed,		OFF);
@@ -689,6 +690,8 @@ static char *T_win_directory[] =
 static vardecl var_display[] =
 { IV(NAME_name, "name", IV_BOTH,
      NAME_name, "Human name of the display"),
+  IV(NAME_number, "int", IV_GET,
+     NAME_name, "Numeric identity for <-geometry"),
   IV(NAME_primary, "bool", IV_BOTH,
      NAME_organisation, "@on if this is the primary display"),
   IV(NAME_area, "area", IV_GET,

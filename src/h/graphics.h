@@ -781,6 +781,7 @@ End;
 NewClass(displayobj)
   ABSTRACT_VISUAL
   Name		name;			/* Human name of the display */
+  Int		number;			/* Number of <-geometry */
   BoolObj	primary;		/* Display is the primary display */
   Area		area;			/* Area occupied by this display */
   Area		work_area;		/* Area for applications */

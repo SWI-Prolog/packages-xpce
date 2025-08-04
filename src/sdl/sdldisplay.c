@@ -55,10 +55,14 @@ ws_create_display(SDL_DisplayID id)
 
   if ( dsp )
   { ws_open_display(dsp, id);
-    SDL_GetDisplayUsableBounds(id, &rect);
-    assign(dsp, work_area,
-	   newObject(ClassArea, toInt(rect.x), toInt(rect.y),
-				toInt(rect.w), toInt(rect.h), EAV));
+    if ( SDL_GetDisplayUsableBounds(id, &rect) )
+    { assign(dsp, work_area,
+	     newObject(ClassArea, toInt(rect.x), toInt(rect.y),
+		       toInt(rect.w), toInt(rect.h), EAV));
+    } else
+    { Cprintf("SDL_GetDisplayUsableBounds(): %s\n", SDL_GetError());
+      assign(dsp, work_area, dsp->area);
+    }
   }
 
   return dsp;
@@ -85,19 +89,40 @@ ws_update_primary_display(DisplayManager dm)
   return primary;
 }
 
+static void
+ws_number_displays(DisplayManager dm)
+{ Cell cell;
+
+  for_cell(cell, dm->members)
+  { DisplayObj dsp = cell->value;
+    if ( isDefault(dsp->number) )
+    { for(int i=2; ; i++)
+      { if ( !getMemberDisplayManager(dm, toInt(i)) )
+	{ assign(dsp, number, toInt(i));
+	  break;
+	}
+      }
+    }
+  }
+}
+
 bool
 ws_init_displays(void)
 { int count;
   SDL_DisplayID *displays = SDL_GetDisplays(&count);
+  DisplayManager dm = TheDisplayManager();
 
   for(int i=0; i<count; i++)
     ws_create_display(displays[i]);
 
   SDL_free(displays);
 
-  DisplayObj primary = ws_update_primary_display(TheDisplayManager());
+  DisplayObj primary = ws_update_primary_display(dm);
   if ( primary )
+  { assign(primary, number, ONE);
     nameReferenceObject(primary, NAME_display);
+    ws_number_displays(dm);
+  }
 
   succeed;
 }
@@ -150,7 +175,9 @@ sdl_display_event(SDL_Event *ev)
   { case SDL_EVENT_DISPLAY_ADDED:
     { SDL_DisplayID id = ev->display.displayID;
       DisplayObj dsp = ws_create_display(id);
-      ws_update_primary_display(TheDisplayManager());
+      DisplayManager dm = TheDisplayManager();
+      ws_update_primary_display(dm);
+      ws_number_displays(dm);
       DEBUG(NAME_display, Cprintf("Added display %s\n", pp(dsp)));
       return true;
     }

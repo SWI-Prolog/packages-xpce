@@ -220,27 +220,26 @@ ws_create_frame(FrameObj fr)
     { SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_PARENT_POINTER,
 			     parent);
     }
+
+    Area da = fr->display->area;	/* work_area is unreliable */
+
     if ( isOn(fr->placed) )
     {
 #ifdef __WINDOWS__
       x += GetSystemMetrics(SM_CXBORDER);
       y += GetSystemMetrics(SM_CYBORDER) + GetSystemMetrics(SM_CYCAPTION);
 #endif
-      DisplayObj dsp = fr->display;
-      x += valInt(dsp->work_area->x);
-      y += valInt(dsp->work_area->y);
+      x += valInt(da->x);
+      y += valInt(da->y);
       DEBUG(NAME_frame,
 	    Cprintf("%s: passing position %d,%d\n", pp(fr), x, y));
       SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x);
       SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y);
     } else
-    { DisplayObj dsp = fr->display;
-      if ( !isOn(dsp->primary) )
-      { x = valInt(dsp->work_area->x) + (valInt(dsp->work_area->w)-w)/2;
-	y = valInt(dsp->work_area->y) + (valInt(dsp->work_area->h)-h)/2;
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x);
-	SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y);
-      }
+    { x = valInt(da->x) + (valInt(da->w)-w)/2;
+      y = valInt(da->y) + (valInt(da->h)-h)/2;
+      SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_X_NUMBER, x);
+      SDL_SetNumberProperty(props, SDL_PROP_WINDOW_CREATE_Y_NUMBER, y);
     }
     win = SDL_CreateWindowWithProperties(props);
     SDL_DestroyProperties(props);
@@ -820,7 +819,7 @@ ws_frame_bb(FrameObj fr, int *x, int *y, int *w, int *h)
 
 void
 ws_x_geometry_frame(FrameObj fr, Name spec, DisplayObj dsp)
-{ char *e, *s = strName(spec);
+{ char *s = strName(spec);
   int x, y, w, h, w0, h0;
   int eh;
   int dw, dh;
@@ -830,25 +829,31 @@ ws_x_geometry_frame(FrameObj fr, Name spec, DisplayObj dsp)
   Int X,Y,W,H;
   int offX=0;			/* window manager frame offset */
 
-  if ( isDefault(dsp) && (e=strchr(s, '@')) )
-  { int n = atoi(e+1);
+  if ( isDefault(dsp) )
+  { char *e = strchr(s, '@');
+    int n;
 
-    if ( !(dsp=getNth0Chain(fr->display->display_manager->members, toInt(n))) )
-      dsp = DEFAULT;
+    if ( e )
+      n = atoi(e+1);
+    else
+      n = 1;
+
+    if ( !(dsp=getMemberDisplayManager(TheDisplayManager(), toInt(n))) )
+      dsp = fr->display;
   }
 
-  if ( instanceOfObject(dsp, ClassDisplay) )
-  { Area a = (notNil(dsp->work_area) ? dsp->work_area : dsp->area);
-
-    dw = valInt(a->w);
-    dh = valInt(a->h);
-  } else
-  { dw = valInt(getWidthDisplay(fr->display));
-    dh = valInt(getHeightDisplay(fr->display));
-  }
+  Area a = dsp->area;		/* work-area seems unreliable */
+  dw = valInt(a->w);
+  dh = valInt(a->h);
 
   if ( !ws_frame_bb(fr, &x, &y, &w0, &h0) )
     return;
+
+  x -= valInt(a->x);			/* relative to display origin */
+  y -= valInt(a->y);
+  Cprintf("%s at %d,%d,%d,%d on %s\n",
+	  pp(fr), x, y, w0, h0, pp(dsp));
+
   w = w0;
   h = h0;
   eh = h - valInt(fr->area->h);		/* height of decorations */
@@ -861,6 +866,8 @@ ws_x_geometry_frame(FrameObj fr, Name spec, DisplayObj dsp)
       break;
     case 6:
       /*w += ew; h += eh;*/
+      Cprintf("6 values; x=%d, y=%d, signx=%s, signy=%s\n",
+	      x, y, signx, signy);
       if ( signx[1] == '-' )
 	x = -x;
       if ( signy[1] == '-' )
@@ -911,6 +918,7 @@ ws_x_geometry_frame(FrameObj fr, Name spec, DisplayObj dsp)
   if ( !(flags & WIN_NOMOVE) )
   { X = toInt(x);
     Y = toInt(y);
+    assign(fr, placed, ON);
   }
   if ( !(flags & WIN_NOSIZE) )
   { W = toInt(w);
@@ -935,7 +943,7 @@ ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
 { WsFrame wsf = fr->ws_ref;
 
   if ( wsf )
-  {  if ( notDefault(w) || notDefault(h) )
+  { if ( notDefault(w) || notDefault(h) )
     { int iw = isDefault(w) ? valInt(fr->area->w) : valInt(w);
       int ih = isDefault(h) ? valInt(fr->area->h) : valInt(h);
 
@@ -953,16 +961,32 @@ ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
     }
 
     if ( notDefault(x) || notDefault(y) )
-    { int ix = isDefault(x) ? valInt(fr->area->x) : valInt(x);
-      int iy = isDefault(y) ? valInt(fr->area->y) : valInt(y);
+    { int ix, iy;
+
+      if ( isDefault(x) )
+      { ix = valInt(fr->area->x);
+      } else
+      { ix = valInt(x);
+	if ( notDefault(dsp) )
+	  ix += valInt(dsp->area->x);
+	Cprintf("ix = %d + %d = %d\n",
+		valInt(x), isDefault(dsp) ? 0 : valInt(dsp->area->x), ix);
+      }
+      if ( isDefault(y) )
+      { iy = valInt(fr->area->y);
+      } else
+      { iy = valInt(y);
+	if ( notDefault(dsp) )
+	  iy += valInt(dsp->area->y);
+      }
 
 #if O_HDPX
       float scale = ws_pixel_density_display(fr);
       ix = ix/scale; iy = iy/scale;
 #endif
-      DEBUG(NAME_set,
+//      DEBUG(NAME_set,
 	    Cprintf("SDL_SetWindowPosition(%s, %d, %d)\n",
-		    pp(fr), ix, iy));
+		    pp(fr), ix, iy);
       ASSERT_SDL_MAIN();
       if ( !SDL_SetWindowPosition(wsf->ws_window, ix, iy) )
 	Cprintf("Could not set size of %s: %s\n",

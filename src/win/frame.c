@@ -620,7 +620,7 @@ get_position_from_center_frame(FrameObj fr, DisplayObj d, Point pos,
   { d = CurrentDisplay(fr);
 
     if ( d )
-    { Area a = d->work_area;
+    { Area a = d->area;
       *x = valInt(a->x) + valInt(a->w)/2;
       *y = valInt(a->y) + valInt(a->h)/2;
     } else
@@ -645,7 +645,7 @@ ensure_on_display(FrameObj fr, DisplayObj dsp, int *x, int *y)
   if ( isDefault(dsp) )
     dsp = CurrentDisplay(fr);
 
-  Area a = dsp->work_area;
+  Area a = dsp->area;
   rm = valInt(a->x) + valInt(a->w);
   bm = valInt(a->y) + valInt(a->h);
 
@@ -692,27 +692,30 @@ getGeometryFrame(FrameObj fr)
 
   if ( ws_frame_bb(fr, &x, &y, &ww, &wh) )	/* outer area */
   { int mx, my, mw, mh;
-    int xn=FALSE, yn=FALSE;
+    bool xn=false, yn=false;
     char buf[100];
     DisplayObj d = fr->display;
     int cw, ch;
 
+    Area a = d->area;		/* work area seems unreliable */
+    x -= valInt(a->x);
+    y -= valInt(a->y);
     cw = valInt(fr->area->w);			/* Client area */
     ch = valInt(fr->area->h);
 
     mx = my = 0;
-    mw = valInt(d->area->w);
-    mh = valInt(d->area->h);
+    mw = valInt(a->w);
+    mh = valInt(a->h);
 
     if ( x-mx > ((mx+mw) - (x+ww))*2 )	/* over 2/3th */
     { x = (mx+mw) - (x+ww);
-      xn = TRUE;
+      xn = true;
     } else
     { x -= mx;
     }
     if ( y-my > ((my+mh) - (y+wh))*2 )
     { y = (my+mh) - (y+wh);
-      yn = TRUE;
+      yn = true;
     } else
     { y -= my;
     }
@@ -725,10 +728,8 @@ getGeometryFrame(FrameObj fr)
     sprintf(buf+strlen(buf),
 	    "%s%d%s%d", xn ? "-" : "+", x, yn ? "-" : "+", y);
 
-    Int n = getIndexChain(d->display_manager->members, d);
-
-    if ( n != ONE )
-      sprintf(buf+strlen(buf), "@%" PRIdPTR, valInt(n)-1);
+    if ( d->number != ONE )
+      sprintf(buf+strlen(buf), "@%d", (int)valInt(d->number));
 
     answer(CtoName(buf));
   }
@@ -750,7 +751,6 @@ getImageFrame(FrameObj fr)
 static status
 geometryFrame(FrameObj fr, Name spec, DisplayObj dsp)
 { assign(fr, geometry, spec);
-  assign(fr, placed, ON);
 
   ws_x_geometry_frame(fr, spec, dsp);
 
@@ -761,21 +761,26 @@ geometryFrame(FrameObj fr, Name spec, DisplayObj dsp)
 static status
 setFrame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
 { Area a = fr->area;
+  Int frx = x;
+  Int fry = y;
 
-  if ( notDefault(dsp) )
-  { if ( notDefault(x) )
-      x = add(x, dsp->work_area->x);
-    if ( notDefault(y) )
-      y = add(y, dsp->work_area->y);
+  if ( fr->kind != NAME_popup )
+  { if ( isDefault(dsp) )
+      dsp = fr->display;
+
+    if ( notDefault(frx) )
+      frx = add(frx, dsp->area->x);
+    if ( notDefault(fry) )
+      fry = add(fry, dsp->area->y);
   }
 
   if ( createdFrame(fr) )
-  { setArea(a, x, y, DEFAULT, DEFAULT);
+  { setArea(a, frx, fry, DEFAULT, DEFAULT);
     sdl_send(fr, NAME_SdlSet, false, x, y, w, h, dsp, EAV);
   } else
   { if ( notDefault(x) || notDefault(y) )
       assign(fr, placed, ON);
-    setArea(a, x, y, w, h);
+    setArea(a, frx, fry, w, h);
     if ( valInt(a->w) <= 0 )		/* Window systems don't like that */
       assign(a, w, ONE);
     if ( valInt(a->h) <= 0 )

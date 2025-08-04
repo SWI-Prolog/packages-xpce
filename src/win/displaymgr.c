@@ -57,13 +57,14 @@ appendDisplayManager(DisplayManager dm, DisplayObj d)
 
 
 DisplayObj
-getMemberDisplayManager(DisplayManager dm, Name name)
+getMemberDisplayManager(DisplayManager dm, Any name)
 { Cell cell;
 
   for_cell(cell, dm->members)
   { DisplayObj d = cell->value;
 
-    if ( d->name == name )
+    if ( d->name == name ||
+	 d->number == name )
       answer(d);
   }
 
@@ -291,8 +292,8 @@ static getdecl get_displayManager[] =
      NAME_display, "Get the primary display"),
   GM(NAME_current, 0, "display", NULL, getCurrentDisplayManager,
      NAME_current, "Get the current display"),
-  GM(NAME_member, 1, "display", "name", getMemberDisplayManager,
-     NAME_display, "Find display from name"),
+  GM(NAME_member, 1, "display", "name|1..", getMemberDisplayManager,
+     NAME_display, "Find display from name or number"),
   GM(NAME_windowOfLastEvent, 0, "window", NULL,
      getWindowOfLastEventDisplayManager,
      NAME_event, "Find window that received last event")
