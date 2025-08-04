@@ -160,14 +160,17 @@ static status
 showPopupMenuBar(MenuBar mb, PopupObj p)
 { Button b = getButtonMenuBar(mb, p);
   Point pos = tempObject(ClassPoint, b->area->x, mb->area->h, EAV);
+  PopupObj close = NIL;
 
   if ( notNil(mb->current) && mb->current->displayed == ON )
-    send(mb->current, NAME_close, EAV);
+    close = mb->current;
   currentMenuBar(mb, p);
   send(mb->current, NAME_update, mb, EAV);
   assign(mb->current, default_item, NIL); /* Initialy do not select */
   send(mb->current, NAME_open, mb, pos, OFF, OFF, ON, EAV);
   considerPreserveObject(pos);
+  if ( notNil(close) )
+    send(close, NAME_close, EAV);
 
   succeed;
 }
