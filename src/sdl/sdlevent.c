@@ -382,6 +382,10 @@ CtoEvent(SDL_Event *event)
       break;
     }
       /* https://wiki.libsdl.org/SDL3/SDL_KeyboardEvent */
+    case SDL_EVENT_KEYMAP_CHANGED:
+      DEBUG(NAME_keyboard,
+	    Cprintf("Got SDL_EVENT_KEYMAP_CHANGED\n"));
+      fail;
     case SDL_EVENT_KEY_UP:
       lastmod = event->key.mod;
       fail;		      /* only update modifiers */
