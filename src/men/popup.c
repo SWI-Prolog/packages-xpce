@@ -290,7 +290,6 @@ closePopup(PopupObj p)
     assign(p, pullright, NIL);
   }
 
-#if SDL_GRAPHICS
   FrameObj fr = getFrameGraphical((Graphical)p);
   if ( fr )
   { if ( notNil(p->device) )
@@ -299,15 +298,6 @@ closePopup(PopupObj p)
     }
     send(fr, NAME_destroy, EAV);
   }
-#else
-  PceWindow sw = (PceWindow) p->device;
-  if ( notNil(sw) )
-  { send(sw, NAME_show, OFF, EAV);
-    send(sw, NAME_sensitive, OFF, EAV);
-    send(sw, NAME_clear, EAV);
-    assign(p, displayed, OFF);
-  }
-#endif
 
   succeed;
 }
