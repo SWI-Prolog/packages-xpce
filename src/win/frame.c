@@ -1226,7 +1226,11 @@ inputWindowFrame(FrameObj fr, PceWindow iw)
 
 static status
 inputFocusFrame(FrameObj fr, BoolObj val)
-{ if ( fr->input_focus != val )
+{ DEBUG(NAME_keyboard,
+	Cprintf("inputFocusFrame(%s, %s->%s)\n",
+		pp(fr), pp(fr->input_focus), pp(val)));
+
+  if ( fr->input_focus != val )
   { PceWindow iw;
 
     assign(fr, input_focus, val);
