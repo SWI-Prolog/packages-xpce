@@ -1788,7 +1788,9 @@ pl_new(term_t assoc, term_t descr)
   pcePushGoal(&goal);
 
   if ( !StripModuleTag(descr, &DefaultModule, d) )
+  { UNLOCK();
     return FALSE;
+  }
   markAnswerStack(mark);
   obj = do_new(assoc, d);
   rewindAnswerStack(mark, obj);
