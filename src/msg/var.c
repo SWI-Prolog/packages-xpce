@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -34,8 +35,8 @@
 
 #include <h/kernel.h>
 
-forwards void initVars(void);
-forwards VarBinding findVarEnvironment(VarEnvironment ev, Var v);
+static void initVars(void);
+static VarBinding findVarEnvironment(VarEnvironment ev, Var v);
 
 static HashTable VarTable;
 
@@ -49,10 +50,6 @@ initialiseVar(Var v, Type type, Name name, Any value)
   assign(v, name, name);
   assign(v, type, type);
   assign(v, global_value, value);
-
-  v->value = value;
-  if ( isObject(value) )
-    addCodeReference(value);
 
   if ( notNil(name) )
   { if ( getMemberHashTable(VarTable, name) )
@@ -75,10 +72,6 @@ unlinkVar(Var v)
     if ( (b = findVarEnvironment(ev, v)) )
       b->variable = NULL;
   }
-
-  if ( isObject(v->value) )
-    delCodeReference(v->value);
-
 
   succeed;
 }
@@ -105,9 +98,18 @@ valueVar(Var v, Any value)
 }
 */
 
-static Any
-getValueVar(Var v)
-{ answer(v->value);
+Any
+getValueVar(const Var v)
+{ VarEnvironment ev = varEnvironment;
+
+  for(; ev; ev = ev->parent)
+  { VarBinding b = findVarEnvironment(ev, v);
+
+    if ( b )
+      return b->value;
+  }
+
+  return v->global_value;
 }
 
 
@@ -129,8 +131,6 @@ static vardecl var_var[] =
      NAME_name, "Name of the var"),
   IV(NAME_Type, "type", IV_BOTH,
      NAME_type, "Type of the <-_value"),
-  IV(NAME_Value, "alien:Any", IV_NONE,
-     NAME_value, "Value of the var"),
   IV(NAME_GlobalValue, "any", IV_GET,
      NAME_abort, "Global value of the var")
 };
@@ -227,19 +227,6 @@ initVars(void)
 }
 
 
-void
-resetVars(void)
-{ varEnvironment = NULL;
-
-  if ( VarTable )
-    for_hash_table(VarTable, s,
-		   { Var v = s->value;
-
-		     v->value = v->global_value;
-		   });
-}
-
-
 		/********************************
 		*          ENVIRONMENTS		*
 		********************************/
@@ -249,7 +236,7 @@ resetVars(void)
 #define EXTBLOCKSIZE 8
 
 static VarBinding
-findVarEnvironment(VarEnvironment ev, Var v)
+findVarEnvironment(const VarEnvironment ev, const Var v)
 { int i;
   VarBinding b;
 
@@ -292,14 +279,14 @@ expandVarExtension(VarExtension ext, int size)
 
 
 static VarBinding
-appendVarEnvironment(VarEnvironment ev, Var v)
+appendVarEnvironment(VarEnvironment ev, Var v, Any value)
 { VarBinding b;
 
   DEBUG(NAME_var, Cprintf("Appending %s to env %p\n", pp(v), ev));
 
   if ( ev->size < BINDINGBLOCKSIZE )
-    b = &ev->bindings[ev->size++];
-  else
+  { b = &ev->bindings[ev->size++];
+  } else
   { int ext =  ev->size - BINDINGBLOCKSIZE;
 
     ev->extension = expandVarExtension(ev->extension, ext+1);
@@ -307,7 +294,9 @@ appendVarEnvironment(VarEnvironment ev, Var v)
   }
 
   b->variable = v;
-  b->value = v->value;
+  b->value = value;
+  if ( isObject(b->value) )
+    addCodeReference(b->value);
 
   return b;
 }
@@ -321,11 +310,8 @@ popVarEnvironment(void)
 
   b = ev->bindings; i = 0;
   while( i < ev->size )
-  { if ( b->variable )			/* may be ->unlink'ed! */
-    { if ( isObject(b->variable->value) )
-	delCodeReference(b->variable->value);
-      b->variable->value = b->value;
-    }
+  { if ( isObject(b->value) )
+      delCodeReference(b->value);
 
     DEBUG(NAME_var, Cprintf("Restoring %s to %s\n",
 			    pp(b->variable), pp(b->value)));
@@ -345,23 +331,30 @@ popVarEnvironment(void)
 
 static void
 valueVarBinding(VarBinding b, Any value)
-{ if ( isObject(b->variable->value) )
-    delCodeReference(b->variable->value);
-  b->value = value;
+{ b->value = value;
+  if ( isObject(b->value) )
+    addCodeReference(b->value);
 }
 
 
 status
 assignVar(Var v, Any value, Name scope)
 { if ( isDefault(scope) || scope == NAME_local )
-  { if ( varEnvironment && !findVarEnvironment(varEnvironment, v) )
-      appendVarEnvironment(varEnvironment, v);
+  { if ( varEnvironment )
+    { VarBinding b = findVarEnvironment(varEnvironment, v);
+      if ( b )
+	valueVarBinding(b, value);
+      else
+	appendVarEnvironment(varEnvironment, v, value);
+    } else
+    { assign(v, global_value, value);
+    }
   } else if ( scope == NAME_outer )
   { VarBinding b;
 
     if ( varEnvironment )
     { if ( !(b = findVarEnvironment(varEnvironment, v)) )
-	b = appendVarEnvironment(varEnvironment, v);
+	b = appendVarEnvironment(varEnvironment, v, value);
 
       valueVarBinding(b, value);
     }
@@ -377,11 +370,8 @@ assignVar(Var v, Any value, Name scope)
     assign(v, global_value, value);
   }
 
-  DEBUG(NAME_var, Cprintf("assignVar(%s) %s --> %s\n",
-			  pp(v), pp(v->value), pp(value)));
-  v->value = value;
-  if ( isObject(value) )
-    addCodeReference(value);
+  DEBUG(NAME_var, Cprintf("assignVar(%s) --> %s\n",
+			  pp(v), pp(value)));
 
   succeed;
 }

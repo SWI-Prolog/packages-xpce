@@ -66,8 +66,8 @@ COMMON(status)	makeClassQuoteFunction(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/msg/var.c */
 COMMON(status)	makeClassVar(Class class);
-COMMON(void)	resetVars(void);
 COMMON(void)	popVarEnvironment(void);
+COMMON(Any)	getValueVar(const Var v);
 COMMON(status)	assignVar(Var v, Any value, Name scope);
 
 /* /staff/jan/src/pl/packages/xpce/src/msg/when.c */

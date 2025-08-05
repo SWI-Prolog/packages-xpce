@@ -855,7 +855,7 @@ insertSelfListBrowser(ListBrowser lb, Int times, Int chr)
     times = ONE;
 
   if ( isDefault(chr) )
-  { EventObj ev = EVENT->value;
+  { EventObj ev = getValueVar(EVENT);
 
     if ( instanceOfObject(ev, ClassEvent) && isAEvent(ev, NAME_printable) )
       c = valInt(getIdEvent(ev));
@@ -1370,13 +1370,13 @@ nextLineListBrowser(ListBrowser lb, Int lines)
       di   = getNth0Chain(lb->dict->members, toInt(caret));
 
       if ( di )
-      { assign(lb, caret, toInt(caret));
+      { EventObj ev;
+
+	assign(lb, caret, toInt(caret));
 
 	if ( lb->multiple_selection == ON &&
-	     instanceOfObject(EVENT->value, ClassEvent) )
-	{ EventObj ev = EVENT->value;
-
-	  if ( valInt(ev->buttons) & BUTTON_shift )
+	     instanceOfObject((ev=getValueVar(EVENT)), ClassEvent) )
+	{ if ( valInt(ev->buttons) & BUTTON_shift )
 	    send(lb, NAME_changeSelection, NAME_extend, di, EAV);
 	  else
 	    send(lb, NAME_changeSelection, NAME_set, di, EAV);

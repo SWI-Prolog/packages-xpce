@@ -1599,8 +1599,9 @@ reportFrame(FrameObj fr, Name kind, CharArray fmt, int argc, Any *argv)
     return sendv(reporter, NAME_report, argc+2, av);
 
   for_chain(fr->members, window,
-	    if ( !(notNil(REPORTEE->value) &&
-		   memberChain(REPORTEE->value, window)) &&
+	    Chain rv;
+	    if ( !(notNil((rv=getValueVar(REPORTEE))) &&
+		   memberChain(rv, window)) &&
 		 sendv(window, NAME_report, argc+2, av) )
 	      succeed);
 

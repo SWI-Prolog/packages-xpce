@@ -1655,19 +1655,23 @@ sameReferenceObject(Any o1, Any o2)
 
 static status
 sendSubObject(Any obj, Name selector, int argc, Any *argv)
-{ if ( obj == RECEIVER->value )
+{ Any orec = getValueVar(RECEIVER);
+
+  if ( obj == orec )
   { return sendv(obj, selector, argc, argv);
   } else
-    return errorPce(obj, NAME_mustBeToReceiver, RECEIVER->value);
+    return errorPce(obj, NAME_mustBeToReceiver, orec);
 }
 
 
 static Any
 getGetSubObject(Any obj, Name selector, int argc, Any *argv)
-{ if ( obj == RECEIVER->value )
+{ Any orec = getValueVar(RECEIVER);
+
+  if ( obj == orec )
     return getv(obj, selector, argc, argv);
 
-  errorPce(obj, NAME_mustBeToReceiver, RECEIVER->value);
+  errorPce(obj, NAME_mustBeToReceiver, orec);
   fail;
 }
 
@@ -1678,75 +1682,94 @@ Object ->send_super: Selector, ...
 
 status
 sendSuperObject(Any obj, Name selector, int argc, const Any argv[])
-{ if ( obj == RECEIVER->value )
-  { Class current = RECEIVER_CLASS->value;
-    status rval;
+{ Any orec = getValueVar(RECEIVER);
 
-    RECEIVER_CLASS->value = current->super_class;
-    if ( notNil(RECEIVER_CLASS->value) )
-      rval = vm_send(obj, selector, RECEIVER_CLASS->value, argc, argv);
-    else
-      rval = FAIL;
-    RECEIVER_CLASS->value = current;
+  if ( obj == orec )
+  { Class current = getValueVar(RECEIVER_CLASS);
+    Class super = current->super_class;
 
-    return rval;
+    if ( notNil(super) )
+    { status rval;
+
+      withLocalVars(
+	{ assignVar(RECEIVER_CLASS, super, NAME_local);
+	  rval = vm_send(obj, selector, super, argc, argv);
+	});
+
+      return rval;
+    }
+
+    fail;			/* no super.  Error? */
   }
 
-  errorPce(obj, NAME_mustBeToReceiver, RECEIVER->value);
+  errorPce(obj, NAME_mustBeToReceiver, orec);
   fail;
 }
 
 
 static Any
 getGetSuperObject(Any obj, Name selector, int argc, const Any argv[])
-{ if ( obj == RECEIVER->value )
-  { Class current = RECEIVER_CLASS->value;
-    Any rval;
+{ Any orec = getValueVar(RECEIVER);
 
-    RECEIVER_CLASS->value = current->super_class;
-    rval = vm_get(obj, selector, RECEIVER_CLASS->value, argc, argv);
-    RECEIVER_CLASS->value = current;
+  if ( obj == orec )
+  { Class current = getValueVar(RECEIVER_CLASS);
+    Class super = current->super_class;
 
-    return rval;
+    if ( notNil(super) )
+    { Any rval;
+
+      withLocalVars(
+	{ assignVar(RECEIVER_CLASS, super, NAME_local);
+	  rval = vm_get(obj, selector, super, argc, argv);
+	});
+      return rval;
+    }
+
+    fail;
   }
 
-  errorPce(obj, NAME_mustBeToReceiver, RECEIVER->value);
+  errorPce(obj, NAME_mustBeToReceiver, orec);
   fail;
 }
 
 
 static status
 sendClassObject(Any obj, Name selector, int argc, Any *argv)
-{ if ( obj == RECEIVER->value )
-  { Class current = RECEIVER_CLASS->value;
+{ Any orec = getValueVar(RECEIVER);
+
+  if ( obj == orec )
+  { Class oclass = classOfObject(obj);
     status rval;
 
-    RECEIVER_CLASS->value = classOfObject(obj);
-    rval = vm_send(obj, selector, RECEIVER_CLASS->value, argc, argv);
-    RECEIVER_CLASS->value = current;
+    withLocalVars(
+      { assignVar(RECEIVER_CLASS, oclass, NAME_local);
+	rval = vm_send(obj, selector, oclass, argc, argv);
+      });
 
     return rval;
   }
 
-  errorPce(obj, NAME_mustBeToReceiver, RECEIVER->value);
-  fail;
+  return errorPce(obj, NAME_mustBeToReceiver, orec);
 }
 
 
 static Any
 getGetClassObject(Any obj, Name selector, int argc, Any *argv)
-{ if ( obj == RECEIVER->value )
-  { Class current = RECEIVER_CLASS->value;
+{ Any orec = getValueVar(RECEIVER);
+
+  if ( obj == orec )
+  { Class oclass = classOfObject(obj);
     Any rval;
 
-    RECEIVER_CLASS->value = classOfObject(obj);
-    rval = vm_get(obj, selector, RECEIVER_CLASS->value, argc, argv);
-    RECEIVER_CLASS->value = current;
+    withLocalVars(
+      { assignVar(RECEIVER_CLASS, oclass, NAME_local);
+	rval = vm_get(obj, selector, oclass, argc, argv);
+      });
 
     return rval;
   }
 
-  errorPce(obj, NAME_mustBeToReceiver, RECEIVER->value);
+  errorPce(obj, NAME_mustBeToReceiver, orec);
   fail;
 }
 
@@ -2565,8 +2588,10 @@ errorObjectv(Any obj, Error e, int argc, Any *argv)
 
 static Any
 getReportToObject(Any obj)
-{ if ( notNil(EVENT->value) )		/* associate to @event?receiver */
-    answer(getReceiverEvent(EVENT->value));
+{ EventObj ev = getValueVar(EVENT);
+
+  if ( notNil(ev) )		/* associate to @event?receiver */
+    answer(getReceiverEvent(ev));
 
   fail;
 }

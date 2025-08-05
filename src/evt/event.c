@@ -67,10 +67,9 @@ initialiseEvent(EventObj e, Name id, Any window,
 
   initialiseProgramObject(e);
 
-  if ( notNil(EVENT->value) )
-  { EventObj parent = EVENT->value;
-
-    if ( isDefault(x) )      x      = parent->x;
+  EventObj parent = getValueVar(EVENT);
+  if ( notNil(parent) )
+  { if ( isDefault(x) )      x      = parent->x;
     if ( isDefault(y) )      y      = parent->y;
     if ( isDefault(bts) )    bts    = parent->buttons;
     if ( isDefault(window) ) window = parent->window;
@@ -237,10 +236,15 @@ unlinkedWindowEvent(Any sw)
 		*          CONVERSION		*
 		********************************/
 
+/* convert @default to the current event */
 static EventObj
 getConvertEvent(Class class, Any def)
-{ if ( isDefault(def) && instanceOfObject(EVENT->value, ClassEvent) )
-    answer(EVENT->value);		/* @event */
+{ if ( isDefault(def) )
+  { EventObj ev = getValueVar(EVENT);
+
+    if ( ev && instanceOfObject(ev, ClassEvent) )
+      answer(ev);		/* @event */
+  }
 
   fail;
 }

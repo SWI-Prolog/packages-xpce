@@ -1081,7 +1081,6 @@ resetPce(Pce pce)
   }
 
   resetTypes();
-  resetVars();
   resetDraw();
   resetDispatch();
 

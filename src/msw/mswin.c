@@ -443,7 +443,7 @@ getWinFileNameDisplay(DisplayObj d,
 { OPENFILENAME ofn;
   HWND hwnd;
   Name rval = 0;
-  EventObj ev = EVENT->value;
+  EventObj ev = getValueVar(EVENT);
   TCHAR filter[1024], *ef = filter;
   TCHAR buffer[2048];
   TCHAR dirbuf[1024];
@@ -629,7 +629,7 @@ getWinDirectoryDisplay(DisplayObj d,
 		       Any owner)	/* owner window */
 { BROWSEINFO bi;
   HWND hwnd;
-  EventObj ev = EVENT->value;
+  EventObj ev = getValueVar(EVENT);
   LPITEMIDLIST pidl;
   Name result = NULL;
 

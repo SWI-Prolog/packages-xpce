@@ -165,7 +165,8 @@ reportVisual(VisualObj v, Name kind, CharArray fmt, int argc, Any *argv)
     av[1] = fmt;
     copyArgs(argc, argv, &av[2]);
 
-    if ( isNil(REPORTEE->value) )
+    Chain rv = getValueVar(REPORTEE);
+    if ( isNil(rv) )
     { Chain visited = answerObject(ClassChain, v, EAV);
 
       withLocalVars(assignVar(REPORTEE, visited, NAME_local);
@@ -173,7 +174,8 @@ reportVisual(VisualObj v, Name kind, CharArray fmt, int argc, Any *argv)
 
       doneObject(visited);
     } else
-    { appendChain(REPORTEE->value, v);
+    { assert(instanceOfObject(rv, ClassChain));
+      appendChain(rv, v);
       rval = sendv(super, NAME_report, argc+2, av);
     }
   }
@@ -184,7 +186,8 @@ reportVisual(VisualObj v, Name kind, CharArray fmt, int argc, Any *argv)
 
 status
 alertReporteeVisual(Any v)
-{ Any obj = (isNil(REPORTEE->value) ? v : getHeadChain(REPORTEE->value));
+{ Chain rv = getValueVar(REPORTEE);
+  Any obj = (isNil(rv) ? v : getHeadChain(rv));
 
   while( obj && !isNil(obj) && !hasSendMethodObject(obj, NAME_alert) )
     obj = getv(obj, NAME_containedIn, 0, NULL);

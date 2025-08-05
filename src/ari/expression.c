@@ -486,13 +486,12 @@ etc. it is supposed to return an integer value.
 Int
 getValueExpression(Expression e, ...)
 { if ( isInteger(e) )			/* happens often! */
-    answer(e);
-  else
+  { answer(e);
+  } else
   { va_list args;
-    int argc, i;
+    int argc;
     Var vars[FWD_PCE_MAX_ARGS];
     Any vals[FWD_PCE_MAX_ARGS];
-    Any savd[FWD_PCE_MAX_ARGS];
     numeric_value v;
 
     va_start(args, e);
@@ -505,16 +504,16 @@ getValueExpression(Expression e, ...)
     }
     va_end(args);
 
-    for(i=0; i<argc; i++)
-    { savd[i] = vars[i]->value;
-      setVar(vars[i], vals[i]);
-    }
+    status rc;
+    withLocalVars(
+      { for(int i=0; i<argc; i++)
+	  assignVar(vars[i], vals[i], NAME_local);
+	rc = evaluateExpression(e, &v);
+      });
 
-    evaluateExpression(e, &v);
+    if ( rc )
+      return ar_int_result(e, &v);
 
-    for(i=0; i<argc; i++)
-      setVar(vars[i], savd[i]);
-
-    return ar_int_result(e, &v);
+    fail;
   }
 }

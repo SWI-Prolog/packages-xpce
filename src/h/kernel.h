@@ -1344,7 +1344,6 @@ NewClass(var)
   ABSTRACT_FUNCTION
   Name		name;			/* Name of the variable */
   Type		type;			/* Type of the variable */
-  Any		value;			/* Current value of the variable */
   Any		global_value;		/* Initial or global value */
 End;
 
@@ -1470,7 +1469,11 @@ typedef struct
 typedef struct var_environment * VarEnvironment;
 typedef struct var_extension * VarExtension;
 
-GLOBAL VarEnvironment varEnvironment;
+#ifndef GLOBAL
+__thread VarEnvironment varEnvironment = NULL;
+#else
+GLOBAL __thread VarEnvironment varEnvironment;
+#endif
 
 struct var_environment
 { VarEnvironment parent;
@@ -1514,8 +1517,7 @@ struct var_extension
       const Any *_val = (av); \
       for( _i=ac; --_i >= 0; _b++, _v++, _val++) \
       { _b->variable = *_v; \
-	_b->value = _b->variable->value; \
-	_b->variable->value = *_val; \
+	_b->value = *_val; \
 	if ( isObject(*_val) ) \
 	  addCodeReference(*_val); \
       } \
@@ -1531,15 +1533,12 @@ struct var_extension
     popVarEnvironment(); \
   }
 
-#define withReceiver(r, c, code) \
-  { Any _rs = RECEIVER->value; \
-    Any _rc = RECEIVER_CLASS->value; \
-    RECEIVER->value = (r); \
-    RECEIVER_CLASS->value = (c); \
-    code; \
-    RECEIVER_CLASS->value = _rc; \
-    RECEIVER->value = _rs; \
-  }
+#define withReceiver(r, c, code)			\
+  withLocalVars(					\
+  { assignVar(RECEIVER, (r), NAME_local);		\
+    assignVar(RECEIVER_CLASS, (c), NAME_local);		\
+    code;						\
+  })
 
 
 		/********************************

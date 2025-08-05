@@ -314,7 +314,8 @@ executePopup(PopupObj p, Any context)
     if ( instanceOfObject(m, ClassMenu) )
     { if ( notNil(p->selected_item) )
       { selectionMenu(m, p->selected_item);
-	BUSY(forwardMenu(m, m->message, EVENT->value));
+	EventObj ev = getValueVar(EVENT);
+	BUSY(forwardMenu(m, m->message, ev));
       }
     } else
       return errorPce(context, NAME_unexpectedType, ClassMenu);

@@ -53,10 +53,9 @@ initialiseSpatial(Spatial s,
 
 static inline Int
 _getVar(Equation e, Var var, va_list args) /* Var, Int, Var, Int, ... */
-{ int argc, i;
+{ int argc;
   Var vars[FWD_PCE_MAX_ARGS];
   Any vals[FWD_PCE_MAX_ARGS];
-  Any savd[FWD_PCE_MAX_ARGS];
   numeric_value v;
 
   for(argc = 0; (vars[argc] = va_arg(args, Var)) != NULL; argc++)
@@ -67,17 +66,17 @@ _getVar(Equation e, Var var, va_list args) /* Var, Int, Var, Int, ... */
     assert(vals[argc] != NULL);
   }
 
-  for(i=0; i<argc; i++)
-  { savd[i] = vars[i]->value;
-    setVar(vars[i], vals[i]);
-  }
+  status rc;
+  withLocalVars(
+    { for(int i=0; i<argc; i++)
+	assignVar(vars[i], vals[i], NAME_local);
+      rc = evaluateEquation(e, var, &v);
+    });
 
-  evaluateEquation(e, var, &v);
+  if ( rc )
+    return ar_int_result(e, &v);
 
-  for(i=0; i<argc; i++)
-    setVar(vars[i], savd[i]);
-
-  return ar_int_result(e, &v);
+  fail;
 }
 
 
@@ -238,4 +237,3 @@ status
 makeClassSpatial(Class class)
 { return declareClass(class, &spatial_decls);
 }
-

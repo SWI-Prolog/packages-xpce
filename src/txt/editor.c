@@ -1595,10 +1595,10 @@ insert_editor(Editor e, Int times, Int chr, int fill)
     times = ONE;
 
   if ( isDefault(chr) )
-  { EventObj ev = EVENT->value;
+  { EventObj ev = getValueVar(EVENT);
 
-    if ( instanceOfObject(ev, ClassEvent) && isAEvent(ev, NAME_printable) )
-      c = valInt(getIdEvent(ev));
+    if ( instanceOfObject(ev, ClassEvent) && isInteger(ev->id) )
+      c = valInt(ev->id);
     else
       return errorPce(e, NAME_noCharacter);
   } else
@@ -2016,12 +2016,11 @@ pasteEditor(Editor e, Name which)
 		 *******************************/
 
 static int
-buttons()
-{ if ( instanceOfObject(EVENT->value, ClassEvent) )
-  { EventObj ev = EVENT->value;
+buttons(void)
+{ EventObj ev = getValueVar(EVENT);
 
+  if ( instanceOfObject(ev, ClassEvent) )
     return valInt(ev->buttons);
-  }
 
   return 0;
 }
@@ -3279,10 +3278,10 @@ insertSelfFillEditor(Editor e, Int times, Int chr)
     times = ONE;
 
   if ( isDefault(chr) )
-  { EventObj ev = EVENT->value;
+  { EventObj ev = getValueVar(EVENT);
 
-    if ( instanceOfObject(ev, ClassEvent) && isAEvent(ev, NAME_printable) )
-      c = valInt(getIdEvent(ev));
+    if ( instanceOfObject(ev, ClassEvent) && isInteger(ev->id) )
+      c = valInt(ev->id);
     else
       return errorPce(e, NAME_noCharacter);
   } else

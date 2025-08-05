@@ -1078,7 +1078,9 @@ selectedCompletionMenu(Menu m, DictItem di)
 { selectionMenu(m, di->key);
   quitCompleterDialogItem(m);
   if ( !send(m->device, NAME_modifiedItem, m, ON, EAV) )
-    forwardMenu(m, m->message, EVENT->value);
+  { EventObj ev = getValueVar(EVENT);
+    forwardMenu(m, m->message, ev);
+  }
 
   succeed;
 }
@@ -1173,7 +1175,7 @@ executeMenu(Menu m, EventObj ev)
   }
 
   if ( isDefault(ev) )
-    ev = EVENT->value;			/* @event */
+    ev = getValueVar(EVENT);			/* @event */
   TRY((mi = getItemFromEventMenu(m, ev)) && mi->active == ON);
 
   return executeMenuItem(m, mi, ev);
@@ -2115,7 +2117,8 @@ keyMenu(Menu m, Name key)
   { MenuItem mi = cell->value;
 
     if ( mi->accelerator == key )
-    { return executeMenuItem(m, mi, EVENT->value);
+    { EventObj ev = getValueVar(EVENT);
+      return executeMenuItem(m, mi, ev);
     }
   }
 

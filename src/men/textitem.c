@@ -1128,7 +1128,7 @@ enterTextItem(TextItem ti, EventId id)
 { Device dev = ti->device;
 
   if ( isDefault(id) )
-  { Any ev = EVENT->value;
+  { Any ev = getValueVar(EVENT);
 
     id = (instanceOfObject(ev, ClassEvent) ? getIdEvent(ev) : toInt('\r'));
   }

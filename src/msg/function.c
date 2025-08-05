@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -73,16 +74,12 @@ check whether the message actually is send to @receiver
 Any
 getForwardReceiverFunctionv(Function f, Any receiver,
 			    int argc, const Any argv[])
-{ if ( RECEIVER->value != receiver )
-  { Any receiver_save = RECEIVER->value;
-    Any receiver_class_save = RECEIVER_CLASS->value;
+{ if ( getValueVar(RECEIVER) != receiver )
+  { Class rclass = classOfObject(receiver);
     Any rval;
 
-    RECEIVER->value = receiver;
-    RECEIVER_CLASS->value = classOfObject(receiver);
-    rval = getForwardFunctionv(f, argc, argv);
-    RECEIVER_CLASS->value = receiver_class_save;
-    RECEIVER->value = receiver_save;
+    withReceiver(receiver, rclass,
+		 rval = getForwardFunctionv(f, argc, argv));
 
     return rval;
   } else
@@ -269,4 +266,3 @@ status
 makeClassFunction(Class class)
 { return declareClass(class, &function_decls);
 }
-

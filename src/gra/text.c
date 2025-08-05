@@ -889,8 +889,10 @@ copyText(TextObj t)
   DisplayObj d = getDisplayGraphical((Graphical)t);
 
   if ( !d )
-  { if ( instanceOfObject(EVENT->value, ClassEvent) )
-      d = getDisplayEvent(EVENT->value);
+  { EventObj ev;
+
+    if ( instanceOfObject((ev=getValueVar(EVENT)), ClassEvent) )
+      d = getDisplayEvent(ev);
   }
 
   if ( s && d )
@@ -1347,10 +1349,10 @@ insertSelfText(TextObj t, Int times, Int chr)
   tms = valInt(times);
 
   if ( isDefault(chr) )
-  { EventObj ev = EVENT->value;
+  { EventObj ev = getValueVar(EVENT);
 
-    if ( instanceOfObject(ev, ClassEvent) && isAEvent(ev, NAME_printable) )
-      c = valInt(getIdEvent(ev));
+    if ( instanceOfObject(ev, ClassEvent) && isInteger(ev->id) )
+      c = valInt(ev->id);
     else
       return errorPce(t, NAME_noCharacter);
   } else

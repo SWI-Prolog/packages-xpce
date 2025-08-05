@@ -112,15 +112,11 @@ messages in dialog items.
 
 status
 userForwardReceiverCodev(Code c, Any receiver, int argc, const Any argv[])
-{ Any receiver_save = RECEIVER->value;
-  Any receiver_class_save = RECEIVER_CLASS->value;
+{ Class rclass = classOfObject(receiver);
   status rval;
 
-  RECEIVER->value = receiver;
-  RECEIVER_CLASS->value = classOfObject(receiver);
-  rval = forwardCodev(c, argc, argv);
-  RECEIVER_CLASS->value = receiver_class_save;
-  RECEIVER->value = receiver_save;
+  withReceiver(receiver, rclass,
+	       rval = forwardCodev(c, argc, argv));
 
   return rval;
 }
@@ -128,7 +124,7 @@ userForwardReceiverCodev(Code c, Any receiver, int argc, const Any argv[])
 
 status
 forwardReceiverCodev(Code c, Any receiver, int argc, const Any argv[])
-{ if ( RECEIVER->value != receiver )
+{ if ( getValueVar(RECEIVER) != receiver )
     return userForwardReceiverCodev(c, receiver, argc, argv);
   else
     return forwardCodev(c, argc, argv);
@@ -450,4 +446,3 @@ makeClassCode(Class class)
 
   succeed;
 }
-
