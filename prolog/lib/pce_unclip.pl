@@ -36,7 +36,8 @@
 :- use_module(library(pce)).
 
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+/** <module> Show graphicals that are clipped by their window
+
 This library deals with showing graphicals   that  are partly clipped by
 the window on which  they  are  displayed.   It  is  used  by  the class
 toc_image from library(pce_toc) to  show   nodes  that  (typically) have
@@ -51,7 +52,17 @@ it   and   part   of   the   graphical     is    clipped.   The   method
 For an example, please start  the   SWI-Prolog  manual  browser using ?-
 help.   The   source-code   that   attaches     this   library   is   in
 `toc_image->entered'.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+@bug	This library is for now disabled.
+*/
+
+%!  unclip_enabled is fail
+%
+%   For now, disable as the event  processing   does  not  work with the
+%   current xpce.
+
+unclip_enabled :-
+    fail.
 
 :- pce_extend_class(graphical).
 
@@ -92,7 +103,8 @@ initialise(W) :->
 
 attach(W, To:graphical) :->
     "Attach to graphical"::
-    (   get(W, slot, busy, @off)
+    (   unclip_enabled,
+        get(W, slot, busy, @off)
     ->  send(W, slot, busy, @on),
         call_cleanup(attach(W, To),
                      send(W, slot, busy, @off))
@@ -114,13 +126,9 @@ attach(W, To) :-
     ),
     new(_, hyper(To, W, mirror, mirroring)),
     send(W, update),
-    get(To, display_position, point(X,Y)),
-    (   get(@pce, window_system, windows)
-    ->  Border = 0                  % TBD: Fix inside kernel
-    ;   get(W, border, Border)
-    ),
+    get(To, frame_position, point(X,Y)),
     send(W?frame, attribute, parent, ToWindow?frame),
-    send(W, open, point(X-Border,Y-Border)),
+    send(W, open, point(X,Y)),
     send(W, expose).
 
 update(W) :->
