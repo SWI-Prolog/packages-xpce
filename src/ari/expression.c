@@ -287,19 +287,23 @@ getExecuteExpression(BinaryExpression e)
 
 static Any
 getValueExpressionv(Any e, int argc, Equation *argv)
-{ Int rval;
-  int n;
+{ Int rval = 0;
+  bool ok = true;
 
-  withLocalVars({ for(n=0; n<argc; n++)
+  withLocalVars({ for(int n=0; ok && n<argc; n++)
 		  { Var v;
 		    Any value;
 
-		    TRY(v = checkType(argv[n]->left, TypeVar, NIL));
-		    value = argv[n]->right;
-		    assignVar(v, value, NAME_local);
+		    if ( (v = checkType(argv[n]->left, TypeVar, NIL)) )
+		    { value = argv[n]->right;
+		      assignVar(v, value, NAME_local);
+		    } else
+		    { ok = false;
+		    }
 		  }
 
-		  rval = getExecuteExpression(e);
+		  if ( ok )
+		    rval = getExecuteExpression(e);
 		});
 
   answer(rval);
