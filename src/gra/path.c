@@ -197,7 +197,7 @@ paintSelectedPath(Path p)
       int bx = valInt(pt->x);
       int by = valInt(pt->y);
 
-      r_complement(bx-2+ox, by-2+oy, 5, 5);
+      r_fill(bx-2+ox, by-2+oy, 5, 5, NAME_foreground);
     }
 
     succeed;
@@ -211,9 +211,9 @@ computePath(Path p)
 { if ( notNil(p->request_compute) )
   { CHANGING_GRAPHICAL(p,
 		       if ( p->kind == NAME_smooth )
-		         smooth_path(p);
+			 smooth_path(p);
 		       else
-		         assign(p, interpolation, NIL);
+			 assign(p, interpolation, NIL);
 		       computeBoundingBoxPath(p);
 		       changedEntireImageGraphical(p));
 
