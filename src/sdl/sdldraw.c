@@ -299,7 +299,7 @@ d_image(Image i, int x, int y, int w, int h)
 
   if ( isDefault(colour) )
     colour = d->foreground;
-  if ( isDefault(background) )
+  if ( isDefault(background) || isNil(background) )
     background = d->background;
 
   push_context();
