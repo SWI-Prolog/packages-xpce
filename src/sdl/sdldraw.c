@@ -1944,8 +1944,19 @@ c_width(wint_t c, FontObj font)
 void
 s_print_utf8(const char *u, size_t len, int x, int y, FontObj font)
 { DEBUG(NAME_draw,
-	Cprintf("s_print_utf8(\"%s\", %d, %d, %d, %s) (color: %s)\n",
-		u, len, x, y, pp(font), pp(context.colour)));
+	{ const char *du = u;
+	  char buf[100];
+	  if ( u[len] )
+	  { size_t dlen = len;
+	    if ( dlen > sizeof(buf)-1 )
+	      dlen = sizeof(buf)-1;
+	    memcpy(buf, u, dlen);
+	    buf[dlen] = 0;
+	    du = buf;
+	  }
+	  Cprintf("s_print_utf8(\"%s\", %d, %d, %d, %s) (color: %s)\n",
+		  du, len, x, y, pp(font), pp(context.colour));
+	});
 
   Translate(x, y);
   cairo_new_path(CR);
