@@ -93,7 +93,7 @@ void r_bezier(fpoint start, fpoint end, fpoint control1, fpoint control2);
 void r_path(Chain points, int ox, int oy, int radius, int closed, Image fill);
 void r_op_image(Image image, int sx, int sy, int x, int y, int w, int h, Name op);
 void r_image(Image image, int sx, int sy, int x, int y, int w, int h, BoolObj transparent);
-void r_fill(int x, int y, int w, int h, Any pattern);
+void r_fill(double x, double y, double w, double h, Any pattern);
 void r_fill_polygon(FPoint pts, int n);
 void r_caret(int cx, int cy, FontObj font);
 void r_fill_triangle(double x1, double y1, double x2, double y2, double x3, double y3);

@@ -1525,7 +1525,7 @@ r_clear(int x, int y, int w, int h)
  */
 
 void
-r_fill(int x, int y, int w, int h, Any fill)
+r_fill(double x, double y, double w, double h, Any fill)
 { r_fill_fgbg(x, y, w, h, fill, NAME_foreground);
 }
 
