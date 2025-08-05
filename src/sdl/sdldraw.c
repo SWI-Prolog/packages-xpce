@@ -2080,6 +2080,34 @@ str_text(FontObj font, PceString s, int x, int y)
   }
 }
 
+static void
+str_stext(FontObj font, PceString s, int f, int len,
+	  int x, int y, Style style)
+{ if ( len > 0 )
+  { Any ofg = NULL;
+
+    if ( notNil(style) )
+    { double w = str_advance(s, f, f+len, font);
+
+      if ( notDefault(style->background) )
+      { double a = s_ascent(font);
+	double b = s_descent(font);
+
+	r_fill(x, y-a, w, b+a, style->background);
+      }
+      if ( notDefault(style->colour) )
+	ofg = r_colour(style->colour);
+    }
+
+    str_draw_text(font, s, f, len, x, y);
+
+    if ( ofg )
+      r_colour(ofg);
+  }
+}
+
+
+
 		/********************************
 		*         MULTILINE TEXT	*
 		********************************/
@@ -2268,7 +2296,44 @@ str_selected_string(PceString s, FontObj font,
 		    int f, int t, Style style,
 		    int x, int y, int w, int h,
 		    Name hadjust, Name vadjust)
-{
+{ strTextLine lines[MAX_TEXT_LINES];
+  strTextLine *line;
+  int nlines, n;
+  int baseline;
+
+  if ( s->s_size == 0 )
+    return;
+
+  Translate(x, y);
+  baseline = s_ascent(font);
+  str_break_into_lines(s, lines, &nlines, MAX_TEXT_LINES);
+  str_compute_lines(lines, nlines, font, x, y, w, h, hadjust, vadjust);
+
+  int here = 0;
+  for(n=0, line = lines; n++ < nlines; line++)
+  { int len = line->text.s_size;
+
+    if ( t <= here || f >= here+len )	/* outside */
+    { str_text(font, &line->text, line->x, line->y+baseline);
+    } else
+    { int sf, sx, sl;
+
+      sf = (f <= here     ?      0 : f-here);
+      sl = (t >= here+len ? len-sf : t-here-sf);
+      sx = str_advance(&line->text, 0, sf, font);
+
+      str_stext(font, &line->text, 0,  sf, line->x,    line->y+baseline, NIL);
+      str_stext(font, &line->text, sf, sl, line->x+sx, line->y+baseline, style);
+      if ( sf+sl < len )
+      { int a  = sf+sl;
+	int ax = sx + str_advance(&line->text, sf, a, font);
+
+	str_stext(font, &line->text, a, len-a, line->x+ax, line->y+baseline, NIL);
+      }
+    }
+
+    here += len + 1;			/* 1 for the newline */
+  }
 }
 
 /**
