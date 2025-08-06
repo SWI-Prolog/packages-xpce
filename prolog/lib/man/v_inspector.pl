@@ -714,11 +714,6 @@ random_pos(X, W, OW, OX) :-
     ).
 
 
-check_not_self(MP, Display) :-
-    send(Display, '_instance_of', display),
-    !,
-    send(MP, report, error, 'Can''t inspect the display'),
-    fail.
 check_not_self(Pict, Obj) :-
     send(Obj, '_instance_of', graphical),
     get(Obj, frame, Frame),
