@@ -695,7 +695,7 @@ pceExecuteMode()
 
 int
 pceExecuteMode(void)
-{ return ServiceMode;
+{ return TheServiceMode;
 }
 
 

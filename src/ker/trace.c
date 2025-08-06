@@ -40,7 +40,7 @@
 void
 resetDebugger(void)
 { CurrentGoal = NULL;
-  ServiceMode = PCE_EXEC_USER;
+  TheServiceMode = PCE_EXEC_USER;
 }
 
 
@@ -310,7 +310,7 @@ writeErrorGoal()
 
 int
 pceDebugging(Name subject)
-{ if ( ServiceMode == PCE_EXEC_SERVICE )
+{ if ( TheServiceMode == PCE_EXEC_SERVICE )
     fail;
 
   return memberChain(PCEdebugSubjects, subject);

@@ -1469,12 +1469,6 @@ typedef struct
 typedef struct var_environment * VarEnvironment;
 typedef struct var_extension * VarExtension;
 
-#ifndef GLOBAL
-__thread VarEnvironment varEnvironment = NULL;
-#else
-GLOBAL __thread VarEnvironment varEnvironment;
-#endif
-
 struct var_environment
 { VarEnvironment parent;
   int		 size;
@@ -1487,7 +1481,6 @@ struct var_extension
 { int		 allocated;
   var_binding	 bindings[BINDINGBLOCKSIZE];
 };
-
 
 #define withLocalVars(code) \
   { struct var_environment _var_env; \
@@ -1881,6 +1874,8 @@ extern char *T_report[];		/* ->report: kind, format, args... */
 		 *******************************/
 
 #include <h/interface.h>
+#include <h/thread.h>
+
 
 		/********************************
 		*        INLINE SUPPORT		*

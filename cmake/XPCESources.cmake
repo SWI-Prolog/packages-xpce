@@ -29,7 +29,7 @@ set(ITF_SRC	c.c host.c interface.c cpointer.c asfile.c console.c
 		public.c)
 
 set(KER_SRC	alloc.c assoc.c behaviour.c class.c conversion.c
-		debug.c declarations.c error.c gc.c
+		debug.c declarations.c error.c gc.c thread.c
 		getmethod.c glob.c global.c goodies.c passing.c
 		method.c name.c object.c programobject.c save.c
 		self.c sendmethod.c srclocation.c timer.c

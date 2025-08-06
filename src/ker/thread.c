@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
-    Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Author:        Jan Wielemaker
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org
+    Copyright (c)  2025, SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -32,24 +32,28 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef PCE_TRACE_H
-#define PCE_TRACE_H
+#include <h/kernel.h>
 
-#define NO_MAX_GOAL_DEPTH INT_MAX	/* unlimited MaxGoalDepth */
-
-#define DebuggingProgramObject(o, flags) \
-	(PCEdebugging && (TheServiceMode == PCE_EXEC_USER) && \
-	 onDFlag((o), (flags)))
-
-#define ServiceMode(mode, code) \
-  { int _smode = TheServiceMode; \
-    TheServiceMode = mode; \
-    { code; } \
-    TheServiceMode = _smode; \
+ThreadData
+createPceThreadData(void)
+{ ThreadData td = malloc(sizeof(*td));
+  if ( td )
+  { memset(td, 0, sizeof(*td));
+    td->max_goal_depth = NO_MAX_GOAL_DEPTH;
+    td->service_mode   = PCE_EXEC_USER;
+    pce_thread_data    = td;
   }
 
-COMMON(void)	writeGoal(PceGoal g);
-COMMON(int)	isProperGoal(PceGoal g);
-COMMON(void)	pceBackTrace(PceGoal g, int depth);
+  return td;
+}
 
-#endif /*PCE_TRACE_H*/
+/* Should be called through PL_thread_at_exit()
+ */
+
+void
+destroyPceThreadData(void)
+{ if ( pce_thread_data )
+  { free(pce_thread_data);
+    pce_thread_data = NULL;
+  }
+}
