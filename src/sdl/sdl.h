@@ -60,7 +60,6 @@ status ws_show_console(Name how);
 status ws_console_label(CharArray label);
 Int ws_default_scrollbar_width(void);
 char *ws_user(void);
-bool pceMTdetach(void);
 status ws_open_url(PceString url);
 
 #endif /* SDL_H */

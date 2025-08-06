@@ -178,18 +178,6 @@ ws_user(void)
     return "user";
 }
 
-/**
- * Called when the xpce dispatch thread is terminated
- *
- * @return `TRUE` on success
- */
-
-bool
-pceMTdetach(void)
-{ return true;
-}
-
-
 status
 ws_open_url(PceString url)
 { const char *u = stringToUTF8(url, NULL);

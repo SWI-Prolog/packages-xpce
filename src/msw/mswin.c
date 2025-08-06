@@ -72,28 +72,6 @@ DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved)
   return TRUE;
 }
 
-
-#if NOSTUB
-int
-pceMTdetach(void)
-{
-#if O_DEBUG_EXIT
-  ServiceMode = PCE_EXEC_USER;
-  PCEdebugging = TRUE;
-
-  Cprintf("pceMTdetach() in user mode\n");
-#endif
-
-  DEBUG(NAME_thread,
-	Cprintf("Detached thread 0x%x\n", GetCurrentThreadId()));
-  destroyThreadWindows(ClassFrame);
-  destroyThreadWindows(ClassWindow);
-
-  return TRUE;
-}
-#endif
-
-
 		 /*******************************
 		 *	      VERSIONS		*
 		 *******************************/

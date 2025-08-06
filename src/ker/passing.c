@@ -85,6 +85,12 @@ pceMTinit(void)
   return true;
 }
 
+/* A Prolog thread has terminated */
+void
+pceMTdetach(void)
+{ destroyPceThreadData();
+}
+
 static inline void
 LOCK(void)
 { if ( XPCE_mt )
