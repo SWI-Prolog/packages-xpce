@@ -1990,6 +1990,7 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
       goal.class    = class;
       goal.selector = selector;
 
+      /* calls pushGoal(), doing a recursive lock */
       if ( pceResolveImplementation(&goal) )
       { if ( goal.flags & PCE_GF_HOST )
 	{ prolog_call_data *pcd = get_pcd(goal.implementation);
@@ -2156,6 +2157,7 @@ out:
   rewindHostHandles(hmark);
   rewindAnswerStack(mark, goal.rval);
   PopDefaultModule(odm);
+  /* calls popGoal() releasing recursive lock */
   pceFreeGoal(&goal);
   if ( fid )
     PL_close_foreign_frame(fid);

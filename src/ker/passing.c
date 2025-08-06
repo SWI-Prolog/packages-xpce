@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           http://www.swi-prolog.org/packages/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -44,120 +45,54 @@
 
 					/* Win32 native locking */
 #ifdef USE_WIN32_CRITICAL_SECTION
-#define HAS_LOCK 1
+#define SYS_THREAD_T      DWORD
+#define SYS_LOCK_T        CRITICAL_SECTION
+#define SYS_THREAD_SELF() GetCurrentThreadId()
+#define SYS_LOCK(l)	  EnterCriticalSection(l)
+#define SYS_TRYLOCK(l)	  TryEnterCriticalSection(l)
+#define SYS_UNLOCK(l)	  LeaveCriticalSection(l)
 
-typedef struct _mutex_t
-{ DWORD			owner;
-  int			count;
-  CRITICAL_SECTION	lock;
-} recursive_mutex_t;
+#define RECURSIVE_MUTEX_INIT { 0 }
 
-static recursive_mutex_t mutex = {0};
-bool
-pceMTTryLock(void)
-{ if ( XPCE_mt )
-  { if ( TryEnterCriticalSection(&mutex.lock) )	/* NT 4 and later! */
-    { if ( mutex.count++ == 0 )
-	mutex.owner = GetCurrentThreadId();
-      return true;
-    } else
-      return false;
-  }
-
-  return true;
-}
-
-static inline void
-LOCK(void)
-{ if ( XPCE_mt )
-  { EnterCriticalSection(&mutex.lock);
-    if ( mutex.count++ == 0 )
-      mutex.owner = GetCurrentThreadId();
-  }
-}
-
-static inline void
-UNLOCK(void)
-{ if ( XPCE_mt )
-  { if ( --mutex.count == 0 )
-      mutex.owner = 0;
-    LeaveCriticalSection(&mutex.lock);
-  }
-}
-
-int
-pceMTUnlockAll(void)
-{ int rc = 0;
-
-  if ( XPCE_mt )
-  { if ( mutex.owner == GetCurrentThreadId() )
-    { assert(mutex.count);
-      rc = mutex.count;
-      mutex.owner = 0;
-      mutex.count = 0;
-      LeaveCriticalSection(&mutex.lock);
-    }
-  }
-
-  return rc;
-}
-
-void
-pceMTRelock(int count)
-{ if ( XPCE_mt && count )
-  { LOCK();
-    mutex.count = count;
-  }
-}
-
-
-#define Code SWI_Code
-#include <SWI-Prolog.h>
-static foreign_t
-pce_lock_owner(term_t owner, term_t count)
-{ if ( PL_unify_integer(owner, mutex.owner) &&
-       PL_unify_integer(count, mutex.count) )
-    return true;
-
-  return false;
-}
-
-bool
-pceMTinit(void)
-{ InitializeCriticalSection(&mutex.lock);
-  XPCE_mt = true;
-
-  PL_register_foreign("pce_lock_owner", 2, pce_lock_owner, 0);
-
-  return true;
-}
-
-#endif /*USE_WIN32_CRITICAL_SECTION*/
-
-/* POSIX thread based locking */
-
-#if defined(_REENTRANT) && !defined(HAS_LOCK)
-#define HAS_LOCK 1
-#define var pthread_sys_var		/* avoid AIX name conflict */
+#else /*USE_WIN32_CRITICAL_SECTION*/
 #include <pthread.h>
-#undef var
 
-typedef struct _mutex_t
-{ pthread_t		owner;
-  int			count;
-  pthread_mutex_t	lock;
-} recursive_mutex_t;
+#define SYS_THREAD_T      pthread_t
+#define SYS_LOCK_T        pthread_mutex_t
+#define SYS_THREAD_SELF() pthread_self()
+#define SYS_LOCK(l)	  pthread_mutex_lock(l)
+#define SYS_TRYLOCK(l)	  pthread_mutex_trylock(l)
+#define SYS_UNLOCK(l)	  pthread_mutex_unlock(l)
 
 #define RECURSIVE_MUTEX_INIT { 0, 0, PTHREAD_MUTEX_INITIALIZER }
 
+#endif /*USE_WIN32_CRITICAL_SECTION*/
+
+typedef struct _mutex_t
+{ SYS_THREAD_T	owner;
+  int		count;
+  SYS_LOCK_T	lock;
+} recursive_mutex_t;
+
 static recursive_mutex_t mutex = RECURSIVE_MUTEX_INIT;
+
+bool
+pceMTinit(void)
+{ XPCE_mt = TRUE;
+#ifdef USE_WIN32_CRITICAL_SECTION
+  InitializeCriticalSection(&mutex.lock);
+#endif
+  return true;
+}
 
 static inline void
 LOCK(void)
 { if ( XPCE_mt )
-  { if ( mutex.owner != pthread_self() )
-    { pthread_mutex_lock(&(mutex.lock));
-      mutex.owner = pthread_self();
+  { SYS_THREAD_T self = SYS_THREAD_SELF();
+
+    if ( mutex.owner != self )
+    { SYS_LOCK(&(mutex.lock));
+      mutex.owner = self;
       mutex.count = 1;
     } else
       mutex.count++;
@@ -168,36 +103,44 @@ LOCK(void)
 static inline void
 UNLOCK(void)
 { if ( XPCE_mt )
-  { if ( mutex.owner == pthread_self() )
-    { if ( --mutex.count < 1 )
+  { SYS_THREAD_T self = SYS_THREAD_SELF();
+
+    if ( mutex.owner == self )
+    { if ( --mutex.count == 0 )
       { mutex.owner = 0;
-	pthread_mutex_unlock(&(mutex.lock));
+	SYS_UNLOCK(&(mutex.lock));
       }
     } else
       assert(0);
   }
 }
 
+/* Public API */
+void
+pceMTLock()
+{ LOCK();
+}
+
+void
+pceMTUnlock()
+{ UNLOCK();
+}
 
 bool
 pceMTTryLock(void)
 { if ( XPCE_mt )
-  { if ( mutex.owner != pthread_self() )
-    { if ( pthread_mutex_trylock(&(mutex.lock)) != 0 )
+  { SYS_THREAD_T self = SYS_THREAD_SELF();
+
+    if ( mutex.owner != self )
+    { if ( SYS_TRYLOCK(&(mutex.lock)) != 0 )
 	return false;
 
-      mutex.owner = pthread_self();
+      mutex.owner = self;
       mutex.count = 1;
     } else
       mutex.count++;
   }
 
-  return true;
-}
-
-bool
-pceMTinit(void)
-{ XPCE_mt = TRUE;
   return true;
 }
 
@@ -211,12 +154,14 @@ pceMTUnlockAll(void)
 { int rc = 0;
 
   if ( XPCE_mt )
-  { if ( mutex.owner == pthread_self() )
+  { SYS_THREAD_T self = SYS_THREAD_SELF();
+
+    if ( mutex.owner == self )
     { assert(mutex.count);
       rc = mutex.count;
       mutex.owner = 0;
       mutex.count = 0;
-      pthread_mutex_unlock(&(mutex.lock));
+      SYS_UNLOCK(&(mutex.lock));
     }
   }
 
@@ -226,39 +171,15 @@ pceMTUnlockAll(void)
 void
 pceMTRelock(int count)
 { if ( XPCE_mt && count )
-  { LOCK();
+  { SYS_THREAD_T self = SYS_THREAD_SELF();
+
+    assert(mutex.owner != self);
+    SYS_LOCK(&(mutex.lock));
+    mutex.owner = self;
     mutex.count = count;
   }
 }
 
-#endif /*_REENTRANT*/
-
-					/* No threading */
-#ifndef HAS_LOCK
-#define LOCK()
-#define UNLOCK()
-
-int					/* signal we can't do this */
-pceMTinit(void)
-{ fail;
-}
-
-int
-pceMTTryLock(int lock)
-{ return TRUE;
-}
-
-#endif
-
-void
-pceMTLock()
-{ LOCK();
-}
-
-void
-pceMTUnlock()
-{ UNLOCK();
-}
 
 #define pushGoal(g) { LOCK(); \
 		      (g)->parent   = CurrentGoal; \
