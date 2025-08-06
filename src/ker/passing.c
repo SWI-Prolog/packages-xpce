@@ -61,7 +61,7 @@
 #define SYS_LOCK_T        pthread_mutex_t
 #define SYS_THREAD_SELF() pthread_self()
 #define SYS_LOCK(l)	  pthread_mutex_lock(l)
-#define SYS_TRYLOCK(l)	  pthread_mutex_trylock(l)
+#define SYS_TRYLOCK(l)	  (pthread_mutex_trylock(l) == 0)
 #define SYS_UNLOCK(l)	  pthread_mutex_unlock(l)
 
 #define RECURSIVE_MUTEX_INIT { 0, 0, PTHREAD_MUTEX_INITIALIZER }
@@ -138,7 +138,7 @@ pceMTTryLock(void)
   { SYS_THREAD_T self = SYS_THREAD_SELF();
 
     if ( mutex.owner != self )
-    { if ( SYS_TRYLOCK(&(mutex.lock)) != 0 )
+    { if ( !SYS_TRYLOCK(&mutex.lock) )
 	return false;
 
       mutex.owner = self;
