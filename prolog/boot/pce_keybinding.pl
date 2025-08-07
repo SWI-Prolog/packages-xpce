@@ -184,7 +184,7 @@ modify1(delete(Key), KB) :-
 :- pce_extend_class(key_binding).
 
 class_variable(style, name,
-               [ 'X'(emacs),
+               [ unix(emacs),
                  windows(cua),
                  apple(apple)
                ],

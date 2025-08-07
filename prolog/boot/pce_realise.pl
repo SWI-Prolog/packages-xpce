@@ -232,14 +232,15 @@ attach_class_variable(Class, ClassVar) :-
 classvar_default(List, Default) :-
     is_list(List),
     !,
-    (   get(@pce, window_system, 'X'),
-        get(@pce, operating_system, OS),
-        sub_atom(OS, _, _, _, darwin),
+    (   current_prolog_flag(apple, true),
         memberchk(apple(AppleDefault), List)
     ->  Default = AppleDefault
-    ;   get(@pce, window_system, WS),
-        Term =.. [WS,Default],
-        memberchk(Term, List)
+    ;   current_prolog_flag(windows, true),
+        memberchk(windows(Default), List)
+    ->  true
+    ;   memberchk(unix(Default), List)
+    ->  true
+    ;   memberchk('X'(Default), List) % Backward compatibility
     ->  true
     ;   List = [H|_],
         compound(H),
