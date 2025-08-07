@@ -981,8 +981,10 @@ ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
 		    pp(fr), ix, iy));
       ASSERT_SDL_MAIN();
       if ( !SDL_SetWindowPosition(wsf->ws_window, ix, iy) )
-	Cprintf("Could not set size of %s: %s\n",
-		pp(fr), SDL_GetError());
+      { DEBUG(NAME_set,
+	      Cprintf("Could not set position of %s: %s\n",
+		      pp(fr), SDL_GetError()));
+      }
     }
   }
 
