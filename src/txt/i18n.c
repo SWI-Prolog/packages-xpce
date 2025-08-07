@@ -303,7 +303,11 @@ UTF8ToCharArray(const char *utf8, bool asname)
   }
 
   if ( *in == EOS )			/* simple ASCII string */
-    return CtoName(utf8);
+  { if ( asname )
+      return CtoName(utf8);
+    else
+      return CtoString(utf8);
+  }
 
   e = in + strlen((const char*)in);
   for(in=(cuchar*)utf8, len=0, wide=FALSE; in < e; )
