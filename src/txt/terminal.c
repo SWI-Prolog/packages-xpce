@@ -364,11 +364,11 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     if ( multi == NAME_double )
     { rlc_word_selection(b, valInt(x), valInt(y));
       if ( rlc_has_selection(b) )
-	rlc_copy(b, NAME_primary);
+	send(ti, NAME_copy, EAV);
     } else if ( multi == NAME_triple )
     { rlc_line_selection(b, valInt(x), valInt(y));
       if ( rlc_has_selection(b) )
-	rlc_copy(b, NAME_primary);
+	send(ti, NAME_copy, EAV);
     } else
       rlc_start_selection(b, valInt(x), valInt(y));
     succeed;
@@ -383,7 +383,7 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     { Name href = TCHAR2Name(lnk);
       clickedLinkTerminalImage(ti, href);
     } else if ( rlc_has_selection(b) )
-      rlc_copy(b, NAME_primary);
+      send(ti, NAME_copy, EAV);
     succeed;
   }
   if ( isAEvent(ev, NAME_msLeftDrag) )
@@ -401,7 +401,7 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
       get_xy_event(ev, ti, ON, &x, &y);
       rlc_extend_selection(b, valInt(x), valInt(y));
       if ( rlc_has_selection(b) )
-	rlc_copy(ti->data, NAME_primary);
+	send(ti, NAME_copy, EAV);
       succeed;
     }
   }
@@ -532,11 +532,19 @@ pasteTerminalImage(TerminalImage ti, Name which)
 static status
 copyTerminalImage(TerminalImage ti, Name which)
 { if ( isDefault(which) )
-    which = NAME_clipboard;
+  { StringObj s = getSelectedTerminalImage(ti);
+    DisplayObj d = getDisplayGraphical((Graphical)ti);
+
+    if ( s && d )
+      return send(d, NAME_copy, s, EAV);
+
+    fail;
+  }
 
   return rlc_copy(ti->data, which);
 }
 
+/* Virtual method */
 static status
 interruptTerminalImage(TerminalImage ti)
 { succeed;
