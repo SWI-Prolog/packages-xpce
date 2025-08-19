@@ -363,7 +363,7 @@ pasteTextItem(TextItem ti, Name buffer)
 static Browser Completer = NULL;
 
 Browser
-CompletionBrowser()
+CompletionBrowser(void)
 { if ( !Completer )
   { KeyBinding kb;
     Any client;
