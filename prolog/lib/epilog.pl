@@ -86,6 +86,7 @@ ep_main :-
     ep_wait.
 
 ep_wait :-
+    set_thread(self, debug(false)),
     capture_messages,
     ep_wait_.
 
