@@ -766,6 +766,7 @@ static kbDef list_browser[] =
   { "\\e",		NAME_keyboardQuit },
   { "RET",		NAME_enter },
   { "LFD",		NAME_enter },
+  { "BS",		NAME_backwardDeleteChar },
   { "DEL",		NAME_backwardDeleteChar },
   { "TAB",		NAME_extendPrefixOrNext },
   { "\\C-w",		NAME_extendToCurrent },
