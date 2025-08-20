@@ -1433,12 +1433,17 @@ pce_check_require(M, File:file) :->
 spy(M) :->
     "Set spy-point on implementation"::
     get(M, prolog_term, Term),
-    (   do_spy(Term, M, Feedback)
-    ->  term_to_atom(Feedback, Atom),
-        send(M, report, status,
-             'Placed spy-point on "%s"', Atom)
+    (   E = error(Formal,_),
+        catch(do_spy(Term, M, Feedback), E, true)
+    ->  (   var(Formal)
+        ->  term_string(Feedback, String),
+            send(M, report, status,
+                 'Placed spy-point on "%s"', String)
+        ;   message_to_string(E, Msg),
+            send(M, report, warning, Msg)
+        )
     ;   send(M, report, warning,
-             'Can''t find anything to spy from caret location')
+             'Caret must be inside a clause')
     ).
 
 do_spy((Head :-> _Body), M, (Class->Name)) :-
@@ -1459,17 +1464,22 @@ do_spy(variable(Name, _Type, _Access, _Doc), M, (Class-Name)) :-
     spypce((Class-Name)).
 do_spy(Clause, M, Spec) :-
     rule_debug_spec(Clause, M, Spec),
-    user:spy(Spec).
+    @(spy(Spec), user).
 
 trace(M) :->
     "Set trace-point on implementation"::
     get(M, prolog_term, Term),
-    (   do_trace(Term, M, Feedback)
-    ->  term_to_atom(Feedback, Atom),
-        send(M, report, status,
-             'Placed trace-point on "%s"', Atom)
+    (   E = error(Formal,_),
+        catch(do_trace(Term, M, Feedback), E, true)
+    ->  (   var(Formal)
+        ->  term_string(Feedback, String),
+            send(M, report, status,
+                 'Will print box events for "%s"', String)
+        ;   message_to_string(E, Msg),
+            send(M, report, warning, Msg)
+        )
     ;   send(M, report, warning,
-             'Can''t find anything to trace from caret location')
+             'Caret must be inside a clause')
     ).
 
 do_trace((Head :-> _Body), M, (Class->Name)) :-
@@ -1506,7 +1516,9 @@ rule_debug_spec(Head, M, Spec), callable(Head) =>
 rule_debug_spec(_, _, _) =>
     fail.
 
-prolog_debug_spec(Head, M, Spec) :-
+prolog_debug_spec(:- _Directive, _M, _Spec) =>
+    fail.
+prolog_debug_spec(Head, M, Spec) =>
     callable(Head),
     head_name_arity(Head, Name, Arity),
     (   get(M, prolog_module, Module)
