@@ -916,8 +916,8 @@ enterListBrowser(ListBrowser lb)
 
 
 status
-typedListBrowser(ListBrowser lb, EventId id)
-{ return typedKeyBinding(lb->key_binding, id, lbReceiver(lb));
+typedListBrowser(ListBrowser lb, Any ev)
+{ return typedKeyBinding(lb->key_binding, ev, lbReceiver(lb));
 }
 
 
@@ -962,7 +962,7 @@ eventListBrowser(ListBrowser lb, EventObj ev)
     succeed;
 
   if ( isAEvent(ev, NAME_keyboard) )
-    return send(lb, NAME_typed, getIdEvent(ev), EAV);
+    return send(lb, NAME_typed, ev, EAV);
 
   if ( mapWheelMouseEvent(ev, lb) )
     succeed;
@@ -1715,8 +1715,8 @@ static senddecl send_listBrowser[] =
      DEFAULT, "Map size to character units"),
   SM(NAME_unlink, 0, NULL, unlinkListBrowser,
      DEFAULT, "Unlink from dict and device"),
-  SM(NAME_typed, 1, "event_id", typedListBrowser,
-     NAME_accelerator, "Handle typed character"),
+  SM(NAME_typed, 1, "event|event_id", typedListBrowser,
+     NAME_accelerator, "Handle keyboard events"),
   SM(NAME_showLabel, 1, "show=bool", showLabelListBrowser,
      NAME_appearance, "Show/unshow the label"),
   SM(NAME_style, 2, T_style, styleListBrowser,
