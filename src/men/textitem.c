@@ -995,7 +995,7 @@ eventTextItem(TextItem ti, EventObj ev)
 	  if ( autohide != ZERO )
 	  { StringObj ss = lb->search_string;
 	    if ( isNil(ss) || valInt(autohide) > valInt(getSizeCharArray(ss)) )
-	    quitCompleterDialogItem(ti);
+	      quitCompleterDialogItem(ti);
 	  }
 	}
 
