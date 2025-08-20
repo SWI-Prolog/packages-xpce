@@ -42,7 +42,7 @@
 :- use_module(library(socket), [gethostname/1]).
 :- use_module(library(debug)).
 :- use_module(library(atom)).
-:- autoload(library(epilog), [epilog/1]).
+:- autoload(library(epilog), [run_in_help_epilog/1]).
 :- require([ auto_call/1,
              chain_list/2,
              default/3,
@@ -972,30 +972,10 @@ prolog_manual(M, On:[name]) :->
 prolog_manual(Topic) :-
     current_prolog_flag(epilog, true),
     !,
-    run_in_help_epilog(help(Topic)).
+    autoload_call(run_in_help_epilog(help(Topic))).
 prolog_manual(Topic) :-
     stream_property(user_output, tty(true)),
     help(Topic).
-
-
-%!  run_in_help_epilog(:Goal)
-%
-%   Run Goal in the `help` epilog frame.  Create this frame
-%   if necessary.
-
-run_in_help_epilog(Goal) :-
-    get(@epilog, member, help, Epilog),
-    !,
-    send(Epilog, expose),
-    send(Epilog, inject, Goal).
-run_in_help_epilog(Goal) :-
-    epilog([ title('SWI-Prolog -- help'),
-             name(help),
-             init(true)
-           ]),
-    get(@epilog, member, help, Epilog),
-    !,
-    send(Epilog, inject, Goal).
 
 :- emacs_end_mode.
 

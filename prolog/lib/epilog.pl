@@ -37,7 +37,8 @@
             epilog/1,                 % :Options
             epilog/0,
             win_window_color/2,       % +Which, +Color
-            window_title/1
+            window_title/1,
+            run_in_help_epilog/1      % :Goal
           ]).
 :- use_module(library(pce)).
 :- use_module(library(threadutil), []).
@@ -57,7 +58,8 @@
 :- use_module(library(pce_openframes), [confirm_open_frames/1]).
 
 :- meta_predicate
-    epilog(:).
+    epilog(:),
+    run_in_help_epilog(0).
 
 :- pce_autoload(finder, library(find_file)).
 :- pce_global(@finder, new(finder)).
@@ -1002,6 +1004,29 @@ xpce_epilog_console(In,Out,Error) :-
 xpce_epilog_console(In,Out,Error) :-
     terminal_input(_Obj,_PTY,In,Out,Error,_EditLine).
 
+
+                /*******************************
+                *      DEDICATED WINDOWS       *
+                *******************************/
+
+%!  run_in_help_epilog(:Goal)
+%
+%   Run Goal in the `help` epilog frame.  Create this frame
+%   if necessary.
+
+run_in_help_epilog(Goal) :-
+    get(@epilog, member, help, Epilog),
+    !,
+    send(Epilog, expose),
+    send(Epilog, inject, Goal).
+run_in_help_epilog(Goal) :-
+    epilog([ title('SWI-Prolog -- help'),
+             name(help),
+             init(true)
+           ]),
+    get(@epilog, member, help, Epilog),
+    !,
+    send(Epilog, inject, Goal).
 
 
                 /*******************************

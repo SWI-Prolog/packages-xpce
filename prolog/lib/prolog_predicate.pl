@@ -47,6 +47,7 @@
 :- if(exists_source(library(pldoc/man_index))).
 :- autoload(library(pldoc/man_index), [man_object_property/2]).
 :- endif.
+:- autoload(library(epilog), [run_in_help_epilog/1]).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Class prolog_predicate represents the identity of a Prolog predicate. It
@@ -213,10 +214,18 @@ help(P) :->
     "Activate the help-system"::
     get(P, head, @off, Head),
     functor(Head, Name, Arity),
-    (   help(Name/Arity)
+    (   prolog_manual(Name/Arity)
     ->  true
     ;   send(P, report, warning, 'Cannot find help for %s/%d', Name, Arity)
     ).
+
+prolog_manual(Topic) :-
+    current_prolog_flag(epilog, true),
+    !,
+    autoload_call(run_in_help_epilog(help(Topic))).
+prolog_manual(Topic) :-
+    stream_property(user_output, tty(true)),
+    help(Topic).
 
 has_help(P) :->
     "See if there is help around"::
