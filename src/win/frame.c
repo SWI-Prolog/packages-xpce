@@ -35,6 +35,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <h/dialog.h>
 
 TileObj		getTileFrame(FrameObj);
 forwards int	get_position_from_center_frame(FrameObj, DisplayObj, Point, int *, int *);
@@ -93,6 +94,15 @@ initialiseFrame(FrameObj fr, Name label, Name kind,
   succeed;
 }
 
+static void
+destroyTransientFrame(FrameObj fr)
+{ if ( isProtectedObj(fr) )	/* a special (reusable) frame */
+  { if ( destroyCompleterFrame(fr) )
+      return;
+  }
+  send(fr, NAME_destroy, EAV);
+}
+
 
 static status
 unlinkFrame(FrameObj fr)
@@ -111,7 +121,7 @@ unlinkFrame(FrameObj fr)
 
     ws_enable_modal(fr, ON);
     if ( notNil(fr->transients) )
-      for_chain(fr->transients, sfr, send(sfr, NAME_destroy, EAV));
+      for_chain(fr->transients, sfr, destroyTransientFrame(sfr));
     if ( notNil(fr->transient_for) && notNil(fr->transient_for->transients) )
       send(fr->transient_for, NAME_detachTransient, fr, EAV);
 

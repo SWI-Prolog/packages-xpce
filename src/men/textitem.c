@@ -373,8 +373,6 @@ CompletionBrowser(void)
     client    = newObject(ClassObtain, Completer, NAME_client, EAV);
     quit      = newObject(ClassMessage, client, NAME_keyboardQuit, EAV);
 
-    protectObject(Completer);
-    protectObject(Completer->frame);
     attributeObject(Completer, NAME_client, NIL);
     attributeObject(Completer, NAME_prefix, NAME_);
     attributeObject(Completer, NAME_autoHide, ZERO);
@@ -394,6 +392,9 @@ CompletionBrowser(void)
     functionKeyBinding(kb, CtoName("\\C-g"), quit);
     functionKeyBinding(kb, CtoName("\\e"),   quit);
     functionKeyBinding(kb, CtoName("SPC"),   NAME_extendPrefix);
+
+    protectObject(Completer);
+    protectObject(Completer->frame);
   }
 
   return Completer;
@@ -409,24 +410,41 @@ completerShownDialogItem(Any di)
 }
 
 
-status
-quitCompleterDialogItem(Any di)
-{ if ( completerShownDialogItem(di) )
-  { PceWindow sw;
-    Browser c = CompletionBrowser();
+static void
+destroyCompleter(Browser c)
+{ Any di = getAttributeObject(c, NAME_client);
 
-    if ( (sw = getWindowGraphical(di)) )
+  if ( di )
+  { PceWindow sw = getWindowGraphical(di);
+
+    if ( sw )
     { grabPointerWindow(sw, OFF);
       focusWindow(sw, NIL, NIL, NIL, NIL);
     }
-
-    send(c, NAME_clear, EAV);
-    send(c, NAME_client, NIL, EAV);
-    send(c, NAME_show, OFF, EAV);
-    send(c, NAME_transientFor, NIL, EAV);
-    if ( text_item_combo_width(di) )
-      changedDialogItem(di);		/* indicator will change */
   }
+
+  send(c, NAME_clear, EAV);
+  send(c, NAME_client, NIL, EAV);
+  send(c, NAME_show, OFF, EAV);
+  send(c, NAME_transientFor, NIL, EAV);
+  if ( di && text_item_combo_width(di) )
+    changedDialogItem(di);		/* indicator will change */
+}
+
+bool
+destroyCompleterFrame(FrameObj fr)
+{ if ( Completer && getFrameWindow((PceWindow)Completer, OFF) == fr )
+  { destroyCompleter(Completer);
+    return true;
+  }
+
+  return false;
+}
+
+status
+quitCompleterDialogItem(Any di)
+{ if ( completerShownDialogItem(di) )
+    destroyCompleter(CompletionBrowser());
 
   succeed;
 }

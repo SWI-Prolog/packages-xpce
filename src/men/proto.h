@@ -61,6 +61,7 @@ COMMON(status)	initialiseTextItem(TextItem ti, Name name, Any val, Code msg);
 COMMON(Browser)	CompletionBrowser(void);
 COMMON(status)	completerShownDialogItem(Any di);
 COMMON(status)	quitCompleterDialogItem(Any di);
+COMMON(bool)	destroyCompleterFrame(FrameObj fr);
 COMMON(status)	selectCompletionDialogItem(Any item, Chain matches, CharArray searchstring, Int autohide);
 COMMON(status)	forwardCompletionEvent(EventObj ev);
 COMMON(status)	styleTextItem(TextItem ti, Name style);
