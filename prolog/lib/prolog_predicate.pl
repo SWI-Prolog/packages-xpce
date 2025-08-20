@@ -219,6 +219,17 @@ help(P) :->
     ;   send(P, report, warning, 'Cannot find help for %s/%d', Name, Arity)
     ).
 
+%!  prolog_manual(+Topic)
+%
+%   Show help. This has three   options. If prolog_help:show_html_hook/1
+%   is defined, we assume this takes care of a good location. When using
+%   Epilog, we run in an Epilog window and   else  we run in the current
+%   console.
+
+prolog_manual(Topic) :-
+    clause(prolog_help:show_html_hook(_), _),
+    !,
+    help(Topic).
 prolog_manual(Topic) :-
     current_prolog_flag(epilog, true),
     !,

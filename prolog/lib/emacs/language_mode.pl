@@ -969,12 +969,14 @@ prolog_manual(M, On:[name]) :->
     ;   send(M, report, "No console for running help/1")
     ).
 
+%!  prolog_manual(+Topic)
+%
+%   Show     help     on     Topic.       When     running     PceEmacs,
+%   library(emacs/help_buffer)      provides      a        hook      for
+%   prolog_help:show_html_hook/1 that makes the help   text appear in an
+%   Emacs buffer.
+
 prolog_manual(Topic) :-
-    current_prolog_flag(epilog, true),
-    !,
-    autoload_call(run_in_help_epilog(help(Topic))).
-prolog_manual(Topic) :-
-    stream_property(user_output, tty(true)),
     help(Topic).
 
 :- emacs_end_mode.

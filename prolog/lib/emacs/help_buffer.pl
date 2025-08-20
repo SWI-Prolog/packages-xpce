@@ -34,9 +34,16 @@
 */
 
 :- module(emacs_show_help, []).
-:- use_module(library(pce), [new/2, pce_open/3, send/2, op(_,_,_)]).
+:- use_module(library(pce),
+              [ new/2,
+                pce_open/3,
+                send/2,
+                op(_, _, _),
+                pce_thread/1,
+                get/3
+              ]).
 :- autoload(library(sgml), [load_html/3]).
-:- autoload(library(lynx/html_text),[html_text/2]).
+:- autoload(library(lynx/html_text), [html_text/2]).
 :- autoload(library(pce_emacs), [start_emacs/0]).
 
 /** <module> Capture help in a PceEmacs buffer
@@ -53,7 +60,8 @@ buffer ``*Documentation*``.
     prolog_help:show_html_hook/1.
 
 prolog_help:show_html_hook(HTMLString) :-
-    thread_self(pce),
+    thread_self(Thread),
+    pce_thread(Thread),
     start_emacs,
     send(@emacs, location_history),
     setup_call_cleanup(
