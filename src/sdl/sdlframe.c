@@ -643,11 +643,25 @@ sdl_frame_event(SDL_Event *ev)
 	return true;
       }
       case SDL_EVENT_WINDOW_FOCUS_GAINED:
+      { PceWindow sw = ws_grabbing_window();
+	if ( sw && getFrameWindow(sw, OFF) != fr )
+	{ WsFrame wfr = fr->ws_ref;
+	  SDL_StartTextInput(wfr->ws_window);
+	  return true;
+	}
 	DEBUG(NAME_keyboard, Cprintf("Input focus on %s\n", pp(fr)));
 	return send(fr, NAME_inputFocus, ON, EAV);
+      }
       case SDL_EVENT_WINDOW_FOCUS_LOST:
+      { PceWindow sw = ws_grabbing_window();
+	if ( sw && getFrameWindow(sw, OFF) != fr )
+	{ WsFrame wfr = fr->ws_ref;
+	  SDL_StopTextInput(wfr->ws_window);
+	  return true;
+	}
 	DEBUG(NAME_keyboard, Cprintf("Input focus lost for %s\n", pp(fr)));
 	return send(fr, NAME_inputFocus, OFF, EAV);
+      }
       case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
       { DisplayObj new_display = dsp_id_to_display(ev->window.data1);
 	DEBUG(NAME_display, Cprintf("%s moved to %s\n",

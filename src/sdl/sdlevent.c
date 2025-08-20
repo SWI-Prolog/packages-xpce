@@ -279,6 +279,14 @@ isOptionPrintCharacter(int code)
 }
 
 
+PceWindow
+ws_grabbing_window(void)
+{ if ( notNil(grabbing_window) )
+    return grabbing_window;
+
+  return NULL;
+}
+
 void
 ev_event_grab_window(Any window)
 { grabbing_window = window;
