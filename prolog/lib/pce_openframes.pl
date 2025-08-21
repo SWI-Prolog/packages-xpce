@@ -40,6 +40,7 @@
 :- autoload(library(lists), [nth1/3, append/2]).
 :- autoload(library(option), [option/2, option/3]).
 :- autoload(library(pce_util), [get_chain/3]).
+:- autoload(library(epilog), [epilog/0]).
 
 %!  confirm_open_frames(+Options)
 %
@@ -84,6 +85,7 @@ initialise(D, Message:[string], Frames:prolog) :->
     forall(nth1(I, Frames, F),
            send(D, append_frame, F, I)),
     send(D, append, button(quit_prolog, message(@prolog, halt)), next_row),
+    send(D, append, button(new_console, message(D, epilog)), right),
     send(D, append, button(continue, message(D, destroy)), right).
 
 append_frame(D, Frame:frame, I:int) :->
@@ -92,9 +94,16 @@ append_frame(D, Frame:frame, I:int) :->
     atom_concat(label, I, LabelName),
     send(D, append, new(Lbl, label(LabelName, Label))),
     send(D, append,
+         new(E, button(expose, message(Frame, expose))), right),
+    send(D, append,
          button(close, and(message(Lbl, active, @off),
                            message(@receiver, active, @off),
+                           message(E, active, @off),
                            message(Frame, destroy))), right).
+
+epilog(_) :->
+    "Create new Epilog console"::
+    epilog.
 
 :- pce_end_class.
 
