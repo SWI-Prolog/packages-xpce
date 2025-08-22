@@ -33,14 +33,16 @@
 */
 
 :- module(epilog,
-          [ ep_main/0,
-            epilog/1,                 % :Options
-            epilog/0,
-            win_window_color/2,       % +Which, +Color
+          [ epilog/0,
+            epilog/1,                  % :Options
+            ep_main/0,
+                                       % Adjust window
+            win_window_color/2,        % +Which, +Color
             window_title/1,
-            run_in_help_epilog/1,     % :Goal
             epilog_insert_menu_item/4, % +PopupName, +Item, +Before, :Goal
-            epilog_insert_menu/2       % +Label, +Before
+            epilog_insert_menu/2,      % +Label, +Before
+                                       % Misc helpers
+            run_in_help_epilog/1       % :Goal
           ]).
 :- use_module(library(pce)).
 :- use_module(library(threadutil), []).
