@@ -1215,13 +1215,13 @@ inputWindowFrame(FrameObj fr, PceWindow iw)
 { PceWindow ow;
 
   if ( (ow=getHyperedObject(fr, NAME_inputWindow, DEFAULT)) && ow != iw )
-  { inputFocusWindow(ow, OFF);
+  { send(ow, NAME_inputFocus, OFF, EAV);
     freeHypersObject(fr, NAME_inputWindow, DEFAULT);
   }
 
   if ( fr->input_focus == ON && notNil(iw) )
   { newObject(ClassHyper, fr, iw, NAME_inputWindow, EAV);
-    inputFocusWindow(iw, ON);
+    send(iw, NAME_inputFocus, ON, EAV);
   }
 
   succeed;
