@@ -1039,6 +1039,28 @@ xpce_epilog_console(In,Out,Error) :-
 
 
                 /*******************************
+                *     TOPLEVEL INTEGRATION     *
+                *******************************/
+
+%!  prolog:set_app_file_config(+Files) is nondet.
+%
+%   Executed as forall(prolog:set_app_file_config(Files), true) to allow
+%   the GUI to update.   This implementation sets the title.
+
+:- multifile
+    prolog:set_app_file_config/1.       % +Files
+
+prolog:set_app_file_config([File|More]) :-
+    (   More == []
+    ->  Extra = []
+    ;   Extra = ['...']
+    ),
+    atomic_list_concat(['SWI-Prolog --', File | Extra], ' ', Title),
+    current_prolog_terminal(_, Term),
+    send(Term?frame, label, Title).
+
+
+                /*******************************
                 *      DEDICATED WINDOWS       *
                 *******************************/
 
