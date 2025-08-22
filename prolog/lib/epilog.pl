@@ -206,6 +206,7 @@ variable(popup,         popup*,               get,  "Terminal popup").
 variable(popup_gesture, popup_gesture*,       none, "Gesture to show menu").
 variable(history,       {on,off,copy} := off, none, "Support history").
 variable(save_history,  bool := @off,         none, "Save history on exit").
+variable(current_link,	name*,                get,  "Link under popup").
 
 %!  binding(?Key, ?Method)
 %
@@ -258,6 +259,7 @@ initialise(PT) :->
     send(PT, name, terminal),
     send(PT, link_message, message(@receiver, open_link, @arg1)),
     send(PT, popup, new(P, epilog_popup)),
+    send(P, update_message, message(PT, update_popup, @receiver, @event)),
     Terminal = @event?receiver,
     send_list(P, append,
               [ menu_item(copy,
@@ -269,6 +271,9 @@ initialise(PT) :->
                           message(Terminal, paste_quoted)),
                 menu_item(select_all,
                           message(Terminal, select_all),
+                          end_group := @on),
+                menu_item(consult_linked_file,
+                          message(Terminal, consult_link),
                           end_group := @on),
                 menu_item(clear_screen,
                           message(Terminal, clear_screen),
@@ -357,6 +362,31 @@ connect(PT) :->
     ->  true
     ;   connect(PT, _Title)
     ).
+
+update_popup(PT, P:popup, Ev:event) :->
+    "Update the popup"::
+    get(P, member, consult_linked_file, Item),
+    (   get(PT, link, Ev, Link),
+        link_file_location(Link, File, _Location)
+    ->  send(Item, active, @on),
+        send(PT, slot, current_link, Link),
+        file_base_name(File, Base),
+        send(Item, label, string('Consult %s', Base))
+    ;   send(Item, active, @off),
+        send(PT, slot, current_link, @nil),
+        send(Item, label, 'Consult linked file')
+    ).
+
+consult_link(PT) :->
+    "Consult linked file"::
+    get(PT, current_link, Link),
+    link_file_location(Link, File, _Location),
+    send(PT, inject, consult(File)).
+
+inject(PT, Command:prolog) :->
+    "Inject Prolog goal in commandline"::
+    format(string(Cmd), '~q.\r', [Command]),
+    send(PT, send, Cmd).
 
 clear_screen(PT) :->
     "Clean all output (cls)"::
@@ -639,14 +669,18 @@ register_input(PT, PTY, EditLine, History) :-
 %   Handle a terminal hyperlink to ``file://`` links
 
 tty_link(Link) :-
+    link_file_location(Link, _File, Location),
+    !,
+    call(edit(Location)).
+tty_link(URL) :-
+    call(www_open_url(URL)).
+
+link_file_location(Link, File, Location) :-
     uri_file_name(Link, File),
     !,
     uri_components(Link, Components),
     uri_data(fragment, Components, Fragment),
-    fragment_location(Fragment, File, Location),
-    call(edit(Location)).
-tty_link(URL) :-
-    call(www_open_url(URL)).
+    fragment_location(Fragment, File, Location).
 
 fragment_location(Fragment, File, file(File)) :-
     var(Fragment),
@@ -822,8 +856,7 @@ current_terminal(Epilog, Terminal:prolog_terminal) :<-
 inject(Epilog, Command:prolog) :->
     "Inject a command into the current terminal"::
     get(Epilog, current_terminal, Term),
-    format(string(Cmd), '~q.\r', [Command]),
-    send(Term, send, Cmd).
+    send(Term, inject, Command).
 
 consult(T) :->
     "Ask for a file and consult it"::
