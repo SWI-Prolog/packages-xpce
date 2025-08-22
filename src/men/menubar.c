@@ -468,8 +468,23 @@ clearMenuBar(MenuBar mb)
 
 
 static status
-appendMenuBar(MenuBar mb, PopupObj p, Name alignment)
-{ if ( !memberChain(mb->members, p) )
+appendMenuBar(MenuBar mb, PopupObj p, Name alignment, Any before)
+{ Button bbutton = NIL;
+
+  if ( notDefault(before) )
+  { Cell cell;
+
+    for_cell(cell, mb->buttons)
+    { Button b = cell->value;
+      if ( before == b->popup ||
+	   before == b->popup->name )
+      { bbutton = b;
+	break;
+      }
+    }
+  }
+
+  if ( !memberChain(mb->members, p) )
   { Button b = newObject(ClassButton, p->name, NIL, EAV);
 
     labelDialogItem((DialogItem)b, p->label);
@@ -477,21 +492,22 @@ appendMenuBar(MenuBar mb, PopupObj p, Name alignment)
     assign(p, context, mb);
 
     if ( alignment == NAME_right )
-    { appendChain(mb->buttons, b);
+    { insertBeforeChain(mb->buttons, b, bbutton);
       assign(b, alignment, NAME_right);
     } else
-    { Cell cell;
-      Button before = NIL;
+    { if ( isNil(bbutton) )
+      { Cell cell;
 
-      for_cell(cell, mb->buttons)
-      { Button b2 = cell->value;
+	for_cell(cell, mb->buttons)
+	{ Button b2 = cell->value;
 
-	if ( b2->alignment == NAME_right )
-	{ before = b2;
-	  break;
+	  if ( b2->alignment == NAME_right )
+	  { bbutton = b2;
+	    break;
+	  }
 	}
       }
-      insertBeforeChain(mb->buttons, b, before);
+      insertBeforeChain(mb->buttons, b, bbutton);
     }
 
     assign(b, popup, p);
@@ -668,7 +684,7 @@ static char *T_activeMember[] =
 static char *T_geometry[] =
 	{ "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 static char *T_append[] =
-	{ "member=popup", "alignment=[{left,right}]" };
+	{ "member=popup", "alignment=[{left,right}]", "before=[name|popup]" };
 
 /* Instance Variables */
 
@@ -720,7 +736,7 @@ static senddecl send_menuBar[] =
      NAME_active, "Activate menu_item or name"),
   SM(NAME_showPopup, 1, "popup", showPopupMenuBar,
      NAME_event, "Make popup <-current and ->open it"),
-  SM(NAME_append, 2, T_append, appendMenuBar,
+  SM(NAME_append, 3, T_append, appendMenuBar,
      NAME_organisation, "Append a popup to the menubar"),
   SM(NAME_clear, 0, NULL, clearMenuBar,
      NAME_organisation, "Remove all menus from the menu_bar"),
