@@ -1242,8 +1242,6 @@ inputFocusFrame(FrameObj fr, BoolObj val)
     { if ( (iw = getKeyboardFocusFrame(fr)) ||
 	   (iw = ws_window_holding_point_frame(fr)) )
 	inputWindowFrame(fr, iw);
-    } else if ( (iw = getKeyboardFocusFrame(fr)) )
-    { inputFocusWindow(iw, OFF);
     } else
     { Cell cell;
       for_cell(cell, fr->members)
