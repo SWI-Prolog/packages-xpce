@@ -463,6 +463,26 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   succeed;
 }
 
+static Name
+getURLTerminalImage(TerminalImage ti, Any from)
+{ Int x, y;
+
+  if ( instanceOfObject(from, ClassEvent) )
+  { get_xy_event(from, ti, ON, &x, &y);
+  } else
+  { Point pt = from;
+    x = pt->x;
+    y = pt->y;
+  }
+
+  const uchar_t *link = rlc_over_link(ti->data, valInt(x), valInt(y));
+  if ( link )
+    answer(TCHAR2Name(link));
+
+  fail;
+}
+
+
 static CursorObj
 getDisplayedCursorTerminalImage(TerminalImage ti)
 { if ( isOn(ti->armed_link) )
@@ -803,15 +823,17 @@ static senddecl send_terminal_image[] =
 };
 
 static getdecl get_terminal_image[] =
-{
-  GM(NAME_ptyName, 0, "pty=name*", NULL, getPtyNameTerminalImage,
+{ GM(NAME_ptyName, 0, "pty=name*", NULL, getPtyNameTerminalImage,
      NAME_process, "Path name for the pty"),
   GM(NAME_displayedCursor, 0, "cursor=cursor", NULL,
      getDisplayedCursorTerminalImage,
      NAME_event, "Indicate normal cursor or link"),
   GM(NAME_selected, 0, "string", NULL,
      getSelectedTerminalImage,
-     NAME_selection, "New string with contents of selection")
+     NAME_selection, "New string with contents of selection"),
+  GM(NAME_link, 1, "name", "point|event",
+     getURLTerminalImage,
+     NAME_selected, "Hyperlink content and location")
 };
 
 static classvardecl rc_terminal_image[] =
