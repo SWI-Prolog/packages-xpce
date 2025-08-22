@@ -154,16 +154,6 @@ resource(breakpoint,   image, image('16x16/stop.png')).
           backward_predicate           = key('\\e['),
           forward_predicate            = key('\\e]'),
 
-          editpce                      = key('\\C-ce') + button(pce),
-          tracepce                     = key('\\C-ct') + button(pce),
-          spypce                       = button(pce),
-          -                            = button(pce),
-          what_class                   = key('\\C-cw') + button(pce),
-          -                            = button(pce),
-          pce_insert_require_directive = key('\\C-c\\C-r') + button(pce),
-          pce_check_require_directives = button(pce),
-          -                            = button(pce),
-          pce_define_class             = button(pce),
           -                            = button(browse),
           prolog_navigator             = button(browse) + key('\\C-c\\C-n'),
 
