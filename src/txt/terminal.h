@@ -203,12 +203,12 @@ typedef unsigned short text_flags;
 #define TF_SET_LINK(f,v)	(((f)&~(1<<13))|((v)<<13))
 
 typedef struct
-{ uchar_t		 code;			/* character code */
+{ uchar_t	 code;			/* character code */
   text_flags	 flags;			/* flags for the text */
 } text_char;
 
 typedef struct href
-{ uchar_t		*link;			/* Hyperlink target */
+{ uchar_t	*link;			/* Hyperlink target */
   int		 start;			/* start of label */
   int		 length;		/* #chars of label */
   struct href   *next;			/* Next in chain */
