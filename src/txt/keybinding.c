@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -792,63 +793,95 @@ static kbDef emacs_page[] =
 };
 
 static kbDef editor[] =
-{ { SUPER,		NAME_emacsBasics },
-  { SUPER,		NAME_emacsPage },
+{ { SUPER,		      NAME_emacsBasics },
+  { SUPER,		      NAME_emacsPage },
 
-  { "<cursor_up>",	NAME_cursorUp },
-  { "<cursor_down>",	NAME_cursorDown },
-  { "<cursor_right>",	NAME_cursorRight },
-  { "<cursor_left>",	NAME_cursorLeft },
-  { "<end>",		NAME_cursorEnd },
-  { "<cursor_home>",	NAME_cursorHome },
-  { "<page_up>",	NAME_cursorPageUp },
-  { "<page_down>",	NAME_cursorPageDown },
+  // The cursor commands detect their action based
+  // on the event buttons.   That is how it was.
+  // It is probably cleaner to create 4 different
+  // methods that decide on how much the cursor moves
+  // as well as whether or not the selection is extended.
+  { "<cursor_up>",	      NAME_cursorUp },
+  { "<cursor_down>",	      NAME_cursorDown },
+  { "<cursor_right>",	      NAME_cursorRight },
+  { "<cursor_left>",	      NAME_cursorLeft },
+  { "<end>",		      NAME_cursorEnd },
+  { "<cursor_home>",	      NAME_cursorHome },
+  { "<page_up>",	      NAME_cursorPageUp },
+  { "<page_down>",	      NAME_cursorPageDown },
 
-  { "\\C-SPC",		NAME_setMark },
-  { "LFD",		NAME_newlineAndIndent },
-  { "\\C-j",		NAME_newlineAndIndent },
-  { "\\C-r",		NAME_isearchBackward },
-  { "\\C-s",		NAME_isearchForward },
-  { "<f3>",		NAME_isearchForward },
-  { "\\C-w",		NAME_killOrGrabRegion },
-  { "\\C-y",		NAME_yank },
-  { "\\C-_",		NAME_undo },
-  { "\\C-z",		NAME_undo },
+  { "\\C-<cursor_up>",	      NAME_cursorUp },
+  { "\\C-<cursor_down>",      NAME_cursorDown },
+  { "\\C-<cursor_right>",     NAME_cursorRight },
+  { "\\C-<cursor_left>",      NAME_cursorLeft },
+  { "\\C-<end>",	      NAME_cursorEnd },
+  { "\\C-<cursor_home>",      NAME_cursorHome },
+  { "\\C-<page_up>",	      NAME_cursorPageUp },
+  { "\\C-<page_down>",	      NAME_cursorPageDown },
 
-  { "\\e\\C-b",		NAME_backwardTerm },
-  { "\\e\\C-f",		NAME_forwardTerm },
-  { "\\e\\C-k",		NAME_killTerm },
-  { "\\e\\C-t",		NAME_transposeTerms },
-  { "\\eSPC",		NAME_justOneSpace },
-  { "\\ea",		NAME_backwardSentence },
-  { "\\ec",		NAME_capitaliseWord },
-  { "\\ed",		NAME_killWord },
-  { "\\ee",		NAME_forwardSentence },
-  { "\\eg",		NAME_fillRegion },
-  { "\\ek",		NAME_killSentence },
-  { "\\el",		NAME_downcaseWord },
-  { "\\eq",		NAME_fillParagraph },
-  { "\\et",		NAME_transposeWord },
-  { "\\eu",		NAME_upcaseWord },
-  { "\\e[",		NAME_backwardParagraph },
-  { "\\e]",		NAME_forwardParagraph },
-  { "\\e<",		NAME_pointToTopOfFile },
-  { "\\e>",		NAME_pointToBottomOfFile },
-  { "\\e/",		NAME_dabbrevExpand },
-  { "\\eDEL",		NAME_backwardKillWord },
+  { "\\S-<cursor_up>",	      NAME_cursorUp },
+  { "\\S-<cursor_down>",      NAME_cursorDown },
+  { "\\S-<cursor_right>",     NAME_cursorRight },
+  { "\\S-<cursor_left>",      NAME_cursorLeft },
+  { "\\S-<end>",	      NAME_cursorEnd },
+  { "\\S-<cursor_home>",      NAME_cursorHome },
+  { "\\S-<page_up>",	      NAME_cursorPageUp },
+  { "\\S-<page_down>",	      NAME_cursorPageDown },
 
-  { "\\C-x\\C-x",	NAME_exchangePointAndMark },
-  { "\\C-xh",		NAME_markWholeBuffer },
-  { "\\C-x\\C-o",	NAME_deleteBlankLines },
-  { "\\C-x\\C-t",	NAME_transposeLines },
-  { "\\C-x\\C-l",	NAME_downcaseRegion },
-  { "\\C-x\\C-u",	NAME_upcaseRegion },
-  { "\\C-x\\C-s",	NAME_saveBuffer },
-  { "\\C-xu",		NAME_undo },
+  { "\\C-\\S-<cursor_up>",    NAME_cursorUp },
+  { "\\C-\\S-<cursor_down>",  NAME_cursorDown },
+  { "\\C-\\S-<cursor_right>", NAME_cursorRight },
+  { "\\C-\\S-<cursor_left>",  NAME_cursorLeft },
+  { "\\C-\\S-<end>",	      NAME_cursorEnd },
+  { "\\C-\\S-<cursor_home>",  NAME_cursorHome },
+  { "\\C-\\S-<page_up>",      NAME_cursorPageUp },
+  { "\\C-\\S-<page_down>",    NAME_cursorPageDown },
 
-  { DEFAULT_FUNCTION,	NAME_undefined },
+  { "\\C-SPC",		      NAME_setMark },
+  { "LFD",		      NAME_newlineAndIndent },
+  { "\\C-j",		      NAME_newlineAndIndent },
+  { "\\C-r",		      NAME_isearchBackward },
+  { "\\C-s",		      NAME_isearchForward },
+  { "<f3>",		      NAME_isearchForward },
+  { "\\C-w",		      NAME_killOrGrabRegion },
+  { "\\C-y",		      NAME_yank },
+  { "\\C-_",		      NAME_undo },
+  { "\\C-z",		      NAME_undo },
 
-  { NULL,		NULL }
+  { "\\e\\C-b",		      NAME_backwardTerm },
+  { "\\e\\C-f",		      NAME_forwardTerm },
+  { "\\e\\C-k",		      NAME_killTerm },
+  { "\\e\\C-t",		      NAME_transposeTerms },
+  { "\\eSPC",		      NAME_justOneSpace },
+  { "\\ea",		      NAME_backwardSentence },
+  { "\\ec",		      NAME_capitaliseWord },
+  { "\\ed",		      NAME_killWord },
+  { "\\ee",		      NAME_forwardSentence },
+  { "\\eg",		      NAME_fillRegion },
+  { "\\ek",		      NAME_killSentence },
+  { "\\el",		      NAME_downcaseWord },
+  { "\\eq",		      NAME_fillParagraph },
+  { "\\et",		      NAME_transposeWord },
+  { "\\eu",		      NAME_upcaseWord },
+  { "\\e[",		      NAME_backwardParagraph },
+  { "\\e]",		      NAME_forwardParagraph },
+  { "\\e<",		      NAME_pointToTopOfFile },
+  { "\\e>",		      NAME_pointToBottomOfFile },
+  { "\\e/",		      NAME_dabbrevExpand },
+  { "\\eDEL",		      NAME_backwardKillWord },
+
+  { "\\C-x\\C-x",	      NAME_exchangePointAndMark },
+  { "\\C-xh",		      NAME_markWholeBuffer },
+  { "\\C-x\\C-o",	      NAME_deleteBlankLines },
+  { "\\C-x\\C-t",	      NAME_transposeLines },
+  { "\\C-x\\C-l",	      NAME_downcaseRegion },
+  { "\\C-x\\C-u",	      NAME_upcaseRegion },
+  { "\\C-x\\C-s",	      NAME_saveBuffer },
+  { "\\C-xu",		      NAME_undo },
+
+  { DEFAULT_FUNCTION,	      NAME_undefined },
+
+  { NULL,		      NULL }
 };
 
 static kbDef terminal[] =
