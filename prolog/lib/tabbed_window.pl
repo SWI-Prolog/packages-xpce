@@ -103,7 +103,6 @@ on_top(W, Top:'name|window') :->
     ->  send(TS, on_top, Tab)
     ).
 
-
 current(W, Window:window) :<-
     "Window of currently selected tab"::
     get_super(W, member, tab_stack, TS),
@@ -117,6 +116,13 @@ current(W, Window:window) :->
     ->  send(W, resize, Tab)
     ;   get_super(W, member, tab_stack, TS),
         send(TS, on_top, Tab)
+    ).
+
+input_focus(W, Focus:bool) :->
+    send_super(W, input_focus, Focus),
+    (   get(W, current, Current)
+    ->  send(Current, input_focus, Focus)
+    ;   true
     ).
 
 :- pce_group(members).
