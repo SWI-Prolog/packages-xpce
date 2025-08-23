@@ -82,7 +82,8 @@ initialise(D, E:editor) :->
     send(D, append, button(cancel)),
     send(D, default_button, forwards),
     new(_, partof_hyper(E, D, search, editor)),
-    send(new(report_dialog), below, D).
+    send(new(report_dialog), below, D),
+    send(D, report, status, 'Tip: use Ctrl-S for incremental search instead').
 
 :- pce_global(@editor_find_dialog_recogniser,
               make_recogniser).
