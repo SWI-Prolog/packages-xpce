@@ -116,7 +116,7 @@ static href    *rlc_add_link(RlcTextLine tl, const uchar_t *link,
 			     int start, int len);
 static void	rlc_free_link(href *hr);
 static void	rlc_free_links(href *links);
-static void	rcl_check_links(RlcTextLine tl);
+static void	rlc_check_links(RlcTextLine tl);
 static bool	rlc_copy(RlcData b, Name to);
 static void	rlc_request_redraw(RlcData b);
 static void	rlc_redraw(RlcData b, int x, int y, int w, int h);
@@ -1572,7 +1572,7 @@ rlc_scroll_lines(RlcData b, int lines)
  */
 
 static void
-rcl_paint_text(RlcData b,
+rlc_paint_text(RlcData b,
 	       RlcTextLine tl, int from, int to,
 	       int ty, int *cx, bool insel)
 { TerminalImage ti = b->object;
@@ -1709,22 +1709,22 @@ rlc_redraw(RlcData b, int x, int y, int w, int h)
       int ce = (b->sel_end_line != b->sel_start_line ? b->width
 						     : b->sel_end_char);
 
-      rcl_paint_text(b, tl,  0, cf, ty, &cx, insel);
+      rlc_paint_text(b, tl,  0, cf, ty, &cx, insel);
       insel = true;
-      rcl_paint_text(b, tl, cf, ce, ty, &cx, insel);
+      rlc_paint_text(b, tl, cf, ce, ty, &cx, insel);
       if ( l == b->sel_end_line )
       { insel = false;
-	rcl_paint_text(b, tl, ce, b->width, ty, &cx, insel);
+	rlc_paint_text(b, tl, ce, b->width, ty, &cx, insel);
       } else
 	insel = true;
     } else if ( l == b->sel_end_line )	/* end of selection */
     { int ce = b->sel_end_char;
 
-      rcl_paint_text(b, tl, 0, ce, ty, &cx, insel);
+      rlc_paint_text(b, tl, 0, ce, ty, &cx, insel);
       insel = false;
-      rcl_paint_text(b, tl, ce, b->width, ty, &cx, insel);
+      rlc_paint_text(b, tl, ce, b->width, ty, &cx, insel);
     } else				/* entire line in/out selection */
-    { rcl_paint_text(b, tl, 0, b->width, ty, &cx, insel);
+    { rlc_paint_text(b, tl, 0, b->width, ty, &cx, insel);
     }
 
 					/* clear remainder of line */
@@ -2005,8 +2005,8 @@ update_links(RlcTextLine l1, RlcTextLine l2, int moved)
 	Dprint_links(l1, "l1 (after)");
 	Dprint_links(l2, "l2 (after)"));
 
-  rcl_check_links(l1);
-  rcl_check_links(l2);
+  rlc_check_links(l1);
+  rlc_check_links(l2);
 }
 
 static void
@@ -2167,7 +2167,7 @@ rlc_resize(RlcData b, int w, int h)
 
       nl->size += tl->size;
       nl->adjusted = true;
-      rcl_check_links(nl);
+      rlc_check_links(nl);
 
       rlc_shift_lines_up(b, i);
     }
@@ -2639,7 +2639,7 @@ rlc_delete_chars(RlcData b, int count)
 }
 
 static void
-rcl_check_links(RlcTextLine tl)
+rlc_check_links(RlcTextLine tl)
 {
 #if _DEBUG
   int links = 0;
@@ -2952,12 +2952,12 @@ rlc_put_link(RlcData b, const uchar_t *label, const uchar_t *link)
     if ( b->caret_y != y )	/* moved to next line */
     { size_t left = ucslen(label)-1;
       hr->length -= left;
-      rcl_check_links(&b->lines[y]);
+      rlc_check_links(&b->lines[y]);
       hr = rlc_register_link(b, link, left);
       y = b->caret_y;
     }
   }
-  rcl_check_links(&b->lines[y]);
+  rlc_check_links(&b->lines[y]);
   b->sgr_flags = flags0;
 }
 
