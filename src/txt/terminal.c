@@ -359,18 +359,22 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
   { RlcData b = ti->data;
     Int x, y;
     get_xy_event(ev, ti, ON, &x, &y);
-    Name multi = getMulticlickEvent(ev);
-
-    if ( multi == NAME_double )
-    { rlc_word_selection(b, valInt(x), valInt(y));
-      if ( rlc_has_selection(b) )
-	send(ti, NAME_copy, EAV);
-    } else if ( multi == NAME_triple )
-    { rlc_line_selection(b, valInt(x), valInt(y));
-      if ( rlc_has_selection(b) )
-	send(ti, NAME_copy, EAV);
+    if ( valInt(ev->buttons) & BUTTON_shift )
+    { rlc_extend_selection(b, valInt(x), valInt(y));
     } else
-      rlc_start_selection(b, valInt(x), valInt(y));
+    { Name multi = getMulticlickEvent(ev);
+
+      if ( multi == NAME_double )
+      { rlc_word_selection(b, valInt(x), valInt(y));
+	if ( rlc_has_selection(b) )
+	  send(ti, NAME_copy, EAV);
+      } else if ( multi == NAME_triple )
+      { rlc_line_selection(b, valInt(x), valInt(y));
+	if ( rlc_has_selection(b) )
+	  send(ti, NAME_copy, EAV);
+      } else
+	rlc_start_selection(b, valInt(x), valInt(y));
+    }
     succeed;
   }
   if ( isAEvent(ev, NAME_msLeftUp) )
