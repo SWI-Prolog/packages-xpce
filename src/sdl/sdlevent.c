@@ -430,6 +430,7 @@ CtoEvent(SDL_Event *event)
       isdown |= SDL_KMOD_LALT;
 #endif
 
+      lastmod = event->key.mod;
       name = keycode_to_name(event);
       if ( !name )
       { DEBUG(NAME_scancode,
@@ -453,7 +454,6 @@ CtoEvent(SDL_Event *event)
     immediate_down_event:
       wid     = event->key.windowID;
       time    = event->key.timestamp/1000000;
-      lastmod = event->key.mod;
       name    = keycode_to_name(event);
       DEBUG(NAME_keyboard,
 	    bool delayed = (&keydown_event == event);
