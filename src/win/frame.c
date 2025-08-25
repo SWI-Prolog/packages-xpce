@@ -995,11 +995,19 @@ static status
 labelFrame(FrameObj fr, Name label, Name icon)
 { assign(fr, label, label);
 
-  ws_set_label_frame(fr);
+  if ( ws_created_frame(fr) )
+    sdl_send(fr, NAME_SdlSetLabel, false, EAV);
 
   if ( notDefault(icon) )
     iconLabelFrame(fr, icon);
 
+  succeed;
+}
+
+
+static status
+SdlSetLabelFrame(FrameObj fr)
+{ ws_set_label_frame(fr);
   succeed;
 }
 
@@ -1798,6 +1806,8 @@ static senddecl send_frame[] =
      NAME_icon, "Set image and icon_label"),
   SM(NAME_label, 2, T_label, labelFrame,
      NAME_label, "Set label of the frame"),
+  SM(NAME_SdlSetLabel, 0, NULL, SdlSetLabelFrame,
+     NAME_thread, "Update the label of an open frame"),
   SM(NAME_fit, 0, NULL, fitFrame,
      NAME_layout, "Recompute windows and resize the frame"),
   SM(NAME_resize, 0, NULL, resizeFrame,
