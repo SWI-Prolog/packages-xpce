@@ -533,19 +533,6 @@ RedrawAreaDialogGroup(DialogGroup g, Area a)
 		 *      DIALOG INTEGRATION	*
 		 *******************************/
 
-static status
-WantsKeyboardFocusTextItem(DialogGroup g)
-{ Cell cell;
-
-  for_cell(cell, g->graphicals)
-  { if ( qadSendv(cell->value, NAME_WantsKeyboardFocus, 0, NULL) )
-      succeed;
-  }
-
-  fail;
-}
-
-
 status
 eventDialogGroup(DialogGroup g, EventObj ev)
 { if ( isAEvent(ev, NAME_obtainKeyboardFocus) )
@@ -726,8 +713,6 @@ static senddecl send_diagroup[] =
      NAME_update, "Add label-area to the update"),
   SM(NAME_event, 1, "event", eventDialogGroup,
      NAME_event, "Process an event"),
-  SM(NAME_WantsKeyboardFocus, 0, NULL, WantsKeyboardFocusTextItem,
-     NAME_event, "Test if a member is ready for input"),
   SM(NAME_apply, 1, "always=[bool]", applyDialogGroup,
      NAME_apply, "->apply all changed items"),
   SM(NAME_modifiedItem, 2, T_modifiedItem, modifiedItemDialogGroup,

@@ -380,6 +380,19 @@ getDefaultButtonDevice(Device d)
 }
 
 
+static status
+WantsKeyboardFocusDevice(Device dev)
+{ Cell cell;
+
+  for_cell(cell, dev->graphicals)
+  { if ( qadSendv(cell->value, NAME_WantsKeyboardFocus, 0, NULL) )
+      succeed;
+  }
+
+  fail;
+}
+
+
 static Int
 getWantsKeyboardFocusGraphical(Graphical gr)
 { if ( qadSendv(gr, NAME_WantsKeyboardFocus, 0, NULL) )
@@ -2336,6 +2349,8 @@ static senddecl send_device[] =
      NAME_event, "Process an event"),
   SM(NAME_updatePointed, 1, "event", updatePointedDevice,
      NAME_event, "Update <-pointed, sending area_enter and area_exit events"),
+  SM(NAME_WantsKeyboardFocus, 0, NULL, WantsKeyboardFocusDevice,
+     NAME_event, "Test if a member is ready for input"),
   SM(NAME_advance, 3, T_advance, advanceDevice,
      NAME_focus, "Advance keyboard focus to next item"),
   SM(NAME_flash, 2, T_flash, flashDevice,
