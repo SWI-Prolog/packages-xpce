@@ -660,10 +660,10 @@ postEventWindow(PceWindow sw, EventObj ev)
   addCodeReference(old_event);
   assign(sw, current_event, ev);
 
-  if ( isAEvent(ev, NAME_areaEnter) )
-  { FrameObj fr = getFrameWindow(sw, DEFAULT);
+  FrameObj fr = getFrameWindow(sw, DEFAULT);
 
-    if ( fr && notNil(fr) &&
+  if ( isAEvent(ev, NAME_areaEnter) )
+  { if ( fr && notNil(fr) &&
 	 !getHyperedObject(fr, NAME_keyboardFocus, DEFAULT) )
       send(fr, NAME_inputWindow, sw, EAV);
     send(sw, NAME_hasPointer, ON, EAV);
@@ -673,7 +673,9 @@ postEventWindow(PceWindow sw, EventObj ev)
   if ( inspectWindow(sw, ev) )
     goto out;
 
-  if ( isDownEvent(ev) && sw->input_focus == OFF )
+  if ( isDownEvent(ev) && sw->input_focus == OFF &&
+       ( send(sw, NAME_WantsKeyboardFocus, EAV) ||
+	 !getHyperedObject(fr, NAME_keyboardFocus, DEFAULT) ) )
     send(getFrameWindow(sw, DEFAULT), NAME_keyboardFocus, sw, EAV);
 
   if ( isAEvent(ev, NAME_keyboard) )
