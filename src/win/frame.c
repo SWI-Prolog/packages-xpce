@@ -1245,7 +1245,7 @@ inputFocusFrame(FrameObj fr, BoolObj val)
     } else
     { Cell cell;
       for_cell(cell, fr->members)
-	inputFocusWindow(cell->value, OFF);
+	send(cell->value, NAME_inputFocus, OFF, EAV);
     }
   }
 
