@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -46,6 +47,10 @@ make_editor_recogniser(G) :-
 make_editor_recogniser(G) :-
     new(Editor, @event?receiver),
     new(G, handler_group(new(select_editor_text_gesture),
+                         click_gesture(left, 's', single,
+                                       message(Editor, selection_extend,
+                                               ?(Editor?image, index, @event)),
+                                       Editor?mark_status == active),
                          click_gesture(middle, '', single,
                                        and(message(Editor, paste, primary),
                                            message(Editor, mark_undo))))).
