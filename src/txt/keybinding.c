@@ -681,6 +681,8 @@ static kbDef emacs_caret_basics[] =
   { "<cursor_down>",	NAME_nextLine },
   { "<cursor_right>",	NAME_forwardChar },
   { "<cursor_left>",	NAME_backwardChar },
+  { "<cursor_home>",	NAME_beginningOfLine },
+  { "<end>",		NAME_endOfLine },
 
   { NULL,		NULL }
 };
