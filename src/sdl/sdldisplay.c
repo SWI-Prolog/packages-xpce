@@ -43,12 +43,28 @@ static DisplayObj
 ws_create_display(SDL_DisplayID id)
 { ASSERT_SDL_MAIN();
   SDL_Rect rect;
-  SDL_GetDisplayBounds(id, &rect);
-  const char *name = SDL_GetDisplayName(id);
+  bool rc = SDL_GetDisplayBounds(id, &rect);
   DisplayObj dsp;
 
+  if ( !rc )
+  { Cprintf("SDL_GetDisplayBounds(): %s\n", SDL_GetError());
+    return NULL;
+  }
+
+  const char *name = SDL_GetDisplayName(id);
+  Name dname;
+
+  if ( name )
+  { dname = UTF8ToName(name);
+  } else			/* or should we give up? */
+  { char buf[100];
+    Cprintf("SDL_GetDisplayName(): %s\n", SDL_GetError());
+    snprintf(buf, sizeof(buf), "Display %d", (int)id);
+    dname = UTF8ToName(buf);
+  }
+
   dsp = newObject(ClassDisplay,
-		  UTF8ToName(name),
+		  dname,
 		  newObject(ClassArea, toInt(rect.x), toInt(rect.y),
 				       toInt(rect.w), toInt(rect.h), EAV),
 		  EAV);
@@ -175,10 +191,12 @@ sdl_display_event(SDL_Event *ev)
   { case SDL_EVENT_DISPLAY_ADDED:
     { SDL_DisplayID id = ev->display.displayID;
       DisplayObj dsp = ws_create_display(id);
-      DisplayManager dm = TheDisplayManager();
-      ws_update_primary_display(dm);
-      ws_number_displays(dm);
-      DEBUG(NAME_display, Cprintf("Added display %s\n", pp(dsp)));
+      if ( dsp )
+      { DisplayManager dm = TheDisplayManager();
+	ws_update_primary_display(dm);
+	ws_number_displays(dm);
+	DEBUG(NAME_display, Cprintf("Added display %s\n", pp(dsp)));
+      }
       return true;
     }
     case SDL_EVENT_DISPLAY_REMOVED:
