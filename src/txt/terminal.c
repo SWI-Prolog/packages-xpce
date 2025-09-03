@@ -429,6 +429,8 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   { chr = 127;
     if ( valInt(ev->buttons) & BUTTON_meta )
       chr += META_OFFSET;
+  } else if ( ev->id == NAME_DEL )
+  { seq = "\e[3~";
   } else if ( ev->id == NAME_TAB )
   { chr = '\t';
     if ( valInt(ev->buttons) & BUTTON_meta )
