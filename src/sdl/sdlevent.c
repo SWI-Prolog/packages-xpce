@@ -419,6 +419,11 @@ CtoEvent(SDL_Event *event)
 	}
       }
 
+      /* Do not signal the meta-key(s) used to create text input */
+      lastmod &= ~SDL_KMOD_RALT;
+#ifdef __APPLE__
+      lastmod &= ~SDL_KMOD_LALT;
+#endif
       wid     = event->text.windowID;
       time    = event->text.timestamp/1000000;
       name    = toInt(codepoint);
