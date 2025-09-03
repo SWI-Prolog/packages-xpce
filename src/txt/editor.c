@@ -1411,7 +1411,7 @@ keyBindingEditor(Editor e, Name key, Any function)
 		********************************/
 
 static status
-typedEditor(Editor e, EventId id)
+typedEditor(Editor e, Any id)
 { if ( notNil(e->focus_function) )
   { if ( send(e, e->focus_function, id, EAV) )
       succeed;
