@@ -406,8 +406,8 @@ CtoEvent(SDL_Event *event)
         Cprintf("SDL_EVENT_TEXT_INPUT: multi-char input not yet supported\n");
 
       DEBUG(NAME_keyboard,
-	    Cprintf("SDL_EVENT_TEXT_INPUT: %s at %" PRIu64 "\n",
-		    event->text.text, event->text.timestamp));
+	    Cprintf("SDL_EVENT_TEXT_INPUT: %d (\"%s\") at %" PRIu64 "\n",
+		    codepoint, event->text.text, event->text.timestamp));
 
       if ( keyboard_timer )
       { if ( isOptionPrintCharacter(codepoint) )
@@ -433,7 +433,7 @@ CtoEvent(SDL_Event *event)
       lastmod = event->key.mod;
       name = keycode_to_name(event);
       if ( !name )
-      { DEBUG(NAME_scancode,
+      { DEBUG(NAME_keyboard,
 	      Cprintf("Ignoring keydown.  Mod=0x%x, scancode=%d, key=0x%x\n",
 		      event->key.mod, event->key.scancode, event->key.key));
 	fail;
