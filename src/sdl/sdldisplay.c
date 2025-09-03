@@ -215,7 +215,9 @@ sdl_display_event(SDL_Event *ev)
     { SDL_DisplayID id = ev->display.displayID;
       DisplayObj dsp = dsp_id_to_display(id);
       DEBUG(NAME_display, Cprintf("Moved display %s\n", pp(dsp)));
-      return ws_poll_dimensions_display(dsp);
+      if ( dsp )
+	ws_poll_dimensions_display(dsp);
+      return true;
     }
   }
 
