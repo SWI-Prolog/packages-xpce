@@ -467,6 +467,13 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   succeed;
 }
 
+static status
+insertSelfTerminalImage(TerminalImage ti, Int chr)
+{ typed_char(ti->data, valInt(chr));
+
+  succeed;
+}
+
 static Name
 getURLTerminalImage(TerminalImage ti, Any from)
 { Int x, y;
@@ -791,6 +798,8 @@ static senddecl send_terminal_image[] =
   SM(NAME_event, 1, "event", eventTerminalImage,
      NAME_event, "Handle a general event"),
   SM(NAME_typed, 1, "event", typedTerminalImage,
+     NAME_event, "Process a keystroke"),
+  SM(NAME_insertSelf, 1, "0..", insertSelfTerminalImage,
      NAME_event, "Process a keystroke"),
   SM(NAME_copy, 1, "which=[{primary,clipboard}]", copyTerminalImage,
      NAME_selection, "Copy selected text to clipboard or primary selection"),

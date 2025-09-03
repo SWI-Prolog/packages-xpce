@@ -166,10 +166,10 @@ getFunctionKeyBinding(KeyBinding kb, EventId id)
     answer(cmd);
 
 					/* deal with UNICODE characters */
-  if ( key->data.s_iswide && key->data.s_size == 1 )
-  { int c = key->data.s_textW[0];
+  if ( key->data.s_size == 1 )
+  { int c = str_fetch(&key->data, 0);
 
-    if ( valInt(id) >= c )
+    if ( c >= 128 )
       return NAME_insertSelf;
   }
 
@@ -622,8 +622,6 @@ initInsertKeyBinding(KeyBinding kb)
   functionKeyBinding(kb, characterName(toInt('\r')), NAME_newline);
 
   for(i = ' '; i < DEL; i++ )
-    functionKeyBinding(kb, characterName(toInt(i)), NAME_insertSelf);
-  for(i = 128; i < 256; i++ )
     functionKeyBinding(kb, characterName(toInt(i)), NAME_insertSelf);
 
   succeed;
