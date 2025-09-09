@@ -166,13 +166,16 @@ ws_create_frame(FrameObj fr)
   int y = valInt(fr->area->y);
   int w = valInt(fr->area->w);
   int h = valInt(fr->area->h);
+  bool focusable = true;
 
   if ( fr->kind == NAME_popup && parent )
-  { SDL_PropertiesID props = SDL_CreateProperties();
+  { focusable = false;
+    SDL_PropertiesID props = SDL_CreateProperties();
     SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_PARENT_POINTER,
 			   parent);
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_MENU_BOOLEAN, true);
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_HIDDEN_BOOLEAN, true);
+    SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_FOCUSABLE_BOOLEAN, false);
 #if defined(__APPLE__) && defined(SDL_PROP_WINDOW_CREATE_CONSTRAIN_POPUP_BOOLEAN)
     /* SDL on MacOS does not handle popup placement correctly on secondary displays */
     SDL_SetBooleanProperty(props, SDL_PROP_WINDOW_CREATE_CONSTRAIN_POPUP_BOOLEAN, false);
@@ -267,7 +270,8 @@ ws_create_frame(FrameObj fr)
 
     ws_draw_frame(fr);
     SDL_ShowWindow(win);
-    SDL_RaiseWindow(win);
+    if ( focusable )
+      SDL_RaiseWindow(win);
 
     succeed;
   }
