@@ -41,6 +41,7 @@
 :- use_module(library(tabbed_window)).
 :- use_module(prompt).
 :- use_module(library(pce_util)).
+:- use_module(library(debug)).
 
 :- require([ between/3,
              atomic_list_concat/2,
@@ -902,7 +903,7 @@ event(E, Ev:event) :->
         (   get(Frame, transients, Transients),
             Transients \== @nil,
             get(Transients, find, @arg1?modal == transient, _)
-        ->  format('We have a transient~n')
+        ->  debug(transient, 'We have a transient~n', [])
         ;   send(Frame, keyboard_focus, E?window)
         )
     ;   send_super(E, event, Ev)
