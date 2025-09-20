@@ -896,22 +896,7 @@ check_console(F) :->
 
 interactor(F) :->
     "Open a new interactor"::
-    send(F, warn_windows_thread),
     prolog_ide(open_interactor).
-
-warn_windows_thread(F) :->
-    "Warn to run in a separate thread"::
-    (   current_prolog_flag(windows, true),
-        pce_thread(main)
-    ->  send(@display, inform, F, "GUI Tracer",
-             'Opening a new interactor from the debugger requires\n\c
-                  for the tools to run in a separate thread.  Please set\n\c
-                  the flag "xpce_threaded" to "true" in your Prolog startup\n\c
-                  file and restart Prolog'),
-        fail
-    ;   true
-    ).
-
 
 copy_goal(F) :->
     "Copy the current goal into the copy-buffer"::
@@ -1026,7 +1011,6 @@ button(gap,            -,     -,                     -).
 button(+nodebug,       "n",   'nodebug.png',         'Continue without debugging').
 button(+abort,         "a",   'abort.png',           'Abort to the Prolog toplevel').
 button(+interrupt,     "t",   'interrupt.png',       'Interrupt (trace)').
-% button(+query, "b", 'break.png', 'Enter a query (in debugged thread)').
 button(+interactor,    "B",   'interactor.png',      'Enter a query (in new thread)').
 button(fail,           "F",   'fail.png',            'Force query to fail').
 button(gap,            -,     -,                     -).
