@@ -894,7 +894,7 @@ check_console(F) :->
         fail
     ).
 
-interactor(F) :->
+interactor(_F) :->
     "Open a new interactor"::
     prolog_ide(open_interactor).
 
