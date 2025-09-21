@@ -35,7 +35,9 @@
 :- module(epilog,
           [ epilog/0,
             epilog/1,                  % :Options
+            epilog_attach/1,           % +Options
             ep_main/0,
+            ep_has_console/1,          % +Thread
                                        % Adjust window
             win_window_color/2,        % +Which, +Color
             window_title/1,
@@ -170,6 +172,63 @@ epilog(Options0) :-
 is_meta(goal).
 is_meta(init).
 
+%!  epilog_attach(+Options) is det.
+%
+%   Attach an epilog window to the currently running thread.
+
+epilog_attach(_Options) :-
+    thread_self(Thread),
+    current_prolog_terminal(Thread, PT),
+    !,
+    print_message(informational, epilog(already_attached(Thread, PT))).
+epilog_attach(Options) :-
+    thread_self(Thread),
+    thread_property(Thread, id(TID)),
+    fix_term,
+    detach_context(RestoreContext),
+    set_prolog_flag(save_history, false),
+    in_pce_thread(create_epilog(TID, Options)),
+    thread_get_message('$epilog'(PT, PTY)),
+    thread_at_exit(terminated),
+    set_prolog_flag(query_debug_settings, debug(false, false)),
+    set_prolog_flag(hyperlink_term, true),
+    attach_terminal(PT, PTY, _Title, []),
+    asserta(current_prolog_terminal(Thread, PT)),
+    asserta(attached_terminal(PT, RestoreContext)).
+
+create_epilog(TID, Options) :-
+    option(name(Name),   Options, @default),
+    option(title(Title), Options, @default),
+    option(rows(Height), Options, @default),
+    option(cols(Width),  Options, @default),
+    new(Epilog, epilog_frame(Name, Title, Width, Height, @off, TID)),
+    send(Epilog, open).
+
+detach_context(ctx(In,Out,Err)) :-
+    stream_property(In, alias(user_input)),
+    stream_property(Out, alias(user_output)),
+    stream_property(Err, alias(user_error)).
+
+
+restore_io(ctx(OIn,OOut,OErr)) :-
+    dbg_format("Calling restore_io~n", []),
+    unwrap_editline,
+    stream_property(CIn, alias(user_input)),
+    stream_property(COut, alias(user_output)),
+    stream_property(CErr, alias(user_error)),
+    dbg_format("Current streams: ~p~n", [t(CIn,COut,CErr)]),
+    set_std_streams(OIn, OOut, OErr),
+    close(CIn, [force(true)]),
+    close(COut, [force(true)]),
+    close(CErr, [force(true)]).
+
+dbg_format(Fmt, Args) :-
+    setup_call_cleanup(
+        open("/proc/self/fd/2", write, Out),
+        format(Out, Fmt, Args),
+        close(Out)).
+
+
 %!  fix_term
 %
 %   Ensure a sensible ``TERM`` setting. We  have   a  problem  if we use
@@ -185,6 +244,13 @@ fix_term :-
 fix_term :-
     setenv('TERM', xterm).
 
+%!  ep_has_console(?Thread)
+%
+%   True when Thread has an Epilog console.
+
+ep_has_console(Thread) :-
+    current_prolog_terminal(Thread, _PT).
+
 %!  setup_history
 %
 %   Whether or not to transfer the history.
@@ -198,6 +264,7 @@ setup_history :-
 :- dynamic
     current_prolog_terminal/2,  % ?Thread, ?TerminalObject
     terminal_input/6,           % TerminalObject, PTY, In, Out, Error,
+    attached_terminal/2,        % TerminalObject, RestoreInfo
                                 % EditLine
     closed_epilog/2,            % Frame, Time
     active_terminal/1.          % TerminalObject
@@ -299,14 +366,20 @@ initialise(PT) :->
     epilog_accelerators(P, KB).
 
 unlink(PT) :->
-    (   retract(current_prolog_terminal(Thread, PT))
-    ->  catch(terminate_thread(Thread), error(_,_), true)
-    ;   true
-    ),
+    catch(unlink_terminal_thread(PT), error(_,_), true),
     send_super(PT, unlink).
 
-terminate_thread(Thread) :-
+unlink_terminal_thread(PT) :-
+    retract(attached_terminal(PT, RestoreContext)),
+    retract(current_prolog_terminal(Thread, PT)),
+    !,
+    call_in_thread(Thread, restore_io(RestoreContext)).
+unlink_terminal_thread(PT) :-
+    retract(current_prolog_terminal(Thread, PT)),
+    !,
     thread_signal(Thread, clean_exit).
+unlink_terminal_thread(_).
+
 
 %!  clean_exit
 %
@@ -336,6 +409,15 @@ terminated :-
 
 delete_window :-
     thread_self(Me),
+    thread_property(Me, id(Id)),
+    current_prolog_terminal(Me, PT),
+    attached_terminal(PT, _RestoreContext),
+    !,
+    get_time(Now),
+    format_time(string(T), '%+', Now),
+    ansi_format(comment, '~N<thread ~w finished at ~s>~n', [Id, T]).
+delete_window :-
+    thread_self(Me),
     retract(current_prolog_terminal(Me, PT)),
     !,
     save_history(PT),
@@ -346,14 +428,17 @@ delete_window :-
 delete_window.
 
 close_io :-
-    (   current_predicate(el_unwrap/1),
-        '$run_state'(normal)            % hangs in el_end() on MacOS
-    ->  catch(el_unwrap(user_input), error(_,_), true)
-    ;   true
-    ),
+    unwrap_editline,
     close(user_input, [force(true)]),
     close(user_output, [force(true)]),
     close(user_error, [force(true)]).
+
+unwrap_editline :-
+    current_predicate(el_unwrap/1),
+    '$run_state'(normal),            % hangs in el_end() on MacOS
+    !,
+    catch(el_unwrap(user_input), error(_,_), true).
+unwrap_editline.
 
 open_link(_T, Href:name) :->
     "Open a clicked hyperlink"::
@@ -361,11 +446,11 @@ open_link(_T, Href:name) :->
 
 :- pce_group(prolog).
 
-connect(PT) :->
+connect(PT, TID:[name|int]) :->
     "Connect a Prolog thread to the terminal"::
     (   current_prolog_terminal(_Thread, PT)
     ->  true
-    ;   connect(PT, _Title)
+    ;   connect(PT, TID, _Title)
     ).
 
 update_popup(PT, P:popup, Ev:event) :->
@@ -597,9 +682,9 @@ font_default(T) :->
                 *     MANAGE PROLOG THREAD     *
                 *******************************/
 
-%!  connect(+PT, -Title) is det.
+%!  connect(+PT, +TID, -Title) is det.
 
-connect(PT, Title) :-
+connect(PT, @default, Title) =>
     get(PT, goal_init, Init),
     get(PT, goal, Goal),
     gensym(con, Alias),
@@ -625,6 +710,10 @@ connect(PT, Title) :-
     ;   Msg = false
     ->  fail
     ).
+connect(PT, TID, _Title) =>
+    thread_property(Thread, id(TID)),
+    get(PT, pty_name, PTY),
+    thread_send_message(Thread, '$epilog'(PT, PTY)).
 
 %!  thread_run_interactor(+PrologTerminal, +CreatorThread, +PTY, +Init,
 %!                        +Goal, +Title, +History) is det.
@@ -655,11 +744,7 @@ attach_terminal(PT, PTY, _Title, History) :-
     !,
     pce_open_terminal_image(PT, In, Out, Err),
     set_stream(In,  eof_action(reset)),
-    set_stream(In,  alias(user_input)),
-    set_stream(Out, alias(user_output)),
-    set_stream(Err, alias(user_error)),
-    set_stream(In,  alias(current_input)),
-    set_stream(Out, alias(current_output)),
+    set_std_streams(In, Out, Err),
     set_prolog_flag(tty_control, true),
     call(el_wrap([pipes(true)])),        % Option only for Windows
     register_input(PT, PTY, true, History).
@@ -667,6 +752,13 @@ attach_terminal(PT, PTY, _Title, History) :-
     pce_open_terminal_image(PT, In, Out, Err),
     set_prolog_IO(In, Out, Err),
     register_input(PT, PTY, false, History).
+
+set_std_streams(In, Out, Err) :-
+    set_stream(In,  alias(user_input)),
+    set_stream(Out, alias(user_output)),
+    set_stream(Err, alias(user_error)),
+    set_stream(In,  alias(current_input)),
+    set_stream(Out, alias(current_output)).
 
 register_input(PT, PTY, EditLine, History) :-
     stream_property(In, alias(user_input)),
@@ -715,10 +807,11 @@ fragment_location(Fragment, File, File:Line) :-
 :- pce_begin_class(epilog_window, window, "Implement an embedded terminal").
 
 variable(terminal, prolog_terminal, get, "The terminal_image").
+variable(tid,      [name|int],      get, "Attached thread").
 delegate_to(terminal).
 
 initialise(T, Title:title=[name],
-           Width:width=[int], Height:height=[int]) :->
+           Width:width=[int], Height:height=[int], TID:[name|int]) :->
     "Create from title, width and height"::
     default(Title, "SWI-Prolog console", TheTitle),
     default(Width, 80, TheWidth),
@@ -732,6 +825,7 @@ initialise(T, Title:title=[name],
     WH is round(TheHeight*FH),
     WW is round((TheWidth+2)*EM+SBW),
     send_super(T, initialise, TheTitle, size(WW,WH)),
+    send(T, slot, tid, TID),
     send(T, slot, terminal, TI),
     send(T, display, SB),
     send(T, display, TI),
@@ -750,7 +844,8 @@ create(T) :->
     "Create the terminal and attach a Prolog thread to it"::
     send_super(T, create),
     get(T, member, terminal, TI),
-    send(TI, connect).
+    get(T, tid, TID),
+    send(TI, connect, TID).
 
 split(T, Dir:{horizontally,vertically}) :->
     "Add a new terminal below me"::
@@ -779,7 +874,8 @@ variable(current_window, name*,        both, "Name of the current window").
 variable(main,		 bool := @off, both, "True if this is the main window").
 
 initialise(T, Name:[name], Title:title=[name],
-           Width:width=[int], Height:height=[int], Main:main=[bool]) :->
+           Width:width=[int], Height:height=[int],
+           Main:main=[bool], TID:[name|int]) :->
     default(Title, "SWI-Prolog console", TheTitle),
     send_super(T, initialise, TheTitle),
     default(Main, @off, IsMain),
@@ -789,7 +885,7 @@ initialise(T, Name:[name], Title:title=[name],
     send(T, application, @epilog),
     send(T, done_message, message(@receiver, wm_close_requested)),
     send(T, append, new(D, epilog_dialog)),
-    new(W, epilog_window(@default, Width, Height)),
+    new(W, epilog_window(@default, Width, Height, TID)),
     send(T, current_window, W?name),
     (   current_prolog_terminal(_, _)
     ->  true
