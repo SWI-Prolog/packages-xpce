@@ -39,10 +39,7 @@
             ep_main/0,
             ep_has_console/1,          % +Thread
                                        % Adjust window
-            win_window_color/2,        % +Which, +Color
-            window_title/1,
-            epilog_insert_menu_item/4, % +PopupName, +Item, +Before, :Goal
-            epilog_insert_menu/2,      % +Label, +Before
+            set_epilog/1,	       % +Option
                                        % Misc helpers
             run_in_help_epilog/1       % :Goal
           ]).
@@ -65,6 +62,7 @@
 
 :- meta_predicate
     epilog(:),
+    set_epilog(:),
     run_in_help_epilog(0),
     epilog_insert_menu_item(+, +, +, 0).
 
@@ -727,6 +725,7 @@ connect(PT, TID, _Title) =>
 thread_run_interactor(PT, Creator, PTY, Init, Goal, Title, History) :-
     set_prolog_flag(query_debug_settings, debug(false, false)),
     set_prolog_flag(hyperlink_term, true),
+    set_prolog_flag(console_menu, true),
     Error = error(Formal,_),
     (   catch(attach_terminal(PT, PTY, Title, History), Error, true)
     ->  (   var(Formal)
@@ -1193,8 +1192,51 @@ run_in_help_epilog(Goal) :-
 
 
                 /*******************************
-                *        COMPATIBILITY         *
+                *              API             *
                 *******************************/
+
+%!  set_epilog(:Option) is det.
+%
+%   Modify the Epilog console attached to the calling thread. Option is
+%   one of:
+%
+%     - title(+Title)
+%     - foreground(+Color)
+%     - background(+Color)
+%     - selection_foreground(+Color)
+%     - selection_background(+Color)
+%     - menu(+Label, +Before)
+%       Add a new popup to the Epilog   menu.  The popus is added before
+%       Before. If Before is `-`, the new popup is added to the right.
+%     - menu_item(+PopupName, +Item, +Before, :Goal)
+%       Insert an item in the  Epilog   console  menu.  PopupName is the
+%       popup in which to insert the item. Item  is the name for the new
+%       item. If Item is `--`, a _separator_  is inserted. Before is the
+%       name of the item before which to insert the new item. If this is
+%       `-`, the item is appended.
+%
+%       Goal is _injected_ into  the  current   terminal  of  the Epilog
+%       window. This implies that we assume  that the console is waiting
+%       for the user. Eventually,  we  probably   want  a  more flexible
+%       solution.
+%
+%   @error existence_error(epilog, Thread) if the   (calling) thread has
+%   no attached Epilog window.
+
+set_epilog(_:title(Title)) =>
+    window_title(Title).
+set_epilog(_:foreground(Color)) =>
+    win_window_color(foreground, Color).
+set_epilog(_:background(Color)) =>
+    win_window_color(background, Color).
+set_epilog(_:selection_foreground(Color)) =>
+    win_window_color(selection_foreground, Color).
+set_epilog(_:selection_background(Color)) =>
+    win_window_color(selection_background, Color).
+set_epilog(_:menu(Label, Before)) =>
+    win_insert_menu(Label, Before).
+set_epilog(M:menu_item(PopupName, Item, Before, Goal)) =>
+    win_insert_menu_item(PopupName, Item, Before, M:Goal).
 
 %!  win_window_color(+Which, +Color) is det.
 %
@@ -1213,7 +1255,11 @@ pce_colour(Atom, Name), atom(Atom) =>
 
 terminal(Term) :-
     thread_self(Me),
-    current_prolog_terminal(Me, Term).
+    current_prolog_terminal(Me, Term),
+    !.
+terminal(_) :-
+    thread_self(Me),
+    existence_error(epilog, Me).
 
 set_colour(foreground, Term, Color) =>
     send(Term, colour, Color).
@@ -1236,16 +1282,16 @@ window_title(Title) :-
     terminal(Term),
     send(Term?frame, label, Title).
 
-%!  epilog_insert_menu(+Label, +Before) is det.
+%!  win_insert_menu(+Label, +Before) is det.
 %
 %   Add a new popup to  the  Epilog   menu.  The  popus  is added before
 %   Before. If Before is `-`, the new popup is added to the right.
 
-epilog_insert_menu(Label, Before) :-
+win_insert_menu(Label, Before) :-
     terminal(Term),
-    epilog_insert_menu(Term, Label, Before).
+    win_insert_menu(Term, Label, Before).
 
-epilog_insert_menu(Term, Label, Before) :-
+win_insert_menu(Term, Label, Before) :-
     get(Term, frame, Epilog),
     get(Epilog, member, epilog_dialog, Dialog),
     get(Dialog, member, menu_bar, MB),
@@ -1257,7 +1303,7 @@ mb_insert_menu(MB, Label, Before) =>
     send(MB, append, popup(Label), before := Before).
 
 
-%!  epilog_insert_menu_item(+PopupName, +Item, +Before, :Goal) is det.
+%!  win_insert_menu_item(+PopupName, +Item, +Before, :Goal) is det.
 %
 %   Insert an item in the Epilog console menu. PopupName is the popup in
 %   which to insert the item. Item is the name for the new item. If Item
@@ -1269,11 +1315,11 @@ mb_insert_menu(MB, Label, Before) =>
 %   This implies that we assume that  the   console  is  waiting for the
 %   user. Eventually, we probably want a more flexible solution.
 
-epilog_insert_menu_item(PopupName, Item, Before, Goal) :-
+win_insert_menu_item(PopupName, Item, Before, Goal) :-
     terminal(Term),
-    epilog_insert_menu_item(Term, PopupName, Item, Before, Goal).
+    win_insert_menu_item(Term, PopupName, Item, Before, Goal).
 
-epilog_insert_menu_item(Term, PopupName, Item, Before, Goal) :-
+win_insert_menu_item(Term, PopupName, Item, Before, Goal) :-
     get(Term, frame, Epilog),
     get(Epilog, member, epilog_dialog, Dialog),
     get(Dialog, member, menu_bar, MB),
