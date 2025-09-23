@@ -64,7 +64,7 @@
     epilog(:),
     set_epilog(:),
     run_in_help_epilog(0),
-    epilog_insert_menu_item(+, +, +, 0).
+    win_insert_menu_item(+, +, +, 0).
 
 :- pce_autoload(finder, library(find_file)).
 :- pce_global(@finder, new(finder)).
