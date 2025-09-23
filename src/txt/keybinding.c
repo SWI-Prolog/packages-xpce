@@ -796,6 +796,13 @@ static kbDef editor[] =
 { { SUPER,		      NAME_emacsBasics },
   { SUPER,		      NAME_emacsPage },
 
+  { "\\C-\\S-a",	      NAME_beginningOfLine },
+  { "\\C-\\S-b",	      NAME_backwardChar },
+  { "\\C-\\S-e",	      NAME_endOfLine },
+  { "\\C-\\S-f",	      NAME_forwardChar },
+  { "\\C-\\S-n",	      NAME_nextLine },
+  { "\\C-\\S-p",	      NAME_previousLine },
+
   // The cursor commands detect their action based
   // on the event buttons.   That is how it was.
   // It is probably cleaner to create 4 different

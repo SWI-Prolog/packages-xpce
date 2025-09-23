@@ -88,6 +88,7 @@ static status		deleteSelectionEditor(Editor e);
 static status		abortIsearchEditor(Editor e, BoolObj save_mark);
 static status		scrollUpEditor(Editor e, Int arg);
 static Int		getColumnLocationEditor(Editor e, Int c, Int from);
+static status		markStatusEditor(Editor e, Name status);
 
 static Timer	ElectricTimer;
 
@@ -367,6 +368,16 @@ textBufferEditor(Editor e, TextBuffer tb)
 		/********************************
 		*            CURSOR		*
 		********************************/
+
+static int
+buttons(void)
+{ EventObj ev = getValueVar(EVENT);
+
+  if ( instanceOfObject(ev, ClassEvent) )
+    return valInt(ev->buttons);
+
+  return 0;
+}
 
 static status
 showCaretAtEditor(Editor e, Int caret)
@@ -1693,7 +1704,11 @@ caretEditor(Editor e, Int c)
 static status
 CaretEditor(Editor e, Int c)
 { if ( e->caret != c )
+  { int bts = buttons();
+    if ( !(bts & BUTTON_shift) )
+      markStatusEditor(e, NAME_inactive);
     return qadSendv(e, NAME_caret, 1, (Any *)&c);
+  }
 
   succeed;
 }
@@ -2015,17 +2030,6 @@ pasteEditor(Editor e, Name which)
 		 /*******************************
 		 *	    CURSOR KEYS		*
 		 *******************************/
-
-static int
-buttons(void)
-{ EventObj ev = getValueVar(EVENT);
-
-  if ( instanceOfObject(ev, ClassEvent) )
-    return valInt(ev->buttons);
-
-  return 0;
-}
-
 
 static status
 caretMoveExtendSelectionEditor(Editor e, Int oldcaret)
