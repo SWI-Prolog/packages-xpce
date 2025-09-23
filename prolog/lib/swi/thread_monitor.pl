@@ -162,7 +162,8 @@ state(TS, State:name, Style:[name]) :->
         send(TS, style, TheStyle)
     ).
 
-recall(TS, Recall:'1..') :->
+recall(TS, Recall0:int) :->
+    Recall is max(1, Recall0),
     send(TS, slot, recall, Recall),
     get(TS, object, History),
     truncate_chain(History, Recall).
@@ -370,8 +371,9 @@ thread_id_status(Id, Status) :-
 :- endif.
 
 
-recall(TB, Recall:'1..') :->
+recall(TB, Recall0:int) :->
     "Recall this many samples"::
+    Recall is max(Recall0, 1),
     send(TB, slot, recall, Recall),
     get(TB, dict, Dict),
     send(Dict, for_all, message(@arg1, recall, Recall)).
@@ -739,7 +741,7 @@ selection(TM, Thread:'name|int') :->
     send(TB, selection, DI),
     send(TB, details, DI).
 
-recall(TM, Recall:'1..') :->
+recall(TM, Recall:int) :->
     "#samples recalled"::
     get(TM, member, thread_browser, TB),
     send(TB, recall, Recall).
