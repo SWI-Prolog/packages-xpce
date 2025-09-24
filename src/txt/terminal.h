@@ -249,6 +249,7 @@ typedef enum
 } G_state;
 
 #define RLC_MAGIC	0x3b75df1e	/* magic number to verify */
+#define MAX_INCOMPLETE	5		/* Max buffered chars */
 
 /* This struct holds all data related to the terminal image, i.e.,
    the lines, selection, etc.
@@ -312,6 +313,8 @@ typedef struct rlc_data
   bool		focus_inout_events;	/* Dec Private Mode 1004 */
   int		caret_px;		/* Position of the caret in pixels */
   int		caret_py;		/* Position of the caret in pixels */
+  unsigned char	incomplete_cnt;		/* # incomplete chars */
+  char		incomplete[MAX_INCOMPLETE]; /* Incomplete sequences */
 #ifdef HAVE_POSIX_OPENPT
   struct
   { bool open;

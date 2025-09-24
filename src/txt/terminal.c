@@ -3435,20 +3435,45 @@ rlc_update(rlc_console c)
 
 static status
 processClientOutputTerminalImage(TerminalImage ti,
-			   const char *buf, ssize_t count)
+				 char *buf, ssize_t count)
 { RlcData b = ti->data;
   bool debug = false;
   DEBUG(NAME_term, debug = true);
 
   if ( count > 0 )
-  { const char *i = buf;
+  { if ( b->incomplete_cnt )
+    { assert(b->incomplete_cnt <= MAX_INCOMPLETE);
+      buf -= b->incomplete_cnt;
+      count += b->incomplete_cnt;
+      memcpy(buf, b->incomplete, b->incomplete_cnt);
+    }
+
+    const char *i = buf;
+    const char *end = &buf[count];
     bool debug = false;
     if ( debug ) Cprintf("Received (%d bytes): ", count);
-    while( i < &buf[count] )
-    { int chr;
-      i = utf8_get_char(i, &chr);
-      rlc_putansi(b, chr);
-      if ( debug ) Dprint_chr(chr);
+    for(;;)
+    { char c = *i;
+      int sz = UTF8_FBN(c);
+      if ( sz < 0 )		 /* Invalid UTF-8 */
+      { if ( i < end )
+	{ int chr = (*i++)&0xff; /* Send as single char */
+	  rlc_putansi(b, chr);
+	  if ( debug ) Dprint_chr(chr);
+	} else
+	{ break;
+	}
+      } else if ( i+sz >= end )	/* Incomplete UTF-8 */
+      { size_t ic = end-i;
+	b->incomplete_cnt = ic;
+	memcpy(b->incomplete, i, ic);
+	break;
+      } else			/* Normal UTF-8 */
+      { int chr;
+	i = utf8_get_char(i, &chr);
+	rlc_putansi(b, chr);
+	if ( debug ) Dprint_chr(chr);
+      }
     }
     if ( debug ) Cprintf("\n");
     rlc_update(b);
@@ -3573,13 +3598,15 @@ rlc_send(RlcData b, const char *buffer, size_t count)
   }
 }
 
+#define PTY_READ_CHUNK 4096
+
 status
 receiveTerminalImage(TerminalImage ti)
-{ char buf[4096];
+{ char buf[PTY_READ_CHUNK+MAX_INCOMPLETE];
   RlcData b = ti->data;
 
-  ssize_t count = read(b->pty.master_fd, buf, sizeof(buf));
-  return processClientOutputTerminalImage(ti, buf, count);
+  ssize_t count = read(b->pty.master_fd, buf+MAX_INCOMPLETE, PTY_READ_CHUNK);
+  return processClientOutputTerminalImage(ti, buf+MAX_INCOMPLETE, count);
 }
 
 static void
@@ -3775,11 +3802,12 @@ rlc_send(RlcData b, const char *buffer, size_t count)
 
 status
 receiveTerminalImage(TerminalImage ti)
-{ char buf[PIPE_READ_CHUNK];
+{ char buf[PIPE_READ_CHUNK+MAX_INCOMPLETE];
   RlcData b = ti->data;
-  ssize_t rc = read_watch(b->ptycon.watchIn, buf, sizeof(buf));
+  ssize_t rc = read_watch(b->ptycon.watchIn,
+			  buf+MAX_INCOMPLETE, PIPE_READ_CHUNK);
 
-  return processClientOutputTerminalImage(ti, buf, rc);
+  return processClientOutputTerminalImage(ti, buf+MAX_INCOMPLETE, rc);
 }
 
 static void
