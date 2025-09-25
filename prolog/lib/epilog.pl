@@ -1069,7 +1069,7 @@ initialise(D) :->
                           message(Epilog, open_url,
                                   'https://swi-prolog.discourse.group/'),
                           end_group := @on),
-                menu_item('XPCE on SDL+Cairo',
+                menu_item('SWI-Prolog GUI tools',
                           message(Epilog, open_url,
                                   'https://github.com/SWI-Prolog/packages-xpce/wiki'))
               ]).
