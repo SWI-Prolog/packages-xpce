@@ -1704,11 +1704,7 @@ caretEditor(Editor e, Int c)
 static status
 CaretEditor(Editor e, Int c)
 { if ( e->caret != c )
-  { int bts = buttons();
-    if ( !(bts & BUTTON_shift) )
-      markStatusEditor(e, NAME_inactive);
     return qadSendv(e, NAME_caret, 1, (Any *)&c);
-  }
 
   succeed;
 }
