@@ -383,8 +383,9 @@ getPair(Any obj, Any *key, Any *value)
     *key = a->name;
     *value = a->value;
   } else
-  { return errorPce(obj, NAME_unexpectedType,
-		    CtoType(":=|tuple|attribute"));
+  { errorPce(obj, NAME_unexpectedType,
+	     CtoType(":=|tuple|attribute"));
+    fail;
   }
 
   succeed;
