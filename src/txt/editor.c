@@ -3689,6 +3689,7 @@ IsearchEditor(Editor e, EventId id)
     return executeSearchEditor(e, DEFAULT, DEFAULT);
   }
   if ( cmd == NAME_backwardDeleteChar ||
+       cmd == NAME_backwardDeleteCharUntabify ||
        cmd == NAME_cutOrBackwardDeleteChar ||
        cnm == NAME_backspace )		/* also if re-bound */
   { changedHitsEditor(e);
