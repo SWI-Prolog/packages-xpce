@@ -393,13 +393,16 @@ status
 ws_selection_display(DisplayObj d, Name which, StringObj data)
 { ASSERT_SDL_MAIN();
   char *u8 = charArrayToUTF8((CharArray)data);
+  bool rc;
 
   if ( which == NAME_primary )
-    return SDL_SetPrimarySelectionText(u8);
-  if ( which == NAME_clipboard )
-    return SDL_SetClipboardText(u8);
+    rc = SDL_SetPrimarySelectionText(u8);
+  else if ( which == NAME_clipboard )
+    rc = SDL_SetClipboardText(u8);
+  else
+    rc = false;
 
-  fail;
+  return rc;
 }
 
 /**
