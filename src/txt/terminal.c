@@ -366,12 +366,8 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
 
       if ( multi == NAME_double )
       { rlc_word_selection(b, valInt(x), valInt(y));
-	if ( rlc_has_selection(b) )
-	  send(ti, NAME_copy, EAV);
       } else if ( multi == NAME_triple )
       { rlc_line_selection(b, valInt(x), valInt(y));
-	if ( rlc_has_selection(b) )
-	  send(ti, NAME_copy, EAV);
       } else
 	rlc_start_selection(b, valInt(x), valInt(y));
     }
