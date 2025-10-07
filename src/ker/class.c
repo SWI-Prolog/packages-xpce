@@ -1624,11 +1624,9 @@ attachLazyGetMethodClass(Class class, const getdecl *gm)
   return m;
 }
 
-static int bind_nesting;
-
 void
-resetMessageResolve()
-{ bind_nesting = 0;
+resetMessageResolve(void)
+{ BindNesting = 0;
 }
 
 static Any
@@ -1652,8 +1650,8 @@ bindMethod(Class class, Name code, Name selector)
     }
   }
 
-  if ( !bind_nesting )
-  { bind_nesting++;
+  if ( !BindNesting )
+  { BindNesting++;
     if ( notNil((c=class->resolve_method_message)) && notDefault(c) )
     { if ( instanceOfObject(c, ClassCode) )
       { DEBUG(NAME_class,
@@ -1662,7 +1660,7 @@ bindMethod(Class class, Name code, Name selector)
 	rval = forwardCode(c, code, class->name, selector, EAV);
       }
     }
-    bind_nesting--;
+    BindNesting--;
   }
 
   if ( isDefault(selector) )

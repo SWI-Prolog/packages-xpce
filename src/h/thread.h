@@ -39,7 +39,8 @@ typedef struct
 { PceGoal		current_goal;	  /* See passing.c */
   VarEnvironment	var_environment;  /* see var.c */
   int			service_mode;	  /* PCE_EXEC_* */
-  int			max_goal_depth;	  /* Mac recursion level */
+  int			max_goal_depth;	  /* Max recursion level */
+  int			bind_nesting;	  /* Nesting in message resolving */
 } thread_data, *ThreadData;
 
 #ifndef GLOBAL
@@ -62,5 +63,6 @@ TheThreadData(void)
 #define CurrentGoal    (TheThreadData()->current_goal)
 #define TheServiceMode (TheThreadData()->service_mode)
 #define MaxGoalDepth   (TheThreadData()->max_goal_depth)
+#define BindNesting    (TheThreadData()->bind_nesting)
 
 #endif /*PCE_THREAD_INCLUDED*/
