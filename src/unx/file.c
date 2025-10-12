@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2024, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -153,7 +153,7 @@ expandFileName(Name in)
 { wchar_t expanded[PATH_MAX];
   int len;
 
-  if ( (len=expandFileNameW(charArrayToWC((CharArray)in, NULL),
+  if ( (len=expandFileNameW(nameToWC(in, NULL),
 			    expanded, PATH_MAX)) > 0 )
   {
 #if O_XOS
@@ -270,7 +270,7 @@ closeFile(FileObj f)
 
 status
 existsFile(FileObj f, BoolObj mustbefile)
-{ const char *fn = charArrayToFN((CharArray)f->name);
+{ const char *fn = nameToFN(f->name);
 
 #if O_XOS
   int flag = (mustbefile == OFF ? 0 : _XOS_FILE);
@@ -326,7 +326,7 @@ sameFile(FileObj f1, FileObj f2)
   if ( !n1 || !n2 )
     fail;
 
-  return sameOsPath(strName(n1), strName(n2));
+  return sameOsPath(nameToFN(n1), nameToFN(n2));
 }
 
 
@@ -390,7 +390,7 @@ open_file(FileObj f, int access, ...)
   mode = va_arg(args, int);
   va_end(args);
 
-  fd = open(charArrayToFN((CharArray)f->name), access, mode);
+  fd = open(nameToFN(f->name), access, mode);
 
   if ( fd < 0 )
     errorPce(f, NAME_openFile,
@@ -532,7 +532,7 @@ accessFile(FileObj f, Name mode)
       m = R_OK;
 #endif
 
-    if ( access(strName(name), m) == 0 )
+    if ( access(nameToFN(name), m) == 0 )
       succeed;
   }
 
@@ -556,8 +556,8 @@ getFilterFile(FileObj f)
       fail;
     }
 
-    char *fname = strName(f->name);
-    char *ext   = strName(extension);
+    char *fname = nameToFN(f->name);
+    char *ext   = nameToFN(extension);
 
     if ( strlen(fname)+strlen(ext)+1 >= sizeof(path) )
     { errorPce(f, NAME_representation, NAME_nameTooLong);
