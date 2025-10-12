@@ -3446,7 +3446,6 @@ processClientOutputTerminalImage(TerminalImage ti,
 
     const char *i = buf;
     const char *end = &buf[count];
-    bool debug = false;
     if ( debug ) Cprintf("Received (%d bytes): ", count);
     for(;;)
     { char c = *i;
