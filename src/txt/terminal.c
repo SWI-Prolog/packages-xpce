@@ -3281,7 +3281,7 @@ rlc_putansi(RlcData b, int chr)
 	    break;
 	  }
 	case '@':		/* \e[<n>@: insert <n> spaces */
-	  rlc_need_arg(b, 1, 0);
+	  rlc_need_arg(b, 1, 1);
 	  for(int i=0; i<b->argv[0]; i++)
 	    rlc_insert(b, ' ');
 	  break;
