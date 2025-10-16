@@ -3441,12 +3441,13 @@ processClientOutputTerminalImage(TerminalImage ti,
       buf -= b->incomplete_cnt;
       count += b->incomplete_cnt;
       memcpy(buf, b->incomplete, b->incomplete_cnt);
+      b->incomplete_cnt = 0;
     }
 
     const char *i = buf;
     const char *end = &buf[count];
     if ( debug ) Cprintf("Received (%d bytes): ", count);
-    for(;;)
+    while( i < end )
     { char c = *i;
       int sz = UTF8_FBN(c);
       if ( sz < 0 )		 /* Invalid UTF-8 */
