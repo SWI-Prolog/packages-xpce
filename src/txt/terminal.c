@@ -2541,7 +2541,6 @@ rlc_erase_display(RlcData b)
 
   RlcTextLine tl = &b->lines[b->window_start];
   tl->size = 0;
-  tl->adjusted = false;
   b->last = b->window_start;
   b->changed |= CHG_CHANGED|CHG_CLEAR|CHG_CARET;
 
