@@ -292,6 +292,10 @@ binding('\\C-\\S-w', close).
 binding('\\C-\\S-=', font_magnify).
 binding('\\C--',     font_reduce).
 binding('\\C-=',     font_default).
+binding('<f5>',      trace_mode).
+binding('\\S-<f5>',  debug_mode).
+binding('\\C-<f5>',  gui_debug).
+binding('<f6>',      debugging).
 :- if(current_prolog_flag(apple, true)).
 binding(Key, Method) :-
     pce_keybinding:binding(apple, epilog, Bindings),
@@ -493,6 +497,45 @@ interrupt(PT) :->
     current_prolog_terminal(Thread, PT),
     current_signal(int, SIGINT, debug),
     thread_signal(Thread, SIGINT).
+
+debug_mode(PT) :->
+    "Toggle Prolog debug mode"::
+    (   terminal_prolog_flag(PT, query_debug_settings,
+                             debug(Debugging, _Tracing), -)
+    ->  debug_toggle_command(Debugging, Negate),
+        send(PT, inject, Negate)
+    ;   true
+    ).
+
+debug_toggle_command(true, nodebug).
+debug_toggle_command(false, debug).
+
+trace_mode(PT) :->
+    "Toggle Prolog trace mode"::
+    (   terminal_prolog_flag(PT, query_debug_settings,
+                             debug(_Debugging, Tracing), -)
+    ->  trace_toggle_command(Tracing, Negate),
+        send(PT, inject, Negate)
+    ;   true
+    ).
+
+trace_toggle_command(true, notrace).
+trace_toggle_command(false, trace).
+
+debugging(PT) :->
+    "Show debugging status"::
+    send(PT, inject, debugging).
+
+gui_debug(PT) :->
+    "Toggle Prolog GUI tracer"::
+    (   terminal_prolog_flag(PT, gui_tracer, GuiDebug, false)
+    ->  gui_debug_toggle_command(GuiDebug, Negate),
+        send(PT, inject, Negate)
+    ;   true
+    ).
+
+gui_debug_toggle_command(true,  noguitracer).
+gui_debug_toggle_command(false, guitracer).
 
 close(PT) :->
     "Close this Prolog shell"::
@@ -1015,6 +1058,64 @@ open_url(_T, URL:name) :->
     "Open a URL"::
     www_open_url(URL).
 
+debug_mode(Frame) :->
+    "Toggle Prolog debug mode"::
+    get(Frame, current_terminal, Term),
+    send(Term, debug_mode).
+
+trace_mode(Frame) :->
+    "Toggle Prolog trace mode"::
+    get(Frame, current_terminal, Term),
+    send(Term, trace_mode).
+
+debugging(Frame, MI:menu_item) :->
+    "Toggle Prolog debug mode"::
+    get(Frame, current_terminal, Term),
+    send(Term, debugging),
+    send(MI, selected, @off).
+
+gui_debug(Frame) :->
+    "Toggle GUI tracer"::
+    get(Frame, current_terminal, Term),
+    send(Term, gui_debug).
+
+update_debug_mode(Frame, MI:menu_item) :->
+    "Updated the current debug mode"::
+    (   epilog_prolog_flag(Frame, query_debug_settings,
+                           debug(Debugging, _Tracing), -)
+    ->  send(MI, selected, Debugging)
+    ;   true
+    ).
+
+update_trace_mode(Frame, MI:menu_item) :->
+    "Updated the current trace mode"::
+    (   epilog_prolog_flag(Frame, query_debug_settings,
+                           debug(_Debugging, Tracing), -)
+    ->  send(MI, selected, Tracing)
+    ;   true
+    ).
+
+update_gui_debug(Frame, MI:menu_item) :->
+    (   epilog_prolog_flag(Frame, gui_tracer, GuiTracer, false)
+    ->  send(MI, selected, GuiTracer)
+    ;   true
+    ).
+
+epilog_prolog_flag(Frame, Flag, Value, Default) :-
+    get(Frame, current_terminal, Term),
+    terminal_prolog_flag(Term, Flag, Value, Default).
+
+terminal_prolog_flag(Term, Flag, Value, Default) :-
+    current_prolog_terminal(Thread, Term),
+    (   catch(call_in_thread(Thread,
+                             current_prolog_flag(Flag, Value)),
+              error(Formal,_),
+              true)
+    ->  var(Formal)
+    ;   Value = Default
+    ).
+
+
 :- pce_end_class(epilog_frame).
 
 :- pce_begin_class(epilog_dialog, dialog, "Prolog terminator menu").
@@ -1027,6 +1128,7 @@ initialise(D) :->
     send(MB, append, new(File,     popup(file))),
     send(MB, append, new(Settings, popup(settings))),
     send(MB, append, new(Tools,    popup(tools))),
+    send(MB, append, new(Debug,    epilog_popup(debug))),
     send(MB, append, new(Help,     popup(help))),
     Epilog = @event?receiver?frame,
     send_list(File, append,
@@ -1061,6 +1163,24 @@ initialise(D) :->
                 menu_item(cross_referencer,
                           message(Epilog, ide, xref))
               ]),
+    send_list(Debug, append,
+              [ new(TraceMode,
+                    menu_item(trace_mode,
+                              message(Epilog, trace_mode),
+                              accelerator := 'F5')),
+                new(DebugMode,
+                    menu_item(debug_mode,
+                              message(Epilog, debug_mode),
+                              accelerator := 'Shift-F5')),
+                new(GuiDebug,
+                    menu_item('GUI_debugger',
+                              message(Epilog, gui_debug),
+                              accelerator := 'Ctrl-F5',
+                              end_group := @on)),
+                menu_item(show_debug_status,
+                          message(Epilog, debugging, @arg1),
+                          accelerator := 'F6')
+              ]),
     send_list(Help, append,
               [ menu_item('SWI-Prolog documentation',
                           message(Epilog, open_url,
@@ -1072,7 +1192,12 @@ initialise(D) :->
                 menu_item('SWI-Prolog GUI tools',
                           message(Epilog, open_url,
                                   'https://github.com/SWI-Prolog/packages-xpce/wiki'))
-              ]).
+              ]),
+    send(Debug, show_current, @on),
+    send(Debug, multiple_selection, @on),
+    send(DebugMode, condition, message(Epilog, update_debug_mode, DebugMode)),
+    send(TraceMode, condition, message(Epilog, update_trace_mode, TraceMode)),
+    send(GuiDebug,  condition, message(Epilog, update_gui_debug, GuiDebug)).
 
 :- pce_end_class(epilog_dialog).
 
