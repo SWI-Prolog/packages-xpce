@@ -50,6 +50,8 @@
 #endif /*ALLOC_DEBUG*/
 #include "alloc.h"
 
+#define USE_MALLOC 1
+
 /* Use this to revert to plain malloc() and use external malloc
    debuggers */
 /*#define ALLOCFAST 0*/
