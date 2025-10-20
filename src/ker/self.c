@@ -372,11 +372,12 @@ callExitMessagesPce(int stat, Pce pce)
 { static int done = 0;
 
   if ( !done++ && pce && notNil(pce) )
-  { Cell cell, q;
+  { Cell cell;
 
-    for_cell_save(cell, q, pce->exit_messages)
+    for_cell(cell, pce->exit_messages)
     { addCodeReference(cell->value);
       forwardCode(cell->value, toInt(stat), EAV);
+      delCodeReference(cell->value);
     }
   }
 }

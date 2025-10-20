@@ -502,13 +502,13 @@ imageNode(Node n, Graphical gr)		/* change image of node */
 
 static status
 delete_tree_node(Node n)
-{ Cell cell, c;
+{ Cell cell;
   Tree tree = n->tree;
 
   if ( isParentNode(n, tree->root) == SUCCEED )
     succeed;				/* has some other path */
 
-  for_cell_save(cell, c, n->sons)
+  for_cell(cell, n->sons)
   { Node son = cell->value;
 
     unrelate_node(n, son);
@@ -522,9 +522,9 @@ delete_tree_node(Node n)
 
 static status
 deleteTreeNode(Node n)
-{ Cell cell, c2;
+{ Cell cell;
 
-  for_cell_save(cell, c2, n->parents)
+  for_cell(cell, n->parents)
     unrelate_node(cell->value, n);
 
   return delete_tree_node(n);
@@ -842,9 +842,9 @@ relateImagesNode(Node n)
 
 status
 forAllNode(Node n, Code msg)
-{ Cell cell, c2;
+{ Cell cell;
 
-  for_cell_save(cell, c2, n->sons)
+  for_cell(cell, n->sons)
     TRY( forAllNode(cell->value, msg) );
   TRY( forwardCode(msg, n, EAV) );
 
@@ -854,9 +854,9 @@ forAllNode(Node n, Code msg)
 
 status
 forSomeNode(Node n, Code msg)
-{ Cell cell, c2;
+{ Cell cell;
 
-  for_cell_save(cell, c2, n->sons)
+  for_cell(cell, n->sons)
     forSomeNode(cell->value, msg);
   forwardCode(msg, n, EAV);
 
@@ -1080,4 +1080,3 @@ makeClassNode(Class class)
 
   succeed;
 }
-

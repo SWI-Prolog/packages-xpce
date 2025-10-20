@@ -197,9 +197,9 @@ getArgSheet(Sheet sh, Int arg)
 
 static status
 forAllSheet(Sheet sh, Code msg)
-{ Cell cell, c2;
+{ Cell cell;
 
-  for_cell_save(cell, c2, sh->attributes)
+  for_cell(cell, sh->attributes)
     TRY( forwardCode(msg, cell->value, EAV) );
 
   succeed;
@@ -208,9 +208,9 @@ forAllSheet(Sheet sh, Code msg)
 
 static status
 forSomeSheet(Sheet sh, Code msg)
-{ Cell cell, c2;
+{ Cell cell;
 
-  for_cell_save(cell, c2, sh->attributes)
+  for_cell(cell, sh->attributes)
     forwardCode(msg, cell->value, EAV);
 
   succeed;
@@ -294,4 +294,3 @@ status
 makeClassSheet(Class class)
 { return declareClass(class, &sheet_decls);
 }
-

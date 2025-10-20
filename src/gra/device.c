@@ -167,7 +167,7 @@ To do or not to do?
 
 static status
 updatePointedDevice(Device dev, EventObj ev)
-{ Cell cell, c2;
+{ Cell cell;
   Graphical active[MAX_ACTIVE];
   int n, an = 0;
   Int x, y;
@@ -183,7 +183,7 @@ updatePointedDevice(Device dev, EventObj ev)
 
 					/* Exit event: leave all children */
   if ( isAEvent(ev, NAME_areaExit) )
-  { for_cell_save(cell, c2, dev->pointed)
+  { for_cell(cell, dev->pointed)
       generateEventGraphical(cell->value, exit);
 
     clearChain(dev->pointed);
@@ -193,7 +193,7 @@ updatePointedDevice(Device dev, EventObj ev)
   get_xy_event(ev, dev, OFF, &x, &y);
 
 					/* See which graphicals are left */
-  for_cell_save(cell, c2, dev->pointed)
+  for_cell(cell, dev->pointed)
   { register Graphical gr = cell->value;
 
     if ( gr->displayed == OFF || !inEventAreaGraphical(gr, x, y) )
@@ -236,7 +236,7 @@ updatePointedDevice(Device dev, EventObj ev)
   }
 
   while( notNil(cell) )			/* Remove the tail of the chain */
-  { c2 = cell->next;
+  { Cell c2 = cell->next;
     deleteChain(dev->pointed, cell->value);
     cell = c2;
   }
@@ -337,7 +337,7 @@ eventDevice(Any obj, EventObj ev)
 
     for_chain(dev->pointed, gr,
 	      if ( !done && postEvent(ev, gr, DEFAULT) )
-	        done = TRUE);
+		done = TRUE);
     if ( done )
       succeed;
 
@@ -2061,9 +2061,9 @@ getMemberDevice(Device dev, Name name)
 
 static status
 forSomeDevice(Device dev, Name name, Code msg)
-{ Cell cell, c2;
+{ Cell cell;
 
-  for_cell_save(cell, c2, dev->graphicals)
+  for_cell(cell, dev->graphicals)
   { Graphical gr = cell->value;
 
     if ( isDefault(name) || gr->name == name )
@@ -2076,9 +2076,9 @@ forSomeDevice(Device dev, Name name, Code msg)
 
 static status
 forAllDevice(Device dev, Name name, Code msg)
-{ Cell cell, c2;
+{ Cell cell;
 
-  for_cell_save(cell, c2, dev->graphicals)
+  for_cell(cell, dev->graphicals)
   { Graphical gr = cell->value;
 
     if ( isDefault(name) || gr->name == name )

@@ -1771,9 +1771,14 @@ extern char *T_report[];		/* ->report: kind, format, args... */
   }
 
 
-#define for_cell(c, ch)	for(c=(ch)->head; notNil(c); c=c->next)
-#define for_cell_save(p, q, ch)	if (notNil(p=(ch)->head))\
-		for(q=p->next; notNil(p); p=q, q=(isNil(q) ? q : q->next))
+/* Iterate over a chain.  The body may remove the cell `c`, but __not__
+ * the cell that follows `c`.
+ */
+
+#define for_cell(c, ch)							\
+  if (notNil(c=(ch)->head))						\
+    for(Cell _q=c->next; notNil(c); c=_q, _q=(isNil(_q) ? _q : _q->next))
+
 
 		/********************************
 		*          EXPRESSIONS		*

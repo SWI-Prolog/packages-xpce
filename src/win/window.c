@@ -1820,10 +1820,10 @@ mergeFramesWindow(PceWindow w1, PceWindow w2)
     */
   } else if ( notNil(w1->frame) && notNil(w2->frame) )
   { if ( (fr1=w1->frame) != (fr2=w2->frame) )
-    { Cell cell, c2;
+    { Cell cell;
 
       addCodeReference(fr1);
-      for_cell_save(cell, c2, fr1->members)
+      for_cell(cell, fr1->members)
 	frame_window(cell->value, fr2);
       delCodeReference(fr1);
       freeableObj(fr1);

@@ -190,12 +190,10 @@ cloneChain(Chain ch, Chain clone)
 
 status
 clearChain(Chain ch)
-{ Cell p, q;
+{ Cell p;
 
-  for_cell_save(p, q, ch)
-  { ch->head = q;
+  for_cell(p, ch)
     freeCell(ch, p);
-  }
   ch->head = ch->tail = ch->current = NIL;
   assign(ch, size, ZERO);
   ChangedChain(ch, NAME_clear, EAV);
@@ -208,12 +206,12 @@ static status
 truncateChain(Chain ch, Int to)
 { int n = valInt(to);
   int i = 0;
-  Cell p, q;
+  Cell p;
 
   if ( n <= 0 )
     return clearChain(ch);
 
-  for_cell_save(p, q, ch)
+  for_cell(p, ch)
   { if ( i == n-1 )
     { p->next = NIL;
       ch->tail = p;
@@ -807,9 +805,9 @@ unionChain(Chain ch, Chain ch2)
 
 static status
 intersectionChain(Chain ch, Chain ch2)
-{ register Cell cell, c2;
+{ register Cell cell;
 
-  for_cell_save(cell, c2, ch)
+  for_cell(cell, ch)
   { if ( !memberChain(ch2, cell->value) )
       deleteCellChain(ch, cell);
   }
@@ -819,9 +817,9 @@ intersectionChain(Chain ch, Chain ch2)
 
 static status
 subtractChain(Chain ch, Chain ch2)
-{ Cell cell, c2;
+{ Cell cell;
 
-  for_cell_save(cell, c2, ch)
+  for_cell(cell, ch)
   { if ( memberChain(ch2, cell->value) )
       deleteCellChain(ch, cell);
   }
@@ -1211,15 +1209,15 @@ getSubChain(Chain ch, Int start, Int end)
 
 static status
 uniqueChain(Chain ch)
-{ Cell cell, cell2;
+{ Cell cell;
 
-  for_cell(cell, ch)
-  { Cell next;
+  for(cell=ch->head; notNil(cell); cell = cell->next)
+  { Cell cell2, next;
 
     for (cell2=cell->next; notNil(cell2); cell2=next)
     { next = cell2->next;
 
-      if (cell2->value == cell->value)
+      if ( cell2->value == cell->value )
 	deleteCellChain(ch, cell2);
     }
   }
@@ -1708,4 +1706,3 @@ makeClassChain(Class class)
 
   succeed;
 }
-

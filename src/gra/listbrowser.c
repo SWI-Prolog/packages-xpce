@@ -1033,7 +1033,7 @@ changeSelectionListBrowser(ListBrowser lb, Name action, DictItem di)
       assign(lb, selection_origin, di->index);
     } else
     { Chain ch = lb->selection;
-      Cell cell, c2;
+      Cell cell;
       int low, high;
 
       low = valInt(di->index);
@@ -1041,7 +1041,7 @@ changeSelectionListBrowser(ListBrowser lb, Name action, DictItem di)
       if ( low > high )
 	swap(low, high);
 
-      for_cell_save(cell, c2, ch)
+      for_cell(cell, ch)
       { DictItem di2 = cell->value;
 
 	if ( valInt(di2->index) < low || valInt(di2->index) > high )
