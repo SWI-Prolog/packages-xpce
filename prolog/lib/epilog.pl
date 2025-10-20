@@ -1111,12 +1111,9 @@ capture_messages :-
 
 :- public xpce_message/3.
 xpce_message(_Term, Kind, Lines) :-
-    report_kind(Kind),
+    Kind \== silent,
     xpce_epilog_console(_In,_Out,Error),
     print_message_lines(Error, kind(Kind), Lines).
-
-report_kind(warning).
-report_kind(error).
 
 %!  pce:xpce_console(-In,-Out,-Error) is semidet.
 %
