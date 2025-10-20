@@ -93,11 +93,11 @@ delRefObject(Any from, Any to)
     changedObject(to, NAME_delReference, from, EAV);
     delCodeReference(from);
     delCodeReference(to);
+    freeableObj(to);
   } else
   { delRefObj(to);
     checkDeferredUnalloc(to);
   }
-  freeableObj(to);
 }
 
 
