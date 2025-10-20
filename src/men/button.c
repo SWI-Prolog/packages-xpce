@@ -485,6 +485,7 @@ executeButton(Button b)
 { if ( notNil(b->message) )
   { DisplayObj d = getDisplayGraphical((Graphical) b);
 
+    addCodeReference(b);
     if ( d )
       busyCursorDisplay(d, DEFAULT, DEFAULT);
     statusButton(b, NAME_execute);
@@ -494,6 +495,7 @@ executeButton(Button b)
 
     if ( !isFreedObj(b) )
       statusButton(b, NAME_inactive);
+    delCodeReference(b);
   }
 
   succeed;
