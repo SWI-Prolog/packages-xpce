@@ -68,15 +68,18 @@ of XPCE.
 %   re-enabled using noguitracer/0.
 
 guitracer :-
+    notrace(guitracer_notrace).
+
+guitracer_notrace :-
     current_prolog_flag(gui_tracer, true),
     !.
-guitracer :-
+guitracer_notrace :-
     current_prolog_flag(gui_tracer, _),
     !,
     set_prolog_flag(gui_tracer, true),
     visible(+cut_call),
     print_message(informational, gui_tracer(true)).
-guitracer :-
+guitracer_notrace :-
     in_pce_thread_sync(
         use_module(library(trace/trace))),
     set_prolog_flag(gui_tracer, true),
@@ -90,12 +93,15 @@ guitracer :-
 %   @see guitracer/0
 
 noguitracer :-
+    notrace(noguitracer_notrace).
+
+noguitracer_notrace :-
     current_prolog_flag(gui_tracer, true),
     !,
     set_prolog_flag(gui_tracer, false),
     visible(-cut_call),
     print_message(informational, gui_tracer(false)).
-noguitracer.
+noguitracer_notrace.
 
 %!  gtrace is det.
 %
