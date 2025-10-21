@@ -232,8 +232,8 @@ getConfirmFrame(FrameObj fr, Point pos, BoolObj grab)
   if ( isObject(rval) )
   { addCodeReference(rval);
     assign(fr, return_value, ConstantNotReturned);
-    delCodeReference(rval);
     pushAnswerObject(rval);
+    delCodeReference(rval);
   } else
     assign(fr, return_value, ConstantNotReturned);
 

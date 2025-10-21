@@ -594,7 +594,7 @@ toInt(intptr_t i)
 #define isFreedObj(obj)		onFlag(obj, F_FREED)
 #define setFreeingObj(obj)	setFlag(obj, F_FREEING)
 #define isFreeingObj(obj)	onFlag(obj, F_FREEING)
-#define isVirginObj(o)		(noRefsObj(o) && \
+#define isVirginObj(o)		(refsObject(o) == 0 && \
 				 !onFlag(o, F_LOCKED|F_PROTECTED|F_ANSWER))
 #define freeableObj(o)		if ( isVirginObj(o) ) \
 				  freeObject(o)
