@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2001-2024, University of Amsterdam
+    Copyright (c)  2001-2025, University of Amsterdam
                               VU University Amsterdam
                               SWI-Prolog Solutions b.v.
     All rights reserved.
@@ -812,7 +812,7 @@ goal(F, Goal:prolog) :<-
     ).
 
 nostop_or_spy(F) :->
-    "Clear spy-point"::
+    "Clear break- or spy-point"::
     (   send(F?source, delete_selected_stop)
     ->  true
     ;   (   get(F, current_frame, Frame)
@@ -825,7 +825,10 @@ nostop_or_spy(F) :->
         ;   Goal = user:Goal0
         ),
         '$get_predicate_attribute'(Goal, spy, 1)
-    ->  nospy(Goal)
+    ->  nospy(Goal),
+        predicate_name(Goal, Pred),
+        send(F, report, warning,
+             'Removed spy-point for %s', Pred)
     ;   send(F, report, warning,
              'No selected break or current spy-point')
     ).
@@ -1011,7 +1014,7 @@ button(gap,            -,     -,                     -).
 button(+nodebug,       "n",   'nodebug.png',         'Continue without debugging').
 button(+abort,         "a",   'abort.png',           'Abort to the Prolog toplevel').
 button(+interrupt,     "t",   'interrupt.png',       'Interrupt (trace)').
-button(+interactor,    "B",   'interactor.png',      'Enter a query (in new thread)').
+button(+interactor,    "B",   'interactor.png',      'Open new console').
 button(fail,           "F",   'fail.png',            'Force query to fail').
 button(gap,            -,     -,                     -).
 button(+up,            "u",   'up.png',              'Select parent frame').
