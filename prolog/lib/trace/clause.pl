@@ -79,6 +79,11 @@ make_dynamic_source_buffer(B) :-
                  *             CACHE            *
                  *******************************/
 
+% Invalidate the cache. This used  to  run   on  the  `erase` channel of
+% prolog_listen/2  only.  However,  since  we   moved  to  non-intrusive
+% incremental compilation, clauses that are the  same are not erased, so
+% we must clean the cache also after a source file has been reloaded.
+
 :- dynamic
     clause_info_cache/4,
     dynamic_info_cache/5.
@@ -93,9 +98,22 @@ clear_clause_info_cache(Ref) :-
 clear_clause_info_cache :-
     retractall(clause_info_cache(_, _, _, _)).
 
-%       clause_info(+ClauseRef, -File, -TermPos, -VarNames)
+:- multifile
+    user:message_hook/3.
+
+user:message_hook(load_file(done(_Level,
+                                 file(_File, Absolute),
+                                 _Action,
+                                 _LM,
+                                 _TimeUsed,
+                                 _ClausesCreated)),
+                 _Kind, _Lines) :-
+    retractall(clause_info_cache(_Ref, Absolute, _Pos, _Names)),
+    fail.
+
+%!  clause_info(+ClauseRef, -File, -TermPos, -VarNames)
 %
-%       Fetches source information for the given clause.
+%   Fetches source information for the given clause.
 
 pce_clause_info(ClauseRef, File, TermPos, NameOffset) :-
     clause_info_cache(ClauseRef, File, TermPos, NameOffset),
