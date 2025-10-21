@@ -1209,7 +1209,9 @@ details(B, Fragment:[prolog_frame_var_fragment], Action:[{view,copy}]) :->
         prolog_frame_attribute(B, Frame, level, Level),
         prolog_frame_attribute(B, Frame, goal, Goal),
         predicate_name(Goal, PredName),
-        (   integer(VarName)
+        (   send(Frag, instance_of, prolog_frame_constraint_fragment)
+        ->  VarType = ''
+        ;   integer(VarName)
         ->  VarType = 'Argument'
         ;   VarType = 'Variable'
         ),
@@ -1360,7 +1362,7 @@ append_extra(B, Constraint:prolog, Fd:prolog, Comment:name) :->
     format(Fd, '(~w)\t~W~n', [Comment, Constraint, Options]),
     flush_output(Fd),
     get(TB, size, S1),
-    new(_, prolog_frame_constraint_fragment(TB, S0, S1)).
+    new(_, prolog_frame_constraint_fragment(TB, S0, S1, Comment, Constraint)).
 
 :- pce_end_class(prolog_bindings_view).
 
@@ -1394,13 +1396,18 @@ value(F, Value:prolog) :<-
 :- pce_begin_class(prolog_frame_constraint_fragment, fragment,
                    "Represent a contraint on a frame").
 
-initialise(F, TB:text_buffer, From:int, To:int) :->
-    Len is To-From,
-    send_super(F, initialise, TB, From, Len, constraint).
+variable(var_name, name,   get, "Comment annotation").
+variable(value,    prolog, get, "Displayed term").
 
-var_name(_F, _Name:name) :<-
-    "Cannot show details"::
-    fail.
+initialise(F, TB:text_buffer, From:int, To:int, Name, Term:prolog) :->
+    Len is To-From,
+    send_super(F, initialise, TB, From, Len, constraint),
+    send(F, slot, var_name, Name),
+    term_size(Term, Size),
+    (   Size < 100_000
+    ->  send(F, slot, value, Term)
+    ;   send(F, slot, value, 'Term is too large')
+    ).
 
 :- pce_end_class(prolog_frame_constraint_fragment).
 
