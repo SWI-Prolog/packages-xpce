@@ -42,6 +42,7 @@ createPceThreadData(void)
     td->max_goal_depth = NO_MAX_GOAL_DEPTH;
     td->service_mode   = PCE_EXEC_USER;
     pce_thread_data    = td;
+    initAnswerStack();
   }
 
   return td;

@@ -1536,7 +1536,6 @@ pceInitialise(int handles, const char *home, const char *appdata,
   PCEargv = argv;
 
   MaxGoalDepth = NO_MAX_GOAL_DEPTH;
-  initAnswerStack();
   initMClock();
 
 #ifndef O_RUNTIME

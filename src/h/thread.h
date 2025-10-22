@@ -41,6 +41,8 @@ typedef struct
   int			service_mode;	  /* PCE_EXEC_* */
   int			max_goal_depth;	  /* Max recursion level */
   int			bind_nesting;	  /* Nesting in message resolving */
+  struct to_cell	answer_stack_base_cell; /* AnswerStack */
+  ToCell		answer_stack;
 } thread_data, *ThreadData;
 
 #ifndef GLOBAL
@@ -59,10 +61,12 @@ TheThreadData(void)
   return createPceThreadData();
 }
 
-#define varEnvironment (TheThreadData()->var_environment)
-#define CurrentGoal    (TheThreadData()->current_goal)
-#define TheServiceMode (TheThreadData()->service_mode)
-#define MaxGoalDepth   (TheThreadData()->max_goal_depth)
-#define BindNesting    (TheThreadData()->bind_nesting)
+#define varEnvironment      (TheThreadData()->var_environment)
+#define CurrentGoal         (TheThreadData()->current_goal)
+#define TheServiceMode      (TheThreadData()->service_mode)
+#define MaxGoalDepth        (TheThreadData()->max_goal_depth)
+#define BindNesting         (TheThreadData()->bind_nesting)
+#define AnswerStackBaseCell (TheThreadData()->answer_stack_base_cell)
+#define AnswerStack	    (TheThreadData()->answer_stack)
 
 #endif /*PCE_THREAD_INCLUDED*/

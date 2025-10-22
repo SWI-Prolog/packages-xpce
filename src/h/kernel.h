@@ -1546,7 +1546,6 @@ struct to_cell
   long		index;			/* Index of the mark */
 };
 
-GLOBAL ToCell	AnswerStack;		/* Stack of `answer objects' */
 GLOBAL int	deferredUnalloced;	/* # deferred unallocs in ->free */
 
 typedef intptr_t AnswerMark;

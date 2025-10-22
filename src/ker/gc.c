@@ -37,8 +37,6 @@
 #undef DEBUG				/* only if needed on this module */
 #define DEBUG(t, g)
 
-static struct to_cell AnswerStackBaseCell;
-
 void
 pushAnswerObject(Any obj)
 { if ( isVirginObj(obj) )
@@ -167,7 +165,7 @@ resetAnswerStack(void)
 
 
 Int
-countAnswerStack()
+countAnswerStack(void)
 { ToCell c;
   int n = 0;
 
