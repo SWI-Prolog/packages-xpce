@@ -536,6 +536,14 @@ frame_is_upto_date(FrameObj fr)
 
 static status
 waitFrame(FrameObj fr)
+{ if ( isOpenFrameStatus(fr->status) )
+    succeed;
+
+  return sdl_send(fr, NAME_SdlWait, true, EAV);
+}
+
+static status
+SdlWaitFrame(FrameObj fr)
 { if ( fr->status == NAME_unmapped )
     TRY(send(fr, NAME_open, EAV));
 
@@ -1828,6 +1836,8 @@ static senddecl send_frame[] =
      NAME_open, "Destroy window-system counterpart"),
   SM(NAME_wait, 0, NULL, waitFrame,
      NAME_open, "Wait till <-status is `open'"),
+  SM(NAME_SdlWait, 0, NULL, SdlWaitFrame,
+     NAME_open, "SDL main thread helper for frame->wait"),
   SM(NAME_append, 1, "subwindow=window", appendFrame,
      NAME_organisation, "Append a window to the frame"),
   SM(NAME_delete, 1, "member:window", deleteFrame,
