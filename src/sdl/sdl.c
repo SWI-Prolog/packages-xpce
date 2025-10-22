@@ -278,9 +278,38 @@ sdl_send(Any receiver, Name selector, int sync, ...)
   int argc;
 
   va_start(args, sync);
-  for(argc=0; (argv[argc] = va_arg(args, Any)) != NULL; argc++)
+  for(argc=0; (argv[argc] = va_arg(args, Any)) != EAV; argc++)
     assert(argc <= VA_PCE_MAX_ARGS);
   va_end(args);
 
   return sdl_sendv(receiver, selector, sync, NULL, argc, argv);
+}
+
+
+/**
+ * Route   a   message   through   Prolog  and   from   Prolog   using
+ * in_pce_thread_sync/1.  This  allows running  a running a  method in
+ * the SDL main thread without locking xpce.
+ *
+ * Prolog part is implemented by pce:sync_wait/2...
+ *
+ * @param sync Not yet used.  Must be `true`.
+ */
+
+status
+wait_host(bool sync, ...)
+{ va_list args;
+  Any argv[VA_PCE_MAX_ARGS];
+  int argc = 0;
+
+  va_start(args, sync);
+  for(; (argv[argc] = va_arg(args, Any)) != EAV; argc++)
+    assert(argc <= VA_PCE_MAX_ARGS);
+  va_end(args);
+
+  PceObject old = TheCallbackFunctions.setHostContext(NAME_pce);
+  status rc = sendv(HOST, NAME_syncWait, argc, argv);
+  TheCallbackFunctions.setHostContext(old);
+
+  return rc;
 }

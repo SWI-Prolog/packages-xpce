@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2022, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
 			      VU University Amsterdam
 			      CWI, Amsterdam
 			      SWI-Prolog Solutions b.v.
@@ -155,6 +155,25 @@ in_pce_thread_sync(Goal) :-
 in_pce_thread_sync(Goal) :-
     term_variables(Goal, Vars),
     pce_principal:in_pce_thread_sync2(Goal-Vars, Vars).
+
+%!  sync_wait(Receiver, Method) is semidet.
+%!  sync_wait(Receiver, Method, Arg) is semidet.
+%
+%   Used by host_wait() in sdl.c. This  routes messages through the host
+%   and in_pce_thread_sync/1 back to XPCE. It runs the method in the SDL
+%   main thread and avoids deadlocks.
+%
+%   This is particularly needed  for  methods   that  wish  to  de event
+%   dispatching until something has happened.
+
+:- public
+    sync_wait/2,
+    sync_wait/3.
+
+sync_wait(Receiver, Method) :-
+    in_pce_thread_sync(send(Receiver, Method)).
+sync_wait(Receiver, Method, Arg) :-
+    in_pce_thread_sync(send(Receiver, Method, Arg)).
 
 %!  set_sdl_video_driver
 %

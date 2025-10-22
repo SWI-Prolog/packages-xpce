@@ -535,16 +535,9 @@ frame_is_upto_date(FrameObj fr)
 
 
 static status
-waitFrame(FrameObj fr)
-{ if ( isOpenFrameStatus(fr->status) )
-    succeed;
-
-  return sdl_send(fr, NAME_SdlWait, true, EAV);
-}
-
-static status
 SdlWaitFrame(FrameObj fr)
-{ if ( fr->status == NAME_unmapped )
+{ ASSERT_SDL_MAIN();
+  if ( fr->status == NAME_unmapped )
     TRY(send(fr, NAME_open, EAV));
 
   while( !frame_is_upto_date(fr) )
@@ -558,6 +551,17 @@ SdlWaitFrame(FrameObj fr)
   fail;					/* error? */
 }
 
+
+static status
+waitFrame(FrameObj fr)
+{ if ( isOpenFrameStatus(fr->status) )
+    succeed;
+
+  if ( SDL_IsMainThread() )
+    return SdlWaitFrame(fr);
+  else
+    return wait_host(true, fr, NAME_SdlWait, EAV);
+}
 
 static status
 showFrame(FrameObj fr, BoolObj val)

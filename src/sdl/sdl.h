@@ -49,6 +49,7 @@
   } while(0)
 
 status	sdl_send(Any receiver, Name selector, int sync, ...);
+status	wait_host(bool sync, ...);
 bool	sdl_initialised(void);
 void	not_on_sdl_main_thread(void);
 
