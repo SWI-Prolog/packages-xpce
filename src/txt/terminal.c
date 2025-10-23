@@ -3671,7 +3671,7 @@ rlc_create_pipes(RlcData b)
   if ( !CreatePipeEx(&b->ptycon.hIn, &b->ptycon.hTaskOut, NULL,
 		     PIPE_SIZE, FILE_FLAG_OVERLAPPED, 0) ||
        !CreatePipeEx(&b->ptycon.hTaskIn, &b->ptycon.hOut,  NULL,
-		     PIPE_SIZE, 0, FILE_FLAG_OVERLAPPED) )
+		     PIPE_SIZE, FILE_FLAG_OVERLAPPED, FILE_FLAG_OVERLAPPED) )
   { Cprintf("Failed to create ptyCon pipes\n");
     return false;
   }
