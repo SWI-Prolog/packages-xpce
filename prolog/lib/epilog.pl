@@ -1105,10 +1105,21 @@ epilog_prolog_flag(Frame, Flag, Value, Default) :-
     get(Frame, current_terminal, Term),
     terminal_prolog_flag(Term, Flag, Value, Default).
 
+%!  terminal_prolog_flag(+Term, +Flag, -Value, +Default) is semidet.
+%
+%   Get the Prolog flat Flag for the toplevel thread running in Term. If
+%   the flag is not defined, unify   Value  with Default. This predicate
+%   uses a timeout of 0.1 seconds,   returning  Default on timeout. This
+%   guarantees that the console will not  freeze   if  the thread is not
+%   responsive.
+
 terminal_prolog_flag(Term, Flag, Value, Default) :-
     current_prolog_terminal(Thread, Term),
     (   catch(call_in_thread(Thread,
-                             current_prolog_flag(Flag, Value)),
+                             current_prolog_flag(Flag, Value),
+                             [ timeout(0.1),
+                               on_timeout(fail)
+                             ]),
               error(Formal,_),
               true)
     ->  var(Formal)
