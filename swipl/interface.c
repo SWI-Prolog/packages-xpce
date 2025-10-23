@@ -1092,7 +1092,7 @@ typedef struct _host_stack_entry
   struct _host_stack_entry *previous;
 } host_stack_entry, *HostStackEntry;
 
-static HostStackEntry host_handle_stack;
+static __thread HostStackEntry host_handle_stack;
 
 static __inline PceObject
 pushHostHandle(PceObject h)
