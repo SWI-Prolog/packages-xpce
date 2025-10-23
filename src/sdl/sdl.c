@@ -293,11 +293,12 @@ sdl_send(Any receiver, Name selector, int sync, ...)
  *
  * Prolog part is implemented by pce:sync_wait/2...
  *
- * @param sync Not yet used.  Must be `true`.
+ * @param sync Not yet used. Must be `true`. Note that this is a `bool`,
+ * but the C standard does not allow `bool` for `va_start()`
  */
 
 status
-wait_host(bool sync, ...)
+wait_host(int sync, ...)
 { va_list args;
   Any argv[VA_PCE_MAX_ARGS];
   int argc = 0;
