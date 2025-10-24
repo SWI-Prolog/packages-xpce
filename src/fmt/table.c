@@ -575,8 +575,10 @@ deleteRowsTable(Table tab, Int from, Int to, BoolObj keep)
 			    i == valInt(cell->column) &&
 			    cell->row == r->index &&
 			    notNil(cell->image) )
-		       { removeCellImageTable(tab, cell, keep);
+		       { addCodeReference(cell);
+			 removeCellImageTable(tab, cell, keep);
 			 freeObject(cell);
+			 delCodeReference(cell);
 		       }
 		     });
 	assign(r, table, NIL);
