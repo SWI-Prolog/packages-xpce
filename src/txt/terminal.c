@@ -378,7 +378,8 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     Int x, y;
     get_xy_event(ev, ti, ON, &x, &y);
     static const uchar_t *lnk;
-    if ( (lnk=rlc_clicked_link(b, valInt(x), valInt(y))) &&
+    if ( (valInt(ev->buttons) & BUTTON_control) &&
+	 (lnk=rlc_clicked_link(b, valInt(x), valInt(y))) &&
 	 notNil(ti->link_message) )
     { Name href = TCHAR2Name(lnk);
       clickedLinkTerminalImage(ti, href);
