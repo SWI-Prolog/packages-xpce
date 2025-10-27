@@ -390,6 +390,7 @@ deleteCellTable(Table tab, TableCell cell, BoolObj keep)
     int ty = valInt(cell->row) + valInt(cell->row_span);
     int x, y;
 
+    addCodeReference(cell);
     removeCellImageTable(tab, cell, keep);
 
     for(y=valInt(cell->row); y<ty; y++)
@@ -402,6 +403,7 @@ deleteCellTable(Table tab, TableCell cell, BoolObj keep)
     }
 
     assign(cell, layout_manager, NIL);
+    delCodeReference(cell);
 
     changedTable(tab);
     requestComputeLayoutManager((LayoutManager)tab, DEFAULT);
@@ -431,7 +433,8 @@ deleteRowTable(Table tab, TableRow row, BoolObj keep)
 					/* this row */
   for_vector_i(row, TableCell cell, i,
 	       { if ( notNil(cell) && i == valInt(cell->column) )
-		 { if ( cell->row_span != ONE )
+		 { addCodeReference(cell);
+		   if ( cell->row_span != ONE )
 		   { if ( cell->row == row->index )
 		       assign(cell, row, inc(cell->row));
 		     assign(cell, row_span, dec(cell->row_span));
@@ -440,6 +443,7 @@ deleteRowTable(Table tab, TableRow row, BoolObj keep)
 		   { removeCellImageTable(tab, cell, keep);
 		   }
 		   freeObject(cell);
+		   delCodeReference(cell);
 		 }
 	       });
 
