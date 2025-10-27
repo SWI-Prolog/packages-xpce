@@ -44,10 +44,10 @@
 :- use_module(library(emacs_extend)).
 :- use_module(library(pce_template)).
 :- use_module(emacs_debug_modes).
-:- require([ maplist/3,
-	     merge_options/3,
-	     setup_call_cleanup/3
-	   ]).
+:- use_module(library(apply)).
+:- use_module(library(broadcast)).
+:- use_module(library(listing)).
+:- use_module(library(option)).
 
 :- multifile
     port_style/2.
@@ -341,11 +341,9 @@ mark_breakpoint(Id, delete) :-
     forall(break_fragment(Id, Fragment),
            free(Fragment)).
 
-:- multifile user:message_hook/3.
-
-user:message_hook(breakpoint(SetDel, Id), _, _) :-
-    catch(mark_breakpoint(Id, SetDel), _, fail),
-    fail.
+:- initialization
+    listen(prolog(breakpoint(SetDel, Id)),
+           catch(mark_breakpoint(Id, SetDel), error(_,_), fail)).
 
 
                  /*******************************
