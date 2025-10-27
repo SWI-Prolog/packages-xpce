@@ -202,7 +202,7 @@ scan_fragment_icons(TextMargin m,
   TextBuffer tb = e->text_buffer;
   TextImage  ti = e->image;
   Fragment fragment = tb->first_fragment;
-  int x = X_MARGIN, y = -1000, h;
+  int x = X_MARGIN, y = -1000, btm = 0;
   int mw = valInt(m->area->w);
   int line = 0, lines = ti->map->length;
   int gw = valInt(m->gap->w);
@@ -210,17 +210,17 @@ scan_fragment_icons(TextMargin m,
   Style s;
   int skip = ti->map->skip;
 
-  for( h=0; notNil(fragment) && line < lines; line++ )
+  for(; notNil(fragment) && line < lines; line++ )
   { TextLine tl = &ti->map->lines[line + skip];
 
     DEBUG(NAME_fragment, Cprintf("Scanning line from %ld\n", tl->start));
     while( notNil(fragment) && fragment->start < tl->start )
       fragment = fragment->next;
 
-    if ( y + h + gh < tl->y )		/* open the icon-line */
+    if ( btm + gh < tl->y )		/* open the icon-line */
     { y = tl->y;
       x = X_MARGIN;
-      h = 0;
+      btm = tl->y;
     }
     DEBUG(NAME_fragment, Cprintf("tl->y = %d\n", tl->y));
 
@@ -232,22 +232,27 @@ scan_fragment_icons(TextMargin m,
       { int aw = valInt(icon->size->w);
 
 	if ( (x + aw) > mw - X_MARGIN && aw <= mw -X_MARGIN)
-        { y += h + gh;			/* does not fit: next line */
+        { y = btm + gh;			/* does not fit: next line */
           x = X_MARGIN;
-          h = 0;
+          btm = y;
 	}
+	int iy;
+	if ( y == tl->y )
+	  iy = y + (tl->h - valInt(icon->size->h))/2;
+	else
+	  iy = y;
 	if ( equalName(how, NAME_forAll) )
-	{ if ( (*func)(m, x, y, fragment, ctx) == FAIL )
+	{ if ( (*func)(m, x, iy, fragment, ctx) == FAIL )
 	    fail;
 	} else if ( equalName(how, NAME_forSome) )
-	{ (*func)(m, x, y, fragment, ctx);
+	{ (*func)(m, x, iy, fragment, ctx);
 	} else if ( equalName(how, NAME_find) )
-	{ if ( (*func)(m, x, y, fragment, ctx) == SUCCEED )
+	{ if ( (*func)(m, x, iy, fragment, ctx) == SUCCEED )
 	    return fragment;
 	}
         x += valInt(icon->size->w) + gw;
-        if ( valInt(icon->size->h) > h )
-          h = valInt(icon->size->h);
+        if ( iy+valInt(icon->size->h) > btm )
+          btm = iy+valInt(icon->size->h);
       }
     }
   }
@@ -348,4 +353,3 @@ makeClassTextMargin(Class class)
 
   succeed;
 }
-
