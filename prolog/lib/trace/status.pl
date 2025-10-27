@@ -310,50 +310,40 @@ mode(_D, Mode:{normal,debug,trace}) :->
                  *******************************/
 
 :- multifile
-    user:message_hook/3.
+    prolog:message_action/2.
 
-                                        % ADDING ITEMS
-%user:message_hook(Term, Level, _Lines) :-
-%       format('~p ~p~n', [Level, Term]),
-%       fail.
-user:message_hook(spy(Head), _Level, _Lines) :-
+prolog:message_action(spy(Head), _Level) :-
     debug_status_window(D),
-    send(D, append_debug, spy, Head),
-    fail.
-user:message_hook(breakpoint(set, Id), _Level, _Lines) :-
+    send(D, append_debug, spy, Head).
+prolog:message_action(breakpoint(set, Id), _Level) :-
     debug_status_window(D),
-    send(D, append_debug, break, breakpoint(Id)),
-    fail.
-user:message_hook(trace(Head, Ports), _Level, _Lines) :-
+    send(D, append_debug, break, breakpoint(Id)).
+prolog:message_action(trace(Head, Ports), _Level) :-
     Ports \== [],
     debug_status_window(D),
     \+ get(D, item, trace, Head, _),
-    send(D, append_debug, trace, Head),
-    fail.
+    send(D, append_debug, trace, Head).
                                         % DELETING ITEMS
-user:message_hook(nospy(Head), _Level, _Lines) :-
+prolog:message_action(nospy(Head), _Level) :-
     debug_status_window(D),
     get(D, item, spy, Head, DI),
-    free(DI),
-    fail.
-user:message_hook(breakpoint(delete, Id), _Level, _Lines) :-
+    free(DI).
+prolog:message_action(breakpoint(delete, Id), _Level) :-
     debug_status_window(D),
     get(D, item, break, breakpoint(Id), DI),
-    free(DI),
-    fail.
-user:message_hook(trace(Head, []), _Level, _Lines) :-
+    free(DI).
+prolog:message_action(trace(Head, []), _Level) :-
     debug_status_window(D),
     get(D, item, trace, Head, DI),
-    free(DI),
-    fail.
-user:message_hook(debug_mode(OnOff), _Level, _Lines) :-
+    free(DI).
+prolog:message_action(debug_mode(OnOff), _Level) :-
     debug_status_window(D),
     get(D, member, mode, Mode),
     (   OnOff == off
     ->  send(Mode, selection, normal)
     ;   send(Mode, selection, debug)
     ).
-user:message_hook(trace_mode(_OnOff), _Level, _Lines) :-
+prolog:message_action(trace_mode(_OnOff), _Level) :-
     debug_status_window(D),
     get(D, member, mode, Mode),
     (   current_prolog_flag(debug, true)

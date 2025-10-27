@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2024, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
                               VU University Amsterdam
                               SWI-Prolog Solutions b.v.
     All rights reserved.
@@ -41,19 +41,14 @@
 :- require([ start_emacs/0
            ]).
 
-:- multifile
-    user:message_hook/3.
-:- dynamic
-    user:message_hook/3.
-
 /** <module> Add messages related to a source-location to the GUI
 
-This module implements user:message_hook/3 to add messages printed using
-print_message/2 that can be related to   a source-location to the window
-@prolog_warnings.
+This module implements prolog:message_action/2 to   add messages printed
+using print_message/2 that can be related   to  a source-location to the
+window @prolog_warnings.
 
 This library is always loaded when XPCE is loaded.  Its functionality is
-controlled by the Prolog flag =message_ide=.
+controlled by the Prolog flag `message_ide`.
 */
 
 :- create_prolog_flag(message_ide, true, [keep(true)]).
@@ -107,7 +102,7 @@ ide_message(Path:Line, String) :-
     send(@prolog_warnings, append_hit, Buffer, SOL, @default, String),
     send(String, lock_object, @off).
 
-message_to_pce(Term, Lines, Path:Line, String) :-
+message_to_pce(Term, Path:Line, String) :-
     (   Term = error(syntax_error(Error),
                      file(Path, Line, _LinePos, _CharPos))
     ->  atom(Path), integer(Line),
@@ -119,106 +114,35 @@ message_to_pce(Term, Lines, Path:Line, String) :-
     ;   Term = error(_, Location),
         nonvar(Location),
         Location = file(Path, Line)
-    ->  make_message(Lines, String)
+    ->  message_to_string(Term, String)
     ;   source_location(Path, Line),
-        make_message(Lines, String)
+        message_to_string(Term, String)
     ),
     atom(Path),
     send(String, lock_object, @on).
 
-%!  make_message(+MessageLine, -String) is det.
-%
-%   Translate a list of message lines into  a PCE string. The string
-%   is  locked  because  it  is  send    to  the  IDE  thread  using
-%   in_pce_thread/1.
-
-make_message(Lines, String) :-
-    phrase(make_message(Lines), Chars),
-    !,
-    new(String, string(Chars)).
-
-% TBD: Sync with elements_to_string/2 in prolog_mode.pl
-
-make_message([]) -->
-    [].
-make_message([nl|T]) -->
-    " ",
-    make_message(T).
-make_message([Fmt-Args|T]) -->
-    !,
-    { format(codes(Codes, Tail), Fmt, Args)
-    },
-    dlist(Codes, Tail),
-    make_message(T).
-make_message([ansi(_Attrs, Fmt, Args)|T]) -->
-    !,
-    { format(codes(Codes, Tail), Fmt, Args)
-    },
-    dlist(Codes, Tail),
-    make_message(T).
-make_message([url(File:Line:Pos)|T]) -->
-    !,
-    { format(codes(Codes, Tail), '~w:~w:~w', [File, Line, Pos]) },
-    dlist(Codes, Tail),
-    make_message(T).
-make_message([url(File:Line)|T]) -->
-    !,
-    { format(codes(Codes, Tail), '~w:~w', [File, Line]) },
-    dlist(Codes, Tail),
-    make_message(T).
-make_message([url(File)|T]) -->
-    !,
-    { format(codes(Codes, Tail), '~w', [File]) },
-    dlist(Codes, Tail),
-    make_message(T).
-make_message([Skip|T]) -->
-    { action_skip(Skip) },
-    !,
-    make_message(T).
-make_message([Fmt|T]) -->
-    make_message([Fmt-[]|T]).
-
-action_skip(at_same_line).
-action_skip(flush).
-action_skip(begin(_Level, _Ctx)).
-action_skip(end(_Ctx)).
-
-dlist(Codes, Tail, Codes, Tail).
-
-%!  user:message_hook(+Term, +Level, +Lines)
+%!  prolog:message_action(+Term, +Level)
 %
 %   Hook clauses that direct error messages to the (xpce) IDE.
 
-user:message_hook(Term, Level, Lines) :-
+prolog:message_action(Term, Level) :-
     current_prolog_flag(message_ide, true),
     \+ message_ide_disabled,
-    ide_message(Term, Level, Lines),
-    fail.
+    ide_message_action(Term, Level).
 
-:- meta_predicate
-    pce(0).
-
-ide_message(Term, Level, Lines) :-
-    accept_level(Level), Lines \== [],
+ide_message_action(Term, Level) :-
+    accept_level(Level),
     !,
-    pce(pce_message(Term, Lines)).
-ide_message(make(reload(_Files)), _, _) :-
-    pce(clear_message_list).
-ide_message(emacs(consult(_File)), _, _) :-
-    pce(clear_message_list).
+    in_pce_thread(pce_message(Term)).
+ide_message_action(make(reload(_Files)), _) :-
+    in_pce_thread(clear_message_list).
+ide_message_action(emacs(consult(_File)), _) :-
+    in_pce_thread(clear_message_list).
 
-pce_message(Term, Lines) :-
+pce_message(Term) :-
     \+ object(@loading_emacs),
-    message_to_pce(Term, Lines, Location, String),
+    message_to_pce(Term, Location, String),
     ide_message(Location, String).
 
 accept_level(warning).
 accept_level(error).
-
-pce(Goal) :-
-    pce_thread(PceThread),
-    thread_self(PceThread),
-    !,
-    Goal.
-pce(Goal) :-
-    in_pce_thread(Goal).

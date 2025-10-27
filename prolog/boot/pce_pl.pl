@@ -62,21 +62,18 @@ property(runtime) :-
                  *******************************/
 
 :- multifile
-    user:message_hook/3.
-:- dynamic
-    user:message_hook/3.
+    prolog:message_action/2.
 
-%!  user:message_hook(+Term, +Kind, +Lines)
+%   prolog:message_action(+Term, +Kind)
 %
 %   Trap abort messages. If an abort happens in the xpce thread we reset
 %   the display. This restores grabbed focus, etc.
 
-user:message_hook(Ex, _Kind, _Lines) :-
+prolog:message_action(Ex, _Kind) :-
     abort_exception(Ex),
     current_prolog_flag(xpce, true),
     pce:pce_thread(PceThread),
     thread_self(PceThread),
-    pce:send(@(display), reset),
-    fail.
+    pce:send(@(display), reset).
 
 abort_exception(unwind(abort)).

@@ -1005,16 +1005,16 @@ image(predicate,        dcg,            'grammar.png').
                  *******************************/
 
 :- multifile
-    user:message_hook/3.
+    prolog:message_action/2.
 
 image_of_load_state(start, _,       'loading.png').
 image_of_load_state(true,  load,    'plloadedfile.png').
 image_of_load_state(true,  include, 'plincludedfile.png').
 image_of_load_state(false, _,       'loadfailed.png').
 
-user:message_hook(load_file(What), _Kind, _Lines) :-
+prolog:message_action(load_file(What), _Kind) :-
     loading(What, load).
-user:message_hook(include_file(What), _Kind, _Lines) :-
+prolog:message_action(include_file(What), _Kind) :-
     loading(What, include).
 
 loading(What, How) :-
@@ -1030,8 +1030,7 @@ loading(What, How) :-
     ),
     get(Win, file_node, TheFile, Node),
     image_of_load_state(Stage, How, Img),
-    in_pce_thread(update_image(Node, Img)),
-    fail.
+    in_pce_thread(update_image(Node, Img)).
 
 qlf_part(source(File), File).
 

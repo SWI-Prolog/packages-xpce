@@ -99,17 +99,16 @@ clear_clause_info_cache :-
     retractall(clause_info_cache(_, _, _, _)).
 
 :- multifile
-    user:message_hook/3.
+    prolog:message_action/2.
 
-user:message_hook(load_file(done(_Level,
+prolog:message_action(load_file(done(_Level,
                                  file(_File, Absolute),
                                  _Action,
                                  _LM,
                                  _TimeUsed,
                                  _ClausesCreated)),
-                 _Kind, _Lines) :-
-    retractall(clause_info_cache(_Ref, Absolute, _Pos, _Names)),
-    fail.
+                      _Kind) :-
+    retractall(clause_info_cache(_Ref, Absolute, _Pos, _Names)).
 
 %!  clause_info(+ClauseRef, -File, -TermPos, -VarNames)
 %

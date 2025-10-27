@@ -1435,20 +1435,16 @@ destroy_thread_debug_gui(Thread) :-
     ;   true
     ).
 
-user:message_hook('$aborted', _, _Lines) :-
-    aborted,
-    fail.
-user:message_hook(unwind(abort), _, _Lines) :-
-    aborted,
-    fail.
-user:message_hook(query(YesNo), _, _Lines) :-
-    query_finished(YesNo),
-    fail.
-user:message_hook(break(end, Level)) :-
+:- multifile prolog:message_action/2.
+
+prolog:message_action:message_hook(unwind(abort), _) :-
+    aborted.
+prolog:message_action(query(YesNo), _) :-
+    query_finished(YesNo).
+prolog:message_action(break(end, Level), _) :-
     thread_self_id(Thread),
     gui(Thread, Level, Gui),
-    send_pce_async(send(Gui, destroy)),
-    fail.
+    send_pce_async(send(Gui, destroy)).
 
 aborted :-
     thread_self_id(Thread),

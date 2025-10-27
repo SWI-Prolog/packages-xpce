@@ -132,13 +132,12 @@ help(_) :->
 :- pce_global(@prolog_debug_monitor_browsers, new(chain)).
 
 :- multifile
-    user:message_hook/3.
+    prolog:message_action/2.
 
-user:message_hook(load_file(Done), _, _) :-
+prolog:message_action(load_file(Done), _) :-
     functor(Done, done, _),
     arg(1, Done, 0),                % level
-    in_pce_thread(update_monitor_browsers),
-    fail.
+    in_pce_thread(update_monitor_browsers).
 
 update_monitor_browsers :-
     send(@prolog_debug_monitor_browsers, for_all,

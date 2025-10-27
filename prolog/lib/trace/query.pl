@@ -306,17 +306,8 @@ add_history(_, Text:name) :->
                  *             HOOKS            *
                  *******************************/
 
-:- multifile
-    user:message_hook/3.
+:- multifile prolog:message_action/2.
 
-user:message_hook('$aborted', _, _Lines) :-
-    aborted,
-    fail.
-user:message_hook(unwind(abort), _, _Lines) :-
-    aborted,
-    fail.
-
-aborted :-
-    query_window(W),
-    send(W, aborted),
-    fail.
+prolog:message_action(unwind(abort), _) :-
+    forall(query_window(W),
+           in_pce_thread(send(W, aborted))).
