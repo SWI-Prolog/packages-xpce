@@ -244,11 +244,16 @@ run_on_load :-
 
 %!  setup_theme
 %
-%   Set the theme based on `@display<-theme`.   This is only used
-%   if the theme is not set using ``-Dtheme=<theme>``.
+%   Set the theme based on `@display<-theme`. This   is only used if the
+%   theme is not set  using  ``-Dtheme=<theme>``   or  a  theme file has
+%   already been loaded.
 
 setup_theme :-
     current_prolog_flag(theme, _),
+    !.
+setup_theme :-
+    predicate_property(prolog:theme(_,_), multifile),
+    prolog:theme(_),
     !.
 setup_theme :-
     get(@display, theme, Theme),
