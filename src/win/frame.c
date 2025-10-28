@@ -210,36 +210,53 @@ initialiseNewSlotFrame(FrameObj fr, Variable var)
 
 static Constant ConstantNotReturned;
 
+static status
+SdlWaitConfirmFrame(FrameObj fr)
+{ ASSERT_SDL_MAIN();
+
+  addCodeReference(fr);
+  while( offFlag(fr, F_FREED|F_FREEING) &&
+	 fr->return_value == ConstantNotReturned )
+  { dispatchDisplay(fr->display);
+    ws_discard_input("Confirmer running");
+  }
+  status rc = offFlag(fr, F_FREED|F_FREEING);
+  delCodeReference(fr);
+  return rc;
+}
+
+
 Any
 getConfirmFrame(FrameObj fr, Point pos, BoolObj grab)
-{ Any rval;
+{ bool rc;
 
   TRY( openFrame(fr, pos, DEFAULT, grab) &&
        exposeFrame(fr) );
   busyCursorDisplay(fr->display, NIL, DEFAULT);
 
   assign(fr, return_value, ConstantNotReturned);
-  while( offFlag(fr, F_FREED|F_FREEING) &&
-	 fr->return_value == ConstantNotReturned )
-  { dispatchDisplay(fr->display);
-    ws_discard_input("Confirmer running");
+
+  if ( SDL_IsMainThread() )
+    rc = SdlWaitConfirmFrame(fr);
+  else
+    rc = wait_host(true, fr, NAME_SdlWaitConfirm, EAV);
+
+  if ( rc )
+  { Any rval = fr->return_value;
+
+    if ( isObject(rval) )
+    { addCodeReference(rval);
+      assign(fr, return_value, ConstantNotReturned);
+      pushAnswerObject(rval);
+      delCodeReference(rval);
+    } else
+      assign(fr, return_value, ConstantNotReturned);
+
+    return rval;
   }
 
-  if ( onFlag(fr, F_FREED|F_FREEING) )
-    fail;
-
-  rval = fr->return_value;
-  if ( isObject(rval) )
-  { addCodeReference(rval);
-    assign(fr, return_value, ConstantNotReturned);
-    pushAnswerObject(rval);
-    delCodeReference(rval);
-  } else
-    assign(fr, return_value, ConstantNotReturned);
-
-  answer(rval);
+  fail;
 }
-
 
 Any
 getConfirmCenteredFrame(FrameObj fr, Any where, BoolObj grab, DisplayObj dsp)
@@ -1842,6 +1859,8 @@ static senddecl send_frame[] =
      NAME_open, "Wait till <-status is `open'"),
   SM(NAME_SdlWait, 0, NULL, SdlWaitFrame,
      NAME_open, "SDL main thread helper for frame->wait"),
+  SM(NAME_SdlWaitConfirm, 0, NULL, SdlWaitConfirmFrame,
+     NAME_open, "SDL main thread helper for frame<-confirm"),
   SM(NAME_append, 1, "subwindow=window", appendFrame,
      NAME_organisation, "Append a window to the frame"),
   SM(NAME_delete, 1, "member:window", deleteFrame,
