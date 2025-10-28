@@ -1518,6 +1518,7 @@ protectConstant(Any obj)
 { Instance i = obj;
 
   i->flags = F_PROTECTED|OBJ_MAGIC;
+  allocRange(obj, sizeof(struct constant));
 }
 
 
@@ -1552,18 +1553,12 @@ pceInitialise(int handles, const char *home, const char *appdata,
   markAnswerStack(mark);
   syntax.word_separator = '_';
 
+  DEBUG_BOOT(Cprintf("Alloc ...\n"));
+  pceInitAlloc();
   protectConstant(NIL);
   protectConstant(DEFAULT);
   protectConstant(ON);
   protectConstant(OFF);
-
-  DEBUG_BOOT(Cprintf("Alloc ...\n"));
-  pceInitAlloc();
-  allocRange(&ConstantNil,          sizeof(struct constant));
-  allocRange(&ConstantDefault,      sizeof(struct constant));
-  allocRange(&ConstantClassDefault, sizeof(struct constant));
-  allocRange(&BoolOff,              sizeof(struct boolean));
-  allocRange(&BoolOn,               sizeof(struct boolean));
   initNamesPass1();
   DEBUG_BOOT(Cprintf("Types ...\n"));
   initTypes();
