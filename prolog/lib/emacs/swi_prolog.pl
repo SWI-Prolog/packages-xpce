@@ -43,9 +43,9 @@
 
 /** <module> Add messages related to a source-location to the GUI
 
-This module implements prolog:message_action/2 to   add messages printed
-using print_message/2 that can be related   to  a source-location to the
-window @prolog_warnings.
+This module implements user:message_hook/3 to add messages printed using
+print_message/2 that can be related to   a source-location to the window
+@prolog_warnings.
 
 This library is always loaded when XPCE is loaded.  Its functionality is
 controlled by the Prolog flag `message_ide`.
@@ -121,14 +121,20 @@ message_to_pce(Term, Path:Line, String) :-
     atom(Path),
     send(String, lock_object, @on).
 
-%!  prolog:message_action(+Term, +Level)
+%   user:message_hook(+Term, +Level, +Lines)
 %
-%   Hook clauses that direct error messages to the (xpce) IDE.
+%   Hook clauses that direct error messages to   the  (xpce) IDE. We use
+%   user:message_hook/3 rather than prolog:message_action/2   because we
+%   want to allow e.g. xref_source/1 to silence messages.
 
-prolog:message_action(Term, Level) :-
+:- multifile user:message_hook/3.
+:- dynamic   user:message_hook/3.
+
+user:message_hook(Term, Level, _Lines) :-
     current_prolog_flag(message_ide, true),
     \+ message_ide_disabled,
-    ide_message_action(Term, Level).
+    ide_message_action(Term, Level),
+    fail.
 
 ide_message_action(Term, Level) :-
     accept_level(Level),
