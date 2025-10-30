@@ -48,5 +48,6 @@ void ws_discard_input(const char *msg);
 Any ws_event_in_subwindow(EventObj ev, Any root);
 int ws_wait_for_key(int maxwait);
 DisplayObj ws_last_display_from_event(void);
+void sdl_alert(void);
 
 #endif /* SDLEVENT_H */

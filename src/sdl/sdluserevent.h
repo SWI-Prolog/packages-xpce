@@ -49,6 +49,7 @@ typedef enum
   MY_EVENT_TIMER,		/* xpce timer, see sdlevent.c */
   MY_EVENT_FD_READY,		/* see sdlinput.c */
   MY_EVENT_KEYDOWN_TIMEOUT,	/* Keydown wait period ended */
+  MY_EVENT_ALERT,		/* Cause event dispatching return */
   MY_EVENT_HIGHEST		/* for ws_events_queued_display() */
 } pce_user_events;
 

@@ -283,6 +283,12 @@ static const error_def errors[] =
     "%N: Cannot start: %s" },
   { NAME_noPipe,		EF_REPORT,
     "%N: Cannot create pipe: %s" },
+					/* frame<-open_file */
+  { NAME_tooManyFilters,	0,
+    "%O: too many (>25) filters" },
+  { NAME_SDLFileDialog,		0,
+    "%O: frame<-{open,save}_file: %N" },
+
 					/* Process */
   { NAME_unknownSignal,		0,
     "%O: Unknown signal: %s" },

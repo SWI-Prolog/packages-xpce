@@ -226,13 +226,9 @@ SdlWaitConfirmFrame(FrameObj fr)
 }
 
 
-Any
-getConfirmFrame(FrameObj fr, Point pos, BoolObj grab)
-{ bool rc;
-
-  TRY( openFrame(fr, pos, DEFAULT, grab) &&
-       exposeFrame(fr) );
-  busyCursorDisplay(fr->display, NIL, DEFAULT);
+static Any
+getWaitConfirmFrame(FrameObj fr)
+{ status rc;
 
   assign(fr, return_value, ConstantNotReturned);
 
@@ -256,6 +252,15 @@ getConfirmFrame(FrameObj fr, Point pos, BoolObj grab)
   }
 
   fail;
+}
+
+Any
+getConfirmFrame(FrameObj fr, Point pos, BoolObj grab)
+{ TRY( openFrame(fr, pos, DEFAULT, grab) &&
+       exposeFrame(fr) );
+  busyCursorDisplay(fr->display, NIL, DEFAULT);
+
+  return getWaitConfirmFrame(fr);
 }
 
 Any
@@ -1678,6 +1683,203 @@ getThreadFrame(FrameObj fr)
 { return ws_frame_thread(fr);
 }
 
+		 /*******************************
+		 *       SDL FILE DIALOGUE        *
+		 *******************************/
+
+#define MAX_FILE_PATTERNS 25
+
+typedef struct open_file_context
+{ FrameObj		frame;
+  SDL_DialogFileFilter  filters[MAX_FILE_PATTERNS];
+  int			nfilters;
+  bool			allow_many;
+} open_file_context;
+
+static status
+getFileFilters(Any from, open_file_context *ctx)
+{ ctx->nfilters = 0;
+
+  if ( instanceOfObject(from, ClassChain) )
+  { Cell cell;
+
+    for_cell(cell, (Chain)from)
+    { if ( instanceOfObject(cell->value, ClassTuple) )
+      { Tuple t = cell->value;
+
+	if ( ctx->nfilters == MAX_FILE_PATTERNS )
+	  return errorPce(from, NAME_tooManyFilters);
+
+	if ( instanceOfObject(t->first, ClassCharArray) )
+	{ ctx->filters[ctx->nfilters].name = charArrayToUTF8(t->first);
+
+	  if ( instanceOfObject(t->second, ClassCharArray) )
+	  { ctx->filters[ctx->nfilters].pattern = charArrayToUTF8(t->second);
+	  } else if ( instanceOfObject(t->second, ClassChain) )
+	  { StringObj s = tempObject(ClassString, EAV);
+	    Cell ext;
+
+	    for_cell(ext, (Chain)t->second)
+	    { if ( instanceOfObject(ext->value, ClassCharArray) )
+	      { if ( s->data.s_size != 0 )
+		{ CharArray sep = CtoScratchCharArray(";");
+		  str_insert_string(s, DEFAULT, &sep->data);
+		  doneScratchCharArray(sep);
+		}
+		str_insert_string(s, DEFAULT, &((CharArray)ext->value)->data);
+	      } else
+	      { considerPreserveObject(s);
+		return errorPce(ext->value, NAME_unexpectedType, TypeCharArray);
+	      }
+	    }
+	    Name patterns = StringToName(&s->data);
+	    ctx->filters[ctx->nfilters].pattern = nameToUTF8(patterns);
+	    considerPreserveObject(s);
+	  } else
+	    return errorPce(cell->value, NAME_unexpectedType, CtoType("char_array|chain"));
+
+	  ctx->nfilters++;
+	} else
+	  return errorPce(t->first, NAME_unexpectedType, TypeCharArray);
+      } else
+	return errorPce(cell->value, NAME_unexpectedType, CtoType("tuple"));
+    }
+
+    succeed;
+  } else if ( isDefault(from ) )
+  { succeed;
+  } else
+  { fail;			/* should not happen */
+  }
+}
+
+
+
+static Name
+utf8_to_canonical_file(const char *in)
+{
+#if O_XOS
+  char file[PATH_MAX];
+  if ( _xos_canonical_filename(in, file, sizeof(file), 0) )
+    return UTF8ToName(file);
+  fail;
+#else
+  return UTF8ToName(in);
+#endif
+}
+
+static void
+open_file_callback(void *udata, const char * const *filelist, int filter)
+{ open_file_context *ctx = udata;
+  FrameObj fr = ctx->frame;
+
+  if ( !filelist )
+  { assign(fr, return_value, CtoString(SDL_GetError())); /* error */
+  } else if ( !filelist[0] )
+  { assign(fr, return_value, OFF); /* cancelled */
+  } else if ( !ctx->allow_many )
+  { Name fn = utf8_to_canonical_file(filelist[0]);
+    if ( fn )
+    { assign(fr, return_value, fn);
+    } else
+    { assign(fr, return_value, CtoString("File name too long"));
+    }
+  } else
+  { Chain ch = newObject(ClassChain, EAV);
+    for( ; *filelist; filelist++ )
+    { Name fn = utf8_to_canonical_file(*filelist);
+      if ( fn )
+      { appendChain(ch, fn);
+      } else
+      { assign(fr, return_value, CtoString("File name too long"));
+	sdl_alert();
+	return;
+      }
+    }
+    assign(fr, return_value, ch);
+  }
+
+  sdl_alert();
+}
+
+static Any
+getOpenFileFrame(FrameObj fr, Chain filters,
+		 CharArray default_location, BoolObj allow_many)
+{ WsFrame wsf = sdl_frame(fr, false);
+
+  if ( wsf && wsf->ws_window )
+  { open_file_context ctx = {
+      .frame = fr,
+      .allow_many = (allow_many == ON)
+    };
+    if ( !getFileFilters(filters, &ctx) )
+      fail;
+
+    char *def = NULL;
+#if O_XOS
+    char buffer[PATH_MAX];
+#endif
+    if ( notDefault(default_location) )
+    {
+#if O_XOS
+      if ( !_xos_os_filename(charArrayToUTF8(default_location),
+			     buffer, sizeof(buffer)) )
+	fail;
+      def = buffer;
+#else
+      def = charArrayToUTF8(default_location);
+#endif
+    }
+
+    SDL_ShowOpenFileDialog(
+      open_file_callback, &ctx,
+      wsf->ws_window,
+      ctx.nfilters > 0 ? ctx.filters : NULL, ctx.nfilters,
+      def,
+      allow_many == ON);
+
+    Any rval = getWaitConfirmFrame(fr);
+    if ( !rval || rval == OFF )
+      fail;
+    if ( instanceOfObject(rval, ClassString) )
+      return errorPce(fr, NAME_SDLFileDialog, rval),NULL;
+
+    answer(rval);
+  }
+
+  return false;			/* error? */
+}
+
+static Any
+getSaveFileFrame(FrameObj fr, Chain filters, CharArray default_location)
+{ WsFrame wsf = sdl_frame(fr, false);
+
+  if ( wsf && wsf->ws_window )
+  { open_file_context ctx = {
+      .frame = fr,
+      .allow_many = false
+    };
+    if ( !getFileFilters(filters, &ctx) )
+      fail;
+
+    SDL_ShowSaveFileDialog(
+      open_file_callback, &ctx,
+      wsf->ws_window,
+      ctx.nfilters > 0 ? ctx.filters : NULL, ctx.nfilters,
+      isDefault(default_location) ? NULL : charArrayToUTF8(default_location));
+
+    Any rval = getWaitConfirmFrame(fr);
+    if ( !rval || rval == OFF )
+      fail;
+    if ( instanceOfObject(rval, ClassString) )
+      return errorPce(fr, NAME_SDLFileDialog, rval),NULL;
+
+    answer(rval);
+  }
+
+  return false;			/* error? */
+}
+
 
 
 		 /*******************************
@@ -1716,6 +1918,10 @@ static char *T_center[] =
 	{ "center=[point]", "display=[display]" };
 static char *T_geometry[] =
 	{ "geometry=name", "display=[display]" };
+static char *T_openFile[] =
+	{ "filters=[chain]", "default=[char_array]", "allow_many=[bool]" };
+static char *T_saveFile[] =
+	{ "filters=[chain]", "default=[char_array]" };
 
 /* Instance Variables */
 
@@ -1960,7 +2166,11 @@ static getdecl get_frame[] =
   GM(NAME_show, 0, "bool", NULL, getShowFrame,
      NAME_visibility, "@on iff <-status = open; @off otherwise"),
   GM(NAME_thread, 0, "int", NULL, getThreadFrame,
-     NAME_thread, "Return system thread-id that owns the frame")
+     NAME_thread, "Return system thread-id that owns the frame"),
+  GM(NAME_openFile, 3, "name|chain", T_openFile, getOpenFileFrame,
+     NAME_dialog, "Use OS dialog to prompt for a file for reading"),
+  GM(NAME_saveFile, 2, "name", T_saveFile, getSaveFileFrame,
+     NAME_dialog, "Use OS dialog to prompt for a file for writing")
 };
 
 /* Resources */

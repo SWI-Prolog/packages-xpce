@@ -884,3 +884,10 @@ ws_wait_for_key(int maxwait)
 {
     return 0;
 }
+
+void
+sdl_alert(void)
+{ SDL_Event ev = {0};
+  ev.type = MY_EVENT_ALERT;
+  SDL_PushEvent(&ev);
+}
