@@ -66,8 +66,6 @@
     run_in_help_epilog(0),
     win_insert_menu_item(+, +, +, 0).
 
-:- pce_autoload(finder, library(find_file)).
-:- pce_global(@finder, new(finder)).
 :- pce_global(@epilog, new(epilog)).
 
 
@@ -1010,24 +1008,51 @@ inject(Epilog, Command:prolog) :->
 
 consult(T) :->
     "Ask for a file and consult it"::
-    findall(Ext, user:prolog_file_type(Ext, prolog), Exts),
-    chain_list(Filter, Exts),
-    get(@finder, file, open, tuple('Prolog file', Filter), File),
-    send(T, inject, consult(File)).
+    source_file_filter(Filter),
+    get(T?frame, open_file,
+        filters := Filter,
+        allow_many := @on, FileChain),
+    chain_list(FileChain, Files),
+    send(T, inject, consult(Files)).
 
-edit_file(_T) :->
+edit_file(T) :->
     "Ask for a file and edit it"::
-    findall(Ext, user:prolog_file_type(Ext, source), Exts),
-    chain_list(Filter, Exts),
-    get(@finder, file, open, tuple('Source', Filter), File),
+    source_file_filter(Filter),
+    (   current_prolog_flag(associated_file, Default)
+    ->  true
+    ;   Default = @default
+    ),
+    get(T?frame, open_file,
+        filters := Filter,
+        default := Default,
+        File),
     edit(file(File)).
 
-new_file(_T) :->
+new_file(T) :->
     "Ask for a file and create it"::
-    findall(Ext, user:prolog_file_type(Ext, source), Exts),
-    chain_list(Filter, Exts),
-    get(@finder, file, save, tuple('Source', Filter), File),
+    source_file_filter(Filter),
+    get(T?frame, save_file,
+        filters := Filter,
+        File0),
+    ensure_prolog_extension(File0, File),
     edit(file(File)).
+
+source_file_filter(Filter) :-
+    findall(Ext, user:prolog_file_type(Ext, source), Exts),
+    chain_list(ExtChain, Exts),
+    new(Filter, chain(tuple('Source', ExtChain))).
+
+%!  ensure_prolog_extension(+File0, -File) is det.
+%
+%   Ensure File has a Prolog extension.
+
+ensure_prolog_extension(File0, File) :-
+    file_name_extension(_, Ext, File0),
+    user:prolog_file_type(Ext, prolog),
+    !,
+    File = File0.
+ensure_prolog_extension(File0, File) :-
+    file_name_extension(File0, pl, File).
 
 make(T) :->
     "Run make/0"::
