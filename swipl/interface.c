@@ -1945,9 +1945,9 @@ invoke(term_t receiver, term_t class, term_t selector, term_t return)
     don't care.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-static int
+static bool
 invoke(term_t rec, term_t cl, term_t msg, term_t ret)
-{ int rval = FALSE;
+{ bool rval = false;
   AnswerMark mark;
   PceObject receiver;
   Module odm;
@@ -2053,7 +2053,7 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
 	    if ( i < 0 )
 	    { if ( !PL_unify_list(tail, tmp2, tail) ||
 		   !PL_unify(tmp2, tmp) )
-	      { rval = FALSE;
+	      { rval = false;
 		goto out;
 	      }
 	    } else
@@ -2061,7 +2061,7 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
 	  }
 	  if ( tail )
 	  { if ( !PL_unify_nil(tail) )
-	    { rval = FALSE;
+	    { rval = false;
 	      goto out;
 	    }
 	  }
@@ -2073,7 +2073,7 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
 
 	  if ( !PL_cons_functor_v(av+1, pcd->functor, mav) ||
 	       !put_object(av+2, goal.receiver) )
-	  { rval = FALSE;
+	  { rval = false;
 	    goto out;
 	  }
 
@@ -2090,7 +2090,7 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
 	    if ( rval )
 	    { if ( IsFunctor(av+3, FUNCTOR_ref1) )
 	      { if ( !get_object_from_refterm(av+3, &goal.rval) )
-		{ rval = FALSE;
+		{ rval = false;
 		  goto out;
 		}
 
@@ -2162,6 +2162,9 @@ out:
   if ( fid )
     PL_close_foreign_frame(fid);
   UNLOCK();
+
+  if ( rval && PL_exception(0) )
+    rval = false;		/* make sure to propagate Prolog exceptions */
 
   return rval;
 }
