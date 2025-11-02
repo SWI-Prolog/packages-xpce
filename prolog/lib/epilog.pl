@@ -783,7 +783,7 @@ thread_run_interactor(PT, Creator, PTY, Init, Goal, Title, History) :-
     ->  (   var(Formal)
         ->  thread_send_message(Creator, title(Title)),
             call(Init),
-            call(Goal)
+            ignore(Goal)
         ;   thread_send_message(Creator, throw(Error))
         )
     ;   thread_send_message(Creator, false)
