@@ -59,6 +59,10 @@
 :- use_module(library(prolog_history), [prolog_history/1]).
 :- use_module(library(swi_preferences), [prolog_edit_preferences/1]).
 :- use_module(library(pce_openframes), [confirm_open_frames/1]).
+:- use_module(library(ansi_term), [ansi_format/3]).
+:- use_module(library(error), [existence_error/2]).
+:- use_module(library(prolog_code), [pi_head/2]).
+:- use_module(library(thread), [call_in_thread/2, call_in_thread/3]).
 
 :- meta_predicate
     epilog(:),
@@ -185,7 +189,7 @@ epilog_attach(Options) :-
     set_prolog_flag(save_history, false),
     in_pce_thread(create_epilog(TID, Options)),
     thread_get_message('$epilog'(PT, PTY)),
-    thread_at_exit(terminated),
+    prolog_listen(this_thread_exit, terminated),
     set_prolog_flag(query_debug_settings, debug(false, false)),
     set_prolog_flag(hyperlink_term, true),
     attach_terminal(PT, PTY, _Title, []),
@@ -369,12 +373,12 @@ unlink(PT) :->
     catch(unlink_terminal_thread(PT), error(_,_), true),
     send_super(PT, unlink).
 
-unlink_terminal_thread(PT) :-
+unlink_terminal_thread(PT) :- % Epilog attached to a running thread
     retract(attached_terminal(PT, RestoreContext)),
     retract(current_prolog_terminal(Thread, PT)),
     !,
     call_in_thread(Thread, restore_io(RestoreContext)).
-unlink_terminal_thread(PT) :-
+unlink_terminal_thread(PT) :- % Normal Epilog window
     retract(current_prolog_terminal(Thread, PT)),
     !,
     thread_signal(Thread, clean_exit).
@@ -407,7 +411,7 @@ terminated :-
     delete_window,
     close_io.
 
-delete_window :-
+delete_window :-            % Epilog attached to running thread
     thread_self(Me),
     thread_property(Me, id(Id)),
     current_prolog_terminal(Me, PT),
@@ -416,11 +420,13 @@ delete_window :-
     get_time(Now),
     format_time(string(T), '%+', Now),
     ansi_format(comment, '~N<thread ~w finished at ~s>~n', [Id, T]).
-delete_window :-
+delete_window :-            % Normal Epilog
     thread_self(Me),
-    retract(current_prolog_terminal(Me, PT)),
+    current_prolog_terminal(Me, PT),
     !,
     save_history(PT),
+    retractall(terminal_input(PT, _Pty, _In, _Out, _Error, _Edit)),
+    retractall(current_prolog_terminal(Me, PT)),
     (   '$run_state'(normal)
     ->  in_pce_thread(send(PT?frame, delete_epilog, PT?window))
     ;   true
@@ -543,11 +549,19 @@ close(PT) :->
     get_time(Now),
     asserta(closed_epilog(Epilog, Now)).
 
+%!  save_history(+PrologTerminal) is det.
+%
+%   Save the history for PrologTerminal.
+
 save_history(PT) :-
-    retract(terminal_input(PT, _PTY, _In, _Out, _Err, EditLine)),
-    EditLine == true,
+    terminal_input(PT, _PTY, _In, _Out, _Err, true),
+    current_prolog_terminal(Thread, PT),
     !,
-    prolog_history(save).               % If loaded and `save_history` is `true`
+    call_in_thread(Thread,
+                   catch(prolog_history(save), error(_,_), true),
+                   [ timeout(0.1),
+                     on_timeout(true)
+                   ]).
 save_history(_).
 
 history_events(PT, Events:prolog) :<-
@@ -579,15 +593,13 @@ history_events(_PT, []) :-
     !.
 history_events(_PT, load) :-
     !,
-    prolog_history(enable),
-    '$load_history'.
+    prolog_history(enable).
 history_events(PT, Events) :-
     terminal_input(PT, _PTY, In, _Out, _Err, true),
     stream_property(In, file_no(Fd)),
     reverse(Events, OldFirst),
     forall(member(_N-Line, OldFirst),
-           el_add_history(Fd, Line)),
-    editline:load_history_events(Events).
+           el_add_history(Fd, Line)).
 
 history(PT, Enabled:enable={on,off,copy}, Save:save=[bool]) :->
     "Enable/disable history"::
@@ -605,7 +617,6 @@ activate_history(PT) :-
     ->  prolog_history(disable)
     ;   Enabled == on
     ->  prolog_history(enable),
-        '$load_history',
         (   Save \== @on
         ->  set_prolog_flag(save_history, false)
         ;   true
@@ -900,6 +911,11 @@ split(T, Dir:{horizontally,vertically}) :->
     ;   send(W, right, Tile)
     ).
 
+save_history(EW) :->
+    "Save the commandline history"::
+    get(EW, terminal, PT),
+    save_history(PT).
+
 :- pce_end_class(epilog_window).
 
 
@@ -939,6 +955,10 @@ epilog_name(@default, _, Name) :-
     gensym(epilog, Name).
 epilog_name(Name, _, Name).
 
+destroy(Epilog) :->
+    "Destroy the Epilog terminal"::
+    send(Epilog, save_history),
+    send_super(Epilog, destroy).
 
 % ->wm_close_requested
 %
@@ -962,7 +982,8 @@ delete_epilog(T, W:window, Destroy:[bool]) :->
             Terminals),
         send(Terminals, delete, W),
         \+ send(Terminals, empty)
-    ->  send(T, delete, W),
+    ->  send(W, save_history),
+        send(T, delete, W),
         (   Destroy == @on
         ->  send(W, destroy)
         ;   true
@@ -1058,11 +1079,20 @@ make(T) :->
     "Run make/0"::
     send(T, inject, make).
 
-quit(T, Prolog:prolog=[bool]) :->
-    "Quit this terminal.  Optionally should terminate Prolog"::
+close(T, Prolog:prolog=[bool]) :->
+    "Close this terminal.  Optionally terminates Prolog"::
     send(T, destroy),
     (   Prolog == @on
     ->  assert(quit_requested)
+    ;   true
+    ).
+
+save_history(Epilog) :->
+    "Save pending history"::
+    (   terminal_input(PT, _PTY, _In, _Out, _Err, true),
+        get(PT, frame, Epilog),
+        save_history(PT),
+        fail
     ;   true
     ).
 
@@ -1178,10 +1208,10 @@ initialise(D) :->
                 menu_item(reload_modified_files,
                           message(Epilog, make),
                           end_group := @on),
-                menu_item(quit,
-                          message(Epilog, quit)),
-                menu_item(quit_prolog,
-                          message(Epilog, quit, @on))
+                menu_item(close,
+                          message(Epilog, close)),
+                menu_item(halt_prolog,
+                          message(Epilog, close, @on))
               ]),
     send_list(Settings, append,
               [ menu_item(user_init_file,
