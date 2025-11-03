@@ -196,9 +196,9 @@ extern install_t	install_pcecall(void);
 		 *	      PROFILER		*
 		 *******************************/
 
-static int prof_active;			/* activated */
+static bool prof_active;		/* activated */
+static bool pce_initialised = false;	/* library is initialiased */
 static PL_prof_type_t pceProfType;	/* registration */
-static int pce_initialised = FALSE;	/* library is initialiased */
 
 		 /*******************************
 		 *	       CONTEXT		*
@@ -612,7 +612,7 @@ install_t
 install_pl2xpce(void)
 { if ( pce_initialised )
     return;
-  pce_initialised = TRUE;
+  pce_initialised = true;
 
   PL_register_foreign("pce_init", 2,
 		      pl_pce_init, PL_FA_TRANSPARENT);
@@ -650,7 +650,7 @@ install_t
 uninstall_pl2xpce(void)
 { if ( !pce_initialised )
     return;
-  pce_initialised = FALSE;
+  pce_initialised = false;
 
   DEBUG(Sdprintf("Removing hooks (%p and %p)\n",
 		 old_dispatch_hook, old_update_hook));
@@ -2275,7 +2275,7 @@ PrologSend(PceObject prolog, PceObject sel, int argc, PceObject *argv)
   int rval;
 
   if ( !pce_initialised )
-    return FALSE;
+    return false;
 
   fid = OpenForeign();
   m = pceContextModule();
@@ -2561,7 +2561,7 @@ PrologCall(PceGoal goal)
 { prolog_call_data *pcd;
 
   if ( !pce_initialised )
-    return FALSE;
+    return false;
 
   if ( (pcd = get_pcd(goal->implementation)) )
   { fid_t fid;
@@ -3191,13 +3191,13 @@ PrologOpenResource(const char *name, const char *rc_class, const char *mode)
 		 *	      PROFILING		*
 		 *******************************/
 
-static int
+static bool
 unify_prof_node(term_t t, void *impl)
 { return unifyObject(t, impl, FALSE);
 }
 
 
-static int
+static bool
 get_prof_node(term_t ref, void **impl)
 { atom_t name;
   size_t arity;
@@ -3206,15 +3206,15 @@ get_prof_node(term_t ref, void **impl)
        name == ATOM_ref &&
        arity == 1 )
   { *impl = termToObject(ref, NULL, NULLATOM, FALSE);
-    return TRUE;
+    return true;
   }
 
-  return FALSE;
+  return false;
 }
 
 
 static void
-prof_activate(int active)
+prof_activate(bool active)
 { pce_profile_hooks hooks;
 
   memset(&hooks, 0, sizeof(hooks));
@@ -3229,7 +3229,7 @@ prof_activate(int active)
 }
 
 static void
-registerProfiler()
+registerProfiler(void)
 { pceProfType.unify    = unify_prof_node;
   pceProfType.get      = get_prof_node;
   pceProfType.activate = prof_activate;
@@ -3266,7 +3266,7 @@ host-language. The non-vararg arguments are in g->argv[], represented as
 Prolog terms.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-static int
+static bool
 PrologWriteGoalArgs(PceGoal g)
 { int i, argn = 0;
   term_t l;
@@ -3291,7 +3291,7 @@ PrologWriteGoalArgs(PceGoal g)
     }
   }
 
-  return TRUE;
+  return true;
 }
 
 
@@ -3347,8 +3347,8 @@ do_reset(void)
 }
 
 
-static int
-hasThreadsProlog()
+static bool
+hasThreadsProlog(void)
 { predicate_t pred = PL_predicate("current_prolog_flag", 2, "user");
   term_t av = PL_new_term_refs(2);
 
