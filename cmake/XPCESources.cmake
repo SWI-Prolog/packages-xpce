@@ -152,7 +152,10 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     scaledbitmap.pl scan_arguments.pl splash_screen.pl
     stayup_popup.pl swi_compatibility.pl swi_edit.pl
     swi_hooks.pl swi_ide.pl swi_preferences.pl tabbed_window.pl tabular.pl
-    toc_filesystem.pl toolbar.pl url_image.pl epilog.pl pce_openframes.pl)
+    toc_filesystem.pl toolbar.pl url_image.pl pce_openframes.pl)
+if(EPILOG)
+    list(APPEND XPCE_DATA_prolog_lib epilog.pl)
+endif()
 
 if(NOT WIN32)
   list(APPEND XPCE_DATA_prolog_lib Xserver.pl)
@@ -181,13 +184,17 @@ set(XPCE_DATA_prolog_lib_draw align.pl attribute.pl canvas.pl config.pl draw.pl
 
 set(XPCE_DATA_prolog_lib_emacs annotate_mode.pl application.pl bookmarks.pl
     buffer_menu.pl buffer.pl chr_mode.pl c_mode.pl cpp_mode.pl dde_server.pl
-    emacs_chrome_server.pl emacs.pl find.pl fundamental_mode.pl gdb.pl
+    emacs.pl find.pl fundamental_mode.pl gdb.pl
     help.pl history.pl hit_list.pl html_mode.pl java_mode.pl xsb_mode.pl
     javascript_mode.pl language_mode.pl latex_mode.pl logtalk_mode.pl
-    man_mode.pl outline_mode.pl prolog_mode.pl prompt.pl rdf_mode.pl
+    man_mode.pl outline_mode.pl prolog_mode.pl prompt.pl
     script_mode.pl server.pl sgml_mode.pl shell.pl swi_prolog.pl
-    text_mode.pl turtle_mode.pl window.pl yaml_mode.pl cmake_mode.pl
+    text_mode.pl window.pl yaml_mode.pl cmake_mode.pl
     help_buffer.pl)
+if(MULTI_THREADED)
+list(APPEND XPCE_DATA_prolog_lib_emacs emacs_chrome_server.pl
+     rdf_mode.pl turtle_mode.pl)
+endif()
 
 set(XPCE_DATA_prolog_lib_english pce_messages.pl)
 
@@ -202,8 +209,11 @@ set(XPCE_DATA_prolog_lib_math expandmath.pl)
 
 set(XPCE_DATA_prolog_lib_plot axis.pl barchart.pl demo.pl plotter.pl README)
 
-set(XPCE_DATA_prolog_lib_swi pce_debug_monitor.pl pce_profile.pl swi_console.pl
+set(XPCE_DATA_prolog_lib_swi pce_debug_monitor.pl swi_console.pl
     thread_monitor.pl)
+if(MULTI_THREADED)
+list(APPEND XPCE_DATA_prolog_lib_swi pce_profile.pl)
+endif()
 
 set(XPCE_DATA_prolog_lib_trace browse.pl browse_xref.pl clause.pl
     emacs_debug_modes.pl exceptions.pl gui.pl pltracer.hlp pprint.pl
