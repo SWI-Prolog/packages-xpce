@@ -204,8 +204,8 @@ static PL_prof_type_t pceProfType;	/* registration */
 		 *	       CONTEXT		*
 		 *******************************/
 
-static Module	 DefaultModule;		/* For module handling */
-static PceObject DefaultContext;	/* Executing context */
+static __thread Module	  DefaultModule;	/* For module handling */
+static __thread PceObject DefaultContext;	/* Executing context */
 
 		 /*******************************
 		 *	     CONSTANTS		*
