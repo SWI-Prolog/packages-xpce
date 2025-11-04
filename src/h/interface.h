@@ -372,7 +372,7 @@ typedef struct
   PceObject (*getHostContext)(PceObject host);
   PceObject (*setHostContext)(PceObject context);
   PceObject (*translate)     (PceObject handle, PceObject type);
-  int       (*writeGoalArgs) (PceGoal g);
+  bool      (*writeGoalArgs) (PceGoal g);
   void *    pad17;
   void *    pad18;
   void *    pad19;
