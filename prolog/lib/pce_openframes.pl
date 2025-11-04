@@ -86,7 +86,8 @@ initialise(D, Message:[string], Frames:prolog) :->
            send(D, append_frame, F, I)),
     send(D, append, button(quit_prolog, message(@prolog, halt)), next_row),
     send(D, append, button(new_console, message(D, epilog)), right),
-    send(D, append, button(continue, message(D, destroy)), right).
+    send(D, append, button(continue, message(D, destroy)), right),
+    send(D, default_button, quit_prolog).
 
 append_frame(D, Frame:frame, I:int) :->
     "Append a frame"::
