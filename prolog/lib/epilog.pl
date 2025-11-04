@@ -1227,7 +1227,11 @@ initialise(D) :->
                 menu_item(debug_messages,
                           message(Epilog, ide, debug_monitor)),
                 menu_item(cross_referencer,
-                          message(Epilog, ide, xref))
+                          message(Epilog, ide, xref),
+                          end_group := @on),
+                menu_item('Inspect GUI hierarchy',
+                          message(Epilog, ide, visual_hierarchy),
+                          end_group := @on)
               ]),
     send_list(Debug, append,
               [ new(TraceMode,
