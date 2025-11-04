@@ -75,6 +75,17 @@ typedef struct _mutex_t
 } recursive_mutex_t;
 
 static recursive_mutex_t mutex = RECURSIVE_MUTEX_INIT;
+static bool redrawing = false;
+
+void
+setRedrawing(bool val)
+{ redrawing = val;
+}
+
+bool
+getRedrawing(void)
+{ return redrawing;
+}
 
 bool
 pceMTinit(void)
@@ -123,12 +134,12 @@ UNLOCK(void)
 
 /* Public API */
 void
-pceMTLock()
+pceMTLock(void)
 { LOCK();
 }
 
 void
-pceMTUnlock()
+pceMTUnlock(void)
 { UNLOCK();
 }
 
@@ -150,6 +161,7 @@ pceMTTryLock(void)
   return true;
 }
 
+
 /**
  * Unlock/relock when we do a callback to Prolog.  This provides
  * similar multi-threading as using the Python GIL.
@@ -159,7 +171,7 @@ int
 pceMTUnlockAll(void)
 { int rc = 0;
 
-  if ( XPCE_mt )
+  if ( XPCE_mt && !redrawing )
   { SYS_THREAD_T self = SYS_THREAD_SELF();
 
     if ( mutex.owner == self )

@@ -65,6 +65,5 @@ void ws_raise_window(PceWindow sw);
 void ws_lower_window(PceWindow sw);
 int ws_enable_window(PceWindow sw, int enable);
 Int ws_window_thread(PceWindow sw);
-int ws_delayed_redraw_window(PceWindow sw);
 
 #endif /* RAYWINDOW_H */

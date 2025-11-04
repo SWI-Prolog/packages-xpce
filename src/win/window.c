@@ -1121,6 +1121,9 @@ redrawWindow(PceWindow sw, Area a)
   succeed;
 }
 
+/* (*) We must block Prolog threads from modifying the graphics of this
+ *  window while redrawing.
+ */
 
 status
 pceRedrawWindow(PceWindow sw)
@@ -1135,15 +1138,11 @@ pceRedrawWindow(PceWindow sw)
     iarea visible;
     bool changed = false;
 
-    if ( ws_delayed_redraw_window(sw) )
-    { deleteChain(ChangedWindows, sw);
-      DEBUG(NAME_window, Cprintf("\tForwarded to owner thread\n"));
-      succeed;
-    }
-
     markAnswerStack(mark);
 
+    setRedrawing(true);			/* see (*) */
     ComputeGraphical(sw);
+
     combine_changes_window(sw);
     visible_window(sw, &visible);
 
@@ -1160,25 +1159,20 @@ pceRedrawWindow(PceWindow sw)
 	      Cprintf("\tUpdate %d %d %d %d (%s)\n",
 		      a->area.x, a->area.y, a->area.w, a->area.h,
 		      a->clear ? "clear" : "no clear"));
-#if WIN32_GRAPHICS
-        ws_redraw_window(sw, &a->area, a->clear);
-#else
 	RedrawAreaWindow(sw, &a->area, a->clear);
-#endif
 	changed = true;
       }
       unalloc(sizeof(struct update_area), a);
     }
 
+    setRedrawing(false);
     rewindAnswerStack(mark, NIL);
 
-#ifdef SDL_GRAPHICS
     if ( changed )
     { FrameObj fr = getFrameWindow(sw, OFF);
       if ( fr )
 	addChain(ChangedFrames, fr);
     }
-#endif
   }
 
   deleteChain(ChangedWindows, sw);

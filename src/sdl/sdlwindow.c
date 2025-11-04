@@ -378,15 +378,3 @@ ws_window_thread(PceWindow sw)
 {
     return (Int)0;
 }
-
-/**
- * Schedule a delayed redraw of the specified window.
- *
- * @param sw Pointer to the PceWindow object.
- * @return An integer status code indicating success (non-zero) or failure (zero).
- */
-int
-ws_delayed_redraw_window(PceWindow sw)
-{
-    return 0;
-}

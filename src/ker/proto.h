@@ -176,6 +176,8 @@ COMMON(status)	send(Any receiver, Name selector, ...);
 COMMON(Any)	get(Any receiver, Name selector, ...);
 COMMON(Any)	resolveSendMethodObject(Any obj, Class class, Name sel, Any *receiver);
 COMMON(Any)	resolveGetMethodObject(Any obj, Class class, Name sel, Any *receiver);
+COMMON(void)	setRedrawing(bool val);
+COMMON(bool)	getRedrawing(void);
 
 /* /home/jan/src/pl/packages/xpce/src/ker/method.c */
 COMMON(status)	createMethod(Method m, Name name, Vector types, StringObj doc, Func action);
