@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -32,10 +33,13 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(pce_visual, []).
+:- module(pce_visual,
+          [ pce_show_visual_tool/0
+          ]).
 :- use_module(library(pce)).
 :- use_module(library(toolbar)).
 :- use_module(library(pce_report)).
+:- use_module(library(pce_manual), []). % Provide @manual
 :- use_module(pce_op).                  % should move
 :- require([ atomic_list_concat/2
            , ignore/1
@@ -45,9 +49,18 @@
            , term_to_atom/2
            ]).
 
-:- pce_autoload(tile_hierarchy,   library('man/v_tile')).
+:- pce_autoload(man_frame,        library(man/v_manual)).
+:- pce_autoload(tile_hierarchy,   library(man/v_tile)).
 :- pce_autoload(toc_window,       library(pce_toc)).
 :- pce_autoload(select_graphical, v_select).
+
+%!  pce_show_visual_tool
+%
+%   Show the visual hierarchy tool.
+
+pce_show_visual_tool :-
+    send(new(vis_frame), open).
+
 
                 /********************************
                 *        ICON GENERATION        *
@@ -261,11 +274,13 @@ object_details(V) :->
 :- pce_begin_class(vis_frame, man_frame,
                    "Visual Hierarchy Tool").
 
-initialise(F, Manual:man_manual) :->
-    F*>>initialise(Manual, 'Visual Hierarchy'),
+initialise(F, Manual:[man_manual]) :->
+    (   Manual == @default
+    ->  TheManual = @manual
+    ;   TheManual = Manual
+    ),
+    F*>>initialise(TheManual, 'Visual Hierarchy'),
     F->>icon(resource(vishier)),
-%   F->>icon(image('32x32/vishier.png')),
-%   send(F, icon, resource(vishier)),
     F->>append(new(TD, tool_dialog)),
     send_list(TD, append,
               [ tool_button(help,

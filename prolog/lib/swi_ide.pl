@@ -3,9 +3,10 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2020, University of Amsterdam
+    Copyright (c)  2002-2025, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -39,6 +40,7 @@
             prolog_ide/1                % +Action
           ]).
 :- use_module(library(pce)).
+:- autoload(library(man/v_visual), [ pce_show_visual_tool/0 ]).
 :- require([ pce_image_directory/1,
 	     file_directory_name/2
 	   ]).
@@ -198,6 +200,13 @@ xref(IDE) :->
         send(XREF, application, IDE),
         send(XREF, wait),
         send(XREF, update)
+    ).
+
+visual_hierarchy(_IDE) :->
+    "Show the visual hierarchy tool"::
+    (   object(@manual)
+    ->  send(@manual, start_tool, visual_hierarchy)
+    ;   pce_show_visual_tool
     ).
 
 :- pce_end_class(prolog_ide).
