@@ -1030,8 +1030,10 @@ inject(Epilog, Command:prolog) :->
 consult(T) :->
     "Ask for a file and consult it"::
     source_file_filter(Filter),
+    working_directory(CWD, CWD),
     get(T?frame, open_file,
         filters := Filter,
+        default := CWD,
         allow_many := @on, FileChain),
     chain_list(FileChain, Files),
     send(T, inject, consult(Files)).
@@ -1041,7 +1043,7 @@ edit_file(T) :->
     source_file_filter(Filter),
     (   current_prolog_flag(associated_file, Default)
     ->  true
-    ;   Default = @default
+    ;   working_directory(Default, Default)
     ),
     get(T?frame, open_file,
         filters := Filter,
@@ -1052,8 +1054,10 @@ edit_file(T) :->
 new_file(T) :->
     "Ask for a file and create it"::
     source_file_filter(Filter),
+    working_directory(CWD, CWD),
     get(T?frame, save_file,
         filters := Filter,
+        default := CWD,
         File0),
     ensure_prolog_extension(File0, File),
     edit(file(File)).
