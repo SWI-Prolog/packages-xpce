@@ -192,6 +192,7 @@ epilog_attach(Options) :-
     prolog_listen(this_thread_exit, terminated),
     set_prolog_flag(query_debug_settings, debug(false, false)),
     set_prolog_flag(hyperlink_term, true),
+    set_prolog_flag(color_term, true),
     attach_terminal(PT, PTY, _Title, []),
     asserta(current_prolog_terminal(Thread, PT)),
     asserta(attached_terminal(PT, RestoreContext)).
@@ -777,6 +778,7 @@ connect(PT, TID, _Title) =>
 thread_run_interactor(PT, Creator, PTY, Init, Goal, Title, History) :-
     set_prolog_flag(query_debug_settings, debug(false, false)),
     set_prolog_flag(hyperlink_term, true),
+    set_prolog_flag(color_term, true),
     set_prolog_flag(console_menu, true),
     Error = error(Formal,_),
     (   catch(attach_terminal(PT, PTY, Title, History), Error, true)
