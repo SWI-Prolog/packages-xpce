@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <h/unix.h>
 #include <math.h>
 
 static status	orientationGraphical(Graphical gr, Name orientation);
@@ -3219,6 +3220,27 @@ getSolidGraphical(Graphical gr)
 { answer(onFlag(gr, F_SOLID) ? ON : OFF);
 }
 
+status
+pdfGraphical(Graphical gr, FileObj dest, Int scale)
+{ if ( isDefault(scale) )
+    scale = toNum(1.0);
+
+  if ( hasSendMethodObject(gr, NAME_compute) )
+    TRY(send(gr, NAME_compute, EAV));
+
+  Name fn = getOsNameFile(dest);
+  if ( fn && d_pdf(nameToFN(fn),
+		   valInt(gr->area->w), valInt(gr->area->h),
+		   valNum(scale)) )
+  { d_offset(valInt(gr->area->x), valInt(gr->area->y));
+    send(gr, NAME_RedrawArea, gr->area, EAV);
+    d_done();
+
+    succeed;
+  }
+
+  fail;
+}
 
 /* Type declaractions */
 
@@ -3278,6 +3300,8 @@ static char *T_flash[] =
 	{ "area=[area]", "time=[int]" };
 static char *T_containerSizeChanged[] =
 	{ "width=[int]", "height=[int]" };
+static char *T_pdf[] =
+	{ "file=file", "scale=[num]" };
 
 /* Instance Variables */
 
@@ -3499,7 +3523,9 @@ static senddecl send_graphical[] =
      NAME_update, "Request a ->compute on next repaint"),
   SM(NAME_containerSizeChanged, 2, T_containerSizeChanged,
      virtualObject,
-     NAME_area, "<-width or <-height of <-contained_in changed")
+     NAME_area, "<-width or <-height of <-contained_in changed"),
+  SM(NAME_pdf, 2, T_pdf, pdfGraphical,
+     NAME_print, "Save PDF for graphical to file")
 };
 
 /* Get Methods */

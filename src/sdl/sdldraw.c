@@ -36,6 +36,9 @@
 #include <h/graphics.h>
 #include <h/text.h>
 #include <cairo/cairo.h>
+#ifdef CAIRO_HAS_PDF_SURFACE
+#include <cairo/cairo-pdf.h>
+#endif
 #include <math.h>
 #include "sdldraw.h"
 #include "sdlcolour.h"
@@ -47,11 +50,18 @@
 
 #define MAX_CTX_DEPTH (10)		/* Max draw context depth */
 
+typedef enum
+{ DCTX_WINDOW,
+  DCTX_IMAGE,
+  DCTX_PDF
+} context_type;
+
 typedef struct
 { int		open;			/* Allow for nested open */
   PceWindow	window;			/* Pce's notion of the window */
   FrameObj	frame;			/* Pce's frame of the window */
   DisplayObj	display;		/* Pce's display for the frame */
+  context_type  type;			/* DCTX_* */
   cairo_surface_t *target;		/* Target for rendering to */
   cairo_t      *cr;			/* Cairo context */
   int		offset_x;		/* Paint offset in X direction */
@@ -259,6 +269,7 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
   DisplayObj d = fr->display;
   WsWindow wsw = sw->ws_ref;
 
+  context.type       = DCTX_WINDOW;
   context.window     = sw;
   context.frame      = fr;
   context.display    = d;
@@ -305,6 +316,7 @@ d_image(Image i, int x, int y, int w, int h)
   push_context();
   context.open = 1;
 
+  context.type               = DCTX_IMAGE;
   context.display            = d;
   context.target             = i->ws_ref;
   context.cr                 = cairo_create(context.target);
@@ -315,6 +327,42 @@ d_image(Image i, int x, int y, int w, int h)
 
   succeed;
 }
+
+#ifdef CAIRO_HAS_PDF_SURFACE
+status
+d_pdf(const char *file, int w, int h, double scale)
+{ push_context();
+  context.open = 1;
+
+  Colour background = WHITE_COLOUR;
+  Colour colour     = BLACK_COLOUR;
+
+  context.type               = DCTX_PDF;
+  context.display            = NIL;
+  context.target             = cairo_pdf_surface_create(file,
+							w*scale, h*scale);
+  context.cr                 = cairo_create(context.target);
+  context.background         = background;
+  context.colour             = colour;
+  context.default_colour     = context.colour;
+  context.default_background = context.background;
+
+  cairo_scale(context.cr, scale, scale);
+
+  succeed;
+}
+#else
+#warning "No PDF backend in Cairo"
+#endif
+
+void
+d_done_pdf(void)
+{ cairo_show_page(context.cr);
+  cairo_destroy(context.cr);
+  cairo_surface_finish(context.target);
+  cairo_surface_destroy(context.target);
+}
+
 
 /**
  * Define a clipping region for subsequent drawing operations.
@@ -340,7 +388,11 @@ void
 d_done(void)
 { DEBUG(NAME_redraw, Cprintf("d_done(): open = %d\n", context.open));
   if ( --context.open == 0 )
-  { cairo_destroy(context.cr);
+  { if ( context.type == DCTX_PDF )
+    { d_done_pdf();
+    } else
+    { cairo_destroy(context.cr);
+    }
     context.cr = NULL;
     if ( ctx_stacked )
       context = ctx_stack[--ctx_stacked];
