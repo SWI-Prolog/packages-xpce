@@ -52,8 +52,6 @@ void d_ensure_display(void);
 void d_flush(void);
 status d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit);
 status d_image(Image i, int x, int y, int w, int h);
-status d_screen(DisplayObj d);
-status d_frame(FrameObj fr, int x, int y, int w, int h);
 void d_clip(int x, int y, int w, int h);
 void d_done(void);
 void d_clip_done(void);

@@ -317,32 +317,6 @@ d_image(Image i, int x, int y, int w, int h)
 }
 
 /**
- * Set the current drawing target to the specified display.
- *
- * @param d Pointer to the DisplayObj.
- */
-status
-d_screen(DisplayObj d)
-{ Cprintf("stub: d_screen(%s)\n", pp(d));
-  fail;
-}
-
-/**
- * Draw a frame at the specified location with given dimensions.
- *
- * @param fr Pointer to the FrameObj.
- * @param x The x-coordinate of the frame.
- * @param y The y-coordinate of the frame.
- * @param w The width of the frame.
- * @param h The height of the frame.
- */
-status
-d_frame(FrameObj fr, int x, int y, int w, int h)
-{ Cprintf("stub: d_frame(%s)\n", pp(fr));
-  fail;
-}
-
-/**
  * Define a clipping region for subsequent drawing operations.
  *
  * @param x The x-coordinate of the clipping region.
