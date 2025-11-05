@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1999-2013, University of Amsterdam
+    Copyright (c)  1999-2025, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -32,18 +33,18 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(classdoc,
-          [ process/2
-          ]).
-
+:- module(classdoc, []).
+:- use_module(library(pce)).
 :- use_module(library(pce_manual)).
+:- use_module(library(lists)).
+:- use_module(library(main)).
+
 :- pce_autoload(man_inheritance_tree, library('man/v_inherit')).
 
-process(In, Out) :-
+:- initialization(main, main).
+
+main([In, Out]) :-
     manpce,
-    send(@display, font_alias, normal, font(times, roman,  10), @on),
-    send(@display, font_alias, bold,   font(times, bold,   10), @on),
-    send(@display, font_alias, italic, font(times, italic, 10), @on),
     new(FIN, file(In)),
     new(FOUT, file(Out)),
     send(FIN, open, read),
@@ -53,7 +54,7 @@ process(In, Out) :-
     send(FOUT, close).
 
 do_process(In, Out) :-
-    between(1, 1000000, LineNo),
+    between(1, infinite, LineNo),
     (   get(In, read_line, Line)
     ->  (   get(Line, character, 0, 0'#)
         ->  get(Line, value, LineAtom),
@@ -83,17 +84,15 @@ need_diagram(Class, File, Line, '') :-
 
 make_diagrams(Dir) :-
     diagram(_, File, Classes),
-        format('(~w', [Classes]), flush,
+        format('(~w', [Classes]), flush_output,
         new(I, man_inheritance_tree),
         send(I, level_gap, 15),
         forall(member(C, Classes), send(I, show, C, @off)),
         send(I, compute),
-        file_name_extension(File, eps, PsFile),
-        get(directory(Dir), file, PsFile, F),
-        send(F, open, write),
-        send(F, append, I?postscript),
-        send(F, close),
-        format(') ', []), flush,
+        file_name_extension(File, pdf, PDFFile),
+        get(directory(Dir), file, PDFFile, F),
+        send(I, pdf, F, 0.5),
+        format(') ', []), flush_output,
     fail ; true.
 
 no_summary :-
@@ -118,9 +117,8 @@ process_line(In, LineNo, Out) :-
     need_diagram(Class, PS, LineNo, Cont),
     class_to_tex(Class, TexClass),
     substitute(Class, TexClass, Header, TexHeader),
-    sformat(S, '\\classsummary~w{~w}{~w}{~w}~n',
-            [Cont, TexClass, TexHeader, PS]),
-    string_codes(S, Out).
+    format(codes(Out), '\\classsummary~w{~w}{~w}{~w}~n',
+           [Cont, TexClass, TexHeader, PS]).
 
 line(Class, Header, PS) -->
     "#class",

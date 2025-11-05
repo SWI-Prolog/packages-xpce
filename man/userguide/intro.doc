@@ -28,10 +28,8 @@ The interface between \product{} and its hosting language is small, which
 makes \product{} especially a good GUI candidate for special-purpose
 languages.
 
-\begin{xpceonly}
-The main target language for \product{} is {\em Prolog} and this document
-concentrates on \productpl{} rather then \product{}/Lisp or \product{}/C++.
-\end{xpceonly}
+The main target language for \product{} is {\em Prolog} and this
+document concentrates on \productpl{} rather then \product{}/Lisp.
 \productpl{} comes with a graphical programming environment that allows
 for quick browsing of the source-code, provides debugging tools and
 allows for the graphical construction of {\em dialog boxes} (graphical
@@ -105,7 +103,6 @@ authors.  The address \email{xpce-bugs@swi.psy.uva.nl} should be used
 for reporting bugs.
 
 
-\begin{xpceonly}
 \section{Language interfaces}
 
 The interface between \product{} and the application (host) language is
@@ -117,79 +114,27 @@ languages with the named properties avoid the need for explicitly
 programmed type-conversion. For a dynamically typed host-language such
 as Prolog or Lisp, the interface determines the type of the
 host-language construct passed and translates it into the corresponding
-\product{} object. For \idx{C++}, the rules for translating C data
-structures to \product{} objects can be handled by the programmable
-type-casting mechanism of C++.
-
-
-%\section{ProWindows-3}				\label{sec:prowindows}
-%
-%\index{ProWindows-3}\index{AIIL}%
-%\product{} is distributed as a commercially supported system for Quintus
-%Prolog under the name ProWindows-3.  ProWindows-3 is identical to
-%\product{}, linking the power of the best Prolog implementation with an
-%advanced and portable GUI toolkit.  ProWindows-3 is distributed and
-%supported by AIIL.  For further information, please contact:
-%
-%\begin{quote}
-%Simon Heywood \\
-%AI International Ltd \\
-%Castle Chambers, High Street, \\
-%Berkhamsted, Hertfordshire, \\
-%HP4 2DF, United Kingdom \\[5pt]
-%\setlength{\tabcolsep}{0pt}
-%\begin{tabular}{ll}
-%Tel:    & ~+44 1442 860214/873873 \\
-%Fax:    & ~+44 1442 860200 \\
-%E-mail: & ~\email{sales@aiil.co.uk} \\
-%WWW:	& ~\url{http://www.aiil.co.uk/prolog/frames_home.htm}
-%\end{tabular}
-%\end{quote}
-\end{xpceonly}
+\product{} object.
 
 
 \section{Portability}
 
 The \product{} virtual machine and built-in class library is written in
 standard ANSI-C and is portable to any machine offering a flat,
-sufficiently large, memory model (32 or 64 bits). \product{}'s graphical
-classes (including windows, etc.) interface to \product{} {\em Virtual
-Windows System} (VWS). Currently there are VWS implementations for X11
-and the Microsoft Win32 API. \ifpw{}{Please contact the authors if you
-are interested in other implementations.}
-
-
-\subsection{Unix/X-windows}
-
-\ifpw{\product{} runs on all Unix platforms supported by \quintus{}.}{
-\index{X-windows}\index{OpenWindows}\index{Motif}
-\product{} runs on most Unix/X11 platforms.  Tested platforms include SunOs,
-Solaris, AIX, HPUX, IRIX, OSF/1 and Linux.  Platform configuration is
-realised using GNU autoconf with an extensive test-suite.}
-
-
-\subsection{Win32 (Windows 95 and NT)}
-
-\index{Windows 95}\index{Windows NT}
-The same binary version of \product{} runs on both Windows~95 and NT.
-Its functionality is very close to the Unix/X11 version, making
-applications source-code compatible between the two platforms. \ifpw{
-Quintus \fileext{qof} files are identical on Unix and Windows platforms,
-reducing the effort of porting an application to relinking the
-\fileext{qof} files on the target platform}{}.
-
-A detailed description of the differences between the Unix/X11 version
-and the Windows version as well as additions to the Windows version to
-access Windows-specific resources is in \appref{mswin}.
-  
+sufficiently large, 64-bits memory model. \product{}'s graphical classes
+(including windows, etc.) interface to the hosting platform using widely
+supported portable libraries: \href{https://www.libsdl.org}{SDL},
+\href{https://www.cairographics.org/}{Cairo} and
+\href{https://www.gtk.org/docs/architecture/pango}{Pango}.  \product{}
+is actively maintained for Linux, MacOS and Windows.
 
 \section{Look-and-feel}
 
 \index{look-and-feel}\index{Motif}\index{OpenWindows}\index{MS-Windows}%
 \product{} is not implemented on top of a standard UI library such as
-Motif, OpenWindows, or Win32. Instead, it is built on top of its own VWS
-defining primitives to create and manipulate windows, draw primitives
-such as lines, circles, text and handle user-events.
+GTK, Qt, or Win32. Instead, it is built on top of its own base layer to
+create and manipulate windows, draw primitives such as lines, circles,
+text and handle user-events.
 
 As a consequence, \product{} programs are fully compatible over the available
 platforms, except that some (almost exclusively obscure) features may
@@ -200,7 +145,7 @@ graphicals guarantees there are no platform-specific limitations in the
 manipulation and semantics of certain controllers. \product{} defines
 the look-and-feel for each of the controllers. As a consequence,
 \product{} controllers may not behave exactly the same as controllers of
-other applications in the same windowing environment. 
+other applications in the same windowing environment.
 
 All good things come at a price-tag and portability based on a virtual
 environment is no exception to this rule. \product{} builds high-level
@@ -217,14 +162,14 @@ actions (feel) of the \product{} controllers is determined by
 \begin{xpceonly}
 \section{A brief history of (X)PCE}
 
-The ``PCE Project'' was started in 1985 by Anjo Anjewierden.  His aim
-was to develop a high-level UI environment for (C-)Prolog.  The
-requirements for this environment came from the ``Thermodynamics Coach''
-project in which Paul Kamsteeg used PCE/Prolog to implement the UI for
-a courseware system for thermodynamics.  This system included a
-`scratch-pad' that allowed the student to create structured drawings
-of component configurations. The application had to be able to analyse
-the drawing made by the student.
+The ``PCE Project'' was started in 1985 by Anjo
+Anjewierden\textsuperscript{\dag}. His aim was to develop a high-level
+UI environment for Edinburgh (C-)Prolog. The requirements for this
+environment came from the ``Thermodynamics Coach'' project in which Paul
+Kamsteeg used PCE/Prolog to implement the UI for a courseware system for
+thermodynamics. This system included a `scratch-pad' that allowed the
+student to create structured drawings of component configurations. The
+application had to be able to analyse the drawing made by the student.
 
 PCE has been redesigned and largely re-implemented on a SUN workstation
 using Quintus Prolog and later SWI-Prolog \cite{SWI-Prolog:manual} in
@@ -259,35 +204,22 @@ As of XPCE 6.0, the licence terms have been changed from GPL to the
 more permissive LGPL for the XPCE kernel (compiled C-part) and GPL
 with an exception allowing for generating non-free applications with
 XPCE for the Prolog libraries.  Please visit the SWI-Prolog home page
-at \url{http://www.swi-prolog.org} for details.
+at \url{https://www.swi-prolog.org} for details.
+
+As of XPCE 7.0, the license terms are changed to BSD-2 and portability
+of the system was handed to the widely supported libraries:
+\href{https://www.libsdl.org}{SDL},
+\href{https://www.cairographics.org/}{Cairo} and
+\href{https://www.gtk.org/docs/architecture/pango}{Pango}.  \product{}
+was extended to provide the ``app'' Prolog console (named
+\textit{Epilog}).  \product{}~7 provides more flexible support for
+Prolog's multi-threading.
 \end{xpceonly}
-
-\begin{pwonly}
-\section{A brief history of \product{}}
-
-The basic design underlying \product{} was developed for an internal
-project at the University of Amsterdam by Anjo Anjewierden. It was
-further developed in `Esprit' project P1098 (KADS-I) for the realisation
-of a workbench for knowledge engineering (Shelley).  PCE 2.0, as the
-system was called then was commercialised by Quintus as ProWindows 1.
-
-Development of PCE continued in the academic environment, producing
-XPCE-3, and later XPCE-4. In this process, the system was ported from
-SunView to X11 and Win32. Controllers and basic graphicals were unified,
-the class-system was made available to the user and user-defined classes
-were introduced. Performance, robustness and programming environment
-were improved drastically.
-
-XPCE-4 was brought to the attention of James Little (AIIL) by Paul
-Holmes-Higgin from Surrey University.  AIIL decided to commercialise
-XPCE-4 using the name `ProWindows-3', and introduce it as the portable
-Quintus GUI environment.
-\end{pwonly}
 
 
 \section{About this manual}
 
-qThis userguide introduces the basics of \productpl{} and its
+This userguide introduces the basics of \productpl{} and its
 development environment. \Chapref{starting}, ``Getting Started''
 explains the interface. \Chapref{online}, ``Using the online manual''
 introduces the online documentation tools. These are introduced early,

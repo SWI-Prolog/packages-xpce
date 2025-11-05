@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2011, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  2001-2025, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -32,16 +33,25 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Build PostScript version for the class-hierarchy holding all (built-in)
-classes.  Called from the documentation Makefile.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+:- module(mkclasshier,
+          []).
+:- use_module(library(pce)).
+:- use_module(library(lists)).
+:- use_module(library(main)).
+:- use_module(library(pce_util)).
 
-mkhierarchy(Out) :-
+/** <module> Create XPCE class hierarchy
+
+Build PostScript version for the  class-hierarchy holding all (built-in)
+classes. Called from the documentation Makefile.
+*/
+
+:- initialization(main, main).
+
+main([Out]) :-
     new(T, tree(new(R, node(text(object))))),
     expand_node(R),
-    send(T, compute),
-    postscript(T, Out).
+    send(T, pdf, Out).
 
 expand_node(N) :-
     get(N?string, value, Name),

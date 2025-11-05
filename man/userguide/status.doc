@@ -1,0 +1,70 @@
+\chapter{XPCE~7 status and plans}			\label{sec:xpce-status}
+
+\product{} has been used by many projects and has been sold as
+commercial product both by the university of Amsterdam and under the
+name ProWindows by Quintus. In addition it has been used to implement
+the SWI-Prolog development tools, the PceEmacs editor, a source level
+debugger, profiler front end and many more tools. Over the years,
+interest for using \product{} for building GUIs faded away because the
+system was barely maintained and claimed as \jargon{deprecated}.
+
+\product{}~7 is a major rewrite of the lower layers of \product{}. It
+makes \product{} future proof by building on widely supported portable
+libraries rather than only providing bindings for X11 and Windows.  The
+current version provides minimal changes to \product{}~6 and older.
+Some major changes are:
+
+\begin{itemize}
+    \item Fonts, colours and images have been updated, removing many of
+    the old legacy X11 features.
+
+    \item All bundled images have been converted to PNG format.  While
+    this represents pixels using the 32-bit RBGA model, images can still
+    be assigned the type \const{bitmap}.  Such images should only have
+    black, white and transparent pixels.  Black pixels are rendered
+    using the current foreground, white pixels using the current
+    background and transparent pixels have no effect.
+
+    \item While \product{}~6 supported primarily integers, \product{}~7
+    generalizes non-object numbers to floating point numbers.  In many,
+    but not all, classes floats are properly passed to the Cairo library
+    which expresses all coordinates as doubles.  The current system
+    supports a type \const{num} to represent such numbers.  Currently,
+    \const{int} is an alias for \const{num}.  Passing floats to methods
+    that require a strict integer causes silent rounding to an integer.
+
+    \item Host file dialogs are supported through SDL using the
+    `frame<-open_file` and `frame<-save_file` methods.   The native
+    xpce \jargon{finder} still works, but does not yet support using
+    the host functionality.
+
+    \item Where \product{}~6 provided access to multiple X11 displays,
+    each of which could be divided into one or more monitors,
+    \product{}~7 removed class \const{monitor}.  The system exposes
+    one or more \class{display} instance as members of
+    \class{display_manager}.  Unlike \product{}~6, \product{}~7 deals
+    with hot plugging, removing and modifing the display configuration.
+
+    \item Generating PostScript from graphicals is still implemented,
+    but mostly non-functional. A new method `graphical->pdf` is provided
+    that use Cairo to write PDF to a file.  The implementation rather
+    minimal. Notably producing multi-page documents is not yet
+    supported.
+
+    \item Printing, support for Windows meta-files are currently not
+    supported.
+\end{itemize}
+
+\section{The future for \product{}}			\label{sec:future}
+
+The underlying libraries allow for many extensions. Notably SDL provides
+APIs for dealing with video, audio and many input devices used for
+gaming. Cairo supports a \jargon{transformation matrix}, allowing for
+scaling, rotation and skewing graphicals. It also supports partial
+transparency (\jargon{alpha channel}). The alpha channel is now
+supported in \class{colour}. Class \class{device} should probably
+support transformation and partial transparency.
+
+Finally, many of the widgets need to be updated to reflect current ideas
+on appearance and interaction.
+

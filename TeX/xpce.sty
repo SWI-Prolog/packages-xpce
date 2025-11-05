@@ -55,7 +55,7 @@
 
 \newcommand{\emptydescription}{\vspace{-.8cm}}
 
-\newcommand{\expanded}[3]{%
+\newcommand{\pceexpanded}[3]{%
 	\definition{#1({\it #3})}%
 	\index{#1/#2}}
 \def\bothmethod{\@ifstar{\@emptybothmethod}{\@bothmethod}}
@@ -156,42 +156,5 @@
 %	compatibility
 
 \providecommand{\tick}[1]{\item {#1}\\\ignorespaces}
-
-\newcommand{\titlepageheader}{
-\newlength{\uvawidth}
-\settowidth{\uvawidth}{\LARGE VU University Amsterdam}
-
-\newcommand{\uvaaddress}{%
-\parbox[b]{\uvawidth}{%
-    \begin{center}
-        \LARGE
-              University of Amsterdam                   \\[3mm]
-        \small
-           Kruislaan 419, 1098 VA~~Amsterdam            \\%
-                    The Netherlands                     \\%
-    \end{center}}}
-\newcommand{\vuaddress}{%
-\parbox[b]{\uvawidth}{%
-    \begin{center}
-        \LARGE
-              VU University Amsterdam                   \\[3mm]
-        \small
-           De Boelelaan 1081a, 1081 HV~~Amsterdam       \\%
-                    The Netherlands                     \\%
-    \end{center}}}
-
-\mbox{~}
-\begin{center}
-\vspace{-3cm}
-\raisebox{5cm}{
-\parbox{\textwidth}{%
-    \makebox[\textwidth]{%
-        \raisebox{0mm}{\vuaddress}
-        \hfill%
-        \raisebox{0mm}{\uvaaddress}}
-}}
-\end{center}
-}
-
 
 \makeatother

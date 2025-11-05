@@ -58,7 +58,7 @@ inspect the persistent state associated with objects.
 This tool provides a `consists-of' view of all displayed visual objects.
 It provides a quick overview of the structure of an interface.  It is
 a useful for finding object-references, examining the structure of
-an unknown UI and verifying that your program created the expected 
+an unknown UI and verifying that your program created the expected
 structure.
     \manualtool{The manual itself (help)}{File/Help}
 \index{help,on manual}%
@@ -114,7 +114,7 @@ The `Formal Description' is a short description derived from the
 described object itself:
 
 \begin{center}
-\begin{tabularlp}{{\tt M} class \url{<- }selector: type ... \url{-->}type}
+\begin{tabularlp}{{\tt M} class <-selector: type ... -->type}
 \hline
 {\tt V} class \verb$ - $selector: type
 	& Variable that cannot be accessed directly \\

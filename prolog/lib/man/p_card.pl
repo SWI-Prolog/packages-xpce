@@ -62,14 +62,15 @@ variable(modules,       hash_table,     get,
 variable(modified,      bool,           both,
          "Indicate some module has modified").
 
-initialise(S, Name:name, Dir:directory) :->
+initialise(S, Name:name, Dir:[directory]) :->
     "Initialise from name and directory"::
     (   get(@man_space_table, member, Name, _)
     ->  send(@display, inform, S, "XPCE Manual",
              'Space %s already exists', Name)
-    ;   send(S, slot, name,      Name),
+    ;   default(Dir, directory('$PCEHOME/man/reference'), Directory),
+        send(S, slot, name,      Name),
         send(S, slot, modified,  @off),
-        send(S, slot, directory, Dir),
+        send(S, slot, directory, Directory),
         send(S, slot, modules,   new(hash_table)),
         send(@man_space_table, append, Name, S)
     ).

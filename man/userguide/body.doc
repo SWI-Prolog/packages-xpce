@@ -2,8 +2,8 @@
 % Common body of the XPCE/ProWindows documentation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\pagestyle{fancyplain}
-\setupfancyplain
+%\pagestyle{fancyplain}
+%\setupfancyplain
 
 {\parskip 0pt
  \setcounter{page}{0}
@@ -22,6 +22,7 @@
 \include{graphics}
 \include{pceprolog}
 \include{udc}
+\include{threads}
 \include{classvar}
 \include{resource}
 \include{techniques}
@@ -30,12 +31,13 @@
 \ifpw{}{\bibliographystyle{name}
 	\bibliography{pce}}
 \appendix
-\include{diaedit}
+%\include{diaedit}
+\include{driver}
 \include{mswin}
 \include{globalarch}
 \include{interface}
 \include{memory}
-\include{trouble}
+\include{status}
 \include{glossary}
 \include{summary}
 

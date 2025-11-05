@@ -275,7 +275,7 @@ send(Device?graphicals, for_all,
 	message(@arg1, font, bold))),
 ...
 \end{code}
- 
+
 #class chain_hyper "chain_hyper(from, to, forward, backward)"
 Link two objects with a `chain'.  If either dies, the other will die
 with it.  See also the library \pllib{hyper} and \secref{hyper}.
@@ -376,11 +376,6 @@ A \class{colour} represents an `RGB' triple.%
 		  the intensities of the three primary colours}
 Colours are used as attributes to graphicals, windows, \classs{style} and
 \classs{pixmap}
-
-#class colour_map "colour_map(name, colours)"
-Manipulate the colourmap.  Colourmaps are normally left untouched, but
-using a 256 entries colour palette in MS-Windows they can be used to
-improve full-colour image rendering.  See also \secref{colour}.
 
 #class connect_gesture "connect_gesture(button, modifier, link)"
 A \class{connect_gesture} allows the user to connect two graphicals
@@ -624,7 +619,7 @@ A single \class{text_buffer} can be associated with multiple
 Editors can handle sensitive regions, different fonts, colours and
 attributes using \class{fragment} objects. All text windows in \product{}'s
 demo programs (PceEmacs, cards from the online help, application help,
-etc.) either use class view or class editor to display the text. 
+etc.) either use class view or class editor to display the text.
 
 #class elevation "elevation(name, height, colour, relief, shadow)"
 An \class{elevation} object describes an elevated region on the screen.
@@ -731,7 +726,7 @@ using a start-position and a length.  Fragments are automatically
 updated if the contents of the text_buffer changes.  A fragment can
 be assigned a logical `category', called `style'.  The \class{editor}
 visualising the text_buffer maps the style-names of fragments into
-\class{style} objects using `editor ->style'.  
+\class{style} objects using `editor ->style'.
 
 \begin{code}
 ...,
@@ -1054,7 +1049,7 @@ initialise(F) :->
 \end{code}
 
 #class menu_item "menu_item(value, message, label, end_group, condition, accelerator)"
-Item of a \class{menu} or \class{popup}.   For \class{popup} menus, the 
+Item of a \class{menu} or \class{popup}.   For \class{popup} menus, the
 items are normally created explicitly as each item often defines a
 unique command. For \classs{menu}, it is common practice to simply
 append the alternatives as \class{menu_item} will translate a
@@ -1401,7 +1396,7 @@ show_splash_screen :-
 	send(W, open_centered),
 	send(timer(2), delay),
 	send(W, destroy).
-	
+
 \end{code}
 
 #class rubber "rubber(level, stretch, shrink, linebreak)"
@@ -1619,6 +1614,16 @@ A \class{relation_table} defines a multi-column table data object that
 can have one or more indexed {\em key} fields. They are (infrequently)
 used for storing complex relational data as \product{} objects.
 
+#class terminal_image "terminal_image(width, height)"
+A \class{graphical} that represents a terminal (console). It is capable
+of providing I/O for Prolog threads or external processes. On Windows
+systems I/O is provided by Windows named pipes opened in
+\jargon{overlapped} mode. On POSIX systems \jargon{pseudo terminals}
+(pty) are used as interface between tasks and the terminal image. The
+\class{terminal_image} input handles a rich set of the ANSI escape
+sequences and various extensions. This class is used to build the
+\jargon{Epilog} Prolog console provided by \program{swipl-win}.
+
 #class text "text(string, format, font)"
 Graphical representing a string in a specified font.  Class text
 defines various multi-line and wrapping/scrolling options.  It also
@@ -1686,11 +1691,6 @@ Tiles are used to realise the `tile-layout' of windows in a
 \class{frame}.  \Secref{framelayout} explains this in detail.  Tiles
 can also be used to realise tabular layout of other re-sizable graphical
 objects.
-
-#class tile_adjuster "tile_adjuster(tile)"
-Small window displayed on top of a \class{frame} at the right/bottom
-of a user-adjustable window. Dragging this window allows the user the
-adjust the subwindow layout.
 
 #class timer "timer(interval, message)"
 Timers are used to initiate messages at regular intervals, schedule
