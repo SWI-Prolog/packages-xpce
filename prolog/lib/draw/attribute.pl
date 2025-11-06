@@ -34,18 +34,11 @@
 
 :- module(draw_attribute, []).
 :- use_module(library(pce)).
-:- require([ between/3
-           , chain_list/2
-           , default/3
-           , forall/2
-           , get_config/2
-           , get_object/4
-           , listen/3
-           , member/2
-           , send_list/3
-           , set_config/2
-           , unlisten/1
-           ]).
+:- use_module(library(apply)).
+:- use_module(library(broadcast)).
+:- use_module(library(lists)).
+:- use_module(library(pce_config)).
+:- use_module(library(pce_util)).
 
 :- pce_autoload(font_item, library(pce_font_item)).
 
@@ -270,57 +263,24 @@ equal_attributes([A|T], O1, O2) :-
     equal_attributes(T, O1, O2).
 
 make_fill_pattern_menu(_Draw, Menu) :-
-    get_config(draw_config:resources/fill_palette, PatternsChain),
-    chain_list(PatternsChain, Patterns0),
-    realise_patterns(Patterns0, Patterns),
+    get_config(draw_config:resources/fill_palette, ColoursChain),
+    chain_list(ColoursChain, ColourNames),
+    maplist(colour_term, ColourNames, Colours),
     new(Proto, box(30, 16)),
-    make_proto_menu(Menu, Proto, fill_pattern, Patterns),
+    make_proto_menu(Menu, Proto, fill_pattern, [foreground|Colours]),
     send(Proto, done).
 
-realise_patterns([], []).
-realise_patterns([Image|T0], [Image|T]) :-
-    object(Image),
-    send(Image, instance_of, image),
-    !,
-    realise_patterns(T0, T).
-realise_patterns([Name|T0], [Image|T]) :-
-    pce_catch_error(_Error, new(Image, image(Name))),
-    !,
-    realise_patterns(T0, T).
-realise_patterns([_|T0], T) :-
-    realise_patterns(T0, T).
-
+colour_term(Name, colour(Name)).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-The colour menu.  When the display  is not a colour  display, the only
-possible colours of an object are @default (implying the colour of the
-device),  `white' and `black'.   On colour displays  we will show some
-more  possibilities.  For  a somewhat  larger  set of choices, a cycle
-menu may be more appropriate.
-
-\index{colour}
-Currently  the only  way  to  find   out  whether you are   using    a
-black-and-white or colour display is `@display  <-depth'.  This is the
-number of bits the screen uses to represent a single pixel.
-
-Note   that  the colour  palette   is  constructed  from   a  box with
-@black_image    fill pattern.   The problem  here     is  the name  of
-@black_image.  It does  not represent  the  colour black, but only  an
-image with all pixels set to 1.
+The colour menu.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-colour_display :-
-    \+ get(@display, depth, 1).
-
 colour(_Draw, Colour) :-
-    colour_display,
-    !,
     get_config(draw_config:resources/colour_palette, ColoursChain),
     chain_list(ColoursChain, Colours),
     member(ColourName, Colours),
     get(@pce, convert, ColourName, colour, Colour).
-colour(_, colour(white)).
-colour(_, colour(black)).
 
 make_colour_menu(Draw, Menu) :-
     new(Proto, box(30, 16)),
@@ -339,7 +299,7 @@ is often used to mark lines or display on top of filled areas.
 make_transparent_menu(Menu) :-
     new(Proto, figure),
     send(Proto, display, new(B, box(30,16))),
-    send(B, fill_pattern, @grey50_image),
+    send(B, fill_pattern, colour(grey50)),
     send(Proto, display, new(T, text('T', left,
                                       font(screen, roman, 10)))),
     send(T, center, B?center),
@@ -364,7 +324,9 @@ Create  a menu for  some prototype attribute.   Each menu_item   has a
 
 make_proto_menu(Menu, Proto, Attribute, Values) :-
     new(Menu, draw_proto_menu(Attribute)),
-    (   Attribute == colour
+    (   (   Attribute == colour
+        ;   Attribute == fill_pattern
+        )
     ->  Kind = pixmap
     ;   Kind = bitmap
     ),

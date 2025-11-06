@@ -48,8 +48,6 @@
                  *      CHECK ENVIRONMENT       *
                  *******************************/
 
-has_metafile :-
-    get(@pce, convert, win_metafile, class, _).
 has_printer_class :-
     get(@pce, convert, win_printer, class, _).
 
@@ -85,10 +83,9 @@ config(resources/colour_palette,
          default([red, green, blue, yellow, black, white])
        ]).
 config(resources/fill_palette,
-       [ type(setof(image)),
-         comment('Images used for filling'),
-         default([ @white_image,
-                   @black_image
+       [ type(setof(colour)),
+         comment('Colours used for filling'),
+         default([red, green, blue, yellow, black, white
                  ])
        ]).
 config(resources/arrows,
@@ -97,30 +94,21 @@ config(resources/arrows,
          default([ @draw_default_arrow
                  ])
        ]).
-config(print/printer,
-       [ type(name),
-         comment('Name of the default printer.  May be $VARIABLE'),
-         default(DefPrinter)
-       ]) :-
-    \+ has_printer_class,
-    (   get(@pce, environment_variable, 'PRINTER', _DefPrinter)
-    ->  DefPrinter = '$PRINTER'
-    ;   DefPrinter = 'PostScript'
-    ).
-config(print/print_command,
-       [ type(name),
-         comment(['Command to send PostScript file to printer.  ',
-                  '%p refers to the printer, %f to the (temporary) ',
-                  'PostScript file']),
-         default('lpr -P%p %f')
-       ]) :-
-    \+ has_printer_class.
+%config(print/printer,
+%       [ type(name),
+%         comment('Name of the default printer.  May be $VARIABLE'),
+%         default(DefPrinter)
+%       ]) :-
+%    (   get(@pce, environment_variable, 'PRINTER', _DefPrinter)
+%    ->  DefPrinter = '$PRINTER'
+%    ;   DefPrinter = 'PostScript'
+%    ).
 config(file/save_prototypes,
        [ type(bool),
          comment('Save user prototypes with drawing.'),
          default(true)
        ]).
-config(file/save_pdfdt_on_save,
+config(file/save_pdf_on_save,
        [ type(bool),
          comment(['Automatically save drawing as PDF after ',
                   'saving as PceDraw .pd file'
