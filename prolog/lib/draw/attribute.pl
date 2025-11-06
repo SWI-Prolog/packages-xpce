@@ -299,7 +299,7 @@ is often used to mark lines or display on top of filled areas.
 make_transparent_menu(Menu) :-
     new(Proto, figure),
     send(Proto, display, new(B, box(30,16))),
-    send(B, fill_pattern, colour(grey50)),
+    send(B, fill_pattern, colour(grey70)),
     send(Proto, display, new(T, text('T', left,
                                       font(screen, roman, 10)))),
     send(T, center, B?center),
@@ -326,6 +326,7 @@ make_proto_menu(Menu, Proto, Attribute, Values) :-
     new(Menu, draw_proto_menu(Attribute)),
     (   (   Attribute == colour
         ;   Attribute == fill_pattern
+        ;   Attribute == transparent
         )
     ->  Kind = pixmap
     ;   Kind = bitmap
