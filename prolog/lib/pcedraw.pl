@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -39,12 +40,13 @@
           ]).
 
 :- use_module(library(pce)).
-:- require([ file_name_extension/3
-           , is_list/1
-           , member/2
-           ]).
+:- use_module(library(apply)).
+:- use_module(library(draw/draw)).
 
-:- consult(library('draw/draw')).
+%!  pcedraw is det.
+%!  pcedraw(+Files) is det.
+%
+%   Open PceDraw, possibly on a file.
 
 pcedraw :-
     draw.
@@ -55,17 +57,13 @@ pcedraw([]) :-
 pcedraw(Files) :-
     is_list(Files),
     !,
-    (   member(File, Files),
-        draw(File),
-        fail
-    ;   true
-    ).
+    maplist(draw, Files).
 pcedraw(File) :-
     draw(File).
 
 pce_ifhostproperty(prolog(swi),
 (   save_pcedraw(File) :-
-        (   feature(windows, true)
+        (   current_prolog_flag(windows, true)
         ->  file_name_extension(File, exe, Exe)
         ;   Exe = File
         ),

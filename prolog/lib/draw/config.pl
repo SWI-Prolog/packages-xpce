@@ -1,8 +1,8 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
     Copyright (c)  1997-2011, University of Amsterdam
     All rights reserved.
 
@@ -120,38 +120,18 @@ config(file/save_prototypes,
          comment('Save user prototypes with drawing.'),
          default(true)
        ]).
-config(file/save_postscript_on_save,
+config(file/save_pdfdt_on_save,
        [ type(bool),
-         comment(['Automatically save drawing as PostScript after ',
+         comment(['Automatically save drawing as PDF after ',
                   'saving as PceDraw .pd file'
                  ]),
          default(false)
        ]).
-config(file/save_metafile_on_save,
-       [ type(bool),
-         comment(['Automatically save drawing as Windows metafile after ',
-                  'saving as PceDraw .pd file'
-                 ]),
-         default(false)
-       ]) :-
-    has_metafile.
-config(file/postscript_file_extension,
+config(file/pdf_file_extension,
        [ type(name),
-         comment(['Extension for PostScript files.  ',
-                  'PceDraw generated PostScript satisfies the rules ',
-                  'for `Encapsulated PostScript''']),
-         default('eps')
+         comment(['Extension for PDF files.']),
+         default('pdf')
        ]).
-config(file/meta_file_format,
-       [ type({aldus,wmf,emf}),
-         comment(['WMF is Windows 3.1 metafile format.  ALDUS is WMF with',
-                  'additional information. EMF is Windows 95 and NT',
-                  'metafile format.  Use EMF whenever possible as its',
-                  'scaling behaviour is much better'
-                 ]),
-         default(emf)
-       ]) :-
-    has_metafile.
 config(history/recent_files,
        [ type(setof(file)),
          comment('Recently visited files'),

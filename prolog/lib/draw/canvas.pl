@@ -1,8 +1,8 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
     Copyright (c)  1985-2002, University of Amsterdam
     All rights reserved.
 
@@ -864,26 +864,25 @@ saved version can be used to convert to later versions of PCE.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-->save_as requests a filename and  then invokes `Object ->save'.   The
-filename is requested   via  @finder, an instance of  the user-defined
-class   `finder', defined   in  the  PCE library file  `find_file.pl'.
-Linking the library is declared in the file draw.pl.
-
-This   addresses the  general case  of  asking  for information  using
-dialog-boxes.  In  earlier PCE applications it  was normal to  build a
-dialog-box, display it, read the information and destroy it again.
-
-For the file-finder,  the  reusable   object @finder is created  using
-pce_global/2 construct.   Once  created,  @finder   is mapped   on and
-removed-from   the display    using `Frame ->show:   @on/@off'.   This
-approach is fast and allow us to remember status (such as the selected
-directory) from the last time the finder was used.
+->save_as requests a filename and  then invokes `Object ->save'.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-prompt_pd_file(_Canvas, Mode:{open,save}, FileName:name) :<-
+prompt_pd_file(Canvas, Mode:{open,save}, FileName:name) :<-
     "Prompt for a load or save file"::
-    get(@finder, file, Mode, tuple('PceDraw files', pd), FileName).
+    working_directory(CWD, CWD),
+    (   Mode == open
+    ->  get(Canvas?frame, open_file,
+            chain(tuple('PceDraw files', pd)), CWD, FileName)
+    ;   get(Canvas?frame, save_file,
+            chain(tuple('PceDraw files', pd)), CWD, FileName0),
+        ensure_extension(FileName0, pd, FileName)
+    ).
 
+ensure_extension(File, Ext, File) :-
+    file_name_extension(_, Ext, File),
+    !.
+ensure_extension(Base, Ext, File) :-
+    file_name_extension(Base, Ext, File).
 
 save_as(Canvas) :->
     "Save in user-specified file"::
@@ -1100,28 +1099,26 @@ NOTE:   This should ask for options such as landscape and scaling
         method.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-postscript(Canvas) :->
-    "Write PostScript to default file"::
-    get(Canvas, default_file, eps, File),
-    send(Canvas, generate_postscript, File).
+export_pdf(Canvas) :->
+    "Write PDF to default file"::
+    get(Canvas, default_file, pdf, File),
+    send(Canvas, generate_pdf, File).
+
+export_pdf_as(Canvas) :->
+    "Write PDF to file"::
+    get(Canvas, default_file, pdf, DefFile),
+    get_config(draw_config:file/pdf_file_extension, Ext),
+    get(Canvas, save_file,
+        chain(tuple('PDF file', Ext)), DefFile,
+        FileName),
+    send(Canvas, generate_pdf, FileName).
 
 
-postscript_as(Canvas) :->
-    "Write PostScript to file"::
-    get(Canvas, default_file, eps, DefFile),
-    get_config(draw_config:file/postscript_file_extension, Ext),
-    get(@finder, file, save, Ext, @default, DefFile, FileName),
-    send(Canvas, generate_postscript, FileName).
-
-
-generate_postscript(Canvas, PsFile:file) :->
+generate_pdf(Canvas, PdfFile:file) :->
     "Write PostScript to named file"::
-    send(PsFile, open, write),
-    send(PsFile, append, Canvas?postscript),
-    send(PsFile, append, string('showpage\n')),
-    send(PsFile, close),
+    send(Canvas, pdf, PdfFile, 0.7),
     send(Canvas, report, status,
-         'Written PostScript to `%s''', PsFile?base_name).
+         'Written PDF to `%s''', PdfFile?base_name).
 
 
 default_file(Canvas, Ext:[name], DefName:name) :<-
@@ -1138,46 +1135,6 @@ default_file(Canvas, Ext:[name], DefName:name) :<-
     ).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Windows MetaFile generation
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-save_default_windows_metafile(Canvas) :->
-    "Save default format to default file"::
-    get_config(draw_config:file/meta_file_format, Fmt),
-    wmf_extension(Fmt, Ext),
-    get(Canvas, default_file, Ext, DefFile),
-    send(Canvas, generate_metafile, DefFile, Fmt).
-
-wmf_extension(aldus, wmf) :- !.
-wmf_extension(Fmt, Fmt).
-
-windows_metafile(Canvas, File:[file], Format:[{emf,wmf,aldus}]) :->
-    "Write Windows Metafile"::
-    (   Format == @default
-    ->  get_config(draw_config:file/meta_file_format, Fmt)
-    ;   Fmt = Format
-    ),
-    wmf_extension(Fmt, Ext),
-    (   File == @default
-    ->  get(Canvas, default_file, Ext, DefFile),
-        get(@finder, file, save,
-            tuple('Windows metafiles', Ext),
-            @default, DefFile, TheFile)
-    ;   TheFile = File
-    ),
-    send(Canvas, generate_metafile, TheFile, Fmt).
-
-
-generate_metafile(Canvas, File:file, Format:{emf,wmf,aldus}) :->
-    "Write document to file as meta-file"::
-    new(MF, win_metafile),
-    send(MF, draw_in, Canvas?graphicals),
-    send(MF, save, File, Format),
-    send(Canvas, report, status,
-         'Saved as "%s" file to %s', Format, File?absolute_path).
-
-
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Print  the image to the default  printer.  Also this  method should be
 extended by requesting additional parameters from the user.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -1187,54 +1144,11 @@ print(Canvas) :->
     print_canvas(Canvas).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-There are two routes to print.  On   MS-Windows  printing is achieved by
-drawing on a GDI representing a printer, after which the Windows printer
-driver creates printer-codes and sends them to the printer. The standard
-Windows print dialog is shown by   win_printer->setup. Next we need some
-calculation effort to place our diagram reasonably on the page.
-
-In the Unix world, things go different. In general you make a PostScript
-file and hand this  to  the   print-spooler,  which  will  translate the
-device-independant PostScript to whatever the printer needs.
-
-XPCE doesn't (yet)  try  to  hide   the  difference  between  these  two
-approaches.
+Printing is not yet supported in XPCE 7.  The Windows specific code has
+been removed as it will not be restored.  The Unix code is still there.
+It should be updated to use PDF and drive CUPS.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-print_canvas(Canvas) :-
-    get(@pce, convert, win_printer, class, _),
-    !,
-    get(Canvas, default_file, Job),
-    new(Prt, win_printer(Job)),
-    send(Prt, setup, Canvas),
-    send(Prt, open),
-    get(Canvas, bounding_box, area(X, Y, W, H)),
-    get(@display, dpi, size(DX, DY)),
-    InchW is W/DX,
-    InchH is H/DY,
-
-    get(Prt, size, size(PW0, PH0)),
-    get(Prt, dpi, size(RX, RY)),
-    MarX is RX,                     % default 1 inch margins
-    MarY is RY,
-    PrInchW is (PW0-MarX*2)/RX,
-    PrInchH is (PH0-MarY*2)/RY,
-
-    send(Prt, map_mode, isotropic),
-    (   InchW < PrInchW,
-        InchH < PrInchH             % it fits on the page
-    ->  OX is MarX + ((PrInchW-InchW)/2)*RX,
-        send(Prt, window, area(X, Y, DX, DY)),
-        send(Prt, viewport, area(OX, MarY, RX, RY))
-    ;   Aspect is min(PrInchW/InchW, PrInchH/InchH),
-        ARX is integer(Aspect*RX),
-        ARY is integer(Aspect*RY),
-        send(Prt, window, area(X, Y, DX, DY)),
-        send(Prt, viewport, area(MarX, MarY, ARX, ARY))
-    ),
-    send(Prt, draw_in, Canvas?graphicals),
-    send(Prt, close),
-    free(Prt).
 print_canvas(Canvas) :-
     get(Canvas, default_printer, Printer),
     new(PsFile, file),

@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -43,20 +44,12 @@ draw_version(4.2).
                 *      LINKING OTHER FILES      *
                 ********************************/
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-This module is the toplevel module  of PceDraw.  It  loads the various
-other modules and defines class  `draw', of which  the drawing tool is
-an instance.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+/** <module> PceDraw toplevel module
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-PCE/Prolog modules that should run on SICStus Prolog must  include the
-library pce,    which  defines the  basic  interface  predicates.  The
-require/1    directive loads    the    requested predicates  from  the
-(PCE-)library.  None of these declarations  are needed  for SWI-Prolog
-as SWI-Prolog will  inherit the PCE system  predicates from the module
-`user' and load the other predicates using the autoloader.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+This module is the toplevel module  of   PceDraw.  It  loads the various
+other modules and defines class `draw', of  which the drawing tool is an
+instance.
+*/
 
 :- use_module(library(pce)).
 :- use_module(library(pce_config)).
@@ -95,38 +88,14 @@ an autoload class, PCE  will activate  the `undefined_class' member of
 `@pce <-exception_handlers'.  Using the standard interface setup, this
 will cause  Prolog to examine the  autoload  declarations and load the
 specified file.
-
-The library file find_file.pl defines   class finder, an  instance  of
-which can be used to ask the  user for a Unix file.   One instance can
-be used for finding   any file that is   needed by PceDraw.  For  this
-reason we use the pce_global/2 construct.  Whenever  @finder is passed
-via one  of the interface  predicates and @finder does not  exist, the
-database of global declarations is searched.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- pce_autoload(draw_attribute_editor, library('draw/attribute')).
-:- pce_autoload(finder, library(find_file)).
-:- pce_global(@finder, new(finder)).
 
-%:- pce_image_directory(library('draw/bitmaps')).
-
-                /********************************
-                *           ENTRY POINT         *
-                ********************************/
-
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Toplevel goals:
-
-        # draw
-          Create a drawing tool and display it.
-
-        # draw(+File)
-          As draw/0, but immediately loads a file.
-
-One could choose not to define these  predicate  and declare the class
-`draw' to be  the toplevel  or  public functionality.    This actually
-might be a cleaner solution than the one choosen here.
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+%!  draw is det.
+%!  draw(+File) is det.
+%
+%   Create a drawing tool and display it, optionally after loading File.
 
 draw :-
     new(Draw, draw),
@@ -354,19 +323,18 @@ fill_dialog(Draw, D:dialog) :->
                           message(Canvas, save_as),
                           @default, @on,
                           NonEmptyDrawing)
-              , menu_item(postscript,
-                          message(Canvas, postscript),
+              , menu_item(export_immediately_as_PDF,
+                          message(Canvas, export_pdf),
                           @default, @off,
                           HasCurrentFile)
-              , menu_item(postscript_as,
-                          message(Canvas, postscript_as),
+              , menu_item(export_as_PDF,
+                          message(Canvas, export_pdf_as),
                           @default, @off,
                           NonEmptyDrawing)
-              , new(SaveAsMetaFile, popup(save_as_metafile))
-              , menu_item('print (Control+P)',
-                          message(Canvas, print),
-                          @default, @on,
-                          NonEmptyDrawing)
+%              , menu_item('print (Control+P)',
+%                          message(Canvas, print),
+%                          @default, @on,
+%                          NonEmptyDrawing)
               , menu_item(new_window,
                           message(Draw, new_window),
                           end_group := @on)
@@ -477,17 +445,6 @@ fill_dialog(Draw, D:dialog) :->
                           message(Canvas, import_win_metafile))
               ]),
 
-    send(SaveAsMetaFile, end_group, @on),
-    send(SaveAsMetaFile?context, condition, and(NonEmptyDrawing,
-                                                HasMetaFile)),
-    send_list(SaveAsMetaFile, append,
-              [ menu_item(current_file,
-                          message(Canvas, save_default_windows_metafile),
-                          condition := HasCurrentFile),
-                menu_item(ask_file,
-                          message(Canvas, windows_metafile))
-              ]),
-
     send(S, multiple_selection, @on),
     send(S, show_current, @on),
     send_list(S, append,
@@ -536,9 +493,9 @@ fill_toolbar(_D, TB:tool_bar) :->
                 tool_button(save,
                             resource(save),
                             save),
-                tool_button(print,
-                            resource(print),
-                            print),
+%                tool_button(print,
+%                            resource(print),
+%                            print),
                 gap,
                 tool_button(cut_selection,
                             resource(cut),
