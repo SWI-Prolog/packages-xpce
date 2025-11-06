@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www-swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -56,7 +57,7 @@ items.
 
 :- pce_begin_class(font_item, label_box, "Dialog item for defining a font").
 
-variable(value_set,     chain,          get,    "List of fonts").
+variable(value_set,     [chain],          get,    "List of fonts").
 
 initialise(FI, Name:[name],
            Default:'[font|function]', Message:[code]*,
@@ -93,23 +94,24 @@ make entries in the three menus.
 
 value_set(FI, ValueSet:[chain]) :->
     "Define set of available fonts"::
-    (   ValueSet == @default
-    ->  new(Set, chain),
-        send(@fonts, for_all, message(Set, append, @arg2))
-    ;   Set = ValueSet
-    ),
-    send(FI, slot, value_set, Set),
+    send(FI, slot, value_set, ValueSet),
     get(FI, member, family, Fam),
     get(FI, member, weight, Wgt),
     get(FI, member, points, Pts),
     send_list([Fam, Wgt, Pts], clear),
-    send(Set, for_all,
-         and(if(not(?(Fam, member, @arg1?family)),
-                message(Fam, append, @arg1?family)),
-             if(not(?(Wgt, member, @arg1?style)),
-                message(Wgt, append, @arg1?style)),
-             if(not(?(Pts, member, @arg1?points)),
-                message(Pts, append, @arg1?points)))),
+    (   ValueSet == @default
+    ->  send_list(Fam, append, [sans,serif,mono]),
+        send_list(Wgt, append, [normal,bold,italic]),
+        forall(between(8,30,S),
+               send(Pts, append, S))
+    ;   send(ValueSet, for_all,
+             and(if(not(?(Fam, member, @arg1?family)),
+                    message(Fam, append, @arg1?family)),
+                 if(not(?(Wgt, member, @arg1?style)),
+                    message(Wgt, append, @arg1?style)),
+                 if(not(?(Pts, member, @arg1?points)),
+                    message(Pts, append, @arg1?points))))
+    ),
     send(Fam, sort),
     send(Wgt, sort),
     send(Pts, sort, ?(@arg1?value, compare, @arg2?value)).
@@ -172,28 +174,31 @@ family/style combination.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 activate(FI) :->
-    get(FI, member, family, Fam),
-    get(FI, member, weight, Wgt),
-    get(FI, member, points, Pts),
-    get(FI, value_set, ValueSet),
-    get(Fam, selection, CFam),
-    new(Wgts, chain),
-    new(Ptss, chain),
-    send(ValueSet, for_all,
-         if(@arg1?family == CFam, message(Wgts, append, @arg1?style))),
-    send(Wgt?members, for_all,
-         message(@arg1, active,
-                 when(message(Wgts, member, @arg1?value), @on, @off))),
-    pick_active(Wgt),
-    get(Wgt, selection, CWgt),
-    send(ValueSet, for_all,
-         if(and(@arg1?family == CFam,
-                @arg1?style == CWgt),
-            message(Ptss, append, @arg1?points))),
-    send(Pts?members, for_all,
-         message(@arg1, active,
-                 when(message(Ptss, member, @arg1?value), @on, @off))),
-    pick_active(Pts).
+    (   get(FI, value_set, @default)
+    ->  true
+    ;   get(FI, member, family, Fam),
+        get(FI, member, weight, Wgt),
+        get(FI, member, points, Pts),
+        get(FI, value_set, ValueSet),
+        get(Fam, selection, CFam),
+        new(Wgts, chain),
+        new(Ptss, chain),
+        send(ValueSet, for_all,
+             if(@arg1?family == CFam, message(Wgts, append, @arg1?style))),
+        send(Wgt?members, for_all,
+             message(@arg1, active,
+                     when(message(Wgts, member, @arg1?value), @on, @off))),
+        pick_active(Wgt),
+        get(Wgt, selection, CWgt),
+        send(ValueSet, for_all,
+             if(and(@arg1?family == CFam,
+                    @arg1?style == CWgt),
+                message(Ptss, append, @arg1?points))),
+        send(Pts?members, for_all,
+             message(@arg1, active,
+                     when(message(Ptss, member, @arg1?value), @on, @off))),
+        pick_active(Pts)
+    ).
 
 
 family(FI, _Fam:name) :->
