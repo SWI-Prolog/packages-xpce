@@ -15,8 +15,8 @@ current version provides minimal changes to \product{}~6 and older.
 Some major changes are:
 
 \begin{itemize}
-    \item Fonts, colours and images have been updated, removing many of
-    the old legacy X11 features.
+    \item Fonts, colours, cursors and images have been updated,
+    removing many of the old legacy X11 features.
 
     \item All bundled images have been converted to PNG format.  While
     this represents pixels using the 32-bit RBGA model, images can still
@@ -38,6 +38,10 @@ Some major changes are:
     xpce \jargon{finder} still works, but does not yet support using
     the host functionality.
 
+    \item The `->fill_pattern` method used to fill graphicals currently
+    only accepts filling with a solid colour.  Filling with repeated
+    patterns is not yet supported.  This functionality may be restored.
+
     \item Where \product{}~6 provided access to multiple X11 displays,
     each of which could be divided into one or more monitors,
     \product{}~7 removed class \const{monitor}.  The system exposes
@@ -46,12 +50,17 @@ Some major changes are:
     with hot plugging, removing and modifing the display configuration.
 
     \item Generating PostScript from graphicals is still implemented,
-    but mostly non-functional. A new method `graphical->pdf` is provided
-    that use Cairo to write PDF to a file.  The implementation rather
-    minimal. Notably producing multi-page documents is not yet
-    supported.
+    but mostly non-functional. This functionality will probably be
+    removed. A new method `graphical->pdf` is provided that use Cairo to
+    write PDF to a file. The implementation rather minimal. Notably
+    producing multi-page documents is not yet supported.
 
-    \item Printing, support for Windows meta-files are currently not
+    \item While internal drag-and-drop is supported, there is currently
+    no support to communicate with external applications using
+    drag-and-drop.  SDL does support dropping external objects, so this
+    may be supported in due time.
+
+    \item Printing and handling for Windows meta-files are currently not
     supported.
 \end{itemize}
 

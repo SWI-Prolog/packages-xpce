@@ -93,3 +93,5 @@ clean::
 distclean: clean
 	rm -f $(PDF)
 
+upload:
+	rsync -P $(PDF) plweb@oehoe:srv/plweb/data/download/xpce/doc/prolog/userguide.pdf
