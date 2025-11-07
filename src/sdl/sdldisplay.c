@@ -493,19 +493,6 @@ ws_asynchronous(DisplayObj d)
 }
 
 /**
- * Enable PostScript support on the display if available.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @param iscolor A boolean flag indicating if color should be used.
- * @return SUCCEED if PostScript output is supported; otherwise, FAIL.
- */
-status
-ws_postscript_display(DisplayObj d, int iscolor)
-{
-    return SUCCEED;
-}
-
-/**
  * Capture a region of the screen as an Image object.
  *
  * @param d Pointer to the DisplayObj representing the display context.

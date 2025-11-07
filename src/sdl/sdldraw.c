@@ -2374,24 +2374,6 @@ str_selected_string(PceString s, FontObj font,
 }
 
 /**
- * Render a string in PostScript format at a specified location.
- *
- * @param s Pointer to the PceString object to be rendered.
- * @param font Pointer to the FontObj specifying the font to use.
- * @param x The x-coordinate where the text begins.
- * @param y The y-coordinate where the text baseline is located.
- * @param w The maximum width for the text rendering.
- * @param format Name indicating the PostScript format to use.
- * @param flags Additional flags controlling rendering behavior.
- */
-void
-ps_string(PceString s, FontObj font,
-	  int x, int y, int w,
-	  Name format, int flags)
-{
-}
-
-/**
  * Draws a string, just like str_string(), but underscores the first
  * character matching the accelerator (case-insensitive).
  */

@@ -866,42 +866,6 @@ getRotateImage(Image image, Real degrees)
   answer(rimg);
 }
 
-
-		/********************************
-		*           POSTSCRIPT		*
-		********************************/
-
-static Area
-getBoundingBoxImage(Image image)
-{ answer(answerObject(ClassArea,
-		      ZERO, ZERO, image->size->w, image->size->h, EAV));
-}
-
-
-static Int
-getPostscriptDepthImage(Image image)
-{ if ( image->kind == NAME_bitmap )
-    return ONE;
-  if ( valInt(image->depth) < 3 )	/* 1, 2 */
-    return image->depth;
-  if ( valInt(image->depth) < 8 )	/* 3-7 */
-    return toInt(4);
-
-  return toInt(8);
-}
-
-
-static Int
-getPostscriptFormatImage(Image image)
-{ if ( image->kind == NAME_bitmap )
-    return NAME_monochrome;
-  else
-    return NAME_colour;			/* may also return greyscale */
-}
-
-
-
-
 		/********************************
 		*       PREDEFINED IMAGES	*
 		********************************/
@@ -985,11 +949,7 @@ stdXPMImage(Name name, Name kind, Image *global, char **bits)
 static void
 greyImage(Name name, int grey, Image *global,
 	  unsigned char *bits, int w, int h)
-{ Image image;
-
-  image = stdImage(name, global, bits, w, h);
-
-  attributeObject(image, NAME_postscriptGrey, toInt(grey));
+{ stdImage(name, global, bits, w, h);
 }
 
 
@@ -1055,8 +1015,6 @@ static char *T_image_atADpointD[] =
 	{ "image", "at=[point]" };
 static char *T_save[] =
 	{ "in=[source_sink]", "format=[{xbm,xpm,pnm,pbm,pgm,ppm,jpeg,gif}]" };
-static char *T_postscript[] =
-	{ "landscape=[bool]", "maximum_area=[area]" };
 static char *T_resize[] =
 	{ "width=int", "height=int" };
 static char *T_xAint_yAint[] =
@@ -1150,10 +1108,6 @@ static senddecl send_image[] =
      NAME_pixel, "Set pixel at x-y to bool or colour"),
   SM(NAME_setPixel, 2, T_xAint_yAint, setPixelImage,
      NAME_pixel, "Set pixel at x-y (to 1 or foreground)"),
-  SM(NAME_Postscript, 1, "{head,body}", drawPostScriptImage,
-     NAME_postscript, "Create PostScript"),
-  SM(NAME_DrawPostScript, 1, "{head,body}", drawPostScriptImage,
-     NAME_postscript, "Create PostScript"),
   SM(NAME_Xclose, 1, "display", XcloseImage,
      NAME_x, "Destroy associated window-system resources"),
   SM(NAME_Xopen, 1, "display", XopenImage,
@@ -1180,16 +1134,7 @@ static getdecl get_image[] =
   GM(NAME_lookup, 1, "image", "name|resource", getLookupImage,
      NAME_oms, "Lookup in @images table"),
   GM(NAME_pixel, 2, "value=bool|colour", T_xAint_yAint, getPixelImage,
-     NAME_pixel, "Get 0-1 (image) or colour for x-y"),
-  GM(NAME_boundingBox, 0, "area", NULL, getBoundingBoxImage,
-     NAME_postscript, "BoundingBox for PostScript generation"),
-  GM(NAME_postscript, 2, "string", T_postscript, getPostscriptObject,
-     NAME_postscript, "New string holding PostScript description"),
-  GM(NAME_postscriptDepth, 0, "int", NULL, getPostscriptDepthImage,
-     NAME_postscript, "Depth for PostScript image to be generated"),
-  GM(NAME_postscriptFormat, 0, "{monochrome,greyscale,colour}",
-     NULL, getPostscriptFormatImage,
-     NAME_postscript, "Format of generated PostScript")
+     NAME_pixel, "Get 0-1 (image) or colour for x-y")
 };
 
 /* Resources */

@@ -184,7 +184,6 @@ static foreign_t	pl_object1(term_t ref);
 static foreign_t	pl_object2(term_t ref, term_t description);
 static foreign_t	pl_pce_method_implementation(term_t id, term_t msg);
 static foreign_t	pl_pce_open(term_t t, term_t mode, term_t plhandle);
-static foreign_t	pl_pce_postscript_stream(term_t ps);
 static foreign_t	pl_pce_dispatch_event(term_t Fd, term_t timeout);
 static foreign_t	pl_pce_open_terminal_image(term_t ti, term_t in,
 						   term_t out, term_t err);
@@ -634,8 +633,6 @@ install_pl2xpce(void)
 		      pl_pce_method_implementation, 0);
   PL_register_foreign("pce_open", 3,
 		      pl_pce_open, 0);
-  PL_register_foreign("pce_postscript_stream", 1,
-		      pl_pce_postscript_stream, 0);
   PL_register_foreign("pce_dispatch", 2,
 		      pl_pce_dispatch_event, 0);
   PL_register_foreign("pce_open_terminal_image", 4,
@@ -2779,16 +2776,6 @@ pl_pce_open(term_t t, term_t mode, term_t plhandle)
   PL_fail;
 }
 
-
-static foreign_t
-pl_pce_postscript_stream(term_t ps)
-{ IOSTREAM *s = pcePostScriptStream();
-
-  if ( s )
-    return PL_unify_stream(ps, s);
-
-  return FALSE;
-}
 
 static foreign_t
 pl_pce_dispatch_event(term_t Fd, term_t timeout)

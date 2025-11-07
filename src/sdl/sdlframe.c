@@ -1184,19 +1184,6 @@ ws_transient_frame(FrameObj fr, FrameObj fr2)
 }
 
 /**
- * Generate a PostScript representation of the specified frame.
- *
- * @param fr Pointer to the FrameObj.
- * @param iscolor Integer indicating whether to use color (non-zero) or not (zero).
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-ws_postscript_frame(FrameObj fr, int iscolor)
-{
-    return SUCCEED;
-}
-
-/**
  * Retrieve the thread identifier associated with the specified frame.
  *
  * @param fr Pointer to the FrameObj.

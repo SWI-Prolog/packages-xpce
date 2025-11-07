@@ -543,12 +543,6 @@ __pce_export const char *pceOsError();
 
 #define PCE_SETENCODING	1		/* pceControl() commands */
 
-		 /*******************************
-		 *	       MISC		*
-		 *******************************/
-
-__pce_export void *	pcePostScriptStream(void);
-
 
 		 /*******************************
 		 *	    CALL-BACK		*

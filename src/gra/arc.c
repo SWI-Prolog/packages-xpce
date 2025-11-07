@@ -584,8 +584,6 @@ static senddecl send_arc[] =
      NAME_dimension, "->width and ->height"),
   SM(NAME_endAngle, 1, "real", endAngleArc,
      NAME_pie, "Set ->size_angle to argument - <-start_angle"),
-  SM(NAME_DrawPostScript, 1, "{head,body}", drawPostScriptArc,
-     NAME_postscript, "Create PostScript"),
   SM(NAME_points, 5, T_points, pointsArc,
      NAME_tip, "ArcObj between two points")
 };

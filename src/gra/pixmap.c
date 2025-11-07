@@ -171,15 +171,8 @@ getReplacementColourPixmap(PixmapObj pm)
 
   if ( (c = getAttributeObject(pm, NAME_replacementColour)) )
     answer(c);
-  if ( (i = getSourcePixmap(pm)) &&
-       instanceOfObject(i, ClassImage) &&
-       (grey = getAttributeObject(i, NAME_postscriptGrey)) )
-  { char buf[100];
-    sprintf(buf, "grey%d", 100-(int)valInt(grey));
-    c = newObject(ClassColour, CtoName(buf), EAV);
-  } else
-    c = BLACK_COLOUR;
 
+  c = BLACK_COLOUR;
   errorPce(pm, NAME_replacedByColour, c);
   attributeObject(pm, NAME_replacementColour, c);
 

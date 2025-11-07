@@ -69,7 +69,6 @@ status ws_own_selection(DisplayObj d, Name selection, Name type);
 Name ws_window_manager(DisplayObj d);
 void ws_synchronous(DisplayObj d);
 void ws_asynchronous(DisplayObj d);
-status ws_postscript_display(DisplayObj d, int iscolor);
 Image ws_grab_image_display(DisplayObj d, int x, int y, int width, int height);
 
 #endif /* RAYDISPLAY_H */

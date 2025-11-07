@@ -1511,12 +1511,6 @@ getCenterYGraphical(Graphical gr)
 }
 
 
-static Area
-getBoundingBoxGraphical(Graphical gr)
-{ answer(getAreaGraphical(gr));
-}
-
-
 static Int
 getDistanceGraphical(Graphical gr, Graphical gr2)
 { answer(getDistanceArea(gr->area, gr2->area));
@@ -2968,32 +2962,6 @@ initialiseNewSlotGraphical(Graphical gr, Variable new)
 }
 
 		 /*******************************
-		 *	    POSTSCRIPT		*
-		 *******************************/
-
-static status
-drawPostScriptGraphical(Graphical gr, Name hb)
-{ if ( gr->area->w != ZERO && gr->area->h != ZERO )
-  { Image i;
-
-    if ( (i=checkType(gr, nameToType(NAME_image), gr)) )
-    { BitmapObj bm = answerObject(ClassBitmap, i, EAV);
-
-      setGraphical(bm, gr->area->x, gr->area->y, DEFAULT, DEFAULT);
-      send(bm, NAME_DrawPostScript, hb, EAV);
-      doneObject(bm);
-      doneObject(i);
-
-      succeed;
-    }
-
-    fail;
-  }
-
-  succeed;
-}
-
-		 /*******************************
 		 *	       DRAW		*
 		 *******************************/
 
@@ -3256,8 +3224,6 @@ static char *T_resize[] =
 static char *T_drawImage[] =
 	{ "image", "x=int", "y=int", "sx=[int]", "sy=[int]",
 	  "sw=[int]", "sh=[int]", "transparent=[bool]" };
-static char *T_postscript[] =
-	{ "landscape=[bool]", "maximum_area=[area]" };
 static char *T_network[] =
 	{ "link=[link]", "from_kind=[name]", "to_kind=[name]" };
 static char *T_handlePosition[] =
@@ -3477,10 +3443,6 @@ static senddecl send_graphical[] =
      NAME_organisation, "Graphicals parent-chain has changed"),
   SM(NAME_pointer, 1, "point", pointerGraphical,
      NAME_pointer, "Warp pointer relative to graphical"),
-  SM(NAME_DrawPostScript, 1, "{head,body}", drawPostScriptGraphical,
-     NAME_postscript, "Create PostScript using intermediate image object"),
-  SM(NAME_Postscript, 1, "{head,body}", postscriptGraphical,
-     NAME_postscript, "Create PostScript"),
   SM(NAME_connect, 4, T_link, connectGraphical,
      NAME_relation, "Create a connection to another graphical"),
   SM(NAME_connected, 4, T_link, connectedGraphical,
@@ -3632,10 +3594,6 @@ static getdecl get_graphical[] =
      NAME_organisation, "Frame graphical is displayed on"),
   GM(NAME_window, 0, "window", NULL, getWindowGraphical,
      NAME_organisation, "Window graphical is displayed on"),
-  GM(NAME_boundingBox, 0, "area", NULL, getBoundingBoxGraphical,
-     NAME_postscript, "Same as <-area; used for PostScript"),
-  GM(NAME_postscript, 2, "string", T_postscript, getPostscriptObject,
-     NAME_postscript, "New string holding PostScript description"),
   GM(NAME_connections, 4, "chain", T_connections, getConnectionsGraphical,
      NAME_relation, "New chain with matching connections"),
   GM(NAME_connected, 4, "connection", T_link, getConnectedGraphical,

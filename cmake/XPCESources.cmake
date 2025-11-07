@@ -21,7 +21,7 @@ set(GRA_SRC	arc.c arrow.c bitmap.c box.c circle.c colour.c
 		connection.c cursor.c device.c ellipse.c figure.c
 		font.c format.c graphical.c handle.c image.c
 		joint.c line.c link.c listbrowser.c node.c path.c
-		postscript.c scrollbar.c text.c tree.c visual.c
+		scrollbar.c text.c tree.c visual.c
 		pixmap.c elevation.c pen.c draw.c bezier.c hsv.c)
 
 set(ITF_SRC	c.c host.c interface.c cpointer.c asfile.c console.c

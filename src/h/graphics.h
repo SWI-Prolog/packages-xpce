@@ -772,8 +772,6 @@ NewClass(fontobj)
   Num		ex;			/* Width of an x in this font */
   Num		avg_char_width;		/* Average char width */
   BoolObj	fixed_width;		/* Is this a fixed width font? */
-  Name		postscript_font;	/* Name of PostScript font */
-  Int		postscript_size;	/* Size in PostScript */
   WsRef		ws_ref;			/* Window system reference */
 End;
 

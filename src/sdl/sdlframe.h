@@ -81,7 +81,6 @@ void ws_topmost_frame(FrameObj fr, BoolObj topmost);
 void ws_set_label_frame(FrameObj fr);
 Image ws_image_of_frame(FrameObj fr);
 void ws_transient_frame(FrameObj fr, FrameObj fr2);
-status ws_postscript_frame(FrameObj fr, int iscolor);
 Int ws_frame_thread(FrameObj fr);
 int ws_enable_frame(FrameObj fr, int enable);
 

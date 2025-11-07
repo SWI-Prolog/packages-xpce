@@ -95,9 +95,7 @@ static vardecl var_ellipse[] =
 
 static senddecl send_ellipse[] =
 { SM(NAME_initialise, 2, T_initialise, initialiseEllipse,
-     DEFAULT, "Create ellipse from width and height"),
-  SM(NAME_DrawPostScript, 1, "{head,body}", drawPostScriptEllipse,
-     NAME_postscript, "Create PostScript")
+     DEFAULT, "Create ellipse from width and height")
 };
 
 /* Get Methods */

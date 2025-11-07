@@ -512,11 +512,6 @@ static const error_def errors[] =
     "%N: No default label for %s" },
   { NAME_graphicalNotDisplayed,	0,
     "%N: Cannot open popup on not-displayed graphical: %s" },
-					/* PostScript */
-  { NAME_noPostScriptHeader,	0,
-    "%O: Failed to get postscript_header" },
-  { NAME_mustBeOpenBeforePostscript, 0,
-    "%O: Must be opened before <-postscript" },
 					/* Windows, Frames and Tiles */
   { NAME_noSubTile, 0,
     "%O: tile %O has no <-super" },

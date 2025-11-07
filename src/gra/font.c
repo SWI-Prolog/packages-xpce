@@ -36,7 +36,6 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 
-static status	defaultPostScriptFont(FontObj f);
 static Int	getPointsFont(FontObj f);
 static status	loadFontFamilies(void);
 static status	loadFontAliases(Name res);
@@ -91,7 +90,6 @@ initialiseFont(FontObj f, Name family, Name style, Int points, Name weight)
   assign(f, points,      points);
   assign(f, fixed_width, DEFAULT);
 
-  defaultPostScriptFont(f);
   protectObject(f);		/* Still needed? */
 
   Name name = fontName(family, style, points, weight);
@@ -196,48 +194,6 @@ makeBuiltinFonts(void)
 
   fail;
 }
-
-		/********************************
-		*          POSTSCRIPT		*
-		********************************/
-
-static status
-defaultPostScriptFont(FontObj f)
-{ char buf[LINESIZE];
-
-  if ( f->family == NAME_helvetica )
-  { strcpy(buf, "Helvetica");
-
-    if ( f->style == NAME_bold )
-      strcat(buf, "-Bold");
-    else if ( f->style == NAME_oblique )
-      strcat(buf, "-Oblique");
-  } else if ( f->family == NAME_times )
-  { strcpy(buf, "Times");
-
-    if ( f->style == NAME_bold )
-      strcat(buf, "-Bold");
-    else if ( f->style == NAME_italic )
-      strcat(buf, "-Italic");
-    else /*if ( f->style == NAME_roman )*/
-      strcat(buf, "-Roman");
-  } else if ( f->style == NAME_ansiVar )
-  { strcpy(buf, "Helvetica");
-  } else				/* default */
-  { strcpy(buf, "Courier");
-
-    if ( f->style == NAME_bold )
-      strcat(buf, "-Bold");
-    else if ( f->style == NAME_oblique )
-      strcat(buf, "-Oblique");
-  }
-
-  assign(f, postscript_size, getPointsFont(f));
-  assign(f, postscript_font, CtoName(buf));
-
-  succeed;
-}
-
 
 		/********************************
 		*           GET INFO		*
@@ -497,10 +453,6 @@ static vardecl var_font[] =
      NAME_dimension, "Average char width"),
   IV(NAME_fixedWidth, "[bool]", IV_NONE,
      NAME_property, "If @off, font is proportional"),
-  IV(NAME_postscriptFont, "name", IV_BOTH,
-     NAME_postscript, "PostScript-name of the font"),
-  IV(NAME_postscriptSize, "int", IV_BOTH,
-     NAME_postscript, "PostScript point-size of the font"),
   IV(NAME_wsRef, "alien:WsRef", IV_NONE,
      NAME_storage, "Window system handle")
 };

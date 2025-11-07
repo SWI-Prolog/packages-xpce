@@ -1009,9 +1009,7 @@ static senddecl send_path[] =
   SM(NAME_insert, 2, T_insert, insertPath,
      NAME_points, "Insert after 2nd argument (@nil: prepend)"),
   SM(NAME_setPoint, 3, T_setPoint, setPointPath,
-     NAME_points, "Move (member) point to (X, Y)"),
-  SM(NAME_DrawPostScript, 1, "{head,body}", drawPostScriptPath,
-     NAME_postscript, "Create PostScript")
+     NAME_points, "Move (member) point to (X, Y)")
 };
 
 /* Get Methods */

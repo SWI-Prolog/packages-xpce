@@ -262,31 +262,6 @@ COMMON(status)	adjustFirstArrowPath(Path p);
 COMMON(status)	adjustSecondArrowPath(Path p);
 COMMON(status)	makeClassPath(Class class);
 
-/* /swi40/jan/src/pl/packages/xpce/src/gra/postscript.c */
-COMMON(StringObj) getPostscriptObject(Any obj, BoolObj ls, Area a);
-COMMON(__pce_export void *) pcePostScriptStream(void);
-COMMON(void)	ps_put_char(int c);
-COMMON(void)	ps_output(char *fm, ...);
-COMMON(status)	ps_font(FontObj font);
-COMMON(status)	postscriptDrawable(int ox, int oy, int w, int h, int depth, int iscolor);
-COMMON(Sheet)	makePSDefinitions(void);
-COMMON(status)	postscriptGraphical(Any obj, Name hb);
-COMMON(status)	drawPostScriptDevice(Device dev, Name hb);
-COMMON(status)	drawPostScriptFigure(Figure f, Name hb);
-COMMON(status)	drawPostScriptTree(Tree tree, Name hb);
-COMMON(status)	drawPostScriptBox(Box b, Name hb);
-COMMON(status)	drawPostScriptCircle(Circle c, Name hb);
-COMMON(status)	drawPostScriptEllipse(EllipseObj e, Name hb);
-COMMON(status)	drawPostScriptPath(Path p, Name hb);
-COMMON(status)	drawPostScriptBezier(Bezier b, Name hb);
-COMMON(status)	drawPostScriptLine(Line ln, Name hb);
-COMMON(status)	drawPostScriptArrow(Arrow a, Name hb);
-COMMON(status)	drawPostScriptArc(ArcObj a, Name hb);
-COMMON(status)	drawPostScriptBitmap(BitmapObj bm, Name hb);
-COMMON(status)	drawPostScriptImage(Image image, Name hb);
-COMMON(status)	drawPostScriptText(TextObj t, Name hb);
-COMMON(status)	postscriptFrame(FrameObj fr, Name hb);
-
 /* /swi40/jan/src/pl/packages/xpce/src/gra/scrollbar.c */
 COMMON(Int)	getMarginScrollBar(ScrollBar sb);
 COMMON(status)	placeScrollBar(ScrollBar sb, Graphical gr);

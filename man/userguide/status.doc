@@ -49,11 +49,14 @@ Some major changes are:
     \class{display_manager}.  Unlike \product{}~6, \product{}~7 deals
     with hot plugging, removing and modifing the display configuration.
 
-    \item Generating PostScript from graphicals is still implemented,
-    but mostly non-functional. This functionality will probably be
+    \item Generating PostScript from graphicals	has been
     removed. A new method `graphical->pdf` is provided that use Cairo to
     write PDF to a file. The implementation rather minimal. Notably
     producing multi-page documents is not yet supported.
+
+    \item There is no support for printing.  The above mentioned
+    `graphical->pdf` allows for generating PDF from graphicals that
+    can then be printed.
 
     \item While internal drag-and-drop is supported, there is currently
     no support to communicate with external applications using

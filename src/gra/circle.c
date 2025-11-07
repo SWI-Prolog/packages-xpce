@@ -130,8 +130,6 @@ static senddecl send_circle[] =
      NAME_area, "Force width and height to be equal"),
   SM(NAME_radius, 1, "int", radiusCircle,
      NAME_area, "Set radius (= half diameter)"),
-  SM(NAME_DrawPostScript, 1, "{head,body}", drawPostScriptCircle,
-     NAME_postscript, "Create PostScript"),
   SM(NAME_rotate, 1, "int", rotateCircle,
      NAME_rotate, "Rotate (does nothing)")
 };

@@ -600,18 +600,6 @@ ws_grayscale_image(Image image)
 }
 
 /**
- * Render the image to PostScript.
- *
- * @param image Pointer to the Image object.
- * @param depth Color depth for rendering.
- * @param iscolor Boolean flag indicating color output.
- */
-void
-ws_postscript_image(Image image, Int depth, int iscolor)
-{
-}
-
-/**
  * Load an image using the XLI utility.
  *
  * @param image Pointer to the Image object.

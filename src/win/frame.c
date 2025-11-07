@@ -715,21 +715,6 @@ getPositionFrame(FrameObj fr)
 { answer(getPositionArea(fr->area));
 }
 
-
-static Area
-getBoundingBoxFrame(FrameObj fr)
-{ int x, y, w, h;
-
-  if ( ws_frame_bb(fr, &x, &y, &w, &h) )
-    answer(answerObject(ClassArea,
-			toInt(x), toInt(y), toInt(w), toInt(h),
-			EAV));
-
-  fail;
-}
-
-
-
 static Name
 getGeometryFrame(FrameObj fr)
 { int x, y, ww, wh;
@@ -1629,8 +1614,6 @@ getCatchAllFramev(FrameObj fr, Name name)
 }
 
 
-extern status postscriptFrame(FrameObj fr, Name hb);
-
 		/********************************
 		*             VISUAL		*
 		********************************/
@@ -1901,8 +1884,6 @@ static char *T_initialise[] =
 	  "application=[application]"};
 static char *T_label[] =
         { "label=name", "icon_label=[name]" };
-static char *T_postscript[] =
-        { "landscape=[bool]", "scale_in=[area]" };
 static char *T_open[] =
         { "position=[point]", "display=[display]", "grab=[bool]" };
 static char *T_wmProtocol[] =
@@ -2071,8 +2052,6 @@ static senddecl send_frame[] =
      NAME_organisation, "Append a window to the frame"),
   SM(NAME_delete, 1, "member:window", deleteFrame,
      NAME_organisation, "Delete window from the frame"),
-  SM(NAME_Postscript, 1, "{head,body}", postscriptFrame,
-     NAME_postscript, "Create PostScript for interior"),
   SM(NAME_bell, 1, "volume=[int]", bellFrame,
      NAME_report, "Ring the bell on display"),
   SM(NAME_report, 3, T_report, reportFrame,
@@ -2159,10 +2138,6 @@ static getdecl get_frame[] =
      NAME_organisation, "Find member window by name"),
   GM(NAME_members, 0, "chain", NULL, getMembersFrame,
      NAME_organisation, "New chain holding all member windows"),
-  GM(NAME_boundingBox, 0, "area", NULL, getBoundingBoxFrame,
-     NAME_postscript, "Bounding for PostScript"),
-  GM(NAME_postscript, 2, "postscript=string", T_postscript, getPostscriptObject,
-     NAME_postscript, "Get PostScript representation of frame"),
   GM(NAME_show, 0, "bool", NULL, getShowFrame,
      NAME_visibility, "@on iff <-status = open; @off otherwise"),
   GM(NAME_thread, 0, "int", NULL, getThreadFrame,

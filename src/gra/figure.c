@@ -298,8 +298,6 @@ convertOldSlotFigure(Figure f, Name slot, Any value)
 }
 
 
-extern status drawPostScriptFigure(Figure f, Name hb);
-
 status
 makeClassFigure(Class class)
 { sourceClass(class, makeClassFigure, __FILE__, "$Revision$");
@@ -334,9 +332,6 @@ makeClassFigure(Class class)
   sendMethod(class, NAME_nextStatus, NAME_visibility, 0,
 	     "Make next in <-graphicals visible",
 	     nextStatusFigure);
-  sendMethod(class, NAME_DrawPostScript, NAME_postscript, 1, "{head,body}",
-	     "Create PostScript",
-	     drawPostScriptFigure);
   sendMethod(class, NAME_display, NAME_organisation, 2, "graphical", "[point]",
 	     "Display graphical at point",
 	     displayFigure);

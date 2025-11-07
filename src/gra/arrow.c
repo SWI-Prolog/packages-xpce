@@ -396,9 +396,7 @@ static senddecl send_arrow[] =
   SM(NAME_tipX, 1, "int", tipXArrow,
      NAME_area, "Set X of tip"),
   SM(NAME_tipY, 1, "int", tipYArrow,
-     NAME_area, "Set Y of tip"),
-  SM(NAME_DrawPostScript, 1, "{head,body}", drawPostScriptArrow,
-     NAME_postscript, "Create PostScript")
+     NAME_area, "Set Y of tip")
 };
 
 /* Get Methods */

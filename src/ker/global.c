@@ -162,9 +162,6 @@ findGlobal(Name name)
       answer(obj);
   }
 
-  if ( name == NAME_postscriptDefs )
-    answer(makePSDefinitions());
-
   if ( exceptionPce(PCE, NAME_undefinedAssoc, name, EAV) &&
        (obj = getObjectAssoc(name)) )
     answer(obj);
