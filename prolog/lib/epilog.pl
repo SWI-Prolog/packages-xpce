@@ -292,7 +292,8 @@ binding('\\C-\\S-e', split_vertically).
 binding('\\C-\\S-i', new_window).
 binding('\\C-\\S-k', clear_screen).       % Gnome terminal
 binding('\\C-\\S-w', close).
-binding('\\C-\\S-=', font_magnify).
+binding('\\C-\\S-w', close).
+binding('\\C-\\S-m', make).
 binding('\\C--',     font_reduce).
 binding('\\C-=',     font_default).
 binding('<f5>',      trace_mode).
@@ -541,6 +542,10 @@ gui_debug(PT) :->
 
 gui_debug_toggle_command(true,  noguitracer).
 gui_debug_toggle_command(false, guitracer).
+
+make(PT) :->
+    "Inject make/0"::
+    send(PT, inject, make).
 
 close(PT) :->
     "Close this Prolog shell"::
@@ -1197,7 +1202,7 @@ initialise(D) :->
     send(D, gap, size(0,0)),
     send(D, pen, 0),
     send(D, append, new(MB, menu_bar)),
-    send(MB, append, new(File,     popup(file))),
+    send(MB, append, new(File,     epilog_popup(file))),
     send(MB, append, new(Settings, popup(settings))),
     send(MB, append, new(Tools,    popup(tools))),
     send(MB, append, new(Debug,    epilog_popup(debug))),
@@ -1213,9 +1218,11 @@ initialise(D) :->
                           end_group := @on),
                 menu_item(reload_modified_files,
                           message(Epilog, make),
+                          accelerator := 'Shift-Ctrl-M',
                           end_group := @on),
                 menu_item(close,
-                          message(Epilog, close)),
+                          message(Epilog, close),
+                          accelerator := 'Shift-Ctrl-W'),
                 menu_item(halt_prolog,
                           message(Epilog, close, @on))
               ]),
