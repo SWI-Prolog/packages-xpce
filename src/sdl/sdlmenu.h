@@ -35,7 +35,6 @@
 #ifndef RAYMENU_H
 #define RAYMENU_H
 
-status ws_draw_scrollbar_arrow(ScrollBar s, int x, int y, int w, int h, Name which, int up);
 int ws_arrow_height_scrollbar(ScrollBar s);
 status ws_draw_sb_thumb(int x, int y, int w, int h);
 Colour ws_3d_grey(void);

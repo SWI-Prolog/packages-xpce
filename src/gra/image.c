@@ -915,13 +915,13 @@ getPostscriptFormatImage(Image image)
 #include "bitmaps/ol_pulldown.bm"
 #include "bitmaps/ol_pullright.bm"
 #include "bitmaps/ol_cycle.bm"
-#include "bitmaps/intarrows.bm"
 
 static Image
 stdImage(Name name, Image *global, unsigned char *bits, int w, int h)
 { Image image = globalObject(name, ClassImage, name, toInt(w), toInt(h), EAV);
 
   assign(image, access, NAME_read);
+  assign(image, kind,   NAME_bitmap);
   image->bits = alloc(sizeof(*image->bits));
   image->bits->type = XBM_DATA;
   image->bits->bits.xbm = bits;
@@ -1012,8 +1012,6 @@ standardImages(void)
 	   ol_pulldown_bits, ol_pulldown_width, ol_pulldown_height);
   stdImage(NAME_olCycleImage, NULL,
 	   ol_cycle_bits, ol_cycle_width, ol_cycle_height);
-  stdImage(NAME_intItemImage, &INT_ITEM_IMAGE,
-	   intarrows_bits, intarrows_width, intarrows_height);
 #ifdef XPM_PCEIMAGE
 #define P NAME_pixmap
 #define B NAME_bitmap

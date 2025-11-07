@@ -107,7 +107,6 @@ RedrawAreaTextItem(TextItem ti, Area a)
   int al, av, am;
   int lw, lh;
   int fw = valInt(getExFont(ti->value_text->font));
-  Elevation z = getClassVariableValueObject(ti, NAME_elevation);
   int tx, ty, tw, th;
   TextObj vt = ti->value_text;
   int flags = 0;
@@ -136,54 +135,8 @@ RedrawAreaTextItem(TextItem ti, Area a)
     flags |= TEXTFIELD_EDITABLE;
   flags |= combo_flags(ti);
 
-  if ( !ws_entry_field((Graphical)ti,
-		       tx, ty, tw+text_item_combo_width(ti), th, flags) )
-  { if ( flags & TEXTFIELD_EDITABLE )
-    { if ( z && notNil(z) )
-      { int zh = abs((int)valInt(z->height));
-	int ly = y+am+zh+valInt(getDescentFont(vt->font));
-
-	r_3d_line(x+lw, ly, x+lw+tw, ly, z, TRUE);
-      } else if ( ti->pen != ZERO )
-      { int pen = valInt(ti->pen);
-	int ly = y+am+1+pen/2;
-
-	r_dash(ti->texture);
-	r_thickness(valInt(ti->pen));
-
-	r_line(x+lw, ly, x+lw+tw, ly);
-      }
-    }
-    if ( flags & (TEXTFIELD_COMBO|TEXTFIELD_COMBO_DOWN) )
-    { double trh = dpi_scale(ti, 8);
-      double trw = dpi_scale(ti, 9);
-      double trx, try;
-      bool up = !!(flags & TEXTFIELD_COMBO);
-
-      trx = tx+tw+5;
-      try = y + (h-trh)/2;
-
-      r_3d_triangle(trx+trw/2, try+trh, trx, try, trx+trw, try, z, up, 0x3);
-    }
-    if ( flags & TEXTFIELD_STEPPER )
-    { double sw = dpi_scale(ti, STEPPER_BOX_W);
-      double bx = x+w-sw;
-      double bh = (h+1)/2.0;
-      double iw, ih, ix, dy;
-      Elevation e = getClassVariableValueClass(ClassButton, NAME_elevation);
-
-      r_3d_box(bx, y,    sw, bh,   0, e, !(flags & TEXTFIELD_INCREMENT));
-      r_3d_box(bx, y+bh, sw, h-bh, 0, e, !(flags & TEXTFIELD_DECREMENT));
-
-      iw = valNum(INT_ITEM_IMAGE->size->w)/2.0;
-      ih = valNum(INT_ITEM_IMAGE->size->h);
-      ix = x + w - (sw+iw+1)/2.0;
-      dy = (bh-ih+1)/2.0;
-
-      r_image(INT_ITEM_IMAGE, 0,  0, ix, y+dy,      iw, ih, ON);
-      r_image(INT_ITEM_IMAGE, iw, 0, ix, y+h-dy-ih, iw, ih, ON);
-    }
-  }
+  ws_entry_field((Graphical)ti,
+		 tx, ty, tw+text_item_combo_width(ti), th, flags);
 
   if ( notDefault(vt->colour) )
   { Any old = r_colour(vt->colour);

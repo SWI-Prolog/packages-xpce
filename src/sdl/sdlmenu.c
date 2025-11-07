@@ -38,25 +38,6 @@
 #include "sdlmenu.h"
 
 /**
- * Draw a scrollbar arrow at the specified location and direction.
- *
- * @param s Pointer to the ScrollBar.
- * @param x The x-coordinate of the arrow box.
- * @param y The y-coordinate of the arrow box.
- * @param w The width of the arrow box.
- * @param h The height of the arrow box.
- * @param which Name indicating which arrow to draw (e.g., up, down).
- * @param up Boolean indicating whether the arrow is in the up state.
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-ws_draw_scrollbar_arrow(ScrollBar s,
-			int x, int y, int w, int h,
-			Name which, int up)
-{ fail;
-}
-
-/**
  * Return the height of a scrollbar arrow.
  *
  * @param s Pointer to the ScrollBar.
@@ -208,9 +189,9 @@ ws_entry_field(Graphical gr, int x, int y, int w, int h, int flags)
       r_image(SCROLL_DOWN_IMAGE, 0, 0, x+w-cw+(cw-iw)/2-2, iy, iw, ih, ON);
     }
     if ( flags & TEXTFIELD_STEPPER )
-    { int cw = ws_stepper_width(gr);
-      int bh = (h-4)/2;
-      int b1up, b2up;
+    { double cw = ws_stepper_width(gr);
+      double bh = (h-4)/2.0;
+      bool b1up, b2up;
 
       if ( cw < 0 ) cw = dpi_scale(NULL, 14);
       b1up = !(flags & TEXTFIELD_INCREMENT);
@@ -219,14 +200,13 @@ ws_entry_field(Graphical gr, int x, int y, int w, int h, int flags)
       r_3d_box(x+w-cw-2, y+2,    cw, bh, 0, button_elevation, b1up);
       r_3d_box(x+w-cw-2, y+2+bh, cw, bh, 0, button_elevation, b2up);
 
-      { int iw = valInt(INT_ITEM_IMAGE->size->w)/2;
-	int ih = valInt(INT_ITEM_IMAGE->size->h);
-	int ix = x+w-2-(cw+iw)/2;
-	int dy = (bh-ih+1)/2;
+      double iw = valNum(SCROLL_UP_IMAGE->size->w);
+      double ih = valNum(SCROLL_UP_IMAGE->size->h);
+      double ix = x + w - (cw+iw)/2.0;
+      double dy = (bh-ih)/2.0;
 
-	r_image(INT_ITEM_IMAGE, 0,  0, ix, y+2+dy,      iw, ih, ON);
-	r_image(INT_ITEM_IMAGE, iw, 0, ix, y+h-2-dy-ih, iw, ih, ON);
-      }
+      r_image(SCROLL_UP_IMAGE,   0, 0, ix, y+dy,      iw, ih, ON);
+      r_image(SCROLL_DOWN_IMAGE, 0, 0, ix, y+h-dy-ih, iw, ih, ON);
     }
   }
 

@@ -1070,7 +1070,6 @@ GLOBAL Image MS_MARK_IMAGE;		/* MS images for toggle and marked */
 GLOBAL Image MS_NOMARK_IMAGE;
 GLOBAL Image MARK_HANDLE_IMAGE;		/* connect_gesture */
 GLOBAL Image NULL_IMAGE;		/* empty image */
-GLOBAL Image INT_ITEM_IMAGE;
 GLOBAL Image SCROLL_UP_IMAGE;
 GLOBAL Image SCROLL_DOWN_IMAGE;
 GLOBAL Image SCROLL_LEFT_IMAGE;

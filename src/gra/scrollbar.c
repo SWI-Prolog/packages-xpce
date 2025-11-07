@@ -329,34 +329,32 @@ getElevationScrollBar(ScrollBar s)
 
 static void
 draw_arrow(ScrollBar s, int x, int y, int w, int h, Name which, int up)
-{ if ( !ws_draw_scrollbar_arrow(s, x, y, w, h, which, up) )
-  { Elevation z = getElevationScrollBar(s);
+{ Elevation z = getElevationScrollBar(s);
 
-    DEBUG(NAME_arrow, Cprintf("Arrow box(%d, %d, %d, %d)\n", x, y, w, h));
+  DEBUG(NAME_arrow, Cprintf("Arrow box(%d, %d, %d, %d)\n", x, y, w, h));
 
-    Image img;
-    int iw, ih;
+  Image img;
+  int iw, ih;
 
-    r_thickness(valInt(s->pen));
+  r_thickness(valInt(s->pen));
 
-    if ( up )
-      r_3d_box(x, y, w, h, 0, z, TRUE);
-    else
-      r_box(x, y, w, h, 0, isDefault(z->colour) ? NIL : (Any) z->colour);
+  if ( up )
+    r_3d_box(x, y, w, h, 0, z, TRUE);
+  else
+    r_box(x, y, w, h, 0, isDefault(z->colour) ? NIL : (Any) z->colour);
 
-         if ( which == NAME_up )       img = SCROLL_UP_IMAGE;
-    else if ( which == NAME_down )     img = SCROLL_DOWN_IMAGE;
-    else if ( which == NAME_left )     img = SCROLL_LEFT_IMAGE;
-    else /* ( which == NAME_right ) */ img = SCROLL_RIGHT_IMAGE;
+       if ( which == NAME_up )       img = SCROLL_UP_IMAGE;
+  else if ( which == NAME_down )     img = SCROLL_DOWN_IMAGE;
+  else if ( which == NAME_left )     img = SCROLL_LEFT_IMAGE;
+  else /* ( which == NAME_right ) */ img = SCROLL_RIGHT_IMAGE;
 
-    if ( img )
-    { iw = valInt(img->size->w);
-      ih = valInt(img->size->h);
+  if ( img )
+  { iw = valInt(img->size->w);
+    ih = valInt(img->size->h);
 
-      r_image(img, 0, 0, x+(w-iw)/2, y+(h-ih)/2, iw, ih, ON);
-    } else
-    { Cprintf("No scroll_bar arrow image\n");
-    }
+    r_image(img, 0, 0, x+(w-iw)/2, y+(h-ih)/2, iw, ih, ON);
+  } else
+  { Cprintf("No scroll_bar arrow image\n");
   }
 }
 
