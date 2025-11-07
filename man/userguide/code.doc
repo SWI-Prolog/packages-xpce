@@ -94,7 +94,7 @@ arguments to any method.  A function is automatically evaluated iff:
 
 \begin{shortlist}
     \item{It appears as part of a code object that is executed}
-    \item{Type checking demands execution} 
+    \item{Type checking demands execution}
 \end{shortlist}
 
 \noindent
@@ -170,9 +170,9 @@ This example will yield a warning:
 
 \begin{code}
 [PCE error: get: No implementation for:
-		 	@default/constant <-x
+			@default/constant <-x
         in: get(@default/constant, x)]
-PCE:  4 fail: get(@default/constant, x) ? 
+PCE:  4 fail: get(@default/constant, x) ?
 \end{code}
 
 The reason for this is that the {\em interface} will translate
@@ -204,7 +204,7 @@ functions in the message and thus create an instance of class
 \end{itemize}
 
 
-\subsection{Example 1: Finding objects}
+\subsection{Example: Finding objects}
 
 A common problem is to find objects, notably some specific graphical
 object on a window. If we want to find all instances of class
@@ -218,83 +218,4 @@ below, collecting all boxes on the device in a new \class{chain}.
 	    Boxes),
 	...
 \end{pcecode}
-
-
-\subsection{Example 2: Internal behaviour of dialog window}
-
-Code are most commonly used to specify the internal behaviour of
-dialog windows, such that the call-back predicate can concentrate on the
-real function.  We have seen an example of this in \secref{fileviewer}.
-
-\index{PostScript}%
-Below there is another example.  {\em Data} is assumed to be an \product{}
-\class{string} object containing a PostScript\tm{} description of a
-graphical object as can be obtained using
-
-\begin{code}
-	...,
-	get(Graphical, postscript, PostScriptString),
-	...,
-\end{code}
-
-In this example both the internal dynamics of the dialog window (the
-label of the text-entry fields changes if the user switches from
-file to printer) and grabbing the arguments from the various
-dialog items is written using \product{} executable objects.  Prolog
-will only be called to do the real work: printing the data to
-the requested destination.
-
-Note that \productpl{} does not {\bf require} you to use \product{} executable
-objects this way.  It is also possible to call Prolog from both the menu
-and the buttons, passing the dialog window as argument and write all
-behaviour in Prolog.  We leave this as an exercise to the user.
-
-
-\begin{pcecode}
-postscript(Data) :-
-	new(D, dialog('Print destination')),
-	send(D, append, new(T, menu(destination, marked))),
-	send_list(T, append, [printer, file]),
-	send(T, layout, horizontal),
-	send(D, append,
-	     new(A, text_item(printer_name, 'PostScript'))),
-	send(T, message,
-	     if(T?selection == printer,
-		message(A, label,
-			?(A, label_name, printer_name)),
-		message(A, label,
-			?(A, label_name, file_name)))),
-	send(D, append,
-	     button(ok, and(message(@prolog,
-				    print_postscript,
-				    T?selection,
-				    A?selection,
-				    Data),
-			    message(D, destroy)))),
-	send(D, append,
-	     button(cancel, message(D, destroy))),
-	send(D, default_button, ok),
-	send(D, open).
-	  
-print_postscript(printer, Address, Data) :- !,
-	new(F, file),
-	send(F, open, write),
-	send(F, append, Data),
-	send(F, close),
-	get(F, name, TmpFile),
-	get(string('lpr -P%s %s', Address, TmpFile),
-	    value, Command),
-	unix(shell(Command)),	  
-	send(F, remove).
-print_postscript(file, Address, Data) :-
-	new(F, file(Address)),
-	send(F, open, write),
-	send(F, append, Data),
-	send(F, close).
-\end{pcecode}
-
-\postscriptfig{printps}{Print destination dialog using code objects
-			for internal behaviour}
-
-
-
+%

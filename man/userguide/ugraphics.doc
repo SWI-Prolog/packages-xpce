@@ -92,7 +92,7 @@ online manual.
 ->graphics_state	& Set graphics attributes \\
 \hline
 ->draw_arc		& Draw ellipse-part \\
-->draw_box		& Draw rectangle (rounded, filled, etc.) \\ 
+->draw_box		& Draw rectangle (rounded, filled, etc.) \\
 ->draw_fill		& Fill/invert/clear rectangle \\
 ->draw_image		& Paint (part of) image \\
 ->draw_line		& Draw a line segment \\
@@ -196,10 +196,6 @@ disadvantages over the \class{device} based implementation:
     \tick{{\tt ++} Memory usage}
 This approach uses considerably less memory than the combination of a
 \class{device}, \class{box} and \class{text}.
-    \tick{{\tt --} Poor PostScript quality}
-The current version of the system will generate PostScript for
-user-defined graphicals by painting the graphical on an \class{image}
-and translating the result in a PostScript image description.
     \tick{{\tt --} More rigid}
 This version of the text-box does not have different colours for box and
 text, etc. Of course it is possible to implement a version with all

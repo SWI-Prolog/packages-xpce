@@ -19,7 +19,7 @@ COMMON=	intro.tex starting.tex globalarch.tex online.tex debug.tex \
 	namedref.tex ugraphics.tex code.tex classvar.tex diaedit.tex \
 	dialog.tex wysiwyg.tex frame.tex error.tex application.tex \
 	resource.tex images.tex summary.tex body.tex driver.tex \
-	mswin.tex balloon.tex printing.tex threads.tex status.tex \
+	mswin.tex balloon.tex threads.tex status.tex \
 	libs.tex findfile.tex toc.tex tabular.tex libdia.tex mlingual.tex \
 	httpd.tex httpd-ex.tex docrender.tex libplot.tex
 

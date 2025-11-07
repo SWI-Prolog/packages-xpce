@@ -42,7 +42,7 @@
 
 /** <module> Create XPCE class hierarchy
 
-Build PostScript version for the  class-hierarchy holding all (built-in)
+Build  PDF  version  for  the  class-hierarchy  holding  all  (built-in)
 classes. Called from the documentation Makefile.
 */
 
