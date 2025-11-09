@@ -87,7 +87,7 @@ editor_setup.
 %   Windows or MacOS (although they may   appear on the main console
 %   when invoked from a  remote  login).   On  Linux,  we can detect
 %   ``DISPLAY`` (X11) or  ``WAYLAND_DISPLAY``   (Wayland).  We  also
-%   assume we can run graphics ifthe ``SDL_VIDEO_DRIVER`` is set to
+%   assume we can run graphics if the ``SDL_VIDEO_DRIVER`` is set to
 %   `dummy`, implying we try to run _headless_.
 
 has_display :- current_prolog_flag(windows, true), !.
