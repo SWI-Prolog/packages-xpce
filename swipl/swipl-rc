@@ -1,10 +1,11 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@cs.vu.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi-prolog.nl/projects/xpce/
-    Copyright (c)  2011-2013, University of Amsterdam
+    Copyright (c)  2011-2025, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -40,88 +41,86 @@
 /** <module> Associate XPCE with SWI-Prolog
 
 This  file  initialises  XPCE,  the  SWI-Prolog   native  GUI.  XPCE  is
-initialised only if it is detected.
+initialised if one of these conditions is true.
+
+  - The Prolog flag `xpce` is `true`
+  - There is a GUI.  See has_display/0 below.  In this case, XPCE
+    is loaded if the Prolog flag `xpce` is `true`.  Otherwise it is
+    setup to be loaded lazily if one of the GUI IDE tools is invoked.
 
 The source-location of this file  is packages/xpce/swipl/swipl-rc. It is
-installed as <plbase>/<exe-base>.rc, where   <exe-base> is =|swipl-win|=
-to associate with the SWI-Prolog gui  application on Windows and =swipl=
-on Unix/X11 platforms.
+installed as <plbase>/<exe-base>.rc, where   <exe-base> is ``swipl-win``
+to  associate  with  the  SWI-Prolog  gui  application  on  Windows  and
+``swipl`` on Unix/X11 platforms.
 */
 
 :- multifile
-	user:file_search_path/2.
+    user:file_search_path/2.
 
 user:file_search_path(pce, swi(xpce)).
 user:file_search_path(library, pce('prolog/lib')).
 user:file_search_path(foreign, pce(ArchLib)) :-
-	current_prolog_flag(arch, Arch),
-	atom_concat('lib/', Arch, ArchLib).
+    current_prolog_flag(arch, Arch),
+    atom_concat('lib/', Arch, ArchLib).
 
 % We added a directory to the autoload directories: force reloading the
 % index
 :- reload_library_index.
 
 gui_setup_ :-
-	current_prolog_flag(gui, true), !.
+    current_prolog_flag(gui, true),
+    !.
 gui_setup_ :-
-	create_prolog_flag(gui, true, []),
-	epilog_setup,
-	editor_setup,
-	load_files(user:library(swi_hooks), [silent(true)]).	% help, etc.
+    create_prolog_flag(gui, true, []),
+    editor_setup,
+    load_files(user:library(swi_hooks), [silent(true)]).    % help, etc.
+
+editor_setup :-
+    current_prolog_flag(editor, default),
+    !,
+    set_prolog_flag(editor, pce_emacs).
+editor_setup.
+
+%!  has_display is semidet.
+%
+%   True when we can run graphics.  Graphics are always available on
+%   Windows or MacOS (although they may   appear on the main console
+%   when invoked from a  remote  login).   On  Linux,  we can detect
+%   ``DISPLAY`` (X11) or  ``WAYLAND_DISPLAY``   (Wayland).  We  also
+%   assume we can run graphics ifthe ``SDL_VIDEO_DRIVER`` is set to
+%   `dummy`, implying we try to run _headless_.
 
 has_display :- current_prolog_flag(windows, true), !.
 has_display :- current_prolog_flag(apple, true), !.
 has_display :- getenv('WAYLAND_DISPLAY', D), D \== '', !.
 has_display :- getenv('DISPLAY', D), D \== '', !.
-
-epilog_setup :-
-	current_prolog_flag(epilog, true),
-	!.
-epilog_setup :-
-	source_file(gui_setup_, File),
-	file_base_name(File, Base),
-	downcase_atom(Base, Lwr),
-	file_name_extension(Name, rc, Lwr),
-	epilog_name(Name),
-	!,
-	set_prolog_flag(epilog, true).
-epilog_setup.
-
-epilog_name('swipl-win').
-epilog_name('swipl-gui').
-epilog_name('swipl-epilog').
-
-editor_setup :-
-	current_prolog_flag(editor, default), !,
-	set_prolog_flag(editor, pce_emacs).
-editor_setup.
+has_display :- getenv('SDL_VIDEO_DRIVER', dummy).
 
 :- dynamic
-	pce_setup_done/0.
+    pce_setup_done/0.
 
 pce_setup_ :-
-	pce_setup_done, !.
+    pce_setup_done,
+    !.
 pce_setup_ :-
-	current_prolog_flag(xpce, false), !.
+    current_prolog_flag(xpce, false),
+    !.
 pce_setup_ :-
-	(   current_prolog_flag(xpce, true)
-	->  Preload = true
-	;   Preload = false
-	),
-	set_prolog_flag(xpce, true),
-	gui_setup_,
-	!,
-	asserta(pce_setup_done),
-	(   (   Preload == true
-	    ;	current_prolog_flag(executable, Executable),
-		file_base_name(Executable, Base),
-		sub_atom_icasechk(Base, _, pce)
-	    )
-	->  ensure_loaded(user:library(pce))
-	;   true
-	).
+    (   current_prolog_flag(xpce, true)
+    ->  Preload = true
+    ;   has_display,                % no explicit xpce flag
+        Preload = false
+    ),
+    set_prolog_flag(xpce, true),
+    gui_setup_,
+    !,
+    asserta(pce_setup_done),
+    (   Preload == true
+    ->  ensure_loaded(user:library(pce))
+    ;   true
+    ).
 pce_setup_ :-
-	asserta(pce_setup_done).
+    asserta(pce_setup_done).
 
 :- initialization pce_setup_.
 :- endif. % \+ current_prolog_flag(xpce,false)
