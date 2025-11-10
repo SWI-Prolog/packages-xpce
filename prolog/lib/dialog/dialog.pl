@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -61,7 +62,6 @@ standard XPCE library directory.
            , member/2
            , pce_help_file/2
            , pce_image_directory/1
-           , postscript/2
            , send_list/3
            ]).
 
@@ -69,8 +69,6 @@ standard XPCE library directory.
 :- pce_autoload(drag_and_drop_gesture, library(dragdrop)).
 :- pce_autoload(drag_and_drop_dict_item_gesture, library(dragdict)).
 :- pce_autoload(dia_attribute_editor, library('dialog/attribute')).
-:- pce_autoload(finder, library(find_file)).
-:- pce_global(@finder, new(finder)).
 
 dia_version('0.8').
 
@@ -920,7 +918,7 @@ fill_top_dialog(D) :-
                           condition := Target),
                 menu_item(save_all, message(Frame, save_all),
                           end_group := @on),
-                menu_item(postscript_as, message(Frame, postscript_as),
+                menu_item('export_PDF_as', message(Frame, pdf_as),
                           condition := Target,
                           end_group := @on),
                 menu_item(quit, message(Frame, destroy))
@@ -1067,7 +1065,9 @@ save_as(DE) :->
     get(DE, target, Target),
     get(Target, name, N0),
     get(N0, ensure_suffix, '.dia', N1),
-    get(@finder, file, @off, '.dia', @default, N1, File),
+    get(DE?frame, save_file,
+        chain(tuple('Dialog file', dia)),
+        N1, File),
     send(Target, attribute, attribute(dia_save_file, File)),
     send(DE, save).
 
@@ -1088,7 +1088,10 @@ save(DE) :->
 save_all(DE, File:[file]) :->
     "Save group of dialogs, so they stay together"::
     (   File == @default
-    ->  get(@finder, file, @off, '.dia', @default, TheFileName),
+    ->  working_directory(CWD, CWD),
+        get(DE?frame, save_file,
+            chain(tuple('Dialog file', dia)),
+            CWD, TheFileName),
         new(TheFile, file(TheFileName))
     ;   TheFile = File
     ),
@@ -1111,7 +1114,11 @@ add_target(DE, Ch:chain, TargetName:name) :->
 
 
 load(DE) :->
-    get(@finder, file, @on, '.dia', File),
+    working_directory(CWD, CWD),
+    get(DE?frame, open_file,
+        chain(tuple('Dialog file', dia)),
+        CWD,
+        File),
     get(file(File), object, Loaded),
     rebind(DE, Loaded, File).
 
@@ -1164,18 +1171,21 @@ reload(DE) :->
     send(DE, target, Target).
 
 
-postscript_as(DE) :->
-    "Dump <-target as PostScript"::
+pdf_as(DE) :->
+    "Dump <-target as PDF"::
     get(DE, target, Target),
-    (   get(Target, attribute, dia_postscript_file, PsFile)
+    (   get(Target, attribute, dia_pdf_file, PDFFile)
     ->  true
     ;   get(Target, attribute, dia_save_file, SaveFile)
     ->  get(SaveFile, delete_suffix, '.dia', Base),
-        get(Base, ensure_suffix, '.ps', PsFile)
+        get(Base, ensure_suffix, '.pdf', PDFFile)
     ;   get(Target, name, Base),
-        get(Base, ensure_suffix, '.ps', PsFile)
+        get(Base, ensure_suffix, '.pdf', PDFFile)
     ),
-    get(@finder, file, @off, '.ps', @default, PsFile, ThePsFile),
-    postscript(Target?frame, ThePsFile).
+    get(Target?frame, save_file,
+        chain(tuple('PDF file'), pdf),
+        PDFFile,
+        ThePDFFile),
+    send(Target, pdf, ThePDFFile, 0.7).
 
 :- pce_end_class.
