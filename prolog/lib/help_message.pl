@@ -63,10 +63,6 @@ initialise(W) :->
     send(Frame, border, 0),
     send(Frame?tile, border, 0),
     send(W, gap, size(5, 2)),
-    (   get(@pce, window_system, windows) % Hack
-    ->  send(W, pen, 1)
-    ;   send(W, pen, 0)
-    ),
     send(W, append, new(L, label(feedback, '', normal))),
     send(L, length, 0),
     send(Frame, create).
