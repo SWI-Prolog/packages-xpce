@@ -317,11 +317,13 @@ typedef struct rlc_data
   char		incomplete[MAX_INCOMPLETE]; /* Incomplete sequences */
 #ifdef HAVE_POSIX_OPENPT
   struct
-  { bool open;
-    int  master_fd;			/* Terminal side */
-    int  slave_fd;			/* Client side */
-    char slave_name[128];		/* PTY name */
-    FDWatch *watch;			/* Watch for write to terminal */
+  { bool      open;
+    int       master_fd;		/* Terminal side */
+    int       slave_fd;			/* Client side */
+    char      slave_name[128];		/* PTY name */
+    FDWatch  *watch;			/* Watch for write to terminal */
+    bool      has_client_thread;
+    pthread_t client_thread;		/* Thread that opened this terminal */
   } pty;
 #else
   struct

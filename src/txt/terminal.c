@@ -3620,9 +3620,16 @@ rlc_resize_pty(RlcData b, int cols, int rows)
       { DEBUG(NAME_term, Cprintf("Updated size to %dx%d\n", cols, rows));
       }
       close(fd);
+      if ( b->pty.has_client_thread )
+	pthread_kill(b->pty.client_thread, SIGWINCH);
     }
   }
 }
+
+/**
+ * Used by pce_open_terminal_image/4 to get  the IO streams of the PTY
+ * client side.
+ */
 
 bool
 getPrologStreamTerminalImage(Any obj,
@@ -3647,6 +3654,11 @@ getPrologStreamTerminalImage(Any obj,
     { set_stream_properties(i,o,e);
 
       *in = i; *out = o; *err = e;
+      b->pty.client_thread = pthread_self();
+      b->pty.has_client_thread = true;
+      DEBUG(NAME_term,
+	    Cprintf("Registered client thread %d (%p)\n",
+		    PL_thread_self(), b->pty.client_thread));
       return true;
     }
 
