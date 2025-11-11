@@ -1317,9 +1317,17 @@ capture_messages :-
     asserta(( user:thread_message_hook(Term,Kind,Lines) :-
                  xpce_message(Term,Kind,Lines))).
 
+:- dynamic in_interrupt_handler/0.
+
 :- public xpce_message/3.
-xpce_message(_Term, Kind, Lines) :-
-    Kind \== silent,
+xpce_message(interrupt(begin), _, _) =>
+    asserta(in_interrupt_handler),
+    fail.
+xpce_message(interrupt(end), _, _) =>
+    retractall(in_interrupt_handler),
+    fail.
+xpce_message(_Term, Kind, Lines), Kind \== silent =>
+    \+ in_interrupt_handler,
     xpce_epilog_console(_In,_Out,Error),
     print_message_lines(Error, kind(Kind), Lines).
 
