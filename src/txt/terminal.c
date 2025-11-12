@@ -3621,8 +3621,12 @@ rlc_resize_pty(RlcData b, int cols, int rows)
       { DEBUG(NAME_term, Cprintf("Updated size to %dx%d\n", cols, rows));
       }
       close(fd);
+#ifdef SIGWINCH
       if ( b->pty.has_client_thread )
 	pthread_kill(b->pty.client_thread, SIGWINCH);
+#else
+#warning "Could not find SIGWINCH.  Please investigate"
+#endif
     }
   }
 }
