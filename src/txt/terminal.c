@@ -3521,6 +3521,14 @@ set_stream_properties(IOSTREAM *i, IOSTREAM *o, IOSTREAM *e)
 #include <sys/ioctl.h>
 #include <signal.h>
 
+/* Getting SIGWINCH  on MacOS seems  to depend on  _POSIX_C_SOURCE and
+   _DARWIN_C_SOURCE, but there seem to be no combination that actually
+   gives the symbol.   Time for a hack :(
+ */
+#if !defined(SIGWINCH) && defined(__APPLE__)
+#define SIGWINCH 28
+#endif
+
 /**
  * Establish  a pty  pair between  the xpce  terminal and  the client.
  * Normally,  the client  is a  Prolog  thread, but  this design  also
