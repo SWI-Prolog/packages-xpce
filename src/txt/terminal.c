@@ -3519,6 +3519,7 @@ set_stream_properties(IOSTREAM *i, IOSTREAM *o, IOSTREAM *e)
 #include <fcntl.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <signal.h>
 
 /**
  * Establish  a pty  pair between  the xpce  terminal and  the client.
