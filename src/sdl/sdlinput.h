@@ -36,7 +36,7 @@
 #define SDL_INPUT_H_INCLUDED
 #include "sdluserevent.h"
 #ifdef __STDC_NO_ATOMICS__
-#define _Atomic(type) type
+#define _Atomic(type) volatile type
 #else
 #include <stdatomic.h>
 #endif

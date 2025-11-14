@@ -87,7 +87,13 @@ static ssize_t start_async_write(FDWatch *watch, bool signal);
 
 bool
 cmp_and_set_watch(FDWatch *watch, watch_state old, watch_state new)
-{ return atomic_compare_exchange_strong(&watch->state, &old, new);
+{
+#ifdef _MSC_VER
+  _Static_assert(sizeof(watch->state) == sizeof(LONG));
+  return InterlockedCompareExchange(&watch->state, new, old);
+#else
+  return atomic_compare_exchange_strong(&watch->state, &old, new);
+#endif
 }
 
 
