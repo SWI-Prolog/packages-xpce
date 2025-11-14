@@ -35,6 +35,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#define _USE_MATH_DEFINES
 #include <math.h>
 
 static Int getAlphaColour(Colour c);

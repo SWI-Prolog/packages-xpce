@@ -45,6 +45,10 @@ typedef struct
   ToCell		answer_stack;
 } thread_data, *ThreadData;
 
+#ifdef _MSC_VER
+#define __thread __declspec(thread)
+#endif
+
 #ifndef GLOBAL
 __thread ThreadData pce_thread_data = NULL;
 #else

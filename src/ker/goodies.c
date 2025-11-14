@@ -372,7 +372,14 @@ checkSummaryCharp(Name classname, Name name, char *s)
 #define stpcpy my_stpcpy	/* avoid name conflicts */
 static char *
 stpcpy(char *dst, const char *src)
-{ char *p = mempcpy(dst, src, strlen(src));
+{
+#ifdef HAVE_MEMPCPY
+  char *p = mempcpy(dst, src, strlen(src));
+#else
+  size_t len = strlen(src);
+  memcpy(dst, src, len);
+  char *p = dst+len;
+#endif
   *p = '\0';
   return p;
 }

@@ -39,6 +39,7 @@
 #ifdef CAIRO_HAS_PDF_SURFACE
 #include <cairo/cairo-pdf.h>
 #endif
+#define _USE_MATH_DEFINES
 #include <math.h>
 #include "sdldraw.h"
 #include "sdlcolour.h"

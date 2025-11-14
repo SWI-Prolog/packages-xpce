@@ -80,7 +80,7 @@ ws_named_colour(Colour c)
     }
 
     Cprintf("%s: not named or no existing name (using grey50)\n", pp(c));
-    assign(c, rgba, RGBA(127,127,127,255));
+    assign(c, rgba, (intptr_t)RGBA(127,127,127,255));
 
     fail;
   }

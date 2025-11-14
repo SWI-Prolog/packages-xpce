@@ -35,7 +35,11 @@
 #ifndef SDL_INPUT_H_INCLUDED
 #define SDL_INPUT_H_INCLUDED
 #include "sdluserevent.h"
+#ifdef __STDC_NO_ATOMICS__
+#define _Atomic(type) type
+#else
 #include <stdatomic.h>
+#endif
 #ifdef __WINDOWS__
 #include <windows.h>
 typedef HANDLE waitable_t;
@@ -59,7 +63,7 @@ typedef enum
 } watch_state;
 
 typedef struct
-{ _Atomic watch_state	state;	/* WATCH_* */
+{ _Atomic (watch_state)	state;	/* WATCH_* */
   waitable_t	 fd;		/* FD/HANDLE we are watching */
 #ifdef __WINDOWS__
   socket_t       sock;		/* socket we are watching */
