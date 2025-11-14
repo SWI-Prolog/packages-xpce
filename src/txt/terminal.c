@@ -77,6 +77,7 @@
 #endif
 
 #define ESC 27				/* the escape character */
+#define S_ESC "\033"
 
 #define IMODE_RAW	1		/* char-by-char */
 #define IMODE_COOKED	2		/* line-by-line */
@@ -335,14 +336,14 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     { ws_enable_text_input((Graphical)ti, ON);
       b->has_focus = true;
       if ( b->focus_inout_events )
-      { const char *focus_in = "\e[I";
+      { const char *focus_in = S_ESC"[I";
 	rlc_send(b, focus_in, strlen(focus_in));
       }
     } else if ( isAEvent(ev, NAME_deactivateKeyboardFocus) )
     { ws_enable_text_input((Graphical)ti, OFF);
       b->has_focus = false;
       if ( b->focus_inout_events )
-      { const char *focus_out = "\e[O";
+      { const char *focus_out = S_ESC"[O";
 	rlc_send(b, focus_out, strlen(focus_out));
       }
     }
@@ -427,7 +428,7 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
     if ( valInt(ev->buttons) & BUTTON_meta )
       chr += META_OFFSET;
   } else if ( ev->id == NAME_DEL )
-  { seq = "\e[3~";
+  { seq = S_ESC"[3~";
   } else if ( ev->id == NAME_TAB )
   { chr = '\t';
     if ( valInt(ev->buttons) & BUTTON_meta )
@@ -437,22 +438,22 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
     if ( valInt(ev->buttons) & BUTTON_meta )
       chr += META_OFFSET;
   } else if ( ev->id == NAME_ESC )
-  { chr = '\e';
+  { chr = ESC;
   } else if ( ev->id == NAME_cursorUp )
-  { seq = b->app_escape ? "\e0A" : "\e[A";
+  { seq = b->app_escape ? S_ESC"0A" : S_ESC"[A";
   } else if ( ev->id == NAME_cursorDown )
-  { seq = b->app_escape ? "\e0B" : "\e[B";
+  { seq = b->app_escape ? S_ESC"0B" : S_ESC"[B";
   } else if ( ev->id == NAME_cursorLeft )
-  { seq = b->app_escape ? "\e0D" : "\e[D";
+  { seq = b->app_escape ? S_ESC"0D" : S_ESC"[D";
   } else if ( ev->id == NAME_cursorRight )
-  { seq = b->app_escape ? "\e0C" : "\e[C";
+  { seq = b->app_escape ? S_ESC"0C" : S_ESC"[C";
   } else if ( ev->id == NAME_delete )
-  { seq = "\e[3~";
+  { seq = S_ESC"[3~";
   } else
     fail;
 
   if ( !seq && chr >= META_OFFSET )
-  { buf[0] = '\e';
+  { buf[0] = ESC;
     buf[1] = chr-META_OFFSET;
     buf[2] = 0;
     seq = buf;
@@ -542,8 +543,8 @@ pasteTerminalImage(TerminalImage ti, Name which)
   StringObj str = get(CurrentDisplay(ti), NAME_paste, which, EAV);
   size_t ulen;
   const char *u = stringToUTF8(&str->data, &ulen);
-  const char *bsm_start = "\e[200~";
-  const char *bsm_end = "\e[201~";
+  const char *bsm_start = S_ESC"[200~";
+  const char *bsm_end = S_ESC"[201~";
 
   clearSelectionTerminalImage(ti);
   DEBUG(NAME_paste, Cprintf("Paste %zd bytes from %s\n", ulen, pp(which)));
@@ -590,7 +591,7 @@ copyOrInterruptTerminalImage(TerminalImage ti)
 static status
 cursorEndTerminalImage(TerminalImage ti)
 { RlcData b = ti->data;
-  const char *seq = b->app_escape ? "\e0F" : "\e[F";
+  const char *seq = b->app_escape ? S_ESC"0F" : S_ESC"[F";
   rlc_send(ti->data, seq, strlen(seq));
   succeed;
 }
@@ -598,7 +599,7 @@ cursorEndTerminalImage(TerminalImage ti)
 static status
 cursorHomeTerminalImage(TerminalImage ti)
 { RlcData b = ti->data;
-  const char *seq = b->app_escape ? "\e0H" : "\e[H";
+  const char *seq = b->app_escape ? S_ESC"0H" : S_ESC"[H";
   rlc_send(ti->data, seq, strlen(seq));
   succeed;
 }
@@ -2927,8 +2928,8 @@ osc_command(RlcData b, int param, const uchar_t *link)
  */
 static bool
 osc8_end(RlcData b)
-{ const char *end1 = "\e]8;;\a";	/* new OSC 8 standard */
-  const char *end2 = "\e]8;;\e\\";	/* old */
+{ const char *end1 = S_ESC"]8;;\a";	/* new OSC 8 standard */
+  const char *end2 = S_ESC"]8;;"S_ESC"\\";	/* old */
   const size_t end1l = strlen(end1);
   const size_t end2l = strlen(end2);
 
@@ -3102,7 +3103,7 @@ rlc_putansi(RlcData b, int chr)
 	{ b->link_len--;
 	  end = true;
 	} else if ( chr == '\\' && b->link_len >= 2 &&
-		    b->link[b->link_len-2] == '\e' )
+		    b->link[b->link_len-2] == ESC )
 	{ b->link_len -= 2;
 	  end = true;
 	}
@@ -3136,7 +3137,7 @@ rlc_putansi(RlcData b, int chr)
       if ( b->link_len < ANSI_MAX_LINK-1 )
       { const char *sep1   = "\a"; /* OSC8 "ST" sequence */
 	const size_t sep1l = strlen(sep1);
-	const char *sep2   = "\e\\";
+	const char *sep2   = S_ESC"\\";
 	const size_t sep2l = strlen(sep2);
 
 	b->link[b->link_len++] = chr;
@@ -3321,14 +3322,14 @@ rlc_putansi(RlcData b, int chr)
 	  { int row = rlc_count_lines(b, b->window_start, b->caret_y)+1;
 	    int col = b->caret_x+1;
 	    char buf[100];
-	    snprintf(buf, sizeof(buf), "\e[%d;%dR", row, col);
+	    snprintf(buf, sizeof(buf), S_ESC"[%d;%dR", row, col);
 	    rlc_send(b, buf, strlen(buf));
 	  } else
 	  { Dprint_csi(b, chr);
 	  }
 	  break;
 	case 'c':		/* Identify as VT100+ANSI */
-	{ const char *id = "\e[?1;2c";
+	{ const char *id = S_ESC"[?1;2c";
 	  rlc_send(b, id, strlen(id));
 	  break;
 	}
@@ -3932,7 +3933,7 @@ static void
 Dprint_chr(int chr)
 { if ( chr >= ' ' && chr <= 127 )
     Cprintf("%c", chr);
-  else if ( chr == 27 )
+  else if ( chr == ESC )
     Cprintf("\\\\e");
   else if ( chr == 13 )
     Cprintf("\\\\r");

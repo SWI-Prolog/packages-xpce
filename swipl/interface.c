@@ -203,6 +203,10 @@ static PL_prof_type_t pceProfType;	/* registration */
 		 *	       CONTEXT		*
 		 *******************************/
 
+#ifdef _MSC_VER
+#define __thread __declspec(thread)
+#endif
+
 static __thread Module	  DefaultModule;	/* For module handling */
 static __thread PceObject DefaultContext;	/* Executing context */
 
@@ -2790,7 +2794,7 @@ pl_pce_dispatch_event(term_t Fd, term_t timeout)
   else if ( !PL_get_stream(Fd, &fd, SIO_INPUT) )
     return false;
 
-  pceDispatch(fd, tmo*1000.0);
+  pceDispatch(fd, (int)(tmo*1000.0));
   return !PL_exception(0);
 }
 

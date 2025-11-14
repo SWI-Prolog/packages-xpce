@@ -64,6 +64,10 @@
 #define Pri_WAIT "%d"
 #endif
 
+#ifdef _MSC_VER
+#define atomic_int volatile LONG
+#endif
+
 #define MAX_FDS 64
 
 #ifdef __WINDOWS__
@@ -90,7 +94,7 @@ cmp_and_set_watch(FDWatch *watch, watch_state old, watch_state new)
 {
 #ifdef _MSC_VER
   _Static_assert(sizeof(watch->state) == sizeof(LONG));
-  return InterlockedCompareExchange(&watch->state, new, old);
+  return InterlockedCompareExchange((LONG*)&watch->state, new, old);
 #else
   return atomic_compare_exchange_strong(&watch->state, &old, new);
 #endif
@@ -229,7 +233,11 @@ poll_thread_fn(void *unused)
       { if ( watch->state != WATCH_FREE )
 	{ int expected = watch_max;
 	  if ( i < watch_max )
+#ifdef _MSC_VER
+	    InterlockedCompareExchange(&watch_max, i, expected);
+#else
 	    atomic_compare_exchange_strong(&watch_max, &expected, i);
+#endif
 	  break;
 	}
       }
