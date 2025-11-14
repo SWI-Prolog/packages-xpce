@@ -56,16 +56,26 @@ to  associate  with  the  SWI-Prolog  gui  application  on  Windows  and
 
 :- multifile
     user:file_search_path/2.
+:- dynamic
+    pce_setup_done/1.
 
-user:file_search_path(pce, swi(xpce)).
-user:file_search_path(library, pce('prolog/lib')).
+has_xpce_library :-
+    pce_setup_done(How),
+    How \== false.
+
+user:file_search_path(pce, swi(xpce)) :-
+    has_xpce_library.
+user:file_search_path(library, pce('prolog/lib')) :-
+    has_xpce_library.
 user:file_search_path(foreign, pce(ArchLib)) :-
+    has_xpce_library,
     current_prolog_flag(arch, Arch),
     atom_concat('lib/', Arch, ArchLib).
 
-% We added a directory to the autoload directories: force reloading the
-% index
-:- reload_library_index.
+%!  gui_setup_
+%
+%   We have a GUI. Prepare it. This loads  hooks that may enable the gui
+%   and set the editor to PceEmacs if it is still `default`.
 
 gui_setup_ :-
     current_prolog_flag(gui, true),
@@ -73,7 +83,7 @@ gui_setup_ :-
 gui_setup_ :-
     create_prolog_flag(gui, true, []),
     editor_setup,
-    load_files(user:library(swi_hooks), [silent(true)]).    % help, etc.
+    use_module(user:library(swi_hooks)).
 
 editor_setup :-
     current_prolog_flag(editor, default),
@@ -96,31 +106,38 @@ has_display :- getenv('WAYLAND_DISPLAY', D), D \== '', !.
 has_display :- getenv('DISPLAY', D), D \== '', !.
 has_display :- getenv('SDL_VIDEO_DRIVER', dummy).
 
-:- dynamic
-    pce_setup_done/0.
+%!  pce_setup_ is det.
+%
+%   Setup xpce.  There are these cases:
+%
+%     - The flag `xpce` is `false`: do not setup xpce.
+%     - The flag `xpce` is `true`: load xpce and set it up.
+%     - The flag `xpce` is not present.  Now
+%       - If we seem to have a gui, prepare xpce to be loaded lazily
+%       - If there is no gui, do not setup xpce.
 
 pce_setup_ :-
-    pce_setup_done,
-    !.
-pce_setup_ :-
-    current_prolog_flag(xpce, false),
+    pce_setup_done(_),
     !.
 pce_setup_ :-
     (   current_prolog_flag(xpce, true)
-    ->  Preload = true
+    ->  Preload = true,
+        How = true
     ;   has_display,                % no explicit xpce flag
-        Preload = false
+        Preload = false,
+        How = lazy
     ),
-    set_prolog_flag(xpce, true),
-    gui_setup_,
     !,
-    asserta(pce_setup_done),
+    set_prolog_flag(xpce, true),
+    asserta(pce_setup_done(How)),
+    reload_library_index,
+    gui_setup_,
     (   Preload == true
     ->  ensure_loaded(user:library(pce))
     ;   true
     ).
-pce_setup_ :-
-    asserta(pce_setup_done).
+pce_setup_ :-                       % Implicit and no display
+    asserta(pce_setup_done(false)).
 
 :- initialization pce_setup_.
 :- endif. % \+ current_prolog_flag(xpce,false)
