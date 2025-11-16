@@ -104,7 +104,7 @@ has_display :- current_prolog_flag(windows, true), !.
 has_display :- current_prolog_flag(apple, true), !.
 has_display :- getenv('WAYLAND_DISPLAY', D), D \== '', !.
 has_display :- getenv('DISPLAY', D), D \== '', !.
-has_display :- getenv('SDL_VIDEO_DRIVER', dummy).
+has_display :- getenv('SDL_VIDEODRIVER', dummy).
 
 %!  pce_setup_ is det.
 %
