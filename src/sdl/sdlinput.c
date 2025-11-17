@@ -94,7 +94,7 @@ cmp_and_set_watch(FDWatch *watch, watch_state old, watch_state new)
 {
 #ifdef _MSC_VER
   _Static_assert(sizeof(watch->state) == sizeof(LONG));
-  return InterlockedCompareExchange((LONG*)&watch->state, new, old);
+  return InterlockedCompareExchange((LONG*)&watch->state, new, old) == old;
 #else
   return atomic_compare_exchange_strong(&watch->state, &old, new);
 #endif
