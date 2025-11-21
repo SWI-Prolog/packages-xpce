@@ -19,11 +19,12 @@
 
 ! display.theme:	dark
 
+! Number of lines saved by Epilog consoles for scroll back.
+terminal_image.save_lines: 1000
+
 ! Basic style for keyboard accelerators.  On Windows the default is `cua'.
-! (Common User Access), on Unix the default is `emacs'.  On Apple, the
-! default is `apple', which is `emacs', but giving Command-v, Command-c
-! and Command-s their usual meaning.  The Emacs equivalent can be accessed
-! using ESC-v, etc.
+! (Common User Access), on Unix the default is `emacs'.  You can overrule
+! the default here.
 
 !key_binding.style:	cua
 !key_binding.style:	emacs
@@ -41,7 +42,7 @@
 !editor.exact_case:	@on
 
 ! How PceEmacs deals with DOS (\r\n) and POSIX (\n) newline separators.
-! Default for existing files is to detect and save in the old format.
+! Default for existing files is to detect and safe in the old format.
 ! Default for new files depends on the platform, but can be overruled
 ! by this declaration.  Setting the new file is particulary interesting
 ! when sharing files between Windows and Unix, such as through a shared
@@ -108,10 +109,6 @@
 ! Ispell is available on most Unix installations.
 
 !ispell.spell_program:	'ispell -d british -t -l'
-
-! Indicate warnings by blinking (@on, default) or using a beep (@off)
-
-!*.visual_bell:	@off
 
 ! Binding for the logical font-names.  You can bind any name to any
 ! font here.
