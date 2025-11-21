@@ -19,8 +19,15 @@
 
 ! display.theme:	dark
 
-! Number of lines saved by Epilog consoles for scroll back.
-terminal_image.save_lines: 1000
+! Epilog Prolog console settings
+!terminal_image.save_lines:      10000
+!terminal_image.background:      white
+!terminal_image.color:           black
+!terminal_image.selection_style: style(background := yellow)
+!terminal_image.ansi_colours:	vector(colour(black),colour(red3),colour(green3),colour(yellow3),   \
+!				       colour(blue2),colour(magenta3),colour(cyan3),colour(gray90), \
+!				       colour(gray50),colour(red),colour(green),colour(yellow),     \
+!				       colour(blue),colour(magenta),colour(cyan),colour(white))
 
 ! Basic style for keyboard accelerators.  On Windows the default is `cua'.
 ! (Common User Access), on Unix the default is `emacs'.  You can overrule
