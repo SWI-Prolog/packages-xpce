@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -61,6 +62,7 @@ NewClass(text_buffer)
   SyntaxTable	syntax;			/* Syntax description */
   BoolObj	indent_tabs;		/* Indent with tabs? */
   Int		generation;		/* Increments on each change */
+  Chain		lsp_changes;		/* Collect change events */
 					/* start private data */
   intptr_t	changed_start;		/* start of changed region */
   intptr_t	changed_end;		/* end of changed region */
@@ -184,6 +186,20 @@ NewClass(text_margin)
   Any		background;		/* background of the margin */
 End;
 
+NewClass(text_change)
+  Int		start_line;		/* 0-based start of change */
+  Int		start_position;		/* 0-based UTF-16 location of change */
+  Int		end_line;		/* Corresponding end */
+  Int		end_position;
+  Int		length;			/* UTF-16 length of range */
+  StringObj	replacement;		/* Replacement text */
+End;
+
+typedef struct lsp_pos
+{ unsigned int line;			/* 0-based line */
+  unsigned int pos;			/* 0-based line pos (UTF-16 units)  */
+} lsp_pos;
+
 
 		/********************************
 		*            TEXTIMAGE		*
@@ -286,5 +302,9 @@ NewClass(terminal_image)
   SyntaxTable	syntax;			/* Word description */
   struct rlc_data *data;		/* The buffered data */
 End;
+
+COMMON(void)	update_lsp_pos_text_buffer(TextBuffer tb, size_t from, size_t to,
+					   lsp_pos *pos);
+COMMON(size_t)	u16_range_length(TextBuffer tb, size_t from, size_t len);
 
 #endif /* _PCE_TXT_INCLUDED */

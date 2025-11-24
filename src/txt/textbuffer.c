@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2005, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -76,6 +77,7 @@ initialiseTextBuffer(TextBuffer tb, CharArray ca)
   assign(tb, last_fragment,  NIL);
   assign(tb, editors,	     newObject(ClassChain, EAV));
   assign(tb, generation,     ZERO);
+  assign(tb, lsp_changes,    NIL);
   obtainClassVariablesObject(tb);	/* dubious: subclassing? */
 
   tb->undo_buffer = NULL;
@@ -1877,6 +1879,137 @@ start_of_line_n_textbuffer(TextBuffer tb, int lineno)
   return tb->size;
 }
 
+/* Update LSP compatible position if `pos` is correct at `from` when
+ * it is moved to `to`.  `to` can be before or after `from`.
+ */
+
+void
+update_lsp_pos_text_buffer(TextBuffer tb, size_t from, size_t to, lsp_pos *pos)
+{ SyntaxTable syntax = tb->syntax;
+
+  if ( to > from )
+  { if ( istbA(tb) )
+    { charA *b = tb->tb_bufferA;
+      size_t i = from;
+      size_t end = tb->gap_start;
+
+      for(int segment = 0; segment <= 2; segment++)
+      { for( ; i<end; i++)
+	{ if ( i == to )
+	    return;
+	  if ( tisendsline(syntax, b[i]) )
+	  { pos->line++;
+	    pos->pos = 0;
+	  } else
+	  { pos->pos++;
+	  }
+	}
+	b = tb->tb_bufferA + tb->gap_end - tb->gap_start;
+	end = tb->size;
+      }
+    } else
+    { charW *b = tb->tb_bufferW;
+      size_t i = from;
+      size_t end = tb->gap_start;
+
+      for(int segment = 0; segment <= 2; segment++)
+      { for( ; i<end; i++)
+	{ if ( i == to )
+	    return;
+	  if ( tisendsline(syntax, b[i]) )
+	  { pos->line++;
+	    pos->pos = 0;
+	  } else
+	  {
+#if SIZEOF_WCHAR_T == 2
+	    pos->pos++;
+#else
+	    if ( b[i] > 0xffff )
+	      pos->pos++;
+#endif
+	  }
+	}
+	b = tb->tb_bufferW + tb->gap_end - tb->gap_start;
+	end = tb->size;
+      }
+    }
+  } else if ( to < from )
+  { if ( istbA(tb) )
+    { charA *b = tb->tb_bufferA + tb->gap_end - tb->gap_start;
+      size_t i = from;
+      size_t start = tb->gap_end;
+      bool pos_valid = true;
+
+      for(int segment = 0; segment <= 2; segment++)
+      { for( ; i>=start; i--)
+	{ if ( i == to && pos_valid )
+	    return;
+	  if ( tisendsline(syntax, b[i]) )
+	  { if ( i <= to )
+	    { pos->pos = 0;
+	      update_lsp_pos_text_buffer(tb, i, to, pos);
+	      return;
+	    }
+	    pos->line--;
+	    pos_valid = false;
+	  } else if ( pos_valid )
+	  { pos->pos--;
+	  }
+	}
+	b = tb->tb_bufferA;
+	start = 0;
+      }
+    } else
+    { charW *b = tb->tb_bufferW + tb->gap_end - tb->gap_start;
+      size_t i = from;
+      size_t start = tb->gap_end;
+      bool pos_valid = true;
+
+      for(int segment = 0; segment <= 2; segment++)
+      { for( ; i>=start; i--)
+	{ if ( i == to && pos_valid )
+	    return;
+	  if ( tisendsline(syntax, b[i]) )
+	  { if ( i <= to )
+	    { pos->pos = 0;
+	      update_lsp_pos_text_buffer(tb, i, to, pos);
+	      return;
+	    }
+	    pos->line--;
+	    pos_valid = false;
+	  } else if ( pos_valid )
+	  { pos->pos--;
+	  }
+	}
+	b = tb->tb_bufferW;
+	start = 0;
+      }
+    }
+  }
+}
+
+size_t
+u16_range_length(TextBuffer tb, size_t where, size_t len)
+{ if ( istbA(tb) )
+  { return len;
+  } else
+  {
+#if SIZEOF_WCHAR_T == 2
+    return len;
+#else
+    charW *b = tb->tb_bufferW + where;
+    size_t ulen = len;
+    for( ; len-- > 0; b++)
+    { if ( b[0] > 0xffff )
+	ulen++;
+    }
+    return ulen;
+#endif
+  }
+}
+
+
+
 		/********************************
 		*     PRIMITIVE OPERATIONS      *
 		*********************************/
@@ -2637,6 +2770,39 @@ getReadAsFileTextBuffer(TextBuffer tb, Int from, Int size)
 { return getContentsTextBuffer(tb, from, size);
 }
 
+		/*******************************
+		*     LSP CHANGE TRACKING      *
+		*******************************/
+
+static status
+lspChangesTextBuffer(TextBuffer tb, BoolObj enable)
+{ if ( enable == ON )
+    assign(tb, lsp_changes, DEFAULT);
+  else
+    assign(tb, lsp_changes, NIL);
+
+  succeed;
+}
+
+static Chain
+getLspChangesTextBuffer(TextBuffer tb, BoolObj clear)
+{ if ( instanceOfObject(tb->lsp_changes, ClassChain) )
+  { Chain ch = tb->lsp_changes;
+    if ( clear != OFF )
+    { addCodeReference(ch);
+      assign(tb, lsp_changes, DEFAULT);
+      setAnswerObj(ch);
+      delCodeReference(ch);
+    }
+    answer(ch);
+  }
+  if ( isNil(tb->lsp_changes) )
+    answer(tb->lsp_changes);
+
+  fail;
+}
+
+
 
 		 /*******************************
 		 *	 CLASS DECLARATION	*
@@ -2708,6 +2874,8 @@ static vardecl var_textBuffer[] =
      NAME_indentation, "Re-indent using tabs (true) or spaces (false)"),
   IV(NAME_generation, "0..", IV_GET,
      NAME_modified, "Indicate change-generation"),
+  IV(NAME_lspChanges, "[chain]*", IV_NONE,
+     NAME_modified, "Collect LSP change events"),
   IV(NAME_changedStart, "alien:int", IV_NONE,
      NAME_repaint, "Start of changes since last repaint"),
   IV(NAME_changedEnd, "alien:int", IV_NONE,
@@ -2792,7 +2960,9 @@ static senddecl send_textBuffer[] =
   SM(NAME_writeAsFile, 2, T_writeAsFile, writeAsFileTextBuffer,
      NAME_stream, "Implements handling a buffer as a file"),
   SM(NAME_iso_latin_1, 0, NULL, demoteTextBuffer,
-     NAME_encoding, "Try to represent text as ISO Latin-1")
+     NAME_encoding, "Try to represent text as ISO Latin-1"),
+  SM(NAME_lspChanges, 1, "bool", lspChangesTextBuffer,
+     NAME_modified, "Do/don't collect LSP changes")
 };
 
 /* Get Methods */
@@ -2837,7 +3007,9 @@ static getdecl get_textBuffer[] =
      NAME_language, "Find syntactical state of position"),
   GM(NAME_countLines, 2, "int", T_fromADintD_toADintD,
      getCountLinesTextBuffer,
-     NAME_line, "Count lines in character range")
+     NAME_line, "Count lines in character range"),
+  GM(NAME_lspChanges, 1, "chain*", "[bool]", getLspChangesTextBuffer,
+     NAME_modified, "Get pending changes")
 };
 
 /* Resources */

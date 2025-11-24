@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -220,6 +221,7 @@ typedef struct text_cursor		* TextCursor;
 typedef struct text_image		* TextImage;
 typedef struct text_margin		* TextMargin;
 typedef struct text_buffer		* TextBuffer;
+typedef struct text_change		* TextChange;
 typedef struct terminal_image		* TerminalImage;
 typedef struct textitem			* TextItem;
 typedef struct textobj			* TextObj;
@@ -419,6 +421,7 @@ PUBLIC_GLOBAL Class ClassTab;
 PUBLIC_GLOBAL Class ClassTabStack;
 PUBLIC_GLOBAL Class ClassText;
 PUBLIC_GLOBAL Class ClassTextBuffer;
+PUBLIC_GLOBAL Class ClassTextChange;
 PUBLIC_GLOBAL Class ClassTextCursor;
 PUBLIC_GLOBAL Class ClassTextImage;
 PUBLIC_GLOBAL Class ClassTextItem;

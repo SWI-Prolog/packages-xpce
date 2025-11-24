@@ -215,6 +215,7 @@ COMMON(status)	checkpointUndoTextBuffer(TextBuffer tb);
 COMMON(void)	register_insert_textbuffer(TextBuffer tb, size_t where, size_t len);
 COMMON(void)	register_delete_textbuffer(TextBuffer tb, size_t where, size_t len);
 COMMON(void)	register_change_textbuffer(TextBuffer tb, size_t where, size_t len);
+COMMON(status)	makeClassTextChange(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/txt/utf8.c */
 COMMON(char *)	F_UTF8_GET_CHAR(const char *in, int *chr);

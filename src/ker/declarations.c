@@ -484,6 +484,9 @@ static struct class_definition classdefs[] =
   { NAME_textMargin, NAME_graphical, makeClassTextMargin,
     &ClassTextMargin, "Annotation margin for editors" },
 
+  { NAME_textChange, NAME_object, makeClassTextChange,
+    &ClassTextChange, "text_buffer change information" },
+
   { NAME_tile, NAME_object, makeClassTile,
     &ClassTile, "Manage non-overlapping areas" },
 

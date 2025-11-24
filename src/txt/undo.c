@@ -64,7 +64,41 @@ it is placed at the head of the list.
 Finally, the checkpoint member describes  the head cell  at the moment
 ->modified @off was send to the textbuffer  the last time.  If undoing
 hits this cell it will again mark the buffer as not modified.
+
+__Change forwarding__
+
+To accommodate LSP (Language Service Protocol), we need to be able to
+send incremental updates.  An LSP change consists of
+
+  - A range, expressed as `start` and `end`, where positions are 0-based
+    line and line position, where the line position is counted in
+    UTF-16 entities ...
+  - Length of the range in UTF-16 entities
+  - Replacement text
+
+This maps as follows to our three undo cell types:
+
+  - An _insert_ has the same `start` and `end` and a text to be inserted.
+  - A _delete_ uses the range to describe the deleted material, using
+    no replacement text.
+  - A _change_ uses the range and the replacement text.  Our replaces
+    always replace with the same number of characters (Unicode code
+    points).
+
+We  must generate  a list  of the  above change  descriptions for  the
+changes that result from processing an event.  At the end of the event
+markUndoTextBuffer() is  called.  While  collecting the  changes, undo
+cells are extended on adjacent changes, creating a new undo cell for a
+new series or if the next action is not adjacent or of different type.
+Thus, we can
+
+  - If we create a new undo cell, push the previous cell on the change
+    list.
+  - On markUndoTextBuffer(), push the previous cell on the change list.
+    if the change list is not empty, dispatch it.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+#define MAX_CHANGESET_SIZE 10000
 
 typedef struct undo_cell	* UndoCell;
 typedef struct undo_delete	* UndoDelete;
@@ -80,9 +114,10 @@ typedef struct undo_change	* UndoChange;
 #define COMMON_CELL \
   UndoCell	previous;	/* previous cell */ \
   UndoCell	next;		/* next in chain */ \
-  unsigned int	size;		/* size in chars */ \
+  size_t	size;		/* size in chars */ \
   bool		marked;		/* marked as interactive cell */ \
   char		type;		/* type of action (UNDO_*) */ \
+  lsp_pos	lpos;		/* LSP line/position notation */ \
   ssize_t	where;		/* start address of delete */ \
   ssize_t	len;		/* number of characters deleted there */
 
@@ -93,6 +128,8 @@ struct undo_cell
 struct undo_delete
 { COMMON_CELL
   bool		iswide;
+  unsigned	u16_len;	/* Maintain range length */
+  lsp_pos	epos;		/* End position */
   union
   { charA	A[1];		/* ISO Latin-1 text */
     charW	W[1];		/* Wide character text */
@@ -106,6 +143,8 @@ struct undo_insert
 struct undo_change
 { COMMON_CELL
   bool		iswide;
+  unsigned	u16_len;	/* Maintain range length */
+  lsp_pos	epos;		/* End position */
   union
   { charA	A[1];		/* ISO Latin-1 text */
     charW	W[1];		/* Wide character text */
@@ -115,6 +154,7 @@ struct undo_change
 struct undo_buffer
 { TextBuffer	client;		/* so we know whom to talk to */
   size_t	size;		/* size of buffer in chars */
+  size_t	changeset_size;	/* Total size of pending changes */
   bool		undone;		/* last action was an undo */
   bool		aborted;	/* sequence was too big, aborted */
   UndoCell	current;	/* current undo cell for undos */
@@ -131,10 +171,12 @@ struct undo_buffer
 #define AllocRound(s)		Round(s, sizeof(UndoCell))
 #define Distance(p1, p2)	((char *)(p1) - (char *)(p2))
 #define SizeAfter(ub, size)	((size) <= ub->size - \
-				           Distance(ub->free, ub->buffer))
+					   Distance(ub->free, ub->buffer))
 #define UndoDeleteSize(len) ((unsigned)(uintptr_t) &((UndoDelete)NULL)->text.A[len])
 #define UndoChangeSize(len) ((unsigned)(uintptr_t) &((UndoChange)NULL)->text.A[len])
 
+static void	pushLspChanges(UndoBuffer ub);
+static Int	getSizeTextChange(TextChange tc);
 
 static UndoBuffer
 createUndoBuffer(size_t size)
@@ -169,6 +211,8 @@ destroyUndoBuffer(UndoBuffer ub)
 }
 
 
+/* Undo a command, returning the new caret position
+ */
 
 Int
 getUndoTextBuffer(TextBuffer tb)
@@ -250,12 +294,10 @@ getUndoTextBuffer(TextBuffer tb)
   fail;
 }
 
-
 status
 undoTextBuffer(TextBuffer tb)
 { return getUndoTextBuffer(tb) ? SUCCEED : FAIL;
 }
-
 
 static UndoBuffer
 getUndoBufferTextBuffer(TextBuffer tb)
@@ -296,6 +338,8 @@ markUndoTextBuffer(TextBuffer tb)
 
   if ( (ub = getUndoBufferTextBuffer(tb)) )
   { DEBUG(NAME_undo, Cprintf("markUndoTextBuffer(%s)\n", pp(tb)));
+
+    pushLspChanges(ub);
 
     if ( ub->head )
     { ub->head->marked = true;
@@ -393,6 +437,8 @@ new_undo_cell(UndoBuffer ub, size_t size)
     return NULL;
   }
 
+  pushLspChanges(ub);
+
   for(;;)
   { if ( ub->head == NULL )		/* Empty: new cell is head & tail */
       break;
@@ -471,6 +517,100 @@ resize_undo_cell(UndoBuffer ub, UndoCell cell, unsigned int size)
 }
 
 
+static TextChange
+get_text_change_undo_cell(TextBuffer tb, UndoCell c)
+{ TextChange tc = NULL;
+
+  switch(c->type)
+  { case UNDO_DELETE:
+    { UndoDelete ud  = (UndoDelete)c;
+
+      tc = newObject(ClassTextChange,
+		     toInt(ud->lpos.line), toInt(ud->lpos.pos),
+		     toInt(ud->epos.line), toInt(ud->epos.pos),
+		     toInt(ud->u16_len), EAV);
+      break;
+    }
+    case UNDO_INSERT:
+    { UndoInsert ui  = (UndoInsert)c;
+      if ( ui->len > MAX_CHANGESET_SIZE ) return NULL;
+      StringObj repl = getContentsTextBuffer(tb, toInt(ui->where), toInt(ui->len));
+
+      tc = newObject(ClassTextChange,
+		     toInt(ui->lpos.line), toInt(ui->lpos.pos),
+		     DEFAULT, DEFAULT, DEFAULT, repl, EAV);
+      break;
+    }
+    case UNDO_CHANGE:
+    { UndoChange uc  = (UndoChange)c;
+      if ( uc->len > MAX_CHANGESET_SIZE ) return NULL;
+      StringObj repl = getContentsTextBuffer(tb, toInt(uc->where), toInt(uc->len));
+
+      tc = newObject(ClassTextChange,
+		     toInt(uc->lpos.line), toInt(uc->lpos.pos),
+		     toInt(uc->epos.line), toInt(uc->epos.pos),
+		     toInt(uc->u16_len), repl, EAV);
+      break;
+    }
+    default:
+      assert(0);
+      fail;
+  }
+
+  return tc;
+}
+
+/* Push a change to the changeset.   This cancels collecting changeset
+ * data if the collective size of the changes exceeds MAX_CHANGESET_SIZE
+ */
+
+static void
+pushLspChanges(UndoBuffer ub)
+{ TextBuffer tb = ub->client;
+
+  if ( !isNil(tb->lsp_changes) )
+  { UndoCell uc = ub->head;
+    if ( uc && !uc->marked )
+    { TextChange tc = get_text_change_undo_cell(tb, uc);
+      if ( tc )
+      { size_t sz = valInt(getSizeTextChange(tc));
+
+	if ( isDefault(tb->lsp_changes) )
+	{ assign(tb, lsp_changes, newObject(ClassChain, tc, EAV));
+	  ub->changeset_size = sz;
+	} else
+	{ appendChain(tb->lsp_changes, tc);
+	  ub->changeset_size += sz;
+	}
+	if ( ub->changeset_size > MAX_CHANGESET_SIZE )
+	{ assign(tb, lsp_changes, NIL);
+	}
+      } else
+      { assign(tb, lsp_changes, NIL);
+      }
+    }
+  }
+}
+
+static void
+init_lsp_pos(TextBuffer tb, UndoCell c)
+{ if ( tb->lsp_changes != NIL )
+  { memset(&c->lpos, 0, sizeof(c->lpos));
+    update_lsp_pos_text_buffer(tb, 0, c->where, &c->lpos);
+  }
+}
+
+static void
+move_lsp_pos(TextBuffer tb, UndoCell c, size_t to)
+{ if ( tb->lsp_changes != NIL )
+  { update_lsp_pos_text_buffer(tb, c->where, to, &c->lpos);
+    c->where = to;
+  }
+}
+
+/* Called _before_ the text is inserted
+*/
+
 void
 register_insert_textbuffer(TextBuffer tb, size_t where, size_t len)
 { UndoBuffer ub;
@@ -478,10 +618,16 @@ register_insert_textbuffer(TextBuffer tb, size_t where, size_t len)
   if ( len > 0 && (ub = getUndoBufferTextBuffer(tb)) != NULL )
   { UndoInsert i = (UndoInsert) ub->head;
 
-    if ( i != NULL && i->type == UNDO_INSERT && i->marked == FALSE )
-    { if ( i->where + i->len == where || where + len == i->where )
+    if ( i != NULL && i->type == UNDO_INSERT && i->marked == false )
+    { if ( i->where + i->len == where )
       { i->len += len;
-	DEBUG(NAME_undo, Cprintf("Insert at %ld grown %ld bytes\n",
+	DEBUG(NAME_undo, Cprintf("Insert at %zd right-grown %zd bytes\n",
+				 i->where, i->len));
+        return;
+      } else if ( where + len == i->where )
+      { i->len += len;
+	move_lsp_pos(tb, (UndoCell)i, where);
+	DEBUG(NAME_undo, Cprintf("Insert at %zd left-grown %zd bytes\n",
 				 i->where, i->len));
         return;
       }
@@ -490,9 +636,10 @@ register_insert_textbuffer(TextBuffer tb, size_t where, size_t len)
     if ( (i = new_undo_cell(ub, sizeof(struct undo_insert))) == NULL )
       return;
 
-    i->type =  UNDO_INSERT;
+    i->type  = UNDO_INSERT;
     i->where = where;
-    i->len  = len;
+    i->len   = len;
+    init_lsp_pos(tb, (UndoCell)i);
     DEBUG(NAME_undo, Cprintf("New Insert at %ld, %ld bytes\n",
 			     i->where, i->len));
   }
@@ -514,6 +661,9 @@ copy_undo_del(TextBuffer tb, long from, long len, UndoDelete udc, long offset)
   }
 }
 
+
+/* Called before the text is actually being deleted
+*/
 
 void
 register_delete_textbuffer(TextBuffer tb, size_t where, size_t len)
@@ -546,6 +696,8 @@ register_delete_textbuffer(TextBuffer tb, size_t where, size_t len)
 	if ( resize_undo_cell(ub, (UndoCell)udc, UndoDeleteSize(cell_size)) )
 	{ copy_undo_del(tb, where, len, udc, udc->len);
 	  udc->len += len;
+	  udc->u16_len += u16_range_length(tb, where, len);
+	  update_lsp_pos_text_buffer(tb, udc->where+udc->len, where+len, &udc->epos);
 	  DEBUG(NAME_undo, Cprintf("Delete at %ld grown forward %ld bytes\n",
 				   udc->where, udc->len));
 	}
@@ -566,8 +718,10 @@ register_delete_textbuffer(TextBuffer tb, size_t where, size_t len)
 	  }
 
 	  copy_undo_del(tb, where, len, udc, 0);
+	  update_lsp_pos_text_buffer(tb, udc->where, where, &udc->lpos);
 	  udc->len += len;
 	  udc->where -= len;
+	  udc->u16_len = u16_range_length(tb, where, len);
 	  DEBUG(NAME_undo, Cprintf("Delete at %ld grown backward %ld bytes\n",
 				   udc->where, udc->len));
 	}
@@ -578,11 +732,15 @@ register_delete_textbuffer(TextBuffer tb, size_t where, size_t len)
     cell_size = need_wide ? len*(int)sizeof(charW) : len;
     if ( (udc = new_undo_cell(ub, UndoDeleteSize(cell_size))) == NULL )
       return;
-    udc->type   = UNDO_DELETE;
-    udc->where  = where;
-    udc->len    = len;
-    udc->iswide = need_wide;
+    udc->type    = UNDO_DELETE;
+    udc->where   = where;
+    udc->len     = len;
+    udc->iswide  = need_wide;
+    udc->u16_len = u16_range_length(tb, where, len);
     copy_undo_del(tb, where, len, udc, 0);
+    init_lsp_pos(tb, (UndoCell)udc);
+    udc->epos    = udc->lpos;
+    update_lsp_pos_text_buffer(tb, where, where+len, &udc->epos);
     DEBUG(NAME_undo, Cprintf("New delete at %ld, %ld bytes\n",
 			     udc->where, udc->len));
   }
@@ -632,8 +790,9 @@ register_change_textbuffer(TextBuffer tb, size_t where, size_t len)
 
 	if ( resize_undo_cell(ub, (UndoCell)uc,
 			      UndoChangeSize(cell_size)) )
-	{ copy_undo_chg(tb, where, len, uc, uc->len);
-
+	{ uc->u16_len += u16_range_length(tb, where, len);
+	  update_lsp_pos_text_buffer(tb, where, where+len, &uc->epos);
+	  copy_undo_chg(tb, where, len, uc, uc->len);
 	  uc->len += len;
 	  DEBUG(NAME_undo,
 		Cprintf("Change at %ld grown forward to %ld bytes\n",
@@ -656,8 +815,10 @@ register_change_textbuffer(TextBuffer tb, size_t where, size_t len)
 	  }
 
 	  copy_undo_chg(tb, where, len, uc, 0);
+	  update_lsp_pos_text_buffer(tb, uc->where, where, &uc->lpos);
 	  uc->len += len;
 	  uc->where -= len;
+	  uc->u16_len = u16_range_length(tb, where, len);
 	  DEBUG(NAME_undo,
 		Cprintf("Change at %ld grown backward to %ld bytes\n",
 			uc->where, uc->len));
@@ -673,8 +834,105 @@ register_change_textbuffer(TextBuffer tb, size_t where, size_t len)
     uc->where  = where;
     uc->len    = len;
     uc->iswide = need_wide;
+    uc->u16_len = u16_range_length(tb, where, len);
+    init_lsp_pos(tb, (UndoCell)uc);
+    uc->epos   = uc->lpos;
+    update_lsp_pos_text_buffer(tb, where, where+len, &uc->epos);
     copy_undo_chg(tb, where, len, uc, 0);
     DEBUG(NAME_undo, Cprintf("New change at %ld, %ld bytes\n",
 			     uc->where, uc->len));
   }
+}
+
+		/*******************************
+		*         TEXT CHANGE          *
+		*******************************/
+
+static status
+initialiseTextChange(TextChange tc,
+		     Int sl, Int sp, Int el, Int ep, Int len,
+		     StringObj repl)
+{ if ( isDefault(el)   ) el=sl;
+  if ( isDefault(ep)   ) ep=sp;
+  if ( isDefault(len)  ) len=ZERO;
+  if ( isDefault(repl) ) repl=NIL;
+
+  assign(tc, start_line,     sl);
+  assign(tc, start_position, sp);
+  assign(tc, end_line,       el);
+  assign(tc, end_position,   ep);
+  assign(tc, length,         len);
+  assign(tc, replacement,    repl);
+
+  succeed;
+}
+
+static Int
+getSizeTextChange(TextChange tc)
+{ size_t sz = sizeof(*tc);
+  if ( notNil(tc->replacement) )
+  { StringObj s = tc->replacement;
+
+    sz += sizeof(*s);
+    sz += s->data.s_size * (s->data.s_iswide ? sizeof(*s->data.s_textW)
+					     : sizeof(*s->data.s_textA));
+  }
+
+  return toInt(sz);
+}
+
+
+static char *T_initialise[] =
+{ "start_line=int", "start_position=int", "end_line=[int]", "end_position=[int]",
+  "length=[int]", "replacement=[string*]"
+};
+
+static vardecl var_text_change[] =
+{ IV(NAME_startLine, "int", IV_GET,
+     NAME_range, "0-based line where change starts"),
+  IV(NAME_startPosition, "int", IV_GET,
+     NAME_range, "0-based line position in UTF-16 units"),
+  IV(NAME_endLine, "int", IV_GET,
+     NAME_range, "0-based line where change ends"),
+  IV(NAME_endPosition, "int", IV_GET,
+     NAME_range, "0-based line position in UTF-16 units"),
+  IV(NAME_length, "int", IV_GET,
+     NAME_range, "Length of region in UTF-16 units"),
+  IV(NAME_replacement, "string*", IV_GET,
+     NAME_range, "Text used to replace the region")
+};
+
+static senddecl send_text_change[] =
+{ SM(NAME_initialise, 6, T_initialise, initialiseTextChange,
+     DEFAULT, "Create text_change from range and replacement"),
+};
+
+static getdecl get_text_change[] =
+{ GM(NAME_size, 0, "int", NULL, getSizeTextChange,
+     NAME_memory, "Size in bytes for this change")
+};
+
+#define rc_text_change NULL
+/*
+static classvardecl rc_text_change[] =
+{
+};
+*/
+
+static Name text_change_termnames[] =
+	{ NAME_startLine, NAME_startPosition, NAME_endLine, NAME_endPosition,
+	  NAME_replacement
+	};
+
+ClassDecl(text_change_decls,
+          var_text_change, send_text_change, get_text_change,
+	  rc_text_change,
+          5, text_change_termnames,
+          "$Rev$");
+
+status
+makeClassTextChange(Class class)
+{ declareClass(class, &text_change_decls);
+
+  succeed;
 }
