@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -80,8 +81,10 @@ typedef struct undo_change	* UndoChange;
   UndoCell	previous;	/* previous cell */ \
   UndoCell	next;		/* next in chain */ \
   unsigned int	size;		/* size in chars */ \
-  char		marked;		/* marked as interactive cell */ \
-  char		type;		/* type of action */
+  bool		marked;		/* marked as interactive cell */ \
+  char		type;		/* type of action (UNDO_*) */ \
+  ssize_t	where;		/* start address of delete */ \
+  ssize_t	len;		/* number of characters deleted there */
 
 struct undo_cell
 { COMMON_CELL
@@ -89,9 +92,7 @@ struct undo_cell
 
 struct undo_delete
 { COMMON_CELL
-  int		iswide;
-  long		where;		/* start address of delete */
-  long		len;		/* number of characters deleted there */
+  bool		iswide;
   union
   { charA	A[1];		/* ISO Latin-1 text */
     charW	W[1];		/* Wide character text */
@@ -100,15 +101,11 @@ struct undo_delete
 
 struct undo_insert
 { COMMON_CELL
-  long		where;		/* start address of insert */
-  long		len;		/* number of characters inserted there */
 };
 
 struct undo_change
 { COMMON_CELL
-  int		iswide;
-  long		where;		/* start of change */
-  long		len;		/* length of change */
+  bool		iswide;
   union
   { charA	A[1];		/* ISO Latin-1 text */
     charW	W[1];		/* Wide character text */
@@ -117,9 +114,9 @@ struct undo_change
 
 struct undo_buffer
 { TextBuffer	client;		/* so we know whom to talk to */
-  unsigned	size;		/* size of buffer in chars */
-  int		undone;		/* last action was an undo */
-  int		aborted;	/* sequence was too big, aborted */
+  size_t	size;		/* size of buffer in chars */
+  bool		undone;		/* last action was an undo */
+  bool		aborted;	/* sequence was too big, aborted */
   UndoCell	current;	/* current undo cell for undos */
   UndoCell	checkpoint;	/* non-modified checkpoint */
   UndoCell	lastmark;	/* last marked cell */
@@ -140,7 +137,7 @@ struct undo_buffer
 
 
 static UndoBuffer
-createUndoBuffer(long size)
+createUndoBuffer(size_t size)
 { UndoBuffer ub = alloc(sizeof(struct undo_buffer));
 
   ub->size    = AllocRound(size);
@@ -234,7 +231,7 @@ getUndoTextBuffer(TextBuffer tb)
       }
 
       cell = cell->previous;
-      if ( cell == NULL || cell->marked == TRUE )
+      if ( cell == NULL || cell->marked == true )
       {	ub->current = cell;
 
 	if ( cell == ub->checkpoint )	/* reached non-modified checkpoint */
@@ -243,7 +240,7 @@ getUndoTextBuffer(TextBuffer tb)
 	}
 
         changedTextBuffer(tb);
-	ub->undone = TRUE;
+	ub->undone = true;
 
 	answer(toInt(caret));
       }
@@ -301,15 +298,15 @@ markUndoTextBuffer(TextBuffer tb)
   { DEBUG(NAME_undo, Cprintf("markUndoTextBuffer(%s)\n", pp(tb)));
 
     if ( ub->head )
-    { ub->head->marked = TRUE;
+    { ub->head->marked = true;
       ub->lastmark = ub->head;
     }
 
-    if ( ub->undone == FALSE )
+    if ( ub->undone == false )
       ub->current = ub->head;
 
-    ub->undone = FALSE;
-    ub->aborted = FALSE;
+    ub->undone = false;
+    ub->aborted = false;
   }
 
   succeed;
@@ -380,7 +377,7 @@ Allocate a new undo size with the requested size in bytes
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static void *
-new_undo_cell(UndoBuffer ub, unsigned int size)
+new_undo_cell(UndoBuffer ub, size_t size)
 { UndoCell new;
 
   if ( ub->aborted )
@@ -475,7 +472,7 @@ resize_undo_cell(UndoBuffer ub, UndoCell cell, unsigned int size)
 
 
 void
-register_insert_textbuffer(TextBuffer tb, long int where, long int len)
+register_insert_textbuffer(TextBuffer tb, size_t where, size_t len)
 { UndoBuffer ub;
 
   if ( len > 0 && (ub = getUndoBufferTextBuffer(tb)) != NULL )
@@ -519,7 +516,7 @@ copy_undo_del(TextBuffer tb, long from, long len, UndoDelete udc, long offset)
 
 
 void
-register_delete_textbuffer(TextBuffer tb, long where, long len)
+register_delete_textbuffer(TextBuffer tb, size_t where, size_t len)
 { UndoBuffer ub;
   long i;
   int need_wide = FALSE;
@@ -609,7 +606,7 @@ copy_undo_chg(TextBuffer tb, long from, long len, UndoChange uc, long offset)
 
 
 void
-register_change_textbuffer(TextBuffer tb, long int where, long int len)
+register_change_textbuffer(TextBuffer tb, size_t where, size_t len)
 { UndoBuffer ub;
   int need_wide = FALSE;
   int cell_size;
