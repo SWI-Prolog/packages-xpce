@@ -39,6 +39,11 @@
 :- use_module(library(pce_history)).
 :- if(current_prolog_flag(windows, true)).
 :- use_module(dde_server).
+:- use_module(library(broadcast)).
+:- use_module(library(edit)).
+:- use_module(library(lists)).
+:- use_module(library(pce_help_file)).
+
 :- endif.
 :- require([ ignore/1
            , pce_help_file/2
@@ -80,6 +85,32 @@ unlink(Emacs) :->
 
 start(_Emacs) :->
     true.
+
+
+                /*******************************
+                *          LSP EVENTS          *
+                *******************************/
+
+new_buffer(_Emacs, Buffer:emacs_buffer) :->
+    "A new buffer was loaded"::
+    (   object(@emacs_mark_list)
+    ->  ignore(send(@emacs_mark_list, loaded_buffer, Buffer))
+    ;   true
+    ),
+    broadcast(pce_emacs(opened(Buffer))).
+
+free_buffer(_Emacs, Buffer:emacs_buffer) :->
+    "A buffer is about to be destroyed"::
+    broadcast(pce_emacs(closed(Buffer))).
+
+editor_event(_Emacs, Ev:event) :->
+    "Called after an event has been processed"::
+    get(Ev, receiver, Editor),
+    (   send(Editor, instance_of, editor)
+    ->  get(Editor, text_buffer, TB),
+        broadcast(pce_emacs(changed(TB)))
+    ;   true
+    ).
 
                  /*******************************
                  *         BUFFER MENU          *

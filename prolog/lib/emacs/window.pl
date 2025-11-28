@@ -906,7 +906,8 @@ event(E, Ev:event) :->
         ->  debug(transient, 'We have a transient~n', [])
         ;   send(Frame, keyboard_focus, E?window)
         )
-    ;   send_super(E, event, Ev)
+    ;   send_super(E, event, Ev),
+        send(@emacs, editor_event, Ev)
     ).
 
 

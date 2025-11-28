@@ -105,10 +105,7 @@ initialise(B, File:file*, Name:[name]) :->
         send(B, auto_save_mode, @on),
         send(@emacs_base_names, append, FileBaseName, B),
         send(B, determine_initial_mode),
-        (   object(@emacs_mark_list)
-        ->  ignore(send(@emacs_mark_list, loaded_buffer, B))
-        ;   true
-        )
+        send(@emacs, new_buffer, B)
     ),
 
     send(B, init_mode_defaults),
@@ -119,6 +116,7 @@ initialise(B, File:file*, Name:[name]) :->
 
 unlink(B) :->
     "Remove from buffer-list and base_name table"::
+    send(@emacs, free_buffer, B),
     send(@emacs_buffers, delete, B?name),
     (   get(B, file, File), File \== @nil
     ->  send(@emacs_base_names, delete, File?base_name, B)
