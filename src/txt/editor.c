@@ -3002,12 +3002,34 @@ alignOneLineEditor(Editor e, Int where, Int column)
       sot++)
     ;
 					/* delete old indent */
-  delete_textbuffer(tb, sol, sot-sol);
   if ( tb->indent_tabs == OFF )
     tabs = 0;
   else
     tabs = col / valInt(e->tab_distance);
   spaces = (tabs == 0 ? col : col % valInt(e->tab_distance));
+
+  int match = 0;
+  for(int i=0; i<tabs; i++)
+  { if ( Fetch(e, sol+i) == '\t' )
+      match++;
+    else
+      break;
+  }
+  if ( tabs == match )
+  { for(int i=0; i<spaces; i++)
+    { if ( Fetch(e, sol+tabs+i) == ' ' )
+	match++;
+      else
+	break;
+    }
+    spaces -= match-tabs;
+    tabs = 0;
+  } else
+  { tabs -= match;
+  }
+  sol += match;
+
+  delete_textbuffer(tb, sol, sot-sol);
   insert_textbuffer(tb, sol, tabs, str_tab(&tb->buffer));
   insert_textbuffer(tb, sol+tabs, spaces, str_spc(&tb->buffer));
 
