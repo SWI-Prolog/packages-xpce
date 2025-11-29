@@ -859,7 +859,14 @@ editor_idle_event(E) :->
 
 start_idle_timer(E, Interval:[real]) :->
     "Reset the idle timer to timeout after the specified time"::
-    default(Interval, 2, Time),
+    (   Interval == @default
+    ->  get(E, mode, Mode),
+        (   Mode \== @nil
+        ->  get(Mode, idle_timeout, Time)
+        ;   Time = 2
+        )
+    ;   Time = Interval
+    ),
     send(@emacs_idle_timer, interval, Time),
     send(@emacs_idle_timer, status, once),
     send(@emacs_idle_timer, delete_hypers),
@@ -1158,6 +1165,7 @@ variable(m_x_history,     chain*,       both, "Current M-x command history").
 variable(m_x_index,       int*,         both, "M-p/M-n current index").
 variable(m_x_argn,        int*,         both, "M-p/M-n current argument").
 variable(keep_selection,  bool := @off, both, "Keep selection for this method").
+variable(idle_timeout,    num := 2,	both, "Auto highlighting timeout").
 
 delegate_to(editor).
 
