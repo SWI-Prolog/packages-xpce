@@ -213,11 +213,7 @@ colourisation_up_to_date(M) :->
 
 colourise_buffer(M) :->
     "Colour buffer using syntax-rules"::
-    send(M, remove_syntax_fragments),
-    get(M, text_buffer, TB),
-    get(TB, generation, Generation),
-    send(TB, coloured_generation, Generation).
-
+    send(M, remove_syntax_fragments).
 
 remove_syntax_fragments(M,
                         From:from=[int], To:to=[int],
