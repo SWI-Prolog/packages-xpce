@@ -2479,7 +2479,7 @@ insert_textbuffer_shift(TextBuffer tb, intptr_t where, intptr_t times,
 { intptr_t grow;
   intptr_t here;
 
-  if ( s->s_size == 0 )
+  if ( s->s_size == 0 || times == 0 )
     succeed;
 
   if ( istbA(tb) && str_iswide(s) )
