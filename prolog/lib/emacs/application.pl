@@ -224,7 +224,15 @@ location_history(Emacs, Title:title=[char_array]) :->
 
 goto_history(Emacs, HE:emacs_history_entry, Where:where=[{here,tab,window}]) :->
     "Go back to an old history location"::
-    send(Emacs, goto_source_location, HE?source_location, Where, @nil),
+    get(HE, get_hyper, fragment, text_buffer, TB),
+    get(HE, get_hyper, fragment, start, Start),
+    get(HE, get_hyper, fragment, length, Len),
+    get(TB, open, Where, Frame),
+    send(TB, check_modified_file),
+    get(Frame, editor, Editor),
+    End is Start+Len,
+    send(Editor, caret, Start),
+    send(Editor, selection, End, Start, highlight),
     send(Emacs?history, location, HE).
 
 edit(Emacs, Location:source_location) :->
