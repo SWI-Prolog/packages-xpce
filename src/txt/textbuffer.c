@@ -67,6 +67,7 @@ forwards status promoteTextBuffer(TextBuffer tb);
 					   : (charA *)&(tb)->tb_bufferW[(i)])
 #define Index(tb, p) ((tb)->gap_start <= (p) ? \
 		      (tb)->gap_end + ((p) - (tb)->gap_start) : (p) )
+#define tb_normalise_index(tb, i) ((i)=(max(0, min(tb->size,i))))
 
 
 static status
@@ -2802,7 +2803,17 @@ getLspChangesTextBuffer(TextBuffer tb, BoolObj clear)
   fail;
 }
 
+Int
+getLspColumnTextBuffer(TextBuffer tb, Int where)
+{ size_t here = valInt(where);
 
+  tb_normalise_index(tb, here);
+  size_t sol = scan_textbuffer(tb, here, NAME_line, 0, 'a');
+  lsp_pos pos = {.line=0, .pos=0};
+  update_lsp_pos_text_buffer(tb, sol, here, &pos);
+
+  return toInt(pos.pos);
+}
 
 		 /*******************************
 		 *	 CLASS DECLARATION	*
@@ -3009,7 +3020,9 @@ static getdecl get_textBuffer[] =
      getCountLinesTextBuffer,
      NAME_line, "Count lines in character range"),
   GM(NAME_lspChanges, 1, "chain*", "[bool]", getLspChangesTextBuffer,
-     NAME_modified, "Get pending changes")
+     NAME_modified, "Get pending changes"),
+  GM(NAME_lspColumn,  1, "0..", "int", getLspColumnTextBuffer,
+     NAME_modified, "Get UTF-16 column from index")
 };
 
 /* Resources */
