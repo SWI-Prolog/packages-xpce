@@ -1165,7 +1165,9 @@ variable(m_x_history,     chain*,       both, "Current M-x command history").
 variable(m_x_index,       int*,         both, "M-p/M-n current index").
 variable(m_x_argn,        int*,         both, "M-p/M-n current argument").
 variable(keep_selection,  bool := @off, both, "Keep selection for this method").
-variable(idle_timeout,    num := 2,	both, "Auto highlighting timeout").
+variable(idle_timeout,    num,		both, "Auto highlighting timeout").
+
+class_variable(idle_timeout, num, 2).
 
 delegate_to(editor).
 
@@ -1181,6 +1183,7 @@ initialise(M) :->
     send(M, send_super, initialise),
     send(M, slot, name, Name),
     send(M, slot, syntax, Name),              % converts to object
+    send(M, load_user_extensions),
     send(M, bindings),
     send(M, obtain_class_variables).
 
@@ -1409,9 +1412,9 @@ arg_call(M, Selector:name, Arg:any) :->
                  *           SETUP              *
                  *******************************/
 
-setup_mode(M) :->
-    "Initialise mode (->load_user_extensions)"::
-    send(M, load_user_extensions).
+setup_mode(_M) :->
+    "Initialise mode (virtual)"::
+    true.
 
 
 load_user_extensions(M) :->
