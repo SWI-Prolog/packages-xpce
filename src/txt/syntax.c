@@ -398,6 +398,8 @@ makeClassSyntaxTable(Class class)
 	     "Ends a quasi quotation");
   localClass(class, NAME_language, NAME_syntax, "name*", NAME_both,
 	     "Enable language tweaks");
+  localClass(class, NAME_lineComment, NAME_syntax, "name*", NAME_both,
+	     "Possible multi-character line comment start");
   localClass(class, NAME_table, NAME_storage, "alien:ushort *", NAME_none,
 	     "Type-flags");
   localClass(class, NAME_context, NAME_storage, "alien:char *", NAME_none,

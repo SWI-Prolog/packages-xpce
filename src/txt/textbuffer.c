@@ -1028,14 +1028,14 @@ getMatchingQuoteTextBuffer(TextBuffer tb, Int idx, Name direction)
 #define SST_STRING	0x0800		/* string (low-order is start) */
 #define SST_QQ		0x1000		/* Quasi quotation */
 
-static int
-match_qq(TextBuffer tb, intptr_t here, const char *s)
+static bool
+match_syntax(TextBuffer tb, intptr_t here, const char *s)
 { for(; *s; s++)
   { if ( fetch(here) != *s )
-      fail;
+      return false;
   }
 
-  succeed;
+  return s[0] == 0;
 }
 
 
@@ -1127,7 +1127,7 @@ scan_syntax_textbuffer(TextBuffer tb,
       state = SST_COMMENT2;
       break;
     } else if ( qq_start && c == qq_start[0] &&
-		match_qq(tb, here+1, qq_start+1) )
+		match_syntax(tb, here+1, qq_start+1) )
     { char *qq_end;
 
       if ( notNil(syntax->qq_end) )
@@ -1140,7 +1140,7 @@ scan_syntax_textbuffer(TextBuffer tb,
       for(here += strlen(qq_start); here < to; here++)
       { int c = fetch(here);
 
-	if ( c == qq_end[0] && match_qq(tb, here+1, qq_end+1) )
+	if ( c == qq_end[0] && match_syntax(tb, here+1, qq_end+1) )
 	{ here += strlen(qq_end);
 	  goto cont;
 	}
@@ -1473,6 +1473,8 @@ forAllCommentsTextBuffer(TextBuffer tb, Code msg, Int from, Int to)
 { int here = (isDefault(from) ? 0 : valInt(from));
   int end  = (isDefault(to)   ? tb->size : valInt(to));
   SyntaxTable syntax = tb->syntax;
+  const char *lc_start = notNil(syntax->line_comment) ? strName(syntax->line_comment)
+				                      : NULL;
 
   if ( here < 0 )			/* normalise the indices */
     here = 0;
@@ -1499,7 +1501,23 @@ forAllCommentsTextBuffer(TextBuffer tb, Code msg, Int from, Int to)
 
       forwardReceiverCode(msg, tb, toInt(here), toInt(endc), EAV);
 
-      here = endc;
+      here = endc + 1;
+      continue;
+    }
+
+    if ( lc_start && c == lc_start[0] &&
+	 match_syntax(tb, here+1, lc_start+1) )
+    { intptr_t endc;
+
+      for(endc = here; endc < end; endc++)
+      { if ( tisendsline(syntax, fetch(endc)) )
+	  break;
+      }
+
+      forwardReceiverCode(msg, tb, toInt(here), toInt(endc), EAV);
+
+      here = endc + 1;
+      continue;
     }
 
     here++;

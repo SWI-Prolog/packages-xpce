@@ -63,6 +63,7 @@
                       '''' = string_quote(\),
                       (/)  + comment_start(*),
                       (*)  + comment_end(/),
+                      line_comment(//),
 
                       paragraph_end(regex('[[:blank:]]*\n|/\\*|[^\n]*\\*/'))
                     ]).

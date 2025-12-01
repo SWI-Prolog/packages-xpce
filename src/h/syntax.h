@@ -44,6 +44,7 @@ NewClass(syntax_table)
   Name		qq_start;		/* Quasi quotation start */
   Name		qq_end;			/* Quasi quotation end */
   Name		language;		/* Specific language hooks */
+  Name		line_comment;		/* Line comment start */
   unsigned short *table;		/* Type-flags */
   unsigned char  *context;		/* Context info */
 End;
