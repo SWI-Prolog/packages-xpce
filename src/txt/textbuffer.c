@@ -2815,6 +2815,23 @@ getLspColumnTextBuffer(TextBuffer tb, Int where)
   return toInt(pos.pos);
 }
 
+Int
+getLspOffsetTextBuffer(TextBuffer tb, Int line, Int character)
+{ size_t pos = isDefault(character) ? 0 : valInt(character);
+  size_t ln  = max(0,valInt(line));
+  size_t off = scan_textbuffer(tb, 0, NAME_line, ln, 'a');
+
+  for(size_t i=0; i<pos; i++, off++)
+  { int chr = fetch(off);
+#if SIZEOF_WCHAR_T > 2
+    if ( chr > 0xffff )
+      i++;
+#endif
+  }
+
+  answer(toInt(off));
+}
+
 		 /*******************************
 		 *	 CLASS DECLARATION	*
 		 *******************************/
@@ -2865,6 +2882,8 @@ static char *T_indexAint_startADintD[] =
         { "index=int", "start=[int]" };
 static char *T_append[] =
         { "text=char_array", "times=[int]" };
+static char *T_lsp_offset[] =
+	{ "line=0..", "character=[0..]" };
 
 /* Instance Variables */
 
@@ -3020,9 +3039,11 @@ static getdecl get_textBuffer[] =
      getCountLinesTextBuffer,
      NAME_line, "Count lines in character range"),
   GM(NAME_lspChanges, 1, "chain*", "[bool]", getLspChangesTextBuffer,
-     NAME_modified, "Get pending changes"),
+     NAME_lsp, "Get pending changes"),
   GM(NAME_lspColumn,  1, "0..", "int", getLspColumnTextBuffer,
-     NAME_modified, "Get UTF-16 column from index")
+     NAME_lsp, "Get UTF-16 column from index"),
+  GM(NAME_lspOffset,  2, "0..", T_lsp_offset, getLspOffsetTextBuffer,
+     NAME_lsp, "Translate LSP line+character to index")
 };
 
 /* Resources */
