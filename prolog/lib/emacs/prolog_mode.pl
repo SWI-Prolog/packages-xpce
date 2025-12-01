@@ -168,7 +168,7 @@ resource(breakpoint,   image, image('16x16/stop.png')).
           '/'  + comment_start('*'),
           '*'  + comment_end('/'),
           quasi_quotation('||', '|}'),
-          prolog,
+          language(prolog),
 
           paragraph_end([ '\\s*$',              % empty line
                           '/\\*',               % comment start

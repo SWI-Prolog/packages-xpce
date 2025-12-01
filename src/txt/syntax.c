@@ -53,7 +53,7 @@ initialiseSyntaxTable(SyntaxTable t, Name name, SyntaxTable def)
     context = def->context;
     assign(t, sentence_end, def->paragraph_end);
     assign(t, paragraph_end, def->paragraph_end);
-    assign(t, prolog, def->prolog);
+    assign(t, language, def->language);
   } else
   { flags = char_flags;
     context = char_context;
@@ -61,7 +61,7 @@ initialiseSyntaxTable(SyntaxTable t, Name name, SyntaxTable def)
 	   newObject(ClassRegex, CtoName("[.?!]\\s"), EAV));
     assign(t, paragraph_end,
 	   newObject(ClassRegex, CtoName("\\s*\n"), EAV));
-    assign(t, prolog, OFF);
+    assign(t, language, NIL);
   }
 
   assign(t, name, name);
@@ -396,8 +396,8 @@ makeClassSyntaxTable(Class class)
 	     "Starts a quasi quotation");
   localClass(class, NAME_quasiQuotationEnd, NAME_syntax, "name*", NAME_both,
 	     "Ends a quasi quotation");
-  localClass(class, NAME_prolog, NAME_syntax, "bool", NAME_both,
-	     "Use Prolog syntax");
+  localClass(class, NAME_language, NAME_syntax, "name*", NAME_both,
+	     "Enable language tweaks");
   localClass(class, NAME_table, NAME_storage, "alien:ushort *", NAME_none,
 	     "Type-flags");
   localClass(class, NAME_context, NAME_storage, "alien:char *", NAME_none,

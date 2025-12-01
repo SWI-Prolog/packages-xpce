@@ -43,7 +43,7 @@ NewClass(syntax_table)
   Regex		paragraph_end;		/* End-Of-Pargraph */
   Name		qq_start;		/* Quasi quotation start */
   Name		qq_end;			/* Quasi quotation end */
-  BoolObj	prolog;			/* Is Prolog syntax */
+  Name		language;		/* Specific language hooks */
   unsigned short *table;		/* Type-flags */
   unsigned char  *context;		/* Context info */
 End;
