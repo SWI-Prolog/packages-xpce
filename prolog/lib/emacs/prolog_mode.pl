@@ -2247,9 +2247,9 @@ colourise_buffer(M) :->
 colourise_comments(M, From:[int], To:[int]) :->
     debug(emacs, 'Colourising comments in ~p..~p', [From, To]),
     get(M, text_buffer, TB),
-    send(TB, for_all_comments,
+    send(TB, for_all_syntax,
          message(@prolog, colour_item, comment, TB, @arg1, @arg2),
-         From, To).
+         From, To, chain(comment)).
 
 colourise_or_recenter(M) :->
     "Colour according to syntax and recenter"::

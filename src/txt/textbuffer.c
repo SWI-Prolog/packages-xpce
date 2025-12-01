@@ -1467,9 +1467,17 @@ inCommentTextBuffer(TextBuffer tb, Int pos, Int from)
   fail;
 }
 
+static status
+callSyntaxTextBuffer(TextBuffer tb, Code msg,
+		     Name type, Int start, Int end, Chain types)
+{ if ( isDefault(types) || memberChain(types, type) )
+    return forwardReceiverCode(msg, tb, start, end, type, EAV);
+
+  succeed;
+}
 
 static status
-forAllCommentsTextBuffer(TextBuffer tb, Code msg, Int from, Int to)
+forAllSyntaxTextBuffer(TextBuffer tb, Code msg, Int from, Int to, Chain types)
 { int here = (isDefault(from) ? 0 : valInt(from));
   int end  = (isDefault(to)   ? tb->size : valInt(to));
   SyntaxTable syntax = tb->syntax;
@@ -1485,11 +1493,13 @@ forAllCommentsTextBuffer(TextBuffer tb, Code msg, Int from, Int to)
   { int c = fetch(here);
 
     if ( tisquote(syntax, c) )
-    { Int h = getMatchingQuoteTextBuffer(tb, toInt(here), NAME_forward);
+    { Int endc = getMatchingQuoteTextBuffer(tb, toInt(here), NAME_forward);
 
-      if ( !h )
+      if ( !endc )
 	succeed;
-      here = valInt(h) + 1;
+      callSyntaxTextBuffer(tb, msg, NAME_quoted, toInt(here), add(endc,ONE), types);
+
+      here = valInt(endc) + 1;
       continue;
     }
 
@@ -1499,7 +1509,7 @@ forAllCommentsTextBuffer(TextBuffer tb, Code msg, Int from, Int to)
     { int endc = valInt(getSkipCommentTextBuffer(tb, toInt(here),
 						 DEFAULT, OFF));
 
-      forwardReceiverCode(msg, tb, toInt(here), toInt(endc), EAV);
+      callSyntaxTextBuffer(tb, msg, NAME_comment, toInt(here), toInt(endc), types);
 
       here = endc + 1;
       continue;
@@ -1514,7 +1524,7 @@ forAllCommentsTextBuffer(TextBuffer tb, Code msg, Int from, Int to)
 	  break;
       }
 
-      forwardReceiverCode(msg, tb, toInt(here), toInt(endc), EAV);
+      callSyntaxTextBuffer(tb, msg, NAME_comment, toInt(here), toInt(endc), types);
 
       here = endc + 1;
       continue;
@@ -2894,8 +2904,8 @@ static char *T_scan[] =
 	  "times=[int]", "return=[{start,end}]" };
 static char *T_save[] =
         { "in=file", "from=[int]", "size=[int]" };
-static char *T_forAllComments[] =
-	{ "message=code", "from=[int]", "to=[int]" };
+static char *T_forAllSyntax[] =
+	{ "message=code", "from=[int]", "to=[int]", "types=[chain]" };
 static char *T_indexAint_startADintD[] =
         { "index=int", "start=[int]" };
 static char *T_append[] =
@@ -2983,8 +2993,8 @@ static senddecl send_textBuffer[] =
      NAME_iterate, "Iterate code over all fragments"),
   SM(NAME_inComment, 2, T_indexAint_startADintD, inCommentTextBuffer,
      NAME_language, "Test if first index is in comment"),
-  SM(NAME_forAllComments, 3, T_forAllComments, forAllCommentsTextBuffer,
-     NAME_iterate, "Iterate code over all comments"),
+  SM(NAME_forAllSyntax, 4, T_forAllSyntax, forAllSyntaxTextBuffer,
+     NAME_iterate, "Iterate code over extends with recognised syntax"),
   SM(NAME_inString, 2, T_indexAint_startADintD, inStringTextBuffer,
      NAME_language, "Test if first index is in string constant"),
   SM(NAME_checkPointUndo, 0, NULL, checkpointUndoTextBuffer,
