@@ -761,14 +761,14 @@ str_lineno(PceString s, int at)
 wint_t
 str_fetch(PceString s, int idx)
 { return s->s_iswide ? str_fetchW(s, idx)
-		   : str_fetchA(s, idx) & 0xff;
+		     : str_fetchA(s, idx) & 0xff;
 }
 
 
 int
 str_store(PceString s, int idx, unsigned int chr)
 { return s->s_iswide ? str_storeW(s, idx, chr)
-		   : str_storeA(s, idx, chr);
+		     : str_storeA(s, idx, chr);
 }
 
 		 /*******************************

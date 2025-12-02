@@ -45,6 +45,8 @@ NewClass(syntax_table)
   Name		qq_end;			/* Quasi quotation end */
   Name		language;		/* Specific language hooks */
   Name		line_comment;		/* Line comment start */
+  Vector	keywords;		/* ordered set of keywords */
+  BoolObj	keyword_case_sensitive;	/* Keywords are case sensitive */
   unsigned short *table;		/* Type-flags */
   unsigned char  *context;		/* Context info */
 End;
@@ -138,6 +140,7 @@ extern unsigned char  char_context[];	/* Initial context table */
 #define tisprint(t, c)		!THasSyntax(t, c, CT)
 
 #define tisalnum(t, c)		THasSyntax(t, c, AN)
+#define tiscsym(t, c)		(THasSyntax(t, c, AN) || c == '_')
 #define tisletter(t, c)		THasSyntax(t, c, LC|UC)
 #define tischtype(t, c, tp)	THasSyntax(t, c, (tp))
 

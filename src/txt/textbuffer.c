@@ -1467,6 +1467,64 @@ inCommentTextBuffer(TextBuffer tb, Int pos, Int from)
   fail;
 }
 
+static int
+kw_char(Name kwd, size_t i)
+{ PceString s = &kwd->data;
+  return i < s->s_size ? str_fetch(s, i) : 0;
+}
+
+static Name
+match_keyword(TextBuffer tb, size_t here, size_t *end)
+{ SyntaxTable syntax = tb->syntax;
+  Vector v = syntax->keywords;
+
+  if ( v )
+  { int a = 0;
+    int z = valInt(v->size)-1;
+    int i = 0;
+    int mina = a;
+    int maxz = z;
+
+    while(a <= z)
+    { int chr = fetch(here+i);
+      int m = (a+z)/2;
+      Name kwd = v->elements[m];
+      int kc = kw_char(kwd, i);
+
+      if ( !tiscsym(syntax, chr) )
+	fail;
+
+      if ( kc == chr )
+      { PceString s = &kwd->data;
+	if ( i == s->s_size-1 &&
+	     (here+i+1 >= tb->size || !tiscsym(syntax, fetch(here+i+1))) )
+	{ *end = here+i+1;
+	  return kwd;
+	} else				/* matched one letter; go to next */
+	{ if ( a < z )
+	  { for(a=m; a>mina && kw_char(v->elements[a-1], i) == chr; a--)
+	      ;
+	    for(z=m; z<maxz && kw_char(v->elements[z+1], i) == chr; z++)
+	      ;
+	    mina = a;
+	    maxz = z;
+	  }
+	  i++;
+	}
+      } else if ( a == z )
+      { fail;
+      } else if ( chr > kc )
+      {	a = m+1;
+      } else if ( chr < kc )
+      {	z = m-1;
+      }
+    }
+  }
+
+  fail;
+}
+
+
 static status
 callSyntaxTextBuffer(TextBuffer tb, Code msg,
 		     Name type, Int start, Int end, Chain types)
@@ -1483,6 +1541,8 @@ forAllSyntaxTextBuffer(TextBuffer tb, Code msg, Int from, Int to, Chain types)
   SyntaxTable syntax = tb->syntax;
   const char *lc_start = notNil(syntax->line_comment) ? strName(syntax->line_comment)
 				                      : NULL;
+  bool match_keywords = (notNil(syntax->keywords) &&
+			 (isDefault(types) || memberChain(types, NAME_keyword)));
 
   if ( here < 0 )			/* normalise the indices */
     here = 0;
@@ -1506,8 +1566,8 @@ forAllSyntaxTextBuffer(TextBuffer tb, Code msg, Int from, Int to, Chain types)
     if ( tiscommentstart(syntax, c) ||
 	 (tiscommentstart1(syntax, c) &&
 	  tiscommentstart2(syntax, fetch(here+1))) )
-    { int endc = valInt(getSkipCommentTextBuffer(tb, toInt(here),
-						 DEFAULT, OFF));
+    { intptr_t endc = valInt(getSkipCommentTextBuffer(tb, toInt(here),
+						      DEFAULT, OFF));
 
       callSyntaxTextBuffer(tb, msg, NAME_comment, toInt(here), toInt(endc), types);
 
@@ -1528,6 +1588,18 @@ forAllSyntaxTextBuffer(TextBuffer tb, Code msg, Int from, Int to, Chain types)
 
       here = endc + 1;
       continue;
+    }
+
+    if ( match_keywords &&
+	 tiscsym(syntax, c) &&
+	 (here == 0 || !tiscsym(syntax, fetch(here-1))) )
+    { size_t endc;
+      Name kwd = match_keyword(tb, here, &endc);
+
+      if ( kwd )
+      { callSyntaxTextBuffer(tb, msg, NAME_keyword, toInt(here), toInt(endc), types);
+	here = endc;
+      }
     }
 
     here++;

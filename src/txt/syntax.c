@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2017, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -54,6 +55,11 @@ initialiseSyntaxTable(SyntaxTable t, Name name, SyntaxTable def)
     assign(t, sentence_end, def->paragraph_end);
     assign(t, paragraph_end, def->paragraph_end);
     assign(t, language, def->language);
+    if ( isNil(def->keywords) )
+      assign(t, keywords, NIL);
+    else
+      assign(t, keywords, getCopyVector(def->keywords));
+    assign(t, keyword_case_sensitive, def->keyword_case_sensitive);
   } else
   { flags = char_flags;
     context = char_context;
@@ -62,6 +68,7 @@ initialiseSyntaxTable(SyntaxTable t, Name name, SyntaxTable def)
     assign(t, paragraph_end,
 	   newObject(ClassRegex, CtoName("\\s*\n"), EAV));
     assign(t, language, NIL);
+    assign(t, keyword_case_sensitive, ON);
   }
 
   assign(t, name, name);
@@ -372,6 +379,21 @@ getCommentEndSyntax(SyntaxTable t, Int len)
   fail;
 }
 
+static status
+keywordsSyntaxTable(SyntaxTable t, Vector keywords)
+{ if ( isNil(keywords) )
+  { assign(t, keywords, keywords);
+  } else
+  { Vector v2 = getCopyVector(keywords);
+    Code cmp = newObject(ClassObtain, Arg(1), NAME_compare, Arg(2), EAV);
+    send(v2, NAME_sort, cmp, EAV);
+    freeObject(cmp);
+    assign(t, keywords, v2);
+  }
+
+  succeed;
+}
+
 
 status
 makeClassSyntaxTable(Class class)
@@ -400,6 +422,10 @@ makeClassSyntaxTable(Class class)
 	     "Enable language tweaks");
   localClass(class, NAME_lineComment, NAME_syntax, "name*", NAME_both,
 	     "Possible multi-character line comment start");
+  localClass(class, NAME_keywords, NAME_syntax, "vector*", NAME_get,
+	     "Ordered set of keywords");
+  localClass(class, NAME_keywordCaseSensitive, NAME_syntax, "bool", NAME_both,
+	     "Whether or not to match keywords case sensitive");
   localClass(class, NAME_table, NAME_storage, "alien:ushort *", NAME_none,
 	     "Type-flags");
   localClass(class, NAME_context, NAME_storage, "alien:char *", NAME_none,
@@ -436,6 +462,9 @@ makeClassSyntaxTable(Class class)
 	     "character=char", "context=char",
 	     "Set context for character",
 	     contextSyntaxTable);
+  sendMethod(class, NAME_keywords, NAME_syntax, 1, "vector*",
+	     "Set set of keywords",
+	     keywordsSyntaxTable);
 
   getMethod(class, NAME_context, NAME_syntax, "context=char", 1,
 	    "character=char",
