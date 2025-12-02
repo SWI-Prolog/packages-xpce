@@ -2922,9 +2922,9 @@ getLspOffsetTextBuffer(TextBuffer tb, Int line, Int character)
   size_t off = scan_textbuffer(tb, 0, NAME_line, ln, 'a');
 
   for(size_t i=0; i<pos; i++, off++)
-  { int chr = fetch(off);
+  {
 #if SIZEOF_WCHAR_T > 2
-    if ( chr > 0xffff )
+    if ( fetch(off) > 0xffff )
       i++;
 #endif
   }
