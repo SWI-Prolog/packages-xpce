@@ -2,9 +2,10 @@
 
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@cs.vu.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2014, University of Amsterdam
-                              Vu University Amsterdam
+    WWW:           https://www.swi-prolog/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+                              VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -43,6 +44,62 @@
            , memberchk/2
            ]).
 
+:- multifile
+    c_keyword/2.
+
+%!  c_keyword(?Keyword, ?Type)
+%
+%   True when Keyword is a C keyword of Type.  Supported types are:
+%
+%     - control
+%     - type
+%     - definition
+%     - qualifier
+%     - operator
+
+c_keyword(if,               control).
+c_keyword(else,             control).
+c_keyword(while,            control).
+c_keyword(for,              control).
+c_keyword(do,               control).
+c_keyword(switch,           control).
+c_keyword(case,             control).
+c_keyword(default,          control).
+c_keyword(return,           control).
+c_keyword(goto,             control).
+c_keyword(break,            control).
+c_keyword(continue,         control).
+c_keyword('_Generic',       control).
+c_keyword('_Static_assert', control).
+c_keyword(char,             type).
+c_keyword(short,            type).
+c_keyword(int,              type).
+c_keyword(signed,           type).
+c_keyword(unsigned,         type).
+c_keyword(long,             type).
+c_keyword(float,            type).
+c_keyword(double,           type).
+c_keyword(void,             type).
+c_keyword('_Bool',          type).
+c_keyword('_Complex',       type).
+c_keyword('_Imaginary',     type).
+c_keyword(struct,           definition).
+c_keyword(enum,             definition).
+c_keyword(union,            definition).
+c_keyword(typedef,          definition).
+c_keyword(inline,           qualifier).
+c_keyword(static,           qualifier).
+c_keyword(const,            qualifier).
+c_keyword(const,            qualifier).
+c_keyword(restrict,         qualifier).
+c_keyword(volatile,         qualifier).
+c_keyword(extern,           qualifier).
+c_keyword('_Atomic',        qualifier).
+c_keyword('_Noreturn',      qualifier).
+c_keyword(sizeof,           operator).
+c_keyword('_Alignas',       operator).
+c_keyword('_Alignof',       operator).
+
 :- emacs_begin_mode(c, language,
                     "Mode for editing C programs",
                     [ insert_c_begin    = key('{'),
@@ -76,6 +133,19 @@ class_variable(indent_level, int, 2).
          chain(regex('^(\\w+\\([^)]*\\).*\n)(\\{([^}].*\n)+\\}(\\s*\n)*)'),
                regex('^(\\w+.*\n)(\\{([^}].*\n)+\\};(\\s*\n)*)'),
                regex('^(#\\s*define.*\\\\)\n((.*\\\\\n)+.*\n)'))).
+
+:- initialization
+    set_keywords.
+
+set_keywords :-
+    new(ST, syntax_table(c)),                       % Does a lookup!
+    findall(Kwd, c_keyword(Kwd, _), Kwds),
+    Obj =.. [vector|Kwds],
+    send(ST, keywords, Obj).
+
+keyword_type(_M, Keyword:name, Type:name) :<-
+    "Classify a C keyword"::
+    c_keyword(Keyword, Type).
 
 :- pce_global(@c_undent_regex, new(regex('\\{|else|\\w+:'))).
 
