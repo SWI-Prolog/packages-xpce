@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -763,34 +764,18 @@ t_underline(int x, int y, int w, Colour c)
 { static int ex = 0, ey = 0, ew = 0;
   static Colour cc = NIL;
 
+  assert(c);
+
   if ( x == ex+ew && y == ey && c == cc )
   { ew += w;
   } else
-  { if ( ew > 0 )
+  { if ( ew > 0 && !isNil(cc) )
     { r_colour(cc);
       r_line(ex, ey, ex+ew, ey);
     }
     ex = x, ey = y, ew = w;
     cc = c;
   }
-}
-
-
-static void
-t_grey(int x, int y, int w, int h)
-{ static int ix=0, iy=0, iw=0, ih=0;
-
-  if ( iw == 0 && ih == 0 )
-  { ix = x, iy = y, iw = w, ih = h;
-  } else
-  { if ( iy == y && ih == h && ix + iw == x )
-    { iw += w;
-      return;
-    }
-  }
-
-  r_and(ix, iy, iw, ih, GREY50_IMAGE);
-  ix=0, iy=0, iw=0, ih=0;
 }
 
 
@@ -882,11 +867,6 @@ paint_attributes(TextImage ti, TextLine l, int from, int to, Colour c)
   if ( atts & TXT_UNDERLINED )
   { t_underline(l->chars[from].x, l->y + l->h - 1,
 		l->chars[to].x - l->chars[from].x, c);
-  }
-  if ( atts & TXT_GREYED )
-  { Cprintf("Greyed text not yet supported\n");
-    t_grey(l->chars[from].x, l->y,
-	   l->chars[to].x - l->chars[from].x, l->h);
   }
 }
 
@@ -995,6 +975,12 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
     }
 
 #define SWAP_COLORS(a,b) do { Any _tmp = a; a = b; b = _tmp; } while(0)
+
+    if ( atts & TXT_GREYED )
+    { if ( isDefault(c) )
+	c = r_colour(DEFAULT);
+      c = getReduceColour(c, DEFAULT);
+    }
 
     if ( notDefault(bg) )
     { if ( instanceOfObject(bg, ClassElevation) )

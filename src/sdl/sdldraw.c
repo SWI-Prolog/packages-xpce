@@ -651,7 +651,7 @@ r_colour(Any c)
     return old;
 
   if ( isDefault(c) )
-     c = context.default_colour;
+    c = context.default_colour;
 
   context.colour = c;
 
