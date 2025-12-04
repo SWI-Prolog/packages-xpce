@@ -35,9 +35,6 @@
 #ifndef RAYDRAW_H
 #define RAYDRAW_H
 
-#define UNDERLINE_PEN 1.0	/* These are Pango metrics properties */
-#define UNDERLINE_SEP 2.0
-
 /* private SDL interface */
 void d_init_surface(cairo_surface_t *surf, Any background);
 
@@ -86,7 +83,8 @@ void r_3d_diamond(int x, int y, int w, int h, Elevation e, int up);
 void r_arc(int x, int y, int w, int h, int s, int e, Name close, Any fill);
 void r_ellipse(int x, int y, int w, int h, Any fill);
 void r_3d_ellipse(int x, int y, int w, int h, Elevation z, int up);
-void r_line(int x1, int y1, int x2, int y2);
+void r_line(double x1, double y1, double x2, double y2);
+void r_underline(FontObj font, double x, double base, double w, Any underline);
 void r_polygon(FPoint pts, int n, int close);
 void r_bezier(fpoint start, fpoint end, fpoint control1, fpoint control2);
 void r_path(Chain points, int ox, int oy, int radius, int closed, Image fill);
@@ -118,8 +116,13 @@ void s_printW(charW *s, int l, int x, int y, FontObj f);
 void s_print(PceString s, int x, int y, FontObj f);
 void s_print_aligned(PceString s, int x, int y, FontObj f);
 void str_size(PceString s, FontObj font, int *width, int *height);
-void str_string(PceString s, FontObj font, int x, int y, int w, int h, Name hadjust, Name vadjust, int flags);
-void str_selected_string(PceString s, FontObj font, int f, int t, Style style, int x, int y, int w, int h, Name hadjust, Name vadjust);
+void str_string(PceString s, FontObj font,
+		int x, int y, int w, int h,
+		Name hadjust, Name vadjust,
+		Any underline, int flags);
+void str_selected_string(PceString s, FontObj font,
+			 int f, int t, Style style, int x, int y, int w, int h,
+			 Name hadjust, Name vadjust);
 void ps_string(PceString s, FontObj font, int x, int y, int w, Name format, int flags);
 void str_label(PceString s, int acc, FontObj font, int x, int y, int w, int h, Name hadjust, Name vadjust, int flags);
 

@@ -46,11 +46,10 @@
 #define TXT_X_MARGIN 5		/* Margin between text and box of textimage */
 #define TXT_Y_MARGIN 2
 
-#define TXT_UNDERLINED	0x1	/* underlined character */
-#define TXT_HIGHLIGHTED	0x2	/* highlighted character (inverse video) */
-#define TXT_GREYED	0x4	/* greyed character */
-#define TXT_BOLDEN	0x8	/* bold character */
-#define TXT_HIDDEN	0x10	/* invisible fragment */
+#define TXT_HIGHLIGHTED	0x1	/* highlighted character (inverse video) */
+#define TXT_GREYED	0x2	/* greyed character */
+#define TXT_BOLDEN	0x4	/* bold character */
+#define TXT_HIDDEN	0x8	/* invisible fragment */
 
 NewClass(text_buffer)
   ABSTRACT_SOURCE_SINK
@@ -95,6 +94,7 @@ NewClass(style)
   FontObj	font;			/* font of fragment */
   Colour	colour;			/* colour of fragment */
   Any		background;		/* Background for drawing */
+  Any		underline;		/* Bool or colour */
   Image		icon;			/* margin marker */
   Int		left_margin;		/* left margin in pixels */
   Int		right_margin;		/* right margin in pixels */
@@ -233,6 +233,7 @@ struct text_char
   FontObj	font;			/* Font of this character */
   Colour	colour;			/* Colour of this character */
   Any		background;		/* Background for the characters */
+  Any		underline;		/* Underline style (bool|colour*) */
   intptr_t	index;			/* Index in line (relative) */
   float		x;			/* X-position in line (pixels) */
   unsigned char attributes;		/* Its attributes */

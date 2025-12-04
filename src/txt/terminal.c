@@ -1677,11 +1677,7 @@ rlc_paint_text(RlcData b,
       r_clear(x0, ty-b->cb, *cx-x0, b->ch);
       s_print_utf8(t, ulen, x0, ty, font);
       if ( TF_UNDERLINE(flags) )
-      { double o_pen = r_thickness(UNDERLINE_PEN);
-	r_line(x0, ty+UNDERLINE_SEP, *cx, ty+UNDERLINE_SEP);
-	r_thickness(o_pen);
-      }
-
+	r_underline(font, x0, ty, *cx, DEFAULT);
       if ( TF_INVERSE(flags) )
 	r_swap_background_and_foreground();
       if ( notDefault(ofg) )

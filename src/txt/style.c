@@ -37,7 +37,6 @@
 #include <h/text.h>
 
 static status	highlightStyle(Style s, BoolObj on);
-static status	underlineStyle(Style s, BoolObj on);
 static status	greyStyle(Style s, BoolObj on);
 static status	hiddenStyle(Style s, BoolObj on);
 
@@ -45,20 +44,20 @@ static status
 initialiseStyle(Style s, Image icon, FontObj font, Colour colour,
 		BoolObj highlight, BoolObj underline, BoolObj bold, BoolObj grey,
 		Any background, BoolObj hidden, Int lm, Int rm)
-{ if ( isDefault(icon) ) icon = NIL;
-  if ( isDefault(lm) )   lm = ZERO;
-  if ( isDefault(rm) )   rm = ZERO;
+{ if ( isDefault(icon) )      icon      = NIL;
+  if ( isDefault(lm) )        lm        = ZERO;
+  if ( isDefault(rm) )        rm        = ZERO;
 
   assign(s, font,         font);
   assign(s, icon,         icon);
   assign(s, colour,       colour);
   assign(s, background,	  background);
+  assign(s, underline,	  underline);
   assign(s, left_margin,  lm);
   assign(s, right_margin, rm);
   s->attributes = 0;
 
   if ( notDefault(highlight) ) highlightStyle(s, highlight);
-  if ( notDefault(underline) ) underlineStyle(s, underline);
   if ( notDefault(bold) )      boldStyle(s, bold);
   if ( notDefault(grey) )      greyStyle(s, grey);
   if ( notDefault(hidden) )    hiddenStyle(s, hidden);
@@ -112,12 +111,6 @@ highlightStyle(Style s, BoolObj on)
 
 
 static status
-underlineStyle(Style s, BoolObj on)
-{ return attribute_style(s, TXT_UNDERLINED, on);
-}
-
-
-static status
 greyStyle(Style s, BoolObj on)
 { return attribute_style(s, TXT_GREYED, on);
 }
@@ -148,12 +141,6 @@ getHighlightStyle(Style s)
 
 
 static BoolObj
-getUnderlineStyle(Style s)
-{ return get_attribute_style(s, TXT_UNDERLINED);
-}
-
-
-static BoolObj
 getGreyStyle(Style s)
 { return get_attribute_style(s, TXT_GREYED);
 }
@@ -178,7 +165,7 @@ getHiddenStyle(Style s)
 /* Type declarations */
 
 static char *T_initialise[] =
-        { "icon=[image]*", "font=[font]", "colour=[colour]", "highlight=[bool]", "underline=[bool]", "bold=[bool]", "grey=[bool]", "background=[colour|pixmap|elevation]", "hidden=[bool]", "left_margin=[int]", "right_margin=[int]" };
+        { "icon=[image]*", "font=[font]", "colour=[colour]", "highlight=[bool]", "underline=[bool|colour]", "bold=[bool]", "grey=[bool]", "background=[colour|pixmap|elevation]", "hidden=[bool]", "left_margin=[int]", "right_margin=[int]" };
 
 /* Instance Variables */
 
@@ -189,6 +176,8 @@ static vardecl var_style[] =
      NAME_appearance, "Colour of the characters"),
   IV(NAME_background, "[colour|pixmap|elevation]", IV_BOTH,
      NAME_appearance, "Background for the characters"),
+  IV(NAME_underline, "[bool|colour]", IV_BOTH,
+     NAME_appearance, "Underline"),
   IV(NAME_icon, "image*", IV_BOTH,
      NAME_appearance, "Image for annotation margin"),
   IV(NAME_leftMargin, "int", IV_BOTH,
@@ -211,9 +200,7 @@ static senddecl send_style[] =
   SM(NAME_hidden, 1, "bool", hiddenStyle,
      NAME_appearance, "Make text invisible"),
   SM(NAME_highlight, 1, "bool", highlightStyle,
-     NAME_appearance, "Inverse video"),
-  SM(NAME_underline, 1, "bool", underlineStyle,
-     NAME_appearance, "Underlined text")
+     NAME_appearance, "Inverse video")
 };
 
 /* Get Methods */
@@ -226,9 +213,7 @@ static getdecl get_style[] =
   GM(NAME_hidden, 0, "bool", NULL, getHiddenStyle,
      NAME_appearance, "Boolean to indicate invisible text"),
   GM(NAME_highlight, 0, "bool", NULL, getHighlightStyle,
-     NAME_appearance, "Boolean to indicate inverse video"),
-  GM(NAME_underline, 0, "bool", NULL, getUnderlineStyle,
-     NAME_appearance, "Boolean to indicate underline")
+     NAME_appearance, "Boolean to indicate inverse video")
 };
 
 /* Resources */

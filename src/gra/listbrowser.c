@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -430,12 +431,13 @@ static Dict	     current_dict;	/* Currently displayed dict */
 static Cell	     current_cell;	/* Cell of this item */
 static int	     current_item;	/* Index of current name */
 static int	     current_index;	/* Current location */
-static PceString	     current_name;	/* Working on this name */
+static PceString     current_name;	/* Working on this name */
 static int	     current_search;	/* search feedback */
 static unsigned char current_atts;	/* Attributes for it */
 static FontObj	     current_font;	/* Current font */
 static Colour	     current_colour;	/* Current colour */
 static Any	     current_background; /* Current background */
+static Any	     current_underline;	/* Current underline */
 static Image	     current_image;	/* Image to flag line */
 
 static void
@@ -453,6 +455,7 @@ compute_current(ListBrowser lb)
     { current_font	 = style->font;
       current_colour     = style->colour;
       current_background = style->background;
+      current_underline  = style->underline;
       current_atts       = style->attributes;
       current_image      = style->icon;
 
@@ -462,6 +465,7 @@ compute_current(ListBrowser lb)
     { current_font       = lb->font;
       current_colour     = DEFAULT;
       current_background = DEFAULT;
+      current_underline  = DEFAULT;
       current_atts       = 0;
       current_image      = NIL;
     }
@@ -490,6 +494,7 @@ compute_current(ListBrowser lb)
     current_font       = lb->font;
     current_colour     = DEFAULT;
     current_background = DEFAULT;
+    current_underline  = DEFAULT;
     current_image      = NIL;
   }
 }
@@ -589,6 +594,7 @@ fetch_list_browser(Any obj, TextChar tc)
   tc->attributes   = current_atts;
   tc->colour	   = current_colour;
   tc->background   = current_background;
+  tc->underline    = current_underline;
   tc->index        = index;
 
   if ( pos > 0 && pos <= current_search )
@@ -596,9 +602,10 @@ fetch_list_browser(Any obj, TextChar tc)
 
     if ( s && notDefault(s) )
     { tc->attributes |= s->attributes;
-      if ( notDefault(s->font) )       tc->font = s->font;
-      if ( notDefault(s->colour) )     tc->colour = s->colour;
+      if ( notDefault(s->font) )       tc->font	      = s->font;
+      if ( notDefault(s->colour) )     tc->colour     = s->colour;
       if ( notDefault(s->background) ) tc->background = s->background;
+      if ( notDefault(s->underline) )  tc->underline  = s->underline;
     } else
       tc->attributes ^= TXT_HIGHLIGHTED;
   }

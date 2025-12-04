@@ -787,10 +787,11 @@ struct fragment_cache
 { FragmentCell	active;			/* list of active fragments */
   Fragment	current;		/* current fragment */
   long		index;			/* current index */
-  unsigned long		attributes;		/* Current (fragment) attributes */
+  unsigned long	attributes;		/* Current (fragment) attributes */
   FontObj	font;			/* current (fragment) font */
   Colour	colour;			/* current (fragment) colour */
-  Any		background;		/* curremt (fragment) background */
+  Any		background;		/* current (fragment) background */
+  Any		underline;		/* current (fragment) underline */
   int		left_margin;		/* current left margin */
   int		right_margin;		/* current right margin */
   int		initial_state;		/* state after reset */
@@ -833,6 +834,7 @@ resetFragmentCache(FragmentCache fc, TextBuffer tb)
     fc->font	      = DEFAULT;
     fc->colour	      = DEFAULT;
     fc->background    = DEFAULT;
+    fc->underline     = DEFAULT;
     fc->left_margin   = 0;
     fc->right_margin  = 0;
     fc->initial_state = TRUE;
@@ -889,14 +891,16 @@ indexFragmentCache(FragmentCache fc, Editor e, long int i)
 
   if ( changed )
   { FragmentCell cell;
-    FontObj f = DEFAULT;
-    Any bg    = DEFAULT;
-    Colour c  = DEFAULT;
-    long fl   = 0;			/* keep compiler happy */
-    long bgl  = 0;
-    long cl   = 0;
-    int lm    = 0;
-    int rm    = 0;			/* margins */
+    FontObj f     = DEFAULT;
+    Any bg        = DEFAULT;
+    Colour c      = DEFAULT;
+    Any underline = DEFAULT;
+    long fl       = 0;			/* keep compiler happy */
+    long bgl      = 0;
+    long ugl      = 0;
+    long cl       = 0;
+    int lm        = 0;
+    int rm        = 0;			/* margins */
     unsigned long attributes = 0L;
 
     for( cell = fc->active; cell; cell = cell->next )
@@ -932,11 +936,18 @@ indexFragmentCache(FragmentCache fc, Editor e, long int i)
 	  bgl = cell->fragment->length;
 	}
       }
+      if ( notDefault(s->underline) )
+      { if ( isDefault(underline) || cell->fragment->length < ugl )
+	{ underline = s->underline;
+	  ugl = cell->fragment->length;
+	}
+      }
     }
 
     fc->font	     = f;
     fc->colour       = c;
     fc->background   = bg;
+    fc->underline    = underline;
     fc->attributes   = attributes;
     fc->right_margin = rm;
     fc->left_margin  = lm;
@@ -1039,6 +1050,7 @@ fetch_editor(Any obj, TextChar tc)
   tc->colour       = fc->colour;
   tc->background   = fc->background;
   tc->attributes   = fc->attributes;
+  tc->underline    = fc->underline;
   tc->index	   = index;
 
   if ( tc->value.c == GRAPHICS_START &&

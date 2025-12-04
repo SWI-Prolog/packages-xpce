@@ -44,8 +44,6 @@ static PangoFontMap *fontmap;	/* Per surface type (screen, PDF, ... */
 static PangoContext *context;	/* Per DPI and fontmap */
 static double font_scale = 1.0;
 
-#define P2D(i) ((i)/(double)PANGO_SCALE)
-
 static void clean_width_cache(charwidth_cache *wcache);
 
 static status
@@ -203,6 +201,8 @@ ws_create_font(FontObj f)
   dynamic_metrics(f);
 #endif
 
+  wsf->ul_thickness = P2D(pango_font_metrics_get_underline_thickness(metrics));
+  wsf->ul_position  = P2D(pango_font_metrics_get_underline_position(metrics));
   wsf->height  = wsf->ascent + wsf->descent;
   assign(f, ex, toNum(wsf->height/2.0)); /* approximated height of "x" */
   pango_font_metrics_unref(metrics);

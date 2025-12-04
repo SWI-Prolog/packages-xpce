@@ -3165,7 +3165,7 @@ drawTextGraphical(Graphical gr, CharArray txt, FontObj font,
 
     str_string(&txt->data, font,
 	       valInt(x), valInt(y), valInt(w), valInt(h),
-	       hadjust, vadjust, 0);
+	       hadjust, vadjust, OFF, 0);
   }
 
   succeed;

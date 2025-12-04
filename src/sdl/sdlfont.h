@@ -38,6 +38,9 @@
 #include <pango/pango.h>
 #include <pango/pangocairo.h>
 
+/* Pango fixed point to Cairo double dimensions*/
+#define P2D(i) ((i)/(double)PANGO_SCALE)
+
 typedef struct
 { float *pages[256];
 } charwidth_cache;
@@ -49,6 +52,8 @@ typedef struct
   double ascent;
   double descent;
   double height;
+  double ul_thickness;		/* Underline thinkness */
+  double ul_position;		/* Underline position */
   charwidth_cache wcache;
   int references;		/* for cloning */
 } ws_font, *WsFont;

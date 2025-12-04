@@ -297,9 +297,6 @@ repaintText(TextObj t, int x, int y, int w, int h)
       r_fill(x, y, w, h, t->background);
   }
 
-  if ( t->underline == ON )
-    flags |= TXT_UNDERLINED;
-
   x += b;
   y += b;
   w -= 2*b;
@@ -326,7 +323,7 @@ repaintText(TextObj t, int x, int y, int w, int h)
     else
       str_string(buf, t->font,
 		 x+valInt(t->x_offset), y, w, h,
-		 t->format, NAME_top, flags);
+		 t->format, NAME_top, t->underline, flags);
   } else
   { if ( t->wrap == NAME_clip )
     { LocalString(buf, s->s_iswide, s->s_size+1);
@@ -339,7 +336,7 @@ repaintText(TextObj t, int x, int y, int w, int h)
       } else
       { str_string(buf, t->font,
 		   x+valInt(t->x_offset), y, w, h,
-		   t->format, NAME_top, flags);
+		   t->format, NAME_top, t->underline, flags);
       }
     } else
     { if ( notNil(t->selection) )
@@ -349,7 +346,7 @@ repaintText(TextObj t, int x, int y, int w, int h)
       } else
       { str_string(s, t->font,
 		   x+valInt(t->x_offset), y, w, h,
-		   t->format, NAME_top, flags);
+		   t->format, NAME_top, t->underline, flags);
       }
     }
   }
@@ -729,7 +726,7 @@ backgroundText(TextObj t, Any bg)
 
 
 static status
-underlineText(TextObj t, BoolObj underline)
+underlineText(TextObj t, Any underline)
 { if ( t->underline != underline )
   { CHANGING_GRAPHICAL(t, assign(t, underline, underline);
 		       changedEntireImageGraphical(t));
@@ -1556,7 +1553,7 @@ loadText(TextObj t, IOSTREAM *fd, ClassDef def)
   if ( isNil(t->border) )
     assign(t, border, ZERO);
   if ( isNil(t->underline) )
-    assign(t, underline, OFF);
+    assign(t, underline, NIL);
 
   succeed;
 }
@@ -1660,7 +1657,7 @@ static vardecl var_text[] =
      NAME_appearance, "Left, center or right alignment"),
   IV(NAME_margin, "int", IV_GET,
      NAME_appearance, "Margin for <->wrap equals wrap"),
-  SV(NAME_underline, "bool", IV_GET|IV_STORE, underlineText,
+  SV(NAME_underline, "bool|colour", IV_GET|IV_STORE, underlineText,
      NAME_appearance, "Underlined text?"),
   IV(NAME_position, "point", IV_NONE,
      NAME_internal, "Avoid `walking' with alignment"),

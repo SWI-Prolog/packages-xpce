@@ -99,9 +99,9 @@ been changed, so we can forward this to the device's update algorithm.
 
 #define X_RIGHT	 (-1)			/* extend to right margin */
 
-forwards long	do_fill_line(TextImage, TextLine, long);
+static long	do_fill_line(TextImage, TextLine, long);
 static TextLine line_from_y(TextImage ti, int y);
-forwards status reinitTextImage(TextImage ti);
+static status   reinitTextImage(TextImage ti);
 static int	char_from_x(TextLine tl, int x);
 static void	copy_line_attributes(TextLine from, TextLine to);
 static void	copy_line_chars(TextLine from, int start, TextLine to);
@@ -431,7 +431,7 @@ starts at index `start' and will be displayed at `y' in the bitmap.
 static long
 do_fill_line(TextImage ti, TextLine l, long index)
 { short last_break = -1;
-  int last_is_space = FALSE;
+  bool last_is_space = false;
   TextChar tc;
   float x;
   int i, left_margin, right_margin;
@@ -566,6 +566,7 @@ do_fill_line(TextImage ti, TextLine l, long index)
 				  (c1)->font == (c2)->font && \
 				  (c1)->colour == (c2)->colour && \
 				  (c1)->background == (c2)->background && \
+				  (c1)->underline == (c2)->underline && \
 				  (c1)->x == (c2)->x && \
 				  (c1)->attributes == (c2)->attributes )
 
@@ -758,11 +759,12 @@ dumpMapTextImage(TextImage ti)
 		*      PAINTING PRIMITIVES	*
 		********************************/
 
-/* TBD: Use Pango hints for offset and thickness of the line */
 static void
-t_underline(int x, int y, int w, Colour c)
-{ static int ex = 0, ey = 0, ew = 0;
+t_underline(FontObj font, int x, double y, int w, Colour c)
+{ static int ex = 0, ew = 0;
+  static double ey = 0.0;
   static Colour cc = NIL;
+  static FontObj ef = NIL;
 
   assert(c);
 
@@ -770,11 +772,10 @@ t_underline(int x, int y, int w, Colour c)
   { ew += w;
   } else
   { if ( ew > 0 && !isNil(cc) )
-    { r_colour(cc);
-      r_line(ex, ey, ex+ew, ey);
-    }
+      r_underline(ef, ex, ey, ew, cc);
     ex = x, ey = y, ew = w;
     cc = c;
+    ef = font;
   }
 }
 
@@ -862,11 +863,13 @@ Paint a line from index `from' to index `to'.
 
 static void
 paint_attributes(TextImage ti, TextLine l, int from, int to, Colour c)
-{ unsigned char atts = l->chars[from].attributes;
+{ Any underline = l->chars[from].underline;
 
-  if ( atts & TXT_UNDERLINED )
-  { t_underline(l->chars[from].x, l->y + l->h - 1,
-		l->chars[to].x - l->chars[from].x, c);
+  if ( underline != OFF && !isDefault(underline) )
+  { Colour uc = isOn(underline) ? c : underline;
+    t_underline(l->chars[from].font,
+		l->chars[from].x, l->y + l->base,
+		l->chars[to].x - l->chars[from].x, uc);
   }
 }
 
@@ -881,6 +884,7 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
   FontObj f;
   Colour c;
   Any bg;
+  Any underline;
   unsigned char atts;
   int cx, cw;
   int pen = valInt(ti->pen);
@@ -905,8 +909,9 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
 
     e = s;
 
-    c      = l->chars[e].colour;
-    bg     = l->chars[e].background;
+    c         = l->chars[e].colour;
+    bg        = l->chars[e].background;
+    underline = l->chars[e].underline;
 
     switch(l->chars[e].type)
     { case CHAR_GRAPHICAL:
@@ -951,6 +956,7 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
       { if ( l->chars[e].type != CHAR_ASCII ||
 	     l->chars[e].attributes != atts ||
 	     l->chars[e].background != bg ||
+	     l->chars[e].underline != underline ||
 	     l->chars[e].value.c != '\t' )
 	  break;
       }
@@ -966,6 +972,7 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
 	     l->chars[e].colour != c ||
 	     l->chars[e].background != bg ||
 	     l->chars[e].attributes != atts ||
+	     l->chars[e].underline != underline ||
 	     l->chars[e].value.c == '\t' ||
 	     l->chars[e].value.c == '\n' )
 	  break;
@@ -1029,7 +1036,7 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
     paint_attributes(ti, l, s, e, c);
   }
 
-  t_underline(0, 0, 0, NIL);
+  t_underline(NIL, 0, 0, 0, NIL);
 }
 
 

@@ -1235,7 +1235,7 @@ r_3d_ellipse(int x, int y, int w, int h, Elevation z, int up)
  * @param y2 The y-coordinate of the ending point.
  */
 void
-r_line(int x1, int y1, int x2, int y2)
+r_line(double x1, double y1, double x2, double y2)
 { Translate(x1, y1);
   Translate(x2, y2);
   DEBUG(NAME_draw, Cprintf("r_line(%d, %d, %d, %d)\n",
@@ -1247,6 +1247,29 @@ r_line(int x1, int y1, int x2, int y2)
   cairo_move_to(CR, x1, y1);
   cairo_line_to(CR, x2, y2);
   cairo_stroke(CR);
+}
+
+/**
+ * Draw a text underline.
+ *  param underline is either a colour or DEFAULT or the boolean OFF.
+ *  If DEFAULT, we paint using the current colour
+ */
+
+void
+r_underline(FontObj font, double x, double base, double w, Any underline)
+{ if ( underline != OFF )
+  { WsFont wsf = ws_get_font(font);
+    Any oldc = NULL;
+    if ( instanceOfObject(underline, ClassColour) )
+      oldc = r_colour(underline);
+    double o_pen = r_thickness(wsf->ul_thickness);
+    r_dash(NAME_none);
+    double uly = base + wsf->ul_thickness/2.0 - wsf->ul_position;
+    r_line(x, uly, x+w, uly);
+    r_thickness(o_pen);
+    if ( oldc )
+      r_colour(oldc);
+  }
 }
 
 /**
@@ -1991,7 +2014,7 @@ s_print_utf8(const char *u, size_t len, int x, int y, FontObj font)
   int baseline = pango_layout_get_baseline(layout);
   pce_cairo_set_source_color(CR, context.colour);
   pango_layout_set_text(layout, u, len);
-  cairo_move_to(CR, x, y-baseline/PANGO_SCALE);
+  cairo_move_to(CR, x, y-P2D(baseline));
   pango_cairo_show_layout(CR, layout);
 }
 
@@ -2281,13 +2304,14 @@ str_size(PceString s, FontObj font, int *width, int *height)
  * @param h The height of the drawing area.
  * @param hadjust Name indicating horizontal alignment (e.g., left, center, right).
  * @param vadjust Name indicating vertical alignment (e.g., top, center, bottom).
- * @param flags Additional flags controlling rendering behavior.  Defined flags:
- *	  - TXT_UNDERLINED
+ * @param flags Additional flags controlling rendering behavior.
+ * @param underline is a bool or colour, defining underlining
+ * @param flags is currently unused
  */
 void
 str_string(PceString s, FontObj font,
 	   int x, int y, int w, int h,
-	   Name hadjust, Name vadjust, int flags)
+	   Name hadjust, Name vadjust, Any underline, int flags)
 { strTextLine lines[MAX_TEXT_LINES];
   strTextLine *line;
   int nlines, n;
@@ -2303,14 +2327,8 @@ str_string(PceString s, FontObj font,
 
   for(n=0, line = lines; n++ < nlines; line++)
   { str_text(font, &line->text, line->x, line->y+baseline);
-    if ( flags & TXT_UNDERLINED )
-    { cairo_new_path(CR);
-      cairo_set_line_width(CR, UNDERLINE_PEN);
-      double y = line->y+baseline+UNDERLINE_SEP;
-      cairo_move_to(CR, line->x, y);
-      cairo_line_to(CR, line->x+line->width, y);
-      cairo_stroke(CR);
-    }
+    if ( isOn(underline) || instanceOfObject(underline, ClassColour) )
+      r_underline(font, line->x, y, line->width, underline);
   }
 }
 
@@ -2402,14 +2420,9 @@ str_draw_text_lines(int acc, FontObj font,
 	if ( (int)tolower(c) == acc )
 	{ cx += str_advance(&line->text, 0, cn, font);
 	  int cw = str_width(&line->text, cn, cn+1, font);
-	  int cy = line->y+baseline+oy+UNDERLINE_SEP;
+	  int cy = line->y+baseline+oy;
 
-	  cairo_new_path(CR);
-	  cairo_set_line_width(CR, UNDERLINE_PEN);
-	  cairo_move_to(CR, cx, cy);
-	  cairo_line_to(CR, cx+cw, cy);
-	  cairo_stroke(CR);
-
+	  r_underline(font, cx, cy, cw, DEFAULT);
 	  acc = 0;
 	  break;
 	}
