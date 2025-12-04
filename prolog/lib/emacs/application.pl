@@ -106,7 +106,8 @@ free_buffer(_Emacs, Buffer:emacs_buffer) :->
 editor_event(_Emacs, Ev:event) :->
     "Called after an event has been processed"::
     get(Ev, receiver, Editor),
-    (   send(Editor, instance_of, editor)
+    (   object(Editor),            % may have dropped out
+        send(Editor, instance_of, editor)
     ->  get(Editor, text_buffer, TB),
         broadcast(pce_emacs(changed(TB)))
     ;   true
