@@ -37,6 +37,7 @@
 :- module(emacs_buffer, []).
 :- use_module(library(pce)).
 :- use_module(library(dcg/basics)).
+:- use_module(library(broadcast)).
 :- require([ between/3
            , default/3
            , ignore/1
@@ -397,7 +398,8 @@ complete_last_line(B) :->
         ;   get(B, character, Size-1, 10)
         )
     ->  true
-    ;   send(B, append, string('\n'))
+    ;   send(B, append, string('\n')),
+        broadcast(pce_emacs(changed(B)))
     ).
 
 fix_whitespace_errors(B) :->
@@ -408,7 +410,8 @@ fix_whitespace_errors(B) :->
     (   get(Count, value, 0)
     ->  true
     ;   send(B, report, status,
-             'Fixed %d whitespace errors', Count)
+             'Fixed %d whitespace errors', Count),
+        broadcast(pce_emacs(changed(B)))
     ).
 
 fix_trailing_space_errors(B, Count:number) :->
