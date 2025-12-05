@@ -129,6 +129,7 @@ NewClass(editor)
   TextCursor	text_cursor;		/* The cursor */
   TextObj	label_text;		/* Text for the label */
   FontObj	font;			/* editors default font */
+  FontObj	bold_font;		/* editors default bold font */
   Size		size;			/* Size in characters */
   Int		caret;			/* position of the caret */
   Int		mark;			/* position of the marker */

@@ -89,6 +89,7 @@ static status		abortIsearchEditor(Editor e, BoolObj save_mark);
 static status		scrollUpEditor(Editor e, Int arg);
 static Int		getColumnLocationEditor(Editor e, Int c, Int from);
 static status		markStatusEditor(Editor e, Name status);
+static status		fontEditor(Editor e, FontObj font, FontObj bold);
 
 static Timer	ElectricTimer;
 
@@ -143,9 +144,8 @@ initialiseEditor(Editor e, TextBuffer tb, Int w, Int h, Int tmw)
   if ( notDefault(h) ) assign(e->size, h, h);
 
   initialiseDevice((Device) e);		/* also obtains class-variables! */
-/*assign(e, pen, getClassVariableValueObject(e, NAME_pen));*/
   assign(e, text_buffer, tb);
-/*assign(e, font, getClassVariableValueObject(e, NAME_font));*/
+  fontEditor(e, e->font, DEFAULT);	/* Initialize bold_font */
   fw = getExFont(e->font);
   fh = getHeightFont(e->font);
   iw = toInt(valInt(e->size->w) * valInt(fw) + 2 * TXT_X_MARGIN);
@@ -1143,7 +1143,13 @@ fetch_editor(Any obj, TextChar tc)
   }
 
   if ( isDefault(tc->font) )
-    tc->font = e->font;
+  { if ( (tc->attributes & TXT_BOLDEN) && notNil(e->bold_font) )
+    { tc->font = e->bold_font;
+      tc->attributes &= ~TXT_BOLDEN;
+    } else
+    { tc->font = e->font;
+    }
+  }
 
   indexFragmentCache(e->fragment_cache, e, ++index);
 
@@ -4675,10 +4681,29 @@ saveEditor(Editor e, SourceSink file)
 		********************************/
 
 static status
-fontEditor(Editor e, FontObj font)
-{ if ( e->font != font )
+fontEditor(Editor e, FontObj font, FontObj bold)
+{ if ( notNil(bold) )
+  { if ( isDefault(bold) )
+      bold = newObject(ClassFont, font->family, NAME_bold, font->points, EAV);
+
+    if ( font->family == NAME_mono )
+    { CharArray cmp = (CharArray)NAME_x;
+      Num af = getAdvanceFont(font, cmp);
+      Num ab = getAdvanceFont(bold, cmp);
+
+      if ( af != ab )
+      { Cprintf("%s: mono fonts %s and %s need to have the same pitch (%s != %s). Using simulated bold\n",
+		pp(e), pp(font), pp(bold), pp(af), pp(ab));
+	bold = NIL;
+      }
+    }
+  }
+
+  assign(e, bold_font, bold);
+  if ( e->font != font )
   { assign(e, font, font);
-    tabDistanceTextImage(e->image, mul(e->tab_distance, getExFont(e->font)));
+    double td = valNum(e->tab_distance) * valNum(getAvgCharWidthFont(e->font));
+    tabDistanceTextImage(e->image, toNum(td));
     setGraphical(e, DEFAULT, DEFAULT, e->size->w, e->size->h);
     updateStyleCursorEditor(e);
     ChangedEditor(e);
@@ -4915,7 +4940,8 @@ static char *T_autoFill[] =
         { "from=[int]", "skip=[regex]" };
 static char *T_dabbrevCandidates[] =
         { "mode={user1,user2,user3}", "target=char_array" };
-
+static char *T_font[] =
+	{ "font=font", "bold=[font]*" };
 
 /* Instance Variables */
 
@@ -4932,8 +4958,10 @@ static vardecl var_editor[] =
      NAME_components, "The caret"),
   IV(NAME_labelText, "text*", IV_GET,
      NAME_components, "Text object that displays the label"),
-  SV(NAME_font, "font", IV_GET|IV_STORE, fontEditor,
+  IV(NAME_font, "font", IV_GET,
      NAME_appearance, "Default font for the text"),
+  IV(NAME_boldFont, "font*", IV_GET,
+     NAME_appearance, "Default bold font for the text"),
   IV(NAME_size, "size", IV_GET,
      NAME_area, "Size of editor in character units"),
   IV(NAME_caret, "int", IV_GET,
@@ -5032,6 +5060,8 @@ static senddecl send_editor[] =
      DEFAULT, "<-text_buffer is being freed"),
   SM(NAME_keyBinding, 2, T_keyBinding, keyBindingEditor,
      NAME_accelerator, "Set a local key binding"),
+  SM(NAME_font, 2, T_font, fontEditor,
+     NAME_appearance, "Set font and bold font"),
   SM(NAME_style, 2, T_style, styleEditor,
      NAME_appearance, "Set style associated with name"),
   SM(NAME_styles, 1, "sheet", stylesEditor,

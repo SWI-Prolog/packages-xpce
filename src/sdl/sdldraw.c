@@ -1951,7 +1951,7 @@ str_advance(PceString s, int from, int to, FontObj font)
   { PangoRectangle logical;
 
     s_extents(s, from, to, font, NULL, &logical);
-    return logical.width/(double)PANGO_SCALE;
+    return P2D(logical.width);
   } else
     return 0.0;
 }
@@ -1962,7 +1962,7 @@ str_advance_utf8(const char *u, int ulen, FontObj font)
   { PangoRectangle logical;
 
     s_extents_utf8(u, ulen, font, NULL, &logical);
-    return logical.width/(double)PANGO_SCALE;
+    return P2D(logical.width);
   }
 
   return 0.0;
