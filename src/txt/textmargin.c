@@ -229,22 +229,25 @@ scan_fragment_icons(TextMargin m,
   TextBuffer tb = e->text_buffer;
   TextImage  ti = e->image;
   Fragment fragment = tb->first_fragment;
-  int x = X_MARGIN, y = -1000, btm = 0;
+  int x = X_MARGIN, y = -1000;
   int mw = valInt(m->area->w);
   int line = 0, lines = ti->map->length;
   int gw = valInt(m->gap->w);
   int gh = valInt(m->gap->h);
+  int btm = -gh;
   Style s;
   int skip = ti->map->skip;
 
   for(; notNil(fragment) && line < lines; line++ )
   { TextLine tl = &ti->map->lines[line + skip];
 
-    DEBUG(NAME_fragment, Cprintf("Scanning line from %ld\n", tl->start));
     while( notNil(fragment) && fragment->start < tl->start )
       fragment = fragment->next;
+    DEBUG(NAME_fragment,
+	  Cprintf("Scanning line from %ld..%ld.  Fragment=%s\n",
+		  tl->start, tl->end, pp(fragment)));
 
-    if ( btm + gh < tl->y )		/* open the icon-line */
+    if ( btm + gh <= tl->y )		/* open the icon-line */
     { y = tl->y;
       x = X_MARGIN;
       btm = tl->y;
@@ -258,6 +261,7 @@ scan_fragment_icons(TextMargin m,
       if ( notNil(s = fragment_style(m, fragment)) && notNil(icon = s->icon) )
       { int aw, ah;
 
+	DEBUG(NAME_fragment, Cprintf("%s has icon %s\n", pp(fragment), pp(icon)));
 	icon_size(m, icon, &aw, &ah);
 	if ( (x + aw) > mw - X_MARGIN && aw <= mw -X_MARGIN)
         { y = btm + gh;			/* does not fit: next line */
@@ -269,6 +273,7 @@ scan_fragment_icons(TextMargin m,
 	  iy = y + (tl->h - ah)/2;
 	else
 	  iy = y;
+	DEBUG(NAME_fragment, Cprintf("Placing %s at %d,%d\n", pp(icon), x, iy));
 	if ( equalName(how, NAME_forAll) )
 	{ if ( (*func)(m, x, iy, fragment, ctx) == FAIL )
 	    fail;
