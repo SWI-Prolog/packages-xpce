@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -51,6 +52,12 @@ initialiseTextMargin(TextMargin m, Editor e, Int w, Int h)
   assign(m, gap, newObject(ClassSize, EAV));
   copySize(m->gap, getClassVariableValueObject(m, NAME_gap));
 
+  Size isize = getClassVariableValueObject(m, NAME_iconSize);
+  if ( isize && instanceOfObject(isize, ClassSize) )
+  { assign(m, icon_size, newObject(ClassSize, EAV));
+    copySize(m->icon_size, isize);
+  }
+
   succeed;
 }
 
@@ -69,18 +76,37 @@ fragment_style(TextMargin m, Fragment f)
 
 static int margin_x, margin_y;
 
+static void
+icon_size(TextMargin m, Image icon, int *w, int *h)
+{ int iw = valInt(icon->size->w);
+  int ih = valInt(icon->size->h);
+
+  if ( isNil(m->icon_size) )
+  { *w = iw;
+    *h = ih;
+  } else
+  { double mw = valNum(m->icon_size->w);
+    double mh = valNum(m->icon_size->h);
+
+    double f = min(mw/max(mw,iw), mh/max(mh,ih));
+    *w = iw*f;
+    *h = ih*f;
+  }
+}
+
+
 static status
 paint_fragment(TextMargin m, int x, int y, Fragment fragment, Any ctx)
 { Image icon;
   Style s;
-  int w, h;
   (void)ctx;
 
   if ( notNil(s = fragment_style(m, fragment)) && notNil(icon = s->icon) )
-  { x += margin_x;
+  { int w, h;
+
+    x += margin_x;
     y += margin_y;
-    w = valInt(icon->size->w);
-    h = valInt(icon->size->h);
+    icon_size(m, icon, &w, &h);
 
     r_image(icon, 0, 0, x, y, w, h, ON);
     if ( m->editor->selected_fragment == fragment )
@@ -105,8 +131,8 @@ RedrawAreaTextMargin(TextMargin m, Area a)
   obg = r_background(m->background);
   r_clear(x, y, w, h);
   if ( z && notNil(z) )
-    r_3d_box(x, y, w, h, 0, z, FALSE);
-  else
+  { r_3d_box(x, y, w, h, 0, z, FALSE);
+  } else
   { r_thickness(valInt(m->pen));
     r_dash(m->texture);
     r_box(x, y, w, h, 0, NIL);
@@ -129,6 +155,10 @@ gapTextMargin(TextMargin m, Size size)
 { return assignGraphical(m, NAME_gap, size);
 }
 
+static status
+iconSizeMargin(TextMargin m, Size size)
+{ return assignGraphical(m, NAME_iconSize, size);
+}
 
 static status
 backgroundTextMargin(TextMargin m, Any bg)
@@ -150,7 +180,6 @@ typedef struct
 static status
 find_fragment(TextMargin m, int x, int y, Fragment fragment, Any ctx)
 { Style s;
-  Size sz;
   int ex, ey;
   position *pos = ctx;
 
@@ -158,12 +187,10 @@ find_fragment(TextMargin m, int x, int y, Fragment fragment, Any ctx)
     fail;
 
   ex = pos->x; ey = pos->y;
-  sz = s->icon->size;
-  if ( ex >= x && ey >= y &&
-       ex <= x + valInt(sz->w) && ey <= y + valInt(sz->h) )
-    succeed;
-
-  fail;
+  int iw, ih;
+  icon_size(m, s->icon, &iw, &ih);
+  return ( ex >= x && ey >= y &&
+	   ex <= x + iw && ey <= y + ih );
 }
 
 
@@ -229,8 +256,9 @@ scan_fragment_icons(TextMargin m,
     { Image icon;
 
       if ( notNil(s = fragment_style(m, fragment)) && notNil(icon = s->icon) )
-      { int aw = valInt(icon->size->w);
+      { int aw, ah;
 
+	icon_size(m, icon, &aw, &ah);
 	if ( (x + aw) > mw - X_MARGIN && aw <= mw -X_MARGIN)
         { y = btm + gh;			/* does not fit: next line */
           x = X_MARGIN;
@@ -238,7 +266,7 @@ scan_fragment_icons(TextMargin m,
 	}
 	int iy;
 	if ( y == tl->y )
-	  iy = y + (tl->h - valInt(icon->size->h))/2;
+	  iy = y + (tl->h - ah)/2;
 	else
 	  iy = y;
 	if ( equalName(how, NAME_forAll) )
@@ -250,9 +278,9 @@ scan_fragment_icons(TextMargin m,
 	{ if ( (*func)(m, x, iy, fragment, ctx) == SUCCEED )
 	    return fragment;
 	}
-        x += valInt(icon->size->w) + gw;
-        if ( iy+valInt(icon->size->h) > btm )
-          btm = iy+valInt(icon->size->h);
+        x += aw + gw;
+        if ( iy+ah > btm )
+          btm = iy+ah;
       }
     }
   }
@@ -302,6 +330,8 @@ static vardecl var_textMargin[] =
      NAME_storage, "Editor I'm part of"),
   SV(NAME_gap, "size", IV_GET|IV_STORE, gapTextMargin,
      NAME_layout, "Distance between icons in X and Y"),
+  SV(NAME_iconSize, "size*", IV_GET|IV_STORE, iconSizeMargin,
+     NAME_layout, "Scale icons to this size"),
   SV(NAME_background, "[colour|pixmap]", IV_GET|IV_STORE, backgroundTextMargin,
      NAME_appearance, "Background colour")
 };
@@ -327,6 +357,8 @@ static getdecl get_textMargin[] =
 static classvardecl rc_textMargin[] =
 { RC(NAME_gap, "size", "size(5,2)",
      "Distance between icons in X and Y"),
+  RC(NAME_iconSize, "size*", "size(16,16)",
+     "Scale icons into this size"),
   RC(NAME_placement, "{left,right}", "left",
      "Placement relative to the image"),
   RC(NAME_elevation, "elevation*", "@nil",
