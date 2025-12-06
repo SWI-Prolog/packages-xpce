@@ -118,7 +118,7 @@ set(XPCE_DATA_DIRS
 
     prolog/demo
 
-    bitmaps bitmaps/16x16 bitmaps/32x32 bitmaps/patterns
+    bitmaps bitmaps/16x16 bitmaps/32x32 bitmaps/64x64 bitmaps/patterns
 
     appl-help
 
@@ -284,6 +284,9 @@ set(XPCE_DATA_bitmaps_16x16 alert.png arrow_length.png arrows.png
 set(XPCE_DATA_bitmaps_32x32 books.png buffers.png dbgsettings.png
     doc_pl.png doc_x.png drawing.png help.png pensil.png viewer.png
     vishier.png)
+
+set(XPCE_DATA_bitmaps_64x64 lsp-error.png lsp-hint.png
+    lsp-information.png lsp-warning.png)
 
 set(XPCE_DATA_bitmaps_patterns Arches.xbm Balls.xbm Bats.xbm brick_2.xbm
     brick_block.xbm brick_cobble.xbm brick_diag_block.xbm
