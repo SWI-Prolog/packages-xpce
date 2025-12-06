@@ -967,6 +967,13 @@ drop(E, Obj:object) :->
     send(Mode, drop, Obj).
 
 
+selected_fragment(E, Fragment:fragment) :->
+    "User selected a fragment in the margin"::
+    send_super(E, selected_fragment, Fragment),
+    get(E, mode, Mode),
+    get(Mode?class, send_method, selected_fragment, _), % avoid delegation
+    send(Mode, selected_fragment, Fragment).
+
 auto_fill(E, Caret:[int], Regex:[regex]) :->
     "Delegate to mode"::
     (   get(E, mode, Mode),
