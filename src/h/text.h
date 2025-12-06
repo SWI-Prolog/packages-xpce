@@ -186,6 +186,7 @@ NewClass(text_margin)
   Size		gap;			/* X and Y distance between icons */
   Size		icon_size;		/* Size for scaling icons */
   Any		background;		/* background of the margin */
+  Fragment	armed;			/* Hovering (armed) fragment */
 End;
 
 NewClass(text_change)

@@ -301,8 +301,24 @@ static status
 eventTextMargin(TextMargin m, EventObj ev)
 { Editor e = (Editor)m->device;
 
-  if ( notNil(e) &&
-       isAEvent(ev, NAME_msLeftUp) &&
+  if ( isNil(e) )
+    fail;
+
+  if ( isAEvent(ev, NAME_locMove) )
+  { CursorObj c = getClassVariableValueObject(m, NAME_fragmentCursor);
+
+    if ( c && notNil(c) )
+    { Fragment f = getFragmentTextMargin(m, ev);
+      if ( !f ) f = NIL;
+
+      if ( f != m->armed )
+      { assign(m, cursor, isNil(f) ? (CursorObj)NIL : c);
+	assign(m, armed, f);
+      }
+    }
+  }
+
+  if ( isAEvent(ev, NAME_msLeftUp) &&
        getMulticlickEvent(ev) == NAME_single &&
        valInt(getClickDisplacementEvent(ev)) < 5 )
   { Fragment f = getFragmentTextMargin(m, ev);
@@ -338,7 +354,9 @@ static vardecl var_textMargin[] =
   SV(NAME_iconSize, "size*", IV_GET|IV_STORE, iconSizeMargin,
      NAME_layout, "Scale icons to this size"),
   SV(NAME_background, "[colour|pixmap]", IV_GET|IV_STORE, backgroundTextMargin,
-     NAME_appearance, "Background colour")
+     NAME_appearance, "Background colour"),
+  IV(NAME_armed, "fragment*", IV_GET,
+     NAME_event, "Icon of this fragment is hovered")
 };
 
 /* Send Methods */
@@ -369,7 +387,9 @@ static classvardecl rc_textMargin[] =
   RC(NAME_elevation, "elevation*", "@nil",
      "Elevation from the background"),
   RC(NAME_background, "[colour|pixmap]", "white",
-     "Background colour for the text")
+     "Background colour for the text"),
+  RC(NAME_fragmentCursor, "cursor*", "pointer",
+     "Cursor when hovering a fragment")
 };
 
 /* Class Declaration */
