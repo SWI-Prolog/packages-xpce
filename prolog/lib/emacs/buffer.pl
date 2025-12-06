@@ -592,7 +592,9 @@ revert(B) :->
         get(B, editors, Editors),
         send(Editors, for_all, message(Carets, append, @arg1?caret)),
         new(@emacs_reverting, object), % avoid trap
+        send(B, lsp_changes, @off),    % Force full update to LSP servers
         send(B, file, File),
+        broadcast(pce_emacs(changed(B))),
         send(Editors, for_all,
              and(message(@arg1, caret, Carets?head),
                  message(Carets, delete_head))),
