@@ -105,7 +105,8 @@ drawTBox(TBox tb, int x, int y, int w)
     old_colour = r_colour(s->colour);
 
   s_print_aligned(&tb->text->data, x, y, f);
-  r_underline(f, x, y, w, s->underline);
+  if ( s->underline != OFF && notDefault(s->underline) )
+    r_underline(f, x, y, w, s->underline);
 
   if ( old_colour )
     r_colour(old_colour);
