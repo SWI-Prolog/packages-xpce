@@ -49,9 +49,6 @@ typedef struct
 { PangoFont *font;
   PangoFontDescription *desc;
   PangoLayout *layout;		/* Should be per display/surface type */
-  double ascent;
-  double descent;
-  double height;
   double ul_thickness;		/* Underline thinkness */
   double ul_position;		/* Underline position */
   charwidth_cache wcache;

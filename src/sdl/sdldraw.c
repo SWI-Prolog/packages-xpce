@@ -1834,8 +1834,8 @@ s_default_char(FontObj font)
  */
 double
 s_ascent(FontObj font)
-{ WsFont wsf = ws_get_font(font);
-  return wsf ? wsf->ascent : 0.0;
+{ (void)ws_get_font(font);
+  return isNum(font->ascent) ? valNum(font->ascent) : 0.0;
 }
 
 /**
@@ -1846,8 +1846,8 @@ s_ascent(FontObj font)
  */
 double
 s_descent(FontObj font)
-{ WsFont wsf = ws_get_font(font);
-  return wsf ? wsf->descent : 0.0;
+{ (void)ws_get_font(font);
+  return isNum(font->descent) ? valNum(font->descent) : 0.0;
 }
 
 /**
@@ -1859,8 +1859,7 @@ s_descent(FontObj font)
  */
 double
 s_height(FontObj font)
-{ WsFont wsf = ws_get_font(font);
-  return wsf ? wsf->height : 0.0;
+{ return s_ascent(font) + s_descent(font);
 }
 
 static

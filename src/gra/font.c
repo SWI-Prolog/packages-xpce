@@ -88,6 +88,8 @@ initialiseFont(FontObj f, Name family, Name style, Int points, Name weight)
   assign(f, style,       style);
   assign(f, weight,	 weight);
   assign(f, points,      points);
+  assign(f, ascent,      DEFAULT);
+  assign(f, descent,     DEFAULT);
   assign(f, fixed_width, DEFAULT);
 
   protectObject(f);		/* Still needed? */
@@ -140,6 +142,22 @@ getConvertFont(Class class, Name name)
   fail;
 }
 
+FontObj
+getCopyFont(FontObj f)
+{ FontObj copy = allocObject(classOfObject(f), FALSE);
+
+  ws_create_font(f);
+  assign(copy, family,      f->family);
+  assign(copy, style,       f->style);
+  assign(copy, weight,	    f->weight);
+  assign(copy, points,      f->points);
+  assign(copy, ascent,      f->ascent);
+  assign(copy, descent,     f->descent);
+  assign(copy, fixed_width, f->fixed_width);
+  copy->ws_ref = ws_clone_ws_font(f->ws_ref);
+
+  answer(copy);
+}
 
 static FontObj
 getRescaleFont(FontObj f, Num scale)
@@ -241,19 +259,22 @@ getAvgCharWidthFont(FontObj f)
 
 Num
 getHeightFont(FontObj f)
-{ answer(toNum(s_height(f)));
+{ ws_create_font(f);
+  answer(toNum(valNum(f->ascent)+valNum(f->descent)));
 }
 
 
 Num
 getAscentFont(FontObj f)
-{ answer(toNum(s_ascent(f)));
+{ ws_create_font(f);
+  answer(f->ascent);
 }
 
 
 Num
 getDescentFont(FontObj f)
-{ answer(toNum(s_descent(f)));
+{ ws_create_font(f);
+  answer(f->descent);
 }
 
 
@@ -447,12 +468,16 @@ static vardecl var_font[] =
      NAME_name, "Weight of the font"),
   IV(NAME_points, "[num]", IV_NONE,
      NAME_name, "Point-size of the font"),
+  IV(NAME_ascent, "[num]", IV_NONE,
+     NAME_dimension, "Height above baseline"),
+  IV(NAME_descent, "[num]", IV_NONE,
+     NAME_dimension, "Depth below baseline"),
   IV(NAME_ex, "num*", IV_NONE,
      NAME_dimension, "Height of the letter `x' in this font"),
   IV(NAME_avgCharWidth, "num*", IV_NONE,
      NAME_dimension, "Average char width"),
   IV(NAME_fixedWidth, "[bool]", IV_NONE,
-     NAME_property, "If @off, font is proportional"),
+     NAME_dimension, "If @off, font is proportional"),
   IV(NAME_wsRef, "alien:WsRef", IV_NONE,
      NAME_storage, "Window system handle")
 };

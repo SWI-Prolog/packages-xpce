@@ -83,7 +83,7 @@ set_ex_font(FontObj f)
 
     ex = P2D(ink.height);
   } else
-  { ex = wsf->height/2.0; /* approximated height of "x" */
+  { ex = (valNum(f->ascent) + valNum(f->descent))/2.0; /* approximated "x" */
   }
 
   assign(f, ex, toNum(ex));
@@ -121,8 +121,8 @@ dynamic_metrics(FontObj f)
 		pp(f), P2D(max_ascent), P2D(max_descent)));
 
   pango_glyph_string_free(glyphs);
-  wsf->ascent  = P2D(max_ascent)  + 1.0;
-  wsf->descent = P2D(max_descent) + 1.0;
+  assign(f, ascent,  toNum(P2D(max_ascent)  + 1.0));
+  assign(f, descent, toNum(P2D(max_descent) + 1.0));
 }
 
 #endif/*TRUST_PANGO_METRICS*/
@@ -227,7 +227,6 @@ ws_create_font(FontObj f)
 
   wsf->ul_thickness = P2D(pango_font_metrics_get_underline_thickness(metrics));
   wsf->ul_position  = P2D(pango_font_metrics_get_underline_position(metrics));
-  wsf->height  = wsf->ascent + wsf->descent;
   set_ex_font(f);
   pango_font_metrics_unref(metrics);
 

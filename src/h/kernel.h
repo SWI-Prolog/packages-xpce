@@ -411,6 +411,7 @@ toInt(intptr_t i)
 }
 
 #define isInteger(i)	((uintptr_t)(i) & INT_MASK)
+#define isNum(i)	((uintptr_t)(i) & INT_MASK)
 #define incrInt(i)	((i) = toInt(valInt(i)+1))
 #define decrInt(i)	((i) = toInt(valInt(i)-1))
 #define addInt(i, j)	((i) = toInt(valInt(i) + valInt(j)))

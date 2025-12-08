@@ -78,6 +78,7 @@ COMMON(status)	makeClassFigure(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/font.c */
 COMMON(status)	makeBuiltinFonts(void);
+COMMON(FontObj) getCopyFont(FontObj f);
 COMMON(Int)	getWidthFont(FontObj f, CharArray txt);
 COMMON(Int)	getAdvanceFont(FontObj f, CharArray txt);
 COMMON(Int)	getExFont(FontObj f);
