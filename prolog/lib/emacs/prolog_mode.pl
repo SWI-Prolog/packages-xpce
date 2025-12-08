@@ -1,8 +1,8 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@cs.vu.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
     Copyright (c)  1985-2025, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
@@ -625,7 +625,7 @@ insert_quote(E, Times:[int], Char:char) :->
     "Complete quote"::
     send(E, insert_self, Times, Char),
     get(E, caret, Here),
-    (   send(E, looking_at, ':->\n\\s*"', Here, 0)
+    (   send(E, looking_at, ':(<-|->)\n\\s*"', Here, 0)
     ->  send(E, insert, '"::'),
         send(E, caret, Here)
     ;   true
