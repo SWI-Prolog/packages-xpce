@@ -65,6 +65,30 @@ ws_init_fonts(void)
 
 #define TRUST_PANGO_METRICS 0
 
+static void
+set_ex_font(FontObj f)
+{ WsFont wsf = f->ws_ref;
+  PangoGlyphString *glyphs = pango_glyph_string_new();
+  PangoAnalysis analysis = {0};
+  PangoRectangle ink;
+  const char *sample = "x";
+  double ex;
+
+  analysis.font = wsf->font;
+  pango_shape(sample, -1, &analysis, glyphs);
+
+  if ( glyphs->num_glyphs == 1 )
+  { PangoGlyphInfo *gi = &glyphs->glyphs[0];
+    pango_font_get_glyph_extents(wsf->font, gi->glyph, &ink, NULL);
+
+    ex = P2D(ink.height);
+  } else
+  { ex = wsf->height/2.0; /* approximated height of "x" */
+  }
+
+  assign(f, ex, toNum(ex));
+}
+
 #if !TRUST_PANGO_METRICS
 
 static void
@@ -195,8 +219,8 @@ ws_create_font(FontObj f)
   f->ws_ref = wsf;
 
 #if TRUST_PANGO_METRICS
-  wsf->ascent  = pango_font_metrics_get_ascent(metrics)/(double)PANGO_SCALE;
-  wsf->descent = pango_font_metrics_get_descent(metrics)/(double)PANGO_SCALE;
+  wsf->ascent  = P2D(pango_font_metrics_get_ascent(metrics));
+  wsf->descent = P2D(pango_font_metrics_get_descent(metrics));
 #else
   dynamic_metrics(f);
 #endif
@@ -204,7 +228,7 @@ ws_create_font(FontObj f)
   wsf->ul_thickness = P2D(pango_font_metrics_get_underline_thickness(metrics));
   wsf->ul_position  = P2D(pango_font_metrics_get_underline_position(metrics));
   wsf->height  = wsf->ascent + wsf->descent;
-  assign(f, ex, toNum(wsf->height/2.0)); /* approximated height of "x" */
+  set_ex_font(f);
   pango_font_metrics_unref(metrics);
 
   succeed;
