@@ -974,6 +974,13 @@ selected_fragment(E, Fragment:fragment) :->
     get(Mode?class, send_method, selected_fragment, _), % avoid delegation
     send(Mode, selected_fragment, Fragment).
 
+hover_fragment_icon(E, Fragment:fragment*, Area:[area]) :->
+    "User hovers the fragment icon"::
+    send_super(E, hover_fragment_icon, Fragment, Area),
+    get(E, mode, Mode),
+    get(Mode?class, send_method, hover_fragment_icon, _), % avoid delegation
+    send(Mode, hover_fragment_icon, Fragment, Area).
+
 auto_fill(E, Caret:[int], Regex:[regex]) :->
     "Delegate to mode"::
     (   get(E, mode, Mode),
