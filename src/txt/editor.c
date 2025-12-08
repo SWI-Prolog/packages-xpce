@@ -4703,6 +4703,13 @@ fontEditor(Editor e, FontObj font, FontObj bold)
       { Cprintf("%s: mono fonts %s and %s need to have the same pitch (%s != %s). Using simulated bold\n",
 		pp(e), pp(font), pp(bold), pp(af), pp(ab));
 	bold = NIL;
+      } else
+      { if ( font->ascent != bold->ascent ||
+	     font->descent != bold->descent )
+	{ bold = getCopyFont(bold);
+	  assign(bold, ascent, font->ascent);
+	  assign(bold, descent, font->descent);
+	}
       }
     }
   }
