@@ -172,8 +172,9 @@ backgroundTextMargin(TextMargin m, Any bg)
 		********************************/
 
 typedef struct
-{ int	x;
+{ int	x;				/* Target X,Y */
   int   y;
+  iarea icon_area;			/* Area of found icon */
 } position;
 
 
@@ -189,21 +190,30 @@ find_fragment(TextMargin m, int x, int y, Fragment fragment, Any ctx)
   ex = pos->x; ey = pos->y;
   int iw, ih;
   icon_size(m, s->icon, &iw, &ih);
-  return ( ex >= x && ey >= y &&
-	   ex <= x + iw && ey <= y + ih );
+  if ( ex >= x && ey >= y &&
+       ex <= x + iw && ey <= y + ih )
+  { pos->icon_area.x = x;
+    pos->icon_area.y = y;
+    pos->icon_area.w = iw;
+    pos->icon_area.h = ih;
+    succeed;
+  }
+
+  fail;
 }
 
 
 static Fragment
 getFragmentTextMargin(TextMargin m, EventObj ev)
-{ position pos;
-  Int ex, ey;
+{ Int ex, ey;
 
-  get_xy_event(ev, m, ON, &ex, &ey);
-  pos.x = valInt(ex);
-  pos.y = valInt(ey);
+  if ( get_xy_event(ev, m, ON, &ex, &ey) )
+  { position pos = {.x = valInt(ex), .y = valInt(ey) };
 
-  answer(scan_fragment_icons(m, find_fragment, NAME_find, &pos));
+    answer(scan_fragment_icons(m, find_fragment, NAME_find, &pos));
+  }
+
+  fail;
 }
 
 
@@ -308,12 +318,28 @@ eventTextMargin(TextMargin m, EventObj ev)
   { CursorObj c = getClassVariableValueObject(m, NAME_fragmentCursor);
 
     if ( c && notNil(c) )
-    { Fragment f = getFragmentTextMargin(m, ev);
-      if ( !f ) f = NIL;
+    { Int ex, ey;
 
-      if ( f != m->armed )
-      { assign(m, cursor, isNil(f) ? (CursorObj)NIL : c);
-	assign(m, armed, f);
+      if ( get_xy_event(ev, m, ON, &ex, &ey) )
+      { position pos = {.x = valInt(ex), .y = valInt(ey) };
+	Fragment f = scan_fragment_icons(m, find_fragment, NAME_find, &pos);
+
+	if ( !f ) f = NIL;
+
+	if ( f != m->armed )
+	{ assign(m, cursor, isNil(f) ? (CursorObj)NIL : c);
+	  assign(m, armed, f);
+	  if ( isNil(f) )
+	  { send(e, NAME_hoverFragmentIcon, f, EAV);
+	  } else
+	  { Area a = tempObject(ClassArea,
+				toInt(pos.icon_area.x), toInt(pos.icon_area.y),
+				toInt(pos.icon_area.w), toInt(pos.icon_area.h),
+				EAV);
+	    send(e, NAME_hoverFragmentIcon, f, a, EAV);
+	    considerPreserveObject(a);
+	  }
+	}
       }
     }
   }

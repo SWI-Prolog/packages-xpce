@@ -611,6 +611,14 @@ selectedFragmentStyleEditor(Editor e, Style style)
   succeed;
 }
 
+static status
+hoverFragmentIconEditor(Editor e, Fragment f, Area a)
+{ (void)e;
+  (void)f;
+  (void)a;
+
+  succeed;
+}
 
 		/********************************
 		*            GEOMETRY		*
@@ -4942,6 +4950,8 @@ static char *T_dabbrevCandidates[] =
         { "mode={user1,user2,user3}", "target=char_array" };
 static char *T_font[] =
 	{ "font=font", "bold=[font]*" };
+static char *T_hoverFragmentIcon[] =
+	{ "fragment=fragment*", "icon_area=[area]" };
 
 /* Instance Variables */
 
@@ -5200,6 +5210,8 @@ static senddecl send_editor[] =
      NAME_event, "Test whether to use as prefix or cut/copy command"),
   SM(NAME_event, 1, "event", eventEditor,
      NAME_event, "Handle a general event"),
+  SM(NAME_hoverFragmentIcon, 2, T_hoverFragmentIcon, hoverFragmentIconEditor,
+     NAME_event, "User hovers fragment icon in margin"),
   SM(NAME_label, 1, "name", labelEditor,
      NAME_label, "Set the name of the label"),
   SM(NAME_load, 1, "file=source_sink", loadEditor,
