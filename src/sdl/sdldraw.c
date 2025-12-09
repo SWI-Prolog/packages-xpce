@@ -978,7 +978,6 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
     if ( !up  )
       shadow = -shadow;
 
-    Translate(fx, fy);
     if ( shadow )
     { Colour top_left_color;
       Colour bottom_right_color;
@@ -995,6 +994,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
       if ( shadow > MAX_SHADOW )
 	shadow = MAX_SHADOW;
 
+      Translate(fx, fy);
       if ( radius > 0 )			/* with rounded corners */
       { Cprintf("r_3d_box(): with radius\n");
       } else
@@ -1017,6 +1017,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
 	  cairo_stroke(CR);
 	}
       }
+      InvTranslate(fx,fy);
     }
 
     if ( fill )			/* r_fill_fgbg() uses floats  */
