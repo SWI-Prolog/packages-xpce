@@ -342,6 +342,11 @@ eventTextMargin(TextMargin m, EventObj ev)
 	}
       }
     }
+  } else if ( isAEvent(ev, NAME_areaExit) &&
+	      notNil(m->armed) )
+  { assign(m, cursor, NIL);
+    assign(m, armed, NIL);
+    send(e, NAME_hoverFragmentIcon, NIL, EAV);
   }
 
   if ( isAEvent(ev, NAME_msLeftUp) &&
