@@ -721,7 +721,7 @@ register_delete_textbuffer(TextBuffer tb, size_t where, size_t len)
 	  update_lsp_pos_text_buffer(tb, udc->where, where, &udc->lpos);
 	  udc->len += len;
 	  udc->where -= len;
-	  udc->u16_len = u16_range_length(tb, where, len);
+	  udc->u16_len += u16_range_length(tb, where, len);
 	  DEBUG(NAME_undo, Cprintf("Delete at %ld grown backward %ld bytes\n",
 				   udc->where, udc->len));
 	}
