@@ -3816,7 +3816,7 @@ dabbrevExpandEditor(Editor e)
 
   TRY( target = get_dabbrev_target(e) );
   assign(e, dabbrev_target, target);
-  assign(e, dabbrev_mode, NAME_backwards);
+  assign(e, dabbrev_mode, NIL);
   assign(e, dabbrev_candidates, NIL);
   DEBUG(NAME_editor, Cprintf("dabbrev target = %s\n", pp(target)));
 
@@ -3877,17 +3877,18 @@ fix_case_and_insert(TextBuffer tb, int where, PceString insert,
   if ( ec )
   { insert_textbuffer(tb, where, 1, insert);
   } else
-  { int size = insert->s_size;
+  { size_t size = insert->s_size;
     LocalString(copy, insert->s_iswide, insert->s_size);
 
     str_cpy(copy, insert);
-    if ( equalName(pattern, NAME_upper) )
-      str_upcase(copy, 0, size);
-    else if ( equalName(pattern, NAME_capitalised) )
+    if ( pattern == NAME_upper )
+    { str_upcase(copy, 0, size);
+    } else if ( pattern == NAME_capitalised )
     { str_upcase(copy, 0, 1);
       str_downcase(copy, 1, size);
     } else
-      str_downcase(copy, 0, size);
+    { str_downcase(copy, 0, size);
+    }
 
     insert_textbuffer(tb, where, 1, copy);
   }
@@ -3896,7 +3897,13 @@ fix_case_and_insert(TextBuffer tb, int where, PceString insert,
 
 static Name
 nextDabbrevMode(Editor e)
-{ if ( e->dabbrev_mode == NAME_forwards )
+{ if ( isNil(e->dabbrev_mode) )
+    assign(e, dabbrev_mode, NAME_user0);
+  else if ( e->dabbrev_mode == NAME_user0 )
+    assign(e, dabbrev_mode, NAME_backwards);
+  else if ( e->dabbrev_mode == NAME_backwards )
+    assign(e, dabbrev_mode, NAME_forwards);
+  else if ( e->dabbrev_mode == NAME_forwards )
     assign(e, dabbrev_mode, NAME_user1);
   else if ( e->dabbrev_mode == NAME_user1 )
     assign(e, dabbrev_mode, NAME_user2);
@@ -3912,11 +3919,9 @@ nextDabbrevMode(Editor e)
 static status
 DabbrevExpandEditor(Editor e, EventId id)
 { ssize_t pos = valInt(e->dabbrev_pos);
-  ssize_t caret = valInt(e->caret);
   PceString target = &e->dabbrev_target->data;
-  bool ec = (e->exact_case == ON);
+  bool ec = isOn(e->exact_case);
   TextBuffer tb = e->text_buffer;
-  int dir = (pos < caret ? -1 : 1);
   Name hit;
 
   if ( notDefault(id) )
@@ -3942,17 +3947,12 @@ DabbrevExpandEditor(Editor e, EventId id)
     DEBUG(NAME_editor, Cprintf("Starting search\n"));
     if ( e->dabbrev_mode == NAME_backwards ||
 	 e->dabbrev_mode == NAME_forwards )
-    { ssize_t hit_pos = find_textbuffer(tb, pos, target, dir, 'a', ec, FALSE);
+    { int dir = (e->dabbrev_mode == NAME_backwards ? -1 : 1);
+      ssize_t hit_pos = find_textbuffer(tb, pos, target, dir, 'a', ec, FALSE);
 
       if ( hit_pos < 0 )
-      { if ( dir < 0 )			/* no more backwards; revert */
-	{ dir = -dir;
-	  pos = caret;
-	  assign(e, dabbrev_mode, NAME_forwards);
-	  continue;
-	}
-
-	goto user;
+      { nextDabbrevMode(e);
+	continue;
       }
 
       if ( hit_pos != 0 &&
@@ -3967,12 +3967,13 @@ DabbrevExpandEditor(Editor e, EventId id)
       DEBUG(NAME_editor, Cprintf("hit = %s\n", pp(hit)));
       pos = (dir < 0 ? hit_pos - 1 : hit_pos + target->s_size);
     } else
-    { user:
-      while ( !(notNil(e->dabbrev_candidates) &&
+    { while ( !(notNil(e->dabbrev_candidates) &&
 		(hit = getDeleteHeadChain(e->dabbrev_candidates))) )
       { Name mode = nextDabbrevMode(e);
 
-	if ( mode )
+	if ( mode == NAME_backwards || mode == NAME_forwards )
+	{ goto next;
+	} else if ( mode )
 	{ Chain ch;
 
 	  ch = get(e, NAME_dabbrevCandidates, mode, e->dabbrev_target, EAV);
@@ -3997,7 +3998,7 @@ DabbrevExpandEditor(Editor e, EventId id)
 	goto next;
     }
 
-    if ( memberChain(e->dabbrev_reject, hit) == SUCCEED )
+    if ( memberChain(e->dabbrev_reject, hit) )
       continue;
     appendChain(e->dabbrev_reject, hit);
     assign(e, dabbrev_pos, toInt(pos));
@@ -4953,7 +4954,7 @@ static char *T_scrollTo[] =
 static char *T_autoFill[] =
         { "from=[int]", "skip=[regex]" };
 static char *T_dabbrevCandidates[] =
-        { "mode={user1,user2,user3}", "target=char_array" };
+        { "mode={user0,user1,user2,user3}", "target=char_array" };
 static char *T_font[] =
 	{ "font=font", "bold=[font]*" };
 static char *T_hoverFragmentIcon[] =
@@ -5051,7 +5052,8 @@ static vardecl var_editor[] =
      NAME_internal, "Caret index at start of dabbrev"),
   IV(NAME_dabbrevOrigin, "int*", IV_NONE,
      NAME_internal, "Caret index of start of target"),
-  IV(NAME_dabbrevMode, "{backwards,forwards,user1,user2,user3}*", IV_NONE,
+  IV(NAME_dabbrevMode, "{user0,backwards,forwards,user1,user2,user3}*",
+     IV_NONE,
      NAME_internal, "Current dabbrev search mode"),
   IV(NAME_dabbrevCandidates, "chain*", IV_NONE,
      NAME_internal, "Current dabbrev candidates"),
