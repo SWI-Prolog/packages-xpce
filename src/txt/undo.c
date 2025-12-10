@@ -485,26 +485,26 @@ new_undo_cell(UndoBuffer ub, size_t size)
 Resize the current undo-cell to be at least <size> characters.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-static int
-resize_undo_cell(UndoBuffer ub, UndoCell cell, unsigned int size)
+static bool
+resize_undo_cell(UndoBuffer ub, UndoCell cell, size_t size)
 { size = AllocRound(size);
   assert(cell == ub->head);
 
   if ( cell->size == size )
-    return TRUE;
+    return true;
 
   while( ub->tail > cell && (int)size > Distance(ub->tail, cell) && ub->head )
     destroy_oldest_undo(ub);
 
   if ( ub->head &&
-       ((ub->tail > cell && (int)size < Distance(ub->tail, cell)) ||
-	(ub->tail < cell && SizeAfter(ub, size))) )
+       ((ub->tail >  cell && size < Distance(ub->tail, cell)) ||
+	(ub->tail <= cell && SizeAfter(ub, size))) )
   { cell->size = size;
     ub->free = (UndoCell) ((char *) cell + size);
 
     DEBUG(NAME_undo, Cprintf("Resized cell at %d size=%d\n",
 			     Distance(cell, ub->buffer), cell->size));
-    return TRUE;
+    return true;
   }
 
   DEBUG(NAME_undo,
@@ -513,7 +513,7 @@ resize_undo_cell(UndoBuffer ub, UndoCell cell, unsigned int size)
 	else
 	  Cprintf("**** UNDO buffer circle ****\n"));
 
-  return FALSE;
+  return false;
 }
 
 
