@@ -62,9 +62,9 @@ RedrawAreaEllipse(EllipseObj e, Area a)
     if ( shadow > h ) shadow = h;
 
     r_colour(BLACK_COLOUR);
-    r_ellipse(x+shadow, y+shadow, w-shadow, h-shadow, BLACK_IMAGE);
+    r_ellipse(x+shadow, y+shadow, w-shadow, h-shadow, BLACK_COLOUR);
     r_colour(DEFAULT);
-    r_ellipse(x, y, w-shadow, h-shadow, isNil(fill) ? WHITE_IMAGE : fill);
+    r_ellipse(x, y, w-shadow, h-shadow, fill);
 
   } else
     r_ellipse(x, y, w, h, e->fill_pattern);

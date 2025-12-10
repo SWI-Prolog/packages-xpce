@@ -466,7 +466,7 @@ ws_save_image_file(Image image, SourceSink into, Name fmt)
  * @return SUCCEED on success; otherwise, FAIL.
  */
 status
-ws_open_image(Image image, DisplayObj d, double scale)
+ws_open_image(Image image)
 { if ( !image->ws_ref )
   { int w = valInt(image->size->w);
     int h = valInt(image->size->h);
@@ -490,8 +490,11 @@ ws_open_image(Image image, DisplayObj d, double scale)
  * @param d Target display.
  */
 void
-ws_close_image(Image image, DisplayObj d)
-{
+ws_close_image(Image image)
+{ if ( image->ws_ref )
+  { cairo_surface_destroy(image->ws_ref);
+    image->ws_ref = NULL;
+  }
 }
 
 /**
@@ -611,19 +614,6 @@ status
 loadXliImage(Image image, FileObj file, Int bright)
 {
     return SUCCEED;
-}
-
-/**
- * Create an image from raw X11 data.
- *
- * @param image Pointer to the Image object.
- * @param data Pointer to raw image bytes.
- * @param w Width of the image.
- * @param h Height of the image.
- */
-void
-ws_create_image_from_x11_data(Image image, unsigned char *data, int w, int h)
-{
 }
 
 /**

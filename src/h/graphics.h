@@ -715,7 +715,7 @@ typedef struct
   Colour	foreground;		/* Foreground-colour (pixmap) */ \
   Int		depth;			/* Bits/pixel */ \
   Size		size;			/* Size of the image */ \
-  Real		scale;			/* Scale image at load time */ \
+  Num		scale;			/* Scale image */ \
   DisplayObj	display;		/* Display of read-write's */ \
   BitmapObj	bitmap;			/* Bitmap for read-write's */ \
   Point		hot_spot;		/* Indication of hot-spot */ \
@@ -1054,10 +1054,6 @@ typedef struct
 #ifndef GLOBAL
 #define GLOBAL extern
 #endif
-
-GLOBAL Image BLACK_IMAGE;
-GLOBAL Image WHITE_IMAGE;
-GLOBAL Image GREY50_IMAGE;
 
 GLOBAL Colour WHITE_COLOUR;
 GLOBAL Colour GREY25_COLOUR;

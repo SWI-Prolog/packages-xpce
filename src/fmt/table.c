@@ -1481,7 +1481,7 @@ r_hline(int x, int y, int w, int b)
     r_line(x, y, x+w-b, y);
   } else if ( b > 1 )
   { r_thickness(0);
-    r_box(x, y, w, b, 0, BLACK_IMAGE);
+    r_box(x, y, w, b, 0, BLACK_COLOUR);
   }
 }
 
@@ -1493,7 +1493,7 @@ r_vline(int x, int y, int h, int b)
     r_line(x, y, x, y+h);
   } else if ( b > 1 )
   { r_thickness(0);
-    r_box(x, y, b, h, 0, BLACK_IMAGE);
+    r_box(x, y, b, h, 0, BLACK_COLOUR);
   }
 }
 

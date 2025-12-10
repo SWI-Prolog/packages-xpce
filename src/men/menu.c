@@ -548,7 +548,7 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
   int pen = valInt(m->pen);
   int ix, iy, iw, ih;
   int radius = 0;
-  Image fill = NIL;
+  Colour fill = NIL;
   Any colour = mi->colour;
   Elevation z = iz;
   int lblflags = (mi->active == ON && m->active == ON ? 0 : LABEL_INACTIVE);
@@ -624,7 +624,7 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
       { radius = 10;
 	pen++;
       } else if ( m->preview_feedback == NAME_invertedRoundedBox )
-      { fill = BLACK_IMAGE;
+      { fill = BLACK_COLOUR;
 	radius = 10;
       }
 

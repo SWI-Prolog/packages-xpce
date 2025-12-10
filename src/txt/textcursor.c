@@ -72,7 +72,7 @@ RedrawAreaTextCursor(TextCursor c, Area a)
     pts[2].x = cx;
     pts[2].y = y + h - (h+2)/3.0;
 
-    r_fillpattern(c->active == ON ? BLACK_IMAGE : GREY50_IMAGE,
+    r_fillpattern(c->active == ON ? BLACK_COLOUR : GREY50_COLOUR,
 		  NAME_foreground);
     r_fill_polygon(pts, 3);
   } else if ( c->style == NAME_image )
@@ -82,7 +82,7 @@ RedrawAreaTextCursor(TextCursor c, Area a)
     { int cx = x + w/2;
       Any colour = getDisplayColourGraphical((Graphical)c);
 
-      r_fillpattern(colour ? colour : (Any) BLACK_IMAGE, NAME_foreground);
+      r_fillpattern(colour ? colour : BLACK_COLOUR, NAME_foreground);
       r_fill_triangle(cx, y, x, y+h, x+w, y+h);
     } else
     { fpoint pts[4];

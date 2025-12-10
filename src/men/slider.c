@@ -143,16 +143,16 @@ RedrawAreaSlider(Slider s, Area a)
     int ly2 = by+OL_BAR_HEIGHT-1;
     int ex  = x + sx + valInt(s->width);
 
-    r_fill(x+sx, by+1, 1, OL_BAR_HEIGHT-2, BLACK_IMAGE);
-    r_fill(x+sx+1, by, vv-2, OL_BAR_HEIGHT, BLACK_IMAGE);
+    r_fill(x+sx, by+1, 1, OL_BAR_HEIGHT-2, BLACK_COLOUR);
+    r_fill(x+sx+1, by, vv-2, OL_BAR_HEIGHT, BLACK_COLOUR);
     r_line(x+sx+1+vv+bw, by, ex-2, by);
     r_line(x+sx+1+vv+bw, ly2, ex-2, ly2);
     r_line(ex-1, by+1, ex-1, ly2-1);
     r_shadow_box(x+sx+vv, y+sy, bw, SLIDER_HEIGHT, 0, 1, NIL);
   } else
-  { r_fill(x+sx, y+sy, vv, SLIDER_HEIGHT, GREY50_IMAGE);
+  { r_fill(x+sx, y+sy, vv, SLIDER_HEIGHT, GREY50_COLOUR);
     r_box(x+sx, y+sy, valInt(s->width), SLIDER_HEIGHT, 0, NIL);
-    r_fill(x+sx+vv, y+sy, bw, SLIDER_HEIGHT, BLACK_IMAGE);
+    r_fill(x+sx+vv, y+sy, bw, SLIDER_HEIGHT, BLACK_COLOUR);
   }
 
   if ( s->show_value == ON )

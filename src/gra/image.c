@@ -271,11 +271,9 @@ XopenImage(Image image, DisplayObj d)
 { if ( image->bits )			/* built-in.  See stdImage() */
   { switch(image->bits->type)
     { case XBM_DATA:
-	ws_create_image_from_x11_data(image,
-				      image->bits->bits.xbm,
-				      valInt(image->size->w),
-				      valInt(image->size->h));
-	break;
+	if ( image->bits->bits.xbm )	/* NULL image has no data */
+	  Cprintf("XopenImage(%s)\n", pp(image));
+        break;
       case XPM_DATA:
 	ws_create_image_from_xpm_data(image,
 				      image->bits->bits.xpm,
@@ -284,18 +282,17 @@ XopenImage(Image image, DisplayObj d)
       default:
 	assert(0);
     }
-			/* Windows already does the registration */
     if ( getExistingXrefObject(image, d) )
       succeed;
   }
 
-  return ws_open_image(image, d, valReal(image->scale));
+  return ws_open_image(image);
 }
 
 
 status
 XcloseImage(Image image, DisplayObj d)
-{ ws_close_image(image, d);
+{ ws_close_image(image);
 
   succeed;
 }
@@ -414,7 +411,7 @@ clearImage(Image image)
 
 
 static status
-scaleImage(Image image, Real factor)
+scaleImage(Image image, Num factor)
 { assign(image, scale, factor);
   if ( notNil(image->mask) )
     assign(image->mask, scale, factor);
@@ -822,11 +819,11 @@ getScaleImage(Image image, Size size)
 
 
 static Image
-getRotateImage(Image image, Real degrees)
-{ float a = (float)valReal(degrees);
+getRotateImage(Image image, Num degrees)
+{ double a = (float)valNum(degrees);
   Image rimg;
 
-  a -= (float)(((int)a / 360)*360);
+  a -= (double)(((int64_t)a / 360)*360);
   if ( a < 0.0 )				/* normalise 0<=a<360 */
     a += 360.0;
   else if ( a == 0.0 )				/* just copy */
@@ -897,7 +894,7 @@ stdImage(Name name, Image *global, unsigned char *bits, int w, int h)
 
 static inline int
 rescale(Image image, int px)
-{ return (int)((double)px*valReal(image->scale)+0.5);
+{ return (int)((double)px*valNum(image->scale)+0.5);
 }
 
 #ifdef XPM_PCEIMAGE
@@ -942,27 +939,9 @@ stdXPMImage(Name name, Name kind, Image *global, char **bits)
 #include "bitmaps/nomark.xpm"
 #endif
 
-#include "bitmaps/white_bm"
-#include "bitmaps/grey50_bm"
-#include "bitmaps/black_bm"
-
-static void
-greyImage(Name name, int grey, Image *global,
-	  unsigned char *bits, int w, int h)
-{ stdImage(name, global, bits, w, h);
-}
-
-
 static void
 standardImages(void)
-{ greyImage(NAME_whiteImage,  0,  &WHITE_IMAGE,
-	    white_bm_bits, white_bm_width, white_bm_height);
-  greyImage(NAME_grey50Image, 50, &GREY50_IMAGE,
-	    grey50_bm_bits, grey50_bm_width, grey50_bm_height);
-  greyImage(NAME_blackImage, 100, &BLACK_IMAGE,
-	    black_bm_bits, black_bm_width, black_bm_height);
-
-  stdImage(NAME_msLeftArrowImage, NULL,
+{ stdImage(NAME_msLeftArrowImage, NULL,
 	   ms_left_arrow_bits, ms_left_arrow_width, ms_left_arrow_height);
   stdImage(NAME_markHandleImage, &MARK_HANDLE_IMAGE,
 	   mark_handle_bm_bits, mark_handle_bm_width, mark_handle_bm_height);
@@ -1045,7 +1024,7 @@ static vardecl var_image[] =
      NAME_colour, "Number of bits/pixel"),
   IV(NAME_size, "size", IV_GET,
      NAME_dimension, "Size of the image in pixels"),
-  SV(NAME_scale, "real", IV_GET|IV_STORE, scaleImage,
+  SV(NAME_scale, "num", IV_GET|IV_STORE, scaleImage,
      NAME_dimension, "Set scale factor for image"),
   IV(NAME_display, "display*", IV_GET,
      NAME_organisation, "X-Display this image belongs to"),
@@ -1129,7 +1108,7 @@ static getdecl get_image[] =
      NAME_copy, "Get grayscale version of image"),
   GM(NAME_scale, 1, "image", "size", getScaleImage,
      NAME_copy, "Get copy with different dimensions"),
-  GM(NAME_rotate, 1, "image", "degrees=real", getRotateImage,
+  GM(NAME_rotate, 1, "image", "degrees=num", getRotateImage,
      NAME_copy, "Get anti-clockwise rotated copy"),
   GM(NAME_lookup, 1, "image", "name|resource", getLookupImage,
      NAME_oms, "Lookup in @images table"),

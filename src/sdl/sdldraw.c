@@ -305,7 +305,7 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
 status
 d_image(Image i, int x, int y, int w, int h)
 { DisplayObj d =  CurrentDisplay(NIL);
-  ws_open_image(i, d, valReal(i->scale));
+  ws_open_image(i);
   Any colour = i->foreground;
   Any background = i->background;
 
