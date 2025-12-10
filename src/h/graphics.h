@@ -732,7 +732,6 @@ End;
 NewClass(bitmapobj)
   ABSTRACT_GRAPHICAL
   Image		image;			/* Image of the bitmap */
-  BoolObj	transparent;		/* Just stipple pattern */
 End;
 
 

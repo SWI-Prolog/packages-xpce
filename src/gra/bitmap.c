@@ -37,19 +37,15 @@
 #include <h/unix.h>
 
 static status	imageBitmap(BitmapObj bm, Image image);
-static status	transparentBitmap(BitmapObj bm, BoolObj transparent);
 
 static status
-initialiseBitmap(BitmapObj b, Image image, BoolObj transparent)
+initialiseBitmap(BitmapObj b, Image image)
 { if ( isDefault(image) )
     TRY(image = newObject(ClassImage, NIL, EAV));
-  if ( isDefault(transparent) )
-    transparent = OFF;
 
   initialiseGraphical(b, ZERO, ZERO, image->size->w, image->size->h);
 
   assign(b, pen, ZERO);
-  assign(b, transparent, transparent);
   assign(b, image, image);
   if ( image->access == NAME_both && isNil(image->bitmap) )
     assign(image, bitmap, b);
@@ -148,20 +144,6 @@ updateSolidBitmap(BitmapObj bm)
 
 
 static status
-transparentBitmap(BitmapObj bm, BoolObj transparent)
-{ CHANGING_GRAPHICAL(bm,
-		     assign(bm, transparent, transparent);
-		     if ( transparent == OFF )
-		       setFlag(bm, F_SOLID);
-		     else
-		       clearFlag(bm, F_SOLID);
-		     changedEntireImageGraphical(bm));
-
-  succeed;
-}
-
-
-static status
 redrawBitmap(BitmapObj bm, Area a)
 { CHANGING_GRAPHICAL(bm, sizeArea(bm->area, bm->image->size));
 
@@ -225,8 +207,6 @@ loadFdBitmap(BitmapObj bm, IOSTREAM *fd, ClassDef def)
       assign(bm, colour, DEFAULT);
     if ( isNil(bm->inverted) )
       assign(bm, inverted, OFF);
-    if ( isNil(bm->transparent) )
-      assign(bm, transparent, OFF);
   }
 
   updateSolidBitmap(bm);
@@ -249,8 +229,6 @@ getContainsBitmap(BitmapObj bm)
 
 static char *T_load[] =
         { "file", "path=[char_array]" };
-static char *T_initialise[] =
-        { "image=[image]", "transparent=[bool]" };
 static char *T_geometry[] =
         { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 
@@ -258,9 +236,7 @@ static char *T_geometry[] =
 
 static vardecl var_bitmap[] =
 { SV(NAME_image, "image", IV_GET|IV_STORE, imageBitmap,
-     NAME_appearance, "The pixel collection managed"),
-  SV(NAME_transparent, "bool", IV_GET|IV_STORE, transparentBitmap,
-     NAME_appearance, "When @on, 0-pixels are not painted")
+     NAME_appearance, "The pixel collection managed")
 };
 
 /* Send Methods */
@@ -268,7 +244,7 @@ static vardecl var_bitmap[] =
 static senddecl send_bitmap[] =
 { SM(NAME_geometry, 4, T_geometry, geometryBitmap,
      DEFAULT, "Bitmaps can only be moved"),
-  SM(NAME_initialise, 2, T_initialise, initialiseBitmap,
+  SM(NAME_initialise, 1, "image=[image]", initialiseBitmap,
      DEFAULT, "Create from image"),
   SM(NAME_unlink, 0, NULL, unlinkBitmap,
      DEFAULT, "Unlink from <-image"),
