@@ -813,13 +813,14 @@ getScaleImage(Image image, Size size)
 
 static Image
 getRotateImage(Image image, Num degrees)
-{ double a = (float)valNum(degrees);
+{ double a = valNum(degrees);
   Image rimg;
 
-  a -= (double)(((int64_t)a / 360)*360);
-  if ( a < 0.0 )				/* normalise 0<=a<360 */
+  a = fmod(a, 360.0);
+  if ( a < 0 )
     a += 360.0;
-  else if ( a == 0.0 )				/* just copy */
+
+  if ( a < 0.01 )				/* just copy */
     answer(getClipImage(image, DEFAULT));
 
   rimg = ws_rotate_image(image, a);
