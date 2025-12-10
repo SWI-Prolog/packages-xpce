@@ -1626,7 +1626,7 @@ getCountLinesTextBuffer(TextBuffer tb, Int from, Int to)
 }
 
 
-intptr_t
+ssize_t
 find_textbuffer(TextBuffer tb, intptr_t here, PceString str,
 		intptr_t times, char az, int ec, int wm)
 { int hit = FALSE;

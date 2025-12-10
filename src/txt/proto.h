@@ -156,7 +156,7 @@ COMMON(intptr_t) scan_textbuffer(TextBuffer tb, intptr_t from, Name unit, intptr
 COMMON(Int)	getMatchingBracketTextBuffer(TextBuffer tb, Int idx, Int bracket);
 COMMON(Int)	getSkipBlanksTextBuffer(TextBuffer tb, Int where, Name direction, BoolObj skipnl);
 COMMON(Int)	getLineNumberTextBuffer(TextBuffer tb, Int i);
-COMMON(intptr_t) find_textbuffer(TextBuffer tb, intptr_t here, PceString str, intptr_t times, char az, int ec, int wm);
+COMMON(ssize_t) find_textbuffer(TextBuffer tb, intptr_t here, PceString str, intptr_t times, char az, int ec, int wm);
 COMMON(int)	match_textbuffer(TextBuffer, intptr_t, PceString, int, int);
 COMMON(intptr_t) fill_line_textbuffer(TextBuffer tb, intptr_t here, intptr_t to, int sc, int rm, int justify);
 COMMON(status)	sortTextBuffer(TextBuffer tb, Int from, Int to);

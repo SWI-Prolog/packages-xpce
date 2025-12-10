@@ -3911,13 +3911,12 @@ nextDabbrevMode(Editor e)
 
 static status
 DabbrevExpandEditor(Editor e, EventId id)
-{ int pos = valInt(e->dabbrev_pos);
-  int caret = valInt(e->caret);
+{ ssize_t pos = valInt(e->dabbrev_pos);
+  ssize_t caret = valInt(e->caret);
   PceString target = &e->dabbrev_target->data;
-  int ec = (e->exact_case == ON);
+  bool ec = (e->exact_case == ON);
   TextBuffer tb = e->text_buffer;
   int dir = (pos < caret ? -1 : 1);
-  int hit_pos;
   Name hit;
 
   if ( notDefault(id) )
@@ -3933,7 +3932,7 @@ DabbrevExpandEditor(Editor e, EventId id)
       succeed;
     }
 
-    if ( !equalName(cmd, NAME_dabbrevExpand) )
+    if ( cmd != NAME_dabbrevExpand )
       fail;
   }
 
@@ -3941,9 +3940,9 @@ DabbrevExpandEditor(Editor e, EventId id)
   { Cell cell;
 
     DEBUG(NAME_editor, Cprintf("Starting search\n"));
-    if ( equalName(e->dabbrev_mode, NAME_backwards) ||
-	 equalName(e->dabbrev_mode, NAME_forwards) )
-    { hit_pos = find_textbuffer(tb, pos, target, dir, 'a', ec, FALSE);
+    if ( e->dabbrev_mode == NAME_backwards ||
+	 e->dabbrev_mode == NAME_forwards )
+    { ssize_t hit_pos = find_textbuffer(tb, pos, target, dir, 'a', ec, FALSE);
 
       if ( hit_pos < 0 )
       { if ( dir < 0 )			/* no more backwards; revert */
