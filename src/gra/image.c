@@ -62,8 +62,6 @@ initialiseImage(Image image, SourceSink data, Int w, Int h, Name kind)
     name = NIL;
 
   assign(image, name,       name);
-  assign(image, background, DEFAULT);
-  assign(image, foreground, DEFAULT);
   ws_init_image(image);
 
   if ( isNil(data) || notDefault(w) || notDefault(h) || notDefault(kind) )
@@ -585,24 +583,6 @@ pixelImage(Image image, Int X, Int Y, Any val)
 
 
 static status
-setPixelImage(Image image, Int x, Int y)
-{ if ( image->kind == NAME_bitmap )
-    return pixelImage(image, x, y, ON);
-  else
-    return pixelImage(image, x, y, image->foreground);
-}
-
-
-static status
-clearPixelImage(Image image, Int x, Int y)
-{ if ( image->kind == NAME_bitmap )
-    return pixelImage(image, x, y, OFF);
-  else
-    return pixelImage(image, x, y, image->background);
-}
-
-
-static status
 invertPixelImage(Image image, Int x, Int y)
 { TRY(verifyAccessImage(image, NAME_invertPixel));
 
@@ -963,10 +943,6 @@ static vardecl var_image[] =
      NAME_file, "Source (file,resource) from which to load"),
   IV(NAME_access, "{read,both}", IV_GET,
      NAME_permission, "One of {read, both}"),
-  IV(NAME_background, "[colour]*", IV_BOTH,
-     NAME_colour, "Colour of background"),
-  IV(NAME_foreground, "[colour]", IV_BOTH,
-     NAME_colour, "Colour of foreground"),
   IV(NAME_size, "size", IV_GET,
      NAME_dimension, "Size of the image in pixels"),
   IV(NAME_bitmap, "bitmap*", IV_GET,
@@ -1010,14 +986,10 @@ static senddecl send_image[] =
      NAME_file, "Load image from file (searching in path)"),
   SM(NAME_save, 2, T_save, saveImage,
      NAME_file, "Save image to file in specified format"),
-  SM(NAME_clearPixel, 2, T_xAint_yAint, clearPixelImage,
-     NAME_pixel, "Clear pixel at x-y (to 0 or background)"),
   SM(NAME_invertPixel, 2, T_xAint_yAint, invertPixelImage,
      NAME_pixel, "Invert pixel at x-y"),
   SM(NAME_pixel, 3, T_pixel, pixelImage,
      NAME_pixel, "Set pixel at x-y to bool or colour"),
-  SM(NAME_setPixel, 2, T_xAint_yAint, setPixelImage,
-     NAME_pixel, "Set pixel at x-y (to 1 or foreground)"),
   SM(NAME_Xclose, 1, "display", XcloseImage,
      NAME_x, "Destroy associated window-system resources"),
   SM(NAME_Xopen, 1, "display", XopenImage,

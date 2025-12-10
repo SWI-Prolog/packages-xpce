@@ -5,7 +5,7 @@ colour(blue).
 colour(black).
 
 append_colour(M, C) :-
-    new(Img, pixmap(@nil, white, black, 32, 16)),
+    new(Img, pixmap(@nil, 32, 16)),
     send(Img, fill, colour(C)),
     send(M, append, menu_item(colour(C), label := Img)).
 

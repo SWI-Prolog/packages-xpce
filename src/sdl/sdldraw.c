@@ -306,8 +306,8 @@ status
 d_image(Image i, int x, int y, int w, int h)
 { DisplayObj d =  CurrentDisplay(NIL);
   ws_open_image(i);
-  Any colour = i->foreground;
-  Any background = i->background;
+  Any colour = d->foreground;
+  Any background = d->background;
 
   if ( isDefault(colour) )
     colour = d->foreground;

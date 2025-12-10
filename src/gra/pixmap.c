@@ -38,13 +38,9 @@
 #include <h/graphics.h>
 
 static status
-initialisePixmap(PixmapObj pm, Any from, Colour fg, Colour bg, Int w, Int h)
+initialisePixmap(PixmapObj pm, Any from, Int w, Int h)
 { if ( isNil(from) )
   { initialiseImage((Image) pm, NIL, w, h, NAME_pixmap);
-    if ( notDefault(fg) )
-      assign(pm, foreground, fg);
-    if ( notDefault(bg) )
-      assign(pm, background, bg);
 
     succeed;
   }
@@ -53,10 +49,6 @@ initialisePixmap(PixmapObj pm, Any from, Colour fg, Colour bg, Int w, Int h)
   { Image i = from;
 
     initialiseImage((Image) pm, NIL, i->size->w, i->size->h, NAME_pixmap);
-    if ( notDefault(fg) )
-      assign(pm, foreground, fg);
-    if ( notDefault(bg) )
-      assign(pm, background, bg);
 
     TRY(send(pm, NAME_copy, i, EAV));
 
@@ -68,8 +60,6 @@ initialisePixmap(PixmapObj pm, Any from, Colour fg, Colour bg, Int w, Int h)
   { FileObj f = from;
 
     assign(pm, name,	   f->name);
-    assign(pm, background, fg);
-    assign(pm, foreground, bg);
     assign(pm, kind,	   NAME_pixmap);
     assign(pm, file,	   f);
     assign(pm, access,	   NAME_read);
@@ -87,7 +77,7 @@ initialisePixmap(PixmapObj pm, Any from, Colour fg, Colour bg, Int w, Int h)
 
 
 static PixmapObj
-getLookupPixmap(Any receiver, Image i, Colour fg, Colour bg, Int w, Int h)
+getLookupPixmap(Any receiver, Image i, Int w, Int h)
 { Chain ch;
 
   if ( (ch = getAllHypersObject(i, OFF)) )
@@ -99,9 +89,7 @@ getLookupPixmap(Any receiver, Image i, Colour fg, Colour bg, Int w, Int h)
       if ( h->from == i && h->forward_name == NAME_pixmap )
       { PixmapObj pm = h->to;
 
-	if ( instanceOfObject(pm, ClassPixmap) &&
-	     (isDefault(fg) || pm->foreground == fg) &&
-	     (isDefault(bg) || pm->background == bg) )
+	if ( instanceOfObject(pm, ClassPixmap) )
 	  answer(pm);
       }
     }
@@ -115,7 +103,7 @@ static PixmapObj
 getConvertPixmap(Class class, Any obj)
 { PixmapObj pm;
 
-  if ( (pm = getLookupPixmap(class, obj, DEFAULT, DEFAULT, DEFAULT, DEFAULT)) )
+  if ( (pm = getLookupPixmap(class, obj, DEFAULT, DEFAULT)) )
     answer(pm);
 
   if ( (pm = getConvertObject(class, obj)) )
@@ -162,25 +150,6 @@ getSourcePixmap(PixmapObj pm)
 }
 
 
-#ifdef WIN32_GRAPHICS
-Colour
-getReplacementColourPixmap(PixmapObj pm)
-{ Colour c;
-  Image i;
-  Int grey;
-
-  if ( (c = getAttributeObject(pm, NAME_replacementColour)) )
-    answer(c);
-
-  c = BLACK_COLOUR;
-  errorPce(pm, NAME_replacedByColour, c);
-  attributeObject(pm, NAME_replacementColour, c);
-
-  answer(c);
-}
-#endif /*WIN32_GRAPHICS*/
-
-
 		 /*******************************
 		 *	 CLASS DECLARATION	*
 		 *******************************/
@@ -190,11 +159,9 @@ getReplacementColourPixmap(PixmapObj pm)
 static char *T_fill[] =
         { "image|colour", "[area]" };
 static char *T_initialise[] =
-        { "source=[image|file]*", "foreground=[colour]",
-	  "background=[colour]", "width=[int]", "height=[int]" };
+        { "source=[image|file]*", "width=[int]", "height=[int]" };
 static char *T_lookup[] =
-        { "source=image", "foreground=[colour]", "background=[colour]",
-	  "width=[int]", "height=[int]"};
+        { "source=image", "width=[int]", "height=[int]"};
 
 /* Instance Variables */
 
@@ -208,7 +175,7 @@ vardecl var_pixmap[] =
 /* Send Methods */
 
 static senddecl send_pixmap[] =
-{ SM(NAME_initialise, 5, T_initialise, initialisePixmap,
+{ SM(NAME_initialise, 3, T_initialise, initialisePixmap,
      DEFAULT, "Create image of <-kind pixmap"),
   SM(NAME_fill, 2, T_fill, fillImage,
      NAME_edit, "Fill rectangular area of image with pattern")
@@ -219,7 +186,7 @@ static senddecl send_pixmap[] =
 static getdecl get_pixmap[] =
 { GM(NAME_convert, 1, "pixmap", "name|image|graphical|file", getConvertPixmap,
      NAME_oms, "Convert @name, image, graphical or file-data"),
-  GM(NAME_lookup, 5, "pixmap", T_lookup, getLookupPixmap,
+  GM(NAME_lookup, 3, "pixmap", T_lookup, getLookupPixmap,
      NAME_oms, "Lookup already made conversion"),
   GM(NAME_source, 0, "image|file*", NULL, getSourcePixmap,
      NAME_term, "Determine source for term representation")
@@ -227,21 +194,21 @@ static getdecl get_pixmap[] =
 
 /* Resources */
 
+#define rc_pixmap NULL
+/*
 static classvardecl rc_pixmap[] =
-{ RC(NAME_background, "colour", "white",
-     "Default background colour"),
-  RC(NAME_foreground, "colour", "black",
-     "Default foreground colour")
+{
 };
+*/
 
 /* Class Declaration */
 
 static Name pixmap_termnames[] =
-	{ NAME_source, NAME_foreground, NAME_background };
+	{ NAME_source };
 
 ClassDecl(pixmap_decls,
           var_pixmap, send_pixmap, get_pixmap, rc_pixmap,
-          3, pixmap_termnames,
+          1, pixmap_termnames,
           "$Rev$");
 
 

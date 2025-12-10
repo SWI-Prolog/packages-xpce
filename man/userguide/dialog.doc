@@ -27,7 +27,7 @@ Windows-NT, is shown in \figref{employee}.
 \begin{pcecode}
 ask_employee :-
 	new(Dialog, dialog('Define employee')),
-	send_list(Dialog, append, 
+	send_list(Dialog, append,
 		  [ new(N1, text_item(first_name)),
 		    new(N2, text_item(family_name)),
 		    new(S,  menu(sex)),
@@ -106,7 +106,7 @@ classes.  See the file Overview in the library directory.
 			  \class{browser} is a window-based version. \\
 \hline
 \class{editor}		& Powerful text-editor.  Handles multiple and
-			  proportional fonts, text-attributes, fragment 
+			  proportional fonts, text-attributes, fragment
 			  marking, etc.  Class \class{view} is a window
 			  based version. \\
 \hline
@@ -231,7 +231,7 @@ desired size of the window.
 Most of the above methods are only used rarely for fine-tuning the
 layout.  Almost all dialog windows used in the development environment,
 demo applications and Prolog library simply use `dialog ->append',
-sometimes specifying the last argument.  
+sometimes specifying the last argument.
 
 Two problems are currently not taken care of very well.  Aligning
 multiple objects with a single third object can only be achieved
@@ -394,7 +394,7 @@ colour(blue).
 colour(black).
 
 append_colour(M, C) :-
-	new(Img, pixmap(@nil, white, black, 32, 16)),
+	new(Img, pixmap(@nil, 32, 16)),
 	send(Img, fill, colour(C)),
 	send(M, append, menu_item(colour(C), label := Img)).
 

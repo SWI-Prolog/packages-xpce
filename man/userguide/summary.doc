@@ -1207,7 +1207,7 @@ A \class{picture} is a \class{window} with scrollbars, normally used for
 application graphics. If a graphical window without scrollbars is
 required, \class{window} should be considered.
 
-#class pixmap "pixmap(source, foreground, background)"
+#class pixmap "pixmap(source)"
 A \class{pixmap} is a subclass of \class{image} that is reserved for
 colour images. All functionality of this class is in class
 \class{image}.  The main reason for its existence is that some graphical

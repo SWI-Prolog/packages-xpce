@@ -520,7 +520,6 @@ image in the bitmap.
 
 paint_outline(MI, I) :->
     "Paint the mode indicating bitmap"::
-    send(I, background, @nil),
     get(MI, mode, Mode),
     outline_image(Mode, ImageFile),
     send(I, copy, image(resource(ImageFile))).

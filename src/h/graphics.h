@@ -711,8 +711,6 @@ typedef struct
   Name		kind;			/* {pixmap,bitmap} */ \
   SourceSink	file;			/* Resolved file */ \
   Name		access;			/* {read,both} */ \
-  Colour	background;		/* Background-colour (pixmap) */ \
-  Colour	foreground;		/* Foreground-colour (pixmap) */ \
   Size		size;			/* Size of the image */ \
   BitmapObj	bitmap;			/* Bitmap for read-write's */ \
   Point		hot_spot;		/* Indication of hot-spot */ \

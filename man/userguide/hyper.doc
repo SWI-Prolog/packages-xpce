@@ -102,7 +102,6 @@ edit(B) :->
 		 menu_item(colour(Colour),
 			   @default,
 			   pixmap(@nil,
-				  background := Colour,
 				  width := 32,
 				  height := 16))),
 	    fail
@@ -156,7 +155,7 @@ Find a hyper-related object. Name is the name of the hyper (seen from
 the side of the receiver). Test is an optional additional test. If
 present, this test is executed using the arguments given below.
 The first matching object is returned.  See also <-all_hypers.
-	
+
 \begin{center}
 \begin{tabular}{ll}
 @arg1	& This object \\
