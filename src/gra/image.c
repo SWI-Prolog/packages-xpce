@@ -424,7 +424,8 @@ resizeImage(Image image, Int w, Int h)
 { TRY( verifyAccessImage(image, NAME_resize) );
 
   CHANGING_IMAGE(image,
-		 ws_resize_image(image, w, h));
+		 assign(image->size, w, w);
+		 assign(image->size, h, h));
 
   succeed;
 }

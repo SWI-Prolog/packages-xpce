@@ -498,20 +498,6 @@ ws_close_image(Image image)
 }
 
 /**
- * Resize the image to a new width and height.
- *
- * @param image Pointer to the Image object.
- * @param w New width.
- * @param h New height.
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-ws_resize_image(Image image, Int w, Int h)
-{
-    return SUCCEED;
-}
-
-/**
  * Create a new scaled version of the image.
  *
  * @param image Pointer to the source Image.
