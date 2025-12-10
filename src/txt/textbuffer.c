@@ -3121,7 +3121,7 @@ static getdecl get_textBuffer[] =
   GM(NAME_scan, 4, "index=int", T_scan, getScanTextBuffer,
      NAME_parse, "Scan textual units"),
   GM(NAME_character, 1, "char", "at=int", getCharacterTextBuffer,
-     NAME_read, "ASCII value of character at index"),
+     NAME_read, "Unicode value of character at index"),
   GM(NAME_contents, 2, "string", T_contents, getContentsTextBuffer,
      NAME_read, "New string holding text (from, length)"),
   GM(NAME_sub, 2, "string", T_fromADintD_toADintD, getSubTextBuffer,
