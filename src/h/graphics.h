@@ -713,7 +713,6 @@ typedef struct
   Name		access;			/* {read,both} */ \
   Colour	background;		/* Background-colour (pixmap) */ \
   Colour	foreground;		/* Foreground-colour (pixmap) */ \
-  Int		depth;			/* Bits/pixel */ \
   Size		size;			/* Size of the image */ \
   DisplayObj	display;		/* Display of read-write's */ \
   BitmapObj	bitmap;			/* Bitmap for read-write's */ \

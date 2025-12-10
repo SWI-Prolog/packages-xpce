@@ -261,7 +261,6 @@ ws_load_image_file(Image image)
   if ( isbitmap )
     DEBUG(NAME_bitmap, Cprintf("%s: bitmap\n", pp(image)));
   assign(image, kind, isbitmap ? NAME_bitmap : NAME_pixmap);
-  assign(image, depth, toInt(32));
   assign(image->size, w, toInt(surf1->w));
   assign(image->size, h, toInt(surf1->h));
   image->ws_ref = final;

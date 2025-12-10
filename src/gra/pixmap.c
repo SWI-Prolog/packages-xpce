@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -72,7 +73,6 @@ initialisePixmap(PixmapObj pm, Any from, Colour fg, Colour bg, Int w, Int h)
     assign(pm, kind,	   NAME_pixmap);
     assign(pm, file,	   f);
     assign(pm, access,	   NAME_read);
-    assign(pm, depth,	   DEFAULT);
     assign(pm, size,	   newObject(ClassSize,	EAV));
     ws_init_image((Image) pm);
     TRY(loadImage((Image) pm, DEFAULT, DEFAULT));

@@ -73,13 +73,11 @@ initialiseImage(Image image, SourceSink data, Int w, Int h, Name kind)
 
     assign(image, kind,   kind);
     assign(image, file,   NIL);
-    assign(image, depth,  toInt(32));
     assign(image, size,	  newObject(ClassSize, w, h, EAV));
     assign(image, access, NAME_both);
   } else
   { assign(image, kind,	  NAME_pixmap);
     assign(image, file,	  data);
-    assign(image, depth,  toInt(32));
     assign(image, size,	  newObject(ClassSize, EAV));
     TRY(loadImage(image, DEFAULT, DEFAULT));
     assign(image, access, NAME_read);
@@ -870,8 +868,7 @@ stdXPMImage(Name name, Name kind, Image *global, char **bits)
   { Image image = globalObject(name, ClassImage, name, toInt(w), toInt(h), EAV);
 
     if ( colours == 2 )
-    { assign(image, depth, ONE);
-      assign(image, kind, kind);
+    { assign(image, kind, kind);
     } else
     { assign(image, kind, NAME_pixmap);
     }
@@ -976,8 +973,6 @@ static vardecl var_image[] =
      NAME_colour, "Colour of background"),
   IV(NAME_foreground, "[colour]", IV_BOTH,
      NAME_colour, "Colour of foreground"),
-  IV(NAME_depth, "[int]", IV_GET,
-     NAME_colour, "Number of bits/pixel"),
   IV(NAME_size, "size", IV_GET,
      NAME_dimension, "Size of the image in pixels"),
   IV(NAME_display, "display*", IV_GET,
