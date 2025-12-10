@@ -165,7 +165,7 @@ RedrawAreaPath(Path p, Area a)
 	r_image(i, 0, 0,
 		valInt(pt->x) - iw2 + ox,
 		valInt(pt->y) - ih2 + oy,
-		iw, ih, ON);
+		iw, ih);
       }
     }
 

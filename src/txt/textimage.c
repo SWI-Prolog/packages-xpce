@@ -847,8 +847,7 @@ paint_image(TextImage ti, Area a, Image im, int x, int base)
 
   r_image(im,
 	  0, 0,
-	  x, base - asc, valInt(im->size->w), valInt(im->size->h),
-	  ON);
+	  x, base - asc, valInt(im->size->w), valInt(im->size->h));
 }
 
 

@@ -96,7 +96,7 @@ RedrawAreaLabel(Label lb, Area a)
   } else /*if ( instanceOfObject(lb->selection, ClassImage) )*/
   { Image image = (Image) lb->selection;
 
-    r_image(image, 0, 0, x, y, w, h, ON);
+    r_image(image, 0, 0, x, y, w, h);
   }
 
   if ( lb->wrap == NAME_clip )

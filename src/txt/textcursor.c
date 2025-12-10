@@ -76,7 +76,7 @@ RedrawAreaTextCursor(TextCursor c, Area a)
 		  NAME_foreground);
     r_fill_polygon(pts, 3);
   } else if ( c->style == NAME_image )
-  { r_image(c->image, 0, 0, x, y, w, h, ON);
+  { r_image(c->image, 0, 0, x, y, w, h);
   } else if ( c->style == NAME_openLook )
   { if ( c->active == ON )
     { int cx = x + w/2;

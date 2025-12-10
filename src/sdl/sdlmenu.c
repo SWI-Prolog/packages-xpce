@@ -186,7 +186,7 @@ ws_entry_field(Graphical gr, int x, int y, int w, int h, int flags)
 
       if ( cw < 0 ) cw = dpi_scale(NULL, 14);
       r_3d_box(x+w-cw-2, y+2, cw, h-4, 0, button_elevation, up);
-      r_image(SCROLL_DOWN_IMAGE, 0, 0, x+w-cw+(cw-iw)/2-2, iy, iw, ih, ON);
+      r_image(SCROLL_DOWN_IMAGE, 0, 0, x+w-cw+(cw-iw)/2-2, iy, iw, ih);
     }
     if ( flags & TEXTFIELD_STEPPER )
     { double cw = ws_stepper_width(gr);
@@ -205,8 +205,8 @@ ws_entry_field(Graphical gr, int x, int y, int w, int h, int flags)
       double ix = x + w - (cw+iw)/2.0;
       double dy = (bh-ih)/2.0;
 
-      r_image(SCROLL_UP_IMAGE,   0, 0, ix, y+dy,      iw, ih, ON);
-      r_image(SCROLL_DOWN_IMAGE, 0, 0, ix, y+h-dy-ih, iw, ih, ON);
+      r_image(SCROLL_UP_IMAGE,   0, 0, ix, y+dy,      iw, ih);
+      r_image(SCROLL_DOWN_IMAGE, 0, 0, ix, y+h-dy-ih, iw, ih);
     }
   }
 

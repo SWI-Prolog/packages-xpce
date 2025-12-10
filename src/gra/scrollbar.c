@@ -352,7 +352,7 @@ draw_arrow(ScrollBar s, int x, int y, int w, int h, Name which, int up)
   { iw = valInt(img->size->w);
     ih = valInt(img->size->h);
 
-    r_image(img, 0, 0, x+(w-iw)/2, y+(h-ih)/2, iw, ih, ON);
+    r_image(img, 0, 0, x+(w-iw)/2, y+(h-ih)/2, iw, ih);
   } else
   { Cprintf("No scroll_bar arrow image\n");
   }

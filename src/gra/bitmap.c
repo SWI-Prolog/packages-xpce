@@ -85,7 +85,7 @@ RedrawAreaBitmap(BitmapObj b, Area a)
 
   initialiseDeviceGraphical(b, &x, &y, &w, &h);
   if ( notNil(b->image) )
-    r_image(b->image, 0, 0, x, y, w, h, b->transparent);
+    r_image(b->image, 0, 0, x, y, w, h);
 
   if ( b->pen != ZERO )
   { r_thickness(valInt(b->pen));

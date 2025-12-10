@@ -504,7 +504,7 @@ draw_popup_indicator(Menu m, MenuItem mi, int x, int y, int w, int h, int b)
   ix = x+w-b-iw;
 
   if ( notNil(m->popup_image) )
-  { r_image(m->popup_image, 0, 0, ix, iy, iw, ih, ON);
+  { r_image(m->popup_image, 0, 0, ix, iy, iw, ih);
   } else if ( (z = getClassVariableValueObject(m, NAME_elevation)) )
   { r_3d_triangle(ix, iy+ih, ix, iy, ix+iw, iy+ih/2,
 		  z, m->preview != mi, 0x3);
@@ -678,7 +678,7 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
 	r_3d_box(x+b-h, by-h, bw+2*h, bh+2*h, 0, mz, FALSE);
       }
 
-      r_image(leftmark, 0, 0, x+b, by, bw, bh, ON);
+      r_image(leftmark, 0, 0, x+b, by, bw, bh);
     } else if ( (Name) leftmark == NAME_marked )
     { if ( m->look == NAME_motif )
       { Elevation mz = getClassVariableValueObject(m, NAME_markElevation);
@@ -781,7 +781,7 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
 	  m->vertical_format == NAME_center ? iy + (ih-bh)/2 :
 					      iy + ih - bh);
 
-    r_image(mi->label, 0, 0, bx, by, bw, bh, ON);
+    r_image(mi->label, 0, 0, bx, by, bw, bh);
   }
 
   if ( notNil(fill) )
@@ -856,7 +856,7 @@ RedrawAreaMenu(Menu m, Area a)
       int bw = valInt(i->size->w);
       int bh = valInt(i->size->h);
 
-      r_image(i, 0, 0, cx-(bw+CYCLE_DROP_DISTANCE), cy, bw, bh, ON);
+      r_image(i, 0, 0, cx-(bw+CYCLE_DROP_DISTANCE), cy, bw, bh);
     }
 
     if ( mi != FAIL )

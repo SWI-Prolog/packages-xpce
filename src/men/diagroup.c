@@ -429,7 +429,7 @@ RedrawLabelDialogGroup(DialogGroup g, int acc,
     else
       iy = y + h-ih;
 
-    r_image(i, 0, 0, ix, iy, iw, ih, ON);
+    r_image(i, 0, 0, ix, iy, iw, ih);
   } else if ( instanceOfObject(g->label, ClassCharArray) )
   { CharArray label = g->label;
 

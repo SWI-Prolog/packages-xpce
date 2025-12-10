@@ -1474,7 +1474,7 @@ recolor_bw_surface(cairo_surface_t* input,
  */
 void
 r_image(Image image, int sx, int sy,
-	int x, int y, int w, int h, BoolObj transparent)
+	int x, int y, int w, int h)
 { cairo_surface_t *surface = pceImage2CairoSurface(image);
   bool free_surface = false;
 
@@ -1503,8 +1503,8 @@ r_image(Image image, int sx, int sy,
     return;
 
   DEBUG(NAME_draw,
-	Cprintf("r_image(%s, %d, %d -> %d, %d, %d, %d, %s)\n",
-		pp(image), sx, sy, x, y, w, h, pp(transparent)));
+	Cprintf("r_image(%s, %d, %d -> %d, %d, %d, %d)\n",
+		pp(image), sx, sy, x, y, w, h));
 
   int width  = cairo_image_surface_get_width(surface);
   int height = cairo_image_surface_get_height(surface);

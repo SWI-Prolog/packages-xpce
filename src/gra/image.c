@@ -435,7 +435,7 @@ copyImage(Image image, Image i2)
 
     if ( d_image(image, 0, 0, valInt(w), valInt(h)) )
     { d_modify();
-      r_image(i2, 0, 0, 0, 0, valInt(w), valInt(h), OFF);
+      r_image(i2, 0, 0, 0, 0, valInt(w), valInt(h));
       d_done();
       changedEntireImageImage(image);
     });
@@ -743,7 +743,7 @@ getClipImage(Image image, Area area)
   CHANGING_IMAGE(i2,
     d_image(i2, 0, 0, w, h);
     d_modify();
-    r_image(image, x, y, 0, 0, w, h, OFF);
+    r_image(image, x, y, 0, 0, w, h);
     d_done();
     changedEntireImageImage(i2););
 

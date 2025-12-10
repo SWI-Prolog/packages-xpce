@@ -223,7 +223,7 @@ draw_button_popup_indicator(Button b, int x, int y, int w, int h, int up)
     int ih = valInt(b->popup_image->size->h);
 
     rm = iw+8;
-    r_image(b->popup_image, 0, 0, x+w-rm, y + (h-ih)/2, iw, ih, ON);
+    r_image(b->popup_image, 0, 0, x+w-rm, y + (h-ih)/2, iw, ih);
   } else
   { Elevation z = getClassVariableValueObject(b, NAME_elevation);
 

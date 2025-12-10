@@ -189,7 +189,7 @@ RedrawAreaNode(Node node, Image cimg, Image eimg)
   { int iw = valInt(i->size->w);
     int ih = valInt(i->size->h);
 
-    r_image(i, 0, 0, lx-lg-(iw+1)/2, ly-(ih+1)/2, iw, ih, OFF);
+    r_image(i, 0, 0, lx-lg-(iw+1)/2, ly-(ih+1)/2, iw, ih);
   }
 
   if ( notNil(node->sons) && node->collapsed != ON &&

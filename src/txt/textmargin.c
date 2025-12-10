@@ -108,7 +108,7 @@ paint_fragment(TextMargin m, int x, int y, Fragment fragment, Any ctx)
     y += margin_y;
     icon_size(m, icon, &w, &h);
 
-    r_image(icon, 0, 0, x, y, w, h, ON);
+    r_image(icon, 0, 0, x, y, w, h);
     if ( m->editor->selected_fragment == fragment )
       r_complement(x, y, w, h);
   }

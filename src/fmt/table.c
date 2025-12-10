@@ -1629,7 +1629,7 @@ RedrawRulesTableCell(TableCell cell, Name style, int b)
     DEBUG(NAME_noteMark,
 	  Cprintf("%s: note_mark %s at %d,%d, size %dx%d\n",
 		  pp(cell), pp(cell->note_mark), d.x+d.w-mw, d.y, mw, mh));
-    r_image(cell->note_mark, 0, 0, d.x+d.w-mw, d.y, mw, mh, ON);
+    r_image(cell->note_mark, 0, 0, d.x+d.w-mw, d.y, mw, mh);
   }
 
   { if ( style == NAME_all )
