@@ -718,7 +718,6 @@ typedef struct
   DisplayObj	display;		/* Display of read-write's */ \
   BitmapObj	bitmap;			/* Bitmap for read-write's */ \
   Point		hot_spot;		/* Indication of hot-spot */ \
-  Image		mask;			/* Masking image */ \
   WsRef		ws_ref;			/* Window system reference */ \
   builtin_image_data *bits;		/* Data for built-in images */
 

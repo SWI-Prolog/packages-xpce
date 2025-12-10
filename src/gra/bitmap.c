@@ -138,7 +138,7 @@ imageBitmap(BitmapObj bm, Image image)
 
 status
 updateSolidBitmap(BitmapObj bm)
-{ if ( notNil(bm->image->mask) || bm->transparent == ON )
+{ if ( ws_has_alpha_image(bm->image) )
     clearFlag(bm, F_SOLID);
   else
     setFlag(bm, F_SOLID);

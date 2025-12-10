@@ -81,8 +81,7 @@ ws_destroy_image(Image image)
  */
 status
 ws_store_image(Image image, FileObj file)
-{
-    return SUCCEED;
+{ succeed;
 }
 
 /**
@@ -507,8 +506,8 @@ ws_close_image(Image image)
  */
 Image
 ws_scale_image(Image image, int w, int h)
-{
-    return NULL;
+{ Cprintf("STUB: ws_scale_image(%s, %d, %d)\n", pp(image), w, h);
+  return NULL;
 }
 
 /**
@@ -520,8 +519,8 @@ ws_scale_image(Image image, int w, int h)
  */
 Image
 ws_rotate_image(Image image, float angle)
-{
-    return NULL;
+{ Cprintf("STUB: ws_rotate_image(%s, %f)\n", pp(image), angle);
+  return NULL;
 }
 
 /**
@@ -532,8 +531,8 @@ ws_rotate_image(Image image, float angle)
  */
 Image
 ws_monochrome_image(Image image)
-{
-    return NULL;
+{ Cprintf("STUB: ws_monochrome_image(%s)\n", pp(image));
+  return NULL;
 }
 
 /**
@@ -586,38 +585,6 @@ ws_grayscale_image(Image image)
   img_gray->ws_ref = gray;
 
   answer(img_gray);
-}
-
-/**
- * Load an image using the XLI utility.
- *
- * @param image Pointer to the Image object.
- * @param file Pointer to the FileObj to load from.
- * @param bright Brightness adjustment.
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-loadXliImage(Image image, FileObj file, Int bright)
-{
-    return SUCCEED;
-}
-
-/**
- * Initialize system image resources (e.g., built-in icons).
- */
-void
-ws_system_images(void)
-{
-}
-
-/**
- * Prepare the transparency mask for the image.
- *
- * @param image Pointer to the Image object.
- */
-void
-ws_prepare_image_mask(Image image)
-{
 }
 
 status

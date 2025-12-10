@@ -667,19 +667,6 @@ getPixelImage(Image image, Int x, Int y)
 }
 
 
-static status
-maskImage(Image image, Image mask)
-{ assign(image, mask, mask);
-
-  if ( notNil(image->bitmap) )
-    updateSolidBitmap(image->bitmap);
-
-  ws_prepare_image_mask(image);
-
-  return changedEntireImageImage(image);
-}
-
-
 		/********************************
 		*      LOGICAL OPERATIONS	*
 		********************************/
@@ -752,8 +739,6 @@ getClipImage(Image image, Area area)
     if ( hx >= 0 && hx <= w && hy >= 0 && hy <= h )
       assign(i2, hot_spot, newObject(ClassPoint, toInt(hx), toInt(hy), EAV));
   }
-  if ( notNil(image->mask) )
-    assign(i2, mask, getClipImage(image->mask, area));
 
   CHANGING_IMAGE(i2,
     d_image(i2, 0, 0, w, h);
@@ -791,13 +776,6 @@ getScaleImage(Image image, Size size)
     return answerObject(ClassImage, NIL, size->w, size->h, image->kind, EAV);
 
   i2 = ws_scale_image(image, valInt(size->w), valInt(size->h));
-
-  if ( notNil(image->mask) )
-  { Image m = getScaleImage(image->mask, size);
-
-    if ( m )
-      assign(i2, mask, m);
-  }
 
   if ( notNil(image->hot_spot) )
   { int hx = (valInt(image->hot_spot->x) * valInt(size->w)) /
@@ -849,9 +827,6 @@ getRotateImage(Image image, Num degrees)
 
       assign(rimg, hot_spot, newObject(ClassPoint, toInt(nhx), toInt(nhy), EAV));
     }
-
-    if ( notNil(image->mask) )
-      assign(rimg, mask, getRotateImage(image->mask, degrees));
   }
 
   answer(rimg);
@@ -957,8 +932,6 @@ standardImages(void)
 
   stdImage(NAME_nullImage, &NULL_IMAGE,
 	   NULL, 0, 0);
-
-  ws_system_images();			/* make sure system images exist */
 }
 
 
@@ -1013,8 +986,6 @@ static vardecl var_image[] =
      NAME_organisation, "Access both and displayed on this bitmap"),
   IV(NAME_hotSpot, "point*", IV_BOTH,
      NAME_dimension, "Hot-spot position"),
-  SV(NAME_mask, "image*", IV_GET|IV_STORE, maskImage,
-     NAME_area, "Image for masked painting"),
   IV(NAME_wsRef, "alien:WsRef", IV_NONE,
      NAME_storage, "Window System Reference"),
   IV(NAME_bits, "alien:char*", IV_NONE,

@@ -57,10 +57,7 @@ Image ws_scale_image(Image image, int w, int h);
 Image ws_rotate_image(Image image, float angle);
 Image ws_monochrome_image(Image image);
 Image ws_grayscale_image(Image image);
-status loadXliImage(Image image, FileObj file, Int bright);
 void ws_create_image_from_x11_data(Image image, unsigned char *data, int w, int h);
-void ws_system_images(void);
-void ws_prepare_image_mask(Image image);
 status ws_has_alpha_image(Image image);
 
 #endif /* RAYIMAGE_H */
