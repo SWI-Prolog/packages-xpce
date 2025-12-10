@@ -286,7 +286,8 @@ set(XPCE_DATA_bitmaps_32x32 books.png buffers.png dbgsettings.png
     vishier.png)
 
 set(XPCE_DATA_bitmaps_64x64 lsp-error.png lsp-hint.png
-    lsp-information.png lsp-warning.png)
+    lsp-information.png lsp-warning.png
+    lsp-apply-fix.png lsp-apply-tweak.png)
 
 set(XPCE_DATA_bitmaps_patterns Arches.xbm Balls.xbm Bats.xbm brick_2.xbm
     brick_block.xbm brick_cobble.xbm brick_diag_block.xbm
