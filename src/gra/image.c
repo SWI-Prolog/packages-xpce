@@ -348,11 +348,6 @@ verifyAccessImage(Image image, Name sel)
 { if ( image->access != NAME_both )
     return errorPce(image, NAME_readOnly);
 
-  if ( isNil(image->display) )
-    assign(image, display, CurrentDisplay(image));
-
-  openDisplay(image->display);
-
   succeed;
 }
 
@@ -393,8 +388,7 @@ clearImage(Image image)
 
   CHANGING_IMAGE(image,
 		 if ( image->size->w != ZERO && image->size->h != ZERO &&
-		      notNil(image->display) &&
-		      getExistingXrefObject(image, image->display) != NULL )
+		      image->ws_ref != NULL )
 		 { int w = valInt(image->size->w);
 		   int h = valInt(image->size->h);
 
@@ -654,7 +648,7 @@ getPixelImage(Image image, Int x, Int y)
       if ( pixel == NoPixel )
 	result = FAIL;
       else
-	result = ws_pixel_to_colour(image->display, pixel);
+	result = ws_pixel_to_colour(pixel);
     }
     d_done();
 
@@ -975,8 +969,6 @@ static vardecl var_image[] =
      NAME_colour, "Colour of foreground"),
   IV(NAME_size, "size", IV_GET,
      NAME_dimension, "Size of the image in pixels"),
-  IV(NAME_display, "display*", IV_GET,
-     NAME_organisation, "X-Display this image belongs to"),
   IV(NAME_bitmap, "bitmap*", IV_GET,
      NAME_organisation, "Access both and displayed on this bitmap"),
   IV(NAME_hotSpot, "point*", IV_BOTH,

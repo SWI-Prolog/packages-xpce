@@ -83,6 +83,6 @@ pceColour2SDL_Color(Colour c)
 
 Int getNamedRGB(Name name);
 
-Colour ws_pixel_to_colour(DisplayObj d, unsigned long pixel);
+Colour ws_pixel_to_colour(unsigned long pixel);
 
 #endif /* RAYCOLOUR_H */

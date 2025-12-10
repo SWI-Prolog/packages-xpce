@@ -116,15 +116,12 @@ canonical_colour_name(Name in)
 }
 
 /**
- * Convert a pixel value to its corresponding Colour object on the
- * specified display.
+ * Convert a pixel value to its corresponding Colour object
  *
- * @param d Pointer to the DisplayObj representing the display context.
  * @param pixel The pixel value to be converted.
  * @return Pointer to the corresponding Colour object; NULL if conversion fails.
  */
 Colour
-ws_pixel_to_colour(DisplayObj d, unsigned long pixel)
-{
-    return NULL;
+ws_pixel_to_colour(unsigned long pixel)
+{ return NULL;
 }

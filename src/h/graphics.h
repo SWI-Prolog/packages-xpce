@@ -714,7 +714,6 @@ typedef struct
   Colour	background;		/* Background-colour (pixmap) */ \
   Colour	foreground;		/* Foreground-colour (pixmap) */ \
   Size		size;			/* Size of the image */ \
-  DisplayObj	display;		/* Display of read-write's */ \
   BitmapObj	bitmap;			/* Bitmap for read-write's */ \
   Point		hot_spot;		/* Indication of hot-spot */ \
   WsRef		ws_ref;			/* Window system reference */ \
