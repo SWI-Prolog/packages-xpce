@@ -715,7 +715,6 @@ typedef struct
   Colour	foreground;		/* Foreground-colour (pixmap) */ \
   Int		depth;			/* Bits/pixel */ \
   Size		size;			/* Size of the image */ \
-  Num		scale;			/* Scale image */ \
   DisplayObj	display;		/* Display of read-write's */ \
   BitmapObj	bitmap;			/* Bitmap for read-write's */ \
   Point		hot_spot;		/* Indication of hot-spot */ \

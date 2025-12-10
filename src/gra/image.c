@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -409,15 +410,6 @@ clearImage(Image image)
   succeed;
 }
 
-
-static status
-scaleImage(Image image, Num factor)
-{ assign(image, scale, factor);
-  if ( notNil(image->mask) )
-    assign(image->mask, scale, factor);
-  /* TBD: Verify the image is not yet opened */
-  succeed;
-}
 
 static status
 resizeImage(Image image, Int w, Int h)
@@ -893,11 +885,6 @@ stdImage(Name name, Image *global, unsigned char *bits, int w, int h)
   return image;
 }
 
-static inline int
-rescale(Image image, int px)
-{ return (int)((double)px*valNum(image->scale)+0.5);
-}
-
 #ifdef XPM_PCEIMAGE
 static void
 stdXPMImage(Name name, Name kind, Image *global, char **bits)
@@ -914,9 +901,7 @@ stdXPMImage(Name name, Name kind, Image *global, char **bits)
     }
 
     assign(image, access, NAME_read);
-    setSize(image->size,
-	    toInt(rescale(image, w)),
-	    toInt(rescale(image, h)));
+    setSize(image->size, toInt(w), toInt(h));
     image->bits = alloc(sizeof(*image->bits));
     image->bits->type = XPM_DATA;
     image->bits->bits.xpm = bits;
@@ -1001,10 +986,6 @@ static char *T_xAint_yAint[] =
 	{ "x=int", "y=int" };
 static char *T_pixel[] =
 	{ "x=int", "y=int", "value=colour|bool" };
-#ifdef O_XLI
-static char *T_loadXli[] =
-	{ "file=file", "bright=[0..]" };
-#endif
 
 /* Instance Variables */
 
@@ -1025,8 +1006,6 @@ static vardecl var_image[] =
      NAME_colour, "Number of bits/pixel"),
   IV(NAME_size, "size", IV_GET,
      NAME_dimension, "Size of the image in pixels"),
-  SV(NAME_scale, "num", IV_GET|IV_STORE, scaleImage,
-     NAME_dimension, "Set scale factor for image"),
   IV(NAME_display, "display*", IV_GET,
      NAME_organisation, "X-Display this image belongs to"),
   IV(NAME_bitmap, "bitmap*", IV_GET,
@@ -1042,10 +1021,6 @@ static vardecl var_image[] =
 };
 
 /* Send Methods */
-
-#ifdef O_XLI
-extern status loadXliImage(Image image, FileObj file, Int bright);
-#endif
 
 static senddecl send_image[] =
 { SM(NAME_initialise, 4, T_initialise, initialiseImage,
@@ -1074,10 +1049,6 @@ static senddecl send_image[] =
      NAME_edit, "Bitwise xor with argument"),
   SM(NAME_load, 2, T_load, loadImage,
      NAME_file, "Load image from file (searching in path)"),
-#ifdef O_XLI
-  SM(NAME_loadXli, 2, T_loadXli, loadXliImage,
-     NAME_file, "Load image using xli library"),
-#endif
   SM(NAME_save, 2, T_save, saveImage,
      NAME_file, "Save image to file in specified format"),
   SM(NAME_clearPixel, 2, T_xAint_yAint, clearPixelImage,
@@ -1123,9 +1094,7 @@ static classvardecl rc_image[] =
 { RC(NAME_path, "string",
      "\".:bitmaps:~/lib/bitmaps:$PCEHOME/bitmaps:" /* concat */
      "/usr/include/X11/bitmaps\"",
-     "Search path for loading images"),
-  RC(NAME_scale, "real", "1.0",
-     "Scale factor for the image")
+     "Search path for loading images")
 };
 
 /* Class Declaration */
