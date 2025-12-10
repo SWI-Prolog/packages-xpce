@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -188,6 +189,12 @@ computeLabel(Label lb)
 
       w = valInt(image->size->w);
       h = valInt(image->size->h);
+      if ( notDefault(lb->width) )
+      { int iw = valInt(lb->width)-2*b;
+
+	h = (h*iw+w/2)/w;
+	w = iw;
+      }
     }
 
     w += 2*b;
@@ -214,8 +221,7 @@ getReferenceLabel(Label lb)
       ref = answerObject(ClassPoint,
 			 ZERO, getAscentFont(lb->font), EAV);
     else
-      ref = answerObject(ClassPoint,
-			 ZERO, ((Image) lb->selection)->size->h, EAV);
+      ref = answerObject(ClassPoint, ZERO, lb->area->h, EAV);
   }
 
   answer(ref);
