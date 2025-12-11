@@ -3816,7 +3816,7 @@ dabbrevExpandEditor(Editor e)
 
   TRY( target = get_dabbrev_target(e) );
   assign(e, dabbrev_target, target);
-  assign(e, dabbrev_mode, NIL);
+  assign(e, dabbrev_mode, NAME_user0);
   assign(e, dabbrev_candidates, NIL);
   DEBUG(NAME_editor, Cprintf("dabbrev target = %s\n", pp(target)));
 
@@ -3941,54 +3941,56 @@ DabbrevExpandEditor(Editor e, EventId id)
       fail;
   }
 
-  for(;;)
+  Name mode = e->dabbrev_mode;
+  while(true)
   { Cell cell;
 
     DEBUG(NAME_editor, Cprintf("Starting search\n"));
-    if ( e->dabbrev_mode == NAME_backwards ||
-	 e->dabbrev_mode == NAME_forwards )
+    if ( mode == NAME_backwards || mode == NAME_forwards )
     { int dir = (e->dabbrev_mode == NAME_backwards ? -1 : 1);
       ssize_t hit_pos = find_textbuffer(tb, pos, target, dir, 'a', ec, FALSE);
 
       if ( hit_pos < 0 )
-      { nextDabbrevMode(e);
+      { mode = nextDabbrevMode(e);
 	continue;
       }
 
       if ( hit_pos != 0 &&
 	   tisalnum(tb->syntax, fetch_textbuffer(tb, hit_pos-1)) )
-      { pos = hit_pos + dir;		/* hit is no start of word */
+      { pos = hit_pos + dir;		/* hit is not at start of word */
 	continue;
       }
 
-      DEBUG(NAME_editor, Cprintf("hit at %d\n", hit_pos));
-
       hit = get_dabbrev_hit_editor(e, hit_pos);
-      DEBUG(NAME_editor, Cprintf("hit = %s\n", pp(hit)));
+      DEBUG(NAME_editor,
+	    Cprintf("Dabbrev search hit at %zd = %s\n", hit_pos, pp(hit)));
       pos = (dir < 0 ? hit_pos - 1 : hit_pos + target->s_size);
-    } else
-    { while ( !(notNil(e->dabbrev_candidates) &&
-		(hit = getDeleteHeadChain(e->dabbrev_candidates))) )
-      { Name mode = nextDabbrevMode(e);
+      assign(e, dabbrev_pos, toInt(pos));
+    } else if ( !(notNil(e->dabbrev_candidates) &&
+		  (hit = getDeleteHeadChain(e->dabbrev_candidates))) )
+    { while(mode)
+      { Chain ch = get(e, NAME_dabbrevCandidates, mode, e->dabbrev_target, EAV);
 
-	if ( mode == NAME_backwards || mode == NAME_forwards )
-	{ goto next;
-	} else if ( mode )
-	{ Chain ch;
-
-	  ch = get(e, NAME_dabbrevCandidates, mode, e->dabbrev_target, EAV);
-
-	  if ( !instanceOfObject(ch, ClassChain) )
-	    ch = NIL;
-	  assign(e, dabbrev_candidates, ch);
+	if ( !ch || !instanceOfObject(ch, ClassChain) || emptyChain(ch) )
+	{ mode = nextDabbrevMode(e);
+	  if ( mode == NAME_backwards || mode == NAME_forwards )
+	    goto next;
 	} else
-	{ send(e, NAME_report, NAME_warning, CtoName("No more hits"), EAV);
-	  assign(e, focus_function, NIL);
-	  succeed;
+	{ assign(e, dabbrev_candidates, ch);
+	  break;
 	}
+      }
+
+      if ( mode )
+      { hit = getDeleteHeadChain(e->dabbrev_candidates);
+      } else
+      { send(e, NAME_report, NAME_warning, CtoName("Dabbrev: no more hits"), EAV);
+	assign(e, focus_function, NIL);
+	succeed;
       }
     }
 
+    /* Avoid returning the same result twice */
     for_cell(cell, e->dabbrev_reject)
     { Name reject = cell->value;
 
@@ -3997,21 +3999,15 @@ DabbrevExpandEditor(Editor e, EventId id)
       if ( !ec && str_icase_eq(&hit->data, &reject->data) )
 	goto next;
     }
-
-    if ( memberChain(e->dabbrev_reject, hit) )
-      continue;
     appendChain(e->dabbrev_reject, hit);
-    assign(e, dabbrev_pos, toInt(pos));
 
-    DEBUG(NAME_editor, Cprintf("deleting\n"));
+    DEBUG(NAME_editor, Cprintf("Dabbrev: inserting completion\n"));
     deleteTextBuffer(tb, e->dabbrev_origin, sub(e->caret, e->dabbrev_origin));
-    DEBUG(NAME_editor, Cprintf("inserting\n"));
     fix_case_and_insert(tb,
 			valInt(e->dabbrev_origin),
 			&hit->data,
 			get_case_pattern(tb->syntax, target),
 			str_prefix(&hit->data, target) ? TRUE : ec);
-    DEBUG(NAME_editor, Cprintf("ok\n"));
     succeed;
 
     next:;
