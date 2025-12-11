@@ -41,6 +41,9 @@
 :- pce_autoload(prolog_predicate_item, library(prolog_predicate_item)).
 :- pce_autoload(emacs_tag_item,        library(emacs_tags)).
 
+:- multifile
+    make_item_hook/6.
+
 resource(back,  image, image('16x16/fatleft_arrow.png')).
 resource(forw,  image, image('16x16/fatright_arrow.png')).
 
@@ -49,6 +52,10 @@ resource(forw,  image, image('16x16/fatright_arrow.png')).
 %   Create a dialog item for editing an object of the specified
 %   type.
 
+					% Allow for hooks
+make_item(Mode, Label, Default, Type, History, Item) :-
+    make_item_hook(Mode, Label, Default, Type, History, Item),
+    !.
                                         % deal with dialog special value
 make_item(Mode, Label, @emacs_prompt_for, Type, History, Item) :-
     !,
