@@ -122,8 +122,7 @@ emacs(File:Line:LinePos) :-
     atom(File),
     !,
     start_emacs,
-    new(Loc, source_location(File, Line)),
-    send(Loc, attribute, linepos, LinePos),
+    new(Loc, source_location(File, Line, LinePos)),
     in_pce_thread(send(@emacs, goto_source_location, Loc, tab)).
 emacs(File:Line) :-
     integer(Line),

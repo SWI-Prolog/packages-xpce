@@ -69,12 +69,11 @@ variable(history,       history, get, "History of visited places").
 
 initialise(Emacs, Buffers:dict) :->
     send_super(Emacs, initialise, emacs),
-%   send(Emacs, leader, frame('PceEmacs')),
     send(Emacs, kind, service),
     send(Emacs, slot, history,
          history(message(Emacs, goto_history, @arg1, tab))),
     send(Emacs, slot, buffer_list, Buffers),
-    new(@emacs_mark_list, emacs_bookmark_editor),
+    get(@emacs_mark_list, class, _), % force loading
     ignore(send(Emacs, server_start)),
     ignore(send(Emacs, load_user_init_file)),
     register_clean_exit(Emacs).
@@ -188,11 +187,19 @@ goto_source_location(Emacs,
     (   get(Location, line_no, Line),
         Line \== @nil
     ->  send(Editor, mark_status, inactive),
-        send(Mode, select_line, Line),
-        (   get(Location, attribute, linepos, LinePos)
-        ->  send(Mode, forward_char, LinePos)
-        ;   true
-        )
+        get(Editor, scan, 0, line, Line-1, start, SOL),
+        (   get(Location, line_pos, LinePos),
+            LinePos \== @nil
+        ->  Start is SOL+LinePos
+        ;   Start is SOL
+        ),
+        (   get(Location, length, Length),
+            Length \== @nil,
+            Length > 0
+        ->  End is Start + Length
+        ;   get(Editor, scan, Start, line, 0, end, End)
+        ),
+        send(Editor, selection, End, Start, highlight)
     ;   true
     ),
     (   Title == @nil
@@ -223,7 +230,8 @@ location_history(Emacs, Title:title=[char_array]) :->
     ;   true
     ).
 
-goto_history(Emacs, HE:emacs_history_entry, Where:where=[{here,tab,window}]) :->
+goto_history(Emacs, HE:emacs_history_entry,
+             Where:where=[{here,tab,window}]) :->
     "Go back to an old history location"::
     get(HE, get_hyper, fragment, text_buffer, TB),
     get(HE, get_hyper, fragment, start, Start),
