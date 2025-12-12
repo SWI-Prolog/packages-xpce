@@ -1260,6 +1260,8 @@ End;
 NewClass(source_location)
   Name		file_name;		/* Name of the file */
   Int		line_no;		/* Line of the source location */
+  Int		line_pos;		/* Position in line */
+  Int		length;			/* Length of range */
 End;
 
 NewClass(spatial)

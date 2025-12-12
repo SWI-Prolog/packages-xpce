@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1995-2013, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1995-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -35,12 +36,17 @@
 #include <h/kernel.h>
 
 status
-initialiseSourceLocation(SourceLocation loc, Name file, Int line)
-{ if ( isDefault(line) )
-    line = (Int) NIL;
+initialiseSourceLocation(SourceLocation loc,
+			 Name file, Int line,
+			 Int linepos, Int length)
+{ if ( isDefault(line) )    line    = (Int) NIL;
+  if ( isDefault(linepos) ) linepos = (Int) NIL;
+  if ( isDefault(length) )  length  = (Int) NIL;
 
   assign(loc, file_name, file);
   assign(loc, line_no,   line);
+  assign(loc, line_pos,  linepos);
+  assign(loc, length,    length);
 
   succeed;
 }
@@ -50,6 +56,8 @@ static status
 copySourceLocation(SourceLocation loc1, SourceLocation loc2)
 { assign(loc1, file_name, loc2->file_name);
   assign(loc1, line_no,   loc2->line_no);
+  assign(loc1, line_pos,  loc2->line_pos);
+  assign(loc1, length,    loc2->length);
 
   succeed;
 }
@@ -120,12 +128,27 @@ getPathSourceLocation(SourceLocation loc)
 
 static StringObj
 getPrintNameSourceLocation(SourceLocation loc)
-{ static Name fmt = NULL;
+{ static Name fmt0 = NULL;
+  static Name fmt1 = NULL;
+  static Name fmt2 = NULL;
+  StringObj s;
 
-  if ( !fmt )
-    fmt = CtoName("%s:%d");
+  if ( !fmt0 )
+  { fmt0 = CtoName("%s");
+    fmt1 = CtoName("%s:%d");
+    fmt2 = CtoName("%s:%d:%d");
+  }
 
-  answer(answerObject(ClassString, fmt, loc->file_name, loc->line_no, EAV));
+  if ( isNil(loc->line_no) )
+    s = answerObject(ClassString, fmt0, loc->file_name, EAV);
+  else if ( isNil(loc->line_pos) )
+    s = answerObject(ClassString, fmt1, loc->file_name,
+		     loc->line_no, EAV);
+  else
+    s = answerObject(ClassString, fmt2, loc->file_name,
+		     loc->line_no, loc->line_pos, EAV);
+
+  answer(s);
 }
 
 
@@ -136,7 +159,7 @@ getPrintNameSourceLocation(SourceLocation loc)
 /* Type declaractions */
 
 static char *T_initialise[] =
-        { "file=name", "line=[int]*" };
+        { "file=name", "line=[int]*", "line_pos=[int]*", "length=[int]*"};
 
 /* Instance Variables */
 
@@ -144,13 +167,17 @@ static vardecl var_sourceLocation[] =
 { IV(NAME_fileName, "name", IV_BOTH,
      NAME_location, "Name of the file in which the source resides"),
   IV(NAME_lineNo, "int*", IV_BOTH,
-     NAME_location, "Starting line number of the source")
+     NAME_location, "Starting line number of the source"),
+  IV(NAME_linePos, "int*", IV_BOTH,
+     NAME_location, "Position in the line"),
+  IV(NAME_length,  "int*", IV_BOTH,
+     NAME_location, "Length in characters")
 };
 
 /* Send Methods */
 
 static senddecl send_sourceLocation[] =
-{ SM(NAME_initialise, 2, T_initialise, initialiseSourceLocation,
+{ SM(NAME_initialise, 4, T_initialise, initialiseSourceLocation,
      DEFAULT, "Create from file_name and line_no"),
   SM(NAME_copy, 1, "source_location", copySourceLocation,
      NAME_copy, "Copy file_name and line_no from argument")
@@ -164,7 +191,7 @@ static getdecl get_sourceLocation[] =
   GM(NAME_path, 0, "name", NULL, getPathSourceLocation,
      NAME_path, "Get absolute path-name of source file"),
   GM(NAME_printName, 0, "string", NULL, getPrintNameSourceLocation,
-     NAME_textual, "Printed representation as %s:%d")
+     NAME_textual, "Printed representation as %s[:%d[:%d]]")
 };
 
 /* Resources */

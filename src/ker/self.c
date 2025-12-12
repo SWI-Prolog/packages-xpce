@@ -1618,9 +1618,9 @@ pceInitialise(int handles, const char *home, const char *appdata,
     bootClass(NAME_sourceLocation,
 	      NAME_object,
 	      sizeof(struct source_location),
-	      2,
+	      4,
 	      initialiseSourceLocation,
-	      2, "name", "[int]*");
+	      4, "name", "[int]*", "[int]*", "[int]*");
 
   ClassVector =
     bootClass(NAME_vector,

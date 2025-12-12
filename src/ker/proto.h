@@ -331,7 +331,9 @@ COMMON(SendMethod) createSendMethod(Name name, Vector types, StringObj doc, Send
 COMMON(status)	makeClassSendMethod(Class class);
 
 /* /home/jan/src/pl/packages/xpce/src/ker/srclocation.c */
-COMMON(status)	initialiseSourceLocation(SourceLocation loc, Name file, Int line);
+COMMON(status)	initialiseSourceLocation(SourceLocation loc,
+					 Name file, Int line,
+					 Int linepos, Int length);
 COMMON(status)	makeClassSourceLocation(Class class);
 
 /* /home/jan/src/pl/packages/xpce/src/ker/timer.c */
