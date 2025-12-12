@@ -1,10 +1,11 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        wielemak@science.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1999-2020, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1999-2025, University of Amsterdam
                               CWI, Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -39,6 +40,9 @@
 :- use_module(library(pce_toc)).
 :- use_module(library(pce_report)).
 :- use_module(library(persistent_frame)).
+:- use_module(library(debug)).
+:- use_module(library(pce_util)).
+
 :- require([ '$my_file'/1,
 	     call_cleanup/2,
 	     file_directory_name/2,
@@ -64,7 +68,8 @@ Some issues to consider:
         * Search
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-:- pce_global(@emacs_mark_list, new(emacs_bookmark_editor)).
+:- pce_global(@emacs_mark_list,
+              new(emacs_bookmark_editor("PceEmacs bookmarks", @on))).
 
 resource(save, image, image('16x16/save.png')).
 resource(cut,  image, image('16x16/cut.png')).
@@ -73,31 +78,50 @@ resource(open, image, image('16x16/book2.png')).
 :- pce_begin_class(emacs_bookmark_editor, persistent_frame,
                    "PceEmacs bookmark administration and viewing").
 
-variable(file,         file, get, "File for holding the bookmarks").
-variable(exit_message, code, get, "Registered exit message").
+variable(persists,     bool,  get, "Bookmarks are persistent").
+variable(file,         file*, get, "File for holding the bookmarks").
+variable(exit_message, code*, get, "Registered exit message").
 
-initialise(BM) :->
-    send_super(BM, initialise, 'PceEmacs bookmarks'),
-    send(BM, done_message, message(BM, status, hidden)),
+initialise(BM, Title:title=[string], Persist:persists=[bool]) :->
+    default(Title, "PceEmacs bookmarks", TheTitle),
+    default(Persist, @off, ThePersist),
+    send_super(BM, initialise, TheTitle),
+    send(BM, slot, persists, ThePersist),
+    send(BM, done_message, message(BM, close)),
     send(BM, append, new(D, dialog)),
     send(BM, fill_dialog),
     send(new(emacs_bookmark_window), below, D),
     send(new(V, view(size := size(40,8))), below, D),
     send(V, font, normal),
     send(V, ver_stretch, 0),
-    send(@pce, exit_message, new(Msg, message(BM, save))),
-    send(BM, slot, exit_message, Msg),
-    ignore(send(BM, load)).
+    (   Persist == @on
+    ->  send(@pce, exit_message, new(Msg, message(BM, save))),
+        send(BM, slot, exit_message, Msg),
+        ignore(send(BM, load))
+    ;   true
+    ).
+
+close(BM) :->
+    "User initiated close"::
+    (   get(BM, persists, @on)
+    ->  send(BM, status, hidden)
+    ;   send(BM, destroy)
+    ).
 
 fill_dialog(BM) :->
     get(BM, member, dialog, D),
     send(D, pen, 0),
     send(D, gap, size(0, 5)),
     send(D, append, new(TB, tool_bar(BM))),
+    (   get(BM, persists, @on)
+    ->  send_list(TB, append,
+                  [ tool_button(save, resource(save), 'Save bookmarks'),
+                    gap
+                  ])
+    ;   true
+    ),
     send_list(TB, append,
-              [ tool_button(save, resource(save), 'Save bookmarks'),
-                gap,
-                tool_button(goto, resource(open), 'Open editor'),
+              [ tool_button(goto, resource(open), 'Open editor'),
                 tool_button(cut,  resource(cut),  'Delete selection')
               ]),
     send(D, append, graphical(0,0,10,1), right), % make a gap
@@ -106,11 +130,13 @@ fill_dialog(BM) :->
 
 unlink(BM) :->
     get(BM, exit_message, Msg),
-    get(@pce, exit_messages, Chain),
-    send(Chain, delete_all, Msg),
-    send(BM, save),
+    (   Msg == @nil
+    ->  true
+    ;   get(@pce, exit_messages, Chain),
+        send(Chain, delete_all, Msg),
+        send(BM, save)
+    ),
     send_super(BM, unlink).
-
 
 tree(BM, Tree:toc_tree) :<-
     get(BM, member, emacs_bookmark_window, W),
@@ -153,12 +179,22 @@ bookmark(F, BM:emacs_bookmark, Sort:[bool]) :->
     get(F, tree, Tree),
     send(Tree?root, append, BM, Sort).
 
-append_hit(F, Buffer:emacs_buffer, SOL:int) :->
+append_hit(F, Buffer:emacs_buffer, Start:int, End0:[int]) :->
     "Add bookmark for indicated line"::
-    get(Buffer, scan, SOL, line, 0, end, EOL),
+    (   End0 == @default
+    ->  get(Buffer, scan, Start, line, 0, end, End)
+    ;   End = End0
+    ),
+    get(Buffer, scan, Start, line, 0, start, SOL),
+    get(Buffer, scan, Start, line, 0, end,  EOL),
     get(Buffer, contents, SOL, EOL-SOL, Title),
     send(Title, translate, '\t', ' '),
     get(Buffer, line_number, SOL, Line),
+    LinePos is Start-SOL,
+    Length is End-Start,
+    debug(bookmark,
+          'Created bookmark ~p[~d]: ~p/~p/~p~n',
+          [Start, End-Start, Line, LinePos, Length]),
     (   get(Buffer, file, File),
         File \== @nil,
         get(File, absolute_path, FileName)
@@ -166,7 +202,9 @@ append_hit(F, Buffer:emacs_buffer, SOL:int) :->
     ;   send(Buffer, report, warning, 'No associated file'),
         fail
     ),
-    send(F, bookmark, new(BM, emacs_bookmark(FileName, Line, Title))),
+    send(F, bookmark,
+         new(BM, emacs_bookmark(FileName, Line, LinePos, Length,
+                                Title))),
     send(BM, link, Buffer),
     send(F, open).
 
@@ -247,8 +285,7 @@ load_bookmarks(Term, Fd, BM) :-
     read(Fd, Term2),
     load_bookmarks(Term2, Fd, BM).
 
-load_bookmark(bookmark(File0, Line, Title, Stamp, Note), BM) :-
-    !,
+load_bookmark(bookmark(File0, Line, Pos, Len, Title, Stamp, Note), BM) =>
     (   absolute_file_name(File0,
                            [ access(read),
                              file_errors(fail)
@@ -258,7 +295,8 @@ load_bookmark(bookmark(File0, Line, Title, Stamp, Note), BM) :-
         FStamp is float(Stamp),             % avoid overflow
         send(Created, posix_value, FStamp),
         send(BM, bookmark,
-             new(M, emacs_bookmark(File, Line, Title, Created, Note)),
+             new(M, emacs_bookmark(File, Line, Pos, Len, Title,
+                                   Created, Note)),
              @off),                 % do not sort
         (   get(@emacs, file_buffer, File, Buffer)
         ->  send(M, link, Buffer)
@@ -266,7 +304,9 @@ load_bookmark(bookmark(File0, Line, Title, Stamp, Note), BM) :-
         )
     ;   true
     ).
-load_bookmark(Term, BM) :-
+load_bookmark(bookmark(File0, Line, Title, Stamp, Note), BM) =>
+    load_bookmark(bookmark(File0, Line, 0, 0, Title, Stamp, Note), BM).
+load_bookmark(Term, BM) =>
     term_to_atom(Term, Atom),
     send(BM, report, warning, 'Unknown term in bookmarks file: %s', Atom).
 
@@ -461,10 +501,12 @@ append(_F, _BM:emacs_bookmark) :->
 
 save(F, Fd:prolog) :->
     "Save bookmarks to file"::
+    $,
     get(F, identifier, BM),
-    get(BM, term, bookmark(File, Line, Title, Stamp, NoteText)),
-    format(Fd, 'bookmark(~q, ~q, ~q, ~0f, ~q).~n',
-           [File, Line, Title, Stamp, NoteText]).
+    get(BM, term, Term),
+    Term = bookmark(File, Line, LinePos, Length, Title, Stamp, NoteText),
+    format(Fd, 'bookmark(~q, ~q, ~q, ~q, ~q, ~0f, ~q).~n',
+           [File, Line, LinePos, Length, Title, Stamp, NoteText]).
 
 loaded_buffer(F, TB:emacs_buffer) :->
     "PceEmacs has loaded this buffer"::
@@ -501,14 +543,18 @@ compare(F, N2:toc_node, Diff:{smaller,equal,larger}) :<-
 :- pce_begin_class(emacs_bookmark, source_location,
                    "Bookmark in PceEmacs").
 
-variable(title,   string,              get,  "Represented title").
-variable(created, date,                get,  "Date of creation").
-variable(note,    string*,             both, "Annotation").
-variable(node,    emacs_toc_bookmark*, get,  "Visualiser").
+variable(title,    string,              get,  "Represented title").
+variable(created,  date,                get,  "Date of creation").
+variable(note,     string*,             both, "Annotation").
+variable(node,     emacs_toc_bookmark*, get,  "Visualiser").
 
-initialise(BM, File:name, Line:int, Title:string,
-           Created:[date], Note:[string]*) :->
-    send_super(BM, initialise, File, Line),
+initialise(BM,
+           File:file=name, Line:line=int,
+           LinePos:position=[int],
+           Length:length=[int],
+           Title:title=string,
+           Created:created=[date], Note:note=[string]*) :->
+    send_super(BM, initialise, File, Line, LinePos, Length),
     send(BM, slot, title, Title),
     (   Created == @default
     ->  send(BM, slot, created, new(date))
@@ -522,6 +568,8 @@ term(BM, Term:prolog) :<-
     ignore(send(BM, update)),
     get(BM, file_name, File),
     get(BM, line_no, Line),
+    get(BM, line_pos, LinePos),
+    get(BM, length, Length),
     get(BM?title, value, Title),
     get(BM?created, posix_value, Stamp),
     (   get(BM, note, Note),
@@ -529,7 +577,7 @@ term(BM, Term:prolog) :<-
     ->  get(Note, value, NoteText)
     ;   NoteText = ''
     ),
-    Term = bookmark(File, Line, Title, Stamp, NoteText).
+    Term = bookmark(File, Line, LinePos, Length, Title, Stamp, NoteText).
 
 exists(BM) :->
     "Test whether associated file exists"::
@@ -541,10 +589,23 @@ exists(BM) :->
 link(BM, To:text_buffer) :->
     "Link the bookmark using a fragment"::
     get(BM, line_no, Line),
-    get(To, scan, 0,   line, Line-1, start, SOL),
-    get(To, scan, SOL, line, 0,      end,   EOL),
-    new(_, emacs_bookmark_hyper(BM, fragment(To, SOL, EOL-SOL, bookmark))).
-%       format('Linked ~p to ~p~n', [BM, To]).
+    get(To, scan, 0, line, Line-1, start, SOL),
+    (   get(BM, line_pos, LinePos),
+        LinePos \== @nil
+    ->  Start is SOL+LinePos
+    ;   Start = SOL
+    ),
+    (   get(BM, length, Length),
+        Length \== @nil
+    ->  true
+    ;   get(To, scan, Start, line, 0, end, End),
+        Length is End-Start
+    ),
+    debug(bookmark,
+          'Created bookmark fragment on ~p ~p[~p]~n',
+          [To, Start, Length]),
+    new(_, emacs_bookmark_hyper(BM,
+                                fragment(To, Start, Length, bookmark))).
 
 update(BM) :->
     "If bookmark is linked, update <-line_no"::
@@ -552,24 +613,37 @@ update(BM) :->
     (   get(Fragment, text_buffer, TB),
         TB \== @nil
     ->  get(Fragment, start, Start),
+        get(Fragment, length, Length),
         get(TB, line_number, Start, Line),
-        (   get(BM, line_no, Line)
-        ->  true
-        ;   send(BM, line_no, Line),
-            Modified = true
-        ),
-        get(Fragment, string, Title),
+        get(TB, scan, Start, line, 0, start, SOL),
+        LinePos is Start-SOL,
+        get(TB, scan, Start, line, 0, end, EOL),
+        get(TB, contents, SOL, EOL-SOL, Title),
         send(Title, translate, '\t', ' '),
-        (   send(BM?title, equal, Title)
-        ->  true
-        ;   send(BM, slot, title, Title),
-            Modified = true
-        ),
+        send(@pce, write_ln, Title),
+        update(BM, line_no, Line, Modified),
+        update(BM, line_pos, LinePos, Modified),
+        update(BM, length, Length, Modified),
+        update(BM, title, Title, Modified),
         (   Modified == true
         ->  send(BM, modified)
         ;   true
         )
     ;   true                        % destroy?
+    ).
+
+update(BM, title, Title, Modified) =>
+    (   send(BM?title, equal, Title)
+    ->  true
+    ;   send(BM, slot, title, Title),
+        Modified = true
+    ).
+update(BM, Slot, Value, Modified) =>
+    (   get(BM, Slot, Value)
+    ->  true
+    ;   send(BM, slot, Slot, Value),
+        debug(bookmark, 'Updated ~p of ~p to ~p~n', [BM, Slot, Value]),
+        Modified = true
     ).
 
 modified(BM) :->

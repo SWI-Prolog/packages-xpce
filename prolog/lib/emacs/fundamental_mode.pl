@@ -666,13 +666,15 @@ replace_end(M) :->
         fail
     ).
 
-
 bookmark_line(M) :->
     "Create a mark in the mark-list"::
-    get(M, caret, Caret),
-    get(M, scan, Caret, line, 0, start, SOL),
-    send(@emacs_mark_list, append_hit, M?text_buffer, SOL).
-
+    (   get(M, selection, point(Start, End))
+    ->  true
+    ;   get(M, caret, Caret),
+        get(M, scan, Caret, line, 0, start, Start),
+        get(M, scan, Start, line, 0, end, End)
+    ),
+    send(@emacs_mark_list, append_hit, M?text_buffer, Start, End).
 
 show_bookmarks(_) :->
     "Show PceEmacs bookmarks"::
