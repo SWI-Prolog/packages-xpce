@@ -79,7 +79,7 @@ have to create your frame explitely:
 
 :- pce_begin_class(persistent_frame, frame, "Frame remembering location").
 
-variable(persistent_subwindow_layout, bool := @on, get,
+variable(persistent_subwindow_layout, bool := @on, both,
          "Remember the layout of the subwindows?").
 variable(geometry_key,                name*, send,
          "Key used to identify this frame").
