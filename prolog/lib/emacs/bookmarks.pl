@@ -82,18 +82,26 @@ variable(persists,     bool,  get, "Bookmarks are persistent").
 variable(file,         file*, get, "File for holding the bookmarks").
 variable(exit_message, code*, get, "Registered exit message").
 
-initialise(BM, Title:title=[string], Persist:persists=[bool]) :->
+initialise(BM,
+           Title:title=[string],
+           Persist:persists=[bool],
+           Notes:notes=[bool]) :->
     default(Title, "PceEmacs bookmarks", TheTitle),
     default(Persist, @off, ThePersist),
     send_super(BM, initialise, TheTitle),
+    send(BM, persistent_subwindow_layout, @off),
+    send(BM, application, @emacs),
     send(BM, slot, persists, ThePersist),
     send(BM, done_message, message(BM, close)),
     send(BM, append, new(D, dialog)),
     send(BM, fill_dialog),
     send(new(emacs_bookmark_window), below, D),
-    send(new(V, view(size := size(40,8))), below, D),
-    send(V, font, normal),
-    send(V, ver_stretch, 0),
+    (   (Persist == @on; Notes == @on)
+    ->  send(new(V, view(size := size(40,8))), below, D),
+        send(V, font, normal),
+        send(V, ver_stretch, 0)
+    ;   true
+    ),
     (   Persist == @on
     ->  send(@pce, exit_message, new(Msg, message(BM, save))),
         send(BM, slot, exit_message, Msg),
@@ -208,6 +216,43 @@ append_hit(F, Buffer:emacs_buffer, Start:int, End0:[int]) :->
     send(BM, link, Buffer),
     send(F, open).
 
+%   ->lsp_add
+%
+%   Add  a  hit  from  an  LSP  server.  If  the  file  is  loaded  used
+%   ->append_hit, else create the hit as a non-loaded file.
+
+lsp_add(F, File:name, LSPRange:prolog, Title:[string]) :->
+    "Add an LSP position"::
+    #{start:RangeStart, end:RangeEnd} :< LSPRange,
+    #{line:Line, character:LinePos} :< RangeStart,
+    #{line:EndLine, character:EndPos} :< RangeEnd,
+    Line1 is Line+1,
+    (   get(F?application, file_buffer, File, Buffer)
+    ->  get(Buffer, lsp_offset, Line, LinePos, Start),
+        get(Buffer, lsp_offset, EndLine, EndPos, End),
+        send(F, append_hit, Buffer, Start, End)
+    ;   Length is EndPos-LinePos,
+        absolute_file_name(File, FileName),
+        (   Title == @default
+        ->  file_line(File, Line, TheTitle),
+            send(TheTitle, translate, '\t', ' ')
+        ;   Title == @nil
+        ->  TheTitle = ""
+        ;   TheTitle = Title
+        ),
+        send(F, bookmark,
+             emacs_bookmark(FileName, Line1, LinePos, Length,
+                            TheTitle))
+    ).
+
+file_line(File, LineNo, Line) :-
+    setup_call_cleanup(
+        open(File, read, In),
+        ( forall(between(1,LineNo,_), skip(In, 0'\n)),
+          read_string(In, "\n", "\r", _Sep, Line)
+        ),
+        close(In)).
+
 loaded_buffer(F, TB:emacs_buffer) :->
     "PceEmacs has loaded a file"::
     get(F, tree, Tree),
@@ -226,26 +271,27 @@ current(F, BM:emacs_bookmark*, UpdateSelection:[bool]) :->
     ->  send(BW, selection, BM)
     ;   true
     ),
-    get(F, view, View),
-    (   get(View, modified, @on),
-        get(View, hypered, bookmark, BM2)
-    ->  send(BM2, note, View?contents)
-    ;   true
-    ),
-    send(View, delete_hypers, bookmark),
-    (   BM == @nil
-    ->  send(View, clear),
-        send(View, editable, @off),
-        send(View, background, grey80)
-    ;   new(_, hyper(View, BM, bookmark, editor)),
-        (   get(BM, note, Note),
-            Note \== @nil
-        ->  send(View, contents, Note),
-            send(View, modified, @off)
+    (   get(F, view, View)
+    ->  (   get(View, modified, @on),
+            get(View, hypered, bookmark, BM2)
+        ->  send(BM2, note, View?contents)
         ;   true
         ),
-        send(View, editable, @on),
-        send(View, background, white)
+        send(View, delete_hypers, bookmark),
+        (   BM == @nil
+        ->  send(View, clear),
+            send(View, editable, @off),
+            send(View, background, grey80)
+        ;   new(_, hyper(View, BM, bookmark, editor)),
+            (   get(BM, note, Note),
+                Note \== @nil
+            ->  send(View, contents, Note),
+                send(View, modified, @off)
+            ;   true
+            ),
+            send(View, editable, @on),
+            send(View, background, white)
+        )
     ).
 
 :- pce_group(file).
@@ -620,7 +666,6 @@ update(BM) :->
         get(TB, scan, Start, line, 0, end, EOL),
         get(TB, contents, SOL, EOL-SOL, Title),
         send(Title, translate, '\t', ' '),
-        send(@pce, write_ln, Title),
         update(BM, line_no, Line, Modified),
         update(BM, line_pos, LinePos, Modified),
         update(BM, length, Length, Modified),
