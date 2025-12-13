@@ -518,14 +518,56 @@ loaded_buffer(F, TB:emacs_buffer) :->
 :- pce_begin_class(emacs_toc_bookmark, toc_file,
                    "Represent a bookmark").
 
+class_variable(style_file, style,
+               style(font := bold,
+                     background := grey90)).
+class_variable(style_line, style,
+               style(background := grey90)).
+class_variable(style_title, style,
+               style(font := fixed)).
+class_variable(style_hit, style,
+               style(font := fixed,
+                     background := yellow)).
+
 initialise(F, BM:emacs_bookmark) :->
-    get(BM, title, Title),
     get(BM, file_name, Path),
     get(file(Path), base_name, File),
     get(BM, line_no, Line),
-    send_super(F, initialise,
-               string('%s:%d %s', File, Line, Title), BM),
+    new(Label, parbox(1000, left)),
+    get(F, class_variable_value, style_file,  StyleFile),
+    get(F, class_variable_value, style_line,  StyleLine),
+    get(F, class_variable_value, style_title, StyleTitle),
+    get(F, class_variable_value, style_hit,   StyleHit),
+    bm_title(BM, StyleTitle, StyleHit, TitleBoxes),
+    send_list(Label, append,
+              [ tbox(File, StyleFile),
+                tbox(:, StyleLine),
+                tbox(Line, StyleLine),
+                hbox(10)
+              | TitleBoxes
+              ]),
+    send_super(F, initialise, Label, BM),
     send(BM, slot, node, F).
+
+bm_title(BM, Style, StyleHit, Boxes) :-
+    get(BM, title, Title),
+    get(Title, size, TitleLen),
+    get(BM, length, Len),
+    Len \== @nil,
+    Len > 0, Len < TitleLen,
+    get(BM, line_pos, Start),
+    Start \== @nil,
+    !,
+    End is Start+Len,
+    get(Title, sub, 0,   Start, Pre),
+    get(Title, sub, Start, End, Match),
+    get(Title, sub, End,        Post),
+    Boxes = [ tbox(Pre, Style),
+              tbox(Match, StyleHit),
+              tbox(Post, Style)
+            ].
+bm_title(BM, Style, _StyleHit, [tbox(Title, Style)]) :-
+    get(BM, title, Title).
 
 unlink(F) :->
     get(F, identifier, BM),
