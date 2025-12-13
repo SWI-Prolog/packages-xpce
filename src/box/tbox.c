@@ -103,6 +103,13 @@ drawTBox(TBox tb, int x, int y, int w)
 
   if ( notDefault(s->colour) )
     old_colour = r_colour(s->colour);
+  if ( notDefault(s->background) )
+  { Colour obg = r_background(s->background);
+    double fy = y - valNum(getAscentFont(f));
+    double fh = valNum(getHeightFont(f));
+    r_clear(x, fy, w, fh);
+    r_background(obg);
+  }
 
   s_print_aligned(&tb->text->data, x, y, f);
   if ( s->underline != OFF && notDefault(s->underline) )
