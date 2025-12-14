@@ -153,7 +153,6 @@ cdataParBox(ParBox pb, StringObj cdata,
 		 *	  LOW-LEVEL DATA	*
 		 *******************************/
 
-#define MAXHBOXES	512		/* max per line */
 #define MAXPENDINGGR	10		/* aligned graphicals pending */
 #define GR_SEP		5		/* distance from aligned graphical */
 
@@ -161,30 +160,6 @@ cdataParBox(ParBox pb, StringObj cdata,
 #define PC_ALIGNED_GR	0x02		/* left/right aligned graphical */
 #define PC_PLACED	0x04		/* we already placed the graphical */
 #define PC_GRMASK	(PC_GRAPHICAL|PC_ALIGNED_GR)
-
-typedef struct _parcell
-{ HBox		box;			/* box displayed here */
-  int		x;			/* Relative X-position */
-  int		w;			/* Width (stretch!) */
-  int		flags;			/* PC_* flags */
-} parcell;
-
-
-typedef struct _parline
-{ int		x;			/* X, relative to device */
-  int		y;			/* Y, relative to device */
-  int		w;			/* Total width of the line */
-  int		minx;			/* left side */
-  int		maxx;			/* Natural width */
-  int		ascent;			/* Total ascent of the line */
-  int		descent;		/* Total descent of the line */
-  int		size;			/* # hboxes contained */
-  int		graphicals;		/* # graphicals on line */
-  int		shape_graphicals;	/* # left/right aligned graphicals */
-  int		end_of_par;		/* Last line?  */
-  int		rlevel;			/* Highest rubber-level */
-  parcell	hbox[MAXHBOXES];	/* array of cells */
-} parline;
 
 typedef struct
 { int	start_y;
@@ -216,9 +191,13 @@ static void	PlaceAlignedGr(GrBox grb,
 		********************************/
 
 static void
-drawHBox(HBox hb, int x, int y, int w)
+drawHBox(HBox hb, int x, int y, int w, parline const *line)
 { if ( instanceOfObject(hb, ClassTBox) )
-  { drawTBox((TBox)hb, x, y, w);
+  { drawTBox((TBox)hb, x, y, w, line);
+  } else
+  { int ly = y - line->ascent;
+    int lh = line->ascent + line->descent;
+    r_clear(x, ly, w, lh);
   }
 }
 
@@ -274,7 +253,16 @@ RedrawAreaParBox(ParBox pb, Area a)
       y += l.ascent;			/* the baseline */
 
       for(i=0, pc = l.hbox; i<l.size; i++, pc++)
-	drawHBox(pc->box, pc->x, y, pc->w);
+	drawHBox(pc->box, pc->x, y, pc->w, &l);
+
+      if ( l.size )
+      { pc = &l.hbox[l.size-1];
+	r_clear(pc->x+pc->w, l.y,
+		l.x+l.w - pc->x+pc->w,
+		l.ascent + l.descent);
+      } else
+      { r_clear(l.x, l.y, l.w, l.ascent + l.descent);
+      }
 
       y += l.descent;
     }

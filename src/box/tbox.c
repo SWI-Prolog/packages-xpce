@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1999-2011, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1999-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -96,19 +97,23 @@ getSpaceTBox(TBox tb)
 		 *******************************/
 
 void
-drawTBox(TBox tb, int x, int y, int w)
+drawTBox(TBox tb, int x, int y, int w, parline const *line)
 { FontObj f = getFontTBox(tb);
   Style s = tb->style;
   Colour old_colour = NULL;
 
   if ( notDefault(s->colour) )
     old_colour = r_colour(s->colour);
+
+  int ly = y - line->ascent;
+  int lh = line->ascent + line->descent;
+
   if ( notDefault(s->background) )
   { Colour obg = r_background(s->background);
-    double fy = y - valNum(getAscentFont(f));
-    double fh = valNum(getHeightFont(f));
-    r_clear(x, fy, w, fh);
+    r_clear(x, ly, w, lh);
     r_background(obg);
+  } else
+  { r_clear(x, ly, w, lh);
   }
 
   s_print_aligned(&tb->text->data, x, y, f);

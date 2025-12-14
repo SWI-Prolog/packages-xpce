@@ -53,6 +53,8 @@ typedef struct lbox     *LBox;
 #define GLOBAL
 #endif
 
+#define MAXHBOXES	512		/* max per line */
+
 GLOBAL Class ClassHBox;
 GLOBAL Class ClassRubber;
 GLOBAL Class ClassTBox;
@@ -102,7 +104,7 @@ NewClass(parbox)
   Int		line_width;		/* Max width of a line */
   Vector	content;		/* Contained hboxes */
   Name		alignment;		/* left,right,center,justify */
-  BoolObj		auto_crop;		/* Crop content */
+  BoolObj	auto_crop;		/* Crop content */
 End;
 
 
@@ -116,5 +118,31 @@ NewClass(lbox)
   Int		label_width;		/* Width of label box */
 End;
 
+typedef struct _parcell
+{ HBox		box;			/* box displayed here */
+  int		x;			/* Relative X-position */
+  int		w;			/* Width (stretch!) */
+  int		flags;			/* PC_* flags */
+} parcell;
+
+
+typedef struct _parline
+{ int		x;			/* X, relative to device */
+  int		y;			/* Y, relative to device */
+  int		w;			/* Total width of the line */
+  int		minx;			/* left side */
+  int		maxx;			/* Natural width */
+  int		ascent;			/* Total ascent of the line */
+  int		descent;		/* Total descent of the line */
+  int		size;			/* # hboxes contained */
+  int		graphicals;		/* # graphicals on line */
+  int		shape_graphicals;	/* # left/right aligned graphicals */
+  int		end_of_par;		/* Last line?  */
+  int		rlevel;			/* Highest rubber-level */
+  parcell	hbox[MAXHBOXES];	/* array of cells */
+} parline;
+
+COMMON(void)	drawTBox(TBox tb, int x, int y, int w,
+			 parline const *line);
 
 #endif /*BOXES_H_INCLUDED*/
