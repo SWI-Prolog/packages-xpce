@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -708,6 +709,12 @@ getPointedText(TextObj t, Point pos)
 
   return get_pointed_text(t, x, y);
 }
+
+static Num
+getAscentText(TextObj t)
+{ answer(toInt(valNum(t->border)+valNum(getAscentFont(t->font))));
+}
+
 
 		/********************************
 		*          ATTRIBUTES		*
@@ -1785,6 +1792,8 @@ static getdecl get_text[] =
 { GM(NAME_characterPosition, 1, "point", "index=[int]",
      getCharacterPositionText,
      NAME_calculate, "Convert index to position of character"),
+  GM(NAME_ascent, 0, "pixels=num", NULL, getAscentText,
+     NAME_dimension, "Baseline of the top text line"),
   GM(NAME_column, 0, "pixels=int", NULL, getColumnText,
      NAME_caret, "Current X-location of caret (pixels)"),
   GM(NAME_upDownColumn, 0, "pixels=int", NULL, getColumnText,

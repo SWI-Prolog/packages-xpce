@@ -39,7 +39,11 @@ initialiseGrBox(GrBox grb, Graphical gr,
 		Any align,		/* left, right or @nil */
 		Rubber rubber)
 { if ( isDefault(align) )
-    align = NAME_center;
+  { if ( hasGetMethodObject(gr, NAME_ascent) )
+      align = NAME_baseline;
+    else
+      align = NAME_center;
+  }
   if ( isDefault(rubber) )
     rubber = NIL;
 
@@ -91,7 +95,10 @@ computeAscentDescentGrBox(GrBox grb)
   ComputeGraphical(gr);
   h = valInt(gr->area->h);
 
-  if ( grb->alignment == NAME_top )
+  if ( grb->alignment == NAME_baseline )
+  { Num val = get(gr, NAME_ascent, EAV);
+    ascent = val ? valNum(val) : 0;
+  } else if ( grb->alignment == NAME_top )
     ascent = 0;
   else if ( grb->alignment == NAME_bottom )
     ascent = h;
@@ -127,9 +134,11 @@ alignmentGrBox(GrBox grb, Any alignment)
 
 /* Type declaractions */
 
+#define ALIGN_TYPE "{baseline,top,center,bottom,left,right}"
+
 static char *T_initialise[] =
         { "graphical=graphical",
-	  "alignment=[{top,center,bottom,left,right}]",
+	  "alignment=["ALIGN_TYPE"]",
 	  "rubber=[rubber]*"
 	};
 
@@ -138,8 +147,7 @@ static char *T_initialise[] =
 static vardecl var_grbox[] =
 { IV(NAME_graphical, "graphical", IV_GET,
      NAME_content, "Represented graphical object"),
-  SV(NAME_alignment, "{top,center,bottom,left,right}", IV_GET|IV_STORE,
-     alignmentGrBox,
+  SV(NAME_alignment, ALIGN_TYPE, IV_GET|IV_STORE, alignmentGrBox,
      NAME_layout, "Alignment in paragraph")
 };
 

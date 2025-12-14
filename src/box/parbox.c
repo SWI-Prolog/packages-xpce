@@ -182,8 +182,9 @@ typedef struct
   shape_cell right[MAXPENDINGGR];
 } parshape;
 
-static int	fill_line(ParBox pb, int here, parline *line, parshape *shape,
-			  int compute);
+static int	fill_line(ParBox pb, int here,
+			  parline *line, parshape *shape,
+			  bool compute);
 static void	justify_line(parline *line, Name alignment);
 static void	init_shape(parshape *s, ParBox pb, int w);
 static void	push_shape_graphicals(parline *l, parshape *s);
@@ -242,7 +243,7 @@ RedrawAreaParBox(ParBox pb, Area a)
       l.y = y;
       l.w = w;
       l.size = MAXHBOXES;
-      here = fill_line(pb, here, &l, &shape, FALSE);
+      here = fill_line(pb, here, &l, &shape, false);
       if ( l.shape_graphicals )
 	push_shape_graphicals(&l, &shape);
 
@@ -275,6 +276,22 @@ RedrawAreaParBox(ParBox pb, Area a)
   return RedrawAreaGraphical(pb, a);
 }
 
+static Num
+getAscentParBox(ParBox pb)
+{ int w = valInt(pb->line_width);
+  parshape shape;
+  parline l;
+
+  init_shape(&shape, pb, w);
+  l.x = 0;
+  l.w = w;
+  l.size = MAXHBOXES;
+  fill_line(pb, valInt(getLowIndexVector(pb->content)),
+	    &l, &shape, false);
+
+  answer(toNum(l.ascent));
+}
+
 		 /*******************************
 		 *	LOCATIONS AND EVENTS	*
 		 *******************************/
@@ -305,7 +322,7 @@ getLocateEventParBox(ParBox pb, EventObj ev)
       l.y = y;
       l.w = w;
       l.size = MAXHBOXES;
-      h2 = fill_line(pb, here, &l, &shape, FALSE);
+      h2 = fill_line(pb, here, &l, &shape, false);
       if ( l.shape_graphicals )
       { int g = 0;
 
@@ -394,7 +411,7 @@ getBoxAreaParBox(ParBox pb, Any target, Device relto)
     l.y = y;
     l.w = w;
     l.size = MAXHBOXES;
-    h2 = fill_line(pb, here, &l, &shape, FALSE);
+    h2 = fill_line(pb, here, &l, &shape, false);
     if ( l.shape_graphicals )
       push_shape_graphicals(&l, &shape);
 
@@ -598,7 +615,7 @@ getNaturalWidthParBox(ParBox pb, Int maxwidth)
     l.w = w;
     l.size = MAXHBOXES;
 
-    here = fill_line(pb, here, &l, &shape, TRUE);
+    here = fill_line(pb, here, &l, &shape, true);
 
     y += l.ascent + l.descent;
     mw = max(mw, l.maxx);
@@ -855,7 +872,8 @@ compute_line(parline *line)
 
 
 static int
-fill_line(ParBox pb, int here, parline *line, parshape *shape, int compute)
+fill_line(ParBox pb, int here, parline *line, parshape *shape,
+	  bool compute)
 { int cx, ex;
   HBox *content = (HBox *)pb->content->elements-1;
   int hi = valInt(getHighIndexVector(pb->content));
@@ -958,7 +976,7 @@ fill_line(ParBox pb, int here, parline *line, parshape *shape, int compute)
   else
     line->end_of_par = TRUE;
 
-  line->size       = pc-line->hbox;
+  line->size = pc-line->hbox;
   compute_line(line);
 
   return here;
@@ -1399,7 +1417,9 @@ static senddecl send_parbox[] =
 /* Get Methods */
 
 static getdecl get_parbox[] =
-{ GM(NAME_locateEvent, 1, "1..", "event", getLocateEventParBox,
+{ GM(NAME_ascent, 0, "num", NULL, getAscentParBox,
+     NAME_dimension, "Ascent of first line"),
+  GM(NAME_locateEvent, 1, "1..", "event", getLocateEventParBox,
      NAME_event, "Find hbox from event"),
   GM(NAME_box, 1, "hbox", "1..", getBoxParBox,
      NAME_content, "Get hbox from index"),
