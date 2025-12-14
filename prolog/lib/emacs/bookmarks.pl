@@ -95,7 +95,8 @@ initialise(BM,
     send(BM, done_message, message(BM, close)),
     send(BM, append, new(D, dialog)),
     send(BM, fill_dialog),
-    send(new(emacs_bookmark_window), below, D),
+    working_directory(CWD, CWD),
+    send(emacs_bookmark_window(CWD, cwd), below, D),
     (   (Persist == @on; Notes == @on)
     ->  send(new(V, view(size := size(40,8))), below, D),
         send(V, font, normal),
@@ -184,7 +185,23 @@ cut(BM) :->
 
 bookmark(F, BM:emacs_bookmark, Sort:[bool]) :->
     "Append a bookmark"::
+    get(BM, file_name, FileName),
     get(F, tree, Tree),
+    (   between(1, 1000, _),
+        get(Tree, root, Root),
+        get(Root, identifier, RootPath),
+        (   send(FileName, prefix, RootPath)
+        ->  !
+        ;   file_directory_name(RootPath, Parent),
+            (   Parent == RootPath
+            ->  !, fail
+            ;   send(Tree, root,
+                     emacs_toc_bookmark_folder(Parent),
+                     @on),
+                fail
+            )
+        )
+    ),
     send(Tree?root, append, BM, Sort).
 
 append_hit(F, Buffer:emacs_buffer, Start:int, End0:[int]) :->
@@ -376,9 +393,10 @@ bookmarks_file(BM, Access:[{read,write}], File:name) :<-
 
 :- pce_begin_class(emacs_bookmark_window, toc_window).
 
-initialise(BW) :->
+initialise(BW, Root:[name], Kind:[{directory,cwd,file}]) :->
+    default(Root, /, TheRoot),
     send_super(BW, initialise),
-    send(BW, root, emacs_toc_bookmark_folder(/)).
+    send(BW, root, emacs_toc_bookmark_folder(TheRoot, Kind)).
 
 open_node(BW, Id:any) :->
     "Open bookmark on double-click"::
@@ -416,7 +434,7 @@ selection(BW, Sel:any*) :->
 :- pce_begin_class(emacs_toc_bookmark_folder, toc_folder,
                    "Represent directory in bookmarks").
 
-initialise(F, Path:name, IsFile:[bool]) :->
+initialise(F, Path:name, Kind:[{directory,cwd,file}]) :->
     (   Path == /
     ->  (   has_drives
         ->  RootName = 'My Computer'
@@ -424,12 +442,16 @@ initialise(F, Path:name, IsFile:[bool]) :->
         ),
         send_super(F, initialise, RootName, @nil)
     ;   get(file(Path), base_name, BaseName),
-        (   IsFile == @on
+        (   Kind == file
         ->  send_super(F, initialise,
                        text(BaseName, left, bold),
                        Path,
                        resource(file),
                        resource(file))
+        ;   Kind == cwd
+        ->  send_super(F, initialise,
+                       new(T, text(BaseName,left,bold)), Path),
+            send(T, colour, darkgreen)
         ;   send_super(F, initialise, BaseName, Path)
         )
     ).
@@ -451,11 +473,11 @@ append(F, BM:emacs_bookmark, Sort:[bool]) :->
     ->  true
     ;   sub_directory(Path, FileName, SubPath),
         (   SubPath == FileName
-        ->  IsFile = @on
-        ;   IsFile = @off
+        ->  Kind = file
+        ;   Kind = directory
         ),
         send(F, collapsed, @off),
-        send(F, son, new(S, emacs_toc_bookmark_folder(SubPath, IsFile))),
+        send(F, son, new(S, emacs_toc_bookmark_folder(SubPath, Kind))),
         send(S, append, BM),
         (   Sort \== @off
         ->  send(F, sort)
@@ -551,7 +573,7 @@ initialise(F, BM:emacs_bookmark) :->
     bm_title(BM, StyleTitle, StyleHit, TitleBoxes),
     get(@pce, convert, normal, font, Font),
     get(Font, advance, 99999, LW),
-    new(Label, parbox(1000, left,
+    new(Label, parbox(10000, left,
                       grbox(parbox(LW, right,
                                    tbox(Line, StyleLine))),
                       hbox(5))),
