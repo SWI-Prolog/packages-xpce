@@ -34,12 +34,14 @@
 
 #include "boxes.h"
 
+static status appendParBox(ParBox pb, HBox hb);
+
 		/********************************
 		*            CREATE		*
 		********************************/
 
 static status
-initialiseParBox(ParBox pb, Int width, Name alignment)
+initialiseParBox(ParBox pb, Int width, Name alignment, int argc, HBox *argv)
 { initialiseDevice((Device) pb);
 
   obtainClassVariablesObject(pb);
@@ -1377,7 +1379,7 @@ static vardecl var_parbox[] =
 /* Send Methods */
 
 static senddecl send_parbox[] =
-{ SM(NAME_initialise, 2, T_initialise, initialiseParBox,
+{ SM(NAME_initialise, 3, T_initialise, initialiseParBox,
      DEFAULT, "Create parbox from width and content"),
   SM(NAME_compute, 0, NULL, computeParBox,
      DEFAULT, "Compute height"),
