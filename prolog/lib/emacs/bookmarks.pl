@@ -416,7 +416,7 @@ selection(BW, Sel:any*) :->
 :- pce_begin_class(emacs_toc_bookmark_folder, toc_folder,
                    "Represent directory in bookmarks").
 
-initialise(F, Path:name) :->
+initialise(F, Path:name, IsFile:[bool]) :->
     (   Path == /
     ->  (   has_drives
         ->  RootName = 'My Computer'
@@ -424,7 +424,14 @@ initialise(F, Path:name) :->
         ),
         send_super(F, initialise, RootName, @nil)
     ;   get(file(Path), base_name, BaseName),
-        send_super(F, initialise, BaseName, Path)
+        (   IsFile == @on
+        ->  send_super(F, initialise,
+                       text(BaseName, left, bold),
+                       Path,
+                       resource(file),
+                       resource(file))
+        ;   send_super(F, initialise, BaseName, Path)
+        )
     ).
 
 collapsed(F, Val:bool*) :->
@@ -432,6 +439,7 @@ collapsed(F, Val:bool*) :->
     send_class(F, node, collapsed(Val)).
 
 append(F, BM:emacs_bookmark, Sort:[bool]) :->
+    "Append a bookmrk to a folder node"::
     get(BM, file_name, FileName),
     get(F, identifier, Path),
     (   Path == @nil                % this is the root
@@ -442,9 +450,12 @@ append(F, BM:emacs_bookmark, Sort:[bool]) :->
     (   get(Sons, find, message(@arg1, append, BM), _)
     ->  true
     ;   sub_directory(Path, FileName, SubPath),
-        SubPath \== FileName,
+        (   SubPath == FileName
+        ->  IsFile = @on
+        ;   IsFile = @off
+        ),
         send(F, collapsed, @off),
-        send(F, son, new(S, emacs_toc_bookmark_folder(SubPath))),
+        send(F, son, new(S, emacs_toc_bookmark_folder(SubPath, IsFile))),
         send(S, append, BM),
         (   Sort \== @off
         ->  send(F, sort)
@@ -470,6 +481,11 @@ compare(F, N:toc_node, Diff:{smaller,equal,larger}) :<-
         get(T0?string, compare, T1?string, Diff)
     ;   Diff = smaller
     ).
+
+%!  sub_directory(+Dir, +File, -SubDir) is semidet.
+%
+%   Extend Dir with one segment "in the direction" of File. Fails if Dir
+%   is not a prefix of File.
 
 sub_directory(@nil, File, SubPath) :-
     !,
@@ -518,11 +534,9 @@ loaded_buffer(F, TB:emacs_buffer) :->
 :- pce_begin_class(emacs_toc_bookmark, toc_file,
                    "Represent a bookmark").
 
-class_variable(style_file, style,
-               style(font := bold,
-                     background := grey90)).
 class_variable(style_line, style,
-               style(background := grey90)).
+               style(background := grey90,
+                     colour := grey20)).
 class_variable(style_title, style,
                style(font := fixed)).
 class_variable(style_hit, style,
@@ -530,23 +544,19 @@ class_variable(style_hit, style,
                      background := yellow)).
 
 initialise(F, BM:emacs_bookmark) :->
-    get(BM, file_name, Path),
-    get(file(Path), base_name, File),
     get(BM, line_no, Line),
-    new(Label, parbox(1000, left)),
-    get(F, class_variable_value, style_file,  StyleFile),
     get(F, class_variable_value, style_line,  StyleLine),
     get(F, class_variable_value, style_title, StyleTitle),
     get(F, class_variable_value, style_hit,   StyleHit),
     bm_title(BM, StyleTitle, StyleHit, TitleBoxes),
-    send_list(Label, append,
-              [ tbox(File, StyleFile),
-                tbox(:, StyleLine),
-                tbox(Line, StyleLine),
-                hbox(10)
-              | TitleBoxes
-              ]),
-    send_super(F, initialise, Label, BM),
+    get(@pce, convert, normal, font, Font),
+    get(Font, advance, 99999, LW),
+    new(Label, parbox(1000, left,
+                      grbox(parbox(LW, right,
+                                   tbox(Line, StyleLine))),
+                      hbox(5))),
+    send_list(Label, append, TitleBoxes),
+    send_super(F, initialise, Label, BM, @null_image),
     send(BM, slot, node, F).
 
 bm_title(BM, Style, StyleHit, Boxes) :-
