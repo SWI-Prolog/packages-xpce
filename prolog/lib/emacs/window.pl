@@ -1628,6 +1628,15 @@ report_to(M, E:editor) :<-
     "Send reports to the <-editor"::
     get(M, editor, E).
 
+
+                /*******************************
+                *       LSP INTEGRATION        *
+                *******************************/
+
+lsp_server(_M, _Server:prolog) :<-
+    "LSP server associated to this mode (virtual)"::
+    fail.
+
 :- pce_end_class.
 
 
