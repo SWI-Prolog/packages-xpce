@@ -200,15 +200,17 @@ static void
 drawHBox(HBox hb, int x, int y, int w, parline const *line, Area a)
 { if ( instanceOfObject(hb, ClassTBox) )
   { drawTBox((TBox)hb, x, y, w, line);
-  } else if ( instanceOfObject(hb, ClassGrBox) )
-  { Graphical gr = ((GrBox)hb)->graphical;
-
-    if ( gr->displayed == ON )
-      RedrawArea(gr, a);
   } else
   { int ly = y - line->ascent;
     int lh = line->ascent + line->descent;
     r_clear(x, ly, w, lh);
+
+    if ( instanceOfObject(hb, ClassGrBox) )
+    { Graphical gr = ((GrBox)hb)->graphical;
+
+      if ( gr->displayed == ON )
+	RedrawArea(gr, a);
+    }
   }
 }
 
