@@ -50,6 +50,9 @@ initialiseParBox(ParBox pb, Int width, Name alignment, int argc, HBox *argv)
   if ( notDefault(alignment) ) assign(pb, alignment,  alignment);
   if ( notDefault(width) )     assign(pb, line_width, width);
 
+  for(int i=0; i<argc; i++)
+    appendParBox(pb, argv[i]);
+
   succeed;
 }
 
@@ -193,9 +196,14 @@ static void	PlaceAlignedGr(GrBox grb,
 		********************************/
 
 static void
-drawHBox(HBox hb, int x, int y, int w, parline const *line)
+drawHBox(HBox hb, int x, int y, int w, parline const *line, Area a)
 { if ( instanceOfObject(hb, ClassTBox) )
   { drawTBox((TBox)hb, x, y, w, line);
+  } else if ( instanceOfObject(hb, ClassGrBox) )
+  { Graphical gr = ((GrBox)hb)->graphical;
+
+    if ( gr->displayed == ON )
+      RedrawArea(gr, a);
   } else
   { int ly = y - line->ascent;
     int lh = line->ascent + line->descent;
@@ -225,14 +233,6 @@ RedrawAreaParBox(ParBox pb, Area a)
   { int here = valInt(getLowIndexVector(pb->content));
     int ay = valInt(a->y);		/* start of redraw area */
     int zy = ay + valInt(a->h);		/* end of it */
-    Cell cell;
-
-    for_cell(cell, pb->graphicals)
-    { Graphical gr = cell->value;
-
-      if ( gr->displayed == ON && overlapArea(a, gr->area) )
-	RedrawArea(gr, a);
-    }
 
     while(here <= valInt(getHighIndexVector(pb->content)) && y < zy)
     { parcell *pc;
@@ -255,7 +255,7 @@ RedrawAreaParBox(ParBox pb, Area a)
       y += l.ascent;			/* the baseline */
 
       for(i=0, pc = l.hbox; i<l.size; i++, pc++)
-	drawHBox(pc->box, pc->x, y, pc->w, &l);
+	drawHBox(pc->box, pc->x, y, pc->w, &l, a);
 
       if ( l.size )
       { pc = &l.hbox[l.size-1];
@@ -1352,7 +1352,8 @@ autoCropParBox(ParBox pb, BoolObj crop)
 
 static char *T_initialise[] =
 	{ "width=[int]",
-	  "alignment=[{left,center,right,justify}]"
+	  "alignment=[{left,center,right,justify}]",
+	  "content=hbox ..."
 	};
 static char *T_geometry[] =
         { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
