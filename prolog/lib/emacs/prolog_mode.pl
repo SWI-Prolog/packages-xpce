@@ -140,6 +140,7 @@ resource(breakpoint,   image, image('16x16/stop.png')).
           setup_auto_indent            = button(prolog),
           insert_full_stop             = key(.),
           find_definition              = key('\\e.') + button(browse),
+          find_references              = key('\\e?') + button(browse),
           -                            = button(prolog),
           make                         = key('\\C-c\\C-m') + button(compile),
           compile_buffer               = key('\\C-c\\C-b') + button(compile),
@@ -802,6 +803,20 @@ find_local_definition(M, For:prolog_predicate) :->
         )
     ;   send(M, report, warning, 'Cannot find %N', For)
     ).
+
+find_references(M) :->
+    "Find references to goal"::
+    get(M, text_buffer, TB),
+    get(M, caret, Caret),
+    get(TB, find_fragment,
+        and(message(@arg1, overlap, Caret),
+            message(@arg1, instance_of, emacs_goal_fragment)),
+        Fragment),
+    get(Fragment, module, Module),
+    get(Fragment, name, Name),
+    get(Fragment, arity, Arity),
+    debug(emacs(find_references),
+          'TODO: find references to ~p', [Module:Name/Arity]).
 
 
                  /*******************************
