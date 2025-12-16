@@ -776,12 +776,12 @@ qualify(Module:Name/Arity, PI),
     PI = Name/Arity.
 qualify(PI0, PI),
     PI0 = _:Plain,
-    pi_head(PI0,Head), predicate_property(Head, imported_from(M)) =>
-    PI = M:Plain.
-qualify(PI0, PI),
-    PI0 = _:Plain,
     pi_head(PI0,Head), predicate_property(Head, iso) =>
     PI = Plain.
+qualify(PI0, PI),
+    PI0 = _:Plain,
+    pi_head(PI0,Head), predicate_property(Head, imported_from(M)) =>
+    PI = M:Plain.
 qualify(PI0, PI) =>
     PI = PI0.
 
