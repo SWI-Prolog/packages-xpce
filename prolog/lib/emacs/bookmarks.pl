@@ -574,6 +574,11 @@ class_variable(style_hit, style,
                      background := yellow)).
 
 initialise(F, BM:emacs_bookmark) :->
+    bookmark_label(F, BM, Label),
+    send_super(F, initialise, Label, BM, @null_image),
+    send(BM, slot, node, F).
+
+bookmark_label(F, BM, Label) :-
     get(BM, line_no, Line),
     get(F, class_variable_value, style_line,  StyleLine),
     get(F, class_variable_value, style_title, StyleTitle),
@@ -585,9 +590,7 @@ initialise(F, BM:emacs_bookmark) :->
                       grbox(parbox(LW, right,
                                    tbox(Line, StyleLine))),
                       hbox(5))),
-    send_list(Label, append, TitleBoxes),
-    send_super(F, initialise, Label, BM, @null_image),
-    send(BM, slot, node, F).
+    send_list(Label, append, TitleBoxes).
 
 bm_title(BM, Style, StyleHit, Boxes) :-
     get(BM, title, Title),
@@ -617,11 +620,21 @@ unlink(F) :->
 update(F) :->
     "Update label after changed bookmark"::
     get(F, identifier, BM),
-    get(BM, title, Title),
-    get(BM, file_name, Path),
-    get(file(Path), base_name, File),
-    get(BM, line_no, Line),
-    send(F, label, string('%s:%d %s', File, Line, Title)).
+    get(F, hypered, fragment, Fragment),
+    get(Fragment, text_buffer, TB),
+    get(Fragment, start, Start),
+    get(TB, line_number, Start, LineNo),
+    send(BM, line_no, LineNo),
+    get(Fragment, length, Length),
+    (   Length > 0
+    ->  send(BM, length, Length),
+        get(TB, scan, Start, line, 0, start, SOL),
+        LinePos is Start-SOL,
+        send(BM, line_pos, LinePos)
+    ;   true
+    ),
+    bookmark_label(F, BM, Label),
+    send(F, label, Label).
 
 append(_F, _BM:emacs_bookmark) :->
     "Can't append to a file"::
