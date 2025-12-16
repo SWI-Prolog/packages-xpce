@@ -624,19 +624,6 @@ unlink(F) :->
 update(F) :->
     "Update label after changed bookmark"::
     get(F, identifier, BM),
-    get(F, hypered, fragment, Fragment),
-    get(Fragment, text_buffer, TB),
-    get(Fragment, start, Start),
-    get(TB, line_number, Start, LineNo),
-    send(BM, line_no, LineNo),
-    get(Fragment, length, Length),
-    (   Length > 0
-    ->  send(BM, length, Length),
-        get(TB, scan, Start, line, 0, start, SOL),
-        LinePos is Start-SOL,
-        send(BM, line_pos, LinePos)
-    ;   true
-    ),
     bookmark_label(F, BM, Label),
     send(F, label, Label).
 
@@ -750,7 +737,7 @@ link(BM, To:text_buffer) :->
           'Created bookmark fragment on ~p ~p[~p]~n',
           [To, Start, Length]),
     new(_, emacs_bookmark_hyper(BM,
-                                fragment(To, Start, Length, bookmark))).
+                                emacs_bookmark_fragment(To, Start, Length))).
 
 update(BM) :->
     "If bookmark is linked, update <-line_no"::
@@ -797,6 +784,17 @@ modified(BM) :->
 
 :- pce_end_class(emacs_bookmark).
 
+
+:- pce_begin_class(emacs_bookmark_fragment, fragment).
+
+initialise(F, TB:text_buffer, Start:int, Length:int) :->
+    send_super(F, initialise, TB, Start, Length, bookmark),
+    (   Length > 0
+    ->  send(F, include, end)
+    ;   true
+    ).
+
+:- pce_end_class(emacs_bookmark_fragment).
 
 :- pce_begin_class(emacs_bookmark_hyper, hyper,
                    "Hyper from bookmark to fragment").
