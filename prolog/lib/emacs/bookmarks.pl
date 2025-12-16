@@ -303,20 +303,24 @@ current(F, BM:emacs_bookmark*, UpdateSelection:[bool]) :->
         ;   true
         ),
         send(View, delete_hypers, bookmark),
+        get(View, editor, Editor),
+        get(Editor, image, TextImage),
         (   BM == @nil
-        ->  send(View, clear),
-            send(View, editable, @off),
-            send(View, background, grey80)
+        ->  send(Editor, clear),
+            send(Editor, editable, @off),
+            send(TextImage, background, grey80)
         ;   new(_, hyper(View, BM, bookmark, editor)),
             (   get(BM, note, Note),
                 Note \== @nil
-            ->  send(View, contents, Note),
-                send(View, modified, @off)
+            ->  send(Editor, contents, Note),
+                send(Editor, modified, @off)
             ;   true
             ),
-            send(View, editable, @on),
-            send(View, background, white)
+            send(Editor, editable, @on),
+            get(TextImage, class_variable_value, background, BG),
+            send(TextImage, background, BG)
         )
+    ;   true
     ).
 
 :- pce_group(file).
