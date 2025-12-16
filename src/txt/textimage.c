@@ -2481,10 +2481,10 @@ static getdecl get_textImage[] =
 /* Resources */
 
 static classvardecl rc_textImage[] =
-{ RC(NAME_background, "[colour|pixmap]",
-     UXWIN("@default", "win_window"),
+{ RC(NAME_background, "colour",
+     UXWIN("white", "win_window"),
      "Background colour for the text"),
-  RC(NAME_elevation, "elevation*", "when(@colour_display, 1, @nil)",
+  RC(NAME_elevation, "elevation*", "1",
      "Elevation from the background"),
   RC(NAME_tabDistance, "int", "64",
      "Tabstop interval (pixels)"),
