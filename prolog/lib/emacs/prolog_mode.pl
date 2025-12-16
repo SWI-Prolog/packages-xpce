@@ -48,6 +48,8 @@
 :- use_module(library(prolog_colour)).
 :- use_module(library(prolog_predicate)).       % class prolog_predicate
 :- use_module(library(prolog_source)).
+:- autoload(library(prolog_codewalk), [prolog_walk_code/1]).
+:- autoload(library(prolog_xref), [ xref_defined/3, xref_module/2 ]).
 :- require([ guitracer/0,
 	     auto_call/1,
 	     delete_breakpoint/1,
@@ -194,6 +196,8 @@ class_variable(dependency_directive,
                  'use_module/2'
                }, 'autoload/2',
                "How to insert new dependencies").
+class_variable(find_references_module_classes,
+               chain, chain(user)).
 
 variable(varmark_style,    style*,       get, "How to mark variables").
 variable(has_var_marks,    bool := @off, get, "Optimise a bit").
@@ -218,6 +222,10 @@ variable(dependency_directive,
          },
          both,
          "How to insert new dependencies").
+variable(find_references_module_classes,
+         chain,
+         both,
+         "Module classes to search for references").
 
 class_variable(quasiquotation_syntax, name*, @nil).
 class_variable(body_indentation,      int,   4).
@@ -741,15 +749,41 @@ close_warning_window(_E) :->
                 *       FINDING PREDICATES      *
                 ********************************/
 
+module(M, Module:name) :<-
+    "Get the module defined in this file"::
+    get(M, text_buffer, TB),
+    xref_module(TB, Module).
+
 default(M, For:type, Default:unchecked) :<-
     "Provide default for prompter"::
     (   send(For, includes, prolog_predicate)
     ->  get(M, caret, Caret),
         get(M, name_and_arity, Caret, tuple(Name, Arity)),
-        atomic_list_concat([Name, /, Arity], Default)
+        ignore(get(M, module, Module)),
+        qualify(Module:Name/Arity, Qualified),
+        format(string(Default), '~w', [Qualified])
     ;   get_super(M, default, For, Default)
     ).
 
+qualify(Module:Name/(@default), PI),
+    var(Module) =>
+    PI = Name.
+qualify(Module:Name/(@default), PI),
+    var(Module) =>
+    PI = Module:Name.
+qualify(Module:Name/Arity, PI),
+    var(Module) =>
+    PI = Name/Arity.
+qualify(PI0, PI),
+    PI0 = _:Plain,
+    pi_head(PI0,Head), predicate_property(Head, imported_from(M)) =>
+    PI = M:Plain.
+qualify(PI0, PI),
+    PI0 = _:Plain,
+    pi_head(PI0,Head), predicate_property(Head, iso) =>
+    PI = Plain.
+qualify(PI0, PI) =>
+    PI = PI0.
 
 find_definition(M, For:prolog_predicate, Where:[{here,tab,window}]) :->
     "Find definition of predicate [in new window]"::
@@ -804,19 +838,65 @@ find_local_definition(M, For:prolog_predicate) :->
     ;   send(M, report, warning, 'Cannot find %N', For)
     ).
 
-find_references(M) :->
+:- dynamic
+    found_reference/1.
+
+find_references(M, For:prolog_predicate) :->
     "Find references to goal"::
-    get(M, text_buffer, TB),
-    get(M, caret, Caret),
-    get(TB, find_fragment,
-        and(message(@arg1, overlap, Caret),
-            message(@arg1, instance_of, emacs_goal_fragment)),
-        Fragment),
-    get(Fragment, module, Module),
-    get(Fragment, name, Name),
-    get(Fragment, arity, Arity),
+    (   get(For, module, @nil)
+    ->  get(For, head, @off, Plain),
+        Head = _:Plain,
+        pi_head(PI, Plain)
+    ;   get(For, head, @on, Head),
+        pi_head(PI, Head)
+    ),
+    retractall(found_reference(_)),
+    get_chain(M, find_references_module_classes, Classes),
+    prolog_walk_code([ autoload(false),
+                       module_class(Classes),
+                       infer_meta_predicates(true),
+                       trace_reference(Head),
+                       on_edge(on_edge)
+                     ]),
+    findall(Ref, retract(found_reference(Ref)), Refs),
+    report_references(M, PI, Refs).
+
+:- public on_edge/3.
+on_edge(_Callee, _Caller, Location) :-
+    assertz(found_reference(Location)).
+
+report_references(M, PI, []) =>
+    format(string(S), '~q', [PI]),
+    send(M, report, warning, "Could not find references to %s", S).
+report_references(_M, PI, References) =>
+    format(string(S), '~q', [PI]),
+    functor_length(PI, Len),
+    new(BM, emacs_bookmark_editor(string('References to %s', S), @off)),
+    length(References, Count),
+    forall(member(Ref, References),
+           add_reference(BM, Len, Ref)),
+    send(BM, report, status,
+         'Found %d references to %s', Count, S),
+    send(BM, open).
+
+functor_length(_:Name/_, Len) => atom(Name), atom_length(Name, Len).
+functor_length(Name/_,   Len) => atom(Name), atom_length(Name, Len).
+functor_length(Name,     Len) => atom(Name), atom_length(Name, Len).
+
+add_reference(BM, Len, Ref),
+    #{ file:File, line_count:Line, line_position:Pos } :< Ref =>
+    LSPLine is Line-1,
+    EndPos is Pos+Len,
+    Range = #{ start: #{line:LSPLine, character:Pos},
+               end:   #{line:LSPLine, character:EndPos}
+             },
+    send(BM, lsp_add(File, Range)).
+add_reference(BM, _Len, Ref),
+    #{ file:_File, line_count:_Line } :< Ref =>
+    add_reference(BM, 0, Ref.put(line_position,0)).
+add_reference(_BM, _Len, Ref) =>
     debug(emacs(find_references),
-          'TODO: find references to ~p', [Module:Name/Arity]).
+          'Could not process reference at ~p', [Ref]).
 
 
                  /*******************************
