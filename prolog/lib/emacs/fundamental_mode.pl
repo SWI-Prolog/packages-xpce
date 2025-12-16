@@ -213,7 +213,17 @@ colourisation_up_to_date(M) :->
 
 colourise_buffer(M) :->
     "Colour buffer using syntax-rules"::
-    send(M, remove_syntax_fragments).
+    send(M, remove_syntax_fragments),
+    send(M, update_bookmarks).
+
+update_bookmarks(M) :->
+    "Update location and contents of bookmarks"::
+    get(M, text_buffer, TB),
+    (   object(@emacs_mark_list),
+        send(@emacs_mark_list, update_bookmarks, TB)
+    ->  true
+    ;   true
+    ).
 
 remove_syntax_fragments(M,
                         From:from=[int], To:to=[int],

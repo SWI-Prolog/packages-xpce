@@ -283,7 +283,7 @@ loaded_buffer(F, TB:emacs_buffer) :->
     get(F, tree, Tree),
     send(Tree?root, loaded_buffer, TB).
 
-saved_buffer(_F, TB:emacs_buffer) :->
+update_bookmarks(_F, TB:emacs_buffer) :->
     "PceEmacs has saved this buffer"::
     send(TB, for_all_fragments,
          if(message(@arg1, send_hyper, bookmark, update))).
