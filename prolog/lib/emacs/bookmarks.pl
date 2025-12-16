@@ -95,8 +95,8 @@ initialise(BM,
     send(BM, done_message, message(BM, close)),
     send(BM, append, new(D, dialog)),
     send(BM, fill_dialog),
-    working_directory(CWD, CWD),
-    send(emacs_bookmark_window(CWD, cwd), below, D),
+    initial_directory(Dir),
+    send(emacs_bookmark_window(Dir, cwd), below, D),
     (   (Persist == @on; Notes == @on)
     ->  send(new(V, view(size := size(40,8))), below, D),
         send(V, font, normal),
@@ -108,6 +108,14 @@ initialise(BM,
         send(BM, slot, exit_message, Msg),
         ignore(send(BM, load))
     ;   true
+    ).
+
+initial_directory(Dir) :-
+    working_directory(CWD, CWD),
+    (   atom_concat(Dir, /, CWD),
+        Dir \== ''
+    ->  true
+    ;   Dir = CWD
     ).
 
 close(BM) :->
@@ -520,7 +528,7 @@ sub_directory(@nil, File, SubPath) :-
 sub_directory(Path, File, SubPath) :-
     send(File, prefix, Path),
     file_directory_name(File, FileDir),
-    (   FileDir == Path
+    (   same_file(FileDir, Path)
     ->  SubPath = File
     ;   sub_directory(Path, FileDir, SubPath)
     ).
