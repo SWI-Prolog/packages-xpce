@@ -218,12 +218,8 @@ colourise_buffer(M) :->
 
 update_bookmarks(M) :->
     "Update location and contents of bookmarks"::
-    get(M, text_buffer, TB),
-    (   object(@emacs_mark_list),
-        send(@emacs_mark_list, update_bookmarks, TB)
-    ->  true
-    ;   true
-    ).
+    send(M, for_all_fragments,
+         if(message(@arg1, send_hyper, bookmark, update))).
 
 remove_syntax_fragments(M,
                         From:from=[int], To:to=[int],
