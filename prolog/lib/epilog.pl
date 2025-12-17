@@ -181,6 +181,11 @@ epilog_attach(_Options) :-
     current_prolog_terminal(Thread, PT),
     !,
     print_message(informational, epilog(already_attached(Thread, PT))).
+epilog_attach(_Options) :-
+    thread_self(Thread),
+    pce_thread(Thread),
+    !,
+    print_message(warning, epilog(cannot_attach(Thread))).
 epilog_attach(Options) :-
     thread_self(Thread),
     thread_property(Thread, id(TID)),
@@ -1554,3 +1559,17 @@ insert_in_popup(Epilog, Popup, Item, Before, Goal) =>
 
 message_to_prolog(Epilog, Goal, Msg) :-
     new(Msg, message(Epilog, inject, prolog(Goal))).
+
+                /*******************************
+                *           MESSAGES           *
+                *******************************/
+
+:- multifile prolog:message//1.
+
+prolog:message(epilog(Message)) -->
+    epilog_message(Message).
+
+epilog_message(already_attached(Thread, _PT)) -->
+    [ 'Thread ~p already has a console'-[Thread] ].
+epilog_message(cannot_attach(Thread)) -->
+    [ 'Can not attach a console to thread ~p'-[Thread] ].
