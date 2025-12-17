@@ -675,6 +675,11 @@ r_background(Any c)
   return old;
 }
 
+Any
+r_current_colour(void)
+{ return context.colour;
+}
+
 /**
  * Swap the foreground and background colors.
  */

@@ -68,6 +68,7 @@ void r_unfix_colours(ColourContext ctx);
 Any r_default_colour(Any c);
 Any r_colour(Any c);
 Any r_background(Any c);
+Any r_current_colour(void);
 void r_swap_background_and_foreground(void);
 BoolObj r_subwindow_mode(BoolObj val);
 void r_invert_mode(BoolObj val);

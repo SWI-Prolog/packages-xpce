@@ -767,6 +767,8 @@ t_underline(FontObj font, int x, double y, int w, Colour c)
   static FontObj ef = NIL;
 
   assert(c);
+  if ( isDefault(c) )
+    c = r_current_colour();
 
   if ( x == ex+ew && y == ey && c == cc )
   { ew += w;
