@@ -789,7 +789,8 @@ find_definition(M, For:prolog_predicate, Where:[{here,tab,window}]) :->
     "Find definition of predicate [in new window]"::
     get(M, text_buffer, TB),
     get(For, head, @off, Head),
-    (   (   xref_defined(TB, Head, local(Location))         % local
+    (   \+ is_foreign(For),
+        (   xref_defined(TB, Head, local(Location))         % local
         ;   xref_defined(TB, Head, constraint(Location))
         ;   xref_defined(TB, Head, foreign(Location))
         )
@@ -801,7 +802,8 @@ find_definition(M, For:prolog_predicate, Where:[{here,tab,window}]) :->
         ->  send(@emacs, goto_source_location,
                  source_location(File, Line), tab)
         )
-    ;   xref_defined(TB, Head, imported(File))      % imported
+    ;   \+ is_foreign(For),
+        xref_defined(TB, Head, imported(File))      % imported
     ->  send(@emacs, ensure_source_file, File),
         new(B, emacs_buffer(File)),
         get(B, open, Where, EmacsFrame),
@@ -818,6 +820,9 @@ find_definition(M, For:prolog_predicate, Where:[{here,tab,window}]) :->
              'Cannot find source')
     ).
 
+is_foreign(PI) :-
+    get(PI, head, @on, Head),
+    predicate_property(Head, foreign).
 
 find_local_definition(M, For:prolog_predicate) :->
     "Find Prolog predicate in local buffer"::
@@ -2664,15 +2669,23 @@ loaded_specifier(F, Head:prolog) :<-
 has_source(F) :->
     "Test if there is source available"::
     get(F, text_buffer, TB),
+    get(F, head, @on, QHead),
+    (   predicate_property(QHead, foreign)
+    ->  IsForeign = true
+    ;   IsForeign = false
+    ),
     get(F, head, @off, Head),
-    (   xref_defined(TB, Head, How),
+    (   IsForeign == false,
+        xref_defined(TB, Head, How),
         xref_definition_line(How, _)
-    ;   Head = Module:Plain,
+    ;   IsForeign == false,
+        Head = Module:Plain,
         xref_module(Src, Module),
         xref_defined(Src, Plain, How),
         xref_definition_line(How, _)
-    ;   xref_defined(TB, Head, imported(_From))
-    ;   get(prolog_predicate(Head), source, _)
+    ;   IsForeign == false,
+        xref_defined(TB, Head, imported(_From))
+    ;   get(prolog_predicate(QHead), source, _)
     ),
     !.
 

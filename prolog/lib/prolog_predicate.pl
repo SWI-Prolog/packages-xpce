@@ -39,6 +39,7 @@
 :- use_module(library(persistent_frame)).
 :- use_module(library(tabbed_window)).
 :- use_module(library(tabular)).
+:- use_module(library(edit)).
 :- require([ atomic_list_concat/2,
              term_to_atom/2,
              auto_call/1
@@ -179,17 +180,14 @@ source(P, Autoload:[bool], Loc:source_location) :<-
     ->  Head = Head0
     ;   Head = _:Head0
     ),
-    (   predicate_property(Head, file(File))
-    ->  true
+    (   true
     ;   Autoload \== @off,
-        send(P, autoload),
-        predicate_property(Head, file(File))
+        send(P, autoload)
     ),
-    (   predicate_property(Head, line_count(Line))
-    ->  new(Loc, source_location(File, Line))
-    ;   new(Loc, source_location(File))
-    ).
-
+    prolog_edit:predicate_location(Head, Location),
+    !,
+    #{file:File, line:Line} :< Location,
+    new(Loc, source_location(File, Line)).
 
 edit(P) :->
     "Edit the predicate"::
