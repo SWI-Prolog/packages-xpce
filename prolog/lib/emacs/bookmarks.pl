@@ -386,9 +386,11 @@ load_bookmark(Term, BM) =>
     send(BM, report, warning, 'Unknown term in bookmarks file: %s', Atom).
 
 bookmarks_file(BM, Access:[{read,write}], File:name) :<-
+    "Get the file for bookmarks persistency"::
     (   get(BM, file, F),
         F \== @nil,
-        send(F, access, Access)
+        default(Access, read, TheAccess),
+        send(F, access, TheAccess)
     ->  get(F, absolute_path, File)
     ;   get(@pce, application_data, DataDir),
         (   Access == write
