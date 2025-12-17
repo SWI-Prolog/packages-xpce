@@ -169,8 +169,8 @@ static prolog_call_data *get_pcd(PceObject method);
 static int		put_object(term_t t, PceObject obj);
 static int		put_trace_info(term_t id, prolog_call_data *pm);
        foreign_t	pl_pce_init(term_t home, term_t appdir);
-static Module		pceContextModule();
-static void		makeClassProlog();
+static Module		pceContextModule(void);
+static void		makeClassProlog(void);
 static term_t		getTermHandle(PceObject hd);
 static PceType		cToPceType(const char *name);
 
@@ -268,7 +268,7 @@ static atom_t ATOM_unwind;		/* "unwind" */
 static Module MODULE_user;		/* Handle for user-module */
 
 static void
-initPrologConstants()
+initPrologConstants(void)
 { ATOM_append			= AtomFromString("append");
   ATOM_argument			= AtomFromString("argument");
   ATOM_argument_count		= AtomFromString("argument_count");
@@ -344,7 +344,7 @@ static PceName		NAME_codeVector;/* "code_vector" */
 #define cToPceName(s) cToPceName_nA(s, strlen(s))
 
 static void
-initPceConstants()
+initPceConstants(void)
 { NAME_functor	  = cToPceName("functor");
   NAME_Arity	  = cToPceName("_arity");
   NAME_Arg	  = cToPceName("_arg");
@@ -1445,6 +1445,24 @@ makeClassProlog()
 termToObject(term_t t, PceType targettype, atom_t assoc, int new)
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+static PceName
+type2vectorClassName(PceType type)
+{ PceName classname = NAME_codeVector;
+
+  if ( type )
+  { if ( pceSend(type, NULL, NAME_includes,
+		 1, (PceObject *)&NAME_chain) )
+    { classname = NAME_chain;
+    } else if ( pceSend(type, NULL, NAME_includes,
+			1, (PceObject *)&NAME_vector) )
+    { classname = NAME_vector;
+    }
+  }
+
+  return classname;
+}
+
+
 
 static PceObject
 termToObject(term_t t, PceType type, atom_t assoc, int new)
@@ -1533,7 +1551,7 @@ termToObject(term_t t, PceType type, atom_t assoc, int new)
       int argsallocated = 16;
       int argc = 0;
       PceObject *argv = alloca(argsallocated*sizeof(PceObject));
-      PceName classname = NAME_codeVector;
+      PceName classname = type2vectorClassName(type);
 
       while ( PL_get_list(tail, head, tail) )
       { PceObject a;
@@ -1553,15 +1571,6 @@ termToObject(term_t t, PceType type, atom_t assoc, int new)
       if ( !PL_get_nil(tail) )
       { ThrowException(EX_TYPE, ATOM_proper_list, t);
 	return PCE_FAIL;
-      }
-
-      if ( type )
-      { if ( pceSend(type, NULL, NAME_includes,
-		     1, (PceObject *)&NAME_chain) )
-	  classname = NAME_chain;
-	else if ( pceSend(type, NULL, NAME_includes, 1,
-			  (PceObject *)&NAME_vector) )
-	  classname = NAME_vector;
       }
 
       return pceNew(NIL, classname, argc, argv);
@@ -1610,16 +1619,8 @@ termToObject(term_t t, PceType type, atom_t assoc, int new)
       return cToPceReal(f);
 
     if ( PL_get_nil(t) )
-    { PceName classname = NAME_codeVector;
+    { PceName classname = type2vectorClassName(type);
 
-      if ( type )
-      { if ( pceSend(type, NULL, NAME_includes,
-		     1, (PceObject *)&NAME_chain) )
-	  classname = NAME_chain;
-	else if ( pceSend(type, NULL, NAME_includes, 1,
-			  (PceObject *)&NAME_vector) )
-	  classname = NAME_vector;
-      }
       return pceNew(NIL, classname, 0, NULL);
     }
 					/* anything else */
@@ -1759,7 +1760,7 @@ unifyObject(term_t t, PceObject obj, int top)
 		 *******************************/
 
 static __inline Module
-PushDefaultModule()
+PushDefaultModule(void)
 { Module odm = DefaultModule;
 
   DefaultModule = 0;
