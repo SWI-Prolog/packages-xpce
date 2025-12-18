@@ -917,7 +917,7 @@ static char *T_load[] =
 static char *T_drawIn[] =
 	{ "graphical", "at=[point]" };
 static char *T_fill[] =
-	{ "image", "[area]" };
+	{ "colour", "[area]" };
 static char *T_initialise[] =
 	{ "name=[source_sink]*", "width=[int]", "height=[int]",
 	  "kind=[{bitmap,pixmap}]" };
@@ -975,7 +975,7 @@ static senddecl send_image[] =
   SM(NAME_clear, 0, NULL, clearImage,
      NAME_edit, "Clear all pixels to 0 or <-background"),
   SM(NAME_fill, 2, T_fill, fillImage,
-     NAME_edit, "Fill rectangular area of image with pattern"),
+     NAME_edit, "Fill rectangular area with colour"),
   SM(NAME_invert, 0, NULL, invertImage,
      NAME_edit, "Invert all pixels in image"),
   SM(NAME_or, 2, T_image_atADpointD, orImage,
