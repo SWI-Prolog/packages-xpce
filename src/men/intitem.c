@@ -89,22 +89,22 @@ rangeIntItem(IntItem ii, Int low, Int high)
   if ( isDefault(low) )
   { if ( isDefault(high) )
     { t = TypeInt;
-      sprintf(s1, "%" PRIdPTR, PCE_MIN_INT);
-      sprintf(s2, "%" PRIdPTR, PCE_MAX_INT);
+      snprintf(s1,  sizeof(s1),  "%" PRIdPTR, PCE_MIN_INT);
+      snprintf(s2,  sizeof(s2),  "%" PRIdPTR, PCE_MAX_INT);
     } else
-    { sprintf(s1, "%" PRIdPTR, PCE_MIN_INT);
-      sprintf(s2, "%" PRIdPTR, valInt(high));
-      sprintf(buf, "..%" PRIdPTR, valInt(high));
+    { snprintf(s1,  sizeof(s1),  "%" PRIdPTR, PCE_MIN_INT);
+      snprintf(s2,  sizeof(s2),  "%" PRIdPTR, valInt(high));
+      snprintf(buf, sizeof(buf), "..%" PRIdPTR, valInt(high));
     }
   } else
   { if ( isDefault(high) )
-    { sprintf(s1, "%" PRIdPTR, valInt(low));
-      sprintf(s2, "%" PRIdPTR, PCE_MAX_INT);
-      sprintf(buf, "%" PRIdPTR "..", valInt(low));
+    { snprintf(s1,  sizeof(s1),  "%" PRIdPTR, valInt(low));
+      snprintf(s2,  sizeof(s2),  "%" PRIdPTR, PCE_MAX_INT);
+      snprintf(buf, sizeof(buf), "%" PRIdPTR "..", valInt(low));
     } else
-    { sprintf(s1, "%" PRIdPTR, valInt(low));
-      sprintf(s2, "%" PRIdPTR, valInt(high));
-      sprintf(buf, "%" PRIdPTR ".." "%" PRIdPTR,
+    { snprintf(s1,  sizeof(s1),  "%" PRIdPTR, valInt(low));
+      snprintf(s2,  sizeof(s2),  "%" PRIdPTR, valInt(high));
+      snprintf(buf, sizeof(buf), "%" PRIdPTR ".." "%" PRIdPTR,
 	      valInt(low), valInt(high));
     }
   }
@@ -192,7 +192,7 @@ addIntItem(IntItem ii, Int change)
     val = max(val, valInt(low));
   if ( (high = getHighIntItem(ii)) )
     val = min(val, valInt(high));
-  sprintf(buf, "%ld", val);
+  snprintf(buf, sizeof(buf), "%ld", val);
   ctmp = CtoScratchCharArray(buf);
   displayedValueTextItem((TextItem)ii, ctmp);
   doneScratchCharArray(ctmp);

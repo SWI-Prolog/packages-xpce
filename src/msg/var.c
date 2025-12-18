@@ -221,7 +221,7 @@ initVars(void)
   for(n = 1; n <= FWD_PCE_MAX_ARGS; n++)
   { char varname[100];
 
-    sprintf(varname, "arg%d", n);
+    snprintf(varname, sizeof(varname), "arg%d", n);
     Arg(n) = initVar(CtoName(varname), "unchecked", DEFAULT);
   }
 }

@@ -119,7 +119,7 @@ getPathSourceLocation(SourceLocation loc)
     char buf[LINESIZE];
 
     TRY(home = get(PCE, NAME_home, EAV));
-    sprintf(buf, "%s/src/%s", strName(home), name);
+    snprintf(buf, sizeof(buf), "%s/src/%s", strName(home), name);
 
     answer(CtoName(buf));
   }

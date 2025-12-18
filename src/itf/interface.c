@@ -222,7 +222,7 @@ pcePPReference(PceObject ref)
 
     if ( rval[0] != '@' )
     { char tmp[256];
-      sprintf(tmp, "@%" PRIdPTR, valInt(ref));
+      snprintf(tmp, sizeof(tmp), "@%" PRIdPTR, valInt(ref));
       return save_string(tmp);
     } else
       return rval;
@@ -232,7 +232,7 @@ pcePPReference(PceObject ref)
     if ( !(addr = getObjectAssoc(ref)) )
     { char tmp[256];
 
-      sprintf(tmp, "@%s", strName(ref));
+      snprintf(tmp, sizeof(tmp), "@%s", strName(ref));
       return save_string(tmp);
     } else
       return pp(addr);

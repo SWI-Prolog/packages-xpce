@@ -76,16 +76,16 @@ defcolourname(Int r, Int g, Int b, Int a)
   { char buf[50];
 
     if ( isDefault(a) || a == toInt(255) )
-      sprintf(buf, "#%02x%02x%02x",
-	      (unsigned int)valInt(r),
-	      (unsigned int)valInt(g),
-	      (unsigned int)valInt(b));
+      snprintf(buf, sizeof(buf), "#%02x%02x%02x",
+	       (unsigned int)valInt(r),
+	       (unsigned int)valInt(g),
+	       (unsigned int)valInt(b));
     else
-      sprintf(buf, "#%02x%02x%02x%02x",
-	      (unsigned int)valInt(r),
-	      (unsigned int)valInt(g),
-	      (unsigned int)valInt(b),
-	      (unsigned int)valInt(a));
+      snprintf(buf, sizeof(buf), "#%02x%02x%02x%02x",
+	       (unsigned int)valInt(r),
+	       (unsigned int)valInt(g),
+	       (unsigned int)valInt(b),
+	       (unsigned int)valInt(a));
 
     return CtoName(buf);
   }

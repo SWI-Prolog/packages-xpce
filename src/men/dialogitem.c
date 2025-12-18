@@ -558,7 +558,7 @@ assignAccelerators(Chain objects, Name prefix, Name label_method)
     if ( acc > 0 )
     { char buf[100];
 
-      sprintf(buf, "%s%c", strName(prefix), acc);
+      snprintf(buf, sizeof(buf), "%s%c", strName(prefix), acc);
       send(bins[n].object, NAME_accelerator, CtoKeyword(buf), EAV);
     } else
       send(bins[n].object, NAME_accelerator, NIL, EAV);

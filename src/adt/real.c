@@ -138,7 +138,7 @@ static StringObj
 getPrintNameReal(Real r)
 { char buf[100];
 
-  sprintf(buf, "%g", valReal(r));
+  snprintf(buf, sizeof(buf), "%g", valReal(r));
 
   answer(CtoString(buf));
 }

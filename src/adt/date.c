@@ -439,13 +439,14 @@ getXMLStringDate(Date d)
   struct tm *tm = gmtime(&now);
   char date[100];
 
-  sprintf(date, "%04d-%02d-%02dT%02d:%02d:%02dZ",
-	  tm->tm_year + 1900,
-	  tm->tm_mon + 1,
-	  tm->tm_mday,
-	  tm->tm_hour,
-	  tm->tm_min,
-	  tm->tm_sec);
+  snprintf(date, sizeof(date),
+	   "%04d-%02d-%02dT%02d:%02d:%02dZ",
+	   tm->tm_year + 1900,
+	   tm->tm_mon + 1,
+	   tm->tm_mday,
+	   tm->tm_hour,
+	   tm->tm_min,
+	   tm->tm_sec);
 
   answer(CtoString(date));
 }

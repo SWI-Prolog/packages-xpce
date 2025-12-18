@@ -62,16 +62,15 @@ static StringObj
 getPrintNameSize(Size s)
 { char buf[200];
 
-  sprintf(buf, "%" PRIdPTR "x%" PRIdPTR, valInt(s->w), valInt(s->h));
+  snprintf(buf, sizeof(buf),
+	   "%" PRIdPTR "x%" PRIdPTR, valInt(s->w), valInt(s->h));
   answer(CtoString(buf));
 }
 
 
 status
 equalSize(Size s, Size s2)
-{ if (s->w == s2->w && s->h == s2->h)
-    succeed;
-  fail;
+{ return (s->w == s2->w && s->h == s2->h);
 }
 
 

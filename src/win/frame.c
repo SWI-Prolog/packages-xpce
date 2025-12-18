@@ -748,15 +748,21 @@ getGeometryFrame(FrameObj fr)
     }
 
     if ( fr->can_resize != OFF )
-      sprintf(buf, "%dx%d", cw, ch);
+      snprintf(buf, sizeof(buf), "%dx%d", cw, ch);
     else
       buf[0] = EOS;
 
-    sprintf(buf+strlen(buf),
-	    "%s%d%s%d", xn ? "-" : "+", x, yn ? "-" : "+", y);
+    char *end = buf+sizeof(buf);
+    char *s = buf+strlen(buf);
+    if ( end > s )
+    { snprintf(s, end-s,
+	      "%s%d%s%d", xn ? "-" : "+", x, yn ? "-" : "+", y);
+      s += strlen(s);
+    }
 
-    if ( d->number != ONE )
-      sprintf(buf+strlen(buf), "@%d", (int)valInt(d->number));
+    if ( d->number != ONE && end > s )
+    { snprintf(s, end-s, "@%d", (int)valInt(d->number));
+    }
 
     answer(CtoName(buf));
   }

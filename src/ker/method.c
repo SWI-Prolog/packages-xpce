@@ -430,10 +430,10 @@ static Name
 getPrintNameMethod(Method m)
 { char buf[LINESIZE];
 
-  sprintf(buf, "%s %s%s",
-	  strName(getContextNameMethod(m)),
-	  strName(getAccessArrowMethod(m)),
-	  strName(m->name));
+  snprintf(buf, sizeof(buf), "%s %s%s",
+	   strName(getContextNameMethod(m)),
+	   strName(getAccessArrowMethod(m)),
+	   strName(m->name));
 
   answer(CtoName(buf));
 }

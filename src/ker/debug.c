@@ -61,8 +61,10 @@ errorSignal(int sig)
     case SIGPIPE:		msg = "Pipe error";		break;
 #endif
     case SIGFPE:		msg = "Floating point exception"; break;
-    default:			msg = tmp;
-				sprintf(tmp, "%d", sig);	break;
+    default:
+      msg = tmp;
+      snprintf(tmp, sizeof(tmp), "%d", sig);
+      break;
   }
 
   errorPce(PCE, NAME_signal, CtoName(msg));

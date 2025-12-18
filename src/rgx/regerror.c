@@ -70,7 +70,8 @@ size_t errbuf_size;		available space in errbuf, can be 0
 		for (r = rerrs; r->code >= 0; r++)
 			if (strcmp(r->name, errbuf) == 0)
 				break;
-		sprintf(convbuf, "%d", r->code);	/* -1 for unknown */
+		/* r->code is -1 for unknown */
+		snprintf(convbuf, sizeof(convbuf), "%d", r->code);
 		msg = convbuf;
 		break;
 	case REG_ITOA:		/* convert number to name */
@@ -81,7 +82,8 @@ size_t errbuf_size;		available space in errbuf, can be 0
 		if (r->code >= 0)
 			msg = r->name;
 		else {			/* unknown; tell him the number */
-			sprintf(convbuf, "REG_%u", (unsigned)icode);
+			snprintf(convbuf, sizeof(convbuf),
+				 "REG_%u", (unsigned)icode);
 			msg = convbuf;
 		}
 		break;
@@ -92,7 +94,7 @@ size_t errbuf_size;		available space in errbuf, can be 0
 		if (r->code >= 0)
 			msg = r->explain;
 		else {			/* unknown; say so */
-			sprintf(convbuf, unk, errcode);
+			snprintf(convbuf, sizeof(convbuf), unk, errcode);
 			msg = convbuf;
 		}
 		break;

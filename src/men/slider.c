@@ -81,13 +81,13 @@ convert_value(Any val)
 
 
 static void
-format_value(Slider s, char *buf, Any val)
+format_value(Slider s, char *buf, size_t size, Any val)
 { int deffmt = isDefault(s->format);
 
   if ( isInteger(val) )
-    sprintf(buf, deffmt ? "%" PRIdPTR : strName(s->format), valInt(val));
+    snprintf(buf, size, deffmt ? "%" PRIdPTR : strName(s->format), valInt(val));
   else
-    sprintf(buf, deffmt ? "%g"  : strName(s->format), valReal(val));
+    snprintf(buf, size, deffmt ? "%g"  : strName(s->format), valReal(val));
 }
 
 
@@ -160,16 +160,16 @@ RedrawAreaSlider(Slider s, Area a)
     string str;
 
     buf[0] = '[';
-    format_value(s, &buf[1], s->displayed_value);
+    format_value(s, &buf[1], sizeof(buf)-1, s->displayed_value);
     strcat(buf, "]");
     str_set_ascii(&str, buf);
     str_label(&str, 0, s->value_font,
 	      x+vx, y+vy, 0, 0, NAME_left, NAME_top, lflags);
-    format_value(s, buf, s->low);
+    format_value(s, buf, sizeof(buf), s->low);
     str_set_ascii(&str, buf);
     str_label(&str, 0, s->value_font,
 	      x+lx, y+ly, 0, 0, NAME_left, NAME_top, lflags);
-    format_value(s, buf, s->high);
+    format_value(s, buf, sizeof(buf), s->high);
     str_set_ascii(&str, buf);
     str_label(&str, 0, s->value_font,
 	      x+hx, y+hy, 0, 0, NAME_left, NAME_top, lflags);
@@ -213,11 +213,11 @@ compute_slider(Slider s, int *ny, int *vx, int *vy, int *lx, int *ly, int *sx, i
     string str;
 
     buf[0] = '[';
-    format_value(s, &buf[1], s->high);
+    format_value(s, &buf[1], sizeof(buf)-1, s->high);
     strcat(buf, "]");
     str_set_ascii(&str, buf);
     str_size(&str, s->value_font, &shw, &sh);
-    format_value(s, buf, s->low);
+    format_value(s, buf, sizeof(buf), s->low);
     str_set_ascii(&str, buf);
     str_size(&str, s->value_font, &slw, &sh);
     if ( convert_value(s->low) < 0.0 &&
@@ -251,7 +251,7 @@ computeSlider(Slider s)
     { char buf[100];
       string str;
 
-      sprintf(buf, "%" PRIdPTR, valInt(s->high));
+      snprintf(buf, sizeof(buf), "%" PRIdPTR, valInt(s->high));
       str_set_ascii(&str, buf);
       str_size(&str, s->value_font, &sw, &sh);
       w = hx + sw;

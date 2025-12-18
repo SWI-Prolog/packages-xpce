@@ -49,15 +49,15 @@ toString(Any obj, PceString s)
     s->s_text = ca->data.s_text;
     succeed;
   } else if ( isInteger(obj) )
-  { sprintf(tmp, "%" PRIdPTR, valInt(obj));
+  { snprintf(tmp, sizeof(tmp), "%" PRIdPTR, valInt(obj));
     str = ppsavestring(tmp);
     rval = SUCCEED;
   } else if ( instanceOfObject(obj, ClassReal) )
-  { sprintf(tmp, "%g", valReal(obj));
+  { snprintf(tmp, sizeof(tmp), "%g", valReal(obj));
     str = ppsavestring(tmp);
     rval = SUCCEED;
   } else if ( instanceOfObject(obj, ClassNumber) )
-  { sprintf(tmp, "%" PRIdPTR, ((Number)obj)->value);
+  { snprintf(tmp, sizeof(tmp), "%" PRIdPTR, ((Number)obj)->value);
     str = ppsavestring(tmp);
     rval = SUCCEED;
   }
@@ -244,7 +244,7 @@ safeStringName(Name n)
   else
   { char buf[100];
 
-    sprintf(buf, "%p", (void*)n);
+    snprintf(buf, sizeof(buf), "%p", (void*)n);
     return ppsavestring(buf);
   }
 }
@@ -272,9 +272,9 @@ do_pp(Any obj)
   { double v = valNum(obj);
     intptr_t i = v;
     if ( (double)i == v )
-      sprintf(tmp, "%" PRIdPTR, i);
+      snprintf(tmp, sizeof(tmp), "%" PRIdPTR, i);
     else
-      sprintf(tmp, "%.3f", v);
+      snprintf(tmp, sizeof(tmp), "%.3f", v);
     return ppsavestring(tmp);
   }
 
@@ -301,10 +301,10 @@ do_pp(Any obj)
 		isName(((Type)obj)->fullname) )
     { s = nameToUTF8(((Type)obj)->fullname);
     } else if ( instanceOfObject(obj, ClassReal) )
-    { sprintf(summary, "%g", valReal(obj));
+    { snprintf(summary, sizeof(summary), "%g", valReal(obj));
       s = summary;
     } else if ( instanceOfObject(obj, ClassNumber) )
-    { sprintf(summary, "%" PRIdPTR, ((Number)obj)->value);
+    { snprintf(summary, sizeof(summary), "%" PRIdPTR, ((Number)obj)->value);
       s = summary;
     } else if ( instanceOfObject(obj, ClassHostData) )
     { Any pn = qadGetv(obj, NAME_printName, 0, NULL);
@@ -319,9 +319,9 @@ do_pp(Any obj)
     { Name name;
 
       if ( (name = getNameAssoc(obj)) )
-	sprintf(tmp, "@%s/%s", nameToUTF8(name), s);
+	snprintf(tmp, sizeof(tmp), "@%s/%s", nameToUTF8(name), s);
       else
-	sprintf(tmp, "@%" PRIdPTR "/%s", valInt(PointerToInt(obj)), s);
+	snprintf(tmp, sizeof(tmp), "@%" PRIdPTR "/%s", valInt(PointerToInt(obj)), s);
     }
 
     if ( isFreedObj(obj) )
@@ -332,7 +332,7 @@ do_pp(Any obj)
     return ppsavestring(tmp);
   }
 
-  sprintf(tmp, "%p", obj);
+  snprintf(tmp, sizeof(tmp), "%p", obj);
   return ppsavestring(tmp);
 }
 
@@ -464,7 +464,7 @@ pcePP(Any obj)
   { s = do_pp(obj);
   } else
   { char tmp[100];
-    sprintf(tmp, "0x%lx", (unsigned long)obj);
+    snprintf(tmp, sizeof(tmp), "0x%lx", (unsigned long)obj);
     s = ppsavestring(tmp);
   }
 #ifndef O_RUNTIME

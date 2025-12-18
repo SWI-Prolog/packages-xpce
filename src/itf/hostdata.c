@@ -128,9 +128,9 @@ static StringObj
 getPrintNameHostData(HostData hd)
 { char tmp[25];
 
-  sprintf(tmp, "@%" PRIdPTR "/%s",
-	  valInt(PointerToInt(hd)),
-	  strName(classOfObject(hd)->name));
+  snprintf(tmp, sizeof(tmp), "@%" PRIdPTR "/%s",
+	   valInt(PointerToInt(hd)),
+	   strName(classOfObject(hd)->name));
 
   return CtoString(tmp);
 }

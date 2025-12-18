@@ -696,11 +696,11 @@ getPeerNameSocket(Socket s)
 
     port = address.sin_port;
     addr = htonl(address.sin_addr.s_addr); /* TBD */
-    sprintf(aname, "%d.%d.%d.%d",
-	    (int)((addr >> 24) & 0xff),
-	    (int)((addr >> 16) & 0xff),
-	    (int)((addr >>  8) & 0xff),
-	    (int) (addr        & 0xff));
+    snprintf(aname, sizeof(aname), "%d.%d.%d.%d",
+	     (int)((addr >> 24) & 0xff),
+	     (int)((addr >> 16) & 0xff),
+	     (int)((addr >>  8) & 0xff),
+	     (int) (addr        & 0xff));
 
     answer(answerObject(ClassTuple, CtoName(aname), toInt(port), EAV));
   }

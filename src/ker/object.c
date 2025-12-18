@@ -2663,7 +2663,7 @@ getManIdObject(Any obj)
   if ( isName(name = getObjectReferenceObject(obj)) )
   { char buf[LINESIZE];
 
-    sprintf(buf, "O.%s", strName(name));
+    snprintf(buf, sizeof(buf), "O.%s", strName(name));
     answer(CtoName(buf));
   }
 
