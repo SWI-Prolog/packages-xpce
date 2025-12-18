@@ -2,9 +2,10 @@
 
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
-    WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2013, University of Amsterdam
+    WWW:           https://www.swi-prolog.org
+    Copyright (c)  2002-2025, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -327,16 +328,13 @@ running_styles(TB) :->
     H is floor(Ascent+Descent),
     send(TB, slot, cpu_height, H),
     new(Running, image(resource(running))),
-    get(Running, size, size(W,_IH)),
+    get(Running, size, size(W,IH)),
     (   between(0, H, N),
         new(Img, image(@nil, W, H, pixmap)),
         send(Img, hot_spot, point(0, Ascent)),
-        send(Img, background, grey80),
-        send(Img, foreground, green),
-        forall(between(0,N,I),
-               (   Y is H-I,
-                   send(Img, draw_in, line(0,Y,W,Y)))),
-        send(Img, draw_in, bitmap(Running)),
+        send(Img, fill, grey80),
+        send(Img, fill, green, area(0, H-N, W, N)),
+        send(Img, draw_in, bitmap(Running), point(0,Ascent-IH)),
         atom_concat(running_, N, Style),
         send(TB, style, Style, style(icon := Img)),
         fail
@@ -663,12 +661,12 @@ graphs(Win, Graphs:chain) :->
 :- pce_begin_class(prolog_thread_monitor, persistent_frame,
                    "Monitor thread-activity").
 
-variable(timer,           timer*,     get, "Update timer").
-variable(graphs,          chain,      get, "Which graphs are shown").
-variable(update_interval, 'int|real*', get, "Update interval").
+variable(timer,           timer*,  get, "Update timer").
+variable(graphs,          chain,   get, "Which graphs are shown").
+variable(update_interval, num*,    get, "Update interval").
 
-class_variable(update_interval, 'int|real*', 0.2).
-class_variable(graphs,          chain,      chain(local,global,trail,cpu)).
+class_variable(update_interval, num*,  0.2).
+class_variable(graphs,          chain, chain(local,global,trail,cpu)).
 
 initialise(TM) :->
     send_super(TM, initialise, 'SWI-Prolog thread monitor'),
