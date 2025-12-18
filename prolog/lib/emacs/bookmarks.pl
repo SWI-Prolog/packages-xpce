@@ -198,7 +198,9 @@ bookmark(F, BM:emacs_bookmark, Sort:[bool]) :->
     (   between(1, 1000, _),
         get(Tree, root, Root),
         get(Root, identifier, RootPath),
-        (   send(FileName, prefix, RootPath)
+        (   (   RootPath == @nil
+            ;   send(FileName, prefix, RootPath)
+            )
         ->  !
         ;   file_directory_name(RootPath, Parent),
             (   Parent == RootPath
