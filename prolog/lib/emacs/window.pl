@@ -1633,8 +1633,8 @@ report_to(M, E:editor) :<-
                 *       LSP INTEGRATION        *
                 *******************************/
 
-lsp_server(_M, _Server:prolog) :<-
-    "LSP server associated to this mode (virtual)"::
+lsp_client(_M, _Client) :<-
+    "LSP client associated to this mode (virtual)"::
     fail.
 
 :- pce_end_class.
