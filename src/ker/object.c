@@ -411,7 +411,8 @@ failed:
 
     exceptionPcev(PCE, NAME_initialiseFailed, ac, av);
     deleteAssoc(rval);
-    unallocObject(rval);
+    delCodeReference(rval);
+    freeableObj(rval);
     fail;
   }
 }
