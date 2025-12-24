@@ -353,20 +353,6 @@ static const error_def errors[] =
   { NAME_classVariablesNotObtained, ET_WARNING|EF_PRINT,
     "%O: class-variables have not been obtained" },
 
-					/* Display */
-  { NAME_noCurrentDisplay,	0,
-    "%N: No current display" },
-  { NAME_notSameDisplay,	0,
-    "%N: Not on the same display: %N" },
-  { NAME_noMainWindow,		ET_FATAL,
-    "%N: Failed to create X-application-shell" },
-  { NAME_noApplicationContext,	ET_FATAL,
-    "%N: Failed to create X-application-context" },
-#if SDL_GRAPHICS
-					/* SDL */
-  { NAME_sdlInitialize,	ET_FATAL,
-    "%N: Failed to initialize SDL" },
-#endif
 					/* Colour/Cursor/Font, etc */
   { NAME_noLocaleSupport,	ET_WARNING,
     "%N: X11 does not support locale %s" },
@@ -375,16 +361,6 @@ static const error_def errors[] =
 
   { NAME_noNamedColour,		ET_WARNING,
     "%N: No colour named %s; using black" },
-  { NAME_noNamedCursor,		EF_REPORT,
-    "%N: No cursor named %s" },
-  { NAME_getSelection,		EF_REPORT,
-    "%N: Cannot get %s selection: %s" },
-  { NAME_cannotBecomeSelectionOwner, EF_REPORT,
-    "%N: Cannot become selection owner" },
-  { NAME_noSelectionType,	ET_WARNING,
-    "%N: Selectiontype %s is not supported" },
-  { NAME_replacedColour,	EF_REPORT|ET_IGNORED,
-    "%N: Replaced by close value" },
   { NAME_replacedByColour,	ET_IGNORED,
     "%O: replaced by colour(%N)" },
 
@@ -400,33 +376,11 @@ static const error_def errors[] =
   { NAME_badFontAlias, ET_WARNING,
     "%O: Bad font alias %N --> %O" },
 
-					/* X-errors */
-  { NAME_xOpen,			ET_FATAL,
-    "%N: Xopen failed on %s" },
-  { NAME_xError,		0,
-    "%N: X-error" },
-  { NAME_noXServer,		ET_FATAL,
-    "%N: Failed to connect to X-server at `%s': %s\n"
-    "*********************************************************************\n"
-    "* You MUST be running the X11 Windowing environment.  If you are,   *\n"
-    "* check the setting of your DISPLAY environment variable as well    *\n"
-    "* the access rights to your X11 server.  See xauth(1) and xhost(1). *\n"
-    "*********************************************************************"
-  },
-  { NAME_xMovedDisplay,		ET_STATUS|EF_PRINT,
-    "%N: Moved to display %s" },
-  { NAME_cannotGrabPointer,	ET_WARNING|EF_PRINT,
-    "%N: Failed to grab pointer: %s" },
-  { NAME_noRelatedXFont,	ET_WARNING,
-    "%N: No related X-font" },
+					/* Class variable-errors */
   { NAME_cannotConvertDefault,	ET_WARNING|EF_PRINT,
     "%N: Failed to convert %s.  Trying program default" },
   { NAME_cannotConvertProgramDefault,	ET_FATAL,
     "%N: Failed to convert program default \"%s\"" },
-  { NAME_winMetafile,		ET_WARNING,
-    "%O: API operation %s failed: %s" },
-  { NAME_x11Threads,		ET_WARNING,
-    "%O: Cannot change X11 threading: display is already open" },
 
 					/* Save/Load */
   { NAME_newSaveVersion,	ET_IGNORED|EF_PRINT,
@@ -536,13 +490,8 @@ static const error_def errors[] =
     "%N: Illegal selector: %O" },
   { NAME_freedObject,		0,
     "%N: Freed object: %O" },
-#ifndef O_RUNTIME
-  { NAME_noBehaviour,		ET_WARNING,
+  { NAME_noBehaviour,		EF_BACKTRACE|ET_WARNING,
     "%O: No implementation for: %s%s" },
-#else
-  { NAME_noBehaviour,		ET_WARNING,
-    "%IFailed on not-implemented behaviour" },
-#endif /*O_RUNTIME*/
   { NAME_noTextBehaviour,	ET_WARNING,
     "%O: No implementation for interactive function: ->%s" },
   { NAME_noClass,		0,
@@ -741,12 +690,6 @@ static const error_def errors[] =
   { NAME_noChangeLayoutInterface, 0,
     "%O: cannot change layout-interface"
   },
-
-#ifdef WIN32_GRAPHICS
-					/* MS-Windows errors */
-  { NAME_moreThanOneIcon,	0,
-    "%N: Contains more than 1 icon.  Using first" },
-#endif /*WIN32_GRAPHICS*/
 
   { NAME_threadsInitialised,		0,
     "%N: Cannot change threading after initialisation" },
