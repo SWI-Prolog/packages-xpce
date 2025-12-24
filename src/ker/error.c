@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog,org/projects/xpce/
+    Copyright (c)  1985-2025, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -103,12 +104,19 @@ displayError(Error e, int argc, Any *argv)
 
 #ifndef O_RUNTIME
     if ( e->kind == NAME_fatal ||
+	 e->feedback == NAME_backtrace ||
 	 (e->feedback == NAME_print &&
 	  e->kind != NAME_inform &&
 	  e->kind != NAME_status &&
 	  e->kind != NAME_warning) )
     { Cprintf("\n\tin: ");
       pceWriteErrorGoal();
+      if ( e->feedback == NAME_backtrace )
+      { pceBackTrace(NULL, 20);
+      } else
+      { Cprintf("Use `?- send(error(%s), feedback, backtrace).` "
+		"to force a backtrace\n", pp(e->id));
+      }
       send(PCE, NAME_exposeConsole, EAV);
       Cputchar('\007');			/* ^G: ASCII bell */
       debuggingPce(PCE, ON);
@@ -146,7 +154,7 @@ static char *T_initialise[] =
         { "name=name",
 	  "format=string",
 	  "kind=[{status,inform,warning,error,fatal,ignored}]",
-	  "feedback=[{report,throw,print}]"
+	  "feedback=[{report,throw,print,backtrace}]"
 	};
 
 /* Instance Variables */
@@ -158,7 +166,7 @@ static vardecl var_error[] =
      NAME_report, "Format used to print the message"),
   IV(NAME_kind, "{status,inform,warning,error,fatal,ignored}", IV_BOTH,
      NAME_report, "Kind of message"),
-  IV(NAME_feedback, "{report,throw,print}", IV_BOTH,
+  IV(NAME_feedback, "{report,throw,print,backtrace}", IV_BOTH,
      NAME_report, "Where (how) the report is reported")
 };
 
@@ -229,6 +237,7 @@ makeClassError(Class class)
 #define EF_THROW	0x00
 #define EF_PRINT	0x10
 #define EF_REPORT	0x20
+#define EF_BACKTRACE	0x40
 #define EF_MASK		0xf0
 
 typedef struct
@@ -768,9 +777,10 @@ initErrorDatabase(HashTable db)
 
 #ifndef O_RUNTIME
     switch(err->flags & EF_MASK)
-    { case EF_THROW:	feedback = NAME_throw;  break;
-      case EF_REPORT:	feedback = NAME_report;	break;
-      case EF_PRINT:	feedback = NAME_print;	break;
+    { case EF_THROW:	 feedback = NAME_throw;     break;
+      case EF_REPORT:	 feedback = NAME_report;    break;
+      case EF_PRINT:	 feedback = NAME_print;	    break;
+      case EF_BACKTRACE: feedback = NAME_backtrace; break;
       default:
 	assert(0);
     }
@@ -832,13 +842,11 @@ _errorPce(Any obj, Name id, va_list args)
 
       sendv(obj, isFunction(obj) ? NAME_Error : NAME_error, argc, argv);
       if ( e->kind == NAME_fatal )
-      {
-#ifndef O_RUNTIME
-	if ( id != NAME_noXServer )	/* little hack ... */
-          pceBackTrace(NULL, 20);
-        Cprintf("Host stack:\n");
+      { pceBackTrace(NULL, 20);
+
+	Cprintf("Host stack:\n");
         hostAction(HOST_BACKTRACE, 5);
-#endif
+
 	hostAction(HOST_RECOVER_FROM_FATAL_ERROR);
 	hostAction(HOST_HALT);
 	exit(1);
