@@ -60,6 +60,7 @@ buffer ``*Documentation*``.
     prolog_help:show_html_hook/1.
 
 prolog_help:show_html_hook(HTMLString) :-
+    nb_current(prolog_help_gui, true),
     thread_self(Thread),
     pce_thread(Thread),
     start_emacs,

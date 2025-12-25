@@ -227,7 +227,9 @@ help(P) :->
 prolog_manual(Topic) :-
     clause(prolog_help:show_html_hook(_), _),
     !,
-    help(Topic).
+    \+ \+ ( b_setval(prolog_help_gui, true),
+            help(Topic)
+          ).
 prolog_manual(Topic) :-
     current_prolog_flag(epilog, true),
     !,
