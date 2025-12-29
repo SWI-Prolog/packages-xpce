@@ -784,7 +784,10 @@ update(BM, Slot, Value, Modified) =>
 modified(BM) :->
     "Bookmark parameters have been modified"::
     get(BM, node, Node),
-    send(Node, update).
+    (   Node == @nil                % Not associated to a current buffer
+    ->  true
+    ;   send(Node, update)
+    ).
 
 :- pce_end_class(emacs_bookmark).
 
