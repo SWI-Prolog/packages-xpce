@@ -2879,7 +2879,7 @@ toggleCharCaseEditor(Editor e)
 		*          INDENT/UNDENT        *
 		*********************************/
 
-static long
+static intptr_t
 start_of_line(Editor e, Int where)
 { TextBuffer tb = e->text_buffer;
 
@@ -2963,6 +2963,39 @@ getIndentationEditor(Editor e, Int where, Regex re)
 }
 
 
+static intptr_t
+minimize_change(Editor e, intptr_t pos, int *tabsp, int *spacesp)
+{ int tabs = *tabsp;
+  int spaces = *spacesp;
+  int match = 0;
+
+  for(int i=0; i<tabs; i++)
+  { if ( Fetch(e, pos+i) == '\t' )
+      match++;
+    else
+      break;
+  }
+  if ( tabs == match )
+  { for(int i=0; i<spaces; i++)
+    { if ( Fetch(e, pos+tabs+i) == ' ' )
+	match++;
+      else
+	break;
+    }
+    spaces -= match-tabs;
+    tabs = 0;
+  } else
+  { tabs -= match;
+  }
+  pos += match;
+
+  *tabsp = tabs;
+  *spacesp = spaces;
+
+  return pos;
+}
+
+
 static status
 alignEditor(Editor e, Int column, Int where)
 { TextBuffer tb = e->text_buffer;
@@ -2999,6 +3032,8 @@ alignEditor(Editor e, Int column, Int where)
 	Cprintf("Ttx = %d; del = %d, tabs = %d; spaces = %d\n",
 		txt, here-txt, tabs, spaces));
 
+  txt = minimize_change(e, txt, &tabs, &spaces);
+
 					/* delete old indent */
   delete_textbuffer(tb, txt, here-txt);
   insert_textbuffer(tb, txt, tabs, str_tab(&tb->buffer));
@@ -3014,8 +3049,8 @@ alignEditor(Editor e, Int column, Int where)
 static status
 alignOneLineEditor(Editor e, Int where, Int column)
 { TextBuffer tb = e->text_buffer;
-  long sol = start_of_line(e, where);
-  long sot;
+  intptr_t sol = start_of_line(e, where);
+  intptr_t sot;
   int tabs, spaces;
   int col;
 
@@ -3036,26 +3071,7 @@ alignOneLineEditor(Editor e, Int where, Int column)
     tabs = col / valInt(e->tab_distance);
   spaces = (tabs == 0 ? col : col % valInt(e->tab_distance));
 
-  int match = 0;
-  for(int i=0; i<tabs; i++)
-  { if ( Fetch(e, sol+i) == '\t' )
-      match++;
-    else
-      break;
-  }
-  if ( tabs == match )
-  { for(int i=0; i<spaces; i++)
-    { if ( Fetch(e, sol+tabs+i) == ' ' )
-	match++;
-      else
-	break;
-    }
-    spaces -= match-tabs;
-    tabs = 0;
-  } else
-  { tabs -= match;
-  }
-  sol += match;
+  sol = minimize_change(e, sol, &tabs, &spaces);
 
   delete_textbuffer(tb, sol, sot-sol);
   insert_textbuffer(tb, sol, tabs, str_tab(&tb->buffer));
