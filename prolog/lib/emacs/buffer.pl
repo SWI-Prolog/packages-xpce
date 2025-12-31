@@ -384,7 +384,8 @@ save(B, File:[file]) :->
     (   object(@emacs_mark_list)
     ->  ignore(send(@emacs_mark_list, update_bookmarks, B))
     ;   true
-    ).
+    ),
+    broadcast(pce_emacs(saved(B))).
 
 no_backup(File) :-
     get(@emacs_no_backup_list, find,
