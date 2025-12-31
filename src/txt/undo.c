@@ -516,6 +516,15 @@ resize_undo_cell(UndoBuffer ub, UndoCell cell, size_t size)
   return false;
 }
 
+static StringObj
+get_string_undo_cell(TextBuffer tb, ssize_t where, ssize_t len)
+{ intptr_t gap_start = tb->gap_start;
+
+  StringObj repl = getContentsTextBuffer(tb, toInt(where), toInt(len));
+  room_text_buffer(tb, gap_start, 0);
+
+  return repl;
+}
 
 static TextChange
 get_text_change_undo_cell(TextBuffer tb, UndoCell c)
@@ -534,7 +543,7 @@ get_text_change_undo_cell(TextBuffer tb, UndoCell c)
     case UNDO_INSERT:
     { UndoInsert ui  = (UndoInsert)c;
       if ( ui->len > MAX_CHANGESET_SIZE ) return NULL;
-      StringObj repl = getContentsTextBuffer(tb, toInt(ui->where), toInt(ui->len));
+      StringObj repl = get_string_undo_cell(tb, ui->where, ui->len);
 
       tc = newObject(ClassTextChange,
 		     toInt(ui->lpos.line), toInt(ui->lpos.pos),
@@ -544,7 +553,7 @@ get_text_change_undo_cell(TextBuffer tb, UndoCell c)
     case UNDO_CHANGE:
     { UndoChange uc  = (UndoChange)c;
       if ( uc->len > MAX_CHANGESET_SIZE ) return NULL;
-      StringObj repl = getContentsTextBuffer(tb, toInt(uc->where), toInt(uc->len));
+      StringObj repl = get_string_undo_cell(tb, uc->where, uc->len);
 
       tc = newObject(ClassTextChange,
 		     toInt(uc->lpos.line), toInt(uc->lpos.pos),

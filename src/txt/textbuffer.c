@@ -38,22 +38,21 @@
 #include <h/text.h>
 #include <h/unix.h>
 
-forwards Int	getMatchingQuoteTextBuffer(TextBuffer, Int, Name);
-forwards int	room(TextBuffer, intptr_t, intptr_t);
-forwards status capitalise_textbuffer(TextBuffer, intptr_t, intptr_t);
-forwards status clear_textbuffer(TextBuffer);
-forwards status downcase_textbuffer(TextBuffer, intptr_t, intptr_t);
-forwards void	end_change(TextBuffer, intptr_t);
-forwards Int    getSizeTextBuffer(TextBuffer);
-forwards status store_textbuffer(TextBuffer, intptr_t, wint_t);
-forwards status transpose_textbuffer(TextBuffer, intptr_t, intptr_t, intptr_t, intptr_t);
-forwards status upcase_textbuffer(TextBuffer, intptr_t, intptr_t);
-forwards status save_textbuffer(TextBuffer, intptr_t, intptr_t, SourceSink);
-forwards status insert_file_textbuffer(TextBuffer, intptr_t, intptr_t, SourceSink);
-forwards status shift_fragments(TextBuffer, intptr_t, intptr_t);
-forwards void	start_change(TextBuffer, intptr_t);
-forwards status insert_textbuffer_shift(TextBuffer, intptr_t, intptr_t, PceString, int);
-forwards status promoteTextBuffer(TextBuffer tb);
+static Int    getMatchingQuoteTextBuffer(TextBuffer, Int, Name);
+static status capitalise_textbuffer(TextBuffer, intptr_t, intptr_t);
+static status clear_textbuffer(TextBuffer);
+static status downcase_textbuffer(TextBuffer, intptr_t, intptr_t);
+static void   end_change(TextBuffer, intptr_t);
+static Int    getSizeTextBuffer(TextBuffer);
+static status store_textbuffer(TextBuffer, intptr_t, wint_t);
+static status transpose_textbuffer(TextBuffer, intptr_t, intptr_t, intptr_t, intptr_t);
+static status upcase_textbuffer(TextBuffer, intptr_t, intptr_t);
+static status save_textbuffer(TextBuffer, intptr_t, intptr_t, SourceSink);
+static status insert_file_textbuffer(TextBuffer, intptr_t, intptr_t, SourceSink);
+static status shift_fragments(TextBuffer, intptr_t, intptr_t);
+static void   start_change(TextBuffer, intptr_t);
+static status insert_textbuffer_shift(TextBuffer, intptr_t, intptr_t, PceString, int);
+static status promoteTextBuffer(TextBuffer tb);
 
 #define ALLOC (256)		/* increment allocation by this amount */
 #define ROUND(n, r)		( (((n) + (r)-1) / (r)) * (r) )
@@ -2245,7 +2244,7 @@ transpose_textbuffer(TextBuffer tb, intptr_t f1, intptr_t t1, intptr_t f2, intpt
 
   register_change_textbuffer(tb, f1, t2-f1);
 
-  room(tb, t2, 0);			/* move gap out of the way */
+  room_text_buffer(tb, t2, 0);			/* move gap out of the way */
   t1--; t2--;
   mirror_textbuffer(tb, f1, t2);
   mirror_textbuffer(tb, f1, f1+t2-f2);
@@ -2322,7 +2321,7 @@ static status
 save_textbuffer(TextBuffer tb, intptr_t from, intptr_t len, SourceSink file)
 { IOSTREAM *fd;
 
-  room(tb, tb->size, 0);		/* move the gap to the end */
+  room_text_buffer(tb, tb->size, 0);		/* move the gap to the end */
 
   if ( !(fd = Sopen_object(file, "wr")) )
     return errorPce(file, NAME_openFile, NAME_write, getOsErrorPce(PCE));
@@ -2376,7 +2375,7 @@ str_sub_text_buffer(TextBuffer tb, PceString s, intptr_t start, intptr_t len)
     len = tb->size - start;
 
   if ( start < tb->gap_start && start+len > tb->gap_start )
-    room(tb, start + len, 1);
+    room_text_buffer(tb, start + len, 1);
 
   str_cphdr(s, &tb->buffer);
   s->s_size = len;
@@ -2486,7 +2485,7 @@ insert_file_textbuffer(TextBuffer tb, intptr_t where, intptr_t times, SourceSink
     fail;
   size = Ssize(fd);			/* size in bytes */
 
-  room(tb, where, size);		/* always enough */
+  room_text_buffer(tb, where, size);		/* always enough */
   where = tb->gap_start;		/* normalised */
   start_change(tb, tb->gap_start);
 
@@ -2546,7 +2545,7 @@ done:
   register_insert_textbuffer(tb, where, grow);
 
   times--;
-  room(tb, tb->gap_start, times*size);	/* enough for the copies */
+  room_text_buffer(tb, tb->gap_start, times*size);	/* enough for the copies */
   while(times-- > 0)
   { memmove(Address(tb, tb->gap_start),
 	    Address(tb, where),
@@ -2588,7 +2587,7 @@ insert_textbuffer_shift(TextBuffer tb, intptr_t where, intptr_t times,
 
   grow = times * s->s_size;
   where = NormaliseIndex(tb, where);
-  room(tb, where, grow);
+  room_text_buffer(tb, where, grow);
 
   register_insert_textbuffer(tb, where, grow);
   start_change(tb, tb->gap_start);
@@ -2685,7 +2684,7 @@ delete_textbuffer(TextBuffer tb, intptr_t where, intptr_t length)
   if ( length <= 0 )				/* out of bounds: ignore */
     succeed;
 
-  room(tb, where, 0);				/* move the gap here */
+  room_text_buffer(tb, where, 0);				/* move the gap here */
   register_delete_textbuffer(tb, where, length);
 
   start_change(tb, where);
@@ -2801,8 +2800,8 @@ end_change(TextBuffer tb, intptr_t where)
 
  ** Tue Apr  4 17:23:28 1989  jan@swivax.UUCP (Jan Wielemaker)  */
 
-static int
-room(TextBuffer tb, intptr_t where, intptr_t grow)
+void
+room_text_buffer(TextBuffer tb, intptr_t where, intptr_t grow)
 { ssize_t shift;
 
   if ( grow + tb->size > tb->allocated )
@@ -2836,8 +2835,6 @@ room(TextBuffer tb, intptr_t where, intptr_t grow)
   }
   tb->gap_start += shift;			/* move the gap pointers */
   tb->gap_end += shift;
-
-  succeed;
 }
 
 

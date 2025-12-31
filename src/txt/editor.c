@@ -2995,7 +2995,9 @@ alignEditor(Editor e, Int column, Int where)
       tabs = col / tabd - txtcol / tabd;
     spaces = (tabs == 0 ? col - txtcol : col % tabd);
   }
-  DEBUG(NAME_align, Cprintf("tabs = %d; spaces = %d\n", tabs, spaces));
+  DEBUG(NAME_align,
+	Cprintf("Ttx = %d; del = %d, tabs = %d; spaces = %d\n",
+		txt, here-txt, tabs, spaces));
 
 					/* delete old indent */
   delete_textbuffer(tb, txt, here-txt);

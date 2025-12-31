@@ -310,5 +310,6 @@ End;
 COMMON(void)	update_lsp_pos_text_buffer(TextBuffer tb, size_t from, size_t to,
 					   lsp_pos *pos);
 COMMON(size_t)	u16_range_length(TextBuffer tb, size_t from, size_t len);
+COMMON(void)    room_text_buffer(TextBuffer, intptr_t, intptr_t);
 
 #endif /* _PCE_TXT_INCLUDED */
