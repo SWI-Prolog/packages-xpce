@@ -353,12 +353,6 @@ static const error_def errors[] =
   { NAME_classVariablesNotObtained, ET_WARNING|EF_PRINT,
     "%O: class-variables have not been obtained" },
 
-					/* Colour/Cursor/Font, etc */
-  { NAME_noLocaleSupport,	ET_WARNING,
-    "%N: X11 does not support locale %s" },
-  { NAME_cannotSetLocale,	ET_WARNING,
-    "%N: X11: cannot set locale modifiers" },
-
   { NAME_noNamedColour,		ET_WARNING,
     "%N: No colour named %s; using black" },
   { NAME_replacedByColour,	ET_IGNORED,
@@ -369,10 +363,6 @@ static const error_def errors[] =
     "%N: No default font defined (Pce.Display.no_font)" },
   { NAME_replacedFont,		ET_WARNING|EF_PRINT,
     "%N: Failed to open; replaced by %N" },
-  { NAME_no16BitFontsSupported,	ET_WARNING,
-    "%N: 16-bit fonts are not (yet) supported" },
-  { NAME_noFontsInFamily, ET_WARNING,
-    "%N: No fonts in font-family %s" },
   { NAME_badFontAlias, ET_WARNING,
     "%O: Bad font alias %N --> %O" },
 
