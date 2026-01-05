@@ -122,6 +122,7 @@ pce_ifhostproperty(prolog(swi),
 :- declare_emacs_mode(script,   library('emacs/script_mode')).
 :- declare_emacs_mode(man,      library('emacs/man_mode')).
 :- declare_emacs_mode(text,     library('emacs/text_mode')).
+:- declare_emacs_mode(markdown, library('emacs/markdown_mode')).
 :- declare_emacs_mode(annotate, library('emacs/annotate_mode')).
 :- declare_emacs_mode(gdb,      library('emacs/gdb')).
 :- declare_emacs_mode(sgml,     library('emacs/sgml_mode')).
@@ -200,7 +201,7 @@ default_emacs_mode('.*\\.idl$',                    cpp).
 default_emacs_mode('.*\\.yaml~?$',                 yaml).
 default_emacs_mode('.*\\.cmake~?$|CMakeLists.txt', cmake).
 default_emacs_mode('.*\\.txt~?$',                  text).
-default_emacs_mode('.*\\.md~?$',                   text).
+default_emacs_mode('.*\\.md~?$',                   markdown).
 default_emacs_mode('.*\\.eml~?$',                  text).
 default_emacs_mode('[Cc]ompose|README|\\.article', text).
 default_emacs_mode(Pattern, prolog) :-
