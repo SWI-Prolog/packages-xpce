@@ -241,6 +241,11 @@ icon(_, I:image) :<-
 setup_mode(M) :->
     "Attach styles for errors, warnings, etc."::
     send_super(M, setup_mode),
+    send(M, setup_prolog_mode).
+
+setup_prolog_mode(M) :->
+    "Do the Prolog specific parts of ->setup_mode"::
+
     send(M, style, breakpoint, style(icon := resource(breakpoint))),
     send(M, style, error,      style(background := red)),
     send(M, style, warning,    style(background := orange)),
@@ -2268,6 +2273,10 @@ colour_item(M, Class, Start, Length) :-
 colour_item(_, _, _, _).
 
 setup_styles(M) :->
+    "Associate defined syntax-styles"::
+    send(M, setup_prolog_styles).
+
+setup_prolog_styles(M) :->
     "Associate defined syntax-styles"::
     get(M, editor, E),
     (   predicate_property(prolog_colour:style(_,_),
