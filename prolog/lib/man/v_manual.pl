@@ -403,15 +403,13 @@ destroy_tool(M, Tool:man_frame) :->
 quit(M) :->
     "Quit Manual Tool"::
     send(M, save_if_modified),
-%   send(@display, confirm, M, "XPCE Manual", 'Quit all manual tools?'),
-    send(M?tools, for_all, message(@arg1?value, quit)),
-    send(M, destroy).
+    send(M, status, unmapped).
 
 
 quit_pce(M) :->
-    "Exit from PCE process"::
+    "Exit from XPCE process"::
     send(M, save_if_modified),
-    send(@display, confirm, M, "XPCE Manual", 'Really exit PCE?'),
+    send(@display, confirm, M, "XPCE Manual", 'Really exit XPCE?'),
     send(@pce, die).
 
 
@@ -671,7 +669,6 @@ inspect(M, V:object) :->
 
 manual(M, Object:'class|behaviour|object') :->
     "Open manual on object"::
-    send(M, open),
     (   send(Object, instance_of, class)
     ->  send(M, start_tool, class_browser),
         send(M, request_tool_focus, Object)
