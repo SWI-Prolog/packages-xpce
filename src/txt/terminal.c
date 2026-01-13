@@ -2592,6 +2592,12 @@ rlc_sgr(RlcData b, int sgr)
   }
 }
 
+static void
+rlc_24bit_colour(RlcData b, bool fg, int red, int green, int blue)
+{ DEBUG(NAME_term, Cprintf("Colour: %s %d,%d,%d (not implemented)\n",
+			   fg ? "fg" : "bg", red, green, blue));
+}
+
 static RlcTextLine
 rlc_prepare_line(RlcData b, int y)
 { RlcTextLine tl = &b->lines[b->caret_y];
@@ -3270,11 +3276,16 @@ rlc_putansi(RlcData b, int chr)
 	  CMD(rlc_erase_line(b));
 	  break;
 	case 'm':
-	  { int i;
-	    rlc_need_arg(b, 1, 0);
+	  { rlc_need_arg(b, 1, 0);
 
-	    for(i=0; i<b->argc; i++)
-	      CMD(rlc_sgr(b, b->argv[i]));
+	    if ( (b->argv[0] == 38 || b->argv[0] == 48) &&
+		 b->argc == 5 && b->argv[1] == 2 )
+	    { CMD(rlc_24bit_colour(b, b->argv[0] == 38,
+				   b->argv[2], b->argv[3], b->argv[4]));
+	    } else
+	    { for(int i=0; i<b->argc; i++)
+		CMD(rlc_sgr(b, b->argv[i]));
+	    }
 	    break;
 	  }
 	case '@':		/* \e[<n>@: insert <n> spaces */
