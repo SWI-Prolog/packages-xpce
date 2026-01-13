@@ -674,7 +674,8 @@ replace_end(M) :->
 
 bookmark_line(M) :->
     "Create a mark in the mark-list"::
-    (   get(M, selection, point(Start, End))
+    (   \+ get(M, mark_status, inactive),
+        get(M, selection, point(Start, End))
     ->  true
     ;   get(M, caret, Caret),
         get(M, scan, Caret, line, 0, start, Start),
