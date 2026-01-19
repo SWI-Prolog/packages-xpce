@@ -2333,7 +2333,7 @@ str_string(PceString s, FontObj font,
   for(n=0, line = lines; n++ < nlines; line++)
   { str_text(font, &line->text, line->x, line->y+baseline);
     if ( isOn(underline) || instanceOfObject(underline, ClassColour) )
-      r_underline(font, line->x, y, line->width, underline);
+      r_underline(font, line->x, y+baseline, line->width, underline);
   }
 }
 
