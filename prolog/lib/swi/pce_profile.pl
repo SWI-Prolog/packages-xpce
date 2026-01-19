@@ -242,10 +242,10 @@ initialise(B) :->
     send(B, select_message, message(@arg1, details)).
 
 resize(B) :->
-    get(B?visible, width, W),
-    get(B?font, ex, Ex),
-    send(B, tab_stops, vector(W-10*Ex)),
-    send_super(B, resize).
+    send_super(B, resize),
+    get(B?image, width, W),
+    get(B?font, width, '100.0%', ColW),
+    send(B, tab_stops, vector(W-ColW-15)).
 
 load_profile(B, Nodes:prolog) :->
     "Load stored profile from the Prolog database"::
