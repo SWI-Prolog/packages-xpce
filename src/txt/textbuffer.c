@@ -2020,13 +2020,9 @@ update_lsp_pos_text_buffer(TextBuffer tb, size_t from, size_t to, lsp_pos *pos)
 	  { pos->line++;
 	    pos->pos = 0;
 	  } else
-	  {
-#if SIZEOF_WCHAR_T == 2
-	    pos->pos++;
-#else
+	  { pos->pos++;
 	    if ( b[i] > 0xffff )
 	      pos->pos++;
-#endif
 	  }
 	}
 	b = tb->tb_bufferW + tb->gap_end - tb->gap_start;
