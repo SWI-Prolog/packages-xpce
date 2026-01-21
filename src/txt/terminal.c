@@ -1671,13 +1671,16 @@ rlc_paint_text(RlcData b,
 	  Cprintf("No bold font\n");
       }
 
-      //Cprintf("Print \"%s\" at %d,%d using %s\n", t, *cx, ty, pp(ti->font));
       int x0 = *cx;
       *cx += tchar_width(b, t, ulen, segment, ti->font);
+#if 0
+      fprintf(stderr, "Print \"%s\"[%d] at %d[%d],%d using %s\n",
+	      t, ulen, x0, *cx-x0, ty, pp(ti->font));
+#endif
       r_clear(x0, ty-b->cb, *cx-x0, b->ch);
       s_print_utf8(t, ulen, x0, ty, font);
       if ( TF_UNDERLINE(flags) )
-	r_underline(font, x0, ty, *cx, DEFAULT);
+	r_underline(font, x0, ty, *cx-x0, DEFAULT);
       if ( TF_INVERSE(flags) )
 	r_swap_background_and_foreground();
       if ( notDefault(ofg) )
