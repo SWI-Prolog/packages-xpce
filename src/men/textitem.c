@@ -106,7 +106,7 @@ RedrawAreaTextItem(TextItem ti, Area a)
 { int x, y, w, h;
   int al, av, am;
   int lw, lh;
-  int fw = valInt(getExFont(ti->value_text->font));
+  int fw = valInt(getAvgCharWidthFont(ti->value_text->font));
   int tx, ty, tw, th;
   TextObj vt = ti->value_text;
   int flags = 0;
@@ -221,7 +221,7 @@ compute_label_text_item(TextItem ti, int *lw, int *lh)
       obtainClassVariablesObject(ti);
 
     dia_label_size(ti, lw, lh, NULL);
-    *lw += valInt(getExFont(ti->label_font));
+    *lw += valInt(getAvgCharWidthFont(ti->label_font));
     if ( notDefault(ti->label_width) )
       *lw = max(valInt(ti->label_width), *lw);
   } else
@@ -1413,7 +1413,7 @@ valueWidthTextItem(TextItem ti, Int val)
 { assign(ti, value_width, val);
 
   if ( notDefault(val) && instanceOfObject(ti->value_font, ClassFont) )
-  { Int ex = getExFont(ti->value_font);
+  { Int ex = getAvgCharWidthFont(ti->value_font);
     int chars = (valInt(val) - text_item_combo_width(ti)) / valInt(ex);
 
     if ( chars < 2 )

@@ -61,7 +61,7 @@ computeLabelTab(Tab t)
 { if ( notNil(t->label) && t->label != NAME_ && notNil(t->label_size) )
   { int w, h;
     Size minsize = getClassVariableValueObject(t, NAME_labelSize);
-    int ex = valInt(getExFont(t->label_font));
+    int ex = valInt(getAvgCharWidthFont(t->label_font));
 
     compute_label_size_dialog_group((DialogGroup) t, &w, &h);
     if ( instanceOfObject(t->label, ClassCharArray) )
@@ -253,7 +253,7 @@ RedrawAreaTab(Tab t, Area a)
   int lw      = valInt(t->label_size->w)-1;
   int loff    = valInt(t->label_offset);
   int eh      = valInt(e->height);
-  int ex      = valInt(getExFont(t->label_font));
+  int ex      = valInt(getAvgCharWidthFont(t->label_font));
   int r       = 1;			/* radius of label corners */
   int lflags  = (t->active == OFF ? LABEL_INACTIVE : 0);
 

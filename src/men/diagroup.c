@@ -114,7 +114,7 @@ compute_label(DialogGroup g, int *x, int *y, int *w, int *h)
 	*y = -th/2;
     }
     if ( x )
-    { *x = valInt(g->radius) + valInt(getExFont(g->label_font));
+    { *x = valInt(g->radius) + valInt(getAvgCharWidthFont(g->label_font));
     }
   } else
   { if ( x ) *x = 0;
@@ -488,7 +488,7 @@ RedrawAreaDialogGroup(DialogGroup g, Area a)
     eh = 0;
 
   if ( notNil(g->label) && g->label != NAME_ )
-  { int ex = valInt(getExFont(g->label_font));
+  { int ex = valInt(getAvgCharWidthFont(g->label_font));
 
     r_clear(x+lx-ex/2, y, lw+ex, lh);
     RedrawLabelDialogGroup(g, 0, x+lx, y, lw, lh, NAME_center, NAME_center, 0);

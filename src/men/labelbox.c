@@ -50,8 +50,8 @@ initialiseLabelBox(LabelBox lb, Name name, Code msg)
   if ( isDefault(msg) )
     msg = NIL;
 
-  assign(lb, pen, 		toInt(0));
-  assign(lb, border, 		newObject(ClassSize, EAV));
+  assign(lb, pen,		toInt(0));
+  assign(lb, border,		newObject(ClassSize, EAV));
   assign(lb, auto_label_align,	ON);
   assign(lb, message,		msg);
   assign(lb, modified,		OFF);
@@ -69,7 +69,7 @@ compute_label(LabelBox lb, int *w, int *h, int *y)
 
   if ( *w > 0 )
   { if ( instanceOfObject(lb->label_font, ClassFont) )
-      *w += valInt(getExFont(lb->label_font));
+      *w += valInt(getAvgCharWidthFont(lb->label_font));
     else
       *w += 5;
   }
@@ -250,7 +250,7 @@ RedrawAreaLabelBox(LabelBox lb, Area a)
 
     compute_label(lb, &lw, &lh, &ly);
     if ( instanceOfObject(lb->label_font, ClassFont) )
-      sx = valInt(getExFont(lb->label_font));
+      sx = valInt(getAvgCharWidthFont(lb->label_font));
 
     RedrawLabelDialogGroup((DialogGroup)lb, 0,
 			   -lw, ly, lw-sx, lh,

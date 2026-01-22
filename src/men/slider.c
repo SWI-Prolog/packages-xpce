@@ -121,7 +121,7 @@ RedrawAreaSlider(Slider s, Area a)
   r_clear(x, y, w, h);
 
   if ( s->show_label == ON )
-  { int ex = valInt(getExFont(s->label_font));
+  { int ex = valInt(getAvgCharWidthFont(s->label_font));
 
     RedrawLabelDialogItem(s,
 			  accelerator_code(s->accelerator),
@@ -186,7 +186,7 @@ compute_label_slider(Slider s, int *lw, int *lh)
       obtainClassVariablesObject(s);
 
     dia_label_size(s, lw, lh, NULL);
-    *lw += valInt(getExFont(s->label_font));
+    *lw += valInt(getAvgCharWidthFont(s->label_font));
     if ( notDefault(s->label_width) )
       *lw = max(valInt(s->label_width), *lw);
   } else

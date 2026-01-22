@@ -146,7 +146,7 @@ initialiseEditor(Editor e, TextBuffer tb, Int w, Int h, Int tmw)
   initialiseDevice((Device) e);		/* also obtains class-variables! */
   assign(e, text_buffer, tb);
   fontEditor(e, e->font, DEFAULT);	/* Initialize bold_font */
-  fw = getExFont(e->font);
+  fw = getAvgCharWidthFont(e->font);
   fh = getHeightFont(e->font);
   iw = toInt(valInt(e->size->w) * valInt(fw) + 2 * TXT_X_MARGIN);
   ih = toInt(valInt(e->size->h) * valInt(fh) + 2 * TXT_Y_MARGIN);
@@ -389,7 +389,7 @@ showCaretAtEditor(Editor e, Int caret)
 				   &x, &y, &w, &h, &b) )
   { x += valInt(e->image->area->x);
     y += valInt(e->image->area->y);
-    w = valInt(getExFont(e->font));
+    w = valInt(getAvgCharWidthFont(e->font));
 
     setTextCursor(e->text_cursor,
 		  toInt(x), toInt(y), toInt(w), toInt(h), toInt(b));
@@ -682,7 +682,7 @@ geometryEditor(Editor e, Int x, Int y, Int w, Int h)
   DEBUG(NAME_editor, Cprintf("sw = %d, mw = %d, iw = %d\n",
 			     sw, mw, iw));
 
-  assign(e->size, w, div(toInt(iw), getExFont(e->font)));
+  assign(e->size, w, div(toInt(iw), getAvgCharWidthFont(e->font)));
   assign(e->size, h, div(h,  getHeightFont(e->font)));
 
   ix = (sw < 0 ? -sw : 0);
@@ -711,9 +711,9 @@ requestGeometryEditor(Editor e, Int x, Int y, Int w, Int h)
 { Any v;
 
   if ( notDefault(w) )
-    w = mul(w, getExFont(e->font));
+    w = mul(w, getAvgCharWidthFont(e->font));
   else if ( notNil(e->request_compute) )
-    w = mul(e->size->w, getExFont(e->font));
+    w = mul(e->size->w, getAvgCharWidthFont(e->font));
 
   if ( notDefault(h) )
     h = mul(h, getHeightFont(e->font));

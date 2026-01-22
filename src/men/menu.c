@@ -180,7 +180,7 @@ computeLabelMenu(Menu m)
 
     dia_label_size(m, &w, &h, NULL);
     if ( m->layout == NAME_horizontal )
-      w += valInt(getExFont(m->label_font));
+      w += valInt(getAvgCharWidthFont(m->label_font));
     setArea(m->label_area, DEFAULT, DEFAULT, toInt(w), toInt(h));
 
     if ( m->layout == NAME_vertical )
@@ -228,7 +228,7 @@ size_menu_item(Menu m, MenuItem mi, int *w, int *h)
     *h = valInt(image->size->h);
   } else if ( isName(mi->label) )
   { FontObj f = getFontMenuItemMenu(m, mi);
-    int fw = valInt(getExFont(f));
+    int fw = valInt(getAvgCharWidthFont(f));
 
     str_size(&((CharArray)mi->label)->data, f, w, h);
     *w += fw;
@@ -308,7 +308,7 @@ computeItemsMenu(Menu m)
       }
     }
 
-    rm += am + valInt(getExFont(f));
+    rm += am + valInt(getAvgCharWidthFont(f));
   }
 
   w += lm + rm;
@@ -714,7 +714,7 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
 
   if ( notNil(m->accelerator_font) && isName(mi->accelerator) )
   { FontObj f = m->accelerator_font;
-    int fw = valInt(getExFont(f));
+    int fw = valInt(getAvgCharWidthFont(f));
     Colour old = NULL;
 
     if ( notDefault(m->accelerator_colour) )
@@ -759,7 +759,7 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
 
   if ( instanceOfObject(mi->label, ClassCharArray) )
   { FontObj f = getFontMenuItemMenu(m, mi);
-    int fw = valInt(getExFont(f));
+    int fw = valInt(getAvgCharWidthFont(f));
 
     str_label(&((Name) mi->label)->data,
 	      accelerator_code(mi->accelerator),
@@ -816,7 +816,7 @@ RedrawAreaMenu(Menu m, Area a)
     int lw = (isDefault(m->label_width) ? valInt(m->label_area->w)
 					: valInt(m->label_width));
     if ( m->layout == NAME_horizontal )
-      lw -= valInt(getExFont(m->label_font));
+      lw -= valInt(getAvgCharWidthFont(m->label_font));
 
     RedrawLabelDialogItem(m,
 			  accelerator_code(m->accelerator),

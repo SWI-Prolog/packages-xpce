@@ -81,7 +81,7 @@ RedrawAreaLabel(Label lb, Area a)
   { PceString s = &((CharArray)lb->selection)->data;
 
     if ( notNil(z) )
-      x += valInt(getExFont(lb->font))/2;
+      x += valInt(getAvgCharWidthFont(lb->font))/2;
 
     if ( lb->wrap == NAME_clip )
     { LocalString(buf, s->s_iswide, s->s_size+1);
@@ -166,7 +166,7 @@ computeLabel(Label lb)
     if ( instanceOfObject(lb->selection, ClassCharArray) )
     { PceString s = &((CharArray)lb->selection)->data;
       int minw;
-      int ex = valInt(getExFont(lb->font));
+      int ex = valInt(getAvgCharWidthFont(lb->font));
 
       if ( lb->wrap == NAME_clip )
       { LocalString(buf, s->s_iswide, s->s_size+1);

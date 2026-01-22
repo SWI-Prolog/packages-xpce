@@ -1113,7 +1113,7 @@ nextLineText(TextObj t, Int arg, Int column)
   int fw, fh;
 
   deselectText(t);
-  fw = valInt(getExFont(t->font));
+  fw = valInt(getAvgCharWidthFont(t->font));
   fh = valInt(getHeightFont(t->font));
   get_char_pos_text(t, DEFAULT, &cx, &cy);
   cy += UArg(t) * fh + fh/2;
@@ -1136,7 +1136,7 @@ getColumnText(TextObj t)
 { int cx, cy;
   int fw;
 
-  fw = valInt(getExFont(t->font));
+  fw = valInt(getAvgCharWidthFont(t->font));
   get_char_pos_text(t, DEFAULT, &cx, &cy);
 
   answer(toInt(cx + fw/2));
@@ -1506,7 +1506,7 @@ lengthText(TextObj t, Int l)
   if ( isDefault(t->font) )
     obtainClassVariablesObject(t);
 
-  fw = valInt(getExFont(t->font));
+  fw = valInt(getAvgCharWidthFont(t->font));
   len = (valInt(l)+1) * fw;
 
   return marginText(t, toInt(len), NAME_clip);

@@ -95,7 +95,7 @@ initialiseListBrowser(ListBrowser lb, Dict dict, Int w, Int h)
   lb->start_cell = NIL;
 
   assign(lb, font, getClassVariableValueObject(lb, NAME_font));
-  fw = valInt(getExFont(lb->font));
+  fw = valInt(getAvgCharWidthFont(lb->font));
   fh = valInt(getHeightFont(lb->font));
   iw = valInt(lb->size->w) * fw + 2 * TXT_X_MARGIN;
   ih = valInt(lb->size->h) * fh + 2 * TXT_Y_MARGIN;
@@ -344,7 +344,7 @@ geometryListBrowser(ListBrowser lb, Int x, Int y, Int w, Int h)
   sw = isNil(lb->scroll_bar) ? 0 : valInt(getMarginScrollBar(lb->scroll_bar));
   iw = valInt(w) - abs(sw);
 
-  { int fw = valInt(getExFont(lb->font));
+  { int fw = valInt(getAvgCharWidthFont(lb->font));
     int fh = valInt(getHeightFont(lb->font));
 
     assign(lb->size, w, toInt((iw - 2 * TXT_X_MARGIN)/fw));
@@ -379,7 +379,7 @@ requestGeometryListBrowser(ListBrowser lb, Int x, Int y, Int w, Int h)
 { PceWindow v;
 
   if ( notDefault(w) )
-  { w = mul(w, getExFont(lb->font));
+  { w = mul(w, getAvgCharWidthFont(lb->font));
     if ( notNil(lb->scroll_bar) )
       w = add(w, getMarginScrollBar(lb->scroll_bar));
     w = add(w, toInt(2 * TXT_X_MARGIN));

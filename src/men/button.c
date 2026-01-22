@@ -321,7 +321,7 @@ computeButton(Button b)
     if ( b->look == NAME_winMenuBar ||
          b->look == NAME_gtkMenuBar )
     { if ( !isimage )
-      { w += valInt(getExFont(b->label_font)) * 2;
+      { w += valInt(getAvgCharWidthFont(b->label_font)) * 2;
 
 	if ( b->look == NAME_gtkMenuBar )
 	  h += 4;
@@ -376,7 +376,7 @@ getReferenceButton(Button b)
 
     if ( b->look == NAME_winMenuBar ||
 	 b->look == NAME_gtkMenuBar )
-      rx = valInt(getExFont(b->label_font));
+      rx = valInt(getAvgCharWidthFont(b->label_font));
 
     ref = answerObject(ClassPoint, toInt(rx), toInt((h - fh)/2 + ascent), EAV);
   }
