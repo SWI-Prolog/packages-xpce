@@ -50,6 +50,7 @@
 :- use_module(library(prolog_source)).
 :- autoload(library(prolog_codewalk), [prolog_walk_code/1]).
 :- autoload(library(prolog_xref), [ xref_defined/3, xref_module/2 ]).
+:- autoload(library(solution_sequences), [distinct/2]).
 :- require([ guitracer/0,
 	     auto_call/1,
 	     delete_breakpoint/1,
@@ -868,7 +869,7 @@ find_references(M, For:prolog_predicate) :->
                        trace_reference(Head),
                        on_edge(on_edge)
                      ]),
-    findall(Ref, retract(found_reference(Ref)), Refs),
+    findall(Ref, distinct(Ref, retract(found_reference(Ref))), Refs),
     report_references(M, PI, Refs).
 
 :- public on_edge/3.
