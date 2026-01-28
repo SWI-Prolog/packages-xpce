@@ -118,11 +118,14 @@ emacs_expansion((:- emacs_begin_mode(Mode, Super, Summary, Bindings, Syntax)),
                  (:- pce_class_directive(emacs_extend:emacs_mode_bindings(Mode,
                                                              Module,
                                                              Bindings,
-                                                             Syntax)))
+                                                             Syntax))),
+                 (:- multifile((ModeModule:style/2,
+                                ModeModule:def_style/2)))
                 ]) :-
     emacs_mode_class(Mode, PceMode),
     emacs_mode_class(Super, PceSuper),
-    prolog_load_context(module, Module).
+    prolog_load_context(module, Module),
+    lsp_mode_module(Mode, ModeModule).
 emacs_expansion((:- emacs_extend_mode(Mode, Bindings)),
                 [(:- pce_extend_class(PceMode)),
                  (:- pce_class_directive(emacs_extend:emacs_mode_bindings(Mode,
@@ -133,6 +136,9 @@ emacs_expansion((:- emacs_extend_mode(Mode, Bindings)),
     emacs_mode_class(Mode, PceMode),
     prolog_load_context(module, Module).
 emacs_expansion((:- emacs_end_mode), (:- pce_end_class)).
+
+lsp_mode_module(Mode, Module) :-
+    atomic_list_concat([emacs_, Mode, '_mode'], Module).
 
 %!  emacs_mode_bindings(+Mode, +Module, +Bindings, +Syntax)
 
