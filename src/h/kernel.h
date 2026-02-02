@@ -931,7 +931,12 @@ typedef struct _classdecl
 #define RCEntries(l)		AREntries(l, classvardecl)
 #define TNEntries(l)		AREntries(l, Name)
 
+#ifdef _MSC_VER
+/* MSVC does not consider `(l) == NULL` a constant expression */
+#define AREntries(l, t)		(sizeof(l) / sizeof(t))
+#else
 #define AREntries(l, t)		((((l) == NULL) ? 0 : sizeof(l)) / sizeof(t))
+#endif
 
 #ifndef UXWIN
 #ifdef WIN32_GRAPHICS
