@@ -925,13 +925,32 @@ typedef struct _classdecl
 #define RC(n, t, d, s)		{ n, t, d, s }
 #define IV(n, t, f, g, s)	{ n, t, f, NULL,        (Name) g, s }
 #define SV(n, t, f, c, g, s)	{ n, t, f, functionToPtr(c), (Name) g, s }
+#ifdef _MSC_VER
+/* MSVC C compiler doesn't accept ternary with pointer comparison in static
+   initializers (error C2099). Use simple sizeof division which works when
+   struct size > sizeof(void*). Static assertions verify this assumption. */
+static_assert(sizeof(vardecl) > sizeof(void*),
+              "vardecl must be larger than pointer for NULL safety");
+static_assert(sizeof(senddecl) > sizeof(void*),
+              "senddecl must be larger than pointer for NULL safety");
+static_assert(sizeof(getdecl) > sizeof(void*),
+              "getdecl must be larger than pointer for NULL safety");
+static_assert(sizeof(classvardecl) > sizeof(void*),
+              "classvardecl must be larger than pointer for NULL safety");
+#define IVEntries(l)		(sizeof(l) / sizeof(vardecl))
+#define SMEntries(l)		(sizeof(l) / sizeof(senddecl))
+#define GMEntries(l)		(sizeof(l) / sizeof(getdecl))
+#define RCEntries(l)		(sizeof(l) / sizeof(classvardecl))
+#define TNEntries(l)		(sizeof(l) / sizeof(Name))
+#else
+/* GCC/Clang: Proper NULL handling to silence bugprone-sizeof-expression */
+#define AREntries(l, t)		((((l) == NULL) ? 0 : sizeof(l)) / sizeof(t))
 #define IVEntries(l)		AREntries(l, vardecl)
 #define SMEntries(l)		AREntries(l, senddecl)
 #define GMEntries(l)		AREntries(l, getdecl)
 #define RCEntries(l)		AREntries(l, classvardecl)
 #define TNEntries(l)		AREntries(l, Name)
-
-#define AREntries(l, t)		((((l) == NULL) ? 0 : sizeof(l)) / sizeof(t))
+#endif
 
 #ifndef UXWIN
 #ifdef WIN32_GRAPHICS
