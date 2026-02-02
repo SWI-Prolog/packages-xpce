@@ -807,9 +807,9 @@ r_shadow_box(int x, int y, int w, int h, int r, int shadow, Any fill)
   { if ( shadow > h ) shadow = h;
     if ( shadow > w ) shadow = w;
 
-    r_colour(BLACK_COLOUR);
+    Any old = r_colour(BLACK_COLOUR);
     r_box(x+shadow, y+shadow, w-shadow, h-shadow, r, BLACK_COLOUR);
-    r_colour(DEFAULT);
+    r_colour(old);
     r_box(x, y, w-shadow, h-shadow, r, isNil(fill) ? WHITE_COLOUR : fill);
   }
 }
