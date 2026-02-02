@@ -936,11 +936,12 @@ r_3d_segments(int n, ISegment s, Elevation e, int light)
 #define MAX_SHADOW 10
 
 void
-r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
-{ int shadow = valInt(e->height);
+r_3d_box(double x, double y, double w, double h,
+	 double radius, Elevation e, bool up)
+{ double shadow = valNum(e->height);
 
   DEBUG(NAME_draw,
-	Cprintf("r_3d_box(%d, %d, %d, %d, %d, %s, %d)\n",
+	Cprintf("r_3d_box(%f, %f, %f, %f, %f, %s, %d)\n",
 		x, y, w, h, radius, pp(e), up));
 
   NormaliseArea(x, y, w, h);
@@ -953,7 +954,7 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
   }
 
   if ( e->kind == NAME_shadow )
-  { shadow = abs(shadow);
+  { shadow = fabs(shadow);
     shadow = min(shadow, min(w, h));
     if ( shadow > MAX_SHADOW )
       shadow = MAX_SHADOW;
@@ -983,11 +984,11 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
     if ( !up  )
       shadow = -shadow;
 
-    if ( shadow )
+    if ( shadow != 0.0 )
     { Colour top_left_color;
       Colour bottom_right_color;
 
-      if ( shadow > 0 )
+      if ( up )
       { top_left_color     = r_elevation_relief(e);
 	bottom_right_color = r_elevation_shadow(e);
       } else
@@ -1003,24 +1004,36 @@ r_3d_box(int x, int y, int w, int h, int radius, Elevation e, int up)
       if ( radius > 0 )			/* with rounded corners */
       { Cprintf("r_3d_box(): with radius\n");
       } else
-      { double fr = fx+fw;
-	double fb = fy+fh;
-
-	pce_cairo_set_source_color(CR, top_left_color);
-	cairo_set_line_width(CR, 1);
-	for(int os=0; os<shadow; os++)
-	{ cairo_move_to(CR, fr-os, fy+os);
-	  cairo_line_to(CR, fx+os, fy+os);
-	  cairo_line_to(CR, fx+os, fb-os);
-	  cairo_stroke(CR);
-	}
+      { pce_cairo_set_source_color(CR, top_left_color);
+	// Top (light)
+	cairo_move_to(CR, x, y);
+	cairo_line_to(CR, x + w, y);
+	cairo_line_to(CR, x + w - shadow, y + shadow);
+	cairo_line_to(CR, x + shadow, y + shadow);
+	cairo_close_path(CR);
+	cairo_fill(CR);
+	// Left (light)
+	cairo_move_to(CR, x, y);
+	cairo_line_to(CR, x, y + h);
+	cairo_line_to(CR, x + shadow, y + h - shadow);
+	cairo_line_to(CR, x + shadow, y + shadow);
+	cairo_close_path(CR);
+	cairo_fill(CR);
+        // Bottom (dark)
 	pce_cairo_set_source_color(CR, bottom_right_color);
-	for(int os=0; os<shadow; os++)
-	{ cairo_move_to(CR, fr-os, fy-os);
-	  cairo_line_to(CR, fr-os, fb-os);
-	  cairo_line_to(CR, fx+os, fb-os);
-	  cairo_stroke(CR);
-	}
+	cairo_move_to(CR, x, y + h);
+	cairo_line_to(CR, x + w, y + h);
+	cairo_line_to(CR, x + w - shadow, y + h - shadow);
+	cairo_line_to(CR, x + shadow, y + h - shadow);
+	cairo_close_path(CR);
+	cairo_fill(CR);
+	// Right (dark)
+	cairo_move_to(CR, x + w, y);
+	cairo_line_to(CR, x + w, y + h);
+	cairo_line_to(CR, x + w - shadow, y + h - shadow);
+	cairo_line_to(CR, x + w - shadow, y + shadow);
+	cairo_close_path(CR);
+	cairo_fill(CR);
       }
       InvTranslate(fx,fy);
     }

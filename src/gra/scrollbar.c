@@ -60,7 +60,7 @@ struct bubble_info
 
 struct sb_draw_data
 { int x, y, w, h;			/* from initialiseDeviceGraphical() */
-  int vertical;				/* true if vertical bar */
+  bool vertical;			/* true if vertical bar */
   int arrow;				/* height of arrows */
   struct bubble_info bubble;		/* bubble info */
 };
@@ -299,9 +299,9 @@ sb_init_draw_data(ScrollBar s, Area a, SbDrawData d, Any bg)
   if ( instanceOfObject(bg, ClassElevation) )
   { Elevation z = bg;
 
-    r_3d_box(d->x, d->y, d->w, d->h, 0, bg, TRUE);
+    r_3d_box(d->x, d->y, d->w, d->h, 0, bg, false);
 
-    m = labs(valInt(z->height)) + 1;
+    m = abs((int)valInt(z->height));
     d->x += m;
     d->y += m;
     d->w -= 2*m;
@@ -479,8 +479,7 @@ RedrawAreaScrollBar(ScrollBar s, Area a)
   Elevation z = NIL;
 
   if ( bg )
-  { if ( instanceOfObject(bg, ClassColour) ||
-	 instanceOfObject(bg, ClassPixmap) )
+  { if ( instanceOfObject(bg, ClassColour) )
       obg = r_background(bg);
     else if ( instanceOfObject(bg, ClassElevation) )
     { z = bg;
