@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@vu.nl
-    WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2001-2025, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/packages/xpce/
+    Copyright (c)  2001-2026, University of Amsterdam
                               VU University Amsterdam
                               SWI-Prolog Solutions b.v.
     All rights reserved.
@@ -117,23 +117,29 @@
     send_pce_async(0).
 
 register_directories :-
+    source_file(register_directories, File),
     (   member(SpyBase, ['icons/nospy', library('trace/icons/nospy')]),
         absolute_file_name(SpyBase,
-                           [ extensions([png]), access(read)],
+                           [ extensions([png]),
+                             access(read),
+                             relative_to(File)
+                           ],
                            SpyIcon)
     ->  file_directory_name(SpyIcon, Icons),
         pce_image_directory(Icons)
     ),
     (   member(HlpBase, ['pltracer', library('trace/pltracer')]),
         absolute_file_name(HlpBase,
-                           [ extensions([hlp]), access(read)],
+                           [ extensions([hlp]),
+                             access(read),
+                             relative_to(File)
+                           ],
                            HlpFile)
     ->  pce_help_file(pltracer, HlpFile)
     ).
 
-:- register_directories.
+:- initialization register_directories.
 
-version('2.0').
 
                  /*******************************
                  *            RESOURCES         *
@@ -573,15 +579,8 @@ fill_menu_bar(F) :->
                           end_group := @on)
               ]),
     send_list(Help, append,
-              [ menu_item(about,
-                          message(F, about)),
-                menu_item(help_on_debugger,
-                          message(F, help),
-                          end_group := @on),
-                menu_item(prolog_manual,
-                          message(@prolog, prolog_help)),
-                menu_item('XPCE manual',
-                          message(@prolog, manpce))
+              [ menu_item(help_on_debugger,
+                          message(F, help))
               ]),
     send(View, show_current, @on),
     send(View, multiple_selection, @on),
@@ -590,15 +589,6 @@ fill_menu_bar(F) :->
 settings(_F) :->
     "Edit the preferences"::
     trace_settings.
-
-
-about(F) :->
-    "Display aout message"::
-    version(Version),
-    send(@display, inform, F, "GUI Tracer",
-         'SWI-Prolog debugger version %s\n\c
-              By Jan Wielemaker',
-         Version).
 
 help(_) :->
     "Show window with help-text"::
