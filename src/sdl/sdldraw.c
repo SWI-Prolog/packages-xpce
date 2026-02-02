@@ -95,6 +95,7 @@ static void pce_cairo_set_source_color(cairo_t *cr, Colour pce);
 static bool validate_cairo_text_consistency(cairo_t *draw_cr);
 #endif
 
+static bool r_set_fill_fgbg(Any fill, Name which);
 static void r_fill_fgbg(double x, double y, double w, double h,
 			Any fill, Name which);
 
@@ -1543,24 +1544,29 @@ r_image(Image image, int sx, int sy,
     cairo_surface_destroy(surface);
 }
 
+static bool
+r_set_fill_fgbg(Any fill, Name which)
+{ r_fillpattern(fill, which);
+  DEBUG(NAME_draw,
+	Cprintf("fill with %s->%s\n", pp(fill), pp(context.fill_pattern)));
+  if ( instanceOfObject(context.fill_pattern, ClassColour) )
+  { pce_cairo_set_source_color(CR, context.fill_pattern);
+    return true;
+  } else if ( isNil(context.fill_pattern) )
+  { cairo_set_source_rgba(CR, 0, 0, 0, 0);
+    return true;
+  }
+
+  return false;
+}
+
 static void
 r_fill_fgbg(double x, double y, double w, double h, Any fill, Name which)
 { NormaliseArea(x, y, w, h);
   if ( w > 0 && h > 0 )
-  { r_fillpattern(fill, which);
-    DEBUG(NAME_draw,
-	  Cprintf("r_fill(%.1f, %.1f, %.1f, %.1f, %s->%s)\n",
-		  x, y, w, h, pp(fill), pp(context.fill_pattern)));
+  { if ( r_set_fill_fgbg(fill, which) )
+    { Translate(x, y);
 
-    Translate(x, y);
-
-    if ( instanceOfObject(context.fill_pattern, ClassColour) )
-    { pce_cairo_set_source_color(CR, context.fill_pattern);
-      cairo_rectangle(CR, x, y, w, h);
-      cairo_fill(CR);
-    } else if ( isNil(context.fill_pattern) )
-    { //Cprintf("r_fill(): Transparent\n");
-      cairo_set_source_rgba(CR, 0, 0, 0, 0);
       cairo_rectangle(CR, x, y, w, h);
       cairo_fill(CR);
     } else
