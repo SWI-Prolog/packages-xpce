@@ -732,14 +732,17 @@ r_translate(int x, int y, int *ox, int *oy)
 
 void
 my_cairo_rounded_rectangle(cairo_t *cr, double x, double y, double w, double h,
-			   double r)
+			   double r, bool sub)
 { double x0 = x,     y0 = y;
   double x1 = x + w, y1 = y + h;
 
   if (r > w / 2) r = w / 2;
   if (r > h / 2) r = h / 2;
 
-  cairo_new_sub_path(cr);
+  if ( sub )
+    cairo_new_sub_path(cr);
+  else
+    cairo_new_path(cr);
   cairo_arc(cr, x1 - r, y0 + r, r, -90 * M_PI/180.0,   0 * M_PI/180.0);
   cairo_arc(cr, x1 - r, y1 - r, r,   0 * M_PI/180.0,  90 * M_PI/180.0);
   cairo_arc(cr, x0 + r, y1 - r, r,  90 * M_PI/180.0, 180 * M_PI/180.0);
@@ -773,7 +776,7 @@ r_box(int x, int y, int w, int h, int r, Any fill)
   cairo_save(CR);
   cairo_set_antialias(CR, CAIRO_ANTIALIAS_NONE);
   if ( r )
-    my_cairo_rounded_rectangle(CR, fx, fy, fw, fh, r);
+    my_cairo_rounded_rectangle(CR, fx, fy, fw, fh, r, true);
   else
     cairo_rectangle(CR, fx, fy, fw, fh);
   if ( notNil(fill) )
@@ -1003,7 +1006,38 @@ r_3d_box(double x, double y, double w, double h,
 
       Translate(fx, fy);
       if ( radius > 0 )			/* with rounded corners */
-      { Cprintf("r_3d_box(): with radius\n");
+      {	pce_cairo_set_source_color(CR, top_left_color);
+	cairo_new_path(CR);
+	cairo_move_to(CR, x, y);
+	cairo_line_to(CR, x+w, y);
+	cairo_line_to(CR, x, y+h);
+	cairo_close_path(CR);
+	cairo_clip(CR);
+
+	my_cairo_rounded_rectangle(CR, x, y, w, h, radius, false);
+	cairo_fill(CR);
+	cairo_reset_clip(CR);
+
+	pce_cairo_set_source_color(CR, bottom_right_color);
+	cairo_new_path(CR);
+	cairo_move_to(CR, x+w, y);
+	cairo_line_to(CR, x+w, y+h);
+	cairo_line_to(CR, x, y+h);
+	cairo_close_path(CR);
+	cairo_clip(CR);
+
+	my_cairo_rounded_rectangle(CR, x, y, w, h, radius, false);
+	cairo_fill(CR);
+	cairo_reset_clip(CR);
+
+	// Fill base
+	if ( r_set_fill_fgbg(NAME_current, NAME_background) )
+	{ double ix = x+shadow, iy = y+shadow, iw = w-2*shadow, ih = h-2*shadow;
+	  double ir = radius * ((w+h)-2*shadow)/(w+h);
+
+	  my_cairo_rounded_rectangle(CR, ix, iy, iw, ih, ir, true);
+	  cairo_fill(CR);
+	}
       } else
       { pce_cairo_set_source_color(CR, top_left_color);
 	// Top (light)
@@ -1039,7 +1073,7 @@ r_3d_box(double x, double y, double w, double h,
       InvTranslate(fx,fy);
     }
 
-    if ( fill )			/* r_fill_fgbg() uses floats  */
+    if ( fill && radius == 0.0 ) /* r_fill_fgbg() uses floats  */
       r_fill_fgbg(fx+shadow, fy+shadow, fw-2*shadow,
 		  fh-2*shadow, NAME_current, NAME_background);
   }
