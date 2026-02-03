@@ -949,7 +949,9 @@ r_3d_box(double x, double y, double w, double h,
 		x, y, w, h, radius, pp(e), up));
 
   NormaliseArea(x, y, w, h);
-  FloatArea(x, y, w, h);
+  if ( w < 0.1 || h < 0.1 )
+    return;
+
   if ( radius > 0 )
   { int maxr = min(w,h)/2;
 
@@ -1004,7 +1006,7 @@ r_3d_box(double x, double y, double w, double h,
       if ( shadow > MAX_SHADOW )
 	shadow = MAX_SHADOW;
 
-      Translate(fx, fy);
+      Translate(x, y);
       if ( radius > 0 )			/* with rounded corners */
       {	pce_cairo_set_source_color(CR, top_left_color);
 	cairo_new_path(CR);
@@ -1070,12 +1072,12 @@ r_3d_box(double x, double y, double w, double h,
 	cairo_close_path(CR);
 	cairo_fill(CR);
       }
-      InvTranslate(fx,fy);
+      InvTranslate(x,y);
     }
 
     if ( fill && radius == 0.0 ) /* r_fill_fgbg() uses floats  */
-      r_fill_fgbg(fx+shadow, fy+shadow, fw-2*shadow,
-		  fh-2*shadow, NAME_current, NAME_background);
+      r_fill_fgbg(x+shadow, y+shadow, w-2*shadow,
+		  h-2*shadow, NAME_current, NAME_background);
   }
 }
 
