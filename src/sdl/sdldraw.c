@@ -944,6 +944,12 @@ r_3d_box(double x, double y, double w, double h,
 	 double radius, Elevation e, bool up)
 { double shadow = valNum(e->height);
 
+  if ( shadow < 0.0 )
+  { shadow = -shadow;
+    up = !up;
+  }
+  radius = max(0.0,radius);
+
   DEBUG(NAME_draw,
 	Cprintf("r_3d_box(%f, %f, %f, %f, %f, %s, %d)\n",
 		x, y, w, h, radius, pp(e), up));
@@ -952,16 +958,10 @@ r_3d_box(double x, double y, double w, double h,
   if ( w < 0.1 || h < 0.1 )
     return;
 
-  if ( radius > 0 )
-  { int maxr = min(w,h)/2;
-
-    if ( radius > maxr )
-      radius = maxr;
-  }
+  radius = min(radius, min(w,h)/2);
 
   if ( e->kind == NAME_shadow )
-  { shadow = fabs(shadow);
-    shadow = min(shadow, min(w, h));
+  { shadow = min(shadow, min(w, h));
     if ( shadow > MAX_SHADOW )
       shadow = MAX_SHADOW;
     r_box(x, y, w-shadow, h-shadow, radius-shadow, e->colour);
@@ -987,9 +987,6 @@ r_3d_box(double x, double y, double w, double h,
   } else
   { bool fill = r_elevation_fillpattern(e, up);
 
-    if ( !up  )
-      shadow = -shadow;
-
     if ( shadow != 0.0 )
     { Colour top_left_color;
       Colour bottom_right_color;
@@ -1000,7 +997,6 @@ r_3d_box(double x, double y, double w, double h,
       } else
       { top_left_color     = r_elevation_shadow(e);
 	bottom_right_color = r_elevation_relief(e);
-	shadow             = -shadow;
       }
 
       if ( shadow > MAX_SHADOW )
