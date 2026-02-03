@@ -941,8 +941,9 @@ r_3d_segments(int n, ISegment s, Elevation e, int light)
 
 void
 r_3d_box(double x, double y, double w, double h,
-	 double radius, Elevation e, bool up)
+	 double radius, Elevation e, bool up0)
 { double shadow = valNum(e->height);
+  bool up = up0;
 
   if ( shadow < 0.0 )
   { shadow = -shadow;
@@ -985,7 +986,7 @@ r_3d_box(double x, double y, double w, double h,
       }
     }
   } else
-  { bool fill = r_elevation_fillpattern(e, up);
+  { bool fill = r_elevation_fillpattern(e, up0);
 
     if ( shadow != 0.0 )
     { Colour top_left_color;
