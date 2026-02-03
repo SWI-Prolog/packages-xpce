@@ -62,7 +62,7 @@ static status
 RedrawAreaLabel(Label lb, Area a)
 { int x, y, w, h;
   Elevation z = lb->elevation;
-  int preview = (lb->status == NAME_preview && notNil(lb->message));
+  bool preview = (lb->status == NAME_preview && notNil(lb->message));
 
   initialiseDeviceGraphical(lb, &x, &y, &w, &h);
 

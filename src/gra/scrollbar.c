@@ -388,7 +388,7 @@ draw_bubble(ScrollBar s, SbDrawData d)
   Elevation z = getClassVariableValueObject(s, NAME_elevation);
   int x = d->x, y = d->y, w = d->w, h = d->h;
   BubbleInfo bi = &d->bubble;
-  int pf=FALSE, pb=FALSE;
+  bool pf=false, pb=false;		/* preview forward/backward */
 
   if ( !instanceOfObject(z, ClassElevation) )
     z = NULL;
@@ -397,9 +397,9 @@ draw_bubble(ScrollBar s, SbDrawData d)
        Repeating(s) &&
        s->unit == NAME_page )
   { if ( s->direction == NAME_forwards )
-      pf = TRUE;
+      pf = true;
     else
-      pb = TRUE;
+      pb = true;
   }
 
   if ( d->vertical )
@@ -420,7 +420,7 @@ draw_bubble(ScrollBar s, SbDrawData d)
     hm = bi->length;
     if ( !ws_draw_sb_thumb(x, ym, w, hm) )
     { if ( z )
-	r_3d_box(x, ym, w, hm, 0, z, TRUE);
+	r_3d_box(x, ym, w, hm, 0, z, true);
       else
 	r_fill(x, ym, w, hm, GREY50_COLOUR);
     }
@@ -453,7 +453,7 @@ draw_bubble(ScrollBar s, SbDrawData d)
     wm = bi->length;
     if ( !ws_draw_sb_thumb(xm, y, wm, h) )
     { if ( z )
-	r_3d_box(xm, y, wm, h, 0, z, TRUE);
+	r_3d_box(xm, y, wm, h, 0, z, true);
       else
 	r_fill(xm, y, wm, h, GREY50_COLOUR);
     }
