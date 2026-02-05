@@ -36,7 +36,6 @@
 #cmakedefine HAVE_MKTIME @HAVE_MKTIME@
 #cmakedefine HAVE_NANOSLEEP @HAVE_NANOSLEEP@
 #cmakedefine HAVE_NDIR_H @HAVE_NDIR_H@
-#cmakedefine HAVE_ON_EXIT @HAVE_ON_EXIT@
 #cmakedefine HAVE_POSIX_OPENPT @HAVE_POSIX_OPENPT@
 #cmakedefine HAVE_PIPE @HAVE_PIPE@
 #cmakedefine HAVE_POLL @HAVE_POLL@

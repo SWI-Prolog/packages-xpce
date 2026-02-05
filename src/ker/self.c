@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@uva.nl
-    WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2019, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/packages/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -64,12 +65,8 @@ extern int gethostname(char *__name, size_t __len);
 
 static void	callExitMessagesPce(int stat, Pce pce);
 static void	exit_pce(int);
-#ifdef HAVE_ON_EXIT
-static void	run_pce_onexit_hooks(int, void *);
-#else
 #ifdef HAVE_ATEXIT
 static void	run_pce_atexit_hooks(void);
-#endif
 #endif
 
 static int
@@ -388,19 +385,11 @@ exit_pce(int rval)
 { callExitMessagesPce(rval, PCE);
 }
 
-#ifdef HAVE_ON_EXIT
-static void
-run_pce_onexit_hooks(int rval, void *context)
-{ run_pce_exit_hooks(rval);
-}
-#else
-
 #ifdef HAVE_ATEXIT
 static void				/* for usage with ANSI atexit() */
 run_pce_atexit_hooks(void)
 { run_pce_exit_hooks(0);
 }
-#endif
 #endif
 
 
@@ -1795,12 +1784,8 @@ pceInitialise(int handles, const char *home, const char *appdata,
   ws_initialise(argc, argv);
   if ( !hostAction(HOST_ATEXIT, run_pce_exit_hooks) )
   {
-#ifdef HAVE_ON_EXIT
-     on_exit(run_pce_onexit_hooks, NULL);
-#else
 #ifdef HAVE_ATEXIT
      atexit(run_pce_atexit_hooks);
-#endif
 #endif
   }
 

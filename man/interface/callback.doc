@@ -62,7 +62,7 @@ For the Prolog interface, a function is realised by adding an
 additional argument to the predicate.  This argument must be bound by
 the predicate.  If the predicate fails \const{PCE_FAIL} is
 returned.  In Lisp \const{PCE_FAIL} is returned if the Lisp function
-returns \const{NIL}. 
+returns \const{NIL}.
 \end{description}
 
 
@@ -129,8 +129,6 @@ the given argument) if the process is terminated.  This callback
 is used for two purposes: kill possible inferior processes of
 PCE (see class \class{process}) and call messages registered
 with `@pce ->exit_message'.
-
-On the \idx{SunOs}, this call may be implemented using \cfunc{on_exit()}.  
 \end{itemize}
     \cfunction{int}{hostQuery}{int action, PceCValue *value}
 Requests a parameter from the host-language.  When implemented, this
