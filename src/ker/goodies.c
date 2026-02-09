@@ -583,10 +583,10 @@ put_string(int (*out)(void*, wint_t), void *closure, PceString s)
 /* See pl-nt.c of SWI-Prolog for details on this madness
 */
 
-#define snprintf ms_snprintf
+#define snprintf c99_snprintf
 
 int
-ms_snprintf(char *buffer, size_t count, const char *fmt, ...)
+c99_snprintf(char *buffer, size_t count, const char *fmt, ...)
 { va_list ap;
   int ret;
 
@@ -594,7 +594,7 @@ ms_snprintf(char *buffer, size_t count, const char *fmt, ...)
   ret = _vsnprintf(buffer, count-1, fmt, ap);
   va_end(ap);
 
-  if ( ret < 0 || ret == count )
+  if ( ret < 0 || ret >= (int)(count-1) )
   { ret = (int)count;
     buffer[count-1] = '\0';
   }
