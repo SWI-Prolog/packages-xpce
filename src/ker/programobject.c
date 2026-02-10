@@ -156,7 +156,7 @@ void
 clearDFlagProgramObject(Any obj, unsigned long mask)
 { ProgramObject po = obj;
 
-  po->dflags &= ~mask;
+  po->dflags &= ~(uintptr_t)mask;
 }
 
 #endif /*TAGGED_LVALUE*/
