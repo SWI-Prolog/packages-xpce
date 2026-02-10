@@ -2677,8 +2677,8 @@ rlc_check_links(RlcTextLine tl)
       { Cprintf("CHECK: %03d could not find href for %d(%d); got: ",
 		tl->line_no, start, len);
 	for(hr = tl->links; hr; hr=hr->next)
-	  Dprintf(_T(" %d(%d)"), hr->start, hr->length);
-	Dprintf(_T("\n"));
+	  Cprintf(" %d(%d)", hr->start, hr->length);
+	Cprintf("\n");
       }
     }
   }
@@ -2687,7 +2687,7 @@ rlc_check_links(RlcTextLine tl)
   for(href *hr = tl->links; hr; hr=hr->next)
     refs++;
   if ( refs != links )
-  { Dprintf("CHECK: %03d found %d links; expected %d\n",
+  { Cprintf("CHECK: %03d found %d links; expected %d\n",
 	    tl->line_no, links, refs);
     Dprint_line(tl, true);
   }
@@ -2979,7 +2979,7 @@ rlc_put_link(RlcData b, const uchar_t *label, const uchar_t *link)
 }
 
 #ifdef _DEBUG
-#define CMD(c) do {cmd = _T(#c); c;} while(0)
+#define CMD(c) do {cmd = #c; c;} while(0)
 #else
 #define CMD(c) do {c;} while(0)
 #endif
@@ -2988,7 +2988,7 @@ static void
 rlc_putansi(RlcData b, int chr)
 {
 #ifdef _DEBUG
-  uchar_t *cmd;
+  const char *cmd;
 #endif
 
   switch(b->cmdstat)
