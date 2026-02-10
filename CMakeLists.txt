@@ -4,13 +4,18 @@ project(swipl-xpce)
 include("../cmake/PrologPackage.cmake")
 include(XPCEConfig)
 
+# cmake/PackageSelection.cmake already checked this is a 64 bit
+# target and SDL3 is around.
+set(HAVE_GUI ON)
+
+if(HAVE_GUI)
+
 find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
 find_package(SDL3_image REQUIRED CONFIG)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(CAIRO REQUIRED IMPORTED_TARGET cairo)
 pkg_check_modules(PANGO REQUIRED IMPORTED_TARGET pango)
 pkg_check_modules(PANGOCAIRO REQUIRED IMPORTED_TARGET pangocairo)
-set(HAVE_GUI 1)
 set(SDL_GRAPHICS 1)
 set(GUI_LIBRARIES
     SDL3::SDL3
@@ -27,7 +32,6 @@ if(WIN32)
   list(APPEND GUI_LIBRARIES ws2_32.lib)
 endif()
 
-if(HAVE_GUI)
 include(QLF)
 include(XPCESources)
 
