@@ -754,8 +754,7 @@ static classvardecl rc_popup[] =
   RC(NAME_pen, "int", "0",
      "Thickness of the drawing-pen"),
   RC(NAME_popupImage, "image*",
-     UXWIN("when(@colour_display, @nil, @ol_pullright_image)",
-	   "@ms_left_arrow_image"),
+     UXWIN("@nil", "@ms_left_arrow_image"),
      "Marker for items with popup"),
   RC(NAME_previewFeedback, "name", UXWIN("box", "colour"),
      "Feedback on `preview' item"),
@@ -763,10 +762,9 @@ static classvardecl rc_popup[] =
      "Label is visible"),
   RC(NAME_valueWidth, "int", "80",
      "Minimum width in pixels"),
-  RC(NAME_itemElevation, RC_REFINE,
-     UXWIN("when(@colour_display, 0, @nil)", "0"),
+  RC(NAME_itemElevation, RC_REFINE, "0",
      NULL),
-  RC(NAME_elevation, RC_REFINE, "when(@colour_display, 1, @nil)", NULL),
+  RC(NAME_elevation, RC_REFINE, "1", NULL),
   RC(NAME_labelSuffix, RC_REFINE, "", NULL),
   RC(NAME_previewElevation, RC_REFINE,
      "elevation(preview, 1, hilited)",
@@ -774,8 +772,7 @@ static classvardecl rc_popup[] =
   RC(NAME_format, RC_REFINE, "left", NULL),
   RC(NAME_margin, RC_REFINE, "1",    NULL),
   RC(NAME_look,   RC_REFINE,
-     UXWIN("when(@colour_display, motif, open_look)",
-	   "win"),
+     UXWIN("motif", "win"),
      NULL)
 };
 
