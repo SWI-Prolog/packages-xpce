@@ -1057,7 +1057,7 @@ initialise(D) :->
     ).
 
 make_message(+Action, Action, D, message(D?frame, Action)) :- !.
-make_message(Action,  Action, D, message(D, return, Action)).
+make_message(Action,  Action, D, message(D?frame, return, Action)).
 
 typed(D, Id:event_id, Delegate:[bool]) :->
     "Handle typing"::
@@ -1087,7 +1087,7 @@ running(D, Running:bool) :->
     forall(running_button(Name),
            (   get(D, button, Name, Button)
            ->  send(Button, active, NotRunning)
-           ;   format('No button ~w~n', [Name])
+           ;   true
            )),
     (   get(D, button, interrupt, Interrupt)
     ->  send(Interrupt, active, Running)

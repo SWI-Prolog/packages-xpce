@@ -70,6 +70,7 @@ typedef struct
 
 static bool init_prolog_goal(prolog_goal *g, term_t goal, bool acknowledge);
 static void call_prolog_goal(prolog_goal *g);
+static void SDLCALL sdl_in_main_sync(void *udata);
 
 static foreign_t
 in_pce_thread(term_t goal)
@@ -82,6 +83,9 @@ in_pce_thread(term_t goal)
   { free(g);
     return FALSE;
   }
+
+  if ( SDL_RunOnMainThread(sdl_in_main_sync, g, false) )
+    return true;
 
   SDL_Event event = {0};
   event.type = MY_EVENT_CALL;
@@ -109,10 +113,12 @@ sdl_call_event(SDL_Event *event)
 }
 
 
-static void
+static void SDLCALL
 sdl_in_main_sync(void *udata)
 { prolog_goal *g = udata;
   call_prolog_goal(g);
+  if ( !g->acknowledge )
+    free(g);
 }
 
 static foreign_t
@@ -122,9 +128,13 @@ in_pce_thread_sync2(term_t goal, term_t vars)
   if ( !init_prolog_goal(&g, goal, true) )
     return false;
 
-  if ( !SDL_RunOnMainThread(sdl_in_main_sync, &g, true) )
-  { Cprintf("SDL_RunOnMainThread(): %s\n", SDL_GetError());
-    return false;		/* TBD: exception */
+  if ( SDL_IsMainThread() )
+  { call_prolog_goal(&g);
+  } else
+  { if ( !SDL_RunOnMainThread(sdl_in_main_sync, &g, true) )
+    { Cprintf("SDL_RunOnMainThread(): %s\n", SDL_GetError());
+      return false;		/* TBD: exception */
+    }
   }
 
   switch(g.state)
@@ -190,15 +200,16 @@ call_prolog_goal(prolog_goal *g)
     g->state = G_RUNNING;
     if ( rc )
     { qid_t qid;
-      int flags = PL_Q_NORMAL;
+      int flags = PL_Q_NORMAL|PL_Q_CATCH_EXCEPTION|PL_Q_NODEBUG;
 
       if ( g->acknowledge )
-      { flags |= PL_Q_CATCH_EXCEPTION;
-	vars = PL_new_term_ref();
+      { vars = PL_new_term_ref();
+	term_t goal = PL_new_term_ref();
 	if ( !PL_get_arg(2, t, vars) ||		/* Goal-Vars */
-	     !PL_get_arg(1, t, t) )
+	     !PL_get_arg(1, t, goal) )
 	{ PL_warning("ERROR: in_pce_thread: bad goal-vars term");
 	}
+	t = goal;
       } else
       { vars = 0;
       }
