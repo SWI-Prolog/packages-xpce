@@ -927,10 +927,11 @@ mapWheelMouseEvent(EventObj ev, Any rec)
 { if ( ev->id == NAME_wheel )
   { Name dir, unit;
     Int count;
-    Int rot = getAttributeObject(ev, NAME_rotation);
+    Int rot_obj = getAttributeObject(ev, NAME_rotation);
 
-    if ( !rot )
+    if ( !rot_obj )
       fail;				/* Error? */
+    intptr_t rot = valInt(rot_obj);
 
     if ( isDefault(rec) )
       rec = ev->receiver;
@@ -941,20 +942,22 @@ mapWheelMouseEvent(EventObj ev, Any rec)
     if ( !hasSendMethodObject(rec, NAME_scrollVertical) )
       fail;
 
-    if ( valInt(rot) > 0 )
-      dir = NAME_backwards;
-    else
-      dir = NAME_forwards;
+    if ( rot > 0 )
+    { dir = NAME_backwards;
+    } else
+    { dir = NAME_forwards;
+      rot = -rot;
+    }
 
     if ( valInt(ev->buttons) & BUTTON_shift )
     { unit = NAME_line;
       count = toInt(1);
     } else if ( valInt(ev->buttons) & BUTTON_control )
     { unit = NAME_page;
-      count = toInt(990);
+      count = toInt(900);
     } else
-    { unit = NAME_page;
-      count = toInt(200);
+    { unit = NAME_line;
+      count = toInt((rot*3)/15);
     }
 
     send(rec, NAME_scrollVertical, dir, unit, count, EAV);

@@ -371,23 +371,21 @@ CtoEvent(SDL_Event *event)
       time = event->wheel.timestamp/1000000;
       name = NAME_wheel;
       ctx_name = NAME_rotation;
-      //float dx = event->wheel.x;
-      float dy = event->wheel.y;
+      int dy = event->wheel.integer_y;
 
       DEBUG(NAME_wheel,
-	    Cprintf("Mouse wheel event.  dy=%.6f, dt=%dms%s\n",
-		    dy, time-last_time,
+	    Cprintf("Mouse wheel event.  fy=%.6f, iy=%d, dt=%dms%s\n",
+		    dy = event->wheel.y, event->wheel.integer_y, time-last_time,
 		    event->wheel.direction == SDL_MOUSEWHEEL_FLIPPED
 		    ? " (flipped)" : ""));
-      last_time = time;
-
-      if ( dy > 0.0 )
-	ctx = toInt(120);
-      else if ( dy < 0.0 )
-	ctx = toInt(-120);
-      else
-	fail;
-      break;
+      if ( dy )
+      { last_time = time;
+	if ( event->wheel.direction == SDL_MOUSEWHEEL_FLIPPED )
+	  dy = -dy;
+	ctx = toInt(dy*15);
+	break;
+      }
+      fail;
     }
       /* https://wiki.libsdl.org/SDL3/SDL_KeyboardEvent */
     case SDL_EVENT_KEYMAP_CHANGED:
