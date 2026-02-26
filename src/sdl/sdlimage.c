@@ -255,7 +255,7 @@ ws_load_image_file(Image image)
     fail;
   cairo_surface_t *final = my_cairo_copy_surface(surf);
   cairo_surface_destroy(surf);
-  if ( !my_cairo_check_surface(final, surf) )
+  if ( !my_cairo_check_surface(image, final) )
     fail;
 
   if ( isbitmap )
