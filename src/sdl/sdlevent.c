@@ -375,7 +375,7 @@ CtoEvent(SDL_Event *event)
 
       DEBUG(NAME_wheel,
 	    Cprintf("Mouse wheel event.  fy=%.6f, iy=%d, dt=%dms%s\n",
-		    dy = event->wheel.y, event->wheel.integer_y, time-last_time,
+		    event->wheel.y, event->wheel.integer_y, time-last_time,
 		    event->wheel.direction == SDL_MOUSEWHEEL_FLIPPED
 		    ? " (flipped)" : ""));
       if ( dy )
