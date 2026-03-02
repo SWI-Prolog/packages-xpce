@@ -3933,6 +3933,23 @@ nextDabbrevMode(Editor e)
   return e->dabbrev_mode;
 }
 
+static bool
+dabbrev_reject(Editor e, Name candidate)
+{ bool ec = isOn(e->exact_case);
+  Cell cell;
+
+  for_cell(cell, e->dabbrev_reject)
+  { Name reject = cell->value;
+
+    if ( ec && reject == candidate )
+      return true;
+    if ( !ec && str_icase_eq(&candidate->data, &reject->data) )
+      return true;
+  }
+
+  return false;
+}
+
 
 static status
 DabbrevExpandEditor(Editor e, EventId id)
@@ -3961,9 +3978,7 @@ DabbrevExpandEditor(Editor e, EventId id)
 
   Name mode = e->dabbrev_mode;
   while(true)
-  { Cell cell;
-
-    DEBUG(NAME_editor, Cprintf("Starting search\n"));
+  { DEBUG(NAME_editor, Cprintf("Starting search\n"));
     if ( mode == NAME_backwards || mode == NAME_forwards )
     { int dir = (e->dabbrev_mode == NAME_backwards ? -1 : 1);
       ssize_t hit_pos = find_textbuffer(tb, pos, target, dir, 'a', ec, FALSE);
@@ -3989,12 +4004,22 @@ DabbrevExpandEditor(Editor e, EventId id)
     { while(mode)
       { Chain ch = get(e, NAME_dabbrevCandidates, mode, e->dabbrev_target, EAV);
 
-	if ( !ch || !instanceOfObject(ch, ClassChain) || emptyChain(ch) )
+	if ( instanceOfObject(ch, ClassChain) )
+	{ Cell c;
+
+	  for_cell(c, ch)
+	  { if ( dabbrev_reject(e, c->value) )
+	      deleteCellChain(ch, c);
+	  }
+	}
+
+	if ( !instanceOfObject(ch, ClassChain) || emptyChain(ch) )
 	{ mode = nextDabbrevMode(e);
 	  if ( mode == NAME_backwards || mode == NAME_forwards )
 	    goto next;
 	} else
 	{ assign(e, dabbrev_candidates, ch);
+
 	  break;
 	}
       }
@@ -4009,14 +4034,8 @@ DabbrevExpandEditor(Editor e, EventId id)
     }
 
     /* Avoid returning the same result twice */
-    for_cell(cell, e->dabbrev_reject)
-    { Name reject = cell->value;
-
-      if ( ec && reject == hit )
-	goto next;
-      if ( !ec && str_icase_eq(&hit->data, &reject->data) )
-	goto next;
-    }
+    if ( dabbrev_reject(e, hit) )
+      goto next;
     appendChain(e->dabbrev_reject, hit);
 
     DEBUG(NAME_editor, Cprintf("Dabbrev: inserting completion\n"));
