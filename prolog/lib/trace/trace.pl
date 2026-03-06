@@ -82,7 +82,7 @@ user:prolog_trace_interception(Port, Frame, CHP, Action) :-
 
 prolog_trace_interception_gui(Port, Frame, CHP, Action) :-
     State = state(0),
-    current_prolog_flag(gui_tracer, true),
+    use_gui_tracer,
     (   (   '$notrace'(intercept(Port, Frame, CHP, GuiAction)),
             map_action(GuiAction, Frame, Action)
         ->  true
@@ -95,6 +95,13 @@ prolog_trace_interception_gui(Port, Frame, CHP, Action) :-
         fail
     ;   arg(1, State, Action)
     ).
+
+use_gui_tracer :-
+    current_prolog_flag(gui_tracer, true),
+    !.
+use_gui_tracer :-
+    thread_self(Me),
+    \+ thread_property(Me, class(console)).
 
 :- initialization
     prolog_listen(frame_finished, retract_frame,

@@ -40,7 +40,8 @@
             gtrace/1,                   % :Goal
             gspy/1,                     % Start tracer and set spypoint
             gdebug/0,                   % Start tracer and debug
-            gtrap/1                     % +Error
+            gtrap/1,                    % +Error
+            ensure_guitracer/0          % Ensure it is loaded
           ]).
 :- use_module(library(pce)).
 :- use_module(library(edinburgh)).
@@ -74,17 +75,21 @@ guitracer_notrace :-
     current_prolog_flag(gui_tracer, true),
     !.
 guitracer_notrace :-
+    ensure_guitracer,
+    set_prolog_flag(gui_tracer, true),
+    print_message(informational, gui_tracer(true)).
+
+
+%!  ensure_guitracer
+%
+%   Ensure the GUI tracer is loaded.  This does not activate it.
+
+ensure_guitracer :-
     current_prolog_flag(gui_tracer, _),
-    !,
-    set_prolog_flag(gui_tracer, true),
-    visible(+cut_call),
-    print_message(informational, gui_tracer(true)).
-guitracer_notrace :-
+    !.
+ensure_guitracer :-
     in_pce_thread_sync(
-        use_module(library(trace/trace))),
-    set_prolog_flag(gui_tracer, true),
-    visible(+cut_call),
-    print_message(informational, gui_tracer(true)).
+        use_module(library(trace/trace))).
 
 %!  noguitracer is det.
 %
