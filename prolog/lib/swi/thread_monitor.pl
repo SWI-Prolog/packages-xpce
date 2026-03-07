@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        J.Wielemaker@vu.nl
     WWW:           https://www.swi-prolog.org
-    Copyright (c)  2002-2025, University of Amsterdam
+    Copyright (c)  2002-2026, University of Amsterdam
                               VU University Amsterdam
                               SWI-Prolog Solutions b.v.
     All rights reserved.
@@ -41,6 +41,13 @@
 :- use_module(library(toolbar)).
 :- use_module(library(pce_report)).
 :- use_module(library(persistent_frame)).
+:- autoload(library(aggregate), [aggregate_all/3]).
+:- autoload(library(gui_tracer), [gtrace/0]).
+:- autoload(library(pce_util), [default/3, send_list/3]).
+:- autoload(library(prolog_profile), [show_profile/1]).
+:- autoload(library(thread), [call_in_thread/3]).
+:- autoload(library(threadutil),
+            [thread_has_console/0, attach_console/0, tdebug/1, tnodebug/1]).
 
 :- pce_autoload(plotter,      library('plot/plotter')).
 :- pce_autoload(partof_hyper, library(hyper)).
@@ -95,13 +102,16 @@ variable(status,   prolog,       get,  "Current status (thread_property(Id, stat
 variable(state,    name := running, get,  "Core status (functor of <-status)").
 variable(seen,     bool := @off, both, "Seen this one").
 variable(recall,   int,          get,  "Recall last #samples").
-variable(lastcpu,  real*,        get,  "CPU at last call").
-variable(lastwall, real*,        get,  "Wall at last call").
+variable(lastcpu,  num*,         get,  "CPU at last call").
+variable(lastwall, num*,         get,  "Wall at last call").
 variable(leftcpu,  int := 0,     none, "Pass-through").
 variable(profiling,bool := @off, get,  "Am I being profiled?").
+variable(thread_class, name*,    get,  "Class of the thread").
+variable(debug,    bool*,	 get,  "Debugging status").
 
 initialise(TS, Id:'int|name', Recall:int, Status:prolog, CpuH:[int]) :->
     send_super(TS, initialise, Id, Id, new(chain), running),
+    send(TS, update_label),
     send(TS, slot, recall, Recall),
     send(TS, update, Status, CpuH).
 
@@ -110,7 +120,9 @@ update(TS, Status:prolog, CpuH:[int]) :->
     get(TS, key, TID),
     send(TS, seen, @on),
     (   get(TS, state, running)
-    ->  send(TS, slot, status, Status),
+    ->  send(TS, update_class),
+        send(TS, update_debug),
+        send(TS, slot, status, Status),
         functor(Status, State, _),
         get(TS, object, History),
         (   State == running
@@ -130,6 +142,56 @@ update(TS, Status:prolog, CpuH:[int]) :->
         ;   send(TS, state, State)
         )
     ;   true
+    ).
+
+update_class(TS) :->
+    "Update the class of the thread"::
+    get(TS, key, TID),
+    (   catch(thread_property(TID, class(Class)), error(_,_), fail)
+    ->  (   get(TS, slot, thread_class, Class)
+        ->  true
+        ;   send(TS, slot, thread_class, Class),
+            send(TS, update_label)
+        )
+    ;   true
+    ).
+
+update_debug(TS) :->
+    "Indicate debug status using label"::
+    get(TS, key, TID),
+    (   debug_status(TID, Debug)
+    ->  (   get(TS, debug, Debug)
+        ->  true
+        ;   send(TS, slot, debug, Debug),
+            send(TS, update_label)
+        )
+    ;   true
+    ).
+
+update_label(TS) :->
+    "Update annotations on the label"::
+    get(TS, key, TID),
+    get(TS, thread_class, Class),
+    get(TS, debug, Debug),
+    label_postfix(Class, Debug, Postfix),
+    (   Postfix == ''
+    ->  send(TS, label, string(" %s", TID))
+    ;   send(TS, label, string(" %s [%s]", TID, Postfix))
+    ).
+
+label_postfix(console, _,    console).
+label_postfix(_,       @nil, system).
+label_postfix(_,       @on,  debug).
+label_postfix(_,       @off, '').
+
+debug_status(TID, Debug) :-
+    (   catch(thread_property(TID, debug(true)), _, fail)
+    ->  catch(thread_property(TID, debug_mode(PlDebug)), _, fail),
+        (   PlDebug == true
+        ->  Debug = @on
+        ;   Debug = @off
+        )
+    ;   Debug = @nil
     ).
 
 cpu_percentage(TS, CPU:'0..100') :<-
@@ -189,6 +251,17 @@ is_running(TS) :->
     get(TS, style, Style),
     sub_atom(Style, 0, _, _, running).
 
+has_console(TS) :->
+    "True if thread has a console"::
+    (   get(TS, thread_class, console)
+    ;   get(TS, key, TID),
+        call_in_thread(TID,
+                       catch(thread_has_console, error(_,_), true),
+                       [ timeout(0.1),
+                         on_timeout(fail)
+                       ])
+    ).
+
 start_profile(TS, How:[{cpu,wall}]) :->
     "Start profiling this thread"::
     (   get(TS, profiling, @on)
@@ -221,19 +294,11 @@ end_profile(TS) :->
     ;   get(TS, key, TID),
         thread_signal(TID,
                       ( profiler(_, false),
-                        show_profile
+                        show_profile([])
                       )),
         send(TS, slot, profiling, @off),
         send(TS, style, TS?state)
     ).
-
-:- if(current_predicate(show_profile/2)).
-show_profile :-                                 % backward compatibility
-    show_profile(plain, 25).
-:- else.
-show_profile :-
-    show_profile([]).
-:- endif.
 
 abort(TS) :->
     "Send abort to the thread"::
@@ -244,6 +309,38 @@ trace(TS) :->
     "Prepare tread for debugging"::
     get(TS, key, TID),
     catch(thread_signal(TID, (attach_console, trace)), _, fail).
+
+can_set_debug_mode(TS) :->
+    "True if we can set the debug mode"::
+    send(TS, is_running),
+    \+ get(TS, debug, @nil),
+    \+ get(TS, thread_class, console).
+
+toggle_debug_mode(TS) :->
+    "Toggle active debug mode"::
+    get(TS, key, TID),
+    get(TS?debug?negate, name, Mode),
+    catch(set_thread(TID, debug_mode(Mode)), error(_,_), fail).
+
+toggle_class_debug_mode(TS) :->
+    "Toggle active debug mode for class"::
+    get(TS, thread_class, Class),
+    get(TS?debug, negate, Mode),
+    (   Mode == @on
+    ->  autoload_call(tdebug(Class))
+    ;   autoload_call(tnodebug(Class))
+    ).
+
+update_popup(TS, Popup:popup) :->
+    "Update the popup"::
+    (   get(TS, debug, @nil)
+    ->  true
+    ;   get(TS, thread_class, Class),
+        get(Popup, member, toggle_class_debug_mode, Item),
+        aggregate_all(count, thread_property(_, class(Class)), Count),
+        send(Item, label,
+             string("Toggle debug for %d %s threads", Count, Class))
+    ).
 
 signal(TS, Signal:prolog) :->
     "Send a signal to the thread"::
@@ -280,28 +377,33 @@ initialise(TB) :->
                  and(message(TB, selection, ?(TB, dict_item, @event)),
                      new(or)))),
     send(TB, popup, new(P, popup)),
+    send(P, update_message,
+         if(message(@arg1, instance_of, dict_item),
+            message(@arg1, update_popup, @receiver))),
     new(IsRunning, message(@arg1, is_running)),
+    new(CanDebug, message(@arg1, can_set_debug_mode)),
+    new(NoConsole, not(message(@arg1, has_console))),
     send_list(P, append,
               [ menu_item(join,
                           message(@arg1, join),
                           condition := not(IsRunning)),
                 gap,
+                menu_item(toggle_debug_mode,
+                          message(@arg1, toggle_debug_mode),
+                          condition := CanDebug),
+                menu_item(toggle_class_debug_mode,
+                          message(@arg1, toggle_class_debug_mode),
+                          condition := CanDebug),
                 menu_item(graphical_debugger,
                           message(@arg1, gtrace),
-                          condition := IsRunning),
-                menu_item(debug_mode,
-                          message(@arg1, signal, debug),
-                          condition := IsRunning),
-                menu_item(nodebug_mode,
-                          message(@arg1, signal, nodebug),
-                          condition := IsRunning),
+                          condition := CanDebug),
                 gap,
                 menu_item(trace,
                           message(@arg1, trace),
-                          condition := IsRunning),
+                          condition := CanDebug),
                 menu_item(attach_console,
                           message(@arg1, signal, attach_console),
-                          condition := IsRunning),
+                          condition := NoConsole),
                 gap,
                 menu_item(profile_cpu,
                           message(@arg1, start_profile, cpu),
@@ -356,18 +458,12 @@ update(TB) :->
     ;   true
     ).
 
-:- if(catch(thread_property(main, id(_)),_,fail)).
 thread_id_status(Id, Status) :-
     thread_property(Handle, status(Status)),
     (   atom(Handle)
     ->  Id = Handle
     ;   thread_property(Handle, id(Id))
     ).
-:- else.
-thread_id_status(Id, Status) :-
-    thread_property(Id, status(Status)).
-:- endif.
-
 
 recall(TB, Recall0:int) :->
     "Recall this many samples"::
@@ -413,14 +509,17 @@ report_status(TB, TS:thread_status) :->
     ->  RTime = Time
     ;   RTime = 0
     ),
+    get(TS, thread_class, Class),
     (   Status = exception(Except),
         special_exception(Except)
     ->  message_to_string(Except, Message),
         send(TB, report, status,
-             'Thread %s ERROR: %s (%.3f sec CPU)', TID, Message, RTime)
+             'Thread %s/%s ERROR: %s (%.3f sec CPU)',
+             Class, TID, Message, RTime)
     ;   atomic(Status)
     ->  send(TB, report, status,
-             'Thread %s status: %s (%.3f sec CPU)', TID, Status, RTime)
+             'Thread %s/%s status: %s (%.3f sec CPU)',
+             Class, TID, Status, RTime)
     ;   new(S, text_buffer),
         pce_open(S, write, Out),
         write_term(Out, Status, [ max_depth(5),
@@ -429,7 +528,8 @@ report_status(TB, TS:thread_status) :->
                                 ]),
         close(Out),
         send(TB, report, status,
-             'Thread %s status: %s (%.3f sec CPU)', TID, S?contents, RTime)
+             'Thread %s/%s status: %s (%.3f sec CPU)',
+             Class, TID, S?contents, RTime)
     ).
 
 special_exception(error(_,_)).
