@@ -1115,6 +1115,7 @@ close(T, Prolog:prolog=[bool]) :->
 save_history(Epilog) :->
     "Save pending history"::
     (   terminal_input(PT, _PTY, _In, _Out, _Err, true),
+        object(PT),
         get(PT, frame, Epilog),
         save_history(PT),
         fail
