@@ -808,16 +808,6 @@ getRotateImage(Image image, Num degrees)
 		*       PREDEFINED IMAGES	*
 		********************************/
 
-#if __WINDOWS__ || HAVE_LIBXPM || SDL_GRAPHICS
-#define XPM_PCEIMAGE 1			/* use an XPM image */
-#endif
-
-#include "bitmaps/mark_handle_bm"
-#include "bitmaps/ms_left_arrow.bm"
-#include "bitmaps/ol_pulldown.bm"
-#include "bitmaps/ol_pullright.bm"
-#include "bitmaps/ol_cycle.bm"
-
 static Image
 stdImage(Name name, Image *global, unsigned char *bits, int w, int h)
 { Image image = globalObject(name, ClassImage, name, toInt(w), toInt(h), EAV);
@@ -833,7 +823,6 @@ stdImage(Name name, Image *global, unsigned char *bits, int w, int h)
   return image;
 }
 
-#ifdef XPM_PCEIMAGE
 static void
 stdXPMImage(Name name, Name kind, Image *global, char **bits)
 { int w, h, colours;
@@ -870,21 +859,12 @@ stdXPMImage(Name name, Name kind, Image *global, char **bits)
 #include "bitmaps/enode.xpm"
 #include "bitmaps/mark.xpm"
 #include "bitmaps/nomark.xpm"
-#endif
+#include "bitmaps/mark_handle.xpm"
+#include "bitmaps/ms_left_arrow.xpm"
 
 static void
 standardImages(void)
-{ stdImage(NAME_msLeftArrowImage, NULL,
-	   ms_left_arrow_bits, ms_left_arrow_width, ms_left_arrow_height);
-  stdImage(NAME_markHandleImage, &MARK_HANDLE_IMAGE,
-	   mark_handle_bm_bits, mark_handle_bm_width, mark_handle_bm_height);
-  stdImage(NAME_olPullrightImage, NULL,
-	   ol_pullright_bits, ol_pullright_width, ol_pullright_height);
-  stdImage(NAME_olPulldownImage, NULL,
-	   ol_pulldown_bits, ol_pulldown_width, ol_pulldown_height);
-  stdImage(NAME_olCycleImage, NULL,
-	   ol_cycle_bits, ol_cycle_width, ol_cycle_height);
-#ifdef XPM_PCEIMAGE
+{
 #define P NAME_pixmap
 #define B NAME_bitmap
   stdXPMImage(NAME_pceImage,	       P, NULL,		       swipl48_xpm);
@@ -897,9 +877,10 @@ standardImages(void)
   stdXPMImage(NAME_treeCollapsedImage, B, NULL,		       cnode_xpm);
   stdXPMImage(NAME_markImage,          P, &MARK_IMAGE,	       mark_xpm);
   stdXPMImage(NAME_nomarkImage,        P, &NOMARK_IMAGE,       nomark_xpm);
+  stdXPMImage(NAME_msLeftArrowImage,   B, NULL,                ms_left_arrow_xpm);
+  stdXPMImage(NAME_markHandleImage,    B, &MARK_HANDLE_IMAGE,  mark_handle_xpm);
 #undef P
 #undef B
-#endif
 
   stdImage(NAME_nullImage, &NULL_IMAGE,
 	   NULL, 0, 0);

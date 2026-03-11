@@ -1,0 +1,17 @@
+/* XPM */
+static char *ms_left_arrow_xpm[] = {
+/* columns rows colors chars-per-pixel */
+"6 9 2 1 ",
+"  c white",
+". c black",
+/* pixels */
+"      ",
+" .    ",
+" ..   ",
+" ...  ",
+" .... ",
+" ...  ",
+" ..   ",
+" .    ",
+"      "
+};
