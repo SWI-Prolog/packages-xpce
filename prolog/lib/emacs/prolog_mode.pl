@@ -2604,6 +2604,9 @@ make_prolog_mode_goal_popup(G) :-
                           message(Fragment, listing),
                           condition := HasListing),
                 gap,
+                menu_item(spy,
+                          message(Fragment, spy)),
+                gap,
                 menu_item(documentation,
                           message(Fragment, documentation))
               ]).
@@ -2755,6 +2758,11 @@ info(F) :->
     get(F, predicate, P),
     send(P, info).
 
+spy(F) :->
+    "Provide all know information about P"::
+    get(F, predicate, P),
+    send(P, spy).
+
 has_info(F) :->
     "Provide all know information about P"::
     get(F, predicate, P),
@@ -2895,6 +2903,9 @@ make_prolog_mode_head_popup(G) :-
                 menu_item(listing,
                           message(Fragment, listing),
                           condition := HasListing),
+                gap,
+                menu_item(spy,
+                          message(Fragment, spy)),
                 gap,
                 menu_item(documentation,
                           message(Fragment, documentation))

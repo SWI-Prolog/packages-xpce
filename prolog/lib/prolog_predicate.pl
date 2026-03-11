@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@cwi.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2020, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  2001-2026, University of Amsterdam
                               CWI, Amsterdam
     All rights reserved.
 
@@ -39,16 +39,20 @@
 :- use_module(library(persistent_frame)).
 :- use_module(library(tabbed_window)).
 :- use_module(library(tabular)).
-:- use_module(library(edit)).
-:- require([ atomic_list_concat/2,
-             term_to_atom/2,
-             auto_call/1
-           ]).
+
+:- autoload(library(edit), [edit/1]).
+:- autoload(library(epilog), [run_in_help_epilog/1]).
+:- autoload(library(apply), [partition/4]).
+:- autoload(library(help), [help/1]).
+:- autoload(library(lists), [select/3, delete/3, member/2]).
+:- autoload(library(prolog_code), [pi_head/2]).
+:- autoload(library(swi_compatibility), [auto_call/1]).
+:- autoload(library(gui_tracer), [gspy/1]).
 
 :- if(exists_source(library(pldoc/man_index))).
 :- autoload(library(pldoc/man_index), [man_object_property/2]).
+
 :- endif.
-:- autoload(library(epilog), [run_in_help_epilog/1]).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Class prolog_predicate represents the identity of a Prolog predicate. It
@@ -281,6 +285,12 @@ info(P) :->
         send(prolog_predicate_frame(prolog_predicate(M2:PI)), open)
     ;   send(prolog_predicate_frame(P), open)
     ).
+
+spy(P) :->
+    "Set a spy point on predicate"::
+     get(P, head, Head),
+     pi_head(PI, Head),
+     gspy(PI).
 
 :- pce_end_class(prolog_predicate).
 
