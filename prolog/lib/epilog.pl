@@ -1333,6 +1333,7 @@ capture_messages :-
                  xpce_message(Term,Kind,Lines))).
 
 :- dynamic in_interrupt_handler/0.
+:- meta_predicate with_hyperlink_term(0).
 
 :- public xpce_message/3.
 xpce_message(interrupt(begin), _, _) =>
@@ -1345,7 +1346,17 @@ xpce_message(_Term, Kind, Lines) =>
     Kind \== silent,
     \+ in_interrupt_handler,
     xpce_epilog_console(_In,_Out,Error),
-    print_message_lines(Error, kind(Kind), Lines).
+    with_hyperlink_term(print_message_lines(Error, kind(Kind), Lines)).
+
+with_hyperlink_term(Goal) :-
+    current_prolog_flag(hyperlink_term, true),
+    !,
+    call(Goal).
+with_hyperlink_term(Goal) :-
+    setup_call_cleanup(
+        set_prolog_flag(hyperlink_term, true),
+        Goal,
+        set_prolog_flag(hyperlink_term, false)).
 
 %!  pce:xpce_console(-In,-Out,-Error) is semidet.
 %
