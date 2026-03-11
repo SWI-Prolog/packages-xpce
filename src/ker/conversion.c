@@ -396,12 +396,12 @@ pcePP(Any obj)
 
 jmp_buf pp_env;
 
-static RETSIGTYPE
+static void
 pp_sig(int sig)
 { longjmp(pp_env, 1);
 }
 
-typedef RETSIGTYPE (*handler_t)();
+typedef void (*handler_t)(int sig);
 
 #ifdef HAVE_SIGACTION
 
