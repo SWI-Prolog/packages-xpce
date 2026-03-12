@@ -1763,7 +1763,19 @@ open_file_callback(void *udata, const char * const *filelist, int filter)
   FrameObj fr = ctx->frame;
 
   if ( !filelist )
-  { assign(fr, return_value, CtoString(SDL_GetError())); /* error */
+  { const char *err = SDL_GetError();
+    /* SDL 3.4 introduced IFileDialog (modern Windows file dialog). When
+       it fails before showing (e.g., unable to set up COM), SDL calls this
+       callback with NULL and then falls back to the legacy GetOpenFileName/
+       GetSaveFileName dialog, which calls this callback a second time with
+       the actual result.  The pre-Show failure is identified by the
+       "dialogg: " prefix (a typo present in SDL 3.4.x).  Ignore it to let
+       the fallback dialog's callback come through.  The caller is still
+       blocked in getWaitConfirmFrame() so ctx remains valid.
+       See https://github.com/libsdl-org/SDL/issues/15194 and PR #15195. */
+    if ( err && strncmp(err, "dialogg:", 8) == 0 )
+      return;				/* wait for legacy dialog callback */
+    assign(fr, return_value, CtoString(err)); /* error */
   } else if ( !filelist[0] )
   { assign(fr, return_value, OFF); /* cancelled */
   } else if ( !ctx->allow_many )
