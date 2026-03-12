@@ -1764,6 +1764,7 @@ open_file_callback(void *udata, const char * const *filelist, int filter)
 
   if ( !filelist )
   { const char *err = SDL_GetError();
+#ifdef __WINDOWS__
     /* SDL 3.4 introduced IFileDialog (modern Windows file dialog). When
        it fails before showing (e.g., unable to set up COM), SDL calls this
        callback with NULL and then falls back to the legacy GetOpenFileName/
@@ -1775,6 +1776,7 @@ open_file_callback(void *udata, const char * const *filelist, int filter)
        See https://github.com/libsdl-org/SDL/issues/15194 and PR #15195. */
     if ( err && strncmp(err, "dialogg:", 8) == 0 )
       return;				/* wait for legacy dialog callback */
+#endif
     assign(fr, return_value, CtoString(err)); /* error */
   } else if ( !filelist[0] )
   { assign(fr, return_value, OFF); /* cancelled */
