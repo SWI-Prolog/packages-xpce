@@ -35,6 +35,7 @@
 #define SWIPL_WINDOWS_NATIVE_ACCESS 1 /* get Swinhandle() */
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <math.h>
 #include "../../swipl/pcecall.h"
 #include "sdlevent.h"
 #include "sdlinput.h"
@@ -371,11 +372,21 @@ CtoEvent(SDL_Event *event)
       time = event->wheel.timestamp/1000000;
       name = NAME_wheel;
       ctx_name = NAME_rotation;
-      int dy = event->wheel.integer_y;
+      int dy = 0;
+#if SDL_VERSION_ATLEAST(3, 2, 12)
+      dy = event->wheel.integer_y;
+#else
+      static double dyf = 0.0;
+      dyf += event->wheel.y;
+      if ( dyf >= 1.0 || dyf <= -1.0 )
+      { dy = trunc(dyf);
+	dyf -= dy;
+      }
+#endif
 
       DEBUG(NAME_wheel,
 	    Cprintf("Mouse wheel event.  fy=%.6f, iy=%d, dt=%dms%s\n",
-		    event->wheel.y, event->wheel.integer_y, time-last_time,
+		    event->wheel.y, dy, time-last_time,
 		    event->wheel.direction == SDL_MOUSEWHEEL_FLIPPED
 		    ? " (flipped)" : ""));
       if ( dy )
