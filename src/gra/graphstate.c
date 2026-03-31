@@ -58,11 +58,6 @@ g_save(void)
   gs->texture    = context.texture;
   gs->foreground = context.colour;
   gs->background = context.background;
-#elif X11_GRAPHICS
-  gs->thickness  = context.gcs->pen;
-  gs->texture    = context.gcs->dash;
-  gs->foreground = context.gcs->colour;
-  gs->background = context.gcs->background;
 #else
 #error "No GUI library"
 #endif

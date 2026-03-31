@@ -47,8 +47,6 @@
 
 #include <md.h>
 
-#define O_NOX11RESOURCES 1		/* use own resource parser */
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>

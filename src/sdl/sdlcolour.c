@@ -44,7 +44,7 @@
 static HashTable ColourNames;		/* name --> rgb (packed in Int) */
 static Chain	 CSSColourList;		/* name (for preserved ordering) */
 
-#include "csscolours.c"			/* get X11/CSS colour names */
+#include "csscolours.c"			/* get CSS colour names */
 
 static Name	canonical_colour_name(Name in);
 

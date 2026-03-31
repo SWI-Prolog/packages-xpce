@@ -35,10 +35,6 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
-#ifdef X11_GRAPHICS
-#include <x11/include.h>
-#include <time.h>
-#endif
 
 static status
 initialiseDisplayManager(DisplayManager dm)
@@ -145,22 +141,6 @@ eventQueuedDisplayManager(DisplayManager dm)
 static status
 redrawDisplayManager(DisplayManager dm)
 {
-#ifdef X11_GRAPHICS
-  if ( MappedFrames && !emptyChain(MappedFrames) )
-  { FrameObj fr;
-
-    for_chain(MappedFrames, fr,
-	      { DEBUG(NAME_delay,
-		      Cprintf("[%d] x_frame_realize_geometry(%s)\n",
-			      (int)(time(NULL)%1000), pp(fr)));
-		x_frame_realize_geometry(fr);
-		deleteChain(MappedFrames, fr);
-		DEBUG(NAME_delay,
-		      Cprintf("[%d]   done\n",
-			      (int)(time(NULL)%1000)));
-	      });
-  }
-#endif
 
   if ( ChangedWindows && !emptyChain(ChangedWindows) )
   { PceWindow sw = WindowOfLastEvent();

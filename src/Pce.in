@@ -30,7 +30,7 @@ Pce.DiaProtoButton.label_font:	@helvetica_roman_12
 Pce.DialogItem.look:		open_look
 Pce.DialogItem.elevation:	when(@colour_display, 1, 0)
 Pce.DialogItem.background:	@_dialog_bg
-Pce.*.inactive_colour: 		when(@colour_display, \
+Pce.*.inactive_colour:		when(@colour_display, \
 				     colour(grey60), \
 				     @grey50_image)
 Pce.*.label_format:		right
@@ -74,14 +74,6 @@ Pce.ScrollBar.background:	@_dialog_bg
 Pce.ScrollBar.pen:		@_win_pen
 Pce.ScrollBar.placement:	[right,bottom]
 
-!Use the following resources if you prefer the X11 (xterm) scrollbars
-!Pce.ScrollBar.look:		x
-!Pce.ScrollBar.distance:	- @_win_pen
-!Pce.ScrollBar.elevation:	when(@colour_display, \
-!				     1, \
-!				     elevation(@nil, 1, @grey50_image))
-
-
 Pce.TextItem.elevation:			when(@colour_display, 1, @nil)
 Pce.TextItem.look:			open_look
 Pce.TextItem.border:			2
@@ -104,7 +96,7 @@ Pce.WindowDecorator.background:		@_dialog_bg
 Pce.TextImage.background:		@default
 Pce.TextImage.colour:			black
 Pce.TextImage.elevation:		when(@colour_display, 1, @nil)
-Pce.TextCursor.inactive_colour: 	black
+Pce.TextCursor.inactive_colour:		black
 Pce.TextCursor.colour:			when(@colour_display, red, black)
 Pce.TextCursor.fixed_font_style:	open_look
 Pce.TextCursor.proportional_font_style:	open_look

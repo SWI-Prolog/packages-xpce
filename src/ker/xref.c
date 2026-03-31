@@ -36,14 +36,13 @@
 #include <h/graphics.h>
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-This maps  an xpce object to  a Window handle per  display.  This only
-needs to be used on systems  where handles are specific for a display,
-such as X11.
+This maps an xpce object  to  a   Window  handle  per display.  This was
+needed on X11 where graphics objects where tied to an X11 display.
 
-
-TBD:	handle destruction of these objects.  Not that important as they
-	are generally not destroyed and only a bit of memory is wasted
-	if they are.
+TBD: Cleanup.  With SDL we no longer  need this.  Most xpce objects that
+refer to SDL data now use  `ws_ref`   as  anonymous pointer.  As this is
+known as well, we can now  use   defined  pointer types, simplifying the
+code and using stricter type checking.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 #define XREF_TABLESIZE		256

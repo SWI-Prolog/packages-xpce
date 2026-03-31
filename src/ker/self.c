@@ -127,8 +127,6 @@ initialisePce(Pce pce)
   assign(pce, operating_system,       CtoName(PCE_OS));
 #ifdef WIN32_GRAPHICS
   assign(pce, window_system,	      NAME_windows);
-#elif X11_GRAPHICS
-  assign(pce, window_system,	      NAME_x11);
 #elif SDL_GRAPHICS
   assign(pce, window_system,	      NAME_sdl);
 #else
@@ -665,10 +663,6 @@ infoPce(Pce pce)
   writef("	Operating System:   %s\n", pce->operating_system);
 #if WIN32_GRAPHICS
   writef("	Window System:      windows %s.%s\n",
-	 pce->window_system_version,
-	 pce->window_system_revision);
-#elif X11_GRAPHICS
-  writef("	Window System:      X%sR%s\n",
 	 pce->window_system_version,
 	 pce->window_system_revision);
 #else

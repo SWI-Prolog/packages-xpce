@@ -916,10 +916,13 @@ getDisplayEvent(EventObj ev)
 		 *******************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Deal with scroll-mice in X11. Such  mice   normally  report the wheel as
-Z-axis motion events. As very  few   applications  know  about this, the
-X-server normally maps  these  to  the   pointer-buttons  4  and  5. The
-function below is called from editor, list_browser and window.
+Deal with scroll-mice and trackpads, mapping   events  with a `rotation`
+attribute to vertical scroll events.  Normally  a mouse scroll wheel has
+tick that are reported as 15 degrees rotations.
+
+@tbd We should also handle horizontal   scrolling  and smooth scrolling.
+As  is,  sdlevent.c  accumulates  fast  precise  scrolling  events  from
+trackpads into 15 degree motion events.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 status

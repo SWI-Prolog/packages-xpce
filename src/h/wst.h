@@ -52,6 +52,5 @@
 #include <gra/graphstate.h>
 
 COMMON(status)	metaModifierDisplay(DisplayObj d, Name name);
-COMMON(status)	X11ThreadsDisplay(DisplayObj d, BoolObj val);
 
 #endif /* _PCE_WST_INCLUDED */

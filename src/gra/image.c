@@ -1004,8 +1004,7 @@ static getdecl get_image[] =
 
 static classvardecl rc_image[] =
 { RC(NAME_path, "string",
-     "\".:bitmaps:~/lib/bitmaps:$PCEHOME/bitmaps:" /* concat */
-     "/usr/include/X11/bitmaps\"",
+     "\".:bitmaps:~/.local/share/swi-prolog/bitmaps:$PCEHOME/bitmaps\"",
      "Search path for loading images")
 };
 

@@ -42,7 +42,7 @@ static struct standardCursor
 { char *name;				/* X name of the cursor */
   int	id;				/* X font id of the cursor */
 } standard_cursors[] =
-{					/* Map X11 names to SDL */
+{					/* Map old (X11) cursor names to SDL */
   { "arrow",               SDL_SYSTEM_CURSOR_DEFAULT },
   { "mouse",               SDL_SYSTEM_CURSOR_DEFAULT },
   { "win_arrow",           SDL_SYSTEM_CURSOR_DEFAULT },
