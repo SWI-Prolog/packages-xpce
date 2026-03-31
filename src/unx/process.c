@@ -204,43 +204,6 @@ static Name signames[] =
 #define SA_SIGINFO 0
 #endif
 
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Catching childs that have changed status. There   appear to be many ways
-for doing this. Posix doesn't  provide   signal  context, so by default,
-waitpid() is used to find out  what   child  changed status. On Solaris,
-this appears to lead to a loop. Therefore we use the context information
-passed to the handler. I've tried to  configure all this without testing
-for Solaris itself to exploit these features automatically in compatible
-operating system. Be careful.
-
-Note this function is called asynchronously, and is therefore dangerous.
-It would be better to merge  it   into  the event-queue, but X11 doesn't
-provide an interface for this, as far as  I know. Maybe posting an event
-to myself?
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-static void
-syncSend(Any rec, Name sel, int argc, const Any *argv)
-{ ArgVector(av, argc+2);
-  int i, ac = 0;
-  Timer t;
-
-  av[ac++] = rec;
-  av[ac++] = sel;
-  for(i=0; i<argc; i++)
-    av[ac++] = argv[i];
-
-  t = newObject(ClassTimer, ZERO,
-		newObject(ClassAnd,
-			  newObjectv(ClassMessage, ac, av),
-			  newObject(ClassMessage, RECEIVER, NAME_free, EAV),
-			  EAV), EAV);
-
-  statusTimer(t, NAME_once);
-}
-
-
-
 static void
 child_changed(int sig)
 { Any rstat = NIL;
@@ -275,7 +238,7 @@ child_changed(int sig)
 		if ( notNil(rstat) )
 		{ DEBUG(NAME_process, Cprintf("Posting %s->%s: %s\n",
 				pp(p), pp(sel), pp(rstat)));
-		  syncSend(p, sel, 1, &rstat);
+		  sdl_send(p, sel, false, rstat, EAV);
 		}
 	      }
 	    });
