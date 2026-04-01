@@ -1271,9 +1271,6 @@ scrollWindow(PceWindow sw, Int x, Int y, BoolObj ax, BoolObj ay)
     UpdateScrollbarValuesWindow(sw);
     updatePositionSubWindowsDevice((Device) sw);
 
-#ifdef WIN32_GRAPHICS
-    ws_scroll_window(sw, nx-ox, ny-oy);
-#else
   { int x, y, w, h;
     int p = valInt(sw->pen);
 
@@ -1286,7 +1283,6 @@ scrollWindow(PceWindow sw, Int x, Int y, BoolObj ax, BoolObj ay)
     changed_window(sw, x, y, w, h, TRUE);
     addChain(ChangedWindows, sw);
   }
-#endif
   }
 
   succeed;
@@ -2233,10 +2229,6 @@ static vardecl var_window[] =
 
 /* Send Methods */
 
-#ifdef WIN32_GRAPHICS
-extern status winHandleWindow(PceWindow sw, Int handle);
-extern Int    getWinHandleWindow(PceWindow sw);
-#endif
 
 static senddecl send_window[] =
 { SM(NAME_destroy, 0, NULL, destroyWindow,
@@ -2335,10 +2327,6 @@ static senddecl send_window[] =
      NAME_stacking, "Expose (raise) related frame"),
   SM(NAME_hide, 0, NULL, hideWindow,
      NAME_stacking, "Hide (lower) related frame"),
-#ifdef WIN32_GRAPHICS
-  SM(NAME_winHandle, 1, "hwnd=int", winHandleWindow,
-     NAME_windows, "Associate this XPCE window with the given MS-Window"),
-#endif
   SM(NAME_compute, 0, NULL, computeWindow,
      NAME_update, "Recompute window")
 };
@@ -2366,10 +2354,6 @@ static getdecl get_window[] =
      NAME_cursor, "Currently displayed cursor"),
   GM(NAME_confirm, 2, "any", T_confirm, getConfirmWindow,
      NAME_modal, "Run sub event-loop until ->return"),
-#ifdef WIN32_GRAPHICS
-  GM(NAME_winHandle, 0, "int", NULL, getWinHandleWindow,
-     NAME_windows, "Fetch the MS-Windows HWND of the window (if any)"),
-#endif
   GM(NAME_confirmCentered, 3, "any", T_confirmCentered,
      getConfirmCenteredWindow,
      NAME_modal, "->confirm with frame centered around point"),

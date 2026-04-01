@@ -526,12 +526,6 @@ static struct class_definition classdefs[] =
   { NAME_while, NAME_code, makeClassWhile,
     &ClassWhile, "While-loop control structure" },
 
-#if WIN32_GRAPHICS
-  { NAME_winMetafile, NAME_graphical, makeClassWinMF,
-    &ClassWinMF, "Windows .WMF based figure" },
-  { NAME_winPrinter, NAME_object, makeClassWinPrinter,
-    &ClassWinPrinter, "Windows printer interface" },
-#endif
 
   { NAME_window, NAME_device, makeClassWindow,
     &ClassWindow, "Interface between X-window and device" },

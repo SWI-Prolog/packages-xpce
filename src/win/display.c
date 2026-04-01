@@ -656,34 +656,6 @@ static char *T_getSelection[] =
         { "which=[name]", "target=[name]", "type=[type]" };
 static char *T_selection[] =
         { "which=[name]", "value=char_array" };
-#ifdef WIN32_GRAPHICS
-extern Name getWinFileNameDisplay(DisplayObj obj,
-				  Name mode,
-				  Chain filters,
-				  CharArray title,
-				  CharArray file,
-				  Directory dir,
-				  Any owner,
-				  Chain flags);
-static char *T_win_file_name[] =
-	{ "mode={open,save}",
-	  "filters=[chain]",
-	  "title=[char_array]",
-	  "default=[char_array]",
-	  "directory=[directory]",
-	  "owner=[frame|int]",
-	  "options=[chain]"
-	};
-extern Name getWinDirectoryDisplay(DisplayObj d,
-				   CharArray title,
-				   Directory dir,
-				   Any owner);
-static char *T_win_directory[] =
-	{ "title=[char_array]",
-	  "directory=[directory]",
-	  "owner=[frame|int]"
-	};
-#endif
 
 /* Instance Variables */
 
@@ -789,12 +761,6 @@ static getdecl get_display[] =
      NAME_selection, "Query value of the X-window selection"),
   GM(NAME_paste, 1, "string", "which=[{primary,clipboard}]", getPasteDisplay,
      NAME_selection, "Simple interface to get clipboard value"),
-#ifdef WIN32_GRAPHICS
-  GM(NAME_winFileName, 7, "name", T_win_file_name, getWinFileNameDisplay,
-     NAME_prompt, "Ask for a filename using Windows standard dialog"),
-  GM(NAME_winDirectory, 3, "name", T_win_directory, getWinDirectoryDisplay,
-     NAME_prompt, "Ask for a directory (folder) using Windows standard dialog"),
-#endif
 };
 
 /* Resources */

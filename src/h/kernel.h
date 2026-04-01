@@ -936,12 +936,14 @@ typedef struct _classdecl
 #define AREntries(l, t)		((((l) == NULL) ? 0 : sizeof(l)) / sizeof(t))
 #endif
 
+/* UXWIN(ux, win) evaluates to the first or second argument and is
+   used in resource declarations to adjust look-and-feel.  Some of the
+   use is probably outdated.  The Windows version is in
+   `src/md/md-windows.h`
+ */
+
 #ifndef UXWIN
-#ifdef WIN32_GRAPHICS
-#define UXWIN(unx, win) win
-#else
 #define UXWIN(unx, win) unx
-#endif
 #endif
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

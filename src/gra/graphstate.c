@@ -52,12 +52,6 @@ g_save(void)
 
   gs->level	 = (statelist ? statelist->level+1 : 1);
 #if SDL_GRAPHICS
-#elif RAY_GRAPHICS
-#elif WIN32_GRAPHICS
-  gs->thickness  = context.thickness;
-  gs->texture    = context.texture;
-  gs->foreground = context.colour;
-  gs->background = context.background;
 #else
 #error "No GUI library"
 #endif

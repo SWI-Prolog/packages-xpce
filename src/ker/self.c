@@ -125,13 +125,7 @@ initialisePce(Pce pce)
   assign(pce, version,                CtoName(PCE_VERSION));
   assign(pce, machine,                CtoName(PCE_MACHINE));
   assign(pce, operating_system,       CtoName(PCE_OS));
-#ifdef WIN32_GRAPHICS
-  assign(pce, window_system,	      NAME_windows);
-#elif SDL_GRAPHICS
   assign(pce, window_system,	      NAME_sdl);
-#else
-  assign(pce, window_system,	      NAME_unknown);
-#endif
   assign(pce, features,		      newObject(ClassChain, EAV));
 
   at_pce_exit(exit_pce, ATEXIT_FIFO);
@@ -606,17 +600,7 @@ static status
 bannerPce(Pce pce)
 { Name host = get(HostObject(), NAME_system, EAV);
 
-#if WIN32_GRAPHICS
-#ifdef WIN64
-  writef("XPCE %s for %I%IWin64: XP 64-bit edition%I%I\n",
-#else
-  writef("XPCE %s for %I%IWin32: NT,2000,XP%I%I\n",
-#endif
-#elif SDL_GRAPHICS
   writef("XPCE %s for %s-%s and SDL%d.%d on %s\n",
-#else
-  writef("XPCE %s for %s-%s and X%dR%d\n",
-#endif
 	 pce->version,
 	 pce->machine,
 	 pce->operating_system,
@@ -653,25 +637,17 @@ count_subclasses(Class class)
 
 static status
 infoPce(Pce pce)
-{ int classes;
-
-  classes = valInt(count_subclasses(ClassObject));
+{ Int classes = count_subclasses(ClassObject);
 
   writef("Version:\n");
   writef("	Release:            %s\n", pce->version);
   writef("	System:             %s\n", pce->machine);
   writef("	Operating System:   %s\n", pce->operating_system);
-#if WIN32_GRAPHICS
-  writef("	Window System:      windows %s.%s\n",
-	 pce->window_system_version,
-	 pce->window_system_revision);
-#else
-  writef("	Window System:      SDL%s.%s\n",
+  writef("	Graphics library:   SDL%s.%s\n",
 	 pce->window_system_version,
 	 pce->window_system_revision);
   writef("	SDL driver:         %s\n",
 	 pce->window_system_driver),
-#endif
   writef("\n");
   writef("Memory allocation:\n");
   writef("	Core in use:        %d Bytes\n", getCoreUsagePce(pce));
@@ -682,7 +658,7 @@ infoPce(Pce pce)
 						     getNoFreedPce(pce)));
   writef("\n");
   writef("Other info:\n");
-  writef("	Classes:            %d\n", toInt(classes));
+  writef("	Classes:            %d\n", classes);
   writef("\n");
   writef("Designed and implemented by:\n");
   writef("	Anjo Anjewierden\n");
