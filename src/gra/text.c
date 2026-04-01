@@ -1836,8 +1836,7 @@ static Name text_termnames[] = { NAME_string, NAME_format, NAME_font };
 
 ClassDecl(text_decls,
           var_text, send_text, get_text, rc_text,
-          3, text_termnames,
-          "$Rev$");
+          3, text_termnames);
 
 
 status

@@ -128,8 +128,7 @@ static classvardecl rc_block[] =
 
 ClassDecl(block_decls,
           var_block, send_block, get_block, rc_block,
-          ARGC_UNKNOWN, NULL,
-          "$Rev$");
+          ARGC_UNKNOWN, NULL);
 
 status
 makeClassBlock(Class class)

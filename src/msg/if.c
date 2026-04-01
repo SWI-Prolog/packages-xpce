@@ -117,8 +117,7 @@ static Name if_termnames[] = { NAME_condition, NAME_then, NAME_else };
 
 ClassDecl(if_decls,
           var_if, send_if, get_if, rc_if,
-          3, if_termnames,
-          "$Rev$");
+          3, if_termnames);
 
 status
 makeClassIf(Class class)

@@ -224,8 +224,7 @@ static classvardecl rc_programObject[] =
 ClassDecl(programObject_decls,
           var_programObject, send_programObject,
 	  get_programObject, rc_programObject,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 
 status

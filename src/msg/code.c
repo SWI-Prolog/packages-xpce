@@ -357,8 +357,7 @@ static classvardecl rc_codeVector[] =
 
 ClassDecl(codeVector_decls,
           var_codeVector, send_codeVector, get_codeVector, rc_codeVector,
-          ARGC_INHERIT, NULL,
-          "$Rev$");
+          ARGC_INHERIT, NULL);
 
 status
 makeClassCodeVector(Class class)
@@ -433,8 +432,7 @@ static classvardecl rc_code[] =
 
 ClassDecl(code_decls,
           var_code, send_code, get_code, rc_code,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 
 status

@@ -719,8 +719,7 @@ static Name colour_termnames[] = { NAME_name };
 
 ClassDecl(colour_decls,
 	  var_colour, send_colour, get_colour, rc_colour,
-	  1, colour_termnames,
-	  "$Rev$");
+	  1, colour_termnames);
 
 
 status

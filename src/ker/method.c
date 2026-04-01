@@ -525,8 +525,7 @@ static Name method_termnames[] = { NAME_name, NAME_types, NAME_message, NAME_sum
 
 ClassDecl(method_decls,
 	  var_method, send_method, get_method, rc_method,
-	  5, method_termnames,
-	  "$Rev$");
+	  5, method_termnames);
 
 
 status

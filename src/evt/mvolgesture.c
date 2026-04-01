@@ -146,8 +146,7 @@ static Name moveOutlineGesture_termnames[] = { NAME_button, NAME_modifier };
 ClassDecl(moveOutlineGesture_decls,
           var_moveOutlineGesture, send_moveOutlineGesture,
 	  get_moveOutlineGesture, rc_moveOutlineGesture,
-          2, moveOutlineGesture_termnames,
-          "$Rev$");
+          2, moveOutlineGesture_termnames);
 
 status
 makeClassMoveOutlineGesture(Class class)

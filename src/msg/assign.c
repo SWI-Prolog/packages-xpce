@@ -112,8 +112,7 @@ static Name assign_termnames[] = { NAME_var, NAME_value, NAME_scope };
 
 ClassDecl(assign_decls,
           var_assign, send_assign, get_assign, rc_assign,
-          3, assign_termnames,
-          "$Rev$");
+          3, assign_termnames);
 
 status
 makeClassAssign(Class class)

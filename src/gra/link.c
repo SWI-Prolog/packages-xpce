@@ -117,8 +117,7 @@ static Name link_termnames[] = { NAME_from, NAME_to, NAME_line };
 
 ClassDecl(link_decls,
           var_link, send_link, get_link, rc_link,
-          3, link_termnames,
-          "$Rev$");
+          3, link_termnames);
 
 
 status

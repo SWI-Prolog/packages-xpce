@@ -123,8 +123,7 @@ static classvardecl rc_and[] =
 
 ClassDecl(and_decls,
           var_and, send_and, get_and, rc_and,
-          ARGC_UNKNOWN, NULL,
-          "$Rev$");
+          ARGC_UNKNOWN, NULL);
 
 status
 makeClassAnd(Class class)

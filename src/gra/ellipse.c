@@ -120,8 +120,7 @@ static Name ellipse_termnames[] = { NAME_width, NAME_height };
 
 ClassDecl(ellipse_decls,
           var_ellipse, send_ellipse, get_ellipse, rc_ellipse,
-          2, ellipse_termnames,
-          "$Rev$");
+          2, ellipse_termnames);
 
 
 status

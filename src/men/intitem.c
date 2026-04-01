@@ -294,8 +294,7 @@ static Name int_item_termnames[] = { NAME_name, NAME_default, NAME_message };
 
 ClassDecl(int_item_decls,
           var_int_item, send_int_item, get_int_item, rc_int_item,
-          3, int_item_termnames,
-          "$Rev$");
+          3, int_item_termnames);
 
 status
 makeClassIntItem(Class class)

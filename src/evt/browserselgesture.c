@@ -241,8 +241,7 @@ ClassDecl(browser_select_gesture_decls,
           var_browser_select_gesture,
 	  send_browser_select_gesture, get_browser_select_gesture,
 	  rc_browser_select_gesture,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 status
 makeClassBrowserSelectGesture(Class class)

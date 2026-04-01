@@ -745,8 +745,7 @@ static Name tree_termnames[] = { NAME_root };
 
 ClassDecl(tree_decls,
           var_tree, send_tree, get_tree, rc_tree,
-          1, tree_termnames,
-          "$Rev$");
+          1, tree_termnames);
 
 status
 makeClassTree(Class class)

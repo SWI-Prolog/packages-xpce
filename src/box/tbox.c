@@ -170,8 +170,7 @@ static Name tbox_termnames[] = { NAME_text, NAME_style };
 
 ClassDecl(tbox_decls,
           var_tbox, send_tbox, get_tbox, rc_tbox,
-          2, tbox_termnames,
-          "$Rev$");
+          2, tbox_termnames);
 
 
 status

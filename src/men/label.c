@@ -458,8 +458,7 @@ static Name label_termnames[] = { NAME_name, NAME_selection, NAME_font };
 
 ClassDecl(label_decls,
           var_label, send_label, get_label, rc_label,
-          3, label_termnames,
-          "$Rev$");
+          3, label_termnames);
 
 status
 makeClassLabel(Class class)

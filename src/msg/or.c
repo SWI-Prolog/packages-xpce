@@ -125,8 +125,7 @@ static classvardecl rc_or[] =
 
 ClassDecl(or_decls,
           var_or, send_or, get_or, rc_or,
-          ARGC_UNKNOWN, NULL,
-          "$Rev$");
+          ARGC_UNKNOWN, NULL);
 
 status
 makeClassOr(Class class)

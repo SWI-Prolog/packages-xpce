@@ -506,8 +506,7 @@ static Name connection_termnames[] = { NAME_from, NAME_to, NAME_link, NAME_fromH
 
 ClassDecl(connection_decls,
           var_connection, send_connection, get_connection, rc_connection,
-          5, connection_termnames,
-          "$Rev$");
+          5, connection_termnames);
 
 status
 makeClassConnection(Class class)

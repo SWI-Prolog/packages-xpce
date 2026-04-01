@@ -172,8 +172,7 @@ static Name hyper_termnames[] = { NAME_from, NAME_to, NAME_forwardName, NAME_bac
 
 ClassDecl(hyper_decls,
           var_hyper, send_hyper, get_hyper, rc_hyper,
-          4, hyper_termnames,
-          "$Rev$");
+          4, hyper_termnames);
 
 status
 makeClassHyper(Class class)
@@ -254,8 +253,7 @@ static classvardecl rc_chain_hyper[] =
 
 ClassDecl(chain_hyper_decls,
           var_chain_hyper, send_chain_hyper, get_chain_hyper, rc_chain_hyper,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 status
 makeClassChainHyper(Class class)

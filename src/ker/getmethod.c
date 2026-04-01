@@ -116,8 +116,7 @@ static Name getMethod_termnames[] = { NAME_name, NAME_returnType, NAME_types,
 
 ClassDecl(getMethod_decls,
           var_getMethod, send_getMethod, get_getMethod, rc_getMethod,
-          4, getMethod_termnames,
-          "$Rev$");
+          4, getMethod_termnames);
 
 
 status

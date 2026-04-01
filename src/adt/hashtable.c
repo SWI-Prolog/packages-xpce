@@ -629,8 +629,7 @@ static Name hashTable_termnames[] = { NAME_buckets };
 
 ClassDecl(hashTable_decls,
           var_hashTable, send_hashTable, get_hashTable, rc_hashTable,
-          1, hashTable_termnames,
-          "$Rev$");
+          1, hashTable_termnames);
 
 
 status

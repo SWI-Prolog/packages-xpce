@@ -177,8 +177,7 @@ static Name size_termnames[] = { NAME_width, NAME_height };
 
 ClassDecl(size_decls,
           var_size, send_size, get_size, rc_size,
-          2, size_termnames,
-          "$Rev$");
+          2, size_termnames);
 
 
 status

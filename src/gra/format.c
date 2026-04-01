@@ -50,7 +50,7 @@ initialiseFormat(Format l, Name direction, Int width, BoolObj columns)
 
 status
 makeClassFormat(Class class)
-{ sourceClass(class, makeClassFormat, __FILE__, "$Revision$");
+{ sourceClass(class, makeClassFormat, __FILE__);
 
   localClass(class, NAME_direction, NAME_orientation,
 	     "{horizontal,vertical}", NAME_both,

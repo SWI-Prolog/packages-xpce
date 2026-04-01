@@ -172,8 +172,7 @@ static Name var_termnames[] = { NAME_Value };
 
 ClassDecl(var_decls,
           var_var, send_var, get_var, rc_var,
-          1, var_termnames,
-          "$Rev$");
+          1, var_termnames);
 
 status
 makeClassVar(Class class)

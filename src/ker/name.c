@@ -718,8 +718,7 @@ static Name name_termnames[] = { (Name)NAME_value };
 
 ClassDecl(name_decls,
           var_name, send_name, get_name, rc_name,
-          1, name_termnames,
-          "$Rev$");
+          1, name_termnames);
 
 
 status

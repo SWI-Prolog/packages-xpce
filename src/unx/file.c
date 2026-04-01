@@ -1449,8 +1449,7 @@ static Name file_termnames[] = { NAME_name };
 
 ClassDecl(file_decls,
 	  var_file, send_file, get_file, rc_file,
-	  1, file_termnames,
-	  "$Rev$");
+	  1, file_termnames);
 
 status
 makeClassFile(Class class)

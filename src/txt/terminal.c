@@ -899,8 +899,7 @@ static Name terminal_image_termnames[] =
 ClassDecl(terminal_image_decls,
           var_terminal_image, send_terminal_image, get_terminal_image,
 	  rc_terminal_image,
-          2, terminal_image_termnames,
-          "$Rev$");
+          2, terminal_image_termnames);
 
 status
 makeClassTerminalImage(Class class)

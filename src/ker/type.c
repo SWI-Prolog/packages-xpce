@@ -1075,8 +1075,7 @@ static Name type_termnames[] = { NAME_name, NAME_kind,
 
 ClassDecl(type_decls,
           var_type, send_type, get_type, rc_type,
-          4, type_termnames,
-          "$Rev$");
+          4, type_termnames);
 
 
 status

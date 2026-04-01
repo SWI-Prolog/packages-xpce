@@ -144,8 +144,7 @@ static Name moveGesture_termnames[] = { NAME_button, NAME_modifier };
 
 ClassDecl(moveGesture_decls,
           var_moveGesture, send_moveGesture, get_moveGesture, rc_moveGesture,
-          2, moveGesture_termnames,
-          "$Rev$");
+          2, moveGesture_termnames);
 
 status
 makeClassMoveGesture(Class class)

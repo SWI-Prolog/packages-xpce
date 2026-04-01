@@ -213,8 +213,7 @@ static Name host_termnames[] = { NAME_system };
 
 ClassDecl(host_decls,
           var_host, send_host, get_host, rc_host,
-          1, host_termnames,
-          "$Rev$");
+          1, host_termnames);
 
 status
 makeClassHost(Class class)

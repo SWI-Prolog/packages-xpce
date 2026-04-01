@@ -804,8 +804,7 @@ static classvardecl rc_vector[] =
 
 ClassDecl(vector_decls,
           var_vector, send_vector, get_vector, rc_vector,
-          ARGC_UNKNOWN, NULL,
-          "$Rev$");
+          ARGC_UNKNOWN, NULL);
 
 
 

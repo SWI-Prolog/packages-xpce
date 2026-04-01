@@ -404,7 +404,7 @@ makeClassSyntaxTable(Class class)
 	     "comment_start,comment_end,"
 	     "letter,word,layout}");
 
-  sourceClass(class, makeClassSyntaxTable, __FILE__, "$Revision$");
+  sourceClass(class, makeClassSyntaxTable, __FILE__);
 
   localClass(class, NAME_name, NAME_name, "name*", NAME_get,
 	     "Name of this syntax table");

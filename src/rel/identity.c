@@ -140,8 +140,7 @@ static Name identity_termnames[] = { NAME_from, NAME_to };
 
 ClassDecl(identity_decls,
           var_identity, send_identity, get_identity, rc_identity,
-          2, identity_termnames,
-          "$Rev$");
+          2, identity_termnames);
 
 status
 makeClassIdentity(Class class)

@@ -231,8 +231,7 @@ static Name style_termnames[] = { NAME_icon, NAME_font };
 
 ClassDecl(style_decls,
           var_style, send_style, get_style, rc_style,
-          2, style_termnames,
-          "$Rev$");
+          2, style_termnames);
 
 status
 makeClassStyle(Class class)

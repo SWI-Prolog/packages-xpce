@@ -275,8 +275,7 @@ static Name view_termnames[] = { NAME_name };
 
 ClassDecl(view_decls,
           var_view, send_view, get_view, rc_view,
-          1, view_termnames,
-          "$Rev$");
+          1, view_termnames);
 
 status
 makeClassView(Class class)

@@ -208,8 +208,7 @@ ClassDecl(table_slice_decls,
 	  send_table_slice,
 	  get_table_slice,
 	  rc_table_slice,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 status
 makeClassTableSlice(Class class)
@@ -484,8 +483,7 @@ ClassDecl(table_column_decls,
 	  send_table_column,
 	  get_table_column,
 	  rc_table_column,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 status
 makeClassTableColumn(Class class)
@@ -744,8 +742,7 @@ ClassDecl(table_row_decls,
 	  send_table_row,
 	  get_table_row,
 	  rc_table_row,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 status
 makeClassTableRow(Class class)

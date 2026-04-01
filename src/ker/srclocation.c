@@ -210,8 +210,7 @@ static Name sourceLocation_termnames[] = { NAME_fileName, NAME_lineNo };
 ClassDecl(sourceLocation_decls,
           var_sourceLocation, send_sourceLocation,
 	  get_sourceLocation, rc_sourceLocation,
-          2, sourceLocation_termnames,
-          "$Rev$");
+          2, sourceLocation_termnames);
 
 status
 makeClassSourceLocation(Class class)

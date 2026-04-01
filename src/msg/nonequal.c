@@ -108,8 +108,7 @@ static Name nonEqual_termnames[] = { NAME_left, NAME_right };
 
 ClassDecl(nonEqual_decls,
           var_nonEqual, send_nonEqual, get_nonEqual, rc_nonEqual,
-          2, nonEqual_termnames,
-          "$Rev$");
+          2, nonEqual_termnames);
 
 
 status

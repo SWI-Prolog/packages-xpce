@@ -272,8 +272,7 @@ static Name elevation_termnames[] =
 
 ClassDecl(elevation_decls,
           var_elevation, send_elevation, get_elevation, rc_elevation,
-          5, elevation_termnames,
-          "$Rev$");
+          5, elevation_termnames);
 
 
 status

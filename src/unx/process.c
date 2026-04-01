@@ -842,8 +842,7 @@ static Name process_termnames[] = { NAME_name };
 
 ClassDecl(process_decls,
           var_process, send_process, get_process, rc_process,
-          1, process_termnames,
-          "$Rev$");
+          1, process_termnames);
 
 status
 makeClassProcess(Class class)

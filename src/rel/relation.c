@@ -96,8 +96,7 @@ static classvardecl rc_relation[] =
 
 ClassDecl(relation_decls,
           var_relation, send_relation, get_relation, rc_relation,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 status
 makeClassRelation(Class class)

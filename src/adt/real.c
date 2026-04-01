@@ -404,8 +404,7 @@ static Name real_termnames[] = { NAME_value };
 
 ClassDecl(real_decls,
           var_real, send_real, get_real, rc_real,
-          1, real_termnames,
-          "$Rev$");
+          1, real_termnames);
 
 
 status

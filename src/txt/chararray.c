@@ -968,8 +968,7 @@ static Name charArray_termnames[] = { NAME_value };
 
 ClassDecl(charArray_decls,
           var_charArray, send_charArray, get_charArray, rc_charArray,
-          1, charArray_termnames,
-          "$Rev$");
+          1, charArray_termnames);
 
 status
 makeClassCharArray(Class class)

@@ -315,8 +315,7 @@ static Name resizeGesture_termnames[] = { NAME_mode, NAME_button, NAME_modifier 
 ClassDecl(resizeGesture_decls,
           var_resizeGesture, send_resizeGesture,
 	  get_resizeGesture, rc_resizeGesture,
-          3, resizeGesture_termnames,
-          "$Rev$");
+          3, resizeGesture_termnames);
 
 status
 makeClassResizeTableSliceGesture(Class class)

@@ -230,8 +230,7 @@ static Name spatial_termnames[] =
 
 ClassDecl(spatial_decls,
           var_spatial, send_spatial, get_spatial, rc_spatial,
-          6, spatial_termnames,
-          "$Rev$");
+          6, spatial_termnames);
 
 status
 makeClassSpatial(Class class)

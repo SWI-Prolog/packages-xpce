@@ -94,8 +94,7 @@ static classvardecl rc_recogniser[] =
 
 ClassDecl(recogniser_decls,
           var_recogniser, send_recogniser, get_recogniser, rc_recogniser,
-          ARGC_INHERIT, NULL,
-          "$Rev$");
+          ARGC_INHERIT, NULL);
 
 
 status

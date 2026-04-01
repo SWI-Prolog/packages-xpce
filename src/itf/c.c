@@ -155,7 +155,7 @@ getCallCv(CObj host, CPointer function, int argc, Any *argv)
 
 status
 makeClassC(Class class)
-{ sourceClass(class, makeClassC, __FILE__, "$Revision$");
+{ sourceClass(class, makeClassC, __FILE__);
 
   sendMethod(class, NAME_initialise, DEFAULT, 0,
 	     "Create C interface",

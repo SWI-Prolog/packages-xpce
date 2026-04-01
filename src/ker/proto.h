@@ -64,7 +64,7 @@ COMMON(status)	setCloneFunctionClass(Class class, SendFunc function);
 COMMON(status)	setRedrawFunctionClass(Class class, SendFunc function);
 COMMON(status)	setLoadStoreFunctionClass(Class class, SendFunc load, SendFunc store);
 COMMON(status)	solidClass(Class class, BoolObj val);
-COMMON(status)	sourceClass(Class class, SendFunc f, char *file, char *rcs);
+COMMON(status)	sourceClass(Class class, SendFunc f, char *file);
 COMMON(void)	localClass(Class class, Name name, Name group, char *type, Name access, char *doc);
 COMMON(status)	declareClass(Class class, const classdecl *decls);
 COMMON(status)	delegateClass(Class class, Name name);

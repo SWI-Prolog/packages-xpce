@@ -146,8 +146,7 @@ static Name modifier_termnames[] =
 
 ClassDecl(modifier_decls,
           var_modifier, send_modifier, get_modifier, rc_modifier,
-          4, modifier_termnames,
-          "$Rev$");
+          4, modifier_termnames);
 
 status
 makeClassModifier(Class class)

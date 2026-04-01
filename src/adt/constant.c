@@ -67,7 +67,7 @@ makeClassConstant(Class class)
   localClass(class, NAME_summary, NAME_manual, "string*", NAME_both,
 	     "Short description");
 
-  sourceClass(class, makeClassConstant, __FILE__, "$Revision$");
+  sourceClass(class, makeClassConstant, __FILE__);
   termClass(class, "constant", 1, NAME_self);
   saveStyleClass(class, NAME_external);
   cloneStyleClass(class, NAME_none);

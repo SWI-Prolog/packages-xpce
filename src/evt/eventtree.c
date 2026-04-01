@@ -120,8 +120,7 @@ static Name eventTree_termnames[] = { NAME_root };
 
 ClassDecl(eventTree_decls,
           var_eventTree, send_eventTree, get_eventTree, rc_eventTree,
-          1, eventTree_termnames,
-          "$Rev$");
+          1, eventTree_termnames);
 
 
 status

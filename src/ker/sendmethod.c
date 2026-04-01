@@ -96,8 +96,7 @@ static classvardecl rc_sendMethod[] =
 
 ClassDecl(sendMethod_decls,
           var_sendMethod, send_sendMethod, get_sendMethod, rc_sendMethod,
-          ARGC_INHERIT, NULL,
-          "$Rev$");
+          ARGC_INHERIT, NULL);
 
 
 status

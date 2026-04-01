@@ -193,8 +193,7 @@ ClassDecl(editTextGesture_decls,
 	  send_editTextGesture,
 	  get_editTextGesture,
 	  rc_editTextGesture,
-          2, editTextGesture_termnames,
-          "$Rev$");
+          2, editTextGesture_termnames);
 
 status
 makeClassEditTextGesture(Class class)

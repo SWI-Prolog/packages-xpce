@@ -607,8 +607,7 @@ ClassDecl(table_cell_decls,
 	  send_table_cell,
 	  get_table_cell,
 	  rc_table_cell,
-          1, table_cell_termnames,
-          "$Rev$");
+          1, table_cell_termnames);
 
 status
 makeClassTableCell(Class class)

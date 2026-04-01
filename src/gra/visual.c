@@ -257,8 +257,7 @@ static classvardecl rc_visual[] =
 
 ClassDecl(visual_decls,
           var_visual, send_visual, get_visual, rc_visual,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 status
 makeClassVisual(Class class)

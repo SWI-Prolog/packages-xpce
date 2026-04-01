@@ -171,8 +171,7 @@ static Name handle_termnames[] =
 
 ClassDecl(handle_decls,
           var_handle, send_handle, get_handle, rc_handle,
-          4, handle_termnames,
-          "$Rev$");
+          4, handle_termnames);
 
 status
 makeClassHandle(Class class)

@@ -380,8 +380,7 @@ static Name binaryExpression_termnames[] = { NAME_left, NAME_right };
 ClassDecl(binaryExpression_decls,
           var_binaryExpression, send_binaryExpression,
 	  get_binaryExpression, rc_binaryExpression,
-          2, binaryExpression_termnames,
-          "$Rev$");
+          2, binaryExpression_termnames);
 
 status
 makeClassBinaryExpression(Class class)
@@ -391,21 +390,21 @@ makeClassBinaryExpression(Class class)
 
 status
 makeClassDivide(Class class)
-{ sourceClass(class, makeClassDivide, __FILE__, "$Revision$");
+{ sourceClass(class, makeClassDivide, __FILE__);
   succeed;
 }
 
 
 status
 makeClassTimes(Class class)
-{ sourceClass(class, makeClassTimes, __FILE__, "$Revision$");
+{ sourceClass(class, makeClassTimes, __FILE__);
   succeed;
 }
 
 
 status
 makeClassPlus(Class class)
-{ sourceClass(class, makeClassPlus, __FILE__, "$Revision$");
+{ sourceClass(class, makeClassPlus, __FILE__);
   succeed;
 }
 
@@ -468,8 +467,7 @@ static classvardecl rc_minus[] =
 
 ClassDecl(minus_decls,
           var_minus, send_minus, get_minus, rc_minus,
-          ARGC_INHERIT, NULL,
-          "$Rev$");
+          ARGC_INHERIT, NULL);
 
 
 status

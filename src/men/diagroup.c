@@ -767,8 +767,7 @@ static classvardecl rc_diagroup[] =
 
 ClassDecl(diagroup_decls,
           var_diagroup, send_diagroup, get_diagroup, rc_diagroup,
-          ARGC_INHERIT, NULL,
-          "$Rev$");
+          ARGC_INHERIT, NULL);
 
 
 status

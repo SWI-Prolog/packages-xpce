@@ -2953,8 +2953,7 @@ static classvardecl rc_object[] =
 
 ClassDecl(object_decls,
           var_object, send_object, get_object, rc_object,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 
 status

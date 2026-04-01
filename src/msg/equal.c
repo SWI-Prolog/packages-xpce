@@ -109,8 +109,7 @@ static Name equal_termnames[] = { NAME_left, NAME_right };
 
 ClassDecl(equal_decls,
           var_equal, send_equal, get_equal, rc_equal,
-          2, equal_termnames,
-          "$Rev$");
+          2, equal_termnames);
 
 status
 makeClassEqual(Class class)

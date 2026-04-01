@@ -142,8 +142,7 @@ static classvardecl rc_handlerGroup[] =
 ClassDecl(handlerGroup_decls,
           var_handlerGroup, send_handlerGroup,
 	  get_handlerGroup, rc_handlerGroup,
-          ARGC_UNKNOWN, NULL,
-          "$Rev$");
+          ARGC_UNKNOWN, NULL);
 
 status
 makeClassHandlerGroup(Class class)

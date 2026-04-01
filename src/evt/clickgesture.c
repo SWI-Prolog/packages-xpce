@@ -210,8 +210,7 @@ static Name clickGesture_termnames[] =
 ClassDecl(clickGesture_decls,
           var_clickGesture, send_clickGesture,
 	  get_clickGesture, rc_clickGesture,
-          6, clickGesture_termnames,
-          "$Rev$");
+          6, clickGesture_termnames);
 
 status
 makeClassClickGesture(Class class)

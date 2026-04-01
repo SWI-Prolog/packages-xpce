@@ -130,8 +130,7 @@ static Name box_termnames[] = { NAME_width, NAME_height };
 
 ClassDecl(box_decls,
           var_box, send_box, get_box, rc_box,
-          2, box_termnames,
-          "$Rev$");
+          2, box_termnames);
 
 
 status

@@ -107,8 +107,7 @@ static Name when_termnames[] = { NAME_condition, NAME_then, NAME_else };
 
 ClassDecl(when_decls,
           var_when, send_when, get_when, rc_when,
-          3, when_termnames,
-          "$Rev$");
+          3, when_termnames);
 
 status
 makeClassWhen(Class class)

@@ -629,8 +629,7 @@ static Name tokeniser_termnames[] = { NAME_source, NAME_syntax };
 
 ClassDecl(tokeniser_decls,
           var_tokeniser, send_tokeniser, get_tokeniser, rc_tokeniser,
-          2, tokeniser_termnames,
-          "$Rev$");
+          2, tokeniser_termnames);
 
 status
 makeClassTokeniser(Class class)

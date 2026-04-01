@@ -704,8 +704,7 @@ static Name dialogItem_termnames[] = { NAME_label };
 
 ClassDecl(dialogItem_decls,
           var_dialogItem, send_dialogItem, get_dialogItem, rc_dialogItem,
-          1, dialogItem_termnames,
-          "$Rev$");
+          1, dialogItem_termnames);
 
 status
 makeClassDialogItem(Class class)

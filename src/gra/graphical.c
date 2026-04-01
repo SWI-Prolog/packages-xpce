@@ -3644,8 +3644,7 @@ static Name graphical_termnames[] = { NAME_x, NAME_y, NAME_width, NAME_height };
 
 ClassDecl(graphical_decls,
           var_graphical, send_graphical, get_graphical, rc_graphical,
-          4, graphical_termnames,
-          "$Rev$");
+          4, graphical_termnames);
 
 status
 makeClassGraphical(Class class)

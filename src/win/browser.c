@@ -257,8 +257,7 @@ static Name browser_termnames[] = { NAME_name };
 
 ClassDecl(browser_decls,
           var_browser, send_browser, get_browser, rc_browser,
-          1, browser_termnames,
-          "$Rev$");
+          1, browser_termnames);
 
 status
 makeClassBrowser(Class class)

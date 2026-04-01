@@ -440,8 +440,7 @@ static Name gesture_termnames[] = { NAME_button, NAME_modifier };
 
 ClassDecl(gesture_decls,
           var_gesture, send_gesture, get_gesture, rc_gesture,
-          2, gesture_termnames,
-          "$Rev$");
+          2, gesture_termnames);
 
 status
 makeClassGesture(Class class)

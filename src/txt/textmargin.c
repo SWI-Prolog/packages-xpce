@@ -429,8 +429,7 @@ static Name textMargin_termnames[] = { NAME_editor, NAME_width, NAME_height };
 
 ClassDecl(textMargin_decls,
           var_textMargin, send_textMargin, get_textMargin, rc_textMargin,
-          3, textMargin_termnames,
-          "$Rev$");
+          3, textMargin_termnames);
 
 
 

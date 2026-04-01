@@ -634,8 +634,7 @@ static classvardecl rc_stream[] =
 
 ClassDecl(stream_decls,
           var_stream, send_stream, get_stream, rc_stream,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 status
 makeClassStream(Class class)
@@ -705,8 +704,7 @@ static classvardecl rc_stream[] =
 
 ClassDecl(stream_decls,
           var_stream, send_stream, get_stream, rc_stream,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 status
 makeClassStream(Class class)

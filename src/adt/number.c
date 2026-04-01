@@ -363,8 +363,7 @@ static Name number_termnames[] = { NAME_value };
 
 ClassDecl(number_decls,
           var_number, send_number, get_number, rc_number,
-          1, number_termnames,
-          "$Rev$");
+          1, number_termnames);
 
 status
 makeClassNumber(Class class)

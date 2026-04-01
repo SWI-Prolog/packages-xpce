@@ -110,8 +110,7 @@ static Name hbox_termnames[] = \
 
 ClassDecl(hbox_decls,
           var_hbox, send_hbox, get_hbox, rc_hbox,
-          4, hbox_termnames,
-          "$Rev$");
+          4, hbox_termnames);
 
 
 status

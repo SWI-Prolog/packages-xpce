@@ -1872,8 +1872,7 @@ static Name listBrowser_termnames[] = { NAME_dict, NAME_width, NAME_height };
 
 ClassDecl(listBrowser_decls,
 	  var_listBrowser, send_listBrowser, get_listBrowser, rc_listBrowser,
-	  3, listBrowser_termnames,
-	  "$Rev$");
+	  3, listBrowser_termnames);
 
 
 status

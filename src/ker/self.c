@@ -1440,8 +1440,7 @@ static Name pce_termnames[] = { NAME_version };
 
 ClassDecl(pce_decls,
           var_pce, send_pce, get_pce, rc_pce,
-          1, pce_termnames,
-          "$Rev$");
+          1, pce_termnames);
 
 status
 makeClassPce(Class class)

@@ -372,8 +372,7 @@ static Name atable_termnames[] = { NAME_names, NAME_keys };
 
 ClassDecl(atable_decls,
           var_atable, send_atable, get_atable, rc_atable,
-          2, atable_termnames,
-          "$Rev$");
+          2, atable_termnames);
 
 
 status

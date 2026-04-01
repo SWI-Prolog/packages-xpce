@@ -612,8 +612,7 @@ static Name arc_termnames[] = { NAME_radius, NAME_startAngle, NAME_sizeAngle };
 
 ClassDecl(arc_decls,
           var_arc, send_arc, get_arc, rc_arc,
-          3, arc_termnames,
-          "$Rev$");
+          3, arc_termnames);
 
 
 status

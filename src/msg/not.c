@@ -103,8 +103,7 @@ static Name not_termnames[] = { NAME_argument };
 
 ClassDecl(not_decls,
           var_not, send_not, get_not, rc_not,
-          1, not_termnames,
-          "$Rev$");
+          1, not_termnames);
 
 
 status

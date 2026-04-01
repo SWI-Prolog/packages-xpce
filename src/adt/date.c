@@ -639,8 +639,7 @@ static Name date_termnames[] = { NAME_second, NAME_minute, NAME_hour,
 
 ClassDecl(date_decls,
           var_date, send_date, doget_date, rc_date,
-          6, date_termnames,
-          "$Rev$");
+          6, date_termnames);
 
 
 

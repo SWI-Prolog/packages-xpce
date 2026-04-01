@@ -1027,8 +1027,7 @@ static Name scrollBar_termnames[] =
 
 ClassDecl(scrollBar_decls,
           var_scrollBar, send_scrollBar, get_scrollBar, rc_scrollBar,
-          3, scrollBar_termnames,
-          "$Rev$");
+          3, scrollBar_termnames);
 
 
 status

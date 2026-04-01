@@ -207,8 +207,7 @@ static Name error_termnames[] = { NAME_id, NAME_format,
 
 ClassDecl(error_decls,
           var_error, send_error, get_error, rc_error,
-          2, error_termnames,
-          "$Rev$");
+          2, error_termnames);
 
 
 status

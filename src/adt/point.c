@@ -292,8 +292,7 @@ static Name point_termnames[] = { NAME_x, NAME_y };
 
 ClassDecl(point_decls,
           var_point, send_point, get_point, rc_point,
-          2, point_termnames,
-          "$Rev$");
+          2, point_termnames);
 
 status
 makeClassPoint(Class class)

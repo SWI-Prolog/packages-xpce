@@ -290,8 +290,7 @@ static classvardecl rc_displayManager[] =
 ClassDecl(displayManager_decls,
           var_displayManager, send_displayManager,
 	  get_displayManager, rc_displayManager,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 
 status

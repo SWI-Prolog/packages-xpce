@@ -253,8 +253,7 @@ static Name application_termnames[] = { NAME_name };
 
 ClassDecl(application_decls,
           var_application, send_application, get_application, rc_application,
-          1, application_termnames,
-          "$Rev$");
+          1, application_termnames);
 
 status
 makeClassApplication(Class class)

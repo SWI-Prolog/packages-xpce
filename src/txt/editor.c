@@ -5577,8 +5577,7 @@ static Name editor_termnames[] =
 
 ClassDecl(editor_decls,
           var_editor, send_editor, get_editor, rc_editor,
-          4, editor_termnames,
-          "$Rev$");
+          4, editor_termnames);
 
 status
 makeClassEditor(Class class)

@@ -657,8 +657,7 @@ static classvardecl rc_dict[] =
 
 ClassDecl(dict_decls,
           var_dict, send_dict, get_dict, rc_dict,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 status
 makeClassDict(Class class)

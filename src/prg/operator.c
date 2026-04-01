@@ -142,8 +142,7 @@ static Name operator_termnames[] = { NAME_name, NAME_priority, NAME_kind };
 
 ClassDecl(operator_decls,
           var_operator, send_operator, get_operator, rc_operator,
-          3, operator_termnames,
-          "$Rev$");
+          3, operator_termnames);
 
 status
 makeClassOperator(Class class)

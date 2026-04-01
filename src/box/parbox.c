@@ -1452,8 +1452,7 @@ static Name parbox_termnames[] = { NAME_width, NAME_alignment };
 
 ClassDecl(parbox_decls,
           var_parbox, send_parbox, get_parbox, rc_parbox,
-          2, parbox_termnames,
-          "$Rev$");
+          2, parbox_termnames);
 
 
 status

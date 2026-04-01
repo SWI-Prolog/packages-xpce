@@ -2375,8 +2375,7 @@ static Name window_termnames[] = { NAME_name };
 
 ClassDecl(window_decls,
           var_window, send_window, get_window, rc_window,
-          1, window_termnames,
-          "$Rev$");
+          1, window_termnames);
 
 
 status

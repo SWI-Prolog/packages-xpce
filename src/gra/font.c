@@ -569,8 +569,7 @@ static Name font_termnames[] = { NAME_family, NAME_style, NAME_points };
 
 ClassDecl(font_decls,
           var_font, send_font, get_font, rc_font,
-          3, font_termnames,
-          "$Rev$");
+          3, font_termnames);
 
 
 status

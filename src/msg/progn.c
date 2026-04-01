@@ -153,8 +153,7 @@ static classvardecl rc_progn[] =
 
 ClassDecl(progn_decls,
           var_progn, send_progn, get_progn, rc_progn,
-          ARGC_UNKNOWN, NULL,
-          "$Rev$");
+          ARGC_UNKNOWN, NULL);
 
 status
 makeClassProgn(Class class)

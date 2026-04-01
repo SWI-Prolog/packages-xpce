@@ -751,8 +751,7 @@ static Name display_termnames[] = { NAME_name };
 
 ClassDecl(display_decls,
           var_display, send_display, get_display, rc_display,
-          1, display_termnames,
-          "$Rev$");
+          1, display_termnames);
 
 status
 makeClassDisplay(Class class)

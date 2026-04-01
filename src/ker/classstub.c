@@ -234,8 +234,7 @@ static Name classStub_termnames[] = { NAME_name, NAME_super, NAME_summary };
 
 ClassDecl(classStub_decls,
           var_classStub, send_classStub, get_classStub, rc_classStub,
-          3, classStub_termnames,
-          "$Rev$");
+          3, classStub_termnames);
 
 status
 makeClassClassStub(Class class)

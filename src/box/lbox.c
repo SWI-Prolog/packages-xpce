@@ -281,8 +281,7 @@ static classvardecl rc_lbox[] =
 
 ClassDecl(lbox_decls,
           var_lbox, send_lbox, get_lbox, rc_lbox,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 
 status

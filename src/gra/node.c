@@ -1070,8 +1070,7 @@ static Name node_termnames[] = { NAME_image };
 
 ClassDecl(node_decls,
           var_node, send_node, get_node, rc_node,
-          1, node_termnames,
-          "$Rev$");
+          1, node_termnames);
 
 status
 makeClassNode(Class class)

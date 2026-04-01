@@ -196,8 +196,7 @@ static Name timer_termnames[] = { NAME_interval, NAME_message };
 
 ClassDecl(timer_decls,
           var_timer, send_timer, get_timer, rc_timer,
-          2, timer_termnames,
-          "$Rev$");
+          2, timer_termnames);
 
 status
 makeClassTimer(Class class)

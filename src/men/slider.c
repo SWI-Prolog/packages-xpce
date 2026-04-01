@@ -639,8 +639,7 @@ static Name slider_termnames[] = { NAME_label, NAME_low, NAME_high, NAME_selecti
 
 ClassDecl(slider_decls,
           var_slider, send_slider, get_slider, rc_slider,
-          5, slider_termnames,
-          "$Rev$");
+          5, slider_termnames);
 
 status
 makeClassSlider(Class class)

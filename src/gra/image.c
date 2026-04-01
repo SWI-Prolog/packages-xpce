@@ -1000,8 +1000,7 @@ static Name image_termnames[] = { NAME_name };
 
 ClassDecl(image_decls,
 	  var_image, send_image, get_image, rc_image,
-	  1, image_termnames,
-	  "$Rev$");
+	  1, image_termnames);
 
 
 status

@@ -330,8 +330,7 @@ static Name connectGesture_termnames[] =
 ClassDecl(connectGesture_decls,
           var_connectGesture, send_connectGesture,
 	  get_connectGesture, rc_connectGesture,
-          3, connectGesture_termnames,
-          "$Rev$");
+          3, connectGesture_termnames);
 
 status
 makeClassConnectGesture(Class class)

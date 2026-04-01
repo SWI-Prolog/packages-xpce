@@ -583,8 +583,7 @@ static Name variable_termnames[] = { NAME_name, NAME_type, NAME_access };
 
 ClassDecl(variable_decls,
           var_variable, send_variable, get_variable, rc_variable,
-          3, variable_termnames,
-          "$Rev$");
+          3, variable_termnames);
 
 
 status

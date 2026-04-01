@@ -176,8 +176,7 @@ static classvardecl rc_create[] =
 
 ClassDecl(create_decls,
           var_create, send_create, get_create, rc_create,
-          ARGC_UNKNOWN, NULL,
-          "$Rev$");
+          ARGC_UNKNOWN, NULL);
 
 status
 makeClassCreate(Class class)

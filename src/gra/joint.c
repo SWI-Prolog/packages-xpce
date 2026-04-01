@@ -222,8 +222,7 @@ static Name joint_termnames[] = { NAME_arrows };
 
 ClassDecl(joint_decls,
           var_joint, send_joint, get_joint, rc_joint,
-          1, joint_termnames,
-          "$Rev$");
+          1, joint_termnames);
 
 
 status

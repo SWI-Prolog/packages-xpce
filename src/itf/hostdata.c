@@ -178,8 +178,7 @@ static Name host_data_termnames[] = { NAME_handle };
 
 ClassDecl(host_data_decls,
           var_host_data, send_host_data, get_host_data, rc_host_data,
-          1, host_data_termnames,
-          "$Rev$");
+          1, host_data_termnames);
 
 
 status

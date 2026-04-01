@@ -169,8 +169,7 @@ static Name cursor_termnames[] = { NAME_name };
 
 ClassDecl(cursor_decls,
           var_cursor, send_cursor, get_cursor, rc_cursor,
-          1, cursor_termnames,
-          "$Rev$");
+          1, cursor_termnames);
 
 
 status

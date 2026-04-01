@@ -178,8 +178,7 @@ static classvardecl rc_obtain[] =
 
 ClassDecl(obtain_decls,
           var_obtain, send_obtain, get_obtain, rc_obtain,
-          ARGC_UNKNOWN, NULL,
-          "$Rev$");
+          ARGC_UNKNOWN, NULL);
 
 status
 makeClassObtain(Class class)

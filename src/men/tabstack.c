@@ -319,8 +319,7 @@ static getdecl get_tab_stack[] =
 
 ClassDecl(tab_stack_decls,
           NULL, send_tab_stack, get_tab_stack, NULL,
-          ARGC_UNKNOWN, NULL,
-          "$Rev$");
+          ARGC_UNKNOWN, NULL);
 
 
 status

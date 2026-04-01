@@ -454,8 +454,7 @@ static Name windowDecorator_termnames[] =
 ClassDecl(windowDecorator_decls,
           var_windowDecorator, send_windowDecorator,
 	  get_windowDecorator, rc_windowDecorator,
-          1, windowDecorator_termnames,
-          "$Rev$");
+          1, windowDecorator_termnames);
 
 
 status

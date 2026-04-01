@@ -58,7 +58,7 @@ getConvertPen(Class class, Int thickness)
 
 status
 makeClassPen(Class class)
-{ sourceClass(class, makeClassPen, __FILE__, "$Revision$");
+{ sourceClass(class, makeClassPen, __FILE__);
 
   localClass(class, NAME_thickness, NAME_dimension, "0..", NAME_both,
 	     "Thickness of the line (pixels)");

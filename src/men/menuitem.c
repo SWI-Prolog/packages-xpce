@@ -383,8 +383,7 @@ static Name menuItem_termnames[] = { NAME_value, NAME_message, NAME_label, NAME_
 
 ClassDecl(menuItem_decls,
           var_menuItem, send_menuItem, get_menuItem, rc_menuItem,
-          6, menuItem_termnames,
-          "$Rev$");
+          6, menuItem_termnames);
 
 
 status

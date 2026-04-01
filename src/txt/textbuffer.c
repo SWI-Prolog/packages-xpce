@@ -3155,8 +3155,7 @@ static Name textBuffer_termnames[] = { NAME_string };
 
 ClassDecl(textBuffer_decls,
           var_textBuffer, send_textBuffer, get_textBuffer, rc_textBuffer,
-          0, textBuffer_termnames,
-          "$Rev$");
+          0, textBuffer_termnames);
 
 status
 makeClassTextBuffer(Class class)

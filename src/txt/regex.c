@@ -842,8 +842,7 @@ static Name regex_termnames[] = { NAME_pattern };
 
 ClassDecl(regex_decls,
           var_regex, send_regex, get_regex, rc_regex,
-          1, regex_termnames,
-          "$Rev$");
+          1, regex_termnames);
 
 status
 makeClassRegex(Class class)

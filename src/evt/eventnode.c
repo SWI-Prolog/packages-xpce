@@ -156,8 +156,7 @@ static Name eventNode_termnames[] = { NAME_value, NAME_parent };
 
 ClassDecl(eventNode_decls,
           var_eventNode, send_eventNode, get_eventNode, rc_eventNode,
-          2, eventNode_termnames,
-          "$Rev$");
+          2, eventNode_termnames);
 
 status
 makeClassEventNode(Class class)

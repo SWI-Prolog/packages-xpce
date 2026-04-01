@@ -1044,8 +1044,7 @@ static Name path_termnames[] = { NAME_kind, NAME_radiusOrInterval };
 
 ClassDecl(path_decls,
           var_path, send_path, get_path, rc_path,
-          2, path_termnames,
-          "$Rev$");
+          2, path_termnames);
 
 status
 makeClassPath(Class class)

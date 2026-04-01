@@ -127,8 +127,7 @@ static Name rubber_termnames[] = { NAME_stretch, NAME_shrink };
 
 ClassDecl(rubber_decls,
           var_rubber, send_rubber, get_rubber, rc_rubber,
-          2, rubber_termnames,
-          "$Rev$");
+          2, rubber_termnames);
 
 
 status

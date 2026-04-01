@@ -249,8 +249,7 @@ static Name dictItem_termnames[] = { NAME_key, NAME_label, NAME_object };
 
 ClassDecl(dictItem_decls,
           var_dictItem, send_dictItem, get_dictItem, rc_dictItem,
-          3, dictItem_termnames,
-          "$Rev$");
+          3, dictItem_termnames);
 
 status
 makeClassDictItem(Class class)

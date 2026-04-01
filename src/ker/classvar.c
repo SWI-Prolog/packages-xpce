@@ -660,8 +660,7 @@ static Name cv_termnames[] = { NAME_context, NAME_name, NAME_default,
 
 ClassDecl(class_variable_decls,
 	  var_class_variable, send_class_variable, get_class_variable, rc_class_variable,
-	  5, cv_termnames,
-	  "$Rev$");
+	  5, cv_termnames);
 
 
 status

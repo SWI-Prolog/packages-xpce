@@ -433,8 +433,7 @@ static Name arrow_termnames[] = { NAME_length, NAME_wing };
 
 ClassDecl(arrow_decls,
           var_arrow, send_arrow, get_arrow, rc_arrow,
-          2, arrow_termnames,
-          "$Rev$");
+          2, arrow_termnames);
 
 
 status

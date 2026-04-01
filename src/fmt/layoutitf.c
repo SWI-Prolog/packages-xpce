@@ -123,8 +123,7 @@ static Name layoutitf_termnames[] = { NAME_image };
 
 ClassDecl(layoutitf_decls,
           var_layoutitf, send_layoutitf, get_layoutitf, rc_layoutitf,
-          1, layoutitf_termnames,
-          "$Rev$");
+          1, layoutitf_termnames);
 
 status
 makeClassLayoutInterface(Class class)

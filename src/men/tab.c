@@ -533,8 +533,7 @@ static classvardecl rc_tab[] =
 
 ClassDecl(tab_decls,
           var_tab, send_tab, get_tab, rc_tab,
-          ARGC_INHERIT, NULL,
-          "$Rev$");
+          ARGC_INHERIT, NULL);
 
 
 status

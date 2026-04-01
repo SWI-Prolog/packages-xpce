@@ -169,8 +169,7 @@ static classvardecl rc_layoutmgr[] =
 
 ClassDecl(layoutmgr_decls,
           var_layoutmgr, send_layoutmgr, get_layoutmgr, rc_layoutmgr,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 status
 makeClassLayoutManager(Class class)

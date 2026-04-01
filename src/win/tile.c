@@ -1249,8 +1249,7 @@ static Name tile_termnames[] =
 
 ClassDecl(tile_decls,
           var_tile, send_tile, get_tile, rc_tile,
-          1, tile_termnames,
-          "$Rev$");
+          1, tile_termnames);
 
 
 status

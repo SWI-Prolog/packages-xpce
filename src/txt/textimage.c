@@ -2501,8 +2501,7 @@ static Name textImage_termnames[] = { NAME_text, NAME_width, NAME_height };
 
 ClassDecl(textImage_decls,
 	  var_textImage, send_textImage, get_textImage, rc_textImage,
-	  3, textImage_termnames,
-	  "$Rev$");
+	  3, textImage_termnames);
 
 
 status

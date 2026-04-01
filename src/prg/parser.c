@@ -535,8 +535,7 @@ static Name parser_termnames[] = { NAME_tokeniser };
 
 ClassDecl(parser_decls,
           var_parser, send_parser, get_parser, rc_parser,
-          1, parser_termnames,
-          "$Rev$");
+          1, parser_termnames);
 
 status
 makeClassParser(Class class)

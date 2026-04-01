@@ -2053,8 +2053,7 @@ static Name frame_termnames[] = { NAME_label, NAME_kind, NAME_display };
 
 ClassDecl(frame_decls,
           var_frame, send_frame, get_frame, rc_frame,
-          3, frame_termnames,
-          "$Rev$");
+          3, frame_termnames);
 
 
 status

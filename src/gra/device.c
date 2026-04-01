@@ -2431,8 +2431,7 @@ static classvardecl rc_device[] =
 
 ClassDecl(device_decls,
           var_device, send_device, get_device, rc_device,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 
 status

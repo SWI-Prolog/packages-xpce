@@ -762,8 +762,7 @@ static Name popup_termnames[] = { NAME_name, NAME_message };
 
 ClassDecl(popup_decls,
           var_popup, send_popup, get_popup, rc_popup,
-          2, popup_termnames,
-          "$Rev$");
+          2, popup_termnames);
 
 status
 makeClassPopup(Class class)

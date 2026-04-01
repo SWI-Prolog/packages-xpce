@@ -855,8 +855,7 @@ static Name area_termnames[] = { NAME_x, NAME_y, NAME_width, NAME_height };
 
 ClassDecl(area_decls,
           var_area, send_area, get_area, rc_area,
-          4, area_termnames,
-          "$Rev$");
+          4, area_termnames);
 
 
 status

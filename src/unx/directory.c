@@ -584,8 +584,7 @@ static Name directory_termnames[] = { NAME_name };
 
 ClassDecl(directory_decls,
           var_directory, send_directory, get_directory, rc_directory,
-          1, directory_termnames,
-          "$Rev$");
+          1, directory_termnames);
 
 status
 makeClassDirectory(Class class)

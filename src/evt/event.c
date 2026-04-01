@@ -1078,8 +1078,7 @@ static Name event_termnames[] = { NAME_receiver, NAME_name, NAME_position, NAME_
 
 ClassDecl(event_decls,
           var_event, send_event, get_event, rc_event,
-          3, event_termnames,
-          "$Rev$");
+          3, event_termnames);
 
 
 status

@@ -715,8 +715,7 @@ static Name line_termnames[] =
 
 ClassDecl(line_decls,
           var_line, send_line, get_line, rc_line,
-          5, line_termnames,
-          "$Rev$");
+          5, line_termnames);
 
 
 status

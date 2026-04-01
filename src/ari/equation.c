@@ -95,8 +95,7 @@ static Name binaryCondition_termnames[] = { NAME_left, NAME_right };
 ClassDecl(binaryCondition_decls,
           var_binaryCondition, send_binaryCondition,
 	  get_binaryCondition, rc_binaryCondition,
-          2, binaryCondition_termnames,
-          "$Rev$");
+          2, binaryCondition_termnames);
 
 status
 makeClassBinaryCondition(Class class)
@@ -306,8 +305,7 @@ static classvardecl rc_equation[] =
 
 ClassDecl(equation_decls,
           var_equation, send_equation, get_equation, rc_equation,
-          ARGC_INHERIT, NULL,
-          "$Rev$");
+          ARGC_INHERIT, NULL);
 
 
 status
@@ -445,8 +443,7 @@ static classvardecl rc_less[] =
 
 ClassDecl(less_decls,
           var_less, send_less, get_less, rc_less,
-          ARGC_INHERIT, NULL,
-          "$Rev$");
+          ARGC_INHERIT, NULL);
 
 status
 makeClassLess(Class class)
@@ -496,8 +493,7 @@ static classvardecl rc_lessEqual[] =
 
 ClassDecl(lessEqual_decls,
           var_lessEqual, send_lessEqual, get_lessEqual, rc_lessEqual,
-          ARGC_INHERIT, NULL,
-          "$Rev$");
+          ARGC_INHERIT, NULL);
 
 
 status
@@ -551,8 +547,7 @@ static classvardecl rc_greater[] =
 
 ClassDecl(greater_decls,
           var_greater, send_greater, get_greater, rc_greater,
-          ARGC_INHERIT, NULL,
-          "$Rev$");
+          ARGC_INHERIT, NULL);
 
 
 status
@@ -607,8 +602,7 @@ static classvardecl rc_greaterEqual[] =
 ClassDecl(greaterEqual_decls,
           var_greaterEqual, send_greaterEqual,
 	  get_greaterEqual, rc_greaterEqual,
-          ARGC_INHERIT, NULL,
-          "$Rev$");
+          ARGC_INHERIT, NULL);
 
 status
 makeClassGreaterEqual(Class class)

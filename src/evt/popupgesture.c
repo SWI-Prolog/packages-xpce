@@ -294,8 +294,7 @@ static Name popupGesture_termnames[] = { NAME_popup, NAME_button, NAME_modifier 
 ClassDecl(popupGesture_decls,
           var_popupGesture, send_popupGesture,
 	  get_popupGesture, rc_popupGesture,
-          3, popupGesture_termnames,
-          "$Rev$");
+          3, popupGesture_termnames);
 
 status
 makeClassPopupGesture(Class class)

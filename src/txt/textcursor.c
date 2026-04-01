@@ -256,8 +256,7 @@ static Name textCursor_termnames[] = { NAME_style };
 
 ClassDecl(textCursor_decls,
           var_textCursor, send_textCursor, get_textCursor, rc_textCursor,
-          1, textCursor_termnames,
-          "$Rev$");
+          1, textCursor_termnames);
 
 status
 makeClassTextCursor(Class class)

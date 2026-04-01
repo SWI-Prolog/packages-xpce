@@ -936,8 +936,7 @@ static Name text_change_termnames[] =
 ClassDecl(text_change_decls,
           var_text_change, send_text_change, get_text_change,
 	  rc_text_change,
-          5, text_change_termnames,
-          "$Rev$");
+          5, text_change_termnames);
 
 status
 makeClassTextChange(Class class)

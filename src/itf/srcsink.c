@@ -320,8 +320,7 @@ static classvardecl rc_source_sink[] =
 
 ClassDecl(source_sink_decls,
           var_source_sink, send_source_sink, get_source_sink, rc_source_sink,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 
 status

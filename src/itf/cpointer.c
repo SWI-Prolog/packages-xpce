@@ -115,8 +115,7 @@ static Name cPointer_termnames[] = { NAME_printName };
 
 ClassDecl(cPointer_decls,
           var_cPointer, send_cPointer, get_cPointer, rc_cPointer,
-          1, cPointer_termnames,
-          "$Rev$");
+          1, cPointer_termnames);
 
 
 status

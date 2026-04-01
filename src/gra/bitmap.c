@@ -280,8 +280,7 @@ static Name bitmap_termnames[] = { NAME_image };
 
 ClassDecl(bitmap_decls,
           var_bitmap, send_bitmap, get_bitmap, rc_bitmap,
-          1, bitmap_termnames,
-          "$Rev$");
+          1, bitmap_termnames);
 
 
 

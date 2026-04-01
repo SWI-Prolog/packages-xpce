@@ -107,8 +107,7 @@ static Name bool_termnames[] = { NAME_self };
 
 ClassDecl(bool_decls,
           var_bool, send_bool, get_bool, rc_bool,
-          1, bool_termnames,
-          "$Rev$");
+          1, bool_termnames);
 
 
 status

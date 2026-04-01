@@ -133,8 +133,7 @@ static Name attribute_termnames[] = { NAME_name, NAME_value };
 
 ClassDecl(attribute_decls,
           var_attribute, send_attribute, get_attribute, rc_attribute,
-          2, attribute_termnames,
-          "$Rev$");
+          2, attribute_termnames);
 
 
 status

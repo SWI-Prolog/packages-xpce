@@ -784,8 +784,7 @@ static Name menuBar_termnames[] = { NAME_label };
 
 ClassDecl(menuBar_decls,
           var_menuBar, send_menuBar, get_menuBar, rc_menuBar,
-          1, menuBar_termnames,
-          "$Rev$");
+          1, menuBar_termnames);
 
 
 status

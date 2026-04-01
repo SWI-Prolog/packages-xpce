@@ -169,8 +169,7 @@ static Name resizeOutlineGesture_termnames[] = { NAME_button, NAME_modifier };
 ClassDecl(resizeOutlineGesture_decls,
           var_resizeOutlineGesture, send_resizeOutlineGesture,
 	  get_resizeOutlineGesture, rc_resizeOutlineGesture,
-          2, resizeOutlineGesture_termnames,
-          "$Rev$");
+          2, resizeOutlineGesture_termnames);
 
 
 status

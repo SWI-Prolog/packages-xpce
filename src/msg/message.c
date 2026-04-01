@@ -227,8 +227,7 @@ static classvardecl rc_message[] =
 
 ClassDecl(message_decls,
           var_message, send_message, get_message, rc_message,
-          ARGC_UNKNOWN, NULL,
-          "$Rev$");
+          ARGC_UNKNOWN, NULL);
 
 status
 makeClassMessage(Class class)

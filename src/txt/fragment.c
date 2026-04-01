@@ -691,8 +691,7 @@ static Name fragment_termnames[] = { NAME_textBuffer, NAME_start, NAME_length, N
 
 ClassDecl(fragment_decls,
           var_fragment, send_fragment, get_fragment, rc_fragment,
-          4, fragment_termnames,
-          "$Rev$");
+          4, fragment_termnames);
 
 status
 makeClassFragment(Class class)

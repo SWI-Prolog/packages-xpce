@@ -255,8 +255,7 @@ ClassDecl(paragraph_decls,
 	  send_paragraph,
 	  get_paragraph,
 	  rc_paragraph,
-          1, paragraph_termnames,
-          "$Rev$");
+          1, paragraph_termnames);
 
 status
 makeClassParagraph(Class class)

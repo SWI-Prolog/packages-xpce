@@ -259,8 +259,7 @@ static classvardecl rc_function[] =
 
 ClassDecl(function_decls,
           var_function, send_function, get_function, rc_function,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 status
 makeClassFunction(Class class)

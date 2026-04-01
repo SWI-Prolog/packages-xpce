@@ -173,8 +173,7 @@ static Name region_termnames[] = { NAME_x, NAME_y, NAME_width, NAME_height };
 
 ClassDecl(region_decls,
           var_region, send_region, get_region, rc_region,
-          4, region_termnames,
-          "$Rev$");
+          4, region_termnames);
 
 
 status

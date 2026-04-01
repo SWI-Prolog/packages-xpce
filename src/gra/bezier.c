@@ -641,8 +641,7 @@ static Name bezier_termnames[] = { NAME_width, NAME_height };
 
 ClassDecl(bezier_decls,
           var_bezier, send_bezier, get_bezier, rc_bezier,
-          2, bezier_termnames,
-          "$Rev$");
+          2, bezier_termnames);
 
 
 status

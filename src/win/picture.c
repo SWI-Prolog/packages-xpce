@@ -91,8 +91,7 @@ static Name picture_termnames[] = { NAME_name };
 
 ClassDecl(picture_decls,
           var_picture, send_picture, get_picture, rc_picture,
-          1, picture_termnames,
-          "$Rev$");
+          1, picture_termnames);
 
 
 status

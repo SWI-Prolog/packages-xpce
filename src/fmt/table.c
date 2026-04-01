@@ -2010,8 +2010,7 @@ static Name table_termnames[] = { NAME_halign };
 
 ClassDecl(table_decls,
           var_table, send_table, get_table, rc_table,
-          0, NULL,
-          "$Rev$");
+          0, NULL);
 
 status
 makeClassTable(Class class)

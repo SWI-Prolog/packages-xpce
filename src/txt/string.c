@@ -739,8 +739,7 @@ static Name string_termnames[] = { NAME_value };
 
 ClassDecl(string_decls,
           var_string, send_string, get_string, rc_string,
-          1, string_termnames,
-          "$Rev$");
+          1, string_termnames);
 
 status
 makeClassString(Class class)

@@ -2376,8 +2376,7 @@ static Name menu_termnames[] = { NAME_label, NAME_kind, NAME_message };
 
 ClassDecl(menu_decls,
           var_menu, send_menu, get_menu, rc_menu,
-          3, menu_termnames,
-          "$Rev$");
+          3, menu_termnames);
 
 status
 makeClassMenu(Class class)

@@ -1692,8 +1692,7 @@ static classvardecl rc_chain[] =
 
 ClassDecl(chain_decls,
           var_chain, send_chain, get_chain, rc_chain,
-          ARGC_UNKNOWN, NULL,
-          "$Rev$");
+          ARGC_UNKNOWN, NULL);
 
 
 status

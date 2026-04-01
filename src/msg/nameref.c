@@ -110,8 +110,7 @@ static Name assoc_termnames[] = { NAME_reference, NAME_object };
 
 ClassDecl(assoc_decls,
           var_assoc, send_assoc, get_assoc, rc_assoc,
-          2, assoc_termnames,
-          "$Rev$");
+          2, assoc_termnames);
 
 
 status

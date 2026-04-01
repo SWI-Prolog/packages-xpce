@@ -286,8 +286,7 @@ static classvardecl rc_sheet[] =
 
 ClassDecl(sheet_decls,
           var_sheet, send_sheet, get_sheet, rc_sheet,
-          ARGC_UNKNOWN, NULL,
-          "$Rev$");
+          ARGC_UNKNOWN, NULL);
 
 
 status

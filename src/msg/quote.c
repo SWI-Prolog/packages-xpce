@@ -88,8 +88,7 @@ static Name quoteFunction_termnames[] = { NAME_function };
 ClassDecl(quoteFunction_decls,
           var_quoteFunction, send_quoteFunction,
 	  get_quoteFunction, rc_quoteFunction,
-          1, quoteFunction_termnames,
-          "$Rev$");
+          1, quoteFunction_termnames);
 
 status
 makeClassQuoteFunction(Class class)

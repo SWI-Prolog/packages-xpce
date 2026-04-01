@@ -94,8 +94,7 @@ static Name binding_termnames[] = { NAME_name, NAME_value };
 
 ClassDecl(binding_decls,
           locals_binding, send_binding, get_binding, rc_binding,
-          2, binding_termnames,
-          "$Rev$");
+          2, binding_termnames);
 
 status
 makeClassBinding(Class class)

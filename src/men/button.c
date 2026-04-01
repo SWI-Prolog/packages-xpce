@@ -728,8 +728,7 @@ static Name button_termnames[] = { NAME_label, NAME_message, NAME_accelerator };
 
 ClassDecl(button_decls,
           var_button, send_button, get_button, rc_button,
-          3, button_termnames,
-          "$Rev$");
+          3, button_termnames);
 
 
 status

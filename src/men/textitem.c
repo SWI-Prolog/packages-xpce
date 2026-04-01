@@ -1749,8 +1749,7 @@ static Name textItem_termnames[] = { NAME_label, NAME_value, NAME_message };
 
 ClassDecl(textItem_decls,
           var_textItem, send_textItem, get_textItem, rc_textItem,
-          3, textItem_termnames,
-          "$Rev$");
+          3, textItem_termnames);
 
 status
 makeClassTextItem(Class class)

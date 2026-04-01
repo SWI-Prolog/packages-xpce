@@ -256,8 +256,7 @@ static Name constraint_termnames[] = { NAME_from, NAME_to, NAME_relation, NAME_l
 
 ClassDecl(constraint_decls,
           var_constraint, send_constraint, get_constraint, rc_constraint,
-          3, constraint_termnames,
-          "$Rev$");
+          3, constraint_termnames);
 
 status
 makeClassConstraint(Class class)

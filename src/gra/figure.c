@@ -300,7 +300,7 @@ convertOldSlotFigure(Figure f, Name slot, Any value)
 
 status
 makeClassFigure(Class class)
-{ sourceClass(class, makeClassFigure, __FILE__, "$Revision$");
+{ sourceClass(class, makeClassFigure, __FILE__);
 
   localClass(class, NAME_status, NAME_visibility, "name", NAME_get,
 	     "Name of visible graphical (or all_active)");

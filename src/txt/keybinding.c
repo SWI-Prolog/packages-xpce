@@ -594,8 +594,7 @@ static Name keyBinding_termnames[] = { NAME_name };
 
 ClassDecl(keyBinding_decls,
           var_keyBinding, send_keyBinding, get_keyBinding, rc_keyBinding,
-          1, keyBinding_termnames,
-          "$Rev$");
+          1, keyBinding_termnames);
 
 
 

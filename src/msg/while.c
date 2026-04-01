@@ -112,8 +112,7 @@ static Name while_termnames[] = { NAME_condition, NAME_body };
 
 ClassDecl(while_decls,
           var_while, send_while, get_while, rc_while,
-          2, while_termnames,
-          "$Rev$");
+          2, while_termnames);
 
 status
 makeClassWhile(Class class)

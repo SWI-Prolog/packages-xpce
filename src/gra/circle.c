@@ -156,8 +156,7 @@ static Name circle_termnames[] = { NAME_diameter };
 
 ClassDecl(circle_decls,
           var_circle, send_circle, get_circle, rc_circle,
-          1, circle_termnames,
-          "$Rev$");
+          1, circle_termnames);
 
 
 status

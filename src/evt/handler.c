@@ -127,8 +127,7 @@ static Name handler_termnames[] = { NAME_event, NAME_message, NAME_region };
 
 ClassDecl(handler_decls,
           var_handler, send_handler, get_handler, rc_handler,
-          3, handler_termnames,
-          "$Rev$");
+          3, handler_termnames);
 
 
 status

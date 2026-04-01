@@ -148,8 +148,7 @@ static Name chainTable_termnames[] = { NAME_buckets };
 
 ClassDecl(chainTable_decls,
           var_chainTable, send_chainTable, get_chainTable, rc_chainTable,
-          1, chainTable_termnames,
-          "$Rev$");
+          1, chainTable_termnames);
 
 
 status

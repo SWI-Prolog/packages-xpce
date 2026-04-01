@@ -430,8 +430,7 @@ static classvardecl rc_label_box[] =
 
 ClassDecl(label_box_decls,
           var_label_box, send_label_box, get_label_box, rc_label_box,
-          ARGC_INHERIT, NULL,
-          "$Rev$");
+          ARGC_INHERIT, NULL);
 
 
 status

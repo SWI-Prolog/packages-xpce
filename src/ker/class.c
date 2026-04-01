@@ -43,7 +43,7 @@ static Variable	getLocaliseInstanceVariableClass(Class class, Name name);
 static Any	bindMethod(Class class, Name code, Name selector);
 static status	lazyBindingClass(Class class, Name which, BoolObj val);
 
-#define CLASS_PCE_SLOTS 42
+#define CLASS_PCE_SLOTS 41
 
 #define InstanceSize(c)	offsetof(struct instance, slots[valInt((c)->slots)])
 #define SlotsClass(c) \
@@ -299,7 +299,6 @@ fill_slots_class(Class class, Class super)
   assign(class, local_table,          newObject(ClassHashTable, EAV));
   assign(class, class_variable_table, NIL);
   assign(class, selection_style,      NIL);
-  assign(class, rcs_revision,	      NIL);
   assign(class, source,		      NIL);
   if ( isClassDefault(class->summary) )
     assign(class, summary, NIL);
@@ -1276,38 +1275,14 @@ solidClass(Class class, BoolObj val)
 
 
 status
-sourceClass(Class class, SendFunc f, char *file, char *rcs)
+sourceClass(Class class, SendFunc f, char *file)
 {
 #ifndef O_RUNTIME
   assign(class, source, newObject(ClassSourceLocation, CtoName(file), EAV));
 #endif
 
-  if ( rcs )
-  { static char rev[] = "$Revision: ";
-    char *s, *q;
-    char buf[100];
-    size_t l;
-
-    for(s=rcs, q=rev; *q && *s == *q; s++, q++)
-      ;
-    strcpy(buf, s);
-    l = strlen(buf);
-    if ( l >= 2 && streq(&buf[l-2], " $") )
-      buf[l-2] = EOS;
-
-    assign(class, rcs_revision, CtoName(buf));
-  }
-
   succeed;
 }
-
-
-#ifdef O_RUNTIME
-static status
-rtSourceClass(Class class, SourceLocation src)
-{ succeed;
-}
-#endif
 
 
 void
@@ -1362,7 +1337,7 @@ declareClass(Class class, const classdecl *decls)
 
   class->c_declarations = (classdecl *)decls; /* TBD: const */
 
-  sourceClass(class, NULL, decls->source_file, decls->rcs_revision);
+  sourceClass(class, NULL, decls->source_file);
   if ( decls->term_arity != ARGC_INHERIT )
   { if ( decls->term_arity == ARGC_UNKNOWN )
     { assign(class, term_names, NIL);
@@ -2261,7 +2236,7 @@ getSubClassesClass(Class class)
 
 status
 makeClassClass(Class class)
-{ sourceClass(class, makeClassClass, __FILE__, "$Revision$");
+{ sourceClass(class, makeClassClass, __FILE__);
 
   localClass(class, NAME_name, NAME_name, "name", NAME_get,
 	     "Name of the class");
@@ -2311,8 +2286,6 @@ makeClassClass(Class class)
 	     "Total number of instance variables");
   localClass(class, NAME_source, NAME_manual, "source_location*", NAME_both,
 	     "Location in the sources");
-  localClass(class, NAME_rcsRevision, NAME_version, "name*", NAME_get,
-	     "RCS revision of sourcefile");
   localClass(class, NAME_changedMessages, NAME_change, "chain*", NAME_both,
 	     "Report (forward) changes to instances");
   localClass(class, NAME_createdMessages, NAME_change, "chain*", NAME_both,

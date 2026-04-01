@@ -208,8 +208,7 @@ static Name pixmap_termnames[] =
 
 ClassDecl(pixmap_decls,
           var_pixmap, send_pixmap, get_pixmap, rc_pixmap,
-          1, pixmap_termnames,
-          "$Rev$");
+          1, pixmap_termnames);
 
 
 status

@@ -184,8 +184,7 @@ static Name grbox_termnames[] = { NAME_graphical };
 
 ClassDecl(grbox_decls,
           var_grbox, send_grbox, get_grbox, rc_grbox,
-          1, grbox_termnames,
-          "$Rev$");
+          1, grbox_termnames);
 
 
 status

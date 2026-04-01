@@ -92,8 +92,7 @@ static Name tuple_termnames[] = { NAME_first, NAME_second };
 
 ClassDecl(tuple_decls,
           var_tuple, send_tuple, get_tuple, rc_tuple,
-          2, tuple_termnames,
-          "$Rev$");
+          2, tuple_termnames);
 
 
 status

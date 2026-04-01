@@ -96,8 +96,7 @@ static Name behaviour_termnames[] = { NAME_name, NAME_context };
 
 ClassDecl(behaviour_decls,
           var_behaviour, send_behaviour, get_behaviour, rc_behaviour,
-          2, behaviour_termnames,
-          "$Rev$");
+          2, behaviour_termnames);
 
 
 status
