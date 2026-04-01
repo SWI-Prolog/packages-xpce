@@ -696,12 +696,10 @@ End;
 
 typedef struct
 { enum
-  { XBM_DATA,
-    XPM_DATA
+  { XPM_DATA
   } type;
   union
-  { unsigned char *xbm;
-    char **xpm;
+  { char **xpm;
   } bits;
 } builtin_image_data;
 

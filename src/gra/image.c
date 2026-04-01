@@ -267,14 +267,11 @@ status
 XopenImage(Image image, DisplayObj d)
 { if ( image->bits )			/* built-in.  See stdImage() */
   { switch(image->bits->type)
-    { case XBM_DATA:
-	if ( image->bits->bits.xbm )	/* NULL image has no data */
-	  Cprintf("XopenImage(%s)\n", pp(image));
-        break;
-      case XPM_DATA:
-	ws_create_image_from_xpm_data(image,
-				      image->bits->bits.xpm,
-				      d);
+    { case XPM_DATA:
+	if ( image->bits->bits.xpm )
+	  ws_create_image_from_xpm_data(image,
+					image->bits->bits.xpm,
+					d);
 	break;
       default:
 	assert(0);
@@ -806,44 +803,36 @@ getRotateImage(Image image, Num degrees)
 		*       PREDEFINED IMAGES	*
 		********************************/
 
-static Image
-stdImage(Name name, Image *global, unsigned char *bits, int w, int h)
-{ Image image = globalObject(name, ClassImage, name, toInt(w), toInt(h), EAV);
-
-  assign(image, access, NAME_read);
-  assign(image, kind,   NAME_bitmap);
-  image->bits = alloc(sizeof(*image->bits));
-  image->bits->type = XBM_DATA;
-  image->bits->bits.xbm = bits;
-  if ( global )
-    *global = image;
-
-  return image;
-}
-
 static void
 stdXPMImage(Name name, Name kind, Image *global, char **bits)
 { int w, h, colours;
 
-  if ( sscanf(bits[0], "%d %d %d", &w, &h, &colours) == 3 )
-  { Image image = globalObject(name, ClassImage, name, toInt(w), toInt(h), EAV);
+  if ( bits )
+  { if ( sscanf(bits[0], "%d %d %d", &w, &h, &colours) != 3 )
+      Cprintf("Failed to initialise built-in image %s\n", pp(name));
+  } else
+  { w = h = 0;
+    colours = 2;
+  }
 
-    if ( colours == 2 )
-    { assign(image, kind, kind);
-    } else
-    { assign(image, kind, NAME_pixmap);
-    }
+  Image image = globalObject(name, ClassImage, name, toInt(w), toInt(h), EAV);
 
-    assign(image, access, NAME_read);
-    setSize(image->size, toInt(w), toInt(h));
-    image->bits = alloc(sizeof(*image->bits));
+  if ( colours == 2 )
+  { assign(image, kind, kind);
+  } else
+  { assign(image, kind, NAME_pixmap);
+  }
+
+  assign(image, access, NAME_read);
+  setSize(image->size, toInt(w), toInt(h));
+  if ( bits )
+  { image->bits = alloc(sizeof(*image->bits));
     image->bits->type = XPM_DATA;
     image->bits->bits.xpm = bits;
+  }
 
-    if ( global )
-      *global = image;
-  } else
-    Cprintf("Failed to initialise image %s\n", pp(name));
+  if ( global )
+    *global = image;
 }
 
 
@@ -877,11 +866,10 @@ standardImages(void)
   stdXPMImage(NAME_nomarkImage,        P, &NOMARK_IMAGE,       nomark_xpm);
   stdXPMImage(NAME_msLeftArrowImage,   B, NULL,                ms_left_arrow_xpm);
   stdXPMImage(NAME_markHandleImage,    B, &MARK_HANDLE_IMAGE,  mark_handle_xpm);
+  stdXPMImage(NAME_nullImage,          B, &NULL_IMAGE,         NULL);
 #undef P
 #undef B
 
-  stdImage(NAME_nullImage, &NULL_IMAGE,
-	   NULL, 0, 0);
 }
 
 
