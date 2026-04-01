@@ -978,17 +978,6 @@ ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
 }
 
 /**
- * Set the border width for the specified frame.
- *
- * @param fr Pointer to the FrameObj.
- * @param b Border width in pixels.
- */
-void
-ws_border_frame(FrameObj fr, int b)
-{
-}
-
-/**
  * Set a busy cursor for the specified frame.
  *
  * @param fr Pointer to the FrameObj.

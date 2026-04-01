@@ -339,7 +339,6 @@ CompletionBrowser(void)
     send(get(Completer, NAME_tile, EAV), NAME_border, ZERO, EAV);
     send(Completer, NAME_kind, NAME_popup, EAV);
     send(Completer, NAME_create, EAV);
-    send(Completer->frame, NAME_border, ZERO, EAV);
 
     kb = get(Completer, NAME_keyBinding, EAV);
     functionKeyBinding(kb, CtoName("\\C-g"), quit);

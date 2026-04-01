@@ -96,7 +96,6 @@ initialise(W) :->
     send(Fr, kind, popup),
     send(Fr, sensitive, @off),
     send(W, pen, 0),
-    send(Fr, border, 1),
     send(Fr?tile, border, 0),
     send(W, slot, handler,
          handler(any, message(W, unclipped_event, @event))).

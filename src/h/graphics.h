@@ -815,7 +815,6 @@ NewClass(frameobj)
   Point		icon_position;		/* Position of the icon */
   Application	application;		/* Application it belongs too */
   DisplayObj	display;		/* Display it is displayed on */
-  Int		border;			/* Border width */
   Any		background;		/* Frames background */
   Area		area;			/* Area of the frame */
   Name		geometry;		/* X-Window geometry spec */
@@ -834,7 +833,6 @@ NewClass(frameobj)
   BoolObj	confirm_done;		/* User must confirm delete */
   BoolObj	fitting;		/* We are running ->fit */
   Sheet		wm_protocols;		/* WM protocols understood */
-  BoolObj	wm_protocols_attached;	/* Have the protocols been attached */
 					/* start private data */
   WsRef		ws_ref;			/* Window-System reference */
 End;

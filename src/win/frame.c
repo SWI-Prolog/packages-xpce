@@ -70,7 +70,6 @@ initialiseFrame(FrameObj fr, Name label, Name kind,
   assign(fr, name,		    getClassNameObject(fr));
   assign(fr, label,		    label);
   assign(fr, display,		    display);
-  assign(fr, border,		    DEFAULT);
   assign(fr, area,		    newObject(ClassArea, EAV));
   assign(fr, placed,		    OFF);
   assign(fr, members,		    newObject(ClassChain, EAV));
@@ -81,7 +80,6 @@ initialiseFrame(FrameObj fr, Name label, Name kind,
   assign(fr, sensitive,		    ON);
   assign(fr, fitting,		    OFF);
   assign(fr, wm_protocols,	    newObject(ClassSheet, EAV));
-  assign(fr, wm_protocols_attached, OFF);
   obtainClassVariablesObject(fr);
 
   doneMessageFrame(fr, newObject(ClassMessage, RECEIVER, NAME_wmDelete, EAV));
@@ -173,7 +171,6 @@ storeFrame(FrameObj fr, FileObj file)
 static status
 loadFrame(FrameObj fr, IOSTREAM *fd, ClassDef def)
 { TRY(loadSlotsObject(fr, fd, def));
-  assign(fr, wm_protocols_attached, OFF);
   assign(fr, input_focus, OFF);
 
   if ( isOpenFrameStatus(fr->status) )
@@ -846,19 +843,6 @@ areaFrame(FrameObj fr, Area area)
 static status
 showLabelFrame(FrameObj fr, BoolObj val)
 { return kindFrame(fr, val == ON ? NAME_toplevel : NAME_transient);
-}
-
-
-static status
-borderFrame(FrameObj fr, Int width)
-{ if ( fr->border != width )
-  { assign(fr, border, width);
-
-    if ( ws_created_frame(fr) )
-      ws_border_frame(fr, valInt(width));
-  }
-
-  succeed;
 }
 
 
@@ -1913,8 +1897,6 @@ static vardecl var_frame[] =
      NAME_organisation, "Application the frame belongs too"),
   IV(NAME_display, "display", IV_BOTH,
      NAME_organisation, "Display the frame resides on"),
-  IV(NAME_border, "[int]", IV_GET,
-     NAME_appearance, "Width of border"),
   SV(NAME_background, "colour|pixmap", IV_GET|IV_STORE, backgroundFrame,
      NAME_appearance, "Background of the frame"),
   SV(NAME_area, "area", IV_GET|IV_STORE, areaFrame,
@@ -1951,8 +1933,6 @@ static vardecl var_frame[] =
      NAME_internal, "We are running ->fit"),
   IV(NAME_wmProtocols, "sheet", IV_GET,
      NAME_windowManager, "Protocol-name --> message"),
-  IV(NAME_wmProtocolsAttached, "bool", IV_GET,
-     NAME_internal, "Have we registered the protocols"),
   IV(NAME_wsRef, "alien:WsRef", IV_NONE,
      NAME_windowSystem, "Window-System reference")
 };
@@ -1976,8 +1956,6 @@ static senddecl send_frame[] =
      statusFrame, DEFAULT, "Current visibility of the frame"),
   SM(NAME_typed, 1, "event|event_id", typedFrame,
      NAME_accelerator, "Dispatch over available windows"),
-  SM(NAME_border, 1, "thickness=int", borderFrame,
-     NAME_appearance, "X-border width"),
   SM(NAME_showLabel, 1, "show=bool", showLabelFrame,
      NAME_appearance, "If @off, sets <->kind to `transient'"),
   SM(NAME_center, 2, T_center, centerFrame,

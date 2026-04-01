@@ -60,7 +60,6 @@ initialise(W) :->
     get(W, frame, Frame),
     send(Frame, kind, popup),
     send(Frame, sensitive, @off),
-    send(Frame, border, 0),
     send(Frame?tile, border, 0),
     send(W, gap, size(5, 2)),
     send(W, append, new(L, label(feedback, '', normal))),

@@ -71,7 +71,6 @@ createPopupWindow(DisplayObj d)
   send(sw, NAME_pen, ZERO, EAV);
   send(sw, NAME_gap, newObject(ClassSize, ZERO, ZERO, EAV), EAV);
   frame = get(sw, NAME_frame, EAV);
-  send(frame, NAME_border, ONE, EAV);
   send(getTileFrame(frame), NAME_border, ZERO, EAV);
 
 
