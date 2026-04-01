@@ -1104,18 +1104,6 @@ ws_transient_frame(FrameObj fr, FrameObj fr2)
 }
 
 /**
- * Retrieve the thread identifier associated with the specified frame.
- *
- * @param fr Pointer to the FrameObj.
- * @return Integer representing the thread identifier.
- */
-Int
-ws_frame_thread(FrameObj fr)
-{
-    return 0;
-}
-
-/**
  * Enable or disable the specified frame.
  *
  * @param fr Pointer to the FrameObj.

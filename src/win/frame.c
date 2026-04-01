@@ -1611,15 +1611,6 @@ getContainsFrame(FrameObj fr)
 }
 
 		 /*******************************
-		 *	     THREADS		*
-		 *******************************/
-
-static Int
-getThreadFrame(FrameObj fr)
-{ return ws_frame_thread(fr);
-}
-
-		 /*******************************
 		 *       SDL FILE DIALOGUE        *
 		 *******************************/
 
@@ -2095,8 +2086,6 @@ static getdecl get_frame[] =
      NAME_organisation, "New chain holding all member windows"),
   GM(NAME_show, 0, "bool", NULL, getShowFrame,
      NAME_visibility, "@on iff <-status = open; @off otherwise"),
-  GM(NAME_thread, 0, "int", NULL, getThreadFrame,
-     NAME_thread, "Return system thread-id that owns the frame"),
   GM(NAME_openFile, 3, "name|chain", T_openFile, getOpenFileFrame,
      NAME_dialog, "Use OS dialog to prompt for a file for reading"),
   GM(NAME_saveFile, 2, "name", T_saveFile, getSaveFileFrame,
