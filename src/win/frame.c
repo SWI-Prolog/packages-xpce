@@ -359,30 +359,14 @@ resizeFrame(FrameObj fr)
 		********************************/
 
 static status
-attachWmProtocolsFrame(FrameObj fr)
-{ ws_attach_wm_prototols_frame(fr);
-
-  succeed;
-}
-
-
-static status
 wmProtocolFrame(FrameObj fr, Name name, Code msg)
-{ valueSheet(fr->wm_protocols, name, msg);
-  if ( fr->wm_protocols_attached == ON )
-    attachWmProtocolsFrame(fr);
-
-  succeed;
+{ return valueSheet(fr->wm_protocols, name, msg);
 }
 
 
 static status
 deleteWmProtocolFrame(FrameObj fr, Name name)
-{ if ( isAttributeSheet(fr->wm_protocols, name) == SUCCEED )
-  { deleteSheet(fr->wm_protocols, name);
-    if ( fr->wm_protocols_attached == ON )
-      attachWmProtocolsFrame(fr);
-  }
+{ deleteSheet(fr->wm_protocols, name);
 
   succeed;
 }
@@ -453,8 +437,6 @@ createFrame(FrameObj fr)
   assign(fr, status, NAME_hidden);
   for_cell(cell, fr->members)
     send(cell->value, NAME_create, EAV);
-
-  attachWmProtocolsFrame(fr);
 
   if ( isName(fr->geometry) )
     geometryFrame(fr, fr->geometry, DEFAULT);
@@ -620,14 +602,6 @@ SdlExposeFrame(FrameObj fr)
 
   succeed;
 }
-
-status
-hideFrame(FrameObj fr)
-{ ws_lower_frame(fr);
-
-  succeed;
-}
-
 
 static status
 exposedFrame(FrameObj fr)
@@ -1271,8 +1245,7 @@ inputFocusFrame(FrameObj fr, BoolObj val)
 
     assign(fr, input_focus, val);
     if ( val == ON )
-    { if ( (iw = getKeyboardFocusFrame(fr)) ||
-	   (iw = ws_window_holding_point_frame(fr)) )
+    { if ( (iw = getKeyboardFocusFrame(fr)) )
 	inputWindowFrame(fr, iw);
     } else
     { Cell cell;
@@ -2083,8 +2056,6 @@ static senddecl send_frame[] =
      NAME_stacking, "Inform transient windows to expose"),
   SM(NAME_hidden, 0, NULL, hiddenFrame,
      NAME_stacking, "Inform transient windows to hide"),
-  SM(NAME_hide, 0, NULL, hideFrame,
-     NAME_stacking, "Put frame below all others on the display"),
   SM(NAME_show, 1, "show=bool", showFrame,
      NAME_visibility, "(Un)show the frame on the display"),
   SM(NAME_deleteWmProtocol, 1, "protocol=name", deleteWmProtocolFrame,

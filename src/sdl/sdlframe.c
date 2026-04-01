@@ -691,28 +691,6 @@ sdl_frame_event(SDL_Event *ev)
 }
 
 /**
- * Realize the specified frame, making it visible on the display.
- *
- * @param fr Pointer to the FrameObj to realize.
- */
-void
-ws_realise_frame(FrameObj fr)
-{
-}
-
-/**
- * Determine which window within the frame holds a specific point.
- *
- * @param fr Pointer to the FrameObj to examine.
- * @return The PceWindow holding the point, or NULL if none.
- */
-PceWindow
-ws_window_holding_point_frame(FrameObj fr)
-{
-    return NULL;
-}
-
-/**
  * Raise the specified frame above other windows.
  *
  * @param fr Pointer to the FrameObj to raise.
@@ -724,28 +702,6 @@ ws_raise_frame(FrameObj fr)
   { ASSERT_SDL_MAIN();
     SDL_RaiseWindow(wfr->ws_window);
   }
-}
-
-/**
- * Lower the specified frame below other windows.
- *
- * @param fr Pointer to the FrameObj to lower.
- */
-void
-ws_lower_frame(FrameObj fr)
-{
-}
-
-/**
- * Attach window manager protocols to the specified frame.
- *
- * @param fr Pointer to the FrameObj to attach protocols to.
- * @return SUCCEED on successful attachment; otherwise, FAIL.
- */
-status
-ws_attach_wm_prototols_frame(FrameObj fr)
-{
-    return SUCCEED;
 }
 
 /**

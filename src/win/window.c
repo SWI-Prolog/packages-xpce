@@ -2061,9 +2061,6 @@ hideWindow(PceWindow sw)
 { if ( notNil(sw->decoration) )
     return hideWindow(sw->decoration);
 
-  if ( notNil(sw->frame) )
-    return hideFrame(sw->frame);
-
   ws_lower_window(sw);
 
   succeed;
