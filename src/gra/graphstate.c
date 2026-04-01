@@ -51,10 +51,6 @@ g_save(void)
 { GraphicsState gs = alloc(sizeof(struct graphics_state));
 
   gs->level	 = (statelist ? statelist->level+1 : 1);
-#if SDL_GRAPHICS
-#else
-#error "No GUI library"
-#endif
 
   gs->savedstate = statelist;
   statelist = gs;

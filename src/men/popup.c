@@ -64,35 +64,16 @@ createPopupWindow(DisplayObj d)
 { PceWindow sw;
   Any frame;
 
-#if !SDL_GRAPHICS
-  static Chain windows = NIL;
-  if ( isNil(windows) )
-    windows = globalObject(NAME_PopupWindows, ClassChain, EAV);
-
-  Cell cell;
-  for_cell(cell, windows)
-  { sw = cell->value;
-
-    if ( emptyChain(sw->graphicals) && sw->frame->display == d )
-      return sw;
-  }
-#endif
 
   sw = newObject(ClassDialog, NAME_popup, DEFAULT, d, EAV);
 
   send(sw, NAME_kind, NAME_popup, EAV);
   send(sw, NAME_pen, ZERO, EAV);
   send(sw, NAME_gap, newObject(ClassSize, ZERO, ZERO, EAV), EAV);
-#if !SDL_GRAPHICS
-  send(sw, NAME_create, EAV);
-#endif
   frame = get(sw, NAME_frame, EAV);
   send(frame, NAME_border, ONE, EAV);
   send(getTileFrame(frame), NAME_border, ZERO, EAV);
 
-#if !SDL_GRAPHICS
-  appendChain(windows, sw);
-#endif
 
   return sw;
 }

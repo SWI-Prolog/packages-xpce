@@ -16,7 +16,6 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(CAIRO REQUIRED IMPORTED_TARGET cairo)
 pkg_check_modules(PANGO REQUIRED IMPORTED_TARGET pango)
 pkg_check_modules(PANGOCAIRO REQUIRED IMPORTED_TARGET pangocairo)
-set(SDL_GRAPHICS 1)
 set(GUI_LIBRARIES
     SDL3::SDL3
     SDL3_image::SDL3_image

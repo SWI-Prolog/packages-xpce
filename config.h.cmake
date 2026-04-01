@@ -1,4 +1,3 @@
-#cmakedefine SDL_GRAPHICS @SDL_GRAPHICS@
 #cmakedefine PCE_OS "@PCE_OS@"
 #cmakedefine PCE_MACHINE "@PCE_MACHINE@"
 #cmakedefine PCE_VERSION "@PCE_VERSION@"

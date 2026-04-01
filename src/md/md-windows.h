@@ -32,7 +32,6 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define SDL_GRAPHICS 1		/* Use SDL graphics API */
 #define _REENTRANT 1			/* Only multi-threading support */
 #define UXWIN(unx, win) win
 

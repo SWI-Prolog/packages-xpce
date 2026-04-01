@@ -606,9 +606,7 @@ bannerPce(Pce pce)
 	 pce->operating_system,
 	 pce->window_system_version,
 	 pce->window_system_revision
-#if SDL_GRAPHICS
 	,pce->window_system_driver
-#endif
     );
   writef("Copyright (C) 1993-2025 University of Amsterdam, SWI-Prolog Solutions b.v.\n"
 	 "XPCE comes with ABSOLUTELY NO WARRANTY. "
