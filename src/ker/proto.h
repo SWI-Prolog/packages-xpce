@@ -382,13 +382,6 @@ COMMON(Any)	getGetVariable(Variable var, Any rec);
 COMMON(Name)	getGroupVariable(Variable v);
 COMMON(status)	makeClassVariable(Class class);
 
-/* /home/jan/src/pl/packages/xpce/src/ker/xref.c */
-COMMON(WsRef)	getXrefObject(Any obj, DisplayObj d);
-COMMON(WsRef)	getExistingXrefObject(Any obj, DisplayObj d);
-COMMON(status)	registerXrefObject(Any obj, DisplayObj d, WsRef xref);
-COMMON(Xref)	unregisterXrefObject(Any obj, DisplayObj d);
-COMMON(void)	closeAllXrefs(void);
-
 /* /home/jan/src/pl/packages/xpce/src/ker/classvar.c */
 COMMON(Any)	getValueClassVariable(ClassVariable cv);
 COMMON(ClassVariable) getClassVariableClass(Class class, Name name);

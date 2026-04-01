@@ -279,8 +279,6 @@ XopenImage(Image image, DisplayObj d)
       default:
 	assert(0);
     }
-    if ( getExistingXrefObject(image, d) )
-      succeed;
   }
 
   return ws_open_image(image);

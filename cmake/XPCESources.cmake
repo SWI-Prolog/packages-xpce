@@ -33,7 +33,7 @@ set(KER_SRC	alloc.c assoc.c behaviour.c class.c conversion.c
 		getmethod.c glob.c global.c goodies.c passing.c
 		method.c name.c object.c programobject.c save.c
 		self.c sendmethod.c srclocation.c timer.c
-		trace.c type.c variable.c xref.c classvar.c inline.c)
+		trace.c type.c variable.c classvar.c inline.c)
 
 set(MEN_SRC	button.c dialogitem.c label.c menu.c menubar.c
 		menuitem.c popup.c slider.c textitem.c tab.c diagroup.c
