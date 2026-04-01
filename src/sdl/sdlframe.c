@@ -705,18 +705,6 @@ ws_raise_frame(FrameObj fr)
 }
 
 /**
- * Set the frame to be aware of drag-and-drop operations.
- *
- * @param fr Pointer to the FrameObj to set.
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-setDndAwareFrame(FrameObj fr)
-{
-    return SUCCEED;
-}
-
-/**
  * Set the cursor  shape for the specified window. In  SDL, the cursor
  * is global for the application, i.e., it is _not_ set for a window.
  *
@@ -730,19 +718,6 @@ ws_frame_cursor(FrameObj fr, CursorObj cursor)
   { ASSERT_SDL_MAIN();
     SDL_SetCursor(c);
   }
-}
-
-/**
- * Grab or release the pointer for the specified frame.
- *
- * @param fr Pointer to the FrameObj.
- * @param grab Boolean indicating whether to grab (ON) or release (OFF)
- *        the pointer.
- * @param cursor Pointer to the CursorObj to use during the grab.
- */
-void
-ws_grab_frame_pointer(FrameObj fr, BoolObj grab, CursorObj cursor)
-{
 }
 
 /**

@@ -49,7 +49,6 @@ static status	setFrame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj mon);
 static status	kindFrame(FrameObj fr, Name kind);
 static status	informTransientsFramev(FrameObj fr, Name selector,
 				       int argc, Any *argv);
-static status	grabPointerFrame(FrameObj fr, BoolObj grab, CursorObj cursor);
 static status	cursorFrame(FrameObj fr, CursorObj cursor);
 static status   statusFrame(FrameObj fr, Name stat);
 
@@ -1448,14 +1447,6 @@ cursorFrame(FrameObj fr, CursorObj cursor)
 
 
 static status
-grabPointerFrame(FrameObj fr, BoolObj grab, CursorObj cursor)
-{ ws_grab_frame_pointer(fr, grab, cursor);
-
-  succeed;
-}
-
-
-static status
 modalFrame(FrameObj fr, Name how)
 { assign(fr, modal, how);
 
@@ -1869,8 +1860,6 @@ static char *T_convertOldSlot[] =
 static char *T_set[] =
         { "x=[int]", "y=[int]", "width=[int]", "height=[int]",
 	  "display=[display]" };
-static char *T_grab_pointer[] =
-	{ "grab=bool", "cursor=[cursor]" };
 static char *T_center[] =
 	{ "center=[point]", "display=[display]" };
 static char *T_geometry[] =
@@ -2052,8 +2041,6 @@ static senddecl send_frame[] =
      NAME_event, "Handle keyboard event on frame-background (fail)"),
   SM(NAME_cursor, 1, "[cursor]", cursorFrame,
      NAME_event, "Define the cursor for the frame-background"),
-  SM(NAME_grabPointer, 2, T_grab_pointer, grabPointerFrame,
-     NAME_event, "Grap all pointer-events"),
   SM(NAME_redraw, 1, "[area]", redrawFrame,
      NAME_redraw, "Redraw subwindow adjust buttons"),
 

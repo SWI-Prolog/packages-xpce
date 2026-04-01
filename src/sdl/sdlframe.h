@@ -58,8 +58,6 @@ status ws_created_frame(FrameObj fr);
 void ws_uncreate_frame(FrameObj fr);
 status ws_create_frame(FrameObj fr);
 void ws_raise_frame(FrameObj fr);
-status setDndAwareFrame(FrameObj fr);
-void ws_grab_frame_pointer(FrameObj fr, BoolObj grab, CursorObj cursor);
 status ws_frame_bb(FrameObj fr, int *x, int *y, int *w, int *h);
 void ws_x_geometry_frame(FrameObj fr, Name spec, DisplayObj dsp);
 status ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp);
