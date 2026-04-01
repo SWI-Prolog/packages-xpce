@@ -110,12 +110,6 @@ shell  widget is created to  serve as root for  all  the other (popup)
 shells.  This widget is never realised (page 35 of Xt manual).
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-status
-openDisplay(DisplayObj d)
-{ succeed;
-}
-
-
 static status
 foregroundDisplay(DisplayObj d, Colour c)
 { assign(d, foreground, c);
@@ -150,9 +144,7 @@ dispatchDisplay(DisplayObj d)
 
 static status
 screenSaverDisplay(DisplayObj d, BoolObj val)
-{ openDisplay(d);
-
-  if ( val == ON )
+{ if ( val == ON )
     ws_activate_screen_saver(d);
   else
     ws_deactivate_screen_saver(d);
@@ -163,9 +155,7 @@ screenSaverDisplay(DisplayObj d, BoolObj val)
 
 status
 bellDisplay(DisplayObj d, Int vol)
-{ openDisplay(d);
-
-  if ( isDefault(vol) )
+{ if ( isDefault(vol) )
     vol = (Int) getClassVariableValueObject(d, NAME_volume);
 
   ws_bell_display(d, valInt(vol));
@@ -173,25 +163,6 @@ bellDisplay(DisplayObj d, Int vol)
   succeed;
 }
 
-
-/* See whether we can open graphics.  We try to avoid this if not
- * really necessary for compiling xpce sources to .qlf
- */
-static int
-hasDisplay(void)
-{
-#if defined(__WINDOWS__) || defined(__APPLE__)
-  return TRUE;
-#else
-  char *dsp = getenv("DISPLAY");
-  if ( dsp && dsp[0] )
-    return TRUE;
-  dsp = getenv("WAYLAND_DISPLAY");
-  if ( dsp && dsp[0] )
-    return TRUE;
-#endif
-  return FALSE;
-}
 
 Size
 getSizeDisplay(DisplayObj d)
@@ -218,9 +189,7 @@ getDepthDisplay(DisplayObj d)
 
 static Name
 getSystemThemeDisplay(DisplayObj d)
-{ TRY(openDisplay(d));
-
-  answer(ws_get_system_theme_display(d));
+{ answer(ws_get_system_theme_display(d));
 }
 
 static Name
@@ -254,8 +223,6 @@ getDPIDisplay(DisplayObj d)
     answer(d->dpi);
   }
 
-  if ( hasDisplay() )
-    TRY(openDisplay(d));
   if ( instanceOfObject(d->dpi, ClassSize) )
     answer(d->dpi);
   if ( ws_resolution_display(d, &rx, &ry) )
@@ -321,8 +288,6 @@ hasVisibleFramesDisplay(DisplayObj d)
 static Any
 getSelectionDisplay(DisplayObj d, Name which, Name target, Type type)
 { Any sel;
-
-  TRY(openDisplay(d));
 
   if ( isDefault(which) )  which  = NAME_primary;
   if ( isDefault(target) ) target = NAME_text;
@@ -709,8 +674,6 @@ static senddecl send_display[] =
      NAME_event, "Register handler for inspect tool"),
   SM(NAME_ConfirmPressed, 1, "event", ConfirmPressedDisplay,
      NAME_internal, "Handle confirmer events"),
-  SM(NAME_open, 0, NULL, openDisplay,
-     NAME_open, "Prepare display for graphics operations"),
   SM(NAME_bell, 1, "volume=[int]", bellDisplay,
      NAME_report, "Ring the bell at volume"),
   SM(NAME_confirm, 4, T_inform, confirmDisplay,

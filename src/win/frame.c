@@ -425,7 +425,6 @@ createFrame(FrameObj fr)
     succeed;
 
   obtainClassVariablesObject(fr);
-  TRY(openDisplay(fr->display));
   appendChain(fr->display->frames, fr);
 
   TRY(send(fr, NAME_fit, EAV));
