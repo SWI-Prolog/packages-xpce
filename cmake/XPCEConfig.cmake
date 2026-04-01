@@ -1,6 +1,5 @@
 include(Sockets)
 include(CheckTypeSize)
-include(TestBSDSignals)
 
 string(TOLOWER ${CMAKE_HOST_SYSTEM_NAME} OS)
 
@@ -29,9 +28,3 @@ AC_CHECK_FUNCS(pipe posix_openpt stpcpy mempcpy)
 
 check_struct_has_member("struct tm" tm_gmtoff time.h HAVE_TM_GMTOFF)
 check_struct_has_member("struct termios" c_line termios.h TERMIOS_HAS_C_LINE)
-
-if(HAVE_SIGNAL AND NOT HAVE_SIGACTION)
-  include(TestBSDSignals)
-endif()
-
-#FIXME usable siginfo

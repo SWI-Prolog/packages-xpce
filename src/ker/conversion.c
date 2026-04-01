@@ -403,7 +403,6 @@ pp_sig(int sig)
 
 typedef void (*handler_t)(int sig);
 
-#ifdef HAVE_SIGACTION
 
 typedef struct sigaction sigsave_t;
 
@@ -425,21 +424,6 @@ restore_handler(int sig, struct sigaction *old)
 { sigaction(sig, old, NULL);
 }
 
-#else /*HAVE_SIGACTION*/
-
-typedef handler_t sigsave_t;
-
-static void
-set_sighandler(int sig, handler_t func, handler_t *old)
-{ old = signal(sig, new);
-}
-
-static void
-restore_handler(int sig, handler_t *old)
-{ signal(sig, *old);
-}
-
-#endif /*HAVE_SIGACTION*/
 
 char *
 pcePP(Any obj)

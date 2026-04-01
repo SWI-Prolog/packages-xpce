@@ -210,11 +210,7 @@ child_changed(int sig)
   Any sel   = NIL;
   Process p = NIL;
 
-#ifdef UNION_WAIT
-#define wait_t union wait
-#else
 #define wait_t int
-#endif
 
 
   DEBUG(NAME_process, Cprintf("child_changed() called\n"));
@@ -244,9 +240,6 @@ child_changed(int sig)
 	    });
 
 
-#if !defined(BSD_SIGNALS) && !defined(HAVE_SIGACTION)
-  signal(sig, child_changed);
-#endif
 }
 
 #endif /*USE_SIGCHLD*/
@@ -266,11 +259,10 @@ killAllProcesses(int status)
 
 
 static void
-setupProcesses()
+setupProcesses(void)
 { if ( !initialised )
   {
 #if defined(SIGCHLD) && defined(HAVE_WAIT)
-#ifdef HAVE_SIGACTION
     struct sigaction action, oaction;
 
     memset((char *) &action, 0, sizeof(action));
@@ -278,9 +270,6 @@ setupProcesses()
     action.sa_flags     = SA_SIGINFO|SA_NOMASK|SA_RESTART;
 
     sigaction(SIGCHLD, &action, &oaction);
-#else
-    hostAction(HOST_SIGNAL, SIGCHLD, child_changed);
-#endif
 #endif
     at_pce_exit(killAllProcesses, ATEXIT_FIFO);
     initialised++;
