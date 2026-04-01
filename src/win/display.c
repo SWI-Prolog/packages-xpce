@@ -346,11 +346,9 @@ selectionDisplay(DisplayObj d, Name which, StringObj data)
 
 static status
 copyDisplay(DisplayObj d, StringObj data)
-{ int rval = (send(d, NAME_selection, NAME_primary, data, EAV) |
-	      send(d, NAME_selection, NAME_clipboard, data, EAV));
-
-
-  return rval ? SUCCEED : FAIL;
+{ return ( send(d, NAME_selection, NAME_primary, data, EAV) ||
+	   send(d, NAME_selection, NAME_clipboard, data, EAV)
+	 );
 }
 
 
