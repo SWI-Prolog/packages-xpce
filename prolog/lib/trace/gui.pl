@@ -469,7 +469,6 @@ initialise(F, Level:int, Thread:'int|name') :->
     send(F, slot, thread, Thread),
     send_super(F, initialise, 'SWI-Prolog debugger',
                application := @prolog_gui),
-    send(F, icon, resource(debug)),
     send(F, done_message, message(F, quit)),
     send(F, append, new(MBD, dialog)),
     send(MBD, gap, size(0, 2)),

@@ -81,7 +81,6 @@
 resource(edit,        image, image('16x16/edit.png')).
 resource(up,          image, image('16x16/up.png')).
 resource(refresh,     image, image('16x16/refresh.png')).
-resource(butterfly,   image, image('butterfly.png')).
 resource(dbgsettings, image, image('16x16/dbgsettings.png')).
 
 :- pce_begin_class(prolog_navigator, persistent_frame,
@@ -89,7 +88,6 @@ resource(dbgsettings, image, image('16x16/dbgsettings.png')).
 
 initialise(SB, Root:directory) :->
     send_super(SB, initialise, 'Prolog Navigator'),
-    send(SB, icon, resource(butterfly)),
     send(SB, append, new(D, dialog)),
     send(new(W, prolog_source_structure(Root)), below, D),
     send(D, append, new(tool_bar(W))),

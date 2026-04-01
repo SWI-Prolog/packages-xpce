@@ -343,6 +343,8 @@ draw_arrow(ScrollBar s, int x, int y, int w, int h, Name which, int up)
   else
     r_box(x, y, w, h, 0, isDefault(z->colour) ? NIL : (Any) z->colour);
 
+  realiseClass(ClassImage);
+
        if ( which == NAME_up )       img = SCROLL_UP_IMAGE;
   else if ( which == NAME_down )     img = SCROLL_DOWN_IMAGE;
   else if ( which == NAME_left )     img = SCROLL_LEFT_IMAGE;

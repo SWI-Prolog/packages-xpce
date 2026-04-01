@@ -60,7 +60,6 @@ resource(stop,   image, image('16x16/stop.png')).
 resource(trace,  image, image('16x16/eye.png')).
 resource(edit,   image, image('16x16/edit.png')).
 resource(spy,    image, library('trace/icons/spy.png')).
-resource(icon,   image, image('32x32/dbgsettings.png')).
 
 :- dynamic
     debug_status_window/1.
@@ -71,7 +70,6 @@ resource(icon,   image, image('32x32/dbgsettings.png')).
 
 initialise(F, App:[application]*) :->
     send_super(F, initialise('Prolog debugging')),
-    send(F, icon, resource(icon)),
     send(F, append, new(prolog_debug_status_dialog)),
     (   App \== @default, App \== @nil
     ->  send(F, application, App)

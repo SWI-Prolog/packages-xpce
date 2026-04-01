@@ -54,7 +54,6 @@ COMMON(status)	exposeFrame(FrameObj fr);
 COMMON(status)	hideFrame(FrameObj fr);
 COMMON(status)	forwardColourMapChangeFrame(FrameObj fr);
 COMMON(status)	busyCursorFrame(FrameObj fr, CursorObj c, BoolObj block_events);
-COMMON(Name)	getIconLabelFrame(FrameObj fr);
 COMMON(TileObj)	getTileFrame(FrameObj fr);
 COMMON(status)	AppendFrame(FrameObj fr, PceWindow sw);
 COMMON(status)	DeleteFrame(FrameObj fr, PceWindow sw);

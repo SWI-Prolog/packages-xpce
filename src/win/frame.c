@@ -885,54 +885,6 @@ resetFrame(FrameObj fr)
 		********************************/
 
 static status
-iconFrame(FrameObj fr, Image image, Name label)
-{ assign(fr, icon_image, image);
-  if ( notDefault(label) )
-    assign(fr, icon_label, label);
-  ws_set_icon_frame(fr);
-
-  succeed;
-}
-
-
-Name
-getIconLabelFrame(FrameObj fr)
-{ answer(notNil(fr->icon_label) ? fr->icon_label : fr->label);
-}
-
-
-static status
-iconLabelFrame(FrameObj fr, Name label)
-{ assign(fr, icon_label, label);
-  ws_set_icon_label_frame(fr);
-
-  succeed;
-}
-
-
-static status
-iconPositionFrame(FrameObj fr, Point pos)
-{ assign(fr, icon_position, pos);
-
-  if ( notNil(pos) )
-    ws_set_icon_position_frame(fr, valInt(pos->x), valInt(pos->y));
-
-  succeed;
-}
-
-
-static Point
-getIconPositionFrame(FrameObj fr)
-{ int x, y;
-
-  if ( ws_get_icon_position_frame(fr, &x, &y) )
-    answerObject(ClassPoint, toInt(x), toInt(y));
-
-  answer(fr->icon_position);
-}
-
-
-static status
 closedFrame(FrameObj fr, BoolObj val)
 { if ( val == ON )
   { if ( isOpenFrameStatus(fr->status) )
@@ -973,14 +925,11 @@ getTileFrame(FrameObj fr)
 
 
 static status
-labelFrame(FrameObj fr, Name label, Name icon)
+labelFrame(FrameObj fr, Name label)
 { assign(fr, label, label);
 
   if ( ws_created_frame(fr) )
     sdl_send(fr, NAME_SdlSetLabel, false, EAV);
-
-  if ( notDefault(icon) )
-    iconLabelFrame(fr, icon);
 
   succeed;
 }
@@ -1486,9 +1435,7 @@ kindFrame(FrameObj fr, Name kind)
       return errorPce(fr, NAME_noChangeAfterOpen);
 
     if ( kind == NAME_transient )
-    { assign(fr, icon_image, NIL);
       assign(fr, can_resize, OFF);
-    }
 
     assign(fr, kind, kind);
   }
@@ -1833,15 +1780,11 @@ static char *T_openCentered[] =
         { "center=[point|frame]", "display=[display]", "grab=[bool]" };
 static char *T_busyCursor[] =
         { "cursor=[cursor]*", "block_input=[bool]" };
-static char *T_icon[] =
-        { "image=image", "icon_label=[name]" };
 static char *T_initialise[] =
         { "label=[name]",
 	  "kind=[{toplevel,transient,popup}]",
 	  "display=[display]",
 	  "application=[application]"};
-static char *T_label[] =
-        { "label=name", "icon_label=[name]" };
 static char *T_open[] =
         { "position=[point]", "display=[display]", "grab=[bool]" };
 static char *T_wmProtocol[] =
@@ -1867,12 +1810,6 @@ static vardecl var_frame[] =
      NAME_name, "Name of the frame"),
   IV(NAME_label, "name", IV_GET,
      NAME_label, "Label of the frame"),
-  SV(NAME_iconLabel, "name*", IV_NONE|IV_STORE, iconLabelFrame,
-     NAME_icon, "Label in the iconic representation"),
-  IV(NAME_iconImage, "image*", IV_GET,
-     NAME_icon, "Image used for the iconic representation"),
-  SV(NAME_iconPosition, "point*", IV_GET|IV_STORE, iconPositionFrame,
-     NAME_icon, "Position of the iconic image"),
   SV(NAME_application, "application*", IV_GET|IV_STORE, applicationFrame,
      NAME_organisation, "Application the frame belongs too"),
   IV(NAME_display, "display", IV_BOTH,
@@ -1968,9 +1905,7 @@ static senddecl send_frame[] =
      NAME_focus, "Redirect (default) keyboard input here"),
   SM(NAME_closed, 1, "open=bool", closedFrame,
      NAME_icon, "Open/iconify frame"),
-  SM(NAME_icon, 2, T_icon, iconFrame,
-     NAME_icon, "Set image and icon_label"),
-  SM(NAME_label, 2, T_label, labelFrame,
+  SM(NAME_label, 1, "label=name", labelFrame,
      NAME_label, "Set label of the frame"),
   SM(NAME_SdlSetLabel, 0, NULL, SdlSetLabelFrame,
      NAME_thread, "Update the label of an open frame"),
@@ -2065,10 +2000,6 @@ static getdecl get_frame[] =
      NAME_focus, "Window for default keyboard input"),
   GM(NAME_closed, 0, "bool", NULL, getClosedFrame,
      NAME_icon, "Open (@off) or iconic (@on)"),
-  GM(NAME_iconLabel, 0, "name", NULL, getIconLabelFrame,
-     NAME_icon, "Name of the icon"),
-  GM(NAME_iconPosition, 0, "point*", NULL, getIconPositionFrame,
-     NAME_icon, "(Current) position of the icon"),
   GM(NAME_tile, 0, "tile", NULL, getTileFrame,
      NAME_layout, "Find tile managing object"),
   GM(NAME_confirm, 2, "return_value=any", T_open, getConfirmFrame,
@@ -2103,8 +2034,6 @@ static classvardecl rc_frame[] =
      "Show confirmer on `Delete'"),
   RC(NAME_geometry, "name*", "@nil",
      "Position/size of the frame"),
-  RC(NAME_iconImage, "image*", "@pce_image",
-     "Image displayed for an icon"),
   RC(NAME_iconLabel, "name*", "@nil",
      "Label displayed in the icon"),
   RC(NAME_canResize, "bool", "@on",

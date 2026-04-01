@@ -977,7 +977,6 @@ initialise(F, Data:'[file|hlp_buffer|hlp_editor]') :->
     ->  E = Data
     ;   new(E, hlp_editor(Data))
     ),
-    send(F, icon, resource(help)),
     send(F, append, new(V, view(editor := E))),
     send(F, slot, editor, E),
     send(new(D, dialog), above, V),

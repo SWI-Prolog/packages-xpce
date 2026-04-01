@@ -46,8 +46,6 @@
            , send_list/3
            ]).
 
-resource(man_icon, image, image('32x32/books.png')).
-
 :- pce_autoload(event_viewer, library('man/showevent')).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -139,7 +137,6 @@ variable(search_patterns,       chain*,         both,
 initialise(M, Dir:[directory]) :->
     "Create the manual main object"::
     send(M, send_super, initialise, 'XPCE Manual'),
-    send(M, icon, resource(man_icon)),
     send(M, can_resize, @off),
     send(M, done_message, message(M, quit)),
     get(M, class_variable_value, user_scope, Scope),

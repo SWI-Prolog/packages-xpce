@@ -802,7 +802,6 @@ NewClass(application)
   Chain		members;		/* its member frames */
   Name		kind;			/* {user,service} */
   Chain		modal;			/* Stack of modal frames */
-  Image		icon_image;		/* Image of the icon */
 End;
 
 
@@ -810,9 +809,6 @@ NewClass(frameobj)
   ABSTRACT_VISUAL
   Name		name;			/* Name of the frame */
   Name		label;			/* Label of the frame */
-  Name		icon_label;		/* Label of the icon */
-  Image		icon_image;		/* Image of the icon */
-  Point		icon_position;		/* Position of the icon */
   Application	application;		/* Application it belongs too */
   DisplayObj	display;		/* Display it is displayed on */
   Any		background;		/* Frames background */

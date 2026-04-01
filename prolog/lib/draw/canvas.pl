@@ -942,7 +942,6 @@ save_if_modified(Canvas, AllowQuit:[bool]) :->
     (   get(Canvas, modified, @on)
     ->  get(Canvas, frame, Draw),
         new(D, dialog('Drawing is modified')),
-        send(D, icon, Draw?icon_image),
         send(D, transient_for, Draw),
         send(D, append, label(message, 'Drawing has changed')),
         (   AllowQuit == @on

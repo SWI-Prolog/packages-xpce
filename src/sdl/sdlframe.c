@@ -975,52 +975,6 @@ ws_frame_background(FrameObj fr, Any c)
 }
 
 /**
- * Set the icon for the specified frame.
- *
- * @param fr Pointer to the FrameObj.
- */
-void
-ws_set_icon_frame(FrameObj fr)
-{
-}
-
-/**
- * Set the icon label for the specified frame.
- *
- * @param fr Pointer to the FrameObj.
- */
-void
-ws_set_icon_label_frame(FrameObj fr)
-{
-}
-
-/**
- * Set the position of the frame's icon.
- *
- * @param fr Pointer to the FrameObj.
- * @param x X-coordinate position.
- * @param y Y-coordinate position.
- */
-void
-ws_set_icon_position_frame(FrameObj fr, int x, int y)
-{
-}
-
-/**
- * Retrieve the position of the frame's icon.
- *
- * @param fr Pointer to the FrameObj.
- * @param x Pointer to store the x-coordinate.
- * @param y Pointer to store the y-coordinate.
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-ws_get_icon_position_frame(FrameObj fr, int *x, int *y)
-{
-    return SUCCEED;
-}
-
-/**
  * Enable or disable modal behavior for the specified frame.
  *
  * @param fr Pointer to the FrameObj.

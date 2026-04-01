@@ -280,7 +280,6 @@ initialise(F, Manual:[man_manual]) :->
     ;   TheManual = Manual
     ),
     F*>>initialise(TheManual, 'Visual Hierarchy'),
-    F->>icon(resource(vishier)),
     F->>append(new(TD, tool_dialog)),
     send_list(TD, append,
               [ tool_button(help,

@@ -205,9 +205,7 @@ static vardecl var_application[] =
   IV(NAME_kind, "{user,service}", IV_BOTH,
      NAME_debugging, "If service, events cannot be debugged"),
   IV(NAME_modal, "chain", IV_NONE,
-     NAME_event, "Frame for modal operation"),
-  IV(NAME_iconImage, "image*", IV_BOTH,
-     NAME_icon, "Image used for the iconic representation")
+     NAME_event, "Frame for modal operation")
 };
 
 /* Send Methods */
@@ -242,10 +240,12 @@ static getdecl get_application[] =
 
 /* Resources */
 
+#define rc_application NULL
+#if 0
 static classvardecl rc_application[] =
-{ RC(NAME_iconImage, "image*", "@nil",
-     "Image displayed for an icon")
+{
 };
+#endif
 
 /* Class Declaration */
 
