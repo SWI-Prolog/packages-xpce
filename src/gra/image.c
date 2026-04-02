@@ -613,18 +613,12 @@ getPixelImage(Image image, Int x, Int y)
 { if ( inImage(image, x, y) )
   { Any result;
     d_image(image, 0, 0, valInt(image->size->w), valInt(image->size->h));
+    COLORRGBA pixel = r_get_pixel(valInt(x), valInt(y));
 
     if ( image->kind == NAME_bitmap )
-      result = (r_get_mono_pixel(valInt(x), valInt(y)) ? ON : OFF);
+      result = (pixel == RGBA(0,0,0,255) ? ON : OFF);
     else
-    { unsigned long pixel;
-
-      pixel = r_get_pixel(valInt(x), valInt(y));
-      if ( pixel == NoPixel )
-	result = FAIL;
-      else
-	result = ws_pixel_to_colour(pixel);
-    }
+      result = ws_pixel_to_colour(pixel);
     d_done();
 
     answer(result);

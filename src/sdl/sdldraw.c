@@ -1779,26 +1779,13 @@ d_modify(void)
 }
 
 /**
- * Retrieve the monochrome value of a specific pixel.
- *
- * @param x The x-coordinate of the pixel.
- * @param y The y-coordinate of the pixel.
- * @return The monochrome value of the pixel.
- */
-int
-r_get_mono_pixel(int x, int y)
-{
-    return 0;
-}
-
-/**
  * Retrieve the color value of a specific pixel.
  *
  * @param x The x-coordinate of the pixel.
  * @param y The y-coordinate of the pixel.
  * @return The color value of the pixel.
  */
-unsigned long
+COLORRGBA
 r_get_pixel(int x, int y)
 { int width  = cairo_image_surface_get_width(context.target);
   int height = cairo_image_surface_get_height(context.target);

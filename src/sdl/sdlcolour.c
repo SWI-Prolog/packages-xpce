@@ -122,6 +122,6 @@ canonical_colour_name(Name in)
  * @return Pointer to the corresponding Colour object; NULL if conversion fails.
  */
 Colour
-ws_pixel_to_colour(unsigned long pixel)
+ws_pixel_to_colour(COLORRGBA pixel)
 { return NULL;
 }

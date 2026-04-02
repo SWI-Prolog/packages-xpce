@@ -1068,7 +1068,6 @@ GLOBAL Recogniser   GESTURE_wheelMouse;	/* Wheelmouse translation */
 GLOBAL Chain ChangedWindows;		/* Windows that have changed */
 GLOBAL Chain ChangedFrames;		/* Frames that have changed */
 
-GLOBAL  int XrefsResolved;		/* succesful getXrefObject()'s */
 GLOBAL	HashTable ColourTable;		/* ColourName --> Colour */
 GLOBAL  HashTable CursorTable;		/* CursorName --> Cursor */
 GLOBAL	HashTable FontTable;		/* FontName --> Font */
@@ -1076,7 +1075,6 @@ GLOBAL  HashTable FontAliasTable;	/* Alias -> font */
 GLOBAL  HashTable FontFamilyTable;	/* Family -> Pango family */
 GLOBAL	HashTable ImageTable;		/* ImageName --> Image */
 GLOBAL  HashTable WindowTable;		/* X-Window --> PceWindow|FrameObj */
-GLOBAL  Class ClassImage;		/* @image_class */
 
 GLOBAL  EventTreeObj  EventTree;	/* @event_tree */
 GLOBAL  Chain grabbedWindows;		/* @grabbed_windows */
