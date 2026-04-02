@@ -314,8 +314,6 @@ decorateWindow(PceWindow sw, Name how, Int lb, Int tb, Int rb, Int bb,
   if ( isDefault(dw->colour) )     assign(dw, colour, sw->colour);
   if ( isDefault(dw->background) ) assign(dw, background, sw->background);
 
-  ws_reassociate_ws_window(sw, dw);
-
   assign(dw, tile, sw->tile);
   if ( instanceOfObject(dw->tile, ClassTile) )
     assign(dw->tile, object, dw);
@@ -1951,7 +1949,6 @@ backgroundWindow(PceWindow sw, Colour colour)
 
   if ( sw->background != colour )
   { assign(sw, background, colour);
-    ws_window_background(sw, colour);
     redrawWindow(sw, DEFAULT);
   }
 
@@ -1976,18 +1973,6 @@ selectionFeedbackWindow(PceWindow sw, Any feedback)
 static Colour
 getForegroundWindow(PceWindow sw)
 { answer(sw->colour);
-}
-
-
-static status
-sensitiveWindow(PceWindow sw, BoolObj sensitive)
-{ if ( sw->sensitive != sensitive )
-  { assign(sw, sensitive, sensitive);
-
-    ws_enable_window(sw, sensitive == ON ? TRUE : FALSE);
-  }
-
-  succeed;
 }
 
 
@@ -2050,8 +2035,6 @@ exposeWindow(PceWindow sw)
   if ( notNil(sw->frame) )
     return exposeFrame(sw->frame);
 
-  ws_raise_window(sw);
-
   succeed;
 }
 
@@ -2060,8 +2043,6 @@ static status
 hideWindow(PceWindow sw)
 { if ( notNil(sw->decoration) )
     return hideWindow(sw->decoration);
-
-  ws_lower_window(sw);
 
   succeed;
 }
@@ -2117,15 +2098,6 @@ catchAllWindowv(PceWindow sw, Name selector, int argc, Any *argv)
   }
 
   return errorPce(sw, NAME_noBehaviour, CtoName("->"), selector);
-}
-
-		 /*******************************
-		 *	    THREADING		*
-		 *******************************/
-
-static Int
-getThreadWindow(PceWindow sw)
-{ return ws_window_thread(sw);
 }
 
 
@@ -2207,7 +2179,7 @@ static vardecl var_window[] =
      NAME_menu, "Popup-menu of the window"),
   IV(NAME_currentEvent, "event*", IV_GET,
      NAME_event, "Event being processed now"),
-  SV(NAME_sensitive, "bool", IV_GET|IV_STORE, sensitiveWindow,
+  IV(NAME_sensitive, "bool", IV_BOTH,
      NAME_event, "Window accepts events"),
   SV(NAME_background, "colour|pixmap", IV_GET|IV_STORE, backgroundWindow,
      NAME_appearance, "Background colour or pattern"),
@@ -2353,9 +2325,7 @@ static getdecl get_window[] =
      NAME_modal, "Run sub event-loop until ->return"),
   GM(NAME_confirmCentered, 3, "any", T_confirmCentered,
      getConfirmCenteredWindow,
-     NAME_modal, "->confirm with frame centered around point"),
-  GM(NAME_thread, 0, "int", NULL, getThreadWindow,
-     NAME_thread, "Return system thread-id that owns the window")
+     NAME_modal, "->confirm with frame centered around point")
 };
 
 /* Resources */

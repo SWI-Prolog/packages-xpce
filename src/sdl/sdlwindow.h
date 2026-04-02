@@ -48,11 +48,7 @@ typedef struct
 status ws_created_window(PceWindow sw);
 void ws_uncreate_window(PceWindow sw);
 status ws_create_window(PceWindow sw, PceWindow parent);
-void ws_manage_window(PceWindow sw);
-void ws_unmanage_window(PceWindow sw);
-void ws_reassociate_ws_window(PceWindow from, PceWindow to);
 void ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen);
-void ws_topmost_window(PceWindow sw, BoolObj topmost);
 void ws_grab_pointer_window(PceWindow sw, BoolObj val);
 void ws_grab_keyboard_window(PceWindow sw, BoolObj val);
 void ws_ungrab_all(void);
@@ -60,10 +56,5 @@ void ws_flash_area_window(PceWindow sw, int x, int y, int w, int h, int msecs);
 void ws_flash_window(PceWindow sw, int msecs);
 void ws_move_pointer(PceWindow sw, int x, int y);
 void ws_window_cursor(PceWindow sw, CursorObj cursor);
-void ws_window_background(PceWindow sw, Any c);
-void ws_raise_window(PceWindow sw);
-void ws_lower_window(PceWindow sw);
-int ws_enable_window(PceWindow sw, int enable);
-Int ws_window_thread(PceWindow sw);
 
 #endif /* RAYWINDOW_H */

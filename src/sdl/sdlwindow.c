@@ -121,37 +121,6 @@ ws_create_window(PceWindow sw, PceWindow parent)
 }
 
 /**
- * Map (display) the specified window on the screen.
- *
- * @param sw Pointer to the PceWindow object to be displayed.
- */
-void
-ws_manage_window(PceWindow sw)
-{
-}
-
-/**
- * Unmap (hide) the specified window from the screen.
- *
- * @param sw Pointer to the PceWindow object to be hidden.
- */
-void
-ws_unmanage_window(PceWindow sw)
-{
-}
-
-/**
- * Reassociate the native window from one PceWindow to another.
- *
- * @param from Pointer to the source PceWindow.
- * @param to Pointer to the target PceWindow.
- */
-void
-ws_reassociate_ws_window(PceWindow from, PceWindow to)
-{
-}
-
-/**
  * Called when the geometry of the window is updated.  Current task
  * is to adjust the size of the backing store texture.
  *
@@ -194,17 +163,6 @@ ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
 }
 
 /**
- * Set the 'topmost' status of the specified window.
- *
- * @param sw Pointer to the PceWindow object.
- * @param topmost A BoolObj indicating whether the window should be topmost.
- */
-void
-ws_topmost_window(PceWindow sw, BoolObj topmost)
-{
-}
-
-/**
  * Grab or release the pointer (mouse) input for the specified window.
  *
  * @param sw Pointer to the PceWindow object.
@@ -218,27 +176,7 @@ ws_grab_pointer_window(PceWindow sw, BoolObj val)
   if ( fr )
   { WsFrame wfr = fr->ws_ref;
     if ( wfr )
-    {
-#if 0
-      ASSERT_SDL_MAIN();
-      if ( !SDL_CaptureMouse(val == ON) )
-	DEBUG(NAME_capture,
-	      Cprintf("ws_grab_pointer_window(%s, %s) failed: %s\n",
-		      pp(sw), pp(val), SDL_GetError()));
-      if ( val == ON )
-      { if ( SDL_SetWindowMouseRect(wfr->ws_window, NULL) )
-	{ DEBUG(NAME_capture,
-		Cprintf("Grabbed mouse for %s (%s)\n", pp(fr), pp(sw)));
-	} else
-	{ DEBUG(NAME_capture,
-		Cprintf("SDL_SetWindowMouseRect(%s, %s) failed\n",
-			pp(sw), pp(val)));
-	}
-      }
-#endif
-
       ev_event_grab_window(val == ON ? sw : NIL);
-    }
   }
 }
 
@@ -320,61 +258,4 @@ ws_window_cursor(PceWindow sw, CursorObj cursor)
   { ASSERT_SDL_MAIN();
     SDL_SetCursor(c);
   }
-}
-
-/**
- * Set the background of the specified window.
- *
- * @param sw Pointer to the PceWindow object.
- * @param c An Any object representing the new background.
- */
-void
-ws_window_background(PceWindow sw, Any c)
-{
-}
-
-/**
- * Raise the specified window above all other windows.
- *
- * @param sw Pointer to the PceWindow object to be raised.
- */
-void
-ws_raise_window(PceWindow sw)
-{
-}
-
-/**
- * Lower the specified window below all other windows.
- *
- * @param sw Pointer to the PceWindow object to be lowered.
- */
-void
-ws_lower_window(PceWindow sw)
-{
-}
-
-/**
- * Enable or disable the specified window.  An enabled window
- * processed keyboard and mouse events.
- *
- * @param sw Pointer to the PceWindow object.
- * @param enable An integer indicating whether to enable
- *        (non-zero) or disable (zero) the window.
- * @return TRUE or FALSE
- */
-int
-ws_enable_window(PceWindow sw, int enable)
-{ succeed;
-}
-
-/**
- * Retrieve the thread identifier associated with the specified window.
- *
- * @param sw Pointer to the PceWindow object.
- * @return An Int representing the thread ID.
- */
-Int
-ws_window_thread(PceWindow sw)
-{
-    return (Int)0;
 }

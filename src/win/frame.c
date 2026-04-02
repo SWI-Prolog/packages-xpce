@@ -971,8 +971,6 @@ AppendFrame(FrameObj fr, PceWindow sw)
   if ( createdFrame(fr) )
   { TRY(send(sw, NAME_create, EAV));
 
-    ws_manage_window(sw);
-
     if ( getClassVariableValueObject(fr, NAME_fitAfterAppend) == ON )
       send(fr, NAME_fit, EAV);
     else
@@ -999,8 +997,7 @@ DeleteFrame(FrameObj fr, PceWindow sw)
   assign(sw, frame, NIL);		/* may kill the frame */
 
   if ( !isFreedObj(fr) && createdFrame(fr) )
-  { ws_unmanage_window(sw);
-    send(sw, NAME_uncreate, EAV);
+  { send(sw, NAME_uncreate, EAV);
     unrelateTile(sw->tile);
     if ( getClassVariableValueObject(fr, NAME_fitAfterAppend) == ON )
       send(fr, NAME_fit, EAV);
