@@ -97,8 +97,8 @@ edit_mode(CE, Val:bool) :->
     get(CE, editor, Editor),
     (   Val == @off
     ->  send(Editor, save_if_modified),
-        send(CE, label, 'Card Viewer', 'Card Viewer')
-    ;   send(CE, label, 'Card Editor', 'Card Editor')
+        send(CE, label, 'Card Viewer')
+    ;   send(CE, label, 'Card Editor')
     ),
     send(Editor, edit_mode, Val).
 

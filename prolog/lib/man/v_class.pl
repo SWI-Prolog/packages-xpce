@@ -235,7 +235,7 @@ tool_focus(CB, Obj:object*) :->
     send(CB, slot, tool_focus, Class),
     get(Class, name, ClassName),
     atom_concat('Class ', ClassName, Label),
-    send(CB, label, Label, ClassName),
+    send(CB, label, Label),
     send(CB, show_header),
     send(CB, show_inheritance),
     send(CB, apply).
