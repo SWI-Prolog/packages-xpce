@@ -64,7 +64,6 @@ initialisePixmap(PixmapObj pm, Any from, Int w, Int h)
     assign(pm, file,	   f);
     assign(pm, access,	   NAME_read);
     assign(pm, size,	   newObject(ClassSize,	EAV));
-    ws_init_image((Image) pm);
     TRY(loadImage((Image) pm, DEFAULT, DEFAULT));
     protectObject(pm);
     appendHashTable(ImageTable, f->name, pm);

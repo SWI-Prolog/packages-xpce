@@ -49,16 +49,6 @@ pceImage2CairoSurface(Image image)
 }
 
 /**
- * Initialize internal state for a new Image object.
- *
- * @param image Pointer to the Image object.
- */
-void
-ws_init_image(Image image)
-{
-}
-
-/**
  * Free resources associated with an Image object.
  *
  * @param image Pointer to the Image object.

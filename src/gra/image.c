@@ -62,7 +62,6 @@ initialiseImage(Image image, SourceSink data, Int w, Int h, Name kind)
     name = NIL;
 
   assign(image, name,       name);
-  ws_init_image(image);
 
   if ( isNil(data) || notDefault(w) || notDefault(h) || notDefault(kind) )
   { if ( isDefault(w) )    w = toInt(16);
@@ -235,8 +234,6 @@ loadFdImage(Image image, IOSTREAM *fd, ClassDef def)
 { FileObj file;
 
   TRY( loadSlotsObject(image, fd, def) );
-  ws_init_image(image);
-
 					/* convert old path-representation */
   if ( instanceOfObject((file=(FileObj)image->file), ClassFile) &&
        isAbsoluteFile(file) &&
