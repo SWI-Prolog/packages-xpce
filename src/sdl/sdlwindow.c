@@ -241,7 +241,14 @@ ws_flash_window(PceWindow sw, int msecs)
  */
 void
 ws_move_pointer(PceWindow sw, int x, int y)
-{
+{ FrameObj fr = getFrameWindow(sw, OFF);
+  WsFrame wfr = fr->ws_ref;
+  if ( wfr->ws_window )
+  { x += valInt(sw->area->x);
+    y += valInt(sw->area->y);
+    ASSERT_SDL_MAIN();
+    SDL_WarpMouseInWindow(wfr->ws_window, x, y);
+  }
 }
 
 /**
