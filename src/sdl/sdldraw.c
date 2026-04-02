@@ -310,11 +310,6 @@ d_image(Image i, int x, int y, int w, int h)
   Any colour = d->foreground;
   Any background = d->background;
 
-  if ( isDefault(colour) )
-    colour = d->foreground;
-  if ( isDefault(background) || isNil(background) )
-    background = d->background;
-
   push_context();
   context.open = 1;
 
