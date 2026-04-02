@@ -221,8 +221,8 @@ storeImage(Image image, FileObj file)
 { TRY( storeSlotsObject(image, file) );
 
   if ( isNil(image->file) )
-    return ws_store_image(image, file);
-  else
+  { return ws_store_image(image, file);
+  } else
   { Sputc('O', file->fd);
     succeed;
   }
@@ -319,7 +319,7 @@ saveImage(Image image, SourceSink file, Name fmt)
 { if ( isDefault(file) )
     file = image->file;
   if ( isDefault(fmt) )
-    fmt = NAME_xbm;
+    fmt = NAME_png;
 
   if ( isNil(file) )
     return errorPce(image, NAME_noFile);

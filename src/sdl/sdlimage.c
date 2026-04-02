@@ -63,15 +63,23 @@ ws_destroy_image(Image image)
 }
 
 /**
- * Store an image to a file.
+ * Add image to a file for creating a saved object.
  *
  * @param image Pointer to the Image object.
- * @param file File object representing the target file.
- * @return SUCCEED if the image is stored successfully; otherwise, FAIL.
+ * @param file File object representing the target file.  This file
+ * is open for writing through `file->fd`.
  */
 status
 ws_store_image(Image image, FileObj file)
-{ succeed;
+{ SDL_Surface *surf = pceImage2SDL_Surface(image);
+
+  if ( surf )
+  { bool rc = false; // = IMG_SavePNG(surf, nameToFN(file->name));
+    SDL_DestroySurface(surf);
+    return rc;
+  }
+
+  fail;
 }
 
 /**
@@ -428,8 +436,33 @@ pceImage2SDL_Surface(Image image)
  */
 status
 ws_save_image_file(Image image, SourceSink into, Name fmt)
-{
-    return SUCCEED;
+{ SDL_Surface *surf = pceImage2SDL_Surface(image);
+  status rc = FAIL;
+
+  if ( surf )
+  { if ( instanceOfObject(into, ClassFile) )
+    { FileObj file = (FileObj)into;
+      if ( file->fd == NULL )
+      { if ( fmt == NAME_png )
+	{ rc = IMG_SavePNG(surf, nameToFN(file->name));
+	} else
+	{ Cprintf("Cannot save %s: format %s is not supported\n",
+		  pp(image), pp(fmt));
+	}
+      } else
+      { Cprintf("Cannot save %s to %s: file is open\n",
+		pp(image), pp(file));
+      }
+    } else
+    { Cprintf("Cannot save %s to %s: Can only save to a file\n",
+	      pp(image), pp(into));
+    }
+
+    SDL_DestroySurface(surf);
+    return rc;
+  }
+
+  fail;
 }
 
 /**
