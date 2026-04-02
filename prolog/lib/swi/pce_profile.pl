@@ -215,12 +215,9 @@ render_time(F, Ticks:int, Rendered:any) :<-
         )
     ).
 
-help(F) :->
-    send(@display, confirm, F, @default,
-         'No online help yet\n\c
-          The profiler is described on the SWI-Prolog web site\n\c
-          Press OK to open the page in your browser'),
-    www_open_url('https://www.swi-prolog.org/profile.html').
+help(_) :->
+    "Open help (web site)"::
+    www_open_url('https://github.com/SWI-Prolog/packages-xpce/wiki/profiler').
 
 :- pce_end_class(prof_frame).
 
