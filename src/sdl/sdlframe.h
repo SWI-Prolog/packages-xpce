@@ -63,7 +63,6 @@ void ws_x_geometry_frame(FrameObj fr, Name spec, DisplayObj dsp);
 status ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp);
 void ws_busy_cursor_frame(FrameObj fr, CursorObj c);
 void ws_frame_cursor(FrameObj fr, CursorObj cursor);
-void ws_frame_background(FrameObj fr, Any c);
 void ws_enable_modal(FrameObj fr, BoolObj val);
 void ws_status_frame(FrameObj fr, Name status);
 void ws_topmost_frame(FrameObj fr, BoolObj topmost);

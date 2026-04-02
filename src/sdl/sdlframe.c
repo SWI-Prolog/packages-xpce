@@ -964,17 +964,6 @@ ws_busy_cursor_frame(FrameObj fr, CursorObj c)
 }
 
 /**
- * Set the background color or pattern for the specified frame.
- *
- * @param fr Pointer to the FrameObj.
- * @param c Any object representing the background (e.g., color or pattern).
- */
-void
-ws_frame_background(FrameObj fr, Any c)
-{
-}
-
-/**
  * Enable or disable modal behavior for the specified frame.
  *
  * @param fr Pointer to the FrameObj.

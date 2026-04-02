@@ -849,8 +849,8 @@ backgroundFrame(FrameObj fr, Any bg)
 { if ( fr->background != bg )
   { assign(fr, background, bg);
 
-    if ( ws_created_frame(fr) )
-      ws_frame_background(fr, bg);
+    if ( ws_created_frame(fr) && ChangedFrames )
+      addChain(ChangedFrames, fr);
   }
 
   succeed;
