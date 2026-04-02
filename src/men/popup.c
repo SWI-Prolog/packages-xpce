@@ -223,7 +223,6 @@ openPopup(PopupObj p, Graphical gr, Point pos,
   }
   send(swfr, NAME_set, toInt(px), toInt(py), toInt(pw), toInt(ph), EAV);
   send(swfr, NAME_show, ON, EAV);
-  ws_topmost_frame(swfr, ON);
   if ( moved && warp_pointer == ON )
   { Point pos = tempObject(ClassPoint, toInt(dx), toInt(dy), EAV);
     send(sw, NAME_pointer, pos, EAV);

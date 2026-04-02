@@ -63,12 +63,8 @@ void ws_x_geometry_frame(FrameObj fr, Name spec, DisplayObj dsp);
 status ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp);
 void ws_busy_cursor_frame(FrameObj fr, CursorObj c);
 void ws_frame_cursor(FrameObj fr, CursorObj cursor);
-void ws_enable_modal(FrameObj fr, BoolObj val);
 void ws_status_frame(FrameObj fr, Name status);
-void ws_topmost_frame(FrameObj fr, BoolObj topmost);
 void ws_set_label_frame(FrameObj fr);
 Image ws_image_of_frame(FrameObj fr);
-void ws_transient_frame(FrameObj fr, FrameObj fr2);
-int ws_enable_frame(FrameObj fr, int enable);
 
 #endif /* RAYFRAME_H */

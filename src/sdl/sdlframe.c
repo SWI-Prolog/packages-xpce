@@ -964,17 +964,6 @@ ws_busy_cursor_frame(FrameObj fr, CursorObj c)
 }
 
 /**
- * Enable or disable modal behavior for the specified frame.
- *
- * @param fr Pointer to the FrameObj.
- * @param val Boolean indicating whether to enable (TRUE) or disable (FALSE) modal behavior.
- */
-void
-ws_enable_modal(FrameObj fr, BoolObj val)
-{
-}
-
-/**
  * Set the status of the specified frame.
  *
  * @param fr Pointer to the FrameObj.
@@ -996,17 +985,6 @@ ws_status_frame(FrameObj fr, Name status)
       ws_create_frame(fr);
     }
   }
-}
-
-/**
- * Set the specified frame to be topmost or not.
- *
- * @param fr Pointer to the FrameObj.
- * @param topmost Boolean indicating whether to set the frame as topmost (TRUE) or not (FALSE).
- */
-void
-ws_topmost_frame(FrameObj fr, BoolObj topmost)
-{
 }
 
 /**
@@ -1033,28 +1011,4 @@ Image
 ws_image_of_frame(FrameObj fr)
 {
     return NULL;
-}
-
-/**
- * Set the specified frame as transient for another frame.
- *
- * @param fr Pointer to the FrameObj to set as transient.
- * @param fr2 Pointer to the FrameObj that owns the transient frame.
- */
-void
-ws_transient_frame(FrameObj fr, FrameObj fr2)
-{
-}
-
-/**
- * Enable or disable the specified frame.
- *
- * @param fr Pointer to the FrameObj.
- * @param enable Integer indicating whether to enable (non-zero) or disable (zero) the frame.
- * @return Integer status code.
- */
-int
-ws_enable_frame(FrameObj fr, int enable)
-{
-    return 0;
 }

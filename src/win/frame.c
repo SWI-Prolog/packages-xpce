@@ -116,7 +116,6 @@ unlinkFrame(FrameObj fr)
       assign(sw, displayed, OFF);
     }
 
-    ws_enable_modal(fr, ON);
     if ( notNil(fr->transients) )
       for_chain(fr->transients, sfr, destroyTransientFrame(sfr));
     if ( notNil(fr->transient_for) && notNil(fr->transient_for->transients) )
@@ -1189,18 +1188,6 @@ inputFocusFrame(FrameObj fr, BoolObj val)
 }
 
 
-static status
-sensitiveFrame(FrameObj fr, BoolObj sensitive)
-{ if ( fr->sensitive != sensitive )
-  { assign(fr, sensitive, sensitive);
-
-    ws_enable_frame(fr, sensitive == ON ? TRUE : FALSE);
-  }
-
-  succeed;
-}
-
-
 status
 redrawFrame(FrameObj fr, Area a)
 { succeed;
@@ -1455,11 +1442,7 @@ transientForFrame(FrameObj fr, FrameObj fr2)
     assign(fr, transient_for, fr2);
 
     if ( notNil(fr2) )
-    { send(fr2, NAME_attachTransient, fr, EAV);
-
-      if ( fr->kind == NAME_transient )
-	ws_transient_frame(fr, fr2);
-    }
+      send(fr2, NAME_attachTransient, fr, EAV);
   }
 
   succeed;
@@ -1835,7 +1818,7 @@ static vardecl var_frame[] =
      NAME_modal, "Bin for value of ->return"),
   SV(NAME_inputFocus, "bool", IV_GET|IV_STORE, inputFocusFrame,
      NAME_event, "Frame has focus for keyboard events"),
-  SV(NAME_sensitive, "bool", IV_GET|IV_STORE, sensitiveFrame,
+  IV(NAME_sensitive, "bool", IV_BOTH,
      NAME_event, "@on: window accepts user input"),
   IV(NAME_status, "{unlinking,unmapped,hidden,iconic,window,full_screen}", IV_GET,
      NAME_visibility, "Current visibility of the frame"),

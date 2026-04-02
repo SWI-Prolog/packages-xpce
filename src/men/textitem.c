@@ -463,7 +463,6 @@ selectCompletionDialogItem(Any item, Chain matches,
 		valInt(pos->x), valInt(pos->y),
 		valInt(c->frame->area->x), valInt(c->frame->area->y)));
 
-  ws_topmost_frame(c->frame, ON);
   send(c, NAME_open, EAV);
   if ( (sw = getWindowGraphical((Graphical)di)) )
   { grabPointerWindow(sw, ON);
