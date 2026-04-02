@@ -612,6 +612,8 @@ static Any
 getPixelImage(Image image, Int x, Int y)
 { if ( inImage(image, x, y) )
   { Any result;
+
+    pceImage2CairoSurface(image);
     d_image(image, 0, 0, valInt(image->size->w), valInt(image->size->h));
     COLORRGBA pixel = r_get_pixel(valInt(x), valInt(y));
 

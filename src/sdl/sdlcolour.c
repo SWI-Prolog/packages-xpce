@@ -119,9 +119,17 @@ canonical_colour_name(Name in)
  * Convert a pixel value to its corresponding Colour object
  *
  * @param pixel The pixel value to be converted.
- * @return Pointer to the corresponding Colour object; NULL if conversion fails.
+ * @return Pointer to the corresponding Colour object;
  */
 Colour
 ws_pixel_to_colour(COLORRGBA pixel)
-{ return NULL;
+{ Colour c;
+
+  if ( RevColourTable && (c=getMemberHashTable(RevColourTable, toInt(pixel))) )
+    return c;
+
+  SDL_Color sdlc = rgba2SDL_Color(pixel);
+  return answerObject(ClassColour, DEFAULT,
+		      toInt(sdlc.r), toInt(sdlc.g), toInt(sdlc.b),
+		      toInt(sdlc.a), EAV);
 }

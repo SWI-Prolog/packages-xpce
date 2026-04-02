@@ -1069,6 +1069,7 @@ GLOBAL Chain ChangedWindows;		/* Windows that have changed */
 GLOBAL Chain ChangedFrames;		/* Frames that have changed */
 
 GLOBAL	HashTable ColourTable;		/* ColourName --> Colour */
+GLOBAL	HashTable RevColourTable;	/* RGBA --> Colour */
 GLOBAL  HashTable CursorTable;		/* CursorName --> Cursor */
 GLOBAL	HashTable FontTable;		/* FontName --> Font */
 GLOBAL  HashTable FontAliasTable;	/* Alias -> font */

@@ -104,12 +104,9 @@ initialiseColour(Colour c, Name name, Int r, Int g, Int b, Int a, Name model)
 
   if ( isDefault(r) && isDefault(g) && isDefault(b) )
   { assign(c, kind, NAME_named);
-    if ( a == toInt(255) )
-    { assign(c, rgba, DEFAULT);
-    } else
-    { ws_named_colour(c);
+    ws_named_colour(c);
+    if ( a != toInt(255) )
       assign(c, rgba, toInt(valInt(c->rgba)|(valInt(a)<<24)));
-    }
   } else if ( notDefault(r) && notDefault(g) && notDefault(b) )
   { assign(c, kind, NAME_rgb);
 
@@ -127,6 +124,7 @@ initialiseColour(Colour c, Name name, Int r, Int g, Int b, Int a, Name model)
 		    getMethodFromFunction((Any(*)())initialiseColour));
 
   appendHashTable(ColourTable, c->name, c);
+  appendHashTable(RevColourTable, c->rgba, c);
 
   succeed;
 }
@@ -149,7 +147,8 @@ getLookupColour(Class class, Name name, Int r, Int g, Int b, Int a, Name model)
   { if ( !toRBG(&r, &g, &b, model) )
       fail;
 
-    name = defcolourname(r, g, b, a);
+    Int rgba = toInt(RGBA(valInt(r), valInt(g), valInt(b), valInt(a)));
+    answer(getMemberHashTable(RevColourTable, rgba));
   }
 
   if ( name )
@@ -729,8 +728,10 @@ makeClassColour(Class class)
   setLoadStoreFunctionClass(class, loadColour, storeColour);
   cloneStyleClass(class, NAME_none);
 
-  ColourTable = globalObject(NAME_colours, ClassHashTable, toInt(32), EAV);
-  assign(ColourTable, refer, NAME_none);
+  ColourTable    = globalObject(NAME_colours, ClassHashTable, toInt(32), EAV);
+  RevColourTable = globalObject(NAME_rgba,    ClassHashTable, toInt(32), EAV);
+  assign(ColourTable,    refer, NAME_none);
+  assign(RevColourTable, refer, NAME_none);
 
   WHITE_COLOUR  = newObject(ClassColour, NAME_white,  EAV);
   GREY25_COLOUR = newObject(ClassColour, NAME_grey25, EAV);
