@@ -512,12 +512,9 @@ static getdecl get_tab[] =
 /* Resources */
 
 static classvardecl rc_tab[] =
-{ RC(NAME_elevation, "elevation",
-     "when(@colour_display, " /* concat */
-           "1, " /* concat */
-	   "elevation(tab, 2, relief := @grey50_image, shadow := black))",
+{ RC(NAME_elevation, "elevation", "1",
      "Elevation above environment"),
-  RC(NAME_inactiveColour, "colour|pixmap*",
+  RC(NAME_inactiveColour, "colour*",
      "@nil", NULL),
   RC(NAME_gap, "size", "size(15, 8)",
      "Distance between items in X and Y"),
