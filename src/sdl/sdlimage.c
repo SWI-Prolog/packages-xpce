@@ -100,19 +100,6 @@ loadPNMImage(Image image, IOSTREAM *fd)
     return SUCCEED;
 }
 
-/**
- * Load an image in the legacy XPCE format.
- *
- * @param image Pointer to the Image object.
- * @param fd IOSTREAM to read from.
- * @return SUCCEED if loading succeeds; otherwise, FAIL.
- */
-status
-ws_load_old_image(Image image, IOSTREAM *fd)
-{
-    return SUCCEED;
-}
-
 static void
 premultiply_alpha(SDL_Surface *surface, bool *pisbitmap)
 { if ( !SDL_LockSurface(surface) )

@@ -182,34 +182,6 @@ static status
 loadFdBitmap(BitmapObj bm, IOSTREAM *fd, ClassDef def)
 { TRY(loadSlotsObject(bm, fd, def));
 
-  if ( restoreVersion < 7 )
-  { if ( restoreVersion == 1 )
-    { Image image = newObject(ClassImage, EAV);
-
-      ws_load_old_image(image, fd);
-      assign(bm, image, image);
-    } else if ( restoreVersion <= 5 )
-    { assign(bm, image, newObject(ClassImage, EAV));
-      assign(bm, pen, ZERO);
-      assign(bm, request_compute, NIL);
-
-      switch( Sgetc(fd) )
-      { case 'O':				/* no image */
-	  setSize(bm->image->size, ZERO, ZERO);
-	  break;
-	case 'X':
-	  loadXImage(bm->image, fd);
-      }
-    }
-
-    if ( isNil(bm->texture) )
-      assign(bm, texture, NAME_none);
-    if ( isNil(bm->colour) )
-      assign(bm, colour, DEFAULT);
-    if ( isNil(bm->inverted) )
-      assign(bm, inverted, OFF);
-  }
-
   updateSolidBitmap(bm);
 
   succeed;

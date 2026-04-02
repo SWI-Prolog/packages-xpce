@@ -46,7 +46,6 @@ void ws_destroy_image(Image image);
 status ws_store_image(Image image, FileObj file);
 status loadXImage(Image image, IOSTREAM *fd);
 status loadPNMImage(Image image, IOSTREAM *fd);
-status ws_load_old_image(Image image, IOSTREAM *fd);
 status ws_load_image_file(Image image);
 status ws_create_image_from_xpm_data(Image image, char **data, DisplayObj d);
 status ws_save_image_file(Image image, SourceSink into, Name fmt);
