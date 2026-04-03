@@ -1028,13 +1028,92 @@ ws_set_label_frame(FrameObj fr)
 }
 
 /**
+ * Recursively composite a window's cairo backing onto a target cairo context.
+ * Mirrors the layout logic of ws_draw_window(), handling WindowDecorator and
+ * subwindows.
+ *
+ * @param cr    Target cairo context (frame-size surface).
+ * @param sw    The window to composite.
+ * @param ox    Accumulated x offset in logical coords (from parent).
+ * @param oy    Accumulated y offset in logical coords (from parent).
+ * @param scale Pixel density multiplier.
+ */
+static void
+composite_window_to_cairo(cairo_t *cr, PceWindow sw,
+			   float ox, float oy, float scale)
+{ WsWindow wsw = sw->ws_ref;
+  if ( !wsw || !wsw->backing )
+    return;
+
+  float wx = (ox + valInt(sw->area->x)) * scale;
+  float wy = (oy + valInt(sw->area->y)) * scale;
+  cairo_surface_flush(wsw->backing);
+  cairo_set_source_surface(cr, wsw->backing, wx, wy);
+  cairo_paint(cr);
+
+  if ( instanceOfObject(sw, ClassWindowDecorator) )
+  { WindowDecorator dw = (WindowDecorator)sw;
+    composite_window_to_cairo(cr, dw->window,
+			      ox + valNum(sw->area->x),
+			      oy + valNum(sw->area->y),
+			      scale);
+  }
+  if ( notNil(sw->subwindows) && !emptyChain(sw->subwindows) )
+  { Cell cell;
+    for_cell(cell, sw->subwindows)
+    { PceWindow sub = cell->value;
+      PceWindow me  = DEFAULT;
+      Int x, y;
+      get_absolute_xy_graphical((Graphical)sub, (Device *)&me, &x, &y);
+      assert(me == sw);
+      composite_window_to_cairo(cr, sub,
+				ox + valNum(sw->area->x) + valNum(x),
+				oy + valNum(sw->area->y) + valNum(y),
+				scale);
+    }
+  }
+}
+
+
+/**
  * Retrieve the image representation of the specified frame.
+ * Composites all window backing cairo surfaces onto a new frame-size
+ * cairo surface and wraps it in an xpce Image object.
  *
  * @param fr Pointer to the FrameObj.
- * @return Pointer to the Image object representing the frame.
+ * @return Pointer to the Image object representing the frame, or NULL on failure.
  */
 Image
 ws_image_of_frame(FrameObj fr)
-{
+{ if ( !ws_created_frame(fr) )
     return NULL;
+
+  WsFrame wfr   = fr->ws_ref;
+  float   scale = SDL_GetWindowPixelDensity(wfr->ws_window);
+  int     fw    = (int)(valInt(fr->area->w) * scale);
+  int     fh    = (int)(valInt(fr->area->h) * scale);
+
+  cairo_surface_t *surf = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, fw, fh);
+  if ( !surf )
+    return NULL;
+
+  d_init_surface(surf, fr->background);
+
+  cairo_t *cr = cairo_create(surf);
+  Cell cell;
+  for_cell(cell, fr->members)
+    composite_window_to_cairo(cr, cell->value, 0.0f, 0.0f, scale);
+  cairo_destroy(cr);
+
+  Image image = newObject(ClassImage, NIL, EAV);
+  if ( !image )
+  { cairo_surface_destroy(surf);
+    return NULL;
+  }
+  assign(image, kind,    NAME_pixmap);
+  assign(image->size, w, toInt(fw));
+  assign(image->size, h, toInt(fh));
+  image->ws_ref = surf;
+
+  return image;
 }
