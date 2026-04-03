@@ -657,7 +657,7 @@ static senddecl send_display[] =
   SM(NAME_copy, 1, "char_array", copyDisplay,
      NAME_selection, "Copy to selection and cut_buffer"),
   SM(NAME_screenSaver, 1, "bool", screenSaverDisplay,
-     NAME_x, "Activate (@on) or deactivate (@off) screensaver"),
+     NAME_power, "Activate (@on) or deactivate (@off) screensaver"),
   SM(NAME_dpi, 1, "size|int", DPIDisplay,
      NAME_dimension, "Resolution in dots per inch"),
   SM(NAME_hasVisibleFrames, 0, NULL, hasVisibleFramesDisplay,
