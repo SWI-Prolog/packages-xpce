@@ -50,8 +50,6 @@ void ws_uncreate_window(PceWindow sw);
 status ws_create_window(PceWindow sw, PceWindow parent);
 void ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen);
 void ws_grab_pointer_window(PceWindow sw, BoolObj val);
-void ws_grab_keyboard_window(PceWindow sw, BoolObj val);
-void ws_ungrab_all(void);
 void ws_flash_area_window(PceWindow sw, int x, int y, int w, int h, int msecs);
 void ws_flash_window(PceWindow sw, int msecs);
 void ws_move_pointer(PceWindow sw, int x, int y);

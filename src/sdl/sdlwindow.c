@@ -181,25 +181,6 @@ ws_grab_pointer_window(PceWindow sw, BoolObj val)
 }
 
 /**
- * Grab or release the keyboard input for the specified window.
- *
- * @param sw Pointer to the PceWindow object.
- * @param val A BoolObj indicating whether to grab (true) or release (false) the keyboard.
- */
-void
-ws_grab_keyboard_window(PceWindow sw, BoolObj val)
-{
-}
-
-/**
- * Release all input grabs, including pointer and keyboard, from all windows.
- */
-void
-ws_ungrab_all(void)
-{
-}
-
-/**
  * Flash a specific rectangular area within the window for a given duration.
  *
  * @param sw Pointer to the PceWindow object.
@@ -211,7 +192,19 @@ ws_ungrab_all(void)
  */
 void
 ws_flash_area_window(PceWindow sw, int x, int y, int w, int h, int msecs)
-{
+{ FrameObj fr = getFrameWindow(sw, OFF);
+  WsFrame wfr = fr ? fr->ws_ref : NULL;
+  if ( !wfr || !wfr->ws_window )
+    return;
+  ASSERT_SDL_MAIN();
+  float scale = SDL_GetWindowPixelDensity(wfr->ws_window);
+  float ox = 0.0f, oy = 0.0f;
+  ws_window_frame_position(sw, fr, &ox, &oy);
+  wfr->flash_rect   = (SDL_FRect){ (ox+x)*scale, (oy+y)*scale,
+				    w*scale,       h*scale };
+  wfr->flash_end_ms = SDL_GetTicks() + msecs;
+  SDL_AddTimer(msecs, flash_end_callback, fr);
+  ws_draw_frame(fr);
 }
 
 /**
@@ -219,17 +212,12 @@ ws_flash_area_window(PceWindow sw, int x, int y, int w, int h, int msecs)
  *
  * @param sw Pointer to the PceWindow object.
  * @param msecs The duration to flash the window, in milliseconds.
- * @todo  This flashes the entire frame as in SDL only the frame is
- * an SDL window.
  */
 void
 ws_flash_window(PceWindow sw, int msecs)
-{ FrameObj fr = getFrameWindow(sw, OFF);
-  WsFrame wfr = fr->ws_ref;
-  if ( wfr->ws_window )
-  { ASSERT_SDL_MAIN();
-    SDL_FlashWindow(wfr->ws_window, SDL_FLASH_BRIEFLY);
-  }
+{ ws_flash_area_window(sw,
+		       0, 0, valInt(sw->area->w), valInt(sw->area->h),
+		       msecs);
 }
 
 /**

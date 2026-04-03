@@ -40,14 +40,18 @@ typedef struct
 { SDL_Window   *ws_window;	/* The SDL3 Window handle */
   SDL_Renderer *ws_renderer;	/* The Window's renderer */
   SDL_WindowID  ws_id;		/* Integer identifier for the event */
+  Uint64	 flash_end_ms;	/* SDL_GetTicks() deadline; 0 = not flashing */
+  SDL_FRect	 flash_rect;	/* overlay area (renderer coords); zero = full frame */
 #ifdef __WINDOWS__
   HWND		hwnd;		/* Windows handle */
 #endif
 } ws_frame, *WsFrame;
 
-/* Functions shared with DSL backend */
+/* Functions shared with SDL backend */
 FrameObj wsid_to_frame(SDL_WindowID id);
 WsFrame sdl_frame(FrameObj fr, bool create);
+bool ws_draw_frame(FrameObj fr);
+Uint32 SDLCALL flash_end_callback(void *userdata, SDL_TimerID id, Uint32 interval);
 bool sdl_frame_event(SDL_Event *ev);
 void ws_redraw_changed_frames(void);
 bool ws_window_frame_position(Any window, FrameObj fr, float *ox, float *oy);

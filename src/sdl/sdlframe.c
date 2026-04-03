@@ -39,13 +39,14 @@
 #include "sdlwindow.h"
 #include "sdlcolour.h"
 #include "sdlevent.h"
+#include "sdluserevent.h"
 #include "sdlcursor.h"
 #include <math.h>
 
 #define MainWindow(fr)	     ( isNil(fr->members->head) ? (Any) fr : \
 			       fr->members->head->value )
 
-static bool	ws_draw_frame(FrameObj fr);
+bool		ws_draw_frame(FrameObj fr);
 
 
 WsFrame
@@ -492,6 +493,20 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
     SDL_UpdateTexture(wsw->texture, NULL, data, stride);
     SDL_RenderTexture(wfr->ws_renderer, wsw->texture, NULL, &dstrect);
     SDL_DestroySurface(sdl_surf);
+    if ( wfr->flash_end_ms && SDL_GetTicks() < wfr->flash_end_ms )
+    { int lum = (int)(0.299f*bg.r + 0.587f*bg.g + 0.114f*bg.b);
+      Uint8 v = lum > 128 ? 0 : 255;		/* dark on light, light on dark */
+      SDL_SetRenderDrawBlendMode(wfr->ws_renderer, SDL_BLENDMODE_BLEND);
+      SDL_SetRenderDrawColor(wfr->ws_renderer, v, v, v, 128);
+      if ( wfr->flash_rect.w > 0.0f )
+      { SDL_FRect isect;
+	if ( SDL_GetRectIntersectionFloat(&dstrect, &wfr->flash_rect, &isect) )
+	  SDL_RenderFillRect(wfr->ws_renderer, &isect);
+      } else
+      { SDL_RenderFillRect(wfr->ws_renderer, &dstrect);
+      }
+      SDL_SetRenderDrawBlendMode(wfr->ws_renderer, SDL_BLENDMODE_NONE);
+    }
 
     if ( instanceOfObject(sw, ClassWindowDecorator) )
     { foffset off2;
@@ -523,7 +538,7 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
   }
 }
 
-static bool
+bool
 ws_draw_frame(FrameObj fr)
 { if ( !ws_created_frame(fr) )
     false;
@@ -550,6 +565,17 @@ ws_draw_frame(FrameObj fr)
   return true;
 }
 
+
+Uint32 SDLCALL
+flash_end_callback(void *userdata, SDL_TimerID id, Uint32 interval)
+{ FrameObj fr = userdata;
+  SDL_Event ev;
+  SDL_zero(ev);
+  ev.type       = MY_EVENT_FLASH_END;
+  ev.user.data1 = fr;
+  SDL_PushEvent(&ev);
+  return 0;				/* one-shot */
+}
 
 void
 ws_redraw_changed_frames(void)

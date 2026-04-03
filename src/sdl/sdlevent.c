@@ -329,6 +329,19 @@ CtoEvent(SDL_Event *event)
     fail;
   if ( sdl_stream_event(event) ) /* I/O stream event */
     fail;
+  if ( event->type == MY_EVENT_FLASH_END )
+  { FrameObj fr = event->user.data1;
+    if ( !onFlag(fr, F_FREED|F_FREEING) && instanceOfObject(fr, ClassFrame) )
+    { WsFrame wfr = fr->ws_ref;
+      if ( wfr )
+      { wfr->flash_end_ms = 0;
+	pceMTLock();
+	ws_draw_frame(fr);
+	pceMTUnlock();
+      }
+    }
+    fail;
+  }
   mouse_flags = SDL_GetMouseState(&fx, &fy);
 
   switch (event->type)
