@@ -765,5 +765,6 @@ ClassDecl(popup_decls,
 
 status
 makeClassPopup(Class class)
-{ return declareClass(class, &popup_decls);
+{ realiseClass(ClassImage);
+  return declareClass(class, &popup_decls);
 }
