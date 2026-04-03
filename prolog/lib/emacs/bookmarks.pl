@@ -34,7 +34,9 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(emacs_bookmarks, []).
+:- module(emacs_bookmarks,
+          [ find_references_editor/2             % +Title, -Editor
+          ]).
 :- use_module(library(pce)).
 :- use_module(library(toolbar)).
 :- use_module(library(pce_toc)).
@@ -71,16 +73,21 @@ Some issues to consider:
 :- pce_global(@emacs_mark_list,
               new(emacs_bookmark_editor("PceEmacs bookmarks", @on))).
 
-resource(save, image, image('16x16/save.png')).
-resource(cut,  image, image('16x16/cut.png')).
-resource(open, image, image('16x16/book2.png')).
+:- dynamic references_editor/1 as volatile.
+
+resource(save,   image, image('16x16/save.png')).
+resource(cut,    image, image('16x16/cut.png')).
+resource(open,   image, image('16x16/book2.png')).
+resource(pin,    image, image('pin.png')).
+resource(pinned, image, image('pinned.png')).
 
 :- pce_begin_class(emacs_bookmark_editor, persistent_frame,
                    "PceEmacs bookmark administration and viewing").
 
-variable(persists,     bool,  get, "Bookmarks are persistent").
-variable(file,         file*, get, "File for holding the bookmarks").
-variable(exit_message, code*, get, "Registered exit message").
+variable(persists,     bool,         get, "Bookmarks are persistent").
+variable(file,         file*,        get, "File for holding the bookmarks").
+variable(exit_message, code*,        get, "Registered exit message").
+variable(pinned,       bool := @off, get, "Pin: do not reuse for the next query").
 
 initialise(BM,
            Title:title=[string],
@@ -92,6 +99,10 @@ initialise(BM,
     send(BM, persistent_subwindow_layout, @off),
     send(BM, application, @emacs),
     send(BM, slot, persists, ThePersist),
+    (   ThePersist == @off
+    ->  assert(references_editor(BM))
+    ;   true
+    ),
     send(BM, done_message, message(BM, close)),
     send(BM, append, new(D, dialog)),
     send(BM, fill_dialog),
@@ -129,7 +140,8 @@ fill_dialog(BM) :->
     get(BM, member, dialog, D),
     send(D, pen, 0),
     send(D, gap, size(0, 5)),
-    send(D, append, new(TB, tool_bar(BM))),
+    send(BM, add_pin),
+    send(D, append, new(TB, tool_bar(BM)), right),
     (   get(BM, persists, @on)
     ->  send_list(TB, append,
                   [ tool_button(save, resource(save), 'Save bookmarks'),
@@ -145,7 +157,23 @@ fill_dialog(BM) :->
     send(D, append, new(reporter), right),
     send(D, resize_message, message(D, layout, @arg2)).
 
+add_pin(BM) :->
+    (   get(BM, persists, @off)
+    ->  get(BM, member, dialog, D),
+        send(D, append, new(Pin, bitmap(image(resource(pin)))), right),
+        send(Pin, name, pin),
+        get(@pce, convert, normal, font, Font),
+        get(Font, ascent, RefH),
+        send(Pin, reference, point(0, RefH)),
+        send(Pin, recogniser,
+             click_gesture(left, '', single, message(BM, toggle_pinned))),
+        send(Pin, help_message, tag,
+             'Pin: keep this view and open next result in a new window')
+    ;   true
+    ).
+
 unlink(BM) :->
+    retractall(references_editor(BM)),
     get(BM, exit_message, Msg),
     (   Msg == @nil
     ->  true
@@ -154,6 +182,29 @@ unlink(BM) :->
         send(BM, save)
     ),
     send_super(BM, unlink).
+
+toggle_pinned(BM) :->
+    "Toggle the pinned state"::
+    get(BM, pinned, P0),
+    get(P0, negate, P1),
+    send(BM, pinned, P1).
+
+pinned(BM, Pinned:bool) :->
+    "Set pinned state and update pin button icon"::
+    send(BM, slot, pinned, Pinned),
+    get(BM, member, dialog, D),
+    get(D, member, pin, Btn),
+    (   Pinned == @off
+    ->  send(Btn, image, image(resource(pin)))
+    ;   send(Btn, image, image(resource(pinned)))
+    ).
+
+clear(BM) :->
+    "Remove all bookmarks from the tree"::
+    get(BM, member, emacs_bookmark_window, BW),
+    send(BW, clear),
+    initial_directory(CWD),
+    send(BW, root, emacs_toc_bookmark_folder(CWD, directory)).
 
 tree(BM, Tree:toc_tree) :<-
     get(BM, member, emacs_bookmark_window, W),
@@ -406,6 +457,21 @@ bookmarks_file(BM, Access:[{read,write}], File:name) :<-
     ).
 
 :- pce_end_class(emacs_bookmark_editor).
+
+%!  find_references_editor(+Title, -BM) is det.
+%
+%   True when BM is an emacs_bookmark_editor ready to display references
+%   with the given Title. Reuses an   existing unpinned editor (clearing
+%   it first); creates a fresh one when none exists or all are pinned.
+
+find_references_editor(Title, BM) :-
+    references_editor(BM),
+    get(BM, pinned, @off),
+    !,
+    send(BM, clear),
+    send(BM, label, string('References to %s', Title)).
+find_references_editor(Title, BM) :-
+    new(BM, emacs_bookmark_editor(string('References to %s', Title), @off)).
 
 :- pce_begin_class(emacs_bookmark_window, toc_window).
 

@@ -64,6 +64,7 @@
           close_block_comment           = key('/'),
           find_tag                      = key('\\e.') + button(browse),
           xref_go_back		= key('\\e,'),
+          find_references               = key('\\e?') + button(browse),
           camelcase_word                = key('\\C-c\\C-c'),
           underscores_word              = key('\\C-c\\C--')
         ],
@@ -773,6 +774,10 @@ find_tag(M, Tag:emacs_tag, Where:[{here,tab,window}], Editor:editor) :<-
 find_tag(M, Tag:emacs_tag) :->
     "Jump to entry from TAG table"::
     ignore(get(M, find_tag, Tag, tab, _)). % avoid delegation to menu-bar
+
+find_references(M, _For:any) :->
+    "Find references (default: not supported in this mode)"::
+    send(M, report, warning, "No reference finder available for this mode").
 
 
 adjust_tag(E, Tag) :-

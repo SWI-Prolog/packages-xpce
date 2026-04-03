@@ -319,7 +319,7 @@ initialise(TC) :->
     send(TC, level_gap, LevelGap).
 
 root(TC, Root:toc_node, Relink:[bool]) :->
-    "Assign the root"::
+    "Assign the root.  @nil clears the tree"::
     send_super(TC, root, Root, Relink),
     send(TC?nodes, append, Root?identifier, Root).
 
