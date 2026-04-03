@@ -334,7 +334,7 @@ ws_resolution_display(DisplayObj d, int *rx, int *ry)
  */
 void
 ws_activate_screen_saver(DisplayObj d)
-{
+{ SDL_EnableScreenSaver();
 }
 
 /**
@@ -344,7 +344,7 @@ ws_activate_screen_saver(DisplayObj d)
  */
 void
 ws_deactivate_screen_saver(DisplayObj d)
-{
+{ SDL_DisableScreenSaver();
 }
 
 /**
