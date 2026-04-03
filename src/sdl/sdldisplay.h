@@ -63,7 +63,5 @@ void ws_close_display(DisplayObj d);
 status ws_events_queued_display(DisplayObj d);
 status ws_selection_display(DisplayObj d, Name which, StringObj data);
 Any ws_get_selection(DisplayObj d, Name which, Name target);
-Name ws_window_manager(DisplayObj d);
-Image ws_grab_image_display(DisplayObj d, int x, int y, int width, int height);
 
 #endif /* RAYDISPLAY_H */

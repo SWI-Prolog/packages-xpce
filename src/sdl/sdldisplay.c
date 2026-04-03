@@ -348,16 +348,6 @@ ws_deactivate_screen_saver(DisplayObj d)
 }
 
 /**
- * Initialize the display, preparing it for graphical operations.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- */
-void
-ws_init_display(DisplayObj d)
-{
-}
-
-/**
  * Open the display, establishing a connection for graphical operations.
  *
  * @param d Pointer to the DisplayObj representing the display context.
@@ -476,44 +466,6 @@ ws_get_selection(DisplayObj d, Name which, Name target)
   Cprintf("ws_get_selection(%s, %s, %s): not supported\n",
 	  pp(d), pp(which), pp(target));
   fail;
-}
-
-/**
- * Retrieve the name of the window manager in use.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @return A Name object identifying the current window manager.
- */
-Name
-ws_window_manager(DisplayObj d)
-{
-    return NULL;
-}
-
-/**
- * Revert to asynchronous mode for display requests (default behavior).
- *
- * @param d Pointer to the DisplayObj representing the display context.
- */
-void
-ws_asynchronous(DisplayObj d)
-{
-}
-
-/**
- * Capture a region of the screen as an Image object.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @param x The x-coordinate of the region's top-left corner.
- * @param y The y-coordinate of the region's top-left corner.
- * @param width The width of the region to capture.
- * @param height The height of the region to capture.
- * @return An Image object containing the screen capture; NULL on failure.
- */
-Image
-ws_grab_image_display(DisplayObj d, int x, int y, int width, int height)
-{
-    return NULL;
 }
 
 Name
