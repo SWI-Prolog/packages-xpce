@@ -680,9 +680,11 @@ static const error_def errors[] =
     "%O: cannot change layout-interface"
   },
 
-  { NAME_threadsInitialised,		0,
+  { NAME_threadsInitialised,	0,
     "%N: Cannot change threading after initialisation" },
 
+  { NAME_SDL_Error,		0,
+    "%O: SDL Error: %N" },
 					/* List closer */
   { NULL,			0,
     NULL }

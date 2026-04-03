@@ -213,7 +213,7 @@ hasAlphaImage(Image image)
 Store/load images to/form file. Format:
 
 <image>	::= <pce-slots>
-	    'X' <image> | 'O'
+	    'P' <image> | 'O'
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static status
@@ -246,7 +246,8 @@ loadFdImage(Image image, IOSTREAM *fd, ClassDef def)
   { case 'O':				/* no image */
       break;
     case 'X':
-      return loadXImage(image, fd);
+      Cprintf("%s: old X image format no longer supported\n", pp(image));
+      fail;
     case 'P':
       return loadPNMImage(image, fd);
   }

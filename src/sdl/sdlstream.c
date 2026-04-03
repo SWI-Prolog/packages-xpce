@@ -287,3 +287,96 @@ void
 ws_done_process(Process p)
 {
 }
+
+		 /*******************************
+		 *	  SDL_IOStream WRAPPER	*
+		 *******************************/
+
+typedef struct
+{ IOSTREAM *fd;
+} SDLIOStreamData;
+
+static Sint64 SDLCALL
+iostream_size(void *userdata)
+{ SDLIOStreamData *d = userdata;
+  return Ssize(d->fd);
+}
+
+static Sint64 SDLCALL
+iostream_seek(void *userdata, Sint64 offset, SDL_IOWhence whence)
+{ SDLIOStreamData *d = userdata;
+  if ( Sseek64(d->fd, offset, (int)whence) == 0 )
+    return Stell64(d->fd);
+  return -1;
+}
+
+static size_t SDLCALL
+iostream_read(void *userdata, void *ptr, size_t size, SDL_IOStatus *status)
+{ SDLIOStreamData *d = userdata;
+  size_t n = Sfread(ptr, 1, size, d->fd);
+  if ( n < size )
+  { if ( Sfeof(d->fd) )
+      *status = SDL_IO_STATUS_EOF;
+    else
+      *status = SDL_IO_STATUS_ERROR;
+  }
+  return n;
+}
+
+static size_t SDLCALL
+iostream_write(void *userdata, const void *ptr, size_t size, SDL_IOStatus *status)
+{ SDLIOStreamData *d = userdata;
+  size_t n = Sfwrite(ptr, 1, size, d->fd);
+  if ( n < size )
+    *status = SDL_IO_STATUS_ERROR;
+  return n;
+}
+
+static bool SDLCALL
+iostream_flush(void *userdata, SDL_IOStatus *status)
+{ SDLIOStreamData *d = userdata;
+  if ( Sflush(d->fd) == 0 )
+    return true;
+  *status = SDL_IO_STATUS_ERROR;
+  return false;
+}
+
+static bool SDLCALL
+iostream_close(void *userdata)
+{ free(userdata);
+  return true;
+}
+
+/**
+ * Wrap an XPCE/SWI-Prolog IOSTREAM as an SDL_IOStream.
+ *
+ * The returned SDL_IOStream delegates all I/O to `fd`.  The caller
+ * retains ownership of `fd`; the underlying stream is NOT closed when
+ * SDL_CloseIO() is called on the returned object.  The stream is put
+ * into binary (ENC_OCTET) mode before wrapping.
+ *
+ * @param fd The IOSTREAM to wrap.
+ * @return A new SDL_IOStream, or NULL on allocation failure.
+ */
+SDL_IOStream *
+IOSTREAM_to_SDL_IOStream(IOSTREAM *fd)
+{ SDLIOStreamData *d = malloc(sizeof(*d));
+  if ( !d )
+    return NULL;
+  d->fd = fd;
+  fd->encoding = ENC_OCTET;
+
+  SDL_IOStreamInterface iface;
+  SDL_INIT_INTERFACE(&iface);
+  iface.size  = iostream_size;
+  iface.seek  = iostream_seek;
+  iface.read  = iostream_read;
+  iface.write = iostream_write;
+  iface.flush = iostream_flush;
+  iface.close = iostream_close;
+
+  SDL_IOStream *io = SDL_OpenIO(&iface, d);
+  if ( !io )
+    free(d);
+  return io;
+}

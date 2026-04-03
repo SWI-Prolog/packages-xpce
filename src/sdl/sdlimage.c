@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        jan@swi-prolog.org
     WWW:           https://www.swi-prolog.org
-    Copyright (c)  2025, SWI-Prolog Solutions b.v.
+    Copyright (c)  2025-2026, SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -37,7 +37,10 @@
 #include <h/unix.h>
 #include "sdlimage.h"
 #include "sdlcolour.h"
+#include "sdlstream.h"
 #include <SDL3_image/SDL_image.h>
+
+static status sdl_surface_to_image(Image image, SDL_Surface *surf0);
 
 cairo_surface_t *
 pceImage2CairoSurface(Image image)
@@ -63,7 +66,8 @@ ws_destroy_image(Image image)
 }
 
 /**
- * Add image to a file for creating a saved object.
+ * Add image to a file for creating a saved object.  Note this is _not_
+ * for saving images to a file.  ws_save_image_file() does that.
  *
  * @param image Pointer to the Image object.
  * @param file File object representing the target file.  This file
@@ -72,27 +76,26 @@ ws_destroy_image(Image image)
 status
 ws_store_image(Image image, FileObj file)
 { SDL_Surface *surf = pceImage2SDL_Surface(image);
+  status rc = FAIL;
 
   if ( surf )
-  { bool rc = false; // = IMG_SavePNG(surf, nameToFN(file->name));
+  { SDL_IOStream *io = IOSTREAM_to_SDL_IOStream(file->fd);
+
+    if ( io )
+    { Sputc('P', file->fd);
+      rc = IMG_SavePNG_IO(surf, io, true);
+      if ( !rc )
+	errorPce(image, NAME_SDL_Error, CtoString(SDL_GetError()));
+    } else
+    { Sputc('O', file->fd);
+    }
+
     SDL_DestroySurface(surf);
-    return rc;
+  } else
+  { Sputc('O', file->fd);
   }
 
-  fail;
-}
-
-/**
- * Load an image in XImage format.
- *
- * @param image Pointer to the Image object.
- * @param fd IOSTREAM to read from.
- * @return SUCCEED if loading succeeds; otherwise, FAIL.
- */
-status
-loadXImage(Image image, IOSTREAM *fd)
-{
-    return SUCCEED;
+  return rc;
 }
 
 /**
@@ -104,8 +107,19 @@ loadXImage(Image image, IOSTREAM *fd)
  */
 status
 loadPNMImage(Image image, IOSTREAM *fd)
-{
-    return SUCCEED;
+{ assert(image->ws_ref == NULL);
+
+  SDL_IOStream *io = IOSTREAM_to_SDL_IOStream(fd);
+  if ( !io )
+    fail;
+
+  SDL_Surface *surf0 = IMG_Load_IO(io, true);  /* closes io */
+  if ( !surf0 )
+  { Cprintf("loadPNMImage(%s): %s\n", pp(image), SDL_GetError());
+    fail;
+  }
+
+  return sdl_surface_to_image(image, surf0);
 }
 
 static void
@@ -176,6 +190,48 @@ my_cairo_check_surface(Any ctx, cairo_surface_t *s)
 }
 
 /**
+ * Convert an SDL_Surface to a cairo-backed Image, consuming surf0.
+ *
+ * Converts to ARGB8888, premultiplies alpha, wraps in a cairo surface,
+ * copies to a cairo-owned buffer, then sets image->kind, size, ws_ref.
+ */
+static status
+sdl_surface_to_image(Image image, SDL_Surface *surf0)
+{ SDL_Surface *surf1 = SDL_ConvertSurface(surf0, SDL_PIXELFORMAT_ARGB8888);
+  SDL_DestroySurface(surf0);
+  if ( !surf1 )
+  { Cprintf("Failed to convert %s: %s\n", pp(image), SDL_GetError());
+    fail;
+  }
+
+  bool isbitmap = false;
+  premultiply_alpha(surf1, &isbitmap);
+  cairo_surface_t *surf = cairo_image_surface_create_for_data(
+    (unsigned char *)surf1->pixels,
+    CAIRO_FORMAT_ARGB32,
+    surf1->w,
+    surf1->h,
+    surf1->pitch);
+  if ( !my_cairo_check_surface(image, surf) )
+  { SDL_DestroySurface(surf1);
+    fail;
+  }
+  cairo_surface_t *final = my_cairo_copy_surface(surf);
+  cairo_surface_destroy(surf);
+  SDL_DestroySurface(surf1);
+  if ( !my_cairo_check_surface(image, final) )
+    fail;
+
+  if ( isbitmap )
+    DEBUG(NAME_bitmap, Cprintf("%s: bitmap\n", pp(image)));
+  assign(image, kind, isbitmap ? NAME_bitmap : NAME_pixmap);
+  assign(image->size, w, toInt(cairo_image_surface_get_width(final)));
+  assign(image->size, h, toInt(cairo_image_surface_get_height(final)));
+  image->ws_ref = final;
+  succeed;
+}
+
+/**
  * Load an image from its associated file path.
  *
  * @param image Pointer to the Image object.
@@ -221,35 +277,7 @@ ws_load_image_file(Image image)
     }
   }
 
-  SDL_Surface *surf1 = SDL_ConvertSurface(surf0,
-					  SDL_PIXELFORMAT_ARGB8888);
-  SDL_DestroySurface(surf0);
-  if ( !surf1 )
-  { Cprintf("Failed to convert %s: %s\n", pp(image), SDL_GetError());
-    fail;
-  }
-  bool isbitmap = false;
-  premultiply_alpha(surf1, &isbitmap);
-  cairo_surface_t *surf = cairo_image_surface_create_for_data(
-    (unsigned char *)surf1->pixels,
-    CAIRO_FORMAT_ARGB32,
-    surf1->w,
-    surf1->h,
-    surf1->pitch);
-  if ( !my_cairo_check_surface(image, surf) )
-    fail;
-  cairo_surface_t *final = my_cairo_copy_surface(surf);
-  cairo_surface_destroy(surf);
-  if ( !my_cairo_check_surface(image, final) )
-    fail;
-
-  if ( isbitmap )
-    DEBUG(NAME_bitmap, Cprintf("%s: bitmap\n", pp(image)));
-  assign(image, kind, isbitmap ? NAME_bitmap : NAME_pixmap);
-  assign(image->size, w, toInt(surf1->w));
-  assign(image->size, h, toInt(surf1->h));
-  image->ws_ref = final;
-  succeed;
+  return sdl_surface_to_image(image, surf0);
 }
 
 /**

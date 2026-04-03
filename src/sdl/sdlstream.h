@@ -39,6 +39,9 @@
 /* Private interface */
 bool sdl_stream_event(SDL_Event *event);
 
+/* SDL_IOStream wrapper for IOSTREAM */
+SDL_IOStream *IOSTREAM_to_SDL_IOStream(IOSTREAM *fd);
+
 /* Public interface */
 void ws_close_input_stream(Stream s);
 void ws_close_output_stream(Stream s);
