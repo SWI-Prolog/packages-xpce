@@ -239,45 +239,26 @@ sdl_surface_to_image(Image image, SDL_Surface *surf0)
  */
 status
 ws_load_image_file(Image image)
-{ assert(image->ws_ref == NULL);
-  SDL_Surface *surf0 = NULL;
+{ IOSTREAM *fd;
+
+  assert(image->ws_ref == NULL);
 
   if ( instanceOfObject(image->file, ClassFile) )
   { FileObj f = (FileObj)image->file;
     char *fname = charArrayToFN((CharArray)getOsNameFile(f));
-    surf0 = IMG_Load(fname);
+    SDL_Surface *surf0 = IMG_Load(fname);
     if ( !surf0 )
     { Cprintf("Failed to load %s: %s\n", fname, SDL_GetError());
       fail;
     }
+    return sdl_surface_to_image(image, surf0);
+  } else if ( (fd = Sopen_object(image->file, "rbr")) )
+  { status rc = loadPNMImage(image, fd);
+    Sclose(fd);
+    return rc;
   } else
-  { IOSTREAM *fd;
-    if ( !(fd = Sopen_object(image->file, "rbr")) )
-      fail;
-    int64_t size = Ssize(fd);
-    if ( size != -1 )
-    { char *data = malloc(size);
-      if ( data )
-      { fd->encoding = ENC_OCTET;
-	Sfread(data, 1, size, fd);
-	Sclose(fd);
-	SDL_IOStream *io = SDL_IOFromConstMem(data, size);
-	surf0 = IMG_Load_IO(io, true);
-	if ( !surf0 )
-	{ Cprintf("Failed to load image from %s: %s\n",
-		  pp(image->file), SDL_GetError());
-	  fail;
-	}
-      } else
-      { assert(0);
-      }
-    } else
-    { Cprintf("Cannot load images from %s yet\n", pp(image->file));
-      fail;
-    }
+  { fail;
   }
-
-  return sdl_surface_to_image(image, surf0);
 }
 
 /**
