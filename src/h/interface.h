@@ -43,11 +43,11 @@
 		********************************/
 
 #ifndef PCE_VERSION
-#define PCE_VERSION "7.0.0, June 2025"
+#define PCE_VERSION "7.1.0"
 #endif
 
-#ifndef OS_VERSION
-#define OS_VERSION "unknown"
+#ifndef PCE_OS
+#define PCE_OS "unknown"
 #endif
 
 #ifndef PCE_MACHINE

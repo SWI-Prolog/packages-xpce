@@ -36,7 +36,7 @@ include(XPCESources)
 
 set(PCE_MACHINE ${SWIPL_ARCH})
 set(PCE_OS ${CMAKE_HOST_SYSTEM_NAME})
-set(PCE_VERSION 7.0.0)
+set(PCE_VERSION 7.1.0)
 
 configure_file(config.h.cmake config.h)
 
