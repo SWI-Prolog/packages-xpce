@@ -126,7 +126,7 @@ screenSaverDisplay(DisplayObj d, BoolObj val)
 status
 bellDisplay(DisplayObj d, Int vol)
 { if ( isDefault(vol) )
-    vol = (Int) getClassVariableValueObject(d, NAME_volume);
+    vol = getClassVariableValueObject(d, NAME_volume);
 
   ws_bell_display(d, valInt(vol));
 
@@ -644,7 +644,7 @@ static senddecl send_display[] =
      NAME_event, "Register handler for inspect tool"),
   SM(NAME_ConfirmPressed, 1, "event", ConfirmPressedDisplay,
      NAME_internal, "Handle confirmer events"),
-  SM(NAME_bell, 1, "volume=[int]", bellDisplay,
+  SM(NAME_bell, 1, "volume=[0..100]", bellDisplay,
      NAME_report, "Ring the bell at volume"),
   SM(NAME_confirm, 4, T_inform, confirmDisplay,
      NAME_report, "Test if the user confirms string"),
@@ -709,7 +709,7 @@ static classvardecl rc_display[] =
      "Label font for confirm/inform"),
   RC(NAME_valueFont, "font", "normal",
      "Text font for confirm/inform"),
-  RC(NAME_volume, "int", "0",
+  RC(NAME_volume, "0..100", "0",
      "Default volume of ->bell"),
   RC(NAME_windowManager, "[name]", "@default",
      "Window manager running on this display")

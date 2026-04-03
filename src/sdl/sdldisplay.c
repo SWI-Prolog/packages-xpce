@@ -36,6 +36,7 @@
 #include <h/graphics.h>
 #include "sdldisplay.h"
 #include "sdluserevent.h"
+#include <math.h>
 
 static void	ws_open_display(DisplayObj d, SDL_DisplayID id);
 
@@ -224,15 +225,79 @@ sdl_display_event(SDL_Event *ev)
   fail;
 }
 
+		 /*******************************
+		 *	       BELL		*
+		 *******************************/
+
+#define BELL_FREQ    440	/* Hz */
+#define BELL_MS      200	/* duration in milliseconds */
+#define BELL_RATE    44100	/* sample rate */
+#define BELL_POLL_MS 50		/* cleanup poll interval */
+
+typedef struct
+{ SDL_AudioStream *stream;
+} BellData;
+
+static Uint32 SDLCALL
+bell_cleanup(void *userdata, SDL_TimerID id, Uint32 interval)
+{ BellData *bd = userdata;
+
+  if ( SDL_GetAudioStreamAvailable(bd->stream) > 0 )
+    return interval;		/* still playing, check again */
+
+  SDL_DestroyAudioStream(bd->stream);	/* also closes the device */
+  free(bd);
+  return 0;			/* cancel timer */
+}
+
 /**
  * Sound the system bell with the specified volume.
  *
  * @param d Pointer to the DisplayObj representing the display context.
- * @param volume The volume level for the bell sound.
+ * @param volume The volume level for the bell sound (0-100).
  */
 void
 ws_bell_display(DisplayObj d, int volume)
-{
+{ if ( !SDL_WasInit(SDL_INIT_AUDIO) &&
+       !SDL_InitSubSystem(SDL_INIT_AUDIO) )
+  { Cprintf("ws_bell_display: audio init: %s\n", SDL_GetError());
+    return;
+  }
+
+  SDL_AudioSpec spec = { SDL_AUDIO_S16, 1, BELL_RATE };
+  SDL_AudioStream *stream =
+    SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
+			      &spec, NULL, NULL);
+  if ( !stream )
+  { Cprintf("ws_bell_display: %s\n", SDL_GetError());
+    return;
+  }
+
+  int nsamples = BELL_RATE * BELL_MS / 1000;
+  Sint16 *buf = malloc(nsamples * sizeof(Sint16));
+  if ( !buf )
+  { SDL_DestroyAudioStream(stream);
+    return;
+  }
+
+  double amplitude = (volume / 100.0) * 32767.0;
+  for ( int i = 0; i < nsamples; i++ )
+    buf[i] = (Sint16)(amplitude * sin(2.0 * M_PI * BELL_FREQ * i / BELL_RATE));
+
+  SDL_PutAudioStreamData(stream, buf, nsamples * (int)sizeof(Sint16));
+  free(buf);
+  SDL_ResumeAudioStreamDevice(stream);
+
+  BellData *bd = malloc(sizeof(*bd));
+  if ( !bd )
+  { SDL_DestroyAudioStream(stream);
+    return;
+  }
+  bd->stream = stream;
+  if ( !SDL_AddTimer(BELL_POLL_MS, bell_cleanup, bd) )
+  { SDL_DestroyAudioStream(stream);
+    free(bd);
+  }
 }
 
 /**
