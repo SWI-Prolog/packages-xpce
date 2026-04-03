@@ -91,7 +91,6 @@ COMMON(status)	makeClassView(Class class);
 COMMON(status)	initialiseWindow(PceWindow sw, Name label, Size size, DisplayObj display);
 COMMON(status)	createdWindow(PceWindow sw);
 COMMON(status)	grabPointerWindow(PceWindow sw, BoolObj val);
-COMMON(status)	grabKeyboardWindow(PceWindow sw, BoolObj val);
 COMMON(status)	unlinkWindow(PceWindow sw);
 COMMON(PceWindow) userWindow(PceWindow sw);
 COMMON(status)	updatePositionWindow(PceWindow sw);

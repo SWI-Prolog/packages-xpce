@@ -139,14 +139,6 @@ grabPointerWindow(PceWindow sw, BoolObj val)
 }
 
 
-status
-grabKeyboardWindow(PceWindow sw, BoolObj val)
-{ ws_grab_keyboard_window(sw, val);
-
-  succeed;
-}
-
-
 		/********************************
 		*          DESTRUCTION		*
 		********************************/
@@ -2246,8 +2238,6 @@ static senddecl send_window[] =
      NAME_delegate, "Handle frame methods when no frame is present"),
   SM(NAME_postEvent, 1, "event", postEventWindow,
      NAME_event, "Handle event"),
-  SM(NAME_grabKeyboard, 1, "bool", grabKeyboardWindow,
-     NAME_event, "Grab keyboard events"),
   SM(NAME_grabPointer, 1, "bool", grabPointerWindow,
      NAME_event, "Grab pointer (mouse) events"),
   SM(NAME_focus, 4, T_focus, focusWindow,

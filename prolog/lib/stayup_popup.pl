@@ -55,8 +55,7 @@ unfocus :-
     get(@event, window, W),
     format('Releasing ~p~n', [W]),
     send(W, focus, @nil),
-    send(W, grab_pointer, @off),
-    send(W, grab_keyboard, @off).
+    send(W, grab_pointer, @off).
 
 :- initialization(install_unfocus_hook).
 
