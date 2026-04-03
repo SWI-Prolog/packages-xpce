@@ -36,9 +36,6 @@
 #include <h/graphics.h>
 					/* generated from Makefile */
 
-static status	backgroundDisplay(DisplayObj, Colour);
-static status	foregroundDisplay(DisplayObj d, Colour c);
-
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Create a display.  The display is not yet opened.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -100,33 +97,6 @@ static status
 pollDimensionsDisplay(DisplayObj d)
 { return ws_poll_dimensions_display(d);
 }
-
-/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Open a display.  If necessary, the X toolkit is initialised first and
-a context for the application is created.
-
-As PCE  normally manages a  collection of main  windows an application
-shell  widget is created to  serve as root for  all  the other (popup)
-shells.  This widget is never realised (page 35 of Xt manual).
-- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-
-static status
-foregroundDisplay(DisplayObj d, Colour c)
-{ assign(d, foreground, c);
-  ws_foreground_display(d, c);
-
-  succeed;
-}
-
-
-static status
-backgroundDisplay(DisplayObj d, Colour c)
-{ assign(d, background, c);
-  ws_background_display(d, c);
-
-  succeed;
-}
-
 
 static status
 eventQueuedDisplay(DisplayObj d)
@@ -641,9 +611,9 @@ static vardecl var_display[] =
      NAME_organisation, "Frames displayed on this display"),
   IV(NAME_inspectHandlers, "chain", IV_GET,
      NAME_event, "Chain of handlers to support inspector tools"),
-  SV(NAME_foreground, "colour", IV_GET|IV_STORE, foregroundDisplay,
+  IV(NAME_foreground, "colour", IV_BOTH,
      NAME_appearance, "Windows default foreground colour"),
-  SV(NAME_background, "colour", IV_GET|IV_STORE, backgroundDisplay,
+  IV(NAME_background, "colour", IV_BOTH,
      NAME_appearance, "Windows default background colour"),
   IV(NAME_displayManager, "display_manager", IV_GET,
      NAME_organisation, "The global display manager (@display_manager)"),

@@ -60,15 +60,10 @@ bool ws_resolution_display(DisplayObj d, int *rx, int *ry);
 void ws_activate_screen_saver(DisplayObj d);
 void ws_deactivate_screen_saver(DisplayObj d);
 void ws_close_display(DisplayObj d);
-void ws_foreground_display(DisplayObj d, Colour c);
-void ws_background_display(DisplayObj d, Colour c);
 status ws_events_queued_display(DisplayObj d);
 status ws_selection_display(DisplayObj d, Name which, StringObj data);
 Any ws_get_selection(DisplayObj d, Name which, Name target);
-status ws_own_selection(DisplayObj d, Name selection, Name type);
 Name ws_window_manager(DisplayObj d);
-void ws_synchronous(DisplayObj d);
-void ws_asynchronous(DisplayObj d);
 Image ws_grab_image_display(DisplayObj d, int x, int y, int width, int height);
 
 #endif /* RAYDISPLAY_H */

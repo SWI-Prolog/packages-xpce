@@ -356,28 +356,6 @@ ws_pixel_density_display(Any obj)
 
 
 /**
- * Set the foreground color for the display.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @param c Pointer to the Colour object representing the foreground color.
- */
-void
-ws_foreground_display(DisplayObj d, Colour c)
-{
-}
-
-/**
- * Set the background color for the display.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @param c Pointer to the Colour object representing the background color.
- */
-void
-ws_background_display(DisplayObj d, Colour c)
-{
-}
-
-/**
  * Check if there are events queued on the display.
  *
  * @param d Pointer to the DisplayObj representing the display context.
@@ -436,31 +414,6 @@ ws_get_selection(DisplayObj d, Name which, Name target)
 }
 
 /**
- * Disown a previously owned X selection.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @param selection The selection type to disown (e.g., PRIMARY, CLIPBOARD).
- */
-void
-ws_disown_selection(DisplayObj d, Name selection)
-{
-}
-
-/**
- * Claim ownership of an X selection.
- *
- * @param d Pointer to the DisplayObj representing the display context.
- * @param selection The selection to claim ownership of.
- * @param type The type of content provided for this selection.
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-ws_own_selection(DisplayObj d, Name selection, Name type)
-{
-    return SUCCEED;
-}
-
-/**
  * Retrieve the name of the window manager in use.
  *
  * @param d Pointer to the DisplayObj representing the display context.
@@ -470,16 +423,6 @@ Name
 ws_window_manager(DisplayObj d)
 {
     return NULL;
-}
-
-/**
- * Enable synchronous mode for display requests (useful for debugging).
- *
- * @param d Pointer to the DisplayObj representing the display context.
- */
-void
-ws_synchronous(DisplayObj d)
-{
 }
 
 /**
