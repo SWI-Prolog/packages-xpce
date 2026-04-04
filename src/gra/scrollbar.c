@@ -36,10 +36,6 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 
-#ifdef __WINDOWS__			/* timer broken in Win95 */
-#define SCROLLTIMER_USE_SLEEP 1
-#endif
-
 #define swap(x, y)	{ int z; z=x; x=y; y=z; }
 #define swapInt(x, y)	{ Int z; z=x; x=y; y=z; }
 #define BOUNDS(n, l, h) ((n) > (h) ? (h) : (n) < (l) ? (l) : (n))
@@ -551,16 +547,10 @@ repeatScrollBar(ScrollBar s)
       assign(s, status, NAME_repeat);
 
       if ( ct > 5 )
-      {
-#ifdef SCROLLTIMER_USE_SLEEP
-	msleep(ct);
-	goto again;
-#else
-        Timer tmr = scrollBarRepeatTimer();
+      { Timer tmr = scrollBarRepeatTimer();
 
 	intervalTimer(tmr, CtoReal((float)ct / 1000.0));
 	statusTimer(tmr, NAME_once);
-#endif
       } else
 	goto again;
     }

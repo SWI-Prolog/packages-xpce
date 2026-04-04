@@ -142,12 +142,6 @@ ws_os(void)
 }
 
 
-void
-ws_msleep(int time)
-{ Sleep((DWORD) time);
-}
-
-
 int
 ws_getpid(void)
 { DEBUG(NAME_instance, Cprintf("HINSTANCE is %d\n", PceHInstance));
