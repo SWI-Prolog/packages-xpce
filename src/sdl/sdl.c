@@ -45,7 +45,7 @@
  */
 void
 ws_initialise(int argc, char **argv)
-{
+{ realiseClass(ClassImage);
 }
 
 static int sdl_main_thread = 0;
