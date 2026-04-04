@@ -39,6 +39,7 @@
 :- use_module(library(persistent_frame)).
 :- use_module(library(tabbed_window)).
 :- use_module(library(tabular)).
+:- use_module(library(edit)).       % get prolog_edit:predicate_location/2
 
 :- autoload(library(edit), [edit/1]).
 :- autoload(library(epilog), [run_in_help_epilog/1]).
