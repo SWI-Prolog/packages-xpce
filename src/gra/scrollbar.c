@@ -526,7 +526,7 @@ repeatScrollBar(ScrollBar s)
   }
 
   if ( Repeating(s) )
-  { unsigned long clk = mclock();
+  { int64_t clk = mclock();
 
     if ( s->unit == NAME_page )
     { if ( s->direction == NAME_backwards )

@@ -430,8 +430,8 @@ waitStream(Stream s)
 
 static StringObj
 getReadLineStream(Stream s, Real timeout)
-{ unsigned long epoch, tmo, left;
-  int use_timeout;
+{ int64_t epoch, tmo, left;
+  bool use_timeout;
 
   if ( instanceOfObject(timeout, ClassReal) )
   { double v = valReal(timeout);
@@ -441,9 +441,9 @@ getReadLineStream(Stream s, Real timeout)
 
     epoch = mclock();
     tmo = (unsigned long)(v * 1000.0);
-    use_timeout = TRUE;
+    use_timeout = true;
   } else
-  { use_timeout = FALSE;
+  { use_timeout = false;
     epoch = tmo = 0L;		/* keep compiler happy */
   }
 
@@ -472,7 +472,7 @@ getReadLineStream(Stream s, Real timeout)
     }
 
     if ( use_timeout )
-    { unsigned long now = mclock();
+    { int64_t now = mclock();
 
       if ( now - epoch > tmo )
 	answer((StringObj)NIL);

@@ -843,7 +843,7 @@ NewClass(eventobj)
   Int		x;			/* X coordinate relative to window */
   Int		y;			/* Y coordinate relative to window */
   Point		position;		/* Computed Position */
-  unsigned long time;			/* Time of event in milliseconds */
+  uintptr_t	time;			/* Time of event in milliseconds */
 End;
 
 
