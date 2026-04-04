@@ -50,13 +50,7 @@
 #ifdef __WINDOWS__
 #include <msw/mswin.h>
 #undef PCE_MACHINE
-#ifdef WIN64
 #define PCE_MACHINE "x86_64"
-#else
-#define PCE_MACHINE "i386"
-#endif
-#undef OS
-#define OS ws_os()
 #endif
 
 #if (defined(__sun__) && !STDC_HEADERS)
