@@ -117,7 +117,6 @@ displayError(Error e, int argc, Any *argv)
       { Cprintf("Use `?- send(error(%s), feedback, backtrace).` "
 		"to force a backtrace\n", pp(e->id));
       }
-      send(PCE, NAME_exposeConsole, EAV);
       Cputchar('\007');			/* ^G: ASCII bell */
       debuggingPce(PCE, ON);
     }

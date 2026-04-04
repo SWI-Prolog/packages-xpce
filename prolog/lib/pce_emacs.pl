@@ -94,8 +94,7 @@ register_emacs :-
 
 emacs_server :-
     start_emacs,
-    send(@pce, trap_errors, @off),
-    send(@pce, console_label, 'PceEmacs Server').
+    send(@pce, trap_errors, @off).
 
 %!  emacs is det.
 %
