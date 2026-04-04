@@ -758,17 +758,10 @@ _emu_gethostname(char *buf, int len)
 
 static Name
 getUserPce(Pce pce)
-{ char *s;
+{ Name user;
 
-  if ( (s = ws_user()) )
-    answer(CtoName(s));
-#if HAVE_PWD_H
-  { struct passwd *pwd;
-
-    if ( (pwd = getpwuid(getuid())) )
-      answer(CtoName(pwd->pw_name));
-  }
-#endif
+  if ( (user = ws_user()) )
+    answer(user);
 
   answer(NAME_unknown);
 }

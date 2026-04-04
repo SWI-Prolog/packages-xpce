@@ -58,7 +58,7 @@ int ws_version(void);
 int ws_revision(void);
 const char *ws_driver(void);
 Int ws_default_scrollbar_width(void);
-char *ws_user(void);
+Name ws_user(void);
 status ws_open_url(PceString url);
 
 #endif /* SDL_H */

@@ -36,6 +36,9 @@
 #include <h/graphics.h>
 #include "sdl.h"
 #include "sdlinput.h"
+#ifndef __WINDOWS__
+#include <pwd.h>
+#endif
 
 /**
  * Initialize the Raylib backend with the given command-line arguments.
@@ -146,12 +149,25 @@ ws_default_scrollbar_width(void)
 /**
  * Retrieve the current username.
  *
- * @return A pointer to a string containing the username.
+ * @return A Name object containing the username, or NULL on failure.
  */
-char *
+Name
 ws_user(void)
 {
-    return "user";
+#ifdef __WINDOWS__
+  wchar_t buf[256];
+  DWORD len = sizeof(buf)/sizeof(wchar_t);
+  if ( GetUserNameW(buf, &len) )
+    return WCToName(buf, len-1);
+  const char *s = getenv("USERNAME");
+  return s ? CtoName(s) : NULL;
+#else
+  struct passwd *pw = getpwuid(getuid());
+  if ( pw )
+    return MBToName(pw->pw_name);
+  const char *s = getenv("USER");
+  return s ? MBToName(s) : NULL;
+#endif
 }
 
 status
