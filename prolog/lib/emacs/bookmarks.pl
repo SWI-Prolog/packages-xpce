@@ -469,7 +469,8 @@ find_references_editor(Title, BM) :-
     get(BM, pinned, @off),
     !,
     send(BM, clear),
-    send(BM, label, string('References to %s', Title)).
+    send(BM, label, string('References to %s', Title)),
+    send(BM, expose).
 find_references_editor(Title, BM) :-
     new(BM, emacs_bookmark_editor(string('References to %s', Title), @off)).
 
