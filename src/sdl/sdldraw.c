@@ -222,14 +222,6 @@ d_ensure_display(void)
 }
 
 /**
- * Flush all pending drawing operations to the display.
- */
-void
-d_flush(void)
-{
-}
-
-/**
  * Start  drawing in  a window.   The x,y,w,h  describe the  region to
  * paint in  window client  coordinates.  The drawing  code translates
  * this  to  window coordinates  using  Translate(x,y),  based on  the
@@ -414,7 +406,20 @@ d_clip_done(void)
  */
 void
 intersection_iarea(IArea a, IArea b)
-{
+{ int x, y, w, h;
+
+  x = (a->x > b->x ? a->x : b->x);
+  y = (a->y > b->y ? a->y : b->y);
+  w = (a->x + a->w < b->x + b->w ? a->x + a->w : b->x + b->w) - x;
+  h = (a->y + a->h < b->y + b->h ? a->y + a->h : b->y + b->h) - y;
+
+  if ( w < 0 ) w = 0;
+  if ( h < 0 ) h = 0;
+
+  a->x = x;
+  a->y = y;
+  a->w = w;
+  a->h = h;
 }
 
 		 /*******************************

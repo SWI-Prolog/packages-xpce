@@ -46,7 +46,6 @@ void r_filloffset(Point offset, int x0, int y0, fill_state *state);
 void r_fillrestore(fill_state *state);
 DisplayObj d_display(DisplayObj d);
 void d_ensure_display(void);
-void d_flush(void);
 status d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit);
 status d_image(Image i, int x, int y, int w, int h);
 status d_pdf(const char *file, int w, int h, double scale);
