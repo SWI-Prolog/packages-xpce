@@ -57,8 +57,6 @@ void ws_initialise(int argc, char **argv);
 int ws_version(void);
 int ws_revision(void);
 const char *ws_driver(void);
-status ws_show_console(Name how);
-status ws_console_label(CharArray label);
 Int ws_default_scrollbar_width(void);
 char *ws_user(void);
 status ws_open_url(PceString url);

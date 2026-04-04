@@ -132,30 +132,6 @@ ws_driver(void)
 }
 
 /**
- * Show or hide the XPCE console window.
- *
- * @param how Name indicating how to show the console (e.g., open, iconify).
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-ws_show_console(Name how)
-{
-    return SUCCEED;
-}
-
-/**
- * Set the label of the console window.
- *
- * @param label The CharArray containing the new label.
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-ws_console_label(CharArray label)
-{
-    return SUCCEED;
-}
-
-/**
  * Get the default width of scrollbars.
  *
  * @return The default scrollbar width as an Int.
