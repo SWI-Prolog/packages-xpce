@@ -40,6 +40,9 @@
 #include "mswin.h"
 #include <h/interface.h>
 #include <tchar.h>
+#undef End
+#include <shlobj.h>
+#define End }
 
 #ifdef UNICODE
 #define nameToTCHAR(nm) nameToWC((Name)(nm), NULL)
@@ -157,7 +160,7 @@ ws_os(void)
 
 
 HWND
-HostConsoleHWND()
+HostConsoleHWND(void)
 { PceCValue val;
 
   if ( hostQuery(HOST_CONSOLE, &val) )
@@ -167,44 +170,8 @@ HostConsoleHWND()
 }
 
 
-#if NOSTUB
-status
-ws_show_console(Name how)
-{ HWND hwnd = HostConsoleHWND();
-
-  if ( hwnd )
-  { if ( how == NAME_open )
-    { if ( IsIconic(hwnd) )
-	ShowWindow(hwnd, SW_RESTORE);
-      else
-	ShowWindow(hwnd, SW_SHOW);
-    } else if ( how == NAME_iconic )
-      ShowWindow(hwnd, SW_SHOWMINIMIZED);
-    else if ( how == NAME_hidden )
-      ShowWindow(hwnd, SW_HIDE);
-    else if ( how == NAME_fullScreen )
-      ShowWindow(hwnd, SW_MAXIMIZE);
-
-    succeed;
-  }
-
-  fail;
-}
-
-
-status
-ws_console_label(CharArray label)
-{ HWND hwnd = HostConsoleHWND();
-
-  if ( hwnd )
-    SetWindowText(hwnd, nameToTCHAR((Name)label));
-
-  succeed;
-}
-#endif
-
 void
-ws_check_intr()
+ws_check_intr(void)
 { hostAction(HOST_CHECK_INTERRUPT);
 }
 
@@ -216,33 +183,11 @@ ws_msleep(int time)
 
 
 int
-ws_getpid()
+ws_getpid(void)
 { DEBUG(NAME_instance, Cprintf("HINSTANCE is %d\n", PceHInstance));
 
   return (int) GetCurrentProcessId();
 }
-
-#if NOSTUB
-char *
-ws_user()
-{ TCHAR buf[256];
-  Name nm;
-  DWORD len = sizeof(buf)/sizeof(TCHAR);
-
-  if ( GetUserName(buf, &len) )
-    return nameToFN(TCHARToName(buf));
-  else if ( (nm = getEnvironmentVariablePce(PCE, CtoName("USER"))) )
-    return nameToFN(nm);
-  else
-    return NULL;
-}
-#endif
-
-
-#undef End
-#include <shlobj.h>
-#define End \
-  }
 
 
 Name
