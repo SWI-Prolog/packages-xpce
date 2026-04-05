@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi.psy.uva.nl/projects/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -45,7 +46,6 @@ static status	widthSlider(Slider s, Int val);
 
 #define SLIDER_HEIGHT 20
 #define VALUE_GAP 20
-#define BAR_WIDTH 5
 
 #define OL_BAR_HEIGHT 5
 #define OL_BOX_WIDTH 10
@@ -96,7 +96,7 @@ RedrawAreaSlider(Slider s, Area a)
 { int x, y, w, h;
   int ny, vx, vy, lx, ly, sx, sy, hx, hy;
   int vv;
-  int bw = (s->look == NAME_x ? BAR_WIDTH : OL_BOX_WIDTH);
+  int bw   = OL_BOX_WIDTH;
   float lv = convert_value(s->low);
   float hv = convert_value(s->high);
   float dv = convert_value(s->displayed_value);

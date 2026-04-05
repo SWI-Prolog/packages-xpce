@@ -512,7 +512,7 @@ NewClass(scrollbar)
   Int		length;			/* Total length of object */
   Int		bubble_start;		/* Start of bubble in pixels */
   Int		bubble_length;		/* Length of bubble in pixels */
-  Name		look;			/* NAME_mac or NAME_sun or NAME_x */
+  Name		look;			/* Look and feel */
   BoolObj	drag;			/* Issue dragging updates? */
   Int		amount;			/* Amount to scroll */
   Name		direction;		/* Direction in which to scroll */
