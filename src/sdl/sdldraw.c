@@ -1133,26 +1133,26 @@ r_3d_line(int x1, int y1, int x2, int y2, Elevation e, int up)
  * @param map Bitmap of up/down edges
  */
 static inline void
-step_to(int *x1, int *y1, int tx, int ty)
+step_to(double *x1, double *y1, double tx, double ty)
 { if ( tx > *x1 )
-    (*x1)++;
+    (*x1) += 1.0;
   else if ( tx < *x1 )
-    (*x1)--;
+    (*x1) -= 1.0;
 
   if ( ty > *y1 )
-    (*y1)++;
+    (*y1) += 1.0;
   else if ( ty < *y1 )
-    (*y1)--;
+    (*y1) -= 1.0;
 }
 
 void
-r_3d_triangle(int x1, int y1, int x2, int y2, int x3, int y3,
-	      Elevation e, int up, int map)
+r_3d_triangle(double x1, double y1, double x2, double y2, double x3, double y3,
+	      Elevation e, bool up, unsigned int map)
 { int shadow = valInt(e->height);
   Colour up_color, down_color;
 
   DEBUG(NAME_draw,
-	Cprintf("r_3d_triangle(%d,%d, %d,%d, %d,%d %s, %d)\n",
+	Cprintf("r_3d_triangle(%1f,%1f, %1f,%1f, %1f,%1f %s, %d)\n",
 		x1,y1, x2,y2, x3,y3, pp(e), up));
 
   if ( !up  )
@@ -1165,8 +1165,8 @@ r_3d_triangle(int x1, int y1, int x2, int y2, int x3, int y3,
     up_color   = r_elevation_relief(e);
   }
 
-  int cx = (x1 + x2 + x3)/3;
-  int cy = (y1 + y2 + y3)/3;
+  double cx = (x1 + x2 + x3)/3.0;
+  double cy = (y1 + y2 + y3)/3.0;
 
   cairo_set_line_width(CR, 1);
   for(int os=0; os<shadow; os++)

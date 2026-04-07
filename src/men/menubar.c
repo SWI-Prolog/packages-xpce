@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi.psy.uva.nl/projects/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -49,6 +50,50 @@ initialiseMenuBar(MenuBar mb, Name name)
 
 
 static status
+RedrawAreaButtonMenuBar(Button b, Area a)
+{ int x, y, w, h;
+  Any ofg = NIL;
+  int flags = 0;
+
+  if ( b->look != NAME_gtk && b->look != NAME_win )
+    return RedrawAreaButton(b, a);
+
+  initialiseDeviceGraphical(b, &x, &y, &w, &h);
+  NormaliseArea(x, y, w, h);
+
+  if ( b->status == NAME_preview )
+  { Elevation e;
+
+    if ( b->look == NAME_gtk &&
+	 (e = getClassVariableValueObject(b, NAME_previewElevation)) &&
+	 notNil(e) )
+    { r_3d_box(x, y, w, h, 0, e, TRUE);
+    } else /* if ( b->look == NAME_win ) */
+    { Any fg = getClassVariableValueObject(b, NAME_selectedForeground);
+      Any bg = getClassVariableValueObject(b, NAME_selectedBackground);
+
+      if ( !fg ) fg = WHITE_COLOUR;
+      if ( !bg ) bg = BLACK_COLOUR;
+      r_fill(x, y, w, h, bg);
+      ofg = r_colour(fg);
+    }
+  }
+
+  if ( b->active == OFF )
+    flags |= LABEL_INACTIVE;
+
+  RedrawLabelDialogItem(b, accelerator_code(b->accelerator),
+			x, y, w, h,
+			NAME_center, NAME_center, flags);
+
+  if ( notNil(ofg) )
+    r_colour(ofg);
+
+  succeed;
+}
+
+
+static status
 RedrawAreaMenuBar(MenuBar mb, Area a)
 { Cell cell;
   Int x = mb->area->x;
@@ -65,7 +110,7 @@ RedrawAreaMenuBar(MenuBar mb, Area a)
       assign(b, active, ba ? ON : OFF);
       assign(b, status, b->popup == mb->current ? NAME_preview
 						: NAME_inactive);
-      RedrawAreaButton(b, a);
+      RedrawAreaButtonMenuBar(b, a);
       assign(b, device, NIL);
     }
     assign(b->area, x, sub(b->area->x, x));
@@ -112,6 +157,36 @@ changedMenuBarButton(MenuBar mb, Any obj)
 
 
 static status
+computeButtonMenuBar(Button b)
+{ if ( b->look == NAME_win || b->look == NAME_gtk )
+  { int w, h, isimage;
+
+    TRY(obtainClassVariablesObject(b));
+    dia_label_size(b, &w, &h, &isimage);
+
+    if ( !isimage )
+    { w += valInt(getAvgCharWidthFont(b->label_font)) * 2;
+
+      if ( b->look == NAME_gtk )
+	h += 4;
+    } else
+    { w += 4;
+      h += 4;
+    }
+
+    CHANGING_GRAPHICAL(b,
+	assign(b->area, w, toInt(w));
+	assign(b->area, h, toInt(h)));
+
+    assign(b, request_compute, NIL);
+    succeed;
+  } else
+    return qadSendv(b, NAME_compute, 0, NULL);
+}
+
+
+
+static status
 computeMenuBar(MenuBar mb)
 { Cell cell;
   int x = 0;
@@ -127,7 +202,8 @@ computeMenuBar(MenuBar mb)
   for_cell(cell, mb->buttons)
   { Button b = cell->value;
 
-    ComputeGraphical(b);
+    if ( notNil(b->request_compute) && !isFreeingObj(b) )
+      computeButtonMenuBar(b);
     assign(b->area, x, toInt(x));
 
     x += valInt(b->area->w) + gap;
@@ -147,10 +223,20 @@ computeMenuBar(MenuBar mb)
 static Point
 getReferenceMenuBar(MenuBar mb)
 { Button b = getHeadChain(mb->buttons);
-  Point ref;
 
-  if ( b && (ref = getReferenceButton(b)) )
-    answer(ref);
+  if ( b )
+  { Point ref;
+
+    if ( !(ref = getReferenceDialogItem(b)) &&
+	 !instanceOfObject(b->label, ClassImage) &&
+	 (ref = getReferenceButton(b)) )
+    { if ( b->look == NAME_win || b->look == NAME_gtk )
+      { Int rx = getAvgCharWidthFont(b->label_font);
+	assign(ref, x, rx);
+      }
+      answer(ref);
+    }
+  }
 
   return getReferenceDialogItem(mb);
 }
@@ -513,12 +599,7 @@ appendMenuBar(MenuBar mb, PopupObj p, Name alignment, Any before)
     assign(b, popup, p);
     obtainClassVariablesObject(mb);
     if ( mb->look != NAME_openLook )
-    { if ( mb->look == NAME_win )
-	assign(b, look, NAME_winMenuBar);
-      else if ( mb->look == NAME_gtk )
-	assign(b, look, NAME_gtkMenuBar);
-
-      assign(b, label_font, mb->label_font);
+    { assign(b, label_font, mb->label_font);
       assign(b, pen,        mb->pen);
       assign(b, radius,     mb->radius);
     }
@@ -642,6 +723,28 @@ currentMenuBar(MenuBar mb, PopupObj p)
   succeed;
 }
 
+static status
+lookMenuBar(MenuBar mb, Name look)
+{ if ( mb->look != look )
+  { Cell cell;
+
+    assign(mb, look, look);
+    for_cell(cell, mb->buttons)
+      send(cell->value, NAME_look, look, EAV);
+    for_cell(cell, mb->members)
+      send(cell->value, NAME_look, look, EAV);
+
+    requestComputeGraphical(mb, DEFAULT);
+    if ( mb->displayed == ON )
+    { CHANGING_GRAPHICAL(mb,
+			 ComputeGraphical(mb);
+			 changedEntireImageGraphical(mb));
+    }
+  }
+
+  succeed;
+}
+
 
 		 /*******************************
 		 *	   ACCELERATORS		*
@@ -741,7 +844,9 @@ static senddecl send_menuBar[] =
   SM(NAME_clear, 0, NULL, clearMenuBar,
      NAME_organisation, "Remove all menus from the menu_bar"),
   SM(NAME_delete, 1, "member:popup", deleteMenuBar,
-     NAME_organisation, "Delete popup or name")
+     NAME_organisation, "Delete popup or name"),
+  SM(NAME_look, 1, "{open_look,motif,win,gtk}", lookMenuBar,
+     NAME_appearance, "Look-and-feel switch")
 };
 
 /* Get Methods */

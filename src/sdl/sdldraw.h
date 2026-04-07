@@ -79,7 +79,10 @@ void r_3d_segments(int n, ISegment s, Elevation e, int light);
 void r_3d_box(double x, double y, double w, double h,
 	      double radius, Elevation e, bool up);
 void r_3d_line(int x1, int y1, int x2, int y2, Elevation e, int up);
-void r_3d_triangle(int x1, int y1, int x2, int y2, int x3, int y3, Elevation e, int up, int map);
+void r_3d_triangle(double x1, double y1,
+		   double x2, double y2,
+		   double x3, double y3,
+		   Elevation e, bool up, unsigned int map);
 void r_3d_diamond(int x, int y, int w, int h, Elevation e, int up);
 void r_arc(int x, int y, int w, int h, int s, int e, Name close, Any fill);
 void r_ellipse(int x, int y, int w, int h, Any fill);
