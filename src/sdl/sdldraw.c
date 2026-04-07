@@ -1133,16 +1133,16 @@ r_3d_line(int x1, int y1, int x2, int y2, Elevation e, int up)
  * @param map Bitmap of up/down edges
  */
 static inline void
-step_to(double *x1, double *y1, double tx, double ty)
+step_to(double *x1, double *y1, double tx, double ty, double step)
 { if ( tx > *x1 )
-    (*x1) += 1.0;
+    (*x1) += step;
   else if ( tx < *x1 )
-    (*x1) -= 1.0;
+    (*x1) -= step;
 
   if ( ty > *y1 )
-    (*y1) += 1.0;
+    (*y1) += step;
   else if ( ty < *y1 )
-    (*y1) -= 1.0;
+    (*y1) -= step;
 }
 
 void
@@ -1155,42 +1155,63 @@ r_3d_triangle(double x1, double y1, double x2, double y2, double x3, double y3,
 	Cprintf("r_3d_triangle(%1f,%1f, %1f,%1f, %1f,%1f %s, %d)\n",
 		x1,y1, x2,y2, x3,y3, pp(e), up));
 
-  if ( !up  )
-    shadow = -shadow;
-  if ( shadow > 0 )
+  if ( shadow < 0 )
+  { shadow = -shadow;
+    up = !up;
+  }
+  if ( up )
   { up_color   = r_elevation_relief(e);
     down_color = r_elevation_shadow(e);
   } else
-  { down_color = r_elevation_shadow(e);
-    up_color   = r_elevation_relief(e);
+  { up_color   = r_elevation_shadow(e);
+    down_color = r_elevation_relief(e);
   }
 
   double cx = (x1 + x2 + x3)/3.0;
   double cy = (y1 + y2 + y3)/3.0;
+  double ix1 = x1, iy1 = y1;
+  double ix2 = x2, iy2 = y2;
+  double ix3 = x3, iy3 = y3;
 
-  cairo_set_line_width(CR, 1);
-  for(int os=0; os<shadow; os++)
-  { if ( map == 0x3 )		/* line 1 and 3 up */
-    { pce_cairo_set_source_color(CR, up_color);
-      cairo_move_to(CR, X(x1), Y(y1));
-      cairo_line_to(CR, X(x2), Y(y2));
-      cairo_line_to(CR, X(x3), Y(y3));
-      cairo_stroke(CR);
-      pce_cairo_set_source_color(CR, down_color);
-      cairo_move_to(CR, X(x3), Y(y3));
-      cairo_line_to(CR, X(x1), Y(y1));
-      cairo_stroke(CR);
-    } else
-    { Cprintf("stub: r_3d_triangle(): map=0x%x\n", map);
-    }
+  if ( shadow > 0 )
+  { /* Compute inner triangle vertices by stepping each vertex toward centroid */
+    step_to(&ix1, &iy1, cx, cy, shadow);
+    step_to(&ix2, &iy2, cx, cy, shadow);
+    step_to(&ix3, &iy3, cx, cy, shadow);
 
-    step_to(&x1, &y1, cx, cy);
-    step_to(&x2, &y2, cx, cy);
-    step_to(&x3, &y3, cx, cy);
+    /* Draw each edge as a filled quadrilateral with the correct colour.
+     * Adjacent quads share the edge outer_Vn → inner_Vn so they connect
+     * without gaps regardless of which colour each edge has.
+     * map bit 0: edge (x1,y1)→(x2,y2); bit 1: (x2,y2)→(x3,y3);
+     * bit 2: (x3,y3)→(x1,y1).  Set bit = up_color, clear bit = down_color.
+     */
+    pce_cairo_set_source_color(CR, (map & 0x1) ? up_color : down_color);
+    cairo_move_to(CR, X(x1), Y(y1));
+    cairo_line_to(CR, X(x2), Y(y2));
+    cairo_line_to(CR, X(ix2), Y(iy2));
+    cairo_line_to(CR, X(ix1), Y(iy1));
+    cairo_close_path(CR);
+    cairo_fill(CR);
+
+    pce_cairo_set_source_color(CR, (map & 0x2) ? up_color : down_color);
+    cairo_move_to(CR, X(x2), Y(y2));
+    cairo_line_to(CR, X(x3), Y(y3));
+    cairo_line_to(CR, X(ix3), Y(iy3));
+    cairo_line_to(CR, X(ix2), Y(iy2));
+    cairo_close_path(CR);
+    cairo_fill(CR);
+
+    pce_cairo_set_source_color(CR, (map & 0x4) ? up_color : down_color);
+    cairo_move_to(CR, X(x3), Y(y3));
+    cairo_line_to(CR, X(x1), Y(y1));
+    cairo_line_to(CR, X(ix1), Y(iy1));
+    cairo_line_to(CR, X(ix3), Y(iy3));
+    cairo_close_path(CR);
+    cairo_fill(CR);
   }
 
   if ( r_elevation_fillpattern(e, up) )
-    r_fill_triangle(x1, y1, x2, y2, x3, y3);
+    r_fill_triangle(ix1, iy1, ix2, iy2, ix3, iy3);
 }
 
 /**
