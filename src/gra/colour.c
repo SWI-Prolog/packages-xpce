@@ -733,10 +733,11 @@ makeClassColour(Class class)
   assign(ColourTable,    refer, NAME_none);
   assign(RevColourTable, refer, NAME_none);
 
-  WHITE_COLOUR  = newObject(ClassColour, NAME_white,  EAV);
-  GREY25_COLOUR = newObject(ClassColour, NAME_grey25, EAV);
-  GREY50_COLOUR = newObject(ClassColour, NAME_grey50, EAV);
-  BLACK_COLOUR  = newObject(ClassColour, NAME_black,  EAV);
+  WHITE_COLOUR  = newObject(ClassColour, NAME_white,     EAV);
+  GREY25_COLOUR = newObject(ClassColour, NAME_grey25,    EAV);
+  GREY50_COLOUR = newObject(ClassColour, NAME_grey50,    EAV);
+  BLACK_COLOUR  = newObject(ClassColour, NAME_black,     EAV);
+  BLUE_COLOUR   = newObject(ClassColour, NAME_royalblue, EAV);
 
   succeed;
 }
