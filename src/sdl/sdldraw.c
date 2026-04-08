@@ -1089,8 +1089,8 @@ r_3d_box(double x, double y, double w, double h,
  * @param up Boolean indicating if the line appears raised.
  */
 void
-r_3d_line(int x1, int y1, int x2, int y2, Elevation e, int up)
-{ int z = valInt(e->height);
+r_3d_line(int x1, int y1, int x2, int y2, Elevation e, bool up)
+{ double z = valNum(e->height);
   Colour up_color, down_color;
 
   Translate(x1, y1);

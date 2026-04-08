@@ -77,25 +77,6 @@ ws_3d_grey(void)
   return c;
 }
 
-/**
- * Draw a button face with 3D effects and state indication.
- *
- * @param di Pointer to the DialogItem.
- * @param x The x-coordinate.
- * @param y The y-coordinate.
- * @param w The width.
- * @param h The height.
- * @param up Boolean indicating button state.
- * @param defb Boolean indicating default button.
- * @param focus Boolean indicating focus state.
- * @return SUCCEED on success; otherwise, FAIL.
- */
-status
-ws_draw_button_face(DialogItem di, int x, int y, int w, int h,
-		    int up, int defb, int focus)
-{ fail;
-}
-
 		 /*******************************
 		 *	      TEXTITEM		*
 		 *******************************/

@@ -35,6 +35,7 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <math.h>
 
 static status
 initialiseButton(Button b, Name name, Message msg, Name acc)
@@ -177,32 +178,33 @@ draw_generic_button_face(Button b,
 static int
 draw_button_popup_indicator(Button b, int x, int y, int w, int h, bool up)
 { int rm;				/* required right margin */
+  double ex = valNum(getExFont(b->label_font));
 
   if ( notNil(b->popup_image) )
   { int iw = valInt(b->popup_image->size->w);
     int ih = valInt(b->popup_image->size->h);
 
-    rm = iw+8;
+    rm = iw+ex;
     r_image(b->popup_image, 0, 0, x+w-rm, y + (h-ih)/2, iw, ih);
   } else
   { Elevation z = getClassVariableValueObject(b, NAME_elevation);
 
     if ( b->look == NAME_motif || b->look == NAME_gtk )
-    { double bw = 12.0;
-      double bh = 8.0;
+    { double bw = ex*1.2;
+      double bh = bw*0.6;
 
       rm = bw+8.0;
       r_3d_box(x+w-bw-8.0, y+(h-bh)/2.0, bw, bh, 0, z, true);
     } else
-    { double th = 8.0;
-      double tw = 9.0;
+    { double th = ex+4;
+      double tw = th;
       double tx, ty;
 
-      rm = tw+8.0;
+      rm = tw+ex;
       tx = x+w-rm;
-      ty = y + (h-th)/2.0;
+      ty = round(y + (h-th)/2.0);
 
-      r_3d_triangle(tx+tw/2, ty+th, tx, ty, tx+tw, ty, z, up, 0x3);
+      r_3d_triangle(tx, ty, tx+tw, ty, tx+tw/2, ty+th, z, up, 0x5);
       rm = tw;
     }
   }
@@ -240,10 +242,7 @@ RedrawAreaButton(Button b, Area a)
   } else
     kbf = obhf = focus = false;		/* should not happen */
 
-  if ( !ws_draw_button_face((DialogItem)b,
-			    x, y, w, h,
-			    up, defb, kbf && focus) )
-    draw_generic_button_face(b, x, y, w, h, up, defb, kbf && focus);
+  draw_generic_button_face(b, x, y, w, h, up, defb, kbf && focus);
 
   if ( b->look == NAME_openLook && b->status == NAME_preview &&
        !((z = getClassVariableValueObject(b, NAME_elevation)) && notNil(z)) )
@@ -277,17 +276,16 @@ computeButton(Button b)
     if ( isimage )
     { w += 4;
       h += 4;
-    } else
+    } else		/* sync with draw_button_popup_indicator() */
     { Size size = getClassVariableValueObject(b, NAME_size);
+      int ex = valInt(getExFont(b->label_font));
 
       h += 6; w += 10 + valInt(b->radius);
       if ( notNil(b->popup) )
       { if ( notNil(b->popup->popup_image) )
-	  w += valInt(b->popup->popup_image->size->w) + 5;
-	else if ( b->look == NAME_motif || b->look == NAME_openLook )
-	  w += 12 + 5;
+	  w += valInt(b->popup->popup_image->size->w) + ex;
 	else
-	  w += 9 + 5;
+	  w += 3*ex;
       }
       w = max(valInt(size->w), w);
       h = max(valInt(size->h), h);
@@ -656,8 +654,7 @@ static classvardecl rc_button[] =
      "elevation(preview, 1, hilited)",
      "Elevation of item in preview mode"),
   RC(NAME_elevation, RC_REFINE,
-     UXWIN("when(@colour_display, button, @nil)",
-	   "elevation(@nil, 2, @_dialog_bg)"),
+     UXWIN("button", "elevation(@nil, 2, @_dialog_bg)"),
      NULL)
 };
 

@@ -78,7 +78,7 @@ Any r_elevation_shadow(Elevation e);
 void r_3d_segments(int n, ISegment s, Elevation e, int light);
 void r_3d_box(double x, double y, double w, double h,
 	      double radius, Elevation e, bool up);
-void r_3d_line(int x1, int y1, int x2, int y2, Elevation e, int up);
+void r_3d_line(int x1, int y1, int x2, int y2, Elevation e, bool up);
 void r_3d_triangle(double x1, double y1,
 		   double x2, double y2,
 		   double x3, double y3,

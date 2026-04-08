@@ -38,7 +38,6 @@
 int ws_arrow_height_scrollbar(ScrollBar s);
 status ws_draw_sb_thumb(int x, int y, int w, int h);
 Colour ws_3d_grey(void);
-status ws_draw_button_face(DialogItem di, int x, int y, int w, int h, int up, int defb, int focus);
 int ws_combo_box_width(Graphical gr);
 int ws_stepper_width(Graphical gr);
 int ws_entry_field_margin(void);
