@@ -570,16 +570,6 @@ r_fillpattern(Any fill, Name which)
 }
 
 /**
- * Set the arc drawing mode (e.g., pie slice, chord).
- *
- * @param mode The name of the arc mode to set.
- */
-void
-r_arcmode(Name mode)
-{
-}
-
-/**
  * Fix the foreground and background colours.  This is used to draw
  * selected or (de-)activated objects with a particular colour.
  *
@@ -782,7 +772,10 @@ r_box(int x, int y, int w, int h, int r, Any fill)
   if ( notNil(fill) )
   { r_fillpattern(fill, NAME_background);
     pce_cairo_set_source_color(CR, context.fill_pattern);
-    cairo_fill_preserve(CR);
+    if ( context.pen )
+      cairo_fill_preserve(CR);
+    else
+      cairo_fill(CR);
   }
   if ( context.pen )
   { pce_cairo_set_source_color(CR, context.colour);
@@ -1273,24 +1266,28 @@ r_arc(int x, int y, int w, int h, int s, int e, Name close, Any fill)
   double fs = s * M_PI / 180.0;
   double fe = e * M_PI / 180.0;
 
+  cairo_new_path(CR);
   cairo_save(CR);
   cairo_translate(CR, fx + fw / 2.0, fy + fh / 2.0);  // Move to center
   cairo_scale(CR, fw / 2.0, fh / 2.0);              // Scale unit circle
-  if (close == NAME_pieSlice)
-  { cairo_move_to(CR, 0, 0);
-  }
+  if ( close == NAME_pieSlice )
+    cairo_move_to(CR, 0, 0);
   cairo_arc(CR, 0, 0, 1.0, fs, fe);
   cairo_restore(CR);
-  if (close == NAME_pieSlice || close == NAME_chord)
+  if ( close == NAME_pieSlice || close == NAME_chord )
   { cairo_close_path(CR);
   }
   if ( notNil(fill) )
   { r_fillpattern(fill, NAME_foreground);
     pce_cairo_set_source_color(CR, context.fill_pattern);
-    cairo_fill_preserve(CR);
+    if ( context.pen )
+      cairo_fill_preserve(CR);
+    else
+      cairo_fill(CR);
   }
   if ( context.pen )
-  { pce_cairo_set_source_color(CR, context.colour);
+  { cairo_set_line_width(CR, context.pen);
+    pce_cairo_set_source_color(CR, context.colour);
     cairo_stroke(CR);
   }
 }

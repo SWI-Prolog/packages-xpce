@@ -61,7 +61,6 @@ int r_transformed(int val);
 void r_dash(Name name);
 void d_pen(Pen pen);
 void r_fillpattern(Any fill, Name which);
-void r_arcmode(Name mode);
 void r_fix_colours(Any fg, Any bg, ColourContext ctx);
 void r_unfix_colours(ColourContext ctx);
 Any r_default_colour(Any c);
