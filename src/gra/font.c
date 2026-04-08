@@ -244,7 +244,7 @@ getExFont(FontObj f)
 
 Num
 getAvgCharWidthFont(FontObj f)
-{ if ( !isInteger(f->avg_char_width) )
+{ if ( !isNum(f->avg_char_width) )
   { const char *sample =
       "0123456789"
       "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
