@@ -1132,52 +1132,76 @@ r_3d_line(int x1, int y1, int x2, int y2, Elevation e, bool up)
  * @param up Boolean indicating if the triangle appears raised.
  * @param map Bitmap of up/down edges
  */
+/* Find the intersection point of two lines, each given as point + direction. */
 static inline void
-step_to(double *x1, double *y1, double tx, double ty, double step)
-{ if ( tx > *x1 )
-    (*x1) += step;
-  else if ( tx < *x1 )
-    (*x1) -= step;
+line_intersect(double px, double py, double pdx, double pdy,
+	       double qx, double qy, double qdx, double qdy,
+	       double *rx, double *ry)
+{ double denom = pdx*qdy - pdy*qdx;
 
-  if ( ty > *y1 )
-    (*y1) += step;
-  else if ( ty < *y1 )
-    (*y1) -= step;
+  if ( fabs(denom) > 1e-10 )
+  { double t = ((qx-px)*qdy - (qy-py)*qdx) / denom;
+    *rx = px + t*pdx;
+    *ry = py + t*pdy;
+  } else			/* parallel — fall back to midpoint */
+  { *rx = (px+qx)/2.0;
+    *ry = (py+qy)/2.0;
+  }
 }
 
 void
 r_3d_triangle(double x1, double y1, double x2, double y2, double x3, double y3,
 	      Elevation e, bool up, unsigned int map)
-{ int shadow = valInt(e->height);
-  Colour up_color, down_color;
+{ double shadow = valNum(e->height);
 
   DEBUG(NAME_draw,
 	Cprintf("r_3d_triangle(%1f,%1f, %1f,%1f, %1f,%1f %s, %d)\n",
 		x1,y1, x2,y2, x3,y3, pp(e), up));
 
-  if ( shadow < 0 )
+  if ( shadow < 0.0 )
   { shadow = -shadow;
     up = !up;
   }
-  if ( up )
-  { up_color   = r_elevation_relief(e);
-    down_color = r_elevation_shadow(e);
-  } else
-  { up_color   = r_elevation_shadow(e);
-    down_color = r_elevation_relief(e);
-  }
 
-  double cx = (x1 + x2 + x3)/3.0;
-  double cy = (y1 + y2 + y3)/3.0;
   double ix1 = x1, iy1 = y1;
   double ix2 = x2, iy2 = y2;
   double ix3 = x3, iy3 = y3;
 
-  if ( shadow > 0 )
-  { /* Compute inner triangle vertices by stepping each vertex toward centroid */
-    step_to(&ix1, &iy1, cx, cy, shadow);
-    step_to(&ix2, &iy2, cx, cy, shadow);
-    step_to(&ix3, &iy3, cx, cy, shadow);
+  if ( shadow > 0.1 )
+  { Colour up_color, down_color;
+
+    if ( up )
+    { up_color   = r_elevation_relief(e);
+      down_color = r_elevation_shadow(e);
+    } else
+    { up_color   = r_elevation_shadow(e);
+      down_color = r_elevation_relief(e);
+    }
+
+    /* Compute the inner (inset) triangle such that every edge is exactly
+     * shadow pixels wide (perpendicular distance).  For each edge compute
+     * its inward unit normal, offset the edge line by shadow along that
+     * normal, then intersect adjacent offset lines to get inner vertices.
+     */
+    // Edge directions
+    double d1x = x2-x1, d1y = y2-y1, l1 = sqrt(d1x*d1x + d1y*d1y);
+    double d2x = x3-x2, d2y = y3-y2, l2 = sqrt(d2x*d2x + d2y*d2y);
+    double d3x = x1-x3, d3y = y1-y3, l3 = sqrt(d3x*d3x + d3y*d3y);
+    // Inward unit normals (rotate edge 90°, then flip if pointing outward)
+    double cx = (x1+x2+x3)/3.0, cy = (y1+y2+y3)/3.0;
+    double n1x = -d1y/l1, n1y =  d1x/l1;
+    if ( (cx-(x1+x2)/2)*n1x + (cy-(y1+y2)/2)*n1y < 0 ) { n1x=-n1x; n1y=-n1y; }
+    double n2x = -d2y/l2, n2y =  d2x/l2;
+    if ( (cx-(x2+x3)/2)*n2x + (cy-(y2+y3)/2)*n2y < 0 ) { n2x=-n2x; n2y=-n2y; }
+    double n3x = -d3y/l3, n3y =  d3x/l3;
+    if ( (cx-(x3+x1)/2)*n3x + (cy-(y3+y1)/2)*n3y < 0 ) { n3x=-n3x; n3y=-n3y; }
+    // Inner vertices: intersect pairs of adjacent offset edge lines
+    line_intersect(x3+shadow*n3x, y3+shadow*n3y, d3x, d3y,
+		   x1+shadow*n1x, y1+shadow*n1y, d1x, d1y, &ix1, &iy1);
+    line_intersect(x1+shadow*n1x, y1+shadow*n1y, d1x, d1y,
+		   x2+shadow*n2x, y2+shadow*n2y, d2x, d2y, &ix2, &iy2);
+    line_intersect(x2+shadow*n2x, y2+shadow*n2y, d2x, d2y,
+		   x3+shadow*n3x, y3+shadow*n3y, d3x, d3y, &ix3, &iy3);
 
     /* Draw each edge as a filled quadrilateral with the correct colour.
      * Adjacent quads share the edge outer_Vn → inner_Vn so they connect
