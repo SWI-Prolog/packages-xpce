@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi.prolog.org/projects/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -51,23 +51,27 @@ RedrawAreaEllipse(EllipseObj e, Area a)
 
   initialiseDeviceGraphical(e, &x, &y, &w, &h);
   NormaliseArea(x, y, w, h);
-  r_thickness(valInt(e->pen));
   r_dash(e->texture);
 
   if ( e->shadow != ZERO )
   { int shadow = valInt(e->shadow);
-    Image fill = e->fill_pattern;
+    Any fill = e->fill_pattern;
+
+    if ( isNil(fill) )
+      fill = NAME_background;
 
     if ( shadow > w ) shadow = w;
     if ( shadow > h ) shadow = h;
 
-    r_colour(BLACK_COLOUR);
+    r_thickness(0.0);
     r_ellipse(x+shadow, y+shadow, w-shadow, h-shadow, BLACK_COLOUR);
+    r_thickness(valNum(e->pen));
     r_colour(DEFAULT);
     r_ellipse(x, y, w-shadow, h-shadow, fill);
-
   } else
+  { r_thickness(valNum(e->pen));
     r_ellipse(x, y, w, h, e->fill_pattern);
+  }
 
   return RedrawAreaGraphical(e, a);
 }
