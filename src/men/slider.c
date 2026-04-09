@@ -138,7 +138,7 @@ RedrawAreaSlider(Slider s, Area a)
     r_3d_box(x+sx, by, vv, OL_BAR_HEIGHT, 0, z, FALSE);
     r_3d_box(x+sx+vv+bw, by, ex-(x+sx+vv+bw), OL_BAR_HEIGHT, 0, z, FALSE);
     r_3d_box(x+sx+vv, y+sy, bw, SLIDER_HEIGHT, 0, z, TRUE);
-  } else
+  } else				/* Gtk based */
   { int by = y+sy+(SLIDER_HEIGHT-OL_BAR_HEIGHT)/2;
     int wx  = valInt(s->width)-vv-bw;
 
@@ -624,7 +624,7 @@ static getdecl get_slider[] =
 /* Resources */
 
 static classvardecl rc_slider[] =
-{ RC(NAME_look, RC_REFINE, "motif", NULL)
+{ RC(NAME_look, RC_REFINE, "gtk", NULL)
 };
 
 /* Class Declaration */
