@@ -539,7 +539,8 @@ ws_scale_image(Image image, int w, int h)
   cairo_paint(cr);
   cairo_destroy(cr);
 
-  Image scaled = answerObject(ClassImage, NIL, toInt(w), toInt(h), NAME_pixmap, EAV);
+  Image scaled = answerObject(ClassImage, NIL, toInt(w), toInt(h),
+			      NAME_pixmap, EAV);
   scaled->ws_ref = dst;
   answer(scaled);
 }
@@ -587,18 +588,6 @@ ws_rotate_image(Image image, float angle)
 			       NAME_pixmap, EAV);
   rotated->ws_ref = dst;
   answer(rotated);
-}
-
-/**
- * Create a monochrome version of the image.
- *
- * @param image Pointer to the source Image.
- * @return A new monochrome Image; NULL on failure.
- */
-Image
-ws_monochrome_image(Image image)
-{ Cprintf("STUB: ws_monochrome_image(%s)\n", pp(image));
-  return NULL;
 }
 
 /**

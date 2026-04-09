@@ -207,7 +207,6 @@ COMMON(status)	XcloseImage(Image image, DisplayObj d);
 COMMON(status)	loadImage(Image image, SourceSink file, CharArray path);
 COMMON(status)	hasAlphaImage(Image image);
 COMMON(status)	fillImage(Image image, Any pattern, Area area);
-COMMON(Image)	getMonochromeImage(Image image);
 COMMON(status)	makeClassImage(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/joint.c */

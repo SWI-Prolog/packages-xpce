@@ -712,15 +712,6 @@ getClipImage(Image image, Area area)
 }
 
 
-Image
-getMonochromeImage(Image image)
-{ if ( image->kind == NAME_bitmap )
-    answer(image);
-
-  answer(ws_monochrome_image(image));
-}
-
-
 static Image
 getGrayscaleImage(Image image)
 { answer(ws_grayscale_image(image));
@@ -966,8 +957,6 @@ static getdecl get_image[] =
      DEFAULT, "Convert bitmap or (file-)name"),
   GM(NAME_clip, 1, "image", "[area]", getClipImage,
      NAME_copy, "Get a subimage"),
-  GM(NAME_monochrome, 0, "image", NULL, getMonochromeImage,
-     NAME_copy, "Get monochrome version of pixmap image"),
   GM(NAME_grayscale, 0, "image", NULL, getGrayscaleImage,
      NAME_copy, "Get grayscale version of image"),
   GM(NAME_scale, 1, "image", "size", getScaleImage,
