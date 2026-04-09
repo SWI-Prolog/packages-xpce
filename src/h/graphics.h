@@ -39,7 +39,7 @@
 		 *        REUSABLE TYPES        *
 		 *******************************/
 
-#define TYPE_FILL "image|colour|{foreground,background}*"
+#define TYPE_FILL "colour|{foreground,background}*"
 
 		 /*******************************
 		 *     STRETCHABLE OBJECTS	*
