@@ -524,8 +524,23 @@ ws_close_image(Image image)
  */
 Image
 ws_scale_image(Image image, int w, int h)
-{ Cprintf("STUB: ws_scale_image(%s, %d, %d)\n", pp(image), w, h);
-  return NULL;
+{ if ( !image->ws_ref && !XopenImage(image, CurrentDisplay(NIL)) )
+    return NULL;
+
+  int src_w = cairo_image_surface_get_width(image->ws_ref);
+  int src_h = cairo_image_surface_get_height(image->ws_ref);
+
+  cairo_surface_t *dst = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+  cairo_t *cr = cairo_create(dst);
+  cairo_scale(cr, (double)w / src_w, (double)h / src_h);
+  cairo_set_source_surface(cr, image->ws_ref, 0, 0);
+  cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_BILINEAR);
+  cairo_paint(cr);
+  cairo_destroy(cr);
+
+  Image scaled = answerObject(ClassImage, NIL, toInt(w), toInt(h), NAME_pixmap, EAV);
+  scaled->ws_ref = dst;
+  answer(scaled);
 }
 
 /**
