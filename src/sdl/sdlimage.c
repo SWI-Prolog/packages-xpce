@@ -244,9 +244,33 @@ ws_load_image_file(Image image)
 
   assert(image->ws_ref == NULL);
 
+  int req_w = valInt(image->size->w);
+  int req_h = valInt(image->size->h);
+
   if ( instanceOfObject(image->file, ClassFile) )
   { FileObj f = (FileObj)image->file;
     char *fname = charArrayToFN((CharArray)getOsNameFile(f));
+    /* Detect SVG by extension and use the size-aware loader so that
+     * aspect ratio is preserved when only one dimension is specified.
+     * SDL auto-computes the missing dimension when it receives 0.
+     */
+    size_t len = strlen(fname);
+    bool is_svg = ( len > 4 &&
+		    strcasecmp(fname + len - 4, ".svg") == 0 );
+    if ( is_svg )
+    { SDL_IOStream *io = SDL_IOFromFile(fname, "rb");
+      if ( !io )
+      { Cprintf("Failed to open %s: %s\n", fname, SDL_GetError());
+	fail;
+      }
+      SDL_Surface *surf0 = IMG_LoadSizedSVG_IO(io, req_w, req_h);
+      SDL_CloseIO(io);
+      if ( !surf0 )
+      { Cprintf("Failed to load SVG %s: %s\n", fname, SDL_GetError());
+	fail;
+      }
+      return sdl_surface_to_image(image, surf0);
+    }
     SDL_Surface *surf0 = IMG_Load(fname);
     if ( !surf0 )
     { Cprintf("Failed to load %s: %s\n", fname, SDL_GetError());
@@ -254,7 +278,22 @@ ws_load_image_file(Image image)
     }
     return sdl_surface_to_image(image, surf0);
   } else if ( (fd = Sopen_object(image->file, "rbr")) )
-  { status rc = loadPNMImage(image, fd);
+  { SDL_IOStream *io = IOSTREAM_to_SDL_IOStream(fd);
+    status rc;
+    if ( io && IMG_isSVG(io) )
+    { SDL_Surface *surf0 = IMG_LoadSizedSVG_IO(io, req_w, req_h);
+      SDL_CloseIO(io);
+      Sclose(fd);
+      if ( !surf0 )
+      { Cprintf("Failed to load SVG %s: %s\n", pp(image), SDL_GetError());
+	fail;
+      }
+      return sdl_surface_to_image(image, surf0);
+    }
+    if ( io )
+      SDL_CloseIO(io);
+    Sseek(fd, 0, SIO_SEEK_SET);
+    rc = loadPNMImage(image, fd);
     Sclose(fd);
     return rc;
   } else
@@ -644,5 +683,25 @@ ws_grayscale_image(Image image)
 
 status
 ws_has_alpha_image(Image image)
-{ succeed;			/* TODO: really verify */
+{ if ( !image->ws_ref && !XopenImage(image, CurrentDisplay(NIL)) )
+    fail;
+
+  cairo_surface_t *surf = image->ws_ref;
+  if ( cairo_image_surface_get_format(surf) != CAIRO_FORMAT_ARGB32 )
+    fail;
+
+  int w      = cairo_image_surface_get_width(surf);
+  int h      = cairo_image_surface_get_height(surf);
+  int stride = cairo_image_surface_get_stride(surf);
+  unsigned char *data = cairo_image_surface_get_data(surf);
+
+  for(int y = 0; y < h; y++)
+  { unsigned char *row = data + y * stride;
+    for(int x = 0; x < w; x++)
+    { if ( row[x*4 + 3] != 255 )
+	succeed;
+    }
+  }
+
+  fail;
 }

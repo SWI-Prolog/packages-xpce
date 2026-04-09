@@ -172,9 +172,8 @@ report_image(IB, Image:image*) :->
     ;   get(IB, image_name, Image, Name),
         get(Image, kind, Kind),
         get(Image, size, size(W, H)),
-        (   get(Image, mask, Mask),
-            Mask \== @nil
-        ->  Comment = ' (masked)'
+        (   send(Image, has_alpha)
+        ->  Comment = ' (with alpha)'
         ;   Comment = ''
         ),
         send(IB, report, status,
@@ -254,7 +253,7 @@ check_file(IB, File:file) :->
         ;   true
         )
     ->  (   pce_catch_error(bad_file, send(IB, append_file, File))
-        ->  send(IB, synchronise)
+        ->  true
         ;   send(IB, report, warning,
                  '%s is not an image file', BaseName)
         )
@@ -266,7 +265,11 @@ append_file(IB, File:file) :->
     "Actually display a file"::
     get(File, base_name, BaseName),
     ignore(send(IB, report, progress, 'Checking %s ...', BaseName)),
-    new(Img, image),
+    (   get(File, name, Name),
+        file_name_extension(_, svg, Name)
+    ->  new(Img, image(@nil, 0, 0, pixmap))
+    ;   new(Img, image)
+    ),
     send(Img, load, File),
     send(IB, append, Img).
 
