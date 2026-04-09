@@ -52,7 +52,6 @@ prolog_edit:(locate(ClassName, class(ClassName), Location) :-
 prolog_edit:locate(class(ClassName), Location) :-       % class(Name)
     atom(ClassName),
     get(@pce, convert, ClassName, class, Class),
-    \+ get(Class, creator, built_in),
     source(Class, Location).
 prolog_edit:locate(SourceLoc, [file(File)|Extra]) :-
     object(SourceLoc),
@@ -92,6 +91,7 @@ source(Object, [file(Path)|T]) :-
     get(Object, source, Loc),
     Loc \== @nil,
     get(Loc, file_name, FileName),
+    exists_file(FileName),
     absolute_file_name(FileName, Path),
     get(Loc, line_no, Line),
     (   integer(Line)
