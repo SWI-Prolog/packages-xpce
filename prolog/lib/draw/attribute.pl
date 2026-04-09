@@ -325,7 +325,6 @@ Create  a menu for  some prototype attribute.   Each menu_item   has a
 make_proto_menu(Menu, Proto, Attribute, Values) :-
     new(Menu, draw_proto_menu(Attribute)),
     (   (   Attribute == colour
-        ;   Attribute == fill_pattern
         ;   Attribute == transparent
         )
     ->  Kind = pixmap
@@ -565,5 +564,9 @@ initialise(Menu, Attribute:name) :->
     send(Menu, off_image, @nil),
     send(Menu, border, 2),
     send(Menu, layout, horizontal).
+
+value_width(_Menu, _Width:int) :->
+    "Ignore value alignment"::
+    true.
 
 :- pce_end_class.
