@@ -39,6 +39,7 @@
 #include "sdlcolour.h"
 #include "sdlstream.h"
 #include <SDL3_image/SDL_image.h>
+#include <math.h>
 
 static status sdl_surface_to_image(Image image, SDL_Surface *surf0);
 
@@ -552,8 +553,40 @@ ws_scale_image(Image image, int w, int h)
  */
 Image
 ws_rotate_image(Image image, float angle)
-{ Cprintf("STUB: ws_rotate_image(%s, %f)\n", pp(image), angle);
-  return NULL;
+{ if ( !image->ws_ref && !XopenImage(image, CurrentDisplay(NIL)) )
+    return NULL;
+
+  double rad = angle * M_PI / 180.0;
+  double cosA = fabs(cos(rad));
+  double sinA = fabs(sin(rad));
+  int src_w = cairo_image_surface_get_width(image->ws_ref);
+  int src_h = cairo_image_surface_get_height(image->ws_ref);
+  int dst_w = (int)ceil(src_w * cosA + src_h * sinA);
+  int dst_h = (int)ceil(src_w * sinA + src_h * cosA);
+
+  cairo_surface_t *dst =
+    cairo_image_surface_create(CAIRO_FORMAT_ARGB32, dst_w, dst_h);
+  cairo_t *cr = cairo_create(dst);
+
+  /* Transparent background */
+  cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
+  cairo_paint(cr);
+  cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+
+  /* Rotate around the centre of the destination, painting the source
+   * centred there.
+   */
+  cairo_translate(cr, dst_w / 2.0, dst_h / 2.0);
+  cairo_rotate(cr, rad);
+  cairo_set_source_surface(cr, image->ws_ref, -src_w / 2.0, -src_h / 2.0);
+  cairo_pattern_set_filter(cairo_get_source(cr), CAIRO_FILTER_BILINEAR);
+  cairo_paint(cr);
+  cairo_destroy(cr);
+
+  Image rotated = answerObject(ClassImage, NIL, toInt(dst_w), toInt(dst_h),
+			       NAME_pixmap, EAV);
+  rotated->ws_ref = dst;
+  answer(rotated);
 }
 
 /**
