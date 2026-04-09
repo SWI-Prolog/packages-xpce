@@ -129,6 +129,8 @@ compute(BG) :->
 
 variable(condition,     code*,       get, "Condition for activation").
 
+class_variable(size, [size], size(24,24), "Forced size of tool buttons").
+
 initialise(TB,
            Action:action='name|code',
            Label:label='name|image',
@@ -136,7 +138,7 @@ initialise(TB,
            Condition:condition=[code]*,
            Name:name=[name]) :->
     default(Condition, @nil, Cond),
-    make_label(Label, Lbl),
+    make_label(TB, Label, Lbl),
     make_name(Action, Name, ButtonName),
     make_message(Action, Msg),
     send(TB, send_super, initialise, ButtonName, Msg),
@@ -176,6 +178,14 @@ make_name(Code, Name) :-
 make_name(_, 'tool_button').
 
 
+make_label(TB, Label, Image) :-
+    make_label(Label, Image0),
+    (   get(TB, class_variable_value, size, Size),
+        Size \== @default
+    ->  get(Image0, scale, Size, Image)
+    ;   true
+    ).
+
 make_label(Image, Image) :-
     send(Image, instance_of, image),
     !.
@@ -185,12 +195,9 @@ make_label(Name, Image) :-
 make_label(Name, Image) :-
     new(T, text(Name, left, small)),
     get(T, size, size(W, H)),
-    new(I0, image(@nil, W, H)),
-    send(I0, draw_in, T),
-    get(I0, scale, size(16,16), Image),
-    free(T),
-    free(I0).
-
+    new(TI, image(@nil, W, H)),
+    send(TI, draw_in, T),
+    get(TI, scale, size(16,16), Image).
 
 forward(TB) :->
     "Send action to <-client"::
