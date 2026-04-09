@@ -55,7 +55,6 @@ void d_clip_done(void);
 void intersection_iarea(IArea a, IArea b);
 void r_clear(int x, int y, int w, int h);
 void r_complement(int x, int y, int w, int h);
-void r_and(int x, int y, int w, int h, Image pattern);
 double r_thickness(double pen);
 int r_transformed(int val);
 void r_dash(Name name);

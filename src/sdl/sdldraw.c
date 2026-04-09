@@ -462,20 +462,6 @@ r_complement(int x, int y, int w, int h)
 }
 
 /**
- * Perform a bitwise AND operation with a pattern over a rectangular area.
- *
- * @param x The x-coordinate of the top-left corner of the rectangle.
- * @param y The y-coordinate of the top-left corner of the rectangle.
- * @param w The width of the rectangle.
- * @param h The height of the rectangle.
- * @param pattern The image pattern to use for the operation.
- */
-void
-r_and(int x, int y, int w, int h, Image pattern)
-{
-}
-
-/**
  * Set the thickness of lines for subsequent drawing operations.
  *
  * @param pen The desired pen thickness.
