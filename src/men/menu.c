@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -789,11 +790,6 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
 
   if ( notNil(fill) )
     r_swap_background_and_foreground();
-
-  if ( (mi->selected == ON && m->feedback == NAME_invert) )
-    r_complement(ix, iy, iw, ih);
-  if ( (m->preview == mi && m->preview_feedback == NAME_invert) )
-    r_complement(x, y, w, h);
 
   if ( notDefault(colour) )
     r_colour(DEFAULT);
@@ -1796,7 +1792,7 @@ kindMenu(Menu m, Name kind)
     } else if ( kind == NAME_choice )
     { assign(m, on_image, NIL);
       assign(m, off_image, NIL);
-      assign(m, feedback, NAME_invert);
+      assign(m, feedback, NAME_box);
       multipleSelectionMenu(m, OFF);
     } else if ( kind == NAME_toggle )
     { assign(m, on_image, MARK_IMAGE);
@@ -2159,7 +2155,7 @@ static vardecl var_menu[] =
      NAME_event, "Item in `preview' state"),
   IV(NAME_previewFeedback, "feedback={box,rounded_box,inverted_rounded_box,invert,colour}", IV_BOTH,
      NAME_appearance, "Feedback given to item in preview state"),
-  SV(NAME_feedback, "feedback={box,invert,image,show_selection_only}", IV_GET|IV_STORE, feedbackMenu,
+  SV(NAME_feedback, "feedback={box,image,show_selection_only}", IV_GET|IV_STORE, feedbackMenu,
      NAME_appearance, "Type of feedback for selection"),
   SV(NAME_multipleSelection, "multiple=bool", IV_GET|IV_STORE, multipleSelectionMenu,
      NAME_selection, "If @on, more than one item may be selected"),
