@@ -61,7 +61,7 @@ initialise(AI, Name:[name], Default:[function|arrow], Message:[code]*) :->
     send(AI, append, new(LI, int_item(length, 0, @nil, 0, 50)), right),
     send(AI, append, new(PI, int_item(pen,    0, @nil, 0,  1)), right),
     send(AI, append, new(Style, menu(style, choice, @nil))),
-    send(AI, append, new(Fill, menu(fill_pattern, choice, @nil)), right),
+    send(AI, append, new(Fill, menu(fill, choice, @nil)), right),
     styles(Style),
     fill_patterns(Fill),
     send(AI, append,
@@ -80,8 +80,8 @@ initialise(AI, Name:[name], Default:[function|arrow], Message:[code]*) :->
     ).
 
 fill_pattern(@nil).
-fill_pattern(@white_image).
-fill_pattern(@black_image).
+fill_pattern(white).
+fill_pattern(black).
 
 fill_patterns(Menu) :-
     fill_pattern(Pattern),

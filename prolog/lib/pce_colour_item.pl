@@ -208,8 +208,7 @@ apply(SE, Always:[bool]) :->
 init_slider(Slider) :-
     get(Slider, name, Colour),
     new(I, image(@nil, 16, 16, pixmap)),
-    send(I, background, Colour),
-    send(I, clear),
+    send(I, fill, Colour),
     send(Slider, label, I),
     send(Slider, width, 100),
     send(Slider, drag, @on),
@@ -291,8 +290,7 @@ adjust_palette_size(CI) :->
 resize_colour_item(Item, IW, IH) :-
     get(Item, value, Colour),
     new(I, image(@nil, IW, IH, pixmap)),
-    send(I, background, Colour),
-    send(I, clear),
+    send(I, fill, Colour),
     send(Item, label, I).
 
 

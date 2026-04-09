@@ -72,8 +72,13 @@ initialise(FI, Name:[name],
          new(Fam, menu(family, cycle, message(FI, family, @arg1)))),
     send(FI, append,
          new(Wgt, menu(weight, cycle, message(FI, weight, @arg1))), right),
-    send(FI, append,
-         new(Pts, menu(points, cycle, message(FI, points, @arg1))), right),
+    (   ValueSet == @default
+    ->  send(FI, append,
+             new(Pts, int_item(points, 10, message(FI, points, @arg1),
+                               5, 36)), right)
+    ;   send(FI, append,
+             new(Pts, menu(points, cycle, message(FI, points, @arg1))), right)
+    ),
     send(Fam, show_label, @off),
     send(Wgt, show_label, @off),
     send(Pts, show_label, @off),
@@ -102,19 +107,26 @@ value_set(FI, ValueSet:[chain]) :->
     (   ValueSet == @default
     ->  send_list(Fam, append, [sans,serif,mono]),
         send_list(Wgt, append, [normal,bold,italic]),
-        forall(between(8,30,S),
-               send(Pts, append, S))
+        (   send(Pts, instance_of, int_item)
+        ->  true
+        ;   forall(between(8,30,S),
+                   send(Pts, append, S))
+        )
     ;   send(ValueSet, for_all,
              and(if(not(?(Fam, member, @arg1?family)),
                     message(Fam, append, @arg1?family)),
                  if(not(?(Wgt, member, @arg1?style)),
                     message(Wgt, append, @arg1?style)),
-                 if(not(?(Pts, member, @arg1?points)),
+                 if(and(message(Pts, instance_of, int_item),
+                        not(?(Pts, member, @arg1?points))),
                     message(Pts, append, @arg1?points))))
     ),
     send(Fam, sort),
     send(Wgt, sort),
-    send(Pts, sort, ?(@arg1?value, compare, @arg2?value)).
+    (   send(Pts, instance_of, int_item)
+    ->  true
+    ;   send(Pts, sort, ?(@arg1?value, compare, @arg2?value))
+    ).
 
 
                  /*******************************

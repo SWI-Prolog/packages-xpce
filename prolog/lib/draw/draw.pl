@@ -116,7 +116,6 @@ draw(File) :-
                 *           CLASS DRAW          *
                 ********************************/
 
-resource(draw,       image, image('32x32/drawing.png')).
 resource(open,       image, image('16x16/open.png')).
 resource(save,       image, image('16x16/save.png')).
 resource(print,      image, image('16x16/print.png')).
@@ -187,7 +186,6 @@ initialise(Draw, Title:[name]) :->
     ensure_loaded_config(draw_config:_ConfigFile),
     default(Title, 'PceDraw', TheTitle),
     send(Draw, send_super, initialise, TheTitle),
-    send(Draw, icon, resource(draw)),
     send(Draw, slot, title, TheTitle),
     draw_version(Version),
     send(Draw, slot, version, Version),
@@ -655,8 +653,7 @@ update_label(Draw) :->
     get(Draw, title, Title),
     (   File \== @nil
     ->  send(Draw, label,
-             string('%s: %s', Title, File?name),
-             string('%s', File?base_name))
+             string('%s: %s', Title, File?name))
     ;   send(Draw, label, Title)
     ).
 
