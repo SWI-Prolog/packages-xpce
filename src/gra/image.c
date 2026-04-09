@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi-prolog.org
     WWW:           https://www.swi-prolog.org/projects/xpce/
-    Copyright (c)  1985-2025, University of Amsterdam
+    Copyright (c)  1985-2026, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -51,6 +51,7 @@ static status drawInImage(Image image, Graphical gr, Point pos);
 status
 initialiseImage(Image image, SourceSink data, Int w, Int h, Name kind)
 { Name name = FAIL;
+  Name access;
 
   if ( isDefault(data) )
     data = (SourceSink) NIL;
@@ -60,25 +61,28 @@ initialiseImage(Image image, SourceSink data, Int w, Int h, Name kind)
     name = get(data, NAME_name, EAV);
   if ( !name )
     name = NIL;
+  assign(image, name, name);
 
-  assign(image, name,       name);
+  if ( isDefault(kind) )
+    kind = NAME_pixmap;
 
-  if ( isNil(data) || notDefault(w) || notDefault(h) || notDefault(kind) )
-  { if ( isDefault(w) )    w = toInt(16);
-    if ( isDefault(h) )    h = toInt(16);
-    if ( isDefault(kind) ) kind = NAME_pixmap;
-
-    assign(image, kind,   kind);
-    assign(image, file,   NIL);
-    assign(image, size,	  newObject(ClassSize, w, h, EAV));
-    assign(image, access, NAME_both);
+  if ( isNil(data) )
+  { if ( isDefault(w) ) w = toInt(16);
+    if ( isDefault(h) ) h = toInt(16);
+    access = NAME_both;
   } else
-  { assign(image, kind,	  NAME_pixmap);
-    assign(image, file,	  data);
-    assign(image, size,	  newObject(ClassSize, EAV));
-    TRY(loadImage(image, DEFAULT, DEFAULT));
-    assign(image, access, NAME_read);
+  { if ( isDefault(w) ) w = toInt(0);	/* Use viewport for SVG */
+    if ( isDefault(h) ) h = toInt(0);
+    access = NAME_read;
   }
+
+  assign(image, kind,   kind);
+  assign(image, file,   data);
+  assign(image, size,	newObject(ClassSize, w, h, EAV));
+  assign(image, access, access);
+
+  if ( notNil(data) )
+    TRY(loadImage(image, DEFAULT, DEFAULT));
 
   if ( notNil(name) )
   { protectObject(image);
@@ -801,7 +805,7 @@ stdXPMImage(Name name, Name kind, Image *global, char **bits)
     colours = 2;
   }
 
-  Image image = globalObject(name, ClassImage, name, toInt(w), toInt(h), EAV);
+  Image image = globalObject(name, ClassImage, NIL, toInt(w), toInt(h), EAV);
 
   if ( colours == 2 )
   { assign(image, kind, kind);

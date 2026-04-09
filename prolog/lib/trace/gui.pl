@@ -148,7 +148,7 @@ register_directories :-
 resource(debug, image,  image('debug.png')).
 resource(Name,  image,  image(PNG)) :-
     button(_, _, PNG, _),
-    file_name_extension(Name, png, PNG).
+    file_name_extension(Name, _Ext, PNG).
 
                  /*******************************
                  *           TOPLEVEL           *
@@ -993,27 +993,27 @@ mode(F, Mode:name) :->
 %       If action is +Action, send message Action to the frame.  Otherwise
 %       return Action to the caller.
 
-button(into,           "i",   'into.png',            'Show unification').
-button(creep,          "\n ", 'creep.png',           'Step').
-button(skip,           "s",   'skip.png',            'Skip over this goal').
-button(finish,         "f",   'finish.png',          'Finish selected goal').
+button(into,           "i",   'into.svg',            'Show unification').
+button(creep,          "\n ", 'creep.svg',           'Step').
+button(skip,           "s",   'skip.svg',            'Skip over this goal').
+button(finish,         "f",   'finish.svg',          'Finish selected goal').
 button(gap,            -,     -,                     -).
-button(retry,          "r",   'retry.png',           'Retry selected goal').
+button(retry,          "r",   'retry.svg',           'Retry selected goal').
 button(gap,            -,     -,                     -).
-button(+nodebug,       "n",   'nodebug.png',         'Continue without debugging').
-button(+abort,         "a",   'abort.png',           'Abort to the Prolog toplevel').
-button(+interrupt,     "t",   'interrupt.png',       'Interrupt (trace)').
-button(+interactor,    "B",   'interactor.png',      'Open new console').
-button(fail,           "F",   'fail.png',            'Force query to fail').
+button(+nodebug,       "n",   'nodebug.svg',         'Continue without debugging').
+button(+abort,         "a",   'abort.svg',           'Abort to the Prolog toplevel').
+button(+interrupt,     "t",   'interrupt.svg',       'Interrupt (trace)').
+button(+interactor,    "B",   'interactor.svg',      'Open new console').
+button(fail,           "F",   'fail.svg',            'Force query to fail').
 button(gap,            -,     -,                     -).
 button(+up,            "u",   'up.png',              'Select parent frame').
 button(+down,          "d",   'down.png',            'Select child frame').
 button(gap,            -,     -,                     -).
 button(+browse,        "",    '16x16/butterfly.png', 'Browse program structure').
 button(gap,            -,     -,                     -).
-button(leap,           "l",   'leap.png',            'Continue to spy- or breakpoint').
+button(leap,           "l",   'leap.svg',            'Continue to spy- or breakpoint').
 button(+breakpoints,   "+",   'spy.png',             'Edit spy- and breakpoints').
-button(+stop_at,       "!",   'stop.png',            'Set Stop at caret').
+button(+stop_at,       "!",   'stop.svg',            'Set Stop at caret').
 button(+nostop_or_spy, "-",   'nostopspy.png',       'Delete break- or spy-point').
 button(gap,            -,     -,                     -).
 button(+details,       "v",   'details.png',         'Show (variable) details').
