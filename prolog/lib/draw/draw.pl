@@ -116,15 +116,15 @@ draw(File) :-
                 *           CLASS DRAW          *
                 ********************************/
 
-resource(open,       image, image('16x16/open.png')).
-resource(save,       image, image('16x16/save.png')).
-resource(print,      image, image('16x16/print.png')).
-resource(undo,       image, image('16x16/undo.png')).
-resource(cut,        image, image('16x16/cut.png')).
-resource(copy,       image, image('16x16/copy.png')).
-resource(paste,      image, image('16x16/paste.png')).
-resource(duplicate,  image, image('16x16/duplicate.png')).
-resource(distribute, image, image('16x16/distribute.png')).
+resource(open,       image, image('tool/open.svg')).
+resource(save,       image, image('tool/save.svg')).
+resource(print,      image, image('tool/print.svg')).
+resource(undo,       image, image('tool/undo.svg')).
+resource(cut,        image, image('tool/cut.svg')).
+resource(copy,       image, image('tool/copy.svg')).
+resource(paste,      image, image('tool/paste.svg')).
+resource(duplicate,  image, image('tool/duplicate.svg')).
+resource(distribute, image, image('tool/distribute.svg')).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Class `draw' defines and manages  the entire tool.  Its initialisation

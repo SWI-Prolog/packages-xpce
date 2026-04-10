@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" width="18" height="18">
+  <g transform="translate(9,9) rotate(45)">
+    <!-- eraser -->
+    <rect x="-2.2" y="-7.5" width="4.4" height="3" rx="1" fill="#94a3b8" stroke="#475569" stroke-width="0.5"/>
+    <!-- shaft -->
+    <rect x="-2.2" y="-4.5" width="4.4" height="9" rx="1" fill="#475569"/>
+    <!-- centre line -->
+    <line x1="0" y1="-4.5" x2="0" y2="4.5" stroke="#64748b" stroke-width="0.7"/>
+    <!-- amber tip -->
+    <polygon points="-2.2,4.5 2.2,4.5 0,7.5" fill="#f59e0b"/>
+  </g>
+</svg>

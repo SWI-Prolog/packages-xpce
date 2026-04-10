@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@vu.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2024, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  2001-2026, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
                               SWI-Prolog Solutions b.v.
@@ -78,10 +78,10 @@
 :- dynamic
     prolog_overview_window/1.
 
-resource(edit,        image, image('16x16/edit.png')).
-resource(up,          image, image('16x16/up.png')).
-resource(refresh,     image, image('16x16/refresh.png')).
-resource(dbgsettings, image, image('16x16/dbgsettings.png')).
+resource(edit,        image, image('tool/edit.svg')).
+resource(up,          image, image('tool/up.svg')).
+resource(refresh,     image, image('tool/refresh.svg')).
+resource(dbgsettings, image, image('dbgsettings.svg')).
 
 :- pce_begin_class(prolog_navigator, persistent_frame,
                    "Prolog source navigator").
@@ -291,7 +291,8 @@ event(FB, Ev:event) :->
 initialise(TF, File:file) :->
     get(File, name, FileName),
     canonical_source_file(FileName, Path),
-    file_image(Path, Img),
+    file_image(Path, ImgFile),
+    file_to_image(ImgFile, Img),
     file_base_name(FileName, Base),
     send_super(TF, initialise, Base, Path, Img),
     send(TF, name, Base).
@@ -307,13 +308,13 @@ included(TF) :->
     get(TF, identifier, Path),
     included_file(Path).
 
-file_image(Path, 'plloadedfile.png') :-
+file_image(Path, 'plloadedfile.svg') :-
     source_file(Path),
     !.
-file_image(Path, 'plincludedfile.png') :-
+file_image(Path, 'plincludedfile.svg') :-
     included_file(Path),
     !.
-file_image(_, 'plfile.png').
+file_image(_, 'plfile.svg').
 
 included_file(Path) :-
     source_file_property(Path, included_in(_,_)).
@@ -384,11 +385,14 @@ make_file_toc_entry(xpce_class(Class, _Super, Doc), TE) :-
     to_summary(Doc, PceDoc),
     new(TE, toc_xpce_class(Class, PceDoc)).
 make_file_toc_entry(xpce_class_extension(Class), TE) :-
-    new(TE, toc_xpce_class(Class, @default, 'classext.png')).
+    file_to_image('classext.svg', Image),
+    new(TE, toc_xpce_class(Class, @default, Image)).
 make_file_toc_entry(module(Module), TE) :-
-    new(TE, toc_module(Module, @default, 'module.png')).
+    file_to_image('module.svg', Image),
+    new(TE, toc_module(Module, @default, Image)).
 make_file_toc_entry(dynamic, TE) :-
-    new(TE, sb_predicate_list(dynamic, @default, 'mini-run.png')).
+    file_to_image('mini-run.svg', Image),
+    new(TE, sb_predicate_list(dynamic, @default, Image)).
 
 to_summary(Doc, String) :-
     catch(string_codes(String, Doc), _, fail),
@@ -607,7 +611,10 @@ variable(summary,       string*, get, "Summary documentation").
 initialise(CF, Class:name, Summary:[string], Image:[image]) :->
     "Create from ClassName, Summary and Image"::
     default(Summary, @nil, Sum),
-    default(Image, 'class.png', Img),
+    (   Image == @default
+    ->  file_image('class.svg', Img)
+    ;   Img = Image
+    ),
     send_super(CF, initialise, Class, @default, Img),
     send(CF, slot, class_id, Class),
     send(CF, slot, summary, Sum).
@@ -636,16 +643,20 @@ make_class_toc_enter(Term, Class, _Key, TE) :-
 
 make_class_toc_enter(xpce_method(send(Class, Name, _Doc)), Class, TE) :-
     atomic_list_concat([send, Name, Class], $, Id),
-    new(TE, toc_xpce_entity(Name, Id, 'send.png')).
+    file_image('send.svg', Img),
+    new(TE, toc_xpce_entity(Name, Id, Img)).
 make_class_toc_enter(xpce_method(get(Class, Name, _Doc)), Class, TE) :-
     atomic_list_concat([get, Name, Class], $, Id),
-    new(TE, toc_xpce_entity(Name, Id, 'get.png')).
+    file_image('get.svg', Img),
+    new(TE, toc_xpce_entity(Name, Id, Img)).
 make_class_toc_enter(xpce_variable(Class, Name, _Doc), Class, TE) :-
     atomic_list_concat([var, Name, Class], $, Id),
-    new(TE, toc_xpce_entity(Name, Id, 'ivar.png')).
+    file_image('ivar.svg', Img),
+    new(TE, toc_xpce_entity(Name, Id, Img)).
 make_class_toc_enter(xpce_class_variable(Class, Name, _Doc), Class, TE) :-
     atomic_list_concat([cvar, Name, Class], $, Id),
-    new(TE, toc_xpce_entity(Name, Id, 'classvar.png')).
+    file_image('classvar.svg', Img),
+    new(TE, toc_xpce_entity(Name, Id, Img)).
 
 identify(CF) :->
     "Report who I am"::
@@ -713,7 +724,7 @@ expand(MF) :->
             send(Entry, line, Line)
         ;   local_predicate_name(Head, Label),
             atom_concat('$export$', Label, Id),
-            new(Entry, toc_file(Label, Id, 'pred.png'))
+            new(Entry, toc_file(Label, Id, 'pred.svg'))
         ),
         send(TocWindow, son, NodeId, Entry),
         fail
@@ -978,23 +989,23 @@ popup(_, Popup:popup) :<-
 :- pce_end_class(sb_predicate).
 
 
-image(module,           open,           'openmodule.png').
-image(module,           closed,         'module.png').
+image(module,           open,           'openmodule.svg').
+image(module,           closed,         'module.svg').
 
-image(dynamic,          open,           'mini-run.png').
-image(dynamic,          closed,         'mini-run.png').
+image(dynamic,          open,           'mini-run.svg').
+image(dynamic,          closed,         'mini-run.svg').
 
-image(predicate,        built_in,       'builtin.png').
-image(predicate,        global,         'mini-globe.png').
-image(predicate,        dynamic,        'mini-run.png').
-image(predicate,        imported,       'import.png').
-image(predicate,        exported,       'export.png').
-image(predicate,        incomplete,     'warnpred.png').
-image(predicate,        unreferenced,   'unrefpred.png').
-image(predicate,        undefined,      'undefpred.png').
-image(predicate,        fact,           'fact.png').
-image(predicate,        local,          'pred.png').
-image(predicate,        dcg,            'grammar.png').
+image(predicate,        built_in,       'builtin.svg').
+image(predicate,        global,         'mini-globe.svg').
+image(predicate,        dynamic,        'mini-run.svg').
+image(predicate,        imported,       'import.svg').
+image(predicate,        exported,       'export.svg').
+image(predicate,        incomplete,     'warnpred.svg').
+image(predicate,        unreferenced,   'unrefpred.svg').
+image(predicate,        undefined,      'undefpred.svg').
+image(predicate,        fact,           'fact.svg').
+image(predicate,        local,          'pred.svg').
+image(predicate,        dcg,            'grammar.svg').
 
 
 
@@ -1005,10 +1016,10 @@ image(predicate,        dcg,            'grammar.png').
 :- multifile
     prolog:message_action/2.
 
-image_of_load_state(start, _,       'loading.png').
-image_of_load_state(true,  load,    'plloadedfile.png').
-image_of_load_state(true,  include, 'plincludedfile.png').
-image_of_load_state(false, _,       'loadfailed.png').
+image_of_load_state(start, _,       'loading.svg').
+image_of_load_state(true,  load,    'plloadedfile.svg').
+image_of_load_state(true,  include, 'plincludedfile.svg').
+image_of_load_state(false, _,       'loadfailed.svg').
 
 prolog:message_action(load_file(What), _Kind) :-
     loading(What, load).
@@ -1049,3 +1060,11 @@ load_info(done(_Level, file(_, Path), _, _, _, _),
 load_info(done(_Level, file(_, Path)),
           Path, true).
 
+file_to_image(File, Img) :-
+    icon_size(H),
+    new(Img, image(File, H, H)).
+
+icon_size(H) :-
+    get(@pce, convert, normal, font, Font),
+    get(Font, height, FH),
+    H is round(FH*0.8).

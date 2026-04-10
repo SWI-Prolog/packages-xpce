@@ -1,0 +1,5 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- finish: emerald arrow into vertical bar -->
+  <polygon points="8,24 8,40 34,40 34,48 52,32 34,16 34,24" fill="#10b981" stroke="#334155" stroke-width="2.5" stroke-linejoin="round"/>
+  <rect x="54" y="14" width="5" height="36" rx="2.5" fill="#10b981" stroke="#334155" stroke-width="2"/>
+</svg>

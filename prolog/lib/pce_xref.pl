@@ -1042,36 +1042,39 @@ set_flags(FN) :->
     ).
 
 :- pce_global(@xref_ok_file,
-              make_xref_image([ image('16x16/doc.png'),
-                                image('16x16/ok.png')
+              make_xref_image([ 'document.svg',
+                                'sign_ok.svg'
                               ])).
 :- pce_global(@xref_alert_file,
-              make_xref_image([ image('16x16/doc.png'),
-                                image('16x16/alert.png')
+              make_xref_image([ 'document.svg',
+                                'sign_alert.svg'
                               ])).
 
 :- pce_global(@xref_ok_opendir,
-              make_xref_image([ image('16x16/opendir.png'),
-                                image('16x16/ok.png')
+              make_xref_image([ 'opendir.svg',
+                                'sign_ok.svg'
                               ])).
 :- pce_global(@xref_alert_opendir,
-              make_xref_image([ image('16x16/opendir.png'),
-                                image('16x16/alert.png')
+              make_xref_image([ 'opendir.svg',
+                                'sign_alert.svg'
                               ])).
 
 :- pce_global(@xref_ok_closedir,
-              make_xref_image([ image('16x16/closedir.png'),
-                                image('16x16/ok.png')
+              make_xref_image([ 'closedir.svg',
+                                'sign_ok.svg'
                               ])).
 :- pce_global(@xref_alert_closedir,
-              make_xref_image([ image('16x16/closedir.png'),
-                                image('16x16/alert.png')
+              make_xref_image([ 'closedir.svg',
+                                'sign_alert.svg'
                               ])).
 
 make_xref_image(Images, Image) :-
-    new(Image, image(@nil, 16, 16, pixmap)),
+    get(@pce, convert, normal, font, Font),
+    get(Font, height, H),
+    ImgW is round(H*0.8),
+    new(Image, image(@nil, ImgW, ImgW, pixmap)),
     forall(member(I2, Images),
-           send(Image, draw_in, bitmap(I2))).
+           send(Image, draw_in, bitmap(image(I2, ImgW, ImgW)))).
 
 :- pce_end_class(prolog_file_node).
 

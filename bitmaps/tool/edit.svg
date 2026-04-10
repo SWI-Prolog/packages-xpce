@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <path d="M5,2 L14,2 L19,7 L19,20 L5,20 Z" fill="#64748b"/>
+  <path d="M14,2 L14,7 L19,7" fill="#334155"/>
+  <line x1="14" y1="2" x2="19" y2="7" stroke="#94a3b8" stroke-width="0.8"/>
+  <g transform="translate(10,10) rotate(-45)">
+    <rect x="-2" y="-7" width="4" height="10" rx="0.5" fill="#f59e0b" stroke="#92400e" stroke-width="0.7"/>
+    <polygon points="-2,3 2,3 0,6.5" fill="#fde68a" stroke="#92400e" stroke-width="0.7"/>
+    <line x1="-2" y1="1.5" x2="2" y2="1.5" stroke="#92400e" stroke-width="0.7"/>
+  </g>
+</svg>

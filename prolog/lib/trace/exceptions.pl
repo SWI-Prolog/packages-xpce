@@ -356,9 +356,9 @@ append_error(T, Name:name, Error:prolog, Trace:[bool], WhenCaught:[bool]) :->
     send(D, format, new(Fmt, format(vertical, 1, @on))),
     send(Fmt, row_sep, 1),
     send_list(D, display,
-              [ pte_img_button(up),
-                pte_img_button(down),
-                pte_img_button(delete)
+              [ pte_img_button(up, ex_up),
+                pte_img_button(down, ex_down),
+                pte_img_button(delete, ex_cut)
               ]),
     send(T, append, D, valign := center),
     send_list([TI, Tr, Ca], show_label, @off),
@@ -430,16 +430,18 @@ prolog_pce_bool(false, @off).
 :- pce_end_class(prolog_exception_table).
 
 
-resource(up,     image, image('16x16/up.png')).
-resource(down,   image, image('16x16/down.png')).
-resource(delete, image, image('16x16/delete.png')).
+resource(ex_up,   image, image('tool/ex_up.svg')).
+resource(ex_down, image, image('tool/ex_down.svg')).
+resource(ex_cut,  image, image('tool/cut.svg')).
 
 :- pce_begin_class(pte_img_button, button).
 
-initialise(B, Name:name) :->
+initialise(B, Name:name, Image:name) :->
     send_super(B, initialise, Name,
                message(B?device?device, alter, B?row, Name)),
-    send(B, label, image(resource(Name))),
+    get(@pce, convert, normal, font, Font),
+    get(Font, height, H),
+    send(B, label, image(resource(Image), H, H)),
     send(B, help_message, tag, Name?capitalise).
 
 row(B, Row:int) :<-

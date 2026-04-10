@@ -110,7 +110,7 @@ set(XPCE_DATA_DIRS
     prolog/lib prolog/lib/compatibility prolog/lib/dialog prolog/lib/doc
     prolog/lib/draw prolog/lib/emacs prolog/lib/english
     prolog/lib/man prolog/lib/math prolog/lib/plot prolog/lib/swi
-    prolog/lib/trace prolog/lib/trace/icons prolog/lib/trace/icons/16x16
+    prolog/lib/trace prolog/lib/trace/icons
     prolog/lib/xref prolog/lib/dialog/bitmaps prolog/lib/doc/icons
 
     prolog/contrib
@@ -118,7 +118,7 @@ set(XPCE_DATA_DIRS
 
     prolog/demo
 
-    bitmaps bitmaps/16x16 bitmaps/32x32 bitmaps/64x64 bitmaps/patterns
+    bitmaps bitmaps/16x16 bitmaps/32x32 bitmaps/64x64 bitmaps/tool
 
     appl-help
 
@@ -176,7 +176,7 @@ set(XPCE_DATA_prolog_lib_dialog attribute.pl behaviour.pl dialog.pl
     meta.pl pretty_print.pl proto.pl README util.pl)
 
 set(XPCE_DATA_prolog_lib_dialog_bitmaps button.png choice.png cycle.png
-    editor.png image.png label.png list.png reporter.png slider.png text_item.png
+    editor.png image.png label.png reporter.png slider.png text_item.png
     toggle.png)
 
 set(XPCE_DATA_prolog_lib_draw align.pl attribute.pl canvas.pl config.pl draw.pl
@@ -220,20 +220,28 @@ set(XPCE_DATA_prolog_lib_trace browse.pl browse_xref.pl clause.pl
     query.pl README settings.pl source.pl stack.pl status.pl test.pl
     trace.pl util.pl viewterm.pl)
 
-set(XPCE_DATA_prolog_lib_trace_icons abort.png breakpoint.png break.png bug.png
-    builtin.png butterfly.png call.png classext.png classvar.png class.png
-    closedir.png creep.png debug.png details.png det.png
-    down.png dynamic.png dyn.png edit.png except.png exit.png export.png
-    eyes.png fact.png fail.png finish.png foreign.png get.png grammar.png
-    import.png interactor.png interrupt.png into.png ivar.png leap.png
-    list.png loadfailed.png loading.png locate.png meta.png mini-globe.png
-    mini-run.png module.png ndet.png nodebug.png nospy.png nostopspy.png
-    nostop.png opendir.png openmodule.png plfile.png plincludedfile.png
-    plloadedfile.png pred.png redo.png retry.png send.png skip.png spy.png
-    stack.png stop.png undefined.png undefpred.png unrefpred.png up.png
-    user.png warnpred.png)
+set(XPCE_DATA_prolog_lib_trace_icons
+    break.png breakpoint.png bug.png classext.png class.png classvar.png
+    debug.png eyes.png get.png ivar.png locate.png nostop.png send.png)
 
-set(XPCE_DATA_prolog_lib_trace_icons_16x16 butterfly.png dbgsettings.png)
+# SVG Images (must be merged with above)
+list(APPEND XPCE_DATA_prolog_lib_trace_icons
+     abort.svg interactor.svg nodebug.svg port_fail.svg stop.svg creep.svg
+     interrupt.svg port_call.svg port_redo.svg fail.svg into.svg
+     port_except.svg retry.svg finish.svg leap.svg port_exit.svg
+     skip.svg trace.svg
+
+     butterfly.svg stack_down.svg list.svg nostopspy.svg stack.svg details.svg
+     nospy.svg spy.svg stack_up.svg
+
+     builtin.svg dyn.svg grammar.svg pred.svg unrefpred.svg det.svg fact.svg
+     meta.svg undefined.svg user.svg dynamic.svg foreign.svg ndet.svg
+     undefpred.svg warnpred.svg
+
+     loading.svg plloadedfile.svg export.svg mini-globe.svg
+     openmodule.svg import.svg mini-run.svg plfile.svg loadfailed.svg
+     module.svg plincludedfile.svg dbgsettings.svg)
+
 
 set(XPCE_DATA_prolog_lib_xref common.pl mkcommon.pl quintus.pl sicstus.pl)
 
@@ -246,13 +254,13 @@ set(XPCE_DATA_prolog_demo chess.pl colour.pl constraint.pl cursor.pl
     imageviewer.pl ispell.pl juggler.pl kangaroo.pl pce_demo.pl)
 
 set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png busy_bee.png
-    cassette.png chessboard.png chesssquare.png close.png closedir.png
+    cassette.png chessboard.png chesssquare.png close.png
     concept.png conceptLink.png confirm.png confirm_name.png console_tile.png
     creating.png cross.png cycle.png desktop.png dir.png domain.png
     draw_cconnect.png draw_connect.png draw_edit.png draw_line.png draw_path.png
     draw_proto.png draw_resize.png draw_text.png ellipse.png fatleft_arrow.png
     fatright_arrow.png file.png folder.png fragment.png globe.png go.png group.png
-    hand.png happy.png help.png hierarchy.png hourgl10.png hourgl1.png hourgl2.png
+    hand.png happy.png hierarchy.png hourgl10.png hourgl1.png hourgl2.png
     hourgl3.png hourgl4.png hourgl5.png hourgl6.png hourgl7.png hourgl8.png
     hourgl9.png hourgl.png juggler1.png juggler2.png juggler3.png juggler4.png
     juggler5.png kangro10.png kangro11.png kangro1.png kangro2.png kangro3.png
@@ -261,76 +269,39 @@ set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png busy_bee.png
     main_link.png mark.png ms_down_arrow.png ms_left_arrow.png ms_right_arrow.png
     ms_up_arrow.png nomark.png nosticky.png note.png off_marked.png off_toggle.png
     ol_cycle.png ol_pulldown.png ol_pullright.png on_marked.png on_toggle.png
-    opendir.png other_link.png paste.png pawn.png pce16.png pce.png
+    other_link.png pawn.png pce16.png pce.png
     pinned.png pin.png printer.png queen.png question.png README right_arrow.png
     rook_64.png rook.png sad.png select.png selecting.png slant_left.png
     slant_right.png sticky.png support.png text.png textedit.png thermo.png
-    toggle_off.png toggle_on.png transcript.png trash.png typing.png web.png)
+    toggle_off.png toggle_on.png transcript.png trash.png typing.png web.png
+
+    opendir.svg closedir.svg document.svg
+    builtin_classflash.svg builtin_class.svg user_classflash.svg user_class.svg
+    sign_alert.svg sign_ok.svg)
+
 
 set(XPCE_DATA_bitmaps_16x16 alert.png arrow_length.png arrows.png
     arrow_wing.png back.png binocular.png book2.png bookmarks.png
-    builtin_classflash.png builtin_class.png closedir.png copy.png
-    cpalette1.png cpalette2.png cut.png delete.png distribute.png doc.png
-    done.png down.png drawing.png drive.png duplicate.png edit.png error.png
-    exclamation.png eye.png false.png fatleft_arrow.png fatright_arrow.png
-    fillpattern.png font.png foot.png forward.png funcdoc.png ghost.png
-    graph.png handpoint.png help.png hierarchy.png manual.png newdir.png
-    new.png noimg.png note.png ok.png opendir.png open.png paste.png pce.png
-    pen.png preddoc.png print.png profiler.png redo.png refresh.png
-    saveall.png save.png stop.png trashcan.png undo.png up.png
-    user_classflash.png user_class.png user.png valign.png
+    cpalette1.png cpalette2.png delete.png doc.png done.png down.png
+    drawing.png drive.png error.png exclamation.png eye.png false.png
+    fatleft_arrow.png fatright_arrow.png fillpattern.png font.png foot.png
+    forward.png funcdoc.png ghost.png graph.png hierarchy.png manual.png
+    newdir.png new.png noimg.png note.png ok.png pce.png pen.png preddoc.png
+    profiler.png redo.png saveall.png valign.png
     vcr_fast_forward.png vcr_forward.png vga16.png wipeall.png)
 
-set(XPCE_DATA_bitmaps_32x32 books.png buffers.png dbgsettings.png
-    doc_pl.png doc_x.png drawing.png help.png pensil.png viewer.png
+set(XPCE_DATA_bitmaps_32x32 books.png buffers.png
+    doc_pl.png doc_x.png drawing.png pensil.png viewer.png
     vishier.png)
 
 set(XPCE_DATA_bitmaps_64x64 lsp-error.png lsp-hint.png
     dictionary.png lsp-information.png lsp-warning.png
     lsp-apply-fix.png lsp-apply-tweak.png)
 
-set(XPCE_DATA_bitmaps_patterns Arches.xbm Balls.xbm Bats.xbm brick_2.xbm
-    brick_block.xbm brick_cobble.xbm brick_diag_block.xbm
-    brick_diag_hering.xbm brick_diag.xbm brick_hering.xbm brick_overlap.xbm
-    brick_pat1.xbm bricks_weave.xbm brick.xbm Bumps.xbm Carpet.xbm
-    check_stag.xbm check.xbm chev_box.xbm chev_circle.xbm chev_same.xbm
-    chev_stag.xbm chev_swap.xbm Circle_hex.xbm Circles.xbm Circle_tile.xbm
-    Crabcan.xbm Diamonds.xbm dots_big_diag.xbm dots_big.xbm
-    dots_diag_wide.xbm dots_diag.xbm dots_hex.xbm dots_open_diag.xbm
-    dots_rand2.xbm dots_rand.xbm dots_skew2.xbm dots_skew.xbm dots_stag.xbm
-    dots_wide.xbm dots.xbm fence_chain_half.xbm fence_chain.xbm
-    fence_knitting.xbm fence_link1.xbm fence_link2.xbm fence_sqknot.xbm
-    Fish_escher.xbm Fishes.xbm Grey_32_00.xbm Grey_32_01.xbm Grey_32_02.xbm
-    Grey_32_03.xbm Grey_32_04.xbm Grey_32_05.xbm Grey_32_06.xbm
-    Grey_32_07.xbm Grey_32_08.xbm Grey_32_09.xbm Grey_32_10.xbm
-    Grey_32_11.xbm Grey_32_12.xbm Grey_32_13.xbm Grey_32_14.xbm
-    Grey_32_15.xbm Grey_32_16.xbm Grey_32_17.xbm Grey_32_18.xbm
-    Grey_32_19.xbm Grey_32_20.xbm Grey_32_21.xbm Grey_32_22.xbm
-    Grey_32_23.xbm Grey_32_24.xbm Grey_32_25.xbm Grey_32_26.xbm
-    Grey_32_27.xbm Grey_32_28.xbm Grey_32_29.xbm Grey_32_30.xbm
-    Grey_32_31.xbm Grey_32_32.xbm Grey_9_0.xbm Grey_9_1.xbm Grey_9_2.xbm
-    Grey_9_3.xbm Grey_9_4.xbm Grey_9_5.xbm Grey_9_6.xbm Grey_9_7.xbm
-    Grey_9_8.xbm Grey_9_9.xbm grid16.xbm grid4.xbm grid8.xbm grid_diag2.xbm
-    grid_diag4.xbm grid_diag8.xbm Hearts.xbm Interferance.xbm Ironcoat.xbm
-    Kapow.xbm line_diag3_1.xbm line_diag3_2.xbm line_diag4_1.xbm
-    line_diag4_2.xbm line_diag4_3.xbm line_diag8_1.xbm line_diag8_2.xbm
-    line_diag8_3.xbm line_diag8_4.xbm line_hex_small.xbm line_hex.xbm
-    line_horz2_1.xbm line_vert2_1.xbm line_vert3_1.xbm line_vert3_2.xbm
-    line_vert4_1.xbm line_vert4_2.xbm line_vert4_3.xbm line_vert5_1.xbm
-    line_vert5_2.xbm line_vert8_4.xbm line_wave.xbm Movietone.xbm Ovals.xbm
-    plaid4.xbm plaid8.xbm plaid.xbm Rain.xbm random_1.xbm random_2.xbm
-    random_3.xbm random_4.xbm Scales.xbm Snake.xbm Spirals.xbm Spiral.xbm
-    Squared.xbm Squares.xbm Squarez.xbm Stars.xbm stich_diag2.xbm
-    stich_diag.xbm stich_horz.xbm stich_vert.xbm Suntile.xbm Tellipse.xbm
-    Tiles.xbm Trelis.xbm Tripoint.xbm tweed2_2.xbm tweed4_3.xbm tweed4_4.xbm
-    tweed5_5.xbm tweed_crab.xbm tweed_cross.xbm tweeddish.xbm tweed.xbm
-    Tyres.xbm Ubalu2.xbm Ubalu.xbm Vertigo.xbm Vibration.xbm
-    weave_crazy_long.xbm weave_crazy.xbm weave_diag_1.xbm weave_diag_2.xbm
-    weave_diag_3.xbm weave_diag_4.xbm weave_diag_root.xbm weave_diag.xbm
-    weave_rect_dbl.xbm weave_rect_long.xbm weave_rect_loose.xbm
-    weave_rect_wide2.xbm weave_rect_wide.xbm weave_rect.xbm
-    weave_tied_cross.xbm weave_wide2.xbm weave_wide.xbm Wiggly.xbm
-    Zigzag.xbm)
+set(XPCE_DATA_bitmaps_tool
+    pencil.svg edit.svg refresh.svg up.svg help.svg handpoint.svg
+    copy.svg distribute.svg open.svg print.svg undo.svg cut.svg
+    duplicate.svg paste.svg save.svg trashcan.svg ex_up.svg ex_down.svg)
 
 set(XPCE_DATA_appl-help customise.hlp dialog.hlp emacs.hlp
     event_monitor.hlp help.hlp pcedraw.hlp pcefaq.hlp plprefs.hlp)

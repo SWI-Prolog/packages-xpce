@@ -34,7 +34,6 @@
 */
 
 :- module(pce_swi_hooks, []).
-:- autoload(swi_compatibility, [auto_call/1]).
 
 /** <module> Hook XPCE based graphics tools into IDE
 
@@ -62,9 +61,9 @@ file from being loaded.
                  *******************************/
 
 prolog:debug_control_hook(spy(Method)) :-
-    auto_call(spypce(Method)).
+    autoload_call(spypce(Method)).
 prolog:debug_control_hook(nospy(Method)) :-
-    auto_call(nospypce(Method)).
+    autoload_call(nospypce(Method)).
 
 
                  /*******************************
@@ -72,7 +71,7 @@ prolog:debug_control_hook(nospy(Method)) :-
                  *******************************/
 
 prolog:show_profile_hook(_Options) :-
-    auto_call(pce_show_profile).
+    autoload_call(pce_show_profile).
 
 
                  /*******************************

@@ -66,13 +66,12 @@ pce_show_visual_tool :-
                 *        ICON GENERATION        *
                 ********************************/
 
-resource(builtin_class,       image, image('16x16/builtin_class.png')).
-resource(user_class,          image, image('16x16/user_class.png')).
-resource(builtin_class_flash, image, image('16x16/builtin_classflash.png')).
-resource(user_class_flash,    image, image('16x16/user_classflash.png')).
-resource(help,                image, image('16x16/help.png')).
-resource(grab,                image, image('16x16/handpoint.png')).
-resource(vishier,             image, image('32x32/vishier.png')).
+resource(builtin_class,       image, image('builtin_class.svg')).
+resource(user_class,          image, image('user_class.svg')).
+resource(builtin_class_flash, image, image('builtin_classflash.svg')).
+resource(user_class_flash,    image, image('user_classflash.svg')).
+resource(help,                image, image('tool/help.svg')).
+resource(grab,                image, image('tool/handpoint.svg')).
 
 :- pce_extend_class(visual).
 
@@ -82,13 +81,16 @@ rc(host,     flash,   user_class_flash).
 rc(host,     noflash, user_class).
 
 vis_icon(V, Icon:image) :<-
-    Creator = V->>class->>creator,
-    (   V->>has_send_method(flash)
+    get(V?class, creator, Creator),
+    (   send(V, has_send_method, flash)
     ->  Flash = flash
     ;   Flash = noflash
     ),
     rc(Creator, Flash, RC),
-    new(Icon, image(resource(RC))).
+    get(@pce, convert, normal, font, Font),
+    get(Font, height, FH),
+    IH is round(0.8*FH),
+    new(Icon, image(resource(RC), IH, IH)).
 
 vis_icon_label(V, Label:name) :<-
     (   object(V, Term)

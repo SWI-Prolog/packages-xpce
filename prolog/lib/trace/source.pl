@@ -2,9 +2,10 @@
 
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        J.Wielemaker@vu.nl
-    WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2001-2018, University of Amsterdam
+    WWW:           https://www.swi-prolog.org/packages/xpce/
+    Copyright (c)  2001-2026, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -57,14 +58,14 @@
                  *             STYLES           *
                  *******************************/
 
-resource(call,   image, image('call.png')).
-resource(exit,   image, image('exit.png')).
-resource(redo,   image, image('redo.png')).
-resource(fail,   image, image('fail.png')).
-resource(except, image, image('except.png')).
-resource(ndet,   image, image('ndet.png')).
-resource(stack,  image, image('stack.png')).
-resource(stop,   image, image('stop.png')).
+resource(call,   image, image('port_call.svg')).
+resource(exit,   image, image('port_exit.svg')).
+resource(redo,   image, image('port_redo.svg')).
+resource(fail,   image, image('port_fail.svg')).
+resource(except, image, image('port_except.svg')).
+resource(ndet,   image, image('ndet.svg')).
+resource(stack,  image, image('stack.svg')).
+resource(stop,   image, image('stop.svg')).
 
 style(Port, Style) :-
     def_style(Port, DefAttrs),
@@ -79,8 +80,24 @@ make_style(Attributes, ObjTerm) :-
     ObjTerm =.. [style|Args].
 
 att_assign(Term, Name := Value) :-
-    Term =.. [Name, Value].
+    Term =.. [Name, Value0],
+    make_value(Name, Value0, Value).
 
+%!  make_value(+Attribute, +Prolog, -Value) is det.
+%
+%   Adjust icons for the margin to be the   height  of the font minus 6.
+%   The  margin  using  3   pixels    horizontal   padding.   Note  that
+%   set_margin_width/1 sets the width of the margin to the height of the
+%   font.
+
+make_value(icon, Resource, Icon) =>
+    get(class(emacs_editor), class_variable, font, ClassVar),
+    get(ClassVar, value, Font),
+    get(Font, height, H),
+    H6 is H-6,
+    new(Icon, image(Resource, H6, H6)).
+make_value(_, Value0, Value) =>
+    Value = Value0.
 
 def_style(call,         [background(green),     icon(resource(call))]).
 def_style(break,        [background(cyan)]).
@@ -129,9 +146,18 @@ initialise(V) :->
     send(V, editable, @off),
     send(V, update_label).
 
+%!  set_margin_width(+Object) is det.
+%
+%   Set the margin width for annotations. Object is either a
+%   `prolog_source_view` or a `emacs_buffer`.
+%
+%   @see make_value/3 for sizing the margin icons.
+
 set_margin_width(V) :-
-    get(image(resource(stop)), size, size(W,_)),
-    MarginWidth is W+6,
+    get(class(emacs_editor), class_variable, font, ClassVar),
+    get(ClassVar, value, Font),
+    get(Font, height, H),
+    MarginWidth is H,
     send(V, margin_width, MarginWidth).
 
 lost_text_buffer(V) :->

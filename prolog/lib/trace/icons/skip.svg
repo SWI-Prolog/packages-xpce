@@ -1,0 +1,5 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- skip: arc humping up, arrowhead pointing down -->
+  <path d="M10,44 C10,8 50,8 50,36" fill="none" stroke="#6366f1" stroke-width="9" stroke-linecap="round"/>
+  <polygon points="50,57 39,40 61,40" fill="#6366f1"/>
+</svg>

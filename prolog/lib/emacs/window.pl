@@ -1059,6 +1059,16 @@ font(E, Font:font) :->
     FH1 is FH+H1-H0,
     send(Frame, size, size(FW1, FH1)).
 
+margin_width(E, Width:int) :->
+    "Set margin width"::
+    send_super(E, margin_width, Width),
+    get(E, margin, Margin),
+    (   Margin == @nil
+    ->  true
+    ;   IconW is Width - 6,  % margin using 3 pixels padding
+        send(Margin, icon_size, size(IconW,IconW))
+    ).
+
 looking_at(E, Re:regex, Where:[int], End:[int]) :->
     "Test if regex macthes from the caret"::
     (   Where == @default

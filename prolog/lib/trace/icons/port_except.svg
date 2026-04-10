@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" width="18" height="18">
+  <rect width="18" height="18" rx="4" fill="#a855f7"/>
+  <!-- triangle outline -->
+  <path d="M9 3.5 L15.5 14.5 L2.5 14.5 Z" fill="none" stroke="white" stroke-width="1.8" stroke-linejoin="round"/>
+  <!-- exclamation dot and stem -->
+  <rect x="8.2" y="8" width="1.6" height="4" rx="0.8" fill="white"/>
+  <circle cx="9" cy="13" r="0.9" fill="white"/>
+</svg>

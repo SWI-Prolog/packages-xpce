@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 18 18" width="18" height="18">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+      <path d="M1 1 L9 5 L1 9" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <rect width="18" height="18" rx="4" fill="#fbbf24"/>
+  <!-- CCW arc, r=5.5, centred at 9,9. Start: bottom (9,14.5), end: top-left (~3.9,6.25) -->
+  <path d="M9 14.5 a5.5 5.5 0 1 0 -5.1 -2.75" fill="none" stroke="white" stroke-width="1.7" stroke-linecap="round" marker-end="url(#arr)"/>
+</svg>

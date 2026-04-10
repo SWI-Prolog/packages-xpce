@@ -75,9 +75,9 @@ Some issues to consider:
 
 :- dynamic references_editor/1 as volatile.
 
-resource(save,   image, image('16x16/save.png')).
-resource(cut,    image, image('16x16/cut.png')).
-resource(open,   image, image('16x16/book2.png')).
+resource(save,   image, image('tool/save.svg')).
+resource(cut,    image, image('tool/cut.svg')).
+resource(open,   image, image('tool/edit.svg')).
 resource(pin,    image, image('pin.png')).
 resource(pinned, image, image('pinned.png')).
 

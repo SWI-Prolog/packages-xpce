@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1996-2013, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1996-2026, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -41,9 +42,9 @@
 
 :- pce_autoload(drag_and_drop_gesture, library(dragdrop)).
 
-resource(file,          image, image('16x16/doc.png')).
-resource(opendir,       image, image('opendir.png')).
-resource(closedir,      image, image('closedir.png')).
+resource(file,          image, image('document.svg')).
+resource(opendir,       image, image('opendir.svg')).
+resource(closedir,      image, image('closedir.svg')).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Status and aim
@@ -87,6 +88,19 @@ Typical usage
         ?- send(directory_hierarchy(~), open).
 
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+resource_image(Name, Image) :-
+    get(@pce, convert, normal, font, Font),
+    get(Font, height, H),
+    ImgH is round(H*0.8),
+    new(Image, image(resource(Name), ImgH, ImgH)).
+
+image(folder, @off, Image) :-
+    !,
+    resource_image(opendir, Image).
+image(folder, _,    Image) :-
+    resource_image(closedir, Image).
+
 
                  /*******************************
                  *          TOC-WINDOW          *
@@ -313,7 +327,7 @@ initialise(TC) :->
     send(TC, slot, nodes, new(hash_table)),
     send_super(TC, initialise),
     send(TC, direction, list),
-    new(FImg, image(resource(file))),
+    resource_image(file, FImg),
     get(FImg, size, size(W,_)),
     LevelGap is W+1,
     send(TC, level_gap, LevelGap).
@@ -591,10 +605,6 @@ drop_target(TF, DTG:'chain|any') :<-
     ).
 
 :- pce_end_class(toc_image).
-
-image(folder, @off, resource(opendir)) :- !.
-image(folder, _,    resource(closedir)).
-
 
                  /*******************************
                  *          TOC-FOLDER          *

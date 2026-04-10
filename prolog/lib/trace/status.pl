@@ -55,11 +55,11 @@ to alter the state of the  debugger   by  changing  the mode and editing
 trace, spy and break-points.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-resource(delete, image, image('16x16/cut.png')).
-resource(stop,   image, image('16x16/stop.png')).
-resource(trace,  image, image('16x16/eye.png')).
-resource(edit,   image, image('16x16/edit.png')).
-resource(spy,    image, library('trace/icons/spy.png')).
+resource(delete, image, image('tool/cut.svg')).
+resource(edit,   image, image('tool/edit.svg')).
+resource(stop,   image, library('trace/icons/stop.svg')).
+resource(trace,  image, library('trace/icons/trace.svg')).
+resource(spy,    image, library('trace/icons/spy.svg')).
 
 :- dynamic
     debug_status_window/1.

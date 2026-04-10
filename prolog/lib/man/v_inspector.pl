@@ -50,9 +50,9 @@
 :- dynamic
     inspector_window/1.
 
-resource(clear, image, image('16x16/trashcan.png')).
-resource(help,  image, image('16x16/help.png')).
-resource(grab,  image, image('16x16/handpoint.png')).
+resource(clear, image, image('tool/trashcan.svg')).
+resource(help,  image, image('tool/help.svg')).
+resource(grab,  image, image('tool/handpoint.svg')).
 
 
                 /********************************

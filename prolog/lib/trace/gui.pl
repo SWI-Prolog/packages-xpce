@@ -120,7 +120,7 @@ register_directories :-
     source_file(register_directories, File),
     (   member(SpyBase, ['icons/nospy', library('trace/icons/nospy')]),
         absolute_file_name(SpyBase,
-                           [ extensions([png]),
+                           [ extensions([svg]),
                              access(read),
                              relative_to(File)
                            ],
@@ -145,10 +145,9 @@ register_directories :-
                  *            RESOURCES         *
                  *******************************/
 
-resource(debug, image,  image('debug.png')).
-resource(Name,  image,  image(PNG)) :-
-    button(_, _, PNG, _),
-    file_name_extension(Name, _Ext, PNG).
+resource(Name,  image,  image(SVG)) :-
+    button(_, _, SVG, _),
+    file_name_extension(Name, _Ext, SVG).
 
                  /*******************************
                  *           TOPLEVEL           *
@@ -997,28 +996,27 @@ button(into,           "i",   'into.svg',            'Show unification').
 button(creep,          "\n ", 'creep.svg',           'Step').
 button(skip,           "s",   'skip.svg',            'Skip over this goal').
 button(finish,         "f",   'finish.svg',          'Finish selected goal').
+button(leap,           "l",   'leap.svg',            'Continue to spy- or breakpoint').
+button(+nodebug,       "n",   'nodebug.svg',         'Continue without debugging').
 button(gap,            -,     -,                     -).
 button(retry,          "r",   'retry.svg',           'Retry selected goal').
-button(gap,            -,     -,                     -).
-button(+nodebug,       "n",   'nodebug.svg',         'Continue without debugging').
-button(+abort,         "a",   'abort.svg',           'Abort to the Prolog toplevel').
-button(+interrupt,     "t",   'interrupt.svg',       'Interrupt (trace)').
-button(+interactor,    "B",   'interactor.svg',      'Open new console').
 button(fail,           "F",   'fail.svg',            'Force query to fail').
 button(gap,            -,     -,                     -).
-button(+up,            "u",   'up.png',              'Select parent frame').
-button(+down,          "d",   'down.png',            'Select child frame').
+button(+abort,         "a",   'abort.svg',           'Abort to the Prolog toplevel').
+button(+interrupt,     "t",   'interrupt.svg',       'Interrupt (trace)').
 button(gap,            -,     -,                     -).
-button(+browse,        "",    '16x16/butterfly.png', 'Browse program structure').
+button(+up,            "u",   'stack_up.svg',        'Select parent frame').
+button(+down,          "d",   'stack_down.svg',      'Select child frame').
 button(gap,            -,     -,                     -).
-button(leap,           "l",   'leap.svg',            'Continue to spy- or breakpoint').
-button(+breakpoints,   "+",   'spy.png',             'Edit spy- and breakpoints').
+button(+breakpoints,   "+",   'spy.svg',             'Edit spy- and breakpoints').
 button(+stop_at,       "!",   'stop.svg',            'Set Stop at caret').
-button(+nostop_or_spy, "-",   'nostopspy.png',       'Delete break- or spy-point').
+button(+nostop_or_spy, "-",   'nostopspy.svg',       'Delete break- or spy-point').
 button(gap,            -,     -,                     -).
-button(+details,       "v",   'details.png',         'Show (variable) details').
-button(+edit,          "e",   'edit.png',            'Toggle read-only/edit-mode').
-
+button(+details,       "v",   'details.svg',         'Show (variable) details').
+button(+browse,        "",    'butterfly.svg',       'Browse program structure').
+button(+interactor,    "B",   'interactor.svg',      'Open new console').
+button(gap,            -,     -,                     -).
+button(+edit,          "e",   'tool/pencil.svg',     'Toggle read-only/edit-mode').
 
 tag_balloon(Balloon0, Keys, Balloon) :-
     maplist(key_name, Keys, Names),

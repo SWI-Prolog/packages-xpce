@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="10" cy="10" r="8.5" fill="#e0f2fe" stroke="#38bdf8" stroke-width="1.2"/>
+  <ellipse cx="10" cy="10" rx="4" ry="8.5" fill="none" stroke="#38bdf8" stroke-width="1"/>
+  <line x1="1.5" y1="10" x2="18.5" y2="10" stroke="#64748b" stroke-width="1"/>
+  <path d="M3.5,6.5 Q10,5 16.5,6.5" fill="none" stroke="#64748b" stroke-width="0.8"/>
+  <path d="M3.5,13.5 Q10,15 16.5,13.5" fill="none" stroke="#64748b" stroke-width="0.8"/>
+  <circle cx="10" cy="10" r="8.5" fill="none" stroke="#38bdf8" stroke-width="1.2"/>
+</svg>

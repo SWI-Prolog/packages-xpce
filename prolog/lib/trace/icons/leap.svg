@@ -1,0 +1,6 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- leap: double chevron + bar (fast-forward) -->
+  <polygon points="6,14 6,50 28,32" fill="#6366f1" stroke="#334155" stroke-width="2.5" stroke-linejoin="round"/>
+  <polygon points="30,14 30,50 52,32" fill="#6366f1" stroke="#334155" stroke-width="2.5" stroke-linejoin="round"/>
+  <rect x="55" y="14" width="5" height="36" rx="2" fill="#6366f1" stroke="#334155" stroke-width="2"/>
+</svg>

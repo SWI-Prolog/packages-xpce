@@ -1,0 +1,5 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- fail: rose bent arrow going right then up -->
+  <path d="M10,42 L42,42 Q52,42 52,32 L52,24" fill="none" stroke="#f43f5e" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <polygon points="42,24 52,8 62,24" fill="#f43f5e" stroke="#334155" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>

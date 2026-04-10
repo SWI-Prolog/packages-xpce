@@ -1,10 +1,11 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@vu.nl
-    WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2001-2018, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/packages/xpce/
+    Copyright (c)  2001-2026, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -37,15 +38,15 @@
           [ display_stack/3             % +Window, +Call, +Choice
           ]).
 :- use_module(library(pce)).
-:- autoload(clause,[predicate_classification/2]).
-:- autoload(gui,[in_debug_thread/2,prolog_frame_attribute/4]).
-:- autoload(util,[thread_self_id/1]).
-:- use_module(library(debug),[assertion/1,debug/3]).
-:- autoload(library(lists),[member/2,nth1/3]).
-:- autoload(library(pce_util),[default/3]).
-:- autoload(library(prolog_clause),[predicate_name/2]).
-:- autoload(library(sort),[predsort/3]).
-:- autoload(library(system),[system_module/0]).
+:- autoload(clause, [predicate_classification/2]).
+:- autoload(gui, [in_debug_thread/2, prolog_frame_attribute/4]).
+:- autoload(util, [thread_self_id/1]).
+:- use_module(library(debug), [assertion/1, debug/3, debugging/1]).
+:- autoload(library(lists), [member/2, nth1/3]).
+:- autoload(library(pce_util), [default/3]).
+:- autoload(library(prolog_clause), [predicate_name/2]).
+:- autoload(library(sort), [predsort/3]).
+:- autoload(library(system), [system_module/0]).
 
 :- system_module.
 
@@ -400,22 +401,23 @@ handle(-5,  h/2, link, east).
 handle(w+5, h/2, link, west).
 
 resource(Name, image, image(File)) :-
-    style_image(_, File),
-    file_name_extension(Name, png, File).
+    style(_Style, File, _Summary),
+    file_name_extension(Name, _, File).
 
-style_image(deterministic,      'det.png').
-style_image(choicepoint,        'ndet.png').
-style_image(built_in,           'builtin.png').
-style_image(foreign,            'foreign.png').
-style_image(dynamic,            'dynamic.png').
-style_image(undefined,          'undefined.png').
-style_image(transparent,        'meta.png').
-style_image(user,               'user.png').
+style(deterministic, 'det.svg',       "Deterministic call (click for source)").
+style(choicepoint,   'ndet.svg',      "Non-deterministic call (click for source)").
+style(built_in,      'builtin.svg',   "Calling built-in predicate").
+style(foreign,       'foreign.svg',   "Calling foreign predicate").
+style(dynamic,       'dynamic.svg',   "Calling dynamic predicate").
+style(undefined,     'undefined.svg', "Calling undefined predicate").
+style(transparent,   'meta.svg',      "Calling meta predicate").
+style(user,          'user.svg',      "Calling user predicate").
 
 variable(frame_reference,  int,         get, "Reference of Prolog frame").
 variable(pc,               'int|name',  get, "Location in the frame").
 variable(choice,           int*,        get, "Id of choice-point").
 variable(frame_level,      int,         get, "Nesting of the frame").
+variable(style,		   name,	get, "Style of frame").
 
 class_variable(background, colour, white).
 class_variable(colour,     colour, black).
@@ -432,11 +434,14 @@ initialise(D, Window:window, Frame:int, Label:char_array,
     send(D, border, 3),
     send(D, shadow, 1),
     send(D, pen, 1),
-    style_image(Style, Image),
+    style(Style, Image, _Summary),
     file_name_extension(Resource, _, Image),
-    send(D, display, new(B, bitmap(resource(Resource)))),
-    send(D, display, text(Label, left, normal), point(B?right_side, 0)),
+    get(@pce, convert, normal, font, Font),
+    get(Font, height, H),
+    send(D, display, new(B, bitmap(image(resource(Resource), H, H)))),
+    send(D, display, text(Label, left, Font), point(B?right_side+3, 0)),
     send(D, slot, frame_reference, Frame),
+    send(D, slot, style, Style),
     (   Location = choice(CH)
     ->  send(D, slot, pc, choice),
         send(D, slot, choice, CH)
@@ -480,8 +485,13 @@ select(D, Show:[bool]) :->
 
 help_message(D, _What:{tag,summary}, _Ev:[event], Msg:string) :<-
     "Fetch associated help message"::
-    get(D, frame_reference, FR),
-    get(D, pc, PC),
-    new(Msg, string('Frame #%d at PC = %s', FR, PC)).
+    get(D, style, Style),
+    style(Style, _Image, Text),
+    (   debugging(guitracer(stack))
+    ->  get(D, frame_reference, FR),
+        get(D, pc, PC),
+        new(Msg, string('%s (frame #%d at PC = %s)', Text, FR, PC))
+    ;   Msg = Text
+    ).
 
 :- pce_end_class.

@@ -66,7 +66,7 @@ variable(client,        chain*,         get,
 variable(blocked,       int := 0,       get,
          "Blocked count to avoid quadratic behaviour").
 
-%       attributes(?Label, ?Selector)
+%!      attribute(?Label, ?Selector)
 %
 %       Label is the label of the menu is the dialog.  Selector is the
 %       name of the method to be activated to change the value.   Used
@@ -167,8 +167,8 @@ fill_dialog(A) :->
     make_line_menu(Texture, texture, [none, dotted, dashed, dashdot]),
     make_arrow_menu(Arrows1, Draw, first_arrow),
     make_arrow_menu(Arrows2, Draw, second_arrow),
-    make_fill_pattern_menu(Draw, FillPattern),
     make_colour_menu(Draw, Colour),
+    make_fill_pattern_menu(Draw, Fill),
     make_font_menu(Font),
     make_transparent_menu(Transparent),
     make_coordinate_menu(X, x),
@@ -191,7 +191,7 @@ fill_dialog(A) :->
     ;   send(Arrows2, alignment, left),
         send(D, append, Arrows2, right)
     ),
-    send_list(D, append, [FillPattern, Colour, Radius]),
+    send_list(D, append, [Colour, Fill, Radius]),
     send(D, append, Shadow, right),
     send(D, append, Closed),
     send(D, append, Interpolation, right),
@@ -262,15 +262,11 @@ equal_attributes([A|T], O1, O2) :-
     ),
     equal_attributes(T, O1, O2).
 
-make_fill_pattern_menu(_Draw, Menu) :-
-    get_config(draw_config:resources/fill_palette, ColoursChain),
-    chain_list(ColoursChain, ColourNames),
-    maplist(colour_term, ColourNames, Colours),
+make_fill_pattern_menu(Draw, Menu) :-
+    findall(Colour, colour(Draw, Colour), Colours),
     new(Proto, box(30, 16)),
     make_proto_menu(Menu, Proto, fill_pattern, [foreground|Colours]),
     send(Proto, done).
-
-colour_term(Name, colour(Name)).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 The colour menu.
@@ -325,6 +321,7 @@ Create  a menu for  some prototype attribute.   Each menu_item   has a
 make_proto_menu(Menu, Proto, Attribute, Values) :-
     new(Menu, draw_proto_menu(Attribute)),
     (   (   Attribute == colour
+        ;   Attribute == fill_pattern
         ;   Attribute == transparent
         )
     ->  Kind = pixmap
