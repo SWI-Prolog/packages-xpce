@@ -522,16 +522,6 @@ r_dash(Name name)
 }
 
 /**
- * Set the current pen for drawing operations.
- *
- * @param pen The pen object defining drawing attributes.
- */
-void
-d_pen(Pen pen)
-{
-}
-
-/**
  * Set the fill pattern for subsequent drawing operations.
  *
  * @param fill The fill pattern to use.
@@ -1627,9 +1617,17 @@ r_fill_fgbg(double x, double y, double w, double h, Any fill, Name which)
   if ( w > 0 && h > 0 )
   { if ( r_set_fill_fgbg(fill, which) )
     { Translate(x, y);
+      bool transparent = isNil(context.fill_pattern);
+      cairo_operator_t saved_op;
 
+      if ( transparent )
+      { saved_op = cairo_get_operator(CR);
+	cairo_set_operator(CR, CAIRO_OPERATOR_SOURCE);
+      }
       cairo_rectangle(CR, x, y, w, h);
       cairo_fill(CR);
+      if ( transparent )
+	cairo_set_operator(CR, saved_op);
     } else
     { Cprintf("stub: r_fill(%s)\n", pp(context.fill_pattern));
     }

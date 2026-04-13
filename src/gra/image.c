@@ -704,6 +704,7 @@ getClipImage(Image image, Area area)
   CHANGING_IMAGE(i2,
     d_image(i2, 0, 0, w, h);
     d_modify();
+    r_fill(0, 0, w, h, NIL);
     r_image(image, x, y, 0, 0, w, h);
     d_done();
     changedEntireImageImage(i2););

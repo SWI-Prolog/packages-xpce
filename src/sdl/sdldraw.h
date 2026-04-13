@@ -58,7 +58,6 @@ void r_complement(int x, int y, int w, int h);
 double r_thickness(double pen);
 int r_transformed(int val);
 void r_dash(Name name);
-void d_pen(Pen pen);
 void r_fillpattern(Any fill, Name which);
 void r_fix_colours(Any fg, Any bg, ColourContext ctx);
 void r_unfix_colours(ColourContext ctx);
