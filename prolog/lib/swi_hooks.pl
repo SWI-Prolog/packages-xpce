@@ -54,8 +54,7 @@ file from being loaded.
 
 :- multifile
     prolog:debug_control_hook/1,
-    prolog:show_profile_hook/1,             % new
-    prolog:show_profile_hook/2.             % compatibility
+    prolog:show_profile_hook/1.
 
 
                  /*******************************
@@ -73,8 +72,6 @@ prolog:debug_control_hook(nospy(Method)) :-
                  *******************************/
 
 prolog:show_profile_hook(_Options) :-
-    auto_call(pce_show_profile).
-prolog:show_profile_hook(_Style, _Top) :-
     auto_call(pce_show_profile).
 
 
