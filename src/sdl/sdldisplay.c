@@ -452,7 +452,7 @@ Any
 ws_get_selection(DisplayObj d, Name which, Name target)
 { ASSERT_SDL_MAIN();
   if ( target == NAME_text || target == NAME_utf8_string )
-  { const char *text = NULL;
+  { char *text = NULL;
 
     if ( which == NAME_clipboard )
       text = SDL_GetClipboardText();
@@ -460,7 +460,24 @@ ws_get_selection(DisplayObj d, Name which, Name target)
       text = SDL_GetPrimarySelectionText();
 
     if ( text )
-      return UTF8ToString(text);
+    { StringObj rc;
+
+#ifdef __WINDOWS__	/* SDL3 returns lines separated by \r\n */
+      for(char *s = text, *o = text;; s++)
+      { char c = *s;
+
+	if ( c == '\r' && s[1] == '\n' )
+	  continue;
+	*o++ = c;
+	if ( !c )
+	  break;
+      }
+#endif
+
+      rc = UTF8ToString(text);
+      SDL_free(text);
+      answer(rc);
+    }
   }
 
   Cprintf("ws_get_selection(%s, %s, %s): not supported\n",
