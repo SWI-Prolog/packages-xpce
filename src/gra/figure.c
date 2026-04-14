@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -72,7 +73,13 @@ RedrawBoxFigure(Figure f, Area area)
       r_dash(f->texture);
 
       if ( notNil(f->elevation) )
-      { r_3d_box(x, y, w, h, valInt(f->radius), f->elevation, TRUE);
+      { Elevation e = f->elevation;
+	if ( e->kind == NAME_shadow )
+	{ r_shadow_box(x, y, w, h,
+		       valInt(f->radius), valInt(e->height), f->background);
+	} else
+	{ r_3d_box(x, y, w, h, valInt(f->radius), e, true);
+	}
 	rval = f->elevation->background;
       } else
       { r_box(x, y, w, h, valInt(f->radius), f->background);
@@ -117,6 +124,8 @@ computeBoundingBoxFigure(Figure f)
 
     if ( f->border != ZERO )
       increaseArea(f->area, f->border);
+    if ( f->pen != ZERO )
+      increaseArea(f->area, f->pen);
 
     if ( ox != a->x || oy != a->y || ow != a->w || oh != a->h )
       changedAreaGraphical((Graphical)f, ox, oy, ow, oh);
@@ -245,8 +254,7 @@ shadowFigure(Figure f, Int shadow)
 					shadow, /* height */
 					isNil(f->background) ? DEFAULT
 							     : f->background,
-					DEFAULT, /* edge colours */
-					DEFAULT,
+					DEFAULT, DEFAULT, /* edge colours */
 					NAME_shadow, EAV));
 }
 
