@@ -377,7 +377,7 @@ set(XPCE_DATA_man_reference_class and.doc application.doc arc.doc
     text_margin.doc tile_adjuster.doc tile.doc timer.doc times.doc
     tokeniser.doc tree.doc tuple.doc type.doc var.doc variable.doc
     vector.doc view.doc visual.doc vmi.doc when.doc while.doc
-    window_decorator.doc window.doc win_metafile.doc win_printer.doc)
+    window_decorator.doc window.doc)
 
 ################
 # QLF DEPENDENCIES
