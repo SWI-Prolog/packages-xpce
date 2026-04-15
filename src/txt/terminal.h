@@ -205,6 +205,7 @@ typedef unsigned short text_flags;
 typedef struct
 { uchar_t	 code;			/* character code */
   text_flags	 flags;			/* flags for the text */
+  uint8_t	 width;			/* display width (0=combining, 1=normal, 2=wide) */
 } text_char;
 
 typedef struct href

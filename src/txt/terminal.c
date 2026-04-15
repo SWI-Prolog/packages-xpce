@@ -34,7 +34,7 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define _XOPEN_SOURCE 600	/* Get PTY API */
+#define _XOPEN_SOURCE 600	/* Get PTY API, wcwidth */
 #undef _WIN32_WINNT
 #define _WIN32_WINNT 0x0B00	/* Get PseudoConsole API */
 #define SWIPL_WINDOWS_NATIVE_ACCESS 1
@@ -45,6 +45,9 @@
 #include <poll.h>
 #endif
 #include <SWI-Stream.h>
+#ifndef _WIN32
+#include <wchar.h>
+#endif
 
 /* This file  implements a terminal  emulator in XPCE.  A  terminal is
  * connected to a Prolog thread, the _client_.
@@ -90,6 +93,220 @@
 #define OPT_POSITION	0x02
 
 		 /*******************************
+		 *	  UNICODE WIDTH		*
+		 *******************************/
+
+/** Return the display column width of a Unicode code point.
+ *
+ * Returns 0 for combining / non-spacing characters (they attach to
+ * the preceding base character and consume no extra column), 2 for
+ * East-Asian wide / fullwidth characters, and 1 for everything else.
+ *
+ * The implementation delegates to the POSIX wcwidth(3) function which
+ * is available on all supported Unix/macOS platforms when
+ * _XOPEN_SOURCE >= 600.  On Windows, where wcwidth is absent, we use
+ * a minimal inline table that covers the most common ranges.
+ */
+
+static int
+uchar_display_width(uchar_t c)
+{
+  if ( c == 0 )
+    return 0;
+  /* Non-spacing / combining characters.  Checked before wcwidth so the
+   * result is independent of the process locale: wcwidth() only returns
+   * 0 for combining marks when the locale's charset covers the code
+   * point, and returns -1 in the C locale.  Getting this wrong means
+   * combining marks claim one column, which throws off every caret and
+   * selection calculation downstream. */
+  if ( (c >= 0x0300 && c <= 0x036F) ||	/* Combining Diacritical Marks */
+       (c >= 0x1AB0 && c <= 0x1AFF) ||	/* Combining Diacritical Marks Extended */
+       (c >= 0x1DC0 && c <= 0x1DFF) ||	/* Combining Diacritical Marks Supplement */
+       (c >= 0x20D0 && c <= 0x20FF) ||	/* Combining Diacritical Marks for Symbols */
+       (c >= 0xFE20 && c <= 0xFE2F) ||	/* Combining Half Marks */
+       c == 0x200C || c == 0x200D ||	/* ZWNJ / ZWJ */
+       c == 0xFE0E || c == 0xFE0F )	/* Variation Selectors 15 / 16 */
+    return 0;
+  /* East-Asian wide / fullwidth characters and wide emoji. */
+  if ( (c >= 0x1100 && c <= 0x115F) ||	/* Hangul Jamo */
+       (c >= 0x2E80 && c <= 0x303E) ||	/* CJK Radicals etc. */
+       (c >= 0x3041 && c <= 0x33BF) ||	/* Hiragana .. CJK Compatibility */
+       (c >= 0x3400 && c <= 0x4DBF) ||	/* CJK Extension A */
+       (c >= 0x4E00 && c <= 0x9FFF) ||	/* CJK Unified Ideographs */
+       (c >= 0xA000 && c <= 0xA4CF) ||	/* Yi */
+       (c >= 0xA960 && c <= 0xA97F) ||	/* Hangul Jamo Extended-A */
+       (c >= 0xAC00 && c <= 0xD7FF) ||	/* Hangul Syllables + Jamo Ext-B */
+       (c >= 0xF900 && c <= 0xFAFF) ||	/* CJK Compatibility Ideographs */
+       (c >= 0xFE10 && c <= 0xFE1F) ||	/* Vertical Forms */
+       (c >= 0xFE30 && c <= 0xFE4F) ||	/* CJK Compatibility Forms */
+       (c >= 0xFF01 && c <= 0xFF60) ||	/* Fullwidth Latin/Katakana */
+       (c >= 0xFFE0 && c <= 0xFFE6) ||	/* Fullwidth Signs */
+       (c >= 0x1B000 && c <= 0x1B0FF) ||/* Kana Supplement */
+       (c >= 0x1F004 && c <= 0x1F0CF) ||/* Mahjong/Domino tiles */
+       (c >= 0x1F300 && c <= 0x1F9FF) ||/* Misc Symbols, Emoticons */
+       (c >= 0x20000 && c <= 0x2FFFD) ||/* CJK Extension B-F */
+       (c >= 0x30000 && c <= 0x3FFFD) ) /* CJK Extension G-H */
+    return 2;
+#ifndef _WIN32
+  /* Fall back to wcwidth for rare cases not covered above.  Treat
+   * wcwidth=-1 (unknown to this locale) as 1 column. */
+  { int w = wcwidth((wchar_t)c);
+    if ( w >= 0 )
+      return w;
+  }
+#endif
+  return 1;
+}
+
+
+/** Return the per-cell display column width of a text_char cell.
+ *
+ * The cell array is a column-grid view: each cell corresponds to ONE
+ * visible column on the terminal, not to one code point.  A wide char
+ * is stored across TWO cells — a base cell (stored width 2) and a
+ * placeholder (code 0) — and each of them contributes ONE column to
+ * the sum.  Combining marks and variation selectors have stored
+ * width 0 and contribute 0 (they attach to the preceding base cell's
+ * cluster rather than taking their own column).
+ *
+ * Reporting per-cell widths makes caret arithmetic and click-translation
+ * uniform: summing tc_display_width() over cells [0, n) always yields
+ * the visual column, and caret_x can land on the placeholder to
+ * represent the right half of a wide char (matching a '\b' from the
+ * cluster's end).
+ */
+
+static inline int
+tc_display_width(const text_char *tc)
+{ if ( tc->code == 0 )
+    return 1;				/* right half of a wide char */
+  if ( tc->width == 2 )
+    return 1;				/* left half of a wide char */
+  return tc->width;			/* 0 for combining marks, 1 for normal */
+}
+
+
+/** Convert a visual column to a cell index within a text line.
+ *
+ * `caret_x` and all other indices into text[] are CELL indices: one
+ * code point per cell, with combining marks and wide-char right-half
+ * placeholders stored as zero-width cells.  ANSI cursor control
+ * sequences (CUP, HPA, ...) speak VISUAL columns.  This helper walks
+ * the line, summing display widths, until it reaches the requested
+ * visual column.  Lands on the first cell of the containing grapheme
+ * cluster (never mid-cluster on a combining mark).
+ *
+ * When vcol extends beyond the stored content, each additional visual
+ * column maps to one cell (an implicit space that rlc_prepare_line
+ * will materialise when content is next written there).
+ */
+static int
+rlc_vcol_to_cell(const RlcTextLine tl, int vcol)
+{ int cell = 0;
+  int col  = 0;
+
+  if ( tl->text )
+  { while ( cell < tl->size && col < vcol )
+    { int w = tc_display_width(&tl->text[cell]);
+      col += w;
+      cell++;
+      /* Skip combining marks and variation selectors (code != 0,
+         stored width 0) attached to the preceding cluster.  Do NOT
+         skip wide-char right-half placeholders (code == 0): each is
+         its own visual column in the per-cell width model. */
+      while ( cell < tl->size &&
+	      tl->text[cell].width == 0 &&
+	      tl->text[cell].code != 0 )
+	cell++;
+    }
+  }
+  if ( col < vcol )
+    cell += vcol - col;			/* virtual cells past end of line */
+
+  return cell;
+}
+
+
+/** Inverse of rlc_vcol_to_cell: convert a cell index to a visual column. */
+static int
+rlc_cell_to_vcol(const RlcTextLine tl, int cell)
+{ int col = 0;
+  int lim = (tl->text && cell < tl->size) ? cell : (tl->text ? tl->size : 0);
+
+  if ( tl->text )
+  { for(int i=0; i<lim; i++)
+      col += tc_display_width(&tl->text[i]);
+  }
+  if ( cell > lim )
+    col += cell - lim;			/* virtual cells past end */
+
+  return col;
+}
+
+
+/** Snap a cell index backward to the start of its grapheme cluster.
+ *
+ * If `cell` points to a combining mark or a wide-char right-half placeholder
+ * (both have width == 0), walk back to the preceding base cell.  Indices
+ * at or past tl->size are left unchanged — there's no cluster to snap to.
+ */
+static int
+rlc_snap_start(const RlcTextLine tl, int cell)
+{ if ( !tl->text || cell <= 0 || cell >= tl->size )
+    return cell;
+  while ( cell > 0 && tl->text[cell].width == 0 )
+    cell--;
+  return cell;
+}
+
+
+/** Snap a cell index forward past any combining marks of the preceding
+ *  cluster.  Used for the exclusive END of a selection range so the final
+ *  grapheme is wholly included (or wholly excluded) rather than split.
+ */
+static int
+rlc_snap_end(const RlcTextLine tl, int cell)
+{ if ( !tl->text )
+    return cell;
+  while ( cell < tl->size && tl->text[cell].width == 0 )
+    cell++;
+  return cell;
+}
+
+
+/** Advance past the grapheme cluster starting at `pos`.  Returns the cell
+ *  index of the next cluster's base (or tl->size if no more clusters).
+ */
+static int
+rlc_cluster_next(const RlcTextLine tl, int pos)
+{ if ( !tl->text || pos >= tl->size )
+    return pos;
+  pos++;
+  while ( pos < tl->size && tl->text[pos].width == 0 )
+    pos++;
+  return pos;
+}
+
+
+/** Return the cell index of the cluster immediately before the one
+ *  containing `pos`.  Returns 0 if there is no earlier cluster.
+ */
+static int
+rlc_cluster_prev(const RlcTextLine tl, int pos)
+{ if ( !tl->text || pos <= 0 )
+    return 0;
+  /* First snap pos back to the start of its own cluster. */
+  pos = rlc_snap_start(tl, pos);
+  if ( pos == 0 )
+    return 0;
+  pos--;
+  while ( pos > 0 && tl->text[pos].width == 0 )
+    pos--;
+  return pos;
+}
+
+
+		 /*******************************
 		 *	     FUNCTIONS		*
 		 *******************************/
 
@@ -127,8 +344,7 @@ static void	rlc_redraw(RlcData b, int x, int y, int w, int h);
 static void	rlc_resize(RlcData b, int w, int h);
 static void	rlc_adjust_line(RlcData b, int line);
 static int	text_width(RlcData b, const text_char *text, int len);
-static int	tchar_width(RlcData b, const char *text,
-			    size_t ulen, size_t len, FontObj font);
+static int	chars_columns(const text_char *chars, int len);
 static void     rlc_reinit_line(RlcData b, int line);
 static void	rlc_free_line(RlcData b, int line);
 static void	rlc_destroy_saved_screen(RlcData b);
@@ -1171,7 +1387,18 @@ rlc_changed_line(RlcData b, int i, int mask)
 
 static void
 rlc_set_selection(RlcData b, int sl, int sc, int el, int ec)
-{ int sch = rlc_min(b, sl, b->sel_start_line);
+{ /* Snap the endpoints to grapheme-cluster boundaries.  `sc` is the
+   * inclusive start: any combining mark there logically belongs to the
+   * cluster before, so move the start back to that base.  `ec` is the
+   * exclusive end: any trailing combining marks of the previous cluster
+   * should be included, so move the end forward past them.
+   */
+  if ( rlc_between(b, b->first, b->last, sl) )
+    sc = rlc_snap_start(&b->lines[sl], sc);
+  if ( rlc_between(b, b->first, b->last, el) )
+    ec = rlc_snap_end(&b->lines[el], ec);
+
+  int sch = rlc_min(b, sl, b->sel_start_line);
   int ech = rlc_max(b, el, b->sel_end_line);
   int nel = NextLine(b, el);
   int nsel= NextLine(b, b->sel_end_line);
@@ -1248,7 +1475,18 @@ rlc_translate_mouse(RlcData b, int x, int y, int *line, int *chr)
   tl = &b->lines[ln];
 
   if ( b->fixedfont )
-  { *chr = min(x/b->cw, tl->size);
+  { /* Map pixel x to character index, accounting for double-width cells. */
+    int col = 0;		/* accumulated visual column (in cw units) */
+    int ci  = 0;		/* character index */
+    while ( ci < tl->size )
+    { int w = tc_display_width(&tl->text[ci]);
+      if ( w == 0 ) { ci++; continue; }	/* skip combining chars */
+      if ( (col + w) * (int)b->cw > x )
+	break;
+      col += w;
+      ci++;
+    }
+    *chr = ci;
   } else if ( tl->size == 0 )
   { *chr = 0;
   } else
@@ -1275,7 +1513,14 @@ rlc_translate_mouse(RlcData b, int x, int y, int *line, int *chr)
       }
     }
 
-    *chr = m;
+    /* The binary search drives off text_width, which sums display widths
+     * and thus treats a combining mark as width 0.  That means consecutive
+     * m values can span a combining-mark cell without the sum changing,
+     * and m can settle on a combining cell (width 0 in display but a real
+     * code-point cell).  Snap the result to the start of its grapheme
+     * cluster so callers (selection, click handlers) get a cluster-base
+     * cell, never a combiner. */
+    *chr = rlc_snap_start(tl, m);
   }
 }
 
@@ -1357,10 +1602,26 @@ rlc_word_selection(RlcData b, int x, int y)
     if ( c < tl->size && rlc_is_word_char(b, tl->text[c].code) )
     { int f, t;
 
-      for(f=c; f>0 && rlc_is_word_char(b, tl->text[f-1].code); f--)
-	;
-      for(t=c; t<tl->size && rlc_is_word_char(b, tl->text[t].code); t++)
-	;
+      /* Walk backward one grapheme cluster at a time.  rlc_is_word_char
+       * is checked on the cluster's BASE cell (combining marks and
+       * wide-char placeholders are not word characters themselves). */
+      f = c;
+      while ( f > 0 )
+      { int p = rlc_cluster_prev(tl, f);
+	if ( !rlc_is_word_char(b, tl->text[p].code) )
+	  break;
+	f = p;
+      }
+
+      /* Walk forward one cluster at a time; t ends up past the last
+       * selected cluster (including its trailing combining marks). */
+      t = c;
+      while ( t < tl->size )
+      { if ( !rlc_is_word_char(b, tl->text[t].code) )
+	  break;
+	t = rlc_cluster_next(tl, t);
+      }
+
       rlc_set_selection(b, l, f, l, t);
     }
   }
@@ -1395,16 +1656,27 @@ rlc_extend_selection(RlcData b, int x, int y)
     { if ( rlc_between(b, b->first, b->last, l) )
       { RlcTextLine tl = &b->lines[l];
 
+	/* Start point: walk backward one cluster at a time while the
+	 * cluster's base is a word character. */
 	if ( c < tl->size && rlc_is_word_char(b, tl->text[c].code) )
-	  for(; c > 0 && rlc_is_word_char(b, tl->text[c-1].code); c--)
-	    ;
+	{ while ( c > 0 )
+	  { int p = rlc_cluster_prev(tl, c);
+	    if ( !rlc_is_word_char(b, tl->text[p].code) )
+	      break;
+	    c = p;
+	  }
+	}
       }
       if ( rlc_between(b, b->first, b->last, el) )
       { RlcTextLine tl = &b->lines[el];
 
+	/* End point: walk forward past word clusters, landing just after
+	 * the last one (including its trailing combining marks). */
 	if ( ec < tl->size && rlc_is_word_char(b, tl->text[ec].code) )
-	  for(; ec < tl->size && rlc_is_word_char(b, tl->text[ec].code); ec++)
-	    ;
+	{ while ( ec < tl->size &&
+		  rlc_is_word_char(b, tl->text[ec].code) )
+	    ec = rlc_cluster_next(tl, ec);
+	}
       }
     } else if ( b->sel_unit == SEL_LINE )
     { ec = b->width;
@@ -1417,16 +1689,25 @@ rlc_extend_selection(RlcData b, int x, int y)
     { if ( rlc_between(b, b->first, b->last, l) )
       { RlcTextLine tl = &b->lines[l];
 
+	/* End point: walk forward past word clusters. */
 	if ( c < tl->size && rlc_is_word_char(b, tl->text[c].code) )
-	  for(; c < tl->size && rlc_is_word_char(b, tl->text[c].code); c++)
-	    ;
+	{ while ( c < tl->size &&
+		  rlc_is_word_char(b, tl->text[c].code) )
+	    c = rlc_cluster_next(tl, c);
+	}
       }
       if ( rlc_between(b, b->first, b->last, el) )
       { RlcTextLine tl = &b->lines[el];
 
+	/* Start point: walk backward one cluster at a time. */
 	if ( ec < tl->size && rlc_is_word_char(b, tl->text[ec].code) )
-	  for(; ec > 0 && rlc_is_word_char(b, tl->text[ec-1].code); ec--)
-	    ;
+	{ while ( ec > 0 )
+	  { int p = rlc_cluster_prev(tl, ec);
+	    if ( !rlc_is_word_char(b, tl->text[p].code) )
+	      break;
+	    ec = p;
+	  }
+	}
       }
     } else if ( b->sel_unit == SEL_LINE )
     { ec = 0;
@@ -1467,7 +1748,9 @@ rlc_read_from_window(RlcData b, int sl, int sc, int el, int ec)
 	  if ( !(buf = rlc_realloc(buf, bufsize * sizeof(uchar_t))) )
 	    return NULL;		/* not enough memory */
 	}
-	buf[i++] = tl->text[sc++].code;
+	uchar_t code = tl->text[sc++].code;
+	if ( code != 0 )		/* skip wide-char right-half placeholders */
+	  buf[i++] = code;
       }
     }
 
@@ -1537,14 +1820,23 @@ rlc_caret_xy(RlcData b, int *x, int *y)
 
   if ( line < b->window_size )
   { *y = line * b->ch;
-    if ( b->fixedfont )
-    { *x = (b->caret_x + 1) * b->cw;
-    } else
-    { int tw;
-      RlcTextLine tl = &b->lines[b->caret_y];
-      tw = text_width(b, tl->text, b->caret_x);
-      *x = b->cw + tw;
-    }
+    /* The cursor position must agree with the cell model used by
+     * click-translation, selection, and ANSI caret commands — all of
+     * which treat `caret_x` as a cell index and the visible column as
+     * the sum of tc_display_width() over cells [0, caret_x).  Using
+     * Pango's str_advance_utf8() here instead (for proportional fonts)
+     * would land the cursor at the pixel Pango happens to advance to,
+     * which for wide emoji with font-fallback can disagree with our
+     * 2-column logical width, making the caret drift one or more
+     * columns away from where the next character would be inserted. */
+    RlcTextLine tl = &b->lines[b->caret_y];
+    int cols = 0;
+    int lim = b->caret_x < tl->size ? b->caret_x : tl->size;
+    for(int i=0; i<lim; i++)
+      cols += tc_display_width(&tl->text[i]);
+    if ( b->caret_x > tl->size )
+      cols += b->caret_x - tl->size;	/* virtual cells past end */
+    *x = (cols + 1) * b->cw;
     return true;
   }
 
@@ -1668,21 +1960,27 @@ rlc_paint_text(RlcData b,
     for(i=0; i<copy; i++)
       *o++ = *s++;
     for(; i<len; i++, o++)
-    { o->code = ' ';
+    { o->code  = ' ';
       o->flags = TF_DEFAULT;
+      o->width = 1;
     }
   }
 
+  /* Build UTF-8 string, skipping zero-code wide-char right-half placeholders.
+     Combining characters (width=0, code!=0) are included normally — Pango
+     will render them attached to their base character. */
   char *t;
   for(t=text, s=chars, i=0; i < len; i++, s++)
-    t = utf8_put_char(t, s->code);
+  { if ( s->code != 0 )
+      t = utf8_put_char(t, s->code);
+  }
   *t = 0;
 
   if ( insel )					/* TBD: Cache */
   { Any ofg = r_colour(ti->selection_style->colour);
     Any obg = r_background(ti->selection_style->background);
     int x0 = *cx;
-    *cx += tchar_width(b, text, t-text, len, ti->font);
+    *cx += chars_columns(chars, len) * b->cw;
     r_clear(x0, ty-b->cb, *cx-x0, b->ch);
     s_print_utf8(text, t-text, x0, ty, ti->font);
     r_colour(ofg);
@@ -1696,12 +1994,18 @@ rlc_paint_text(RlcData b,
     { text_flags flags = s->flags;
       int left = len-start;
 
+      /* Count characters in this same-flags segment and build its UTF-8 span.
+	 Wide-char placeholders (code==0) inherit the previous cell's flags and
+	 are skipped in the UTF-8 output.  We walk both the char array (segment)
+	 and the UTF-8 bytes (ut) together. */
       char *ut = t;
       for(segment=0;
 	  segment<left && s[segment].flags == flags;
 	  segment++)
-      { int chr;		/* TODO: just skip UTF8 is easier */
-	ut = utf8_get_char(ut, &chr);
+      { if ( s[segment].code != 0 )
+	{ int chr;
+	  ut = utf8_get_char(ut, &chr);
+	}
       }
       ulen = ut-t;
 
@@ -1730,7 +2034,7 @@ rlc_paint_text(RlcData b,
       }
 
       int x0 = *cx;
-      *cx += tchar_width(b, t, ulen, segment, ti->font);
+      *cx += chars_columns(s, segment) * b->cw;
 #if 0
       fprintf(stderr, "Print \"%s\"[%d] at %d[%d],%d using %s\n",
 	      t, ulen, x0, *cx-x0, ty, pp(ti->font));
@@ -1893,6 +2197,16 @@ rlc_resize_pixel_units(RlcData b, int w, int h)
 		 *	       FONT		*
 		 *******************************/
 
+/* Note: the terminal uses a monospace cell model.  `cw` is treated as
+ * the pixel width of one visual column, and every cell spans an integer
+ * number of columns (0 for combining marks and wide-char placeholders,
+ * 1 for narrow chars, 2 for wide chars).  Click translation, selection,
+ * ANSI cursor positioning, caret rendering, and paint all assume
+ * col × cw pixel geometry.  A proportional font will therefore draw
+ * glyphs at their natural widths but the underlying grid stays
+ * monospace — supporting truly variable-width glyphs would require
+ * per-cell pixel widths and reworking all of the above in tandem.
+ */
 static void
 rlc_init_text_dimensions(RlcData b, FontObj font)
 { b->cw = valNum(getAvgCharWidthFont(font));
@@ -1904,19 +2218,14 @@ rlc_init_text_dimensions(RlcData b, FontObj font)
 
 static int
 text_width(RlcData b, const text_char *text, int len)
-{ if ( b->fixedfont )
-  { return len * b->cw;
-  } else
-  { TerminalImage ti = b->object;
-    char tmp[MAXLINE*4];
-    char *o = tmp;
-
-    for(int i=0; i<len && o<&tmp[sizeof(tmp)-7]; i++)
-      o = utf8_put_char(o, text[i].code);
-    *o = 0;
-
-    return str_advance_utf8(tmp, o-tmp, ti->font);
-  }
+{ /* Cell-based pixel width: sum of visual columns × cw.  Kept uniform
+   * with paint and caret positioning so click-translation, selection,
+   * and the caret all agree.  See rlc_init_text_dimensions() for the
+   * monospace-grid assumption. */
+  int cols = 0;
+  for(int i=0; i<len; i++)
+    cols += tc_display_width(&text[i]);
+  return cols * b->cw;
 }
 
 
@@ -1927,14 +2236,17 @@ text_width(RlcData b, const text_char *text, int len)
  * @param len is the number of UTF-8 characters, __not__ bytes!
  */
 
+/* Sum display column widths for `len` text_char cells.  Used by the
+   paint loop for fixed-font line segments where each cell may have a
+   stored width (0 for combining/placeholder, 1 for normal, 2 for wide).
+*/
 static int
-tchar_width(RlcData b, const char *text, size_t ulen, size_t len, FontObj font)
-{ if ( b->fixedfont )
-    return len * b->cw;
-  else
-    return str_advance_utf8(text, ulen, font);
+chars_columns(const text_char *chars, int len)
+{ int cols = 0;
+  for(int i=0; i<len; i++)
+    cols += tc_display_width(&chars[i]);
+  return cols;
 }
-
 
 		 /*******************************
 		 *     BUFFER INITIALISATION	*
@@ -2343,9 +2655,11 @@ rlc_unadjust_line(RlcData b, int line)
   { if ( tl->adjusted )
     { tl->text = rlc_realloc(tl->text, (b->width + 1)*sizeof(text_char));
       tl->adjusted = false;
+      /* zero-initialize new tail if any (realloc may grow the buffer) */
     }
   } else
   { tl->text = rlc_malloc((b->width + 1)*sizeof(text_char));
+    memset(tl->text, 0, (b->width + 1)*sizeof(text_char));
     tl->adjusted = false;
     tl->size = 0;
   }
@@ -2364,6 +2678,7 @@ rlc_open_line(RlcData b)
   }
 
   b->lines[i].text       = rlc_malloc((b->width + 1)*sizeof(text_char));
+  memset(b->lines[i].text, 0, (b->width + 1)*sizeof(text_char));
   b->lines[i].adjusted   = false;
   b->lines[i].size       = 0;
   b->lines[i].softreturn = false;
@@ -2492,6 +2807,19 @@ rlc_caret_forward(RlcData b, int arg)
       b->caret_x = 0;
       rlc_caret_down(b, 1);
     }
+    /* Skip over combining marks and variation selectors (stored
+       width 0, code != 0) which share a cluster with the preceding
+       base cell.  Wide-char right-half placeholders (code == 0) are
+       NOT skipped — they are valid cursor positions representing the
+       right half of a wide char, and matching them lets a single
+       terminal `\b` step move 1 visual column through a wide char
+       instead of jumping over the whole cluster. */
+    { RlcTextLine tl = &b->lines[b->caret_y];
+      while ( b->caret_x < tl->size &&
+	      tl->text[b->caret_x].width == 0 &&
+	      tl->text[b->caret_x].code != 0 )
+	b->caret_x++;
+    }
   }
 
   b->changed |= CHG_CARET;
@@ -2504,6 +2832,17 @@ rlc_caret_backward(RlcData b, int arg)
   { if ( b->caret_x-- == 0 )
     { rlc_caret_up(b, 1);
       b->caret_x = b->width-1;
+    }
+    /* See rlc_caret_forward: skip combining marks (code != 0, width 0)
+       but stop on wide-char placeholders (code == 0), which represent
+       the right half of a wide char and are a valid visual column. */
+    { RlcTextLine tl = &b->lines[b->caret_y];
+      while ( b->caret_x > 0 &&
+	      tl->text &&
+	      b->caret_x < tl->size &&
+	      tl->text[b->caret_x].width == 0 &&
+	      tl->text[b->caret_x].code != 0 )
+	b->caret_x--;
     }
   }
 
@@ -2533,8 +2872,9 @@ rlc_tab(RlcData b)
     while ( tl->size < b->caret_x )
     { text_char *tc = &tl->text[tl->size++];
 
-      tc->code = ' ';
+      tc->code  = ' ';
       tc->flags = b->sgr_flags;
+      tc->width = 1;
     }
   }
 
@@ -2558,7 +2898,12 @@ rlc_set_caret(RlcData b, int x, int y)
   else
     rlc_caret_down(b, y-cy);
 
-  b->caret_x = Bounds(x, 0, b->width-1);
+  /* ANSI CUP/HVP passes a visual column — map to the cell index that
+   * holds the first code point of that visual column's grapheme. */
+  int vcol = Bounds(x, 0, b->width-1);
+  b->caret_x = rlc_vcol_to_cell(&b->lines[b->caret_y], vcol);
+  if ( b->caret_x > b->width-1 )
+    b->caret_x = b->width-1;
 
   b->changed |= CHG_CARET;
 }
@@ -2566,7 +2911,11 @@ rlc_set_caret(RlcData b, int x, int y)
 
 static void
 rlc_set_caret_x(RlcData b, int x)
-{ b->caret_x = Bounds(x-1, 0, b->width-1);
+{ /* CSI G (HPA) uses 1-based visual columns. */
+  int vcol = Bounds(x-1, 0, b->width-1);
+  b->caret_x = rlc_vcol_to_cell(&b->lines[b->caret_y], vcol);
+  if ( b->caret_x > b->width-1 )
+    b->caret_x = b->width-1;
 
   b->changed |= CHG_CARET;
 }
@@ -2575,7 +2924,10 @@ rlc_set_caret_x(RlcData b, int x)
 static void
 rlc_save_caret_position(RlcData b)
 { b->scaret_y = rlc_count_lines(b, b->window_start, b->caret_y);
-  b->scaret_x = b->caret_x;
+  /* Save the VISUAL column so rlc_restore_caret_position (which goes
+   * through rlc_set_caret) restores to the same visual position even
+   * if the line contents have changed meanwhile. */
+  b->scaret_x = rlc_cell_to_vcol(&b->lines[b->caret_y], b->caret_x);
 }
 
 
@@ -2670,6 +3022,7 @@ rlc_prepare_line(RlcData b, int y)
 
     tc->code  = ' ';
     tc->flags = b->sgr_flags;
+    tc->width = 1;
   }
 
   return tl;
@@ -2679,37 +3032,149 @@ rlc_prepare_line(RlcData b, int y)
 static void
 rlc_put(RlcData b, int chr)
 { RlcTextLine tl = rlc_prepare_line(b, b->caret_y);
-  text_char *tc = &tl->text[b->caret_x];
-  tc->code = chr;
-  tc->flags = b->sgr_flags;
-  if ( tl->size <= b->caret_x )
-    tl->size = b->caret_x + 1;
-  tl->changed |= CHG_CHANGED;
+  int dw = uchar_display_width((uchar_t)chr);
 
-  rlc_caret_forward(b, 1);
+  if ( dw == 0 )
+  { /* Combining character: attach to the preceding base's cluster by
+       storing in its own cell at caret_x.  Pango will render base +
+       combiner as a single grapheme.  If there is no preceding cell on
+       this line (caret_x == 0 with nothing before) the combiner would
+       orphan; drop it in that case — a real terminal typically folds
+       such a stray mark onto an implicit space, which we leave to the
+       next base write. */
+    if ( b->caret_x == 0 )
+      return;				/* orphan: no base to attach to */
+    text_char *tc = &tl->text[b->caret_x];
+    tc->code  = chr;
+    tc->flags = b->sgr_flags;
+    tc->width = 0;
+    if ( tl->size <= b->caret_x )
+      tl->size = b->caret_x + 1;
+    tl->changed |= CHG_CHANGED;
+    /* Advance the cell index (not the visual column) so the next char
+       doesn't overwrite this combiner.  Cap at b->width to avoid wrap. */
+    if ( b->caret_x < b->width - 1 )
+      b->caret_x++;
+  } else
+  { /* Pre-wrap: a wide char at the last column won't fit.  Pad the
+       remaining cell with a space and wrap to the next line before
+       placing the wide character.  Without this the wide char would
+       be written at caret_x = width-1 with no room for its
+       placeholder, leaving the cell array and the rendered glyph out
+       of sync. */
+    if ( dw == 2 && b->caret_x + 1 >= b->width )
+    { if ( b->caret_x < b->width )
+      { text_char *pad = &tl->text[b->caret_x];
+	pad->code  = ' ';
+	pad->flags = b->sgr_flags;
+	pad->width = 1;
+	if ( tl->size <= b->caret_x )
+	  tl->size = b->caret_x + 1;
+      }
+      tl->changed |= CHG_CHANGED;
+      b->lines[b->caret_y].softreturn = true;
+      b->caret_x = 0;
+      rlc_caret_down(b, 1);
+      tl = rlc_prepare_line(b, b->caret_y);
+    }
+
+    text_char *tc = &tl->text[b->caret_x];
+    tc->code  = chr;
+    tc->flags = b->sgr_flags;
+    tc->width = (uint8_t)dw;
+    if ( tl->size <= b->caret_x )
+      tl->size = b->caret_x + 1;
+
+    if ( dw == 2 )
+    { /* Wide character: place a zero-code placeholder in the next column so
+         that the cell array stays aligned with visual columns. */
+      text_char *ph = &tl->text[b->caret_x + 1];
+      ph->code  = 0;
+      ph->flags = b->sgr_flags;
+      ph->width = 0;
+      if ( tl->size <= b->caret_x + 1 )
+	tl->size = b->caret_x + 2;
+    }
+
+    tl->changed |= CHG_CHANGED;
+    /* Advance caret_x by the character's cell width directly — do NOT go
+       through rlc_caret_forward because that skips zero-width cells, which
+       would cause double-advance for wide chars whose placeholder is 0-width.
+       We DO NOT skip existing combining marks following the new base: when
+       a client re-echoes a grapheme cluster (e.g. libedit re-writing a base
+       to move the cursor), it sends base + combiners in sequence.  Skipping
+       here would advance past a combiner that the very next rlc_put is about
+       to re-write, causing that write to land one cell too far right and
+       clobber the following cluster's base. */
+    b->caret_x += dw;
+    if ( b->caret_x >= b->width )
+    { b->lines[b->caret_y].softreturn = true;
+      b->caret_x = 0;
+      rlc_caret_down(b, 1);
+    }
+    b->changed |= CHG_CARET;
+  }
 }
 
 static void
 rlc_insert(RlcData b, int chr)
 { RlcTextLine tl = rlc_prepare_line(b, b->caret_y);
-  if ( tl->size < b->width )
-    tl->size++;
-  for(int i=tl->size-1; i>b->caret_x; i--)
-    tl->text[i] = tl->text[i-1];
+  int dw = uchar_display_width((uchar_t)chr);
+  int slots = (dw == 2) ? 2 : 1;	/* wide chars need 2 cells */
+
+  if ( tl->size + slots <= b->width )
+    tl->size += slots;
+  else if ( tl->size < b->width )
+    tl->size = b->width;
+  for(int i=tl->size-1; i>=(int)(b->caret_x+slots); i--)
+    tl->text[i] = tl->text[i-slots];
   text_char *tc = &tl->text[b->caret_x];
-  tc->code = chr;
+  tc->code  = chr;
   tc->flags = b->sgr_flags;
+  tc->width = (uint8_t)dw;
+  if ( dw == 2 && b->caret_x + 1 < b->width )
+  { text_char *ph = &tl->text[b->caret_x + 1];
+    ph->code  = 0;
+    ph->flags = b->sgr_flags;
+    ph->width = 0;
+  }
   tl->changed |= CHG_CHANGED;
 }
 
 static void
 rlc_delete_chars(RlcData b, int count)
 { RlcTextLine tl = rlc_prepare_line(b, b->caret_y);
-  if ( count > tl->size - b->caret_x )
-    count = tl->size - b->caret_x;
-  tl->size -= count;
-  for(int i=b->caret_x; i<tl->size; i++)
-    tl->text[i] = tl->text[i+count];
+  /* ANSI DCH takes a VISUAL COLUMN count.  Snap the caret back to the
+     start of its grapheme cluster (in case it lands on a combining mark
+     or a wide-char right-half placeholder) so the erase begins at a
+     cluster boundary. */
+  int cx = rlc_snap_start(tl, b->caret_x);
+
+  /* Walk forward `count` visual columns, accumulating the number of
+     cells to delete.  Each grapheme cluster contributes its base's
+     display width (1 for narrow, 2 for wide); we always delete the
+     base plus all trailing combining marks and any wide-char
+     placeholder. */
+  int del_cells = 0;
+  int p = cx;
+  while ( count > 0 && p < tl->size )
+  { int w    = tc_display_width(&tl->text[p]);
+    int next = rlc_cluster_next(tl, p);
+    del_cells += next - p;
+    count    -= (w > 0 ? w : 1);
+    p         = next;
+  }
+
+  if ( del_cells > tl->size - cx )
+    del_cells = tl->size - cx;
+  tl->size -= del_cells;
+  for(int i=cx; i<tl->size; i++)
+    tl->text[i] = tl->text[i+del_cells];
+
+  /* If we snapped caret back to cluster start, reflect that in the
+     terminal's caret position. */
+  b->caret_x = cx;
+
   tl->changed |= CHG_CHANGED;
 }
 
