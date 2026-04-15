@@ -38,7 +38,7 @@
 static status
 initialiseCircle(Circle c, Int w)
 { initialiseGraphical(c, ZERO, ZERO, w, w);
-  assign(c, fill_pattern, NIL);
+  assign(c, fill, NIL);
 
   succeed;
 }
@@ -52,7 +52,7 @@ RedrawAreaCircle(Circle c, Area a)
   NormaliseArea(x, y, w, h);
   r_thickness(valInt(c->pen));
   r_dash(c->texture);
-  r_ellipse(x, y, w, h, c->fill_pattern);
+  r_ellipse(x, y, w, h, c->fill);
 
   return RedrawAreaGraphical(c, a);
 }
@@ -115,7 +115,7 @@ static char *T_geometry[] =
 /* Instance Variables */
 
 static vardecl var_circle[] =
-{ SV(NAME_fillPattern, TYPE_FILL, IV_GET|IV_STORE, fillPatternGraphical,
+{ SV(NAME_fill, TYPE_FILL, IV_GET|IV_STORE, fillGraphical,
      NAME_appearance, "Fill pattern for internals")
 };
 
@@ -163,7 +163,7 @@ status
 makeClassCircle(Class class)
 { declareClass(class, &circle_decls);
 
-  cloneStyleVariableClass(class, NAME_fillPattern, NAME_reference);
+  cloneStyleVariableClass(class, NAME_fill, NAME_reference);
   setRedrawFunctionClass(class, RedrawAreaCircle);
 
   succeed;

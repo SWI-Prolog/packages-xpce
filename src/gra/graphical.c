@@ -1794,8 +1794,8 @@ shadowGraphical(Graphical gr, Int s)
 
 
 status
-fillPatternGraphical(Graphical gr, Any pattern)
-{ return assignGraphical(gr, NAME_fillPattern, pattern);
+fillGraphical(Graphical gr, Any pattern)
+{ return assignGraphical(gr, NAME_fill, pattern);
 }
 
 

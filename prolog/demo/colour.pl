@@ -82,7 +82,7 @@ make_colour_browser(CB, DataBase) :-
     send(P, display, text(hello, left, bold)),
     send(P, display, new(Box, box(30, 12))),
     send(P, display, line(0, 0, 30, 0)),
-    send(Box, fill_pattern, foreground),
+    send(Box, fill, foreground),
 
                                     % A colour is selected; call
                                     % selected_colour/3, using the

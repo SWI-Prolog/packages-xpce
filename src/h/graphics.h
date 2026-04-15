@@ -271,18 +271,18 @@ NewClass(arc)
   Real		start_angle;		/* Start angle */
   Real		size_angle;		/* Size angle */
   Name		close;			/* {none,chord,pie_slice} */
-  Image		fill_pattern;		/* Filled with this pattern */
+  Image		fill;		/* Filled with this pattern */
 End;
 
 NewClass(circle)
   ABSTRACT_GRAPHICAL
-  Image		fill_pattern;		/* image to fill the circle */
+  Image		fill;		/* image to fill the circle */
 End;
 
 NewClass(ellipse)
   ABSTRACT_GRAPHICAL
   Int		shadow;			/* shadow displayed around ellipse */
-  Image		fill_pattern;		/* fill pattern  */
+  Image		fill;		/* fill pattern  */
 End;
 
 NewClass(bezier)
@@ -297,7 +297,7 @@ NewClass(box)
   ABSTRACT_GRAPHICAL
   Int        radius;			/* if displayed as a rounded box */
   Int	     shadow;			/* shadow displayed around box */
-  Image	     fill_pattern;		/* fill box with this */
+  Image	     fill;		/* fill box with this */
   Point	     fill_offset;		/* Offset for filling */
 End;
 
@@ -307,7 +307,7 @@ NewClass(arrow)
   Point      reference;		/* reference point for the arrow */
   Int        length;		/* length of the arrow head */
   Int        wing;		/* wing (width) of the arrow head */
-  Image	     fill_pattern;	/* bitmap used to fill the arrow head */
+  Image	     fill;	/* bitmap used to fill the arrow head */
   Name       style;		/* open or closed arrow */
   Point      left;
   Point      right;		/* together with tip make up the arrow head */
@@ -347,7 +347,7 @@ NewClass(path)
   Int	     radius;			/* Round corners of poly-line */
   Int	     intervals;			/* Number of iteration intervals */
   Chain	     points;			/* Points of the poly-line */
-  Image	     fill_pattern;		/* Fill the path with this pattern */
+  Image	     fill;		/* Fill the path with this pattern */
   Image	     mark;			/* Mark used for points */
   BoolObj    closed;			/* Line from end back to start */
   Chain	     interpolation;		/* interpolated points */

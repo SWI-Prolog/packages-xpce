@@ -36,14 +36,14 @@ geometry(TB, X:[int], Y:[int], W:[int], H:[int]) :->
     send(TB, send_super, geometry, X, Y).
 
 
-fill_pattern(TB, Pattern:image*) :->
+fill(TB, Pattern:image*) :->
     "Specify fill-pattern of the box"::
     get(TB, member, box, Box),
-    send(Box, fill_pattern, Pattern).
-fill_pattern(TB, Pattern:image*) :<-
+    send(Box, fill, Pattern).
+fill(TB, Pattern:image*) :<-
     "Read fill-pattern of the box"::
     get(TB, member, box, Box),
-    get(Box, fill_pattern, Pattern).
+    get(Box, fill, Pattern).
 
 
 string(TB, String:char_array) :->

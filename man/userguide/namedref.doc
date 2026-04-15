@@ -32,7 +32,7 @@ a logical way of dealing with them.  This leads to the following code:
 :- new(@stones_image, image(stones)).
 
 	...,
-	send(Box, fill_pattern, @stones_image),
+	send(Box, fill, @stones_image),
 	...
 \end{code}
 
@@ -53,7 +53,7 @@ look like:
 	->  true
 	;   new(@stones_image, image(stones))
 	),
-	send(Box, fill_pattern, @stones_image),
+	send(Box, fill, @stones_image),
 	...
 \end{code}
 
@@ -74,7 +74,7 @@ The example becomes:
 :- pce_global(@stones_image, new(image(stones))).
 
 	...,
-	send(Box, fill_pattern, @stones_image),
+	send(Box, fill, @stones_image),
 	...
 \end{code}
 

@@ -130,7 +130,7 @@ proto_box(CI, Box:box) :<-
 colour_selection(CI, Colour:colour) :->
     "Set the current selection"::
     get(CI, proto_box, Box),
-    send(Box, fill_pattern, Colour),
+    send(Box, fill, Colour),
     set_slider(CI, Colour, red),
     set_slider(CI, Colour, green),
     set_slider(CI, Colour, blue),
@@ -144,11 +144,11 @@ colour_selection(CI, Colour:colour) :->
             Item)
     ->  send(Palette, selection, Item),
         send(AB, message,
-             message(CI, delete_palette_colour, Box?fill_pattern)),
+             message(CI, delete_palette_colour, Box?fill)),
         send(AB, label, image(resource(trash)))
     ;   send(Palette, clear_selection),
         send(AB, message,
-             message(CI, add_palette_colour, Box?fill_pattern)),
+             message(CI, add_palette_colour, Box?fill)),
         send(AB, label, image(resource(cpalette)))
     ),
     send(CI, modified, @off).
@@ -156,7 +156,7 @@ colour_selection(CI, Colour:colour) :->
 colour_selection(CI, Colour:colour) :<-
     "Get the current selection"::
     get(CI, proto_box, Box),
-    get(Box, fill_pattern, Colour),
+    get(Box, fill, Colour),
     send(CI, modified, @off).
 
 selection(CI, Colour:colour) :->

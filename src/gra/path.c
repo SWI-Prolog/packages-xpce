@@ -63,7 +63,7 @@ initialisePath(Path p, Name kind, Int radius_or_interval, Chain points)
   assign(p, kind,          kind);
   assign(p, points,        newObject(ClassChain, EAV));
   assign(p, interpolation, NIL);
-  assign(p, fill_pattern,  NIL);
+  assign(p, fill,  NIL);
   assign(p, closed,	   OFF);
 
   if ( notDefault(points) )
@@ -144,11 +144,11 @@ RedrawAreaPath(Path p, Area a)
     r_dash(p->texture);
     if ( p->kind == NAME_smooth )
     { points = p->interpolation;
-      r_path(points, ox, oy, 0, FALSE, p->fill_pattern);
+      r_path(points, ox, oy, 0, FALSE, p->fill);
     } else
     { points = p->points;
       r_path(points, ox, oy,
-	     valInt(p->radius), p->closed == ON, p->fill_pattern);
+	     valInt(p->radius), p->closed == ON, p->fill);
     }
 
     if ( notNil(p->mark) )
@@ -971,7 +971,7 @@ static vardecl var_path[] =
      NAME_interpolation, "Interpolation intervals between points"),
   SV(NAME_points, "chain", IV_GET|IV_STORE, pointsPath,
      NAME_points, "Chain of points"),
-  SV(NAME_fillPattern, TYPE_FILL, IV_GET|IV_STORE, fillPatternGraphical,
+  SV(NAME_fill, TYPE_FILL, IV_GET|IV_STORE, fillGraphical,
      NAME_appearance, "Fill pattern"),
   SV(NAME_mark, "image*", IV_GET|IV_STORE, markPath,
      NAME_appearance, "Mark used for points"),
@@ -1050,7 +1050,7 @@ status
 makeClassPath(Class class)
 { declareClass(class, &path_decls);
 
-  cloneStyleVariableClass(class, NAME_fillPattern, NAME_reference);
+  cloneStyleVariableClass(class, NAME_fill, NAME_reference);
   setRedrawFunctionClass(class, RedrawAreaPath);
 
   succeed;

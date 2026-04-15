@@ -80,7 +80,7 @@ attribute(dash,         texture).
 attribute(arrow_1,      first_arrow).
 attribute(arrow_2,      second_arrow).
 %attribute(arrows,      arrows).
-attribute(fill,         fill_pattern).
+attribute(fill,         fill).
 attribute(colour,       colour).
 attribute(font,         font).
 attribute(transparent,  transparent).
@@ -238,7 +238,7 @@ equal_arrows(A1, A2) :-
     equal_attributes([ class_name,
                        length, wing,
                        pen, texture, style,
-                       fill_pattern, colour
+                       fill, colour
                      ],
                      A1, A2).
 
@@ -248,7 +248,7 @@ close_arrows(A1, A2) :-
     send(A2, instance_of, arrow),
     equal_attributes([ class_name,
                        pen, texture, style,
-                       fill_pattern, colour
+                       fill, colour
                      ],
                      A1, A2).
 
@@ -265,7 +265,7 @@ equal_attributes([A|T], O1, O2) :-
 make_fill_pattern_menu(Draw, Menu) :-
     findall(Colour, colour(Draw, Colour), Colours),
     new(Proto, box(30, 16)),
-    make_proto_menu(Menu, Proto, fill_pattern, [foreground|Colours]),
+    make_proto_menu(Menu, Proto, fill, [foreground|Colours]),
     send(Proto, done).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -280,7 +280,7 @@ colour(_Draw, Colour) :-
 
 make_colour_menu(Draw, Menu) :-
     new(Proto, box(30, 16)),
-    send(Proto, fill_pattern, foreground),
+    send(Proto, fill, foreground),
     findall(Colour, colour(Draw, Colour), Colours),
     make_proto_menu(Menu, Proto, colour, [@default|Colours]),
     send(Proto, done).
@@ -295,7 +295,7 @@ is often used to mark lines or display on top of filled areas.
 make_transparent_menu(Menu) :-
     new(Proto, figure),
     send(Proto, display, new(B, box(30,16))),
-    send(B, fill_pattern, colour(grey70)),
+    send(B, fill, colour(grey70)),
     send(Proto, display, new(T, text('T', left,
                                       font(screen, roman, 10)))),
     send(T, center, B?center),
@@ -321,7 +321,7 @@ Create  a menu for  some prototype attribute.   Each menu_item   has a
 make_proto_menu(Menu, Proto, Attribute, Values) :-
     new(Menu, draw_proto_menu(Attribute)),
     (   (   Attribute == colour
-        ;   Attribute == fill_pattern
+        ;   Attribute == fill
         ;   Attribute == transparent
         )
     ->  Kind = pixmap

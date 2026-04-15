@@ -208,7 +208,7 @@ class_variable(item_sep, '0..', 0).
 
 new_label(_, Label:graphical) :<-
     new(Label, circle(8)),
-    send(Label, fill_pattern, @black_image).
+    send(Label, fill, @black_image).
 
 make_item(BL, Item:prolog, Mode:mode, PB:parbox) :<-
     "Create a new item"::

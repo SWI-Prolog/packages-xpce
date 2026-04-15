@@ -52,7 +52,7 @@ queries below to appreciate this. The result is shown in
 
 \begin{code}
 7  ?- send(@bo, radius, 10).
-8  ?- send(@ci, fill_pattern, colour(orange)).
+8  ?- send(@ci, fill, colour(orange)).
 9  ?- send(@tx, font, font(times, bold, 18)).
 10 ?- send(@bz, arrows, both).
 \end{code}

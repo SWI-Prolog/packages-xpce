@@ -38,7 +38,7 @@ Some major changes are:
     xpce \jargon{finder} still works, but does not yet support using
     the host functionality.
 
-    \item The `->fill_pattern` method used to fill graphicals currently
+    \item The `->fill` method used to fill graphicals currently
     only accepts filling with a solid colour.  Filling with repeated
     patterns is not yet supported.  This functionality may be restored.
 

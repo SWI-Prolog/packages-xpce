@@ -165,7 +165,7 @@ resize_box(_V, B:box) :->
 
 initialise(B) :->
     send_super(B, initialise, 100, 100),
-    send(B, fill_pattern, colour(dark_green)).
+    send(B, fill, colour(dark_green)).
 
 '_wants_keyboard_focus'(_) :->
     true.

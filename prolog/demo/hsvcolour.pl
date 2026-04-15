@@ -197,7 +197,7 @@ initialise(Candidate, Name:name, Label:name) :->
 value(Candidate, Value:colour) :->
     "Set the selected colour"::
     get(Candidate, member, box, Box),
-    send(Box, fill_pattern, Value),
+    send(Box, fill, Value),
     get(Candidate, member, colour_name, Text1),
     send(Text1, string, Value?name),
     get(Candidate, member, label, Text2),

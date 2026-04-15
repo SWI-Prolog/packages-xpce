@@ -72,7 +72,7 @@ typedef struct
   Any		background;		/* Background colour */
   Any		default_colour;
   Any		default_background;
-  Any		fill_pattern;		/* Default for fill operations */
+  Any		fill;		/* Default for fill operations */
   Name		dash;			/* Dash pattern */
   double	pen;			/* Drawing thickness */
 } sdl_draw_context;
@@ -542,7 +542,7 @@ r_fillpattern(Any fill, Name which)
   else if ( fill == NAME_current )
     return;
 
-  context.fill_pattern = fill;
+  context.fill = fill;
 }
 
 /**
@@ -747,7 +747,7 @@ r_box(int x, int y, int w, int h, int r, Any fill)
     cairo_rectangle(CR, fx, fy, fw, fh);
   if ( notNil(fill) )
   { r_fillpattern(fill, NAME_background);
-    pce_cairo_set_source_color(CR, context.fill_pattern);
+    pce_cairo_set_source_color(CR, context.fill);
     if ( context.pen )
       cairo_fill_preserve(CR);
     else
@@ -1255,7 +1255,7 @@ r_arc(int x, int y, int w, int h, int s, int e, Name close, Any fill)
   }
   if ( notNil(fill) )
   { r_fillpattern(fill, NAME_foreground);
-    pce_cairo_set_source_color(CR, context.fill_pattern);
+    pce_cairo_set_source_color(CR, context.fill);
     if ( context.pen )
       cairo_fill_preserve(CR);
     else
@@ -1441,7 +1441,7 @@ r_path(Chain points, int ox, int oy, int radius, int closed, Image fill)
 
   if ( notNil(fill) )
   { r_fillpattern(fill, NAME_foreground);
-    pce_cairo_set_source_color(CR, context.fill_pattern);
+    pce_cairo_set_source_color(CR, context.fill);
     cairo_fill_preserve(CR);
   }
 
@@ -1599,11 +1599,11 @@ static bool
 r_set_fill_fgbg(Any fill, Name which)
 { r_fillpattern(fill, which);
   DEBUG(NAME_draw,
-	Cprintf("fill with %s->%s\n", pp(fill), pp(context.fill_pattern)));
-  if ( instanceOfObject(context.fill_pattern, ClassColour) )
-  { pce_cairo_set_source_color(CR, context.fill_pattern);
+	Cprintf("fill with %s->%s\n", pp(fill), pp(context.fill)));
+  if ( instanceOfObject(context.fill, ClassColour) )
+  { pce_cairo_set_source_color(CR, context.fill);
     return true;
-  } else if ( isNil(context.fill_pattern) )
+  } else if ( isNil(context.fill) )
   { cairo_set_source_rgba(CR, 0, 0, 0, 0);
     return true;
   }
@@ -1617,7 +1617,7 @@ r_fill_fgbg(double x, double y, double w, double h, Any fill, Name which)
   if ( w > 0 && h > 0 )
   { if ( r_set_fill_fgbg(fill, which) )
     { Translate(x, y);
-      bool transparent = isNil(context.fill_pattern);
+      bool transparent = isNil(context.fill);
       cairo_operator_t saved_op;
 
       if ( transparent )
@@ -1629,7 +1629,7 @@ r_fill_fgbg(double x, double y, double w, double h, Any fill, Name which)
       if ( transparent )
 	cairo_set_operator(CR, saved_op);
     } else
-    { Cprintf("stub: r_fill(%s)\n", pp(context.fill_pattern));
+    { Cprintf("stub: r_fill(%s)\n", pp(context.fill));
     }
   }
 }
@@ -1680,7 +1680,7 @@ r_fill_polygon(FPoint pts, int n)
   cairo_set_source_rgba(CR, 0, 0, 0, 0);
   cairo_paint(CR);
 
-  pce_cairo_set_source_color(CR, context.fill_pattern);
+  pce_cairo_set_source_color(CR, context.fill);
   double x = pts[0].x;
   double y = pts[0].y;
   Translate(x, y);

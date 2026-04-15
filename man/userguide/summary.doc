@@ -633,7 +633,7 @@ supporting an elevation is \class{figure}.
 
 #class ellipse "ellipse(width, height)"
 Elliptical shape.  Class \class{ellipse} defines similar attributes as
-\class{box}: pen, texture, fill_pattern and shadow. See also
+\class{box}: pen, texture, fill and shadow. See also
 \class{circle}.
 
 #class error "error(id, format)"

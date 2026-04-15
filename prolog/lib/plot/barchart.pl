@@ -202,14 +202,14 @@ range(B, Low:low=real*, High:high=real*) :->
 
 colour(B, Colour:'colour|image*') :->
     "Colour of the interior"::
-    send(B, fill_pattern, Colour),
+    send(B, fill, Colour),
     (   Colour == @nil
     ->  send(B, pen, 1)
     ;   send(B, pen, 0)
     ).
 colour(B, Colour:'colour|image*') :<-
     "Colour of the interior"::
-    get(B, fill_pattern, Colour).
+    get(B, fill, Colour).
 
 value_format(B, Fmt:name) :<-
     "Format for displaying values"::

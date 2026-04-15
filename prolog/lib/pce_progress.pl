@@ -145,7 +145,7 @@ scale(PB, Scale:[int|real]) :->
     send(F2, elevation, elevation(@nil, 1)),
     send(F2, display, new(B, box(0,Height-4)), point(2,2)),
     send(B, pen, 0),
-    send(B, fill_pattern, C).
+    send(B, fill, C).
 
 value(BP, Val:[int|real]) :->
     "Set progress"::

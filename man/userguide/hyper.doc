@@ -95,7 +95,7 @@ edit(B) :->
 	new(D, dialog('Select colour')),
 	send(D, append, new(M, menu(colour, choice,
 				    message(?(D, hypered, box),
-					    fill_pattern,
+					    fill,
 					    @arg1)))),
 	(   colour(Colour),
 	    send(M, append,

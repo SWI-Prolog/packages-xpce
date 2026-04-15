@@ -39,7 +39,7 @@ static status
 initialiseEllipse(EllipseObj e, Int w, Int h)
 { initialiseGraphical(e, ZERO, ZERO, w, h);
   assign(e, shadow, ZERO);
-  assign(e, fill_pattern, NIL);
+  assign(e, fill, NIL);
 
   succeed;
 }
@@ -55,7 +55,7 @@ RedrawAreaEllipse(EllipseObj e, Area a)
 
   if ( e->shadow != ZERO )
   { int shadow = valInt(e->shadow);
-    Any fill = e->fill_pattern;
+    Any fill = e->fill;
 
     if ( isNil(fill) )
       fill = NAME_background;
@@ -70,7 +70,7 @@ RedrawAreaEllipse(EllipseObj e, Area a)
     r_ellipse(x, y, w-shadow, h-shadow, fill);
   } else
   { r_thickness(valNum(e->pen));
-    r_ellipse(x, y, w, h, e->fill_pattern);
+    r_ellipse(x, y, w, h, e->fill);
   }
 
   return RedrawAreaGraphical(e, a);
@@ -91,7 +91,7 @@ static char *T_initialise[] =
 static vardecl var_ellipse[] =
 { SV(NAME_shadow, "int", IV_GET|IV_STORE, shadowGraphical,
      NAME_appearance, "Shadow painted below/right"),
-  SV(NAME_fillPattern, TYPE_FILL, IV_GET|IV_STORE, fillPatternGraphical,
+  SV(NAME_fill, TYPE_FILL, IV_GET|IV_STORE, fillGraphical,
      NAME_appearance, "Fill pattern for internals")
 };
 
@@ -131,7 +131,7 @@ status
 makeClassEllipse(Class class)
 { declareClass(class, &ellipse_decls);
 
-  cloneStyleVariableClass(class, NAME_fillPattern, NAME_reference);
+  cloneStyleVariableClass(class, NAME_fill, NAME_reference);
   setRedrawFunctionClass(class, RedrawAreaEllipse);
 
   succeed;

@@ -1,14 +1,14 @@
-fill_pattern(@white_image).
-fill_pattern(@grey12_image).
-fill_pattern(@grey25_image).
-fill_pattern(@grey50_image).
-fill_pattern(@grey75_image).
-fill_pattern(@black_image).
+fill(@white_image).
+fill(@grey12_image).
+fill(@grey25_image).
+fill(@grey50_image).
+fill(@grey75_image).
+fill(@black_image).
 
 make_fill_pattern_menu(M) :-
-    new(M, menu(fill_pattern, marked)),
+    new(M, menu(fill, marked)),
     send(M, layout, horizontal),
-    (   fill_pattern(P),
+    (   fill(P),
         send(M, append, menu_item(P, @default, P)),
         fail
     ;   true
@@ -26,7 +26,7 @@ add_box_1(P) :-
     send(B, popup, new(Pop, popup)),
     send(Pop, append,
          menu_item(fill,
-                   message(B, fill_pattern,
+                   message(B, fill,
                            @fill_pattern_menu?selection))).
 
 fill1 :-

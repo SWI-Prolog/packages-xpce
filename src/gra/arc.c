@@ -103,7 +103,7 @@ RedrawAreaArc(ArcObj a, Area area)
 	2*aw, 2*ah,
 	rfloat(valReal(a->start_angle)), rfloat(valReal(a->size_angle)),
 	a->close,
-	a->fill_pattern);
+	a->fill);
 
   if (notNil(a->first_arrow))
   { Any av[4];
@@ -246,7 +246,7 @@ computeArc(ArcObj a)
       maxy = max(maxy, py + sh);
 
     if ( a->close == NAME_pieSlice ||
-	 (a->close == NAME_none && notNil(a->fill_pattern)) )
+	 (a->close == NAME_none && notNil(a->fill)) )
     { maxx = max(maxx, px);
       minx = min(minx, px);
       miny = min(miny, py);
@@ -563,7 +563,7 @@ static vardecl var_arc[] =
      NAME_pie, "Size (degrees)"),
   SV(NAME_close, "{none,pie_slice,chord}", IV_GET|IV_STORE, closeArc,
      NAME_appearance, "How the arc is closed"),
-  SV(NAME_fillPattern, TYPE_FILL, IV_GET|IV_STORE, fillPatternGraphical,
+  SV(NAME_fill, TYPE_FILL, IV_GET|IV_STORE, fillGraphical,
      NAME_appearance, "Fill pattern for the slice")
 };
 
@@ -619,7 +619,7 @@ status
 makeClassArc(Class class)
 { declareClass(class, &arc_decls);
 
-  cloneStyleVariableClass(class, NAME_fillPattern, NAME_reference);
+  cloneStyleVariableClass(class, NAME_fill, NAME_reference);
   setRedrawFunctionClass(class, RedrawAreaArc);
 
   succeed;

@@ -73,7 +73,7 @@ initialiseArrow(Arrow a, Num length, Num wing, Name style, Any fill)
   if ( notDefault(length) )	assign(a, length, length);
   if ( notDefault(wing) )	assign(a, wing, wing);
   if ( notDefault(style) )	assign(a, style, style);
-  if ( notDefault(fill) )	assign(a, fill_pattern, fill);
+  if ( notDefault(fill) )	assign(a, fill, fill);
 
   assign(a, tip,       newObject(ClassPoint, toInt(10), toInt(10), EAV));
   assign(a, reference, newObject(ClassPoint, EAV));
@@ -82,7 +82,7 @@ initialiseArrow(Arrow a, Num length, Num wing, Name style, Any fill)
 
   obtainClassVariablesObject(a);
 
-  if ( notNil(a->fill_pattern) )
+  if ( notNil(a->fill) )
     assign(a, pen, ZERO);
 
   requestComputeGraphical(a, DEFAULT);
@@ -193,7 +193,7 @@ RedrawAreaArrow(Arrow a, Area area)
 { drawArrow(valNum(a->left->x),  valNum(a->left->y),
 	    valNum(a->tip->x),   valNum(a->tip->y),
 	    valNum(a->right->x), valNum(a->right->y),
-	    a->fill_pattern,
+	    a->fill,
 	    valNum(a->pen),
 	    a->texture,
 	    a->style);
@@ -369,7 +369,7 @@ static vardecl var_arrow[] =
      NAME_area, "Distance tip to base"),
   SV(NAME_wing, "num", IV_GET|IV_STORE, wingArrow,
      NAME_area, "Length of base"),
-  SV(NAME_fillPattern, TYPE_FILL, IV_GET|IV_STORE, fillPatternGraphical,
+  SV(NAME_fill, TYPE_FILL, IV_GET|IV_STORE, fillGraphical,
      NAME_appearance, "How it is filled"),
   SV(NAME_style, "{open,closed}", IV_GET|IV_STORE, styleArrow,
      NAME_appearance, "If `closed', the triangle is closed"),
@@ -416,7 +416,7 @@ static getdecl get_arrow[] =
 /* Resources */
 
 static classvardecl rc_arrow[] =
-{ RC(NAME_fillPattern, TYPE_FILL, "foreground",
+{ RC(NAME_fill, TYPE_FILL, "foreground",
      "Fill pattern for the triangle"),
   RC(NAME_length, "num", "15",
      "Distance tip to base"),
@@ -441,7 +441,7 @@ status
 makeClassArrow(Class class)
 { declareClass(class, &arrow_decls);
 
-  cloneStyleVariableClass(class, NAME_fillPattern, NAME_reference);
+  cloneStyleVariableClass(class, NAME_fill, NAME_reference);
   setRedrawFunctionClass(class, RedrawAreaArrow);
 
   succeed;

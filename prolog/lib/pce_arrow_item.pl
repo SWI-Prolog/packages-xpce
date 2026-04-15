@@ -79,12 +79,12 @@ initialise(AI, Name:[name], Default:[function|arrow], Message:[code]*) :->
         copy_attributes(AI, Proto)
     ).
 
-fill_pattern(@nil).
-fill_pattern(white).
-fill_pattern(black).
+fill(@nil).
+fill(white).
+fill(black).
 
 fill_patterns(Menu) :-
-    fill_pattern(Pattern),
+    fill(Pattern),
     new(I, image(@nil, 30, 16)),
     new(A, arrow(20, 10, closed, Pattern)),
     new(L, line(0, 7, 25, 7)),
@@ -184,7 +184,7 @@ edited_attribute(wing).
 edited_attribute(length).
 edited_attribute(pen).
 edited_attribute(style).
-edited_attribute(fill_pattern).
+edited_attribute(fill).
 edited_attribute(colour).
 
 set_value(AI, Attribute, Value) :-
@@ -198,11 +198,11 @@ set_value(AI, Attribute, Value) :-
 
 :- pce_group(edit).
 
-rule(fill_pattern = @black_image,       pen = 0).
-rule(fill_pattern = @black_image,       style = closed).
-rule(fill_pattern = @nil,               pen = 1).
-rule(fill_pattern = @white_image,       pen = 1).
-rule(style        = open,               fill_pattern = @nil).
+rule(fill = @black_image,       pen = 0).
+rule(fill = @black_image,       style = closed).
+rule(fill = @nil,               pen = 1).
+rule(fill = @white_image,       pen = 1).
+rule(style        = open,               fill = @nil).
 
 apply_rules(AI, Sel, Val) :-
     set_value(AI, Sel, Val),

@@ -92,7 +92,7 @@ initialise(F, Label:char_array) :->
     default(Label, '', Lbl),
     send(F, slot, title_box, new(TB, box)),
     send(TB, pen, 0),
-    send(TB, fill_pattern, @grey50_image),
+    send(TB, fill, @grey50_image),
     send(F, slot, title_line, new(TL, line)),
     send(TL, pen, F?pen),
     send(TL, points, 0, -F?pen/2, 0, -F?pen/2),

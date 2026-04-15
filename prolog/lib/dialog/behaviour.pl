@@ -249,7 +249,7 @@ initialise(C, F:graphical, T:graphical, L:[link], FH:[name], TH:[name]) :->
         send(C, handle, @argument_handle)
     ;   (Type == activate ; Type == condition ; Type == expansion )
     ->  new(Tag, circle(10)),
-        send(Tag, fill_pattern, @black_image),
+        send(Tag, fill, @black_image),
         send(C, tag, Tag),
         send(C, handle, @argument_handle),
         send(C, handle, @condition_handle)

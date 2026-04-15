@@ -138,7 +138,7 @@ resource(fillpattern,   image, image('16x16/fillpattern.png')).
                                           term([ length,
                                                  wing,
                                                  style,
-                                                 fill_pattern
+                                                 fill
                                                ]+pen+colour),
                                           icon(arrows)
                                         ]).

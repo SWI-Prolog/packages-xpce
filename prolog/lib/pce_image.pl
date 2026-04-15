@@ -54,7 +54,7 @@ makes a call
 after which the images from the  directory   may  be accessed using -for
 example-:
 
-        send(Box, fill_pattern, image('my_image.png')).
+        send(Box, fill, image('my_image.png')).
 
 See also the ImageViewer demo  tool  to   get  an  overview of available
 images in a directory.

@@ -72,10 +72,10 @@ class_map(draw_text,
           [background, colour]).
 class_map(draw_box,
           box(width, height),
-          [pen, texture, radius, fill_pattern, colour]).
+          [pen, texture, radius, fill, colour]).
 class_map(draw_ellipse,
           ellipse(width, height),
-          [pen, texture, fill_pattern, colour]).
+          [pen, texture, fill, colour]).
 class_map(draw_line,
           line(start_x, start_y, end_x, end_y),
           [pen, texture, colour, first_arrow, second_arrow]).
@@ -89,7 +89,7 @@ class_map(draw_compound,
           figure,
           [pen, texture, radius, colour]).
 class_map(arrow,
-          arrow(length, wing, style, fill_pattern),
+          arrow(length, wing, style, fill),
           [ pen, colour]).
 class_map(font,
           font(family, style, points),

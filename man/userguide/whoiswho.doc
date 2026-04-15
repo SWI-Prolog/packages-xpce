@@ -25,17 +25,17 @@ To reduce the code of the individual examples, the following predicate
 creating the fill-pattern menu is assumed to be available:
 
 \begin{pcecode}
-fill_pattern(@white_image).
-fill_pattern(@grey12_image).
-fill_pattern(@grey25_image).
-fill_pattern(@grey50_image).
-fill_pattern(@grey75_image).
-fill_pattern(@black_image).
+fill(@white_image).
+fill(@grey12_image).
+fill(@grey25_image).
+fill(@grey50_image).
+fill(@grey75_image).
+fill(@black_image).
 
 make_fill_pattern_menu(M) :-
-	new(M, menu(fill_pattern, marked)),
+	new(M, menu(fill, marked)),
 	send(M, layout, horizontal),
-	forall(fill_pattern(P),
+	forall(fill(P),
 	       send(M, append, menu_item(P, @default, P))).
 \end{pcecode}
 
@@ -57,7 +57,7 @@ add_box_1(P) :-
 	send(B, popup, new(Pop, popup)),
 	send(Pop, append,
 	     menu_item(fill,
-		       message(B, fill_pattern,
+		       message(B, fill,
 			       @fill_pattern_menu?selection))).
 \end{pcecode}
 
@@ -124,7 +124,7 @@ add_box_2(P) :-
 	fill_pattern_menu(M),
 	send(Pop, append,
 	     menu_item(fill,
-		       message(B, fill_pattern,
+		       message(B, fill,
 			       M?selection))).
 \end{pcecode}
 
@@ -161,7 +161,7 @@ add_box_3(P) :-
 	get(P, fill_pattern_menu, M),
 	send(Pop, append,
 	     menu_item(fill,
-		       message(B, fill_pattern,
+		       message(B, fill,
 			       M?selection))).
 \end{pcecode}
 
@@ -203,10 +203,10 @@ make_fill_with_current_pattern(G) :-
 	new(G, popup),
 	send(G, append,
 	     menu_item(fill,
-		       message(Gr, fill_pattern,
+		       message(Gr, fill,
 			       ?(?(Gr?frame, member, dialog),
 				 member,
-				 fill_pattern)?selection))).
+				 fill)?selection))).
 
 add_box_4(P) :-
 	send(P, display, new(B, box(100,100)), point(20,20)),
@@ -226,7 +226,7 @@ the previous example as well.
 This example has largely the same (dis)advantages as the previous two.
 As an advantage, the attribute object may be omitted. The assumption
 here is that the frame the box is in contains a dialog which in turn
-contains a graphical object named `fill_pattern' that implements
+contains a graphical object named `fill' that implements
 a <-selection method yielding an image.
 
 
@@ -247,7 +247,7 @@ initialise(F) :->
 
 current_fill_pattern(F, P:image) :<-
 	get(F, member, dialog, D),
-	get(D, member, fill_pattern, M),
+	get(D, member, fill, M),
 	get(M, selection, P).
 
 draw_box(F) :->
@@ -264,7 +264,7 @@ make_fillbox_recogniser(G) :-
 	new(G, popup_gesture(new(P, popup))),
 	send(P, append,
 	     menu_item(fill,
-		       message(Gr, fill_pattern,
+		       message(Gr, fill,
 			       Gr?frame?current_fill_pattern))).
 
 event(B, Ev:event) :->

@@ -204,7 +204,7 @@ make_paths([(Device,X,Y,Side)|PosList],[(Row,Col)|BoxPosList],Vector,I):-
     send(Device,display,new(Path,path)),
     send(Path,closed,@on),
     send_list(Path,append,[Point1,Point2,Point3,Point4]),
-    send(Path,fill_pattern,@black_image),
+    send(Path,fill,@black_image),
     send(Path,recogniser,@draw_field_gesture),
     send(Path,attribute,attribute(row,Row)),
     send(Path,attribute,attribute(col,Col)),
@@ -272,7 +272,7 @@ make_boxes(_,[],_,_).
 make_boxes(Device,[(Y,X)|PosList],Vector,I):-
     send(Device,display,new(Box,box(20,20)),point(X*20,Y*20)),
     send(Box,radius,3),
-    send(Box,fill_pattern,@black_image),
+    send(Box,fill,@black_image),
     send(Box,recogniser,@draw_field_gesture),
     send_list(Box,attribute,[attribute(row,Y),attribute(col,X)]),
     send(Vector,element,I,Box),

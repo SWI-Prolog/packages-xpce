@@ -9,7 +9,7 @@ initialise(F) :->
 
 current_fill_pattern(F, P:image) :<-
     get(F, member, dialog, D),
-    get(D, member, fill_pattern, M),
+    get(D, member, fill, M),
     get(M, selection, P).
 
 draw_box(F) :->
@@ -25,7 +25,7 @@ make_fillbox_recogniser(G) :-
     Gr = @arg1,
     new(G, popup_gesture(new(P, popup))),
     send(P, append,
-         menu_item(fill, message(Gr, fill_pattern,
+         menu_item(fill, message(Gr, fill,
                                  Gr?frame?current_fill_pattern))).
 
 event(B, Ev:event) :->
