@@ -152,7 +152,8 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     scaledbitmap.pl scan_arguments.pl splash_screen.pl
     stayup_popup.pl swi_compatibility.pl swi_edit.pl
     swi_hooks.pl swi_ide.pl swi_preferences.pl tabbed_window.pl tabular.pl
-    toc_filesystem.pl toolbar.pl url_image.pl pce_openframes.pl)
+    toc_filesystem.pl toolbar.pl url_image.pl pce_openframes.pl
+    pce_backcomp.pl)
 if(EPILOG)
     list(APPEND XPCE_DATA_prolog_lib epilog.pl)
 endif()
