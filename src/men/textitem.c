@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi-prolog.org
     WWW:           https://www.swi-prolog.org/projects/xpce/
-    Copyright (c)  1985-2025, University of Amsterdam
+    Copyright (c)  1985-2026, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -67,6 +67,7 @@ initialiseTextItem(TextItem ti, Name name, Any val, Code msg)
   assign(ti, value_set,	       DEFAULT);
   assign(ti, value_width,      DEFAULT);
   assign(ti, print_name,       CtoString(""));
+  assign(ti, placeholder,      NIL);
 
   assign(ti, advance,          NAME_next);
   assign(ti, show_label,       ON);
@@ -137,6 +138,19 @@ RedrawAreaTextItem(TextItem ti, Area a)
 
   ws_entry_field((Graphical)ti,
 		 tx, ty, tw+text_item_combo_width(ti), th, flags);
+
+  if ( vt->string->data.hdr.f.size == 0 &&
+       notNil(ti->placeholder) )
+  { Colour c = getClassVariableValueObject(ti, NAME_placeholderColour);
+    Cprintf("Placeholder colour = %s\n", pp(c));
+    if ( !c ) c = GREY50_COLOUR;
+    Any old = r_colour(c);
+    int b = valInt(vt->border);
+    str_string(&ti->placeholder->data, vt->font,
+	       tx+valInt(vt->x_offset)+b, ty+b, tw-2*b, th-2*b,
+	       vt->format, NAME_top, NIL, 0);
+    r_colour(old);
+  }
 
   if ( notDefault(vt->colour) )
   { Any old = r_colour(vt->colour);
@@ -1295,6 +1309,15 @@ selectionTextItem(TextItem ti, Any selection)
   return resetTextItem(ti);
 }
 
+static status
+placeholderTextItem(TextItem ti, CharArray placeholder)
+{ if ( ti->placeholder != placeholder )
+  { assign(ti, placeholder, placeholder);
+    requestComputeGraphical(ti, DEFAULT);
+  }
+
+  succeed;
+}
 
 static status
 resetTextItem(TextItem ti)
@@ -1568,6 +1591,8 @@ static vardecl var_textItem[] =
      NAME_selection, "Current value"),
   IV(NAME_default, "any|function", IV_NONE,
      NAME_apply, "The default value"),
+  SV(NAME_placeholder, "char_array*", IV_GET|IV_STORE, placeholderTextItem,
+     NAME_appearance, "Indicate intended usage"),
   IV(NAME_printName, "char_array", IV_NONE,
      NAME_textual, "Text-representation of <->selection"),
   SV(NAME_type, "type", IV_BOTH|IV_STORE, typeTextItem,
@@ -1733,6 +1758,8 @@ static classvardecl rc_textItem[] =
   RC(NAME_repeatInterval, "real", "0.06",
      "Interval between repeats"),
   RC(NAME_look, RC_REFINE, UXWIN("gtk", "win"), NULL),
+  RC(NAME_placeholderColour, "colour", "grey60",
+     "Colour for the placeholder"),
   RC(NAME_elevation, RC_REFINE,
      UXWIN("0.25mm", "@_txt_height"),
      NULL),

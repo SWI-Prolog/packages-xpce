@@ -388,6 +388,7 @@ End;
   ABSTRACT_DIALOGITEM \
   Any	     selection;			/* Current selection */ \
   Any	     default_value;		/* The default (initial) value */ \
+  CharArray  placeholder;		/* Placeholder string */ \
   StringObj  print_name;		/* Print-name of selection */ \
   Type	     type;			/* Type of the value */ \
   Any	     value_set;			/* Set of possible values */ \
