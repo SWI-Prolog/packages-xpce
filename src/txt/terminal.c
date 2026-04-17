@@ -110,6 +110,9 @@ static void	rlc_line_selection(RlcData b, int x, int y);
 static bool	rlc_has_selection(RlcData b);
 static void	rlc_select_all(RlcData b);
 static uchar_t   *rlc_selection(RlcData b);
+static uchar_t   *rlc_read_from_window(RlcData b, int sl, int sc,
+				       int el, int ec);
+static void	rlc_free(void *ptr);
 static void	rlc_set_selection(RlcData b, int sl, int sc, int el, int ec);
 static const uchar_t *rlc_clicked_link(RlcData b, int x, int y);
 static const uchar_t *rlc_over_link(RlcData b, int x, int y);
@@ -530,6 +533,56 @@ getSelectedTerminalImage(TerminalImage ti)
   fail;
 }
 
+
+/* Return the logical cursor position as a Point(col, row).
+ *
+ * col is the visual column on the current line (sum of display widths
+ * for cells [0, caret_x)), row is the 0-based visible row counted from
+ * the top of the terminal window.  These are the same coordinates that
+ * ANSI cursor commands, click translation, and rlc_caret_xy use
+ * internally, so tests can drive and inspect the terminal in one
+ * consistent coordinate system.
+ */
+static Point
+getCursorPositionTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+  int col = rlc_cell_to_vcol(&b->lines[b->caret_y], b->caret_x);
+  int row = rlc_count_lines(b, b->window_start, b->caret_y);
+
+  answer(answerObject(ClassPoint, toInt(col), toInt(row), EAV));
+}
+
+
+/* Return the content of the visible row `arg` as a string.
+ *
+ * `arg` is a 0-based row counted from the top of the terminal window
+ * (same reference as <-cursor_position's y).  Wide-char right-half
+ * placeholders (code == 0) are skipped; combining marks stay attached
+ * to their preceding base.  Rows beyond the active content fail.
+ */
+static StringObj
+getRowTerminalImage(TerminalImage ti, Int arg)
+{ RlcData b = ti->data;
+  int row  = valInt(arg);
+
+  if ( row < 0 || row >= b->window_size )
+    fail;
+
+  int line = rlc_add_lines(b, b->window_start, row);
+  RlcTextLine tl = &b->lines[line];
+
+  uchar_t *buf = rlc_read_from_window(b, line, 0, line, tl->size);
+  if ( buf )
+  { StringObj str = TCHAR2String(buf);
+    rlc_free(buf);
+    if ( str )
+      pushAnswerObject(str);
+    answer(str);
+  }
+
+  fail;
+}
+
 static status
 clearSelectionTerminalImage(TerminalImage ti)
 { rlc_set_selection(ti->data, 0, 0, 0, 0);
@@ -844,6 +897,12 @@ static getdecl get_terminal_image[] =
   GM(NAME_selected, 0, "string", NULL,
      getSelectedTerminalImage,
      NAME_selection, "New string with contents of selection"),
+  GM(NAME_cursorPosition, 0, "point", NULL,
+     getCursorPositionTerminalImage,
+     NAME_cursor, "Logical cursor position as point(col, row)"),
+  GM(NAME_row, 1, "string", "int",
+     getRowTerminalImage,
+     NAME_text, "Text content of visible row (0-based from top)"),
   GM(NAME_link, 1, "name", "point|event",
      getURLTerminalImage,
      NAME_selected, "Hyperlink content and location")
