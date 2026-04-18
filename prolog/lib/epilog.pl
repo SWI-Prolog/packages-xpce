@@ -140,6 +140,8 @@ ep_main_end :-
 %       If `true`, act as main window.   In this case epilog/1
 %       runs the main thread and returns after all windows have
 %       been closed.
+%     - object(-Epilog)
+%       Get the xpce object reference for the created terminal.
 
 epilog :-
     epilog([]).
@@ -163,6 +165,7 @@ epilog(Options0) :-
     ->  send(PT, goal, Goal)
     ;   true
     ),
+    option(object(Epilog), Options, _),
     send(Epilog, open),
     (   get(Epilog, main, @on)
     ->  ep_wait
