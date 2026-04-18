@@ -3056,9 +3056,31 @@ rlc_put(RlcData b, int chr)
        this line (caret_x == 0 with nothing before) the combiner would
        orphan; drop it in that case — a real terminal typically folds
        such a stray mark onto an implicit space, which we leave to the
-       next base write. */
+       next base write.
+
+       Mid-line writes (caret_x inside existing content) must NOT
+       overwrite the cell at caret_x, because that cell's visual column
+       is unchanged by a width-0 insertion — the combiner simply
+       attaches to the preceding base.  Shift cells right by 1 to make
+       room for the combiner's own cell without destroying the content.
+       This matches what a classic xterm does when a combiner arrives
+       at a non-end cursor: it updates the preceding glyph, leaving the
+       cursor's cell content intact. */
     if ( b->caret_x == 0 )
       return;				/* orphan: no base to attach to */
+    /* Shift only if we're writing into a cell that currently holds a
+       BASE (or wide placeholder), not if the cell already contains a
+       combiner.  The latter case is a re-render overwriting the same
+       code point; shifting there would duplicate the combiner every
+       refresh. */
+    if ( b->caret_x < tl->size &&
+	 tl->size < LINE_CELL_CAPACITY(b) &&
+	 !(tl->text[b->caret_x].width == 0 &&
+	   tl->text[b->caret_x].code != 0) )
+    { for(int i=tl->size; i>b->caret_x; i--)
+	tl->text[i] = tl->text[i-1];
+      tl->size++;
+    }
     text_char *tc = &tl->text[b->caret_x];
     tc->code  = chr;
     tc->flags = b->sgr_flags;

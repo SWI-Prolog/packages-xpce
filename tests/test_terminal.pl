@@ -518,6 +518,42 @@ test(delete_word_forward_removes_full_word, [setup(test_begin(T))]) :-
 %   `à` (NFD a+U+0300).  Expected line: `àabcỳ`; without the fix,
 %   libedit's refresh overwrites the 'b' and the line becomes `àacỳ`.
 
+%   Forward-delete of a mid-line NFD cluster must drop the whole
+%   cluster (base + combining marks), not just the base.  Before the
+%   fix, libedit's re_update_line placed ofd on a combining mark, so
+%   the resulting ANSI DCH targeted the NEXT base's column — the
+%   preceding cluster's combiner stayed behind, attaching to whatever
+%   cluster shifted into that column.
+%   Repro: type `f̀fj̀jòǹàz̀` (NFD), home, cursor_right twice, insert
+%   `z`, delete (which should remove `j̀`).  Without the fix the line
+%   becomes `f̀fzj̀òǹàz̀` — the `j̀`'s combiner survives, attaches to
+%   the plain `j`.
+
+test(delete_nfd_cluster_midline, [setup(test_begin(T))]) :-
+    cursor(T, P, R),
+    atom_codes(Buf, [ 0'f, 0x300, 0'f,
+                      0'j, 0x300, 0'j,
+                      0'o, 0x300,
+                      0'n, 0x300,
+                      0'a, 0x300,
+                      0'z, 0x300 ]),
+    type(T, Buf),
+    key(T, home),
+    key(T, cursor_right),
+    key(T, cursor_right),
+    type(T, 'z'),
+    ColBeforeDel is P + 3,
+    assert_cursor(T, ColBeforeDel, R),
+    key(T, delete),
+    assert_cursor(T, ColBeforeDel, R),
+    atom_codes(Expected, [ 0'f, 0x300, 0'f, 0'z,
+                           0'j,
+                           0'o, 0x300,
+                           0'n, 0x300,
+                           0'a, 0x300,
+                           0'z, 0x300 ]),
+    assert_input(T, R, Expected).
+
 test(insert_nfd_at_home_with_nfd_buffer, [setup(test_begin(T))]) :-
     cursor(T, P, R),
     atom_codes(Ygrave, [0'y, 0x300]),
