@@ -33,7 +33,9 @@
 */
 
 :- module(test_terminal,
-          [ test_terminal/0
+          [ test_terminal/0,
+            test_terminal_random/2,              % +Sessions, +CommandsPerSession
+            test_terminal_random/3               % +Sessions, +CommandsPerSession, +Options
           ]).
 :- encoding(utf8).
 
@@ -75,10 +77,15 @@ setup_headless :-
 :- use_module(library(plunit)).
 :- use_module(library(pce)).
 :- use_module(library(epilog)).
+:- use_module(library(lists)).
+:- use_module(library(pairs)).
+:- use_module(library(option)).
+:- use_module(library(random)).
 
 test_terminal :-
     run_tests([ terminal_basic,
                 terminal_nfd,
+                terminal_regression,
                 terminal_wide,
                 terminal_mixed,
                 terminal_wrap
@@ -493,6 +500,44 @@ test(delete_word_forward_removes_full_word, [setup(test_begin(T))]) :-
 
 
 		 /*******************************
+		 *      TEST: REGRESSION        *
+		 *******************************/
+
+%   Minimised regressions found by test_terminal_random/2,3.  Each
+%   test replays the shortest command sequence that reproduces the
+%   bug and asserts the display state the model expected.
+
+:- begin_tests(terminal_regression,
+               [ setup(setup_unit),
+                 cleanup(cleanup_unit)
+               ]).
+
+%   Inserting an NFD cluster at `home` when the buffer already contains
+%   another NFD cluster drops one character from the re-rendered line.
+%   Repro: type `abcỳ` (ỳ = 'y'+U+0300 in NFD), press Home, type
+%   `à` (NFD a+U+0300).  Expected line: `àabcỳ`; without the fix,
+%   libedit's refresh overwrites the 'b' and the line becomes `àacỳ`.
+
+test(insert_nfd_at_home_with_nfd_buffer, [setup(test_begin(T))]) :-
+    cursor(T, P, R),
+    atom_codes(Ygrave, [0'y, 0x300]),
+    atom_codes(Agrave, [0'a, 0x300]),
+    atom_concat('abc', Ygrave, Buffer),
+    type(T, Buffer),
+    Col0 is P + 4,
+    assert_cursor(T, Col0, R),
+    key(T, home),
+    assert_cursor(T, P, R),
+    type(T, Agrave),
+    Col1 is P + 1,
+    assert_cursor(T, Col1, R),
+    atom_concat(Agrave, Buffer, Expected),
+    assert_input(T, R, Expected).
+
+:- end_tests(terminal_regression).
+
+
+		 /*******************************
 		 *     TEST: WIDE / EMOJI       *
 		 *******************************/
 
@@ -808,3 +853,352 @@ test(cursor_left_across_wrap_nfd,
     assert_cursor(T, LastCol, R).
 
 :- end_tests(terminal_wrap).
+
+
+		 /*******************************
+		 *        RANDOM TESTING        *
+		 *******************************/
+
+/** <section> Random testing
+
+    test_terminal_random(+N, +M) runs N independent sessions (each
+    starting from a fresh empty input line) of M commands each.  A
+    command is either typing one grapheme cluster or sending a libedit
+    editing key.  After EVERY command we compare the terminal's reported
+    cursor and the content of the input row against a pure-Prolog
+    model of where they should be.
+
+    v1 stays on a single input row: the random generator rejects any
+    `type` command that would push the cursor past column W-1.  Wrap
+    support is a follow-up.
+
+    On the first divergence we print the seed, the full command
+    history of the failing session, the expected state and the actual
+    state, then throw.  The seed + history is the minimum information
+    needed to reproduce or minimise the failure by hand.
+*/
+
+%!  test_terminal_random(+N, +M) is det.
+%!  test_terminal_random(+N, +M, +Options) is det.
+%
+%   Run N random sessions of M commands each.  Options:
+%
+%     - seed(Seed)
+%       A term acceptable to set_random/1 (e.g. `random` or an integer
+%       seed).  Default: a fresh random state.
+%     - verbose(Bool)
+%       If true, log every command and verify outcome.
+%
+%   Throws `terminal_random_failure(Info)` on the first divergence.
+
+test_terminal_random(N, M) :-
+    test_terminal_random(N, M, []).
+
+test_terminal_random(N, M, Options) :-
+    must_be(positive_integer, N),
+    must_be(nonneg, M),
+    option(seed(Seed), Options, random),
+    option(verbose(Verbose), Options, false),
+    set_random(seed(Seed)),
+    format("test_terminal_random: seed=~q sessions=~w commands=~w~n",
+           [Seed, N, M]),
+    setup_call_cleanup(setup_unit,
+                       run_random_sessions(N, M, Verbose),
+                       cleanup_unit).
+
+run_random_sessions(0, _, _) :- !.
+run_random_sessions(N, M, Verbose) :-
+    N > 0,
+    current_test_terminal(T),
+    reset_input(T),
+    cursor(T, P, R),
+    row_text(T, R, PromptLine),
+    State0 = state([], 0),
+    (   Verbose == true
+    ->  format("==== session ~w: prompt=~q at (~w,~w) ====~n",
+               [N, PromptLine, P, R])
+    ;   true
+    ),
+    random_commands(M, T, P, R, PromptLine, State0, [], Verbose),
+    N1 is N - 1,
+    run_random_sessions(N1, M, Verbose).
+
+random_commands(0, _, _, _, _, _, _, _) :- !.
+random_commands(K, T, P, R, Prompt, State0, History, Verbose) :-
+    K > 0,
+    random_command(State0, P, Cmd),
+    apply_model(Cmd, State0, State1),
+    History1 = [Cmd|History],
+    apply_terminal(Cmd, T),
+    wait_verified(T, P, R, Prompt, State1, Outcome),
+    (   Outcome == ok
+    ->  (   Verbose == true
+        ->  format("  ok  ~q~n", [Cmd])
+        ;   true
+        ),
+        K1 is K - 1,
+        random_commands(K1, T, P, R, Prompt, State1, History1, Verbose)
+    ;   reverse(History1, HistF),
+        report_failure(T, P, R, Prompt, State1, HistF, Outcome),
+        throw(terminal_random_failure(
+                  info{ history: HistF,
+                        expected: State1,
+                        divergence: Outcome }))
+    ).
+
+
+		 /*******************************
+		 *           MODEL              *
+		 *******************************/
+
+%   state(Clusters, Cursor):
+%   - Clusters: list of cluster(Codes, VCols).  Codes is a list of
+%     Unicode code points, VCols is the visual width (1 for narrow
+%     and NFD, 2 for wide).
+%   - Cursor: integer 0..length(Clusters) — the insertion point.
+
+%!  apply_model(+Command, +State0, -State1) is det.
+
+apply_model(type(Cluster),   state(Cs, I), state(Cs1, I1)) :-
+    nth0_insert(I, Cluster, Cs, Cs1),
+    I1 is I + 1.
+apply_model(cursor_left,     state(Cs, I), state(Cs, I1)) :-
+    I1 is max(0, I - 1).
+apply_model(cursor_right,    state(Cs, I), state(Cs, I1)) :-
+    length(Cs, Len),
+    I1 is min(Len, I + 1).
+apply_model(home,            state(Cs, _), state(Cs, 0)).
+apply_model(end,             state(Cs, _), state(Cs, Len)) :-
+    length(Cs, Len).
+apply_model(backspace,       state(Cs, I), state(Cs1, I1)) :-
+    (   I > 0
+    ->  I1 is I - 1,
+        nth0_delete(I1, Cs, Cs1)
+    ;   Cs1 = Cs, I1 = I
+    ).
+apply_model(delete,          state(Cs, I), state(Cs1, I)) :-
+    length(Cs, Len),
+    (   I < Len
+    ->  nth0_delete(I, Cs, Cs1)
+    ;   Cs1 = Cs
+    ).
+
+nth0_insert(0, X, L, [X|L]) :- !.
+nth0_insert(N, X, [H|T], [H|T1]) :-
+    N > 0, N1 is N - 1,
+    nth0_insert(N1, X, T, T1).
+
+nth0_delete(0, [_|T], T) :- !.
+nth0_delete(N, [H|T], [H|T1]) :-
+    N > 0, N1 is N - 1,
+    nth0_delete(N1, T, T1).
+
+
+		 /*******************************
+		 *          LAYOUT              *
+		 *******************************/
+
+%!  model_cursor_col(+Clusters, +Cursor, +PromptCol, -Col) is det.
+%
+%   Visual column of the cursor, given the cluster list and the
+%   starting prompt column.  v1 single-row invariant: layout is
+%   `PromptCol + sum of widths of the first Cursor clusters`.
+
+model_cursor_col(Cs, Cursor, P, Col) :-
+    length(Prefix, Cursor),
+    append(Prefix, _, Cs),
+    sum_widths(Prefix, 0, W),
+    Col is P + W.
+
+sum_widths([], Acc, Acc).
+sum_widths([cluster(_, W)|T], Acc, Sum) :-
+    Acc1 is Acc + W,
+    sum_widths(T, Acc1, Sum).
+
+%!  model_row_text(+PromptLine, +PromptCol, +Clusters, -Atom) is det.
+%
+%   The expected row text: prompt (sub-atom up to PromptCol) followed
+%   by the concatenated code points of all clusters.  Trailing cells on
+%   the row are blank, but the terminal's <-row returns only the
+%   allocated size — we trim the expected to match.
+
+model_row_text(PromptLine, P, Clusters, Atom) :-
+    (   sub_atom(PromptLine, 0, P, _, PromptPrefix)
+    ->  true
+    ;   PromptPrefix = PromptLine       % shorter than P: use as-is
+    ),
+    clusters_codes(Clusters, Codes),
+    atom_codes(InputAtom, Codes),
+    atom_concat(PromptPrefix, InputAtom, Atom).
+
+clusters_codes([], []).
+clusters_codes([cluster(CodePts, _)|T], Codes) :-
+    append(CodePts, Rest, Codes),
+    clusters_codes(T, Rest).
+
+
+		 /*******************************
+		 *        RANDOM COMMANDS       *
+		 *******************************/
+
+%!  random_command(+State, +PromptCol, -Command) is det.
+%
+%   Pick a random command.  Heavily biased toward typing so the buffer
+%   grows; rejects `type` that would push layout past column W-2.
+
+random_command(state(Cs, Cursor), P, Cmd) :-
+    length(Cs, Len),
+    sum_widths(Cs, 0, UsedW),
+    W = 80,
+    Remaining is W - P - UsedW - 1,     % keep 1-col safety margin
+    edit_weights(Len, Cursor, EditWeights),
+    (   Remaining >= 2
+    ->  Weights = [60-type|EditWeights]
+    ;   Weights = EditWeights
+    ),
+    weighted_pick(Weights, Kind),
+    (   Kind == type
+    ->  random_typeable(Remaining, Cluster),
+        Cmd = type(Cluster)
+    ;   Cmd = Kind
+    ).
+
+%!  edit_weights(+BufLen, +Cursor, -Weights) is det.
+%
+%   Available edit commands, tagged with selection weights.  Commands
+%   that would be no-ops in the current state are omitted so the pick
+%   is more productive.
+
+edit_weights(Len, Cursor, Ws) :-
+    findall(Weight-Cmd, edit_candidate(Len, Cursor, Cmd, Weight), Ws0),
+    (   Ws0 == []
+    ->  Ws = [1-end]                   % always available
+    ;   Ws = Ws0
+    ).
+
+edit_candidate(_,    Cursor, cursor_left,  10) :- Cursor > 0.
+edit_candidate(Len,  Cursor, cursor_right, 10) :- Cursor < Len.
+edit_candidate(_,    Cursor, home,          5) :- Cursor > 0.
+edit_candidate(Len,  Cursor, end,           5) :- Cursor < Len.
+edit_candidate(_,    Cursor, backspace,     8) :- Cursor > 0.
+edit_candidate(Len,  Cursor, delete,        8) :- Cursor < Len.
+
+%!  random_typeable(+RemainingCols, -Cluster) is det.
+
+random_typeable(Remaining, Cluster) :-
+    (   Remaining >= 2
+    ->  Choices = [5-ascii, 3-nfd, 2-wide]
+    ;   Choices = [5-ascii, 3-nfd]
+    ),
+    weighted_pick(Choices, Kind),
+    make_cluster(Kind, Cluster).
+
+make_cluster(ascii, cluster([Code], 1)) :-
+    random_between(0'a, 0'z, Code).
+make_cluster(nfd, cluster([Base, 0x300], 1)) :-
+    random_between(0'a, 0'z, Base).
+make_cluster(wide, cluster([0x1F929], 2)).  % 🤩
+
+%!  weighted_pick(+Weights, -Choice) is det.
+%
+%   Weights is a list of Weight-Item pairs.  Pick Item with probability
+%   Weight / Total.
+
+weighted_pick(Weights, Choice) :-
+    pairs_keys(Weights, Keys),
+    sum_list(Keys, Total),
+    Total > 0,
+    R is random_float * Total,
+    pick_weighted(Weights, R, Choice).
+
+pick_weighted([W-Item|Rest], R, Out) :-
+    (   R < W
+    ->  Out = Item
+    ;   R1 is R - W,
+        pick_weighted(Rest, R1, Out)
+    ).
+
+
+		 /*******************************
+		 *       APPLY TO TERMINAL      *
+		 *******************************/
+
+%!  apply_terminal(+Command, +Terminal) is det.
+
+apply_terminal(type(cluster(Codes, _)), T) :-
+    atom_codes(Atom, Codes),
+    send(T, send, Atom).
+apply_terminal(cursor_left,  T) :- send_key(T, cursor_left).
+apply_terminal(cursor_right, T) :- send_key(T, cursor_right).
+apply_terminal(home,         T) :- send_key(T, home).
+apply_terminal(end,          T) :- send_key(T, end).
+apply_terminal(backspace,    T) :- send_key(T, backspace).
+apply_terminal(delete,       T) :- send_key(T, delete).
+
+send_key(T, Name) :-
+    key_bytes(Name, Bytes),
+    atom_codes(Atom, Bytes),
+    send(T, send, Atom).
+
+
+		 /*******************************
+		 *         VERIFICATION         *
+		 *******************************/
+
+%!  wait_verified(+T, +P, +R, +Prompt, +State, -Outcome) is det.
+%
+%   Drive the event loop in small slices until the terminal matches the
+%   model, up to ~1 s.  Returns `ok` on match, or the last observed
+%   divergence if libedit never settled to the expected state.
+
+wait_verified(T, P, R, Prompt, State, ok) :-
+    between(1, 100, _),
+    drive(0.01),
+    verify_state(T, P, R, Prompt, State, ok),
+    !.
+wait_verified(T, P, R, Prompt, State, Outcome) :-
+    verify_state(T, P, R, Prompt, State, Outcome).
+
+
+%!  verify_state(+T, +P, +R, +Prompt, +State, -Outcome) is det.
+%
+%   Binds Outcome to `ok` when the terminal matches the model, or to a
+%   `diff{...}` dict describing what disagreed.  The caller reports and
+%   throws on any non-`ok` outcome.
+
+verify_state(T, P, R, Prompt, state(Cs, Cursor), Outcome) :-
+    model_cursor_col(Cs, Cursor, P, ExpCol),
+    cursor(T, Col, Row),
+    model_row_text(Prompt, P, Cs, ExpLine),
+    row_text(T, R, GotLine),
+    (   Col =:= ExpCol,
+        Row =:= R,
+        GotLine == ExpLine
+    ->  Outcome = ok
+    ;   Outcome = diff{ expected_cursor: (ExpCol,R),
+                        got_cursor:      (Col,Row),
+                        expected_row:    ExpLine,
+                        got_row:         GotLine }
+    ).
+
+%!  report_failure(+T, +P, +R, +Prompt, +State, +History, +Divergence) is det.
+
+report_failure(_T, P, R, Prompt, state(Cs, Cursor),
+               History, Divergence) :-
+    length(Cs, Len),
+    format(user_error, "~n*** test_terminal_random DIVERGENCE ***~n", []),
+    format(user_error, "prompt at (col=~w, row=~w), prompt line = ~q~n",
+           [P, R, Prompt]),
+    format(user_error, "model state: cursor=~w of ~w clusters~n",
+           [Cursor, Len]),
+    format(user_error, "clusters: ~q~n", [Cs]),
+    get_dict(expected_cursor, Divergence, EC),
+    get_dict(got_cursor,      Divergence, GC),
+    get_dict(expected_row,    Divergence, ER),
+    get_dict(got_row,         Divergence, GR),
+    format(user_error, "expected cursor: ~q   got: ~q~n", [EC, GC]),
+    format(user_error, "expected row:    ~q~n", [ER]),
+    format(user_error, "got row:         ~q~n", [GR]),
+    format(user_error, "command history (in order):~n", []),
+    forall(member(C, History),
+           format(user_error, "    ~q~n", [C])).
