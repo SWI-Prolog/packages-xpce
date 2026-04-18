@@ -159,6 +159,14 @@ uchar_display_width(uchar_t c)
 }
 
 
+/* Per-line cell capacity.  One cell per visual column is not enough:
+   NFD content attaches combining marks as their own (width-0) cells, so a
+   single visual column can consume several cells.  The factor below
+   accommodates a base plus up to two combining marks per column, which
+   covers NFD Latin, common emoji with variation selectors, and Hangul
+   decomposed jamo.  The +1 is a scratch cell past the last column. */
+#define LINE_CELL_CAPACITY(b) (((b)->width * 3) + 1)
+
 /** Return the per-cell display column width of a text_char cell.
  *
  * The cell array is a column-grid view: each cell corresponds to ONE
@@ -381,7 +389,7 @@ rlc_check_assertions(RlcData b)
   int y;
 
   assert(b->last != b->first || b->first == 0);
-  assert(b->caret_x >= 0 && b->caret_x < b->width);
+  assert(b->caret_x >= 0 && b->caret_x < LINE_CELL_CAPACITY(b));
 					/* TBD: debug properly */
 /*assert(rlc_between(b, b->window_start, window_last, b->caret_y));*/
   (void)window_last;
@@ -389,7 +397,7 @@ rlc_check_assertions(RlcData b)
   for(y=0; y<b->height; y++)
   { RlcTextLine tl = &b->lines[y];
 
-    assert(tl->size >= 0 && tl->size <= b->width);
+    assert(tl->size >= 0 && tl->size <= LINE_CELL_CAPACITY(b));
     (void)tl;
   }
 }
@@ -1942,23 +1950,37 @@ rlc_paint_text(RlcData b,
   text_char *chars, *s;
   text_char buf[MAXLINE];
   char text[MAXLINE*4];		/* UTF-8 */
-  int len = to-from;
   int i;
 
-  if ( len <= 0 )
+  if ( to <= from )
     return;
 
-  if ( tl->text && to <= tl->size )
-  { chars = &tl->text[from];
+  /* `from`/`to` are VISUAL-COLUMN indices (b->width, sel_{start,end}_char
+   * are all visual columns).  tl->text[] is a cell array where combining
+   * marks and wide-char right-half placeholders take their own slots —
+   * for NFD content a single visual column can span several cells.  Convert
+   * the visual-column range to a cell range before indexing into tl->text. */
+  int cell_from = rlc_vcol_to_cell(tl, from);
+  int cell_to   = rlc_vcol_to_cell(tl, to);
+  int len = cell_to - cell_from;
+
+  if ( tl->text && cell_to <= tl->size )
+  { chars = &tl->text[cell_from];
   } else
   { text_char *o;
     int copy;
 
     o = chars = buf;
-    s = &tl->text[from];
-    copy = tl->text ? tl->size-from : 0;
-    for(i=0; i<copy; i++)
-      *o++ = *s++;
+    copy = (tl->text && cell_from < tl->size) ? tl->size - cell_from : 0;
+    if ( copy > len )
+      copy = len;
+    if ( copy > 0 )
+    { s = &tl->text[cell_from];
+      for(i=0; i<copy; i++)
+	*o++ = *s++;
+    } else
+    { i = 0;
+    }
     for(; i<len; i++, o++)
     { o->code  = ' ';
       o->flags = TF_DEFAULT;
@@ -2653,13 +2675,14 @@ rlc_unadjust_line(RlcData b, int line)
 
   if ( tl->text )
   { if ( tl->adjusted )
-    { tl->text = rlc_realloc(tl->text, (b->width + 1)*sizeof(text_char));
+    { tl->text = rlc_realloc(tl->text,
+			     LINE_CELL_CAPACITY(b)*sizeof(text_char));
       tl->adjusted = false;
       /* zero-initialize new tail if any (realloc may grow the buffer) */
     }
   } else
-  { tl->text = rlc_malloc((b->width + 1)*sizeof(text_char));
-    memset(tl->text, 0, (b->width + 1)*sizeof(text_char));
+  { tl->text = rlc_malloc(LINE_CELL_CAPACITY(b)*sizeof(text_char));
+    memset(tl->text, 0, LINE_CELL_CAPACITY(b)*sizeof(text_char));
     tl->adjusted = false;
     tl->size = 0;
   }
@@ -2677,8 +2700,8 @@ rlc_open_line(RlcData b)
     b->first = NextLine(b, b->first);
   }
 
-  b->lines[i].text       = rlc_malloc((b->width + 1)*sizeof(text_char));
-  memset(b->lines[i].text, 0, (b->width + 1)*sizeof(text_char));
+  b->lines[i].text       = rlc_malloc(LINE_CELL_CAPACITY(b)*sizeof(text_char));
+  memset(b->lines[i].text, 0, LINE_CELL_CAPACITY(b)*sizeof(text_char));
   b->lines[i].adjusted   = false;
   b->lines[i].size       = 0;
   b->lines[i].softreturn = false;
@@ -2801,24 +2824,21 @@ rlc_caret_down(RlcData b, int arg)
 
 static void
 rlc_caret_forward(RlcData b, int arg)
-{ while(arg-- > 0)
-  { if ( ++b->caret_x >= b->width )
+{ /* Move by VISUAL columns, not cells.  An NFD cluster takes several
+     cells but one visual column, so cell-indexed arithmetic moves the
+     caret by a fraction of a column for combining content.  Wide-char
+     right-half placeholders are their own visual column (a `\b` steps
+     through a wide char in two halves). */
+  while(arg-- > 0)
+  { RlcTextLine tl = &b->lines[b->caret_y];
+    int cur_vcol = rlc_cell_to_vcol(tl, b->caret_x);
+    int new_vcol = cur_vcol + 1;
+    if ( new_vcol >= b->width )
     { b->lines[b->caret_y].softreturn = true;
       b->caret_x = 0;
       rlc_caret_down(b, 1);
-    }
-    /* Skip over combining marks and variation selectors (stored
-       width 0, code != 0) which share a cluster with the preceding
-       base cell.  Wide-char right-half placeholders (code == 0) are
-       NOT skipped — they are valid cursor positions representing the
-       right half of a wide char, and matching them lets a single
-       terminal `\b` step move 1 visual column through a wide char
-       instead of jumping over the whole cluster. */
-    { RlcTextLine tl = &b->lines[b->caret_y];
-      while ( b->caret_x < tl->size &&
-	      tl->text[b->caret_x].width == 0 &&
-	      tl->text[b->caret_x].code != 0 )
-	b->caret_x++;
+    } else
+    { b->caret_x = rlc_vcol_to_cell(tl, new_vcol);
     }
   }
 
@@ -2828,21 +2848,16 @@ rlc_caret_forward(RlcData b, int arg)
 
 static void
 rlc_caret_backward(RlcData b, int arg)
-{ while(arg-- > 0)
-  { if ( b->caret_x-- == 0 )
+{ /* See rlc_caret_forward: move by visual columns. */
+  while(arg-- > 0)
+  { RlcTextLine tl = &b->lines[b->caret_y];
+    int cur_vcol = rlc_cell_to_vcol(tl, b->caret_x);
+    if ( cur_vcol == 0 )
     { rlc_caret_up(b, 1);
-      b->caret_x = b->width-1;
-    }
-    /* See rlc_caret_forward: skip combining marks (code != 0, width 0)
-       but stop on wide-char placeholders (code == 0), which represent
-       the right half of a wide char and are a valid visual column. */
-    { RlcTextLine tl = &b->lines[b->caret_y];
-      while ( b->caret_x > 0 &&
-	      tl->text &&
-	      b->caret_x < tl->size &&
-	      tl->text[b->caret_x].width == 0 &&
-	      tl->text[b->caret_x].code != 0 )
-	b->caret_x--;
+      tl = &b->lines[b->caret_y];
+      b->caret_x = rlc_vcol_to_cell(tl, b->width - 1);
+    } else
+    { b->caret_x = rlc_vcol_to_cell(tl, cur_vcol - 1);
     }
   }
 
@@ -3052,26 +3067,35 @@ rlc_put(RlcData b, int chr)
       tl->size = b->caret_x + 1;
     tl->changed |= CHG_CHANGED;
     /* Advance the cell index (not the visual column) so the next char
-       doesn't overwrite this combiner.  Cap at b->width to avoid wrap. */
-    if ( b->caret_x < b->width - 1 )
+       doesn't overwrite this combiner.  Cap at the physical line
+       capacity (a visual column can hold a base + several combiners). */
+    if ( b->caret_x < LINE_CELL_CAPACITY(b) - 1 )
       b->caret_x++;
   } else
-  { /* Pre-wrap: a wide char at the last column won't fit.  Pad the
-       remaining cell with a space and wrap to the next line before
-       placing the wide character.  Without this the wide char would
-       be written at caret_x = width-1 with no room for its
-       placeholder, leaving the cell array and the rendered glyph out
-       of sync. */
-    if ( dw == 2 && b->caret_x + 1 >= b->width )
-    { if ( b->caret_x < b->width )
+  { /* Wrap in terms of VISUAL columns, not cell indices.  NFD content
+       can consume multiple cells per column, so comparing caret_x to
+       b->width would wrap too early.  We also use "delayed wrap": when
+       a base lands in the last column we leave the caret at vcol ==
+       width so a following combiner can still attach; the wrap happens
+       when the next base arrives. */
+    int cur_vcol = rlc_cell_to_vcol(tl, b->caret_x);
+
+    /* If the caret is past the right edge (pending wrap), or a wide
+       char's second half won't fit, wrap to the next line first.  When
+       wrapping for a wide char at the last column, pad that column so
+       the rendered glyph and the cell array stay in sync. */
+    if ( cur_vcol >= b->width ||
+	 (dw == 2 && cur_vcol + 1 >= b->width) )
+    { if ( dw == 2 && cur_vcol < b->width &&
+	   b->caret_x < LINE_CELL_CAPACITY(b) )
       { text_char *pad = &tl->text[b->caret_x];
 	pad->code  = ' ';
 	pad->flags = b->sgr_flags;
 	pad->width = 1;
 	if ( tl->size <= b->caret_x )
 	  tl->size = b->caret_x + 1;
+	tl->changed |= CHG_CHANGED;
       }
-      tl->changed |= CHG_CHANGED;
       b->lines[b->caret_y].softreturn = true;
       b->caret_x = 0;
       rlc_caret_down(b, 1);
@@ -3105,13 +3129,10 @@ rlc_put(RlcData b, int chr)
        to move the cursor), it sends base + combiners in sequence.  Skipping
        here would advance past a combiner that the very next rlc_put is about
        to re-write, causing that write to land one cell too far right and
-       clobber the following cluster's base. */
+       clobber the following cluster's base.  Do NOT wrap here either:
+       delayed wrap above handles the end-of-line transition on the next
+       base, which lets a trailing combiner still attach to this base. */
     b->caret_x += dw;
-    if ( b->caret_x >= b->width )
-    { b->lines[b->caret_y].softreturn = true;
-      b->caret_x = 0;
-      rlc_caret_down(b, 1);
-    }
     b->changed |= CHG_CARET;
   }
 }
