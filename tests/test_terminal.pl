@@ -545,6 +545,36 @@ test(delete_word_forward_removes_full_word, [setup(test_begin(T))]) :-
 %   char into a line of 40 NFD clusters (= 80 cells) dropped the last
 %   cell — the final cluster's combining mark.
 
+%   When the buffer contains enough NFD combining marks that the
+%   total code-point count past the cursor reaches the terminal width,
+%   a wide (emoji) cluster after the cursor caused libedit's re_refresh
+%   to bump the cursor to the next row — the wrap check compared the
+%   code-point index against t_size.h instead of the visual column.
+%   Repro: fill a line with ~45 narrow chars plus enough NFD combining
+%   marks to push the code-point index past 80, insert an emoji, move
+%   cursor back, then type another char to trigger re_refresh.  Before
+%   the fix the cursor reported (0, R+1) instead of the correct (col, R).
+
+test(refresh_wide_at_cursor_uses_visual_col, [setup(test_begin(T))]) :-
+    cursor(T, P, R),
+    %  Build a buffer: 20 NFD clusters (40 cps, 20 vcols) + emoji (1
+    %  cp, 2 vcols) + 20 narrow chars.  Total cps with prompt > 80,
+    %  visual cols well under.
+    make_nfd_codes(20, NFDCodes),
+    append(NFDCodes, [0x1F929], MidCodes),       % NFD then 🤩
+    length(Tail, 20), maplist(=(0'q), Tail),
+    append(MidCodes, Tail, AllCodes),
+    atom_codes(Buf, AllCodes),
+    type(T, Buf),
+    %  Move left past the trailing q's, stopping just past the emoji,
+    %  so the NEXT char under libedit's cursor is the 🤩.  Then type
+    %  one more letter to force a re_refresh.
+    forall(between(1, 20, _), key(T, cursor_left)),
+    type(T, 'k'),
+    %  The cursor must still be on row R, not bumped to R+1.
+    cursor(T, _, GotRow),
+    assertion(GotRow =:= R).
+
 test(insert_midline_preserves_trailing_combiner, [setup(test_begin(T))]) :-
     cursor(T, P, R),
     %  Fill a line with NFD clusters up to just below visual width so
