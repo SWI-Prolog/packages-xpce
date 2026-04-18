@@ -751,15 +751,16 @@ cursor_at(T, C, R) :-
     Cc =:= C, Rc =:= R.
 
 
-test(input_fills_first_row_then_wraps, [setup(test_begin(T))]) :-
-    %  Typing exactly 80-P narrow characters fills the row and moves
-    %  the cursor to column 0 of the next row.
+test(input_fills_first_row_exactly, [setup(test_begin(T))]) :-
+    %  Typing exactly 80-P narrow characters fills the row to its
+    %  right edge.  On an xenl terminal (and xpce's delayed wrap) the
+    %  cursor stays in the pending-wrap state at (80, R); the physical
+    %  move to (0, R+1) only happens when the NEXT base arrives.
     cursor(T, P, R),
     Fill is 80 - P,
     xs(Fill, Xs),
-    R2 is R + 1,
-    type_await(T, Xs, 0, R2),
-    assert_cursor(T, 0, R2).
+    type_await(T, Xs, 80, R),
+    assert_cursor(T, 80, R).
 
 test(input_wraps_one_char_past_row, [setup(test_begin(T))]) :-
     %  One extra character past 80-P lands at column 1 of the next row.
@@ -853,15 +854,16 @@ test(nfd_fills_first_row_exactly,
      [ setup(test_begin(T))
      ]) :-
     %  Typing exactly (80-P) NFD clusters fills the row to its visual
-    %  edge.  Cursor should be at column 0 of the next row, not
-    %  somewhere in the middle because caret_x hit 80 after only
-    %  ~40 clusters.
+    %  edge.  Same pending-wrap semantics as the narrow fill test:
+    %  cursor waits at (80, R) until the next base arrives.  Before
+    %  the wrap fix this cursor landed around column 40 because
+    %  caret_x (cell index) hit the wrap threshold at the visual
+    %  midpoint of the buffer.
     cursor(T, P, R),
     Fill is 80 - P,
     nfd_as(Fill, Atom),
-    R2 is R + 1,
-    type_await(T, Atom, 0, R2),
-    assert_cursor(T, 0, R2).
+    type_await(T, Atom, 80, R),
+    assert_cursor(T, 80, R).
 
 test(nfd_one_cluster_wraps_to_next_row,
      [ setup(test_begin(T))
@@ -893,8 +895,7 @@ test(nfd_cluster_kept_whole_at_wrap_boundary,
     assert_row(T, R2, OneCluster).
 
 test(cursor_left_across_wrap_nfd,
-     [ blocked('libedit cross-wrap cursor tracking: reports col P + N/2'),
-       setup(test_begin(T))
+     [ setup(test_begin(T))
      ]) :-
     %  After filling row R with (80-P) clusters and wrapping one more
     %  onto R+1, two cursor-lefts should land on the last cluster of

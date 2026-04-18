@@ -2914,11 +2914,14 @@ rlc_set_caret(RlcData b, int x, int y)
     rlc_caret_down(b, y-cy);
 
   /* ANSI CUP/HVP passes a visual column — map to the cell index that
-   * holds the first code point of that visual column's grapheme. */
+   * holds the first code point of that visual column's grapheme.
+   * Do NOT clamp to b->width-1: cells and visual columns only match
+   * 1:1 for plain narrow content; combining marks and wide chars push
+   * the cell index past width-1 for the same visual column. */
   int vcol = Bounds(x, 0, b->width-1);
   b->caret_x = rlc_vcol_to_cell(&b->lines[b->caret_y], vcol);
-  if ( b->caret_x > b->width-1 )
-    b->caret_x = b->width-1;
+  if ( b->caret_x > LINE_CELL_CAPACITY(b) - 1 )
+    b->caret_x = LINE_CELL_CAPACITY(b) - 1;
 
   b->changed |= CHG_CARET;
 }
@@ -2926,11 +2929,15 @@ rlc_set_caret(RlcData b, int x, int y)
 
 static void
 rlc_set_caret_x(RlcData b, int x)
-{ /* CSI G (HPA) uses 1-based visual columns. */
+{ /* CSI G (HPA) uses 1-based visual columns.  Map the target visual
+     column to a cell index via rlc_vcol_to_cell; do NOT clamp the
+     result to b->width-1, because lines with combining marks or wide
+     chars legitimately have cell indices that exceed the visual
+     width (a base + combining mark takes 2 cells for 1 column). */
   int vcol = Bounds(x-1, 0, b->width-1);
   b->caret_x = rlc_vcol_to_cell(&b->lines[b->caret_y], vcol);
-  if ( b->caret_x > b->width-1 )
-    b->caret_x = b->width-1;
+  if ( b->caret_x > LINE_CELL_CAPACITY(b) - 1 )
+    b->caret_x = LINE_CELL_CAPACITY(b) - 1;
 
   b->changed |= CHG_CARET;
 }
