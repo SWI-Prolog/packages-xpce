@@ -538,6 +538,39 @@ test(delete_word_forward_removes_full_word, [setup(test_begin(T))]) :-
 %   second 🤩).  Without the fix the line becomes 🤩🤩jnsh̀i instead of
 %   🤩🤩jjnsh̀i — the `j` disappears.
 
+%   Typing a character into the middle of a line whose cell count
+%   already exceeds the visual width (because it's full of NFD
+%   clusters) must not truncate the trailing combining mark.  Before
+%   the fix, rlc_insert clamped tl->size at b->width, so inserting a
+%   char into a line of 40 NFD clusters (= 80 cells) dropped the last
+%   cell — the final cluster's combining mark.
+
+test(insert_midline_preserves_trailing_combiner, [setup(test_begin(T))]) :-
+    cursor(T, P, R),
+    %  Fill a line with NFD clusters up to just below visual width so
+    %  the next insert definitely exceeds b->width in cells but still
+    %  fits visually.
+    Fill is 80 - P - 2,
+    make_nfd_codes(Fill, TypedCodes),
+    atom_codes(Typed, TypedCodes),
+    type(T, Typed),
+    key(T, home),
+    key(T, cursor_right),
+    type(T, 'z'),
+    TailN is Fill - 1,
+    make_nfd_codes(TailN, TailCodes),
+    atom_codes(Tail, TailCodes),
+    atom_codes(OneCluster, [0'a, 0x300]),
+    atom_concat(OneCluster, 'z', Prefix),
+    atom_concat(Prefix, Tail, Expected),
+    assert_input(T, R, Expected).
+
+make_nfd_codes(0, []) :- !.
+make_nfd_codes(N, [0'a, 0x300 | T]) :-
+    N > 0,
+    N1 is N - 1,
+    make_nfd_codes(N1, T).
+
 test(delete_wide_cluster_midline, [setup(test_begin(T))]) :-
     cursor(T, P, R),
     atom_codes(Buf, [0x1F929, 0x1F929, 0x1F929,

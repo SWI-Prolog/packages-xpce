@@ -3172,17 +3172,22 @@ rlc_insert(RlcData b, int chr)
   int dw = uchar_display_width((uchar_t)chr);
   int slots = (dw == 2) ? 2 : 1;	/* wide chars need 2 cells */
 
-  if ( tl->size + slots <= b->width )
+  /* Bound tl->size by the line's physical cell capacity (which
+     allows for combining marks), NOT by b->width: a row holding NFD
+     content can legitimately have more cells than visual columns, and
+     clamping to b->width would trim its trailing combining marks. */
+  int cap = LINE_CELL_CAPACITY(b);
+  if ( tl->size + slots <= cap )
     tl->size += slots;
-  else if ( tl->size < b->width )
-    tl->size = b->width;
+  else if ( tl->size < cap )
+    tl->size = cap;
   for(int i=tl->size-1; i>=(int)(b->caret_x+slots); i--)
     tl->text[i] = tl->text[i-slots];
   text_char *tc = &tl->text[b->caret_x];
   tc->code  = chr;
   tc->flags = b->sgr_flags;
   tc->width = (uint8_t)dw;
-  if ( dw == 2 && b->caret_x + 1 < b->width )
+  if ( dw == 2 && b->caret_x + 1 < cap )
   { text_char *ph = &tl->text[b->caret_x + 1];
     ph->code  = 0;
     ph->flags = b->sgr_flags;
