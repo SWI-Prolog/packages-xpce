@@ -3194,17 +3194,22 @@ rlc_delete_chars(RlcData b, int count)
   int cx = rlc_snap_start(tl, b->caret_x);
 
   /* Walk forward `count` visual columns, accumulating the number of
-     cells to delete.  Each grapheme cluster contributes its base's
-     display width (1 for narrow, 2 for wide); we always delete the
-     base plus all trailing combining marks and any wide-char
-     placeholder. */
+     cells to delete.  A cluster's visual width is the SUM of per-cell
+     display widths: 1 for a narrow base, 2 for a wide base (its cell
+     contributes 1 plus the placeholder cell's 1), 0 for any trailing
+     combining marks.  Using only the base cell's width would count a
+     wide cluster as 1 column and leave the placeholder behind. */
   int del_cells = 0;
   int p = cx;
   while ( count > 0 && p < tl->size )
-  { int w    = tc_display_width(&tl->text[p]);
-    int next = rlc_cluster_next(tl, p);
+  { int next = rlc_cluster_next(tl, p);
+    int cluster_vcols = 0;
+    for(int i=p; i<next; i++)
+      cluster_vcols += tc_display_width(&tl->text[i]);
+    if ( cluster_vcols == 0 )
+      cluster_vcols = 1;			/* stray combiner: count as 1 */
     del_cells += next - p;
-    count    -= (w > 0 ? w : 1);
+    count    -= cluster_vcols;
     p         = next;
   }
 

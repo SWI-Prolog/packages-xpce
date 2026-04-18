@@ -529,6 +529,30 @@ test(delete_word_forward_removes_full_word, [setup(test_begin(T))]) :-
 %   becomes `f̀fzj̀òǹàz̀` — the `j̀`'s combiner survives, attaches to
 %   the plain `j`.
 
+%   Forward-delete of a wide (emoji) cluster must drop exactly the 2
+%   cells the cluster occupies, not 3.  Before the fix, rlc_delete_chars
+%   decremented its column budget by the base cell's width (1) even for
+%   a wide base, so a `count=2` DCH walked past the cluster and ate a
+%   character from the next cluster.
+%   Repro: type 🤩🤩🤩jj, home, cursor_right once, delete (to remove the
+%   second 🤩).  Without the fix the line becomes 🤩🤩jnsh̀i instead of
+%   🤩🤩jjnsh̀i — the `j` disappears.
+
+test(delete_wide_cluster_midline, [setup(test_begin(T))]) :-
+    cursor(T, P, R),
+    atom_codes(Buf, [0x1F929, 0x1F929, 0x1F929,
+                     0'j, 0'j, 0'n, 0's]),
+    type(T, Buf),
+    key(T, home),
+    key(T, cursor_right),
+    ColBefore is P + 2,
+    assert_cursor(T, ColBefore, R),
+    key(T, delete),
+    assert_cursor(T, ColBefore, R),
+    atom_codes(Expected, [0x1F929, 0x1F929,
+                          0'j, 0'j, 0'n, 0's]),
+    assert_input(T, R, Expected).
+
 test(delete_nfd_cluster_midline, [setup(test_begin(T))]) :-
     cursor(T, P, R),
     atom_codes(Buf, [ 0'f, 0x300, 0'f,
