@@ -3055,7 +3055,6 @@ static void
 rlc_put(RlcData b, int chr)
 { RlcTextLine tl = rlc_prepare_line(b, b->caret_y);
   int dw = uchar_display_width((uchar_t)chr);
-
   if ( dw == 0 )
   { /* Combining character: attach to the preceding base's cluster by
        storing in its own cell at caret_x.  Pango will render base +
