@@ -87,6 +87,7 @@ test_terminal :-
                 terminal_nfd,
                 terminal_regression,
                 terminal_wide,
+                terminal_non_bmp,
                 terminal_mixed,
                 terminal_wrap
               ]).
@@ -695,6 +696,95 @@ test(cursor_left_skips_emoji_as_cluster, [setup(test_begin(T))]) :-
     assert_cursor(T, P, R).                 % back to before the emoji
 
 :- end_tests(terminal_wide).
+
+
+		 /*******************************
+		 *     TEST: NON-BMP (SMP)      *
+		 *******************************/
+
+%   Regression tests for supplementary-plane (U+10000+) code points on
+%   Windows, where wchar_t is 16-bit UTF-16 and a single code point
+%   occupies two wchar_t slots as a surrogate pair.  Linux stores the
+%   same code point in one wchar_t, so these tests pin both platforms
+%   to the same observable behaviour.
+
+:- begin_tests(terminal_non_bmp,
+               [ setup(setup_unit),
+                 cleanup(cleanup_unit)
+               ]).
+
+%!  smp_char(-Code) is det.
+%
+%   Plain U+1F929 "star-struck" emoji, no VS-16 — a single non-BMP code
+%   point that renders as two visual columns.
+
+smp_char(0x1F929).
+
+test(smp_types_two_columns, [setup(test_begin(T))]) :-
+    cursor(T, P, R),
+    smp_char(C),
+    atom_codes(A, [C]),
+    type(T, A),
+    End is P + 2,
+    assert_cursor(T, End, R).
+
+test(smp_backspace_removes_whole_cluster, [setup(test_begin(T))]) :-
+    cursor(T, P, R),
+    smp_char(C),
+    atom_codes(A, [C]),
+    type(T, A),
+    key(T, backspace),
+    drive(0.1),
+    assert_cursor(T, P, R),                 % 2 visual cols gone
+    atom_codes(Empty, []),
+    assert_input(T, R, Empty).              % buffer emptied
+
+test(smp_cursor_left_is_one_cluster, [setup(test_begin(T))]) :-
+    cursor(T, P, R),
+    smp_char(C),
+    atom_codes(A, [C]),
+    type(T, A),
+    End is P + 2,
+    assert_cursor(T, End, R),
+    key(T, cursor_left),
+    assert_cursor(T, P, R).                 % one hop across the pair
+
+test(smp_delete_forward_is_one_cluster, [setup(test_begin(T))]) :-
+    cursor(T, P, R),
+    smp_char(C),
+    atom_codes(A, [C]),
+    type(T, A),
+    key(T, home),
+    assert_cursor(T, P, R),
+    key(T, delete),
+    drive(0.1),
+    assert_cursor(T, P, R),
+    atom_codes(Empty, []),
+    assert_input(T, R, Empty).
+
+test(smp_midline_insert, [setup(test_begin(T))]) :-
+    %   Type an ASCII context, step the cursor into the middle of it,
+    %   then insert a non-BMP cluster.  Verifies the pair lands in the
+    %   buffer as a single cluster and the display advances by two
+    %   visual columns.
+    cursor(T, P, R),
+    type(T, abcd),
+    End is P + 4,
+    assert_cursor(T, End, R),
+    key(T, cursor_left),                    % between c and d
+    key(T, cursor_left),                    % between b and c
+    Mid is P + 2,
+    assert_cursor(T, Mid, R),
+    smp_char(C),
+    atom_codes(Emoji, [C]),
+    type(T, Emoji),
+    drive(0.1),
+    After is P + 4,                         % cursor = Mid + 2 visual cols
+    assert_cursor(T, After, R),
+    atom_codes(Expected, [0'a, 0'b, C, 0'c, 0'd]),
+    assert_input(T, R, Expected).
+
+:- end_tests(terminal_non_bmp).
 
 
 		 /*******************************
