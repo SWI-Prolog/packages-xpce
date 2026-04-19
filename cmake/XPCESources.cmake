@@ -282,11 +282,11 @@ set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png busy_bee.png
 
 
 set(XPCE_DATA_bitmaps_16x16 alert.png arrow_length.png arrows.png
-    arrow_wing.png back.png binocular.png book2.png bookmarks.png
+    arrow_wing.png binocular.png book2.png bookmarks.png
     cpalette1.png cpalette2.png delete.png doc.png done.png down.png
     drawing.png drive.png error.png exclamation.png eye.png false.png
     fatleft_arrow.png fatright_arrow.png fillpattern.png font.png foot.png
-    forward.png funcdoc.png ghost.png graph.png hierarchy.png manual.png
+    funcdoc.png ghost.png graph.png hierarchy.png manual.png
     newdir.png new.png noimg.png note.png ok.png pce.png pen.png preddoc.png
     profiler.png redo.png saveall.png valign.png
     vcr_fast_forward.png vcr_forward.png vga16.png wipeall.png)
@@ -302,7 +302,8 @@ set(XPCE_DATA_bitmaps_64x64 lsp-error.png lsp-hint.png
 set(XPCE_DATA_bitmaps_tool
     pencil.svg edit.svg refresh.svg up.svg help.svg handpoint.svg
     copy.svg distribute.svg open.svg print.svg undo.svg cut.svg
-    duplicate.svg paste.svg save.svg trashcan.svg ex_up.svg ex_down.svg)
+    duplicate.svg paste.svg save.svg trashcan.svg ex_up.svg ex_down.svg
+    nav-forward.svg nav-backward.svg)
 
 set(XPCE_DATA_appl-help customise.hlp dialog.hlp emacs.hlp
     event_monitor.hlp help.hlp pcedraw.hlp pcefaq.hlp plprefs.hlp)
