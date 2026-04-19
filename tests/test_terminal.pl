@@ -1122,38 +1122,72 @@ nth0_delete(N, [H|T], [H|T1]) :-
 		 *          LAYOUT              *
 		 *******************************/
 
-%!  model_cursor_col(+Clusters, +Cursor, +PromptCol, -Col) is det.
+%!  model_layout(+Clusters, +Cursor, +P, +R, +W,
+%!               -CurCol, -CurRow, -RowGroups) is det.
 %
-%   Visual column of the cursor, given the cluster list and the
-%   starting prompt column.  v1 single-row invariant: layout is
-%   `PromptCol + sum of widths of the first Cursor clusters`.
+%   Lay out Clusters starting at visual column P of row R on a
+%   terminal of width W columns, then report where the cursor lands
+%   (CurCol, CurRow) and group the clusters by the row they
+%   eventually occupy (RowGroups is a list of Row-ClusterList pairs,
+%   sorted by Row).
+%
+%   The cursor at index I sits AFTER the first I clusters — i.e. at
+%   the position the (I+1)th cluster would occupy, or at the
+%   post-placement tip when I == length(Clusters).  After exactly
+%   filling a row the cursor stays at (W, R) pending-wrap; it only
+%   physically moves to (0, R+1) once a further cluster actually
+%   lands there.
 
-model_cursor_col(Cs, Cursor, P, Col) :-
-    length(Prefix, Cursor),
-    append(Prefix, _, Cs),
-    sum_widths(Prefix, 0, W),
-    Col is P + W.
+model_layout(Clusters, Cursor, P, R, W, CurCol, CurRow, RowGroups) :-
+    length(Before, Cursor),
+    append(Before, _, Clusters),
+    layout_end_pos(Before, P, R, W, CurCol, CurRow),
+    layout_all(Clusters, P, R, W, Placements),
+    group_pairs_by_key(Placements, RowGroups).
+
+layout_end_pos([], Col, Row, _, Col, Row).
+layout_end_pos([cluster(_, CW)|Cs], Col, Row, W, EndCol, EndRow) :-
+    (   Col + CW > W
+    ->  NewCol = CW, NewRow is Row + 1
+    ;   NewCol is Col + CW, NewRow = Row
+    ),
+    layout_end_pos(Cs, NewCol, NewRow, W, EndCol, EndRow).
+
+layout_all([], _, _, _, []).
+layout_all([C|Cs], Col, Row, W, [PlaceRow-C|Ps]) :-
+    C = cluster(_, CW),
+    (   Col + CW > W
+    ->  PlaceCol = 0, PlaceRow is Row + 1
+    ;   PlaceCol = Col, PlaceRow = Row
+    ),
+    NewCol is PlaceCol + CW,
+    layout_all(Cs, NewCol, PlaceRow, W, Ps).
 
 sum_widths([], Acc, Acc).
 sum_widths([cluster(_, W)|T], Acc, Sum) :-
     Acc1 is Acc + W,
     sum_widths(T, Acc1, Sum).
 
-%!  model_row_text(+PromptLine, +PromptCol, +Clusters, -Atom) is det.
+%!  model_row_text(+PromptLine, +PromptCol, +PromptRow, +RowNum,
+%!                 +RowClusters, -Atom) is det.
 %
-%   The expected row text: prompt (sub-atom up to PromptCol) followed
-%   by the concatenated code points of all clusters.  Trailing cells on
-%   the row are blank, but the terminal's <-row returns only the
-%   allocated size — we trim the expected to match.
+%   Build the expected text for row RowNum.  For the prompt row we
+%   prefix with the captured prompt (truncated to PromptCol chars —
+%   what's visible before any input landed).  Other rows contain just
+%   the concatenated cluster code points — libedit doesn't pad, and
+%   xpce's <-row stops at tl->size, so we match that.
 
-model_row_text(PromptLine, P, Clusters, Atom) :-
-    (   sub_atom(PromptLine, 0, P, _, PromptPrefix)
-    ->  true
-    ;   PromptPrefix = PromptLine       % shorter than P: use as-is
-    ),
+model_row_text(PromptLine, P, PromptRow, RowNum, Clusters, Atom) :-
     clusters_codes(Clusters, Codes),
     atom_codes(InputAtom, Codes),
-    atom_concat(PromptPrefix, InputAtom, Atom).
+    (   RowNum =:= PromptRow
+    ->  (   sub_atom(PromptLine, 0, P, _, PromptPrefix)
+        ->  true
+        ;   PromptPrefix = PromptLine
+        ),
+        atom_concat(PromptPrefix, InputAtom, Atom)
+    ;   Atom = InputAtom
+    ).
 
 clusters_codes([], []).
 clusters_codes([cluster(CodePts, _)|T], Codes) :-
@@ -1168,13 +1202,15 @@ clusters_codes([cluster(CodePts, _)|T], Codes) :-
 %!  random_command(+State, +PromptCol, -Command) is det.
 %
 %   Pick a random command.  Heavily biased toward typing so the buffer
-%   grows; rejects `type` that would push layout past column W-2.
+%   grows.  Caps total content width at 900 visual columns so the
+%   buffer (including prompt) never wraps off the bottom of a 25-row
+%   terminal (~11 rows of content leaves plenty of margin).
 
-random_command(state(Cs, Cursor), P, Cmd) :-
+random_command(state(Cs, Cursor), _P, Cmd) :-
     length(Cs, Len),
     sum_widths(Cs, 0, UsedW),
-    W = 80,
-    Remaining is W - P - UsedW - 1,     % keep 1-col safety margin
+    MaxContent = 900,
+    Remaining is MaxContent - UsedW,
     edit_weights(Len, Cursor, EditWeights),
     (   Remaining >= 2
     ->  Weights = [60-type|EditWeights]
@@ -1291,19 +1327,42 @@ wait_verified(T, P, R, Prompt, State, Outcome) :-
 %   throws on any non-`ok` outcome.
 
 verify_state(T, P, R, Prompt, state(Cs, Cursor), Outcome) :-
-    model_cursor_col(Cs, Cursor, P, ExpCol),
+    W = 80,
+    model_layout(Cs, Cursor, P, R, W, ExpCol, ExpRow, RowGroups),
     cursor(T, Col, Row),
-    model_row_text(Prompt, P, Cs, ExpLine),
-    row_text(T, R, GotLine),
-    (   Col =:= ExpCol,
-        Row =:= R,
-        GotLine == ExpLine
-    ->  Outcome = ok
-    ;   Outcome = diff{ expected_cursor: (ExpCol,R),
+    (   Col =:= ExpCol, Row =:= ExpRow
+    ->  verify_rows(T, P, R, Prompt, RowGroups, Outcome)
+    ;   collect_row_diffs(T, P, R, Prompt, RowGroups, RowDiffs),
+        Outcome = diff{ expected_cursor: (ExpCol,ExpRow),
                         got_cursor:      (Col,Row),
-                        expected_row:    ExpLine,
-                        got_row:         GotLine }
+                        row_diffs:       RowDiffs }
     ).
+
+%!  verify_rows(+T, +P, +R, +Prompt, +RowGroups, -Outcome) is det.
+%
+%   Walk each Row-Clusters pair in RowGroups.  Returns `ok` if every
+%   row's rendered text matches the model; otherwise a diff dict.
+
+verify_rows(_T, _P, _R, _Prompt, [], ok).
+verify_rows(T, P, R, Prompt, [RowNum-Clusters|Groups], Outcome) :-
+    model_row_text(Prompt, P, R, RowNum, Clusters, ExpText),
+    row_text(T, RowNum, GotText),
+    (   ExpText == GotText
+    ->  verify_rows(T, P, R, Prompt, Groups, Outcome)
+    ;   Outcome = diff{ row:          RowNum,
+                        expected_row: ExpText,
+                        got_row:      GotText }
+    ).
+
+collect_row_diffs(_T, _P, _R, _Prompt, [], []).
+collect_row_diffs(T, P, R, Prompt, [RowNum-Clusters|Groups], Diffs) :-
+    model_row_text(Prompt, P, R, RowNum, Clusters, ExpText),
+    row_text(T, RowNum, GotText),
+    (   ExpText == GotText
+    ->  Rest = Diffs
+    ;   Diffs = [row(RowNum, ExpText, GotText)|Rest]
+    ),
+    collect_row_diffs(T, P, R, Prompt, Groups, Rest).
 
 %!  report_failure(+T, +P, +R, +Prompt, +State, +History, +Divergence) is det.
 
@@ -1316,13 +1375,25 @@ report_failure(_T, P, R, Prompt, state(Cs, Cursor),
     format(user_error, "model state: cursor=~w of ~w clusters~n",
            [Cursor, Len]),
     format(user_error, "clusters: ~q~n", [Cs]),
-    get_dict(expected_cursor, Divergence, EC),
-    get_dict(got_cursor,      Divergence, GC),
-    get_dict(expected_row,    Divergence, ER),
-    get_dict(got_row,         Divergence, GR),
-    format(user_error, "expected cursor: ~q   got: ~q~n", [EC, GC]),
-    format(user_error, "expected row:    ~q~n", [ER]),
-    format(user_error, "got row:         ~q~n", [GR]),
+    (   get_dict(expected_cursor, Divergence, EC),
+        get_dict(got_cursor,      Divergence, GC)
+    ->  format(user_error, "expected cursor: ~q   got: ~q~n", [EC, GC])
+    ;   true
+    ),
+    (   get_dict(row,             Divergence, RN),
+        get_dict(expected_row,    Divergence, ER),
+        get_dict(got_row,         Divergence, GR)
+    ->  format(user_error, "row ~w expected: ~q~n", [RN, ER]),
+        format(user_error, "row ~w got:      ~q~n", [RN, GR])
+    ;   true
+    ),
+    (   get_dict(row_diffs, Divergence, RowDiffs), RowDiffs \== []
+    ->  forall(member(row(RN, ER, GR), RowDiffs),
+               ( format(user_error, "row ~w expected: ~q~n", [RN, ER]),
+                 format(user_error, "row ~w got:      ~q~n", [RN, GR])
+               ))
+    ;   true
+    ),
     format(user_error, "command history (in order):~n", []),
     forall(member(C, History),
            format(user_error, "    ~q~n", [C])).

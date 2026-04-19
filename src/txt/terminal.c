@@ -3193,6 +3193,28 @@ rlc_insert(RlcData b, int chr)
     ph->flags = b->sgr_flags;
     ph->width = 0;
   }
+  /* ANSI ICH discards content shifted past the right edge.  Trim any
+     tail clusters whose visual column would fall past b->width so the
+     stored content matches what's visible on-screen.  Use a
+     cluster-aware walk: a wide cluster's base + placeholder go or
+     stay together, and a base with attached combining marks is not
+     sliced through. */
+  { int vcol = 0;
+    int keep = tl->size;
+    for(int i=0; i<tl->size; )
+    { int next = rlc_cluster_next(tl, i);
+      int cw = 0;
+      for(int j=i; j<next; j++)
+	cw += tc_display_width(&tl->text[j]);
+      if ( vcol + cw > b->width )
+      { keep = i;
+	break;
+      }
+      vcol += cw;
+      i = next;
+    }
+    tl->size = keep;
+  }
   tl->changed |= CHG_CHANGED;
 }
 
