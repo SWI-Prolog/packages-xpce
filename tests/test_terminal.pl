@@ -120,7 +120,7 @@ start_terminal(Frame, Terminal) :-
 
 stop_terminal(Frame) :-
     (   object(Frame)
-    ->  ignore(send(Frame, destroy))
+    ->  in_pce_thread(send(Frame, destroy))
     ;   true
     ).
 
@@ -556,7 +556,7 @@ test(delete_word_forward_removes_full_word, [setup(test_begin(T))]) :-
 %   the fix the cursor reported (0, R+1) instead of the correct (col, R).
 
 test(refresh_wide_at_cursor_uses_visual_col, [setup(test_begin(T))]) :-
-    cursor(T, P, R),
+    cursor(T, _P, R),
     %  Build a buffer: 20 NFD clusters (40 cps, 20 vcols) + emoji (1
     %  cp, 2 vcols) + 20 narrow chars.  Total cps with prompt > 80,
     %  visual cols well under.
