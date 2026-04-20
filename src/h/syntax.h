@@ -79,7 +79,11 @@ End;
 #define streq(s, t)	((s) && (t) && (strcmp((s), (t)) == 0))
 
 #define UNICODE_MAX		(0x10FFFF)
-#define META_OFFSET		(1L<<16)
+/* META_OFFSET must sit above the full Unicode range; (1<<16) collided
+ * with non-BMP code points (emoji, non-BMP CJK), causing the terminal
+ * widget to misclassify a typed 🤩 (U+1F929) as "Meta+<byte>" and
+ * emit ESC <byte> instead of the emoji. */
+#define META_OFFSET		(1L<<21)
 
 #define EOS	0			/* end of string */
 #define ESC	27			/* char escape */
