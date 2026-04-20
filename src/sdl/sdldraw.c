@@ -2081,9 +2081,15 @@ s_print_utf8(const char *u, size_t len, int x, int y, FontObj font)
   Translate(x, y);
   cairo_new_path(CR);
   PangoLayout *layout = pce_cairo_set_font(CR, font);
-  int baseline = pango_layout_get_baseline(layout);
   pce_cairo_set_source_color(CR, context.colour);
+  /* pango_layout_get_baseline reports the baseline of whatever text
+   * is currently in the layout, so set the text first — otherwise a
+   * previous call that rendered an emoji (whose glyph font has a
+   * different baseline than the roman font) makes the next plain-text
+   * call draw a few pixels off.  Visible as the "see😀aap" selection
+   * shifting the unselected tail. */
   pango_layout_set_text(layout, u, len);
+  int baseline = pango_layout_get_baseline(layout);
   cairo_move_to(CR, x, y-P2D(baseline));
   pango_cairo_show_layout(CR, layout);
 }
