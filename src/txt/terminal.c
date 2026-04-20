@@ -1939,6 +1939,76 @@ rlc_scroll_lines(RlcData b, int lines)
   rlc_request_redraw(b);
 }
 
+/** Paint a same-flags run, but split on every wide-char boundary so each
+ *  wide cluster is drawn in its own 2-column box.
+ *
+ *  Pango's natural advance for an emoji tends to exceed 2*cw by a pixel or
+ *  two.  If we hand it a long "sskll😀😀😀…" span as one show_layout call,
+ *  each emoji nudges the baseline rightward, so the visual text drifts past
+ *  the column-grid cursor and "sskll😀😀😀😀😀😀😀" with the caret walked
+ *  to the end shows the caret a few pixels left of the last emoji.  Drawing
+ *  each emoji in its own cluster, at a column-grid x0, lets the following
+ *  r_clear erase any bleed and resets the cursor to its true column every
+ *  cluster boundary.
+ *
+ *  `cells` is the array of text_char cells for the run; `utf8`/`ulen` is
+ *  the matching UTF-8 span (with wide-char placeholders already skipped).
+ *  `x0` is the left edge; the run is expected to span
+ *  chars_columns(cells, n) * cw pixels.  Underline is re-applied per
+ *  cluster so it still joins visually.
+ */
+static void
+paint_chunks(const text_char *cells, int n,
+	     const char *utf8, int ulen,
+	     int x0, int ty, int cw, FontObj font, int underline)
+{ const text_char *c = cells;
+  const char *u = utf8;
+  int i = 0;
+
+  while (i < n)
+  { int chunk_i = i;
+    const char *chunk_u = u;
+    int is_wide = (c[i].width == 2);
+
+    if (is_wide)
+    { /* Base wide cell + its width-0/placeholder followers (wide-char
+       * right-half placeholder with code 0, combining marks with width
+       * 0 and code != 0, variation selectors).  Stops at the next
+       * base-width-1 cell or the next base-width-2 cell. */
+      int chr;
+      u = utf8_get_char((char *)u, &chr);	/* the wide code point */
+      i++;
+      while (i < n && (c[i].code == 0 ||
+		       (c[i].width == 0 && c[i].code != 0)))
+      { if (c[i].code != 0)
+	  u = utf8_get_char((char *)u, &chr);
+	i++;
+      }
+    } else
+    { /* Contiguous non-wide run: width-1 cells and any trailing
+       * width-0 combining marks, up to the next width-2 cell. */
+      while (i < n && c[i].width != 2)
+      { if (c[i].code != 0)
+	{ int chr;
+	  u = utf8_get_char((char *)u, &chr);
+	}
+	i++;
+      }
+    }
+
+    int chunk_ulen = (int)(u - chunk_u);
+    int chunk_cols = chars_columns(c + chunk_i, i - chunk_i);
+    int chunk_w    = chunk_cols * cw;
+
+    s_print_utf8(chunk_u, chunk_ulen, x0, ty, font);
+    if (underline)
+      r_underline(font, x0, ty, chunk_w, DEFAULT);
+
+    x0 += chunk_w;
+  }
+  (void)utf8; (void)ulen;
+}
+
 /** Draw a line of the terminal
  */
 
@@ -2004,7 +2074,7 @@ rlc_paint_text(RlcData b,
     int x0 = *cx;
     *cx += chars_columns(chars, len) * b->cw;
     r_clear(x0, ty-b->cb, *cx-x0, b->ch);
-    s_print_utf8(text, t-text, x0, ty, ti->font);
+    paint_chunks(chars, len, text, (int)(t-text), x0, ty, b->cw, ti->font, 0);
     r_colour(ofg);
     r_background(obg);
   } else
@@ -2062,9 +2132,8 @@ rlc_paint_text(RlcData b,
 	      t, ulen, x0, *cx-x0, ty, pp(ti->font));
 #endif
       r_clear(x0, ty-b->cb, *cx-x0, b->ch);
-      s_print_utf8(t, ulen, x0, ty, font);
-      if ( TF_UNDERLINE(flags) )
-	r_underline(font, x0, ty, *cx-x0, DEFAULT);
+      paint_chunks(s, segment, t, ulen, x0, ty, b->cw, font,
+                   TF_UNDERLINE(flags));
       if ( TF_INVERSE(flags) )
 	r_swap_background_and_foreground();
       if ( notDefault(ofg) )
