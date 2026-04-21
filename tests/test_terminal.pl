@@ -81,6 +81,7 @@ setup_headless :-
 :- use_module(library(pairs)).
 :- use_module(library(option)).
 :- use_module(library(random)).
+:- use_module(library(aggregate)).
 
 test_terminal :-
     run_tests([ terminal_basic,
@@ -89,7 +90,8 @@ test_terminal :-
                 terminal_wide,
                 terminal_non_bmp,
                 terminal_mixed,
-                terminal_wrap
+                terminal_wrap,
+                terminal_resize
               ]).
 
 
@@ -322,6 +324,84 @@ key_bytes(cursor_down,    [0'\e, 0'[, 0'B]).
 key_bytes(cursor_right,   [0'\e, 0'[, 0'C]).
 key_bytes(cursor_left,    [0'\e, 0'[, 0'D]).
 key_bytes(delete,         [0'\e, 0'[, 0'3, 0'~]).
+
+
+		 /*******************************
+		 *         RESIZE HELPERS       *
+		 *******************************/
+
+%!  filler(+N, -Atom) is det.
+%
+%   Build an atom of N printable ASCII chars drawn from a repeating
+%   "abcdefghijklmnopqrstuvwxyz_" pattern — 26 letters followed by
+%   an underscore marker every 27 characters.  The underscores make
+%   it easy to see at a glance where any byte-offset sits inside a
+%   wrapped or shifted row: the N-th underscore marks column 27*(N+1).
+%
+%   Shared between the terminal_wrap and terminal_resize units.
+%   Defined outside any `begin_tests/end_tests` block because plunit
+%   scopes predicates declared inside a unit to a per-unit
+%   plunit_<unit> module.
+
+filler(N, Atom) :-
+    length(Codes, N),
+    fill_codes(Codes, 0),
+    atom_codes(Atom, Codes).
+
+fill_codes([], _).
+fill_codes([C|T], I) :-
+    Mod is I mod 27,
+    (   Mod =:= 26
+    ->  C = 0'_
+    ;   C is 0'a + Mod
+    ),
+    I1 is I + 1,
+    fill_codes(T, I1).
+
+%!  cw_of(+Terminal, -CW) is det.
+%
+%   Pixel width of one character cell of the terminal's current font,
+%   derived from the current geometry.  Call this BEFORE any resize so
+%   the geometry still reflects the initial cols=80 setup from
+%   start_terminal/2.
+
+cw_of(Terminal, CW) :-
+    get(Terminal, width, W),
+    CW is W / 82.                       % 80 cols + 2-char margin
+
+%!  cols_for_pixels(+CW, +Pixels, -Cols) is det.
+%
+%   Inverse of rlc_resize_pixel_units: for a requested pixel width,
+%   compute the column count the terminal will end up with.  Mirrors
+%   `max(20, w/cw) - 2` in packages/xpce/src/txt/terminal.c.
+
+cols_for_pixels(CW, Pixels, Cols) :-
+    Raw is Pixels / CW,
+    truncate(Raw, RawCols),
+    Cols is max(20, RawCols) - 2.
+
+truncate(F, I) :-
+    I is truncate(F).
+
+%!  resize_width(+Terminal, +Pixels) is det.
+%
+%   Resize the terminal to Pixels wide and pump the event loop so the
+%   SIGWINCH-driven libedit refresh lands before we read rows.
+
+resize_width(Terminal, Pixels) :-
+    send(Terminal, width, Pixels),
+    drive(0.2).
+
+%!  rows_of(+Terminal, +FromRow, +Count, -Atoms) is det.
+%
+%   Read Count consecutive rows starting at FromRow as a list of atoms.
+
+rows_of(_Terminal, _FromRow, 0, []) :- !.
+rows_of(Terminal, FromRow, Count, [Atom|Rest]) :-
+    row_text(Terminal, FromRow, Atom),
+    Next is FromRow + 1,
+    Count1 is Count - 1,
+    rows_of(Terminal, Next, Count1, Rest).
 
 
 		 /*******************************
@@ -861,6 +941,294 @@ test(insert_before_final_emoji, [setup(test_begin(T))]) :-
 
 
 		 /*******************************
+		 *        TEST: RESIZE          *
+		 *******************************/
+
+%   These tests drive `send(Terminal, width, Pixels)` while a line is
+%   being edited and check that libedit+xpce re-wrap the current input
+%   correctly at the new column count.  The tests currently fail on
+%   the known resize-while-editing bug (stale rows from the pre-resize
+%   wrap leak into the post-resize display); they exist to pin that
+%   bug down so the follow-up fix has a regression net.
+
+:- begin_tests(terminal_resize,
+               [ setup(setup_unit_resize),
+                 cleanup(cleanup_unit_resize)
+               ]).
+
+%!  setup_unit_resize is det.
+%!  cleanup_unit_resize is det.
+%
+%   Extend the shared terminal setup/cleanup so we also remember the
+%   initial pixel width of the terminal.  Each resize test restores
+%   that width first (via resize_test_begin/1) so a previous test's
+%   resize doesn't leak into the next one.
+
+setup_unit_resize :-
+    setup_unit,
+    current_test_terminal(T),
+    get(T, width, W),
+    nb_setval(terminal_resize_initial_width, W).
+
+cleanup_unit_resize :-
+    (   nb_current(terminal_resize_initial_width, _)
+    ->  nb_delete(terminal_resize_initial_width)
+    ;   true
+    ),
+    cleanup_unit.
+
+%!  resize_test_begin(-Terminal) is det.
+%
+%   Per-resize-test setup: restore the terminal to its initial width,
+%   then delegate to the usual test_begin/1 (which clears the input
+%   line).  Resizing first means the input line is cleared at the
+%   original width, so every test starts from the same geometry.
+
+resize_test_begin(T) :-
+    current_test_terminal(T),
+    (   nb_current(terminal_resize_initial_width, W0)
+    ->  get(T, width, W),
+        (   W =:= W0
+        ->  true
+        ;   resize_width(T, W0)
+        )
+    ;   true
+    ),
+    reset_input(T).
+
+%!  type_and_wait(+Terminal, +Text) is det.
+%
+%   Like type/2 but waits until libedit has echoed Text to the end.
+%   drive(0.1) is not always enough for libedit to finish echoing a
+%   large paste before we trigger a resize; without this wait the
+%   resize sees a half-echoed line and the caret in a stale mid-line
+%   position.  The expected final cursor position is derived from the
+%   pre-type cursor, the input length, and the current column count;
+%   at the wrap boundary (TotalCells a multiple of Cols) xpce reports
+%   the "pending-wrap" column, hence the branch on LastCol+1.
+
+type_and_wait(T, Text) :-
+    cursor(T, Col0, Row0),
+    atom_length(Text, Len),
+    cw_of(T, CW),
+    get(T, width, W),
+    Cols is max(20, truncate(W / CW)) - 2,
+    TotalCells is Col0 + Len,
+    LastCell is TotalCells - 1,
+    LastRow is Row0 + LastCell // Cols,
+    LastCol is LastCell mod Cols,
+    NextCol is LastCol + 1,
+    (   NextCol < Cols
+    ->  ExpCol = NextCol, ExpRow = LastRow
+    ;   ExpCol = Cols,    ExpRow = LastRow
+    ),
+    send(T, send, Text),
+    wait_until(cursor_at(T, ExpCol, ExpRow), 5).
+
+cursor_at(T, Col, Row) :-
+    cursor(T, C, R),
+    C =:= Col, R =:= Row.
+
+has_prompt(Line) :-
+    atom(Line),
+    sub_atom(Line, _, 3, _, '?- ').
+
+trim_trailing_spaces(Atom, Trimmed) :-
+    atom_codes(Atom, Codes),
+    reverse(Codes, RCodes),
+    drop_spaces(RCodes, RTrimmed),
+    reverse(RTrimmed, TrimmedCodes),
+    atom_codes(Trimmed, TrimmedCodes).
+
+drop_spaces([0' |T], R) :- !, drop_spaces(T, R).
+drop_spaces(L, L).
+
+count_prompt_occurrences(Rows, N) :-
+    aggregate_all(count, (member(L, Rows), has_prompt(L)), N).
+
+assert_single_prompt(Rows) :-
+    count_prompt_occurrences(Rows, N),
+    (   N == 1
+    ->  true
+    ;   format(user_error,
+               "expected exactly one prompt row, found ~w in ~q~n",
+               [N, Rows]),
+        assertion(N == 1)
+    ).
+
+test(resize_welcome_line, [setup(resize_test_begin(T))]) :-
+    %  Reproduce the user's bug report as closely as possible on a
+    %  fresh terminal: a long ASCII input, resized so the line needs
+    %  exactly two rows at the new width.  The bug manifests as an
+    %  extra (duplicated) prompt row appearing after the resize.
+    cursor(T, P, R),
+    cw_of(T, CW),
+    Input = 'Welcome to SWI-Prolog (threaded, 64 bits, version 10.1.5-43-g7b3ac1193-DIRTY)',
+    type_and_wait(T, Input),
+    atom_length(Input, InputLen),
+    %  Pick a width that gives NewCols such that the first row holds
+    %  prompt + most of the input and the second row holds the tail.
+    TargetCols = 73,
+    NewPixels is round((TargetCols + 2) * CW),
+    resize_width(T, NewPixels),
+    cols_for_pixels(CW, NewPixels, NewCols),
+    assertion(NewCols == TargetCols),
+    %  First row: prompt + first (NewCols - P) chars of the input.
+    HeadLen is NewCols - P,
+    sub_atom(Input, 0, HeadLen, _, Head),
+    row_text(T, R, Row0),
+    strip_prompt(Row0, Row0Tail),
+    assertion(Row0Tail == Head),
+    %  Second row: rest of the input, no prompt.
+    TailLen is InputLen - HeadLen,
+    sub_atom(Input, HeadLen, TailLen, 0, Tail),
+    R1 is R + 1,
+    assert_row(T, R1, Tail),
+    %  Third row must be empty — the pre-resize row that held the
+    %  continuation "193-DIRTY)" should be cleared.
+    R2 is R + 2,
+    row_text(T, R2, Row2),
+    assertion(\+ has_prompt(Row2)),
+    rows_of(T, 0, 5, AllRows),
+    assert_single_prompt(AllRows).
+
+test(resize_ascii_shrink, [setup(resize_test_begin(T))]) :-
+    %  Shrink the width enough that the 150-x line needs 3+ rows.  Each
+    %  non-empty row must be at most NewCols wide, and concatenating
+    %  the rows (stripping the prompt once) must reproduce the input
+    %  exactly — so there can be no duplicated prefix.
+    cursor(T, P, R),
+    cw_of(T, CW),
+    Len = 150,
+    filler(Len, Xs),
+    type_and_wait(T, Xs),
+    TargetCols = 40,			% comfortably forces 3+ rows
+    NewPixels is round((TargetCols + 2) * CW),
+    resize_width(T, NewPixels),
+    cols_for_pixels(CW, NewPixels, NewCols),
+    assertion((NewCols >= 30, NewCols =< 50)),
+    %  Number of rows the wrapped line occupies (prompt only counts on
+    %  first row).
+    RowsNeeded is (P + Len + NewCols - 1) // NewCols,
+    rows_of(T, R, RowsNeeded, DisplayRows),
+    %  Rows may include padding spaces; the *content* length (after
+    %  trailing whitespace trim) should not exceed NewCols.
+    forall(member(Row, DisplayRows),
+           (   trim_trailing_spaces(Row, Trimmed),
+               atom_length(Trimmed, L),
+               (   L =< NewCols
+               ->  true
+               ;   format(user_error,
+                          "row too wide: ~w chars (NewCols=~w): ~q~n",
+                          [L, NewCols, Row]),
+                   assertion(L =< NewCols)
+               )
+           )),
+    assert_single_prompt(DisplayRows),
+    %  Reconstruct: strip prompt from first row, trim trailing padding
+    %  from each, concatenate; expect the original 150 x's.
+    DisplayRows = [First|Tail],
+    strip_prompt(First, FirstTail),
+    maplist(trim_trailing_spaces, [FirstTail|Tail], Trimmed),
+    atomic_list_concat(Trimmed, Joined),
+    assertion(Joined == Xs).
+
+test(resize_ascii_grow, [setup(resize_test_begin(T))]) :-
+    cursor(T, P, R),
+    cw_of(T, CW),
+    filler(150, Xs),
+    type_and_wait(T, Xs),
+    NewPixels is round((P + 160) * CW),
+    resize_width(T, NewPixels),
+    cols_for_pixels(CW, NewPixels, NewCols),
+    assertion(NewCols >= P + 150),
+    assert_input(T, R, Xs),
+    rows_of(T, 0, 3, Rows),
+    assert_single_prompt(Rows).
+
+test(resize_below_window_scrolls, [setup(resize_test_begin(T))]) :-
+    %   Type a long input and then shrink the terminal so the
+    %   wrapped input needs more rows than the window holds.  The
+    %   cursor is at the end of the input, so xpce must scroll the
+    %   view down until the cursor lands on the last visible row.
+    %   Any rows above the cursor that were part of the original
+    %   unscrolled layout should have slid into scrollback.
+    %
+    %   Assertions are kept lenient because the exact row-0 offset
+    %   depends on xpce's reflow vs. libedit's redraw interaction;
+    %   the key properties are:
+    %     - cursor's row is the last visible row,
+    %     - the visible rows form a contiguous slice of the input,
+    %     - that slice ends at the tail of the input,
+    %     - no prompt is visible (it's scrolled off).
+    cursor(T, P, _R),
+    cw_of(T, CW),
+    WindowSize = 25,
+    TargetCols = 25,
+    %   Pick total chars as an exact multiple of NewCols so the last
+    %   visible row is either full (25 chars, pending-wrap cursor)
+    %   or empty (auto-wrap cursor landed on a new line).
+    TotalRows = 32,
+    TotalChars is TotalRows * TargetCols,
+    Len is TotalChars - P,
+    filler(Len, Xs),
+    type_and_wait(T, Xs),
+    NewPixels is round((TargetCols + 2) * CW),
+    resize_width(T, NewPixels),
+    cols_for_pixels(CW, NewPixels, NewCols),
+    assertion(NewCols == TargetCols),
+    assertion(TotalRows > WindowSize),
+    LastRow is WindowSize - 1,
+    %   Cursor row is the last visible row (column may be 0 or
+    %   NewCols depending on pending-wrap vs auto-wrap).
+    cursor(T, _CursorCol, CursorRow),
+    assertion(CursorRow =:= LastRow),
+    %   The visible rows (trimmed, prompt-stripped if any) form a
+    %   contiguous slice of the input that ends at the last input
+    %   char.  We walk upward from the last non-empty row and
+    %   accumulate rows into a concatenated atom; that atom must be
+    %   a suffix of Xs.
+    rows_of(T, 0, WindowSize, AllVisible),
+    visible_suffix(AllVisible, Suffix),
+    atom_length(Suffix, SuffixLen),
+    %   Suffix must cover at least one full window's worth of input,
+    %   demonstrating that we scrolled (not just truncated).
+    ContentRowsAboveWindow is TotalRows - WindowSize,
+    MinSuffix is ContentRowsAboveWindow * NewCols,
+    assertion(SuffixLen >= MinSuffix),
+    atom_length(Xs, XsLen),
+    TailStart is XsLen - SuffixLen,
+    sub_atom(Xs, TailStart, SuffixLen, 0, ExpectedTail),
+    assertion(Suffix == ExpectedTail),
+    %   The prompt scrolled off — none of the visible rows carry
+    %   the "?- " marker.
+    count_prompt_occurrences(AllVisible, NPrompts),
+    assertion(NPrompts == 0).
+
+%!  visible_suffix(+Rows, -Concatenated) is det.
+%
+%   Trim trailing empty rows, then concatenate the remaining rows
+%   (each trimmed of trailing whitespace).  Used by the scroll test
+%   to reconstruct the visible slice of input for comparison with
+%   the typed content's tail.
+
+visible_suffix(Rows, Concatenated) :-
+    maplist(trim_trailing_spaces, Rows, Trimmed),
+    exclude_trailing_empty(Trimmed, Kept),
+    atomic_list_concat(Kept, Concatenated).
+
+exclude_trailing_empty(List, Kept) :-
+    reverse(List, R),
+    drop_empty_prefix(R, RKept),
+    reverse(RKept, Kept).
+
+drop_empty_prefix([''|T], R) :- !, drop_empty_prefix(T, R).
+drop_empty_prefix(L, L).
+
+:- end_tests(terminal_resize).
+
+
+		 /*******************************
 		 *      TEST: WRAPPED INPUT     *
 		 *******************************/
 
@@ -874,11 +1242,6 @@ test(insert_before_final_emoji, [setup(test_begin(T))]) :-
 %   80 - P columns before wrapping to the next row.  When the cursor
 %   reaches the edge it moves to column 0 of the next row (no
 %   deferred-wrap position is observable through <-cursor_position).
-
-%!  xs(+N, -Atom) is det.
-
-xs(N, Atom) :-
-    format(atom(Atom), '~*c', [N, 0'x]).
 
 %!  wrap_emoji(-Emoji) is det.
 %
@@ -911,7 +1274,7 @@ test(input_fills_first_row_exactly, [setup(test_begin(T))]) :-
     %  move to (0, R+1) only happens when the NEXT base arrives.
     cursor(T, P, R),
     Fill is 80 - P,
-    xs(Fill, Xs),
+    filler(Fill, Xs),
     type_await(T, Xs, 80, R),
     assert_cursor(T, 80, R).
 
@@ -919,7 +1282,7 @@ test(input_wraps_one_char_past_row, [setup(test_begin(T))]) :-
     %  One extra character past 80-P lands at column 1 of the next row.
     cursor(T, P, R),
     Fill is 80 - P + 1,
-    xs(Fill, Xs),
+    filler(Fill, Xs),
     R2 is R + 1,
     type_await(T, Xs, 1, R2),
     assert_cursor(T, 1, R2).
@@ -928,7 +1291,7 @@ test(input_wraps_multiple_cols, [setup(test_begin(T))]) :-
     %  Cursor lands at (N - (80 - P), R+1) after typing N chars.
     cursor(T, P, R),
     N = 100,
-    xs(N, Xs),
+    filler(N, Xs),
     R2 is R + 1,
     ExpCol is N - (80 - P),
     type_await(T, Xs, ExpCol, R2),
@@ -939,7 +1302,7 @@ test(home_end_on_wrapped_input, [setup(test_begin(T))]) :-
     %  to the wrapped-line end on the next row.
     cursor(T, P, R),
     N = 100,
-    xs(N, Xs),
+    filler(N, Xs),
     R2 is R + 1,
     ExpCol is N - (80 - P),
     type_await(T, Xs, ExpCol, R2),
@@ -953,7 +1316,7 @@ test(cursor_right_across_wrap, [setup(test_begin(T))]) :-
     %  (80 - P) right-moves we land at column 0 of the next row.
     cursor(T, P, R),
     Fill is 80 - P + 1,                      % one char beyond end of row
-    xs(Fill, Xs),
+    filler(Fill, Xs),
     R2 is R + 1,
     type_await(T, Xs, 1, R2),
     key(T, ctrl_a),
@@ -980,7 +1343,7 @@ test(wide_char_prewraps_at_row_edge, [setup(test_begin(T))]) :-
     %  row R+1.
     cursor(T, P, R),
     Fill is 80 - P - 1,                      % leave 1 col empty on row R
-    xs(Fill, Xs),
+    filler(Fill, Xs),
     At is P + Fill,
     type_await(T, Xs, At, R),
     assert_cursor(T, At, R),

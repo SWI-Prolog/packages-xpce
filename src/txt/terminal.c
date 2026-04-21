@@ -2433,6 +2433,27 @@ rlc_shift_lines_up(RlcData b, int line)
 
   rlc_reinit_line(b, b->first);
   b->first = NextLine(b, b->first);
+
+  /* rlc_check_assertions requires `first == last` only at first == 0
+   * (the 0/1-line "origin" state).  If the shift leaves a single-line
+   * buffer parked at a non-zero index — e.g. merging two lines down
+   * from (first=0, last=1) produces (first=last=1) — compact it back
+   * to index 0 so the invariant holds and downstream caret/window
+   * arithmetic doesn't drift.
+   */
+  if (b->first == b->last && b->first != 0) {
+    RlcTextLine src = &b->lines[b->first];
+    b->lines[0] = *src;
+    b->lines[0].line_no = 0;
+    memset(src, 0, sizeof(*src));
+    src->line_no = b->first;
+    if (b->window_start == b->first)
+      b->window_start = 0;
+    if (b->caret_y == b->first)
+      b->caret_y = 0;
+    b->first = 0;
+    b->last = 0;
+  }
 }
 
 static void
@@ -2657,8 +2678,11 @@ rlc_resize(RlcData b, int w, int h)
   else
     b->window_start = rlc_add_lines(b, b->last, -(h-1));
 
-  b->caret_y = b->last;
-  b->caret_x = b->lines[b->last].size;
+  /* Clamp caret_x: typing at 80 cols can leave caret_x up to 80 in
+   * the pending-wrap position; after shrinking to 25 cols the cap
+   * is 3*25+1 = 76 and rlc_check_assertions would otherwise abort. */
+  if ( b->caret_x > LINE_CELL_CAPACITY(b) - 1 )
+    b->caret_x = LINE_CELL_CAPACITY(b) - 1;
 
   b->changed |= CHG_CARET|CHG_CHANGED|CHG_CLEAR;
 
@@ -3062,6 +3086,25 @@ static void
 rlc_clear_from_cursor(RlcData b)
 { rlc_erase_line(b);
   b->last = b->caret_y;
+  /* If we just collapsed the buffer to a single line parked at a
+   * non-zero ring-position, compact to line 0 so the origin
+   * invariant (first == last implies first == 0) holds.  Otherwise
+   * rlc_check_assertions aborts on the next escape.  Move the text
+   * pointer by shallow copy and zero the source to avoid a
+   * double-free; move window_start / caret_y along with it. */
+  if (b->first == b->last && b->first != 0) {
+    RlcTextLine src = &b->lines[b->first];
+    b->lines[0] = *src;
+    b->lines[0].line_no = 0;
+    memset(src, 0, sizeof(*src));
+    src->line_no = b->first;
+    if (b->window_start == b->first)
+      b->window_start = 0;
+    if (b->caret_y == b->first)
+      b->caret_y = 0;
+    b->first = 0;
+    b->last = 0;
+  }
   b->changed |= CHG_CHANGED|CHG_CLEAR|CHG_CARET;
 }
 
