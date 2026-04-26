@@ -281,9 +281,10 @@ selectionDisplay(DisplayObj d, Name which, StringObj data)
 
 static status
 copyDisplay(DisplayObj d, StringObj data)
-{ return ( send(d, NAME_selection, NAME_primary, data, EAV) ||
-	   send(d, NAME_selection, NAME_clipboard, data, EAV)
-	 );
+{ status rc1 = send(d, NAME_selection, NAME_primary, data, EAV);
+  status rc2 = send(d, NAME_selection, NAME_clipboard, data, EAV);
+
+  return rc1 || rc2;
 }
 
 

@@ -435,6 +435,10 @@ ws_selection_display(DisplayObj d, Name which, StringObj data)
   else
     rc = false;
 
+  DEBUG(NAME_selection,
+	Cprintf("ws_selection_display: \"%s\", %s -> %d\n",
+		u8, pp(which), rc));
+
   return rc;
 }
 
