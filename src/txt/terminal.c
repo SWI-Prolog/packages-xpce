@@ -2140,10 +2140,17 @@ rlc_redraw(RlcData b, int x, int y, int w, int h)
     r_clear(x, ty-b->cb, b->cw, b->ch); /* clear margin */
 
 					/* compute selection */
+    /* sel_{start,end}_char are CELL indices (consistent with caret_x and
+     * tl->text[] indexing in rlc_set_selection / rlc_read_from_window).
+     * rlc_paint_text takes VISUAL-COLUMN bounds, so convert here.  Without
+     * the conversion, NFD combining marks (own cell, width 0) make the cell
+     * index drift past the visual column, and the painted selection extends
+     * past where the user dragged. */
     if ( l == b->sel_start_line )
-    { int cf = b->sel_start_char;
-      int ce = (b->sel_end_line != b->sel_start_line ? b->width
-						     : b->sel_end_char);
+    { int cf = rlc_cell_to_vcol(tl, b->sel_start_char);
+      int ce = (b->sel_end_line != b->sel_start_line
+		  ? b->width
+		  : rlc_cell_to_vcol(tl, b->sel_end_char));
 
       rlc_paint_text(b, tl,  0, cf, ty, &cx, insel);
       insel = true;
@@ -2154,7 +2161,7 @@ rlc_redraw(RlcData b, int x, int y, int w, int h)
       } else
 	insel = true;
     } else if ( l == b->sel_end_line )	/* end of selection */
-    { int ce = b->sel_end_char;
+    { int ce = rlc_cell_to_vcol(tl, b->sel_end_char);
 
       rlc_paint_text(b, tl, 0, ce, ty, &cx, insel);
       insel = false;
