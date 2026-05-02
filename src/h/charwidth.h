@@ -36,7 +36,6 @@
 #define PCE_CHARWIDTH_H_INCLUDED
 
 #include <stdint.h>
-#include <wchar.h>
 
 /* uchar_t is also defined in terminal.h; use the same guard to avoid
  * duplicate typedef errors when both headers are included. */
@@ -45,11 +44,10 @@
 typedef uint32_t uchar_t;
 #endif
 
-#ifndef _WIN32
-/* Forward declaration: avoids _XOPEN_SOURCE requirements while still
- * calling the system wcwidth for code points not covered by our tables. */
-extern int wcwidth(wchar_t c);
-#endif
+/* Forward declaration of the host's wcwidth wrapper (defined in
+ * src/itf/interface.c).  Keeps this header free of <wchar.h> so the
+ * static inline below can be included without _XOPEN_SOURCE plumbing. */
+extern int hostWcWidth(int c);
 
 /** Return the display column width of a Unicode code point.
  *
@@ -57,10 +55,13 @@ extern int wcwidth(wchar_t c);
  * the preceding base character and consume no extra column), 2 for
  * East-Asian wide / fullwidth characters, and 1 for everything else.
  *
- * The implementation delegates to the POSIX wcwidth(3) function which
- * is available on all supported Unix/macOS platforms.  On Windows,
- * where wcwidth is absent, we use a minimal inline table that covers
- * the most common ranges.
+ * Delegates to the host (Prolog) wcwidth via hostWcWidth() — which is
+ * the same implementation pl-read.c / pl-write.c use — so xpce stays
+ * consistent with the rest of SWI-Prolog regardless of the process
+ * locale.  Explicit table look-ups are kept for the most common
+ * combining and wide-character ranges so the result is correct even
+ * before the host has registered its callback (e.g., during early
+ * xpce initialisation).
  *
  * This function is shared between txt/terminal.c, txt/textimage.c, and
  * txt/editor.c.  It is declared static inline so each translation unit
@@ -101,14 +102,13 @@ uchar_display_width(uchar_t c)
        (c >= 0x20000 && c <= 0x2FFFD) ||/* CJK Extension B-F */
        (c >= 0x30000 && c <= 0x3FFFD) ) /* CJK Extension G-H */
     return 2;
-#ifndef _WIN32
-  /* Fall back to wcwidth for rare cases not covered above.  Treat
-   * wcwidth=-1 (unknown to this locale) as 1 column. */
-  { int w = wcwidth((wchar_t)c);
+  /* Fall back to the host's wcwidth for rare cases not covered above.
+   * Treat -1 (host not yet registered, or code point unknown to its
+   * tables) as 1 column. */
+  { int w = hostWcWidth((int)c);
     if ( w >= 0 )
       return w;
   }
-#endif
   return 1;
 }
 

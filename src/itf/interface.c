@@ -833,6 +833,22 @@ hostAction(int what, ...)
 }
 
 
+/* Display width of a Unicode code point.  Routed through the host so
+ * xpce uses the same wcwidth implementation as the rest of SWI-Prolog
+ * (and is independent of the process locale).  Returns -1 when no host
+ * has registered a callback; callers (see h/charwidth.h) fall back to
+ * width 1 in that case.
+ */
+
+int
+hostWcWidth(int chr)
+{ if ( TheCallbackFunctions.wcwidth )
+    return (*TheCallbackFunctions.wcwidth)(chr);
+
+  return -1;
+}
+
+
 void
 Cprintf(const char *fmt, ...)
 { if ( TheCallbackFunctions.vCprintf )

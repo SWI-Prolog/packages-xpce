@@ -3287,6 +3287,11 @@ PrologWriteGoalArgs(PceGoal g)
 }
 
 
+static int
+pl_wcwidth(int chr)
+{ return PL_wcwidth(chr);
+}
+
 
 		 /*******************************
 		 *	  SETUP CALLBACK	*
@@ -3309,7 +3314,8 @@ static pce_callback_functions callbackfunction =
   getPrologContext,			/* (Module) context */
   setPrologContext,
   PrologTranslate,
-  PrologWriteGoalArgs
+  PrologWriteGoalArgs,
+  pl_wcwidth
 };
 
 

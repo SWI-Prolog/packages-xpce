@@ -373,7 +373,7 @@ typedef struct
   PceObject (*setHostContext)(PceObject context);
   PceObject (*translate)     (PceObject handle, PceObject type);
   bool      (*writeGoalArgs) (PceGoal g);
-  void *    pad17;
+  int       (*wcwidth)       (int chr);
   void *    pad18;
   void *    pad19;
   void *    pad20;
@@ -566,6 +566,7 @@ PceObject	hostGet(PceObject host, PceName selector,
 			int argc, PceObject argv []);
 int		hostQuery(int what, PceCValue *value);
 int		hostAction(int what, ...);
+int		hostWcWidth(int chr);
 
 extern pce_profile_hooks PceProfile;
 #endif /*PCE_INCLUDED*/

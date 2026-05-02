@@ -34,7 +34,7 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#define _XOPEN_SOURCE 600	/* Get PTY API, wcwidth (also enables wcwidth in charwidth.h) */
+#define _XOPEN_SOURCE 600	/* Get PTY API */
 #undef _WIN32_WINNT
 #define _WIN32_WINNT 0x0B00	/* Get PseudoConsole API */
 #define SWIPL_WINDOWS_NATIVE_ACCESS 1
@@ -46,10 +46,6 @@
 #include <poll.h>
 #endif
 #include <SWI-Stream.h>
-#ifndef _WIN32
-#include <wchar.h>
-#endif
-#include <h/charwidth.h>
 
 /* This file  implements a terminal  emulator in XPCE.  A  terminal is
  * connected to a Prolog thread, the _client_.
@@ -98,9 +94,10 @@
 		 *	  UNICODE WIDTH		*
 		 *******************************/
 
-/* uchar_display_width() is defined as a static inline in <h/charwidth.h>.
- * terminal.c defines _XOPEN_SOURCE 600 before any includes so the
- * wcwidth(3) fallback inside charwidth.h is available here. */
+/* uchar_display_width() is a static inline in <h/charwidth.h>.  Its
+ * fallback path goes through hostWcWidth() (defined in itf/interface.c),
+ * which routes to PL_wcwidth() in libswipl — no _XOPEN_SOURCE plumbing
+ * needed in this file. */
 
 /* Per-line cell capacity.  One cell per visual column is not enough:
    NFD content attaches combining marks as their own (width-0) cells, so a
