@@ -1889,17 +1889,32 @@ rlc_scroll_lines(RlcData b, int lines)
   rlc_request_redraw(b);
 }
 
-/** Paint a same-flags run, but split on every wide-char boundary so each
- *  wide cluster is drawn in its own 2-column box.
+/** Paint a same-flags run, splitting on every grapheme-cluster boundary
+ *  that involves zero-width followers (combining marks or wide-char
+ *  right-half placeholders) so each such cluster is drawn in its own
+ *  Pango call at a column-grid x0.  Plain narrow base characters are
+ *  batched into a single call as long as the run is uninterrupted.
  *
- *  Pango's natural advance for an emoji tends to exceed 2*cw by a pixel or
- *  two.  If we hand it a long "sskll😀😀😀…" span as one show_layout call,
- *  each emoji nudges the baseline rightward, so the visual text drifts past
- *  the column-grid cursor and "sskll😀😀😀😀😀😀😀" with the caret walked
- *  to the end shows the caret a few pixels left of the last emoji.  Drawing
- *  each emoji in its own cluster, at a column-grid x0, lets the following
- *  r_clear erase any bleed and resets the cursor to its true column every
- *  cluster boundary.
+ *  Two reasons for the per-cluster split:
+ *
+ *  1. Wide glyphs.  Pango's natural advance for an emoji tends to exceed
+ *     2*cw by a pixel or two; handing it a long "😀😀😀…" span as one
+ *     call lets each emoji nudge the baseline rightward, so the text
+ *     drifts past the column-grid cursor.
+ *
+ *  2. Complex-script clusters (Thai, Hangul, NFD).  Pango applies
+ *     contextual shaping inside a single layout, so the per-glyph
+ *     positions inside a Thai run depend on the run's neighbours.  When
+ *     the line is split into three chunks at a selection boundary
+ *     (rlc_redraw paints before-sel / sel / after-sel separately) the
+ *     two sides reshape independently and the visible glyph positions
+ *     no longer match what the unselected line drew.  Visible as the
+ *     "drift" reported when extending a selection over Thai สวัสดี.
+ *
+ *  Drawing each cluster on its own at a column-grid x0 makes each
+ *  cluster's shaping local — so split-at-selection produces the same
+ *  per-cluster Pango calls as no-selection, and the column grid stays
+ *  authoritative.
  *
  *  `cells` is the array of text_char cells for the run; `utf8`/`ulen` is
  *  the matching UTF-8 span (with wide-char placeholders already skipped).
@@ -1918,26 +1933,39 @@ paint_chunks(const text_char *cells, int n,
   while (i < n)
   { int chunk_i = i;
     const char *chunk_u = u;
-    int is_wide = (c[i].width == 2);
 
-    if (is_wide)
-    { /* Base wide cell + its width-0/placeholder followers (wide-char
-       * right-half placeholder with code 0, combining marks with width
-       * 0 and code != 0, variation selectors).  Stops at the next
-       * base-width-1 cell or the next base-width-2 cell. */
-      int chr;
-      u = utf8_get_char((char *)u, &chr);	/* the wide code point */
-      i++;
-      while (i < n && (c[i].code == 0 ||
-		       (c[i].width == 0 && c[i].code != 0)))
-      { if (c[i].code != 0)
-	  u = utf8_get_char((char *)u, &chr);
-	i++;
+    /* Consume one grapheme cluster: base cell at i, plus any width-0
+     * followers (wide-char right-half placeholder with code 0,
+     * combining marks with width 0 and code != 0, variation selectors). */
+    if (c[i].code != 0)
+    { int chr;
+      u = utf8_get_char((char *)u, &chr);
+    }
+    i++;
+    while (i < n && c[i].width == 0)
+    { if (c[i].code != 0)
+      { int chr;
+	u = utf8_get_char((char *)u, &chr);
       }
-    } else
-    { /* Contiguous non-wide run: width-1 cells and any trailing
-       * width-0 combining marks, up to the next width-2 cell. */
-      while (i < n && c[i].width != 2)
+      i++;
+    }
+
+    /* Fast path: if the cluster was a single ASCII base with no
+     * followers, batch subsequent ASCII bases into the same chunk so
+     * plain English text stays one Pango call.  ASCII has no contextual
+     * shaping, so a batched run lays out at the column grid regardless
+     * of context.  Anything beyond ASCII (e.g., Thai, Hangul, Arabic)
+     * needs per-cluster painting because the system fixed-width font
+     * usually has no glyphs for those scripts and Pango falls back to a
+     * proportional font; a multi-char Pango call there has natural
+     * advance < n*cw, and each chunk reshape (e.g., on selection)
+     * would shift the after-cluster glyphs by a different amount than
+     * the unselected line did. */
+    if (i - chunk_i == 1 && c[chunk_i].width == 1 && c[chunk_i].code < 128)
+    { while (i < n &&
+	     c[i].width == 1 &&
+	     c[i].code < 128 &&
+	     !(i+1 < n && c[i+1].width == 0 && c[i+1].code != 0))
       { if (c[i].code != 0)
 	{ int chr;
 	  u = utf8_get_char((char *)u, &chr);
