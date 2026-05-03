@@ -374,11 +374,11 @@ typedef struct
   PceObject (*translate)     (PceObject handle, PceObject type);
   bool      (*writeGoalArgs) (PceGoal g);
   int       (*wcwidth)       (int chr);
-  void *    pad18;
-  void *    pad19;
-  void *    pad20;
-  void *    pad21;
-  void *    pad22;
+  bool      (*is_letter)     (int chr);
+  bool      (*is_word_char)  (int chr);
+  bool      (*is_layout)     (int chr);
+  bool      (*is_digit)      (int chr);
+  bool      (*is_endsline)   (int chr);
   void *    pad23;
 } pce_callback_functions;
 
@@ -567,6 +567,11 @@ PceObject	hostGet(PceObject host, PceName selector,
 int		hostQuery(int what, PceCValue *value);
 int		hostAction(int what, ...);
 int		hostWcWidth(int chr);
+bool		hostIsLetter(int chr);
+bool		hostIsWordChar(int chr);
+bool		hostIsLayout(int chr);
+bool		hostIsDigit(int chr);
+bool		hostIsEndsline(int chr);
 
 extern pce_profile_hooks PceProfile;
 #endif /*PCE_INCLUDED*/

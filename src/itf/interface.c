@@ -39,6 +39,7 @@
 #include <h/graphics.h>
 #include <h/unix.h>
 #include "stub.h"
+#include <wctype.h>		/* hostIs* fallbacks when no host registered */
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -846,6 +847,53 @@ hostWcWidth(int chr)
     return (*TheCallbackFunctions.wcwidth)(chr);
 
   return -1;
+}
+
+
+/* Syntax-table fallbacks for chars > 0xFF.  THasSyntaxEx (h/syntax.h)
+ * filters the ASCII/Latin-1 range through the syntax_table itself, so
+ * the hostIs* functions are only consulted for code points > 0xFF.
+ * Each routes to the host (via the callback block); when no host is
+ * registered, decay to the POSIX wide-character classifier so xpce
+ * standalone still does something sensible in UTF-8 locales.
+ */
+
+bool
+hostIsLetter(int chr)
+{ if ( TheCallbackFunctions.is_letter )
+    return (*TheCallbackFunctions.is_letter)(chr);
+  return iswalpha(chr) != 0;
+}
+
+bool
+hostIsWordChar(int chr)
+{ if ( TheCallbackFunctions.is_word_char )
+    return (*TheCallbackFunctions.is_word_char)(chr);
+  return iswalnum(chr) != 0;
+}
+
+bool
+hostIsLayout(int chr)
+{ if ( TheCallbackFunctions.is_layout )
+    return (*TheCallbackFunctions.is_layout)(chr);
+  return iswspace(chr) != 0;
+}
+
+bool
+hostIsDigit(int chr)
+{ if ( TheCallbackFunctions.is_digit )
+    return (*TheCallbackFunctions.is_digit)(chr);
+  return iswdigit(chr) != 0;
+}
+
+bool
+hostIsEndsline(int chr)
+{ if ( TheCallbackFunctions.is_endsline )
+    return (*TheCallbackFunctions.is_endsline)(chr);
+  /* Only the > 0xFF Unicode line terminators can land here; the ASCII
+   * and Latin-1 ones (LF/VT/FF/CR, NEL) are handled via the syntax
+   * table's EL flag. */
+  return chr == 0x2028 || chr == 0x2029;
 }
 
 

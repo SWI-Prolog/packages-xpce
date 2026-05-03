@@ -3293,6 +3293,50 @@ pl_wcwidth(int chr)
 }
 
 
+/* Map xpce's syntax-table categories to one or more PL_is_* shims.
+ * The xpce side speaks its own vocabulary (letter, word_char, layout,
+ * digit, endsline); the mapping decisions live here so xpce stays
+ * portable to non-Prolog hosts and the C call sites don't need to
+ * know about U_* flags.  is_endsline is hard-coded — small, stable
+ * set, no Prolog consumer beyond xpce, so no need for a PL_* shim.
+ */
+
+static bool
+pl_is_letter(int chr)
+{ return PL_is_id_start(chr) || PL_is_uppercase(chr);
+}
+
+static bool
+pl_is_word_char(int chr)
+{ return PL_is_id_continue(chr);
+}
+
+static bool
+pl_is_layout(int chr)
+{ return PL_is_layout(chr);
+}
+
+static bool
+pl_is_digit(int chr)
+{ return PL_is_decimal(chr);
+}
+
+static bool
+pl_is_endsline(int chr)
+{ switch ( chr )
+  { case 0x000A:	/* LF */
+    case 0x000B:	/* VT */
+    case 0x000C:	/* FF */
+    case 0x000D:	/* CR */
+    case 0x0085:	/* NEL */
+    case 0x2028:	/* LINE SEPARATOR */
+    case 0x2029:	/* PARAGRAPH SEPARATOR */
+      return true;
+  }
+  return false;
+}
+
+
 		 /*******************************
 		 *	  SETUP CALLBACK	*
 		 *******************************/
@@ -3315,7 +3359,12 @@ static pce_callback_functions callbackfunction =
   setPrologContext,
   PrologTranslate,
   PrologWriteGoalArgs,
-  pl_wcwidth
+  pl_wcwidth,
+  pl_is_letter,
+  pl_is_word_char,
+  pl_is_layout,
+  pl_is_digit,
+  pl_is_endsline
 };
 
 

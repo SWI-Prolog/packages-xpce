@@ -98,8 +98,7 @@ extern unsigned short syntax_spec_code[]; /* Char --> syntax (for \sC regex) */
 extern unsigned char  char_context[];	/* Initial context table */
 
 #define Is8char(c)		(((c) & ~0xff) == 0)
-#define HasSyntax(c, f)		(Is8char(c) && \
-				 (char_flags[(unsigned int)(c)] & (f)))
+#define HasSyntax(c, f)		(Is8char(c) && HasSyntax8(c, f))
 #define HasSyntax8(c, f)	((char_flags[(unsigned int)(c)] & (f)))
 
 #ifndef iscsym
@@ -129,23 +128,26 @@ extern unsigned char  char_context[];	/* Initial context table */
 
 #define THasSyntax(t, c, f)	(Is8char(c) && \
 				 ((t)->table[(unsigned int)(c)] & (f)))
+#define THasSyntaxEx(t,c,f,func) (Is8char(c) ? \
+				  ((t)->table[(unsigned int)(c)] & (f)) : \
+				  func(c))
 
 #define tislower(t, c)		THasSyntax(t, c, LC)
 #define tisupper(t, c)		THasSyntax(t, c, UC)
-#define tisdigit(t, c)		THasSyntax(t, c, DI)
+#define tisdigit(t, c)		THasSyntaxEx(t, c, DI, hostIsDigit)
 #define tisopenbrace(t, c)	THasSyntax(t, c, OB)
 #define tisclosebrace(t, c)	THasSyntax(t, c, CB)
-#define tisendsline(t, c)	THasSyntax(t, c, EL)
+#define tisendsline(t, c)	THasSyntaxEx(t, c, EL, hostIsEndsline)
 #define tisblank(t, c)		THasSyntax(t, c, BL)
-#define tislayout(t, c)		THasSyntax(t, c, BL|EL)
+#define tislayout(t, c)		THasSyntaxEx(t, c, BL|EL, hostIsLayout)
 #define tisquote(t, c)		THasSyntax(t, c, QT)
 #define tissymbol(t, c)		THasSyntax(t, c, SY)
 #define tiswordsep(t, c)	THasSyntax(t, c, WS)
 #define tisprint(t, c)		!THasSyntax(t, c, CT)
 
-#define tisalnum(t, c)		THasSyntax(t, c, AN)
-#define tiscsym(t, c)		(THasSyntax(t, c, AN) || c == '_')
-#define tisletter(t, c)		THasSyntax(t, c, LC|UC)
+#define tisalnum(t, c)		THasSyntaxEx(t, c, AN, hostIsWordChar)
+#define tiscsym(t, c)		(tisalnum((t), (c)) || c == '_')
+#define tisletter(t, c)		THasSyntaxEx(t, c, LC|UC, hostIsLetter)
 #define tischtype(t, c, tp)	THasSyntax(t, c, (tp))
 
 #define tismatching(t, c1, c2)  (Is8char(c1) && (t)->context[c1] == (c2))
