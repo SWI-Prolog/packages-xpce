@@ -62,15 +62,9 @@ typedef int celt;		/* type to hold chr, MCCE number, or NOCELT */
 #define	NOCELT	(-1)		/* celt value which is not valid chr or MCCE */
 #define	CHR(c)	(UCHAR(c))	/* turn char literal into chr literal */
 #define	DIGITVAL(c) ((c)-'0')	/* turn chr digit into its value */
-#ifndef __WINDOWS__			/* TBD, but why not sizeof!? */
 #define	CHRBITS	32		/* bits in a chr; must not use sizeof */
 #define	CHR_MIN	0x00000000	/* smallest and largest chr; the value */
 #define	CHR_MAX	0x3fffffff	/* CHR_MAX-CHR_MIN+1 should fit in uchr */
-#else
-#define	CHRBITS	16		/* bits in a chr; must not use sizeof */
-#define	CHR_MIN	0x0000		/* smallest and largest chr; the value */
-#define	CHR_MAX	0xffff		/*  CHR_MAX-CHR_MIN+1 should fit in uchr */
-#endif
 #else /*REG_WIDE*/
 typedef charA chr;		/* the type itself */
 typedef int pchr;		/* what it promotes to */
