@@ -447,11 +447,7 @@ pceCharArrayToCW(Any val, size_t *len)
   { CharArray ca = val;
 
     if ( isstrW(&ca->data) )
-    { if ( len )
-	*len = ca->data.s_size;
-
-      return ca->data.s_textW;
-    }
+      return charArrayToWC(ca, len);
   }
 
   return NULL;

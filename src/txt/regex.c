@@ -214,13 +214,13 @@ ensure_compiled_regex(Regex re, int flags)
        isNil(re->re_flags) ||
        valInt(re->re_flags) != myflags )
   { int rc;
-    wchar_t *ws;
+    charW *ws;
     size_t len;
 
     unlink_compiled(re);
     unlink_registers(re);
 
-    ws = charArrayToWC(re->pattern, &len);
+    ws = charArrayToCharW(re->pattern, &len);
     re->compiled = pceMalloc(sizeof(regex_t));
     rc = re_compileW(re->compiled, ws, len, myflags);
 

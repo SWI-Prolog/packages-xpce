@@ -156,15 +156,14 @@ stringToUTF8(PceString str, size_t *olen)
       out->bufp = utf8_put_char(out->bufp, *s);
     }
   } else
-  { cwchar *s = str->s_textW;
-    cwchar *e = &s[str->s_size];
+  { const charW *s = str->s_textW;
+    const charW *e = &s[str->s_size];
 
     out = find_ring();
     while( s < e )
-    { int c;
+    { int c = (int)*s++;
 
       roomBuffer(out, 6);		/* max bytes per UTF-8 */
-      s = get_wchar(s, &c);
       out->bufp = utf8_put_char(out->bufp, c);
     }
   }
@@ -209,14 +208,17 @@ stringToMB(PceString str)
       out->bufp += rc;
     }
   } else
-  { cwchar *s = str->s_textW;
-    cwchar *e = &s[str->s_size];
+  { const charW *s = str->s_textW;
+    const charW *e = &s[str->s_size];
 
     out = find_ring();
     for( ; s<e; s++ )
     { roomBuffer(out, MB_LEN_MAX);
 
-      if ( (rc=wcrtomb(out->bufp, *s, &mbs)) == (size_t)-1 )
+      /* wcrtomb takes a wchar_t.  When charW is wider than wchar_t the
+       * cast truncates SMP code points; the platform's locale codepage
+       * cannot represent them anyway. */
+      if ( (rc=wcrtomb(out->bufp, (wchar_t)*s, &mbs)) == (size_t)-1 )
 	return NULL;
       out->bufp += rc;
     }
@@ -230,12 +232,44 @@ stringToMB(PceString str)
 }
 
 
+/** Widen a CharArray to charW (one Unicode code point per slot).
+ *
+ * Used by internal code that operates on charW directly (regex,
+ * etc.).  charW strings are returned as a direct cast to s_textW;
+ * charA strings are widened into a ring slot.  The result lives until
+ * RING_SIZE-1 more ring allocations have happened.
+ */
+charW *
+charArrayToCharW(CharArray ca, size_t *len)
+{ PceString str = &ca->data;
+
+  if ( isstrA(str) )
+  { rcell *out = find_ring();
+    cuchar *s = (cuchar*) str->s_textA;
+    cuchar *e = &s[str->s_size];
+    charW *o;
+
+    roomBuffer(out, (str->s_size+1)*sizeof(charW));
+
+    for(o=(charW*)out->data ; s<e; )
+    { *o++ = *s++;
+    }
+    *o = 0;
+
+    if ( len )
+      *len = str->s_size;
+    return (charW *)out->data;
+  } else
+  { if ( len )
+      *len = str->s_size;
+    return str->s_textW;
+  }
+}
+
+
 wchar_t *
 charArrayToWC(CharArray ca, size_t *len)
 { PceString str = &ca->data;
-
-  if ( len )
-    *len = str->s_size;
 
   if ( isstrA(str) )
   { rcell *out = find_ring();
@@ -250,9 +284,32 @@ charArrayToWC(CharArray ca, size_t *len)
     }
     *o = 0;
 
+    if ( len )
+      *len = str->s_size;
     return (wchar_t *)out->data;
   } else
-    return str->s_textW;
+  { /* Wide string: charW → wchar_t.  When sizeof(charW) ==
+     * sizeof(wchar_t) (Linux always; Windows when charW falls back
+     * to wchar_t) the buffer pointer is value-equivalent and is
+     * returned via a cast.  When charW is wider than wchar_t (Windows
+     * post-flip) surrogate-encode into a ring slot. */
+    if ( sizeof(wchar_t) == sizeof(charW) )
+    { if ( len )
+        *len = str->s_size;
+      return (wchar_t*)str->s_textW;
+    } else
+    { rcell *out = find_ring();
+      size_t wlen = charW_to_wchar_len(str->s_textW, str->s_size);
+      wchar_t *e;
+
+      roomBuffer(out, (wlen+1)*sizeof(wchar_t));
+      e = charW_to_wchar((wchar_t*)out->data, str->s_textW, str->s_size);
+      *e = 0;
+      if ( len )
+        *len = wlen;
+      return (wchar_t*)out->data;
+    }
+  }
 }
 
 

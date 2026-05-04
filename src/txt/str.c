@@ -151,8 +151,21 @@ str_set_n_wchar(PceString str, size_t len, wchar_t *text)
     return errorPce(NIL, NAME_stringTooLong, toInt(len));
 
   str_inithdr(str, TRUE);
-  str->s_size = (int)len;
-  str->s_textW = text;
+
+  if ( sizeof(wchar_t) == sizeof(charW) )
+  { /* charW and wchar_t are the same width (Linux always; Windows
+     * when charW falls back to wchar_t).  Cast through; no copy. */
+    str->s_size = (int)len;
+    str->s_textW = (charW *)text;
+  } else
+  { /* charW is wider than wchar_t (Windows when charW is uint32_t):
+     * allocate a ring slot and surrogate-decode the source so the
+     * string's storage holds one code point per slot. */
+    size_t cwlen = wchar_to_charW_len(text, len);
+    str->s_size = (int)cwlen;
+    str_ring_alloc(str);
+    wchar_to_charW(str->s_textW, text, len);
+  }
 
   succeed;
 }

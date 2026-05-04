@@ -2343,10 +2343,8 @@ save_textbuffer(TextBuffer tb, intptr_t from, intptr_t len, SourceSink file)
   { const charW *f = &tb->tb_bufferW[from];
     const charW *e = &f[len];
 
-    while ( f < e )
-    { int chr;
-      f = get_wchar(f, &chr);
-      if ( Sputcode(chr, fd) < 0 )
+    for ( ; f < e; f++ )
+    { if ( Sputcode((int)*f, fd) < 0 )
 	goto error;
     }
   }
@@ -2495,10 +2493,8 @@ insert_file_textbuffer(TextBuffer tb, intptr_t where, intptr_t times, SourceSink
 	goto done;
       if ( c > 0xff )
       { promoteTextBuffer(tb);
-	charW *p = put_wchar(&tb->tb_bufferW[tb->gap_start], c);
-	size_t n = p - &tb->tb_bufferW[tb->gap_start];
-	tb->gap_start += n;
-	tb->size += n;
+	tb->tb_bufferW[tb->gap_start++] = c;
+	tb->size++;
 	break;
       }
       tb->tb_bufferA[tb->gap_start++] = c;
@@ -2512,10 +2508,8 @@ insert_file_textbuffer(TextBuffer tb, intptr_t where, intptr_t times, SourceSink
 
       if ( c == EOF )
 	goto done;
-      charW *p = put_wchar(&tb->tb_bufferW[tb->gap_start], c);
-      size_t n = p - &tb->tb_bufferW[tb->gap_start];
-      tb->gap_start += n;
-      tb->size += n;
+      tb->tb_bufferW[tb->gap_start++] = c;
+      tb->size++;
     }
   }
 

@@ -1151,7 +1151,9 @@ strip_string(StrPart s)
 
 static status
 init_string(StrPart s, PceString t)
-{ if ( t->s_size >= LINESIZE )
+{ size_t len;
+
+  if ( t->s_size >= LINESIZE )
     fail;
 
   if ( isstrA(t) )
@@ -1162,12 +1164,19 @@ init_string(StrPart s, PceString t)
     while(i<e)
       *o++ = *i++;
     *o = EOS;
+    len = t->s_size;
   } else
-  { wcscpy(s->text, t->s_textW);
+  { /* charW → wchar_t boundary: identity copy when sizeof(charW) ==
+     * sizeof(wchar_t); on Windows post-flip surrogate-encodes any SMP
+     * code point.  Type-spec syntax is plain ASCII in practice, so the
+     * encoded length equals t->s_size. */
+    wchar_t *e = charW_to_wchar(s->text, t->s_textW, t->s_size);
+    *e = EOS;
+    len = e - s->text;
   }
 
   s->start = s->text;
-  s->end = &s->text[t->s_size - 1];
+  s->end = &s->text[len - 1];
   strip_string(s);
 
   succeed;
