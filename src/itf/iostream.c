@@ -87,17 +87,18 @@ Sread_object(void *handle, char *buf, size_t size)
     assert(s->s_size <= advance);
 
     if ( h->encoding == ENC_WCHAR )
-    { if ( isstrA(s) )
-      { charW *dest = (charW*)buf;
-	const charA *f = s->s_textA;
+    { wchar_t *dest = (wchar_t*)buf;
+
+      if ( isstrA(s) )
+      { const charA *f = s->s_textA;
 	const charA *e = &f[s->s_size];
 
 	while(f<e)
-	  *dest++ = *f++;
+	  *dest++ = (wchar_t)*f++;
       } else
-      { memcpy(buf, s->s_textW, s->s_size*sizeof(charW));
+      { dest = charW_to_wchar(dest, s->s_textW, s->s_size);
       }
-      chread = s->s_size * sizeof(wchar_t);
+      chread = (int)((dest - (wchar_t*)buf) * sizeof(wchar_t));
     } else
     { if ( isstrA(s) )
       { memcpy(buf, s->s_textA, s->s_size);

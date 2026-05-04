@@ -390,18 +390,19 @@ pceRead_nolock(int handle, char *buf, size_t size)
 
       assert(s->s_size <= size/sizeof(wchar_t));
 
-      if ( isstrA(s) )
-      { charW *dest = (charW*)buf;
-	const charA *f = s->s_textA;
-	const charA *e = &f[s->s_size];
+      { wchar_t *dest = (wchar_t*)buf;
 
-	while(f<e)
-	  *dest++ = *f++;
-      } else
-      { memcpy(buf, s->s_textW, s->s_size*sizeof(charW));
+	if ( isstrA(s) )
+	{ const charA *f = s->s_textA;
+	  const charA *e = &f[s->s_size];
+
+	  while(f<e)
+	    *dest++ = (wchar_t)*f++;
+	} else
+	{ dest = charW_to_wchar(dest, s->s_textW, s->s_size);
+	}
+	chread = (int)((dest - (wchar_t*)buf) * sizeof(wchar_t));
       }
-
-      chread = s->s_size * sizeof(wchar_t);
       h->point += s->s_size;
     } else
     { errno = EIO;
