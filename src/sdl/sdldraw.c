@@ -2066,6 +2066,20 @@ double
 c_width(wint_t c, FontObj font)
 { float cw;
 
+  /* UTF-16 surrogate halves end up here on Windows (wchar_t==16) when a
+   * supplementary-plane code point is iterated as a pair of charW slots.
+   * Pango's UTF-8 encoder treats the lone surrogate as malformed and
+   * returns a .notdef-glyph advance — typically much wider than the
+   * actual emoji glyph the paired UTF-8 renders, leaving extra
+   * whitespace.  Account the cluster's width once, on the lead, and
+   * let the trail contribute zero.  Two average char widths is the
+   * monospace-cell approximation that matches uchar_display_width()'s
+   * column count of 2 for SMP wide glyphs (emoji, CJK Ext B-G). */
+  if ( c >= 0xD800 && c <= 0xDBFF )		/* high surrogate */
+    return 2.0 * valNum(getAvgCharWidthFont(font));
+  if ( c >= 0xDC00 && c <= 0xDFFF )		/* low surrogate */
+    return 0.0;
+
   if ( s_cwidth(c, font, &cw) )
   { return cw;
   } else
