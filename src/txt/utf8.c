@@ -133,10 +133,13 @@ F_UTF8_ENCLENW(const wchar_t *s, size_t len)
   size_t n = 0;
   const wchar_t *e = &s[len];
 
-  for( ; s<e; s++)
-  { char *z = F_UTF8_PUT_CHAR(out, *s);
+  while ( s < e )
+  { int c;
+    char *z;
 
-    n += z-out;
+    s = get_wchar(s, &c);	/* combines UTF-16 surrogate pairs */
+    z = F_UTF8_PUT_CHAR(out, c);
+    n += z - out;
   }
 
   return n;
