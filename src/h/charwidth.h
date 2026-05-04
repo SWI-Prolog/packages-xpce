@@ -72,6 +72,17 @@ static inline int
 uchar_display_width(uchar_t c)
 { if ( c == 0 )
     return 0;
+  /* UTF-16 surrogate halves.  These appear in xpce text buffers on
+   * Windows (where wchar_t is 16-bit) when the buffer stores a
+   * supplementary-plane code point.  Treat the lead as occupying two
+   * columns (the supplementary-plane ranges xpce typically encounters
+   * — emoji, CJK Extensions B-G — are all double-width) and the trail
+   * as zero-width so the pair contributes the right total to vcol and
+   * groups as one cluster in the per-cluster painter. */
+  if ( c >= 0xD800 && c <= 0xDBFF )	/* high surrogate */
+    return 2;
+  if ( c >= 0xDC00 && c <= 0xDFFF )	/* low surrogate */
+    return 0;
   /* Non-spacing / combining characters.  Checked before wcwidth so the
    * result is independent of the process locale. */
   if ( (c >= 0x0300 && c <= 0x036F) ||	/* Combining Diacritical Marks */
