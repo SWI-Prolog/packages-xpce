@@ -641,13 +641,13 @@ static int			/* regexec return code */
 altdissect(struct vars *v, struct subre *t, chr *begin, chr *end)
 {
 	struct dfa *d;
-	int i;
 
 	assert(t != NULL);
 	assert(t->op == '|');
 
-	for (i = 0; t != NULL; t = t->right, i++) {
+	for (int i = 0; t != NULL; t = t->right, i++) {
 		MDEBUG(("trying %dth\n", i));
+		(void)i;
 		assert(t->left != NULL && t->left->cnfa.nstates > 0);
 		d = newdfa(v, &t->left->cnfa, &v->g->cmap, &v->dfa1);
 		if (ISERR())
