@@ -38,11 +38,25 @@
 #include <wchar.h>
 #include <wctype.h>
 #include <ctype.h>
+#include <stdint.h>
 
 #undef charA				/* from pce-include.h */
 
 typedef unsigned char charA;		/* 8-bit character */
-typedef wchar_t       charW;		/* wide character */
+
+/* charW is the internal wide-character storage type: one Unicode code
+ * point per slot.  Use the platform's native wchar_t when it is wide
+ * enough (Linux/macOS where wchar_t is 32-bit); otherwise — Windows,
+ * where wchar_t is 16-bit UTF-16 — fall back to uint32_t and convert
+ * at the external boundaries (host embedding API, ENC_WCHAR streams,
+ * Win32 file APIs) via <h/charW.h>.  When wchar_t is wide enough,
+ * charW and wchar_t are interchangeable and the boundary conversions
+ * fold to compile-time identity copies. */
+#if defined(WCHAR_MAX) && WCHAR_MAX > 0xFFFF
+typedef wchar_t       charW;
+#else
+typedef uint32_t      charW;
+#endif
 
 #define STR_SIZE_BITS 30
 #define STR_MAX_SIZE ((1L<<STR_SIZE_BITS)-1)
