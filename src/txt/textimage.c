@@ -491,14 +491,14 @@ do_fill_line(TextImage ti, TextLine l, long index)
 	    last_is_space = TRUE;
 	    break;
 	  case ' ':
-	    x += c_width((wint_t)tc->value.c, tc->font);
+	    x += c_width((uchar_t)tc->value.c, tc->font);
 	    current_vcol++;
 	    last_is_space = TRUE;
 	    break;
 	  default:
 	  { int dw = uchar_display_width((uchar_t)tc->value.c);
 	    if ( dw != 0 )	/* combining/zero-width: don't advance x */
-	    { x += c_width((wint_t)tc->value.c, tc->font);
+	    { x += c_width((uchar_t)tc->value.c, tc->font);
 	      if ( last_is_space )
 		last_break = i;
 	      last_is_space = FALSE;

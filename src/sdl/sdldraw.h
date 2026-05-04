@@ -35,6 +35,15 @@
 #ifndef RAYDRAW_H
 #define RAYDRAW_H
 
+#include <stdint.h>
+
+/* uchar_t is also defined in charwidth.h and terminal.h; use the same
+ * guard to avoid duplicate typedef errors when both are included. */
+#ifndef UCHAR_T_DEFINED
+#define UCHAR_T_DEFINED
+typedef uint32_t uchar_t;
+#endif
+
 /* private SDL interface */
 void d_init_surface(cairo_surface_t *surf, Any background);
 
@@ -106,7 +115,7 @@ int s_default_char(FontObj font);
 double s_ascent(FontObj f);
 double s_descent(FontObj f);
 double s_height(FontObj f);
-double c_width(wint_t c, FontObj font);
+double c_width(uchar_t c, FontObj font);
 double str_width(PceString s, int from, int to, FontObj f);
 double str_advance(PceString s, int from, int to, FontObj f);
 double str_advance_utf8(const char *u, int ulen, FontObj font);
