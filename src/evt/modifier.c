@@ -64,7 +64,7 @@ getConvertModifier(Class class, Name name)
     Name gui     = NAME_up;
 
     for(i=0; i<size; i++)
-    { wint_t c = str_fetch(s, i);
+    { uchar_t c = str_fetch(s, i);
 
       switch(towlower(c))
       { case 's':

@@ -787,7 +787,7 @@ cclass(struct vars *v, chr *startp, chr *endp, int cases)
     if (cases && len == 5 && (strncmpAW("lower", startp, 5) == 0
 	    || strncmpAW("upper", startp, 5) == 0)) {
 #ifdef REG_WIDE
-	static const chr alpha_lit[] = { 'a', 'l', 'p', 'h', 'a', 0 };
+	static chr alpha_lit[] = { 'a', 'l', 'p', 'h', 'a', 0 };
 	startp = alpha_lit;
 #else
 	startp = "alpha";

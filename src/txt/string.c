@@ -302,7 +302,7 @@ newlineString(StringObj s, Int times)
 status
 insertCharacterString(StringObj str, Int chr, Int where, Int times)
 { int tms = isDefault(times) ? 1 : valInt(times);
-  wint_t c = valInt(chr);
+  uchar_t c = valInt(chr);
   int iswide = (c <= 0xff);
   LocalString(buf, iswide, tms);
   int i;
@@ -375,7 +375,7 @@ untabifyString(StringObj str, Any tabs)
       int i=0, o=0, col=0;
 
       for( ; i < size; i++ )
-      { wint_t c = str_fetch(s, i);
+      { uchar_t c = str_fetch(s, i);
 
 	if ( c == '\t' )
 	{ int destcol = col+1;
@@ -412,7 +412,7 @@ untabifyString(StringObj str, Any tabs)
     int i=0, o=0, col=0;
 
     for( ; i < size; i++ )
-    { wint_t c = str_fetch(s, i);
+    { uchar_t c = str_fetch(s, i);
 
       if ( c == '\t' )
       { do
@@ -462,14 +462,14 @@ truncateString(StringObj s, Int n)
 
 static status
 translateString(StringObj str, Int c1, Int c2)
-{ wint_t f = valInt(c1);
+{ uchar_t f = valInt(c1);
   int changed = 0;
   PceString s = &str->data;
   int size = s->s_size;
   int i = 0;
 
   if ( notNil(c2) )
-  { wint_t t = valInt(c2);
+  { uchar_t t = valInt(c2);
 
     if ( t > 0xff )
       promoteString(str);
@@ -517,7 +517,7 @@ translateString(StringObj str, Int c1, Int c2)
 static status
 characterString(StringObj str, Int index, Int chr)
 { int i = valInt(index);
-  wint_t c = valInt(chr);
+  uchar_t c = valInt(chr);
 
   if ( i <  0 || i >= str->data.s_size )
     fail;

@@ -90,13 +90,13 @@ COMMON(int)	str_suffix(PceString s1, PceString s2);
 COMMON(int)	str_icase_suffix(PceString s1, PceString s2);
 COMMON(int)	str_sub(PceString s1, PceString s2);
 COMMON(int)	str_icasesub(PceString s1, PceString s2);
-COMMON(int)	str_next_index(PceString s, int from, wint_t chr);
-COMMON(int)	str_next_rindex(PceString s, int from, wint_t chr);
-COMMON(int)	str_index(PceString s, wint_t chr);
-COMMON(int)	str_rindex(PceString s, wint_t chr);
-COMMON(int)	str_count_chr(PceString s, int from, int to, wint_t chr);
+COMMON(int)	str_next_index(PceString s, int from, uchar_t chr);
+COMMON(int)	str_next_rindex(PceString s, int from, uchar_t chr);
+COMMON(int)	str_index(PceString s, uchar_t chr);
+COMMON(int)	str_rindex(PceString s, uchar_t chr);
+COMMON(int)	str_count_chr(PceString s, int from, int to, uchar_t chr);
 COMMON(int)	str_lineno(PceString s, int at);
-COMMON(wint_t)	str_fetch(PceString s, int idx);
+COMMON(uchar_t)	str_fetch(PceString s, int idx);
 COMMON(int)	str_store(PceString s, int idx, unsigned int chr);
 COMMON(PceString)	str_nl(PceString proto);
 COMMON(PceString)	str_spc(PceString proto);
@@ -105,7 +105,7 @@ COMMON(void)	str_strip(PceString s);
 COMMON(int)	str_common_length(PceString s1, PceString s2);
 COMMON(int)	str_icase_common_length(PceString s1, PceString s2);
 COMMON(tmp_string *) str_tmp_init(tmp_string *tmp);
-COMMON(wint_t)	str_tmp_put(tmp_string *tmp, wint_t c);
+COMMON(uchar_t)	str_tmp_put(tmp_string *tmp, uchar_t c);
 COMMON(void)	str_tmp_done(tmp_string *tmp);
 
 /* /swi40/jan/src/pl/packages/xpce/src/txt/string.c */

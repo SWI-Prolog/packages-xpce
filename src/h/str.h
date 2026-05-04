@@ -42,6 +42,14 @@
 
 #undef charA				/* from pce-include.h */
 
+/* uchar_t is the Unicode code-point type used by xpce APIs that expect
+ * a code-point value (not "char or EOF").  Also defined in charwidth.h,
+ * sdldraw.h, terminal.h with the same guard. */
+#ifndef UCHAR_T_DEFINED
+#define UCHAR_T_DEFINED
+typedef uint32_t uchar_t;
+#endif
+
 typedef unsigned char charA;		/* 8-bit character */
 
 /* charW is the internal wide-character storage type: one Unicode code

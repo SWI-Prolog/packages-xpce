@@ -1345,7 +1345,7 @@ insertText(TextObj t, Int where, CharArray str)
 
 static status
 insertSelfText(TextObj t, Int times, Int chr)
-{ wint_t c;
+{ uchar_t c;
   int tms;
 
   if ( isDefault(times) )

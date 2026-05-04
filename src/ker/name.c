@@ -437,7 +437,7 @@ syntaxName(Name n, Name casemap, Int ws)
   StringObj str;
 
   for(i=0; i<size; i++)
-  { wint_t c = str_fetch(s, i);
+  { uchar_t c = str_fetch(s, i);
 
     if ( iswupper(c) || c == '%' || c == '.' )
       succeed;
@@ -450,7 +450,7 @@ syntaxName(Name n, Name casemap, Int ws)
     size = s->s_size;
 
     for(i=0; i<size; i++)
-      if ( str_fetch(s, i) == (wint_t)syntax.word_separator )
+      if ( str_fetch(s, i) == (uchar_t)syntax.word_separator )
 	str_store(s, i, valInt(ws));
   }
 

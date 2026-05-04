@@ -560,7 +560,7 @@ writef(char *fm, ...)
 			} while(0)
 
 static int
-put_string(int (*out)(void*, wint_t), void *closure, PceString s)
+put_string(int (*out)(void*, uchar_t), void *closure, PceString s)
 { int i;
 
   if ( isstrA(s) )
@@ -609,12 +609,12 @@ Comment to avoid mkproto not generating the prototype for this function
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static int
-swritefv(int (*out)(void*, wint_t), void *closure,
+swritefv(int (*out)(void*, uchar_t), void *closure,
 	 const PceString fmt, int argc, const Any argv[])
 { int i;
 
   for( i=0; i<fmt->s_size; i++ )
-  { wint_t c;
+  { uchar_t c;
 
     switch((c=str_fetch(fmt, i)))
     { case '\\':
@@ -869,7 +869,7 @@ swritefv(int (*out)(void*, wint_t), void *closure,
 
 
 static int
-put_void_str(void *ctx, wint_t c)
+put_void_str(void *ctx, uchar_t c)
 { PceString s = ctx;
 
   s->s_size++;
@@ -881,7 +881,7 @@ put_void_str(void *ctx, wint_t c)
 
 
 static int
-put_str(void *ctx, wint_t c)
+put_str(void *ctx, uchar_t c)
 { PceString s = ctx;
 
   str_store(s, s->s_size, c);

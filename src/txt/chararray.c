@@ -228,7 +228,7 @@ getCapitaliseCharArray(CharArray n)
     str_store(buf, 0, towupper(str_fetch(d, 0)));
 
     for(; i < size; i++, o++)
-    { wint_t c = str_fetch(d, i);
+    { uchar_t c = str_fetch(d, i);
 
       if ( iswordsep(c) )
       { if ( ++i < size )
@@ -261,7 +261,7 @@ getLabelNameCharArray(CharArray n)
 
   { LocalString(buf, s->s_iswide, size);
     int o = 0;
-    wint_t c = str_fetch(s, 0);
+    uchar_t c = str_fetch(s, 0);
 
     i = 0;
     str_store(buf, o, towupper(c));
@@ -327,7 +327,7 @@ getStripCharArray(CharArray n, Name how)
       ;
   }
   for( ; i<size; i++)
-  { wint_t c = str_fetch(s, i);
+  { uchar_t c = str_fetch(s, i);
 
     str_store(buf, o++, c);
     if ( !iswspace(c) )
@@ -686,7 +686,7 @@ getCharacterCharArray(CharArray n, Int idx)
 
 static Int
 getIndexCharArray(CharArray n, Int chr, Int here)
-{ wint_t c = valInt(chr);
+{ uchar_t c = valInt(chr);
   int h;
 
   h = (isDefault(here) ? 0 : valInt(here));
@@ -699,7 +699,7 @@ getIndexCharArray(CharArray n, Int chr, Int here)
 
 static Int
 getRindexCharArray(CharArray n, Int chr, Int here)
-{ wint_t c = valInt(chr);
+{ uchar_t c = valInt(chr);
   int h, len = n->data.s_size;
 
   h = (isDefault(here) ? (len - 1) : valInt(here));

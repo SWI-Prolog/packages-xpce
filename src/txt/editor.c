@@ -1649,7 +1649,7 @@ verify_editable_editor(Editor e)
 
 static status
 insert_editor(Editor e, Int times, Int chr, int fill)
-{ wint_t c;
+{ uchar_t c;
   LocalString(s, TRUE, 1);		/* wide-character string! */
 
   MustBeEditable(e);
@@ -2775,7 +2775,7 @@ transposeCharsEditor(Editor e)
 
   MustBeEditable(e);
   if ( caret >= 1 && caret < e->text_buffer->size )
-  { wint_t c1, c2;
+  { int c1, c2;
 
     c1 = Fetch(e, caret-1);
     c2 = Fetch(e, caret);
@@ -3413,7 +3413,7 @@ static status
 insertSelfFillEditor(Editor e, Int times, Int chr)
 { TextBuffer tb = e->text_buffer;
   LocalString(s, TRUE, 1);
-  wint_t c;
+  uchar_t c;
   Int le;
 
   MustBeEditable(e);
@@ -3938,7 +3938,7 @@ get_dabbrev_hit_editor(Editor e, int start)
   string s;
 
   for(end = start; end < size; end++)
-  { wint_t c = fetch_textbuffer(tb, end);
+  { int c = fetch_textbuffer(tb, end);
     if ( !tisalnum(tb->syntax, c) )
       break;
   }
@@ -4704,7 +4704,7 @@ getColumnEditor(Editor e, Int where)
 
   sol = valInt(getScanTextBuffer(tb, where, NAME_line, 0, NAME_start));
   for(col = 0; sol < valInt(where); sol++ )
-  { wint_t c = fetch_textbuffer(tb, sol);
+  { int c = fetch_textbuffer(tb, sol);
     if ( c == '\t' )
     { col++;
       col = Round(col, valInt(e->tab_distance));
@@ -4735,7 +4735,7 @@ getColumnLocationEditor(Editor e, Int c, Int from)
   pos = valInt(getScanTextBuffer(tb, from, NAME_line, 0, NAME_start));
 
   for(col = 0; col < dcol && pos < size; )
-  { wint_t ch = fetch_textbuffer(tb, pos);
+  { int ch = fetch_textbuffer(tb, pos);
     switch(ch)
     { case '\n':
 	return toInt(pos);
