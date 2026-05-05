@@ -87,6 +87,47 @@
 #define PrevLine(b, i) ((i) > 0 ? (i)-1 : (b)->height-1)
 #define Bounds(v, mn, mx) ((v) < (mn) ? (mn) : (v) > (mx) ? (mx) : (v))
 
+/* Optional terminal byte / caret trace.  Compile with -DXPCE_TERM_TRACE
+ * to activate; at runtime set XPCE_TERM_TRACE=<file> (or "1" for
+ * "xpce-terminal.log" in CWD) to capture every byte through
+ * rlc_putansi plus caret moves, puts, inserts and deletes.  Used to
+ * chase Windows surrogate-pair / cursor-tracking bugs against
+ * libedit's matching EL_REFRESH_TRACE log.  Inert and zero-cost when
+ * the macro is undefined: tlog collapses to ((void)0). */
+#ifdef XPCE_TERM_TRACE
+#include <stdarg.h>
+static FILE *xpce_term_trace_fp = NULL;
+static int   xpce_term_trace_enabled = -1;	/* -1 = uninitialised */
+
+static void
+xpce_term_trace_init(void)
+{ const char *env = getenv("XPCE_TERM_TRACE");
+  if ( env && *env )
+  { const char *path = (env[0] == '1' && env[1] == '\0')
+		     ? "xpce-terminal.log" : env;
+    xpce_term_trace_fp = fopen(path, "w");
+    xpce_term_trace_enabled = (xpce_term_trace_fp != NULL);
+  } else
+  { xpce_term_trace_enabled = 0;
+  }
+}
+
+static void
+tlog(const char *fmt, ...)
+{ if ( xpce_term_trace_enabled == -1 )
+    xpce_term_trace_init();
+  if ( !xpce_term_trace_enabled )
+    return;
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(xpce_term_trace_fp, fmt, ap);
+  va_end(ap);
+  fflush(xpce_term_trace_fp);
+}
+#else
+# define tlog(...) ((void)0)
+#endif
+
 #define OPT_SIZE	0x01
 #define OPT_POSITION	0x02
 
@@ -2920,7 +2961,9 @@ rlc_caret_down(RlcData b, int arg)
 
 static void
 rlc_caret_forward(RlcData b, int arg)
-{ /* Move by VISUAL columns, not cells.  An NFD cluster takes several
+{ tlog("rlc_caret_forward(arg=%d) entry caret_x=%d caret_y=%d\n",
+       arg, b->caret_x, b->caret_y);
+  /* Move by VISUAL columns, not cells.  An NFD cluster takes several
      cells but one visual column, so cell-indexed arithmetic moves the
      caret by a fraction of a column for combining content.  Wide-char
      right-half placeholders are their own visual column (a `\b` steps
@@ -2939,12 +2982,16 @@ rlc_caret_forward(RlcData b, int arg)
   }
 
   b->changed |= CHG_CARET;
+  tlog("rlc_caret_forward exit  caret_x=%d caret_y=%d\n",
+       b->caret_x, b->caret_y);
 }
 
 
 static void
 rlc_caret_backward(RlcData b, int arg)
-{ /* See rlc_caret_forward: move by visual columns. */
+{ tlog("rlc_caret_backward(arg=%d) entry caret_x=%d caret_y=%d\n",
+       arg, b->caret_x, b->caret_y);
+  /* See rlc_caret_forward: move by visual columns. */
   while(arg-- > 0)
   { RlcTextLine tl = &b->lines[b->caret_y];
     int cur_vcol = rlc_cell_to_vcol(tl, b->caret_x);
@@ -2958,6 +3005,8 @@ rlc_caret_backward(RlcData b, int arg)
   }
 
   b->changed |= CHG_CARET;
+  tlog("rlc_caret_backward exit  caret_x=%d caret_y=%d\n",
+       b->caret_x, b->caret_y);
 }
 
 
@@ -3025,7 +3074,9 @@ rlc_set_caret(RlcData b, int x, int y)
 
 static void
 rlc_set_caret_x(RlcData b, int x)
-{ /* CSI G (HPA) uses 1-based visual columns.  Map the target visual
+{ tlog("rlc_set_caret_x(x=%d) entry caret_x=%d width=%d\n",
+       x, b->caret_x, b->width);
+  /* CSI G (HPA) uses 1-based visual columns.  Map the target visual
      column to a cell index via rlc_vcol_to_cell; do NOT clamp the
      result to b->width-1, because lines with combining marks or wide
      chars legitimately have cell indices that exceed the visual
@@ -3036,6 +3087,7 @@ rlc_set_caret_x(RlcData b, int x)
     b->caret_x = LINE_CELL_CAPACITY(b) - 1;
 
   b->changed |= CHG_CARET;
+  tlog("rlc_set_caret_x exit caret_x=%d\n", b->caret_x);
 }
 
 
@@ -3170,6 +3222,8 @@ static void
 rlc_put(RlcData b, int chr)
 { RlcTextLine tl = rlc_prepare_line(b, b->caret_y);
   int dw = uchar_display_width((uchar_t)chr);
+  tlog("rlc_put(0x%X) entry caret_x=%d width=%d\n",
+       chr, b->caret_x, dw);
   if ( dw == 0 )
   { /* Combining character: attach to the preceding base's cluster by
        storing in its own cell at caret_x.  Pango will render base +
@@ -3278,12 +3332,15 @@ rlc_put(RlcData b, int chr)
     b->caret_x += dw;
     b->changed |= CHG_CARET;
   }
+  tlog("rlc_put exit  caret_x=%d size=%d\n", b->caret_x, tl->size);
 }
 
 static void
 rlc_insert(RlcData b, int chr)
 { RlcTextLine tl = rlc_prepare_line(b, b->caret_y);
   int dw = uchar_display_width((uchar_t)chr);
+  tlog("rlc_insert(0x%X) entry caret_x=%d width=%d size=%d\n",
+       chr, b->caret_x, dw, tl->size);
   int slots = (dw == 2) ? 2 : 1;	/* wide chars need 2 cells */
 
   /* Bound tl->size by the line's physical cell capacity (which
@@ -3335,11 +3392,18 @@ rlc_insert(RlcData b, int chr)
 static void
 rlc_delete_chars(RlcData b, int count)
 { RlcTextLine tl = rlc_prepare_line(b, b->caret_y);
+  tlog("rlc_delete_chars(count=%d) entry caret_x=%d size=%d\n",
+       count, b->caret_x, tl->size);
+  for(int i = 0; i < tl->size && i < 16; i++)
+    tlog("  cell %2d: code=0x%05X width=%d flags=0x%X\n",
+	 i, (unsigned)tl->text[i].code, tl->text[i].width,
+	 (unsigned)tl->text[i].flags);
   /* ANSI DCH takes a VISUAL COLUMN count.  Snap the caret back to the
      start of its grapheme cluster (in case it lands on a combining mark
      or a wide-char right-half placeholder) so the erase begins at a
      cluster boundary. */
   int cx = rlc_snap_start(tl, b->caret_x);
+  tlog("  rlc_snap_start(%d) -> %d\n", b->caret_x, cx);
 
   /* Walk forward `count` visual columns, accumulating the number of
      cells to delete.  A cluster's visual width is the SUM of per-cell
@@ -3372,6 +3436,8 @@ rlc_delete_chars(RlcData b, int count)
   b->caret_x = cx;
 
   tl->changed |= CHG_CHANGED;
+  tlog("rlc_delete_chars exit  caret_x=%d size=%d del_cells=%d\n",
+       b->caret_x, tl->size, del_cells);
 }
 
 static void
@@ -3710,6 +3776,16 @@ rlc_putansi(RlcData b, int chr)
   const char *cmd;
 #endif
 
+#ifdef XPCE_TERM_TRACE
+  { static const char *names[] = {
+      "INITIAL", "ESC", "ANSI", "OSC", "DEC_PRIVATE", "G0", "G1"
+    };
+    const char *st = (b->cmdstat >= 0 && b->cmdstat < (int)(sizeof(names)/sizeof(*names)))
+		    ? names[b->cmdstat] : "?";
+    tlog("rlc_putansi state=%s 0x%X%s\n", st, chr,
+	 (chr >= 0x20 && chr < 0x7F) ? "" : " (control)");
+  }
+#endif
   switch(b->cmdstat)
   { case CMD_INITIAL:
       switch(chr)
