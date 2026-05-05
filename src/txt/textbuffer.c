@@ -2089,10 +2089,10 @@ u16_range_length(TextBuffer tb, size_t where, size_t len)
 { if ( istbA(tb) )
   { return len;
   } else
-  {
-#if SIZEOF_WCHAR_T == 2
-    return len;
-#else
+  { /* charW now holds one Unicode code point per slot on every
+     * platform.  Each SMP code point takes two UTF-16 units, so the
+     * UTF-16 length is the code-point count plus the SMP count in
+     * the range. */
     charW *b = tb->tb_bufferW + where;
     size_t ulen = len;
     for( ; len-- > 0; b++)
@@ -2100,7 +2100,6 @@ u16_range_length(TextBuffer tb, size_t where, size_t len)
 	ulen++;
     }
     return ulen;
-#endif
   }
 }
 
@@ -2915,11 +2914,11 @@ getLspOffsetTextBuffer(TextBuffer tb, Int line, Int character)
   size_t off = scan_textbuffer(tb, 0, NAME_line, ln, 'a');
 
   for(size_t i=0; i<pos; i++, off++)
-  {
-#if SIZEOF_WCHAR_T > 2
+  { /* LSP advances `pos` in UTF-16 units; each SMP code point in the
+     * buffer corresponds to two UTF-16 units, so consume the second
+     * UTF-16 unit by skipping ahead in i. */
     if ( fetch(off) > 0xffff )
       i++;
-#endif
   }
 
   answer(toInt(off));
