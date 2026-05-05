@@ -97,7 +97,13 @@ str_ring_alloc(PceString s)
   { str_ring[str_ring_ptr] = pceRealloc(str_ring[str_ring_ptr], size);
   }
   s->s_textA = (charA*)str_ring[str_ring_ptr];
-  s->s_readonly = TRUE;
+  /* s_readonly stays FALSE: the ring buffer is *not* permanent
+   * storage.  initialiseCharArray's fast-path treats s_readonly as
+   * "share the pointer, the source lives forever" — that is correct
+   * for static C-string sources (str_set_static) but fatal here, since
+   * the next 16 ring allocations recycle the slot.  Callers must not
+   * call str_unalloc on a ring-derived string; in current xpce no
+   * caller does. */
 
   if ( ++str_ring_ptr == STR_RING_SIZE )
     str_ring_ptr = 0;
