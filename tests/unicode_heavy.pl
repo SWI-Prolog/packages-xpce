@@ -188,6 +188,8 @@ nfd_length_demo :-
  *  NFD: café résumé naïve señor Zürich garçon rôle
  *  double-width: 东西南北 上下左右 春夏秋冬 日月星辰
  *  wide emoji: 🌏 🗾 🏯 🗼 🍣 🍜 🍱
+ *  SMP CJK Ext B: 𠀀 𠀁 𠀂 𠀃 𠁂 𠂉 𠂊 𠂍
+ *  inline mix: file [🌏] saved 𠀀 to 北京 path ok
  */
 
 %  一行コメント: 東京・大阪・京都・名古屋・札幌
