@@ -3071,11 +3071,8 @@ edit(F, Where:[{here,tab,window}]) :->
         send(Frame?editor, goto_line, Line)
     ;   ensure_loaded(library(edit)),
         prolog_edit:locate(Source, _, Location),
-        memberchk(file(File), Location),
-        (   memberchk(line(Line), Location)
-        ->  true
-        ;   Line = @default
-        ),
+        File = Location.get(file),
+        Line = Location.get(line, @default),
         send(@emacs, goto_source_location,
              source_location(File, Line), Where)
     ).
