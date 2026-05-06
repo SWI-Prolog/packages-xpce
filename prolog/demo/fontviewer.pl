@@ -94,7 +94,7 @@ initialise(FB) :->
     send(FB, alias_selected, normal).
 
 unicode_block(Name) :-
-    unicode_block(Name, From, To),
+    unicode_block(Name, From, _To),
     \+ (  surrogate(_, SF, ST),
           between(SF, ST, From)
        ).
