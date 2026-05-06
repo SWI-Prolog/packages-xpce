@@ -1,0 +1,10 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- newdir: folder with green + badge -->
+  <path d="M2,6 L2,17 L18,17 L18,9 L10,9 L8,6 Z" fill="#f59e0b" stroke="#92400e" stroke-width="0.9" stroke-linejoin="round"/>
+  <line x1="2" y1="9" x2="18" y2="9" stroke="#92400e" stroke-width="0.9"/>
+  <!-- badge: emerald circle bottom-right -->
+  <circle cx="18.5" cy="17.5" r="5" fill="#10b981" stroke="white" stroke-width="1.5"/>
+  <!-- plus sign -->
+  <line x1="18.5" y1="14.5" x2="18.5" y2="20.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="15.5" y1="17.5" x2="21.5" y2="17.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
