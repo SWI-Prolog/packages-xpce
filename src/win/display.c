@@ -123,6 +123,27 @@ screenSaverDisplay(DisplayObj d, BoolObj val)
 }
 
 
+static status
+screenKeyboardDisplay(DisplayObj d, Name mode)
+{ if ( isDefault(mode) )
+    mode = NAME_auto;
+  ws_set_screen_keyboard(d, mode);
+  succeed;
+}
+
+
+static BoolObj
+getHasScreenKeyboardSupportDisplay(DisplayObj d)
+{ answer(ws_has_screen_keyboard_support(d) ? ON : OFF);
+}
+
+
+static BoolObj
+getScreenKeyboardShownDisplay(DisplayObj d)
+{ answer(ws_screen_keyboard_shown(d) ? ON : OFF);
+}
+
+
 status
 bellDisplay(DisplayObj d, Int vol)
 { if ( isDefault(vol) )
@@ -659,6 +680,8 @@ static senddecl send_display[] =
      NAME_selection, "Copy to selection and cut_buffer"),
   SM(NAME_screenSaver, 1, "bool", screenSaverDisplay,
      NAME_power, "Activate (@on) or deactivate (@off) screensaver"),
+  SM(NAME_screenKeyboard, 1, "[{auto,on,off}]", screenKeyboardDisplay,
+     NAME_event, "Policy for the on-screen keyboard on text-input focus"),
   SM(NAME_dpi, 1, "size|int", DPIDisplay,
      NAME_dimension, "Resolution in dots per inch"),
   SM(NAME_hasVisibleFrames, 0, NULL, hasVisibleFramesDisplay,
@@ -693,6 +716,12 @@ static getdecl get_display[] =
      NAME_selection, "Query value of the X-window selection"),
   GM(NAME_paste, 1, "string", "which=[{primary,clipboard}]", getPasteDisplay,
      NAME_selection, "Simple interface to get clipboard value"),
+  GM(NAME_hasScreenKeyboardSupport, 0, "bool", NULL,
+     getHasScreenKeyboardSupportDisplay,
+     NAME_event, "@on if SDL reports on-screen keyboard support"),
+  GM(NAME_screenKeyboardShown, 0, "bool", NULL,
+     getScreenKeyboardShownDisplay,
+     NAME_event, "@on if the on-screen keyboard is currently shown"),
 };
 
 /* Resources */

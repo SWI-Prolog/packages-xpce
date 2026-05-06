@@ -338,6 +338,49 @@ ws_activate_screen_saver(DisplayObj d)
 }
 
 /**
+ * Whether SDL reports that the running session can show an
+ * on-screen keyboard.
+ */
+bool
+ws_has_screen_keyboard_support(DisplayObj d)
+{ ASSERT_SDL_MAIN();
+  return SDL_HasScreenKeyboardSupport();
+}
+
+/**
+ * Whether the on-screen keyboard is currently shown.  SDL3 reports
+ * this per window; in practice the OSK is session-global, so we ask
+ * any open frame on the display.
+ */
+bool
+ws_screen_keyboard_shown(DisplayObj d)
+{ ASSERT_SDL_MAIN();
+  Cell cell;
+  for_cell(cell, d->frames)
+  { FrameObj fr = cell->value;
+    WsFrame  wfr = fr->ws_ref;
+    if ( wfr && wfr->ws_window )
+      return SDL_ScreenKeyboardShown(wfr->ws_window);
+  }
+  return false;
+}
+
+/**
+ * Set the SDL hint that decides whether SDL_StartTextInput() should
+ * request the on-screen keyboard.  `auto` (SDL default) shows the
+ * OSK only when no physical keyboard is detected; `on`/`off` force
+ * the corresponding behaviour.
+ */
+void
+ws_set_screen_keyboard(DisplayObj d, Name mode)
+{ ASSERT_SDL_MAIN();
+  const char *v = "auto";
+  if      ( mode == NAME_on  ) v = "1";
+  else if ( mode == NAME_off ) v = "0";
+  SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, v);
+}
+
+/**
  * Deactivate the screen saver on the display.
  *
  * @param d Pointer to the DisplayObj representing the display context.
