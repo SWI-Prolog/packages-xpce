@@ -46,12 +46,20 @@ typedef struct
 } charwidth_cache;
 
 typedef struct
+{ int first;
+  int last;
+  bool computed;
+} font_domain;
+
+typedef struct
 { PangoFont *font;
   PangoFontDescription *desc;
   PangoLayout *layout;		/* Should be per display/surface type */
   double ul_thickness;		/* Underline thinkness */
   double ul_position;		/* Underline position */
   charwidth_cache wcache;
+  font_domain dom_main;		/* Cached domain of primary font */
+  font_domain dom_family;	/* Cached domain over fontset/fallbacks */
   int references;		/* for cloning */
 } ws_font, *WsFont;
 
@@ -60,6 +68,7 @@ void   ws_destroy_font(FontObj f);
 bool   s_cwidth(uint32_t c, FontObj font, float *wp);
 bool   s_setcwidth(uint32_t c, FontObj font, float w);
 bool   s_has_char_family(FontObj f, unsigned int c);
+void   f_domain(FontObj f, bool family, int *a, int *z);
 Sheet  ws_font_families(BoolObj mono);
 Any    ws_get_pango_property(FontObj f, Name property);
 

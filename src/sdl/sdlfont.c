@@ -284,6 +284,107 @@ s_has_char_family(FontObj f, unsigned int c)
   return ok;
 }
 
+/* PangoCoverage envelope: minimum first / maximum last codepoint for
+ * which any of the given coverages is not PANGO_COVERAGE_NONE.
+ */
+static void
+coverages_envelope(PangoCoverage **covs, int n, int *a, int *z)
+{ gunichar first = 0, last = 0;
+  bool found = false;
+
+  for (gunichar wc = 0; wc <= 0x10FFFF; wc++)
+  { for (int i = 0; i < n; i++)
+    { if ( pango_coverage_get(covs[i], wc) != PANGO_COVERAGE_NONE )
+      { if ( !found )
+	{ first = wc;
+	  found = true;
+	}
+	last = wc;
+	break;
+      }
+    }
+  }
+
+  if ( found )
+  { *a = first;
+    *z = last;
+  } else
+  { *a = 0;
+    *z = 0x10ffff;
+  }
+}
+
+#define MAX_FONTSET_FACES 64
+
+typedef struct
+{ PangoCoverage *covs[MAX_FONTSET_FACES];
+  int n;
+} cov_collector;
+
+static gboolean
+collect_cov(PangoFontset *fs, PangoFont *font, gpointer ud)
+{ cov_collector *c = ud;
+  if ( c->n < MAX_FONTSET_FACES )
+    c->covs[c->n++] = pango_font_get_coverage(font, NULL);
+  return FALSE;	/* keep iterating */
+}
+
+/**
+ * Retrieve the range of valid characters for a font.
+ *
+ * The result is cached on the WsFont; computing it requires walking
+ * the full Unicode range against one or more PangoCoverage maps.
+ *
+ * @param f      The font object.
+ * @param family If true, take the union over the PangoFontset (the
+ *               primary font plus its fallback chain) — matching the
+ *               default behaviour of `font ->member`.  If false, look
+ *               only at the primary PangoFont.
+ * @param a      Pointer to first valid character.
+ * @param z      Pointer to last valid character.
+ */
+void
+f_domain(FontObj f, bool family, int *a, int *z)
+{ WsFont wsf = ws_get_font(f);
+  if ( !wsf )
+  { *a = 0;
+    *z = 0x10ffff;
+    return;
+  }
+
+  font_domain *cache = family ? &wsf->dom_family : &wsf->dom_main;
+  if ( cache->computed )
+  { *a = cache->first;
+    *z = cache->last;
+    return;
+  }
+
+  if ( family && wsf->desc )
+  { PangoFontset *fs = pango_font_map_load_fontset(fontmap, context,
+						   wsf->desc,
+						   pango_language_get_default());
+    if ( fs )
+    { cov_collector c = { .n = 0 };
+      pango_fontset_foreach(fs, collect_cov, &c);
+      coverages_envelope(c.covs, c.n, a, z);
+      for (int i = 0; i < c.n; i++)
+	g_object_unref(c.covs[i]);
+      g_object_unref(fs);
+    } else
+    { *a = 0;
+      *z = 0x10ffff;
+    }
+  } else
+  { PangoCoverage *cov = pango_font_get_coverage(wsf->font, NULL);
+    coverages_envelope(&cov, 1, a, z);
+    g_object_unref(cov);
+  }
+
+  cache->first    = *a;
+  cache->last     = *z;
+  cache->computed = true;
+}
+
 		 /*******************************
 		 *            CACHE             *
 		 *******************************/

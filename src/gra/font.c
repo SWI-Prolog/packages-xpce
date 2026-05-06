@@ -318,13 +318,10 @@ getDefaultCharacterFont(FontObj f)
 
 
 static Tuple
-getDomainFont(FontObj f, Name which)
+getDomainFont(FontObj f, BoolObj family)
 { int a, z;
 
-  if ( isDefault(which) )
-    which = NAME_x;
-
-  f_domain(f, which, &a, &z);
+  f_domain(f, family != OFF, &a, &z);
   return answerObject(ClassTuple, toInt(a), toInt(z), EAV);
 }
 
@@ -526,8 +523,8 @@ static getdecl get_font[] =
      NAME_oms, "Lookup in @fonts table"),
   GM(NAME_defaultCharacter, 0, "char", NULL, getDefaultCharacterFont,
      NAME_property, "Character painted for non-existing entries"),
-  GM(NAME_domain, 1, "tuple", "[{x,y}]", getDomainFont,
-     NAME_property, "Range of valid characters"),
+  GM(NAME_domain, 1, "tuple", "family=[bool]", getDomainFont,
+     NAME_property, "Range of valid characters (over family fallbacks by default)"),
   GM(NAME_fixedWidth, 0, "bool", NULL, getFixedWidthFont,
      NAME_property, "Boolean to indicate font is fixed-width"),
   GM(NAME_pangoProperty, 1, "{description,family,style,weight,size}",

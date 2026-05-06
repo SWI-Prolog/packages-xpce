@@ -110,7 +110,6 @@ void r_complement_pixel(int x, int y);
 void d_modify(void);
 COLORRGBA r_get_pixel(int x, int y);
 bool s_has_char(FontObj f, unsigned int c);
-void f_domain(FontObj f, Name which, int *x, int *y);
 int s_default_char(FontObj font);
 double s_ascent(FontObj f);
 double s_descent(FontObj f);
