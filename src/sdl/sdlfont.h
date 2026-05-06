@@ -100,6 +100,7 @@ cairo_font(FontObj f)
 #ifdef __WINDOWS__
 #define MONO_FAMILY "Consolas,Courier New,Cascadia Mono," \
 		    "MS Gothic,Malgun Gothic,NSimSun," \
+		    "Leelawadee UI,Microsoft Yi Baiti," \
 		    "Segoe UI Symbol,Segoe UI Emoji,monospace"
 #elif __APPLE__
 #define MONO_FAMILY "Menlo,monospace"
@@ -112,6 +113,7 @@ cairo_font(FontObj f)
 #ifdef __WINDOWS__
 #define SANS_FAMILY "Segoe UI,Verdana," \
 		    "Yu Gothic UI,Malgun Gothic,Microsoft YaHei UI," \
+		    "Leelawadee UI,Microsoft Yi Baiti," \
 		    "Segoe UI Symbol,Segoe UI Emoji,sans"
 #elif __APPLE__
 #define SANS_FAMILY "sans"
@@ -124,6 +126,7 @@ cairo_font(FontObj f)
 #ifdef __WINDOWS__
 #define SERIF_FAMILY "Georgia,Times New Roman," \
 		     "MS Mincho,Batang,SimSun," \
+		     "Leelawadee UI,Microsoft Yi Baiti," \
 		     "Segoe UI Symbol,serif"
 #elif __APPLE__
 #define SERIF_FAMILY "serif"
