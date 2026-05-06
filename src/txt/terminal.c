@@ -592,7 +592,8 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
 	 notNil(ti->link_message) )
     { Name href = TCHAR2Name(lnk);
       clickedLinkTerminalImage(ti, href);
-    } else if ( rlc_has_selection(b) )
+    } else if ( rlc_has_selection(b) &&
+		isOn(getClassVariableValueObject(ti, NAME_autoCopy)) )
       send(ti, NAME_copy, EAV);
     succeed;
   }
@@ -610,7 +611,8 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
 
       get_xy_event(ev, ti, ON, &x, &y);
       rlc_extend_selection(b, valInt(x), valInt(y));
-      if ( rlc_has_selection(b) )
+      if ( rlc_has_selection(b) &&
+	   getClassVariableValueObject(ti, NAME_autoCopy) )
 	send(ti, NAME_copy, EAV);
       succeed;
     }
@@ -1136,6 +1138,8 @@ static classvardecl rc_terminal_image[] =
      "Style for <-selection"),
   RC(NAME_nfdStyle, "style*", "@nil",
      "Style for NFD grapheme clusters (default off)"),
+  RC(NAME_autoCopy, "bool", UXWINMAC("@on", "@off", "@off"),
+     "Automatically copy selected text to the clipboard"),
   RC(NAME_saveLines, "int", "1000",
      "How many lines are saved for scroll back"),
   RC(NAME_syntax, "[syntax_table]", "default",

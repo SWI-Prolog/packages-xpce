@@ -1747,7 +1747,7 @@ static classvardecl rc_textItem[] =
      "Width of area for selection (chars)"),
   RC(NAME_pen, "int", "1",
      "Thickness of line below selection"),
-  RC(NAME_autoCopy, "bool", UXWIN("@on", "@off"),
+  RC(NAME_autoCopy, "bool", UXWINMAC("@on", "@off", "@off"),
      "Automatically copy selected text to the clipboard"),
   RC(NAME_autoSelect, "bool", "@off",
      "Automatically select all text when ->activate'd"),

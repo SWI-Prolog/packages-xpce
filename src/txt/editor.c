@@ -5674,7 +5674,7 @@ static classvardecl rc_editor[] =
      "->insert_self and ->paste delete the selection"),
   RC(NAME_caretMovesOnSelect, "bool", "@on",
      "The caret is moved if a selection is made"),
-  RC(NAME_autoCopy, "bool", "@on",
+  RC(NAME_autoCopy, "bool", UXWINMAC("@on", "@off", "@off"),
      "Automatically copy selected text to the clipboard"),
   RC(NAME_showOpenBracket, "bool", "@on",
      "Show open-bracket when inserting close-bracket"),
