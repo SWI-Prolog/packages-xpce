@@ -89,10 +89,19 @@ initialise(FB) :->
     findall(W, weight(W), Weights),
     set_menu_options(Weight, Weights),
     set_menu_options(Points, [8,9,10,12,14,18,24]),
-    forall(unicode_block(Name, _, _),
+    forall(unicode_block(Name),
            send(ChartMenu, append, menu_item(Name, @default, Name))),
-
     send(FB, alias_selected, normal).
+
+unicode_block(Name) :-
+    unicode_block(Name, From, To),
+    \+ (  surrogate(_, SF, ST),
+          between(SF, ST, From)
+       ).
+
+surrogate(lead,  0xD800, 0xDBFF).
+surrogate(trail, 0xDC00, 0xDFFF).
+
 
 %!  set_menu_options(+Menu, +Options:list) is det.
 %
@@ -253,7 +262,8 @@ show_font(FB, Font:font, Chart:name) :->
         new(S, string),
         (   between(0, 15, X),
             C is I+X,
-            C \== 0, C \== 9, C \== 10, C \== 13,
+            code_type(C, width(W)),
+            W > 0,
             (   send(Font, member, C)
             ->  send(A, character, 0, C),
                 send(S, append, A)
@@ -269,12 +279,10 @@ show_font(FB, Font:font, Chart:name) :->
 has_chars_in_row(Font, From) :-
     between(0, 15, X),
     C is From+X,
-    \+ hide_char(C),
+    printable_char(C),
     send(Font, member, C), !.
 
-hide_char(C) :- code_type(C, white), !.
-hide_char(0x00A0).               % non-breaking space
-hide_char(0x200b).               % zero-width space
+printable_char(C) :- code_type(C, width(W)), W > 0.
 
 report_font(FB, Font:font) :->
     "Report font in xpce notation"::
@@ -324,11 +332,12 @@ font_supports_unicode_block(Font, Block) :-
     var(Block),
     !,
     get(Font, domain, tuple(DS, DE)),
+    unicode_block(Block),                       % Avoid surrogate blocks
     unicode_block(Block, Start, End),
     DS =< End,
     DE >= Start,
     (   between(Start, End, Char),
-        \+ hide_char(Char),
+        printable_char(Char),
         send(Font, member, Char)
     ->  true
     ).
@@ -336,7 +345,7 @@ font_supports_unicode_block(Font, Block) :-
     unicode_block(Block, Start, End),
     between(Start, End, Char),
     send(Font, member, Char),
-    \+ hide_char(Char),
+    printable_char(Char),
     !.
 
 weight(thin).
