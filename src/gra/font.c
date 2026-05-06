@@ -301,11 +301,13 @@ getFixedWidthFont(FontObj f)
 
 
 static status
-memberFont(FontObj f, Int chr)
-{ if ( s_has_char(f, valInt(chr)) )
-    succeed;
+memberFont(FontObj f, Int chr, BoolObj family)
+{ unsigned int c = valInt(chr);
 
-  fail;
+  if ( family == OFF )
+    return s_has_char(f, c);
+  else
+    return s_has_char_family(f, c);
 }
 
 
@@ -456,6 +458,8 @@ getFontFamilies(Class class, BoolObj mono)
 static char *T_initialise[] =
         { "family=name", "style=name", "points=[int]",
 	  "weight=["WEIGHT_TYPE"]" };
+static char *T_member[] =
+        { "char=char", "family=[bool]" };
 
 /* Instance Variables */
 
@@ -489,8 +493,8 @@ static senddecl send_font[] =
      DEFAULT, "Create from fam, style, points, weigth"),
   SM(NAME_unlink, 0, NULL, unlinkFont,
      DEFAULT, "Destroy the font"),
-  SM(NAME_member, 1, "char", memberFont,
-     NAME_set, "Test if font defines character")
+  SM(NAME_member, 2, T_member, memberFont,
+     NAME_set, "Test if font (or family fallbacks) defines character")
 };
 
 /* Get Methods */

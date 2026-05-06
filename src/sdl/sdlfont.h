@@ -59,6 +59,7 @@ status ws_create_font(FontObj f);
 void   ws_destroy_font(FontObj f);
 bool   s_cwidth(uint32_t c, FontObj font, float *wp);
 bool   s_setcwidth(uint32_t c, FontObj font, float w);
+bool   s_has_char_family(FontObj f, unsigned int c);
 Sheet  ws_font_families(BoolObj mono);
 Any    ws_get_pango_property(FontObj f, Name property);
 

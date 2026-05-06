@@ -255,6 +255,35 @@ ws_destroy_font(FontObj f)
   }
 }
 
+/**
+ * Check if any font in the family/fallback chain for `f` covers
+ * character `c`.  Whereas s_has_char() consults only the primary
+ * PangoFont, this helper loads a PangoFontset for the font's
+ * description and lets Pango pick the best font for `c` — matching
+ * the fallback behaviour seen during shaping.
+ */
+bool
+s_has_char_family(FontObj f, unsigned int c)
+{ if ( c > 0x10ffff )
+    return false;
+  WsFont wsf = ws_get_font(f);
+  if ( !wsf || !wsf->desc )
+    return false;
+
+  PangoFontset *fs = pango_font_map_load_fontset(fontmap, context,
+						 wsf->desc,
+						 pango_language_get_default());
+  if ( !fs )
+    return false;
+
+  PangoFont *fb = pango_fontset_get_font(fs, c);
+  bool ok = fb && pango_font_has_char(fb, c);
+  if ( fb )
+    g_object_unref(fb);
+  g_object_unref(fs);
+  return ok;
+}
+
 		 /*******************************
 		 *            CACHE             *
 		 *******************************/
