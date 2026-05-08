@@ -1,0 +1,7 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- thread-exited: slate circle with door and exit arrow -->
+  <circle cx="12" cy="12" r="9.5" fill="#64748b"/>
+  <rect x="7" y="7" width="7" height="10" rx="1" fill="none" stroke="white" stroke-width="1.4"/>
+  <line x1="11" y1="12" x2="17" y2="12" stroke="white" stroke-width="1.6" stroke-linecap="round"/>
+  <polyline points="15,9.5 17.5,12 15,14.5" fill="none" stroke="white" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

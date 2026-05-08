@@ -119,6 +119,7 @@ set(XPCE_DATA_DIRS
     prolog/demo
 
     bitmaps bitmaps/16x16 bitmaps/32x32 bitmaps/64x64 bitmaps/tool
+    bitmaps/ide/threads
 
     appl-help
 
@@ -304,6 +305,10 @@ set(XPCE_DATA_bitmaps_tool
     copy.svg distribute.svg open.svg print.svg undo.svg cut.svg
     duplicate.svg paste.svg save.svg trashcan.svg ex_up.svg ex_down.svg
     nav-forward.svg nav-backward.svg)
+
+set(XPCE_DATA_bitmaps_ide_threads
+    thread-exception.svg thread-false.svg thread-running.svg
+    thread-exited.svg thread-profiling.svg thread-true.svg)
 
 set(XPCE_DATA_appl-help customise.hlp dialog.hlp emacs.hlp
     event_monitor.hlp help.hlp pcedraw.hlp pcefaq.hlp plprefs.hlp)

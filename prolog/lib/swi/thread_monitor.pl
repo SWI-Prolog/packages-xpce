@@ -60,12 +60,12 @@ This library defines  the  class   prolog_thread_monitor,  a  frame that
 displays the status of threads.
 */
 
-resource(running,   image, library('trace/icons/mini-run.png')).
-resource(true,      image, image('16x16/ok.png')).
-resource(false,     image, image('16x16/false.png')).
-resource(exception, image, image('16x16/error.png')).
-resource(exited,    image, image('16x16/done.png')).
-resource(profiling, image, image('16x16/profiler.png')).
+resource(thread_running,   image, image('ide/threads/thread-running.svg')).
+resource(thread_true,      image, image('ide/threads/thread-true.svg')).
+resource(thread_false,     image, image('ide/threads/thread-false.svg')).
+resource(thread_exception, image, image('ide/threads/thread-exception.svg')).
+resource(thread_exited,    image, image('ide/threads/thread-exited.svg')).
+resource(thread_profiling, image, image('ide/threads/thread-profiling.svg')).
 
 
 :- pce_begin_class(thread_statistics, object,
@@ -364,12 +364,12 @@ class_variable(size, size, size(10, 10)).
 
 initialise(TB) :->
     send_super(TB, initialise),
-    send(TB, style, running, style(icon := resource(running))),
-    send(TB, style, true, style(icon := resource(true))),
-    send(TB, style, false, style(icon := resource(false))),
-    send(TB, style, exception, style(icon := resource(exception))),
-    send(TB, style, exited, style(icon := resource(exited))),
-    send(TB, style, profiling, style(icon := resource(profiling))),
+    send(TB, style, running, style(icon := resource(thread_running))),
+    send(TB, style, true, style(icon := resource(thread_true))),
+    send(TB, style, false, style(icon := resource(thread_false))),
+    send(TB, style, exception, style(icon := resource(thread_exception))),
+    send(TB, style, exited, style(icon := resource(thread_exited))),
+    send(TB, style, profiling, style(icon := resource(thread_profiling))),
     send(TB, select_message, message(TB, details, @arg1)),
     send(TB, running_styles),
     send(TB?image, recogniser,
@@ -425,11 +425,12 @@ initialise(TB) :->
 running_styles(TB) :->
     "Define styles running_0..running_<H>"::
     get(TB, font, Font),
-    get(Font, ascent, Ascent),
+    get(Font, height, Ascent0),
     get(Font, descent, Descent),
-    H is floor(Ascent+Descent),
+    Ascent is Ascent0*0.8,
+    H is floor((Ascent+Descent)),
     send(TB, slot, cpu_height, H),
-    new(Running, image(resource(running))),
+    new(Running, image(resource(thread_running), H)),
     get(Running, size, size(W,IH)),
     (   between(0, H, N),
         new(Img, image(@nil, W, H, pixmap)),

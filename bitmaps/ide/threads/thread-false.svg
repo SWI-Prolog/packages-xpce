@@ -1,0 +1,6 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- thread-false: rose circle with white X -->
+  <circle cx="12" cy="12" r="9.5" fill="#f43f5e"/>
+  <line x1="8" y1="8" x2="16" y2="16" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="16" y1="8" x2="8" y2="16" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+</svg>

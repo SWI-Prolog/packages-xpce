@@ -1,0 +1,5 @@
+<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <!-- thread-exception: amber circle with white lightning bolt -->
+  <circle cx="12" cy="12" r="9.5" fill="#f59e0b"/>
+  <polygon points="13.5,4.5 8,13 12,13 10.5,19.5 16.5,11 12.5,11" fill="white"/>
+</svg>
