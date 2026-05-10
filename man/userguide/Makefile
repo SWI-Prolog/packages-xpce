@@ -1,4 +1,4 @@
-.SUFFIXES: .tex .dvi .doc .pl .eps .pdf
+.SUFFIXES: .tex .dvi .plx .pl .eps .pdf
 
 SWIPLTEX=../../../../man
 PCETEX=../../TeX
@@ -70,13 +70,13 @@ dragdropdemo.tex:	examples/dragdrop.pl
 	$(PLTOTEX) examples/dragdrop.pl > $@
 wysiwyg.tex:		examples/wysiwyg.pl
 	$(PLTOTEX) examples/wysiwyg.pl > $@
-summary.tex:		figs/class summary.doc classes.pl
-	swipl -f none --no-packs  classes.pl summary.doc summary.tmp
+summary.tex:		figs/class summary.plx classes.pl
+	swipl -f none --no-packs  classes.pl summary.plx summary.tmp
 	$(DOCTOTEX) summary.tmp > summary.tex
 	rm -f summary.tmp
 
-.doc.tex:
-	$(DOCTOTEX) $*.doc > $*.tex
+.plx.tex:
+	$(DOCTOTEX) $*.plx > $*.tex
 
 .pl.tex:
 	$(PLTOTEX) $*.pl > $*.tex
