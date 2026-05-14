@@ -677,6 +677,54 @@ swritefv(int (*out)(void*, uchar_t), void *closure,
 
 	  switch(c)
 	  { case 'c':
+	    { int a;
+	      Int i;
+	      int width = 0;
+	      int left = 0;
+	      const char *p;
+
+	      if ( argc <= 0 )
+		a = 0;
+	      else
+	      { if ( (i = checkType(argv[0], TypeInt, NIL)) )
+		  a = valInt(i);
+		else
+		{ PutString(pp(argv[0]));
+		  argc--, argv++;
+
+		  continue;
+		}
+		argc--, argv++;
+	      }
+
+	      /* Parse alignment/width from the already-collected fmtbuf
+		 (excludes the leading '%').  %c is the only conversion
+		 that takes a Unicode code point rather than bytes, so
+		 we drive Put() directly instead of going through
+		 snprintf, which would truncate to a single byte.
+	      */
+	      *r = EOS;
+	      for (p = fmtbuf+1; *p; p++)
+	      { if ( *p == '-' )
+		  left = 1;
+		else if ( *p >= '0' && *p <= '9' )
+		  width = width*10 + (*p - '0');
+	      }
+	      if ( arg != NOT_SET )
+		width = arg;
+
+	      if ( !left )
+	      { while ( width-- > 1 )
+		  Put(' ');
+	      }
+	      Put(a);
+	      if ( left )
+	      { while ( width-- > 1 )
+		  Put(' ');
+	      }
+
+	      continue;
+	    }
 	    case 'd':
 	    case 'i':
 	    case 'o':
