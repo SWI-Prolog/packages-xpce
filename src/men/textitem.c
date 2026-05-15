@@ -912,7 +912,7 @@ static Int
 getPointedTextItem(TextItem ti, Point pos)
 { return get_pointed_text(ti->value_text,
 			  valInt(pos->x)-valInt(ti->value_text->area->x),
-			  valInt(pos->y));
+			  valInt(pos->y), TRUE);
 }
 
 
