@@ -38,8 +38,8 @@
            , send_list/3
            ]).
 
-resource(builtin_class, image, image('16x16/builtin_class.png')).
-resource(user_class,    image, image('16x16/user_class.png')).
+resource(builtin_class, image, image('builtin_class.svg')).
+resource(user_class,    image, image('user_class.svg')).
 
 :- pce_autoload(toc_window, library(pce_toc)).
 
