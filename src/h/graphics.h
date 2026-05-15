@@ -794,6 +794,8 @@ NewClass(display_manager)
   ABSTRACT_VISUAL
   Chain		members;		/* Available displays */
   BoolObj	test_queue;		/* Test queue during redraw */
+  Code		focus_message;		/* Sent with the frame that gained
+					   keyboard focus */
 End;
 
 
