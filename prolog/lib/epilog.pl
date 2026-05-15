@@ -63,6 +63,7 @@
 :- use_module(library(error), [existence_error/2]).
 :- use_module(library(prolog_code), [pi_head/2]).
 :- use_module(library(thread), [call_in_thread/2, call_in_thread/3]).
+:- use_module(library(pce_symbol_picker), [symbol_picker/0]).
 
 :- meta_predicate
     epilog(:),
@@ -303,6 +304,8 @@ variable(current_link,	name*,                get,  "Link under popup").
 %   key_binding object.
 
 binding('\\C-y',     paste_quoted).
+binding('\\C-x8\\r', insert_symbol).
+binding('\\C-x8s',   insert_symbol).
 binding('\\C-\\S-o', split_horizontally). % Terminator compatibility
 binding('\\C-\\S-e', split_vertically).
 binding('\\C-\\S-i', new_window).
@@ -363,6 +366,8 @@ initialise(PT) :->
                           message(Terminal, paste)),
                 menu_item(paste_quoted,
                           message(Terminal, paste_quoted)),
+                menu_item(insert_symbol,
+                          message(Terminal, insert_symbol)),
                 menu_item(select_all,
                           message(Terminal, select_all),
                           end_group := @on),
@@ -655,6 +660,10 @@ parent_history(PT, Events) :-
     get(PT, slot, history, on),
     Events = load.
 parent_history(_PT, []).
+
+insert_symbol(_PT) :->
+    "Open the Unicode symbol picker"::
+    symbol_picker.
 
 paste_quoted(PT) :->
     "Paste as quoted material"::
