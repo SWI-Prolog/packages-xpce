@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <h/unix.h>
 #include <stdbool.h>
 
 static status	uncreateWindow(PceWindow sw);
@@ -1228,6 +1229,34 @@ redrawAreaWindow(PceWindow sw, Area a)
 }
 
 
+/* Graphical->pdf saves <-area (the visible part).  A window's content
+   may extend beyond the visible area, so override to use the full
+   <-bounding_box and offset the page so the bounding box maps onto it.
+*/
+
+static status
+pdfWindow(PceWindow sw, FileObj dest, Int scale)
+{ if ( isDefault(scale) )
+    scale = toNum(1.0);
+
+  ComputeGraphical((Graphical) sw);
+  Area bb = sw->bounding_box;
+
+  Name fn = getOsNameFile(dest);
+  if ( fn && d_pdf(nameToFN(fn),
+		   valInt(bb->w), valInt(bb->h),
+		   valNum(scale)) )
+  { d_offset(-valInt(bb->x), -valInt(bb->y));
+    send(sw, NAME_RedrawArea, bb, EAV);
+    d_done();
+
+    succeed;
+  }
+
+  fail;
+}
+
+
 
 		/********************************
 		*           SCROLLING		*
@@ -2127,6 +2156,8 @@ static char *T_geometry[] =
         { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 static char *T_flash[] =
 	{ "area=[area]", "time=[int]" };
+static char *T_pdf[] =
+	{ "file=file", "scale=[num]" };
 static char *T_normalise[] =
 	{ "on=area|graphical|chain", "mode=[{xy,x,y}]" };
 
@@ -2266,6 +2297,8 @@ static senddecl send_window[] =
      NAME_pointer, "Move the pointer relative to window"),
   SM(NAME_redraw, 1, "[area]", redrawWindow,
      NAME_repaint, "Redraw (area of) the window"),
+  SM(NAME_pdf, 2, T_pdf, pdfWindow,
+     NAME_print, "Save PDF of the full window contents to file"),
   SM(NAME_flash, 2, T_flash, flashWindow,
      NAME_report, "Flash (part of) the window"),
   SM(NAME_bubbleScrollBar, 1, "scroll_bar", bubbleScrollBarWindow,
