@@ -3199,7 +3199,7 @@ pdfGraphical(Graphical gr, FileObj dest, Int scale)
   if ( fn && d_pdf(nameToFN(fn),
 		   valInt(gr->area->w), valInt(gr->area->h),
 		   valNum(scale)) )
-  { d_offset(valInt(gr->area->x), valInt(gr->area->y));
+  { d_offset(-valInt(gr->area->x), -valInt(gr->area->y));
     send(gr, NAME_RedrawArea, gr->area, EAV);
     d_done();
 
