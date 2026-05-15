@@ -2017,6 +2017,54 @@ str_advance_W(charW *s, int l, FontObj font)
   return str_advance(&str, 0, l, font);
 }
 
+/** Map an x pixel offset to a character index within s[from..to).
+ *
+ * Uses the same Pango layout that renders the text, so font-fallback
+ * substitution and GPOS kerning are accounted for.  Summing c_width()
+ * per character (as a hand-written hit-test would) drifts from the
+ * real glyph positions for proportional fonts with fallback glyphs.
+ * The returned value is an absolute index into `s` in the range
+ * [from, to].
+ */
+int
+str_x_to_index(PceString s, int from, int to, FontObj font, int x)
+{ string s2 = *s;
+  if ( from > s2.s_size )
+    from = s2.s_size;
+  if ( to > s2.s_size )
+    to = s2.s_size;
+  if ( to <= from )
+    return from;
+
+  if ( s2.s_iswide )
+    s2.s_textW += from;
+  else
+    s2.s_textA += from;
+  s2.s_size = to-from;
+
+  size_t ulen;
+  const char *u = stringToUTF8(&s2, &ulen);
+
+  cairo_t *cr = ws_font_context();
+  cairo_save(cr);
+  PangoLayout *layout = pce_cairo_set_font(cr, font);
+  pango_layout_set_text(layout, u, ulen);
+
+  if ( x < 0 )
+    x = 0;
+  int byte_index = 0, trailing = 0;
+  pango_layout_xy_to_index(layout, x*PANGO_SCALE, 0,
+                           &byte_index, &trailing);
+  cairo_restore(cr);
+
+  const char *p = u + byte_index;
+  while ( trailing-- > 0 && p < u+ulen )
+    p = g_utf8_next_char(p);
+
+  long off = g_utf8_pointer_to_offset(u, p);
+  return from + (int)off;
+}
+
 /**
  * Retrieve the width of a specific character in a font.
  *

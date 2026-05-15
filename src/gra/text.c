@@ -646,7 +646,7 @@ get_pointed_text(TextObj t, int x, int y)
 { PceString s = &t->string->data;
   int ch = valInt(getHeightFont(t->font));
   int b = valInt(t->border);
-  int cw, w;
+  int w;
   int caret = 0, el;
   int line = (y-b) / ch;			/* line for caret */
   string buf;
@@ -689,16 +689,11 @@ get_pointed_text(TextObj t, int x, int y)
   }
   w += valInt(t->x_offset);
 
-  if ( caret < el-1 )
-  { for( cw = c_width(str_fetch(s, caret), t->font);
-	 x > w + cw/2;
-	 caret++, w += cw, cw = c_width(str_fetch(s, caret), t->font) )
-    { if ( caret >= el )
-	break;
-    }
-  }
-
-  answer(toInt(caret));
+  /* Map the click to a character index using the same Pango layout
+     that renders the text, so proportional fonts and fallback glyphs
+     are hit-tested correctly.
+  */
+  answer(toInt(str_x_to_index(s, caret, el, t->font, x - w)));
 }
 
 

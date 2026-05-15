@@ -119,6 +119,7 @@ double str_width(PceString s, int from, int to, FontObj f);
 double str_advance(PceString s, int from, int to, FontObj f);
 double str_advance_utf8(const char *u, int ulen, FontObj font);
 double str_advance_W(charW *s, int l, FontObj font);
+int    str_x_to_index(PceString s, int from, int to, FontObj f, int x);
 void s_print_utf8(const char *u, size_t len, int x, int y, FontObj font);
 void s_printA(charA *s, int l, int x, int y, FontObj f);
 void s_printW(charW *s, int l, int x, int y, FontObj f);
