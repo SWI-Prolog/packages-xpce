@@ -142,8 +142,8 @@ RedrawAreaTextItem(TextItem ti, Area a)
   if ( vt->string->data.hdr.f.size == 0 &&
        notNil(ti->placeholder) )
   { Colour c = getClassVariableValueObject(ti, NAME_placeholderColour);
-    Cprintf("Placeholder colour = %s\n", pp(c));
-    if ( !c ) c = GREY50_COLOUR;
+    if ( !c || !instanceOfObject(c, ClassColour) )
+      c = GREY50_COLOUR;
     Any old = r_colour(c);
     int b = valInt(vt->border);
     str_string(&ti->placeholder->data, vt->font,
