@@ -1174,6 +1174,7 @@ inputFocusFrame(FrameObj fr, BoolObj val)
     if ( val == ON )
     { if ( (iw = getKeyboardFocusFrame(fr)) )
 	inputWindowFrame(fr, iw);
+      forwardFocusDisplayManager(fr);
     } else
     { Cell cell;
       for_cell(cell, fr->members)

@@ -39,8 +39,28 @@
 static status
 initialiseDisplayManager(DisplayManager dm)
 { assign(dm, members, newObject(ClassChain, EAV));
+  assign(dm, focus_message, NIL);
 
   protectObject(dm);
+
+  succeed;
+}
+
+
+/* Called from inputFocusFrame() when a frame gains keyboard focus.
+   Forwards the frame to <-focus_message so tools (e.g. the symbol
+   picker) can track the active window without polling.
+*/
+
+status
+forwardFocusDisplayManager(Any focus)
+{ DisplayManager dm = TheDisplayManager();
+
+  if ( dm && notNil(dm->focus_message) )
+  { Any av = focus;
+
+    forwardCodev(dm->focus_message, 1, &av);
+  }
 
   succeed;
 }
@@ -247,7 +267,9 @@ static vardecl var_displayManager[] =
 { IV(NAME_members, "chain", IV_GET,
      NAME_display, "Available displays"),
   IV(NAME_testQueue, "bool", IV_BOTH,
-     NAME_event, "Test queue in event-loop")
+     NAME_event, "Test queue in event-loop"),
+  IV(NAME_focusMessage, "code*", IV_BOTH,
+     NAME_event, "Sent with the frame that gained keyboard focus")
 };
 
 /* Send Methods */
