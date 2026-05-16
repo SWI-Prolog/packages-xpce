@@ -325,22 +325,22 @@ builtin_code_range('Quotes',      Ranges, '""«»⸉⸊') :-
 		 *            RANGES            *
 		 *******************************/
 
-%!  range_def(?Name, -Members, -Sample) is nondet.
+%!  range_def(?Class, ?Name, -Members, -Sample) is nondet.
 %
 %   Raw definition of a named range: the user defined code_range/3
 %   clauses followed by the Unicode blocks from library(unicode/blocks)
 %   (as a single From-To member, surrogates suppressed).  A user
 %   definition hides the block with the same name.
 
-range_def(Name, Members, Sample) :-
-    distinct(Name, range_def_(Name, Members, Sample)).
+range_def(Class, Name, Members, Sample) :-
+    distinct(Name, range_def_(Class, Name, Members, Sample)).
 
 
-range_def_(Name, Members, Sample) :-
+range_def_(user, Name, Members, Sample) :-
     code_range(Name, Members, Sample).
-range_def_(Name, Members, Sample) :-
+range_def_(prolog, Name, Members, Sample) :-
     builtin_code_range(Name, Members, Sample).
-range_def_(Name, [From-To], _) :-
+range_def_(unicode, Name, [From-To], _) :-
     unicode_block(Name, From, To),
     \+ surrogate_block(From).
 
@@ -354,7 +354,7 @@ surrogate_block(From) :-
 %   emit(Code) or pair(Open,Close).
 
 range_cells(Name, Cells) :-
-    range_def(Name, Members, _),
+    range_def(_Class, Name, Members, _),
     members_cells(Members, Cells, []).
 
 members_cells([], T, T).
@@ -383,7 +383,7 @@ emit_range(From, To, [emit(From)|Cs], T) :-
 %   (bounded, so huge blocks stay cheap).
 
 range_sample(Name, Font, Codes) :-
-    range_def(Name, Members, Sample),
+    range_def(_Class, Name, Members, Sample),
     (   is_list(Sample)
     ->  include(ok_sample(Font), Sample, Codes)
     ;   members_sample(Members, Font, 4, Codes)
@@ -439,10 +439,10 @@ take_at_most(N, [X|Xs], [X|Ys]) :-
 
 initial_range_name(Name) :-
     last_range(Name),
-    range_def(Name, _, _),
+    range_def(_Class, Name, _, _),
     !.
 initial_range_name(Name) :-
-    once(range_def(Name, _, _)).
+    once(range_def(_Class, Name, _, _)).
 
 %!  focus_widget_font(+Graphical, -Font) is semidet.
 %
@@ -462,6 +462,9 @@ focus_widget_font(Gr, Font) :-
 		 /*******************************
 		 *            FRAME             *
 		 *******************************/
+
+resource(logo_unicode, image, image('logo/New_Unicode_logo.svg')).
+resource(ublock_user,  image, image('tool/user.svg')).
 
 :- pce_begin_class(symbol_picker, frame,
                    "Pick a Unicode symbol from a code range").
@@ -511,9 +514,17 @@ initialise(SP) :->
     send(B, name, ranges),
     send(B, select_message, RangeMsg),
     send(B, open_message,   RangeMsg),
-    get(SP, symbol_font, Font),
-    get(Font, width, 'WWWWW', Tab),
+    get(B, font, Font),
+    get(Font, width, 'WWWWWWW', Tab),
+    get(Font, height, H),
+    IH is round(H*0.8),
+    get(@pce_image, scale, size(IH,IH), PrologIcon),
+    new(UnicodeIcon, image(resource(logo_unicode), IH, IH)),
+    new(UserIcon, image(resource(ublock_user), IH, IH)),
     send(B, tab_stops, vector(Tab)),
+    send(B, style, user,    style(bold := @on, icon := UserIcon)),
+    send(B, style, prolog,  style(colour := navyblue, icon := PrologIcon)),
+    send(B, style, unicode, style(icon := UnicodeIcon)),
 
     format(string(Row), '~20c', [0'W]),
     get(Font, width, Row, GridW),
@@ -629,18 +640,18 @@ fill_ranges(SP, Filter:name) :->
     ),
     send(LB, clear),
     get(SP, symbol_font, Font),
-    forall(( matching_range(Filter, Name),
+    forall(( matching_range(Filter, Class, Name),
              range_label(Name, Font, Label)
            ),
-           send(LB, append, dict_item(Name, Label))),
+           send(LB, append, dict_item(Name, Label, style := Class))),
     (   OldName \== @nil,
         get(LB?dict, member, OldName, _)
     ->  send(LB, selection, OldName)
     ;   true
     ).
 
-matching_range(Filter, Name) :-
-    range_def(Name, _, _),
+matching_range(Filter, Class, Name) :-
+    range_def(Class, Name, _Members, _Sample),
     matches(Filter, Name).
 
 %!  range_label(+Name, +Font, -Label) is det.
