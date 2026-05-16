@@ -119,7 +119,7 @@ set(XPCE_DATA_DIRS
     prolog/demo
 
     bitmaps bitmaps/16x16 bitmaps/32x32 bitmaps/64x64 bitmaps/tool
-    bitmaps/ide/threads
+    bitmaps/ide/threads bitmaps/logo
 
     appl-help
 
@@ -305,7 +305,10 @@ set(XPCE_DATA_bitmaps_tool
     pencil.svg edit.svg refresh.svg up.svg help.svg handpoint.svg
     copy.svg distribute.svg open.svg print.svg undo.svg cut.svg
     duplicate.svg paste.svg save.svg trashcan.svg ex_up.svg ex_down.svg
-    nav-forward.svg nav-backward.svg clear-text.svg)
+    nav-forward.svg nav-backward.svg user.svg clear-text.svg)
+
+set(XPCE_DATA_bitmaps_logo
+    New_Unicode_logo.svg)
 
 set(XPCE_DATA_bitmaps_ide_threads
     thread-exception.svg thread-false.svg thread-running.svg
