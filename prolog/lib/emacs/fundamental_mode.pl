@@ -105,7 +105,7 @@
           replace                  = button(edit),
           -                        = button(edit),
           insert_symbol            = button(edit) +
-                                     key('\\C-x8\\r') + key('\\C-x8s'),
+                                     key('\\C-x8RET') + key('\\C-x8s'),
           -                        = button(edit),
           editor_preferences       = button(edit),
           prolog_preferences       = button(edit),
