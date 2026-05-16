@@ -41,7 +41,8 @@
 :- use_module(library(pce_report)).
 :- autoload(library(unicode/blocks), [unicode_block/3]).
 :- autoload(library(apply), [include/3]).
-:- autoload(library(lists), [append/3, member/2, delete/3, reverse/2, nth0/3]).
+:- autoload(library(lists),
+            [append/3, member/2, delete/3, reverse/2, nth0/3, flatten/2]).
 :- autoload(library(pce_util), [chain_list/2]).
 :- autoload(library(readutil), [read_file_to_terms/3]).
 :- autoload(library(solution_sequences), [distinct/2]).
@@ -335,12 +336,15 @@ builtin_code_range('Quotes',      Ranges, '""«»⸉⸊') :-
 range_def(Class, Name, Members, Sample) :-
     distinct(Name, range_def_(Class, Name, Members, Sample)).
 
+range_def_(Class, Name, Members, Sample) :-
+    range_def__(Class, Name, Members0, Sample),
+    flatten(Members0, Members).
 
-range_def_(user, Name, Members, Sample) :-
+range_def__(user, Name, Members, Sample) :-
     code_range(Name, Members, Sample).
-range_def_(prolog, Name, Members, Sample) :-
+range_def__(prolog, Name, Members, Sample) :-
     builtin_code_range(Name, Members, Sample).
-range_def_(unicode, Name, [From-To], _) :-
+range_def__(unicode, Name, [From-To], _) :-
     unicode_block(Name, From, To),
     \+ surrogate_block(From).
 
@@ -522,7 +526,7 @@ initialise(SP) :->
     new(UnicodeIcon, image(resource(logo_unicode), IH, IH)),
     new(UserIcon, image(resource(ublock_user), IH, IH)),
     send(B, tab_stops, vector(Tab)),
-    send(B, style, user,    style(bold := @on, icon := UserIcon)),
+    send(B, style, user,    style(colour := darkgreen, icon := UserIcon)),
     send(B, style, prolog,  style(colour := navyblue, icon := PrologIcon)),
     send(B, style, unicode, style(icon := UnicodeIcon)),
 
@@ -662,7 +666,7 @@ matching_range(Filter, Class, Name) :-
 range_label(Name, Font, Label) :-
     range_sample(Name, Font, Codes),
     Codes \== [],
-    format(string(Label), '~s\t~w', [Codes, Name]).
+    format(string(Label), ' ~s\t~w', [Codes, Name]).
 
 matches('', _) :- !.
 matches(Filter, Name) :-
@@ -769,17 +773,14 @@ list_drop(N, [_|T], R) :-
 %   same pair action).
 
 row_visual(Cells, S, Actions) :-
-    new(S, string),
-    row_visual_(Cells, S, Actions).
+    row_visual_(Cells, Codes, Actions),
+    string_codes(S, Codes).
 
-row_visual_([], _, []).
-row_visual_([emit(C)|T], S, [emit(C)|A]) :-
-    send(S, append, string('%c', C)),
-    row_visual_(T, S, A).
-row_visual_([pair(O,C)|T], S, [pair(O,C),pair(O,C)|A]) :-
-    send(S, append, string('%c', O)),
-    send(S, append, string('%c', C)),
-    row_visual_(T, S, A).
+row_visual_([], [], []).
+row_visual_([emit(C)|T], [C|CT], [emit(C)|A]) :-
+    row_visual_(T, CT, A).
+row_visual_([pair(O,C)|T], [O,C|CT], [pair(O,C),pair(O,C)|A]) :-
+    row_visual_(T, CT, A).
 row_visual_([_|T], S, A) :-             % skip anything unexpected
     row_visual_(T, S, A).
 
