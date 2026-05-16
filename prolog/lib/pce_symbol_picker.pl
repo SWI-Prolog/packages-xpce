@@ -34,6 +34,7 @@
 
 :- module(pce_symbol_picker,
           [ symbol_picker/0,
+            symbol_picker/1,            % +Client
             pick_symbol/1,              % -Code
             code_range/3                % ?Name, ?From, ?To
           ]).
@@ -53,11 +54,13 @@ the selected range.
 
 Two entry points are provided:
 
-  * symbol_picker/0 opens a non-modal singleton window. Clicking
-    a symbol types it into the application window that has the
-    keyboard focus (falling back to the clipboard if there is no
-    such window) and remembers it in the recents list (which is
-    persisted across sessions).
+  * symbol_picker/0 and symbol_picker/1 open or expose the non-modal
+    singleton window (@symbol_picker).  Clicking a symbol types it
+    into the application window that has the keyboard focus (falling
+    back to the clipboard if there is no such window) and remembers
+    it in the recents list (which is persisted across sessions).
+    symbol_picker/1 takes a _Client_ object (e.g. an editor) that
+    should initially receive the typed symbols.
 
   * pick_symbol/1 opens a modal window. It succeeds with the code
     of the picked symbol or fails when the user closes the window
@@ -85,18 +88,21 @@ library(unicode/blocks).
 
 :- multifile code_range/3.
 
+:- pce_global(@symbol_picker, new(symbol_picker)).
+
 %!  symbol_picker is det.
+%!  symbol_picker(+Client) is det.
 %
-%   Open a non-modal singleton symbol picker. Picking a symbol types
-%   it into the focused application window and adds it to the recents
-%   list.
+%   Open or expose the non-modal singleton symbol picker. Picking a
+%   symbol types it into the window that has keyboard focus and adds
+%   it to the recents list. _Client_, when given, is the object (e.g.
+%   an editor) that should initially receive the typed symbols.
 
 symbol_picker :-
-    load_recents,
-    (   object(@symbol_picker)
-    ->  send(@symbol_picker, expose)
-    ;   send(new(@symbol_picker, symbol_picker), open)
-    ).
+    send(@symbol_picker, show).
+
+symbol_picker(Client) :-
+    send(@symbol_picker, show, Client).
 
 %!  pick_symbol(-Code) is semidet.
 %
@@ -104,13 +110,10 @@ symbol_picker :-
 %   symbol or fails if the user closes the picker.
 
 pick_symbol(Code) :-
-    load_recents,
     new(SP, symbol_picker),
-    send(SP, slot, pick_mode, return),
-    (   get(SP, confirm_centered, Reply),
-        Reply \== @nil
-    ->  Code = Reply,
-        send(SP, destroy)
+    (   get(SP, pick, Code0)
+    ->  send(SP, destroy),
+        Code = Code0
     ;   send(SP, destroy),
         fail
     ).
@@ -346,6 +349,7 @@ variable(range_to,   int*, get,
 class_variable(symbol_font, font, font(sans, normal, 16)).
 
 initialise(SP) :->
+    load_recents,
     send_super(SP, initialise, 'Symbol picker'),
     send(SP, done_message, message(SP, destroy)),
 
@@ -405,6 +409,39 @@ unlink(SP) :->
     get(SP, saved_focus_message, Old),
     send(@display_manager, focus_message, Old),
     send_super(SP, unlink).
+
+show(SP, Client:[object]*) :->
+    "Open or expose the picker; Client initially receives symbols"::
+    (   (   Client == @default
+        ;   Client == @nil
+        )
+    ->  true
+    ;   send(SP, client, Client)
+    ),
+    (   get(SP, status, unmapped)
+    ->  send(SP, open)
+    ;   send(SP, expose)
+    ).
+
+client(SP, Client:object) :->
+    "Set the frame that receives typed symbols"::
+    (   send(Client, instance_of, frame)
+    ->  Fr = Client
+    ;   send(Client, has_get_method, frame)
+    ->  get(Client, frame, Fr)
+    ;   Fr = @nil
+    ),
+    (   Fr == @nil
+    ->  true
+    ;   send(SP, slot, target_frame, Fr)
+    ).
+
+pick(SP, Code:int) :<-
+    "Modally pick a symbol; fails when cancelled"::
+    send(SP, slot, pick_mode, return),
+    get(SP, confirm_centered, Reply),
+    Reply \== @nil,
+    Code = Reply.
 
 on_focus(SP, Fr:frame) :->
     "Track the application frame that just gained keyboard focus"::
