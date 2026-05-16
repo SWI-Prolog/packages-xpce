@@ -39,10 +39,12 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_report)).
-:- use_module(library(unicode/blocks)).
-:- use_module(library(lists)).
-:- use_module(library(pce_util)).
-:- use_module(library(solution_sequences)).
+:- autoload(library(unicode/blocks), [unicode_block/3]).
+:- autoload(library(apply), [include/3]).
+:- autoload(library(lists), [append/3, member/2, delete/3, reverse/2, nth0/3]).
+:- autoload(library(pce_util), [chain_list/2]).
+:- autoload(library(readutil), [read_file_to_terms/3]).
+:- autoload(library(solution_sequences), [distinct/2]).
 
 :- multifile code_range/3.              % Name, Ranges, Sample
 
@@ -207,7 +209,7 @@ do_load_recents :-
     recents_file(File),
     exists_file(File),
     !,
-    read_recents_terms(File, Terms),
+    read_file_to_terms(File, Terms, [encoding(utf8)]),
     apply_terms(Terms, state([], _), state(Recents0, LR)),
     max_recents(Max),
     truncate_list(Recents0, Max, Recents),
@@ -219,20 +221,6 @@ do_load_recents :-
     ),
     maybe_compact(File, Terms, Recents, LR).
 do_load_recents.
-
-read_recents_terms(File, Terms) :-
-    setup_call_cleanup(
-        open(File, read, In, [encoding(utf8)]),
-        read_all_terms(In, Terms),
-        close(In)).
-
-read_all_terms(In, Terms) :-
-    read_term(In, T, []),
-    (   T == end_of_file
-    ->  Terms = []
-    ;   Terms = [T|Rest],
-        read_all_terms(In, Rest)
-    ).
 
 apply_terms([], S, S).
 apply_terms([recent(C0)|Ts], state(R0, LR0), Final) :-
@@ -327,8 +315,10 @@ rewrite_recents_file(File, Recents, LastRange) :-
                 *        DEFAULT RANGES        *
                 *******************************/
 
-builtin_code_range('Parenthesis', Ranges, _) :-
+builtin_code_range('Parenthesis', Ranges, `()⌈⌉⟪⟫`) :-
     findall(Open/Close, code_type(Open, paren(Close)), Ranges).
+builtin_code_range('Quotes',      Ranges, '""«»⸉⸊') :-
+    findall(Open/Close, code_type(Open, quote(Close)), Ranges).
 
 
 		 /*******************************
@@ -394,15 +384,10 @@ emit_range(From, To, [emit(From)|Cs], T) :-
 
 range_sample(Name, Font, Codes) :-
     range_def(Name, Members, Sample),
-    (   explicit_sample(Sample, Codes0)
-    ->  take_at_most(4, Codes0, Codes)
+    (   is_list(Sample)
+    ->  include(ok_sample(Font), Sample, Codes)
     ;   members_sample(Members, Font, 4, Codes)
     ).
-
-explicit_sample(S, _)  :- var(S), !, fail.
-explicit_sample(S, S)  :- is_list(S), !.
-explicit_sample(S, Cs) :- atom(S), !, atom_codes(S, Cs).
-explicit_sample(S, Cs) :- string(S), !, string_codes(S, Cs).
 
 members_sample(_, _, 0, []) :- !.
 members_sample([], _, _, []) :- !.
@@ -418,15 +403,18 @@ members_sample([M|Ms], Font, N, Codes) :-
 
 item_sample(Code, Font, _, Got) :-
     integer(Code), !,
-    (   ok_sample(Code, Font) -> Got = [Code] ; Got = [] ).
+    (   ok_sample(Font, Code)
+    ->  Got = [Code]
+    ;   Got = []
+    ).
 item_sample(Open/Close, Font, _, Got) :-
     integer(Open), !,
-    findall(C, (member(C, [Open,Close]), ok_sample(C, Font)), Got).
+    include(ok_sample(Font), [Open,Close], Got).
 item_sample(From-To, Font, N, Got) :-
     integer(From), !,
     scan_sample(From, To, Font, N, 256, Got).
 
-ok_sample(C, Font) :-
+ok_sample(Font, C) :-
     printable_char(C),
     send(Font, member, C).
 
@@ -434,11 +422,13 @@ scan_sample(From, To, _, _, _, []) :- From > To, !.
 scan_sample(_, _, _, 0, _, []) :- !.
 scan_sample(_, _, _, _, 0, []) :- !.
 scan_sample(From, To, Font, N, B, Out) :-
-    (   ok_sample(From, Font)
-    ->  Out = [From|O], N1 is N-1
+    (   ok_sample(Font, From)
+    ->  Out = [From|O],
+        N1 is N-1
     ;   Out = O, N1 = N
     ),
-    F1 is From+1, B1 is B-1,
+    F1 is From+1,
+    B1 is B-1,
     scan_sample(F1, To, Font, N1, B1, O).
 
 take_at_most(0, _, []) :- !.
@@ -460,10 +450,10 @@ initial_range_name(Name) :-
 %   (text_item).  Fails if the widget has no usable font.
 
 focus_widget_font(Gr, Font) :-
-    (   send(Gr, has_get_method, font)
-    ->  get(Gr, font, F)
-    ;   send(Gr, has_get_method, value_font)
+    (   send(Gr, has_get_method, value_font)
     ->  get(Gr, value_font, F)
+    ;   send(Gr, has_get_method, font)
+    ->  get(Gr, font, F)
     ),
     F \== @nil,
     Font = F.
@@ -869,7 +859,7 @@ pick_pair(SP, Open:int, Close:int) :->
     ;   Mode == type,
         send(SP, type_symbol, Open),
         send(SP, type_symbol, Close),
-        send(SP, type_ctrl, 0'b)        % ^B: leave caret between
+        send(SP, type_ctrl, 'B')        % ^B: leave caret between
     ->  add_recent(pair(Open,Close)),
         send(SP, update_recents),
         send(SP, report, status, 'Typed %c%c', Open, Close)
@@ -910,14 +900,19 @@ type_symbol(SP, Code:int) :->
     new(Ev, event(Code, Fr)),
     send(Fr, post_event, Ev).
 
-type_ctrl(SP, Code:int) :->
+type_ctrl(SP, Char:name) :->
     "Post a control-modified key (e.g. ^B) to the target frame"::
     get(SP, target_frame, Fr),
     Fr \== @nil,
     object(Fr),
     Fr \== SP,
-    new(Ev, event(Code, Fr, @default, @default, 1)), % 1 = BUTTON_control
+    ctrl(Char, Ctrl),
+    new(Ev, event(Ctrl, Fr, button_mask := 1)), % 1 = BUTTON_control
     send(Fr, post_event, Ev).
+
+ctrl(Char, Ctrl) :-
+    char_code(Char, Code),
+    Ctrl is Code - 0'@.
 
 :- pce_end_class(symbol_picker).
 
