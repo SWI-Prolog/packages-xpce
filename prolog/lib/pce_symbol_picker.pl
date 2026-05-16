@@ -36,7 +36,7 @@
           [ symbol_picker/0,
             symbol_picker/1,            % +Client
             pick_symbol/1,              % -Code
-            code_range/3                % ?Name, ?From, ?To
+            code_range/3                % ?Name, ?Members, ?Sample
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_report)).
@@ -74,17 +74,33 @@ same name:
   ==
   :- multifile pce_symbol_picker:code_range/3.
 
-  pce_symbol_picker:code_range('My math', 0x2200, 0x22FF).
+  pce_symbol_picker:code_range('My math', [0x2200-0x22FF], _).
+  pce_symbol_picker:code_range('Brackets',
+                               [ 0x28/0x29,            % ( )
+                                 0x5B/0x5D,            % [ ]
+                                 0x2018/0x2019         % ‘ ’
+                               ], _).
   ==
 
 The default set of ranges is the Unicode blocks from
 library(unicode/blocks).
 */
 
-%!  code_range(?Name, ?From, ?To) is nondet.
+%!  code_range(?Name, ?Members, ?Sample) is nondet.
 %
-%   Multifile hook to define named code  ranges shown in the picker's
-%   list browser. _From_ and _To_ are inclusive code points.
+%   Multifile hook defining a named set of symbols shown in the
+%   picker.  _Members_ is a list whose elements are:
+%
+%     * an integer character code
+%     * From-To, an inclusive range of code points
+%     * Open/Close, a matching pair (e.g. brackets/quotes).  The two
+%       characters are shown adjacently; picking emits _Open_,
+%       _Close_ and a backward-character (^B), leaving the caret
+%       between them.
+%
+%   _Sample_ is the list of code points (or text) shown next to the
+%   name in the browser.  Leave it unbound to derive a sample
+%   automatically.
 
 :- multifile code_range/3.
 
@@ -285,16 +301,16 @@ rewrite_recents_file(File, Recents, LastRange) :-
 		 *            RANGES            *
 		 *******************************/
 
-%!  effective_range(?Name, ?From, ?To) is nondet.
+%!  range_def(?Name, -Members, -Sample) is nondet.
 %
-%   All code ranges shown in the list browser: first the user defined
-%   ranges (code_range/3) followed by the Unicode blocks from
-%   library(unicode/blocks), with surrogate blocks suppressed. Names
-%   already defined by the user are not added again from the defaults.
+%   Raw definition of a named range: the user defined code_range/3
+%   clauses followed by the Unicode blocks from library(unicode/blocks)
+%   (as a single From-To member, surrogates suppressed).  A user
+%   definition hides the block with the same name.
 
-effective_range(Name, From, To) :-
-    code_range(Name, From, To).
-effective_range(Name, From, To) :-
+range_def(Name, Members, Sample) :-
+    code_range(Name, Members, Sample).
+range_def(Name, [From-To], _) :-
     unicode_block(Name, From, To),
     \+ surrogate_block(From),
     \+ code_range(Name, _, _).
@@ -303,12 +319,101 @@ surrogate_block(From) :-
     From >= 0xD800,
     From =< 0xDFFF.
 
+%!  range_cells(+Name, -Cells) is semidet.
+%
+%   Expand a range's Members into an ordered list of cells, each
+%   emit(Code) or pair(Open,Close).
+
+range_cells(Name, Cells) :-
+    range_def(Name, Members, _),
+    members_cells(Members, Cells, []).
+
+members_cells([], T, T).
+members_cells([M|Ms], Cells, T) :-
+    member_cells(M, Cells, T1),
+    members_cells(Ms, T1, T).
+
+member_cells(Code, [emit(Code)|T], T) :-
+    integer(Code), !.
+member_cells(Open/Close, [pair(Open,Close)|T], T) :-
+    integer(Open), integer(Close), !.
+member_cells(From-To, Cells, T) :-
+    integer(From), integer(To), !,
+    emit_range(From, To, Cells, T).
+
+emit_range(From, To, T, T) :-
+    From > To, !.
+emit_range(From, To, [emit(From)|Cs], T) :-
+    F1 is From+1,
+    emit_range(F1, To, Cs, T).
+
+%!  range_sample(+Name, +Font, -Codes) is det.
+%
+%   Up to four representative code points for the browser label.
+%   Uses an explicit Sample when given, else scans the members
+%   (bounded, so huge blocks stay cheap).
+
+range_sample(Name, Font, Codes) :-
+    range_def(Name, Members, Sample),
+    (   explicit_sample(Sample, Codes0)
+    ->  take_at_most(4, Codes0, Codes)
+    ;   members_sample(Members, Font, 4, Codes)
+    ).
+
+explicit_sample(S, _)  :- var(S), !, fail.
+explicit_sample(S, S)  :- is_list(S), !.
+explicit_sample(S, Cs) :- atom(S), !, atom_codes(S, Cs).
+explicit_sample(S, Cs) :- string(S), !, string_codes(S, Cs).
+
+members_sample(_, _, 0, []) :- !.
+members_sample([], _, _, []) :- !.
+members_sample([M|Ms], Font, N, Codes) :-
+    item_sample(M, Font, N, Got),
+    length(Got, G),
+    append(Got, Rest, Codes),
+    N1 is N - G,
+    (   N1 =< 0
+    ->  Rest = []
+    ;   members_sample(Ms, Font, N1, Rest)
+    ).
+
+item_sample(Code, Font, _, Got) :-
+    integer(Code), !,
+    (   ok_sample(Code, Font) -> Got = [Code] ; Got = [] ).
+item_sample(Open/Close, Font, _, Got) :-
+    integer(Open), !,
+    findall(C, (member(C, [Open,Close]), ok_sample(C, Font)), Got).
+item_sample(From-To, Font, N, Got) :-
+    integer(From), !,
+    scan_sample(From, To, Font, N, 256, Got).
+
+ok_sample(C, Font) :-
+    printable_char(C),
+    send(Font, member, C).
+
+scan_sample(From, To, _, _, _, []) :- From > To, !.
+scan_sample(_, _, _, 0, _, []) :- !.
+scan_sample(_, _, _, _, 0, []) :- !.
+scan_sample(From, To, Font, N, B, Out) :-
+    (   ok_sample(From, Font)
+    ->  Out = [From|O], N1 is N-1
+    ;   Out = O, N1 = N
+    ),
+    F1 is From+1, B1 is B-1,
+    scan_sample(F1, To, Font, N1, B1, O).
+
+take_at_most(0, _, []) :- !.
+take_at_most(_, [], []) :- !.
+take_at_most(N, [X|Xs], [X|Ys]) :-
+    N1 is N-1,
+    take_at_most(N1, Xs, Ys).
+
 initial_range_name(Name) :-
     last_range(Name),
-    effective_range(Name, _, _),
+    range_def(Name, _, _),
     !.
 initial_range_name(Name) :-
-    once(effective_range(Name, _, _)).
+    once(range_def(Name, _, _)).
 
 %!  focus_widget_font(+Graphical, -Font) is semidet.
 %
@@ -341,10 +446,8 @@ variable(saved_focus_message, code*, both,
          "Previous @display_manager focus_message, restored on close").
 variable(symbol_font, font, both,
          "Font used to display symbols").
-variable(range_from, int*, get,
-         "First code of selected range").
-variable(range_to,   int*, get,
-         "Last code of selected range").
+variable(range_name, name*, get,
+         "Name of the selected range").
 
 class_variable(symbol_font, font, font(sans, normal, 16)).
 
@@ -497,8 +600,8 @@ fill_ranges(SP, Filter:name) :->
     ),
     send(LB, clear),
     get(SP, symbol_font, Font),
-    forall(( matching_range(Filter, Name, From, To),
-             range_label(Name, From, To, Font, Label)
+    forall(( matching_range(Filter, Name),
+             range_label(Name, Font, Label)
            ),
            send(LB, append, dict_item(Name, Label))),
     (   OldName \== @nil,
@@ -507,32 +610,18 @@ fill_ranges(SP, Filter:name) :->
     ;   true
     ).
 
-matching_range(Filter, Name, From, To) :-
-    effective_range(Name, From, To),
+matching_range(Filter, Name) :-
+    range_def(Name, _, _),
     matches(Filter, Name).
 
-%!  range_label(+Name, +From, +To, +Font, Label) is semidet.
+%!  range_label(+Name, +Font, -Label) is det.
 %
-%   Build "Name  abcd" where abcd are up to 4 representative printable
-%   characters from the range, rendered with the list browser's font.
+%   "samples\tName": up to four representative characters followed by
+%   the range name.
 
-range_label(Name, From, To, Font, Label) :-
-    range_samples(From, To, Font, 4, Samples),
-    length(Samples, 4),
-    format(string(Label), '~s\t~w', [Samples, Name]).
-
-range_samples(From, To, _, _, []) :-
-    From > To, !.
-range_samples(_, _, _, 0, []) :- !.
-range_samples(From, To, Font, N, [From|T]) :-
-    printable_char(From),
-    send(Font, member, From),
-    !,
-    F1 is From + 1, N1 is N - 1,
-    range_samples(F1, To, Font, N1, T).
-range_samples(From, To, Font, N, T) :-
-    F1 is From + 1,
-    range_samples(F1, To, Font, N, T).
+range_label(Name, Font, Label) :-
+    range_sample(Name, Font, Codes),
+    format(string(Label), '~s\t~w', [Codes, Name]).
 
 matches('', _) :- !.
 matches(Filter, Name) :-
@@ -554,9 +643,8 @@ range_selected(SP, Name:name) :->
 
 select_range(SP, Name:name) :->
     "Display the named range in the grid"::
-    (   effective_range(Name, From, To)
-    ->  send(SP, slot, range_from, From),
-        send(SP, slot, range_to,   To),
+    (   range_cells(Name, Cells)
+    ->  send(SP, slot, range_name, Name),
         get(SP, member, ranges, LB),
         (   get(LB?dict, member, Name, _)
         ->  send(LB, selection, Name)
@@ -564,7 +652,8 @@ select_range(SP, Name:name) :->
         ),
         send(SP, fill_grid),
         update_last_range(Name),
-        send(SP, report, status, '%s  (U+%04X..U+%04X)', Name, From, To)
+        length(Cells, Count),
+        send(SP, report, status, '%s  (%d items)', Name, Count)
     ;   send(SP, report, warning, 'Unknown range: %s', Name)
     ).
 
@@ -591,49 +680,65 @@ fill_grid(SP) :->
     send(Fmt, column_sep, 6),
     send(Fmt, row_sep, 2),
     send(G, format, Fmt),
-    get(SP, range_from, From), From \== @nil,
-    get(SP, range_to,   To),   To   \== @nil,
+    get(SP, range_name, Name), Name \== @nil,
     get(SP, symbol_font, Font),
-    Start is (From // 16) * 16,
-    fill_grid_rows(G, Font, Start, From, To).
+    range_cells(Name, Cells0),
+    renderable_cells(Cells0, Font, Cells),
+    fill_grid_rows(G, Font, Cells).
 
-fill_grid_rows(_, _, RowStart, _, To) :-
-    RowStart > To,
-    !.
-fill_grid_rows(G, Font, RowStart, From, To) :-
-    row_string(Font, RowStart, From, To, S, FirstCode),
-    (   FirstCode == none
-    ->  true
-    ;   /*send(G, display,
-             text(string('U+%04X', RowStart), left, fixed)),*/
-        send(G, display,
-             picker_cell(RowStart, S, Font))
+%   Drop emit cells the font cannot show; keep curated pairs as-is.
+
+renderable_cells([], _, []).
+renderable_cells([emit(C)|T], Font, Out) :-
+    !,
+    (   printable_char(C),
+        send(Font, member, C)
+    ->  Out = [emit(C)|O]
+    ;   Out = O
     ),
-    Next is RowStart + 16,
-    fill_grid_rows(G, Font, Next, From, To).
+    renderable_cells(T, Font, O).
+renderable_cells([pair(O,C)|T], Font, [pair(O,C)|Os]) :-
+    !,
+    renderable_cells(T, Font, Os).
+renderable_cells([_|T], Font, Out) :-
+    renderable_cells(T, Font, Out).
 
-row_string(Font, RowStart, From, To, S, FirstCode) :-
+fill_grid_rows(_, _, []) :- !.
+fill_grid_rows(G, Font, Cells) :-
+    take_at_most(16, Cells, Row),
+    length(Row, Len),
+    Len > 0,
+    !,
+    row_visual(Row, S, Actions),
+    new(Cell, picker_cell(S, Font)),
+    send(Cell, slot, actions, Actions),
+    send(G, display, Cell),
+    list_drop(Len, Cells, Rest),
+    fill_grid_rows(G, Font, Rest).
+fill_grid_rows(_, _, _).
+
+list_drop(0, L, L) :- !.
+list_drop(_, [], []) :- !.
+list_drop(N, [_|T], R) :-
+    N1 is N-1,
+    list_drop(N1, T, R).
+
+%   Build the row's display string and a per-display-character action
+%   list (a pair occupies two display characters, both mapping to the
+%   same pair action).
+
+row_visual(Cells, S, Actions) :-
     new(S, string),
-    fill_row(0, 16, Font, RowStart, From, To, S, none, FirstCode).
+    row_visual_(Cells, S, Actions).
 
-fill_row(I, N, _, _, _, _, _, FirstCode, FirstCode) :-
-    I >= N,
-    !.
-fill_row(I, N, Font, RowStart, From, To, S, FC0, FirstCode) :-
-    Code is RowStart + I,
-    (   Code >= From,
-        Code =< To,
-        printable_char(Code),
-        send(Font, member, Code)
-    ->  send(S, append, string('%c', Code)),
-        (   FC0 == none
-        ->  FC1 = Code
-        ;   FC1 = FC0
-        )
-    ;   FC1 = FC0
-    ),
-    I1 is I + 1,
-    fill_row(I1, N, Font, RowStart, From, To, S, FC1, FirstCode).
+row_visual_([], _, []).
+row_visual_([emit(C)|T], S, [emit(C)|A]) :-
+    send(S, append, string('%c', C)),
+    row_visual_(T, S, A).
+row_visual_([pair(O,C)|T], S, [pair(O,C),pair(O,C)|A]) :-
+    send(S, append, string('%c', O)),
+    send(S, append, string('%c', C)),
+    row_visual_(T, S, A).
 
 printable_char(C) :-
     code_type(C, width(W)),
@@ -660,8 +765,10 @@ update_recents(SP) :->
     ;   new(S, string),
         forall(member(C, Codes),
                send(S, append, string('%c', C))),
-        Codes = [First|_],
-        send(R, display, picker_cell(First, S, Font))
+        findall(emit(C), member(C, Codes), Actions),
+        new(Cell, picker_cell(S, Font)),
+        send(Cell, slot, actions, Actions),
+        send(R, display, Cell)
     ).
 
 clear_recents(SP) :->
@@ -707,6 +814,36 @@ font(SP, Font:font) :->
 		 *            PICK              *
 		 *******************************/
 
+pick_action(SP, Action:prolog) :->
+    "Dispatch a cell action chosen in the grid or recents"::
+    (   Action = emit(Code)
+    ->  send(SP, pick_code, Code)
+    ;   Action = pair(Open, Close)
+    ->  send(SP, pick_pair, Open, Close)
+    ;   true
+    ).
+
+pick_pair(SP, Open:int, Close:int) :->
+    "Pick a matching pair: emit Open, Close and a backward-character"::
+    get(SP, pick_mode, Mode),
+    (   Mode == return
+    ->  send(SP, return, Open)
+    ;   Mode == type,
+        send(SP, type_symbol, Open),
+        send(SP, type_symbol, Close),
+        send(SP, type_ctrl, 0'b)        % ^B: leave caret between
+    ->  add_recent(Open),
+        add_recent(Close),
+        send(SP, update_recents),
+        send(SP, report, status, 'Typed %c%c', Open, Close)
+    ;   atom_codes(A, [Open,Close]),
+        send(@display, copy, A),
+        add_recent(Open),
+        add_recent(Close),
+        send(SP, update_recents),
+        send(SP, report, status, 'Copied %s', A)
+    ).
+
 pick_code(SP, Code:int) :->
     "Called by picker_cell when the user clicks a symbol"::
     get(SP, pick_mode, Mode),
@@ -737,6 +874,15 @@ type_symbol(SP, Code:int) :->
     new(Ev, event(Code, Fr)),
     send(Fr, post_event, Ev).
 
+type_ctrl(SP, Code:int) :->
+    "Post a control-modified key (e.g. ^B) to the target frame"::
+    get(SP, target_frame, Fr),
+    Fr \== @nil,
+    object(Fr),
+    Fr \== SP,
+    new(Ev, event(Code, Fr, @default, @default, 1)), % 1 = BUTTON_control
+    send(Fr, post_event, Ev).
+
 :- pce_end_class(symbol_picker).
 
 
@@ -747,12 +893,12 @@ type_symbol(SP, Code:int) :->
 :- pce_begin_class(picker_cell, text,
                    "Clickable row of symbols").
 
-variable(start_code, int, get,
-         "Code of the first symbol in this cell").
+variable(actions, prolog, get,
+         "Action per display-character position").
 
-initialise(C, Start:int, S:string, Font:font) :->
+initialise(C, S:string, Font:font) :->
     send_super(C, initialise, S, left, Font),
-    send(C, slot, start_code, Start).
+    send(C, slot, actions, []).
 
 event(C, Ev:event) :->
     (   send_super(C, event, Ev)
@@ -761,17 +907,21 @@ event(C, Ev:event) :->
     ->  send(C, report, status, '')
     ;   get(C, pointed, Ev, @off, Index),
         Index >= 0,
-        get(C?string, size, Sz),
-        Index < Sz
-    ->  get(C?string, character, Index, Code),
-        (   send(Ev, is_a, ms_left_up)
-        ->  send(C?frame, pick_code, Code)
+        get(C, actions, Actions),
+        nth0(Index, Actions, Action)
+    ->  (   send(Ev, is_a, ms_left_up)
+        ->  send(C?frame, pick_action, Action)
         ;   send(C?frame, capture_target),
-            send(C, report, status, '%c  U+%04X / %d',
-                 Code, Code, Code)
+            action_status(Action, Status),
+            send(C, report, status, Status)
         )
     ;   true
     ).
+
+action_status(emit(Code), Status) :-
+    new(Status, string('%c  U+%04X / %d', Code, Code, Code)).
+action_status(pair(Open,Close), Status) :-
+    new(Status, string('%c%c  pair', Open, Close)).
 
 :- pce_end_class(picker_cell).
 
