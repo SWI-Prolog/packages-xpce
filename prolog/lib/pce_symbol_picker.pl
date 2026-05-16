@@ -650,6 +650,7 @@ matching_range(Filter, Name) :-
 
 range_label(Name, Font, Label) :-
     range_sample(Name, Font, Codes),
+    Codes \== [],
     format(string(Label), '~s\t~w', [Codes, Name]).
 
 matches('', _) :- !.
