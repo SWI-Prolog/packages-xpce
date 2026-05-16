@@ -35,13 +35,16 @@
 :- module(pce_symbol_picker,
           [ symbol_picker/0,
             symbol_picker/1,            % +Client
-            pick_symbol/1,              % -Code
-            code_range/3                % ?Name, ?Members, ?Sample
+            pick_symbol/1               % -Code
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_report)).
-:- use_module(library('unicode/blocks')).
+:- use_module(library(unicode/blocks)).
 :- use_module(library(lists)).
+:- use_module(library(pce_util)).
+:- use_module(library(solution_sequences)).
+
+:- multifile code_range/3.              % Name, Ranges, Sample
 
 :- pce_autoload(font_item, library(pce_font_item)).
 
@@ -101,8 +104,6 @@ library(unicode/blocks).
 %   _Sample_ is the list of code points (or text) shown next to the
 %   name in the browser.  Leave it unbound to derive a sample
 %   automatically.
-
-:- multifile code_range/3.
 
 :- pce_global(@symbol_picker, new(symbol_picker)).
 
@@ -297,6 +298,14 @@ rewrite_recents_file(File, Recents, LastRange) :-
         close(Out)).
 
 
+                /*******************************
+                *        DEFAULT RANGES        *
+                *******************************/
+
+builtin_code_range('Parenthesis', Ranges, _) :-
+    findall(Open/Close, code_type(Open, paren(Close)), Ranges).
+
+
 		 /*******************************
 		 *            RANGES            *
 		 *******************************/
@@ -309,11 +318,16 @@ rewrite_recents_file(File, Recents, LastRange) :-
 %   definition hides the block with the same name.
 
 range_def(Name, Members, Sample) :-
+    distinct(Name, range_def_(Name, Members, Sample)).
+
+
+range_def_(Name, Members, Sample) :-
     code_range(Name, Members, Sample).
-range_def(Name, [From-To], _) :-
+range_def_(Name, Members, Sample) :-
+    builtin_code_range(Name, Members, Sample).
+range_def_(Name, [From-To], _) :-
     unicode_block(Name, From, To),
-    \+ surrogate_block(From),
-    \+ code_range(Name, _, _).
+    \+ surrogate_block(From).
 
 surrogate_block(From) :-
     From >= 0xD800,
