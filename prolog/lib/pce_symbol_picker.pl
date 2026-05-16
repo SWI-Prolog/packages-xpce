@@ -140,9 +140,10 @@ pick_symbol(Code) :-
 		 *           RECENTS            *
 		 *******************************/
 
-%!  recent(?Code) is nondet.
+%!  recent(?Action) is nondet.
 %
-%   Recently picked symbols, in most-recent-first order. Persisted
+%   Recently picked actions (emit(Code) or pair(Open,Close)), in
+%   most-recent-first order. Persisted
 %   to the xpce per-user application data directory using an
 %   append-only log so that multiple sessions can contribute. The
 %   log is compacted on load when it grows too large compared to the
@@ -158,11 +159,20 @@ max_recents(48).
 %   and more than twice as many entries as distinct recents.
 recents_compact_threshold(200).
 
-add_recent(Code) :-
-    retractall(recent(Code)),
-    asserta(recent(Code)),
+%!  add_recent(+Action) is det.
+%
+%   Action is emit(Code) or pair(Open,Close).  Kept as a unit so a
+%   recent pair re-emits the pair (not its two characters separately).
+
+add_recent(Action0) :-
+    (   norm_action(Action0, Action)
+    ->  true
+    ;   Action = Action0
+    ),
+    retractall(recent(Action)),
+    asserta(recent(Action)),
     cap_recents,
-    append_recent(Code).
+    append_recent(Action).
 
 cap_recents :-
     max_recents(Max),
@@ -225,15 +235,24 @@ read_all_terms(In, Terms) :-
     ).
 
 apply_terms([], S, S).
-apply_terms([recent(C)|Ts], state(R0, LR0), Final) :-
-    integer(C), !,
-    delete(R0, C, R1),
-    apply_terms(Ts, state([C|R1], LR0), Final).
+apply_terms([recent(C0)|Ts], state(R0, LR0), Final) :-
+    norm_action(C0, A), !,
+    delete(R0, A, R1),
+    apply_terms(Ts, state([A|R1], LR0), Final).
 apply_terms([last_range(N)|Ts], state(R, _), Final) :-
     atom(N), !,
     apply_terms(Ts, state(R, N), Final).
 apply_terms([_|Ts], S, Final) :-
     apply_terms(Ts, S, Final).
+
+%!  norm_action(+Stored, -Action) is semidet.
+%
+%   Normalise a stored recent: an action term, or a bare integer
+%   (legacy on-disk format) treated as emit/1.
+
+norm_action(emit(C),     emit(C))     :- integer(C), !.
+norm_action(pair(O,Cl),  pair(O,Cl))  :- integer(O), integer(Cl), !.
+norm_action(C,           emit(C))     :- integer(C), !.
 
 truncate_list(L, Max, T) :-
     length(L, N),
@@ -243,16 +262,22 @@ truncate_list(L, Max, T) :-
         append(T, _, L)
     ).
 
-append_recent(Code) :-
-    catch(do_append_recent(Code), E,
+append_recent(Action) :-
+    catch(do_append_recent(Action), E,
           print_message(warning, E)).
 
-do_append_recent(Code) :-
+do_append_recent(Action) :-
     recents_file(File),
     setup_call_cleanup(
         open(File, append, Out, [encoding(utf8)]),
-        format(Out, 'recent(0x~|~`0t~16r~4+).~n', [Code]),
+        write_recent_term(Out, Action),
         close(Out)).
+
+write_recent_term(Out, emit(C)) :-
+    format(Out, 'recent(emit(0x~|~`0t~16r~4+)).~n', [C]).
+write_recent_term(Out, pair(O,Cl)) :-
+    format(Out, 'recent(pair(0x~|~`0t~16r~4+,0x~|~`0t~16r~4+)).~n',
+           [O, Cl]).
 
 append_last_range(Name) :-
     catch(do_append_last_range(Name), E,
@@ -292,8 +317,8 @@ rewrite_recents_file(File, Recents, LastRange) :-
           ->  format(Out, 'last_range(~q).~n', [LastRange])
           ;   true
           ),
-          forall(member(C, Chrono),
-                 format(Out, 'recent(0x~|~`0t~16r~4+).~n', [C]))
+          forall(member(A, Chrono),
+                 write_recent_term(Out, A))
         ),
         close(Out)).
 
@@ -753,6 +778,8 @@ row_visual_([pair(O,C)|T], S, [pair(O,C),pair(O,C)|A]) :-
     send(S, append, string('%c', O)),
     send(S, append, string('%c', C)),
     row_visual_(T, S, A).
+row_visual_([_|T], S, A) :-             % skip anything unexpected
+    row_visual_(T, S, A).
 
 printable_char(C) :-
     code_type(C, width(W)),
@@ -771,17 +798,14 @@ update_recents(SP) :->
     send(Fmt, row_sep, 2),
     send(R, format, Fmt),
     get(SP, symbol_font, Font),
-    findall(C, recent(C), Codes),
-    (   Codes == []
+    findall(A, ( recent(A0), norm_action(A0, A) ), Actions),
+    (   Actions == []
     ->  send(R, display,
              text('(no recently picked symbols)',
                   left, font(helvetica, oblique, 11)))
-    ;   new(S, string),
-        forall(member(C, Codes),
-               send(S, append, string('%c', C))),
-        findall(emit(C), member(C, Codes), Actions),
+    ;   row_visual(Actions, S, Map),
         new(Cell, picker_cell(S, Font)),
-        send(Cell, slot, actions, Actions),
+        send(Cell, slot, actions, Map),
         send(R, display, Cell)
     ).
 
@@ -846,14 +870,12 @@ pick_pair(SP, Open:int, Close:int) :->
         send(SP, type_symbol, Open),
         send(SP, type_symbol, Close),
         send(SP, type_ctrl, 0'b)        % ^B: leave caret between
-    ->  add_recent(Open),
-        add_recent(Close),
+    ->  add_recent(pair(Open,Close)),
         send(SP, update_recents),
         send(SP, report, status, 'Typed %c%c', Open, Close)
     ;   atom_codes(A, [Open,Close]),
         send(@display, copy, A),
-        add_recent(Open),
-        add_recent(Close),
+        add_recent(pair(Open,Close)),
         send(SP, update_recents),
         send(SP, report, status, 'Copied %s', A)
     ).
@@ -865,12 +887,12 @@ pick_code(SP, Code:int) :->
     ->  send(SP, return, Code)
     ;   Mode == type,
         send(SP, type_symbol, Code)
-    ->  add_recent(Code),
+    ->  add_recent(emit(Code)),
         send(SP, update_recents),
         send(SP, report, status, 'Typed %c  (U+%04X)', Code, Code)
     ;   atom_codes(A, [Code]),
         send(@display, copy, A),
-        add_recent(Code),
+        add_recent(emit(Code)),
         send(SP, update_recents),
         (   Mode == type
         ->  send(SP, report, status,
