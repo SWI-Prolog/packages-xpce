@@ -48,6 +48,7 @@ static status	selectionTextItem(TextItem ti, Any selection);
 static status	resetTextItem(TextItem ti);
 static int	combo_flags(TextItem ti);
 static status	detachTimerTextItem(TextItem ti);
+static int	text_item_clear_width(TextItem ti);
 
 #define STEPPER_BOX_W   14
 #define STEPPER_BOX_GAP 5
@@ -80,6 +81,7 @@ initialiseTextItem(TextItem ti, Name name, Any val, Code msg)
   assign(ti, auto_value_align, OFF);
   assign(ti, hor_stretch,      toInt(100));
   assign(ti, style,	       NAME_normal);
+  assign(ti, clear_image,      NIL);
 
   Colour c;
   if ( (c=getClassVariableValueObject(ti, NAME_textColour)) &&
@@ -136,8 +138,10 @@ RedrawAreaTextItem(TextItem ti, Area a)
     flags |= TEXTFIELD_EDITABLE;
   flags |= combo_flags(ti);
 
+  int clrw = text_item_clear_width(ti);
+
   ws_entry_field((Graphical)ti,
-		 tx, ty, tw+text_item_combo_width(ti), th, flags);
+		 tx, ty, tw+text_item_combo_width(ti)+clrw, th, flags);
 
   if ( vt->string->data.hdr.f.size == 0 &&
        notNil(ti->placeholder) )
@@ -158,6 +162,16 @@ RedrawAreaTextItem(TextItem ti, Area a)
     r_colour(old);
   } else
     repaintText(vt, tx, ty, tw, th);
+
+  if ( clrw > 0 && getSizeCharArray(vt->string) != ZERO )
+  { Image ci = ti->clear_image;
+    int iw = valInt(ci->size->w);
+    int ih = valInt(ci->size->h);
+    int ix = tx + tw + (clrw-iw)/2;
+    int iy = ty + (th-ih)/2;
+
+    r_image(ci, 0, 0, ix, iy, iw, ih);
+  }
 
   return RedrawAreaGraphical(ti, a);
 }
@@ -251,13 +265,14 @@ computeTextItem(TextItem ti)
     int al, av, am;
     Int b = getClassVariableValueObject(ti, NAME_border);
     int cwb = text_item_combo_width(ti);
+    int clrw = text_item_clear_width(ti);
     TextObj vt = ti->value_text;
 
     obtainClassVariablesObject(ti);
     fontText(vt, ti->value_font);
     borderText(vt, b);
     if ( notDefault(ti->value_width) )
-    { Int vw = toInt(valInt(ti->value_width) - cwb);
+    { Int vw = toInt(valInt(ti->value_width) - cwb - clrw);
       marginText(vt, vw, NAME_clip);
     } else
       lengthText(vt, ti->length);
@@ -271,7 +286,7 @@ computeTextItem(TextItem ti)
     assign(vt->area, y, toInt(am-av));
 
     h = max(lh, valInt(vt->area->h));
-    w = lw + valInt(vt->area->w) + cwb;
+    w = lw + valInt(vt->area->w) + cwb + clrw;
 
     if ( ti->pen != ZERO )
       h = max(h, am+1+valInt(ti->pen));
@@ -812,6 +827,49 @@ text_item_combo_width(TextItem ti)
 }
 
 
+/* Width reserved at the right for the optional clear-field image.  The
+   space is reserved as soon as a <-clear_image is set (and the style is
+   `normal') so the field does not reflow when the icon appears; the icon
+   itself is only painted/clickable while the field is non-empty.
+*/
+
+static int
+text_item_clear_width(TextItem ti)
+{ if ( notNil(ti->clear_image) && ti->style == NAME_normal )
+  { int iw = valInt(ti->clear_image->size->w);
+    int ex = (int)valNum(getExFont(ti->value_text->font));
+
+    return iw + 2*ex;
+  }
+
+  return 0;
+}
+
+
+static int
+clear_icon_shown(TextItem ti)
+{ return ( text_item_clear_width(ti) > 0 &&
+	   getSizeCharArray(ti->value_text->string) != ZERO );
+}
+
+
+static status
+clearImageTextItem(TextItem ti, Image image)
+{ if ( isDefault(image) )
+  { image = getClassVariableValueObject(ti, NAME_clearImage);
+    if ( !image || !instanceOfObject(image, ClassImage) )
+      image = NIL;
+  }
+
+  if ( ti->clear_image != image )
+  { assign(ti, clear_image, image);
+    requestComputeGraphical(ti, DEFAULT);
+  }
+
+  succeed;
+}
+
+
 static status
 showComboBoxTextItem(TextItem ti, BoolObj val)
 { if ( val == OFF )
@@ -1019,6 +1077,22 @@ eventTextItem(TextItem ti, EventObj ev)
 	{ BoolObj val = (completerShownDialogItem(ti) ? OFF : ON);
 
 	  send(ti, NAME_showComboBox, val, EAV);
+	  succeed;
+	}
+      }
+
+      if ( clear_icon_shown(ti) && ti->editable == ON )
+      { Int X, Y;
+	int x, y;
+	int clrw = text_item_clear_width(ti);
+
+	get_xy_event(ev, ti, ON, &X, &Y);
+	x = valInt(X); y = valInt(Y);
+	if ( y >= 0 &&
+	     y <= valInt(ti->area->h) &&
+	     x <= valInt(ti->area->w) &&
+	     x >= valInt(ti->area->w) - clrw )
+	{ send(ti, NAME_clear, EAV);
 	  succeed;
 	}
       }
@@ -1616,7 +1690,9 @@ static vardecl var_textItem[] =
   IV(NAME_horStretch, "0..100", IV_BOTH,
      NAME_layout, "Horizontal stretchability"),
   IV(NAME_style, "{normal,combo_box,stepper}", IV_GET,
-     NAME_appearance, "Show plain/combo-box/stepper")
+     NAME_appearance, "Show plain/combo-box/stepper"),
+  SV(NAME_clearImage, "[image]*", IV_GET|IV_STORE, clearImageTextItem,
+     NAME_appearance, "Image at the right that clears the field when clicked")
 };
 
 /* Send Methods */
@@ -1766,7 +1842,9 @@ static classvardecl rc_textItem[] =
   RC(NAME_textColour, "[colour]", "@default",
      "Colour to use for the text"),
   RC(NAME_comboBoxHeight, "1..", "6",
-     "Maximum height of the combo-box shown for completions")
+     "Maximum height of the combo-box shown for completions"),
+  RC(NAME_clearImage, "image*", "image('16x16/delete.png')",
+     "Default image for ->clear_image(@default)")
 };
 
 /* Class Declaration */
