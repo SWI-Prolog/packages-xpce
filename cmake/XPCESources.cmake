@@ -119,7 +119,7 @@ set(XPCE_DATA_DIRS
     prolog/demo
 
     bitmaps bitmaps/16x16 bitmaps/32x32 bitmaps/64x64 bitmaps/tool
-    bitmaps/ide/threads
+    bitmaps/ide/threads bitmaps/logo
 
     appl-help
 
@@ -146,6 +146,7 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     pce_prolog_xref.pl pce_prompter.pl pce_regex_compat.pl pce_renew.pl
     pce_report.pl pce_require.pl pce_select_set_item.pl
     pce_server.pl pce_set_item.pl pce_shell.pl pce_style_item.pl
+    pce_symbol_picker.pl
     pce_tagged_connection.pl pce_template.pl pce_tick_box.pl pce_toc.pl
     pce_type.pl pce_unclip.pl pce_util.pl pce_xref.pl persistent_frame.pl
     portray_object.pl print_graphics.pl print_text.pl
@@ -304,7 +305,10 @@ set(XPCE_DATA_bitmaps_tool
     pencil.svg edit.svg refresh.svg up.svg help.svg handpoint.svg
     copy.svg distribute.svg open.svg print.svg undo.svg cut.svg
     duplicate.svg paste.svg save.svg trashcan.svg ex_up.svg ex_down.svg
-    nav-forward.svg nav-backward.svg clear-text.svg)
+    nav-forward.svg nav-backward.svg user.svg clear-text.svg wipe.svg)
+
+set(XPCE_DATA_bitmaps_logo
+    New_Unicode_logo.svg)
 
 set(XPCE_DATA_bitmaps_ide_threads
     thread-exception.svg thread-false.svg thread-running.svg
