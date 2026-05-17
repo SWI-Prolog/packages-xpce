@@ -487,6 +487,11 @@ variable(symbol_font, font, both,
          "Font used to display symbols").
 variable(range_name, name*, get,
          "Name of the selected range").
+variable(filter_mode,
+         {block,character} := block, get,
+         "Filter on block names or on character names").
+variable(match_index, prolog* := @nil, get,
+         "Character mode: list of m(Class,Name,Codes); @nil otherwise").
 
 class_variable(symbol_font, font, font(sans, normal, 16)).
 
@@ -507,10 +512,21 @@ initialise(SP) :->
                      resource(clear_recents),
                      clear_recents)),
     send(D, append,
+         new(Mode, menu(filter_mode, choice,
+                        message(SP, filter_mode, @arg1))), right),
+    send(Mode, label, 'Filter'),
+    send(Mode, layout, horizontal),
+    send_list(Mode, append,
+              [ menu_item(block,     @default, 'Blocks'),
+                menu_item(character, @default, 'Names')
+              ]),
+    send(Mode, selection, block),
+    send(D, append,
          new(Filter, sp_live_text_item(filter, '', FilterMsg)), right),
     send(Filter, length, 24),
     send(Filter, placeholder, "Filter code blocks"),
     send(Filter, clear_image, @default),
+    send(Filter, show_label, @off),
     send(TB, reference, Filter?reference),
 
     send(new(R, picture(recents, size(450, 60))), below, D),
@@ -649,10 +665,17 @@ fill_ranges(SP, Filter:name) :->
     ),
     send(LB, clear),
     get(SP, symbol_font, Font),
-    forall(( matching_range(Filter, Class, Name),
-             range_label(Name, Font, Label)
-           ),
-           send(LB, append, dict_item(Name, Label, style := Class))),
+    get(SP, match_index, Index),
+    (   Index == @nil
+    ->  forall(( matching_range(Filter, Class, Name),
+                 range_label(Name, Font, Label)
+               ),
+               send(LB, append, dict_item(Name, Label, style := Class)))
+    ;   forall(( member(m(Class,Name,Codes), Index),
+                 char_range_label(Codes, Name, Font, Label)
+               ),
+               send(LB, append, dict_item(Name, Label, style := Class)))
+    ),
     (   OldName \== @nil,
         get(LB?dict, member, OldName, _)
     ->  send(LB, selection, OldName)
@@ -662,6 +685,17 @@ fill_ranges(SP, Filter:name) :->
 matching_range(Filter, Class, Name) :-
     range_def(Class, Name, _Members, _Sample),
     matches(Filter, Name).
+
+%!  char_range_label(+Codes, +Name, +Font, -Label) is det.
+%
+%   Browser label for a block in character mode: a few of the matching
+%   characters the font can show, the block name and the match count.
+
+char_range_label(Codes, Name, Font, Label) :-
+    include(ok_sample(Font), Codes, Showable),
+    take_at_most(4, Showable, Sample),
+    length(Codes, N),
+    format(string(Label), ' ~s\t~w  (~d)', [Sample, Name, N]).
 
 %!  range_label(+Name, +Font, -Label) is det.
 %
@@ -677,15 +711,77 @@ matches('', _) :- !.
 matches(Filter, Name) :-
     sub_atom_icasechk(Name, _, Filter).
 
+filter_mode(SP, Mode:name) :->
+    "Switch the filter between block names and character names"::
+    send(SP, slot, filter_mode, Mode),
+    get(SP, member, controls, D),
+    (   get(D, member, filter_mode, MM)
+    ->  send(MM, selection, Mode)
+    ;   true
+    ),
+    get(D, member, filter, Item),
+    (   Mode == character
+    ->  send(Item, placeholder, "Filter character names")
+    ;   send(Item, placeholder, "Filter code blocks")
+    ),
+    send(SP, filter).
+
 filter(SP) :->
     "Apply the current filter expression"::
     get(SP, member, controls, D),
     get(D, member, filter, Item),
     get(Item, selection, Text),
-    send(SP, fill_ranges, Text),
-    get(SP, member, ranges, LB),
-    get(LB?dict?members, size, N),
-    send(SP, report, status, '%d matches', N).
+    get(SP, filter_mode, Mode),
+    (   Mode == character
+    ->  send(SP, apply_char_filter, Text)
+    ;   send(SP, slot, match_index, @nil),
+        send(SP, fill_ranges, Text),
+        get(SP, member, ranges, LB),
+        get(LB?dict?members, size, N),
+        send(SP, report, status, '%d matching blocks', N),
+        (   get(SP, range_name, RN), RN \== @nil,
+            get(LB?dict, member, RN, _)
+        ->  send(SP, select_range, RN)
+        ;   true
+        )
+    ).
+
+apply_char_filter(SP, Text:name) :->
+    "Character mode: filter on Unicode character names"::
+    (   name_search_available
+    ->  (   Text == ''
+        ->  send(SP, slot, match_index, @nil),
+            send(SP, fill_ranges, ''),
+            send(SP, report, status, 'Type part of a character name')
+        ;   atom_length(Text, Len), Len < 2
+        ->  send(SP, slot, match_index, @nil),
+            send(SP, fill_ranges, ''),
+            send(SP, report, status,
+                 'Type at least two characters of a name')
+        ;   char_match_index(Text, Index, Total),
+            send(SP, slot, match_index, Index),
+            send(SP, fill_ranges, ''),
+            get(SP, member, ranges, LB),
+            get(LB?dict?members, size, NB),
+            (   NB > 0
+            ->  get(LB?dict?members, head, First),
+                get(First, key, FName),
+                send(LB, selection, FName),
+                send(SP, select_range, FName)
+            ;   send(SP, clear_grid)
+            ),
+            send(SP, report, status,
+                 '%d characters in %d blocks', Total, NB)
+        )
+    ;   send(SP, slot, match_index, @nil),
+        send(SP, report, warning,
+             'Character-name search needs library(uniname)')
+    ).
+
+clear_grid(SP) :->
+    "Remove all symbols from the grid"::
+    get(SP, member, grid, G),
+    send(G, clear).
 
 range_selected(SP, Name:name) :->
     "User clicked a range name"::
@@ -693,7 +789,7 @@ range_selected(SP, Name:name) :->
 
 select_range(SP, Name:name) :->
     "Display the named range in the grid"::
-    (   range_cells(Name, Cells)
+    (   range_view_cells(SP, Name, Cells)
     ->  send(SP, slot, range_name, Name),
         get(SP, member, ranges, LB),
         (   get(LB?dict, member, Name, _)
@@ -701,11 +797,89 @@ select_range(SP, Name:name) :->
         ;   true
         ),
         send(SP, fill_grid),
-        update_last_range(Name),
         length(Cells, Count),
-        send(SP, report, status, '%s  (%d items)', Name, Count)
+        (   get(SP, filter_mode, character),
+            get(SP, match_index, Idx), Idx \== @nil
+        ->  send(SP, report, status,
+                 '%s  (%d matching)', Name, Count)
+        ;   update_last_range(Name),
+            send(SP, report, status, '%s  (%d items)', Name, Count)
+        )
     ;   send(SP, report, warning, 'Unknown range: %s', Name)
     ).
+
+%!  range_view_cells(+SP, +Name, -Cells) is semidet.
+%
+%   Cells to show for Name: the whole range in block mode, or only the
+%   characters matching the active character filter in character mode.
+
+range_view_cells(SP, Name, Cells) :-
+    get(SP, match_index, Index),
+    (   Index == @nil
+    ->  range_cells(Name, Cells)
+    ;   memberchk(m(_,Name,Codes), Index)
+    ->  findall(emit(C), member(C, Codes), Cells)
+    ;   range_cells(Name, Cells)
+    ).
+
+                 /*******************************
+                 *      CHARACTER SEARCH        *
+                 *******************************/
+
+name_search_available :-
+    current_predicate(unicode_name/2).
+
+%!  char_match_index(+Text, -Index, -Total) is det.
+%
+%   Index is a list of m(Class,Name,Codes), one per range that contains
+%   at least one character whose Unicode name contains Text (case
+%   insensitive), in the regular range order.  Total is the number of
+%   distinct matching characters.
+
+char_match_index(Text, Index, Total) :-
+    char_matched_codes(Text, Codes),
+    length(Codes, Total),
+    findall(m(Class,Name,Ms),
+            ( range_def(Class, Name, Members, _),
+              range_matched(Members, Codes, Ms),
+              Ms \== []
+            ),
+            Index).
+
+char_matched_codes(Text, Codes) :-
+    findall(C,
+            ( unicode_name(C, Nm),
+              sub_atom_icasechk(Nm, _, Text),
+              printable_char(C)
+            ),
+            Cs),
+    sort(Cs, Codes).
+
+%!  range_matched(+Members, +Codes, -Ms) is det.
+%
+%   Ms are the (sorted, unique) members of this range that occur in the
+%   sorted set Codes.  From-To members are intersected by scanning
+%   Codes, so huge blocks are not expanded.
+
+range_matched(Members, Codes, Ms) :-
+    findall(C,
+            ( member(M, Members),
+              member_matched_code(M, Codes, C)
+            ),
+            Ms0),
+    sort(Ms0, Ms).
+
+member_matched_code(C, Codes, C) :-
+    integer(C), !,
+    memberchk(C, Codes).
+member_matched_code(O/Cl, Codes, X) :-
+    !,
+    ( X = O ; X = Cl ),
+    memberchk(X, Codes).
+member_matched_code(From-To, Codes, C) :-
+    !,
+    member(C, Codes),
+    C >= From, C =< To.
 
 %   Remember the named range as the most-recent selection.  Only writes
 %   when the value actually changes to avoid spurious file growth.
@@ -732,7 +906,7 @@ fill_grid(SP) :->
     send(G, format, Fmt),
     get(SP, range_name, Name), Name \== @nil,
     get(SP, symbol_font, Font),
-    range_cells(Name, Cells0),
+    range_view_cells(SP, Name, Cells0),
     renderable_cells(Cells0, Font, Cells),
     fill_grid_rows(G, Font, Cells).
 
