@@ -839,7 +839,7 @@ text_item_clear_width(TextItem ti)
   { int iw = valInt(ti->clear_image->size->w);
     int ex = (int)valNum(getExFont(ti->value_text->font));
 
-    return iw + 2*ex;
+    return iw + 1*ex;
   }
 
   return 0;
@@ -1843,7 +1843,7 @@ static classvardecl rc_textItem[] =
      "Colour to use for the text"),
   RC(NAME_comboBoxHeight, "1..", "6",
      "Maximum height of the combo-box shown for completions"),
-  RC(NAME_clearImage, "image*", "image('16x16/delete.png')",
+  RC(NAME_clearImage, "image*", "image('tool/clear-text.svg', 22, 22)",
      "Default image for ->clear_image(@default)")
 };
 
