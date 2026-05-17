@@ -312,7 +312,7 @@ event(FT, Ev:event) :->
     ->  true
     ;   send(Ev, is_a, area_exit)
     ->  send(FT, report, status, '')
-    ;   get(FT, pointed, Ev, Index),
+    ;   get(FT, pointed, Ev, @off, Index),
         End is Index+1,
         get(FT?string, sub, Index, End, S),
         get(FT?string, character, Index, C),

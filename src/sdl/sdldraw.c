@@ -2024,10 +2024,14 @@ str_advance_W(charW *s, int l, FontObj font)
  * per character (as a hand-written hit-test would) drifts from the
  * real glyph positions for proportional fonts with fallback glyphs.
  * The returned value is an absolute index into `s` in the range
- * [from, to].
+ * [from, to].  When `round` is true the result is the nearest caret
+ * position (a point past the middle of a glyph maps to the next one,
+ * as for click-to-position-caret).  When false it is the index of
+ * the glyph the point is inside (hit-test, e.g. picking a symbol).
  */
 int
-str_x_to_index(PceString s, int from, int to, FontObj font, int x)
+str_x_to_index(PceString s, int from, int to, FontObj font, int x,
+	       int round)
 { string s2 = *s;
   if ( from > s2.s_size )
     from = s2.s_size;
@@ -2058,8 +2062,10 @@ str_x_to_index(PceString s, int from, int to, FontObj font, int x)
   cairo_restore(cr);
 
   const char *p = u + byte_index;
-  while ( trailing-- > 0 && p < u+ulen )
-    p = g_utf8_next_char(p);
+  if ( round )
+  { while ( trailing-- > 0 && p < u+ulen )
+      p = g_utf8_next_char(p);
+  }
 
   long off = g_utf8_pointer_to_offset(u, p);
   return from + (int)off;
