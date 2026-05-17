@@ -400,7 +400,8 @@ End;
   BoolObj    editable;			/* TextItem is editable */ \
   Int	     value_width;		/* Width of value-field in pixels */ \
   Int	     hor_stretch;		/* Horizontal stretchability */ \
-  Name	     style;			/* normal, combo_box */
+  Name	     style;			/* normal, combo_box */ \
+  Image	     clear_image;		/* Optional clear-field image */
 
 NewClass(textitem)
   ABSTRACT_TEXTITEM
