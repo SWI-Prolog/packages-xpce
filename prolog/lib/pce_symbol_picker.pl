@@ -39,6 +39,7 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_report)).
+:- use_module(library(toolbar)).
 :- autoload(library(unicode/blocks), [unicode_block/3]).
 :- autoload(library(apply), [include/3]).
 :- autoload(library(lists),
@@ -48,8 +49,6 @@
 :- autoload(library(solution_sequences), [distinct/2]).
 
 :- multifile code_range/3.              % Name, Ranges, Sample
-
-:- pce_autoload(font_item, library(pce_font_item)).
 
 /** <module> Pick a Unicode symbol
 
@@ -467,8 +466,9 @@ focus_widget_font(Gr, Font) :-
 		 *            FRAME             *
 		 *******************************/
 
-resource(logo_unicode, image, image('logo/New_Unicode_logo.svg')).
-resource(ublock_user,  image, image('tool/user.svg')).
+resource(logo_unicode,  image, image('logo/New_Unicode_logo.svg')).
+resource(ublock_user,   image, image('tool/user.svg')).
+resource(clear_recents, image, image('tool/wipe.svg')).
 
 :- pce_begin_class(symbol_picker, frame,
                    "Pick a Unicode symbol from a code range").
@@ -494,19 +494,21 @@ initialise(SP) :->
 
     new(FilterMsg, message(SP, filter)),
     new(RangeMsg,  message(SP, range_selected, @arg1?key)),
-    new(FontMsg,   message(SP, choose_font)),
-    new(CloseMsg,  message(SP, destroy)),
-    new(ClearMsg,  message(SP, clear_recents)),
 
     send(SP, append, new(D, dialog)),
     send(D, name, controls),
     send(D, gap, size(8,4)),
-    send(D, append, new(Filter, sp_live_text_item(filter, '', FilterMsg))),
+    send(D, append, new(TB, tool_bar(SP))),
+    send(TB, append,
+         tool_button(clear_recents,
+                     resource(clear_recents),
+                     clear_recents)),
+    send(D, append,
+         new(Filter, sp_live_text_item(filter, '', FilterMsg)), right),
     send(Filter, length, 24),
     send(Filter, placeholder, "Filter code blocks"),
-    send(D, append, button(font, FontMsg), right),
-    send(D, append, button(clear_recents, ClearMsg), right),
-    send(D, append, button(close, CloseMsg), right),
+    send(Filter, clear_image, @default),
+    send(TB, reference, Filter?reference),
 
     send(new(R, picture(recents, size(450, 60))), below, D),
     send(R, name, recents),
@@ -826,23 +828,6 @@ clear_recents(SP) :->
 		 /*******************************
 		 *             FONT             *
 		 *******************************/
-
-choose_font(SP) :->
-    "Let the user pick a new display font"::
-    get(SP, symbol_font, Old),
-    new(Dlg, dialog('Symbol picker font')),
-    send(Dlg, append, new(FI, font_item(font, Old))),
-    send(Dlg, append, button(ok,
-                             message(Dlg, return, FI?selection))),
-    send(Dlg, append, button(cancel,
-                             message(Dlg, return, @nil))),
-    send(Dlg, default_button, ok),
-    (   get(Dlg, confirm_centered, SP?area?center, Reply),
-        Reply \== @nil
-    ->  send(SP, font, Reply)
-    ;   true
-    ),
-    send(Dlg, destroy).
 
 font(SP, Font:font) :->
     "Change the display font and refresh"::

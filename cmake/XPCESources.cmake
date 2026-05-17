@@ -305,7 +305,7 @@ set(XPCE_DATA_bitmaps_tool
     pencil.svg edit.svg refresh.svg up.svg help.svg handpoint.svg
     copy.svg distribute.svg open.svg print.svg undo.svg cut.svg
     duplicate.svg paste.svg save.svg trashcan.svg ex_up.svg ex_down.svg
-    nav-forward.svg nav-backward.svg user.svg clear-text.svg)
+    nav-forward.svg nav-backward.svg user.svg clear-text.svg wipe.svg)
 
 set(XPCE_DATA_bitmaps_logo
     New_Unicode_logo.svg)
