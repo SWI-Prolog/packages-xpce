@@ -104,8 +104,13 @@
           find                     = key('<f4>') + button(edit),
           replace                  = button(edit),
           -                        = button(edit),
+          insert_symbol            = button(edit) +
+                                     key('\\C-x8RET') + key('\\C-x8s'),
+          -                        = button(edit),
           editor_preferences       = button(edit),
           prolog_preferences       = button(edit),
+
+          prefix                   = key('\\C-x8'),
 
                                         % BROWSER menu
           prefix                   = key('\\C-x5'),
@@ -981,6 +986,13 @@ insert_date(M) :->
 insert_character_by_code(M, Code:code='0..') :->
     "Insert character by entering numeric value"::
     send(M, insert_self, @default, Code).
+
+
+insert_symbol(M) :->
+    "Open the Unicode symbol picker, targeting this editor"::
+    get(M, editor, E),
+    auto_call(symbol_picker),
+    send(@symbol_picker, client, E).
 
 
 what_cursor_position(M) :->
