@@ -47,6 +47,9 @@
 :- autoload(library(pce_util), [chain_list/2]).
 :- autoload(library(readutil), [read_file_to_terms/3]).
 :- autoload(library(solution_sequences), [distinct/2]).
+:- if(exists_source(library(uniname))).
+:- autoload(library(uniname), [unicode_name/2]).
+:- endif.
 
 :- multifile code_range/3.              % Name, Ranges, Sample
 
@@ -874,20 +877,31 @@ pick_code(SP, Code:int) :->
     (   Mode == return
     ->  send(SP, return, Code)
     ;   Mode == type,
-        send(SP, type_symbol, Code)
+        send(SP, type_symbol, Code)          % may fail if no target
     ->  add_recent(emit(Code)),
         send(SP, update_recents),
-        send(SP, report, status, 'Typed %c  (U+%04X)', Code, Code)
-    ;   atom_codes(A, [Code]),
+        char_name(Code, Name),
+        send(SP, report, status, 'Typed %c  (%s)', Code, Name)
+    ;   char_name(Code, Name),
+        char_code(A, Code),
         send(@display, copy, A),
         add_recent(emit(Code)),
         send(SP, update_recents),
         (   Mode == type
         ->  send(SP, report, status,
-                 'No target window; copied %c  (U+%04X)', Code, Code)
-        ;   send(SP, report, status, 'Copied %s  (U+%04X)', A, Code)
+                 'No target window; copied %c  (%s)', Code, Name)
+        ;   send(SP, report, status, 'Copied %c  (%s)', Code, Name)
         )
     ).
+
+:- if(current_predicate(unicode_name/2)).
+char_name(C, Name) :-
+    current_predicate(unicode_name/2),
+    unicode_name(C, Name),
+    !.
+:- endif.
+char_name(C, Name) :-
+    format(string(Name), 'U+~|~`0t~16r~4+', C).
 
 type_symbol(SP, Code:int) :->
     "Post a keyboard event for Code to the target frame"::
@@ -948,9 +962,12 @@ event(C, Ev:event) :->
     ).
 
 action_status(emit(Code), Status) :-
-    new(Status, string('%c  U+%04X / %d', Code, Code, Code)).
+    char_name(Code, Name),
+    new(Status, string('%c  (%s)', Code, Name)).
 action_status(pair(Open,Close), Status) :-
-    new(Status, string('%c%c  pair', Open, Close)).
+    char_name(Open, OpenName),
+    char_name(Close, CloseName),
+    new(Status, string('%s/%s  pair', OpenName, CloseName)).
 
 :- pce_end_class(picker_cell).
 
