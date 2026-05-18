@@ -81,7 +81,6 @@ initialiseTextItem(TextItem ti, Name name, Any val, Code msg)
   assign(ti, auto_value_align, OFF);
   assign(ti, hor_stretch,      toInt(100));
   assign(ti, style,	       NAME_normal);
-  assign(ti, clear_image,      NIL);
 
   Colour c;
   if ( (c=getClassVariableValueObject(ti, NAME_textColour)) &&
@@ -90,6 +89,8 @@ initialiseTextItem(TextItem ti, Name name, Any val, Code msg)
 
   if ( (str = get(ti, NAME_printNameOfValue, val, EAV)) )
     valueString(ti->print_name, str);
+
+  obtainClassVariablesObject(ti);
   resetTextItem(ti);
 
   return requestComputeGraphical(ti, DEFAULT);
