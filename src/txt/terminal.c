@@ -654,9 +654,15 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   } else if ( ev->id == NAME_cursorDown )
   { seq = b->app_escape ? S_ESC"0B" : S_ESC"[B";
   } else if ( ev->id == NAME_cursorLeft )
-  { seq = b->app_escape ? S_ESC"0D" : S_ESC"[D";
+  { if ( valInt(ev->buttons) & BUTTON_control )
+      seq = S_ESC"[1;5D";		/* xterm-style Ctrl+Left */
+    else
+      seq = b->app_escape ? S_ESC"0D" : S_ESC"[D";
   } else if ( ev->id == NAME_cursorRight )
-  { seq = b->app_escape ? S_ESC"0C" : S_ESC"[C";
+  { if ( valInt(ev->buttons) & BUTTON_control )
+      seq = S_ESC"[1;5C";		/* xterm-style Ctrl+Right */
+    else
+      seq = b->app_escape ? S_ESC"0C" : S_ESC"[C";
   } else if ( ev->id == NAME_delete )
   { seq = S_ESC"[3~";
   } else
