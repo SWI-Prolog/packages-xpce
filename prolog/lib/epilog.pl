@@ -306,7 +306,7 @@ variable(current_link,	name*,                get,  "Link under popup").
 binding('\\C-y',     paste_quoted).
 binding('\\C-x',     prefix).
 binding('\\C-x8',    prefix).
-binding('\\C-x8\\r', insert_symbol).
+binding('\\C-x8RET', insert_symbol).
 binding('\\C-x8s',   insert_symbol).
 binding('\\C-\\S-o', split_horizontally). % Terminator compatibility
 binding('\\C-\\S-e', split_vertically).
