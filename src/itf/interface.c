@@ -670,6 +670,12 @@ pceDispatch(IOSTREAM *input, int time)
 
 
 void
+pceSetDispatchInput(IOSTREAM *input)
+{ setDispatchInput(input);
+}
+
+
+void
 pceRedraw(void)
 { static DisplayManager dm = NULL;
 

@@ -622,13 +622,41 @@ dispatch_event(EventObj ev)
  * mechanism to its initial state. It is typically called before
  * starting a new event loop or when reinitializing the event system.
  */
-void
-resetDispatch(void)
-{
-}
-
+static IOSTREAM *dispatch_input = NULL;
 static waitable_t dispatch_fd = NO_WAITABLE;
 static FDWatch *watch  = NULL;
+
+void
+resetDispatch(void)
+{ if ( watch )
+  { remove_fd_watch(watch);
+    watch = NULL;
+  }
+
+  dispatch_input = NULL;
+  dispatch_fd = NO_WAITABLE;
+}
+
+void
+setDispatchInput(IOSTREAM *input)
+{ waitable_t fd;
+
+  if ( input )
+  {
+#if __WINDOWS__
+    fd = Swinhandle(input);
+#else
+    fd = Sfileno(input);
+#endif
+  } else
+    fd = NO_WAITABLE;
+
+  if ( input != dispatch_input || fd != dispatch_fd )
+  { resetDispatch();
+    dispatch_input = input;
+    dispatch_fd = fd;
+  }
+}
 
 static void
 set_watch(waitable_t fd)
@@ -704,11 +732,14 @@ status
 ws_dispatch(IOSTREAM *input, Any timeout)
 { int tmo;
   waitable_t fd;
+  bool persistent = false;
+  FDWatch *wait_watch = NULL;
 
   if ( !input )
   { fd = NO_WAITABLE;
   } else if ( input == DEFAULT )
   { fd = dispatch_fd;
+    persistent = true;
   } else
   {
 #if __WINDOWS__
@@ -716,10 +747,9 @@ ws_dispatch(IOSTREAM *input, Any timeout)
 #else
     fd = Sfileno(input);
 #endif
+    if ( input == dispatch_input && fd == dispatch_fd )
+      persistent = true;
   }
-
-  if ( fd != NO_WAITABLE )
-    dispatch_fd = fd;
 
   if ( isNil(timeout) )
   { tmo = -1;
@@ -747,7 +777,12 @@ ws_dispatch(IOSTREAM *input, Any timeout)
       succeed;
 
     if ( fd != NO_WAITABLE )
-      set_watch(fd);
+    { if ( persistent )
+      { set_watch(fd);
+      } else
+      { wait_watch = add_fd_to_watch(fd, FD_READY_DISPATCH, NULL);
+      }
+    }
 
     bool rc;
     SDL_Event ev;
@@ -760,15 +795,34 @@ ws_dispatch(IOSTREAM *input, Any timeout)
     if ( rc )
     { if ( ev.type == MY_EVENT_FD_READY &&
 	   ev.user.code == FD_READY_DISPATCH )
-      { FDWatch *watch = ev.user.data1;
-	cmp_and_set_watch(watch, WATCH_PENDING, WATCH_PROCESSING);
+      { FDWatch *evwatch = ev.user.data1;
+
+	if ( wait_watch && evwatch == wait_watch )
+	{ remove_fd_watch(wait_watch);
+	  wait_watch = NULL;
+	} else if ( evwatch == watch )
+	{ cmp_and_set_watch(evwatch, WATCH_PENDING, WATCH_PROCESSING);
+	}
+
+	if ( wait_watch )
+	{ remove_fd_watch(wait_watch);
+	  wait_watch = NULL;
+	}
 	succeed;
+      }
+
+      if ( wait_watch )
+      { remove_fd_watch(wait_watch);
+	wait_watch = NULL;
       }
 
       EventObj event = CtoEvent(&ev);
       if ( event )
 	dispatch_event(event);
     }
+
+    if ( wait_watch )
+      remove_fd_watch(wait_watch);
 
     considerLocStillEvent();
 

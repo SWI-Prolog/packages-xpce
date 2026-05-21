@@ -2850,7 +2850,20 @@ the possibility of reentrance at moments this is not allowed in PCE ...
 
 static int
 pce_dispatch(IOSTREAM *fd)
-{ if ( pceDispatch(fd, TIMEOUT) == PCE_DISPATCH_INPUT )
+{ IOSTREAM *input = Suser_input;
+
+  if ( !input )
+    input = Sinput;
+
+  if ( fd == input )
+  { if ( PL_ttymode(fd) == PL_NOTTY )
+    { pceSetDispatchInput(NULL);
+    } else
+    { pceSetDispatchInput(fd);
+    }
+  }
+
+  if ( pceDispatch(fd, TIMEOUT) == PCE_DISPATCH_INPUT )
     return PROLOG_DISPATCH_INPUT;
 
   return PROLOG_DISPATCH_TIMEOUT;

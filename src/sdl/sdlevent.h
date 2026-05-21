@@ -43,6 +43,7 @@ PceWindow ws_grabbing_window(void);
 
 /* Public interface */
 void resetDispatch(void);
+void setDispatchInput(IOSTREAM *input);
 status ws_dispatch(IOSTREAM *input, Any timeout);
 void ws_discard_input(const char *msg);
 Any ws_event_in_subwindow(EventObj ev, Any root);
