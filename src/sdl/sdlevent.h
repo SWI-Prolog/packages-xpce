@@ -50,4 +50,14 @@ int ws_wait_for_key(int maxwait);
 DisplayObj ws_last_display_from_event(void);
 void sdl_alert(void);
 
+/* Console drain registry (see sdlevent.c). */
+typedef enum
+{ CON_DRAIN_TCFLUSH,
+  CON_DRAIN_WIN_CONSOLE,
+  CON_DRAIN_NONE
+} ConDrainKind;
+
+bool pceRegisterConsole(waitable_t handle, ConDrainKind kind);
+bool pceUnregisterConsole(waitable_t handle);
+
 #endif /* SDLEVENT_H */

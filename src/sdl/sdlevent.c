@@ -45,6 +45,9 @@
 #ifdef HAVE_POLL
 #include <poll.h>
 #endif
+#ifndef __WINDOWS__
+#include <termios.h>
+#endif
 
 #define InitAreaA	int ax = valInt(a->x), ay = valInt(a->y),	\
 			    aw = valInt(a->w), ah = valInt(a->h)
@@ -627,23 +630,46 @@ resetDispatch(void)
 {
 }
 
-static waitable_t dispatch_fd = NO_WAITABLE;
-static FDWatch *watch  = NULL;
+/* Registry of consoles whose pending input ws_discard_input() drops
+   when a modal/confirmer is active.  There is at most one stdin console
+   (registered by the host on init when stdin is a terminal) plus zero
+   or more Epilog terminal consoles (registered by terminal.c when a
+   pty pair is created).  Lookup is rare (only on discard), so a small
+   linear-search array is sufficient.
+*/
 
-static void
-set_watch(waitable_t fd)
-{ if ( fd >= 0 )
-  { if ( watch )
-    { if ( watch->fd != fd )
-      { remove_fd_watch(watch);
-	watch = add_fd_to_watch(fd, FD_READY_DISPATCH, NULL);
-      } else
-      { processed_fd_watch(watch); /* re-enable */
-      }
-    } else
-    { watch = add_fd_to_watch(fd, FD_READY_DISPATCH, NULL);
+#define MAX_CONSOLES 16
+
+typedef struct
+{ bool          used;
+  ConDrainKind  kind;
+  waitable_t    handle;
+} ConsoleEntry;
+
+static ConsoleEntry consoles[MAX_CONSOLES];
+
+bool
+pceRegisterConsole(waitable_t handle, ConDrainKind kind)
+{ for(int i=0; i<MAX_CONSOLES; i++)
+  { if ( !consoles[i].used )
+    { consoles[i].used   = true;
+      consoles[i].kind   = kind;
+      consoles[i].handle = handle;
+      return true;
     }
   }
+  return false;
+}
+
+bool
+pceUnregisterConsole(waitable_t handle)
+{ for(int i=0; i<MAX_CONSOLES; i++)
+  { if ( consoles[i].used && consoles[i].handle == handle )
+    { consoles[i].used = false;
+      return true;
+    }
+  }
+  return false;
 }
 
 static bool
@@ -703,13 +729,9 @@ win_wait_for_handle(HANDLE hConsole, int tmo)
 status
 ws_dispatch(IOSTREAM *input, Any timeout)
 { int tmo;
-  waitable_t fd;
+  waitable_t fd = NO_WAITABLE;
 
-  if ( !input )
-  { fd = NO_WAITABLE;
-  } else if ( input == DEFAULT )
-  { fd = dispatch_fd;
-  } else
+  if ( input && input != DEFAULT )
   {
 #if __WINDOWS__
     fd = Swinhandle(input);
@@ -717,9 +739,6 @@ ws_dispatch(IOSTREAM *input, Any timeout)
     fd = Sfileno(input);
 #endif
   }
-
-  if ( fd != NO_WAITABLE )
-    dispatch_fd = fd;
 
   if ( isNil(timeout) )
   { tmo = -1;
@@ -746,8 +765,9 @@ ws_dispatch(IOSTREAM *input, Any timeout)
     if ( dispatch_ready_event() )
       succeed;
 
+    FDWatch *transient = NULL;
     if ( fd != NO_WAITABLE )
-      set_watch(fd);
+      transient = add_fd_to_watch(fd, FD_READY_DISPATCH, NULL);
 
     bool rc;
     SDL_Event ev;
@@ -762,6 +782,8 @@ ws_dispatch(IOSTREAM *input, Any timeout)
 	   ev.user.code == FD_READY_DISPATCH )
       { FDWatch *watch = ev.user.data1;
 	cmp_and_set_watch(watch, WATCH_PENDING, WATCH_PROCESSING);
+	if ( transient )
+	  remove_fd_watch(transient);
 	succeed;
       }
 
@@ -769,6 +791,9 @@ ws_dispatch(IOSTREAM *input, Any timeout)
       if ( event )
 	dispatch_event(event);
     }
+
+    if ( transient )
+      remove_fd_watch(transient);
 
     considerLocStillEvent();
 
@@ -838,35 +863,51 @@ input_on_fd(waitable_t fd)
 #endif
 }
 
-#ifdef __WINDOWS__
-static bool
-isconsole(HANDLE h)
-{ DWORD mode;
-
-  return GetConsoleMode(h, &mode);
-}
-#endif
-
 /**
- * Discard any pending input events.
+ * Discard any pending input events on all registered consoles.
+ *
+ * Called when a modal/confirmer is up so that keystrokes the user typed
+ * at a terminal (intended for the program but unwanted by the modal)
+ * do not leak through after the modal closes.  Uses tcflush() on
+ * POSIX tty/pty fds and FlushConsoleInputBuffer() on Windows console
+ * handles; both drop pending bytes without consuming them, so this
+ * never races with a Prolog engine reading the same fd.
  *
  * @param msg A message indicating the reason for discarding input.
  */
 void
 ws_discard_input(const char *msg)
-{ if ( dispatch_fd != NO_WAITABLE && input_on_fd(dispatch_fd) )
-  { Cprintf("%s; discarding input ...", msg);
+{ bool announced = false;
+
+  for(int i=0; i<MAX_CONSOLES; i++)
+  { ConsoleEntry *c = &consoles[i];
+    if ( !c->used || !input_on_fd(c->handle) )
+      continue;
+
+    if ( !announced )
+    { Cprintf("%s; discarding input ...", msg);
+      announced = true;
+    }
+
+    switch(c->kind)
+    {
 #ifdef __WINDOWS__
-    if ( isconsole(dispatch_fd) )
-      FlushConsoleInputBuffer(dispatch_fd);
+      case CON_DRAIN_WIN_CONSOLE:
+	FlushConsoleInputBuffer(c->handle);
+	break;
 #else
-    char buf[1024];
-    if ( read(dispatch_fd, buf, sizeof(buf)) >= 0 )
-      Cprintf("ok\n");
-    else
-      Cprintf("failed\n");
+      case CON_DRAIN_TCFLUSH:
+	tcflush(c->handle, TCIFLUSH);
+	break;
 #endif
+      case CON_DRAIN_NONE:
+      default:
+	break;
+    }
   }
+
+  if ( announced )
+    Cprintf("ok\n");
 }
 
 /**
