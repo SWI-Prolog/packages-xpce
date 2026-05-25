@@ -36,8 +36,10 @@
 #include <h/graphics.h>
 #include "sdl.h"
 #include "sdlinput.h"
+#include "sdlevent.h"
 #ifndef __WINDOWS__
 #include <pwd.h>
+#include <unistd.h>
 #endif
 
 /**
@@ -86,6 +88,22 @@ setPceThread(const char *app_name)
     }
     ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
     start_fd_watcher_thread();
+
+    /* Register the program's stdin as a drainable console iff it is a
+       real terminal/console.  Used by ws_discard_input() when a modal
+       confirmer is up to drop keystrokes the user typed at the terminal.
+    */
+#ifdef __WINDOWS__
+    { HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
+      DWORD mode;
+      if ( h != INVALID_HANDLE_VALUE && GetConsoleMode(h, &mode) )
+	pceRegisterConsole(h, CON_DRAIN_WIN_CONSOLE);
+    }
+#else
+    if ( isatty(STDIN_FILENO) )
+      pceRegisterConsole(STDIN_FILENO, CON_DRAIN_TCFLUSH);
+#endif
+
     TRY(ws_init_displays());
 
     assign(PCE, window_system_version,  toInt(ws_version()));
