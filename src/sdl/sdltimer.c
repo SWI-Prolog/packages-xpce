@@ -48,6 +48,7 @@ tm_callback(void *udata, SDL_TimerID id, Uint32 interval)
   SDL_zero(ev);
   ev.type = MY_EVENT_TIMER;
   ev.user.data1 = tm;
+  addCodeReference(tm);		/* released in sdl_timer_event() */
   SDL_PushEvent(&ev);
 
   if ( tm->status == NAME_once )
@@ -72,6 +73,7 @@ sdl_timer_event(SDL_Event *event)
       }
       pceMTUnlock();
     }
+    delCodeReference(tm);
     return true;
   }
 
