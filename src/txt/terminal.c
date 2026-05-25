@@ -42,6 +42,7 @@
 #include <h/text.h>
 #include <h/charwidth.h>
 #include "terminal.h"
+#include "../sdl/sdlevent.h"
 #ifdef HAVE_POLL
 #include <poll.h>
 #endif
@@ -4386,6 +4387,7 @@ rlc_open_pty_pair(RlcData b, int cols, int rows)
   }
   b->pty.open = true;
   b->pty.watch = add_fd_to_watch(b->pty.master_fd, FD_READY_TERMINAL, b->object);
+  pceRegisterConsole(b->pty.slave_fd, CON_DRAIN_TCFLUSH);
 
   return true;
 }
@@ -4402,7 +4404,8 @@ rlc_close_connection(RlcData b)
       b->pty.master_fd = -1;
     }
     if ( b->pty.slave_fd >= 0 )	/* leave to the client? */
-    { close(b->pty.slave_fd);
+    { pceUnregisterConsole(b->pty.slave_fd);
+      close(b->pty.slave_fd);
       b->pty.slave_fd = -1;
     }
     b->pty.open = false;
