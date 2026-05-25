@@ -569,10 +569,15 @@ ws_draw_frame(FrameObj fr)
 Uint32 SDLCALL
 flash_end_callback(void *userdata, SDL_TimerID id, Uint32 interval)
 { FrameObj fr = userdata;
+
+  if ( onFlag(fr, F_FREEING|F_FREED) )
+    return 0;
+
   SDL_Event ev;
   SDL_zero(ev);
   ev.type       = MY_EVENT_FLASH_END;
   ev.user.data1 = fr;
+  addCodeReference(fr);			/* released by MY_EVENT_FLASH_END handler */
   SDL_PushEvent(&ev);
   return 0;				/* one-shot */
 }

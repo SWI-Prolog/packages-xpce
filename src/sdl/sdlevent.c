@@ -343,6 +343,7 @@ CtoEvent(SDL_Event *event)
 	pceMTUnlock();
       }
     }
+    delCodeReference(fr);
     fail;
   }
   mouse_flags = SDL_GetMouseState(&fx, &fy);
