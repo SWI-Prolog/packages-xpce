@@ -289,7 +289,7 @@ set(XPCE_DATA_bitmaps_16x16 alert.png arrow_length.png arrows.png
     drawing.png drive.png error.png exclamation.png eye.png false.png
     fatleft_arrow.png fatright_arrow.png fillpattern.png font.png foot.png
     funcdoc.png ghost.png graph.png hierarchy.png manual.png
-    newdir.png new.png noimg.png note.png ok.png pce.png pen.png preddoc.png
+    new.png noimg.png note.png ok.png pce.png pen.png preddoc.png
     profiler.png redo.png saveall.png valign.png
     vcr_fast_forward.png vcr_forward.png vga16.png wipeall.png)
 
@@ -305,7 +305,8 @@ set(XPCE_DATA_bitmaps_tool
     pencil.svg edit.svg refresh.svg up.svg help.svg handpoint.svg
     copy.svg distribute.svg open.svg print.svg undo.svg cut.svg
     duplicate.svg paste.svg save.svg trashcan.svg ex_up.svg ex_down.svg
-    nav-forward.svg nav-backward.svg user.svg clear-text.svg wipe.svg)
+    nav-forward.svg nav-backward.svg user.svg clear-text.svg wipe.svg
+    newdir.svg)
 
 set(XPCE_DATA_bitmaps_logo
     New_Unicode_logo.svg)
