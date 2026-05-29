@@ -58,14 +58,14 @@
                  *             STYLES           *
                  *******************************/
 
-resource(call,   image, image('port_call.svg')).
-resource(exit,   image, image('port_exit.svg')).
-resource(redo,   image, image('port_redo.svg')).
-resource(fail,   image, image('port_fail.svg')).
-resource(except, image, image('port_except.svg')).
-resource(ndet,   image, image('ndet.svg')).
-resource(stack,  image, image('stack.svg')).
-resource(stop,   image, image('stop.svg')).
+resource(port_call,   image, image('port_call.svg')).
+resource(port_exit,   image, image('port_exit.svg')).
+resource(port_redo,   image, image('port_redo.svg')).
+resource(port_fail,   image, image('port_fail.svg')).
+resource(port_except, image, image('port_except.svg')).
+resource(port_ndet,   image, image('ndet.svg')).
+resource(port_stack,  image, image('stack.svg')).
+resource(port_stop,   image, image('stop.svg')).
 
 style(Port, Style) :-
     def_style(Port, DefAttrs),
@@ -99,16 +99,16 @@ make_value(icon, Resource, Icon) =>
 make_value(_, Value0, Value) =>
     Value = Value0.
 
-def_style(call,         [background(green),     icon(resource(call))]).
+def_style(call,         [background(green),     icon(resource(port_call))]).
 def_style(break,        [background(cyan)]).
-def_style(exit,         [background(green),     icon(resource(exit))]).
-def_style(redo,         [background(yellow),    icon(resource(redo))]).
-def_style(fail,         [background('#ff8080'), icon(resource(fail))]).
-def_style(exception,    [background(magenta),   icon(resource(except))]).
+def_style(exit,         [background(green),     icon(resource(port_exit))]).
+def_style(redo,         [background(yellow),    icon(resource(port_redo))]).
+def_style(fail,         [background('#ff8080'), icon(resource(port_fail))]).
+def_style(exception,    [background(magenta),   icon(resource(port_except))]).
 def_style(unify,        [background(sky_blue)]).
-def_style(choice,       [background(yellow),    icon(resource(ndet))]).
-def_style(frame,        [background('#d6dc5e'), icon(resource(stack))]).
-def_style(breakpoint,   [icon(resource(stop))]).
+def_style(choice,       [background(yellow),    icon(resource(port_ndet))]).
+def_style(frame,        [background('#d6dc5e'), icon(resource(port_stack))]).
+def_style(breakpoint,   [icon(resource(port_stop))]).
 
 
 % If you define an alternative mode as a subclass of the Prolog mode
