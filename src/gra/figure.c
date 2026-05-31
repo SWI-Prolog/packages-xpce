@@ -93,16 +93,53 @@ RedrawBoxFigure(Figure f, Area area)
 }
 
 
+/* Paint the children of f with f->transform applied.  Mirrors the body
+ * of RedrawAreaDevice between Enter/Exit, with cairo carrying the affine
+ * via r_push_transform/r_pop_transform around the children loop.
+ */
+
+static void
+RedrawTransformedChildren(Figure f, Area area)
+{ device_draw_context ctx;
+  Device dev = (Device) f;
+
+  if ( EnterRedrawAreaDevice(dev, area, &ctx) )
+  { Cell cell;
+    r_transform_save saved;
+
+    if ( notNil(dev->layout_manager) )
+      qadSendv(dev->layout_manager, NAME_redrawBackground, 1, (Any*)&area);
+
+    r_push_transform(f->transform, &saved);
+    for_cell(cell, dev->graphicals)
+      RedrawArea(cell->value, area);
+    r_pop_transform(&saved);
+
+    if ( notNil(dev->layout_manager) )
+      qadSendv(dev->layout_manager, NAME_redrawForeground, 1, (Any*)&area);
+
+    ExitRedrawAreaDevice(dev, area, &ctx);
+  }
+
+  RedrawAreaGraphical((Graphical) f, area);
+}
+
+
 static status
 RedrawAreaFigure(Figure f, Area area)
 { Any bg, obg;
+  bool transformed = ( notNil(f->transform) &&
+		       !transformIsIdentity(f->transform) );
 
   if ( notNil(bg = RedrawBoxFigure(f, area)) )
     obg = r_background(bg);
   else
     obg = NULL;
 
-  RedrawAreaDevice((Device) f, area);
+  if ( transformed )
+    RedrawTransformedChildren(f, area);
+  else
+    RedrawAreaDevice((Device) f, area);
 
   if ( obg )
     r_background(obg);

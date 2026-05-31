@@ -51,6 +51,19 @@ void d_init_surface(cairo_surface_t *surf, Any background);
 void resetDraw(void);
 void d_offset(int x, int y);
 void r_offset(int x, int y);
+
+/* Push/pop a 2D affine transform on the current drawing context.
+ * Subsequent r_* calls deliver coordinates as input to the matrix; the
+ * integer offset that was in effect at push time becomes part of the
+ * cairo transform until pop.
+ */
+typedef struct r_transform_save
+{ int saved_offset_x;
+  int saved_offset_y;
+} r_transform_save;
+
+void r_push_transform(Transform t, r_transform_save *saved);
+void r_pop_transform (r_transform_save *saved);
 void r_filloffset(Point offset, int x0, int y0, fill_state *state);
 void r_fillrestore(fill_state *state);
 DisplayObj d_display(DisplayObj d);

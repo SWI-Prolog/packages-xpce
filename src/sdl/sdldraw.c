@@ -177,6 +177,46 @@ r_offset(int x, int y)
 }
 
 /**
+ * Apply a 2D affine transform on top of the current drawing context.
+ *
+ * The current integer pen offset is folded into the cairo transform as
+ * a translation, the user-supplied matrix is then composed on top, and
+ * the offset is reset to zero.  Subsequent r_* calls therefore deliver
+ * coordinates directly as input to the matrix.
+ *
+ * Pair with r_pop_transform(saved) to undo.
+ */
+void
+r_push_transform(Transform t, r_transform_save *saved)
+{ saved->saved_offset_x = context.offset_x;
+  saved->saved_offset_y = context.offset_y;
+
+  cairo_save(CR);
+  cairo_translate(CR,
+		  (double)context.offset_x,
+		  (double)context.offset_y);
+
+  cairo_matrix_t m;
+  m.xx = valNum(t->xx);
+  m.yx = valNum(t->yx);
+  m.xy = valNum(t->xy);
+  m.yy = valNum(t->yy);
+  m.x0 = valNum(t->tx);
+  m.y0 = valNum(t->ty);
+  cairo_transform(CR, &m);
+
+  context.offset_x = 0;
+  context.offset_y = 0;
+}
+
+void
+r_pop_transform(r_transform_save *saved)
+{ context.offset_x = saved->saved_offset_x;
+  context.offset_y = saved->saved_offset_y;
+  cairo_restore(CR);
+}
+
+/**
  * Initialize the fill state with the specified offset and starting point.
  *
  * @param offset Pointer to the Point object representing the offset.
