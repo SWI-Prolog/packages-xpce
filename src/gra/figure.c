@@ -49,6 +49,7 @@ initialiseFigure(Figure f)
   assign(f, radius,	ZERO);
   assign(f, elevation,	NIL);
   assign(f, transform,	NIL);
+  assign(f, local_area,	newObject(ClassArea, EAV));
   assign(f, status,     NAME_allActive);
 
   succeed;
@@ -157,8 +158,31 @@ computeBoundingBoxFigure(Figure f)
 { if ( f->badBoundingBox == ON )
   { Area a = f->area;
     Int ox = a->x, oy = a->y, ow = a->w, oh = a->h;
+    bool transformed = ( notNil(f->transform) &&
+			 !transformIsIdentity(f->transform) );
 
     computeBoundingBoxDevice((Device) f);
+
+    /* f->area now holds the un-transformed children union, translated
+     * by dev->offset (and clipped by clip_area in local coords).
+     * Snapshot the local-coord bbox into f->local_area; later phases
+     * (events, damage) need it.
+     */
+    int offx = valInt(f->offset->x);
+    int offy = valInt(f->offset->y);
+    qassign(f->local_area, x, toInt(valInt(f->area->x) - offx));
+    qassign(f->local_area, y, toInt(valInt(f->area->y) - offy));
+    qassign(f->local_area, w, f->area->w);
+    qassign(f->local_area, h, f->area->h);
+
+    if ( transformed )
+    { /* Project local_area through the transform, then re-apply offset
+       * to land back in parent coords.
+       */
+      transformAreaToIntAABB(f->transform, f->local_area, f->area);
+      qassign(f->area, x, toInt(valInt(f->area->x) + offx));
+      qassign(f->area, y, toInt(valInt(f->area->y) + offy));
+    }
 
     if ( f->border != ZERO )
       increaseArea(f->area, f->border);
@@ -380,6 +404,8 @@ makeClassFigure(Class class)
 	     "Elevation from background");
   localClass(class, NAME_transform, NAME_appearance, "transform*", NAME_get,
 	     "Optional 2D affine transform applied to contents");
+  localClass(class, NAME_localArea, NAME_area, "area", NAME_get,
+	     "Children bbox in figure-local coords (before transform/offset)");
 
   setRedrawFunctionClass(class, RedrawAreaFigure);
 

@@ -84,13 +84,14 @@ determinantTransform(Transform t)
  * that exact rotations (90/180/270) of integer-aligned areas don't grow by
  * one pixel from cos/sin dust.
  */
-static double
-snap_to_int(double v)
+double
+transformSnapInt(double v)
 { double r = round(v);
   if ( fabs(v - r) < 1e-9 * fmax(1.0, fabs(v)) )
     return r;
   return v;
 }
+#define snap_to_int(v) transformSnapInt(v)
 
 
 		 /*******************************
@@ -357,6 +358,25 @@ transformAreaAABB(Transform t, Area in, double bbox[4])
     if ( nx > bbox[2] ) bbox[2] = nx;
     if ( ny > bbox[3] ) bbox[3] = ny;
   }
+}
+
+
+/* Map an integer-coord input Area through t and write the (snapped,
+ * outward-rounded) integer AABB into `out`.  `in` and `out` may alias.
+ */
+void
+transformAreaToIntAABB(Transform t, Area in, Area out)
+{ double bbox[4];
+
+  transformAreaAABB(t, in, bbox);
+  intptr_t ix  = (intptr_t)floor(transformSnapInt(bbox[0]));
+  intptr_t iy  = (intptr_t)floor(transformSnapInt(bbox[1]));
+  intptr_t ix1 = (intptr_t)ceil (transformSnapInt(bbox[2]));
+  intptr_t iy1 = (intptr_t)ceil (transformSnapInt(bbox[3]));
+  qassign(out, x, toInt(ix));
+  qassign(out, y, toInt(iy));
+  qassign(out, w, toInt(ix1 - ix));
+  qassign(out, h, toInt(iy1 - iy));
 }
 
 

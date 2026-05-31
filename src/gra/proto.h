@@ -292,6 +292,8 @@ COMMON(void)	transformPoint(Transform t, double x, double y,
 COMMON(bool)	inverseTransformPoint(Transform t, double x, double y,
 				      double *ox, double *oy);
 COMMON(void)	transformAreaAABB(Transform t, Area in, double bbox[4]);
+COMMON(void)	transformAreaToIntAABB(Transform t, Area in, Area out);
+COMMON(double)	transformSnapInt(double v);
 COMMON(status)	makeClassTransform(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/tree.c */
