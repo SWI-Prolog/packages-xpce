@@ -36,6 +36,10 @@ COMMON(bool)	graphicalToWindowCoord(Graphical gr, double lx, double ly,
 COMMON(bool)	windowToGraphicalCoord(Graphical gr, double wx, double wy,
 				       double *lx, double *ly);
 COMMON(bool)	graphicalToWindowArea(Graphical gr, Area in, double bbox[4]);
+COMMON(bool)	deviceLocalAreaToWindowAABB(Device dev,
+					    int lx, int ly, int lw, int lh,
+					    int *wx, int *wy,
+					    int *ww, int *wh);
 COMMON(bool)	hasTransformInDeviceChain(Device dev);
 COMMON(bool)	deviceChainHasTransform(Graphical gr);
 

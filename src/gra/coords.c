@@ -266,6 +266,48 @@ windowToGraphicalCoord(Graphical gr, double wx, double wy,
 }
 
 
+/* Map an integer rect in `dev`'s children-coord to a window-coord
+ * AABB, rounded outward (floor min, ceil max with float-dust snap).
+ * Returns false if `dev` has no window ancestor or the composition is
+ * singular.  Used by damage propagation in graphical.c.
+ */
+bool
+deviceLocalAreaToWindowAABB(Device dev,
+			    int lx, int ly, int lw, int lh,
+			    int *wx, int *wy, int *ww, int *wh)
+{ aff W;
+
+  if ( !compose_device_to_window(dev, &W) )
+    return false;
+
+  double x0 = (double)lx, y0 = (double)ly;
+  double x1 = x0 + (double)lw, y1 = y0 + (double)lh;
+  double cx[4] = { x0, x1, x1, x0 };
+  double cy[4] = { y0, y0, y1, y1 };
+  double minx =  DBL_MAX, miny =  DBL_MAX;
+  double maxx = -DBL_MAX, maxy = -DBL_MAX;
+
+  for(int i=0; i<4; i++)
+  { double nx, ny;
+    aff_apply(&W, cx[i], cy[i], &nx, &ny);
+    if ( nx < minx ) minx = nx;
+    if ( ny < miny ) miny = ny;
+    if ( nx > maxx ) maxx = nx;
+    if ( ny > maxy ) maxy = ny;
+  }
+
+  int ix  = (int)floor(transformSnapInt(minx));
+  int iy  = (int)floor(transformSnapInt(miny));
+  int ix1 = (int)ceil (transformSnapInt(maxx));
+  int iy1 = (int)ceil (transformSnapInt(maxy));
+  *wx = ix;
+  *wy = iy;
+  *ww = ix1 - ix;
+  *wh = iy1 - iy;
+  return true;
+}
+
+
 /* Map an Area in `gr`-local coords to the window-coord AABB.  Writes
  * floats; caller decides how to round.
  */

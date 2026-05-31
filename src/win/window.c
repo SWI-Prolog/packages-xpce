@@ -1705,6 +1705,33 @@ getBoundingBoxWindow(PceWindow w)
 }
 
 
+/* <-changes_area: -> area*
+ *
+ * Returns the union of pending damage rectangles in the window's
+ * children-coord (the rects stored by changed_window).  Fails if no
+ * changes are pending.  Primarily for testing transform-aware damage.
+ */
+
+static Area
+getChangesAreaWindow(PceWindow w)
+{ UpdateArea u = w->changes_data;
+  if ( !u )
+    fail;
+
+  int x0 = u->area.x, y0 = u->area.y;
+  int x1 = x0 + u->area.w, y1 = y0 + u->area.h;
+  for( u = u->next; u; u = u->next )
+  { if ( u->area.x        < x0 ) x0 = u->area.x;
+    if ( u->area.y        < y0 ) y0 = u->area.y;
+    if ( u->area.x+u->area.w > x1 ) x1 = u->area.x + u->area.w;
+    if ( u->area.y+u->area.h > y1 ) y1 = u->area.y + u->area.h;
+  }
+  answer(answerObject(ClassArea,
+		      toInt(x0), toInt(y0),
+		      toInt(x1-x0), toInt(y1-y0), EAV));
+}
+
+
 		/********************************
 		*         LINK TO FRAME		*
 		********************************/
@@ -2336,6 +2363,8 @@ static getdecl get_window[] =
      DEFAULT, "Tile of window (create if not there)"),
   GM(NAME_foreground, 0, "colour", NULL, getForegroundWindow,
      NAME_appearance, "Get foreground colour"),
+  GM(NAME_changesArea, 0, "area*", NULL, getChangesAreaWindow,
+     NAME_repaint, "AABB of pending damage rectangles, or fail if none"),
   GM(NAME_boundingBox, 0, "area", NULL, getBoundingBoxWindow,
      NAME_area, "Union of graphicals"),
   GM(NAME_visible, 0, "area", NULL, getVisibleWindow,

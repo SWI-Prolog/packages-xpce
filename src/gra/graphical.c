@@ -482,19 +482,31 @@ changedAreaGraphical(Any obj, Int x, Int y, Int w, Int h)
       if ( instanceOfObject(d, ClassWindow) )
       { PceWindow sw = (PceWindow) d;
 	Area a = gr->area;
-	int ox = valInt(x), oy = valInt(y),
-	    ow = valInt(w), oh = valInt(h);
-	int cx = valInt(a->x), cy = valInt(a->y),
-            cw = valInt(a->w), ch = valInt(a->h);
+	int ox, oy, ow, oh;
+	int cx, cy, cw, ch;
 	int m;
 
 	if ( !createdWindow(sw) )
 	  break;
 
-	NormaliseArea(ox, oy, ow, oh);
-	NormaliseArea(cx, cy, cw, ch);
-	ox += offx; oy += offy;
-	cx += offx; cy += offy;
+	int ix = valInt(x), iy = valInt(y), iw = valInt(w), ih = valInt(h);
+	int ax = valInt(a->x), ay = valInt(a->y),
+            aw = valInt(a->w), ah = valInt(a->h);
+	NormaliseArea(ix, iy, iw, ih);
+	NormaliseArea(ax, ay, aw, ah);
+
+	if ( hasTransformInDeviceChain(gr->device) )
+	{ /* Project both the old (passed-in) and new (current) area
+	   * rects through the ancestor figure->transforms.
+	   */
+	  deviceLocalAreaToWindowAABB(gr->device, ix, iy, iw, ih,
+				      &ox, &oy, &ow, &oh);
+	  deviceLocalAreaToWindowAABB(gr->device, ax, ay, aw, ah,
+				      &cx, &cy, &cw, &ch);
+	} else
+	{ ox = ix + offx; oy = iy + offy; ow = iw; oh = ih;
+	  cx = ax + offx; cy = ay + offy; cw = aw; ch = ah;
+	}
 
 					/* HACKS ... */
 	if ( (m = get_extension_margin_graphical(gr)) )
@@ -552,14 +564,28 @@ changedImageGraphical(Any obj, Int x, Int y, Int w, Int h)
       if ( isDefault(w) ) w = gr->area->w;
       if ( isDefault(h) ) h = gr->area->h;
 
-      cx = valInt(x) + valInt(gr->area->x),
-      cy = valInt(y) + valInt(gr->area->y),
-      cw = valInt(w),
-      ch = valInt(h);
+      if ( !instanceOfObject(obj, ClassWindow) &&
+	   hasTransformInDeviceChain(gr->device) )
+      { /* Map the rect (in gr's local coord) through ancestor
+	 * figure->transforms to a window-coord AABB.
+	 */
+	int ix = valInt(x) + valInt(gr->area->x);
+	int iy = valInt(y) + valInt(gr->area->y);
+	int iw = valInt(w);
+	int ih = valInt(h);
+	NormaliseArea(ix, iy, iw, ih);
+	deviceLocalAreaToWindowAABB(gr->device, ix, iy, iw, ih,
+				    &cx, &cy, &cw, &ch);
+      } else
+      { cx = valInt(x) + valInt(gr->area->x),
+	cy = valInt(y) + valInt(gr->area->y),
+	cw = valInt(w),
+	ch = valInt(h);
 
-      NormaliseArea(cx, cy, cw, ch);
-      cx += ox;
-      cy += oy;
+	NormaliseArea(cx, cy, cw, ch);
+	cx += ox;
+	cy += oy;
+      }
 
       if ( instanceOfObject(gr, ClassText) ||
 	   instanceOfObject(gr, ClassDialogItem) )
