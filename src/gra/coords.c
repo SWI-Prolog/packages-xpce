@@ -159,7 +159,15 @@ compose_device_to_window(Device dev, aff *out)
   aff_identity(&W);
 
   for( ; notNil(dev); dev = dev->device )
-  { if ( instanceOfObject(dev, ClassFigure) )
+  { /* The window terminates the walk and its own dev->offset is not
+     * part of the painting / event coordinate chain (scroll_offset is
+     * handled separately by callers).
+     */
+    if ( instanceOfObject(dev, ClassWindow) )
+    { *out = W;
+      return true;
+    }
+    if ( instanceOfObject(dev, ClassFigure) )
     { Figure f = (Figure) dev;
       if ( notNil(f->transform) && !transformIsIdentity(f->transform) )
 	aff_pre_compose_transform(&W, f->transform);
@@ -167,10 +175,6 @@ compose_device_to_window(Device dev, aff *out)
     aff_pre_translate(&W,
 		      (double)valInt(dev->offset->x),
 		      (double)valInt(dev->offset->y));
-    if ( instanceOfObject(dev, ClassWindow) )
-    { *out = W;
-      return true;
-    }
   }
 
   return false;
@@ -208,6 +212,24 @@ deviceLocalToWindowCoord(Device dev, double lx, double ly,
   if ( !compose_device_to_window(dev, &W) )
     return false;
   aff_apply(&W, lx, ly, wx, wy);
+  return true;
+}
+
+
+/* Inverse: map a point in window-coord into `dev`'s children-coord
+ * system.  Fails if dev has no window ancestor or the composed
+ * transform is singular.
+ */
+bool
+windowToDeviceLocalCoord(Device dev, double wx, double wy,
+			 double *lx, double *ly)
+{ aff W, inv;
+
+  if ( !compose_device_to_window(dev, &W) )
+    return false;
+  if ( !aff_invert(&W, &inv) )
+    return false;
+  aff_apply(&inv, wx, wy, lx, ly);
   return true;
 }
 
@@ -275,21 +297,30 @@ graphicalToWindowArea(Graphical gr, Area in, double bbox[4])
 }
 
 
-/* Fast-path predicate: does any device ancestor (gr->device, ..., up to
- * the window) carry a non-identity figure->transform?  Callers can use
- * this to short-circuit to the cheap integer-offset code path when
- * nothing transformed is in play.
+/* Fast-path predicate: does the device chain starting at `dev`
+ * (inclusive) up to the enclosing window carry a non-identity
+ * figure->transform?
  */
 bool
-deviceChainHasTransform(Graphical gr)
-{ for( Device d = gr->device; notNil(d); d = d->device )
-  { if ( instanceOfObject(d, ClassFigure) )
-    { Figure f = (Figure) d;
+hasTransformInDeviceChain(Device dev)
+{ for( ; notNil(dev); dev = dev->device )
+  { if ( instanceOfObject(dev, ClassWindow) )
+      break;
+    if ( instanceOfObject(dev, ClassFigure) )
+    { Figure f = (Figure) dev;
       if ( notNil(f->transform) && !transformIsIdentity(f->transform) )
 	return true;
     }
-    if ( instanceOfObject(d, ClassWindow) )
-      break;
   }
   return false;
+}
+
+
+/* Convenience wrapper for graphicals: checks gr->device upward, so
+ * that gr's own transform (if gr is itself a figure) does NOT matter
+ * — only ancestor transforms affect mapping a gr-local coordinate.
+ */
+bool
+deviceChainHasTransform(Graphical gr)
+{ return hasTransformInDeviceChain(gr->device);
 }

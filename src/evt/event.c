@@ -35,6 +35,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <math.h>
 #include <time.h>
 
 forwards void init_event_tree(void);
@@ -540,6 +541,17 @@ get_xy_event_device(EventObj ev, Device dev, int *rx, int *ry)
   }
 
   get_xy_event_window(ev, sw, OFF, rx, ry);
+
+  if ( hasTransformInDeviceChain(dev) )
+  { double lx, ly;
+    if ( windowToDeviceLocalCoord(dev, (double)*rx, (double)*ry, &lx, &ly) )
+    { *rx = (int)floor(lx + 0.5);
+      *ry = (int)floor(ly + 0.5);
+      return;
+    }
+    /* singular or detached: fall through to the integer path */
+  }
+
   offsetDeviceGraphical(dev, &ox, &oy);
   *rx -= ox + valInt(dev->offset->x);
   *ry -= oy + valInt(dev->offset->y);
@@ -556,6 +568,17 @@ get_xy_event_graphical(EventObj ev, Graphical gr, int *rx, int *ry)
     sw = ev->window;
 
   get_xy_event_window(ev, sw, OFF, rx, ry);
+
+  if ( deviceChainHasTransform(gr) )
+  { double lx, ly;
+    if ( windowToGraphicalCoord(gr, (double)*rx, (double)*ry, &lx, &ly) )
+    { *rx = (int)floor(lx + 0.5);
+      *ry = (int)floor(ly + 0.5);
+      return;
+    }
+    /* singular or detached: fall through to the integer path */
+  }
+
   offsetDeviceGraphical(gr, &ox, &oy);
   DEBUG(NAME_inside, Cprintf("At %d,%d: offset %s --> %s is %d,%d\n",
 			     *rx, *ry,
