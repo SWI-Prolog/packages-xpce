@@ -302,6 +302,7 @@ NewClass(terminal_image)
   Style		selection_style;	/* Style for selected text  */
   Style		nfd_style;		/* Style for NFD grapheme clusters */
   Style		link_style;		/* Style for hyperlinks  */
+  Style		link_armed_style;	/* Style for the hovered link  */
   Vector	ansi_colours;		/* The 16 ANSI colour codes */
   BoolObj	armed_link;		/* Hovering over link */
   Code		link_message;		/* Handle a clicked link */

@@ -295,6 +295,7 @@ typedef struct rlc_data
   int		argc;			/* argument count for ANSI */
   int		argv[ANSI_MAX_ARGC];	/* argument vector for ANSI */
   uchar_t		link[ANSI_MAX_LINK];	/* Max URL length */
+  href	       *armed_href;		/* href the mouse is hovering, or NULL */
   bool		shift_in;		/* select G1 */
   G_state	G0;			/* Character set slot 0 */
   G_state	G1;			/* Character set slot 1 */

@@ -323,6 +323,8 @@ static void	rlc_free(void *ptr);
 static void	rlc_set_selection(RlcData b, int sl, int sc, int el, int ec);
 static const uchar_t *rlc_clicked_link(RlcData b, int x, int y);
 static const uchar_t *rlc_over_link(RlcData b, int x, int y);
+static href    *rlc_href_at(RlcData b, int x, int y, int *l, int *c);
+static status	refreshTerminalImage(TerminalImage ti);
 static href    *rlc_add_link(RlcTextLine tl, const uchar_t *link,
 			     int start, int len);
 static void	rlc_free_link(href *hr);
@@ -525,10 +527,12 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
 { if ( ev->id == NAME_locMove && notNil(ti->link_message) )
   { Int x, y;
     get_xy_event(ev, ti, ON, &x, &y);
-    if ( rlc_over_link(ti->data, valInt(x), valInt(y)) )
-    { assign(ti, armed_link, ON);
-    } else
-    { assign(ti, armed_link, OFF);
+    RlcData b = ti->data;
+    href *hr = rlc_href_at(b, valInt(x), valInt(y), NULL, NULL);
+    if ( hr != b->armed_href )
+    { b->armed_href = hr;
+      assign(ti, armed_link, hr ? ON : OFF);
+      refreshTerminalImage(ti);		/* repaint old + new armed run */
     }
 
     fail;
@@ -942,6 +946,12 @@ linkStyleTerminalImage(TerminalImage ti, Style s)
 }
 
 static status
+linkArmedStyleTerminalImage(TerminalImage ti, Style s)
+{ assign(ti, link_armed_style, s);
+  return refreshTerminalImage(ti);
+}
+
+static status
 ansiColoursTerminalImage(TerminalImage ti, Vector colours)
 { assign(ti, ansi_colours, colours);
   return refreshTerminalImage(ti);
@@ -1045,6 +1055,9 @@ static vardecl var_terminal_image[] =
      NAME_appearance, "Style for NFD grapheme clusters (@nil to disable)"),
   SV(NAME_linkStyle, "style*", IV_GET|IV_STORE, linkStyleTerminalImage,
      NAME_appearance, "Style for hyperlinks (@nil for none)"),
+  SV(NAME_linkArmedStyle, "style*", IV_GET|IV_STORE,
+     linkArmedStyleTerminalImage,
+     NAME_appearance, "Style for the hyperlink under the mouse"),
   SV(NAME_ansiColours, "vector*", IV_GET|IV_STORE, ansiColoursTerminalImage,
      NAME_appearance, "The 16 ansi colours"),
   IV(NAME_armedLink, "bool", IV_GET,
@@ -1156,6 +1169,9 @@ static classvardecl rc_terminal_image[] =
   RC(NAME_linkStyle, "style*",
      "style(colour := blue, underline := @on)",
      "Style for hyperlinks"),
+  RC(NAME_linkArmedStyle, "style*",
+     "style(colour := blue, underline := @on)",
+     "Style for the hyperlink under the mouse"),
   RC(NAME_autoCopy, "bool", UXWINMAC("@on", "@off", "@off"),
      "Automatically copy selected text to the clipboard"),
   RC(NAME_saveLines, "int", "1000",
@@ -1576,28 +1592,31 @@ rlc_clicked_link(RlcData b, int x, int y)
   return NULL;
 }
 
-static const uchar_t *
-rlc_over_link(RlcData b, int x, int y)
+/* Locate the href at viewport (x,y), or NULL.  When found, (l,c) record
+ * the line ring index and cell of the hit, useful for redraw scheduling.
+ */
+static href *
+rlc_href_at(RlcData b, int x, int y, int *line_out, int *cell_out)
 { int l, c;
 
   rlc_translate_mouse(b, x, y, &l, &c);
-  { RlcTextLine tl = &b->lines[l];
-    if ( c >= 0 && c < tl->size )
-    { text_char *chr = &tl->text[c];
-      if ( chr->flags.link )
-      { //DEBUG(Dprintf(_T("On link at %d,%d\n"), l, c));
-	for(href *hr=tl->links; hr; hr = hr->next)
-	{ if ( c >= hr->start && c <= hr->start + hr->length )
-	  { //DEBUG(Dprintf(_T("  link: %d(%d) -> \"%ls\"\n"),
-	    //	    hr->start, hr->length, hr->link));
-	    return hr->link;
-	  }
-	}
+  RlcTextLine tl = &b->lines[l];
+  if ( c >= 0 && c < tl->size && tl->text[c].flags.link )
+  { for(href *hr=tl->links; hr; hr = hr->next)
+    { if ( c >= hr->start && c <= hr->start + hr->length )
+      { if ( line_out ) *line_out = l;
+	if ( cell_out ) *cell_out = c;
+	return hr;
       }
     }
   }
-
   return NULL;
+}
+
+static const uchar_t *
+rlc_over_link(RlcData b, int x, int y)
+{ href *hr = rlc_href_at(b, x, y, NULL, NULL);
+  return hr ? hr->link : NULL;
 }
 
 static int				/* v >= f && v <= t */
@@ -2306,7 +2325,7 @@ typedef struct
 } effective_style;
 
 static effective_style
-effective_style_for(RlcData b, text_flags flags)
+effective_style_for(RlcData b, text_flags flags, bool armed)
 { TerminalImage ti = b->object;
   effective_style es =
     { .fg        = palette_colour(b, flags.fg),
@@ -2319,19 +2338,26 @@ effective_style_for(RlcData b, text_flags flags)
    * nor @default) replace the cell's own values.  An application can
    * still embed colored, bold, or unstyled links by leaving link_style
    * slots at @default — the cell's flags win where the style is silent.
+   * The hover (armed) variant overrides link_style on a per-link basis;
+   * cells outside the hovered href keep using the resting link_style.
    */
-  if ( flags.link && notNil(ti->link_style) && !isDefault(ti->link_style) )
-  { Style ls = ti->link_style;
-    if ( notDefault(ls->colour) && notNil(ls->colour) )
-      es.fg = ls->colour;
-    if ( notDefault(ls->background) && notNil(ls->background) )
-      es.bg = ls->background;
-    /* Style->underline is "Bool or Colour"; either form means underline. */
-    if ( notDefault(ls->underline) && notNil(ls->underline) &&
-	 ls->underline != OFF )
-      es.underline = true;
-    if ( ls->attributes & TXT_BOLDEN )
-      es.bold = true;
+  if ( flags.link )
+  { Style ls = (armed &&
+		notNil(ti->link_armed_style) && !isDefault(ti->link_armed_style))
+		 ? ti->link_armed_style
+		 : ti->link_style;
+    if ( notNil(ls) && !isDefault(ls) )
+    { if ( notDefault(ls->colour) && notNil(ls->colour) )
+	es.fg = ls->colour;
+      if ( notDefault(ls->background) && notNil(ls->background) )
+	es.bg = ls->background;
+      /* Style->underline is "Bool or Colour"; either form means underline. */
+      if ( notDefault(ls->underline) && notNil(ls->underline) &&
+	   ls->underline != OFF )
+	es.underline = true;
+      if ( ls->attributes & TXT_BOLDEN )
+	es.bold = true;
+    }
   }
   return es;
 }
@@ -2395,6 +2421,27 @@ rlc_paint_text(RlcData b,
   }
   *t = 0;
 
+  /* If the hovered href lives on this line, compute its range within the
+   * `chars` window (cell indices, half-open).  Otherwise leave the range
+   * empty so every cell renders unarmed.  Walking tl->links is O(links)
+   * per visible line; trivial. */
+  int armed_from = 0, armed_to = 0;
+  if ( b->armed_href && tl->text )
+  { for(href *hr = tl->links; hr; hr = hr->next)
+    { if ( hr == b->armed_href )
+      { int f = hr->start - cell_from;
+	int e = f + hr->length + 1;	/* href->length is inclusive */
+	if ( f < 0   ) f = 0;
+	if ( e > len ) e = len;
+	if ( e > f )
+	{ armed_from = f;
+	  armed_to   = e;
+	}
+	break;
+      }
+    }
+  }
+
   if ( insel )					/* TBD: Cache */
   { Any ofg = r_colour(ti->selection_style->colour);
     Any obg = r_background(ti->selection_style->background);
@@ -2412,14 +2459,19 @@ rlc_paint_text(RlcData b,
 	start+=segment, s+=segment, t+=ulen)
     { text_flags flags = s->flags;
       int left = len-start;
+      bool armed0 = (start >= armed_from && start < armed_to);
 
-      /* Count characters in this same-flags segment and build its UTF-8 span.
-	 Wide-char placeholders (code==0) inherit the previous cell's flags and
-	 are skipped in the UTF-8 output.  We walk both the char array (segment)
-	 and the UTF-8 bytes (ut) together. */
+      /* Count characters in this same-flags + same-armed segment and build
+	 its UTF-8 span.  Wide-char placeholders (code==0) inherit the
+	 preceding cell's flags and are skipped in the UTF-8 output.  We
+	 walk both the char array (segment) and the UTF-8 bytes (ut)
+	 together.  Armed status flips at the href's edge, splitting an
+	 otherwise-uniform link run when only part of it is hovered. */
       char *ut = t;
       for(segment=0;
-	  segment<left && s[segment].flags.raw == flags.raw;
+	  segment<left && s[segment].flags.raw == flags.raw &&
+	  ((start + segment >= armed_from &&
+	    start + segment <  armed_to) == armed0);
 	  segment++)
       { if ( s[segment].code != 0 )
 	{ int chr;
@@ -2428,7 +2480,7 @@ rlc_paint_text(RlcData b,
       }
       ulen = ut-t;
 
-      effective_style es = effective_style_for(b, flags);
+      effective_style es = effective_style_for(b, flags, armed0);
       Colour ofg = DEFAULT;
       Colour obg = DEFAULT;
       if ( es.fg )
