@@ -742,6 +742,15 @@ NewClass(atable)
   Vector	tables;			/* hash tables */
 End;
 
+NewClass(transform)
+  Num		xx;			/* 2x3 affine matrix: */
+  Num		xy;			/*   [ xx xy tx ]      */
+  Num		yx;			/*   [ yx yy ty ]      */
+  Num		yy;			/* mapping (x,y) ->     */
+  Num		tx;			/*   (xx*x+xy*y+tx,    */
+  Num		ty;			/*    yx*x+yy*y+ty)    */
+End;
+
 NewClass(tuple)
   Any		first;			/* first of tuple */
   Any		second;			/* second element of tuple */

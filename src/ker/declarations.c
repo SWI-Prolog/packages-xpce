@@ -496,6 +496,9 @@ static struct class_definition classdefs[] =
   { NAME_tokeniser, NAME_object, makeClassTokeniser,
     &ClassTokeniser, "Tokenise input" },
 
+  { NAME_transform, NAME_object, makeClassTransform,
+    &ClassTransform, "2D affine transformation matrix" },
+
   { NAME_tree, NAME_figure, makeClassTree,
     &ClassTree, "Hierarchy of graphicals" },
 

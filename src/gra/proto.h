@@ -285,6 +285,15 @@ COMMON(status)	lengthText(TextObj t, Int l);
 COMMON(status)	marginText(TextObj t, Int width, Name wrap);
 COMMON(status)	makeClassText(Class class);
 
+/* /swi40/jan/src/pl/packages/xpce/src/gra/transform.c */
+COMMON(bool)	transformIsIdentity(Transform t);
+COMMON(void)	transformPoint(Transform t, double x, double y,
+			       double *ox, double *oy);
+COMMON(bool)	inverseTransformPoint(Transform t, double x, double y,
+				      double *ox, double *oy);
+COMMON(void)	transformAreaAABB(Transform t, Area in, double bbox[4]);
+COMMON(status)	makeClassTransform(Class class);
+
 /* /swi40/jan/src/pl/packages/xpce/src/gra/tree.c */
 COMMON(status)	requestComputeTree(Tree t);
 COMMON(status)	displayTree(Tree t, Node n);
