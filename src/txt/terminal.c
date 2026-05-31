@@ -2039,20 +2039,247 @@ paint_chunks(const text_char *cells, int n,
   (void)utf8; (void)ulen;
 }
 
+		 /*******************************
+		 *     TERMINAL COLOR PALETTE	*
+		 *******************************/
+
+/* The palette is a per-buffer dynamic array of COLORRGBA values.  Indices
+ * 0..15 (PAL_ANSI_RESERVED) are reserved: those cells live in the
+ * user-settable ti->ansi_colours Vector — slots in palette[] for those
+ * indices are unused, but counted in palette_size so the allocator never
+ * hands them out for truecolor.  Indices >= 16 hold interned 256-color
+ * cube/grayscale entries and SGR 38;2/48;2 truecolor entries.
+ *
+ * Lookup is by COLORRGBA via an open-addressed hashtable so SGR runs that
+ * repeatedly select the same color don't grow the palette.  Once the
+ * palette fills (PAL_LIMIT entries), new requests fall back to the
+ * nearest existing color by Euclidean distance in RGB space.
+ */
+
+struct pal_hash
+{ uint32_t  cap;			/* power of 2, > 0 */
+  uint32_t  mask;			/* cap - 1 */
+  uint16_t *slots;			/* index+1 stored; 0 = empty */
+};
+
+#define PAL_INITIAL_ALLOC 64		/* covers ANSI 0..15 + first 48 */
+#define PAL_HASH_INITIAL  64
+
+static uint32_t
+pal_hash_mix(COLORRGBA c)
+{ uint32_t h = (uint32_t)c;
+  h ^= h >> 16;
+  h *= 0x7feb352dU;
+  h ^= h >> 15;
+  h *= 0x846ca68bU;
+  h ^= h >> 16;
+  return h;
+}
+
+static void
+palette_hash_grow(struct pal_hash *h, const COLORRGBA *pal)
+{ uint32_t new_cap = h->cap ? h->cap * 2 : PAL_HASH_INITIAL;
+  uint16_t *old = h->slots;
+  uint32_t  old_cap = h->cap;
+
+  h->slots = rlc_malloc(new_cap * sizeof(*h->slots));
+  memset(h->slots, 0, new_cap * sizeof(*h->slots));
+  h->cap   = new_cap;
+  h->mask  = new_cap - 1;
+  if ( old )
+  { for(uint32_t i=0; i<old_cap; i++)
+    { uint16_t enc = old[i];
+      if ( !enc )
+	continue;
+      uint32_t idx = enc - 1;
+      uint32_t p = pal_hash_mix(pal[idx]) & h->mask;
+      while ( h->slots[p] )
+	p = (p + 1) & h->mask;
+      h->slots[p] = enc;
+    }
+    rlc_free(old);
+  }
+}
+
+/* Look up an RGB value in the palette.  Returns the index if present,
+ * else (uint32_t)-1.  Does not allocate.
+ */
+static uint32_t
+palette_hash_lookup(const struct pal_hash *h, const COLORRGBA *pal, COLORRGBA c)
+{ if ( h->cap == 0 )
+    return (uint32_t)-1;
+  uint32_t p = pal_hash_mix(c) & h->mask;
+  for(;;)
+  { uint16_t enc = h->slots[p];
+    if ( !enc )
+      return (uint32_t)-1;
+    if ( pal[enc - 1] == c )
+      return enc - 1;
+    p = (p + 1) & h->mask;
+  }
+}
+
+static void
+palette_init(RlcData b)
+{ b->palette       = rlc_malloc(PAL_INITIAL_ALLOC * sizeof(*b->palette));
+  b->palette_obj   = rlc_malloc(PAL_INITIAL_ALLOC * sizeof(*b->palette_obj));
+  memset(b->palette_obj, 0, PAL_INITIAL_ALLOC * sizeof(*b->palette_obj));
+  b->palette_alloc = PAL_INITIAL_ALLOC;
+  b->palette_size  = PAL_ANSI_RESERVED;	/* reserve 0..15 for ANSI */
+  b->palette_hash  = rlc_malloc(sizeof(*b->palette_hash));
+  memset(b->palette_hash, 0, sizeof(*b->palette_hash));
+  /* Slots 0..15 are sentinel placeholders; nothing to write yet. */
+}
+
+static void
+palette_destroy(RlcData b)
+{ if ( b->palette_obj )
+  { for(uint32_t i = PAL_ANSI_RESERVED; i < b->palette_size; i++)
+    { if ( b->palette_obj[i] )
+	lockObject(b->palette_obj[i], OFF);
+    }
+    rlc_free(b->palette_obj);
+    b->palette_obj = NULL;
+  }
+  if ( b->palette )
+  { rlc_free(b->palette);
+    b->palette = NULL;
+  }
+  if ( b->palette_hash )
+  { if ( b->palette_hash->slots )
+      rlc_free(b->palette_hash->slots);
+    rlc_free(b->palette_hash);
+    b->palette_hash = NULL;
+  }
+  b->palette_alloc = b->palette_size = 0;
+}
+
+/* Insert `c` at a fresh slot.  Caller has already verified !lookup.
+ * Returns the new index, or (uint32_t)-1 if the palette is full and
+ * cannot grow further.
+ */
+static uint32_t
+palette_append(RlcData b, COLORRGBA c)
+{ if ( b->palette_size >= PAL_LIMIT )
+    return (uint32_t)-1;
+  if ( b->palette_size >= b->palette_alloc )
+  { uint32_t new_alloc = b->palette_alloc * 2;
+    if ( new_alloc > PAL_LIMIT )
+      new_alloc = PAL_LIMIT;
+    b->palette = rlc_realloc(b->palette, new_alloc * sizeof(*b->palette));
+    b->palette_obj = rlc_realloc(b->palette_obj,
+				 new_alloc * sizeof(*b->palette_obj));
+    memset(b->palette_obj + b->palette_alloc, 0,
+	   (new_alloc - b->palette_alloc) * sizeof(*b->palette_obj));
+    b->palette_alloc = new_alloc;
+  }
+  if ( !b->palette_hash || b->palette_hash->cap == 0 ||
+       b->palette_size * 2 >= b->palette_hash->cap )
+    palette_hash_grow(b->palette_hash, b->palette);
+
+  uint32_t idx = b->palette_size++;
+  b->palette[idx] = c;
+  uint32_t p = pal_hash_mix(c) & b->palette_hash->mask;
+  while ( b->palette_hash->slots[p] )
+    p = (p + 1) & b->palette_hash->mask;
+  b->palette_hash->slots[p] = (uint16_t)(idx + 1);
+  return idx;
+}
+
+/* Find the nearest existing palette entry to (r,g,b) by RGB Euclidean
+ * distance.  Used as fallback once the palette is full.  Slots 0..15
+ * (ANSI) are excluded because their COLORRGBA isn't stored in
+ * b->palette[]; the fallback only weighs interned colors.
+ */
+static uint32_t
+palette_nearest(const RlcData b, int r, int g, int b_)
+{ uint32_t best = PAL_ANSI_RESERVED;	/* falls back to first interned slot */
+  long best_d = -1;
+  for(uint32_t i = PAL_ANSI_RESERVED; i < b->palette_size; i++)
+  { COLORRGBA c = b->palette[i];
+    long dr = (long)((c >> 16) & 0xff) - r;
+    long dg = (long)((c >>  8) & 0xff) - g;
+    long db = (long)( c        & 0xff) - b_;
+    long d  = dr*dr + dg*dg + db*db;
+    if ( best_d < 0 || d < best_d )
+    { best_d = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/* Intern an opaque RGB color in the palette and return its index.  Full
+ * palette: nearest-fallback (log once at DEBUG).
+ */
+static uint32_t
+palette_intern_rgb(RlcData b, int r, int g, int b_)
+{ COLORRGBA rgba = RGBA(r, g, b_, 0xff);
+  uint32_t idx = palette_hash_lookup(b->palette_hash, b->palette, rgba);
+  if ( idx != (uint32_t)-1 )
+    return idx;
+  idx = palette_append(b, rgba);
+  if ( idx != (uint32_t)-1 )
+    return idx;
+  if ( !b->palette_full )
+  { b->palette_full = true;
+    DEBUG(NAME_term, Cprintf("Terminal palette full at %u entries; "
+			     "falling back to nearest color\n",
+			     b->palette_size));
+  }
+  return palette_nearest(b, r, g, b_);
+}
+
+/* Map an xterm 256-color number to a palette index.  0..15 alias the
+ * ANSI palette; 16..231 are the 6x6x6 RGB cube; 232..255 the 24-step
+ * grayscale ramp.  Cube and grayscale entries are interned on first
+ * use, so a session that only uses a handful gets a small palette.
+ */
+static uint32_t
+palette_for_xterm256(RlcData b, int n)
+{ if ( n < 0 || n > 255 )
+    return PAL_DEFAULT;
+  if ( n < 16 )
+    return (uint32_t)n;
+  if ( n < 232 )			/* 6x6x6 cube */
+  { static const int levels[6] = { 0, 95, 135, 175, 215, 255 };
+    int x = n - 16;
+    int r = levels[(x / 36) % 6];
+    int g = levels[(x /  6) % 6];
+    int bl = levels[ x       % 6];
+    return palette_intern_rgb(b, r, g, bl);
+  }
+  /* grayscale ramp: 8, 18, 28, ..., 238 */
+  int v = 8 + (n - 232) * 10;
+  return palette_intern_rgb(b, v, v, v);
+}
+
 /* Resolve a palette index to an xpce Colour object.  PAL_DEFAULT yields
- * NULL, signalling "use the inherited default" — callers already check.
- * For now indices 0..15 are routed through ti->ansi_colours (the
- * canonical, user-settable theme).  Higher indices arrive only after
- * Stage 2 wires up the COLORRGBA palette[] for 256-color and truecolor.
+ * NULL — callers fall back to the terminal/style default.  Slots 0..15
+ * read from ti->ansi_colours so theme changes take effect immediately;
+ * higher slots come from the interned COLORRGBA palette, with each
+ * Colour created lazily and locked so it survives xpce GC between
+ * paints (RevColourTable holds Colours with refer=none).
  */
 static Colour
 palette_colour(RlcData b, unsigned idx)
-{ if ( idx == PAL_DEFAULT )
+{ if ( idx >= PAL_DEFAULT )
     return NULL;
-  TerminalImage ti = b->object;
-  if ( idx < 16 && ti->ansi_colours )
-    return getElementVector(ti->ansi_colours, toInt(idx+1));
-  return NULL;
+  if ( idx < PAL_ANSI_RESERVED )
+  { TerminalImage ti = b->object;
+    if ( ti->ansi_colours )
+      return getElementVector(ti->ansi_colours, toInt(idx+1));
+    return NULL;
+  }
+  if ( idx >= b->palette_size )		/* defensive: shouldn't happen */
+    return NULL;
+  if ( !b->palette_obj[idx] )
+  { Colour c = ws_pixel_to_colour(b->palette[idx]);
+    if ( c )
+      lockObject(c, ON);
+    b->palette_obj[idx] = c;
+  }
+  return b->palette_obj[idx];
 }
 
 /** Draw a line of the terminal
@@ -2429,6 +2656,7 @@ rlc_make_buffer(int w, int h)
   b->cmdstat	    = CMD_INITIAL;
   b->changed	    = CHG_CARET|CHG_CHANGED|CHG_CLEAR;
   b->sgr_flags	    = TF_DEFAULT;
+  palette_init(b);
 
   memset(b->lines, 0, sizeof(rlc_text_line) * h);
   for(i=0; i<h; i++)
@@ -2458,6 +2686,7 @@ rlc_destroy_buffer(RlcData b)
 
   rlc_destroy_saved_screen(b);
   rlc_close_connection(b);
+  palette_destroy(b);
 
   free(b);
 }
@@ -3219,8 +3448,20 @@ rlc_sgr(RlcData b, int sgr)
 
 static void
 rlc_24bit_colour(RlcData b, bool fg, int red, int green, int blue)
-{ DEBUG(NAME_term, Cprintf("Colour: %s %d,%d,%d (not implemented)\n",
-			   fg ? "fg" : "bg", red, green, blue));
+{ uint32_t idx = palette_intern_rgb(b, red & 0xff, green & 0xff, blue & 0xff);
+  if ( fg )
+    b->sgr_flags.fg = idx;
+  else
+    b->sgr_flags.bg = idx;
+}
+
+static void
+rlc_256_colour(RlcData b, bool fg, int n)
+{ uint32_t idx = palette_for_xterm256(b, n);
+  if ( fg )
+    b->sgr_flags.fg = idx;
+  else
+    b->sgr_flags.bg = idx;
 }
 
 static RlcTextLine
@@ -4099,13 +4340,29 @@ rlc_putansi(RlcData b, int chr)
 	case 'm':
 	  { rlc_need_arg(b, 1, 0);
 
-	    if ( (b->argv[0] == 38 || b->argv[0] == 48) &&
-		 b->argc == 5 && b->argv[1] == 2 )
-	    { CMD(rlc_24bit_colour(b, b->argv[0] == 38,
-				   b->argv[2], b->argv[3], b->argv[4]));
-	    } else
-	    { for(int i=0; i<b->argc; i++)
-		CMD(rlc_sgr(b, b->argv[i]));
+	    /* Walk the SGR parameter list.  Most codes are atomic (handled
+	     * by rlc_sgr); 38/48 introduce a sub-sequence for extended
+	     * color: 38;5;N or 48;5;N selects an xterm-256 color, and
+	     * 38;2;R;G;B or 48;2;R;G;B selects a 24-bit color.  Anything
+	     * malformed (too few following args, unknown mode) is dropped. */
+	    for(int i=0; i<b->argc; )
+	    { int code = b->argv[i];
+	      if ( (code == 38 || code == 48) && i+1 < b->argc )
+	      { bool fg = (code == 38);
+		int mode = b->argv[i+1];
+		if ( mode == 5 && i+2 < b->argc )
+		{ CMD(rlc_256_colour(b, fg, b->argv[i+2]));
+		  i += 3;
+		  continue;
+		} else if ( mode == 2 && i+4 < b->argc )
+		{ CMD(rlc_24bit_colour(b, fg,
+				       b->argv[i+2], b->argv[i+3], b->argv[i+4]));
+		  i += 5;
+		  continue;
+		}
+	      }
+	      CMD(rlc_sgr(b, code));
+	      i++;
 	    }
 	    break;
 	  }

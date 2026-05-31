@@ -205,7 +205,8 @@ typedef union text_flags
 } text_flags;
 
 #define PAL_DEFAULT 4095		/* sentinel: use default fg/bg */
-#define PAL_MAX	    4095		/* hard cap on interned colors */
+#define PAL_LIMIT   4095		/* exclusive upper bound: valid 0..4094 */
+#define PAL_ANSI_RESERVED 16		/* slots 0..15 mirror ti->ansi_colours */
 
 #define TF_DEFAULT ((text_flags){ .fg = PAL_DEFAULT, .bg = PAL_DEFAULT })
 
@@ -308,8 +309,8 @@ typedef struct rlc_data
   COLORRGBA	sel_background;		/* Selection background */
   COLORRGBA	ansi_color[16];		/* ANSI colors (8 normal + 8 bright) */
   COLORRGBA    *palette;		/* per-buffer color palette */
-  struct colour **palette_obj;		/* cached xpce Colour objects (lazy) */
-  uint32_t	palette_size;		/* live entries */
+  struct colour **palette_obj;		/* owned locked Colour per slot >=16 */
+  uint32_t	palette_size;		/* live entries (>= PAL_ANSI_RESERVED) */
   uint32_t	palette_alloc;		/* capacity */
   struct pal_hash *palette_hash;	/* COLORRGBA -> index for intern */
   bool		palette_full;		/* sticky once nearest-fallback engages */
