@@ -170,9 +170,9 @@ static inline int
 tc_display_width(const text_char *tc)
 { if ( tc->code == 0 )
     return 1;				/* right half of a wide char */
-  if ( tc->width == 2 )
+  if ( tc->flags.width == 2 )
     return 1;				/* left half of a wide char */
-  return tc->width;			/* 0 for combining marks, 1 for normal */
+  return tc->flags.width;		/* 0 for combining marks, 1 for normal */
 }
 
 
@@ -205,7 +205,7 @@ rlc_vcol_to_cell(const RlcTextLine tl, int vcol)
          skip wide-char right-half placeholders (code == 0): each is
          its own visual column in the per-cell width model. */
       while ( cell < tl->size &&
-	      tl->text[cell].width == 0 &&
+	      tl->text[cell].flags.width == 0 &&
 	      tl->text[cell].code != 0 )
 	cell++;
     }
@@ -244,7 +244,7 @@ static int
 rlc_snap_start(const RlcTextLine tl, int cell)
 { if ( !tl->text || cell <= 0 || cell >= tl->size )
     return cell;
-  while ( cell > 0 && tl->text[cell].width == 0 )
+  while ( cell > 0 && tl->text[cell].flags.width == 0 )
     cell--;
   return cell;
 }
@@ -258,7 +258,7 @@ static int
 rlc_snap_end(const RlcTextLine tl, int cell)
 { if ( !tl->text )
     return cell;
-  while ( cell < tl->size && tl->text[cell].width == 0 )
+  while ( cell < tl->size && tl->text[cell].flags.width == 0 )
     cell++;
   return cell;
 }
@@ -272,7 +272,7 @@ rlc_cluster_next(const RlcTextLine tl, int pos)
 { if ( !tl->text || pos >= tl->size )
     return pos;
   pos++;
-  while ( pos < tl->size && tl->text[pos].width == 0 )
+  while ( pos < tl->size && tl->text[pos].flags.width == 0 )
     pos++;
   return pos;
 }
@@ -290,7 +290,7 @@ rlc_cluster_prev(const RlcTextLine tl, int pos)
   if ( pos == 0 )
     return 0;
   pos--;
-  while ( pos > 0 && tl->text[pos].width == 0 )
+  while ( pos > 0 && tl->text[pos].flags.width == 0 )
     pos--;
   return pos;
 }
@@ -1573,7 +1573,7 @@ rlc_over_link(RlcData b, int x, int y)
   { RlcTextLine tl = &b->lines[l];
     if ( c >= 0 && c < tl->size )
     { text_char *chr = &tl->text[c];
-      if ( TF_LINK(chr->flags) )
+      if ( chr->flags.link )
       { //DEBUG(Dprintf(_T("On link at %d,%d\n"), l, c));
 	for(href *hr=tl->links; hr; hr = hr->next)
 	{ if ( c >= hr->start && c <= hr->start + hr->length )
@@ -1994,7 +1994,7 @@ paint_chunks(const text_char *cells, int n,
       u = utf8_get_char((char *)u, &chr);
     }
     i++;
-    while (i < n && c[i].width == 0)
+    while (i < n && c[i].flags.width == 0)
     { if (c[i].code != 0)
       { int chr;
 	u = utf8_get_char((char *)u, &chr);
@@ -2013,11 +2013,11 @@ paint_chunks(const text_char *cells, int n,
      * advance < n*cw, and each chunk reshape (e.g., on selection)
      * would shift the after-cluster glyphs by a different amount than
      * the unselected line did. */
-    if (i - chunk_i == 1 && c[chunk_i].width == 1 && c[chunk_i].code < 128)
+    if (i - chunk_i == 1 && c[chunk_i].flags.width == 1 && c[chunk_i].code < 128)
     { while (i < n &&
-	     c[i].width == 1 &&
+	     c[i].flags.width == 1 &&
 	     c[i].code < 128 &&
-	     !(i+1 < n && c[i+1].width == 0 && c[i+1].code != 0))
+	     !(i+1 < n && c[i+1].flags.width == 0 && c[i+1].code != 0))
       { if (c[i].code != 0)
 	{ int chr;
 	  u = utf8_get_char((char *)u, &chr);
@@ -2037,6 +2037,22 @@ paint_chunks(const text_char *cells, int n,
     x0 += chunk_w;
   }
   (void)utf8; (void)ulen;
+}
+
+/* Resolve a palette index to an xpce Colour object.  PAL_DEFAULT yields
+ * NULL, signalling "use the inherited default" — callers already check.
+ * For now indices 0..15 are routed through ti->ansi_colours (the
+ * canonical, user-settable theme).  Higher indices arrive only after
+ * Stage 2 wires up the COLORRGBA palette[] for 256-color and truecolor.
+ */
+static Colour
+palette_colour(RlcData b, unsigned idx)
+{ if ( idx == PAL_DEFAULT )
+    return NULL;
+  TerminalImage ti = b->object;
+  if ( idx < 16 && ti->ansi_colours )
+    return getElementVector(ti->ansi_colours, toInt(idx+1));
+  return NULL;
 }
 
 /** Draw a line of the terminal
@@ -2084,7 +2100,7 @@ rlc_paint_text(RlcData b,
     for(; i<len; i++, o++)
     { o->code  = ' ';
       o->flags = TF_DEFAULT;
-      o->width = 1;
+      o->flags.width = 1;
     }
   }
 
@@ -2122,7 +2138,7 @@ rlc_paint_text(RlcData b,
 	 and the UTF-8 bytes (ut) together. */
       char *ut = t;
       for(segment=0;
-	  segment<left && s[segment].flags == flags;
+	  segment<left && s[segment].flags.raw == flags.raw;
 	  segment++)
       { if ( s[segment].code != 0 )
 	{ int chr;
@@ -2133,22 +2149,22 @@ rlc_paint_text(RlcData b,
 
       Colour ofg = DEFAULT;
       Colour obg = DEFAULT;
-      int ifg = TF_FG(flags);
-      int ibg = TF_BG(flags);
-      if ( ifg != ANSI_COLOR_DEFAULT )
-      { Colour fg = getElementVector(ti->ansi_colours, toInt(ifg+1));
+      int ifg = flags.fg;
+      int ibg = flags.bg;
+      if ( ifg != PAL_DEFAULT )
+      { Colour fg = palette_colour(b, ifg);
 	if ( fg )
 	  ofg = r_colour(fg);
       }
-      if ( ibg != ANSI_COLOR_DEFAULT )
-      { Colour bg = getElementVector(ti->ansi_colours, toInt(ifg+1));
+      if ( ibg != PAL_DEFAULT )
+      { Colour bg = palette_colour(b, ibg);
 	if ( bg )
 	  obg = r_background(bg);
       }
-      if ( TF_INVERSE(flags) )
+      if ( flags.inverse )
 	r_swap_background_and_foreground();
       FontObj font = ti->font;
-      if ( TF_BOLD(flags) )
+      if ( flags.bold )
       { if ( notNil(ti->bold_font) )
 	  font = ti->bold_font;
 	else
@@ -2169,10 +2185,10 @@ rlc_paint_text(RlcData b,
 	  for(int ci = 0; ci < segment; )
 	  { if ( s[ci].code == 0 ) { ci++; continue; } /* skip wide-char right-half: col advanced by base */
 	    int base_col = col;
-	    int base_width = (s[ci].width == 2) ? 2 : 1;
+	    int base_width = (s[ci].flags.width == 2) ? 2 : 1;
 	    col += base_width; ci++;
 	    bool has_combining = false;
-	    while ( ci < segment && s[ci].width == 0 && s[ci].code != 0 )
+	    while ( ci < segment && s[ci].flags.width == 0 && s[ci].code != 0 )
 	    { has_combining = true; ci++; }
 	    if ( has_combining )
 	      r_fill(x0 + base_col*b->cw, ty-b->cb,
@@ -2181,8 +2197,8 @@ rlc_paint_text(RlcData b,
 	}
       }
       paint_chunks(s, segment, t, ulen, x0, ty, b->cw, font,
-                   TF_UNDERLINE(flags));
-      if ( TF_INVERSE(flags) )
+                   flags.underline);
+      if ( flags.inverse )
 	r_swap_background_and_foreground();
       if ( notDefault(ofg) )
 	r_colour(ofg);
@@ -3045,7 +3061,7 @@ rlc_tab(RlcData b)
 
       tc->code  = ' ';
       tc->flags = b->sgr_flags;
-      tc->width = 1;
+      tc->flags.width = 1;
     }
   }
 
@@ -3179,29 +3195,25 @@ rlc_sgr(RlcData b, int sgr)
 { if ( sgr == 0 )
   { b->sgr_flags = TF_DEFAULT;
   } else if ( sgr >= 30 && sgr <= 39 )
-  { b->sgr_flags = TF_SET_FG(b->sgr_flags,
-			     sgr == 39 ? ANSI_COLOR_DEFAULT : sgr-30);
+  { b->sgr_flags.fg = sgr == 39 ? PAL_DEFAULT : sgr-30;
   } else if ( sgr >= 40 && sgr <= 49 )
-  { b->sgr_flags = TF_SET_BG(b->sgr_flags,
-			     sgr == 49 ? ANSI_COLOR_DEFAULT : sgr-40);
+  { b->sgr_flags.bg = sgr == 49 ? PAL_DEFAULT : sgr-40;
   } else if ( sgr >= 90 && sgr <= 99 )
-  { b->sgr_flags = TF_SET_FG(b->sgr_flags,
-			     sgr == 99 ? ANSI_COLOR_DEFAULT : sgr-90+8);
+  { b->sgr_flags.fg = sgr == 99 ? PAL_DEFAULT : sgr-90+8;
   } else if ( sgr >= 100 && sgr <= 109 )
-  { b->sgr_flags = TF_SET_BG(b->sgr_flags,
-			     sgr == 109 ? ANSI_COLOR_DEFAULT : sgr-100+8);
+  { b->sgr_flags.bg = sgr == 109 ? PAL_DEFAULT : sgr-100+8;
   } else if ( sgr == 1 )
-  { b->sgr_flags = TF_SET_BOLD(b->sgr_flags, 1);
+  { b->sgr_flags.bold = 1;
   } else if ( sgr == 4 )
-  { b->sgr_flags = TF_SET_UNDERLINE(b->sgr_flags, 1);
+  { b->sgr_flags.underline = 1;
   } else if ( sgr == 7 )
-  { b->sgr_flags = TF_SET_INVERSE(b->sgr_flags, 1);
+  { b->sgr_flags.inverse = 1;
   } else if ( sgr == 22 )	/* also clears "faint" */
-  { b->sgr_flags = TF_SET_BOLD(b->sgr_flags, 0);
+  { b->sgr_flags.bold = 0;
   } else if ( sgr == 24 )
-  { b->sgr_flags = TF_SET_UNDERLINE(b->sgr_flags, 0);
+  { b->sgr_flags.underline = 0;
   } else if ( sgr == 27 )
-  { b->sgr_flags = TF_SET_INVERSE(b->sgr_flags, 0);
+  { b->sgr_flags.inverse = 0;
   }
 }
 
@@ -3222,7 +3234,7 @@ rlc_prepare_line(RlcData b, int y)
 
     tc->code  = ' ';
     tc->flags = b->sgr_flags;
-    tc->width = 1;
+    tc->flags.width = 1;
   }
 
   return tl;
@@ -3261,7 +3273,7 @@ rlc_put(RlcData b, int chr)
        refresh. */
     if ( b->caret_x < tl->size &&
 	 tl->size < LINE_CELL_CAPACITY(b) &&
-	 !(tl->text[b->caret_x].width == 0 &&
+	 !(tl->text[b->caret_x].flags.width == 0 &&
 	   tl->text[b->caret_x].code != 0) )
     { for(int i=tl->size; i>b->caret_x; i--)
 	tl->text[i] = tl->text[i-1];
@@ -3270,7 +3282,7 @@ rlc_put(RlcData b, int chr)
     text_char *tc = &tl->text[b->caret_x];
     tc->code  = chr;
     tc->flags = b->sgr_flags;
-    tc->width = 0;
+    tc->flags.width = 0;
     if ( tl->size <= b->caret_x )
       tl->size = b->caret_x + 1;
     tl->changed |= CHG_CHANGED;
@@ -3299,7 +3311,7 @@ rlc_put(RlcData b, int chr)
       { text_char *pad = &tl->text[b->caret_x];
 	pad->code  = ' ';
 	pad->flags = b->sgr_flags;
-	pad->width = 1;
+	pad->flags.width = 1;
 	if ( tl->size <= b->caret_x )
 	  tl->size = b->caret_x + 1;
 	tl->changed |= CHG_CHANGED;
@@ -3313,7 +3325,7 @@ rlc_put(RlcData b, int chr)
     text_char *tc = &tl->text[b->caret_x];
     tc->code  = chr;
     tc->flags = b->sgr_flags;
-    tc->width = (uint8_t)dw;
+    tc->flags.width = (unsigned)dw;
     if ( tl->size <= b->caret_x )
       tl->size = b->caret_x + 1;
 
@@ -3323,7 +3335,7 @@ rlc_put(RlcData b, int chr)
       text_char *ph = &tl->text[b->caret_x + 1];
       ph->code  = 0;
       ph->flags = b->sgr_flags;
-      ph->width = 0;
+      ph->flags.width = 0;
       if ( tl->size <= b->caret_x + 1 )
 	tl->size = b->caret_x + 2;
     }
@@ -3368,12 +3380,12 @@ rlc_insert(RlcData b, int chr)
   text_char *tc = &tl->text[b->caret_x];
   tc->code  = chr;
   tc->flags = b->sgr_flags;
-  tc->width = (uint8_t)dw;
+  tc->flags.width = (unsigned)dw;
   if ( dw == 2 && b->caret_x + 1 < cap )
   { text_char *ph = &tl->text[b->caret_x + 1];
     ph->code  = 0;
     ph->flags = b->sgr_flags;
-    ph->width = 0;
+    ph->flags.width = 0;
   }
   /* ANSI ICH discards content shifted past the right edge.  Trim any
      tail clusters whose visual column would fall past b->width so the
@@ -3407,8 +3419,8 @@ rlc_delete_chars(RlcData b, int count)
        count, b->caret_x, tl->size);
   for(int i = 0; i < tl->size && i < 16; i++)
     tlog("  cell %2d: code=0x%05X width=%d flags=0x%X\n",
-	 i, (unsigned)tl->text[i].code, tl->text[i].width,
-	 (unsigned)tl->text[i].flags);
+	 i, (unsigned)tl->text[i].code, tl->text[i].flags.width,
+	 (unsigned)tl->text[i].flags.raw);
   /* ANSI DCH takes a VISUAL COLUMN count.  Snap the caret back to the
      start of its grapheme cluster (in case it lands on a combining mark
      or a wide-char right-half placeholder) so the erase begins at a
@@ -3458,10 +3470,10 @@ rlc_check_links(RlcTextLine tl)
   int links = 0;
 
   for(int x=0; x<tl->size; x++)
-  { if ( TF_LINK(tl->text[x].flags) )
+  { if ( tl->text[x].flags.link )
     { int start = x;
       links++;
-      for(; x<tl->size && TF_LINK(tl->text[x].flags); x++)
+      for(; x<tl->size && tl->text[x].flags.link; x++)
 	;
       int len = x-start;
       href *hr;
@@ -3759,7 +3771,7 @@ rlc_put_link(RlcData b, const uchar_t *label, const uchar_t *link)
   rlc_sgr(b, 4);	/* underline */
   int y = b->caret_y;
   href *hr = rlc_register_link(b, link, ucslen(label));
-  b->sgr_flags = TF_SET_LINK(b->sgr_flags, true);
+  b->sgr_flags.link = 1;
   for( ; *label; label++)
   { rlc_put(b, *label);
     if ( b->caret_y != y )	/* moved to next line */
