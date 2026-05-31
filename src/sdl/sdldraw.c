@@ -1345,6 +1345,30 @@ r_underline(FontObj font, double x, double base, double w,
   }
 }
 
+/* Draw a strikethrough line for the run `[x, x+w)` whose text was
+ * placed on baseline `base`.  `strike` is the same Bool|Colour idiom as
+ * `r_underline`'s underline arg; `texture` picks a dash pattern from
+ * the line-texture vocabulary.
+ */
+void
+r_strikethrough(FontObj font, double x, double base, double w,
+		Any strike, Name texture)
+{ if ( strike != OFF )
+  { WsFont wsf = ws_get_font(font);
+    Any oldc = NULL;
+    if ( instanceOfObject(strike, ClassColour) )
+      oldc = r_colour(strike);
+    double o_pen = r_thickness(wsf->st_thickness);
+    r_dash(isDefault(texture) || !texture ? NAME_none : texture);
+    double sty = base - wsf->st_position + wsf->st_thickness/2.0;
+    r_line(x, sty, x+w, sty);
+    r_thickness(o_pen);
+    r_dash(NAME_none);
+    if ( oldc )
+      r_colour(oldc);
+  }
+}
+
 /**
  * Draw a polygon defined by a series of points.  Used for
  * class `bezier` and `graphical->draw_poly`.

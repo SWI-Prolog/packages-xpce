@@ -74,20 +74,21 @@ section(Title) :-
 
 %!  attributes is det.
 %
-%   Render the four styles the xpce terminal supports.  Italic, faint,
-%   blink, conceal and crossed_out are accepted by library(ansi_term)
-%   but currently not rendered by the xpce terminal — they are listed
-%   here too so visitors can confirm what's wired up on their host.
+%   Render the styles the xpce terminal supports.  Italic, faint and
+%   blink are accepted by library(ansi_term) but currently not rendered
+%   by the xpce terminal — they are listed here too so visitors can
+%   confirm what's wired up on their host.
 
 attributes :-
-    ansi_format([bold],      "bold ",         []),
-    ansi_format([underline], "underline ",    []),
-    ansi_format([negative],  "inverse ",      []),
-    ansi_format([bold,underline,negative], "all three ", []),
-    ansi_format([italic],    "italic ",       []),
-    ansi_format([faint],     "faint ",        []),
-    ansi_format([blink(slow)], "blink ",      []),
-    ansi_format([crossed_out], "crossed_out", []),
+    ansi_format([bold],        "bold ",         []),
+    ansi_format([underline],   "underline ",    []),
+    ansi_format([negative],    "inverse ",      []),
+    ansi_format([crossed_out], "strikethrough ",[]),
+    ansi_format([bold,underline,negative,crossed_out],
+                "all four ", []),
+    ansi_format([italic],      "italic ",       []),
+    ansi_format([faint],       "faint ",        []),
+    ansi_format([blink(slow)], "blink",         []),
     nl.
 
 %!  ansi_8 is det.

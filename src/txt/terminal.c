@@ -2008,7 +2008,8 @@ static void
 paint_chunks(const text_char *cells, int n,
 	     const char *utf8, int ulen,
 	     int x0, int ty, int cw, FontObj font,
-	     int underline, Name underline_texture)
+	     int underline, Name underline_texture,
+	     int strike, Name strike_texture)
 { const text_char *c = cells;
   const char *u = utf8;
   int i = 0;
@@ -2064,6 +2065,8 @@ paint_chunks(const text_char *cells, int n,
     s_print_utf8(chunk_u, chunk_ulen, x0, ty, font);
     if (underline)
       r_underline(font, x0, ty, chunk_w, DEFAULT, underline_texture);
+    if (strike)
+      r_strikethrough(font, x0, ty, chunk_w, DEFAULT, strike_texture);
 
     x0 += chunk_w;
   }
@@ -2322,7 +2325,9 @@ typedef struct
 { Colour fg;
   Colour bg;
   Name   underline_texture;		/* NAME_none, NAME_dotted, ... */
+  Name   strike_texture;
   bool   underline;
+  bool   strike;
   bool   bold;
 } effective_style;
 
@@ -2334,6 +2339,8 @@ effective_style_for(RlcData b, text_flags flags, bool armed)
       .bg                = palette_colour(b, flags.bg),
       .underline         = flags.underline,
       .underline_texture = NAME_none,
+      .strike            = flags.strike,
+      .strike_texture    = NAME_none,
       .bold              = flags.bold
     };
 
@@ -2364,6 +2371,12 @@ effective_style_for(RlcData b, text_flags flags, bool armed)
       { es.underline = true;
 	if ( instanceOfObject(uls, ClassName) )
 	  es.underline_texture = uls;
+      }
+      Any sts = ls->strikethrough;
+      if ( notDefault(sts) && notNil(sts) && sts != OFF )
+      { es.strike = true;
+	if ( instanceOfObject(sts, ClassName) )
+	  es.strike_texture = sts;
       }
       if ( ls->attributes & TXT_BOLDEN )
 	es.bold = true;
@@ -2459,7 +2472,7 @@ rlc_paint_text(RlcData b,
     *cx += chars_columns(chars, len) * b->cw;
     r_clear(x0, ty-b->cb, *cx-x0, b->ch);
     paint_chunks(chars, len, text, (int)(t-text), x0, ty, b->cw, ti->font,
-                 0, NAME_none);
+                 0, NAME_none, 0, NAME_none);
     r_colour(ofg);
     r_background(obg);
   } else
@@ -2534,7 +2547,8 @@ rlc_paint_text(RlcData b,
 	}
       }
       paint_chunks(s, segment, t, ulen, x0, ty, b->cw, font,
-                   es.underline, es.underline_texture);
+                   es.underline, es.underline_texture,
+                   es.strike, es.strike_texture);
       if ( flags.inverse )
 	r_swap_background_and_foreground();
       if ( notDefault(ofg) )
@@ -3560,12 +3574,16 @@ rlc_sgr(RlcData b, int sgr)
   { b->sgr_flags.underline = 1;
   } else if ( sgr == 7 )
   { b->sgr_flags.inverse = 1;
+  } else if ( sgr == 9 )
+  { b->sgr_flags.strike = 1;
   } else if ( sgr == 22 )	/* also clears "faint" */
   { b->sgr_flags.bold = 0;
   } else if ( sgr == 24 )
   { b->sgr_flags.underline = 0;
   } else if ( sgr == 27 )
   { b->sgr_flags.inverse = 0;
+  } else if ( sgr == 29 )
+  { b->sgr_flags.strike = 0;
   }
 }
 

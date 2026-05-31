@@ -696,6 +696,7 @@ typedef status (*SendFunc8)(Any r, Any, Any, Any, Any, Any, Any, Any, Any);
 typedef status (*SendFunc9)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any);
 typedef status (*SendFunc10)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any);
 typedef status (*SendFunc11)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any);
+typedef status (*SendFunc12)(Any r, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any, Any);
 
 status
 pceExecuteGoal(PceGoal g)
@@ -905,6 +906,10 @@ pceExecuteGoal(PceGoal g)
 	    case 11:
 	      rval = (*(SendFunc11)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
 				     a[8], a[9], a[10]);
+	      break;
+	    case 12:
+	      rval = (*(SendFunc12)f)(r, a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7],
+				     a[8], a[9], a[10], a[11]);
 	      break;
 	    default:
 	      rval = FAIL;

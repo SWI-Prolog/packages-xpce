@@ -96,6 +96,8 @@ void r_3d_ellipse(int x, int y, int w, int h, Elevation z, int up);
 void r_line(double x1, double y1, double x2, double y2);
 void r_underline(FontObj font, double x, double base, double w,
 		 Any underline, Name texture);
+void r_strikethrough(FontObj font, double x, double base, double w,
+		     Any strike, Name texture);
 void r_polygon(FPoint pts, int n, int close);
 void r_bezier(fpoint start, fpoint end, fpoint control1, fpoint control2);
 void r_path(Chain points, int ox, int oy, int radius, int closed, Image fill);

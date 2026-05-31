@@ -55,8 +55,10 @@ typedef struct
 { PangoFont *font;
   PangoFontDescription *desc;
   PangoLayout *layout;		/* Should be per display/surface type */
-  double ul_thickness;		/* Underline thinkness */
+  double ul_thickness;		/* Underline thickness */
   double ul_position;		/* Underline position */
+  double st_thickness;		/* Strikethrough thickness */
+  double st_position;		/* Strikethrough position (from baseline) */
   charwidth_cache wcache;
   font_domain dom_main;		/* Cached domain of primary font */
   font_domain dom_family;	/* Cached domain over fontset/fallbacks */

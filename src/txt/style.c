@@ -43,18 +43,20 @@ static status	hiddenStyle(Style s, BoolObj on);
 static status
 initialiseStyle(Style s, Image icon, FontObj font, Colour colour,
 		BoolObj highlight, BoolObj underline, BoolObj bold, BoolObj grey,
-		Any background, BoolObj hidden, Int lm, Int rm)
+		Any background, BoolObj hidden, Int lm, Int rm,
+		Any strikethrough)
 { if ( isDefault(icon) )      icon      = NIL;
   if ( isDefault(lm) )        lm        = ZERO;
   if ( isDefault(rm) )        rm        = ZERO;
 
-  assign(s, font,         font);
-  assign(s, icon,         icon);
-  assign(s, colour,       colour);
-  assign(s, background,	  background);
-  assign(s, underline,	  underline);
-  assign(s, left_margin,  lm);
-  assign(s, right_margin, rm);
+  assign(s, font,          font);
+  assign(s, icon,          icon);
+  assign(s, colour,        colour);
+  assign(s, background,    background);
+  assign(s, underline,     underline);
+  assign(s, strikethrough, strikethrough);
+  assign(s, left_margin,   lm);
+  assign(s, right_margin,  rm);
   s->attributes = 0;
 
   if ( notDefault(highlight) ) highlightStyle(s, highlight);
@@ -165,7 +167,7 @@ getHiddenStyle(Style s)
 /* Type declarations */
 
 static char *T_initialise[] =
-        { "icon=[image]*", "font=[font]", "colour=[colour]", "highlight=[bool]", "underline=[bool|texture_name|colour]", "bold=[bool]", "grey=[bool]", "background=[colour|pixmap|elevation]", "hidden=[bool]", "left_margin=[int]", "right_margin=[int]" };
+        { "icon=[image]*", "font=[font]", "colour=[colour]", "highlight=[bool]", "underline=[bool|texture_name|colour]", "bold=[bool]", "grey=[bool]", "background=[colour|pixmap|elevation]", "hidden=[bool]", "left_margin=[int]", "right_margin=[int]", "strikethrough=[bool|texture_name|colour]" };
 
 /* Instance Variables */
 
@@ -178,6 +180,8 @@ static vardecl var_style[] =
      NAME_appearance, "Background for the characters"),
   IV(NAME_underline, "[bool|texture_name|colour]", IV_BOTH,
      NAME_appearance, "Underline: @on/@off, a texture name, or a colour"),
+  IV(NAME_strikethrough, "[bool|texture_name|colour]", IV_BOTH,
+     NAME_appearance, "Strikethrough: @on/@off, a texture name, or a colour"),
   IV(NAME_icon, "image*", IV_BOTH,
      NAME_appearance, "Image for annotation margin"),
   IV(NAME_leftMargin, "int", IV_BOTH,
@@ -191,7 +195,7 @@ static vardecl var_style[] =
 /* Send Methods */
 
 static senddecl send_style[] =
-{ SM(NAME_initialise, 11, T_initialise, initialiseStyle,
+{ SM(NAME_initialise, 12, T_initialise, initialiseStyle,
      DEFAULT, "Create from icon, font, colour and attributes"),
   SM(NAME_bold, 1, "bool", boldStyle,
      NAME_appearance, "Bold text"),

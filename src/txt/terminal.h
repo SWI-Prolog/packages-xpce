@@ -186,7 +186,8 @@ typedef struct lqueued
  *   - underline  : 1
  *   - inverse    : 1
  *   - link       : 1   inside a hyperlink
- *   - reserved   : 2   future: italic, strikethrough
+ *   - strike     : 1   strikethrough (SGR 9 / crossed_out)
+ *   - reserved   : 1   future: italic
  *   - fg         : 12  palette index, 4096 entries
  *   - bg         : 12  palette index, 4096 entries
  */
@@ -198,7 +199,8 @@ typedef union text_flags
     unsigned underline : 1;
     unsigned inverse   : 1;
     unsigned link      : 1;
-    unsigned reserved  : 2;
+    unsigned strike    : 1;
+    unsigned reserved  : 1;
     unsigned fg        : 12;
     unsigned bg        : 12;
   };

@@ -94,7 +94,8 @@ NewClass(style)
   FontObj	font;			/* font of fragment */
   Colour	colour;			/* colour of fragment */
   Any		background;		/* Background for drawing */
-  Any		underline;		/* Bool or colour */
+  Any		underline;		/* Bool, texture name, or colour */
+  Any		strikethrough;		/* Bool, texture name, or colour */
   Image		icon;			/* margin marker */
   Int		left_margin;		/* left margin in pixels */
   Int		right_margin;		/* right margin in pixels */

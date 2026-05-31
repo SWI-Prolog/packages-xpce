@@ -227,6 +227,8 @@ ws_create_font(FontObj f)
 
   wsf->ul_thickness = P2D(pango_font_metrics_get_underline_thickness(metrics));
   wsf->ul_position  = P2D(pango_font_metrics_get_underline_position(metrics));
+  wsf->st_thickness = P2D(pango_font_metrics_get_strikethrough_thickness(metrics));
+  wsf->st_position  = P2D(pango_font_metrics_get_strikethrough_position(metrics));
   set_ex_font(f);
   pango_font_metrics_unref(metrics);
 
