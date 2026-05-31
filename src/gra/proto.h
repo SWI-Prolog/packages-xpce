@@ -26,6 +26,16 @@ COMMON(Colour)	getHiliteColour(Colour c, Real h);
 COMMON(Colour)	getReduceColour(Colour c, Real re);
 COMMON(status)	makeClassColour(Class class);
 
+/* /swi40/jan/src/pl/packages/xpce/src/gra/coords.c */
+COMMON(bool)	deviceLocalToWindowCoord(Device dev, double lx, double ly,
+					 double *wx, double *wy);
+COMMON(bool)	graphicalToWindowCoord(Graphical gr, double lx, double ly,
+				       double *wx, double *wy);
+COMMON(bool)	windowToGraphicalCoord(Graphical gr, double wx, double wy,
+				       double *lx, double *ly);
+COMMON(bool)	graphicalToWindowArea(Graphical gr, Area in, double bbox[4]);
+COMMON(bool)	deviceChainHasTransform(Graphical gr);
+
 /* /swi40/jan/src/pl/packages/xpce/src/gra/connection.c */
 COMMON(status)	updateHideExposeConnection(Connection c);
 COMMON(status)	updateDeviceConnection(Connection c);

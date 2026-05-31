@@ -1479,6 +1479,52 @@ getSizeGraphical(Graphical gr)
 }
 
 
+/* <-window_point: [point] → point
+ *
+ * Map a point in gr's local coord (relative to gr->area origin) to
+ * window-coord, taking any figure->transform along the device chain
+ * into account.  Defaults to (0,0), which yields the window-coord of
+ * gr's own origin.  Result is rounded to integer.
+ */
+
+static Point
+getWindowPointGraphical(Graphical gr, Point p)
+{ double lx = 0.0, ly = 0.0;
+  double wx, wy;
+
+  if ( notDefault(p) )
+  { lx = (double)valInt(p->x);
+    ly = (double)valInt(p->y);
+  }
+  if ( !graphicalToWindowCoord(gr, lx, ly, &wx, &wy) )
+    fail;
+  answer(answerObject(ClassPoint,
+		      toInt((intptr_t)floor(wx + 0.5)),
+		      toInt((intptr_t)floor(wy + 0.5)), EAV));
+}
+
+
+/* <-graphical_point: point → point
+ *
+ * Inverse of <-window_point: map a window-coord point to gr's local
+ * coord.  Fails if no window ancestor or the composed transform is
+ * singular.  Result is rounded to integer.
+ */
+
+static Point
+getGraphicalPointGraphical(Graphical gr, Point p)
+{ double wx = (double)valInt(p->x);
+  double wy = (double)valInt(p->y);
+  double lx, ly;
+
+  if ( !windowToGraphicalCoord(gr, wx, wy, &lx, &ly) )
+    fail;
+  answer(answerObject(ClassPoint,
+		      toInt((intptr_t)floor(lx + 0.5)),
+		      toInt((intptr_t)floor(ly + 0.5)), EAV));
+}
+
+
 static Point
 getCornerGraphical(Graphical gr)
 { Area a = getAreaGraphical(gr);
@@ -3532,6 +3578,10 @@ static getdecl get_graphical[] =
      NAME_area, "Position relative to frame"),
   GM(NAME_displayPosition, 0, "point", NULL, getDisplayPositionGraphical,
      NAME_area, "Position relative to display"),
+  GM(NAME_windowPoint, 1, "point", "[point]", getWindowPointGraphical,
+     NAME_area, "Map a local point to window-coord (transform-aware)"),
+  GM(NAME_graphicalPoint, 1, "point", "point", getGraphicalPointGraphical,
+     NAME_area, "Map a window-coord point to local (inverse of <-window_point)"),
   GM(NAME_height, 0, "int", NULL, getHeightGraphical,
      NAME_area, "Height of graphical"),
   GM(NAME_leftSide, 0, "int", NULL, getLeftSideGraphical,
