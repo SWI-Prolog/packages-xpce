@@ -102,7 +102,8 @@ typedef struct colour_context *ColourContext; /* for selection/inactive */
   Image		background;		/* Pattern for background */ \
   Int		border;			/* border around graphicals */ \
   Int		radius;			/* radius of outline */ \
-  Elevation	elevation;		/* elevation of outline */
+  Elevation	elevation;		/* elevation of outline */ \
+  Transform	transform;		/* optional 2D affine on contents */
 
 #define ABSTRACT_DIALOGITEM \
   ABSTRACT_GRAPHICAL \

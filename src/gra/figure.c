@@ -48,6 +48,7 @@ initialiseFigure(Figure f)
   assign(f, border,	ZERO);
   assign(f, radius,	ZERO);
   assign(f, elevation,	NIL);
+  assign(f, transform,	NIL);
   assign(f, status,     NAME_allActive);
 
   succeed;
@@ -246,6 +247,25 @@ elevationFigure(Figure f, Elevation e)
 }
 
 
+/* Attach an optional 2D affine transform to the figure's contents.
+ * @nil restores the un-transformed default.  Subsequent painting, hit
+ * testing and bounding-box math will use the transform; for now only
+ * the slot is wired up.
+ */
+
+static status
+transformFigure(Figure f, Transform t)
+{ if ( f->transform != t )
+  { CHANGING_GRAPHICAL(f,
+		       assign(f, transform, t);
+		       requestComputeDevice((Device) f, DEFAULT);
+		       changedEntireImageGraphical(f));
+  }
+
+  succeed;
+}
+
+
 static status
 shadowFigure(Figure f, Int shadow)
 { return elevationFigure(f, shadow == ZERO ?
@@ -321,6 +341,8 @@ makeClassFigure(Class class)
 	     "Radius of outline");
   localClass(class, NAME_elevation, NAME_appearance, "elevation*", NAME_get,
 	     "Elevation from background");
+  localClass(class, NAME_transform, NAME_appearance, "transform*", NAME_get,
+	     "Optional 2D affine transform applied to contents");
 
   setRedrawFunctionClass(class, RedrawAreaFigure);
 
@@ -330,6 +352,7 @@ makeClassFigure(Class class)
   storeMethod(class, NAME_border,     borderFigure);
   storeMethod(class, NAME_radius,     radiusFigure);
   storeMethod(class, NAME_elevation,  elevationFigure);
+  storeMethod(class, NAME_transform,  transformFigure);
 
   sendMethod(class, NAME_initialise, DEFAULT, 0,
 	     "Create figure",
