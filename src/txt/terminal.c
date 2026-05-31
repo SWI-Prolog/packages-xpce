@@ -327,8 +327,8 @@ static href    *rlc_href_at(RlcData b, int x, int y, int *l, int *c);
 static status	refreshTerminalImage(TerminalImage ti);
 static href    *rlc_add_link(RlcTextLine tl, const uchar_t *link,
 			     int start, int len);
-static void	rlc_free_link(href *hr);
-static void	rlc_free_links(href *links);
+static void	rlc_free_link(RlcData b, href *hr);
+static void	rlc_free_links(RlcData b, href *links);
 static void	rlc_check_links(RlcTextLine tl);
 static bool	rlc_copy(RlcData b, Name to);
 static void	rlc_request_redraw(RlcData b);
@@ -1167,7 +1167,7 @@ static classvardecl rc_terminal_image[] =
   RC(NAME_nfdStyle, "style*", "@nil",
      "Style for NFD grapheme clusters (default off)"),
   RC(NAME_linkStyle, "style*",
-     "style(colour := blue, underline := @on)",
+     "style(colour := blue, underline := dotted)",
      "Style for hyperlinks"),
   RC(NAME_linkArmedStyle, "style*",
      "style(colour := blue, underline := @on)",
@@ -2007,7 +2007,8 @@ rlc_scroll_lines(RlcData b, int lines)
 static void
 paint_chunks(const text_char *cells, int n,
 	     const char *utf8, int ulen,
-	     int x0, int ty, int cw, FontObj font, int underline)
+	     int x0, int ty, int cw, FontObj font,
+	     int underline, Name underline_texture)
 { const text_char *c = cells;
   const char *u = utf8;
   int i = 0;
@@ -2062,7 +2063,7 @@ paint_chunks(const text_char *cells, int n,
 
     s_print_utf8(chunk_u, chunk_ulen, x0, ty, font);
     if (underline)
-      r_underline(font, x0, ty, chunk_w, DEFAULT);
+      r_underline(font, x0, ty, chunk_w, DEFAULT, underline_texture);
 
     x0 += chunk_w;
   }
@@ -2320,6 +2321,7 @@ palette_colour(RlcData b, unsigned idx)
 typedef struct
 { Colour fg;
   Colour bg;
+  Name   underline_texture;		/* NAME_none, NAME_dotted, ... */
   bool   underline;
   bool   bold;
 } effective_style;
@@ -2328,10 +2330,11 @@ static effective_style
 effective_style_for(RlcData b, text_flags flags, bool armed)
 { TerminalImage ti = b->object;
   effective_style es =
-    { .fg        = palette_colour(b, flags.fg),
-      .bg        = palette_colour(b, flags.bg),
-      .underline = flags.underline,
-      .bold      = flags.bold
+    { .fg                = palette_colour(b, flags.fg),
+      .bg                = palette_colour(b, flags.bg),
+      .underline         = flags.underline,
+      .underline_texture = NAME_none,
+      .bold              = flags.bold
     };
 
   /* Link overlay: only slots that the user explicitly set (neither nil
@@ -2340,6 +2343,11 @@ effective_style_for(RlcData b, text_flags flags, bool armed)
    * slots at @default — the cell's flags win where the style is silent.
    * The hover (armed) variant overrides link_style on a per-link basis;
    * cells outside the hovered href keep using the resting link_style.
+   *
+   * Style->underline historically was "Bool or Colour" (we ignore the
+   * Colour shade for now since the line is drawn in the current fg).
+   * We additionally accept a texture Name from the line-texture
+   * vocabulary (solid, dotted, dashed, dashdot, dashdotted, longdash).
    */
   if ( flags.link )
   { Style ls = (armed &&
@@ -2351,10 +2359,12 @@ effective_style_for(RlcData b, text_flags flags, bool armed)
 	es.fg = ls->colour;
       if ( notDefault(ls->background) && notNil(ls->background) )
 	es.bg = ls->background;
-      /* Style->underline is "Bool or Colour"; either form means underline. */
-      if ( notDefault(ls->underline) && notNil(ls->underline) &&
-	   ls->underline != OFF )
-	es.underline = true;
+      Any uls = ls->underline;
+      if ( notDefault(uls) && notNil(uls) && uls != OFF )
+      { es.underline = true;
+	if ( instanceOfObject(uls, ClassName) )
+	  es.underline_texture = uls;
+      }
       if ( ls->attributes & TXT_BOLDEN )
 	es.bold = true;
     }
@@ -2448,7 +2458,8 @@ rlc_paint_text(RlcData b,
     int x0 = *cx;
     *cx += chars_columns(chars, len) * b->cw;
     r_clear(x0, ty-b->cb, *cx-x0, b->ch);
-    paint_chunks(chars, len, text, (int)(t-text), x0, ty, b->cw, ti->font, 0);
+    paint_chunks(chars, len, text, (int)(t-text), x0, ty, b->cw, ti->font,
+                 0, NAME_none);
     r_colour(ofg);
     r_background(obg);
   } else
@@ -2523,7 +2534,7 @@ rlc_paint_text(RlcData b,
 	}
       }
       paint_chunks(s, segment, t, ulen, x0, ty, b->cw, font,
-                   es.underline);
+                   es.underline, es.underline_texture);
       if ( flags.inverse )
 	r_swap_background_and_foreground();
       if ( notDefault(ofg) )
@@ -2777,7 +2788,7 @@ rlc_destroy_buffer(RlcData b)
 	rlc_free(tl->text);
       href *links = tl->links;
       if ( links )
-	rlc_free_links(links);
+	rlc_free_links(b, links);
     }
 
     rlc_free(b->lines);
@@ -2908,8 +2919,17 @@ move_link_positions(RlcTextLine tl, int offset)
     hr->start += offset;
 }
 
+/* When two hrefs merge, retarget b->armed_href so hover survives the
+ * splice.  Anything else that frees an href will fall back to clearing
+ * armed_href in rlc_free_link. */
+static inline void
+retarget_armed(RlcData b, href *from_hr, href *to_hr)
+{ if ( b->armed_href == from_hr )
+    b->armed_href = to_hr;
+}
+
 static void
-move_links(RlcTextLine from, RlcTextLine to)
+move_links(RlcData b, RlcTextLine from, RlcTextLine to)
 { href *next;
 
   DEBUG(NAME_term,
@@ -2925,7 +2945,8 @@ move_links(RlcTextLine from, RlcTextLine to)
       {	DEBUG(NAME_term, Cprintf("Rejoin split link\n"));
 	hr2->start = hr->start;
 	hr2->length += hr->length;
-	rlc_free_link(hr);
+	retarget_armed(b, hr, hr2);
+	rlc_free_link(b, hr);
 	goto next_link;
       }
     }
@@ -2940,7 +2961,7 @@ move_links(RlcTextLine from, RlcTextLine to)
 }
 
 static void
-move_links_soft(RlcTextLine from, RlcTextLine to)
+move_links_soft(RlcData b, RlcTextLine from, RlcTextLine to)
 { href *next;
 
   DEBUG(NAME_term,
@@ -2958,7 +2979,8 @@ move_links_soft(RlcTextLine from, RlcTextLine to)
 	{ DEBUG(NAME_term, Cprintf("Rejoin split link\n"));
 	  hr2->start = hr->start;
 	  hr2->length += hr->length;
-	  rlc_free_link(hr);
+	  retarget_armed(b, hr, hr2);
+	  rlc_free_link(b, hr);
 	  goto next_link;
 	}
       }
@@ -3041,7 +3063,7 @@ rlc_resize(RlcData b, int w, int h)
 	nl->size += move;
 	tl->size = w;
 	move_link_positions(nl, move);
-	move_links_soft(tl, nl);
+	move_links_soft(b, tl, nl);
       }
     } else if ( tl->text && tl->softreturn && tl->size < w )
     { RlcTextLine nl;
@@ -3056,7 +3078,7 @@ rlc_resize(RlcData b, int w, int h)
       memmove(&nl->text[tl->size], nl->text, nl->size*sizeof(text_char));
       move_link_positions(nl, tl->size);
       memmove(nl->text, tl->text, tl->size*sizeof(text_char));
-      move_links(tl, nl);
+      move_links(b, tl, nl);
 
       nl->size += tl->size;
       nl->adjusted = true;
@@ -3098,18 +3120,20 @@ rlc_reinit_line(RlcData b, int line)
 }
 
 static void
-rlc_free_link(href *hr)
-{ rlc_free(hr->link);
+rlc_free_link(RlcData b, href *hr)
+{ if ( b->armed_href == hr )
+    b->armed_href = NULL;
+  rlc_free(hr->link);
   rlc_free(hr);
 }
 
 static void
-rlc_free_links(href *links)
+rlc_free_links(RlcData b, href *links)
 { href *next;
 
   for(; links; links=next)
   { next = links->next;
-    rlc_free_link(links);
+    rlc_free_link(b, links);
   }
 }
 
@@ -3143,7 +3167,7 @@ rlc_free_line(RlcData b, int line)
   href *links = tl->links;
   if ( links )
   { tl->links = NULL;
-    rlc_free_links(links);
+    rlc_free_links(b, links);
   }
 }
 
@@ -3901,12 +3925,12 @@ rlc_shift_up(RlcData b, int shift)
 
 
 static void
-rlc_destroy_saved_line(RlcTextLine tl)
+rlc_destroy_saved_line(RlcData b, RlcTextLine tl)
 { if ( tl->text )
     rlc_free(tl->text);
   href *links = tl->links;
   if ( links )
-    rlc_free_links(links);
+    rlc_free_links(b, links);
 }
 
 static void
@@ -3918,7 +3942,7 @@ rlc_destroy_saved_screen(RlcData b)
     b->saved.lines = NULL;
     b->saved.height = 0;
     for(int i=0; i<count; i++)
-      rlc_destroy_saved_line(&tls[i]);
+      rlc_destroy_saved_line(b, &tls[i]);
     rlc_free(tls);
   }
 }
@@ -3980,7 +4004,7 @@ rlc_restore_screen(RlcData b)
 	}
 	line = NextLine(b, line);
       } else
-      { rlc_destroy_saved_line(&tls[i]);
+      { rlc_destroy_saved_line(b, &tls[i]);
       }
     }
     rlc_free(tls);

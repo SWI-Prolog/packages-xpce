@@ -787,7 +787,7 @@ t_underline(FontObj font, int x, double y, int w, Colour c)
   { ew += w;
   } else
   { if ( ew > 0 && !isNil(cc) )
-      r_underline(ef, ex, ey, ew, cc);
+      r_underline(ef, ex, ey, ew, cc, NAME_none);
     ex = x, ey = y, ew = w;
     cc = c;
     ef = font;

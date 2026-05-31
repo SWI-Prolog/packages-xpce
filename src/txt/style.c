@@ -165,7 +165,7 @@ getHiddenStyle(Style s)
 /* Type declarations */
 
 static char *T_initialise[] =
-        { "icon=[image]*", "font=[font]", "colour=[colour]", "highlight=[bool]", "underline=[bool|colour]", "bold=[bool]", "grey=[bool]", "background=[colour|pixmap|elevation]", "hidden=[bool]", "left_margin=[int]", "right_margin=[int]" };
+        { "icon=[image]*", "font=[font]", "colour=[colour]", "highlight=[bool]", "underline=[bool|texture_name|colour]", "bold=[bool]", "grey=[bool]", "background=[colour|pixmap|elevation]", "hidden=[bool]", "left_margin=[int]", "right_margin=[int]" };
 
 /* Instance Variables */
 
@@ -176,8 +176,8 @@ static vardecl var_style[] =
      NAME_appearance, "Colour of the characters"),
   IV(NAME_background, "[colour|pixmap|elevation]", IV_BOTH,
      NAME_appearance, "Background for the characters"),
-  IV(NAME_underline, "[bool|colour]", IV_BOTH,
-     NAME_appearance, "Underline"),
+  IV(NAME_underline, "[bool|texture_name|colour]", IV_BOTH,
+     NAME_appearance, "Underline: @on/@off, a texture name, or a colour"),
   IV(NAME_icon, "image*", IV_BOTH,
      NAME_appearance, "Image for annotation margin"),
   IV(NAME_leftMargin, "int", IV_BOTH,

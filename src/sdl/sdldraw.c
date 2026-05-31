@@ -1327,17 +1327,19 @@ r_line(double x1, double y1, double x2, double y2)
  */
 
 void
-r_underline(FontObj font, double x, double base, double w, Any underline)
+r_underline(FontObj font, double x, double base, double w,
+	    Any underline, Name texture)
 { if ( underline != OFF )
   { WsFont wsf = ws_get_font(font);
     Any oldc = NULL;
     if ( instanceOfObject(underline, ClassColour) )
       oldc = r_colour(underline);
     double o_pen = r_thickness(wsf->ul_thickness);
-    r_dash(NAME_none);
+    r_dash(isDefault(texture) || !texture ? NAME_none : texture);
     double uly = base + wsf->ul_thickness/2.0 - wsf->ul_position;
     r_line(x, uly, x+w, uly);
     r_thickness(o_pen);
+    r_dash(NAME_none);
     if ( oldc )
       r_colour(oldc);
   }
@@ -2437,7 +2439,7 @@ str_string(PceString s, FontObj font,
   for(n=0, line = lines; n++ < nlines; line++)
   { str_text(font, &line->text, line->x, line->y+baseline);
     if ( isOn(underline) || instanceOfObject(underline, ClassColour) )
-      r_underline(font, line->x, y+baseline, line->width, underline);
+      r_underline(font, line->x, y+baseline, line->width, underline, NAME_none);
   }
 }
 
@@ -2531,7 +2533,7 @@ str_draw_text_lines(int acc, FontObj font,
 	  int cw = str_width(&line->text, cn, cn+1, font);
 	  int cy = line->y+baseline+oy;
 
-	  r_underline(font, cx, cy, cw, DEFAULT);
+	  r_underline(font, cx, cy, cw, DEFAULT, NAME_none);
 	  acc = 0;
 	  break;
 	}
