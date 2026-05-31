@@ -936,6 +936,12 @@ nfdStyleTerminalImage(TerminalImage ti, Style s)
 }
 
 static status
+linkStyleTerminalImage(TerminalImage ti, Style s)
+{ assign(ti, link_style, s);
+  return refreshTerminalImage(ti);
+}
+
+static status
 ansiColoursTerminalImage(TerminalImage ti, Vector colours)
 { assign(ti, ansi_colours, colours);
   return refreshTerminalImage(ti);
@@ -1037,6 +1043,8 @@ static vardecl var_terminal_image[] =
      NAME_appearance, "Feedback for the selection"),
   SV(NAME_nfdStyle, "style*", IV_GET|IV_STORE, nfdStyleTerminalImage,
      NAME_appearance, "Style for NFD grapheme clusters (@nil to disable)"),
+  SV(NAME_linkStyle, "style*", IV_GET|IV_STORE, linkStyleTerminalImage,
+     NAME_appearance, "Style for hyperlinks (@nil for none)"),
   SV(NAME_ansiColours, "vector*", IV_GET|IV_STORE, ansiColoursTerminalImage,
      NAME_appearance, "The 16 ansi colours"),
   IV(NAME_armedLink, "bool", IV_GET,
@@ -1145,6 +1153,9 @@ static classvardecl rc_terminal_image[] =
      "Style for <-selection"),
   RC(NAME_nfdStyle, "style*", "@nil",
      "Style for NFD grapheme clusters (default off)"),
+  RC(NAME_linkStyle, "style*",
+     "style(colour := blue, underline := @on)",
+     "Style for hyperlinks"),
   RC(NAME_autoCopy, "bool", UXWINMAC("@on", "@off", "@off"),
      "Automatically copy selected text to the clipboard"),
   RC(NAME_saveLines, "int", "1000",
@@ -2282,6 +2293,49 @@ palette_colour(RlcData b, unsigned idx)
   return b->palette_obj[idx];
 }
 
+/* Resolved render parameters for a same-flags run of cells.  Encodes
+ * what to actually paint: NULL fg/bg mean "inherit the surrounding
+ * default".  The result already reflects any link_style overlay so the
+ * paint loop doesn't have to special-case hyperlinks.
+ */
+typedef struct
+{ Colour fg;
+  Colour bg;
+  bool   underline;
+  bool   bold;
+} effective_style;
+
+static effective_style
+effective_style_for(RlcData b, text_flags flags)
+{ TerminalImage ti = b->object;
+  effective_style es =
+    { .fg        = palette_colour(b, flags.fg),
+      .bg        = palette_colour(b, flags.bg),
+      .underline = flags.underline,
+      .bold      = flags.bold
+    };
+
+  /* Link overlay: only slots that the user explicitly set (neither nil
+   * nor @default) replace the cell's own values.  An application can
+   * still embed colored, bold, or unstyled links by leaving link_style
+   * slots at @default — the cell's flags win where the style is silent.
+   */
+  if ( flags.link && notNil(ti->link_style) && !isDefault(ti->link_style) )
+  { Style ls = ti->link_style;
+    if ( notDefault(ls->colour) && notNil(ls->colour) )
+      es.fg = ls->colour;
+    if ( notDefault(ls->background) && notNil(ls->background) )
+      es.bg = ls->background;
+    /* Style->underline is "Bool or Colour"; either form means underline. */
+    if ( notDefault(ls->underline) && notNil(ls->underline) &&
+	 ls->underline != OFF )
+      es.underline = true;
+    if ( ls->attributes & TXT_BOLDEN )
+      es.bold = true;
+  }
+  return es;
+}
+
 /** Draw a line of the terminal
  */
 
@@ -2374,24 +2428,17 @@ rlc_paint_text(RlcData b,
       }
       ulen = ut-t;
 
+      effective_style es = effective_style_for(b, flags);
       Colour ofg = DEFAULT;
       Colour obg = DEFAULT;
-      int ifg = flags.fg;
-      int ibg = flags.bg;
-      if ( ifg != PAL_DEFAULT )
-      { Colour fg = palette_colour(b, ifg);
-	if ( fg )
-	  ofg = r_colour(fg);
-      }
-      if ( ibg != PAL_DEFAULT )
-      { Colour bg = palette_colour(b, ibg);
-	if ( bg )
-	  obg = r_background(bg);
-      }
+      if ( es.fg )
+	ofg = r_colour(es.fg);
+      if ( es.bg )
+	obg = r_background(es.bg);
       if ( flags.inverse )
 	r_swap_background_and_foreground();
       FontObj font = ti->font;
-      if ( flags.bold )
+      if ( es.bold )
       { if ( notNil(ti->bold_font) )
 	  font = ti->bold_font;
 	else
@@ -2424,7 +2471,7 @@ rlc_paint_text(RlcData b,
 	}
       }
       paint_chunks(s, segment, t, ulen, x0, ty, b->cw, font,
-                   flags.underline);
+                   es.underline);
       if ( flags.inverse )
 	r_swap_background_and_foreground();
       if ( notDefault(ofg) )
@@ -4008,8 +4055,6 @@ osc8_end(RlcData b)
 static void
 rlc_put_link(RlcData b, const uchar_t *label, const uchar_t *link)
 { text_flags flags0 = b->sgr_flags;
-  rlc_sgr(b, 34);	/* blue */
-  rlc_sgr(b, 4);	/* underline */
   int y = b->caret_y;
   href *hr = rlc_register_link(b, link, ucslen(label));
   b->sgr_flags.link = 1;
