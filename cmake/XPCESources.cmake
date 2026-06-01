@@ -254,7 +254,8 @@ set(XPCE_DATA_prolog_contrib_rubik maplist.pl README rubikpce.pl rubik.pl)
 
 set(XPCE_DATA_prolog_demo arc.pl chess.pl colour.pl constraint.pl cursor.pl
     event_hierarchy.pl fontviewer.pl ftplog.pl graph.pl hsvcolour.pl
-    imageviewer.pl ispell.pl juggler.pl kangaroo.pl pce_demo.pl)
+    imageviewer.pl ispell.pl juggler.pl kangaroo.pl pce_demo.pl
+    transform.pl)
 
 set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png busy_bee.png
     cassette.png chessboard.png chesssquare.png close.png
