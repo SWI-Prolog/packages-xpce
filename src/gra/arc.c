@@ -84,18 +84,66 @@ points_arc(ArcObj a, double *sx, double *sy, double *ex, double *ey)
 }
 
 
+/* Compute (tip, reference) for an arrow attached to an arc end.
+ *
+ * The tip sits on the arc at the endpoint.  The reference is placed at
+ * the arc point that is at chord-distance arrow-><-length from the tip
+ * — looking forward into the arc for is_first, backward for the second.
+ * That makes the arrow's wing line align with the local chord rather
+ * than the tangent, so the wing's midpoint lands on (or very close to)
+ * the arc, eliminating the visible offset between arc and wing centre.
+ *
+ * For an ellipse (aw != ah) the chord-distance is computed against the
+ * mean radius — exact for circles, a usable approximation otherwise.
+ * Falls back to the historic tangent direction when the arc is too
+ * small to fit the arrow.
+ */
+static void
+arc_arrow_endpoints(ArcObj a, Arrow ar, bool is_first,
+		    double *tip_x, double *tip_y,
+		    double *ref_x, double *ref_y)
+{ double cx = valInt(a->position->x);
+  double cy = valInt(a->position->y);
+  double aw = valInt(a->size->w);
+  double ah = valInt(a->size->h);
+  double start = valNum(a->start_angle);
+  double size  = valNum(a->size_angle);
+  double tip_angle = is_first ? start : start + size;
+  double l1 = valNum(ar->length);
+  double r_avg = (aw + ah) / 2.0;
+
+  *tip_x = cx + aw * COS(tip_angle);
+  *tip_y = cy - ah * SIN(tip_angle);
+
+  if ( r_avg > 0.0 && l1 > 0.0 && l1 < 2.0*r_avg )
+  { double sign = (size >= 0.0) ? 1.0 : -1.0;
+    double delta = 2.0 * asin(l1 / (2.0 * r_avg)) * 180.0 / M_PI;
+    double ref_angle = is_first
+		     ? tip_angle + sign * delta
+		     : tip_angle - sign * delta;
+    *ref_x = cx + aw * COS(ref_angle);
+    *ref_y = cy - ah * SIN(ref_angle);
+  } else
+  { if ( (is_first && size >= 0.0) || (!is_first && size < 0.0) )
+    { *ref_x = *tip_x + (*tip_y - cy);
+      *ref_y = *tip_y - (*tip_x - cx);
+    } else
+    { *ref_x = *tip_x - (*tip_y - cy);
+      *ref_y = *tip_y + (*tip_x - cx);
+    }
+  }
+}
+
+
 static status
 RedrawAreaArc(ArcObj a, Area area)
 { int x, y, w, h;
   double aw = valInt(a->size->w);
   double ah = valInt(a->size->h);
-  double sx, sy, ex, ey;
   double cx, cy;
-  double size_angle = valNum(a->size_angle);
 
   initialiseDeviceGraphical(a, &x, &y, &w, &h);
 
-  points_arc(a, &sx, &sy, &ex, &ey);
   cx = valInt(a->position->x);
   cy = valInt(a->position->y);
 
@@ -104,23 +152,17 @@ RedrawAreaArc(ArcObj a, Area area)
 
   r_arc(cx - aw, cy - ah,
 	2*aw, 2*ah,
-	valNum(a->start_angle), size_angle,
+	valNum(a->start_angle), valNum(a->size_angle),
 	a->close,
 	a->fill);
 
-  if (notNil(a->first_arrow))
+  if ( notNil(a->first_arrow) )
   { Any av[4];
+    double tx, ty, rx, ry;
 
-    av[0] = toNum(sx);
-    av[1] = toNum(sy);
-
-    if ( size_angle >= 0.0 )
-    { av[2] = toNum(sx+(sy-cy));
-      av[3] = toNum(sy-(sx-cx));
-    } else
-    { av[2] = toNum(sx-(sy-cy));
-      av[3] = toNum(sy+(sx-cx));
-    }
+    arc_arrow_endpoints(a, (Arrow)a->first_arrow, true, &tx, &ty, &rx, &ry);
+    av[0] = toNum(tx); av[1] = toNum(ty);
+    av[2] = toNum(rx); av[3] = toNum(ry);
 
     if ( qadSendv(a->first_arrow, NAME_points, 4, av) )
     { assign(a->first_arrow, displayed, ON);
@@ -128,19 +170,13 @@ RedrawAreaArc(ArcObj a, Area area)
       RedrawArea(a->first_arrow, area);
     }
   }
-  if (notNil(a->second_arrow))
+  if ( notNil(a->second_arrow) )
   { Any av[4];
+    double tx, ty, rx, ry;
 
-    av[0] = toNum(ex);
-    av[1] = toNum(ey);
-
-    if ( size_angle >= 0.0 )
-    { av[2] = toNum(ex-(ey-cy));
-      av[3] = toNum(ey+(ex-cx));
-    } else
-    { av[2] = toNum(ex+(ey-cy));
-      av[3] = toNum(ey-(ex-cx));
-    }
+    arc_arrow_endpoints(a, (Arrow)a->second_arrow, false, &tx, &ty, &rx, &ry);
+    av[0] = toNum(tx); av[1] = toNum(ty);
+    av[2] = toNum(rx); av[3] = toNum(ry);
 
     if ( qadSendv(a->second_arrow, NAME_points, 4, av) )
     { assign(a->second_arrow, displayed, ON);
@@ -176,49 +212,27 @@ angleInArc(ArcObj a, double angle)
 
 static void
 includeArrowsInAreaArc(ArcObj a)
-{ if ( notNil(a->first_arrow) || notNil(a->second_arrow) )
-  { double sx, sy, ex, ey;
-    double cx, cy;
-    double size_angle = valNum(a->size_angle);
-    Any av[4];
+{ Any av[4];
+  double tx, ty, rx, ry;
 
-    points_arc(a, &sx, &sy, &ex, &ey);
-    cx = valInt(a->position->x);
-    cy = valInt(a->position->y);
+  if ( notNil(a->first_arrow) )
+  { arc_arrow_endpoints(a, (Arrow)a->first_arrow, true, &tx, &ty, &rx, &ry);
+    av[0] = toNum(tx); av[1] = toNum(ty);
+    av[2] = toNum(rx); av[3] = toNum(ry);
 
-    if ( notNil(a->first_arrow) )
-    { av[0] = toNum(sx);
-      av[1] = toNum(sy);
-
-      if ( size_angle >= 0.0 )
-      { av[2] = toNum(sx+(sy-cy));
-	av[3] = toNum(sy-(sx-cx));
-      } else
-      { av[2] = toNum(sx-(sy-cy));
-	av[3] = toNum(sy+(sx-cx));
-      }
-
-      if ( qadSendv(a->first_arrow, NAME_points, 4, av) )
-      { ComputeGraphical(a->first_arrow);
-	unionNormalisedArea(a->area, a->first_arrow->area);
-      }
+    if ( qadSendv(a->first_arrow, NAME_points, 4, av) )
+    { ComputeGraphical(a->first_arrow);
+      unionNormalisedArea(a->area, a->first_arrow->area);
     }
-    if ( notNil(a->second_arrow) )
-    { av[0] = toNum(ex);
-      av[1] = toNum(ey);
+  }
+  if ( notNil(a->second_arrow) )
+  { arc_arrow_endpoints(a, (Arrow)a->second_arrow, false, &tx, &ty, &rx, &ry);
+    av[0] = toNum(tx); av[1] = toNum(ty);
+    av[2] = toNum(rx); av[3] = toNum(ry);
 
-      if ( size_angle >= 0.0 )
-      { av[2] = toNum(ex-(ey-cy));
-	av[3] = toNum(ey+(ex-cx));
-      } else
-      { av[2] = toNum(ex+(ey-cy));
-	av[3] = toNum(ey-(ex-cx));
-      }
-
-      if ( qadSendv(a->second_arrow, NAME_points, 4, av) )
-      { ComputeGraphical(a->second_arrow);
-	unionNormalisedArea(a->area, a->second_arrow->area);
-      }
+    if ( qadSendv(a->second_arrow, NAME_points, 4, av) )
+    { ComputeGraphical(a->second_arrow);
+      unionNormalisedArea(a->area, a->second_arrow->area);
     }
   }
 }
