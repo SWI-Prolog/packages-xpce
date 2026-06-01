@@ -64,7 +64,7 @@ area of the graphical) should not be used.  Changing the area of an arrow
 has no well-defined meaning.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-static status pointsArrow(Arrow a, Int tx, Int ty, Int rx, Int ry);
+static status pointsArrow(Arrow a, Num tx, Num ty, Num rx, Num ry);
 
 static status
 initialiseArrow(Arrow a, Num length, Num wing, Name style, Any fill)
@@ -157,7 +157,10 @@ computeArrow(Arrow a)
 
     CHANGING_GRAPHICAL(a,
 		       { setArea(a->area,
-				 toInt(x), toInt(y), toInt(w), toInt(h));
+				 toInt((intptr_t)floor(x)),
+				 toInt((intptr_t)floor(y)),
+				 toInt((intptr_t)ceil(w)),
+				 toInt((intptr_t)ceil(h)));
 			 if ( changed )
 			   changedEntireImageGraphical(a);
 		       });
@@ -239,12 +242,12 @@ tipArrow(Arrow a, Point p)
 }
 
 static status
-tipXArrow(Arrow a, Int x)
+tipXArrow(Arrow a, Num x)
 { return pointsArrow(a, x, DEFAULT, DEFAULT, DEFAULT);
 }
 
 static status
-tipYArrow(Arrow a, Int y)
+tipYArrow(Arrow a, Num y)
 { return pointsArrow(a, DEFAULT, y, DEFAULT, DEFAULT);
 }
 
@@ -255,33 +258,33 @@ referenceArrow(Arrow a, Point p)
 }
 
 static status
-referenceXArrow(Arrow a, Int x)
+referenceXArrow(Arrow a, Num x)
 { return pointsArrow(a, DEFAULT, DEFAULT, x, DEFAULT);
 }
 
 static status
-referenceYArrow(Arrow a, Int y)
+referenceYArrow(Arrow a, Num y)
 { return pointsArrow(a, DEFAULT, DEFAULT, DEFAULT, y);
 }
 
 
-static Int
+static Num
 getTipXArrow(Arrow a)
 { answer(a->tip->x);
 }
 
-static Int
+static Num
 getTipYArrow(Arrow a)
 { answer(a->tip->y);
 }
 
-static Int
+static Num
 getReferenceXArrow(Arrow a)
 { answer(a->reference->x);
 }
 
 
-static Int
+static Num
 getReferenceYArrow(Arrow a)
 { answer(a->reference->y);
 }
@@ -299,7 +302,7 @@ styleArrow(Arrow a, Name style)
 
 
 static status
-lengthArrow(Arrow a, Int l)
+lengthArrow(Arrow a, Num l)
 { if ( a->length != l )
   { assign(a, length, l);
     requestComputeGraphical(a, DEFAULT);
@@ -309,7 +312,7 @@ lengthArrow(Arrow a, Int l)
 
 
 static status
-wingArrow(Arrow a, Int w)
+wingArrow(Arrow a, Num w)
 { if ( a->wing != w )
   { assign(a, wing, w);
     requestComputeGraphical(a, DEFAULT);
@@ -319,7 +322,7 @@ wingArrow(Arrow a, Int w)
 
 
 static status
-pointsArrow(Arrow a, Int tx, Int ty, Int rx, Int ry)
+pointsArrow(Arrow a, Num tx, Num ty, Num rx, Num ry)
 { Point tip = a->tip;
   Point ref = a->reference;
 
@@ -351,8 +354,8 @@ static char *T_initialise[] =
 	  "style=[{open,closed}]", "fill=[colour]*"
 	};
 static char *T_points[] =
-        { "tip_x=[int]", "tip_y=[int]",
-	  "reference_x=[int]", "reference_y=[int]"
+        { "tip_x=[num]", "tip_y=[num]",
+	  "reference_x=[num]", "reference_y=[num]"
 	};
 static char *T_geometry[] =
 	{ "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
@@ -390,26 +393,26 @@ static senddecl send_arrow[] =
      DEFAULT, "Create from length and wing"),
   SM(NAME_points, 4, T_points, pointsArrow,
      NAME_area, "Set XY of tip and reference"),
-  SM(NAME_referenceX, 1, "int", referenceXArrow,
+  SM(NAME_referenceX, 1, "num", referenceXArrow,
      NAME_area, "Set X of reference"),
-  SM(NAME_referenceY, 1, "int", referenceYArrow,
+  SM(NAME_referenceY, 1, "num", referenceYArrow,
      NAME_area, "Set Y of reference"),
-  SM(NAME_tipX, 1, "int", tipXArrow,
+  SM(NAME_tipX, 1, "num", tipXArrow,
      NAME_area, "Set X of tip"),
-  SM(NAME_tipY, 1, "int", tipYArrow,
+  SM(NAME_tipY, 1, "num", tipYArrow,
      NAME_area, "Set Y of tip")
 };
 
 /* Get Methods */
 
 static getdecl get_arrow[] =
-{ GM(NAME_referenceX, 0, "int", NULL, getReferenceXArrow,
+{ GM(NAME_referenceX, 0, "num", NULL, getReferenceXArrow,
      NAME_area, "X of reference point"),
-  GM(NAME_referenceY, 0, "int", NULL, getReferenceYArrow,
+  GM(NAME_referenceY, 0, "num", NULL, getReferenceYArrow,
      NAME_area, "Y of reference point"),
-  GM(NAME_tipX, 0, "int", NULL, getTipXArrow,
+  GM(NAME_tipX, 0, "num", NULL, getTipXArrow,
      NAME_area, "X of tip point"),
-  GM(NAME_tipY, 0, "int", NULL, getTipYArrow,
+  GM(NAME_tipY, 0, "num", NULL, getTipYArrow,
      NAME_area, "Y of tip  point")
 };
 
