@@ -224,6 +224,11 @@ demo('Juggler',
      demo(juggler),
      juggle_demo).
 
+demo('Transform',
+     'Live figure->transform: rotate, scale and shear a small scene',
+     demo(transform),
+     transform_demo).
+
 demo('Arc gallery',
      'A gallery of class arc usage',
      demo(arc),
