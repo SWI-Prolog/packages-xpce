@@ -950,6 +950,14 @@ ws_event_in_subwindow(EventObj ev, Any root)
     float x = valNum(ev->x);
     float y = valNum(ev->y);
 
+    if ( instanceOfObject(ev->window, ClassWindow) )
+    { float ox = 0, oy = 0;
+      if ( ws_window_frame_position(ev->window, root, &ox, &oy) )
+      { x += ox;
+	y += oy;
+      }
+    }
+
     event_window(&window, &x, &y);
     return window;
   } else
