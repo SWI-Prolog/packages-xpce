@@ -55,7 +55,7 @@ initialiseHandle(Handle h, Expression x, Expression y, Name kind, Name name)
 
 status
 getXYHandle(Handle h, Graphical gr, Device dev, Int *X, Int *Y)
-{ Int x, y, gx, gy;
+{ Int gx, gy;
 
   if ( isDefault(dev) )
     dev = gr->device;
