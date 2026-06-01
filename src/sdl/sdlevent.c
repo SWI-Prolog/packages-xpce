@@ -569,11 +569,30 @@ CtoEvent(SDL_Event *event)
     }
   }
 
+  /* For mouse events, read modifiers live: cached lastmod can be stale
+   * because event->key.mod on KEY_UP is not always reliable (we have
+   * observed a phantom RSHIFT bit set on LSHIFT release with SDL3 on
+   * Linux, which then leaked into the next mouse click).  For non-mouse
+   * events keep lastmod, which the TEXT_INPUT path masks to suppress
+   * AltGr.
+   */
+  SDL_Keymod mod_for_event = lastmod;
+  switch ( event->type )
+  { case SDL_EVENT_MOUSE_BUTTON_DOWN:
+    case SDL_EVENT_MOUSE_BUTTON_UP:
+    case SDL_EVENT_MOUSE_MOTION:
+    case SDL_EVENT_MOUSE_WHEEL:
+      mod_for_event = SDL_GetModState();
+      break;
+    default:
+      break;
+  }
+
   EventObj ev = answerObject(ClassEvent,
 			     name,
 			     window,
 			     toInt(x), toInt(y),
-			     state_to_buttons(mouse_flags, lastmod),
+			     state_to_buttons(mouse_flags, mod_for_event),
 			     EAV);
   if ( ev )
   { assign(ev, frame, frame);
