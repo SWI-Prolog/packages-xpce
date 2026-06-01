@@ -43,15 +43,15 @@
 #define SIN(x) sin(((x) * M_PI) / 180.0)
 
 static status
-initialiseArc(ArcObj a, Int radius, Real start_angle, Real size_angle)
+initialiseArc(ArcObj a, Int radius, Int start_angle, Int size_angle)
 { initialiseJoint((Joint) a, ZERO, ZERO, ZERO, ZERO, DEFAULT);
 
   if ( isDefault(radius) )
     radius = getClassVariableValueObject(a, NAME_radius);
   if ( isDefault(start_angle) )
-    start_angle = CtoReal(0.0);
+    start_angle = toNum(0.0);
   if ( isDefault(size_angle) )
-    size_angle = CtoReal(90.0);
+    size_angle = toNum(90.0);
 
   assign(a, size,	  newObject(ClassSize, radius, radius, EAV));
   assign(a, position,	  newObject(ClassPoint, EAV));
@@ -67,18 +67,18 @@ void
 points_arc(ArcObj a, int *sx, int *sy, int *ex, int *ey)
 { int cx = valInt(a->position->x);
   int cy = valInt(a->position->y);
-  float start = valReal(a->start_angle);
-  float size = valReal(a->size_angle);
+  double start = valNum(a->start_angle);
+  double size = valNum(a->size_angle);
 
 
   if ( sx )
-    *sx = cx + rfloat((float) valInt(a->size->w) * COS(start));
+    *sx = cx + rfloat((double) valInt(a->size->w) * COS(start));
   if ( sy )
-    *sy = cy - rfloat((float) valInt(a->size->h) * SIN(start));
+    *sy = cy - rfloat((double) valInt(a->size->h) * SIN(start));
   if ( ex )
-    *ex = cx + rfloat((float) valInt(a->size->w) * COS(start + size));
+    *ex = cx + rfloat((double) valInt(a->size->w) * COS(start + size));
   if ( ey )
-    *ey = cy - rfloat((float) valInt(a->size->h) * SIN(start + size));
+    *ey = cy - rfloat((double) valInt(a->size->h) * SIN(start + size));
 }
 
 
@@ -101,7 +101,7 @@ RedrawAreaArc(ArcObj a, Area area)
 
   r_arc(cx - aw, cy - ah,
 	2*aw, 2*ah,
-	rfloat(valReal(a->start_angle)), rfloat(valReal(a->size_angle)),
+	rfloat(valNum(a->start_angle)), rfloat(valNum(a->size_angle)),
 	a->close,
 	a->fill);
 
@@ -111,7 +111,7 @@ RedrawAreaArc(ArcObj a, Area area)
     av[0] = toInt(sx);
     av[1] = toInt(sy);
 
-    if ( valReal(a->size_angle) >= 0.0 )
+    if ( valNum(a->size_angle) >= 0.0 )
     { av[2] = toInt(sx+(sy-cy));
       av[3] = toInt(sy-(sx-cx));
     } else
@@ -131,7 +131,7 @@ RedrawAreaArc(ArcObj a, Area area)
     av[0] = toInt(ex);
     av[1] = toInt(ey);
 
-    if ( valReal(a->size_angle) >= 0.0 )
+    if ( valNum(a->size_angle) >= 0.0 )
     { av[2] = toInt(ex-(ey-cy));
       av[3] = toInt(ey+(ex-cx));
     } else
@@ -152,8 +152,8 @@ RedrawAreaArc(ArcObj a, Area area)
 
 static status
 angleInArc(ArcObj a, int angle)
-{ int start = rfloat(valReal(a->start_angle));
-  int size  = rfloat(valReal(a->size_angle));
+{ int start = rfloat(valNum(a->start_angle));
+  int size  = rfloat(valNum(a->size_angle));
 
   if ( size < 0 )
   { start += size;
@@ -186,7 +186,7 @@ includeArrowsInAreaArc(ArcObj a)
     { av[0] = toInt(sx);
       av[1] = toInt(sy);
 
-      if ( valReal(a->size_angle) >= 0.0 )
+      if ( valNum(a->size_angle) >= 0.0 )
       { av[2] = toInt(sx+(sy-cy));
 	av[3] = toInt(sy-(sx-cx));
       } else
@@ -203,7 +203,7 @@ includeArrowsInAreaArc(ArcObj a)
     { av[0] = toInt(ex);
       av[1] = toInt(ey);
 
-      if ( valReal(a->size_angle) >= 0.0 )
+      if ( valNum(a->size_angle) >= 0.0 )
       { av[2] = toInt(ex-(ey-cy));
 	av[3] = toInt(ey+(ex-cx));
       } else
@@ -295,7 +295,7 @@ geometryArc(ArcObj a, Int x, Int y, Int w, Int h)
 
 
 static status
-setArc(ArcObj a, Int x, Int y, Int radius, float start, float size)
+setArc(ArcObj a, Int x, Int y, Int radius, double start, double size)
 { int changed = 0;
 
   if ( a->position->x != x || a->position->y != y )
@@ -307,9 +307,9 @@ setArc(ArcObj a, Int x, Int y, Int radius, float start, float size)
     changed++;
   }
 
-  if ( valReal(a->start_angle) != start || valReal(a->size_angle) != size )
-  { setReal(a->start_angle, start);
-    setReal(a->size_angle, size);
+  if ( valNum(a->start_angle) != start || valNum(a->size_angle) != size )
+  { assign(a, start_angle, toNum(start));
+    assign(a, size_angle,  toNum(size));
     changed++;
   }
 
@@ -401,9 +401,9 @@ sizeArc(ArcObj a, Size sz)
 
 
 static status
-startAngleArc(ArcObj a, Real s)
-{ if ( valReal(a->start_angle) != valReal(s) )
-  { valueReal(a->start_angle, s);
+startAngleArc(ArcObj a, Int s)
+{ if ( valNum(a->start_angle) != valNum(s) )
+  { assign(a, start_angle, s);
     requestComputeGraphical(a, DEFAULT);
   }
 
@@ -412,9 +412,9 @@ startAngleArc(ArcObj a, Real s)
 
 
 static status
-sizeAngleArc(ArcObj a, Real e)
-{ if ( valReal(a->size_angle) != valReal(e) )
-  { valueReal(a->size_angle, e);
+sizeAngleArc(ArcObj a, Int e)
+{ if ( valNum(a->size_angle) != valNum(e) )
+  { assign(a, size_angle, e);
     requestComputeGraphical(a, DEFAULT);
   }
 
@@ -423,13 +423,13 @@ sizeAngleArc(ArcObj a, Real e)
 
 
 static status
-endAngleArc(ArcObj a, Real e)
-{ float size = valReal(e) - valReal(a->start_angle);
+endAngleArc(ArcObj a, Int e)
+{ double size = valNum(e) - valNum(a->start_angle);
   if ( size < 0.0 )
     size += 360.0;
 
-  if ( valReal(a->size_angle) != size )
-  { setReal(a->size_angle, size);
+  if ( valNum(a->size_angle) != size )
+  { assign(a, size_angle, toNum(size));
     requestComputeGraphical(a, DEFAULT);
   }
 
@@ -461,8 +461,8 @@ connectAngleArc(ArcObj a, Line l1, Line l2)
     fail;				/* no intersection */
 
   positionArc(a, is);
-  startAngleArc(a, getAngleLine(l1, is));
-  endAngleArc(a, getAngleLine(l2, is));
+  startAngleArc(a, toNum(valReal(getAngleLine(l1, is))));
+  endAngleArc(a,   toNum(valReal(getAngleLine(l2, is))));
   doneObject(is);
 
   succeed;
@@ -542,7 +542,7 @@ pointsArc(ArcObj a, Int Sx, Int Sy, Int Ex, Int Ey, Int D)
 static char *T_connectAngle[] =
         { "line", "line" };
 static char *T_initialise[] =
-        { "radius=[int]", "start=[real]", "size=[real]" };
+        { "radius=[int]", "start=[num]", "size=[num]" };
 static char *T_resize[] =
         { "real", "[real]", "[point]" };
 static char *T_points[] =
@@ -557,9 +557,9 @@ static vardecl var_arc[] =
      NAME_area, "Position of the arc"),
   SV(NAME_size, "size", IV_GET|IV_STORE, sizeArc,
      NAME_area, "Size of the ellipse I'm part of"),
-  SV(NAME_startAngle, "real", IV_GET|IV_STORE, startAngleArc,
+  SV(NAME_startAngle, "num", IV_GET|IV_STORE, startAngleArc,
      NAME_pie, "Start angle (degrees)"),
-  SV(NAME_sizeAngle, "real", IV_GET|IV_STORE, sizeAngleArc,
+  SV(NAME_sizeAngle, "num", IV_GET|IV_STORE, sizeAngleArc,
      NAME_pie, "Size (degrees)"),
   SV(NAME_close, "{none,pie_slice,chord}", IV_GET|IV_STORE, closeArc,
      NAME_appearance, "How the arc is closed"),
@@ -582,7 +582,7 @@ static senddecl send_arc[] =
      NAME_area, "Connect both lines with an angle"),
   SM(NAME_radius, 1, "int", radiusArc,
      NAME_dimension, "->width and ->height"),
-  SM(NAME_endAngle, 1, "real", endAngleArc,
+  SM(NAME_endAngle, 1, "num", endAngleArc,
      NAME_pie, "Set ->size_angle to argument - <-start_angle"),
   SM(NAME_points, 5, T_points, pointsArc,
      NAME_tip, "ArcObj between two points")

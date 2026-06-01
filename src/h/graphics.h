@@ -268,8 +268,8 @@ NewClass(arc)
   ABSTRACT_JOINT
   Point		position;		/* Center of the arc */
   Size		size;			/* width and height */
-  Real		start_angle;		/* Start angle */
-  Real		size_angle;		/* Size angle */
+  Int		start_angle;		/* Start angle (Num, degrees) */
+  Int		size_angle;		/* Size angle (Num, degrees) */
   Name		close;			/* {none,chord,pie_slice} */
   Image		fill;		/* Filled with this pattern */
 End;
