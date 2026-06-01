@@ -321,7 +321,25 @@ Area
 getAbsoluteAreaGraphical(Graphical gr, Device device)
 { if ( gr->device == device || isNil(gr->device) )
     answer(gr->area);
-  else
+
+  if ( deviceChainHasTransform(gr) )
+  { /* Project gr->area's rectangle through ancestor figure->transforms
+     * up to `device` (or window).  The result is an AABB whose width
+     * and height may differ from gr->area->{w,h} when rotation or
+     * non-uniform scale is in play.
+     */
+    Device target = device;
+    int ox, oy, ow, oh;
+    if ( graphicalToDeviceAreaAABB(gr, &target,
+				   0, 0,
+				   valInt(gr->area->w),
+				   valInt(gr->area->h),
+				   &ox, &oy, &ow, &oh) )
+      answer(answerObject(ClassArea,
+			  toInt(ox), toInt(oy),
+			  toInt(ow), toInt(oh), EAV));
+  }
+
   { Device dev = gr->device;
     int x, y;
 
@@ -1374,14 +1392,28 @@ getPositionGraphical(Graphical gr)
 
 status
 get_absolute_xy_graphical(Graphical gr, Device *dev, Int *X, Int *Y)
-{ int x, y;
-
-  DEBUG(NAME_absolutePosition,
+{ DEBUG(NAME_absolutePosition,
 	Cprintf("get_absolutePosition(%s, %s) ... ", pp(gr), pp(*dev)));
 
   ComputeGraphical(gr);
-  x = valInt(gr->area->x);
-  y = valInt(gr->area->y);
+
+  if ( deviceChainHasTransform(gr) )
+  { /* Map gr's origin (lx=0, ly=0 in gr-local) through ancestor
+     * figure->transforms.
+     */
+    double ox, oy;
+    if ( !graphicalToDeviceCoord(gr, dev, 0.0, 0.0, &ox, &oy) )
+    { DEBUG(NAME_absolutePosition, Cprintf("failed\n"));
+      fail;
+    }
+    *X = toInt((intptr_t)floor(ox + 0.5));
+    *Y = toInt((intptr_t)floor(oy + 0.5));
+    DEBUG(NAME_absolutePosition, Cprintf("X=%s; Y=%s\n", pp(*X), pp(*Y)));
+    succeed;
+  }
+
+  int x = valInt(gr->area->x);
+  int y = valInt(gr->area->y);
 
   while( !instanceOfObject(gr->device, ClassWindow) &&
 	 !isNil(gr->device) &&
@@ -2848,8 +2880,7 @@ flashGraphical(Graphical gr, Area a, Int time)
 { PceWindow sw = getWindowGraphical(gr);
 
   if ( sw )
-  { int x, y;
-    Int w, h;
+  { int x, y, fw, fh;
     Area a2;
 
     if ( isDefault(time) )
@@ -2857,18 +2888,26 @@ flashGraphical(Graphical gr, Area a, Int time)
     if ( !isInteger(time) )
       time = toInt(250);
 
-    offsetDeviceGraphical(gr, &x, &y);
-    x += valInt(gr->area->x);
-    y += valInt(gr->area->y);
-
+    int lx, ly, lw, lh;
     if ( isDefault(a) )
-    { w = gr->area->w;
-      h = gr->area->h;
+    { lx = 0; ly = 0;
+      lw = valInt(gr->area->w); lh = valInt(gr->area->h);
     } else
-    { x += valInt(a->x);
-      y += valInt(a->y);
-      w = a->w;
-      h = a->h;
+    { lx = valInt(a->x); ly = valInt(a->y);
+      lw = valInt(a->w); lh = valInt(a->h);
+    }
+
+    if ( deviceChainHasTransform(gr) )
+    { /* Project the flash rect through any ancestor transforms. */
+      Device target = NIL;
+      graphicalToDeviceAreaAABB(gr, &target, lx, ly, lw, lh,
+				&x, &y, &fw, &fh);
+    } else
+    { offsetDeviceGraphical(gr, &x, &y);
+      x += valInt(gr->area->x) + lx;
+      y += valInt(gr->area->y) + ly;
+      fw = lw;
+      fh = lh;
     }
 
     if ( (Graphical)sw != gr )
@@ -2879,7 +2918,8 @@ flashGraphical(Graphical gr, Area a, Int time)
       y += valInt(sw->scroll_offset->y);
     }
 
-    a2 = answerObject(ClassArea, toInt(x), toInt(y), w, h, EAV);
+    a2 = answerObject(ClassArea, toInt(x), toInt(y),
+		      toInt(fw), toInt(fh), EAV);
     flashWindow(sw, a2, time);
     doneObject(a2);
   }
@@ -3582,6 +3622,8 @@ static getdecl get_graphical[] =
      NAME_area, "Get X-position relative to device"),
   GM(NAME_absoluteY, 1, "int", "[device]", getAbsoluteYGraphical,
      NAME_area, "Get Y-position relative to device"),
+  GM(NAME_absoluteArea, 1, "area", "device", getAbsoluteAreaGraphical,
+     NAME_area, "Bounding-box AABB in target device's frame"),
   GM(NAME_area, 0, "area", NULL, getAreaGraphical,
      NAME_area, "->compute and return area slot"),
   GM(NAME_bottomSide, 0, "int", NULL, getBottomSideGraphical,

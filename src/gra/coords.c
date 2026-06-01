@@ -234,6 +234,98 @@ windowToDeviceLocalCoord(Device dev, double wx, double wy,
 }
 
 
+/* Map a point in `gr`'s local coord (relative to gr->area origin) into
+ * `*target_io`'s children-coord system, walking through ancestor
+ * figure->transforms.
+ *
+ * `*target_io` selects the stopping point:
+ *
+ *   - DEFAULT or NIL: walk until reaching a window (or the root).
+ *     `*target_io` is updated to the stopping device.
+ *   - a specific device: walk until reaching that device.  Returns
+ *     false if it isn't an ancestor of gr.
+ *
+ * The integer fast-path is not used here — callers that need it should
+ * check hasTransformInDeviceChain / deviceChainHasTransform first.
+ */
+bool
+graphicalToDeviceCoord(Graphical gr, Device *target_io,
+		       double lx, double ly,
+		       double *ox, double *oy)
+{ aff W;
+  Device target = NULL;
+
+  if ( target_io && notDefault(*target_io) && notNil(*target_io) )
+    target = *target_io;
+
+  aff_identity(&W);
+  aff_post_translate(&W,
+		     (double)valInt(gr->area->x),
+		     (double)valInt(gr->area->y));
+
+  Graphical cur = gr;
+  while ( notNil(cur->device) &&
+	  !instanceOfObject(cur->device, ClassWindow) &&
+	  (target == NULL || cur->device != target) )
+  { Device d = cur->device;
+    if ( instanceOfObject(d, ClassFigure) )
+    { Figure f = (Figure) d;
+      if ( notNil(f->transform) && !transformIsIdentity(f->transform) )
+	aff_pre_compose_transform(&W, f->transform);
+    }
+    aff_pre_translate(&W,
+		      (double)valInt(d->offset->x),
+		      (double)valInt(d->offset->y));
+    cur = (Graphical) d;
+  }
+
+  if ( target && cur->device != target )
+    return false;
+
+  if ( target_io )
+    *target_io = cur->device;
+
+  aff_apply(&W, lx, ly, ox, oy);
+  return true;
+}
+
+
+/* Map an integer area in `gr`'s local coord into `*target_io`'s
+ * children-coord, taking the outward-rounded AABB.  Same target
+ * semantics as graphicalToDeviceCoord.
+ */
+bool
+graphicalToDeviceAreaAABB(Graphical gr, Device *target_io,
+			  int lx, int ly, int lw, int lh,
+			  int *ox, int *oy, int *ow, int *oh)
+{ double x0 = (double)lx, y0 = (double)ly;
+  double x1 = x0 + (double)lw, y1 = y0 + (double)lh;
+  double cx[4] = { x0, x1, x1, x0 };
+  double cy[4] = { y0, y0, y1, y1 };
+  double minx =  DBL_MAX, miny =  DBL_MAX;
+  double maxx = -DBL_MAX, maxy = -DBL_MAX;
+  Device probe = (target_io ? *target_io : NIL);
+
+  for(int i=0; i<4; i++)
+  { Device t = probe;
+    double nx, ny;
+    if ( !graphicalToDeviceCoord(gr, &t, cx[i], cy[i], &nx, &ny) )
+      return false;
+    if ( i == 0 && target_io )
+      *target_io = t;
+    if ( nx < minx ) minx = nx;
+    if ( ny < miny ) miny = ny;
+    if ( nx > maxx ) maxx = nx;
+    if ( ny > maxy ) maxy = ny;
+  }
+  *ox = (int)floor(transformSnapInt(minx));
+  *oy = (int)floor(transformSnapInt(miny));
+  *ow = (int)ceil (transformSnapInt(maxx)) - *ox;
+  *oh = (int)ceil (transformSnapInt(maxy)) - *oy;
+  return true;
+}
+
+
 /* Map a point in `gr`'s local coord (relative to gr->area origin) to
  * the window-coord system.
  */

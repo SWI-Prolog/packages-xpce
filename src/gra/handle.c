@@ -35,6 +35,7 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include <h/arith.h>
+#include <math.h>
 
 static status
 initialiseHandle(Handle h, Expression x, Expression y, Name kind, Name name)
@@ -59,22 +60,38 @@ getXYHandle(Handle h, Graphical gr, Device dev, Int *X, Int *Y)
   if ( isDefault(dev) )
     dev = gr->device;
 
+  /* Resolve the handle's position in gr's local coord. */
+  Int hx = ZERO, hy = ZERO;
+  if ( X )
+    TRY(hx = getValueExpression(h->xPosition,
+				VarW, gr->area->w,
+				VarH, gr->area->h,
+				EAV));
+  if ( Y )
+    TRY(hy = getValueExpression(h->yPosition,
+				VarW, gr->area->w,
+				VarH, gr->area->h,
+				EAV));
+
+  if ( deviceChainHasTransform(gr) )
+  { /* Map the handle through ancestor figure->transforms. */
+    Device target = dev;
+    double ox, oy;
+    if ( !graphicalToDeviceCoord(gr, &target,
+				 (double)valInt(hx),
+				 (double)valInt(hy),
+				 &ox, &oy) )
+      fail;
+    if ( X ) *X = toInt((intptr_t)floor(ox + 0.5));
+    if ( Y ) *Y = toInt((intptr_t)floor(oy + 0.5));
+    succeed;
+  }
+
   TRY( get_absolute_xy_graphical(gr, &dev, &gx, &gy) );
 
-  if ( X )
-  { TRY(x = getValueExpression(h->xPosition,
-			       VarW, gr->area->w,
-			       VarH, gr->area->h,
-			       EAV));
-    *X = add(x, gx);
-  }
-  if ( Y )
-  { TRY(y = getValueExpression(h->yPosition,
-			       VarW, gr->area->w,
-			       VarH, gr->area->h,
-			       EAV));
-    *Y = add(y, gy);
-  }
+  if ( X ) *X = add(hx, gx);
+  if ( Y ) *Y = add(hy, gy);
+
   DEBUG(NAME_handle,
 	Cprintf("handle %s on gr=%s,dev=%s at x=%s,y=%s\n",
 		pp(h->name), pp(gr), pp(dev), X?"":pp(*X), Y?"":pp(*Y)));

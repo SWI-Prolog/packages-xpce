@@ -36,6 +36,13 @@ COMMON(bool)	graphicalToWindowCoord(Graphical gr, double lx, double ly,
 COMMON(bool)	windowToGraphicalCoord(Graphical gr, double wx, double wy,
 				       double *lx, double *ly);
 COMMON(bool)	graphicalToWindowArea(Graphical gr, Area in, double bbox[4]);
+COMMON(bool)	graphicalToDeviceCoord(Graphical gr, Device *target_io,
+				       double lx, double ly,
+				       double *ox, double *oy);
+COMMON(bool)	graphicalToDeviceAreaAABB(Graphical gr, Device *target_io,
+					  int lx, int ly, int lw, int lh,
+					  int *ox, int *oy,
+					  int *ow, int *oh);
 COMMON(bool)	deviceLocalAreaToWindowAABB(Device dev,
 					    int lx, int ly, int lw, int lh,
 					    int *wx, int *wy,
