@@ -180,14 +180,29 @@ connect_cell(P, X0, Y0) :-
 %!  arrows_cell(+Picture, +X0, +Y0) is det.
 %
 %   first_arrow / second_arrow attach arrows at the arc endpoints.
+%   The cell shows arrows at three curvatures and one CW sweep —
+%   the wing midpoint should sit on the arc in every case.
 
 arrows_cell(P, X0, Y0) :-
-    CX is X0+120, CY is Y0+100,
-    send(P, display, new(A, arc(60, 30, 240)), point(CX, CY)),
-    send(A, first_arrow,  new(arrow)),
-    send(A, second_arrow, new(arrow)),
+    CX is X0+60,  CY is Y0+95,
+    arrowed_arc(P, CX, CY, 50,  30, 240,  navy_blue,    [first, second]),
+    DX is X0+155, DY is Y0+60,
+    arrowed_arc(P, DX, DY, 28,   0, 200,  forest_green, [second]),
+    EX is X0+185, EY is Y0+135,
+    arrowed_arc(P, EX, EY, 22, 180,-260,  red,          [first, second]).
+
+arrowed_arc(P, CX, CY, R, Start, Size, Col, Ends) :-
+    send(P, display, new(A, arc(R, Start, Size)), point(CX, CY)),
     send(A, pen, 2),
-    send(A, colour, colour(navy_blue)).
+    send(A, colour, colour(Col)),
+    (   memberchk(first, Ends)
+    ->  send(A, first_arrow, new(arrow))
+    ;   true
+    ),
+    (   memberchk(second, Ends)
+    ->  send(A, second_arrow, new(arrow))
+    ;   true
+    ).
 
 %!  ellipse_cell(+Picture, +X0, +Y0) is det.
 %
