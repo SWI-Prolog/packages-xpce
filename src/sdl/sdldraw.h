@@ -90,7 +90,7 @@ void r_3d_triangle(double x1, double y1,
 		   double x3, double y3,
 		   Elevation e, bool up, unsigned int map);
 void r_3d_diamond(int x, int y, int w, int h, Elevation e, int up);
-void r_arc(int x, int y, int w, int h, int s, int e, Name close, Any fill);
+void r_arc(int x, int y, int w, int h, int s, int sz, Name close, Any fill);
 void r_ellipse(int x, int y, int w, int h, Any fill);
 void r_3d_ellipse(int x, int y, int w, int h, Elevation z, int up);
 void r_line(double x1, double y1, double x2, double y2);
