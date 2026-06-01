@@ -76,9 +76,9 @@ resource(C, Name:name, Resource) :<-
                  *******************************/
 
 :- dynamic
-    user:pce_pre_expansion_hook.
+    user:pce_pre_expansion_hook/2.
 :- multifile
-    user:pce_pre_expansion_hook.
+    user:pce_pre_expansion_hook/2.
 
 user:pce_pre_expansion_hook(resource(Name, Type, Value),
                             class_variable(Name, Type, NewVal)) :-
