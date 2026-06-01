@@ -97,6 +97,16 @@ RedrawBoxFigure(Figure f, Area area)
 /* Paint the children of f with f->transform applied.  Mirrors the body
  * of RedrawAreaDevice between Enter/Exit, with cairo carrying the affine
  * via r_push_transform/r_pop_transform around the children loop.
+ *
+ * After EnterRedrawAreaDevice the incoming `area' is in the figure's
+ * POST-transform local coord (where the rotated pixel AABB lives), but
+ * the children's own `area' slots live in PRE-transform local coord.
+ * RedrawArea's overlap test would then mis-clip the children — visible
+ * as text disappearing at ±180° rotation or small scales.  We replace
+ * `area' with the figure's local_area for the children loop, which is
+ * always in pre-transform coord and encloses every child; cairo's clip
+ * (and the dirty-rect filtering done by changed_window) still keeps
+ * the paint area minimal.  Exit restores the original area.
  */
 
 static void
@@ -107,6 +117,12 @@ RedrawTransformedChildren(Figure f, Area area)
   if ( EnterRedrawAreaDevice(dev, area, &ctx) )
   { Cell cell;
     r_transform_save saved;
+    Area la = f->local_area;
+
+    qassign(area, x, la->x);
+    qassign(area, y, la->y);
+    qassign(area, w, la->w);
+    qassign(area, h, la->h);
 
     if ( notNil(dev->layout_manager) )
       qadSendv(dev->layout_manager, NAME_redrawBackground, 1, (Any*)&area);
