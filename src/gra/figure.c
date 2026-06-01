@@ -309,19 +309,20 @@ elevationFigure(Figure f, Elevation e)
 
 
 /* Attach an optional 2D affine transform to the figure's contents.
- * @nil restores the un-transformed default.  Subsequent painting, hit
- * testing and bounding-box math will use the transform; for now only
- * the slot is wired up.
+ * @nil restores the un-transformed default.
+ *
+ * Unlike a "pure" slot setter we always invalidate here, even when the
+ * passed transform is the same object as the current one: callers
+ * typically modify a single transform in place (e.g. driven by a
+ * slider) and re-assign it to trigger repaint.
  */
 
 static status
 transformFigure(Figure f, Transform t)
-{ if ( f->transform != t )
-  { CHANGING_GRAPHICAL(f,
-		       assign(f, transform, t);
-		       requestComputeDevice((Device) f, DEFAULT);
-		       changedEntireImageGraphical(f));
-  }
+{ CHANGING_GRAPHICAL(f,
+		     assign(f, transform, t);
+		     requestComputeDevice((Device) f, DEFAULT);
+		     changedEntireImageGraphical(f));
 
   succeed;
 }
