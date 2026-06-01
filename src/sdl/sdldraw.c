@@ -1236,9 +1236,11 @@ r_3d_diamond(int x, int y, int w, int h, Elevation e, int up)
  * @param fill The fill pattern or color.
  */
 void
-r_arc(int x, int y, int w, int h, int s, int sz, Name close, Any fill)
+r_arc(double x, double y, double w, double h,
+      double s, double sz, Name close, Any fill)
 { Translate(x, y);
-  NormaliseArea(x, y, w, h);
+  if ( w < 0 ) { x += w; w = -w; }
+  if ( h < 0 ) { y += h; h = -h; }
   FloatArea(x, y, w, h);
   /* xpce angles are CCW from +x with y-up; cairo angles are CW on screen
      because cairo's y points down.  Negate to convert. */

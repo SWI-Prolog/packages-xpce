@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -64,31 +65,33 @@ initialiseArc(ArcObj a, Int radius, Int start_angle, Int size_angle)
 
 
 void
-points_arc(ArcObj a, int *sx, int *sy, int *ex, int *ey)
-{ int cx = valInt(a->position->x);
-  int cy = valInt(a->position->y);
+points_arc(ArcObj a, double *sx, double *sy, double *ex, double *ey)
+{ double cx = valInt(a->position->x);
+  double cy = valInt(a->position->y);
+  double aw = valInt(a->size->w);
+  double ah = valInt(a->size->h);
   double start = valNum(a->start_angle);
-  double size = valNum(a->size_angle);
-
+  double size  = valNum(a->size_angle);
 
   if ( sx )
-    *sx = cx + rfloat((double) valInt(a->size->w) * COS(start));
+    *sx = cx + aw * COS(start);
   if ( sy )
-    *sy = cy - rfloat((double) valInt(a->size->h) * SIN(start));
+    *sy = cy - ah * SIN(start);
   if ( ex )
-    *ex = cx + rfloat((double) valInt(a->size->w) * COS(start + size));
+    *ex = cx + aw * COS(start + size);
   if ( ey )
-    *ey = cy - rfloat((double) valInt(a->size->h) * SIN(start + size));
+    *ey = cy - ah * SIN(start + size);
 }
 
 
 static status
 RedrawAreaArc(ArcObj a, Area area)
 { int x, y, w, h;
-  int aw = valInt(a->size->w);
-  int ah = valInt(a->size->h);
-  int sx, sy, ex, ey;
-  int cx, cy;
+  double aw = valInt(a->size->w);
+  double ah = valInt(a->size->h);
+  double sx, sy, ex, ey;
+  double cx, cy;
+  double size_angle = valNum(a->size_angle);
 
   initialiseDeviceGraphical(a, &x, &y, &w, &h);
 
@@ -101,22 +104,22 @@ RedrawAreaArc(ArcObj a, Area area)
 
   r_arc(cx - aw, cy - ah,
 	2*aw, 2*ah,
-	rfloat(valNum(a->start_angle)), rfloat(valNum(a->size_angle)),
+	valNum(a->start_angle), size_angle,
 	a->close,
 	a->fill);
 
   if (notNil(a->first_arrow))
   { Any av[4];
 
-    av[0] = toInt(sx);
-    av[1] = toInt(sy);
+    av[0] = toNum(sx);
+    av[1] = toNum(sy);
 
-    if ( valNum(a->size_angle) >= 0.0 )
-    { av[2] = toInt(sx+(sy-cy));
-      av[3] = toInt(sy-(sx-cx));
+    if ( size_angle >= 0.0 )
+    { av[2] = toNum(sx+(sy-cy));
+      av[3] = toNum(sy-(sx-cx));
     } else
-    { av[2] = toInt(sx-(sy-cy));
-      av[3] = toInt(sy+(sx-cx));
+    { av[2] = toNum(sx-(sy-cy));
+      av[3] = toNum(sy+(sx-cx));
     }
 
     if ( qadSendv(a->first_arrow, NAME_points, 4, av) )
@@ -128,15 +131,15 @@ RedrawAreaArc(ArcObj a, Area area)
   if (notNil(a->second_arrow))
   { Any av[4];
 
-    av[0] = toInt(ex);
-    av[1] = toInt(ey);
+    av[0] = toNum(ex);
+    av[1] = toNum(ey);
 
-    if ( valNum(a->size_angle) >= 0.0 )
-    { av[2] = toInt(ex-(ey-cy));
-      av[3] = toInt(ey+(ex-cx));
+    if ( size_angle >= 0.0 )
+    { av[2] = toNum(ex-(ey-cy));
+      av[3] = toNum(ey+(ex-cx));
     } else
-    { av[2] = toInt(ex+(ey-cy));
-      av[3] = toInt(ey-(ex-cx));
+    { av[2] = toNum(ex+(ey-cy));
+      av[3] = toNum(ey-(ex-cx));
     }
 
     if ( qadSendv(a->second_arrow, NAME_points, 4, av) )
@@ -151,20 +154,20 @@ RedrawAreaArc(ArcObj a, Area area)
 
 
 static status
-angleInArc(ArcObj a, int angle)
-{ int start = rfloat(valNum(a->start_angle));
-  int size  = rfloat(valNum(a->size_angle));
+angleInArc(ArcObj a, double angle)
+{ double start = valNum(a->start_angle);
+  double size  = valNum(a->size_angle);
 
   if ( size < 0 )
   { start += size;
     size = -size;
   }
-  while(start < 0)
-    start += 360;
-  start = start % 360;
+  start = fmod(start, 360.0);
+  if ( start < 0 )
+    start += 360.0;
 
   if ( (angle >= start && angle <= start + size) ||
-       (angle <  start && angle <= start + size - 360) )
+       (angle <  start && angle <= start + size - 360.0) )
     succeed;
 
   fail;
@@ -174,8 +177,9 @@ angleInArc(ArcObj a, int angle)
 static void
 includeArrowsInAreaArc(ArcObj a)
 { if ( notNil(a->first_arrow) || notNil(a->second_arrow) )
-  { int sx, sy, ex, ey;
-    int cx, cy;
+  { double sx, sy, ex, ey;
+    double cx, cy;
+    double size_angle = valNum(a->size_angle);
     Any av[4];
 
     points_arc(a, &sx, &sy, &ex, &ey);
@@ -183,15 +187,15 @@ includeArrowsInAreaArc(ArcObj a)
     cy = valInt(a->position->y);
 
     if ( notNil(a->first_arrow) )
-    { av[0] = toInt(sx);
-      av[1] = toInt(sy);
+    { av[0] = toNum(sx);
+      av[1] = toNum(sy);
 
-      if ( valNum(a->size_angle) >= 0.0 )
-      { av[2] = toInt(sx+(sy-cy));
-	av[3] = toInt(sy-(sx-cx));
+      if ( size_angle >= 0.0 )
+      { av[2] = toNum(sx+(sy-cy));
+	av[3] = toNum(sy-(sx-cx));
       } else
-      { av[2] =	toInt(sx-(sy-cy));
-	av[3] = toInt(sy+(sx-cx));
+      { av[2] = toNum(sx-(sy-cy));
+	av[3] = toNum(sy+(sx-cx));
       }
 
       if ( qadSendv(a->first_arrow, NAME_points, 4, av) )
@@ -200,15 +204,15 @@ includeArrowsInAreaArc(ArcObj a)
       }
     }
     if ( notNil(a->second_arrow) )
-    { av[0] = toInt(ex);
-      av[1] = toInt(ey);
+    { av[0] = toNum(ex);
+      av[1] = toNum(ey);
 
-      if ( valNum(a->size_angle) >= 0.0 )
-      { av[2] = toInt(ex-(ey-cy));
-	av[3] = toInt(ey+(ex-cx));
+      if ( size_angle >= 0.0 )
+      { av[2] = toNum(ex-(ey-cy));
+	av[3] = toNum(ey+(ex-cx));
       } else
-      { av[2] = toInt(ex+(ey-cy));
-	av[3] = toInt(ey-(ex-cx));
+      { av[2] = toNum(ex+(ey-cy));
+	av[3] = toNum(ey-(ex-cx));
       }
 
       if ( qadSendv(a->second_arrow, NAME_points, 4, av) )
@@ -223,12 +227,13 @@ includeArrowsInAreaArc(ArcObj a)
 static status
 computeArc(ArcObj a)
 { if ( notNil(a->request_compute) )
-  { int minx, miny, maxx, maxy;
-    int sx, sy, ex, ey;
+  { double minx, miny, maxx, maxy;
+    double sx, sy, ex, ey;
     int px = valInt(a->position->x);
     int py = valInt(a->position->y);
     int sw = valInt(a->size->w);
     int sh = valInt(a->size->h);
+    int iminx, iminy, imaxx, imaxy;
 
     points_arc(a, &sx, &sy, &ex, &ey);
     minx = min(sx, ex);
@@ -236,38 +241,40 @@ computeArc(ArcObj a)
     miny = min(sy, ey);
     maxy = max(sy, ey);
 
-    if ( angleInArc(a, 0) )
-      maxx = max(maxx, px + sw);
-    if ( angleInArc(a, 90) )
-      miny = min(miny, py - sh);
-    if ( angleInArc(a, 180) )
-      minx = min(minx, px - sw);
-    if ( angleInArc(a, 270) )
-      maxy = max(maxy, py + sh);
+    if ( angleInArc(a, 0.0) )
+      maxx = max(maxx, (double)(px + sw));
+    if ( angleInArc(a, 90.0) )
+      miny = min(miny, (double)(py - sh));
+    if ( angleInArc(a, 180.0) )
+      minx = min(minx, (double)(px - sw));
+    if ( angleInArc(a, 270.0) )
+      maxy = max(maxy, (double)(py + sh));
 
     if ( a->close == NAME_pieSlice ||
 	 (a->close == NAME_none && notNil(a->fill)) )
-    { maxx = max(maxx, px);
-      minx = min(minx, px);
-      miny = min(miny, py);
-      maxy = max(maxy, py);
+    { maxx = max(maxx, (double)px);
+      minx = min(minx, (double)px);
+      miny = min(miny, (double)py);
+      maxy = max(maxy, (double)py);
     }
 
-    minx--;
-    miny--;
-    maxy++;
-    maxx++;
+    /* Snap to enclosing integer area with a 1-pixel margin. */
+    iminx = (int)floor(minx) - 1;
+    iminy = (int)floor(miny) - 1;
+    imaxx = (int)ceil(maxx)  + 1;
+    imaxy = (int)ceil(maxy)  + 1;
 
     if ( a->selected == ON )		/* account for selection blobs */
-    { minx -= 3;
-      miny -= 3;
-      maxx += 3;
-      maxy += 3;
+    { iminx -= 3;
+      iminy -= 3;
+      imaxx += 3;
+      imaxy += 3;
     }
 
     CHANGING_GRAPHICAL(a,
-		       { setArea(a->area, toInt(minx), toInt(miny),
-				          toInt(maxx-minx), toInt(maxy-miny));
+		       { setArea(a->area, toInt(iminx), toInt(iminy),
+					  toInt(imaxx-iminx),
+					  toInt(imaxy-iminy));
 			 includeArrowsInAreaArc(a);
 		         changedEntireImageGraphical(a);
 		       });
@@ -373,19 +380,19 @@ getRadiusArc(ArcObj a)
 
 static Point
 getStartArc(ArcObj a)
-{ int sx, sy;
+{ double sx, sy;
 
   points_arc(a, &sx, &sy, NULL, NULL);
-  answer(answerObject(ClassPoint, toInt(sx), toInt(sy), EAV));
+  answer(answerObject(ClassPoint, toNum(sx), toNum(sy), EAV));
 }
 
 
 static Point
 getEndArc(ArcObj a)
-{ int ex, ey;
+{ double ex, ey;
 
   points_arc(a, NULL, NULL, &ex, &ey);
-  answer(answerObject(ClassPoint, toInt(ex), toInt(ey), EAV));
+  answer(answerObject(ClassPoint, toNum(ex), toNum(ey), EAV));
 }
 
 

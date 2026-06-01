@@ -1,7 +1,8 @@
 #define COMMON(type) SO_LOCAL type
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/arc.c */
-COMMON(void)	points_arc(ArcObj a, int *sx, int *sy, int *ex, int *ey);
+COMMON(void)	points_arc(ArcObj a, double *sx, double *sy,
+			   double *ex, double *ey);
 COMMON(status)	makeClassArc(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/arrow.c */
