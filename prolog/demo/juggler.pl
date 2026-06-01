@@ -74,8 +74,6 @@ initialise(F) :->
     send(P, scrollbars, none),
     send(P, popup, @juggler_popup),
 
-    send(P, icon, 'juggler1.png', 'Juggler'),
-
     send(P, display, new(Fig, figure)),
     send(Fig, status, 1),
     forall(member(N, [1,2,3,4,5]),
