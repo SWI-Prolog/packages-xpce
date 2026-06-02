@@ -402,6 +402,7 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h)
     h = toInt(100);
   initialiseGraphical(ti, ZERO, ZERO, w, h);
   assign(ti, bindings, newObject(ClassKeyBinding, NIL, NAME_terminal, EAV));
+  assign(ti, armed_link, OFF);
   obtainClassVariablesObject(ti);
 
   // compute width in characters from w
