@@ -840,14 +840,21 @@ RedrawArea(Any obj, Area area)
 
     rval = RedrawAreaGraphical(sw, area);
   } else
-  { if ( clearbg )
+  { double op = valNum(gr->opacity);
+    bool use_group = (op < 1.0);
+
+    if ( clearbg )
     { int x, y, w, h;
 
       initialiseDeviceGraphical(obj, &x, &y, &w, &h);
       r_clear(x, y, w, h);
     }
 
+    if ( use_group )
+      r_push_group();
     rval = qadSendv(gr, NAME_RedrawArea, 1, (Any *)&area);
+    if ( use_group )
+      r_pop_group_with_alpha(op);
   }
 
   if ( fix )
