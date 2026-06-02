@@ -217,6 +217,29 @@ r_pop_transform(r_transform_save *saved)
 }
 
 /**
+ * Begin an offscreen drawing group on the current cairo context.
+ * Subsequent draws accumulate into the group instead of the target.
+ * Pair with r_pop_group_with_alpha() to composite.
+ */
+void
+r_push_group(void)
+{ cairo_push_group(CR);
+}
+
+/**
+ * Composite the topmost cairo group onto the underlying target with
+ * the given alpha (0.0..1.0).  Values are clamped to that range.
+ */
+void
+r_pop_group_with_alpha(double alpha)
+{ if ( alpha < 0.0 ) alpha = 0.0;
+  else if ( alpha > 1.0 ) alpha = 1.0;
+
+  cairo_pop_group_to_source(CR);
+  cairo_paint_with_alpha(CR, alpha);
+}
+
+/**
  * Initialize the fill state with the specified offset and starting point.
  *
  * @param offset Pointer to the Point object representing the offset.

@@ -64,6 +64,15 @@ typedef struct r_transform_save
 
 void r_push_transform(Transform t, r_transform_save *saved);
 void r_pop_transform (r_transform_save *saved);
+
+/* Push a temporary cairo group; subsequent drawing renders into it.
+ * Pair with r_pop_group_with_alpha(alpha) to composite the group's
+ * contents onto the underlying target modulated by alpha (0.0..1.0).
+ * Used to implement per-graphical opacity with correct overlapping-
+ * children semantics.
+ */
+void r_push_group(void);
+void r_pop_group_with_alpha(double alpha);
 void r_filloffset(Point offset, int x0, int y0, fill_state *state);
 void r_fillrestore(fill_state *state);
 DisplayObj d_display(DisplayObj d);
