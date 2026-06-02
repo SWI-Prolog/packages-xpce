@@ -2799,6 +2799,14 @@ flashGraphical(Graphical gr, Area a, Int time)
       h = a->h;
     }
 
+    if ( (Graphical)sw != gr )
+    { /* Translate from window-local to window-pixel coordinates,
+       * mirroring the Translate(x,y) Cairo applies in d_window().
+       */
+      x += valInt(sw->scroll_offset->x);
+      y += valInt(sw->scroll_offset->y);
+    }
+
     a2 = answerObject(ClassArea, toInt(x), toInt(y), w, h, EAV);
     flashWindow(sw, a2, time);
     doneObject(a2);
