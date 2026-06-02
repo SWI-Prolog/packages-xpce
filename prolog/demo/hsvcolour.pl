@@ -181,7 +181,7 @@ rgb(R,G,B, colour(@default, R, G, B)).
 initialise(Candidate, Name:name, Label:name) :->
     send_super(Candidate, initialise, Name, group),
     send(Candidate, append, new(Btn, button(copy))),
-    send(Btn, label, image('16x16/copy.png')),
+    send(Btn, label, image('tool/copy.svg')),
     send(Candidate, append, new(Nme, text('#xxxxxx')), right),
     send(Candidate, append, new(Txt,  text(Label)), right),
     send(Candidate, append, new(Box,  box(100, 20)), right),
