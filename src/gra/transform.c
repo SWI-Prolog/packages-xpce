@@ -95,19 +95,52 @@ transformSnapInt(double v)
 
 
 		 /*******************************
+		 *      FORWARD DECLARATIONS    *
+		 *******************************/
+
+static status identityTransform(Transform t);
+static status scaleTransform(Transform t, Num sx, Num sy);
+static status rotateTransform(Transform t, Num degrees);
+static status shearTransform(Transform t, Num kx, Num ky);
+
+
+		 /*******************************
 		 *	CONSTRUCT/IDENTITY	*
 		 *******************************/
 
+/* Build a transform from optional rotate/scale/shear operations.
+ *
+ * The operations are applied in the fixed order scale, rotate, shear
+ * on a fresh identity transform.  Following cairo's composition rule
+ * `self := self * Op', the input coordinate is therefore transformed
+ * shear-first, then rotate, then scale.  Document this when the
+ * end-user reading would otherwise read left-to-right.
+ *
+ * `scale' is either a Num (uniform) or a tuple(sx, sy).
+ * `shear' is a tuple(kx, ky).
+ *
+ * For an arbitrary transform whose six coefficients are known, use
+ * `new(T, transform), send(T, set, xx, xy, yx, yy, tx, ty)'.
+ */
+
 static status
-initialiseTransform(Transform t,
-		    Num xx, Num xy, Num yx, Num yy, Num tx, Num ty)
-{ set_transform(t,
-		isDefault(xx) ? 1.0 : valNum(xx),
-		isDefault(xy) ? 0.0 : valNum(xy),
-		isDefault(yx) ? 0.0 : valNum(yx),
-		isDefault(yy) ? 1.0 : valNum(yy),
-		isDefault(tx) ? 0.0 : valNum(tx),
-		isDefault(ty) ? 0.0 : valNum(ty));
+initialiseTransform(Transform t, Num rotate, Any scale, Tuple shear)
+{ identityTransform(t);
+
+  if ( notDefault(scale) )
+  { if ( instanceOfObject(scale, ClassTuple) )
+    { Tuple s = scale;
+      scaleTransform(t, (Num)s->first, (Num)s->second);
+    } else
+    { scaleTransform(t, (Num)scale, DEFAULT);
+    }
+  }
+
+  if ( notDefault(rotate) )
+    rotateTransform(t, rotate);
+
+  if ( notDefault(shear) )
+    shearTransform(t, (Num)shear->first, (Num)shear->second);
 
   succeed;
 }
@@ -258,8 +291,13 @@ getDeterminantTransform(Transform t)
 
 static Transform
 getCopyTransform(Transform t)
-{ answer(answerObject(classOfObject(t),
-		      t->xx, t->xy, t->yx, t->yy, t->tx, t->ty, EAV));
+{ Transform copy = answerObject(classOfObject(t), EAV);
+
+  set_transform(copy,
+		TXX(t), TXY(t), TYX(t), TYY(t),
+		TTX(t), TTY(t));
+
+  answer(copy);
 }
 
 
@@ -387,8 +425,7 @@ transformAreaToIntAABB(Transform t, Area in, Area out)
 /* Argument-type vectors */
 
 static char *T_initialise[] =
-{ "xx=[num]", "xy=[num]", "yx=[num]", "yy=[num]",
-  "tx=[num]", "ty=[num]"
+{ "rotate=[num]", "scale=[num|tuple]", "shear=[tuple]"
 };
 static char *T_set[] =
 { "xx=num", "xy=num", "yx=num", "yy=num",
@@ -418,10 +455,11 @@ static vardecl var_transform[] =
 /* Send methods */
 
 static senddecl send_transform[] =
-{ SM(NAME_initialise, 6, T_initialise, initialiseTransform,
-     DEFAULT, "Create transform; defaults to identity"),
+{ SM(NAME_initialise, 3, T_initialise, initialiseTransform,
+     DEFAULT,
+     "Create from rotate/scale/shear, applied in that fixed order"),
   SM(NAME_set, 6, T_set, setTransform,
-     NAME_dimension, "Set all six coefficients"),
+     NAME_dimension, "Set all six matrix coefficients directly"),
   SM(NAME_copy, 1, "from=transform", copyTransform,
      NAME_copy, "Copy coefficients from argument transform"),
   SM(NAME_identity, 0, NULL, identityTransform,

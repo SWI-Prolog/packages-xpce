@@ -73,6 +73,15 @@ coeffs(T, [XX,XY,YX,YY,TX,TY]) :-
     get(T, yx, YX), get(T, yy, YY),
     get(T, tx, TX), get(T, ty, TY).
 
+%!  mk_transform(+XX, +XY, +YX, +YY, +TX, +TY, -T) is det.
+%
+%   Shortcut to build a transform with all six coefficients set
+%   directly; equivalent to new(T, transform) + ->set/6.
+
+mk_transform(XX, XY, YX, YY, TX, TY, T) :-
+    new(T, transform),
+    send(T, set, XX, XY, YX, YY, TX, TY).
+
 
 :- begin_tests(transform_construct).
 
@@ -81,20 +90,41 @@ test(default_is_identity) :-
     coeffs(T, [1,0,0,1,0,0]),
     free(T).
 
-test(initialise_all_six) :-
-    new(T, transform(2.0, 0.5, -0.5, 3.0, 4.0, 5.0)),
+test(initialise_rotate_only) :-
+    new(T, transform(rotate := 90)),
     coeffs(T, [XX,XY,YX,YY,TX,TY]),
-    near(XX, 2.0), near(XY,  0.5),
-    near(YX,-0.5), near(YY,  3.0),
-    near(TX, 4.0), near(TY,  5.0),
+    near(XX, 0.0), near(XY,-1.0),
+    near(YX, 1.0), near(YY, 0.0),
+    near(TX, 0.0), near(TY, 0.0),
     free(T).
 
-test(initialise_some_default) :-
-    new(T, transform(2.0, @default, @default, 3.0)),
-    coeffs(T, [XX,XY,YX,YY,TX,TY]),
-    near(XX, 2.0), near(XY, 0.0),
-    near(YX, 0.0), near(YY, 3.0),
-    near(TX, 0.0), near(TY, 0.0),
+test(initialise_uniform_scale) :-
+    new(T, transform(scale := 2)),
+    coeffs(T, [XX,XY,YX,YY,_,_]),
+    near(XX, 2.0), near(YY, 2.0),
+    near(XY, 0.0), near(YX, 0.0),
+    free(T).
+
+test(initialise_anisotropic_scale) :-
+    new(T, transform(scale := tuple(2, 3))),
+    coeffs(T, [XX,_,_,YY,_,_]),
+    near(XX, 2.0), near(YY, 3.0),
+    free(T).
+
+test(initialise_shear_only) :-
+    new(T, transform(shear := tuple(0.5, 0))),
+    coeffs(T, [XX,XY,_,YY,_,_]),
+    near(XX, 1.0), near(YY, 1.0),
+    near(XY, 0.5),
+    free(T).
+
+test(initialise_combined_scale_rotate) :-
+    %  Code order is scale then rotate, i.e. M = I*S*R = S*R.  Applied
+    %  to a point p that means rotate then scale.
+    new(T, transform(rotate := 90, scale := 2)),
+    coeffs(T, [XX,XY,YX,YY,_,_]),
+    near(XX, 0.0), near(XY,-2.0),
+    near(YX, 2.0), near(YY, 0.0),
     free(T).
 
 test(set_assigns_all) :-
@@ -104,14 +134,14 @@ test(set_assigns_all) :-
     free(T).
 
 test(copy_send_replaces_contents) :-
-    new(A, transform(1, 2, 3, 4, 5, 6)),
+    mk_transform(1, 2, 3, 4, 5, 6, A),
     new(B, transform),
     send(B, copy, A),
     coeffs(B, [1,2,3,4,5,6]),
     free(A), free(B).
 
 test(copy_get_is_independent) :-
-    new(A, transform(1, 2, 3, 4, 5, 6)),
+    mk_transform(1, 2, 3, 4, 5, 6, A),
     get(A, copy, B),
     send(A, identity),
     coeffs(B, [1,2,3,4,5,6]),
@@ -119,7 +149,7 @@ test(copy_get_is_independent) :-
     free(A), free(B).
 
 test(identity_resets) :-
-    new(T, transform(7, 8, 9, 10, 11, 12)),
+    mk_transform(7, 8, 9, 10, 11, 12, T),
     send(T, identity),
     coeffs(T, [1,0,0,1,0,0]),
     free(T).
@@ -206,7 +236,7 @@ test(shear_y) :-
 :- begin_tests(transform_compose).
 
 test(compose_with_identity_is_self) :-
-    new(T, transform(1, 2, 3, 4, 5, 6)),
+    mk_transform(1, 2, 3, 4, 5, 6, T),
     new(I, transform),
     send(T, compose, I),
     coeffs(T, [1,2,3,4,5,6]),
@@ -274,7 +304,7 @@ test(invert_scale) :-
     free(T).
 
 test(inverse_get_is_independent) :-
-    new(T, transform(1.5, 0.5, -0.3, 2.0, 4, 5)),
+    mk_transform(1.5, 0.5, -0.3, 2.0, 4, 5, T),
     get(T, inverse, Inv),
     %% T is unchanged
     coeffs(T, [A,B,C,D,E,F]),
@@ -284,7 +314,7 @@ test(inverse_get_is_independent) :-
     free(T), free(Inv).
 
 test(round_trip_is_identity) :-
-    new(T, transform(1.5, 0.5, -0.3, 2.0, 4, 5)),
+    mk_transform(1.5, 0.5, -0.3, 2.0, 4, 5, T),
     get(T, inverse, Inv),
     send(T, compose, Inv),
     coeffs(T, [XX,XY,YX,YY,TX,TY]),
@@ -294,11 +324,11 @@ test(round_trip_is_identity) :-
     free(T), free(Inv).
 
 test(singular_inverse_fails, [fail]) :-
-    new(T, transform(1, 1, 1, 1, 0, 0)),
+    mk_transform(1, 1, 1, 1, 0, 0, T),
     get(T, inverse, _).
 
 test(singular_invert_send_fails, [fail]) :-
-    new(T, transform(1, 1, 1, 1, 0, 0)),
+    mk_transform(1, 1, 1, 1, 0, 0, T),
     send(T, invert).
 
 test(scale_by_zero_is_singular) :-
@@ -309,7 +339,7 @@ test(scale_by_zero_is_singular) :-
     free(T).
 
 test(determinant_scale_xy) :-
-    new(T, transform(2, 0, 0, 3, 0, 0)),
+    mk_transform(2, 0, 0, 3, 0, 0, T),
     get(T, determinant, D), near(D, 6),
     free(T).
 
