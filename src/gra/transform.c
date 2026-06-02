@@ -99,9 +99,6 @@ transformSnapInt(double v)
 		 *******************************/
 
 static status identityTransform(Transform t);
-static status scaleTransform(Transform t, Num sx, Num sy);
-static status rotateTransform(Transform t, Num degrees);
-static status shearTransform(Transform t, Num kx, Num ky);
 
 
 		 /*******************************
@@ -179,7 +176,7 @@ setTransform(Transform t,
 		 *	    OPERATIONS		*
 		 *******************************/
 
-static status
+status
 translateTransform(Transform t, Num dx, Num dy)
 { double dxv = valNum(dx);
   double dyv = valNum(dy);
@@ -191,7 +188,7 @@ translateTransform(Transform t, Num dx, Num dy)
 }
 
 
-static status
+status
 scaleTransform(Transform t, Num sx, Num sy)
 { double sxv = valNum(sx);
   double syv = isDefault(sy) ? sxv : valNum(sy);
@@ -205,7 +202,7 @@ scaleTransform(Transform t, Num sx, Num sy)
 }
 
 
-static status
+status
 rotateTransform(Transform t, Num degrees)
 { double rad = valNum(degrees) * M_PI / 180.0;
   double c = cos(rad), s = sin(rad);
@@ -220,7 +217,7 @@ rotateTransform(Transform t, Num degrees)
 }
 
 
-static status
+status
 shearTransform(Transform t, Num kx, Num ky)
 { double kxv = valNum(kx);
   double kyv = valNum(ky);

@@ -344,6 +344,65 @@ transformFigure(Figure f, Transform t)
 }
 
 
+/* Compose an operation into the figure's transform.  If the figure has
+ * no transform yet (the @nil default), one is created lazily and set to
+ * the identity before the operation is applied.  After composing the
+ * figure is invalidated so that bounding box, damage and repaint pick
+ * up the new transform on the next round.
+ */
+
+static Transform
+get_or_make_transform(Figure f)
+{ if ( isNil(f->transform) )
+  { Transform t = newObject(ClassTransform, EAV);
+    assign(f, transform, t);
+  }
+  return f->transform;
+}
+
+static void
+transform_changed(Figure f)
+{ requestComputeDevice((Device) f, DEFAULT);
+  changedEntireImageGraphical(f);
+}
+
+static status
+translateFigure(Figure f, Num dx, Num dy)
+{ Transform t = get_or_make_transform(f);
+  CHANGING_GRAPHICAL(f,
+		     translateTransform(t, dx, dy);
+		     transform_changed(f));
+  succeed;
+}
+
+static status
+scaleFigureMethod(Figure f, Num sx, Num sy)
+{ Transform t = get_or_make_transform(f);
+  CHANGING_GRAPHICAL(f,
+		     scaleTransform(t, sx, sy);
+		     transform_changed(f));
+  succeed;
+}
+
+static status
+rotateFigure(Figure f, Num degrees)
+{ Transform t = get_or_make_transform(f);
+  CHANGING_GRAPHICAL(f,
+		     rotateTransform(t, degrees);
+		     transform_changed(f));
+  succeed;
+}
+
+static status
+shearFigureMethod(Figure f, Num kx, Num ky)
+{ Transform t = get_or_make_transform(f);
+  CHANGING_GRAPHICAL(f,
+		     shearTransform(t, kx, ky);
+		     transform_changed(f));
+  succeed;
+}
+
+
 static status
 shadowFigure(Figure f, Int shadow)
 { return elevationFigure(f, shadow == ZERO ?
@@ -449,6 +508,22 @@ makeClassFigure(Class class)
   sendMethod(class, NAME_shadow, NAME_appearance, 1, "0..",
 	     "Attach `shadow' elevation object",
 	     shadowFigure);
+  sendMethod(class, NAME_translate, NAME_calculate, 2,
+	     "dx=num", "dy=num",
+	     "Compose translate(dx,dy) into the figure's transform",
+	     translateFigure);
+  sendMethod(class, NAME_scale, NAME_calculate, 2,
+	     "sx=num", "sy=[num]",
+	     "Compose scale(sx,sy) into the figure's transform",
+	     scaleFigureMethod);
+  sendMethod(class, NAME_rotate, NAME_calculate, 1,
+	     "degrees=num",
+	     "Compose rotate(degrees) into the figure's transform",
+	     rotateFigure);
+  sendMethod(class, NAME_shear, NAME_calculate, 2,
+	     "kx=num", "ky=num",
+	     "Compose shear(kx,ky) into the figure's transform",
+	     shearFigureMethod);
   sendMethod(class, NAME_convertOldSlot, NAME_compatibility, 2,
 	     "slot=name", "value=any",
 	     "Translate old shadow into elevation",

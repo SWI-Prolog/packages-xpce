@@ -318,6 +318,10 @@ COMMON(bool)	inverseTransformPoint(Transform t, double x, double y,
 COMMON(void)	transformAreaAABB(Transform t, Area in, double bbox[4]);
 COMMON(void)	transformAreaToIntAABB(Transform t, Area in, Area out);
 COMMON(double)	transformSnapInt(double v);
+COMMON(status)	translateTransform(Transform t, Num dx, Num dy);
+COMMON(status)	scaleTransform(Transform t, Num sx, Num sy);
+COMMON(status)	rotateTransform(Transform t, Num degrees);
+COMMON(status)	shearTransform(Transform t, Num kx, Num ky);
 COMMON(status)	makeClassTransform(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/tree.c */
