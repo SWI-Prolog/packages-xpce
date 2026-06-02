@@ -69,37 +69,66 @@ initialise(F) :->
     send(P, display, Scene, point(130, 110)),
     send(F, slot, scene, Scene),
 
-    send(Scene, transform, new(transform)),
-
     new(D, dialog),
     send(D, below, P),
-
     send(D, append, new(Report, label(report, 'Click a child of the scene'))),
     send(F, slot, report, Report),
 
-    send(D, append,
-         new(SR, slider(rotation, -180, 180, 0,
-                        message(F, set_rotation, @arg1))),
-         next_row),
-    send(SR, drag, @on),
+    Rebuild = message(F, rebuild),
+    add_slider(D, rotation,   -180, 180,   0, Rebuild),
+    add_slider(D, scale_x100,   25, 250, 100, Rebuild),
+    add_slider(D, shear_x100, -100, 100,   0, Rebuild),
 
-    send(D, append,
-         new(SS, slider(scale_x100, 25, 250, 100,
-                        message(F, set_scale, @arg1))),
-         next_row),
-    send(SS, drag, @on),
-
-    send(D, append,
-         new(SH, slider(shear_x100, -100, 100, 0,
-                        message(F, set_shear_x, @arg1))),
-         next_row),
-    send(SH, drag, @on),
-
-    send(D, append, button(reset, message(F, reset_sliders, SR, SS, SH)),
-         next_row),
+    send(D, append, button(reset, message(F, reset)), next_row),
     send(D, append, button(quit,  message(F, destroy))),
 
     send(F, open).
+
+add_slider(D, Name, Lo, Hi, Init, Msg) :-
+    send(D, append, new(S, slider(Name, Lo, Hi, Init, Msg)), next_row),
+    send(S, drag, @on).
+
+slider_value(F, Name, Value) :-
+    get(F, member, dialog, D),
+    get(D, member, Name, S),
+    get(S, selection, Value).
+
+set_slider(F, Name, Value) :-
+    get(F, member, dialog, D),
+    get(D, member, Name, S),
+    send(S, selection, Value).
+
+
+pivot(120, 90).                         % center of the 240x180 box
+
+
+rebuild(F) :->
+    "Rebuild the scene's transform from the current slider positions"::
+    slider_value(F, rotation,   Deg),
+    slider_value(F, scale_x100, Sc100),
+    slider_value(F, shear_x100, Sx100),
+    Sc is Sc100 / 100.0,
+    Sx is Sx100 / 100.0,
+    pivot(Cx, Cy),
+    Scene = F?scene,
+    %  Start from identity and pre-compose around the pivot:
+    %  translate(Cx,Cy) o scale o rotate o shear o translate(-Cx,-Cy).
+    send(Scene, transform, new(transform)),
+    send(Scene, translate,  Cx,  Cy),
+    send(Scene, scale,      Sc),
+    send(Scene, rotate,     Deg),
+    send(Scene, shear,      Sx, 0.0),
+    send(Scene, translate, -Cx, -Cy).
+
+
+reset(F) :->
+    "Reset sliders to identity and rebuild"::
+    set_slider(F, rotation,   0),
+    set_slider(F, scale_x100, 100),
+    set_slider(F, shear_x100, 0),
+    send(F, rebuild).
+
+:- pce_end_class.
 
 
 %!  fill_scene(+Figure) is det.
@@ -148,61 +177,3 @@ report_click(Gr, Tag, _Recv) :-
     get(Gr, frame, F),
     format(string(Msg), 'hit ~w at local (~w, ~w)', [Tag, X, Y]),
     send(F?report, selection, Msg).
-
-
-set_rotation(F, Degrees:int) :->
-    "Slider callback: set absolute rotation"::
-    rebuild_transform(F, Degrees, @default, @default).
-
-set_scale(F, Percent:int) :->
-    "Slider callback: set uniform scale (percent)"::
-    rebuild_transform(F, @default, Percent, @default).
-
-set_shear_x(F, Percent:int) :->
-    "Slider callback: set horizontal shear (percent)"::
-    rebuild_transform(F, @default, @default, Percent).
-
-reset_sliders(F, SR:slider, SS:slider, SH:slider) :->
-    "Reset sliders to identity and rebuild transform"::
-    send(SR, selection, 0),
-    send(SS, selection, 100),
-    send(SH, selection, 0),
-    rebuild_transform(F, 0, 100, 0).
-
-
-%!  rebuild_transform(+Frame, +Rot, +Scale, +ShearX) is det.
-%
-%   Update the scene's transform.  Each argument may be @default to
-%   keep that slider's current value (read off the dialog).
-
-rebuild_transform(F, Rot0, Scale0, ShearX0) :-
-    slider_int(F, rotation,   Rot0,    Rot),
-    slider_int(F, scale_x100, Scale0,  Sc100),
-    slider_int(F, shear_x100, ShearX0, Sx100),
-    %  Compose around the scene's centre.
-    pivot(Cx, Cy),
-    Scale is Sc100 / 100.0,
-    Shx   is Sx100 / 100.0,
-    get(F?scene, transform, T),
-    send(T, identity),
-    send(T, translate, Cx, Cy),
-    send(T, scale,     Scale),
-    send(T, rotate,    Rot),
-    send(T, shear,     Shx, 0.0),
-    send(T, translate, -Cx, -Cy),
-    %  Force a re-read by re-assigning the same transform; this also
-    %  invalidates the scene's bounding box and triggers a repaint.
-    send(F?scene, transform, T).
-
-pivot(120, 90).         % center of the 240x180 box
-
-
-slider_int(_F, _Name, Value, Value) :-
-    integer(Value),
-    !.
-slider_int(F, Name, _, Value) :-
-    get(F, member, dialog, D),
-    get(D, member, Name, S),
-    get(S, selection, Value).
-
-:- pce_end_class.
