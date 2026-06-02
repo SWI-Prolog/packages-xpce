@@ -148,7 +148,7 @@ initialiseTransform(Transform t, Num rotate, Any scale, Tuple shear)
 
   if ( notDefault(scale) )
   { if ( instanceOfObject(scale, ClassTuple) )
-    { Num sx, sy;
+    { Num sx = ZERO, sy = ZERO;
       TRY( tuple_to_nums((Tuple)scale, &sx, &sy) );
       scaleTransform(t, sx, sy);
     } else
@@ -160,7 +160,7 @@ initialiseTransform(Transform t, Num rotate, Any scale, Tuple shear)
     rotateTransform(t, rotate);
 
   if ( notDefault(shear) )
-  { Num kx, ky;
+  { Num kx = ZERO, ky = ZERO;
     TRY( tuple_to_nums(shear, &kx, &ky) );
     shearTransform(t, kx, ky);
   }
