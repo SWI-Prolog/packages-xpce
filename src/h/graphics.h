@@ -767,9 +767,9 @@ NewClass(fontobj)
   Num		points;			/* Point size */
   Num		ascent;			/* Height above baseline */
   Num		descent;		/* Depth below baseline */
-  BoolObj	fixed_width;		/* Is this a fixed width font? */
   Num		ex;			/* Height of an x in this font */
   Num		avg_char_width;		/* Average char width */
+  BoolObj	fixed_width;		/* Is this a fixed width font? */
   WsRef		ws_ref;			/* Window system reference */
 End;
 
