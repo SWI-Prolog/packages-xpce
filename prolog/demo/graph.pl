@@ -68,10 +68,10 @@ fill_dialog(D) :-
     send(D, append, text_item(generator, 'graph_viewer:test(A, B)',
                               message(D?generate_member, execute)), right),
 
-    send(D, append, button(quit, message(Frame, destroy))),
+    send(D, append, button(layout, message(Frame, layout))),
     send(D, append, button(clear, message(Frame, clear))),
-    send(D, append, button(postscript, message(Frame, postscript))),
-    send(D, append, button(layout, message(Frame, layout))).
+    send(D, append, button('Export PDF', message(Frame, save_pdf))),
+    send(D, append, button(quit, message(Frame, destroy))).
 
 
 clear(F) :->
@@ -92,17 +92,23 @@ layout(F) :->
 :- pce_autoload(finder, library(find_file)).
 :- pce_global(@finder, new(finder)).
 
-postscript(F) :->
-    "Create PostScript in file"::
-    get(@finder, file, @off, '.eps', FileName),
+save_pdf(F) :->
+    "Create PDF in file"::
+    get(F, save_file,
+        chain(tuple('PDF file', pdf)), @default,
+        FileName0),
+    ensure_extension(FileName0, pdf, FileName),
     get(F, member, picture, Pict),
     new(File, file(FileName)),
-    send(File, open, write),
-    send(File, append, Pict?postscript),
-    send(File, close),
-    send(File, done),
-    send(F, report, status, 'Saved PostScript in %s', FileName).
+    send(Pict, pdf, File),
+    send(F, report, status, 'Saved PDF in %s', FileName).
 
+ensure_extension(Base, Ext, File) :-
+    file_name_extension(_, Ext, Base),
+    !,
+    File = Base.
+ensure_extension(Base, Ext, File) :-
+    file_name_extension(Base, Ext, File).
 
 generate(F, Generator:name) :->
     "Create graph using generator"::
