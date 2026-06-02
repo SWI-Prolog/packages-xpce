@@ -59,6 +59,7 @@ initialiseGraphical(Any obj, Int x, Int y, Int w, Int h)
   assign(gr, name,             class->name);
   assign(gr, inverted,         OFF);
   assign(gr, active,	       ON);
+  assign(gr, opacity,	       toNum(1.0));
   obtainClassVariablesObject(obj);
 
   if ( class->solid == ON )
@@ -104,6 +105,7 @@ copyGraphical(Any obj1, Any obj2)
   assign(gr1, inverted,  gr2->inverted);
   assign(gr1, displayed, gr2->displayed);
   assign(gr1, colour,	 gr2->colour);
+  assign(gr1, opacity,	 gr2->opacity);
   assign(gr1, cursor,    gr2->cursor);
   assign(gr1, name,      gr2->name);
 
@@ -1892,6 +1894,21 @@ penGraphical(Graphical gr, Int pen)
 
 
 status
+opacityGraphical(Graphical gr, Num o)
+{ double v = valNum(o);
+  if ( v < 0.0 ) v = 0.0;
+  else if ( v > 1.0 ) v = 1.0;
+
+  if ( valNum(gr->opacity) != v )
+  { CHANGING_GRAPHICAL(gr, assign(gr, opacity, toNum(v));
+			   changedEntireImageGraphical(gr));
+  }
+
+  succeed;
+}
+
+
+status
 shadowGraphical(Graphical gr, Int s)
 { return assignGraphical(gr, NAME_shadow, s);
 }
@@ -3403,6 +3420,8 @@ static vardecl var_graphical[] =
      NAME_appearance, "Stipple pattern of drawing pen"),
   SV(NAME_colour, "[colour|pixmap]", IV_GET|IV_STORE, colourGraphical,
      NAME_appearance, "Colour of drawing pen"),
+  SV(NAME_opacity, "num", IV_GET|IV_STORE, opacityGraphical,
+     NAME_appearance, "Opacity 0.0..1.0; 1.0 is opaque"),
   IV(NAME_handles, "chain*", IV_NONE,
      NAME_relation, "Connection points for connections"),
   IV(NAME_connections, "chain*", IV_NONE,
