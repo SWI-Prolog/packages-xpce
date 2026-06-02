@@ -105,6 +105,28 @@ static status identityTransform(Transform t);
 		 *	CONSTRUCT/IDENTITY	*
 		 *******************************/
 
+/* Extract two numeric values from a tuple.  Slots on tuple are typed
+ * `any', so we explicitly run each through TypeNum: any value xpce can
+ * convert to a number (Int, Real, integer-valued atom, ...) is
+ * accepted; anything else raises a type error and fails.
+ */
+
+static status
+tuple_to_nums(Tuple tu, Num *first, Num *second)
+{ Num n1 = checkType(tu->first,  TypeNum, NIL);
+  Num n2 = checkType(tu->second, TypeNum, NIL);
+
+  if ( !n1 )
+    return errorPce(tu->first,  NAME_unexpectedType, TypeNum);
+  if ( !n2 )
+    return errorPce(tu->second, NAME_unexpectedType, TypeNum);
+
+  *first  = n1;
+  *second = n2;
+  succeed;
+}
+
+
 /* Build a transform from optional rotate/scale/shear operations.
  *
  * The operations are applied in the fixed order scale, rotate, shear
@@ -126,8 +148,9 @@ initialiseTransform(Transform t, Num rotate, Any scale, Tuple shear)
 
   if ( notDefault(scale) )
   { if ( instanceOfObject(scale, ClassTuple) )
-    { Tuple s = scale;
-      scaleTransform(t, (Num)s->first, (Num)s->second);
+    { Num sx, sy;
+      TRY( tuple_to_nums((Tuple)scale, &sx, &sy) );
+      scaleTransform(t, sx, sy);
     } else
     { scaleTransform(t, (Num)scale, DEFAULT);
     }
@@ -137,7 +160,10 @@ initialiseTransform(Transform t, Num rotate, Any scale, Tuple shear)
     rotateTransform(t, rotate);
 
   if ( notDefault(shear) )
-    shearTransform(t, (Num)shear->first, (Num)shear->second);
+  { Num kx, ky;
+    TRY( tuple_to_nums(shear, &kx, &ky) );
+    shearTransform(t, kx, ky);
+  }
 
   succeed;
 }
