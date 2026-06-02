@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1995-2011, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1995-2026, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -55,8 +56,8 @@ image_viewer :-
     get(@pce, home, Home),
     atom_concat(Home, '/bitmaps', DefDir),
     send(D, append, new(Dir, directory_item(directory, DefDir))),
-    send(D, append, new(File, text_item(file_pattern, '*.png'))),
-    new(ValueSet, chain('*.png', '*.gif', '*.jpg', '*.jpeg')),
+    send(D, append, new(File, text_item(file_pattern, '*.svg'))),
+    new(ValueSet, chain('*.svg', '*.png', '*.gif', '*.jpg', '*.jpeg')),
     (   get(@pce, window_system, windows)
     ->  send_list(ValueSet, append, ['*.ico', '*.cur'])
     ;   true
@@ -171,6 +172,15 @@ resize(Bitmap, W, H) :-
 show(_, [], _) :- !.
 show(P, [F|R], Dir) :-
     get(Dir, file, F, File),
+    show_file(P, File),
+    !,
+    show(P, R, Dir).
+show(P, [_|R], Dir) :-
+    show(P, R, Dir).
+
+show_file(P, File) :-
+    get(File, base_name, Name),
+    debug(pce(image), 'Showing ~p', [Name]),
     new(I, image(File?name)),      % first make image to avoid error
     !,
     new(B, bitmap(I)),              % the bitmap
@@ -178,25 +188,16 @@ show(P, [F|R], Dir) :-
 
     new(F2, figure),                % elevate it from the background
     send(F2, border, 3),
-    (   get(@display, visual_type, monochrome)
-    ->  send(F2, elevation, elevation(image, 2,
-                                      relief := @grey50_image,
-                                      shadow := colour(black)))
-    ;   send(F2, elevation, elevation(image, 2,
-                                      colour := colour(grey80)))
-    ),
+    send(F2, elevation, elevation(image, 2,
+                                  colour := colour(grey80))),
     send(F2, display, B),
 
     new(D, device),                 % put together with label
     send(D, display, F2),
-    send(D, display, new(T, text(F, center))),
+    send(D, display, new(T, text(Name, center))),
     send(@image_viewer_icon_spatial, forwards, F2, T),
 
-    send(P, display, D),            % display (<-format positions)
-    show(P, R, Dir).
-show(P, [_|R], Dir) :-
-    show(P, R, Dir).
-
+    send(P, display, D).            % display (<-format positions)
 
                  /*******************************
                  *             UTIL             *
@@ -205,22 +206,22 @@ show(P, [_|R], Dir) :-
 file_pattern_to_regex(Pattern, Regex) :-
     atom_codes(Pattern, Chars),
     phrase(file_regex(RegexChars0), Chars),
-    flatten(["^", RegexChars0, "$"], RegexChars),
+    flatten([`^`, RegexChars0, `$`], RegexChars),
     atom_codes(Regex, RegexChars).
 
 file_regex([]) --> [].
-file_regex([".*"|T]) -->
+file_regex([`.*`|T]) -->
     "*",
     !,
     file_regex(T).
-file_regex(["\\."|T]) -->
+file_regex([`\\.`|T]) -->
     ".",
     file_regex(T).
-file_regex(["."|T]) -->
+file_regex([`.`|T]) -->
     "?",
     !,
     file_regex(T).
-file_regex(["[",Set,"]"|T]) -->
+file_regex([`[`,Set,`]`|T]) -->
     "[",
     !,
     charset(Set),
