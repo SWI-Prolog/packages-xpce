@@ -234,3 +234,8 @@ demo('Arc gallery',
      demo(arc),
      arc_demo).
 
+demo('Opacity',
+     'Per-graphical opacity: ramps, primitives, groups, overlays',
+     demo(opacity),
+     opacity_demo).
+
