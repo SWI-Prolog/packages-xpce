@@ -137,8 +137,11 @@ start_timer(Frame):-
     send(Timer,start).
 
 stop_timer(Frame):-
+    object(Frame),
     get(Frame,attribute,timer,Timer),
+    !,
     send(Timer,stop).
+stop_timer(_).
 
 timer_action(Frame):-
     retract(steplist(Frame,[Step|Steps])),!,
@@ -204,7 +207,7 @@ make_paths([(Device,X,Y,Side)|PosList],[(Row,Col)|BoxPosList],Vector,I):-
     send(Device,display,new(Path,path)),
     send(Path,closed,@on),
     send_list(Path,append,[Point1,Point2,Point3,Point4]),
-    send(Path,fill,@black_image),
+    send(Path,fill,foreground),
     send(Path,recogniser,@draw_field_gesture),
     send(Path,attribute,attribute(row,Row)),
     send(Path,attribute,attribute(col,Col)),
@@ -213,7 +216,7 @@ make_paths([(Device,X,Y,Side)|PosList],[(Row,Col)|BoxPosList],Vector,I):-
     make_paths(PosList,BoxPosList,Vector,II).
 
 compute_pathpoints(X,Y,Side,point(OX1,OY1),point(OX2,OY2),point(OX3,OY3),point(OX4,OY4)):-
-    path_shape(Side,(IX1,IY1),(IX2,IY2),(IX3,IY3),(IX4,IY4)),
+    once(path_shape(Side,(IX1,IY1),(IX2,IY2),(IX3,IY3),(IX4,IY4))),
       sgn(IX2, IX2SGN),
       sgn(IX4, IX4SGN),
       sgn(IY4, IY4SGN),
@@ -235,9 +238,8 @@ path_shape(r,(0,0),(  0, 20),( 11,  9),( 11,-11)).
 path_shape(d,(0,0),(-20,  0),( -9, 11),( 11, 11)).
 path_shape(b,(0,0),(  0,-20),(-20,-20),(-20,  0)).
 
-sgn(0,0).
-sgn(X,Y):-
-    (X >= 0 -> Y is 1; Y is -1).
+sgn(X,S) :-
+    S is sign(X).
 
 make_boxlist(Frame,Window):-
     send(Frame,append,new(Window,window(cube_cross,size(10*20,13*20)))),
@@ -272,7 +274,7 @@ make_boxes(_,[],_,_).
 make_boxes(Device,[(Y,X)|PosList],Vector,I):-
     send(Device,display,new(Box,box(20,20)),point(X*20,Y*20)),
     send(Box,radius,3),
-    send(Box,fill,@black_image),
+    send(Box,fill,foreground),
     send(Box,recogniser,@draw_field_gesture),
     send_list(Box,attribute,[attribute(row,Y),attribute(col,X)]),
     send(Vector,element,I,Box),

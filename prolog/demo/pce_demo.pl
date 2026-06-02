@@ -1,10 +1,11 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@vu.nl.nl
-    WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1995-2014, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/packages/xpce/
+    Copyright (c)  1995-2026, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -36,6 +37,7 @@
 :- module(pce_demo,
           [ pcedemo/0
           ]).
+:- encoding(utf8).
 :- use_module(library(pce)).
 :- use_module(contrib(contrib)).
 :- use_module(library(persistent_frame)).
@@ -79,7 +81,7 @@ fill_browser(B) :-
            send(B, append, dict_item(Name,
                                      string('%s\t%s', Name, Summary)))),
     send(B, append,
-         dict_item('======Contributions====================',
+         dict_item('💙 Contributions 💙',
                    style := title)),
     forall(contribution(Name, Summary, _Author, _, _),
            send(B, append, dict_item(Name,

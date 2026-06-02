@@ -213,8 +213,6 @@ fill_dialog(M, D) :->
                 menu_item(demo_programs,
                           message(M, start_demo),
                           @default, @on),
-                menu_item('ChangeLog',
-                          message(M, changelog)),
                 menu_item('FAQ',
                           message(M, faq),
                           @default, @on),
@@ -507,13 +505,6 @@ list_all_modules(M) :->
                  *          VIEW FILES          *
                  *******************************/
 
-changelog(_M) :->
-    "View ChangeLog"::
-    get(@pce, home, Home),
-    get(string('%s/ChangeLog', Home), value, Path),
-    auto_call(start_emacs),
-    send(@emacs, goto_source_location, Path).
-
 :- pce_help_file(pce_faq,     pce_help('pcefaq.hlp')).
 
 faq(_M) :->
@@ -530,13 +521,11 @@ help_on_prolog(_M) :->
                 ********************************/
 
 about([ 'XPCE version %s'+[@pce?version]-boldhuge,
-        'Copyright 1992-2007, University of Amsterdam',
-        'XPCE comes with ABSOLUTELY NO WARRANTY.',
-        'This is free software (LGPL), and you are welcome to',
-        'redistribute it under certain conditions.',
-        url('http://www.swi-prolog.org/packages/xpce/'),
-        'Jan Wielemaker\nAnjo Anjewierden'-italic,
-        'HCS\nUniversity of Amsterdam\nKruislaan 419\n1098 VA  Amsterdam\nThe Netherlands'
+        'Copyright 1992-2026, University of Amsterdam, SWI-Prolog Solutions b.v.',
+        'XPCE is covered by the BSD-2 license.',
+        'XPCE use the Pango library for font rendering, which is covered by the LGPL 2.1 or later license',
+        url('https://www.swi-prolog.org/packages/xpce/'),
+        'Jan Wielemaker\nAnjo Anjewierden'-italic
       ]).
 
 
