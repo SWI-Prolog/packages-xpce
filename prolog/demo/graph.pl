@@ -35,14 +35,9 @@
 :- module(graph_viewer,
           [ graph_viewer/0
           ]).
-
 :- use_module(library(pce)).
-:- require([ forall/2
-           , term_variables/2
-           , random/3
-           , term_to_atom/2
-           ]).
-
+:- use_module(library(apply)).
+:- use_module(library(random)).
 
 graph_viewer :-
     new(GV, graph_viewer),
@@ -112,17 +107,20 @@ ensure_extension(Base, Ext, File) :-
 
 generate(F, Generator:name) :->
     "Create graph using generator"::
-    (   term_to_atom(Term, Generator),
-        term_variables(Term, [From, To])
+    (   term_string(Term, Generator, [variable_names(Bindings0)]),
+        exclude(named_anon, Bindings0, Bindings),
+        Bindings = [_=From, _=To]
     ->  send(F, clear),
         forall(user:Term,
                send(F, display_arc, From, To)),
         send(F, layout),
         send(F, label, Generator)
     ;   send(F, report, error,
-             'Generator should be a Prolog goal with two variables')
+             'Generator should be a Prolog goal with two named variables')
     ).
 
+named_anon(Name=_) :-                     % Should deal with Unicode Names.
+    sub_atom(Name, 0, _, _, '_').
 
 :- pce_global(@demo_graph_link, new(link(link, link, line(0,0,0,0,second)))).
 
