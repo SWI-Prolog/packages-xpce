@@ -426,13 +426,13 @@ getShadowFigure(Figure f)
 
 
 static status
-radiusFigure(Figure f, Int radius)
+radiusFigure(Figure f, Num radius)
 { return assignGraphical(f, NAME_radius, radius);
 }
 
 
 static status
-borderFigure(Figure f, Int border)
+borderFigure(Figure f, Num border)
 { if ( f->border != border )
   { assign(f, border, border);
     requestComputeDevice((Device) f, DEFAULT);
@@ -470,11 +470,11 @@ makeClassFigure(Class class)
   localClass(class, NAME_status, NAME_visibility, "name", NAME_get,
 	     "Name of visible graphical (or all_active)");
   localClass(class, NAME_background, NAME_appearance,
-	     "image|colour*", NAME_get,
+	     TYPE_FILL, NAME_get,
 	     "Fill pattern used as background");
-  localClass(class, NAME_border, NAME_appearance, "int", NAME_get,
+  localClass(class, NAME_border, NAME_appearance, "num", NAME_get,
 	     "Border around graphicals");
-  localClass(class, NAME_radius, NAME_appearance, "int", NAME_get,
+  localClass(class, NAME_radius, NAME_appearance, "num", NAME_get,
 	     "Radius of outline");
   localClass(class, NAME_elevation, NAME_appearance, "elevation*", NAME_get,
 	     "Elevation from background");

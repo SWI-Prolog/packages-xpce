@@ -100,9 +100,9 @@ typedef struct colour_context *ColourContext; /* for selection/inactive */
 #define ABSTRACT_FIGURE \
   ABSTRACT_DEVICE \
   Name		status;			/* Which members are displayed? */ \
-  Image		background;		/* Pattern for background */ \
-  Int		border;			/* border around graphicals */ \
-  Int		radius;			/* radius of outline */ \
+  Any		background;		/* Pattern for background */ \
+  Num		border;			/* border around graphicals */ \
+  Num		radius;			/* radius of outline */ \
   Elevation	elevation;		/* elevation of outline */ \
   Transform	transform;		/* optional 2D affine on contents */ \
   Area		local_area;		/* children bbox in local coords */
