@@ -83,6 +83,7 @@ expand_node(H, Node:xml_node) :->
     append(Loc0, [Index], Loc),
     (   nth1(Index, Content, Esub),
         get(H, caption, Esub, Name),
+        compound(Esub),
         arg(3, Esub, SubContent),
         (   memberchk(element(_,_,_), SubContent)
         ->  get(H, icon, Esub, @on, Icons),
