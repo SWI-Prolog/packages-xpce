@@ -104,7 +104,6 @@ new_kangaroo(Pict, Pos) :-
     new(F, figure),
     forall(image(Rc, N, _File),
            (send(F, display, new(BM, bitmap(resource(Rc)))),
-            send(BM, transparent, @on),
             send(BM, name, N))),
     send(F, status, 1),
     send(Pict, display, F, Pos).

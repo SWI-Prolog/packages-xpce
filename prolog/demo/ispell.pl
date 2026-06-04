@@ -361,7 +361,7 @@ file(F, File:[file]) :->
     ;   LoadFile = File
     ),
     send(F?view, load, LoadFile),
-    send(F, label, string('Ispell: %s', LoadFile?base_name), 'Ispell').
+    send(F, label, string('Ispell: %s', LoadFile?base_name)).
 
 
                 /********************************

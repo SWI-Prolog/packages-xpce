@@ -41,13 +41,10 @@
 :- use_module(library(pce)).
 :- use_module(contrib(contrib)).
 :- use_module(library(persistent_frame)).
-:- require([ emacs/1
-           , forall/2
-           , member/2
-           , term_to_atom/2
-           ]).
+:- autoload(library(process), [process_which/2]).
+:- autoload(library(pce_emacs), [emacs/1]).
 
-:- multifile                            % So this may be predefined, avoiding
+:- multifile                        % So this may be predefined, avoiding
     pcedemo/0.                      % an undefined trap
 
 /** <module> XPCE demo starter
@@ -147,12 +144,8 @@ demo('Ispell',
      'Graphical interface to ispell (requires ispell 3)',
      demo(ispell),
      ispell) :-
-    send(@pce, has_feature, process).
-
-demo('XMLView',
-     'Browse structure of HTML/SGML and XML files',
-     library('doc/xml_browse'),
-     send(new(xml_browser), open)).
+    send(@pce, has_feature, process),
+    process_which(ispell, _Path).
 
 demo('FontViewer',
      'Examine PCE predefined fonts',
@@ -184,10 +177,35 @@ demo('EventHierarchy',
      demo(event_hierarchy),
      event_hierarchy).
 
+demo('Transform',
+     'Live figure->transform: rotate, scale and shear a small scene',
+     demo(transform),
+     transform_demo).
+
+demo('Arc gallery',
+     'A gallery of class arc usage',
+     demo(arc),
+     arc_demo).
+
+demo('Opacity',
+     'Per-graphical opacity: ramps, primitives, groups, overlays',
+     demo(opacity),
+     opacity_demo).
+
+demo('London Tube',
+     'Interactive London tube map: zoom, pan, search and toggle lines',
+     demo(tube_gui),
+     london_tube).
+
 demo('GraphViewer',
      'Visualise a graph represented as Prolog facts',
      demo(graph),
      graph_viewer).
+
+demo('XMLView',
+     'Browse structure of HTML/SGML and XML files',
+     library('doc/xml_browse'),
+     send(new(xml_browser), open)).
 
 demo('ChessTool',
      'Simple frontend for /usr/games/chess',
@@ -211,24 +229,3 @@ demo('Juggler',
      'Annimation of a juggling creature',
      demo(juggler),
      juggle_demo).
-
-demo('Transform',
-     'Live figure->transform: rotate, scale and shear a small scene',
-     demo(transform),
-     transform_demo).
-
-demo('Arc gallery',
-     'A gallery of class arc usage',
-     demo(arc),
-     arc_demo).
-
-demo('Opacity',
-     'Per-graphical opacity: ramps, primitives, groups, overlays',
-     demo(opacity),
-     opacity_demo).
-
-demo('London Tube',
-     'Interactive London tube map: zoom, pan, search and toggle lines',
-     demo(tube_gui),
-     london_tube).
-

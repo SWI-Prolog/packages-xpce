@@ -46,17 +46,20 @@
 :- use_module(library(file_item)).      % Class directory_item
 
 image_viewer :-
-    new(P, picture),
+    new(P, picture(size := size(800,500))),
     send(P, scrollbars, vertical),
     send(P, format, format(horizontal, 800, @off)),
     send(P, resize_message,
          message(P, format, width, @arg2?width)),
     send(new(D, dialog), below, P),
+    send(D, resize_message,
+         message(D, layout, D?size)),
     send(P?frame, label, 'Image Viewer'),
     get(@pce, home, Home),
     atom_concat(Home, '/bitmaps', DefDir),
     send(D, append, new(Dir, directory_item(directory, DefDir))),
     send(D, append, new(File, text_item(file_pattern, '*.svg'))),
+    send_list([Dir,File], hor_stretch, 100),
     new(ValueSet, chain('*.svg', '*.png', '*.gif', '*.jpg', '*.jpeg')),
     (   get(@pce, window_system, windows)
     ->  send_list(ValueSet, append, ['*.ico', '*.cur'])
