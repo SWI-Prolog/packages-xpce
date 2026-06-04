@@ -241,3 +241,8 @@ demo('Opacity',
      demo(opacity),
      opacity_demo).
 
+demo('London Tube',
+     'Interactive London tube map: zoom, pan, search and toggle lines',
+     demo(tube_gui),
+     london_tube).
+
