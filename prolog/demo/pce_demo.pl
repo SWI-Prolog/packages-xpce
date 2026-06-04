@@ -194,15 +194,6 @@ demo('GraphViewer',
      demo(graph),
      graph_viewer).
 
-demo('FtpLog',
-     'Examine /usr/adm/xferlog (ftp log file)',
-     demo(ftplog),
-     ftplog('/usr/adm/xferlog')) :-
-    send(@pce, has_feature, process),
-    absolute_file_name('/usr/adm/xferlog', Path),
-    send(file(Path), access, read).
-
-
 demo('ChessTool',
      'Simple frontend for /usr/games/chess',
      demo(chess),
