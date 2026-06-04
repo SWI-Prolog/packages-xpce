@@ -149,11 +149,6 @@ demo('Ispell',
      ispell) :-
     send(@pce, has_feature, process).
 
-demo('Emacs',
-     'Emacs (Epoch) look-alike editor',
-     library(pce_emacs),
-     emacs).
-
 demo('XMLView',
      'Browse structure of HTML/SGML and XML files',
      library('doc/xml_browse'),
@@ -184,7 +179,7 @@ demo('ImageViewer',
      demo(imageviewer),
      image_viewer).
 
-demo('Events',
+demo('EventHierarchy',
      'Display hierarchy of event-types',
      demo(event_hierarchy),
      event_hierarchy).
@@ -193,15 +188,6 @@ demo('GraphViewer',
      'Visualise a graph represented as Prolog facts',
      demo(graph),
      graph_viewer).
-
-demo('FtpLog',
-     'Examine /usr/adm/xferlog (ftp log file)',
-     demo(ftplog),
-     ftplog('/usr/adm/xferlog')) :-
-    send(@pce, has_feature, process),
-    absolute_file_name('/usr/adm/xferlog', Path),
-    send(file(Path), access, read).
-
 
 demo('ChessTool',
      'Simple frontend for /usr/games/chess',
