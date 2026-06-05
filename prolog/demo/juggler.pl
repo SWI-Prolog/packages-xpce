@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1995-2011, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           http://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1995-2026, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -51,7 +52,7 @@ juggle_demo :-
 variable(timer, timer, get, "Timer for animation").
 variable(speed, int,   get, "Animations/second").
 
-class_variable(geometry, geometry,      '72x72+0+0',    "Default geometry").
+class_variable(size,	 size,		size(200,200),  "Window size").
 class_variable(speed,    int,           10,             "Animations/second").
 
 :- pce_global(@juggler_popup, make_juggler_popup).
@@ -69,16 +70,17 @@ make_juggler_popup(P) :-
 
 initialise(F) :->
     "Create a juggler-window"::
-    send(F, send_super, initialise, 'Juggler', popup),
-    send(F, append, new(P, picture)),
-    send(P, scrollbars, none),
+    send_super(F, initialise, 'Juggler', popup),
+    get(F, class_variable_value, size, Size),
+    object(Size, size(W,H)),
+    send(F, append, new(P, window(@default, Size))),
     send(P, popup, @juggler_popup),
 
     send(P, display, new(Fig, figure)),
     send(Fig, status, 1),
     forall(member(N, [1,2,3,4,5]),
-           (atomic_list_concat([juggler, N, '.png'], IconName),
-            new(I, bitmap(IconName)),
+           (atomic_list_concat([juggler, N, '.svg'], IconName),
+            new(I, bitmap(image(IconName, W, H))),
             send(I, name, N),
             send(Fig, display, I))),
 
