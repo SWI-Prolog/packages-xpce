@@ -258,31 +258,32 @@ set(XPCE_DATA_prolog_demo arc.pl chess.pl colour.pl constraint.pl cursor.pl
     transform.pl tube_gui.pl tube.pl tube.json)
 
 set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png
-    busy_bee.png cassette.png chessboard.png chesssquare.png close.png concept.png
-    conceptLink.png confirm.png confirm_name.png console_tile.png
-    creating.png cross.png cycle.png desktop.png dir.png domain.png
-    draw_cconnect.png draw_connect.png draw_edit.png draw_line.png
-    draw_path.png draw_proto.png draw_resize.png draw_text.png ellipse.png
-    fatleft_arrow.png fatright_arrow.png file.png folder.png fragment.png
-    globe.png go.png group.png hand.png happy.png hierarchy.png hourgl10.png
-    hourgl1.png hourgl2.png hourgl3.png hourgl4.png hourgl5.png hourgl6.png
-    hourgl7.png hourgl8.png hourgl9.png hourgl.png kangro10.png kangro11.png
-    kangro1.png kangro2.png kangro3.png kangro4.png kangro5.png kangro6.png
-    kangro7.png kangro8.png kangro9.png king.png knight.png left_arrow.png
-    line.png link.png linking.png magnify.png main_link.png mark.png
-    ms_down_arrow.png ms_left_arrow.png ms_right_arrow.png ms_up_arrow.png
-    nomark.png nosticky.png note.png off_marked.png off_toggle.png
-    ol_cycle.png ol_pulldown.png ol_pullright.png on_marked.png
-    on_toggle.png other_link.png pawn.png pce16.png pce.png pinned.png
-    pin.png printer.png queen.png question.png README right_arrow.png
-    rook_64.png rook.png sad.png select.png selecting.png slant_left.png
-    slant_right.png sticky.png support.png text.png textedit.png thermo.png
-    toggle_off.png toggle_on.png transcript.png trash.png typing.png web.png
+    busy_bee.png cassette.png chessboard.png chesssquare.png close.png
+    concept.png conceptLink.png confirm.png confirm_name.png
+    console_tile.png creating.png cross.png cycle.png desktop.png dir.png
+    domain.png draw_cconnect.png draw_connect.png draw_edit.png
+    draw_line.png draw_path.png draw_proto.png draw_resize.png draw_text.png
+    ellipse.png fatleft_arrow.png fatright_arrow.png file.png folder.png
+    fragment.png globe.png go.png group.png hand.png happy.png hierarchy.png
+    hourgl10.png hourgl1.png hourgl2.png hourgl3.png hourgl4.png hourgl5.png
+    hourgl6.png hourgl7.png hourgl8.png hourgl9.png hourgl.png king.png
+    knight.png left_arrow.png line.png link.png linking.png magnify.png
+    main_link.png mark.png ms_down_arrow.png ms_left_arrow.png
+    ms_right_arrow.png ms_up_arrow.png nomark.png nosticky.png note.png
+    off_marked.png off_toggle.png ol_cycle.png ol_pulldown.png
+    ol_pullright.png on_marked.png on_toggle.png other_link.png pawn.png
+    pce16.png pce.png pinned.png pin.png printer.png queen.png question.png
+    README right_arrow.png rook_64.png rook.png sad.png select.png
+    selecting.png slant_left.png slant_right.png sticky.png support.png
+    text.png textedit.png thermo.png toggle_off.png toggle_on.png
+    transcript.png trash.png typing.png web.png
 
-    opendir.svg closedir.svg document.svg
-    builtin_classflash.svg builtin_class.svg user_classflash.svg user_class.svg
-    sign_alert.svg sign_ok.svg
-    juggler1.svg juggler2.svg juggler3.svg juggler4.svg juggler5.svg)
+    opendir.svg closedir.svg document.svg builtin_classflash.svg
+    builtin_class.svg user_classflash.svg user_class.svg sign_alert.svg
+    sign_ok.svg juggler1.svg juggler2.svg juggler3.svg juggler4.svg
+    juggler5.svg kangaroo_10.svg kangaroo_11.svg kangaroo_1.svg
+    kangaroo_2.svg kangaroo_3.svg kangaroo_4.svg kangaroo_5.svg
+    kangaroo_6.svg kangaroo_7.svg kangaroo_8.svg kangaroo_9.svg)
 
 
 set(XPCE_DATA_bitmaps_16x16 alert.png arrow_length.png arrows.png

@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
-    Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1995-2011, University of Amsterdam
+    Author:        Anja van der Hulst
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1995-2026, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -95,7 +95,7 @@ set_speed(T, N) :-
 image(R, N, File) :-
     between(1, 11, N),
     atom_concat(kangaroo_, N, R),
-    atomic_list_concat([kangro, N, '.png'], File).
+    atomic_list_concat([kangaroo_, N, '.svg'], File).
 
 resource(R, image, image(File)) :-
     image(R, _N, File).
@@ -103,7 +103,7 @@ resource(R, image, image(File)) :-
 new_kangaroo(Pict, Pos) :-
     new(F, figure),
     forall(image(Rc, N, _File),
-           (send(F, display, new(BM, bitmap(resource(Rc)))),
+           (send(F, display, new(BM, bitmap(image(resource(Rc), 100)))),
             send(BM, name, N))),
     send(F, status, 1),
     send(Pict, display, F, Pos).
