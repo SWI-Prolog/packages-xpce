@@ -1145,6 +1145,11 @@ ide(_T, Tool:name) :->
     "Open an IDE tool"::
     call(user:prolog_ide(Tool)).
 
+manpce_tool(_T, Tool:name) :->
+    "Open a manpce/0 tool routed through @manual"::
+    use_module(user:library(pce_manual), []),
+    send(@manual, start_tool, Tool).
+
 preferences(_T, Which:{prolog,xpce}) :->
     "Edit Prolog or GUI preferences"::
     call(prolog_edit_preferences(Which)).
@@ -1231,12 +1236,13 @@ initialise(D) :->
     send(D, gap, size(0,0)),
     send(D, pen, 0),
     send(D, append, new(MB, menu_bar)),
+    Epilog = @event?receiver?frame,
     send(MB, append, new(File,     epilog_popup(file))),
     send(MB, append, new(Settings, popup(settings))),
     send(MB, append, new(Tools,    popup(tools))),
     send(MB, append, new(Debug,    epilog_popup(debug))),
+    send(MB, append, new(GUI,      popup('GUI'))),
     send(MB, append, new(Help,     popup(help))),
-    Epilog = @event?receiver?frame,
     send_list(File, append,
               [ menu_item(consult,
                           message(Epilog, consult)),
@@ -1270,10 +1276,33 @@ initialise(D) :->
                           message(Epilog, ide, debug_monitor)),
                 menu_item(cross_referencer,
                           message(Epilog, ide, xref),
+                          end_group := @on)
+              ]),
+    send_list(GUI, append,
+              [ menu_item('GUI demo programs',
+                          message(Epilog, manpce_tool, demos)),
+                menu_item(example_XPCE_code_snippets,
+                          message(Epilog, manpce_tool, examples),
+                          end_group := @on),
+                menu_item('Explore XPCE classes',
+                          message(Epilog, manpce_tool, class_browser)),
+                menu_item('Explore XPCE class hierarchy',
+                          message(Epilog, manpce_tool, class_hierarchy)),
+                menu_item('Explore XPCE global objects',
+                          message(Epilog, manpce_tool, global_objects)),
+                menu_item('Explore XPCE errors',
+                          message(Epilog, manpce_tool, errors)),
+                menu_item('Explore by function group',
+                          message(Epilog, manpce_tool, group_overview)),
+                menu_item('Search XPCE manual',
+                          message(Epilog, manpce_tool, search),
                           end_group := @on),
                 menu_item('Inspect GUI hierarchy',
-                          message(Epilog, ide, visual_hierarchy),
-                          end_group := @on)
+                          message(Epilog, manpce_tool, visual_hierarchy)),
+                menu_item('Inspect XPCE object',
+                          message(Epilog, manpce_tool, inspector)),
+                menu_item('Show XPCE events',
+                          message(Epilog, manpce_tool, event_viewer))
               ]),
     send_list(Debug, append,
               [ new(TraceMode,
