@@ -468,7 +468,7 @@ get_extension_margin_graphical(Graphical gr)
     if ( instanceOfObject(gr, ClassButton) )
     { Button b = (Button)gr;
 
-      if ( b->look == NAME_motif || b->look == NAME_gtk )
+      if ( b->look == NAME_xpce )
 	m = GTK_BUTTON_MARGIN + 1;
     }
 

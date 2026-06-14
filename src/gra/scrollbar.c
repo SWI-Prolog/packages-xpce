@@ -116,19 +116,14 @@ initialiseScrollBar(ScrollBar s, Any obj, Name orientation, Message msg)
 
 static int
 arrow_height_scrollbar(ScrollBar sb)
-{ if ( sb->look == NAME_gtk ||
-       sb->look == NAME_win )
-  { int ah;
+{ int ah;
 
-    if ( (ah = ws_arrow_height_scrollbar(sb)) < 0 )
-    { ah = valInt(sb->orientation == NAME_vertical ? sb->area->w
-						   : sb->area->h);
-    }
-
-    return ah;
+  if ( (ah = ws_arrow_height_scrollbar(sb)) < 0 )
+  { ah = valInt(sb->orientation == NAME_vertical ? sb->area->w
+						 : sb->area->h);
   }
 
-  return 0;
+  return ah;
 }
 
 
@@ -933,7 +928,7 @@ static vardecl var_scrollBar[] =
      NAME_internal, "Pixel position of bubble"),
   IV(NAME_bubbleLength, "int", IV_NONE,
      NAME_internal, "Pixel size of bubble"),
-  SV(NAME_look, "{win,gtk}", IV_GET|IV_STORE, lookScrollBar,
+  SV(NAME_look, "{xpce,win}", IV_GET|IV_STORE, lookScrollBar,
      NAME_appearance, "Look-and-feel"),
   IV(NAME_drag, "bool", IV_BOTH,
      NAME_event, "If @on, messages are sent continuously"),
@@ -993,7 +988,7 @@ static classvardecl rc_scrollBar[] =
      UXWIN("elevation(@nil, 1, @_dialog_bg)",
 	   "elevation(@nil, 2, win_menu)"),
      "3-D effect elevation"),
-  RC(NAME_look, "{x,open_look,motif,gtk,win}", UXWIN("gtk", "win"),
+  RC(NAME_look, "{xpce,win}", UXWIN("xpce", "win"),
      "Look-and-feel"),
   RC(NAME_pen, "int", UXWIN("@_win_pen", "0"),
      "Thickness of surrounding box"),

@@ -77,7 +77,7 @@ RedrawAreaTextCursor(TextCursor c, Area a)
     r_fill_polygon(pts, 3);
   } else if ( c->style == NAME_image )
   { r_image(c->image, 0, 0, x, y, w, h);
-  } else if ( c->style == NAME_openLook )
+  } else if ( c->style == NAME_xpce )
   { if ( c->active == ON )
     { int cx = x + w/2;
       Any colour = getDisplayColourGraphical((Graphical)c);
@@ -142,7 +142,7 @@ setTextCursor(TextCursor c, Int x, Int y, Int w, Int h, Int b)
 			     sub(x, c->hot_spot->x),
 			     sub(add(y, b), c->hot_spot->y),
 			     c->image->size->w, c->image->size->h);
-  if ( c->style == NAME_openLook )
+  if ( c->style == NAME_xpce )
   { Int h = getClassVariableValueObject(c, NAME_height);
     double px = h ? valNum(h) : 11;
     return geometryGraphical(c,
@@ -168,7 +168,7 @@ styleTextCursor(TextCursor c, Name style)
        (isNil(c->image) || isNil(c->hot_spot)) )
     return errorPce(c, NAME_needImageAndHotSpot);
 
-  if ( style == NAME_openLook )
+  if ( style == NAME_xpce )
   { Int o = getClassVariableValueObject(c, NAME_height);
 
     w = h = o ? o : toInt(11);
@@ -207,7 +207,7 @@ static char *T_set[] =
 /* Instance Variables */
 
 static vardecl var_textCursor[] =
-{ SV(NAME_style, "{arrow,image,block,open_look}", IV_GET|IV_STORE,
+{ SV(NAME_style, "{arrow,image,block,xpce}", IV_GET|IV_STORE,
      styleTextCursor,
      NAME_appearance, "How the text_cursor object is visualised"),
   SV(NAME_image, "image*", IV_GET|IV_STORE, imageTextCursor,
@@ -239,15 +239,14 @@ static getdecl get_textCursor[] =
 /* Resources */
 
 static classvardecl rc_textCursor[] =
-{ RC(NAME_fixedFontStyle, "name", "open_look",
+{ RC(NAME_fixedFontStyle, "name", "xpce",
      "->style for fixed fonts"),
-  RC(NAME_proportionalFontStyle, "name", "open_look",
+  RC(NAME_proportionalFontStyle, "name", "xpce",
      "->style for proportional fonts"),
-  RC(NAME_style, NULL, "open_look", NULL),
-  RC(NAME_style, NULL, "open_look", NULL),
+  RC(NAME_style, NULL, "xpce", NULL),
   RC(NAME_colour, RC_REFINE, "red", NULL),
   RC(NAME_inactiveColour, RC_REFINE, "grey50", NULL),
-  RC(NAME_height, "int", "11", "Height as open_look cursor")
+  RC(NAME_height, "int", "11", "Height as xpce cursor")
 };
 
 /* Class Declaration */

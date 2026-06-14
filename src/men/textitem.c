@@ -1834,7 +1834,7 @@ static classvardecl rc_textItem[] =
      "Time to wait until start of repeat"),
   RC(NAME_repeatInterval, "real", "0.06",
      "Interval between repeats"),
-  RC(NAME_look, RC_REFINE, UXWIN("gtk", "win"), NULL),
+  RC(NAME_look, RC_REFINE, UXWIN("xpce", "win"), NULL),
   RC(NAME_placeholderColour, "colour", "grey60",
      "Colour for the placeholder"),
   RC(NAME_elevation, RC_REFINE,

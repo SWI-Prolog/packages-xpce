@@ -48,7 +48,6 @@ static status	widthSlider(Slider s, Int val);
 #define VALUE_GAP 20
 
 #define OL_BAR_HEIGHT 5
-#define OL_BOX_WIDTH 10
 
 static status
 initialiseSlider(Slider s, Name name, Any low, Any high, Any def, Message msg)
@@ -96,7 +95,7 @@ RedrawAreaSlider(Slider s, Area a)
 { int x, y, w, h;
   int ny, vx, vy, lx, ly, sx, sy, hx, hy;
   int vv;
-  int bw   = s->look == NAME_motif ? OL_BOX_WIDTH : SLIDER_HEIGHT;
+  int bw   = SLIDER_HEIGHT;
   float lv = convert_value(s->low);
   float hv = convert_value(s->high);
   float dv = convert_value(s->displayed_value);
@@ -130,15 +129,6 @@ RedrawAreaSlider(Slider s, Area a)
 			  lflags);
   }
 
-  if ( s->look == NAME_motif )
-  { int by = y+sy+(SLIDER_HEIGHT-OL_BAR_HEIGHT)/2;
-    int ex  = x + sx + valInt(s->width);
-    Elevation z = getClassVariableValueObject(s, NAME_elevation);
-
-    r_3d_box(x+sx, by, vv, OL_BAR_HEIGHT, 0, z, FALSE);
-    r_3d_box(x+sx+vv+bw, by, ex-(x+sx+vv+bw), OL_BAR_HEIGHT, 0, z, FALSE);
-    r_3d_box(x+sx+vv, y+sy, bw, SLIDER_HEIGHT, 0, z, TRUE);
-  } else				/* Gtk based */
   { int by = y+sy+(SLIDER_HEIGHT-OL_BAR_HEIGHT)/2;
     int wx  = valInt(s->width)-vv-bw;
 
@@ -624,7 +614,7 @@ static getdecl get_slider[] =
 /* Resources */
 
 static classvardecl rc_slider[] =
-{ RC(NAME_look, RC_REFINE, "gtk", NULL)
+{ RC(NAME_look, RC_REFINE, "xpce", NULL)
 };
 
 /* Class Declaration */

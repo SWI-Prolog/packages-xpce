@@ -743,7 +743,7 @@ static classvardecl rc_popup[] =
      "Minimum width in pixels"),
   RC(NAME_itemElevation, RC_REFINE, "0",
      NULL),
-  RC(NAME_elevation, RC_REFINE, "1", NULL),
+  RC(NAME_elevation, RC_REFINE, UXWIN("2", "1"), NULL),
   RC(NAME_labelSuffix, RC_REFINE, "", NULL),
   RC(NAME_previewElevation, RC_REFINE,
      "elevation(preview, 1, hilited)",
@@ -751,7 +751,7 @@ static classvardecl rc_popup[] =
   RC(NAME_format, RC_REFINE, "left", NULL),
   RC(NAME_margin, RC_REFINE, "1",    NULL),
   RC(NAME_look,   RC_REFINE,
-     UXWIN("motif", "win"),
+     UXWIN("xpce", "win"),
      NULL)
 };
 

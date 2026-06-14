@@ -86,13 +86,9 @@ draw_generic_button_face(Button b,
   if ( z && notNil(z) )			/* 3-d style */
   { int up = (b->status == NAME_inactive || b->status == NAME_active);
 
-    if ( b->look == NAME_motif ||
-	 b->look == NAME_gtk ||
-	 b->look == NAME_win )
     { int bx = x, by = y, bw = w, bh = h;
 
-      if ( b->look == NAME_motif ||
-	   b->look == NAME_gtk )
+      if ( b->look == NAME_xpce )
       {
 	if ( b->show_focus_border == ON )
 	{ PceWindow sw = getWindowGraphical((Graphical)b);
@@ -135,20 +131,13 @@ draw_generic_button_face(Button b,
     }
 
     r_3d_box(x, y, w, h, r, z, up);
-    if ( b->look == NAME_openLook && defb )
-    { Any old;
-
-      old = r_colour(r_elevation_shadow(z));
-      r_box(x+2, y+2, w-4, h-4, r, NIL);
-      r_colour(old);
-    }
   } else				/* 2-d style */
   { int swapc  = 0;
     int pen    = valInt(b->pen);
     int radius = valInt(b->radius);
     int shadow = valInt(b->shadow);
 
-    if ( defb && b->look != NAME_openLook )
+    if ( defb )
       pen++;
 
     r_thickness(pen);
@@ -165,9 +154,6 @@ draw_generic_button_face(Button b,
 
     if ( swapc )
       r_swap_background_and_foreground();
-
-    if ( defb && b->look == NAME_openLook )
-      r_box(x+pen, y+pen, w-2*pen-shadow, h-2*pen-shadow, radius, NIL);
 
     if ( swapc )
       r_swap_background_and_foreground();
@@ -189,7 +175,7 @@ draw_button_popup_indicator(Button b, int x, int y, int w, int h, bool up)
   } else
   { Elevation z = getClassVariableValueObject(b, NAME_elevation);
 
-    if ( b->look == NAME_motif || b->look == NAME_gtk )
+    if ( b->look == NAME_xpce )
     { double bw = ex*1.2;
       double bh = bw*0.6;
 
@@ -220,12 +206,9 @@ RedrawAreaButton(Button b, Area a)
   int rm = 0;				/* right-margin */
   PceWindow sw;
   bool kbf;				/* Button has keyboard focus */
-  bool obhf;				/* Other button has focus */
   bool focus;
-  bool swapbg = false;
   bool up;
   int flags = 0;
-  Elevation z;
 
   if ( b->active == OFF )
     flags |= LABEL_INACTIVE;
@@ -237,18 +220,11 @@ RedrawAreaButton(Button b, Area a)
 
   if ( (sw = getWindowGraphical((Graphical)b)) )
   { kbf   = (sw->keyboard_focus == (Graphical) b);
-    obhf  = (!kbf && instanceOfObject(sw->keyboard_focus, ClassButton));
     focus = (sw->input_focus == ON);
   } else
-    kbf = obhf = focus = false;		/* should not happen */
+    kbf = focus = false;		/* should not happen */
 
   draw_generic_button_face(b, x, y, w, h, up, defb, kbf && focus);
-
-  if ( b->look == NAME_openLook && b->status == NAME_preview &&
-       !((z = getClassVariableValueObject(b, NAME_elevation)) && notNil(z)) )
-  { swapbg = TRUE;
-    r_swap_background_and_foreground();
-  }
 
   if ( notNil(b->popup) && !instanceOfObject(b->label, ClassImage) )
     rm = draw_button_popup_indicator(b, x, y, w, h, up);
@@ -256,9 +232,6 @@ RedrawAreaButton(Button b, Area a)
   RedrawLabelDialogItem(b, accelerator_code(b->accelerator),
 			x, y, w-rm, h,
 			NAME_center, NAME_center, flags);
-
-  if ( swapbg )
-    r_swap_background_and_foreground();
 
   return RedrawAreaGraphical(b, a);
 }
@@ -360,13 +333,7 @@ makeButtonGesture(void)
 
 static status
 WantsKeyboardFocusButton(Button b)
-{ if ( b->active == ON &&
-       ( b->look == NAME_motif ||
-	 b->look == NAME_gtk ||
-	 b->look == NAME_win) )
-    succeed;
-
-  fail;
+{ return b->active == ON;
 }
 
 
@@ -625,7 +592,7 @@ static getdecl get_button[] =
 /* Resources */
 
 static classvardecl rc_button[] =
-{ RC(NAME_look, RC_REFINE, UXWIN("gtk", "win"),
+{ RC(NAME_look, RC_REFINE, UXWIN("xpce", "win"),
      NULL),
   RC(NAME_alignment, "{column,left,center,right}", "center",
      "Alignment in the row"),

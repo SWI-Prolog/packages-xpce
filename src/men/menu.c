@@ -526,14 +526,11 @@ elevated_items(Menu m, Elevation z)
   { if ( m->kind == NAME_choice )
       succeed;
 
-    if ( m->look == NAME_openLook )
-    { if ( m->feedback == NAME_image )
-	fail;
-      succeed;
+    if ( m->look == NAME_xpce )
+    { if ( instanceOfObject(m, ClassPopup) )
+	succeed;
+      return m->feedback != NAME_image;
     }
-
-    if ( m->look == NAME_motif )
-      return instanceOfObject(m, ClassPopup);
 
     if ( m->look == NAME_win)
       return (m->preview_feedback != NAME_colour &&
@@ -684,21 +681,7 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
 
       r_image(leftmark, 0, 0, x+b, by, bw, bh);
     } else if ( (Name) leftmark == NAME_marked )
-    { if ( m->look == NAME_motif )
-      { Elevation mz = getClassVariableValueObject(m, NAME_markElevation);
-
-	if ( m->multiple_selection == ON )
-	{ int dy = item_mark_y(m, y, h, MARK_BOX_SIZE);
-
-	  r_3d_box(x+b, dy, MARK_BOX_SIZE, MARK_BOX_SIZE,
-		   0, mz, mi->selected == OFF);
-	} else
-	{ int dy = item_mark_y(m, y, h, MARK_DIAMOND_SIZE);
-
-	  r_3d_diamond(x+b, dy, MARK_DIAMOND_SIZE, MARK_DIAMOND_SIZE,
-		       mz, mi->selected == OFF);
-	}
-      } else if ( m->look == NAME_win )
+    { if ( m->look == NAME_win )
       { if ( m->multiple_selection == OFF )
 	{ int d = MARK_CIRCLE_SIZE;
 	  int zh = valInt(z->height);
@@ -876,9 +859,7 @@ RedrawAreaMenu(Menu m, Area a)
       r_3d_box(cx, cy, w-(cx-x), h-(cy-y), 0, z, TRUE);
     cx += valInt(m->margin);
 
-    if ( m->look == NAME_motif ||
-	 m->look == NAME_win ||
-	 (m->look == NAME_openLook && instanceOfObject(iz, ClassElevation)) )
+    if ( m->look == NAME_win )
     { iw += gx; ih += gy;
       gx = gy = 0;
     } else if ( m->pen != ZERO )
@@ -1695,7 +1676,7 @@ allOffMenu(Menu m)
 
 static status
 kindMenu(Menu m, Name kind)
-{ if ( m->look == NAME_openLook || m->look == NAME_gtk )
+{ if ( m->look == NAME_xpce )
   { if ( kind == NAME_choice || kind == NAME_toggle )
     { assign(m, on_image, NIL);
       assign(m, off_image, NIL);
@@ -1714,30 +1695,6 @@ kindMenu(Menu m, Name kind)
       multipleSelectionMenu(m, OFF);
       assign(m, kind, kind);
 
-      return requestComputeGraphical(m, DEFAULT);
-    } else if ( kind == NAME_cycle )
-    { assign(m, pen, ZERO);
-    }
-  } else if ( m->look == NAME_motif )
-  { if ( kind == NAME_marked || kind == NAME_toggle )
-    { assign(m, on_image, MARK_IMAGE);
-      assign(m, off_image, NOMARK_IMAGE);
-      assign(m, feedback, NAME_image);
-      assign(m, pen, ZERO);
-      assign(m, border, toInt(3));
-      multipleSelectionMenu(m, kind == NAME_toggle ? ON : OFF);
-
-      assign(m, kind, kind);
-      return requestComputeGraphical(m, DEFAULT);
-    } else if ( kind == NAME_choice )
-    { assign(m, on_image, NIL);
-      assign(m, off_image, NIL);
-      assign(m, feedback, NAME_box);
-      assign(m, pen, ONE);
-      assign(m, border, TWO);
-      multipleSelectionMenu(m, OFF);
-
-      assign(m, kind, kind);
       return requestComputeGraphical(m, DEFAULT);
     } else if ( kind == NAME_cycle )
     { assign(m, pen, ZERO);
@@ -1808,7 +1765,7 @@ kindMenu(Menu m, Name kind)
       }
       multipleSelectionMenu(m, OFF);
     } else if ( kind == NAME_cyclePopup )
-    { if ( m->look == NAME_win || m->look == NAME_motif )
+    { if ( m->look == NAME_win )
 	assign(m, on_image, NAME_marked);
       else
 	assign(m, on_image, MARK_IMAGE);

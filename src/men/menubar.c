@@ -55,16 +55,13 @@ RedrawAreaButtonMenuBar(Button b, Area a)
   Any ofg = NIL;
   int flags = 0;
 
-  if ( b->look != NAME_gtk && b->look != NAME_win )
-    return RedrawAreaButton(b, a);
-
   initialiseDeviceGraphical(b, &x, &y, &w, &h);
   NormaliseArea(x, y, w, h);
 
   if ( b->status == NAME_preview )
   { Elevation e;
 
-    if ( b->look == NAME_gtk &&
+    if ( b->look == NAME_xpce &&
 	 (e = getClassVariableValueObject(b, NAME_previewElevation)) &&
 	 notNil(e) )
     { r_3d_box(x, y, w, h, 0, e, TRUE);
@@ -158,30 +155,27 @@ changedMenuBarButton(MenuBar mb, Any obj)
 
 static status
 computeButtonMenuBar(Button b)
-{ if ( b->look == NAME_win || b->look == NAME_gtk )
-  { int w, h, isimage;
+{ int w, h, isimage;
 
-    TRY(obtainClassVariablesObject(b));
-    dia_label_size(b, &w, &h, &isimage);
+  TRY(obtainClassVariablesObject(b));
+  dia_label_size(b, &w, &h, &isimage);
 
-    if ( !isimage )
-    { w += valInt(getAvgCharWidthFont(b->label_font)) * 2;
+  if ( !isimage )
+  { w += valInt(getAvgCharWidthFont(b->label_font)) * 2;
 
-      if ( b->look == NAME_gtk )
-	h += 4;
-    } else
-    { w += 4;
+    if ( b->look == NAME_xpce )
       h += 4;
-    }
-
-    CHANGING_GRAPHICAL(b,
-	assign(b->area, w, toInt(w));
-	assign(b->area, h, toInt(h)));
-
-    assign(b, request_compute, NIL);
-    succeed;
   } else
-    return qadSendv(b, NAME_compute, 0, NULL);
+  { w += 4;
+    h += 4;
+  }
+
+  CHANGING_GRAPHICAL(b,
+      assign(b->area, w, toInt(w));
+      assign(b->area, h, toInt(h)));
+
+  assign(b, request_compute, NIL);
+  succeed;
 }
 
 
@@ -230,10 +224,8 @@ getReferenceMenuBar(MenuBar mb)
     if ( !(ref = getReferenceDialogItem(b)) &&
 	 !instanceOfObject(b->label, ClassImage) &&
 	 (ref = getReferenceButton(b)) )
-    { if ( b->look == NAME_win || b->look == NAME_gtk )
-      { Int rx = getAvgCharWidthFont(b->label_font);
-	assign(ref, x, rx);
-      }
+    { Int rx = getAvgCharWidthFont(b->label_font);
+      assign(ref, x, rx);
       answer(ref);
     }
   }
@@ -493,7 +485,8 @@ eventMenuBar(MenuBar mb, EventObj ev)
 
 static Int
 getHorStretchMenuBar(MenuBar mb)
-{ answer(mb->look == NAME_motif ? ONE : ZERO);
+{ (void)mb;
+  answer(ZERO);
 }
 
 
@@ -598,11 +591,9 @@ appendMenuBar(MenuBar mb, PopupObj p, Name alignment, Any before)
 
     assign(b, popup, p);
     obtainClassVariablesObject(mb);
-    if ( mb->look != NAME_openLook )
-    { assign(b, label_font, mb->label_font);
-      assign(b, pen,        mb->pen);
-      assign(b, radius,     mb->radius);
-    }
+    assign(b, label_font, mb->label_font);
+    assign(b, pen,        mb->pen);
+    assign(b, radius,     mb->radius);
     send(p, NAME_format, getSlotObject(mb, NAME_format), EAV);
     requestComputeGraphical(mb, DEFAULT);
   }
@@ -845,7 +836,7 @@ static senddecl send_menuBar[] =
      NAME_organisation, "Remove all menus from the menu_bar"),
   SM(NAME_delete, 1, "member:popup", deleteMenuBar,
      NAME_organisation, "Delete popup or name"),
-  SM(NAME_look, 1, "{open_look,motif,win,gtk}", lookMenuBar,
+  SM(NAME_look, 1, "{xpce,win}", lookMenuBar,
      NAME_appearance, "Look-and-feel switch")
 };
 
@@ -871,7 +862,7 @@ static classvardecl rc_menuBar[] =
      "Format items {left,center,right}"),
   RC(NAME_gap, "int", UXWIN("10", "5"),
      "Distance between buttons"),
-  RC(NAME_look, RC_REFINE, UXWIN("gtk", "win"),
+  RC(NAME_look, RC_REFINE, UXWIN("xpce", "win"),
      NULL),
   RC(NAME_labelFont, "font", "normal",
      "Default font for labels"),
