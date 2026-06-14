@@ -725,10 +725,6 @@ NewClass(vmi)
   Name		name;			/* Name of vmi */
 End;
 
-NewClass(c_pointer)
-  void *	pointer;		/* the pointer value */
-End;
-
 NewClass(area)
   Int		x;			/* position and dimension */
   Int		y;
@@ -1629,13 +1625,11 @@ __pce_export char *	Cgetline(char *line, int size);
 
 					/* interface prototypes */
 __pce_export Any	cToPceName(const char *text);
-COMMON(CPointer) CtoCPointer(void *);
-COMMON(status)	makeClassC(Class class);
 COMMON(status)	makeClassRC(Class class);
-COMMON(status)	makeClassCPointer(Class class);
 COMMON(status)	initialiseHost(Host h, Name which);
 COMMON(status)	makeClassHost(Class class);
 COMMON(status)	makeClassHostData(Class class);
+COMMON(status)	makeClassHostMethod(Class class);
 COMMON(status)	makeClassSourceSink(Class class);
 COMMON(Host)	HostObject(void);
 COMMON(int)	hostGetc(void);

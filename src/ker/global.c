@@ -49,7 +49,6 @@ struct global
   { NAME_changedWindows,	NAME_window },
   { NAME_DocumentFonts,		NAME_font },
   { NAME_scrollBarRepeatTimer,  NAME_scrollBar},
-  { NAME_c,			NAME_c},
   { NAME_host,			NAME_host },
   { NAME_ButtonGesture,		NAME_clickGesture },
   { NAME_PopupWindows,		NAME_popup },

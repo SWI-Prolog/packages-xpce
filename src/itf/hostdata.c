@@ -186,3 +186,22 @@ makeClassHostData(Class class)
 { return declareClass(class, &host_data_decls);
 }
 
+
+/* class(host_method, host_data) is a marker subclass used to wrap
+ * opaque host-side method handles in method->message.  It exists so
+ * the slot type can be `code|host_method` rather than `code|host_data`:
+ * a plain host_data type would also accept class(prolog_term) instances,
+ * causing the converter to wrap any Prolog compound (e.g. a code-object
+ * constructor like message/3) as a Prolog-term handle instead of
+ * constructing the intended object.
+ */
+
+ClassDecl(host_method_decls, NULL, NULL, NULL, NULL,
+          ARGC_INHERIT, NULL);
+
+
+status
+makeClassHostMethod(Class class)
+{ return declareClass(class, &host_method_decls);
+}
+

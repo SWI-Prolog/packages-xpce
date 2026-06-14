@@ -15,12 +15,11 @@ object-management and storage facilities.
 \productpl{} user-defined classes have their methods implemented
 in Prolog.  This provides a neat and transparent interface between
 the two systems.%
-    \footnote{\product{} defines four implementation techniques for methods.
+    \footnote{\product{} defines three implementation techniques for methods.
     {\em C-function pointers} are used for almost all the built-in
-    behaviour. {\em C++-function pointers} are used when classes are
-    defined in C++\ifpw{}{ (\cite{XPCE:cpp})}. Instances of
-    \class{c_pointer} are left to the host object for interpretation and
-    finally, \class{code} objects are executed.}
+    behaviour. Instances of \class{host_data} are left to the host
+    object for interpretation and finally, \class{code} objects are
+    executed.}
 
 User defined classes are defined using Prolog syntax, where some
 operators have special meaning. The definition of an \productpl{} class

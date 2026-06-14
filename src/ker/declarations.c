@@ -104,14 +104,8 @@ static struct class_definition classdefs[] =
   { NAME_button, NAME_dialogItem, makeClassButton,
     &ClassButton, "Push button to invoke a command" },
 
-  { NAME_c, NAME_host, makeClassC,
-    &ClassC, "C language (for communication)" },
-
   { NAME_classVariable, NAME_behaviour, makeClassClassVariable,
     &ClassClassVariable, "Class variables (defaults)" },
-
-  { NAME_cPointer, NAME_object, makeClassCPointer,
-    &ClassCPointer, "C void * encapsulation" },
 
   { NAME_chain, NAME_object, makeClassChain,
     &ClassChain, "Single linked list of objects" },
@@ -256,6 +250,9 @@ static struct class_definition classdefs[] =
 
   { NAME_hostData, NAME_object, makeClassHostData,
     &ClassHostData, "Handle to native data of the host language" },
+
+  { NAME_hostMethod, NAME_hostData, makeClassHostMethod,
+    &ClassHostMethod, "Opaque handle to a host-implemented method" },
 
   { NAME_hyper, NAME_programObject, makeClassHyper,
     &ClassHyper, "Named binary association (hyper link)" },

@@ -1661,7 +1661,12 @@ unifyObject(term_t t, PceObject obj, int top)
       }
     }
     case PCE_HOSTDATA:
-      return PL_unify(t, getTermHandle(obj)); /* TBD: avoid redoing this */
+      if ( pceInstanceOf(obj, ClassProlog) )
+	return PL_unify(t, getTermHandle(obj)); /* TBD: avoid redoing this */
+      /* Other host_data subclasses (e.g. host method handles) behave
+	 like regular object references, so reclassify and fall through. */
+      pcetype = pceToCReference(obj, &value);
+      /* fall through */
     case PCE_REFERENCE:
     case PCE_ASSOC:
       if ( !top )
@@ -2501,7 +2506,7 @@ pl_pce_method_implementation(term_t id, term_t msg)
   { return PL_warning("pce_method_implementation/2: type error");
   }
 
-  return unifyObject(msg, cToPcePointer(pcd), FALSE);
+  return unifyObject(msg, cToPceHostData(pcd), FALSE);
 }
 
 
@@ -3243,6 +3248,9 @@ it may be new(class) or new(Ref, Class), as well as a list.
 static PceObject
 PrologTranslate(PceObject hd, PceObject type)
 { term_t t;
+
+  if ( !pceInstanceOf(hd, ClassProlog) )
+    return hd;			/* e.g. host method handles: no translation */
 
   if ( (t = getTermHandle(hd)) )
     return termToObject(t, type, NULLATOM, FALSE);

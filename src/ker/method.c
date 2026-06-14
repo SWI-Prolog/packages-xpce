@@ -36,7 +36,6 @@
 #include <h/kernel.h>
 #include <h/trace.h>
 #include <h/interface.h>
-#include <itf/c.h>
 #include <h/unix.h>
 #include <h/text.h>
 
@@ -83,7 +82,7 @@ initialiseMethod(Method m, Name name, Vector types, Code msg, StringObj doc, Sou
   assign(m, source,  loc);
 #endif
 
-  if ( notNil(msg) && instanceOfObject(msg, ClassCPointer) )
+  if ( ClassHostMethod && instanceOfObject(msg, ClassHostMethod) )
     setDFlag(m, D_HOSTMETHOD);
 
   return typesMethod(m, types);
@@ -446,7 +445,7 @@ getPrintNameMethod(Method m)
 
 static char *T_initialise[] =
 	{ "name=name", "types=[vector]",
-	  "implementation=code|c_pointer", "summary=[string]*",
+	  "implementation=code|host_method", "summary=[string]*",
 	  "source=[source_location]*", "group=[name]*" };
 
 /* Instance Variables */
@@ -462,7 +461,7 @@ static vardecl var_method[] =
   IV(NAME_source, "source_location*", IV_BOTH,
      NAME_manual, "Location of definition in the sources"),
 #endif
-  IV(NAME_message, "code|c_pointer*", IV_BOTH,
+  IV(NAME_message, "code|host_method*", IV_BOTH,
      NAME_implementation, "If implemented in PCE: the code object"),
   IV(NAME_function, "alien:Func", IV_NONE,
      NAME_implementation, "If implemented in C: function pointer")

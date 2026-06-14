@@ -158,24 +158,10 @@ cToPceName_nW(const wchar_t *text, size_t len)
 
 
 Any
-cToPcePointer(void *ptr)
-{ CPointer p = answerObjectv(ClassCPointer, 0, NULL);
-
-  p->pointer = ptr;
-
-  return p;
-}
-
-
-void *
-pcePointerToC(PceObject obj)
-{ if ( instanceOfObject(obj, ClassCPointer) )
-  { CPointer ptr = (CPointer)obj;
-
-    return ptr->pointer;
-  }
-
-  return PCE_NO_POINTER;
+cToPceHostData(void *ptr)
+{ if ( ClassHostMethod->realised != ON )
+    realiseClass(ClassHostMethod);
+  return CtoHostData(ClassHostMethod, ptr, PCE_ANSWER);
 }
 
 
@@ -489,9 +475,9 @@ convert_trace_flags(PceMethod m, int *flags)
 int
 pceGetMethodInfo(PceMethod m, pce_method_info *info)
 { if ( onDFlag(m, D_HOSTMETHOD) )
-  { CPointer p = (CPointer)m->message;
+  { HostData hd = (HostData)m->message;
 
-    info->handle = p->pointer;
+    info->handle = hd->handle;
     if ( DebuggingProgramObject(m, D_TRACE|D_BREAK) )
       convert_trace_flags(m, &info->flags);
 

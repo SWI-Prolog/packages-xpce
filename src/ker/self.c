@@ -124,8 +124,6 @@ initialisePce(Pce pce)
 
   at_pce_exit(exit_pce, ATEXIT_FIFO);
 
-  initPublicInterface();
-
   succeed;
 }
 
@@ -1686,8 +1684,6 @@ pceInitialise(int handles, const char *home, const char *appdata,
   featurePce(PCE, NAME_socket);
 #endif
 
-  DEBUG_BOOT(Cprintf("C/C++ global objects\n"));
-  initCGlobals();
   if ( home )
     send(PCE, NAME_home, CtoName(home), EAV);
   if ( appdata )

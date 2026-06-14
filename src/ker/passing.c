@@ -41,7 +41,6 @@
 #define INLINE_UTILITIES 1
 #include <h/kernel.h>
 #include <h/trace.h>
-#include <itf/c.h>
 
 					/* Win32 native locking */
 #ifdef USE_WIN32_CRITICAL_SECTION

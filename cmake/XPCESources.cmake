@@ -24,9 +24,8 @@ set(GRA_SRC	arc.c arrow.c bitmap.c box.c circle.c colour.c
 		scrollbar.c text.c transform.c tree.c visual.c
 		pixmap.c elevation.c pen.c draw.c bezier.c hsv.c)
 
-set(ITF_SRC	c.c host.c interface.c cpointer.c asfile.c console.c
-		stub.c xmalloc.c iostream.c srcsink.c rc.c hostdata.c
-		public.c)
+set(ITF_SRC	host.c interface.c asfile.c console.c
+		stub.c xmalloc.c iostream.c srcsink.c rc.c hostdata.c)
 
 set(KER_SRC	alloc.c assoc.c behaviour.c class.c conversion.c
 		debug.c declarations.c error.c gc.c thread.c
@@ -123,7 +122,7 @@ set(XPCE_DATA_DIRS
 
     appl-help
 
-    man man/faq man/reference man/reference/class)
+    man man/faq)
 
 set(XPCE_DATA_prolog_boot pce_autoload.pl pce_editor.pl pce_error.pl
     pce_expand.pl pce_expansion.pl pce_global.pl pce_goal_expansion.pl
@@ -141,7 +140,7 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     pce_emacs.pl pce_float_item.pl pce_font_item.pl pce_grapher.pl
     pce_graphical_browser.pl pce_helper.pl pce_help_file.pl pce_history.pl
     pce_identifier_item.pl pce_image_browser.pl pce_image_item.pl
-    pce_image.pl pce_main.pl pce_manual.pl pce_meta.pl
+    pce_image.pl pce_main.pl pce_manual.pl pce_meta.pl pce_html_manual.pl
     pce_objects.pl pce.pl pce_progress.pl
     pce_prolog_xref.pl pce_prompter.pl pce_regex_compat.pl pce_renew.pl
     pce_report.pl pce_require.pl pce_select_set_item.pl
@@ -201,12 +200,13 @@ endif()
 
 set(XPCE_DATA_prolog_lib_english pce_messages.pl)
 
-set(XPCE_DATA_prolog_lib_man behaviour_item.pl classification.dat classmap.pl
-    man_index.pl p_card.pl pce_op.pl p_data.pl showevent.pl util.pl
-    v_card.pl v_class.pl v_editor.pl v_error.pl v_global.pl v_group.pl
-    v_hierarchy.pl v_inherit.pl v_inspector.pl v_instance.pl v_manual.pl
-    v_module.pl v_search.pl v_select.pl v_statistics.pl v_summary.pl
-    v_tile.pl v_topic.pl v_visual.pl)
+set(XPCE_DATA_prolog_lib_man behaviour_item.pl classification.pl classmap.pl
+    example_summaries.pl group_summaries.pl p_card.pl pce_op.pl p_data.pl
+    showevent.pl util.pl
+    v_card.pl v_class.pl v_error.pl v_global.pl v_group.pl
+    v_hierarchy.pl v_idx.pl v_inherit.pl v_inspector.pl v_instance.pl
+    v_manual.pl v_module.pl v_search.pl v_select.pl v_statistics.pl
+    v_summary.pl v_tile.pl v_topic.pl v_visual.pl)
 
 set(XPCE_DATA_prolog_lib_math expandmath.pl)
 
@@ -253,7 +253,7 @@ set(XPCE_DATA_prolog_contrib contrib.pl README)
 set(XPCE_DATA_prolog_contrib_rubik maplist.pl README rubikpce.pl rubik.pl)
 
 set(XPCE_DATA_prolog_demo arc.pl chess.pl colour.pl constraint.pl cursor.pl
-    event_hierarchy.pl fontviewer.pl graph.pl hsvcolour.pl
+    dragdrop_file.pl event_hierarchy.pl fontviewer.pl graph.pl hsvcolour.pl
     imageviewer.pl ispell.pl juggler.pl kangaroo.pl opacity.pl pce_demo.pl
     transform.pl tube_gui.pl tube.pl tube.json)
 
@@ -322,48 +322,6 @@ set(XPCE_DATA_appl-help customise.hlp dialog.hlp emacs.hlp
     event_monitor.hlp help.hlp pcedraw.hlp pcefaq.hlp plprefs.hlp)
 
 set(XPCE_DATA_man_faq faq.html)
-
-set(XPCE_DATA_man_reference bug_fixes.doc changes.doc errors.doc
-    examples.doc groups.doc objects.doc predicates.doc tools.doc
-    topics.doc)
-
-set(XPCE_DATA_man_reference_class and.doc application.doc arc.doc
-    area.doc arrow.doc assign.doc attribute.doc behaviour.doc
-    bezier_curve.doc binary_condition.doc binary_expression.doc binding.doc
-    bitmap.doc block.doc bool.doc box.doc browser.doc
-    browser_select_gesture.doc button.doc chain.doc chain_hyper.doc
-    chain_table.doc char_array.doc circle.doc class.doc class_variable.doc
-    click_gesture.doc code.doc code_vector.doc colour.doc
-    connect_gesture.doc connection.doc constant.doc constraint.doc
-    c_pointer.doc create.doc cursor.doc date.doc device.doc dialog.doc
-    dialog_group.doc dialog_item.doc dict.doc dict_item.doc directory.doc
-    display.doc display_manager.doc divide.doc @=.doc editor.doc
-    elevation.doc ellipse.doc eq.doc equal.doc error.doc event.doc
-    event_node.doc event_tree.doc figure.doc file.doc font.doc format.doc
-    fragment.doc frame.doc function.doc gesture.doc get_method.doc
-    graphical.doc grbox.doc greateq.doc greater.doc handle.doc handler.doc
-    handler_group.doc hash_table.doc hbox.doc host_data.doc host.doc
-    hyper.doc identity.doc if.doc image.doc int_item.doc joint.doc
-    key_binding.doc label_box.doc label.doc layout_manager.doc lbox.doc
-    less.doc lesseq.doc line.doc link.doc list_browser.doc menu_bar.doc
-    menu.doc menu_item.doc message.doc method.doc minus.doc modifier.doc
-    monitor.doc move_gesture.doc move_outline_gesture.doc name.doc
-    nameref.doc node.doc not.doc noteq.doc number.doc object.doc obtain.doc
-    operator.doc or.doc parbox.doc parser.doc path.doc pce.doc picture.doc
-    pixmap.doc plus.doc point.doc popup.doc popup_gesture.doc process.doc
-    progn.doc program_object.doc prolog_term.doc quote_function.doc real.doc
-    recogniser.doc regex.doc region.doc relation.doc relation_table.doc
-    resize_gesture.doc resize_outline_gesture.doc
-    resize_table_slice_gesture.doc resource.doc rubber.doc scroll_bar.doc
-    send_method.doc sheet.doc size.doc slider.doc socket.doc
-    source_location.doc source_sink.doc spatial.doc stream.doc string.doc
-    style.doc syntax_table.doc tab.doc table_cell.doc table_column.doc
-    table.doc table_row.doc table_slice.doc tab_stack.doc tbox.doc
-    text_buffer.doc text_cursor.doc text.doc text_image.doc text_item.doc
-    text_margin.doc tile_adjuster.doc tile.doc timer.doc times.doc
-    tokeniser.doc tree.doc tuple.doc type.doc var.doc variable.doc
-    vector.doc view.doc visual.doc vmi.doc when.doc while.doc
-    window_decorator.doc window.doc)
 
 ################
 # QLF DEPENDENCIES

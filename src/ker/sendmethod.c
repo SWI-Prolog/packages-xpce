@@ -35,7 +35,6 @@
 #define INLINE_UTILITIES 1
 #include <h/kernel.h>
 #include <h/interface.h>
-#include <itf/c.h>
 
 
 SendMethod

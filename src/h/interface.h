@@ -174,8 +174,6 @@ typedef union
 #define PCE_REAL	5
 #define PCE_HOSTDATA	6
 
-#define PCE_NO_POINTER  ((void *) ~0L)
-
 #define PCE_ANSWER	0x1		/* CtoHostData() flags */
 
 __pce_export int    pceToC(PceObject datum, PceCValue *rval);
@@ -183,8 +181,8 @@ __pce_export int    pceToCReference(PceObject datum, PceCValue *rval);
 __pce_export char * pceCharArrayToCA(PceObject datum, size_t *len);
 __pce_export wchar_t * pceCharArrayToCW(PceObject datum, size_t *len);
 __pce_export int    pceIsString(PceObject datum);
-__pce_export void * pcePointerToC(PceObject datum);
 __pce_export PceHostData  CtoHostData(PceClass class, void *handle, int flags);
+__pce_export PceObject    cToPceHostData(void *handle);
 __pce_export void *    getHostDataHandle(PceHostData hd);
 __pce_export void  makeAnyHostData(PceHostData hd);
 __pce_export void  setHostDataHandle(PceHostData hd, void *handle);
@@ -417,7 +415,6 @@ __pce_export PceObject	cToPceStringW(PceName assoc,
 				      int translate);
 __pce_export PceObject	cToPceAssoc(const char *);
 __pce_export PceObject	cToPceReference(uintptr_t);
-__pce_export PceObject	cToPcePointer(void *ptr);
 __pce_export int	pceLock(PceObject);
 
 __pce_export PceObject	cToPceTmpCharArray(const char *text);

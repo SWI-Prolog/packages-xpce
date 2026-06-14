@@ -130,7 +130,7 @@ method(Spec, Method) :-
 prolog_method(Implementation) :-
     send(Implementation, instance_of, method),
     get(Implementation, message, Msg),
-    send(Msg, instance_of, c_pointer).
+    send(Msg, instance_of, host_data).
 
 trace_feedback(Action, Obj) :-
     (   prolog_method(Obj)

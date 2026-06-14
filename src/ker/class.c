@@ -34,7 +34,6 @@
 
 #include <h/kernel.h>
 #include <h/text.h>
-#include <itf/c.h>
 #include <h/interface.h>		/* hostCallProc() */
 
 static status	recordInstancesClass(Class class, BoolObj keep, BoolObj recursive);
@@ -2311,7 +2310,7 @@ makeClassClass(Class class)
 	     "Type conversion");
 
   localClass(class, NAME_resolveMethodMessage, NAME_cache,
-	     "[code|c_pointer]*",NAME_both,
+	     "[code|host_data]*",NAME_both,
 	     "Hook for lazy attachment of methods");
 
   localClass(class, NAME_sendTable, NAME_cache, "hash_table", NAME_get,

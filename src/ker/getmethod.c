@@ -72,7 +72,7 @@ initialiseGetMethod(GetMethod m, Name name, Type rtype,
 
 static char *T_initialise[] =
         { "name=name", "return=[type]", "types=[vector]",
-	  "implementation=function|c_pointer",
+	  "implementation=function|host_method",
 	  "summary=[string]*",
 	  "source=[source_location]*", "group=[name]*" };
 static char *T_get[] =

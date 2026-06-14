@@ -244,20 +244,6 @@ button.
 		 message(@pce, write_ln, hello))).
 \end{code}
 
-#class c "c(system)"
-Class \class{c} is a subclass of class \class{host}, providing
-communication to C and C++ code. It is not used directly by the
-application programmer.
-
-#class c_pointer "c_pointer(print_name)"
-Class \class{c_pointer} encapsulates an anonymous C pointer ({\tt void
-*}).  It is used to register references to Prolog predicates with \product{}
-methods.  See also \chapref{udc}.
-\begin{code}
-?- pce_predicate_reference(gnat:gnu(_,_), X).
-X = @1190997/c_pointer
-\end{code}
-
 #class chain "chain(any...)"
 Class \class{chain} represents a single-linked list of arbitrary
 objects.  Chains are commonly used inside \product{} to represent collections.
