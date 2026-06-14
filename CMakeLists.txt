@@ -108,7 +108,6 @@ set(XPCE_BUILD_HOME      ${SWIPL_BUILD_HOME}/xpce)
 set(XPCE_BUILD_LIBRARY   ${XPCE_BUILD_HOME}/prolog/lib)
 set(XPCE_PREDICATE_INDEX ${XPCE_BUILD_LIBRARY}/INDEX.pl)
 set(XPCE_CLASS_INDEX     ${XPCE_BUILD_LIBRARY}/CLASSINDEX.pl)
-set(XPCE_MANINDEX        ${XPCE_BUILD_HOME}/man/reference/index.obj)
 
 set(SWIPL_COMMAND_DEPENDS plugin_pl2xpce)
 set(SWIPL_QLF_BASE        ${XPCE_BUILD_LIBRARY})
@@ -126,14 +125,6 @@ add_swipl_target(
     COMMAND "pce_make_library_index('${XPCE_BUILD_LIBRARY}')"
     DEPENDS xpce-predicate-index
     COMMENT "-- Building xpce class index")
-add_swipl_target(
-    xpce-manual-index
-    QUIET
-    OUTPUT ${XPCE_MANINDEX}
-    COMMAND "pce_make_manual_index('${XPCE_MANINDEX}')"
-    SCRIPT  "${XPCE_BUILD_LIBRARY}/man/man_index.pl"
-    DEPENDS xpce-predicate-index
-    COMMENT "-- Building manual index")
 
 set(SWIPL_COMMAND_DEPENDS ${SWIPL_COMMAND_DEPENDS}
     xpce-predicate-index xpce-class-index)
@@ -141,6 +132,8 @@ set(SWIPL_COMMAND_DEPENDS ${SWIPL_COMMAND_DEPENDS}
 if(INSTALL_QLF)
   add_dependencies(library_qlf xpce-predicate-index xpce-class-index)
 endif()
+
+add_subdirectory(man/refmanual)
 
 add_qcompile_target(pce               SOURCES ${XPCE_QLF_pce})
 add_qcompile_target(emacs/emacs	      SOURCES ${XPCE_QLF_emacs}

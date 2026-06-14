@@ -24,26 +24,46 @@
 
 %	Running text indication of behaviour
 
+%   The TeX form uses math-mode arrows; the PDF-string form is plain
+%   ASCII so hyperref can put it in bookmarks and link labels without
+%   complaint.
+
 \newcommand{\send}[1]{%                 % send behaviour
-        \ifmmode\rightarrow\!\!\reffont #1\:%
-        \else\mbox{$\rightarrow$\reffont #1}\fi}
+        \texorpdfstring{%
+            \ifmmode\rightarrow\!\!\reffont #1\:%
+            \else\mbox{$\rightarrow$\reffont #1}\fi%
+        }{->#1}}
 \newcommand{\get}[1]{%                  % get behaviour
-        \ifmmode\leftarrow\!\!\reffont #1\:%
-        \else\mbox{$\leftarrow$\reffont #1}\fi}
+        \texorpdfstring{%
+            \ifmmode\leftarrow\!\!\reffont #1\:%
+            \else\mbox{$\leftarrow$\reffont #1}\fi%
+        }{<-#1}}
 \newcommand{\both}[1]{%                 % both behaviour
-        \ifmmode\mbox{\botharrow\!\!\reffont #1\:}%
-        \else\mbox{\botharrow\reffont #1}\fi}
+        \texorpdfstring{%
+            \ifmmode\mbox{\botharrow\!\!\reffont #1\:}%
+            \else\mbox{\botharrow\reffont #1}\fi%
+        }{<->#1}}
 \newcommand{\classsend}[2]{%		% class ->method
-	\ifmmode\mbox{\reffont #1 \rightarrow!\! #2\:}%
-        \else\mbox{\reffont #1 $\rightarrow$ #2}\fi}
+        \texorpdfstring{%
+            \ifmmode\mbox{\reffont #1 \rightarrow!\! #2\:}%
+            \else\mbox{\reffont #1 $\rightarrow$ #2}\fi%
+        }{#1->#2}}
 \newcommand{\classget}[2]{%		% class <-method
-	\ifmmode\mbox{\reffont #1 \leftarrow\!\! #2\:}%
-        \else\mbox{\reffont #1 $\leftarrow$ #2}\fi}
+        \texorpdfstring{%
+            \ifmmode\mbox{\reffont #1 \leftarrow\!\! #2\:}%
+            \else\mbox{\reffont #1 $\leftarrow$ #2}\fi%
+        }{#1<-#2}}
 \newcommand{\classboth}[2]{%		% class <->method
-	\ifmmode\mbox{\reffont #1 \botharrow\!\! #2\:}%
-        \else\mbox{\reffont #1 $\botharrow$ #2}\fi}
+        \texorpdfstring{%
+            \ifmmode\mbox{\reffont #1 \botharrow\!\! #2\:}%
+            \else\mbox{\reffont #1 $\botharrow$ #2}\fi%
+        }{#1<->#2}}
 \newcommand{\classvar}[2]{%		% class.classvar
-        \mbox{\reffont #1.#2}}
+        \texorpdfstring{\mbox{\reffont #1.#2}}{#1.#2}}
+\newcommand{\classinstvar}[2]{%		% class-instvar (instance variable)
+        \texorpdfstring{\mbox{\reffont #1-#2}}{#1-#2}}
+\newcommand{\errid}[1]{%		% !errid (xpce error reference)
+        \texorpdfstring{\mbox{\reffont !#1}}{!#1}}
 \newcommand{\nameof}[1]{\{{\tt #1}\}}
 
 %	Descriptions (definitions) of various things
@@ -61,6 +81,11 @@
 \def\bothmethod{\@ifstar{\@emptybothmethod}{\@bothmethod}}
 \def\sendmethod{\@ifstar{\@emptysendmethod}{\@sendmethod}}
 \def\getmethod{\@ifstar{\@emptygetmethod}{\@getmethod}}
+\def\classvarmethod{\@ifstar{\@emptyclassvarmethod}{\@classvarmethod}}
+\def\ivarbothmethod{\@ifstar{\@emptyivarbothmethod}{\@ivarbothmethod}}
+\def\ivargetmethod{\@ifstar{\@emptyivargetmethod}{\@ivargetmethod}}
+\def\ivarsendmethod{\@ifstar{\@emptyivarsendmethod}{\@ivarsendmethod}}
+\def\ivarnonemethod{\@ifstar{\@emptyivarnonemethod}{\@ivarnonemethod}}
 
 \newcommand{\@methodarg}[1]{\ifthenelse{\equal{}{#1}}{}{: #1}}
 
@@ -84,6 +109,40 @@
 \def\@getmethod#1#2#3#4{%
 	\definition{#1 $\leftarrow$ #2\@argline{\@methodarg{#3} $\rightarrow$ #4}}%
 	\index{#1,\string\get{#2}}\ignorespaces}
+\def\@emptyclassvarmethod#1#2#3{%
+	\emptydefinition{#1.#2\@methodarg{#3}}%
+			 \index{#1,\string\classvar{#2}}\ignorespaces}
+\def\@classvarmethod#1#2#3{%
+	\definition{#1.#2\@methodarg{#3}}%
+		    \index{#1,\string\classvar{#2}}\ignorespaces}
+
+% Instance-variable rendering: one macro per access form so the
+% caller (pldoc_xpce member_item_latex) picks the variant up front
+% and the TeX side stays trivial.
+\def\@ivarbothmethod#1#2#3{%
+	\definition{#1 $\botharrow$ #2\@methodarg{#3}}%
+		    \index{#1,\string\both{#2}}\ignorespaces}
+\def\@emptyivarbothmethod#1#2#3{%
+	\emptydefinition{#1 $\botharrow$ #2\@methodarg{#3}}%
+			 \index{#1,\string\both{#2}}\ignorespaces}
+\def\@ivargetmethod#1#2#3{%
+	\definition{#1 $\leftarrow$ #2\@methodarg{#3}}%
+		    \index{#1,\string\get{#2}}\ignorespaces}
+\def\@emptyivargetmethod#1#2#3{%
+	\emptydefinition{#1 $\leftarrow$ #2\@methodarg{#3}}%
+			 \index{#1,\string\get{#2}}\ignorespaces}
+\def\@ivarsendmethod#1#2#3{%
+	\definition{#1 $\rightarrow$ #2\@methodarg{#3}}%
+		    \index{#1,\string\send{#2}}\ignorespaces}
+\def\@emptyivarsendmethod#1#2#3{%
+	\emptydefinition{#1 $\rightarrow$ #2\@methodarg{#3}}%
+			 \index{#1,\string\send{#2}}\ignorespaces}
+\def\@ivarnonemethod#1#2#3{%
+	\definition{#1-#2\@methodarg{#3}}%
+		    \index{#1,#2}\ignorespaces}
+\def\@emptyivarnonemethod#1#2#3{%
+	\emptydefinition{#1-#2\@methodarg{#3}}%
+			 \index{#1,#2}\ignorespaces}
 
 \renewcommand{\arg}[1]{{\em #1}}
 
@@ -91,6 +150,10 @@
 \def\classs{}
 \renewcommand{\class}[1]{{\reffont #1}\index{#1 \string\idxtype{class}}}
 \renewcommand{\classs}[1]{{\reffont #1s}\index{#1 \string\idxtype{class}}}
+% \classsuffix{Slug}{Display}: like \class but the displayed token
+% comes from the second arg so sentence-leading capitalisation is
+% preserved while the index/link still uses the canonical name.
+\newcommand{\classsuffix}[2]{{\reffont #2}\index{#1 \string\idxtype{class}}}
 \newcommand{\lib}[1]{library({\tt #1})\index{#1 \string\idxtype{library}}}
 
 \newlength{\clwidth}
