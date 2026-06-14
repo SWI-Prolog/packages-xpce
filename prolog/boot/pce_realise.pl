@@ -43,11 +43,8 @@
 
 :- use_module(pce_principal).
 :- use_module(pce_global).
-:- require([ ignore/1
-           , pce_error/1
-           , call/3
-           , last/2
-           ]).
+:- use_module(library(swi_compatibility), [pce_error/1]).
+:- use_module(library(lists),             [last/2]).
 
 :- pce_global(@class, new(var(class, class, @nil))).
 

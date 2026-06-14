@@ -40,25 +40,23 @@
           pce_end_recording/0
         ]).
 :- use_module(pce_principal).
-:- require([ pce_error/1
-           , pce_info/1
-           , pce_warn/1
-           , string/1
-           , atomic_list_concat/2
-           , expand_goal/2
-           , flatten/2
-           , forall/2
-           , reverse/2
-           , source_location/2
-           , string_codes/2
-           , append/3
-           , atom_concat/3
-           , between/3
-           , maplist/3
-           , sub_atom/5
-           , push_operators/1
-           , pop_operators/0
-           ]).
+:- use_module(library(swi_compatibility),
+              [ pce_error/1
+              , pce_info/1
+              , pce_warn/1
+              ]).
+:- use_module(library(lists),
+              [ append/3
+              , flatten/2
+              , reverse/2
+              ]).
+:- use_module(library(apply),
+              [ maplist/3
+              ]).
+:- use_module(library(operators),
+              [ push_operators/1
+              , pop_operators/0
+              ]).
 
 :- dynamic
     compiling/2,                    % -ClassName

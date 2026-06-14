@@ -37,9 +37,8 @@
           [ pce_message//1,
             pce_message_context//1
           ]).
-:- require([ append/3,
-             get/3
-           ]).
+:- use_module(library(lists),          [append/3]).
+:- use_module('../../boot/pce_principal', [get/3]).
 
 :- multifile
     pce_message//1.

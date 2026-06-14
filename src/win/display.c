@@ -740,9 +740,7 @@ static classvardecl rc_display[] =
   RC(NAME_valueFont, "font", "normal",
      "Text font for confirm/inform"),
   RC(NAME_volume, "0..100", "0",
-     "Default volume of ->bell"),
-  RC(NAME_windowManager, "[name]", "@default",
-     "Window manager running on this display")
+     "Default volume of ->bell")
 };
 
 /* Class Declaration */

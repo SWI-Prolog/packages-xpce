@@ -180,7 +180,7 @@ default_emacs_mode('.*\\.P~?$',                    xsb).
 default_emacs_mode('\\.yap~?',                     prolog).
 default_emacs_mode('.*\\.chr~?$',                  chr).
 default_emacs_mode('.*\\.(tex|sty)~?$',            latex).
-default_emacs_mode('.*\\.doc~?$',                  latex).
+default_emacs_mode('.*\\.plx~?$',                  latex).
 default_emacs_mode('.*\\.lgt~?$',                  logtalk).
 default_emacs_mode('.*\\.html~?$',                 html).
 default_emacs_mode('.*\\.php[0-9]?~?$',            html).

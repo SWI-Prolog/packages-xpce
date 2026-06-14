@@ -36,9 +36,8 @@
 :- use_module(pce_realise).
 :- use_module(pce_expansion, [pce_compiling/1]).
 :- use_module(pce_principal).
-:- require([ pce_error/1
-           , append/3
-           ]).
+:- use_module(library(swi_compatibility), [pce_error/1]).
+:- use_module(library(lists),             [append/3]).
 
 expandable(send, A)       :- A >= 2.
 expandable(get, A)        :- A >= 3.

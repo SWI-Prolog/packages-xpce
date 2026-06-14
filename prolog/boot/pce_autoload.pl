@@ -44,10 +44,8 @@
               [ pce_realise_class/1,
                 pce_prolog_class/1
               ]).
-:- require([ is_absolute_file_name/1
-           , atomic_list_concat/2
-           , absolute_file_name/3
-           ]).
+%   is_absolute_file_name/1, atomic_list_concat/2 and
+%   absolute_file_name/3 are all built-in; no import needed.
 
 :- dynamic
     autoload_decl/2.

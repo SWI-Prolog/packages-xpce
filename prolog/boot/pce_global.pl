@@ -40,8 +40,8 @@
       pce_global(+, :).
 
 :- use_module(pce_principal).
-
-:- require([strip_module/3, gensym/2, append/3]).
+:- use_module(library(gensym), [gensym/2]).
+:- use_module(library(lists),  [append/3]).
 
 :- dynamic
     'pce global goal'/3,                      % Ref, Module, Goal

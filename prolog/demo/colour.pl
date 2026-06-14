@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi-prolog.org
     WWW:           https://www.swi-prolog.org/projects/xpce/
-    Copyright (c)  1996-2025, University of Amsterdam
+    Copyright (c)  1996-2026, University of Amsterdam
                               SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -37,12 +37,12 @@
           [ colour_browser/0
           ]).
 :- use_module(library(pce)).
-:- require([ send_list/3
-           ]).
+:- use_module(library(pce_util)).
+:- pce_autoload(hsv_browser, demo(hsvcolour)).
 
 /** <module> Colour browse demo
 
-This demo implements a browser for the predefined colours.
+This demo implements a browser for the predefined CSS named colours.
 */
 
 colour_browser :-
@@ -58,21 +58,22 @@ make_colour_browser(CB, DataBase) :-
     send_list(M, append, [foreground, background]),
     send(M, selection, background),
     send(new(CB, browser('XPCE (CSS) named colours')), below, D),
-    send(CB, width, 40),
     send(CB, font, fixed),
+    get(CB?font, width, "medium_sea_green  255 255 255 #ffffff", Width),
 
     send(CB?key_binding, function,  % pretend arrow up/down not only
-         cursor_down,               % do the preview, but also show
+         '<cursor_down>',           % do the preview, but also show
          and(message(CB, next_line),% the colour immediately
              message(CB, enter))),
     send(CB?key_binding, function,
-         cursor_up,
+         '<cursor_up>',
          and(message(CB, previous_line),
              message(CB, enter))),
 
+    add_popup(CB),
                                     % Make a picture with some different
                                     % graphicals for preview
-    send(new(P, picture(size := size(100, 25))), below, CB),
+    send(new(P, window(size := size(Width+50, 30))), below, CB),
     send(P, ver_stretch, 0),
     send(P, ver_shrink, 0),
     send(P, format, new(Fmt, format(vertical, 1, @on))),
@@ -89,10 +90,11 @@ make_colour_browser(CB, DataBase) :-
                                     % picture, fore/back ground and
                                     % the description of the colour
     send(CB, select_message,
-         message(@prolog, selected_colour, P, M?selection, @arg1?label)),
+         message(@prolog, selected_colour, P, M?selection, @arg1)),
 
                                     % set tab-stops for nice alignment
-    send(CB?image, tab_stops, vector(200)),
+    get(CB?font, width, "medium_sea_green  ", LeftWidth),
+    send(CB?image, tab_stops, vector(LeftWidth)),
                                     % scan de database
     send(DataBase, for_all,
          message(@prolog, append_colour, CB, @arg1)).
@@ -104,13 +106,40 @@ append_colour(CB, Name) :-
     G is (RGB >> 8) /\ 255,
     B is (RGB /\ 255),
     format(atom(HexName), '#~|~`0t~16r~2+~`0t~16r~2+~`0t~16r~2+', [R,G,B]),
-    send(CB, append, string('%s\t%3d %3d %3d %s', Name, R, G, B, HexName)).
+    send(CB, append,
+         dict_item(Name, string('%s\t%3d %3d %3d %s', Name, R, G, B, HexName))).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 A colour was selected.  Change the colour attribute of the picture window.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-selected_colour(P, Which, Label) :-
-    get(Label, scan, '%s%d%d%d', vector(NameStr, R, G, B)),
-    send(@display, copy, NameStr),
-    send(P, Which, colour(@default, R, G, B)).
+selected_colour(P, Which, DictItem) :-
+    get(DictItem, key, ColourName),
+    send(@display, copy, ColourName),
+    send(P, Which, colour(ColourName)).
+
+add_popup(CB) :-
+    send(CB, popup, new(P, popup)),
+    send_list(P, append,
+              [ menu_item('Open in HSV explorer',
+                          message(@prolog, open_hsv, CB, @arg1)),
+                menu_item('Copy as #XXXXXX"',
+                          message(@prolog, copy_hex, @arg1))
+              ]).
+
+open_hsv(CB, DictItem) :-
+    get(DictItem, key, ColourName),
+    (   send(CB, send_hyper, hsv_browser, current_colour, colour(ColourName))
+    ->  true
+    ;   send(new(HSV, hsv_browser(colour(ColourName))), open),
+        new(_, hyper(CB, HSV, hsv_browser, name_browser))
+    ).
+
+copy_hex(DictItem) :-
+    get(DictItem, key, ColourName),
+    new(C, colour(ColourName)),
+    get(C, red,   R),
+    get(C, green, G),
+    get(C, blue,  B),
+    format(string(Hex), '#~`0t~16r~2+~`0t~16r~2+~`0t~16r~2+', [R,G,B]),
+    send(@display, copy, Hex).
