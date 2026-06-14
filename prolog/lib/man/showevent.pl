@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1999-2025, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog/projects/xpce/
+    Copyright (c)  1999-2026, University of Amsterdam
 				 SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -33,29 +33,21 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(pce_show_event,
-          [ event_monitor/0
-          ]).
+:- module(pce_show_event, []).
 :- use_module(library(pce)).
 :- use_module(library(pce_toc)).
-:- require([ forall/2
-           , pce_help_file/2
-           , send_list/2
-           , send_list/3
-           ]).
+:- autoload(library(pce_help_file)).
+:- autoload(library(pce_util)).
 
 :- pce_help_file(event_monitor, pce_help('event_monitor.hlp')).
 
 program_version('0.0').
 
-event_monitor :-
-    send(new(event_viewer), open).
-
-:- pce_begin_class(event_viewer, frame,
+:- pce_begin_class(man_event_viewer, man_frame,
                    "Show event-details").
 
-initialise(V) :->
-    send_super(V, initialise, 'XPCE Event-viewer'),
+initialise(V, M) :->
+    send_super(V, initialise, M, 'XPCE Event-viewer'),
     send(V, append, new(P, picture)),
     send(new(D, dialog), below, P),
     send(new(event_hierarchy_window), left, D),
@@ -112,7 +104,8 @@ fill_dialog(V) :->
     ;   true
     ),
     send(Dialog, append, new(I, menu(modifiers, marked))),
-    forall(modifier(M, _), send(I, append, menu_item(M, label:=M, accelerator := @nil))).
+    forall(modifier(M, _),
+           send(I, append, menu_item(M, label:=M, accelerator := @nil))).
 
 update_dialog(V, Ev:event) :->
     get(V, member, dialog, Dialog),

@@ -34,11 +34,12 @@
 
 :- module(man_search, []).
 :- use_module(library(pce)).
-:- require([ absolute_file_name/3
-           , append/3
+:- use_module(library('man/v_idx'),
+              [ man_index_build/0
+              ]).
+:- require([ append/3
            , default/3
            , ignore/1
-           , atomic_list_concat/2
            ]).
 
 
@@ -107,48 +108,16 @@ typed(I, Id:event_id) :->
                  *        INDEX DATABASE        *
                  *******************************/
 
-make_index(_, Ref) :-
-    object(Ref),
-    !.
-make_index(IV, @Ref) :-
-    absolute_file_name(pce('/man/reference/index'),
-                       [ extensions([obj]),
-                         access(read),
-                         file_errors(fail)
-                       ],
-                       IndexFile),
-    !,
-    send(IV, report, progress, 'Loading index ...'),
-    get(file(IndexFile), object, Obj),
-    send(IV, report, done),
-    send(Obj, name_reference, Ref).
-make_index(IV, @Ref) :-
-    absolute_file_name(pce('/man/reference'),
-                       [ file_type(directory),
-                         access(write),
-                         file_errors(fail)
-                       ],
-                       IndexDir),
-    !,
-    atomic_list_concat([IndexDir, /, 'index.obj'], IndexFile),
-    send(@display, confirm, IV, "XPCE Manual",
-         '%s\n%s %s',
-         'Cannot find PCE manual index file.',
-         'Create', IndexFile),
-    send(IV, busy_cursor),
-    get(new(man_index_manager), make_index, IndexFile, TmpTable),
-    send(IV, busy_cursor, @nil),
-    send(TmpTable, name_reference, Ref),
-    send(@display, inform, IV, "XPCE Manual",
-         '%s\n%s\n%s\n%s',
-         'Creating the manual index has loaded the entire manual',
-         'and introduced considerable fragmentation in XPCE''s',
-         'memory management.  If you are tight on memory, please',
-         'quit and restart XPCE').
-make_index(IV, Ref) :-
-    send(@display, inform, IV, "XPCE Manual",
-         'Sorry, no manual index and no permission to write one.'),
-    new(Ref, chain_table).
+%   The index now comes from =|home/doc/manindex.db|= (built alongside
+%   the HTML manual), not from the retired =|man/reference/index.obj|=
+%   serialised =|chain_table|=. =|man_index_build/0|= populates the
+%   @man_index =|chain_table|= lazily on first call and is idempotent
+%   afterwards.
+
+make_index(IV, @man_index) :-
+    send(IV, report, progress, 'Building index ...'),
+    man_index_build,
+    send(IV, report, done).
 
 
                  /*******************************
@@ -242,65 +211,7 @@ pause(IV, Spec:char_array) :->
 
 show_cards(IV, Cards:chain) :->
     get(IV, member, hitlist, Browser),
-    get(Cards, map, ?(@prolog, object_from_id, @arg1), Objects),
-    send(Browser, members, Objects).
-
-
-object_from_id(Id, Obj) :-
-    atom_codes(Id, Chars),
-    phrase(id(Obj), Chars),
-    !.
-object_from_id(Id, _) :-
-    format('Cannot parse card id "~w"~n', [Id]),
-    fail.
-
-id(Obj) -->                             % methods
-    "M.", string(C), ".", sendget(SG), ".", string(N), eos,
-    !,
-    { atom_codes(ClassName, C),
-      atom_codes(MName, N),
-      get(@pce, convert, ClassName, class, Class),
-      get(Class, SG, MName, Obj)
-    }.
-id(Obj) -->                             % variable
-    "V.", string(C), ".", string(N), eos,
-    !,
-    { atom_codes(ClassName, C),
-      atom_codes(VarName, N),
-      get(@pce, convert, ClassName, class, Class),
-      get(Class, instance_variable, VarName, Obj)
-    }.
-id(Obj) -->                             % resource
-    "R.", string(C), ".", string(N), eos,
-    !,
-    { atom_codes(ClassName, C),
-      atom_codes(ResName, N),
-      get(@pce, convert, ClassName, class, Class),
-      get(Class, class_variable, ResName, Obj)
-    }.
-id(Obj) -->                             % classes
-    "C.", string(C), eos,
-    !,
-    { atom_codes(ClassName, C),
-      get(@pce, convert, ClassName, class, Obj)
-    }.
-id(Obj) -->                             % plain cards
-    "$", string(MS), "$", string(I), eos,
-    !,
-    { atom_codes(Module, MS),
-      name(CardId, I),
-      get(@manual, space, ManSpace),
-      get(ManSpace, module, Module, @on, M),
-      get(M, card, CardId, Obj)
-    }.
-
-sendget(send_method) --> "S".
-sendget(get_method) --> "G".
-
-string(S, In, Rest) :-
-    append(S, Rest, In).
-
-eos([], []).
+    send(Browser, members, Cards).
 
                  /*******************************
                  *          SEARCH STUFF        *

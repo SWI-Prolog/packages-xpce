@@ -35,9 +35,15 @@
 :- module(man_group_browser, []).
 
 :- use_module(library(pce)).
+:- use_module(library(pldoc/man_index), [manual_object/5]).
+:- use_module(library(lists), [nth1/3]).
+:- use_module(group_summaries, [group_summary/2]).
 :- use_module(util).
 :- require([ append/3
            , default/3
+           , findall/3
+           , foldl/5
+           , forall/2
            ]).
 
 
@@ -91,8 +97,7 @@ initialise(MB, Manual:man_manual, ModuleName:[name], Label:[name]) :->
          right, V),
     send(B, name, browser),
 
-    send(MB, view, MN),
-    send(MB, edit_mode, Manual?edit_mode).
+    send(MB, view, MN).
 
 
 view(MB, View) :<-
@@ -110,17 +115,13 @@ make_man_group_recogniser(R) :-
     IM = @event?receiver,
     E = IM?device,
     Tool = IM?frame,
-    Manual = Tool?manual,
 
     SelectLine = and(message(E, caret, ?(IM, index, @event)),
                      message(E, select_line, newline := @on)),
-    EditMode = ((Manual?edit_mode) == @on),
 
     new(CG1, click_gesture(left, '', single, SelectLine)),
-    send(CG1, condition, not(EditMode)),
     new(CG2, click_gesture(left, '', double,
-                           and(if(EditMode, SelectLine),
-                               message(Tool, show_group_members)))),
+                           message(Tool, show_group_members))),
 
     new(R, handler_group(CG1, CG2)).
 
@@ -167,12 +168,6 @@ show_group_members(T, Group:[name]) :->
                 *          COMMUNICATION        *
                 ********************************/
 
-edit_mode(MB, Val:bool) :->
-    "Switch edit mode on/off"::
-    get(MB, view, View),
-    send(View, editable, Val).
-
-
 selected(MB, Obj:object*) :->
     "Set the selection"::
     (   send(Obj, instance_of, man_group_card)
@@ -194,6 +189,7 @@ view(MB, ModuleName:name) :->
     "View group module"::
     get(MB?manual, module, ModuleName, @on, Module),
     send(MB, slot, module, Module),
+    ensure_module_loaded(ModuleName, Module),
     get(MB, view, View),
     new(Chain, chain),
     send(Module?id_table, for_all,
@@ -203,6 +199,41 @@ view(MB, ModuleName:name) :->
          message(View, format,
                  '%s\t%s\n', @arg1?name, @arg1?summary)),
     send(View, caret, 0).
+
+
+%   manindex.db has one section row per documented group at
+%   =|sec:sec-groups-<name>|=, but its Summary slot is just the group
+%   name (PlDoc's H3 title); the prose summary lives in the legacy
+%   =|reference/groups.doc|= we retired. =|tmp/extract_groups.pl|=
+%   pulled those pairs out into =|man/group_summaries.pl|=. Populate
+%   the module from the union of the two on first open.
+
+ensure_module_loaded(ModuleName, Module) :-
+    get(Module?id_table, size, 0),
+    populate_module(ModuleName, Module),
+    !.
+ensure_module_loaded(_, _).
+
+populate_module(groups, Module) :-
+    !,
+    findall(G, group_section_row(G), Sections),
+    sort(Sections, Names),
+    foldl(append_group(Module), Names, 1, _).
+populate_module(_, _).
+
+group_section_row(Group) :-
+    manual_object(section(_Level, _Nr, Anchor, _Title),
+                  _Summary, File, packages, _Off),
+    sub_atom(File, _, _, _, '/xpce/man/refmanual/'),
+    atom_concat('sec:sec-groups-', Group, Anchor).
+
+append_group(Module, GroupName, Idx0, Idx) :-
+    (   group_summary(GroupName, Summary), Summary \== ''
+    ->  new(_, man_group_card(Module, GroupName, Idx0,
+                              string('%s', Summary)))
+    ;   new(_, man_group_card(Module, GroupName, Idx0))
+    ),
+    Idx is Idx0 + 1.
 
 
 

@@ -35,6 +35,8 @@
 :- module(man_module_browser, []).
 
 :- use_module(library(pce)).
+:- use_module(library(pldoc/man_index), [manual_object/5]).
+:- use_module(example_summaries, [example_summary/3]).
 :- use_module(util).
 :- require([ forall/2
            , member/2
@@ -55,32 +57,8 @@ initialise(MB, Manual:man_manual, ModuleName:name, CreateClass:[name]*,
     new(Browser, man_summary_browser(man_summary, size(90, 15))),
     dialog(Dialog),
 
-    new(Obj, @arg1?object),
-    new(EditModeOn, MB?manual?edit_mode == @on),
-    ifmaintainer(send_list(Browser?popup, append,
-              [ menu_item(rename,
-                          message(MB, rename,
-                                  Obj, Dialog?name_member?selection),
-                          @default, @off,
-                          and(EditModeOn,
-                              Dialog?name_member?selection \== ''))
-              , menu_item(summary,
-                          message(MB, summary,
-                                  Obj, Dialog?summary_member?selection),
-                          @default, @on,
-                          and(EditModeOn,
-                              Dialog?summary_member?selection \== ''))
-              , menu_item(delete,
-                          block(message(@display, confirm,
-                                        'Delete card %s', Obj?man_name),
-                                message(MB, delete, @arg1)),
-                          @default, @on,
-                          EditModeOn)
-              ])),
-
     send(MB, append, Browser),
     send(Dialog, below, Browser),
-    send(MB, edit_mode, Manual?edit_mode),
     send(MB, view, ModuleName, CreateClass).
 
 
@@ -106,21 +84,6 @@ dialog(D) :-
     new(D, dialog),
     new(MB, D?frame),
 
-    ifmaintainer((
-        send(D, append, new(TN, text_item(name,    '', @nil))),
-        send(D, append, new(TS, text_item(summary, '',
-                                          if(TN?selection \== '',
-                                             message(D?create_member,
-                                                     execute))))),
-        send(TN, length, 15),
-        send(TS, length, 40),
-        send(D, append, button(create, block(message(MB, create_card,
-                                                     TN?selection,
-                                                     TS?selection),
-                                             message(TN, clear),
-                                             message(TS, clear),
-                                             message(TN, caret)))))),
-
     send(D, append, button(help,   message(MB, help))),
     send(D, append, button(quit,   message(MB, quit))).
 
@@ -129,24 +92,6 @@ dialog(D) :-
                 /********************************
                 *          COMMUNICATION        *
                 ********************************/
-
-toggle_edit_mode(MB) :->
-    "Toggle between edit and browse mode"::
-    (   get(MB?manual, edit_mode, @on)
-    ->  send(MB?manual, edit_mode, @off)
-    ;   send(MB?manual, edit_mode, @on)
-    ).
-
-
-edit_mode(MB, Val:bool) :->
-    "Switch edit mode on/off"::
-    get(MB, dialog_member, Dialog),
-    forall(member(Name, [create, name, summary]),
-           (   get(Dialog, member, Name, Item)
-           ->  send(Item, active, Val)
-           ;   true
-           )).
-
 
 selected(MB, Obj:object*) :->
     "Set the selection"::
@@ -169,57 +114,72 @@ view(MB, ModuleName:name, ClassName:name*) :->
     ->  send(MB, slot, create_class, @nil)
     ;   send(MB, slot, create_class, ClassName)
     ),
+    ensure_module_loaded(ModuleName, ClassName, Module),
     get(MB, browser, Browser),
     send(Module?id_table, for_some,
          message(Browser, append_card, @arg2)),
     send(Browser, sort).
 
 
-                /********************************
-                *            EDITING            *
-                ********************************/
+%   The .doc tree retired in Phase 8 used to ship serialised modules
+%   under =|$PCEHOME/man/reference|=. The HTML manual keeps the same
+%   content as =|section(_,_,sec:<kind>-<slug>,_)|= rows in
+%   =|manindex.db|=; populate the module from those rows the first
+%   time anyone opens this browser.
 
-create_card(MB, Name:string, Summary:string) :->
-    "Add a card to the module"::
-    send(Name, strip),
-    (   get(Name, size, 0)
-    ->  send(@display, inform, MB, "XPCE Manual",
-             'Please enter a card name first')
-    ;   get(MB, create_class, ClassName),
-        (   ClassName \== @nil
-        ->  Term =.. [ClassName, MB?module, Name],
-            new(Card, Term),
-            send(Card, store, summary, Summary),
-            send(MB?browser, append_card, Card)
-        ;   send(@display, inform, MB, "XPCE Manual", 'What class?')
-        )
+ensure_module_loaded(ModuleName, ClassName, Module) :-
+    get(Module?id_table, size, 0),
+    populate_module(ModuleName, ClassName, Module),
+    !.
+ensure_module_loaded(_, _, _).
+
+populate_module(examples, ClassName, Module) :-
+    nonvar(ClassName),
+    !,
+    forall(manual_example(Title),
+           ensure_card(Module, ClassName, examples, Title)).
+populate_module(changes, ClassName, Module) :-
+    nonvar(ClassName),
+    !,
+    forall(manual_change(Title),
+           ensure_card(Module, ClassName, changes, Title)).
+populate_module(_, _, _).
+
+manual_example(Title) :-
+    manual_object(section(_Level, _Nr, Anchor, _Tle),
+                  Summary, File, packages, _Off),
+    sub_atom(File, _, _, _, '/xpce/man/refmanual/'),
+    atom_concat('sec:example-', _, Anchor),
+    summary_to_title(Summary, Title).
+
+manual_change(Title) :-
+    %   No manindex slot for changes yet; rely on summary text in
+    %   any =|section(_,_,sec:sec-changes-...,_)|= row to surface
+    %   the changelog entries the legacy .doc tree exposed.
+    manual_object(section(_Level, _Nr, Anchor, _Tle),
+                  Summary, File, packages, _Off),
+    sub_atom(File, _, _, _, '/xpce/man/refmanual/'),
+    atom_concat('sec:sec-changes-', _, Anchor),
+    summary_to_title(Summary, Title).
+
+summary_to_title(S, T) :-
+    (   string(S) -> T = S
+    ;   atom(S)   -> atom_string(S, T)
+    ;   fail
     ).
 
-
-rename(MB, Card:man_card, Name:string) :->
-    "Change name to value in dialog"::
-    send(Name, strip),
-    (   get(Name, size, 0)
-    ->  send(@display, inform, MB, "XPCE Manual", 'Please enter a card name first')
-    ;   send(Card, store, name, Name),
-        send(MB?browser, update_card, Card)
+ensure_card(Module, ClassName, Kind, Title) :-
+    Term =.. [ClassName, Module, Title],
+    new(Card, Term),
+    %   The first paragraph of each example / change has been
+    %   extracted by =|tmp/extract_example_summaries.pl|= into
+    %   =|man/example_summaries.pl|=. Stash it on the card so the
+    %   browser shows real prose instead of =|nil|= next to the
+    %   title.
+    (   example_summary(Kind, Title, Summary)
+    ->  send(Card, store, summary, string(Summary))
+    ;   true
     ).
 
-
-summary(MB, Card:man_card, Summary:string) :->
-    "Change summary to value in dialog"::
-    send(Summary, strip),
-    (   get(Summary, size, 0)
-    ->  send(@display, inform, MB, "XPCE Manual", 'Please enter a card name first')
-    ;   send(Card, store, summary, Summary),
-        send(MB?browser, update_card, Card)
-    ).
-
-
-delete(_MB, DI:dict_item) :->
-    "Delete from module"::
-    get(DI, object, Card),
-    send(DI, free),
-    send(Card, free).
 
 :- pce_end_class.

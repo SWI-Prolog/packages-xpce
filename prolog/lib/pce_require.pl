@@ -231,8 +231,6 @@ meta_goal(ignore(G),            [G]).
 meta_goal(once(G),              [G]).
 meta_goal(initialization(G),    [G]).
 
-meta_goal(ifmaintainer(G),      [G]).   % used in manual
-
 process_body(Goal) :-
     meta_goal(Goal, Metas),
     !,

@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www-prolog/projects/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -37,16 +38,19 @@
 :- use_module(library(pce)).
 :- use_module(library(persistent_frame)).
 :- use_module(library(pce_help_file)).
-:- use_module(util).
-:- require([ absolute_file_name/3
-           , auto_call/1
-           , default/3
-           , forall/2
-           , ignore/1
-           , send_list/3
-           ]).
+:- autoload(library(man/classification), [scope/2]).
+:- autoload(library(apply), [maplist/2]).
+:- autoload(library(gui_tracer), [guitracer/0]).
+:- autoload(library(pce_debug), [checkpce/0]).
+:- autoload(library(pce_emacs), [emacs/0, start_emacs/0]).
+:- autoload(library(pce_util), [send_list/3]).
+:- autoload(library(swi_compatibility), [auto_call/1]).
+:- autoload(library(swi_ide), [prolog_ide/1]).
+:- autoload(library(swi_preferences), [prolog_edit_preferences/1]).
+:- autoload(library(www_browser), [www_open_url/1]).
 
-:- pce_autoload(event_viewer, library('man/showevent')).
+:- pce_autoload(man_event_viewer, library(man/showevent)).
+:- pce_autoload(man_demo_browser, demo(pce_demo)).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                             OVERALL ARCHITECTURE
@@ -92,8 +96,6 @@ and possible broadcasted by ManualTool.  These messages are:
     ->relate: object
         Request manual to relate selection to object.
 
-    ->edit_mode: bool
-        Switch edit_mode on/off.  Broadcasted to all tools.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 :- pce_begin_class(man_manual, persistent_frame,
@@ -102,7 +104,6 @@ and possible broadcasted by ManualTool.  These messages are:
 class_variable(geometry,        geometry,               '+0+0').
 class_variable(user_scope,      chain,                  chain(basic, user),
          "Default scoping of manual material").
-class_variable(edit,            bool,                   @off).
 
 variable(selection,             object*,        get,
          "Currently selected object").
@@ -112,18 +113,12 @@ variable(tool_focus,            object*,        get,
          "Arg of last ->tool_focus").
 variable(tools,                 sheet,          get,
          "Tool-name --> tool mapping").
-variable(edit_mode,             bool,           get,
-         "Can database be edited?").
 variable(space,                 man_space,      get,
          "Manual module collection").
 variable(focus_history,         chain,          get,
          "Chain of focused cards").
 variable(selection_history,     chain,          get,
          "Chain of selected cards").
-variable(maintainer,            bool,           get,
-         "Indicates the user is a maintainer").
-variable(exit_message,          code*,          get,
-         "Message called on exit").
 variable(user_scope,            chain,          get,
          "Types in user's scope").
 variable(search_patterns,       chain*,         both,
@@ -134,19 +129,16 @@ variable(search_patterns,       chain*,         both,
                 *            CREATE             *
                 ********************************/
 
-initialise(M, Dir:[directory]) :->
+initialise(M, _Dir:[directory]) :->
     "Create the manual main object"::
     send(M, send_super, initialise, 'XPCE Manual'),
     send(M, can_resize, @off),
     send(M, done_message, message(M, quit)),
     get(M, class_variable_value, user_scope, Scope),
-    get(M, class_variable_value, edit, Edit),
-    send(M, slot, maintainer, Edit),
-    default(Dir, directory('$PCEHOME/man/reference'), Directory),
-    send(M, check_directory, Directory),
-    send(M, slot, space, new(Space, man_space(reference, Directory))),
+    %   Phase 8: the .doc tree retired; man_space remains as an
+    %   inert container for any tools that still reach for it.
+    send(M, slot, space, new(Space, man_space(reference))),
     send(M, slot, tools, new(sheet)),
-    send(M, slot, edit_mode, @off),
     send(M, slot, focus_history, new(chain)),
     send(M, slot, selection_history, new(chain)),
     send(M, slot, user_scope, Scope),
@@ -154,10 +146,6 @@ initialise(M, Dir:[directory]) :->
     send(Space, attribute, attribute(report_to, M)),
     send(M, append, new(D, dialog)),
     send(M, fill_dialog, D),
-
-    ifmaintainer((
-          send(@pce, exit_message, new(Msg, message(M, save_if_modified))),
-          send(M, slot, exit_message, Msg))),
 
     send(M, check_runtime),
     send(M, report, status, 'For help, see `File'' menu').
@@ -167,17 +155,7 @@ unlink(M) :->
     "Manual is destroyed"::
     get(M, space, Space),
     send(Space, delete_attribute, report_to),
-    get(M, exit_message, Msg),
-    ignore(send(@pce?exit_messages, delete, Msg)),
     send(M, send_super, unlink).
-
-
-check_directory(M, Dir:directory) :->
-    "Check the manual directory"::
-    (   send(Dir, exists)
-    ->  true
-    ;   send(M, report, error, 'Cannot find manual directory %s', Dir?path)
-    ).
 
 
 check_runtime(M) :->
@@ -234,21 +212,6 @@ fill_dialog(M, D) :->
                        message(M, edit_prolog_registry)))
     ;   true
     ),
-    (   get(M, maintainer, @on)
-    ->  send_list(F, append,
-                  [ menu_item(edit_mode,
-                              message(M, toggle_edit_mode))
-                  , menu_item(list_modules,
-                              message(M, list_modules))
-                  , menu_item(list_all_modules,
-                              message(M, list_all_modules))
-                  , menu_item(save_manual,
-                              message(M, save_if_modified, @off),
-                              @default, @on,
-                              M?modified == @on)
-                  ])
-    ;   true
-    ),
     send_list(F, append,
               [ menu_item(quit,
                           message(M, quit)),
@@ -260,29 +223,15 @@ fill_dialog(M, D) :->
     /* BROWSERS menu */
 
     send_list(V, append,
-         [ menu_item(manual_tools,
-                     end_group := @on),
-           menu_item(class_hierarchy),
+         [ menu_item(class_hierarchy),
            menu_item(class_browser),
            menu_item(global_objects),
            menu_item(errors,
-                     end_group := @on),
-           menu_item(xpce_predicates,
-                     @default,
-                     'XPCE/Prolog predicates'),
-           menu_item(prolog_manual,
-                     message(M, help_on_prolog),
                      end_group := @on),
            menu_item(search),
            menu_item(group_overview),
            menu_item(examples,          end_group := @on)
          ]),
-    (    get(M, maintainer, @on)
-    ->   send_list(V, append,
-         [ menu_item(class_finder,      end_group := @off)
-         ])
-    ;    true
-    ),
 
     /* TOOLS menu */
 
@@ -365,17 +314,14 @@ tool_class(inspector,           M, isp_frame(M)).
 tool_class(visual_hierarchy,    M, vis_frame(M)).
 tool_class(global_objects,      M, man_object_browser(M)).
 tool_class(errors,              M, man_error_browser(M)).
-tool_class(manual_tools,        M,
-           man_module_browser(M, tools, man_browser_card, 'Manual Tools')).
-tool_class(xpce_predicates,     M,
-           man_module_browser(M, predicates,
-                              man_predicate_card, 'XPCE/Prolog Predicates')).
 tool_class(examples,            M,
            man_module_browser(M, examples, man_example_card, 'XPCE Examples')).
 tool_class(changes,             M,
            man_module_browser(M, changes, man_change_card, 'XPCE Changes')).
 tool_class(group_overview,      M,
            man_group_browser(M, groups, 'Group Browser')).
+tool_class(demos,		M, man_demo_browser(M)).
+tool_class(event_viewer,	M, man_event_viewer(M)).
 
 
                 /********************************
@@ -397,54 +343,13 @@ destroy_tool(M, Tool:man_frame) :->
 
 quit(M) :->
     "Quit Manual Tool"::
-    send(M, save_if_modified),
     send(M, status, unmapped).
 
 
 quit_pce(M) :->
     "Exit from XPCE process"::
-    send(M, save_if_modified),
     send(@display, confirm, M, "XPCE Manual", 'Really exit XPCE?'),
     send(@pce, die).
-
-
-                 /*******************************
-                 *         SAVE/MODIFIED        *
-                 *******************************/
-
-modified(M, Modified:bool) :<-
-    "See if manual database has been modified"::
-    (   (   get(M?space, modified, @on)
-        ;   object(@man_classification),
-            get(@man_classification, modified, @on)
-        )
-    ->  Modified = @on
-    ;   Modified = @off
-    ).
-
-
-save_if_modified(M, Ask:[bool]) :->
-    "Save if some part has been modified"::
-    (   get(M, modified, @on)
-    ->  (   Ask \== @on
-        ;   send(@display, confirm, M, "XPCE Manual",
-                 'Manual Database is modified. Save?')
-        ),
-        !,
-        send(M?space, save_some),
-        ClassifyTab = @man_classification,
-        (   object(ClassifyTab),
-            get(ClassifyTab, modified, @on)
-        ->  send(M, report, progress,
-                 'Saving %s ...', ClassifyTab?file?base_name),
-            send(ClassifyTab?file, backup),
-            send(ClassifyTab, save_in_file, ClassifyTab?file),
-            send(ClassifyTab, modified, @off),
-            send(M, report, done)
-        ;   true
-        )
-    ;   true
-    ).
 
                  /*******************************
                  *          PREFERENCES         *
@@ -466,8 +371,8 @@ edit_prolog_registry(_M) :->
 module(M, Name:name, Create:[bool], Module) :<-
     "Find/create manual module"::
     get(M, space, Space),
-    (   send(Space, ensure_loaded, Name)
-    ->  get(Space, module, Name, Module)
+    (   get(Space?modules, member, Name, Module)
+    ->  true
     ;   Create == @on
     ->  new(Module, man_module(Space, Name))
     ;   fail
@@ -510,11 +415,6 @@ list_all_modules(M) :->
 faq(_M) :->
     "Start @helper on faq-database"::
     send(@helper, give_help, pce_faq, main).
-
-help_on_prolog(_M) :->
-    "Start Prolog help-system"::
-    auto_call(user:help).
-
 
                 /********************************
                 *          ABOUT/LICENCE        *
@@ -611,14 +511,6 @@ check_object_base(M) :->
                  *     START EXTERNAL TOOLS     *
                  *******************************/
 
-dialog_editor(_M) :->
-    "Start the dialog editor"::
-    auto_call(dialog).
-
-event_viewer(_) :->
-    "Start event-viewer"::
-    send(new(event_viewer), open).
-
 guitracer(M) :->
     "Start the GUI tracer for Prolog"::
     (   catch(guitracer, _, fail)
@@ -674,22 +566,14 @@ manual(M, Object:'class|behaviour|object') :->
                  *          USER-SCOPING        *
                  *******************************/
 
-:- pce_global(@man_classification, load_man_classification).
-
-load_man_classification(C) :-
-    absolute_file_name(library('man/classification.dat'),
-                       [access(read)], FileName),
-    new(F, file(FileName)),
-    get(F, object, C),
-    send(C, attribute, file, file(F?absolute_path)),
-    send(C, attribute, modified, @off).
-
+%   The user-scope classification table is library('man/classification')
+%   (Prolog facts), which exports scope/2.  Loaded above; queried below.
 
 in_scope(M, Obj:object) :->
     "Test if object is in current scope"::
     get(M, user_scope, Scope),
     get(Obj, man_id, Id),
-    (   (   get(@man_classification, member, Id, Type)
+    (   (   scope(Id, Type)
         ->  send(Scope, member, Type)
         ;   send(Scope, member, obscure)
         )
@@ -756,12 +640,6 @@ request_tool_focus(M, Obj:object*, ForceClass:[bool]) :->
     ).
 
 
-maintainer(M, Val:bool) :->
-    "Switch maintainer-mode on/off"::
-    send(M, slot, maintainer, Val),
-    send(M?tools, for_some, message(@arg1?value, maintainer, Val)).
-
-
                 /********************************
                 *             HISTORY           *
                 ********************************/
@@ -812,89 +690,6 @@ select_history_menu(M, History:name, Obj) :->
 
 
                 /********************************
-                *           (UN)RELATE          *
-                ********************************/
-
-request_relate(M, Obj:object) :->
-    "Relate selection to object"::
-    request_relate(M, relate, Obj).
-
-request_unrelate(M, Obj:object) :->
-    "Destroy relation to selection"::
-    request_relate(M, unrelate, Obj).
-
-request_relate(M, CD, Obj) :-
-    (   get(M, edit_mode, @on)
-    ->  (   get(M, selection, Selection),
-            Selection \== @nil
-        ->  get(Selection, class_name, SClass),
-            get(Obj, class_name, OClass),
-            relate(M, SClass-OClass, CD, Selection, Obj)
-        ;   send(@display, inform, M, "XPCE Manual", 'First make a selection')
-        )
-    ;   send(@display, inform, M, "XPCE Manual", 'Manual is in read-only mode')
-    ).
-
-relate(M, _-_, create, Obj, Obj) :-
-    !,
-    send(@display, inform, M, "XPCE Manual",
-         'Can''t relate %s to itself', Obj?man_name).
-relate(M, _-_, CD, Selection, Obj) :-
-    send(@display, confirm, M, "XPCE Manual",
-         '%s %s <-> %s', CD, Selection?man_name, Obj?man_name),
-    send(M, create_relation, CD, Selection, see_also, Obj),
-    send(M, create_relation, CD, Obj, see_also, Selection).
-
-
-create_relation(M, CD, From, Rel, To) :->
-    (   CD == relate
-    ->  send(From, man_relate, Rel, To),
-        send(M?tools, for_some,
-             message(@arg1?value, related, From, Rel, To))
-    ;   CD == unrelate
-    ->  send(From, man_unrelate, Rel, To),
-        send(M?tools, for_some,
-             message(@arg1?value, unrelated, From, Rel, To))
-    ).
-
-
-                 /*******************************
-                 *          (UN)INHERIT         *
-                 *******************************/
-
-request_inherit(M, Obj:object) :->
-    "Relate selection to object"::
-    request_inherit(M, relate, Obj).
-
-request_uninherit(M, Obj:object) :->
-    "Destroy relation to selection"::
-    request_inherit(M, unrelate, Obj).
-
-request_inherit(M, CD, Obj) :-
-    (   get(M, edit_mode, @on)
-    ->  (   get(M, selection, Selection),
-            Selection \== @nil
-        ->  inherit(M, CD, Selection, Obj)
-        ;   send(@display, inform, M, "XPCE Manual", 'First make a selection')
-        )
-    ;   send(@display, inform, M, "XPCE Manual", 'Manual is in read-only mode')
-    ).
-
-inherit(M, create, Obj, Obj) :-
-    !,
-    send(@display, inform, M, "XPCE Manual",
-         'Can''t inherit %s from myself', Obj?man_name).
-inherit(M, CD, Selection, Obj) :-
-    send(@display, confirm, M, "XPCE Manual",
-         '%s description of %s from %s',
-         when(CD == relate, 'Inherit', 'UnInherit'),
-         Obj?man_name, Selection?man_name),
-    send(M, create_relation, CD, Obj, inherit, Selection),
-    send(@man_description_cache, clear),
-    send(@man_source_cache, clear).
-
-
-                /********************************
                 *            SOURCES            *
                 ********************************/
 
@@ -906,25 +701,6 @@ request_source(M, Obj:object) :->
     ;   send(@display, inform, M, "XPCE Manual", 'Can''t find source')
     ).
 
-
-                /********************************
-                *          EDIT MODE            *
-                ********************************/
-
-edit_mode(M, Val) :->
-    "Set overall edit_mode"::
-    send(M, slot, edit_mode, Val),
-    send(M?tools, for_some, message(@arg1?value, edit_mode, Val)).
-
-
-toggle_edit_mode(M) :->
-    "Toggle current setting of edit_mode"::
-    (   get(M, edit_mode, @off)
-    ->  send(M, edit_mode, @on)
-    ;   send(M, edit_mode, @off)
-    ),
-    get(M, edit_mode, @Val),
-    send(M, report, status, 'Edit mode is now %s', Val).
 
 :- pce_end_class.
 
@@ -968,21 +744,6 @@ release_selection(_F) :->
     true.
 
 
-edit_mode(_F, _Val:bool) :->
-    "Generic operation: fail"::
-    fail.
-
-
-related(_F, _From:object, _Rel:name, _To:object) :->
-    "Generic operation: fail"::
-    fail.
-
-
-unrelated(_F, _From:object, _Rel:name, _To:object) :->
-    "Generic operation: fail"::
-    fail.
-
-
 quit(F) :->
     "Destroy a tool"::
     send(F?manual, destroy_tool, F).
@@ -1001,18 +762,6 @@ request_tool_focus(F, Obj:object, Force:[bool]) :->
 request_source(F, Obj:object) :->
     send(F?manual, request_source, Obj).
 
-request_relate(F, Obj:object) :->
-    send(F?manual, request_relate, Obj).
-
-request_unrelate(F, Obj:object) :->
-    send(F?manual, request_unrelate, Obj).
-
-request_inherit(F, Obj:object) :->
-    send(F?manual, request_inherit, Obj).
-
-request_uninherit(F, Obj:object) :->
-    send(F?manual, request_uninherit, Obj).
-
 help(F) :->
     "Give help on a manual tool"::
     get(F, manual, Manual),
@@ -1029,13 +778,6 @@ give_help(Manual, Frame, ToolName) :-
     get(Manual, module, tools, @on, Tools),
     (   get(Tools?id_table, find_value, @arg2?tool_name == ToolName, Card)
     ->  send(Manual, request_selection, Frame, Card, @on)
-    ;   get(Manual, edit_mode, @on),
-        get(Manual, selection, ToolCard),
-        ToolCard \== @nil,
-        send(ToolCard, instance_of, man_browser_card),
-        send(@display, confirm, Manual, "XPCE Manual", 'Assign %s to browser %s',
-             ToolCard?man_name, ToolName)
-    ->  send(ToolCard, store, tool_name, ToolName)
     ;   send(@display, inform, Manual, "XPCE Manual",
              'Sorry, Can''t find help card ...')
     ).

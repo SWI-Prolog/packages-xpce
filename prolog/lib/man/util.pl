@@ -41,16 +41,12 @@
         , man_relation/1
         , apropos_class/6
         , class_of/2
-        , ifmaintainer/1
         , group_objects/2
         , indent/2
         , man_classification/2
         , super_or_delegate_class/2     % +Class, -SuperOrDelegate
         , class_of_type/2               % +Type, -Class
         ]).
-
-:- meta_predicate
-    ifmaintainer(:).
 
 :- use_module(library(pce)).
 :- require([ chain_list/2
@@ -413,13 +409,6 @@ order_groups(Sheet) :-
                 /********************************
                 *            MAINTAINER         *
                 ********************************/
-
-ifmaintainer(Goal) :-
-    get(@manual, maintainer, @on),
-    !,
-    Goal.
-ifmaintainer(_).
-
 
                  /*******************************
                  *        CLASSIFICATION        *

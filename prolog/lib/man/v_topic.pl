@@ -58,7 +58,6 @@ initialise(TB, Manual:man_manual) :->
 
     send(TB, append, Picture),
     send(Dialog, below, Picture),
-    send(TB, edit_mode, Manual?edit_mode),
     send(TB, expand_node, TB?tree?root),
 
     send(TB, open).
@@ -72,19 +71,6 @@ dialog(D) :-
     new(D, dialog),
     new(TB, D?frame),
 
-    send(D, append, new(TN, text_item(name,    '', @nil))),
-    send(D, append, new(TS, text_item(summary, '',
-                                      if(TN?selection \== '',
-                                         message(D?create_member,
-                                                 execute))))),
-    send(TN, length, 15),
-    send(TS, length, 40),
-    send(D, append, button(create, block(message(TB, create_topic,
-                                                 TN?selection,
-                                                 TS?selection),
-                                         message(TN, clear),
-                                         message(TS, clear),
-                                         message(TN, caret)))),
     send(D, append, button(help,   message(TB, help))),
     send(D, append, button(quit,   message(TB, quit))).
 
@@ -94,14 +80,6 @@ dialog(D) :-
                 *          COMMUNICATION        *
                 ********************************/
 
-edit_mode(TB, Val:bool) :->
-    "Switch edit mode on/off"::
-    get(TB, dialog_member, Dialog),
-    send_list([ Dialog?create_member
-              , Dialog?name_member
-              , Dialog?summary_member
-              ],
-              active, Val).
 
 
 node(TB, Card:man_topic_card, Node) :<-
@@ -141,101 +119,6 @@ related(TB, From:object*, Rel:name, _To:object*) :->
 
 
                 /********************************
-                *            EDITING            *
-                ********************************/
-
-create_topic(TB, Name:string, Summary:string, Super:[man_topic_card]) :->
-    "Add a new topic from name and summary"::
-    (   Super == @default
-    ->  get(TB, selection, SuperTopic),
-        (   SuperTopic == @nil
-        ->  send(@display, inform, TB, "XPCE Manual",
-                 'Please first select a super-topic'),
-            fail
-        ;   true
-        )
-    ;   SuperTopic = Super
-    ),
-    send(Name, strip),
-    (   get(Name, size, 0)
-    ->  send(@display, inform, TB, "XPCE Manual",
-             'Please enter a topic name first')
-    ;   new(Topic, man_topic_card(TB?topics, Name)),
-        send(Topic, store, summary, Summary),
-        send(SuperTopic, relate, subs, Topic),
-        send(Topic, relate, super, SuperTopic),
-        get(TB, node, SuperTopic, SuperNode),
-        send(SuperNode, font, bold),
-        add_card(SuperNode, Topic)
-    ).
-
-
-rename_node(TB, Node:node) :->
-    "Rename node to name in dialog"::
-    get(TB?dialog_member?name_member, selection, NewName),
-    (   NewName == ''
-    ->  send(@display, inform, TB, "XPCE Manual",
-             'First type a name in ''Name''')
-    ;   send(Node?card, store, name, NewName),
-        send(Node, string, NewName),
-        send(TB?dialog_member?name_member, clear)
-    ),
-    get(TB?dialog_member?summary_member, selection, NewSumm),
-    (   NewSumm == ''
-    ->  true
-    ;   send(Node?card, store, summary, NewSumm),
-        send(TB?dialog_member?summary_member, clear)
-    ).
-
-
-delete_card(TB, Node:node) :->
-    "Destroy a card"::
-    get(Node, card, Card),
-    send(@display, confirm, TB, "XPCE Manual",
-         'Really delete card `%s''', Card?name),
-    (   get(Card, related, subs, Subs),
-        \+ send(Subs, empty)
-    ->  send(@display, inform, TB, "XPCE Manual",
-             'Only leaf-nodes can be deleted')
-    ;   send(Node, delete_tree),
-        send(Card, free)
-    ).
-
-
-son_node(TB, Node:node) :->
-    "Relate node to selection"::
-    get(TB, selection, Selection), Selection \== @nil,
-    send(Selection, relate, subs, Node?card),
-    send(Node?card, relate, super, Selection),
-    send(?(TB, node, Selection), son, Node).
-
-
-remove_son_node(TB, Node:node) :->
-    "Unrelate a node from selection"::
-    get(TB, selection, Selection), Selection \== @nil,
-    send(Selection, unrelate, subs, Node?card),
-    send(Node?card, unrelate, super, Selection),
-    send(?(TB, node, Selection), unrelate, Node).
-
-
-below_node(TB, Node:node) :->
-    "Move node below selection or to be the first"::
-    get_chain(Node, parents, Parents),
-    (   get(TB, selection, Selection),
-        Selection \== @nil,
-        get(TB, node, Selection, SelectedNode),
-        member(Parent, Parents),
-        send(Parent?sons, member, SelectedNode)
-    ->  send(Parent?card, move_relation_after, subs, Node?card, Selection),
-        send(Node, move_after, SelectedNode)
-    ;   member(Parent, Parents)
-    ->  send(Parent?card, move_relation_after, subs, Node?card),
-        send(Node, move_after)
-    ),
-    send(TB, request_selection, Node?card, @off).
-
-
-                /********************************
                 *            PICTURE            *
                 ********************************/
 
@@ -244,7 +127,6 @@ below_node(TB, Node:node) :->
 make_man_topic_node_handler(H) :-
     new(TB, @arg1?frame),
     new(Manual, TB?manual),
-    new(CanEdit, Manual?edit_mode == @on),
     new(Selection, Manual?selection),
     Node = @arg1,
     new(Card, Node?card),
@@ -268,43 +150,12 @@ make_man_topic_node_handler(H) :-
                           message(TB, collapse_node, Node),
                           @default, @on,
                           not(message(Node?sons, empty)))
-              , menu_item(relate,
-                          message(TB, request_relate, Card),
-                          @default, @off,
-                          and(CanEdit,
-                              Selection \== @nil,
-                              Selection \== Card,
-                              not(message(Card, man_related,
-                                          see_also, Selection))))
-              , menu_item(rename,
-                          message(TB, rename_node, Node),
-                          @default, @on,
-                          and(CanEdit,
-                              TB?dialog_member?name_member?selection \== ''))
-              , menu_item(move_below,
-                          message(TB, below_node, Node),
-                          @default, @off,
-                          CanEdit)
-              , menu_item(make_daughter,
-                          message(TB, son_node, Node),
-                          @default, @off,
-                          CanEdit)
-              , menu_item(remove_daughter,
-                          message(TB, remove_son_node, Node),
-                          @default, @on,
-                          CanEdit)
-              , menu_item(delete_card,
-                          message(TB, delete_card, Node),
-                          @default, @off,
-                          CanEdit)
               ]),
 
     HNode = @receiver,
     new(HTool, HNode?frame),
 
     new(H, handler_group(popup_gesture(P),
-                         click_gesture(left, c, single,
-                                       message(HTool, below_node, HNode)),
                          click_gesture(left, '', single,
                                        message(HTool, request_selection,
                                                HNode?card, @off)),

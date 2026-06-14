@@ -36,9 +36,7 @@
 
 :- use_module(library(pce)).
 :- use_module(util).
-:- require([ atomic_list_concat/2
-           , file_directory_name/2
-           , forall/2
+:- require([ forall/2
            , member/2
            ]).
 
@@ -55,126 +53,46 @@
 
 variable(name,          name,           both,
          "Logical name of the space").
-variable(directory,     directory,      both,
-         "Directory the saved modules reside in").
 variable(modules,       hash_table,     get,
          "Map module name onto module").
 variable(modified,      bool,           both,
          "Indicate some module has modified").
 
-initialise(S, Name:name, Dir:[directory]) :->
-    "Initialise from name and directory"::
+%   Phase 8 retired the on-disk =|$PCEHOME/man/reference/*.doc|=
+%   serialised modules. man_space is now just an in-memory namespace
+%   the v_global / v_module / v_group browsers populate from
+%   manual_object/5; load/save and the directory slot are gone.
+
+initialise(S, Name:name) :->
+    "Initialise from name"::
     (   get(@man_space_table, member, Name, _)
-    ->  send(@display, inform, S, "XPCE Manual",
+    ->  send(@display, inform, @nil, "XPCE Manual",
              'Space %s already exists', Name)
-    ;   default(Dir, directory('$PCEHOME/man/reference'), Directory),
-        send(S, slot, name,      Name),
-        send(S, slot, modified,  @off),
-        send(S, slot, directory, Directory),
-        send(S, slot, modules,   new(hash_table)),
+    ;   send(S, slot, name,     Name),
+        send(S, slot, modified, @off),
+        send(S, slot, modules,  new(hash_table)),
         send(@man_space_table, append, Name, S)
     ).
 
 
-lookup(_, Name:name, _Dir:[directory], S:man_space) :<-
+lookup(_, Name:name, S:man_space) :<-
     "Lookup existing manual space"::
     get(@man_space_table, member, Name, S).
 
 
-module(S, ModuleName:name, Load:[bool], Module) :<-
-    "Find named module (if loaded)"::
-    (   get(S?modules, member, ModuleName, Module)
-    ->  true
-    ;   Load == @on,
-        send(S, load, ModuleName),
-        get(S?modules, member, ModuleName, Module)
-    ).
+module(S, ModuleName:name, _Load:[bool], Module) :<-
+    "Find named module (if present)"::
+    get(S?modules, member, ModuleName, Module).
 
 
-module_file(S, Module:name, File:file) :<-
-    "Find file for storing module"::
-    atom_concat(Module, '.doc', FileName),
-    (   atom_concat('class/', ClassName, Module),
-        get(@pce, convert, ClassName, class, Class),
-        get(Class, creator, host),
-        get(Class, source, source_location(Path, _)),
-        file_directory_name(Path, SrcDir),
-        atomic_list_concat([SrcDir, '/doc'], DocDirName),
-        new(DocDir, directory(DocDirName)),
-        send(DocDir, exists)
-    ->  true
-    ;   get(S, directory, DocDir)
-    ),
-    get(DocDir, file, FileName, File).
-
-
-save_some(S) :->
-    "Save all modified buffers"::
-    send(S?modules, for_all, message(@arg2, save_if_modified)),
-    send(S, modified, @off).
-
-
-save_all(S) :->
-    "Save all modified buffers (modified or not)"::
-    send(S?modules, for_all, message(@arg2, save)),
-    send(S, modified, @off).
-
-
-load(S, Module:name) :->
-    "Load named module from file"::
-    get(S, module_file, Module, File),
-    (   send(File, exists)
-    ->  send(S, report, progress, 'Loading %s ...', File?base_name),
-        get(File, object, Mod),
-        send(S, report, done),
-        send(Mod, modified, @off),
-        send(S?modules, append, Module, Mod)
-    ).
-
-
-ensure_loaded(S, Module:name) :->
-    "Load named module if not yet done"::
-    get(S, module, Module, @on, _).
-
-
-load_all_modules(S) :->
-    "Load all modules from the directory"::
-    get(S?directory, files, '.*\\.doc$', F1),
-    get(S?directory, directory, class, ClassDir),
-    get(ClassDir, files, '.*\\.doc$', F2),
-    send(F1, for_all, message(S, load_file, @arg1)),
-    send(F2, for_all, message(S, load_file,
-                              create(string, 'class/%s', @arg1))).
-
-
-update_save_version(S) :->
-    "Load and save all modules"::
-    send(S, load_all_modules),
-    send(S, save_all).
-
-
-load_file(S, Name:name) :->
-    "Load from a file name"::
-    get(Name, delete_suffix, '.doc', Module),
-    send(S, ensure_loaded, Module).
+ensure_loaded(_S, _Module:name) :->
+    "Stub -- the .doc store retired; on-demand loading is gone"::
+    fail.
 
 
 for_all_cards(S, Msg:code) :->
-    "Run code on all loaded cards"::
+    "Run code on all cards in every module"::
     send(S?modules, for_all, message(@arg2, for_all_cards, Msg)).
-
-
-delete_unreferenced(S) :->
-    send(@classes, for_all, message(@arg2, realise)),
-    send(S, load_all_modules),
-    send(S, for_all_cards, message(@arg1, delete_unreferenced)).
-
-
-fix_names(S) :->
-    "Fix changed module-names"::
-    send(S?modules, for_all,
-         if(@arg2?name \== @arg1,
-            message(@arg2, rename, @arg1))).
 
 :- pce_end_class.
 
@@ -195,7 +113,7 @@ variable(current_id,    number,         both,   "Numeric id for next card").
 initialise(M, Space:man_space, Name:name) :->
     "Create from space and name"::
     (   get(Space?modules, member, Name, _)
-    ->  send(@display, inform, M, "XPCE Manual",
+    ->  send(@display, inform, @nil, "XPCE Manual",
              'Module %s already exists', Name)
     ;   send(M, slot, name,     Name),
         send(M, slot, id_table, new(hash_table)),
@@ -225,40 +143,10 @@ card(M, Id:'int|name', Card) :<-
     get(M?id_table, member, Id, Card).
 
 
-save_if_modified(M) :->
-    "Save if modified is @on"::
-    (   get(M, modified, @on),
-        \+ send(M?id_table, empty)
-    ->  send(M, save)
-    ;   true
-    ).
-
-
-save(M) :->
-    "Save in related file"::
-    get(M, name, Name),
-    get(M?space, module_file, Name, F),
-    send(F, backup),
-    send(M, report, progress, 'Saving %s ... ', F?base_name),
-    send(M, save_in_file, F),
-    send(M, report, done),
-    send(M, modified, @off).
-
-
 for_all_cards(M, Msg:code) :->
     "Run code on all cards of module"::
     send(M?id_table, for_all,
          message(Msg, forward, @arg2)).
-
-
-rename(M, Name:name) :->
-    "Change name and relation-names"::
-    get(M, name, OldName),
-    send(M, report, progress, 'Renaming module %s --> %s', OldName, Name),
-    send(M?space, for_all_cards,
-         message(@arg1, renamed_module, OldName, Name)),
-    send(M, slot, name, Name),
-    send(M, report, done).
 
 :- pce_end_class.
 

@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www-prolog.org/projects/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -37,12 +38,16 @@
         ]).
 
 :- use_module(library(pce)).
-:- use_module(util).
+:- use_module(library(pce_history)).
 
-:- pce_autoload(behaviour_item, library('man/behaviour_item')).
+:- pce_autoload(behaviour_item, library(man/behaviour_item)).
+:- pce_autoload(report_dialog,  library(pce_report)).
+:- use_module(library(pce_html_manual), []).
 
 :- pce_begin_class(man_card_editor,     man_frame,
-                   "Display textual and relational attributes").
+                   "Show HTML manual page for the selected entry").
+
+variable(history, history, get, "Navigation history (library(pce_history))").
 
                 /********************************
                 *            CREATE             *
@@ -51,24 +56,21 @@
 initialise(CE, Manual:man_manual) :->
     "Create from manual"::
     send(CE, send_super, initialise, Manual, 'Card Viewer'),
-
-    send(CE, append, new(TE, man_editor)),
-    send(TE, name, editor),
-    send(new(D, dialog), below, TE),
-    fill_dialog(D),
-
+    send(CE, slot, history,
+         history(message(CE, goto_history, @arg1))),
+    send(CE, append, new(D, dialog)),
+    send(CE, fill_dialog),
+    send(new(TE, man_html_card), below, D),
+    send(new(report_dialog), below, TE),
+    send(TE, name, html_card),
     send(CE, create),                         % compute layout before
                                               % setting selection
-    send(CE, edit_mode, Manual?edit_mode),
     send(CE, selected, Manual?selection).
 
+fill_dialog(CE) :->
+    get(CE, member, dialog, D),
+    get(CE, history, H),
 
-fill_dialog(D) :-
-    send(D, name, dialog),
-    get(D, frame, CE),
-
-    send(D, append, button(help, message(CE, help))),
-    send(D, append, button(quit, message(CE, quit))),
     send(D, append,
          new(Goto, behaviour_item(goto, '',
                                   if(@arg1 \== @nil,
@@ -76,39 +78,53 @@ fill_dialog(D) :-
                                              @arg1)))),
          right),
     send(Goto, advance, clear),
-    send(D, append, new(label), right).     % reporter
+    send(Goto, hor_stretch, 100),
+    send(D, append, new(TB, tool_bar), right),
+    send(TB, reference, point(0,20)),
+    get(H, button, backward, BackBtn),
+    get(H, button, forward,  FwdBtn),
+    send(TB, append, BackBtn),
+    send(TB, append, FwdBtn),
+    send(D, resize_message, message(D, layout, @arg2)).
 
 
                 /********************************
-                *          READ STATUS          *
+                *           SELECTION          *
                 ********************************/
 
-editor(CE, Editor) :<-
-    "Text attribute editor"::
-    get(CE, member, editor, Editor).
+html_card(CE, HC) :<-
+    "Inner HTML view"::
+    get(CE, member, html_card, HC).
 
-
-                /********************************
-                *           EDIT MODE           *
-                ********************************/
-
-edit_mode(CE, Val:bool) :->
-    "Switch editors edit_mode"::
-    get(CE, editor, Editor),
-    (   Val == @off
-    ->  send(Editor, save_if_modified),
-        send(CE, label, 'Card Viewer')
-    ;   send(CE, label, 'Card Editor')
-    ),
-    send(Editor, edit_mode, Val).
-
-                 /*******************************
-                 *           SELECTION          *
-                 *******************************/
-
-selected(CE, Obj:object) :->
+selected(CE, Obj:object*) :->
     "Display selected object"::
-    send(CE?editor, selection, Obj).
+    send(CE?html_card, selection, Obj),
+    (   Obj == @nil
+    ->  true
+    ;   send(CE?history, location, Obj)
+    ).
+
+%!  ->goto_history(+Obj) is det.
+%
+%   Invoked by =|library(pce_history)|='s =|->forward|= /
+%   =|->backward|= on the history object during navigation. The
+%   history's =|action|= slot is non-=|@nil|= during this call so the
+%   inner =|->selection|= call's =|->location|= is suppressed -- we
+%   only have to update the visible card.
+
+goto_history(CE, Obj:any) :->
+    (   atom(Obj)
+    ->  send(CE, goto_url, Obj)
+    ;   send(CE?html_card, selection, Obj)
+    ).
+
+add_history(CE, URL:any) :->
+    "doc_window expects this on its frame; no-op for the card view"::
+    send(CE?history, location, URL).
+
+goto_url(CE, URL:name) :->
+    "Open a link clicked in the rendered chunk"::
+    send(CE?html_card, url, URL),
+    send(CE?history, location, URL).
 
 :- pce_end_class.
-

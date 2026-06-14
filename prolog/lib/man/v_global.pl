@@ -35,6 +35,7 @@
 :- module(man_object_browser, []).
 
 :- use_module(library(pce)).
+:- use_module(library(pldoc/man_index), [manual_object/5]).
 :- use_module(util).
 :- require([ default/3
            , send_list/3
@@ -43,14 +44,9 @@
 :- pce_begin_class(man_object_browser, man_frame,
                    "Gobal object browser").
 
-variable(objects,       man_module,             get).
-
 initialise(OB, Manual:man_manual) :->
     "Create from Manual"::
     send(OB, send_super, initialise, Manual, 'Object Browser'),
-
-    get(Manual, module, objects, @on, Module),
-    send(OB, slot, objects, Module),
 
     new(B, man_summary_browser(man_summary, size(70, 15))),
     send(B?image, tab_stops, vector(20, 200)),
@@ -96,9 +92,8 @@ fill(OB, Pattern:regex, What:[name]) :->
     send(B, clear),
     new(Chain, chain),
     (   Show == documented
-    ->  get(@manual, module, objects, @on, ObjModule),
-        send(ObjModule?id_table, for_some,
-             message(@prolog, append_card, Chain, Pattern, @arg2))
+    ->  forall(documented_global(Ref),
+               append_object(Chain, Pattern, Ref))
     ;   send(@pce, for_name_reference,
              message(@prolog, append_object, Chain, Pattern, @arg1))
     ),
@@ -109,24 +104,34 @@ fill(OB, Pattern:regex, What:[name]) :->
     send(B, members, Chain).
 
 
+%   The HTML manual's global-object chapter lives under section
+%   anchors =|sec:object-<slug>|= (PlDoc strips underscores via
+%   =|delete_unsafe_label_chars/2|=, so the slug isn't a clean key).
+%   The per-section Summary stores the original =|@ref|= name -- use
+%   that as the authoritative reference.
+%
+%   Only yield refs that actually resolve to a live xpce global; the
+%   .md file still lists obsolete sentinels (=|@_not_returned|=) and
+%   =|new(man_global(Ref))|= would hang on those.
+
+documented_global(Ref) :-
+    manual_object(section(_Level, _Nr, Anchor, _Title),
+                  Summary, File, packages, _Off),
+    sub_atom(File, _, _, _, '/xpce/man/refmanual/'),
+    atom_concat('sec:object-', _, Anchor),
+    summary_to_global_ref(Summary, Ref),
+    object(@Ref).
+
+summary_to_global_ref(Summary, Ref) :-
+    text_atom(Summary, SumAtom),
+    atom_concat('@', Ref, SumAtom).
+
+text_atom(S, A) :- string(S), !, atom_string(A, S).
+text_atom(A, A).
+
+
 append_object(Chain, Pattern, Ref) :-
     new(G, man_global(Ref)),
-    (   get(G, man_summary, Summary),
-        send(Pattern, search, Summary)
-    ->  send(Chain, append, G)
-    ;   true
-    ).
-
-
-append_card(Chain, Pattern, Card) :-
-    get(Card, identifier, Id),
-    atom_concat('O.', Name, Id),
-    get(Card, summary, S0),
-    (   S0 == @nil
-    ->  S1 = @default
-    ;   S1 = S0
-    ),
-    new(G, man_global(Name, S1)),
     (   get(G, man_summary, Summary),
         send(Pattern, search, Summary)
     ->  send(Chain, append, G)

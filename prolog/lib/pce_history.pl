@@ -123,7 +123,8 @@ goto(DW, Dir:{forward,backward}, Obj:any) :->
     setup_call_cleanup(
         send(DW, slot, action, Dir),
         send(Msg, forward, Obj),
-        send(DW, slot, action, @nil)).
+        send(DW, slot, action, @nil)),
+    ignore(send(DW, send_hyper, button, activate)).
 
 can_backward(H) :->
     "Test whether there is backward history available"::

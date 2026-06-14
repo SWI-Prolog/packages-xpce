@@ -51,12 +51,10 @@
 */
 
 :- pce_autoload(man_class_browser,      library('man/v_class')).
-:- pce_autoload(man_editor,             library('man/v_editor')).
 :- pce_autoload(man_card_editor,        library('man/v_card')).
 :- pce_autoload(man_summary_browser,    library('man/v_summary')).
 :- pce_autoload(man_class_hierarchy,    library('man/v_hierarchy')).
 :- pce_autoload(man_search_tool,        library('man/v_search')).
-:- pce_autoload(man_index_manager,      library('man/man_index')).
 :- pce_autoload(man_topic_browser,      library('man/v_topic')).
 :- pce_autoload(man_module_browser,     library('man/v_module')).
 :- pce_autoload(man_statistics,         library('man/v_statistics')).

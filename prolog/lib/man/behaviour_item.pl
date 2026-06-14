@@ -89,7 +89,9 @@ split_completion(_MI, Value:char_array, RVal:'char_array|tuple') :<-
 selected_completion(MI, Selected:char_array, _Apply:[bool]) :->
     send(MI, send_super, selected_completion, Selected, @off),
     (   get(MI, selection, Selection),
-        send(Selection, instance_of, behaviour)
+        (   send(Selection, instance_of, behaviour)
+        ;   send(Selection, instance_of, class)
+        )
     ->  send(MI, apply, @on)
     ;   true
     ).

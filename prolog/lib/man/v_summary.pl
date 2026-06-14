@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -66,8 +67,6 @@ initialise(S, Att:name, Size:size) :->
     "Create from displayed attribute and size"::
     DI = @arg1,
     new(Tool, S?frame),
-    new(Manual, Tool?manual),
-    new(Selection, Manual?selection),
     new(Obj, DI?object),
 
     get(S, list_font, ListFont),
@@ -120,57 +119,7 @@ initialise(S, Att:name, Size:size) :->
                           @default, @on,
                           and(message(Obj, has_send_method, trace),
                               Obj?trace == @on))
-              ]),
-    ifmaintainer((send_list(P, append,
-              [ new(CM, menu_item(class,
-                                  end_group := @on)),
-                menu_item(relate,
-                          message(Tool, request_relate, Obj),
-                          @default, @off,
-                          and(Manual?edit_mode == @on,
-                              Selection \== @nil,
-                              Selection \== Obj,
-                              not(message(Selection, man_related,
-                                          see_also, Obj))))
-              , menu_item(unrelate,
-                          message(Tool, request_unrelate, Obj),
-                          @default, @off,
-                          and(Manual?edit_mode == @on,
-                              Selection \== @nil,
-                              or(message(Obj, man_related,
-                                         see_also, Selection),
-                                 message(Selection, man_related,
-                                         see_also, Obj))))
-              , menu_item(inherit,
-                          message(Tool, request_inherit, Obj),
-                          @default, @off,
-                          and(Manual?edit_mode == @on,
-                              Selection \== @nil,
-                              Selection \== Obj,
-                              not(message(Selection, man_related,
-                                          inherit, Obj))))
-              , menu_item(uninherit,
-                          message(Tool, request_uninherit, Obj),
-                          @default, @off,
-                          and(Manual?edit_mode == @on,
-                              Selection \== @nil,
-                              message(Obj, man_related,
-                                      inherit, Selection)))
-              ]),
-
-        ClassifyTab = @man_classification,
-
-        send(CM, popup, new(CP, popup(class))),
-        send(CP, show_current, @on),
-        send(CP, update_message,
-         message(CP, selection,
-                 ?(ClassifyTab, member, Obj?man_id))),
-        forall(man_classification(T, L),
-           send(CP, append,
-                menu_item(T,
-                          and(message(ClassifyTab, append, Obj?man_id, T),
-                              message(ClassifyTab, modified, @on)),
-                          L))))).
+              ]).
 
 
                 /********************************
