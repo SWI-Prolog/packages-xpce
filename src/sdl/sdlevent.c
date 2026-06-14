@@ -455,6 +455,39 @@ CtoEvent(SDL_Event *event)
       name    = toInt(codepoint);
       break;
     }
+    /* https://wiki.libsdl.org/SDL3/SDL_DropEvent */
+    case SDL_EVENT_DROP_BEGIN:
+    case SDL_EVENT_DROP_FILE:
+    case SDL_EVENT_DROP_TEXT:
+    case SDL_EVENT_DROP_POSITION:
+    case SDL_EVENT_DROP_COMPLETE:
+    { switch ( event->type )
+      { case SDL_EVENT_DROP_BEGIN:    name = NAME_dropBegin;    break;
+	case SDL_EVENT_DROP_FILE:     name = NAME_dropFile;     break;
+	case SDL_EVENT_DROP_TEXT:     name = NAME_dropText;     break;
+	case SDL_EVENT_DROP_POSITION: name = NAME_dropPosition; break;
+	case SDL_EVENT_DROP_COMPLETE: name = NAME_dropComplete; break;
+	default: break; /* unreachable */
+      }
+      fx   = event->drop.x;
+      fy   = event->drop.y;
+      wid  = event->drop.windowID;
+      time = event->drop.timestamp/1000000;
+      if ( event->drop.data )
+      { if ( event->type == SDL_EVENT_DROP_TEXT )
+	{ ctx_name = NAME_text;
+	  ctx     = CtoString(event->drop.data);
+	} else if ( event->type == SDL_EVENT_DROP_FILE )
+	{ ctx_name = NAME_path;
+	  ctx     = CtoName(event->drop.data);
+	}
+      }
+      DEBUG(NAME_event,
+	    Cprintf("Drop event %s on SDL window-id=%u: %s\n",
+		    pp(name), wid,
+		    event->drop.data ? event->drop.data : "(none)"));
+      break;
+    }
     case SDL_EVENT_KEY_DOWN:
     { SDL_Keymod isdown = (SDL_KMOD_LCTRL|SDL_KMOD_RCTRL|SDL_KMOD_GUI);
 #ifndef __APPLE__

@@ -1220,6 +1220,19 @@ static struct namepair
   { NAME_releaseFocus,			NAME_focus },
   { NAME_obtainFocus,			NAME_focus },
 
+  /* OS-level file / text drag-and-drop, delivered by the SDL backend
+   * via SDL_EVENT_DROP_*.  The drop_file / drop_text events carry the
+   * path / text payload as the `path' / `text' attribute on the
+   * event.  drop_begin / drop_complete bracket a drop sequence;
+   * drop_position is emitted while the user drags over the window.
+   */
+  { NAME_drop,				NAME_any },
+  { NAME_dropBegin,			NAME_drop },
+  { NAME_dropComplete,			NAME_drop },
+  { NAME_dropPosition,			NAME_drop },
+  { NAME_dropFile,			NAME_drop },
+  { NAME_dropText,			NAME_drop },
+
   { 0,			0 }
 };
 
