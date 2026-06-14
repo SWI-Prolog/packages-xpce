@@ -579,37 +579,6 @@ pixelImage(Image image, Int X, Int Y, Any val)
 }
 
 
-static status
-invertPixelImage(Image image, Int x, Int y)
-{ TRY(verifyAccessImage(image, NAME_invertPixel));
-
-  if ( inImage(image, x, y) )
-  { CHANGING_IMAGE(image,
-	d_image(image, 0, 0, valInt(image->size->w), valInt(image->size->h));
-	d_modify();
-	r_complement_pixel(valInt(x), valInt(y));
-	d_done();
-	changedImageImage(image, x, y, ONE, ONE));
-  }
-  succeed;
-}
-
-
-static status
-invertImage(Image image)
-{ TRY(verifyAccessImage(image, NAME_invert));
-
-  CHANGING_IMAGE(image,
-	d_image(image, 0, 0, valInt(image->size->w), valInt(image->size->h));
-	d_modify();
-	r_complement(0, 0, valInt(image->size->w), valInt(image->size->h));
-	d_done();
-	changedEntireImageImage(image));
-
-  succeed;
-}
-
-
 static Any
 getPixelImage(Image image, Int x, Int y)
 { if ( inImage(image, x, y) )
@@ -629,51 +598,6 @@ getPixelImage(Image image, Int x, Int y)
   }
 
   fail;
-}
-
-
-		/********************************
-		*      LOGICAL OPERATIONS	*
-		********************************/
-
-static status
-opImage(Image image, Image i2, Name op, Point pos)
-{ int x, y;
-
-  TRY(verifyAccessImage(image, op));
-  if ( notDefault(pos) )
-  { x = valInt(pos->x);
-    y = valInt(pos->y);
-  } else
-    x = y = 0;
-
-  CHANGING_IMAGE(image,
-	d_image(image, x, y, valInt(image->size->w), valInt(image->size->h));
-	d_modify();
-	r_op_image(i2, 0, 0, x, y, valInt(i2->size->w), valInt(i2->size->h),
-		   op);
-	d_done();
-	changedEntireImageImage(image));
-
-  succeed;
-}
-
-
-static status
-orImage(Image image, Image i2, Point pos)
-{ return opImage(image, i2, NAME_or, pos);
-}
-
-
-static status
-andImage(Image image, Image i2, Point pos)
-{ return opImage(image, i2, NAME_and, pos);
-}
-
-
-static status
-xorImage(Image image, Image i2, Point pos)
-{ return opImage(image, i2, NAME_xor, pos);
 }
 
 
@@ -878,8 +802,6 @@ static char *T_fill[] =
 static char *T_initialise[] =
 	{ "name=[source_sink]*", "width=[int]", "height=[int]",
 	  "kind=[{bitmap,pixmap}]" };
-static char *T_image_atADpointD[] =
-	{ "image", "at=[point]" };
 static char *T_save[] =
 	{ "in=[source_sink]", "format=[{xbm,xpm,pnm,pbm,pgm,ppm,jpeg,gif}]" };
 static char *T_resize[] =
@@ -927,24 +849,14 @@ static senddecl send_image[] =
      NAME_copy, "Paint graphical in image [at point]"),
   SM(NAME_resize, 2, T_resize, resizeImage,
      NAME_dimension, "Resize image to width, height"),
-  SM(NAME_and, 2, T_image_atADpointD, andImage,
-     NAME_edit, "Bitwise and with argument"),
   SM(NAME_clear, 0, NULL, clearImage,
      NAME_edit, "Clear all pixels to 0 or <-background"),
   SM(NAME_fill, 2, T_fill, fillImage,
      NAME_edit, "Fill rectangular area with colour"),
-  SM(NAME_invert, 0, NULL, invertImage,
-     NAME_edit, "Invert all pixels in image"),
-  SM(NAME_or, 2, T_image_atADpointD, orImage,
-     NAME_edit, "Bitwise or with argument"),
-  SM(NAME_xor, 2, T_image_atADpointD, xorImage,
-     NAME_edit, "Bitwise xor with argument"),
   SM(NAME_load, 2, T_load, loadImage,
      NAME_file, "Load image from file (searching in path)"),
   SM(NAME_save, 2, T_save, saveImage,
      NAME_file, "Save image to file in specified format"),
-  SM(NAME_invertPixel, 2, T_xAint_yAint, invertPixelImage,
-     NAME_pixel, "Invert pixel at x-y"),
   SM(NAME_pixel, 3, T_pixel, pixelImage,
      NAME_pixel, "Set pixel at x-y to bool or colour"),
   SM(NAME_Xclose, 1, "display", XcloseImage,

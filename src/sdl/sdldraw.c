@@ -1549,23 +1549,6 @@ r_path(Chain points, int ox, int oy, int radius, int closed, Image fill)
   }
 }
 
-/**
- * Perform an image operation with a specified operator.
- *
- * @param image The image to operate on.
- * @param sx The source x-coordinate.
- * @param sy The source y-coordinate.
- * @param x The destination x-coordinate.
- * @param y The destination y-coordinate.
- * @param w The width of the area to operate on.
- * @param h The height of the area to operate on.
- * @param op The operation to perform.
- */
-void
-r_op_image(Image image, int sx, int sy, int x, int y, int w, int h, Name op)
-{
-}
-
 static cairo_surface_t *
 recolor_bw_surface(cairo_surface_t* input,
 		   Colour foreground,
@@ -1880,17 +1863,6 @@ r_pixel(int x, int y, Any val)
   } else
   { return false;
   }
-}
-
-/**
- * Invert the color of a specific pixel.
- *
- * @param x The x-coordinate of the pixel.
- * @param y The y-coordinate of the pixel.
- */
-void
-r_complement_pixel(int x, int y)
-{
 }
 
 /**
@@ -2347,7 +2319,7 @@ str_text(FontObj font, PceString s, int x, int y)
   }
 }
 
-static void
+void
 str_stext(FontObj font, PceString s, int f, int len,
 	  int x, int y, Style style)
 { if ( len > 0 )

@@ -124,7 +124,6 @@ void r_strikethrough(FontObj font, double x, double base, double w,
 void r_polygon(FPoint pts, int n, int close);
 void r_bezier(fpoint start, fpoint end, fpoint control1, fpoint control2);
 void r_path(Chain points, int ox, int oy, int radius, int closed, Image fill);
-void r_op_image(Image image, int sx, int sy, int x, int y, int w, int h, Name op);
 void r_image(Image image, int sx, int sy, int x, int y, int w, int h);
 void r_fill(double x, double y, double w, double h, Any pattern);
 void r_fill_polygon(FPoint pts, int n);
@@ -132,7 +131,6 @@ void r_caret(int cx, int cy, FontObj font);
 void r_fill_triangle(double x1, double y1, double x2, double y2, double x3, double y3);
 void r_triangle(int x1, int y1, int x2, int y2, int x3, int y3, Any fill);
 bool r_pixel(int x, int y, Any val);
-void r_complement_pixel(int x, int y);
 void d_modify(void);
 COLORRGBA r_get_pixel(int x, int y);
 bool s_has_char(FontObj f, unsigned int c);
@@ -160,6 +158,8 @@ void str_string(PceString s, FontObj font,
 void str_selected_string(PceString s, FontObj font,
 			 int f, int t, Style style, int x, int y, int w, int h,
 			 Name hadjust, Name vadjust);
+void str_stext(FontObj font, PceString s, int f, int len,
+	       int x, int y, Style style);
 void ps_string(PceString s, FontObj font, int x, int y, int w, Name format, int flags);
 void str_label(PceString s, int acc, FontObj font, int x, int y, int w, int h, Name hadjust, Name vadjust, int flags);
 
