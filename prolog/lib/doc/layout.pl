@@ -38,6 +38,8 @@
 :- use_module(doc(emit)).
 :- use_module(doc(vfont)).
 
+resource(copy, image, image('tool/copy.svg')).
+
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Support classes for the html rendering package.  Defines the classes:
 
@@ -71,9 +73,7 @@ Support classes for the html rendering package.  Defines the classes:
 
 class_variable(auto_crop, bool, @on).
 
-:- pce_global(@pbox_recogniser,
-              new(click_gesture(left, '', single,
-                                message(@receiver, clicked, @event)))).
+:- pce_global(@pbox_recogniser, new(pbox_select_gesture)).
 
 event(PB, Ev:event) :->
     (   send_super(PB, event, Ev)
@@ -154,7 +154,7 @@ url(PB, URL:name) :<-
     get(PB, window, Window),
     catch(get(Window, url, URL), _, fail).
 
-show(PB, Content:prolog, Mode:mode=[doc_mode]) :->
+show(PB, Content:prolog, Mode:doc_mode=[doc_mode]) :->
     "Render list of commands in this box"::
     (   Mode == @default
     ->  new(M, doc_mode)
@@ -165,6 +165,125 @@ show(PB, Content:prolog, Mode:mode=[doc_mode]) :->
     ;   emit(Content, PB, M)
     ).
 %       send(PB, compute).
+
+:- pce_end_class.
+
+                 /*******************************
+                 *          CODE BLOCK          *
+                 *******************************/
+
+:- pce_begin_class(code_block, device,
+                   "HTML <pre> block with a copy-on-hover icon").
+
+variable(parbox,    pbox,        get, "Inner pbox holding the code lines").
+variable(copy_icon, graphical*,  get, "Copy icon shown on hover").
+
+initialise(CB, Width:int) :->
+    send_super(CB, initialise),
+    send(CB, display, new(PB, pbox(Width, left)), point(0,0)),
+    send(CB, slot, parbox, PB),
+    new(I, bitmap(image(resource(copy)))),
+    send(I, displayed, @off),
+    send(I, cursor, hand2),
+    send(I, recogniser,
+         click_gesture(left, '', single,
+                       message(@receiver?device, copy))),
+    send(CB, display, I, point(Width-20, 2)),
+    send(CB, slot, copy_icon, I).
+
+event(CB, Ev:event) :->
+    (   send(Ev, is_a, area_enter)
+    ->  send(CB?copy_icon, displayed, @on)
+    ;   send(Ev, is_a, area_exit)
+    ->  send(CB?copy_icon, displayed, @off)
+    ;   send_super(CB, event, Ev)
+    ).
+
+copy(CB) :->
+    "Copy all code in this block to the clipboard"::
+    get(CB, parbox, PB),
+    get(PB, content, V),
+    get(V, low_index, Lo),
+    get(V, high_index, Hi),
+    new(S, string),
+    forall(between(Lo, Hi, I),
+           ( get(V, element, I, B),
+             append_code_text(B, S)
+           )),
+    get(CB, display, D),
+    send(D, copy, S).
+
+:- pce_end_class.
+
+append_code_text(B, S) :-
+    send(B, instance_of, tbox), !,
+    get(B?text, value, T),
+    send(S, append, T).
+append_code_text(B, _) :-
+    send(B, instance_of, grbox), !.
+append_code_text(B, S) :-
+    send(B, instance_of, hbox),
+    get(B, rubber, R),
+    R \== @nil,
+    get(R, linebreak, force),
+    !,
+    send(S, append, '\n').
+append_code_text(_, _).
+
+                 /*******************************
+                 *      PBOX SELECT GESTURE     *
+                 *******************************/
+
+:- pce_begin_class(pbox_select_gesture, gesture,
+                   "Drag to select pbox text; click navigates").
+
+class_variable(button,   button_name, left).
+class_variable(modifier, modifier,    '').
+
+variable(down_pos,  point*,                  get, "Down position").
+variable(selecting, bool := @off,            get, "Drag crossed threshold").
+variable(unit,      {character,word} := character,
+                                             get, "Selection unit").
+
+initiate(G, Ev:event) :->
+    send(G, slot, down_pos, Ev?position),
+    send(G, slot, selecting, @off),
+    get(Ev, receiver, PB),
+    get(Ev, multiclick, Multi),
+    (   Multi == double
+    ->  send(G, slot, unit, word),
+        send(G, slot, selecting, @on),
+        send(PB, select_word, Ev)
+    ;   send(G, slot, unit, character),
+        send(PB, mark_selection, Ev)
+    ).
+
+drag(G, Ev:event) :->
+    get(Ev, receiver, PB),
+    (   get(G, selecting, @on)
+    ->  send(G, extend, PB, Ev)
+    ;   get(G, down_pos, DP),
+        get(Ev, position, P),
+        get(DP, distance, P, D),
+        D > 4
+    ->  send(G, slot, selecting, @on),
+        send(G, extend, PB, Ev)
+    ;   true
+    ).
+
+extend(G, PB:pbox, Ev:event) :->
+    (   get(G, unit, word)
+    ->  send(PB, extend_selection_word, Ev)
+    ;   send(PB, extend_selection, Ev)
+    ).
+
+terminate(G, Ev:event) :->
+    get(Ev, receiver, PB),
+    (   get(G, selecting, @on)
+    ->  true
+    ;   send(PB, selection, @nil),
+        send(PB, clicked, Ev)
+    ).
 
 :- pce_end_class.
 
@@ -208,9 +327,9 @@ class_variable(item_sep, '0..', 0).
 
 new_label(_, Label:graphical) :<-
     new(Label, circle(8)),
-    send(Label, fill, @black_image).
+    send(Label, fill, foreground).
 
-make_item(BL, Item:prolog, Mode:mode, PB:parbox) :<-
+make_item(BL, Item:prolog, Mode:doc_mode, PB:parbox) :<-
     "Create a new item"::
     (   Item == []
     ->  Label = @default
@@ -239,7 +358,7 @@ new_label(EN, Label:graphical) :<-
     send(EN, index, I),
     new(Label, text(I, right, normal)).
 
-make_item(BL, Item:prolog, Mode:mode, PB:parbox) :<-
+make_item(BL, Item:prolog, Mode:doc_mode, PB:parbox) :<-
     "Create a new item"::
     (   Item == []
     ->  Label = @default
@@ -260,7 +379,7 @@ make_item(BL, Item:prolog, Mode:mode, PB:parbox) :<-
 
 :- pce_begin_class(definition_list, lbox, "HTML <DL> element").
 
-make_item(DL, Item:prolog, Mode:mode, PB:parbox) :<-
+make_item(DL, Item:prolog, Mode:doc_mode, PB:parbox) :<-
     "Create a new item"::
     get(Mode, alignment, Align),
     get(DL, item_width, IW),

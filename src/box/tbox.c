@@ -52,7 +52,7 @@ initialiseTBox(TBox tb, CharArray text, Style style)
 		 *	      COMPUTE		*
 		 *******************************/
 
-static FontObj
+FontObj
 getFontTBox(TBox tb)
 { if ( notDefault(tb->style->font) )
     answer(tb->style->font);
@@ -98,9 +98,29 @@ getSpaceTBox(TBox tb)
 
 void
 drawTBox(TBox tb, int x, int y, int w, parline const *line)
+{ drawTBoxSel(tb, x, y, w, line, 0, 0, NIL);
+}
+
+
+static void
+print_substring(PceString s, int offset, int len, int x, int y, FontObj f)
+{ if ( len <= 0 )
+    return;
+  if ( isstrA(s) )
+    s_printA(s->s_textA + offset, len, x, y, f);
+  else
+    s_printW(s->s_textW + offset, len, x, y, f);
+}
+
+
+void
+drawTBoxSel(TBox tb, int x, int y, int w, parline const *line,
+	    int sel_from, int sel_to, Style sel_style)
 { FontObj f = getFontTBox(tb);
   Style s = tb->style;
   Colour old_colour = NULL;
+  PceString str = &tb->text->data;
+  int len = str->s_size;
 
   if ( notDefault(s->colour) )
     old_colour = r_colour(s->colour);
@@ -116,7 +136,31 @@ drawTBox(TBox tb, int x, int y, int w, parline const *line)
   { r_clear(x, ly, w, lh);
   }
 
-  s_print_aligned(&tb->text->data, x, y, f);
+  if ( sel_from < 0 )    sel_from = 0;
+  if ( sel_to   > len )  sel_to   = len;
+
+  if ( notNil(sel_style) && sel_from < sel_to )
+  { int sx    = (int)str_advance(str, 0, sel_from, f);
+    int sel_w = (int)str_advance(str, sel_from, sel_to, f);
+
+    if ( notDefault(sel_style->background) )
+      r_fill(x+sx, ly, sel_w, lh, sel_style->background);
+
+    print_substring(str, 0, sel_from, x, y, f);
+
+    Any sel_fg = NULL;
+    if ( notDefault(sel_style->colour) )
+      sel_fg = r_colour(sel_style->colour);
+    print_substring(str, sel_from, sel_to - sel_from, x+sx, y, f);
+    if ( sel_fg )
+      r_colour(sel_fg);
+
+    if ( sel_to < len )
+      print_substring(str, sel_to, len - sel_to, x+sx+sel_w, y, f);
+  } else
+  { s_print_aligned(str, x, y, f);
+  }
+
   if ( s->underline != OFF && notDefault(s->underline) )
     r_underline(f, x, y, w, s->underline, NAME_none);
 

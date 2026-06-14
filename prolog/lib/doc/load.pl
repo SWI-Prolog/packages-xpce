@@ -67,6 +67,7 @@ user:file_search_path(doc, pce('prolog/lib/doc')).
 :- pce_autoload(definition_list, doc(layout)).
 :- pce_autoload(button_box,      doc(layout)).
 :- pce_autoload(anchor_box,      doc(layout)).
+:- pce_autoload(code_block,      doc(layout)).
 
 :- pce_autoload(doc_window,      doc(window)).
 :- pce_autoload(doc_browser,     doc(browser)).

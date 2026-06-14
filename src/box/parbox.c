@@ -50,6 +50,13 @@ initialiseParBox(ParBox pb, Int width, Name alignment, int argc, HBox *argv)
   if ( notDefault(alignment) ) assign(pb, alignment,  alignment);
   if ( notDefault(width) )     assign(pb, line_width, width);
 
+  assign(pb, sel_start_box,  NIL);
+  assign(pb, sel_start_char, NIL);
+  assign(pb, sel_end_box,    NIL);
+  assign(pb, sel_end_char,   NIL);
+  assign(pb, sel_mark_box,   NIL);
+  assign(pb, sel_mark_char,  NIL);
+
   for(int i=0; i<argc; i++)
     appendParBox(pb, argv[i]);
 
@@ -197,13 +204,18 @@ static void	PlaceAlignedGr(GrBox grb,
 		********************************/
 
 static void
-drawHBox(HBox hb, int x, int y, int w, parline const *line, Area a)
+drawHBox(HBox hb, int x, int y, int w, parline const *line, Area a,
+	 int sel_from, int sel_to, Style sel_style, bool in_sel)
 { if ( instanceOfObject(hb, ClassTBox) )
-  { drawTBox((TBox)hb, x, y, w, line);
+  { drawTBoxSel((TBox)hb, x, y, w, line, sel_from, sel_to, sel_style);
   } else
   { int ly = y - line->ascent;
     int lh = line->ascent + line->descent;
-    r_clear(x, ly, w, lh);
+
+    if ( in_sel && notNil(sel_style) && notDefault(sel_style->background) )
+      r_fill(x, ly, w, lh, sel_style->background);
+    else
+      r_clear(x, ly, w, lh);
 
     if ( instanceOfObject(hb, ClassGrBox) )
     { Graphical gr = ((GrBox)hb)->graphical;
@@ -236,16 +248,29 @@ RedrawAreaParBox(ParBox pb, Area a)
   { int here = valInt(getLowIndexVector(pb->content));
     int ay = valInt(a->y);		/* start of redraw area */
     int zy = ay + valInt(a->h);		/* end of it */
+    bool has_sel = notNil(pb->sel_start_box);
+    int sb = 0, sc = 0, eb = 0, ec = 0;
+    Style sel_style = NIL;
+
+    if ( has_sel )
+    { sb = valInt(pb->sel_start_box);
+      sc = valInt(pb->sel_start_char);
+      eb = valInt(pb->sel_end_box);
+      ec = valInt(pb->sel_end_char);
+      sel_style = getClassVariableValueObject(pb, NAME_selectionStyle);
+      if ( !sel_style ) sel_style = NIL;
+    }
 
     while(here <= valInt(getHighIndexVector(pb->content)) && y < zy)
     { parcell *pc;
       int i;
+      int line_start = here;
 
       l.x = 0;
       l.y = y;
       l.w = w;
       l.size = MAXHBOXES;
-      here = fill_line(pb, here, &l, &shape, false);
+      here = fill_line(pb, line_start, &l, &shape, false);
       if ( l.shape_graphicals )
 	push_shape_graphicals(&l, &shape);
 
@@ -258,7 +283,21 @@ RedrawAreaParBox(ParBox pb, Area a)
       y += l.ascent;			/* the baseline */
 
       for(i=0, pc = l.hbox; i<l.size; i++, pc++)
-	drawHBox(pc->box, pc->x, y, pc->w, &l, a);
+      { int gi = line_start + i;
+	int sel_from = 0, sel_to = 0;
+	bool in_sel = false;
+
+	if ( has_sel && gi >= sb && gi <= eb )
+	{ in_sel = true;
+	  if ( instanceOfObject(pc->box, ClassTBox) )
+	  { int len = ((TBox)pc->box)->text->data.s_size;
+	    sel_from = (gi == sb) ? sc : 0;
+	    sel_to   = (gi == eb) ? ec : len;
+	  }
+	}
+	drawHBox(pc->box, pc->x, y, pc->w, &l, a,
+		 sel_from, sel_to, sel_style, in_sel);
+      }
 
       if ( l.size )
       { pc = &l.hbox[l.size-1];
@@ -298,9 +337,16 @@ getAscentParBox(ParBox pb)
 		 *	LOCATIONS AND EVENTS	*
 		 *******************************/
 
-static Int
-getLocateEventParBox(ParBox pb, EventObj ev)
+/* Locate the (hbox-index, char-in-tbox) under an event.
+   The char index is the offset within the tbox text under the click, or 0
+   when the cell is not a tbox.  Returns true if the event lies on a cell.
+*/
+static bool
+locate_event_parbox(ParBox pb, EventObj ev, int *box_out, int *char_out)
 { Int X, Y;
+
+  *box_out  = 0;
+  *char_out = 0;
 
   if ( get_xy_event(ev, pb, OFF, &X, &Y) )
   { int ex = valInt(X);
@@ -356,17 +402,51 @@ getLocateEventParBox(ParBox pb, EventObj ev)
 	  continue;			/* check? */
 
 	if ( ex > pc->x && ex <= pc->x + pc->w )
-	{ found:
+	{ int chr = 0;
+	  found:
 	  here += i;
 	  assert(content[here] == pc->box);
-	  answer(toInt(here));
+	  if ( instanceOfObject(pc->box, ClassTBox) )
+	  { TBox tb = (TBox)pc->box;
+	    FontObj f = getFontTBox(tb);
+	    int len = tb->text->data.s_size;
+
+	    chr = str_x_to_index(&tb->text->data, 0, len, f,
+				 ex - pc->x, 1);
+	  }
+	  *box_out  = here;
+	  *char_out = chr;
+	  (void)content;
+	  return true;
 	}
       }
       (void)content;
 
-      fail;
+      return false;
     }
   }
+
+  return false;
+}
+
+
+static Int
+getLocateEventParBox(ParBox pb, EventObj ev)
+{ int box, chr;
+
+  if ( locate_event_parbox(pb, ev, &box, &chr) )
+    answer(toInt(box));
+
+  fail;
+}
+
+
+static Tuple
+getLocateCharParBox(ParBox pb, EventObj ev)
+{ int box, chr;
+
+  if ( locate_event_parbox(pb, ev, &box, &chr) )
+    answer(answerObject(ClassTuple, toInt(box), toInt(chr), EAV));
 
   fail;
 }
@@ -1342,6 +1422,277 @@ alignmentParBox(ParBox pb, Name alignment)
 }
 
 
+		 /*******************************
+		 *	    SELECTION		*
+		 *******************************/
+
+static int
+sel_cmp(int b1, int c1, int b2, int c2)
+{ if ( b1 != b2 ) return b1 < b2 ? -1 : 1;
+  if ( c1 != c2 ) return c1 < c2 ? -1 : 1;
+  return 0;
+}
+
+
+static status
+selectionParBox(ParBox pb, Int sbox, Int schar, Int ebox, Int echar)
+{ if ( isDefault(sbox) || isNil(sbox) )
+  { if ( isNil(pb->sel_start_box) )
+      succeed;
+
+    assign(pb, sel_start_box,  NIL);
+    assign(pb, sel_start_char, NIL);
+    assign(pb, sel_end_box,    NIL);
+    assign(pb, sel_end_char,   NIL);
+    assign(pb, sel_mark_box,   NIL);
+    assign(pb, sel_mark_char,  NIL);
+    changedEntireImageGraphical(pb);
+    succeed;
+  }
+
+  int sb = valInt(sbox);
+  int sc = (isDefault(schar) || isNil(schar)) ? 0 : valInt(schar);
+  int eb = (isDefault(ebox)  || isNil(ebox))  ? sb : valInt(ebox);
+  int ec = (isDefault(echar) || isNil(echar)) ? sc : valInt(echar);
+
+  if ( sel_cmp(sb, sc, eb, ec) > 0 )
+  { int tb = sb, tc = sc; sb = eb; sc = ec; eb = tb; ec = tc;
+  }
+
+  Int sb_i = toInt(sb), sc_i = toInt(sc);
+  Int eb_i = toInt(eb), ec_i = toInt(ec);
+
+  if ( pb->sel_start_box  != sb_i ||
+       pb->sel_start_char != sc_i ||
+       pb->sel_end_box    != eb_i ||
+       pb->sel_end_char   != ec_i )
+  { assign(pb, sel_start_box,  sb_i);
+    assign(pb, sel_start_char, sc_i);
+    assign(pb, sel_end_box,    eb_i);
+    assign(pb, sel_end_char,   ec_i);
+    changedEntireImageGraphical(pb);
+  }
+
+  succeed;
+}
+
+
+static Tuple
+getSelectionParBox(ParBox pb)
+{ if ( isNil(pb->sel_start_box) )
+    fail;
+
+  Point p1 = answerObject(ClassPoint,
+			  pb->sel_start_box, pb->sel_start_char, EAV);
+  Point p2 = answerObject(ClassPoint,
+			  pb->sel_end_box,   pb->sel_end_char,   EAV);
+  answer(answerObject(ClassTuple, p1, p2, EAV));
+}
+
+
+static status
+hasSelectionParBox(ParBox pb)
+{ if ( isNil(pb->sel_start_box) )
+    fail;
+  if ( pb->sel_start_box  == pb->sel_end_box &&
+       pb->sel_start_char == pb->sel_end_char )
+    fail;
+  succeed;
+}
+
+
+static StringObj
+getSelectedTextParBox(ParBox pb)
+{ if ( isNil(pb->sel_start_box) )
+    fail;
+
+  int sb = valInt(pb->sel_start_box);
+  int sc = valInt(pb->sel_start_char);
+  int eb = valInt(pb->sel_end_box);
+  int ec = valInt(pb->sel_end_char);
+  int lo = valInt(getLowIndexVector(pb->content));
+  int hi = valInt(getHighIndexVector(pb->content));
+
+  if ( sb < lo ) sb = lo;
+  if ( eb > hi ) eb = hi;
+
+  tmp_string tmp;
+  str_tmp_init(&tmp);
+
+  for(int i=sb; i<=eb; i++)
+  { HBox hb = getElementVector(pb->content, toInt(i));
+
+    if ( !hb || isNil(hb) )
+      continue;
+
+    if ( instanceOfObject(hb, ClassTBox) )
+    { TBox tb = (TBox)hb;
+      PceString str = &tb->text->data;
+      int from = (i == sb) ? sc : 0;
+      int to   = (i == eb) ? ec : str->s_size;
+
+      if ( from < 0 ) from = 0;
+      if ( to > str->s_size ) to = str->s_size;
+
+      for(int j=from; j<to; j++)
+	str_tmp_put(&tmp, str_fetch(str, j));
+    } else if ( instanceOfObject(hb, ClassGrBox) )
+    { /* graphic: skip */
+    } else if ( instanceOfObject(hb, ClassHBox) )
+    { if ( notNil(hb->rubber) &&
+	   hb->rubber->linebreak == NAME_force )
+	str_tmp_put(&tmp, '\n');
+      else
+	str_tmp_put(&tmp, ' ');
+    }
+  }
+
+  StringObj rval = StringToString(&tmp.s);
+  str_tmp_done(&tmp);
+
+  if ( !rval )
+    fail;
+  answer(rval);
+}
+
+
+static status
+copyParBox(ParBox pb)
+{ StringObj s = getSelectedTextParBox(pb);
+  DisplayObj d = getDisplayGraphical((Graphical)pb);
+
+  if ( !d )
+  { EventObj ev;
+
+    if ( instanceOfObject((ev=getValueVar(EVENT)), ClassEvent) )
+      d = getDisplayEvent(ev);
+  }
+
+  if ( s && d )
+    return send(d, NAME_copy, s, EAV);
+
+  fail;
+}
+
+
+static status
+markSelectionParBox(ParBox pb, EventObj ev)
+{ int box, chr;
+
+  if ( !locate_event_parbox(pb, ev, &box, &chr) )
+    fail;
+
+  assign(pb, sel_mark_box,  toInt(box));
+  assign(pb, sel_mark_char, toInt(chr));
+  return selectionParBox(pb, toInt(box), toInt(chr), toInt(box), toInt(chr));
+}
+
+
+static status
+selectWordParBox(ParBox pb, EventObj ev)
+{ int box, chr;
+
+  if ( !locate_event_parbox(pb, ev, &box, &chr) )
+    fail;
+
+  HBox hb = getElementVector(pb->content, toInt(box));
+  if ( !hb || isNil(hb) || !instanceOfObject(hb, ClassTBox) )
+    fail;
+
+  TBox tb = (TBox)hb;
+  int len = tb->text->data.s_size;
+
+  assign(pb, sel_mark_box,  toInt(box));
+  assign(pb, sel_mark_char, toInt(0));
+  return selectionParBox(pb, toInt(box), toInt(0), toInt(box), toInt(len));
+}
+
+
+static int
+find_tbox_at_or_before(ParBox pb, int box)
+{ int lo = valInt(getLowIndexVector(pb->content));
+  for(int i=box; i >= lo; i--)
+  { HBox hb = getElementVector(pb->content, toInt(i));
+    if ( hb && notNil(hb) && instanceOfObject(hb, ClassTBox) )
+      return i;
+  }
+  return -1;
+}
+
+
+static int
+find_tbox_at_or_after(ParBox pb, int box)
+{ int hi = valInt(getHighIndexVector(pb->content));
+  for(int i=box; i <= hi; i++)
+  { HBox hb = getElementVector(pb->content, toInt(i));
+    if ( hb && notNil(hb) && instanceOfObject(hb, ClassTBox) )
+      return i;
+  }
+  return -1;
+}
+
+
+static status
+extendSelectionWordParBox(ParBox pb, EventObj ev)
+{ int loc_box, loc_chr;
+
+  (void)loc_chr;
+
+  if ( !locate_event_parbox(pb, ev, &loc_box, &loc_chr) )
+    fail;
+
+  if ( isNil(pb->sel_mark_box) )
+    return selectWordParBox(pb, ev);
+
+  int mb = valInt(pb->sel_mark_box);
+  int snapped;
+
+  if ( loc_box < mb )
+    snapped = find_tbox_at_or_after(pb, loc_box);
+  else
+    snapped = find_tbox_at_or_before(pb, loc_box);
+
+  if ( snapped < 0 )
+    snapped = mb;
+
+  HBox mhb = getElementVector(pb->content, toInt(mb));
+  int mb_len = (mhb && instanceOfObject(mhb, ClassTBox))
+               ? ((TBox)mhb)->text->data.s_size : 0;
+  HBox shb = getElementVector(pb->content, toInt(snapped));
+  int snapped_len = (shb && instanceOfObject(shb, ClassTBox))
+                    ? ((TBox)shb)->text->data.s_size : 0;
+
+  if ( snapped <= mb )
+    return selectionParBox(pb, toInt(snapped), toInt(0),
+			       toInt(mb),      toInt(mb_len));
+  else
+    return selectionParBox(pb, toInt(mb),      toInt(0),
+			       toInt(snapped), toInt(snapped_len));
+}
+
+
+static status
+extendSelectionParBox(ParBox pb, EventObj ev)
+{ int box, chr;
+
+  if ( !locate_event_parbox(pb, ev, &box, &chr) )
+    fail;
+
+  if ( isNil(pb->sel_mark_box) )
+  { assign(pb, sel_mark_box,  toInt(box));
+    assign(pb, sel_mark_char, toInt(chr));
+  }
+
+  int mb = valInt(pb->sel_mark_box);
+  int mc = valInt(pb->sel_mark_char);
+
+  if ( sel_cmp(mb, mc, box, chr) <= 0 )
+    return selectionParBox(pb, toInt(mb), toInt(mc), toInt(box), toInt(chr));
+  else
+    return selectionParBox(pb, toInt(box), toInt(chr), toInt(mb), toInt(mc));
+}
+
+
 static status
 lineWidthParBox(ParBox pb, Int w)
 { if ( valInt(w) < 0 )
@@ -1382,6 +1733,9 @@ static char *T_boxArea[] =
 static char *T_cdata[] =
 	{ "cdata=string", "style=[style]", "space=[hbox]",
 	  "ignore_blanks=[{none,leading,trailing,both}]" };
+static char *T_selection[] =
+        { "start_box=[int]*", "start_char=[int]*",
+	  "end_box=[int]*",   "end_char=[int]*" };
 
 
 /* Instance Variables */
@@ -1394,7 +1748,19 @@ static vardecl var_parbox[] =
   SV(NAME_alignment, "{left,right,center,justify}", IV_GET|IV_STORE,
      alignmentParBox, NAME_layout, "Alignment of text in box"),
   SV(NAME_autoCrop, "bool", IV_GET|IV_STORE,
-     autoCropParBox, NAME_layout, "If @on, make <-area fit content")
+     autoCropParBox, NAME_layout, "If @on, make <-area fit content"),
+  IV(NAME_selStartBox, "int*", IV_NONE,
+     NAME_selection, "Selection start: hbox index"),
+  IV(NAME_selStartChar, "int*", IV_NONE,
+     NAME_selection, "Selection start: character offset in tbox"),
+  IV(NAME_selEndBox, "int*", IV_NONE,
+     NAME_selection, "Selection end: hbox index"),
+  IV(NAME_selEndChar, "int*", IV_NONE,
+     NAME_selection, "Selection end: character offset in tbox"),
+  IV(NAME_selMarkBox, "int*", IV_NONE,
+     NAME_selection, "Drag anchor: hbox index"),
+  IV(NAME_selMarkChar, "int*", IV_NONE,
+     NAME_selection, "Drag anchor: character offset in tbox")
 };
 
 /* Send Methods */
@@ -1413,7 +1779,21 @@ static senddecl send_parbox[] =
   SM(NAME_cdata, 4, T_cdata, cdataParBox,
      NAME_content, "Append CDATA after breaking into words"),
   SM(NAME_clear, 0, NULL, clearParBox,
-     NAME_content, "Delete all contents")
+     NAME_content, "Delete all contents"),
+  SM(NAME_selection, 4, T_selection, selectionParBox,
+     NAME_selection, "Set or clear selection [start, end)"),
+  SM(NAME_markSelection, 1, "event", markSelectionParBox,
+     NAME_selection, "Start a zero-width selection under event"),
+  SM(NAME_extendSelection, 1, "event", extendSelectionParBox,
+     NAME_selection, "Extend selection to position under event"),
+  SM(NAME_selectWord, 1, "event", selectWordParBox,
+     NAME_selection, "Select the tbox (word) under event"),
+  SM(NAME_extendSelectionWord, 1, "event", extendSelectionWordParBox,
+     NAME_selection, "Extend selection by whole words to event position"),
+  SM(NAME_hasSelection, 0, NULL, hasSelectionParBox,
+     NAME_selection, "Succeed if a non-empty selection is set"),
+  SM(NAME_copy, 0, NULL, copyParBox,
+     NAME_selection, "Copy selection to clipboard (\\C-c)")
 };
 
 /* Get Methods */
@@ -1423,6 +1803,12 @@ static getdecl get_parbox[] =
      NAME_dimension, "Ascent of first line"),
   GM(NAME_locateEvent, 1, "1..", "event", getLocateEventParBox,
      NAME_event, "Find hbox from event"),
+  GM(NAME_locateChar, 1, "tuple", "event", getLocateCharParBox,
+     NAME_event, "Find tuple(hbox, char) from event"),
+  GM(NAME_selection, 0, "tuple", NULL, getSelectionParBox,
+     NAME_selection, "Tuple(point(box,char), point(box,char))"),
+  GM(NAME_selectedText, 0, "string", NULL, getSelectedTextParBox,
+     NAME_selection, "New string with contents of selection"),
   GM(NAME_box, 1, "hbox", "1..", getBoxParBox,
      NAME_content, "Get hbox from index"),
   GM(NAME_boxArea, 2, "area", T_boxArea, getBoxAreaParBox,
@@ -1443,7 +1829,11 @@ static getdecl get_parbox[] =
 static classvardecl rc_parbox[] =
 { RC(NAME_lineWidth, NULL, "500",  NULL),
   RC(NAME_alignment, NULL, "left", NULL),
-  RC(NAME_autoCrop,  NULL, "@off", NULL)
+  RC(NAME_autoCrop,  NULL, "@off", NULL),
+  RC(NAME_selectionStyle, "style",
+     UXWIN("style(background := yellow)",
+	   "@_select_style"),
+     "Style for selected text")
 };
 
 /* Class Declaration */

@@ -10,6 +10,7 @@ COMMON(status)	makeClassHBox(Class class);
 /* /staff/jan/src/pl/packages/xpce/src/box/tbox.c */
 COMMON(status)	initialiseTBox(TBox tb, CharArray text, Style style);
 COMMON(HBox)	getSpaceHBoxFont(FontObj f);
+COMMON(FontObj)	getFontTBox(TBox tb);
 COMMON(status)	makeClassTBox(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/box/parbox.c */

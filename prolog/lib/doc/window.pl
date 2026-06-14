@@ -47,6 +47,7 @@ variable(forward_list,  chain, get, "->back list of URL's").
 variable(page_source,   file*, get, "(Cached) source-page").
 
 class_variable(size, size, size(600, 300)).
+class_variable(restrict_scroll, bool, @on).
 
 initialise(DW, URL:[name]*) :->
     send_super(DW, initialise),
@@ -73,6 +74,8 @@ make_scroll_recogniser(G) :-
                                  forwards, page, 700)),
                 function('\\ef',
                          message(@event?receiver?window, find)),
+                function('\\C-c',
+                         message(@event?receiver, copy)),
                 function(page_down,
                          message(@receiver, scroll_vertical,
                                  forwards, page, 1000)),
@@ -90,6 +93,22 @@ make_scroll_recogniser(G) :-
 parbox(DW, PB:pbox) :<-
     "Get the parbox representing the whole document"::
     get(DW, member, pbox, PB).
+
+'_wants_keyboard_focus'(_DW) :->
+    "Claim keyboard focus on click so Ctrl-C reaches us"::
+    true.
+
+selected_parbox(DW, PB:pbox) :<-
+    "Find the (sub-)pbox holding the current selection"::
+    get(DW, parbox, Top),
+    get(Top, find, message(@receiver, has_selection), tuple(PB, _)).
+
+copy(DW) :->
+    "Copy selection from whichever pbox holds it"::
+    (   get(DW, selected_parbox, PB)
+    ->  send(PB, copy)
+    ;   send(DW, report, status, 'No selection')
+    ).
 
 :- pce_group(navigate).
 

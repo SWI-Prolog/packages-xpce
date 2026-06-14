@@ -334,6 +334,8 @@ element(a, Attr, Content) -->           % <A NAME=<Label>> ... </A>
     !,
     [ \anchor(Label, Content)
     ].
+element(a, _Attr, Content) -->          % attribute-only anchor, e.g.
+    seq(Content).                       % <A data-obj=...></A>.
 
 %       Tables
 
@@ -386,6 +388,8 @@ element(meta, _, _) -->                 % <META>
 element(link, _, _) -->                 % <LINK>
     [].
 element(script, _, _) -->               % <SCRIPT>
+    [].
+element(style, _, _) -->                % <STYLE>
     [].
 element(body, Attributes, Content) -->  % <BODY>gg343
     [ \body(Attributes)

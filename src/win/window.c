@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -55,7 +56,6 @@ initialiseWindow(PceWindow sw, Name label, Size size, DisplayObj display)
   assign(sw, has_pointer,	   OFF);
   assign(sw, sensitive,		   ON);
   assign(sw, bounding_box,	   newObject(ClassArea, EAV));
-  assign(sw, buffered_update,	   ON);
   obtainClassVariablesObject(sw);
 
   if ( isDefault(size) )
@@ -833,7 +833,7 @@ keyboardFocusWindow(PceWindow sw, Graphical gr)
     if ( instanceOfObject(gr, ClassButton) !=
 	 instanceOfObject(sw->keyboard_focus, ClassButton) &&
 	 (defb = getDefaultButtonDevice((Device)sw)) &&
-	 (defb->look == NAME_motif || defb->look == NAME_gtk) )
+	 defb->look == NAME_xpce )
       changedDialogItem(defb);
 
     assign(sw, keyboard_focus, gr);
@@ -1282,6 +1282,43 @@ scrollWindow(PceWindow sw, Int x, Int y, BoolObj ax, BoolObj ay)
       ny = oy - valInt(y);
   } else
     ny = oy;
+
+  bool clamp_x = sw->restrict_scroll == ON && notDefault(x) && ax == OFF;
+  bool clamp_y = sw->restrict_scroll == ON && notDefault(y) && ay == OFF;
+
+  if ( clamp_x || clamp_y )
+  { computeBoundingBoxWindow(sw);
+    Area bb = sw->bounding_box;
+    int vp_w = valInt(sw->area->w);
+    int vp_h = valInt(sw->area->h);
+    int bx = valInt(bb->x),  by = valInt(bb->y);
+    int bw = valInt(bb->w),  bh = valInt(bb->h);
+
+    /* The viewport's top-left in world space is (-nx, -ny).  Keep it in
+       [bx, bx+bw-vp_w] x [by, by+bh-vp_h]; when content is smaller than
+       the viewport on an axis, both bounds collapse so that axis cannot
+       scroll.  Only clamp for relative scrolls (ax/ay == OFF): absolute
+       ->scroll_to / ->normalise / ->scroll_vertical(_, file, _) calls
+       are honoured literally so e.g. doc_window->clear's scroll_to(0,0)
+       preserves any intentional left/top margin.
+    */
+    if ( clamp_x )
+    { int lo_x = bx, hi_x = bx + bw - vp_w;
+      if ( hi_x < lo_x ) hi_x = lo_x;
+      int top_x = -nx;
+      if ( top_x < lo_x ) top_x = lo_x;
+      if ( top_x > hi_x ) top_x = hi_x;
+      nx = -top_x;
+    }
+    if ( clamp_y )
+    { int lo_y = by, hi_y = by + bh - vp_h;
+      if ( hi_y < lo_y ) hi_y = lo_y;
+      int top_y = -ny;
+      if ( top_y < lo_y ) top_y = lo_y;
+      if ( top_y > hi_y ) top_y = hi_y;
+      ny = -top_y;
+    }
+  }
 
   if ( ox != nx || ny != oy )
   { assign(sw->scroll_offset, x, toInt(nx));
@@ -2231,15 +2268,15 @@ static vardecl var_window[] =
      NAME_event, "Event being processed now"),
   IV(NAME_sensitive, "bool", IV_BOTH,
      NAME_event, "Window accepts events"),
-  SV(NAME_background, "colour|pixmap", IV_GET|IV_STORE, backgroundWindow,
+  IV(NAME_restrictScroll, "bool", IV_BOTH,
+     NAME_scroll, "If @on, clamp scrolling to <-bounding_box"),
+  SV(NAME_background, "[colour]", IV_GET|IV_STORE, backgroundWindow,
      NAME_appearance, "Background colour or pattern"),
   IV(NAME_hasPointer, "bool", IV_BOTH,
      NAME_event, "If @on, pointer (mouse) is in window"),
   SV(NAME_selectionFeedback, "{invert,handles,colour}|elevation|colour*",
      IV_GET|IV_STORE, selectionFeedbackWindow,
      NAME_appearance, "How <-selected graphicals are visualised"),
-  IV(NAME_bufferedUpdate, "bool", IV_BOTH,
-     NAME_redraw, "If @on (default) use buffered update"),
   IV(NAME_changesData, "alien:UpdateArea", IV_NONE,
      NAME_repaint, "Summary info for redraw"),
   IV(NAME_wsRef, "alien:WsRef", IV_NONE,
@@ -2278,7 +2315,7 @@ static senddecl send_window[] =
      DEFAULT, "Move graphical horizontally"),
   SM(NAME_y, 1, "int", yGraphical,
      DEFAULT, "Move graphical vertically"),
-  SM(NAME_colour, 1, "[colour|pixmap]", colourWindow,
+  SM(NAME_colour, 1, "[colour]", colourWindow,
      DEFAULT, "Default colour of graphicals"),
   SM(NAME_pen, 1, "0..", penWindow,
      DEFAULT, "Thickness of line around window"),
@@ -2288,7 +2325,7 @@ static senddecl send_window[] =
      NAME_accelerator, "Handle accelerator (delegate to <-frame)"),
   SM(NAME_decorate, 6, T_decorate, decorateWindow,
      NAME_appearance, "Embed window for scrollbars, etc."),
-  SM(NAME_foreground, 1, "colour", colourWindow,
+  SM(NAME_foreground, 1, "[colour]", colourWindow,
      NAME_appearance, "Set foreground colour"),
   SM(NAME_resize, 0, NULL, resizeWindow,
      NAME_area, "Execute <-resize_message"),
@@ -2388,7 +2425,8 @@ static classvardecl rc_window[] =
   RC(NAME_pen,               "0..",	      "@_win_pen",                   NULL),
   RC(NAME_selectionHandles,  RC_REFINE,	      "@nil",			 NULL),
   RC(NAME_size,		 "size",	      "size(200,100)",               NULL),
-  RC(NAME_selectionFeedback, NULL,            "colour",                      NULL)
+  RC(NAME_selectionFeedback, NULL,            "colour",                      NULL),
+  RC(NAME_restrictScroll,    "bool",          "@off",                        NULL)
 };
 
 /* Class Declaration */

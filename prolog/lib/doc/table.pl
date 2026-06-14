@@ -51,6 +51,7 @@ variable(adjusted_for_width, int*, get, "Table is adjusted for this width").
 variable(natural_width,      int*, get, "Width I would like to have").
 variable(def_alignment,      {left,center,right} := left, both,
                                         "Default cell alignment").
+variable(css_class,          name := '', both, "CSS class of table").
 
 initialise(T, Options:prolog) :->
     send_super(T, initialise),
@@ -119,6 +120,10 @@ compute_cell_rubber(_T, PB:parbox) :->
     debug(table, print_rubber(Cell, hrubber)).
 
 :- pce_group(attributes).
+
+class(T, Class:name) :->
+    "Set the css_class"::
+    send(T, css_class, Class).
 
 frame(T, Frame:name) :->
     send(T?layout_manager, frame, Frame).

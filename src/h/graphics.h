@@ -691,10 +691,10 @@ End;
   PopupObj	popup;			/* Associated popup */ \
   EventObj	current_event;		/* Currently processed event */ \
   BoolObj	sensitive;		/* Sensitive to events */ \
+  BoolObj	restrict_scroll;	/* Clamp scroll to <-bounding_box */ \
   Any		background;		/* Background colour of the window */ \
   BoolObj	has_pointer;		/* We own the pointer */ \
   Any		selection_feedback;	/* Feedback for selection */ \
-  BoolObj	buffered_update;	/* Buffered update? */ \
 					/* Alien stuff */ \
   UpdateArea	changes_data;		/* Recorded changes */ \
   WsRef		ws_ref;			/* Window system reference */

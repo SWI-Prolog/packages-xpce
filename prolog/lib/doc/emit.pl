@@ -124,7 +124,11 @@ action(ignorespaces, _, Mode) :-
 action(space(SpaceMode), _, Mode) :-
     send(Mode, space_mode, SpaceMode).
 action(pre(Text), PB, Mode) :-
-    append_pre(Text, PB, Mode).
+    get(PB, line_width, LW),
+    new(CB, code_block(LW)),
+    get(CB, parbox, InnerPB),
+    append_pre(Text, InnerPB, Mode),
+    send(PB, append, grbox(CB, top, @hfill_rubber)).
 
 append_pre([], _, _).
 append_pre([H|T], PB, Mode) :-

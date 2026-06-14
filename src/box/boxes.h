@@ -105,6 +105,12 @@ NewClass(parbox)
   Vector	content;		/* Contained hboxes */
   Name		alignment;		/* left,right,center,justify */
   BoolObj	auto_crop;		/* Crop content */
+  Int		sel_start_box;		/* Selection start: hbox index (NIL: none) */
+  Int		sel_start_char;		/* Selection start: char in tbox */
+  Int		sel_end_box;		/* Selection end:   hbox index */
+  Int		sel_end_char;		/* Selection end:   char in tbox */
+  Int		sel_mark_box;		/* Drag anchor:     hbox index */
+  Int		sel_mark_char;		/* Drag anchor:     char in tbox */
 End;
 
 
@@ -144,5 +150,8 @@ typedef struct _parline
 
 COMMON(void)	drawTBox(TBox tb, int x, int y, int w,
 			 parline const *line);
+COMMON(void)	drawTBoxSel(TBox tb, int x, int y, int w,
+			    parline const *line,
+			    int sel_from, int sel_to, Style sel_style);
 
 #endif /*BOXES_H_INCLUDED*/
