@@ -93,11 +93,19 @@ source(Object, [file(Path)|T]) :-
     get(Loc, file_name, FileName),
     exists_file(FileName),
     absolute_file_name(FileName, Path),
-    get(Loc, line_no, Line),
-    (   integer(Line)
+    !,
+    (   get(Loc, line_no, Line),
+        integer(Line)
     ->  T = [line(Line)]
     ;   T = []
     ).
+source(Class, #{file:Path, line:Line}) :-
+    object(Class),
+    send(Class, instance_of, class),
+    get(Class, make_class_function, Address),
+    Address \== 0,
+    prolog_edit:addr2location(Address, Path, Line).
+
 
 receiver_class(Object, Class) :-
     object(Object),
