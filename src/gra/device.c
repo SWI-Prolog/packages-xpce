@@ -182,10 +182,15 @@ updatePointedDevice(Device dev, EventObj ev)
     exit  = NAME_areaCancel;
   }
 
-					/* Exit event: leave all children */
+					/* Exit event: leave all children.
+					 * for_chain (snapshot+reference):
+					 * generateEventGraphical may dispatch
+					 * Prolog handlers that mutate
+					 * dev->pointed. */
   if ( isAEvent(ev, NAME_areaExit) )
-  { for_cell(cell, dev->pointed)
-      generateEventGraphical(cell->value, exit);
+  { Graphical gr;
+    for_chain(dev->pointed, gr,
+      generateEventGraphical(gr, exit));
 
     clearChain(dev->pointed);
     succeed;
@@ -193,36 +198,42 @@ updatePointedDevice(Device dev, EventObj ev)
 
   get_xy_event(ev, dev, OFF, &x, &y);
 
-					/* See which graphicals are left */
-  for_cell(cell, dev->pointed)
-  { register Graphical gr = cell->value;
-
-    if ( gr->displayed == OFF || !inEventAreaGraphical(gr, x, y) )
-    { DEBUG(NAME_event, Cprintf("Leaving %s\n", pp(gr)));
-      deleteChain(dev->pointed, gr);
-      generateEventGraphical(gr, exit);
-    }
+					/* See which graphicals are left.
+					 * for_chain for the same reason as
+					 * above. */
+  { Graphical gr;
+    for_chain(dev->pointed, gr,
+      { if ( gr->displayed == OFF || !inEventAreaGraphical(gr, x, y) )
+	{ DEBUG(NAME_event, Cprintf("Leaving %s\n", pp(gr)));
+	  deleteChain(dev->pointed, gr);
+	  generateEventGraphical(gr, exit);
+	}
+      });
   }
 
-					/* See which graphicals are entered */
-  for_cell(cell, dev->graphicals)
-  { register Graphical gr = cell->value;
+					/* See which graphicals are entered.
+					 * for_chain (snapshot+reference) is
+					 * required: generateEventGraphical may
+					 * mutate dev->graphicals via Prolog
+					 * handlers (e.g. ->expose). */
+  { Graphical gr;
+    for_chain(dev->graphicals, gr,
+      { if ( gr->displayed == ON && inEventAreaGraphical(gr, x, y) )
+	{ active[an++] = gr;
 
-    if ( gr->displayed == ON && inEventAreaGraphical(gr, x, y) )
-    { active[an++] = gr;
+	  if ( memberChain(dev->pointed, gr) != SUCCEED )
+	  { DEBUG(NAME_event, Cprintf("Entering %s\n", pp(gr)));
+	    generateEventGraphical(gr, enter);
+	  }
 
-      if ( memberChain(dev->pointed, gr) != SUCCEED )
-      { DEBUG(NAME_event, Cprintf("Entering %s\n", pp(gr)));
-        generateEventGraphical(gr, enter);
-      }
-
-      if ( an == MAX_ACTIVE )		/* Shift to keep top ones */
-      { int n;
-        for( n = 0; n < MAX_ACTIVE-1; n++ )
-	  active[n] = active[n+1];
-	an--;
-      }
-    }
+	  if ( an == MAX_ACTIVE )	/* Shift to keep top ones */
+	  { int n;
+	    for( n = 0; n < MAX_ACTIVE-1; n++ )
+	      active[n] = active[n+1];
+	    an--;
+	  }
+	}
+      });
   }
 
 					/* Update the ->pointed chain */
