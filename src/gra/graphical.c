@@ -537,6 +537,8 @@ changedAreaGraphical(Any obj, Int x, Int y, Int w, Int h)
 	}
 					/* end hacks! */
 
+	ox--; oy--; ow+=2; oh+=2;
+	cx--; cy--; cw+=2; ch+=2;
 	changed_window(sw, ox, oy, ow, oh, TRUE);
 	changed_window(sw, cx, cy, cw, ch, offFlag(gr, F_SOLID));
 
@@ -606,6 +608,11 @@ changedImageGraphical(Any obj, Int x, Int y, Int w, Int h)
 	cx += ox;
 	cy += oy;
       }
+
+      cx -= 1; cy -= 1; cw += 2; ch += 2;
+				/* Antialiased strokes and non-integer
+				 * coords can paint just outside the
+				 * integer bounding box. */
 
       if ( instanceOfObject(gr, ClassText) ||
 	   instanceOfObject(gr, ClassDialogItem) )
