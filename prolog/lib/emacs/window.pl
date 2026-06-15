@@ -41,6 +41,7 @@
 :- use_module(library(tabbed_window)).
 :- use_module(prompt).
 :- use_module(library(pce_util)).
+:- use_module(library(pce_drop_target), [drop_target_event/4]).
 :- use_module(library(debug)).
 
 :- require([ between/3,
@@ -904,9 +905,21 @@ event(E, Ev:event) :->
         ->  debug(transient, 'We have a transient~n', [])
         ;   send(Frame, keyboard_focus, E?window)
         )
+    ;   drop_target_event(E, Ev,
+                          'Drop file(s) to edit in new tab',
+                          pceemacs_open_drop)
+    ->  true
     ;   send_super(E, event, Ev),
         send(@emacs, editor_event, Ev)
     ).
+
+%!  pceemacs_open_drop(+Editor, +Paths) is det.
+%
+%   Drop-target callback: open each dropped file as a new tab.
+
+pceemacs_open_drop(_Editor, Paths) :-
+    forall(member(P, Paths),
+           ignore(send(@emacs, open_file, P, tab))).
 
 
 paste(E, Which:[{primary,clipboard}]) :->
