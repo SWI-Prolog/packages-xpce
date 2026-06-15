@@ -317,8 +317,9 @@ binding('\\C-\\S-e', split_vertically).
 binding('\\C-\\S-i', new_window).
 binding('\\C-\\S-k', clear_screen).       % Gnome terminal
 binding('\\C-\\S-w', close).
-binding('\\C-\\S-w', close).
 binding('\\C-\\S-m', make).
+binding('\\C-\\S-v', paste).
+binding('\\C-\\S-c', copy).
 binding('\\C--',     font_reduce).
 binding('\\C-=',     font_default).
 binding('<f5>',      trace_mode).
