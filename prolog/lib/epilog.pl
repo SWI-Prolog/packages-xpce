@@ -64,6 +64,10 @@
 :- use_module(library(prolog_code), [pi_head/2]).
 :- use_module(library(thread), [call_in_thread/2, call_in_thread/3]).
 :- use_module(library(pce_symbol_picker), [symbol_picker/1]).
+:- use_module(library(pce_drop_target),
+              [ drop_target_event/4,
+                drop_target_show_rejected/3
+              ]).
 
 :- meta_predicate
     epilog(:),
@@ -687,7 +691,7 @@ parent_thread(_, main).
 :- pce_group(event).
 
 event(T, Ev:event) :->
-    "Handle popup"::
+    "Handle popup and drag-and-drop"::
     (   send_super(T, event, Ev)
     ->  (   send(Ev, is_a, activate_keyboard_focus)
         ->  send(T?frame, current_terminal, T)
@@ -699,6 +703,9 @@ event(T, Ev:event) :->
 
     ;   send(Ev, is_a, ms_right_down)
     ->  send(T, show_popup, Ev)
+    ;   drop_target_event(T, Ev,
+                          'Drop Prolog source file(s) to consult',
+                          epilog_consult_drop)
     ).
 
 split(T, Dir:{horizontally,vertically}) :->
@@ -882,6 +889,41 @@ fragment_location(Fragment, File, File:Line:Column) :-
     number_string(Column, ColumnS).
 fragment_location(Fragment, File, File:Line) :-
     atom_number(Fragment, Line).
+
+%!  epilog_consult_drop(+Terminal, +Paths) is det.
+%
+%   Drop-target callback: consult dropped Prolog files; briefly flag
+%   any non-Prolog files in red.
+
+epilog_consult_drop(Terminal, Paths) :-
+    split_dropped_files(Paths, PrologOS, OtherOS),
+    (   PrologOS \== []
+    ->  prolog_path_list(PrologOS, PrologFiles),
+        send(Terminal, inject, consult(PrologFiles))
+    ;   OtherOS \== []
+    ->  rejection_text(OtherOS, Msg),
+        drop_target_show_rejected(Terminal, Msg, 1.5)
+    ;   true
+    ).
+
+split_dropped_files([], [], []).
+split_dropped_files([P|T], [P|PR], O) :-
+    file_name_extension(_, Ext, P),
+    user:prolog_file_type(Ext, prolog),
+    !,
+    split_dropped_files(T, PR, O).
+split_dropped_files([P|T], PR, [P|O]) :-
+    split_dropped_files(T, PR, O).
+
+prolog_path_list([], []).
+prolog_path_list([OS|TOS], [Pl|TPl]) :-
+    prolog_to_os_filename(Pl, OS),
+    prolog_path_list(TOS, TPl).
+
+rejection_text([_], 'Ignored: not a Prolog source file') :- !.
+rejection_text(Files, Msg) :-
+    length(Files, N),
+    format(string(Msg), 'Ignored ~d files: not Prolog source', [N]).
 
 :- pce_end_class(prolog_terminal).
 
