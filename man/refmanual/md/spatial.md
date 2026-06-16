@@ -9,7 +9,7 @@ organised in two pairs of two and two singles.  One pair describe the
 relative X-positions, the other pair the relative Y position and the two
 remaining expressions describe the relation in their width and height.
 
-The first pair is `x-from, x_to`; both = objects (equations) describe
+The first pair is `x_from`, `x_to`; both `=` objects (equations) describe
 the X-coordinate `xref` of the *reference-point* of each area.  The
 spatial will attempt to keep the values of `xref` of both equations
 equal.  When evaluated, the variables `x` and `w` are refer to the
@@ -44,22 +44,21 @@ Or, to put a label-box just above a graphical at the left side, half the
 width of the graphical.
 
 	:- pce_global(@top_left_label_spatial,
-				  new(spatial(xref = x, yref = y,
-			     			  xref = x, yref = y + h,
-						      w2 = w/2))).
+		      new(spatial(xref = x, yref = y,
+				  xref = x, yref = y + h,
+				  w2 = w/2))).
 
 
-## Hints {#class-spatial-hints}
+**Hints**
 
-- Spatials are useful, but don't exaggerate.  Certainly under the
-	current implementation, complex networks of spatials lead to
-	very slow response.  Figure objects (allowing for nested
-	graphicals, similar to grouping in many drawing applications)
-	are often a good alternative.
+- Spatials are useful, but don't exaggerate. Certainly under the current
+  implementation, complex networks of spatials lead to very slow response.
+  Figure objects (allowing for nested graphicals, similar to grouping in
+  many drawing applications) are often a good alternative.
 
 - When relating many objects to another, of which one generally
-	moves/resizes, relate *all* other objects to this one object.
-	This makes the result better predictable.
+  moves/resizes, relate *all* other objects to this one object. This makes
+  the result better predictable.
 
 @see =<-var
 @see class figure
@@ -68,22 +67,23 @@ width of the graphical.
 
 ## Instance variables {#class-spatial-instvars}
 
+- spatial<->w_to: =*
 - spatial<->h_to: =*
     Equation (= object) relating the following variables:
 
-    	| w  | `area <-width` of the `constraint <-from` graphical  |
-    	| h  | `area <-height` of the `constraint <-from` graphical |
-    	| w2 | `area <-width` of the `constraint <-to` graphical    |
-    	| h2 | `area <-height` of the `constraint <-to` graphical   |
+	| w  | `area <-width` of the `constraint <-from` graphical  |
+	| h  | `area <-height` of the `constraint <-from` graphical |
+	| w2 | `area <-width` of the `constraint <-to` graphical    |
+	| h2 | `area <-height` of the `constraint <-to` graphical   |
 
     Examples:
 
-    	| w = w2      | Equally wide                         |
-    	| w = w2 + 10 | `constraint <-to` is 10 pixels wider |
+	| w = w2      | Equally wide                         |
+	| w = w2 + 10 | `constraint <-to` is 10 pixels wider |
 
-- spatial<->w_to: =*
-    *Inherits description from*: spatial-h_to
-
+- spatial<->x_to: =*
+- spatial<->y_from: =*
+- spatial<->y_to: =*
 - spatial<->x_from: =*
     These equations define the *reference* points on both graphical objects
     constrained.  They should be defaulted or specified in pairs: if
@@ -96,19 +96,11 @@ width of the graphical.
     During the evaluation of the = object, the following variables are
     available:
 
-    	xref	the x coordinate of the reference-point
-    	yef		the y coordinate of the reference-point
-    	x		<-x of the graphical's `graphical <-area`
-    	y		<-y
-    	w		<-width
-    	h		<-height
+	| xref	| the x coordinate of the reference-point   |
+	| yef	| the y coordinate of the reference-point   |
+	| x	| <-x of the graphical's `graphical <-area` |
+	| y	| <-y					    |
+	| w	| <-width				    |
+	| h	| <-height				    |
 
-- spatial<->x_to: =*
-    *Inherits description from*: spatial-x_from
-
-- spatial<->y_from: =*
-    *Inherits description from*: spatial-x_from
-
-- spatial<->y_to: =*
-    *Inherits description from*: spatial-x_from
 

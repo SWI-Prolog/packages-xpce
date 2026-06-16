@@ -1,8 +1,8 @@
 # class obtain {#class-obtain}
 
-Class ? is (pronounced as `obtainer`) is a template for the virtual machine
-instruction get in the same fashion as a message object is a template to
-the send operation.   Obtainers are the most commonly used function
+Class ? is (pronounced as _obtainer_) is a template for the virtual machine
+instruction _get_ in the same fashion as a message object is a template to
+the _send_ operation.   Obtainers are the most commonly used function
 objects.
 
 Obtainers add a very powerful mechanism to PCE.  Understanding them is
@@ -13,14 +13,15 @@ dialog_item selections to create a single call to the application:
 	?- new(D, dialog),
 	   send(D, append, new(label)),		% for feedback
 	   send(D, append, new(Name, text_item(name, ''))),
-	   send(D, append, new(Age, text_item(age, ''))),
+	   send(D, append, new(Age,  int_item(age))),
+	   send(Age, hor_stretch, 100),		% stretch to right of D
 	   send(D, append,
-			button(create, message(@prolog, create_person,
-								   Name?selection,
-								   Age?selection))),
+		button(create, message(@prolog, create_person,
+				       Name?selection,
+				       Age?selection))),
 	   send(D, open).
 
-Of course, the application must define the predicate create_person.
+Of course, the application must define a predicate `create_person/2`.
 
 @see @arg1
 @see topic Checking
@@ -42,5 +43,34 @@ Of course, the application must define the predicate create_person.
 ## Instance variables {#class-obtain-instvars}
 
 - obtain-_context
-    *Inherits description from*: message-context
+    Contains the Prolog module if the obtainer refers to a Prolog
+    predicate.  Here is an example of an obtainer using Prolog:
+
+       ?- send(@pce, writeln,
+	       ?(@prolog,current_prolog_flag,version)).
+       100109
+
+## Send methods {#class-obtain-send}
+
+- obtain->initialise: receiver=object|function, selector=name|function, argument=any|function ...
+    Create a get-template from its receiver, selector and argument list.
+    Note that all arguments may be function objects.  When the obtainer
+    is evaluated it first evaluates all functions.  Example:
+
+	?- new(B, box(100,100)),
+	   send(@pce, writeln, B?center?x).
+	50
+
+    See also class message.
+
+## Get methods {#class-obtain-get}
+
+- obtain<-_execute
+    Evaluate the obtainer.  Function objects in the <-receiver, <-selector
+    or <-arguments are evaluated first, after which the XPCE virtual
+    machine operation
+
+	get(<-receiver, <-selector, <-arguments ..., Value)
+
+    is performed and the resulting Value is the result of the obtainer.
 

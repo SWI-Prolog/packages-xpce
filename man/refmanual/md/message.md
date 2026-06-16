@@ -24,7 +24,7 @@ all graphical objects on a device object.  It exploits `chain
 ->for_all'.
 
 	send(Device?graphicals, for_all,
-	 	 message(@arg1, pen, 3)).
+		 message(@arg1, pen, 3)).
 
 
 ## Instance variables {#class-message-instvars}
@@ -36,13 +36,14 @@ all graphical objects on a device object.  It exploits `chain
     <->argument.
 
 - message<-context: any*
-    The context slot is reserved for cooperation with `function-based` modularization.
+    The context slot is reserved for cooperation with `function-based`
+    modularization.
     For Prolog, it contains the module from which the object was
     created.  If the object is `executed`, this context argument
     will be used to resolve the proper function.  In Prolog:
 
-    	?- new(X, foo:message(@prolog, hello)),
-    	   send(X, execute).
+	?- new(X, foo:message(@prolog, hello)),
+	   send(X, execute).
 
     will call the predicate `hello` in the module `foo`.  See also
     '?<-_context' and `rc<-context`.
@@ -53,7 +54,7 @@ all graphical objects on a device object.  It exploits `chain
 - message->_execute
     Start the XPCE virtual machine operation
 
-    	send(<-receiver, <-selector, <-arguments ...)
+	send(<-receiver, <-selector, <-arguments ...)
 
     Any function object appearing in the <-receiver, <-selector or
     <-arguments are first evaluated.
@@ -67,14 +68,14 @@ all graphical objects on a device object.  It exploits `chain
     Note that all arguments may be function objects.  If the message is
     executed it will first evaluate all functions.    Example:
 
-    	?- new(D, dialog),
-    	   send(D, append,
-    		    button(show_display_size,
-    				   message(@display, inform,
-    						   'The display is %dx%d pixels',
-    						   @display?size?width,
-    						   @display?size?height))),
-    	   send(D, open).
+	?- new(D, dialog),
+	   send(D, append,
+		    button(show_display_size,
+				   message(@display, inform,
+						   'The display is %dx%d pixels',
+						   @display?size?width,
+						   @display?size?height))),
+	   send(D, open).
 
     See also class ?.
 
