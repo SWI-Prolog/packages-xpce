@@ -40,6 +40,7 @@
 :- use_module(library(doc/browser)).
 :- use_module(library(doc/window)).
 :- use_module(library(pldoc/man_index), [manual_object/5]).
+:- use_module(library(man/classmap), [mapped_class_name/2]).
 
 /** <module> Open the generated XPCE reference manual in a doc_browser
 
@@ -98,7 +99,8 @@ object_spec(Obj, example(Name)) :-
 object_spec(Obj, Class) :-
     send(Obj, instance_of, class),
     !,
-    get(Obj, name, Class).
+    get(Obj, name, Raw),
+    class_doc_name(Raw, Class).
 object_spec(Obj, ->(Class, Name)) :-
     send(Obj, instance_of, send_method),
     !,
@@ -122,7 +124,17 @@ class_loaded(Name) :-
 behaviour_class_name(Obj, Class, Name) :-
     get(Obj, name, Name),
     get(Obj, context, ContextClass),
-    get(ContextClass, name, Class).
+    get(ContextClass, name, Raw),
+    class_doc_name(Raw, Class).
+
+%   Symbolic xpce class names (e.g. =|==|=, =|\==|=, =|:=|=) are
+%   documented under safe basenames (=|equal|=, =|noteq|=, =|binding|=,
+%   ...). The HTML index and anchors are keyed on the safe form, so map
+%   live class names through classmap before looking them up.
+class_doc_name(Raw, Mapped) :-
+    mapped_class_name(Raw, Mapped),
+    !.
+class_doc_name(Name, Name).
 
 spec_url(Spec, URL) :-
     spec_anchor(Spec, ClassFile, FragmentOrEmpty),
