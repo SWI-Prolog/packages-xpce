@@ -43,6 +43,7 @@ add_custom_command(
     OUTPUT  ${REFMAN_TEX_STAMP}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${REFMAN_TEX_DIR}
     COMMAND ${PROG_SWIPL} --home=${SWIPL_BUILD_HOME} -f none --no-packs
+	    -DSDL_VIDEODRIVER=dummy
             ${REFMAN_GENERATOR} -- ${REFMAN_MD_DIR} ${REFMAN_TEX_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy
             ${REFMAN_DRIVER} ${REFMAN_TEX_DIR}/xpcerefman.tex
