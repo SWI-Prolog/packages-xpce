@@ -93,11 +93,7 @@ See also @receiver, @event, class var, class function, class method and
 
 Image filled with only 1's
 
-Predefined images of `image <-kind: bitmap` of 16x16 pixels.  These
-bitmaps are frequently used to fill graphicals.  See `graphical
-->fill'.
-
-@see topic Fill Patterns
+Predefined image of `image <-kind: bitmap` of 16x16 pixels.
 
 ## @class {#object-class}
 
@@ -318,15 +314,11 @@ Image filled  with 12% 1's
 
 *Inherits description from*: @black_image
 
-@see topic Fill Patterns
-
 ## @grey25_image {#object-grey25_image}
 
 Image filled  with 25% 1's
 
 *Inherits description from*: @black_image
-
-@see topic Fill Patterns
 
 ## @grey50_image {#object-grey50_image}
 
@@ -334,15 +326,11 @@ Image filled  with 50% 1's
 
 *Inherits description from*: @black_image
 
-@see topic Fill Patterns
-
 ## @grey75_image {#object-grey75_image}
 
 Image filled  with 75% 1's
 
 *Inherits description from*: @black_image
-
-@see topic Fill Patterns
 
 ## @images {#object-images}
 
@@ -508,6 +496,4 @@ It may also be used to enumerate the existing instances of class type.
 Image filled  with only 0's
 
 *Inherits description from*: @black_image
-
-@see topic Fill Patterns
 

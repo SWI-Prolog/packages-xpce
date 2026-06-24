@@ -31,11 +31,9 @@ See also `joint ->arrows` and `joint <-default_arrow`.
 ## Instance variables {#class-arrow-instvars}
 
 - arrow<-fill: colour|{foreground,background}*
-    If not equal to @nil, the triangle is filled with this pattern.
+    If not equal to @nil, the triangle is filled with this colour.
 
     **Defaults**: @nil
-
-    @see bitmap-status
 
 - arrow-right: point
     Right-end of base.

@@ -275,36 +275,6 @@ menu_bar_demo :-
 :- initialization(menu_bar_demo).
 ```
 
-## Menu of fill patterns {#example-Menu-of-fill-patterns}
-
-Marked menu to select a fill
-
-The code of this example creates a dialog window that allows the user to
-select a fill.  The selected value of the fill pattern is written in the
-Prolog.window,
-
-```prolog
-create_fill_pattern_dialog :-
-	new(Dialog, dialog('Fill Patterns')),
-	send(Dialog, append,
-		 new(M, menu(fill_pattern, marked,
-					 message(@prolog, write_ln, @arg1)))),
-	send_list(M, append,
-		[ menu_item(white,  @default, @white_image)
-		, menu_item(grey12, @default, @grey12_image)
-		, menu_item(grey25, @default, @grey25_image)
-		, menu_item(grey50, @default, @grey50_image)
-		, menu_item(grey75, @default, @grey75_image)
-		, menu_item(black,  @default, @black_image)
-		]),
-
-	send(Dialog, open).
-
-% Start the demo
-
-:- create_fill_pattern_dialog.
-```
-
 ## Multiple fonts {#example-Multiple-fonts}
 
 Using multiple fonts in an editor

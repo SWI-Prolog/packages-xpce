@@ -12,11 +12,9 @@ top-left corner.  Use ->center to define the center.
 ## Instance variables {#class-ellipse-instvars}
 
 - ellipse<-fill: colour|{foreground,background}*
-    When not @nil, the interior is filled with the specified bitmap.
+    When not @nil, the interior is filled with the specified colour.
 
     **Defaults**: @nil
-
-    @see bitmap-status
 
 - ellipse<-shadow: int
     Amount (pixels) of shadow painted below and right of the

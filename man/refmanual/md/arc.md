@@ -36,7 +36,7 @@ to relate two lines with an arc (like in and/or trees).
     	are displayed.
 
 - arc<-fill: colour|{foreground,background}*
-    Image used to fill the arc.  When @nil, the arc is not filled.  The
+    Colour used to fill the arc.  When @nil, the arc is not filled.  The
     behaviour of this method is dependent of the value of ->close:
 
     - none or pie_slice

@@ -3386,7 +3386,7 @@ static char *T_graphicsState[] =
 	{ "pen=[0..]", "texture=[texture_name]", "colour=[colour|pixmap]",
 	  "background=[colour|pixmap]" };
 static char *T_drawPoly[] =
-	{ "points=chain|vector", "closed=[bool]", "fill=[colour|image]*" };
+	{ "points=chain|vector", "closed=[bool]", "fill=" TYPE_FILL_ARG };
 static char *T_focus[] =
 	{ "recogniser=[recogniser]", "cursor=[cursor]", "button=[name]" };
 static char *T_drawText[] =
@@ -3406,12 +3406,12 @@ static char *T_inEventArea[] =
 	{ "x=int", "y=int" };
 static char *T_drawArc[] =
 	{ "x=int", "y=int", "w=int", "h=int",
-	  "angle1=[real]", "angle2=[real]", "fill=[colour|image]*" };
+	  "angle1=[real]", "angle2=[real]", "fill=" TYPE_FILL_ARG };
 static char *T_drawFill[] =
-	{ "x=int", "y=int", "w=int", "h=int", "fill=[colour|image]*" };
+	{ "x=int", "y=int", "w=int", "h=int", "fill=" TYPE_FILL_ARG };
 static char *T_drawBox[] =
 	{ "x=int", "y=int", "w=int", "h=int", "radius=[0..]",
-	  "fill=[image|colour|elevation]", "up=[bool]" };
+	  "fill=" TYPE_FILL_3D, "up=[bool]" };
 static char *T_flash[] =
 	{ "area=[area]", "time=[int]" };
 static char *T_containerSizeChanged[] =

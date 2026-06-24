@@ -8,7 +8,7 @@ of paths:
 
 The line of a path has a ->texture and a ->pen (thickness).  The first
 and last point of the path may be connected (->closed) and the
-interior of the path may be filled with an image object using
+interior of the path may be filled with a colour using
 ->fill.  Class path is a subclass of class joint and
 therefore may have ->arrows attached.
 
@@ -34,12 +34,10 @@ Paths can be used for numerous purposes:
     **Defaults**: @off
 
 - path<-fill: colour|{foreground,background}*
-    Pattern to fill the interior of the path.  To determine the interior,
-    the _Even-Odd-Rule_ is used.
+    Colour used to fill the interior of the path.  To determine the
+    interior, the _Even-Odd-Rule_ is used.
 
     **Defaults**: @nil (not filled)
-
-    @see bitmap-status
 
 - path<-interpolation: chain*
     When kind is `smooth`, this is a chain of interpolated points. The

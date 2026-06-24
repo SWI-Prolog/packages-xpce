@@ -39,7 +39,9 @@
 		 *        REUSABLE TYPES        *
 		 *******************************/
 
-#define TYPE_FILL "colour|{foreground,background}*"
+#define TYPE_FILL     "colour|{foreground,background}*"
+#define TYPE_FILL_ARG "[colour|{foreground,background}]*"
+#define TYPE_FILL_3D  "[colour|{foreground,background}|elevation]*"
 
 		 /*******************************
 		 *     STRETCHABLE OBJECTS	*

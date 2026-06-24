@@ -459,21 +459,6 @@ Classes of objects for programming
 
 *Subtopics*: Parameters, Compound, Conditions, Primitives
 
-## Fill Patterns {#sec-topics-fill-patterns}
-
-Bitmaps used to fill graphicals
-
-PCE predefines a number of bitmaps that may be used as fills for
-graphical objects (see Graphical ->fill).  These bitmaps are of
-depth one (e.g. they contain only 0's and 1's).
-
-Though not protected, it is not allowed to modify or destroy these bitmaps as
-they are also used by PCE itself.
-
-*Parent*: Global Objects
-
-*Subtopics*: 29, 28, 27, 26, 25, 24
-
 ## Finding References {#sec-topics-finding-references}
 
 Finding references of graphicals
@@ -512,7 +497,7 @@ Predefined global objects
 
 *Parent*: Contents
 
-*Subtopics*: 22, 85, 31, 30, Fill Patterns
+*Subtopics*: 22, 85, 31, 30
 
 ## Global references {#sec-topics-global-references}
 

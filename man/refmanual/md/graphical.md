@@ -532,33 +532,33 @@ for creating customised graphical objects:
     This method may be used to redefine ->_redraw_area.  It should
     not be called outside this context.
 
-- graphical->draw_arc: x=int, y=int, w=int, h=int, angle1=[real], angle2=[real], fill=[colour|image]*
+- graphical->draw_arc: x=int, y=int, w=int, h=int, angle1=[real], angle2=[real], fill=[colour|{foreground,background}]*
     Draw an ellipse-part.  X,Y,W,H define the bounding box if the
     entire ellipse.  Angle1 and Angle2 the start and end angles (in
     degrees).  When omitted, an entire ellipse will be drawn.
 
-    Fill defines the fill-pattern used.  If @nil, the shape is not filled.
+    Fill defines the fill colour.  If @nil, the shape is not filled.
 
     This method is part of the user-defined graphics infra-structure
     described with ->_redraw_area and should not be called outside
     this context.
 
-- graphical->draw_box: x=int, y=int, w=int, h=int, radius=[0..], fill=[image|colour|elevation], up=[bool]
+- graphical->draw_box: x=int, y=int, w=int, h=int, radius=[0..], fill=[colour|{foreground,background}|elevation]*, up=[bool]
     Draw rectangular (rounded) box with the given X, Y, W, H.
     Radius defines the rounding radius for the corners.  If the last
-    argument is an image or colour object, the interior will be
-    filled with this.  If it is an elevation object, a 3D effect
-    will be simulated.  In this case `up` defines whether the box
-    is painted elevated or lowered.
+    argument is a colour object, the interior will be filled with
+    this colour.  If it is an elevation object, a 3D effect will be
+    simulated.  In this case `up` defines whether the box is painted
+    elevated or lowered.
 
     This method is part of the user-defined graphics infra-structure
     described with ->_redraw_area and should not be called outside
     this context.
 
-- graphical->draw_fill: x=int, y=int, w=int, h=int, fill=[colour|image]*
-    Fill rectangle with specified pattern.  If the pattern is @nil,
-    the area is cleared to the current background.  If the pattern
-    is @default, the area is filled with the current foreground.
+- graphical->draw_fill: x=int, y=int, w=int, h=int, fill=[colour|{foreground,background}]*
+    Fill rectangle with specified colour.  If the colour is @nil,
+    the area is cleared to the current background.  If it is
+    @default, the area is filled with the current foreground.
 
     To fill a rounded rectangle, use ->draw_box with the pen set
     to 0.
@@ -587,12 +587,12 @@ for creating customised graphical objects:
     described with ->_redraw_area and should not be called outside
     this context.
 
-- graphical->draw_poly: points=chain|vector, closed=[bool], fill=[colour|image]*
+- graphical->draw_poly: points=chain|vector, closed=[bool], fill=[colour|{foreground,background}]*
     Draw/fill a polygon.  Points is a chain object or vector object
     containing the points though which the polyline is drawn.  If
     closed is @on, a line is drawn from the last to the first point.
     If fill is specified, the interior is filled with the given
-    pattern.
+    colour.
 
     This method is part of the user-defined graphics infra-structure
     described with ->_redraw_area and should not be called outside

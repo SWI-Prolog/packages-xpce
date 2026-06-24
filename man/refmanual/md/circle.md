@@ -2,7 +2,7 @@
 
 A circle just an ellipse with equal <-width and <-height.  It's
 border-line may have a <-texture and <-pen. The circle's
-interior may be filled with an image object using ->fill.
+interior may be filled with a colour using ->fill.
 
 @see class ellipse
 
@@ -10,13 +10,10 @@ interior may be filled with an image object using ->fill.
 ## Instance variables {#class-circle-instvars}
 
 - circle<-fill: colour|{foreground,background}*
-    When a fill pattern is defined, this pattern is repeated over the interior
-    of the circle.  The circle is transparent if the fill pattern equals
-    @nil.
+    When a colour is defined, the interior of the circle is filled with
+    this colour.  The circle is transparent if <-fill equals @nil.
 
     **Defaults**: @nil (transparent).
-
-    @see bitmap-status
 
 
 ## Send methods {#class-circle-send}
