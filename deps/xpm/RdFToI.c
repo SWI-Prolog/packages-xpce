@@ -46,6 +46,17 @@
 
 static int OpenReadFile(char *filename, xpmData *mdata);
 static void xpmDataClose(xpmData *mdata);
+#ifndef NO_ZPIPE
+static int is_safe_filename(const char *filename)
+{
+    const char *p;
+    for (p = filename; *p; p++) {
+        if (strchr("\"\\$`!;|&<>(){}", *p))
+            return 0;
+    }
+    return 1;
+}
+#endif
 
 #ifndef CXPMPROG
 int
@@ -136,15 +147,17 @@ OpenReadFile(char* filename, xpmData* mdata)
     } else {
 #ifndef NO_ZPIPE
 	int len = strlen(filename);
+	if (!is_safe_filename(filename))
+	    return (XpmOpenFailed);
 	if ((len > 2) && !strcmp(".Z", filename + (len - 2))) {
 	    mdata->type = XPMPIPE;
-	    sprintf(buf, "uncompress -c \"%s\"", filename);
+	    snprintf(buf, sizeof(buf), "uncompress -c \"%s\"", filename);
 	    if (!(mdata->stream.file = popen(buf, "r")))
 		return (XpmOpenFailed);
 
 	} else if ((len > 3) && !strcmp(".gz", filename + (len - 3))) {
 	    mdata->type = XPMPIPE;
-	    sprintf(buf, "gunzip -qc \"%s\"", filename);
+	    snprintf(buf, sizeof(buf), "gunzip -qc \"%s\"", filename);
 	    if (!(mdata->stream.file = popen(buf, "r")))
 		return (XpmOpenFailed);
 
@@ -153,18 +166,18 @@ OpenReadFile(char* filename, xpmData* mdata)
 	    if (!(compressfile = (char *) XpmMalloc(len + 4)))
 		return (XpmNoMemory);
 
-	    sprintf(compressfile, "%s.Z", filename);
+	    snprintf(compressfile, len + 4, "%s.Z", filename);
 	    if (!stat(compressfile, &status)) {
-		sprintf(buf, "uncompress -c \"%s\"", compressfile);
+		snprintf(buf, sizeof(buf), "uncompress -c \"%s\"", compressfile);
 		if (!(mdata->stream.file = popen(buf, "r"))) {
 		    XpmFree(compressfile);
 		    return (XpmOpenFailed);
 		}
 		mdata->type = XPMPIPE;
 	    } else {
-		sprintf(compressfile, "%s.gz", filename);
+		snprintf(compressfile, len + 4, "%s.gz", filename);
 		if (!stat(compressfile, &status)) {
-		    sprintf(buf, "gunzip -c \"%s\"", compressfile);
+		    snprintf(buf, sizeof(buf), "gunzip -c \"%s\"", compressfile);
 		    if (!(mdata->stream.file = popen(buf, "r"))) {
 			XpmFree(compressfile);
 			return (XpmOpenFailed);
