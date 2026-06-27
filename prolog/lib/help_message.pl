@@ -35,7 +35,11 @@
 :- module(pce_help_messages, []).
 :- use_module(library(pce)).
 
-:- pce_global(@help_message_window, new(help_message_window)).
+:- pce_global(@help_message_window, make_help_message_window).
+
+make_help_message_window(W) :-
+    new(W, help_message_window),
+    send(W, lock_object, @on).
 
 :- pce_begin_class(help_message_window, dialog,
                    "Window to display <-help_message").
