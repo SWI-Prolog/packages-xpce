@@ -656,19 +656,19 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   } else if ( ev->id == NAME_ESC )
   { chr = ESC;
   } else if ( ev->id == NAME_cursorUp )
-  { seq = b->app_escape ? S_ESC"0A" : S_ESC"[A";
+  { seq = b->app_escape ? S_ESC"OA" : S_ESC"[A";
   } else if ( ev->id == NAME_cursorDown )
-  { seq = b->app_escape ? S_ESC"0B" : S_ESC"[B";
+  { seq = b->app_escape ? S_ESC"OB" : S_ESC"[B";
   } else if ( ev->id == NAME_cursorLeft )
   { if ( valInt(ev->buttons) & BUTTON_control )
       seq = S_ESC"[1;5D";		/* xterm-style Ctrl+Left */
     else
-      seq = b->app_escape ? S_ESC"0D" : S_ESC"[D";
+      seq = b->app_escape ? S_ESC"OD" : S_ESC"[D";
   } else if ( ev->id == NAME_cursorRight )
   { if ( valInt(ev->buttons) & BUTTON_control )
       seq = S_ESC"[1;5C";		/* xterm-style Ctrl+Right */
     else
-      seq = b->app_escape ? S_ESC"0C" : S_ESC"[C";
+      seq = b->app_escape ? S_ESC"OC" : S_ESC"[C";
   } else if ( ev->id == NAME_delete )
   { seq = S_ESC"[3~";
   } else
@@ -863,7 +863,7 @@ copyOrInterruptTerminalImage(TerminalImage ti)
 static status
 cursorEndTerminalImage(TerminalImage ti)
 { RlcData b = ti->data;
-  const char *seq = b->app_escape ? S_ESC"0F" : S_ESC"[F";
+  const char *seq = b->app_escape ? S_ESC"OF" : S_ESC"[F";
   rlc_send(ti->data, seq, strlen(seq));
   succeed;
 }
@@ -871,7 +871,7 @@ cursorEndTerminalImage(TerminalImage ti)
 static status
 cursorHomeTerminalImage(TerminalImage ti)
 { RlcData b = ti->data;
-  const char *seq = b->app_escape ? S_ESC"0H" : S_ESC"[H";
+  const char *seq = b->app_escape ? S_ESC"OH" : S_ESC"[H";
   rlc_send(ti->data, seq, strlen(seq));
   succeed;
 }
