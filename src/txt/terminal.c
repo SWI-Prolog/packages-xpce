@@ -4100,6 +4100,69 @@ rlc_clear_dec_mode(RlcData b, int mode)
   }
 }
 
+/* Return the 0xRRGGBB / alpha-packed COLORRGBA of an xpce graphical
+   "fill" attribute (Colour, @default, @nil, or Pattern).  Non-Colour or
+   unresolved fills fall back to opaque black; that keeps OSC 10 / 11
+   replies meaningful even when the foreground is the inherited class
+   default.
+ */
+static COLORRGBA
+fill_rgba(Any c)
+{ if ( !c || isNil(c) || isDefault(c) ||
+       !instanceOfObject(c, ClassColour) )
+    return RGBA(0, 0, 0, 0xff);
+  Colour col = c;
+  if ( isDefault(col->rgba) )
+    ws_named_colour(col);
+  if ( isDefault(col->rgba) )
+    return RGBA(0, 0, 0, 0xff);
+  return (COLORRGBA)valInt(col->rgba);
+}
+
+/* Parse an xterm "rgb:R/G/B" colour spec, where each component is 1-4
+   hex digits, into a COLORRGBA.  Each component is scaled to 8 bits per
+   the xterm convention (replicate or truncate as needed).
+ */
+static bool
+parse_rgb_spec(const uchar_t *s, COLORRGBA *out)
+{ if ( s[0] != 'r' || s[1] != 'g' || s[2] != 'b' || s[3] != ':' )
+    return false;
+  s += 4;
+  unsigned ch[3];
+  for(int i=0; i<3; i++)
+  { unsigned v = 0;
+    int n = 0;
+    while ( n < 4 && ((s[0] >= '0' && s[0] <= '9') ||
+		      (s[0] >= 'a' && s[0] <= 'f') ||
+		      (s[0] >= 'A' && s[0] <= 'F')) )
+    { unsigned d = (s[0] <= '9') ? s[0]-'0'
+		 : (s[0] <= 'F') ? s[0]-'A'+10
+		 : s[0]-'a'+10;
+      v = (v<<4) | d;
+      s++;
+      n++;
+    }
+    if ( n == 0 )
+      return false;
+    switch(n)			/* normalise to 8 bits */
+    { case 1: v = v*0x11; break;		/* 0xF  -> 0xFF */
+      case 2: break;				/* already 8-bit */
+      case 3: v = (v*0xff + 0x7ff) / 0xfff; break;
+      case 4: v = (v*0xff + 0x7fff) / 0xffff; break;
+    }
+    ch[i] = v & 0xff;
+    if ( i < 2 )
+    { if ( *s != '/' )
+	return false;
+      s++;
+    }
+  }
+  if ( *s != 0 )
+    return false;
+  *out = RGBA(ch[0], ch[1], ch[2], 0xff);
+  return true;
+}
+
 static void
 osc_command(RlcData b, int param, const uchar_t *link)
 { switch(param)
@@ -4113,6 +4176,36 @@ osc_command(RlcData b, int param, const uchar_t *link)
       delCodeReference(s);
       freeableObj(s);
       rewindAnswerStack(mark, NIL);
+      break;
+    }
+    case 10:			/* default foreground colour */
+    case 11:			/* default background colour */
+    { TerminalImage ti = b->object;
+      if ( link[0] == '?' && link[1] == 0 )
+      { COLORRGBA rgba = fill_rgba(param == 10 ? ti->colour : ti->background);
+	char buf[64];
+	snprintf(buf, sizeof(buf),
+		 S_ESC"]%d;rgb:%02x/%02x/%02x"S_ESC"\\",
+		 param,
+		 (unsigned)ColorRValue(rgba),
+		 (unsigned)ColorGValue(rgba),
+		 (unsigned)ColorBValue(rgba));
+	rlc_send(b, buf, strlen(buf));
+      } else
+      { COLORRGBA rgba;
+	if ( parse_rgb_spec(link, &rgba) )
+	{ AnswerMark mark;
+	  markAnswerStack(mark);
+	  Colour nc = ws_pixel_to_colour(rgba);
+	  if ( nc )
+	  { addCodeReference(nc);
+	    send(ti, param == 10 ? NAME_colour : NAME_background, nc, EAV);
+	    delCodeReference(nc);
+	    freeableObj(nc);
+	  }
+	  rewindAnswerStack(mark, NIL);
+	}
+      }
       break;
     }
     default:
@@ -4251,11 +4344,33 @@ rlc_putansi(RlcData b, int chr)
 	  b->app_keypad_mode = true;
 	  b->cmdstat = CMD_INITIAL;
 	  break;
+	case 'P':			/* DCS introducer */
+	  b->cmdstat = CMD_DCS;
+	  break;
+	case '\\':			/* stray ST without a string */
+	  b->cmdstat = CMD_INITIAL;
+	  break;
 	default:
 	  Cprintf("ESC%c\n", chr);
 	  b->cmdstat = CMD_INITIAL;
 	  break;
       }
+      break;
+    case CMD_DCS:
+      /* Device Control String body.  Swallow until BEL or ESC '\\' (ST).
+	 We do not parse XTGETTCAP / DECRQSS; vim treats no reply as
+	 "capability unknown" and falls back to its compiled terminfo.
+       */
+      if ( chr == '\a' )
+	b->cmdstat = CMD_INITIAL;
+      else if ( chr == ESC )
+	b->cmdstat = CMD_DCS_ESC;
+      break;
+    case CMD_DCS_ESC:
+      /* '\\' closes the DCS (ST = ESC '\\'); anything else continues the
+	 body.
+       */
+      b->cmdstat = (chr == '\\') ? CMD_INITIAL : CMD_DCS;
       break;
     case CMD_G0:
       switch(chr)
@@ -4382,6 +4497,15 @@ rlc_putansi(RlcData b, int chr)
 	  rlc_put(b, *split);
 	break;
       }
+    case CMD_CSI_INTERMEDIATE:
+      /* Consume further intermediates (0x20-0x2F).  A final byte
+	 (0x40-0x7E) terminates the sequence; we discard it.  Any other
+	 byte aborts (treated as end of sequence) per ECMA-48.
+       */
+      if ( chr >= 0x20 && chr <= 0x2F )
+	return;
+      b->cmdstat = CMD_INITIAL;
+      break;
     case CMD_ANSI:			/* ESC [ */
     case CMD_DEC_PRIVATE:		/* ESC [ ? */
     case CMD_OSCARG:			/* ESC ] <digit> */
@@ -4404,6 +4528,17 @@ rlc_putansi(RlcData b, int chr)
 	if ( b->argc < (ANSI_MAX_ARGC-1) )
 	  b->argc++;			/* silently discard more of them */
 	b->argstat = 0;
+      }
+      /* ECMA-48: zero or more intermediate bytes (0x20-0x2F) may appear
+	 between the parameter bytes and the final byte (0x40-0x7E).
+	 Combinations like CSI ! p (DECSTR), " p (DECSCL), $ p (DECRQM),
+	 % q (XTQMODKEYS) are recognized by xterm/vim but not implemented
+	 here; consume the rest of the sequence silently.  OSC arg state
+	 has its own terminator handling and is excluded.
+       */
+      if ( b->cmdstat != CMD_OSCARG && chr >= 0x20 && chr <= 0x2F )
+      { b->cmdstat = CMD_CSI_INTERMEDIATE;
+	return;
       }
       switch(chr)
       { case ';':

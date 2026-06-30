@@ -250,7 +250,10 @@ typedef enum
   CMD_OSCTEXT,			/* \e]param; */
   CMD_LINK,			/* \e]8 */
   CMD_LINKARG,
-  CMD_DEC_PRIVATE
+  CMD_DEC_PRIVATE,
+  CMD_CSI_INTERMEDIATE,		/* CSI param ... <intermediate 0x20-0x2F>+ */
+  CMD_DCS,			/* \eP <body> ST */
+  CMD_DCS_ESC			/* saw ESC inside DCS, waiting for '\\' */
 } ansi_state;
 
 typedef enum
