@@ -74,7 +74,10 @@ zoom(_R, Ev:event) :->
     "Scale the receiver figure around the cursor"::
     get(Ev, receiver, F),
     get(F, window, Win),
-    get(Ev, position, Win, point(X, Y)),
+    get(Ev, position, Win, point(WX, WY)),
+    get(F, position, point(FX, FY)),
+    X is WX - FX,                       % cursor in figure-origin coord
+    Y is WY - FY,
     get(Ev, rotation, Angle),
     S is (100 - Angle)/100,
     ensure_transform(F, T),
