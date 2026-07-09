@@ -94,6 +94,8 @@ COMMON(status)	geometryDevice(Device dev, Int x, Int y, Int w, Int h);
 COMMON(status)	makeClassDevice(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/ellipse.c */
+COMMON(double)	ellipseNormDistance(int ax, int ay, int aw, int ah,
+				    int px, int py);
 COMMON(status)	makeClassEllipse(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/figure.c */

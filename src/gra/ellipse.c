@@ -34,6 +34,31 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <math.h>
+
+/* Test the normalised ellipse-space distance of (px, py) from the
+ * centre of the axis-aligned bounding box (ax, ay, aw, ah).  A return
+ * value <= 1 means the point is inside the ellipse inscribed in that
+ * box; larger values are outside.  Semi-axes below 1 are clamped to
+ * avoid a division by zero on degenerate 0-width shapes.
+ *
+ * Shared with class circle via proto.h.
+ */
+double
+ellipseNormDistance(int ax, int ay, int aw, int ah, int px, int py)
+{ double rx = aw / 2.0;
+  double ry = ah / 2.0;
+  double cx = ax + rx;
+  double cy = ay + ry;
+  double dx, dy;
+
+  if ( rx < 1 ) rx = 1;
+  if ( ry < 1 ) ry = 1;
+  dx = (px - cx) / rx;
+  dy = (py - cy) / ry;
+  return sqrt(dx*dx + dy*dy);
+}
+
 
 static status
 initialiseEllipse(EllipseObj e, Int w, Int h)
@@ -95,11 +120,47 @@ static vardecl var_ellipse[] =
      NAME_appearance, "Fill pattern for internals")
 };
 
+static status
+insideEllipse(EllipseObj e, Int xc, Int yc)
+{ Area a = e->area;
+  return ellipseNormDistance(valInt(a->x), valInt(a->y),
+			       valInt(a->w), valInt(a->h),
+			       valInt(xc), valInt(yc)) <= 1.0;
+}
+
+
+/* Event hit: inside the ellipse, or within event_tolerance pixels of
+ * its outline (implemented as "inside a slightly larger ellipse").
+ */
+static status
+inEventAreaEllipse(EllipseObj e, Int xc, Int yc)
+{ static int evtol = -1;
+  Area a = e->area;
+  int ax = valInt(a->x), ay = valInt(a->y);
+  int aw = valInt(a->w), ah = valInt(a->h);
+  int px = valInt(xc), py = valInt(yc);
+
+  if ( evtol < 0 )
+  { Int v = getClassVariableValueObject(e, NAME_eventTolerance);
+    evtol = (v ? valInt(v) : 5);
+  }
+
+  return ellipseNormDistance(ax - evtol, ay - evtol,
+			       aw + 2*evtol, ah + 2*evtol,
+			       px, py) <= 1.0;
+}
+
+
 /* Send Methods */
+
+static char *T_inside[] =
+	{ "x=int", "y=int" };
 
 static senddecl send_ellipse[] =
 { SM(NAME_initialise, 2, T_initialise, initialiseEllipse,
-     DEFAULT, "Create ellipse from width and height")
+     DEFAULT, "Create ellipse from width and height"),
+  SM(NAME_inside, 2, T_inside, insideEllipse,
+     NAME_event, "Test whether (X,Y) is inside the ellipse")
 };
 
 /* Get Methods */
@@ -133,6 +194,7 @@ makeClassEllipse(Class class)
 
   cloneStyleVariableClass(class, NAME_fill, NAME_reference);
   setRedrawFunctionClass(class, RedrawAreaEllipse);
+  setInEventAreaFunctionClass(class, inEventAreaEllipse);
 
   succeed;
 }

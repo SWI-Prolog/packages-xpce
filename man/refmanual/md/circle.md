@@ -26,6 +26,17 @@ interior may be filled with a colour using ->fill.
     specified this value is used for both parameters.  If both are specified
     the minimum of the two is used for both.
 
+- circle->inside: x=int, y=int
+    Succeed if the point (X, Y) — in the circle's <-device coordinate
+    system — lies inside the circle: (X-cx)² + (Y-cy)² ≤ r².  Bbox
+    corners just miss.
+
+    Same test drives `->in_event_area`; that method additionally
+    inflates the radius by `event_tolerance` pixels so hits within
+    tolerance of the outline still count.
+
+    @see ellipse->inside
+
 - circle->radius: int
     *Inherits description from*: circle<-radius
 

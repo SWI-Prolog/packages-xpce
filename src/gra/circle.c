@@ -91,6 +91,35 @@ getDiameterCircle(Circle c)
 
 
 static status
+insideCircle(Circle c, Int xc, Int yc)
+{ Area a = c->area;
+  return ellipseNormDistance(valInt(a->x), valInt(a->y),
+			     valInt(a->w), valInt(a->h),
+			     valInt(xc), valInt(yc)) <= 1.0;
+}
+
+
+/* Event hit: inside the circle or within event_tolerance pixels. */
+static status
+inEventAreaCircle(Circle c, Int xc, Int yc)
+{ static int evtol = -1;
+  Area a = c->area;
+  int ax = valInt(a->x), ay = valInt(a->y);
+  int aw = valInt(a->w), ah = valInt(a->h);
+  int px = valInt(xc), py = valInt(yc);
+
+  if ( evtol < 0 )
+  { Int v = getClassVariableValueObject(c, NAME_eventTolerance);
+    evtol = (v ? valInt(v) : 5);
+  }
+
+  return ellipseNormDistance(ax - evtol, ay - evtol,
+			     aw + 2*evtol, ah + 2*evtol,
+			     px, py) <= 1.0;
+}
+
+
+static status
 geometryCircle(Circle c, Int x, Int y, Int w, Int h)
 { Int d;
 
@@ -111,6 +140,8 @@ geometryCircle(Circle c, Int x, Int y, Int w, Int h)
 
 static char *T_geometry[] =
         { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
+static char *T_inside[] =
+	{ "x=int", "y=int" };
 
 /* Instance Variables */
 
@@ -131,7 +162,9 @@ static senddecl send_circle[] =
   SM(NAME_radius, 1, "int", radiusCircle,
      NAME_area, "Set radius (= half diameter)"),
   SM(NAME_rotate, 1, "int", rotateCircle,
-     NAME_rotate, "Rotate (does nothing)")
+     NAME_rotate, "Rotate (does nothing)"),
+  SM(NAME_inside, 2, T_inside, insideCircle,
+     NAME_event, "Test whether (X,Y) is inside the circle")
 };
 
 /* Get Methods */
@@ -165,6 +198,7 @@ makeClassCircle(Class class)
 
   cloneStyleVariableClass(class, NAME_fill, NAME_reference);
   setRedrawFunctionClass(class, RedrawAreaCircle);
+  setInEventAreaFunctionClass(class, inEventAreaCircle);
 
   succeed;
 }
