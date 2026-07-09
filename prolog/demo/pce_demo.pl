@@ -199,6 +199,12 @@ demo('London Tube',
      demo(tube_gui),
      london_tube).
 
+demo('xdot',
+     'Graphviz layout viewer: render .dot files (requires graphviz)',
+     demo(xdot_demo),
+     xdot_demo) :-
+    process_which(path(dot), _Path).
+
 demo('GraphViewer',
      'Visualise a graph represented as Prolog facts',
      demo(graph),

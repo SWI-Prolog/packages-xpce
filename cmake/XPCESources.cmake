@@ -155,7 +155,7 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     stayup_popup.pl swi_compatibility.pl swi_edit.pl
     swi_hooks.pl swi_ide.pl swi_preferences.pl tabbed_window.pl tabular.pl
     toc_filesystem.pl toolbar.pl url_image.pl pce_openframes.pl
-    pce_backcomp.pl)
+    pce_backcomp.pl xdot.pl)
 if(EPILOG)
     list(APPEND XPCE_DATA_prolog_lib epilog.pl)
 endif()
@@ -256,7 +256,8 @@ set(XPCE_DATA_prolog_contrib_rubik maplist.pl README rubikpce.pl rubik.pl)
 set(XPCE_DATA_prolog_demo arc.pl chess.pl colour.pl constraint.pl cursor.pl
     dragdrop_file.pl event_hierarchy.pl fontviewer.pl graph.pl hsvcolour.pl
     imageviewer.pl ispell.pl juggler.pl kangaroo.pl opacity.pl pce_demo.pl
-    transform.pl tube_gui.pl tube.pl tube.json)
+    transform.pl tube_gui.pl tube.pl tube.json
+    xdot_demo.pl xdot_demo.dot)
 
 set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png
     busy_bee.png cassette.png chessboard.png chesssquare.png close.png

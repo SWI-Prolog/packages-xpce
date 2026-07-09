@@ -1,0 +1,174 @@
+/*
+  Demo file for library(xdot) exercising every supported xdot op.
+
+  Op coverage:
+    E / e   filled / stroked ellipse       (ellipse/circle shapes)
+    P / p   filled / stroked polygon       (box/diamond/triangle, cluster bg,
+                                            arrowheads: normal/inv/dot/diamond/
+                                            vee/crow/tee)
+    L       polyline                        (record shape dividers)
+    B / b   cubic B-spline                  (curved edges)
+    T       text                            (all labels)
+    t       font-flags bitmask              (HTML <B>, <I>, <U> label markup)
+    C / c   set fill / pen colour           (fillcolor, color; #rgb, #rgba,
+                                            X11 name, HSV, gradients)
+    F       set font                        (fontname, fontsize)
+    S       style                           (dashed, dotted, bold, setlinewidth)
+    I       image                           (image= attribute — none in this demo)
+
+  Layout: default rankdir=TB with each cluster's contents pinned to a
+  single rank (`rank=same`) so the clusters read top to bottom while
+  the nodes inside each cluster flow left to right.
+*/
+
+digraph demo {
+  fontname="Times-Roman";
+  fontsize=14;
+  compound=true;
+  ranksep=0.8;
+  nodesep=0.4;
+
+  //---- Node shapes (E, e, P, p, L)
+  subgraph cluster_shapes {
+    label="Node shapes";
+    fontname="Helvetica";
+    style=filled;
+    fillcolor=lightyellow;
+
+    { rank=same;
+      ellipse_node  [label="ellipse",                        // e op
+                     tooltip="Default node shape — e (unfilled ellipse) op"];
+      filled_ell    [label="filled ellipse", style=filled,   // E + e
+                     fillcolor=lightblue,
+                     tooltip="style=filled + fillcolor=lightblue → E + e"];
+      box_node      [shape=box, label="box",                 // p op
+                     tooltip="shape=box → p (polygon) op"];
+      diamond_node  [shape=diamond, label="diamond"];        // p op
+      triangle_node [shape=triangle, label="triangle"];      // p op
+      circle_node   [shape=circle, label="circle"];          // e op
+      record_node   [shape=record, label="a|b|c",            // p + L
+                     tooltip="record shape — polygon + polyline dividers"];
+    }
+  }
+
+  //---- Edge styles (B, S: dashed/dotted/bold/setlinewidth)
+  subgraph cluster_styles {
+    label="Edge styles";
+    fontname="Helvetica";
+    node [shape=box];
+
+    { rank=same; s1; s2; s3; s4; s5; s6; s7; s8; s9; s10; }
+
+    s1 -> s2 [label="solid",                               // B
+              tooltip="Default edge — B (cubic B-spline) op"];
+    s3 -> s4 [style=dashed, label="dashed",                // B + S dashed
+              tooltip="style=dashed → S dashed sets the texture"];
+    s5 -> s6 [style=dotted, label="dotted"];               // B + S dotted
+    s7 -> s8 [style=bold,   label="bold"];                 // B + S bold
+    s9 -> s10 [penwidth=3,  label="pen 3",                 // B + S setlinewidth
+               tooltip="penwidth=3 → S setlinewidth(3)"];
+  }
+
+  //---- Colours (C, c; named, hex, alpha, HSV)
+  subgraph cluster_colours {
+    label="Colours";
+    fontname="Helvetica";
+    node [shape=box];
+
+    { rank=same; c_named; c_hex; c_alpha; c_hsv; c_filled; }
+
+    c_named  [label="red",       color=red,       fontcolor=red];
+    c_hex    [label="#00a0a0",   color="#00a0a0", fontcolor="#00a0a0"];
+    c_alpha  [label="#ff008080", color="#ff008080",                     // 50 % opacity
+                                 fontcolor="#ff008080"];
+    c_hsv    [label="0.83 0.9 0.9",                                     // HSV: violet
+                                 color="0.83 0.9 0.9", fontcolor="0.83 0.9 0.9"];
+    c_filled [label="filled",    style=filled,
+                                 fillcolor=lightgreen, color=darkgreen];
+
+    c_named  -> c_hex    [color=orange, penwidth=2];
+    c_hex    -> c_alpha  [color="#0000ff80", style=dashed];
+    c_alpha  -> c_hsv    [color="0.33 1 0.7"];                          // HSV: dark green edge
+    c_hsv    -> c_filled;
+  }
+
+  //---- Fonts and font-flag ops (F, t)
+  subgraph cluster_fonts {
+    label="Fonts + text flags";
+    fontname="Helvetica";
+    node [shape=box];
+
+    { rank=same; f_times; f_helv; f_courier; f_bold; f_italic; f_under; f_bi; }
+
+    f_times   [label="Times",     fontname="Times-Roman"];
+    f_helv    [label="Helvetica", fontname="Helvetica"];
+    f_courier [label="Courier",   fontname="Courier"];
+
+    // HTML label markup emits t ops with fontchar bitmask
+    f_bold    [label=<<B>bold</B>>];
+    f_italic  [label=<<I>italic</I>>];
+    f_under   [label=<<U>underline</U>>];
+    f_bi      [label=<<B><I>bold+italic</I></B>>];
+
+    f_times -> f_helv -> f_courier -> f_bold -> f_italic -> f_under -> f_bi;
+  }
+
+  //---- Gradient fills (C op with grad=linear|radial and stops)
+  subgraph cluster_gradients {
+    label="Gradient fills";
+    fontname="Helvetica";
+    node [shape=box, style=filled, width=1.2, height=0.7];
+
+    { rank=same; g_lin_h; g_lin_v; g_lin_split; g_lin_hex; g_rad; g_rad_off; }
+
+    // Horizontal linear (default angle for two-colour fillcolor)
+    g_lin_h     [label="linear H",   fillcolor="yellow:red"];
+
+    // Vertical linear via gradientangle
+    g_lin_v     [label="linear V",   fillcolor="yellow:red", gradientangle=90];
+
+    // Split at 30 % — two solid bands (stops share a fraction)
+    g_lin_split [label="split 30 %", fillcolor="yellow;0.3:red", gradientangle=90];
+
+    // Named colours + hex form
+    g_lin_hex   [label="hex",        fillcolor="#4080ff:#ff8040", gradientangle=90];
+
+    // Radial with implicit centre
+    g_rad       [label="radial",     fillcolor="yellow:red", style="radial,filled",
+                                     tooltip="Radial gradient: yellow centre, red rim"];
+
+    // Radial with an off-centre focal point
+    g_rad_off   [label="radial off", fillcolor="yellow:red",
+                                     style="radial,filled",
+                                     gradientangle=45];
+  }
+
+  //---- Arrowheads (various P polygons emitted for _hdraw_ / _tdraw_)
+  subgraph cluster_arrows {
+    label="Arrowheads";
+    fontname="Helvetica";
+    node [shape=circle, width=0.15, label="", style=filled, fillcolor=black];
+
+    { rank=same; ah1; ah2; ah3; ah4; ah5; ah6;
+                 ah7; ah8; ah9; ahA; ahB; ahC; }
+
+    ah1 -> ah2 [arrowhead=normal,   label="normal"];
+    ah3 -> ah4 [arrowhead=inv,      label="inv"];
+    ah5 -> ah6 [arrowhead=dot,      label="dot"];
+    ah7 -> ah8 [arrowhead=diamond,  label="diamond"];
+    ah9 -> ahA [arrowhead=vee,      label="vee"];
+    ahB -> ahC [arrowhead=crow, arrowtail=tee, dir=both,
+                                    label="crow / tee"];
+  }
+
+  //---- Vertical stacking: connect the leftmost node of each cluster
+  //     downward so the columns stay left-aligned (avoids the "each
+  //     row drifts further right" effect that comes from linking the
+  //     rightmost node to the next row).
+  edge [weight=100, color=grey50, arrowsize=0.7];
+  ellipse_node -> s1       [ltail=cluster_shapes,    lhead=cluster_styles];
+  s1           -> c_named  [ltail=cluster_styles,    lhead=cluster_colours];
+  c_named      -> f_times  [ltail=cluster_colours,   lhead=cluster_fonts];
+  f_times      -> g_lin_h  [ltail=cluster_fonts,     lhead=cluster_gradients];
+  g_lin_h      -> ah1      [ltail=cluster_gradients, lhead=cluster_arrows];
+}
