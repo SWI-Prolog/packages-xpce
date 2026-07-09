@@ -644,11 +644,49 @@ ClassDecl(bezier_decls,
           2, bezier_termnames);
 
 
+/* Point-in-shape test for events.  Bezier's default bounding box is
+ * usually much larger than the actual curve; testing against the flat
+ * bounding box makes it hard to click precisely on the curve.  Flatten
+ * the curve to a polyline (via compute_points_bezier), then test the
+ * event point against each segment using distanceLineToPoint.  Passes
+ * if any segment is within the class's `event_tolerance' (default 5
+ * pixels, same as class line).
+ */
+
+static status
+inEventAreaBezier(Bezier b, Int xc, Int yc)
+{ static int evtol = -1;
+  fpoint ptsbuf[MAXPTS];
+  FPoint pts = ptsbuf;
+  int npts = MAXPTS;
+  int px = valInt(xc), py = valInt(yc);
+  int i;
+
+  if ( evtol < 0 )
+  { Int v = getClassVariableValueObject(b, NAME_eventTolerance);
+    evtol = (v ? valInt(v) : 5);
+  }
+
+  compute_points_bezier(b, pts, &npts);
+
+  for(i=0; i<npts-1; i++)
+  { int d = distanceLineToPoint(rfloat(pts[i].x),   rfloat(pts[i].y),
+				rfloat(pts[i+1].x), rfloat(pts[i+1].y),
+				px, py, FALSE);
+    if ( d < evtol )
+      succeed;
+  }
+
+  fail;
+}
+
+
 status
 makeClassBezier(Class class)
 { declareClass(class, &bezier_decls);
 
   setRedrawFunctionClass(class, RedrawAreaBezier);
+  setInEventAreaFunctionClass(class, inEventAreaBezier);
 
   succeed;
 }
