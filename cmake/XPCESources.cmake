@@ -17,7 +17,7 @@ set(EVT_SRC	clickgesture.c conngesture.c event.c
 
 set(GNU_SRC	getdate.c)
 
-set(GRA_SRC	arc.c arrow.c bitmap.c box.c circle.c colour.c
+set(GRA_SRC	arc.c arrow.c bitmap.c box.c circle.c colour.c gradient.c
 		connection.c coords.c cursor.c device.c ellipse.c
 		figure.c font.c format.c graphical.c handle.c image.c
 		joint.c line.c link.c listbrowser.c node.c path.c
@@ -131,7 +131,7 @@ set(XPCE_DATA_prolog_boot pce_autoload.pl pce_editor.pl pce_error.pl
 
 set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     draw_extend.pl edit_dialog.pl emacs_extend.pl emacs_tags.pl file_item.pl
-    find_file_dialog.pl find_file.pl getpass.pl gradient.pl gui_tracer.pl
+    find_file_dialog.pl find_file.pl getpass.pl gui_tracer.pl
     help_message.pl http_client.pl hyper.pl imageops.pl isocomp.pl
     keybinding.pl make_dialog.pl MKINDEX.pl Overview pan_zoom.pl
     password_item.pl pce_arm.pl pce_arrow_item.pl pce_class_index.pl

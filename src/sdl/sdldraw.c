@@ -91,6 +91,8 @@ typedef struct
   double fh = (h)-_lw;
 
 static void pce_cairo_set_source_color(cairo_t *cr, Colour pce);
+static void pce_cairo_set_source_gradient(cairo_t *cr, Gradient g);
+static void pce_cairo_set_source_fill(cairo_t *cr, Any fill);
 #if 0
 static bool validate_cairo_text_consistency(cairo_t *draw_cr);
 #endif
@@ -495,6 +497,64 @@ pce_cairo_set_source_color(cairo_t *cr, Colour pce)
   cairo_set_source_rgba(cr, c.r/256.0, c.g/256.0, c.b/256.0, c.a/256.0);
 }
 
+/* Build a cairo pattern from an XPCE `gradient' object and set it as
+ * the source on `cr'.  cairo_set_source() takes a reference to the
+ * pattern, so we destroy our local one afterwards.
+ */
+static void
+pce_cairo_set_source_gradient(cairo_t *cr, Gradient g)
+{ cairo_pattern_t *pat;
+  /* Translate the gradient's coordinates through the current draw-
+   * context offset, the same shift shape-drawing macros apply so the
+   * pattern lines up with the shape being filled.
+   */
+  double x0 = X(valNum(g->p0->x));
+  double y0 = Y(valNum(g->p0->y));
+  double x1 = X(valNum(g->p1->x));
+  double y1 = Y(valNum(g->p1->y));
+
+  if ( g->kind == NAME_radial )
+  { double r0 = notNil(g->r0) ? valNum(g->r0) : 0.0;
+    double r1 = notNil(g->r1) ? valNum(g->r1) : 0.0;
+    pat = cairo_pattern_create_radial(x0, y0, r0, x1, y1, r1);
+  } else
+  { pat = cairo_pattern_create_linear(x0, y0, x1, y1);
+  }
+
+  if ( notNil(g->stops) )
+  { Cell cell;
+
+    for_cell(cell, g->stops)
+    { Tuple t = (Tuple)cell->value;
+
+      if ( instanceOfObject(t, ClassTuple) &&
+	   instanceOfObject(t->second, ClassColour) )
+      { double frac = valNum(t->first);
+	SDL_Color c = pceColour2SDL_Color((Colour)t->second);
+	cairo_pattern_add_color_stop_rgba(pat, frac,
+					  c.r/256.0, c.g/256.0,
+					  c.b/256.0, c.a/256.0);
+      }
+    }
+  }
+
+  cairo_set_source(cr, pat);
+  cairo_pattern_destroy(pat);
+}
+
+/* Dispatch: set the source appropriate for whatever the fill slot
+ * carries.  Colours go via pce_cairo_set_source_color; gradients via
+ * pce_cairo_set_source_gradient.  Non-matching values fall through to
+ * the colour path (which will error/default).
+ */
+static void
+pce_cairo_set_source_fill(cairo_t *cr, Any fill)
+{ if ( instanceOfObject(fill, ClassGradient) )
+    pce_cairo_set_source_gradient(cr, (Gradient)fill);
+  else
+    pce_cairo_set_source_color(cr, (Colour)fill);
+}
+
 static PangoLayout *
 pce_cairo_set_font(cairo_t *cr, FontObj pce)
 { WsFont wsf = ws_get_font(pce);
@@ -810,7 +870,7 @@ r_box(int x, int y, int w, int h, int r, Any fill)
     cairo_rectangle(CR, fx, fy, fw, fh);
   if ( notNil(fill) )
   { r_fillpattern(fill, NAME_background);
-    pce_cairo_set_source_color(CR, context.fill);
+    pce_cairo_set_source_fill(CR, context.fill);
     if ( context.pen )
       cairo_fill_preserve(CR);
     else
@@ -1326,7 +1386,7 @@ r_arc(double x, double y, double w, double h,
   }
   if ( notNil(fill) )
   { r_fillpattern(fill, NAME_foreground);
-    pce_cairo_set_source_color(CR, context.fill);
+    pce_cairo_set_source_fill(CR, context.fill);
     if ( context.pen )
       cairo_fill_preserve(CR);
     else
@@ -1538,7 +1598,7 @@ r_path(Chain points, int ox, int oy, int radius, int closed, Image fill)
 
   if ( notNil(fill) )
   { r_fillpattern(fill, NAME_foreground);
-    pce_cairo_set_source_color(CR, context.fill);
+    pce_cairo_set_source_fill(CR, context.fill);
     cairo_fill_preserve(CR);
   }
 
@@ -1681,7 +1741,7 @@ r_set_fill_fgbg(Any fill, Name which)
   DEBUG(NAME_draw,
 	Cprintf("fill with %s->%s\n", pp(fill), pp(context.fill)));
   if ( instanceOfObject(context.fill, ClassColour) )
-  { pce_cairo_set_source_color(CR, context.fill);
+  { pce_cairo_set_source_fill(CR, context.fill);
     return true;
   } else if ( isNil(context.fill) )
   { cairo_set_source_rgba(CR, 0, 0, 0, 0);
@@ -1760,7 +1820,7 @@ r_fill_polygon(FPoint pts, int n)
   cairo_set_source_rgba(CR, 0, 0, 0, 0);
   cairo_paint(CR);
 
-  pce_cairo_set_source_color(CR, context.fill);
+  pce_cairo_set_source_fill(CR, context.fill);
   double x = pts[0].x;
   double y = pts[0].y;
   Translate(x, y);

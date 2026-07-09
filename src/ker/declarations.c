@@ -233,6 +233,9 @@ static struct class_definition classdefs[] =
   { NAME_graphical, NAME_visual, makeClassGraphical,
     &ClassGraphical, "Displayable graphical object" },
 
+  { NAME_gradient, NAME_object, makeClassGradient,
+    &ClassGradient, "Linear or radial colour gradient" },
+
   { NAME_handle, NAME_object, makeClassHandle,
     &ClassHandle, "Connection point on graphical" },
 

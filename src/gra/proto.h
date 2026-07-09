@@ -219,6 +219,9 @@ COMMON(status)	clipGraphical(Graphical gr, Area a);
 COMMON(status)	unclipGraphical(Graphical gr);
 COMMON(status)	makeClassGraphical(Class class);
 
+/* /swi40/jan/src/pl/packages/xpce/src/gra/gradient.c */
+COMMON(status)	makeClassGradient(Class class);
+
 /* /swi40/jan/src/pl/packages/xpce/src/gra/handle.c */
 COMMON(status)	getXYHandle(Handle h, Graphical gr, Device dev, Int *X, Int *Y);
 COMMON(Int)	getXHandle(Handle h, Graphical gr, Device dev);

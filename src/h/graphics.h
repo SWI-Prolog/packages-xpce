@@ -39,9 +39,9 @@
 		 *        REUSABLE TYPES        *
 		 *******************************/
 
-#define TYPE_FILL     "colour|{foreground,background}*"
-#define TYPE_FILL_ARG "[colour|{foreground,background}]*"
-#define TYPE_FILL_3D  "[colour|{foreground,background}|elevation]*"
+#define TYPE_FILL     "colour|gradient|{foreground,background}*"
+#define TYPE_FILL_ARG "[colour|gradient|{foreground,background}]*"
+#define TYPE_FILL_3D  "[colour|gradient|{foreground,background}|elevation]*"
 
 		 /*******************************
 		 *     STRETCHABLE OBJECTS	*
@@ -748,6 +748,16 @@ NewClass(colour)
   Name		name;			/* Name of the colour (red, ...) */
   Name		kind;			/* `named' or `rgb' */
   Int		rgba;			/* 32-bit encoded RGBA */
+End;
+
+
+NewClass(gradient)
+  Name		kind;			/* `linear' or `radial' */
+  Point		p0;			/* Start point (linear) / start-circle center (radial) */
+  Point		p1;			/* End   point (linear) / end-circle   center (radial) */
+  Num		r0;			/* Num*, radial start-circle radius */
+  Num		r1;			/* Num*, radial end-circle radius */
+  Chain		stops;			/* Chain of tuple(fraction, colour) */
 End;
 
 

@@ -129,6 +129,7 @@ scope('C.frame', basic).
 scope('C.function', basic).
 scope('C.gesture', basic).
 scope('C.get_method', basic).
+scope('C.gradient', basic).
 scope('C.graphical', basic).
 scope('C.grbox', basic).
 scope('C.handle', basic).
@@ -1430,6 +1431,9 @@ scope('M.gesture.S.terminate', basic_programming).
 scope('M.gesture.S.verify', basic_programming).
 scope('M.get_method.G.get', advanced_programming).
 scope('M.get_method.S.initialise', advanced_programming).
+scope('M.gradient.S.initialise', basic).
+scope('M.gradient.S.add_stop', basic).
+scope('M.gradient.S.stops', advanced).
 scope('M.graphical.G.above', advanced_programming).
 scope('M.graphical.G.absolute_area', advanced).
 scope('M.graphical.G.absolute_position', obscure).
@@ -4444,6 +4448,12 @@ scope('V.get_method.return_type', advanced_programming).
 scope('V.get_method.source', advanced).
 scope('V.get_method.summary', advanced).
 scope('V.get_method.types', advanced).
+scope('V.gradient.kind', advanced).
+scope('V.gradient.p0', advanced).
+scope('V.gradient.p1', advanced).
+scope('V.gradient.r0', advanced).
+scope('V.gradient.r1', advanced).
+scope('V.gradient.stops', advanced).
 scope('V.graphical.active', advanced_programming).
 scope('V.graphical.area', internal).
 scope('V.graphical.colour', obscure).
