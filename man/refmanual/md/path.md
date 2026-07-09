@@ -124,6 +124,20 @@ Paths can be used for numerous purposes:
 
     @see path->append
 
+- path->inside: x=int, y=int
+    Succeed if the point (X, Y) — in the path's <-device coordinate
+    system — lies inside the polygon formed by the path's vertices.
+    Uses the standard even-odd (ray-casting) rule with an implicit
+    closing edge from the last vertex back to the first, so `<-closed`
+    is not consulted: an open polygon can still be probed as a closed
+    region for hit-testing purposes.  For smooth paths the test is
+    performed against the interpolated poly-line.  Fails silently
+    when the path has fewer than three vertices.
+
+    Companion to `path->in_event_area`, which combines this test with a
+    near-outline distance test to make edge hits work on closed paths
+    as well as open ones.
+
 - path->relative_move: diff=point, how=[{offset,points}]
     Move the graphical relative to its current position using the X- and
     Y-values of point.  How defines how the path is moved: by

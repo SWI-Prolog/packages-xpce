@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -867,6 +868,10 @@ getSegmentPath(Path p, Point pos, Int accept)
 }
 
 
+static int minDistancePolyline(Chain points, int tx, int ty,
+			       bool close_last_to_first);
+static status insidePath(Path p, Int xc, Int yc);
+
 static Int
 getDistancePath(Path p, Any to)
 { ComputeGraphical(p);
@@ -878,34 +883,16 @@ getDistancePath(Path p, Any to)
   }
 
   if ( instanceOfObject(to, ClassPoint) )
-  { Point p0 = NIL;
-    Point pt = to;
-    int bestd = INT_MAX;
+  { Point pt = to;
     Chain ch = (p->kind == NAME_smooth ? p->interpolation : p->points);
-    Cell cell;
-    int tx = valInt(pt->x);
-    int ty = valInt(pt->y);
 
     if ( ch->size == ZERO )		/* no points */
       fail;
     if ( ch->size == ONE )		/* one point? */
       answer(getDistancePoint(to, getHeadChain(ch)));
 
-    for_cell(cell, ch)
-    { if ( isNil(p0) )
-      { p0 = cell->value;
-      } else
-      { Point p1 = cell->value;
-	int   dl = distanceLineToPoint(valInt(p0->x), valInt(p0->y),
-				       valInt(p1->x), valInt(p1->y),
-				       tx, ty, FALSE);
-	/*Cprintf("dl = %d\n", dl);*/
-	bestd = min(bestd, dl);
-	p0 = p1;
-      }
-    }
-
-    answer(toInt(bestd));
+    answer(toInt(minDistancePolyline(ch, valInt(pt->x), valInt(pt->y),
+				     FALSE)));
   } else
     return getDistanceArea(p->area, ((Graphical)to)->area);
 }
@@ -957,6 +944,8 @@ static char *T_relativeMove[] =
 	{ "diff=point", "how=[{offset,points}]" };
 static char *T_segment[] =
 	{ "near=point|event", "accept=[0..]" };
+static char *T_inside[] =
+	{ "x=int", "y=int" };
 
 /* Instance Variables */
 
@@ -1009,7 +998,9 @@ static senddecl send_path[] =
   SM(NAME_insert, 2, T_insert, insertPath,
      NAME_points, "Insert after 2nd argument (@nil: prepend)"),
   SM(NAME_setPoint, 3, T_setPoint, setPointPath,
-     NAME_points, "Move (member) point to (X, Y)")
+     NAME_points, "Move (member) point to (X, Y)"),
+  SM(NAME_inside, 2, T_inside, insidePath,
+     NAME_event, "Test whether (X,Y) lies inside the polygon")
 };
 
 /* Get Methods */
@@ -1046,12 +1037,143 @@ ClassDecl(path_decls,
           var_path, send_path, get_path, rc_path,
           2, path_termnames);
 
+		 /*******************************
+		 *	HIT-TEST FOR EVENTS	*
+		 *******************************/
+
+/* Minimum distance from (tx, ty) to the polyline whose vertices are
+ * the points of chain `points'.  All coordinates are in RAW vertex
+ * space (offset already subtracted).  If `close_last_to_first' is
+ * true, the closing edge from the last vertex back to the first is
+ * also considered.
+ *
+ * Used by both getDistancePath (open) and inEventAreaPath (with the
+ * closing edge for closed paths).
+ */
+static int
+minDistancePolyline(Chain points, int tx, int ty, bool close_last_to_first)
+{ Cell cell;
+  Point first = NULL, prev = NULL;
+  int bestd = INT_MAX;
+
+  for_cell(cell, points)
+  { Point cur = cell->value;
+
+    if ( prev )
+    { int d = distanceLineToPoint(valInt(prev->x), valInt(prev->y),
+				  valInt(cur->x),  valInt(cur->y),
+				  tx, ty, FALSE);
+      if ( d < bestd ) bestd = d;
+    } else
+      first = cur;
+    prev = cur;
+  }
+  if ( close_last_to_first && first && prev && prev != first )
+  { int d = distanceLineToPoint(valInt(prev->x),  valInt(prev->y),
+				valInt(first->x), valInt(first->y),
+				tx, ty, FALSE);
+    if ( d < bestd ) bestd = d;
+  }
+  return bestd;
+}
+
+
+/* Ray-casting inside test.  Query point (tx, ty) is in RAW vertex
+ * space (offset already subtracted).  Uses the standard even-odd
+ * rule and closes the polygon between the last and first vertex.
+ */
+static bool
+pointInPolyPath(Chain points, int tx, int ty)
+{ Cell cell;
+  Point first = NULL, prev = NULL;
+  bool inside = false;
+
+  for_cell(cell, points)
+  { Point cur = cell->value;
+
+    if ( prev )
+    { int cx = valInt(cur->x),  cy = valInt(cur->y);
+      int qx = valInt(prev->x), qy = valInt(prev->y);
+
+      if ( (cy > ty) != (qy > ty) )
+      { double xi = qx + (double)(ty - qy) * (cx - qx) / (double)(cy - qy);
+	if ( (double)tx < xi )
+	  inside = !inside;
+      }
+    } else
+      first = cur;
+    prev = cur;
+  }
+  if ( first && prev && prev != first )
+  { int fx = valInt(first->x), fy = valInt(first->y);
+    int qx = valInt(prev->x),  qy = valInt(prev->y);
+
+    if ( (fy > ty) != (qy > ty) )
+    { double xi = qx + (double)(ty - qy) * (fx - qx) / (double)(fy - qy);
+      if ( (double)tx < xi )
+	inside = !inside;
+    }
+  }
+  return inside;
+}
+
+
+/* Public send method: test whether (X, Y) — expressed in the path's
+ * device coordinate system — is inside the polygon defined by the
+ * path's vertices.  Uses the even-odd ray-casting rule
+ * (pointInPolyPath) with an implicit last→first closing edge; the
+ * path's `<-closed' flag is not consulted, so an "open" polygon can
+ * still be treated as a closed region for hit-testing purposes.
+ * Fails silently if there are fewer than three vertices.
+ */
+static status
+insidePath(Path p, Int xc, Int yc)
+{ Chain points = (p->kind == NAME_smooth ? p->interpolation : p->points);
+  int tx, ty;
+
+  if ( isNil(points) || valInt(getSizeChain(points)) < 3 )
+    fail;
+
+  tx = valInt(xc) - valInt(p->offset->x);
+  ty = valInt(yc) - valInt(p->offset->y);
+
+  return pointInPolyPath(points, tx, ty);
+}
+
+
+static status
+inEventAreaPath(Path p, Int xc, Int yc)
+{ static int evtol = -1;
+  Chain points;
+
+  if ( evtol < 0 )
+  { Int v = getClassVariableValueObject(p, NAME_eventTolerance);
+    evtol = (v ? valInt(v) : 5);
+  }
+
+  points = (p->kind == NAME_smooth ? p->interpolation : p->points);
+  if ( isNil(points) || valInt(getSizeChain(points)) < 2 )
+    fail;
+
+  int tx = valInt(xc) - valInt(p->offset->x);
+  int ty = valInt(yc) - valInt(p->offset->y);
+
+  if ( p->closed == ON && pointInPolyPath(points, tx, ty) )
+    succeed;
+  if ( minDistancePolyline(points, tx, ty, p->closed == ON) < evtol )
+    succeed;
+
+  fail;
+}
+
+
 status
 makeClassPath(Class class)
 { declareClass(class, &path_decls);
 
   cloneStyleVariableClass(class, NAME_fill, NAME_reference);
   setRedrawFunctionClass(class, RedrawAreaPath);
+  setInEventAreaFunctionClass(class, inEventAreaPath);
 
   succeed;
 }
