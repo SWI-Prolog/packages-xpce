@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1999-2011, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1999-2026, University of Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -32,7 +33,7 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(pce_nedit, []).
+:- module(pce_edit, []).
 :- use_module(library(pce)).
 :- use_module(library(pce_meta)).
 
@@ -102,7 +103,7 @@ source(Object, [file(Path)|T]) :-
 source(Class, #{file:Path, line:Line}) :-
     object(Class),
     send(Class, instance_of, class),
-    get(Class, make_class_function, Address),
+    get(Class, slot, make_class_function, Address),
     Address \== 0,
     prolog_edit:addr2location(Address, Path, Line).
 
