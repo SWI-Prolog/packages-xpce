@@ -24,6 +24,7 @@ COMMON(Int)	getGreenColour(Colour c);
 COMMON(Int)	getBlueColour(Colour c);
 COMMON(Colour)	getHiliteColour(Colour c, Real h);
 COMMON(Colour)	getReduceColour(Colour c, Real re);
+COMMON(Colour)	getFadeColour(Colour c, Real f);
 COMMON(status)	makeClassColour(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/coords.c */

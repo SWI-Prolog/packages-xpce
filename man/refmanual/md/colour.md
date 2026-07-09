@@ -35,6 +35,9 @@ also be specified in CSS hex notation (`#RGB`, `#RGBA`, `#RRGGBB`,
 - colour.reduce_factor: real = 0.6
     Default factor for `<-reduce`.
 
+- colour.fade_factor: real = 0.5
+    Default alpha multiplier for `<-fade`.
+
 
 ## Instance variables {#class-colour-instvars}
 
@@ -141,6 +144,18 @@ also be specified in CSS hex notation (`#RGB`, `#RGBA`, `#RRGGBB`,
     The derived colour is associated with the original; asking for
     the same modification again returns the cached object, and
     destroying the original lets the derivative go.
+
+- colour<-fade: factor=[0.0..1.0] -> colour
+    Return a colour with the same RGB but alpha multiplied by
+    `factor`.  `0.0` yields a fully transparent variant; `1.0`
+    leaves alpha unchanged.  The default factor comes from the
+    `fade_factor` class variable (0.5).
+
+    Complements `graphical->opacity`: setting the fill or pen to a
+    faded colour lets a single graphical carry both an alpha
+    component and its shape/stroke identity, without a global
+    graphical opacity slot.  Like `<-hilite` and `<-reduce`, the
+    result is cached against the source colour via `@colours`.
 
 - colour<-convert: name -> colour
     Type-checker hook.  First looks the name up in `@colours`

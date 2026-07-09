@@ -432,6 +432,36 @@ getReduceColour(Colour c, Real re)
 }
 
 
+/* Return a colour with the same RGB as C but alpha multiplied by
+ * `factor'.  Factor 0 fades to fully transparent, factor 1 is a
+ * no-op, values above 1 clamp at fully opaque.  The class variable
+ * `fade_factor' supplies a default; hard-coded fallback 0.5.
+ */
+Colour
+getFadeColour(Colour c, Real f)
+{ float ff;
+  int a;
+
+  if ( isDefault(f) )
+    f = getClassVariableValueObject(c, NAME_fadeFactor);
+  ff = f ? valReal(f) : 0.5;
+
+  if ( isDefault(c->rgba) )
+    ws_named_colour(c);
+
+  a = (int)((float)valInt(getAlphaColour(c)) * ff);
+  if ( a < 0 )   a = 0;
+  if ( a > 255 ) a = 255;
+
+  COLORRGBA rgb = valInt(c->rgba);
+  int r = ColorRValue(rgb);
+  int g = ColorGValue(rgb);
+  int b = ColorBValue(rgb);
+
+  return associateColour(c, toInt(r), toInt(g), toInt(b), toInt(a));
+}
+
+
 static Int
 getIntensityColour(Colour c)
 { if ( isDefault(c->rgba) )
@@ -677,6 +707,8 @@ static getdecl get_colour[] =
      NAME_3d, "Hilited version of the colour"),
   GM(NAME_reduce, 1, "colour", "factor=[0.0..1.0]", getReduceColour,
      NAME_3d, "Reduced version of the colour"),
+  GM(NAME_fade, 1, "colour", "factor=[0.0..1.0]", getFadeColour,
+     NAME_3d, "Same RGB with alpha multiplied by factor"),
   GM(NAME_convert, 1, "colour", "name", getConvertColour,
      NAME_conversion, "Convert X-colour name"),
   GM(NAME_storageReference, 0, "name", NULL, getStorageReferenceColour,
@@ -709,7 +741,9 @@ static classvardecl rc_colour[] =
 { RC(NAME_hiliteFactor, "real", "0.9",
      "Default factor for <-hilite'd colour"),
   RC(NAME_reduceFactor, "real", "0.6",
-     "Default factor for <-reduce'd colour")
+     "Default factor for <-reduce'd colour"),
+  RC(NAME_fadeFactor, "real", "0.5",
+     "Default alpha multiplier for <-fade")
 };
 
 /* Class Declaration */
