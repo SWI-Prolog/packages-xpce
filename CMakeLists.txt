@@ -100,6 +100,7 @@ endif()
 # Tests
 
 test_libs(xpce)
+add_subdirectory(tests)
 
 ################
 # Create indexes

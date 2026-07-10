@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        wielemak@science.uva.nl
-    WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  2011-2025, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/packages/xpce/
+    Copyright (c)  2011-2026, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -1178,27 +1178,33 @@ getTermHandle(PceObject hd)
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Translate a message argument into an XPCE  object.
 
-Returns  FALSE  and  raises  an  exception    of  the  the  argument  is
+Returns `false` and raises an exception of the the argument is
 @<bad-reference>
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-static int
+static bool
 get_object_arg(term_t t, PceObject* obj)
 { term_value_t val;
+  int rv = PL_get_term_value(t, &val);
 
-  switch(PL_get_term_value(t, &val))
+  if ( !rv )
+    return false;
+
+  switch(rv)
   { case PL_ATOM:
       *obj = atomToName(val.a);
-      return TRUE;
-    case PL_INTEGER:
+      return true;
+    case PL_INT64:
       if ( val.i >= PCE_MIN_INT && val.i <= PCE_MAX_INT )
 	*obj = cToPceInteger((intptr_t)val.i);
       else
 	*obj = cToPceReal((double)val.i);
-      return TRUE;
-    case PL_FLOAT:
+      return true;
+    case PL_FLOAT:			/* true float */
+    case PL_INTEGER:			/* large integer */
+    case PL_RATIONAL:			/* rational number */
       *obj = cToPceReal(val.f);
-      return TRUE;
+      return true;
     case PL_TERM:			/* @reference */
       if ( val.t.name == ATOM_ref && val.t.arity == 1 )
 	return get_object_from_refterm(t, obj);
@@ -1218,33 +1224,39 @@ get_object_arg(term_t t, PceObject* obj)
 
 	  *obj = pceNew(NIL, ClassBinding, 2, av);
 
-	  return TRUE;
+	  return true;
 	}
       }
     /*FALLTHROUGH*/
     default:
       *obj = makeTermHandle(t);
-      return TRUE;
+      return true;
   }
 }
 
 
-static int
+static bool
 get_typed_object(PceGoal g, term_t t, PceType type, PceObject* rval)
 { PceObject obj = PCE_FAIL, obj2;
   term_value_t val;
+  int rv = PL_get_term_value(t, &val);
 
-  switch(PL_get_term_value(t, &val))
+  if ( !rv )
+    return false;
+
+  switch(rv)
   { case PL_ATOM:
       obj = atomToName(val.a);
       break;
-    case PL_INTEGER:
+    case PL_INT64:
       if ( val.i >= PCE_MIN_INT && val.i <= PCE_MAX_INT )
 	obj = cToPceInteger(val.i);
       else
 	obj = cToPceReal((double)val.i);
       break;
     case PL_FLOAT:
+    case PL_INTEGER:			/* large integer */
+    case PL_RATIONAL:			/* rational number */
       obj = cToPceReal(val.f);
       break;
     case PL_TERM:			/* @reference */
@@ -1256,7 +1268,7 @@ get_typed_object(PceGoal g, term_t t, PceType type, PceObject* rval)
   if ( !obj )
   { if ( pceIncludesHostDataType(type, ClassProlog) )
     { *rval = makeTermHandle(t);
-      return TRUE;
+      return true;
     }
 
     if ( !(obj = termToObject(t, type, NULLATOM, FALSE)) )
@@ -1265,7 +1277,7 @@ get_typed_object(PceGoal g, term_t t, PceType type, PceObject* rval)
 
   if ( (obj2 = pceCheckType(g, type, obj)) )
   { *rval = obj2;
-    return TRUE;
+    return true;
   }
 
   return pceSetErrorGoal(g, PCE_ERR_ARGTYPE, makeTermHandle(t));
@@ -1278,22 +1290,28 @@ termToReceiver(term_t t)
 }
 
 
-static int
+static bool
 get_answer_object(PceGoal g, term_t t, PceType type, PceObject *rval)
 { PceObject obj = PCE_FAIL, obj2;
   term_value_t val;
+  int rv = PL_get_term_value(t, &val);
 
-  switch(PL_get_term_value(t, &val))
+  if ( !rv )
+    return false;
+
+  switch(rv)
   { case PL_ATOM:
       obj = atomToName(val.a);
       break;
-    case PL_INTEGER:
+    case PL_INT64:
       if ( val.i >= PCE_MIN_INT && val.i <= PCE_MAX_INT )
 	obj = cToPceInteger(val.i);
       else
 	obj = cToPceReal((double)val.i);
       break;
     case PL_FLOAT:
+    case PL_INTEGER:			/* large integer */
+    case PL_RATIONAL:			/* rational number */
       obj = cToPceReal(val.f);
       break;
     case PL_TERM:			/* @reference */
@@ -1314,7 +1332,7 @@ get_answer_object(PceGoal g, term_t t, PceType type, PceObject *rval)
 
   if ( (obj2 = pceCheckType(g, type, obj)) )
   { *rval = obj2;
-    return TRUE;
+    return true;
   }
 
   return pceSetErrorGoal(g, PCE_ERR_RETTYPE, makeRecordedTermHandle(t));
@@ -1867,11 +1885,15 @@ static int
 put_prolog_argument(PceGoal g, term_t t, PceType type, term_t f)
 { PceObject obj;
   term_value_t val;
+  int rv;
 					/* --> :prolog */
   if ( pceIncludesHostDataType(type, ClassProlog) )
     return PutTerm(t, f);
 
-  switch(PL_get_term_value(f, &val))
+  rv = PL_get_term_value(f, &val);
+  if ( !rv )				/* rational or out-of-range bignum */
+    PL_clear_exception();		/* fall through to termToObject */
+  else switch(rv)
   { case PL_ATOM:
       if ( pceCheckNameType(type, AtomCharp(val.a)) )
       { PL_put_atom(t, val.a);
