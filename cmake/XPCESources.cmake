@@ -257,7 +257,7 @@ set(XPCE_DATA_prolog_demo arc.pl chess.pl colour.pl constraint.pl cursor.pl
     dragdrop_file.pl event_hierarchy.pl fontviewer.pl graph.pl hsvcolour.pl
     imageviewer.pl ispell.pl juggler.pl kangaroo.pl opacity.pl pce_demo.pl
     transform.pl tube_gui.pl tube.pl tube.json
-    xdot_demo.pl xdot_demo.dot)
+    xdot_demo.pl xdot_demo.dot random_terms_demo.pl)
 
 set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png
     busy_bee.png cassette.png chessboard.png chesssquare.png close.png

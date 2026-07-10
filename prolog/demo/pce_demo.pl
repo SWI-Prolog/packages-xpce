@@ -205,6 +205,12 @@ demo('xdot',
      xdot_demo) :-
     process_which(path(dot), _Path).
 
+demo('Random Terms',
+     'Generate random Prolog terms and show as graph',
+     demo(random_terms_demo),
+     random_terms_demo) :-
+    process_which(path(dot), _Path).
+
 demo('GraphViewer',
      'Visualise a graph represented as Prolog facts',
      demo(graph),
