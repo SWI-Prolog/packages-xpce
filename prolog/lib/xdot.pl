@@ -210,6 +210,9 @@ edge_endpoints(Edge, Index, Tail, Head) :-
 :- pce_begin_class(xdot_group, figure,
                    "Common base for xdot_node and xdot_edge").
 
+variable(url, name*, get,
+         "Graphviz URL attribute, if set on the source object").
+
 in_event_area(G, X:int, Y:int) :->
     "Succeed only if X,Y lands on the actual shape of some member"::
     get(G, position, point(GX, GY)),
@@ -288,6 +291,22 @@ set_tooltip(G, Obj) :-
     send(G, help_message, tag, string(TooltipStr)).
 set_tooltip(_, _).
 
+%!  set_url(+Graphical, +Obj) is det.
+%
+%   If Obj has a `URL` (or its `href` alias) attribute from graphviz,
+%   store it in the group's `url` slot.  Click handlers wired via
+%   <-node_clicked or <-edge_clicked can then read it with
+%   `get(Group, url, URL)`.
+
+set_url(G, Obj) :-
+    (   (   get_dict('URL', Obj, URL)
+        ;   get_dict(href, Obj, URL)
+        ),
+        URL \== ""
+    ->  send(G, slot, url, URL)
+    ;   true
+    ).
+
 :- pce_end_class(xdot_group).
 
                  /*******************************
@@ -304,6 +323,7 @@ initialise(N, Obj:prolog, Ymax:num) :->
     send(N, name, NodeName),
     render_object(Obj, N, Ymax),
     set_tooltip(N, Obj),
+    set_url(N, Obj),
     send(N, recogniser, @xdot_node_recogniser).
 
 popup(N, P:'popup*') :<-
@@ -380,6 +400,7 @@ initialise(E, Edge:prolog, Tail:name, Head:name, Ymax:num) :->
     send(E, name, EName),
     render_object(Edge, E, Ymax),
     set_tooltip(E, Edge),
+    set_url(E, Edge),
     send(E, recogniser, @xdot_edge_recogniser).
 
 popup(E, P:'popup*') :<-
