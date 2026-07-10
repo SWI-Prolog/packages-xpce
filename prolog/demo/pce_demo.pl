@@ -142,7 +142,7 @@ demo('Ispell',
      demo(ispell),
      ispell) :-
     send(@pce, has_feature, process),
-    process_which(ispell, _Path).
+    process_which(path(ispell), _Path).
 
 demo('FontViewer',
      'Examine PCE predefined fonts',
