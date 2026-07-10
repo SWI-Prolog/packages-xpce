@@ -22,7 +22,6 @@ dialog.pl		dialog/0: interactive dialog editor
 
 emacs_extend.pl		declare_emacs_mode/[2,3]: Extending PceEmacs
 emacs_tags.pl		Library to handle GNU-Emacs TAG files
-pce_edit.pl		pce_edit/1: interface to PceEmacs
 
 **************** STANDALONE APPLICATIONS *****
 
