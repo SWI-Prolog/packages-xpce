@@ -274,6 +274,20 @@ restore_slot(M, Slot, Attr) :-
     send(M, delete_attribute, Attr).
 restore_slot(_, _, _).
 
+%!  set_tooltip(+Graphical, +Obj) is det.
+%
+%   If Obj has a `tooltip` attribute (from graphviz), wire it up as
+%   the graphical's `->help_message(tag, ...)` — library(help_message)
+%   pops it up as a balloon after the mouse rests on the group.
+%   Skip empty tooltip strings.
+
+set_tooltip(G, Obj) :-
+    get_dict(tooltip, Obj, TooltipStr),
+    TooltipStr \== "",
+    !,
+    send(G, help_message, tag, string(TooltipStr)).
+set_tooltip(_, _).
+
 :- pce_end_class(xdot_group).
 
                  /*******************************
@@ -400,20 +414,6 @@ edge_name(Edge, _, _, Name) :-
     atom_string(Name, IdStr).
 edge_name(_, Tail, Head, Name) :-
     atomic_list_concat([Tail, Head], -, Name).
-
-%!  set_tooltip(+Graphical, +Obj) is det.
-%
-%   If Obj has a `tooltip` attribute (from graphviz), wire it up as
-%   the graphical's `->help_message(tag, ...)` — library(help_message)
-%   pops it up as a balloon after the mouse rests on the group.
-%   Skip empty tooltip strings.
-
-set_tooltip(G, Obj) :-
-    get_dict(tooltip, Obj, TooltipStr),
-    TooltipStr \== "",
-    !,
-    send(G, help_message, tag, string(TooltipStr)).
-set_tooltip(_, _).
 
 :- pce_end_class(xdot_edge).
 
