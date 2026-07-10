@@ -425,6 +425,9 @@ set_tooltip(_, _).
 :- pce_begin_class(xdot_window, picture,
                    "Pan/zoom viewer for graphviz xdot output").
 
+variable(natural_zoom, num := 1.0, both,
+         "Preferred zoom for ->fit if the graph fits at this scale").
+
 initialise(W, Source:[file]*, Label:[name], Size:[size]) :->
     "Create the viewer; if Source is given, load it and fit"::
     default(Label, 'xdot',          TheLabel),
@@ -449,16 +452,18 @@ load(W, Source:file) :->
     send(W, fit).
 
 fit(W) :->
-    "Reset zoom; scale down to fit the visible area with a margin; center"::
+    "Reset zoom to <-natural_zoom if the graph fits, else scale down \c
+     to fit the visible area with a margin; center"::
     get(W, xdot, F),
-    send(F, transform, @nil),              % reset any prior zoom
+    send(F, transform, @nil),
     get(F, area, area(_,_,GW,GH)),
     get(W, visible, area(_,_,VW,VH)),
+    get(W, natural_zoom, Natural),
     Margin = 20,
     Sx is float(VW - 2*Margin) / GW,
     Sy is float(VH - 2*Margin) / GH,
-    S is min(1.0, min(Sx, Sy)),            % never scale up on fit
-    (   S < 1.0
+    S is min(Natural, min(Sx, Sy)),
+    (   S =\= 1
     ->  new(T, transform(0.0, S)),
         send(F, transform, T)
     ;   true
