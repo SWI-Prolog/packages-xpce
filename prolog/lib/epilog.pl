@@ -1458,9 +1458,9 @@ with_hyperlink_term(Goal) :-
     call(Goal).
 with_hyperlink_term(Goal) :-
     setup_call_cleanup(
-        set_prolog_flag(hyperlink_term, true),
+        push_prolog_flag(hyperlink_term, true),
         Goal,
-        set_prolog_flag(hyperlink_term, false)).
+        pop_prolog_flag(hyperlink_term)).
 
 %!  pce:xpce_console(-In,-Out,-Error) is semidet.
 %

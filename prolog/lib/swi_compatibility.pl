@@ -68,13 +68,12 @@ auto_call(G) :-
     call(G).
 auto_call(G) :-
     '$pi_head'(PI, G),
-    current_prolog_flag(autoload, Old),
     setup_call_cleanup(
         asserta(user:thread_message_hook(autoload(disabled(_Count)),_,_), Ref),
         setup_call_cleanup(
-            set_prolog_flag(autoload, true),
+            push_prolog_flag(autoload, true),
             '$autoload'(PI),
-            set_prolog_flag(autoload, Old)),
+            pop_prolog_flag(autoload)),
         erase(Ref)),
     call(G).
 
