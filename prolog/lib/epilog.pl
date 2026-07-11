@@ -1377,29 +1377,11 @@ initialise(D) :->
                           message(Epilog, open_url,
                                   'https://github.com/SWI-Prolog/packages-xpce/wiki'))
               ]),
-    add_pce_demos(D, Help),
     send(Debug, show_current, @on),
     send(Debug, multiple_selection, @on),
     send(DebugMode, condition, message(Epilog, update_debug_mode, DebugMode)),
     send(TraceMode, condition, message(Epilog, update_trace_mode, TraceMode)),
     send(GuiDebug,  condition, message(Epilog, update_gui_debug, GuiDebug)).
-
-:- if(exists_source(demo(pce_demo))).
-:- autoload(demo(pce_demo), [pcedemo/0]).
-
-add_pce_demos(Dialog, Menu) :-
-    send_list(Menu, append,
-              [ menu_item('GUI demos',
-                          message(Dialog, pce_demos))
-              ]).
-
-pce_demos(_D) :->
-    "Start demos browser"::
-    autoload_call(pcedemo).
-:- else.
-add_pce_demos(_Dialog, _Menu).
-:- endif.
-
 
 :- pce_end_class(epilog_dialog).
 
