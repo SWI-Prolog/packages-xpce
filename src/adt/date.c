@@ -416,17 +416,12 @@ getRfcStringDate(Date d)
   char *s = ctime(&now);
   char date[30];
 
-  date[0] = '\0';
-
-  strncat(date, s, 3);			/* dayname */
-  strcat(date, ", ");
-  strncat(date, s+8, 2);		/* day */
-  strncat(date, s+3, 5);		/* Month */
-  strncat(date, s+20, 4);		/* year */
-  strncat(date, s+10, 9);		/* time */
 #ifdef HAVE_TZNAME
-  strcat(date, " ");
-  strcat(date, tzname[0]);
+  snprintf(date, sizeof(date), "%.3s, %.2s%.5s%.4s%.9s %s",
+	   s, s+8, s+3, s+20, s+10, tzname[0]);
+#else
+  snprintf(date, sizeof(date), "%.3s, %.2s%.5s%.4s%.9s",
+	   s, s+8, s+3, s+20, s+10);
 #endif
 
   answer(CtoString(date));
@@ -704,8 +699,7 @@ timegm(struct tm *tm)
   if ( otz && strlen(otz) < 10 )	/* avoid buffer overflow */
   { putenv("TZ=UTC");
     t = mktime(tm);
-    strcpy(oenv, "TZ=");
-    strcat(oenv, otz);
+    snprintf(oenv, sizeof(oenv), "TZ=%s", otz);
     putenv(oenv);
   } else if ( otz )
   { Cprintf("Too long value for TZ: %s", otz);
