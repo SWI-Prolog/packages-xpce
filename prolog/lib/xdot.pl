@@ -118,7 +118,7 @@ xdot_view(File, Options) :-
 
 variable(engine, name := dot, both,
          "Graphviz layout program (`dot', `neato', `fdp', ...)").
-variable(source, file*,       get,
+variable(source, 'file|string'*,       get,
          "Current source; @nil if nothing has been loaded").
 variable(node_popup,   popup*, both,
          "Default right-click menu for xdot_node children").
@@ -137,8 +137,8 @@ initialise(F, Source:[file]*) :->
     ;   true
     ).
 
-load(F, Source:file) :->
-    "Clear F and render Source as graphviz xdot"::
+load(F, Source:'file|string') :->
+    "Clear F and render a file or string as graphviz xdot"::
     send(F, clear, destroy),
     send(F, transform, @nil),           % reset any prior pan/zoom
     get(F, engine, Engine),
@@ -499,6 +499,8 @@ fit(W) :->
                  *******************************/
 
 dot_to_json(Source, Engine, JSON) :-
+    send(Source, instance_of, file),
+    !,
     get(Source, name, Path),                   % xpce file object → path atom
     setup_call_cleanup(
         process_create(path(Engine),
@@ -510,6 +512,31 @@ dot_to_json(Source, Engine, JSON) :-
         ( close(Out),
           process_wait(PID, _Status)
         )).
+dot_to_json(String, Engine, JSON) :-
+    object(String, string(Data)),
+    setup_call_cleanup(
+        process_create(path(Engine),
+                       ['-Tjson'],
+                       [ stdin(pipe(In)),
+                         stdout(pipe(Out)),
+                         process(PID)
+                       ]),
+        ( send_to_dot(Data, In),
+          json_read_dict(Out, JSON)
+        ),
+        ( close(Out),
+          process_wait(PID, _Status)
+        )).
+
+send_to_dot(String, ToDOT) :-
+    set_stream(ToDOT, encoding(utf8)),
+    thread_create(send_to_dot_(String, ToDOT), _,
+                  [ detached(true) ]).
+
+send_to_dot_(String, ToDOT) :-
+    call_cleanup(format(ToDOT, '~s', [String]),
+                 close(ToDOT)), !.
+
 
 graph_bb(JSON, bb(Xmin, Ymin, Xmax, Ymax)) :-
     get_dict(bb, JSON, BBString),

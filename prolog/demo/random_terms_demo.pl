@@ -162,11 +162,10 @@ generate(F) :->
     collect_options(D, Options),
     debug(random_term, 'Options: ~p', [Options]),
     random_term(Term, Options),
-    setup_call_cleanup(
-        tmp_file_stream(utf8, File, Out),
-        term_to_dot(Out, Term),
-        close(Out)),
-    send(F?xdot, load, File),
+    with_output_to(
+        string(DOT),
+        term_to_dot(current_output, Term)),
+    send(F?xdot, load, DOT),
     get(F, member, xdot_window, W),
     send(W, fit).
 
