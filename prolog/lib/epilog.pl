@@ -1413,6 +1413,7 @@ initialise(E) :->
                 *******************************/
 
 %!  capture_messages(+PrologTerminal) is det.
+%!  uncapture_messages(?PrologTerminal) is det.
 %
 %   Capture messages from XPCE's main thread in an Epilog console.
 
@@ -1421,7 +1422,7 @@ initialise(E) :->
 
 capture_messages(PrologTerminal) :-
     thread_self(main),
-    xpce_epilog_console(PrologTerminal,_In,Out,Error),
+    terminal_input(PrologTerminal, _PTY, _In,Out,Error, _EditLine),
     stream_property(Stdout, alias(user_output)),
     stream_property(Stderr, alias(user_error)),
     Stdout \== Out,
@@ -1442,32 +1443,6 @@ uncapture_messages(PrologTerminal) :-
     set_stream(Stdout, alias(user_output)),
     set_stream(Stderr, alias(user_error)).
 uncapture_messages(_).
-
-%!  pce:xpce_console(-In,-Out,-Error) is semidet.
-%
-%   Tell xpce where to write console output.   If  this fails, output is
-%   written to the `user_output` of the   calling  thread or the process
-%   `stdout`.
-
-:- multifile
-    pce:xpce_console/3.
-
-pce:xpce_console(In,Out,Error) :-
-    current_prolog_flag(epilog, true),
-    xpce_epilog_console(_Obj,In,Out,Error),
-    !.
-
-xpce_epilog_console(TerminalImage,In,Out,Error) :-
-    thread_self(Me),
-    current_prolog_terminal(Me, TerminalImage),
-    terminal_input(TerminalImage, _PTY, In,Out,Error, _EditLine),
-    !.
-xpce_epilog_console(TerminalImage,In,Out,Error) :-
-    active_terminal(TerminalImage),
-    terminal_input(TerminalImage,_PTY,In,Out,Error,_EditLine),
-    !.
-xpce_epilog_console(TerminalImage,In,Out,Error) :-
-    terminal_input(TerminalImage,_PTY,In,Out,Error,_EditLine).
 
 
                 /*******************************
