@@ -96,12 +96,13 @@ library(thread_util). Eventually, this should be properly merged.
 :- dynamic quit_requested/0.
 
 ep_main :-
-    epilog,
-    ep_wait.
+    epilog([object(Epilog)]),
+    ep_wait(Epilog).
 
-ep_wait :-
+ep_wait(Epilog) :-
     set_thread(self, debug(false)),
-    capture_messages,
+    get(Epilog, current_terminal, PT),
+    capture_messages(PT),
     ep_wait_.
 
 ep_wait_ :-
@@ -173,7 +174,7 @@ epilog(Options0) :-
     option(object(Epilog), Options, _),
     send(Epilog, open),
     (   get(Epilog, main, @on)
-    ->  ep_wait
+    ->  ep_wait(Epilog)
     ;   true
     ).
 
@@ -401,6 +402,7 @@ initialise(PT) :->
 
 unlink(PT) :->
     catch(unlink_terminal_thread(PT), error(_,_), true),
+    uncapture_messages(PT),
     send_super(PT, unlink).
 
 unlink_terminal_thread(PT) :- % Epilog attached to a running thread
@@ -1410,39 +1412,36 @@ initialise(E) :->
                 *     XPCE CONSOLE OUTPUT      *
                 *******************************/
 
-%!  capture_messages
+%!  capture_messages(+PrologTerminal) is det.
 %
 %   Capture messages from XPCE's main thread in an Epilog console.
 
-capture_messages :-
-    asserta(( user:thread_message_hook(Term,Kind,Lines) :-
-                 xpce_message(Term,Kind,Lines))).
+:- dynamic
+    capturing/3.                        % PrologTerminal, Stdout, Stderr
 
-:- dynamic in_interrupt_handler/0.
-:- meta_predicate with_hyperlink_term(0).
-
-:- public xpce_message/3.
-xpce_message(interrupt(begin), _, _) =>
-    asserta(in_interrupt_handler),
-    fail.
-xpce_message(interrupt(end), _, _) =>
-    retractall(in_interrupt_handler),
-    fail.
-xpce_message(_Term, Kind, Lines) =>
-    Kind \== silent,
-    \+ in_interrupt_handler,
-    xpce_epilog_console(_In,_Out,Error),
-    with_hyperlink_term(print_message_lines(Error, kind(Kind), Lines)).
-
-with_hyperlink_term(Goal) :-
-    current_prolog_flag(hyperlink_term, true),
+capture_messages(PrologTerminal) :-
+    thread_self(main),
+    xpce_epilog_console(PrologTerminal,_In,Out,Error),
+    stream_property(Stdout, alias(user_output)),
+    stream_property(Stderr, alias(user_error)),
+    Stdout \== Out,
+    Stderr \== Error,
     !,
-    call(Goal).
-with_hyperlink_term(Goal) :-
-    setup_call_cleanup(
-        push_prolog_flag(hyperlink_term, true),
-        Goal,
-        pop_prolog_flag(hyperlink_term)).
+    set_stream(Out, alias(current_output)),
+    set_stream(Out, alias(user_output)),
+    set_stream(Error, alias(user_error)),
+    retractall(capturing(_,_,_)),
+    asserta(capturing(PrologTerminal,Stdout,Stderr)).
+capture_messages(_).
+
+uncapture_messages(PrologTerminal) :-
+    thread_self(main),
+    retract(capturing(PrologTerminal,Stdout,Stderr)),
+    !,
+    set_stream(Stdout, alias(current_output)),
+    set_stream(Stdout, alias(user_output)),
+    set_stream(Stderr, alias(user_error)).
+uncapture_messages(_).
 
 %!  pce:xpce_console(-In,-Out,-Error) is semidet.
 %
@@ -1455,20 +1454,20 @@ with_hyperlink_term(Goal) :-
 
 pce:xpce_console(In,Out,Error) :-
     current_prolog_flag(epilog, true),
-    xpce_epilog_console(In,Out,Error),
+    xpce_epilog_console(_Obj,In,Out,Error),
     !.
 
-xpce_epilog_console(In,Out,Error) :-
+xpce_epilog_console(TerminalImage,In,Out,Error) :-
     thread_self(Me),
     current_prolog_terminal(Me, TerminalImage),
     terminal_input(TerminalImage, _PTY, In,Out,Error, _EditLine),
     !.
-xpce_epilog_console(In,Out,Error) :-
+xpce_epilog_console(TerminalImage,In,Out,Error) :-
     active_terminal(TerminalImage),
     terminal_input(TerminalImage,_PTY,In,Out,Error,_EditLine),
     !.
-xpce_epilog_console(In,Out,Error) :-
-    terminal_input(_Obj,_PTY,In,Out,Error,_EditLine).
+xpce_epilog_console(TerminalImage,In,Out,Error) :-
+    terminal_input(TerminalImage,_PTY,In,Out,Error,_EditLine).
 
 
                 /*******************************
