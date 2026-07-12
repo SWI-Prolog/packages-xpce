@@ -134,6 +134,10 @@ The most important methods are:
 
     See also ->before, ->equal and ->after.
 
+- date<-dst: -> bool
+    `@on` if daylight-saving time is in effect at the represented instant,
+    `@off` if standard time.  Fails if the system cannot determine this.
+
 - date<-posix_value: -> real
 
 - date<-print_name: -> string
@@ -143,7 +147,8 @@ The most important methods are:
     @see date<-string
 
 - date<-rfc_string: -> string
-    <-string in RFC compatible format.  See also <-xml_string.
+    <-string in RFC 5322 compatible format, using a numeric timezone
+    offset (e.g. `+0200`).  See also <-time_zone and <-xml_string.
 
 - date<-string: -> string
     New string object representing date.  This method uses the C-library
@@ -160,6 +165,12 @@ The most important methods are:
 
     @see date<-print_name
     @see pce<-date
+
+- date<-time_zone: abbreviation=[bool] -> name
+    Local timezone at the represented instant.  Returns the numeric offset
+    (e.g. `+0200`, `-0330`, `+0530`) by default; with `@on` returns the
+    zone abbreviation (e.g. `CEST`).  Fails if the platform does not
+    provide the requested form.
 
 - date<-xml_string: -> string
     <-string in the XML-Schema defined dateTime format.  The time is

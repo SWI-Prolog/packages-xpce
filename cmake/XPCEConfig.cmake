@@ -1,5 +1,6 @@
 include(Sockets)
 include(CheckTypeSize)
+include(CheckSymbolExists)
 
 string(TOLOWER ${CMAKE_HOST_SYSTEM_NAME} OS)
 
@@ -28,3 +29,5 @@ AC_CHECK_FUNCS(pipe posix_openpt stpcpy mempcpy)
 
 check_struct_has_member("struct tm" tm_gmtoff time.h HAVE_TM_GMTOFF)
 check_struct_has_member("struct termios" c_line termios.h TERMIOS_HAS_C_LINE)
+
+check_symbol_exists(tzname time.h HAVE_TZNAME)

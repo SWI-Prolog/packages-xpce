@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -410,11 +411,49 @@ getStringDate(Date d)
 }
 
 
+static BoolObj
+getDstDate(Date d)
+{ time_t now = d->unix_date;
+  struct tm *tm = localtime(&now);
+
+  if ( !tm || tm->tm_isdst < 0 )
+    fail;
+  answer(tm->tm_isdst > 0 ? ON : OFF);
+}
+
+
+static Name
+getTimeZoneDate(Date d, BoolObj abbrev)
+{ time_t now = d->unix_date;
+  struct tm *tm = localtime(&now);
+
+  if ( !tm )
+    fail;
+
+  if ( abbrev == ON )
+  {
+#ifdef HAVE_TZNAME
+    answer(CtoName(tzname[tm->tm_isdst > 0 ? 1 : 0]));
+#endif
+  } else
+  {
+#ifdef HAVE_TM_GMTOFF
+    char buf[24];
+    long off = tm->tm_gmtoff;
+    snprintf(buf, sizeof buf, "%+03ld%02ld",
+	     off / 3600, labs(off % 3600) / 60);
+    answer(CtoName(buf));
+#endif
+  }
+  fail;
+}
+
+
 static StringObj
 getRfcStringDate(Date d)
 { time_t now = d->unix_date;
   char *s = ctime(&now);
-  char date[30];
+  char date[40];
 
   date[0] = '\0';
 
@@ -424,11 +463,12 @@ getRfcStringDate(Date d)
   strncat(date, s+3, 5);		/* Month */
   strncat(date, s+20, 4);		/* year */
   strncat(date, s+10, 9);		/* time */
-#ifdef HAVE_TZNAME
-  strcat(date, " ");
-  strcat(date, tzname[0]);
-#endif
 
+  Name tz = getTimeZoneDate(d, OFF);
+  if ( tz )
+  { strcat(date, " ");
+    strcat(date, strName(tz));
+  }
   answer(CtoString(date));
 }
 
@@ -609,6 +649,10 @@ static getdecl doget_date[] =
      NAME_dateComponent, "Second in the minute"),
   GM(NAME_weekDay, 0, "0..6", NULL, getWeekDayDate,
      NAME_dateComponent, "Day in the week"),
+  GM(NAME_dst, 0, "bool", NULL, getDstDate,
+     NAME_dateComponent, "Daylight-saving time in effect (fails if unknown)"),
+  GM(NAME_timeZone, 1, "name", "abbreviation=[bool]", getTimeZoneDate,
+     NAME_dateComponent, "Local time zone numeric or abbrev"),
   GM(NAME_year, 0, "1970..2050", NULL, getYearDate,
      NAME_dateComponent, "Year of the date"),
   GM(NAME_convert, 1, "date", "string", getConvertDate,
