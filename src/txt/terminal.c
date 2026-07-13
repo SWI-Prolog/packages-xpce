@@ -175,6 +175,29 @@ tc_display_width(const text_char *tc)
   return tc->flags.width;		/* 0 for combining marks, 1 for normal */
 }
 
+/** Cells occupied by `c` when drawn in `font` over a `cw`-pixel grid.
+ *
+ * uchar_display_width() classifies from static Unicode tables + host
+ * wcwidth.  That reports 1 for BMP symbol blocks (Dingbats U+2700-U+27BF,
+ * Misc Symbols U+2600-U+26FF, Misc Technical U+2300-U+23FF, some
+ * arrows, …) that emoji-presenting fonts actually draw at ~2 cells
+ * wide.  Trust the static classification when it says 0 (combining) or
+ * 2 (wide), and for ASCII; otherwise consult the font's own measured
+ * advance and promote to width 2 when the glyph is visibly wider than
+ * one cell.  c_width() is backed by the SDL font's lazy per-code-point
+ * cache, so the Pango round-trip happens at most once per (font, char).
+ */
+static inline int
+terminal_char_cells(uchar_t c, FontObj font, double cw)
+{ int dw = uchar_display_width(c);
+  if ( dw != 1 || c < 0x80 )
+    return dw;
+  double aw = c_width(c, font);
+  if ( aw > cw * 1.5 )
+    return 2;
+  return 1;
+}
+
 
 /** Convert a visual column to a cell index within a text line.
  *
@@ -3627,7 +3650,7 @@ rlc_prepare_line(RlcData b, int y)
 static void
 rlc_put(RlcData b, int chr)
 { RlcTextLine tl = rlc_prepare_line(b, b->caret_y);
-  int dw = uchar_display_width((uchar_t)chr);
+  int dw = terminal_char_cells((uchar_t)chr, b->object->font, b->cw);
   tlog("rlc_put(0x%X) entry caret_x=%d width=%d\n",
        chr, b->caret_x, dw);
   if ( dw == 0 )
