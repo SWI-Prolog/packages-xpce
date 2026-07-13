@@ -2516,12 +2516,22 @@ rlc_paint_text(RlcData b,
 	 together.  Armed status flips at the href's edge, splitting an
 	 otherwise-uniform link run when only part of it is hovered. */
       char *ut = t;
-      for(segment=0;
-	  segment<left && s[segment].flags.raw == flags.raw &&
-	  ((start + segment >= armed_from &&
-	    start + segment <  armed_to) == armed0);
-	  segment++)
-      { if ( s[segment].code != 0 )
+      for(segment=0; segment<left; segment++)
+      { const text_char *cell = &s[segment];
+	/* Followers (width-0 combining marks, code-0 wide-char placeholders)
+	   inherit the preceding base's flags and armed status; keep them in
+	   the current segment so a wide glyph and its placeholder share one
+	   r_clear + paint_chunks call — otherwise the placeholder's r_clear
+	   wipes the right half of the just-painted glyph. */
+	if ( cell->flags.width != 0 && cell->code != 0 )
+	{ if ( cell->flags.raw != flags.raw )
+	    break;
+	  bool cell_armed = (start + segment >= armed_from &&
+			     start + segment <  armed_to);
+	  if ( cell_armed != armed0 )
+	    break;
+	}
+	if ( cell->code != 0 )
 	{ int chr;
 	  ut = utf8_get_char(ut, &chr);
 	}
