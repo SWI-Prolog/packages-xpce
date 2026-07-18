@@ -40,6 +40,8 @@
 #define swapInt(x, y)	{ Int z; z=x; x=y; y=z; }
 #define BOUNDS(n, l, h) ((n) > (h) ? (h) : (n) < (l) ? (l) : (n))
 #define MIN_BUBBLE 6			/* smallest variable bubble */
+#define SB_THUMB_FRACTION 5		/* `win' thumb: 1/5 of the width */
+#define SB_THUMB_FRACTION_HOVER 3	/* ... and 1/3 when hovered */
 
 #define Repeating(sb) ((sb)->status == NAME_repeatDelay || \
 		       (sb)->status == NAME_repeat)
@@ -99,6 +101,7 @@ initialiseScrollBar(ScrollBar s, Any obj, Name orientation, Message msg)
   assign(s, unit,	   NAME_file);
   assign(s, status,	   NAME_inactive);
   assign(s, offset,	   ZERO);
+  assign(s, hover,	   OFF);
 
   obtainClassVariablesObject(s);
   if ( orientation == NAME_horizontal )
@@ -375,6 +378,55 @@ draw_arrows(ScrollBar s, SbDrawData d)
 }
 
 
+/* Colour for the thumb of a `win' look scroll bar: a clearly visible
+   variation of the trough colour.  Darken for light themes, lighten
+   for dark ones.
+*/
+
+static Colour
+thumb_colour(Colour trough)
+{ Int i = getIntensityColour(trough);
+
+  if ( i && valInt(i) >= 128 )
+    return getReduceColour(trough, CtoReal(0.55));
+  else
+    return getHiliteColour(trough, CtoReal(0.45));
+}
+
+
+/* Draw the thumb of a `win' look scroll bar as a bar of about
+   1/SB_THUMB_FRACTION of the width of the scroll bar, centred in the
+   trough.  While the pointer is inside the scroll bar the thumb is
+   widened to 1/SB_THUMB_FRACTION_HOVER.  The area not covered by the
+   thumb is filled with the trough colour.
+*/
+
+static void
+draw_win_thumb(int x, int y, int w, int h, bool vertical,
+	       Colour trough, bool hover)
+{ int frac = hover ? SB_THUMB_FRACTION_HOVER : SB_THUMB_FRACTION;
+  int t;
+
+  r_fill(x, y, w, h, trough);
+
+  if ( vertical )
+  { t = (w + frac/2)/frac;
+    if ( t < 1 )
+      t = 1;
+    x += (w-t)/2;
+    w  = t;
+  } else
+  { t = (h + frac/2)/frac;
+    if ( t < 1 )
+      t = 1;
+    y += (h-t)/2;
+    h  = t;
+  }
+
+  r_fill(x, y, w, h, thumb_colour(trough));
+}
+
+
 static void
 draw_bubble(ScrollBar s, SbDrawData d)
 { int p = valInt(s->pen);
@@ -382,9 +434,14 @@ draw_bubble(ScrollBar s, SbDrawData d)
   int x = d->x, y = d->y, w = d->w, h = d->h;
   BubbleInfo bi = &d->bubble;
   bool pf=false, pb=false;		/* preview forward/backward */
+  Colour trough = NULL;			/* `win' look trough colour */
+  bool hover = (s->hover == ON);
 
   if ( !instanceOfObject(z, ClassElevation) )
     z = NULL;
+
+  if ( s->look == NAME_win && z && instanceOfObject(z->colour, ClassColour) )
+    trough = z->colour;
 
   if ( s->look == NAME_win &&
        Repeating(s) &&
@@ -404,15 +461,17 @@ draw_bubble(ScrollBar s, SbDrawData d)
     ym = y+bi->bar_start; hm = bi->start - bi->bar_start;
     if ( pb )
       r_fill(x, ym, w, hm, BLACK_COLOUR);
-    else if ( s->look == NAME_win )
-      r_fill(x, ym, w, hm, GREY50_COLOUR);
+    else if ( trough )
+      r_fill(x, ym, w, hm, trough);
     else
       r_clear(x, ym, w, hm);
 
     ym = y+bi->start;
     hm = bi->length;
     if ( !ws_draw_sb_thumb(x, ym, w, hm) )
-    { if ( z )
+    { if ( trough )
+	draw_win_thumb(x, ym, w, hm, true, trough, hover);
+      else if ( z )
 	r_3d_box(x, ym, w, hm, 0, z, true);
       else
 	r_fill(x, ym, w, hm, GREY50_COLOUR);
@@ -423,8 +482,8 @@ draw_bubble(ScrollBar s, SbDrawData d)
     if ( hm > 0 )
     { if ( pf )
 	r_fill(x, ym, w, hm, BLACK_COLOUR);
-      else if ( s->look == NAME_win && z )
-	r_fill(x, ym, w, hm, GREY50_COLOUR);
+      else if ( trough )
+	r_fill(x, ym, w, hm, trough);
       else
 	r_clear(x, ym, w, hm);
     }
@@ -437,15 +496,17 @@ draw_bubble(ScrollBar s, SbDrawData d)
     xm = x+bi->bar_start; wm = bi->start - bi->bar_start;
     if ( pb )
       r_fill(xm, y, wm, h, BLACK_COLOUR);
-    else if ( s->look == NAME_win && z )
-      r_fill(xm, y, wm, h, GREY50_COLOUR);
+    else if ( trough )
+      r_fill(xm, y, wm, h, trough);
     else
       r_clear(xm, y, wm, h);
 
     xm = x+bi->start;
     wm = bi->length;
     if ( !ws_draw_sb_thumb(xm, y, wm, h) )
-    { if ( z )
+    { if ( trough )
+	draw_win_thumb(xm, y, wm, h, false, trough, hover);
+      else if ( z )
 	r_3d_box(xm, y, wm, h, 0, z, true);
       else
 	r_fill(xm, y, wm, h, GREY50_COLOUR);
@@ -456,8 +517,8 @@ draw_bubble(ScrollBar s, SbDrawData d)
     if ( wm > 0 )
     { if ( pf )
 	r_fill(xm, y, wm, h, BLACK_COLOUR);
-      else if ( s->look == NAME_win && z )
-	r_fill(xm, y, wm, h, GREY50_COLOUR);
+      else if ( trough )
+	r_fill(xm, y, wm, h, trough);
       else
 	r_clear(xm, y, wm, h);
     }
@@ -746,10 +807,29 @@ forwardScrollBar(ScrollBar s)
 }
 
 
+/* The `win' look draws a wider thumb while the pointer is inside the
+   scroll bar.
+*/
+
+static status
+hoverScrollBar(ScrollBar s, BoolObj val)
+{ if ( s->hover != val )
+  { assign(s, hover, val);
+    if ( s->look == NAME_win )
+      CHANGING_GRAPHICAL(s, changedEntireImageGraphical(s));
+  }
+
+  succeed;
+}
+
+
 static status
 eventScrollBar(ScrollBar s, EventObj ev)
 { if ( mapWheelMouseEvent(ev, s->object) )
     succeed;
+
+  if ( isAEvent(ev, NAME_area) )
+    hoverScrollBar(s, isAEvent(ev, NAME_areaEnter) ? ON : OFF);
 
   if ( barEventScrollBar(s, ev) )
     succeed;
@@ -941,7 +1021,9 @@ static vardecl var_scrollBar[] =
   IV(NAME_offset, "int", IV_NONE,
      NAME_internal, "Offset of down from top of bubble"),
   SV(NAME_autoHide, "bool", IV_GET|IV_STORE, autoHideScrollBar,
-     NAME_internal, "If @on, hide if all is visible")
+     NAME_internal, "If @on, hide if all is visible"),
+  IV(NAME_hover, "bool", IV_GET,
+     NAME_internal, "If @on, the pointer is inside the scroll bar")
 };
 
 /* Send Methods */

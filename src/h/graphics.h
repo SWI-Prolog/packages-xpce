@@ -526,6 +526,7 @@ NewClass(scrollbar)
   Name		unit;			/* Unit to scroll */
   Int		offset;			/* offset of down from bubble-start */
   BoolObj		auto_hide;		/* if @on, hide automatically */
+  BoolObj	hover;			/* pointer is inside the bar */
 End;
 
 #define SCROLL_PAGE_PROM 900		/* Scroll one page */

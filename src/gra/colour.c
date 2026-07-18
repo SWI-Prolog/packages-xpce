@@ -462,7 +462,7 @@ getFadeColour(Colour c, Real f)
 }
 
 
-static Int
+Int
 getIntensityColour(Colour c)
 { if ( isDefault(c->rgba) )
     ws_named_colour(c);
