@@ -226,6 +226,7 @@ keycode_to_name(SDL_Event *event)
 static SDL_Keymod lastmod = SDL_KMOD_NONE;
 static Any grabbing_window = NIL;
 static Any mouse_tracking_window = NIL; /* Window or Frame */
+static Any pointer_window = NIL;	/* Window holding the pointer */
 static Uint8 mouse_tracking_button;
 static SDL_WindowID mouse_tracking_wid = 0;
 static SDL_DisplayID last_display_id = 0;
@@ -302,6 +303,100 @@ ws_event_destroyed_target(Any window)
     mouse_tracking_window = NIL;
   if ( window == grabbing_window )
     grabbing_window = NIL;
+  if ( window == pointer_window )
+    pointer_window = NIL;
+}
+
+
+		 /*******************************
+		 *	   ENTER/LEAVE		*
+		 *******************************/
+
+/* SDL only reports enter/leave for its own (native) windows, which are
+   our frames.  We therefore synthesise `area_enter' and `area_exit'
+   for the xpce window that receives the mouse events.  These maintain
+   PceWindow <->has_pointer as well as the <->pointed chain of the
+   devices in the window, which is what makes e.g. scroll bars react to
+   the pointer entering and leaving them.
+*/
+
+static void
+post_area_event(Any window, Name id, float x, float y, Any buttons)
+{ EventObj ev;
+
+  if ( onFlag(window, F_FREED|F_FREEING) )
+    return;
+
+  if ( (ev=answerObject(ClassEvent, id, window,
+			toInt(x), toInt(y), buttons, EAV)) )
+  { AnswerMark mark;
+
+    ServiceMode(is_service_window(window),
+		{ markAnswerStack(mark);
+		  addCodeReference(ev);
+		  postNamedEvent(ev, window, DEFAULT, NAME_postEvent);
+		  delCodeReference(ev);
+		  freeableObj(ev);
+		  rewindAnswerStack(mark, NIL);
+		});
+  }
+}
+
+
+/* Note that `fx' and `fy' are relative to the frame.  We translate
+   them to each of the two windows involved.
+*/
+
+static void
+set_pointer_window(Any window)
+{ if ( notNil(pointer_window) )
+    delCodeReference(pointer_window);
+  pointer_window = window;
+  if ( notNil(window) )
+    addCodeReference(window);		/* keep it around while we
+					   hold a pointer to it */
+}
+
+
+static void
+update_pointer_window(Any window, FrameObj frame,
+		      float fx, float fy, Any buttons)
+{ Any old = pointer_window;
+
+  if ( !instanceOfObject(window, ClassWindow) )
+    window = NIL;			/* on the frame, but not in a
+					   window */
+  if ( old == window )
+    return;
+
+  addCodeReference(old);		/* survives set_pointer_window() */
+  set_pointer_window(window);		/* update before we post: the
+					   handlers may generate events */
+
+  if ( notNil(old) && !onFlag(old, F_FREED|F_FREEING) )
+  { float ox=0, oy=0;
+
+    ws_window_frame_position(old, frame, &ox, &oy);
+    post_area_event(old, NAME_areaExit, fx-ox, fy-oy, buttons);
+  }
+  delCodeReference(old);
+
+  if ( notNil(window) )
+  { float ox=0, oy=0;
+
+    ws_window_frame_position(window, frame, &ox, &oy);
+    post_area_event(window, NAME_areaEnter, fx-ox, fy-oy, buttons);
+  }
+}
+
+
+/* Called when the pointer leaves a frame.  SDL does report this one. */
+
+void
+ws_pointer_left_frame(FrameObj fr)
+{ if ( notNil(pointer_window) &&
+       getFrameWindow(pointer_window, OFF) == fr )
+    update_pointer_window(NIL, fr, 0.0, 0.0, ZERO);
 }
 
 DisplayObj
@@ -553,6 +648,7 @@ CtoEvent(SDL_Event *event)
 
   float x = fx*scale;
   float y = fy*scale;
+  float frame_x = x, frame_y = y;	/* for update_pointer_window() */
   if ( notNil(mouse_tracking_window) )
   { if ( onFlag(mouse_tracking_window, F_FREED|F_FREEING) ||
 	 !ws_created_window(mouse_tracking_window) )
@@ -621,11 +717,23 @@ CtoEvent(SDL_Event *event)
       break;
   }
 
+  Any buttons = state_to_buttons(mouse_flags, mod_for_event);
+
+  switch ( event->type )		/* pointer moved to another window? */
+  { case SDL_EVENT_MOUSE_BUTTON_DOWN:
+    case SDL_EVENT_MOUSE_BUTTON_UP:
+    case SDL_EVENT_MOUSE_MOTION:
+      update_pointer_window(window, frame, frame_x, frame_y, buttons);
+      break;
+    default:
+      break;
+  }
+
   EventObj ev = answerObject(ClassEvent,
 			     name,
 			     window,
 			     toInt(x), toInt(y),
-			     state_to_buttons(mouse_flags, mod_for_event),
+			     buttons,
 			     EAV);
   if ( ev )
   { assign(ev, frame, frame);

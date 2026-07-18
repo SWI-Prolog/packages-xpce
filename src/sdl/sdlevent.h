@@ -39,6 +39,7 @@
 /* SDL binding interface */
 void ev_event_grab_window(Any window);
 void ws_event_destroyed_target(Any window);
+void ws_pointer_left_frame(FrameObj fr);
 PceWindow ws_grabbing_window(void);
 
 /* Public interface */

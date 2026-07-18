@@ -709,6 +709,9 @@ sdl_frame_event(SDL_Event *ev)
 	}
 	return send(fr, NAME_inputFocus, OFF, EAV);
       }
+      case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+	ws_pointer_left_frame(fr);
+	return true;
       case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
       { DisplayObj new_display = dsp_id_to_display(ev->window.data1);
 	DEBUG(NAME_display, Cprintf("%s moved to %s\n",
