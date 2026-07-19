@@ -220,13 +220,25 @@ class_name_from_spec(_:Term, Name) :-
 class_name_from_spec(Term, Name) :-
     head_name_arity(Term, Name, _).
 
+%!  public_head(+ExportSpec, -Head) is semidet.
+%
+%   Map an element of the module export list to the head of the exported
+%   predicate.  Non-terminals are mapped to  the   head  of  the derived
+%   predicate.  Operator declarations are ignored.
+
+public_head(Name/Arity, Head) :-
+    head_name_arity(Head, Name, Arity).
+public_head(Name//Arity0, Head) :-
+    Arity is Arity0+2,
+    head_name_arity(Head, Name, Arity).
+
 process_raw(end_of_file) :- !.
 process_raw((:- module(Name, Public))) :-               % must be the first!
     current_id(Id),
     asserta(x_module(Name)),
     assert_entity(module(Name)),
-    (   member(PName/Arity, Public),
-        head_name_arity(Head, PName, Arity),
+    (   member(Spec, Public),
+        public_head(Spec, Head),
         assert(x_public(Id, Head)),
         fail
     ;   true

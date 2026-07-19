@@ -986,7 +986,7 @@ expand(MF) :->
     get(MF, file_id, BrowseId),
     get(MF, window, TocWindow),
     (   x_browse_info(BrowseId, export(Head)),
-        (   x_browse_info(BrowseId, entity(predicate(Head), Line))
+        (   exported_definition(BrowseId, Head, Line)
         ->  make_file_toc_entry(predicate(Head), BrowseId, Entry),
             send(Entry, file_id, BrowseId),
             send(Entry, line, Line)
@@ -1003,6 +1003,17 @@ update_image(MF) :->
     get(MF, status, Status),
     image(module, Status, Image),
     send(MF, image, Image).
+
+%!  exported_definition(+BrowseId, +Head, -Line) is semidet.
+%
+%   Line is the location where the exported Head is defined.  Exported
+%   non-terminals are found as grammar_rule/1 entities.
+
+exported_definition(BrowseId, Head, Line) :-
+    (   x_browse_info(BrowseId, entity(predicate(Head), Line))
+    ;   x_browse_info(BrowseId, entity(grammar_rule(Head), Line))
+    ),
+    !.
 
 :- pce_end_class.
 
