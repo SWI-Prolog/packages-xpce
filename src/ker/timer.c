@@ -63,6 +63,55 @@ unlinkTimer(Timer tm)
   succeed;
 }
 
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+A  scheduled timer  holds a  code reference  to itself.   This keeps  it
+alive while it is pending, so a timer that is not referenced from
+elsewhere can simply be created and started:
+
+    new(T, timer(0.01, message(Gr, expand_all))), send(T, start, once)
+
+The reference is dropped when the timer  becomes idle again.  If it just
+fired and nothing else refers to it,  the timer is destroyed.  If it was
+stopped explicitly it is  left as it was, so it  remains available until
+the goal that created it completes.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+static void
+scheduleTimer(Timer tm)
+{ addCodeReference(tm);			/* survive garbage collection */
+}
+
+
+static void
+unscheduleTimer(Timer tm)
+{ delCodeReference(tm);
+}
+
+
+/**
+ * Drop the code reference of a timer that completed and destroy the
+ * timer if nothing refers to it.  Used by the window system layer after
+ * a `once' timer fired and by ->delay.
+ *
+ * The timer is destroyed before dropping our reference: the message may
+ * have destroyed the timer, in which case dropping the last reference
+ * unallocs it.  Therefore tm may not be used after delCodeReference().
+ *
+ * @param tm Pointer to the Timer object.  May not be used afterwards.
+ */
+
+void
+releaseTimer(Timer tm)
+{ if ( tm->status == NAME_idle &&	/* ->message did not restart us */
+       refsObject(tm) == 0 &&		/* nothing else refers to us */
+       !onFlag(tm, F_LOCKED|F_PROTECTED|F_FREEING|F_FREED) )
+  { deleteAnswerObject(tm);		/* we are the last one interested */
+    freeObject(tm);			/* unalloc deferred: we hold a ref */
+  }
+
+  delCodeReference(tm);			/* may unalloc tm */
+}
+
 
 status
 intervalTimer(Timer tm, Real interval)
@@ -88,9 +137,18 @@ executeTimer(Timer tm)
 
 status
 statusTimer(Timer tm, Name stat)
-{ ws_status_timer(tm, stat);
+{ Name old = tm->status;
 
+  ws_status_timer(tm, stat);
   assign(tm, status, stat);
+
+  if ( stat != old )
+  { if ( old == NAME_idle )
+      scheduleTimer(tm);
+    else if ( stat == NAME_idle )
+      unscheduleTimer(tm);
+  }
+
   succeed;
 }
 
@@ -99,11 +157,13 @@ static status
 delayTimer(Timer tm)
 { DisplayObj d = CurrentDisplay(NIL);
 
+  addCodeReference(tm);			/* we watch <-status below */
   statusTimer(tm, NAME_once);
   while( tm->status == NAME_once )
   { if ( dispatchDisplay(d) )
       ws_discard_input("Timer running");
   }
+  releaseTimer(tm);
 
   succeed;
 }

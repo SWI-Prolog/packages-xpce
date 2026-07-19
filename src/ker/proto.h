@@ -334,6 +334,7 @@ COMMON(status)	makeClassSourceLocation(Class class);
 COMMON(status)	intervalTimer(Timer tm, Real interval);
 COMMON(status)	executeTimer(Timer tm);
 COMMON(status)	statusTimer(Timer tm, Name stat);
+COMMON(void)	releaseTimer(Timer tm);
 COMMON(status)	startTimer(Timer tm, Name mode);
 COMMON(status)	stopTimer(Timer tm);
 COMMON(status)	makeClassTimer(Class class);

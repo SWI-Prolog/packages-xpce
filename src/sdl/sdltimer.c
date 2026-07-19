@@ -52,9 +52,7 @@ tm_callback(void *udata, SDL_TimerID id, Uint32 interval)
   SDL_PushEvent(&ev);
 
   if ( tm->status == NAME_once )
-  { assign(tm, status, NAME_idle);
-    return 0;
-  }
+    return 0;			/* <-status updated by sdl_timer_event() */
   return interval;
 }
 
@@ -66,12 +64,22 @@ sdl_timer_event(SDL_Event *event)
     if ( !onFlag(tm, F_FREEING|F_FREED) &&
 	 instanceOfObject(tm, ClassTimer) )
     { pceMTLock();
+      bool completed = (tm->status == NAME_once);
+
+      if ( completed )			/* the SDL timer stopped itself */
+	assign(tm, status, NAME_idle);	/* ->message may start it again */
+
       if ( tm->service == ON )
       { ServiceMode(PCE_EXEC_SERVICE, executeTimer(tm));
       } else
       { executeTimer(tm);
       }
+
+      delCodeReference(tm);		/* the event reference */
+      if ( completed )
+	releaseTimer(tm);		/* may destroy tm */
       pceMTUnlock();
+      return true;
     }
     delCodeReference(tm);
     return true;
