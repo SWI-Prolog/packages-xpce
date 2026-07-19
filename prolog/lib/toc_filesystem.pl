@@ -129,7 +129,8 @@ make_dir(F, Name:name) :->
     get(F, identifier, Dir),
     get(Dir, directory, Name, SubDir),
     get(F?tree, window, FB),
-    send(FB, son, F, toc_directory(SubDir)).
+    get(FB, make_dir_node, SubDir, Node),
+    send(FB, son, F, Node).
 
 ensure_file(F, File:name) :->
     "Ensure file is displayed"::
@@ -180,15 +181,9 @@ variable(refresh_timer, timer*, get, "Timer for automatic refresh").
 
 initialise(FB, Root:[directory]) :->
     "Create from initial dierctory"::
-    (   Root == @default
-    ->  absolute_file_name('.', Dir),
-        new(R, directory(Dir))
-    ;   get(Root, path, Path0),
-        absolute_file_name(Path0, Dir),
-        new(R, directory(Dir))
-    ),
     send_super(FB, initialise),
-    send(FB, root, toc_directory(R, path)),
+    get(FB, make_root_node, Root, RootNode),
+    send(FB, root, RootNode),
     send(FB, expand_root),
     (   get(FB, auto_refresh, Time),
         Time \== @nil
@@ -210,12 +205,26 @@ up(FB) :->
     get(FB, root, RootNode),
     get(RootNode, identifier, RootDir),
     get(RootDir, parent, Parent),
-    send(FB, root,
-         new(R, toc_directory(Parent, path)), @on),
+    get(FB, make_dir_node, Parent, R),
+    send(R, show, path),
+    send(FB, root, R, @on),
     send(RootNode, show, name),
     send(R, update).
 
 :- pce_group(virtual).
+
+make_root_node(_FB, Root:[directory], Node:toc_folder) :<-
+    "Virtual: create the root node from the initial directory"::
+    (   Root == @default
+    ->  absolute_file_name('.', Path)
+    ;   get(Root, path, Path0),
+        absolute_file_name(Path0, Path)
+    ),
+    new(Node, toc_directory(directory(Path), path)).
+
+make_dir_node(_FB, Dir:directory, Node:toc_node) :<-
+    "Virtual: create a node for a directory"::
+    new(Node, toc_directory(Dir)).
 
 make_file_node(_FB, File:file, Node:toc_node) :<-
     "Virtual: create a node for a file"::
@@ -225,22 +234,31 @@ make_file_node(_FB, File:file, Node:toc_node) :<-
 
 :- pce_group(expand).
 
+existing_dir_node(FB, Dir:directory, Node:toc_node) :<-
+    "Node for Dir if it is already in the tree"::
+    get(FB?tree, nodes, NodeTable),
+    get(NodeTable, find_key,
+        and(message(@arg1, instance_of, directory),
+            message(@arg1, same, Dir)),
+        NodeDir),
+    get(NodeTable, member, NodeDir, Node).
+
+sub_dir_node(_FB, Node:toc_node, Dir:directory, SubNode:toc_node) :<-
+    "Son of Node representing Dir"::
+    get(Node?sons, find,
+        and(message(@arg1?identifier, instance_of, directory),
+            message(@arg1?identifier, same, Dir)),
+        SubNode).
+
 dir_node(FB, Dir:directory, Create:[bool], Node:toc_node) :<-
     "Get node for directory, possibly add it to tree"::
-    get(FB?tree, nodes, NodeTable),
-    (   get(NodeTable, find_key,
-            and(message(@arg1, instance_of, directory),
-                message(@arg1, same, Dir)),
-            NodeDir)
-    ->  get(NodeTable, member, NodeDir, Node)
+    (   get(FB, existing_dir_node, Dir, Node)
+    ->  true
     ;   Create == @on
     ->  get(Dir, parent, Parent),
         get(FB, dir_node, Parent, Create, ParentNode),
         send(ParentNode, collapsed, @off),
-        get(ParentNode?sons, find,
-            and(message(@arg1?identifier, instance_of, directory),
-                message(@arg1?identifier, same, Dir)),
-            Node)
+        get(FB, sub_dir_node, ParentNode, Dir, Node)
     ).
 
 

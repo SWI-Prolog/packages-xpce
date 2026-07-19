@@ -60,7 +60,8 @@
 	    [nospypce/1,spypce/1,notracepce/1,tracepce/1]).
 :- autoload(library(pce_image),[pce_image_directory/1]).
 :- autoload(library(pce_manual),[manpce/1,manpce/0]).
-:- autoload(library(pce_util),[send_list/3,default/3,get_chain/3]).
+:- autoload(library(pce_util),
+	    [send_list/3,default/3,get_chain/3,chain_list/2]).
 :- autoload(library(prolog_source),
 	    [ prolog_open_source/2,
 	      prolog_read_source_term/4,
@@ -86,7 +87,7 @@ resource(dbgsettings, image, image('dbgsettings.svg')).
 :- pce_begin_class(prolog_navigator, persistent_frame,
                    "Prolog source navigator").
 
-initialise(SB, Root:directory) :->
+initialise(SB, Root:[directory]) :->
     send_super(SB, initialise, 'Prolog Navigator'),
     send(SB, append, new(D, dialog)),
     send(new(W, prolog_source_structure(Root)), below, D),
@@ -128,7 +129,7 @@ goto(SB, File:file, Line:int) :->
 directory(SB, Dir:directory) :->
     "Make directory visible"::
     get(SB, member, prolog_source_structure, FB),
-    get(FB, dir_node, Dir, @on, _Node).
+    send(FB, directory, Dir).
 
 :- pce_end_class(prolog_navigator).
 
@@ -144,12 +145,16 @@ class_variable(size,    size,   size(200, 500),
 
 variable(file_pattern,  regex, get, "Pattern of showed files").
 
-initialise(FB, Root:directory) :->
+initialise(FB, Root:[directory]) :->
     source_pattern(Regex),
     send(FB, slot, file_pattern, Regex),
     send_super(FB, initialise, Root),
     send(FB?frame, label, 'SWI-Prolog Navigator'),
-    asserta(prolog_overview_window(FB)).
+    asserta(prolog_overview_window(FB)),
+    (   Root == @default
+    ->  true
+    ;   send(FB, directory, Root)
+    ).
 
 source_pattern(Pat) :-
     findall(E, (user:prolog_file_type(E, prolog),
@@ -163,6 +168,55 @@ source_pattern(Pat) :-
 unlink(FB) :->
     retractall(prolog_overview_window(FB)),
     send_super(FB, unlink).
+
+make_root_node(_FB, Root:[directory], Node:toc_folder) :<-
+    "Root at the common directory of the loaded source files"::
+    (   Root == @default
+    ->  (   loaded_root_directory(Path)
+        ->  Content = loaded
+        ;   absolute_file_name('.', Path),
+            Content = all
+        )
+    ;   get(Root, path, Path0),
+        absolute_file_name(Path0, Path),
+        Content = all
+    ),
+    new(Node, sb_prolog_directory(directory(Path), path, Content)).
+
+%!  loaded_root_directory(-Dir) is semidet.
+%
+%   Common root directory of all directories holding loaded files.
+
+loaded_root_directory(Dir) :-
+    findall(D, loaded_file_directory(D), Ds0),
+    sort(Ds0, [First|Rest]),
+    last([First|Rest], Last),
+    dir_segments(First, S1),
+    dir_segments(Last, S2),
+    common_prefix(S1, S2, Common),
+    Common \== [],
+    segments_dir(Common, Dir).
+
+loaded_file_directory(Dir) :-
+    source_file(File),
+    file_directory_name(File, Dir).
+
+dir_segments(Dir, Segments) :-
+    atomic_list_concat(Segments, /, Dir).
+
+segments_dir([''], /) :-
+    !.
+segments_dir(Segments, Dir) :-
+    atomic_list_concat(Segments, /, Dir).
+
+common_prefix([H|T1], [H|T2], [H|T]) :-
+    !,
+    common_prefix(T1, T2, T).
+common_prefix(_, _, []).
+
+make_dir_node(_FB, Dir:directory, Node:sb_prolog_directory) :<-
+    "Return a directory node showing all Prolog files"::
+    new(Node, sb_prolog_directory(Dir)).
 
 make_file_node(_FB, File:file, Node:sb_prolog_file) :<-
     "Return a Prolog source-file node"::
@@ -179,8 +233,50 @@ file_node(FB, File:name, Create:[bool], Node:toc_node) :<-
     ->  file_directory_name(Path, Dir),
         get(FB, dir_node, Dir, @on, DirNode),
         send(DirNode, collapsed, @off),
-        get(FB, node, Path, Node)
+        (   get(FB, node, Path, Node)
+        ->  true
+        ;   send(DirNode, show_all_files),   % not a loaded file
+            get(FB, node, Path, Node)
+        )
     ).
+
+dir_node(FB, Dir:directory, Create:[bool], Node:toc_node) :<-
+    "Get node for directory, possibly add it to the tree"::
+    (   get(FB, existing_dir_node, Dir, Node)
+    ->  true
+    ;   Create == @on
+    ->  send(FB, ensure_below_root, Dir),
+        get(Dir, parent, Parent),
+        get(FB, dir_node, Parent, @on, ParentNode),
+        send(ParentNode, show_all_files),
+        send(ParentNode, collapsed, @off),
+        get(FB, sub_dir_node, ParentNode, Dir, Node)
+    ).
+
+ensure_below_root(FB, Dir:directory) :->
+    "Move the root up until Dir is inside the tree"::
+    (   send(FB, below_root, Dir)
+    ->  true
+    ;   send(FB, up)                    % fails at the filesystem root
+    ->  send(FB, ensure_below_root, Dir)
+    ;   true
+    ).
+
+below_root(FB, Dir:directory) :->
+    "True if Dir is the root directory or below it"::
+    get(FB, root, Root),
+    get(Root, identifier, RootDir),
+    (   send(RootDir, same, Dir)
+    ->  true
+    ;   get(Dir, parent, Parent),
+        send(FB, below_root, Parent)
+    ).
+
+directory(FB, Dir:directory) :->
+    "Make directory visible"::
+    get(FB, dir_node, Dir, @on, Node),
+    send(Node, show_all_files),
+    send(Node, collapsed, @off).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ->goto: File, Line opens  the  tree   such  that  the indicated position
@@ -236,6 +332,12 @@ popup(FB, Id:any, Popup:popup) :<-
     ->  true
     ;   send(Node, instance_of, toc_directory)
     ->  new(Popup, popup(options)),
+        (   get(Node, content, loaded)
+        ->  send(Popup, append,
+                 menu_item(show_all_files,
+                           message(Node, show_all_files)))
+        ;   true
+        ),
         send(Popup, append,
              menu_item(expand_all,
                        message(Node, expand_all)))
@@ -283,6 +385,122 @@ event(FB, Ev:event) :->
     ).
 
 :- pce_end_class(prolog_source_structure).
+
+
+:- pce_begin_class(sb_prolog_directory, toc_directory,
+                   "Directory holding Prolog source files").
+
+variable(content, {loaded,all} := all, get,
+         "Show all Prolog files or only the loaded ones").
+
+initialise(D, Dir:directory, Show:[name], Content:[{loaded,all}]) :->
+    send_super(D, initialise, Dir, Show),
+    (   Content == @default
+    ->  true
+    ;   send(D, slot, content, Content)
+    ).
+
+content(D, Content:{loaded,all}) :->
+    "Switch between showing all files and the loaded ones"::
+    (   get(D, content, Content)
+    ->  true
+    ;   send(D, slot, content, Content),
+        (   get(D, collapsed, @off)
+        ->  send(D, update)
+        ;   true
+        )
+    ).
+
+show_all_files(D) :->
+    "Show all Prolog files in this directory"::
+    send(D, content, all).
+
+expand_all(D) :->
+    "Expand this directory recursively"::
+    send(D, content, all),
+    send_super(D, expand_all).
+
+refresh(D) :->
+    "Update for possible changes"::
+    (   get(D, content, loaded),
+        get(D, collapsed, @off)
+    ->  send(D, update),
+        send(D?sons, for_all,
+             if(message(@arg1, has_send_method, refresh),
+                message(@arg1, refresh)))
+    ;   send_super(D, refresh)
+    ).
+
+update(D) :->
+    "Really update"::
+    (   get(D, content, loaded)
+    ->  send(D, update_loaded)
+    ;   send_super(D, update)
+    ).
+
+hide_sons(D) :->
+    "Show all files when the directory is expanded again"::
+    send(D, slot, content, all),
+    send_super(D, hide_sons).
+
+update_loaded(D) :->
+    "Show the loaded files and the directories leading to them"::
+    get(D, identifier, Dir),
+    (   send(Dir, exists)
+    ->  get(Dir, path, Path),
+        loaded_below(Path, SubDirs, Files),
+        chain_list(DirNames, SubDirs),
+        chain_list(FileNames, Files),
+        send(D?sons, for_all,             % delete the no longer loaded
+             if(and(not(message(DirNames, member, @arg1?name)),
+                    not(message(FileNames, member, @arg1?name))),
+                message(@arg1, delete_tree))),
+        send(DirNames, for_all, message(D, ensure_loaded_dir, @arg1)),
+        send(FileNames, for_all, message(D, ensure_file, @arg1)),
+        send(D, sort_sons)
+    ;   send(D, delete_tree)
+    ).
+
+ensure_loaded_dir(D, Name:name) :->
+    "Ensure an expanded subdirectory holding loaded files"::
+    (   get(D?sons, find,
+            and(message(@arg1, instance_of, toc_directory),
+                @arg1?name == Name),
+            _)
+    ->  true
+    ;   send(D, ensure_dir, Name),
+        get(D?sons, find, @arg1?name == Name, Node),
+        send(Node, slot, content, loaded),
+        send(Node, collapsed, @off)
+    ).
+
+%!  loaded_below(+Dir, -SubDirs, -Files) is det.
+%
+%   SubDirs are the subdirectories of Dir that hold loaded files at some
+%   level below them; Files are the files loaded from Dir itself.
+
+loaded_below(Dir, SubDirs, Files) :-
+    dir_prefix(Dir, Prefix),
+    findall(D, loaded_entry(Prefix, dir(D)), SubDirs0),
+    sort(SubDirs0, SubDirs),
+    findall(F, loaded_entry(Prefix, file(F)), Files0),
+    sort(Files0, Files).
+
+loaded_entry(Prefix, Entry) :-
+    source_file(File),
+    atom_concat(Prefix, Rest, File),
+    (   sub_atom(Rest, Before, _, _, /)
+    ->  sub_atom(Rest, 0, Before, _, Name),
+        Entry = dir(Name)
+    ;   Entry = file(Rest)
+    ).
+
+dir_prefix(/, /) :-
+    !.
+dir_prefix(Dir, Prefix) :-
+    atom_concat(Dir, /, Prefix).
+
+:- pce_end_class(sb_prolog_directory).
 
 
 :- pce_begin_class(sb_prolog_file, toc_folder,

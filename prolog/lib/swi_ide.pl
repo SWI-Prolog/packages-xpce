@@ -143,7 +143,7 @@ open_navigator(IDE, Where:[directory|source_location]) :->
         ),
         get(IDE, navigator, Dir, Navigator),
         send(Navigator, goto, File, LineNo)
-    ;   get(IDE, navigator, directory('.'), Navigator)
+    ;   get(IDE, navigator, Navigator)
     ),
     send(Navigator, expose).
 
