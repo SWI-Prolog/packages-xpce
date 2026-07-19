@@ -605,7 +605,7 @@ repeatScrollBar(ScrollBar s)
       if ( ct > 5 )
       { Timer tmr = scrollBarRepeatTimer();
 
-	intervalTimer(tmr, CtoReal((float)ct / 1000.0));
+	intervalTimer(tmr, toNum((float)ct / 1000.0));
 	statusTimer(tmr, NAME_once);
       } else
 	goto again;
@@ -1076,7 +1076,7 @@ static classvardecl rc_scrollBar[] =
      "Thickness of surrounding box"),
   RC(NAME_placement, "chain", "[right,bottom]",
      "Relative placement"),
-  RC(NAME_repeatDelay, "real", "0.35",
+  RC(NAME_repeatDelay, "num", "0.35",
      "OpenLook: time to wait until start of repeat"),
   RC(NAME_repeatInterval, "real", "0.06",
      "OpenLook: interval between repeats"),

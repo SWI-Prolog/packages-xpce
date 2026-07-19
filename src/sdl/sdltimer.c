@@ -91,9 +91,9 @@ sdl_timer_event(SDL_Event *event)
 
 static void
 start_timer(Timer tm)
-{ Uint32 ms = valReal(tm->interval)*1000.0+0.5;
+{ Uint32 ms = valNum(tm->interval)*1000.0+0.5;
   Uint32 id = SDL_AddTimer(ms, tm_callback, tm);
-  tm->ws_ref = (void*)(intptr_t)id;
+  assign(tm, sdl_timer, toInt(id));
 }
 
 
@@ -107,10 +107,10 @@ start_timer(Timer tm)
  */
 void
 ws_status_timer(Timer tm, Name status)
-{ if ( tm->ws_ref )
-  { Uint32 id = (Uint32)(intptr_t)tm->ws_ref;
+{ if ( isInteger(tm->sdl_timer) )
+  { Uint32 id = (Uint32)valInt(tm->sdl_timer);
     SDL_RemoveTimer(id);
-    tm->ws_ref = NULL;
+    assign(tm, sdl_timer, NIL);
   }
 
   if ( status == NAME_repeat || status == NAME_once )

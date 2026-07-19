@@ -331,7 +331,7 @@ COMMON(status)	initialiseSourceLocation(SourceLocation loc,
 COMMON(status)	makeClassSourceLocation(Class class);
 
 /* /home/jan/src/pl/packages/xpce/src/ker/timer.c */
-COMMON(status)	intervalTimer(Timer tm, Real interval);
+COMMON(status)	intervalTimer(Timer tm, Num interval);
 COMMON(status)	executeTimer(Timer tm);
 COMMON(status)	statusTimer(Timer tm, Name stat);
 COMMON(void)	releaseTimer(Timer tm);

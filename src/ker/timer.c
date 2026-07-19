@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -41,11 +41,11 @@
 static status	runningTimer(Timer tm, BoolObj val);
 
 static status
-initialiseTimer(Timer tm, Real interval, Code msg)
+initialiseTimer(Timer tm, Num interval, Code msg)
 { if ( isDefault(msg) )
     msg = NIL;
 
-  assign(tm, interval, CtoReal(0.0));
+  assign(tm, interval, toNum(0.0));
   assign(tm, message,  msg);
   assign(tm, status,   NAME_idle);
   assign(tm, service,  OFF);
@@ -114,8 +114,8 @@ releaseTimer(Timer tm)
 
 
 status
-intervalTimer(Timer tm, Real interval)
-{ if ( valReal(interval) == valReal(tm->interval) )
+intervalTimer(Timer tm, Num interval)
+{ if ( interval == tm->interval )
     succeed;
 
   assign(tm, interval, interval);
@@ -196,12 +196,12 @@ runningTimer(Timer tm, BoolObj val)
 /* Type declaractions */
 
 static char *T_initialise[] =
-        { "interval=real", "message=[code]*" };
+        { "interval=num", "message=[code]*" };
 
 /* Instance Variables */
 
 static vardecl var_timer[] =
-{ SV(NAME_interval, "real", IV_GET|IV_STORE, intervalTimer,
+{ SV(NAME_interval, "num", IV_GET|IV_STORE, intervalTimer,
      NAME_time, "Interval between messages in seconds"),
   IV(NAME_message, "code*", IV_BOTH,
      NAME_action, "Code executed each time"),
@@ -209,8 +209,8 @@ static vardecl var_timer[] =
      NAME_status, "Status of timer"),
   IV(NAME_service, "bool", IV_BOTH,
      NAME_debugging, "If @on, execution cannot be debugged"),
-  IV(NAME_wsRef, "alien:WsRef", IV_GET,
-     NAME_internal, "Window System Reference")
+  IV(NAME_sdlTimer, "int", IV_GET,
+     NAME_internal, "SDL timer handle")
 };
 
 /* Send Methods */

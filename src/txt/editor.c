@@ -413,7 +413,7 @@ updateCursorEditor(Editor e)
 
 
 static status
-electricCaretEditor(Editor e, Int caret, Real time)
+electricCaretEditor(Editor e, Int caret, Num time)
 { TRY( showCaretAtEditor(e, caret) );
 
   if ( !ElectricTimer )
@@ -5067,7 +5067,7 @@ static char *T_fill[] =
 static char *T_indentation[] =
         { "index=[int]", "skip=[regex]" };
 static char *T_electricCaret[] =
-        { "index=int", "seconds=[real]" };
+        { "index=int", "seconds=[num]" };
 static char *T_int_int[] =
         { "int", "int" };
 static char *T_keyBinding[] =

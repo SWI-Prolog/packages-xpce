@@ -921,11 +921,11 @@ NewClass(browser)
 End;
 
 NewClass(timer)
-  Real		interval;		/* interval as a real value */
+  Num		interval;		/* interval as a float */
   Code		message;		/* message when timer fires */
   Name		status;			/* {idle,interval,once} */
   BoolObj	service;		/* Operating in service mode? */
-  WsRef		ws_ref;			/* Window System Reference */
+  Int		sdl_timer;		/* The SDL timer reference */
 End;
 
 		 /*******************************

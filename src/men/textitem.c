@@ -951,7 +951,7 @@ detachTimerTextItem(TextItem ti)
 static status
 repeatTextItem(TextItem ti)
 { Timer t;
-  Real i = getClassVariableValueObject(ti, NAME_repeatInterval);
+  Num i = getClassVariableValueObject(ti, NAME_repeatInterval);
 
   if ( ti->status == NAME_increment ||
        ti->status == NAME_decrement )
@@ -1832,7 +1832,7 @@ static classvardecl rc_textItem[] =
      "@on: ignore case for completion"),
   RC(NAME_repeatDelay, "real", "0.35",
      "Time to wait until start of repeat"),
-  RC(NAME_repeatInterval, "real", "0.06",
+  RC(NAME_repeatInterval, "num", "0.06",
      "Interval between repeats"),
   RC(NAME_look, RC_REFINE, UXWIN("xpce", "win"), NULL),
   RC(NAME_placeholderColour, "colour", "grey60",
