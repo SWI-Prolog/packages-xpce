@@ -171,6 +171,64 @@ compare_sons(_, S1:node, S2:node, Diff:{smaller,equal,larger}) :<-
 :- pce_end_class(toc_directory).
 
 
+:- pce_begin_class(toc_roots, toc_folder,
+                   "Virtual root above the file system roots").
+
+initialise(TR, Label:[name]) :->
+    "Create from label, default \"This computer\""::
+    default(Label, 'This computer', TheLabel),
+    send_super(TR, initialise, TheLabel).
+
+expand(TR) :->
+    "Expand into the file system roots"::
+    send(TR, update).
+
+expand_all(TR) :->
+    "Expand recursively"::
+    send(TR, collapsed, @off),
+    send(TR?sons, for_all, message(@arg1, expand_all)).
+
+show_all_files(TR) :->
+    "Ensure all roots are shown"::
+    send(TR, update).
+
+refresh(TR) :->
+    "Update for possible changes"::
+    send(TR, update),
+    send(TR?sons, for_all,
+         if(message(@arg1, has_send_method, refresh),
+            message(@arg1, refresh))).
+
+update(TR) :->
+    "Ensure a node for each file system root"::
+    get(TR?tree, window, FB),
+    get(FB, root_directories, Roots),
+    send(Roots, for_all, message(TR, ensure_root, @arg1)),
+    send(TR, sort_sons).
+
+ensure_root(TR, Dir:directory) :->
+    "Ensure a node for the root directory Dir"::
+    get(TR?tree, window, FB),
+    (   \+ send(Dir, exists)        % empty or disconnected drive
+    ->  true
+    ;   get(FB, existing_dir_node, Dir, _)
+    ->  true
+    ;   get(FB, make_dir_node, Dir, Node),
+        send(Node, show, path),
+        send(FB, son, TR, Node)
+    ).
+
+sort_sons(TR) :->
+    "Sort the roots by path"::
+    send_super(TR, sort_sons, ?(TR, compare_sons, @arg1, @arg2)).
+
+compare_sons(_TR, S1:node, S2:node, Diff:{smaller,equal,larger}) :<-
+    "Compare the labels of the roots"::
+    get(S1?label, compare, S2?label, Diff).
+
+:- pce_end_class(toc_roots).
+
+
 :- pce_begin_class(toc_filesystem, toc_window,
                    "Table-of-content based on directories").
 
@@ -204,12 +262,20 @@ up(FB) :->
     "Provide the parent directory"::
     get(FB, root, RootNode),
     get(RootNode, identifier, RootDir),
-    get(RootDir, parent, Parent),
-    get(FB, make_dir_node, Parent, R),
-    send(R, show, path),
-    send(FB, root, R, @on),
-    send(RootNode, show, name),
-    send(R, update).
+    send(RootDir, instance_of, directory),
+    (   get(RootDir, parent, Parent)
+    ->  get(FB, make_dir_node, Parent, R),
+        send(R, show, path),
+        send(FB, root, R, @on),
+        send(RootNode, show, name),
+        send(R, update)
+    ;   get(FB, root_directories, Roots),  % above a Windows drive
+        get(Roots, size, Size),
+        Size > 1
+    ->  get(FB, make_roots_node, R),
+        send(FB, root, R, @on),
+        send(R, update)
+    ).
 
 :- pce_group(virtual).
 
@@ -222,9 +288,17 @@ make_root_node(_FB, Root:[directory], Node:toc_folder) :<-
     ),
     new(Node, toc_directory(directory(Path), path)).
 
+make_roots_node(_FB, Node:toc_folder) :<-
+    "Virtual: create a virtual root above the file system roots"::
+    new(Node, toc_roots).
+
 make_dir_node(_FB, Dir:directory, Node:toc_node) :<-
     "Virtual: create a node for a directory"::
     new(Node, toc_directory(Dir)).
+
+root_directories(_FB, Roots:chain) :<-
+    "Virtual: chain of file system roots (Windows drives)"::
+    get(directory('.'), roots, Roots).
 
 make_file_node(_FB, File:file, Node:toc_node) :<-
     "Virtual: create a node for a file"::

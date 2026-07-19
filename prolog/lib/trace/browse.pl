@@ -169,23 +169,29 @@ unlink(FB) :->
     retractall(prolog_overview_window(FB)),
     send_super(FB, unlink).
 
-make_root_node(_FB, Root:[directory], Node:toc_folder) :<-
+make_root_node(FB, Root:[directory], Node:toc_folder) :<-
     "Root at the common directory of the loaded source files"::
     (   Root == @default
     ->  (   loaded_root_directory(Path)
-        ->  Content = loaded
+        ->  new(Node, sb_prolog_directory(directory(Path), path, loaded))
+        ;   loaded_file_directory(_)      % spread over multiple drives
+        ->  get(FB, make_roots_node, Node)
         ;   absolute_file_name('.', Path),
-            Content = all
+            new(Node, sb_prolog_directory(directory(Path), path, all))
         )
     ;   get(Root, path, Path0),
         absolute_file_name(Path0, Path),
-        Content = all
-    ),
-    new(Node, sb_prolog_directory(directory(Path), path, Content)).
+        new(Node, sb_prolog_directory(directory(Path), path, all))
+    ).
+
+make_roots_node(_FB, Node:sb_computer) :<-
+    "Return a virtual root above the file system roots"::
+    new(Node, sb_computer).
 
 %!  loaded_root_directory(-Dir) is semidet.
 %
-%   Common root directory of all directories holding loaded files.
+%   Common root directory of all directories holding loaded files.  Fails
+%   if they are spread over multiple roots (Windows drives).
 
 loaded_root_directory(Dir) :-
     findall(D, loaded_file_directory(D), Ds0),
@@ -206,6 +212,10 @@ dir_segments(Dir, Segments) :-
 
 segments_dir([''], /) :-
     !.
+segments_dir([Drive], Dir) :-           % Windows drive
+    sub_atom(Drive, _, _, 0, :),
+    !,
+    atom_concat(Drive, /, Dir).
 segments_dir(Segments, Dir) :-
     atomic_list_concat(Segments, /, Dir).
 
@@ -246,8 +256,11 @@ dir_node(FB, Dir:directory, Create:[bool], Node:toc_node) :<-
     ->  true
     ;   Create == @on
     ->  send(FB, ensure_below_root, Dir),
-        get(Dir, parent, Parent),
-        get(FB, dir_node, Parent, @on, ParentNode),
+        (   get(Dir, parent, Parent)
+        ->  get(FB, dir_node, Parent, @on, ParentNode)
+        ;   get(FB, root, ParentNode),  % Dir is a file system root
+            send(ParentNode, instance_of, toc_roots)
+        ),
         send(ParentNode, show_all_files),
         send(ParentNode, collapsed, @off),
         get(FB, sub_dir_node, ParentNode, Dir, Node)
@@ -266,10 +279,13 @@ below_root(FB, Dir:directory) :->
     "True if Dir is the root directory or below it"::
     get(FB, root, Root),
     get(Root, identifier, RootDir),
-    (   send(RootDir, same, Dir)
-    ->  true
-    ;   get(Dir, parent, Parent),
-        send(FB, below_root, Parent)
+    (   send(RootDir, instance_of, directory)
+    ->  (   send(RootDir, same, Dir)
+        ->  true
+        ;   get(Dir, parent, Parent),
+            send(FB, below_root, Parent)
+        )
+    ;   true                            % virtual root holds all roots
     ).
 
 directory(FB, Dir:directory) :->
@@ -387,6 +403,17 @@ event(FB, Ev:event) :->
 :- pce_end_class(prolog_source_structure).
 
 
+:- pce_begin_class(sb_computer, toc_roots,
+                   "Root above the file system roots").
+
+update(C) :->
+    "Show the roots, expanding those that hold loaded files"::
+    send_super(C, update),
+    send(C?sons, for_all, message(@arg1, show_loaded)).
+
+:- pce_end_class(sb_computer).
+
+
 :- pce_begin_class(sb_prolog_directory, toc_directory,
                    "Directory holding Prolog source files").
 
@@ -415,6 +442,19 @@ show_all_files(D) :->
     "Show all Prolog files in this directory"::
     send(D, content, all).
 
+show_loaded(D) :->
+    "Show the loaded files if this directory holds any"::
+    get(D, identifier, Dir),
+    get(Dir, path, Path),
+    (   loaded_below(Path, [], [])
+    ->  true
+    ;   send(D, content, loaded),
+        (   object(D)               % ->content may have deleted us
+        ->  send(D, collapsed, @off)
+        ;   true
+        )
+    ).
+
 expand_all(D) :->
     "Expand this directory recursively"::
     send(D, content, all),
@@ -425,9 +465,12 @@ refresh(D) :->
     (   get(D, content, loaded),
         get(D, collapsed, @off)
     ->  send(D, update),
-        send(D?sons, for_all,
-             if(message(@arg1, has_send_method, refresh),
-                message(@arg1, refresh)))
+        (   object(D)               % ->update may have deleted us
+        ->  send(D?sons, for_all,
+                 if(message(@arg1, has_send_method, refresh),
+                    message(@arg1, refresh)))
+        ;   true
+        )
     ;   send_super(D, refresh)
     ).
 
@@ -495,7 +538,8 @@ loaded_entry(Prefix, Entry) :-
     ;   Entry = file(Rest)
     ).
 
-dir_prefix(/, /) :-
+dir_prefix(Dir, Dir) :-                 % "/" or Windows "c:/"
+    sub_atom(Dir, _, _, 0, /),
     !.
 dir_prefix(Dir, Prefix) :-
     atom_concat(Dir, /, Prefix).
