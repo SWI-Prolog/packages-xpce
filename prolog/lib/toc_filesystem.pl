@@ -69,7 +69,18 @@ expand(F) :->
 expand_all(F) :->
     "Expand this directory recursively"::
     send(F, collapsed, @off),
-    send(F?sons, for_all, message(@arg1, expand_all)).
+    (   object(F)                   % ->update deletes vanished directories
+    ->  send(F?sons, for_all, message(@arg1, async_expand))
+    ;   true
+    ).
+
+async_expand(F) :->
+    "Run ->expand_all in the next GUI iteration"::
+    Delay is random_float/5,
+    new(T, timer(Delay, message(@receiver, send_hyper,
+                                node, expand_all))),
+    new(_, hyper(T, F, node, timer)),
+    send(T, start, once).
 
 refresh(F) :->
     "Update for possible changes"::
@@ -78,9 +89,12 @@ refresh(F) :->
     ->  send(F, update)
     ;   true
     ),
-    send(F?sons, for_all,
-         if(message(@arg1, has_send_method, refresh),
-            message(@arg1, refresh))).
+    (   object(F)                   % ->update deletes vanished directories
+    ->  send(F?sons, for_all,
+             if(message(@arg1, has_send_method, refresh),
+                message(@arg1, refresh)))
+    ;   true
+    ).
 
 update(F) :->
     "Really update"::

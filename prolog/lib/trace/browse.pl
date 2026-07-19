@@ -458,7 +458,10 @@ show_loaded(D) :->
 expand_all(D) :->
     "Expand this directory recursively"::
     send(D, content, all),
-    send_super(D, expand_all).
+    (   object(D)                   % ->update may have deleted us
+    ->  send_super(D, expand_all)
+    ;   true
+    ).
 
 refresh(D) :->
     "Update for possible changes"::
@@ -624,6 +627,9 @@ expand(TF) :->
     ).
 
 expand_all(_TF) :->
+    true.
+
+async_expand(_TF) :->
     true.
 
 split_head(M:Head, Name, Arity, M) :-
