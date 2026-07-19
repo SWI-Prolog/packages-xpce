@@ -350,7 +350,7 @@ getRootsDirectory(Directory dir)
     { char buf2[PATH_MAX];
       char *cnfn;
 
-      if ( (cnfn=_xos_canonical_filename(s, buf2, sizeof(buf2), 0)) )
+      if ( (cnfn=_xos_canonical_filename(s, buf2, sizeof(buf2))) )
 	appendChain(ch, FNToName(cnfn));
       s += strlen(s)+1;
     }

@@ -161,7 +161,7 @@ expandFileName(Name in)
      char buf[PATH_MAX];
 
      if ( _xos_long_file_nameW(expanded, lng, PATH_MAX) &&
-	  _xos_canonical_filenameW(lng, buf, sizeof(buf), 0) )
+	  _xos_canonical_filenameW(lng, buf, sizeof(buf)) )
      { return UTF8ToName(buf);
      } else
      { errorPce(in, NAME_representation, NAME_nameTooLong);

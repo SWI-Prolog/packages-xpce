@@ -1614,7 +1614,7 @@ utf8_to_canonical_file(const char *in)
 {
 #if O_XOS
   char file[PATH_MAX];
-  if ( _xos_canonical_filename(in, file, sizeof(file), 0) )
+  if ( _xos_canonical_filename(in, file, sizeof(file)) )
     return UTF8ToName(file);
   fail;
 #else
