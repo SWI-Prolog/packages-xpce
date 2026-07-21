@@ -136,6 +136,16 @@ keystrokes and hovered hyperlinks.
 - terminal_image<-link: point|event -> name
     Hyperlink URL at the given position or under an event.
 
+- terminal_image<-cwidth: code=int -> int
+    Number of columns the code point `code` occupies when drawn in
+    `<-font`: 0 for combining marks, 2 for wide characters and 1 for
+    the rest.  This is the classification the renderer itself uses, so
+    clients that must predict our layout can share it rather than keep
+    a second copy that drifts.  In particular it accounts for symbol
+    and emoji code points that the static Unicode tables call width 1
+    while an emoji-presenting font draws them twice as wide.  Fails
+    while the terminal has no cell metrics yet.
+
 
 ## Class variables {#class-terminal_image-classvars}
 

@@ -825,6 +825,31 @@ getRowTerminalImage(TerminalImage ti, Int arg)
   fail;
 }
 
+
+/* Return the number of terminal columns occupied by code point `chr`
+ * when drawn in this terminal's font.
+ *
+ * This exposes terminal_char_cells() -- the classification the renderer
+ * itself uses -- so that clients needing to predict our layout have a
+ * single point of truth rather than a second, drifting copy.  It is in
+ * particular consulted by library(editline) (through the hook
+ * editline:el_wcwidth/2) so that libedit's cursor arithmetic agrees
+ * with what we paint for the symbol and emoji code points that the
+ * static Unicode tables call width 1 but the font draws twice as wide.
+ *
+ * Fails while the terminal has no buffer or cell metrics yet, leaving
+ * the caller to fall back on its own notion of width.
+ */
+static Int
+getCwidthTerminalImage(TerminalImage ti, Int chr)
+{ RlcData b = ti->data;
+
+  if ( !b || b->cw <= 0.0 )
+    fail;
+
+  answer(toInt(terminal_char_cells((uchar_t)valInt(chr), ti->font, b->cw)));
+}
+
 static status
 clearSelectionTerminalImage(TerminalImage ti)
 { rlc_set_selection(ti->data, 0, 0, 0, 0);
@@ -1172,7 +1197,10 @@ static getdecl get_terminal_image[] =
      NAME_text, "Text content of visible row (0-based from top)"),
   GM(NAME_link, 1, "name", "point|event",
      getURLTerminalImage,
-     NAME_selected, "Hyperlink content and location")
+     NAME_selected, "Hyperlink content and location"),
+  GM(NAME_cwidth, 1, "int", "code=int",
+     getCwidthTerminalImage,
+     NAME_text, "Columns occupied by a code point in this font")
 };
 
 static classvardecl rc_terminal_image[] =

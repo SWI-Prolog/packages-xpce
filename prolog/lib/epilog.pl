@@ -864,6 +864,28 @@ register_input(PT, PTY, EditLine, History) :-
     history_events(PT, History).
 
 
+%!  editline:el_wcwidth(+Code, -Columns) is semidet.
+%
+%   Hook for library(editline).  Report the number of terminal columns
+%   occupied by Code when rendered by this thread's Epilog terminal.
+%
+%   The default libedit column tracker uses PL_wcwidth(), which reads
+%   the static Unicode tables.  Those disagree with us for the symbol
+%   and emoji code points an emoji-presenting font draws twice as wide.
+%   We therefore ask the terminal itself using <-cwidth, keeping the
+%   renderer as the single point of truth.  Failing here (no terminal,
+%   or no cell metrics yet) makes libedit fall back to PL_wcwidth().
+
+:- multifile
+    editline:el_wcwidth/2.
+
+editline:el_wcwidth(Code, Columns) :-
+    thread_self(Thread),
+    current_prolog_terminal(Thread, PT),
+    object(PT),                         % terminal may already be gone
+    get(PT, cwidth, Code, Columns).
+
+
 %!  tty_link(+Link) is det.
 %
 %   Handle a terminal hyperlink to ``file://`` links
