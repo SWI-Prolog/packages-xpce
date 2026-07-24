@@ -46,7 +46,9 @@
             get_chain/3,                % +Receiver, +Selector, -List
             chain_list/2,               % ?Chain, ?List
 
-            default/3                   % +MethodArg, +Default, -Arg
+            default/3,                  % +MethodArg, +Default, -Arg
+
+            pce_text_to_regex/2         % +Text, -Regex
           ]).
 
 
@@ -274,3 +276,21 @@ default(@default, Default, Value) :-
     ;   Value = Default
     ).
 default(Value, _Default, Value).
+
+
+                /********************************
+                *             REGEX             *
+                ********************************/
+
+%!  pce_text_to_regex(+Pattern, -Regex) is semidet.
+%
+%   Convert text to a pce regular expression object. Fails if Pattern is
+%   not a valid regular expression. This   is  intended for filters that
+%   are applied while typing, where the text   is incomplete most of the
+%   time.
+
+pce_text_to_regex(Pattern, Regex) :-
+    send(@pce, last_error, @nil),
+    new(Regex, regex(Pattern)),
+    ignore(pce_catch_error(_, send(Regex, search, ''))),
+    get(@pce, last_error, @nil).

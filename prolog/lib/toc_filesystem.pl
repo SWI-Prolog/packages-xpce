@@ -100,14 +100,15 @@ update(F) :->
     "Really update"::
     get(F, identifier, Dir),
     (   send(Dir, exists)
-    ->  get(F?tree, window, FB),
-        (   send(FB, has_get_method, file_pattern)
-        ->  get(FB, file_pattern, Regex)
-        ;   Regex = @default
-        ),
+    ->  get(F, file_pattern, Regex),
+        get(F, scan_hidden, Hidden),
         new(SubDirNames, chain),
         new(SubFileNames, chain),
-        send(Dir, scan, SubFileNames, SubDirNames, Regex),
+        send(Dir, scan, SubFileNames, SubDirNames, Regex, Hidden),
+        send(SubDirNames, delete_all, '.'),   % ->scan returns these if
+        send(SubDirNames, delete_all, '..'),  % hidden_too is @on
+        send(F, filter_files, SubFileNames),
+        send(F, filter_dirs, SubDirNames),
 
         get(F?sons, map, @arg1?name, Labels), % delete removed ones
         send(Labels, subtract, SubFileNames),
@@ -126,6 +127,26 @@ update(F) :->
     ;   send(F, delete_tree)
     ).
 
+
+filter_files(_F, _Names:chain) :->
+    "Virtual: remove the files that must not be displayed"::
+    true.
+
+filter_dirs(_F, _Names:chain) :->
+    "Virtual: remove the subdirectories that must not be displayed"::
+    true.
+
+scan_hidden(_F, Hidden:[bool]) :<-
+    "Virtual: whether to scan the entries starting with a dot"::
+    Hidden = @default.
+
+file_pattern(F, Regex:[regex]) :<-
+    "Pattern for the files to display"::
+    get(F?tree, window, FB),
+    (   send(FB, has_get_method, file_pattern)
+    ->  get(FB, file_pattern, Regex)
+    ;   Regex = @default
+    ).
 
 ensure_dir(F, SubDir:name) :->
     "Ensure we have a subdirectory with this name"::

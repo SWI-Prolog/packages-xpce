@@ -734,22 +734,11 @@ typed(FFI, Id) :->
     get(FFI?frame, browser, files, Tree),
     (   send(Current, equal, '')
     ->  send(Tree, filter_file_name, @nil)
-    ;   (   text_to_regex(Current, Filter)
+    ;   (   pce_text_to_regex(Current, Filter)
         ->  send(Tree, filter_file_name, Filter)
         ;   send(FFI, report, status, 'Incomplete expression')
         )
     ).
-
-%!  text_to_regex(+Pattern, -Regex) is semidet.
-%
-%   Convert text to a regular expression.  Fail if the text
-%   does not represent a valid regular expression.
-
-text_to_regex(Pattern, Regex) :-
-    send(@pce, last_error, @nil),
-    new(Regex, regex(Pattern)),
-    ignore(pce_catch_error(_, send(Regex, search, ''))),
-    get(@pce, last_error, @nil).
 
 :- pce_end_class(xref_file_filter_item).
 
