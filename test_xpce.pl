@@ -745,13 +745,13 @@ wide_character_types :-
 %       display_present
 %
 %       True if the current user session is running under a windowed
-%       environment.
+%       environment.  Ask XPCE rather than probing the environment: since
+%       XPCE moved to SDL, $DISPLAY says nothing about whether a display
+%       can actually be opened.  Notably, XQuartz sets $DISPLAY on macOS
+%       sessions that have no window server access at all.
 
 display_present :-
-    (   current_prolog_flag(windows, true)
-    ->  true
-    ;   getenv('DISPLAY', _)
-    ).
+    catch(get(@display, size, _), _, fail).
 
 %       testdir(Dir)
 %
