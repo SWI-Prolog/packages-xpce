@@ -85,6 +85,12 @@ deleteAnswerObject(Any obj)
 NOTE: deletion of the  head  is  avoided   to  ensure  this  routine  is
 reentrant. This may be  necessary  if   unlinking  an  object causes new
 mark/rewind actions.
+
+NOTE: F_ANSWER must be cleared for  every   cell  we drop, not only when
+we also free the object.  An object   that  acquired a reference while it
+was on the stack survives the rewind,   but its cell is gone: leaving the
+flag set makes isVirginObj() false forever, so freeableObj() can never
+reclaim it once the last reference disappears.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 export void
@@ -103,10 +109,11 @@ _rewindAnswerStack(AnswerMark *mark, Any obj)
       { if ( c->value != obj )
 	{ Any o = c->value;
 
+	  clearAnswerObj(o);		/* the cell is dropped below */
+
 	  if ( noRefsObj(o) && !onFlag(o, F_LOCKED|F_PROTECTED) )
 	  { DEBUG(NAME_gc,
 		  Cprintf("Removing %s from AnswerStack\n", pp(o)));
-	    clearAnswerObj(c->value);
 	    freeObject(o);
 	  }
 	  if ( c != AnswerStack )
