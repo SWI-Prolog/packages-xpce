@@ -1429,6 +1429,49 @@ test(cursor_left_across_wrap_nfd,
     LastCol is 80 - 1,
     assert_cursor(T, LastCol, R).
 
+test(edit_at_right_margin_stays_on_row,
+     [ setup(test_begin(T))
+     ]) :-
+    %  Fill the row exactly to the right margin, then replace the last
+    %  character.  The replacement must appear on the input row.
+    %
+    %  This is the Windows-only regression reported on Discourse (thread
+    %  "Progressing the SWI-Prolog environment", post 101): the new
+    %  character showed up on the row *above* the line being edited, and
+    %  from there on every redraw was anchored one row too high, so the
+    %  screen filled up from the bottom.
+    %
+    %  xpce's terminal implements xterm's delayed wrap: the base that
+    %  lands in the last column leaves the caret at column 80 with the
+    %  wrap still pending.  libedit only resolves that pending wrap (by
+    %  writing ' ' and backspacing over it) when the terminal
+    %  description advertises `xn`.  The fake termcap libedit uses on
+    %  Windows, packages/libedit/libedit/src/win_ncurses.c, reports `am`
+    %  but not `xn`, so libedit assumed the terminal had wrapped by
+    %  itself and every following cursor motion -- which cancels the
+    %  pending wrap -- acted one row too high.  On Unix library(epilog)
+    %  forces TERM=xterm, which has xenl, so this only ever failed on
+    %  Windows.
+    %
+    %  test_begin/1 ends with ^L, which leaves the prompt on row 0.  Run
+    %  a trivial goal first so that there *is* a row above the input row
+    %  for a misplaced character to land on.
+    type(T, 'true.'),
+    key(T, enter),
+    wait_for_prompt(T),
+    cursor(T, P, R),
+    assertion(R > 0),
+    Fill is 80 - P,
+    filler(Fill, Xs),
+    type_await(T, Xs, 80, R),
+    key(T, backspace),
+    type(T, '1'),
+    Head is Fill - 1,
+    sub_atom(Xs, 0, Head, _, Prefix),
+    atom_concat(Prefix, '1', Expected),
+    assert_input(T, R, Expected),
+    assert_cursor(T, 80, R).
+
 :- end_tests(terminal_wrap).
 
 
