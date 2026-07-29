@@ -826,6 +826,23 @@ getRowTerminalImage(TerminalImage ti, Int arg)
 }
 
 
+/* True if `c` is not a Unicode scalar value: out of range, a UTF-16
+ * surrogate or a non-character.  None of these can be drawn, so the
+ * font has no glyph for them and measuring one yields the width of the
+ * "missing glyph" box (typically two cells) rather than a meaningful
+ * answer.  Note that clients working in UTF-16 (libedit on Windows) do
+ * hand us surrogates and sentinels: see getCwidthTerminalImage().
+ */
+
+static bool
+not_a_character(uchar_t c)
+{ return ( c > 0x10FFFF ||
+	   (c >= 0xD800  && c <= 0xDFFF) ||	/* surrogates */
+	   (c >= 0xFDD0  && c <= 0xFDEF) ||	/* non-characters */
+	   (c&0xFFFE) == 0xFFFE );		/* U+xFFFE, U+xFFFF */
+}
+
+
 /* Return the number of terminal columns occupied by code point `chr`
  * when drawn in this terminal's font.
  *
@@ -837,17 +854,19 @@ getRowTerminalImage(TerminalImage ti, Int arg)
  * with what we paint for the symbol and emoji code points that the
  * static Unicode tables call width 1 but the font draws twice as wide.
  *
- * Fails while the terminal has no buffer or cell metrics yet, leaving
- * the caller to fall back on its own notion of width.
+ * Fails while the terminal has no buffer or cell metrics yet, or if
+ * `chr` is not a drawable character, leaving the caller to fall back on
+ * its own notion of width.
  */
 static Int
 getCwidthTerminalImage(TerminalImage ti, Int chr)
 { RlcData b = ti->data;
+  uchar_t c = (uchar_t)valInt(chr);
 
-  if ( !b || b->cw <= 0.0 )
+  if ( !b || b->cw <= 0.0 || not_a_character(c) )
     fail;
 
-  answer(toInt(terminal_char_cells((uchar_t)valInt(chr), ti->font, b->cw)));
+  answer(toInt(terminal_char_cells(c, ti->font, b->cw)));
 }
 
 static status
