@@ -738,6 +738,27 @@ test(insert_nfd_at_home_with_nfd_buffer, [setup(test_begin(T))]) :-
     atom_concat(Agrave, Buffer, Expected),
     assert_input(T, R, Expected).
 
+test(delete_wide_before_nfd, [setup(test_begin(T))]) :-
+    %  Insert a wide character in front of NFD text and take it away
+    %  again.  Found by test_terminal_random/2 and Windows-only: libedit
+    %  removed the two columns as two CSI P sequences, and we delete
+    %  whole grapheme clusters, so the second one ate the cluster behind
+    %  the wide character -- 'ǹ' vanished from the display.  U+4E2D is
+    %  wide in the BMP, so this exercises the cluster arithmetic without
+    %  also involving surrogate pairs.
+    cursor(T, P, R),
+    atom_codes(Buffer, [0'q, 0x300, 0'n, 0x300, 0'o]),
+    type(T, Buffer),
+    Col0 is P + 3,
+    assert_cursor(T, Col0, R),
+    key(T, home),
+    type(T, '中'),
+    Col1 is P + 2,
+    assert_cursor(T, Col1, R),
+    key(T, backspace),
+    assert_cursor(T, P, R),
+    assert_input(T, R, Buffer).
+
 :- end_tests(terminal_regression).
 
 
