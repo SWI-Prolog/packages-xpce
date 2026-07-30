@@ -185,8 +185,14 @@ widget_value(list_item, Sel, V) :-
     is_list(V).
 
 item_string(Sel, Str) :-
-    (   string(Sel) -> Str = Sel
-    ;   atom(Sel)   -> atom_string(Sel, Str)
+    (   string(Sel)
+    ->  Str = Sel
+    ;   atom(Sel)
+    ->  atom_string(Sel, Str)
+    ;   is_object_reference(Sel),        % text_item <-selection is an
+        send(Sel, instance_of, char_array)      % XPCE string object
+    ->  get(Sel, value, Text),
+        atom_string(Text, Str)
     ;   format(string(Str), '~w', [Sel])
     ).
 
