@@ -90,6 +90,7 @@ test_terminal :-
                 terminal_wide,
                 terminal_non_bmp,
                 terminal_mixed,
+                terminal_background,
                 terminal_wrap,
                 terminal_resize
               ]).
@@ -959,6 +960,49 @@ test(insert_before_final_emoji, [setup(test_begin(T))]) :-
     assert_input(T, R, Expected).
 
 :- end_tests(terminal_mixed).
+
+
+		 /*******************************
+		 *      TEST: BACKGROUND IO     *
+		 *******************************/
+
+:- begin_tests(terminal_background,
+               [ setup(setup_unit),
+                 cleanup(cleanup_unit)
+               ]).
+
+%!  bg_row(+Terminal, +Text, -Row) is semidet.
+%
+%   Row is the first visible row whose content is exactly Text.
+
+bg_row(T, Text, Row) :-
+    between(0, 24, Row),
+    row_text(T, Row, Line),
+    atom(Line),
+    atom_concat(Text, Padding, Line),
+    \+ sub_atom(Padding, _, _, _, ' '),         % trailing blanks only
+    !.
+
+test(thread_output_keeps_input_line, [setup(test_begin(T))]) :-
+    %  Output from another thread while the user is typing must not be
+    %  written into the input line.  libedit takes the line off the
+    %  screen, lets the output through, and paints the line back below
+    %  it -- without waiting for the next keystroke.
+    type(T, 'thread_create((sleep(1),writeln(from_thread)),_,[detached(true)]).'),
+    key(T, enter),
+    assertion(wait_for_prompt(T)),
+    prompt_col(T, P),
+    Input = 'foo(Bar)',
+    type(T, Input),
+    assertion(wait_until(bg_row(T, from_thread, _), 15)),
+    bg_row(T, from_thread, OutRow),
+    InputRow is OutRow + 1,
+    assert_input(T, InputRow, Input),
+    atom_length(Input, Len),
+    ExpCol is P + Len,
+    assert_cursor(T, ExpCol, InputRow).
+
+:- end_tests(terminal_background).
 
 
 		 /*******************************
