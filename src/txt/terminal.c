@@ -1466,7 +1466,20 @@ rlc_is_word_char(RlcData b, int chr)
 		 *	    SELECTION		*
 		 *******************************/
 
-#define SelLT(l1, c1, l2, c2) ((l1) < (l2) || ((l1) == (l2) && (c1) < (c2)))
+/* Is (l1,c1) before (l2,c2)?  The lines live in a ring, so their bare
+ * indices do not order them: once it has wrapped, a line further down
+ * the screen has the smaller index.  Comparing the indices made a drag
+ * downwards look like a drag upwards, and extending a selection over
+ * the wrap did not extend it at all. */
+
+static bool
+rlc_sel_lt(RlcData b, int l1, int c1, int l2, int c2)
+{ int n1 = rlc_count_lines(b, b->first, l1);
+  int n2 = rlc_count_lines(b, b->first, l2);
+
+  return n1 < n2 || (n1 == n2 && c1 < c2);
+}
+
 #define SelEQ(l1, c1, l2, c2) ((l1) == (l2) && (c1) == (c2))
 
 static int
@@ -1761,7 +1774,7 @@ rlc_extend_selection(RlcData b, int x, int y)
   int ec = b->sel_org_char;
 
   rlc_translate_mouse(b, x, y, &l, &c);
-  if ( SelLT(l, c, b->sel_org_line, b->sel_org_char) )
+  if ( rlc_sel_lt(b, l, c, b->sel_org_line, b->sel_org_char) )
   {				/* Backward */
     if ( b->sel_unit == SEL_WORD )
     { if ( rlc_between(b, b->first, b->last, l) )
@@ -1794,7 +1807,7 @@ rlc_extend_selection(RlcData b, int x, int y)
       c = 0;
     }
     rlc_set_selection(b, l, c, el, ec);
-  } else if ( SelLT(b->sel_org_line, b->sel_org_char, l, c) )
+  } else if ( rlc_sel_lt(b, b->sel_org_line, b->sel_org_char, l, c) )
   {				/* forward */
     if ( b->sel_unit == SEL_WORD )
     { if ( rlc_between(b, b->first, b->last, l) )
@@ -1840,7 +1853,13 @@ rlc_read_from_window(RlcData b, int sl, int sc, int el, int ec)
   uchar_t *buf;
   int i = 0;
 
-  if ( el < sl || (el == sl && ec < sc) )
+  /* Order the endpoints in the ring, not by their bare indices: once
+   * the ring has wrapped, the end of a region that spans the wrap has
+   * the smaller index.  Comparing the indices themselves rejected
+   * exactly the selections covering both ends of the buffer -- which
+   * is what select-all does once the terminal has scrolled. */
+  if ( rlc_count_lines(b, b->first, el) < rlc_count_lines(b, b->first, sl) ||
+       (el == sl && ec < sc) )
     return NULL;			/* invalid region */
   if ( !(buf = rlc_malloc(bufsize * sizeof(uchar_t))) )
     return NULL;			/* not enough memory */
