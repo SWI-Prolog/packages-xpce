@@ -92,8 +92,7 @@ createHashTable(Int buckets, Name refer)
 { HashTable ht = alloc(sizeof(struct hash_table));
 
   initHeaderObj(ht, ClassHashTable);
-  initialiseHashTable(ht, buckets);
-  ht->refer = refer;			/* is a protected object */
+  initialiseHashTable(ht, buckets, refer);
   createdObject(ht, NAME_new);
 
   return ht;
@@ -110,11 +109,11 @@ freeHashTable(HashTable ht)
 
 
 status
-initialiseHashTable(HashTable ht, Int buckets)
+initialiseHashTable(HashTable ht, Int buckets, Name refer)
 { int n = isDefault(buckets) ? 5 : valInt(buckets);
   Symbol s;
 
-  ht->refer = NAME_both;
+  ht->refer = isDefault(refer) ? NAME_both : refer;
   n = nextBucketSize(n);
   ht->size    = ZERO;
   ht->buckets = n;
@@ -550,6 +549,8 @@ static char *T_append[] =
         { "key=any", "value=any" };
 static char *T_convertOldSlot[] =
         { "name", "any" };
+static char *T_initialise[] =
+        { "buckets=[int]", "refer=[{none,name,value,both}]" };
 
 /* Instance Variables */
 
@@ -567,8 +568,8 @@ static vardecl var_hashTable[] =
 /* Send Methods */
 
 static senddecl send_hashTable[] =
-{ SM(NAME_initialise, 1, "buckets=[int]", initialiseHashTable,
-     DEFAULT, "Create from buckets"),
+{ SM(NAME_initialise, 2, T_initialise, initialiseHashTable,
+     DEFAULT, "Create from buckets and reference mode"),
   SM(NAME_unlink, 0, NULL, unlinkHashTable,
      DEFAULT, "Clear table"),
   SM(NAME_append, 2, T_append, appendHashTable,

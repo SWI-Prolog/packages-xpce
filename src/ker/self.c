@@ -1546,7 +1546,7 @@ pceInitialise(int handles, const char *home, const char *appdata,
 	      sizeof(struct hash_table),
 	      1,
 	      initialiseHashTable,
-	      1, "[int]");
+	      2, "[int]", "[{none,name,value,both}]");
 
   ClassBehaviour =
     bootClass(NAME_behaviour,

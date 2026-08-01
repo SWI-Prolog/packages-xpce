@@ -105,7 +105,7 @@ COMMON(status)	makeClassDictItem(Class class);
 /* /staff/jan/src/pl/packages/xpce/src/adt/hashtable.c */
 COMMON(HashTable) createHashTable(Int buckets, Name refer);
 COMMON(status)	freeHashTable(HashTable ht);
-COMMON(status)	initialiseHashTable(HashTable ht, Int buckets);
+COMMON(status)	initialiseHashTable(HashTable ht, Int buckets, Name refer);
 COMMON(status)	appendHashTable(HashTable ht, Any name, Any value);
 COMMON(status)	deleteHashTable(HashTable ht, Any name);
 COMMON(status)	clearHashTable(HashTable ht);
