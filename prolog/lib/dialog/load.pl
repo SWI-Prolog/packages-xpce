@@ -219,8 +219,8 @@ object_name(Item, Name) :-
     send(Item, has_get_method, name),
     !,
     get(Item, name, Name).
-object_name(@Ref, Name) :-
-    atom_concat(@, Ref, Name).
+object_name(Obj, Name) :-
+    format(atom(Name), '~w', [Obj]).    % @name or <pce>(Addr,Class)
 
 
 add_model_item(Model, Item, EventPorts) :-

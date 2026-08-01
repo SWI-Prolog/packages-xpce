@@ -195,10 +195,11 @@ portray_object(@Object, @Object, _) :-
 portray_object(Obj, '<recursive>'(Obj), Done) :-
     memberchk(Obj, Done),
     !.
-portray_object(@Object, Term, Done) :-
-    object(@Object, Description),
+portray_object(Obj, Term, Done) :-
+    is_object_reference(Obj),
+    object(Obj, Description),
     portray_class(Description, Result),
-    portray_description(Result, Term, [@Object|Done]),
+    portray_description(Result, Term, [Obj|Done]),
     !.
 portray_object(Term, Term, _).
 

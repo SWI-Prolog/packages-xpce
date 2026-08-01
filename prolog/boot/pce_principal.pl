@@ -47,6 +47,9 @@
             get_class/4,
 
             object/1, object/2,
+            object_reference/2,         % +Object, -Name
+            object_from_reference/2,    % +Name, -Object
+            is_object_reference/1,      % @Term
 
             pce_class/6,
             pce_lazy_send_method/3,
@@ -236,13 +239,50 @@ init_pce :-
 
 %!  free(+Ref) is det.
 %
-%   Delete object if it exists.
+%   Delete object if it exists.  If Ref is an anonymous reference it is
+%   also released, so that it reports as <pce>(freed) and using it raises
+%   an existence error rather than denoting a dying object.
 
 free(Ref) :-
-    object(Ref),
-    !,
-    send(Ref, free).
+    object(Ref),                    % must not resolve @Name: that would
+    !,                              % trap undefined_assoc and create it
+    '$pce_free'(Ref).
 free(_).
+
+
+%!  object_reference(+Object, -Name) is semidet.
+%
+%   Name is the name of Object.  Fails if Object has no name: an anonymous
+%   object is denoted by its handle and has no other identity.  The handle
+%   is what to keep, compare and use as a key; do not decompose it.
+%
+%   @see object_from_reference/2 turns a Name back into an Object.
+
+object_reference(Object, Name) :-
+    get(Object, object_reference, Name),
+    atom(Name).
+
+%!  object_from_reference(+Name, -Object) is semidet.
+%
+%   Object is the object named Name.  Fails silently if there is no such
+%   object.  Only named references can be resolved: an address cannot,
+%   because it may since have been reused for another object.
+
+object_from_reference(Name, Object) :-
+    atom(Name),
+    get(@pce, object_from_reference, Name, Object).
+
+%!  is_object_reference(@Term) is semidet.
+%
+%   True if Term is a Prolog object reference: the blob denoting an
+%   anonymous object, or @Name.  Does not imply that the object exists;
+%   use object/1 for that.
+
+is_object_reference(Term) :-
+    blob(Term, pce),
+    !.
+is_object_reference(@Name) :-
+    atom(Name).
 
 
 %!  send(+Object, +Selector, +Arg...) is semidet.

@@ -101,7 +101,7 @@ method(Spec, Method) :-
     object(Spec),
     send(Spec, '_instance_of', var),
     !,
-    Spec = @Ref,
+    object_reference(Spec, Ref),
     new(Method, man_global(Ref)).
 method(Spec, Method) :-
     pce_to_method(Spec, Method),

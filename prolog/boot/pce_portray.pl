@@ -50,6 +50,7 @@ class-name and the goal to the implementation of methods more readable
 
 user:portray(Obj) :-
     Obj = @Ref,
+    atom(Ref),
     object(Obj),
     !,
     (   send(Obj, '_instance_of', var)
@@ -58,6 +59,16 @@ user:portray(Obj) :-
     ;   get(Obj, '_class_name', CN),
         format('@~w/~w', [Ref, CN])
     ).
+%   An anonymous reference writes itself as <pce>(0xADDR,Class), which
+%   already names the class and, unlike anything we could print here, can
+%   be read back.  Only a var is worth intercepting, to show its value.
+user:portray(Obj) :-
+    blob(Obj, pce),
+    object(Obj),
+    send(Obj, '_instance_of', var),
+    !,
+    get(Obj, '_value', Value),
+    format('~w(= ~p)', [Obj, Value]).
 user:portray(pce_principal:send_implementation(Id, Args, Receiver)) :-
     object(Receiver),
     !,

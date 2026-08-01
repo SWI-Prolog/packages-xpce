@@ -324,7 +324,7 @@ variable(nodes, hash_table, get, "Id --> node mapping").
 
 initialise(TC) :->
     "Create the tree, setting style and geometry"::
-    send(TC, slot, nodes, new(hash_table)),
+    send(TC, slot, nodes, new(hash_table(@default, value))),
     send_super(TC, initialise),
     send(TC, direction, list),
     resource_image(file, FImg),

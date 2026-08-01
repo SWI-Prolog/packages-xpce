@@ -562,7 +562,7 @@ man_related(Obj, Type:name, Chain) :<-
 man_name(Obj, Name) :<-
     "Name for relation browser"::
     new(Name, string),
-    send(Name, format, 'O\t@%s', Obj?object_reference).
+    send(Name, format, 'O\t%O', Obj).
 
 man_creator(_Obj, _) :<-
     "Global default"::
