@@ -1211,6 +1211,297 @@ test(resize_ascii_grow, [setup(resize_test_begin(T))]) :-
     rows_of(T, 0, 3, Rows),
     assert_single_prompt(Rows).
 
+test(resize_to_exact_row_multiple, [setup(resize_test_begin(T))]) :-
+    %  Shrink to a width the input fills exactly: prompt + input is a
+    %  whole number of rows, so the caret ends on the right margin.  A
+    %  terminal with magic margins leaves it there rather than opening
+    %  the row below, and libedit must rewind by one row less when it
+    %  repaints.  It rewound one row too far and painted the input over
+    %  the line above the prompt, eating it.
+    %  Run a goal first: its output gives us a known line above the
+    %  prompt, which is what the bug ate.
+    type(T, 'true.'),
+    key(T, enter),
+    assertion(wait_for_prompt(T)),
+    cursor(T, P, R),
+    assertion(R > 0),
+    cw_of(T, CW),
+    TargetCols = 54,
+    Len is 2*TargetCols - P,            % exactly two rows after the resize
+    filler(Len, Xs),
+    type_and_wait(T, Xs),
+    row_text(T, R, PromptLine),
+    sub_atom(PromptLine, 0, P, _, Prompt),
+    R0 is R - 1,
+    row_text(T, R0, Above0),
+    NewPixels is round((TargetCols + 2) * CW),
+    resize_width(T, NewPixels),
+    cols_for_pixels(CW, NewPixels, NewCols),
+    assertion(NewCols == TargetCols),
+    %  The prompt row moved (the input needs one row more than it did
+    %  at 80 columns), so find it by its prompt rather than from the
+    %  caret: at the right margin the caret sits below the last row of
+    %  the input.  The line above the prompt must still be there.
+    prompt_row(T, Prompt, PromptRow),
+    AboveRow is PromptRow - 1,
+    row_text(T, AboveRow, Above1),
+    (   Above1 == Above0
+    ->  true
+    ;   format(user_error,
+               "line above the prompt: expected ~q, got ~q~n",
+               [Above0, Above1]),
+        assertion(Above1 == Above0)
+    ),
+    RowsNeeded is (P + Len + NewCols - 1) // NewCols,
+    rows_of(T, PromptRow, RowsNeeded, DisplayRows),
+    assert_single_prompt(DisplayRows),
+    DisplayRows = [First|Rest],
+    strip_prompt(First, FirstTail),
+    maplist(trim_trailing_spaces, [FirstTail|Rest], Trimmed),
+    atomic_list_concat(Trimmed, Joined),
+    assertion(Joined == Xs).
+
+%!  prompt_rows(+Terminal, +Prompt, -Rows) is det.
+%!  prompt_row(+Terminal, +Prompt, -Row) is semidet.
+%
+%   All visible rows that start with Prompt, and the last of them.
+
+prompt_rows(T, Prompt, Rows) :-
+    atom_length(Prompt, PL),
+    findall(I,
+            ( between(0, 24, I),
+              row_text(T, I, Line),
+              sub_atom(Line, 0, PL, _, Prompt)
+            ), Rows).
+
+prompt_row(T, Prompt, Row) :-
+    prompt_rows(T, Prompt, Rows),
+    last(Rows, Row).
+
+test(key_after_resize_uses_new_width,
+     [ setup(start_terminal(Frame, T)),
+       cleanup(stop_terminal(Frame))
+     ]) :-
+    %  Resize, then press a key.  The resize must reach libedit before
+    %  the key is acted on: ^A moves the caret up by as many rows as
+    %  libedit believes the input occupies, and with the width it had
+    %  before the resize that is the wrong row -- the repaint then
+    %  leaves a copy of the first row behind.  On Windows nothing
+    %  interrupts the read, so the size has to be polled after it.
+    %  Needs a terminal of its own: a resize in an earlier test leaves
+    %  libedit's size already in step.
+    cursor(T, P, R),
+    row_text(T, R, PromptLine),
+    sub_atom(PromptLine, 0, P, _, Prompt),
+    cw_of(T, CW),
+    TargetCols = 60,
+    %  One character past four whole rows at the new width: the last
+    %  row holds a single character, so the row count changes and the
+    %  caret's row offset with it.
+    Len is 4*TargetCols + 1 - P,
+    filler(Len, Xs),
+    type_and_wait(T, Xs),
+    NewPixels is round((TargetCols + 2) * CW),
+    resize_width(T, NewPixels),
+    key(T, ctrl_a),
+    drive(0.2),
+    %  Exactly one prompt on the screen: a repaint that started on the
+    %  wrong row leaves a second copy of the first row above it.  The
+    %  terminal is this test's own, so the prompt of the line being
+    %  edited is the only one there is.
+    prompt_rows(T, Prompt, PromptRows),
+    last(PromptRows, PromptRow),
+    (   PromptRows = [_]
+    ->  true
+    ;   format(user_error, "prompt on rows ~q, expected one~n", [PromptRows]),
+        assertion(PromptRows = [_])
+    ),
+    assert_cursor(T, P, PromptRow),
+    cols_for_pixels(CW, NewPixels, NewCols),
+    RowsNeeded is (P + Len + NewCols - 1) // NewCols,
+    rows_of(T, PromptRow, RowsNeeded, DisplayRows),
+    assert_single_prompt(DisplayRows),
+    DisplayRows = [First|Rest],
+    strip_prompt(First, FirstTail),
+    maplist(trim_trailing_spaces, [FirstTail|Rest], Trimmed),
+    atomic_list_concat(Trimmed, Joined),
+    assertion(Joined == Xs).
+
+test(shrink_move_caret_widen,
+     [ setup(start_terminal(Frame, T)),
+       cleanup(stop_terminal(Frame))
+     ]) :-
+    %  Shrink, walk the caret to the start and back to the end, widen,
+    %  then ^A.  Going to the end moves the caret down one row per
+    %  wrapped row, and a terminal that took each of those moves for a
+    %  line break turned every continuation of the input into a hard
+    %  line: rewrapping on the next resize reflowed the pieces on their
+    %  own and left parts of the old layout on the screen.
+    cursor(T, P, R),
+    row_text(T, R, PromptLine),
+    sub_atom(PromptLine, 0, P, _, Prompt),
+    cw_of(T, CW),
+    Len is 321 - P,
+    filler(Len, Xs),
+    type_and_wait(T, Xs),
+    NarrowPixels is round((39 + 2) * CW),
+    resize_width(T, NarrowPixels),
+    key(T, ctrl_a),
+    drive(0.2),
+    key(T, ctrl_e),
+    drive(0.2),
+    WidePixels is round((60 + 2) * CW),
+    resize_width(T, WidePixels),
+    key(T, ctrl_a),
+    drive(0.2),
+    prompt_rows(T, Prompt, PromptRows),
+    last(PromptRows, PromptRow),
+    (   PromptRows = [_]
+    ->  true
+    ;   format(user_error, "prompt on rows ~q, expected one~n", [PromptRows]),
+        assertion(PromptRows = [_])
+    ),
+    assert_cursor(T, P, PromptRow),
+    RowsNeeded is (P + Len + 59) // 60,
+    rows_of(T, PromptRow, RowsNeeded, DisplayRows),
+    DisplayRows = [First|Rest],
+    strip_prompt(First, FirstTail),
+    maplist(trim_trailing_spaces, [FirstTail|Rest], Trimmed),
+    atomic_list_concat(Trimmed, Joined),
+    assertion(Joined == Xs).
+
+test(selection_survives_resize, [setup(resize_test_begin(T))]) :-
+    %  Rewrapping rebuilds the ring of lines the selection points into,
+    %  so the anchors have to be carried across with the text.  They
+    %  were not, and a selection made before a resize covered something
+    %  else afterwards.
+    type(T, 'true.'),
+    key(T, enter),
+    assertion(wait_for_prompt(T)),
+    cw_of(T, CW),
+    filler(200, Xs),
+    type_and_wait(T, Xs),
+    send(T, select_all),
+    get(T, selected, Sel0),
+    get(Sel0, value, Text0),
+    NewPixels is round(62 * CW),
+    resize_width(T, NewPixels),
+    get(T, selected, Sel1),
+    get(Sel1, value, Text1),
+    (   Text1 == Text0
+    ->  true
+    ;   format(user_error,
+               "selection changed over the resize:~n  before: ~q~n  after:  ~q~n",
+               [Text0, Text1]),
+        assertion(Text1 == Text0)
+    ).
+
+test(resize_wrapped_row_ending_in_a_space, [setup(resize_test_begin(T))]) :-
+    %  Put a space in the last column of the first row.  libedit does
+    %  not write trailing blanks, so unless it is made to, the row ends
+    %  with the newline that moves to the next one rather than with a
+    %  wrap -- and the terminal, which rewraps on resize, reads that as
+    %  a hard line break and reflows the input into the wrong number of
+    %  rows, leaving a copy of a row on the screen.
+    type(T, 'true.'),
+    key(T, enter),
+    assertion(wait_for_prompt(T)),
+    cursor(T, P, R),
+    assertion(R > 0),
+    cw_of(T, CW),
+    row_text(T, R, PromptLine),
+    sub_atom(PromptLine, 0, P, _, Prompt),
+    row_text(T, R-1, Above0),
+    FirstCols = 70,                     % the space ends the second row
+    HeadLen is 2*FirstCols - P - 1,     % once we are at FirstCols
+    filler(HeadLen, Head),
+    filler(30, Tail),
+    atomic_list_concat([Head, ' ', Tail], Xs),
+    type_and_wait(T, Xs),
+    %  The first resize repaints, and the repaint is where libedit
+    %  would drop the trailing space; the second one rewraps whatever
+    %  structure that left behind.
+    FirstPixels is round((FirstCols + 2) * CW),
+    resize_width(T, FirstPixels),
+    TargetCols = 68,
+    NewPixels is round((TargetCols + 2) * CW),
+    resize_width(T, NewPixels),
+    cols_for_pixels(CW, NewPixels, NewCols),
+    assertion(NewCols == TargetCols),
+    prompt_row(T, Prompt, PromptRow),
+    AboveRow is PromptRow - 1,
+    row_text(T, AboveRow, Above1),
+    (   Above1 == Above0
+    ->  true
+    ;   format(user_error,
+               "line above the prompt: expected ~q, got ~q~n",
+               [Above0, Above1]),
+        assertion(Above1 == Above0)
+    ),
+    atom_length(Xs, Len),
+    RowsNeeded is (P + Len + NewCols - 1) // NewCols,
+    rows_of(T, PromptRow, RowsNeeded, DisplayRows),
+    assert_single_prompt(DisplayRows),
+    DisplayRows = [First|Rest],
+    strip_prompt(First, FirstTail),
+    maplist(trim_trailing_spaces, [FirstTail|Rest], Trimmed),
+    atomic_list_concat(Trimmed, Joined),
+    normalize_space(atom(JoinedN), Joined),
+    normalize_space(atom(XsN), Xs),
+    assertion(JoinedN == XsN).
+
+test(edit_wrapped_input_after_resize, [setup(resize_test_begin(T))]) :-
+    %  Resize the window, then edit an input line that wraps.  Every
+    %  cursor motion libedit makes is computed from the column count it
+    %  believes the terminal has, so if the resize never reached it the
+    %  redraw lands on the wrong row: ^A repaints the head of the line
+    %  over its last row instead of moving to the prompt.  Reported for
+    %  Epilog on Windows, where a resize raises no SIGWINCH.
+    cursor(T, P, R),
+    cw_of(T, CW),
+    TargetCols = 100,
+    NewPixels is round((TargetCols + 2) * CW),
+    resize_width(T, NewPixels),
+    cols_for_pixels(CW, NewPixels, NewCols),
+    assertion(NewCols == TargetCols),
+    Len = 200,
+    filler(Len, Xs),
+    %  type_and_wait/2 is not usable here: it re-derives the cell width
+    %  from the current geometry with cw_of/2, which only holds at the
+    %  initial 80 columns.  We know NewCols, so wait for the cursor the
+    %  input must end at: the last cell is P+Len-1.
+    LastCell is P + Len - 1,
+    ExpRow is R + LastCell // NewCols,
+    ExpCol is LastCell mod NewCols + 1,
+    assertion(ExpCol < NewCols),
+    type(T, Xs),
+    wait_until(cursor_at(T, ExpCol, ExpRow), 5),
+    %  Move to the start of the line: the cursor must land on the
+    %  prompt row, not somewhere in the wrapped tail.
+    key(T, ctrl_a),
+    drive(0.2),
+    assert_cursor(T, P, R),
+    %  Replace the character at offset 5 and check the whole line.
+    key(T, cursor_right),
+    key(T, cursor_right),
+    key(T, cursor_right),
+    key(T, cursor_right),
+    key(T, cursor_right),
+    key(T, backspace),
+    type(T, 'Z'),
+    drive(0.2),
+    sub_atom(Xs, 0, 4, _, Head),
+    sub_atom(Xs, 5, _, 0, Tail),
+    atomic_list_concat([Head, 'Z', Tail], Expected),
+    RowsNeeded is (P + Len + NewCols - 1) // NewCols,
+    rows_of(T, R, RowsNeeded, DisplayRows),
+    assert_single_prompt(DisplayRows),
+    DisplayRows = [First|Rest],
+    strip_prompt(First, FirstTail),
+    maplist(trim_trailing_spaces, [FirstTail|Rest], Trimmed),
+    atomic_list_concat(Trimmed, Joined),
+    assertion(Joined == Expected).
+
 test(resize_below_window_scrolls, [setup(resize_test_begin(T))]) :-
     %   Type a long input and then shrink the terminal so the
     %   wrapped input needs more rows than the window holds.  The
