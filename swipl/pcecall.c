@@ -265,7 +265,11 @@ set_pce_thread(term_t options)
 
 static foreign_t
 pl_pce_dispatch(void)
-{ pceDispatch(NULL, 250);
+{ pceMTLock();				/* reclaim objects the atom GC */
+  pceDrainHostReferences();		/* handed back to us */
+  pceMTUnlock();
+
+  pceDispatch(NULL, 250);
 
   if ( PL_handle_signals() == -1 || PL_exception(0) )
     return FALSE;

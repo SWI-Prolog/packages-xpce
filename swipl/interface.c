@@ -182,6 +182,9 @@ static foreign_t	pl_get(term_t rec, term_t msg, term_t ret);
 static foreign_t	pl_get_class(term_t rec, term_t cl, term_t msg, term_t r);
 static foreign_t	pl_object1(term_t ref);
 static foreign_t	pl_object2(term_t ref, term_t description);
+static PL_blob_t	pce_blob;
+static foreign_t	pl_pce_object_blob(term_t ref, term_t blob);
+static foreign_t	pl_pce_free(term_t ref);
 static foreign_t	pl_pce_method_implementation(term_t id, term_t msg);
 static foreign_t	pl_pce_open(term_t t, term_t mode, term_t plhandle);
 static foreign_t	pl_pce_dispatch_event(term_t Fd, term_t timeout);
@@ -617,6 +620,8 @@ install_pl2xpce(void)
     return;
   pce_initialised = true;
 
+  PL_register_blob_type(&pce_blob);	/* so that the type exists as soon */
+					/* as the library is loaded */
   PL_register_foreign("pce_init", 2,
 		      pl_pce_init, PL_FA_TRANSPARENT);
   PL_register_foreign("send", 2,
@@ -631,6 +636,10 @@ install_pl2xpce(void)
 		      pl_object1, 0);
   PL_register_foreign("object", 2,
 		      pl_object2, 0);
+  PL_register_foreign("$pce_object_blob", 2,
+		      pl_pce_object_blob, 0);
+  PL_register_foreign("$pce_free", 1,
+		      pl_pce_free, 0);
   PL_register_foreign("new", 2,
 		      pl_new, PL_FA_TRANSPARENT);
   PL_register_foreign("pce_method_implementation", 2,
@@ -899,7 +908,7 @@ ThrowException(int id, ...)
   if ( !PL_cons_functor(et, FUNCTOR_error2, err, ctx) )
     goto error;
 
-  return PL_raise_exception(et);
+  return PL_raise_exception(et),FALSE;
 
 error:
   va_end(args);
@@ -946,6 +955,169 @@ atomToAssoc(atom_t a)
 }
 
 
+		 /*******************************
+		 *	  OBJECT BLOBS		*
+		 *******************************/
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+An anonymous object reference is a blob  holding the object pointer.  It
+is written as <pce>(0xADDR,ClassName):  the  bracketed name must be the
+name of our blob type and the  first argument the address of the blob
+data, as that is what allows read_term/2,3   to find the object back
+using the option blob(resolve).  Named references remain the term @Name.
+
+The blob is PL_BLOB_UNIQUE, so one object   maps to one atom and ==/2,
+compare/3 and sort/2 on references behave as they should.  It is
+PL_BLOB_NOCOPY, so the blob data *is* the object pointer.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+static void
+acquire_pce_object(atom_t symbol)
+{ PceObject obj = PL_blob_data(symbol, NULL, NULL);
+
+  if ( obj )
+    pceAddHostReference(obj);
+}
+
+
+/* Runs in the atom garbage collector, on a thread that does not hold the
+   XPCE lock and cannot take it.  Only queue the object.
+*/
+
+static int
+release_pce_object(atom_t symbol)
+{ PceObject obj = PL_blob_data(symbol, NULL, NULL);
+
+  if ( obj )
+    pceDelHostReferenceDelayed(obj);
+
+  return true;
+}
+
+
+static int
+compare_pce_object(atom_t a, atom_t b)
+{ void *o1 = PL_blob_data(a, NULL, NULL);
+  void *o2 = PL_blob_data(b, NULL, NULL);
+
+  return o1 > o2 ? 1 : o1 < o2 ? -1 : 0;
+}
+
+
+/* Naming the class reads the object header and the class name, both of
+   which are stable: the blob holds a reference, so ->free() defers the
+   unalloc and the header stays valid, a class is permanent and a name's
+   text is immutable.  So this takes no lock.  It must not: this runs
+   while another thread may hold XPCE, notably its event loop, and also
+   for every live blob of our type when read_term/2,3 resolves one from
+   its text.  pp(), which every XPCE error message goes through, reads
+   the same fields the same way.
+*/
+
+static int
+write_pce_object(IOSTREAM *s, atom_t symbol, int flags)
+{ PceObject obj = PL_blob_data(symbol, NULL, NULL);
+  const char *cname;
+
+/* ->free() destroys the object but leaves us holding the handle, which
+   keeps its administration alive.  Say so, as free/1 does: whichever way
+   the object was destroyed, the reference no longer denotes one.
+*/
+  if ( !pceExistsObject(obj) )
+    return Sfprintf(s, "<pce>(freed)") >= 0;
+
+  cname = pceClassNameOfObject(obj);
+  SfprintfX(s, "<pce>(%p,%UAs)", obj, cname ? cname : "?");
+
+  return true;
+}
+
+
+static int
+save_pce_object(atom_t symbol, IOSTREAM *fd)
+{ return PL_warning("Cannot save reference to <pce>(%p)",
+		    PL_blob_data(symbol, NULL, NULL));
+}
+
+
+static atom_t
+load_pce_object(IOSTREAM *fd)
+{ return PL_new_atom("<saved-pce-object-reference>");
+}
+
+
+static PL_blob_t pce_blob =
+{ PL_BLOB_MAGIC,
+  PL_BLOB_UNIQUE|PL_BLOB_NOCOPY,
+  "pce",
+  release_pce_object,
+  compare_pce_object,
+  write_pce_object,
+  acquire_pce_object,
+  save_pce_object,
+  load_pce_object,
+  0,					/* padding */
+  16*1024*1024				/* gc_margin: reclaim per 16Mb */
+};
+
+
+/* The length we register is not the size of the handle but the size of the
+   object it keeps alive, which is what decides whether reclaiming these is
+   worth a collection.  PL_BLOB_NOCOPY does not use it for lookup.
+*/
+
+static int
+unifyBlobRef(term_t t, PceObject obj)
+{ return PL_unify_blob(t, obj, pceSizeOfObject(obj), &pce_blob);
+}
+
+
+static int
+putBlobRef(term_t t, PceObject obj)
+{ PL_put_blob(t, obj, pceSizeOfObject(obj), &pce_blob);
+
+  return TRUE;
+}
+
+
+/* True if `t` is one of our blobs.  *obj is NULL if the blob has been
+   released by free/1, which is a valid state: the reference is dead but
+   the handle is still there.
+*/
+
+static int
+is_pce_blob(term_t t, PceObject *obj)
+{ void *data;
+  size_t len;
+  PL_blob_t *type;
+
+  if ( PL_get_blob(t, &data, &len, &type) && type == &pce_blob )
+  { *obj = data;
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
+
+/* Get the object from a term we already know to be one of our blobs.  The
+   blob is a well formed reference, so a failure here means the object is
+   gone: report it the same way a stale @Integer is reported.
+*/
+
+static int
+get_object_from_blob(term_t t, PceObject *obj)
+{ PceObject o;
+
+  if ( is_pce_blob(t, &o) && o && pceExistsObject(o) )
+  { *obj = o;
+    return TRUE;
+  }
+
+  return ThrowException(EX_EXISTENCE, ATOM_object, t);
+}
+
+
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Get an XPCE object-reference from a Prolog term we already know to be of
 the form @/1.
@@ -955,20 +1127,15 @@ static int
 get_object_from_refterm(term_t t, PceObject *obj)
 { term_t a = PL_new_term_ref();
   PceObject o;
-  intptr_t r;
   atom_t name;
 
   _PL_get_arg(1, t, a);
 
-  if ( PL_get_intptr(a, &r) )
-  { if ( (o = cToPceReference(r)) )
-    { *obj = o;
-
-      return TRUE;
-    }
-
-    return ThrowException(EX_BAD_INTEGER_OBJECT_REF, r);
-  }
+/* @Integer is not accepted: the integer is the object's address, so after
+   the object is freed and the memory reused it would denote whatever was
+   created in its place.  An anonymous object is denoted by its handle,
+   which cannot go stale.
+*/
 
   if ( GetAtom(a, &name) )
   { if ( (o = pceObjectFromName(atomToName(name))) )
@@ -984,56 +1151,56 @@ get_object_from_refterm(term_t t, PceObject *obj)
 }
 
 
+/* Unify the argument of an @/1 term with the object's reference.  Only a
+   named object has one: an anonymous object is denoted by the blob itself,
+   so there is nothing @Var could be bound to and the unification fails.
+*/
+
 static int
-unifyReferenceArg(term_t t, int type, PceCValue value)
-{ term_t t2 = PL_new_term_ref();	/* Exploit SWI-Prolog PL_unify-* */
+unifyReferenceArg(term_t t, PceObject obj)
+{ PceCValue value;
+  term_t t2;
 
-  if ( type == PCE_REFERENCE )
-  { if ( !PutInteger(t2, value.integer) )
-      return FALSE;
-  } else
-  { PceITFSymbol symbol = value.itf_symbol;
+  if ( pceToCReference(obj, &value) != PCE_ASSOC )
+    return FALSE;
 
-    PL_put_atom(t2, CachedNameToAtom(symbol->name));
-  }
+  if ( !(t2=PL_new_term_ref()) )
+    return FALSE;
+  PL_put_atom(t2, CachedNameToAtom(value.itf_symbol->name));
 
   return PL_unify(t, t2);
 }
 
 
-static int
-unifyReference(term_t t, int type, PceCValue value)
-{
-#ifdef HAVE_XPCEREF
-  xpceref_t r;
+/* Unify `t` with the Prolog representation of a reference to `obj`: the
+   term @Name if the object has a name, the <pce> blob otherwise.
+*/
 
-  if ( type == PCE_REFERENCE )
-  { r.type = PL_INTEGER;
-    r.value.i = value.integer;
-  } else
+static int
+unifyReference(term_t t, PceObject obj)
+{ PceCValue value;
+
+  if ( pceToCReference(obj, &value) != PCE_ASSOC )
+    return unifyBlobRef(t, obj);
+
   { PceITFSymbol symbol = value.itf_symbol;
+#ifdef HAVE_XPCEREF
+    xpceref_t r;
 
     r.type = PL_ATOM;
     r.value.a = CachedNameToAtom(symbol->name);
-  }
-  return _PL_unify_xpce_reference(t, &r);
 
+    return _PL_unify_xpce_reference(t, &r);
 #else /*HAVE_XPCEREF*/
-
-  term_t t2 = PL_new_term_ref();
-  term_t r  = PL_new_term_ref();
-
-  if ( type == PCE_REFERENCE )
-  { PL_put_integer(t2, value.integer);
-  } else
-  { PceITFSymbol symbol = value.itf_symbol;
+    term_t t2 = PL_new_term_ref();
+    term_t r  = PL_new_term_ref();
 
     PL_put_atom(t2, CachedNameToAtom(symbol->name));
-  }
-  PL_cons_functor(r, FUNCTOR_ref1, t2);
+    PL_cons_functor(r, FUNCTOR_ref1, t2);
 
-  return PL_unify(t, r);
+    return PL_unify(t, r);
 #endif /*HAVE_XPCEREF*/
+  }
 }
 
 
@@ -1047,10 +1214,7 @@ do_new(term_t ref, term_t t)
 
   if ( IsVar(ref) )
   { if ( (rval = termToObject(t, NULL, NULLATOM, TRUE)) )
-    { PceCValue value;
-      int type = pceToCReference(rval, &value);
-
-      if ( unifyReference(ref, type, value) )
+    { if ( unifyReference(ref, rval) )
 	return rval;
     }
 
@@ -1062,17 +1226,10 @@ do_new(term_t ref, term_t t)
     QGetArg(1, ref, a);
 
     if ( !GetAtom(a, &assoc) )		/* new(@foo, ...) */
-    { if ( IsVar(a) )
-	assoc = 0;			/* new(@X, ...) */
-      else
-	goto error;
-    }
+      goto error;			/* new(@X, ...): @ needs a name */
 
     if ( (rval = termToObject(t, NULL, assoc, TRUE)) )
-    { PceCValue value;
-      int type = pceToCReference(rval, &value);
-
-      if ( unifyReferenceArg(a, type, value) )
+    { if ( unifyReferenceArg(a, rval) )
 	return rval;
     }
 
@@ -1205,6 +1362,15 @@ get_object_arg(term_t t, PceObject* obj)
     case PL_RATIONAL:			/* rational number */
       *obj = cToPceReal(val.f);
       return true;
+    case PL_BLOB:			/* <pce>(Addr,Class) */
+    { PceObject o;
+
+      if ( is_pce_blob(t, &o) )
+	return get_object_from_blob(t, obj);
+
+      *obj = makeTermHandle(t);		/* other blobs are Prolog terms */
+      return true;
+    }
     case PL_TERM:			/* @reference */
       if ( val.t.name == ATOM_ref && val.t.arity == 1 )
 	return get_object_from_refterm(t, obj);
@@ -1258,6 +1424,10 @@ get_typed_object(PceGoal g, term_t t, PceType type, PceObject* rval)
     case PL_INTEGER:			/* large integer */
     case PL_RATIONAL:			/* rational number */
       obj = cToPceReal(val.f);
+      break;
+    case PL_BLOB:			/* <pce>(Addr,Class) */
+      if ( is_pce_blob(t, &obj) && !get_object_from_blob(t, &obj) )
+	return false;
       break;
     case PL_TERM:			/* @reference */
       if ( val.t.name == ATOM_ref && val.t.arity == 1 )
@@ -1313,6 +1483,10 @@ get_answer_object(PceGoal g, term_t t, PceType type, PceObject *rval)
     case PL_INTEGER:			/* large integer */
     case PL_RATIONAL:			/* rational number */
       obj = cToPceReal(val.f);
+      break;
+    case PL_BLOB:			/* <pce>(Addr,Class) */
+      if ( is_pce_blob(t, &obj) && !get_object_from_blob(t, &obj) )
+	return false;
       break;
     case PL_TERM:			/* @reference */
       if ( val.t.name == ATOM_ref && val.t.arity == 1 )
@@ -1486,10 +1660,24 @@ static PceObject
 termToObject(term_t t, PceType type, atom_t assoc, int new)
 { atom_t functor;
   size_t arity;
+  PceObject blobref;
 
   DEBUG(Sdprintf("termToObject(");
 	PL_write_term(Soutput, t, 1200, 0);
 	Sdprintf(")\n"));
+
+					/* <pce>(Addr,Class): must precede */
+					/* GetNameArity(), which fails on */
+					/* a blob and would land us in the */
+					/* "not a term" branch below */
+  if ( is_pce_blob(t, &blobref) )	/* as for @Ref below, `new' does not */
+  { PceObject rval;			/* apply: this *is* an object */
+
+    if ( get_object_from_blob(t, &rval) )
+      return rval;
+
+    return PCE_FAIL;
+  }
 
   if ( GetNameArity(t, &functor, &arity) )
   {					/* Just an atom */
@@ -1690,16 +1878,21 @@ unifyObject(term_t t, PceObject obj, int top)
       if ( !top )
       { atom_t n;
 	size_t a;
+	PceObject blobref;
 
 	if ( IsVar(t) )			/* get(R, S, Var) */
-	  return unifyReference(t, pcetype, value);
+	  return unifyReference(t, obj);
+
+					/* get(R, S, <pce>(...)) */
+	if ( is_pce_blob(t, &blobref) )
+	  return unifyBlobRef(t, obj);
 
 					/* get(R, S, @something) */
 	if ( GetNameArity(t, &n, &a) && n == ATOM_ref && a == 1 )
 	{ tmpt = PL_new_term_ref();
 
 	  QGetArg(1, t, tmpt);
-	  return unifyReferenceArg(tmpt, pcetype, value);
+	  return unifyReferenceArg(tmpt, obj);
 	}
       }
   }
@@ -1803,6 +1996,7 @@ pl_new(term_t assoc, term_t descr)
   HostStackEntry hmark;
 
   LOCK();
+  pceDrainHostReferences();		/* before pcePushGoal(): no goal yet */
   odm		      =	PushDefaultModule();
   hmark               = host_handle_stack;
   goal.flags	      =	PCE_GF_CATCH;
@@ -1818,7 +2012,7 @@ pl_new(term_t assoc, term_t descr)
   }
   markAnswerStack(mark);
   obj = do_new(assoc, d);
-  rewindAnswerStack(mark, obj);
+  rewindAnswerStack(mark, NIL);		/* do_new() gave Prolog a reference */
   rewindHostHandles(hmark);
   PopDefaultModule(odm);
 
@@ -1985,6 +2179,7 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
   fid_t fid = 0;
 
   LOCK();
+  pceDrainHostReferences();		/* no goal in progress at this point */
   odm = PushDefaultModule();
   hmark = host_handle_stack;
 
@@ -2184,7 +2379,8 @@ out:
   if ( goal.flags & PCE_GF_THROW )
     rval = ThrowException(EX_GOAL, &goal, rec, msg);
   rewindHostHandles(hmark);
-  rewindAnswerStack(mark, goal.rval);
+  rewindAnswerStack(mark, NIL);		/* the result was unified above, so */
+					/* Prolog holds a reference on it */
   PopDefaultModule(odm);
   /* calls popGoal() releasing recursive lock */
   pceFreeGoal(&goal);
@@ -2232,22 +2428,82 @@ static foreign_t
 pl_object1(term_t ref)
 { atom_t name;
   size_t arity;
+  PceObject obj;
+
+  if ( is_pce_blob(ref, &obj) )		/* fails silently on a dead handle */
+    return obj && pceExistsObject(obj);
 
   if ( GetNameArity(ref, &name, &arity) &&
        name == ATOM_ref &&
        arity == 1 )
   { term_t a = PL_new_term_ref();
     atom_t refname;
-    intptr_t refi;
 
     QGetArg(1, ref, a);
-    if ( GetAtom(a, &refname) )
-      return pceExistsAssoc(atomToName(refname));
-    else if ( GetInteger(a, &refi) )
-      return pceExistsReference(refi);
+    if ( GetAtom(a, &refname) )		/* @Integer: see */
+      return pceExistsAssoc(atomToName(refname));  /* get_object_from_refterm() */
   }
 
   return FALSE;
+}
+
+
+/* '$pce_object_blob'(+Spec, -Blob) is semidet.
+   Blob is the <pce> blob for the object denoted by Spec.  Only used to
+   test the blob representation before it is used to pass references.
+*/
+
+/* '$pce_free'(+Ref) is det.
+   Free the object and, if the reference is one of our blobs, release the
+   blob as well.  The handle then reports as <pce>(freed) and any attempt
+   to use it raises an existence error, rather than denoting an object
+   that is on its way out.
+*/
+
+static foreign_t
+pl_pce_free(term_t ref)
+{ PceObject obj;
+  atom_t blob = 0;
+  int rval;
+
+  if ( is_pce_blob(ref, &obj) )
+  { if ( !obj )
+      return TRUE;			/* already released */
+    if ( !PL_get_atom(ref, &blob) )
+      return FALSE;
+  }
+
+  LOCK();
+  if ( (obj = termToObject(ref, NULL, NULLATOM, FALSE)) )
+  { rval = pceSend(obj, NULL, cToPceName("free"), 0, NULL);
+    if ( blob )
+    { PL_free_blob(blob);
+      pceDrainHostReferences();
+    }
+  } else
+  { PL_clear_exception();		/* no such object: nothing to free */
+    rval = TRUE;
+  }
+  UNLOCK();
+
+  return rval;
+}
+
+
+static foreign_t
+pl_pce_object_blob(term_t ref, term_t blob)
+{ PceObject obj;
+  int rval;
+
+  LOCK();
+  pceDrainHostReferences();
+  if ( (obj = termToObject(ref, NULL, NULLATOM, FALSE)) )
+    rval = unifyBlobRef(blob, obj);
+  else
+    rval = FALSE;
+  UNLOCK();
+
+  return rval;
 }
 
 
@@ -2461,18 +2717,7 @@ put_object(term_t t, PceObject obj)
 
   switch( pcetype = pceToC(obj, &value) )
   { case PCE_REFERENCE:
-    {
-#ifdef HAVE_XPCEREF
-      return _PL_put_xpce_reference_i(t, value.integer);
-#else
-      term_t t2;
-
-      return ( (t2 = PL_new_term_ref()) &&
-	       PL_put_int64(t2, value.integer) &&
-	       PL_cons_functor(t, FUNCTOR_ref1, t2) );
-#endif
-      break;
-    }
+      return putBlobRef(t, obj);
     case PCE_ASSOC:
     { PceITFSymbol symbol = value.itf_symbol;
 
@@ -3184,9 +3429,20 @@ PrologOpenResource(const char *name, const char *rc_class, const char *mode)
 		 *	      PROFILING		*
 		 *******************************/
 
+/* The profiler calls us from pl-prof.c, outside any XPCE goal, so unlike
+   every other place that creates a reference we must take the lock here:
+   creating the blob takes a reference on the object.
+*/
+
 static bool
 unify_prof_node(term_t t, void *impl)
-{ return unifyObject(t, impl, FALSE);
+{ bool rc;
+
+  LOCK();
+  rc = unifyObject(t, impl, FALSE);
+  UNLOCK();
+
+  return rc;
 }
 
 
@@ -3194,12 +3450,24 @@ static bool
 get_prof_node(term_t ref, void **impl)
 { atom_t name;
   size_t arity;
+  PceObject obj;
+
+  if ( is_pce_blob(ref, &obj) )
+  { *impl = obj;
+    return true;
+  }
 
   if ( GetNameArity(ref, &name, &arity) &&
        name == ATOM_ref &&
        arity == 1 )
-  { *impl = termToObject(ref, NULL, NULLATOM, FALSE);
-    return true;
+  { bool rc;
+
+    LOCK();
+    *impl = termToObject(ref, NULL, NULLATOM, FALSE);
+    rc = true;
+    UNLOCK();
+
+    return rc;
   }
 
   return false;
