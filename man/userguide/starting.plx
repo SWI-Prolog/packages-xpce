@@ -114,16 +114,17 @@ the Prolog prompt):
 
 \begin{code}
 1 ?- new(P, point(10,20)).
-P = @772024
+P = <pce>(0x7f8a12c400,point)
 
 2 ?- new(@demo, dialog('Demo Window')).
 \end{code}
 
 The first example creates an instance of class point from the
-arguments `10' and `20'.  The reference is represented in Prolog using
-the prefix operator \functor{@}{1}.  For \product{} generated references
-the argument of this term is a \product{} generated integer value.  These
-integers are guaranteed to be unique.  The second example creates a
+arguments `10' and `20'.  A \product{} generated reference is an opaque
+handle, written \const{<pce>(\arg{Address},\arg{Class})}.  It is unique,
+and it may be typed or pasted back into a later query as the examples
+below do: the toplevel looks the handle up again.  It is not a term to
+take apart, however; see \secref{prologrefs}.  The second example creates a
 dialog object.  A dialog is a window that is specialised for
 displaying controllers such as buttons, text-entry-fields,
 etc.  In this example we have specified the reference.  Such a
@@ -162,7 +163,7 @@ method to invoke ({\em selector}) and the arguments are arguments
 to the operation.
 
 \begin{code}
-3 ?- send(@772024, x(15)).
+3 ?- send(<pce>(0x7f8a12c400,point), x(15)).
 4 ?- send(@demo, append(text_item(name))).
 \end{code}
 
@@ -200,11 +201,11 @@ and \product{} \class{real} objects, that are translated to Prolog
 \idx{floating point} numbers. Examples:
 
 \begin{code}
-6 ?- get(@772024, y, Y).
+6 ?- get(<pce>(0x7f8a12c400,point), y, Y).
 Y = 20
 7 ?- get(@demo, display, D).
 D = @display/display
-8 ?- get(@772024, distance(point(100,100)), Distance).
+8 ?- get(<pce>(0x7f8a12c400,point), distance(point(100,100)), Distance).
 Distance = 117
 \end{code}
 
@@ -212,16 +213,17 @@ The first example just obtains the value of the `y' instance variable.
 The second example returns the display object on which @demo is
 displayed.  This is the reference to an object of class display that
 represents your screen.%
-    \footnote{Prolog would normally print `@display'.  The
-    	      \pllib{pce_portray} defines a clause for the Prolog
-	      predicate portray/1 that prints object references as
-	      `@Reference/Class'. This library is used throughout all
+    \footnote{An anonymous reference prints itself as
+	      \const{<pce>(\arg{Address},\arg{Class})}.  For named
+	      references the \pllib{pce_portray} defines a clause for the
+	      Prolog predicate portray/1 that prints them as
+	      `@Reference/Class'.  This library is used throughout all
 	      the examples of this manual.}
 The last example again shows the creation of objects from the
 arguments to send/2 and get/3 and also shows that the
 returned value does not need to be a direct instance variable of the
 object.  The return value is an integer representing the (rounded)
-distance between @772024 and point(100,100).
+distance between the point and point(100,100).
 
 The second example illustrates that get/3 returns objects by
 their reference.  This reference may be used for further queries.
@@ -231,7 +233,7 @@ The example below computes the width and height of your screen.
 9 ?- get(@display, size, Size),
      get(Size, width, W),
      get(Size, height, H).
-Size = @4653322, W = 1152, H = 900
+Size = <pce>(0x7f8a12c5d0,size), W = 1152, H = 900
 \end{code}
 
 As a final example, type something in the text entry field and try
@@ -240,7 +242,7 @@ the following:
 \begin{code}
 10 ?- get(@demo, member(name), TextItem),
       get(TextItem, selection, Text).
-TextItem = @573481/text_item, Text = hello
+TextItem = <pce>(0x7f8a12c7a0,text_item), Text = hello
 \end{code}
 
 \index{graphical,finding}\index{finding,graphical}
@@ -258,7 +260,7 @@ an object reference as returned by new/2 or get/3.  It will remove
 the object from the \product{} object base.  Examples:
 
 \begin{code}
-12 ?- free(@772024).
+12 ?- free(<pce>(0x7f8a12c400,point)).
 13 ?- free(@demo).
 14 ?- free(@display).
 No

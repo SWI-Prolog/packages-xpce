@@ -336,8 +336,8 @@ a starting point for manipulating hierarchies.
     	?- new(@t, tree(text(animal))),
     	?- get(@t, root, Root)
 
-    	Root = @345263
-    	?- get(@345263, class_name, Class)
+    	Root = <pce>(0x7f9c3a41b0,node)
+    	?- get(Root, class_name, Class)
 
     	Class = node.
 

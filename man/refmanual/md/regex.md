@@ -759,7 +759,7 @@ will be overwritten on a new ->match or ->search.
     	?- get(regex(''), quote, '^hello*', S),
     	   get(S, value, T).
 
-    	S = @27463123
+    	S = <pce>(0x7f9c3a41b0,string)
     	T = '\^hello\*'
 
 - regex<-register_end: register=[0..9] -> index=int

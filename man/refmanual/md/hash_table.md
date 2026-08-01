@@ -31,9 +31,16 @@ class sheet and class table (multi-column indexed table).
     	for the difference between a division and a masking operation.
 
 - hash_table-refer: {none,name,value,both}
-    Hash_tables are used internally by PCE in algorithms where the table
-    should not give a reference count to the objects in it.  Internal use
-    only.
+    Which of the key and the value of an entry create a reference to the
+    object.  The default is `both`.  A table created with `none` refers to
+    neither, which is what a tool that monitors the object base needs: it
+    can hold objects without keeping them alive.  Such a table does not
+    know when an entry dies, so the tool must remove entries itself, for
+    example from a `class ->freed_message`.
+
+    Pass it as the second initialisation argument:
+
+    	new(T, hash_table(@default, none))
 
 - hash_table<-size: int
     Number of symbols in the table.

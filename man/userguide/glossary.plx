@@ -77,8 +77,9 @@
     of the method.
 \glossitem{Object-reference}
     An {\em object-reference} is the identifier for a particular
-    instance.  In Prolog \g{object-references} are represented by
-    @Integer or @Atom.
+    instance.  In Prolog a named reference is \exam{@Atom} and an
+    anonymous one is an opaque handle, written
+    \const{<pce>(\arg{Address},\arg{Class})}.
 \glossitem{Object}
     An \g{object} is en entity in PCE's world that is identified by
     an \g{object-reference} and has a local state.  An object is an

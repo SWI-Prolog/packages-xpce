@@ -902,16 +902,16 @@ specification.  See:
 	   get(@p, send_method, mirror, tuple(Object, Impl)).
 
 	Object = @p/point
-	Impl = @632241/send_method
+	Impl = <pce>(0x7f9c3a41b0,send_method)
 
 	?- new(@v, view),
 	   get(@v, send_method, append, tuple(Object, Impl)).
 
-	Object = @833889/editor
-	Impl = @749374/send_method
+	Object = <pce>(0x7f9c3a5d20,editor)
+	Impl = <pce>(0x7f9c3a6c40,send_method)
 
     The second example indicates that, when a message ->append is sent to
-    @v it will be delegated to the editor @833889.
+    @v it will be delegated to the editor bound to Object.
 
     See also ->has_get_method, ->has_send_method and <-all_send_methods.
 

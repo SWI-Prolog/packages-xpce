@@ -332,7 +332,7 @@ See also class directory.
     	?- new(F, file('/staff/jan/src/xpce/src/unx-file.c')),
     	   get(F, base_name, Base).
 
-    	F = @634787
+    	F = <pce>(0x7f9c3a41b0,file)
     	Base = 'unx-file.c'
 
     @see file<-directory_name

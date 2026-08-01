@@ -98,8 +98,8 @@ See also class real.
     	   get(N2, value, V2).
 
     	V2 = 5
-    	N2 = @1687003/number
-    	N = @1686999/number
+    	N2 = <pce>(0x7f9c3a41b0,number)
+    	N = <pce>(0x7f9c3a5d20,number)
 
     First creates a new number object with the same <-value, invokes the
     method as a send method and, if the send succeeds, returns the copy.

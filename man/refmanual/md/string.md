@@ -39,6 +39,19 @@ name and class text_buffer.
     computer, you may wish to check the documentation of
     printf (Unix: man printf).
 
+    Besides the conversions printf() defines (`%c`, `%d`, `%i`, `%o`,
+    `%u`, `%x`, `%X`, `%f`, `%e`, `%E`, `%g`, `%G`, `%s`), these are
+    understood:
+
+	| `%N` | As `%s`, falling back to the argument's <-print_name |
+	| `%O` | The argument as XPCE prints it for diagnostics |
+	| `%I` | Skip the argument, producing no output |
+
+    `%O` writes a named object as `@name/class` and an anonymous one as
+    `<pce>(Address,Class)`, matching what Prolog prints for the same
+    reference, with a summary appended where that says more than the class
+    name.  This is the conversion used by error messages and `->report`.
+
     Various other classes implement the ->format method.  See also
     `editor ->format`, `text_buffer->format`, `pce->format`.
 

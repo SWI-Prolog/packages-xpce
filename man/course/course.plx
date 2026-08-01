@@ -25,12 +25,13 @@ Prolog: new/2, send/[2-12], get/[3-13] and free/1:
 \begin{code}
 ?- new(X, point(5, 6)).
 
-X = @791307/point
+X = <pce>(0x7f9c3a41b0,point)
 \end{code}
 
 Created an instance of class `point' at location (5,6).  In general,
 The first argument of new/2 provides or is unified to the {\em object
-reference}, which is a Prolog term of the functor @/1.  The second
+reference}: an opaque handle written as \const{<pce>(Address,Class)}, or
+a term of the functor @/1 if the object has a name.  The second
 argument is a ground Prolog term.  The function describes the class
 from which an instance is to be created, while the arguments provide
 initialisation arguments.
@@ -48,7 +49,7 @@ Created an instance of class size with width 100 and height 5.  We call
 @s a `named' or `global' object reference.
 
 \begin{code}
-?- send(@791307, x, 7).
+?- send(X, x, 7).
 
 Yes
 \end{code}
@@ -59,7 +60,7 @@ object-reference.  The second is the {\em selector} and the remaining
 arguments (up to 10) provide arguments to the operation.
 
 \begin{code}
-?- get(@791307, distance, point(0,0), D).
+?- get(X, distance, point(0,0), D).
 
 D = 9
 \end{code}
@@ -72,7 +73,7 @@ get/[3-13] requires one additional argument for the return value.
 Finally, the following call destroys the created object.
 
 \begin{code}
-?- free(@791307).
+?- free(X).
 
 Yes
 \end{code}
@@ -89,7 +90,7 @@ manipulation.  In this section we will use windows and graphics.
    send(P, display, text('Hello World'), point(20, 20)),
    send(P, open).
 
-P = @682375
+P = <pce>(0x7f9c3a5d20,picture)
 \end{code}
 
 First created a picture (=graphics) window labeled `Hello World',
@@ -782,10 +783,10 @@ methods.  Example:
 Trace variable: point <->x
 
 ?- new(P, point), send(P, x, 20).
-PCE:  2 enter: V @892203/point <->x: 20
-PCE:  2 exit: V @892203/point <->x: 20
+PCE:  2 enter: V <pce>(0x7f9c3a41b0,point) <->x: 20
+PCE:  2 exit: V <pce>(0x7f9c3a41b0,point) <->x: 20
 
-P = @892203/point 
+P = <pce>(0x7f9c3a41b0,point) 
 \end{code}
 
 Both tracepce/1 and breakpce/1 accept a specification of the form
@@ -811,18 +812,18 @@ the Prolog tracer will generally suffice to find the offending call.
 What if your program is big, you don't know the program to well and
 you have no clue?  You will have to work with conditional trace- and
 breakpoints to get a clue.  If you know the reference of the offending
-object (lets assume @284737), you can spy all send-operations invoked
-using:
+object (lets assume it is bound to Obj), you can spy all send-operations
+invoked using:
 
 \begin{code}
-?- send(@vmi_send, trace, @on, full, @receiver == @284737).
+?- send(@vmi_send, trace, @on, full, @receiver == Obj).
 \end{code}
 
 If---for example---you finally discovered that the object is sent
 the message ->device: @nil, you can trap the tracer using:
 
 \begin{code}
-?- send(@vmi_send, break, @on, call, and(@receiver == @284737,
+?- send(@vmi_send, break, @on, call, and(@receiver == Obj,
 					 @selector == device)).
 \end{code}
 

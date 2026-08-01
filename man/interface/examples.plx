@@ -17,7 +17,11 @@ at all.  Details of the syntax are found in the PCE User's Guide
 \cite{PCE:Prolog}.
 
 The host language translates ``send(@foo, tweak, hello, 15, @123456)''
-into something functionally equivalent to:
+into something functionally equivalent to:\footnote{\exam{@123456} is the
+notation a host may use for an anonymous reference; it is what
+cToPceReference() takes.  SWI-Prolog no longer writes references that way:
+it hands them to Prolog as opaque handles.  See the section on references
+held by Prolog in the User's Guide.}
 
 \begin{code}
 { PceObject receiver, selector;

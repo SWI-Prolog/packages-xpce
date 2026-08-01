@@ -13,8 +13,11 @@ Prolog is started with PCE loaded on top of it.
 \begin{description}
     \predicate{new}{2}{?Reference, +TermDescription}
 Create a \product{} object from \arg{TermDescription} and either unify an
-integer reference (e.g.\ @2535252) with \arg{Reference} or give the
-new object the provided atomic reference (e.g. @my_diagram).  The
+anonymous reference (e.g.\ \const{<pce>(0x7f8a12c400,box)}) with
+\arg{Reference} or give the new object the provided named reference
+(e.g. @my_diagram).  An anonymous reference is an opaque handle: it can be
+passed to send/2 and get/3, compared with ==/2 and used as a key, but it
+is not a term to take apart.  See \secref{prologrefs}.  The
 argument \arg{TermDescription} is a complex term of the form
 \mbox{Functor(...InitArg...)}.  \arg{Functor} denotes the class from
 which to create an object and \arg{InitArg} are the initialisation
@@ -129,7 +132,7 @@ Examples:
 1 ?- get(@pce, user, User).
 User = fred
 2 ?- get(@display, size, Size).
-Size = @474573
+Size = <pce>(0x7f8a12c400,size)
 3 ?- get(@display, size, size(W, H)).
 W = 1152, H = 900
 \end{code}
@@ -169,27 +172,25 @@ a method-definition should be considered illegal.  See \chapref{udc} for
 further discussion on defining classes and methods.
 
     \predicate{object}{1}{+Reference}
-Succeeds if \arg{Reference} is a term of the form @/1 and the argument
-is a valid object reference.  Fails silently otherwise.  Note that the
-form @Integer is only save to test whether or not an object has
-already been freed as a side-effect of freeing another object.
-Consider the following example:
+Succeeds if \arg{Reference} is an object reference and denotes an existing
+object.  Fails silently otherwise.  A reference Prolog holds cannot go
+stale: the object may be destroyed with free/1 or \const{->free}, but the
+handle then reports that it is gone rather than coming to denote whatever
+was created in its place.
+
 \begin{code}
 1 ?- new(P, point(100,100)).
-P = @235636/point
-2 ?- free(@235636).
-3 ?- object(@235636).		---> fail
-4 ?- new(S, size(50,50)).
-S = @235636/size
+P = <pce>(0x7f8a12c400,point)
+2 ?- free(P).
+3 ?- object(P).			---> fail
+4 ?- P == P.
+true.				% still a valid handle, just not an object
 \end{code}
-If ->free is invoked on an object that has no references, its memory
-will be reclaimed immediately.  As long as the memory has not been
-reused object/1 is guaranteed to fail.  If the memory is reused for
-storing a new object object/1 will succeed, but point to another
-object than expected.  Finally, the memory may be reused by a
-non-object data structure.  In this case object/1 only applies
-heuristics to detect whether the memory holds an object.
-See also \secref{debugging} and \secref{global}
+
+This was not so as long as an anonymous reference was the object's address
+written as \exam{@Integer}: after the object was freed and its memory
+reused, object/1 would succeed and denote a different object.  See also
+\secref{prologrefs}, \secref{debugging} and \secref{global}
 
     \predicate{object}{2}{+Reference, -TermDescription}
 Unify object description with the argument.  Normally only used for
@@ -449,11 +450,11 @@ Prints the values of all instance variables of \arg{Reference}:
 @move_gesture/move_gesture
         active                @on/bool
         button                middle
-        modifier              @810918/modifier
+        modifier              <pce>(0x7f8a12c400,modifier)
         condition             @nil/constant
         status                inactive
         cursor                @default/constant
-        offset                @548249/point
+        offset                <pce>(0x7f8a12c5d0,point)
 \end{code}
 
 A graphical tool for inspecting instance variables is described in

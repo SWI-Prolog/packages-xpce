@@ -94,9 +94,9 @@ object:
     	   send(new(P1, picture(world)), open),
     	   new(_, part_hyper(V1, P1, part, whole)).
 
-    	V1 = @435643
-    	P1 = @465732
+    	V1 = <pce>(0x7f9c3a41b0,window)
+    	P1 = <pce>(0x7f9c3a5d20,window)
 
     Now the following call will delete both windows:
 
-    	?- send(@435643, free).
+    	?- send(V1, free).

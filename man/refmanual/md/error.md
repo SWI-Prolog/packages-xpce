@@ -47,7 +47,7 @@ allows the user to examine the available (reusable) error objects.
 
     		?- catch(send(@pce, hello), E, true).
 
-    		E = error(pce(@290191/error,
+    		E = error(pce(<pce>(0x7f9c3a41b0,error),
     			 	      [@pce/pce, (->), hello]),
     				  send(@pce/pce, hello))
 

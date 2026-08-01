@@ -200,34 +200,70 @@ chain<-find_all, etc.
 
     \predicate{free}{1}{+Ref}
     \label{sec:xpce-free}
-Send ->free to \arg{Ref} if it is a valid reference. Defined as
+Send ->free to \arg{Ref} if it is a valid reference.
 
-\begin{code}
-free(Ref) :- object(Ref), !, send(Ref, free).
-free(_).
-\end{code}
-
-This definition implies free/1 only fails if the object may not be
-freed (see object->protect).
+free/1 only fails if the object may not be freed (see
+object->protect); it succeeds silently if there is no such object.  If
+\arg{Ref} is an anonymous reference it is also {\em released}: it then
+writes as \const{<pce>(freed)}, object/1 fails on it and using it raises
+an existence error, rather than denoting whatever is allocated in its
+place later.
 
     \predicate{object}{1}{+Reference}
     \predicate{object}{2}{+Reference, -Term}
     \label{sec:xpce-object}
-The Prolog predicate object/1 is an extension of the Prolog
-type-test predicates. It succeeds if \arg{Reference} refers to a
-valid object reference -- a term of the form @/1 whose first
-argument is an atom denoting the name of a global object, or an
-integer referring to an existing object.
+The Prolog predicate object/1 is an extension of the Prolog type-test
+predicates.  It succeeds if \arg{Reference} is an object reference and the
+object it denotes exists.  A reference is either
 
-In all other cases this predicate fails silently. Note that, if the
-term is of the form @<integer>, heuristics are used to determine
-whether the indicated memory location refers to a valid object.
+\begin{itemlist}
+    \item[Anonymous]
+An opaque handle, written \const{<pce>(\arg{Address},\arg{Class})}, as
+produced by new/2 and get/3 for an object that has no name.  It can be
+passed to send/2 and get/3, compared with ==/2 and used as a key, but it
+is not a term to take apart.  Use object_reference/2 for the XPCE-level
+reference and is_object_reference/1 to test a term.
+    \item[Named]
+The term \exam{@\arg{Atom}}, where \arg{Atom} is the name of a global
+object such as \exam{@display}.  See pce_global/2.
+\end{itemlist}
+
+In all other cases this predicate fails silently.  It also fails for a
+reference whose object has been freed, and it cannot be misled: as long as
+Prolog holds the handle the object's administration is kept, so the handle
+cannot come to denote whatever was created in its place.
+
+\exam{@\arg{Integer}} is {\bf not} a reference.  XPCE identifies an
+anonymous object internally by its address, which
+\verb$object<-object_reference$ still reports, but that number is not
+accepted as a reference: after the object is freed and its memory reused it
+would denote a different object.  There is no way to turn one back into an
+object, and therefore no way to hold a reference that lies.
 
 object/2 converts an object into a descriptive term. See the User
 Guide for complete information.
 
 See also \verb$@pce<-object_from_reference$ and
 object->name_reference.
+
+    \predicate{object_reference}{2}{+Object, -Name}
+    \label{sec:xpce-object_reference}
+Unify \arg{Name} with the name of \arg{Object}.  Fails if \arg{Object}
+has no name: an anonymous object is denoted by its handle and has no other
+identity.  Keep, compare and index on the handle itself rather than
+decomposing it.
+
+    \predicate{object_from_reference}{2}{+Name, -Object}
+    \label{sec:xpce-object_from_reference}
+Unify \arg{Object} with the object named \arg{Name}.  Fails silently if
+there is no such object.  Only names resolve; see object/1 on why an
+address does not.
+
+    \predicate{is_object_reference}{1}{@Term}
+    \label{sec:xpce-is_object_reference}
+True if \arg{Term} is an object reference: the handle denoting an
+anonymous object, or \exam{@Name}.  This does not imply the object
+exists; use object/1 for that.
 
     \predicate{portray}{1}{+Ref}
     \label{sec:xpce-portray}
@@ -387,7 +423,7 @@ yes
 % on another terminal on the same machine
 % xpce-client gnat
 (pce) send(new(P, picture), open).
-P = @364728
+P = <pce>(0x7f9c3a41b0,picture)
 (pce) exit
 %
 \end{code}

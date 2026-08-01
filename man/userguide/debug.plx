@@ -21,7 +21,7 @@ Consider the following example:
      get(B, area, Area),
      free(Area).
 
-Area = @ 803438, B = @803419/box
+Area = <pce>(0x7f8a12c400,area), B = <pce>(0x7f8a12c5d0,box)
 \end{code}
 
 After these calls, the <-area attribute of the box has been destroyed,
@@ -32,7 +32,8 @@ will report that the box contains a slot referring to a freed object.
 \begin{code}
 2 ?- checkpce.
 
-[WARNING: Freed object in slot area of @803419/box: @803438/area]
+[WARNING: Freed object in slot area of <pce>(0x7f8a12c5d0,box):
+          <pce>(0x7f8a12c400,area)]
 [PCE: Checked 13173 objects]
 \end{code}
 

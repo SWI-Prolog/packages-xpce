@@ -47,7 +47,7 @@ initialise(P, Name:name, Age:int, Address:string) :->
 :- pce_end_class.
 
 1 ?- new(P, person(fred, 30, 'Long Street 45')).
-P = @3664437/person
+P = <pce>(0x7f8a12c400,person)
 \end{code}
 
 These two representations have very different properties:
@@ -117,11 +117,11 @@ have a natural representation in both languages.  However:
 
 \begin{code}
 3 ?- send(@m, forward, chain(hello)).
-@774516
+<pce>(0x7f8a12c400,chain)
 4 ?- send(@m, forward, 3 + 4).
 7
 5 ?- send(@m, forward, [hello, world]).
-@608322
+<pce>(0x7f8a12c5d0,chain)
 \end{code}
 
 In all these examples the argument is a Prolog compound term which

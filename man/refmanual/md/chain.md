@@ -372,7 +372,7 @@ inside PCE.  Notably look at ->member, ->empty,. ->for_all, ->for_some,
 
     	Common = gn
     	Chain = chain(gnu, gnats)
-    	Matches = @854357/chain
+    	Matches = <pce>(0x7f9c3a41b0,chain)
 
     See also `text_item ->complete`.
 
