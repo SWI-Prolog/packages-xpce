@@ -2182,8 +2182,10 @@ initialiseNewSlotObject(Any obj, Variable var)
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Translates text of the form
 
-  <blank>*@<blank>*<digit>+		integer reference
   <blank>*@<blank>*<alnum>+		atomic reference
+
+Text of the form `@<digit>+' used to name the object at that address.  It
+is no longer accepted: see getObjectFromReferencePce().
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 Any
@@ -2205,18 +2207,11 @@ getConvertObject(Any ctx, Any x)
       ;
     start = s;
 
-					/* check for @35435623 */
-    for( ; isdigit(*s); s++ )
+					/* check for @name (exception?) */
+    for( ; iscsym(*s); s++ )
       ;
-    if ( *s == EOS )
-      rval = getObjectFromReferencePce(PCE, toInt(atol(start)));
-    else
-    {					/* check for @name (exception?) */
-      for( s=start; iscsym(*s); s++ )
-	;
-      if ( *s == EOS )
-	rval = getObjectAssoc(CtoKeyword(start));
-    }
+    if ( *s == EOS && !isdigit(*start) )
+      rval = getObjectAssoc(CtoKeyword(start));
   }
 
   answer(rval);

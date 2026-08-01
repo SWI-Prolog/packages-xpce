@@ -1075,20 +1075,16 @@ defineClassPce(Pce pce, Name name, Name super, StringObj summary, Code msg)
 		*           REFERENCES		*
 		********************************/
 
+/* Only named references resolve.  An object's address, which
+   `object<-object_reference' reports for an anonymous object, is not
+   accepted: after the object is freed and its memory reused it would
+   denote whatever was created in its place.
+*/
+
 Any
 getObjectFromReferencePce(Pce pce, Any ref)
-{ Any rval;
-
-  if ( isInteger(ref) )
-  { rval = IntToPointer(ref);
-
-    if ( isProperObject(rval) && !isFreedObj(rval) )
-      answer(rval);
-  } else
-  { assert(isName(ref));
-
+{ if ( isName(ref) )
     answer(findGlobal(ref));
-  }
 
   fail;
 }
@@ -1330,9 +1326,9 @@ static getdecl get_pce[] =
      NAME_limit, "Lowest representable integer"),
   GM(NAME_instance, 2, "created=object|function", T_instance, getInstancePcev,
      NAME_oms, "Create instance of any class"),
-  GM(NAME_objectFromReference, 1, "object=unchecked", "reference=int|name",
+  GM(NAME_objectFromReference, 1, "object=unchecked", "reference=name",
      getObjectFromReferencePce,
-     NAME_oms, "Convert object-name or integer reference into object"),
+     NAME_oms, "Convert object-name into object"),
   GM(NAME_pid, 0, "identifier=int", NULL, getPidPce,
      NAME_process, "Process id of this process"),
   GM(NAME_osError, 0, "identifier=name", NULL, getOsErrorPce,
