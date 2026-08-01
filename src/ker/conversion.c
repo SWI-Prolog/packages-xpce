@@ -319,9 +319,21 @@ do_pp(Any obj)
     { Name name;
 
       if ( (name = getNameAssoc(obj)) )
-	snprintf(tmp, sizeof(tmp), "@%s/%s", nameToUTF8(name), s);
-      else
-	snprintf(tmp, sizeof(tmp), "@%" PRIdPTR "/%s", valInt(PointerToInt(obj)), s);
+      { snprintf(tmp, sizeof(tmp), "@%s/%s", nameToUTF8(name), s);
+      } else
+      {	/* An anonymous reference has no @<integer> form.  Write it as the
+	   host does, so the two can be correlated and the text read back,
+	   and keep the summary alongside where it says more than the class.
+	*/
+	const char *cname = nameToUTF8(classOfObject(obj)->name);
+
+	if ( strcmp(s, cname) == 0 )
+	  snprintf(tmp, sizeof(tmp), "<pce>(0x%" PRIxPTR ",%s)",
+		   (uintptr_t)obj, cname);
+	else
+	  snprintf(tmp, sizeof(tmp), "<pce>(0x%" PRIxPTR ",%s) %s",
+		   (uintptr_t)obj, cname, s);
+      }
     }
 
     if ( isFreedObj(obj) )
