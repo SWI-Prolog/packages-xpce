@@ -99,7 +99,14 @@ endif()
 ################
 # Tests
 
+# XPCE needs a display.  SDL's dummy driver provides a headless one, so the
+# test sets that require a display (bom, selection, image) run everywhere
+# rather than being skipped, and the result does not depend on whether the
+# build host happens to have a window server.
+set(XPCE_TEST_ENV "SDL_VIDEODRIVER=dummy")
+
 test_libs(xpce)
+set_tests_properties(xpce:xpce PROPERTIES ENVIRONMENT "${XPCE_TEST_ENV}")
 add_subdirectory(tests)
 
 ################
