@@ -3514,9 +3514,18 @@ static void
 rlc_caret_down(RlcData b, int arg)
 { while ( arg-- > 0 )
   { if ( b->caret_y == b->last )
-      rlc_add_line(b);
+      rlc_add_line(b);			/* rlc_open_line() clears its flags */
     b->caret_y = NextLine(b, b->caret_y);
-    b->lines[b->caret_y].softreturn = false; /* ? why not only on open? */
+    /* Do NOT clear softreturn here.  Moving the caret says nothing
+     * about how the line it lands on ends, and a client that walks
+     * down its input with newlines -- libedit going to the end of a
+     * wrapped line, or from one display row to the next -- would turn
+     * every continuation into a hard break.  Rewrapping on the next
+     * resize then reflows the pieces separately and leaves parts of
+     * the old layout on the screen.  The flag belongs to the content:
+     * rlc_put() sets it when a line wraps, rlc_erase_line() clears it
+     * when the tail that wrapped is erased.
+     */
   }
   b->changed |= CHG_CARET;
 					/* scroll? */
@@ -3710,6 +3719,7 @@ rlc_erase_line(RlcData b)
 { RlcTextLine tl = &b->lines[b->caret_y];
 
   tl->size = b->caret_x;
+  tl->softreturn = false;		/* what wrapped is gone */
   tl->changed |= CHG_CHANGED|CHG_CLEAR;
 }
 
