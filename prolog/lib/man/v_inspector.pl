@@ -77,20 +77,15 @@ select(T) :->
     get(T, display, Display),
     (    get(T, object, Object)
     ->   flash(Object),
-         Object = @Reference,
-         new(S, string('@%s', Reference))
+         new(S, string('%O', Object))
     ;    get(T, string, S)
     ),
     send(Display, copy, S).
 
 
-reference(_T, _) :<-
+object(_T, _:'object|function') :<-
+    "Object this text stands for; none by default"::
     fail.
-
-object(T, Obj:'object|function') :<-
-    get(T, reference, Ref),
-    object(@Ref),
-    Obj = @Ref.
 
 flash(Object) :-
     object(Object),
@@ -107,7 +102,20 @@ flash(_).
 
 :- pce_begin_class(isp_value_text, isp_selectable_text).
 
-variable(reference,     'name|int*',    get).
+%  As for the object sheet: displaying a value must not keep it alive.
+
+:- pce_global(@isp_text_objects, new(hash_table(@default, none))).
+
+%!  forget(+Table, +Key) is det.
+%
+%   Remove Key from Table if it is there.  hash_table ->delete fails on a
+%   key that is not in the table.
+
+forget(Table, Key) :-
+    (   get(Table, member, Key, _)
+    ->  send(Table, delete, Key)
+    ;   true
+    ).
 
 handle(w-6, h/2, link).
 
@@ -130,12 +138,12 @@ label(T, Label:name) :->
 value_text(Value, String) :-
     object(Value),
     !,
-    Value = @Reference,
-    get(Value, '_class_name', ClassName),
-    new(String, string('@%s/%s', Reference, ClassName)).
-value_text(@Reference, String) :-
+    new(String, string('%O', Value)).
+value_text(Value, String) :-
+    is_object_reference(Value),  % reference to a dead object
     !,
-    new(String, string('@%s', Reference)).
+    format(atom(Text), '~w', [Value]),
+    new(String, string(Text)).
 value_text(Atomic, Atomic) :-
     atomic(Atomic),
     !.
@@ -145,16 +153,18 @@ value_text(Term, Atomic) :-
 
 object(T, Object:unchecked) :->
     (   object(Object)
-    ->  Object = @Ref,
-        send(T, slot, reference, Ref)
-    ;   send(T, slot, reference, @nil)
+    ->  send(@isp_text_objects, append, T, Object)
+    ;   forget(@isp_text_objects, T)
     ).
 
 
 object(T, Object) :<-
-    get(T, reference, Ref),
-    Ref \== @nil,
-    Object = @Ref.
+    get(@isp_text_objects, member, T, Object).
+
+
+unlink(T) :->
+    forget(@isp_text_objects, T),
+    send(T, send_super, unlink).
 
 
 %               EVENTS
@@ -234,10 +244,10 @@ pretty_print(T) :->
 %       to that inspector if it displays the object for which the inspector has
 %       been created.
 
-link_to(T, Ref:'name|int') :->
-    (   get(T, reference, Ref),
+link_to(T, Obj:object) :->
+    (   get(T, object, Obj),
         get(T, window, MonPict),
-        get(MonPict, inspector, @Ref, Monitor),
+        get(MonPict, inspector, Obj, Monitor),
         \+ send(T, connected, Monitor)
     ->  send(T, link, Monitor)
     ;   true
@@ -281,10 +291,6 @@ initialise(T, String:string) :->
 object(T, Object) :<-
     get(T, device, Dev),
     get(Dev, object, Object).
-
-reference(T, Ref) :<-
-    get(T, device, Dev),
-    get(Dev, object, @Ref).
 
 :- pce_end_class.
 
@@ -368,7 +374,7 @@ relink(AV) :->
             message(@arg1, relink))).
 
 
-link_to(AV, Dest:'name|int') :->
+link_to(AV, Dest:object) :->
     send(AV, for_all, @default,
          if(message(@arg1, has_send_method, link_to),
             message(@arg1, link_to, Dest))).
@@ -381,7 +387,7 @@ make_isp_attribute_value_sheet_handler(H) :-
     new(H, handler_group(popup_gesture(new(P, popup)),
                          click_gesture(left, '', single,
                                        message(@receiver, expose)),
-                         new(move_outline_gesture))),
+                         new(move_outline_gesture(left)))),
     new(IsObjectSheet, message(@arg1, instance_of, isp_object_sheet)),
     new(Obj, @arg1?object),
     send_list(P, append,
@@ -430,7 +436,12 @@ quit(AV) :->
 
 :- pce_begin_class(isp_object_sheet, isp_attribute_value_sheet).
 
-variable(object, any, none).
+%  The sheet must not keep the object it monitors alive, and a slot always
+%  creates a reference, so the association lives in a table that does not.
+%  It is removed deterministically: ->unlink when the sheet goes, and
+%  ->uninspect (driven by the class's freed_message) when the object goes.
+
+:- pce_global(@isp_sheet_objects, new(hash_table(@default, none))).
 
 initialise(OS, Object:'object|function') :->
     value_text(Object, Title),
@@ -440,12 +451,14 @@ initialise(OS, Object:'object|function') :->
     send(OS, display_slots).
 
 object(OS, Object:'object|function') :->
-    Object = @Reference,
-    send(OS, slot, object, Reference).
+    send(@isp_sheet_objects, append, OS, Object).
 
 object(OS, Object) :<-
-    get(OS, slot, object, Reference),
-    Object = @Reference.
+    get(@isp_sheet_objects, member, OS, Object).
+
+unlink(OS) :->
+    forget(@isp_sheet_objects, OS),
+    send(OS, send_super, unlink).
 
 update_flags(OS) :->
     get(OS, object, Object),
@@ -650,7 +663,7 @@ variable(inspected,             hash_table,     get).
 
 initialise(MP) :->
     send(MP, send_super, initialise, 'PCE Inspector', size(512, 512)),
-    send(MP, slot, inspected, new(hash_table)),
+    send(MP, slot, inspected, new(hash_table(@default, none))),
     send(MP, done_message, message(MP, quit)).
 
 
@@ -691,13 +704,12 @@ inspect(MP, Object:'object|function', Pos:[point]) :->
         ;   ThePos = Pos
         ),
         send(MP, display, OS, ThePos),
-        Object = @Reference,
         get(MP, inspected, Table),
-        send(Table, append, Reference, OS),
+        send(Table, append, Object, OS),
         send(OS, relink),
         send(MP, for_some, @default,
              if(message(@arg1, instance_of, isp_object_sheet),
-                message(@arg1, link_to, Reference))),
+                message(@arg1, link_to, Object))),
         prepare_class(Object)
     ).
 
@@ -726,16 +738,14 @@ check_not_self(_, _).
 
 inspector(MP, Object:'object|function', Monitor) :<-
     object(Object),
-    Object = @Reference,
     get(MP, inspected, Table),
-    get(Table, member, Reference, Monitor).
+    get(Table, member, Object, Monitor).
 
 
 uninspect(MP, Object:'object|function') :->
     get(MP, inspector, Object, Monitor),
-    Object = @Reference,
     get(MP, inspected, Table),
-    send(Table, delete, Reference),
+    send(Table, delete, Object),
     send(Object, '_inspect', @off),
     send(Monitor, free).
 
@@ -755,15 +765,24 @@ clear(MP) :->
 inspect_atom(MP, What:string) :->
     "Create a card, target is a string"::
     send(What, strip),
-    (   (   get(What, scan, '@%d', vector(Ref))
-        ;   get(What, scan, '@%s', vector(string(Ref)))
-        )
-    ->  (   object(@Ref)
-        ->  send(MP, inspect, @Ref)
-        ;   send(MP, report, error, 'No such object: %s', What)
-        )
-    ;   send(MP, report, error, 'Bad object reference syntax: %s', What)
+    get(What, value, Text),
+    (   typed_object(Text, Obj)
+    ->  send(MP, inspect, Obj)
+    ;   send(MP, report, error, 'No such object: %s', What)
     ).
+
+%!  typed_object(+Text, -Object) is semidet.
+%
+%   Object is the object the user named.  Accepts a named reference and a
+%   reference as printed, which read_term/2,3 resolves back to the object
+%   it denotes.
+
+typed_object(Text, Obj) :-
+    catch(term_string(Term, Text, [blob(resolve), variable_names([])]),
+          _, fail),
+    is_object_reference(Term),
+    object(Term),
+    Obj = Term.
 
                 /********************************
                 *          TRAP CHANGES         *

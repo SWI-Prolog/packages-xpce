@@ -78,9 +78,16 @@ browser(IB, B) :<-
     get(IB, member, browser, B).
 
 
+%  The browser watches every instance of a class, so it must not keep any
+%  of them alive.  A dict_item slot would create a reference, so the item to
+%  object association lives in a table that does not.  Entries are removed
+%  in ->freed, which the class's freed_message delivers while the object is
+%  still intact, and in ->detach.
+
+:- pce_global(@isp_instance_objects, new(hash_table(@default, none))).
+
 object(_IB, Di:dict_item, Obj) :<-
-    get(Di, object, Ref),
-    Obj = @Ref.
+    get(@isp_instance_objects, member, Di, Obj).
 
 
 detach(IB) :->
@@ -90,6 +97,8 @@ detach(IB) :->
     ;   send(IB, label, 'Instance Browser'),
         send(IB?class?created_messages, delete, IB?created_message),
         send(IB?class?freed_messages, delete, IB?created_message),
+        send(IB?browser, for_all,          % if/1: ->delete fails when the
+             if(message(@isp_instance_objects, delete, @arg1))),
         send(IB, slot, class, @nil),
         send(IB, slot, created_message, @nil),
         send(IB, slot, freed_messages, @nil)
@@ -113,16 +122,22 @@ class(IB, Class:class*) :->
 created(IB, Obj:object) :->
     "Add object to the browser"::
     send(Obj, '_inspect', @on),
-    Obj = @Ref,
-    atom_concat(@, Ref, Key),
-    send(IB?browser, append, dict_item(Key, @default, Ref)),
+    instance_key(Obj, Key),
+    send(IB?browser, append, new(Di, dict_item(Key))),
+    send(@isp_instance_objects, append, Di, Obj),
     send(IB?browser, normalise, Key).
 
 
 freed(IB, Obj:object) :->
     "Delete object from browser"::
-    Obj = @Ref,
-    atom_concat(@, Ref, Key),
+    instance_key(Obj, Key),
+    (   get(IB?browser, member, Key, Di)
+    ->  send(@isp_instance_objects, delete, Di)
+    ;   true
+    ),
     send(IB?browser, delete, Key).
+
+instance_key(Obj, Key) :-
+    format(atom(Key), '~w', [Obj]).     % @name or <pce>(Addr,Class)
 
 :- pce_end_class.
