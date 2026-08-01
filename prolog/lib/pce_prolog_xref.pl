@@ -50,25 +50,25 @@ Prolog cross referencer.
 
 %!  prolog:xref_source_identifier(+Object, -Ref)
 %
-%   The  cross-referencer  runs  faster  if   the  reference  is  an
-%   indexable term. Therefore we strip the XPCE @ from the object.
+%   An object reference is its own source identifier.  It is an opaque
+%   handle, so it indexes as well as an atom would, and unlike the
+%   integer it used to be reduced to it cannot go stale.
 
-prolog:xref_source_identifier(Object, Ref) :-
-    object(Object),
-    !,
-    Object = @Ref.
-prolog:xref_source_identifier(Ref, Ref) :-
-    integer(Ref),
+%   is_object_reference/1 rather than object/1: xref_clean/1 and friends
+%   re-canonicalise an identifier that is already canonical, and that has to
+%   keep working for a buffer that has since been freed.
+
+prolog:xref_source_identifier(Object, Object) :-
+    is_object_reference(Object),
     !.
+
 
 %!  prolog:xref_source_directory(+Source, -Dir)
 %
 %   Find the directory of a PceEmacs buffer to resolve relative paths.
 
 prolog:xref_source_directory(SourceId, Dir) :-
-    integer(SourceId),
-    Obj = @SourceId,
-    object(Obj),
+    xref_source_object(SourceId, Obj),
     catch(get(Obj?file, absolute_path, Path), _, fail),
     file_directory_name(Path, Dir).
 
@@ -77,11 +77,18 @@ prolog:xref_source_directory(SourceId, Dir) :-
 %   Open the PceEmacs as a Prolog stream.
 
 prolog:xref_open_source(SourceId, Stream) :-
-    integer(SourceId),
-    Obj = @SourceId,
-    object(Obj),
+    xref_source_object(SourceId, Obj),
     pce_open(Obj, read, Stream),
     (   catch(get(Obj?file, absolute_path, Path), _, fail)
     ->  set_stream(Stream, file_name(Path))
     ;   true
     ).
+
+%!  xref_source_object(+SourceId, -Object) is semidet.
+%
+%   Object is the XPCE object SourceId refers to.
+
+xref_source_object(SourceId, Object) :-
+    is_object_reference(SourceId),
+    object(SourceId),                   % fails on a freed object
+    Object = SourceId.

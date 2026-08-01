@@ -38,6 +38,7 @@
 :- use_module(library(pce)).
 :- use_module(library(dcg/basics)).
 :- use_module(library(broadcast)).
+:- autoload(library(prolog_xref), [xref_clean/1]).
 :- require([ between/3
            , default/3
            , ignore/1
@@ -123,6 +124,7 @@ unlink(B) :->
     ->  send(@emacs_base_names, delete, File?base_name, B)
     ;   true
     ),
+    ignore(xref_clean(B)),          % the xref data refers to us
     send(B, send_super, unlink).
 
 report(B,
