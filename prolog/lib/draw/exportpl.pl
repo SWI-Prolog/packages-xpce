@@ -200,6 +200,7 @@ object_to_term(Object, Term) :-
 
 object_to_term(Atomic, _, Atomic) :-
     atomic(Atomic),
+    \+ is_object_reference(Atomic),  % which is atomic as well
     !.
 object_to_term(Font, _, Alias) :-       % replace font by alias
     send(Font, instance_of, font),

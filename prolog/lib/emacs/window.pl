@@ -1690,7 +1690,7 @@ convert(_, Name:name, MM:emacs_mode_menu) :<-
 
 
 action_name(Name, Name) :-
-    atomic(Name),
+    atom(Name),                     % an object reference is atomic too
     !.
 action_name(MenuItem, Name) :-
     get(MenuItem?value?print_name, value, Name).

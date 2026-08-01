@@ -78,6 +78,7 @@ emit(Term, PB, Mode) :-
     !.
 emit([Text|T], PB, Mode) :-
     atomic(Text),
+    \+ is_object_reference(Text),   % an object reference is atomic too
     !,
     get(Mode, style, Style),
     (   get(Mode, space_mode, preserve)
@@ -93,9 +94,10 @@ emit([\H|T], PB, Mode) :-
     action(H, PB, Mode),
     !,
     emit(T, PB, Mode).
-emit([@Ref|T], PB, Mode) :-
-    !,
-    send(PB, append, @Ref),
+emit([Obj|T], PB, Mode) :-
+    is_object_reference(Obj),       % not @Ref: an anonymous reference is
+    !,                              % an opaque handle, not a term
+    send(PB, append, Obj),
     emit(T, PB, Mode).
 emit([H|T], PB, Mode) :-
     print_message(warning, doc(failed(emit(H)))),
@@ -132,7 +134,8 @@ action(pre(Text), PB, Mode) :-
 
 append_pre([], _, _).
 append_pre([H|T], PB, Mode) :-
-    (   atomic(H)
+    (   atomic(H),
+        \+ is_object_reference(H)   % as emit/3 above
     ->  append_pre_atom(H, PB, Mode)
     ;   emit([H], PB, Mode)
     ),

@@ -97,7 +97,8 @@ get_object(Obj, Sel, A1, A2, A3, A4, A5, Out) :-
     get_to_object(R, Out).
 
 get_to_object(Ref, Object) :-
-    (   atomic(Ref)
+    (   atomic(Ref),
+        \+ is_object_reference(Ref)  % which is atomic as well
     ->  Object = Ref
     ;   object(Ref, Object)
     ).

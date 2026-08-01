@@ -710,6 +710,7 @@ get_argument(Object, Name, Value) :-
 
 pce_to_prolog(Atomic, Atomic) :-
     atomic(Atomic),
+    \+ is_object_reference(Atomic),  % which is atomic as well
     !.
 pce_to_prolog(@Atom, @Atom) :-
     atom(Atom),

@@ -1041,7 +1041,8 @@ relink(P) :->
 value(P, Value:'any|function') :->
     "Associate value (using hyper)"::
     forall(get(P, find_hyper, msg_value, Hyper), send(Hyper, free)),
-    (   (   atomic(Value)           % int, atom, float
+    (   (   atomic(Value),          % int, atom, float; an object
+            \+ is_object_reference(Value)       % reference is atomic too
         ;   send(Value, '_instance_of', function)
         )
     ->  send(P, slot, value, Value)

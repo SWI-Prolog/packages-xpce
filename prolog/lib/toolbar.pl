@@ -157,8 +157,8 @@ client(TB, Client:object) :<-
     get(Dev, client, Client).
 
 make_message(Name, @default) :-
-    atomic(Name),
-    !.
+    atom(Name),                     % not atomic/1: an anonymous object
+    !.                              % reference is atomic as well
 make_message(Code, Code).
 
 
@@ -168,7 +168,7 @@ make_name(Action, @default, Name) :-
 make_name(_, Name, Name).
 
 make_name(Name, Name) :-
-    atomic(Name),
+    atom(Name),                     % as make_message/2 above
     !.
 make_name(Code, Name) :-
     send(Code, instance_of, message),
