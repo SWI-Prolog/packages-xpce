@@ -371,6 +371,7 @@ static void	changed_caret(RlcData b);
 static bool	rlc_open_pty_pair(RlcData b, int cols, int rows);
 static void	rlc_close_connection(RlcData b);
 static ssize_t	rlc_send(RlcData b, const char *buffer, size_t count);
+static bool	rlc_caret_to_click(RlcData b, int x, int y);
 static void	rlc_resize_pty(RlcData b, int cols, int rows);
 static Name	TCHAR2Name(const uchar_t *str);
 static StringObj TCHAR2String(const uchar_t *str);
@@ -621,9 +622,11 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
 	 notNil(ti->link_message) )
     { Name href = TCHAR2Name(lnk);
       clickedLinkTerminalImage(ti, href);
-    } else if ( rlc_has_selection(b) &&
-		isOn(getClassVariableValueObject(ti, NAME_autoCopy)) )
-      send(ti, NAME_copy, EAV);
+    } else if ( rlc_has_selection(b) )
+    { if ( isOn(getClassVariableValueObject(ti, NAME_autoCopy)) )
+	send(ti, NAME_copy, EAV);
+    } else				/* a click, not a drag */
+      rlc_caret_to_click(b, valInt(x), valInt(y));
     succeed;
   }
   if ( isAEvent(ev, NAME_msLeftDrag) )
@@ -1643,6 +1646,80 @@ rlc_translate_mouse(RlcData b, int x, int y, int *line, int *chr)
      * cell, never a combiner. */
     *chr = rlc_snap_start(tl, m);
   }
+}
+
+
+/* Move the client's caret to a clicked position.
+ *
+ * The line being edited belongs to the client, not to us, so we cannot
+ * put the caret anywhere: we can only ask, and the request every line
+ * editor understands is cursor-left and cursor-right.  Count the
+ * grapheme clusters between the caret and the click and send that
+ * many.  Only inside the logical line the caret is on -- the line
+ * being edited -- so a click anywhere else still just starts a
+ * selection.
+ */
+
+#define MAX_CLICK_MOVE 4096		/* don't flood the client */
+
+static int
+rlc_logical_start(RlcData b, int line)
+{ while ( line != b->first && b->lines[PrevLine(b, line)].softreturn )
+    line = PrevLine(b, line);
+
+  return line;
+}
+
+/* Grapheme clusters from (l1,c1) forward to (l2,c2).  The caller
+ * guarantees both are on the same logical line and (l1,c1) comes
+ * first.
+ */
+
+static int
+rlc_cluster_distance(RlcData b, int l1, int c1, int l2, int c2)
+{ int n = 0;
+
+  for(;;)
+  { RlcTextLine tl = &b->lines[l1];
+
+    if ( (l1 == l2 && c1 >= c2) || n >= MAX_CLICK_MOVE )
+      return n;
+
+    if ( c1 >= tl->size )		/* on to the next wrapped row */
+    { if ( l1 == b->last )
+	return n;
+      l1 = NextLine(b, l1);
+      c1 = 0;
+      continue;
+    }
+
+    c1 = rlc_cluster_next(tl, c1);
+    n++;
+  }
+}
+
+static bool
+rlc_caret_to_click(RlcData b, int x, int y)
+{ int line, chr, n, i;
+  const char *seq;
+
+  rlc_translate_mouse(b, x, y, &line, &chr);
+  if ( !rlc_between(b, b->first, b->last, line) ||
+       rlc_logical_start(b, line) != rlc_logical_start(b, b->caret_y) )
+    return false;
+
+  if ( rlc_sel_lt(b, line, chr, b->caret_y, b->caret_x) )
+  { n = rlc_cluster_distance(b, line, chr, b->caret_y, b->caret_x);
+    seq = b->app_escape ? S_ESC"OD" : S_ESC"[D";
+  } else
+  { n = rlc_cluster_distance(b, b->caret_y, b->caret_x, line, chr);
+    seq = b->app_escape ? S_ESC"OC" : S_ESC"[C";
+  }
+
+  for(i=0; i<n; i++)
+    rlc_send(b, seq, strlen(seq));
+
+  return true;
 }
 
 
