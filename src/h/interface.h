@@ -305,6 +305,7 @@ __pce_export void pceMTdetach(void);
 __pce_export void pceMTLock(void);
 __pce_export void pceMTUnlock(void);
 __pce_export bool pceMTTryLock(void);
+__pce_export bool pceMTOwnsLock(void);
 __pce_export int  pceMTUnlockAll(void);
 __pce_export void pceMTRelock(int count);
 __pce_export bool setPceThread(const char *app_name);
@@ -424,6 +425,14 @@ __pce_export int	pceExistsReference(uintptr_t ref);
 __pce_export char *	pcePPReference(PceObject ref);
 __pce_export int	pceExistsAssoc(PceName assoc);
 __pce_export PceObject  pceObjectFromName(PceName assoc);
+
+					/* references held by the host */
+__pce_export void	pceAddHostReference(PceObject);
+__pce_export void	pceDelHostReferenceDelayed(PceObject);
+__pce_export void	pceDrainHostReferences(void);
+__pce_export int	pceExistsObject(PceObject);
+__pce_export const char *pceClassNameOfObject(PceObject);
+__pce_export size_t	pceSizeOfObject(PceObject);
 
 __pce_export int	pceInstanceOf(PceObject obj, PceObject class);
 

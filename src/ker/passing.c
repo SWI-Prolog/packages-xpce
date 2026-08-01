@@ -142,6 +142,16 @@ pceMTUnlock(void)
 { UNLOCK();
 }
 
+/* True if this thread holds the XPCE lock.  Note that a non-threaded XPCE
+   has no owner, so we must claim ownership: there is no other thread that
+   could hold it.
+*/
+
+bool
+pceMTOwnsLock(void)
+{ return !XPCE_mt || mutex.owner == SYS_THREAD_SELF();
+}
+
 bool
 pceMTTryLock(void)
 { if ( XPCE_mt )

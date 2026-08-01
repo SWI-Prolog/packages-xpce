@@ -262,6 +262,151 @@ _markAnswerStack(AnswerMark *mark)
 }
 
 
+		 /*******************************
+		 *       HOST REFERENCES	*
+		 *******************************/
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+A host reference is an ordinary object  reference held on behalf of the
+host language.  It  makes  the  object  non-virgin,  so  it survives the
+rewind of the answer stack and every  freeableObj(), and it makes
+noRefsObj() false, so ->free() only  marks   the  object F_FREED and
+defers the unalloc: the header stays valid   as long as the host points
+at it and a host reference can therefore never dangle.
+
+Dropping the reference is the hard part.   The host reclaims its handles
+in a garbage collector that runs in  its   own  thread at an arbitrary
+moment.  Taking the XPCE lock there deadlocks against a thread that
+holds it and is writing to a stream; and if the collector happens to run
+inline (single threaded host, or an explicit collect from a callback) we
+may already be arbitrarily deep inside XPCE.  So the host only pushes the
+object onto a lock-free list and  pceDrainHostReferences() empties it at
+a point where XPCE is known to be idle.  library(janus) solves the same
+problem the same way for the Python GIL.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+typedef struct pce_delayed
+{ Any			object;
+  struct pce_delayed   *next;
+} pce_delayed;
+
+static pce_delayed *delayed_host_refs;
+
+void
+pceAddHostReference(PceObject obj)
+{ if ( isObject(obj) )
+    addRefObj(obj);
+}
+
+
+void
+pceDelHostReferenceDelayed(PceObject obj)
+{ pce_delayed *d;
+
+  if ( !isObject(obj) )
+    return;
+
+  if ( (d=malloc(sizeof(*d))) )		/* if not, we leak the object */
+  { pce_delayed *old;
+
+    d->object = obj;
+    do
+    { old     = delayed_host_refs;
+      d->next = old;
+    } while( !__sync_bool_compare_and_swap(&delayed_host_refs, old, d) );
+  }
+}
+
+
+void
+pceDrainHostReferences(void)
+{ static bool draining = false;
+  pce_delayed *d, *n;
+
+  if ( draining ||		/* freeObject() ->unlink can re-enter us */
+       getRedrawing() ||	/* ->unlink on a graphical mid-redraw crashes */
+       CurrentGoal )		/* only at the host boundary; see below */
+    return;
+
+  if ( !(d=delayed_host_refs) ||
+       !__sync_bool_compare_and_swap(&delayed_host_refs, d, NULL) )
+    return;
+
+  draining = true;
+  for(; d; d=n)
+  { Any o = d->object;
+
+    n = d->next;
+    free(d);
+
+    assert(refsObject(o) > 0);
+    delRefObj(o);
+    if ( isFreedObj(o) )		/* macros expand to if-statements */
+    { checkDeferredUnalloc(o);
+    } else
+    { freeableObj(o);
+    }
+  }
+  draining = false;
+}
+
+/* CurrentGoal: a goal holds no code reference on its receiver or on its
+   arguments, so running freeObject() from a nested invocation could free
+   an object the C stack above us is still holding in a local.  Draining
+   only when no goal is in progress removes that whole class of problem.
+*/
+
+
+int
+pceExistsObject(PceObject obj)
+{ if ( !isProperObject(obj) || isFreedObj(obj) )
+    return PCE_FAIL;
+
+  return PCE_SUCCEED;
+}
+
+
+const char *
+pceClassNameOfObject(PceObject obj)
+{ if ( isObject(obj) )
+  { Class class = classOfObject(obj);
+
+    if ( class && isName(class->name) && isstrA(&class->name->data) )
+      return strName(class->name);
+  }
+
+  return NULL;
+}
+
+
+/* How much this object keeps alive.  XPCE has no general notion of the
+   memory an object is responsible for, so this is an approximation: the
+   instance, plus the text of a char_array, which is what actually gets
+   large.  It is used by the host to decide when reclaiming is worth a
+   collection, where an approximation is good enough.
+*/
+
+size_t
+pceSizeOfObject(PceObject obj)
+{ if ( isObject(obj) )
+  { Class class = classOfObject(obj);
+    size_t size = ( class && isInteger(class->instance_size)
+		        ? (size_t)valInt(class->instance_size)
+		        : sizeof(void*) );
+
+    if ( instanceOfObject(obj, ClassCharArray) )
+    { CharArray ca = obj;
+
+      size += str_datasize(&ca->data);
+    }
+
+    return size;
+  }
+
+  return sizeof(void*);
+}
+
+
 		/********************************
 		*           TYPE TEST		*
 		********************************/
