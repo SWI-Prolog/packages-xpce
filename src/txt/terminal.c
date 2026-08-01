@@ -3115,6 +3115,74 @@ move_links_soft(RlcData b, RlcTextLine from, RlcTextLine to)
 }
 
 
+/* Rewrapping moves text between the lines of the ring, so afterwards a
+ * line index names different text.  Describe a position as (logical
+ * lines back from the last, cell offset from the start of that logical
+ * line) and put it back once the ring has been rebuilt.  A logical line
+ * is a hard line plus its soft continuations -- exactly what rewrapping
+ * preserves.
+ */
+
+typedef struct
+{ int	lines_back;			/* logical lines before the last */
+  int	offset;				/* cells from the logical start */
+} rlc_textpos;
+
+static rlc_textpos
+rlc_save_textpos(RlcData b, int line, int chr)
+{ rlc_textpos pos = { -1, chr };
+  int i;
+
+  if ( !rlc_between(b, b->first, b->last, line) )
+    return pos;				/* stale index; leave it alone */
+
+  for(i=line; i != b->first && b->lines[PrevLine(b, i)].softreturn; )
+  { i = PrevLine(b, i);
+    pos.offset += b->lines[i].size;
+  }
+
+  pos.lines_back = 0;
+  for(; i != b->last; i = NextLine(b, i))
+  { if ( !b->lines[i].softreturn )
+      pos.lines_back++;
+  }
+
+  return pos;
+}
+
+static void
+rlc_restore_textpos(RlcData b, rlc_textpos pos, int *line, int *chr)
+{ int i = b->last;
+  int n, off;
+
+  if ( pos.lines_back < 0 )
+    return;
+
+  while ( i != b->first && b->lines[PrevLine(b, i)].softreturn )
+    i = PrevLine(b, i);
+  for(n=pos.lines_back; n > 0 && i != b->first; n--)
+  { i = PrevLine(b, i);			/* end of the logical line above */
+    while ( i != b->first && b->lines[PrevLine(b, i)].softreturn )
+      i = PrevLine(b, i);
+  }
+
+  /* Walk the continuations.  A position at the end of a full line stays
+   * there rather than moving to the next: rlc_put() leaves the caret on
+   * the right margin and wraps only when the next character arrives.
+   */
+  for(off=pos.offset;
+      off > b->lines[i].size && b->lines[i].softreturn && i != b->last;
+      i = NextLine(b, i))
+    off -= b->lines[i].size;
+
+  if ( off > b->lines[i].size )
+    off = b->lines[i].size;
+
+  *line = i;
+  *chr  = off;
+}
+
+
 static void
 rlc_resize(RlcData b, int w, int h)
 { int i;
@@ -3125,6 +3193,14 @@ rlc_resize(RlcData b, int w, int h)
   DEBUG(NAME_term,
 	Cprintf("Resizing %dx%d --> %dx%d\n",
 		b->width, b->window_size, w, h));
+
+  rlc_textpos caret     = rlc_save_textpos(b, b->caret_y, b->caret_x);
+  rlc_textpos sel_org   = rlc_save_textpos(b, b->sel_org_line,
+					      b->sel_org_char);
+  rlc_textpos sel_start = rlc_save_textpos(b, b->sel_start_line,
+					      b->sel_start_char);
+  rlc_textpos sel_end   = rlc_save_textpos(b, b->sel_end_line,
+					      b->sel_end_char);
 
   b->window_size = h;
   b->width = w;
@@ -3212,6 +3288,13 @@ rlc_resize(RlcData b, int w, int h)
     b->window_start = b->first;
   else
     b->window_start = rlc_add_lines(b, b->last, -(h-1));
+
+  /* Follow the text: the caret and the selection were indices into the
+   * ring we just rebuilt. */
+  rlc_restore_textpos(b, caret,     &b->caret_y,       &b->caret_x);
+  rlc_restore_textpos(b, sel_org,   &b->sel_org_line,  &b->sel_org_char);
+  rlc_restore_textpos(b, sel_start, &b->sel_start_line,&b->sel_start_char);
+  rlc_restore_textpos(b, sel_end,   &b->sel_end_line,  &b->sel_end_char);
 
   /* Clamp caret_x: typing at 80 cols can leave caret_x up to 80 in
    * the pending-wrap position; after shrinking to 25 cols the cap
