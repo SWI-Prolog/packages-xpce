@@ -91,6 +91,7 @@ test_terminal :-
                 terminal_non_bmp,
                 terminal_mixed,
                 terminal_background,
+                terminal_mouse,
                 terminal_wrap,
                 terminal_resize
               ]).
@@ -325,6 +326,46 @@ key_bytes(cursor_down,    [0'\e, 0'[, 0'B]).
 key_bytes(cursor_right,   [0'\e, 0'[, 0'C]).
 key_bytes(cursor_left,    [0'\e, 0'[, 0'D]).
 key_bytes(delete,         [0'\e, 0'[, 0'3, 0'~]).
+
+
+		 /*******************************
+		 *         MOUSE HELPERS        *
+		 *******************************/
+
+%!  cell_pixel(+Terminal, +Col, +Row, -X, -Y) is det.
+%
+%   Pixel in the middle of a character cell.  The terminal keeps one
+%   cell of margin on the left, so column Col starts at (Col+1)*CW.
+
+cell_pixel(T, Col, Row, X, Y) :-
+    get(T, width, W),
+    get(T, height, H),
+    CW is W/82,                         % 80 columns + 2 of margin
+    CH is H/25,
+    X is integer(CW*(Col+1) + CW/2),
+    Y is integer(CH*Row + CH/2).
+
+%!  click(+Terminal, +Col, +Row) is det.
+%!  drag(+Terminal, +Col1, +Row1, +Col2, +Row2) is det.
+%
+%   Synthesise a left-button click, and a press-move-release.
+
+click(T, Col, Row) :-
+    cell_pixel(T, Col, Row, X, Y),
+    send(T, event, new(_, event(ms_left_down, T, X, Y, 1, 0))),
+    drive(0.1),
+    send(T, event, new(_, event(ms_left_up, T, X, Y, 1, 0))),
+    drive(0.3).
+
+drag(T, Col1, Row1, Col2, Row2) :-
+    cell_pixel(T, Col1, Row1, X1, Y1),
+    cell_pixel(T, Col2, Row2, X2, Y2),
+    send(T, event, new(_, event(ms_left_down, T, X1, Y1, 1, 0))),
+    drive(0.1),
+    send(T, event, new(_, event(ms_left_drag, T, X2, Y2, 1, 0))),
+    drive(0.1),
+    send(T, event, new(_, event(ms_left_up, T, X2, Y2, 1, 0))),
+    drive(0.3).
 
 
 		 /*******************************
@@ -1003,6 +1044,83 @@ test(thread_output_keeps_input_line, [setup(test_begin(T))]) :-
     assert_cursor(T, ExpCol, InputRow).
 
 :- end_tests(terminal_background).
+
+
+		 /*******************************
+		 *        TEST: MOUSE           *
+		 *******************************/
+
+:- begin_tests(terminal_mouse,
+               [ setup(setup_unit),
+                 cleanup(cleanup_unit)
+               ]).
+
+test(click_moves_the_caret, [setup(test_begin(T))]) :-
+    %  A click in the line being edited puts the caret there.  The
+    %  terminal cannot place the caret itself -- the line belongs to
+    %  the client -- so it asks, by sending as many cursor keys as
+    %  there are grapheme clusters in between.  Assert the caret moves
+    %  by the distance clicked rather than to an absolute column: the
+    %  pixel-to-cell mapping is the terminal's business, and a
+    %  synthesised event does not carry the offset a real one has.
+    type(T, 'hello world, this is the input line'),
+    drive(0.3),
+    cursor(T, End, R),
+    click(T, 12, R),
+    cursor(T, C1, R1),
+    assertion(R1 =:= R),
+    assertion(C1 < End),
+    click(T, 20, R),                    % eight cells further right
+    cursor(T, C2, R2),
+    assertion(R2 =:= R),
+    (   C2 =:= C1+8
+    ->  true
+    ;   format(user_error,
+               "caret went from ~w to ~w, expected ~w~n", [C1, C2, C1+8]),
+        assertion(C2 =:= C1+8)
+    ),
+    click(T, 20, R),                    % clicking again changes nothing
+    assert_cursor(T, C2, R).
+
+test(click_outside_the_input_line,
+     [ setup(start_terminal(Frame, T)),        % needs rows above the input
+       cleanup(stop_terminal(Frame))
+     ]) :-
+    %  Only the line being edited follows the mouse; a click anywhere
+    %  else still just starts a selection.
+    type(T, 'hello'),
+    drive(0.3),
+    cursor(T, C, R),
+    Above is R-2,
+    assertion(Above >= 0),
+    click(T, 5, Above),
+    assert_cursor(T, C, R).
+
+test(drag_selects_and_leaves_the_caret, [setup(test_begin(T))]) :-
+    type(T, 'hello world, this is the input line'),
+    drive(0.3),
+    cursor(T, C, R),
+    drag(T, 10, R, 20, R),
+    assert_cursor(T, C, R),
+    assertion(send(T, has_selection)).
+
+test(click_on_a_wrapped_row, [setup(test_begin(T))]) :-
+    %  The input spans two rows; a click on the first row moves the
+    %  caret back into it.
+    filler(120, Xs),
+    type(T, Xs),
+    drive(0.4),
+    cursor(T, _, LastRow),
+    FirstRow is LastRow-1,
+    click(T, 20, FirstRow),
+    cursor(T, C, R),
+    assertion(R =:= FirstRow),
+    click(T, 28, FirstRow),
+    cursor(T, C2, R2),
+    assertion(R2 =:= FirstRow),
+    assertion(C2 =:= C+8).
+
+:- end_tests(terminal_mouse).
 
 
 		 /*******************************
