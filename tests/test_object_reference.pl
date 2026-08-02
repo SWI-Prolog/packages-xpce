@@ -77,6 +77,24 @@ reclaim :-
 written(Term, Atom) :-
     format(atom(Atom), '~q', [Term]).
 
+%  A class whose get method is implemented in Prolog, to test how the
+%  object it answers reaches the caller.
+
+:- pce_begin_class(tor_answer, object,
+                   "Answer objects from a Prolog implemented method").
+
+fresh(_TA, S:size) :<-
+    "Answer a newly created object"::
+    new(S, size(3,4)).
+
+named(_TA, S:size) :<-
+    "Answer a named object"::
+    S = @tor_answer_size.
+
+:- pce_end_class(tor_answer).
+
+:- pce_global(@tor_answer_size, new(size(5,6))).
+
 
 :- begin_tests(reference_representation).
 
@@ -211,6 +229,26 @@ test(a_blob_is_a_legal_argument,
     get(C, head, H),
     assertion(H == P),
     assertion(object(H)).
+
+%  get(Obj, Sel, Term) decomposes the answer into its term description.
+%  This has to work for a method implemented in Prolog as well, where the
+%  answer travels back as a blob rather than as @Reference.
+
+test(prolog_answer_as_term,
+     [setup(new(TA, tor_answer)), cleanup(free(TA))]) :-
+    get(TA, fresh, size(W, H)),
+    assertion(W-H == 3-4).
+
+test(prolog_answer_as_reference,
+     [setup(new(TA, tor_answer)), cleanup(free(TA))]) :-
+    get(TA, fresh, S),
+    assertion(is_object_reference(S)),
+    assertion(send(S, instance_of, size)).
+
+test(prolog_named_answer_as_term,
+     [setup(new(TA, tor_answer)), cleanup(free(TA))]) :-
+    get(TA, named, size(W, H)),
+    assertion(W-H == 5-6).
 
 :- end_tests(reference_conversion).
 
