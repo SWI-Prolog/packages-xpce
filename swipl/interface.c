@@ -2312,14 +2312,26 @@ invoke(term_t rec, term_t cl, term_t msg, term_t ret)
 				     PREDICATE_get_implementation, av);
 	    pceMTRelock(locks);
 	    if ( rval )
-	    { if ( IsFunctor(av+3, FUNCTOR_ref1) )
-	      { if ( !get_object_from_refterm(av+3, &goal.rval) )
+	    { PceObject obj = NULL;
+
+	      if ( is_pce_blob(av+3, &obj) )	/* <pce>(Addr,Class) */
+	      { if ( !get_object_from_blob(av+3, &obj) )
 		{ rval = false;
 		  goto out;
 		}
+	      } else if ( IsFunctor(av+3, FUNCTOR_ref1) )
+	      { if ( !get_object_from_refterm(av+3, &obj) )
+		{ rval = false;
+		  goto out;
+		}
+	      }
 
+	      if ( obj )
+	      { goal.rval = obj;
+
+					/* get(R, S, size(W,H)) */
 		if ( !PL_unify(ret, av+3) )
-		  rval = unifyObject(ret, goal.rval, FALSE);
+		  rval = unifyObject(ret, obj, FALSE);
 	      } else
 		rval = PL_unify(ret, av+3);
 	    }
