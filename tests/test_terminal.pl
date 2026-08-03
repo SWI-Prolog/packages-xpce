@@ -105,23 +105,6 @@ setup_headless :-
 
 :- initialization(setup_headless, now).
 
-%   Stopping a terminal closes the master end of its pty, and a read
-%   on the slave then fails with EIO.  The terminal's Prolog thread is
-%   sitting in exactly such a read, and because that stream carries
-%   eof_action(reset) its top level retries rather than stops, so it
-%   reports the error until the thread is taken down.  Nothing in the
-%   suite ever reads user_input, so the message can only come from a
-%   terminal being torn down: drop it, or --on-error=status fails a
-%   run in which every test passed.
-%
-%   This costs the suite nothing, but the spin itself is a real wart
-%   in epilog's shutdown, and is why a run ends reporting console
-%   threads that "wouldn't die".
-
-:- multifile user:message_hook/3.
-
-user:message_hook(error(io_error(read, user_input), _), error, _).
-
 :- use_module(library(plunit)).
 :- use_module(library(pce)).
 :- use_module(library(epilog)).
@@ -574,7 +557,8 @@ child_started(T, ParentRow) :-
 
 stop_child(T) :-
     child_done_marker(Marker),
-    catch(( term_send(T, '\r'),
+    catch(( key(T, ctrl_e),           % whatever the test left on the
+            key(T, ctrl_u),           % line must not swallow the halt
             term_send(T, 'halt.\n'),
             wait_until(marker_on_screen(T, Marker), 15)
           ), _, fail).
