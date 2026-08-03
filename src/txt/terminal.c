@@ -3679,6 +3679,34 @@ rlc_caret_forward(RlcData b, int arg)
 }
 
 
+/* Cursor motion stops at the edge of the line.
+ *
+ * Only writing a character wraps: ECMA-48 has CUF not pass the last
+ * column, and a terminal without `bw' does not take a backspace in
+ * column 0 to the line above.  rlc_caret_forward() above moves over
+ * *text*, which does wrap, and rlc_goto_mark() replays text with it.
+ *
+ * Wrapping on a cursor motion also marked the row it left as
+ * soft-wrapped, so a later rewrap read two rows as one line and the
+ * screen filled with duplicated text.
+ */
+
+static void
+rlc_cursor_forward(RlcData b, int arg)
+{ while(arg-- > 0)
+  { RlcTextLine tl = &b->lines[b->caret_y];
+    int cur_vcol = rlc_cell_to_vcol(tl, b->caret_x);
+    int new_vcol = cur_vcol + 1;
+
+    if ( new_vcol >= b->width )
+      break;				/* at the right edge; stay there */
+    b->caret_x = rlc_vcol_to_cell(tl, new_vcol);
+  }
+
+  b->changed |= CHG_CARET;
+}
+
+
 static void
 rlc_caret_backward(RlcData b, int arg)
 { tlog("rlc_caret_backward(arg=%d) entry caret_x=%d caret_y=%d\n",
@@ -3688,12 +3716,8 @@ rlc_caret_backward(RlcData b, int arg)
   { RlcTextLine tl = &b->lines[b->caret_y];
     int cur_vcol = rlc_cell_to_vcol(tl, b->caret_x);
     if ( cur_vcol == 0 )
-    { rlc_caret_up(b, 1);
-      tl = &b->lines[b->caret_y];
-      b->caret_x = rlc_vcol_to_cell(tl, b->width - 1);
-    } else
-    { b->caret_x = rlc_vcol_to_cell(tl, cur_vcol - 1);
-    }
+      break;				/* at the left edge; stay there */
+    b->caret_x = rlc_vcol_to_cell(tl, cur_vcol - 1);
   }
 
   b->changed |= CHG_CARET;
@@ -3715,7 +3739,11 @@ rlc_tab(RlcData b)
 { RlcTextLine tl = &b->lines[b->caret_y];
 
   do
-  { rlc_caret_forward(b, 1);
+  { int was = b->caret_x;
+
+    rlc_cursor_forward(b, 1);
+    if ( b->caret_x == was )		/* at the right edge */
+      break;
   } while( (b->caret_x % 8) != 0 );
 
   if ( tl->size < b->caret_x )
@@ -4937,7 +4965,7 @@ rlc_putansi(RlcData b, int chr)
 	  break;
 	case 'C':
 	  rlc_need_arg(b, 1, 1);
-	  CMD(rlc_caret_forward(b, b->argv[0]));
+	  CMD(rlc_cursor_forward(b, b->argv[0]));
 	  break;
 	case 'D':
 	  rlc_need_arg(b, 1, 1);
