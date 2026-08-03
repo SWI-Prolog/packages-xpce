@@ -132,6 +132,7 @@ test_terminal(Backend) :-
     setup_call_cleanup(
         nb_setval(terminal_backend, Backend),
         run_tests([ terminal_basic,
+                    terminal_screen,
                     terminal_nfd,
                     terminal_regression,
                     terminal_wide,
@@ -234,6 +235,16 @@ term_send(terminal(_, console), Text) :-
     win_console_send(Text).
 term_send(terminal(_, xpce(_, TI)), Text) :-
     send(TI, send, Text).
+
+%!  term_output(+T, +Text) is det.
+%
+%   Write Text to the screen as a program running on the terminal
+%   would, escape sequences and all.  Unlike term_send/2 this does not
+%   go past the line editor: it tests what the screen makes of a
+%   sequence, not what libedit does with it.
+
+term_output(terminal(_, xpce(_, TI)), Text) :-
+    send(TI, insert, Text).
 
 %!  term_cursor(+T, -Col, -Row) is det.
 %
@@ -380,6 +391,9 @@ term_has_selection(terminal(_, xpce(_, TI))) :-
 %                     past the last, rather than on it
 %       wcwidth_font  - the line editor and the screen agree on column
 %                     widths because both ask the terminal's font
+%       program_output
+%                   - term_output/2 works, i.e. we can write to the
+%                     screen without going through the line editor
 
 term_capability(terminal(Backend, _), Cap) :-
     backend_capability(Backend, Cap).
@@ -409,11 +423,16 @@ backend_capability(epilog,   combining).
 backend_capability(epilog,   wcwidth_font).
 backend_capability(epilog,   non_bmp).
 backend_capability(epilog,   margin_past_last_column).
+backend_capability(epilog,   program_output).
 backend_capability(child(_), mouse).
 backend_capability(child(_), selection).
 backend_capability(child(_), combining).
 backend_capability(child(_), non_bmp).
 backend_capability(child(_), margin_past_last_column).
+%  `program_output' is epilog-only although the screen is the same
+%  object under a child: there the child owns the screen, so writing
+%  behind its back races with its own redisplay.
+%
 %  The console has no mouse or selection we can drive, and a cell holds
 %  one UTF-16 unit, so a base and its combining marks cannot both be
 %  there to read back.  Nothing about `combining' is skipped because it
@@ -1287,6 +1306,112 @@ test(kill_to_start, [setup(test_begin(T))]) :-
     assert_input(T, R, bar).
 
 :- end_tests(terminal_basic).
+
+
+		 /*******************************
+		 *      TEST: SCREEN EDITS      *
+		 *******************************/
+
+%   Escape sequences that rearrange whole lines: IL (`ESC [ Ps L'),
+%   DL (`ESC [ Ps M') and the reverse index (`ESC M') they share their
+%   implementation with.  These write to the screen rather than to the
+%   line editor, so they say what the terminal makes of the sequence.
+
+:- begin_tests(terminal_screen,
+               [ condition(needs([program_output])),
+                 setup(setup_unit),
+                 cleanup(cleanup_unit)
+               ]).
+
+%!  paint(+T, +Lines) is det.
+%
+%   Clear the screen and write Lines to it, one per row from the top.
+%   The screen does not turn a newline into a carriage return, so the
+%   lines carry their own.
+
+paint(T, Lines) :-
+    out(T, '\e[2J\e[H'),
+    forall(member(Line, Lines),
+           out(T, [Line, '\r\n'])).
+
+out(T, Parts) :-
+    is_list(Parts),
+    !,
+    atomic_list_concat(Parts, Text),
+    out(T, Text).
+out(T, Text) :-
+    term_output(T, Text),
+    drive(0.05).
+
+%!  assert_rows(+T, +Expected) is det.
+%
+%   Expected holds the content of the rows from the top of the screen.
+
+assert_rows(T, Expected) :-
+    length(Expected, Len),
+    rows_of(T, 0, Len, Rows),
+    (   Rows == Expected
+    ->  true
+    ;   format(user_error, "rows ~q, expected ~q~n", [Rows, Expected]),
+        assertion(Rows == Expected)
+    ).
+
+%!  numbered_lines(+From, +To, -Lines) is det.
+
+numbered_lines(From, To, Lines) :-
+    findall(Line,
+            ( between(From, To, N),
+              format(atom(Line), 'l~w', [N])
+            ), Lines).
+
+nine_lines(T) :-
+    numbered_lines(1, 9, Lines),
+    paint(T, Lines).
+
+test(delete_lines, [setup(current_test_terminal(T))]) :-
+    nine_lines(T),
+    out(T, '\e[3;1H\e[2M'),
+    assert_rows(T, [l1,l2,l5,l6,l7,l8,l9,'','']),
+    assert_cursor(T, 0, 2).
+
+test(delete_lines_to_bottom, [setup(current_test_terminal(T))]) :-
+    %  More lines than the screen holds: everything from the caret
+    %  down goes, and the caret's own row is left empty.
+    nine_lines(T),
+    out(T, '\e[5;1H\e[99M'),
+    assert_rows(T, [l1,l2,l3,l4,'','','','','']).
+
+test(insert_lines, [setup(current_test_terminal(T))]) :-
+    nine_lines(T),
+    out(T, '\e[2;1H\e[3L'),
+    assert_rows(T, [l1,'','','',l2,l3,l4,l5,l6,l7,l8,l9,'']),
+    assert_cursor(T, 0, 1).
+
+test(insert_lines_pushes_off_the_screen,
+     [setup(current_test_terminal(T))]) :-
+    %  A full screen has no room below, so what is pushed past the
+    %  last row is lost rather than added to the scroll back.  Writing
+    %  Rows lines scrolls the screen by the caret's own line, leaving
+    %  l2 on the top row and the last row empty.
+    term_rows(T, Rows),
+    numbered_lines(1, Rows, Lines),
+    paint(T, Lines),
+    Last is Rows-1,
+    numbered_lines(2, Rows, Painted),
+    append(Painted, [''], Before),
+    assert_rows(T, Before),
+    out(T, '\e[1;1H\e[2L'),
+    numbered_lines(2, Last, Kept),     % l<Rows> and the empty row are gone
+    assert_rows(T, ['',''|Kept]).
+
+test(reverse_index, [setup(current_test_terminal(T))]) :-
+    %  ESC M on the top row inserts a line there, the same operation
+    %  IL performs.
+    paint(T, [l1,l2,l3]),
+    out(T, '\e[1;1H\eM'),
+    assert_rows(T, ['',l1,l2,l3,'']).
+
+:- end_tests(terminal_screen).
 
 
 		 /*******************************

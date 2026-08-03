@@ -3564,6 +3564,93 @@ rlc_add_lines(RlcData b, int here, int add)
 		 *    ANSI SEQUENCE HANDLING	*
 		 *******************************/
 
+/** Last line of the scrolling region.
+ *
+ * We do not implement DECSTBM (see `CSI r'), so the region is the
+ * window.  Lines below `b->last' do not exist yet: when the window is
+ * not filled, `grow' asks for up to that many new lines at the end so
+ * content scrolled down has somewhere to go.  The result is the last
+ * line that may be written, which is the last line of the window if the
+ * window is full and `b->last' otherwise.
+ */
+
+static int
+rlc_screen_bottom(RlcData b, int grow)
+{ int rows = rlc_count_lines(b, b->window_start, b->last)+1;
+
+  for(int room = b->window_size - rows; grow > 0 && room > 0; grow--, room--)
+  { rlc_add_line(b);
+    rows++;
+  }
+
+  if ( rows >= b->window_size )
+    return rlc_add_lines(b, b->window_start, b->window_size-1);
+
+  return b->last;
+}
+
+
+/** Number of lines from `line' to `bottom', or 0 if `line' is off screen.
+ */
+
+static int
+rlc_region_size(RlcData b, int line, int bottom)
+{ if ( rlc_count_lines(b, b->window_start, line) >= b->window_size )
+    return 0;				/* not in the window */
+  int rows = rlc_count_lines(b, line, bottom)+1;
+
+  return rows > b->window_size ? 0 : rows;	/* past the bottom */
+}
+
+
+/** Scroll the part of the screen from `line' to the bottom of the
+ * scrolling region.
+ *
+ * If `shift' is positive, insert that many empty lines at `line',
+ * moving the content down and discarding what is pushed past the
+ * bottom (ANSI IL).  If it is negative, delete that many lines at
+ * `line', moving the content below up and leaving empty lines at the
+ * bottom (ANSI DL).  Both are the same walk over the region, run from
+ * opposite ends: copying towards the end content moves to means each
+ * line is read before it is overwritten.
+ */
+
+static void
+rlc_scroll_region(RlcData b, int line, int shift)
+{ int bottom = rlc_screen_bottom(b, shift);
+  int rows   = rlc_region_size(b, line, bottom);
+  int count  = shift > 0 ? shift : -shift;
+
+  if ( rows == 0 )
+    return;
+  if ( count > rows )
+    count = rows;
+  int move = rows - count;		/* lines that survive */
+  int from = shift > 0 ? bottom : line;	/* end we copy towards */
+  int step = shift > 0 ? -1 : 1;
+  int off  = shift > 0 ? -count : count;	/* destination to source */
+
+  for(int i=0; i<count; i++)		/* lines that leave the region */
+    rlc_free_line(b, rlc_add_lines(b, from, i*step));
+  for(int i=0; i<move; i++)
+  { int dst = rlc_add_lines(b, from, i*step);
+    int src = rlc_add_lines(b, dst, off);
+
+    b->lines[dst] = b->lines[src];
+    b->lines[dst].line_no = dst;
+    b->lines[dst].changed |= CHG_CHANGED;
+  }
+  for(int i=0; i<count; i++)		/* the new empty lines */
+  { int l = rlc_add_lines(b, from, (move+i)*step);
+
+    rlc_reinit_line(b, l);
+    b->lines[l].changed |= CHG_CHANGED;
+  }
+
+  b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
+}
+
+
 static void
 rlc_need_arg(RlcData b, int arg, int def)
 { if ( b->argc < arg )
@@ -3589,27 +3676,7 @@ rlc_caret_up(RlcData b, int arg)
 static void
 rlc_reverse_index(RlcData b)
 { if ( b->caret_y == b->window_start )
-  { int lines = rlc_count_lines(b, b->window_start, b->last)+1;
-    int bottom;
-    if ( lines > b->window_size )
-    { bottom = rlc_add_lines(b, b->window_start, b->window_size-1);
-    } else
-    { bottom = NextLine(b, b->last);
-      b->last = bottom;
-    }
-
-    rlc_free_line(b, bottom);
-    while(bottom != b->window_start)
-    { int before = PrevLine(b, bottom);
-      b->lines[bottom] = b->lines[before];
-      b->lines[bottom].changed |= CHG_CHANGED;
-      b->lines[bottom].line_no = bottom;
-      bottom = before;
-    }
-    rlc_reinit_line(b, bottom);
-    b->lines[bottom].changed |= CHG_CHANGED;
-
-    b->changed |= CHG_CARET|CHG_CLEAR|CHG_CHANGED;
+  { rlc_scroll_region(b, b->window_start, 1);
   } else
   { b->caret_y = PrevLine(b, b->caret_y);
     b->changed |= CHG_CARET;
@@ -4274,30 +4341,7 @@ rlc_register_link(RlcData b, const uchar_t *link, size_t len)
 
 static void
 rlc_shift_up(RlcData b, int shift)
-{ int line = b->window_start;
-  int last = rlc_add_lines(b, b->window_start, b->window_size-1);
-  int src = rlc_add_lines(b, line, shift);
-
-  if ( shift < b->window_size )
-  { int done = 0;
-    for(;;)
-    { if ( done++ < shift )
-	rlc_free_line(b, line);
-      b->lines[line] = b->lines[src];
-      b->lines[line].changed = CHG_CHANGED;
-      if ( src == last )
-	break;
-      line = NextLine(b, line);
-      src  = NextLine(b, src);
-    }
-  }
-
-  do
-  { line = NextLine(b, line);
-    rlc_reinit_line(b, line);
-  } while( line != last );
-
-  b->changed |= CHG_CHANGED|CHG_CLEAR;
+{ rlc_scroll_region(b, b->window_start, -shift);
 }
 
 
@@ -5033,6 +5077,15 @@ rlc_putansi(RlcData b, int chr)
 	  rlc_need_arg(b, 1, 1);
 	  CMD(rlc_delete_chars(b, b->argv[0]));
 	  break;
+	case 'L':		/* CSI Ps L — Insert Line(s) (IL) */
+	case 'M':		/* CSI Ps M — Delete Line(s) (DL) */
+	{ rlc_need_arg(b, 1, 1);
+	  int count = b->argv[0] < 1 ? 1 : b->argv[0];
+	  CMD(rlc_scroll_region(b, b->caret_y, chr == 'L' ? count : -count));
+	  b->caret_x = 0;	/* ECMA-48: caret to the line home position */
+	  b->changed |= CHG_CARET;
+	  break;
+	}
 	case '?':
 	case '>':
 	  b->cmdstat = CMD_DEC_PRIVATE;
