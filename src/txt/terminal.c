@@ -331,6 +331,7 @@ static int	rlc_count_lines(RlcData b, int from, int to);
 static void	rlc_add_line(RlcData b);
 static void	rlc_open_line(RlcData b);
 static RlcTextLine rlc_prepare_line(RlcData b, int y);
+static void	rlc_caret_down(RlcData b, int arg);
 static void	rlc_update_scrollbar(RlcData b);
 static void	rlc_init_text_dimensions(RlcData b, FontObj f);
 static int	rlc_add_lines(RlcData b, int here, int add);
@@ -3690,6 +3691,42 @@ rlc_scroll_region(RlcData b, int line, int shift)
 }
 
 
+/** Scroll the region up (SU, `CSI Ps S').
+ *
+ * The caret does not move.  Scrolling the whole window pushes the
+ * lines that leave the top into the scroll back, as a line feed on the
+ * last row does; a region, or the alternate screen, has nowhere to put
+ * them and drops them.
+ */
+
+static void
+rlc_scroll_up(RlcData b, int count)
+{ if ( rlc_has_region(b) || b->saved.lines ||
+       rlc_window_row(b, b->last)+1 < b->window_size )
+  { rlc_scroll_region(b, rlc_region_start(b), -count);
+  } else
+  { int row = rlc_window_row(b, b->caret_y);
+    int x = b->caret_x;
+
+    b->caret_y = rlc_add_lines(b, b->window_start, b->window_size-1);
+    rlc_caret_down(b, count);		/* scrolls the window along */
+    b->caret_y = rlc_add_lines(b, b->window_start, row);
+    b->caret_x = x;
+    b->changed |= CHG_CARET;
+  }
+}
+
+
+/** Scroll the region down (SD, `CSI Ps T').  What leaves the bottom is
+ * gone; a terminal does not pull the scroll back onto the screen.
+ */
+
+static void
+rlc_scroll_down(RlcData b, int count)
+{ rlc_scroll_region(b, rlc_region_start(b), count);
+}
+
+
 static void
 rlc_need_arg(RlcData b, int arg, int def)
 { if ( b->argc < arg )
@@ -5252,6 +5289,22 @@ rlc_putansi(RlcData b, int chr)
 	case 'X':		/* CSI Ps X — Erase Character(s) (ECH) */
 	  rlc_need_arg(b, 1, 1);
 	  CMD(rlc_erase_chars(b, b->argv[0]));
+	  break;
+	case 'S':		/* CSI Ps S — Scroll Up (SU) */
+	  if ( b->cmdstat == CMD_DEC_PRIVATE )	/* XTSMGRAPHICS */
+	  { Dprint_csi(b, chr);
+	    break;
+	  }
+	  rlc_need_arg(b, 1, 1);
+	  CMD(rlc_scroll_up(b, Bounds(b->argv[0], 1, b->window_size)));
+	  break;
+	case 'T':		/* CSI Ps T — Scroll Down (SD) */
+	  if ( b->argc > 1 )	/* mouse tracking takes five parameters */
+	  { Dprint_csi(b, chr);
+	    break;
+	  }
+	  rlc_need_arg(b, 1, 1);
+	  CMD(rlc_scroll_down(b, Bounds(b->argv[0], 1, b->window_size)));
 	  break;
 	case 'm':
 	  { rlc_need_arg(b, 1, 0);

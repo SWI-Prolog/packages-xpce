@@ -1468,6 +1468,25 @@ test(erase_above, [setup(current_test_terminal(T))]) :-
     out(T, '\e[2;2H\e[1J'),
     assert_rows(T, ['','  ',l3]).
 
+test(scroll_up_and_down_in_region, [setup(current_test_terminal(T))]) :-
+    %  SU and SD move the content of the region and leave the caret
+    %  where it is.  Both stay inside the region.
+    full_screen(T, [_Top,Second,Third|Below]),
+    out(T, '\e[1;3r\e[2;1H\e[1S'),
+    assert_rows(T, [Second,Third,''|Below]),
+    assert_cursor(T, 0, 1),
+    out(T, '\e[1T\e[1;25r'),
+    assert_rows(T, ['',Second,Third|Below]).
+
+test(scroll_up_without_a_region, [setup(current_test_terminal(T))]) :-
+    %  Without a region the window scrolls as a whole, the way a line
+    %  feed on the last row does.
+    full_screen(T, Painted),
+    out(T, '\e[3S'),
+    append([_,_,_], Rest, Painted),
+    append(Rest, ['','',''], Expected),
+    assert_rows(T, Expected).
+
 test(save_and_restore_cursor, [setup(current_test_terminal(T))]) :-
     %  DECSC/DECRC (ESC 7 / ESC 8) are what terminfo's sc/rc use; they
     %  carry the attributes along with the position.
