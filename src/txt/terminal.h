@@ -294,6 +294,7 @@ typedef struct rlc_data
   int		sel_end_char;		/* ending char for selection */
   bool		app_escape;		/* Send ESC 0 instead of ESC [ */
   bool		app_keypad_mode;	/* Send ESC <N> p from keypad */
+  bool		insert_mode;		/* ANSI mode 4 (IRM) */
   ansi_state    cmdstat;		/* for parsing ANSI escape */
   int		argstat;		/* argument status ANSI */
   char const   *must_see;		/* \e]8;; link decoding */

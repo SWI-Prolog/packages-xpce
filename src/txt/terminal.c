@@ -3923,6 +3923,56 @@ rlc_prepare_line(RlcData b, int y)
 }
 
 
+/* Open `slots` cells at the caret, shifting the rest of the line right.
+ * Used by ICH (\e[<n>@) and by a write in insert mode (IRM).
+ */
+
+static void
+rlc_open_cells(RlcData b, RlcTextLine tl, int slots)
+{ /* Bound tl->size by the line's physical cell capacity (which
+     allows for combining marks), NOT by b->width: a row holding NFD
+     content can legitimately have more cells than visual columns, and
+     clamping to b->width would trim its trailing combining marks. */
+  int cap = LINE_CELL_CAPACITY(b);
+
+  if ( tl->size + slots <= cap )
+    tl->size += slots;
+  else if ( tl->size < cap )
+    tl->size = cap;
+  for(int i=tl->size-1; i>=(int)(b->caret_x+slots); i--)
+    tl->text[i] = tl->text[i-slots];
+}
+
+
+/* Content shifted past the right edge is discarded rather than wrapped.
+ * Trim any tail clusters whose visual column would fall past b->width so
+ * the stored content matches what is visible on-screen.  The walk is
+ * cluster-aware: a wide cluster's base + placeholder go or stay
+ * together, and a base with attached combining marks is not sliced
+ * through.
+ */
+
+static void
+rlc_trim_past_margin(RlcData b, RlcTextLine tl)
+{ int vcol = 0;
+  int keep = tl->size;
+
+  for(int i=0; i<tl->size; )
+  { int next = rlc_cluster_next(tl, i);
+    int cw = 0;
+    for(int j=i; j<next; j++)
+      cw += tc_display_width(&tl->text[j]);
+    if ( vcol + cw > b->width )
+    { keep = i;
+      break;
+    }
+    vcol += cw;
+    i = next;
+  }
+  tl->size = keep;
+}
+
+
 static void
 rlc_put(RlcData b, int chr)
 { RlcTextLine tl = rlc_prepare_line(b, b->caret_y);
@@ -4004,6 +4054,15 @@ rlc_put(RlcData b, int chr)
       tl = rlc_prepare_line(b, b->caret_y);
     }
 
+    /* Insert mode (IRM, \e[4h): open the cells this character needs and
+       push the rest of the row right rather than writing over it.  What
+       is pushed past the right edge is discarded, not wrapped.  A
+       combining mark is not a new cluster and takes no column, so it
+       does not open a cell -- the width-0 branch above already makes
+       room for it. */
+    if ( b->insert_mode )
+      rlc_open_cells(b, tl, dw == 2 ? 2 : 1);
+
     text_char *tc = &tl->text[b->caret_x];
     tc->code  = chr;
     tc->flags = b->sgr_flags;
@@ -4021,6 +4080,9 @@ rlc_put(RlcData b, int chr)
       if ( tl->size <= b->caret_x + 1 )
 	tl->size = b->caret_x + 2;
     }
+
+    if ( b->insert_mode )
+      rlc_trim_past_margin(b, tl);
 
     tl->changed |= CHG_CHANGED;
     /* Advance caret_x by the character's cell width directly — do NOT go
@@ -4046,19 +4108,9 @@ rlc_insert(RlcData b, int chr)
   int dw = uchar_display_width((uchar_t)chr);
   tlog("rlc_insert(0x%X) entry caret_x=%d width=%d size=%d\n",
        chr, b->caret_x, dw, tl->size);
-  int slots = (dw == 2) ? 2 : 1;	/* wide chars need 2 cells */
-
-  /* Bound tl->size by the line's physical cell capacity (which
-     allows for combining marks), NOT by b->width: a row holding NFD
-     content can legitimately have more cells than visual columns, and
-     clamping to b->width would trim its trailing combining marks. */
   int cap = LINE_CELL_CAPACITY(b);
-  if ( tl->size + slots <= cap )
-    tl->size += slots;
-  else if ( tl->size < cap )
-    tl->size = cap;
-  for(int i=tl->size-1; i>=(int)(b->caret_x+slots); i--)
-    tl->text[i] = tl->text[i-slots];
+
+  rlc_open_cells(b, tl, (dw == 2) ? 2 : 1);
   text_char *tc = &tl->text[b->caret_x];
   tc->code  = chr;
   tc->flags = b->sgr_flags;
@@ -4069,28 +4121,7 @@ rlc_insert(RlcData b, int chr)
     ph->flags = b->sgr_flags;
     ph->flags.width = 0;
   }
-  /* ANSI ICH discards content shifted past the right edge.  Trim any
-     tail clusters whose visual column would fall past b->width so the
-     stored content matches what's visible on-screen.  Use a
-     cluster-aware walk: a wide cluster's base + placeholder go or
-     stay together, and a base with attached combining marks is not
-     sliced through. */
-  { int vcol = 0;
-    int keep = tl->size;
-    for(int i=0; i<tl->size; )
-    { int next = rlc_cluster_next(tl, i);
-      int cw = 0;
-      for(int j=i; j<next; j++)
-	cw += tc_display_width(&tl->text[j]);
-      if ( vcol + cw > b->width )
-      { keep = i;
-	break;
-      }
-      vcol += cw;
-      i = next;
-    }
-    tl->size = keep;
-  }
+  rlc_trim_past_margin(b, tl);
   tl->changed |= CHG_CHANGED;
 }
 
@@ -4336,6 +4367,28 @@ rlc_restore_screen(RlcData b)
 			       Bounds(b->saved.caret_y, 0, b->window_size));
   }
 }
+
+		 /*******************************
+		 *           ANSI MODES         *
+		 *******************************/
+
+/** Set/clear an ANSI mode: CSI <n> h and CSI <n> l, without the `?'
+ *  that marks the DEC private modes below.
+ */
+
+static void
+rlc_set_ansi_mode(RlcData b, int mode, bool set)
+{ switch(mode)
+  { case 4:				/* IRM: insert/replace mode */
+      b->insert_mode = set;
+      break;
+    default:
+      DEBUG(NAME_term, Cprintf("stub: ANSI mode %d %s\n",
+			       mode, set ? "set" : "reset"));
+      break;
+  }
+}
+
 
 		 /*******************************
 		 *      DEC PRIVATE MODES       *
@@ -4957,12 +5010,18 @@ rlc_putansi(RlcData b, int chr)
 	  if ( b->cmdstat == CMD_DEC_PRIVATE )
 	  { rlc_need_arg(b, 1, 0);
 	    rlc_clear_dec_mode(b, b->argv[0]);
+	  } else
+	  { rlc_need_arg(b, 1, 0);
+	    rlc_set_ansi_mode(b, b->argv[0], false);
 	  }
 	  break;
 	case 'h':
 	  if ( b->cmdstat == CMD_DEC_PRIVATE )
 	  { rlc_need_arg(b, 1, 0);
 	    rlc_set_dec_mode(b, b->argv[0]);
+	  } else
+	  { rlc_need_arg(b, 1, 0);
+	    rlc_set_ansi_mode(b, b->argv[0], true);
 	  }
 	  break;
 	case 't':
