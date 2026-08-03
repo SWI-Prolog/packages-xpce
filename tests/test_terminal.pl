@@ -246,6 +246,28 @@ term_send(terminal(_, xpce(_, TI)), Text) :-
 term_output(terminal(_, xpce(_, TI)), Text) :-
     send(TI, insert, Text).
 
+%!  term_press(+T, +Code) is det.
+%
+%   Press Ctrl+<key> at the window, Code being the control character it
+%   produces.  Unlike term_send/2, which puts bytes on the pty, this
+%   goes through ->typed and thus past the window's key bindings, which
+%   is what a test of those bindings needs.  It is BUTTON_control that
+%   makes the table look up \C-<key> rather than <key>; see
+%   characterName() in src/ker/goodies.c.
+
+term_press(terminal(_, xpce(Frame, TI)), Code) :-
+    button_control(Control),
+    send(TI, typed, new(event(Code, Frame, @default, @default, Control))).
+
+button_control(0x1).			% BUTTON_control, src/h/graphics.h
+
+%!  term_foreground_process(+T, -PID) is semidet.
+%
+%   Process group of the process running in the terminal, if any.
+
+term_foreground_process(terminal(_, xpce(_, TI)), PID) :-
+    get(TI, foreground_process, PID).
+
 %!  term_cursor(+T, -Col, -Row) is det.
 %
 %   Read the logical cursor position: Col is a *visual* column, Row is
@@ -394,6 +416,9 @@ term_has_selection(terminal(_, xpce(_, TI))) :-
 %       program_output
 %                   - term_output/2 works, i.e. we can write to the
 %                     screen without going through the line editor
+%       pty_signals - the window runs its client on a pty whose
+%                     foreground process group it can see, so a process
+%                     started in it gets the control keys
 
 term_capability(terminal(Backend, _), Cap) :-
     backend_capability(Backend, Cap).
@@ -429,6 +454,14 @@ backend_capability(child(_), selection).
 backend_capability(child(_), combining).
 backend_capability(child(_), non_bmp).
 backend_capability(child(_), margin_past_last_column).
+%  `pty_signals' is Unix-only: a Windows pseudo console has no
+%  foreground process group to ask about.  It is epilog-only for a
+%  different reason: a child backend would run the tests against a
+%  grandchild, which is the same code path at three times the cost.
+
+backend_capability(epilog, pty_signals) :-
+    \+ current_prolog_flag(windows, true).
+
 %  `program_output' is epilog-only although the screen is the same
 %  object under a child: there the child owns the screen, so writing
 %  behind its back races with its own redisplay.
@@ -3008,6 +3041,110 @@ test(edit_at_right_margin_stays_on_row,
     assert_cursor(T, Margin, R).
 
 :- end_tests(terminal_wrap).
+
+
+		 /*******************************
+		 *        CONTROL KEYS          *
+		 *******************************/
+
+/** <section> Control keys and the process running in the terminal
+
+    While a process group of another session owns the pty, the control
+    keys belong to that process: ^C must reach it as an interrupt and
+    ^X as input, rather than acting on the window.  With no such
+    process the window keeps its own bindings, which is what lets ^C
+    interrupt the Prolog thread that runs on this terminal.  See
+    clientOwnsKeyTerminalImage() in packages/xpce/src/txt/terminal.c.
+
+    These tests press keys with press/2 rather than type/2: only what
+    goes through ->typed passes the key bindings, and the bindings are
+    what is under test.
+*/
+
+:- begin_tests(terminal_control_keys,
+               [ condition(needs([pty_signals])),
+                 setup(setup_unit),
+                 cleanup(cleanup_unit)
+               ]).
+
+test(toplevel_has_no_foreground_process, [setup(test_begin(T))]) :-
+    \+ term_foreground_process(T, _).
+
+test(child_becomes_the_foreground_process,
+     [ setup(test_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    start_foreground(T, 'sleep 30'),
+    term_foreground_process(T, PID),
+    assertion(integer(PID)).
+
+test(control_c_interrupts_the_child, [setup(test_begin(T))]) :-
+    start_foreground(T, 'sleep 30'),
+    press(T, ctrl_c),
+    assertion(wait_until(\+ term_foreground_process(T, _), 15)),
+    wait_for_prompt(T).
+
+test(control_x_reaches_the_child,
+     [ setup(test_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    start_foreground(T, 'stty -echo; cat -v'),
+    press(T, ctrl_x),
+    key(T, enter),
+    assertion(wait_until(marker_on_screen(T, '^X'), 15)).
+
+%  A client that turned signal generation off wants ^C as input.  The
+%  line discipline is what knows, so the window may not decide to
+%  interrupt on its own.
+
+test(control_c_reaches_a_child_that_wants_no_signals,
+     [ setup(test_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    start_foreground(T, 'stty -echo -isig; cat -v'),
+    press(T, ctrl_c),
+    key(T, enter),
+    assertion(wait_until(marker_on_screen(T, '^C'), 15)),
+    press(T, ctrl_d),			% ^C cannot end this one
+    assertion(wait_until(\+ term_foreground_process(T, _), 15)).
+
+%!  start_foreground(+T, +Command) is det.
+%!  stop_foreground(+T) is det.
+%
+%   Run Command in the terminal with shell/1 and wait until it owns the
+%   pty.  stop_foreground/1 gets rid of it again and is a no-op when
+%   the test already did.
+
+start_foreground(T, Command) :-
+    format(atom(Goal), 'shell("~w").\n', [Command]),
+    term_send(T, Goal),
+    (   wait_until(term_foreground_process(T, _), 15)
+    ->  true
+    ;   throw(error(terminal_no_foreground_process(Command), _))
+    ).
+
+stop_foreground(T) :-
+    (   term_foreground_process(T, _)
+    ->  press(T, ctrl_c),
+        wait_until(\+ term_foreground_process(T, _), 15)
+    ;   true
+    ),
+    wait_for_prompt(T).
+
+%!  press(+T, +Key) is det.
+%
+%   Press a control key at the window and let the terminal settle.
+
+press(T, Key) :-
+    control_code(Key, Code),
+    term_press(T, Code),
+    drive(0.2).
+
+control_code(ctrl_c, 0x03).
+control_code(ctrl_d, 0x04).
+control_code(ctrl_x, 0x18).
+
+:- end_tests(terminal_control_keys).
 
 
 		 /*******************************
