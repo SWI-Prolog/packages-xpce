@@ -34,23 +34,36 @@
 
 :- module(test_terminal,
           [ test_terminal/0,
+            test_terminal/1,                     % +Backend
             test_terminal_random/2,              % +Sessions, +CommandsPerSession
             test_terminal_random/3               % +Sessions, +CommandsPerSession, +Options
           ]).
 :- encoding(utf8).
 
-/** <module> Integration tests for the xpce terminal + libedit
+/** <module> Integration tests for the terminal + libedit
 
-Drives an epilog terminal end-to-end through its public xpce methods:
+Drives a terminal end-to-end through three primitives:
 
-    - ->send                injects keystrokes (UTF-8 bytes to the PTY)
-    - <-cursor_position     point(col, row) in the visible window
-    - <-row                 string content of a visible row
+    - send a keystroke      (UTF-8 bytes towards the line editor)
+    - read the cursor       point(col, row) in the visible window
+    - read a row            text content of a visible row
 
-Tests create a fresh epilog frame, type and hit keys, drive the event
-loop until output has settled, then assert the cursor position and row
-contents.  Each test owns its frame and destroys it in its cleanup
-clause.
+Tests type and hit keys, drive the event loop until output has settled,
+then assert the cursor position and row contents.
+
+The three primitives are all the suite needs, so it can run against
+more than one terminal.  A *backend* (see the BACKENDS section) says
+which line editor produces the output and which screen we read back;
+term_start/2 opens one and every test then works through the term_*
+primitives rather than through xpce methods directly.  Supported:
+
+    - epilog          the epilog terminal driven by a Prolog thread in
+                      this process; libedit runs with the EPILOG flag
+    - child(Profile)  a child `swipl` started with shell/1 from the
+                      epilog thread, so it runs on the terminal's pty
+                      with TERM taken from Profile.  This is the only
+                      way to exercise libedit's ordinary termcap paths,
+                      the ones every non-epilog terminal uses.
 
 Because the SWI-Prolog prompt includes the command number ("101 ?- "
 rather than just "?- "), column assertions are expressed relative to
@@ -62,6 +75,10 @@ N is the visual-column offset inside the input.
 Run with:
 
     swipl -g test_terminal -t halt packages/xpce/tests/test_terminal.pl
+
+or, for a single backend:
+
+    swipl -g 'test_terminal(child(ansi))' -t halt packages/xpce/tests/test_terminal.pl
 */
 
 :- use_module(library(debug)).
@@ -84,74 +101,350 @@ setup_headless :-
 :- use_module(library(aggregate)).
 
 test_terminal :-
-    run_tests([ terminal_basic,
-                terminal_nfd,
-                terminal_regression,
-                terminal_wide,
-                terminal_non_bmp,
-                terminal_mixed,
-                terminal_background,
-                terminal_mouse,
-                terminal_wrap,
-                terminal_resize
-              ]).
+    test_terminal(epilog).
+
+%!  test_terminal(+Backend) is semidet.
+%
+%   Run the suite against Backend.  Units that need a capability the
+%   backend lacks (mouse, selection, ...) are skipped rather than
+%   failed; see term_capability/2.
+
+test_terminal(Backend) :-
+    setup_call_cleanup(
+        nb_setval(terminal_backend, Backend),
+        run_tests([ terminal_basic,
+                    terminal_nfd,
+                    terminal_regression,
+                    terminal_wide,
+                    terminal_non_bmp,
+                    terminal_mixed,
+                    terminal_background,
+                    terminal_mouse,
+                    terminal_wrap,
+                    terminal_resize
+                  ]),
+        nb_delete(terminal_backend)).
+
+%!  current_backend(-Backend) is det.
+%
+%   The backend the current run uses.  Defaults to `epilog` so that
+%   running a single unit by hand needs no set-up.
+
+current_backend(Backend) :-
+    (   nb_current(terminal_backend, B)
+    ->  Backend = B
+    ;   Backend = epilog
+    ).
+
+
+		 /*******************************
+		 *           BACKENDS           *
+		 *******************************/
+
+%   A terminal under test is a handle
+%
+%       terminal(Backend, Screen)
+%
+%   Backend says what produces the output:
+%
+%       epilog          - a Prolog thread in this process.  libedit is
+%                         wrapped around the terminal's streams with
+%                         the EPILOG flag set.
+%       child(Profile)  - a child `swipl` running on the terminal's
+%                         pty, started with shell/1 from the epilog
+%                         thread.  libedit sees an ordinary terminal
+%                         and takes its capabilities from TERM, which
+%                         term_profile_term/2 derives from Profile.
+%
+%   Screen says what we read back:
+%
+%       xpce(Frame, TerminalImage)
+%
+%   Everything below this section goes through the term_* primitives;
+%   xpce methods on the terminal appear only in this section.
+
+%!  term_start(+Backend, -T) is det.
+%!  term_stop(+T) is det.
+
+term_start(epilog, terminal(epilog, xpce(Frame, TI))) :-
+    !,
+    epilog_screen(Frame, TI).
+term_start(child(Profile), terminal(child(Profile), xpce(Frame, TI))) :-
+    epilog_screen(Frame, TI),
+    T0 = terminal(epilog, xpce(Frame, TI)),
+    wait_for_prompt(T0),
+    start_child(T0, Profile).
+
+epilog_screen(Frame, TI) :-
+    epilog([ object(Frame),
+             title('test_terminal'),
+             rows(25),
+             cols(80)
+           ]),
+    get(Frame, current_terminal, TI).
+
+term_stop(terminal(Backend, xpce(Frame, TI))) :-
+    (   Backend = child(_)
+    ->  stop_child(terminal(Backend, xpce(Frame, TI)))
+    ;   true
+    ),
+    (   object(Frame)
+    ->  in_pce_thread(send(Frame, destroy))
+    ;   true
+    ).
+
+%!  term_send(+T, +Text) is det.
+%
+%   Inject Text into the terminal as if typed.
+
+term_send(terminal(_, xpce(_, TI)), Text) :-
+    send(TI, send, Text).
+
+%!  term_cursor(+T, -Col, -Row) is det.
+%
+%   Read the logical cursor position: Col is a *visual* column, Row is
+%   0-based from the top of the visible window.
+
+term_cursor(terminal(_, xpce(_, TI)), Col, Row) :-
+    get(TI, cursor_position, P),
+    get(P, x, Col),
+    get(P, y, Row).
+
+%!  term_row(+T, +Row, -Atom) is det.
+%
+%   Content of visible row Row.  Rows past the end of the screen model
+%   read as '' rather than failing: a display bug should surface as a
+%   mismatched row, not as a helper that quietly fails.
+
+term_row(terminal(_, xpce(_, TI)), Row, Atom) :-
+    (   get(TI, row, Row, Str)
+    ->  get(Str, value, Atom)
+    ;   Atom = ''
+    ).
+
+%!  term_cols(+T, -Cols) is det.
+%
+%   Current width of the terminal in columns.
+
+term_cols(terminal(_, xpce(_, TI)), Cols) :-
+    get(TI, columns, Cols).
+
+%!  term_resize(+T, +WantCols, -GotCols) is det.
+%
+%   Resize the terminal to WantCols columns.  GotCols is the width
+%   actually achieved, which may differ: the xpce terminal derives its
+%   column count from pixels and the font's cell width, so only
+%   certain widths are reachable.
+
+term_resize(T, WantCols, GotCols) :-
+    T = terminal(_, xpce(_, TI)),
+    xpce_cw(TI, CW),
+    Pixels is round((WantCols + 2) * CW),
+    send(TI, width, Pixels),
+    drive(0.2),
+    term_cols(T, GotCols).
+
+%!  xpce_cw(+TerminalImage, -CW) is det.
+%
+%   Pixel width of one character cell.  The terminal keeps one cell of
+%   margin on either side, hence the +2 (see rlc_resize_pixel_units in
+%   packages/xpce/src/txt/terminal.c).
+
+xpce_cw(TI, CW) :-
+    get(TI, width, W),
+    get(TI, columns, Cols),
+    CW is W/(Cols+2).
+
+%!  term_click(+T, +Col, +Row) is det.
+%!  term_drag(+T, +Col1, +Row1, +Col2, +Row2) is det.
+%
+%   Synthesise a left-button click, and a press-move-release.
+
+term_click(terminal(_, xpce(_, TI)), Col, Row) :-
+    cell_pixel(TI, Col, Row, X, Y),
+    send(TI, event, new(_, event(ms_left_down, TI, X, Y, 1, 0))),
+    drive(0.1),
+    send(TI, event, new(_, event(ms_left_up, TI, X, Y, 1, 0))),
+    drive(0.3).
+
+term_drag(terminal(_, xpce(_, TI)), Col1, Row1, Col2, Row2) :-
+    cell_pixel(TI, Col1, Row1, X1, Y1),
+    cell_pixel(TI, Col2, Row2, X2, Y2),
+    send(TI, event, new(_, event(ms_left_down, TI, X1, Y1, 1, 0))),
+    drive(0.1),
+    send(TI, event, new(_, event(ms_left_drag, TI, X2, Y2, 1, 0))),
+    drive(0.1),
+    send(TI, event, new(_, event(ms_left_up, TI, X2, Y2, 1, 0))),
+    drive(0.3).
+
+%!  cell_pixel(+TerminalImage, +Col, +Row, -X, -Y) is det.
+%
+%   Pixel in the middle of a character cell.
+
+cell_pixel(TI, Col, Row, X, Y) :-
+    get(TI, height, H),
+    get(TI, rows, Rows),
+    xpce_cw(TI, CW),
+    CH is H/Rows,
+    X is integer(CW*(Col+1) + CW/2),
+    Y is integer(CH*Row + CH/2).
+
+%!  term_select_all(+T) is det.
+%!  term_selection(+T, -Atom) is det.
+%!  term_has_selection(+T) is semidet.
+
+term_select_all(terminal(_, xpce(_, TI))) :-
+    send(TI, select_all).
+
+term_selection(terminal(_, xpce(_, TI)), Atom) :-
+    get(TI, selected, Sel),
+    (   Sel == @nil
+    ->  Atom = ''
+    ;   get(Sel, value, Atom)
+    ).
+
+term_has_selection(terminal(_, xpce(_, TI))) :-
+    send(TI, has_selection).
+
+%!  term_capability(+T, ?Cap) is nondet.
+%
+%   True when the backend supports Cap:
+%
+%       mouse       - term_click/3 and term_drag/5 work
+%       selection   - the terminal maintains a selection
+%       combining   - the screen model can hold combining marks
+%       wcwidth_font  - the line editor and the screen agree on column
+%                     widths because both ask the terminal's font
+
+term_capability(terminal(Backend, _), Cap) :-
+    backend_capability(Backend, Cap).
+
+backend_capability(epilog,   mouse).
+backend_capability(epilog,   selection).
+backend_capability(epilog,   combining).
+backend_capability(epilog,   wcwidth_font).
+backend_capability(child(_), mouse).
+backend_capability(child(_), selection).
+backend_capability(child(_), combining).
+
+%!  needs(+Caps) is semidet.
+%
+%   plunit condition: true when the backend of the current run has all
+%   of Caps.  Used as `condition(needs([mouse]))` so a unit is skipped
+%   rather than failed on a backend that cannot support it.
+
+needs(Caps) :-
+    current_backend(Backend),
+    forall(member(Cap, Caps), backend_capability(Backend, Cap)).
+
+
+		 /*******************************
+		 *         CHILD BACKEND        *
+		 *******************************/
+
+%!  term_profile_term(+Profile, -TERM) is det.
+%
+%   TERM setting for a capability profile.  A profile names the
+%   terminal description libedit will read, which is what decides
+%   which redisplay strategy it uses.
+
+term_profile_term(Profile, Profile).
+
+%!  start_child(+T, +Profile) is det.
+%
+%   Start a child `swipl` on the terminal's pty by asking the epilog
+%   thread to run shell/1.  System() (src/os/pl-os.c) dups the calling
+%   thread's user streams onto the child's 0/1/2, and in an epilog
+%   thread those are the terminal's pty, so the child gets the
+%   terminal.  TERM is set on the command line so it applies to the
+%   child only.
+%
+%   After the child's prompt appears we clear the screen, so the child
+%   starts from row 0 exactly like the epilog backend does.
+
+start_child(T, Profile) :-
+    term_profile_term(Profile, TERM),
+    current_prolog_flag(executable, Exe),
+    format(atom(Cmd),
+           'shell(\'TERM=~w ~w -q --no-tty=false\').\n', [TERM, Exe]),
+    term_send(T, Cmd),
+    (   wait_until(child_started(T), 30)
+    ->  true
+    ;   throw(error(terminal_child_failed(Profile), _))
+    ),
+    key(T, ctrl_l),
+    wait_for_prompt(T).
+
+%!  child_started(+T) is semidet.
+%
+%   True once the child's own prompt is on screen.  The parent prompt
+%   we typed into is still there, so we wait for a *second* prompt
+%   below it rather than for "a prompt".
+
+child_started(T) :-
+    term_cursor(T, _, Row),
+    Row > 0,
+    at_prompt(T).
+
+%!  stop_child(+T) is det.
+%
+%   Halt the child and wait for the parent's prompt to come back.
+
+stop_child(T) :-
+    catch(( term_send(T, '\r'),
+            term_send(T, 'halt.\n'),
+            ignore(wait_until(at_prompt(T), 10))
+          ), _, true).
 
 
 		 /*******************************
 		 *       SETUP / TEARDOWN       *
 		 *******************************/
 
-%   We create one epilog terminal per test UNIT (via begin_tests/2's
-%   setup and cleanup options) and reuse it across the tests of the
-%   unit.  Each test's own setup calls reset_input/1 to clear whatever
-%   the previous test left on the command line, so tests see a fresh
-%   empty prompt without the overhead of spawning a new window.
+%   We create one terminal per test UNIT (via begin_tests/2's setup
+%   and cleanup options) and reuse it across the tests of the unit.
+%   Each test's own setup calls reset_input/1 to clear whatever the
+%   previous test left on the command line, so tests see a fresh empty
+%   prompt without the overhead of spawning a new terminal.
 
-%!  start_terminal(-Frame, -Terminal) is det.
+%!  start_terminal(-Terminal) is det.
 %
-%   Create a fresh epilog terminal and wait for the initial prompt.
-%   Frame is the epilog_frame; Terminal is its prolog_terminal.
+%   Open a terminal for the current backend and wait for the initial
+%   prompt.
 
-start_terminal(Frame, Terminal) :-
-    epilog([ object(Frame),
-             title('test_terminal'),
-             rows(25),
-             cols(80)
-           ]),
-    get(Frame, current_terminal, Terminal),
+start_terminal(Terminal) :-
+    current_backend(Backend),
+    term_start(Backend, Terminal),
     wait_for_prompt(Terminal).
 
-%!  stop_terminal(+Frame) is det.
+%!  stop_terminal(+Terminal) is det.
 
-stop_terminal(Frame) :-
-    (   object(Frame)
-    ->  in_pce_thread(send(Frame, destroy))
-    ;   true
-    ).
+stop_terminal(Terminal) :-
+    term_stop(Terminal).
 
 %!  setup_unit is det.
 %!  cleanup_unit is det.
 %
-%   Unit-level hooks: open/close the epilog terminal shared by all
-%   tests in a PLUnit unit.  The frame and terminal references are
-%   stashed in a non-backtrackable global so individual tests can
-%   retrieve them through current_test_terminal/1.
+%   Unit-level hooks: open/close the terminal shared by all tests in a
+%   PLUnit unit.  The handle is stashed in a non-backtrackable global
+%   so individual tests can retrieve it through
+%   current_test_terminal/1.
 
 setup_unit :-
-    start_terminal(Frame, Terminal),
-    nb_setval(terminal_test, Frame-Terminal).
+    start_terminal(Terminal),
+    nb_setval(terminal_test, Terminal).
 
 cleanup_unit :-
-    (   nb_current(terminal_test, Frame-_)
+    (   nb_current(terminal_test, Terminal)
     ->  nb_delete(terminal_test),
-        stop_terminal(Frame)
+        stop_terminal(Terminal)
     ;   true
     ).
 
 %!  current_test_terminal(-Terminal) is det.
 
 current_test_terminal(Terminal) :-
-    nb_getval(terminal_test, _-Terminal).
+    nb_getval(terminal_test, Terminal).
 
 %!  test_begin(-Terminal) is det.
 %
@@ -177,27 +470,20 @@ reset_input(Terminal) :-
 
 
 		 /*******************************
-		 *   xpce ↔ Prolog CONVERSION   *
+		 *          SHORTHANDS          *
 		 *******************************/
 
 %!  cursor(+Terminal, -Col, -Row) is det.
-%
-%   Read the logical cursor position.  <-cursor_position returns an
-%   xpce Point object; unpack it into Prolog integers.
-
-cursor(Terminal, Col, Row) :-
-    get(Terminal, cursor_position, P),
-    get(P, x, Col),
-    get(P, y, Row).
-
 %!  row_text(+Terminal, +Row, -Atom) is det.
 %
-%   Read the content of a visible row as a Prolog atom.  <-row
-%   returns an xpce String; pull its value out.
+%   Shorthands for the two readback primitives, kept because the tests
+%   below use them on nearly every line.
+
+cursor(Terminal, Col, Row) :-
+    term_cursor(Terminal, Col, Row).
 
 row_text(Terminal, Row, Atom) :-
-    get(Terminal, row, Row, Str),
-    get(Str, value, Atom).
+    term_row(Terminal, Row, Atom).
 
 
 		 /*******************************
@@ -287,7 +573,7 @@ prompt_col(Terminal, Col) :-
 %   terminal has a chance to echo.  Text may be an atom or a string.
 
 type(Terminal, Text) :-
-    send(Terminal, send, Text),
+    term_send(Terminal, Text),
     drive(0.1).
 
 %!  key(+Terminal, +Name) is det.
@@ -298,7 +584,7 @@ type(Terminal, Text) :-
 key(Terminal, Name) :-
     key_bytes(Name, Bytes),
     atom_codes(Atom, Bytes),
-    send(Terminal, send, Atom),
+    term_send(Terminal, Atom),
     drive(0.05).
 
 % ctrl bytes --------------------------------------------------------------
@@ -332,40 +618,16 @@ key_bytes(delete,         [0'\e, 0'[, 0'3, 0'~]).
 		 *         MOUSE HELPERS        *
 		 *******************************/
 
-%!  cell_pixel(+Terminal, +Col, +Row, -X, -Y) is det.
-%
-%   Pixel in the middle of a character cell.  The terminal keeps one
-%   cell of margin on the left, so column Col starts at (Col+1)*CW.
-
-cell_pixel(T, Col, Row, X, Y) :-
-    get(T, width, W),
-    get(T, height, H),
-    CW is W/82,                         % 80 columns + 2 of margin
-    CH is H/25,
-    X is integer(CW*(Col+1) + CW/2),
-    Y is integer(CH*Row + CH/2).
-
 %!  click(+Terminal, +Col, +Row) is det.
 %!  drag(+Terminal, +Col1, +Row1, +Col2, +Row2) is det.
 %
 %   Synthesise a left-button click, and a press-move-release.
 
 click(T, Col, Row) :-
-    cell_pixel(T, Col, Row, X, Y),
-    send(T, event, new(_, event(ms_left_down, T, X, Y, 1, 0))),
-    drive(0.1),
-    send(T, event, new(_, event(ms_left_up, T, X, Y, 1, 0))),
-    drive(0.3).
+    term_click(T, Col, Row).
 
 drag(T, Col1, Row1, Col2, Row2) :-
-    cell_pixel(T, Col1, Row1, X1, Y1),
-    cell_pixel(T, Col2, Row2, X2, Y2),
-    send(T, event, new(_, event(ms_left_down, T, X1, Y1, 1, 0))),
-    drive(0.1),
-    send(T, event, new(_, event(ms_left_drag, T, X2, Y2, 1, 0))),
-    drive(0.1),
-    send(T, event, new(_, event(ms_left_up, T, X2, Y2, 1, 0))),
-    drive(0.3).
+    term_drag(T, Col1, Row1, Col2, Row2).
 
 
 		 /*******************************
@@ -400,39 +662,14 @@ fill_codes([C|T], I) :-
     I1 is I + 1,
     fill_codes(T, I1).
 
-%!  cw_of(+Terminal, -CW) is det.
+%!  resize_cols(+Terminal, +WantCols, -GotCols) is det.
 %
-%   Pixel width of one character cell of the terminal's current font,
-%   derived from the current geometry.  Call this BEFORE any resize so
-%   the geometry still reflects the initial cols=80 setup from
-%   start_terminal/2.
+%   Resize the terminal to WantCols columns and pump the event loop so
+%   the resize-driven libedit refresh lands before we read rows.
+%   GotCols is the width actually achieved; see term_resize/3.
 
-cw_of(Terminal, CW) :-
-    get(Terminal, width, W),
-    CW is W / 82.                       % 80 cols + 2-char margin
-
-%!  cols_for_pixels(+CW, +Pixels, -Cols) is det.
-%
-%   Inverse of rlc_resize_pixel_units: for a requested pixel width,
-%   compute the column count the terminal will end up with.  Mirrors
-%   `max(20, w/cw) - 2` in packages/xpce/src/txt/terminal.c.
-
-cols_for_pixels(CW, Pixels, Cols) :-
-    Raw is Pixels / CW,
-    truncate(Raw, RawCols),
-    Cols is max(20, RawCols) - 2.
-
-truncate(F, I) :-
-    I is truncate(F).
-
-%!  resize_width(+Terminal, +Pixels) is det.
-%
-%   Resize the terminal to Pixels wide and pump the event loop so the
-%   SIGWINCH-driven libedit refresh lands before we read rows.
-
-resize_width(Terminal, Pixels) :-
-    send(Terminal, width, Pixels),
-    drive(0.2).
+resize_cols(Terminal, WantCols, GotCols) :-
+    term_resize(Terminal, WantCols, GotCols).
 
 %!  rows_of(+Terminal, +FromRow, +Count, -Atoms) is det.
 %
@@ -1051,7 +1288,8 @@ test(thread_output_keeps_input_line, [setup(test_begin(T))]) :-
 		 *******************************/
 
 :- begin_tests(terminal_mouse,
-               [ setup(setup_unit),
+               [ condition(needs([mouse, selection])),
+                 setup(setup_unit),
                  cleanup(cleanup_unit)
                ]).
 
@@ -1083,8 +1321,8 @@ test(click_moves_the_caret, [setup(test_begin(T))]) :-
     assert_cursor(T, C2, R).
 
 test(click_outside_the_input_line,
-     [ setup(start_terminal(Frame, T)),        % needs rows above the input
-       cleanup(stop_terminal(Frame))
+     [ setup(start_terminal(T)),               % needs rows above the input
+       cleanup(stop_terminal(T))
      ]) :-
     %  Only the line being edited follows the mouse; a click anywhere
     %  else still just starts a selection.
@@ -1102,7 +1340,7 @@ test(drag_selects_and_leaves_the_caret, [setup(test_begin(T))]) :-
     cursor(T, C, R),
     drag(T, 10, R, 20, R),
     assert_cursor(T, C, R),
-    assertion(send(T, has_selection)).
+    assertion(term_has_selection(T)).
 
 test(click_on_a_wrapped_row, [setup(test_begin(T))]) :-
     %  The input spans two rows; a click on the first row moves the
@@ -1127,7 +1365,7 @@ test(click_on_a_wrapped_row, [setup(test_begin(T))]) :-
 		 *        TEST: RESIZE          *
 		 *******************************/
 
-%   These tests drive `send(Terminal, width, Pixels)` while a line is
+%   These tests resize the terminal while a line is
 %   being edited and check that libedit+xpce re-wrap the current input
 %   correctly at the new column count.  The tests currently fail on
 %   the known resize-while-editing bug (stale rows from the pre-resize
@@ -1143,19 +1381,19 @@ test(click_on_a_wrapped_row, [setup(test_begin(T))]) :-
 %!  cleanup_unit_resize is det.
 %
 %   Extend the shared terminal setup/cleanup so we also remember the
-%   initial pixel width of the terminal.  Each resize test restores
-%   that width first (via resize_test_begin/1) so a previous test's
-%   resize doesn't leak into the next one.
+%   initial width of the terminal.  Each resize test restores that
+%   width first (via resize_test_begin/1) so a previous test's resize
+%   doesn't leak into the next one.
 
 setup_unit_resize :-
     setup_unit,
     current_test_terminal(T),
-    get(T, width, W),
-    nb_setval(terminal_resize_initial_width, W).
+    term_cols(T, Cols),
+    nb_setval(terminal_resize_initial_cols, Cols).
 
 cleanup_unit_resize :-
-    (   nb_current(terminal_resize_initial_width, _)
-    ->  nb_delete(terminal_resize_initial_width)
+    (   nb_current(terminal_resize_initial_cols, _)
+    ->  nb_delete(terminal_resize_initial_cols)
     ;   true
     ),
     cleanup_unit.
@@ -1169,12 +1407,10 @@ cleanup_unit_resize :-
 
 resize_test_begin(T) :-
     current_test_terminal(T),
-    (   nb_current(terminal_resize_initial_width, W0)
-    ->  get(T, width, W),
-        (   W =:= W0
-        ->  true
-        ;   resize_width(T, W0)
-        )
+    (   nb_current(terminal_resize_initial_cols, Cols0),
+        term_cols(T, Cols),
+        Cols =\= Cols0
+    ->  resize_cols(T, Cols0, _)
     ;   true
     ),
     reset_input(T).
@@ -1193,9 +1429,7 @@ resize_test_begin(T) :-
 type_and_wait(T, Text) :-
     cursor(T, Col0, Row0),
     atom_length(Text, Len),
-    cw_of(T, CW),
-    get(T, width, W),
-    Cols is max(20, truncate(W / CW)) - 2,
+    term_cols(T, Cols),
     TotalCells is Col0 + Len,
     LastCell is TotalCells - 1,
     LastRow is Row0 + LastCell // Cols,
@@ -1205,7 +1439,7 @@ type_and_wait(T, Text) :-
     ->  ExpCol = NextCol, ExpRow = LastRow
     ;   ExpCol = Cols,    ExpRow = LastRow
     ),
-    send(T, send, Text),
+    term_send(T, Text),
     wait_until(cursor_at(T, ExpCol, ExpRow), 5).
 
 cursor_at(T, Col, Row) :-
@@ -1245,16 +1479,13 @@ test(resize_welcome_line, [setup(resize_test_begin(T))]) :-
     %  exactly two rows at the new width.  The bug manifests as an
     %  extra (duplicated) prompt row appearing after the resize.
     cursor(T, P, R),
-    cw_of(T, CW),
     Input = 'Welcome to SWI-Prolog (threaded, 64 bits, version 10.1.5-43-g7b3ac1193-DIRTY)',
     type_and_wait(T, Input),
     atom_length(Input, InputLen),
     %  Pick a width that gives NewCols such that the first row holds
     %  prompt + most of the input and the second row holds the tail.
     TargetCols = 73,
-    NewPixels is round((TargetCols + 2) * CW),
-    resize_width(T, NewPixels),
-    cols_for_pixels(CW, NewPixels, NewCols),
+    resize_cols(T, TargetCols, NewCols),
     assertion(NewCols == TargetCols),
     %  First row: prompt + first (NewCols - P) chars of the input.
     HeadLen is NewCols - P,
@@ -1281,14 +1512,11 @@ test(resize_ascii_shrink, [setup(resize_test_begin(T))]) :-
     %  the rows (stripping the prompt once) must reproduce the input
     %  exactly — so there can be no duplicated prefix.
     cursor(T, P, R),
-    cw_of(T, CW),
     Len = 150,
     filler(Len, Xs),
     type_and_wait(T, Xs),
     TargetCols = 40,			% comfortably forces 3+ rows
-    NewPixels is round((TargetCols + 2) * CW),
-    resize_width(T, NewPixels),
-    cols_for_pixels(CW, NewPixels, NewCols),
+    resize_cols(T, TargetCols, NewCols),
     assertion((NewCols >= 30, NewCols =< 50)),
     %  Number of rows the wrapped line occupies (prompt only counts on
     %  first row).
@@ -1318,12 +1546,10 @@ test(resize_ascii_shrink, [setup(resize_test_begin(T))]) :-
 
 test(resize_ascii_grow, [setup(resize_test_begin(T))]) :-
     cursor(T, P, R),
-    cw_of(T, CW),
     filler(150, Xs),
     type_and_wait(T, Xs),
-    NewPixels is round((P + 160) * CW),
-    resize_width(T, NewPixels),
-    cols_for_pixels(CW, NewPixels, NewCols),
+    WantCols is P + 158,
+    resize_cols(T, WantCols, NewCols),
     assertion(NewCols >= P + 150),
     assert_input(T, R, Xs),
     rows_of(T, 0, 3, Rows),
@@ -1343,7 +1569,6 @@ test(resize_to_exact_row_multiple, [setup(resize_test_begin(T))]) :-
     assertion(wait_for_prompt(T)),
     cursor(T, P, R),
     assertion(R > 0),
-    cw_of(T, CW),
     TargetCols = 54,
     Len is 2*TargetCols - P,            % exactly two rows after the resize
     filler(Len, Xs),
@@ -1352,9 +1577,7 @@ test(resize_to_exact_row_multiple, [setup(resize_test_begin(T))]) :-
     sub_atom(PromptLine, 0, P, _, Prompt),
     R0 is R - 1,
     row_text(T, R0, Above0),
-    NewPixels is round((TargetCols + 2) * CW),
-    resize_width(T, NewPixels),
-    cols_for_pixels(CW, NewPixels, NewCols),
+    resize_cols(T, TargetCols, NewCols),
     assertion(NewCols == TargetCols),
     %  The prompt row moved (the input needs one row more than it did
     %  at 80 columns), so find it by its prompt rather than from the
@@ -1397,8 +1620,8 @@ prompt_row(T, Prompt, Row) :-
     last(Rows, Row).
 
 test(key_after_resize_uses_new_width,
-     [ setup(start_terminal(Frame, T)),
-       cleanup(stop_terminal(Frame))
+     [ setup(start_terminal(T)),
+       cleanup(stop_terminal(T))
      ]) :-
     %  Resize, then press a key.  The resize must reach libedit before
     %  the key is acted on: ^A moves the caret up by as many rows as
@@ -1411,7 +1634,6 @@ test(key_after_resize_uses_new_width,
     cursor(T, P, R),
     row_text(T, R, PromptLine),
     sub_atom(PromptLine, 0, P, _, Prompt),
-    cw_of(T, CW),
     TargetCols = 60,
     %  One character past four whole rows at the new width: the last
     %  row holds a single character, so the row count changes and the
@@ -1419,8 +1641,7 @@ test(key_after_resize_uses_new_width,
     Len is 4*TargetCols + 1 - P,
     filler(Len, Xs),
     type_and_wait(T, Xs),
-    NewPixels is round((TargetCols + 2) * CW),
-    resize_width(T, NewPixels),
+    resize_cols(T, TargetCols, NewCols),
     key(T, ctrl_a),
     drive(0.2),
     %  Exactly one prompt on the screen: a repaint that started on the
@@ -1435,7 +1656,6 @@ test(key_after_resize_uses_new_width,
         assertion(PromptRows = [_])
     ),
     assert_cursor(T, P, PromptRow),
-    cols_for_pixels(CW, NewPixels, NewCols),
     RowsNeeded is (P + Len + NewCols - 1) // NewCols,
     rows_of(T, PromptRow, RowsNeeded, DisplayRows),
     assert_single_prompt(DisplayRows),
@@ -1446,8 +1666,8 @@ test(key_after_resize_uses_new_width,
     assertion(Joined == Xs).
 
 test(shrink_move_caret_widen,
-     [ setup(start_terminal(Frame, T)),
-       cleanup(stop_terminal(Frame))
+     [ setup(start_terminal(T)),
+       cleanup(stop_terminal(T))
      ]) :-
     %  Shrink, walk the caret to the start and back to the end, widen,
     %  then ^A.  Going to the end moves the caret down one row per
@@ -1458,18 +1678,15 @@ test(shrink_move_caret_widen,
     cursor(T, P, R),
     row_text(T, R, PromptLine),
     sub_atom(PromptLine, 0, P, _, Prompt),
-    cw_of(T, CW),
     Len is 321 - P,
     filler(Len, Xs),
     type_and_wait(T, Xs),
-    NarrowPixels is round((39 + 2) * CW),
-    resize_width(T, NarrowPixels),
+    resize_cols(T, 39, _),
     key(T, ctrl_a),
     drive(0.2),
     key(T, ctrl_e),
     drive(0.2),
-    WidePixels is round((60 + 2) * CW),
-    resize_width(T, WidePixels),
+    resize_cols(T, 60, _),
     key(T, ctrl_a),
     drive(0.2),
     prompt_rows(T, Prompt, PromptRows),
@@ -1496,16 +1713,12 @@ test(selection_survives_resize, [setup(resize_test_begin(T))]) :-
     type(T, 'true.'),
     key(T, enter),
     assertion(wait_for_prompt(T)),
-    cw_of(T, CW),
     filler(200, Xs),
     type_and_wait(T, Xs),
-    send(T, select_all),
-    get(T, selected, Sel0),
-    get(Sel0, value, Text0),
-    NewPixels is round(62 * CW),
-    resize_width(T, NewPixels),
-    get(T, selected, Sel1),
-    get(Sel1, value, Text1),
+    term_select_all(T),
+    term_selection(T, Text0),
+    resize_cols(T, 60, _),
+    term_selection(T, Text1),
     (   Text1 == Text0
     ->  true
     ;   format(user_error,
@@ -1526,7 +1739,6 @@ test(resize_wrapped_row_ending_in_a_space, [setup(resize_test_begin(T))]) :-
     assertion(wait_for_prompt(T)),
     cursor(T, P, R),
     assertion(R > 0),
-    cw_of(T, CW),
     row_text(T, R, PromptLine),
     sub_atom(PromptLine, 0, P, _, Prompt),
     row_text(T, R-1, Above0),
@@ -1539,12 +1751,9 @@ test(resize_wrapped_row_ending_in_a_space, [setup(resize_test_begin(T))]) :-
     %  The first resize repaints, and the repaint is where libedit
     %  would drop the trailing space; the second one rewraps whatever
     %  structure that left behind.
-    FirstPixels is round((FirstCols + 2) * CW),
-    resize_width(T, FirstPixels),
+    resize_cols(T, FirstCols, _),
     TargetCols = 68,
-    NewPixels is round((TargetCols + 2) * CW),
-    resize_width(T, NewPixels),
-    cols_for_pixels(CW, NewPixels, NewCols),
+    resize_cols(T, TargetCols, NewCols),
     assertion(NewCols == TargetCols),
     prompt_row(T, Prompt, PromptRow),
     AboveRow is PromptRow - 1,
@@ -1576,18 +1785,15 @@ test(edit_wrapped_input_after_resize, [setup(resize_test_begin(T))]) :-
     %  over its last row instead of moving to the prompt.  Reported for
     %  Epilog on Windows, where a resize raises no SIGWINCH.
     cursor(T, P, R),
-    cw_of(T, CW),
     TargetCols = 100,
-    NewPixels is round((TargetCols + 2) * CW),
-    resize_width(T, NewPixels),
-    cols_for_pixels(CW, NewPixels, NewCols),
+    resize_cols(T, TargetCols, NewCols),
     assertion(NewCols == TargetCols),
     Len = 200,
     filler(Len, Xs),
-    %  type_and_wait/2 is not usable here: it re-derives the cell width
-    %  from the current geometry with cw_of/2, which only holds at the
-    %  initial 80 columns.  We know NewCols, so wait for the cursor the
-    %  input must end at: the last cell is P+Len-1.
+    %  type_and_wait/2 waits for the cursor position it derives from
+    %  the column count, which is what this test is checking; wait for
+    %  the position we computed from NewCols instead: the last cell of
+    %  the input is P+Len-1.
     LastCell is P + Len - 1,
     ExpRow is R + LastCell // NewCols,
     ExpCol is LastCell mod NewCols + 1,
@@ -1636,7 +1842,6 @@ test(resize_below_window_scrolls, [setup(resize_test_begin(T))]) :-
     %     - that slice ends at the tail of the input,
     %     - no prompt is visible (it's scrolled off).
     cursor(T, P, _R),
-    cw_of(T, CW),
     WindowSize = 25,
     TargetCols = 25,
     %   Pick total chars as an exact multiple of NewCols so the last
@@ -1647,9 +1852,7 @@ test(resize_below_window_scrolls, [setup(resize_test_begin(T))]) :-
     Len is TotalChars - P,
     filler(Len, Xs),
     type_and_wait(T, Xs),
-    NewPixels is round((TargetCols + 2) * CW),
-    resize_width(T, NewPixels),
-    cols_for_pixels(CW, NewPixels, NewCols),
+    resize_cols(T, TargetCols, NewCols),
     assertion(NewCols == TargetCols),
     assertion(TotalRows > WindowSize),
     LastRow is WindowSize - 1,
@@ -1711,7 +1914,7 @@ drop_empty_prefix(L, L).
                  cleanup(cleanup_unit)
                ]).
 
-%   Terminal width is 80 columns (see start_terminal/2).  With a prompt
+%   Terminal width is 80 columns (see term_start/2).  With a prompt
 %   of width P (captured per test), the first input row can hold
 %   80 - P columns before wrapping to the next row.  When the cursor
 %   reaches the edge it moves to column 0 of the next row (no
@@ -1803,7 +2006,7 @@ test(cursor_right_across_wrap, [setup(test_begin(T))]) :-
     maplist(=(Bytes), Runs),
     append(Runs, All),
     atom_codes(Burst, All),
-    send(T, send, Burst),
+    term_send(T, Burst),
     drive(0.5),
     assert_cursor(T, 0, R2),
     key(T, cursor_right),
@@ -1993,12 +2196,16 @@ test_terminal_random(N, M, Options) :-
     must_be(nonneg, M),
     option(seed(Seed), Options, random),
     option(verbose(Verbose), Options, false),
+    option(backend(Backend), Options, epilog),
     set_random(seed(Seed)),
-    format("test_terminal_random: seed=~q sessions=~w commands=~w~n",
-           [Seed, N, M]),
-    setup_call_cleanup(setup_unit,
-                       run_random_sessions(N, M, Verbose),
-                       cleanup_unit).
+    format("test_terminal_random: seed=~q sessions=~w commands=~w backend=~q~n",
+           [Seed, N, M, Backend]),
+    setup_call_cleanup(
+        nb_setval(terminal_backend, Backend),
+        setup_call_cleanup(setup_unit,
+                           run_random_sessions(N, M, Verbose),
+                           cleanup_unit),
+        nb_delete(terminal_backend)).
 
 run_random_sessions(0, _, _) :- !.
 run_random_sessions(N, M, Verbose) :-
@@ -2257,7 +2464,7 @@ pick_weighted([W-Item|Rest], R, Out) :-
 
 apply_terminal(type(cluster(Codes, _)), T) :-
     atom_codes(Atom, Codes),
-    send(T, send, Atom).
+    term_send(T, Atom).
 apply_terminal(cursor_left,  T) :- send_key(T, cursor_left).
 apply_terminal(cursor_right, T) :- send_key(T, cursor_right).
 apply_terminal(home,         T) :- send_key(T, home).
@@ -2268,7 +2475,7 @@ apply_terminal(delete,       T) :- send_key(T, delete).
 send_key(T, Name) :-
     key_bytes(Name, Bytes),
     atom_codes(Atom, Bytes),
-    send(T, send, Atom).
+    term_send(T, Atom).
 
 
 		 /*******************************
@@ -2297,7 +2504,7 @@ wait_verified(T, P, R, Prompt, State, Outcome) :-
 %   throws on any non-`ok` outcome.
 
 verify_state(T, P, R, Prompt, state(Cs, Cursor), Outcome) :-
-    W = 80,
+    term_cols(T, W),
     model_layout(Cs, Cursor, P, R, W, ExpCol, ExpRow, RowGroups),
     cursor(T, Col, Row),
     (   Col =:= ExpCol, Row =:= ExpRow
