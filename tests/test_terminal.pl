@@ -1249,6 +1249,34 @@ test(home_end, [setup(test_begin(T))]) :-
     key(T, ctrl_e),
     assert_cursor(T, End, R).
 
+test(program_clears_the_screen, [setup(test_begin(T))]) :-
+    %  A program that clears the screen with ESC [ 2 J must have it
+    %  cleared.  On Windows the standard streams are wrapped by an
+    %  emulation of our own, src/pl-ntconsole.c, which acted on SGR and
+    %  quietly ate every other sequence -- so this cleared nothing and
+    %  wrote nothing either.
+    %
+    %  ESC [ 2 J alone, without the ESC [ H that usually goes with it:
+    %  moving the caret as well would leave the line editor painting
+    %  from a position it did not choose, which is a different question
+    %  from whether the screen was cleared.
+    rows_above(T, 3),
+    cursor(T, _, PromptRow),
+    Above is PromptRow - 2,
+    row_text(T, Above, Before),
+    assertion(Before \== ''),
+    type(T, 'format(user_error, "\\e[2J", []).'),
+    key(T, enter),
+    assertion(wait_for_prompt(T)),
+    row_text(T, Above, After),
+    (   After == ''
+    ->  true
+    ;   format(user_error,
+               "row ~w was ~q before the clear and ~q after~n",
+               [Above, Before, After]),
+        assertion(After == '')
+    ).
+
 test(kill_to_start, [setup(test_begin(T))]) :-
     cursor(T, P, R),
     type(T, foo),
