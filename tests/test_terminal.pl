@@ -1487,6 +1487,35 @@ test(scroll_up_without_a_region, [setup(current_test_terminal(T))]) :-
     append(Rest, ['','',''], Expected),
     assert_rows(T, Expected).
 
+test(tab_stops, [setup(current_test_terminal(T))]) :-
+    %  Tabs stop every eight columns until HTS (ESC H) says otherwise,
+    %  and CBT walks the same stops backwards.  Nothing before this
+    %  test moves a stop, so the stops are still the ones we start with.
+    one_line(T, 'a\tb'),
+    assert_rows(T, ['a       b']),
+    assert_cursor(T, 9, 0),
+    out(T, '\e[1;1H\e[2I'),             % two tabs forward, writing nothing
+    assert_cursor(T, 16, 0),
+    assert_rows(T, ['a       b']),
+    out(T, '\e[3;7H\eH'),               % a stop on the 7th column
+    out(T, '\e[3;1H\tb'),
+    assert_rows(T, ['a       b','','      b']),
+    out(T, '\e[3;13H\e[Z'),             % back to the stop on column 9
+    assert_cursor(T, 8, 2),
+    out(T, '\e[Z'),                     % and to the one HTS set
+    assert_cursor(T, 6, 2).
+
+test(clear_tab_stops, [setup(current_test_terminal(T))]) :-
+    term_cols(T, Cols),
+    Margin is Cols-1,
+    out(T, '\e[2J\e[H\e[3g'),           % no stops at all
+    out(T, '\t'),
+    assert_cursor(T, Margin, 0),        % a tab runs into the margin
+    out(T, '\e[2;5H\eH\e[2;1H\t'),      % one stop, on the 5th column
+    assert_cursor(T, 4, 1),
+    out(T, '\e[2;5H\e[g\e[2;1H\t'),     % and away again
+    assert_cursor(T, Margin, 1).
+
 test(save_and_restore_cursor, [setup(current_test_terminal(T))]) :-
     %  DECSC/DECRC (ESC 7 / ESC 8) are what terminfo's sc/rc use; they
     %  carry the attributes along with the position.

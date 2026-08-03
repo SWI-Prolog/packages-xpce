@@ -332,6 +332,7 @@ static void	rlc_add_line(RlcData b);
 static void	rlc_open_line(RlcData b);
 static RlcTextLine rlc_prepare_line(RlcData b, int y);
 static void	rlc_caret_down(RlcData b, int arg);
+static void	rlc_init_tabs(RlcData b);
 static void	rlc_update_scrollbar(RlcData b);
 static void	rlc_init_text_dimensions(RlcData b, FontObj f);
 static int	rlc_add_lines(RlcData b, int here, int add);
@@ -2987,6 +2988,7 @@ rlc_make_buffer(int w, int h)
   b->window_size    = 25;
   b->scroll_top     = 0;
   b->scroll_bottom  = b->window_size-1;
+  rlc_init_tabs(b);
   b->lines          = rlc_malloc(sizeof(rlc_text_line) * h);
   b->cmdstat	    = CMD_INITIAL;
   b->changed	    = CHG_CARET|CHG_CHANGED|CHG_CLEAR;
@@ -3882,20 +3884,54 @@ rlc_cariage_return(RlcData b)
 }
 
 
+		 /*******************************
+		 *	     TAB STOPS		*
+		 *******************************/
+
+#define TAB_MAP_COLS ((int)sizeof(((RlcData)0)->tabs)*8)
+
+static bool
+rlc_is_tab_stop(RlcData b, int col)
+{ if ( col < 0 || col >= TAB_MAP_COLS )
+    return col%8 == 0;			/* past the map: the default */
+
+  return (b->tabs[col/8] & (1<<(col%8))) != 0;
+}
+
+
 static void
-rlc_tab(RlcData b)
+rlc_init_tabs(RlcData b)
+{ memset(b->tabs, 0, sizeof(b->tabs));
+  for(int col=0; col<TAB_MAP_COLS; col += 8)
+    b->tabs[col/8] |= 1<<(col%8);
+}
+
+
+static void
+rlc_set_tab(RlcData b, int col, bool set)
+{ if ( col >= 0 && col < TAB_MAP_COLS )
+  { if ( set )
+      b->tabs[col/8] |=  (1<<(col%8));
+    else
+      b->tabs[col/8] &= ~(1<<(col%8));
+  }
+}
+
+
+/** Move the caret to a visual column of the current line.  `fill' says
+ * to write out the columns it passes over as spaces, which is what a
+ * tab does: the text it moved over is on the screen, and the caret can
+ * only sit where the line reaches.
+ */
+
+static void
+rlc_caret_to_column(RlcData b, int col, bool fill)
 { RlcTextLine tl = &b->lines[b->caret_y];
 
-  do
-  { int was = b->caret_x;
-
-    rlc_cursor_forward(b, 1);
-    if ( b->caret_x == was )		/* at the right edge */
-      break;
-  } while( (b->caret_x % 8) != 0 );
-
-  if ( tl->size < b->caret_x )
+  b->caret_x = rlc_vcol_to_cell(tl, col);
+  if ( fill && tl->size < b->caret_x )
   { rlc_unadjust_line(b, b->caret_y);
+    tl = &b->lines[b->caret_y];
 
     while ( tl->size < b->caret_x )
     { text_char *tc = &tl->text[tl->size++];
@@ -3904,9 +3940,63 @@ rlc_tab(RlcData b)
       tc->flags = b->sgr_flags;
       tc->flags.width = 1;
     }
+    tl->changed |= CHG_CHANGED;
   }
 
   b->changed |= CHG_CARET;
+}
+
+
+/** The next tab stop after `col', never past the last column. */
+
+static int
+rlc_next_tab_stop(RlcData b, int col)
+{ int to = col+1;
+
+  while( to < b->width-1 && !rlc_is_tab_stop(b, to) )
+    to++;
+
+  return to > b->width-1 ? b->width-1 : to;
+}
+
+
+/** Horizontal tab: write out the columns up to the next tab stop.
+ */
+
+static void
+rlc_tab(RlcData b)
+{ int col = rlc_cell_to_vcol(&b->lines[b->caret_y], b->caret_x);
+
+  rlc_caret_to_column(b, rlc_next_tab_stop(b, col), true);
+}
+
+
+/** Cursor forward tabulation (CHT) and backward tabulation (CBT) move
+ * the caret over the same stops without writing anything.
+ */
+
+static void
+rlc_forward_tabs(RlcData b, int count)
+{ int col = rlc_cell_to_vcol(&b->lines[b->caret_y], b->caret_x);
+
+  while(count-- > 0)
+    col = rlc_next_tab_stop(b, col);
+
+  rlc_caret_to_column(b, col, false);
+}
+
+
+static void
+rlc_back_tabs(RlcData b, int count)
+{ int col = rlc_cell_to_vcol(&b->lines[b->caret_y], b->caret_x);
+
+  while(count-- > 0 && col > 0)
+  { col--;
+    while( col > 0 && !rlc_is_tab_stop(b, col) )
+      col--;
+  }
+
+  rlc_caret_to_column(b, col, false);
 }
 
 
@@ -4994,6 +5084,11 @@ rlc_putansi(RlcData b, int chr)
 	  CMD(rlc_caret_down(b, 1));
 	  b->cmdstat = CMD_INITIAL;
 	  break;
+	case 'H':			/* HTS: set a tab stop */
+	  CMD(rlc_set_tab(b, rlc_cell_to_vcol(&b->lines[b->caret_y],
+					      b->caret_x), true));
+	  b->cmdstat = CMD_INITIAL;
+	  break;
 	case '7':			/* DECSC: save cursor */
 	  CMD(rlc_save_cursor(b));
 	  b->cmdstat = CMD_INITIAL;
@@ -5289,6 +5384,24 @@ rlc_putansi(RlcData b, int chr)
 	case 'X':		/* CSI Ps X — Erase Character(s) (ECH) */
 	  rlc_need_arg(b, 1, 1);
 	  CMD(rlc_erase_chars(b, b->argv[0]));
+	  break;
+	case 'I':		/* CSI Ps I — Cursor Forward Tab (CHT) */
+	  rlc_need_arg(b, 1, 1);
+	  CMD(rlc_forward_tabs(b, Bounds(b->argv[0], 1, b->width)));
+	  break;
+	case 'Z':		/* CSI Ps Z — Cursor Backward Tab (CBT) */
+	  rlc_need_arg(b, 1, 1);
+	  CMD(rlc_back_tabs(b, Bounds(b->argv[0], 1, b->width)));
+	  break;
+	case 'g':		/* CSI Ps g — Tab Clear (TBC) */
+	  rlc_need_arg(b, 1, 0);
+	  if ( b->argv[0] == 0 )
+	    CMD(rlc_set_tab(b, rlc_cell_to_vcol(&b->lines[b->caret_y],
+						b->caret_x), false));
+	  else if ( b->argv[0] == 3 )
+	    memset(b->tabs, 0, sizeof(b->tabs));
+	  else
+	    Dprint_csi(b, chr);
 	  break;
 	case 'S':		/* CSI Ps S — Scroll Up (SU) */
 	  if ( b->cmdstat == CMD_DEC_PRIVATE )	/* XTSMGRAPHICS */

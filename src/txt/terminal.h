@@ -305,6 +305,10 @@ typedef struct rlc_data
   uchar_t		link[ANSI_MAX_LINK];	/* Max URL length */
   href	       *armed_href;		/* href the mouse is hovering, or NULL */
   bool		shift_in;		/* select G1 */
+					/* HTS/TBC tab stops.  Columns past
+					   the map (a line holds at most
+					   MAXLINE of them) stop every 8 */
+  unsigned char	tabs[128];
   G_state	G0;			/* Character set slot 0 */
   G_state	G1;			/* Character set slot 1 */
   int		link_len;		/* # chars in `link` */
