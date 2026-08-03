@@ -4657,6 +4657,9 @@ rlc_putansi(RlcData b, int chr)
 	case 27:			/* ESC */
 	  b->cmdstat = CMD_ESC;
 	  break;
+	case 0:				/* NUL */
+	case 0x7F:			/* DEL */
+	  break;			/* ignored, as on a VT100 */
 	case 0x0F:			/* SI (Shift In) */
 	  b->shift_in = true;
 	  break;
