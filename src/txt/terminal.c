@@ -4862,6 +4862,12 @@ rlc_set_dec_mode(RlcData b, int mode)
   { case 1:
       b->app_escape = true;
       break;
+    case 5:				/* DECSCNM: reverse video.  Used by
+					   terminfo's `flash', which sets and
+					   clears it around a delay; we take
+					   the set as the flash itself */
+      send(b->object, NAME_flash, EAV);
+      break;
     case 7:				/* DECAWM: wrap at the margin */
       b->autowrap = true;
       break;
@@ -4883,7 +4889,7 @@ rlc_set_dec_mode(RlcData b, int mode)
       b->bracketed_paste_mode = true;
       break;
     default:
-      Cprintf("Set unknown DEC private mode %d\n", mode);
+      DEBUG(NAME_term, Cprintf("Set unknown DEC private mode %d\n", mode));
   }
 }
 
@@ -4892,6 +4898,8 @@ rlc_clear_dec_mode(RlcData b, int mode)
 { switch(mode)
   { case 1:
       b->app_escape = false;
+      break;
+    case 5:				/* DECSCNM: see rlc_set_dec_mode() */
       break;
     case 7:				/* DECAWM */
       b->autowrap = false;
@@ -4914,7 +4922,7 @@ rlc_clear_dec_mode(RlcData b, int mode)
       b->bracketed_paste_mode = false;
       break;
     default:
-      Cprintf("Clear unknown DEC private mode %d\n", mode);
+      DEBUG(NAME_term, Cprintf("Clear unknown DEC private mode %d\n", mode));
   }
 }
 
@@ -5027,7 +5035,7 @@ osc_command(RlcData b, int param, const uchar_t *link)
       break;
     }
     default:
-      Cprintf("Unknown OSC command: %d\n", param);
+      DEBUG(NAME_term, Cprintf("Unknown OSC command: %d\n", param));
   }
 }
 
@@ -5198,7 +5206,7 @@ rlc_putansi(RlcData b, int chr)
 	  b->cmdstat = CMD_INITIAL;
 	  break;
 	default:
-	  Cprintf("ESC%c\n", chr);
+	  DEBUG(NAME_term, Cprintf("Unknown escape: ESC%c\n", chr));
 	  b->cmdstat = CMD_INITIAL;
 	  break;
       }
@@ -6230,10 +6238,17 @@ Dprint_chr(int chr)
     Cprintf("\\\\u%04x", chr);
 }
 
+/* Report a sequence we parsed but do not act on.  A terminal is
+   expected to ignore what it does not know, quietly: the stream
+   belongs to the application, and writing our own notes into it
+   corrupts the screen we are trying to paint.
+*/
+
 static void
 Dprint_csi(RlcData b, int chr)
-{ Cprintf("Unknown ANSI CSI: \\\\e[");
-  for(int i=0; i<b->argc; i++)
-    Cprintf("%s%d", i==0?"":";", b->argv[i]);
-  Cprintf("%c\n", chr);
+{ DEBUG(NAME_term,
+	Cprintf("Unknown ANSI CSI: \\\\e[");
+	for(int i=0; i<b->argc; i++)
+	  Cprintf("%s%d", i==0?"":";", b->argv[i]);
+	Cprintf("%c\n", chr));
 }
