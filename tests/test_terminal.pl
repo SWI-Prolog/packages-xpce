@@ -1516,6 +1516,17 @@ test(clear_tab_stops, [setup(current_test_terminal(T))]) :-
     out(T, '\e[2;5H\e[g\e[2;1H\t'),     % and away again
     assert_cursor(T, Margin, 1).
 
+test(erase_display_drops_the_rows, [setup(current_test_terminal(T))]) :-
+    %  A row the screen no longer reaches is still in the ring, and
+    %  both the painter and <-row walk the ring: erasing the display
+    %  has to let go of the text or it stays on the screen.
+    paint(T, [l1,l2,l3,l4]),
+    out(T, '\e[2J'),
+    assert_rows(T, ['','','','']),
+    paint(T, [l1,l2,l3,l4]),
+    out(T, '\e[2;1H\e[J'),              % and the same from the caret down
+    assert_rows(T, [l1,'','','']).
+
 test(repeat_character, [setup(current_test_terminal(T))]) :-
     %  REP repeats the last character written.
     out(T, '\ec-\e[4b\e[2;1Hx\e[b'),

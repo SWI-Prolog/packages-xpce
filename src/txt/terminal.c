@@ -4161,14 +4161,31 @@ rlc_erase_saved_lines(RlcData b)
     b->first = b->window_start;
 }
 
+/** Drop the lines from `line' to the last one of the buffer.
+ *
+ * A line beyond `b->last' does not exist, but it is still in the ring
+ * and both the painter and <-row walk the ring: unless we let go of
+ * its text it stays on the screen.
+ */
+
+static void
+rlc_drop_lines_below(RlcData b, int line)
+{ while( line != b->last )
+  { line = NextLine(b, line);
+    rlc_free_line(b, line);
+  }
+}
+
+
 static void
 rlc_erase_display(RlcData b)
-{ if ( b->first == b->window_start ) /* no saved lines */
+{ rlc_drop_lines_below(b, b->window_start);
+  rlc_free_line(b, b->window_start);
+  b->last = b->window_start;
+
+  if ( b->first == b->window_start )	/* no saved lines: start over */
     b->window_start = b->first = b->last = 0;
 
-  RlcTextLine tl = &b->lines[b->window_start];
-  tl->size = 0;
-  b->last = b->window_start;
   b->changed |= CHG_CHANGED|CHG_CLEAR|CHG_CARET;
 
   rlc_set_caret(b, 0, 0);
@@ -4288,6 +4305,7 @@ rlc_erase_chars(RlcData b, int count)
 static void
 rlc_clear_from_cursor(RlcData b)
 { rlc_erase_line(b, 0);
+  rlc_drop_lines_below(b, b->caret_y);
   b->last = b->caret_y;
   /* If we just collapsed the buffer to a single line parked at a
    * non-zero ring-position, compact to line 0 so the origin
