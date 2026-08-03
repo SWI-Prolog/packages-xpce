@@ -105,8 +105,10 @@ keystrokes and hovered hyperlinks.
     Succeeds if a non-empty selection exists.
 
 - terminal_image->interrupt
-    Virtual hook called on Ctrl-C; subclasses send a signal to the
-    connected process.
+    Interrupt the process running in the terminal by handing the tty
+    its interrupt character.  Fails if `<-foreground_process` reports
+    none, leaving the interrupt to a subclass whose client is not a
+    process of its own.
 
 - terminal_image->copy_or_interrupt
     Copy if there is selected text, otherwise call `->interrupt`.
@@ -120,6 +122,13 @@ keystrokes and hovered hyperlinks.
 - terminal_image<-pty_name: -> name*
     Path of the pseudo-terminal device, or `@nil` when not connected
     to one.
+
+- terminal_image<-foreground_process: -> int
+    Process group of another session that owns the pty, i.e. of the
+    process running in the terminal.  Fails if there is none, which is
+    the case while the terminal is driven by a thread of this process.
+    While it succeeds the control keys are passed to that process
+    rather than looked up in `<-bindings`.  Unix only.
 
 - terminal_image<-displayed_cursor: -> cursor
     Cursor reflecting whether the pointer is on text or over a link.
