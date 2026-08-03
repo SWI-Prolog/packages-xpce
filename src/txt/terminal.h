@@ -297,8 +297,11 @@ typedef struct rlc_data
   bool		app_escape;		/* Send ESC 0 instead of ESC [ */
   bool		app_keypad_mode;	/* Send ESC <N> p from keypad */
   bool		insert_mode;		/* ANSI mode 4 (IRM) */
+  bool		autowrap;		/* DEC Private Mode 7 (DECAWM) */
+  int		last_char;		/* last printed char, for REP */
   ansi_state    cmdstat;		/* for parsing ANSI escape */
   int		argstat;		/* argument status ANSI */
+  int		csi_intermediate;	/* CSI intermediate byte, 0 if none */
   char const   *must_see;		/* \e]8;; link decoding */
   int		argc;			/* argument count for ANSI */
   int		argv[ANSI_MAX_ARGC];	/* argument vector for ANSI */

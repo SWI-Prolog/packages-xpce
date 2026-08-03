@@ -333,6 +333,8 @@ static void	rlc_open_line(RlcData b);
 static RlcTextLine rlc_prepare_line(RlcData b, int y);
 static void	rlc_caret_down(RlcData b, int arg);
 static void	rlc_init_tabs(RlcData b);
+static void	rlc_erase_display(RlcData b);
+static void	rlc_restore_screen(RlcData b);
 static void	rlc_update_scrollbar(RlcData b);
 static void	rlc_init_text_dimensions(RlcData b, FontObj f);
 static int	rlc_add_lines(RlcData b, int here, int add);
@@ -2988,6 +2990,7 @@ rlc_make_buffer(int w, int h)
   b->window_size    = 25;
   b->scroll_top     = 0;
   b->scroll_bottom  = b->window_size-1;
+  b->autowrap       = true;
   rlc_init_tabs(b);
   b->lines          = rlc_malloc(sizeof(rlc_text_line) * h);
   b->cmdstat	    = CMD_INITIAL;
@@ -3729,6 +3732,51 @@ rlc_scroll_down(RlcData b, int count)
 }
 
 
+/** Soft terminal reset (DECSTR, `CSI ! p').  Puts the modes, the
+ * attributes and the character sets back to their defaults, leaving
+ * the screen and the tab stops alone.  It is part of terminfo's `is2',
+ * so this runs whenever a full screen application starts.
+ *
+ * DEC resets autowrap here; xterm leaves it on, and so do we: `am' is
+ * what its terminfo entry promises and an application that sends `is2'
+ * does not expect to have lost it.
+ */
+
+static void
+rlc_soft_reset(RlcData b)
+{ b->scroll_top       = 0;
+  b->scroll_bottom    = b->window_size-1;
+  b->sgr_flags        = TF_DEFAULT;
+  b->insert_mode      = false;
+  b->autowrap         = true;
+  b->app_escape       = false;
+  b->app_keypad_mode  = false;
+  b->G0               = G_ASCII;
+  b->G1               = G_ASCII;
+  b->shift_in         = false;
+  b->cursor.saved     = false;
+  b->hide_caret       = false;
+  changed_caret(b);
+}
+
+
+/** Hard terminal reset (RIS, `ESC c').  As DECSTR, but it also gives
+ * back the normal screen, the default tab stops and an empty window.
+ */
+
+static void
+rlc_reset(RlcData b)
+{ if ( b->saved.lines )
+    rlc_restore_screen(b);
+  rlc_soft_reset(b);
+  rlc_init_tabs(b);
+  b->bracketed_paste_mode = false;
+  b->focus_inout_events   = false;
+  b->last_char            = 0;
+  rlc_erase_display(b);
+}
+
+
 static void
 rlc_need_arg(RlcData b, int arg, int def)
 { if ( b->argc < arg )
@@ -4443,7 +4491,13 @@ rlc_put(RlcData b, int chr)
        char's second half won't fit, wrap to the next line first.  When
        wrapping for a wide char at the last column, pad that column so
        the rendered glyph and the cell array stay in sync. */
-    if ( cur_vcol >= b->width ||
+    if ( (cur_vcol >= b->width ||
+	  (dw == 2 && cur_vcol + 1 >= b->width)) && !b->autowrap )
+    { /* DECAWM is off: the character goes into the last column, over
+	 whatever is there, and the caret stays with it. */
+      b->caret_x = rlc_vcol_to_cell(tl, b->width > dw ? b->width-dw : 0);
+      tl = rlc_prepare_line(b, b->caret_y);
+    } else if ( cur_vcol >= b->width ||
 	 (dw == 2 && cur_vcol + 1 >= b->width) )
     { if ( dw == 2 && cur_vcol < b->width &&
 	   b->caret_x < LINE_CELL_CAPACITY(b) )
@@ -4504,8 +4558,12 @@ rlc_put(RlcData b, int chr)
        delayed wrap above handles the end-of-line transition on the next
        base, which lets a trailing combiner still attach to this base. */
     b->caret_x += dw;
+    if ( !b->autowrap &&		/* no delayed wrap: the caret stays */
+	 rlc_cell_to_vcol(tl, b->caret_x) > b->width-1 )
+      b->caret_x = rlc_vcol_to_cell(tl, b->width-1);
     b->changed |= CHG_CARET;
   }
+  b->last_char = chr;			/* what REP repeats */
   tlog("rlc_put exit  caret_x=%d size=%d\n", b->caret_x, tl->size);
 }
 
@@ -4786,6 +4844,9 @@ rlc_set_dec_mode(RlcData b, int mode)
   { case 1:
       b->app_escape = true;
       break;
+    case 7:				/* DECAWM: wrap at the margin */
+      b->autowrap = true;
+      break;
     case 12:
       DEBUG(NAME_term, Cprintf("stub: enable blinking cursor\n"));
       break;
@@ -4813,6 +4874,9 @@ rlc_clear_dec_mode(RlcData b, int mode)
 { switch(mode)
   { case 1:
       b->app_escape = false;
+      break;
+    case 7:				/* DECAWM */
+      b->autowrap = false;
       break;
     case 12:
       DEBUG(NAME_term, Cprintf("stub: enable static cursor\n"));
@@ -5084,6 +5148,10 @@ rlc_putansi(RlcData b, int chr)
 	  CMD(rlc_caret_down(b, 1));
 	  b->cmdstat = CMD_INITIAL;
 	  break;
+	case 'c':			/* RIS: reset to initial state */
+	  CMD(rlc_reset(b));
+	  b->cmdstat = CMD_INITIAL;
+	  break;
 	case 'H':			/* HTS: set a tab stop */
 	  CMD(rlc_set_tab(b, rlc_cell_to_vcol(&b->lines[b->caret_y],
 					      b->caret_x), true));
@@ -5260,11 +5328,16 @@ rlc_putansi(RlcData b, int chr)
       }
     case CMD_CSI_INTERMEDIATE:
       /* Consume further intermediates (0x20-0x2F).  A final byte
-	 (0x40-0x7E) terminates the sequence; we discard it.  Any other
-	 byte aborts (treated as end of sequence) per ECMA-48.
+	 (0x40-0x7E) terminates the sequence; of those we act on DECSTR
+	 (CSI ! p) and discard the rest.  Any other byte aborts
+	 (treated as end of sequence) per ECMA-48.
        */
       if ( chr >= 0x20 && chr <= 0x2F )
+      { b->csi_intermediate = 0;	/* more than one: none of ours */
 	return;
+      }
+      if ( b->csi_intermediate == '!' && chr == 'p' )
+	CMD(rlc_soft_reset(b));
       b->cmdstat = CMD_INITIAL;
       break;
     case CMD_ANSI:			/* ESC [ */
@@ -5292,13 +5365,14 @@ rlc_putansi(RlcData b, int chr)
       }
       /* ECMA-48: zero or more intermediate bytes (0x20-0x2F) may appear
 	 between the parameter bytes and the final byte (0x40-0x7E).
-	 Combinations like CSI ! p (DECSTR), " p (DECSCL), $ p (DECRQM),
-	 % q (XTQMODKEYS) are recognized by xterm/vim but not implemented
-	 here; consume the rest of the sequence silently.  OSC arg state
+	 Of the combinations xterm/vim use -- CSI ! p (DECSTR), " p
+	 (DECSCL), $ p (DECRQM), % q (XTQMODKEYS) -- we act on DECSTR
+	 and consume the rest of the sequence silently.  OSC arg state
 	 has its own terminator handling and is excluded.
        */
       if ( b->cmdstat != CMD_OSCARG && chr >= 0x20 && chr <= 0x2F )
       { b->cmdstat = CMD_CSI_INTERMEDIATE;
+	b->csi_intermediate = chr;
 	return;
       }
       switch(chr)
@@ -5384,6 +5458,15 @@ rlc_putansi(RlcData b, int chr)
 	case 'X':		/* CSI Ps X — Erase Character(s) (ECH) */
 	  rlc_need_arg(b, 1, 1);
 	  CMD(rlc_erase_chars(b, b->argv[0]));
+	  break;
+	case 'b':		/* CSI Ps b — Repeat (REP) */
+	  rlc_need_arg(b, 1, 1);
+	  if ( b->last_char )
+	  { int n = Bounds(b->argv[0], 1, b->width);
+
+	    for(int i=0; i<n; i++)
+	      CMD(rlc_put(b, b->last_char));
+	  }
 	  break;
 	case 'I':		/* CSI Ps I — Cursor Forward Tab (CHT) */
 	  rlc_need_arg(b, 1, 1);

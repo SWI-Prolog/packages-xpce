@@ -1489,8 +1489,8 @@ test(scroll_up_without_a_region, [setup(current_test_terminal(T))]) :-
 
 test(tab_stops, [setup(current_test_terminal(T))]) :-
     %  Tabs stop every eight columns until HTS (ESC H) says otherwise,
-    %  and CBT walks the same stops backwards.  Nothing before this
-    %  test moves a stop, so the stops are still the ones we start with.
+    %  and CBT walks the same stops backwards.
+    out(T, '\ec'),                      % RIS: default stops again
     one_line(T, 'a\tb'),
     assert_rows(T, ['a       b']),
     assert_cursor(T, 9, 0),
@@ -1508,13 +1508,42 @@ test(tab_stops, [setup(current_test_terminal(T))]) :-
 test(clear_tab_stops, [setup(current_test_terminal(T))]) :-
     term_cols(T, Cols),
     Margin is Cols-1,
-    out(T, '\e[2J\e[H\e[3g'),           % no stops at all
+    out(T, '\ec\e[3g'),                 % no stops at all
     out(T, '\t'),
     assert_cursor(T, Margin, 0),        % a tab runs into the margin
     out(T, '\e[2;5H\eH\e[2;1H\t'),      % one stop, on the 5th column
     assert_cursor(T, 4, 1),
     out(T, '\e[2;5H\e[g\e[2;1H\t'),     % and away again
     assert_cursor(T, Margin, 1).
+
+test(repeat_character, [setup(current_test_terminal(T))]) :-
+    %  REP repeats the last character written.
+    out(T, '\ec-\e[4b\e[2;1Hx\e[b'),
+    assert_rows(T, ['-----',xx]).
+
+test(autowrap_off, [setup(current_test_terminal(T))]) :-
+    %  With DECAWM off the last column takes every further character
+    %  and the caret stays with it.
+    term_cols(T, Cols),
+    Margin is Cols-1,
+    numlist(1, Cols, Ns),
+    findall(a, member(_, Ns), As),
+    atomic_list_concat(As, Line),       % one full row of a's
+    out(T, ['\ec\e[?7l', Line, bcd]),
+    assert_cursor(T, Margin, 0),
+    atom_concat(Head, a, Line),
+    atom_concat(Head, d, Expected),     % b and c were overwritten
+    assert_rows(T, [Expected]),
+    out(T, ['\e[?7h\e[2;1H', Line, x]), % and wrapping again
+    assert_rows(T, [Expected,Line,x]).
+
+test(soft_reset, [setup(current_test_terminal(T))]) :-
+    %  DECSTR is part of terminfo's is2, so it runs when a full screen
+    %  application starts: it must put the scrolling region back.
+    full_screen(T, [_Top,Second|Below]),
+    out(T, '\e[1;3r\e[!p'),
+    out(T, '\e[1;1H\e[1M'),             % a delete the region would bound
+    assert_rows(T, [Second|Below]).
 
 test(save_and_restore_cursor, [setup(current_test_terminal(T))]) :-
     %  DECSC/DECRC (ESC 7 / ESC 8) are what terminfo's sc/rc use; they
