@@ -535,10 +535,13 @@ clear_screen(PT) :->
     send(PT, send, "\f").               % Ctrl-L: re-prompt.
 
 interrupt(PT) :->
-    "Interrupt client Prolog process"::
-    current_prolog_terminal(Thread, PT),
-    current_signal(int, SIGINT, debug),
-    thread_signal(Thread, SIGINT).
+    "Interrupt the process running in this terminal"::
+    (   send_super(PT, interrupt)       % external process: the tty signals it
+    ->  true
+    ;   current_prolog_terminal(Thread, PT),
+        current_signal(int, SIGINT, debug),
+        thread_signal(Thread, SIGINT)
+    ).
 
 debug_mode(PT) :->
     "Toggle Prolog debug mode"::

@@ -376,6 +376,9 @@ static void	changed_caret(RlcData b);
 static bool	rlc_open_pty_pair(RlcData b, int cols, int rows);
 static void	rlc_close_connection(RlcData b);
 static ssize_t	rlc_send(RlcData b, const char *buffer, size_t count);
+static int	rlc_foreground_process(RlcData b);
+static int	rlc_interrupt_char(RlcData b);
+static int	rlc_suspend_char(RlcData b);
 static bool	rlc_caret_to_click(RlcData b, int x, int y);
 static void	rlc_resize_pty(RlcData b, int cols, int rows);
 static Name	TCHAR2Name(const uchar_t *str);
@@ -658,6 +661,23 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
   fail;
 }
 
+/* While a process group of another session owns the pty, control
+ * characters belong to that process: it is the tty line discipline,
+ * not this window, that decides whether ^C raises a signal or is
+ * plain input.  Passing them on is what makes ^C, ^X, ^V and friends
+ * work in a program started by shell/1 or process_create/3.
+ *
+ * Ctrl+Shift and Meta combinations do not produce a control
+ * character, so the window's own bindings keep working throughout.
+ */
+
+static bool
+clientOwnsKeyTerminalImage(TerminalImage ti, EventObj ev)
+{ return ( isInteger(ev->id) &&
+	   valInt(ev->id) < 32 &&
+	   rlc_foreground_process(ti->data) > 0 );
+}
+
 static status
 typedTerminalImage(TerminalImage ti, EventObj ev)
 { int chr;
@@ -665,7 +685,8 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   char buf[10];
   RlcData b = ti->data;
 
-  if ( typedKeyBinding(ti->bindings, ev, (Graphical)ti) )
+  if ( !clientOwnsKeyTerminalImage(ti, ev) &&
+       typedKeyBinding(ti->bindings, ev, (Graphical)ti) )
     succeed;
 
   if ( isInteger(ev->id) )
@@ -946,10 +967,35 @@ copyTerminalImage(TerminalImage ti, Name which)
   return rlc_copy(ti->data, which);
 }
 
-/* Virtual method */
+/* Interrupt the process running in this terminal.  If another session
+ * owns the pty we hand the tty its interrupt character and let the
+ * line discipline signal the foreground process group.  If there is
+ * none we fail, leaving the interrupt to a subclass: a prolog_terminal
+ * runs its client as a thread of this process, which no tty can reach.
+ */
+
 static status
 interruptTerminalImage(TerminalImage ti)
-{ succeed;
+{ RlcData b = ti->data;
+  int intr;
+
+  if ( rlc_foreground_process(b) > 0 && (intr=rlc_interrupt_char(b)) >= 0 )
+  { char chr = intr;
+
+    return rlc_send(b, &chr, 1) == 1;
+  }
+
+  fail;
+}
+
+static Int
+getForegroundProcessTerminalImage(TerminalImage ti)
+{ int pgid = rlc_foreground_process(ti->data);
+
+  if ( pgid > 0 )
+    answer(toInt(pgid));
+
+  fail;
 }
 
 static status
@@ -1202,7 +1248,7 @@ static senddecl send_terminal_image[] =
   SM(NAME_paste, 1, "which=[{primary,clipboard}]", pasteTerminalImage,
      NAME_selection, "Paste content of clipboard or primary selection"),
   SM(NAME_interrupt, 0, NULL, interruptTerminalImage,
-     NAME_event, "Virtual method called on Ctrl-C"),
+     NAME_event, "Interrupt the foreground process; fail if there is none"),
   SM(NAME_copyOrInterrupt, 0, NULL, copyOrInterruptTerminalImage,
      NAME_selection, "Copy if there is selected text; else interrupt"),
   SM(NAME_cursorEnd, 0, NULL, cursorEndTerminalImage,
@@ -1234,6 +1280,9 @@ static senddecl send_terminal_image[] =
 static getdecl get_terminal_image[] =
 { GM(NAME_ptyName, 0, "pty=name*", NULL, getPtyNameTerminalImage,
      NAME_process, "Path name for the pty"),
+  GM(NAME_foregroundProcess, 0, "int", NULL,
+     getForegroundProcessTerminalImage,
+     NAME_process, "Process group of another session owning the pty"),
   GM(NAME_displayedCursor, 0, "cursor=cursor", NULL,
      getDisplayedCursorTerminalImage,
      NAME_event, "Indicate normal cursor or link"),
@@ -1472,12 +1521,23 @@ again:
 		 *******************************/
 
 /**
- * Handle  an typed  character.  C-c  and C-v  are handled  here.  All
- * other characters are added to the queue of this terminal.
+ * Send a typed character to the client as UTF-8.
+ *
+ * ^Z is dropped: it would stop the client, and this terminal has no
+ * job control to get it going again.  A client that turned signals off
+ * wants the character as data, and then rlc_suspend_char() reports
+ * none.
  */
 static void
 typed_char(RlcData b, int chr)
-{ rlc_set_selection(b, 0, 0, 0, 0);
+{ int susp = rlc_suspend_char(b);
+
+  rlc_set_selection(b, 0, 0, 0, 0);
+
+  if ( susp > 0 && chr == susp )
+  { DEBUG(NAME_term, Cprintf("Not sending %d: would stop the client\n", chr));
+    return;
+  }
 
   DEBUG(NAME_term, Cprintf("Send %d to client\n", chr));
   char buf[6];
@@ -5910,6 +5970,59 @@ rlc_send(RlcData b, const char *buffer, size_t count)
   }
 }
 
+/**
+ * Process group that owns the pty, or 0 if there is none.
+ *
+ * A pty only has a foreground process group once a process made it
+ * its controlling terminal.  Our own client, a Prolog thread, cannot
+ * do so: it shares this process, which has a terminal of its own and
+ * may run several of these windows.  A process started from that
+ * thread does, though.  See adopt_ctty() in pl-os.c and process.c.
+ *
+ * This makes the kernel answer whether an external process is running
+ * in this terminal, without either side telling us about it.
+ */
+
+static int
+rlc_foreground_process(RlcData b)
+{ if ( b->pty.open )
+  { pid_t pgid = tcgetpgrp(b->pty.master_fd);
+
+    if ( pgid > 0 && pgid != getpgrp() )
+      return pgid;
+  }
+
+  return 0;
+}
+
+/**
+ * Character that makes the line discipline raise `which` (VINTR,
+ * VSUSP, ...) in the client, or -1 if the client turned signal
+ * generation off.  The master side reports the settings of the slave.
+ */
+
+static int
+rlc_signal_char(RlcData b, int which)
+{ struct termios tio;
+
+  if ( b->pty.open &&
+       tcgetattr(b->pty.master_fd, &tio) == 0 &&
+       (tio.c_lflag&ISIG) )
+    return tio.c_cc[which];
+
+  return -1;
+}
+
+static int
+rlc_interrupt_char(RlcData b)
+{ return rlc_signal_char(b, VINTR);
+}
+
+static int
+rlc_suspend_char(RlcData b)
+{ return rlc_signal_char(b, VSUSP);
+}
+
 #define PTY_READ_CHUNK 4096
 
 status
@@ -6126,6 +6239,31 @@ rlc_send(RlcData b, const char *buffer, size_t count)
   { Cprintf("%s: nowhere to send data\n", pp(b->object));
     return -1;
   }
+}
+
+/**
+ * A pseudo console has no equivalent of a foreground process group,
+ * so we cannot tell whether a process is running in this terminal.
+ * ->typed keeps its own bindings and ->interrupt is left to the
+ * subclass.  A process started with ->launch would have to tell us.
+ */
+
+static int
+rlc_foreground_process(RlcData b)
+{ (void)b;
+  return 0;
+}
+
+static int
+rlc_interrupt_char(RlcData b)
+{ (void)b;
+  return -1;
+}
+
+static int
+rlc_suspend_char(RlcData b)
+{ (void)b;
+  return -1;
 }
 
 status
