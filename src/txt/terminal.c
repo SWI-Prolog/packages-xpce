@@ -5151,6 +5151,8 @@ rlc_putansi(RlcData b, int chr)
 	  b->cmdstat = CMD_ANSI;
 	  b->argc    = 0;
 	  b->argstat = 0;		/* no arg */
+	  b->csi_private = 0;
+	  b->csi_intermediate = 0;
 	  break;
 	case ']':
 	  b->cmdstat = CMD_OSC;
@@ -5513,7 +5515,7 @@ rlc_putansi(RlcData b, int chr)
 	    Dprint_csi(b, chr);
 	  break;
 	case 'S':		/* CSI Ps S — Scroll Up (SU) */
-	  if ( b->cmdstat == CMD_DEC_PRIVATE )	/* XTSMGRAPHICS */
+	  if ( b->csi_private )			/* CSI ? Pi ; ... S is XTSMGRAPHICS */
 	  { Dprint_csi(b, chr);
 	    break;
 	  }
@@ -5529,7 +5531,11 @@ rlc_putansi(RlcData b, int chr)
 	  CMD(rlc_scroll_down(b, Bounds(b->argv[0], 1, b->window_size)));
 	  break;
 	case 'm':
-	  { rlc_need_arg(b, 1, 0);
+	  { if ( b->csi_private )	/* CSI > Pm m is XTMODKEYS, not SGR */
+	    { Dprint_csi(b, chr);
+	      break;
+	    }
+	    rlc_need_arg(b, 1, 0);
 
 	    /* Walk the SGR parameter list.  Most codes are atomic (handled
 	     * by rlc_sgr); 38/48 introduce a sub-sequence for extended
@@ -5575,9 +5581,10 @@ rlc_putansi(RlcData b, int chr)
 	  b->changed |= CHG_CARET;
 	  break;
 	}
-	case '?':
-	case '>':
+	case '?':		/* private markers: DEC modes (?) and the */
+	case '>':		/* xterm extensions (>) */
 	  b->cmdstat = CMD_DEC_PRIVATE;
+	  b->csi_private = chr;
 	  return;
 	case 'l':
 	  if ( b->cmdstat == CMD_DEC_PRIVATE )
@@ -5619,9 +5626,15 @@ rlc_putansi(RlcData b, int chr)
 	  { Dprint_csi(b, chr);
 	  }
 	  break;
-	case 'c':		/* Identify as VT100+ANSI */
-	{ const char *id = S_ESC"[?1;2c";
-	  rlc_send(b, id, strlen(id));
+	case 'c':		/* CSI c — Device Attributes (DA) */
+	{ const char *id = NULL;
+
+	  if ( b->csi_private == 0 )		/* primary: VT100 with AVO */
+	    id = S_ESC"[?1;2c";
+	  else if ( b->csi_private == '>' )	/* secondary: VT100, no ROM */
+	    id = S_ESC"[>0;10;0c";
+	  if ( id )
+	    rlc_send(b, id, strlen(id));
 	  break;
 	}
 	default:

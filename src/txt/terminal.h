@@ -302,6 +302,7 @@ typedef struct rlc_data
   ansi_state    cmdstat;		/* for parsing ANSI escape */
   int		argstat;		/* argument status ANSI */
   int		csi_intermediate;	/* CSI intermediate byte, 0 if none */
+  int		csi_private;		/* CSI private marker ? or >, 0 if none */
   char const   *must_see;		/* \e]8;; link decoding */
   int		argc;			/* argument count for ANSI */
   int		argv[ANSI_MAX_ARGC];	/* argument vector for ANSI */
