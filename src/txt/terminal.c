@@ -798,6 +798,30 @@ getCursorPositionTerminalImage(TerminalImage ti)
 }
 
 
+/* Return the size of the terminal in character units.
+ *
+ * The pixel size (<-width, <-height) only yields this after dividing
+ * by the font's cell width and subtracting the margin, i.e. after
+ * duplicating rlc_resize_pixel_units().  Report it directly instead,
+ * so callers that reason in columns and rows -- the coordinate system
+ * <-cursor_position and <-row already use -- need not know the font.
+ */
+static Int
+getColumnsTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+
+  answer(toInt(b->width));
+}
+
+
+static Int
+getRowsTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+
+  answer(toInt(b->window_size));
+}
+
+
 /* Return the content of the visible row `arg` as a string.
  *
  * `arg` is a 0-based row counted from the top of the terminal window
@@ -1217,6 +1241,12 @@ static getdecl get_terminal_image[] =
   GM(NAME_row, 1, "string", "int",
      getRowTerminalImage,
      NAME_text, "Text content of visible row (0-based from top)"),
+  GM(NAME_columns, 0, "int", NULL,
+     getColumnsTerminalImage,
+     NAME_dimension, "Width of the terminal in characters"),
+  GM(NAME_rows, 0, "int", NULL,
+     getRowsTerminalImage,
+     NAME_dimension, "Height of the terminal in characters"),
   GM(NAME_link, 1, "name", "point|event",
      getURLTerminalImage,
      NAME_selected, "Hyperlink content and location"),
