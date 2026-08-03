@@ -349,6 +349,24 @@ term_has_selection(terminal(_, xpce(_, TI))) :-
 term_capability(terminal(Backend, _), Cap) :-
     backend_capability(Backend, Cap).
 
+%!  magic_margins is semidet.
+%
+%   True when the line editor believes the terminal defers its wrap,
+%   i.e. when the terminal description it reads has `xenl'.  A caret
+%   the terminal's own reflow left on the right margin is the one thing
+%   the redisplay still predicts from the description rather than
+%   settling itself, so a test of that prediction only makes sense
+%   where the description and the terminal agree.  The terminal is
+%   always the xpce one, which does defer its wrap.
+
+magic_margins :-
+    current_backend(Backend),
+    (   Backend = child(Profile)
+    ->  term_profile_term(Profile, TERM)
+    ;   getenv('TERM', TERM)
+    ),
+    terminfo_flag(TERM, xenl).
+
 backend_capability(epilog,   mouse).
 backend_capability(epilog,   selection).
 backend_capability(epilog,   combining).
@@ -744,6 +762,31 @@ terminfo_string(TERM, Cap, Bytes) :-
     ),
     Cached \== (-),
     Bytes = Cached.
+
+%!  terminfo_flag(+TERM, +Cap) is semidet.
+%
+%   True when TERM has the boolean capability Cap.  tput reports those
+%   in its exit status rather than on standard output.
+
+terminfo_flag(TERM, Cap) :-
+    (   terminfo_cache(TERM, Cap, Cached)
+    ->  true
+    ;   (   catch(tput_status(TERM, Cap), _, fail)
+        ->  Cached = true
+        ;   Cached = (-)
+        ),
+        assertz(terminfo_cache(TERM, Cap, Cached))
+    ),
+    Cached == true.
+
+tput_status(TERM, Cap) :-
+    process_create(path(tput), ['-T', TERM, Cap],
+                   [ stdout(null),
+                     stderr(null),
+                     process(PID)
+                   ]),
+    process_wait(PID, Status),
+    Status == exit(0).
 
 tput(TERM, Cap, Bytes) :-
     process_create(path(tput), ['-T', TERM, Cap],
@@ -1713,13 +1756,22 @@ test(resize_ascii_grow, [setup(resize_test_begin(T))]) :-
     rows_of(T, 0, 3, Rows),
     assert_single_prompt(Rows).
 
-test(resize_to_exact_row_multiple, [setup(resize_test_begin(T))]) :-
+test(resize_to_exact_row_multiple,
+     [ condition(magic_margins),
+       setup(resize_test_begin(T))
+     ]) :-
     %  Shrink to a width the input fills exactly: prompt + input is a
     %  whole number of rows, so the caret ends on the right margin.  A
     %  terminal with magic margins leaves it there rather than opening
     %  the row below, and libedit must rewind by one row less when it
     %  repaints.  It rewound one row too far and painted the input over
     %  the line above the prompt, eating it.
+    %
+    %  Needs a terminal description that says so: this is the one place
+    %  where the redisplay predicts the caret from the description
+    %  rather than settling it, so where the two disagree -- TERM=ansi
+    %  on the xpce terminal -- libedit rewinds by the wrong amount and
+    %  there is nothing it could have done about it.
     %  Run a goal first: its output gives us a known line above the
     %  prompt, which is what the bug ate.
     type(T, 'true.'),

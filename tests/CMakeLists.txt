@@ -35,6 +35,17 @@ if(NOT WIN32)
 		   -g "test_terminal(child(xterm))"
 		   -t halt)
   list(APPEND XPCE_EXTRA_TESTS xpce:terminal_child)
+
+  # Once more with a terminal description that has am but not xenl,
+  # which is the shape win_ncurses.c reports on Windows.  That is the
+  # combination the redisplay used to get wrong, so this is where the
+  # Windows console bugs can be caught without a Windows console.
+  add_test(NAME "xpce:terminal_child_no_xenl"
+	   COMMAND ${PROG_SWIPL} -f none --no-packs
+		   -s ${CMAKE_CURRENT_SOURCE_DIR}/test_terminal.pl
+		   -g "test_terminal(child(ansi))"
+		   -t halt)
+  list(APPEND XPCE_EXTRA_TESTS xpce:terminal_child_no_xenl)
 endif()
 
 set_tests_properties(${XPCE_EXTRA_TESTS}
