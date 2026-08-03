@@ -990,9 +990,10 @@ interruptTerminalImage(TerminalImage ti)
 
 static Int
 getForegroundProcessTerminalImage(TerminalImage ti)
-{ int pgid = rlc_foreground_process(ti->data);
+{ RlcData b = ti->data;			/* NULL after ->unlink */
+  int pgid;
 
-  if ( pgid > 0 )
+  if ( b && (pgid=rlc_foreground_process(b)) > 0 )
     answer(toInt(pgid));
 
   fail;
