@@ -256,6 +256,12 @@ dbg_format(Fmt, Args) :-
 %
 %   Ensure a sensible ``TERM`` setting. We  have   a  problem  if we use
 %   `swipl` in a terminal that is not compatible with `xterm`.
+%
+%   We claim ``xterm-256color``: the  terminal   implements  the  string
+%   capabilities of that description  and  the   colours  it  adds, from
+%   ANSI 16 through the 256 colour cube  to   24  bit  RGB. What it does
+%   ignore  are  the  attributes  it  cannot  draw  (dim,  italic,  slow
+%   blink and invisible), printer control and left/right margins.
 
 fix_term :-
     current_prolog_flag(windows, true),
@@ -265,7 +271,7 @@ fix_term :-
     getenv('TERM', _),
     !.
 fix_term :-
-    setenv('TERM', xterm).
+    setenv('TERM', 'xterm-256color').
 
 %!  ep_has_console(?Thread)
 %
