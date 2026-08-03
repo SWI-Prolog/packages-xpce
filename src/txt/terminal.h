@@ -278,6 +278,8 @@ typedef struct rlc_data
   int		caret_y;		/* its line */
   int		window_start;		/* start line of the window */
   int		window_size;		/* #lines on the window */
+  int		scroll_top;		/* DECSTBM: first row of the */
+  int		scroll_bottom;		/* scrolling region and its last */
   RlcTextLine	lines;			/* the actual lines */
   struct				/* ESC ? 1049 [hl] */
   { RlcTextLine	lines;			/* The saved lines */

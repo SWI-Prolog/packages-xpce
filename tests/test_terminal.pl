@@ -1313,9 +1313,11 @@ test(kill_to_start, [setup(test_begin(T))]) :-
 		 *******************************/
 
 %   Escape sequences that rearrange whole lines: IL (`ESC [ Ps L'),
-%   DL (`ESC [ Ps M') and the reverse index (`ESC M') they share their
-%   implementation with.  These write to the screen rather than to the
-%   line editor, so they say what the terminal makes of the sequence.
+%   DL (`ESC [ Ps M'), the reverse index (`ESC M') they share their
+%   implementation with, and the scrolling region (`ESC [ Ps ; Ps r')
+%   that bounds all three.  These write to the screen rather than to
+%   the line editor, so they say what the terminal makes of the
+%   sequence.
 
 :- begin_tests(terminal_screen,
                [ condition(needs([program_output])),
@@ -1368,6 +1370,21 @@ nine_lines(T) :-
     numbered_lines(1, 9, Lines),
     paint(T, Lines).
 
+%!  full_screen(+T, -Painted) is det.
+%
+%   Write a numbered line to every row of the screen.  That is one line
+%   more than fits: the last carriage return scrolls the screen, so
+%   Painted, the content of the rows afterwards, runs from l2 to the
+%   last line and ends in the caret's own empty row.
+
+full_screen(T, Painted) :-
+    term_rows(T, Rows),
+    numbered_lines(1, Rows, Lines),
+    paint(T, Lines),
+    numbered_lines(2, Rows, Text),
+    append(Text, [''], Painted),
+    assert_rows(T, Painted).
+
 test(delete_lines, [setup(current_test_terminal(T))]) :-
     nine_lines(T),
     out(T, '\e[3;1H\e[2M'),
@@ -1390,19 +1407,29 @@ test(insert_lines, [setup(current_test_terminal(T))]) :-
 test(insert_lines_pushes_off_the_screen,
      [setup(current_test_terminal(T))]) :-
     %  A full screen has no room below, so what is pushed past the
-    %  last row is lost rather than added to the scroll back.  Writing
-    %  Rows lines scrolls the screen by the caret's own line, leaving
-    %  l2 on the top row and the last row empty.
-    term_rows(T, Rows),
-    numbered_lines(1, Rows, Lines),
-    paint(T, Lines),
-    Last is Rows-1,
-    numbered_lines(2, Rows, Painted),
-    append(Painted, [''], Before),
-    assert_rows(T, Before),
+    %  last row is lost rather than added to the scroll back.
+    full_screen(T, Painted),
     out(T, '\e[1;1H\e[2L'),
-    numbered_lines(2, Last, Kept),     % l<Rows> and the empty row are gone
+    once(append(Kept, [_Last,_Empty], Painted)), % pushed off the bottom
     assert_rows(T, ['',''|Kept]).
+
+test(delete_lines_in_scroll_region, [setup(current_test_terminal(T))]) :-
+    %  What emacs sends to take a line out of a window: a scrolling
+    %  region around the window, DL inside it, region back to the whole
+    %  screen.  Without DECSTBM the delete pulled up everything below,
+    %  taking the mode line and the echo area with it.
+    full_screen(T, [Top,_Killed,Third|Below]),
+    out(T, '\e[1;3r\e[2;1H\e[1M\e[1;25r'),
+    assert_rows(T, [Top,Third,''|Below]).
+
+test(line_feed_scrolls_the_region_only,
+     [setup(current_test_terminal(T))]) :-
+    %  A line feed on the last row of the region scrolls the region
+    %  rather than the screen: the rows below it stay put and nothing
+    %  goes to the scroll back.
+    full_screen(T, [_Top,Second,Third|Below]),
+    out(T, '\e[1;3r\e[3;1H\n\e[1;25r'),
+    assert_rows(T, [Second,Third,''|Below]).
 
 test(reverse_index, [setup(current_test_terminal(T))]) :-
     %  ESC M on the top row inserts a line there, the same operation

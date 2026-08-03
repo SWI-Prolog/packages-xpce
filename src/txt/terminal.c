@@ -2983,6 +2983,8 @@ rlc_make_buffer(int w, int h)
   b->height         = h;
   b->width          = w;
   b->window_size    = 25;
+  b->scroll_top     = 0;
+  b->scroll_bottom  = b->window_size-1;
   b->lines          = rlc_malloc(sizeof(rlc_text_line) * h);
   b->cmdstat	    = CMD_INITIAL;
   b->changed	    = CHG_CARET|CHG_CHANGED|CHG_CLEAR;
@@ -3311,6 +3313,8 @@ rlc_resize(RlcData b, int w, int h)
 
   b->window_size = h;
   b->width = w;
+  b->scroll_top = 0;			/* the region does not survive a */
+  b->scroll_bottom = h-1;		/* screen of a different size */
 
   for(i = b->first; /*i != b->last*/; i = NextLine(b, i))
   { RlcTextLine tl = &b->lines[i];
@@ -3564,42 +3568,76 @@ rlc_add_lines(RlcData b, int here, int add)
 		 *    ANSI SEQUENCE HANDLING	*
 		 *******************************/
 
-/** Last line of the scrolling region.
+/** Row of `line' counted from the top of the window.
  *
- * We do not implement DECSTBM (see `CSI r'), so the region is the
- * window.  Lines below `b->last' do not exist yet: when the window is
- * not filled, `grow' asks for up to that many new lines at the end so
- * content scrolled down has somewhere to go.  The result is the last
- * line that may be written, which is the last line of the window if the
- * window is full and `b->last' otherwise.
+ * Lines above the window (i.e., in the scroll back) give a number well
+ * past the last row rather than a negative one, so a single test
+ * against the height of the window rejects both.
  */
 
 static int
-rlc_screen_bottom(RlcData b, int grow)
-{ int rows = rlc_count_lines(b, b->window_start, b->last)+1;
+rlc_window_row(RlcData b, int line)
+{ return rlc_count_lines(b, b->window_start, line);
+}
 
-  for(int room = b->window_size - rows; grow > 0 && room > 0; grow--, room--)
+
+/** First line of the scrolling region (DECSTBM, `CSI r'). */
+
+static int
+rlc_region_start(RlcData b)
+{ return rlc_add_lines(b, b->window_start, b->scroll_top);
+}
+
+
+/** True if the scrolling region is a part of the window rather than
+ * all of it.  Text reaching the bottom of such a region scrolls the
+ * region alone; the window as a whole scrolls into the scroll back.
+ */
+
+static bool
+rlc_has_region(RlcData b)
+{ return b->scroll_top > 0 || b->scroll_bottom < b->window_size-1;
+}
+
+
+/** Last line of the scrolling region.
+ *
+ * Lines below `b->last' do not exist yet: when the region is not
+ * filled, `grow' asks for up to that many new lines at the end so
+ * content scrolled down has somewhere to go.  The result is the last
+ * line that may be written, which is the last line of the region if
+ * the buffer reaches that far and `b->last' otherwise.
+ */
+
+static int
+rlc_region_bottom(RlcData b, int grow)
+{ int rows = rlc_window_row(b, b->last)+1;
+
+  for(int room = b->scroll_bottom+1 - rows; grow > 0 && room > 0; grow--, room--)
   { rlc_add_line(b);
     rows++;
   }
 
-  if ( rows >= b->window_size )
-    return rlc_add_lines(b, b->window_start, b->window_size-1);
+  if ( rows > b->scroll_bottom )
+    return rlc_add_lines(b, b->window_start, b->scroll_bottom);
 
   return b->last;
 }
 
 
-/** Number of lines from `line' to `bottom', or 0 if `line' is off screen.
+/** Number of lines from `line' to `bottom', or 0 if `line' is not in
+ * the scrolling region.
  */
 
 static int
 rlc_region_size(RlcData b, int line, int bottom)
-{ if ( rlc_count_lines(b, b->window_start, line) >= b->window_size )
-    return 0;				/* not in the window */
+{ int row = rlc_window_row(b, line);
+
+  if ( row < b->scroll_top || row > b->scroll_bottom )
+    return 0;
   int rows = rlc_count_lines(b, line, bottom)+1;
 
-  return rows > b->window_size ? 0 : rows;	/* past the bottom */
+  return rows > b->window_size ? 0 : rows;	/* `line' past `bottom' */
 }
 
 
@@ -3617,7 +3655,7 @@ rlc_region_size(RlcData b, int line, int bottom)
 
 static void
 rlc_scroll_region(RlcData b, int line, int shift)
-{ int bottom = rlc_screen_bottom(b, shift);
+{ int bottom = rlc_region_bottom(b, shift);
   int rows   = rlc_region_size(b, line, bottom);
   int count  = shift > 0 ? shift : -shift;
 
@@ -3675,8 +3713,8 @@ rlc_caret_up(RlcData b, int arg)
 
 static void
 rlc_reverse_index(RlcData b)
-{ if ( b->caret_y == b->window_start )
-  { rlc_scroll_region(b, b->window_start, 1);
+{ if ( rlc_window_row(b, b->caret_y) == b->scroll_top )
+  { rlc_scroll_region(b, b->caret_y, 1);
   } else
   { b->caret_y = PrevLine(b, b->caret_y);
     b->changed |= CHG_CARET;
@@ -3687,7 +3725,12 @@ rlc_reverse_index(RlcData b)
 static void
 rlc_caret_down(RlcData b, int arg)
 { while ( arg-- > 0 )
-  { if ( b->caret_y == b->last )
+  { if ( rlc_has_region(b) &&
+	 rlc_window_row(b, b->caret_y) == b->scroll_bottom )
+    { rlc_scroll_region(b, rlc_region_start(b), -1);
+      continue;				/* the caret stays where it is */
+    }
+    if ( b->caret_y == b->last )
       rlc_add_line(b);			/* rlc_open_line() clears its flags */
     b->caret_y = NextLine(b, b->caret_y);
     /* Do NOT clear softreturn here.  Moving the caret says nothing
@@ -4341,7 +4384,7 @@ rlc_register_link(RlcData b, const uchar_t *link, size_t len)
 
 static void
 rlc_shift_up(RlcData b, int shift)
-{ rlc_scroll_region(b, b->window_start, -shift);
+{ rlc_scroll_region(b, rlc_region_start(b), -shift);
 }
 
 
@@ -4990,15 +5033,20 @@ rlc_putansi(RlcData b, int chr)
 	  CMD(rlc_set_caret(b, col, row));
 	  break;
 	}
-	case 'r':
-	  if ( b->argc == 0 )
-	  { DEBUG(NAME_term, Cprintf("Unlimit scroll\n"));
-	  } else
-	  { rlc_need_arg(b, 1, 1); /* row */
-	    rlc_need_arg(b, 2, 1); /* col */
-	    DEBUG(NAME_term, Cprintf("Limit scroll\n"));
+	case 'r':		/* CSI Ps ; Ps r — scrolling region (DECSTBM) */
+	{ rlc_need_arg(b, 1, 1);		/* top row */
+	  rlc_need_arg(b, 2, b->window_size);	/* bottom row */
+	  int top = Bounds(b->argv[0], 1, b->window_size)-1;
+	  int bottom = Bounds(b->argv[1], 1, b->window_size)-1;
+
+	  if ( top < bottom )		/* a region holds at least two rows */
+	  { b->scroll_top    = top;
+	    b->scroll_bottom = bottom;
+	    DEBUG(NAME_term, Cprintf("Scroll region %d..%d\n", top, bottom));
+	    CMD(rlc_set_caret(b, 0, 0));	/* DECSTBM homes the caret */
 	  }
 	  break;
+	}
 	case 'A':
 	  rlc_need_arg(b, 1, 1);
 	  CMD(rlc_caret_up(b, b->argv[0]));
