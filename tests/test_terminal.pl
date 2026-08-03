@@ -1431,6 +1431,43 @@ test(line_feed_scrolls_the_region_only,
     out(T, '\e[1;3r\e[3;1H\n\e[1;25r'),
     assert_rows(T, [Second,Third,''|Below]).
 
+%!  one_line(+T, +Text) is det.
+%
+%   Clear the screen and write Text to the top row, leaving the caret
+%   at its end.
+
+one_line(T, Text) :-
+    out(T, ['\e[2J\e[H', Text]).
+
+test(erase_to_end_of_line, [setup(current_test_terminal(T))]) :-
+    one_line(T, abcdef),
+    out(T, '\e[1;4H\e[K'),
+    assert_rows(T, [abc]).
+
+test(erase_to_start_of_line, [setup(current_test_terminal(T))]) :-
+    %  EL 1 erases up to and including the caret and leaves the rest of
+    %  the row where it is.  The parameter was ignored, so this erased
+    %  the other half of the line.
+    one_line(T, abcdef),
+    out(T, '\e[1;4H\e[1K'),
+    assert_rows(T, ['    ef']).
+
+test(erase_whole_line, [setup(current_test_terminal(T))]) :-
+    one_line(T, abcdef),
+    out(T, '\e[1;4H\e[2K'),
+    assert_rows(T, ['']).
+
+test(erase_characters, [setup(current_test_terminal(T))]) :-
+    %  ECH blanks columns without moving what follows them.
+    one_line(T, abcdef),
+    out(T, '\e[1;3H\e[2X'),
+    assert_rows(T, ['ab  ef']).
+
+test(erase_above, [setup(current_test_terminal(T))]) :-
+    paint(T, [l1,l2,l3]),
+    out(T, '\e[2;2H\e[1J'),
+    assert_rows(T, ['','  ',l3]).
+
 test(reverse_index, [setup(current_test_terminal(T))]) :-
     %  ESC M on the top row inserts a line there, the same operation
     %  IL performs.

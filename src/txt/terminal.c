@@ -330,6 +330,7 @@ static RlcData	rlc_make_buffer(int w, int h);
 static int	rlc_count_lines(RlcData b, int from, int to);
 static void	rlc_add_line(RlcData b);
 static void	rlc_open_line(RlcData b);
+static RlcTextLine rlc_prepare_line(RlcData b, int y);
 static void	rlc_update_scrollbar(RlcData b);
 static void	rlc_init_text_dimensions(RlcData b, FontObj f);
 static int	rlc_add_lines(RlcData b, int here, int add);
@@ -3959,18 +3960,119 @@ rlc_erase_display(RlcData b)
 }
 
 
+/** Overwrite the cells [from,to) with spaces in the current SGR flags.
+ *
+ * A cell that stays on the line takes the background colour along
+ * (`bce'), which the cells dropped by truncation cannot: this terminal
+ * holds lines of the length they were written to, so that copying a
+ * row does not pick up the blanks to the right of its text.
+ */
+
 static void
-rlc_erase_line(RlcData b)
+rlc_blank_cells(RlcData b, RlcTextLine tl, int from, int to)
+{ if ( to > tl->size )
+    to = tl->size;
+
+  for(int i=from; i<to; i++)
+  { text_char *tc = &tl->text[i];
+
+    tc->code  = ' ';
+    tc->flags = b->sgr_flags;
+    tc->flags.width = 1;
+  }
+
+  tl->changed |= CHG_CHANGED;
+}
+
+
+/** Erase in line (EL): 0 erases from the caret to the end of the line,
+ * 1 from the start of the line up to and including the caret and 2 the
+ * whole line.  The caret does not move.
+ */
+
+static void
+rlc_erase_line(RlcData b, int mode)
 { RlcTextLine tl = &b->lines[b->caret_y];
 
-  tl->size = b->caret_x;
+  switch(mode)
+  { case 0:
+      if ( b->caret_x < tl->size )
+	tl->size = b->caret_x;
+      break;
+    case 1:
+      rlc_blank_cells(b, tl, 0,
+		      rlc_cluster_next(tl, rlc_snap_start(tl, b->caret_x)));
+      return;				/* the tail of the line stays */
+    case 2:
+      tl->size = 0;
+      break;
+    default:
+      return;
+  }
+
   tl->softreturn = false;		/* what wrapped is gone */
   tl->changed |= CHG_CHANGED|CHG_CLEAR;
 }
 
+
+/** Erase in display (ED) 1: from the top of the screen up to and
+ * including the caret.
+ */
+
+static void
+rlc_erase_above(RlcData b)
+{ for(int line = b->window_start; line != b->caret_y; line = NextLine(b, line))
+  { RlcTextLine tl = &b->lines[line];
+
+    tl->size = 0;
+    tl->softreturn = false;
+    tl->changed |= CHG_CHANGED|CHG_CLEAR;
+    if ( line == b->last )		/* the caret is off screen */
+      return;
+  }
+
+  rlc_erase_line(b, 1);
+  b->changed |= CHG_CHANGED|CHG_CLEAR;
+}
+
+
+/** Erase characters (ECH): blank `count' columns at the caret without
+ * moving what follows them.  Erasing whole grapheme clusters can free
+ * cells (the combining marks of an erased cluster are gone), so the
+ * tail of the line moves up to keep the columns aligned.
+ */
+
+static void
+rlc_erase_chars(RlcData b, int count)
+{ RlcTextLine tl = rlc_prepare_line(b, b->caret_y);
+  int cx = rlc_snap_start(tl, b->caret_x);
+  int cells = 0;			/* cells the erased clusters take */
+  int cols = 0;				/* and the columns they occupy */
+  int p = cx;
+
+  while ( cols < count && p < tl->size )
+  { int next = rlc_cluster_next(tl, p);
+
+    for(int i=p; i<next; i++)
+      cols += tc_display_width(&tl->text[i]);
+    cells = next - cx;
+    p = next;
+  }
+					/* a cluster erases as a whole, so
+					   `cols' can pass `count' */
+  if ( cells > cols )			/* the marks we erased freed cells */
+  { for(int i=cx+cols; i<tl->size-(cells-cols); i++)
+      tl->text[i] = tl->text[i+cells-cols];
+    tl->size -= cells-cols;
+  }
+  rlc_blank_cells(b, tl, cx, cx+cols);
+  b->caret_x = cx;
+}
+
+
 static void
 rlc_clear_from_cursor(RlcData b)
-{ rlc_erase_line(b);
+{ rlc_erase_line(b, 0);
   b->last = b->caret_y;
   /* If we just collapsed the buffer to a single line parked at a
    * non-zero ring-position, compact to line 0 so the origin
@@ -5077,6 +5179,8 @@ rlc_putansi(RlcData b, int chr)
 	  rlc_need_arg(b, 1, 0);
 	  if ( b->argv[0] == 0 )
 	    CMD(rlc_clear_from_cursor(b));
+	  else if ( b->argv[0] == 1 )
+	    CMD(rlc_erase_above(b));
 	  else if ( b->argv[0] == 2 )
 	    CMD(rlc_erase_display(b));
 	  else if ( b->argv[0] == 3 )
@@ -5084,8 +5188,13 @@ rlc_putansi(RlcData b, int chr)
 	  else
 	    Dprint_csi(b, chr);
 	  break;
-	case 'K':
-	  CMD(rlc_erase_line(b));
+	case 'K':		/* CSI Ps K — Erase in Line (EL) */
+	  rlc_need_arg(b, 1, 0);
+	  CMD(rlc_erase_line(b, b->argv[0]));
+	  break;
+	case 'X':		/* CSI Ps X — Erase Character(s) (ECH) */
+	  rlc_need_arg(b, 1, 1);
+	  CMD(rlc_erase_chars(b, b->argv[0]));
 	  break;
 	case 'm':
 	  { rlc_need_arg(b, 1, 0);
