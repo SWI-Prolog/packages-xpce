@@ -99,6 +99,7 @@ setup_headless :-
 :- use_module(library(option)).
 :- use_module(library(random)).
 :- use_module(library(aggregate)).
+:- use_module(library(process)).
 
 test_terminal :-
     test_terminal(epilog).
@@ -185,9 +186,14 @@ epilog_screen(Frame, TI) :-
 
 term_stop(terminal(Backend, xpce(Frame, TI))) :-
     (   Backend = child(_)
-    ->  stop_child(terminal(Backend, xpce(Frame, TI)))
+    ->  ignore(stop_child(terminal(Backend, xpce(Frame, TI))))
     ;   true
     ),
+    %  Known wart: a terminal whose thread hosted an interactive child
+    %  keeps that thread running after ->destroy, so a child(_) run
+    %  ends with a list of console threads that "wouldn't die".  The
+    %  threads are idle and the run is unaffected; waiting for them
+    %  here only made the suite three times slower.
     (   object(Frame)
     ->  in_pce_thread(send(Frame, destroy))
     ;   true
@@ -228,6 +234,13 @@ term_row(terminal(_, xpce(_, TI)), Row, Atom) :-
 
 term_cols(terminal(_, xpce(_, TI)), Cols) :-
     get(TI, columns, Cols).
+
+%!  term_rows(+T, -Rows) is det.
+%
+%   Height of the visible window in rows.
+
+term_rows(terminal(_, xpce(_, TI)), Rows) :-
+    get(TI, rows, Rows).
 
 %!  term_resize(+T, +WantCols, -GotCols) is det.
 %
@@ -350,13 +363,23 @@ needs(Caps) :-
 
 term_profile_term(Profile, Profile).
 
+%!  child_done_marker(-Marker) is det.
+%
+%   Text the epilog thread prints once shell/1 has returned, i.e. once
+%   the child is really gone.  Waiting for "a prompt" instead would
+%   return at once, because the child's own prompt is still on screen;
+%   we would then tear the terminal down with its thread still inside
+%   shell/1.
+
+child_done_marker('<<child-exited>>').
+
 %!  start_child(+T, +Profile) is det.
 %
 %   Start a child `swipl` on the terminal's pty by asking the epilog
 %   thread to run shell/1.  System() (src/os/pl-os.c) dups the calling
 %   thread's user streams onto the child's 0/1/2, and in an epilog
 %   thread those are the terminal's pty, so the child gets the
-%   terminal.  TERM is set on the command line so it applies to the
+%   terminal.  TERM is set on the command line, so it applies to the
 %   child only.
 %
 %   After the child's prompt appears we clear the screen, so the child
@@ -365,36 +388,50 @@ term_profile_term(Profile, Profile).
 start_child(T, Profile) :-
     term_profile_term(Profile, TERM),
     current_prolog_flag(executable, Exe),
+    child_done_marker(Marker),
+    term_cursor(T, _, ParentRow),
     format(atom(Cmd),
-           'shell(\'TERM=~w ~w -q --no-tty=false\').\n', [TERM, Exe]),
+           'shell("TERM=~w \'~w\' -q"), format("~~n~w~~n").\n',
+           [TERM, Exe, Marker]),
     term_send(T, Cmd),
-    (   wait_until(child_started(T), 30)
+    (   wait_until(child_started(T, ParentRow), 30)
     ->  true
     ;   throw(error(terminal_child_failed(Profile), _))
     ),
     key(T, ctrl_l),
     wait_for_prompt(T).
 
-%!  child_started(+T) is semidet.
+%!  child_started(+T, +ParentRow) is semidet.
 %
-%   True once the child's own prompt is on screen.  The parent prompt
-%   we typed into is still there, so we wait for a *second* prompt
-%   below it rather than for "a prompt".
+%   True once the child's own prompt is on screen.  The prompt we typed
+%   the shell/1 goal into is still there, so wait for a prompt *below*
+%   it rather than for "a prompt".
 
-child_started(T) :-
+child_started(T, ParentRow) :-
     term_cursor(T, _, Row),
-    Row > 0,
+    Row > ParentRow,
     at_prompt(T).
 
-%!  stop_child(+T) is det.
+%!  stop_child(+T) is semidet.
 %
-%   Halt the child and wait for the parent's prompt to come back.
+%   Halt the child and wait until the epilog thread reports that
+%   shell/1 has returned.  Fails if the child does not go away, in
+%   which case the terminal is torn down regardless -- there is
+%   nothing better to do at cleanup time.
 
 stop_child(T) :-
+    child_done_marker(Marker),
     catch(( term_send(T, '\r'),
             term_send(T, 'halt.\n'),
-            ignore(wait_until(at_prompt(T), 10))
-          ), _, true).
+            wait_until(marker_on_screen(T, Marker), 15)
+          ), _, fail).
+
+marker_on_screen(T, Marker) :-
+    term_rows(T, Rows),
+    between(0, Rows, Row),
+    term_row(T, Row, Line),
+    sub_atom(Line, _, _, _, Marker),
+    !.
 
 
 		 /*******************************
@@ -467,6 +504,31 @@ reset_input(Terminal) :-
     key(Terminal, ctrl_u),
     key(Terminal, ctrl_l),
     wait_for_prompt(Terminal).
+
+%!  rows_above(+Terminal, +N) is semidet.
+%
+%   Make sure the prompt has at least N rows above it by running
+%   queries until it has moved far enough down.  How far down a
+%   terminal starts out differs per backend, so a test that needs room
+%   above the input line asks for it rather than assuming it.
+%
+%   Submitting an empty line would not do: the reader wants a term, so
+%   it answers with the continuation prompt rather than a new query.
+
+rows_above(Terminal, N) :-
+    rows_above(Terminal, N, N).
+
+rows_above(Terminal, N, Tries) :-
+    cursor(Terminal, _, Row),
+    (   Row >= N
+    ->  true
+    ;   Tries > 0,
+        type(Terminal, 'true.'),
+        key(Terminal, enter),
+        wait_for_prompt(Terminal),
+        Tries1 is Tries - 1,
+        rows_above(Terminal, N, Tries1)
+    ).
 
 
 		 /*******************************
@@ -578,40 +640,118 @@ type(Terminal, Text) :-
 
 %!  key(+Terminal, +Name) is det.
 %
-%   Send a symbolic key.  Uses the byte sequences libedit expects on a
-%   VT-style terminal.
+%   Send a symbolic key.
 
 key(Terminal, Name) :-
-    key_bytes(Name, Bytes),
+    key_bytes(Terminal, Name, Bytes),
     atom_codes(Atom, Bytes),
     term_send(Terminal, Atom),
     drive(0.05).
 
-% ctrl bytes --------------------------------------------------------------
-key_bytes(ctrl_a,         [0x01]).
-key_bytes(ctrl_b,         [0x02]).
-key_bytes(ctrl_d,         [0x04]).
-key_bytes(ctrl_e,         [0x05]).
-key_bytes(ctrl_f,         [0x06]).
-key_bytes(ctrl_k,         [0x0B]).
-key_bytes(ctrl_l,         [0x0C]).
-key_bytes(ctrl_u,         [0x15]).
-key_bytes(backspace,      [0x7F]).          % libedit treats DEL as backspace
-key_bytes(enter,          [0'\r]).
-key_bytes(tab,            [0'\t]).
+%!  key_bytes(+Terminal, +Name, -Bytes) is det.
+%
+%   Byte sequence for a symbolic key.  Control and Meta keys are
+%   bindings inside the line editor and mean the same on every
+%   terminal.  The cursor and editing keys belong to the terminal, and
+%   the terminal here is always the xpce one, which sends the VT
+%   sequences below (see typedTerminalImage() in
+%   packages/xpce/src/txt/terminal.c).
+%
+%   Whether the line editor makes anything of them is another matter:
+%   it binds the keys its terminal description gives it, so on a
+%   description that has no Delete key at all -- `ansi' and `vt100'
+%   have none -- ESC [ 3 ~ is not a key press but four characters to
+%   type.  Drive those operations through the editor binding that does
+%   the same thing instead, so a test of the redisplay does not fail
+%   over a key the terminal cannot report.
+
+key_bytes(_Terminal, Name, Bytes) :-
+    editor_key_bytes(Name, Bytes),
+    !.
+key_bytes(Terminal, Name, Bytes) :-
+    terminal_key(Name, Cap, Sequence, Fallback),
+    (   term_terminfo(Terminal, TERM),
+        terminfo_string(TERM, Cap, _)
+    ->  Bytes = Sequence
+    ;   editor_key_bytes(Fallback, Bytes)
+    ).
+
+% Line editor bindings: the same bytes everywhere ------------------------
+editor_key_bytes(ctrl_a,         [0x01]).
+editor_key_bytes(ctrl_b,         [0x02]).
+editor_key_bytes(ctrl_d,         [0x04]).
+editor_key_bytes(ctrl_e,         [0x05]).
+editor_key_bytes(ctrl_f,         [0x06]).
+editor_key_bytes(ctrl_k,         [0x0B]).
+editor_key_bytes(ctrl_l,         [0x0C]).
+editor_key_bytes(ctrl_n,         [0x0E]).
+editor_key_bytes(ctrl_p,         [0x10]).
+editor_key_bytes(ctrl_u,         [0x15]).
+editor_key_bytes(backspace,      [0x7F]).   % libedit treats DEL as backspace
+editor_key_bytes(enter,          [0'\r]).
+editor_key_bytes(tab,            [0'\t]).
 % Meta = ESC prefix on VT terminals
-key_bytes(meta_b,         [0'\e, 0'b]).
-key_bytes(meta_f,         [0'\e, 0'f]).
-key_bytes(meta_d,         [0'\e, 0'd]).
-key_bytes(meta_backspace, [0'\e, 0x7F]).
-% ANSI CSI sequences
-key_bytes(home,           [0'\e, 0'[, 0'H]).
-key_bytes(end,            [0'\e, 0'[, 0'F]).
-key_bytes(cursor_up,      [0'\e, 0'[, 0'A]).
-key_bytes(cursor_down,    [0'\e, 0'[, 0'B]).
-key_bytes(cursor_right,   [0'\e, 0'[, 0'C]).
-key_bytes(cursor_left,    [0'\e, 0'[, 0'D]).
-key_bytes(delete,         [0'\e, 0'[, 0'3, 0'~]).
+editor_key_bytes(meta_b,         [0'\e, 0'b]).
+editor_key_bytes(meta_f,         [0'\e, 0'f]).
+editor_key_bytes(meta_d,         [0'\e, 0'd]).
+editor_key_bytes(meta_backspace, [0'\e, 0x7F]).
+
+% Keys of the terminal itself: name, the terminfo capability that says
+% whether the line editor knows this key, the bytes the xpce terminal
+% sends for it, and the editor binding for the same operation to fall
+% back on when it does not.
+terminal_key(cursor_up,    kcuu1, [0'\e, 0'[, 0'A],       ctrl_p).
+terminal_key(cursor_down,  kcud1, [0'\e, 0'[, 0'B],       ctrl_n).
+terminal_key(cursor_right, kcuf1, [0'\e, 0'[, 0'C],       ctrl_f).
+terminal_key(cursor_left,  kcub1, [0'\e, 0'[, 0'D],       ctrl_b).
+terminal_key(home,         khome, [0'\e, 0'[, 0'H],       ctrl_a).
+terminal_key(end,          kend,  [0'\e, 0'[, 0'F],       ctrl_e).
+terminal_key(delete,       kdch1, [0'\e, 0'[, 0'3, 0'~],  ctrl_d).
+
+%!  terminfo_string(+TERM, +Cap, -Bytes) is semidet.
+%
+%   Value of a terminfo string capability, or failure when TERM has no
+%   such capability.  Asks tput, and remembers the answer -- including
+%   "no such capability", recorded as (-) -- so each is looked up once.
+
+:- dynamic terminfo_cache/3.                % TERM, Cap, Bytes or (-)
+
+terminfo_string(TERM, Cap, Bytes) :-
+    (   terminfo_cache(TERM, Cap, Cached)
+    ->  true
+    ;   (   catch(tput(TERM, Cap, Found), _, fail)
+        ->  Cached = Found
+        ;   Cached = (-)
+        ),
+        assertz(terminfo_cache(TERM, Cap, Cached))
+    ),
+    Cached \== (-),
+    Bytes = Cached.
+
+tput(TERM, Cap, Bytes) :-
+    process_create(path(tput), ['-T', TERM, Cap],
+                   [ stdout(pipe(Out)),
+                     stderr(null),
+                     process(PID)
+                   ]),
+    setup_call_cleanup(
+        read_string(Out, _, String),
+        process_wait(PID, Status),
+        close(Out)),
+    Status == exit(0),
+    String \== "",
+    string_codes(String, Bytes).
+
+%!  term_terminfo(+Terminal, -TERM) is semidet.
+%
+%   Name of the terminal description the line editor on the other end
+%   is reading.
+
+term_terminfo(terminal(child(Profile), _), TERM) :-
+    !,
+    term_profile_term(Profile, TERM).
+term_terminfo(terminal(epilog, _), TERM) :-
+    getenv('TERM', TERM).                   % as fix_term/0 left it
 
 
 		 /*******************************
@@ -1320,12 +1460,13 @@ test(click_moves_the_caret, [setup(test_begin(T))]) :-
     click(T, 20, R),                    % clicking again changes nothing
     assert_cursor(T, C2, R).
 
-test(click_outside_the_input_line,
-     [ setup(start_terminal(T)),               % needs rows above the input
-       cleanup(stop_terminal(T))
-     ]) :-
+test(click_outside_the_input_line, [setup(test_begin(T))]) :-
     %  Only the line being edited follows the mouse; a click anywhere
-    %  else still just starts a selection.
+    %  else still just starts a selection.  Push the prompt down first
+    %  so there is a row above it to click on: how far down a terminal
+    %  starts out is a property of the backend, not of the behaviour
+    %  under test.
+    rows_above(T, 2),
     type(T, 'hello'),
     drive(0.3),
     cursor(T, C, R),
@@ -2001,7 +2142,7 @@ test(cursor_right_across_wrap, [setup(test_begin(T))]) :-
     Steps is 80 - P,
     %  Send all cursor_rights at once and drive once at the end — far
     %  faster than drive/1 after each individual key.
-    key_bytes(cursor_right, Bytes),
+    key_bytes(T, cursor_right, Bytes),
     length(Runs, Steps),
     maplist(=(Bytes), Runs),
     append(Runs, All),
@@ -2473,7 +2614,7 @@ apply_terminal(backspace,    T) :- send_key(T, backspace).
 apply_terminal(delete,       T) :- send_key(T, delete).
 
 send_key(T, Name) :-
-    key_bytes(Name, Bytes),
+    key_bytes(T, Name, Bytes),
     atom_codes(Atom, Bytes),
     term_send(T, Atom).
 
