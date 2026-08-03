@@ -1468,6 +1468,20 @@ test(erase_above, [setup(current_test_terminal(T))]) :-
     out(T, '\e[2;2H\e[1J'),
     assert_rows(T, ['','  ',l3]).
 
+test(save_and_restore_cursor, [setup(current_test_terminal(T))]) :-
+    %  DECSC/DECRC (ESC 7 / ESC 8) are what terminfo's sc/rc use; they
+    %  carry the attributes along with the position.
+    out(T, '\e[2J\e[H'),
+    out(T, '\e[2;3H\e7\e[5;1Hlow\e8here'),
+    assert_rows(T, ['','  here','','','low']),
+    assert_cursor(T, 6, 1).
+
+test(index_and_next_line, [setup(current_test_terminal(T))]) :-
+    %  IND (ESC D) moves down in the column it is in, NEL (ESC E) moves
+    %  down to the start of the next row.
+    out(T, '\e[2J\e[Habc\eDd\eEe'),
+    assert_rows(T, [abc,'   d',e]).
+
 test(reverse_index, [setup(current_test_terminal(T))]) :-
     %  ESC M on the top row inserts a line there, the same operation
     %  IL performs.

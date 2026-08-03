@@ -3938,6 +3938,46 @@ rlc_restore_caret_position(RlcData b)
 }
 
 
+/** Save the cursor (DECSC, `ESC 7').  Where `CSI s' saves the position
+ * alone, this also saves the attributes and the character sets, as the
+ * VT100 does.
+ */
+
+static void
+rlc_save_cursor(RlcData b)
+{ b->cursor.x        = rlc_cell_to_vcol(&b->lines[b->caret_y], b->caret_x);
+  b->cursor.y        = rlc_window_row(b, b->caret_y);
+  b->cursor.sgr      = b->sgr_flags;
+  b->cursor.G0       = b->G0;
+  b->cursor.G1       = b->G1;
+  b->cursor.shift_in = b->shift_in;
+  b->cursor.saved    = true;
+}
+
+
+/** Restore the cursor (DECRC, `ESC 8').  Without a saved cursor the
+ * VT100 goes home with everything at its default, which is also what
+ * we do after a reset.
+ */
+
+static void
+rlc_restore_cursor(RlcData b)
+{ if ( b->cursor.saved )
+  { rlc_set_caret(b, b->cursor.x, b->cursor.y);
+    b->sgr_flags = b->cursor.sgr;
+    b->G0        = b->cursor.G0;
+    b->G1        = b->cursor.G1;
+    b->shift_in  = b->cursor.shift_in;
+  } else
+  { rlc_set_caret(b, 0, 0);
+    b->sgr_flags = TF_DEFAULT;
+    b->G0        = G_ASCII;
+    b->G1        = G_ASCII;
+    b->shift_in  = false;
+  }
+}
+
+
 static void
 rlc_erase_saved_lines(RlcData b)
 { if ( b->last == b->window_start )
@@ -4904,8 +4944,25 @@ rlc_putansi(RlcData b, int chr)
 	case ')':
 	  b->cmdstat = CMD_G1;
 	  break;
-	case 'M':
+	case 'M':			/* RI: reverse index */
 	  CMD(rlc_reverse_index(b));
+	  b->cmdstat = CMD_INITIAL;
+	  break;
+	case 'D':			/* IND: index */
+	  CMD(rlc_caret_down(b, 1));
+	  b->cmdstat = CMD_INITIAL;
+	  break;
+	case 'E':			/* NEL: next line */
+	  CMD(rlc_cariage_return(b));
+	  CMD(rlc_caret_down(b, 1));
+	  b->cmdstat = CMD_INITIAL;
+	  break;
+	case '7':			/* DECSC: save cursor */
+	  CMD(rlc_save_cursor(b));
+	  b->cmdstat = CMD_INITIAL;
+	  break;
+	case '8':			/* DECRC: restore cursor */
+	  CMD(rlc_restore_cursor(b));
 	  b->cmdstat = CMD_INITIAL;
 	  break;
 	case '=':

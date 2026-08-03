@@ -308,8 +308,17 @@ typedef struct rlc_data
   G_state	G0;			/* Character set slot 0 */
   G_state	G1;			/* Character set slot 1 */
   int		link_len;		/* # chars in `link` */
-  int		scaret_x;		/* saved-caret X */
+  int		scaret_x;		/* saved-caret X (CSI s/u) */
   int		scaret_y;		/* saved-caret Y */
+  struct				/* ESC 7 / ESC 8 (DECSC/DECRC) */
+  { int		x;			/* visual column */
+    int		y;			/* row in the window */
+    text_flags	sgr;			/* SGR in effect */
+    G_state	G0;			/* character set slots */
+    G_state	G1;
+    bool	shift_in;		/* G1 selected */
+    bool	saved;			/* ESC 7 was seen */
+  } cursor;
   bool		has_focus;		/* Application has the focus */
   bool		fixedfont;		/* Font is fixed */
   COLORRGBA	foreground;		/* Foreground (text) color */
