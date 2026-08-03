@@ -1,0 +1,41 @@
+# The Windows console as libedit sees it.
+#
+# swipl.exe on a Windows console does not read a terminal description:
+# it links a fake termcap, packages/libedit/libedit/src/win_ncurses.c,
+# which answers tgetflag/tgetnum/tgetstr from a hard-coded table.  This
+# entry is that table, so that the suite can put libedit through the
+# same decisions on a Unix pty.  Keep the two in step.
+#
+# What matters here is as much what is absent as what is present:
+#
+#   no xenl   the console wraps as soon as the last column is written
+#   no IC     with only ich1, an insert opens one cell per column
+#   no smir   ... rather than switching the terminal to insert mode
+#   no UP/DO/LE/RI
+#             cursor motion goes out one step at a time
+#   no ku/kd/kl/kr/kh/@7
+#             the console reports the arrows and Home/End as key events,
+#             so libedit binds nothing for them from the description
+#   no pt     tabs are never used to move the cursor
+#
+# Capabilities win_ncurses.c answers that libedit never asks for -- cr,
+# cm, do, le -- are left out: its tstr[] table has no entry for them.
+#
+# lines/cols are what the entry has to say; libedit asks the terminal
+# itself (GetConsoleScreenBufferInfo on Windows, TIOCGWINSZ here).
+#
+swipl-winconsole|the Windows console as libedit sees it,
+	am,
+	cols#80, lines#25,
+	clear=\E[H\E[J,
+	el=\E[K,
+	ed=\E[J,
+	il1=\E[L,
+	dl1=\E[M,
+	cuu1=\E[A,
+	cuf1=\E[C,
+	ich1=\E[@,
+	dch1=\E[P,
+	dch=\E[%p1%dP,
+	hpa=\E[%i%p1%dG,
+	kdch1=\E[3~,

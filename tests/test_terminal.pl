@@ -65,6 +65,20 @@ primitives rather than through xpce methods directly.  Supported:
                       way to exercise libedit's ordinary termcap paths,
                       the ones every non-epilog terminal uses.
 
+Profile is the name of a terminal description: `xterm', `screen',
+`linux', `ansi', ... and `winconsole', which is not a stock one.
+swipl.exe on a Windows console reads no description at all -- it links
+the fake termcap in packages/libedit/libedit/src/win_ncurses.c -- so
+swipl-winconsole.ti in this directory writes that table out as a
+description, and running against it puts libedit through the same
+decisions the Windows console does.  Both bugs the suite has found so
+far were of that kind, which is the argument for keeping the two in
+step.
+
+The screen is the xpce terminal whichever profile is chosen, so this
+tests what libedit does, not what a Windows console draws.  Nothing
+here can stand in for reading back a real console.
+
 Because the SWI-Prolog prompt includes the command number ("101 ?- "
 rather than just "?- "), column assertions are expressed relative to
 the prompt's width on that fresh line.  Each test captures the
@@ -128,6 +142,7 @@ test_terminal :-
 %   failed; see term_capability/2.
 
 test_terminal(Backend) :-
+    ensure_terminfo(Backend),
     setup_call_cleanup(
         nb_setval(terminal_backend, Backend),
         run_tests([ terminal_basic,
@@ -188,6 +203,7 @@ term_start(epilog, terminal(epilog, xpce(Frame, TI))) :-
     !,
     epilog_screen(Frame, TI).
 term_start(child(Profile), terminal(child(Profile), xpce(Frame, TI))) :-
+    ensure_terminfo(child(Profile)),
     epilog_screen(Frame, TI),
     T0 = terminal(epilog, xpce(Frame, TI)),
     wait_for_prompt(T0),
@@ -394,9 +410,66 @@ needs(Caps) :-
 %
 %   TERM setting for a capability profile.  A profile names the
 %   terminal description libedit will read, which is what decides
-%   which redisplay strategy it uses.
+%   which redisplay strategy it uses.  Most profiles are simply the
+%   name of a stock description; `winconsole' is one we bring along.
 
+term_profile_term(winconsole, 'swipl-winconsole') :-
+    !.
 term_profile_term(Profile, Profile).
+
+%!  profile_terminfo_source(+Profile, -File) is semidet.
+%
+%   Terminal description this suite ships for Profile.  There is one:
+%   swipl.exe on a Windows console reads no description at all -- it
+%   links the fake termcap in packages/libedit/libedit/src/win_ncurses.c
+%   -- so to put libedit through the same decisions on a Unix pty we
+%   have to hand it that table as a description of its own.
+
+profile_terminfo_source(winconsole, File) :-
+    source_file(term_profile_term(_,_), Here),
+    file_directory_name(Here, Dir),
+    directory_file_path(Dir, 'swipl-winconsole.ti', File).
+
+%!  ensure_terminfo(+Backend) is det.
+%
+%   Compile the description a profile brings along, and point TERMINFO
+%   at it.  Setting it in this process rather than only in the child's
+%   command line means tput sees it too, so terminfo_string/3 and
+%   magic_margins/0 answer for the same description libedit reads.
+%   ncurses searches $TERMINFO first and the system database after, so
+%   the stock profiles keep working.
+
+:- dynamic terminfo_compiled/1.
+
+ensure_terminfo(Backend) :-
+    (   Backend = child(Profile),
+        profile_terminfo_source(Profile, Source)
+    ->  (   terminfo_compiled(Profile)
+        ->  true
+        ;   terminfo_scratch_dir(Dir),
+            compile_terminfo(Source, Dir),
+            setenv('TERMINFO', Dir),
+            assertz(terminfo_compiled(Profile))
+        )
+    ;   true
+    ).
+
+terminfo_scratch_dir(Dir) :-
+    tmp_file(terminfo, Base),
+    atom_concat(Base, '.d', Dir),
+    make_directory(Dir).
+
+compile_terminfo(Source, Dir) :-
+    process_create(path(tic), ['-o', file(Dir), file(Source)],
+                   [ stdout(null),
+                     stderr(null),
+                     process(PID)
+                   ]),
+    process_wait(PID, Status),
+    (   Status == exit(0)
+    ->  true
+    ;   throw(error(terminfo_compile_failed(Source, Status), _))
+    ).
 
 %!  child_done_marker(-Marker) is det.
 %
