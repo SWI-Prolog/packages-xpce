@@ -131,6 +131,9 @@ user:message_hook(error(io_error(read, user_input), _), error, _).
 :- use_module(library(random)).
 :- use_module(library(aggregate)).
 :- use_module(library(process)).
+:- if(exists_source(library(win_console))).
+:- use_module(library(win_console)).
+:- endif.
 
 test_terminal :-
     test_terminal(epilog).
@@ -203,11 +206,15 @@ term_start(epilog, terminal(epilog, xpce(Frame, TI))) :-
     !,
     epilog_screen(Frame, TI).
 term_start(child(Profile), terminal(child(Profile), xpce(Frame, TI))) :-
+    !,
     ensure_terminfo(child(Profile)),
     epilog_screen(Frame, TI),
     T0 = terminal(epilog, xpce(Frame, TI)),
     wait_for_prompt(T0),
     start_child(T0, Profile).
+term_start(console, T) :-
+    T = terminal(console, console),
+    start_console(T).
 
 epilog_screen(Frame, TI) :-
     epilog([ object(Frame),
@@ -217,6 +224,9 @@ epilog_screen(Frame, TI) :-
            ]),
     get(Frame, current_terminal, TI).
 
+term_stop(terminal(console, console)) :-
+    !,
+    catch(win_console_close, _, true).
 term_stop(terminal(Backend, xpce(Frame, TI))) :-
     (   Backend = child(_)
     ->  ignore(stop_child(terminal(Backend, xpce(Frame, TI))))
@@ -236,6 +246,9 @@ term_stop(terminal(Backend, xpce(Frame, TI))) :-
 %
 %   Inject Text into the terminal as if typed.
 
+term_send(terminal(_, console), Text) :-
+    !,
+    win_console_send(Text).
 term_send(terminal(_, xpce(_, TI)), Text) :-
     send(TI, send, Text).
 
@@ -244,6 +257,9 @@ term_send(terminal(_, xpce(_, TI)), Text) :-
 %   Read the logical cursor position: Col is a *visual* column, Row is
 %   0-based from the top of the visible window.
 
+term_cursor(terminal(_, console), Col, Row) :-
+    !,
+    win_console_cursor(Col, Row).
 term_cursor(terminal(_, xpce(_, TI)), Col, Row) :-
     get(TI, cursor_position, P),
     get(P, x, Col),
@@ -255,6 +271,9 @@ term_cursor(terminal(_, xpce(_, TI)), Col, Row) :-
 %   read as '' rather than failing: a display bug should surface as a
 %   mismatched row, not as a helper that quietly fails.
 
+term_row(terminal(_, console), Row, Atom) :-
+    !,
+    win_console_row(Row, Atom).
 term_row(terminal(_, xpce(_, TI)), Row, Atom) :-
     (   get(TI, row, Row, Str)
     ->  get(Str, value, Atom)
@@ -265,6 +284,9 @@ term_row(terminal(_, xpce(_, TI)), Row, Atom) :-
 %
 %   Current width of the terminal in columns.
 
+term_cols(terminal(_, console), Cols) :-
+    !,
+    win_console_size(Cols, _).
 term_cols(terminal(_, xpce(_, TI)), Cols) :-
     get(TI, columns, Cols).
 
@@ -272,6 +294,9 @@ term_cols(terminal(_, xpce(_, TI)), Cols) :-
 %
 %   Height of the visible window in rows.
 
+term_rows(terminal(_, console), Rows) :-
+    !,
+    win_console_size(_, Rows).
 term_rows(terminal(_, xpce(_, TI)), Rows) :-
     get(TI, rows, Rows).
 
@@ -282,6 +307,13 @@ term_rows(terminal(_, xpce(_, TI)), Rows) :-
 %   column count from pixels and the font's cell width, so only
 %   certain widths are reachable.
 
+term_resize(T, WantCols, GotCols) :-
+    T = terminal(_, console),
+    !,
+    term_rows(T, Rows),
+    win_console_resize(WantCols, Rows),
+    drive(0.2),
+    term_cols(T, GotCols).
 term_resize(T, WantCols, GotCols) :-
     T = terminal(_, xpce(_, TI)),
     xpce_cw(TI, CW),
@@ -359,6 +391,10 @@ term_has_selection(terminal(_, xpce(_, TI))) :-
 %       mouse       - term_click/3 and term_drag/5 work
 %       selection   - the terminal maintains a selection
 %       combining   - the screen model can hold combining marks
+%       non_bmp     - ... and characters outside the BMP
+%       margin_past_last_column
+%                   - a caret waiting to wrap is reported one column
+%                     past the last, rather than on it
 %       wcwidth_font  - the line editor and the screen agree on column
 %                     widths because both ask the terminal's font
 
@@ -377,6 +413,7 @@ term_capability(terminal(Backend, _), Cap) :-
 
 magic_margins :-
     current_backend(Backend),
+    Backend \== console,       % a console wraps as the column is written
     (   Backend = child(Profile)
     ->  term_profile_term(Profile, TERM)
     ;   getenv('TERM', TERM)
@@ -387,9 +424,17 @@ backend_capability(epilog,   mouse).
 backend_capability(epilog,   selection).
 backend_capability(epilog,   combining).
 backend_capability(epilog,   wcwidth_font).
+backend_capability(epilog,   non_bmp).
+backend_capability(epilog,   margin_past_last_column).
 backend_capability(child(_), mouse).
 backend_capability(child(_), selection).
 backend_capability(child(_), combining).
+backend_capability(child(_), non_bmp).
+backend_capability(child(_), margin_past_last_column).
+%  The console has no mouse or selection we can drive, and a cell holds
+%  one UTF-16 unit, so a base and its combining marks cannot both be
+%  there to read back.  Nothing about `combining' is skipped because it
+%  is hard; it cannot be represented.
 
 %!  needs(+Caps) is semidet.
 %
@@ -540,6 +585,63 @@ marker_on_screen(T, Marker) :-
     term_row(T, Row, Line),
     sub_atom(Line, _, _, _, Marker),
     !.
+
+
+		 /*******************************
+		 *        CONSOLE BACKEND       *
+		 *******************************/
+
+%!  start_console(+T) is det.
+%
+%   Open a Windows console, put a `swipl' on it and wait for its
+%   prompt.  Unlike the other backends this one reads the screen the
+%   user would be looking at -- conhost's own buffer -- rather than a
+%   terminal of ours, so it is the only one that can show what the
+%   console makes of what libedit writes.
+%
+%   The suite's own output must not be on that console; see
+%   win_console_open/2.
+
+start_console(T) :-
+    current_prolog_flag(executable, Exe),
+    %  A process has one console, so a test that wants a terminal of its
+    %  own gets this one back rather than a second.
+    catch(win_console_close, _, true),
+    win_console_open(80, 25),
+    format(atom(Cmd), '"~w" -q', [Exe]),
+    win_console_spawn(Cmd),
+    (   wait_until(at_prompt(T), 30)
+    ->  true
+    ;   throw(error(terminal_console_failed(Cmd), _))
+    ),
+    check_console_interprets_escapes(T),
+    key(T, ctrl_l),
+    wait_for_prompt(T).
+
+%!  check_console_interprets_escapes(+T) is det.
+%
+%   The line editor writes cursor motion as escape sequences and hands
+%   them to WriteConsole().  A console acts on those only with
+%   ENABLE_VIRTUAL_TERMINAL_PROCESSING set, which the line editor turns
+%   on for itself as it starts up.  Where that does not take, the
+%   sequences land in the screen buffer as text.
+%
+%   Test the screen rather than the mode word: wine's console accepts
+%   the flag and ignores it, so the flag says everything is fine while
+%   every row reads back full of escapes.  An ESC anywhere on screen
+%   means no assertion about content can hold, so say that once instead
+%   of letting it look like forty failures.
+
+check_console_interprets_escapes(T) :-
+    term_rows(T, Rows),
+    Last is Rows-1,
+    (   between(0, Last, Row),
+        term_row(T, Row, Line),
+        sub_atom(Line, _, 1, _, '\e')
+    ->  win_console_mode(_In, Out),
+        throw(error(console_does_not_interpret_escapes(Row, Line, Out), _))
+    ;   true
+    ).
 
 
 		 /*******************************
@@ -707,7 +809,10 @@ wait_until_(Goal, Deadline) :-
 %   Wait for an xpce event while dispatching input.
 
 wait(Time) :-
-    pce_principal:pce_dispatch(-1, Time).
+    (   current_backend(console)
+    ->  sleep(Time)
+    ;   pce_principal:pce_dispatch(-1, Time)
+    ).
 
 %!  wait_for_prompt(+Terminal) is semidet.
 %
@@ -722,7 +827,13 @@ at_prompt(Terminal) :-
     cursor(Terminal, _, Row),
     row_text(Terminal, Row, Line),
     atom(Line),
-    sub_atom(Line, _, _, 0, '?- ').
+    (   sub_atom(Line, _, _, 0, '?- ')
+    ->  true
+    ;   %  A console pads every row to the full width, so the space
+        %  after the prompt cannot be told from the padding and is
+        %  trimmed away with it.
+        sub_atom(Line, _, _, 0, '?-')
+    ).
 
 %!  prompt_col(+Terminal, -Col) is det.
 %
@@ -750,11 +861,30 @@ type(Terminal, Text) :-
 %
 %   Send a symbolic key.
 
+key(terminal(console, _), Name) :-
+    !,
+    console_key(Name),
+    drive(0.05).
 key(Terminal, Name) :-
     key_bytes(Terminal, Name, Bytes),
     atom_codes(Atom, Bytes),
     term_send(Terminal, Atom),
     drive(0.05).
+
+%!  console_key(+Name) is det.
+%
+%   Press a key on a Windows console.  The editor bindings are control
+%   characters and go as themselves; the rest are keys the console
+%   reports as key codes, and letting it turn those into the escape
+%   sequence the editor reads is part of what a console run is for.
+
+console_key(Name) :-
+    editor_key_bytes(Name, Bytes),
+    !,
+    atom_codes(Atom, Bytes),
+    win_console_send(Atom).
+console_key(Name) :-
+    win_console_key(Name).
 
 %!  key_bytes(+Terminal, +Name, -Bytes) is det.
 %
@@ -970,8 +1100,77 @@ assert_cursor(Terminal, ExpCol, ExpRow) :-
     ;   format(user_error,
                "cursor: expected (~w, ~w), got (~w, ~w)~n",
                [ExpCol, ExpRow, Col, Row]),
+        report_cursor_row(Terminal, Row),
+        dump_screen(Terminal, 'caret is not where it should be'),
         assertion((Col =:= ExpCol, Row =:= ExpRow))
     ).
+
+%!  margin_col(+Terminal, -Col) is det.
+%
+%   The column the caret reports once a row has been filled to its right
+%   edge and the wrap is still pending.
+%
+%   A terminal with delayed wrap parks the caret one past the last
+%   column and says so: on an 80-column xpce terminal, 80.  A console
+%   holds the same state but has no column 80 to name it with -- its
+%   columns are 0..79 -- and reports the last one instead.  The state is
+%   the same either way, so ask the terminal what it calls it rather
+%   than writing one terminal's answer into the tests.
+
+margin_col(Terminal, Col) :-
+    term_cols(Terminal, Cols),
+    (   term_capability(Terminal, margin_past_last_column)
+    ->  Col = Cols
+    ;   Col is Cols-1
+    ).
+
+%!  prompt_prefix(+Line, +Width, -Prompt) is det.
+%
+%   The first Width characters of Line, padded with spaces when Line is
+%   shorter than that.  On a console the space after the prompt cannot
+%   be told from the padding of an otherwise empty row and is trimmed
+%   away with it, leaving a row one character shorter than the column
+%   the caret is in.
+
+prompt_prefix(Line, Width, Prompt) :-
+    atom_length(Line, Len),
+    (   Len >= Width
+    ->  sub_atom(Line, 0, Width, _, Prompt)
+    ;   Pad is Width - Len,
+        length(Spaces, Pad),
+        maplist(=(0' ), Spaces),
+        atom_codes(Padding, Spaces),
+        atom_concat(Line, Padding, Prompt)
+    ).
+
+%!  dump_screen(+Terminal, +Tag) is det.
+%
+%   Print every non-empty row.  For a failure that is about what is
+%   *not* on the screen, the screen is the evidence.
+
+dump_screen(Terminal, Tag) :-
+    term_rows(Terminal, Rows),
+    Last is Rows-1,
+    format(user_error, "    screen (~w):~n", [Tag]),
+    forall(( between(0, Last, Row),
+             row_text(Terminal, Row, Line),
+             Line \== ''
+           ),
+           format(user_error, "      ~w: ~q~n", [Row, Line])).
+
+%!  report_cursor_row(+Terminal, +Row) is det.
+%
+%   Print the row the caret is on and how wide its content is.  Where a
+%   caret lands at the right margin, what settles whether the terminal
+%   or the line editor is at fault is whether the last column was
+%   written at all.
+
+report_cursor_row(Terminal, Row) :-
+    term_cols(Terminal, Cols),
+    row_text(Terminal, Row, Line),
+    atom_length(Line, Len),
+    format(user_error, "    row ~w holds ~w of ~w columns: ~q~n",
+           [Row, Len, Cols, Line]).
 
 %!  assert_row(+Terminal, +Row, +Expected) is det.
 %
@@ -981,9 +1180,25 @@ assert_row(Terminal, Row, Expected) :-
     row_text(Terminal, Row, Line),
     (   Line == Expected
     ->  true
-    ;   format(user_error,
-               "row ~w: expected ~q, got ~q~n", [Row, Expected, Line]),
+    ;   format(user_error, "row ~w: expected ~q, got ~q~n",
+               [Row, Expected, Line]),
+        report_codes(Expected, Line),
         assertion(Line == Expected)
+    ).
+
+%!  report_codes(+Expected, +Got) is det.
+%
+%   Print both as code points as well.  A terminal that cannot draw the
+%   characters under test draws both sides as the same row of question
+%   marks, which says nothing about how they differ.
+
+report_codes(Expected, Got) :-
+    atom_codes(Expected, EC),
+    atom_codes(Got, GC),
+    (   EC == GC
+    ->  true
+    ;   format(user_error, "    expected codes: ~w~n", [EC]),
+        format(user_error, "         got codes: ~w~n", [GC])
     ).
 
 %!  assert_input(+Terminal, +Row, +ExpectedInput) is det.
@@ -1000,6 +1215,8 @@ assert_input(Terminal, Row, ExpectedInput) :-
     ;   format(user_error,
                "input row ~w: expected ~q, got ~q (full: ~q)~n",
                [Row, ExpectedInput, Input, Line]),
+        report_codes(ExpectedInput, Input),
+        dump_screen(Terminal, 'input row does not match'),
         assertion(Input == ExpectedInput)
     ).
 
@@ -1012,6 +1229,11 @@ assert_input(Terminal, Row, ExpectedInput) :-
 strip_prompt(Line, Rest) :-
     (   sub_atom(Line, Before, 3, _, '?- ')
     ->  After is Before + 3,
+        sub_atom(Line, After, _, 0, Rest)
+    ;   %  On a console the space after the prompt cannot be told from
+        %  the padding of an otherwise empty row, and goes with it.
+        sub_atom(Line, Before, 2, 0, '?-')
+    ->  After is Before + 2,
         sub_atom(Line, After, _, 0, Rest)
     ;   Rest = Line
     ).
@@ -1060,7 +1282,8 @@ test(kill_to_start, [setup(test_begin(T))]) :-
 		 *******************************/
 
 :- begin_tests(terminal_nfd,
-               [ setup(setup_unit),
+               [ condition(needs([combining])),
+                 setup(setup_unit),
                  cleanup(cleanup_unit)
                ]).
 
@@ -1208,7 +1431,10 @@ test(refresh_wide_at_cursor_uses_visual_col, [setup(test_begin(T))]) :-
     cursor(T, _, GotRow),
     assertion(GotRow =:= R).
 
-test(insert_midline_preserves_trailing_combiner, [setup(test_begin(T))]) :-
+test(insert_midline_preserves_trailing_combiner,
+     [ condition(needs([combining])),
+       setup(test_begin(T))
+     ]) :-
     cursor(T, P, R),
     %  Fill a line with NFD clusters up to just below visual width so
     %  the next insert definitely exceeds b->width in cells but still
@@ -1234,7 +1460,10 @@ make_nfd_codes(N, [0'a, 0x300 | T]) :-
     N1 is N - 1,
     make_nfd_codes(N1, T).
 
-test(delete_wide_cluster_midline, [setup(test_begin(T))]) :-
+test(delete_wide_cluster_midline,
+     [ condition(needs([non_bmp])),
+       setup(test_begin(T))
+     ]) :-
     cursor(T, P, R),
     atom_codes(Buf, [0x1F929, 0x1F929, 0x1F929,
                      0'j, 0'j, 0'n, 0's]),
@@ -1249,7 +1478,10 @@ test(delete_wide_cluster_midline, [setup(test_begin(T))]) :-
                           0'j, 0'j, 0'n, 0's]),
     assert_input(T, R, Expected).
 
-test(delete_nfd_cluster_midline, [setup(test_begin(T))]) :-
+test(delete_nfd_cluster_midline,
+     [ condition(needs([combining])),
+       setup(test_begin(T))
+     ]) :-
     cursor(T, P, R),
     atom_codes(Buf, [ 0'f, 0x300, 0'f,
                       0'j, 0x300, 0'j,
@@ -1274,7 +1506,10 @@ test(delete_nfd_cluster_midline, [setup(test_begin(T))]) :-
                            0'z, 0x300 ]),
     assert_input(T, R, Expected).
 
-test(insert_nfd_at_home_with_nfd_buffer, [setup(test_begin(T))]) :-
+test(insert_nfd_at_home_with_nfd_buffer,
+     [ condition(needs([combining])),
+       setup(test_begin(T))
+     ]) :-
     cursor(T, P, R),
     atom_codes(Ygrave, [0'y, 0x300]),
     atom_codes(Agrave, [0'a, 0x300]),
@@ -1290,7 +1525,10 @@ test(insert_nfd_at_home_with_nfd_buffer, [setup(test_begin(T))]) :-
     atom_concat(Agrave, Buffer, Expected),
     assert_input(T, R, Expected).
 
-test(delete_wide_before_nfd, [setup(test_begin(T))]) :-
+test(delete_wide_before_nfd,
+     [ condition(needs([combining])),
+       setup(test_begin(T))
+     ]) :-
     %  Insert a wide character in front of NFD text and take it away
     %  again.  Found by test_terminal_random/2 and Windows-only: libedit
     %  removed the two columns as two CSI P sequences, and we delete
@@ -1415,7 +1653,10 @@ test(smp_delete_forward_is_one_cluster, [setup(test_begin(T))]) :-
     atom_codes(Empty, []),
     assert_input(T, R, Empty).
 
-test(smp_midline_insert, [setup(test_begin(T))]) :-
+test(smp_midline_insert,
+     [ condition(needs([non_bmp])),
+       setup(test_begin(T))
+     ]) :-
     %   Type an ASCII context, step the cursor into the middle of it,
     %   then insert a non-BMP cluster.  Verifies the pair lands in the
     %   buffer as a single cluster and the display advances by two
@@ -1490,7 +1731,10 @@ test(cursor_left_from_end_lands_before_emoji, [setup(test_begin(T))]) :-
     BeforeU is P + 12,
     assert_cursor(T, BeforeU, R).           % before the preceding 'ü'
 
-test(insert_before_final_emoji, [setup(test_begin(T))]) :-
+test(insert_before_final_emoji,
+     [ condition(needs([combining])),
+       setup(test_begin(T))
+     ]) :-
     cursor(T, P, R),
     mixed_line(L),
     type(T, L),
@@ -1534,6 +1778,11 @@ bg_row(T, Text, Row) :-
     \+ sub_atom(Padding, _, _, _, ' '),         % trailing blanks only
     !.
 
+input_row_holds(T, Row, Input) :-
+    row_text(T, Row, Line),
+    strip_prompt(Line, Got),
+    Got == Input.
+
 test(thread_output_keeps_input_line, [setup(test_begin(T))]) :-
     %  Output from another thread while the user is typing must not be
     %  written into the input line.  libedit takes the line off the
@@ -1545,9 +1794,20 @@ test(thread_output_keeps_input_line, [setup(test_begin(T))]) :-
     prompt_col(T, P),
     Input = 'foo(Bar)',
     type(T, Input),
-    assertion(wait_until(bg_row(T, from_thread, _), 15)),
+    (   wait_until(bg_row(T, from_thread, _), 15)
+    ->  true
+    ;   dump_screen(T, 'waiting for output from the other thread')
+    ),
+    assertion(bg_row(T, from_thread, _)),
     bg_row(T, from_thread, OutRow),
     InputRow is OutRow + 1,
+    %  The line comes back on its own account, a moment after the output
+    %  it was taken down for.  Wait for it rather than reading the screen
+    %  the instant the output lands.
+    (   wait_until(input_row_holds(T, InputRow, Input), 5)
+    ->  true
+    ;   dump_screen(T, 'input line did not come back below the output')
+    ),
     assert_input(T, InputRow, Input),
     atom_length(Input, Len),
     ExpCol is P + Len,
@@ -1709,9 +1969,10 @@ type_and_wait(T, Text) :-
     LastRow is Row0 + LastCell // Cols,
     LastCol is LastCell mod Cols,
     NextCol is LastCol + 1,
+    margin_col(T, Margin),
     (   NextCol < Cols
     ->  ExpCol = NextCol, ExpRow = LastRow
-    ;   ExpCol = Cols,    ExpRow = LastRow
+    ;   ExpCol = Margin,  ExpRow = LastRow
     ),
     term_send(T, Text),
     wait_until(cursor_at(T, ExpCol, ExpRow), 5).
@@ -1857,7 +2118,7 @@ test(resize_to_exact_row_multiple,
     filler(Len, Xs),
     type_and_wait(T, Xs),
     row_text(T, R, PromptLine),
-    sub_atom(PromptLine, 0, P, _, Prompt),
+    prompt_prefix(PromptLine, P, Prompt),
     R0 is R - 1,
     row_text(T, R0, Above0),
     resize_cols(T, TargetCols, NewCols),
@@ -1903,8 +2164,7 @@ prompt_row(T, Prompt, Row) :-
     last(Rows, Row).
 
 test(key_after_resize_uses_new_width,
-     [ setup(start_terminal(T)),
-       cleanup(stop_terminal(T))
+     [ setup(resize_test_begin(T))
      ]) :-
     %  Resize, then press a key.  The resize must reach libedit before
     %  the key is acted on: ^A moves the caret up by as many rows as
@@ -1916,7 +2176,7 @@ test(key_after_resize_uses_new_width,
     %  libedit's size already in step.
     cursor(T, P, R),
     row_text(T, R, PromptLine),
-    sub_atom(PromptLine, 0, P, _, Prompt),
+    prompt_prefix(PromptLine, P, Prompt),
     TargetCols = 60,
     %  One character past four whole rows at the new width: the last
     %  row holds a single character, so the row count changes and the
@@ -1949,8 +2209,7 @@ test(key_after_resize_uses_new_width,
     assertion(Joined == Xs).
 
 test(shrink_move_caret_widen,
-     [ setup(start_terminal(T)),
-       cleanup(stop_terminal(T))
+     [ setup(resize_test_begin(T))
      ]) :-
     %  Shrink, walk the caret to the start and back to the end, widen,
     %  then ^A.  Going to the end moves the caret down one row per
@@ -1960,7 +2219,7 @@ test(shrink_move_caret_widen,
     %  own and left parts of the old layout on the screen.
     cursor(T, P, R),
     row_text(T, R, PromptLine),
-    sub_atom(PromptLine, 0, P, _, Prompt),
+    prompt_prefix(PromptLine, P, Prompt),
     Len is 321 - P,
     filler(Len, Xs),
     type_and_wait(T, Xs),
@@ -1988,7 +2247,10 @@ test(shrink_move_caret_widen,
     atomic_list_concat(Trimmed, Joined),
     assertion(Joined == Xs).
 
-test(selection_survives_resize, [setup(resize_test_begin(T))]) :-
+test(selection_survives_resize,
+     [ condition(needs([selection])),
+       setup(resize_test_begin(T))
+     ]) :-
     %  Rewrapping rebuilds the ring of lines the selection points into,
     %  so the anchors have to be carried across with the text.  They
     %  were not, and a selection made before a resize covered something
@@ -2023,8 +2285,9 @@ test(resize_wrapped_row_ending_in_a_space, [setup(resize_test_begin(T))]) :-
     cursor(T, P, R),
     assertion(R > 0),
     row_text(T, R, PromptLine),
-    sub_atom(PromptLine, 0, P, _, Prompt),
-    row_text(T, R-1, Above0),
+    prompt_prefix(PromptLine, P, Prompt),
+    RowAbove is R-1,
+    row_text(T, RowAbove, Above0),
     FirstCols = 70,                     % the space ends the second row
     HeadLen is 2*FirstCols - P - 1,     % once we are at FirstCols
     filler(HeadLen, Head),
@@ -2233,10 +2496,11 @@ test(input_fills_first_row_exactly, [setup(test_begin(T))]) :-
     %  cursor stays in the pending-wrap state at (80, R); the physical
     %  move to (0, R+1) only happens when the NEXT base arrives.
     cursor(T, P, R),
+    margin_col(T, Margin),
     Fill is 80 - P,
     filler(Fill, Xs),
     type_await(T, Xs, 80, R),
-    assert_cursor(T, 80, R).
+    assert_cursor(T, Margin, R).
 
 test(input_wraps_one_char_past_row, [setup(test_begin(T))]) :-
     %  One extra character past 80-P lands at column 1 of the next row.
@@ -2295,7 +2559,10 @@ test(cursor_right_across_wrap, [setup(test_begin(T))]) :-
     key(T, cursor_right),
     assert_cursor(T, 1, R2).
 
-test(wide_char_prewraps_at_row_edge, [setup(test_begin(T))]) :-
+test(wide_char_prewraps_at_row_edge,
+     [ condition(needs([combining])),
+       setup(test_begin(T))
+     ]) :-
     %  Fill the row leaving exactly one column empty (cursor at col 79
     %  on row R), then type a wide emoji.  It does not fit in the
     %  remaining single column so it pre-wraps: the last cell of row R
@@ -2327,7 +2594,8 @@ nfd_codes(N, [0'a, 0x300 | T]) :-
     nfd_codes(N1, T).
 
 test(nfd_fills_first_row_exactly,
-     [ setup(test_begin(T))
+     [ condition(needs([combining])),
+       setup(test_begin(T))
      ]) :-
     %  Typing exactly (80-P) NFD clusters fills the row to its visual
     %  edge.  Same pending-wrap semantics as the narrow fill test:
@@ -2342,7 +2610,8 @@ test(nfd_fills_first_row_exactly,
     assert_cursor(T, 80, R).
 
 test(nfd_one_cluster_wraps_to_next_row,
-     [ setup(test_begin(T))
+     [ condition(needs([combining])),
+       setup(test_begin(T))
      ]) :-
     %  (80-P)+1 NFD clusters: last one should land at column 0 of the
     %  next row, cursor at column 1.  Currently fails because the wrap
@@ -2356,7 +2625,8 @@ test(nfd_one_cluster_wraps_to_next_row,
     assert_cursor(T, 1, R2).
 
 test(nfd_cluster_kept_whole_at_wrap_boundary,
-     [ setup(test_begin(T))
+     [ condition(needs([combining])),
+       setup(test_begin(T))
      ]) :-
     %  When typing one NFD cluster more than fits on row R, the extra
     %  cluster must appear as a complete `à` on row R+1 — not a bare
@@ -2371,7 +2641,8 @@ test(nfd_cluster_kept_whole_at_wrap_boundary,
     assert_row(T, R2, OneCluster).
 
 test(cursor_left_across_wrap_nfd,
-     [ setup(test_begin(T))
+     [ condition(needs([combining])),
+       setup(test_begin(T))
      ]) :-
     %  After filling row R with (80-P) clusters and wrapping one more
     %  onto R+1, two cursor-lefts should land on the last cluster of
@@ -2430,7 +2701,8 @@ test(edit_at_right_margin_stays_on_row,
     sub_atom(Xs, 0, Head, _, Prefix),
     atom_concat(Prefix, '1', Expected),
     assert_input(T, R, Expected),
-    assert_cursor(T, 80, R).
+    margin_col(T, Margin),
+    assert_cursor(T, Margin, R).
 
 :- end_tests(terminal_wrap).
 

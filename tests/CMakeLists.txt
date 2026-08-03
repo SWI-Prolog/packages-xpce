@@ -60,5 +60,26 @@ if(NOT WIN32)
   list(APPEND XPCE_EXTRA_TESTS xpce:terminal_child_insert_mode)
 endif()
 
+# On Windows the same suite can be aimed at a real console:
+# library(win_console) allocates one, puts swipl.exe on it and reads
+# conhost's own screen buffer back.  That is the only run of the four
+# that shows what a user would see rather than what a terminal of ours
+# makes of it.
+#
+# It needs the foreign library from packages/libedit.  The program under
+# test draws on a screen buffer of its own, so this can equally be run
+# by hand from a toplevel on the console you are sitting on.
+
+if(WIN32)
+  add_test(NAME "xpce:terminal_console"
+	   COMMAND ${PROG_SWIPL}
+		   -p "foreign=${CMAKE_CURRENT_BINARY_DIR}/../../libedit"
+		   -f none --no-packs
+		   -s ${CMAKE_CURRENT_SOURCE_DIR}/test_terminal.pl
+		   -g "test_terminal(console)"
+		   -t halt)
+  list(APPEND XPCE_EXTRA_TESTS xpce:terminal_console)
+endif()
+
 set_tests_properties(${XPCE_EXTRA_TESTS}
                      PROPERTIES ENVIRONMENT "${XPCE_TEST_ENV}")
