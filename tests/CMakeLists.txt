@@ -69,11 +69,12 @@ endif()
 # It needs the foreign library from packages/libedit.  The program under
 # test draws on a screen buffer of its own, so this can equally be run
 # by hand from a toplevel on the console you are sitting on.
+#
+# This test does not run under Wine.
 
-if(WIN32)
+if(WIN32 AND NOT CMAKE_CROSSCOMPILING_EMULATOR)
   add_test(NAME "xpce:terminal_console"
 	   COMMAND ${PROG_SWIPL}
-		   -p "foreign=${CMAKE_CURRENT_BINARY_DIR}/../../libedit"
 		   -f none --no-packs
 		   -s ${CMAKE_CURRENT_SOURCE_DIR}/test_terminal.pl
 		   -g "test_terminal(console)"
