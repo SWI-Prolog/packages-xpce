@@ -758,7 +758,48 @@ check_console_interprets_escapes(T) :-
 start_terminal(Terminal) :-
     current_backend(Backend),
     term_start(Backend, Terminal),
-    wait_for_prompt(Terminal).
+    wait_for_prompt(Terminal),
+    wait_settled(Terminal).
+
+%!  wait_settled(+Terminal) is det.
+%
+%   Wait until the screen stops changing.  Waiting for the prompt is not
+%   enough: it is drawn while the rest of the banner is still on its way,
+%   and on a machine running several of these at once the rest can arrive
+%   after a test has painted the screen and overwrite what it painted.
+%
+%   Polls rather than sleeps, so it costs what it has to and no more, and
+%   waits longer where waiting is needed.  Gives up rather than failing:
+%   a terminal that never goes quiet is the test's problem to report.
+
+wait_settled(Terminal) :-
+    screen_signature(Terminal, Sig),
+    wait_settled(Terminal, Sig, 0, 0).
+
+wait_settled(_Terminal, _Prev, Still, _Polls) :-
+    Still >= 5,                         % nothing moved for five rounds
+    !.
+wait_settled(_Terminal, _Prev, _Still, Polls) :-
+    Polls >= 500,                       % ... or it never stops
+    !.
+wait_settled(Terminal, Prev, Still, Polls) :-
+    wait(0.01),
+    screen_signature(Terminal, Sig),
+    (   Sig == Prev
+    ->  Still1 is Still+1
+    ;   Still1 = 0
+    ),
+    Polls1 is Polls+1,
+    wait_settled(Terminal, Sig, Still1, Polls1).
+
+screen_signature(Terminal, Rows) :-
+    term_rows(Terminal, N),
+    Last is N-1,
+    findall(Row,
+            ( between(0, Last, I),
+              term_row(Terminal, I, Row)
+            ),
+            Rows).
 
 %!  stop_terminal(+Terminal) is det.
 
