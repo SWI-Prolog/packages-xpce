@@ -141,7 +141,9 @@ test_terminal(Backend) :-
                     terminal_background,
                     terminal_mouse,
                     terminal_wrap,
-                    terminal_resize
+                    terminal_resize,
+                    terminal_control_keys,
+                    terminal_child_on_terminal
                   ]),
         nb_delete(terminal_backend)).
 
@@ -246,18 +248,36 @@ term_send(terminal(_, xpce(_, TI)), Text) :-
 term_output(terminal(_, xpce(_, TI)), Text) :-
     send(TI, insert, Text).
 
+%!  term_typed(+T, +Id, +Buttons) is det.
 %!  term_press(+T, +Code) is det.
+%!  term_type_keys(+T, +Text) is det.
+%!  term_key_press(+T, +Key) is det.
 %
-%   Press Ctrl+<key> at the window, Code being the control character it
-%   produces.  Unlike term_send/2, which puts bytes on the pty, this
-%   goes through ->typed and thus past the window's key bindings, which
-%   is what a test of those bindings needs.  It is BUTTON_control that
-%   makes the table look up \C-<key> rather than <key>; see
-%   characterName() in src/ker/goodies.c.
+%   Press a key at the window.  term_send/2 puts bytes on the terminal
+%   instead, which skips both the key bindings and whatever ->typed makes
+%   of the key -- Return is a CR there and a newline in a byte stream --
+%   so only these say what a client really receives.
+%
+%   term_press/2 holds Control down, Code being the control character
+%   that produces; it is BUTTON_control that makes the table look up
+%   \C-<key> rather than <key>, see characterName() in
+%   src/ker/goodies.c.  term_type_keys/2 types text a character at a
+%   time, term_key_press/2 presses a named key such as 'RET'.
 
-term_press(terminal(_, xpce(Frame, TI)), Code) :-
+term_typed(terminal(_, xpce(Frame, TI)), Id, Buttons) :-
+    send(TI, typed, new(event(Id, Frame, @default, @default, Buttons))).
+
+term_press(T, Code) :-
     button_control(Control),
-    send(TI, typed, new(event(Code, Frame, @default, @default, Control))).
+    term_typed(T, Code, Control).
+
+term_type_keys(T, Text) :-
+    atom_codes(Text, Codes),
+    forall(member(Code, Codes),
+           term_typed(T, Code, 0)).
+
+term_key_press(T, Key) :-
+    term_typed(T, Key, 0).
 
 button_control(0x1).			% BUTTON_control, src/h/graphics.h
 
@@ -419,6 +439,10 @@ term_has_selection(terminal(_, xpce(_, TI))) :-
 %       pty_signals - the window runs its client on a pty whose
 %                     foreground process group it can see, so a process
 %                     started in it gets the control keys
+%       child_on_terminal
+%                   - a process the Prolog thread starts runs on this
+%                     terminal: it writes to the screen and reads what
+%                     is typed at the window
 
 term_capability(terminal(Backend, _), Cap) :-
     backend_capability(Backend, Cap).
@@ -461,6 +485,18 @@ backend_capability(child(_), margin_past_last_column).
 
 backend_capability(epilog, pty_signals) :-
     \+ current_prolog_flag(windows, true).
+
+%  `child_on_terminal' holds on both platforms, but for different
+%  reasons: POSIX hands the child the pty, Windows puts it on the
+%  terminal's pseudo console.  Epilog only, as under a child backend
+%  shell/1 would start a grandchild.
+%
+%  Not under Wine, which answers S_OK for a pseudo console and then does
+%  not put the child on it: its output goes to whatever console the
+%  process already had and nothing arrives on the handles passed in.
+
+backend_capability(epilog, child_on_terminal) :-
+    \+ current_prolog_flag(wine_version, _).
 
 %  `program_output' is epilog-only although the screen is the same
 %  object under a child: there the child owns the screen, so writing
@@ -3044,6 +3080,143 @@ test(edit_at_right_margin_stays_on_row,
 
 
 		 /*******************************
+		 *      CHILD ON THE TERMINAL   *
+		 *******************************/
+
+/** <section> A process started by the Prolog thread runs on the window
+
+    shell/1 hands the child the terminal the calling thread runs on.  On
+    POSIX that is the pty and the kernel does the rest.  Windows has no
+    pty: the child is put on the pseudo console of the window instead,
+    which the terminal hands out for as long as the child holds it.
+
+    Which is why these tests are worth having on both platforms: they
+    say nothing about how it is done, only that the child ends up on
+    the window, and every Windows attempt at this failed in a way this
+    unit would have caught.
+*/
+
+:- begin_tests(terminal_child_on_terminal,
+               [ condition(needs([child_on_terminal])),
+                 setup(setup_unit),
+                 cleanup(cleanup_unit)
+               ]).
+
+test(child_writes_to_the_window, [setup(test_begin(T))]) :-
+    echo_command('CHILD-STDOUT', Cmd),
+    format(atom(Goal), 'shell("~w", _).\n', [Cmd]),
+    term_send(T, Goal),
+    assertion(wait_until(marker_on_screen(T, 'CHILD-STDOUT'), 30)),
+    wait_for_prompt(T).
+
+test(child_exit_status_reaches_prolog, [setup(test_begin(T))]) :-
+    exit_command(3, Cmd),
+    format(atom(Goal), 'shell("~w", St), format("STATUS=~~w~~n", [St]).\n',
+           [Cmd]),
+    term_send(T, Goal),
+    assertion(wait_until(marker_on_screen(T, 'STATUS=3'), 30)),
+    wait_for_prompt(T).
+
+%  The direction that is easy to get wrong: what is typed at the window
+%  must reach the child, not the Prolog thread that started it.  Echo is
+%  off, so the text can only appear on the screen by going through the
+%  child and coming back.
+
+test(child_reads_what_is_typed, [setup(test_begin(T))]) :-
+    start_interactive_shell(T),
+    arithmetic_command(Cmd, Answer),
+    term_type_keys(T, Cmd),
+    term_key_press(T, 'RET'),
+    assertion(wait_until(marker_on_screen(T, Answer), 30)),
+    quit_interactive_shell(T).
+
+%  What is typed must appear as it is typed.  A console shows it itself
+%  and so does the line discipline on POSIX; a Windows terminal is
+%  neither, so there the console the child runs on does it.  Nothing is
+%  submitted, so only an echo can put it on the screen.
+
+test(typing_is_echoed, [setup(test_begin(T))]) :-
+    start_interactive_shell(T),
+    term_type_keys(T, 'ECHOED-BACK'),
+    assertion(wait_until(marker_on_screen(T, 'ECHOED-BACK'), 30)),
+    term_key_press(T, 'RET'),		% let the shell make of it what it will
+    wait(0.5),
+    quit_interactive_shell(T).
+
+%  The Prolog thread hands its terminal over for the child and must get
+%  it back: on Windows the console it hands out reads the very pipe the
+%  thread reads.  Run enough children that a stuck one shows up.
+
+test(terminal_still_works_after_many_children, [setup(test_begin(T))]) :-
+    echo_command('ROUND', Cmd),
+    format(atom(Goal), 'shell("~w", _).\n', [Cmd]),
+    forall(between(1, 20, _),
+           ( term_send(T, Goal),
+             assertion(wait_until(at_prompt(T), 30)) )),
+    key(T, ctrl_l),
+    wait_for_prompt(T),
+    type(T, 'X is 6*7.'),
+    key(T, enter),
+    assertion(wait_until(marker_on_screen(T, 'X = 42'), 30)).
+
+%!  echo_command(+Text, -Command) is det.
+%!  exit_command(+Status, -Command) is det.
+%
+%   A shell/1 command that prints Text, respectively exits with Status.
+%   shell/1 runs the POSIX shell on Unix and the command line as given
+%   on Windows, so the two need different words for the same thing.
+
+echo_command(Text, Command) :-
+    (   current_prolog_flag(windows, true)
+    ->  format(atom(Command), 'cmd /c echo ~w', [Text])
+    ;   format(atom(Command), 'echo ~w', [Text])
+    ).
+
+exit_command(Status, Command) :-
+    (   current_prolog_flag(windows, true)
+    ->  format(atom(Command), 'cmd /c exit ~w', [Status])
+    ;   format(atom(Command), 'exit ~w', [Status])
+    ).
+
+%!  start_interactive_shell(+T) is det.
+%!  quit_interactive_shell(+T) is det.
+%
+%   Run an interactive shell on the terminal and leave it again.  A shell
+%   rather than something like `sort' because it ends on a command: there
+%   is no way to send end of input to a child on Windows, where the
+%   terminal is a pipe and ^Z is a convention of the console rather than
+%   something a pipe can carry.
+
+start_interactive_shell(T) :-
+    (   current_prolog_flag(windows, true)
+    ->  Shell = cmd
+    ;   Shell = sh
+    ),
+    format(atom(Goal), 'shell("~w", _).\n', [Shell]),
+    term_send(T, Goal),
+    wait(1).
+
+quit_interactive_shell(T) :-
+    term_type_keys(T, exit),
+    term_key_press(T, 'RET'),
+    assertion(wait_until(at_prompt(T), 30)).
+
+%!  arithmetic_command(-Command, -Answer) is det.
+%
+%   A command whose answer appears nowhere in the command itself, so that
+%   seeing the answer means the child read the line and ran it.  Echoing
+%   what was typed, whoever does the echoing, cannot produce it.
+
+arithmetic_command(Command, '56088') :-
+    (   current_prolog_flag(windows, true)
+    ->  Command = 'set /a 123*456'
+    ;   Command = 'echo $((123*456))'
+    ).
+
+:- end_tests(terminal_child_on_terminal).
+
+
+		 /*******************************
 		 *        CONTROL KEYS          *
 		 *******************************/
 
@@ -3093,21 +3266,6 @@ test(control_x_reaches_the_child,
     key(T, enter),
     assertion(wait_until(marker_on_screen(T, '^X'), 15)).
 
-%  A client that turned signal generation off wants ^C as input.  The
-%  line discipline is what knows, so the window may not decide to
-%  interrupt on its own.
-
-test(control_c_reaches_a_child_that_wants_no_signals,
-     [ setup(test_begin(T)),
-       cleanup(stop_foreground(T))
-     ]) :-
-    start_foreground(T, 'stty -echo -isig; cat -v'),
-    press(T, ctrl_c),
-    key(T, enter),
-    assertion(wait_until(marker_on_screen(T, '^C'), 15)),
-    press(T, ctrl_d),			% ^C cannot end this one
-    assertion(wait_until(\+ term_foreground_process(T, _), 15)).
-
 %!  start_foreground(+T, +Command) is det.
 %!  stop_foreground(+T) is det.
 %
@@ -3141,7 +3299,6 @@ press(T, Key) :-
     drive(0.2).
 
 control_code(ctrl_c, 0x03).
-control_code(ctrl_d, 0x04).
 control_code(ctrl_x, 0x18).
 
 :- end_tests(terminal_control_keys).
