@@ -377,6 +377,7 @@ static bool	rlc_open_pty_pair(RlcData b, int cols, int rows);
 static void	rlc_close_connection(RlcData b);
 static ssize_t	rlc_send(RlcData b, const char *buffer, size_t count);
 static int	rlc_foreground_process(RlcData b);
+static bool	rlc_client_owns_terminal(RlcData b);
 static int	rlc_interrupt_char(RlcData b);
 static int	rlc_suspend_char(RlcData b);
 static bool	rlc_caret_to_click(RlcData b, int x, int y);
@@ -675,7 +676,7 @@ static bool
 clientOwnsKeyTerminalImage(TerminalImage ti, EventObj ev)
 { return ( isInteger(ev->id) &&
 	   valInt(ev->id) < 32 &&
-	   rlc_foreground_process(ti->data) > 0 );
+	   rlc_client_owns_terminal(ti->data) );
 }
 
 static status
@@ -979,7 +980,7 @@ interruptTerminalImage(TerminalImage ti)
 { RlcData b = ti->data;
   int intr;
 
-  if ( rlc_foreground_process(b) > 0 && (intr=rlc_interrupt_char(b)) >= 0 )
+  if ( rlc_client_owns_terminal(b) && (intr=rlc_interrupt_char(b)) >= 0 )
   { char chr = intr;
 
     return rlc_send(b, &chr, 1) == 1;
@@ -5996,6 +5997,11 @@ rlc_foreground_process(RlcData b)
   return 0;
 }
 
+static bool
+rlc_client_owns_terminal(RlcData b)
+{ return rlc_foreground_process(b) > 0;
+}
+
 /**
  * Character that makes the line discipline raise `which` (VINTR,
  * VSUSP, ...) in the client, or -1 if the client turned signal
@@ -6146,6 +6152,150 @@ rlc_open_pty_pair(RlcData b, int cols, int rows)
   return true;
 }
 
+		 /*******************************
+		 *     PSEUDO CONSOLE CLIENTS   *
+		 *******************************/
+
+/**
+ * A  process started  by the  Prolog  thread of  this terminal  --  by
+ * shell/1 or process_create/3 -- must run on the terminal rather than
+ * on a  redirected pipe.  It  does so by  attaching to our  pseudo
+ * console, which it reaches through Swinpseudoconsole() on the streams
+ * it was handed.  See System() in src/pl-nt.c.
+ *
+ * The console cannot simply stay open:  it reads b->ptycon.hTaskIn, the
+ * same end of the  pipe the Prolog thread reads, so  the two would race
+ * for the terminal's input.  It therefore lives no longer than the
+ * clients that asked for it, which is safe because the Prolog thread is
+ * inside System() the whole time.
+ *
+ * The streams  are made by  Swin_open_handle() and so carry  the plain
+ * file  functions.   We  hand   them  a  control  function  that  adds
+ * SIO_[GET|REL]WINPSEUDOCONSOLE  and passes  everything  else on.   It
+ * receives the stream's handle, an fd, hence the registry below.
+ */
+
+typedef struct pty_client
+{ int		     fd;		/* fd of the client stream */
+  RlcData	     data;		/* terminal it belongs to */
+  struct pty_client *next;
+} pty_client;
+
+static pty_client   *pty_clients;
+static IOFUNCTIONS   pty_functions;	/* file functions + our control */
+static IOFUNCTIONS  *pty_saved_functions;
+
+static RlcData
+pty_client_data(void *handle)
+{ for(pty_client *c = pty_clients; c; c = c->next)
+  { if ( c->fd == (int)(intptr_t)handle )
+      return c->data;
+  }
+
+  return NULL;
+}
+
+/**
+ * Claim the pseudo console, creating it if we are the first.
+ */
+
+static int
+claim_pseudo_console(RlcData b, HANDLE *hpc)
+{ if ( !b->ptycon.hPC )
+  { COORD size = { b->width, b->window_size };	/* the visible window */
+
+    if ( CreatePseudoConsole(size, b->ptycon.hTaskIn, b->ptycon.hTaskOut,
+			     0, &b->ptycon.hPC) != S_OK )
+    { Cprintf("Failed to create PtyCon for a client\n");
+      return -1;
+    }
+    b->ptycon.hPC_ours = true;
+  }
+
+  b->ptycon.hPC_refs++;
+  *hpc = b->ptycon.hPC;
+  DEBUG(NAME_term, Cprintf("Claimed PtyCon of %s (%d refs)\n",
+			   pp(b->object), b->ptycon.hPC_refs));
+
+  return 0;
+}
+
+static int
+release_pseudo_console(RlcData b)
+{ if ( b->ptycon.hPC_refs > 0 && --b->ptycon.hPC_refs == 0 &&
+       b->ptycon.hPC_ours )
+  { ClosePseudoConsole(b->ptycon.hPC);	/* give the pipe back to Prolog */
+    b->ptycon.hPC = NULL;
+    b->ptycon.hPC_ours = false;
+    DEBUG(NAME_term, Cprintf("Closed PtyCon of %s\n", pp(b->object)));
+  }
+
+  return 0;
+}
+
+static int
+pty_control(void *handle, int action, void *arg)
+{ RlcData b;
+
+  switch(action)
+  { case SIO_GETWINPSEUDOCONSOLE:
+      if ( (b=pty_client_data(handle)) )
+	return claim_pseudo_console(b, arg);
+      return -1;
+    case SIO_RELWINPSEUDOCONSOLE:
+      if ( (b=pty_client_data(handle)) )
+	return release_pseudo_console(b);
+      return -1;
+    default:
+      if ( pty_saved_functions->control )
+	return (*pty_saved_functions->control)(handle, action, arg);
+      return -1;
+  }
+}
+
+static void
+register_client_stream(RlcData b, IOSTREAM *s)
+{ int fd = Sfileno(s);
+  pty_client *c;
+
+  if ( fd < 0 || !(c=rlc_malloc(sizeof(*c))) )
+    return;
+
+  if ( !pty_saved_functions )
+  { pty_saved_functions = s->functions;
+    pty_functions	= *s->functions;
+    pty_functions.control = pty_control;
+  }
+  s->functions = &pty_functions;
+
+  c->fd	     = fd;
+  c->data    = b;
+  c->next    = pty_clients;
+  pty_clients = c;
+}
+
+static void
+register_client_streams(RlcData b, IOSTREAM *i, IOSTREAM *o, IOSTREAM *e)
+{ register_client_stream(b, i);
+  register_client_stream(b, o);
+  register_client_stream(b, e);
+}
+
+static void
+unregister_client_streams(RlcData b)
+{ pty_client **p = &pty_clients;
+
+  while(*p)
+  { pty_client *c = *p;
+
+    if ( c->data == b )
+    { *p = c->next;
+      rlc_free(c);
+    } else
+      p = &c->next;
+  }
+}
+
 /**
  * Get the Prolog streams for the terminal I/O.
  */
@@ -6181,6 +6331,7 @@ getPrologStreamTerminalImage(Any obj,
 	b->ptycon.pl_streams[0] = i;
 	b->ptycon.pl_streams[1] = o;
 	b->ptycon.pl_streams[2] = e;
+	register_client_streams(b, i, o, e);
 
 	*in = i; *out = o; *err = e;
 	return true;
@@ -6218,8 +6369,11 @@ rlc_close_connection(RlcData b)
   }
   if ( (h=b->ptycon.hPC) )
   { b->ptycon.hPC = NULL;
+    b->ptycon.hPC_refs = 0;
+    b->ptycon.hPC_ours = false;
     ClosePseudoConsole(h);
   }
+  unregister_client_streams(b);
   closeHandlePtr(&b->ptycon.hIn);
   closeHandlePtr(&b->ptycon.hOut);
   closeHandlePtr(&b->ptycon.hTaskIn);
@@ -6243,22 +6397,30 @@ rlc_send(RlcData b, const char *buffer, size_t count)
 }
 
 /**
- * A pseudo console has no equivalent of a foreground process group,
- * so we cannot tell whether a process is running in this terminal.
- * ->typed keeps its own bindings and ->interrupt is left to the
- * subclass.  A process started with ->launch would have to tell us.
+ * A pseudo console has no foreground process group to ask about, and no
+ * process id to report either: the console is made here, but the process
+ * put on it is created by whoever claimed it.  What we do know is that
+ * somebody holds the console, which is what the keyboard has to go by.
  */
 
 static int
 rlc_foreground_process(RlcData b)
 { (void)b;
-  return 0;
+  return 0;			/* no pid to give; see <-foreground_process */
 }
+
+static bool
+rlc_client_owns_terminal(RlcData b)
+{ return b->ptycon.hPC_refs > 0;
+}
+
+/* The console turns this into a Ctrl+C for whatever runs on it, the same
+ * way the line discipline raises SIGINT on POSIX.
+ */
 
 static int
 rlc_interrupt_char(RlcData b)
-{ (void)b;
-  return -1;
+{ return rlc_client_owns_terminal(b) ? 3 : -1;
 }
 
 static int

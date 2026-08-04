@@ -368,6 +368,8 @@ typedef struct rlc_data
 #else
   struct
   { HANDLE hPC;				/* The pseudo console */
+    int	   hPC_refs;			/* Clients that claimed hPC */
+    bool   hPC_ours;			/* ... and we made it for them */
     HANDLE hIn;				/* For reading from the process */
     HANDLE hOut;			/* For writing to the process */
     HANDLE hTaskIn;			/* The client read handle */
