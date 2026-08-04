@@ -35,6 +35,8 @@
 :- module(test_terminal,
           [ test_terminal/0,
             test_terminal/1,                     % +Backend
+            test_terminal/2,                     % +Backend, +Unit
+            terminal_test_unit/1,                % ?Unit
             test_terminal_random/2,              % +Sessions, +CommandsPerSession
             test_terminal_random/3               % +Sessions, +CommandsPerSession, +Options
           ]).
@@ -128,24 +130,46 @@ test_terminal :-
 %   failed; see term_capability/2.
 
 test_terminal(Backend) :-
+    findall(Unit, terminal_test_unit(Unit), Units),
+    run_units(Backend, Units).
+
+%!  test_terminal(+Backend, +Unit) is semidet.
+%
+%   Run one unit.  The build runs the suite this way, a process per unit
+%   and per backend: the units are independent, and xpce is not -- it has
+%   one thread that may touch an object, so two units cannot share a
+%   process.  See tests/CMakeLists.txt.
+
+test_terminal(Backend, Unit) :-
+    run_units(Backend, [Unit]).
+
+run_units(Backend, Units) :-
     ensure_terminfo(Backend),
     setup_call_cleanup(
         nb_setval(terminal_backend, Backend),
-        run_tests([ terminal_basic,
-                    terminal_screen,
-                    terminal_nfd,
-                    terminal_regression,
-                    terminal_wide,
-                    terminal_non_bmp,
-                    terminal_mixed,
-                    terminal_background,
-                    terminal_mouse,
-                    terminal_wrap,
-                    terminal_resize,
-                    terminal_control_keys,
-                    terminal_child_on_terminal
-                  ]),
+        run_tests(Units),
         nb_delete(terminal_backend)).
+
+%!  terminal_test_unit(?Unit) is nondet.
+%
+%   The units of this suite, in one place.  tests/CMakeLists.txt reads
+%   them from here, so adding a unit below is enough to have the build
+%   run it; there is no second list to keep in step.  A unit the backend
+%   cannot support skips itself, see term_capability/2.
+
+terminal_test_unit(terminal_basic).
+terminal_test_unit(terminal_screen).
+terminal_test_unit(terminal_nfd).
+terminal_test_unit(terminal_regression).
+terminal_test_unit(terminal_wide).
+terminal_test_unit(terminal_non_bmp).
+terminal_test_unit(terminal_mixed).
+terminal_test_unit(terminal_background).
+terminal_test_unit(terminal_mouse).
+terminal_test_unit(terminal_wrap).
+terminal_test_unit(terminal_resize).
+terminal_test_unit(terminal_control_keys).
+terminal_test_unit(terminal_child_on_terminal).
 
 %!  current_backend(-Backend) is det.
 %
