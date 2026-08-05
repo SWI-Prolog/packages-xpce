@@ -983,12 +983,79 @@ clientOwnsKeyTerminalImage(TerminalImage ti, EventObj ev)
 	   rlc_client_owns_terminal(ti->data) );
 }
 
+/* The xterm modifier parameter: 1 plus a bit for each modifier held.
+ * Zero if none are, in which case the sequence carries no parameter.
+ */
+
+static int
+xterm_modifier(EventObj ev)
+{ int b = valInt(ev->buttons);
+  int m = 0;
+
+  if ( b & BUTTON_shift )   m |= 0x1;
+  if ( b & BUTTON_meta )    m |= 0x2;		/* Alt */
+  if ( b & BUTTON_control ) m |= 0x4;
+
+  return m ? m+1 : 0;
+}
+
+/* Keys xterm reports as a lone final character: the cursor keys (A..D)
+ * and F1..F4 (P..S).  Unmodified they use SS3 in application mode and
+ * CSI otherwise; F1..F4 always use SS3.  With a modifier they are
+ * always `CSI 1 ; <mod> <final>'.
+ */
+
+static const char *
+final_seq(char *buf, size_t size, int final, int mod, bool app)
+{ if ( mod )
+    snprintf(buf, size, S_ESC"[1;%d%c", mod, final);
+  else if ( app )
+    snprintf(buf, size, S_ESC"O%c", final);
+  else
+    snprintf(buf, size, S_ESC"[%c", final);
+
+  return buf;
+}
+
+/* Keys xterm reports as `CSI <num> ~': Delete and F5..F12.  With a
+ * modifier the number is followed by `; <mod>'.
+ */
+
+static const char *
+tilde_seq(char *buf, size_t size, int num, int mod)
+{ if ( mod )
+    snprintf(buf, size, S_ESC"[%d;%d~", num, mod);
+  else
+    snprintf(buf, size, S_ESC"[%d~", num);
+
+  return buf;
+}
+
+/* 1..12 if `id' is a function key event, else 0. */
+
+static int
+function_key_number(Any id)
+{ const Name fkeys[] =
+  { NAME_f1, NAME_f2, NAME_f3,  NAME_f4,  NAME_f5,  NAME_f6,
+    NAME_f7, NAME_f8, NAME_f9,  NAME_f10, NAME_f11, NAME_f12
+  };
+
+  for(size_t i=0; i<sizeof(fkeys)/sizeof(*fkeys); i++)
+  { if ( fkeys[i] == id )
+      return (int)i+1;
+  }
+
+  return 0;
+}
+
 static status
 typedTerminalImage(TerminalImage ti, EventObj ev)
 { int chr;
+  int fn;
   const char *seq = NULL;
-  char buf[10];
+  char buf[16];
   RlcData b = ti->data;
+  int mod = xterm_modifier(ev);
 
   if ( !clientOwnsKeyTerminalImage(ti, ev) &&
        typedKeyBinding(ti->bindings, ev, (Graphical)ti) )
@@ -1001,7 +1068,7 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
     if ( valInt(ev->buttons) & BUTTON_meta )
       chr += META_OFFSET;
   } else if ( ev->id == NAME_DEL )
-  { seq = S_ESC"[3~";
+  { seq = tilde_seq(buf, sizeof(buf), 3, mod);
   } else if ( ev->id == NAME_TAB )
   { chr = '\t';
     if ( valInt(ev->buttons) & BUTTON_meta )
@@ -1013,21 +1080,22 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   } else if ( ev->id == NAME_ESC )
   { chr = ESC;
   } else if ( ev->id == NAME_cursorUp )
-  { seq = b->app_escape ? S_ESC"OA" : S_ESC"[A";
+  { seq = final_seq(buf, sizeof(buf), 'A', mod, b->app_escape);
   } else if ( ev->id == NAME_cursorDown )
-  { seq = b->app_escape ? S_ESC"OB" : S_ESC"[B";
-  } else if ( ev->id == NAME_cursorLeft )
-  { if ( valInt(ev->buttons) & BUTTON_control )
-      seq = S_ESC"[1;5D";		/* xterm-style Ctrl+Left */
-    else
-      seq = b->app_escape ? S_ESC"OD" : S_ESC"[D";
+  { seq = final_seq(buf, sizeof(buf), 'B', mod, b->app_escape);
   } else if ( ev->id == NAME_cursorRight )
-  { if ( valInt(ev->buttons) & BUTTON_control )
-      seq = S_ESC"[1;5C";		/* xterm-style Ctrl+Right */
-    else
-      seq = b->app_escape ? S_ESC"OC" : S_ESC"[C";
+  { seq = final_seq(buf, sizeof(buf), 'C', mod, b->app_escape);
+  } else if ( ev->id == NAME_cursorLeft )
+  { seq = final_seq(buf, sizeof(buf), 'D', mod, b->app_escape);
   } else if ( ev->id == NAME_delete )
-  { seq = S_ESC"[3~";
+  { seq = tilde_seq(buf, sizeof(buf), 3, mod);
+  } else if ( (fn=function_key_number(ev->id)) )
+  { static const int tilde[] = {15,17,18,19,20,21,23,24}; /* F5..F12 */
+
+    if ( fn <= 4 )
+      seq = final_seq(buf, sizeof(buf), 'P'+fn-1, mod, true);
+    else
+      seq = tilde_seq(buf, sizeof(buf), tilde[fn-5], mod);
   } else
     fail;
 

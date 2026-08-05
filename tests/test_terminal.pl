@@ -172,6 +172,7 @@ terminal_test_unit(terminal_mouse_reports).
 terminal_test_unit(terminal_wrap).
 terminal_test_unit(terminal_resize).
 terminal_test_unit(terminal_control_keys).
+terminal_test_unit(terminal_function_keys).
 terminal_test_unit(terminal_child_on_terminal).
 
 %!  current_backend(-Backend) is det.
@@ -3920,6 +3921,94 @@ test(control_x_reaches_the_child,
     assertion(wait_until(marker_on_screen(T, '^X'), 15)).
 
 :- end_tests(terminal_control_keys).
+
+
+		 /*******************************
+		 *     TEST: FUNCTION KEYS      *
+		 *******************************/
+
+%   The keys that are not characters: what the window spells them as
+%   towards the client.  The sequences are xterm's, which is what the
+%   terminfo entries every client reads describe.  As with alternate
+%   scroll, the bytes are read back from a client that echoes them; see
+%   client_reads/2.
+%
+%   F5 and F6 do not appear here: epilog binds them to the debugger,
+%   see binding/2 in library(epilog), so they never reach the client.
+
+:- begin_tests(terminal_function_keys,
+               [ condition(needs([program_output, pty_signals])),
+                 setup(setup_unit),
+                 cleanup(cleanup_unit)
+               ]).
+
+fkeys_begin(T) :-
+    current_test_terminal(T),
+    start_echo_client(T).
+
+%!  hit(+T, +Key) is det.
+%!  hit(+T, +Key, +Buttons) is det.
+%
+%   Press a named key, optionally with modifiers held.
+
+hit(T, Key) :-
+    hit(T, Key, 0).
+
+hit(T, Key, Buttons) :-
+    term_typed(T, Key, Buttons),
+    drive(0.05).
+
+test(f1_to_f4_are_ss3,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    forall(member(K, [f1,f2,f3,f4]),
+           hit(T, K)),
+    assertion(client_reads(T, '^[OP^[OQ^[OR^[OS')).
+
+test(f7_to_f12_are_numbered,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    forall(member(K, [f7,f8,f9,f10,f11,f12]),
+           hit(T, K)),
+    assertion(client_reads(T, '^[[18~^[[19~^[[20~^[[21~^[[23~^[[24~')).
+
+test(modified_function_keys,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    %  A modifier turns the SS3 form into a parameterised CSI one and
+    %  adds a second parameter to the numbered form.
+    button_control(Control),
+    button_shift(Shift),
+    hit(T, f1, Control),
+    hit(T, f7, Shift),
+    assertion(client_reads(T, '^[[1;5P^[[18;2~')).
+
+test(modified_cursor_keys,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    button_control(Control),
+    button_shift(Shift),
+    hit(T, cursor_up, Control),
+    hit(T, cursor_left, Shift),
+    assertion(client_reads(T, '^[[1;5A^[[1;2D')).
+
+test(application_mode_leaves_modifiers_alone,
+     [ setup(fkeys_begin(T)),
+       cleanup(( out(T, '\e[?1l'), stop_foreground(T) ))
+     ]) :-
+    %  DECCKM (mode 1) picks between CSI and SS3 for a plain cursor
+    %  key; a modified one is CSI either way.
+    out(T, '\e[?1h'),
+    button_control(Control),
+    hit(T, cursor_up),
+    hit(T, cursor_up, Control),
+    assertion(client_reads(T, '^[OA^[[1;5A')).
+
+:- end_tests(terminal_function_keys).
 
 
 		 /*******************************
