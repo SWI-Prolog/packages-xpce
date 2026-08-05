@@ -2796,6 +2796,24 @@ test(tracking_can_be_switched_off,
     click(T, 10, 5),
     assertion(client_reads(T, '')).
 
+test(utf8_encoding,
+     [ setup(reports_begin(T)),
+       cleanup(( resize_cols(T, 80, _), reports_end(T) ))
+     ]) :-
+    %  1005 is the default encoding with the three numbers written as
+    %  UTF-8 code points rather than as bytes, so it says nothing until
+    %  a number passes 127 -- which takes a terminal wider than the 96th
+    %  column.  `cat -v' spells the bytes out: the single 0x85 of the
+    %  default is `M-^E', the two of its UTF-8 form are `M-BM-^E'.
+    resize_cols(T, 120, Cols),
+    assertion(Cols >= 101),
+    tracking(T, [1000]),
+    click(T, 100, 5),
+    assertion(client_reads(T, '^[[M M-^E&^[[M#M-^E&')),
+    tracking(T, [1005]),
+    click(T, 100, 5),
+    assertion(client_reads(T, '^[[M M-BM-^E&^[[M#M-BM-^E&')).
+
 test(reporting_takes_the_wheel_from_alternate_scroll,
      [ setup(reports_begin(T)),
        cleanup(( normal_screen(T), reports_end(T) ))
