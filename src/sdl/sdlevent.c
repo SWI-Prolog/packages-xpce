@@ -503,8 +503,6 @@ CtoEvent(SDL_Event *event)
 		    ? " (flipped)" : ""));
       if ( dy )
       { last_time = time;
-	if ( event->wheel.direction == SDL_MOUSEWHEEL_FLIPPED )
-	  dy = -dy;
 	ctx = toInt(dy*15);
 	break;
       }
