@@ -1878,6 +1878,34 @@ test(reverse_index, [setup(current_test_terminal(T))]) :-
     out(T, '\e[1;1H\eM'),
     assert_rows(T, ['',l1,l2,l3,'']).
 
+test(alternate_screen_round_trip, [setup(current_test_terminal(T))]) :-
+    paint(T, [l1,l2,l3]),
+    alt_screen(T, 'ALT'),
+    assert_rows(T, ['ALT','','']),
+    normal_screen(T),
+    assert_rows(T, [l1,l2,l3]).
+
+test(leaving_an_alternate_screen_never_entered,
+     [setup(current_test_terminal(T))]) :-
+    %  A stray rmcup must not blank the window: there is nothing saved
+    %  to bring back, so erasing first would leave it empty for good.
+    %  One arrives out of a Windows pseudo console as its client goes.
+    paint(T, [l1,l2,l3]),
+    normal_screen(T),
+    assert_rows(T, [l1,l2,l3]).
+
+test(entering_the_alternate_screen_twice,
+     [ setup(current_test_terminal(T)),
+       cleanup(normal_screen(T))
+     ]) :-
+    %  The second smcup is ignored rather than saving the alternate
+    %  screen over the normal one, which would be gone for good.
+    paint(T, [l1,l2,l3]),
+    alt_screen(T, 'ALT'),
+    alt_screen(T, 'ALT-AGAIN'),
+    normal_screen(T),
+    assert_rows(T, [l1,l2,l3]).
+
 :- end_tests(terminal_screen).
 
 

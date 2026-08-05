@@ -5276,8 +5276,14 @@ rlc_set_dec_mode(RlcData b, int mode)
       b->alt_scroll = true;
       break;
     case 1049:
-      rlc_save_screen(b);
-      rlc_erase_display(b);
+      /* Ignore it while the alternate screen is already up, as xterm
+       * does.  Saving again would save the alternate screen over the
+       * normal one, which is then gone for good.
+       */
+      if ( !rlc_alt_screen(b) )
+      { rlc_save_screen(b);
+	rlc_erase_display(b);
+      }
       break;
     case 2004:
       b->bracketed_paste_mode = true;
@@ -5330,8 +5336,15 @@ rlc_clear_dec_mode(RlcData b, int mode)
       b->alt_scroll = false;
       break;
     case 1049:
-      rlc_erase_display(b);
-      rlc_restore_screen(b);
+      /* Only when there is a screen to come back to.  Erasing first and
+       * finding nothing saved leaves the window blank with nothing that
+       * can bring it back, which is what a stray or repeated rmcup did:
+       * one comes out of a pseudo console as its client goes away.
+       */
+      if ( rlc_alt_screen(b) )
+      { rlc_erase_display(b);
+	rlc_restore_screen(b);
+      }
       break;
     case 2004:
       b->bracketed_paste_mode = false;
