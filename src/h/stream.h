@@ -495,6 +495,8 @@ PL_EXPORT(IOSTREAM *)	Swin_open_handle(HANDLE h, const char *mode);
 PL_EXPORT(HANDLE)	Swinhandle(IOSTREAM *s);
 PL_EXPORT(HANDLE)	Swinpseudoconsole(IOSTREAM *s);
 PL_EXPORT(void)		Swinrelease_pseudoconsole(IOSTREAM *s);
+PL_EXPORT(void *)	Swinpseudoconsole_attributes(HANDLE hpcon);
+PL_EXPORT(void)		Swinfree_pseudoconsole_attributes(void *attributes);
 #if defined(_WINSOCKAPI_) || defined(NEEDS_SWINSOCK) /* have SOCKET */
 PL_EXPORT(SOCKET)	Swinsock(IOSTREAM *s);
 #endif
