@@ -1878,6 +1878,24 @@ test(reverse_index, [setup(current_test_terminal(T))]) :-
     out(T, '\e[1;1H\eM'),
     assert_rows(T, ['',l1,l2,l3,'']).
 
+test(clear_screen_starts_over, [setup(current_test_terminal(T))]) :-
+    %  What cls/0 in library(shell) sends.  ED 3 drops the scroll back,
+    %  so ED 2 finds no saved lines and starts the ring over -- on the
+    %  slots that hold the oldest lines of the session.  Nothing of them
+    %  may show: the reported symptom was the banner coming back with
+    %  the next prompt written over its first characters.
+    term_rows(T, Rows),
+    Lines is Rows*2,                    % more than the screen holds
+    numbered_lines(1, Lines, Text),
+    paint(T, Text),
+    out(T, '\e[3J\e[H\e[2J'),
+    out(T, '\e[3J\r'),
+    out(T, 'X'),
+    Blanks is Rows-1,
+    length(Empty, Blanks),
+    maplist(=(''), Empty),
+    assert_rows(T, ['X'|Empty]).
+
 test(alternate_screen_round_trip, [setup(current_test_terminal(T))]) :-
     paint(T, [l1,l2,l3]),
     alt_screen(T, 'ALT'),

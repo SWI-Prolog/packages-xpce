@@ -4564,7 +4564,18 @@ rlc_erase_display(RlcData b)
   b->last = b->window_start;
 
   if ( b->first == b->window_start )	/* no saved lines: start over */
-    b->window_start = b->first = b->last = 0;
+  { b->window_start = b->first = b->last = 0;
+
+    /* The window lands on the oldest slots of the ring, which still
+     * hold whatever was written in them: the redraw paints a whole
+     * window from `window_start' and does not stop at `last'.  Emptying
+     * the buffer means emptying its lines.  This is what `cls' hit: ED
+     * 3 leaves no saved lines, so ED 2 takes this branch and the banner
+     * of the session came back with the next prompt written over it.
+     */
+    for(int i=0; i<b->height; i++)
+      rlc_free_line(b, i);
+  }
 
   b->changed |= CHG_CHANGED|CHG_CLEAR|CHG_CARET;
 
