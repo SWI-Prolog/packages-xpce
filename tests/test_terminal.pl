@@ -3933,8 +3933,9 @@ test(control_x_reaches_the_child,
 %   scroll, the bytes are read back from a client that echoes them; see
 %   client_reads/2.
 %
-%   F5 and F6 do not appear here: epilog binds them to the debugger,
-%   see binding/2 in library(epilog), so they never reach the client.
+%   F5 and F6 are epilog's debugger keys, and the last two tests are
+%   the two sides of that: while a client owns the terminal they are
+%   its keys, and back at the prompt they are epilog's again.
 
 :- begin_tests(terminal_function_keys,
                [ condition(needs([program_output, pty_signals])),
@@ -3966,13 +3967,14 @@ test(f1_to_f4_are_ss3,
            hit(T, K)),
     assertion(client_reads(T, '^[OP^[OQ^[OR^[OS')).
 
-test(f7_to_f12_are_numbered,
+test(f5_to_f12_are_numbered,
      [ setup(fkeys_begin(T)),
        cleanup(stop_foreground(T))
      ]) :-
-    forall(member(K, [f7,f8,f9,f10,f11,f12]),
+    forall(member(K, [f5,f6,f7,f8,f9,f10,f11,f12]),
            hit(T, K)),
-    assertion(client_reads(T, '^[[18~^[[19~^[[20~^[[21~^[[23~^[[24~')).
+    assertion(client_reads(
+                  T, '^[[15~^[[17~^[[18~^[[19~^[[20~^[[21~^[[23~^[[24~')).
 
 test(modified_function_keys,
      [ setup(fkeys_begin(T)),
@@ -4007,6 +4009,30 @@ test(application_mode_leaves_modifiers_alone,
     hit(T, cursor_up),
     hit(T, cursor_up, Control),
     assertion(client_reads(T, '^[OA^[[1;5A')).
+
+test(debugger_keys_go_to_the_client,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    %  F5 with a modifier is epilog's too (debug_mode, gui_debug), and
+    %  a client that owns the terminal gets all of them.
+    button_control(Control),
+    button_shift(Shift),
+    hit(T, f5, Shift),
+    hit(T, f5, Control),
+    assertion(client_reads(T, '^[[15;2~^[[15;5~')).
+
+test(debugger_keys_are_epilogs_at_the_prompt,
+     [ setup(test_begin(T)),
+       cleanup(( hit(T, f5),
+                 wait_until(\+ marker_on_screen(T, '[trace]'), 15)
+               ))
+     ]) :-
+    %  Nothing owns the terminal here, so F5 is epilog's again: it
+    %  injects `trace', which the top-level shows in its prompt.
+    assertion(\+ marker_on_screen(T, '[trace]')),
+    hit(T, f5),
+    assertion(wait_until(marker_on_screen(T, '[trace]'), 15)).
 
 :- end_tests(terminal_function_keys).
 

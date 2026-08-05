@@ -966,11 +966,33 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
   fail;
 }
 
+/* 1..12 if `id' is a function key event, else 0. */
+
+static int
+function_key_number(Any id)
+{ const Name fkeys[] =
+  { NAME_f1, NAME_f2, NAME_f3,  NAME_f4,  NAME_f5,  NAME_f6,
+    NAME_f7, NAME_f8, NAME_f9,  NAME_f10, NAME_f11, NAME_f12
+  };
+
+  for(size_t i=0; i<sizeof(fkeys)/sizeof(*fkeys); i++)
+  { if ( fkeys[i] == id )
+      return (int)i+1;
+  }
+
+  return 0;
+}
+
 /* While a process group of another session owns the pty, control
  * characters belong to that process: it is the tty line discipline,
  * not this window, that decides whether ^C raises a signal or is
  * plain input.  Passing them on is what makes ^C, ^X, ^V and friends
  * work in a program started by shell/1 or process_create/3.
+ *
+ * The function keys go the same way.  They are epilog's debugger keys
+ * at the prompt, but they belong to `mc', `vim' or whatever else the
+ * user started: a key the window keeps for itself is one that program
+ * can never be given.
  *
  * Ctrl+Shift and Meta combinations do not produce a control
  * character, so the window's own bindings keep working throughout.
@@ -978,9 +1000,11 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
 
 static bool
 clientOwnsKeyTerminalImage(TerminalImage ti, EventObj ev)
-{ return ( isInteger(ev->id) &&
-	   valInt(ev->id) < 32 &&
-	   rlc_client_owns_terminal(ti->data) );
+{ if ( !rlc_client_owns_terminal(ti->data) )
+    return false;
+
+  return ( (isInteger(ev->id) && valInt(ev->id) < 32) ||
+	   function_key_number(ev->id) != 0 );
 }
 
 /* The xterm modifier parameter: 1 plus a bit for each modifier held.
@@ -1029,23 +1053,6 @@ tilde_seq(char *buf, size_t size, int num, int mod)
     snprintf(buf, size, S_ESC"[%d~", num);
 
   return buf;
-}
-
-/* 1..12 if `id' is a function key event, else 0. */
-
-static int
-function_key_number(Any id)
-{ const Name fkeys[] =
-  { NAME_f1, NAME_f2, NAME_f3,  NAME_f4,  NAME_f5,  NAME_f6,
-    NAME_f7, NAME_f8, NAME_f9,  NAME_f10, NAME_f11, NAME_f12
-  };
-
-  for(size_t i=0; i<sizeof(fkeys)/sizeof(*fkeys); i++)
-  { if ( fkeys[i] == id )
-      return (int)i+1;
-  }
-
-  return 0;
 }
 
 static status
