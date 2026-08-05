@@ -1312,6 +1312,7 @@ control_code(ctrl_c, 0x03).
 control_code(ctrl_x, 0x18).
 
 %!  echo_client(-Command) is det.
+%!  start_echo_client(+T) is det.
 %!  client_reads(+T, +Expected) is semidet.
 %
 %   What the terminal sends its client is otherwise invisible: nothing
@@ -1324,8 +1325,26 @@ control_code(ctrl_x, 0x18).
 %
 %   Expected == '' therefore says the terminal sent nothing, which
 %   waiting for something not to appear cannot: that can only time out.
+%
+%   start_echo_client/1 runs the client and waits until it is ready.
+%   The shell claims the pty before its `stty -echo' has run, and until
+%   that has, the line discipline echoes what we type on top of what
+%   the client reads back -- a key pressed in that window arrives
+%   twice.  The marker carries a quote so that the command line, which
+%   the line editor does echo, cannot match it.
 
-echo_client('stty -echo; cat -v').
+echo_client('stty -echo; echo ECHO''''-CLIENT-READY; cat -v').
+
+echo_client_marker('ECHO-CLIENT-READY').
+
+start_echo_client(T) :-
+    echo_client(Cmd),
+    start_foreground(T, Cmd),
+    echo_client_marker(Marker),
+    (   wait_until(marker_on_screen(T, Marker), 15)
+    ->  true
+    ;   throw(error(terminal_echo_client_not_ready, _))
+    ).
 
 client_reads(T, Expected) :-
     atom_concat(Expected, '#', Line),
@@ -2662,8 +2681,7 @@ test(alt_screen_scrollbar_is_full,
 
 alt_scroll_begin(T) :-
     current_test_terminal(T),
-    echo_client(Cmd),
-    start_foreground(T, Cmd),
+    start_echo_client(T),
     alt_screen(T, '').
 
 alt_scroll_end(T) :-
@@ -2718,8 +2736,7 @@ test(shift_wheel_is_not_the_applications,
 
 test(normal_screen_wheel_is_ours,
      [ setup(( current_test_terminal(T),
-               echo_client(Cmd),
-               start_foreground(T, Cmd) )),
+               start_echo_client(T) )),
        cleanup(stop_foreground(T))
      ]) :-
     %  Off the alternate screen the wheel scrolls the scroll back and
@@ -2749,8 +2766,7 @@ test(normal_screen_wheel_is_ours,
 
 reports_begin(T) :-
     current_test_terminal(T),
-    echo_client(Cmd),
-    start_foreground(T, Cmd).
+    start_echo_client(T).
 
 reports_end(T) :-
     out(T, '\e[?1003l\e[?1002l\e[?1000l\e[?9l\e[?1006l\e[?1015l\e[?1005l'),
@@ -3898,8 +3914,7 @@ test(control_x_reaches_the_child,
      [ setup(test_begin(T)),
        cleanup(stop_foreground(T))
      ]) :-
-    echo_client(Cmd),
-    start_foreground(T, Cmd),
+    start_echo_client(T),
     press(T, ctrl_x),
     key(T, enter),
     assertion(wait_until(marker_on_screen(T, '^X'), 15)).
