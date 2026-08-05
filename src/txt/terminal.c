@@ -6586,6 +6586,40 @@ claim_pseudo_console(RlcData b, HANDLE *hpc)
   return 0;
 }
 
+/**
+ * End of a console session.
+ *
+ * A real console owns the screen buffer the application draws on: when
+ * the application goes away the buffer dies with it and the one
+ * underneath comes back, which is why `less' leaves a Windows console
+ * as it found it without sending anything.  A pseudo console does not
+ * do that for us, and once it is closed there is nobody left to send
+ * the sequences either, so the terminal sends them to itself.
+ *
+ * Everything here is a no-op unless the client changed it, and it goes
+ * through the Prolog thread's own output stream rather than through the
+ * screen model: the model belongs to the thread that reads the pipe.
+ */
+
+static void
+end_console_session(RlcData b)
+{ static const char *reset =
+    S_ESC"[?1049l"			/* back to the normal screen */
+    S_ESC"[?25h"			/* caret visible */
+    S_ESC"[0m"				/* default attributes */
+    S_ESC"[r"				/* the whole screen scrolls */
+    S_ESC"[?1l"				/* normal cursor keys */
+    S_ESC"[?9l"S_ESC"[?1000l"		/* no mouse reports */
+    S_ESC"[?1002l"S_ESC"[?1003l"
+    S_ESC"[?2004l";			/* no bracketed paste */
+  IOSTREAM *out = b->ptycon.pl_streams[1];
+
+  if ( out )
+  { Sfputs(reset, out);
+    Sflush(out);
+  }
+}
+
 static int
 release_pseudo_console(RlcData b)
 { if ( b->ptycon.hPC_refs > 0 && --b->ptycon.hPC_refs == 0 &&
@@ -6594,6 +6628,7 @@ release_pseudo_console(RlcData b)
     b->ptycon.hPC = NULL;
     b->ptycon.hPC_ours = false;
     DEBUG(NAME_term, Cprintf("Closed PtyCon of %s\n", pp(b->object)));
+    end_console_session(b);		/* ... and the screen with it */
   }
 
   return 0;
