@@ -75,6 +75,9 @@
     run_in_help_epilog(0),
     win_insert_menu_item(+, +, +, 0).
 
+:- multifile
+    tty_link_hook/1.                                % +URL
+
 :- pce_global(@epilog, new(epilog)).
 
 
@@ -897,8 +900,11 @@ editline:el_wcwidth(Code, Columns) :-
 
 %!  tty_link(+Link) is det.
 %
-%   Handle a terminal hyperlink to ``file://`` links
+%   Handle clicking a terminal hyperlink click.
 
+tty_link(Link) :-
+    tty_link_hook(Link),
+    !.
 tty_link(Link) :-
     link_file_location(Link, _File, Location),
     !,
