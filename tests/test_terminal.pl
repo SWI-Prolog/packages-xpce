@@ -166,6 +166,9 @@ terminal_test_unit(terminal_non_bmp).
 terminal_test_unit(terminal_mixed).
 terminal_test_unit(terminal_background).
 terminal_test_unit(terminal_mouse).
+terminal_test_unit(terminal_wheel).
+terminal_test_unit(terminal_alt_scroll).
+terminal_test_unit(terminal_mouse_reports).
 terminal_test_unit(terminal_wrap).
 terminal_test_unit(terminal_resize).
 terminal_test_unit(terminal_control_keys).
@@ -399,22 +402,44 @@ xpce_cw(TI, CW) :-
 %
 %   Synthesise a left-button click, and a press-move-release.
 
-term_click(terminal(_, xpce(_, TI)), Col, Row) :-
+term_click(T, Col, Row) :-
+    term_click(T, Col, Row, 0).
+
+term_drag(T, Col1, Row1, Col2, Row2) :-
+    term_drag(T, Col1, Row1, Col2, Row2, 0).
+
+%!  term_click(+T, +Col, +Row, +Buttons) is det.
+%!  term_drag(+T, +Col1, +Row1, +Col2, +Row2, +Buttons) is det.
+%!  term_move(+T, +Col, +Row) is det.
+%
+%   As above, with the modifier mask spelled out, and a bare motion of
+%   the pointer.
+
+term_click(terminal(_, xpce(_, TI)), Col, Row, Buttons) :-
     cell_pixel(TI, Col, Row, X, Y),
-    send(TI, event, new(_, event(ms_left_down, TI, X, Y, 1, 0))),
+    send(TI, event, new(_, event(ms_left_down, TI, X, Y, Buttons, 0))),
     drive(0.1),
-    send(TI, event, new(_, event(ms_left_up, TI, X, Y, 1, 0))),
+    send(TI, event, new(_, event(ms_left_up, TI, X, Y, Buttons, 0))),
     drive(0.3).
 
-term_drag(terminal(_, xpce(_, TI)), Col1, Row1, Col2, Row2) :-
+term_drag(terminal(_, xpce(_, TI)), Col1, Row1, Col2, Row2, Buttons) :-
     cell_pixel(TI, Col1, Row1, X1, Y1),
     cell_pixel(TI, Col2, Row2, X2, Y2),
-    send(TI, event, new(_, event(ms_left_down, TI, X1, Y1, 1, 0))),
+    send(TI, event, new(_, event(ms_left_down, TI, X1, Y1, Buttons, 0))),
     drive(0.1),
-    send(TI, event, new(_, event(ms_left_drag, TI, X2, Y2, 1, 0))),
+    send(TI, event, new(_, event(ms_left_drag, TI, X2, Y2, Buttons, 0))),
     drive(0.1),
-    send(TI, event, new(_, event(ms_left_up, TI, X2, Y2, 1, 0))),
+    send(TI, event, new(_, event(ms_left_up, TI, X2, Y2, Buttons, 0))),
     drive(0.3).
+
+%   A terminal that does not report the mouse has nothing to do with a
+%   bare motion and says so by failing the event, which is not the
+%   helper's business.
+
+term_move(terminal(_, xpce(_, TI)), Col, Row) :-
+    cell_pixel(TI, Col, Row, X, Y),
+    ignore(send(TI, event, new(_, event(loc_move, TI, X, Y, 0, 0)))),
+    drive(0.1).
 
 %!  term_wheel(+T, +Col, +Row, +Ticks, +Buttons) is det.
 %
@@ -1225,8 +1250,14 @@ term_terminfo(terminal(epilog, _), TERM) :-
 click(T, Col, Row) :-
     term_click(T, Col, Row).
 
+click(T, Col, Row, Buttons) :-
+    term_click(T, Col, Row, Buttons).
+
 drag(T, Col1, Row1, Col2, Row2) :-
     term_drag(T, Col1, Row1, Col2, Row2).
+
+move(T, Col, Row) :-
+    term_move(T, Col, Row).
 
 %!  wheel(+T, +Col, +Row, +Ticks) is det.
 %!  wheel(+T, +Col, +Row, +Ticks, +Buttons) is det.
@@ -2622,6 +2653,162 @@ test(normal_screen_wheel_is_ours,
     assertion(client_reads(T, '')).
 
 :- end_tests(terminal_alt_scroll).
+
+
+		 /*******************************
+		 *      TEST: MOUSE REPORTS     *
+		 *******************************/
+
+%   Mouse reporting (DEC private modes 9, 1000, 1002 and 1003, encoded
+%   as asked for by 1005, 1006 or 1015).  As with alternate scroll, the
+%   reports are read back from a client that echoes what it is sent.
+%
+%   The cell clicked on is (10,5) throughout, which the wire format
+%   counts from one as column 11, row 6.
+
+:- begin_tests(terminal_mouse_reports,
+               [ condition(needs([mouse, program_output, pty_signals])),
+                 setup(setup_unit),
+                 cleanup(cleanup_unit)
+               ]).
+
+reports_begin(T) :-
+    current_test_terminal(T),
+    echo_client(Cmd),
+    start_foreground(T, Cmd).
+
+reports_end(T) :-
+    out(T, '\e[?1003l\e[?1002l\e[?1000l\e[?9l\e[?1006l\e[?1015l\e[?1005l'),
+    stop_foreground(T).
+
+%!  tracking(+T, +Modes) is det.
+%
+%   Ask for the mouse as an application would, Modes being the DEC
+%   private modes it sets.
+
+tracking(T, Modes) :-
+    forall(member(Mode, Modes),
+           out(T, ['\e[?', Mode, 'h'])).
+
+test(sgr_reports_press_and_release,
+     [ setup(reports_begin(T)),
+       cleanup(reports_end(T))
+     ]) :-
+    tracking(T, [1000, 1006]),
+    click(T, 10, 5),
+    assertion(client_reads(T, '^[[<0;11;6M^[[<0;11;6m')).
+
+test(default_encoding_is_the_x10_one,
+     [ setup(reports_begin(T)),
+       cleanup(reports_end(T))
+     ]) :-
+    %  Without 1006 the report is CSI M and three bytes, each 32 more
+    %  than the number it stands for: button 0 is a space, column 11 a
+    %  `+', row 6 an `&'.  A release says only that a button came up,
+    %  which is button 3, a `#'.
+    tracking(T, [1000]),
+    click(T, 10, 5),
+    assertion(client_reads(T, '^[[M +&^[[M#+&')).
+
+test(urxvt_encoding,
+     [ setup(reports_begin(T)),
+       cleanup(reports_end(T))
+     ]) :-
+    tracking(T, [1000, 1015]),
+    click(T, 10, 5),
+    assertion(client_reads(T, '^[[32;11;6M^[[35;11;6M')).
+
+test(wheel_is_a_button,
+     [ setup(reports_begin(T)),
+       cleanup(reports_end(T))
+     ]) :-
+    %  Buttons 64 and 65, one report per notch and no release.  This is
+    %  what `less --mouse' and emacs read, and it is why they scroll in
+    %  a terminal that reports and not in one that scrolls itself.
+    tracking(T, [1000, 1006]),
+    wheel(T, 10, 5, -1),
+    assertion(client_reads(T, '^[[<65;11;6M')),
+    wheel(T, 10, 5, 2),
+    assertion(client_reads(T, '^[[<64;11;6M^[[<64;11;6M')).
+
+test(drags_need_button_event_tracking,
+     [ setup(reports_begin(T)),
+       cleanup(reports_end(T))
+     ]) :-
+    %  1000 reports the two ends of a drag but not the way there;
+    %  1002 adds the motion, marked with the motion flag (32).
+    tracking(T, [1000, 1006]),
+    drag(T, 10, 5, 20, 5),
+    assertion(client_reads(T, '^[[<0;11;6M^[[<0;21;6m')),
+    tracking(T, [1002]),
+    drag(T, 10, 5, 20, 5),
+    assertion(client_reads(T, '^[[<0;11;6M^[[<32;21;6M^[[<0;21;6m')).
+
+test(motion_needs_any_event_tracking,
+     [ setup(reports_begin(T)),
+       cleanup(reports_end(T))
+     ]) :-
+    %  A pointer that moves with no button down is 1003's business
+    %  alone, and only where it enters a new cell: button 3 (no
+    %  button) plus the motion flag is 35.
+    tracking(T, [1002, 1006]),
+    move(T, 10, 5),
+    assertion(client_reads(T, '')),
+    tracking(T, [1003]),
+    move(T, 11, 5),
+    move(T, 11, 5),
+    assertion(client_reads(T, '^[[<35;12;6M')).
+
+test(x10_tracking_reports_presses_only,
+     [ setup(reports_begin(T)),
+       cleanup(reports_end(T))
+     ]) :-
+    tracking(T, [9, 1006]),
+    click(T, 10, 5),
+    assertion(client_reads(T, '^[[<0;11;6M')).
+
+test(modifiers_are_reported,
+     [ setup(reports_begin(T)),
+       cleanup(reports_end(T))
+     ]) :-
+    button_control(Control),
+    tracking(T, [1000, 1006]),
+    click(T, 10, 5, Control),
+    assertion(client_reads(T, '^[[<16;11;6M^[[<16;11;6m')).
+
+test(shift_click_is_the_users,
+     [ setup(reports_begin(T)),
+       cleanup(reports_end(T))
+     ]) :-
+    %  Shift is the way out of an application that took the mouse: it
+    %  is never reported, so selecting and pasting keep working.
+    button_shift(Shift),
+    tracking(T, [1000, 1006]),
+    click(T, 10, 5, Shift),
+    assertion(client_reads(T, '')).
+
+test(tracking_can_be_switched_off,
+     [ setup(reports_begin(T)),
+       cleanup(reports_end(T))
+     ]) :-
+    tracking(T, [1000, 1006]),
+    out(T, '\e[?1000l'),
+    click(T, 10, 5),
+    assertion(client_reads(T, '')).
+
+test(reporting_takes_the_wheel_from_alternate_scroll,
+     [ setup(reports_begin(T)),
+       cleanup(( normal_screen(T), reports_end(T) ))
+     ]) :-
+    %  Both could claim the wheel on the alternate screen.  An
+    %  application that asked for reports gets them; alternate scroll
+    %  is for the ones that did not.
+    alt_screen(T, ''),
+    tracking(T, [1000, 1006]),
+    wheel(T, 10, 5, -1),
+    assertion(client_reads(T, '^[[<65;11;6M')).
+
+:- end_tests(terminal_mouse_reports).
 
 
 		 /*******************************

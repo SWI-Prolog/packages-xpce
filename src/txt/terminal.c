@@ -579,25 +579,25 @@ clickedLinkTerminalImage(TerminalImage ti, Name href)
 
 #define WHEEL_LINES 3
 
-/** How far the wheel turned, in lines.  Negative is towards the user,
- * i.e. forwards through the text.  Fails on an event that carries no
- * rotation, which is not a wheel event at all.
+/** How far the wheel turned, in notches.  Negative is towards the
+ * user, i.e. forwards through the text.  Fails on an event that
+ * carries no rotation, which is not a wheel event at all.
  */
 
 static bool
-rlc_wheel_lines(EventObj ev, int *lines)
+rlc_wheel_notches(EventObj ev, int *notches)
 { Int rot = getAttributeObject(ev, NAME_rotation);
 
   if ( !rot )
     return false;
 
   int deg = valInt(rot);		/* a notch is 15 degrees */
-  int ln  = (deg*WHEEL_LINES)/15;
-  if ( ln == 0 )			/* a fraction of a notch still moves */
-    ln = deg > 0 ? 1 : deg < 0 ? -1 : 0;
+  int n   = deg/15;
+  if ( n == 0 )				/* a fraction of a notch still moves */
+    n = deg > 0 ? 1 : deg < 0 ? -1 : 0;
 
-  *lines = ln;
-  return ln != 0;
+  *notches = n;
+  return n != 0;
 }
 
 /** Alternate scroll (DEC private mode 1007, on by default as in xterm
@@ -613,19 +613,240 @@ rlc_wheel_lines(EventObj ev, int *lines)
 static bool
 rlc_alt_scroll(TerminalImage ti, EventObj ev)
 { RlcData b = ti->data;
-  int lines;
+  int notches;
 
   if ( !b->alt_scroll || !rlc_alt_screen(b) ||
        (valInt(ev->buttons) & BUTTON_shift) ||
-       !rlc_wheel_lines(ev, &lines) )
+       !rlc_wheel_notches(ev, &notches) )
     return false;
 
-  const char *seq = lines > 0
+  const char *seq = notches > 0
 	  ? (b->app_escape ? S_ESC"OA" : S_ESC"[A")
 	  : (b->app_escape ? S_ESC"OB" : S_ESC"[B");
 
-  for(int i=abs(lines); i-- > 0; )
+  for(int i=abs(notches)*WHEEL_LINES; i-- > 0; )
     rlc_send(b, seq, strlen(seq));
+
+  return true;
+}
+
+		 /*******************************
+		 *        MOUSE REPORTING       *
+		 *******************************/
+
+/** Mouse reporting, DEC private modes 9, 1000, 1002 and 1003, in the
+ * encoding of DEC private mode 1005, 1006 or 1015.  An application
+ * that asked for it gets the mouse: `emacs -nw', `less --mouse', vim,
+ * mc and tmux all do, and the wheel is a button to them like any
+ * other.
+ *
+ * Shift is the user's way out, as in xterm: a shifted event is never
+ * reported, so selecting, pasting and scrolling back keep working
+ * whatever the application asked for.  That is also why shift is not
+ * among the modifiers we encode.
+ */
+
+#define MOUSE_BUTTON_NONE  3		/* release, or motion with no button */
+#define MOUSE_META	0x08
+#define MOUSE_CONTROL	0x10
+#define MOUSE_MOTION	0x20
+#define MOUSE_WHEEL_UP	  64
+#define MOUSE_WHEEL_DOWN  65
+#define MOUSE_MAX_X10	 223		/* 255-32: what one byte can hold */
+
+typedef enum
+{ MOUSE_PRESS,
+  MOUSE_RELEASE,
+  MOUSE_DRAG,				/* motion with a button down */
+  MOUSE_MOVE				/* motion without */
+} mouse_kind;
+
+static int
+rlc_mouse_modifiers(EventObj ev)
+{ int bts  = valInt(ev->buttons);
+  int mods = 0;
+
+  if ( bts & BUTTON_meta )
+    mods |= MOUSE_META;
+  if ( bts & BUTTON_control )
+    mods |= MOUSE_CONTROL;
+
+  return mods;
+}
+
+/** The cell the event points at, as a 0-based column and row in the
+ * visible window.
+ *
+ * This is the grid the terminal draws on rather than what
+ * rlc_translate_mouse() finds: that one maps to a character in a line
+ * and so stops where the line does, while an application wants the
+ * cell the pointer is over, text or no text.
+ */
+
+static bool
+rlc_event_cell(TerminalImage ti, EventObj ev, int *colp, int *rowp)
+{ RlcData b = ti->data;
+  Int x, y;
+
+  if ( !get_xy_event(ev, ti, ON, &x, &y) )
+    return false;
+
+  int col = (int)((valInt(x) - b->cw)/b->cw); /* a cell of left margin */
+  int row = valInt(y)/b->ch;
+
+  *colp = Bounds(col, 0, b->width-1);
+  *rowp = Bounds(row, 0, b->window_size-1);
+
+  return true;
+}
+
+/** The xterm button number of a mouse event and what kind of report it
+ * makes.  Fails on any other event.
+ */
+
+static bool
+rlc_mouse_kind(EventObj ev, int *button, mouse_kind *kind)
+{ Name id = ev->id;
+
+  if ( id == NAME_msLeftDown )
+  { *button = 0; *kind = MOUSE_PRESS;
+  } else if ( id == NAME_msMiddleDown )
+  { *button = 1; *kind = MOUSE_PRESS;
+  } else if ( id == NAME_msRightDown )
+  { *button = 2; *kind = MOUSE_PRESS;
+  } else if ( id == NAME_msLeftUp )
+  { *button = 0; *kind = MOUSE_RELEASE;
+  } else if ( id == NAME_msMiddleUp )
+  { *button = 1; *kind = MOUSE_RELEASE;
+  } else if ( id == NAME_msRightUp )
+  { *button = 2; *kind = MOUSE_RELEASE;
+  } else if ( id == NAME_msLeftDrag )
+  { *button = 0; *kind = MOUSE_DRAG;
+  } else if ( id == NAME_msMiddleDrag )
+  { *button = 1; *kind = MOUSE_DRAG;
+  } else if ( id == NAME_msRightDrag )
+  { *button = 2; *kind = MOUSE_DRAG;
+  } else if ( id == NAME_locMove )
+  { *button = MOUSE_BUTTON_NONE; *kind = MOUSE_MOVE;
+  } else
+    return false;
+
+  return true;
+}
+
+/** Write one report.  `cb' is the button with its modifiers and the
+ * motion flag; in every encoding but 1006 a release says only that a
+ * button came up, not which one.
+ */
+
+static void
+rlc_mouse_report(RlcData b, int cb, int col, int row, bool release)
+{ char buf[32];
+  int len;
+
+  col++; row++;				/* the wire format is 1-based */
+
+  if ( b->mouse_encoding == 1006 )	/* CSI < Cb ; Cx ; Cy M or m */
+  { len = snprintf(buf, sizeof(buf), S_ESC"[<%d;%d;%d%c",
+		   cb, col, row, release ? 'm' : 'M');
+  } else
+  { if ( release )
+      cb = (cb & ~0x3) | MOUSE_BUTTON_NONE;
+
+    if ( b->mouse_encoding == 1015 )	/* urxvt: CSI Cb ; Cx ; Cy M */
+    { len = snprintf(buf, sizeof(buf), S_ESC"[%d;%d;%dM",
+		     cb+32, col, row);
+    } else if ( b->mouse_encoding == 1005 ) /* CSI M and three code points */
+    { char *o = buf;
+
+      *o++ = ESC; *o++ = '['; *o++ = 'M';
+      o = utf8_put_char(o, cb+32);
+      o = utf8_put_char(o, col+32);
+      o = utf8_put_char(o, row+32);
+      len = (int)(o-buf);
+    } else				/* the default: three bytes, and
+					   nothing past column 223 fits */
+    { if ( col > MOUSE_MAX_X10 || row > MOUSE_MAX_X10 )
+	return;
+
+      len = snprintf(buf, sizeof(buf), S_ESC"[M%c%c%c",
+		     cb+32, col+32, row+32);
+    }
+  }
+
+  rlc_send(b, buf, len);
+}
+
+/** A wheel event is a button press per notch and has no release. */
+
+static bool
+rlc_mouse_wheel(TerminalImage ti, EventObj ev)
+{ RlcData b = ti->data;
+  int notches, col, row;
+
+  if ( !rlc_wheel_notches(ev, &notches) ||
+       !rlc_event_cell(ti, ev, &col, &row) )
+    return false;
+
+  int cb = (notches > 0 ? MOUSE_WHEEL_UP : MOUSE_WHEEL_DOWN) |
+	   rlc_mouse_modifiers(ev);
+
+  for(int i=abs(notches); i-- > 0; )
+    rlc_mouse_report(b, cb, col, row, false);
+
+  return true;
+}
+
+/** Report the event to the application if it asked for this kind of
+ * report.  True if it did, in which case the event was the
+ * application's: it is not ours to select, paste or scroll with.
+ */
+
+static bool
+rlc_mouse_event(TerminalImage ti, EventObj ev)
+{ RlcData b = ti->data;
+  int button, col, row;
+  mouse_kind kind;
+
+  if ( !b->mouse_tracking || (valInt(ev->buttons) & BUTTON_shift) )
+    return false;
+
+  if ( ev->id == NAME_wheel )
+    return rlc_mouse_wheel(ti, ev);
+
+  if ( !rlc_mouse_kind(ev, &button, &kind) )
+    return false;
+
+  switch(kind)				/* what did it ask for? */
+  { case MOUSE_PRESS:
+      break;
+    case MOUSE_RELEASE:
+      if ( b->mouse_tracking == 9 )	/* X10 reports presses only */
+	return false;
+      break;
+    case MOUSE_DRAG:
+      if ( b->mouse_tracking < 1002 )
+	return false;
+      break;
+    case MOUSE_MOVE:
+      if ( b->mouse_tracking < 1003 )
+	return false;
+      break;
+  }
+
+  if ( !rlc_event_cell(ti, ev, &col, &row) )
+    return false;
+
+  int cb = button | rlc_mouse_modifiers(ev);
+  if ( kind == MOUSE_DRAG || kind == MOUSE_MOVE )
+  { if ( col == b->mouse_col && row == b->mouse_row )
+      return true;			/* still in the cell it reported */
+    cb |= MOUSE_MOTION;
+  }
+  b->mouse_col = col;
+  b->mouse_row = row;
+
+  rlc_mouse_report(b, cb, col, row, kind == MOUSE_RELEASE);
 
   return true;
 }
@@ -643,10 +864,16 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
       refreshTerminalImage(ti);		/* repaint old + new armed run */
     }
 
+    if ( rlc_mouse_event(ti, ev) )	/* the link is ours, the motion */
+      succeed;				/* may be the application's */
+
     fail;
   }
 
   DEBUG(NAME_event, Cprintf("Event: %s\n", pp(ev->id)));
+
+  if ( rlc_mouse_event(ti, ev) )
+    succeed;
 
   if ( ev->id == NAME_wheel && rlc_alt_scroll(ti, ev) )
     succeed;
@@ -3137,6 +3364,8 @@ rlc_make_buffer(int w, int h)
   b->scroll_bottom  = b->window_size-1;
   b->autowrap       = true;
   b->alt_scroll     = true;
+  b->mouse_col      = -1;		/* no cell reported yet */
+  b->mouse_row      = -1;
   rlc_init_tabs(b);
   b->lines          = rlc_malloc(sizeof(rlc_text_line) * h);
   b->cmdstat	    = CMD_INITIAL;
@@ -3919,6 +4148,10 @@ rlc_reset(RlcData b)
   b->bracketed_paste_mode = false;
   b->focus_inout_events   = false;
   b->alt_scroll           = true;
+  b->mouse_tracking       = 0;
+  b->mouse_encoding       = 0;
+  b->mouse_col            = -1;
+  b->mouse_row            = -1;
   b->last_char            = 0;
   rlc_erase_display(b);
 }
@@ -5025,6 +5258,17 @@ rlc_set_dec_mode(RlcData b, int mode)
       b->hide_caret = false;
       changed_caret(b);
       break;
+    case 9:				/* X10: presses only */
+    case 1000:				/* VT200: presses and releases */
+    case 1002:				/* ... and drags */
+    case 1003:				/* ... and motion without buttons */
+      b->mouse_tracking = mode;		/* see rlc_mouse_event() */
+      break;
+    case 1005:				/* coordinates as UTF-8 */
+    case 1006:				/* SGR */
+    case 1015:				/* urxvt */
+      b->mouse_encoding = mode;		/* see rlc_mouse_report() */
+      break;
     case 1004:
       b->focus_inout_events = true;
       break;
@@ -5060,6 +5304,24 @@ rlc_clear_dec_mode(RlcData b, int mode)
     case 25:
       b->hide_caret = true;
       changed_caret(b);
+      break;
+      /* We keep the tracking mode and the encoding as one value each
+	 rather than as a flag per mode.  Clearing one that is not in
+	 effect is then a no-op, which is what an application that
+	 turns off 1000, 1002 and 1003 together expects to happen.
+       */
+    case 9:
+    case 1000:
+    case 1002:
+    case 1003:
+      if ( b->mouse_tracking == mode )
+	b->mouse_tracking = 0;
+      break;
+    case 1005:
+    case 1006:
+    case 1015:
+      if ( b->mouse_encoding == mode )
+	b->mouse_encoding = 0;
       break;
     case 1004:
       b->focus_inout_events = false;
