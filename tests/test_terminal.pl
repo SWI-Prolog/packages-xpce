@@ -304,6 +304,7 @@ term_key_press(T, Key) :-
     term_typed(T, Key, 0).
 
 button_control(0x1).			% BUTTON_control, src/h/graphics.h
+button_shift(0x2).			% BUTTON_shift, idem
 
 %!  term_foreground_process(+T, -PID) is semidet.
 %
@@ -940,6 +941,18 @@ out(T, Text) :-
     term_output(T, Text),
     drive(0.05).
 
+%!  alt_screen(+T, +Text) is det.
+%!  normal_screen(+T) is det.
+%
+%   Enter the alternate screen (DEC private mode 1049) with Text on its
+%   top row, and leave it again.
+
+alt_screen(T, Text) :-
+    out(T, ['\e[?1049h\e[H', Text]).
+
+normal_screen(T) :-
+    out(T, '\e[?1049l').
+
 
 		 /*******************************
 		 *       SYNCHRONISATION        *
@@ -1226,6 +1239,80 @@ wheel(T, Col, Row, Ticks) :-
 
 wheel(T, Col, Row, Ticks, Buttons) :-
     term_wheel(T, Col, Row, Ticks, Buttons).
+
+
+		 /*******************************
+		 *      FOREGROUND CHILD        *
+		 *******************************/
+
+%!  start_foreground(+T, +Command) is det.
+%!  stop_foreground(+T) is det.
+%
+%   Run Command in the terminal with shell/1 and wait until it owns the
+%   pty.  stop_foreground/1 gets rid of it again and is a no-op when
+%   the test already did.
+
+start_foreground(T, Command) :-
+    format(atom(Goal), 'shell("~w").\n', [Command]),
+    term_send(T, Goal),
+    (   wait_until(term_foreground_process(T, _), 15)
+    ->  true
+    ;   throw(error(terminal_no_foreground_process(Command), _))
+    ).
+
+stop_foreground(T) :-
+    (   term_foreground_process(T, _)
+    ->  press(T, ctrl_c),
+        wait_until(\+ term_foreground_process(T, _), 15)
+    ;   true
+    ),
+    wait_for_prompt(T).
+
+%!  press(+T, +Key) is det.
+%
+%   Press a control key at the window and let the terminal settle.
+
+press(T, Key) :-
+    control_code(Key, Code),
+    term_press(T, Code),
+    drive(0.2).
+
+control_code(ctrl_c, 0x03).
+control_code(ctrl_x, 0x18).
+
+%!  echo_client(-Command) is det.
+%!  client_reads(+T, +Expected) is semidet.
+%
+%   What the terminal sends its client is otherwise invisible: nothing
+%   on this side sees the bytes and the line editor is not reading
+%   them.  echo_client/1 is a command to run in the terminal that reads
+%   them and prints them back with the escapes made visible, and
+%   client_reads/2 asks it what it got by typing a `#' and Return: the
+%   line discipline hands the line over and the row that comes back is
+%   what the terminal sent, `#' and all.
+%
+%   Expected == '' therefore says the terminal sent nothing, which
+%   waiting for something not to appear cannot: that can only time out.
+
+echo_client('stty -echo; cat -v').
+
+client_reads(T, Expected) :-
+    atom_concat(Expected, '#', Line),
+    term_type_keys(T, '#'),
+    key(T, enter),
+    wait_until(row_on_screen(T, Line), 15).
+
+%!  row_on_screen(+T, +Text) is semidet.
+%
+%   True when a visible row holds exactly Text.  marker_on_screen/2
+%   matches a substring, which cannot tell `#' from `^[[B#'.
+
+row_on_screen(T, Text) :-
+    term_rows(T, Rows),
+    between(0, Rows, Row),
+    term_row(T, Row, Line),
+    Line == Text,
+    !.
 
 
 		 /*******************************
@@ -2414,18 +2501,6 @@ scrollback(T, N) :-
     forall(between(1, N, I),
            out(T, ['line', I, '\r\n'])).
 
-%!  alt_screen(+T, +Text) is det.
-%!  normal_screen(+T) is det.
-%
-%   Enter the alternate screen (DEC private mode 1049) with Text on its
-%   top row, and leave it again.
-
-alt_screen(T, Text) :-
-    out(T, ['\e[?1049h\e[H', Text]).
-
-normal_screen(T) :-
-    out(T, '\e[?1049l').
-
 test(wheel_scrolls_the_scrollback, [setup(current_test_terminal(T))]) :-
     scrollback(T, 60),
     row_text(T, 0, Before),
@@ -2435,13 +2510,18 @@ test(wheel_scrolls_the_scrollback, [setup(current_test_terminal(T))]) :-
 
 test(alt_screen_has_no_scrollback,
      [ setup(current_test_terminal(T)),
-       cleanup(normal_screen(T))
+       cleanup(( out(T, '\e[?1007h'), normal_screen(T) ))
      ]) :-
     %  The lines the alternate screen replaced belong to the normal
     %  screen: an application owns the window until it gives them back,
     %  and scrolling them into view is never what the wheel was for.
+    %
+    %  Alternate scroll off: this is about our own scroll back, not
+    %  about the cursor keys the wheel otherwise sends the application
+    %  -- which the client on this terminal would answer.
     scrollback(T, 60),
     alt_screen(T, 'ALT-SCREEN'),
+    out(T, '\e[?1007l'),
     wheel(T, 10, 5, 3),
     assert_row(T, 0, 'ALT-SCREEN').
 
@@ -2458,6 +2538,90 @@ test(alt_screen_scrollbar_is_full,
     assertion([Length,Start,View] == [Rows,0,Rows]).
 
 :- end_tests(terminal_wheel).
+
+
+		 /*******************************
+		 *      TEST: ALT SCROLL        *
+		 *******************************/
+
+%   Alternate scroll (DEC private mode 1007): what the terminal sends
+%   its client is otherwise invisible, so these tests run a client that
+%   reads it back; see client_reads/2.
+
+:- begin_tests(terminal_alt_scroll,
+               [ condition(needs([mouse, program_output, pty_signals])),
+                 setup(setup_unit),
+                 cleanup(cleanup_unit)
+               ]).
+
+alt_scroll_begin(T) :-
+    current_test_terminal(T),
+    echo_client(Cmd),
+    start_foreground(T, Cmd),
+    alt_screen(T, '').
+
+alt_scroll_end(T) :-
+    normal_screen(T),
+    stop_foreground(T).
+
+test(wheel_down_sends_cursor_down,
+     [ setup(alt_scroll_begin(T)),
+       cleanup(alt_scroll_end(T))
+     ]) :-
+    %  What makes the wheel scroll `less' and `man': they never asked
+    %  for a mouse, so the terminal turns the wheel into the keys they
+    %  do read -- three lines to the notch, as everywhere else.
+    wheel(T, 10, 5, -1),
+    assertion(client_reads(T, '^[[B^[[B^[[B')).
+
+test(wheel_up_sends_cursor_up,
+     [ setup(alt_scroll_begin(T)),
+       cleanup(alt_scroll_end(T))
+     ]) :-
+    wheel(T, 10, 5, 1),
+    assertion(client_reads(T, '^[[A^[[A^[[A')).
+
+test(application_cursor_keys,
+     [ setup(alt_scroll_begin(T)),
+       cleanup(alt_scroll_end(T))
+     ]) :-
+    %  DECCKM (mode 1) decides how a cursor key is spelled, and these
+    %  are cursor keys like any other.
+    out(T, '\e[?1h'),
+    wheel(T, 10, 5, -1),
+    assertion(client_reads(T, '^[OB^[OB^[OB')),
+    out(T, '\e[?1l').
+
+test(alt_scroll_can_be_switched_off,
+     [ setup(alt_scroll_begin(T)),
+       cleanup(( out(T, '\e[?1007h'), alt_scroll_end(T) ))
+     ]) :-
+    out(T, '\e[?1007l'),
+    wheel(T, 10, 5, -1),
+    assertion(client_reads(T, '')).
+
+test(shift_wheel_is_not_the_applications,
+     [ setup(alt_scroll_begin(T)),
+       cleanup(alt_scroll_end(T))
+     ]) :-
+    %  Shift is the way out of whatever the application asked for; on
+    %  the alternate screen that leaves the wheel with nothing to do.
+    button_shift(Shift),
+    wheel(T, 10, 5, -1, Shift),
+    assertion(client_reads(T, '')).
+
+test(normal_screen_wheel_is_ours,
+     [ setup(( current_test_terminal(T),
+               echo_client(Cmd),
+               start_foreground(T, Cmd) )),
+       cleanup(stop_foreground(T))
+     ]) :-
+    %  Off the alternate screen the wheel scrolls the scroll back and
+    %  the client hears nothing of it, whatever it is running.
+    wheel(T, 10, 5, 1),
+    assertion(client_reads(T, '')).
+
+:- end_tests(terminal_alt_scroll).
 
 
 		 /*******************************
@@ -3454,45 +3618,11 @@ test(control_x_reaches_the_child,
      [ setup(test_begin(T)),
        cleanup(stop_foreground(T))
      ]) :-
-    start_foreground(T, 'stty -echo; cat -v'),
+    echo_client(Cmd),
+    start_foreground(T, Cmd),
     press(T, ctrl_x),
     key(T, enter),
     assertion(wait_until(marker_on_screen(T, '^X'), 15)).
-
-%!  start_foreground(+T, +Command) is det.
-%!  stop_foreground(+T) is det.
-%
-%   Run Command in the terminal with shell/1 and wait until it owns the
-%   pty.  stop_foreground/1 gets rid of it again and is a no-op when
-%   the test already did.
-
-start_foreground(T, Command) :-
-    format(atom(Goal), 'shell("~w").\n', [Command]),
-    term_send(T, Goal),
-    (   wait_until(term_foreground_process(T, _), 15)
-    ->  true
-    ;   throw(error(terminal_no_foreground_process(Command), _))
-    ).
-
-stop_foreground(T) :-
-    (   term_foreground_process(T, _)
-    ->  press(T, ctrl_c),
-        wait_until(\+ term_foreground_process(T, _), 15)
-    ;   true
-    ),
-    wait_for_prompt(T).
-
-%!  press(+T, +Key) is det.
-%
-%   Press a control key at the window and let the terminal settle.
-
-press(T, Key) :-
-    control_code(Key, Code),
-    term_press(T, Code),
-    drive(0.2).
-
-control_code(ctrl_c, 0x03).
-control_code(ctrl_x, 0x18).
 
 :- end_tests(terminal_control_keys).
 

@@ -351,6 +351,7 @@ typedef struct rlc_data
   bool		hide_caret;		/* DEC Private Mode 25 */
   bool		bracketed_paste_mode;	/* DEC Private Mode 2004 */
   bool		focus_inout_events;	/* Dec Private Mode 1004 */
+  bool		alt_scroll;		/* DEC Private Mode 1007 */
   int		caret_px;		/* Position of the caret in pixels */
   int		caret_py;		/* Position of the caret in pixels */
   unsigned char	incomplete_cnt;		/* # incomplete chars */

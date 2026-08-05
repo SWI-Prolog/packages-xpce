@@ -572,6 +572,64 @@ clickedLinkTerminalImage(TerminalImage ti, Name href)
   succeed;
 }
 
+/** Lines the window scrolls per notch of the wheel.  Both xpce (see
+ * mapWheelMouseEvent()) and VTE use three; the wheel must move the
+ * same distance whether we scroll ourselves or the application does.
+ */
+
+#define WHEEL_LINES 3
+
+/** How far the wheel turned, in lines.  Negative is towards the user,
+ * i.e. forwards through the text.  Fails on an event that carries no
+ * rotation, which is not a wheel event at all.
+ */
+
+static bool
+rlc_wheel_lines(EventObj ev, int *lines)
+{ Int rot = getAttributeObject(ev, NAME_rotation);
+
+  if ( !rot )
+    return false;
+
+  int deg = valInt(rot);		/* a notch is 15 degrees */
+  int ln  = (deg*WHEEL_LINES)/15;
+  if ( ln == 0 )			/* a fraction of a notch still moves */
+    ln = deg > 0 ? 1 : deg < 0 ? -1 : 0;
+
+  *lines = ln;
+  return ln != 0;
+}
+
+/** Alternate scroll (DEC private mode 1007, on by default as in xterm
+ * and VTE): while the alternate screen is up there is no scroll back
+ * to scroll, so the wheel is sent to the application as cursor keys.
+ * That is what makes the wheel scroll `less', `man' and any other full
+ * screen application that never asked for a mouse.
+ *
+ * Shift is the user's way out: it keeps the wheel on this side, where
+ * the alternate screen leaves it with nothing to do.
+ */
+
+static bool
+rlc_alt_scroll(TerminalImage ti, EventObj ev)
+{ RlcData b = ti->data;
+  int lines;
+
+  if ( !b->alt_scroll || !rlc_alt_screen(b) ||
+       (valInt(ev->buttons) & BUTTON_shift) ||
+       !rlc_wheel_lines(ev, &lines) )
+    return false;
+
+  const char *seq = lines > 0
+	  ? (b->app_escape ? S_ESC"OA" : S_ESC"[A")
+	  : (b->app_escape ? S_ESC"OB" : S_ESC"[B");
+
+  for(int i=abs(lines); i-- > 0; )
+    rlc_send(b, seq, strlen(seq));
+
+  return true;
+}
+
 static status
 eventTerminalImage(TerminalImage ti, EventObj ev)
 { if ( ev->id == NAME_locMove && notNil(ti->link_message) )
@@ -589,6 +647,9 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
   }
 
   DEBUG(NAME_event, Cprintf("Event: %s\n", pp(ev->id)));
+
+  if ( ev->id == NAME_wheel && rlc_alt_scroll(ti, ev) )
+    succeed;
 
   if ( mapWheelMouseEvent(ev, ti) )
     succeed;
@@ -3075,6 +3136,7 @@ rlc_make_buffer(int w, int h)
   b->scroll_top     = 0;
   b->scroll_bottom  = b->window_size-1;
   b->autowrap       = true;
+  b->alt_scroll     = true;
   rlc_init_tabs(b);
   b->lines          = rlc_malloc(sizeof(rlc_text_line) * h);
   b->cmdstat	    = CMD_INITIAL;
@@ -3856,6 +3918,7 @@ rlc_reset(RlcData b)
   rlc_init_tabs(b);
   b->bracketed_paste_mode = false;
   b->focus_inout_events   = false;
+  b->alt_scroll           = true;
   b->last_char            = 0;
   rlc_erase_display(b);
 }
@@ -4965,6 +5028,9 @@ rlc_set_dec_mode(RlcData b, int mode)
     case 1004:
       b->focus_inout_events = true;
       break;
+    case 1007:				/* alternate scroll, see rlc_alt_scroll() */
+      b->alt_scroll = true;
+      break;
     case 1049:
       rlc_save_screen(b);
       rlc_erase_display(b);
@@ -4997,6 +5063,9 @@ rlc_clear_dec_mode(RlcData b, int mode)
       break;
     case 1004:
       b->focus_inout_events = false;
+      break;
+    case 1007:
+      b->alt_scroll = false;
       break;
     case 1049:
       rlc_erase_display(b);
