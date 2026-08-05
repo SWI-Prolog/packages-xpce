@@ -1885,6 +1885,35 @@ test(alternate_screen_round_trip, [setup(current_test_terminal(T))]) :-
     normal_screen(T),
     assert_rows(T, [l1,l2,l3]).
 
+test(alternate_screen_restores_the_caret,
+     [ setup(current_test_terminal(T)),
+       cleanup(normal_screen(T))
+     ]) :-
+    %  The caret comes back with the screen: what is written next -- the
+    %  prompt, after a pager quits -- goes where it was, not to the top.
+    paint(T, [l1,l2,l3]),
+    out(T, '\e[2;3H'),
+    cursor(T, C, R),
+    alt_screen(T, 'ALT'),
+    out(T, '\e[5;10Hx'),
+    normal_screen(T),
+    assert_cursor(T, C, R).
+
+test(scrolling_region_after_the_alternate_screen,
+     [ setup(current_test_terminal(T)),
+       cleanup(normal_screen(T))
+     ]) :-
+    %  DECSTBM homes the caret, so a client that leaves a region behind
+    %  must have it reset before the screen comes back, not after: that
+    %  is the order end_console_session() sends them in.
+    paint(T, [l1,l2,l3]),
+    out(T, '\e[2;3H'),
+    cursor(T, C, R),
+    alt_screen(T, 'ALT'),
+    out(T, '\e[1;5r'),                  % a region the client leaves set
+    out(T, '\e[r\e[?1049l'),            % reset, then the normal screen
+    assert_cursor(T, C, R).
+
 test(leaving_an_alternate_screen_never_entered,
      [setup(current_test_terminal(T))]) :-
     %  A stray rmcup must not blank the window: there is nothing saved

@@ -6604,14 +6604,16 @@ claim_pseudo_console(RlcData b, HANDLE *hpc)
 static void
 end_console_session(RlcData b)
 { static const char *reset =
-    S_ESC"[?1049l"			/* back to the normal screen */
     S_ESC"[?25h"			/* caret visible */
     S_ESC"[0m"				/* default attributes */
     S_ESC"[r"				/* the whole screen scrolls */
     S_ESC"[?1l"				/* normal cursor keys */
     S_ESC"[?9l"S_ESC"[?1000l"		/* no mouse reports */
     S_ESC"[?1002l"S_ESC"[?1003l"
-    S_ESC"[?2004l";			/* no bracketed paste */
+    S_ESC"[?2004l"			/* no bracketed paste */
+    S_ESC"[?1049l";			/* the normal screen, and last of all: it
+					   brings the caret back with it, and
+					   DECSTBM above homes the caret */
   IOSTREAM *out = b->ptycon.pl_streams[1];
 
   if ( out )
