@@ -6,16 +6,18 @@
 # entry is that table, so that the suite can put libedit through the
 # same decisions on a Unix pty.  Keep the two in step.
 #
-# What matters here is as much what is absent as what is present:
+# The table says what the console and an Epilog window both do: the
+# console with ENABLE_VIRTUAL_TERMINAL_PROCESSING on, the window through
+# the xpce terminal.  What matters here is as much what is absent as
+# what is present:
 #
-#   no xenl   the console wraps as soon as the last column is written
-#   no IC     with only ich1, an insert opens one cell per column
-#   no smir   ... rather than switching the terminal to insert mode
-#   no UP/DO/LE/RI
-#             cursor motion goes out one step at a time
-#   no ku/kd/kl/kr/kh/@7
-#             the console reports the arrows and Home/End as key events,
-#             so libedit binds nothing for them from the description
+#   no xenl   the console wraps as soon as the last column is written.
+#             An Epilog window defers it, and terminal_setflags() sets
+#             the flag for that case alone.
+#   no smir   an insert opens cells with ich/ich1 rather than switching
+#             the terminal to insert mode, which the console has no
+#             sequence for
+#   no cud    libedit never asks the description to move down
 #   no pt     tabs are never used to move the cursor
 #
 # Capabilities win_ncurses.c answers that libedit never asks for -- cr,
@@ -27,15 +29,27 @@
 swipl-winconsole|the Windows console as libedit sees it,
 	am,
 	cols#80, lines#25,
+	bel=^G,
 	clear=\E[H\E[J,
 	el=\E[K,
 	ed=\E[J,
+	home=\E[H,
 	il1=\E[L,
 	dl1=\E[M,
 	cuu1=\E[A,
 	cuf1=\E[C,
+	cuu=\E[%p1%dA,
+	cub=\E[%p1%dD,
+	cuf=\E[%p1%dC,
 	ich1=\E[@,
+	ich=\E[%p1%d@,
 	dch1=\E[P,
 	dch=\E[%p1%dP,
 	hpa=\E[%i%p1%dG,
+	kcuu1=\E[A,
+	kcud1=\E[B,
+	kcuf1=\E[C,
+	kcub1=\E[D,
+	khome=\E[H,
+	kend=\E[F,
 	kdch1=\E[3~,
