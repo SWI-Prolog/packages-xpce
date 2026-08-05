@@ -510,6 +510,19 @@ geometryTerminalImage(TerminalImage ti, Int x, Int y, Int w, Int h)
   succeed;
 }
 
+/** True while the alternate screen (DEC private mode 1049) is up.
+ *
+ * The alternate screen has no scrollback: the lines it replaced belong
+ * to the normal screen and a full screen application owns the window
+ * until it gives them back.  Scrolling the ring buffer there shows the
+ * text under the application, which is never what the user asked for.
+ */
+
+static bool
+rlc_alt_screen(RlcData b)
+{ return b->saved.lines != NULL;
+}
+
 static status
 bubbleScrollBarTerminalImage(TerminalImage ti, ScrollBar sb)
 { int length, start, view;
@@ -524,6 +537,9 @@ static status
 scrollVerticalTerminalImage(TerminalImage ti,
 			    Name dir, Name unit, Int amount)
 { RlcData b = ti->data;
+
+  if ( rlc_alt_screen(b) )		/* the application owns the window */
+    fail;
 
   if ( unit == NAME_file )
   { int lines = rlc_count_lines(b, b->first, b->last);
@@ -2207,7 +2223,13 @@ rlc_update_scrollbar(RlcData b)
 
 static void
 rlc_scroll_bubble(RlcData b, int *length, int *start, int *view)
-{ int nsb_lines = rlc_count_lines(b, b->first, b->last);
+{ if ( rlc_alt_screen(b) )		/* no scrollback: fill the bar */
+  { *length = *view = b->window_size;
+    *start  = 0;
+    return;
+  }
+
+  int nsb_lines = rlc_count_lines(b, b->first, b->last);
   int nsb_start = rlc_count_lines(b, b->first, b->window_start);
   int nsb_view  = rlc_count_lines(b, b->window_start, b->last);
   if ( nsb_view > b->window_size )

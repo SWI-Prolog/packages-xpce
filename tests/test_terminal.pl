@@ -415,6 +415,22 @@ term_drag(terminal(_, xpce(_, TI)), Col1, Row1, Col2, Row2) :-
     send(TI, event, new(_, event(ms_left_up, TI, X2, Y2, 1, 0))),
     drive(0.3).
 
+%!  term_wheel(+T, +Col, +Row, +Ticks, +Buttons) is det.
+%
+%   Turn the wheel Ticks notches over cell (Col,Row), positive being
+%   away from the user.  Buttons is the modifier mask.  Unlike a button
+%   event, a wheel event carries how far it turned as an attribute
+%   rather than as an initialisation argument, 15 degrees to the notch;
+%   see mapWheelMouseEvent() in packages/xpce/src/evt/event.c.
+
+term_wheel(terminal(_, xpce(_, TI)), Col, Row, Ticks, Buttons) :-
+    cell_pixel(TI, Col, Row, X, Y),
+    Rotation is Ticks*15,
+    new(Ev, event(wheel, TI, X, Y, Buttons, 0)),
+    send(Ev, attribute, rotation, Rotation),
+    send(TI, event, Ev),
+    drive(0.2).
+
 %!  cell_pixel(+TerminalImage, +Col, +Row, -X, -Y) is det.
 %
 %   Pixel in the middle of a character cell.
@@ -426,6 +442,20 @@ cell_pixel(TI, Col, Row, X, Y) :-
     CH is H/Rows,
     X is integer(CW*(Col+1) + CW/2),
     Y is integer(CH*Row + CH/2).
+
+%!  term_bubble(+T, -Length, -Start, -View) is semidet.
+%
+%   What the terminal tells its scroll bar: the total number of lines,
+%   where the visible part starts and how long it is.  Fails if the
+%   terminal has no scroll bar.
+
+term_bubble(terminal(_, xpce(_, TI)), Length, Start, View) :-
+    get(TI, scroll_bar, SB),
+    SB \== @nil,
+    send(TI, bubble_scroll_bar, SB),
+    get(SB, length, Length),
+    get(SB, start, Start),
+    get(SB, view, View).
 
 %!  term_select_all(+T) is det.
 %!  term_selection(+T, -Atom) is det.
@@ -894,6 +924,22 @@ cursor(Terminal, Col, Row) :-
 row_text(Terminal, Row, Atom) :-
     term_row(Terminal, Row, Atom).
 
+%!  out(+Terminal, +Text) is det.
+%
+%   Write to the screen as a program running on the terminal would,
+%   escape sequences and all, and let the screen settle.  Text may be a
+%   list of atomics, which saves the tests a format/3 to glue a
+%   sequence and its payload together.
+
+out(T, Parts) :-
+    is_list(Parts),
+    !,
+    atomic_list_concat(Parts, Text),
+    out(T, Text).
+out(T, Text) :-
+    term_output(T, Text),
+    drive(0.05).
+
 
 		 /*******************************
 		 *       SYNCHRONISATION        *
@@ -1168,6 +1214,18 @@ click(T, Col, Row) :-
 
 drag(T, Col1, Row1, Col2, Row2) :-
     term_drag(T, Col1, Row1, Col2, Row2).
+
+%!  wheel(+T, +Col, +Row, +Ticks) is det.
+%!  wheel(+T, +Col, +Row, +Ticks, +Buttons) is det.
+%
+%   Turn the wheel over a cell; positive Ticks is up (away from the
+%   user), which scrolls back.
+
+wheel(T, Col, Row, Ticks) :-
+    wheel(T, Col, Row, Ticks, 0).
+
+wheel(T, Col, Row, Ticks, Buttons) :-
+    term_wheel(T, Col, Row, Ticks, Buttons).
 
 
 		 /*******************************
@@ -1469,15 +1527,6 @@ paint(T, Lines) :-
     out(T, '\e[2J\e[H'),
     forall(member(Line, Lines),
            out(T, [Line, '\r\n'])).
-
-out(T, Parts) :-
-    is_list(Parts),
-    !,
-    atomic_list_concat(Parts, Text),
-    out(T, Text).
-out(T, Text) :-
-    term_output(T, Text),
-    drive(0.05).
 
 %!  assert_rows(+T, +Expected) is det.
 %
@@ -2330,6 +2379,85 @@ test(click_on_a_wrapped_row, [setup(test_begin(T))]) :-
     assertion(C2 =:= C+8).
 
 :- end_tests(terminal_mouse).
+
+
+		 /*******************************
+		 *        TEST: WHEEL           *
+		 *******************************/
+
+/** <section> What the wheel does
+
+    Turning the wheel means different things depending on what runs on
+    the terminal, and always scrolling our own scroll back is the one
+    thing no other terminal does:
+
+      - Nothing in particular: scroll the scroll back.
+      - A full screen application, i.e. one on the alternate screen:
+        there is no scroll back to scroll there.
+      - An application that asked for mouse reports: the wheel is a
+        button like any other and the application decides.
+*/
+
+:- begin_tests(terminal_wheel,
+               [ condition(needs([mouse, program_output])),
+                 setup(setup_unit),
+                 cleanup(cleanup_unit)
+               ]).
+
+%!  scrollback(+T, +N) is det.
+%
+%   Clear the screen and write N numbered lines.  N is more than the
+%   screen holds, so the first ones end up in the scroll back.
+
+scrollback(T, N) :-
+    out(T, '\e[2J\e[H'),
+    forall(between(1, N, I),
+           out(T, ['line', I, '\r\n'])).
+
+%!  alt_screen(+T, +Text) is det.
+%!  normal_screen(+T) is det.
+%
+%   Enter the alternate screen (DEC private mode 1049) with Text on its
+%   top row, and leave it again.
+
+alt_screen(T, Text) :-
+    out(T, ['\e[?1049h\e[H', Text]).
+
+normal_screen(T) :-
+    out(T, '\e[?1049l').
+
+test(wheel_scrolls_the_scrollback, [setup(current_test_terminal(T))]) :-
+    scrollback(T, 60),
+    row_text(T, 0, Before),
+    wheel(T, 10, 5, 3),
+    row_text(T, 0, After),
+    assertion(Before \== After).
+
+test(alt_screen_has_no_scrollback,
+     [ setup(current_test_terminal(T)),
+       cleanup(normal_screen(T))
+     ]) :-
+    %  The lines the alternate screen replaced belong to the normal
+    %  screen: an application owns the window until it gives them back,
+    %  and scrolling them into view is never what the wheel was for.
+    scrollback(T, 60),
+    alt_screen(T, 'ALT-SCREEN'),
+    wheel(T, 10, 5, 3),
+    assert_row(T, 0, 'ALT-SCREEN').
+
+test(alt_screen_scrollbar_is_full,
+     [ setup(current_test_terminal(T)),
+       cleanup(normal_screen(T))
+     ]) :-
+    %  ... and the scroll bar must say so rather than offering a bubble
+    %  that scrolls nowhere.
+    scrollback(T, 60),
+    alt_screen(T, 'ALT-SCREEN'),
+    term_rows(T, Rows),
+    term_bubble(T, Length, Start, View),
+    assertion([Length,Start,View] == [Rows,0,Rows]).
+
+:- end_tests(terminal_wheel).
 
 
 		 /*******************************
