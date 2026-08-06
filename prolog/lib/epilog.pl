@@ -76,7 +76,7 @@
     win_insert_menu_item(+, +, +, 0).
 
 :- multifile
-    tty_link_hook/1.                                % +URL
+    tty_link_hook/2.                                % +PT, +URL
 
 :- pce_global(@epilog, new(epilog)).
 
@@ -487,9 +487,9 @@ unwrap_editline :-
     catch(el_unwrap(user_input), error(_,_), true).
 unwrap_editline.
 
-open_link(_T, Href:name) :->
+open_link(PT, Href:name) :->
     "Open a clicked hyperlink"::
-    tty_link(Href).
+    tty_link(PT, Href).
 
 :- pce_group(prolog).
 
@@ -898,18 +898,24 @@ editline:el_wcwidth(Code, Columns) :-
     get(PT, cwidth, Code, Columns).
 
 
-%!  tty_link(+Link) is det.
+%!  tty_link_hook(+Terminal, +Link) is semidet.
+%
+%   Multifile hook to open an  OSC8   embedded  hyperlink.  The link was
+%   clicked in Terminal, an  instance   of  the class `prolog_terminal`.
+%   Link is an atom representing the clicked link.
+
+%!  tty_link(+Terminal, +Link) is det.
 %
 %   Handle clicking a terminal hyperlink click.
 
-tty_link(Link) :-
-    tty_link_hook(Link),
+tty_link(PT, Link) :-
+    tty_link_hook(PT, Link),
     !.
-tty_link(Link) :-
+tty_link(_PT, Link) :-
     link_file_location(Link, _File, Location),
     !,
     call(edit(Location)).
-tty_link(URL) :-
+tty_link(_PT, URL) :-
     call(www_open_url(URL)).
 
 link_file_location(Link, File, Location) :-
