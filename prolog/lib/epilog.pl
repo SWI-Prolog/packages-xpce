@@ -493,6 +493,10 @@ open_link(PT, Href:name) :->
 
 :- pce_group(prolog).
 
+thread(PT, Thread:prolog) :<-
+    "Prolog thread connected to this terminal"::
+    current_prolog_terminal(Thread, PT).
+
 connect(PT, TID:[name|int]) :->
     "Connect a Prolog thread to the terminal"::
     (   current_prolog_terminal(_Thread, PT)
