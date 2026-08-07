@@ -1106,8 +1106,16 @@ keyboardFocusFrame(FrameObj fr, PceWindow sw)
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 Find the window  for  redirecting  keyboard   strokes.  If  there  is an
-explicit focus, this is easy.  Otherwise,  use   the  window  that has a
-keyboard-focus or the window that has a focus (in this order).
+explicit focus, this is easy.  Otherwise, use  the window that holds the
+input focus, the window that has a  keyboard-focus or the window that has
+a focus (in this order).
+
+Consulting <-input_window before scanning  the   members  is what keeps a
+frame with multiple windows consistent: ->input_window is set when the
+pointer enters a window (see postEventWindow()) and is what draws the
+active caret.  Without it, a frame  with   e.g.  two terminals sends the
+keys to the first member that has  a   keyboard  focus, regardless of the
+window the user selected.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 PceWindow
@@ -1117,6 +1125,14 @@ getKeyboardFocusFrame(FrameObj fr)
 
   if ( (sw = getHyperedObject(fr, NAME_keyboardFocus, DEFAULT)) )
     answer(sw);
+
+  if ( (sw = getHyperedObject(fr, NAME_inputWindow, DEFAULT)) )
+  { if ( instanceOfObject(sw, ClassWindowDecorator) )
+    { WindowDecorator dw = (WindowDecorator)sw;
+      sw = dw->window;
+    }
+    answer(sw);
+  }
 
   if ( getSizeChain(fr->members) == ONE )
   { sw = getHeadChain(fr->members);
