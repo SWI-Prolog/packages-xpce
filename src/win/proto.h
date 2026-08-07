@@ -59,6 +59,7 @@ COMMON(TileObj)	getTileFrame(FrameObj fr);
 COMMON(status)	AppendFrame(FrameObj fr, PceWindow sw);
 COMMON(status)	DeleteFrame(FrameObj fr, PceWindow sw);
 COMMON(PceWindow) getKeyboardFocusFrame(FrameObj fr);
+COMMON(bool)	focusFollowsMouseFrame(FrameObj fr);
 COMMON(status)	redrawFrame(FrameObj fr, Area a);
 COMMON(FrameObj) blockedByModalFrame(FrameObj fr);
 COMMON(status)	eventFrame(FrameObj fr, EventObj ev);

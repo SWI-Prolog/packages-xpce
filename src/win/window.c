@@ -655,6 +655,7 @@ postEventWindow(PceWindow sw, EventObj ev)
 
   if ( isAEvent(ev, NAME_areaEnter) )
   { if ( fr && notNil(fr) &&
+	 focusFollowsMouseFrame(fr) &&
 	 !getHyperedObject(fr, NAME_keyboardFocus, DEFAULT) )
       send(fr, NAME_inputWindow, sw, EAV);
     send(sw, NAME_hasPointer, ON, EAV);
@@ -664,10 +665,17 @@ postEventWindow(PceWindow sw, EventObj ev)
   if ( inspectWindow(sw, ev) )
     goto out;
 
-  if ( isDownEvent(ev) && sw->input_focus == OFF &&
+/* A click makes this window the keyboard focus of the frame.  If the
+ * focus follows the mouse, the window under the pointer already has the
+ * input focus and we must not turn that into an explicit focus, as that
+ * stops the focus from following the pointer.
+ */
+
+  if ( isDownEvent(ev) && fr && notNil(fr) &&
+       (sw->input_focus == OFF || !focusFollowsMouseFrame(fr)) &&
        ( send(sw, NAME_WantsKeyboardFocus, EAV) ||
 	 !getHyperedObject(fr, NAME_keyboardFocus, DEFAULT) ) )
-    send(getFrameWindow(sw, DEFAULT), NAME_keyboardFocus, sw, EAV);
+    send(fr, NAME_keyboardFocus, sw, EAV);
 
   if ( isAEvent(ev, NAME_keyboard) )
   { PceWindow iw;

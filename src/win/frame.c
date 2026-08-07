@@ -1080,24 +1080,38 @@ applicationFrame(FrameObj fr, Application app)
 		 *	   EVENT HANDLING	*
 		 *******************************/
 
+/* Does this frame move the keyboard focus to the window under the
+ * pointer?  If not (the default), only ->keyboard_focus, i.e., normally
+ * a click in a window, moves the focus.
+ */
+
+bool
+focusFollowsMouseFrame(FrameObj fr)
+{ return getClassVariableValueObject(fr, NAME_focusFollowsMouse) == ON;
+}
+
+
 static status
 keyboardFocusFrame(FrameObj fr, PceWindow sw)
-{ if ( getHyperedObject(fr, NAME_keyboardFocus, DEFAULT) != sw )
-    freeHypersObject(fr, NAME_keyboardFocus, DEFAULT);
-
-  if ( instanceOfObject(sw, ClassWindowDecorator) )
+{ if ( instanceOfObject(sw, ClassWindowDecorator) )
   { WindowDecorator dw = (WindowDecorator)sw;
     sw = dw->window;
   }
 
-  if ( instanceOfObject(sw, ClassWindow) )
-  { newObject(ClassHyper, fr, sw, NAME_keyboardFocus, NAME_KeyboardFocus, EAV);
-    if ( fr->input_focus == ON )
-      send(fr, NAME_inputWindow, sw, EAV);
-  } else if ( fr->input_focus == ON )
-  { PceWindow iw = getPointerWindowFrame(fr);
+  if ( getHyperedObject(fr, NAME_keyboardFocus, DEFAULT) != sw )
+  { freeHypersObject(fr, NAME_keyboardFocus, DEFAULT);
 
-    send(fr, NAME_inputWindow, iw, EAV);
+    if ( instanceOfObject(sw, ClassWindow) )
+      newObject(ClassHyper, fr, sw, NAME_keyboardFocus, NAME_KeyboardFocus,
+		EAV);
+  }
+
+  if ( fr->input_focus == ON )
+  { PceWindow iw = ( instanceOfObject(sw, ClassWindow) ? sw
+						       : getPointerWindowFrame(fr) );
+
+    if ( iw )
+      send(fr, NAME_inputWindow, iw, EAV);
   }
 
   succeed;
@@ -1161,9 +1175,16 @@ getKeyboardFocusFrame(FrameObj fr)
 
 static status
 inputWindowFrame(FrameObj fr, PceWindow iw)
-{ PceWindow ow;
+{ PceWindow ow = getHyperedObject(fr, NAME_inputWindow, DEFAULT);
 
-  if ( (ow=getHyperedObject(fr, NAME_inputWindow, DEFAULT)) && ow != iw )
+  if ( ow == iw )			/* no change; do not duplicate */
+  { if ( fr->input_focus == ON && notNil(iw) )
+      send(iw, NAME_inputFocus, ON, EAV);
+
+    succeed;
+  }
+
+  if ( ow )
   { send(ow, NAME_inputFocus, OFF, EAV);
     freeHypersObject(fr, NAME_inputWindow, DEFAULT);
   }
@@ -2040,6 +2061,8 @@ static classvardecl rc_frame[] =
      "Cursor for vertically resizing tile"),
   RC(NAME_fitAfterAppend, "bool", "@off",
      "Automatically ->fit the frame after a subwindow was added"),
+  RC(NAME_focusFollowsMouse, "bool", "@off",
+     "Move the keyboard focus to the window under the pointer"),
   RC(NAME_decorateTransient, "bool", "@on",
      "Decorate transient windows (if possible)")
 };
