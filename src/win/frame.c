@@ -993,12 +993,14 @@ DeleteFrame(FrameObj fr, PceWindow sw)
     return errorPce(fr, NAME_noMember, sw);
 
   addCodeReference(fr);
+  if ( createdFrame(fr) )		/* ->uncreate while sw is still a */
+    send(sw, NAME_uncreate, EAV);	/* member: ws_created_window() needs */
+					/* the frame to release the window */
   deleteChain(fr->members, sw);
   assign(sw, frame, NIL);		/* may kill the frame */
 
   if ( !isFreedObj(fr) && createdFrame(fr) )
-  { send(sw, NAME_uncreate, EAV);
-    unrelateTile(sw->tile);
+  { unrelateTile(sw->tile);
     if ( getClassVariableValueObject(fr, NAME_fitAfterAppend) == ON )
       send(fr, NAME_fit, EAV);
     else

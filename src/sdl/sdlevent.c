@@ -234,6 +234,8 @@ static Uint32 keyboard_timer = 0;
 static SDL_Event keydown_event = {0};
 static Uint64 keyinput_time = 0;
 
+static void	set_pointer_window(Any window);
+
 static Uint32
 tm_keyboard_timeout(void *udata, SDL_TimerID id, Uint32 interval)
 { keyboard_timer = 0;
@@ -300,11 +302,13 @@ ev_event_grab_window(Any window)
 void
 ws_event_destroyed_target(Any window)
 { if ( window == mouse_tracking_window )
+  { delCodeReference(mouse_tracking_window);
     mouse_tracking_window = NIL;
+  }
   if ( window == grabbing_window )
     grabbing_window = NIL;
   if ( window == pointer_window )
-    pointer_window = NIL;
+    set_pointer_window(NIL);
 }
 
 
