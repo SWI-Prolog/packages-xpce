@@ -1334,8 +1334,16 @@ control_code(ctrl_x, 0x18).
 %   the client reads back -- a key pressed in that window arrives
 %   twice.  The marker carries a quote so that the command line, which
 %   the line editor does echo, cannot match it.
+%
+%   `cat -v' runs in the C locale because the BSD one, which is what
+%   MacOS has, escapes per character rather than per byte: in a UTF-8
+%   locale it passes the 0xC2 of a two-byte sequence through as itself
+%   and only escapes the second byte, so a mouse report encoded as
+%   UTF-8 (DEC private mode 1005) comes back as `ÂM-^E' rather than
+%   as `M-BM-^E'.  What the tests are about is the bytes the terminal
+%   sent, so the byte-wise reading is the one to ask for.
 
-echo_client('stty -echo; echo ECHO''''-CLIENT-READY; cat -v').
+echo_client('stty -echo; echo ECHO''''-CLIENT-READY; LC_ALL=C cat -v').
 
 echo_client_marker('ECHO-CLIENT-READY').
 
