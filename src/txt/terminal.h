@@ -366,6 +366,7 @@ typedef struct rlc_data
     int       master_fd;		/* Terminal side */
     int       slave_fd;			/* Client side */
     char      slave_name[128];		/* PTY name */
+    int	      client_fd[3];		/* Client stdin/stdout/stderr */
     FDWatch  *watch;			/* Watch for write to terminal */
     bool      has_client_thread;
     pthread_t client_thread;		/* Thread that opened this terminal */

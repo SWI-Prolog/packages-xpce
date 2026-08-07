@@ -6358,6 +6358,8 @@ set_stream_properties(IOSTREAM *i, IOSTREAM *o, IOSTREAM *e)
 static bool
 rlc_open_pty_pair(RlcData b, int cols, int rows)
 { memset(&b->pty, 0, sizeof(b->pty));
+  for(int i=0; i<3; i++)
+    b->pty.client_fd[i] = -1;
 
   b->pty.master_fd = posix_openpt(O_RDWR | O_NOCTTY);
   if ( b->pty.master_fd < 0 )
@@ -6394,6 +6396,61 @@ rlc_open_pty_pair(RlcData b, int cols, int rows)
   return true;
 }
 
+/**
+ * Reconnect the client side of the pty after the kernel revoked it.
+ *
+ * A process that made this pty its  controlling terminal -- a child of
+ * shell/1 or process_create/3 -- is the session leader of a session
+ * that owns a terminal, and on BSD systems, MacOS among them, the
+ * kernel revokes such a terminal when its session leader exits.  It
+ * detaches every descriptor on the slave side from the device, in
+ * this process as well: the fds stay open, but read() and write() on
+ * them fail with EIO and the master sees end of file.  Linux does not
+ * do this and never reaches the reconnect below.
+ *
+ * The device itself survives, so opening it again gives a working
+ * terminal, which we dup2() back onto the descriptors we and our
+ * client hold.  The fd numbers stay as they were, which is what makes
+ * this repairable at all: the client's Prolog streams and the console
+ * we registered both remember the descriptor rather than the device.
+ *
+ * shell/1 does the same for its caller as soon as the child is gone
+ * (restore_ctty() in src/os/pl-os.c), because the calling thread is
+ * back and writing before we get to see the end of file here.  This
+ * catches what it cannot: a process the client left running.
+ *
+ * @return true if the pty was revoked and is now usable again.
+ */
+
+static bool
+rlc_reclaim_pty(RlcData b)
+{ struct termios tio;
+
+  if ( !b->pty.open || b->pty.slave_fd < 0 ||
+       tcgetattr(b->pty.slave_fd, &tio) == 0 )
+    return false;			/* not revoked */
+
+  int fd = open(b->pty.slave_name, O_RDWR|O_NOCTTY);
+  if ( fd < 0 )
+    return false;
+
+  int fds[4] = { b->pty.slave_fd,	/* Ours and the client's three */
+		 b->pty.client_fd[0],
+		 b->pty.client_fd[1],
+		 b->pty.client_fd[2]
+	       };
+
+  for(int i=0; i<4; i++)		/* leave what shell/1 already did */
+  { if ( fds[i] >= 0 && fds[i] != fd && tcgetattr(fds[i], &tio) < 0 )
+      dup2(fd, fds[i]);
+  }
+  close(fd);
+
+  DEBUG(NAME_term, Cprintf("%s: reclaimed revoked pty %s\n",
+			   pp(b->object), b->pty.slave_name));
+  return true;
+}
+
 static void
 rlc_close_connection(RlcData b)
 { if ( b->pty.open )
@@ -6410,6 +6467,8 @@ rlc_close_connection(RlcData b)
       close(b->pty.slave_fd);
       b->pty.slave_fd = -1;
     }
+    for(int i=0; i<3; i++)
+      b->pty.client_fd[i] = -1;
     b->pty.open = false;
   }
 }
@@ -6490,6 +6549,8 @@ receiveTerminalImage(TerminalImage ti)
   RlcData b = ti->data;
 
   ssize_t count = read(b->pty.master_fd, buf+MAX_INCOMPLETE, PTY_READ_CHUNK);
+  if ( count == 0 && rlc_reclaim_pty(b) )
+    succeed;				/* revoked rather than closed */
   return processClientOutputTerminalImage(ti, buf+MAX_INCOMPLETE, count);
 }
 
@@ -6546,6 +6607,9 @@ getPrologStreamTerminalImage(Any obj,
     { set_stream_properties(i,o,e);
 
       *in = i; *out = o; *err = e;
+      b->pty.client_fd[0] = Sfileno(i);	/* to reclaim after a revoke */
+      b->pty.client_fd[1] = Sfileno(o);
+      b->pty.client_fd[2] = Sfileno(e);
       b->pty.client_thread = pthread_self();
       b->pty.has_client_thread = true;
       DEBUG(NAME_term,

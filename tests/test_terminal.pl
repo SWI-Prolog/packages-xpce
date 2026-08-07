@@ -1310,6 +1310,7 @@ press(T, Key) :-
     drive(0.2).
 
 control_code(ctrl_c, 0x03).
+control_code(ctrl_d, 0x04).
 control_code(ctrl_x, 0x18).
 
 %!  echo_client(-Command) is det.
@@ -3796,6 +3797,29 @@ test(typing_is_echoed, [setup(test_begin(T))]) :-
     term_key_press(T, 'RET'),		% let the shell make of it what it will
     wait(0.5),
     quit_interactive_shell(T).
+
+%  The child is the session leader of a session that owns a terminal,
+%  and BSD kernels, MacOS among them, revoke such a terminal when its
+%  leader exits: the pty is detached from every descriptor on it, ours
+%  as well, and reading or writing them fails with EIO.  Prolog then
+%  dies on the first message it prints -- "Cannot write to user_error"
+%  -- and takes the window with it.  See restore_ctty() in
+%  src/os/pl-os.c and rlc_reclaim_pty() in src/txt/terminal.c.
+%
+%  End of input rather than `exit' because that is the shortest way to
+%  the same place and the one a user runs into.  Pty only: a Windows
+%  child reads a pipe, which carries no end of input.
+
+test(terminal_survives_child_leaving_on_eof,
+     [ condition(needs([pty_signals])),
+       setup(test_begin(T))
+     ]) :-
+    start_interactive_shell(T),
+    press(T, ctrl_d),
+    assertion(wait_until(at_prompt(T), 30)),
+    type(T, 'X is 6*7.'),
+    key(T, enter),
+    assertion(wait_until(marker_on_screen(T, 'X = 42'), 30)).
 
 %  The Prolog thread hands its terminal over for the child and must get
 %  it back: on Windows the console it hands out reads the very pipe the
