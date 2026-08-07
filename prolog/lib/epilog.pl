@@ -1036,7 +1036,8 @@ split(T, Dir:{horizontally,vertically}) :->
     (   Dir == horizontally
     ->  send(W, below, Tile)
     ;   send(W, right, Tile)
-    ).
+    ),
+    send(T?frame, keyboard_focus, W).
 
 save_history(EW) :->
     "Save the commandline history"::
