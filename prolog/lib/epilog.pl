@@ -145,6 +145,8 @@ ep_main_end :-
 %       first and `true` for subsequent terminals.
 %     - goal(:Goal)
 %       Run Goal as REPL loop.  Default is `prolog`.
+%     - goal_split(:Goal)
+%       Goal to run on a window split.  Default is the same as `goal`.
 %     - main(+Bool)
 %       If `true`, act as main window.   In this case epilog/1
 %       runs the main thread and returns after all windows have
@@ -166,14 +168,12 @@ epilog(Options0) :-
     option(main(IsMain), Options, @off),
     new(Epilog, epilog_frame(Name, Title, Width, Height, IsMain)),
     get(Epilog, current_terminal, PT),
-    (   option(init(Init), Options)
-    ->  send(PT, goal_init, Init)
-    ;   true
-    ),
-    (   option(goal(Goal), Options)
-    ->  send(PT, goal, Goal)
-    ;   true
-    ),
+    option(init(Init), Options, version),
+    send(PT, goal_init, Init),
+    option(goal(Goal), Options, prolog),
+    send(PT, goal, Goal),
+    option(goal_split(GoalSplit), Options, Goal),
+    send(PT, goal_split, GoalSplit),
     option(object(Epilog), Options, _),
     send(Epilog, open),
     (   get(Epilog, main, @on)
@@ -182,6 +182,7 @@ epilog(Options0) :-
     ).
 
 is_meta(goal).
+is_meta(goal_split).
 is_meta(init).
 
 %!  epilog_attach(+Options) is det.
@@ -306,6 +307,7 @@ setup_history :-
 
 variable(goal_init,     prolog := version,    both, "Goal to run for init").
 variable(goal,          prolog := prolog,     both, "Main goal").
+variable(goal_split,    prolog := prolog,     both, "Main for splitted terminal").
 variable(popup,         popup*,               get,  "Terminal popup").
 variable(popup_gesture, popup_gesture*,       none, "Gesture to show menu").
 variable(history,       {on,off,copy} := off, none, "Support history").
@@ -739,9 +741,12 @@ split_vertically(T) :->
     "Split terminal vertically"::
     send(T, split, vertically).
 
-new_window(_T) :->
+new_window(T) :->
     "Open a new window"::
-    epilog.
+    get(T, goal_split, Goal),
+    epilog([ init(true),
+             goal(Goal)
+           ]).
 
 popup(T, Popup:popup*) :->
     "Associate a menu"::
@@ -1030,7 +1035,10 @@ split(T, Dir:{horizontally,vertically}) :->
     new(W, epilog_window),
     new(_, hyper(W, T, parent, child)),
     send(W, history, copy),
-    send(W, goal_init, true),
+    get(W, terminal, PT),
+    send(PT, goal_init, true),
+    get(T, goal_split, Split),
+    send(PT, goal, Split),
     get(T, tile, Tile),
     send(Tile, can_resize, @on),
     (   Dir == horizontally
