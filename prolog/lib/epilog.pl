@@ -175,6 +175,10 @@ epilog(Options0) :-
     option(goal_split(GoalSplit), Options, Goal),
     send(PT, goal_split, GoalSplit),
     option(object(Epilog), Options, _),
+    (   option(background(Colour), Options)
+    ->  send(PT, background, Colour)
+    ;   true
+    ),
     send(Epilog, open),
     (   get(Epilog, main, @on)
     ->  ep_wait(Epilog)
@@ -744,8 +748,10 @@ split_vertically(T) :->
 new_window(T) :->
     "Open a new window"::
     get(T, goal_split, Goal),
+    get(T, background, BG),
     epilog([ init(true),
-             goal(Goal)
+             goal(Goal),
+             background(BG)
            ]).
 
 popup(T, Popup:popup*) :->
@@ -1040,6 +1046,7 @@ split(T, Dir:{horizontally,vertically}) :->
     get(T, goal_split, Split),
     send(PT, goal, Split),
     get(T, tile, Tile),
+    send(PT, background, T?terminal?background),
     send(Tile, can_resize, @on),
     (   Dir == horizontally
     ->  send(W, below, Tile)
