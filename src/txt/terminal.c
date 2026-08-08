@@ -1064,6 +1064,13 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   RlcData b = ti->data;
   int mod = xterm_modifier(ev);
 
+  if ( ( (valInt(ev->buttons) & BUTTON_gui) ||
+	 ((valInt(ev->buttons) & (BUTTON_shift|BUTTON_control)) ==
+	  (BUTTON_shift|BUTTON_control))
+       ) &&
+       typedKeyBinding(ti->bindings, ev, (Graphical)ti) )
+    succeed;
+
   if ( !clientOwnsKeyTerminalImage(ti, ev) &&
        typedKeyBinding(ti->bindings, ev, (Graphical)ti) )
     succeed;

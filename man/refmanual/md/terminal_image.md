@@ -84,7 +84,15 @@ keystrokes and hovered hyperlinks.
     Top-level event dispatcher.
 
 - terminal_image->typed: event
-    Process a single keystroke.
+    Process a single keystroke.  This takes these steps:
+
+    - If the event has the `s` (super, Apple ⌘) or the event has both
+      shift and control modifiers active _and_ the key is handled as
+      an accelerator, we are done.
+    - If there is no attached foreground process running _and_
+      the key is handled as an accelerator, we are done.
+    - Else, encode the event using the terminal escape sequences and
+      send the resulting bytes to the client.
 
 - terminal_image->insert: text=char_array
     Insert text at the caret position.
