@@ -3879,8 +3879,29 @@ start_interactive_shell(T) :-
     ;   Shell = sh
     ),
     format(atom(Goal), 'shell("~w", _).\n', [Shell]),
+    cursor(T, _, Row),
     term_send(T, Goal),
-    wait(1).
+    assertion(wait_until(shell_is_reading(T, Row), 30)).
+
+%!  shell_is_reading(+T, +Row) is semidet.
+%
+%   True once the shell wrote its prompt: the cursor left Row, the row
+%   the command was typed on, and sits behind what the shell put on the
+%   row below.
+%
+%   Waiting for the prompt rather than sleeping is what makes the keys
+%   that follow arrive at a shell that is reading.  ^D in particular is
+%   lost otherwise: on an empty line it is end of input to the line
+%   discipline, which hands it to whoever reads next as a zero-length
+%   read.  A shell that has not put its own line editor on the terminal
+%   yet is not reading, and by the time it does the terminal is in raw
+%   mode, where the ^D the line discipline already consumed cannot come
+%   back.
+
+shell_is_reading(T, Row) :-
+    cursor(T, Col, Row1),
+    Row1 > Row,
+    Col > 0.
 
 quit_interactive_shell(T) :-
     term_type_keys(T, exit),
