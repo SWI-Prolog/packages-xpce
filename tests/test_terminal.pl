@@ -111,6 +111,8 @@ setup_headless :-
 :- use_module(library(pce)).
 :- use_module(library(epilog)).
 :- use_module(library(lists)).
+:- use_module(library(apply)).
+:- use_module(library(yall)).
 :- use_module(library(pairs)).
 :- use_module(library(option)).
 :- use_module(library(random)).
@@ -534,6 +536,38 @@ term_select(terminal(_, xpce(_, TI)), From, To) :-
 
 term_scroll_to(terminal(_, xpce(_, TI)), Index) :-
     send(TI, scroll_to, Index).
+
+%!  term_search_options(+T, -Options) is semidet.
+%
+%   Which of the boxes on the report bar are ticked, as a list of
+%   `exact_case' and `search_word'.  Fails while they are not shown,
+%   which is whenever no search is running.
+
+%!  term_report(+T, -Text) is semidet.
+%
+%   What the window is showing on its report bar.  That is where an
+%   incremental search says what it is looking for and how many of them
+%   there are, and it is the only place any of it can be read back.
+
+term_search_options(terminal(_, xpce(_, TI)), Options) :-
+    get(TI, device, Window),
+    get(Window, member, epilog_report, Bar),
+    get(Bar, displayed, @on),
+    get(Bar, member, search_options, Menu),
+    get(Menu, displayed, @on),
+    get(Menu, selection, Selection),
+    (   Selection == @nil
+    ->  Options = []
+    ;   chain_list(Selection, Items),
+        maplist([Item,Value]>>get(Item, value, Value), Items, Options)
+    ).
+
+term_report(terminal(_, xpce(_, TI)), Text) :-
+    get(TI, device, Window),
+    get(Window, member, epilog_report, Bar),
+    get(Bar, member, text, Item),
+    get(Item, string, String),
+    get(String, value, Text).
 
 %!  term_highlight(+T, +Row, -Marks) is det.
 %
@@ -4072,6 +4106,11 @@ isearch_named_key(T, Key) :-
     term_typed(T, Key, 0),
     drive(0.2).
 
+isearch_meta(T, Letter) :-
+    button_meta(Meta),
+    term_typed(T, Letter, Meta),
+    drive(0.2).
+
 %!  isearch_stop(+T) is det.
 %
 %   End a search that is still running and put back what it changed.  A
@@ -4294,6 +4333,95 @@ test(isearch_backspace_returns_to_the_last_repeat,
     isearch_named_key(T, 'BS'),
     term_highlight(T, 1, Back),
     assertion(Back == 'HHH').               % back to where ^R left it
+
+test(isearch_counts_the_matches,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    %  Which of them we are on and how many there are, counted from the
+    %  start of the buffer whichever way the search is going -- so a
+    %  search backwards starts at the last of them and counts down.
+    buffer(T, 'format\r\nforall\r\nformat\r\nformat'),
+    isearch(T),
+    isearch_type(T, for),
+    term_report(T, Last),
+    assertion(sub_atom(Last, _, _, _, '(4/4)')),
+    isearch_key(T, 0'R),
+    term_report(T, Third),
+    assertion(sub_atom(Third, _, _, _, '(3/4)')),
+    isearch_type(T, a),                     % `fora': only `forall' has it
+    term_report(T, Only),
+    assertion(sub_atom(Only, _, _, _, '(1/1)')).
+
+test(isearch_counts_overlapping_matches,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    %  A repeat steps a single character, so a match that overlaps the
+    %  one before it is a place the search can get to and has to be in
+    %  the tally.
+    buffer(T, 'aaaa'),
+    isearch(T),
+    isearch_type(T, aa),
+    term_report(T, Report),
+    assertion(sub_atom(Report, _, _, _, '(3/3)')).
+
+test(isearch_counts_nothing_when_it_finds_nothing,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    buffer(T, 'format\r\nforall'),
+    isearch(T),
+    isearch_type(T, 'nowhere'),
+    term_report(T, Report),
+    assertion(\+ sub_atom(Report, _, _, _, '/')).
+
+test(isearch_toggles_case_and_word,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    %  M-c and M-w change what counts as a match, and the search looks
+    %  again at once: `Format' is a match until case matters, and the
+    %  `format' inside `formatting' until whole words do.
+    buffer(T, 'Format\r\nformatting\r\nformat'),
+    isearch(T),
+    isearch_type(T, format),
+    term_report(T, All),
+    assertion(sub_atom(All, _, _, _, '(3/3)')),
+    isearch_meta(T, 0'c),
+    term_report(T, Cased),
+    assertion(sub_atom(Cased, _, _, _, '(2/2)')),
+    isearch_meta(T, 0'c),
+    isearch_meta(T, 0'w),
+    term_report(T, Worded),
+    assertion(sub_atom(Worded, _, _, _, '(2/2)')).
+
+test(isearch_shows_what_the_boxes_stand_at,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    buffer(T, 'format\r\nformat'),
+    isearch(T),
+    isearch_type(T, format),
+    term_search_options(T, None),
+    assertion(None == []),
+    isearch_meta(T, 0'c),
+    term_search_options(T, Case),
+    assertion(Case == [exact_case]),
+    isearch_meta(T, 0'w),
+    term_search_options(T, Both),
+    assertion(msort(Both, [exact_case, search_word])).
+
+test(isearch_boxes_go_away_with_the_search,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    buffer(T, 'format\r\nformat'),
+    isearch(T),
+    isearch_type(T, format),
+    assertion(term_search_options(T, _)),
+    isearch_key(T, 0'G),
+    assertion(\+ term_search_options(T, _)).
 
 test(isearch_control_w_takes_the_rest_of_the_word,
      [ setup(test_begin(T)),
