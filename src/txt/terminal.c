@@ -5780,11 +5780,37 @@ rlc_restore_cursor(RlcData b)
 }
 
 
+/** Put the window back on the oldest slots of the ring.
+ *
+ * The slots still hold whatever was written in them, and the redraw
+ * paints a whole window from `window_start' without stopping at
+ * `last': emptying the buffer means emptying its lines.
+ */
+
+static void
+rlc_restart_buffer(RlcData b)
+{ b->window_start = b->first = b->last = 0;
+
+  for(int i=0; i<b->height; i++)
+    rlc_free_line(b, i);
+}
+
+
+/** Erase saved lines (ED 3): let go of the scroll back.  If that leaves
+ * nothing on the screen either we start the ring over, which is what
+ * `clear' hit: it sends ED 2 before ED 3, so the window was already
+ * empty here and the old text of the slots we land on came back.
+ */
+
 static void
 rlc_erase_saved_lines(RlcData b)
 { if ( b->last == b->window_start )
-    b->window_start = b->first = b->last = 0;
-  else
+  { int row = rlc_window_row(b, b->caret_y);
+
+    rlc_restart_buffer(b);
+    b->caret_y = rlc_add_lines(b, b->window_start, row);
+    b->changed |= CHG_CHANGED|CHG_CLEAR|CHG_CARET;
+  } else
     b->first = b->window_start;
 }
 
@@ -5811,18 +5837,12 @@ rlc_erase_display(RlcData b)
   b->last = b->window_start;
 
   if ( b->first == b->window_start )	/* no saved lines: start over */
-  { b->window_start = b->first = b->last = 0;
-
-    /* The window lands on the oldest slots of the ring, which still
-     * hold whatever was written in them: the redraw paints a whole
-     * window from `window_start' and does not stop at `last'.  Emptying
-     * the buffer means emptying its lines.  This is what `cls' hit: ED
-     * 3 leaves no saved lines, so ED 2 takes this branch and the banner
-     * of the session came back with the next prompt written over it.
-     */
-    for(int i=0; i<b->height; i++)
-      rlc_free_line(b, i);
-  }
+    rlc_restart_buffer(b);		/* this is what `cls' hit: ED 3
+					 * leaves no saved lines, so ED 2
+					 * takes this branch and the
+					 * banner of the session came
+					 * back with the next prompt
+					 * written over it. */
 
   b->changed |= CHG_CHANGED|CHG_CLEAR|CHG_CARET;
 

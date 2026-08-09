@@ -1993,6 +1993,20 @@ test(erase_display_drops_the_rows, [setup(current_test_terminal(T))]) :-
     out(T, '\e[2;1H\e[J'),              % and the same from the caret down
     assert_rows(T, [l1,'','','']).
 
+test(clear_command, [setup(current_test_terminal(T))]) :-
+    %  What /bin/clear sends for TERM=xterm.  ED 2 empties the window
+    %  and ED 3 then finds nothing saved, so it starts the ring over:
+    %  the slots it lands on must not hand back the text they held.
+    term_rows(T, Rows),
+    More is Rows*2,
+    scrollback(T, More),
+    out(T, '\e[H\e[2J\e[3J'),
+    length(Empty, Rows),
+    maplist(=(''), Empty),
+    assert_rows(T, Empty),
+    out(T, after),
+    assert_rows(T, [after]).
+
 test(repeat_character, [setup(current_test_terminal(T))]) :-
     %  REP repeats the last character written.
     out(T, '\ec-\e[4b\e[2;1Hx\e[b'),
