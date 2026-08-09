@@ -171,6 +171,7 @@ terminal_test_unit(terminal_alt_scroll).
 terminal_test_unit(terminal_mouse_reports).
 terminal_test_unit(terminal_wrap).
 terminal_test_unit(terminal_search).
+terminal_test_unit(terminal_isearch).
 terminal_test_unit(terminal_resize).
 terminal_test_unit(terminal_control_keys).
 terminal_test_unit(terminal_function_keys).
@@ -310,6 +311,7 @@ term_key_press(T, Key) :-
 
 button_control(0x1).			% BUTTON_control, src/h/graphics.h
 button_shift(0x2).			% BUTTON_shift, idem
+button_meta(0x4).			% BUTTON_meta, idem
 
 %!  term_foreground_process(+T, -PID) is semidet.
 %
@@ -532,6 +534,53 @@ term_select(terminal(_, xpce(_, TI)), From, To) :-
 
 term_scroll_to(terminal(_, xpce(_, TI)), Index) :-
     send(TI, scroll_to, Index).
+
+%!  term_highlight(+T, +Row, -Marks) is det.
+%
+%   What is painted over each column of a visible row, as an atom of
+%   one character per column: `H' for the hit of an incremental search,
+%   `o' for one of its other matches, `S' for the selection and `.' for
+%   a cell drawn from its own attributes.  Trailing `.' are dropped, so
+%   a row with nothing on it comes back as ''.
+%
+%   <-cell_style is the only way in: the terminal hands out its text
+%   and its caret, and would otherwise say nothing at all about how any
+%   of it is painted.
+
+term_highlight(T, Row, Marks) :-
+    T = terminal(_, xpce(_, TI)),
+    term_cols(T, Cols),
+    Last is Cols-1,
+    findall(Mark,
+            ( between(0, Last, Col),
+              (   get(TI, cell_style, Col, Row, Style)
+              ->  highlight_mark(TI, Style, Mark)
+              ;   Mark = '.'
+              )
+            ),
+            All),
+    strip_trailing_dots(All, Marks0),
+    atomic_list_concat(Marks0, Marks).
+
+highlight_mark(TI, Style, Mark) :-
+    (   get(TI, isearch_style, Style)
+    ->  Mark = 'H'
+    ;   get(TI, isearch_other_style, Style)
+    ->  Mark = o
+    ;   get(TI, selection_style, Style)
+    ->  Mark = 'S'
+    ;   Mark = '?'
+    ).
+
+strip_trailing_dots(Marks, Stripped) :-
+    reverse(Marks, Reversed),
+    exclude_leading_dots(Reversed, Tail),
+    reverse(Tail, Stripped).
+
+exclude_leading_dots(['.'|T0], T) :-
+    !,
+    exclude_leading_dots(T0, T).
+exclude_leading_dots(T, T).
 
 %!  term_capability(+T, ?Cap) is nondet.
 %
@@ -1010,6 +1059,17 @@ alt_screen(T, Text) :-
 
 normal_screen(T) :-
     out(T, '\e[?1049l').
+
+%!  buffer(+T, +Text) is det.
+%
+%   Leave Text as the entire buffer, scroll back and all: ED 3 lets go
+%   of the saved lines and ED 2 of the window, which together start the
+%   ring over.  Without the first a test would see whatever the ones
+%   before it left behind.
+
+buffer(T, Text) :-
+    out(T, '\e[3J\e[H\e[2J'),
+    out(T, Text).
 
 %!  scrollback(+T, +N) is det.
 %
@@ -3794,17 +3854,6 @@ test(edit_at_right_margin_stays_on_row,
                  cleanup(cleanup_unit)
                ]).
 
-%!  buffer(+T, +Text) is det.
-%
-%   Leave Text as the entire buffer, scroll back and all: ED 3 lets go
-%   of the saved lines and ED 2 of the window, which together start the
-%   ring over.  Without the first the tests would search whatever the
-%   ones before them left behind.
-
-buffer(T, Text) :-
-    out(T, '\e[3J\e[H\e[2J'),
-    out(T, Text).
-
 %!  three_lines(+T) is det.
 %
 %   `hello', `world' and `hello again', which give two occurrences of
@@ -3967,6 +4016,395 @@ test(scroll_to_fails_on_the_alternate_screen,
     \+ term_scroll_to(T, 0).
 
 :- end_tests(terminal_search).
+
+
+		 /*******************************
+		 *       TEST: ISEARCH          *
+		 *******************************/
+
+/** <section> Incremental search
+
+    Ctrl-Shift-F puts a focus function in the way of ->typed, which then
+    sees every key until the search ends.  That is what most of these
+    tests are about: while the search runs, the keys are the window's
+    and nothing must reach the process on the terminal -- not the
+    letters that are typed, and not the Return or the Escape that ends
+    the search, which would otherwise submit a line to whatever is
+    reading.
+
+    The buffer never grows while a search runs, so its length is the
+    evidence: a key that leaked to the client comes back as output.
+*/
+
+:- begin_tests(terminal_isearch,
+               [ condition(needs([program_output, selection])),
+                 setup(setup_unit),
+                 cleanup(cleanup_unit)
+               ]).
+
+%!  isearch(+T) is det.
+%!  isearch_key(+T, +Key) is det.
+%!  isearch_type(+T, +Text) is det.
+%
+%   Start a search and drive it.  These press keys at the window with
+%   term_typed/3 rather than putting bytes on the terminal: the focus
+%   function is reached through ->typed and nothing else.
+
+isearch(T) :-
+    button_control(Control),
+    button_shift(Shift),
+    Buttons is Control \/ Shift,
+    term_typed(T, 0'\006, Buttons),         % Ctrl-Shift-F
+    drive(0.2).
+
+isearch_key(T, Letter) :-
+    Code is Letter /\ 0x1f,
+    button_control(Control),
+    term_typed(T, Code, Control),
+    drive(0.2).
+
+isearch_type(T, Text) :-
+    atom_codes(Text, Codes),
+    forall(member(Code, Codes), term_typed(T, Code, 0)),
+    drive(0.2).
+
+isearch_named_key(T, Key) :-
+    term_typed(T, Key, 0),
+    drive(0.2).
+
+%!  isearch_stop(+T) is det.
+%
+%   End a search that is still running and put back what it changed.  A
+%   test that leaves a search behind hands the next one a Ctrl-Shift-F
+%   that repeats its search string rather than starting over, and the
+%   two flags that say what counts as a match outlive a search on
+%   purpose.
+
+isearch_stop(T) :-
+    T = terminal(_, xpce(_, TI)),
+    (   get(TI, focus_function, @nil)
+    ->  true
+    ;   isearch_key(T, 0'G)
+    ),
+    send(TI, exact_case, @off),         % they outlive a search, so a
+    send(TI, search_word, @off).        % test that sets one must undo it
+
+%!  on_screen(+T, +Text) is semidet.
+%!  screen_row(+T, +Text, -Row) is semidet.
+%
+%   Row is the visible row that holds exactly Text.
+
+on_screen(T, Text) :-
+    screen_row(T, Text, _).
+
+screen_row(T, Text, Row) :-
+    term_rows(T, Rows),
+    Last is Rows-1,
+    between(0, Last, Row),
+    row_text(T, Row, Text),
+    !.
+
+test(isearch_selects_what_it_finds,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    scrollback(T, 60),
+    isearch(T),
+    isearch_type(T, line42),
+    term_selection(T, Selected),
+    assertion(Selected == line42).
+
+test(isearch_narrows_as_you_type,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    scrollback(T, 60),
+    isearch(T),
+    isearch_type(T, line4),
+    term_selection(T, First),
+    assertion(First == line4),
+    isearch_type(T, '2'),
+    term_selection(T, Second),
+    assertion(Second == line42).
+
+test(isearch_backspace_widens_again,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    scrollback(T, 60),
+    isearch(T),
+    isearch_type(T, line42),
+    isearch_named_key(T, 'BS'),
+    term_selection(T, Selected),
+    assertion(Selected == line4).
+
+test(isearch_escape_keeps_the_hit, [setup(test_begin(T))]) :-
+    scrollback(T, 60),
+    isearch(T),
+    isearch_type(T, line42),
+    isearch_named_key(T, 'ESC'),
+    assertion(term_has_selection(T)),
+    term_selection(T, Selected),
+    assertion(Selected == line42).
+
+test(isearch_abort_gives_back_view_and_selection, [setup(test_begin(T))]) :-
+    %  ^G is the way out that pretends the search never happened.
+    %  line12 and not line5: `line5' is a prefix of line50..line59,
+    %  which are on the screen, so the search would never leave it.
+    scrollback(T, 60),
+    term_bubble(T, _, Before, _),
+    isearch(T),
+    isearch_type(T, line12),
+    term_bubble(T, _, Searching, _),
+    assertion(Searching < Before),          % it scrolled to the hit
+    isearch_key(T, 0'G),
+    term_bubble(T, _, After, _),
+    assertion(After == Before),
+    assertion(\+ term_has_selection(T)).
+
+test(isearch_keys_do_not_reach_the_client, [setup(test_begin(T))]) :-
+    %  Nothing is written while a search runs, so the buffer standing
+    %  still is what says the keys stayed at the window.
+    scrollback(T, 60),
+    term_length(T, Before),
+    isearch(T),
+    isearch_type(T, line42),
+    isearch_key(T, 0'S),
+    isearch_key(T, 0'R),
+    isearch_key(T, 0'G),
+    drive(0.3),
+    term_length(T, After),
+    assertion(After == Before).
+
+test(isearch_escape_does_not_reach_the_client, [setup(test_begin(T))]) :-
+    scrollback(T, 60),
+    term_length(T, Before),
+    isearch(T),
+    isearch_type(T, line42),
+    isearch_named_key(T, 'ESC'),
+    drive(0.3),
+    term_length(T, After),
+    assertion(After == Before).
+
+test(isearch_return_does_not_reach_the_client, [setup(test_begin(T))]) :-
+    %  The one that costs the most if it gets through: a Return at a
+    %  shell prompt runs whatever is on the input line.
+    scrollback(T, 60),
+    term_length(T, Before),
+    isearch(T),
+    isearch_type(T, line42),
+    isearch_named_key(T, 'RET'),
+    drive(0.3),
+    term_length(T, After),
+    assertion(After == Before).
+
+test(isearch_holds_the_view_against_output,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    %  Output normally pulls the window back to the caret.  While the
+    %  user is driving the view, it must not: at a live prompt bytes
+    %  keep arriving and the search would be thrown back to the bottom
+    %  between one keystroke and the next.
+    scrollback(T, 60),
+    isearch(T),
+    isearch_type(T, line12),
+    assertion(on_screen(T, line12)),
+    out(T, 'noise\r\n'),
+    drive(0.3),
+    assertion(on_screen(T, line12)).
+
+test(isearch_wraps_after_a_warning,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    %  Emacs' two-step wrap: running out only says so, and the attempt
+    %  after that starts over at the far end.  The two hits are a
+    %  screenful apart, so which one the search is on is the one that
+    %  is on the screen.
+    buffer(T, 'HIT alpha\r\n'),
+    forall(between(1, 50, I), out(T, ['filler', I, '\r\n'])),
+    out(T, 'HIT omega\r\n'),
+    isearch(T),
+    isearch_type(T, 'HIT'),
+    assertion(on_screen(T, 'HIT omega')),   % the nearest one, going back
+    assertion(\+ on_screen(T, 'HIT alpha')),
+    isearch_key(T, 0'R),
+    assertion(on_screen(T, 'HIT alpha')),   % ... and the one before it
+    assertion(\+ on_screen(T, 'HIT omega')),
+    isearch_key(T, 0'R),
+    assertion(on_screen(T, 'HIT alpha')),   % nothing left: it only warns
+    isearch_key(T, 0'R),
+    assertion(on_screen(T, 'HIT omega')).   % and now it wraps
+
+test(isearch_backspace_stays_on_the_hit,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    %  Backspace looks again from where the search is looking from, not
+    %  one on from the hit: what is shorter still matches where the
+    %  longer thing did, and the search has no business walking past it.
+    %  The two hits are a screenful apart, so the one on the screen says
+    %  which the search is on.
+    buffer(T, 'HIT alpha\r\n'),
+    forall(between(1, 50, I), out(T, ['filler', I, '\r\n'])),
+    out(T, 'HIT omega\r\n'),
+    isearch(T),
+    isearch_type(T, 'HIT o'),               % only omega has this
+    assertion(on_screen(T, 'HIT omega')),
+    isearch_named_key(T, 'BS'),             % `HIT ' still matches there
+    assertion(on_screen(T, 'HIT omega')),
+    assertion(\+ on_screen(T, 'HIT alpha')).
+
+test(isearch_backspace_gives_back_what_narrowing_took,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    %  Narrowing walks the hit away from what it was standing on as
+    %  soon as that no longer matches; widening again has to give it
+    %  back, rather than keeping whatever the longer string reached.
+    buffer(T, 'format\r\nforall\r\nformat'),
+    isearch(T),
+    isearch_type(T, for),
+    term_highlight(T, 2, Third),
+    assertion(Third == 'HHH'),              % the last one, going back
+    isearch_type(T, a),
+    term_highlight(T, 1, Middle),
+    assertion(Middle == 'HHHH'),            % only `forall' has `fora'
+    isearch_named_key(T, 'BS'),
+    term_highlight(T, 2, Back),
+    assertion(Back == 'HHH').
+
+test(isearch_backspace_returns_to_the_last_repeat,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    %  ... but no further back than the last ^S or ^R: a repeat is the
+    %  user saying "not that one, the next", and backspace is not an
+    %  undo of that.
+    buffer(T, 'format\r\nforall\r\nformat'),
+    isearch(T),
+    isearch_type(T, for),
+    isearch_key(T, 0'R),                    % on to `forall'
+    term_highlight(T, 1, Middle),
+    assertion(Middle == 'HHH'),
+    isearch_type(T, m),                     % `form': not there any more
+    term_highlight(T, 0, First),
+    assertion(First == 'HHHH'),
+    isearch_named_key(T, 'BS'),
+    term_highlight(T, 1, Back),
+    assertion(Back == 'HHH').               % back to where ^R left it
+
+test(isearch_control_w_takes_the_rest_of_the_word,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    buffer(T, 'the terminal image is here\r\nand something else'),
+    isearch(T),
+    isearch_type(T, ter),
+    isearch_key(T, 0'W),
+    term_selection(T, Word),
+    assertion(Word == terminal),
+    isearch_key(T, 0'W),                % again: on to the next word
+    term_selection(T, Two),
+    assertion(Two == 'terminal image').
+
+test(isearch_control_w_stays_on_the_line,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    %  A search string with a line break in it matches almost nothing,
+    %  so the word behind the last one on a line is not a word to take.
+    buffer(T, 'the terminal image is here\r\nand something else'),
+    isearch(T),
+    isearch_type(T, here),
+    isearch_key(T, 0'W),
+    term_selection(T, Selected),
+    assertion(Selected == here).
+
+test(isearch_highlights_the_other_matches_on_the_page,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    %  The hit is one style and the rest another, so the eye can find
+    %  where else the thing is without walking the search there.
+    buffer(T, 'aa HIT bb HIT cc\r\nsecond HIT line'),
+    isearch(T),
+    isearch_type(T, 'HIT'),
+    term_highlight(T, 0, First),
+    term_highlight(T, 1, Second),
+    assertion(First  == '...ooo....ooo'),
+    assertion(Second == '.......HHH').
+
+test(isearch_highlight_follows_the_search_string,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    buffer(T, 'HIT one\r\nHITTER two'),
+    isearch(T),
+    isearch_type(T, 'HIT'),
+    term_highlight(T, 0, Three),
+    assertion(Three == ooo),
+    isearch_type(T, 'T'),                   % HITT: only the second line
+    term_highlight(T, 0, Four),
+    assertion(Four == ''),
+    isearch_named_key(T, 'BS'),             % and back again
+    term_highlight(T, 0, Again),
+    assertion(Again == ooo).
+
+test(isearch_highlight_goes_away_with_the_search,
+     [ setup(test_begin(T))
+     ]) :-
+    buffer(T, 'aa HIT bb HIT cc'),
+    isearch(T),
+    isearch_type(T, 'HIT'),
+    term_highlight(T, 0, Searching),
+    assertion(Searching \== ''),
+    isearch_key(T, 0'G),
+    term_highlight(T, 0, Done),
+    assertion(Done == '').
+
+test(isearch_highlights_only_the_page,
+     [ setup(test_begin(T)),
+       cleanup(isearch_stop(T))
+     ]) :-
+    %  A match in the scroll back is not painted, because it is not on
+    %  the screen; scrolling to it is what brings it into view, and the
+    %  painter looks again every time it draws.
+    buffer(T, 'HIT alpha\r\n'),
+    forall(between(1, 50, I), out(T, ['filler', I, '\r\n'])),
+    out(T, 'HIT omega\r\n'),
+    isearch(T),
+    isearch_type(T, 'HIT'),
+    assertion(on_screen(T, 'HIT omega')),
+    assertion(\+ on_screen(T, 'HIT alpha')),
+    forall(( term_rows(T, Rows),
+             Last is Rows-1,
+             between(0, Last, Row),
+             row_text(T, Row, Text),
+             Text \== 'HIT omega'
+           ),
+           ( term_highlight(T, Row, Marks),
+             assertion(Marks == '')
+           )),
+    isearch_key(T, 0'R),                    % now alpha is the page
+    screen_row(T, 'HIT alpha', AlphaRow),
+    term_highlight(T, AlphaRow, Alpha),
+    assertion(Alpha == 'HHH').
+
+test(isearch_refuses_the_alternate_screen,
+     [ setup(test_begin(T)),
+       cleanup(normal_screen(T))
+     ]) :-
+    %  The lines an application replaces are not in the ring, so there
+    %  is nothing to find and nowhere to scroll.
+    scrollback(T, 60),
+    alt_screen(T, 'ALT-SCREEN'),
+    isearch(T),
+    assertion(\+ term_has_selection(T)),
+    assert_row(T, 0, 'ALT-SCREEN').
+
+:- end_tests(terminal_isearch).
 
 
 		 /*******************************

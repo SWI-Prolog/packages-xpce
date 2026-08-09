@@ -32,6 +32,18 @@ keystrokes and hovered hyperlinks.
 - terminal_image<->selection_style: [style]
     `style` applied to selected cells.
 
+- terminal_image<->isearch_style: style*
+    `style` applied to the hit of an incremental search, in place of
+    `<-selection_style`, so that what a search found can be told from
+    what the user picked with the mouse.
+
+- terminal_image<->isearch_other_style: style*
+    `style` applied to the other matches of a running incremental
+    search that are on the screen, or `@nil` to leave them alone.  Only
+    the visible ones: they are worked out afresh every time the window
+    is painted, so scrolling brings the ones it reaches into view
+    without the search doing anything about it.
+
 - terminal_image<->nfd_style: style*
     Style applied to NFD grapheme clusters (e.g. accented composed
     characters), or @nil to disable highlighting.
@@ -61,6 +73,28 @@ keystrokes and hovered hyperlinks.
 - terminal_image<->syntax: syntax_table
     Syntax table used for word boundaries in selection.
 
+- terminal_image<-focus_function: name*
+    Method that is sent every keystroke while it succeeds, ahead of
+    everything `->typed` normally does.  `@nil` unless an incremental
+    search is running.
+
+- terminal_image<-search_string: string*
+    What the incremental search is looking for, or `@nil`.
+
+- terminal_image<-search_direction: {forward,backward}
+    Direction the incremental search is going.
+
+- terminal_image<->exact_case: bool
+    Whether the incremental search is case sensitive.
+
+- terminal_image<->search_word: bool
+    Whether the incremental search matches whole words only, in the
+    sense of `<-syntax`.
+
+    Both outlive the search that used them, and setting either while
+    one is running looks again at once, so the hit, the tally and what
+    is painted all follow.
+
 
 ## Send methods {#class-terminal_image-send}
 
@@ -86,6 +120,10 @@ keystrokes and hovered hyperlinks.
 - terminal_image->typed: event
     Process a single keystroke.  This takes these steps:
 
+    - If a focus function is active -- an incremental search -- the key
+      goes to it, and we are done if it succeeds.  This comes first:
+      the search would otherwise lose its keys to the accelerators
+      below, or to a process running on the terminal.
     - If the event has the `s` (super, Apple ⌘) or the event has both
       shift and control modifiers active _and_ the key is handled as
       an accelerator, we are done.
@@ -131,6 +169,45 @@ keystrokes and hovered hyperlinks.
     Scroll the line holding `index` into view, moving as little as
     possible and doing nothing while the line is already on the screen.
     Fails on the alternate screen and on an index out of range.
+
+- terminal_image->isearch_forward
+- terminal_image->isearch_backward
+    Start an Emacs style incremental search, towards the end of the
+    buffer or towards its start.  `\C-\S-f` is bound to
+    `->isearch_backward`, as a terminal's history lies behind the
+    caret.  While the search runs it has every key (see
+    `<-focus_function`):
+
+    The hit is painted in `<-isearch_style` and the other matches on
+    the screen in `<-isearch_other_style`.  What it reports as it goes
+    -- through `->report`, so where that lands is the window's business
+    -- says which of the matches it is on and how many there are, as
+    `(3/4)`.  Those are counted over the whole buffer, and from its
+    start whichever way the search is going, so a search backwards
+    begins at the last of them and counts down.  Every place the string
+    occurs counts, overlapping ones included: a repeat steps a single
+    character, so those are places the search can get to.
+
+    | `^S`, `^R`         | The next hit, forwards resp. backwards |
+    | `Backspace`        | Drop a character and search again |
+    | `^W`               | Take the word behind the hit into the search string, along with whatever separates the two, so that pressing it again walks on word by word.  Not across a line: a search string with a line break in it matches almost nothing |
+    | `M-c`              | Turn `<->exact_case` on or off |
+    | `M-w`              | Turn `<->search_word` on or off |
+    | `^G`               | Give back the view and the selection the search started from |
+    | `Escape`, `Return` | Leave the search with the hit selected |
+    | Any other key      | Leaves the search, and then means what it usually means |
+
+    Two things differ from `editor->isearch_forward`.  `Escape` and
+    `Return` are swallowed rather than passed on: an unhandled key here
+    reaches the process on the terminal, and leaving a search is no
+    reason to submit a line to a shell.  `^C` is the exception that
+    proves it -- it ends the search and then interrupts, or a search
+    started over a running program would trap the interrupt.
+
+    Running out of hits only says so; the attempt after that starts
+    over at the far end of the buffer.  A search refuses to start on
+    the alternate screen, whose lines are not in the buffer, and an
+    application that claims the screen ends one that is running.
 
 - terminal_image->window_label: char_array
     Set the enclosing frame's label, e.g. from an OSC 0 sequence.
@@ -181,6 +258,18 @@ keystrokes and hovered hyperlinks.
 - terminal_image<-contents: from=[int], size=[int] -> string
     Text of the buffer from `from`.
 
+- terminal_image<-cell_style: column=int, row=int -> style
+    The style painted over the cell at `column` of the visible `row`:
+    the selection, the hit of an incremental search, one of its other
+    matches, or the hyperlink under it.  Fails when the cell is drawn
+    from its own attributes, which is to say from the colours and the
+    bold or underline the client asked for.
+
+    This goes through the very computation the painter uses, so it is
+    not a second opinion about what should be drawn.  It says nothing
+    about what has actually been drawn yet: a cell whose line has not
+    been repainted since still shows what it showed before.
+
 - terminal_image<-cwidth: code=int -> int
     Number of columns the code point `code` occupies when drawn in
     `<-font`: 0 for combining marks, 2 for wide characters and 1 for
@@ -214,6 +303,10 @@ see the scroll-back that came before it.
 - font, bold_font: default to `tt` and `boldtt`.
 - background, colour: default to `white` and `black`.
 - selection_style: yellow background (X) or system selection style.
+- isearch_style: green background.
+- isearch_other_style: pale turquoise background.
+- exact_case, search_word: both `@off`.
+- exact_case: `@off`; the incremental search ignores case.
 - link_style, link_armed_style: blue, dotted/solid underline.
 - save_lines: 1000 by default.
 - auto_copy: copy selected text to clipboard automatically (default

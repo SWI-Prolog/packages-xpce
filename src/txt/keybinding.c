@@ -899,6 +899,7 @@ static kbDef terminal[] =
   { "\\C-v",		NAME_paste },
   { "\\C-v",		NAME_paste },
   { "\\C-\\S-a",	NAME_selectAll },
+  { "\\C-\\S-f",	NAME_isearchBackward },
   { NULL,		NULL }
 };
 

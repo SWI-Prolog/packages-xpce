@@ -294,6 +294,13 @@ typedef struct rlc_data
   int		sel_start_char;		/* starting char for selection */
   int		sel_end_line;		/* ending line for selection */
   int		sel_end_char;		/* ending char for selection */
+  struct				/* Incremental search; the hit is */
+  { int	origin_line;			/* the selection, so all we keep is */
+    int	origin_char;			/* where the search started ... */
+    int	base_line;			/* ... where changing the string */
+    int	base_char;			/* looks from ... */
+    int	window_start;			/* ... and the view it started from */
+  } isearch;
   bool		app_escape;		/* Send ESC 0 instead of ESC [ */
   bool		app_keypad_mode;	/* Send ESC <N> p from keypad */
   bool		insert_mode;		/* ANSI mode 4 (IRM) */
