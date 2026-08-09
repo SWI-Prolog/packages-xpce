@@ -76,7 +76,8 @@
     win_insert_menu_item(+, +, +, 0).
 
 :- multifile
-    tty_link_hook/2.                                % +PT, +URL
+    tty_link_hook/2,                                % +PT, +URL
+    profile/2.                                      % +Profile, -Options
 
 :- pce_global(@epilog, new(epilog)).
 
@@ -131,9 +132,11 @@ ep_main_end :-
     quit_requested.
 
 %!  epilog is det.
-%!  epilog(:Options) is det.
+%!  epilog(:ProfileOrOptions) is det.
 %
-%   Create a new terminal and open it.  Options:
+%   Create a new terminal and open it. If  the argument is an atom it is
+%   taken as a _profile name_  and   options  are  taken from profile/2.
+%   Options:
 %
 %     - title(+Title)
 %     - rows(+Rows)
@@ -157,6 +160,14 @@ ep_main_end :-
 epilog :-
     epilog([]).
 
+epilog(M:Profile) :-
+    atom(Profile),
+    !,
+    (   profile(Profile, Options)
+    ->  true
+    ;   existence_error(epilog_profile, Profile)
+    ),
+    epilog(M:Options).
 epilog(Options0) :-
     meta_options(is_meta, Options0, Options),
     fix_term,
@@ -305,6 +316,20 @@ setup_history :-
                                 % EditLine
     closed_epilog/2,            % Frame, Time
     active_terminal/1.          % TerminalObject
+
+%!  profile(?Name, ?Options) is nondet.
+%
+%   Multifile hook that  defines  available   profiles  for  new  Epilog
+%   windows. Name is the name of the profile   and  Options is a dict or
+%   option list for epilog/1. By default,   the only existing profile is
+%   `prolog`.
+
+profile(prolog, []).
+
+
+                /*******************************
+                *           CLASSES            *
+                *******************************/
 
 :- pce_begin_class(prolog_terminal, terminal_image,
                    "Terminal for running a Prolog thread").
@@ -1427,6 +1452,17 @@ open_url(_T, URL:name) :->
     "Open a URL"::
     www_open_url(URL).
 
+update_profile_menu(_T, Popup:popup) :->
+    "Update the profile menu"::
+    send(Popup, clear),
+    forall(profile(Name, _),
+           send(Popup, append, Name)).
+
+new_window(_T, Profile:profile=[name]) :->
+    "Open a new Epilog window with Profile"::
+    default(Profile, prolog, TheProfile),
+    epilog(TheProfile).
+
 debug_mode(Frame) :->
     "Toggle Prolog debug mode"::
     get(Frame, current_terminal, Term),
@@ -1517,19 +1553,25 @@ initialise(D) :->
                           message(Epilog, consult)),
                 menu_item(edit,
                           message(Epilog, edit_file)),
-                menu_item(new,
+                menu_item(new_prolog_file,
                           message(Epilog, new_file),
                           end_group := @on),
                 menu_item(reload_modified_files,
                           message(Epilog, make),
                           accelerator := 'Shift-Ctrl-M',
                           end_group := @on),
+                new(NewWindow, menu_item(new_window_with_profile)),
                 menu_item(close,
                           message(Epilog, close),
                           accelerator := 'Shift-Ctrl-W'),
                 menu_item(halt_prolog,
                           message(Epilog, close, @on))
               ]),
+    send(NewWindow, popup,
+         new(NewWindowPopup, popup(new_window,
+                                   message(Epilog, new_window, @arg1)))),
+    send(NewWindowPopup, update_message,
+         message(D?frame, update_profile_menu, @receiver)),
     send_list(Settings, append,
               [ menu_item(user_init_file,
                           message(Epilog, preferences, prolog)),
