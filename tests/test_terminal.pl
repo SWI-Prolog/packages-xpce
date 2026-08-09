@@ -170,6 +170,7 @@ terminal_test_unit(terminal_wheel).
 terminal_test_unit(terminal_alt_scroll).
 terminal_test_unit(terminal_mouse_reports).
 terminal_test_unit(terminal_wrap).
+terminal_test_unit(terminal_search).
 terminal_test_unit(terminal_resize).
 terminal_test_unit(terminal_control_keys).
 terminal_test_unit(terminal_function_keys).
@@ -500,6 +501,37 @@ term_selection(terminal(_, xpce(_, TI)), Atom) :-
 
 term_has_selection(terminal(_, xpce(_, TI))) :-
     send(TI, has_selection).
+
+%!  term_find(+T, +From, +For, -Index) is semidet.
+%!  term_find(+T, +From, +For, +Times, +Return, +Case, +Word, -Index) is semidet.
+%!  term_length(+T, -Length) is det.
+%!  term_contents(+T, +From, +Size, -Atom) is det.
+%!  term_select(+T, +From, +To) is det.
+%!  term_scroll_to(+T, +Index) is semidet.
+%
+%   The buffer as a flat sequence of characters.  The short term_find/4
+%   takes <-find's defaults: forwards once, case sensitive, no word
+%   boundaries and the index just past the match.
+
+term_find(terminal(_, xpce(_, TI)), From, For, Index) :-
+    get(TI, find, From, For, Index).
+
+term_find(terminal(_, xpce(_, TI)), From, For, Times, Return, Case, Word,
+          Index) :-
+    get(TI, find, From, For, Times, Return, Case, Word, Index).
+
+term_length(terminal(_, xpce(_, TI)), Length) :-
+    get(TI, length, Length).
+
+term_contents(terminal(_, xpce(_, TI)), From, Size, Atom) :-
+    get(TI, contents, From, Size, String),
+    get(String, value, Atom).
+
+term_select(terminal(_, xpce(_, TI)), From, To) :-
+    send(TI, selection, From, To).
+
+term_scroll_to(terminal(_, xpce(_, TI)), Index) :-
+    send(TI, scroll_to, Index).
 
 %!  term_capability(+T, ?Cap) is nondet.
 %
@@ -978,6 +1010,16 @@ alt_screen(T, Text) :-
 
 normal_screen(T) :-
     out(T, '\e[?1049l').
+
+%!  scrollback(+T, +N) is det.
+%
+%   Clear the screen and write N numbered lines.  N is more than the
+%   screen holds, so the first ones end up in the scroll back.
+
+scrollback(T, N) :-
+    out(T, '\e[2J\e[H'),
+    forall(between(1, N, I),
+           out(T, ['line', I, '\r\n'])).
 
 
 		 /*******************************
@@ -2626,16 +2668,6 @@ test(click_on_a_wrapped_row, [setup(test_begin(T))]) :-
                  cleanup(cleanup_unit)
                ]).
 
-%!  scrollback(+T, +N) is det.
-%
-%   Clear the screen and write N numbered lines.  N is more than the
-%   screen holds, so the first ones end up in the scroll back.
-
-scrollback(T, N) :-
-    out(T, '\e[2J\e[H'),
-    forall(between(1, N, I),
-           out(T, ['line', I, '\r\n'])).
-
 test(wheel_scrolls_the_scrollback, [setup(current_test_terminal(T))]) :-
     scrollback(T, 60),
     row_text(T, 0, Before),
@@ -3740,6 +3772,201 @@ test(edit_at_right_margin_stays_on_row,
     assert_cursor(T, Margin, R).
 
 :- end_tests(terminal_wrap).
+
+
+		 /*******************************
+		 *         TEST: SEARCH         *
+		 *******************************/
+
+/** <section> Searching the buffer
+
+    <-find, <-length and <-contents see the buffer as a flat sequence of
+    characters, and ->selection and ->scroll_to take an index in that
+    same space.  What the tests below are really about is the seam
+    between the two models: the buffer is a ring of lines of cells, and
+    a cell is not a character -- a wide character owns two of them and
+    the second holds nothing.
+*/
+
+:- begin_tests(terminal_search,
+               [ condition(needs([program_output, selection])),
+                 setup(setup_unit),
+                 cleanup(cleanup_unit)
+               ]).
+
+%!  buffer(+T, +Text) is det.
+%
+%   Leave Text as the entire buffer, scroll back and all: ED 3 lets go
+%   of the saved lines and ED 2 of the window, which together start the
+%   ring over.  Without the first the tests would search whatever the
+%   ones before them left behind.
+
+buffer(T, Text) :-
+    out(T, '\e[3J\e[H\e[2J'),
+    out(T, Text).
+
+%!  three_lines(+T) is det.
+%
+%   `hello', `world' and `hello again', which give two occurrences of
+%   `hello' with something in between and a `world' that shares no
+%   prefix with either.
+
+three_lines(T) :-
+    buffer(T, 'hello\r\nworld\r\nhello again').
+
+test(length_is_the_length_of_the_contents, [setup(test_begin(T))]) :-
+    three_lines(T),
+    term_length(T, Length),
+    term_contents(T, 0, Length, All),
+    atom_length(All, Length).
+
+test(contents_separates_lines_with_one_newline, [setup(test_begin(T))]) :-
+    %  A single newline, not the "\r\n" that <-selected hands to
+    %  another program: two characters would make the distance between
+    %  the start and the end of a match depend on how many line breaks
+    %  it spans.
+    three_lines(T),
+    term_contents(T, 0, 11, Text),
+    assertion(Text == 'hello\nworld').
+
+test(find_returns_the_end_by_default, [setup(test_begin(T))]) :-
+    %  As text_buffer<-find does: `return' defaults to `end' going
+    %  forwards.  Surprising, but shared.
+    three_lines(T),
+    term_find(T, 0, world, Index),
+    assertion(Index == 11).
+
+test(find_returns_the_start_on_request, [setup(test_begin(T))]) :-
+    three_lines(T),
+    term_find(T, 0, world, @default, start, @default, @default, Index),
+    assertion(Index == 6).
+
+test(find_fails_without_a_match, [setup(test_begin(T))]) :-
+    three_lines(T),
+    \+ term_find(T, 0, 'nowhere at all', _).
+
+test(find_searches_backwards, [setup(test_begin(T))]) :-
+    three_lines(T),
+    term_length(T, Length),
+    term_find(T, Length, hello, -1, start, @default, @default, Index),
+    assertion(Index == 12).                 % the second one
+
+test(find_repeats_past_the_hit, [setup(test_begin(T))]) :-
+    %  Every repeat must move on.  find_textbuffer() leaves the cursor
+    %  on the match it found, so there `times' beyond the first finds
+    %  the same place again.
+    three_lines(T),
+    term_find(T, 0, hello, 2, start, @default, @default, Index),
+    assertion(Index == 12).
+
+test(find_ignores_case_on_request, [setup(test_begin(T))]) :-
+    three_lines(T),
+    \+ term_find(T, 0, 'HELLO', _),
+    term_find(T, 0, 'HELLO', @default, start, @off, @default, Index),
+    assertion(Index == 0).
+
+test(find_honours_word_boundaries, [setup(test_begin(T))]) :-
+    buffer(T, 'foobar foo'),
+    term_find(T, 0, foo, @default, start, @default, @on, Index),
+    assertion(Index == 7).                  % not the one inside `foobar'
+
+test(find_crosses_a_soft_wrap, [setup(test_begin(T))]) :-
+    %  A line the terminal wrapped is one line to whoever reads it: the
+    %  break exists in the ring, not in the text.
+    term_cols(T, Columns),
+    Pad is Columns-3,
+    length(Codes, Pad),
+    maplist(=(0'x), Codes),
+    atom_codes(Padding, Codes),
+    buffer(T, [Padding, 'SPLITME']),
+    term_find(T, 0, 'SPLITME', @default, start, @default, @default, Index),
+    assertion(Index == Pad).
+
+test(find_does_not_cross_a_hard_break, [setup(test_begin(T))]) :-
+    three_lines(T),
+    \+ term_find(T, 0, helloworld, _),
+    term_find(T, 0, 'hello\nworld', @default, start, @default, @default,
+              Index),
+    assertion(Index == 0).
+
+test(contents_skips_the_half_of_a_wide_character, [setup(test_begin(T))]) :-
+    %  The right half of a wide character is a cell that holds no
+    %  character, and the index space is characters: had we counted the
+    %  cell, a zero would show up in the text and everything behind it
+    %  would sit one index too far along.
+    atom_codes(Emoji, [0x1F929, 0xFE0F]),   % as terminal_wide uses it
+    buffer(T, ['a', Emoji, 'b']),
+    term_length(T, Length),
+    term_contents(T, 0, Length, All),
+    atom_codes(All, Codes),
+    assertion(Codes == [0'a, 0x1F929, 0xFE0F, 0'b]),
+    term_find(T, 0, b, @default, start, @default, @default, Index),
+    assertion(Index == 3).
+
+test(selection_takes_a_hit, [setup(test_begin(T))]) :-
+    three_lines(T),
+    term_find(T, 0, world, @default, start, @default, @default, From),
+    To is From+5,
+    term_select(T, From, To),
+    term_selection(T, Selected),
+    assertion(Selected == world).
+
+test(selection_swaps_an_inverted_range, [setup(test_begin(T))]) :-
+    %  The painter walks the ring from the start of the selection to its
+    %  end and draws nothing sensible if the start comes last.
+    three_lines(T),
+    term_select(T, 11, 6),
+    term_selection(T, Selected),
+    assertion(Selected == world).
+
+test(selection_clears, [setup(test_begin(T))]) :-
+    three_lines(T),
+    term_select(T, 6, 11),
+    assertion(term_has_selection(T)),
+    term_select(T, @default, @default),
+    assertion(\+ term_has_selection(T)).
+
+test(selection_clamps_to_the_buffer, [setup(test_begin(T))]) :-
+    three_lines(T),
+    term_select(T, 6, 100000),
+    term_selection(T, Selected),
+    assertion(sub_atom(Selected, 0, _, _, world)),
+    assertion(sub_atom(Selected, _, _, 0, 'hello again')).
+
+test(scroll_to_reaches_the_scrollback, [setup(test_begin(T))]) :-
+    scrollback(T, 60),
+    term_bubble(T, _, Before, _),
+    term_find(T, 0, line3, @default, start, @default, @default, Index),
+    term_scroll_to(T, Index),
+    drive(0.1),
+    term_bubble(T, _, After, _),
+    assertion(After < Before),
+    term_rows(T, Rows),
+    Last is Rows-1,
+    assertion(( between(0, Last, Row), row_text(T, Row, line3) )).
+
+test(scroll_to_leaves_a_visible_line_alone, [setup(test_begin(T))]) :-
+    %  An incremental search asks for this on every keystroke; a window
+    %  that moves when it need not is one the eye cannot follow.
+    scrollback(T, 60),
+    term_bubble(T, _, Before, _),
+    term_length(T, Length),
+    term_scroll_to(T, Length),
+    drive(0.1),
+    term_bubble(T, _, After, _),
+    assertion(After == Before).
+
+test(scroll_to_fails_on_the_alternate_screen,
+     [ setup(test_begin(T)),
+       cleanup(normal_screen(T))
+     ]) :-
+    %  The lines under a full-screen application are not in the ring, so
+    %  there is nothing to scroll to and the application owns the window.
+    scrollback(T, 60),
+    alt_screen(T, 'ALT-SCREEN'),
+    \+ term_scroll_to(T, 0).
+
+:- end_tests(terminal_search).
 
 
 		 /*******************************

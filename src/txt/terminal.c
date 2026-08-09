@@ -346,7 +346,7 @@ static bool	rlc_has_selection(RlcData b);
 static void	rlc_select_all(RlcData b);
 static uchar_t   *rlc_selection(RlcData b);
 static uchar_t   *rlc_read_from_window(RlcData b, int sl, int sc,
-				       int el, int ec);
+				       int el, int ec, const char *sep);
 static void	rlc_free(void *ptr);
 static void	rlc_set_selection(RlcData b, int sl, int sc, int el, int ec);
 static const uchar_t *rlc_clicked_link(RlcData b, int x, int y);
@@ -388,6 +388,19 @@ static void	rlc_scroll_bubble(RlcData b,
 				  int *length, int *start, int *view);
 static void	rlc_scroll_lines(RlcData b, int lines);
 static void	rlc_shift_up(RlcData b, int shift);
+
+typedef struct				/* Where a character is; see the */
+{ int line;				/* comment above rlc_buffer_text() */
+  int cell;
+} rlc_pos;
+
+static uchar_t *rlc_buffer_text(RlcData b, size_t *lenp, rlc_pos **posp);
+static rlc_pos	rlc_pos_start(RlcData b, const uchar_t *text,
+			      const rlc_pos *pos, size_t len, size_t index);
+static rlc_pos	rlc_pos_end(const rlc_pos *pos, size_t index);
+static ssize_t	ucs_find(RlcData b, const uchar_t *text, size_t len,
+			 ssize_t here, PceString s, ssize_t times, char az,
+			 bool exact_case, bool word);
 
 
 		 /*******************************
@@ -1192,6 +1205,187 @@ getSelectedTerminalImage(TerminalImage ti)
 }
 
 
+		 /*******************************
+		 *            SEARCH            *
+		 *******************************/
+
+/* The methods below address the buffer as a flat sequence of
+ * characters; see the comment above rlc_buffer_text() for what an
+ * index is and how long it stays valid.
+ */
+
+static Int
+getLengthTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+  size_t len;
+  rlc_pos *pos;
+  uchar_t *text = rlc_buffer_text(b, &len, &pos);
+
+  if ( !text )
+    fail;
+  rlc_free(text);
+  rlc_free(pos);
+
+  answer(toInt(len));
+}
+
+static StringObj
+getContentsTerminalImage(TerminalImage ti, Int from, Int size)
+{ RlcData b = ti->data;
+  size_t len;
+  rlc_pos *pos;
+  uchar_t *text = rlc_buffer_text(b, &len, &pos);
+
+  if ( !text )
+    fail;
+
+  size_t f = isDefault(from) ? 0 : (size_t)max(0, valInt(from));
+  if ( f > len )
+    f = len;
+  size_t n = isDefault(size) ? len-f : (size_t)max(0, valInt(size));
+  if ( n > len-f )
+    n = len-f;
+
+  text[f+n] = 0;
+  StringObj str = TCHAR2String(&text[f]);
+  rlc_free(text);
+  rlc_free(pos);
+  if ( str )
+  { pushAnswerObject(str);
+    answer(str);
+  }
+
+  fail;
+}
+
+/* Search for a string, as text_buffer<-find does and with the same
+ * defaults: the search is case sensitive, ignores word boundaries and
+ * reports the end of a match going forwards and its start going back.
+ * `from` outside the buffer is clamped to the nearest end.  Fails if
+ * there is no match.
+ */
+
+static Int
+getFindTerminalImage(TerminalImage ti, Int from, StringObj str, Int times,
+		     Name start, BoolObj exactcase, BoolObj wordmode)
+{ RlcData b = ti->data;
+  size_t len;
+  rlc_pos *pos;
+  uchar_t *text = rlc_buffer_text(b, &len, &pos);
+
+  if ( !text )
+    fail;
+  rlc_free(pos);
+
+  ssize_t n  = isDefault(times) ? 1 : valInt(times);
+  char az    = ( isDefault(start) ? (n >= 0 ? 'z' : 'a')
+				  : start == NAME_start ? 'a' : 'z' );
+  bool ec    = isDefault(exactcase) || exactcase == ON;
+  bool wm    = notDefault(wordmode) && wordmode == ON;
+  ssize_t f  = valInt(from);
+  if ( f < 0 )
+    f = 0;
+  else if ( (size_t)f > len )
+    f = len;
+
+  ssize_t hit = ucs_find(b, text, len, f, &str->data, n, az, ec, wm);
+  rlc_free(text);
+
+  if ( hit < 0 )
+    fail;
+
+  answer(toInt(hit));
+}
+
+/* Make [from, to) the selection.  Both @default clears it, as does an
+ * empty region; a single @default reaches to that end of the buffer.
+ * The endpoints are clamped and swapped if they arrive the wrong way
+ * round: the paint path walks the ring from the start of the selection
+ * to its end and draws nothing sensible if the start comes last.
+ */
+
+static status
+selectionTerminalImage(TerminalImage ti, Int from, Int to)
+{ RlcData b = ti->data;
+
+  if ( isDefault(from) && isDefault(to) )
+  { rlc_set_selection(b, 0, 0, 0, 0);
+    succeed;
+  }
+
+  size_t len;
+  rlc_pos *pos;
+  uchar_t *text = rlc_buffer_text(b, &len, &pos);
+  if ( !text )
+    fail;
+
+  ssize_t f = isDefault(from) ? 0            : valInt(from);
+  ssize_t t = isDefault(to)   ? (ssize_t)len : valInt(to);
+
+  f = min(max(f, 0), (ssize_t)len);
+  t = min(max(t, 0), (ssize_t)len);
+  if ( f > t )
+  { ssize_t tmp = f; f = t; t = tmp;
+  }
+
+  if ( f == t )
+  { rlc_set_selection(b, 0, 0, 0, 0);
+  } else
+  { rlc_pos ps = rlc_pos_start(b, text, pos, len, f);
+    rlc_pos pe = rlc_pos_end(pos, t);
+
+    rlc_set_selection(b, ps.line, ps.cell, pe.line, pe.cell);
+  }
+
+  rlc_free(text);
+  rlc_free(pos);
+  succeed;
+}
+
+/* Scroll the line holding `index` into view, moving as little as we
+ * can: an incremental search asks for this on every keystroke, and a
+ * window that recentres each time is one the eye cannot follow.  Does
+ * nothing while the line is already on the screen.
+ */
+
+static status
+scrollToTerminalImage(TerminalImage ti, Int index)
+{ RlcData b = ti->data;
+
+  if ( rlc_alt_screen(b) )		/* the application owns the window */
+    fail;
+
+  size_t len;
+  rlc_pos *pos;
+  uchar_t *text = rlc_buffer_text(b, &len, &pos);
+  if ( !text )
+    fail;
+
+  ssize_t i = valInt(index);
+  status rc = FAIL;
+
+  if ( i >= 0 && (size_t)i <= len )
+  { rlc_pos p = rlc_pos_start(b, text, pos, len, i);
+    /* Both counts run from b->first: rlc_count_lines() cannot return a
+     * negative, so asking it directly how far the line is from the top
+     * of the window reports a line above the window as far below it.
+     */
+    int row = ( rlc_count_lines(b, b->first, p.line) -
+		rlc_count_lines(b, b->first, b->window_start) );
+
+    if ( row < 0 )
+      rlc_scroll_lines(b, row-1);	/* a line of context above */
+    else if ( row >= b->window_size )
+      rlc_scroll_lines(b, row - (b->window_size-1));
+    rc = SUCCEED;
+  }
+
+  rlc_free(text);
+  rlc_free(pos);
+  return rc;
+}
+
+
 /* Return the logical cursor position as a Point(col, row).
  *
  * col is the visual column on the current line (sum of display widths
@@ -1253,7 +1447,7 @@ getRowTerminalImage(TerminalImage ti, Int arg)
   int line = rlc_add_lines(b, b->window_start, row);
   RlcTextLine tl = &b->lines[line];
 
-  uchar_t *buf = rlc_read_from_window(b, line, 0, line, tl->size);
+  uchar_t *buf = rlc_read_from_window(b, line, 0, line, tl->size, "\n");
   if ( buf )
   { StringObj str = TCHAR2String(buf);
     rlc_free(buf);
@@ -1572,6 +1766,13 @@ static char *T_font[] =
 { "font=font", "bold=[font]" };
 static char *T_print[] =
 { "start=[int]", "count=[int]" };
+static char *T_find[] =
+{ "from=int", "for=string", "times=[int]",
+  "return=[{start,end}]", "exact_case=[bool]", "word=[bool]" };
+static char *T_contents[] =
+{ "from=[int]", "size=[int]" };
+static char *T_selection[] =
+{ "from=[int]", "to=[int]" };
 
 static vardecl var_terminal_image[] =
 { IV(NAME_bindings, "key_binding", IV_BOTH,
@@ -1651,6 +1852,10 @@ static senddecl send_terminal_image[] =
      NAME_selection, "True if the image has a non-empty selection"),
   SM(NAME_selectAll, 0, NULL, selectAllTerminalImage,
      NAME_selection, "Select all text in the buffer"),
+  SM(NAME_selection, 2, T_selection, selectionTerminalImage,
+     NAME_selection, "Make [from, to) the selection"),
+  SM(NAME_scrollTo, 1, "index=int", scrollToTerminalImage,
+     NAME_scroll, "Scroll the line holding index into view"),
   SM(NAME_send, 1, "text=char_array", sendTerminalImage,
      NAME_insert, "Send text to the connected process"),
   SM(NAME_insert, 1, "text=char_array", insertTerminalImage,
@@ -1694,7 +1899,16 @@ static getdecl get_terminal_image[] =
      NAME_selected, "Hyperlink content and location"),
   GM(NAME_cwidth, 1, "int", "code=int",
      getCwidthTerminalImage,
-     NAME_text, "Columns occupied by a code point in this font")
+     NAME_text, "Columns occupied by a code point in this font"),
+  GM(NAME_find, 6, "index=int", T_find,
+     getFindTerminalImage,
+     NAME_search, "Search for a string"),
+  GM(NAME_length, 0, "int", NULL,
+     getLengthTerminalImage,
+     NAME_search, "Number of characters in the buffer"),
+  GM(NAME_contents, 2, "string", T_contents,
+     getContentsTerminalImage,
+     NAME_text, "Text of the buffer from index")
 };
 
 static classvardecl rc_terminal_image[] =
@@ -2407,9 +2621,23 @@ rlc_select_all(RlcData b)
 { rlc_set_selection(b, b->first, 0, b->last, b->width);
 }
 
+/* Text of the region that starts at cell `sc` of line `sl` and ends
+ * before cell `ec` of line `el`, with `sep` between lines that are not
+ * soft-wrapped continuations of the line above.
+ *
+ * The separator is the caller's because the clipboard and the search
+ * index space want different ones.  Text handed to another program
+ * carries "\r\n"; the index space of <-find and friends is defined
+ * with a single "\n", as a two-character separator would make the
+ * distance between the start and the end of a match depend on how many
+ * line breaks it spans.
+ */
+
 static uchar_t *
-rlc_read_from_window(RlcData b, int sl, int sc, int el, int ec)
+rlc_read_from_window(RlcData b, int sl, int sc, int el, int ec,
+		     const char *sep)
 { int bufsize = 256;
+  size_t seplen = strlen(sep);
   uchar_t *buf;
   int i = 0;
 
@@ -2450,13 +2678,13 @@ rlc_read_from_window(RlcData b, int sl, int sc, int el, int ec)
     }
 
     if ( tl && !tl->softreturn )
-    { if ( i+2 >= bufsize )
+    { if ( i+(int)seplen >= bufsize )
       { bufsize *= 2;
 	if ( !(buf = rlc_realloc(buf, bufsize * sizeof(uchar_t))) )
 	  return NULL;			/* not enough memory */
       }
-      buf[i++] = '\r';			/* Bill ... */
-      buf[i++] = '\n';
+      for(const char *s = sep; *s; s++)
+	buf[i++] = *s;
     }
   }
 }
@@ -2476,7 +2704,7 @@ rlc_selection(RlcData b)
 { if ( rlc_has_selection(b) )
     return rlc_read_from_window(b,
 				b->sel_start_line, b->sel_start_char,
-				b->sel_end_line,   b->sel_end_char);
+				b->sel_end_line,   b->sel_end_char, "\r\n");
   return NULL;
 }
 
@@ -2499,6 +2727,186 @@ rlc_copy(RlcData b, Name to)	/* NAME_clipboard or NAME_primary */
   return false;
 }
 
+
+		 /*******************************
+		 *            SEARCH            *
+		 *******************************/
+
+/* The buffer as a flat sequence of characters, which is what <-find,
+ * <-length, <-contents, ->selection and ->scroll_to address.  Index 0
+ * is the first character of the oldest line we still keep; a line
+ * contributes the cells that hold a character, so a wide character
+ * counts once and the placeholder cell of its right half not at all;
+ * a line that is not a soft-wrapped continuation is followed by a
+ * single newline, except for the last line.
+ *
+ * A ring line and a cell in it say where a character is; an index says
+ * how far into the text it is.  The two need each other -- a search
+ * wants text, the selection wants cells -- and rlc_buffer_text() hands
+ * out both from the same walk, so they cannot disagree about which
+ * cells hold a character.
+ *
+ * Indices are relative to the oldest line we keep and therefore shift
+ * as output pushes lines out of the scroll-back.  They say where
+ * something is now, not what it is: an index is only good until the
+ * next thing the client writes.
+ */
+
+/* Text of the whole buffer, plus the position of each character and
+ * one more for the end.  Both are rlc_malloc()ed; the caller frees
+ * them.  Returns NULL if we are out of memory.
+ */
+
+static uchar_t *
+rlc_buffer_text(RlcData b, size_t *lenp, rlc_pos **posp)
+{ size_t len = 0;
+  int line = b->first;
+
+  for(;;)				/* count first: one alloc, no realloc */
+  { RlcTextLine tl = &b->lines[line];
+
+    for(int i=0; i<tl->size; i++)
+    { if ( tl->text[i].code )
+	len++;
+    }
+    if ( line == b->last )
+      break;
+    if ( !tl->softreturn )
+      len++;				/* the newline */
+    line = NextLine(b, line);
+  }
+
+  uchar_t *text = rlc_malloc((len+1)*sizeof(*text));
+  rlc_pos *pos  = rlc_malloc((len+1)*sizeof(*pos));
+  if ( !text || !pos )
+  { if ( text ) rlc_free(text);
+    if ( pos )  rlc_free(pos);
+    return NULL;
+  }
+
+  size_t i = 0;
+  line = b->first;
+  for(;;)
+  { RlcTextLine tl = &b->lines[line];
+
+    for(int c=0; c<tl->size; c++)
+    { if ( tl->text[c].code )
+      { text[i]      = tl->text[c].code;
+	pos[i].line  = line;
+	pos[i].cell  = c;
+	i++;
+      }
+    }
+    if ( line == b->last )
+    { pos[i].line = line;		/* the end: past the last cell */
+      pos[i].cell = tl->size;
+      break;
+    }
+    if ( !tl->softreturn )
+    { text[i]     = '\n';
+      pos[i].line = line;		/* the newline sits at the line end */
+      pos[i].cell = tl->size;
+      i++;
+    }
+    line = NextLine(b, line);
+  }
+  text[len] = 0;
+  assert(i == len);
+
+  *lenp = len;
+  *posp = pos;
+  return text;
+}
+
+/* Where an index is, as a line and a cell.  An index that names a
+ * newline is two places at once: the end of the line it terminates and
+ * the start of the line below.  Which one is meant depends on the side
+ * of a region it is on, so there are two of these, as there are for
+ * grapheme clusters one level down (rlc_snap_start(), rlc_snap_end()).
+ */
+
+static rlc_pos
+rlc_pos_start(RlcData b, const uchar_t *text, const rlc_pos *pos,
+	      size_t len, size_t index)
+{ rlc_pos p = pos[index];
+
+  if ( index < len && text[index] == '\n' )
+  { p.line = NextLine(b, p.line);	/* the line below starts here */
+    p.cell = 0;
+  }
+
+  return p;
+}
+
+static rlc_pos
+rlc_pos_end(const rlc_pos *pos, size_t index)
+{ return pos[index];			/* the end of the line it closes */
+}
+
+/* Character at `index`, or 0 outside the text.  Word mode asks about
+ * the characters just outside a match, and nothing is a word character
+ * beyond the ends of the buffer.
+ */
+
+#define BFETCH(text, len, index) \
+	((index) < 0 || (size_t)(index) >= (len) ? 0 : (text)[index])
+
+static bool
+ucs_match(RlcData b, const uchar_t *text, size_t len, ssize_t here,
+	  PceString s, bool exact_case, bool word)
+{ ssize_t l = s->s_size;
+
+  if ( word &&
+       (rlc_is_word_char(b, BFETCH(text, len, here-1)) ||
+	rlc_is_word_char(b, BFETCH(text, len, here+l))) )
+    return false;
+
+  for(ssize_t i=0; i<l; i++)
+  { uchar_t c1 = BFETCH(text, len, here+i);
+    uchar_t c2 = str_fetch(s, i);
+
+    if ( exact_case ? c1 != c2 : towlower(c1) != towlower(c2) )
+      return false;
+  }
+
+  return true;
+}
+
+/* Index of the `times`-th match at or after (before, if `times` is
+ * negative) `here`, or -1 if there is none.  `az` says whether to
+ * report the start of the match or its end.
+ *
+ * Unlike find_textbuffer(), which this follows in everything else, a
+ * repeat starts one character past the match it found: leaving `here`
+ * on the hit made every repeat find the same place again.
+ */
+
+static ssize_t
+ucs_find(RlcData b, const uchar_t *text, size_t len, ssize_t here,
+	 PceString s, ssize_t times, char az, bool exact_case, bool word)
+{ ssize_t where = -1;
+  int step = times < 0 ? -1 : 1;
+
+  if ( times == 0 )
+    return here;
+
+  for( ; times != 0; times -= step )
+  { bool hit = false;
+
+    for( ; here >= 0 && (size_t)here <= len; here += step )
+    { if ( ucs_match(b, text, len, here, s, exact_case, word) )
+      { where = here;
+	hit = true;
+	break;
+      }
+    }
+    if ( !hit )
+      return -1;
+    here += step;			/* else the repeat finds this again */
+  }
+
+  return az == 'a' ? where : where + (ssize_t)s->s_size;
+}
 
 		 /*******************************
 		 *           REPAINT		*
@@ -6241,7 +6649,8 @@ rlc_read_screen(rlc_console c, RlcMark f, RlcMark t)
 { RlcData b = rlc_get_data(c);
   uchar_t *buf;
 
-  buf = rlc_read_from_window(b, f->mark_y, f->mark_x, t->mark_y, t->mark_x);
+  buf = rlc_read_from_window(b, f->mark_y, f->mark_x,
+			     t->mark_y, t->mark_x, "\r\n");
 
   return buf;
 }
