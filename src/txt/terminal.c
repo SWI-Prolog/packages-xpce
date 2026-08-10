@@ -46,6 +46,13 @@
 #ifdef HAVE_POLL
 #include <poll.h>
 #endif
+#ifdef __APPLE__
+#include <libproc.h>			/* <-foreground_directory */
+#endif
+#if defined(__FreeBSD__) || defined(__DragonFly__)
+#include <sys/sysctl.h>
+#include <sys/user.h>
+#endif
 #include <SWI-Stream.h>
 
 /* This file  implements a terminal  emulator in XPCE.  A  terminal is
@@ -381,6 +388,7 @@ static void	rlc_close_connection(RlcData b);
 static ssize_t	rlc_send(RlcData b, const char *buffer, size_t count);
 static int	rlc_foreground_process(RlcData b);
 static bool	rlc_client_owns_terminal(RlcData b);
+static bool	rlc_foreground_directory(RlcData b, char *buf, size_t size);
 static int	rlc_interrupt_char(RlcData b);
 static int	rlc_suspend_char(RlcData b);
 static bool	rlc_caret_to_click(RlcData b, int x, int y);
@@ -471,6 +479,7 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h)
   assign(ti, search_string, NIL);
   assign(ti, search_direction, NAME_backward);
   assign(ti, search_wrapped_warned, OFF);
+  assign(ti, working_directory, NIL);
   obtainClassVariablesObject(ti);
 
   // compute width in characters from w
@@ -2119,6 +2128,38 @@ getForegroundProcessTerminalImage(TerminalImage ti)
   fail;
 }
 
+/**
+ * Working directory of the process group that owns the pty, asked of
+ * the OS rather than of the client.  Unlike <-working_directory this
+ * needs no cooperation, but it only works on some platforms and only
+ * while another process owns the terminal.
+ */
+
+static Name
+getForegroundDirectoryTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;			/* NULL after ->unlink */
+  char buf[PATH_MAX];
+
+  if ( b && rlc_foreground_directory(b, buf, sizeof(buf)) )
+    answer(FNToName(buf));
+
+  fail;
+}
+
+/**
+ * The client reported where it is; see osc7_directory().  A subclass
+ * may trap this to follow the client, e.g., to label the window or to
+ * open file dialogs in the right place.
+ */
+
+static status
+workingDirectoryTerminalImage(TerminalImage ti, Name dir, Name host)
+{ assign(ti, working_directory, dir);
+  assign(ti, host, host);
+
+  succeed;
+}
+
 static status
 copyOrInterruptTerminalImage(TerminalImage ti)
 { if ( send(ti, NAME_copy, NAME_clipboard, EAV) )
@@ -2315,6 +2356,8 @@ static char *T_scrollVertical[] =
   "unit={file,page,line}", "amount=int" };
 static char *T_font[] =
 { "font=font", "bold=[font]" };
+static char *T_workingDirectory[] =
+{ "directory=name*", "host=name*" };
 static char *T_print[] =
 { "start=[int]", "count=[int]" };
 static char *T_find[] =
@@ -2375,6 +2418,10 @@ static vardecl var_terminal_image[] =
      NAME_search, "Search is case sensitive"),
   SV(NAME_searchWord, "bool", IV_GET|IV_STORE, searchWordTerminalImage,
      NAME_search, "Search matches whole words only"),
+  IV(NAME_workingDirectory, "name*", IV_GET,
+     NAME_process, "Directory the client reported (OSC 7 or OSC 9;9)"),
+  IV(NAME_host, "name*", IV_GET,
+     NAME_process, "Host it reported that directory on (@nil: this one)"),
   IV(NAME_data, "alien:RlcData", IV_NONE,
      NAME_cache, "Line buffer and related data")
 };
@@ -2440,6 +2487,9 @@ static senddecl send_terminal_image[] =
      NAME_debug, "Print content of the window"),
   SM(NAME_windowLabel, 1, "char_array", windowLabelTerminalImage,
      NAME_label, "Called on OSC 0 <window title>"),
+  SM(NAME_workingDirectory, 2, T_workingDirectory,
+     workingDirectoryTerminalImage,
+     NAME_process, "Called on OSC 7 or OSC 9;9 <directory>"),
 #ifdef __WINDOWS__
   SM(NAME_launch, 1, "char_array", launchTerminalImage,
      NAME_process, "Run process in the terminal"),
@@ -2452,6 +2502,9 @@ static getdecl get_terminal_image[] =
   GM(NAME_foregroundProcess, 0, "int", NULL,
      getForegroundProcessTerminalImage,
      NAME_process, "Process group of another session owning the pty"),
+  GM(NAME_foregroundDirectory, 0, "directory=name", NULL,
+     getForegroundDirectoryTerminalImage,
+     NAME_process, "Working directory of <-foreground_process"),
   GM(NAME_displayedCursor, 0, "cursor=cursor", NULL,
      getDisplayedCursorTerminalImage,
      NAME_event, "Indicate normal cursor or link"),
@@ -6703,6 +6756,159 @@ parse_rgb_spec(const uchar_t *s, COLORRGBA *out)
   return true;
 }
 
+static bool
+uc_prefix(const uchar_t *s, const char *prefix)
+{ for( ; *prefix; prefix++, s++)
+  { if ( *s != (uchar_t)*prefix )
+      return false;
+  }
+
+  return true;
+}
+
+static int
+hexdigit(uchar_t c)
+{ if ( c >= '0' && c <= '9' ) return c-'0';
+  if ( c >= 'a' && c <= 'f' ) return c-'a'+10;
+  if ( c >= 'A' && c <= 'F' ) return c-'A'+10;
+
+  return -1;
+}
+
+/* Is `host' of an OSC 7 URL this machine?  Emitters use the empty host,
+   "localhost" or some spelling of our own name, so we compare the first
+   label and leave the domain out of it.
+ */
+
+static bool
+osc7_local_host(const char *host)
+{ if ( !host[0] || strcmp(host, "localhost") == 0 )
+    return true;
+
+  Name me = getHostnamePce(PCE);
+  if ( !me || !isstrA(&me->data) )
+    return false;
+
+  const char *my = strName(me);
+  size_t hl = strcspn(host, ".");
+  size_t ml = strcspn(my, ".");
+
+  return hl == ml && strncmp(host, my, hl) == 0;
+}
+
+/**
+ * Decode the URL of an OSC 7 report, `file://<host>/<path>`, where the
+ * path is percent-encoded UTF-8.
+ *
+ * @param host is set to the host of the URL, or NIL if that is us.  A
+ * host means the client sits at the far end of an ssh connection and
+ * the directory it names is one over there.
+ * @return the directory as a Name, or NIL if the URL is unusable.
+ */
+
+static Name
+osc7_directory(const uchar_t *url, Name *host)
+{ char hostname[256];
+  char path[ANSI_MAX_LINK];
+  size_t hlen = 0;
+
+  *host = NIL;
+  if ( !uc_prefix(url, "file://") )
+    return NIL;
+  url += 7;
+
+  for( ; *url && *url != '/'; url++)
+  { if ( hlen < sizeof(hostname)-1 && *url < 0x80 )
+      hostname[hlen++] = (char)*url;
+    else
+      return NIL;
+  }
+  hostname[hlen] = 0;
+
+  char *o = path;
+  char *e = path+sizeof(path)-8;	/* room for a char and the 0 */
+  for( ; *url; url++)
+  { uchar_t c = *url;
+
+    if ( c == '%' )			/* a percent-encoded UTF-8 byte */
+    { int d1 = hexdigit(url[1]);
+      int d2 = hexdigit(url[2]);
+
+      if ( d1 < 0 || d2 < 0 || (d1 == 0 && d2 == 0) )
+	return NIL;
+      c = d1*16+d2;
+      url += 2;
+    } else if ( c >= 0x80 )		/* not encoded; encode it now */
+    { if ( o >= e )
+	return NIL;
+      o = utf8_put_char(o, c);
+      continue;
+    }
+
+    if ( o >= e )
+      return NIL;
+    *o++ = (char)c;
+  }
+  *o = 0;
+
+#ifdef __WINDOWS__
+  if ( path[0] == '/' && isalpha(path[1]) && path[2] == ':' )
+    memmove(path, path+1, strlen(path));	/* /C:/... --> C:/... */
+#endif
+  if ( !path[0] )
+    return NIL;
+
+  if ( !osc7_local_host(hostname) )
+    *host = CtoName(hostname);
+
+  return UTF8ToName(path);
+}
+
+/**
+ * Decode an OSC 9;9 report, `ESC ] 9 ; 9 ; <path> ST`.  This is what
+ * Windows shells emit: a plain path, neither a URL nor encoded, and
+ * always one on this machine.  Other OSC 9 commands are notifications
+ * we have no use for.
+ *
+ * @return the directory as a Name, or NIL if this is not a report.
+ */
+
+static Name
+osc9_directory(const uchar_t *link)
+{ char path[ANSI_MAX_LINK];
+
+  if ( !uc_prefix(link, "9;") )
+    return NIL;
+
+  char *o = path;
+  char *e = path+sizeof(path)-8;
+  for(const uchar_t *s = link+2; *s; s++)
+  { if ( o >= e )
+      return NIL;
+    o = utf8_put_char(o, *s);
+  }
+  *o = 0;
+
+  if ( !path[0] )
+    return NIL;
+
+  return UTF8ToName(path);
+}
+
+/**
+ * Tell the terminal where its client is, but only when that is news:
+ * a shell reports its directory on every prompt, and ->working_directory
+ * may be trapped to update a label or a file dialog.
+ */
+
+static void
+report_directory(RlcData b, Name dir, Name host)
+{ TerminalImage ti = b->object;
+
+  if ( ti->working_directory != dir || ti->host != host )
+    send(ti, NAME_workingDirectory, dir, host, EAV);
+}
+
 static void
 osc_command(RlcData b, int param, const uchar_t *link)
 { switch(param)
@@ -6716,6 +6922,18 @@ osc_command(RlcData b, int param, const uchar_t *link)
       delCodeReference(s);
       freeableObj(s);
       rewindAnswerStack(mark, NIL);
+      break;
+    }
+    case 7:			/* working directory of the client */
+    { Name host;
+      Name dir = osc7_directory(link, &host);
+      report_directory(b, dir, host);
+      break;
+    }
+    case 9:			/* 9;<path>: the same, Windows style */
+    { Name dir = osc9_directory(link);
+      if ( notNil(dir) )
+	report_directory(b, dir, NIL);
       break;
     }
     case 10:			/* default foreground colour */
@@ -7715,6 +7933,66 @@ rlc_client_owns_terminal(RlcData b)
 }
 
 /**
+ * Working directory of the process that owns the pty.
+ *
+ * The foreground process group is named after its leader, so its pid is
+ * the pgid we get from the kernel.  Asking the OS where that process is
+ * needs no cooperation from the client, unlike OSC 7, but there is no
+ * portable way to do it and some systems provide none at all.  OpenBSD
+ * is one; there, and on Windows, OSC 7 is all we have.
+ *
+ * @return true if `buf` was filled with the directory.
+ */
+
+static bool
+rlc_foreground_directory(RlcData b, char *buf, size_t size)
+{ pid_t pid = rlc_foreground_process(b);
+
+  if ( pid <= 0 )
+    return false;
+
+#if defined(__linux__) || defined(__NetBSD__) || defined(__sun)
+  char procfile[64];
+
+#ifdef __sun
+  snprintf(procfile, sizeof(procfile), "/proc/%d/path/cwd", (int)pid);
+#else
+  snprintf(procfile, sizeof(procfile), "/proc/%d/cwd", (int)pid);
+#endif
+
+  ssize_t len = readlink(procfile, buf, size-1);
+  if ( len > 0 )
+  { buf[len] = 0;
+    return true;
+  }
+#elif defined(__APPLE__)
+  struct proc_vnodepathinfo vpi;
+
+  if ( proc_pidinfo(pid, PROC_PIDVNODEPATHINFO, 0, &vpi, sizeof(vpi)) ==
+       sizeof(vpi) )
+  { strncpy(buf, vpi.pvi_cdir.vip_path, size-1);
+    buf[size-1] = 0;
+    return true;
+  }
+#elif defined(KERN_PROC_CWD)		/* FreeBSD and friends */
+  struct kinfo_file kf;
+  int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_CWD, (int)pid };
+  size_t len = sizeof(kf);
+
+  if ( sysctl(mib, 4, &kf, &len, NULL, 0) == 0 && len >= sizeof(kf) )
+  { strncpy(buf, kf.kf_path, size-1);
+    buf[size-1] = 0;
+    return true;
+  }
+#else
+  (void)buf;
+  (void)size;
+#endif
+
+  return false;
+}
+
+/**
  * Character that makes the line discipline raise `which` (VINTR,
  * VSUSP, ...) in the client, or -1 if the client turned signal
  * generation off.  The master side reports the settings of the slave.
@@ -8161,6 +8439,20 @@ static int
 rlc_foreground_process(RlcData b)
 { (void)b;
   return 0;			/* no pid to give; see <-foreground_process */
+}
+
+/* Without a pid there is nobody to ask about, and Windows has no
+ * supported way to read another process' directory anyway.  Here OSC 7
+ * or OSC 9;9 is the only route; see <-working_directory.
+ */
+
+static bool
+rlc_foreground_directory(RlcData b, char *buf, size_t size)
+{ (void)b;
+  (void)buf;
+  (void)size;
+
+  return false;
 }
 
 static bool

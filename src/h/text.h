@@ -318,6 +318,8 @@ NewClass(terminal_image)
   BoolObj	search_wrapped_warned;	/* Search hit the end of the buffer */
   BoolObj	exact_case;		/* Search is case sensitive */
   BoolObj	search_word;		/* Search matches whole words */
+  Name		working_directory;	/* Directory the client reported */
+  Name		host;			/* ... and the host it is on */
   struct rlc_data *data;		/* The buffered data */
 End;
 
