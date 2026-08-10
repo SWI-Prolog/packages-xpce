@@ -51,23 +51,24 @@
 :- use_module(library(www_browser)).
 :- use_module(library(gensym)).
 :- use_module(library(editline),
-              [ el_unwrap/1, el_history_events/2,
-                el_add_history/2, el_wrap/1
-              ]).
+              [el_unwrap/1, el_history_events/2, el_add_history/2, el_wrap/1]).
+:- use_module(library(solution_sequences), [distinct/2]).
 :- use_module(library(lists), [reverse/2, member/2]).
-:- use_module(library(option), [meta_options/3, option/3, option/2]).
+:- use_module(library(option),
+              [meta_options/3, option/3, option/2, merge_options/3]).
 :- use_module(library(prolog_history), [prolog_history/1]).
 :- use_module(library(swi_preferences), [prolog_edit_preferences/1]).
 :- use_module(library(pce_openframes), [confirm_open_frames/1]).
 :- use_module(library(ansi_term), [ansi_format/3]).
-:- use_module(library(error), [existence_error/2]).
+:- use_module(library(error), [existence_error/2, must_be/2]).
 :- use_module(library(prolog_code), [pi_head/2]).
 :- use_module(library(thread), [call_in_thread/2, call_in_thread/3]).
-:- use_module(library(pce_symbol_picker), [symbol_picker/1]).
-:- use_module(library(pce_drop_target),
-              [ drop_target_event/4,
-                drop_target_show_rejected/3
-              ]).
+:- autoload(library(pce_symbol_picker), [symbol_picker/1]).
+:- autoload(library(pce_drop_target),
+            [drop_target_event/4, drop_target_show_rejected/3]).
+:- autoload(library(desktop), [desktop_open/1]).
+:- autoload(library(process), [process_create/3, process_wait/2]).
+:- autoload(library(shell), [shell_command/1]).
 
 :- meta_predicate
     epilog(:),
@@ -143,13 +144,17 @@ ep_main_end :-
 %       Height of the initial terminal in lines (default 25)
 %     - cols(+Cols)
 %       Width of the initial terminal in characters (default 80)
+%     - profile(+Name)
+%       Take the default options from the profile Name.  See profile/2.
 %     - init(:Goal)
 %       Run Goal as initialization goal. Default is `version` for the
 %       first and `true` for subsequent terminals.
 %     - goal(:Goal)
 %       Run Goal as REPL loop.  Default is `prolog`.
-%     - goal_split(:Goal)
-%       Goal to run on a window split.  Default is the same as `goal`.
+%     - cwd(+Directory)
+%       Directory in which to start an OS shell using shell/0.
+%     - background(+Colour)
+%       Background colour for the terminal.
 %     - main(+Bool)
 %       If `true`, act as main window.   In this case epilog/1
 %       runs the main thread and returns after all windows have
@@ -163,13 +168,12 @@ epilog :-
 epilog(M:Profile) :-
     atom(Profile),
     !,
-    (   profile(Profile, Options)
-    ->  true
-    ;   existence_error(epilog_profile, Profile)
-    ),
-    epilog(M:Options).
-epilog(Options0) :-
-    meta_options(is_meta, Options0, Options),
+    epilog(M:[profile(Profile)]).
+epilog(M:Options0) :-
+    option(profile(Profile), Options0, prolog),
+    profile_options(Profile, ProfileOptions),
+    merge_options(Options0, ProfileOptions, Options1),
+    meta_options(is_meta, M:Options1, Options),
     fix_term,
     setup_history,
     option(name(Name),   Options, @default),
@@ -179,17 +183,14 @@ epilog(Options0) :-
     option(main(IsMain), Options, @off),
     new(Epilog, epilog_frame(Name, Title, Width, Height, IsMain)),
     get(Epilog, current_terminal, PT),
-    option(init(Init), Options, version),
-    send(PT, goal_init, Init),
-    option(goal(Goal), Options, prolog),
-    send(PT, goal, Goal),
-    option(goal_split(GoalSplit), Options, Goal),
-    send(PT, goal_split, GoalSplit),
-    option(object(Epilog), Options, _),
-    (   option(background(Colour), Options)
-    ->  send(PT, background, Colour)
-    ;   true
-    ),
+
+    send(PT, profile, Profile),
+    on_option(init(Init),            Options, send(PT, goal_init, Init)),
+    on_option(goal(Goal),            Options, send(PT, goal, Goal)),
+    on_option(cwd(CWD),              Options, send(PT, process_cwd, CWD)),
+    on_option(background(Colour),    Options, send(PT, background, Colour)),
+    ignore(option(object(Epilog), Options)),
+
     send(Epilog, open),
     (   get(Epilog, main, @on)
     ->  ep_wait(Epilog)
@@ -197,8 +198,20 @@ epilog(Options0) :-
     ).
 
 is_meta(goal).
-is_meta(goal_split).
 is_meta(init).
+
+%!  on_option(+Option, +Options, :Goal) is det.
+%
+%   Run Goal if Option appears in Options.
+
+:- meta_predicate
+    on_option(+, +, 0).
+
+on_option(Opt, Options, Goal) :-
+    (   option(Opt, Options)
+    ->  call(Goal)
+    ;   true
+    ).
 
 %!  epilog_attach(+Options) is det.
 %
@@ -317,14 +330,58 @@ setup_history :-
     closed_epilog/2,            % Frame, Time
     active_terminal/1.          % TerminalObject
 
+%!  current_profile(-Name, -Label) is nondet.
+%
+%   True when Name is a known profile name to be announced using Label.
+
+current_profile(Name, Label) :-
+    distinct(Name, (default_profile(Name,_) ; profile(Name,_))),
+    profile_options(Name, Options),
+    (   option(label(Label), Options)
+    ->  true
+    ;   option(title(Label), Options, Name)
+    ).
+
+%!  profile_options(+Name, -Options) is det.
+%
+%   True when Options are the options to   create a new Epilog window in
+%   the profile Name.
+
+profile_options(Name, Options) :-
+    default_profile(Name, Opts0),
+    profile(Name, UserOpts),
+    !,
+    merge_options(UserOpts, Opts0, Options).
+profile_options(Name, Options) :-
+    profile(Name, Options),
+    !.
+profile_options(Name, Options) :-
+    default_profile(Name, Options),
+    !.
+profile_options(Name, _) :-
+    existence_error(epilog_profile, Name).
+
 %!  profile(?Name, ?Options) is nondet.
 %
 %   Multifile hook that  defines  available   profiles  for  new  Epilog
-%   windows. Name is the name of the profile   and  Options is a dict or
-%   option list for epilog/1. By default,   the only existing profile is
-%   `prolog`.
+%   windows. Name is the name of the  profile   and Options is an option
+%   list for epilog/1. Options defined  here   overrule those of a built
+%   in profile with the same name. Note that goals in Options are
+%   qualified in the module that calls epilog/1.
 
-profile(prolog, []).
+%!  default_profile(?Name, ?Options) is nondet.
+%
+%   Built-in profiles: `prolog` runs the  Prolog   top level and `shell`
+%   runs the user's shell. A profile/2 clause with the same name
+%   overrules the options below.
+
+default_profile(prolog, [ label('Prolog')
+                        ]).
+default_profile(shell,  [ title('SWI-Prolog OS shell'),
+                          label('OS shell'),
+                          init(true),
+                          goal(shell)
+                        ]).
 
 
                 /*******************************
@@ -336,7 +393,8 @@ profile(prolog, []).
 
 variable(goal_init,     prolog := version,    both, "Goal to run for init").
 variable(goal,          prolog := prolog,     both, "Main goal").
-variable(goal_split,    prolog := prolog,     both, "Main for splitted terminal").
+variable(profile,       name := prolog,       both, "Profile used to create").
+variable(process_cwd,   [name]*,              both, "Directory for processes").
 variable(popup,         popup*,               get,  "Terminal popup").
 variable(popup_gesture, popup_gesture*,       none, "Gesture to show menu").
 variable(history,       {on,off,copy} := off, none, "Support history").
@@ -772,9 +830,13 @@ split_vertically(T) :->
 
 new_window(T) :->
     "Open a new window"::
-    get(T, goal_split, Goal),
+    get(T, goal, Goal),
     get(T, background, BG),
-    epilog([ init(true),
+    get(T, working_directory, WDir),
+    get(T, profile, Profile),
+    epilog([ profile(Profile),
+             cwd(WDir),
+             init(true),
              goal(Goal),
              background(BG)
            ]).
@@ -832,13 +894,14 @@ font_default(T) :->
 connect(PT, @default, Title) =>
     get(PT, goal_init, Init),
     get(PT, goal, Goal),
+    get(PT, process_cwd, CWD),
     gensym(con, Alias),
     send(PT?window, name, Alias),
     get(PT, pty_name, PTY),             % /dev/pty* on Unix, @nil on Windows
     thread_self(Me),
     parent_history(PT, Events),
     parent_thread(PT, Parent),
-    thread_create(thread_run_interactor(PT, Me, PTY, Init, Goal, Title,
+    thread_create(thread_run_interactor(PT, Me, PTY, Init, Goal, CWD, Title,
                                         Events),
                   Thread,
                   [ inherit_from(Parent),
@@ -862,7 +925,7 @@ connect(PT, TID, _Title) =>
     thread_send_message(Thread, '$epilog'(PT, PTY)).
 
 %!  thread_run_interactor(+PrologTerminal, +CreatorThread, +PTY, +Init,
-%!                        +Goal, +Title, +History) is det.
+%!                        +Goal, +CWD, +Title, +History) is det.
 %
 %   Run the Prolog terminal main thread. Note that this code cannot talk
 %   to xpce as  it  will  deadlock.  That   is  why  all  relevant  xpce
@@ -870,7 +933,7 @@ connect(PT, TID, _Title) =>
 %
 %   Q: Will this still deadlock after changes to the XPCE "GIL"?
 
-thread_run_interactor(PT, Creator, PTY, Init, Goal, Title, History) :-
+thread_run_interactor(PT, Creator, PTY, Init, Goal, CWD, Title, History) :-
     set_prolog_flag(query_debug_settings, debug(false, false)),
     set_prolog_flag(hyperlink_term, true),
     set_prolog_flag(color_term, true),
@@ -879,8 +942,9 @@ thread_run_interactor(PT, Creator, PTY, Init, Goal, Title, History) :-
     (   catch(attach_terminal(PT, PTY, Title, History), Error, true)
     ->  (   var(Formal)
         ->  thread_send_message(Creator, title(Title)),
+            set_process_working_directory(CWD),
             call(Init),
-            ignore(Goal)
+            ignore(epilog_run(Goal))
         ;   thread_send_message(Creator, throw(Error))
         )
     ;   thread_send_message(Creator, false)
@@ -954,9 +1018,55 @@ tty_link(PT, Link) :-
 tty_link(_PT, Link) :-
     link_file_location(Link, _File, Location),
     !,
-    call(edit(Location)).
+    tty_open(Location).
 tty_link(_PT, URL) :-
     call(www_open_url(URL)).
+
+%!  tty_open(+Location) is det.
+%
+%   Open a file link.  A location that   carries a line number is opened
+%   using edit/1.  A plain file is  opened   using  the editor unless we
+%   know it is not a text file,  e.g., an image or PDF document.
+
+tty_open(file(File)) :-
+    !,
+    (   binary_file(File)
+    ->  desktop_open(File)
+    ;   call(edit(file(File)))
+    ).
+tty_open(Location) :-
+    call(edit(Location)).
+
+%!  binary_file(+File) is semidet.
+%
+%   True when we know File cannot be edited as text.  Note that
+%   file_mime_type/2 returns `application/unknown` if it does not know
+%   the extension, so we must ask for known binary types rather than
+%   for known text types.
+
+:- if(exists_source(library(http/mimetype))).
+:- autoload(library(http/mimetype), [file_mime_type/2]).
+
+binary_file(File) :-
+    file_mime_type(File, Type),
+    binary_type(Type).
+:- else.
+binary_file(_) :-               % library(http) is not installed and we
+    fail.                       % cannot tell.  Assume text.
+:- endif.
+
+binary_type(image/_).
+binary_type(audio/_).
+binary_type(video/_).
+binary_type(application/pdf).
+binary_type(application/msword).
+binary_type(application/zip).
+binary_type(application/wasm).
+binary_type(application/'x-gzip').
+binary_type(application/'x-gtar').
+binary_type(application/'x-java-archive').
+binary_type(application/'octet-stream').
+
 
 link_file_location(Link, File, Location) :-
     uri_file_name(Link, File),
@@ -975,6 +1085,8 @@ fragment_location(Fragment, File, File:Line:Column) :-
     number_string(Column, ColumnS).
 fragment_location(Fragment, File, File:Line) :-
     atom_number(Fragment, Line).
+
+:- pce_group(drop).
 
 %!  epilog_consult_drop(+Terminal, +Paths) is det.
 %
@@ -1010,6 +1122,19 @@ rejection_text([_], 'Ignored: not a Prolog source file') :- !.
 rejection_text(Files, Msg) :-
     length(Files, N),
     format(string(Msg), 'Ignored ~d files: not Prolog source', [N]).
+
+:- pce_group(process).
+
+working_directory(PT, CWD:name) :<-
+    "Get the directory for running commands"::
+    (   get_super(PT, working_directory, CWD),  % OSC 7 or 9
+        CWD \== @nil
+    ->  true
+    ;   get(PT, foreground_directory, CWD),     % POSIX PTY/Process inspection
+        CWD \== @nil
+    ->  true
+    ;   working_directory(CWD, CWD)             % Prolog default
+    ).
 
 :- pce_end_class(prolog_terminal).
 
@@ -1072,9 +1197,12 @@ split(T, Dir:{horizontally,vertically}) :->
     new(_, hyper(W, T, parent, child)),
     send(W, history, copy),
     get(W, terminal, PT),
+    get(T, working_directory, WDir),
+    send(PT, process_cwd, WDir),
     send(PT, goal_init, true),
-    get(T, goal_split, Split),
-    send(PT, goal, Split),
+    get(T, goal, Goal),
+    send(PT, goal, Goal),
+    send(PT, profile, T?profile),
     get(T, tile, Tile),
     send(PT, background, T?terminal?background),
     send(Tile, can_resize, @on),
@@ -1125,6 +1253,79 @@ report_on_bar(warning).
 
 :- pce_end_class(epilog_window).
 
+
+%!  set_process_working_directory(+Dir) is det.
+%
+%   Initialisation goal for a  terminal  that   must  run  its external
+%   processes in Dir.  We cannot use  working_directory/2 as the Prolog
+%   working directory is  shared  by  all   threads.   Instead  we  let
+%   run_shell/0 pass Dir to process_create/3.  Nothing needs to be done
+%   if Dir is already the current directory.
+
+:- public set_process_working_directory/1.
+
+set_process_working_directory(Dir) :-
+    (   atom(Dir),
+        exists_directory(Dir),
+        \+ same_file(Dir, '.')
+    ->  nb_setval(epilog_process_working_directory, Dir)
+    ;   true
+    ).
+
+%!  epilog_run(:Goal)
+%
+%   Run Goal under Epilog.  Redefines shell/0
+
+epilog_run(_:shell) :-
+    !,
+    run_shell.
+epilog_run(Goal) :-
+    call(Goal).
+
+%!  run_shell is det.
+%
+%   Run an interactive shell  in  this   terminal.  Unlike  shell/0, we
+%   use process_create/3 to run the shell   in  the directory the user
+%   was in when this terminal was created.
+%
+%   We wait using process_wait/2 rather   than leaving the waiting to
+%   process_create/3, as the latter turns a  non-zero exit status into
+%   an exception.  As for shell/0, the exit status is not our business.
+
+run_shell :-
+    (   nb_current(epilog_process_working_directory, Dir)
+    ->  Options = [cwd(Dir)]
+    ;   Options = []
+    ),
+    shell_command(Shell),
+    shell_prog_argv(Shell, Prog, Argv),
+    process_create(Prog, Argv, [process(PID)|Options]),
+    process_wait(PID, _Status).
+
+%!  shell_prog_argv(+Shell, -Prog, -Argv) is det.
+%
+%   Split the shell command into a  program and its arguments.  Shell is
+%   either the executable or  a  term   Exe(Arg...),  e.g.,  bash('-l').
+
+shell_prog_argv(Shell, Prog, Argv) :-
+    must_be(callable, Shell),
+    (   atom(Shell)
+    ->  Name = Shell,
+        Argv = []
+    ;   compound_name_arguments(Shell, Name, Argv)
+    ),
+    process_prog(Name, Prog).
+
+%!  process_prog(+Shell, -Prog) is det.
+%
+%   Turn the shell command into a  specification for process_create/3,
+%   searching $PATH if Shell has no directory component.
+
+process_prog(Name, Prog) :-
+    (   file_base_name(Name, Name)
+    ->  Prog = path(Name)
+    ;   Prog = Name
+    ).
 
                 /*******************************
                 *          REPORT BAR          *
@@ -1455,8 +1656,9 @@ open_url(_T, URL:name) :->
 update_profile_menu(_T, Popup:popup) :->
     "Update the profile menu"::
     send(Popup, clear),
-    forall(profile(Name, _),
-           send(Popup, append, Name)).
+    forall(current_profile(Name, Label),
+           send(Popup, append,
+                menu_item(Name, label := Label))).
 
 new_window(_T, Profile:profile=[name]) :->
     "Open a new Epilog window with Profile"::
