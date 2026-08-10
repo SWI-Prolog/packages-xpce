@@ -157,10 +157,14 @@ keycode_to_name(SDL_Event *event)
   { if ( event->key.mod & MetaMask )
       return toInt(Meta(event->key.key));
     if ( event->key.mod & ControlMask )
-    { if ( event->key.key >= 'a' && event->key.key <= 'z' )
+    { /* The C0 controls: Control() strips all but the low five bits,
+       * which turns `@' into NUL, the letters into 1..26 and the five
+       * keys after `Z' into 27..31, giving us ^[, ^\, ^] and friends.
+       * Without these, Ctrl+\ reached the client as a backslash and a
+       * program on a terminal could never be sent SIGQUIT.
+       */
+      if ( event->key.key >= '@' && event->key.key < DEL )
 	return toInt(Control(event->key.key));
-      else if ( event->key.key == SDLK_AT )
-	return ZERO;
       else
 	return toInt(event->key.key);
     }
