@@ -2714,18 +2714,21 @@ again:
 /**
  * Send a typed character to the client as UTF-8.
  *
- * ^Z is dropped: it would stop the client, and this terminal has no
- * job control to get it going again.  A client that turned signals off
- * wants the character as data, and then rlc_suspend_char() reports
- * none.
+ * ^Z is dropped while we are our own client: it would stop the thread
+ * running this window and nothing is left to continue it.  Once a
+ * process group of another session holds the terminal the character
+ * goes through, so that a shell started on it can suspend its jobs.
+ * A client that turned signals off wants the character as data, and
+ * then rlc_suspend_char() reports none.
  */
 static void
 typed_char(RlcData b, int chr)
-{ int susp = rlc_suspend_char(b);
+{ int susp;
 
   rlc_set_selection(b, 0, 0, 0, 0);
 
-  if ( susp > 0 && chr == susp )
+  if ( !rlc_client_owns_terminal(b) &&
+       (susp=rlc_suspend_char(b)) > 0 && chr == susp )
   { DEBUG(NAME_term, Cprintf("Not sending %d: would stop the client\n", chr));
     return;
   }
