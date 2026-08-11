@@ -877,30 +877,12 @@ git_grep(M, GrepArgs:grep_arguments=string) :->
          string(GrepCommad, GrepArgs),
          string('git-grep %s', GrepArgs)).
 
-
 shell(M) :->
-    "Start interactive shell"::
-    send(M, has_processes),
-    (   get(@emacs, buffer, '*shell*', Buffer)
-    ->  send(Buffer, open)
-    ;   (   get(@pce, environment_variable, 'SHELL', Shell)
-        ->  better_shell(Shell, Shell2),
-            Process = process(Shell2, '-i')
-        ;   get(@pce, operating_system, winnt) % TBD: Windows 95-ME
-        ->  Process = process('cmd.exe')
-        ;   Process = process('sh', '-i')
-        ),
-        new(P, Process),
-        get(M, directory, Dir),
-        send(P, directory, Dir),
-        new(B, emacs_process_buffer(P, '*shell*')),
-        send(B, directory, Dir),
-        send(B, start_process),
-        send(B, open, tab)
-    ).
-
-better_shell('/bin/tcsh', '/bin/csh') :- !.
-better_shell(Shell, Shell).
+    "Start interactive shell in Epilog"::
+    get(M?directory, path, Dir),
+    auto_call(epilog([ profile(shell),
+                       cwd(Dir)
+                     ])).
 
 manual_entry(M, Spec:unix_manual_entry_for=name) :->
     "Lookup Unix manual entry"::
