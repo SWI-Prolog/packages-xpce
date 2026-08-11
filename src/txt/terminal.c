@@ -4098,7 +4098,12 @@ effective_style_for(RlcData b, text_flags flags, bool armed)
    * nor @default) replace the cell's own values.  An application can
    * still embed colored, bold, or unstyled links by leaving link_style
    * slots at @default — the cell's flags win where the style is silent.
-   * The hover (armed) variant overrides link_style on a per-link basis;
+   * The colours of the resting link_style only apply if the client did
+   * not colour the label itself: a client that colours its links (`rg`
+   * does) knows better what its output means than we do, and the
+   * underline marks the link anyway.  The hover (armed) variant does
+   * replace them: that is transient feedback which must be visible on a
+   * coloured link as well.  It overrides link_style on a per-link basis;
    * cells outside the hovered href keep using the resting link_style.
    *
    * Style->underline historically was "Bool or Colour" (we ignore the
@@ -4107,14 +4112,16 @@ effective_style_for(RlcData b, text_flags flags, bool armed)
    * vocabulary (solid, dotted, dashed, dashdot, dashdotted, longdash).
    */
   if ( flags.link )
-  { Style ls = (armed &&
-		notNil(ti->link_armed_style) && !isDefault(ti->link_armed_style))
-		 ? ti->link_armed_style
-		 : ti->link_style;
+  { bool hover = (armed &&
+		  notNil(ti->link_armed_style) &&
+		  !isDefault(ti->link_armed_style));
+    Style ls = hover ? ti->link_armed_style : ti->link_style;
     if ( notNil(ls) && !isDefault(ls) )
-    { if ( notDefault(ls->colour) && notNil(ls->colour) )
+    { if ( (hover || flags.fg == PAL_DEFAULT) &&
+	   notDefault(ls->colour) && notNil(ls->colour) )
 	es.fg = ls->colour;
-      if ( notDefault(ls->background) && notNil(ls->background) )
+      if ( (hover || flags.bg == PAL_DEFAULT) &&
+	   notDefault(ls->background) && notNil(ls->background) )
 	es.bg = ls->background;
       Any uls = ls->underline;
       if ( notDefault(uls) && notNil(uls) && uls != OFF )
