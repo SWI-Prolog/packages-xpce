@@ -1075,16 +1075,25 @@ link_file_location(Link, File, Location) :-
     uri_data(fragment, Components, Fragment),
     fragment_location(Fragment, File, Location).
 
+%!  fragment_location(?Fragment, +File, -Location) is semidet.
+%
+%   Translate the fragment of a `file://` link  into a location for
+%   edit/1.  The fragment holds the line  and optionally the column,
+%   both counting from 1 as in edit/1.  The line may be prefixed with
+%   ``L``, the form used by GitHub and e.g., ``rg
+%   --hyperlink-format=file://{path}#L{line}:{column}``.
+
 fragment_location(Fragment, File, file(File)) :-
     var(Fragment),
     !.
 fragment_location(Fragment, File, File:Line:Column) :-
-    split_string(Fragment, ":", "", [LineS,ColumnS]),
-    !,
+    split_string(Fragment, ":", "L", [LineS,ColumnS]),
     number_string(Line, LineS),
-    number_string(Column, ColumnS).
+    number_string(Column, ColumnS),
+    !.
 fragment_location(Fragment, File, File:Line) :-
-    atom_number(Fragment, Line).
+    split_string(Fragment, "", "L", [LineS]),
+    number_string(Line, LineS).
 
 :- pce_group(drop).
 

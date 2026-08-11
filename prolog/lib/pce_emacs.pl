@@ -114,6 +114,9 @@ emacs :-
 %     - File:Line:LinePos
 %     - File:Line
 %     - File
+%
+%   Line and LinePos count from 1, as   for edit/1.  The `line_pos` of
+%   an xpce source_location counts from 0.
 
 emacs(File:Line:LinePos) :-
     integer(Line),
@@ -121,7 +124,8 @@ emacs(File:Line:LinePos) :-
     atom(File),
     !,
     start_emacs,
-    new(Loc, source_location(File, Line, LinePos)),
+    LinePos0 is max(0, LinePos-1),
+    new(Loc, source_location(File, Line, LinePos0)),
     in_pce_thread(send(@emacs, goto_source_location, Loc, tab)).
 emacs(File:Line) :-
     integer(Line),
