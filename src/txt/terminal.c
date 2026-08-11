@@ -391,6 +391,7 @@ static bool	rlc_open_pty_pair(RlcData b, int cols, int rows);
 static void	rlc_close_connection(RlcData b);
 static ssize_t	rlc_send(RlcData b, const char *buffer, size_t count);
 static int	rlc_foreground_process(RlcData b);
+static int	rlc_tty_echo(RlcData b);
 static bool	rlc_client_owns_terminal(RlcData b);
 static bool	rlc_foreground_directory(RlcData b, char *buf, size_t size);
 static int	rlc_interrupt_char(RlcData b);
@@ -2133,6 +2134,27 @@ getForegroundProcessTerminalImage(TerminalImage ti)
 }
 
 /**
+ * Does the tty echo what is sent to it?
+ *
+ * Echo off says a client put the tty in raw mode and is thus reading
+ * and displaying by itself.  That tells us when text we send arrives
+ * at a client that is ready for it rather than at one still setting
+ * the terminal up, which would display it twice.  Fails if we have no
+ * pty, or on a platform that cannot tell.
+ */
+
+static BoolObj
+getTtyEchoTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;			/* NULL after ->unlink */
+  int echo;
+
+  if ( b && (echo=rlc_tty_echo(b)) >= 0 )
+    answer(echo ? ON : OFF);
+
+  fail;
+}
+
+/**
  * Working directory of the process group that owns the pty, asked of
  * the OS rather than of the client.  Unlike <-working_directory this
  * needs no cooperation, but it only works on some platforms and only
@@ -2506,6 +2528,9 @@ static getdecl get_terminal_image[] =
   GM(NAME_foregroundProcess, 0, "int", NULL,
      getForegroundProcessTerminalImage,
      NAME_process, "Process group of another session owning the pty"),
+  GM(NAME_ttyEcho, 0, "bool", NULL,
+     getTtyEchoTerminalImage,
+     NAME_process, "Whether the tty echoes what we send it"),
   GM(NAME_foregroundDirectory, 0, "directory=name", NULL,
      getForegroundDirectoryTerminalImage,
      NAME_process, "Working directory of <-foreground_process"),
@@ -7797,6 +7822,24 @@ rlc_send(RlcData b, const char *buffer, size_t count)
 }
 
 /**
+ * Does the line discipline echo what we send to the pty?
+ *
+ * Returns -1 if we cannot tell.  Echo off says a client put the tty in
+ * raw mode, which is how we know it reads and displays by itself.
+ */
+
+static int
+rlc_tty_echo(RlcData b)
+{ struct termios tio;
+
+  if ( b->pty.open && b->pty.slave_fd >= 0 &&
+       tcgetattr(b->pty.slave_fd, &tio) == 0 )
+    return (tio.c_lflag & ECHO) != 0;
+
+  return -1;
+}
+
+/**
  * Process group that owns the pty, or 0 if there is none.
  *
  * A pty only has a foreground process group once a process made it
@@ -8352,6 +8395,16 @@ rlc_foreground_directory(RlcData b, char *buf, size_t size)
 static bool
 rlc_client_owns_terminal(RlcData b)
 { return b->ptycon.hPC_refs > 0;
+}
+
+/* The echo belongs to the console mode of the client that attached to
+ * the pseudo console.  We hold no handle on it.
+ */
+
+static int
+rlc_tty_echo(RlcData b)
+{ (void)b;
+  return -1;
 }
 
 /* The console turns this into a Ctrl+C for whatever runs on it, the same

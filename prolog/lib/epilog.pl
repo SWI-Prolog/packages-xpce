@@ -44,6 +44,7 @@
             run_in_help_epilog/1       % :Goal
           ]).
 :- use_module(library(pce)).
+:- pce_autoload(partof_hyper, library(hyper)).
 :- use_module(library(threadutil), []).
 :- use_module(library(edit)).
 :- use_module(library(pce_util)).
@@ -153,6 +154,12 @@ ep_main_end :-
 %       Run Goal as REPL loop.  Default is `prolog`.
 %     - cwd(+Directory)
 %       Directory in which to start an OS shell using shell/0.
+%     - inject(+Spec)
+%       Type Spec at the terminal once it is connected.  Spec is an item
+%       or a list of items.  A string is typed as a line of text, any
+%       other item as a Prolog goal (see ->inject).  Unlike init(:Goal),
+%       which runs in the Prolog thread, this is read by whoever reads
+%       the terminal, e.g., the shell of goal(shell).
 %     - background(+Colour)
 %       Background colour for the terminal.
 %     - main(+Bool)
@@ -188,6 +195,7 @@ epilog(M:Options0) :-
     on_option(init(Init),            Options, send(PT, goal_init, Init)),
     on_option(goal(Goal),            Options, send(PT, goal, Goal)),
     on_option(cwd(CWD),              Options, send(PT, process_cwd, CWD)),
+    on_option(inject(Text),          Options, set_inject(PT, Text)),
     on_option(background(Colour),    Options, send(PT, background, Colour)),
     ignore(option(object(Epilog), Options)),
 
@@ -395,11 +403,15 @@ variable(goal_init,     prolog := version,    both, "Goal to run for init").
 variable(goal,          prolog := prolog,     both, "Main goal").
 variable(profile,       name := prolog,       both, "Profile used to create").
 variable(process_cwd,   [name]*,              both, "Directory for processes").
+variable(inject_items,  prolog := '',         both, "Lines/goals to type when connected").
 variable(popup,         popup*,               get,  "Terminal popup").
 variable(popup_gesture, popup_gesture*,       none, "Gesture to show menu").
 variable(history,       {on,off,copy} := off, none, "Support history").
 variable(save_history,  bool := @off,         none, "Save history on exit").
 variable(current_link,	name*,                get,  "Link under popup").
+
+class_variable(inject_tries, int, [windows(5), unix(20)],
+               "Times to look for a reader of inject(Spec) text").
 
 %!  binding(?Key, ?Method)
 %
@@ -924,6 +936,96 @@ connect(PT, TID, _Title) =>
     get(PT, pty_name, PTY),
     thread_send_message(Thread, '$epilog'(PT, PTY)).
 
+%!  set_inject(+PT, +Spec) is det.
+%
+%   Realise the inject(Spec) option of epilog/1.  As we cannot tell what
+%   will run the terminal, the caller does:   a string is a line of text,
+%   anything else a Prolog goal, typed by ->inject.
+
+set_inject(PT, Spec) :-
+    (   is_list(Spec)
+    ->  Items = Spec
+    ;   Items = [Spec]
+    ),
+    maplist(must_be_inject_item, Items),
+    send(PT, inject_items, Items).
+
+must_be_inject_item(Item) :-
+    (   string(Item)
+    ->  true
+    ;   must_be(callable, Item)
+    ).
+
+inject_pending(PT) :->
+    "Type the inject(Spec) items once a client reads them"::
+    %  Text that arrives while a client is still setting the terminal up
+    %  is displayed twice: the client reads and echoes it during its
+    %  setup, and its line editor draws it again at the prompt.  We
+    %  therefore wait for inject_ready/1, and type anyway when it does
+    %  not come.  First called from thread_run_interactor/8, i.e., after
+    %  the client ran its init goal, and by the timer below after that.
+    (   get(PT, inject_items, Items),
+        is_list(Items)                          % `` when there is nothing
+    ->  (   inject_ready(PT)
+        ->  inject_now(PT, Items)
+        ;   get(PT, hypered, inject_timer, Timer)
+        ->  (   get(Timer, times, 0)            % we just used our last
+            ->  inject_now(PT, Items)           % try; type it blind
+            ;   true                            % the timer calls us again
+            )
+        ;   wait_for_reader(PT)
+        )
+    ;   true
+    ).
+
+inject_now(PT, Items) :-
+    send(PT, inject_items, ''),                 % once
+    (   get(PT, hypered, inject_timer, Timer)
+    ->  send(Timer, stop)
+    ;   true
+    ),
+    maplist(inject_item(PT), Items).
+
+%!  wait_for_reader(+PT) is det.
+%
+%   Have the terminal ask itself again every  50ms, `inject_tries` times.
+%   The timer is a part of PT, so that   closing the terminal takes it
+%   with it, and it reaches PT back over that same hyper.
+%
+%   Windows waits fewer times: it cannot  tell   a  reader from a client
+%   still setting up (see inject_ready/1),   so the tries are a delay we
+%   always pay rather than a bound we rarely reach.
+
+wait_for_reader(PT) :-
+    get(PT, class_variable_value, inject_tries, Tries),
+    new(Timer, timer(0.05, message(@receiver, send_hyper,
+                                   terminal, inject_pending))),
+    new(_, partof_hyper(PT, Timer, inject_timer, terminal)),
+    send(Timer, start, repeat, Tries).
+
+%!  inject_ready(+PT) is semidet.
+%
+%   True when a client stopped the tty  from   echoing, which says a line
+%   editor took the terminal over and  displays   what  it reads.  We do
+%   not use <-foreground_process: a  shell   owns  the  tty from the ~exec
+%   on, well before its editor is up.
+%
+%   Fails while nothing edits, e.g., a  plain   `sh' or a Prolog toplevel
+%   without library(editline), and on a platform  that cannot tell.  The
+%   tty then echoes our text itself and  nothing repeats it, so the wait
+%   only costs us the timeout.
+
+inject_ready(PT) :-
+    get(PT, tty_echo, @off).
+
+inject_item(PT, Item) :-
+    string(Item),
+    !,
+    atomics_to_string([Item, "\r"], Line),
+    send(PT, send, Line).
+inject_item(PT, Goal) :-
+    send(PT, inject, Goal).
+
 %!  thread_run_interactor(+PrologTerminal, +CreatorThread, +PTY, +Init,
 %!                        +Goal, +CWD, +Title, +History) is det.
 %
@@ -944,6 +1046,7 @@ thread_run_interactor(PT, Creator, PTY, Init, Goal, CWD, Title, History) :-
         ->  thread_send_message(Creator, title(Title)),
             set_process_working_directory(CWD),
             call(Init),
+            in_pce_thread(send(PT, inject_pending)),
             ignore(epilog_run(Goal))
         ;   thread_send_message(Creator, throw(Error))
         )
