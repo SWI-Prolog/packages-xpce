@@ -54,14 +54,16 @@
 :- use_module(library(editline),
               [el_unwrap/1, el_history_events/2, el_add_history/2, el_wrap/1]).
 :- use_module(library(solution_sequences), [distinct/2]).
-:- use_module(library(lists), [reverse/2, member/2]).
+:- use_module(library(lists), [reverse/2, member/2, memberchk/2]).
 :- use_module(library(option),
-              [meta_options/3, option/3, option/2, merge_options/3]).
+              [meta_options/3, option/3, option/2, merge_options/3,
+               select_option/3]).
 :- use_module(library(prolog_history), [prolog_history/1]).
 :- use_module(library(swi_preferences), [prolog_edit_preferences/1]).
 :- use_module(library(pce_openframes), [confirm_open_frames/1]).
 :- use_module(library(ansi_term), [ansi_format/3]).
-:- use_module(library(error), [existence_error/2, must_be/2]).
+:- use_module(library(error),
+              [existence_error/2, must_be/2, permission_error/3]).
 :- use_module(library(prolog_code), [pi_head/2]).
 :- use_module(library(thread), [call_in_thread/2, call_in_thread/3]).
 :- autoload(library(pce_symbol_picker), [symbol_picker/1]).
@@ -147,6 +149,8 @@ ep_main_end :-
 %       Width of the initial terminal in characters (default 80)
 %     - profile(+Name)
 %       Take the default options from the profile Name.  See profile/2.
+%       A profile/2 clause may use this option itself to refine another
+%       profile.
 %     - init(:Goal)
 %       Run Goal as initialization goal. Default is `version` for the
 %       first and `true` for subsequent terminals.
@@ -344,29 +348,60 @@ setup_history :-
 
 current_profile(Name, Label) :-
     distinct(Name, (default_profile(Name,_) ; profile(Name,_))),
-    profile_options(Name, Options),
-    (   option(label(Label), Options)
-    ->  true
-    ;   option(title(Label), Options, Name)
-    ).
+    Error = error(_,_),
+    catch(profile_options(Name, Options), Error,
+          ( print_message(warning, Error),   % a broken profile may not
+            fail                             % take the others with it
+          )),
+    option(label(Label), Options, Name).
 
 %!  profile_options(+Name, -Options) is det.
 %
 %   True when Options are the options to   create a new Epilog window in
-%   the profile Name.
+%   the profile Name.  A  profile  that   names  another  in  a profile/1
+%   option refines that one: its own options win.
 
 profile_options(Name, Options) :-
+    profile_options(Name, [], Options).
+
+profile_options(Name, Seen, _) :-
+    memberchk(Name, Seen),
+    !,
+    permission_error(inherit, epilog_profile, Name).
+profile_options(Name, Seen, Options) :-
+    own_profile_options(Name, Options0),
+    profile_label(Name, Options0, Options1),
+    (   select_option(profile(Super), Options1, Options2)
+    ->  profile_options(Super, [Name|Seen], SuperOptions),
+        merge_options(Options2, SuperOptions, Options)
+    ;   Options = Options1
+    ).
+
+%!  profile_label(+Name, +Options0, -Options) is det.
+%
+%   Give a profile a label of its own before  it takes any from the one
+%   it refines: a profile is announced by  its label, else its title, and
+%   else its name.  Inheriting the label  would   announce  it as the very
+%   profile it refines.
+
+profile_label(_, Options0, Options0) :-
+    option(label(_), Options0),
+    !.
+profile_label(Name, Options0, [label(Label)|Options0]) :-
+    option(title(Label), Options0, Name).
+
+own_profile_options(Name, Options) :-
     default_profile(Name, Opts0),
     profile(Name, UserOpts),
     !,
     merge_options(UserOpts, Opts0, Options).
-profile_options(Name, Options) :-
+own_profile_options(Name, Options) :-
     profile(Name, Options),
     !.
-profile_options(Name, Options) :-
+own_profile_options(Name, Options) :-
     default_profile(Name, Options),
     !.
-profile_options(Name, _) :-
+own_profile_options(Name, _) :-
     existence_error(epilog_profile, Name).
 
 %!  profile(?Name, ?Options) is nondet.
@@ -374,8 +409,22 @@ profile_options(Name, _) :-
 %   Multifile hook that  defines  available   profiles  for  new  Epilog
 %   windows. Name is the name of the  profile   and Options is an option
 %   list for epilog/1. Options defined  here   overrule those of a built
-%   in profile with the same name. Note that goals in Options are
-%   qualified in the module that calls epilog/1.
+%   in profile with the same name.  A   profile/1  option in Options is a
+%   profile to refine, taking its options for  the ones we do not give
+%   ourselves.  The label is the exception:  a   profile  is announced by
+%   its own label, else its own title,  and else its name.  Note that
+%   goals in Options are qualified in the module that calls epilog/1.
+%
+%   For example, a shell in a fixed place to build in:
+%
+%       ```
+%       epilog:profile(build,
+%                      [ profile(shell),
+%                        label('Build'),
+%                        cwd('/home/me/src/swipl-devel/build'),
+%                        inject(["ninja"])
+%                      ]).
+%       ```
 
 %!  default_profile(?Name, ?Options) is nondet.
 %
