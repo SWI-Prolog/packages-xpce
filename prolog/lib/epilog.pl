@@ -1182,7 +1182,9 @@ tty_link(_PT, URL) :-
 
 tty_open(file(File)) :-
     !,
-    (   binary_file(File)
+    (   (   exists_directory(File)
+        ;   binary_file(File)
+        )
     ->  desktop_open(File)
     ;   call(edit(file(File)))
     ).
