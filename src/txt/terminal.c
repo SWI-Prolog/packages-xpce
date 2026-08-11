@@ -38,6 +38,12 @@
 #undef _WIN32_WINNT
 #define _WIN32_WINNT 0x0B00	/* Get PseudoConsole API */
 #define SWIPL_WINDOWS_NATIVE_ACCESS 1
+#ifdef __APPLE__
+#define _DARWIN_C_SOURCE 1		/* _XOPEN_SOURCE hides u_short, etc. */
+#include <libproc.h>			/* <-foreground_directory.  Must be
+					   included before kernel.h, which
+					   #defines send() */
+#endif
 #include <h/kernel.h>
 #include <h/text.h>
 #include <h/charwidth.h>
@@ -45,9 +51,6 @@
 #include "../sdl/sdlevent.h"
 #ifdef HAVE_POLL
 #include <poll.h>
-#endif
-#ifdef __APPLE__
-#include <libproc.h>			/* <-foreground_directory */
 #endif
 #if defined(__FreeBSD__) || defined(__DragonFly__)
 #include <sys/sysctl.h>
