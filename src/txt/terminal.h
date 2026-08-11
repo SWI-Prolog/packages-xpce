@@ -248,8 +248,6 @@ typedef enum
   CMD_OSC,			/* \e] */
   CMD_OSCARG,			/* \e]<digit> */
   CMD_OSCTEXT,			/* \e]param; */
-  CMD_LINK,			/* \e]8 */
-  CMD_LINKARG,
   CMD_DEC_PRIVATE,
   CMD_CSI_INTERMEDIATE,		/* CSI param ... <intermediate 0x20-0x2F>+ */
   CMD_DCS,			/* \eP <body> ST */
@@ -310,10 +308,10 @@ typedef struct rlc_data
   int		argstat;		/* argument status ANSI */
   int		csi_intermediate;	/* CSI intermediate byte, 0 if none */
   int		csi_private;		/* CSI private marker ? or >, 0 if none */
-  char const   *must_see;		/* \e]8;; link decoding */
   int		argc;			/* argument count for ANSI */
   int		argv[ANSI_MAX_ARGC];	/* argument vector for ANSI */
   uchar_t		link[ANSI_MAX_LINK];	/* Max URL length */
+  uchar_t      *link_url;		/* Open OSC 8 hyperlink or NULL */
   href	       *armed_href;		/* href the mouse is hovering, or NULL */
   bool		shift_in;		/* select G1 */
 					/* HTS/TBC tab stops.  Columns past

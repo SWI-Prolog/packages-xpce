@@ -368,6 +368,8 @@ static href    *rlc_add_link(RlcTextLine tl, const uchar_t *link,
 static void	rlc_free_link(RlcData b, href *hr);
 static void	rlc_free_links(RlcData b, href *links);
 static void	rlc_check_links(RlcTextLine tl);
+static void	rlc_link_cells(RlcData b, RlcTextLine tl, int start, int len);
+static void	rlc_link_end(RlcData b);
 static bool	rlc_copy(RlcData b, Name to);
 static void	rlc_request_redraw(RlcData b);
 static void	rlc_redraw(RlcData b, int x, int y, int w, int h);
@@ -2673,17 +2675,6 @@ ucsncpy(uchar_t *dst, const uchar_t *src, size_t len)
 #endif
 
 static int
-cuncmp(const char *s1, const uchar_t *s2, size_t len)
-{ const unsigned char *u1 = (const unsigned char*)s1;
-  for(; len-- > 0; u1++, s2++)
-  { int d = *u1 - *s2;
-    if ( d )
-      return d;
-  }
-  return 0;
-}
-
-static int
 ucscmp(const uchar_t *s1, const uchar_t *s2)
 { while(*s1 == *s2 && *s1)
   { s1++;
@@ -2693,24 +2684,6 @@ ucscmp(const uchar_t *s1, const uchar_t *s2)
   return *s1-*s2;
 }
 
-
-static uchar_t *
-ucstr(const uchar_t *haystack, const char *needle)
-{ for(; *haystack; haystack++)
-  { const unsigned char *n = (const unsigned char*)needle;
-    const uchar_t *h = haystack;
-    for(; *n; n++, h++)
-    { if ( *n != *h )
-	break;
-      if ( !*h )
-	return NULL;
-    }
-    if ( !*n )
-      return (uchar_t*)haystack;
-  }
-
-  return NULL;
-}
 
 
 static Name
@@ -4694,6 +4667,8 @@ rlc_destroy_buffer(RlcData b)
     rlc_free(b->lines);
   }
 
+  if ( b->link_url )
+    rlc_free(b->link_url);
   rlc_destroy_saved_screen(b);
   rlc_close_connection(b);
   palette_destroy(b);
@@ -5422,7 +5397,8 @@ rlc_scroll_down(RlcData b, int count)
 
 static void
 rlc_soft_reset(RlcData b)
-{ b->scroll_top       = 0;
+{ rlc_link_end(b);
+  b->scroll_top       = 0;
   b->scroll_bottom    = b->window_size-1;
   b->sgr_flags        = TF_DEFAULT;
   b->insert_mode      = false;
@@ -5833,6 +5809,7 @@ rlc_restore_cursor(RlcData b)
     b->G1        = G_ASCII;
     b->shift_in  = false;
   }
+  b->sgr_flags.link = !!b->link_url;	/* OSC 8 is not part of the cursor */
 }
 
 
@@ -6047,6 +6024,7 @@ static void
 rlc_sgr(RlcData b, int sgr)
 { if ( sgr == 0 )
   { b->sgr_flags = TF_DEFAULT;
+    b->sgr_flags.link = !!b->link_url;	/* OSC 8 is not an SGR attribute */
   } else if ( sgr >= 30 && sgr <= 39 )
   { b->sgr_flags.fg = sgr == 39 ? PAL_DEFAULT : sgr-30;
   } else if ( sgr >= 40 && sgr <= 49 )
@@ -6104,6 +6082,7 @@ rlc_prepare_line(RlcData b, int y)
     tc->code  = ' ';
     tc->flags = b->sgr_flags;
     tc->flags.width = 1;
+    tc->flags.link = 0;			/* no href covers padding */
   }
 
   return tl;
@@ -6204,6 +6183,8 @@ rlc_put(RlcData b, int chr)
     tc->flags.width = 0;
     if ( tl->size <= b->caret_x )
       tl->size = b->caret_x + 1;
+    if ( b->link_url )
+      rlc_link_cells(b, tl, b->caret_x, 1);
     tl->changed |= CHG_CHANGED;
     /* Advance the cell index (not the visual column) so the next char
        doesn't overwrite this combiner.  Cap at the physical line
@@ -6276,6 +6257,9 @@ rlc_put(RlcData b, int chr)
 
     if ( b->insert_mode )
       rlc_trim_past_margin(b, tl);
+
+    if ( b->link_url )
+      rlc_link_cells(b, tl, b->caret_x, dw == 2 ? 2 : 1);
 
     tl->changed |= CHG_CHANGED;
     /* Advance caret_x by the character's cell width directly — do NOT go
@@ -6425,10 +6409,49 @@ rlc_add_link(RlcTextLine tl, const uchar_t *link, int start, int len)
   return hr;
 }
 
-static href *
-rlc_register_link(RlcData b, const uchar_t *link, size_t len)
-{ RlcTextLine tl = &b->lines[b->caret_y];
-  return rlc_add_link(tl, link, b->caret_x, len);
+/* An OSC 8 hyperlink is a _state_ rather than a self contained sequence:
+ * everything written between `ESC ] 8 ; <params> ; <URL> ST` and the same
+ * sequence with an empty URL belongs to the link.  That includes the SGR
+ * sequences a colouring client such as ripgrep emits inside the label, so
+ * we cannot collect the label as text.  Instead, rlc_put() adds the cells
+ * it writes to the link while it is open.
+ */
+
+static void
+rlc_link_start(RlcData b, const uchar_t *url)
+{ if ( b->link_url )
+    rlc_free(b->link_url);
+  b->link_url = rlc_malloc((ucslen(url)+1)*sizeof(*url));
+  ucscpy(b->link_url, url);
+  b->sgr_flags.link = 1;
+}
+
+
+static void
+rlc_link_end(RlcData b)
+{ if ( b->link_url )
+  { rlc_free(b->link_url);
+    b->link_url = NULL;
+  }
+  b->sgr_flags.link = 0;
+}
+
+
+/* Add `len` cells starting at `start` of `tl` to the open link.  The href
+ * of the previous write is the head of the line's list, so a run of
+ * characters extends a single href.  Moving to a new line, jumping the
+ * caret or a new URL starts a new one.
+ */
+
+static void
+rlc_link_cells(RlcData b, RlcTextLine tl, int start, int len)
+{ href *hr = tl->links;
+
+  if ( hr && hr->start + hr->length == start &&
+       ucscmp(hr->link, b->link_url) == 0 )
+    hr->length += len;
+  else
+    rlc_add_link(tl, b->link_url, start, len);
 }
 
 		 /*******************************
@@ -6930,6 +6953,21 @@ osc_command(RlcData b, int param, const uchar_t *link)
       report_directory(b, dir, host);
       break;
     }
+    case 8:			/* 8;<params>;<URL>: hyperlink */
+    { const uchar_t *url = link;
+
+      while(*url && *url != ';')	/* we have no use for the params */
+	url++;
+      if ( *url != ';' )		/* malformed: no URL at all */
+	break;
+      url++;
+      DEBUG(NAME_term, Cprintf("Link: \"%ls\"\n", url));
+      if ( *url )
+	rlc_link_start(b, url);
+      else
+	rlc_link_end(b);
+      break;
+    }
     case 9:			/* 9;<path>: the same, Windows style */
     { Name dir = osc9_directory(link);
       if ( notNil(dir) )
@@ -6969,53 +7007,6 @@ osc_command(RlcData b, int param, const uchar_t *link)
     default:
       DEBUG(NAME_term, Cprintf("Unknown OSC command: %d\n", param));
   }
-}
-
-/** The "ST" sequence is either \e\\ or \a
- */
-static bool
-osc8_end(RlcData b)
-{ const char *end1 = S_ESC"]8;;\a";	/* new OSC 8 standard */
-  const char *end2 = S_ESC"]8;;"S_ESC"\\";	/* old */
-  const size_t end1l = strlen(end1);
-  const size_t end2l = strlen(end2);
-
-  int chr = b->link[b->link_len-1];
-  if ( chr == '\a' &&
-       b->link_len >= end1l &&
-       cuncmp(end1, &b->link[b->link_len-end1l], end1l) == 0 )
-  { b->link_len -= end1l;
-    return true;
-  }
-  if ( chr == '\\' &&
-       b->link_len >= end2l &&
-       cuncmp(end2, &b->link[b->link_len-end2l], end2l) == 0 )
-  { b->link_len -= end2l;
-    return true;
-  }
-
-  return false;
-}
-
-
-static void
-rlc_put_link(RlcData b, const uchar_t *label, const uchar_t *link)
-{ text_flags flags0 = b->sgr_flags;
-  int y = b->caret_y;
-  href *hr = rlc_register_link(b, link, ucslen(label));
-  b->sgr_flags.link = 1;
-  for( ; *label; label++)
-  { rlc_put(b, *label);
-    if ( b->caret_y != y )	/* moved to next line */
-    { size_t left = ucslen(label)-1;
-      hr->length -= left;
-      rlc_check_links(&b->lines[y]);
-      hr = rlc_register_link(b, link, left);
-      y = b->caret_y;
-    }
-  }
-  rlc_check_links(&b->lines[y]);
-  b->sgr_flags = flags0;
 }
 
 #ifdef _DEBUG
@@ -7184,22 +7175,13 @@ rlc_putansi(RlcData b, int chr)
       b->cmdstat = CMD_INITIAL;
       break;
     case CMD_OSC:
-      switch ( chr )
-      { case '8':
-	{ b->must_see = ";;";
-	  b->cmdstat = CMD_LINK;
-	  break;
-	}
-	default:
-	{ if ( chr >= '0' && chr <= '9' )
-	  { b->cmdstat = CMD_OSCARG;
-	    b->argc    = 0;
-	    b->argstat = 1;
-	    b->argv[b->argc] = (chr - '0');
-	    break;
-	  }
-	  b->cmdstat = CMD_INITIAL;
-	}
+      if ( chr >= '0' && chr <= '9' )
+      { b->cmdstat = CMD_OSCARG;
+	b->argc    = 0;
+	b->argstat = 1;
+	b->argv[b->argc] = (chr - '0');
+      } else
+      { b->cmdstat = CMD_INITIAL;
       }
       break;
     case CMD_OSCTEXT:
@@ -7228,64 +7210,6 @@ rlc_putansi(RlcData b, int chr)
 	  rlc_put(b, *split);
       }
       break;
-    case CMD_LINK:
-      if ( b->must_see && b->must_see[0] == chr )
-      { b->must_see++;
-	if ( !b->must_see[0] )
-	{ b->cmdstat = CMD_LINKARG;
-	  b->link_len = 0;
-	  b->must_see = NULL;
-	}
-	break;
-      } else
-      { b->cmdstat = CMD_INITIAL;
-	break;
-      }
-    case CMD_LINKARG:
-      if ( b->link_len < ANSI_MAX_LINK-1 )
-      { const char *sep1   = "\a"; /* OSC8 "ST" sequence */
-	const size_t sep1l = strlen(sep1);
-	const char *sep2   = S_ESC"\\";
-	const size_t sep2l = strlen(sep2);
-
-	b->link[b->link_len++] = chr;
-	b->link[b->link_len] = 0;
-	if ( osc8_end(b) )
-	{ uchar_t *link;
-
-	  b->cmdstat = CMD_INITIAL;
-	  b->link[b->link_len] = 0;
-
-	  uchar_t *label = ucstr(b->link, sep1);
-	  if ( label )
-	  { *label = 0;
-	    label += sep1l;
-	    link = b->link;
-	  } else if ( (label=ucstr(b->link, sep2)) )
-	  { *label = 0;
-	    label += sep2l;
-	    link = b->link;
-	  } else
-	  { label = b->link;
-	    link = NULL;
-	  }
-	  DEBUG(NAME_term,
-		Cprintf("Link: \"%ls\", Label \"%ls\"\n", link, label));
-	  if ( link )
-	  { rlc_put_link(b, label, link);
-	  } else
-	  { for( ; *label; label++)
-	      rlc_put(b, *label);
-	  }
-	}
-	break;
-      } else			/* too long; process as text */
-      { b->cmdstat = CMD_INITIAL;
-	b->link[b->link_len] = 0;
-	for(uchar_t *split=b->link; *split; split++)
-	  rlc_put(b, *split);
-	break;
-      }
     case CMD_CSI_INTERMEDIATE:
       /* Consume further intermediates (0x20-0x2F).  A final byte
 	 (0x40-0x7E) terminates the sequence; of those we act on DECSTR
