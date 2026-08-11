@@ -635,7 +635,7 @@ attachTimerScrollBar(ScrollBar s)
   detachTimerScrollBar(s);
   intervalTimer(t, getClassVariableValueObject(s, NAME_repeatDelay));
   assign(ScrollBarRepeatMessage, receiver, s);
-  startTimer(t, NAME_once);
+  startTimer(t, NAME_once, DEFAULT);
 }
 
 

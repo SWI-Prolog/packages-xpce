@@ -49,6 +49,7 @@ initialiseTimer(Timer tm, Num interval, Code msg)
   assign(tm, message,  msg);
   assign(tm, status,   NAME_idle);
   assign(tm, service,  OFF);
+  assign(tm, times,    NIL);
 
   intervalTimer(tm, interval);
 
@@ -126,9 +127,26 @@ intervalTimer(Timer tm, Num interval)
 }
 
 
+/**
+ * Run the message of a timer that fired.
+ *
+ * A timer started for a number of times counts this one off before the
+ * message runs, and stops when it was the last.  The message can thus
+ * see from <-times == 0 that it will not be called again, and start the
+ * timer anew as it may for a `once' timer.
+ */
+
 status
 executeTimer(Timer tm)
-{ if ( notNil(tm->message) )
+{ if ( notNil(tm->times) )
+  { Int left = toInt(valInt(tm->times)-1);
+
+    assign(tm, times, left);
+    if ( valInt(left) <= 0 )
+      stopTimer(tm);
+  }
+
+  if ( notNil(tm->message) )
     return forwardReceiverCode(tm->message, tm, EAV);
 
   fail;
@@ -170,9 +188,10 @@ delayTimer(Timer tm)
 
 
 status
-startTimer(Timer tm, Name mode)
+startTimer(Timer tm, Name mode, Int times)
 { if ( isDefault(mode) )
     mode = NAME_repeat;
+  assign(tm, times, isDefault(times) ? NIL : times);
 
   return statusTimer(tm, mode);
 }
@@ -186,7 +205,7 @@ stopTimer(Timer tm)
 
 static status
 runningTimer(Timer tm, BoolObj val)
-{ return (val == ON ? startTimer(tm, NAME_repeat) : stopTimer(tm));
+{ return (val == ON ? startTimer(tm, NAME_repeat, DEFAULT) : stopTimer(tm));
 }
 
 		 /*******************************
@@ -197,6 +216,8 @@ runningTimer(Timer tm, BoolObj val)
 
 static char *T_initialise[] =
         { "interval=num", "message=[code]*" };
+static char *T_start[] =
+        { "how=[{repeat,once}]", "times=[int]" };
 
 /* Instance Variables */
 
@@ -209,6 +230,8 @@ static vardecl var_timer[] =
      NAME_status, "Status of timer"),
   IV(NAME_service, "bool", IV_BOTH,
      NAME_debugging, "If @on, execution cannot be debugged"),
+  IV(NAME_times, "int*", IV_GET,
+     NAME_status, "Times left to fire (@nil: no limit)"),
   IV(NAME_sdlTimer, "int", IV_GET,
      NAME_internal, "SDL timer handle")
 };
@@ -226,8 +249,8 @@ static senddecl send_timer[] =
      NAME_status, "Delay for <-interval"),
   SM(NAME_running, 1, "running=bool", runningTimer,
      NAME_status, "Start/stop the timer in `repeat' mode"),
-  SM(NAME_start, 1, "how=[{repeat,once}]", startTimer,
-     NAME_status, "Equivalent to ->status: [repeat]"),
+  SM(NAME_start, 2, T_start, startTimer,
+     NAME_status, "Equivalent to ->status: [repeat], for [times] times"),
   SM(NAME_stop, 0, NULL, stopTimer,
      NAME_status, "Equivalent to ->status: idle")
 };

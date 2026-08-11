@@ -348,7 +348,7 @@ tryDragScrollGesture(Gesture g, EventObj ev)
 	     newObject(ClassTimer, CtoReal(0.06), /* TBD */
 		       newObject(ClassMessage, g,
 				 NAME_scroll, EAV), EAV));
-      startTimer(g->drag_scroll_timer, NAME_repeat);
+      startTimer(g->drag_scroll_timer, NAME_repeat, DEFAULT);
       assign(g, drag_scroll_event, getCloneObject(ev));
     }
   } else

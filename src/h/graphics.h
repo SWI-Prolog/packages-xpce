@@ -925,6 +925,7 @@ NewClass(timer)
   Code		message;		/* message when timer fires */
   Name		status;			/* {idle,interval,once} */
   BoolObj	service;		/* Operating in service mode? */
+  Int		times;			/* Times left to fire; NIL: no limit */
   Int		sdl_timer;		/* The SDL timer reference */
 End;
 

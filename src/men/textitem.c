@@ -928,7 +928,7 @@ attachTimerTextItem(TextItem ti)
   { Timer t = newObject(ClassTimer, delay,
 			newObject(ClassMessage, ti, NAME_repeat, EAV), EAV);
     attributeObject(ti, NAME_Timer, t);
-    startTimer(t, NAME_once);
+    startTimer(t, NAME_once, DEFAULT);
   }
 
   succeed;

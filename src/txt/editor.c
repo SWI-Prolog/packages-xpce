@@ -430,7 +430,7 @@ electricCaretEditor(Editor e, Int caret, Num time)
       intervalTimer(ElectricTimer, time);
   }
 
-  return startTimer(ElectricTimer, NAME_once);
+  return startTimer(ElectricTimer, NAME_once, DEFAULT);
 }
 
 

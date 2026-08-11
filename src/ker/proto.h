@@ -335,7 +335,7 @@ COMMON(status)	intervalTimer(Timer tm, Num interval);
 COMMON(status)	executeTimer(Timer tm);
 COMMON(status)	statusTimer(Timer tm, Name stat);
 COMMON(void)	releaseTimer(Timer tm);
-COMMON(status)	startTimer(Timer tm, Name mode);
+COMMON(status)	startTimer(Timer tm, Name mode, Int times);
 COMMON(status)	stopTimer(Timer tm);
 COMMON(status)	makeClassTimer(Class class);
 
