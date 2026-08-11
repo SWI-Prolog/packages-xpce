@@ -7869,6 +7869,29 @@ rlc_client_owns_terminal(RlcData b)
 { return rlc_foreground_process(b) > 0;
 }
 
+#if defined(__APPLE__) || defined(KERN_PROC_CWD)
+/**
+ * Copy a path from a fixed size field of an OS struct into `buf`.  The
+ * field need not be terminated, so we bound the length by its size.
+ *
+ * @return false if the path does not fit; a truncated path is a
+ * different directory and thus worse than none.
+ */
+
+static bool
+rlc_copy_path(char *buf, size_t size, const char *path, size_t pathlen)
+{ size_t len = strnlen(path, pathlen);
+
+  if ( len >= size )
+    return false;
+
+  memcpy(buf, path, len);
+  buf[len] = 0;
+
+  return true;
+}
+#endif
+
 /**
  * Working directory of the process that owns the pty.
  *
@@ -7907,20 +7930,15 @@ rlc_foreground_directory(RlcData b, char *buf, size_t size)
 
   if ( proc_pidinfo(pid, PROC_PIDVNODEPATHINFO, 0, &vpi, sizeof(vpi)) ==
        sizeof(vpi) )
-  { strncpy(buf, vpi.pvi_cdir.vip_path, size-1);
-    buf[size-1] = 0;
-    return true;
-  }
+    return rlc_copy_path(buf, size, vpi.pvi_cdir.vip_path,
+			 sizeof(vpi.pvi_cdir.vip_path));
 #elif defined(KERN_PROC_CWD)		/* FreeBSD and friends */
   struct kinfo_file kf;
   int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_CWD, (int)pid };
   size_t len = sizeof(kf);
 
   if ( sysctl(mib, 4, &kf, &len, NULL, 0) == 0 && len >= sizeof(kf) )
-  { strncpy(buf, kf.kf_path, size-1);
-    buf[size-1] = 0;
-    return true;
-  }
+    return rlc_copy_path(buf, size, kf.kf_path, sizeof(kf.kf_path));
 #else
   (void)buf;
   (void)size;
