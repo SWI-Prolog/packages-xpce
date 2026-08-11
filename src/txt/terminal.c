@@ -375,7 +375,6 @@ static void	rlc_request_redraw(RlcData b);
 static void	rlc_redraw(RlcData b, int x, int y, int w, int h);
 static void	rlc_resize(RlcData b, int w, int h);
 static void	rlc_adjust_line(RlcData b, int line);
-static int	text_width(RlcData b, const text_char *text, int len);
 static int	chars_columns(const text_char *chars, int len);
 static void     rlc_reinit_line(RlcData b, int line);
 static void	rlc_free_line(RlcData b, int line);
@@ -2913,54 +2912,25 @@ rlc_translate_mouse(RlcData b, int x, int y, int *line, int *chr)
   *line = ln;
   tl = &b->lines[ln];
 
-  if ( b->fixedfont )
-  { /* Map pixel x to character index, accounting for double-width cells. */
-    int col = 0;		/* accumulated visual column (in cw units) */
-    int ci  = 0;		/* character index */
-    while ( ci < tl->size )
-    { int w = tc_display_width(&tl->text[ci]);
-      if ( w == 0 ) { ci++; continue; }	/* skip combining chars */
-      if ( (col + w) * (int)b->cw > x )
-	break;
-      col += w;
-      ci++;
-    }
-    *chr = ci;
-  } else if ( tl->size == 0 )
-  { *chr = 0;
-  } else
-  { text_char *s = tl->text;
-    int f = 0;
-    int t = tl->size;
-    int m = (f+t)/2;
-    int i;
-
-    for(i=10; --i > 0; m=(f+t)/2)
-    { int w;
-
-      w = text_width(b, s, m);
-      if ( x > w )
-      { int cw = 0;
-
-	if ( x < w+cw )
-	{ *chr = m;
-	  return;
-	}
-	f = m+1;
-      } else
-      { t = m;
-      }
-    }
-
-    /* The binary search drives off text_width, which sums display widths
-     * and thus treats a combining mark as width 0.  That means consecutive
-     * m values can span a combining-mark cell without the sum changing,
-     * and m can settle on a combining cell (width 0 in display but a real
-     * code-point cell).  Snap the result to the start of its grapheme
-     * cluster so callers (selection, click handlers) get a cluster-base
-     * cell, never a combiner. */
-    *chr = rlc_snap_start(tl, m);
+  /* Map pixel x to the character index of the cell it is in, accounting
+   * for double-width cells.  This is the same col × cw geometry that
+   * paint uses, for a proportional font as well: see
+   * rlc_init_text_dimensions().  A cell owns the pixels from its own
+   * column boundary up to the next one, so the leftmost pixel of a cell
+   * belongs to that cell rather than to the one before it.  Combining
+   * marks take no column, so the result is a cluster base or tl->size.
+   */
+  int col = 0;			/* accumulated visual column (in cw units) */
+  int ci  = 0;			/* character index */
+  while ( ci < tl->size )
+  { int w = tc_display_width(&tl->text[ci]);
+    if ( w == 0 ) { ci++; continue; }	/* skip combining chars */
+    if ( (col + w) * (int)b->cw > x )
+      break;
+    col += w;
+    ci++;
   }
+  *chr = ci;
 }
 
 
@@ -4577,20 +4547,6 @@ rlc_init_text_dimensions(RlcData b, FontObj font)
 { b->cw = valNum(getAvgCharWidthFont(font));
   b->cb = s_ascent(font);
   b->ch = s_height(font);
-  b->fixedfont = font->fixed_width == ON;
-}
-
-
-static int
-text_width(RlcData b, const text_char *text, int len)
-{ /* Cell-based pixel width: sum of visual columns × cw.  Kept uniform
-   * with paint and caret positioning so click-translation, selection,
-   * and the caret all agree.  See rlc_init_text_dimensions() for the
-   * monospace-grid assumption. */
-  int cols = 0;
-  for(int i=0; i<len; i++)
-    cols += tc_display_width(&text[i]);
-  return cols * b->cw;
 }
 
 

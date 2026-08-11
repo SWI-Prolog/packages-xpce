@@ -333,7 +333,6 @@ typedef struct rlc_data
     bool	saved;			/* ESC 7 was seen */
   } cursor;
   bool		has_focus;		/* Application has the focus */
-  bool		fixedfont;		/* Font is fixed */
   COLORRGBA	foreground;		/* Foreground (text) color */
   COLORRGBA	background;		/* Background color */
   COLORRGBA	sel_foreground;		/* Selection foreground */

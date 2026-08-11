@@ -89,8 +89,8 @@ link_at(TI, Column, Row, URL) :-
     get(TI, font, Font),
     get(Font, avg_char_width, CW),
     get(Font, height, CH),
-    X is round(Column*CW + CW/2),       % centre of the cell
-    Y is round(Row*CH + CH/2),
+    X is round((Column+1)*CW + CW/2),   % centre of the cell; one cell
+    Y is round(Row*CH + CH/2),          % of left margin
     get(TI, link, point(X, Y), URL).
 
 %!  osc8(+URL, -Sequence) is det.
@@ -179,5 +179,39 @@ test(wrap, [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
     assertion(link_at(TI, 0, 1, 'file:///tmp/wrap')),
     assertion(link_at(TI, 19, 1, 'file:///tmp/wrap')),
     assertion(\+ link_at(TI, 21, 1, _)).
+
+% Every pixel of a cell must find the link of that cell, including the
+% first and last one.  Translating a click used to be off by one cell,
+% so the last character of a link was not clickable.
+
+test(cell_pixels, [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    numlist(0, 4, Cells),
+    maplist(one_cell_link, Cells, Texts),
+    atomic_list_concat(Texts, Text),
+    send(TI, insert, Text),
+    get(TI, font, Font),
+    get(Font, avg_char_width, CW0),
+    CW is truncate(CW0),
+    forall(member(Cell, Cells),
+           ( atom_concat(u, Cell, URL),
+             Left  is (Cell+1)*CW,      % first pixel of the cell
+             Right is (Cell+2)*CW-1,    % last pixel of the cell
+             assertion(link_pixel(TI, Left, URL)),
+             assertion(link_pixel(TI, Right, URL)),
+             assertion(link_at(TI, Cell, 0, URL))
+           )).
+
+one_cell_link(Cell, Text) :-
+    atom_concat(u, Cell, URL),
+    osc8(URL, Open),
+    osc8('', Close),
+    atomic_list_concat([Open, x, Close], Text).
+
+%!  link_pixel(+Terminal, +X, ?URL) is semidet.
+%
+%   URL of the hyperlink at pixel X of the first row.
+
+link_pixel(TI, X, URL) :-
+    get(TI, link, point(X, 1), URL).
 
 :- end_tests(terminal_osc8).
