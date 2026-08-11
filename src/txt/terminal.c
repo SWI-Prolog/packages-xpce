@@ -7782,9 +7782,13 @@ rlc_close_connection(RlcData b)
   }
 }
 
+/* Zero if we never opened a pty, -1 once we closed it, and both mean
+ * there is no client to send to.
+ */
+
 static ssize_t
 rlc_send(RlcData b, const char *buffer, size_t count)
-{ if ( b->pty.master_fd )
+{ if ( b->pty.master_fd > 0 )
   { return write(b->pty.master_fd, buffer, count);
   } else
   { Cprintf("Nowhere to send data\n");
