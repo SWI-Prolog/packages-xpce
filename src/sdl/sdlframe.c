@@ -87,8 +87,8 @@ uncreate_window_frame(PceWindow sw)
 { ASSERT_SDL_MAIN();
   WsWindow wsw = sw->ws_ref;
 
-  if ( wsw->texture )
-  { SDL_DestroyTexture(wsw->texture);
+  if ( wsw && wsw->texture )		/* ws_ref is gone if the window was */
+  { SDL_DestroyTexture(wsw->texture);	/* uncreated before the frame */
     wsw->texture = NULL;
   }
 

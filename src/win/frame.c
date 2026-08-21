@@ -51,6 +51,7 @@ static status	informTransientsFramev(FrameObj fr, Name selector,
 				       int argc, Any *argv);
 static status	cursorFrame(FrameObj fr, CursorObj cursor);
 static status   statusFrame(FrameObj fr, Name stat);
+static status	uncreateFrame(FrameObj fr);
 
 #define isOpenFrameStatus(s) ((s) == NAME_window || (s) == NAME_fullScreen)
 
@@ -101,6 +102,14 @@ destroyTransientFrame(FrameObj fr)
 }
 
 
+/* (*) Uncreate the members before the frame rather than calling
+   ws_uncreate_frame() directly.  ws_created_window() is false as soon
+   as the frame is uncreated, so uncreateWindow() -- reached below from
+   freeObject() -- would skip ws_uncreate_window() for every member.
+   That leaks the backing store and, worse, leaves the pointer grab
+   pointing at a window that is about to be freed.
+*/
+
 static status
 unlinkFrame(FrameObj fr)
 { if ( fr->status != NAME_unlinking )
@@ -121,7 +130,7 @@ unlinkFrame(FrameObj fr)
     if ( notNil(fr->transient_for) && notNil(fr->transient_for->transients) )
       send(fr->transient_for, NAME_detachTransient, fr, EAV);
 
-    ws_uncreate_frame(fr);
+    uncreateFrame(fr);			/* (*) */
     deleteChain(fr->display->frames, fr);
     if ( notNil(fr->application) )
       send(fr->application, NAME_delete, fr, EAV);
