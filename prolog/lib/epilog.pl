@@ -101,7 +101,7 @@ library(thread_util). Eventually, this should be properly merged.
 %
 %   Run epilog as main goal
 
-:- dynamic quit_requested/0.
+:- dynamic ep_main_running/0.
 
 ep_main :-
     epilog([object(Epilog)]),
@@ -111,7 +111,10 @@ ep_wait(Epilog) :-
     set_thread(self, debug(false)),
     get(Epilog, current_terminal, PT),
     capture_messages(PT),
-    ep_wait_.
+    setup_call_cleanup(
+        asserta(ep_main_running),
+        ep_wait_,
+        retractall(ep_main_running)).
 
 ep_wait_ :-
     E = error(Formal,_),
@@ -133,7 +136,7 @@ ep_main_end :-
     \+ send(@display_manager, has_visible_frames),
     !.
 ep_main_end :-
-    quit_requested.
+    \+ ep_main_running.
 
 %!  epilog is det.
 %!  epilog(:ProfileOrOptions) is det.
@@ -1780,7 +1783,10 @@ close(T, Prolog:prolog=[bool]) :->
     "Close this terminal.  Optionally terminates Prolog"::
     send(T, destroy),
     (   Prolog == @on
-    ->  assert(quit_requested)
+    ->  (   retract(ep_main_running)
+        ->  true
+        ;   halt
+        )
     ;   true
     ).
 
