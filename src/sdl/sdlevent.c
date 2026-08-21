@@ -298,9 +298,23 @@ ws_grabbing_window(void)
   return NULL;
 }
 
+/* Hold a code reference while we grab, as we do for the mouse tracking
+   window.  A menu item that destroys its own window -- Epilog's "Halt
+   Prolog" is one -- is executed while its menu bar still holds the
+   grab, and without the reference the object is unallocated under us
+   and the next event reads freed memory.
+*/
+
 void
 ev_event_grab_window(Any window)
-{ grabbing_window = window;
+{ if ( window == grabbing_window )
+    return;
+
+  if ( notNil(grabbing_window) )
+    delCodeReference(grabbing_window);
+  grabbing_window = window;
+  if ( notNil(grabbing_window) )
+    addCodeReference(grabbing_window);
 }
 
 void
@@ -310,7 +324,7 @@ ws_event_destroyed_target(Any window)
     mouse_tracking_window = NIL;
   }
   if ( window == grabbing_window )
-    grabbing_window = NIL;
+    ev_event_grab_window(NIL);
   if ( window == pointer_window )
     set_pointer_window(NIL);
 }
@@ -682,8 +696,9 @@ CtoEvent(SDL_Event *event)
     }
   } else if ( notNil(grabbing_window) )
   { if ( onFlag(grabbing_window, F_FREED|F_FREEING) )
-    { Cprintf("Grabbing window %s lost?\n", pp(grabbing_window));
-      grabbing_window = NIL;
+    { DEBUG(NAME_event,			/* the grabber destroyed itself */
+	    Cprintf("Grabbing window %s lost\n", pp(grabbing_window)));
+      ev_event_grab_window(NIL);
       goto not_grabbing;
     }
     float ox=0, oy=0;

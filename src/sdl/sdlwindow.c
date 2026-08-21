@@ -171,12 +171,16 @@ ws_geometry_window(PceWindow sw, int x, int y, int w, int h, int pen)
  */
 void
 ws_grab_pointer_window(PceWindow sw, BoolObj val)
-{ FrameObj fr = getFrameWindow(sw, OFF);
+{ if ( val == ON )
+  { FrameObj fr = getFrameWindow(sw, OFF);
 
-  if ( fr )
-  { WsFrame wfr = fr->ws_ref;
-    if ( wfr )
-      ev_event_grab_window(val == ON ? sw : NIL);
+    if ( fr && fr->ws_ref )		/* only grab for a realised frame */
+      ev_event_grab_window(sw);
+  } else
+  { /* Release unconditionally.  The frame may already be on its way
+       out, and the old test left the grab in place if it was.
+    */
+    ev_event_grab_window(NIL);
   }
 }
 
