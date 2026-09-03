@@ -55,6 +55,7 @@ void	ws_menubar_changed(MenuBar mb);
 void	ws_menubar_destroyed(MenuBar mb);
 void	ws_menubar_activate_frame(FrameObj fr);
 bool	ws_menubar_event(SDL_Event *ev);
+bool	ws_menubar_key_equivalent(SDL_Event *ev);
 
 #else /*__APPLE__*/
 
@@ -72,6 +73,10 @@ static inline void ws_menubar_activate_frame(FrameObj fr)
 { (void)fr;
 }
 static inline bool ws_menubar_event(SDL_Event *ev)
+{ (void)ev;
+  return false;
+}
+static inline bool ws_menubar_key_equivalent(SDL_Event *ev)
 { (void)ev;
   return false;
 }

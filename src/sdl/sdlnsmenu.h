@@ -121,5 +121,11 @@ void	ns_menubar_install(void *mb);
 void	ns_menubar_dirty(void *mb);
 /* `mb' is being destroyed; forget it if it is currently installed. */
 void	ns_menubar_forget(void *mb);
+/* True if the menu bar currently shown has a key equivalent for this
+ * keystroke and will therefore act on it itself.  `key' is the UTF-8
+ * key equivalent and `mods' a PCE_MOD_* mask, both as they are handed
+ * to ns_menubar_install() in pce_menu_item.
+ */
+bool	ns_menubar_owns_key(const char *key, unsigned mods);
 
 #endif /* SDLNSMENU_H */

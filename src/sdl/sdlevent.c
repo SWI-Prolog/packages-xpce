@@ -629,6 +629,13 @@ CtoEvent(SDL_Event *event)
 #endif
 
       lastmod = event->key.mod;
+      if ( ws_menubar_key_equivalent(event) )
+      { DEBUG(NAME_keyboard,
+	      Cprintf("Keystroke claimed by the native menu bar.  "
+		      "Mod=0x%x, key=0x%x\n",
+		      event->key.mod, event->key.key));
+	fail;			/* MacOS runs the menu item itself */
+      }
       name = keycode_to_name(event);
       if ( !name )
       { DEBUG(NAME_keyboard,

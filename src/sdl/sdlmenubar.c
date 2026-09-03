@@ -401,6 +401,72 @@ done:
 }
 
 
+/* True when the MacOS menu bar will act on this keystroke itself.
+ * SDL's Cocoa backend reports every key event, including the ones the
+ * main menu has just dispatched as a key equivalent, so without this
+ * test both the menu item and the XPCE key binding run the command:
+ * Command-V pasted twice.  We translate the SDL keystroke the way
+ * parse_accelerator() translates a menu_item<-accelerator and ask
+ * Cocoa whether an enabled item claims it.
+ */
+
+bool
+ws_menubar_key_equivalent(SDL_Event *ev)
+{ SDL_Keycode k = ev->key.key;
+  SDL_Keymod m  = ev->key.mod;
+  unsigned mods = 0;
+  char key[8];
+
+  if ( !menubar_setup_done || !ws_has_native_menubar(NULL) )
+    return false;
+
+  if ( m & SDL_KMOD_SHIFT ) mods |= PCE_MOD_SHIFT;
+  if ( m & SDL_KMOD_CTRL )  mods |= PCE_MOD_CONTROL;
+  if ( m & SDL_KMOD_ALT )   mods |= PCE_MOD_OPTION;
+  if ( m & SDL_KMOD_GUI )   mods |= PCE_MOD_COMMAND;
+
+  /* Only the accelerators parse_accelerator() hands to MacOS can be
+   * claimed, so ordinary typing never walks the menus.
+   */
+  if ( !(mods & (PCE_MOD_COMMAND|PCE_MOD_OPTION)) &&
+       !(k >= SDLK_F1 && k <= SDLK_F12) )
+    return false;
+
+  if ( k >= ' ' && k < DEL )
+  { key[0] = (char)tolower((int)k);
+    key[1] = 0;
+  } else if ( k >= SDLK_F1 && k <= SDLK_F12 )
+  { if ( !utf8_put(key, sizeof(key),
+		   (unsigned int)(NS_F1_KEY + (k-SDLK_F1))) )
+      return false;
+  } else
+  { unsigned int code;
+
+    switch(k)
+    { case SDLK_RETURN:
+      case SDLK_KP_ENTER:  code = '\r';   break;
+      case SDLK_TAB:	   code = '\t';   break;
+      case SDLK_BACKSPACE: code = '\b';   break;
+      case SDLK_ESCAPE:	   code = 0x1b;   break;
+      case SDLK_DELETE:	   code = 0x7f;   break;
+      case SDLK_UP:	   code = 0xF700; break;
+      case SDLK_DOWN:	   code = 0xF701; break;
+      case SDLK_LEFT:	   code = 0xF702; break;
+      case SDLK_RIGHT:	   code = 0xF703; break;
+      case SDLK_HOME:	   code = 0xF729; break;
+      case SDLK_END:	   code = 0xF72B; break;
+      case SDLK_PAGEUP:	   code = 0xF72C; break;
+      case SDLK_PAGEDOWN:  code = 0xF72D; break;
+      default:		   return false;
+    }
+    if ( !utf8_put(key, sizeof(key), code) )
+      return false;
+  }
+
+  return ns_menubar_owns_key(key, mods);
+}
+
+
 		 /*******************************
 		 *	  COCOA CALLBACKS	*
 		 *******************************/
