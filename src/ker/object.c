@@ -2434,7 +2434,7 @@ CheckObject(Any obj, BoolObj recursive)
     freeHashTable(done);
   }
 
-  return errs ? FAIL : SUCCEED;
+  return errs == 0;
 }
 
 
