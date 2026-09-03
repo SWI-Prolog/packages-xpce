@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi-prolog.org
     WWW:           https://www.swi-prolog.org
-    Copyright (c)  1985-2021, University of Amsterdam
+    Copyright (c)  1985-2026, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -49,20 +49,17 @@
         , pce_global_objects/1          % -globals
         ]).
 :- use_module(library(pce)).
-:- require([ forall/2
-           , pce_to_method/2
-           , append/3
-           , between/3
-           , genarg/3
-           ]).
+:- autoload(library(apply)).
+:- autoload(library(edinburgh), [debug/0]).
+:- autoload(library(pce_meta), [pce_to_method/2]).
+
 :- set_prolog_flag(generate_debug_info, false).
 :- meta_predicate test(0,-).
 
-% leave this to the user
-% :- op(100, xfx, user:(<-)).
-
-%   debugpce/0
-%   nodebugpce/0
+%!  debugpce is det.
+%!  nodebugpce is det.
+%
+%   Switch xpce debugging facilities.
 
 debugpce :-
     send(@pce, debugging, @on).
@@ -70,8 +67,8 @@ nodebugpce :-
     send(@pce, debugging, @off).
 
 
-%%   debugpce(+Subject) is det.
-%%   nodebugpce(+Subject) is det.
+%!   debugpce(+Subject) is det.
+%!   nodebugpce(+Subject) is det.
 %
 %   Start/stop printing debugging messages on `Subject'. System maintenance
 %   usage only.
@@ -82,14 +79,16 @@ debugpce(Subject) :-
 nodebugpce(Subject) :-
     send(@pce, nodebug_subject, Subject).
 
-
-
-%       (no)tracepce(+ClassName ->|<- +Selector)
+%!  tracepce(+Method) is det.
+%!  notracepce(+Method) is det.
 %
-%       Send a ->trace message to the refered method.  This will cause
-%       PCE to  print the enters,  exits or failures  of  this method.
-%       Prints  the class  and selector   on  which  the tracepoint is
-%       actually set (which might be an inherited method).
+%   Send a ->trace message to the refered method. This will cause PCE to
+%   print the enters, exits or failures of this method. Prints the class
+%   and selector on which the tracepoint is actually set (which might be
+%   an inherited method).
+%
+%   @arg Method is one of `Class->Method` or `Class<-Method`.  Note that
+%   the `<-` is declared as operator in library(pce).
 
 tracepce(Spec) :-
     method(Spec, Method),
@@ -97,14 +96,16 @@ tracepce(Spec) :-
     trace_feedback('Tracing', Method).
 
 notracepce(Spec) :-
-    !,
     method(Spec, Method),
     send(Method, trace, full, @off),
     trace_feedback('Stopped tracing', Method).
 
-%       (no)spypce(+ClassName ->|<- +Selector)
+%!  spypce(+Method) is det.
+%!  nospypce(+Method) is det.
 %
-%       Put a spy-point on the Prolog implementation or XPCE method object
+%   Put a spy-point on the Prolog implementation or XPCE method object.
+%
+%   @see tracepce/1.
 
 spypce(Spec) :-
     method(Spec, Method),
@@ -165,15 +166,41 @@ non_object_reference('_object_to_itf_table').
 non_object_reference('_name_to_itf_table').
 non_object_reference('_handle_to_itf_table').
 
-%       checkpce/0
+%!  add_prolog_references(+Chain, -PrologRefs, -Freed) is det.
 %
-%       Runs a recursive  '_check' on all  reachable objects.  See the
-%       reference documentation of `Object ->_check' for details.
+%   Add all Prolog blob references to Chain.
+%
+%   @arg PrologRefs is the number of life Prolog blobs.
+%   @arg Freed is the number of blobs that refer to freed PCE objects.
+%   @see garbage_collect_atoms/0 may be called to minimize the set.
 
-checkpce :-
-    get(@pce, is_runtime_system, @on),
+add_prolog_references(Chain, PrologRefs, Freed) :-
+    get(Chain, size, Size0),
+    State = freed(0),
+    forall(( current_blob(Ref, pce),
+             Ref \== Chain,
+             existing_object(Ref, State)
+           ),
+           send(Chain, '_append', Ref)),
+    get(Chain, size, AllObjects),
+    PrologRefs is AllObjects-Size0,
+    arg(1, State, Freed).
+
+existing_object(Ref, _State) :-
+    object(Ref),
     !,
-    send(checkpce, error, runtime_version).
+    \+ send(Ref, '_instance_of', host_data).
+existing_object(_, State) :-
+    arg(1, State, Count0),
+    Count is Count0+1,
+    nb_setarg(1, State, Count),
+    fail.
+
+%!  checkpce is semidet.
+%
+%   Runs  a  recursive  '_check'  on  all  reachable  objects.  See  the
+%   reference documentation of `Object ->_check' for details.
+
 checkpce :-
     test(check_pce_database, Status),
     test(check_pce_types, Status),
@@ -230,13 +257,18 @@ report_redefined_method(method(Class, Sel, B0, B1)) :-
                         Loc)).
 
 describe_location(Binder, File:Line) :-
-    genarg(_, Binder, source_location(File, Line)),
+    arg(_, Binder, source_location(File, Line)),
     !.
 describe_location(_, '<no source>').
 
 
+%!  check_pce_database
+
 check_pce_database :-
     pce_global_objects(All),
+    get(All, size, Globals),
+    add_prolog_references(All, PrologRefs, Freed),
+    print_message(information, pce(checking(Globals, PrologRefs, Freed))),
     send(All, '_check'),
     send(All, done).
 
@@ -288,11 +320,16 @@ show_slots(X) :-
                 *             REFER             *
                 ********************************/
 
+%!  pcerefer is det.
+%
+%   Print references to an object.
+
 pcerefer(Obj) :-
     get(Obj, '_references', Refs),
     format('~p has ~d references~n', [Obj, Refs]),
     (   Refs > 0
     ->  pce_global_objects(All),
+        add_prolog_references(All, _, _),
         new(Found, number(0)),
         send(All, for_slot_reference,
              if(message(Obj, '_same_reference', @arg4),
@@ -362,4 +399,9 @@ prolog:message(error(pce(redefined_method(Class, Sel, B0, B1)), _)) -->
     },
     [ '~w: ~w~w~w redefined'-[Loc1, Class, Arrow, Sel], nl,
       '\tFirst definition at ~w'-[Loc0]
+    ].
+prolog:message(pce(checking(AllObjects, PrologRefs, Freed))) -->
+    [ 'PCE: Checking ~D global objects, ~D Prolog references.'-
+      [AllObjects, PrologRefs], nl,
+      'PCE: ~D Prolog references to freed objects'-[Freed]
     ].
