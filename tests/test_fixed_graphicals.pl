@@ -65,6 +65,7 @@ test_fixed_graphicals :-
     run_tests([ fixed_graphicals ]).
 
 :- dynamic hit/1.
+:- dynamic pointed/1.
 
 :- pce_begin_class(tfg_box, box, "Records where it was clicked").
 
@@ -75,6 +76,12 @@ event(B, Ev:event) :->
     ->  get(B, tag, Tag),
         get(Ev, position, B, point(X, Y)),
         assertz(test_fixed_graphicals:hit(Tag-X-Y))
+    ;   send(Ev, is_a, area_enter)
+    ->  get(B, tag, Tag),
+        assertz(test_fixed_graphicals:pointed(Tag-enter))
+    ;   send(Ev, is_a, area_exit)
+    ->  get(B, tag, Tag),
+        assertz(test_fixed_graphicals:pointed(Tag-exit))
     ;   send_super(B, event, Ev)
     ).
 
@@ -103,6 +110,16 @@ click(P, X, Y, What) :-
     retractall(hit(_)),
     ignore(send(P, post_event, event(ms_left_down, P, X, Y))),
     (   hit(What) ->  true ;  What = nothing ).
+
+%!  move_to(+Picture, +X, +Y, -Events) is det.
+%
+%   Move the pointer to a position on screen and say what the graphicals
+%   under it were told.
+
+move_to(P, X, Y, Events) :-
+    retractall(pointed(_)),
+    ignore(send(P, post_event, event(loc_move, P, X, Y))),
+    findall(E, pointed(E), Events).
 
 classes(Chain, Names) :-
     chain_list(Chain, List),
@@ -163,6 +180,31 @@ test(erasing_it_takes_it_out_of_the_layer, true(Names == [])) :-
 
 %       <-content_area is where such a graphical belongs: what is visible
 %       less any scrollbar the window draws itself.
+
+%       Being pointed at.  A fixed graphical is hit against the viewport
+%       here as well, or a grip in the corner of a pane never lights up.
+
+test(the_pointer_entering_it_is_an_area_enter, true(Events == [fixed-enter])) :-
+    window(P, _A, _B),
+    move_to(P, 205, 5, Events).
+
+test(and_leaving_it_an_area_exit, true(Events == [fixed-exit])) :-
+    window(P, _A, _B),
+    move_to(P, 205, 5, _),
+    move_to(P, 300, 300, Events).
+
+test(it_is_still_entered_at_that_place_when_scrolled,
+     true(Events == [fixed-enter])) :-
+    window(P, _A, _B),
+    send(P, scroll_to, point(0, 100)),
+    move_to(P, 205, 5, Events).
+
+test(while_one_that_scrolls_is_entered_where_it_has_moved_to,
+     true(Away-Along == []-[ordinary-enter])) :-
+    window(P, _A, _B),
+    send(P, scroll_to, point(50, 0)),   % it sits at 100,2 in the content
+    move_to(P, 105, 5, Away),           % where it was on screen
+    move_to(P, 55, 5, Along).           % where it is now
 
 test(content_area_is_visible_when_the_window_draws_no_bar,
      true(Same == true)) :-
