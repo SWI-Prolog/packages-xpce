@@ -59,7 +59,8 @@ Run with:
 :- use_module(library(pce_util), [chain_list/2]).
 
 test_epilog_tabs :-
-    run_tests([ epilog_tabs,
+    run_tests([ epilog_main,
+                epilog_tabs,
                 epilog_split,
                 epilog_move,
                 epilog_close
@@ -124,6 +125,28 @@ split_orientation(W, Orientation) :-
     get(T, super, Super),
     Super \== @nil,
     get(Super, orientation, Orientation).
+
+
+%       boot/toplevel.pl starts the console with `epilog([main(true)])',
+%       and epilog/1 holds the main thread in ep_wait/1 only while the
+%       frame says it is the main one.  Getting that wrong drops swipl-win
+%       through into the ordinary toplevel.
+
+:- begin_tests(epilog_main).
+
+test(a_console_asked_for_as_the_main_one_says_so, true(Main == @on)) :-
+    epilog_frame(@default, @default, @default, true, @default, F),
+    get(F, attribute, main, Main).
+
+test(and_xpce_s_way_of_saying_it_too, true(Main == @on)) :-
+    epilog_frame(@default, @default, @default, @on, @default, F),
+    get(F, attribute, main, Main).
+
+test(an_ordinary_console_does_not, [fail]) :-
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    get(F, attribute, main, _).
+
+:- end_tests(epilog_main).
 
 
 :- begin_tests(epilog_tabs).

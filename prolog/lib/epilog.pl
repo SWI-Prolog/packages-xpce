@@ -231,7 +231,7 @@ epilog_frame(Title, Width, Height, Main, TID, F) :-
     ;   send(W, history, on)            % use history on the first
     ),
     new(F, pane_frame(@prolog_ide, 'SWI-Prolog')),
-    (   Main == @on
+    (   is_true(Main)
     ->  send(F, attribute, main, @on)
     ;   true
     ),
@@ -240,6 +240,17 @@ epilog_frame(Title, Width, Height, Main, TID, F) :-
     ->  true
     ;   send(F, tab_label, Title)
     ).
+
+%!  is_true(+Bool) is semidet.
+%
+%   True for either way of saying yes.  This used to be a method, whose
+%   `bool' argument XPCE converted for us; epilog/1 takes main(true) from
+%   an option list -- that is how boot/toplevel.pl asks for the console
+%   that must not return to the toplevel -- while a caller inside XPCE
+%   says @on.
+
+is_true(@on).
+is_true(true).
 
 %!  epilog_name(+Spec, +IsMain, -Name) is det.
 %
