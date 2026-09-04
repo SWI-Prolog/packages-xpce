@@ -237,7 +237,7 @@ scan_fragment_icons(TextMargin m,
 		    Name how, Any ctx)
 { Editor e = m->editor;
   TextBuffer tb = e->text_buffer;
-  TextImage  ti = e->image;
+  TextImage  ti = e->text_image;
   Fragment fragment = tb->first_fragment;
   int x = X_MARGIN, y = -1000;
   int mw = valInt(m->area->w);

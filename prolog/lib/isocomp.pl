@@ -654,13 +654,13 @@ make_change_editor_recogniser(G) :-
 
 fragment(V, Ev:event, Fragment:change_fragment) :<-
     "Find fragment from event"::
-    get(V?image, index, Ev, Index),
+    get(V?text_image, index, Ev, Index),
         get(V?text_buffer, find_fragment,
             message(@arg1, overlap, Index),
             Fragment).
 
 event(V, Ev:event) :->
-    (   get(V, image, Image),
+    (   get(V, text_image, Image),
         send(Ev, inside, Image),
         send(@change_editor_recogniser, event, Ev)
     ->  true
@@ -675,7 +675,7 @@ clicked(V, Ev:event) :->
     "Replace text with proposed alternative"::
     get(V, fragment, Ev, Fragment),
     send(V?frame, select_fragment, Fragment),
-    get(V?image, index, Ev, Index),
+    get(V?text_image, index, Ev, Index),
     send(V, caret, Index).
 
 :- pce_end_class.

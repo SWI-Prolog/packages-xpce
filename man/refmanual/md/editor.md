@@ -253,7 +253,7 @@ although the latter is the principal way of manipulating a text.
     Font used to display the contents of the associated text_buffer.  Class
     editor can handle both proportional and non-proportional fonts.
 
-- editor<-image: text_image
+- editor<-text_image: text_image
     Text_image object used for actually displaying the text.  Direct access
     to this object may be necessary to exploit the following methods:
 
@@ -263,7 +263,7 @@ although the latter is the principal way of manipulating a text.
     Direct access may also be used to attach event-handling to the editor.
     For example, if a popup is attached to the editor as a whole it might
     contradict with the <-scroll_bar.  Associating the popup with the
-    <-image ensures it only operates in the text area.
+    <-text_image ensures it only operates in the text area.
 
     @see class text_image
 
@@ -767,7 +767,7 @@ although the latter is the principal way of manipulating a text.
 
 - editor->geometry: x=[int], y=[int], width=[int], height=[int]
     Handle geometry requests to the editor.  Properly resizes and positions
-    the <-scroll_bar, <-image and <-margin.   The minimum size is defined
+    the <-scroll_bar, <-text_image and <-margin.   The minimum size is defined
     to be 50x20 pixels.
 
 - editor->gosmacs_transpose

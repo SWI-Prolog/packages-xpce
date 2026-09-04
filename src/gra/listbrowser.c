@@ -100,15 +100,15 @@ initialiseListBrowser(ListBrowser lb, Dict dict, Int w, Int h)
   iw = valInt(lb->size->w) * fw + 2 * TXT_X_MARGIN;
   ih = valInt(lb->size->h) * fh + 2 * TXT_Y_MARGIN;
 
-  assign(lb, image, newObject(ClassTextImage, lb, toInt(iw), toInt(ih), EAV));
-  assign(lb->image, wrap, NAME_none);
+  assign(lb, text_image, newObject(ClassTextImage, lb, toInt(iw), toInt(ih), EAV));
+  assign(lb->text_image, wrap, NAME_none);
   assign(lb, scroll_bar, newObject(ClassScrollBar, lb, NAME_vertical, EAV));
 
-  send(lb->image, NAME_cursor, getClassVariableValueObject(lb, NAME_cursor), EAV);
-  send(lb->image, NAME_set,
+  send(lb->text_image, NAME_cursor, getClassVariableValueObject(lb, NAME_cursor), EAV);
+  send(lb->text_image, NAME_set,
        lb->scroll_bar->area->w, ZERO, DEFAULT, toInt(ih), EAV);
   displayDevice(lb, lb->scroll_bar, DEFAULT);
-  displayDevice(lb, lb->image, DEFAULT);
+  displayDevice(lb, lb->text_image, DEFAULT);
   if ( notNil(lb->scroll_bar) )
     iw += valInt(getMarginScrollBar(lb->scroll_bar));
 
@@ -148,7 +148,7 @@ RedrawAreaListBrowser(ListBrowser lb, Area a)
   RedrawAreaDevice((Device)lb, a);
   if ( lb->pen != ZERO )
   { int x, y, w, h;
-    int th = valInt(lb->image->area->y);
+    int th = valInt(lb->text_image->area->y);
 
     initialiseDeviceGraphical(lb, &x, &y, &w, &h);
     y += th;
@@ -224,8 +224,8 @@ showLabelListBrowser(ListBrowser lb, BoolObj val)
       marginText(lb->label_text, lb->area->w, NAME_clip);
       displayDevice(lb, lb->label_text, DEFAULT);
       return geometryListBrowser(lb, DEFAULT, DEFAULT,
-				 add(lb->image->area->x, lb->image->area->w),
-				 lb->image->area->h);
+				 add(lb->text_image->area->x, lb->text_image->area->w),
+				 lb->text_image->area->h);
     } else
       succeed;
   }
@@ -264,9 +264,9 @@ statusListBrowser(ListBrowser lb, Name stat)
       ws_enable_text_input((Graphical)lb, OFF);
 
 				/* avoid unnecessary flickering (hack) */
-    if ( !((z = getClassVariableValueObject(lb->image, NAME_elevation)) &&
+    if ( !((z = getClassVariableValueObject(lb->text_image, NAME_elevation)) &&
 	   notNil(z)) )
-    { penGraphical((Graphical) lb->image,
+    { penGraphical((Graphical) lb->text_image,
 		   stat == NAME_active ? add(lb->pen, ONE) : lb->pen);
     }
   }
@@ -311,7 +311,7 @@ WantsKeyboardFocusListBrowser(ListBrowser lb)
 
 static Int
 getViewListBrowser(ListBrowser lb)
-{ answer(div(getViewTextImage(lb->image), toInt(BROWSER_LINE_WIDTH)));
+{ answer(div(getViewTextImage(lb->text_image), toInt(BROWSER_LINE_WIDTH)));
 }
 
 
@@ -360,9 +360,9 @@ geometryListBrowser(ListBrowser lb, Int x, Int y, Int w, Int h)
   }
   ih = valInt(h) - iy;
 
-  send(lb->image, NAME_set, toInt(ix), toInt(iy), toInt(iw), toInt(ih), EAV);
+  send(lb->text_image, NAME_set, toInt(ix), toInt(iy), toInt(iw), toInt(ih), EAV);
   if ( notNil(lb->scroll_bar) )
-    placeScrollBar(lb->scroll_bar, (Graphical) lb->image);
+    placeScrollBar(lb->scroll_bar, (Graphical) lb->text_image);
 
   return geometryDevice((Device) lb, x, y, DEFAULT, DEFAULT);
 }
@@ -672,7 +672,7 @@ getRewindFunctionListBrowser(ListBrowser lb)
 static status
 computeListBrowser(ListBrowser lb)
 { if ( notNil(lb->request_compute) )
-  { computeTextImage(lb->image);
+  { computeTextImage(lb->text_image);
     requestComputeGraphical(lb->scroll_bar, DEFAULT); /* TBD: where to put? */
     return computeDevice(lb);
   }
@@ -930,8 +930,8 @@ typedListBrowser(ListBrowser lb, Any ev)
 
 DictItem
 getDictItemListBrowser(ListBrowser lb, EventObj ev)
-{ if ( insideEvent(ev, (Graphical)lb->image) )
-  { Int where = getIndexTextImage(lb->image, ev);
+{ if ( insideEvent(ev, (Graphical)lb->text_image) )
+  { Int where = getIndexTextImage(lb->text_image, ev);
 
     if ( where && notNil(lb->dict) )
       answer(getFindIndexDict(lb->dict,
@@ -1200,7 +1200,7 @@ scrollToListBrowser(ListBrowser lb, Int index)
   index = normalise_index(lb, index);
 
   assign(lb, start, index);
-  return startTextImage(lb->image, mul(index, toInt(BROWSER_LINE_WIDTH)), ZERO);
+  return startTextImage(lb->text_image, mul(index, toInt(BROWSER_LINE_WIDTH)), ZERO);
 }
 
 
@@ -1210,8 +1210,8 @@ normaliseListBrowser(ListBrowser lb, DictItem di)
   int start, last;
 
   computeListBrowser(lb);
-  start = valInt(lb->image->start) / BROWSER_LINE_WIDTH;
-  last  = (valInt(lb->image->end) - 1) / BROWSER_LINE_WIDTH;
+  start = valInt(lb->text_image->start) / BROWSER_LINE_WIDTH;
+  last  = (valInt(lb->text_image->end) - 1) / BROWSER_LINE_WIDTH;
 
   if ( here >= start && here <= last )
     succeed;
@@ -1221,13 +1221,13 @@ normaliseListBrowser(ListBrowser lb, DictItem di)
     return scrollUpListBrowser(lb, ONE);
 
   return scrollToListBrowser(lb,
-			toInt(here - valInt(getLinesTextImage(lb->image))/2));
+			toInt(here - valInt(getLinesTextImage(lb->text_image))/2));
 }
 
 
 static status
 scrollUpListBrowser(ListBrowser lb, Int arg)
-{ Int lines = (isDefault(arg) ? sub(getLinesTextImage(lb->image), ONE) : arg);
+{ Int lines = (isDefault(arg) ? sub(getLinesTextImage(lb->text_image), ONE) : arg);
 
   if ( isDefault(arg) )
     cancelSearchListBrowser(lb);
@@ -1237,7 +1237,7 @@ scrollUpListBrowser(ListBrowser lb, Int arg)
 
 static status
 scrollDownListBrowser(ListBrowser lb, Int arg)
-{ Int lines = (isDefault(arg) ? sub(getLinesTextImage(lb->image), ONE) : arg);
+{ Int lines = (isDefault(arg) ? sub(getLinesTextImage(lb->text_image), ONE) : arg);
 
   if ( isDefault(arg) )
     cancelSearchListBrowser(lb);
@@ -1258,7 +1258,7 @@ scrollVerticalListBrowser(ListBrowser lb, Name dir, Name unit, Int amount)
 { if ( unit == NAME_file )
   { if ( dir == NAME_goto )
     { int size = (isNil(lb->dict) ? 0 : valInt(lb->dict->members->size));
-      int view = valInt(getLinesTextImage(lb->image));
+      int view = valInt(getLinesTextImage(lb->text_image));
       int h = ((size-view) * valInt(amount)) / 1000;
 
       if ( h < 0 )
@@ -1267,7 +1267,7 @@ scrollVerticalListBrowser(ListBrowser lb, Name dir, Name unit, Int amount)
       scrollToListBrowser(lb, toInt(h));
     }
   } else if ( unit == NAME_page )
-  { int d = (valInt(getLinesTextImage(lb->image)) * valInt(amount)) / 1000;
+  { int d = (valInt(getLinesTextImage(lb->text_image)) * valInt(amount)) / 1000;
 
     if ( d < 1 )
       d = 1;
@@ -1343,8 +1343,8 @@ nextLineListBrowser(ListBrowser lb, Int lines)
 	assign(lb, search_hit, newi);
       }
     } else
-    { int start = valInt(lb->image->start) / BROWSER_LINE_WIDTH;
-      int last  = (valInt(lb->image->end) - 1) / BROWSER_LINE_WIDTH;
+    { int start = valInt(lb->text_image->start) / BROWSER_LINE_WIDTH;
+      int last  = (valInt(lb->text_image->end) - 1) / BROWSER_LINE_WIDTH;
       int caret = -1;
 
       if ( notNil(lb->caret) )
@@ -1518,7 +1518,7 @@ DeleteItemListBrowser(ListBrowser lb, DictItem di)
     assign(lb, start, sub(lb->start, ONE));
 
   current_dict = NULL;			/* clears cache */
-  return InsertTextImage(lb->image, where, toInt(-BROWSER_LINE_WIDTH));
+  return InsertTextImage(lb->text_image, where, toInt(-BROWSER_LINE_WIDTH));
 }
 
 
@@ -1527,7 +1527,7 @@ InsertItemListBrowser(ListBrowser lb, DictItem di)
 { Int where = mul(di->index, toInt(BROWSER_LINE_WIDTH));
 
   current_dict = NULL;			/* clears cache */
-  return InsertTextImage(lb->image, where, toInt(BROWSER_LINE_WIDTH));
+  return InsertTextImage(lb->text_image, where, toInt(BROWSER_LINE_WIDTH));
 }
 
 
@@ -1545,7 +1545,7 @@ ClearListBrowser(ListBrowser lb)
       assign(lb, selection, NIL);
 
     current_dict = NULL;			/* clears cache */
-    InsertTextImage(lb->image, ZERO, toInt(size * -BROWSER_LINE_WIDTH));
+    InsertTextImage(lb->text_image, ZERO, toInt(size * -BROWSER_LINE_WIDTH));
   }
 
   succeed;
@@ -1557,14 +1557,14 @@ ChangeItemListBrowser(ListBrowser lb, DictItem di)
 { Int from = mul(di->index, toInt(BROWSER_LINE_WIDTH));
   Int to   = add(from, toInt(BROWSER_LINE_WIDTH));
 
-  return ChangedRegionTextImage(lb->image, from, to);
+  return ChangedRegionTextImage(lb->text_image, from, to);
 }
 
 
 static status
 ChangedListBrowser(ListBrowser lb)
 { current_dict = NULL;			/* clears cache */
-  ChangedRegionTextImage(lb->image, ZERO, toInt(PCE_MAX_INT));
+  ChangedRegionTextImage(lb->text_image, ZERO, toInt(PCE_MAX_INT));
 
   succeed;
 }
@@ -1575,7 +1575,7 @@ ChangedListBrowser(ListBrowser lb)
 
 static status
 tabStopsListBrowser(ListBrowser lb, Vector v)
-{ return tabStopsTextImage(lb->image, v);
+{ return tabStopsTextImage(lb->text_image, v);
 
   succeed;
 }
@@ -1583,7 +1583,7 @@ tabStopsListBrowser(ListBrowser lb, Vector v)
 
 status
 backgroundListBrowser(ListBrowser lb, Any bg)
-{ return backgroundTextImage(lb->image, bg);
+{ return backgroundTextImage(lb->text_image, bg);
 
   succeed;
 }
@@ -1661,7 +1661,7 @@ static char *T_xADintD_yADintD_widthADintD_heightADintD[] =
 static vardecl var_listBrowser[] =
 { SV(NAME_dict, "dict*", IV_GET|IV_STORE, dictListBrowser,
      NAME_delegate, "Associated dict object (table of items)"),
-  IV(NAME_image, "text_image", IV_GET,
+  IV(NAME_textImage, "text_image", IV_GET,
      NAME_components, "TextImage used to display textlines"),
   IV(NAME_scrollBar, "scroll_bar", IV_GET,
      NAME_components, "Scrollbar used to scroll window"),

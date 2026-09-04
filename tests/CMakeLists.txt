@@ -2,6 +2,7 @@
 # Additional xpce tests (plunit-based, standalone modules)
 
 test_libs(colour               OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(text_image           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(no_display           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(number_conversion    OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(object_reference     OPTIONS ${XPCE_TEST_OPTIONS})
@@ -12,6 +13,7 @@ test_libs(terminal_palette     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(terminal_glyphs      OPTIONS ${XPCE_TEST_OPTIONS})
 
 set(XPCE_EXTRA_TESTS xpce:colour
+                     xpce:text_image
                      xpce:no_display
                      xpce:number_conversion
                      xpce:object_reference

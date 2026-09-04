@@ -642,7 +642,7 @@ End;
 NewClass(list_browser)
   ABSTRACT_DEVICE
   Dict		dict;			/* dict in which items reside */
-  TextImage	image;			/* The text area */
+  TextImage	text_image;		/* The text area */
   ScrollBar	scroll_bar;		/* The scrollbar */
   TextObj	label_text;		/* Text to display the label */
   Name		status;			/* active/inactive */

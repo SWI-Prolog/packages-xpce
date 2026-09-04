@@ -357,7 +357,7 @@ current(F, BM:emacs_bookmark*, UpdateSelection:[bool]) :->
         ),
         send(View, delete_hypers, bookmark),
         get(View, editor, Editor),
-        get(Editor, image, TextImage),
+        get(Editor, text_image, TextImage),
         (   BM == @nil
         ->  send(Editor, clear),
             send(Editor, editable, @off),

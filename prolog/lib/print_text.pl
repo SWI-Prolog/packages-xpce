@@ -92,8 +92,8 @@ win_print(TB, From:int, To:int,
         fail
     ),
     new(E, editor(TB, 80)),
-    send(E?image, elevation, @nil),
-    send(E?image, pen, 0),
+    send(E?text_image, elevation, @nil),
+    send(E?text_image, pen, 0),
     send(TB, setup_print_editor, E, Editor),
     (   Font \== @default
     ->  send(E, font, Font)
@@ -151,7 +151,7 @@ setup_print_editor(_TB, E:editor, From:[editor]) :->
 %   @param Margin   Term margin(+X,+Y) representing the page margins
 
 print_pages(Printer, Editor, End, Margin, BG, Page, Pages) :-
-    get(Editor, image, Image),
+    get(Editor, text_image, Image),
     Margin = margin(MX, MY),
     (   get(BG, member, pageno, PageNoText)
     ->  send(PageNoText, string, string('%s %d', page?label_name, Page)),

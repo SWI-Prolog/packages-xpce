@@ -59,7 +59,7 @@ initialise(MB, Manual:man_manual, ModuleName:[name], Label:[name]) :->
     send(MB, send_super, initialise, Manual, Lbl),
 
     send(MB, append, new(V, view('', size(50, 20)))),
-    get(V, image, Image),
+    get(V, text_image, Image),
     send(V, font, normal),
     send(Image, tab_stops, vector(100)),
     send(Image, wrap, none),

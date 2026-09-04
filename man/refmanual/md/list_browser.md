@@ -75,7 +75,7 @@ the `dir.bm` icon, use the following code as a starting point:
 - list_browser<-dict: dict*
     Associated dict object (table of items).
 
-- list_browser<-image: text_image
+- list_browser<-text_image: text_image
     Text_image object used for visualisation of the items.  Class text_image
     is also used by class editor.  There are many similarities in the
     architecture of class editor and class list_browser.
@@ -96,7 +96,7 @@ the `dir.bm` icon, use the following code as a starting point:
     Text object used to display the <->label.  When @nil, no label is
     displayed (default).   The <-label_text may be accessed directly,
     but be aware that the layout of the list_browser (i.e. placement and
-    sizes of the <-scroll_bar, <-image and <-label_text) will not be
+    sizes of the <-scroll_bar, <-text_image and <-label_text) will not be
     updated automatically.
 
 - list_browser<-multiple_selection: bool
@@ -199,7 +199,7 @@ the `dir.bm` icon, use the following code as a starting point:
     <-dict.
 
 - list_browser->compute
-    ->compute's the <-image and <-scroll_bar.  Initialises <-start_cell to
+    ->compute's the <-text_image and <-scroll_bar.  Initialises <-start_cell to
     speed up redraw.
 
 - list_browser->enter
@@ -247,7 +247,7 @@ the `dir.bm` icon, use the following code as a starting point:
     ->extend_prefix.
 
 - list_browser->geometry: x=[int], y=[int], width=[int], height=[int]
-    Resize the <-image and <-scroll_bar.
+    Resize the <-text_image and <-scroll_bar.
 
 - list_browser->height: int
     *Inherits description from*: list_browser<-height

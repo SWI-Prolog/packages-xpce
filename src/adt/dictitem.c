@@ -158,10 +158,10 @@ getPositionDictItem(DictItem di)
   { int index = valInt(di->index) * BROWSER_LINE_WIDTH;
     int x, y, w, h, b;
 
-    if ( get_character_box_textimage(lb->image, index,
+    if ( get_character_box_textimage(lb->text_image, index,
 				     &x, &y, &w, &h, &b) )
-    { x += valInt(lb->image->area->x);
-      y += valInt(lb->image->area->y);
+    { x += valInt(lb->text_image->area->x);
+      y += valInt(lb->text_image->area->y);
 
       answer(answerObject(ClassPoint, toInt(x), toInt(y), EAV));
     }

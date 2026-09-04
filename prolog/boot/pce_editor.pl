@@ -49,7 +49,7 @@ make_editor_recogniser(G) :-
     new(G, handler_group(new(select_editor_text_gesture),
                          click_gesture(left, 's', single,
                                        message(Editor, selection_extend,
-                                               ?(Editor?image, index, @event)),
+                                               ?(Editor?text_image, index, @event)),
                                        Editor?mark_status == active),
                          click_gesture(middle, '', single,
                                        and(message(Editor, paste, primary),
@@ -81,7 +81,7 @@ initiate(G, Ev:event) :->
     send(G, slot, down_position, Ev?position),
     get(Ev, receiver, Editor),
     send(G, slot, editor, Editor),
-    get(Editor, image, Image),
+    get(Editor, text_image, Image),
     get(Image, index, Ev, Index),
     send(Editor, caret, Index),
     get(Ev, multiclick, Multi),
@@ -121,7 +121,7 @@ drag(G, Ev:event) :->
         ->  send(G, selecting, @on)
         )
     ->  get(Ev, receiver, Editor),
-        get(Editor, image, Image),
+        get(Editor, text_image, Image),
         (   get(Image, index, Ev, Index)
         ->  send(Editor, selection_extend, Index)
         ;   true

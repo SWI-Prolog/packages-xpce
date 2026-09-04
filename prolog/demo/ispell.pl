@@ -194,7 +194,7 @@ initialise(F, File:[file]) :->
     get(F, error_style, ErrorStyle),
     send(V, style, error, ErrorStyle),
     send(V, selected_fragment_style, style(underline := @on)),
-    send(V?image, recogniser,
+    send(V?text_image, recogniser,
          click_gesture(left, '', double,
                        message(F, select_current_fragment))),
     fill_dialog(D),

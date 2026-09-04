@@ -125,7 +125,7 @@ typedef struct isearch_cache  *ISearchCache;
 NewClass(editor)
   ABSTRACT_DEVICE			/* abstract super class device */
   TextBuffer	text_buffer;		/* Buffer editor operates on */
-  TextImage	image;			/* The text area */
+  TextImage	text_image;		/* The text area */
   ScrollBar	scroll_bar;		/* The scrollbar */
   TextMargin	margin;			/* The margin */
   TextCursor	text_cursor;		/* The cursor */

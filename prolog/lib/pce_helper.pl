@@ -327,11 +327,11 @@ initialise(E, Data:[file|text_buffer]) :->
     send(E, right_margin, 80),
     send(E, editable, @off),
 
-    send(E?image, recogniser,
+    send(E?text_image, recogniser,
          new(C, click_gesture(left, '', double,
                               message(E, follow)))),
     send(C, condition, E?button),
-    send(E?image, recogniser,
+    send(E?text_image, recogniser,
          popup_gesture(@hlp_editor_popup, right, c)),
 
 
