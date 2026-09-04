@@ -539,6 +539,20 @@ changedAreaGraphical(Any obj, Int x, Int y, Int w, Int h)
 
 	ox--; oy--; ow+=2; oh+=2;
 	cx--; cy--; cw+=2; ch+=2;
+
+	/* A graphical of the fixed layer is placed in the coordinates of
+	 * what is on screen, while damage is recorded in those of what is
+	 * being shown.  See <-fixed_graphicals in src/win/window.c.
+	 */
+	if ( notNil(sw->fixed_graphicals) &&
+	     memberChain(sw->fixed_graphicals, gr) )
+	{ int sox = valInt(sw->scroll_offset->x);
+	  int soy = valInt(sw->scroll_offset->y);
+
+	  ox -= sox; oy -= soy;
+	  cx -= sox; cy -= soy;
+	}
+
 	changed_window(sw, ox, oy, ow, oh, TRUE);
 	changed_window(sw, cx, cy, cw, ch, offFlag(gr, F_SOLID));
 

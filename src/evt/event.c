@@ -559,6 +559,29 @@ get_xy_event_device(EventObj ev, Device dev, int *rx, int *ry)
 
 
 
+/* A graphical of a window's fixed layer is placed, painted and
+ * hit-tested in the coordinates of what is on screen, so the scroll
+ * offset must not be taken off again here.  See <-fixed_graphicals in
+ * src/win/window.c.
+ */
+
+static int
+in_fixed_layer(Graphical gr)
+{ Device d;
+
+  for(d = (Device)gr; notNil(d) && notNil(d->device); d = d->device)
+  { if ( instanceOfObject(d->device, ClassWindow) )
+    { PceWindow sw = (PceWindow)d->device;
+
+      return notNil(sw->fixed_graphicals) &&
+	     memberChain(sw->fixed_graphicals, d);
+    }
+  }
+
+  return FALSE;
+}
+
+
 static void
 get_xy_event_graphical(EventObj ev, Graphical gr, int *rx, int *ry)
 { int ox, oy;
@@ -567,7 +590,7 @@ get_xy_event_graphical(EventObj ev, Graphical gr, int *rx, int *ry)
   if ( !sw )
     sw = ev->window;
 
-  get_xy_event_window(ev, sw, OFF, rx, ry);
+  get_xy_event_window(ev, sw, in_fixed_layer(gr) ? ON : OFF, rx, ry);
 
   if ( deviceChainHasTransform(gr) )
   { double lx, ly;
