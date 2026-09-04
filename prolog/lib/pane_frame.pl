@@ -1148,6 +1148,78 @@ history_source(D, Source) :-
 
 
                  /*******************************
+                 *          TOOL PANE           *
+                 *******************************/
+
+/** A pane that shows more than one window.
+
+Most panes are one window: a terminal, an editor.  A tool is usually
+several -- the thread monitor is a list of threads beside a graph -- and
+they have to be laid out against one another and to travel together.
+
+A tabbed_window holding a single tab_frame does both.  A tab_frame lays
+windows out with a tile the way class frame does for its members, so the
+windows can be arranged and the gaps between them dragged; a lone tab
+shows no label; and to everything outside it is one window, so it drops
+into a tab of a window of the IDE like any other pane.
+
+    :- pce_begin_class(my_tool, tool_pane, "...").
+
+    initialise(T) :->
+        send_super(T, initialise, my_tool),
+        send(T, append_window, new(B, my_browser)),
+        send(T, append_window, new(my_view), B, right).
+*/
+
+:- pce_begin_class(tool_pane, tabbed_window,
+                   "A pane of the IDE showing more than one window").
+:- use_class_template(pane).
+
+initialise(TP, Label:[name]) :->
+    "Create empty, with a grip to drag me by"::
+    send_super(TP, initialise, Label),
+    send(TP, hide_single_label, @on),   % I am one pane, not a tab strip
+    send(TP, display, new(split_handle)).
+
+append_window(TP, Window:window,
+                  Relative:relative_to=[window],
+                  Where:where=[{above,below,left,right}]) :->
+    "Add a window beside the ones I have"::
+    (   get(TP, content, Tab)
+    ->  send(Tab, append, Window, Relative, Where)
+    ;   send(TP, tab, tab_frame(Window, TP?name))
+    ).
+
+content(TP, Tab:tab_frame) :<-
+    "The tab my windows are tiled in"::
+    get(TP, tabs, Tabs),
+    get(Tabs, head, Tab).
+
+%       Not <-member: on a tabbed_window that answers the window of a
+%       named tab.  The windows of a tool are told apart by their class.
+
+window(TP, Class:name, W:window) :<-
+    "A window of mine of the given class"::
+    get(TP, members, Windows),
+    get(Windows, find, message(@arg1, instance_of, Class), W).
+
+grip(TP, Handle:split_handle) :<-
+    "The grip I am dragged by"::
+    get(TP?graphicals, find,
+        message(@arg1, instance_of, split_handle), Handle).
+
+resize(TP, Tab:[tab]) :->
+    "Keep the grip in my corner"::
+    send_super(TP, resize, Tab),
+    (   get(TP, grip, Handle)
+    ->  send(Handle, place, TP)
+    ;   true                            % still being built
+    ).
+
+:- pce_end_class(tool_pane).
+
+
+                 /*******************************
                  *         PANE TEMPLATE        *
                  *******************************/
 

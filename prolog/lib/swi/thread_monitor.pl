@@ -772,20 +772,14 @@ graphs(Win, Graphs:chain) :->
 /** The thread monitor as a pane.
 
 It used to be a frame of its own, holding the browser, the graphs, a
-menu bar and a reporter.  It is a pane now -- a window that can be
-dropped into a tab of any window of the IDE, beside a terminal or an
-editor -- so what was the frame's is divided: the two windows it shows
-are tiled inside it, and its menus go on the bar of whatever window it
-ends up in.
-
-A pane that shows more than one window is a tabbed_window holding a
-single tab_frame: a tab_frame lays windows out with a tile the way a
-frame does for its members, and a lone tab shows no label.
+menu bar and a reporter.  It is a `tool_pane' now -- see
+library(pane_frame) -- so it drops into a tab of any window of the IDE,
+or beside a terminal or an editor in one, and its menus go on the bar of
+whatever window it ends up in.
 */
 
-:- pce_begin_class(prolog_thread_monitor, tabbed_window,
+:- pce_begin_class(prolog_thread_monitor, tool_pane,
                    "Monitor thread-activity").
-:- use_class_template(pane).
 
 variable(timer,           timer*,  get, "Update timer").
 variable(graphs,          chain,   get, "Which graphs are shown").
@@ -796,9 +790,8 @@ class_variable(graphs,          chain, chain(local,global,trail,cpu)).
 
 initialise(TM) :->
     send_super(TM, initialise, threads),
-    send(TM, hide_single_label, @on),
-    send(TM, tab, new(T, tab_frame(new(TB, thread_browser), threads))),
-    send(T, split, new(thread_window), TB, vertically),
+    send(TM, append_window, new(TB, thread_browser)),
+    send(TM, append_window, new(thread_window), TB, right),
     send(TM, update),
     get(TM, update_interval, Time),
     send(TM, update_interval, Time),
@@ -812,21 +805,13 @@ unlink(TM) :->
                  *            MEMBERS           *
                  *******************************/
 
-%       <-member of a tabbed_window answers the window of a named tab, so
-%       the two windows are found by their class instead.
-
 browser(TM, TB:thread_browser) :<-
     "The list of threads"::
-    get(TM, monitor_window, thread_browser, TB).
+    get(TM, window, thread_browser, TB).
 
 graph_window(TM, TW:thread_window) :<-
     "The window the graphs are drawn in"::
-    get(TM, monitor_window, thread_window, TW).
-
-monitor_window(TM, Class:name, W:window) :<-
-    "A window of mine of the given class"::
-    get(TM, members, Windows),
-    get(Windows, find, message(@arg1, instance_of, Class), W).
+    get(TM, window, thread_window, TW).
 
                  /*******************************
                  *             PANE             *

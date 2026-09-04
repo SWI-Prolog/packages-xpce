@@ -194,6 +194,7 @@ erase(TF, Gr:graphical) :->
         (   get(TF, slot, closing, @on)
         ->  true
         ;   send(TF, update_current),
+            notify_frame(TF),
             (   get(TF, tile, _)
             ->  send(TF, layout)
             ;   send(TF, empty)
@@ -563,6 +564,23 @@ update_frame_label(TF) :->
                  /*******************************
                  *            HELPERS           *
                  *******************************/
+
+%!  notify_frame(+TabFrame) is det.
+%
+%   Tell the frame that the pane the user is working in may have
+%   changed.  Losing a window is not always a change of <-current -- the
+%   one that went may not have been the tab's remembered current, only
+%   the one holding the keyboard -- but the frame has to look again
+%   either way, or it goes on showing the name and the menus of a pane
+%   that is no longer there.
+
+notify_frame(TF) :-
+    (   get(TF, frame, Frame),
+        Frame \== @nil,
+        send(Frame, has_send_method, pane_changed)
+    ->  ignore(send(Frame, pane_changed))
+    ;   true
+    ).
 
 %!  decoration(+Window, -Decoration) is det.
 %

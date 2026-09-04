@@ -234,7 +234,7 @@ tool(IDE, Class:name, Pane:window) :<-
     send(Pane, instance_of, Class),
     !.
 
-show_tool(IDE, Class:name, Pane:window) :<-
+show_tool(IDE, Class:name, How:[{tab,split}], Pane:window) :<-
     "Bring the tool pane of that class into view, making one if there is none"::
     (   get(IDE, tool, Class, Pane)
     ->  get(Pane, frame, F),
@@ -242,16 +242,19 @@ show_tool(IDE, Class:name, Pane:window) :<-
     ;   Term =.. [Class],
         new(Pane, Term),
         (   get(IDE, current_frame, F)
-        ->  send(F, append_pane, Pane, @default, @on)
+        ->  (   How == split
+            ->  send(F, split, Pane, @default, vertically)
+            ;   send(F, append_pane, Pane, @default, @on)
+            )
         ;   new(F, pane_frame(IDE, @default, Pane))
         )
     ),
     send(F, open),
     send(F, expose).
 
-show_tool(IDE, Class:name) :->
+show_tool(IDE, Class:name, How:[{tab,split}]) :->
     "Bring the tool pane of that class into view"::
-    get(IDE, show_tool, Class, _).
+    get(IDE, show_tool, Class, How, _).
 
 current_frame(IDE, F:pane_frame) :<-
     "A window of mine to put a tool in"::

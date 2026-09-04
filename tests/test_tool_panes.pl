@@ -86,7 +86,7 @@ menus(F, Names) :-
 %   The one thread monitor there is, made if there is none.
 
 monitor(TM) :-
-    get(@prolog_ide, show_tool, prolog_thread_monitor, TM).
+    get(@prolog_ide, show_tool, prolog_thread_monitor, @default, TM).
 
 %!  no_monitor is det.
 %
@@ -174,5 +174,71 @@ test(selecting_a_thread_draws_its_graph) :-
     send(TM, selection, main),
     get(TM, graph_window, GW),
     get(GW, member, thread_diagram, _).
+
+%       A tool is a pane, not only a tab: it can sit beside a terminal or
+%       an editor, and be dragged to another window like any other pane.
+
+test(it_can_be_asked_for_beside_what_is_already_there,
+     Classes == [epilog_window, prolog_thread_monitor]) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_thread_monitor, split),
+    get(@prolog_ide, tool, prolog_thread_monitor, TM),
+    get(TM, container, tab_frame, Tab),
+    get(Tab, windows, Chain),
+    chain_list(Chain, Panes),
+    findall(C, (member(P, Panes), get(P, class_name, C)), Classes).
+
+test(its_windows_follow_the_size_it_is_given, true(Fits == true)) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_thread_monitor, split),
+    get(@prolog_ide, tool, prolog_thread_monitor, TM),
+    get(TM, area, area(_, _, _, PaneH)),
+    get(TM, window, thread_browser, TB),
+    get(TB, area, area(_, _, _, BrowserH)),
+    (   BrowserH =:= PaneH ->  Fits = true ;  Fits = false ).
+
+test(it_carries_a_grip_to_drag_it_by) :-
+    monitor(TM),
+    get(TM, grip, _).
+
+test(dragging_it_to_another_window_takes_it_there,
+     true(Where == [[epilog_window], [epilog_window, prolog_thread_monitor]])) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F1),
+    send(F1, open),
+    send(@prolog_ide, show_tool, prolog_thread_monitor, split),
+    get(@prolog_ide, tool, prolog_thread_monitor, TM),
+    get(TM, frame, From),
+    epilog_frame(@default, @default, @default, @off, @default, F2),
+    send(F2, open),
+    get(F2, current_pane, Target),
+    get(Target, container, tab_frame, Tab2),
+    get(Target, area, area(AX, AY, AW, AH)),
+    X is AX+AW-5, Y is AY+AH//2,
+    send(Tab2, drop, TM, point(X, Y)),
+    classes(From, Left),
+    classes(F2, Arrived),
+    Where = [Left, Arrived].
+
+test(and_the_window_it_left_stops_saying_its_name,
+     Label == 'SWI-Prolog -- Prolog') :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F1),
+    send(F1, open),
+    send(@prolog_ide, show_tool, prolog_thread_monitor, split),
+    get(@prolog_ide, tool, prolog_thread_monitor, TM),
+    get(TM, frame, From),
+    epilog_frame(@default, @default, @default, @off, @default, F2),
+    send(F2, open),
+    get(F2, current_pane, Target),
+    get(Target, container, tab_frame, Tab2),
+    get(Target, area, area(AX, AY, AW, AH)),
+    X is AX+AW-5, Y is AY+AH//2,
+    send(Tab2, drop, TM, point(X, Y)),
+    get(From, label, Label).
 
 :- end_tests(tool_panes).

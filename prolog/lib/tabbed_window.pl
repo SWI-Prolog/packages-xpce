@@ -95,6 +95,18 @@ layout_dialog(W, _Gap:[size], _Size:[size], _Border:[size]) :->
     new(S0, size(0,0)),
     send_super(W, layout_dialog, S0, S0, S0).
 
+%       ->resize is what fits the tabs to the window, and the window
+%       system only sends it once the window has a surface to draw on
+%       (ws_geometry_window(), src/sdl/sdlwindow.c).  A tabbed window
+%       placed by a tile before it is created -- which is what happens
+%       when one is used as a pane -- would keep the size it asked for
+%       rather than the size it was given.  Being placed is enough.
+
+geometry(W, X:[int], Y:[int], Width:[int], Height:[int]) :->
+    "Fit my tabs to the size I am given"::
+    send_super(W, geometry, X, Y, Width, Height),
+    send(W, resize).
+
 new_tab_message(W, Message:'code*') :->
     "What the new-tab button is to do; @nil takes the button away"::
     send(W, slot, new_tab_message, Message),
