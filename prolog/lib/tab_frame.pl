@@ -170,14 +170,20 @@ detach_window(TF, Window:window) :->
 
 split(TF, Window:window=window,
           Relative:relative_to=[window],
-          Direction:direction=[{horizontally,vertically}]) :->
+          Direction:direction=[{horizontally,vertically,
+                                above,below,left,right}]) :->
     "Add Window by splitting Relative"::
     default(Direction, horizontally, Dir),
-    (   Dir == horizontally
-    ->  Where = below                      % new window below: Terminator
-    ;   Where = right                      % compatible naming
-    ),
+    split_side(Dir, Where),
     send(TF, append, Window, Relative, Where).
+
+%       Splitting a window `horizontally' puts the new one below it, as in
+%       Terminator and the shells; the two names for the same thing are
+%       both in use.  A caller that knows which side it wants says so.
+
+split_side(horizontally, below) :- !.
+split_side(vertically,   right) :- !.
+split_side(Where,        Where).
 
 delete(TF, Window:window) :->
     "Remove a window without destroying it"::

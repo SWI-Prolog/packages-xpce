@@ -253,7 +253,7 @@ show_tool(IDE, Class:name, How:[{frame,tab,split}], Pane:window) :<-
         (   Where \== frame,
             get(IDE, current_frame, F)
         ->  (   Where == split
-            ->  send(F, split, Pane, @default, vertically)
+            ->  send(F, split, Pane, @default, ?(IDE, pane_side, Pane))
             ;   send(F, append_pane, Pane, @default, @on)
             )
         ;   new(F, pane_frame(IDE, @default, Pane))
@@ -265,6 +265,13 @@ show_tool(IDE, Class:name, How:[{frame,tab,split}], Pane:window) :<-
 show_tool(IDE, Class:name, How:[{frame,tab,split}]) :->
     "Show the tool pane of that class"::
     get(IDE, show_tool, Class, How, _).
+
+pane_side(_IDE, Pane:window, Side:{above,below,left,right}) :<-
+    "Which side of what is there a tool is added on"::
+    (   send(Pane, has_get_method, pane_side)
+    ->  get(Pane, pane_side, Side)
+    ;   Side = below
+    ).
 
 tool_placement(IDE, How:[{frame,tab,split}], Where:name) :<-
     "Where a new tool goes; How overrules the setting"::

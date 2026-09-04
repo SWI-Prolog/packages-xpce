@@ -335,6 +335,92 @@ test(and_the_caller_can_overrule_the_setting, true(InItsTab == 2)) :-
                      get(Tab?windows, size, InItsTab)
                    )).
 
+%       Which side of what is there it lands on is the tool's own say, so
+%       a navigator can go down the left and a monitor along the bottom.
+
+%!  with_pane_side(+Side, :Goal) is det.
+
+:- meta_predicate with_pane_side(+, 0).
+
+with_pane_side(Side, Goal) :-
+    get(@pce, convert, prolog_thread_monitor, class, Class),
+    get(Class, class_variable, pane_side, Var),
+    get(Var, value, Old),
+    setup_call_cleanup(
+        send(Class, class_variable_value, pane_side, Side),
+        Goal,
+        send(Class, class_variable_value, pane_side, Old)).
+
+no_frames :-
+    get(@prolog_ide, members, Members),
+    chain_list(Members, List),
+    forall(( member(F, List),
+             send(F, instance_of, pane_frame)
+           ),
+           send(F, destroy)).
+
+%!  monitor_side(+Side, -Landed) is det.
+%
+%   Ask for the monitor beside a terminal, with the tool saying it wants
+%   Side, and report where it actually landed.
+
+monitor_side(Side, Landed) :-
+    with_pane_side(
+        Side,
+        with_placement(
+            split,
+            ( no_frames,                % whichever window is there is the
+              no_monitor,               % one the tool is put in
+              epilog_frame(@default, @default, @default, @off, @default, F),
+              send(F, open),
+              send(@prolog_ide, thread_monitor),
+              get(@prolog_ide, tool, prolog_thread_monitor, TM),
+              get(TM, container, tab_frame, Tab),
+              get(Tab, windows, Chain),
+              chain_list(Chain, Windows),
+              member(Other, Windows),
+              Other \== TM,
+              !,
+              side_of(TM, Other, Landed)
+            ))).
+
+%       The tile places a window's decoration, not the window, so that is
+%       what says where it went.  See `placed_area/2' in library(pane_frame).
+
+side_of(Gr, Relative, Side) :-
+    placed_position(Gr, X, Y),
+    placed_position(Relative, RX, RY),
+    (   Y > RY
+    ->  Side = below
+    ;   Y < RY
+    ->  Side = above
+    ;   X > RX
+    ->  Side = right
+    ;   X < RX
+    ->  Side = left
+    ;   Side = nowhere
+    ).
+
+placed_position(W, X, Y) :-
+    (   get(W, decoration, Decor),
+        Decor \== @nil
+    ->  Placed = Decor
+    ;   Placed = W
+    ),
+    get(Placed, area, area(X, Y, _, _)).
+
+test(a_tool_says_which_side_it_goes_on, true(Landed == left)) :-
+    monitor_side(left, Landed).
+
+test(and_is_believed_whichever_side_that_is, true(Landed == above)) :-
+    monitor_side(above, Landed).
+
+test(the_monitor_asks_for_the_bottom, true(Side == below)) :-
+    no_monitor,
+    new(TM, prolog_thread_monitor),
+    get(TM, pane_side, Side),
+    send(TM, destroy).
+
 %       And it is on the Settings menu, so it can be changed without
 %       editing a Defaults file.
 

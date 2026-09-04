@@ -257,7 +257,8 @@ append_pane(F, Pane:window, Label:[name], Expose:[bool]) :->
 
 split(F, Pane:window,
          Relative:relative_to=[window],
-         Direction:direction=[{horizontally,vertically}]) :->
+         Direction:direction=[{horizontally,vertically,
+                               above,below,left,right}]) :->
     "Add Pane beside Relative, in the tab Relative is in"::
     (   Relative == @default
     ->  get(F, current_pane, Rel)
@@ -1289,12 +1290,26 @@ into a tab of a window of the IDE like any other pane.
 
 variable(grip, split_handle*, get, "The grip I am dragged by").
 
+%       Where I belong in a window that already has something in it: a
+%       navigator down the left, a monitor along the bottom.  It is a
+%       class variable, so a tool says where it goes by declaring one of
+%       its own, and the user overrules that from a Defaults file:
+%
+%           prolog_thread_monitor.pane_side: right
+
+class_variable(pane_side, {above,below,left,right}, below,
+               "Which side of what is there I am added on").
+
 initialise(TP, Label:[name]) :->
     "Create empty, with a grip to drag me by"::
     send_super(TP, initialise, Label),
     send(TP, hide_single_label, @on),   % I am one pane, not a tab strip
     send(TP, slot, grip, new(H, split_handle)),
     send(H, pane, TP).                  % it moves me, not the window it is on
+
+pane_side(TP, Side:{above,below,left,right}) :<-
+    "Which side of what is there I am added on"::
+    get(TP, class_variable_value, pane_side, Side).
 
 append_window(TP, Window:window,
                   Relative:relative_to=[window],
