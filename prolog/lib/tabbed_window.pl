@@ -173,19 +173,22 @@ make_current(Tab, Window) :-
 %       So I hand the focus on to a window I remember, not to whichever is
 %       current at the moment I am told.
 
-variable(focus_window, window*, none, "The window I passed the focus to").
+%       The window I passed the focus to is remembered by a hyper rather
+%       than in a slot of my own: a slot goes on pointing at a pane that
+%       is destroyed while I hold the focus, and sending to it afterwards
+%       is an error.  A hyper is unlinked with either end.
 
 input_focus(W, Focus:bool) :->
     send_super(W, input_focus, Focus),
     (   Focus == @on
     ->  (   get(W, current, Current)
-        ->  send(W, slot, focus_window, Current),
+        ->  send(W, delete_hypers, focus_window),
+            new(_, hyper(W, Current, focus_window, tabbed_window)),
             send(Current, input_focus, @on)
         ;   true
         )
-    ;   get(W, slot, focus_window, Old),
-        Old \== @nil
-    ->  send(W, slot, focus_window, @nil),
+    ;   get(W, hypered, focus_window, Old)
+    ->  send(W, delete_hypers, focus_window),
         send(Old, input_focus, @off)
     ;   true
     ).

@@ -303,8 +303,7 @@ with_placement(Where, Goal) :-
 %   A window of terminals is open, then the monitor is asked for.
 
 monitor_shape(Tabs, InItsTab) :-
-    no_frames,                          % windows earlier tests left open
-    no_monitor,                         % still hold the panes they closed
+    no_monitor,
 
     epilog_frame(@default, @default, @default, @off, @default, F),
     send(F, open),

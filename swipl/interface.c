@@ -1115,6 +1115,14 @@ get_object_from_blob(term_t t, PceObject *obj)
     return TRUE;
   }
 
+  /* A blob that no longer denotes an object means something kept a
+     reference across the object's death -- a slot, a chain, a Prolog
+     term.  The error alone says nothing about who, and the culprit is
+     usually far from the send that trips over it, so name the caller.
+  */
+  DEBUG(( Sdprintf("Stale object reference (obj=%p):\n", (void*)o),
+	  PL_backtrace(25, 1) ));
+
   return ThrowException(EX_EXISTENCE, ATOM_object, t);
 }
 
