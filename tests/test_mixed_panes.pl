@@ -341,6 +341,34 @@ test(and_the_focus_follows_a_click_afterwards, true(Focused == [T])) :-
     ignore(send(T, post_event, event(ms_left_up, T, 20, 20))),
     focused(F, Focused).
 
+%       edit/1 in a window where an editor sits beside a terminal.  The
+%       buffer opens in a tab of its own, and that tab has to stay in
+%       front: the terminal is told it has the keyboard as its own tab
+%       goes away, and used to answer by pulling it back.
+
+test(edit_opens_a_tab_and_it_stays_in_front, true(Pane == view)) :-
+    emacs,
+    mixed_window(F),
+    terminal(F, T),
+    send(F, current_pane, T),
+    new(B, emacs_buffer(@nil, '*edit*')),
+    send(@emacs, show_buffer, F, B, tab),
+    get(F, current_pane, Current),
+    (   send(Current, instance_of, emacs_view)
+    ->  Pane = view
+    ;   Pane = terminal
+    ).
+
+test(and_the_editor_it_opens_is_the_one_it_asked_for, true(TB == B)) :-
+    emacs,
+    mixed_window(F),
+    terminal(F, T),
+    send(F, current_pane, T),
+    new(B, emacs_buffer(@nil, '*edit2*')),
+    send(@emacs, show_buffer, F, B, tab),
+    get(F, current_pane, View),
+    get(View, text_buffer, TB).
+
 %!  tabbed_window_pair(-Frame, -Terminal, -View) is det.
 %
 %   A window with a terminal and an editor in tabs of their own, the

@@ -2419,13 +2419,34 @@ current_terminal(F, Terminal:prolog_terminal) :<-
     get(F, current_pane, Window),
     get(Window, terminal, Terminal).
 
+%       A terminal is told it has the keyboard whenever the window it is
+%       in is activated -- including while the frame is telling everyone
+%       that another tab has come to the front, at which point the window
+%       being activated is the one on its way out.  Bringing its tab back
+%       is the last thing wanted, so all I do here is pick the terminal
+%       out of a tab that holds more than one pane.
+
 current_terminal(F, Terminal:prolog_terminal) :->
     "Make Terminal the one the user is working in"::
     get(Terminal, window, Window),
     (   get(F, current_pane, Window)
     ->  true                            % it already is
-    ;   send(F, current_pane, Window)
+    ;   in_view(Window)
+    ->  send(F, current_pane, Window)
+    ;   true
     ).
+
+%!  in_view(+Window) is semidet.
+%
+%   True when Window is in the tab that is in front.  A window on its way
+%   out may be half taken apart by then, and not being able to tell is
+%   the same answer as no.
+
+
+in_view(Window) :-
+    catch(( get(Window, container, tab, Tab),
+            get(Tab, status, on_top)
+          ), _, fail).
 
 inject(F, Command:prolog) :->
     "Inject a command into the terminal in view"::
