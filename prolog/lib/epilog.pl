@@ -46,6 +46,9 @@
 :- use_module(library(pce)).
 :- use_module(library(tabbed_window)).
 :- use_module(library(tab_frame)).
+:- use_module(library(pane_frame), [pane_frame_closed_tab/1]).
+:- use_module(library(pce_template)).
+:- use_module(library(toolbar), []).
 :- pce_autoload(partof_hyper, library(hyper)).
 :- use_module(library(threadutil), []).
 :- use_module(library(edit)).
@@ -198,7 +201,9 @@ epilog(M:Options0) :-
     option(rows(Height), Options, @default),
     option(cols(Width),  Options, @default),
     option(main(IsMain), Options, @off),
-    new(Epilog, epilog_frame(Name, Title, Width, Height, IsMain)),
+    get(@epilog, frame, Title, Width, Height, IsMain, @default, Epilog),
+    epilog_name(Name, IsMain, TheName),
+    send(Epilog, name, TheName),
     get(Epilog, current_terminal, PT),
     configure_terminal(PT, Profile, Options),
     ignore(option(object(Epilog), Options)),
@@ -229,7 +234,7 @@ epilog_tab(Frame, M:Options0) :-
     new(W, epilog_window),
     get(W, terminal, PT),
     configure_terminal(PT, Profile, Options),
-    send(Frame?tabs, append_terminal, W, @on),
+    send(Frame, append_terminal, W, @on),
     send(Frame, keyboard_focus, W).
 
 %!  configure_terminal(+Terminal, +Profile, +Options) is det.
@@ -294,7 +299,9 @@ create_epilog(TID, Options) :-
     option(title(Title), Options, @default),
     option(rows(Height), Options, @default),
     option(cols(Width),  Options, @default),
-    new(Epilog, epilog_frame(Name, Title, Width, Height, @off, TID)),
+    get(@epilog, frame, Title, Width, Height, @off, TID, Epilog),
+    epilog_name(Name, @off, TheName),
+    send(Epilog, name, TheName),
     send(Epilog, open).
 
 detach_context(ctx(In,Out,Err,Class)) :-
@@ -380,7 +387,6 @@ setup_history :-
     terminal_input/6,           % TerminalObject, PTY, In, Out, Error,
     attached_terminal/2,        % TerminalObject, RestoreInfo
                                 % EditLine
-    closed_epilog/2,            % Frame, Time
     active_terminal/1.          % TerminalObject
 
 %!  current_profile(-Name, -Label) is nondet.
@@ -716,7 +722,7 @@ delete_window :-            % Normal Epilog
     retractall(terminal_input(PT, _Pty, _In, _Out, _Error, _Edit)),
     retractall(current_prolog_terminal(Me, PT)),
     (   '$run_state'(normal)
-    ->  in_pce_thread(send(PT?frame, delete_epilog, PT?window))
+    ->  in_pce_thread(send(PT?frame, delete_pane, PT?window))
     ;   true
     ).
 delete_window.
@@ -1028,9 +1034,8 @@ close(PT) :->
     "Close this Prolog shell"::
     get(PT, window, Window),
     get(PT, frame, Epilog),
-    send(Epilog, delete_epilog, Window, @on),
-    get_time(Now),
-    asserta(closed_epilog(Epilog, Now)).
+    pane_frame_closed_tab(Epilog),
+    send(Epilog, delete_pane, Window, @on).
 
 %!  save_history(+PrologTerminal) is det.
 %
@@ -1619,6 +1624,87 @@ working_directory(PT, CWD:name) :<-
     ;   working_directory(CWD, CWD)             % Prolog default
     ).
 
+consult(PT) :->
+    "Ask for a file and consult it"::
+    source_file_filter(Filter),
+    working_directory(CWD, CWD),
+    get(PT?frame, open_file,
+        filters := Filter,
+        default := CWD,
+        allow_many := @on, FileChain),
+    chain_list(FileChain, Files),
+    send(PT, inject, consult(Files)).
+
+edit_file(PT) :->
+    "Ask for a file and edit it"::
+    source_file_filter(Filter),
+    (   current_prolog_flag(associated_file, Default)
+    ->  true
+    ;   working_directory(Default, Default)
+    ),
+    get(PT?frame, open_file,
+        filters := Filter,
+        default := Default,
+        File),
+    edit(file(File)).
+
+new_file(PT) :->
+    "Ask for a file and create it"::
+    source_file_filter(Filter),
+    working_directory(CWD, CWD),
+    get(PT?frame, save_file,
+        filters := Filter,
+        default := CWD,
+        File0),
+    ensure_prolog_extension(File0, File),
+    edit(file(File)).
+
+toggle_fold_previous(PT) :->
+    "Toggle folding the previous command"::
+    get(PT, fold_previous, Old),
+    (   Old == @on
+    ->  New = @off
+    ;   New = @on
+    ),
+    send(PT, fold_previous, New).
+
+:- pce_group(menu).
+
+%       The menu bar asks the terminal it acts on what its items should
+%       look like, through `menu_item <-condition'.  Each reads a flag of
+%       the Prolog thread this terminal runs, which may be busy, so
+%       terminal_prolog_flag/4 gives up after a moment.
+
+update_debug_mode(PT, MI:menu_item) :->
+    "Tick the item while the thread is in debug mode"::
+    (   terminal_prolog_flag(PT, query_debug_settings,
+                             debug(Debugging, _Tracing), -)
+    ->  send(MI, selected, Debugging)
+    ;   true
+    ).
+
+update_trace_mode(PT, MI:menu_item) :->
+    "Tick the item while the thread is tracing"::
+    (   terminal_prolog_flag(PT, query_debug_settings,
+                             debug(_Debugging, Tracing), -)
+    ->  send(MI, selected, Tracing)
+    ;   true
+    ).
+
+update_gui_debug(PT, MI:menu_item) :->
+    "Tick the item while the thread uses the GUI tracer"::
+    (   terminal_prolog_flag(PT, gui_tracer, GuiTracer, false)
+    ->  send(MI, selected, GuiTracer)
+    ;   true
+    ).
+
+update_fold_previous(PT, MI:menu_item) :->
+    "Tick the item while the previous command is folded"::
+    (   get(PT, fold_previous, Bool)
+    ->  send(MI, selected, Bool)
+    ;   true
+    ).
+
 :- pce_end_class(prolog_terminal).
 
 
@@ -1627,6 +1713,7 @@ working_directory(PT, CWD:name) :<-
                 *******************************/
 
 :- pce_begin_class(epilog_window, window, "Implement an embedded terminal").
+:- use_class_template(pane).
 
 variable(terminal, prolog_terminal, get, "The terminal_image").
 variable(tid,      [name|int],      get, "Attached thread").
@@ -1691,19 +1778,26 @@ sibling(T, W:epilog_window) :<-
     send(PT, profile, T?profile),
     send(PT, background, T?terminal?background).
 
-split(T, Dir:{horizontally,vertically}) :->
-    "Add a new terminal beside me, in my tab"::
-    get(T, sibling, W),
-    get(T, container, tab_frame, Tab),
-    send(Tab, split, W, T, Dir),
-    send(T?frame, keyboard_focus, W).
-
 new_tab(T) :->
     "Add a new terminal in a tab of its own"::
     get(T, sibling, W),
     get(T, frame, Frame),
-    send(Frame?tabs, append_terminal, W, @on),
+    send(Frame, append_terminal, W, @on),
     send(Frame, keyboard_focus, W).
+
+pane_label(T, Label:name) :<-
+    "What my tab is called: my thread, or the profile I run"::
+    get(T, terminal, PT),
+    terminal_base_label(PT, Label).
+
+menu_bar_key(_T, Key:name) :<-
+    "Every terminal asks for the same menu bar"::
+    Key = epilog.
+
+unlink(T) :->
+    "Save the command line history of my terminal"::
+    ignore(send(T, save_history)),
+    send_super(T, unlink).
 
 window_label(T, Label:char_array) :->
     "Show the title a client asked for on my tab"::
@@ -2080,40 +2174,16 @@ stop_timer(R) :->
                 *            EPILOG            *
                 *******************************/
 
-:- pce_begin_class(epilog_tab, tab_frame,
-                   "Tab holding one or more terminals").
+:- pce_begin_class(epilog, application,
+                   "The Epilog terminal application").
 
-class_variable(editable_label, bool, @on,
-               "A terminal tab is named by the user, so let them").
-class_variable(closable,       bool, @on,
-               "A terminal tab carries a button to close it").
+/** Everything an Epilog window differs in.
 
-close_tab(Tab) :->
-    "Close my terminals, which takes me with them"::
-    send(Tab, close).
-
-close(Tab) :->
-    "Close my terminals"::
-    get(Tab, windows, Chain),
-    chain_list(Chain, Windows),
-    forall(member(W, Windows),
-           send(W?terminal, close)).
-
-close_other_tabs(Tab) :->
-    "Close the terminals of every other tab"::
-    get(Tab?device, tabs, Chain),
-    chain_list(Chain, Tabs),
-    forall(( member(Other, Tabs),
-             Other \== Tab,
-             send(Other, instance_of, epilog_tab)
-           ),
-           send(Other, close)).
-
-:- pce_end_class(epilog_tab).
-
-
-:- pce_begin_class(epilog_tabbed_window, tabbed_window,
-                   "Tabs holding the terminals of an Epilog window").
+An Epilog window is a `pane_frame' whose panes are terminals.  The frame
+carries the menu bar, the tabs and the panes; what is particular to
+Epilog is here and on class epilog_window, which answers the pane
+protocol.  See library(pane_frame).
+*/
 
 :- pce_global(@epilog_tab_popup, make_epilog_tab_popup).
 
@@ -2123,393 +2193,134 @@ make_epilog_tab_popup(P) :-
     Cond = (Tab?device?tabs?size \== 1),
     send_list(P, append,
               [ menu_item(close_tab,
-                          message(Tab, close)),
+                          message(Tab, close_tab)),
                 menu_item(close_other_tabs,
                           message(Tab, close_other_tabs),
                           condition := Cond)
               ]).
 
-initialise(TW) :->
-    send_super(TW, initialise),
-    send(TW, hide_single_label, @on),   % one tab needs no name
-    send(TW, new_tab_message, message(TW, new_terminal)),
-    send(TW, label_popup, @epilog_tab_popup).
+initialise(E) :->
+    send_super(E, initialise, epilog).
 
-new_terminal(TW) :->
-    "Open a terminal in a tab of its own, from the current one"::
-    get(TW?frame, current_window, W),
-    send(W, new_tab).
+                 /*******************************
+                 *          THE FRAME           *
+                 *******************************/
 
-new_tab(_TW, Window:window, Label:[name], Tab:tab) :<-
-    "An Epilog tab holds one or more terminals"::
-    new(Tab, epilog_tab(Window, Label)).
+label_format(_E, Format:name) :<-
+    "My windows are titled after the terminal in view"::
+    Format = 'SWI-Prolog -- %s'.
 
-append_terminal(TW, W:epilog_window, Expose:[bool]) :->
-    "Add a terminal in a tab of its own, named after its profile"::
-    get(W, terminal, PT),
-    get(PT, profile, Profile),
-    unique_tab_label(TW, PT, Profile, 1, Label),
-    send(TW, append, W, Label, Expose).
+status_bar(_E, Bar:bool) :<-
+    "A terminal reports on a bar of its own, over its own text"::
+    Bar = @off.
 
-empty(TW) :->
-    "The last tab was closed"::
-    send(TW?frame, terminate).
-
-%!  unique_tab_label(+TabbedWindow, +PrologTerminal, +Profile, +N,
-%!                   -Label) is det.
-%
-%   A tab is found back by its label (see tabbed_window ->on_top), so no
-%   two of them may carry the same one.
-
-unique_tab_label(_TW, PT, prolog, _, Label) :-
-    current_prolog_terminal(Thread, PT),
-    atom(Thread),
-    !,
-    Label = Thread.
-unique_tab_label(TW, PT, Profile, N, Label) :-
-    (   current_profile(Profile, Base)
-    ->  true
-    ;   Base = Profile
-    ),
-    (   N == 1
-    ->  Try = Base
-    ;   format(atom(Try), '~w ~d', [Base, N])
-    ),
-    (   get(TW, tab, Try, _)
-    ->  N2 is N+1,
-        unique_tab_label(TW, PT, Base, N2, Label)
-    ;   Label = Try
-    ).
-
-:- pce_end_class(epilog_tabbed_window).
-
-
-:- pce_begin_class(epilog_frame, frame,
-                   "Multiple terminals and menu").
-
-variable(main,		 bool := @off, both, "True if this is the main window").
-
-initialise(T, Name:[name], Title:title=[name],
-           Width:width=[int], Height:height=[int],
-           Main:main=[bool], TID:[name|int]) :->
-    default(Title, "SWI-Prolog console", TheTitle),
-    send_super(T, initialise, TheTitle),
-    default(Main, @off, IsMain),
-    send(T, slot, main, IsMain),
-    epilog_name(Name, IsMain, TheName),
-    send(T, name, TheName),
-    send(T, application, @epilog),
-    send(T, done_message, message(@receiver, wm_close_requested)),
-    send(T, append, new(D, epilog_dialog)),
-    send(new(TW, epilog_tabbed_window), below, D),
+frame(E, Title:[name], Width:[int], Height:[int],
+         Main:[bool], TID:[name|int], F:pane_frame) :<-
+    "A new Epilog window running one terminal"::
     new(W, epilog_window(@default, Width, Height, TID)),
     (   current_prolog_terminal(_, _)
     ->  true
-    ;   send(W, history, on)            % Use history on the first
+    ;   send(W, history, on)            % use history on the first
     ),
-    send(TW, append_terminal, W, @on).
-
-epilog_name(@default, @on, main) :-
-    !.
-epilog_name(@default, _, Name) :-
-    gensym(epilog, Name).
-epilog_name(Name, _, Name).
-
-destroy(Epilog) :->
-    "Destroy the Epilog terminal"::
-    send(Epilog, save_history),
-    send_super(Epilog, destroy).
-
-% ->wm_close_requested
-%
-% This  is  a  hack  around  MacOS,    where   Command-W  also  triggers
-% SDL_EVENT_WINDOW_CLOSE_REQUESTED
-
-wm_close_requested(T) :->
-    "Handle close-request"::
-    (   retract(closed_epilog(T, Time)),
-        get_time(Now),
-        Now-Time < 0.5
+    new(F, pane_frame(E, 'SWI-Prolog', @default, @off)),
+    (   Main == @on
+    ->  send(F, attribute, main, @on)
+    ;   true
+    ),
+    send(F, append_terminal, W, @on),
+    (   Title == @default
     ->  true
-    ;   send(T, destroy)
+    ;   send(F, tab_label, Title)
     ).
 
-tabs(T, TW:epilog_tabbed_window) :<-
-    "The tabbed window holding my terminals"::
-    get(T, member, epilog_tabbed_window, TW).
+new_pane(E, F:pane_frame, Profile:[name]) :->
+    "The new-tab button and File->New tab: another terminal"::
+    default(Profile, prolog, TheProfile),
+    epilog_tab(F, TheProfile),
+    send(E, dummy).                     % never fails
 
-terminal_windows(T, Windows:chain) :<-
-    "All terminal windows of this frame, over all tabs"::
-    get(T, tabs, TW),
-    get(TW, members, Windows).
+dummy(_E) :->
+    true.
 
-current_window(T, W:epilog_window) :<-
-    "Terminal window that has the focus"::
-    get(T, tabs, TW),
-    get(TW, current, W).
-
-delete_epilog(T, W:window, Destroy:[bool]) :->
-    "Remove an individual terminal"::
-    (   send(W, instance_of, epilog_window),
-        get(T?terminal_windows, size, Size),
-        Size > 1
-    ->  send(W, save_history),
-        get(W, container, tab_frame, Tab),
-        send(Tab, delete, W),
-        (   Destroy == @on
-        ->  send(W, destroy)
-        ;   true
-        )
-    ;   send(T, terminate)
-    ).
-
-terminate(T) :->
-    "Destroy this Epilog window"::
-    (   get(T, main, @on)
-    ->  send(T, destroy),
+frame_empty(E, F:pane_frame) :->
+    "The last terminal of a window was closed"::
+    (   get(F, attribute, main, @on)
+    ->  send(F, destroy),
         confirm_open_frames(
             [ message("The main Prolog console was closed\n\c
                        while there are open windows")
             ])
-    ;   send(T, destroy)
-    ).
-
-:- pce_group(actions).
-
-% Run several actions.  These should have output redirected to the
-% current terminal.  How to do that?
-
-current_terminal(Epilog, Terminal:prolog_terminal) :->
-    "Set the current terminal"::
-    get(Terminal, window, Window),
-    (   get(Epilog, current_window, Window)
-    ->  true                            % it already is
-    ;   send(Epilog?tabs, current, Window)
-    ).
-
-current_terminal(Epilog, Terminal:prolog_terminal) :<-
-    "Get the current terminal of this frame"::
-    get(Epilog, current_window, Window),
-    get(Window, terminal, Terminal).
-
-inject(Epilog, Command:prolog) :->
-    "Inject a command into the current terminal"::
-    get(Epilog, current_terminal, Term),
-    send(Term, inject, Command).
-
-consult(T) :->
-    "Ask for a file and consult it"::
-    source_file_filter(Filter),
-    working_directory(CWD, CWD),
-    get(T?frame, open_file,
-        filters := Filter,
-        default := CWD,
-        allow_many := @on, FileChain),
-    chain_list(FileChain, Files),
-    send(T, inject, consult(Files)).
-
-edit_file(T) :->
-    "Ask for a file and edit it"::
-    source_file_filter(Filter),
-    (   current_prolog_flag(associated_file, Default)
-    ->  true
-    ;   working_directory(Default, Default)
+    ;   send(F, destroy)
     ),
-    get(T?frame, open_file,
-        filters := Filter,
-        default := Default,
-        File),
-    edit(file(File)).
+    send(E, dummy).
 
-new_file(T) :->
-    "Ask for a file and create it"::
-    source_file_filter(Filter),
-    working_directory(CWD, CWD),
-    get(T?frame, save_file,
-        filters := Filter,
-        default := CWD,
-        File0),
-    ensure_prolog_extension(File0, File),
-    edit(file(File)).
-
-source_file_filter(Filter) :-
-    findall(Ext, user:prolog_file_type(Ext, source), Exts),
-    chain_list(ExtChain, Exts),
-    new(Filter, chain(tuple('Source', ExtChain))).
-
-%!  ensure_prolog_extension(+File0, -File) is det.
-%
-%   Ensure File has a Prolog extension.
-
-ensure_prolog_extension(File0, File) :-
-    file_name_extension(_, Ext, File0),
-    user:prolog_file_type(Ext, prolog),
-    !,
-    File = File0.
-ensure_prolog_extension(File0, File) :-
-    file_name_extension(File0, pl, File).
-
-make(T) :->
-    "Run make/0"::
-    send(T, inject, make).
-
-close(T, Prolog:prolog=[bool]) :->
-    "Close this terminal.  Optionally terminates Prolog"::
-    send(T, destroy),
+close_frame(E, F:pane_frame, Prolog:prolog=[bool]) :->
+    "Close a window.  Optionally terminate Prolog"::
+    send(F, destroy),
     (   Prolog == @on
     ->  (   retract(ep_main_running)
         ->  true
         ;   halt
         )
     ;   true
-    ).
+    ),
+    send(E, dummy).
 
-save_history(Epilog) :->
-    "Save pending history"::
-    (   terminal_input(PT, _PTY, _In, _Out, _Err, true),
-        object(PT),
-        get(PT, frame, Epilog),
-        save_history(PT),
-        fail
-    ;   true
-    ).
+                 /*******************************
+                 *           ACTIONS            *
+                 *******************************/
 
-interrupt(Epilog) :->
-    "Interrupt running thread"::
-    get(Epilog, current_terminal, Term),
-    send(Term, interrupt).
+%       These are about the application rather than about any one
+%       terminal.  What a terminal does is on class prolog_terminal, and
+%       the menu reaches it through `pane_frame <-current_pane'.
 
-ide(_T, Tool:name) :->
+ide(_E, Tool:name) :->
     "Open an IDE tool"::
     call(user:prolog_ide(Tool)).
 
-manpce_tool(_T, Tool:name) :->
+manpce_tool(_E, Tool:name) :->
     "Open a manpce/0 tool routed through @manual"::
     use_module(user:library(pce_manual), []),
     send(@manual, start_tool, Tool).
 
-preferences(_T, Which:{prolog,xpce}) :->
+preferences(_E, Which:{prolog,xpce}) :->
     "Edit Prolog or GUI preferences"::
     call(prolog_edit_preferences(Which)).
 
-open_url(_T, URL:name) :->
+open_url(_E, URL:name) :->
     "Open a URL"::
     www_open_url(URL).
 
-update_profile_menu(_T, Popup:popup) :->
-    "Update the profile menu"::
+new_window(_E, Profile:profile=[name]) :->
+    "Open a new Epilog window with Profile"::
+    default(Profile, prolog, TheProfile),
+    epilog(TheProfile).
+
+new_tab(_E, F:pane_frame, Profile:profile=[name]) :->
+    "Open a new tab in F with Profile"::
+    default(Profile, prolog, TheProfile),
+    epilog_tab(F, TheProfile).
+
+update_profile_menu(_E, Popup:popup) :->
+    "Fill the pullright with the profiles there are"::
     send(Popup, clear),
     forall(current_profile(Name, Label),
            send(Popup, append,
                 menu_item(Name, label := Label))).
 
-new_window(_T, Profile:profile=[name]) :->
-    "Open a new Epilog window with Profile"::
-    default(Profile, prolog, TheProfile),
-    epilog(TheProfile).
+                 /*******************************
+                 *           MENU BAR           *
+                 *******************************/
 
-new_tab(T, Profile:profile=[name]) :->
-    "Open a new tab in this window with Profile"::
-    default(Profile, prolog, TheProfile),
-    epilog_tab(T, TheProfile).
+%       The bar is rebuilt whenever the pane the user is working in
+%       changes, so it is built against one frame and may name it.
+%       `Term' is read when an item is chosen, so it is whichever
+%       terminal is current then.
 
-debug_mode(Frame) :->
-    "Toggle Prolog debug mode"::
-    get(Frame, current_terminal, Term),
-    send(Term, debug_mode).
-
-trace_mode(Frame) :->
-    "Toggle Prolog trace mode"::
-    get(Frame, current_terminal, Term),
-    send(Term, trace_mode).
-
-debugging(Frame, MI:menu_item) :->
-    "Toggle Prolog debug mode"::
-    get(Frame, current_terminal, Term),
-    send(Term, debugging),
-    send(MI, selected, @off).
-
-gui_debug(Frame) :->
-    "Toggle GUI tracer"::
-    get(Frame, current_terminal, Term),
-    send(Term, gui_debug).
-
-update_debug_mode(Frame, MI:menu_item) :->
-    "Updated the current debug mode"::
-    (   epilog_prolog_flag(Frame, query_debug_settings,
-                           debug(Debugging, _Tracing), -)
-    ->  send(MI, selected, Debugging)
-    ;   true
-    ).
-
-update_trace_mode(Frame, MI:menu_item) :->
-    "Updated the current trace mode"::
-    (   epilog_prolog_flag(Frame, query_debug_settings,
-                           debug(_Debugging, Tracing), -)
-    ->  send(MI, selected, Tracing)
-    ;   true
-    ).
-
-update_gui_debug(Frame, MI:menu_item) :->
-    (   epilog_prolog_flag(Frame, gui_tracer, GuiTracer, false)
-    ->  send(MI, selected, GuiTracer)
-    ;   true
-    ).
-
-fold_previous(Frame) :->
-    "Toggle folding the previous command"::
-    get(Frame, current_terminal, Term),
-    get(Term, fold_previous, Old),
-    (   Old == @on
-    ->  New = @off
-    ;   New = @on
-    ),
-    send(Term, fold_previous, New).
-
-update_fold_previous(Frame, MI:menu_item) :->
-    "Update the fold previous command menu item"::
-    (   get(Frame, current_terminal, Term),
-        get(Term, fold_previous, Bool)
-    ->  send(MI, selected, Bool)
-    ;   true
-    ).
-
-epilog_prolog_flag(Frame, Flag, Value, Default) :-
-    get(Frame, current_terminal, Term),
-    terminal_prolog_flag(Term, Flag, Value, Default).
-
-%!  terminal_prolog_flag(+Term, +Flag, -Value, +Default) is semidet.
-%
-%   Get the Prolog flat Flag for the toplevel thread running in Term. If
-%   the flag is not defined, unify   Value  with Default. This predicate
-%   uses a timeout of 0.1 seconds,   returning  Default on timeout. This
-%   guarantees that the console will not  freeze   if  the thread is not
-%   responsive.
-
-terminal_prolog_flag(Term, Flag, Value, Default) :-
-    current_prolog_terminal(Thread, Term),
-    (   catch(call_in_thread(Thread,
-                             current_prolog_flag(Flag, Value),
-                             [ timeout(0.1),
-                               on_timeout(fail)
-                             ]),
-              error(Formal,_),
-              true)
-    ->  var(Formal)
-    ;   Value = Default
-    ).
-
-
-:- pce_end_class(epilog_frame).
-
-:- pce_begin_class(epilog_dialog, dialog, "Prolog terminator menu").
-
-initialise(D) :->
-    send_super(D, initialise),
-    send(D, gap, size(0,0)),
-    send(D, pen, 0),
-    send(D, append, new(MB, menu_bar)),
-    Epilog = @event?receiver?frame,
+fill_menu_bar(E, MD:tool_dialog, F:pane_frame) :->
+    "Build the Epilog menu bar"::
+    Term = F?current_pane,
+    get(MD, menu_bar, @on, MB),
     send(MB, append, new(File,     epilog_popup(file))),
     send(MB, append, new(Settings, popup(settings))),
     send(MB, append, new(Tools,    popup(tools))),
@@ -2518,141 +2329,205 @@ initialise(D) :->
     send(MB, append, new(Help,     popup(help))),
     send_list(File, append,
               [ menu_item(consult,
-                          message(Epilog, consult)),
+                          message(Term, consult)),
                 menu_item(edit,
-                          message(Epilog, edit_file)),
+                          message(Term, edit_file)),
                 menu_item(new_prolog_file,
-                          message(Epilog, new_file),
+                          message(Term, new_file),
                           end_group := @on),
                 menu_item(reload_modified_files,
-                          message(Epilog, make),
+                          message(Term, make),
                           accelerator := 'Shift-Ctrl-M',
                           end_group := @on),
                 new(NewTab, menu_item(new_tab_with_profile)),
                 new(NewWindow, menu_item(new_window_with_profile)),
                 menu_item(close,
-                          message(Epilog, close),
+                          message(E, close_frame, F),
                           accelerator := 'Shift-Ctrl-W'),
                 menu_item(halt_prolog,
-                          message(Epilog, close, @on))
+                          message(E, close_frame, F, @on))
               ]),
     send(NewTab, popup,
          new(NewTabPopup, popup(new_tab,
-                                message(Epilog, new_tab, @arg1)))),
+                                message(E, new_tab, F, @arg1)))),
     send(NewTabPopup, update_message,
-         message(D?frame, update_profile_menu, @receiver)),
+         message(E, update_profile_menu, @receiver)),
     send(NewWindow, popup,
          new(NewWindowPopup, popup(new_window,
-                                   message(Epilog, new_window, @arg1)))),
+                                   message(E, new_window, @arg1)))),
     send(NewWindowPopup, update_message,
-         message(D?frame, update_profile_menu, @receiver)),
+         message(E, update_profile_menu, @receiver)),
     send_list(Settings, append,
               [ menu_item(user_init_file,
-                          message(Epilog, preferences, prolog)),
+                          message(E, preferences, prolog)),
                 menu_item('GUI_preferences',
-                          message(Epilog, preferences, xpce),
+                          message(E, preferences, xpce),
                           end_group := @on),
                 new(FoldPrevious,
                     menu_item(fold_previous_command,
-                              message(Epilog, fold_previous)))
+                              message(Term, toggle_fold_previous)))
               ]),
     send_list(Tools, append,
               [ menu_item(navigator,
-                          message(Epilog, ide, open_navigator)),
+                          message(E, ide, open_navigator)),
                 menu_item(view_threads,
-                          message(Epilog, ide, thread_monitor)),
+                          message(E, ide, thread_monitor)),
                 menu_item(debug_messages,
-                          message(Epilog, ide, debug_monitor)),
+                          message(E, ide, debug_monitor)),
                 menu_item(cross_referencer,
-                          message(Epilog, ide, xref),
+                          message(E, ide, xref),
                           end_group := @on)
               ]),
     send_list(GUI, append,
               [ menu_item('GUI demo programs',
-                          message(Epilog, manpce_tool, demos)),
+                          message(E, manpce_tool, demos)),
                 menu_item(example_XPCE_code_snippets,
-                          message(Epilog, manpce_tool, examples),
+                          message(E, manpce_tool, examples),
                           end_group := @on),
                 menu_item('Explore XPCE classes',
-                          message(Epilog, manpce_tool, class_browser)),
+                          message(E, manpce_tool, class_browser)),
                 menu_item('Explore XPCE class hierarchy',
-                          message(Epilog, manpce_tool, class_hierarchy)),
+                          message(E, manpce_tool, class_hierarchy)),
                 menu_item('Explore XPCE global objects',
-                          message(Epilog, manpce_tool, global_objects)),
+                          message(E, manpce_tool, global_objects)),
                 menu_item('Explore XPCE errors',
-                          message(Epilog, manpce_tool, errors)),
+                          message(E, manpce_tool, errors)),
                 menu_item('Explore by function group',
-                          message(Epilog, manpce_tool, group_overview)),
+                          message(E, manpce_tool, group_overview)),
                 menu_item('Search XPCE manual',
-                          message(Epilog, manpce_tool, search),
+                          message(E, manpce_tool, search),
                           end_group := @on),
                 menu_item('Inspect GUI hierarchy',
-                          message(Epilog, manpce_tool, visual_hierarchy)),
+                          message(E, manpce_tool, visual_hierarchy)),
                 menu_item('Inspect XPCE object',
-                          message(Epilog, manpce_tool, inspector)),
+                          message(E, manpce_tool, inspector)),
                 menu_item('Show XPCE events',
-                          message(Epilog, manpce_tool, event_viewer))
+                          message(E, manpce_tool, event_viewer))
               ]),
     send_list(Debug, append,
               [ new(TraceMode,
                     menu_item(trace_mode,
-                              message(Epilog, trace_mode),
+                              message(Term, trace_mode),
                               accelerator := 'F5')),
                 new(DebugMode,
                     menu_item(debug_mode,
-                              message(Epilog, debug_mode),
+                              message(Term, debug_mode),
                               accelerator := 'Shift-F5')),
                 new(GuiDebug,
                     menu_item('GUI_debugger',
-                              message(Epilog, gui_debug),
+                              message(Term, gui_debug),
                               accelerator := 'Ctrl-F5',
                               end_group := @on)),
                 menu_item(show_debug_status,
-                          message(Epilog, debugging, @arg1),
+                          message(Term, debugging),
                           accelerator := 'F6')
               ]),
     send_list(Help, append,
               [ menu_item('SWI-Prolog documentation',
-                          message(Epilog, open_url,
+                          message(E, open_url,
                                   'https://www.swi-prolog.org')),
                 menu_item('SWI-Prolog Discourse forum',
-                          message(Epilog, open_url,
+                          message(E, open_url,
                                   'https://swi-prolog.discourse.group/'),
                           end_group := @on),
                 menu_item('SWI-Prolog GUI tools',
-                          message(Epilog, open_url,
+                          message(E, open_url,
                                   'https://github.com/SWI-Prolog/packages-xpce/wiki'))
               ]),
     send(Debug, show_current, @on),
     send(Debug, multiple_selection, @on),
-    send(DebugMode, condition, message(Epilog, update_debug_mode, DebugMode)),
-    send(TraceMode, condition, message(Epilog, update_trace_mode, TraceMode)),
-    send(GuiDebug,  condition, message(Epilog, update_gui_debug, GuiDebug)),
+    send(DebugMode, condition, message(Term, update_debug_mode, DebugMode)),
+    send(TraceMode, condition, message(Term, update_trace_mode, TraceMode)),
+    send(GuiDebug,  condition, message(Term, update_gui_debug, GuiDebug)),
     send(Settings, show_current, @on),
     send(Settings, multiple_selection, @on),
     send(FoldPrevious, condition,
-         message(Epilog, update_fold_previous, FoldPrevious)).
+         message(Term, update_fold_previous, FoldPrevious)).
 
-:- pce_end_class(epilog_dialog).
+:- pce_end_class(epilog).
 
-:- pce_begin_class(epilog_popup, popup, "Epilog styled popup").
 
-class_variable(accelerator_font, font, small).
-
-assign_accelerators(_) :->
-    "Accelerators are defined by the window"::
-    true.
-
+:- pce_begin_class(epilog_popup, pane_popup, "Epilog styled popup").
 :- pce_end_class(epilog_popup).
 
 
-:- pce_begin_class(epilog, application,
-                   "The Epilog terminal application").
+                 /*******************************
+                 *        TERMINALS IN IT       *
+                 *******************************/
 
-initialise(E) :->
-    send_super(E, initialise, epilog).
+%       A window of terminals.  ->append_terminal names the tab after the
+%       thread or the profile the terminal runs; a tab is found back by
+%       its label (see `tabbed_window ->on_top'), so no two of them may
+%       carry the same one.
 
-:- pce_end_class(epilog).
+:- pce_extend_class(pane_frame).
+
+append_terminal(F, W:epilog_window, Expose:[bool]) :->
+    "Add a terminal in a tab of its own, named after its profile"::
+    get(W, terminal, PT),
+    terminal_base_label(PT, Base),
+    unique_tab_label(F, Base, 1, Label),
+    send(F, append_pane, W, Label, Expose).
+
+tab_label(F, Label:name) :->
+    "Rename the tab in view"::
+    get(F, tab, Tab),
+    send(Tab, label, Label).
+
+current_terminal(F, Terminal:prolog_terminal) :<-
+    "The terminal the user is working in"::
+    get(F, current_pane, Window),
+    get(Window, terminal, Terminal).
+
+current_terminal(F, Terminal:prolog_terminal) :->
+    "Make Terminal the one the user is working in"::
+    get(Terminal, window, Window),
+    (   get(F, current_pane, Window)
+    ->  true                            % it already is
+    ;   send(F, current_pane, Window)
+    ).
+
+inject(F, Command:prolog) :->
+    "Inject a command into the terminal in view"::
+    get(F, current_terminal, Term),
+    send(Term, inject, Command).
+
+:- pce_end_class.
+
+%!  terminal_base_label(+PrologTerminal, -Label) is det.
+%
+%   What a tab holding PrologTerminal is called, before it is made
+%   unique within its window.
+
+terminal_base_label(PT, Label) :-
+    get(PT, profile, prolog),
+    current_prolog_terminal(Thread, PT),
+    atom(Thread),
+    !,
+    Label = Thread.
+terminal_base_label(PT, Label) :-
+    get(PT, profile, Profile),
+    (   current_profile(Profile, Label)
+    ->  true
+    ;   Label = Profile
+    ).
+
+%!  unique_tab_label(+Frame, +Base, +N, -Label) is det.
+%
+%   Base, or Base with a number after it, such that no tab of Frame
+%   carries it already.
+
+unique_tab_label(F, Base, N, Label) :-
+    (   N == 1
+    ->  Try = Base
+    ;   format(atom(Try), '~w ~d', [Base, N])
+    ),
+    (   get(F, tabs, TW),
+        get(TW, tab, Try, _)
+    ->  N2 is N+1,
+        unique_tab_label(F, Base, N2, Label)
+    ;   Label = Try
+    ).
 
 
 
@@ -2844,10 +2719,22 @@ win_insert_menu(Label, Before) :-
     terminal(Term),
     win_insert_menu(Term, Label, Before).
 
+%       A menu added at runtime cannot simply be put on the bar: the bar
+%       is rebuilt whenever the pane the user is working in changes, and
+%       the next rebuild would take it away again.  It is registered with
+%       the frame instead and replayed after every rebuild.
+
 win_insert_menu(Term, Label, Before) :-
     get(Term, frame, Epilog),
-    get(Epilog, member, epilog_dialog, Dialog),
-    get(Dialog, member, menu_bar, MB),
+    send(Epilog, extend_menu_bar,
+         message(@prolog, ep_insert_menu, @arg1, Label, Before)).
+
+:- public
+    ep_insert_menu/3,
+    ep_insert_menu_item/5.
+
+ep_insert_menu(MD, Label, Before) :-
+    get(MD, menu_bar, @on, MB),
     mb_insert_menu(MB, Label, Before).
 
 mb_insert_menu(MB, Label, '-') =>
@@ -2874,9 +2761,14 @@ win_insert_menu_item(PopupName, Item, Before, Goal) :-
 
 win_insert_menu_item(Term, PopupName, Item, Before, Goal) :-
     get(Term, frame, Epilog),
-    get(Epilog, member, epilog_dialog, Dialog),
-    get(Dialog, member, menu_bar, MB),
+    send(Epilog, extend_menu_bar,
+         message(@prolog, ep_insert_menu_item, @arg1,
+                 PopupName, Item, Before, prolog(Goal))).
+
+ep_insert_menu_item(MD, PopupName, Item, Before, Goal) :-
+    get(MD, menu_bar, @on, MB),
     get(MB, member, PopupName, Popup),
+    get(MD, frame, Epilog),
     insert_in_popup(Epilog, Popup, Item, Before, Goal).
 
 insert_in_popup(_Epilog, Popup, '--', '-', _Goal) =>

@@ -74,8 +74,8 @@ test_epilog_tabs :-
 %   An Epilog frame with one tab holding one terminal.
 
 epilog(F, W) :-
-    new(F, epilog_frame),
-    get(F, current_window, W).
+    get(@epilog, frame, F),
+    get(F, current_pane, W).
 
 %!  tabs(+Frame, -Tabs) is det.
 %
@@ -95,7 +95,7 @@ tabs(F, Tabs) :-
 %!  terminals(+Frame, -Count) is det.
 
 terminals(F, Count) :-
-    get(F?terminal_windows, size, Count).
+    get(F?panes, size, Count).
 
 %!  at_edge(+Window, +Where, -Pos) is det.
 %
@@ -148,7 +148,7 @@ test(a_new_tab_gets_a_label_of_its_own) :-
 
 test(a_new_tab_can_take_another_profile) :-
     epilog(F, _W),
-    send(F, new_tab, shell),
+    send(F, new_pane, shell),
     tabs(F, ['Prolog'-1, 'OS shell'-1]).
 
 test(terminal_windows_counts_over_all_tabs) :-
@@ -180,7 +180,7 @@ test(a_split_terminal_continues_the_one_it_came_from) :-
     send(W?terminal, profile, shell),
     send(W?terminal, goal, prolog),
     send(W, split, horizontally),
-    get(F, current_window, New),
+    get(F, current_pane, New),
     New \== W,
     get(New?terminal, profile, shell),
     get(New?terminal, goal, prolog).
@@ -188,7 +188,7 @@ test(a_split_terminal_continues_the_one_it_came_from) :-
 test(splitting_stays_in_the_tab) :-
     epilog(F, W),
     send(W, split, horizontally),
-    get(F, current_window, New),
+    get(F, current_pane, New),
     send(New, split, vertically),
     tabs(F, ['Prolog'-3]).
 
@@ -207,7 +207,7 @@ test(splitting_stays_in_the_tab) :-
 test(an_empty_title_puts_the_tab_name_back) :-
     epilog(F, W),
     send(W, new_tab),
-    get(F, current_window, New),
+    get(F, current_pane, New),
     get(New, container, tab_frame, Tab),
     get(Tab, name, Name),
     send(Tab, window_label, 'claude'),
@@ -263,7 +263,7 @@ test(a_terminal_carries_a_grip) :-
 test(a_terminal_moves_to_another_tab) :-
     epilog(F, W),
     send(W, new_tab),
-    get(F, current_window, Other),
+    get(F, current_pane, Other),
     get(Other, container, tab_frame, Tab),
     at_edge(Other, right, Pos),
     send(Tab, drop, W, Pos),
@@ -288,7 +288,7 @@ test(the_terminals_of_a_moved_window_still_answer) :-
     get(W1, container, tab_frame, Tab),
     at_edge(W1, right, Pos),
     send(Tab, drop, W2, Pos),
-    get(F1, terminal_windows, Chain),
+    get(F1, panes, Chain),
     send(Chain, member, W2),
     get(W2?terminal, profile, shell).
 
@@ -308,17 +308,17 @@ test(closing_a_tab_closes_its_terminals) :-
     epilog(F, W),
     send(W, split, horizontally),
     send(W, new_tab),
-    get(F, current_window, Other),
+    get(F, current_pane, Other),
     get(W, container, tab_frame, Tab),
     send(Tab, close),
     tabs(F, ['Prolog 2'-1]),
-    get(F, current_window, Other).
+    get(F, current_pane, Other).
 
 test(close_other_tabs_leaves_just_this_one) :-
     epilog(F, W),
     send(W, split, horizontally),
     send(W, new_tab),
-    send(F, new_tab, shell),
+    send(F, new_pane, shell),
     tabs(F, ['Prolog'-2, 'Prolog 2'-1, 'OS shell'-1]),
     get(W, container, tab_frame, Tab),
     send(Tab, close_other_tabs),
