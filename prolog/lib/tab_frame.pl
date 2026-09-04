@@ -756,6 +756,22 @@ place(H, W:window, Inset:[int]) :->
 class_variable(grip_image, name, 'tool/drag-pane.svg',
                "Picture on the grip, drawn at <-handle_size").
 
+variable(pane, window*, both,
+         "Window I move; @nil: the one I am displayed on").
+
+%       A window has a surface of its own, so a grip displayed on the
+%       window behind one is covered by it.  A pane that shows several
+%       windows therefore puts its grip on one of them and says here
+%       which window the grip is really for.
+
+pane(H, Pane:window) :<-
+    "The window I move"::
+    (   get(H, slot, pane, P),
+        P \== @nil
+    ->  Pane = P
+    ;   get(H, window, Pane)
+    ).
+
 :- pce_global(@split_handle_gesture, new(split_handle_gesture)).
 
 %       Dragging the grip moves the window onto another one and clicking
@@ -767,7 +783,7 @@ class_variable(grip_image, name, 'tool/drag-pane.svg',
 
 make_split_handle_popup(P) :-
     new(P, popup),
-    Window = @arg1?window,
+    Window = @arg1?pane,
     send(P, append,
          menu_item(move_to_new_window,
                    message(Window, detach),
@@ -796,11 +812,11 @@ class_variable(cursor_border, [colour]*, @default,
                "Border around it; @default: the foreground, @nil: none").
 
 initialise(G) :->
-    send_super(G, initialise, left, @default, @off, @arg1?window).
+    send_super(G, initialise, left, @default, @off, @arg1?pane).
 
 cursor(G, Gr:graphical, Cursor:cursor) :<-
     "A picture of the window being dragged, scaled to fit"::
-    (   get(Gr, window, W),
+    (   get(Gr, pane, W),
         window_cursor(G, W, Cursor)
     ->  true
     ;   get_super(G, cursor, Gr, Cursor)

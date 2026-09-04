@@ -154,6 +154,19 @@ name_frame(F) :-
     gensym(pane_frame, Name),
     send(F, name, Name).
 
+%!  placed_area(+Window, -Area) is det.
+%
+%   Where a window sits among the ones it is tiled with.  A window that
+%   carries a label or scrollbars of its own is wrapped in a
+%   window_decorator, and it is the decorator the tile places.
+
+placed_area(W, Area) :-
+    (   get(W, decoration, Decor),
+        Decor \== @nil
+    ->  get(Decor, area, Area)
+    ;   get(W, area, Area)
+    ).
+
 %!  modal_transient(+Frame) is semidet.
 %
 %   True while a transient window of Frame is up.  The focus must not be
@@ -1281,11 +1294,14 @@ into a tab of a window of the IDE like any other pane.
                    "A pane of the IDE showing more than one window").
 :- use_class_template(pane).
 
+variable(grip, split_handle*, get, "The grip I am dragged by").
+
 initialise(TP, Label:[name]) :->
     "Create empty, with a grip to drag me by"::
     send_super(TP, initialise, Label),
     send(TP, hide_single_label, @on),   % I am one pane, not a tab strip
-    send(TP, display, new(split_handle)).
+    send(TP, slot, grip, new(H, split_handle)),
+    send(H, pane, TP).                  % it moves me, not the window it is on
 
 append_window(TP, Window:window,
                   Relative:relative_to=[window],
@@ -1309,17 +1325,41 @@ window(TP, Class:name, W:window) :<-
     get(TP, members, Windows),
     get(Windows, find, message(@arg1, instance_of, Class), W).
 
-grip(TP, Handle:split_handle) :<-
-    "The grip I am dragged by"::
-    get(TP?graphicals, find,
-        message(@arg1, instance_of, split_handle), Handle).
-
 resize(TP, Tab:[tab]) :->
     "Keep the grip in my corner"::
     send_super(TP, resize, Tab),
-    (   get(TP, grip, Handle)
-    ->  send(Handle, place, TP)
-    ;   true                            % still being built
+    ignore(send(TP, place_grip)).
+
+%       Each of my windows has a surface of its own, so a grip displayed
+%       on me is covered by whichever of them is over it.  It goes on the
+%       window that is in my corner instead, and moves house when the
+%       layout changes which window that is.
+
+place_grip(TP) :->
+    "Put the grip in my top right corner, on the window that is there"::
+    get(TP, grip, Handle),
+    Handle \== @nil,
+    get(TP, corner_window, W),
+    (   get(Handle, device, W)
+    ->  true
+    ;   send(W, display, Handle)
+    ),
+    send(Handle, place, W).
+
+corner_window(TP, W:window) :<-
+    "The window of mine at my top right"::
+    get(TP, content, Tab),
+    get(Tab, windows, Chain),
+    chain_list(Chain, Windows),
+    Windows \== [],
+    get(TP, size, size(PW, _)),
+    Right is PW-1,
+    (   member(W, Windows),
+        placed_area(W, area(X, Y, AW, AH)),
+        Right >= X, Right =< X+AW,
+        0 >= Y, 0 =< Y+AH
+    ->  true
+    ;   Windows = [W|_]
     ).
 
 :- pce_end_class(tool_pane).

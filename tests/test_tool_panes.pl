@@ -205,6 +205,44 @@ test(it_carries_a_grip_to_drag_it_by) :-
     monitor(TM),
     get(TM, grip, _).
 
+%       A window has a surface of its own, so a grip displayed on the
+%       pane behind them would be covered.  It goes on the window that is
+%       in the corner, and still moves the whole tool.
+
+test(the_grip_is_on_one_of_its_windows, true(OnAWindow == true)) :-
+    monitor(TM),
+    get(TM, grip, Handle),
+    get(Handle, device, D),
+    get(TM, members, Chain),
+    chain_list(Chain, Windows),
+    (   memberchk_eq(D, Windows) ->  OnAWindow = true ;  OnAWindow = false ).
+
+test(but_it_moves_the_whole_tool, true(Moves == TM)) :-
+    monitor(TM),
+    get(TM, grip, Handle),
+    get(Handle, pane, Moves).
+
+test(and_sits_in_the_top_right_of_the_pane, true(NearRight == true)) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_thread_monitor, split),
+    get(@prolog_ide, tool, prolog_thread_monitor, TM),
+    get(TM, size, size(PaneW, _)),
+    get(TM, grip, Handle),
+    get(Handle, device, D),
+    (   get(D, decoration, Dec), Dec \== @nil ->  Placed = Dec ;  Placed = D ),
+    get(Placed, area, area(DX, _, _, _)),
+    get(Handle, area, area(HX, HY, HW, _)),
+    Right is DX+HX+HW,
+    %  within a scrollbar's width of the right edge, and at the top
+    (   PaneW-Right < 24, HY < 8 ->  NearRight = true ;  NearRight = false ).
+
+%!  memberchk_eq(+X, +List) is semidet.
+
+memberchk_eq(X, [Y|T]) :-
+    (   X == Y ->  true ;  memberchk_eq(X, T) ).
+
 test(dragging_it_to_another_window_takes_it_there,
      true(Where == [[epilog_window], [epilog_window, prolog_thread_monitor]])) :-
     no_monitor,
