@@ -128,6 +128,12 @@ sibling(P, New:window) :<-
 label_format(_App, Fmt:name) :<-
     Fmt = 'Test -- %s'.
 
+variable(emptied, frame*, both, "Frame whose last pane went").
+
+frame_empty(App, F:frame) :->
+    "Remember rather than destroy, so a test can see it"::
+    send(App, emptied, F).
+
 fill_menu_bar(_App, MD:tool_dialog, _F:frame) :->
     get(MD, popup, file, @on, Popup),
     send(Popup, append, menu_item(quit)).
@@ -625,10 +631,26 @@ test(deleting_a_pane_leaves_the_others, Names == [one]) :-
     chain_list(Chain, Panes),
     findall(N, (member(P, Panes), get(P, name, N)), Names).
 
-test(deleting_the_last_pane_takes_the_frame_with_it, [fail]) :-
-    frame(F, _App, P1),
+%       What the last pane going means is the application's to say --
+%       Epilog warns when the main console is closed with other windows
+%       open.  A frame whose application says nothing is destroyed.
+
+test(the_application_is_asked_what_an_empty_frame_means, true(Gone == F)) :-
+    frame(F, App, P1),
     send(F, delete_pane, P1, @on),
+    get(App, emptied, Gone).
+
+test(and_a_frame_whose_application_says_nothing_is_destroyed, [fail]) :-
+    new(P, tp_bare),
+    new(F, pane_frame(@default, @default, P)),
+    send(F, delete_pane, P, @on),
     object(F).
+
+test(every_frame_gets_a_name_of_its_own, true(N1 \== N2)) :-
+    frame(F1, _A1, _P1),
+    frame(F2, _A2, _P2),
+    get(F1, name, N1),
+    get(F2, name, N2).
 
 test(the_template_splits_a_pane_beside_itself, true(Panes == [P1, New])) :-
     frame(F, _App, P1),

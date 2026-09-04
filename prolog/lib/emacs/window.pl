@@ -249,10 +249,8 @@ pane_exposed(V) :->
 
 frame_active(V, Val:bool) :->
     "My frame was activated or deactivated by the window manager"::
-    (   Val == @on
-    ->  get(V, frame, Frame),
-        send(@emacs, first, Frame),
-        send(@emacs, selection, V?text_buffer)
+    (   Val == @on                      % `pane_frame ->input_focus' keeps
+    ->  send(@emacs, selection, V?text_buffer)  % the frames in order
     ;   send(@emacs, selection, @nil)
     ).
 

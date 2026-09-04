@@ -38,6 +38,7 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(gensym), [gensym/2]).
 :- use_module(library(pce_template)).
 :- use_module(library(tabbed_window), []).
 :- use_module(library(tab_frame), []).
@@ -117,6 +118,7 @@ initialise(F, App:application=[application],
     "Create from an application and a first pane"::
     send_super(F, initialise, Label, @default, @default, App),
     send(F, slot, menu_extensions, new(chain)),
+    name_frame(F),
     send(F, slot, own_label_format, @default),  % a slot declared `:= @default'
                                                 % is @nil until it is told
 
@@ -139,6 +141,18 @@ initialise(F, App:application=[application],
     ;   send(F, append_pane, Pane, @default, @on)
     ),
     ignore(send(F, pane_changed)).      % nothing has moved the focus yet
+
+%!  name_frame(+Frame) is det.
+%
+%   Give Frame a name of its own.  A frame is named after its class, so
+%   every pane_frame would be called `pane_frame' and `application
+%   <-member(Name)' -- how a tool asks whether its window is already open
+%   -- could not tell two of them apart.  A caller that has a name in
+%   mind sets it afterwards, as epilog/1 does with `main' and `help'.
+
+name_frame(F) :-
+    gensym(pane_frame, Name),
+    send(F, name, Name).
 
 %!  modal_transient(+Frame) is semidet.
 %
@@ -264,7 +278,12 @@ new_pane(F, Kind:[name]) :->
 
 empty(F) :->
     "My last pane is gone"::
-    send(F, destroy).
+    (   get(F, application, App),
+        App \== @nil,
+        send(App, has_send_method, frame_empty)
+    ->  send(App, frame_empty, F)
+    ;   send(F, destroy)
+    ).
 
                  /*******************************
                  *           CLOSING            *
@@ -376,6 +395,13 @@ do_pane_changed(F) :->
 input_focus(F, Val:bool) :->
     "The window manager gave me the focus, or took it away"::
     send_super(F, input_focus, Val),
+    (   Val == @on,
+        \+ send(F, unlinking),
+        get(F, application, App),
+        App \== @nil
+    ->  ignore(send(App, first, F))     % the most recently worked in
+    ;   true
+    ),
     (   \+ send(F, unlinking),
         get(F, current_pane, Pane),
         send(Pane, has_send_method, frame_active)
