@@ -33,7 +33,9 @@
 */
 
 
-:- module(pane_frame, []).
+:- module(pane_frame,
+          [ pane_frame_closed_tab/1     % +Frame
+          ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_util), [chain_list/2]).
 :- use_module(library(pce_template)).
@@ -86,6 +88,8 @@ class_variable(label_format, 'name*', 'SWI-Prolog -- %s',
                "Frame label; %s is the label of the tab in view").
 class_variable(inactive_opacity, num, 1.0,
                "Opacity of a pane that has not got the focus").
+class_variable(prompt_style, {status_bar,dialog}, dialog,
+               "Ask for one value at a time, or all of them in a dialog").
 
 :- pce_global(@pane_tab_popup, make_pane_tab_popup).
 
@@ -116,6 +120,12 @@ initialise(F, App:application=[application],
     send(F, append, new(MD, pane_menu_dialog)),
     get(MD, menu_bar, @on, _),          % there is always a bar to fill
     send(new(TW, pane_tabbed_window), below, MD),
+    (   get(F, application, App0),
+        App0 \== @nil,
+        send(App0, has_send_method, new_pane)
+    ->  send(TW, new_tab_message, message(TW, new_pane))
+    ;   true                            % no button: nothing to make
+    ),
     (   status_bar(F, Status)
     ->  send(new(pane_status_dialog), below, TW)
     ;   true
@@ -234,13 +244,14 @@ empty(F) :->
 :- dynamic
     closed_tab/2.                       % Frame, Time
 
-%!  register_closed_tab(+Frame) is det.
+%!  pane_frame_closed_tab(+Frame) is det.
 %
 %   Remember that a tab of Frame was just closed.  On MacOS, Command-W
 %   closes the tab *and* asks the frame to close, and the frame must let
-%   that second request go.
+%   that second request go.  Exported, so that a key binding that closes
+%   a tab itself can say so.
 
-register_closed_tab(Frame) :-
+pane_frame_closed_tab(Frame) :-
     get_time(Now),
     forget_closed_tabs(Now),
     asserta(closed_tab(Frame, Now)).
@@ -332,6 +343,16 @@ do_pane_changed(F) :->
     ;   true
     ).
 
+input_focus(F, Val:bool) :->
+    "The window manager gave me the focus, or took it away"::
+    send_super(F, input_focus, Val),
+    (   \+ send(F, unlinking),
+        get(F, current_pane, Pane),
+        send(Pane, has_send_method, frame_active)
+    ->  ignore(send(Pane, frame_active, Val))
+    ;   true
+    ).
+
 keyboard_focus(F, W:[window]*) :->
     "Follow the focus as it moves between my panes"::
     (   get(F, prompter, _),
@@ -342,6 +363,29 @@ keyboard_focus(F, W:[window]*) :->
         (   send(W, instance_of, window)
         ->  send(F, pane_changed)
         ;   true
+        )
+    ).
+
+fit(F) :->
+    "Fit around my contents, but resize rather than refit"::
+    (   get(F, attribute, fitted, @on)
+    ->  send(F, resize)
+    ;   send_super(F, fit),
+        send(F, attribute, fitted, @on)
+    ).
+
+on_current_desktop(F) :->
+    "True if I am for more than half on the desktop in view"::
+    (   get(@pce, window_system, sdl)
+    ->  true
+    ;   get(F, area, FArea),
+        (   object(FArea, area(-32000, -32000, _, _))
+        ->  true                        % MS-Windows iconized
+        ;   get(F?display, size, size(DW,DH)),
+            get(FArea, intersection, area(0,0,DW,DH), Intersection),
+            get(FArea, measure, MA),
+            get(Intersection, measure, IA),
+            IA > MA/2
         )
     ).
 
@@ -657,8 +701,7 @@ initialise(TW, Label:label=[name], Size:size=[size],
     "Create with a popup on the labels and a new-tab button"::
     send_super(TW, initialise, Label, Size, Display),
     send(TW, hide_single_label, @on),   % one tab needs no name
-    send(TW, label_popup, @pane_tab_popup),
-    send(TW, new_tab_message, message(TW, new_pane)).
+    send(TW, label_popup, @pane_tab_popup).
 
 new_pane(TW) :->
     "The new-tab button was pressed"::
@@ -672,7 +715,13 @@ new_tab(_TW, Window:window, Label:[name], Tab:tab) :<-
     ->  true
     ;   TheLabel = Label
     ),
-    new(Tab, pane_tab(Window, TheLabel)).
+    new(Tab, pane_tab(Window, TheLabel)),
+    %  A pane that keeps pushing a label out -- an editor showing a
+    %  buffer -- would take a hand-typed one straight back off again.
+    (   send(Window, has_get_method, tab_editable_label)
+    ->  send(Tab, editable_label, Window?tab_editable_label)
+    ;   true
+    ).
 
 %       Not `get_super(TW, member, tab_stack, TS)': in a subclass the
 %       super is class tabbed_window, whose <-member answers the *window*
@@ -735,7 +784,7 @@ close_tab(Tab) :->
     "Close my panes, which takes me with them"::
     (   get(Tab, frame, Frame),
         Frame \== @nil
-    ->  register_closed_tab(Frame)
+    ->  pane_frame_closed_tab(Frame)
     ;   true
     ),
     send(Tab, close).
