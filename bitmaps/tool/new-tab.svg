@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Add a tab after the last one (24x24).  A tab with a plus in it, so
+       that it is not taken for the cross that closes one. -->
+  <path d="M3.2 20.5 V6.4 A2.2 2.2 0 0 1 5.4 4.2 H18.6 A2.2 2.2 0 0 1 20.8 6.4 V20.5"
+        fill="none" stroke="#334155" stroke-width="1.8" stroke-linejoin="round"
+        stroke-linecap="round"/>
+  <path d="M12 8.6 V16.2" fill="none" stroke="#334155" stroke-width="2"
+        stroke-linecap="round"/>
+  <path d="M8.2 12.4 H15.8" fill="none" stroke="#334155" stroke-width="2"
+        stroke-linecap="round"/>
+</svg>

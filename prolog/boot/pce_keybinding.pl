@@ -120,6 +120,7 @@ binding(apple, epilog,
           '\\S-\\s-d' = split_horizontally,
           '\\s-d'     = split_vertically,
           '\\s-n'     = new_window,
+          '\\s-t'     = new_tab,
           '\\s-k'     = clear_screen,
           '\\s-w'     = close
         ]).

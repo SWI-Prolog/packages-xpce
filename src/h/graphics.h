@@ -182,6 +182,8 @@ NewClass(tab)
   ABSTRACT_DIALOG_GROUP
   Size		label_size;		/* Size of the label-box */
   Int		label_offset;		/* X-Offset of the label-box */
+  BoolObj	editable_label;		/* Label can be edited in place */
+  BoolObj	closable;		/* Label carries a close button */
   Name		status;			/* {on_top, hidden} */
   Name		previous_top;		/* Name of element on top before me */
 End;
@@ -197,6 +199,7 @@ End;
 
 NewClass(tab_stack)
   ABSTRACT_DEVICE
+  BoolObj	hide_single_label;	/* Drop the label of a lone tab */
 End;
 
 		/********************************

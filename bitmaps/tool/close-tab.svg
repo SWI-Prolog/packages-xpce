@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <!-- Close the tab this sits on (24x24) -->
+  <path d="M7 7 L17 17" fill="none" stroke="#334155" stroke-width="2.2"
+        stroke-linecap="round"/>
+  <path d="M17 7 L7 17" fill="none" stroke="#334155" stroke-width="2.2"
+        stroke-linecap="round"/>
+</svg>
