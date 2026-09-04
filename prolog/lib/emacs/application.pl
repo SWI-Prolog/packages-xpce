@@ -383,10 +383,28 @@ frame(Emacs, For:'emacs_buffer|emacs_view', Frame:pane_frame) :<-
     get(E, mode, Mode),
     ignore(send(Mode, new_buffer)).
 
-new_pane(Emacs, Frame:pane_frame, _Kind:[name]) :->
-    "The new-tab button: show the buffer in view in a tab of its own"::
-    get(Frame, current_pane, View),
-    send(Emacs, show_buffer, Frame, View?text_buffer, tab).
+new_pane(Emacs, Frame:pane_frame, Kind:[name]) :->
+    "The new-tab button: another editor, or a terminal beside it"::
+    (   Kind == terminal
+    ->  send(Emacs, new_terminal, Frame)
+    ;   get(Frame, current_pane, View),
+        send(View, has_get_method, text_buffer),
+        send(Emacs, show_buffer, Frame, View?text_buffer, tab)
+    ).
+
+%       A terminal in a PceEmacs window.  Nothing here depends on
+%       library(epilog) at load time: an XPCE class is found by name when
+%       it is asked for, so loading it when the user asks is enough.
+
+new_terminal(_Emacs, Frame:pane_frame, Split:[bool]) :->
+    "Put an Epilog terminal in this window"::
+    use_module(user:library(epilog), []),
+    new(W, epilog_window),
+    (   Split == @on
+    ->  send(Frame, split, W, @default, vertically)
+    ;   send(Frame, append_terminal, W, @on)
+    ),
+    send(Frame, keyboard_focus, W).
 
 show_buffer(_Emacs, Frame:pane_frame, B:emacs_buffer,
             How:[{here,tab,split}]) :->

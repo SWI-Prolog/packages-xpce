@@ -77,15 +77,22 @@ various others.
 emacs_register_closed_tab(Frame) :-
     pane_frame_closed_tab(Frame).
 
-:- pce_begin_class(emacs_popup, pane_popup,
-                   "Popup for the mode-menu").
+%       A menu of a mode is added to whatever popup of that name is on the
+%       bar already, which on a window shared with another application is
+%       one that application made.  So this is on class pane_popup rather
+%       than on a popup of PceEmacs's own, and an item carries its own
+%       message rather than leaning on the one of the popup it lands in.
+
+:- pce_extend_class(pane_popup).
 
 append_item(P, Mode:emacs_mode, Item:any) :->
     "Append single menu item"::
     (   Item == -
     ->  send(P, append, gap)
     ;   atom(Item)
-    ->  send(P, append, new(MI, menu_item(Item))),
+    ->  send(P, append,
+             new(MI, menu_item(Item,
+                               message(@emacs_mode, noarg_call, Item)))),
         (   accelerator(Item, Mode, Accell)
         ->  send(MI, accelerator, Accell)
         ;   true
@@ -116,7 +123,7 @@ accelerator(Cmd,  Mode, Accell) :-
 pce_keybinding:alt_binding_function(copy, prefix_or_copy). % Ctrl-V can be bound to prefix_or_copy.
 pce_keybinding:alt_binding_function(cut,  prefix_or_cut).
 
-:- pce_end_class(emacs_popup).
+:- pce_end_class.
 
 
 :- pce_begin_class(emacs_view, view,
@@ -279,8 +286,7 @@ append_menu_items(_V, MB:menu_bar, Mode:emacs_mode,
     "Add the entries of one mode menu to the bar"::
     (   get(MB, member, Name, Popup)
     ->  true
-    ;   new(Popup, emacs_popup(Name,
-                               message(@emacs_mode, noarg_call, @arg1))),
+    ;   new(Popup, pane_popup(Name)),
         (   Name == help
         ->  send(MB, append, Popup, right)
         ;   send(MB, append, Popup)

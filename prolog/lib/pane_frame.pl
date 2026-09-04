@@ -654,6 +654,20 @@ menu_bar(MD, Create:[bool], MB:menu_bar) :<-
         )
     ).
 
+%       A popup on my bar is a pane_popup: the bar is assembled from two
+%       sides, so a menu one of them makes must be one the other can add
+%       to.  Class tool_dialog would make a plain popup.
+
+popup(MD, Name:name, Create:[bool], Popup:pane_popup) :<-
+    "Find the named popup or create it"::
+    get(MD, menu_bar, Create, MB),
+    (   get(MB, member, Name, Popup)
+    ->  true
+    ;   Create == @on
+    ->  send(MB, append, new(Popup, pane_popup(Name))),
+        send(Popup, message, message(MD, action, @arg1))
+    ).
+
 assign_accelerators(_) :->
     "Accelerators are defined by the panes"::
     true.

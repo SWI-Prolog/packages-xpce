@@ -583,7 +583,7 @@ initialise(PT) :->
     send(PT, bindings, KB),
     send(PT, name, terminal),
     send(PT, link_message, message(@receiver, open_link, @arg1)),
-    send(PT, popup, new(P, epilog_popup)),
+    send(PT, popup, new(P, pane_popup)),
     send(P, update_message, message(PT, update_popup, @receiver, @event)),
     Terminal = @event?receiver,
     send_list(P, append,
@@ -636,7 +636,7 @@ initialise(PT) :->
 %   command it stands beside rather than about the terminal.
 
 block_popup(PT, Terminal) :-
-    send(PT, block_popup, new(BP, epilog_popup)),
+    send(PT, block_popup, new(BP, pane_popup)),
     send(BP, update_message,
          message(PT, update_block_popup, @receiver, @event)),
     send_list(BP, append,
@@ -1799,6 +1799,66 @@ unlink(T) :->
     ignore(send(T, save_history)),
     send_super(T, unlink).
 
+%       What a terminal puts on the menu bar of whatever window it is in.
+%       The frame has already put the menus of its application there, so
+%       the File items go in front of that application's own, and the
+%       Debug menu is made if it is not there.
+%
+%       `Term' is read when an item is chosen or a menu opens, so it is
+%       whichever terminal is current then rather than the one that built
+%       the bar.
+
+fill_menu_bar(_T, MD:tool_dialog) :->
+    "Put the menus of a terminal on the bar"::
+    Term = @event?receiver?frame?current_terminal,
+    %  Each goes immediately before the item the application put first,
+    %  so they keep the order they are written in here.
+    forall(member(Item,
+                  [ menu_item(consult,
+                              message(Term, consult)),
+                    menu_item(edit,
+                              message(Term, edit_file)),
+                    menu_item(new_prolog_file,
+                              message(Term, new_file),
+                              end_group := @on),
+                    menu_item(reload_modified_files,
+                              message(Term, make),
+                              accelerator := 'Shift-Ctrl-M',
+                              end_group := @on)
+                  ]),
+           send(MD, append, Item, file, new_tab_with_profile)),
+    get(MD, popup, settings, @on, Settings),
+    send(Settings, append,
+         new(FoldPrevious,
+             menu_item(fold_previous_command,
+                       message(Term, toggle_fold_previous)))),
+    send(FoldPrevious, condition,
+         message(Term, update_fold_previous, FoldPrevious)),
+    debug_popup(MD, Debug),
+    send_list(Debug, append,
+              [ new(TraceMode,
+                    menu_item(trace_mode,
+                              message(Term, trace_mode),
+                              accelerator := 'F5')),
+                new(DebugMode,
+                    menu_item(debug_mode,
+                              message(Term, debug_mode),
+                              accelerator := 'Shift-F5')),
+                new(GuiDebug,
+                    menu_item('GUI_debugger',
+                              message(Term, gui_debug),
+                              accelerator := 'Ctrl-F5',
+                              end_group := @on)),
+                menu_item(show_debug_status,
+                          message(Term, debugging),
+                          accelerator := 'F6')
+              ]),
+    send(Debug, show_current, @on),
+    send(Debug, multiple_selection, @on),
+    send(DebugMode, condition, message(Term, update_debug_mode, DebugMode)),
+    send(TraceMode, condition, message(Term, update_trace_mode, TraceMode)),
+    send(GuiDebug,  condition, message(Term, update_gui_debug, GuiDebug)).
+
 window_label(T, Label:char_array) :->
     "Show the title a client asked for on my tab"::
     (   get(T, container, tab_frame, Tab)
@@ -1866,6 +1926,23 @@ search_options(TI) :-
     !.
 
 :- pce_end_class(epilog_window).
+
+%!  debug_popup(+MenuDialog, -Popup) is det.
+%
+%   The Debug menu, made if it is not there yet.  In a window of Epilog's
+%   own it goes where it has always been, before the GUI menu; in a window
+%   belonging to something else it goes at the end.
+
+debug_popup(MD, Debug) :-
+    get(MD, menu_bar, @on, MB),
+    (   get(MB, member, debug, Debug)
+    ->  true
+    ;   new(Debug, pane_popup(debug)),
+        (   get(MB, member, 'GUI', _)
+        ->  send(MB, append, Debug, @default, 'GUI')
+        ;   send(MB, append, Debug)
+        )
+    ).
 
 
 %!  set_process_working_directory(+Dir) is det.
@@ -2233,11 +2310,32 @@ frame(E, Title:[name], Width:[int], Height:[int],
     ;   send(F, tab_label, Title)
     ).
 
-new_pane(E, F:pane_frame, Profile:[name]) :->
-    "The new-tab button and File->New tab: another terminal"::
-    default(Profile, prolog, TheProfile),
-    epilog_tab(F, TheProfile),
+new_pane(E, F:pane_frame, Kind:[name]) :->
+    "The new-tab button and File->New tab: a terminal, or an editor"::
+    (   Kind == editor
+    ->  send(E, new_editor, F)
+    ;   default(Kind, prolog, TheProfile),
+        epilog_tab(F, TheProfile)
+    ),
     send(E, dummy).                     % never fails
+
+%       An editor in an Epilog window.  Nothing here depends on PceEmacs at
+%       load time: an XPCE class is found by name when it is asked for, so
+%       starting PceEmacs when the user asks is enough.
+
+new_editor(_E, F:pane_frame, Split:[bool]) :->
+    "Put a PceEmacs editor in this window"::
+    use_module(user:library(pce_emacs), []),
+    call(user:start_emacs),
+    new(B, emacs_buffer(@nil, '*scratch*')),
+    new(V, emacs_view(B)),
+    (   Split == @on
+    ->  send(F, split, V, @default, vertically)
+    ;   send(F, append_pane, V, @default, @on)
+    ),
+    send(B, update_label),
+    send(V, setup_mode),
+    send(F, keyboard_focus, V).
 
 dummy(_E) :->
     true.
@@ -2318,29 +2416,19 @@ update_profile_menu(_E, Popup:popup) :->
 %       terminal is current then.
 
 fill_menu_bar(E, MD:tool_dialog, F:pane_frame) :->
-    "Build the Epilog menu bar"::
-    Term = F?current_pane,
+    "Build the menus every pane of an Epilog window shares"::
     get(MD, menu_bar, @on, MB),
-    send(MB, append, new(File,     epilog_popup(file))),
-    send(MB, append, new(Settings, popup(settings))),
-    send(MB, append, new(Tools,    popup(tools))),
-    send(MB, append, new(Debug,    epilog_popup(debug))),
-    send(MB, append, new(GUI,      popup('GUI'))),
-    send(MB, append, new(Help,     popup(help))),
+    send(MB, append, new(File,     pane_popup(file))),
+    send(MB, append, new(Settings, pane_popup(settings))),
+    send(MB, append, new(Tools,    pane_popup(tools))),
+    send(MB, append, new(GUI,      pane_popup('GUI'))),
+    send(MB, append, new(Help,     pane_popup(help))),
     send_list(File, append,
-              [ menu_item(consult,
-                          message(Term, consult)),
-                menu_item(edit,
-                          message(Term, edit_file)),
-                menu_item(new_prolog_file,
-                          message(Term, new_file),
-                          end_group := @on),
-                menu_item(reload_modified_files,
-                          message(Term, make),
-                          accelerator := 'Shift-Ctrl-M',
-                          end_group := @on),
-                new(NewTab, menu_item(new_tab_with_profile)),
+              [ new(NewTab, menu_item(new_tab_with_profile)),
                 new(NewWindow, menu_item(new_window_with_profile)),
+                menu_item(editor_in_a_new_tab,
+                          message(E, new_editor, F),
+                          end_group := @on),
                 menu_item(close,
                           message(E, close_frame, F),
                           accelerator := 'Shift-Ctrl-W'),
@@ -2362,10 +2450,7 @@ fill_menu_bar(E, MD:tool_dialog, F:pane_frame) :->
                           message(E, preferences, prolog)),
                 menu_item('GUI_preferences',
                           message(E, preferences, xpce),
-                          end_group := @on),
-                new(FoldPrevious,
-                    menu_item(fold_previous_command,
-                              message(Term, toggle_fold_previous)))
+                          end_group := @on)
               ]),
     send_list(Tools, append,
               [ menu_item(navigator,
@@ -2404,24 +2489,6 @@ fill_menu_bar(E, MD:tool_dialog, F:pane_frame) :->
                 menu_item('Show XPCE events',
                           message(E, manpce_tool, event_viewer))
               ]),
-    send_list(Debug, append,
-              [ new(TraceMode,
-                    menu_item(trace_mode,
-                              message(Term, trace_mode),
-                              accelerator := 'F5')),
-                new(DebugMode,
-                    menu_item(debug_mode,
-                              message(Term, debug_mode),
-                              accelerator := 'Shift-F5')),
-                new(GuiDebug,
-                    menu_item('GUI_debugger',
-                              message(Term, gui_debug),
-                              accelerator := 'Ctrl-F5',
-                              end_group := @on)),
-                menu_item(show_debug_status,
-                          message(Term, debugging),
-                          accelerator := 'F6')
-              ]),
     send_list(Help, append,
               [ menu_item('SWI-Prolog documentation',
                           message(E, open_url,
@@ -2434,21 +2501,10 @@ fill_menu_bar(E, MD:tool_dialog, F:pane_frame) :->
                           message(E, open_url,
                                   'https://github.com/SWI-Prolog/packages-xpce/wiki'))
               ]),
-    send(Debug, show_current, @on),
-    send(Debug, multiple_selection, @on),
-    send(DebugMode, condition, message(Term, update_debug_mode, DebugMode)),
-    send(TraceMode, condition, message(Term, update_trace_mode, TraceMode)),
-    send(GuiDebug,  condition, message(Term, update_gui_debug, GuiDebug)),
     send(Settings, show_current, @on),
-    send(Settings, multiple_selection, @on),
-    send(FoldPrevious, condition,
-         message(Term, update_fold_previous, FoldPrevious)).
+    send(Settings, multiple_selection, @on).
 
 :- pce_end_class(epilog).
-
-
-:- pce_begin_class(epilog_popup, pane_popup, "Epilog styled popup").
-:- pce_end_class(epilog_popup).
 
 
                  /*******************************

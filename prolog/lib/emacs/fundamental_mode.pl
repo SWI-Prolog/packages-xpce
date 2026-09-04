@@ -129,6 +129,7 @@
           delete_window            = key('\\C-x0') + button(browse),
           other_window             = key('\\C-xo') + button(browse),
           new_frame                = key('\\C-x52') + button(browse),
+          terminal_in_a_new_tab    = button(browse),
           -                        = button(browse),
           history_backward         = key('\\C-\\s-<cursor_left>') +
                                      button(browse),
@@ -1033,6 +1034,12 @@ other_window(M) :->
     ->  send(V?frame, keyboard_focus, Next)
     ;   send(M, report, status, 'Single view')
     ).
+
+terminal_in_a_new_tab(M) :->
+    "Open an Epilog terminal in a tab of this window"::
+    get(M, view, V),
+    get(V, frame, Frame),
+    send(@emacs, new_terminal, Frame).
 
 new_frame(M) :->
     "Open this buffer in a frame of its own"::
