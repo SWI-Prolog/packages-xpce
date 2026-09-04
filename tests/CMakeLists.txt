@@ -4,6 +4,7 @@
 test_libs(colour               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(text_image           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(tab_frame            OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(pane_frame           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(emacs_split          OPTIONS ${XPCE_TEST_OPTIONS})
 if(EPILOG)
 test_libs(epilog_tabs          OPTIONS ${XPCE_TEST_OPTIONS})
@@ -20,6 +21,7 @@ test_libs(terminal_glyphs      OPTIONS ${XPCE_TEST_OPTIONS})
 set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:text_image
                      xpce:tab_frame
+                     xpce:pane_frame
                      xpce:emacs_split
                      xpce:no_display
                      xpce:number_conversion
