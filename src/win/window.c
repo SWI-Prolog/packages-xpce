@@ -1007,6 +1007,24 @@ computeWindow(PceWindow sw)
 { if ( notNil(sw->request_compute) )
   { computeGraphicalsDevice((Device) sw);
     computeLayoutDevice((Device) sw);
+
+    /* The fixed layer is placed against <-content_area, which is what is
+     * visible less any scrollbar I draw myself -- and a scrollbar is one
+     * of the graphicals just laid out, and comes and goes without my
+     * geometry changing.  So they are placed last, and every time, which
+     * ->compute makes cheap when the answer has not moved.
+     */
+    if ( notNil(sw->fixed_graphicals) )
+    { Cell cell;
+
+      for_cell(cell, sw->fixed_graphicals)
+      { Graphical gr = cell->value;
+
+	requestComputeGraphical(gr, DEFAULT);
+	ComputeGraphical(gr);
+      }
+    }
+
     computeBoundingBoxWindow(sw);
 
     assign(sw, request_compute, NIL);
@@ -1330,11 +1348,8 @@ displayFixedWindow(PceWindow sw, Graphical gr, Point pos)
 
   appendChain(sw->fixed_graphicals, gr);
   assign(gr, device, (Device)sw);
-  if ( notNil(gr->request_compute) )
-  { appendChain(sw->recompute, gr);
-    if ( isNil(sw->request_compute) )
-      requestComputeDevice((Device)sw, DEFAULT);
-  }
+  requestComputeGraphical(gr, DEFAULT);	/* it is placed against my size,
+					   which it has yet to see */
   if ( notDefault(pos) )
   { Variable var;
 
@@ -1356,6 +1371,30 @@ displayFixedWindow(PceWindow sw, Graphical gr, Point pos)
  * drawn.  Everything else falls through to the ordinary device
  * behaviour.
  */
+
+/* <-member also finds a graphical of the fixed layer: it is a graphical
+ * of mine, and whoever asks for one by name has no reason to care which
+ * chain it is in.
+ */
+
+static Graphical
+getMemberWindow(PceWindow sw, Name name)
+{ Graphical gr;
+  Cell cell;
+
+  if ( (gr = getMemberDevice((Device)sw, name)) )
+    answer(gr);
+
+  if ( notNil(sw->fixed_graphicals) )
+  { for_cell(cell, sw->fixed_graphicals)
+    { if ( ((Graphical)cell->value)->name == name )
+	answer(cell->value);
+    }
+  }
+
+  fail;
+}
+
 
 static status
 eventFixedWindow(PceWindow sw, EventObj ev)
@@ -1886,6 +1925,18 @@ geometryWindow(PceWindow sw, Int X, Int Y, Int W, Int H)
   y = valInt(sw->area->y);
   w = valInt(sw->area->w);
   h = valInt(sw->area->h);
+
+  /* The fixed layer is placed against my size -- see <-content_area --
+   * so its members work it out again whenever that changes.  ->resize is
+   * no good to them: the window system only sends it once the window has
+   * a surface, and never for a window that is merely re-laid out.
+   */
+  if ( notNil(sw->fixed_graphicals) )
+  { Cell cell;
+
+    for_cell(cell, sw->fixed_graphicals)
+      requestComputeGraphical(cell->value, DEFAULT);
+  }
 
   ws_geometry_window(sw, x, y, w, h, pen);
 
@@ -2741,6 +2792,8 @@ static getdecl get_window[] =
      NAME_repaint, "AABB of pending damage rectangles, or fail if none"),
   GM(NAME_boundingBox, 0, "area", NULL, getBoundingBoxWindow,
      NAME_area, "Union of graphicals"),
+  GM(NAME_member, 1, "graphical", "name", getMemberWindow,
+     NAME_organisation, "Find a graphical of mine by name, fixed or not"),
   GM(NAME_contentArea, 0, "area", NULL, getContentAreaWindow,
      NAME_scroll, "<-visible less the scrollbars I display myself"),
   GM(NAME_visible, 0, "area", NULL, getVisibleWindow,

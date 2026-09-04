@@ -1831,7 +1831,7 @@ initialise(T, Title:title=[name],
     send(T, display, new(Bar, epilog_report)),  % after TI: it draws on top
     send(Bar, displayed, @off),                 % ->display turned it on
     send(Bar, client, TI),
-    send(T, display, new(split_handle)),        % over the terminal as well
+    send(T, display_fixed, new(split_handle)),  % puts itself in the corner
     send(T, keyboard_focus, TI).
 
 resize(T) :->
@@ -1843,9 +1843,7 @@ resize(T) :->
     get(T, member, terminal, TI),
     send(TI, set, 0, 0, TW-SBW, TH),
     get(T, member, epilog_report, Bar),
-    send(Bar, place, 0, 0, TW-SBW, TH),
-    get(T, member, split_handle, Handle),
-    send(Handle, place, T, SBW).
+    send(Bar, place, 0, 0, TW-SBW, TH).
 
 create(T, Parent:[window]) :->
     "Create the terminal and attach a Prolog thread to it"::

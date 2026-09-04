@@ -1256,13 +1256,6 @@ event(P, Ev:event) :->
     ;   send_super(P, event, Ev)
     ).
 
-place_pane_handle(P, Inset:[int]) :->
-    "Put my split_handle back in my corner"::
-    (   get(P, member, split_handle, Handle)
-    ->  send(Handle, place, P, Inset)
-    ;   true                            % still being built
-    ).
-
 :- pce_end_class(pane).
 
 
@@ -1326,25 +1319,26 @@ window(TP, Class:name, W:window) :<-
     get(Windows, find, message(@arg1, instance_of, Class), W).
 
 resize(TP, Tab:[tab]) :->
-    "Keep the grip in my corner"::
+    "Keep the grip on the window in my corner"::
     send_super(TP, resize, Tab),
     ignore(send(TP, place_grip)).
 
 %       Each of my windows has a surface of its own, so a grip displayed
 %       on me is covered by whichever of them is over it.  It goes on the
-%       window that is in my corner instead, and moves house when the
-%       layout changes which window that is.
+%       fixed layer of the window that is in my corner instead, and moves
+%       house when the layout changes which window that is.  Where in that
+%       window it sits is the grip's own business -- see `split_handle
+%       ->compute'.
 
 place_grip(TP) :->
-    "Put the grip in my top right corner, on the window that is there"::
+    "Put the grip on the window in my top right corner"::
     get(TP, grip, Handle),
     Handle \== @nil,
     get(TP, corner_window, W),
     (   get(Handle, device, W)
     ->  true
-    ;   send(W, display, Handle)
-    ),
-    send(Handle, place, W).
+    ;   send(W, display_fixed, Handle)
+    ).
 
 corner_window(TP, W:window) :<-
     "The window of mine at my top right"::

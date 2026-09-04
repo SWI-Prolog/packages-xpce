@@ -799,6 +799,46 @@ initialise(H) :->
     send(H, recogniser, @split_handle_gesture),
     send(H, recogniser, popup_gesture(@split_handle_popup)).
 
+%       I put myself in the corner.  A window asks its fixed graphicals to
+%       work their position out again whenever its size changes, and
+%       <-content_area is what is visible less any scrollbar the window
+%       draws itself, so there is nothing for a pane to do and nothing to
+%       go wrong when it scrolls.
+
+variable(placing, bool := @off, none, "->compute is placing me").
+
+%       Only slots are read here: `<-area', `<-size' and `<-position' all
+%       compute first, and computing is what we are in the middle of.
+%       ->set computes again on the way out -- I am a device -- so it is
+%       kept from coming back round.
+
+compute(H) :->
+    "Put myself in the top right corner of the window I am on"::
+    (   get(H, slot, placing, @on)
+    ->  true
+    ;   send(H, slot, placing, @on),
+        ignore(send(H, place_in_corner)),
+        send(H, slot, placing, @off)
+    ),
+    send_super(H, compute).
+
+place_in_corner(H) :->
+    "Move myself to the corner of the window I am on"::
+    get(H, device, W),
+    W \== @nil,
+    send(W, instance_of, window),
+    get(W, content_area, area(X, Y, AW, _)),
+    get(H, slot, area, Mine),
+    get(Mine, width, HW),
+    get(Mine, x, MX),
+    get(Mine, y, MY),
+    NX is X + AW - HW - 2,
+    NY is Y + 2,
+    (   MX =:= NX, MY =:= NY
+    ->  true
+    ;   send(H, set, NX, NY)
+    ).
+
 :- pce_end_class(split_handle).
 
 :- pce_begin_class(split_handle_gesture, drag_and_drop_gesture,

@@ -160,15 +160,21 @@ initialise(V, B:buffer=[emacs_buffer], W:width=[int], H:height=[int]) :->
     send(E, mode, ModeName),
     get(E, mode, Mode),             % the mode object
     ignore(send(Mode, new_buffer)),
-    send(V, display, new(split_handle)).   % after the editor, which fills
-                                           % me: the grip draws over it
-resize(V) :->
-    "Keep the grip in the corner, clear of the scrollbar"::
-    send_super(V, resize),
-    (   get(V, member, split_handle, H)
-    ->  get(V?editor?scroll_bar, width, SBW),
-        send(H, place, V, SBW)
-    ;   true                        % still being built
+    send(V, display_fixed, new(split_handle)).   % puts itself in the corner
+%       My editor fills me and draws its own scroll bar, so what is left
+%       for the grip in my corner is that much narrower.  See `window
+%       <-content_area', which the grip places itself against.
+
+content_area(V, Area:area) :<-
+    "What is visible, less the scroll bar my editor draws"::
+    get_super(V, content_area, Area),
+    (   get(V, editor, E),
+        get(E, scroll_bar, SB),
+        SB \== @nil
+    ->  get(SB, width, SBW),
+        get(Area, width, W),
+        send(Area, width, W-SBW)
+    ;   true
     ).
 
 %       A tab may hold more than one view (see class tab_frame), while
