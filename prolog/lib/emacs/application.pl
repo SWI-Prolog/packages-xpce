@@ -39,6 +39,8 @@
 :- use_module(library(pce)).
 :- use_module(library(pce_history)).
 :- use_module(library(pane_frame), []).
+:- use_module(library(swi_ide), []).
+:- use_module(library(pce_util), [chain_list/2]).
 :- use_module(library(toolbar), []).
 :- use_module(library(broadcast)).
 :- use_module(library(edit)).
@@ -141,7 +143,7 @@ editor_event(_Emacs, Ev:event) :->
 
 show_buffer_menu(Emacs) :->
     "Show the buffer menu"::
-    (   get(Emacs, member, buffer_menu, Menu)
+    (   get(@prolog_ide, member, buffer_menu, Menu)
     ->  send(Menu, expose)
     ;   send(emacs_buffer_menu(Emacs), open)
     ).
@@ -149,7 +151,7 @@ show_buffer_menu(Emacs) :->
 
 selection(Emacs, B:emacs_buffer*) :->
     "Select emacs buffer"::
-    (   get(Emacs, member, buffer_menu, Menu)
+    (   get(@prolog_ide, member, buffer_menu, Menu)
     ->  send(Menu, selection, B)
     ;   true
     ).
@@ -359,48 +361,24 @@ check_saved_at_exit(BM) :->
 
 :- pce_group(window).
 
-%       What a pane_frame asks of me.  PceEmacs used to have a frame class
-%       of its own; what was specific to it lives here and on emacs_view.
+%       PceEmacs used to have a frame class of its own, and then an
+%       application of its own.  A window of the IDE belongs to
+%       @prolog_ide whoever opened it; what makes this one PceEmacs's is
+%       the editor in it -- see emacs_view, which answers the pane
+%       protocol.
 
-label_format(_Emacs, Format:name) :<-
-    "My frames are titled after the buffer in view"::
-    Format = 'PceEmacs -- %s'.
-
-frame(Emacs, For:'emacs_buffer|emacs_view', Frame:pane_frame) :<-
+frame(_Emacs, For:'emacs_buffer|emacs_view', Frame:pane_frame) :<-
     "A new frame showing For"::
     (   send(For, instance_of, emacs_view)
     ->  View = For
     ;   new(View, emacs_view(For))
     ),
-    new(Frame, pane_frame(Emacs, 'PceEmacs', View, @on)),
+    new(Frame, pane_frame(@prolog_ide, 'PceEmacs', View, @on)),
     send(View?text_buffer, update_label),
     send(Frame, open),
     get(View, editor, E),
     get(E, mode, Mode),
     ignore(send(Mode, new_buffer)).
-
-new_pane(Emacs, Frame:pane_frame, Kind:[name]) :->
-    "The new-tab button: another editor, or a terminal beside it"::
-    (   Kind == terminal
-    ->  send(Emacs, new_terminal, Frame)
-    ;   get(Frame, current_pane, View),
-        send(View, has_get_method, text_buffer),
-        send(Emacs, show_buffer, Frame, View?text_buffer, tab)
-    ).
-
-%       A terminal in a PceEmacs window.  Nothing here depends on
-%       library(epilog) at load time: an XPCE class is found by name when
-%       it is asked for, so loading it when the user asks is enough.
-
-new_terminal(_Emacs, Frame:pane_frame, Split:[bool]) :->
-    "Put an Epilog terminal in this window"::
-    use_module(user:library(epilog), []),
-    new(W, epilog_window),
-    (   Split == @on
-    ->  send(Frame, split, W, @default, vertically)
-    ;   send(Frame, append_terminal, W, @on)
-    ),
-    send(Frame, keyboard_focus, W).
 
 show_buffer(_Emacs, Frame:pane_frame, B:emacs_buffer,
             How:[{here,tab,split}]) :->
@@ -423,41 +401,39 @@ show_buffer(_Emacs, Frame:pane_frame, B:emacs_buffer,
         send(View?editor, text_buffer, B)
     ).
 
-%       The two history buttons live on the tool bar rather than in a menu,
-%       and the tool bar is not rebuilt when the menu bar is, so they are
-%       put there once.
+%       Every window of the IDE belongs to @prolog_ide, so being a member
+%       no longer says a window is one of PceEmacs's.  Holding an editor
+%       does.  <-members is in most-recently-worked-in order -- see
+%       `pane_frame ->input_focus' -- so the first that qualifies is the
+%       one to use.
 
-fill_menu_bar(Emacs, MD:tool_dialog, _F:pane_frame) :->
-    "Put the history buttons on the tool bar"::
-    get(MD, menu_bar, @on, MB),
-    (   get(MB, native, @on)
-    ->  true                    % the menu bar is not drawn: two buttons
-                                % on their own look stranded.  The
-                                % history is on the Browse menu and on
-                                % Control-Command-Left/Right.
-    ;   get(MD, tool_bar, @on, TB),
-        get(TB?graphicals, size, 0)
-    ->  get(Emacs, history, History),
-        get(History, button, forward, Forward),
-        get(History, button, backward, Backward),
-        send_list(TB, append, [Backward,Forward]),
-        send_list([Backward,Forward], activate)
-    ;   true
-    ).
-
-current_frame(Emacs, Frame:pane_frame) :<-
+current_frame(_Emacs, Frame:pane_frame) :<-
     "PceEmacs frame the user is working in"::
     (   send(@event, instance_of, event),
         get(@event, window, Window),
         get(Window, frame, Frame),
         send(Frame, instance_of, pane_frame),
-        get(Frame, application, Emacs)
+        shows_an_editor(Frame)
     ->  true
-    ;   get(Emacs?members, find,
-            and(message(@arg1, instance_of, pane_frame),
-                message(@arg1, on_current_desktop)),
-            Frame)
+    ;   get(@prolog_ide, members, Members),
+        chain_list(Members, Frames),
+        member(Frame, Frames),
+        send(Frame, instance_of, pane_frame),
+        send(Frame, on_current_desktop),
+        shows_an_editor(Frame)
+    ->  true
     ).
+
+%!  shows_an_editor(+Frame) is semidet.
+%
+%   True when Frame holds a view a buffer can be shown in.
+
+shows_an_editor(Frame) :-
+    get(Frame, panes, Chain),
+    chain_list(Chain, Panes),
+    member(Pane, Panes),
+    send(Pane, instance_of, emacs_view),
+    !.
 
 
                  /*******************************

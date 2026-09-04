@@ -39,6 +39,7 @@
 :- use_module(library(emacs_extend), []).
 :- use_module(library(print_text)).
 :- use_module(window, [emacs_register_closed_tab/1]).
+:- use_module(library(swi_ide), []).
 :- require([ append/3
            , auto_call/1
            , between/3
@@ -1039,7 +1040,7 @@ terminal_in_a_new_tab(M) :->
     "Open an Epilog terminal in a tab of this window"::
     get(M, view, V),
     get(V, frame, Frame),
-    send(@emacs, new_terminal, Frame).
+    send(@prolog_ide, new_terminal, Frame).
 
 new_frame(M) :->
     "Open this buffer in a frame of its own"::

@@ -277,11 +277,35 @@ setup_mode(V) :->
 
 fill_menu_bar(V, MD:tool_dialog) :->
     "Put the menus of my mode on the bar"::
+    ignore(send(V, fill_tool_bar, MD)),
     get(V, mode, Mode),
     get(Mode, mode_menu, ModeMenu),
     get(MD, menu_bar, @on, MB),
     send(ModeMenu, for_all,
          message(V, append_menu_items, MB, Mode, @arg1?name, @arg1?value)).
+
+%       The two history buttons live on the tool bar rather than in a
+%       menu, and the tool bar is not rebuilt when the menu bar is, so
+%       they are put there once.  They are the editor's, not the
+%       application's: a window showing a terminal has no history to walk.
+
+fill_tool_bar(_V, MD:tool_dialog) :->
+    "Put the history buttons on the tool bar"::
+    get(MD, menu_bar, @on, MB),
+    (   get(MB, native, @on)
+    ->  true                    % the menu bar is not drawn: two buttons
+                                % on their own look stranded.  The
+                                % history is on the Browse menu and on
+                                % Control-Command-Left/Right.
+    ;   get(MD, tool_bar, @on, TB),
+        get(TB?graphicals, size, 0)
+    ->  get(@emacs, history, History),
+        get(History, button, forward, Forward),
+        get(History, button, backward, Backward),
+        send_list(TB, append, [Backward,Forward]),
+        send_list([Backward,Forward], activate)
+    ;   true
+    ).
 
 append_menu_items(_V, MB:menu_bar, Mode:emacs_mode,
                   Name:name, Entries:chain) :->

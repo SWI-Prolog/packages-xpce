@@ -117,7 +117,8 @@ views(F, Views) :-
 %   <-label_format of its application; see library(pane_frame).
 
 frame_label(F, TabLabel) :-
-    get(@emacs, label_format, Format),
+    get(F, current_pane, Pane),
+    get(Pane, title_format, Format),    % an editor names its own window
     get(F, label, Label),
     get(string(Format, TabLabel), value, Expected),
     Label == Expected.

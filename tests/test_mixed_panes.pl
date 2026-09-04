@@ -115,7 +115,7 @@ test(a_pcemacs_window_takes_a_terminal, Classes == [emacs_view, epilog_window]) 
     emacs,
     new(B, emacs_buffer(@nil, '*mixed-1*')),
     get(@emacs, frame, B, F),
-    send(@emacs, new_terminal, F),
+    send(@prolog_ide, new_terminal, F),
     classes(F, Classes).
 
 test(the_mode_menus_come_and_go_with_the_editor) :-
@@ -135,7 +135,7 @@ test(a_terminal_carries_its_own_menus_into_a_pcemacs_window) :-
     emacs,
     new(B, emacs_buffer(@nil, '*mixed-2*')),
     get(@emacs, frame, B, F),
-    send(@emacs, new_terminal, F),
+    send(@prolog_ide, new_terminal, F),
     terminal(F, T),
     send(F, current_pane, T),
     menus(F, Menus),
@@ -183,5 +183,64 @@ test(and_a_terminal_leaves_it_to_the_application, true(Label == Expected)) :-
     get(F, tab_label, TabLabel),
     get(string('SWI-Prolog -- %s', TabLabel), value, Expected),
     get(F, label, Label).
+
+%       The point of one application for the whole IDE: dropping a
+%       terminal onto an editor and dropping an editor onto a terminal
+%       must leave the same window.
+
+test(the_two_ways_round_give_the_same_menus,
+     true(FromTerminal == FromEditor)) :-
+    emacs,
+    %  a window that started as a terminal and gained an editor
+    epilog_frame(@default, @default, @default, @off, @default, F1),
+    send(@prolog_ide, new_editor, F1),
+    %  and one that started as an editor and gained a terminal
+    new(B, emacs_buffer(@nil, '*symmetry*')),
+    get(@emacs, frame, B, F2),
+    send(@prolog_ide, new_terminal, F2),
+    %  compared with the terminal current in both
+    terminal(F1, T1), send(F1, current_pane, T1), menus(F1, FromTerminal),
+    terminal(F2, T2), send(F2, current_pane, T2), menus(F2, FromEditor).
+
+%       Both editors are made the same way, so that the mode menus they
+%       bring are the same and any difference left is the window's.
+
+test(and_the_same_menus_with_the_editor_current,
+     true(FromTerminal == FromEditor)) :-
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F1),
+    send(@prolog_ide, new_editor, F1),
+    get(F1, current_pane, V1),
+    new(B, emacs_buffer(@nil, '*symmetry-2*')),
+    get(@emacs, frame, B, F2),
+    send(@prolog_ide, new_editor, F2),
+    get(F2, current_pane, V2),
+    send(F1, current_pane, V1), menus(F1, FromTerminal),
+    send(F2, current_pane, V2), menus(F2, FromEditor).
+
+test(a_window_that_started_as_a_terminal_grows_a_bar_for_its_editor,
+     true(Bar == yes)) :-
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    \+ get(F, status_dialog, _),        % a window of terminals has none
+    send(@prolog_ide, new_editor, F),
+    send(F, show_line_number, 3),       % what an editor does as you type
+    (   get(F, status_dialog, _) ->  Bar = yes ;  Bar = no ).
+
+%       Every window of the IDE belongs to @prolog_ide, so being a member
+%       no longer says a window is one PceEmacs can put a buffer in.
+%       Holding an editor does.
+
+test(a_buffer_is_not_shown_in_a_window_of_terminals, true(Landed == own)) :-
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, FT),
+    new(B, emacs_buffer(@nil, '*not-here*')),
+    get(B, open, tab, F),
+    (   F == FT ->  Landed = terminal_window ;  Landed = own ).
+
+test(and_a_window_of_terminals_is_not_the_current_frame, [fail]) :-
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, FT),
+    get(@emacs, current_frame, FT).
 
 :- end_tests(mixed_panes).

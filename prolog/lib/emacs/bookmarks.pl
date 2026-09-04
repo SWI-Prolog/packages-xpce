@@ -38,6 +38,7 @@
           [ find_references_editor/2             % +Title, -Editor
           ]).
 :- use_module(library(pce)).
+:- use_module(library(swi_ide), []).
 :- use_module(library(toolbar)).
 :- use_module(library(pce_toc)).
 :- use_module(library(pce_report)).
@@ -97,7 +98,7 @@ initialise(BM,
     default(Persist, @off, ThePersist),
     send_super(BM, initialise, TheTitle),
     send(BM, persistent_subwindow_layout, @off),
-    send(BM, application, @emacs),
+    send(BM, application, @prolog_ide),  % every window of the IDE does
     send(BM, slot, persists, ThePersist),
     (   ThePersist == @off
     ->  assert(references_editor(BM))
