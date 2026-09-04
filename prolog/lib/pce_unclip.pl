@@ -56,7 +56,7 @@ help.   The   source-code   that   attaches     this   library   is   in
 @bug	This library is for now disabled.
 */
 
-%!  unclip_enabled is fail
+%!  unclip_enabled is semidet.
 %
 %   For now, disable as the event  processing   does  not  work with the
 %   current xpce.

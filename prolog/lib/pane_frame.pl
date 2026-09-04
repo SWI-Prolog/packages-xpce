@@ -955,7 +955,7 @@ close_other_tabs(Tab) :->
                  *          STATUS BAR          *
                  *******************************/
 
-/** The bar at the bottom of a pane_frame.
+/* The bar at the bottom of a pane_frame.
 
 It does three things at once, as the minibuffer of an editor does: it
 carries the reporter every ->report of the frame ends up on, it is where
@@ -1165,7 +1165,7 @@ history_source(D, Source) :-
                  *         PANE TEMPLATE        *
                  *******************************/
 
-/** What a pane does not have to write out for itself.
+/* What a pane does not have to write out for itself.
 
 A pane is any window in a pane_tab, and none of the pane protocol is
 compulsory.  This template carries the parts that would otherwise be
@@ -1264,7 +1264,7 @@ event(P, Ev:event) :->
                  *          TOOL PANE           *
                  *******************************/
 
-/** A pane that shows more than one window.
+/* A pane that shows more than one window.
 
 Most panes are one window: a terminal, an editor.  A tool is usually
 several -- the thread monitor is a list of threads beside a graph -- and

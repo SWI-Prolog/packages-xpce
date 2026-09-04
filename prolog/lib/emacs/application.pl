@@ -149,7 +149,7 @@ show_buffer_menu(Emacs) :->
     ).
 
 
-selection(Emacs, B:emacs_buffer*) :->
+selection(_Emacs, B:emacs_buffer*) :->
     "Select emacs buffer"::
     (   get(@prolog_ide, member, buffer_menu, Menu)
     ->  send(Menu, selection, B)

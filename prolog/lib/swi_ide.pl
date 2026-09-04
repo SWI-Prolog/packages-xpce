@@ -218,7 +218,7 @@ visual_hierarchy(_IDE) :->
                  *          TOOL PANES          *
                  *******************************/
 
-/** A tool that is a pane rather than a window of its own.
+/* A tool that is a pane rather than a window of its own.
 
 Such a tool lives in a tab of a window of the IDE, beside a terminal or
 an editor or another tool.  There is one of each: asking for it again
@@ -303,7 +303,7 @@ current_frame(IDE, F:pane_frame) :<-
                  *          THE WINDOWS         *
                  *******************************/
 
-/** What a pane_frame asks of the application it belongs to.
+/* What a pane_frame asks of the application it belongs to.
 
 Every window of the IDE belongs to me, whichever tool opened it, so that
 it behaves the same however it was made: dropping a terminal onto an

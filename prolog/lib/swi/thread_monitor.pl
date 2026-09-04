@@ -769,7 +769,7 @@ graphs(Win, Graphs:chain) :->
 :- pce_end_class(thread_window).
 
 
-/** The thread monitor as a pane.
+/* The thread monitor as a pane.
 
 It used to be a frame of its own, holding the browser, the graphs, a
 menu bar and a reporter.  It is a `tool_pane' now -- see

@@ -715,7 +715,7 @@ relative_window(TF, _, Rel) :-
                  *         SPLIT HANDLE         *
                  *******************************/
 
-/** A grip that drags its window onto another one.
+/* A grip that drags its window onto another one.
 
 A window is not a good thing to start a drag on: an editor and a terminal
 both want the pointer for themselves.  So a window that is to be moved by
@@ -1091,7 +1091,7 @@ scaled_size(W, H, MaxW, MaxH, SW, SH) :-
                  *          MOVE  MODE          *
                  *******************************/
 
-/** Moving a window to a place picked with the pointer.
+/* Moving a window to a place picked with the pointer.
 
 Dragging a window onto another one asks the window system where the
 pointer is once it has left the window it started on.  Wayland does not
