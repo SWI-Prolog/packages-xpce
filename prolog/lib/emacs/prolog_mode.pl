@@ -102,7 +102,6 @@
 
 :- autoload(library(pldoc/doc_process), [comment_modes/2]).
 
-resource(mode_pl_icon, image, image('32x32/doc_pl.png')).
 resource(breakpoint,   image, library('trace/icons/stop.svg')).
 
 :- emacs_begin_mode(prolog, language,
@@ -233,10 +232,6 @@ class_variable(cond_indentation,      int,   4).
 class_variable(dict_indentation,      int,   2).
 class_variable(indent_tabs,           bool,  @off,
                "Use tabs for indentation").
-
-icon(_, I:image) :<-
-    "Return icon for mode"::
-    catch(new(I, image(resource(mode_pl_icon))), _, fail).
 
 setup_mode(M) :->
     "Attach styles for errors, warnings, etc."::
@@ -3072,6 +3067,9 @@ edit(F, Where:[{here,tab,split,window}]) :->
     ->  get(F, text_buffer, TB),
         get(TB, open, Where, Frame),
         send(Frame?editor, goto_line, Line)
+    ;   object(Source),
+        send(Source, instance_of, source_location)
+    ->  send(@emacs, goto_source_location, Source, Where)
     ;   ensure_loaded(library(edit)),
         prolog_edit:locate(Source, _, Location),
         File = Location.get(file),
