@@ -384,14 +384,22 @@ done:
   { mods &= ~PCE_MOD_CONTROL;
     mods |= PCE_MOD_COMMAND;
   }
-  /* Command or Option means the accelerator is a real XPCE binding we
-   * can hand to MacOS: routing it through the menu runs the same
-   * command.  A function key is safe to take bare, as it is not text
-   * input.  Anything else -- a bare or merely shifted key -- would be
-   * taken from ordinary typing, so leave it to XPCE and let the caller
-   * show it as text.
+  /* Command means the accelerator is a real XPCE binding we can hand to
+   * MacOS: routing it through the menu runs the same command.  A
+   * function key is safe to take bare, as it is not text input.
+   *
+   * Option is NOT safe, even though it is a real binding: on MacOS it
+   * is the text composition modifier, so Option-`.' is the character
+   * `>=' and Option-`e' a dead acute.  Registering PceEmacs' M-. as a
+   * key equivalent made AppKit swallow the keystroke, which left the
+   * TEXT_INPUT event carrying `>=' unopposed by a pending key-down and
+   * inserted that instead of running find_definition.
+   *
+   * Anything else -- a bare or merely shifted key -- would be taken
+   * from ordinary typing.  All of these are left to XPCE, and the
+   * caller shows them as text.
    */
-  if ( !(mods & (PCE_MOD_COMMAND|PCE_MOD_OPTION)) && !fkey )
+  if ( !(mods & PCE_MOD_COMMAND) && !fkey )
   { key[0] = 0;				/* we got as far as writing one */
     return false;
   }
@@ -426,9 +434,10 @@ ws_menubar_key_equivalent(SDL_Event *ev)
   if ( m & SDL_KMOD_GUI )   mods |= PCE_MOD_COMMAND;
 
   /* Only the accelerators parse_accelerator() hands to MacOS can be
-   * claimed, so ordinary typing never walks the menus.
+   * claimed, so ordinary typing -- and Option, which is how MacOS
+   * composes text -- never walks the menus.
    */
-  if ( !(mods & (PCE_MOD_COMMAND|PCE_MOD_OPTION)) &&
+  if ( !(mods & PCE_MOD_COMMAND) &&
        !(k >= SDLK_F1 && k <= SDLK_F12) )
     return false;
 
