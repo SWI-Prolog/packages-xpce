@@ -2357,10 +2357,6 @@ label_format(_E, Format:name) :<-
     "My windows are titled after the terminal in view"::
     Format = 'SWI-Prolog -- %s'.
 
-status_bar(_E, Bar:bool) :<-
-    "A terminal reports on a bar of its own, over its own text"::
-    Bar = @off.
-
 frame(E, Title:[name], Width:[int], Height:[int],
          Main:[bool], TID:[name|int], F:pane_frame) :<-
     "A new Epilog window running one terminal"::

@@ -125,13 +125,8 @@ sibling(P, New:window) :<-
 
 :- pce_begin_class(tp_app, application, "Application of a test frame").
 
-variable(bar, bool := @off, both, "Do my frames get a status bar?").
-
 label_format(_App, Fmt:name) :<-
     Fmt = 'Test -- %s'.
-
-status_bar(App, Bar:bool) :<-
-    get(App, bar, Bar).
 
 fill_menu_bar(_App, MD:tool_dialog, _F:frame) :->
     get(MD, popup, file, @on, Popup),
@@ -154,11 +149,10 @@ frame(F, App, P) :-
 
 frame(F, App, P, Bar) :-
     new(App, tp_app(test)),
-    send(App, bar, Bar),
     new(P, tp_pane),
     send(P, name, one),
     send(P, kind, alpha),
-    new(F, pane_frame(App, @default, P)).
+    new(F, pane_frame(App, @default, P, Bar)).
 
 %!  pane(+Name, +Kind, -Pane) is det.
 
@@ -234,6 +228,36 @@ test(two_rows_when_it_is_not, Names == [pane_menu_dialog,
 test(a_frame_without_a_status_bar_has_no_status_dialog, [fail]) :-
     frame(F, _App, _P),
     get(F, status_dialog, _).
+
+%       A window that never prompts stays bare; one that does grows a bar
+%       the first time it is wanted, which is what lets an editor dropped
+%       into a window of terminals prompt on one.
+
+test(a_bar_is_grown_when_it_is_first_wanted, true(Names == [pane_menu_dialog,
+                                                           pane_tabbed_window,
+                                                           pane_status_dialog])) :-
+    frame(F, _App, _P),
+    get(F, ensure_status_dialog, _),
+    get(F, members, Chain),
+    chain_list(Chain, Members),
+    findall(N, (member(M, Members), get(M, class_name, N)), Names).
+
+test(and_only_one_is_ever_grown, true(SD1 == SD2)) :-
+    frame(F, _App, _P),
+    get(F, ensure_status_dialog, SD1),
+    get(F, ensure_status_dialog, SD2).
+
+test(showing_no_line_number_does_not_grow_one, [fail]) :-
+    frame(F, _App, _P),
+    send(F, show_line_number, @nil),
+    get(F, status_dialog, _).
+
+test(showing_one_does, true(Shown == 'Line: 42')) :-
+    frame(F, _App, _P),
+    send(F, show_line_number, 42),
+    get(F, status_dialog, SD),
+    get(SD, member, line, Text),
+    get(Text?string, value, Shown).
 
 test(the_first_pane_is_the_current_one, true(P == P0)) :-
     frame(F, _App, P0),

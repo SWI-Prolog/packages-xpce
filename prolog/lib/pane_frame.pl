@@ -130,7 +130,7 @@ initialise(F, App:application=[application],
     ->  send(TW, new_tab_message, message(TW, new_pane))
     ;   true                            % no button: nothing to make
     ),
-    (   status_bar(F, Status)
+    (   status_bar(Status)
     ->  send(new(pane_status_dialog), below, TW)
     ;   true
     ),
@@ -150,18 +150,16 @@ modal_transient(F) :-
     Transients \== @nil,
     get(Transients, find, @arg1?modal == transient, _).
 
-%!  status_bar(+Frame, +Argument) is semidet.
+%!  status_bar(+Argument) is semidet.
 %
-%   True when Frame is to have a bar at the bottom.  The application
-%   decides unless the caller said.
+%   True when a frame is to be built with a bar at the bottom.  Only a
+%   caller who says so: a window that never prompts should not carry one,
+%   and one that does grows it when it is first wanted -- see
+%   <-ensure_status_dialog.  A terminal reports on a bar of its own, over
+%   its own text, and an editor wants a minibuffer, so this cannot be
+%   settled per application once a window may hold either.
 
-status_bar(_F, @on) :- !.
-status_bar(_F, @off) :- !, fail.
-status_bar(F, _) :-
-    get(F, application, App),
-    App \== @nil,
-    send(App, has_get_method, status_bar),
-    get(App, status_bar, @on).
+status_bar(@on).
 
                  /*******************************
                  *           STRUCTURE          *
@@ -183,6 +181,23 @@ tabs(F, TW:pane_tabbed_window) :<-
 status_dialog(F, SD:pane_status_dialog) :<-
     "The bar at my bottom; fails if I have none"::
     get(F, member, pane_status_dialog, SD).
+
+%       A window grows a bar the first time a pane wants to prompt on one
+%       or to say which line the caret is on.  A window of terminals never
+%       asks, and stays as bare as it always was; drop an editor into one
+%       and the bar appears.
+
+ensure_status_dialog(F, SD:pane_status_dialog) :<-
+    "The bar at my bottom, made if I have none"::
+    (   get(F, member, pane_status_dialog, SD)
+    ->  true
+    ;   get(F, tabs, TW),
+        send(new(SD, pane_status_dialog), below, TW),
+        (   get(F, status, unmapped)
+        ->  true                        % not open yet: it lays out on ->open
+        ;   send(F, resize)
+        )
+    ).
 
 tab(F, Tab:pane_tab) :<-
     "The tab in view"::
@@ -595,7 +610,7 @@ prompter(F, Prompter:dialog_item) :<-
 
 prompt_using(F, Item:dialog_item, Rval:unchecked) :<-
     "Prompt for a value using Item"::
-    (   get(F, status_dialog, SD)
+    (   get(F, ensure_status_dialog, SD)
     ->  get(F, prompt_in_status_dialog, SD, Item, Rval)
     ;   new(D, dialog),
         send(D, transient_for, F),
@@ -667,7 +682,12 @@ editor_event(F, Ev:event) :->
 
 show_line_number(F, Line:'int|{too_expensive}*') :->
     "Show the line the caret is on"::
-    (   get(F, status_dialog, SD)
+    (   Line == @nil                    % nothing to say: do not grow a bar
+    ->  (   get(F, status_dialog, SD)
+        ->  send(SD, show_line_number, @nil)
+        ;   true
+        )
+    ;   get(F, ensure_status_dialog, SD)
     ->  send(SD, show_line_number, Line)
     ;   true
     ).

@@ -362,10 +362,6 @@ check_saved_at_exit(BM) :->
 %       What a pane_frame asks of me.  PceEmacs used to have a frame class
 %       of its own; what was specific to it lives here and on emacs_view.
 
-status_bar(_Emacs, Bar:bool) :<-
-    "My frames carry a minibuffer"::
-    Bar = @on.
-
 label_format(_Emacs, Format:name) :<-
     "My frames are titled after the buffer in view"::
     Format = 'PceEmacs -- %s'.
@@ -376,7 +372,7 @@ frame(Emacs, For:'emacs_buffer|emacs_view', Frame:pane_frame) :<-
     ->  View = For
     ;   new(View, emacs_view(For))
     ),
-    new(Frame, pane_frame(Emacs, 'PceEmacs', View)),
+    new(Frame, pane_frame(Emacs, 'PceEmacs', View, @on)),
     send(View?text_buffer, update_label),
     send(Frame, open),
     get(View, editor, E),
