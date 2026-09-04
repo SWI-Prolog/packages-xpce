@@ -62,6 +62,7 @@ status ws_created_frame(FrameObj fr);
 void ws_uncreate_frame(FrameObj fr);
 status ws_create_frame(FrameObj fr);
 void ws_raise_frame(FrameObj fr);
+bool ws_frame_has_input_focus(FrameObj fr);
 status ws_frame_bb(FrameObj fr, int *x, int *y, int *w, int *h);
 void ws_x_geometry_frame(FrameObj fr, Name spec, DisplayObj dsp);
 status ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp);
