@@ -146,7 +146,7 @@ goto(L, Fragment:fragment) :->
     send(L, used, @on),
     get(Fragment, text_buffer, TB),
     get(TB, open, tab, Frame),
-    get(Frame, editor, Editor),
+    get(Frame?current_pane, editor, Editor),
     get(L, message, Method),
     send(Editor, Method, Fragment?start).
 

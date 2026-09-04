@@ -38,6 +38,8 @@
 :- module(emacs_application, []).
 :- use_module(library(pce)).
 :- use_module(library(pce_history)).
+:- use_module(library(pane_frame), []).
+:- use_module(library(toolbar), []).
 :- use_module(library(broadcast)).
 :- use_module(library(edit)).
 :- use_module(library(lists)).
@@ -201,7 +203,7 @@ goto_source_location(Emacs,
     new(B, emacs_buffer(File)),
     get(B, open, Where, Frame),
     send(B, check_modified_file),
-    get(Frame, editor, Editor),
+    get(Frame?current_pane, editor, Editor),
     get(Editor, mode, Mode),
     (   get(Location, line_no, Line),
         Line \== @nil
@@ -243,7 +245,7 @@ ensure_source_file(_Emacs, File) :->
 location_history(Emacs, Title:title=[char_array]) :->
     "Save current location into history"::
     (   get(Emacs, current_frame, Frame),
-        get(Frame, editor, Editor),
+        get(Frame?current_pane, editor, Editor),
         get(Editor, mode, Mode)
     ->  send(Mode, location_history, title := Title)
     ;   true
@@ -257,7 +259,7 @@ goto_history(Emacs, HE:emacs_history_entry,
     get(HE, get_hyper, fragment, length, Len),
     get(TB, open, Where, Frame),
     send(TB, check_modified_file),
-    get(Frame, editor, Editor),
+    get(Frame?current_pane, editor, Editor),
     End is Start+Len,
     send(Editor, caret, Start),
     send(Editor, selection, End, Start, highlight),
@@ -357,15 +359,88 @@ check_saved_at_exit(BM) :->
 
 :- pce_group(window).
 
-current_frame(Emacs, Frame:emacs_frame) :<-
+%       What a pane_frame asks of me.  PceEmacs used to have a frame class
+%       of its own; what was specific to it lives here and on emacs_view.
+
+status_bar(_Emacs, Bar:bool) :<-
+    "My frames carry a minibuffer"::
+    Bar = @on.
+
+label_format(_Emacs, Format:name) :<-
+    "My frames are titled after the buffer in view"::
+    Format = 'PceEmacs -- %s'.
+
+frame(Emacs, For:'emacs_buffer|emacs_view', Frame:pane_frame) :<-
+    "A new frame showing For"::
+    (   send(For, instance_of, emacs_view)
+    ->  View = For
+    ;   new(View, emacs_view(For))
+    ),
+    new(Frame, pane_frame(Emacs, 'PceEmacs', View)),
+    send(View?text_buffer, update_label),
+    send(Frame, open),
+    get(View, editor, E),
+    get(E, mode, Mode),
+    ignore(send(Mode, new_buffer)).
+
+new_pane(Emacs, Frame:pane_frame, _Kind:[name]) :->
+    "The new-tab button: show the buffer in view in a tab of its own"::
+    get(Frame, current_pane, View),
+    send(Emacs, show_buffer, Frame, View?text_buffer, tab).
+
+show_buffer(_Emacs, Frame:pane_frame, B:emacs_buffer,
+            How:[{here,tab,split}]) :->
+    "Show B in Frame, here, in a tab of its own or beside the view"::
+    (   How == tab
+    ->  (   get(Frame, panes, Panes),
+            get(Panes, find, @arg1?text_buffer == B, View)
+        ->  send(Frame, current_pane, View)
+        ;   send(Frame, append_pane, new(New, emacs_view(B)),
+                 B?name, @on),
+            send(B, update_label),
+            send(New, setup_mode)
+        )
+    ;   How == split
+    ->  get(Frame, current_pane, Rel),
+        send(Frame, split, new(New, emacs_view(B)), Rel, horizontally),
+        send(B, update_label),
+        send(New, setup_mode)
+    ;   get(Frame, current_pane, View),
+        send(View?editor, text_buffer, B)
+    ).
+
+%       The two history buttons live on the tool bar rather than in a menu,
+%       and the tool bar is not rebuilt when the menu bar is, so they are
+%       put there once.
+
+fill_menu_bar(Emacs, MD:tool_dialog, _F:pane_frame) :->
+    "Put the history buttons on the tool bar"::
+    get(MD, menu_bar, @on, MB),
+    (   get(MB, native, @on)
+    ->  true                    % the menu bar is not drawn: two buttons
+                                % on their own look stranded.  The
+                                % history is on the Browse menu and on
+                                % Control-Command-Left/Right.
+    ;   get(MD, tool_bar, @on, TB),
+        get(TB?graphicals, size, 0)
+    ->  get(Emacs, history, History),
+        get(History, button, forward, Forward),
+        get(History, button, backward, Backward),
+        send_list(TB, append, [Backward,Forward]),
+        send_list([Backward,Forward], activate)
+    ;   true
+    ).
+
+current_frame(Emacs, Frame:pane_frame) :<-
     "PceEmacs frame the user is working in"::
     (   send(@event, instance_of, event),
         get(@event, window, Window),
         get(Window, frame, Frame),
-        send(Frame, instance_of, emacs_frame)
+        send(Frame, instance_of, pane_frame),
+        get(Frame, application, Emacs)
     ->  true
     ;   get(Emacs?members, find,
-            and(message(@arg1, instance_of, emacs_frame),
+            and(message(@arg1, instance_of, pane_frame),
                 message(@arg1, on_current_desktop)),
             Frame)
     ).

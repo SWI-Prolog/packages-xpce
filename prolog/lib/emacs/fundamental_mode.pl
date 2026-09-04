@@ -498,7 +498,7 @@ show_buffer(M, B:emacs_buffer) :->
     (   get(M, views, [_,_|_])          % the request came from here
     ->  get(M, editor, E),
         send(E, text_buffer, B)
-    ;   send(Frame, tab, B, @on)
+    ;   send(@emacs, show_buffer, Frame, B, tab)
     ),
     send(Frame, expose),
     send(B, check_modified_file, Frame).
@@ -1038,7 +1038,7 @@ new_frame(M) :->
     "Open this buffer in a frame of its own"::
     get(M, text_buffer, Buffer),
     get(Buffer, open, window, Frame),
-    get(Frame, editor, NewEditor),
+    get(Frame?current_pane, editor, NewEditor),
     get(M, caret, Here),
     send(NewEditor, caret, Here).
 

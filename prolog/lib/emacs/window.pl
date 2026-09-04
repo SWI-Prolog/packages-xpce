@@ -40,6 +40,7 @@
 :- use_module(library(pce)).
 :- use_module(library(tabbed_window)).
 :- use_module(library(tab_frame)).
+:- use_module(library(pane_frame), [pane_frame_closed_tab/1]).
 :- use_module(prompt).
 :- use_module(library(pce_util)).
 :- use_module(library(pce_drop_target), [drop_target_event/4]).
@@ -61,95 +62,12 @@ various others.
 
 :- pce_global(@current_emacs_mode, new(var)).
 
-:- pce_begin_class(emacs_tabbed_window, tabbed_window,
-                   "Emacs editor tabs").
-
-:- pce_global(@emacs_tab_popup, make_emacs_tab_popup).
-
-make_emacs_tab_popup(P) :-
-    new(P, popup),
-    Tab = @arg1,
-    Cond = (Tab?device?tabs?size \== 1),
-    send_list(P, append,
-              [ menu_item(close_tab,
-                          message(Tab, destroy),
-                          condition := Cond),
-                menu_item(close_other_tabs,
-                          message(Tab, close_other_tabs),
-                          condition := Cond),
-                menu_item(move_to_new_window,
-                          message(Tab, untab),
-                          condition := Cond)
-              ]).
-
-initialise(TW, Label:label=[name], Size:size=[size],
-           Display:display=[display]) :->
-    send_super(TW, initialise, Label, Size, Display),
-    send(TW, hide_single_label, @on).   % one tab needs no name
-
-new_tab(_TW, Window:window, Label:[name], Tab:tab) :<-
-    "Emacs tabs hold one or more views (see class tab_frame)"::
-    new(Tab, tab_frame(Window, Label)),
-    send(Tab, closable, @on).
-
-current(TW, Window:window) :->
-    "Make the given window the current one"::
-    send_super(TW, current, Window),
-    get(Window, text_buffer, TB),
-    (   get(TW, frame, Frame),
-        send(TB, check_modified_file, Frame),
-        send(Frame, has_send_method, setup_mode)
-    ->  send(TW?frame, setup_mode, Window)
-    ;   send(TB, check_modified_file)
-    ).
-
-frame_window(_TW, Window:window, _Name:name, _Rank:'1..', Frame:frame) :<-
-    "After un-tabbing, give the window a new frame"::
-    new(Frame, emacs_frame(Window)).
-
-empty(TW) :->
-    "Last window-tab disappeared"::
-    send(TW?frame, destroy).
-
-:- pce_end_class.
-
-
-:- pce_begin_class(emacs_frame, frame, "Frame for the PceEmacs editor").
-
-class_variable(size,         size, size(80,32), "Size of text-field").
-class_variable(prompt_style, {mini_window,dialog}, dialog, "How to prompt").
-
-initialise(F, For:'emacs_buffer|emacs_view') :->
-    "Create window for buffer"::
-    send(F, send_super, initialise, 'PceEmacs', application := @emacs),
-    send(F, done_message, message(F, close)),
-    send(F, append, new(MBD, emacs_mode_dialog)),
-
-    send(new(TW, emacs_tabbed_window), below, MBD),
-    send(TW, label_popup, @emacs_tab_popup),
-    send(new(emacs_mini_window), below, TW),
-
-    (   send(For, instance_of, emacs_view)
-    ->  V = For,
-        get(For, text_buffer, B)
-    ;   B = For,
-        get(F, class_variable_value, size, Size),
-        new(V, emacs_view(B, Size?width, Size?height))
-    ),
-
-    send(TW, append, V),
-    send(B, update_label),
-    get(V, editor, E),
-    send(F, keyboard_focus, V),
-    send(F, setup_mode, V),
-
-    send(F, open),
-
-    get(E, mode, Mode),
-    ignore(send(Mode, new_buffer)).
-
-:- dynamic
-    closed_tab_in_frame/2.
+%       PceEmacs used to have a frame, a tabbed window, a menu-bar dialog,
+%       a menu bar and a mini window of its own.  All five are now
+%       library(pane_frame): the frame is a pane_frame whose application
+%       is @emacs, and what used to be emacs_frame is split between
+%       @emacs (see `<-frame' and `->show_buffer' in application.pl) and
+%       emacs_view, which answers the pane protocol below.
 
 %!  emacs_register_closed_tab(+Frame) is det.
 %
@@ -157,295 +75,10 @@ initialise(F, For:'emacs_buffer|emacs_view') :->
 %   Command-W on MacOS from killing all tabs.
 
 emacs_register_closed_tab(Frame) :-
-    get_time(Now),
-    asserta(closed_tab_in_frame(Frame, Now)).
+    pane_frame_closed_tab(Frame).
 
-close(F) :->
-    "User-initiated close"::
-    (   retract(closed_tab_in_frame(F, Time)),
-        get_time(Now),
-        Now-Time < 0.5
-    ->  true
-    ;   get(F, member, emacs_tabbed_window, TW),
-        get(TW?tabs, size, Count),
-        (   Count == 1
-        ->  send(F, destroy)
-        ;   send(F, confirm, 'Close %d tabs?', Count)
-        ->  send(F, destroy)
-        ;   true
-        )
-    ).
-
-confirm(F, Format:char_array, Args:any...) :->
-    "Confirm centered"::
-    new(D, dialog('Confirm action')),
-    String =.. [string, Format | Args ],
-    send(D, append, label(message, String)),
-    send(D, append, button(ok, message(D, return, ok))),
-    send(D, append, button(cancel, message(D, return, cancel))),
-    send(D, modal, transient),
-    get(D, confirm_centered, F, Rval),
-    send(D, destroy),
-    Rval == ok.
-
-editor_event(F, Ev:event) :->
-    "Delegate to the mini-window"::
-    get(F, member, mini_window, MW),
-    send(MW, editor_event, Ev).
-
-keyboard_focus(F, W:[window]*) :->
-    "Follow the focus as it moves between the panes of a tab"::
-    (   send(W, instance_of, view),
-        get(F, member, mini_window, MW),
-        get(MW, prompter, Prompter), Prompter \== @nil
-    ->  send_super(F, keyboard_focus, MW)
-    ;   send_super(F, keyboard_focus, W),
-        (   send(W, instance_of, view)
-        ->  send(W, expose_view)
-        ;   true
-        )
-    ).
-
-split(F, B:buffer=emacs_buffer,
-         Direction:direction=[{horizontally,vertically}]) :->
-    "Show a buffer in a new pane next to the current view"::
-    get(F, view, V),
-    get(V, container, tab_frame, TF),
-    default(Direction, horizontally, Dir),
-    send(TF, split, new(New, emacs_view(B)), V, Dir),
-    send(B, update_label),
-    send(F, keyboard_focus, New).
-
-input_focus(F, Val:bool) :->
-    "Activate the window"::
-    send(F, send_super, input_focus, Val),
-    (   send(F, unlinking)
-    ->  true
-    ;   send(F, active, Val)
-    ).
-
-on_current_desktop(F) :->
-    "True if F for more than half on the current desktop"::
-    (   get(@pce, window_system, sdl)
-    ->  true
-    ;   get(F, area, FArea),
-        (   object(FArea, area(-32000, -32000, _, _))
-        ->  true                    % MS-Windows iconized
-        ;   get(F?display, size, size(DW,DH)),
-            get(FArea, intersection, area(0,0,DW,DH), Intersection),
-            get(FArea, measure, MA),
-            get(Intersection, measure, IA),
-            IA > MA/2
-        )
-    ).
-
-tab(F, B:buffer=emacs_buffer, Expose:expose=[bool]) :->
-    "Add new tab holding buffer"::
-    get(F, member, emacs_tabbed_window, TW),
-    (   get(TW, members, Windows),
-        get(Windows, find, @arg1?text_buffer == B, Window)
-    ->  (   Expose == @on
-        ->  send(TW, on_top, Window)
-        ;   true
-        )
-    ;   send(TW, append, new(V, emacs_view(B)), B?name, Expose),
-        send(B, update_label),
-        send(F, setup_mode, V)
-    ).
-
-
-buffer(F, B:emacs_buffer) :->
-    "Switch to the given emacs buffer"::
-    get(F, editor, E),
-    send(E, text_buffer, B).
-
-
-view(F, View:emacs_view) :<-
-    "Currently active view"::
-    get(F, member, emacs_tabbed_window, TW),
-    get(TW, current, View).
-
-
-editor(F, Editor:emacs_editor) :<-
-    "Editor component of the frame"::
-    get(F, view, V),
-    get(V, editor, Editor).
-
-
-menu_bar(F, MB:emacs_menu_bar) :<-
-    "The menu_bar object at the top"::
-    get(F, member, emacs_mode_dialog, D),
-    get(D, member, emacs_menu_bar, MB).
-
-
-mode(F, Mode:emacs_mode) :<-
-    "Current mode object of the editor"::
-    get(F, editor, E),
-    get(E, mode, Mode).
-
-
-setup_mode(F, V:emacs_view) :->
-    "Setup the mode for indicated view"::
-    get(F, menu_bar, MB),
-    ignore(send(V, fill_menu_bar, MB)),
-    (   get(V, label, Label)
-    ->  send(F, label, Label)
-    ;   true
-    ).
-
-
-active(F, Val:bool) :->
-    "Indicate active status"::
-    get(F, view, View),
-    (   Val == @on
-    ->  send(@emacs, first, F),
-        send(@emacs, selection, View?text_buffer)
-    ;   send(@emacs, selection, @nil)
-    ).
-
-
-fit(F) :->
-    "Request to fit the contents"::
-    (   get(F, attribute, fitted, @on)
-    ->  send(F, resize)
-    ;   send(F, send_super, fit),
-        send(F, attribute, fitted, @on)
-    ).
-
-                 /*******************************
-                 *          PROMPTING           *
-                 *******************************/
-
-:- pce_global(@prompt_recogniser, make_prompt_binding).
-
-make_prompt_binding(G) :-
-    new(G, key_binding(emacs_mini_window_prompter, text_item)),
-    send(G, function, 'TAB',  complete),
-    send(G, function, 'SPC',  insert_self),
-    send(G, function, 'RET',  if(message(@receiver, apply, @on))),
-    send(G, function, '\\C-g', and(message(@receiver, keyboard_quit),
-                                  message(@receiver?frame, return,
-                                          canceled))).
-
-prompt_using(F, Item:dialog_item, Rval:unchecked) :<-
-    "Prompt for value in dialog using Item"::
-    get(F, view, View),
-    get(F, member, mini_window, W),
-    get(F, menu_bar, MB),
-    send(MB, active, @off),
-
-    send(W, client, View),
-    send(W, prompter, Item),
-    send(Item, message, message(F, return, ok)),
-    (   send(Item, instance_of, text_item)
-    ->  send(Item, recogniser, @prompt_recogniser),
-        send(Item, value_font, fixed)
-    ;   true
-    ),
-    send(F, keyboard_focus, W),
-    get(F, confirm, Return),
-    object(F),                      % may be freed!
-
-    (   Return == ok
-    ->  get(Item, selection, Rval)
-    ;   true
-    ),
-
-    send(Item, message, @nil),
-    send(Item, lock_object, @on),   % Tricky, but we should leave the
-    send(W, prompter, @nil),        % lifetime to the caller
-    get(Item, unlock, Item),
-    get(F, view, View),
-    send(F, keyboard_focus, View),
-    send(MB, active, @on),
-    Return == ok.
-
-reset(F) :->
-    "Remove prompter"::
-    send(F, send_super, reset),
-    get(F, member, mini_window, W),
-    send(W, prompter, @nil),
-    get(F, menu_bar, MB),
-    send(MB, active, @on).
-
-show_line_number(F, Line:'int|{too_expensive}*') :->
-    "Show current line in mini-window"::
-    get(F, member, mini_window, W),
-    send(W, show_line_number, Line).
-
-:- pce_end_class(emacs_frame).
-
-
-:- pce_begin_class(emacs_mode_dialog, dialog,
-                   "Show menu-bar for mode options").
-
-initialise(D) :->
-    send_super(D, initialise),
-    send(D, gap, size(0,0)),
-    send(D, pen, 0),
-    send(D, append, new(MB, emacs_menu_bar)),
-    (   get(MB, native, @on)
-    ->  true                    % the menu bar is not drawn: two buttons
-                                % on their own look stranded.  The
-                                % history is on the Browse menu and on
-                                % Control-Command-Left/Right.
-    ;   send(D, append, new(TB, tool_bar), right),
-        send(TB, reference, point(0,15)),
-        send(TB, alignment, right),
-        get(@emacs, history, History),
-        get(History, button, forward, Forward),
-        get(History, button, backward, Backward),
-        send_list(TB, append, [Backward,Forward]),
-        send_list([Backward,Forward], activate)
-    ).
-
-resize(D) :->
-    send(D, layout, D?area?size).
-
-assign_accelerators(_) :->
-    "Accelerators are defined by the window"::
-    true.
-
-:- pce_end_class(emacs_mode_dialog).
-
-
-:- pce_begin_class(emacs_menu_bar, menu_bar,
-                   "Top menu bar of the editor").
-
-assign_accelerators(_) :->
-    "Accelerators are defined by the window"::
-    true.
-
-mode(MB, Mode:emacs_mode) :->
-    "Prepare for given mode"::
-    get(Mode, mode_menu, ModeMenu),
-    send(MB, clear),
-    send(ModeMenu, for_all,
-         message(MB, append_items, Mode, @arg1?name, @arg1?value)).
-
-append_items(MB, Mode:emacs_mode, Name:name, Entries:chain) :->
-    (   get(MB, member, Name, Popup)
-    ->  true
-    ;   new(Popup, emacs_popup(Name,
-                               message(@emacs_mode, noarg_call, @arg1))),
-        (   Name == help
-        ->  send(MB, append, Popup, right)
-        ;   send(MB, append, Popup)
-        )
-    ),
-    send(Entries, for_some, message(Popup, append_item, Mode, @arg1)).
-
-:- pce_end_class(emacs_menu_bar).
-
-
-:- pce_begin_class(emacs_popup, popup,
+:- pce_begin_class(emacs_popup, pane_popup,
                    "Popup for the mode-menu").
-
-class_variable(accelerator_font, font, small).
-
-assign_accelerators(_) :->
-    "Accelerators are defined by the window"::
-    true.
 
 append_item(P, Mode:emacs_mode, Item:any) :->
     "Append single menu item"::
@@ -486,173 +119,9 @@ pce_keybinding:alt_binding_function(cut,  prefix_or_cut).
 :- pce_end_class(emacs_popup).
 
 
-:- pce_begin_class(emacs_mini_window, dialog, "Prompt and feedback window").
-
-variable(prompter,       dialog_item*,  get,    "Current prompter").
-variable(report_count,   number,        get,    "Count to erase report").
-variable(report_type,    name*,         both,   "Last type of report").
-
-initialise(D) :->
-    send(D, send_super, initialise),
-    send(D, slot, report_count, number(0)),
-    send(D, gap, size(10, 2)),
-    send(D, pen, 0),
-    send(D, display, new(R, label(reporter)), point(0, 2)),
-    send(R, wrap, clip),
-    send(D, display, new(T, text('', right, normal)), point(100, 2)),
-    send(T, name, line),
-    get(text_item(''), height, MH),
-    send(D, height, MH),
-    send(D, name, mini_window).
-
-resize(D) :->
-    get(D, member, line, Text),
-    get(D?area, width, W),
-    get(Text, width, TW),
-    send(Text, x, W-TW-16).
-
-'_compute_desired_size'(_) :->
-    "We have fixed size"::
-    true.
-
-client(D, Client:emacs_view) :->
-    "Register emacs_view as client"::
-    send(D, delete_hypers, client),
-    new(_, hyper(D, Client, client, mini_window)).
-client(D, Client:emacs_view) :<-
-    "Get client emacs_view"::
-    get(D, hypered, client, Client).
-
-
-show_line_number(D, Line:'int|{too_expensive}*') :->
-    "Show number of current line"::
-    get(D, member, line, Text),
-    (   Line == @nil
-    ->  send(Text, string, '')
-    ;   Line == too_expensive
-    ->  send(Text, string, 'Line: ?')
-    ;   send(Text, string, string('Line: %d', Line))
-    ).
-
-
-report(D, Type:name, Fmt:[char_array], Args:any ...) :->
-    "Report"::
-    (   get(D, report_type, ReportType),
-        ok_to_overrule(Type, ReportType)
-    ->  send(D, report_type, Type),
-        get(D, member, reporter, Label),
-        get(D, report_count, RC),
-        (   Fmt == '', Type == status       % clear
-        ->  send(Label, clear),
-            send(RC, value, 0)
-        ;   (   get(D, prompter, Prompter), Prompter \== @nil
-            ->  send(Label, x, Prompter?width + 10)
-            ;   send(Label, x, 0)
-            ),
-            send(Label, displayed, @on),
-            Msg =.. [report, Type, Fmt|Args],
-            send(Label, Msg),
-            send(RC, value, 10)
-        )
-    ;   true
-    ).
-
-ok_to_overrule(_, @nil).
-ok_to_overrule(_, status).
-ok_to_overrule(_, progress).
-ok_to_overrule(_, done).
-ok_to_overrule(warning, warning).
-ok_to_overrule(inform, _).
-ok_to_overrule(error, _).
-
-:- pce_global(@emacs_mini_window_bindings, make_emacs_mini_window_bindings).
-
-make_emacs_mini_window_bindings(B) :-
-    new(B, key_binding(emacs_mini_window)),
-    send(B, function, '\\en', m_x_next),
-    send(B, function, '\\ep', m_x_previous).
-
-editor_event(D, Ev:event) :->
-    "Process event typed in the editor"::
-    (   get(D, prompter, Prompter),
-        Prompter \== @nil
-    ->  (   send(@emacs_mini_window_bindings, event, Ev)
-        ->  true
-        ;   get(D, member, reporter, Reporter),
-            send(Reporter, displayed, @off),
-            ignore(send(Ev, post, Prompter))
-        )
-    ;   send(D, report_type, @nil),
-        get(D, report_count, RC),
-        send(RC, minus, 1),
-        (   send(RC, equal, 0)
-        ->  send(D, report, status, '')
-        ),
-        fail
-    ).
-
-
-event(D, Ev:event) :->
-    "Process direct event"::
-    (   get(D, prompter, Prompter),
-        Prompter \== @nil
-    ->  send(D, editor_event, Ev)
-    ;   send_super(D, event, Ev)
-    ).
-
-
-m_x_next(D) :->
-    "Handle M-n to get next value"::
-    (   get(D?client?mode, m_x_next, NewDefault)
-    ->  send(D?prompter, displayed_value, NewDefault?print_name)
-    ;   send(D?prompter, restore)
-    ).
-
-
-m_x_previous(D) :->
-    "Handle M-p to get previous value"::
-    get(D?client?mode, m_x_previous, NewDefault),
-    send(D?prompter, displayed_value, NewDefault?print_name).
-
-
-geometry(D, X:[int], Y:[int], W:[int], H:[int]) :->
-    "Change size, center contents vertically"::
-    send(D, send_super, geometry, X, Y, W, H),
-    get(D, height, DH),
-    DH2 is round(DH/2),
-    send(D?graphicals, for_all,
-         message(@arg1, center_y, DH2)).
-
-
-prompter(D, Prompter:dialog_item*) :->
-    "Display the prompter"::
-    get(D, member, reporter, Reporter),
-    (   get(D, prompter, OldPrompter), OldPrompter \== @nil
-    ->  send(D, erase, OldPrompter)
-    ;   true
-    ),
-    (   Prompter == @nil
-    ->  send(Reporter, clear),
-        send(Reporter, displayed, @on)
-    ;   send(Reporter, displayed, @off),
-        get(Prompter, height, H),
-        get(D, height, DH),
-        PY is (DH-H)/2,
-        send(D, display, Prompter, point(25, PY)),
-        get(Prompter, height, H),
-        MinH is H,
-        (   DH < MinH
-        ->  send(D, height, MinH)
-        ;   true
-        )
-    ),
-    send(D, slot, prompter, Prompter).
-
-:- pce_end_class.
-
-
 :- pce_begin_class(emacs_view, view,
                    "View running an emacs_editor").
+:- use_class_template(pane).
 
 :- pce_global(@emacs_image_recogniser,
               new(handler(button,
@@ -711,20 +180,12 @@ label(V, Label:name) :<-
     Label \== @nil.
 
 update_labels(V) :->
-    "Push my label to the tab and the frame if I am the current view"::
-    (   get(V, label, Label)
-    ->  (   get(V, container, tab, Tab)
-        ->  (   current_in_tab(Tab, V)
-            ->  send(Tab, label, Label),
-                (   get(Tab, status, on_top)
-                ->  frame_label(V, Label)
-                ;   true
-                )
-            ;   true
-            )
-        ;   frame_label(V, Label)
-        )
-    ;   true
+    "Put my label on my tab if I am the view it is showing"::
+    (   get(V, label, Label),
+        get(V, container, tab, Tab),
+        current_in_tab(Tab, V)
+    ->  send(Tab, label, Label)         % the frame follows the tab; see
+    ;   true                            % `pane_frame ->update_label'
     ).
 
 %       current_in_tab(+Tab, +View)
@@ -738,36 +199,94 @@ current_in_tab(Tab, V) :-
     ;   true
     ).
 
-frame_label(V, Label) :-
-    (   get(V, frame, Frame),
-        Frame \== @nil
-    ->  send(Frame, label, Label)
-    ;   true
-    ).
-
-expose_view(V) :->
-    "I have become the current view of my tab"::
-    send(V, update_labels),
-    send(V, setup_mode).
-
 drop_files(V, Files:chain, _At:point) :->
     "Accept files dropped on me"::
     send(V?editor, drop_files, Files).
 
 
+:- pce_group(pane).
+
+%       What my frame asks of me.  See library(pane_frame): every one of
+%       these is optional, and the frame guards each with
+%       ->has_send_method before it sends it.
+
+pane_label(V, Label:name) :<-
+    "What my tab is called"::
+    (   get(V, label, Label)
+    ->  true
+    ;   get(V, name, Label)
+    ).
+
+tab_editable_label(_V, Editable:bool) :<-
+    "My tab is named after my buffer, so it is not renamed by hand"::
+    Editable = @off.
+
+menu_bar_key(V, Key:name) :<-
+    "The menu bar follows the mode, so the mode names it"::
+    get(V, mode, Mode),
+    get(Mode, name, Key).
+
+pane_exposed(V) :->
+    "I have become the current view"::
+    send(V, update_labels),
+    get(V, text_buffer, TB),
+    (   get(V, frame, Frame),
+        Frame \== @nil
+    ->  ignore(send(TB, check_modified_file, Frame))
+    ;   ignore(send(TB, check_modified_file))
+    ).
+
+frame_active(V, Val:bool) :->
+    "My frame was activated or deactivated by the window manager"::
+    (   Val == @on
+    ->  get(V, frame, Frame),
+        send(@emacs, first, Frame),
+        send(@emacs, selection, V?text_buffer)
+    ;   send(@emacs, selection, @nil)
+    ).
+
+sibling(V, New:emacs_view) :<-
+    "A second view on my buffer"::
+    new(New, emacs_view(V?text_buffer)).
+
 :- pce_group(mode).
 
 setup_mode(V) :->
-    "Editor has changed mode; ask <-frame to do its part"::
+    "My editor changed mode; the menu bar and my label follow"::
+    send(V, update_labels),
     (   get(V, frame, Frame),
-        send(Frame, has_send_method, setup_mode)
-    ->  send(Frame, setup_mode, V)
+        Frame \== @nil,
+        send(Frame, has_send_method, update_menu_bar)
+    ->  ignore(send(Frame, update_menu_bar))
     ;   true
     ).
 
-fill_menu_bar(V, MB:menu_bar) :->
-    "Setup menu-bar for current mode"::
-    send(V?editor, fill_menu_bar, MB).
+%       The whole menu bar of a mode, as `emacs_mode_menu' describes it.
+%       The frame has already put the menus every pane shares on the bar;
+%       a menu named here that is already there is added to rather than
+%       made again.
+
+fill_menu_bar(V, MD:tool_dialog) :->
+    "Put the menus of my mode on the bar"::
+    get(V, mode, Mode),
+    get(Mode, mode_menu, ModeMenu),
+    get(MD, menu_bar, @on, MB),
+    send(ModeMenu, for_all,
+         message(V, append_menu_items, MB, Mode, @arg1?name, @arg1?value)).
+
+append_menu_items(_V, MB:menu_bar, Mode:emacs_mode,
+                  Name:name, Entries:chain) :->
+    "Add the entries of one mode menu to the bar"::
+    (   get(MB, member, Name, Popup)
+    ->  true
+    ;   new(Popup, emacs_popup(Name,
+                               message(@emacs_mode, noarg_call, @arg1))),
+        (   Name == help
+        ->  send(MB, append, Popup, right)
+        ;   send(MB, append, Popup)
+        )
+    ),
+    send(Entries, for_some, message(Popup, append_item, Mode, @arg1)).
 
 :- pce_group(prompt).
 
@@ -1074,8 +593,8 @@ import_selection(E) :->
     get(E, display, Display),
     get(Display, selected_text, String),
     (   get(E, frame, Frame),
-        get(Frame, member, mini_window, MiniWindow),
-        get(MiniWindow, prompter, TI),
+        send(Frame, has_get_method, prompter),
+        get(Frame, prompter, TI),
         send(TI, instance_of, text_item)
     ->  send(TI, insert, @default, String)
     ;   send(E, insert, String)
@@ -1412,11 +931,6 @@ mode_menu_name(ClassName, Name) :-
     send(Super, is_a, emacs_mode),
     get(Super, name, SuperName),
     mode_menu_name(SuperName, Name).
-
-fill_menu_bar(M, MB:menu_bar) :->
-    "Fill the menu_bar"::
-    send(MB, mode, M).
-
 
                  /*******************************
                  *            HISTORY           *
