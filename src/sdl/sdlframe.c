@@ -453,6 +453,34 @@ ws_draw_resize_frame(FrameObj fr)
 }
 
 
+/**
+ * Where the coordinate system of `sub`, a subwindow of `sw`, starts
+ * relative to the origin of `sw`.
+ *
+ * get_absolute_xy_graphical() answers the position of `sub` itself,
+ * which already includes its <-area.  The routines below add the area
+ * again when they place the window, so take it out here.  The two are
+ * the same only while a subwindow sits in the top-left corner of its
+ * device, which is what class window_tab does and class tab_frame (see
+ * library(tab_frame)) does not.
+ *
+ * @param sw  Window holding `sub` in its <-subwindows
+ * @param sub The subwindow
+ */
+
+static void
+subwindow_offset(PceWindow sw, PceWindow sub, float *ox, float *oy)
+{ PceWindow me = DEFAULT;
+  Int x, y;
+
+  get_absolute_xy_graphical((Graphical)sub, (Device *)&me, &x, &y);
+  assert(me == sw);
+
+  *ox = (float)(valInt(x) - valInt(sub->area->x));
+  *oy = (float)(valInt(y) - valInt(sub->area->y));
+}
+
+
 static void
 ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
 { WsFrame  wfr = fr->ws_ref;
@@ -520,17 +548,16 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
 
       for_cell(cell, sw->subwindows)
       { PceWindow sub = cell->value;
-	PceWindow me = DEFAULT;
-	Int x, y;
-	get_absolute_xy_graphical((Graphical)sub, (Device *)&me, &x, &y);
-	assert(me == sw);
+	float sx, sy;
+
+	subwindow_offset(sw, sub, &sx, &sy);
 
 	foffset off2;
-	off2.x = off->x + (float)(valInt(sw->area->x) + valInt(x));
-	off2.y = off->y + (float)(valInt(sw->area->y) + valInt(y));
+	off2.x = off->x + (float)valInt(sw->area->x) + sx;
+	off2.y = off->y + (float)valInt(sw->area->y) + sy;
 	DEBUG(NAME_sdl,
 	      Cprintf("Drawing subwindow %s of %s at %f,%f\n",
-		      pp(sub), pp(sw), pp(me), off2.x, off2.y));
+		      pp(sub), pp(sw), off2.x, off2.y));
 
 	ws_draw_window(fr, sub, &off2);
       }
@@ -749,7 +776,10 @@ ws_raise_frame(FrameObj fr)
  */
 void
 ws_frame_cursor(FrameObj fr, CursorObj cursor)
-{ SDL_Cursor *c = pceCursor2SDL_Cursor(cursor);
+{ if ( ws_busy_cursor() )               /* covers every frame */
+    return;
+
+  SDL_Cursor *c = pceCursor2SDL_Cursor(cursor);
   if ( c )
   { ASSERT_SDL_MAIN();
     SDL_SetCursor(c);
@@ -996,7 +1026,10 @@ ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
  */
 void
 ws_busy_cursor_frame(FrameObj fr, CursorObj c)
-{
+{ if ( isDefault(c) )
+    c = getClassVariableValueObject(fr, NAME_busyCursor);
+
+  ws_set_busy_cursor(c);
 }
 
 /**
@@ -1072,13 +1105,12 @@ composite_window_to_cairo(cairo_t *cr, PceWindow sw,
   { Cell cell;
     for_cell(cell, sw->subwindows)
     { PceWindow sub = cell->value;
-      PceWindow me  = DEFAULT;
-      Int x, y;
-      get_absolute_xy_graphical((Graphical)sub, (Device *)&me, &x, &y);
-      assert(me == sw);
+      float sx, sy;
+
+      subwindow_offset(sw, sub, &sx, &sy);
       composite_window_to_cairo(cr, sub,
-				ox + valNum(sw->area->x) + valNum(x),
-				oy + valNum(sw->area->y) + valNum(y),
+				ox + valNum(sw->area->x) + sx,
+				oy + valNum(sw->area->y) + sy,
 				scale);
     }
   }

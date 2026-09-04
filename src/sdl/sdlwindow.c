@@ -253,7 +253,10 @@ ws_move_pointer(PceWindow sw, int x, int y)
  */
 void
 ws_window_cursor(PceWindow sw, CursorObj cursor)
-{ SDL_Cursor *c = pceCursor2SDL_Cursor(cursor);
+{ if ( ws_busy_cursor() )               /* covers every window */
+    return;
+
+  SDL_Cursor *c = pceCursor2SDL_Cursor(cursor);
   if ( c )
   { ASSERT_SDL_MAIN();
     SDL_SetCursor(c);

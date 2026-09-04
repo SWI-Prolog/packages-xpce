@@ -1565,7 +1565,8 @@ view_region(int x, int w, int rx, int rw)
 
 static status				/* update bubble of scroll_bar */
 bubbleScrollBarWindow(PceWindow sw, ScrollBar sb)
-{ Area bb = sw->bounding_box;
+{ ComputeGraphical((Graphical)sw);	/* a stale union latches the bar on */
+  Area bb = sw->bounding_box;
   int x, y, w, h;
   int hor    = (sb->orientation == NAME_horizontal);
   int start  = valInt(hor ? bb->x : bb->y);

@@ -90,6 +90,38 @@ static struct standardCursor
   { NULL,	   0 }
 };
 
+/* display ->busy_cursor names one cursor for all the frames at once.  SDL
+ * has a single cursor for the application, so hold it here and leave the
+ * per-window cursor alone while it is set: updateCursorWindow() runs after
+ * every event and would otherwise take it straight off again.  Dropping it
+ * needs no more than forgetting it: that same call then puts back the
+ * cursor of the window the pointer is over.
+ */
+
+static SDL_Cursor *busy_cursor;
+
+bool
+ws_busy_cursor(void)
+{ return busy_cursor != NULL;
+}
+
+
+void
+ws_set_busy_cursor(CursorObj c)
+{ if ( !c || isNil(c) || isDefault(c) )   /* isDefault: unresolved */
+  { busy_cursor = NULL;
+  } else
+  { SDL_Cursor *sc = pceCursor2SDL_Cursor(c);
+
+    if ( sc )
+    { ASSERT_SDL_MAIN();
+      busy_cursor = sc;
+      SDL_SetCursor(sc);
+    }
+  }
+}
+
+
 /**
  * Initialize the cursor font resources.
  *
