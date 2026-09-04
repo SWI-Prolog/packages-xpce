@@ -103,7 +103,33 @@ terminal(F, W) :-
     member(W, Panes), send(W, instance_of, epilog_window), !.
 
 
+%       The warning the search used to give -- <-text_buffer sent to a
+%       terminal -- costs nothing but noise, so no outcome betrays it.  A
+%       pane that says when it is asked does.
+
+:- dynamic asked/1.
+
+:- pce_begin_class(nosy_pane, window,
+                   "A pane that records being asked for a buffer").
+
+text_buffer(P, TB:text_buffer) :<-
+    "I have none, but I remember the question"::
+    assertz(test_mixed_panes:asked(P)),
+    fail,
+    TB = @nil.                          % never reached; types the method
+
+:- pce_end_class(nosy_pane).
+
+
 :- begin_tests(mixed_panes).
+
+no_frames :-
+    get(@prolog_ide, members, Members),
+    chain_list(Members, List),
+    forall(( member(F, List),
+             send(F, instance_of, pane_frame)
+           ),
+           send(F, destroy)).
 
 test(an_epilog_window_takes_an_editor, Classes == [epilog_window, emacs_view]) :-
     emacs,
@@ -242,5 +268,62 @@ test(and_a_window_of_terminals_is_not_the_current_frame, [fail]) :-
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, FT),
     get(@emacs, current_frame, FT).
+
+%       Opening a buffer in a window that holds a terminal as well as an
+%       editor.  Each of the three routes has to pick the editor out of
+%       the panes rather than take the first one it finds.
+
+test(a_buffer_opens_in_a_window_that_also_holds_a_terminal,
+     true(Landed == same_window)) :-
+    emacs,
+    mixed_window(F),
+    new(B, emacs_buffer(@nil, '*mixed-open*')),
+    get(B, open, tab, In),
+    (   In == F ->  Landed = same_window ;  Landed = elsewhere ).
+
+test(and_asking_twice_goes_back_to_the_view_it_made, true(Views == 1)) :-
+    emacs,
+    mixed_window(F),
+    new(B, emacs_buffer(@nil, '*mixed-twice*')),
+    get(B, open, tab, F),
+    get(B, open, tab, F),
+    get(F, panes, Chain),
+    chain_list(Chain, Panes),
+    aggregate_all(count,
+                  ( member(P, Panes),
+                    send(P, instance_of, emacs_view),
+                    get(P, text_buffer, TB),
+                    TB == B
+                  ),
+                  Views).
+
+test(and_here_uses_the_editor_even_from_the_terminal, true(TB == B)) :-
+    emacs,
+    mixed_window(F),
+    terminal(F, T),
+    send(F, current_pane, T),           % the terminal has the focus
+    new(B, emacs_buffer(@nil, '*mixed-here*')),
+    send(@emacs, show_buffer, F, B, here),
+    editor(F, V),
+    get(V, text_buffer, TB).
+
+test(only_editors_are_asked_which_buffer_they_hold, true(Asked == [])) :-
+    emacs,
+    mixed_window(F),
+    send(F, append_pane, new(nosy_pane), nosy, @off),
+    retractall(test_mixed_panes:asked(_)),
+    new(B, emacs_buffer(@nil, '*mixed-nosy*')),
+    send(@emacs, show_buffer, F, B, tab),
+    findall(P, test_mixed_panes:asked(P), Asked).
+
+%!  mixed_window(-Frame) is det.
+%
+%   A window with a terminal and an editor below it.
+
+mixed_window(F) :-
+    no_frames,                          % it is the window PceEmacs finds
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F, @on),
+    send(F, open).
 
 :- end_tests(mixed_panes).
