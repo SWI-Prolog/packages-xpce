@@ -132,6 +132,7 @@ append(TF, Window:window=window,
            Where:where=[{above,below,left,right}]) :->
     "Add a window, optionally next to an existing one"::
     send(Window, '_compute_desired_size'),
+    release_focus(Window),
     decoration(Window, Decor),
     send(Decor, lock_object, @on),
     (   get(Decor, tile_manager, Manager)
@@ -400,13 +401,23 @@ separator(TF, A:area) :->
 %       what has to be rearranged, and this way it works for a window of
 %       any class.
 
+%       ->expose: a window dropped into another frame must work there.
+%       Only the window system can hand a frame the focus, and until it
+%       does `frame ->keyboard_focus' records the intent without acting on
+%       it -- see releaseFocusFrame() in src/win/frame.c.
+
 drop(TF, Window:window, Pos:point) :->
     "Put Window beside the window Pos is over"::
     send(TF, preview_drop, @nil),
     (   drop_zone(TF, Pos, Target, Where),
         Target \== Window
     ->  send(TF, append, Window, Target, Where),
-        send(TF, current, Window)
+        send(TF, current, Window),
+        (   get(TF, frame, Frame),
+            Frame \== @nil
+        ->  send(Frame, expose)
+        ;   true
+        )
     ;   true
     ).
 
@@ -564,6 +575,20 @@ decoration(W, Decor) :-
         D \== @nil
     ->  Decor = D
     ;   Decor = W
+    ).
+
+%!  release_focus(+Window) is det.
+%
+%   Let the frame Window is in now let go of it, before it is moved into
+%   another one.  A pane lives on a device, so its <-frame changes with
+%   the device tree it hangs in and no frame is ever told it lost a
+%   member.  See `frame ->release_focus'.
+
+release_focus(Window) :-
+    (   get(Window, frame, Frame),
+        Frame \== @nil
+    ->  ignore(send(Frame, release_focus, Window))
+    ;   true
     ).
 
 %!  user_window(+Graphical, -Window) is det.

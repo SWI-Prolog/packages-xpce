@@ -66,6 +66,7 @@ test_pane_frame :-
                 pane_frame_menu_bar,
                 pane_frame_label,
                 pane_frame_focus,
+                pane_frame_move,
                 pane_frame_opacity,
                 pane_frame_panes,
                 pane_frame_plain_pane
@@ -437,6 +438,74 @@ test(unless_it_is_asked_to, true(Current == P3)) :-
     get(F, current_pane, Current).
 
 :- end_tests(pane_frame_focus).
+
+
+                 /*******************************
+                 *          MOVING A PANE       *
+                 *******************************/
+
+%       A pane lives on a device, so it can change frame without its
+%       `frame' slot ever changing and without any frame being told it
+%       lost a member.  The frame it leaves has to let go of it, or it
+%       stays that frame's keyboard focus and keeps the ->input_focus it
+%       had -- which is edge triggered, so it would never be armed again
+%       in the frame it moved to.
+
+:- begin_tests(pane_frame_move).
+
+%!  two_frames(-A, -B, -Pane) is det.
+%
+%   Two frames of two panes each, with Pane the current one of A and A
+%   holding the focus, as if the window system had given it.
+
+two_frames(A, B, Pane) :-
+    frame(A, App, _P1),
+    pane(second, alpha, P2),
+    send(A, append_pane, P2, @default, @on),
+    new(B, pane_frame(App, @default, new(P3, tp_pane))),
+    send(P3, name, other),
+    get(A, current_pane, Pane),
+    send(A, input_focus, @on),
+    send(A, keyboard_focus, Pane).
+
+%!  move(+Pane, +Frame) is det.
+%
+%   Put Pane beside the current pane of Frame, as ->drop does.
+
+move(Pane, F) :-
+    get(F, current_pane, Rel),
+    get(Rel, container, tab_frame, Tab),
+    send(Tab, append, Pane, Rel, right),
+    send(Tab, current, Pane).
+
+test(the_frame_it_leaves_stops_naming_it, [fail]) :-
+    two_frames(A, B, Pane),
+    move(Pane, B),
+    get(A, hypered, keyboard_focus, Pane).
+
+test(the_pane_is_disarmed_so_that_it_can_be_armed_again,
+     true(Focus == @off)) :-
+    two_frames(_A, B, Pane),
+    move(Pane, B),
+    get(Pane, input_focus, Focus).
+
+test(the_frame_it_arrives_in_names_it, true(Named == Pane)) :-
+    two_frames(_A, B, Pane),
+    move(Pane, B),
+    get(B, hypered, keyboard_focus, Named).
+
+%       `second' is the pane that moves: two_frames/3 exposed it last, so
+%       it is the current one of A.
+
+test(both_frames_keep_a_sensible_current_pane, true(Names == [one, second])) :-
+    two_frames(A, B, Pane),
+    move(Pane, B),
+    get(A, current_pane, CA), get(CA, name, NA),
+    get(B, current_pane, CB), get(CB, name, NB),
+    CB == Pane,                         % the moved one is current in B
+    Names = [NA, NB].
+
+:- end_tests(pane_frame_move).
 
                  /*******************************
                  *           OPACITY            *

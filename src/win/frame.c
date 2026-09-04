@@ -1223,6 +1223,45 @@ getKeyboardFocusFrame(FrameObj fr)
 }
 
 
+/* ->release_focus: window
+ *
+ * Let go of a window that is leaving me.  A window can change frame
+ * without ever changing its `frame' slot: a pane lives on a device --
+ * see class tab_frame -- so its <-frame is whatever frame the device
+ * tree it hangs in ends up in, and dragging it into another window's tab
+ * is enough to change that.
+ *
+ * Two things then have to be undone here, or the window is lost to both
+ * frames.  I would go on naming it my keyboard focus, so keys typed in
+ * me are forwarded to a window that is somewhere else.  And it would
+ * keep the ->input_focus it had: that is edge triggered, so a window
+ * still holding `@on' is never armed again, and ws_enable_text_input()
+ * is never re-issued for the window-system window it has moved to.  That
+ * is why such a pane could not be revived by clicking it -- only by
+ * taking the focus off the frame and putting it back.
+ */
+
+static status
+releaseFocusFrame(FrameObj fr, PceWindow sw)
+{ if ( instanceOfObject(sw, ClassWindowDecorator) )
+  { WindowDecorator dw = (WindowDecorator)sw;
+    sw = dw->window;
+  }
+
+  if ( !instanceOfObject(sw, ClassWindow) )
+    succeed;
+
+  if ( getHyperedObject(fr, NAME_keyboardFocus, DEFAULT) == sw )
+    freeHypersObject(fr, NAME_keyboardFocus, DEFAULT);
+  if ( getHyperedObject(fr, NAME_inputWindow, DEFAULT) == sw )
+    freeHypersObject(fr, NAME_inputWindow, DEFAULT);
+
+  send(sw, NAME_inputFocus, OFF, EAV);
+
+  succeed;
+}
+
+
 static status
 inputWindowFrame(FrameObj fr, PceWindow iw)
 { PceWindow ow = getHyperedObject(fr, NAME_inputWindow, DEFAULT);
@@ -1968,6 +2007,8 @@ static senddecl send_frame[] =
      NAME_event, "Define (temporary) cursor for all windows in the frame"),
   SM(NAME_inputWindow, 1, "window", inputWindowFrame,
      NAME_focus, "Input is directed to this window"),
+  SM(NAME_releaseFocus, 1, "window", releaseFocusFrame,
+     NAME_event, "Let go of a window that is leaving me"),
   SM(NAME_keyboardFocus, 1, "[window]*", keyboardFocusFrame,
      NAME_focus, "Redirect (default) keyboard input here"),
   SM(NAME_closed, 1, "open=bool", closedFrame,
