@@ -384,20 +384,95 @@ done:
   { mods &= ~PCE_MOD_CONTROL;
     mods |= PCE_MOD_COMMAND;
   }
-  /* Command or Option means the accelerator is a real XPCE binding we
-   * can hand to MacOS: routing it through the menu runs the same
-   * command.  A function key is safe to take bare, as it is not text
-   * input.  Anything else -- a bare or merely shifted key -- would be
-   * taken from ordinary typing, so leave it to XPCE and let the caller
-   * show it as text.
+  /* Command means the accelerator is a real XPCE binding we can hand to
+   * MacOS: routing it through the menu runs the same command.  A
+   * function key is safe to take bare, as it is not text input.
+   *
+   * Option is NOT safe, even though it is a real binding: on MacOS it
+   * is the text composition modifier, so Option-`.' is the character
+   * `>=' and Option-`e' a dead acute.  Registering PceEmacs' M-. as a
+   * key equivalent made AppKit swallow the keystroke, which left the
+   * TEXT_INPUT event carrying `>=' unopposed by a pending key-down and
+   * inserted that instead of running find_definition.
+   *
+   * Anything else -- a bare or merely shifted key -- would be taken
+   * from ordinary typing.  All of these are left to XPCE, and the
+   * caller shows them as text.
    */
-  if ( !(mods & (PCE_MOD_COMMAND|PCE_MOD_OPTION)) && !fkey )
+  if ( !(mods & PCE_MOD_COMMAND) && !fkey )
   { key[0] = 0;				/* we got as far as writing one */
     return false;
   }
 
   *modp = mods;
   return true;
+}
+
+
+/* True when the MacOS menu bar will act on this keystroke itself.
+ * SDL's Cocoa backend reports every key event, including the ones the
+ * main menu has just dispatched as a key equivalent, so without this
+ * test both the menu item and the XPCE key binding run the command:
+ * Command-V pasted twice.  We translate the SDL keystroke the way
+ * parse_accelerator() translates a menu_item<-accelerator and ask
+ * Cocoa whether an enabled item claims it.
+ */
+
+bool
+ws_menubar_key_equivalent(SDL_Event *ev)
+{ SDL_Keycode k = ev->key.key;
+  SDL_Keymod m  = ev->key.mod;
+  unsigned mods = 0;
+  char key[8];
+
+  if ( !menubar_setup_done || !ws_has_native_menubar(NULL) )
+    return false;
+
+  if ( m & SDL_KMOD_SHIFT ) mods |= PCE_MOD_SHIFT;
+  if ( m & SDL_KMOD_CTRL )  mods |= PCE_MOD_CONTROL;
+  if ( m & SDL_KMOD_ALT )   mods |= PCE_MOD_OPTION;
+  if ( m & SDL_KMOD_GUI )   mods |= PCE_MOD_COMMAND;
+
+  /* Only the accelerators parse_accelerator() hands to MacOS can be
+   * claimed, so ordinary typing -- and Option, which is how MacOS
+   * composes text -- never walks the menus.
+   */
+  if ( !(mods & PCE_MOD_COMMAND) &&
+       !(k >= SDLK_F1 && k <= SDLK_F12) )
+    return false;
+
+  if ( k >= ' ' && k < DEL )
+  { key[0] = (char)tolower((int)k);
+    key[1] = 0;
+  } else if ( k >= SDLK_F1 && k <= SDLK_F12 )
+  { if ( !utf8_put(key, sizeof(key),
+		   (unsigned int)(NS_F1_KEY + (k-SDLK_F1))) )
+      return false;
+  } else
+  { unsigned int code;
+
+    switch(k)
+    { case SDLK_RETURN:
+      case SDLK_KP_ENTER:  code = '\r';   break;
+      case SDLK_TAB:	   code = '\t';   break;
+      case SDLK_BACKSPACE: code = '\b';   break;
+      case SDLK_ESCAPE:	   code = 0x1b;   break;
+      case SDLK_DELETE:	   code = 0x7f;   break;
+      case SDLK_UP:	   code = 0xF700; break;
+      case SDLK_DOWN:	   code = 0xF701; break;
+      case SDLK_LEFT:	   code = 0xF702; break;
+      case SDLK_RIGHT:	   code = 0xF703; break;
+      case SDLK_HOME:	   code = 0xF729; break;
+      case SDLK_END:	   code = 0xF72B; break;
+      case SDLK_PAGEUP:	   code = 0xF72C; break;
+      case SDLK_PAGEDOWN:  code = 0xF72D; break;
+      default:		   return false;
+    }
+    if ( !utf8_put(key, sizeof(key), code) )
+      return false;
+  }
+
+  return ns_menubar_owns_key(key, mods);
 }
 
 

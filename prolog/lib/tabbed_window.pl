@@ -35,6 +35,10 @@
 :- module(tabbed_window, []).
 :- use_module(library(pce)).
 :- use_module(library(hyper)).
+:- use_module(library(help_message), []).
+:- use_module(library(pce_icon_button), []).
+:- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(lists), [member/2, last/2]).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 This class creates a tabbed window:  a   window  displaying  a number of
@@ -56,6 +60,8 @@ test :-
                    "Resizeable window holding set of tabs").
 
 variable(label_popup,   popup*, both, "Popup shown on labels").
+variable(new_tab_message, code*, get,
+         "Run by the new-tab button; @nil: no such button").
 
 initialise(W, Label:label=[name], Size:size=[size],
            Display:display=[display]) :->
@@ -72,13 +78,14 @@ resize(W, Tab:[tab]) :->
     "Resize member tabs to fit the dialog"::
     get_super(W, member, tab_stack, TS),
     get(W, area, area(_,_,Width, Height)),
+    get(TS, tabs, Tabs),
     new(LabelH, number(0)),
-    send(TS?graphicals, for_all,
-         message(LabelH, maximum, @arg1?label_size?height)),
+    send(Tabs, for_all,           % 0 while a lone tab drops its label
+         message(LabelH, maximum, @arg1?label_height)),
     get(LabelH, value, LH),
     TabH is Height - LH,
     (   Tab == @default
-    ->  send(TS?graphicals, for_all,
+    ->  send(Tabs, for_all,
              message(@arg1, size, size(Width,TabH)))
     ;   send(Tab, size, size(Width,TabH))
     ).
@@ -87,6 +94,22 @@ layout_dialog(W, _Gap:[size], _Size:[size], _Border:[size]) :->
     "Overrule to deal with nested tabbed windows"::
     new(S0, size(0,0)),
     send_super(W, layout_dialog, S0, S0, S0).
+
+new_tab_message(W, Message:'code*') :->
+    "What the new-tab button is to do; @nil takes the button away"::
+    send(W, slot, new_tab_message, Message),
+    get_super(W, member, tab_stack, TS),
+    send(TS, layout_labels).
+
+hide_single_label(W, Hide:bool) :->
+    "Give a lone tab the room its label would take"::
+    get_super(W, member, tab_stack, TS),
+    send(TS, hide_single_label, Hide).
+
+hide_single_label(W, Hide:bool) :<-
+    "Does a lone tab drop its label?"::
+    get_super(W, member, tab_stack, TS),
+    get(TS, hide_single_label, Hide).
 
 :- pce_group(stack).
 
@@ -99,8 +122,9 @@ on_top(W, Top:'name|window') :->
         ;   get(W, hypered, tab, @arg3?name == Top, Window)
         ->  send(Window, expose)
         )
-    ;   get(Top, container, window_tab, Tab)
-    ->  send(TS, on_top, Tab)
+    ;   get(Top, container, tab, Tab)
+    ->  make_current(Tab, Top),
+        send(TS, on_top, Tab)
     ).
 
 current(W, Window:window) :<-
@@ -111,11 +135,23 @@ current(W, Window:window) :<-
 
 current(W, Window:window) :->
     "Window of currently selected tab"::
-    get(Window, container, window_tab, Tab),
+    get(Window, container, tab, Tab),
+    make_current(Tab, Window),
     (   get(Tab, status, on_top)
     ->  send(W, resize, Tab)
     ;   get_super(W, member, tab_stack, TS),
         send(TS, on_top, Tab)
+    ).
+
+%       make_current(+Tab, +Window)
+%
+%       If Tab holds more than one window (see class tab_frame), tell it
+%       which of them the request is about.
+
+make_current(Tab, Window) :-
+    (   send(Tab, has_send_method, current)
+    ->  send(Tab, current, Window)
+    ;   true
     ).
 
 input_focus(W, Focus:bool) :->
@@ -139,13 +175,23 @@ input_focus(W, Focus:bool) :->
 append(W, Window:window=window, Label:name=[name], Expose:expose=[bool]) :->
     "Append a window to the tabs"::
     send(Window, '_compute_desired_size'),
-    send(W, tab, new(Tab, window_tab(Window, Label))),
+    get(W, new_tab, Window, Label, Tab),
+    send(W, tab, Tab),
     (   Expose == @on
     ->  send(W, resize, Tab),
         get_super(W, member, tab_stack, TS),
         send(TS, on_top, Tab)
     ;   true
     ).
+
+new_tab(_W, Window:window, Label:[name], Tab:tab) :<-
+    "Create the tab that is to hold Window"::
+    new(Tab, window_tab(Window, Label)).
+
+tabs(W, Tabs:chain) :<-
+    "New chain holding my tabs"::
+    get_super(W, member, tab_stack, TS),
+    get(TS, tabs, Tabs).
 
 member(W, Name:name, Window:window) :<-
     "Get named window from tabbed window"::
@@ -157,8 +203,8 @@ members(W, Windows:chain) :<-
     "New chain with member windows"::
     new(Windows, chain),
     get_super(W, member, tab_stack, TS),
-    send(TS?graphicals, for_all,
-         message(Windows, append, @arg1?window)),
+    send(TS?tabs, for_all,
+         message(Windows, merge, @arg1?windows)),
     (   get(W, all_hypers, Hypers)
     ->  send(Hypers, for_all,
              if(@arg1?forward_name == toplevel,
@@ -197,6 +243,221 @@ frame_window(TW, Window:window, Name:name, Rank:'1..', Frame:frame) :<-
     new(_, partof_hyper(TW, Window, toplevel, tab)).
 
 :- pce_end_class(tabbed_window).
+
+
+                 /*******************************
+                 *          TAB LABELS          *
+                 *******************************/
+
+%       The label of a tab is drawn by the tab itself rather than being a
+%       graphical of its own, so what can be done to it is answered here
+%       rather than by something sitting on it.  This is on class tab, so
+%       that it holds for a window_tab and for a tab_frame alike.
+
+:- pce_extend_class(tab).
+
+label_popup(Tab, Popup:popup) :<-
+    "Popup of the tabbed_window I am in"::
+    get(Tab?device, window, TabbedWindow),
+    send(TabbedWindow, has_get_method, label_popup),
+    get(TabbedWindow, label_popup, Popup),
+    Popup \== @nil.
+
+:- pce_global(@tab_label_recogniser,
+              new(popup_gesture(@receiver?label_popup))).
+
+%       ->send_super is no use here: class tab defines ->label_event
+%       itself, so the one below replaces it rather than adding to it and
+%       the super is class dialog_group, which has none.  Raising the tab
+%       on a left click is therefore repeated here, from labelEventTab().
+
+label_event(T, Ev:event) :->
+    "Raise on a click, rename on a double one, popup on the right button"::
+    (   send(Ev, is_a, ms_left_down),
+        get(T, active, Active),
+        Active \== @off
+    ->  (   get(T, editable_label, @on),
+            get(Ev, multiclick, double)
+        ->  send(T, edit_label)
+        ;   send(T?device, on_top, T)
+        )
+    ;   send(@tab_label_recogniser, event, Ev)
+    ).
+
+edit_label(T) :->
+    "Put an editor over my label"::
+    get(T, editable_label, @on),
+    get(T, label_height, H),
+    H > 0,                              % a lone tab may show no label
+    get(T, device, Stack),
+    send(T, end_label_edit),
+    get(T?label_size, width, W),
+    get(T, label_offset, X),
+    send(Stack, display, new(TI, tab_label_item(T)), point(X, 0)),
+    send(TI, set, X, 0, W, H),
+    send(Stack?window, keyboard_focus, TI).
+
+close_tab(T) :->
+    "Close me; what that means is up to what I hold"::
+    send(T, destroy).
+
+end_label_edit(T) :->
+    "Take the editor away, if there is one"::
+    get(T, device, Stack),
+    (   get(Stack, member, tab_label_item, TI)
+    ->  send(Stack?window, keyboard_focus, @nil),
+        send(TI, destroy)
+    ;   true
+    ).
+
+label_edited(T, Label:name) :->
+    "Take the label typed into the editor"::
+    send(T, end_label_edit),
+    (   Label == ''
+    ->  true
+    ;   send(T, label, Label),
+        send(T, compute),               % the label box has a new width
+        send(T?device, layout_labels)
+    ).
+
+:- pce_end_class.
+
+
+                 /*******************************
+                 *          TAB BUTTONS         *
+                 *******************************/
+
+%       The labels are drawn by the tabs themselves, so anything to click
+%       on them is displayed on the stack instead, at the place the label
+%       was given.  tab_stack ->labels_laid_out is sent whenever those
+%       places change, which is the one moment the buttons have to follow.
+
+:- pce_extend_class(tab_stack).
+
+tabs(TS, Tabs:chain) :<-
+    "My tabs, in order, without the buttons on the label row"::
+    get(TS?graphicals, find_all, message(@arg1, instance_of, tab), Tabs).
+
+labels_laid_out(TS) :->
+    "Put the buttons back where the labels are now"::
+    ignore(send(TS, update_tab_buttons)).
+
+update_tab_buttons(TS) :->
+    "A close button per closable tab, and one to add a tab at the end"::
+    get(TS, graphicals, Graphicals),
+    chain_list(Graphicals, List),
+    tab_list(List, Tabs),
+    forall(member(T, Tabs),
+           send(TS, place_close_button, T)),
+    send(TS, place_new_tab_button, Tabs).
+
+place_close_button(TS, T:tab) :->
+    "Give T a close button, or take away the one it has"::
+    (   get(T, close_button_area, area(BX, BY, W, H)),   % says class tab
+        get(T, area, area(TX, TY, _, _))
+    ->  get(TS, tab_button, T, close_button, size(W, H),
+            close_tab, message(T, close_tab), 'Close this tab', B),
+        X is TX+BX,
+        Y is TY+BY,
+        send(B, set, X, Y)
+    ;   send(TS, forget_tab_button, T, close_button)
+    ).
+
+place_new_tab_button(TS, Tabs:prolog) :->
+    "Put the new-tab button after the last label"::
+    (   new_tab_message(TS, Message),
+        last(Tabs, Last),
+        get(Last, label_button_area, area(BX, BY, S, S)),
+        get(Last, area, area(TX, TY, _, _)),
+        get(Last, label_offset, LX),
+        get(Last?label_size, width, LW)
+    ->  Gap is LX+LW-BX-S,              % the same room it leaves on a label
+        X is TX+LX+LW+Gap,
+        Y is TY+BY,
+        get(TS, tab_button, TS, new_tab_button, size(S, S),
+            new_tab, Message, 'Open a new tab', B),
+        send(B, set, X, Y)
+    ;   send(TS, forget_tab_button, TS, new_tab_button)
+    ).
+
+tab_button(TS, Owner:object, Role:name, Size:size, Which:name,
+           Message:code, Help:name, Button:icon_button) :<-
+    "The button Owner holds under Role, made if it has none of that size"::
+    get(Size, width, W),
+    get(Size, height, H),
+    (   get(Owner, hypered, Role, B),
+        get(B, size, size(W, H))
+    ->  Button = B
+    ;   send(TS, forget_tab_button, Owner, Role),
+        tab_button_image(Which, File),
+        new(Button, icon_button(File, size(W, H))),
+        send(Button, name, Which),
+        send(Button, recogniser,
+             click_gesture(left, '', single, Message)),
+        send(Button, help_message, tag, Help),
+        send(TS, display, Button),
+        new(_, partof_hyper(Owner, Button, Role, tab_button))
+                                        % so that it goes with what it
+                                        % belongs to, tab or stack
+    ).
+
+forget_tab_button(_TS, Owner:object, Role:name) :->
+    "Take away the button Owner holds under Role, if any"::
+    (   get(Owner, hypered, Role, B)
+    ->  send(B, destroy)
+    ;   true
+    ).
+
+:- pce_end_class.
+
+%!  new_tab_message(+TabStack, -Message) is semidet.
+%
+%   What the new-tab button is to do, as the tabbed_window says.  There is
+%   no button while it says nothing.
+
+new_tab_message(TS, Message) :-
+    get(TS, window, TW),
+    TW \== @nil,
+    send(TW, has_get_method, new_tab_message),
+    get(TW, new_tab_message, Message),
+    Message \== @nil.
+
+tab_button_image(close_tab, 'tool/close-tab.svg').
+tab_button_image(new_tab,   'tool/new-tab.svg').
+
+tab_list([], []).
+tab_list([G|T0], Tabs) :-
+    (   send(G, instance_of, tab)
+    ->  Tabs = [G|T]
+    ;   Tabs = T
+    ),
+    tab_list(T0, T).
+
+
+:- pce_begin_class(tab_label_item, text_item,
+                   "Editor over the label of a tab").
+
+initialise(TI, Tab:tab) :->
+    "Edit the label of Tab"::
+    get(Tab, label, Label),
+    send_super(TI, initialise, tab_label_item, Label,
+               message(Tab, label_edited, @arg1)),
+    send(TI, show_label, @off),
+    new(_, hyper(Tab, TI, label_item, tab)).
+
+tab(TI, Tab:tab) :<-
+    "The tab I am editing"::
+    get(TI, hypered, tab, Tab).
+
+typed(TI, Id:event_id) :->
+    "Escape puts the old label back"::
+    (   Id == 27
+    ->  get(TI, tab, Tab),
+        send(Tab, end_label_edit)
+    ;   send_super(TI, typed, Id)
+    ).
+
+:- pce_end_class(tab_label_item).
 
 
                  /*******************************
@@ -240,11 +501,16 @@ initialise(T, Window:window=[window], Name:name=[name]) :->
     send(T, slot, window, W),
     new(_, mutual_dependency_hyper(T, W, window, tab)).
 
+windows(T, Windows:chain) :<-
+    "New chain holding my (single) window"::
+    get(T, window, Window),
+    new(Windows, chain(Window)).
+
 unlink(Tab) :->
     "Trap if I'm the last tab"::
     (   get(Tab, device, Dev),
         Dev \== @nil
-    ->  get(Dev?graphicals, size, Count),
+    ->  get(Dev?tabs, size, Count),
         (   Count == 1
         ->  get(Tab, container, tabbed_window, TabbedWindow),
             send_super(Tab, unlink),
@@ -311,35 +577,17 @@ append(T, Item:graphical, RelPos:[{below,right,next_row}]) :->
     get(T, window, Window),
     send(Window, append, Item, RelPos).
 
-:- pce_group(event).
-
-label_popup(Tab, Popup:popup) :<-
-    "Get popup for label"::
-    get_super(Tab, window, TabbedWindow),
-    get(TabbedWindow, label_popup, Popup),
-    Popup \== @nil.
-
-:- pce_global(@window_tab_label_recogniser,
-              new(popup_gesture(@receiver?label_popup))).
-
-label_event(G, Ev:event) :->
-    "Show popup on label of tab"::
-    (   send_super(G, label_event, Ev)
-    ->  true
-    ;   send(@window_tab_label_recogniser, event, Ev)
-    ).
-
 :- pce_group(frame).
 
 rank(Tab, Rank:'1..') :<-
     "Get position number of the tab"::
     get(Tab, device, Stack),
-    get(Stack?graphicals, index, Tab, Rank).
+    get(Stack?tabs, index, Tab, Rank).
 
 rank(Tab, Rank:'1..') :->
     "Move tab in rank"::
     get(Tab, device, Stack),
-    get(Stack?graphicals, index, Tab, Rank0),
+    get(Stack?tabs, index, Tab, Rank0),
     (   Rank == Rank0
     ->  true
     ;   (   Rank > Rank0
@@ -349,7 +597,7 @@ rank(Tab, Rank:'1..') :->
         (   Rank1 == 1
         ->  send(Tab, hide)
         ;   Before is Rank1 - 1,
-            get(Stack?graphicals, nth1, Before, BeforeGr)
+            get(Stack?tabs, nth1, Before, BeforeGr)
         ->  send(Tab, expose, BeforeGr)
         ;   send(Tab, expose)               % make last one
         ),
@@ -383,10 +631,11 @@ untab(Tab) :->
 close_other_tabs(Tab) :->
     "Destroy all tabs except for me"::
     get(Tab, device, Stack),
-    send(Stack?graphicals, for_all,
+    get(Stack, tabs, Tabs),
+    send(Tabs, for_all,
          if(@arg1 \== Tab,
             message(@arg1, slot, closing, @on))),
-    send(Stack?graphicals, for_all,
+    send(Tabs, for_all,
          if(@arg1 \== Tab,
             message(@arg1, destroy))).
 

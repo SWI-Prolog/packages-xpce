@@ -372,7 +372,7 @@ initialise(TB) :->
     send(TB, style, profiling, style(icon := resource(thread_profiling))),
     send(TB, select_message, message(TB, details, @arg1)),
     send(TB, running_styles),
-    send(TB?image, recogniser,
+    send(TB?text_image, recogniser,
          handler(ms_right_down,
                  and(message(TB, selection, ?(TB, dict_item, @event)),
                      new(or)))),

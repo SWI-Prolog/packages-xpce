@@ -352,6 +352,33 @@ decorateWindow(PceWindow sw, Name how, Int lb, Int tb, Int rb, Int bb,
 }
 
 
+/* ->window_label: a client of this window -- a terminal running a
+   program that sets the window title, say -- asked for a title.  Where
+   a title belongs depends on where the window is shown, so this is the
+   default rather than the rule: a decorator that already carries a
+   label shows it, and a window without one is titled by its frame.  A
+   window that is displayed somewhere with a place of its own for a
+   title, such as a tab, overrules this.
+
+   Not `->label': that is delegated to the <-decoration, which wraps the
+   window in a window_decorator to put a label on it.
+*/
+
+static status
+windowLabelWindow(PceWindow sw, CharArray label)
+{ FrameObj fr;
+
+  if ( notNil(sw->decoration) &&
+       notNil(((WindowDecorator)sw->decoration)->label_text) )
+    return send(sw->decoration, NAME_label, label, EAV);
+
+  if ( (fr=getFrameWindow(sw, OFF)) )
+    return send(fr, NAME_label, label, EAV);
+
+  fail;
+}
+
+
 PceWindow				/* used in MSW binding */
 userWindow(PceWindow sw)
 { if ( instanceOfObject(sw, ClassWindowDecorator) )
@@ -416,10 +443,39 @@ updatePositionSubWindowsDevice(Device dev)
 
 
 
+/* The <-parent that createWindow() records for a window created inside
+   `parent': a window_decorator paints the window it holds itself, so a
+   window inside one is not a subwindow and carries no <-parent.
+*/
+
+static PceWindow
+subwindow_parent(PceWindow parent)
+{ if ( parent && !instanceOfObject(parent, ClassWindowDecorator) )
+    return parent;
+
+  return NULL;
+}
+
+
 static status
 reparentWindow(PceWindow sw)
-{ if ( !getWindowGraphical((Graphical) sw->device) )
-    uncreateWindow(sw);
+{ PceWindow parent = getWindowGraphical((Graphical) sw->device);
+
+  if ( !parent )
+  { uncreateWindow(sw);
+  } else if ( createdWindow(sw) )
+  { PceWindow was = isNil(sw->parent) ? NULL : sw->parent;
+
+    /* Moved to a window other than the one it was created inside, which
+       is what ->decorate does when it wraps a window that is already a
+       subwindow of another one.  Uncreate it, so that it leaves the
+       <-subwindows of the old parent and is created again under the new
+       one.  Left alone, it stays in a chain that says it is painted at
+       an offset in a window its <-device chain no longer leads to.
+    */
+    if ( subwindow_parent(parent) != was )
+      uncreateWindow(sw);
+  }
 
   succeed;
 }
@@ -1565,7 +1621,8 @@ view_region(int x, int w, int rx, int rw)
 
 static status				/* update bubble of scroll_bar */
 bubbleScrollBarWindow(PceWindow sw, ScrollBar sb)
-{ Area bb = sw->bounding_box;
+{ ComputeGraphical((Graphical)sw);	/* a stale union latches the bar on */
+  Area bb = sw->bounding_box;
   int x, y, w, h;
   int hor    = (sb->orientation == NAME_horizontal);
   int start  = valInt(hor ? bb->x : bb->y);
@@ -1934,24 +1991,66 @@ mergeFramesWindow(PceWindow w1, PceWindow w2)
 }
 
 
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+<-tile_manager is the object that owns the tile hierarchy this window is
+part of: its <-frame, or the device that displays it (see class tab_frame
+in library(tab_frame)).  It is what relateWindow() asks so that `->below'
+and friends work for both: the manager is left to do the attaching and
+detaching through ->attach_window and ->detach_window.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+Any
+tileManagerWindow(PceWindow sw)
+{ Any manager;
+
+  while(notNil(sw->decoration))
+    sw = sw->decoration;
+
+  if ( notNil(sw->tile) && (manager=managerTile(sw->tile)) )
+    return manager;
+  if ( notNil(sw->frame) )
+    return sw->frame;
+
+  return NULL;
+}
+
+
+static Any
+getTileManagerWindow(PceWindow sw)
+{ Any manager = tileManagerWindow(sw);
+
+  if ( manager )
+    answer(manager);
+
+  fail;
+}
+
+
 static status
 relateWindow(PceWindow sw, Name how, Any to)
 { PceWindow w2 = instanceOfObject(to, ClassWindow) ? to : NIL;
   PceWindow wto = w2;
+  Any manager, old;
 
   if ( notNil(sw->decoration) )
     return relateWindow(sw->decoration, how, to);
   if ( notNil(w2) && notNil(w2->decoration) )
     return relateWindow(sw, how, w2->decoration);
 
-  DeviceGraphical((Graphical)sw, NIL);
   if ( notNil(w2) )
-  { DeviceGraphical((Graphical)w2, NIL);
-    tileWindow(w2, DEFAULT);
-  }
+  { tileWindow(w2, DEFAULT);
+    if ( !(manager=tileManagerWindow(w2)) )
+      DeviceGraphical((Graphical)w2, NIL); /* unmanaged: it may not be */
+  } else				/* displayed on a device */
+    manager = managerTile((TileObj)to);
 
-  if ( createdWindow(sw) && notNil(sw->frame) )
-    send(sw->frame, NAME_delete, sw, EAV);
+  if ( (old=tileManagerWindow(sw)) )
+  { send(old, NAME_detachWindow, sw, EAV);
+  } else
+  { DeviceGraphical((Graphical)sw, NIL);
+    if ( createdWindow(sw) && notNil(sw->frame) )
+      send(sw->frame, NAME_delete, sw, EAV);
+  }
 
   tileWindow(sw, DEFAULT);
 
@@ -1979,6 +2078,9 @@ relateWindow(PceWindow sw, Name how, Any to)
 
     w2 = t2->object;
   }
+
+  if ( manager )
+    return send(manager, NAME_attachWindow, sw, EAV);
 
   mergeFramesWindow(sw, w2);
 
@@ -2370,6 +2472,8 @@ static senddecl send_window[] =
      NAME_accelerator, "Handle accelerator (delegate to <-frame)"),
   SM(NAME_decorate, 6, T_decorate, decorateWindow,
      NAME_appearance, "Embed window for scrollbars, etc."),
+  SM(NAME_windowLabel, 1, "char_array", windowLabelWindow,
+     NAME_appearance, "Title a client of this window asked for"),
   SM(NAME_foreground, 1, "[colour]", colourWindow,
      NAME_appearance, "Set foreground colour"),
   SM(NAME_resize, 0, NULL, resizeWindow,
@@ -2443,6 +2547,8 @@ static getdecl get_window[] =
      DEFAULT, "Frame of window (create if not there)"),
   GM(NAME_tile, 0, "tile", NULL, getTileWindow,
      DEFAULT, "Tile of window (create if not there)"),
+  GM(NAME_tileManager, 0, "object", NULL, getTileManagerWindow,
+     NAME_layout, "Frame or device managing my tile"),
   GM(NAME_foreground, 0, "colour", NULL, getForegroundWindow,
      NAME_appearance, "Get foreground colour"),
   GM(NAME_image, 0, "image", NULL, getImageWindow,

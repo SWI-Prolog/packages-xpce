@@ -646,7 +646,7 @@ initialise(V, B:buffer=[emacs_buffer], W:width=[int], H:height=[int]) :->
     ),
     send_super(V, initialise, @default, @default, @default,
                new(E, emacs_editor(Buffer, Width, Height))),
-    send(E?image, recogniser, @emacs_image_recogniser),
+    send(E?text_image, recogniser, @emacs_image_recogniser),
     send(E, recogniser,
          handler(keyboard,
                  if(message(E?frame, has_send_method, editor_event),
@@ -1496,7 +1496,7 @@ event(M, Ev:event) :->
             get(Chain, find,
                 message(@arg1, event, Ev), _)
     ;   send(Ev, is_a, ms_right_down), % show fragment popup (if any)
-        get(M?image, index, Caret),
+        get(M?text_image, index, Caret),
         get(M?text_buffer, find_all_fragments,
             message(@arg1, overlap, Caret),
             Fragments),

@@ -182,6 +182,8 @@ NewClass(tab)
   ABSTRACT_DIALOG_GROUP
   Size		label_size;		/* Size of the label-box */
   Int		label_offset;		/* X-Offset of the label-box */
+  BoolObj	editable_label;		/* Label can be edited in place */
+  BoolObj	closable;		/* Label carries a close button */
   Name		status;			/* {on_top, hidden} */
   Name		previous_top;		/* Name of element on top before me */
 End;
@@ -197,6 +199,7 @@ End;
 
 NewClass(tab_stack)
   ABSTRACT_DEVICE
+  BoolObj	hide_single_label;	/* Drop the label of a lone tab */
 End;
 
 		/********************************
@@ -220,11 +223,14 @@ NewClass(tileobj)
   Int		verStretch;		/* Vertical stretchability */
   Int		verShrink;		/* Vertical shrinkability */
   BoolObj	canResize;		/* Can be resized by user? */
+  BoolObj	resized;		/* Was given a size (see setTile()) */
   Int		border;			/* Border between subtiles */
+  Int		border_root;		/* Border around the root tile */
   Name		orientation;		/* none, horizontal, vertical */
   Chain		members;		/* subtiles */
   TileObj	super;			/* Super tile */
   Any		object;			/* Object managed */
+  Any		manager;		/* Frame/device managing the root */
   Area		area;			/* Current area of the tile */
   BoolObj		enforced;		/* Enfore layout */
 End;
@@ -642,7 +648,7 @@ End;
 NewClass(list_browser)
   ABSTRACT_DEVICE
   Dict		dict;			/* dict in which items reside */
-  TextImage	image;			/* The text area */
+  TextImage	text_image;		/* The text area */
   ScrollBar	scroll_bar;		/* The scrollbar */
   TextObj	label_text;		/* Text to display the label */
   Name		status;			/* active/inactive */

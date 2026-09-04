@@ -53,7 +53,7 @@ initialise(EB, Manual:man_manual) :->
     send(EB, slot, errors, Module),
 
     new(B, man_summary_browser(man_summary, size(100, 15))),
-    send(B?image, tab_stops, vector(15, 220, 280)),
+    send(B?text_image, tab_stops, vector(15, 220, 280)),
     send(B, name, browser),
     dialog(Dialog),
 

@@ -151,7 +151,7 @@ activate(G, Ev:event) :->
 
 drag(G, Ev:event) :->
     "Find possible ->drop target"::
-    (   send(G, activate)
+    (   send(G, activate, Ev)
     ->  get(G, source, Source),
         (   get(Ev, inside_sub_window, Frame),
             get(Ev, inside_sub_window, Frame, Window),

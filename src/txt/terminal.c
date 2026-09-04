@@ -2865,11 +2865,20 @@ ansiColoursTerminalImage(TerminalImage ti, Vector colours)
   return refreshTerminalImage(ti);
 }
 
+/* Not `window ->label': that is delegated to the <-decoration and wraps
+   the window in a window_decorator to put a label on it, which is not
+   what a client asking for a window title means.  Where the title does
+   belong depends on where the window is shown, so hand it to the window
+   and let `window ->window_label' and whoever overrules it decide.
+*/
+
 static status
 windowLabelTerminalImage(TerminalImage ti, CharArray label)
 { PceWindow sw = getWindowGraphical((Graphical)ti);
+
   if ( sw )
-    return send(sw, NAME_label, label, EAV);
+    return send(sw, NAME_windowLabel, label, EAV);
+
   fail;
 }
 

@@ -1,0 +1,1109 @@
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
+
+    Author:        Jan Wielemaker
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org
+    Copyright (c)  2026, SWI-Prolog Solutions b.v.
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in
+       the documentation and/or other materials provided with the
+       distribution.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE.
+*/
+
+:- module(test_tab_frame, [test_tab_frame/0]).
+:- encoding(utf8).
+
+/** <module> Tests for class tab_frame
+
+A tab_frame is a tab that lays its windows out with a tile hierarchy, the
+way class frame does for its members.   These tests check the layout, the
+splitting and removal of windows and the drag-to-resize gesture.  None of
+that needs pixels, so they run against the headless SDL driver.
+
+Run with:
+
+    swipl -g test_tab_frame -t halt \
+          packages/xpce/tests/test_tab_frame.pl
+*/
+
+%  Set before library(pce) is loaded: the driver is picked when the
+%  display is initialised, which loading xpce already does.
+
+:- set_prolog_flag('SDL_VIDEODRIVER', dummy).
+
+:- use_module(library(pce)).
+:- use_module(library(plunit)).
+:- use_module(library(tabbed_window)).
+:- use_module(library(tab_frame)).
+
+test_tab_frame :-
+    run_tests([ tab_frame_layout,
+                tab_frame_single_tab,
+                tab_frame_label,
+                tab_frame_buttons,
+                tab_frame_members,
+                tab_frame_resize,
+                tab_frame_manager,
+                tab_frame_drop
+              ]).
+
+                 /*******************************
+                 *            HELPERS           *
+                 *******************************/
+
+%!  tabbed(-TabbedWindow, -TabFrame, -Window) is det.
+%
+%   An open tabbed window holding one tab_frame with one picture in it.
+%   The frame is leaked: destroying it is unreliable on dummy-SDL.
+
+tabbed(TW, TF, P) :-
+    new(TW, tabbed_window('Test')),
+    send(TW, tab, new(TF, tab_frame(new(P, picture), one))),
+    send(TW, open),
+    send(TW, resize).
+
+%!  tabbed_at(+X, +Y, -TabbedWindow, -TabFrame, -Window) is det.
+%
+%   As tabbed/3, at a place of its own on the display, so that two of them
+%   can be told apart.
+
+tabbed_at(X, Y, TW, TF, P) :-
+    new(TW, tabbed_window('Test', size(500,300))),
+    send(TW, tab, new(TF, tab_frame(new(P, picture), one))),
+    send(TW, open, point(X, Y)),
+    send(TW, resize).
+
+%!  geometry(+Window, -Area) is det.
+%
+%   Area of Window as it is placed by the tile.  A window that carries a
+%   label or scrollbars is wrapped in a window_decorator and it is the
+%   decorator that the tile positions.
+
+geometry(W, area(X,Y,Width,Height)) :-
+    (   get(W, decoration, D),
+        D \== @nil
+    ->  Decor = D
+    ;   Decor = W
+    ),
+    get(Decor, area, area(X,Y,Width,Height)).
+
+%!  two_tabs(-TabbedWindow, -Tab1, -Tab2) is det.
+%
+%   An open tabbed window with two tabs, so that both carry a label.
+
+two_tabs(TW, TF1, TF2) :-
+    new(TW, tabbed_window('Test', size(400,300))),
+    send(TW, tab, new(TF1, tab_frame(new(_P1, picture), one))),
+    send(TW, tab, new(TF2, tab_frame(new(_P2, picture), two))),
+    send(TW, open),
+    send(TW, resize).
+
+%!  post_grabbed(+Window, +Id, +Tab, +X, +Y) is det.
+%
+%   Post an event to Window the way the window system delivers one while
+%   Window holds the pointer grab: whatever frame it arrived on, it is
+%   handed to the grabbing window, naming that frame and a position in it.
+%   X,Y are in the content coordinates of Tab.
+
+post_grabbed(W, Id, Tab, X, Y) :-
+    get(Tab, display_position, point(TX, TY)),
+    get(Tab, offset, point(OX, OY)),
+    get(Tab, frame, Frame),
+    get(Frame, area, area(FX, FY, _, _)),
+    EX is TX+OX+X-FX,
+    EY is TY+OY+Y-FY,
+    new(Ev, event(Id, W, EX, EY)),
+    send(Ev, slot, frame, Frame),
+    ignore(send(W, post_event, Ev)).
+
+%!  event_at(+TabFrame, +Id, +X, +Y, -Event) is det.
+%
+%   An event of type Id at X,Y in the content coordinates of TabFrame,
+%   i.e. the coordinate system its windows are laid out in.
+
+event_at(TF, Id, CX, CY, Ev) :-
+    get(TF, area, area(AX,AY,_,_)),
+    get(TF, offset, point(OX,OY)),
+    get(TF, frame, Frame),
+    get(Frame, member, tabbed_window, TW),
+    X is AX+OX+CX,
+    Y is AY+OY+CY,
+    new(Ev, event(Id, TW, X, Y)).
+
+
+:- begin_tests(tab_frame_layout).
+
+test(single_window_fills_the_tab) :-
+    tabbed(_TW, TF, P),
+    get(TF, content_size, size(CW, CH)),
+    geometry(P, area(X,Y,W,H)),
+    get(TF?root_tile, border_root, B),
+    X =:= B, Y =:= B,
+    W =:= CW-2*B, H =:= CH-2*B.
+
+%   A tab wants its windows out to its own edges, which is what
+%   <-border_root is for: the border between the tiles stays.
+
+%   ->border used to be the only border a tile had, and code that wants
+%   none of it -- a popup frame, a balloon -- still says so that way.
+
+test(setting_the_border_sets_the_one_around_the_root) :-
+    tabbed(_TW, TF, _P),
+    get(TF, root_tile, Tile),
+    send(Tile, border, 7),
+    get(Tile, border, 7),
+    get(Tile, border_root, 7),
+    send(Tile, border_root, 0),          % and this is what tells them apart
+    get(Tile, border, 7),
+    get(Tile, border_root, 0).
+
+test(the_tab_asks_for_no_border_around_its_tile) :-
+    tabbed(_TW, TF, P),
+    get(TF?root_tile, border_root, 0),
+    geometry(P, area(0, 0, CW, CH)),
+    get(TF, content_size, size(CW, CH)).
+
+test(the_border_survives_a_split_making_a_new_root) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(_P2, picture), P1, vertically),
+    get(TF?tile, super, @nil),          % the split made a new root
+    get(TF?root_tile, border_root, 0),
+    geometry(P1, area(0, 0, _, _)).
+
+test(the_border_survives_losing_a_window) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, vertically),
+    send(TF, delete, P2),
+    get(TF?root_tile, border_root, 0),
+    geometry(P1, area(0, 0, CW, CH)),
+    get(TF, content_size, size(CW, CH)).
+
+test(vertical_split_divides_the_width) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, vertically),
+    geometry(P1, area(X1,Y1,W1,_H1)),
+    geometry(P2, area(X2,Y2,_W2,_H2)),
+    Y1 =:= Y2,
+    X2 > X1+W1.
+
+test(horizontal_split_divides_the_height) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, horizontally),
+    geometry(P1, area(X1,Y1,_W1,H1)),
+    geometry(P2, area(X2,Y2,_W2,_H2)),
+    X1 =:= X2,
+    Y2 > Y1+H1.
+
+test(split_of_a_split_nests) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, vertically),
+    send(TF, split, new(P3, picture), P2, horizontally),
+    geometry(P1, area(_X1,_Y1,_W1,H1)),
+    geometry(P2, area(X2,_Y2,_W2,H2)),
+    geometry(P3, area(X3,_Y3,_W3,_H3)),
+    X2 =:= X3,                          % P2 and P3 share the right column
+    H2 < H1.                            % and split its height
+
+test(separator_per_resizable_gap) :-
+    tabbed(_TW, TF, P1),
+    get(TF?separators, size, 0),
+    send(TF, split, new(P2, picture), P1, vertically),
+    get(TF?separators, size, 1),
+    send(TF, split, new(_P3, picture), P2, horizontally),
+    get(TF?separators, size, 2).
+
+:- end_tests(tab_frame_layout).
+
+
+:- begin_tests(tab_frame_single_tab).
+
+%   A stack told to hide the label of a lone tab hands that tab the strip
+%   the label would take, and takes it back as soon as there is a second
+%   tab to tell it from.
+
+single(TW, TF, P) :-
+    new(TW, tabbed_window('Test', size(400,300))),
+    send(TW, hide_single_label, @on),
+    send(TW, tab, new(TF, tab_frame(new(P, picture), one))),
+    send(TW, open),
+    send(TW, resize).
+
+test(a_lone_tab_keeps_its_label_by_default) :-
+    tabbed(TW, TF, _P),
+    get(TW, hide_single_label, @off),
+    get(TF, label_height, LH),
+    LH > 0.
+
+test(a_lone_tab_can_drop_its_label) :-
+    single(_TW, TF, _P),
+    get(TF, label_height, 0).
+
+test(the_content_gets_the_room_the_label_would_take) :-
+    single(TW, TF, _P),
+    get(TF, content_size, size(_, H1)),
+    send(TW, tab, new(TF2, tab_frame(new(_P2, picture), two))),
+    send(TW, resize),
+    get(TF, label_height, LH),
+    LH > 0,
+    get(TF, content_size, size(_, H2)),
+    H1 =:= H2+LH,                       % the label is back and paid for
+    send(TF2, destroy),
+    send(TW, resize),
+    get(TF, label_height, 0),
+    get(TF, content_size, size(_, H3)),
+    H3 =:= H1.
+
+test(the_window_fills_the_tab_either_way) :-
+    single(TW, TF, P),
+    get(TF, content_size, size(CW, CH)),
+    geometry(P, area(0, 0, CW, CH)),
+    send(TW, tab, new(_TF2, tab_frame(new(_P2, picture), two))),
+    send(TW, resize),
+    get(TF, content_size, size(CW2, CH2)),
+    geometry(P, area(0, 0, CW2, CH2)).
+
+test(the_tab_sits_at_the_top_either_way) :-
+    single(TW, TF, _P),
+    get(TF, area, area(_, 0, _, _)),
+    send(TW, tab, new(_TF2, tab_frame(new(_P2, picture), two))),
+    send(TW, resize),
+    get(TF, area, area(_, 0, _, _)).
+
+test(turning_it_on_later_takes_effect) :-
+    tabbed(TW, TF, _P),
+    get(TF, label_height, LH),
+    LH > 0,
+    send(TW, hide_single_label, @on),
+    get(TF, label_height, 0),
+    send(TW, hide_single_label, @off),
+    get(TF, label_height, LH).
+
+:- end_tests(tab_frame_single_tab).
+
+
+:- begin_tests(tab_frame_label).
+
+%   The label of a tab is drawn by the tab, not by a graphical of its own,
+%   so what can be done to it answers on class tab.  Editing it is off
+%   unless the tab says otherwise.
+
+editor(TF, Item) :-
+    get(TF, device, Stack),
+    get(Stack, member, tab_label_item, Item).
+
+%!  label_click(+TabbedWindow, +Tab, -Event) is det.
+%
+%   A left click in the middle of the label of Tab.  A label is drawn
+%   above the tab, so it lies at a negative y.
+
+label_click(TW, TF, Ev) :-
+    get(TF, label_offset, X),
+    get(TF, label_height, H),
+    EX is X+10,
+    EY is -(H//2),
+    new(Ev, event(ms_left_down, TW, EX, EY)).
+
+test(a_label_is_not_editable_unless_asked) :-
+    two_tabs(_TW, TF, _TF2),
+    get(TF, editable_label, @off),
+    \+ send(TF, edit_label).
+
+test(an_editable_label_opens_over_itself) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    send(TF, edit_label),
+    editor(TF, Item),
+    get(Item, selection, Label),
+    send(Label, equal, TF?label),
+    get(TF, label_offset, X),
+    get(TF, label_height, H),
+    get(TF?label_size, width, W),
+    get(Item, area, area(X, 0, W, IH)),
+    IH >= H.
+
+test(what_is_typed_becomes_the_label) :-
+    two_tabs(_TW, TF, TF2),
+    send(TF, editable_label, @on),
+    send(TF, edit_label),
+    editor(TF, Item),
+    send(Item, selection, renamed),
+    send(Item, execute),
+    get(TF, label, renamed),
+    \+ editor(TF, _),
+    get(TF2, label_offset, X2),          % the labels were laid out again
+    get(TF?label_size, width, W1),
+    X2 =:= W1.
+
+test(an_empty_name_is_no_name) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    get(TF, label, Was),
+    send(TF, edit_label),
+    editor(TF, Item),
+    send(Item, selection, ''),
+    send(Item, execute),
+    get(TF, label, Was).
+
+test(escape_leaves_the_label_alone) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    get(TF, label, Was),
+    send(TF, edit_label),
+    editor(TF, Item),
+    send(Item, selection, nope),
+    send(Item, typed, 27),
+    \+ editor(TF, _),
+    get(TF, label, Was).
+
+%   ->label_event has to raise the tab itself: class tab defines it, so
+%   the one in library(tabbed_window) replaces it rather than adding to it.
+
+test(a_click_on_a_label_raises_its_tab) :-
+    two_tabs(TW, TF1, TF2),
+    get(TF1, status, on_top),           % the first one appended
+    label_click(TW, TF2, Ev),
+    send(TF2, label_event, Ev),
+    get(TF2, status, on_top),
+    get(TF1, status, hidden).
+
+test(a_click_on_the_label_of_an_inactive_tab_does_nothing) :-
+    two_tabs(TW, TF1, TF2),
+    send(TF2, active, @off),
+    label_click(TW, TF2, Ev),
+    \+ send(TF2, label_event, Ev),
+    get(TF1, status, on_top).
+
+test(a_double_click_on_the_label_starts_an_edit) :-
+    two_tabs(TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    get(TF, label_offset, X),
+    get(TF, label_height, H),
+    EX is X+10,
+    EY is -(H//2),
+    new(_First, event(ms_left_down, TW, EX, EY)),
+    new(Ev, event(ms_left_down, TW, EX, EY)),
+    get(Ev, multiclick, double),
+    send(TF, label_event, Ev),
+    editor(TF, _).
+
+%   ->label_event and <-label_popup used to sit on window_tab, which left
+%   a tab_frame without either.
+
+test(a_tab_frame_reaches_the_label_popup) :-
+    two_tabs(TW, TF, _TF2),
+    send(TW, label_popup, new(P, popup)),
+    get(TF, label_popup, P).
+
+:- end_tests(tab_frame_label).
+
+
+:- begin_tests(tab_frame_buttons).
+
+%   A label is drawn by its tab, so the buttons on the tab bar are
+%   displayed on the stack at the place the label was given.  The stack
+%   therefore holds graphicals that are not tabs, which the rest of it has
+%   to allow for.
+
+close_button(TF, B) :-
+    get(TF, hypered, close_button, B).
+
+new_tab_button(TF, B) :-
+    get(TF?device, hypered, new_tab_button, B).
+
+click(B) :-
+    get(B, area, area(X, Y, W, H)),
+    CX is X+W//2,
+    CY is Y+H//2,
+    get(B?device, window, Window),
+    send(event(ms_left_down, Window, CX, CY), post, B),
+    send(event(ms_left_up, Window, CX, CY), post, B).
+
+test(a_tab_carries_no_close_button_unless_asked) :-
+    two_tabs(_TW, TF, _TF2),
+    get(TF, closable, @off),
+    \+ close_button(TF, _).
+
+test(a_closable_tab_makes_room_for_its_button) :-
+    two_tabs(_TW, TF, _TF2),
+    get(TF?label_size, width, W0),
+    get(TF, label_height, LH),
+    send(TF, closable, @on),
+    get(TF?label_size, width, W1),
+    W1 > W0,                            % the button goes beside the text
+    W1 < W0+LH,                         % but is smaller than the label
+    close_button(TF, B),
+    get(B, area, area(BX, _, BW, _)),
+    get(TF, label_offset, LX),
+    BX >= LX+W0,                        % and lands in the room made
+    BX+BW =< LX+W1.
+
+%   The cross sits on the baseline of the text it belongs to, and is drawn
+%   smaller than the label is tall.
+
+%   A tab that is given no label at all shrinks to its minimum rather than
+%   keeping the box of a label it no longer has, which used to leave a
+%   wide empty tab with its close button next to the new-tab button.
+
+test(an_empty_label_gives_the_room_back) :-
+    two_tabs(_TW, TF, TF2),
+    send(TF, label, 'a very long tab title indeed'),
+    send(TF?device, layout_labels),
+    get(TF?label_size, width, W1),
+    get(TF, label_height, H1),
+    send(TF, label, ''),
+    send(TF?device, layout_labels),
+    get(TF?label_size, width, W2),
+    get(TF, label_height, H2),
+    W2 < W1,
+    H2 =:= H1,                          % but the bar keeps its height
+    get(TF2, label_offset, W2).         % and the next tab moves up
+
+test(the_close_button_sits_on_the_text_baseline) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, closable, @on),
+    get(TF, label_height, LH),
+    get(TF, close_button_area, area(_, Y, S, S)),
+    S < LH,
+    get(TF?label_font, ascent, Ascent),
+    Y+S =< LH,                          % inside the label
+    Y+S >= Ascent.
+
+test(the_close_button_closes_the_tab) :-
+    two_tabs(TW, TF, TF2),
+    send(TF, closable, @on),
+    close_button(TF, B),
+    click(B),
+    \+ object(TF),
+    get(TW?tabs, size, 1),
+    send(TW?tabs, member, TF2).
+
+%   A button belongs to the tab it acts on, so it has to go when that tab
+%   does -- clicking it included.  It used to be left behind on the bar,
+%   where it read as a second close button.
+
+%   The stack holds the buttons among its tabs, so what follows a tab in
+%   its chain need not be one: closing the tab on top used to hand
+%   ->on_top whatever came next, which was a button, and a freed one.
+
+test(closing_the_tab_on_top_raises_another_tab) :-
+    two_tabs(TW, TF1, TF2),
+    send(TF1, closable, @on),
+    send(TF2, closable, @on),
+    send(TW, new_tab_message, message(@pce, succeed)),
+    get(TF1, status, on_top),
+    send(TF1, destroy),
+    get(TW?tabs, size, 1),
+    get(TF2, status, on_top).
+
+test(closing_the_last_tab_on_top_raises_the_one_before_it) :-
+    two_tabs(TW, TF1, TF2),
+    send(TF1, closable, @on),
+    send(TF2, closable, @on),
+    send(TW, new_tab_message, message(@pce, succeed)),
+    send(TF2?device, on_top, TF2),      % ->on_top of a tabbed_window takes
+    get(TF2, status, on_top),           % a name or a window, not a tab
+    send(TF2, destroy),
+    get(TW?tabs, size, 1),
+    get(TF1, status, on_top).
+
+test(a_closed_tab_takes_its_button_with_it,
+     [forall(member(How, [click, destroy]))]) :-
+    two_tabs(TW, TF, TF2),
+    send(TF, closable, @on),
+    send(TF2, closable, @on),
+    close_buttons(TW, 2),
+    close_button(TF, B),
+    (   How == click
+    ->  click(B)
+    ;   send(TF, destroy)
+    ),
+    \+ object(B),
+    close_buttons(TW, 1).
+
+close_buttons(TW, Count) :-
+    get(TW, tabs, Tabs),
+    get(Tabs, head, Tab),
+    get(Tab?device, graphicals, Graphicals),
+    chain_list(Graphicals, List),
+    findall(G, ( member(G, List),
+                 \+ send(G, instance_of, tab),
+                 get(G, name, close_tab)
+               ), Buttons),
+    length(Buttons, Count).
+
+test(there_is_no_new_tab_button_unless_asked) :-
+    two_tabs(_TW, TF, _TF2),
+    \+ new_tab_button(TF, _).
+
+test(the_new_tab_button_runs_what_it_was_given) :-
+    two_tabs(TW, TF, TF2),
+    send(TW, new_tab_message, message(new(C, number(0)), plus, 1)),
+    new_tab_button(TF, B),
+    get(TF2, label_offset, LX),         % it follows the last label
+    get(TF2?label_size, width, LW),
+    get(B, area, area(BX, _, _, _)),
+    BX >= LX+LW,
+    click(B),
+    get(C, value, 1).
+
+test(taking_the_message_away_takes_the_button_away) :-
+    two_tabs(TW, TF, _TF2),
+    send(TW, new_tab_message, message(@pce, succeed)),
+    new_tab_button(TF, _),
+    send(TW, new_tab_message, @nil),
+    \+ new_tab_button(TF, _).
+
+%   Everything that walks the stack has to skip what is not a tab.
+
+test(the_buttons_are_not_taken_for_tabs) :-
+    two_tabs(TW, TF, _TF2),
+    send(TF, closable, @on),
+    send(TW, new_tab_message, message(@pce, succeed)),
+    get(TW?tabs, size, 2),
+    send(TW, resize),
+    get(TF, label_height, LH),
+    get(TF, content_size, size(_, CH)),
+    get(TW, area, area(_, _, _, WH)),
+    CH =:= WH-LH,                       % a button did not count as a label
+    get(TW, members, Members),
+    get(Members, size, 2).
+
+:- end_tests(tab_frame_buttons).
+
+
+:- begin_tests(tab_frame_members).
+
+test(windows_lists_all_of_them) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, vertically),
+    send(TF, split, new(P3, picture), P2, horizontally),
+    get(TF, windows, Windows),
+    get(Windows, size, 3),
+    send(Windows, member, P1),
+    send(Windows, member, P2),
+    send(Windows, member, P3).
+
+test(delete_gives_the_space_to_the_sibling) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, vertically),
+    geometry(P1, area(_,_,W0,_)),
+    send(TF, delete, P2),
+    get(TF?windows, size, 1),
+    geometry(P1, area(_,_,W1,_)),
+    W1 > W0.
+
+test(destroy_is_seen_as_a_delete) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, vertically),
+    send(P2, destroy),
+    get(TF?windows, size, 1),
+    get(TF?separators, size, 0).
+
+test(deleted_window_survives_and_can_move) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, vertically),
+    send(TF, delete, P2),
+    send(TF, append, P2, P1, below),
+    get(TF?windows, size, 2),
+    geometry(P1, area(X1,_,_,_)),
+    geometry(P2, area(X2,_,_,_)),
+    X1 =:= X2.
+
+test(tabbed_window_sees_windows_of_every_tab) :-
+    tabbed(TW, TF, P1),
+    send(TF, split, new(_P2, picture), P1, vertically),
+    send(TW, append, new(_V, view), plain),     % a classic window_tab
+    get(TW, members, Members),
+    get(Members, size, 3).
+
+test(on_top_selects_the_window_in_the_tab) :-
+    tabbed(TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, vertically),
+    send(TW, on_top, P2),
+    get(TF, current, P2),
+    send(TW, on_top, P1),
+    get(TF, current, P1).
+
+:- end_tests(tab_frame_members).
+
+
+:- begin_tests(tab_frame_manager).
+
+%   `window ->below' and friends work on whatever manages the tile
+%   hierarchy the target is part of: a frame, or a tab_frame.  See tile
+%   <-manager and window <-tile_manager.
+
+test(a_tab_window_is_managed_by_its_tab) :-
+    tabbed(_TW, TF, P1),
+    get(P1, tile_manager, TF).
+
+test(a_frame_member_is_managed_by_its_frame) :-
+    new(F, frame('Test')),
+    send(F, append, new(P, picture)),
+    send(F, open),
+    get(P, tile_manager, F).
+
+test(relating_adds_to_the_tab) :-
+    tabbed(_TW, TF, P1),
+    send(new(P2, picture), right, P1),
+    get(TF?windows, size, 2),
+    get(TF?separators, size, 1),
+    get(P2, tile_manager, TF),
+    geometry(P1, area(X1,_,W1,_)),
+    geometry(P2, area(X2,_,_,_)),
+    X2 > X1+W1.
+
+test(relating_below_adds_to_the_tab) :-
+    tabbed(_TW, TF, P1),
+    send(new(P2, picture), below, P1),
+    get(TF?windows, size, 2),
+    geometry(P1, area(_,Y1,_,H1)),
+    geometry(P2, area(_,Y2,_,_)),
+    Y2 > Y1+H1.
+
+test(moving_a_pane_into_a_frame_takes_it_out_of_the_tab) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, vertically),
+    new(F, frame('Own')),
+    send(F, append, P2),
+    send(F, open),
+    get(TF?windows, size, 1),
+    get(TF?separators, size, 0),
+    get(P2, tile_manager, F).
+
+test(moving_a_window_into_a_tab_takes_it_out_of_the_frame) :-
+    tabbed(_TW, TF, P1),
+    new(F, frame('Own')),
+    send(F, append, new(P2, picture)),
+    send(F, open),
+    send(TF, append, P2, P1, right),
+    get(TF?windows, size, 2),
+    get(P2, tile_manager, TF),
+    get(F?members, size, 0).
+
+test(relating_to_a_tile_works_too) :-      % as class epilog_window does
+    tabbed(_TW, TF, P1),
+    get(P1, tile, T1),
+    send(new(P2, picture), right, T1),
+    get(TF?windows, size, 2),
+    get(P2, tile_manager, TF).
+
+test(the_manager_follows_a_new_root) :-
+    tabbed(_TW, TF, P1),
+    get(P1?tile, root, Root0),
+    send(TF, split, new(_P2, picture), P1, horizontally),
+    get(P1?tile, root, Root),
+    Root \== Root0,                     % the split introduced a super
+    get(Root, manager, TF).
+
+test(current_never_answers_a_destroyed_window) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, vertically),
+    send(TF, current, P2),
+    send(P2, destroy),
+    get(TF, current, P1).
+
+:- end_tests(tab_frame_manager).
+
+
+:- begin_tests(tab_frame_resize).
+
+%!  gap_x(+TabFrame, +LeftWindow, -X) is det.
+%
+%   X in the middle of the gap right of LeftWindow.
+
+gap_x(TF, Left, X) :-
+    geometry(Left, area(LX,_,LW,_)),
+    get(TF?tile, border, B),
+    X is LX+LW+B//2.
+
+%!  drag(+TabbedWindow, +TabFrame, +X0, +Y0, +X1, +Y1) is det.
+%
+%   Drag the gap at X0,Y0 to X1,Y1, in the content coordinates of the tab.
+
+drag(TW, TF, X0, Y0, X1, Y1) :-
+    event_at(TF, ms_left_down, X0, Y0, Down),
+    send(TW, event, Down),
+    event_at(TF, ms_left_drag, X1, Y1, Drag),
+    send(TW, event, Drag),
+    event_at(TF, ms_left_up, X1, Y1, Up),
+    send(TW, event, Up).
+
+test(cursor_follows_the_gap) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(_P2, picture), P1, vertically),
+    gap_x(TF, P1, GapX),
+    event_at(TF, loc_move, GapX, 50, Ev1),
+    send(TF, update_cursor, Ev1),
+    get(TF, cursor, C1),
+    get(C1, name, ew_resize),
+    event_at(TF, loc_move, 10, 50, Ev2),
+    send(TF, update_cursor, Ev2),
+    get(TF, cursor, @nil).
+
+test(dragging_the_gap_redistributes_the_space) :-
+    tabbed(TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, vertically),
+    geometry(P1, area(X1,_,W1,_)),
+    geometry(P2, area(_,_,W2,_)),
+    gap_x(TF, P1, GapX),
+    Target is GapX-60,
+    event_at(TF, ms_left_down, GapX, 50, Down),
+    send(TW, event, Down),
+    event_at(TF, ms_left_drag, Target, 50, Drag),
+    send(TW, event, Drag),
+    event_at(TF, ms_left_up, Target, 50, Up),
+    send(TW, event, Up),
+    geometry(P1, area(_,_,NW1,_)),
+    geometry(P2, area(_,_,NW2,_)),
+    NW1 =:= Target-X1,                  % the gap went where we dropped it
+    NW1+NW2 =:= W1+W2.                  % and the total is unchanged
+
+%   A pane the user has resized holds its size through a zero stretch,
+%   which used to be inherited by the tile a later split of that pane
+%   introduces: the pair then took the new window's ideal size, squeezing
+%   whatever was next to it, and could no longer be resized at all.
+
+test(splitting_a_resized_pane_leaves_the_rest_where_it_was) :-
+    tabbed(TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, horizontally),
+    geometry(P1, area(_,Y1,_,H1)),
+    Gap is Y1+H1+2,
+    Target is Gap-40,
+    drag(TW, TF, 100, Gap, 100, Target),
+    geometry(P1, area(_,_,_,RH1)),
+    geometry(P2, area(_,RY2,_,RH2)),
+    send(TF, split, new(_P3, picture), P1, vertically),
+    geometry(P1, area(_,_,_,RH1)),      % the resized pane keeps its height
+    geometry(P2, area(_,RY2,_,RH2)),    % and its neighbour does not move
+    get(TF?separators, size, 2).
+
+test(the_separator_of_a_resized_pane_can_still_be_dragged) :-
+    tabbed(TW, TF, P1),
+    send(TF, split, new(_P2, picture), P1, horizontally),
+    geometry(P1, area(_,Y1,_,H1)),
+    Gap is Y1+H1+2,
+    Target is Gap-40,
+    drag(TW, TF, 100, Gap, 100, Target),
+    send(TF, split, new(_P3, picture), P1, vertically),
+    geometry(P1, area(_,NY1,_,NH1)),
+    NewGap is NY1+NH1+2,
+    event_at(TF, loc_move, 100, NewGap, Ev),
+    get(TF, resize_tile, Ev, _).
+
+%   <-can_resize is derived and cached, as it is asked for on every
+%   pointer move.  Relating or dropping a tile changes the answer.
+
+test(can_resize_is_worked_out_again_after_a_split) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, horizontally),
+    get(P2?tile, can_resize, @off),     % last of the column: nothing to give
+    send(TF, split, new(_P3, picture), P2, vertically),
+    get(P2?tile, can_resize, @on),      % but P3 is beside it now
+    get(TF?separators, size, 2).
+
+test(can_resize_is_worked_out_again_after_a_delete) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, horizontally),
+    get(P1?tile, can_resize, @on),
+    send(TF, delete, P2),
+    get(P1?tile, can_resize, @off).     % on its own again
+
+test(a_resized_pane_is_still_resizable) :-
+    tabbed(TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, horizontally),
+    geometry(P1, area(_,Y1,_,H1)),
+    Gap is Y1+H1+2,
+    Target is Gap-40,
+    drag(TW, TF, 100, Gap, 100, Target),
+    send(TF, split, new(_P3, picture), P2, vertically),  % re-derives
+    get(P1?tile, can_resize, @on).
+
+test(no_gesture_inside_a_window) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(_P2, picture), P1, vertically),
+    event_at(TF, ms_left_down, 10, 50, Down),
+    send(Down, slot, receiver, TF),
+    \+ send(@tab_frame_resize_gesture, event, Down).
+
+:- end_tests(tab_frame_resize).
+
+
+:- begin_tests(tab_frame_drop).
+
+%   A window is moved by dragging its split_handle onto another window;
+%   the receiver splits and the dropped window takes the half the pointer
+%   is nearest.  The drag itself cannot be driven here: the driver these
+%   tests run against paints nothing, so no subwindow is ever created and
+%   the pointer cannot be resolved to one (see event <-inside_sub_window).
+%   What ->drop does once a target is found is what is checked.
+
+%!  at(+Window, +Where, -Point) is det.
+%
+%   A point just inside the Where edge of Window, in the coordinates the
+%   tab lays its windows out in.
+
+at(W, Where, point(X, Y)) :-
+    geometry(W, area(AX, AY, AW, AH)),
+    edge(Where, AX, AY, AW, AH, X, Y).
+
+edge(left,   AX, AY, _AW, AH, X, Y) :- X is AX+5,       Y is AY+AH//2.
+edge(right,  AX, AY, AW,  AH, X, Y) :- X is AX+AW-5,    Y is AY+AH//2.
+edge(above,  AX, AY, AW, _AH, X, Y) :- X is AX+AW//2,   Y is AY+5.
+edge(below,  AX, AY, AW,  AH, X, Y) :- X is AX+AW//2,   Y is AY+AH-5.
+
+test(the_side_follows_the_nearest_edge, [forall(member(Where,
+                                                [left,right,above,below]))]) :-
+    tabbed(_TW, TF, P1),
+    at(P1, Where, Pos),
+    get(TF, drop_side, Pos, Where).
+
+test(the_sides_get_more_of_the_window_than_the_top_and_bottom) :-
+    tabbed(_TW, TF, P1),
+    geometry(P1, area(AX, AY, AW, AH)),
+    AW > AH,                            % a quarter in and a fifth down is
+    X is AX+AW//4,                      % nearer the top edge in pixels, but
+    Y is AY+AH//5,                      % still well inside the left zone
+    get(TF, drop_side, point(X, Y), left).
+
+test(the_target_is_the_window_under_the_pointer) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, horizontally),
+    at(P1, left, Pos1),
+    get(TF, drop_target, Pos1, P1),
+    at(P2, left, Pos2),
+    get(TF, drop_target, Pos2, P2).
+
+test(a_point_outside_every_window_is_no_target) :-
+    tabbed(_TW, TF, _P1),
+    \+ get(TF, drop_target, point(-20, -20), _).
+
+test(preview_shows_and_takes_away_the_outline) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, horizontally),
+    at(P1, right, Pos),
+    send(TF, preview_drop, P2, Pos),
+    get(TF, drop_feedback, Box),
+    Box \== @nil,
+    send(TF, preview_drop, @nil),
+    get(TF, drop_feedback, @nil).
+
+test(dropping_beside_a_window_rearranges_the_tab) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, horizontally),   % stacked
+    geometry(P1, area(_,Y1,_,H1)),
+    geometry(P2, area(_,Y2,_,_)),
+    Y2 > Y1+H1,
+    at(P1, right, Pos),
+    send(TF, drop, P2, Pos),
+    geometry(P1, area(X1,_,W1,_)),                         % now beside
+    geometry(P2, area(X2,_,_,_)),
+    X2 > X1+W1,
+    get(TF?windows, size, 2).
+
+test(dropping_from_another_tab_moves_the_window) :-
+    tabbed(TW, TF, P1),
+    send(TW, tab, new(TF2, tab_frame(new(P2, picture), two))),
+    get(TW?tabs, size, 2),
+    at(P1, below, Pos),
+    send(TF, drop, P2, Pos),
+    get(TF?windows, size, 2),
+    send(TF?windows, member, P2),
+    get(P2, tile_manager, TF),
+    \+ object(TF2),                    % the tab it left was empty
+    get(TW?tabs, size, 1).
+
+test(dropping_a_window_on_itself_does_nothing) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, horizontally),
+    at(P2, right, Pos),
+    send(TF, drop, P2, Pos),
+    get(TF?windows, size, 2),
+    get(TF?separators, size, 1).
+
+test(dragging_the_grip_onto_another_window_moves_it) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, horizontally),   % P2 below P1
+    send(P2, display, new(H, split_handle)),
+    send(H, place, P2),
+    get(H, area, area(HX, HY, HW, HH)),
+    DownX is HX+HW//2,
+    DownY is HY+HH//2,
+    geometry(P1, area(AX, AY, AW, AH)),
+    geometry(P2, area(BX, BY, _, _)),
+    UpX is AX+AW-20-BX,                 % the right edge of P1, in the
+    UpY is AY+AH//2-BY,                 % coordinates of P2
+    send(P2, post_event, event(ms_left_down, P2, DownX, DownY)),
+    send(P2, post_event, event(ms_left_drag, P2, UpX, UpY)),
+    get(TF, drop_feedback, Box),
+    Box \== @nil,                       % outlined while the pointer is there
+    send(P2, post_event, event(ms_left_up, P2, UpX, UpY)),
+    get(TF, drop_feedback, @nil),
+    geometry(P1, area(NX1, _, NW1, _)),
+    geometry(P2, area(NX2, _, _, _)),
+    NX2 > NX1+NW1.                      % beside P1 now, not below it
+
+%   A class variable whose default cannot be converted to its type is
+%   only found out when something asks for it, and the cursor asks in the
+%   middle of a drag.
+
+test(dragging_the_grip_onto_another_frame_moves_the_window) :-
+    tabbed_at(0, 0, _TW1, TF1, P1),
+    tabbed_at(700, 0, _TW2, TF2, P2),
+    send(P1, display, new(H, split_handle)),
+    send(H, place, P1),
+    get(P1, display_position, point(D1X, D1Y)),
+    get(P2, display_position, point(D2X, D2Y)),
+    geometry(P2, area(_, _, W2, H2)),
+    get(H, area, area(HX, HY, HW, HH)),
+    DownX is HX+HW//2,
+    DownY is HY+HH//2,
+    UpX is D2X+W2-30-D1X,               % the right edge of P2, over in the
+    UpY is D2Y+H2//2-D1Y,               % other frame, relative to P1
+    send(P1, post_event, event(ms_left_down, P1, DownX, DownY)),
+    send(P1, post_event, event(ms_left_drag, P1, UpX, UpY)),
+    get(TF2, drop_feedback, Box),
+    Box \== @nil,                       % outlined in the frame it is over
+    send(P1, post_event, event(ms_left_up, P1, UpX, UpY)),
+    get(TF2?windows, size, 2),
+    send(TF2?windows, member, P1),
+    get(P1, tile_manager, TF2),
+    \+ object(TF1).                     % the tab it left was empty
+
+%   Clicking the grip picks the window up instead of dragging it: the
+%   pointer then carries it until a click says where it goes.  That works
+%   across frames on every window system, as the pointer is delivered to
+%   whatever window it is over rather than to the one it was pressed on.
+
+test(clicking_the_grip_picks_the_window_up) :-
+    tabbed_at(0, 0, _TW, TF, P1),
+    send(TF, split, new(_P2, picture), P1, horizontally),
+    send(P1, display, new(H, split_handle)),
+    send(H, place, P1),
+    get(H, area, area(HX, HY, HW, HH)),
+    X is HX+HW//2,
+    Y is HY+HH//2,
+    send(P1, post_event, event(ms_left_down, P1, X, Y)),
+    send(P1, post_event, event(ms_left_up, P1, X, Y)),
+    get(@split_move, source, P1),
+    send(@split_move, cancel),
+    get(@split_move, source, @nil).
+
+test(the_pointer_puts_it_down_in_another_frame) :-
+    tabbed_at(0, 0, _TW1, TF1, P1),
+    tabbed_at(700, 0, _TW2, TF2, P2),
+    send(P1, display, new(H, split_handle)),
+    send(H, place, P1),
+    get(H, area, area(HX, HY, HW, HH)),
+    DownX is HX+HW//2,
+    DownY is HY+HH//2,
+    send(P1, post_event, event(ms_left_down, P1, DownX, DownY)),
+    send(P1, post_event, event(ms_left_up, P1, DownX, DownY)),
+    get(@split_move, source, P1),       % picked up
+    geometry(P2, area(BX, BY, BW, BH)),
+    OverX is BX+BW-20,                  % the right half of the window in
+    OverY is BY+BH//2,                  % the other frame
+    post_grabbed(P1, loc_move, TF2, OverX, OverY),
+    get(TF2, drop_feedback, Box),
+    Box \== @nil,                       % outlined over there
+    post_grabbed(P1, ms_left_up, TF2, OverX, OverY),
+    get(TF2?windows, size, 2),
+    send(TF2?windows, member, P1),
+    get(P1, tile_manager, TF2),
+    get(@split_move, source, @nil),     % and put down again
+    \+ object(TF1).
+
+test(the_grip_fades_until_the_pointer_is_on_it) :-
+    tabbed(_TW, _TF, P1),
+    send(P1, display, new(H, split_handle)),
+    send(H, place, P1),
+    get(H, area, area(HX, HY, HW, HH)),
+    X is HX+HW//2,
+    Y is HY+HH//2,
+    get(H, class_variable_value, dim_opacity, Dim),
+    Dim < 1.0,
+    get(H, opacity, Dim),
+    send(event(area_enter, P1, X, Y), post, H),
+    get(H, opacity, Full),
+    Full =:= 1.0,                       % num gives back a plain 1
+    send(event(area_exit, P1, X, Y), post, H),
+    get(H, opacity, Dim).
+
+%   Which gesture the grip names depends on the window system: dragging
+%   needs to know where the windows are and Wayland does not say.
+
+test(the_grip_names_the_gesture_that_works_here) :-
+    tab_frame:move_gesture(How),
+    memberchk(How, [drag, click]),
+    tab_frame:handle_help(drag, Drag),
+    tab_frame:handle_help(click, Click),
+    Drag \== Click,
+    tab_frame:handle_help(How, Here),
+    tabbed(_TW, _TF, P1),
+    send(P1, display, new(H, split_handle)),
+    get(H, help_message, tag, Tag),
+    send(Tag, equal, Here).
+
+test(the_grip_shows_its_picture_at_its_size) :-
+    tabbed(_TW, _TF, P1),
+    send(P1, display, new(H, split_handle)),
+    get(H, class_variable_value, handle_size, Size),
+    get(H?graphicals, find, message(@arg1, instance_of, bitmap), Bitmap),
+    send(Bitmap?image?size, equal, Size),
+    send(H?size, equal, Size).
+
+%   The grip is one of these; a pane may want more of them, as the demo
+%   does for throwing a pane away.
+
+test(a_pane_handle_takes_any_picture_and_a_tip) :-
+    tabbed(_TW, _TF, P1),
+    send(P1, display,
+         new(H, pane_handle('tool/trashcan.svg', 'Delete this pane'))),
+    get(H, class_variable_value, handle_size, Size),
+    send(H?size, equal, Size),
+    get(H, help_message, tag, Tag),
+    send(Tag, equal, 'Delete this pane').
+
+test(the_class_variables_resolve,
+     [forall(member(Class-Var, [split_handle        - handle_size,
+                                split_handle        - grip_image,
+                                split_handle        - dim_opacity,
+                                tab_frame           - split_bias,
+                                split_handle_gesture- cursor,
+                                split_handle_gesture- cursor_size,
+                                split_handle_gesture- cursor_border]))]) :-
+    get(@pce, convert, Class, class, TheClass),
+    get(TheClass, class_variable, Var, ClassVariable),
+    get(ClassVariable, value, _).
+
+test(the_handle_drags_the_window_it_is_displayed_on) :-
+    new(P, picture),
+    send(P, display, new(H, split_handle)),
+    get(H, window, P),                  % what the gesture takes as source
+    get(H, all_recognisers, Recognisers),
+    get(Recognisers, find,
+        message(@arg1, instance_of, drag_and_drop_gesture), _).
+
+:- end_tests(tab_frame_drop).

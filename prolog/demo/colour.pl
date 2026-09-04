@@ -94,7 +94,7 @@ make_colour_browser(CB, DataBase) :-
 
                                     % set tab-stops for nice alignment
     get(CB?font, width, "medium_sea_green  ", LeftWidth),
-    send(CB?image, tab_stops, vector(LeftWidth)),
+    send(CB?text_image, tab_stops, vector(LeftWidth)),
                                     % scan de database
     send(DataBase, for_all,
          message(@prolog, append_colour, CB, @arg1)).

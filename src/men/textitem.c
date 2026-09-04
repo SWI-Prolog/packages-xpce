@@ -529,7 +529,7 @@ forwardCompletionEvent(EventObj ev)
       succeed;
     }
 
-    if ( insideEvent(ev, (Graphical)lb->image) &&
+    if ( insideEvent(ev, (Graphical)lb->text_image) &&
 	 !insideEvent(ev, (Graphical)sb) ) /* HACK: they can overlap a bit */
     { if ( isAEvent(ev, NAME_msLeftDrag) ||
 	   isAEvent(ev, NAME_locMove) )

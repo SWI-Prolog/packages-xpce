@@ -81,7 +81,7 @@ method(TextImage, Method) :-
 
 show_key_bindings(Object) :-
     new(V, view),
-    send(V?image, cursor, arrow),
+    send(V?text_image, cursor, arrow),
     send(new(D, dialog), below, V),
     send(D, append, button(quit, message(V, destroy))),
     send(D, append,
@@ -94,8 +94,8 @@ show_key_bindings(Object) :-
     send(B, active, @off),
     send(D, default_button, apply),
     send(V, tab_stops, vector(100, 300)),
-    send(V?image, wrap, none),
-    send(V?image, recogniser, @show_key_bindings_recogniser),
+    send(V?text_image, wrap, none),
+    send(V?text_image, recogniser, @show_key_bindings_recogniser),
     show_key_bindings(Object, V, R),
     send(V, open).
 

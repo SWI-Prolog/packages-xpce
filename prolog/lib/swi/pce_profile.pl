@@ -240,7 +240,7 @@ initialise(B) :->
 
 resize(B) :->
     send_super(B, resize),
-    get(B?image, width, W),
+    get(B?text_image, width, W),
     get(B?font, width, '100.0%', ColW),
     send(B, tab_stops, vector(W-ColW-15)).
 

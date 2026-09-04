@@ -66,7 +66,7 @@ cursor(G, LB:list_browser, Ev:event, Cursor:cursor) :<-
         get(T, size, size(W, H)),
         new(BM, image(@nil, W, H)),
         send(BM, draw_in, T),
-        get(DI, image, LB),
+        get(DI, text_image, LB),
         get(DI, position, DiPos),
         (   get(G, warp, @on)
         ->  new(HotSpot, point(W/2, H/2)),
@@ -86,13 +86,13 @@ cursor(G, LB:list_browser, Ev:event, Cursor:cursor) :<-
 font(DI, Font) :-
     get(DI, style, StyleName),
     atom(StyleName),
-    get(DI, image, Browser),
+    get(DI, text_image, Browser),
     get(Browser?styles, StyleName, Style),
     get(Style, font, Font),
     !.
 font(DI, Font) :-
     get(DI, style, @default),
-    get(DI, image, Browser),
+    get(DI, text_image, Browser),
     get(Browser, font, Font).
 
 

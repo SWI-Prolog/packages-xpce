@@ -179,6 +179,11 @@ demo('Drag-and-drop File',
      demo(dragdrop_file),
      dragdrop_file_demo).
 
+demo('Tabs and splitting',
+     'Tabs holding split windows: split, resize, move panes around',
+     demo(tabframe),
+     tab_frame_demo).
+
 demo('Transform',
      'Live figure->transform: rotate, scale and shear a small scene',
      demo(transform),

@@ -38,6 +38,124 @@
 static Tab	getOnTopTabStack(TabStack ts);
 
 
+		 /*******************************
+		 *	      LABELS		*
+		 *******************************/
+
+/* <-hide_single_label leaves the whole of the stack to a tab that is the
+   only one in it: a label naming the one thing there is says nothing, and
+   costs a strip across the top.  The label comes back as soon as there is
+   a second tab to tell it from.
+*/
+
+static int
+count_tabs(TabStack ts)
+{ Cell cell;
+  int n = 0;
+
+  for_cell(cell, ts->graphicals)
+  { if ( instanceOfObject(cell->value, ClassTab) )
+      n++;
+  }
+
+  return n;
+}
+
+
+/* The stack holds the buttons on the label row and the editor over a
+   label being renamed as well as the tabs, so what is meant for a tab has
+   to say so.
+*/
+
+static bool
+is_tab(Any gr)
+{ return instanceOfObject(gr, ClassTab) && !isFreedObj(gr);
+}
+
+
+static Tab
+first_tab(TabStack ts, bool last)
+{ Tab found = NULL;
+  Cell cell;
+
+  for_cell(cell, ts->graphicals)
+  { if ( is_tab(cell->value) )
+    { found = cell->value;
+      if ( !last )
+	return found;
+    }
+  }
+
+  return found;
+}
+
+
+static Tab
+next_tab(TabStack ts, Tab t)
+{ Cell cell;
+  bool seen = false;
+
+  for_cell(cell, ts->graphicals)
+  { if ( cell->value == t )
+      seen = true;
+    else if ( seen && is_tab(cell->value) )
+      return cell->value;
+  }
+
+  return NULL;
+}
+
+
+bool
+labelsShownTabStack(TabStack ts)
+{ return ts->hide_single_label != ON || count_tabs(ts) > 1;
+}
+
+
+/* Appending or erasing a tab can be what turns the labels on or off, and
+   that changes the room every tab has.  The stack does not do the sizing
+   -- whoever holds it does, from ->resize -- so ask for it again.
+*/
+
+static void
+relayout_tab_stack(TabStack ts)
+{ Cell cell;
+
+  for_cell(cell, ts->graphicals)
+  { Graphical gr = cell->value;
+
+    if ( !instanceOfObject(gr, ClassTab) )
+      continue;
+
+    requestComputeGraphical(gr, DEFAULT);
+    ComputeGraphical(gr);		/* a tab sits <-label_height below */
+    setGraphical(gr, ZERO, ZERO, DEFAULT, DEFAULT);   /* its own top-left,
+					   so it has to be put back */
+  }
+
+  if ( notNil(ts->device) && hasSendMethodObject(ts->device, NAME_resize) )
+    send(ts->device, NAME_resize, EAV);
+}
+
+
+static void
+labels_may_have_changed_tab_stack(TabStack ts)
+{ if ( ts->hide_single_label == ON && count_tabs(ts) <= 2 )
+    relayout_tab_stack(ts);
+}
+
+
+static status
+hideSingleLabelTabStack(TabStack ts, BoolObj hide)
+{ if ( ts->hide_single_label != hide )
+  { assign(ts, hide_single_label, hide);
+    relayout_tab_stack(ts);
+  }
+
+  succeed;
+}
+
+
 		/********************************
 		*            CREATE		*
 		********************************/
@@ -66,8 +184,15 @@ RedrawAreaTabStack(TabStack t, Area a)
   { Cell cell;
 
     for_cell(cell, dev->graphicals)
-    { Tab t = cell->value;
+    { Graphical gr = cell->value;
+      Tab t;
 
+      if ( !instanceOfObject(gr, ClassTab) )
+      { RedrawArea(gr, a);		/* a button or an editor on the */
+	continue;			/* label row */
+      }
+
+      t = (Tab)gr;
       if ( t->status == NAME_onTop )
 	RedrawArea(t, a);
       else
@@ -89,6 +214,25 @@ static status
 eventTabStack(TabStack t, EventObj ev)
 { Cell cell;
 
+  /* The label row belongs to the tab it names, so a button sitting on it
+     would never be reached: the loop below hands the event to the tab.
+     Offer it to what is not a tab first.
+  */
+
+  for_cell(cell, t->graphicals)
+  { Graphical gr = cell->value;
+    Int X, Y;
+
+    if ( instanceOfObject(gr, ClassTab) || gr->displayed != ON )
+      continue;
+
+    if ( get_xy_event(ev, gr, ON, &X, &Y) &&
+	 valInt(X) >= 0 && valInt(X) < valInt(gr->area->w) &&
+	 valInt(Y) >= 0 && valInt(Y) < valInt(gr->area->h) &&
+	 postEvent(ev, gr, DEFAULT) )
+      succeed;
+  }
+
   for_cell(cell, t->graphicals)
   { if ( instanceOfObject(cell->value, ClassTab) )
     { Tab tab = cell->value;
@@ -99,7 +243,9 @@ eventTabStack(TabStack t, EventObj ev)
       x = valInt(X), y = valInt(Y);
 
       if ( y < 0 )			/* tab-bar */
-      { if ( y > -valInt(tab->label_size->h) &&
+      { int lh = labelHeightTab(tab);
+
+	if ( lh > 0 && y > -lh &&
 	     x > valInt(tab->label_offset) &&
 	     x < valInt(tab->label_offset) + valInt(tab->label_size->w) )
 	{ if ( postNamedEvent(ev, (Graphical)tab, DEFAULT, NAME_labelEvent) )
@@ -128,6 +274,7 @@ appendTabStack(TabStack ts, Tab t)
   { send(t, NAME_status, NAME_hidden, EAV);
     send(ts, NAME_layoutLabels, EAV);
   }
+  labels_may_have_changed_tab_stack(ts);
 
   succeed;
 }
@@ -141,11 +288,12 @@ eraseTabStack(TabStack ts, Graphical gr)
 
     if ( t->status == NAME_onTop )
     { if ( !(notNil(t->previous_top) &&
-	     (newtop = (Tab)getMemberDevice((Device)ts, t->previous_top))) )
-      { newtop = getNextChain(ts->graphicals, t);
-
+	     (newtop = (Tab)getMemberDevice((Device)ts, t->previous_top)) &&
+	     is_tab(newtop)) )
+      { newtop = next_tab(ts, t);	/* not getNextChain(): what follows */
+					/* may be a button on the label row */
 	if ( !newtop )
-	{ newtop = getHeadChain(ts->graphicals);
+	{ newtop = first_tab(ts, false);
 	  if ( newtop == t )
 	    newtop = NULL;
 	}
@@ -157,6 +305,7 @@ eraseTabStack(TabStack ts, Graphical gr)
     send(ts, NAME_layoutLabels, EAV);
     if ( newtop )
       send(ts, NAME_onTop, newtop, EAV);
+    labels_may_have_changed_tab_stack(ts);
   } else
     eraseDevice((Device)ts, gr);
 
@@ -177,7 +326,9 @@ layoutLabelsTabStack(TabStack ts)
   { Tab t = cell->value;
 
     if ( instanceOfObject(t, ClassTab) )
-    { if ( t->label_offset != toInt(offset) )
+    { ComputeGraphical(t);		/* the label box may have a new width */
+
+      if ( t->label_offset != toInt(offset) )
       { changedLabelImageTab(t);	/* clear old and new location */
 	send(t, NAME_labelOffset, toInt(offset), EAV);
 	changedLabelImageTab(t);
@@ -186,7 +337,16 @@ layoutLabelsTabStack(TabStack ts)
     }
   }
 
+  send(ts, NAME_labelsLaidOut, EAV);	/* a hook: see library(tabbed_window),
+					   which puts buttons on the labels */
+
   succeed;
+}
+
+
+static status
+labelsLaidOutTabStack(TabStack ts)
+{ succeed;				/* nothing to do here; see above */
 }
 
 
@@ -196,10 +356,8 @@ layoutDialogTabStack(TabStack ts, Size s)
   Tab first;
   Cell cell;
 
-  if ( !(first = getHeadChain(ts->graphicals)) )
-    succeed;				/* empty stack */
-  if ( !instanceOfObject(first, ClassTab) )
-    fail;
+  if ( !(first = first_tab(ts, false)) )
+    succeed;				/* no tabs */
 
   if ( isDefault(s) )
   { struct area a;
@@ -208,10 +366,14 @@ layoutDialogTabStack(TabStack ts, Size s)
 
     for_cell(cell, ts->graphicals)
     { Graphical gr = cell->value;
-      BoolObj old = gr->displayed;
+      BoolObj old;
 
+      if ( !instanceOfObject(gr, ClassTab) )
+	continue;
+
+      old = gr->displayed;
       assign(gr, displayed, ON);	/* why? */
-      send(cell->value, NAME_layoutDialog, EAV);
+      send(gr, NAME_layoutDialog, EAV);
       assign(gr, displayed, old);
     }
 
@@ -220,25 +382,32 @@ layoutDialogTabStack(TabStack ts, Size s)
     for_cell(cell, ts->graphicals)
     { Graphical gr = cell->value;
 
-      unionNormalisedArea(&a, gr->area);
+      if ( instanceOfObject(gr, ClassTab) )
+	unionNormalisedArea(&a, gr->area);
     }
     w = valInt(a.w);
     h = valInt(a.h);
 
-    if ( !instanceOfObject((last=getTailChain(ts->graphicals)), ClassTab) )
+    if ( !(last = first_tab(ts, true)) )
       fail;
-    lw = valInt(last->label_offset) + valInt(last->label_size->w);
+    lw = labelsShownTabStack(ts)
+		? valInt(last->label_offset) + valInt(last->label_size->w)
+		: 0;
     w = max(w, lw);
   } else
   { w = valInt(s->w);
     h = valInt(s->h);
   }
 
-  h -= valInt(first->label_size->h);
+  h -= labelHeightTab(first);
 
   for_cell(cell, ts->graphicals)
-  { Size sz = answerObject(ClassSize, toInt(w), toInt(h), EAV);
+  { Size sz;
 
+    if ( !instanceOfObject(cell->value, ClassTab) )
+      continue;				/* a button keeps its own size */
+
+    sz = answerObject(ClassSize, toInt(w), toInt(h), EAV);
     send(cell->value, NAME_size, sz, EAV);
   }
 
@@ -259,7 +428,10 @@ onTopTabStack(TabStack ts, Tab t)
     }
 
     for_cell(cell, ts->graphicals)
-    { send(cell->value, NAME_status,
+    { if ( !instanceOfObject(cell->value, ClassTab) )
+	continue;
+
+      send(cell->value, NAME_status,
 	   (Tab)cell->value == t ? NAME_onTop : NAME_hidden, EAV);
     }
 
@@ -289,6 +461,11 @@ getOnTopTabStack(TabStack ts)
 
 /* Instance Variables */
 
+static vardecl var_tab_stack[] =
+{ SV(NAME_hideSingleLabel, "bool", IV_GET|IV_STORE, hideSingleLabelTabStack,
+     NAME_appearance, "Give a lone tab the room its label would take")
+};
+
 /* Send Methods */
 
 static senddecl send_tab_stack[] =
@@ -302,6 +479,8 @@ static senddecl send_tab_stack[] =
      NAME_organisation, "Erase a tab (or graphical)"),
   SM(NAME_layoutLabels, 0, NULL, layoutLabelsTabStack,
      NAME_layout, "Assign positions for the labels"),
+  SM(NAME_labelsLaidOut, 0, NULL, labelsLaidOutTabStack,
+     NAME_layout, "The labels have been given their places"),
   SM(NAME_layoutDialog, 1, "[size]", layoutDialogTabStack,
      NAME_layout, "Adjust the members"),
   SM(NAME_onTop, 1, "member:tab", onTopTabStack,
@@ -315,10 +494,17 @@ static getdecl get_tab_stack[] =
      NAME_stack, "Find tab on top")
 };
 
+/* Resources */
+
+static classvardecl rc_tab_stack[] =
+{ RC(NAME_hideSingleLabel, "bool", "@off",
+     "Give a lone tab the room its label would take")
+};
+
 /* Class Declaration */
 
 ClassDecl(tab_stack_decls,
-          NULL, send_tab_stack, get_tab_stack, NULL,
+          var_tab_stack, send_tab_stack, get_tab_stack, rc_tab_stack,
           ARGC_UNKNOWN, NULL);
 
 

@@ -37,6 +37,8 @@
 #include <SDL3/SDL.h>
 
 void ws_init_cursor_font(void);
+bool ws_busy_cursor(void);
+void ws_set_busy_cursor(CursorObj c);
 Int ws_cursor_font_index(Name name);
 status ws_create_cursor(CursorObj c, DisplayObj d);
 void ws_destroy_cursor(CursorObj c, DisplayObj d);

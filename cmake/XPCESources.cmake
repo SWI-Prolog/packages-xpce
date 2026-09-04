@@ -147,6 +147,7 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     pcedraw.pl pce_editable_text.pl
     pce_emacs.pl pce_float_item.pl pce_font_item.pl pce_grapher.pl
     pce_graphical_browser.pl pce_helper.pl pce_help_file.pl pce_history.pl
+    pce_icon_button.pl
     pce_identifier_item.pl pce_image_browser.pl pce_image_item.pl
     pce_image.pl pce_main.pl pce_manual.pl pce_meta.pl pce_html_manual.pl
     pce_objects.pl pce.pl pce_progress.pl
@@ -160,7 +161,8 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     prolog_predicate_item.pl prolog_predicate.pl qrecompile.pl
     scaledbitmap.pl scan_arguments.pl splash_screen.pl
     stayup_popup.pl swi_compatibility.pl swi_edit.pl
-    swi_hooks.pl swi_ide.pl swi_preferences.pl tabbed_window.pl tabular.pl
+    swi_hooks.pl swi_ide.pl swi_preferences.pl tab_frame.pl
+    tabbed_window.pl tabular.pl
     toc_filesystem.pl toolbar.pl url_image.pl pce_openframes.pl
     pce_backcomp.pl xdot.pl graphviz_term.pl)
 if(EPILOG)
@@ -263,7 +265,7 @@ set(XPCE_DATA_prolog_contrib_rubik maplist.pl README rubikpce.pl rubik.pl)
 set(XPCE_DATA_prolog_demo arc.pl chess.pl colour.pl constraint.pl cursor.pl
     dragdrop_file.pl event_hierarchy.pl fontviewer.pl graph.pl hsvcolour.pl
     imageviewer.pl ispell.pl juggler.pl kangaroo.pl opacity.pl pce_demo.pl
-    transform.pl tube_gui.pl tube.pl tube.json
+    tabframe.pl transform.pl tube_gui.pl tube.pl tube.json
     xdot_demo.pl xdot_demo.dot random_terms_demo.pl)
 
 set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png
@@ -318,7 +320,7 @@ set(XPCE_DATA_bitmaps_tool
     copy.svg distribute.svg open.svg print.svg undo.svg cut.svg
     duplicate.svg paste.svg save.svg trashcan.svg ex_up.svg ex_down.svg
     nav-forward.svg nav-backward.svg user.svg clear-text.svg wipe.svg
-    newdir.svg)
+    newdir.svg drag-pane.svg close-tab.svg new-tab.svg)
 
 set(XPCE_DATA_bitmaps_logo
     New_Unicode_logo.svg)

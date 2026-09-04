@@ -254,6 +254,15 @@ static SDL_DisplayID last_display_id = 0;
 static Uint32 keyboard_timer = 0;
 static SDL_Event keydown_event = {0};
 static Uint64 keyinput_time = 0;
+static Uint64 menubar_key_time = 0;	/* key-down taken by the MacOS menu */
+
+/* Milliseconds we hold a key-down while waiting to see whether SDL
+ * turns it into text input, and equally the window in which a text
+ * input event is taken to belong to the key-down just before it.
+ */
+
+#define KEYBOARD_DELAY 10
+#define ms_to_ns(ms) ((Uint64)(ms)*1000000)
 
 static void	set_pointer_window(Any window);
 
@@ -569,6 +578,23 @@ CtoEvent(SDL_Event *event)
 	    Cprintf("SDL_EVENT_TEXT_INPUT: %d (\"%s\") at %" PRIu64 "\n",
 		    codepoint, event->text.text, event->text.timestamp));
 
+      /* A key-down the MacOS menu bar claimed is not delayed, so there
+       * is no timer and the test below would let its text through.
+       * MacOS composes text from Option, so an Option accelerator would
+       * insert a character on top of running the menu item.  Drop the
+       * text that belongs to the claimed key-down.
+       */
+      if ( !keyboard_timer && menubar_key_time &&
+	   event->text.timestamp >= menubar_key_time &&
+	   event->text.timestamp - menubar_key_time <
+	   ms_to_ns(KEYBOARD_DELAY) )
+      { DEBUG(NAME_keyboard,
+	      Cprintf("Dropping text input for a keystroke claimed by "
+		      "the native menu bar\n"));
+	menubar_key_time = 0;
+	fail;
+      }
+
       if ( keyboard_timer )
       { if ( isOptionPrintCharacter(codepoint) )
 	{ SDL_RemoveTimer(keyboard_timer);
@@ -629,6 +655,15 @@ CtoEvent(SDL_Event *event)
 #endif
 
       lastmod = event->key.mod;
+      menubar_key_time = 0;
+      if ( ws_menubar_key_equivalent(event) )
+      { DEBUG(NAME_keyboard,
+	      Cprintf("Keystroke claimed by the native menu bar.  "
+		      "Mod=0x%x, key=0x%x\n",
+		      event->key.mod, event->key.key));
+	menubar_key_time = event->key.timestamp;
+	fail;			/* MacOS runs the menu item itself */
+      }
       name = keycode_to_name(event);
       if ( !name )
       { DEBUG(NAME_keyboard,
@@ -642,7 +677,7 @@ CtoEvent(SDL_Event *event)
 
       keydown_event  = *event;
       keyinput_time  = 0;
-      keyboard_timer = SDL_AddTimer(10, tm_keyboard_timeout, NULL);
+      keyboard_timer = SDL_AddTimer(KEYBOARD_DELAY, tm_keyboard_timeout, NULL);
       DEBUG(NAME_keyboard,
 	    Cprintf("Delaying keyboard down event at %" PRIu64 "\n"));
       fail;

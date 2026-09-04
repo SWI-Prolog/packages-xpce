@@ -230,7 +230,7 @@ setup_styles(M) :->
 
 set_caret_and_inform(M) :->
     get(M, editor, Editor),
-    get(Editor?image, index, @event, Caret),
+    get(Editor?text_image, index, @event, Caret),
     send(M, caret, Caret),
     get(M?text_buffer, find_all_fragments,
         message(@arg1, overlap, Caret),
@@ -243,7 +243,7 @@ set_caret_and_inform(M) :->
 event(M, Ev:event) :->
     "Show insert-menu on right-down"::
     send(Ev, is_a, ms_right_down),
-    (   get(M?image, index, Ev, I)
+    (   get(M?text_image, index, Ev, I)
     ->  send(M, caret, I)
     ;   true
     ),

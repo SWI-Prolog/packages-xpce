@@ -298,6 +298,54 @@ populate_menu(NSMenu *menu, void *mb, void *popup, int depth)
 
 
 		 /*******************************
+		 *	  KEY EQUIVALENTS	*
+		 *******************************/
+
+/* SDL hands us every key event, including the ones MacOS has just
+ * dispatched to a menu item as a key equivalent: SDL's Cocoa backend
+ * reports the key from -sendEvent: whether or not the main menu
+ * consumed it.  Without this test both paths run the command, which is
+ * why Command-V pasted twice.  We answer from the items rather than
+ * from -performKeyEquivalent:, which would run the item a third time.
+ */
+
+static bool
+menu_owns_key(NSMenu *menu, NSString *key, NSEventModifierFlags mods,
+	      int depth)
+{ if ( depth >= MAX_DEPTH )
+    return false;
+
+  for(NSMenuItem *mi in [menu itemArray])
+  { NSMenu *sub = [mi submenu];
+
+    if ( sub && menu_owns_key(sub, key, mods, depth+1) )
+      return true;
+
+    if ( ![mi isEnabled] || [[mi keyEquivalent] length] == 0 )
+      continue;
+    if ( [[[mi keyEquivalent] lowercaseString] isEqualToString:key] &&
+	 [mi keyEquivalentModifierMask] == mods )
+      return true;
+  }
+
+  return false;
+}
+
+
+bool
+ns_menubar_owns_key(const char *key, unsigned mods)
+{ if ( !main_menu || !key || !key[0] )
+    return false;
+
+  @autoreleasepool
+  { NSString *k = [utf8(key) lowercaseString];
+
+    return menu_owns_key(main_menu, k, ns_modifiers(mods), 0);
+  }
+}
+
+
+		 /*******************************
 		 *	  THE APP MENU		*
 		 *******************************/
 

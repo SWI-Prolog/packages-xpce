@@ -74,6 +74,7 @@ COMMON(status)	makeClassTextItem(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/men/tab.c */
 COMMON(status)	changedLabelImageTab(Tab t);
+COMMON(int)	labelHeightTab(Tab t);
 COMMON(status)	makeClassTab(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/men/diagroup.c */
@@ -85,6 +86,7 @@ COMMON(status)	eventDialogGroup(DialogGroup g, EventObj ev);
 COMMON(status)	makeClassDialogGroup(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/men/tabstack.c */
+COMMON(bool)	labelsShownTabStack(TabStack ts);
 COMMON(status)	makeClassTabStack(Class class);
 
 /* /staff/jan/src/pl/packages/xpce/src/men/labelbox.c */
