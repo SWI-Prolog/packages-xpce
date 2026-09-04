@@ -1,0 +1,178 @@
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
+
+    Author:        Jan Wielemaker
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org
+    Copyright (c)  2026, SWI-Prolog Solutions b.v.
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in
+       the documentation and/or other materials provided with the
+       distribution.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE.
+*/
+
+
+:- module(test_tool_panes, [test_tool_panes/0]).
+:- encoding(utf8).
+
+/** <module> An IDE tool as a pane
+
+The thread monitor used to be a window of its own: a browser, a graph
+window, a menu bar and a reporter in a frame.  It is a pane now, so it
+can sit in a tab of any window of the IDE beside a terminal, an editor
+or another tool.
+
+These check that it goes where it should, that there is only ever one,
+that its two windows are tiled inside it and that its menu reaches the
+bar of whatever window it lands in.
+
+Run with:
+
+    swipl -g test_tool_panes -t halt \
+          packages/xpce/tests/test_tool_panes.pl
+*/
+
+:- set_prolog_flag('SDL_VIDEODRIVER', dummy).
+
+:- use_module(library(pce)).
+:- use_module(library(plunit)).
+:- use_module(library(swi_ide)).
+:- use_module(library(epilog)).
+:- use_module(library(swi/thread_monitor), []).
+:- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(lists), [member/2]).
+
+test_tool_panes :-
+    run_tests([ tool_panes ]).
+
+%!  classes(+Frame, -Classes) is det.
+
+classes(F, Classes) :-
+    get(F, panes, Chain),
+    chain_list(Chain, Panes),
+    findall(C, (member(P, Panes), get(P, class_name, C)), Classes).
+
+%!  menus(+Frame, -Names) is det.
+
+menus(F, Names) :-
+    get(F, menu_bar, MB),
+    get(MB, buttons, Chain),
+    chain_list(Chain, Buttons),
+    findall(N, (member(B, Buttons), get(B, name, N)), Names).
+
+%!  monitor(-Monitor) is det.
+%
+%   The one thread monitor there is, made if there is none.
+
+monitor(TM) :-
+    get(@prolog_ide, show_tool, prolog_thread_monitor, TM).
+
+%!  no_monitor is det.
+%
+%   Take away the one there is.  There is only ever one, so a test that
+%   wants to watch one being made has to start without it.
+
+no_monitor :-
+    (   get(@prolog_ide, tool, prolog_thread_monitor, TM)
+    ->  send(TM, destroy)
+    ;   true
+    ).
+
+
+:- begin_tests(tool_panes).
+
+test(a_tool_opens_in_a_window_of_the_ide, Classes == [prolog_thread_monitor]) :-
+    no_monitor,
+    monitor(TM),
+    get(TM, frame, F),
+    send(F, instance_of, pane_frame),
+    classes(F, Classes).
+
+test(it_goes_into_a_window_that_is_already_open,
+     Classes == [epilog_window, prolog_thread_monitor]) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, thread_monitor),
+    classes(F, Classes).
+
+test(there_is_only_ever_one, true(Again == TM)) :-
+    monitor(TM),
+    send(@prolog_ide, thread_monitor),
+    get(@prolog_ide, tool, prolog_thread_monitor, Again).
+
+%       A pane that shows more than one window is a tabbed_window holding
+%       a single tab_frame, which lays them out with a tile.
+
+test(its_two_windows_are_tiled_inside_it,
+     Names == [thread_browser, thread_window]) :-
+    monitor(TM),
+    get(TM, members, Chain),
+    chain_list(Chain, Windows),
+    findall(N, (member(W, Windows), get(W, class_name, N)), Names).
+
+test(its_menu_reaches_the_bar_of_the_window_it_is_in) :-
+    monitor(TM),
+    get(TM, frame, F),
+    send(F, current_pane, TM),
+    menus(F, Menus),
+    memberchk(threads, Menus).
+
+%       Which window a tool lands in is <-current_frame's to say, and
+%       with no window manager to give one the focus that is whichever
+%       was made first.  So ask the monitor which window it is in rather
+%       than assuming.
+
+test(and_goes_again_when_another_pane_has_the_focus) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, thread_monitor),
+    get(@prolog_ide, tool, prolog_thread_monitor, TM),
+    get(TM, frame, MF),
+    send(MF, current_pane, TM),
+    menus(MF, WithMonitor),
+    memberchk(threads, WithMonitor),
+    get(MF, panes, Chain), chain_list(Chain, Panes),
+    member(Other, Panes), Other \== TM, !,
+    send(MF, current_pane, Other),
+    menus(MF, WithOther),
+    \+ memberchk(threads, WithOther).
+
+test(the_window_is_named_after_it, true(Label == 'SWI-Prolog -- Threads')) :-
+    monitor(TM),
+    get(TM, frame, F),
+    send(F, current_pane, TM),
+    get(F, label, Label).
+
+%       The browser drives the graph window through the pane they share,
+%       not through <-frame: the frame is the window of the IDE now.
+
+test(selecting_a_thread_draws_its_graph) :-
+    monitor(TM),
+    send(TM, selection, main),
+    get(TM, graph_window, GW),
+    get(GW, member, thread_diagram, _).
+
+:- end_tests(tool_panes).

@@ -39,8 +39,10 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(toolbar)).
+:- use_module(library(tabbed_window)).
+:- use_module(library(tab_frame)).
+:- use_module(library(pane_frame)).
 :- use_module(library(pce_report)).
-:- use_module(library(persistent_frame)).
 :- autoload(library(aggregate), [aggregate_all/3]).
 :- autoload(library(gui_tracer), [gtrace/0]).
 :- autoload(library(pce_util), [default/3, send_list/3]).
@@ -495,9 +497,13 @@ join_all(TB) :->
          if(@arg1?state \== running,
             message(@arg1, join))).
 
+monitor(TB, TM:prolog_thread_monitor) :<-
+    "The monitor I am part of"::
+    get(TB, container, prolog_thread_monitor, TM).
+
 details(TB, TS:thread_status) :->
     "Show detailed usage of thread"::
-    get(TB?frame, member, thread_window, P),
+    get(TB?monitor, graph_window, P),
     send(P, thread_diagram, TS),
     send(TB, report_status, TS).
 
@@ -711,13 +717,17 @@ percent_location(A, Val:'int|real', Loc:int) :<-
 :- pce_begin_class(thread_window, picture,
                    "Show details of a thread").
 
+monitor(Win, TM:prolog_thread_monitor) :<-
+    "The monitor I am part of"::
+    get(Win, container, prolog_thread_monitor, TM).
+
 thread_diagram(Win, TS:thread_status) :->
     "Show thread-diagram for status"::
     (   get(Win, member, thread_diagram, TD)
     ->  send(TD, attach, TS)
     ;   send(Win, clear, destroy),
         get(Win, axis_length, size(H, V)),
-        get(Win?frame, graphs, Graphs),
+        get(Win?monitor, graphs, Graphs),
         send(Win, display, thread_diagram(TS, Graphs, H, V)),
         send(Win, recenter)
     ).
@@ -735,7 +745,7 @@ axis_length(Win, Size:size) :<-
 resize(Win) :->
     "Window is resized; update display"::
     get(Win, axis_length, size(W,H)),
-    send(Win?frame, recall, W),
+    send(Win?monitor, recall, W),
     (   get(Win, member, thread_diagram, TD)
     ->  send(TD, axis_length, W, H),
         send(Win, recenter)
@@ -759,8 +769,23 @@ graphs(Win, Graphs:chain) :->
 :- pce_end_class(thread_window).
 
 
-:- pce_begin_class(prolog_thread_monitor, persistent_frame,
+/** The thread monitor as a pane.
+
+It used to be a frame of its own, holding the browser, the graphs, a
+menu bar and a reporter.  It is a pane now -- a window that can be
+dropped into a tab of any window of the IDE, beside a terminal or an
+editor -- so what was the frame's is divided: the two windows it shows
+are tiled inside it, and its menus go on the bar of whatever window it
+ends up in.
+
+A pane that shows more than one window is a tabbed_window holding a
+single tab_frame: a tab_frame lays windows out with a tile the way a
+frame does for its members, and a lone tab shows no label.
+*/
+
+:- pce_begin_class(prolog_thread_monitor, tabbed_window,
                    "Monitor thread-activity").
+:- use_class_template(pane).
 
 variable(timer,           timer*,  get, "Update timer").
 variable(graphs,          chain,   get, "Which graphs are shown").
@@ -770,12 +795,10 @@ class_variable(update_interval, num*,  0.2).
 class_variable(graphs,          chain, chain(local,global,trail,cpu)).
 
 initialise(TM) :->
-    send_super(TM, initialise, 'SWI-Prolog thread monitor'),
-    send(TM, append, new(TD, tool_dialog)),
-    send(new(thread_window), right, new(TB, thread_browser)),
-    send(TB, below, TD),
-    send(new(report_dialog), below, TB),
-    send(TM, fill_tool_dialog, TD),
+    send_super(TM, initialise, threads),
+    send(TM, hide_single_label, @on),
+    send(TM, tab, new(T, tab_frame(new(TB, thread_browser), threads))),
+    send(T, split, new(thread_window), TB, vertically),
     send(TM, update),
     get(TM, update_interval, Time),
     send(TM, update_interval, Time),
@@ -785,26 +808,70 @@ unlink(TM) :->
     send(TM, update_interval, @nil),
     send_super(TM, unlink).
 
-fill_tool_dialog(TM, TD:tool_dialog) :->
-    "Fill menu-bar"::
-    get(TM, member, thread_browser, TB),
-    send_list(TD, append,
-              [ new(File, popup(file)),
-                new(Threads, popup(threads))
-              ]),
-    send_list(File, append,
-              [ menu_item(settings, message(TM, settings)),
-                gap,
-                menu_item(quit, message(TM, destroy))
-              ]),
+                 /*******************************
+                 *            MEMBERS           *
+                 *******************************/
+
+%       <-member of a tabbed_window answers the window of a named tab, so
+%       the two windows are found by their class instead.
+
+browser(TM, TB:thread_browser) :<-
+    "The list of threads"::
+    get(TM, monitor_window, thread_browser, TB).
+
+graph_window(TM, TW:thread_window) :<-
+    "The window the graphs are drawn in"::
+    get(TM, monitor_window, thread_window, TW).
+
+monitor_window(TM, Class:name, W:window) :<-
+    "A window of mine of the given class"::
+    get(TM, members, Windows),
+    get(Windows, find, message(@arg1, instance_of, Class), W).
+
+                 /*******************************
+                 *             PANE             *
+                 *******************************/
+
+pane_label(_TM, Label:name) :<-
+    "What my tab is called"::
+    Label = 'Threads'.
+
+menu_bar_key(_TM, Key:name) :<-
+    "Every thread monitor asks for the same menu bar"::
+    Key = thread_monitor.
+
+fill_menu_bar(TM, MD:tool_dialog) :->
+    "Put my menu on the bar of the window I am in"::
+    get(MD, popup, threads, @on, Threads),
     send_list(Threads, append,
-              [ menu_item(new,
+              [ menu_item(new_thread,
                           message(@prolog, interactor)),
-                gap,
                 menu_item(join_all,
-                          message(TB, join_all))
+                          message(TM?browser, join_all),
+                          end_group := @on),
+                menu_item(thread_monitor_settings,
+                          message(TM, settings))
               ]).
 
+%       A pane reports to the window it is in, which grows a bar the
+%       first time anything wants one.  The monitor says what it is
+%       doing as it runs, so it asks for one as soon as it has something
+%       to say rather than losing the first message.
+
+report(TM, Kind:name, Fmt:[char_array], Args:any ...) :->
+    "Report on the bar of the window I am in"::
+    (   get(TM, frame, F),
+        F \== @nil,
+        send(F, has_get_method, ensure_status_dialog)
+    ->  ignore(get(F, ensure_status_dialog, _))
+    ;   true
+    ),
+    Msg =.. [report, Kind, Fmt|Args],
+    send_super(TM, Msg).
+
+                 /*******************************
+                 *           SETTINGS           *
+                 *******************************/
 
 update_interval(TM, Interval:'int|real*') :->
     "Set the timer update interval"::
@@ -824,31 +891,31 @@ update_interval(TM, Interval:'int|real*') :->
 
 graphs(TM, Graphs:chain) :->
     send(TM, slot, graphs, Graphs),
-    get(TM, member, thread_window, TW),
-    send(TW, graphs, Graphs).
+    send(TM?graph_window, graphs, Graphs).
 
 
 update(TM) :->
     "Update status"::
-    get(TM, member, thread_browser, TB),
-    send(TB, update).
+    send(TM?browser, update).
 
 selection(TM, Thread:'name|int') :->
     "Select the given thread"::
-    get(TM, member, thread_browser, TB),
+    get(TM, browser, TB),
     get(TB, member, Thread, DI),
     send(TB, selection, DI),
     send(TB, details, DI).
 
 recall(TM, Recall:int) :->
     "#samples recalled"::
-    get(TM, member, thread_browser, TB),
-    send(TB, recall, Recall).
+    send(TM?browser, recall, Recall).
 
 
 settings(TM) :->
     "Edit settings"::
-    send(new(thread_settings_dialog(TM)), open_centered, TM?area?center).
+    (   get(TM, frame, F), F \== @nil
+    ->  send(new(thread_settings_dialog(TM)), open_centered, F?area?center)
+    ;   send(new(thread_settings_dialog(TM)), open)
+    ).
 
 :- pce_end_class(prolog_thread_monitor).
 

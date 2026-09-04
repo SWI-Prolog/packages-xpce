@@ -46,6 +46,8 @@
 :- autoload(library(www_browser), [www_open_url/1]).
 :- autoload(library(swi_preferences), [prolog_edit_preferences/1]).
 :- autoload(library(pce_openframes), [confirm_open_frames/1]).
+:- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(lists), [member/2]).
 :- require([ pce_image_directory/1,
 	     file_directory_name/2
 	   ]).
@@ -177,12 +179,7 @@ open_interactor(_) :->
 thread_monitor(IDE) :->
     "Open a monitor for running threads"::
     (   current_prolog_flag(threads, true)
-    ->  (   get(IDE, member, prolog_thread_monitor, Monitor)
-        ->  true
-        ;   new(Monitor, prolog_thread_monitor),
-            send(Monitor, application, IDE)
-        ),
-        send(Monitor, open)
+    ->  send(IDE, show_tool, prolog_thread_monitor)
     ;   send(@display, report, error,
              'This version of SWI-Prolog is not built \n\c
                   with thread-support')
@@ -213,6 +210,57 @@ visual_hierarchy(_IDE) :->
     ->  send(@manual, start_tool, visual_hierarchy)
     ;   pce_show_visual_tool
     ).
+
+                 /*******************************
+                 *          TOOL PANES          *
+                 *******************************/
+
+/** A tool that is a pane rather than a window of its own.
+
+Such a tool lives in a tab of a window of the IDE, beside a terminal or
+an editor or another tool.  There is one of each: asking for it again
+brings the one there is into view rather than making a second.
+*/
+
+tool(IDE, Class:name, Pane:window) :<-
+    "The tool pane of that class, in whichever window holds it"::
+    get(IDE, members, Frames),
+    chain_list(Frames, List),
+    member(F, List),
+    send(F, instance_of, pane_frame),
+    get(F, panes, Panes),
+    chain_list(Panes, Ps),
+    member(Pane, Ps),
+    send(Pane, instance_of, Class),
+    !.
+
+show_tool(IDE, Class:name, Pane:window) :<-
+    "Bring the tool pane of that class into view, making one if there is none"::
+    (   get(IDE, tool, Class, Pane)
+    ->  get(Pane, frame, F),
+        send(F, current_pane, Pane)
+    ;   Term =.. [Class],
+        new(Pane, Term),
+        (   get(IDE, current_frame, F)
+        ->  send(F, append_pane, Pane, @default, @on)
+        ;   new(F, pane_frame(IDE, @default, Pane))
+        )
+    ),
+    send(F, open),
+    send(F, expose).
+
+show_tool(IDE, Class:name) :->
+    "Bring the tool pane of that class into view"::
+    get(IDE, show_tool, Class, _).
+
+current_frame(IDE, F:pane_frame) :<-
+    "A window of mine to put a tool in"::
+    get(IDE, members, Frames),
+    chain_list(Frames, List),
+    member(F, List),
+    send(F, instance_of, pane_frame),
+    send(F, on_current_desktop),
+    !.
 
                  /*******************************
                  *          THE WINDOWS         *

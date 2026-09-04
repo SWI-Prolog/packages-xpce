@@ -10,6 +10,7 @@ if(EPILOG)
 test_libs(epilog_tabs          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(mixed_panes          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(undefined            OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(tool_panes           OPTIONS ${XPCE_TEST_OPTIONS})
 endif()
 test_libs(no_display           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(number_conversion    OPTIONS ${XPCE_TEST_OPTIONS})
@@ -36,7 +37,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
 
 if(EPILOG)
   list(APPEND XPCE_EXTRA_TESTS xpce:epilog_tabs xpce:mixed_panes
-                               xpce:undefined)
+                               xpce:undefined xpce:tool_panes)
 endif()
 
 # The terminal suite drives a terminal and reads the screen back, so it
