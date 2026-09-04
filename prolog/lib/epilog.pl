@@ -2147,34 +2147,40 @@ append_terminal(TW, W:epilog_window, Expose:[bool]) :->
     "Add a terminal in a tab of its own, named after its profile"::
     get(W, terminal, PT),
     get(PT, profile, Profile),
-    (   current_profile(Profile, Base)
-    ->  true
-    ;   Base = Profile
-    ),
-    unique_tab_label(TW, Base, 1, Label),
+    unique_tab_label(TW, PT, Profile, 1, Label),
     send(TW, append, W, Label, Expose).
 
 empty(TW) :->
     "The last tab was closed"::
     send(TW?frame, terminate).
 
-:- pce_end_class(epilog_tabbed_window).
-
-%!  unique_tab_label(+TabbedWindow, +Base, +N, -Label) is det.
+%!  unique_tab_label(+TabbedWindow, +PrologTerminal, +Profile, +N,
+%!                   -Label) is det.
 %
 %   A tab is found back by its label (see tabbed_window ->on_top), so no
 %   two of them may carry the same one.
 
-unique_tab_label(TW, Base, N, Label) :-
+unique_tab_label(_TW, PT, prolog, _, Label) :-
+    current_prolog_terminal(Thread, PT),
+    atom(Thread),
+    !,
+    Label = Thread.
+unique_tab_label(TW, PT, Profile, N, Label) :-
+    (   current_profile(Profile, Base)
+    ->  true
+    ;   Base = Profile
+    ),
     (   N == 1
     ->  Try = Base
     ;   format(atom(Try), '~w ~d', [Base, N])
     ),
     (   get(TW, tab, Try, _)
     ->  N2 is N+1,
-        unique_tab_label(TW, Base, N2, Label)
+        unique_tab_label(TW, PT, Base, N2, Label)
     ;   Label = Try
     ).
+
+:- pce_end_class(epilog_tabbed_window).
 
 
 :- pce_begin_class(epilog_frame, frame,
