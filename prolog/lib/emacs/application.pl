@@ -48,6 +48,21 @@
 :- use_module(dde_server).
 :- endif.
 
+%!  emacs_server
+%
+%   PceEmacs listens on a socket (see @emacs_server_address), so that
+%   `xpce-client' and edit/1 from another  process reach this PceEmacs
+%   rather than starting one of  their  own.   Set  the flag to `false'
+%   before PceEmacs is created to  do   without,  which  is what a test
+%   wants: it must not take the address of the PceEmacs of whoever runs
+%   it, nor leave one behind.  ->server_start still starts the server if
+%   it is asked to explicitly.
+
+:- create_prolog_flag(emacs_server, true,
+                      [ type(boolean),
+                        keep(true)
+                      ]).
+
 :- require([ ignore/1
            , pce_help_file/2
            , member/2
@@ -75,7 +90,10 @@ initialise(Emacs, Buffers:dict) :->
          history(message(Emacs, goto_history, @arg1, tab))),
     send(Emacs, slot, buffer_list, Buffers),
     get(@emacs_mark_list, class, _), % force loading
-    ignore(send(Emacs, server_start)),
+    (   current_prolog_flag(emacs_server, false)
+    ->  true
+    ;   ignore(send(Emacs, server_start))
+    ),
     ignore(send(Emacs, load_user_init_file)),
     register_clean_exit(Emacs).
 
@@ -158,7 +176,7 @@ buffers(Emacs, Buffers:chain) :<-
     get(Emacs?buffer_list?members, map, @arg1?object, Buffers).
 
 
-open_file(_Emacs, File:file, How:[{here,tab,window}]) :->
+open_file(_Emacs, File:file, How:[{here,tab,split,window}]) :->
     "Open a file"::
     new(B, emacs_buffer(File)),
     send(B, open, How).
@@ -171,7 +189,7 @@ find_file(Emacs, Dir:[directory]) :->
 
 goto_source_location(Emacs,
                      Location:source_location,
-                     Where:where=[{here,tab,window}],
+                     Where:where=[{here,tab,split,window}],
                      Title:title=[char_array]*) :->
     "Visit the indicated source-location"::
     (   Title == @nil
@@ -232,7 +250,7 @@ location_history(Emacs, Title:title=[char_array]) :->
     ).
 
 goto_history(Emacs, HE:emacs_history_entry,
-             Where:where=[{here,tab,window}]) :->
+             Where:where=[{here,tab,split,window}]) :->
     "Go back to an old history location"::
     get(HE, get_hyper, fragment, text_buffer, TB),
     get(HE, get_hyper, fragment, start, Start),

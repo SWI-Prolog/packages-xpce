@@ -595,13 +595,19 @@ term_screenshot(terminal(_, xpce(Frame, TI)), Pixels) :-
 %!  term_origin(+TerminalImage, -X, -Y) is det.
 %
 %   Top left corner of the terminal in the coordinates of its frame.
+%
+%   Adding the area of the terminal to the area of its window only gives
+%   that while the window is a member of the frame.  An Epilog window sits
+%   in a tab (see library(tab_frame)), where its area is stated in the
+%   coordinates of the tab, so ask for the position on the display and
+%   take the frame off that.
 
 term_origin(TI, X, Y) :-
-    get(TI, area, area(TX, TY, _, _)),
-    get(TI, window, Win),
-    get(Win, area, area(WX, WY, _, _)),
-    X is WX+TX,
-    Y is WY+TY.
+    get(TI, display_position, point(DX, DY)),
+    get(TI, frame, Frame),
+    get(Frame, area, area(FX, FY, _, _)),
+    X is DX-FX,
+    Y is DY-FY.
 
 %!  term_find(+T, +From, +For, -Index) is semidet.
 %!  term_find(+T, +From, +For, +Times, +Return, +Case, +Word, -Index) is semidet.

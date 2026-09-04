@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@cs.vu.nl
-    WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1985-2025, University of Amsterdam,
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/packages/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam,
                               VU University Amsterdam
                               SWI-Prolog Solutions b.v.
     All rights reserved.
@@ -39,6 +39,7 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(tabbed_window)).
+:- use_module(library(tab_frame)).
 :- use_module(prompt).
 :- use_module(library(pce_util)).
 :- use_module(library(pce_drop_target), [drop_target_event/4]).
@@ -68,7 +69,7 @@ various others.
 make_emacs_tab_popup(P) :-
     new(P, popup),
     Tab = @arg1,
-    Cond = (Tab?device?graphicals?size \== 1),
+    Cond = (Tab?device?tabs?size \== 1),
     send_list(P, append,
               [ menu_item(close_tab,
                           message(Tab, destroy),
@@ -80,6 +81,16 @@ make_emacs_tab_popup(P) :-
                           message(Tab, untab),
                           condition := Cond)
               ]).
+
+initialise(TW, Label:label=[name], Size:size=[size],
+           Display:display=[display]) :->
+    send_super(TW, initialise, Label, Size, Display),
+    send(TW, hide_single_label, @on).   % one tab needs no name
+
+new_tab(_TW, Window:window, Label:[name], Tab:tab) :<-
+    "Emacs tabs hold one or more views (see class tab_frame)"::
+    new(Tab, tab_frame(Window, Label)),
+    send(Tab, closable, @on).
 
 current(TW, Window:window) :->
     "Make the given window the current one"::
@@ -156,7 +167,7 @@ close(F) :->
         Now-Time < 0.5
     ->  true
     ;   get(F, member, emacs_tabbed_window, TW),
-        get(TW?members, size, Count),
+        get(TW?tabs, size, Count),
         (   Count == 1
         ->  send(F, destroy)
         ;   send(F, confirm, 'Close %d tabs?', Count)
@@ -181,6 +192,29 @@ editor_event(F, Ev:event) :->
     "Delegate to the mini-window"::
     get(F, member, mini_window, MW),
     send(MW, editor_event, Ev).
+
+keyboard_focus(F, W:[window]*) :->
+    "Follow the focus as it moves between the panes of a tab"::
+    (   send(W, instance_of, view),
+        get(F, member, mini_window, MW),
+        get(MW, prompter, Prompter), Prompter \== @nil
+    ->  send_super(F, keyboard_focus, MW)
+    ;   send_super(F, keyboard_focus, W),
+        (   send(W, instance_of, view)
+        ->  send(W, expose_view)
+        ;   true
+        )
+    ).
+
+split(F, B:buffer=emacs_buffer,
+         Direction:direction=[{horizontally,vertically}]) :->
+    "Show a buffer in a new pane next to the current view"::
+    get(F, view, V),
+    get(V, container, tab_frame, TF),
+    default(Direction, horizontally, Dir),
+    send(TF, split, new(New, emacs_view(B)), V, Dir),
+    send(B, update_label),
+    send(F, keyboard_focus, New).
 
 input_focus(F, Val:bool) :->
     "Activate the window"::
@@ -276,15 +310,6 @@ fit(F) :->
     ->  send(F, resize)
     ;   send(F, send_super, fit),
         send(F, attribute, fitted, @on)
-    ).
-
-
-keyboard_focus(F, W:window) :->
-    (   send(W, instance_of, view),
-        get(F, member, mini_window, MW),
-        get(MW, prompter, Prompter), Prompter \== @nil
-    ->  send(F, send_super, keyboard_focus, MW)
-    ;   send(F, send_super, keyboard_focus, W)
     ).
 
                  /*******************************
@@ -635,6 +660,8 @@ prompter(D, Prompter:dialog_item*) :->
 
 class_variable(size,         size, size(80,32), "Size of text-field").
 
+variable(label, name*, none, "Label as set by my buffer").
+
 initialise(V, B:buffer=[emacs_buffer], W:width=[int], H:height=[int]) :->
     "Create for buffer"::
     get(V, class_variable_value, size, size(DW, DH)),
@@ -656,30 +683,72 @@ initialise(V, B:buffer=[emacs_buffer], W:width=[int], H:height=[int]) :->
     get(Buffer, mode, ModeName),
     send(E, mode, ModeName),
     get(E, mode, Mode),             % the mode object
-    ignore(send(Mode, new_buffer)).
+    ignore(send(Mode, new_buffer)),
+    send(V, display, new(split_handle)).   % after the editor, which fills
+                                           % me: the grip draws over it
+resize(V) :->
+    "Keep the grip in the corner, clear of the scrollbar"::
+    send_super(V, resize),
+    (   get(V, member, split_handle, H)
+    ->  get(V?editor?scroll_bar, width, SBW),
+        send(H, place, V, SBW)
+    ;   true                        % still being built
+    ).
+
+%       A tab may hold more than one view (see class tab_frame), while
+%       it can only show one label.  The label follows the view that has
+%       the focus: every view keeps its own and pushes it out to the tab
+%       and to the frame while it is the current one.
 
 label(V, Label:name) :->
-    "Set label of frame/tab"::
-    get(V, device, Dev),
-    (   send(Dev, has_send_method, label)
-    ->  send(Dev, label, Label),
-        (   get(Dev, container, emacs_tabbed_window, TW),
-            get(TW, current, V),
-            get(V, frame, Frame),
-            Frame \== @nil
-        ->  send(Frame, label, Label) % HACK: should subclass window_tab
-        ;   true
+    "Set label of tab and frame"::
+    send(V, slot, label, Label),
+    send(V, update_labels).
+
+label(V, Label:name) :<-
+    "My label; see also ->update_labels"::
+    get(V, slot, label, Label),
+    Label \== @nil.
+
+update_labels(V) :->
+    "Push my label to the tab and the frame if I am the current view"::
+    (   get(V, label, Label)
+    ->  (   get(V, container, tab, Tab)
+        ->  (   current_in_tab(Tab, V)
+            ->  send(Tab, label, Label),
+                (   get(Tab, status, on_top)
+                ->  frame_label(V, Label)
+                ;   true
+                )
+            ;   true
+            )
+        ;   frame_label(V, Label)
         )
-    ;   get(V, frame, Frame),
+    ;   true
+    ).
+
+%       current_in_tab(+Tab, +View)
+%
+%       True while View is the one whose label the tab is to carry.  A
+%       window_tab holds a single window and thus always is.
+
+current_in_tab(Tab, V) :-
+    (   send(Tab, has_get_method, current)
+    ->  get(Tab, current, V)
+    ;   true
+    ).
+
+frame_label(V, Label) :-
+    (   get(V, frame, Frame),
         Frame \== @nil
     ->  send(Frame, label, Label)
     ;   true
     ).
-label(V, Label:name) :<-
-    "Fetch the current label"::
-    get(V, device, Dev),
-    send(Dev, has_get_method, label),
-    get(Dev, label, Label).
+
+expose_view(V) :->
+    "I have become the current view of my tab"::
+    send(V, update_labels),
+    send(V, setup_mode).
 
 drop_files(V, Files:chain, _At:point) :->
     "Accept files dropped on me"::

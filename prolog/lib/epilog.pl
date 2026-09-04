@@ -44,6 +44,8 @@
             run_in_help_epilog/1       % :Goal
           ]).
 :- use_module(library(pce)).
+:- use_module(library(tabbed_window)).
+:- use_module(library(tab_frame)).
 :- pce_autoload(partof_hyper, library(hyper)).
 :- use_module(library(threadutil), []).
 :- use_module(library(edit)).
@@ -75,6 +77,7 @@
 
 :- meta_predicate
     epilog(:),
+    epilog_tab(+, :),
     set_epilog(:),
     run_in_help_epilog(0),
     win_insert_menu_item(+, +, +, 0).
@@ -197,13 +200,7 @@ epilog(M:Options0) :-
     option(main(IsMain), Options, @off),
     new(Epilog, epilog_frame(Name, Title, Width, Height, IsMain)),
     get(Epilog, current_terminal, PT),
-
-    send(PT, profile, Profile),
-    on_option(init(Init),            Options, send(PT, goal_init, Init)),
-    on_option(goal(Goal),            Options, send(PT, goal, Goal)),
-    on_option(cwd(CWD),              Options, send(PT, process_cwd, CWD)),
-    on_option(inject(Text),          Options, set_inject(PT, Text)),
-    on_option(background(Colour),    Options, send(PT, background, Colour)),
+    configure_terminal(PT, Profile, Options),
     ignore(option(object(Epilog), Options)),
 
     send(Epilog, open),
@@ -214,6 +211,39 @@ epilog(M:Options0) :-
 
 is_meta(goal).
 is_meta(init).
+
+%!  epilog_tab(+Frame, :Spec) is det.
+%
+%   Open a new tab in Frame.  Spec is a profile name or a list of options
+%   as epilog/1 takes them; it is the same terminal in another place.
+
+epilog_tab(Frame, M:Profile) :-
+    atom(Profile),
+    !,
+    epilog_tab(Frame, M:[profile(Profile)]).
+epilog_tab(Frame, M:Options0) :-
+    option(profile(Profile), Options0, prolog),
+    profile_options(Profile, ProfileOptions),
+    merge_options(Options0, ProfileOptions, Options1),
+    meta_options(is_meta, M:Options1, Options),
+    new(W, epilog_window),
+    get(W, terminal, PT),
+    configure_terminal(PT, Profile, Options),
+    send(Frame?tabs, append_terminal, W, @on),
+    send(Frame, keyboard_focus, W).
+
+%!  configure_terminal(+Terminal, +Profile, +Options) is det.
+%
+%   Set Terminal up for Profile.  Shared by the window epilog/1 opens and
+%   the tab epilog_tab/2 adds to one.
+
+configure_terminal(PT, Profile, Options) :-
+    send(PT, profile, Profile),
+    on_option(init(Init),            Options, send(PT, goal_init, Init)),
+    on_option(goal(Goal),            Options, send(PT, goal, Goal)),
+    on_option(cwd(CWD),              Options, send(PT, process_cwd, CWD)),
+    on_option(inject(Text),          Options, set_inject(PT, Text)),
+    on_option(background(Colour),    Options, send(PT, background, Colour)).
 
 %!  on_option(+Option, +Options, :Goal) is det.
 %
@@ -495,6 +525,7 @@ binding('\\C-x8s',   insert_symbol).
 binding('\\C-\\S-o', split_horizontally). % Terminator compatibility
 binding('\\C-\\S-e', split_vertically).
 binding('\\C-\\S-i', new_window).
+binding('\\C-\\S-t', new_tab).
 binding('\\C-\\S-k', clear_screen).       % Gnome terminal
 binding('\\C-\\S-w', close).
 binding('\\C-\\S-m', make).
@@ -579,6 +610,8 @@ initialise(PT) :->
                           message(Terminal, split_horizontally)),
                 menu_item(split_vertically,
                           message(Terminal, split_vertically)),
+                menu_item(new_tab,
+                          message(Terminal, new_tab)),
                 menu_item(new_window,
                           message(Terminal, new_window),
                           end_group := @on),
@@ -1143,6 +1176,10 @@ split_vertically(T) :->
     "Split terminal vertically"::
     send(T, split, vertically).
 
+new_tab(T) :->
+    "Open a new terminal in a tab of this window"::
+    send(T?window, new_tab).
+
 new_window(T) :->
     "Open a new window"::
     get(T, goal, Goal),
@@ -1600,6 +1637,7 @@ initialise(T, Title:title=[name],
     send(T, display, new(Bar, epilog_report)),  % after TI: it draws on top
     send(Bar, displayed, @off),                 % ->display turned it on
     send(Bar, client, TI),
+    send(T, display, new(split_handle)),        % over the terminal as well
     send(T, keyboard_focus, TI).
 
 resize(T) :->
@@ -1611,17 +1649,19 @@ resize(T) :->
     get(T, member, terminal, TI),
     send(TI, set, 0, 0, TW-SBW, TH),
     get(T, member, epilog_report, Bar),
-    send(Bar, place, 0, 0, TW-SBW, TH).
+    send(Bar, place, 0, 0, TW-SBW, TH),
+    get(T, member, split_handle, Handle),
+    send(Handle, place, T, SBW).
 
-create(T) :->
+create(T, Parent:[window]) :->
     "Create the terminal and attach a Prolog thread to it"::
-    send_super(T, create),
-    get(T, member, terminal, TI),
+    send_super(T, create, Parent),      % a subwindow is created with the
+    get(T, member, terminal, TI),       % window it is displayed on
     get(T, tid, TID),
     send(TI, connect, TID).
 
-split(T, Dir:{horizontally,vertically}) :->
-    "Add a new terminal below me"::
+sibling(T, W:epilog_window) :<-
+    "A new terminal window that continues mine"::
     new(W, epilog_window),
     new(_, hyper(W, T, parent, child)),
     send(W, history, copy),
@@ -1632,14 +1672,28 @@ split(T, Dir:{horizontally,vertically}) :->
     get(T, goal, Goal),
     send(PT, goal, Goal),
     send(PT, profile, T?profile),
-    get(T, tile, Tile),
-    send(PT, background, T?terminal?background),
-    send(Tile, can_resize, @on),
-    (   Dir == horizontally
-    ->  send(W, below, Tile)
-    ;   send(W, right, Tile)
-    ),
+    send(PT, background, T?terminal?background).
+
+split(T, Dir:{horizontally,vertically}) :->
+    "Add a new terminal beside me, in my tab"::
+    get(T, sibling, W),
+    get(T, container, tab_frame, Tab),
+    send(Tab, split, W, T, Dir),
     send(T?frame, keyboard_focus, W).
+
+new_tab(T) :->
+    "Add a new terminal in a tab of its own"::
+    get(T, sibling, W),
+    get(T, frame, Frame),
+    send(Frame?tabs, append_terminal, W, @on),
+    send(Frame, keyboard_focus, W).
+
+window_label(T, Label:char_array) :->
+    "Show the title a client asked for on my tab"::
+    (   get(T, container, tab_frame, Tab)
+    ->  send(Tab, window_label, Label)
+    ;   send_super(T, window_label, Label)
+    ).
 
 save_history(EW) :->
     "Save the commandline history"::
@@ -2008,10 +2062,107 @@ stop_timer(R) :->
                 *            EPILOG            *
                 *******************************/
 
+:- pce_begin_class(epilog_tab, tab_frame,
+                   "Tab holding one or more terminals").
+
+class_variable(editable_label, bool, @on,
+               "A terminal tab is named by the user, so let them").
+class_variable(closable,       bool, @on,
+               "A terminal tab carries a button to close it").
+
+close_tab(Tab) :->
+    "Close my terminals, which takes me with them"::
+    send(Tab, close).
+
+close(Tab) :->
+    "Close my terminals"::
+    get(Tab, windows, Chain),
+    chain_list(Chain, Windows),
+    forall(member(W, Windows),
+           send(W?terminal, close)).
+
+close_other_tabs(Tab) :->
+    "Close the terminals of every other tab"::
+    get(Tab?device, tabs, Chain),
+    chain_list(Chain, Tabs),
+    forall(( member(Other, Tabs),
+             Other \== Tab,
+             send(Other, instance_of, epilog_tab)
+           ),
+           send(Other, close)).
+
+:- pce_end_class(epilog_tab).
+
+
+:- pce_begin_class(epilog_tabbed_window, tabbed_window,
+                   "Tabs holding the terminals of an Epilog window").
+
+:- pce_global(@epilog_tab_popup, make_epilog_tab_popup).
+
+make_epilog_tab_popup(P) :-
+    new(P, popup),
+    Tab = @arg1,
+    Cond = (Tab?device?tabs?size \== 1),
+    send_list(P, append,
+              [ menu_item(close_tab,
+                          message(Tab, close)),
+                menu_item(close_other_tabs,
+                          message(Tab, close_other_tabs),
+                          condition := Cond)
+              ]).
+
+initialise(TW) :->
+    send_super(TW, initialise),
+    send(TW, hide_single_label, @on),   % one tab needs no name
+    send(TW, new_tab_message, message(TW, new_terminal)),
+    send(TW, label_popup, @epilog_tab_popup).
+
+new_terminal(TW) :->
+    "Open a terminal in a tab of its own, from the current one"::
+    get(TW?frame, current_window, W),
+    send(W, new_tab).
+
+new_tab(_TW, Window:window, Label:[name], Tab:tab) :<-
+    "An Epilog tab holds one or more terminals"::
+    new(Tab, epilog_tab(Window, Label)).
+
+append_terminal(TW, W:epilog_window, Expose:[bool]) :->
+    "Add a terminal in a tab of its own, named after its profile"::
+    get(W, terminal, PT),
+    get(PT, profile, Profile),
+    (   current_profile(Profile, Base)
+    ->  true
+    ;   Base = Profile
+    ),
+    unique_tab_label(TW, Base, 1, Label),
+    send(TW, append, W, Label, Expose).
+
+empty(TW) :->
+    "The last tab was closed"::
+    send(TW?frame, terminate).
+
+:- pce_end_class(epilog_tabbed_window).
+
+%!  unique_tab_label(+TabbedWindow, +Base, +N, -Label) is det.
+%
+%   A tab is found back by its label (see tabbed_window ->on_top), so no
+%   two of them may carry the same one.
+
+unique_tab_label(TW, Base, N, Label) :-
+    (   N == 1
+    ->  Try = Base
+    ;   format(atom(Try), '~w ~d', [Base, N])
+    ),
+    (   get(TW, tab, Try, _)
+    ->  N2 is N+1,
+        unique_tab_label(TW, Base, N2, Label)
+    ;   Label = Try
+    ).
+
+
 :- pce_begin_class(epilog_frame, frame,
                    "Multiple terminals and menu").
 
-variable(current_window, name*,        both, "Name of the current window").
 variable(main,		 bool := @off, both, "True if this is the main window").
 
 initialise(T, Name:[name], Title:title=[name],
@@ -2026,13 +2177,13 @@ initialise(T, Name:[name], Title:title=[name],
     send(T, application, @epilog),
     send(T, done_message, message(@receiver, wm_close_requested)),
     send(T, append, new(D, epilog_dialog)),
+    send(new(TW, epilog_tabbed_window), below, D),
     new(W, epilog_window(@default, Width, Height, TID)),
-    send(T, current_window, W?name),
     (   current_prolog_terminal(_, _)
     ->  true
     ;   send(W, history, on)            % Use history on the first
     ),
-    send(W, below, D).
+    send(TW, append_terminal, W, @on).
 
 epilog_name(@default, @on, main) :-
     !.
@@ -2059,16 +2210,28 @@ wm_close_requested(T) :->
     ;   send(T, destroy)
     ).
 
+tabs(T, TW:epilog_tabbed_window) :<-
+    "The tabbed window holding my terminals"::
+    get(T, member, epilog_tabbed_window, TW).
+
+terminal_windows(T, Windows:chain) :<-
+    "All terminal windows of this frame, over all tabs"::
+    get(T, tabs, TW),
+    get(TW, members, Windows).
+
+current_window(T, W:epilog_window) :<-
+    "Terminal window that has the focus"::
+    get(T, tabs, TW),
+    get(TW, current, W).
+
 delete_epilog(T, W:window, Destroy:[bool]) :->
     "Remove an individual terminal"::
     (   send(W, instance_of, epilog_window),
-        get(T?members, find_all,
-            message(@arg1, instance_of, epilog_window),
-            Terminals),
-        send(Terminals, delete, W),
-        \+ send(Terminals, empty)
+        get(T?terminal_windows, size, Size),
+        Size > 1
     ->  send(W, save_history),
-        send(T, delete, W),
+        get(W, container, tab_frame, Tab),
+        send(Tab, delete, W),
         (   Destroy == @on
         ->  send(W, destroy)
         ;   true
@@ -2094,17 +2257,15 @@ terminate(T) :->
 
 current_terminal(Epilog, Terminal:prolog_terminal) :->
     "Set the current terminal"::
-    send(Epilog, current_window, Terminal?window?name).
+    get(Terminal, window, Window),
+    (   get(Epilog, current_window, Window)
+    ->  true                            % it already is
+    ;   send(Epilog?tabs, current, Window)
+    ).
 
 current_terminal(Epilog, Terminal:prolog_terminal) :<-
     "Get the current terminal of this frame"::
-    (   get(Epilog, current_window, WindowName),
-        WindowName \== @nil,
-        get(Epilog, member, WindowName, Window)
-    ->  true
-    ;   get(Epilog?members, find,
-            message(@arg1, instance_of, epilog_window), Window)
-    ),
+    get(Epilog, current_window, Window),
     get(Window, terminal, Terminal).
 
 inject(Epilog, Command:prolog) :->
@@ -2223,6 +2384,11 @@ new_window(_T, Profile:profile=[name]) :->
     default(Profile, prolog, TheProfile),
     epilog(TheProfile).
 
+new_tab(T, Profile:profile=[name]) :->
+    "Open a new tab in this window with Profile"::
+    default(Profile, prolog, TheProfile),
+    epilog_tab(T, TheProfile).
+
 debug_mode(Frame) :->
     "Toggle Prolog debug mode"::
     get(Frame, current_terminal, Term),
@@ -2338,6 +2504,7 @@ initialise(D) :->
                           message(Epilog, make),
                           accelerator := 'Shift-Ctrl-M',
                           end_group := @on),
+                new(NewTab, menu_item(new_tab_with_profile)),
                 new(NewWindow, menu_item(new_window_with_profile)),
                 menu_item(close,
                           message(Epilog, close),
@@ -2345,6 +2512,11 @@ initialise(D) :->
                 menu_item(halt_prolog,
                           message(Epilog, close, @on))
               ]),
+    send(NewTab, popup,
+         new(NewTabPopup, popup(new_tab,
+                                message(Epilog, new_tab, @arg1)))),
+    send(NewTabPopup, update_message,
+         message(D?frame, update_profile_menu, @receiver)),
     send(NewWindow, popup,
          new(NewWindowPopup, popup(new_window,
                                    message(Epilog, new_window, @arg1)))),
@@ -2516,7 +2688,7 @@ prolog:set_app_file_config([File|More]) :-
     ),
     atomic_list_concat(['SWI-Prolog --', File | Extra], ' ', Title),
     current_prolog_terminal(_, Term),
-    send(Term?frame, label, Title).
+    send(Term, window_label, Title).
 
 
                 /*******************************
@@ -2629,10 +2801,15 @@ set_colour(selection_background, Term, Color) =>
     send(Term, selection_style, NewStyle).
 
 %!  window_title(+Title) is det.
+%
+%   Ask for a title for the terminal of the calling thread.  Where it
+%   lands is up to the window the terminal is on: a tab of its own puts
+%   it on the tab and, while that tab is the one in view, on the frame.
+%   This is the road a client that writes an OSC 0 takes as well.
 
 window_title(Title) :-
     terminal(Term),
-    send(Term?frame, label, Title).
+    send(Term, window_label, Title).
 
 %!  win_insert_menu(+Label, +Before) is det.
 %

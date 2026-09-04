@@ -706,13 +706,17 @@ confirm_reload(_, Frame, _, File) :-
                  *          OPEN WINDOW         *
                  *******************************/
 
-open(B, How:[{here,tab,window}], Frame:emacs_frame) :<-
+open(B, How:[{here,tab,split,window}], Frame:emacs_frame) :<-
     "Create window for buffer"::
     (   How == window
     ->  send(new(Frame, emacs_frame(B)), open)
     ;   How == tab,
         get(@emacs, current_frame, Frame)
     ->  send(Frame, tab, B, @on),
+        send(Frame, expose)
+    ;   How == split,
+        get(@emacs, current_frame, Frame)
+    ->  send(Frame, split, B),
         send(Frame, expose)
     ;   get(@emacs, current_frame, Frame)
     ->  send(Frame, buffer, B),
@@ -721,7 +725,7 @@ open(B, How:[{here,tab,window}], Frame:emacs_frame) :<-
     ),
     send(B, check_modified_file, Frame).
 
-open(B, How:[{here,tab,window}]) :->
+open(B, How:[{here,tab,split,window}]) :->
     "Create window for buffer"::
     get(B, open, How, _).
 

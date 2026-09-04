@@ -790,7 +790,7 @@ qualify(PI0, PI),
 qualify(PI0, PI) =>
     PI = PI0.
 
-find_definition(M, For:prolog_predicate, Where:[{here,tab,window}]) :->
+find_definition(M, For:prolog_predicate, Where:[{here,tab,split,window}]) :->
     "Find definition of predicate [in new window]"::
     get(M, text_buffer, TB),
     get(For, head, @off, Head),
@@ -2709,7 +2709,7 @@ has_source(F) :->
 %       Find the predicate and invoke ->find_definition on the
 %       @emacs_mode, which is the mode object of the current editor.
 
-edit(F, Where:[{here,tab,window}]) :->
+edit(F, Where:[{here,tab,split,window}]) :->
     "Open Prolog predicate [in new window]"::
     get(F, predicate, Pred),
     send(@emacs_mode, find_definition, Pred, Where).
@@ -3063,7 +3063,7 @@ class_source(_, ClassName, Source) :-
     pce_library_class(ClassName, _, _Summary, Source).
 
 
-edit(F, Where:[{here,tab,window}]) :->
+edit(F, Where:[{here,tab,split,window}]) :->
     "Open XPCE class"::
     get(F, referenced_class, ClassName),
     get(F, text_buffer, TB),
