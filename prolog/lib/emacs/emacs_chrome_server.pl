@@ -123,6 +123,6 @@ create_editor(File, MeID) :-
     new(B, emacs_buffer(File)),
     get(B, open, tab, Frame),
     send(Frame, expose),
-    get(Frame, editor, Editor),
+    get(Frame?current_pane, editor, Editor),
     new(H, hyper(Proxy, Editor, editor, server)),
     send(H, send_method, @emacs_chrome_server_method).

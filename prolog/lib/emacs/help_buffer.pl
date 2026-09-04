@@ -83,7 +83,7 @@ prolog_help:show_html_hook(HTMLString) :-
     ->  send(B, open, tab)
     ;   send(B?editors, for_all, message(@arg1, caret, 0)),
         get(B?editors?head, frame, Frame),
-        send(Frame, tab, B, @on),
+        send(@emacs, show_buffer, Frame, B, tab),
         send(Frame, expose)
     ),
     send(@emacs, location_history, title := 'Documentation').

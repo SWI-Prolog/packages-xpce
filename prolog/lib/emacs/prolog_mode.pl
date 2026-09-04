@@ -102,7 +102,6 @@
 
 :- autoload(library(pldoc/doc_process), [comment_modes/2]).
 
-resource(mode_pl_icon, image, image('32x32/doc_pl.png')).
 resource(breakpoint,   image, library('trace/icons/stop.svg')).
 
 :- emacs_begin_mode(prolog, language,
@@ -233,10 +232,6 @@ class_variable(cond_indentation,      int,   4).
 class_variable(dict_indentation,      int,   2).
 class_variable(indent_tabs,           bool,  @off,
                "Use tabs for indentation").
-
-icon(_, I:image) :<-
-    "Return icon for mode"::
-    catch(new(I, image(resource(mode_pl_icon))), _, fail).
 
 setup_mode(M) :->
     "Attach styles for errors, warnings, etc."::
@@ -790,7 +785,7 @@ qualify(PI0, PI),
 qualify(PI0, PI) =>
     PI = PI0.
 
-find_definition(M, For:prolog_predicate, Where:[{here,tab,window}]) :->
+find_definition(M, For:prolog_predicate, Where:[{here,tab,split,window}]) :->
     "Find definition of predicate [in new window]"::
     get(M, text_buffer, TB),
     get(For, head, @off, Head),
@@ -800,7 +795,7 @@ find_definition(M, For:prolog_predicate, Where:[{here,tab,window}]) :->
         ;   xref_defined(TB, Head, foreign(Location))
         )
     ->  get(TB, open, Where, Frame),
-        get(Frame, editor, Editor),
+        get(Frame?current_pane, editor, Editor),
         (   integer(Location)
         ->  send(Editor, goto_line, Location, title := For?print_name)
         ;   Location = (File:Line)
@@ -812,7 +807,7 @@ find_definition(M, For:prolog_predicate, Where:[{here,tab,window}]) :->
     ->  send(@emacs, ensure_source_file, File),
         new(B, emacs_buffer(File)),
         get(B, open, Where, EmacsFrame),
-        get(EmacsFrame, mode, Mode),
+        get(EmacsFrame?current_pane, mode, Mode),
         send(Mode, instance_of, emacs_prolog_mode),
         send(Mode, find_local_definition, For)
     ;   get(For, source, SourceLocation)            % From Prolog DB
@@ -2709,7 +2704,7 @@ has_source(F) :->
 %       Find the predicate and invoke ->find_definition on the
 %       @emacs_mode, which is the mode object of the current editor.
 
-edit(F, Where:[{here,tab,window}]) :->
+edit(F, Where:[{here,tab,split,window}]) :->
     "Open Prolog predicate [in new window]"::
     get(F, predicate, Pred),
     send(@emacs_mode, find_definition, Pred, Where).
@@ -3063,7 +3058,7 @@ class_source(_, ClassName, Source) :-
     pce_library_class(ClassName, _, _Summary, Source).
 
 
-edit(F, Where:[{here,tab,window}]) :->
+edit(F, Where:[{here,tab,split,window}]) :->
     "Open XPCE class"::
     get(F, referenced_class, ClassName),
     get(F, text_buffer, TB),
@@ -3071,7 +3066,10 @@ edit(F, Where:[{here,tab,window}]) :->
     (   Source = line(Line)
     ->  get(F, text_buffer, TB),
         get(TB, open, Where, Frame),
-        send(Frame?editor, goto_line, Line)
+        send(Frame?current_pane?editor, goto_line, Line)
+    ;   object(Source),
+        send(Source, instance_of, source_location)
+    ->  send(@emacs, goto_source_location, Source, Where)
     ;   ensure_loaded(library(edit)),
         prolog_edit:locate(Source, _, Location),
         File = Location.get(file),

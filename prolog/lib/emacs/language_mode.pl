@@ -748,7 +748,7 @@ expand_tag(M, Tag:[name], TheTag:name) :<-
     ).
 
 
-find_tag(M, Tag:emacs_tag, Where:[{here,tab,window}], Editor:editor) :<-
+find_tag(M, Tag:emacs_tag, Where:[{here,tab,split,window}], Editor:editor) :<-
     "Jump to indicated tag entry"::
     (   get(M, directory, Dir),
         find_tag_from_dir(Dir, TagFile),
@@ -761,7 +761,7 @@ find_tag(M, Tag:emacs_tag, Where:[{here,tab,window}], Editor:editor) :<-
         auto_call(emacs_tag(Tag, SearchDir, File, Line))
     ->  new(B, emacs_buffer(File)),
         get(B, open, Where, Frame),
-        get(Frame, editor, Editor),
+        get(Frame?current_pane, editor, Editor),
         send(M, location_history),
         send(Editor, line_number, Line),
         adjust_tag(Editor, Tag),

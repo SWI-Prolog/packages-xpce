@@ -34,6 +34,7 @@
 
 :- module(emacs_buffer_menu, []).
 :- use_module(library(pce)).
+:- use_module(library(swi_ide), []).
 :- use_module(library(persistent_frame)).
 :- require([ send_list/3
            ]).
@@ -50,10 +51,15 @@ resource(bookmarks, image, image('16x16/bookmarks.png')).
 
 class_variable(geometry,        geometry,       '211x190+0+125').
 
+%       The window belongs to @prolog_ide, as every window of the IDE
+%       does, so that `<-member(buffer_menu)' finds it; its tool bar still
+%       acts on @emacs, whose ->find_file and ->save_some_buffers the
+%       buttons send.
+
 initialise(BM, Emacs:emacs) :->
     "Create menu for buffer-list"::
     send(BM, send_super, initialise,
-         'PCE Emacs Buffers', application := Emacs),
+         'PCE Emacs Buffers', application := @prolog_ide),
     send(BM, name, buffer_menu),
     send(BM, append, new(D, dialog)),
     send(D, pen, 0),

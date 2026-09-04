@@ -839,6 +839,21 @@ RedrawArea(Any obj, Area area)
   else
     ofg = NULL;
 
+/* The group is pushed around a window as well as around anything else: a
+   window is drawn into the frame's surface like any other graphical, so
+   <-opacity is as meaningful on one.  Fading a window is how a frame shows
+   which of its panes has the focus; see library(pane_frame).  Wrapping the
+   decorator instead is no good: the window inside it comes back here and
+   would stay opaque.  Nothing is pushed while <-opacity is 1.0, so the
+   ordinary case pays nothing.
+*/
+
+  double op = valNum(gr->opacity);
+  bool use_group = (op < 1.0);
+
+  if ( use_group )
+    r_push_group();
+
   if ( instanceOfObject(gr, ClassWindow) ) /* Must be quicker */
   { PceWindow sw = (PceWindow) gr;
 
@@ -847,22 +862,18 @@ RedrawArea(Any obj, Area area)
 
     rval = RedrawAreaGraphical(sw, area);
   } else
-  { double op = valNum(gr->opacity);
-    bool use_group = (op < 1.0);
-
-    if ( clearbg )
+  { if ( clearbg )
     { int x, y, w, h;
 
       initialiseDeviceGraphical(obj, &x, &y, &w, &h);
       r_clear(x, y, w, h);
     }
 
-    if ( use_group )
-      r_push_group();
     rval = qadSendv(gr, NAME_RedrawArea, 1, (Any *)&area);
-    if ( use_group )
-      r_pop_group_with_alpha(op);
   }
+
+  if ( use_group )
+    r_pop_group_with_alpha(op);
 
   if ( fix )
     r_unfix_colours(&ctx);
