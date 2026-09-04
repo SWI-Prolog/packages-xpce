@@ -352,6 +352,33 @@ decorateWindow(PceWindow sw, Name how, Int lb, Int tb, Int rb, Int bb,
 }
 
 
+/* ->window_label: a client of this window -- a terminal running a
+   program that sets the window title, say -- asked for a title.  Where
+   a title belongs depends on where the window is shown, so this is the
+   default rather than the rule: a decorator that already carries a
+   label shows it, and a window without one is titled by its frame.  A
+   window that is displayed somewhere with a place of its own for a
+   title, such as a tab, overrules this.
+
+   Not `->label': that is delegated to the <-decoration, which wraps the
+   window in a window_decorator to put a label on it.
+*/
+
+static status
+windowLabelWindow(PceWindow sw, CharArray label)
+{ FrameObj fr;
+
+  if ( notNil(sw->decoration) &&
+       notNil(((WindowDecorator)sw->decoration)->label_text) )
+    return send(sw->decoration, NAME_label, label, EAV);
+
+  if ( (fr=getFrameWindow(sw, OFF)) )
+    return send(fr, NAME_label, label, EAV);
+
+  fail;
+}
+
+
 PceWindow				/* used in MSW binding */
 userWindow(PceWindow sw)
 { if ( instanceOfObject(sw, ClassWindowDecorator) )
@@ -416,10 +443,39 @@ updatePositionSubWindowsDevice(Device dev)
 
 
 
+/* The <-parent that createWindow() records for a window created inside
+   `parent': a window_decorator paints the window it holds itself, so a
+   window inside one is not a subwindow and carries no <-parent.
+*/
+
+static PceWindow
+subwindow_parent(PceWindow parent)
+{ if ( parent && !instanceOfObject(parent, ClassWindowDecorator) )
+    return parent;
+
+  return NULL;
+}
+
+
 static status
 reparentWindow(PceWindow sw)
-{ if ( !getWindowGraphical((Graphical) sw->device) )
-    uncreateWindow(sw);
+{ PceWindow parent = getWindowGraphical((Graphical) sw->device);
+
+  if ( !parent )
+  { uncreateWindow(sw);
+  } else if ( createdWindow(sw) )
+  { PceWindow was = isNil(sw->parent) ? NULL : sw->parent;
+
+    /* Moved to a window other than the one it was created inside, which
+       is what ->decorate does when it wraps a window that is already a
+       subwindow of another one.  Uncreate it, so that it leaves the
+       <-subwindows of the old parent and is created again under the new
+       one.  Left alone, it stays in a chain that says it is painted at
+       an offset in a window its <-device chain no longer leads to.
+    */
+    if ( subwindow_parent(parent) != was )
+      uncreateWindow(sw);
+  }
 
   succeed;
 }
@@ -2416,6 +2472,8 @@ static senddecl send_window[] =
      NAME_accelerator, "Handle accelerator (delegate to <-frame)"),
   SM(NAME_decorate, 6, T_decorate, decorateWindow,
      NAME_appearance, "Embed window for scrollbars, etc."),
+  SM(NAME_windowLabel, 1, "char_array", windowLabelWindow,
+     NAME_appearance, "Title a client of this window asked for"),
   SM(NAME_foreground, 1, "[colour]", colourWindow,
      NAME_appearance, "Set foreground colour"),
   SM(NAME_resize, 0, NULL, resizeWindow,

@@ -321,6 +321,31 @@ frame_displayed(FrameObj fr, BoolObj val)
 }
 
 /**
+ * Say that `sub` sits in the <-subwindows of `sw` while its <-device
+ * chain says otherwise, naming what it does hang under.  A window that
+ * is erased from its device, or moved to one held by another window,
+ * should be uncreated and taken out of the chain; that it was not is a
+ * bug in whoever moved it, but the drawing code is the wrong place to
+ * die over one.  Reported once per window: this runs on every repaint.
+ */
+
+static void
+report_stray_subwindow(PceWindow sw, PceWindow sub, PceWindow me)
+{ static PceWindow reported;
+
+  if ( sub == reported )
+    return;
+  reported = sub;
+
+  Cprintf("xpce: %s is in the <-subwindows of %s, but its <-device "
+	  "chain ends at %s (<-parent = %s).  Not drawing it.\n",
+	  pp(sub), pp(sw), pp(me), pp(sub->parent));
+  for(Graphical gr = (Graphical)sub; notNil(gr->device); gr = (Graphical)gr->device)
+    Cprintf("\t%s is displayed on %s\n", pp(gr), pp(gr->device));
+}
+
+
+/**
  * Find  the x,y  offset of  a window,  possibly the  frame itself,  a
  * direct window, a  window inside a decorator or a  subwindow of some
  * other window, relative to the frame.
@@ -352,7 +377,10 @@ ws_window_frame_position_(Any window, FrameObj fr, float *ox, float *oy)
     { PceWindow me = DEFAULT;
       Int x, y;
       get_absolute_xy_graphical((Graphical)sw, (Device *)&me, &x, &y);
-      assert(me == sw->parent);
+      if ( me != sw->parent )
+      { report_stray_subwindow(sw->parent, sw, me);
+	return false;
+      }
       *ox += valNum(x);
       *oy += valNum(y);
       return ws_window_frame_position_(sw->parent, fr, ox, oy);
@@ -466,18 +494,25 @@ ws_draw_resize_frame(FrameObj fr)
  *
  * @param sw  Window holding `sub` in its <-subwindows
  * @param sub The subwindow
+ * @return `false` if `sub` does not hang under `sw` after all, in which
+ *         case there is no offset to be had and it must not be drawn.
  */
 
-static void
+static bool
 subwindow_offset(PceWindow sw, PceWindow sub, float *ox, float *oy)
 { PceWindow me = DEFAULT;
   Int x, y;
 
   get_absolute_xy_graphical((Graphical)sub, (Device *)&me, &x, &y);
-  assert(me == sw);
+  if ( me != sw )
+  { report_stray_subwindow(sw, sub, me);
+    return false;
+  }
 
   *ox = (float)(valInt(x) - valInt(sub->area->x));
   *oy = (float)(valInt(y) - valInt(sub->area->y));
+
+  return true;
 }
 
 
@@ -550,7 +585,8 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
       { PceWindow sub = cell->value;
 	float sx, sy;
 
-	subwindow_offset(sw, sub, &sx, &sy);
+	if ( !subwindow_offset(sw, sub, &sx, &sy) )
+	  continue;
 
 	foffset off2;
 	off2.x = off->x + (float)valInt(sw->area->x) + sx;
@@ -1107,7 +1143,8 @@ composite_window_to_cairo(cairo_t *cr, PceWindow sw,
     { PceWindow sub = cell->value;
       float sx, sy;
 
-      subwindow_offset(sw, sub, &sx, &sy);
+      if ( !subwindow_offset(sw, sub, &sx, &sy) )
+	continue;
       composite_window_to_cairo(cr, sub,
 				ox + valNum(sw->area->x) + sx,
 				oy + valNum(sw->area->y) + sy,
