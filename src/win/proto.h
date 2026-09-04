@@ -75,6 +75,8 @@ typedef void *(*for_tile_func)(Any ctx, TileObj t, Int x, Int y, Int w, Int h);
 
 COMMON(status)	unrelateTile(TileObj t);
 COMMON(TileObj)	getRootTile(TileObj t);
+COMMON(Any)	managerTile(TileObj t);
+COMMON(void)	setManagerTile(TileObj t, Any manager);
 COMMON(status)	distribute_stretches(stretch *s, int n, int w);
 COMMON(void)	sum_stretches(stretch *sp, int len, stretch *r);
 COMMON(void)	join_stretches(stretch *stretches, int len, stretch *r);
@@ -92,6 +94,7 @@ COMMON(status)	makeClassView(Class class);
 /* /staff/jan/src/pl/packages/xpce/src/win/window.c */
 COMMON(status)	initialiseWindow(PceWindow sw, Name label, Size size, DisplayObj display);
 COMMON(status)	createdWindow(PceWindow sw);
+COMMON(Any)	tileManagerWindow(PceWindow sw);
 COMMON(status)	grabPointerWindow(PceWindow sw, BoolObj val);
 COMMON(status)	unlinkWindow(PceWindow sw);
 COMMON(PceWindow) userWindow(PceWindow sw);

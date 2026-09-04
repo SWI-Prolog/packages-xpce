@@ -1935,24 +1935,66 @@ mergeFramesWindow(PceWindow w1, PceWindow w2)
 }
 
 
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+<-tile_manager is the object that owns the tile hierarchy this window is
+part of: its <-frame, or the device that displays it (see class tab_frame
+in library(tab_frame)).  It is what relateWindow() asks so that `->below'
+and friends work for both: the manager is left to do the attaching and
+detaching through ->attach_window and ->detach_window.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+Any
+tileManagerWindow(PceWindow sw)
+{ Any manager;
+
+  while(notNil(sw->decoration))
+    sw = sw->decoration;
+
+  if ( notNil(sw->tile) && (manager=managerTile(sw->tile)) )
+    return manager;
+  if ( notNil(sw->frame) )
+    return sw->frame;
+
+  return NULL;
+}
+
+
+static Any
+getTileManagerWindow(PceWindow sw)
+{ Any manager = tileManagerWindow(sw);
+
+  if ( manager )
+    answer(manager);
+
+  fail;
+}
+
+
 static status
 relateWindow(PceWindow sw, Name how, Any to)
 { PceWindow w2 = instanceOfObject(to, ClassWindow) ? to : NIL;
   PceWindow wto = w2;
+  Any manager, old;
 
   if ( notNil(sw->decoration) )
     return relateWindow(sw->decoration, how, to);
   if ( notNil(w2) && notNil(w2->decoration) )
     return relateWindow(sw, how, w2->decoration);
 
-  DeviceGraphical((Graphical)sw, NIL);
   if ( notNil(w2) )
-  { DeviceGraphical((Graphical)w2, NIL);
-    tileWindow(w2, DEFAULT);
-  }
+  { tileWindow(w2, DEFAULT);
+    if ( !(manager=tileManagerWindow(w2)) )
+      DeviceGraphical((Graphical)w2, NIL); /* unmanaged: it may not be */
+  } else				/* displayed on a device */
+    manager = managerTile((TileObj)to);
 
-  if ( createdWindow(sw) && notNil(sw->frame) )
-    send(sw->frame, NAME_delete, sw, EAV);
+  if ( (old=tileManagerWindow(sw)) )
+  { send(old, NAME_detachWindow, sw, EAV);
+  } else
+  { DeviceGraphical((Graphical)sw, NIL);
+    if ( createdWindow(sw) && notNil(sw->frame) )
+      send(sw->frame, NAME_delete, sw, EAV);
+  }
 
   tileWindow(sw, DEFAULT);
 
@@ -1980,6 +2022,9 @@ relateWindow(PceWindow sw, Name how, Any to)
 
     w2 = t2->object;
   }
+
+  if ( manager )
+    return send(manager, NAME_attachWindow, sw, EAV);
 
   mergeFramesWindow(sw, w2);
 
@@ -2444,6 +2489,8 @@ static getdecl get_window[] =
      DEFAULT, "Frame of window (create if not there)"),
   GM(NAME_tile, 0, "tile", NULL, getTileWindow,
      DEFAULT, "Tile of window (create if not there)"),
+  GM(NAME_tileManager, 0, "object", NULL, getTileManagerWindow,
+     NAME_layout, "Frame or device managing my tile"),
   GM(NAME_foreground, 0, "colour", NULL, getForegroundWindow,
      NAME_appearance, "Get foreground colour"),
   GM(NAME_image, 0, "image", NULL, getImageWindow,

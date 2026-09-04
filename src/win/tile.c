@@ -37,6 +37,8 @@
 
 static status	layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah);
 static status	computeTile(TileObj t);
+static void	relatedTile(TileObj t1, TileObj t2, Any manager);
+static void	invalidateCanResizeTile(TileObj t);
 
 #define Max(a, b)	(valInt(a) > valInt(b) ? (a) : (b))
 #define Min(a, b)	(valInt(a) < valInt(b) ? (a) : (b))
@@ -70,9 +72,11 @@ initialiseTile(TileObj t, Any object, Int w, Int h)
   assign(t, verStretch,  toInt(100));
   assign(t, verShrink,   toInt(100));
   assign(t, canResize,   DEFAULT);
+  assign(t, resized,     OFF);
   assign(t, orientation, NAME_none);
   assign(t, members, NIL);		/* subtiles */
   assign(t, super,   NIL);		/* super-tile */
+  assign(t, manager, NIL);		/* managing frame/device */
   assign(t, object,  object);		/* managed object */
 					/* Actual area */
   assign(t, area, newObject(ClassArea, ZERO, ZERO, w, h, EAV));
@@ -112,12 +116,16 @@ cleanTile(TileObj t)
       assign(child, super, super);
     } else
     { assign(child, super, NIL);
+      assign(child, manager, t->manager);
       freeObject(t);
     }
 
+    invalidateCanResizeTile(getRootTile(child));
     computeTile(getRootTile(child));
   } else
+  { invalidateCanResizeTile(getRootTile(t));
     computeTile(t);
+  }
 
   succeed;
 }
@@ -130,6 +138,8 @@ unrelateTile(TileObj t)
 
     deleteChain(t->super->members, t);
     assign(t, super, NIL);
+    assign(t, manager, NIL);
+    invalidateCanResizeTile(t);
     cleanTile(super);
   }
 
@@ -139,6 +149,66 @@ unrelateTile(TileObj t)
 		/********************************
 		*    CREATING TILE HIERARCHY	*
 		********************************/
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Splitting a tile puts a new super  in   its  place among its siblings, so
+the super must present to them what   the  tile presented: its ideal size
+along the axis its parent divides.   computeTile() cannot know that: on
+that axis it takes the largest of the  members, which is the size the new
+window asks for and not the size there is room for.
+
+It does not take over the tile's  stretchability there.  A tile that the
+user has given a size (see setTile())  has none left, and inheriting that
+would freeze the new pair: no longer  resizable and holding on to the new
+member's ideal size.  A split rearranges, so the pair starts fresh.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+#define TILE_STRETCH toInt(100)
+
+/* Splitting one tile must not move the others.  Their ideal sizes are
+ * what a layout starts from, and those may have drifted from what is on
+ * the screen: a tile the user has given a size holds it through a zero
+ * stretch rather than through its ideal.  Commit the layout as it stands
+ * before the split, so that the split divides `t' and leaves the rest of
+ * the row alone.
+ */
+
+static void
+commitLayoutTile(TileObj t)
+{ if ( notNil(t->super) && t->super->enforced == ON )
+  { Name orientation = t->super->orientation;
+    Cell cell;
+
+    for_cell(cell, t->super->members)
+    { TileObj t2 = cell->value;
+      Int size = (orientation == NAME_horizontal ? t2->area->w
+						 : t2->area->h);
+
+      if ( valInt(size) <= 0 )		/* not laid out (yet) */
+	continue;
+
+      if ( orientation == NAME_horizontal )
+	assign(t2, idealWidth, size);
+      else
+	assign(t2, idealHeight, size);
+    }
+  }
+}
+
+
+static void
+splitOfTile(TileObj super, TileObj t, Name orientation)
+{ if ( orientation == NAME_horizontal )	/* parent divides the height */
+  { assign(super, idealHeight, t->idealHeight);
+    assign(super, verStretch,  TILE_STRETCH);
+    assign(super, verShrink,   TILE_STRETCH);
+  } else				/* parent divides the width */
+  { assign(super, idealWidth, t->idealWidth);
+    assign(super, horStretch, TILE_STRETCH);
+    assign(super, horShrink,  TILE_STRETCH);
+  }
+}
+
 
 static TileObj
 toTile(Any obj)
@@ -226,11 +296,41 @@ computeTile(TileObj t)
 }
 
 
+/* ->border used to be the only border there was, so it sets both: whoever
+   asks for no border at all is asking for none around the hierarchy
+   either.  ->border_root afterwards is what tells them apart.
+*/
+
+static status
+borderTile(TileObj t, Int border)
+{ assign(t, border, border);
+  assign(t, border_root, border);
+
+  succeed;
+}
+
+
+/* A tile put above another takes over its appearance.  It may be the root
+   of the hierarchy now, and <-border_root is the manager's business.
+*/
+
+static void
+inheritTile(TileObj t, TileObj from)
+{ assign(t, border,      from->border);
+  assign(t, border_root, from->border_root);
+  assign(t, enforced,    from->enforced);
+}
+
+
 static status
 nonDelegatingLeftRightTile(TileObj t, TileObj t2, Name where)
 { TileObj super;
+  Any manager;
+  int split = FALSE;
 
   t = getRootTile(t);
+  if ( !(manager=managerTile(t2)) )
+    manager = managerTile(t);
 
   if ( notNil(t2->super) && t2->super->orientation == NAME_horizontal )
   { super = t2->super;
@@ -244,6 +344,7 @@ nonDelegatingLeftRightTile(TileObj t, TileObj t2, Name where)
   } else
   { Chain ch;
 
+    commitLayoutTile(t2);
     super = newObject(ClassTile, NIL, ZERO, ZERO, EAV);
 
     if ( where == NAME_right )
@@ -261,10 +362,17 @@ nonDelegatingLeftRightTile(TileObj t, TileObj t2, Name where)
     }
     assign(t2, super, super);
     assign(t,  super, super);
-    assign(super, enforced, t2->enforced);
+    inheritTile(super, t2);
+    split = TRUE;
   }
 
-  return computeTile(super);
+  relatedTile(t, t2, manager);
+
+  TRY(computeTile(super));
+  if ( split )
+    splitOfTile(super, t2, NAME_horizontal);
+
+  succeed;
 }
 
 
@@ -272,6 +380,7 @@ static status
 leftTile(TileObj t, Any obj, BoolObj delegate)
 { TileObj t2 = toTile(obj);
   TileObj super;
+  Any manager;
 
   if ( delegate == OFF )
     return nonDelegatingLeftRightTile(t, t2, NAME_left);
@@ -289,6 +398,9 @@ leftTile(TileObj t, Any obj, BoolObj delegate)
   if ( notNil(t->super) && notNil(t2->super) )
     return leftTile(t->super, t2->super, ON);
 
+  if ( !(manager=managerTile(t2)) )
+    manager = managerTile(t);
+
   if ( notNil(t->super) )
   { super = t->super;
     appendChain(super->members, t2);
@@ -305,6 +417,7 @@ leftTile(TileObj t, Any obj, BoolObj delegate)
 
   assign(t,  super, super);
   assign(t2, super, super);
+  relatedTile(t, t2, manager);
   computeTile(super);
 
   succeed;
@@ -323,8 +436,12 @@ rightTile(TileObj t, Any obj, BoolObj delegate)
 static status
 nonDelegatingAboveBelowTile(TileObj t, TileObj t2, Name where)
 { TileObj super;
+  Any manager;
+  int split = FALSE;
 
   t = getRootTile(t);
+  if ( !(manager=managerTile(t2)) )
+    manager = managerTile(t);
 
   if ( notNil(t2->super) && t2->super->orientation == NAME_vertical )
   { super = t2->super;
@@ -338,6 +455,7 @@ nonDelegatingAboveBelowTile(TileObj t, TileObj t2, Name where)
   } else
   { Chain ch;
 
+    commitLayoutTile(t2);
     super = newObject(ClassTile, NIL, ZERO, ZERO, EAV);
 
     if ( where == NAME_below )
@@ -355,10 +473,17 @@ nonDelegatingAboveBelowTile(TileObj t, TileObj t2, Name where)
     }
     assign(t2, super, super);
     assign(t,  super, super);
-    assign(super, enforced, t2->enforced);
+    inheritTile(super, t2);
+    split = TRUE;
   }
 
-  return computeTile(super);
+  relatedTile(t, t2, manager);
+
+  TRY(computeTile(super));
+  if ( split )
+    splitOfTile(super, t2, NAME_vertical);
+
+  succeed;
 }
 
 
@@ -366,6 +491,7 @@ static status
 aboveTile(TileObj t, Any obj, BoolObj delegate)
 { TileObj t2 = toTile(obj);
   TileObj super;
+  Any manager;
 
   if ( delegate == OFF )
     return nonDelegatingAboveBelowTile(t, t2, NAME_above);
@@ -382,6 +508,9 @@ aboveTile(TileObj t, Any obj, BoolObj delegate)
 
   if ( notNil(t->super) && notNil(t2->super) )
     return aboveTile(t->super, t2->super, ON);
+
+  if ( !(manager=managerTile(t2)) )
+    manager = managerTile(t);
 
   if ( notNil(t->super) )
   { super = t->super;
@@ -400,6 +529,7 @@ aboveTile(TileObj t, Any obj, BoolObj delegate)
   assign(t,  super, super);
   assign(t2, super, super);
 
+  relatedTile(t, t2, manager);
   computeTile(super);
 
   succeed;
@@ -418,6 +548,91 @@ belowTile(TileObj t, Any obj, BoolObj delegate)
 		/********************************
 		*        LAYOUT MANAGEMENT	*
 		********************************/
+
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+The <-manager of a tile hierarchy is the object that owns it: the frame
+whose windows these are, or -- see class tab_frame in library(tab_frame)
+-- the device that displays them.  It is what makes `window ->below' and
+friends work for both: relateWindow() asks the target hierarchy who runs
+it and leaves the attaching and detaching to that object, which does so
+with ->attach_window and ->detach_window.
+
+The manager is kept on the root, as that is the only tile that is there
+for as long as the hierarchy is.  Relating two hierarchies may introduce
+a new root and dropping a member may take one away, so both move it.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+Any
+managerTile(TileObj t)
+{ t = getRootTile(t);
+
+  return isNil(t->manager) ? NULL : t->manager;
+}
+
+
+void
+setManagerTile(TileObj t, Any manager)
+{ if ( manager )
+    assign(getRootTile(t), manager, manager);
+}
+
+
+/* <-can_resize says whether the gap after a tile can be dragged.  It is
+ * derived from where the tile sits among its siblings and from what they
+ * can do, and cached, as it is asked for on every pointer move.  Relating
+ * or dropping a tile changes both, for tiles all over the hierarchy, so
+ * the cache goes.  An explicit ->can_resize goes with it: it answers a
+ * question about an arrangement that no longer holds.
+ */
+
+static void
+invalidateCanResizeTile(TileObj t)
+{ assign(t, canResize, DEFAULT);
+
+  if ( notNil(t->members) )
+  { Cell cell;
+
+    for_cell(cell, t->members)
+      invalidateCanResizeTile(cell->value);
+  }
+}
+
+
+/* Called after t1 and t2 have been related.  The tiles that used to be
+ * roots may no longer be one, so the manager moves to the new root, and
+ * the hierarchy has to work out again what it can resize.
+ */
+
+static void
+relatedTile(TileObj t1, TileObj t2, Any manager)
+{ if ( notNil(t1->super) )
+    assign(t1, manager, NIL);
+  if ( notNil(t2->super) )
+    assign(t2, manager, NIL);
+
+  setManagerTile(t1, manager);
+  invalidateCanResizeTile(getRootTile(t1));
+}
+
+
+static Any
+getManagerTile(TileObj t)
+{ Any manager = managerTile(t);
+
+  if ( manager )
+    answer(manager);
+
+  fail;
+}
+
+
+static status
+managerTileMethod(TileObj t, Any manager)
+{ assign(getRootTile(t), manager, manager);
+
+  succeed;
+}
 
 
 TileObj
@@ -696,9 +911,10 @@ setTile(TileObj t, Int x, Int y, Int w, Int h)
       { TileObj t2 = cell->value;
 
 	if ( before )
-	{ assign(t2, horStretch, ZERO);
+	{ assign(t2, horStretch, ZERO); /* hold on to the size they have */
 	  assign(t2, horShrink,  ZERO);
-	  if ( t2 == t )
+	  assign(t2, resized,    ON);	/* but stay resizable, see */
+	  if ( t2 == t )		/* ICanResizeTile() */
 	    before = FALSE;
 	} else
 	{ hs += valInt(t2->horShrink);
@@ -738,6 +954,7 @@ setTile(TileObj t, Int x, Int y, Int w, Int h)
 	if ( before )
 	{ assign(t2, verStretch, ZERO);
 	  assign(t2, verShrink,  ZERO);
+	  assign(t2, resized,    ON);
 	  if ( t2 == t )
 	    before = FALSE;
 	} else
@@ -859,11 +1076,15 @@ layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah)
   w = valInt(t->area->w);
   h = valInt(t->area->h);
 
-  if ( isNil(t->super) )
-  { x += border;
-    y += border;
-    w -= border*2;
-    h -= border*2;
+  if ( isNil(t->super) )		/* the outer border is its own: a manager
+				   may want none of it and still separate
+				   the tiles inside */
+  { int root = valInt(t->border_root);
+
+    x += root;
+    y += root;
+    w -= root*2;
+    h -= root*2;
   }
 
   if ( t->orientation == NAME_none )
@@ -1030,9 +1251,19 @@ A tile is considered only a candidate for  resizing if it can be resized
 and there is at least one tile below/right of it that can be resized.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
+/* Can `t' take part in a resize along `dir'?  A tile that has been given
+ * a size no longer stretches -- setTile() takes that away so that it holds
+ * the size it was given -- but it can be given another one, which is what
+ * dragging its edge does.  A tile that never stretched is fixed by whoever
+ * built it and stays that way.
+ */
+
 static status
 ICanResizeTile(TileObj t, Name dir)
-{ if ( dir == NAME_horizontal )
+{ if ( t->resized == ON )
+    succeed;
+
+  if ( dir == NAME_horizontal )
   { if ( t->horShrink != ZERO || t->horStretch != ZERO )
       succeed;
   } else
@@ -1120,6 +1351,33 @@ forResizeAreaTile(TileObj t, for_tile_func func, Any ctx)
   }
 
   return NULL;
+}
+
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+<-resize_areas returns a chain of  areas   that  cover the gaps between
+resizable sub-tiles.  The frame paints these  using the window system (see
+ws_draw_resize_frame()).  A tile hierarchy that  lives inside a graphical
+device (see class tab_frame) paints them itself and thus needs the areas.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+static void *
+add_resize_area_tile(Any ctx, TileObj t, Int x, Int y, Int w, Int h)
+{ Chain ch = ctx;
+
+  appendChain(ch, newObject(ClassArea, x, y, w, h, EAV));
+
+  return NULL;				/* continue */
+}
+
+
+static Chain
+getResizeAreasTile(TileObj t)
+{ Chain ch = answerObject(ClassChain, EAV);
+
+  forResizeAreaTile(t, add_resize_area_tile, ch);
+
+  answer(ch);
 }
 
 
@@ -1211,8 +1469,12 @@ static vardecl var_tile[] =
      NAME_resize, "Encouragement to get lower"),
   IV(NAME_canResize, "[bool]", IV_SEND,
      NAME_resize, "Can be resized by user?"),
-  IV(NAME_border, "int", IV_BOTH,
+  IV(NAME_resized, "bool", IV_NONE,
+     NAME_resize, "Has been given a size by ->set and friends"),
+  SV(NAME_border, "int", IV_GET|IV_STORE, borderTile,
      NAME_appearance, "Distance between areas"),
+  IV(NAME_borderRoot, "int", IV_BOTH,
+     NAME_appearance, "Distance around the root tile"),
   IV(NAME_orientation, "{none,horizontal,vertical}", IV_GET,
      NAME_layout, "Direction of adjacent sub-tiles"),
   IV(NAME_members, "chain*", IV_GET,
@@ -1221,6 +1483,8 @@ static vardecl var_tile[] =
      NAME_organisation, "Tile that manages me"),
   IV(NAME_object, "object*", IV_GET,
      NAME_client, "Object managed"),
+  IV(NAME_manager, "object*", IV_NONE,
+     NAME_organisation, "Frame or device managing the hierarchy"),
   SV(NAME_area, "area", IV_GET|IV_STORE, areaTile,
      NAME_dimension, "Area of the object"),
   IV(NAME_enforced, "bool", IV_GET,
@@ -1267,7 +1531,11 @@ static senddecl send_tile[] =
   SM(NAME_right, 2, T_associate, rightTile,
      NAME_layout, "Place a tile to my right"),
   SM(NAME_compute, 0, NULL, computeTile,
-     NAME_update, "Compute ideal sizes from sub-tiles")
+     NAME_update, "Compute ideal sizes from sub-tiles"),
+  SM(NAME_unrelate, 0, NULL, unrelateTile,
+     NAME_layout, "Remove me from my super-tile"),
+  SM(NAME_manager, 1, "object*", managerTileMethod,
+     NAME_organisation, "Object that manages this hierarchy")
 };
 
 /* Get Methods */
@@ -1278,14 +1546,20 @@ static getdecl get_tile[] =
   GM(NAME_subTileToResize, 1, "tile", "point", getSubTileToResizeTile,
      NAME_event, "Tile above or left-of gap at point"),
   GM(NAME_canResize, 0, "bool", NULL, getCanResizeTile,
-     NAME_resize, NULL)
+     NAME_resize, NULL),
+  GM(NAME_resizeAreas, 0, "chain", NULL, getResizeAreasTile,
+     NAME_resize, "New chain of area for the resizable gaps"),
+  GM(NAME_manager, 0, "object", NULL, getManagerTile,
+     NAME_organisation, "Object that manages this hierarchy")
 };
 
 /* Resources */
 
 static classvardecl rc_tile[] =
 { RC(NAME_border, "int", "4",
-     "Border between subtiles")
+     "Border between subtiles"),
+  RC(NAME_borderRoot, "int", "4",
+     "Border around the root tile")
 };
 
 /* Class Declaration */

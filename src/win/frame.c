@@ -493,7 +493,7 @@ fitFrame(FrameObj fr)
     send(cell->value, NAME_ComputeDesiredSize, EAV);
 
   enforceTile(t, ON);
-  border = mul(t->border, TWO);
+  border = mul(t->border_root, TWO);
 
   assign(fr->area, w, ZERO);		/* ensure ->resize */
 
@@ -957,7 +957,36 @@ SdlSetLabelFrame(FrameObj fr)
 
 static status
 appendFrame(FrameObj fr, PceWindow sw)
+{ Any manager;
+
+  if ( (manager=tileManagerWindow(sw)) && manager != (Any)fr )
+    send(manager, NAME_detachWindow, sw, EAV); /* take it from its old owner */
+
+  return frameWindow(sw, fr);
+}
+
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+->attach_window and ->detach_window are the frame's half of the protocol
+that makes `window ->below' and friends work regardless of who manages a
+tile hierarchy.  See tile <-manager and relateWindow().  The other
+implementation is class tab_frame in library(tab_frame).
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+static status
+attachWindowFrame(FrameObj fr, PceWindow sw)
 { return frameWindow(sw, fr);
+}
+
+
+static status
+detachWindowFrame(FrameObj fr, PceWindow sw)
+{ DeviceGraphical((Graphical)sw, NIL);
+
+  if ( createdWindow(sw) && sw->frame == fr )
+    return send(fr, NAME_delete, sw, EAV);
+
+  succeed;
 }
 
 
@@ -982,6 +1011,8 @@ getMembersFrame(FrameObj fr)
 status
 AppendFrame(FrameObj fr, PceWindow sw)
 { appendChain(fr->members, sw);
+  if ( notNil(sw->tile) )
+    setManagerTile(sw->tile, fr);		/* see tile <-manager */
 
   if ( createdFrame(fr) )
   { TRY(send(sw, NAME_create, EAV));
@@ -1021,6 +1052,8 @@ DeleteFrame(FrameObj fr, PceWindow sw)
     else
       send(fr, NAME_resize, EAV);
   }
+  if ( notNil(sw->tile) && managerTile(sw->tile) == (Any)fr )
+    assign(getRootTile(sw->tile), manager, NIL);
   delCodeReference(fr);
 
   succeed;
@@ -1969,6 +2002,10 @@ static senddecl send_frame[] =
      NAME_open, "SDL main thread helper for frame<-confirm"),
   SM(NAME_append, 1, "subwindow=window", appendFrame,
      NAME_organisation, "Append a window to the frame"),
+  SM(NAME_attachWindow, 1, "window", attachWindowFrame,
+     NAME_tile, "Take a window into my tile hierarchy"),
+  SM(NAME_detachWindow, 1, "window", detachWindowFrame,
+     NAME_tile, "Release a window from my tile hierarchy"),
   SM(NAME_delete, 1, "member:window", deleteFrame,
      NAME_organisation, "Delete window from the frame"),
   SM(NAME_bell, 1, "volume=[int]", bellFrame,
