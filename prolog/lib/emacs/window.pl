@@ -224,6 +224,10 @@ pane_label(V, Label:name) :<-
     ;   get(V, name, Label)
     ).
 
+title_format(_V, Format:name) :<-
+    "A window showing me is PceEmacs's, whoever else is in it"::
+    Format = 'PceEmacs -- %s'.
+
 tab_editable_label(_V, Editable:bool) :<-
     "My tab is named after my buffer, so it is not renamed by hand"::
     Editable = @off.

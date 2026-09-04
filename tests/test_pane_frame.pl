@@ -90,6 +90,13 @@ variable(exposed,  int := 0,      both, "Times I was told I am current").
 class_variable(inactive_opacity, num, 0.6,
                "Fade me while another pane has the focus").
 
+variable(own_title_format, name*, both,
+         "What a window showing me is called; @nil: not my business").
+
+title_format(P, Format:name) :<-
+    get(P, own_title_format, Format),
+    Format \== @nil.
+
 menu_bar_key(P, Key:name) :<-
     get(P, kind, Key).
 
@@ -371,6 +378,23 @@ test(the_tab_is_named_after_the_pane_with_the_focus, Label == 'Test -- Three') :
 test(and_follows_the_focus_back, Label == 'Test -- One') :-
     frame(F, _App, P1),
     pane(three, gamma, P3),
+    send(F, split, P3, P1, vertically),
+    send(F, keyboard_focus, P1),
+    get(F, label, Label).
+
+test(a_pane_may_say_what_a_window_showing_it_is_called,
+     Label == 'Pane -- Three') :-
+    frame(F, _App, P1),
+    pane(three, gamma, P3),
+    send(P3, own_title_format, 'Pane -- %s'),
+    send(F, split, P3, P1, vertically),
+    get(F, label, Label).
+
+test(and_the_application_has_it_back_when_the_focus_moves_on,
+     Label == 'Test -- One') :-
+    frame(F, _App, P1),
+    pane(three, gamma, P3),
+    send(P3, own_title_format, 'Pane -- %s'),
     send(F, split, P3, P1, vertically),
     send(F, keyboard_focus, P1),
     get(F, label, Label).

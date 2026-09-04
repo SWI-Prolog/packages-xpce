@@ -79,8 +79,8 @@ variable(menu_key,        name*  := @nil, get,
          "Identity of the menu bar now in place").
 variable(menu_extensions, chain,          get,
          "Codes run after every rebuild of the menu bar").
-variable(label_format,    'name*',   none,
-         "Format for my label; %s is the label of the tab in view").
+variable(own_label_format, '[name]*' := @default, none,
+         "Format asked for on me alone; @default: ask elsewhere").
 variable(updating,        bool := @off,   none,
          "->pane_changed is running").
 
@@ -117,7 +117,9 @@ initialise(F, App:application=[application],
     "Create from an application and a first pane"::
     send_super(F, initialise, Label, @default, @default, App),
     send(F, slot, menu_extensions, new(chain)),
-    ignore(send(F, label_format_from_application)),
+    send(F, slot, own_label_format, @default),  % a slot declared `:= @default'
+                                                % is @nil until it is told
+
     send(F, done_message, message(F, close)),
     send(F, append, new(MD, pane_menu_dialog)),
     get(MD, menu_bar, @on, _),          % there is always a bar to fill
@@ -482,29 +484,40 @@ extend_menu_bar(F, Code:code) :->
 %       writes the title, so there is one place that decides what a
 %       window of this application is called.
 
+%       Four say what a window is called, the earlier overruling the
+%       later: ->label_format, for one window on its own; <-title_format
+%       of the pane the user is working in, so that an editor may still
+%       call its window something else; the application; and the class
+%       variable, so that a user can say in their Defaults what all of
+%       them are called.  The pane is asked for <-title_format rather
+%       than <-label_format: the latter is text alignment on anything
+%       descended from dialog_item, which a pane may well be.
+%
+%       It is asked at every ->update_label rather than settled once, or
+%       a window would keep the name of whichever tool happened to make
+%       it however its panes changed afterwards.
+
 label_format(F, Fmt:'[name]*') :->
     "Set the format my label is made with"::
-    send(F, slot, label_format, Fmt),
+    send(F, slot, own_label_format, Fmt),
     ignore(send(F, update_label)).
 
 label_format(F, Fmt:'name*') :<-
     "The format my label is made with"::
-    get(F, slot, label_format, Fmt).
-
-%       Three say what a window of this application is called, the later
-%       overruling the earlier: the class variable, so that a user can set
-%       it in their Defaults; the application, so that PceEmacs and Epilog
-%       differ; and ->label_format, for one frame on its own.  The first
-%       two are settled here, once, as the slot starts out holding the
-%       class variable.
-
-label_format_from_application(F) :->
-    "Take the format my application asks for"::
-    get(F, application, App),
-    App \== @nil,
-    send(App, has_get_method, label_format),
-    get(App, label_format, Fmt),
-    send(F, slot, label_format, Fmt).
+    (   get(F, slot, own_label_format, Fmt0),
+        Fmt0 \== @default
+    ->  Fmt = Fmt0
+    ;   get(F, current_pane, Pane),
+        send(Pane, has_get_method, title_format),
+        get(Pane, title_format, Fmt1)
+    ->  Fmt = Fmt1
+    ;   get(F, application, App),
+        App \== @nil,
+        send(App, has_get_method, label_format),
+        get(App, label_format, Fmt2)
+    ->  Fmt = Fmt2
+    ;   get(F, class_variable_value, label_format, Fmt)
+    ).
 
 tab_label(F, Label:name) :<-
     "The label of the tab in view"::

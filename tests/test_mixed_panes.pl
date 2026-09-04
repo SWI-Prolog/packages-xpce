@@ -160,10 +160,25 @@ test(the_menu_bar_follows_the_focus_inside_one_tab) :-
     menus(F, WithTerminal),
     WithEditor \== WithTerminal.
 
-test(the_title_follows_the_tab, true(Label == Expected)) :-
+%       The title is made out of the label of the tab in view and a
+%       format.  The pane the user is working in may say what that format
+%       is, so an editor still names its window PceEmacs's wherever it
+%       sits, and a terminal leaves the name to the application.
+
+test(an_editor_names_the_window_it_is_in, true(Label == Expected)) :-
     emacs,
     get(@epilog, frame, F),
     send(@epilog, new_editor, F),
+    get(F, tab_label, TabLabel),
+    get(string('PceEmacs -- %s', TabLabel), value, Expected),
+    get(F, label, Label).
+
+test(and_a_terminal_leaves_it_to_the_application, true(Label == Expected)) :-
+    emacs,
+    get(@epilog, frame, F),
+    send(@epilog, new_editor, F),
+    terminal(F, T),
+    send(F, current_pane, T),
     get(F, tab_label, TabLabel),
     get(string('SWI-Prolog -- %s', TabLabel), value, Expected),
     get(F, label, Label).
