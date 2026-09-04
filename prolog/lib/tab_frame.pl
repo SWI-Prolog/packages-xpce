@@ -518,16 +518,31 @@ window_label(TF, Label:char_array) :->
         send(TF, label, TF?name)
     ;   send(TF, slot, window_label, Label),
         send(TF, label, Label)
-    ),
+    ).
+
+label(TF, Label:'name|image') :->
+    "Set my label and let the frame follow it"::
+    send_super(TF, label, Label),
     send(TF, update_frame_label).
 
+%       A frame that makes its own label -- see `pane_frame ->update_label'
+%       -- is asked to remake it rather than told what it is: it may want to
+%       say more than the tab does, and it is the one place the title is
+%       written.  A plain frame is told, and only once a window has asked
+%       for a title: until then it keeps the one it was opened with.
+
 update_frame_label(TF) :->
-    "Put my title on the frame, if I have one and I am the tab in view"::
-    (   get(TF, window_label, Label),
-        Label \== @nil,
-        get(TF, status, on_top),
-        get(TF, frame, Frame)
-    ->  send(Frame, label, Label)
+    "Put my title on the frame, if I am the tab in view"::
+    (   get(TF, status, on_top),
+        get(TF, frame, Frame),
+        Frame \== @nil
+    ->  (   send(Frame, has_send_method, update_label)
+        ->  send(Frame, update_label)
+        ;   get(TF, window_label, Label),
+            Label \== @nil
+        ->  send(Frame, label, Label)
+        ;   true
+        )
     ;   true
     ).
 
