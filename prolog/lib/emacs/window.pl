@@ -496,15 +496,17 @@ caret(E, Caret:[int]) :->
     ).
 
 
+%       Whether the pointer entering a pane is enough to give it the
+%       focus is one class variable of the frame -- see `pane_frame
+%       ->focus_on_enter'.  PceEmacs used to answer that here, on its own,
+%       so a terminal in the same window behaved differently.
+
 event(E, Ev:event) :->
     (   send(Ev, is_a, area_enter)
     ->  get(E, frame, Frame),
-        (   get(Frame, transients, Transients),
-            Transients \== @nil,
-            get(Transients, find, @arg1?modal == transient, _)
-        ->  debug(transient, 'We have a transient~n', [])
-        ;   send(Frame, keyboard_focus, E?window)
-        )
+        Frame \== @nil,
+        send(Frame, has_send_method, focus_on_enter),
+        ignore(send(Frame, focus_on_enter, E?window))
     ;   drop_target_event(E, Ev,
                           'Drop file(s) to edit in new tab',
                           pceemacs_open_drop)

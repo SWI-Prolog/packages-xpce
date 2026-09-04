@@ -267,7 +267,10 @@ test(a_terminal_moves_to_another_tab) :-
     get(Other, container, tab_frame, Tab),
     at_edge(Other, right, Pos),
     send(Tab, drop, W, Pos),
-    tabs(F, ['Prolog 2'-2]),            % the tab it left was emptied
+    %  The tab it left was emptied, and the one it arrived in is named
+    %  after it: a tab carries the name of the pane the user is working
+    %  in, so that a tab holding two of them says which.
+    tabs(F, ['Prolog'-2]),
     terminals(F, 2),
     get(W, tile_manager, Tab).
 

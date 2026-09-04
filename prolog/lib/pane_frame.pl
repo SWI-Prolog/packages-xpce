@@ -90,6 +90,8 @@ class_variable(inactive_opacity, num, 1.0,
                "Opacity of a pane that has not got the focus").
 class_variable(prompt_style, {status_bar,dialog}, dialog,
                "Ask for one value at a time, or all of them in a dialog").
+class_variable(focus_on_enter, bool, @off,
+               "Give a pane the focus when the pointer enters it").
 
 :- pce_global(@pane_tab_popup, make_pane_tab_popup).
 
@@ -135,6 +137,16 @@ initialise(F, App:application=[application],
     ;   send(F, append_pane, Pane, @default, @on)
     ),
     ignore(send(F, pane_changed)).      % nothing has moved the focus yet
+
+%!  modal_transient(+Frame) is semidet.
+%
+%   True while a transient window of Frame is up.  The focus must not be
+%   taken from under it.
+
+modal_transient(F) :-
+    get(F, transients, Transients),
+    Transients \== @nil,
+    get(Transients, find, @arg1?modal == transient, _).
 
 %!  status_bar(+Frame, +Argument) is semidet.
 %
@@ -336,6 +348,7 @@ do_pane_changed(F) :->
     get(F, current_pane, Pane),
     send(F?menu_dialog, client, Pane),
     ignore(send(F, update_menu_bar)),
+    ignore(send(F, update_tab_label)),
     ignore(send(F, update_label)),
     ignore(send(F, update_opacity)),
     (   send(Pane, has_send_method, pane_exposed)
@@ -365,6 +378,17 @@ keyboard_focus(F, W:[window]*) :->
         ;   true
         )
     ).
+
+%       A pane tells me the pointer entered it and I decide whether that
+%       is enough to give it the focus.  PceEmacs used to do this itself,
+%       unconditionally; a terminal never did.  One class variable now says
+%       which it is for every pane of every window.
+
+focus_on_enter(F, Pane:window) :->
+    "Give Pane the focus, if the pointer entering one is enough"::
+    get(F, class_variable_value, focus_on_enter, @on),
+    \+ modal_transient(F),
+    send(F, keyboard_focus, Pane).
 
 fit(F) :->
     "Fit around my contents, but resize rather than refit"::
@@ -486,6 +510,19 @@ tab_label(F, Label:name) :<-
     "The label of the tab in view"::
     get(F, tab, Tab),
     get(Tab, label, Label).
+
+%       A tab is named after the pane the user is working in, so that a
+%       tab holding two of them says which.  A tab the user has renamed by
+%       hand keeps the name they gave it.
+
+update_tab_label(F) :->
+    "Put the label of the current pane on its tab"::
+    get(F, current_pane, Pane),
+    send(Pane, has_get_method, pane_label),
+    get(Pane, pane_label, Label),
+    get(F, tab, Tab),
+    get(Tab, renamed, @off),
+    send(Tab, label, Label).
 
 update_label(F) :->
     "Make my title out of the label of the tab in view"::
@@ -776,6 +813,14 @@ class_variable(editable_label, bool, @on,
                "A tab is named by the user, so let them").
 class_variable(closable,       bool, @on,
                "A tab carries a button to close it").
+
+variable(renamed, bool := @off, get,
+         "The user typed my label; it is not the pane's to set").
+
+label_edited(Tab, Label:name) :->
+    "Take the label typed into the editor, and keep it"::
+    send(Tab, slot, renamed, @on),
+    send_super(Tab, label_edited, Label).
 
 %       tab_frame ->status only tells the tabbed window when the stack is
 %       displayed, which is not yet so while a frame is being built.  The
@@ -1070,7 +1115,7 @@ kind for ->split and ->new_tab to have anything to put there.
 
 pane_label(P, Label:name) :<-
     "What my tab is called; my name unless I say otherwise"::
-    get(P, name, Label).
+    get(P?name, label_name, Label).   % as class tab would have written it
 
 pane_frame(P, Frame:pane_frame) :<-
     "The frame I am a pane of"::
@@ -1112,6 +1157,15 @@ close_pane(P) :->
     (   get(P, pane_frame, Frame)
     ->  send(Frame, delete_pane, P, @on)
     ;   send(P, destroy)
+    ).
+
+event(P, Ev:event) :->
+    "Let my frame decide whether entering me gives me the focus"::
+    (   send(Ev, is_a, area_enter),
+        get(P, pane_frame, Frame),
+        send(Frame, focus_on_enter, P)
+    ->  true
+    ;   send_super(P, event, Ev)
     ).
 
 place_pane_handle(P, Inset:[int]) :->

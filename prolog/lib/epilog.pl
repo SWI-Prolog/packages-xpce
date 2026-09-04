@@ -1769,6 +1769,8 @@ terminal_prolog_flag(Term, Flag, Value, Default) :-
 :- use_class_template(pane).
 
 variable(terminal, prolog_terminal, get, "The terminal_image").
+variable(tab_label,    name*, get, "Name my tab was given").
+variable(window_label, name*, get, "Title a client asked for").
 variable(tid,      [name|int],      get, "Attached thread").
 delegate_to(terminal).
 
@@ -1839,9 +1841,20 @@ new_tab(T) :->
     send(Frame, keyboard_focus, W).
 
 pane_label(T, Label:name) :<-
-    "What my tab is called: my thread, or the profile I run"::
-    get(T, terminal, PT),
-    terminal_base_label(PT, Label).
+    "What my tab is called"::
+    (   get(T, slot, window_label, L),          % a client asked for a title
+        L \== @nil
+    ->  Label = L
+    ;   get(T, slot, tab_label, L),             % the name my tab was given
+        L \== @nil
+    ->  Label = L
+    ;   get(T, terminal, PT),                   % failing both, what I run
+        terminal_base_label(PT, Label)
+    ).
+
+tab_label(T, Label:name) :->
+    "Remember the name my tab was given, so that I can put it back"::
+    send(T, slot, tab_label, Label).
 
 menu_bar_key(_T, Key:name) :<-
     "Every terminal asks for the same menu bar"::
@@ -1914,6 +1927,10 @@ fill_menu_bar(_T, MD:tool_dialog) :->
 
 window_label(T, Label:char_array) :->
     "Show the title a client asked for on my tab"::
+    (   send(Label, equal, '')          % no title: my tab gets its own
+    ->  send(T, slot, window_label, @nil)
+    ;   send(T, slot, window_label, Label)
+    ),
     (   get(T, container, tab_frame, Tab)
     ->  send(Tab, window_label, Label)
     ;   send_super(T, window_label, Label)
@@ -2576,6 +2593,7 @@ append_terminal(F, W:epilog_window, Expose:[bool]) :->
     get(W, terminal, PT),
     terminal_base_label(PT, Base),
     unique_tab_label(F, Base, 1, Label),
+    send(W, tab_label, Label),
     send(F, append_pane, W, Label, Expose).
 
 tab_label(F, Label:name) :->

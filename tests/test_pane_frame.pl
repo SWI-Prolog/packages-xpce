@@ -65,6 +65,7 @@ test_pane_frame :-
     run_tests([ pane_frame_structure,
                 pane_frame_menu_bar,
                 pane_frame_label,
+                pane_frame_focus,
                 pane_frame_opacity,
                 pane_frame_panes,
                 pane_frame_plain_pane
@@ -87,9 +88,6 @@ variable(exposed,  int := 0,      both, "Times I was told I am current").
 
 class_variable(inactive_opacity, num, 0.6,
                "Fade me while another pane has the focus").
-
-pane_label(P, Label:name) :<-
-    get(P, name, Label).
 
 menu_bar_key(P, Key:name) :<-
     get(P, kind, Key).
@@ -360,7 +358,85 @@ test(no_format_at_all_is_the_bare_tab_label, Label == 'One') :-
     send(F, label_format, @nil),
     get(F, label, Label).
 
+%       A tab holding two panes is named after the one the user is
+%       working in, and the title follows it.
+
+test(the_tab_is_named_after_the_pane_with_the_focus, Label == 'Test -- Three') :-
+    frame(F, _App, P1),
+    pane(three, gamma, P3),
+    send(F, split, P3, P1, vertically),
+    get(F, label, Label).
+
+test(and_follows_the_focus_back, Label == 'Test -- One') :-
+    frame(F, _App, P1),
+    pane(three, gamma, P3),
+    send(F, split, P3, P1, vertically),
+    send(F, keyboard_focus, P1),
+    get(F, label, Label).
+
+test(a_tab_the_user_renamed_keeps_the_name_they_gave_it,
+     Label == 'Test -- Mine') :-
+    frame(F, _App, P1),
+    pane(three, gamma, P3),
+    send(F, split, P3, P1, vertically),
+    get(F, tab, Tab),
+    send(Tab, label_edited, 'Mine'),    % what the label editor sends
+    send(F, keyboard_focus, P1),
+    get(F, label, Label).
+
 :- end_tests(pane_frame_label).
+
+
+                 /*******************************
+                 *             FOCUS            *
+                 *******************************/
+
+%       One class variable says whether the pointer entering a pane is
+%       enough to give it the focus, for every pane of every window.
+
+:- begin_tests(pane_frame_focus).
+
+%!  enter(+Pane) is det.
+%
+%   Post the event a pointer entering Pane would deliver.
+
+%   An event nothing acts on answers failure, which is not the same as
+%   something going wrong, so the answer is not the point here.
+
+enter(P) :-
+    get(P, area, area(X, Y, _, _)),
+    ignore(send(event(area_enter, P, X, Y), post, P)).
+
+%!  with_focus_on_enter(+Bool, :Goal) is det.
+
+:- meta_predicate with_focus_on_enter(+, 0).
+
+with_focus_on_enter(Bool, Goal) :-
+    get(@pce, convert, pane_frame, class, Class),
+    get(Class, class_variable, focus_on_enter, Var),
+    get(Var, value, Old),
+    setup_call_cleanup(
+        send(Class, class_variable_value, focus_on_enter, Bool),
+        Goal,
+        send(Class, class_variable_value, focus_on_enter, Old)).
+
+test(the_pointer_alone_does_not_move_the_focus, true(Current == P1)) :-
+    frame(F, _App, P1),
+    pane(three, gamma, P3),
+    send(F, split, P3, P1, vertically),
+    send(F, keyboard_focus, P1),
+    with_focus_on_enter(@off, enter(P3)),
+    get(F, current_pane, Current).
+
+test(unless_it_is_asked_to, true(Current == P3)) :-
+    frame(F, _App, P1),
+    pane(three, gamma, P3),
+    send(F, split, P3, P1, vertically),
+    send(F, keyboard_focus, P1),
+    with_focus_on_enter(@on, enter(P3)),
+    get(F, current_pane, Current).
+
+:- end_tests(pane_frame_focus).
 
                  /*******************************
                  *           OPACITY            *
