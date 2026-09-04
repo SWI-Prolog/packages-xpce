@@ -559,6 +559,41 @@ test(both_frames_keep_a_sensible_current_pane, true(Names == [one, second])) :-
     CB == Pane,                         % the moved one is current in B
     Names = [NA, NB].
 
+%       Dragging the grip moves a pane onto another one and clicking it
+%       picks the pane up, so a window of its own is offered on a popup.
+
+test(detaching_takes_the_pane_out_of_the_window_it_was_in,
+     Names == [one]) :-
+    frame(F, _App, P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    send(P2, detach),
+    get(F, panes, Chain),
+    chain_list(Chain, Panes),
+    findall(N, (member(P, Panes), get(P, name, N)), Names).
+
+test(and_gives_it_a_window_of_its_own, true(Alone == [second])) :-
+    frame(F, _App, _P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    send(P2, detach),
+    get(P2, frame, New),
+    New \== F,
+    get(New, panes, Chain),
+    chain_list(Chain, Panes),
+    findall(N, (member(P, Panes), get(P, name, N)), Alone).
+
+test(the_new_window_belongs_to_the_same_application, true(App2 == App)) :-
+    frame(F, App, _P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    send(P2, detach),
+    get(P2?frame, application, App2).
+
+test(a_pane_that_is_already_alone_has_nowhere_to_go, [fail]) :-
+    frame(_F, _App, P1),
+    send(P1, detach).
+
 :- end_tests(pane_frame_move).
 
                  /*******************************

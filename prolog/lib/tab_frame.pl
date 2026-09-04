@@ -758,13 +758,30 @@ class_variable(grip_image, name, 'tool/drag-pane.svg',
 
 :- pce_global(@split_handle_gesture, new(split_handle_gesture)).
 
+%       Dragging the grip moves the window onto another one and clicking
+%       it picks the window up, so neither is free to say "into a window
+%       of its own".  That is on a popup, where the label of a tab offers
+%       the same thing for a whole tab.
+
+:- pce_global(@split_handle_popup, make_split_handle_popup).
+
+make_split_handle_popup(P) :-
+    new(P, popup),
+    Window = @arg1?window,
+    send(P, append,
+         menu_item(move_to_new_window,
+                   message(Window, detach),
+                   condition := and(message(Window, has_send_method, detach),
+                                    Window?frame?panes?size > 1))).
+
 initialise(H) :->
     "Create the grip"::
     get(H, class_variable_value, grip_image, Image),
     move_gesture(How),
     handle_help(How, Help),
     send_super(H, initialise, Image, Help),
-    send(H, recogniser, @split_handle_gesture).
+    send(H, recogniser, @split_handle_gesture),
+    send(H, recogniser, popup_gesture(@split_handle_popup)).
 
 :- pce_end_class(split_handle).
 

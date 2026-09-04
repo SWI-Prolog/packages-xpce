@@ -1148,6 +1148,112 @@ history_source(D, Source) :-
 
 
                  /*******************************
+                 *         PANE TEMPLATE        *
+                 *******************************/
+
+/** What a pane does not have to write out for itself.
+
+A pane is any window in a pane_tab, and none of the pane protocol is
+compulsory.  This template carries the parts that would otherwise be
+repeated by every pane that does want them: reaching my frame and my
+tab, splitting, opening a new tab or window, and closing.
+
+Use it as:
+
+```
+:- pce_begin_class(my_pane, window, "...").
+:- use_class_template(pane).
+```
+
+A class that uses it must answer `<-sibling' with a new pane of its own
+kind for ->split and ->new_tab to have anything to put there.
+*/
+
+:- pce_begin_class(pane, template,
+                   "Common behaviour of a window in a pane_frame").
+
+pane_label(P, Label:name) :<-
+    "What my tab is called; my name unless I say otherwise"::
+    get(P?name, label_name, Label).   % as class tab would have written it
+
+pane_frame(P, Frame:pane_frame) :<-
+    "The frame I am a pane of"::
+    get(P, frame, Frame),
+    send(Frame, instance_of, pane_frame).
+
+pane_tab(P, Tab:tab_frame) :<-
+    "The tab I am in"::
+    get(P, container, tab_frame, Tab).
+
+split(P, Direction:[{horizontally,vertically}]) :->
+    "Put a new pane like me beside me"::
+    get(P, sibling, New),
+    get(P, pane_tab, Tab),
+    send(Tab, split, New, P, Direction),
+    (   get(P, pane_frame, Frame)
+    ->  send(Frame, keyboard_focus, New)
+    ;   true
+    ).
+
+new_tab(P) :->
+    "Put a new pane like me in a tab of its own"::
+    get(P, sibling, New),
+    get(P, pane_frame, Frame),
+    send(Frame, append_pane, New, @default, @on),
+    send(Frame, keyboard_focus, New).
+
+new_window(P) :->
+    "Put a new pane like me in a window of its own"::
+    get(P, sibling, New),
+    (   get(P, pane_frame, Frame)
+    ->  get(Frame, application, App)
+    ;   App = @default
+    ),
+    send(new(pane_frame(App, @default, New)), open).
+
+detach(P) :->
+    "Move me into a window of my own"::
+    get(P, pane_frame, F),
+    get(F, panes, Panes),
+    get(Panes, size, Size),
+    Size > 1,                           % alone already: nothing to do
+    (   get(F, application, App0),
+        App0 \== @nil
+    ->  App = App0
+    ;   App = @default
+    ),
+    get(P, display_position, point(X, Y)),
+    send(F, delete_pane, P, @off),      % take me out without destroying me
+    new(New, pane_frame(App, @default, P)),
+    send(New, open, point(X, Y+20)).
+
+close_pane(P) :->
+    "Close me; my frame goes with me if I was its last pane"::
+    (   get(P, pane_frame, Frame)
+    ->  send(Frame, delete_pane, P, @on)
+    ;   send(P, destroy)
+    ).
+
+event(P, Ev:event) :->
+    "Let my frame decide whether entering me gives me the focus"::
+    (   send(Ev, is_a, area_enter),
+        get(P, pane_frame, Frame),
+        send(Frame, focus_on_enter, P)
+    ->  true
+    ;   send_super(P, event, Ev)
+    ).
+
+place_pane_handle(P, Inset:[int]) :->
+    "Put my split_handle back in my corner"::
+    (   get(P, member, split_handle, Handle)
+    ->  send(Handle, place, P, Inset)
+    ;   true                            % still being built
+    ).
+
+:- pce_end_class(pane).
+
+
+                 /*******************************
                  *          TOOL PANE           *
                  *******************************/
 
@@ -1217,93 +1323,3 @@ resize(TP, Tab:[tab]) :->
     ).
 
 :- pce_end_class(tool_pane).
-
-
-                 /*******************************
-                 *         PANE TEMPLATE        *
-                 *******************************/
-
-/** What a pane does not have to write out for itself.
-
-A pane is any window in a pane_tab, and none of the pane protocol is
-compulsory.  This template carries the parts that would otherwise be
-repeated by every pane that does want them: reaching my frame and my
-tab, splitting, opening a new tab or window, and closing.
-
-Use it as:
-
-```
-:- pce_begin_class(my_pane, window, "...").
-:- use_class_template(pane).
-```
-
-A class that uses it must answer `<-sibling' with a new pane of its own
-kind for ->split and ->new_tab to have anything to put there.
-*/
-
-:- pce_begin_class(pane, template,
-                   "Common behaviour of a window in a pane_frame").
-
-pane_label(P, Label:name) :<-
-    "What my tab is called; my name unless I say otherwise"::
-    get(P?name, label_name, Label).   % as class tab would have written it
-
-pane_frame(P, Frame:pane_frame) :<-
-    "The frame I am a pane of"::
-    get(P, frame, Frame),
-    send(Frame, instance_of, pane_frame).
-
-pane_tab(P, Tab:tab_frame) :<-
-    "The tab I am in"::
-    get(P, container, tab_frame, Tab).
-
-split(P, Direction:[{horizontally,vertically}]) :->
-    "Put a new pane like me beside me"::
-    get(P, sibling, New),
-    get(P, pane_tab, Tab),
-    send(Tab, split, New, P, Direction),
-    (   get(P, pane_frame, Frame)
-    ->  send(Frame, keyboard_focus, New)
-    ;   true
-    ).
-
-new_tab(P) :->
-    "Put a new pane like me in a tab of its own"::
-    get(P, sibling, New),
-    get(P, pane_frame, Frame),
-    send(Frame, append_pane, New, @default, @on),
-    send(Frame, keyboard_focus, New).
-
-new_window(P) :->
-    "Put a new pane like me in a window of its own"::
-    get(P, sibling, New),
-    (   get(P, pane_frame, Frame)
-    ->  get(Frame, application, App)
-    ;   App = @default
-    ),
-    send(new(pane_frame(App, @default, New)), open).
-
-close_pane(P) :->
-    "Close me; my frame goes with me if I was its last pane"::
-    (   get(P, pane_frame, Frame)
-    ->  send(Frame, delete_pane, P, @on)
-    ;   send(P, destroy)
-    ).
-
-event(P, Ev:event) :->
-    "Let my frame decide whether entering me gives me the focus"::
-    (   send(Ev, is_a, area_enter),
-        get(P, pane_frame, Frame),
-        send(Frame, focus_on_enter, P)
-    ->  true
-    ;   send_super(P, event, Ev)
-    ).
-
-place_pane_handle(P, Inset:[int]) :->
-    "Put my split_handle back in my corner"::
-    (   get(P, member, split_handle, Handle)
-    ->  send(Handle, place, P, Inset)
-    ;   true                            % still being built
-    ).
-
-:- pce_end_class(pane).

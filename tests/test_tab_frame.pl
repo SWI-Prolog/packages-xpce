@@ -1098,6 +1098,20 @@ test(the_class_variables_resolve,
     get(TheClass, class_variable, Var, ClassVariable),
     get(ClassVariable, value, _).
 
+test(the_handle_offers_a_window_of_its_own_on_a_popup,
+     Items == [move_to_new_window]) :-
+    new(P, picture),
+    send(P, display, new(H, split_handle)),
+    get(H, all_recognisers, Recognisers),
+    chain_list(Recognisers, Rs),
+    member(R, Rs),
+    send(R, instance_of, popup_gesture),
+    !,
+    get(R, popup, Popup),
+    get(Popup, members, Chain),
+    chain_list(Chain, Members),
+    findall(V, (member(MI, Members), get(MI, value, V)), Items).
+
 test(the_handle_drags_the_window_it_is_displayed_on) :-
     new(P, picture),
     send(P, display, new(H, split_handle)),
