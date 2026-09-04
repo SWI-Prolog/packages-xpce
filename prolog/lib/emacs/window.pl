@@ -921,7 +921,50 @@ convert(_, Name:name, Mode:emacs_mode) :<-
                  *         THE MODE MENU        *
                  *******************************/
 
-:- pce_global(@emacs_mode, new(@event?window?(mode))).
+%       @emacs_mode is the mode of the editor the user is working in.  It
+%       used to be `@event?window?(mode)', which only holds while the
+%       event came from the editor itself: a menu item is chosen in the
+%       menu bar or in a popup, so the window it arrives on has no <-mode
+%       and the whole menu entry failed -- that is what left the
+%       pullrights such as File -> Switch to buffer empty.  The editor is
+%       reached through the frame instead.
+
+:- pce_global(@emacs_mode, new(?(@prolog, emacs_current_mode))).
+
+:- public emacs_current_mode/1.
+
+%!  emacs_current_mode(-Mode) is semidet.
+%
+%   The emacs_mode the user is working in: the mode of the window the
+%   event came from if that is an editor, else the mode of the pane its
+%   frame is showing, else that of whichever PceEmacs window is current.
+%   Fails when they are not in an editor at all, which is what leaves a
+%   menu item that asks for it inactive.
+
+emacs_current_mode(Mode) :-
+    send(@event, instance_of, event),
+    get(@event, window, Window),
+    Window \== @nil,
+    (   window_mode(Window, Mode)
+    ->  true
+    ;   get(Window, frame, Frame),
+        Frame \== @nil,
+        frame_mode(Frame, Mode)
+    ),
+    !.
+emacs_current_mode(Mode) :-
+    get(@emacs, current_frame, Frame),
+    frame_mode(Frame, Mode).
+
+window_mode(Window, Mode) :-
+    send(Window, has_get_method, mode),
+    get(Window, mode, Mode),
+    send(Mode, instance_of, emacs_mode).
+
+frame_mode(Frame, Mode) :-
+    send(Frame, has_get_method, current_pane),
+    get(Frame, current_pane, Pane),
+    window_mode(Pane, Mode).
 
 mode_menu(M, MM:emacs_mode_menu) :<-
     "Return the mode-menu structure for this mode"::

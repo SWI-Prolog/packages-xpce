@@ -62,7 +62,8 @@ Run with:
 :- use_module(library(pce_util), [chain_list/2]).
 
 test_emacs_split :-
-    run_tests([ emacs_tabs,
+    run_tests([ emacs_menu,
+                emacs_tabs,
                 emacs_split,
                 emacs_move,
                 emacs_labels
@@ -158,6 +159,28 @@ at_edge(W, Where, point(X, Y)) :-
 
 edge(left,  AX, AY, _AW, AH, X, Y) :- X is AX+5,    Y is AY+AH//2.
 edge(right, AX, AY, AW,  AH, X, Y) :- X is AX+AW-5, Y is AY+AH//2.
+
+
+%       A menu item is chosen in the menu bar, not in the editor, so
+%       @emacs_mode cannot be the mode of the window the event came from.
+
+:- begin_tests(emacs_menu).
+
+test(the_current_mode_is_found_with_no_event_at_all, Name == fundamental) :-
+    emacs(_F, _V),
+    get(@emacs_mode, name, Name).
+
+test(a_pullright_fills_itself, true(Entries > 0)) :-
+    emacs(F, _V),
+    get(F, menu_dialog, MD),
+    get(MD, menu_bar, @on, MB),
+    get(MB, member, file, File),
+    get(File, member, switch_to_buffer, Item),
+    get(Item, popup, Popup),
+    send(Popup, update, MB),
+    get(Popup?members, size, Entries).
+
+:- end_tests(emacs_menu).
 
 
 :- begin_tests(emacs_tabs).
