@@ -1792,14 +1792,15 @@ set_process_working_directory(Dir) :-
     ;   true
     ).
 
-%!  epilog_run(:Goal)
+%!  epilog_run(+Terminal, :Goal)
 %
 %   Run Goal under Epilog.  Redefines shell/0
 
-epilog_run(_:shell) :-
+epilog_run(PT, _:shell) :-
     !,
-    run_shell.
-epilog_run(Goal) :-
+    run_shell,
+    send(PT, window_label, 'Shell').
+epilog_run(_, Goal) :-
     call(Goal).
 
 %!  run_shell is det.
