@@ -166,10 +166,27 @@ make_current(Tab, Window) :-
     ;   true
     ).
 
+%       Losing the focus has to reach the window that has it, and by the
+%       time it is taken away <-current is usually the window it is being
+%       given to -- a frame moves its `input_window\' by activating the new
+%       one, which makes it current, and only then deactivating the old.
+%       So I hand the focus on to a window I remember, not to whichever is
+%       current at the moment I am told.
+
+variable(focus_window, window*, none, "The window I passed the focus to").
+
 input_focus(W, Focus:bool) :->
     send_super(W, input_focus, Focus),
-    (   get(W, current, Current)
-    ->  send(Current, input_focus, Focus)
+    (   Focus == @on
+    ->  (   get(W, current, Current)
+        ->  send(W, slot, focus_window, Current),
+            send(Current, input_focus, @on)
+        ;   true
+        )
+    ;   get(W, slot, focus_window, Old),
+        Old \== @nil
+    ->  send(W, slot, focus_window, @nil),
+        send(Old, input_focus, @off)
     ;   true
     ).
 

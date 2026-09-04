@@ -316,6 +316,71 @@ test(only_editors_are_asked_which_buffer_they_hold, true(Asked == [])) :-
     send(@emacs, show_buffer, F, B, tab),
     findall(P, test_mixed_panes:asked(P), Asked).
 
+%       Dropping a pane onto another gives it the focus: that is where
+%       the mouse is.  The pane it came from has to lose it in the same
+%       breath.  ->input_focus is edge-triggered, so a pane left switched
+%       on can never be switched on again -- what the user sees is that
+%       clicking either pane does nothing and only leaving the application
+%       and coming back repairs it.  That symptom is a ws_enable_text_input
+%       that is never re-issued and cannot be seen from here; that exactly
+%       one pane holds the focus is the invariant behind it.
+
+test(a_dropped_pane_takes_the_focus, true(Focused == [V])) :-
+    emacs,
+    tabbed_window_pair(F, _T, V),
+    send(F, input_focus, @on),          % as if the window manager had
+    drop_onto(F, V),
+    focused(F, Focused).
+
+test(and_the_focus_follows_a_click_afterwards, true(Focused == [T])) :-
+    emacs,
+    tabbed_window_pair(F, T, V),
+    send(F, input_focus, @on),
+    drop_onto(F, V),
+    ignore(send(T, post_event, event(ms_left_down, T, 20, 20))),
+    ignore(send(T, post_event, event(ms_left_up, T, 20, 20))),
+    focused(F, Focused).
+
+%!  tabbed_window_pair(-Frame, -Terminal, -View) is det.
+%
+%   A window with a terminal and an editor in tabs of their own, the
+%   terminal current.  This is `swipl-win' plus edit/1.
+
+tabbed_window_pair(F, T, V) :-
+    no_frames,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    new(B, emacs_buffer(@nil, '*dropped*')),
+    send(@emacs, show_buffer, F, B, tab),
+    editor(F, V),
+    terminal(F, T),
+    send(F, current_pane, T).
+
+%!  drop_onto(+Frame, +Window) is det.
+%
+%   Drag Window onto the bottom half of the pane that is current.
+
+drop_onto(F, Window) :-
+    get(F, current_pane, Target),
+    get(Target, container, tab_frame, Tab),
+    get(Target, size, size(W, H)),
+    X is W//2,
+    Y is H-10,
+    send(Tab, drop, Window, point(X, Y)).
+
+%!  focused(+Frame, -Panes) is det.
+%
+%   The panes of Frame that hold the keyboard focus.  Exactly one should.
+
+focused(F, Panes) :-
+    get(F, panes, Chain),
+    chain_list(Chain, All),
+    findall(P,
+            ( member(P, All),
+              get(P, input_focus, @on)
+            ),
+            Panes).
+
 %!  mixed_window(-Frame) is det.
 %
 %   A window with a terminal and an editor below it.
