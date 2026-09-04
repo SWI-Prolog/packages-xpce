@@ -9,6 +9,7 @@ test_libs(emacs_split          OPTIONS ${XPCE_TEST_OPTIONS})
 if(EPILOG)
 test_libs(epilog_tabs          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(mixed_panes          OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(undefined            OPTIONS ${XPCE_TEST_OPTIONS})
 endif()
 test_libs(no_display           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(number_conversion    OPTIONS ${XPCE_TEST_OPTIONS})
@@ -34,7 +35,8 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:terminal_glyphs)
 
 if(EPILOG)
-  list(APPEND XPCE_EXTRA_TESTS xpce:epilog_tabs xpce:mixed_panes)
+  list(APPEND XPCE_EXTRA_TESTS xpce:epilog_tabs xpce:mixed_panes
+                               xpce:undefined)
 endif()
 
 # The terminal suite drives a terminal and reads the screen back, so it
