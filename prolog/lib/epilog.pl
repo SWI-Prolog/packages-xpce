@@ -745,10 +745,13 @@ thread(PT, Thread:prolog) :<-
     current_prolog_terminal(Thread, PT).
 
 connect(PT, TID:[name|int]) :->
+    get(PT, connect, TID, _Title).
+
+connect(PT, TID:[name|int], Title:[name]) :<-
     "Connect a Prolog thread to the terminal"::
     (   current_prolog_terminal(_Thread, PT)
-    ->  true
-    ;   connect(PT, TID, _Title)
+    ->  Title = @default
+    ;   connect(PT, TID, Title)
     ).
 
 update_popup(PT, P:popup, Ev:event) :->
@@ -1254,6 +1257,10 @@ font_default(T) :->
                 *******************************/
 
 %!  connect(+PT, +TID, -Title) is det.
+%
+%   Connect to a Prolog thread. If TID  = @default, create a new thread,
+%   else connect to the  already  existing   thread.  Title  carries the
+%   thread alias or `'Thead <id>'`.
 
 connect(PT, @default, Title) =>
     get(PT, goal_init, Init),
@@ -1283,9 +1290,10 @@ connect(PT, @default, Title) =>
     ;   Msg = false
     ->  fail
     ).
-connect(PT, TID, _Title) =>
+connect(PT, TID, Title) =>
     thread_property(Thread, id(TID)),
     get(PT, pty_name, PTY),
+    thread_title(Title),
     thread_send_message(Thread, '$epilog'(PT, PTY)).
 
 %!  set_inject(+PT, +Spec) is det.
@@ -1393,19 +1401,20 @@ thread_run_interactor(PT, Creator, PTY, Init, Goal, CWD, Title, History) :-
     set_prolog_flag(color_term, true),
     set_prolog_flag(console_menu, true),
     Error = error(Formal,_),
-    (   catch(attach_terminal(PT, PTY, Title, History), Error, true)
+    (   catch(attach_terminal(PT, PTY, History), Error, true)
     ->  (   var(Formal)
-        ->  thread_send_message(Creator, title(Title)),
+        ->  thread_title(Title),
+            thread_send_message(Creator, title(Title)),
             set_process_working_directory(CWD),
             call(Init),
             in_pce_thread(send(PT, inject_pending)),
-            ignore(epilog_run(Goal))
+            ignore(epilog_run(PT, Goal))
         ;   thread_send_message(Creator, throw(Error))
         )
     ;   thread_send_message(Creator, false)
     ).
 
-attach_terminal(PT, PTY, _Title, History) :-
+attach_terminal(PT, PTY, History) :-
     exists_source(library(editline)),
     use_module(library(editline)),
     !,
@@ -1415,10 +1424,18 @@ attach_terminal(PT, PTY, _Title, History) :-
     set_prolog_flag(tty_control, true),
     call(el_wrap([pipes(true)])),        % Option only for Windows
     register_input(PT, PTY, true, History).
-attach_terminal(PT, PTY, _Title, History) :-
+attach_terminal(PT, PTY, History) :-
     pce_open_terminal_image(PT, In, Out, Err),
     set_prolog_IO(In, Out, Err),
     register_input(PT, PTY, false, History).
+
+thread_title(Title) :-
+    thread_self(Me),
+    (   atom(Me)
+    ->  Title = Me
+    ;   thread_property(Me, id(Id)),
+        format(atom(Title), 'Thread ~w', [Id])
+    ).
 
 set_std_streams(In, Out, Err) :-
     set_stream(In,  alias(user_input)),
@@ -1658,7 +1675,7 @@ create(T, Parent:[window]) :->
     send_super(T, create, Parent),      % a subwindow is created with the
     get(T, member, terminal, TI),       % window it is displayed on
     get(T, tid, TID),
-    send(TI, connect, TID).
+    get(TI, connect, TID, _Title).
 
 sibling(T, W:epilog_window) :<-
     "A new terminal window that continues mine"::
