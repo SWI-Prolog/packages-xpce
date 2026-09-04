@@ -209,13 +209,24 @@ epilog(M:Options0) :-
     ignore(option(object(Epilog), Options)),
 
     send(Epilog, open),
-    (   get(Epilog, main, @on)
+    (   get(Epilog, attribute, main, @on)
     ->  ep_wait(Epilog)
     ;   true
     ).
 
 is_meta(goal).
 is_meta(init).
+
+%!  epilog_name(+Spec, +IsMain, -Name) is det.
+%
+%   <-name of an Epilog window.  The main console is `main'; the rest are
+%   numbered, so that every window can be found back by name.
+
+epilog_name(@default, @on, main) :-
+    !.
+epilog_name(@default, _, Name) :-
+    gensym(epilog, Name).
+epilog_name(Name, _, Name).
 
 %!  epilog_tab(+Frame, :Spec) is det.
 %
@@ -1706,6 +1717,48 @@ update_fold_previous(PT, MI:menu_item) :->
     ).
 
 :- pce_end_class(prolog_terminal).
+
+%!  source_file_filter(-Filter) is det.
+%
+%   Chain the file finder takes, offering the Prolog source extensions.
+
+source_file_filter(Filter) :-
+    findall(Ext, user:prolog_file_type(Ext, source), Exts),
+    chain_list(ExtChain, Exts),
+    new(Filter, chain(tuple('Source', ExtChain))).
+
+%!  ensure_prolog_extension(+File0, -File) is det.
+%
+%   Ensure File has a Prolog extension.
+
+ensure_prolog_extension(File0, File) :-
+    file_name_extension(_, Ext, File0),
+    user:prolog_file_type(Ext, prolog),
+    !,
+    File = File0.
+ensure_prolog_extension(File0, File) :-
+    file_name_extension(File0, pl, File).
+
+%!  terminal_prolog_flag(+Term, +Flag, -Value, +Default) is semidet.
+%
+%   Get the Prolog flag Flag for the toplevel thread running in Term. If
+%   the flag is not defined, unify   Value  with Default. This predicate
+%   uses a timeout of 0.1 seconds,   returning  Default on timeout. This
+%   guarantees that the console will not  freeze   if  the thread is not
+%   responsive.
+
+terminal_prolog_flag(Term, Flag, Value, Default) :-
+    current_prolog_terminal(Thread, Term),
+    (   catch(call_in_thread(Thread,
+                             current_prolog_flag(Flag, Value),
+                             [ timeout(0.1),
+                               on_timeout(fail)
+                             ]),
+              error(Formal,_),
+              true)
+    ->  var(Formal)
+    ;   Value = Default
+    ).
 
 
                 /*******************************
