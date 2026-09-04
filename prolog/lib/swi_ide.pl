@@ -40,7 +40,12 @@
             prolog_ide/1                % +Action
           ]).
 :- use_module(library(pce)).
+:- use_module(library(pane_frame), []).
+:- use_module(library(toolbar), []).
 :- autoload(library(man/v_visual), [ pce_show_visual_tool/0 ]).
+:- autoload(library(www_browser), [www_open_url/1]).
+:- autoload(library(swi_preferences), [prolog_edit_preferences/1]).
+:- autoload(library(pce_openframes), [confirm_open_frames/1]).
 :- require([ pce_image_directory/1,
 	     file_directory_name/2
 	   ]).
@@ -208,5 +213,197 @@ visual_hierarchy(_IDE) :->
     ->  send(@manual, start_tool, visual_hierarchy)
     ;   pce_show_visual_tool
     ).
+
+                 /*******************************
+                 *          THE WINDOWS         *
+                 *******************************/
+
+/** What a pane_frame asks of the application it belongs to.
+
+Every window of the IDE belongs to me, whichever tool opened it, so that
+it behaves the same however it was made: dropping a terminal onto an
+editor and dropping an editor onto a terminal must leave the same window.
+What differs between a terminal and an editor is answered by the pane,
+not here -- see library(pane_frame).
+
+Nothing below pulls PceEmacs or Epilog in at load time.  An XPCE class is
+found by name when it is asked for, so loading the library the user just
+asked for is enough.
+*/
+
+label_format(_IDE, Format:name) :<-
+    "What a window of mine is called; a pane may overrule it"::
+    Format = 'SWI-Prolog -- %s'.
+
+frame_empty(_IDE, F:pane_frame) :->
+    "The last pane of a window was closed"::
+    (   get(F, attribute, main, @on)
+    ->  send(F, destroy),
+        confirm_open_frames(
+            [ message("The main Prolog console was closed\n\c
+                       while there are open windows")
+            ])
+    ;   send(F, destroy)
+    ).
+
+close_frame(_IDE, F:pane_frame, Prolog:prolog=[bool]) :->
+    "Close a window.  Optionally terminate Prolog"::
+    send(F, destroy),
+    (   Prolog == @on
+    ->  halt
+    ;   true
+    ).
+
+                 /*******************************
+                 *            PANES             *
+                 *******************************/
+
+new_pane(IDE, F:pane_frame, Kind:[name]) :->
+    "The new-tab button and File->New: an editor, or a terminal"::
+    (   Kind == editor
+    ->  send(IDE, new_editor, F)
+    ;   send(IDE, new_terminal, F, @off, Kind)
+    ).
+
+new_editor(_IDE, F:pane_frame, Split:[bool]) :->
+    "Put a PceEmacs editor in this window"::
+    use_module(user:library(pce_emacs), []),
+    call(start_emacs:start_emacs),      % the module of library(pce_emacs)
+    new(B, emacs_buffer(@nil, '*scratch*')),
+    new(V, emacs_view(B)),
+    (   Split == @on
+    ->  send(F, split, V, @default, vertically)
+    ;   send(F, append_pane, V, @default, @on)
+    ),
+    send(B, update_label),
+    send(V, setup_mode),
+    send(F, keyboard_focus, V).
+
+new_terminal(_IDE, F:pane_frame, Split:[bool], Profile:[name]) :->
+    "Put an Epilog terminal in this window"::
+    use_module(user:library(epilog), []),
+    (   Split == @on
+    ->  new(W, epilog_window),
+        send(F, split, W, @default, vertically),
+        send(F, keyboard_focus, W)
+    ;   (   Profile == @default
+        ->  TheProfile = prolog
+        ;   TheProfile = Profile
+        ),
+        call(epilog:epilog_tab(F, TheProfile))
+    ).
+
+new_window(_IDE) :->
+    "Open another window of the IDE"::
+    use_module(user:library(epilog), []),
+    call(epilog:epilog).
+
+                 /*******************************
+                 *           ACTIONS            *
+                 *******************************/
+
+manpce_tool(_IDE, Tool:name) :->
+    "Open a manpce/0 tool routed through @manual"::
+    use_module(user:library(pce_manual), []),
+    send(@manual, start_tool, Tool).
+
+preferences(_IDE, Which:{prolog,xpce}) :->
+    "Edit Prolog or GUI preferences"::
+    prolog_edit_preferences(Which).
+
+open_url(_IDE, URL:name) :->
+    "Open a URL"::
+    www_open_url(URL).
+
+                 /*******************************
+                 *           MENU BAR           *
+                 *******************************/
+
+%       The menus every window of the IDE has, whatever is in it.  A pane
+%       adds its own on top of these -- see `pane_frame ->update_menu_bar'
+%       -- so what belongs here is what is about the window and the IDE
+%       rather than about any one tool.
+
+fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
+    "Build the menus every pane of a window shares"::
+    get(MD, menu_bar, @on, MB),
+    send(MB, append, new(File,     pane_popup(file))),
+    send(MB, append, new(Settings, pane_popup(settings))),
+    send(MB, append, new(Tools,    pane_popup(tools))),
+    send(MB, append, new(GUI,      pane_popup('GUI'))),
+    send(MB, append, new(Help,     pane_popup(help))),
+    send_list(File, append,
+              [ menu_item(editor_in_a_new_tab,
+                          message(IDE, new_editor, F)),
+                menu_item(terminal_in_a_new_tab,
+                          message(IDE, new_terminal, F),
+                          end_group := @on),
+                menu_item(new_window,
+                          message(IDE, new_window),
+                          end_group := @on),
+                menu_item(close_window,
+                          message(IDE, close_frame, F),
+                          accelerator := 'Shift-Ctrl-W'),
+                menu_item(halt_prolog,
+                          message(IDE, close_frame, F, @on))
+              ]),
+    send_list(Settings, append,
+              [ menu_item(user_init_file,
+                          message(IDE, preferences, prolog)),
+                menu_item('GUI_preferences',
+                          message(IDE, preferences, xpce),
+                          end_group := @on)
+              ]),
+    send_list(Tools, append,
+              [ menu_item(navigator,
+                          message(IDE, open_navigator)),
+                menu_item(view_threads,
+                          message(IDE, thread_monitor)),
+                menu_item(debug_messages,
+                          message(IDE, debug_monitor)),
+                menu_item(cross_referencer,
+                          message(IDE, xref),
+                          end_group := @on)
+              ]),
+    send_list(GUI, append,
+              [ menu_item('GUI demo programs',
+                          message(IDE, manpce_tool, demos)),
+                menu_item(example_XPCE_code_snippets,
+                          message(IDE, manpce_tool, examples),
+                          end_group := @on),
+                menu_item('Explore XPCE classes',
+                          message(IDE, manpce_tool, class_browser)),
+                menu_item('Explore XPCE class hierarchy',
+                          message(IDE, manpce_tool, class_hierarchy)),
+                menu_item('Explore XPCE global objects',
+                          message(IDE, manpce_tool, global_objects)),
+                menu_item('Explore XPCE errors',
+                          message(IDE, manpce_tool, errors)),
+                menu_item('Explore by function group',
+                          message(IDE, manpce_tool, group_overview)),
+                menu_item('Search XPCE manual',
+                          message(IDE, manpce_tool, search),
+                          end_group := @on),
+                menu_item('Inspect GUI hierarchy',
+                          message(IDE, manpce_tool, visual_hierarchy)),
+                menu_item('Inspect XPCE object',
+                          message(IDE, manpce_tool, inspector)),
+                menu_item('Show XPCE events',
+                          message(IDE, manpce_tool, event_viewer))
+              ]),
+    send_list(Help, append,
+              [ menu_item('SWI-Prolog documentation',
+                          message(IDE, open_url,
+                                  'https://www.swi-prolog.org')),
+                menu_item('SWI-Prolog Discourse forum',
+                          message(IDE, open_url,
+                                  'https://swi-prolog.discourse.group/'),
+                          end_group := @on),
+                menu_item('SWI-Prolog GUI tools',
+                          message(IDE, open_url,
+                                  'https://github.com/SWI-Prolog/packages-xpce/wiki'))
+              ]),
+    send(Settings, show_current, @on),
+    send(Settings, multiple_selection, @on).
 
 :- pce_end_class(prolog_ide).

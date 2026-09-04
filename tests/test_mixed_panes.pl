@@ -56,6 +56,7 @@ Run with:
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
 :- use_module(library(epilog)).
+:- use_module(library(swi_ide)).
 :- use_module(library(emacs/emacs)).
 :- use_module(library(pce_util), [chain_list/2]).
 :- use_module(library(lists), [member/2, subtract/3]).
@@ -106,8 +107,8 @@ terminal(F, W) :-
 
 test(an_epilog_window_takes_an_editor, Classes == [epilog_window, emacs_view]) :-
     emacs,
-    get(@epilog, frame, F),
-    send(@epilog, new_editor, F),
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F),
     classes(F, Classes).
 
 test(a_pcemacs_window_takes_a_terminal, Classes == [emacs_view, epilog_window]) :-
@@ -119,9 +120,9 @@ test(a_pcemacs_window_takes_a_terminal, Classes == [emacs_view, epilog_window]) 
 
 test(the_mode_menus_come_and_go_with_the_editor) :-
     emacs,
-    get(@epilog, frame, F),
+    epilog_frame(@default, @default, @default, @off, @default, F),
     menus(F, WithTerminal),
-    send(@epilog, new_editor, F),
+    send(@prolog_ide, new_editor, F),
     menus(F, WithEditor),
     subtract(WithEditor, WithTerminal, Added),
     Added \== [],                        % the mode brought menus of its own
@@ -142,16 +143,16 @@ test(a_terminal_carries_its_own_menus_into_a_pcemacs_window) :-
 
 test(both_kinds_of_pane_side_by_side_in_one_tab, true(N == 2)) :-
     emacs,
-    get(@epilog, frame, F),
-    send(@epilog, new_editor, F, @on),  % split, rather than a tab of its own
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F, @on),  % split, rather than a tab of its own
     editor(F, V),
     get(V, container, tab_frame, Tab),
     get(Tab?windows, size, N).
 
 test(the_menu_bar_follows_the_focus_inside_one_tab) :-
     emacs,
-    get(@epilog, frame, F),
-    send(@epilog, new_editor, F, @on),
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F, @on),
     editor(F, V),
     terminal(F, T),
     send(F, keyboard_focus, V),
@@ -167,16 +168,16 @@ test(the_menu_bar_follows_the_focus_inside_one_tab) :-
 
 test(an_editor_names_the_window_it_is_in, true(Label == Expected)) :-
     emacs,
-    get(@epilog, frame, F),
-    send(@epilog, new_editor, F),
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F),
     get(F, tab_label, TabLabel),
     get(string('PceEmacs -- %s', TabLabel), value, Expected),
     get(F, label, Label).
 
 test(and_a_terminal_leaves_it_to_the_application, true(Label == Expected)) :-
     emacs,
-    get(@epilog, frame, F),
-    send(@epilog, new_editor, F),
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F),
     terminal(F, T),
     send(F, current_pane, T),
     get(F, tab_label, TabLabel),

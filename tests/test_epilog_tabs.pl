@@ -74,7 +74,7 @@ test_epilog_tabs :-
 %   An Epilog frame with one tab holding one terminal.
 
 epilog(F, W) :-
-    get(@epilog, frame, F),
+    epilog_frame(@default, @default, @default, @off, @default, F),
     get(F, current_pane, W).
 
 %!  tabs(+Frame, -Tabs) is det.
