@@ -279,4 +279,96 @@ test(and_the_window_it_left_stops_saying_its_name,
     send(Tab2, drop, TM, point(X, Y)),
     get(From, label, Label).
 
+%       Where a tool goes is one setting on the application, so it can be
+%       said once in a Defaults file and hold for every tool.  Which
+%       window it lands in is <-current_frame's to say and depends on
+%       which one was last worked in, so these assert the shape of the
+%       window the tool ends up in rather than which window that is.
+
+%!  with_placement(+Where, :Goal) is det.
+
+:- meta_predicate with_placement(+, 0).
+
+with_placement(Where, Goal) :-
+    get(@pce, convert, prolog_ide, class, Class),
+    get(Class, class_variable, tool_placement, Var),
+    get(Var, value, Old),
+    setup_call_cleanup(
+        send(Class, class_variable_value, tool_placement, Where),
+        Goal,
+        send(Class, class_variable_value, tool_placement, Old)).
+
+%!  monitor_shape(-Tabs, -PanesInItsTab) is det.
+%
+%   A window of terminals is open, then the monitor is asked for.
+
+monitor_shape(Tabs, InItsTab) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, thread_monitor),
+    get(@prolog_ide, tool, prolog_thread_monitor, TM),
+    get(TM?frame?tabs?tabs, size, Tabs),
+    get(TM, container, tab_frame, Tab),
+    get(Tab?windows, size, InItsTab).
+
+test(a_tool_takes_a_tab_by_default, true(InItsTab == 1)) :-
+    with_placement(tab, monitor_shape(Tabs, InItsTab)),
+    Tabs > 1.                           % beside the terminal's tab
+
+test(it_can_be_asked_to_sit_beside_what_is_there, true(InItsTab == 2)) :-
+    with_placement(split, monitor_shape(_Tabs, InItsTab)).
+
+test(or_to_open_a_window_of_its_own, true(Shape == [1, 1])) :-
+    with_placement(frame, monitor_shape(Tabs, InItsTab)),
+    Shape = [Tabs, InItsTab].           % one tab, one pane: only the tool
+
+test(and_the_caller_can_overrule_the_setting, true(InItsTab == 2)) :-
+    with_placement(tab,
+                   ( no_monitor,
+                     epilog_frame(@default, @default, @default, @off,
+                                  @default, F),
+                     send(F, open),
+                     send(@prolog_ide, show_tool, prolog_thread_monitor, split),
+                     get(@prolog_ide, tool, prolog_thread_monitor, TM),
+                     get(TM, container, tab_frame, Tab),
+                     get(Tab?windows, size, InItsTab)
+                   )).
+
+%       And it is on the Settings menu, so it can be changed without
+%       editing a Defaults file.
+
+test(the_setting_is_on_the_settings_menu,
+     Items == [frame, tab, split]) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    get(F, menu_bar, MB),
+    get(MB, member, settings, Settings),
+    get(Settings, member, new_tools_open, Item),
+    get(Item, popup, Popup),
+    get(Popup, members, Chain),
+    chain_list(Chain, Members),
+    findall(V, (member(MI, Members), get(MI, value, V)), Items).
+
+test(it_shows_which_one_is_in_force, true(Ticked == [split])) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    get(F, menu_bar, MB),
+    get(MB, member, settings, Settings),
+    get(Settings, member, new_tools_open, Item),
+    get(Item, popup, Popup),
+    with_placement(split,
+                   ( send(Popup, update, F),
+                     get(Popup, members, Chain),
+                     chain_list(Chain, Members),
+                     findall(V,
+                             ( member(MI, Members),
+                               get(MI, selected, @on),
+                               get(MI, value, V)
+                             ),
+                             Ticked)
+                   )).
+
 :- end_tests(tool_panes).

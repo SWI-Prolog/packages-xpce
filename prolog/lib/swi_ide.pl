@@ -101,6 +101,9 @@ prolog_ide(Action) :-
 
 :- pce_begin_class(prolog_ide, application, "Prolog IDE application").
 
+class_variable(tool_placement, {frame,tab,split}, tab,
+               "Where a tool the user asks for is put").
+
 initialise(IDE) :->
     "Create as service application"::
     send_super(IDE, initialise, prolog_ide),
@@ -234,15 +237,22 @@ tool(IDE, Class:name, Pane:window) :<-
     send(Pane, instance_of, Class),
     !.
 
-show_tool(IDE, Class:name, How:[{tab,split}], Pane:window) :<-
-    "Bring the tool pane of that class into view, making one if there is none"::
+%       Where a tool the user asks for is put: in a window of its own, in
+%       a tab of the window they are working in, or beside what is already
+%       there.  `prolog_ide.tool_placement' says which, so it can be set
+%       once in a Defaults file and hold for every tool.
+
+show_tool(IDE, Class:name, How:[{frame,tab,split}], Pane:window) :<-
+    "Show the tool pane of that class, making one if there is none"::
     (   get(IDE, tool, Class, Pane)
     ->  get(Pane, frame, F),
         send(F, current_pane, Pane)
     ;   Term =.. [Class],
         new(Pane, Term),
-        (   get(IDE, current_frame, F)
-        ->  (   How == split
+        get(IDE, tool_placement, How, Where),
+        (   Where \== frame,
+            get(IDE, current_frame, F)
+        ->  (   Where == split
             ->  send(F, split, Pane, @default, vertically)
             ;   send(F, append_pane, Pane, @default, @on)
             )
@@ -252,9 +262,26 @@ show_tool(IDE, Class:name, How:[{tab,split}], Pane:window) :<-
     send(F, open),
     send(F, expose).
 
-show_tool(IDE, Class:name, How:[{tab,split}]) :->
-    "Bring the tool pane of that class into view"::
+show_tool(IDE, Class:name, How:[{frame,tab,split}]) :->
+    "Show the tool pane of that class"::
     get(IDE, show_tool, Class, How, _).
+
+tool_placement(IDE, How:[{frame,tab,split}], Where:name) :<-
+    "Where a new tool goes; How overrules the setting"::
+    (   How \== @default
+    ->  Where = How
+    ;   get(IDE, class_variable_value, tool_placement, Where)
+    ).
+
+tool_placement(_IDE, Where:{frame,tab,split}) :->
+    "Say where a tool the user asks for is to be put"::
+    get(@pce, convert, prolog_ide, class, Class),
+    send(Class, class_variable_value, tool_placement, Where).
+
+update_tool_placement_menu(IDE, Popup:popup) :->
+    "Tick where a tool goes now"::
+    get(IDE, tool_placement, @default, Where),
+    send(Popup, selection, Where).
 
 current_frame(IDE, F:pane_frame) :<-
     "A window of mine to put a tool in"::
@@ -403,8 +430,21 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
                           message(IDE, preferences, prolog)),
                 menu_item('GUI_preferences',
                           message(IDE, preferences, xpce),
-                          end_group := @on)
+                          end_group := @on),
+                new(Placement, menu_item(new_tools_open))
               ]),
+    send(Placement, popup,
+         new(PlacementPopup,
+             popup(tool_placement,
+                   message(IDE, tool_placement, @arg1)))),
+    send_list(PlacementPopup, append,
+              [ menu_item(frame, @default, 'In a window of its own'),
+                menu_item(tab,   @default, 'In a tab'),
+                menu_item(split, @default, 'Beside what is there')
+              ]),
+    send(PlacementPopup, show_current, @on),
+    send(PlacementPopup, update_message,
+         message(IDE, update_tool_placement_menu, @receiver)),
     send_list(Tools, append,
               [ menu_item(navigator,
                           message(IDE, open_navigator)),
