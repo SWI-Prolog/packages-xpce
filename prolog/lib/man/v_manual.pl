@@ -273,9 +273,10 @@ fill_dialog(M, D) :->
                 *         STARTING TOOLS        *
                 ********************************/
 
-start_tool(M, ToolName:name, Tool:frame) :<-
+start_tool(M, ToolName:name, Tool:man_frame) :<-
     "Start named tool"::
-    (   get(M?tools, value, ToolName, Tool)
+    (   get(M?tools, value, ToolName, Tool),
+        object(Tool)
     ->  send(Tool, expose)
     ;   create_tool(M, ToolName, Tool),
         send(Tool, open)
@@ -709,19 +710,163 @@ request_source(M, Obj:object) :->
                 *          TOOL FRAMES          *
                 ********************************/
 
-:- pce_begin_class(man_frame(label), persistent_frame).
+/* A tool of the manual as a pane.
+
+Every tool -- the class browser, the inspector, the visual hierarchy and
+the rest -- is a man_frame.  They used to be frames of their own;
+man_frame is a `tool_pane' now -- see library(pane_frame) -- so all of
+them sit in a tab of a window of the IDE beside a terminal, an editor or
+another tool, and what they have to say goes on the status bar of that
+window.
+
+The class keeps its name and the protocol a tool used to reach its frame
+with, so that a subclass saying `send(F, append, W)', `<-member(Name)' or
+`send(F, open)' goes on working: what changed is where the windows end
+up, not how a tool builds itself.  A window inside a tool is the one
+place that had to change: it used to reach the tool with <-frame, which
+is a window of the IDE now, so it asks for <-container(man_frame).
+*/
+
+:- pce_begin_class(man_frame(label), tool_pane).
 
 variable(manual,        man_manual,     get,
          "Manual we are related to").
 variable(tool_name,     name,           get,
          "Name of the tool in this frame").
+variable(tool_label,    name*,          get,
+         "Label I was made with; what my tab is called").
 
 
 initialise(F, Manual:man_manual, Label:[name]) :->
     "Create from label"::
     send(F, send_super, initialise, Label),
     send(F, slot, manual, Manual),
-    send(F, done_message, message(F, quit)).
+    (   Label == @default
+    ->  true
+    ;   send(F, label, Label)
+    ).
+
+                 /*******************************
+                 *             PANE             *
+                 *******************************/
+
+pane_label(F, Label:name) :<-
+    "What my tab is called"::
+    get(F, slot, tool_label, Label),
+    Label \== @nil.
+
+%       A pane reports on the bar of the window it is in, which grows one
+%       the first time anything asks.
+
+report(F, Kind:name, Fmt:[char_array], Args:any ...) :->
+    "Report on the bar of the window I am in"::
+    (   get(F, frame, Fr),
+        Fr \== @nil,
+        send(Fr, has_get_method, ensure_status_dialog)
+    ->  ignore(get(Fr, ensure_status_dialog, _))
+    ;   true
+    ),
+    Msg =.. [report, Kind, Fmt|Args],
+    send_super(F, Msg).
+
+                 /*******************************
+                 *      WHAT A FRAME OFFERED    *
+                 *******************************/
+
+/* A tool builds itself the way it always did.  These give it back the
+   handful of frame methods it uses to do that, over the pane it is now.
+   `window ->catch_all' forwards anything else to the window a pane ends
+   up in, which is right for the rest of the frame protocol but no good
+   for these: a tool builds itself before it is in a window at all.
+*/
+
+append(F, Window:window,
+          Relative:relative_to=[window],
+          Where:where=[{above,below,left,right}]) :->
+    "Add a window, as class frame does"::
+    send(F, append_window, Window, Relative, Where).
+
+member(F, Name:name, Window:window) :<-
+    "The window of mine with that name, as class frame does"::
+    get(F, members, Windows),
+    get(Windows, find, @arg1?name == Name, Window).
+
+catch_all(F, Name:name, Window:window) :<-
+    "<-<name>_member is <-member(<name>), as class frame does"::
+    get(Name, delete_suffix, '_member', Base),
+    get(F, member, Base, Window).
+
+%       A tool that renames itself -- the class browser says which class
+%       it is showing -- used to put that on the title of its frame.  A
+%       pane says it on its tab, and the window it is in makes its title
+%       out of that; see `pane_frame ->update_tab_label'.
+
+label(F, Label:name) :->
+    "Name my tab, as a frame was named"::
+    send(F, slot, tool_label, Label),
+    (   get(F, container, pane_frame, Frame)
+    ->  send(Frame, update_tab_label)
+    ;   true
+    ).
+
+label(F, Label:name) :<-
+    "The name I go by"::
+    get(F, slot, tool_label, Label),
+    Label \== @nil.
+
+open(F, _Pos:[point], _Normalise:[bool]) :->
+    "Show me in a window of the IDE"::
+    show_tool_pane(F).
+
+open_centered(F, _Pos:[point], _Grab:[bool]) :->
+    "Show me in a window of the IDE"::
+    show_tool_pane(F).
+
+expose(F) :->
+    "Bring the window I am in up, with me in view"::
+    show_tool_pane(F).
+
+keyboard_focus(F, Window:window*) :->
+    "Type in one of my windows"::
+    (   Window == @nil
+    ->  true
+    ;   get(F, content, Tab)
+    ->  send(Tab, current, Window)
+    ;   true
+    ),
+    (   get(F, container, pane_frame, Frame)
+    ->  send(Frame, keyboard_focus, F)
+    ;   true
+    ).
+
+create(_F) :->
+    "A pane is laid out by the window it is in"::
+    true.
+
+done_message(_F, _Message:[code]*) :->
+    "A pane is closed with its tab"::
+    true.
+
+can_resize(_F, _Resize:bool) :->
+    "A pane is resized with the window it is in"::
+    true.
+
+wait(_F) :->
+    "Nothing to wait for: a pane is not a window of the window system"::
+    true.
+
+%!  show_tool_pane(+Pane) is det.
+%
+%   Put Pane in a window of the IDE, or bring the one it is in up.  The
+%   IDE is asked for at need: the manual is XPCE's own and does not load
+%   the Prolog IDE to be able to run.
+
+show_tool_pane(F) :-
+    use_module(user:library(swi_ide), []),
+    (   get(F, pane_tab, _)             % a pane of a window already.  Not
+    ->  send(@prolog_ide, expose_tool, F)  % <-frame: a window that is in
+    ;   send(@prolog_ide, place_tool, F, @default)   % none is given one
+    ).
 
 
 user_scope(_F, _Scope:chain) :->

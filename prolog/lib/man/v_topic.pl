@@ -69,7 +69,7 @@ initialise(TB, Manual:man_manual) :->
 
 dialog(D) :-
     new(D, dialog),
-    new(TB, D?frame),
+    new(TB, ?(D, container, man_frame)),
 
     send(D, append, button(help,   message(TB, help))),
     send(D, append, button(quit,   message(TB, quit))).
@@ -125,7 +125,7 @@ related(TB, From:object*, Rel:name, _To:object*) :->
 :- pce_global(@man_topic_node_handler, make_man_topic_node_handler).
 
 make_man_topic_node_handler(H) :-
-    new(TB, @arg1?frame),
+    new(TB, ?(@arg1, container, man_frame)),
     new(Manual, TB?manual),
     new(Selection, Manual?selection),
     Node = @arg1,
@@ -153,7 +153,7 @@ make_man_topic_node_handler(H) :-
               ]),
 
     HNode = @receiver,
-    new(HTool, HNode?frame),
+    new(HTool, ?(HNode, container, man_frame)),
 
     new(H, handler_group(popup_gesture(P),
                          click_gesture(left, '', single,

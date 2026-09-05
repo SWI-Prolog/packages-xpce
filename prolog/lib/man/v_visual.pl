@@ -321,7 +321,8 @@ grab(F) :->
     new(D, select_graphical('Select object from screen')),
     D->>transient_for(F),
     D->>attribute(report_to, F),
-    Obj = D->>select(@arg1?frame \== F, F?area?center),
+    Mine = F->>frame,                   % anything but my own window: the
+    Obj = D->>select(@arg1?frame \== Mine, F?area?center),
     D->>destroy,
     Obj \== @nil,
     F->>window->>visualise(Obj).

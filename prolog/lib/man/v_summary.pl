@@ -66,7 +66,7 @@ make_man_drag_and_drop_objects(G) :-
 initialise(S, Att:name, Size:size) :->
     "Create from displayed attribute and size"::
     DI = @arg1,
-    new(Tool, S?frame),
+    new(Tool, ?(S, container, man_frame)),
     new(Obj, DI?object),
 
     get(S, list_font, ListFont),
@@ -179,7 +179,8 @@ members(S, Matches:chain) :->
         send(Groups, for_all,
              and(message(S, append_group, Index, @arg1?name, @arg1?value),
                  message(Index, plus, 1))),
-        (   get(S?frame, manual, Manual),
+        (   get(S, container, man_frame, Tool),
+            get(Tool, manual, Manual),
             Manual \== @nil
         ->  send(S, selected, Manual?selection)
         ;   true

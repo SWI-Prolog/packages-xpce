@@ -82,7 +82,7 @@ browser(MB, Browser) :<-
 
 dialog(D) :-
     new(D, dialog),
-    new(MB, D?frame),
+    new(MB, ?(D, container, man_frame)),
 
     send(D, append, button(help,   message(MB, help))),
     send(D, append, button(quit,   message(MB, quit))).

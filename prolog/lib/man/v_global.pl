@@ -66,7 +66,7 @@ initialise(OB, Manual:man_manual) :->
 
 dialog(D) :-
     new(D, dialog),
-    new(OB, D?frame),
+    new(OB, ?(D, container, man_frame)),
     send(D, append, new(A, menu(show, marked, @nil))),
     send(A, layout, horizontal),
     send_list(A, append, [documented, all]),

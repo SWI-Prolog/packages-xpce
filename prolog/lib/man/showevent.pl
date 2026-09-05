@@ -52,20 +52,22 @@ initialise(V, M) :->
     send(new(D, dialog), below, P),
     send(new(event_hierarchy_window), left, D),
     send(new(event_list), right, D),
-    send(new(D2, dialog), above, D),
-    send(D2, name, menu_bar_dialog),
-    send(V, fill_menu_bar),
     send(V, fill_dialog),
     send(V, fill_picture),
     send(V, keyboard_focus, P).
 
-fill_menu_bar(V) :->
-    get(V, member, menu_bar_dialog, D),
-    send(D, pen, 0),
-    send(D, gap, size(0, 5)),
-    send(D, append, new(MB, menu_bar)),
-    send(MB, append, new(Help, popup(help))),
-    send_list(Help, append,
+%       My menu goes on the bar of the window I am in -- see
+%       `pane_frame ->update_menu_bar'.  It used to be a bar of my own, in
+%       a dialog above my windows.
+
+menu_bar_key(_V, Key:name) :<-
+    "Every event viewer asks for the same menu bar"::
+    Key = event_viewer.
+
+fill_menu_bar(V, MD:tool_dialog) :->
+    "Put my menu on the bar of the window I am in"::
+    get(MD, popup, events, @on, Popup),
+    send_list(Popup, append,
               [ menu_item(about,
                           message(V, about)),
                 menu_item(help,
@@ -165,7 +167,7 @@ initialise(B) :->
 
 event(B, Ev:event) :->
     ignore(send_super(B, event, Ev)),
-    send(B?frame, append_event, Ev).
+    send(?(B, container, man_frame), append_event, Ev).
 
 :- pce_end_class(event_landing).
 
@@ -241,7 +243,7 @@ find(W, EvNode, Node) :-
 initialise(EL) :->
     send_super(EL, initialise),
     send(EL, select_message,
-         message(EL?frame, show_event, @arg1?object)).
+         message(?(EL, container, man_frame), show_event, @arg1?object)).
 
 append(EL, Ev:event) :->
     get(Ev, clone, Clone),

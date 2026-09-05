@@ -39,10 +39,10 @@
 /** <module> An IDE tool as a pane
 
 The thread monitor, the source navigator, the debug monitor, the debugger
-status and the cross-referencer used to be windows of their own, each
-holding its windows, a menu bar and a reporter in a frame.  They are
-panes now, so they can sit in a tab of any window of the IDE beside a
-terminal, an editor or another tool.
+status, the cross-referencer and the tools of the XPCE manual used to be
+windows of their own, each holding its windows, a menu bar and a reporter
+in a frame.  They are panes now, so they can sit in a tab of any window
+of the IDE beside a terminal, an editor or another tool.
 
 These check that a tool goes where it should, that there is only ever
 one, that its windows are tiled inside it and that what it has to say
@@ -65,6 +65,7 @@ Run with:
 :- use_module(library(swi/pce_debug_monitor), []).
 :- use_module(library(trace/status), []).
 :- use_module(library(pce_xref), []).
+:- use_module(library(pce_manual), []).
 :- use_module(library(prolog_debug), [spy/1, nospy/1]).
 :- use_module(library(debug), [debug/1, debug/3, nodebug/1]).
 :- use_module(library(pce_util), [chain_list/2]).
@@ -75,7 +76,8 @@ test_tool_panes :-
                 navigator_pane,
                 debug_monitor_pane,
                 debug_status_pane,
-                xref_pane
+                xref_pane,
+                manual_tool_panes
               ]).
 
 %!  classes(+Frame, -Classes) is det.
@@ -1040,3 +1042,130 @@ test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :
     get(SD, class_name, Class).
 
 :- end_tests(xref_pane).
+
+
+                 /*******************************
+                 *       THE MANUAL TOOLS       *
+                 *******************************/
+
+/* Every tool of the XPCE manual is a man_frame, and man_frame is a
+tool_pane: the one class turned all fourteen of them into panes at once.
+What a tool says to build itself -- ->append, <-member, <-<name>_member,
+->label, ->open, ->keyboard_focus -- man_frame answers over the pane, so
+the tools themselves did not have to change.  What did change is that a
+window inside a tool reaches it with <-container(man_frame) rather than
+with <-frame, which is a window of the IDE now.
+*/
+
+manual_tool(class_browser,    man_class_browser(@manual)).
+manual_tool(class_hierarchy,  man_class_hierarchy(@manual)).
+manual_tool(search,           man_search_tool(@manual)).
+manual_tool(topics,           man_topic_browser(@manual)).
+manual_tool(card_viewer,      man_card_editor(@manual)).
+manual_tool(statistics,       man_statistics(@manual)).
+manual_tool(inspector,        isp_frame(@manual)).
+manual_tool(visual_hierarchy, vis_frame(@manual)).
+manual_tool(global_objects,   man_object_browser(@manual)).
+manual_tool(errors,           man_error_browser(@manual)).
+manual_tool(group_overview,   man_group_browser(@manual, groups,
+                                                'Group Browser')).
+manual_tool(examples,         man_module_browser(@manual, examples,
+                                                 man_example_card,
+                                                 'XPCE Examples')).
+manual_tool(event_viewer,     man_event_viewer(@manual)).
+
+%!  open_manual_tool(+Name, -Tool) is det.
+%
+%   Make the named tool and show it.  Not `@manual <-start_tool', which
+%   tells the user with a modal dialog when a tool cannot be made: with
+%   no display there is nobody to answer it.
+
+open_manual_tool(Name, Tool) :-
+    manual_tool(Name, Term),
+    new(Tool, Term),
+    send(Tool, open).
+
+:- begin_tests(manual_tool_panes).
+
+test(every_tool_opens_in_a_window_of_the_ide,
+     [ forall(manual_tool(Name, _)),
+       true(Class == pane_frame)
+     ]) :-
+    no_frames,
+    open_manual_tool(Name, Tool),
+    get(Tool, frame, Frame),            % a pane in no window would be
+    get(Frame, class_name, Class).      % given a plain frame of its own
+
+test(and_is_named_on_its_tab, true(Label == 'Class Hierarchy')) :-
+    open_manual_tool(class_hierarchy, Tool),
+    get(Tool, pane_label, Label).
+
+%       A tool that renames itself -- the class browser says which class
+%       it shows -- used to put that on the title of its frame.
+
+test(a_tool_that_renames_itself_renames_its_tab,
+     true(Label == 'Class object')) :-
+    no_frames,
+    open_manual_tool(class_browser, Tool),
+    get(Tool, frame, Frame),
+    send(Frame, current_pane, Tool),
+    get(Frame, tab, Tab),
+    get(Tab, label, Label).
+
+%       What a tool says to build itself.
+
+test(a_tool_adds_a_window_with_append, true(Names == [dialog, picture])) :-
+    open_manual_tool(statistics, Tool),
+    send(Tool, append, new(P, picture)),
+    send(P, name, picture),
+    get(Tool, members, Chain),
+    chain_list(Chain, Windows),
+    findall(N, (member(W, Windows), get(W, name, N)), Names).
+
+test(and_finds_it_back_by_name, true(Found == P)) :-
+    open_manual_tool(statistics, Tool),
+    send(Tool, append, new(P, picture)),
+    send(P, name, picture),
+    get(Tool, member, picture, Found).
+
+test(and_by_the_shorthand_class_frame_offered, true(Found == P)) :-
+    open_manual_tool(statistics, Tool),
+    send(Tool, append, new(P, picture)),
+    send(P, name, picture),
+    get(Tool, picture_member, Found).
+
+%       And what a window inside a tool says to reach it.
+
+test(a_window_of_a_tool_reaches_the_tool, true(Reached == Tool)) :-
+    open_manual_tool(class_hierarchy, Tool),
+    get(Tool, member, dialog, Dialog),
+    get(Dialog, container, man_frame, Reached).
+
+test(the_tool_is_not_the_window_it_is_in) :-
+    open_manual_tool(class_hierarchy, Tool),
+    get(Tool, frame, Frame),
+    Frame \== Tool,
+    send(Frame, instance_of, pane_frame).
+
+%       A tool with a menu of its own puts it on the bar of the window it
+%       is in, like any other pane.
+
+test(a_tool_with_a_menu_puts_it_on_the_bar_of_its_window) :-
+    no_frames,
+    open_manual_tool(event_viewer, Tool),
+    get(Tool, frame, Frame),
+    send(Frame, current_pane, Tool),
+    menus(Frame, Menus),
+    memberchk(events, Menus).
+
+test(what_a_tool_has_to_say_grows_a_status_bar,
+     true(Class == pane_status_dialog)) :-
+    no_frames,
+    open_manual_tool(statistics, Tool),
+    get(Tool, frame, Frame),
+    \+ get(Frame, status_dialog, _),
+    send(Tool, report, status, 'busy'),
+    get(Frame, status_dialog, SD),
+    get(SD, class_name, Class).
+
+:- end_tests(manual_tool_panes).
