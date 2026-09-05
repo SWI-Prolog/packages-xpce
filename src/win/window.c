@@ -828,7 +828,21 @@ out:
       goto out;
   }
 
-  updateCursorWindow(sw);
+  /* A gesture may have grabbed the pointer while handling this event --
+   * `split_move ->start' does, and the window it grabs for need not be
+   * the one the click landed on.  From here on every pointer event goes
+   * to the grabbing window, so it is its cursor that must show; leaving
+   * it to the next event would only change the cursor once the pointer
+   * moves.
+   */
+  { PceWindow grabbed = ws_grabbing_window();
+
+    if ( grabbed && grabbed != sw && !isFreedObj(grabbed) &&
+	 instanceOfObject(grabbed, ClassWindow) )
+      updateCursorWindow(grabbed);
+    else
+      updateCursorWindow(sw);
+  }
 
   assign(sw, current_event, old_event);
 destroyed:
