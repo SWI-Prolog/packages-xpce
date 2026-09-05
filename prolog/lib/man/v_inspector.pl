@@ -863,7 +863,8 @@ freed_object(Instance) :-
 
 initialise(F, Manual:man_manual) :->
     send(F, send_super, initialise, Manual, 'PCE Inspector'),
-    send(F, append, new(TD, tool_dialog)),
+    send(F, append, new(TD, tool_dialog(F))),  % on me, not on <-frame:
+                                               % a window of the IDE
     send_list(TD, append,
               [ tool_button(clear,
                             resource(clear),

@@ -1162,6 +1162,21 @@ test(the_frame_methods_a_tool_uses_keep_their_shape,
     get(Class, send_method, Selector, Method),
     get(Method?types, size, Types).
 
+%       A tool bar acts on <-client, and a tool_dialog made without one
+%       falls back to <-frame -- a window of the IDE now, which knows
+%       nothing of ->grab or ->clear.  The tools that carry one say who
+%       their buttons act on.
+
+test(a_tool_bar_acts_on_the_tool_that_carries_it,
+     [ forall(member(Term, [isp_frame(@manual), vis_frame(@manual)])),
+       true(Client == Tool)
+     ]) :-
+    new(Tool, Term),
+    send(Tool, open),
+    get(Tool, member, tool_dialog, TD),
+    get(TD, tool_bar, TB),
+    get(TB, client, Client).
+
 %       A tool with a menu of its own puts it on the bar of the window it
 %       is in, like any other pane.
 

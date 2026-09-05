@@ -279,7 +279,8 @@ initialise(F, Manual:[man_manual]) :->
     ;   TheManual = Manual
     ),
     F*>>initialise(TheManual, 'Visual Hierarchy'),
-    F->>append(new(TD, tool_dialog)),
+    F->>append(new(TD, tool_dialog(F))),       % on me, not on <-frame:
+                                               % a window of the IDE
     send_list(TD, append,
               [ tool_button(help,
                             resource(help),
