@@ -427,6 +427,28 @@ test(the_label_follows_a_view_that_goes_away) :-
     get(V1, container, tab_frame, TF),
     get(TF, label, Name1).
 
+%       Renaming a buffer used to put its name straight on the title of
+%       every frame holding a view on it, which is the label of whatever
+%       tab is in view now.
+
+test(renaming_a_hidden_buffer_leaves_the_title_alone) :-
+    emacs(F, V1),
+    get(V1?text_buffer, name, Name1),
+    scratch(B2),
+    send(@emacs, show_buffer, F, B2, tab),
+    send(F, current_pane, V1),          % B2 is in a tab that is not in view
+    send(B2, name, '*renamed*'),
+    frame_label(F, Name1),
+    get(B2?editors, head, E2),
+    get(E2, container, tab, Tab2),
+    get(Tab2, label, '*renamed*').      % its own tab did follow
+
+test(renaming_the_buffer_in_view_retitles_its_frame) :-
+    emacs(F, V),
+    get(V, text_buffer, B),
+    send(B, name, '*retitled*'),
+    frame_label(F, '*retitled*').
+
 test(a_view_of_its_own_labels_its_frame) :-
     start_emacs,
     scratch(B),

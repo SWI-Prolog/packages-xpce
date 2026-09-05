@@ -291,9 +291,8 @@ name(B, Name:name) :->
         ->  send(DictItem, key, BufName)
         ;   send(@emacs_buffers, append, dict_item(BufName, @default, B))
         ),
-        send(B, update_label),
-        send(B?editors, for_some, message(@arg1?frame, label, BufName))
-    ).
+        send(B, update_label)           % reaches the views, their tabs
+    ).                                  % and the frame label from there
 
 
 lookup(_Ctx, File:file*, Name:[name], Buffer:emacs_buffer) :<-
