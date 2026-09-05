@@ -1147,6 +1147,21 @@ test(the_tool_is_not_the_window_it_is_in) :-
     Frame \== Tool,
     send(Frame, instance_of, pane_frame).
 
+%       man_frame answers a handful of frame methods over the pane, and a
+%       method there must keep the shape class window gives it: ->create
+%       takes the window to create the pane inside -- see createWindow()
+%       in src/win/window.c -- and one of another shape is not an override
+%       but a clash, which leaves the pane uncreated.
+
+test(the_frame_methods_a_tool_uses_keep_their_shape,
+     [ forall(member(Selector-Args, [create-1, open-2, open_centered-3,
+                                     keyboard_focus-1, label-1])),
+       true(Types == Args)
+     ]) :-
+    get(@pce, convert, man_frame, class, Class),
+    get(Class, send_method, Selector, Method),
+    get(Method?types, size, Types).
+
 %       A tool with a menu of its own puts it on the bar of the window it
 %       is in, like any other pane.
 

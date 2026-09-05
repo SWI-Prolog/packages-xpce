@@ -814,11 +814,17 @@ label(F, Label:name) :<-
     get(F, slot, tool_label, Label),
     Label \== @nil.
 
-open(F, _Pos:[point], _Normalise:[bool]) :->
+%       These keep the signatures class window gives them: a pane is a
+%       window, and the window system sends it ->create with the window
+%       to create it inside.  A method of another shape here is not an
+%       override but a clash, and the send fails.
+
+open(F, _Pos:[point], _Display:[display]) :->
     "Show me in a window of the IDE"::
     show_tool_pane(F).
 
-open_centered(F, _Pos:[point], _Grab:[bool]) :->
+open_centered(F, _Center:[point|frame], _Display:[display],
+                 _Grab:[bool]) :->
     "Show me in a window of the IDE"::
     show_tool_pane(F).
 
@@ -826,22 +832,18 @@ expose(F) :->
     "Bring the window I am in up, with me in view"::
     show_tool_pane(F).
 
-keyboard_focus(F, Window:window*) :->
+keyboard_focus(F, Focus:graphical*) :->
     "Type in one of my windows"::
-    (   Window == @nil
-    ->  true
-    ;   get(F, content, Tab)
-    ->  send(Tab, current, Window)
-    ;   true
-    ),
-    (   get(F, container, pane_frame, Frame)
-    ->  send(Frame, keyboard_focus, F)
-    ;   true
+    (   Focus \== @nil,
+        send(Focus, instance_of, window),
+        get(F, content, Tab)
+    ->  send(Tab, current, Focus),
+        (   get(F, container, pane_frame, Frame)
+        ->  send(Frame, keyboard_focus, F)
+        ;   true
+        )
+    ;   send_super(F, keyboard_focus, Focus)
     ).
-
-create(_F) :->
-    "A pane is laid out by the window it is in"::
-    true.
 
 done_message(_F, _Message:[code]*) :->
     "A pane is closed with its tab"::
