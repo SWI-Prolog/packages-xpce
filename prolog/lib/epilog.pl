@@ -722,6 +722,7 @@ unlink_terminal_thread(PT) :- % Epilog attached to a running thread
 unlink_terminal_thread(PT) :- % Normal Epilog window
     retract(current_prolog_terminal(Thread, PT)),
     !,
+    send(PT, send, '\u0004'),
     thread_signal(Thread, clean_exit).
 unlink_terminal_thread(_).
 
