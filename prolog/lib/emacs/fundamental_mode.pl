@@ -1045,8 +1045,8 @@ terminal_in_a_new_tab(M) :->
 new_frame(M) :->
     "Open this buffer in a frame of its own"::
     get(M, text_buffer, Buffer),
-    get(Buffer, open, window, Frame),
-    get(Frame?current_pane, editor, NewEditor),
+    get(Buffer, open, window, View),
+    get(View, editor, NewEditor),
     get(M, caret, Here),
     send(NewEditor, caret, Here).
 

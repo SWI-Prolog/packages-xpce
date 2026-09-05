@@ -760,8 +760,8 @@ find_tag(M, Tag:emacs_tag, Where:[{here,tab,split,window}], Editor:editor) :<-
         emacs_update_tags,
         auto_call(emacs_tag(Tag, SearchDir, File, Line))
     ->  new(B, emacs_buffer(File)),
-        get(B, open, Where, Frame),
-        get(Frame?current_pane, editor, Editor),
+        get(B, open, Where, View),
+        get(View, editor, Editor),
         send(M, location_history),
         send(Editor, line_number, Line),
         adjust_tag(Editor, Tag),

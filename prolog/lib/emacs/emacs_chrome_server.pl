@@ -121,8 +121,8 @@ edit_file(File) :-
 create_editor(File, MeID) :-
     new(Proxy, emacs_chrome_proxy(MeID)),
     new(B, emacs_buffer(File)),
-    get(B, open, tab, Frame),
-    send(Frame, expose),
-    get(Frame?current_pane, editor, Editor),
+    get(B, open, tab, View),
+    send(View, expose),
+    get(View, editor, Editor),
     new(H, hyper(Proxy, Editor, editor, server)),
     send(H, send_method, @emacs_chrome_server_method).

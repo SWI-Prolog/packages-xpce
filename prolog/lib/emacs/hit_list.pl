@@ -145,8 +145,8 @@ goto(L, Fragment:fragment) :->
     "Indicate the fragment"::
     send(L, used, @on),
     get(Fragment, text_buffer, TB),
-    get(TB, open, tab, Frame),
-    get(Frame?current_pane, editor, Editor),
+    get(TB, open, tab, View),
+    get(View, editor, Editor),
     get(L, message, Method),
     send(Editor, Method, Fragment?start).
 

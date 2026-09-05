@@ -261,7 +261,8 @@ test(a_buffer_is_not_shown_in_a_window_of_terminals, true(Landed == own)) :-
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, FT),
     new(B, emacs_buffer(@nil, '*not-here*')),
-    get(B, open, tab, F),
+    get(B, open, tab, V),
+    get(V, frame, F),
     (   F == FT ->  Landed = terminal_window ;  Landed = own ).
 
 test(and_a_window_of_terminals_is_not_the_current_frame, [fail]) :-
@@ -278,15 +279,17 @@ test(a_buffer_opens_in_a_window_that_also_holds_a_terminal,
     emacs,
     mixed_window(F),
     new(B, emacs_buffer(@nil, '*mixed-open*')),
-    get(B, open, tab, In),
+    get(B, open, tab, V),
+    get(V, frame, In),
     (   In == F ->  Landed = same_window ;  Landed = elsewhere ).
 
 test(and_asking_twice_goes_back_to_the_view_it_made, true(Views == 1)) :-
     emacs,
     mixed_window(F),
     new(B, emacs_buffer(@nil, '*mixed-twice*')),
-    get(B, open, tab, F),
-    get(B, open, tab, F),
+    get(B, open, tab, V),
+    get(B, open, tab, V),                % the same view, in the same frame
+    get(V, frame, F),
     get(F, panes, Chain),
     chain_list(Chain, Panes),
     aggregate_all(count,

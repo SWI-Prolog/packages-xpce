@@ -794,8 +794,8 @@ find_definition(M, For:prolog_predicate, Where:[{here,tab,split,window}]) :->
         ;   xref_defined(TB, Head, constraint(Location))
         ;   xref_defined(TB, Head, foreign(Location))
         )
-    ->  get(TB, open, Where, Frame),
-        get(Frame?current_pane, editor, Editor),
+    ->  get(TB, open, Where, View),
+        get(View, editor, Editor),
         (   integer(Location)
         ->  send(Editor, goto_line, Location, title := For?print_name)
         ;   Location = (File:Line)
@@ -806,8 +806,8 @@ find_definition(M, For:prolog_predicate, Where:[{here,tab,split,window}]) :->
         xref_defined(TB, Head, imported(File))      % imported
     ->  send(@emacs, ensure_source_file, File),
         new(B, emacs_buffer(File)),
-        get(B, open, Where, EmacsFrame),
-        get(EmacsFrame?current_pane, mode, Mode),
+        get(B, open, Where, View),
+        get(View, mode, Mode),
         send(Mode, instance_of, emacs_prolog_mode),
         send(Mode, find_local_definition, For)
     ;   get(For, source, SourceLocation)            % From Prolog DB
@@ -3065,8 +3065,8 @@ edit(F, Where:[{here,tab,split,window}]) :->
     class_source(TB, ClassName, Source),
     (   Source = line(Line)
     ->  get(F, text_buffer, TB),
-        get(TB, open, Where, Frame),
-        send(Frame?current_pane?editor, goto_line, Line)
+        get(TB, open, Where, View),
+        send(View?editor, goto_line, Line)
     ;   object(Source),
         send(Source, instance_of, source_location)
     ->  send(@emacs, goto_source_location, Source, Where)

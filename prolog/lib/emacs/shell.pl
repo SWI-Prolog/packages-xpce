@@ -300,8 +300,8 @@ start_process(B) :->
 
 open(B, Where:[{here,tab,split,window}]) :->
     "Create window for buffer"::
-    get(B, open, Where, Frame),
-    send(Frame?editor, caret, @default),
+    get(B, open, Where, View),
+    send(View?editor, caret, @default),
     send(B, update_label).
 
 :- pce_end_class.

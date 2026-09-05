@@ -304,8 +304,7 @@ test(a_buffer_asked_for_reuses_the_pane_when_split) :-
 test(open_split_splits_the_current_frame) :-
     emacs(_F, _V),                      % <-open picks <-current_frame,
     scratch(B),                         % which need not be that one
-    get(B, open, split, Frame),
-    get(Frame, current_pane, V),
+    get(B, open, split, V),
     get(V, text_buffer, B),
     get(V, container, tab_frame, TF),
     get(TF?windows, size, N),
@@ -432,7 +431,8 @@ test(a_view_of_its_own_labels_its_frame) :-
     start_emacs,
     scratch(B),
     get(B, name, Name),
-    get(B, open, window, F),
+    get(B, open, window, V),
+    get(V, frame, F),
     frame_label(F, Name),
     tabs(F, 1).
 
