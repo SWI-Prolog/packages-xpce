@@ -975,7 +975,10 @@ test(and_the_small_one_shrinks_in_proportion) :-
 %   window with room for none of them at their ideal size.  This is a
 %   terminal, a tool beside it and the terminal split.
 
-crowded(TF, [Big, Small, Big2]) :-
+crowded(TF, Windows) :-
+    crowded(_TW, TF, Windows).
+
+crowded(TW, TF, [Big, Small, Big2]) :-
     new(TW, tabbed_window('Test', size(400,300))),
     new(Big, picture(big, size(400, 500))),
     send(TW, tab, new(TF, tab_frame(Big, one))),
@@ -984,6 +987,43 @@ crowded(TF, [Big, Small, Big2]) :-
     send(TF, split, new(Small, picture(small, size(200, 100))), Big, horizontally),
     send(TF, split, new(Big2, picture(big2, size(400, 500))), Big, horizontally),
     send(TW, resize).
+
+%       Dragging the gap above the small one makes it taller.  The tiles
+%       above the gap hold on to the size they have, which is not the size
+%       they asked for once anything has had to give way.
+
+test(dragging_a_gap_gives_the_pane_below_it_the_room) :-
+    crowded(TW, TF, [_Big, Small, _Big2]),
+    geometry(Small, area(_, SY, _, H0)),
+    get(TF?tile, border, B),
+    GapY is SY - B//2 - 1,
+    drag(TW, TF, 50, GapY, 50, GapY-60),
+    geometry(Small, area(_, _, _, H1)),
+    H1 > H0.
+
+test(and_dragging_it_back_takes_it_away_again) :-
+    crowded(TW, TF, [_Big, Small, _Big2]),
+    get(TF?tile, border, B),
+    geometry(Small, area(_, SY0, _, _)),
+    G0 is SY0 - B//2 - 1,
+    drag(TW, TF, 50, G0, 50, G0-60),
+    geometry(Small, area(_, SY1, _, H1)),
+    G1 is SY1 - B//2 - 1,
+    drag(TW, TF, 50, G1, 50, G1+40),
+    geometry(Small, area(_, _, _, H2)),
+    H2 < H1.
+
+test(and_none_of_them_collapses_along_the_way) :-
+    crowded(TW, TF, Windows),
+    Windows = [_Big, Small, _Big2],
+    get(TF?tile, border, B),
+    geometry(Small, area(_, SY, _, _)),
+    GapY is SY - B//2 - 1,
+    drag(TW, TF, 50, GapY, 50, GapY-60),
+    forall(member(W, Windows),
+           ( geometry(W, area(_, _, _, H)),
+             H > 0
+           )).
 
 :- end_tests(tab_frame_resize).
 

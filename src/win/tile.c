@@ -915,7 +915,11 @@ setTile(TileObj t, Int x, Int y, Int w, Int h)
       { TileObj t2 = cell->value;
 
 	if ( before )
-	{ assign(t2, horStretch, ZERO); /* hold on to the size they have */
+	{ if ( t2 != t && valInt(t2->area->w) > 0 )
+	    assign(t2, idealWidth, t2->area->w); /* the size they have: it is */
+					/* not <-ideal_width once anything */
+					/* has had to give way */
+	  assign(t2, horStretch, ZERO); /* hold on to the size they have */
 	  assign(t2, horShrink,  ZERO);
 	  assign(t2, resized,    ON);	/* but stay resizable, see */
 	  if ( t2 == t )		/* ICanResizeTile() */
@@ -956,7 +960,9 @@ setTile(TileObj t, Int x, Int y, Int w, Int h)
       { TileObj t2 = cell->value;
 
 	if ( before )
-	{ assign(t2, verStretch, ZERO);
+	{ if ( t2 != t && valInt(t2->area->h) > 0 )
+	    assign(t2, idealHeight, t2->area->h);	/* see above */
+	  assign(t2, verStretch, ZERO);
 	  assign(t2, verShrink,  ZERO);
 	  assign(t2, resized,    ON);
 	  if ( t2 == t )
