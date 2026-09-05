@@ -360,6 +360,40 @@ test(a_menu_item_without_a_message_goes_to_the_current_pane,
     get(F, menu_dialog, MD),
     get(MD, client, Client).
 
+%       Alt-<char> to open a popup and the same again to run an item only
+%       works on a bar XPCE draws itself, where the character is
+%       underlined.  A popup has to be able to say which bar it is on --
+%       through however many pull-rights -- for the assignment to know.
+
+test(a_popup_on_the_bar_knows_the_bar, true(Bar == MB)) :-
+    frame(F, _App, _P),
+    get(F, menu_bar, MB),
+    get(MB, member, file, Popup),
+    get(Popup, menu_bar, Bar).
+
+test(and_so_does_a_pull_right_under_it, true(Bar == MB)) :-
+    frame(F, _App, _P),
+    get(F, menu_bar, MB),
+    get(MB, member, file, Popup),
+    send(Popup, append, menu_item(more)),
+    get(Popup, member, more, Item),
+    send(Item, popup, new(Sub, popup(more))),
+    get(Sub, menu_bar, Bar).
+
+test(while_a_popup_on_no_bar_says_nothing, [fail]) :-
+    new(P, popup(loose)),
+    get(P, menu_bar, _).
+
+test(a_popup_of_the_bar_leaves_its_items_alone, true(Accelerators == [@default])) :-
+    frame(F, _App, _P),
+    get(F, menu_bar, MB),
+    get(MB, member, file, Popup),
+    send(Popup, append, menu_item(alpha)),
+    send(Popup, assign_accelerators),
+    get(Popup, member, alpha, Item),
+    get(Item, accelerator, A),
+    Accelerators = [A].
+
 :- end_tests(pane_frame_menu_bar).
 
                  /*******************************
