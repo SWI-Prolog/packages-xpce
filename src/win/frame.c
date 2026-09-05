@@ -981,7 +981,15 @@ attachWindowFrame(FrameObj fr, PceWindow sw)
 
 static status
 detachWindowFrame(FrameObj fr, PceWindow sw)
-{ DeviceGraphical((Graphical)sw, NIL);
+{ /* A window that carries scrollbars or a label is a member of mine
+     through its decorator, and is displayed on that decorator.  Letting
+     go of it must take the decorator out of whatever holds it, and must
+     not take the window out of its own decorator.
+  */
+  while ( notNil(sw->decoration) )
+    sw = sw->decoration;
+
+  DeviceGraphical((Graphical)sw, NIL);
 
   if ( createdWindow(sw) && sw->frame == fr )
     return send(fr, NAME_delete, sw, EAV);
