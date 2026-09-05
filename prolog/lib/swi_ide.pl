@@ -46,6 +46,8 @@
 :- autoload(library(www_browser), [www_open_url/1]).
 :- autoload(library(swi_preferences), [prolog_edit_preferences/1]).
 :- autoload(library(pce_openframes), [confirm_open_frames/1]).
+:- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(lists), [member/2]).
 :- require([ pce_image_directory/1,
 	     file_directory_name/2
 	   ]).
@@ -98,6 +100,9 @@ prolog_ide(Action) :-
 :- pce_global(@prolog_exception_window, new(prolog_trace_exception)).
 
 :- pce_begin_class(prolog_ide, application, "Prolog IDE application").
+
+class_variable(tool_placement, {frame,tab,split}, tab,
+               "Where a tool the user asks for is put").
 
 initialise(IDE) :->
     "Create as service application"::
@@ -177,12 +182,7 @@ open_interactor(_) :->
 thread_monitor(IDE) :->
     "Open a monitor for running threads"::
     (   current_prolog_flag(threads, true)
-    ->  (   get(IDE, member, prolog_thread_monitor, Monitor)
-        ->  true
-        ;   new(Monitor, prolog_thread_monitor),
-            send(Monitor, application, IDE)
-        ),
-        send(Monitor, open)
+    ->  send(IDE, show_tool, prolog_thread_monitor)
     ;   send(@display, report, error,
              'This version of SWI-Prolog is not built \n\c
                   with thread-support')
@@ -215,10 +215,95 @@ visual_hierarchy(_IDE) :->
     ).
 
                  /*******************************
+                 *          TOOL PANES          *
+                 *******************************/
+
+/* A tool that is a pane rather than a window of its own.
+
+Such a tool lives in a tab of a window of the IDE, beside a terminal or
+an editor or another tool.  There is one of each: asking for it again
+brings the one there is into view rather than making a second.
+*/
+
+tool(IDE, Class:name, Pane:window) :<-
+    "The tool pane of that class, in whichever window holds it"::
+    get(IDE, members, Frames),
+    chain_list(Frames, List),
+    member(F, List),
+    send(F, instance_of, pane_frame),
+    get(F, panes, Panes),
+    chain_list(Panes, Ps),
+    member(Pane, Ps),
+    send(Pane, instance_of, Class),
+    !.
+
+%       Where a tool the user asks for is put: in a window of its own, in
+%       a tab of the window they are working in, or beside what is already
+%       there.  `prolog_ide.tool_placement' says which, so it can be set
+%       once in a Defaults file and hold for every tool.
+
+show_tool(IDE, Class:name, How:[{frame,tab,split}], Pane:window) :<-
+    "Show the tool pane of that class, making one if there is none"::
+    (   get(IDE, tool, Class, Pane)
+    ->  get(Pane, frame, F),
+        send(F, current_pane, Pane)
+    ;   Term =.. [Class],
+        new(Pane, Term),
+        get(IDE, tool_placement, How, Where),
+        (   Where \== frame,
+            get(IDE, current_frame, F)
+        ->  (   Where == split
+            ->  send(F, split, Pane, @default, ?(IDE, pane_side, Pane))
+            ;   send(F, append_pane, Pane, @default, @on)
+            )
+        ;   new(F, pane_frame(IDE, @default, Pane))
+        )
+    ),
+    send(F, open),
+    send(F, expose).
+
+show_tool(IDE, Class:name, How:[{frame,tab,split}]) :->
+    "Show the tool pane of that class"::
+    get(IDE, show_tool, Class, How, _).
+
+pane_side(_IDE, Pane:window, Side:{above,below,left,right}) :<-
+    "Which side of what is there a tool is added on"::
+    (   send(Pane, has_get_method, pane_side)
+    ->  get(Pane, pane_side, Side)
+    ;   Side = below
+    ).
+
+tool_placement(IDE, How:[{frame,tab,split}], Where:name) :<-
+    "Where a new tool goes; How overrules the setting"::
+    (   How \== @default
+    ->  Where = How
+    ;   get(IDE, class_variable_value, tool_placement, Where)
+    ).
+
+tool_placement(_IDE, Where:{frame,tab,split}) :->
+    "Say where a tool the user asks for is to be put"::
+    get(@pce, convert, prolog_ide, class, Class),
+    send(Class, class_variable_value, tool_placement, Where).
+
+update_tool_placement_menu(IDE, Popup:popup) :->
+    "Tick where a tool goes now"::
+    get(IDE, tool_placement, @default, Where),
+    send(Popup, selection, Where).
+
+current_frame(IDE, F:pane_frame) :<-
+    "A window of mine to put a tool in"::
+    get(IDE, members, Frames),
+    chain_list(Frames, List),
+    member(F, List),
+    send(F, instance_of, pane_frame),
+    send(F, on_current_desktop),
+    !.
+
+                 /*******************************
                  *          THE WINDOWS         *
                  *******************************/
 
-/** What a pane_frame asks of the application it belongs to.
+/* What a pane_frame asks of the application it belongs to.
 
 Every window of the IDE belongs to me, whichever tool opened it, so that
 it behaves the same however it was made: dropping a terminal onto an
@@ -352,8 +437,21 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
                           message(IDE, preferences, prolog)),
                 menu_item('GUI_preferences',
                           message(IDE, preferences, xpce),
-                          end_group := @on)
+                          end_group := @on),
+                new(Placement, menu_item(new_tools_open))
               ]),
+    send(Placement, popup,
+         new(PlacementPopup,
+             popup(tool_placement,
+                   message(IDE, tool_placement, @arg1)))),
+    send_list(PlacementPopup, append,
+              [ menu_item(frame, @default, 'In a window of its own'),
+                menu_item(tab,   @default, 'In a tab'),
+                menu_item(split, @default, 'Beside what is there')
+              ]),
+    send(PlacementPopup, show_current, @on),
+    send(PlacementPopup, update_message,
+         message(IDE, update_tool_placement_menu, @receiver)),
     send_list(Tools, append,
               [ menu_item(navigator,
                           message(IDE, open_navigator)),

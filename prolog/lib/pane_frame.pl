@@ -154,6 +154,19 @@ name_frame(F) :-
     gensym(pane_frame, Name),
     send(F, name, Name).
 
+%!  placed_area(+Window, -Area) is det.
+%
+%   Where a window sits among the ones it is tiled with.  A window that
+%   carries a label or scrollbars of its own is wrapped in a
+%   window_decorator, and it is the decorator the tile places.
+
+placed_area(W, Area) :-
+    (   get(W, decoration, Decor),
+        Decor \== @nil
+    ->  get(Decor, area, Area)
+    ;   get(W, area, Area)
+    ).
+
 %!  modal_transient(+Frame) is semidet.
 %
 %   True while a transient window of Frame is up.  The focus must not be
@@ -244,7 +257,8 @@ append_pane(F, Pane:window, Label:[name], Expose:[bool]) :->
 
 split(F, Pane:window,
          Relative:relative_to=[window],
-         Direction:direction=[{horizontally,vertically}]) :->
+         Direction:direction=[{horizontally,vertically,
+                               above,below,left,right}]) :->
     "Add Pane beside Relative, in the tab Relative is in"::
     (   Relative == @default
     ->  get(F, current_pane, Rel)
@@ -941,7 +955,7 @@ close_other_tabs(Tab) :->
                  *          STATUS BAR          *
                  *******************************/
 
-/** The bar at the bottom of a pane_frame.
+/* The bar at the bottom of a pane_frame.
 
 It does three things at once, as the minibuffer of an editor does: it
 carries the reporter every ->report of the frame ends up on, it is where
@@ -1151,7 +1165,7 @@ history_source(D, Source) :-
                  *         PANE TEMPLATE        *
                  *******************************/
 
-/** What a pane does not have to write out for itself.
+/* What a pane does not have to write out for itself.
 
 A pane is any window in a pane_tab, and none of the pane protocol is
 compulsory.  This template carries the parts that would otherwise be
@@ -1211,6 +1225,76 @@ new_window(P) :->
     ),
     send(new(pane_frame(App, @default, New)), open).
 
+move_to_tab(P) :->
+    "Move me out of a split, into a tab of my own"::
+    get(P, pane_frame, F),
+    get(P, pane_tab, Tab),
+    get(Tab, windows, Windows),
+    get(Windows, size, Size),
+    Size > 1,                           % a tab of my own already
+    send(Tab, delete, P),               % take me out without destroying me
+    send(F, append_pane, P, @default, @on).
+
+%       The other way round: a pane that has a tab to itself is put into
+%       the tab beside it, which takes its own tab away.  ->append moves
+%       the pane out of the tab it is in, so there is nothing to undo
+%       here; the tab left empty destroys itself.
+
+neighbour_tab(P, Where:{previous,next}, Tab:tab_frame) :<-
+    "The tab before or after mine; fails if there is none"::
+    get(P, pane_tab, Mine),
+    get(Mine, device, Stack),
+    get(Stack, tabs, Tabs),
+    get(Tabs, index, Mine, Rank),
+    (   Where == previous
+    ->  N is Rank-1
+    ;   N is Rank+1
+    ),
+    N >= 1,
+    get(Tabs, nth1, N, Tab).
+
+can_move_to_neighbour_tab(P, Where:{previous,next}) :->
+    "True if my tab holds nothing but me and there is one beside it"::
+    get(P, pane_tab, Mine),
+    get(Mine, windows, Windows),
+    get(Windows, size, 1),              % sharing: ->move_to_tab is the way
+    get(P, neighbour_tab, Where, _).
+
+move_to_neighbour_tab(P, Where:{previous,next}) :->
+    "Move me into the tab before or after mine"::
+    send(P, can_move_to_neighbour_tab, Where),
+    get(P, pane_frame, F),
+    get(P, neighbour_tab, Where, Tab),
+    pane_side(P, Side),
+    send(Tab, append, P, @default, Side),
+    send(F, current_pane, P),
+    send(F, keyboard_focus, P).
+
+%       Same rule as `prolog_ide <-pane_side': a tool says which side of
+%       what is there it belongs on, anything else goes below.
+
+pane_side(P, Side) :-
+    send(P, has_get_method, pane_side),
+    get(P, pane_side, Side),
+    !.
+pane_side(_, below).
+
+detach(P) :->
+    "Move me into a window of my own"::
+    get(P, pane_frame, F),
+    get(F, panes, Panes),
+    get(Panes, size, Size),
+    Size > 1,                           % alone already: nothing to do
+    (   get(F, application, App0),
+        App0 \== @nil
+    ->  App = App0
+    ;   App = @default
+    ),
+    get(P, display_position, point(X, Y)),
+    send(F, delete_pane, P, @off),      % take me out without destroying me
+    new(New, pane_frame(App, @default, P)),
+    send(New, open, point(X, Y+20)).
+
 close_pane(P) :->
     "Close me; my frame goes with me if I was its last pane"::
     (   get(P, pane_frame, Frame)
@@ -1227,11 +1311,118 @@ event(P, Ev:event) :->
     ;   send_super(P, event, Ev)
     ).
 
-place_pane_handle(P, Inset:[int]) :->
-    "Put my split_handle back in my corner"::
-    (   get(P, member, split_handle, Handle)
-    ->  send(Handle, place, P, Inset)
-    ;   true                            % still being built
+:- pce_end_class(pane).
+
+
+                 /*******************************
+                 *          TOOL PANE           *
+                 *******************************/
+
+/* A pane that shows more than one window.
+
+Most panes are one window: a terminal, an editor.  A tool is usually
+several -- the thread monitor is a list of threads beside a graph -- and
+they have to be laid out against one another and to travel together.
+
+A tabbed_window holding a single tab_frame does both.  A tab_frame lays
+windows out with a tile the way class frame does for its members, so the
+windows can be arranged and the gaps between them dragged; a lone tab
+shows no label; and to everything outside it is one window, so it drops
+into a tab of a window of the IDE like any other pane.
+
+    :- pce_begin_class(my_tool, tool_pane, "...").
+
+    initialise(T) :->
+        send_super(T, initialise, my_tool),
+        send(T, append_window, new(B, my_browser)),
+        send(T, append_window, new(my_view), B, right).
+*/
+
+:- pce_begin_class(tool_pane, tabbed_window,
+                   "A pane of the IDE showing more than one window").
+:- use_class_template(pane).
+
+variable(grip, split_handle*, get, "The grip I am dragged by").
+
+%       Where I belong in a window that already has something in it: a
+%       navigator down the left, a monitor along the bottom.  It is a
+%       class variable, so a tool says where it goes by declaring one of
+%       its own, and the user overrules that from a Defaults file:
+%
+%           prolog_thread_monitor.pane_side: right
+
+class_variable(pane_side, {above,below,left,right}, below,
+               "Which side of what is there I am added on").
+
+initialise(TP, Label:[name]) :->
+    "Create empty, with a grip to drag me by"::
+    send_super(TP, initialise, Label),
+    send(TP, hide_single_label, @on),   % I am one pane, not a tab strip
+    send(TP, slot, grip, new(H, split_handle)),
+    send(H, pane, TP).                  % it moves me, not the window it is on
+
+pane_side(TP, Side:{above,below,left,right}) :<-
+    "Which side of what is there I am added on"::
+    get(TP, class_variable_value, pane_side, Side).
+
+append_window(TP, Window:window,
+                  Relative:relative_to=[window],
+                  Where:where=[{above,below,left,right}]) :->
+    "Add a window beside the ones I have"::
+    (   get(TP, content, Tab)
+    ->  send(Tab, append, Window, Relative, Where)
+    ;   send(TP, tab, tab_frame(Window, TP?name))
     ).
 
-:- pce_end_class(pane).
+content(TP, Tab:tab_frame) :<-
+    "The tab my windows are tiled in"::
+    get(TP, tabs, Tabs),
+    get(Tabs, head, Tab).
+
+%       Not <-member: on a tabbed_window that answers the window of a
+%       named tab.  The windows of a tool are told apart by their class.
+
+window(TP, Class:name, W:window) :<-
+    "A window of mine of the given class"::
+    get(TP, members, Windows),
+    get(Windows, find, message(@arg1, instance_of, Class), W).
+
+resize(TP, Tab:[tab]) :->
+    "Keep the grip on the window in my corner"::
+    send_super(TP, resize, Tab),
+    ignore(send(TP, place_grip)).
+
+%       Each of my windows has a surface of its own, so a grip displayed
+%       on me is covered by whichever of them is over it.  It goes on the
+%       fixed layer of the window that is in my corner instead, and moves
+%       house when the layout changes which window that is.  Where in that
+%       window it sits is the grip's own business -- see `split_handle
+%       ->compute'.
+
+place_grip(TP) :->
+    "Put the grip on the window in my top right corner"::
+    get(TP, grip, Handle),
+    Handle \== @nil,
+    get(TP, corner_window, W),
+    (   get(Handle, device, W)
+    ->  true
+    ;   send(W, display_fixed, Handle)
+    ).
+
+corner_window(TP, W:window) :<-
+    "The window of mine at my top right"::
+    get(TP, content, Tab),
+    get(Tab, windows, Chain),
+    chain_list(Chain, Windows),
+    Windows \== [],
+    get(TP, size, size(PW, _)),
+    Right is PW-1,
+    (   member(W, Windows),
+        placed_area(W, area(X, Y, AW, AH)),
+        Right >= X, Right =< X+AW,
+        0 >= Y, 0 =< Y+AH
+    ->  true
+    ;   Windows = [W|_]
+    ).
+
+:- pce_end_class(tool_pane).

@@ -2061,9 +2061,65 @@ applyMenu(Menu m, BoolObj always)
 		 *	   ACCELERATORS		*
 		 *******************************/
 
+/* The menu bar a popup is on, however deep in pull-rights it sits: a
+   popup on the bar has the bar as its <-context, and one on a pull-right
+   has the menu_item that opens it.  Fails for a popup that is not on a
+   menu bar at all -- one posted by a popup_gesture, say.
+*/
+
+static MenuBar
+getMenuBarMenu(Menu m)
+{ int depth;
+
+  for(depth = 0; depth < 20; depth++)
+  { Any ctx;
+
+    if ( !instanceOfObject(m, ClassPopup) )
+      break;
+    ctx = ((PopupObj)m)->context;
+
+    if ( instanceOfObject(ctx, ClassMenuBar) )
+      answer(ctx);
+    if ( !instanceOfObject(ctx, ClassMenuItem) )
+      break;
+    m = ((MenuItem)ctx)->menu;
+  }
+
+  fail;
+}
+
+
+/* Alt-<char> to open a popup and the same again to run an item is an
+   XPCE thing: it works because XPCE draws the bar and underlines the
+   character.  A native bar draws neither, and the accelerator would show
+   up as the meaningless "\ex" beside every item.
+*/
+
+static int
+auto_accelerator(Name acc)
+{ return isName(acc) && strncmp(strName(acc), "\\e", 2) == 0;
+}
+
+
 static status
 assignAcceletatorsMenu(Menu m)
-{ return assignAccelerators(m->members, CtoName("\\e"), NAME_label);
+{ MenuBar mb = getMenuBarMenu(m);
+
+  if ( mb && ws_has_native_menubar(mb) )
+  { Cell cell;
+
+    for_cell(cell, m->members)		/* one may be left from before the */
+    { MenuItem mi = cell->value;	/* popup reached the bar */
+
+      if ( instanceOfObject(mi, ClassMenuItem) &&
+	   auto_accelerator(mi->accelerator) )
+	send(mi, NAME_accelerator, NIL, EAV);
+    }
+
+    succeed;
+  }
+
+  return assignAccelerators(m->members, CtoName("\\e"), NAME_label);
 }
 
 
@@ -2264,6 +2320,8 @@ static getdecl get_menu[] =
      NAME_layout, "Minimum width for value in pixels"),
   GM(NAME_selected, 1, "selected=bool", "item=member:menu_item", getSelectedMenu,
      NAME_selection, "Find out if menu_item or value is selected"),
+  GM(NAME_menuBar, 0, "menu_bar", NULL, getMenuBarMenu,
+     NAME_organisation, "The menu bar I am a popup of"),
   GM(NAME_selection, 0, "values=any|chain*", NULL, getSelectionMenu,
      NAME_selection, "Get current selection (menu_item<-value or chain)")
 };

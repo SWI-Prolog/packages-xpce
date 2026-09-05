@@ -253,6 +253,13 @@ parse_accelerator(const char *s, char *key, size_t keylen, unsigned *modp)
   if ( !s )
     return false;
 
+  /* "\ex" is XPCE's own Alt-x mnemonic for a bar it draws itself, where
+   * the character is underlined in the label.  It is not a key to offer
+   * the window system.  See `menu ->assign_accelerators'.
+   */
+  if ( s[0] == '\\' && s[1] == 'e' )
+    return false;
+
   for(;;)				/* strip modifiers */
   { const modname *m;
 

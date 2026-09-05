@@ -697,6 +697,7 @@ End;
   Name		focus_button;		/* Button that initiated focus */ \
   EventObj	focus_event;		/* Event that grabbed the focus */ \
   Point		scroll_offset;		/* Amount scrolled */ \
+  Chain		fixed_graphicals;	/* Graphicals that do not scroll */ \
   PopupObj	popup;			/* Associated popup */ \
   EventObj	current_event;		/* Currently processed event */ \
   BoolObj	sensitive;		/* Sensitive to events */ \

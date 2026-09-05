@@ -207,6 +207,7 @@ epilog(M:Options0) :-
     send(Epilog, name, TheName),
     get(Epilog, current_terminal, PT),
     configure_terminal(PT, Profile, Options),
+    ignore(send(PT?window, pane_exposed)),  % the tab was named before this
     ignore(option(object(Epilog), Options)),
 
     send(Epilog, open),
@@ -721,6 +722,7 @@ unlink_terminal_thread(PT) :- % Epilog attached to a running thread
 unlink_terminal_thread(PT) :- % Normal Epilog window
     retract(current_prolog_terminal(Thread, PT)),
     !,
+    send(PT, send, '\u0004'),
     thread_signal(Thread, clean_exit).
 unlink_terminal_thread(_).
 
@@ -1831,7 +1833,7 @@ initialise(T, Title:title=[name],
     send(T, display, new(Bar, epilog_report)),  % after TI: it draws on top
     send(Bar, displayed, @off),                 % ->display turned it on
     send(Bar, client, TI),
-    send(T, display, new(split_handle)),        % over the terminal as well
+    send(T, display_fixed, new(split_handle)),  % puts itself in the corner
     send(T, keyboard_focus, TI).
 
 resize(T) :->
@@ -1843,16 +1845,48 @@ resize(T) :->
     get(T, member, terminal, TI),
     send(TI, set, 0, 0, TW-SBW, TH),
     get(T, member, epilog_report, Bar),
-    send(Bar, place, 0, 0, TW-SBW, TH),
-    get(T, member, split_handle, Handle),
-    send(Handle, place, T, SBW).
+    send(Bar, place, 0, 0, TW-SBW, TH).
 
 create(T, Parent:[window]) :->
     "Create the terminal and attach a Prolog thread to it"::
     send_super(T, create, Parent),      % a subwindow is created with the
     get(T, member, terminal, TI),       % window it is displayed on
     get(T, tid, TID),
-    get(TI, connect, TID, _Title).
+    get(TI, connect, TID, Title),
+    (   Title == @default               % it was connected already
+    ->  true
+    ;   ignore(send(T, thread_connected, Title))
+    ).
+
+%       A tab is named when it is added, which is before its terminal has
+%       a thread to be named after, so the name it starts with says what
+%       it runs.  Once the thread is there, a Prolog toplevel goes by its
+%       alias -- con1, con2 -- and the user renames the thread to rename
+%       the tab.  Anything else keeps the name of what it runs: a shell
+%       has a thread too, and `con3' would say nothing about it.
+
+thread_connected(T, Thread:name) :->
+    "Name my tab after the thread that has just been connected"::
+    get(T, terminal, PT),
+    get(PT, profile, prolog),
+    send(T, retitle_tab, Thread).
+
+pane_exposed(T) :->
+    "Take the name of what I run, which I may only know now"::
+    get(T, terminal, PT),
+    terminal_base_label(PT, Base),
+    ignore(send(T, retitle_tab, Base)).
+
+retitle_tab(T, Base:name) :->
+    "Put Base on my tab, made unique, unless the user named it"::
+    get(T, pane_frame, F),
+    get(T, pane_tab, Tab),
+    get(Tab, renamed, @off),            % the user named it themselves
+    get(Tab, label, Now),
+    \+ says_the_same(Now, Base),        % renaming would only bump the
+    unique_tab_label(F, Base, 1, Label), % number after it
+    send(T, tab_label, Label),
+    send(Tab, label, Label).
 
 sibling(T, W:epilog_window) :<-
     "A new terminal window that continues mine"::
@@ -1935,7 +1969,7 @@ fill_menu_bar(_T, MD:tool_dialog) :->
     send(NewTab, popup,
          new(NewTabPopup, popup(new_tab,
                                 message(@prolog, epilog_tab_with_profile,
-                                        @receiver?frame, @arg1)))),
+                                        @event?receiver?frame, @arg1)))),
     send(NewTabPopup, update_message,
          message(@prolog, epilog_profile_menu, @receiver)),
     send(NewWindow, popup,
@@ -2421,13 +2455,34 @@ current_terminal(F, Terminal:prolog_terminal) :<-
     get(F, current_pane, Window),
     get(Window, terminal, Terminal).
 
+%       A terminal is told it has the keyboard whenever the window it is
+%       in is activated -- including while the frame is telling everyone
+%       that another tab has come to the front, at which point the window
+%       being activated is the one on its way out.  Bringing its tab back
+%       is the last thing wanted, so all I do here is pick the terminal
+%       out of a tab that holds more than one pane.
+
 current_terminal(F, Terminal:prolog_terminal) :->
     "Make Terminal the one the user is working in"::
     get(Terminal, window, Window),
     (   get(F, current_pane, Window)
     ->  true                            % it already is
-    ;   send(F, current_pane, Window)
+    ;   in_view(Window)
+    ->  send(F, current_pane, Window)
+    ;   true
     ).
+
+%!  in_view(+Window) is semidet.
+%
+%   True when Window is in the tab that is in front.  A window on its way
+%   out may be half taken apart by then, and not being able to tell is
+%   the same answer as no.
+
+
+in_view(Window) :-
+    catch(( get(Window, container, tab, Tab),
+            get(Tab, status, on_top)
+          ), _, fail).
 
 inject(F, Command:prolog) :->
     "Inject a command into the terminal in view"::
@@ -2459,17 +2514,43 @@ terminal_base_label(PT, Label) :-
 %   Base, or Base with a number after it, such that no tab of Frame
 %   carries it already.
 
+%!  says_the_same(+Label, +Base) is semidet.
+%
+%   Label is Base, or Base with a number after it as `unique_tab_label/4'
+%   writes them.  Either way it already says what Base says.
+
+says_the_same(Label, Base) :-
+    (   Label == Base
+    ->  true
+    ;   atom_concat(Base, Rest, Label),
+        atom_concat(' ', Digits, Rest),
+        atom_number(Digits, _)
+    ).
+
 unique_tab_label(F, Base, N, Label) :-
     (   N == 1
     ->  Try = Base
     ;   format(atom(Try), '~w ~d', [Base, N])
     ),
-    (   get(F, tabs, TW),
-        get(TW, tab, Try, _)
+    (   tab_labelled(F, Try)
     ->  N2 is N+1,
         unique_tab_label(F, Base, N2, Label)
     ;   Label = Try
     ).
+
+%!  tab_labelled(+Frame, +Label) is semidet.
+%
+%   A tab of Frame carries Label.  Not `tabbed_window <-tab', which finds
+%   a tab by its name: a tab keeps the name it was made with however it
+%   is labelled afterwards, and it is the label that has to be unique.
+
+tab_labelled(F, Label) :-
+    get(F, tabs, TW),
+    get(TW, tabs, Chain),
+    chain_list(Chain, Tabs),
+    member(Tab, Tabs),
+    get(Tab, label, Label),
+    !.
 
 
 

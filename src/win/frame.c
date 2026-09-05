@@ -1156,6 +1156,15 @@ keyboardFocusFrame(FrameObj fr, PceWindow sw)
 		EAV);
   }
 
+  /* A click that lands here says the window system gave us the keyboard,
+   * whatever we last heard.  FOCUS_GAINED is not sent again to a window
+   * that already had the focus, so a frame that came to believe it has
+   * none stays that way -- and then a click moves the focus between its
+   * panes without activating any of them.
+   */
+  if ( fr->input_focus != ON && ws_frame_has_input_focus(fr) )
+    send(fr, NAME_inputFocus, ON, EAV);
+
   if ( fr->input_focus == ON )
   { PceWindow iw = ( instanceOfObject(sw, ClassWindow) ? sw
 						       : getPointerWindowFrame(fr) );

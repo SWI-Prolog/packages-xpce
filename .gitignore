@@ -26,6 +26,7 @@
 *.blg
 TAGS
 swipl
+!swipl/
 autom4te.cache
 config.h.in
 configure

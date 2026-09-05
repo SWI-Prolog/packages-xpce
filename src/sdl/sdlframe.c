@@ -804,6 +804,28 @@ ws_raise_frame(FrameObj fr)
 }
 
 /**
+ * Does the window system consider this frame to have the keyboard?
+ *
+ * `frame <-input_focus' is kept up to date from the FOCUS_GAINED and
+ * FOCUS_LOST events, which can be missed: they are not sent when the
+ * window that has the focus already had it.  This is the truth to fall
+ * back on.
+ *
+ * @param fr Pointer to the FrameObj to test.
+ * @return true if the frame holds the keyboard focus.
+ */
+bool
+ws_frame_has_input_focus(FrameObj fr)
+{ WsFrame wfr = fr->ws_ref;
+
+  if ( !SDL_IsMainThread() )	/* only the main thread may ask; taking */
+    return false;		/* our own word for it is the safe answer */
+
+  return ( wfr && wfr->ws_window &&
+	   SDL_GetKeyboardFocus() == wfr->ws_window );
+}
+
+/**
  * Set the cursor  shape for the specified window. In  SDL, the cursor
  * is global for the application, i.e., it is _not_ set for a window.
  *

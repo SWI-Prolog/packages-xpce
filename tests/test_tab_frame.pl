@@ -319,11 +319,20 @@ editor(TF, Item) :-
 %   above the tab, so it lies at a negative y.
 
 label_click(TW, TF, Ev) :-
+    label_event(TW, TF, ms_left_down, 10, Ev).
+
+%!  label_event(+TabbedWindow, +Tab, +Kind, +Into, -Event) is det.
+%
+%   An event Into pixels along Tab's label.  `postNamedEvent()' hands
+%   ->label_event the tab as <-receiver, so say so here as well.
+
+label_event(TW, TF, Kind, Into, Ev) :-
     get(TF, label_offset, X),
     get(TF, label_height, H),
-    EX is X+10,
+    EX is X+Into,
     EY is -(H//2),
-    new(Ev, event(ms_left_down, TW, EX, EY)).
+    new(Ev, event(Kind, TW, EX, EY)),
+    send(Ev, slot, receiver, TF).
 
 test(a_label_is_not_editable_unless_asked) :-
     two_tabs(_TW, TF, _TF2),
@@ -340,8 +349,67 @@ test(an_editable_label_opens_over_itself) :-
     get(TF, label_offset, X),
     get(TF, label_height, H),
     get(TF?label_size, width, W),
-    get(Item, area, area(X, 0, W, IH)),
-    IH >= H.
+    get(Item, area, area(X, 0, IW, IH)),
+    IH >= H,
+    IW >= W.                            % a label is narrow to type in
+
+%       Room to type in, which is more than the label takes to draw --
+%       there is a whole name to put there.
+
+test(and_is_wider_than_the_label) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    send(TF, edit_label),
+    editor(TF, Item),
+    get(TF?label_size, width, W),
+    get(Item?area, width, IW),
+    IW > W.
+
+test(but_not_wider_than_the_row_it_is_in) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    send(TF, edit_label),
+    editor(TF, Item),
+    get(TF?device?area, width, RowW),
+    get(TF, label_offset, X),
+    get(Item?area, width, IW),
+    X+IW =< RowW.
+
+%       Escape and Return arrive as names from the window system and as
+%       character codes from a program.  Both have to work, or Escape does
+%       nothing where it counts.
+
+test(escape_by_name_leaves_the_label_alone) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    get(TF, label, Was),
+    send(TF, edit_label),
+    editor(TF, Item),
+    send(Item, selection, nope),
+    send(Item, typed, 'ESC'),
+    \+ editor(TF, _),
+    get(TF, label, Was).
+
+test(return_that_changes_nothing_closes_the_editor) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    get(TF, label, Was),
+    send(TF, edit_label),
+    editor(TF, Item),
+    send(Item, typed, 'RET'),
+    \+ editor(TF, _),
+    get(TF, label, Was).
+
+test(while_return_after_typing_takes_what_was_typed) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    send(TF, edit_label),
+    editor(TF, Item),
+    send(Item, selection, renamed),
+    send(Item, modified, @on),
+    send(Item, typed, 'RET'),
+    \+ editor(TF, _),
+    get(TF, label, renamed).
 
 test(what_is_typed_becomes_the_label) :-
     two_tabs(_TW, TF, TF2),
@@ -415,6 +483,89 @@ test(a_tab_frame_reaches_the_label_popup) :-
     two_tabs(TW, TF, _TF2),
     send(TW, label_popup, new(P, popup)),
     get(TF, label_popup, P).
+
+%       Dragging a label puts the tab somewhere else in the row.  The
+%       labels are laid out in the order the stack holds the tabs in, so
+%       the order of <-tabs is the order they are drawn in.
+
+test(a_tab_can_be_moved_along_the_row, true(Names == [two, one, three])) :-
+    three_tabs(TW, TF1, TF2, _TF3),
+    get(TF2, device, TS),
+    send(TS, move_tab, TF2, TF1),
+    tab_names(TW, Names).
+
+test(and_back_again, true(Names == [one, two, three])) :-
+    three_tabs(TW, TF1, TF2, _TF3),
+    get(TF1, device, TS),
+    send(TS, move_tab, TF2, TF1),
+    send(TS, move_tab, TF1, TF2),
+    tab_names(TW, Names).
+
+test(a_label_says_which_tab_is_at_a_place, true(Name == two)) :-
+    three_tabs(TW, _TF1, TF2, _TF3),
+    get(TF2, device, TS),
+    get(TF2, label_offset, X),
+    get(TS, tab_at, X+2, Tab),
+    get(Tab, name, Name).
+
+test(and_nothing_past_the_end_of_the_row, [fail]) :-
+    three_tabs(_TW, _TF1, _TF2, TF3),
+    get(TF3, device, TS),
+    get(TF3, label_offset, X),
+    get(TF3?label_size, width, W),
+    get(TS, tab_at, X+W+10, _).
+
+test(dragging_a_label_over_another_moves_the_tab,
+     true(Names == [two, one, three])) :-
+    three_tabs(TW, TF1, TF2, _TF3),
+    drag_label(TW, TF2, TF1),
+    tab_names(TW, Names).
+
+test(and_dragging_it_back_puts_it_where_it_was,
+     true(Names == [one, two, three])) :-
+    three_tabs(TW, TF1, TF2, _TF3),
+    drag_label(TW, TF2, TF1),
+    drag_label(TW, TF2, TF1),           % TF1 is on the right of it now
+    tab_names(TW, Names).
+
+test(while_dragging_a_label_over_itself_changes_nothing,
+     true(Names == [one, two, three])) :-
+    three_tabs(TW, _TF1, TF2, _TF3),
+    drag_label(TW, TF2, TF2),
+    tab_names(TW, Names).
+
+%!  drag_label(+TabbedWindow, +Tab, +Onto) is det.
+%
+%   Press Tab's label and drag it onto Onto's, the way the window system
+%   delivers it: to the window, in its coordinates.
+
+drag_label(TW, Tab, Onto) :-
+    get(Tab, device, TS),
+    get(TS, area, area(SX, SY, _, _)),
+    get(Tab, label_height, H),
+    Y is SY + H//2,
+    get(Tab, label_offset, From),
+    get(Onto, label_offset, To),
+    DownX is SX+From+5,
+    DragX is SX+To+2,
+    ignore(send(TW, post_event, event(ms_left_down, TW, DownX, Y))),
+    ignore(send(TW, post_event, event(ms_left_drag, TW, DragX, Y))),
+    ignore(send(TW, post_event, event(ms_left_up,   TW, DragX, Y))).
+
+%!  three_tabs(-TabbedWindow, -One, -Two, -Three) is det.
+
+three_tabs(TW, TF1, TF2, TF3) :-
+    new(TW, tabbed_window('Test', size(400,300))),
+    send(TW, tab, new(TF1, tab_frame(new(_P1, picture), one))),
+    send(TW, tab, new(TF2, tab_frame(new(_P2, picture), two))),
+    send(TW, tab, new(TF3, tab_frame(new(_P3, picture), three))),
+    send(TW, open),
+    send(TW, resize).
+
+tab_names(TW, Names) :-
+    get(TW, tabs, Chain),
+    chain_list(Chain, Tabs),
+    findall(N, (member(T, Tabs), get(T, name, N)), Names).
 
 :- end_tests(tab_frame_label).
 
@@ -589,6 +740,25 @@ test(the_buttons_are_not_taken_for_tabs) :-
     CH =:= WH-LH,                       % a button did not count as a label
     get(TW, members, Members),
     get(Members, size, 2).
+
+%       The close button sits over the label, so the editor would cover it
+%       and a click meant for the editor would close the tab instead.
+
+test(the_buttons_go_away_while_a_label_is_edited) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, closable, @on),
+    send(TF, editable_label, @on),
+    close_button(TF, _),
+    send(TF, edit_label),
+    \+ close_button(TF, _).
+
+test(and_come_back_when_the_edit_ends) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, closable, @on),
+    send(TF, editable_label, @on),
+    send(TF, edit_label),
+    send(TF, end_label_edit),
+    close_button(TF, _).
 
 :- end_tests(tab_frame_buttons).
 
@@ -848,6 +1018,91 @@ test(no_gesture_inside_a_window) :-
     send(Down, slot, receiver, TF),
     \+ send(@tab_frame_resize_gesture, event, Down).
 
+%       What the tiles have to give up between them is shared out in
+%       proportion to what they are, so a small window keeps a small share
+%       rather than being asked for as many pixels as a large one and
+%       ending with none.
+
+test(a_small_window_keeps_a_share_of_a_space_too_small_for_all) :-
+    crowded(_TF, Windows),
+    forall(member(W, Windows),
+           ( geometry(W, area(_, _, _, H)),
+             H > 0
+           )).
+
+test(and_they_fit_in_the_tab_they_are_in) :-
+    crowded(TF, [A, B, C]),
+    get(TF?tile, border, Border),
+    get(TF, content_size, size(_, Room)),
+    geometry(A, area(_,_,_,HA)),
+    geometry(B, area(_,_,_,HB)),
+    geometry(C, area(_,_,_,HC)),
+    HA+HB+HC + 2*Border =< Room.
+
+test(and_the_small_one_shrinks_in_proportion) :-
+    crowded(_TF, [Big, Small|_]),
+    get(Big?tile, ideal_height, BI),
+    get(Small?tile, ideal_height, SI),
+    geometry(Big, area(_,_,_,BH)),
+    geometry(Small, area(_,_,_,SH)),
+    abs(BH*SI - SH*BI) =< BI+SI.        % the same fraction, give or take
+
+%!  crowded(-TabFrame, -Windows) is det.
+%
+%   A tab holding a tall window, a short one and another tall one, in a
+%   window with room for none of them at their ideal size.  This is a
+%   terminal, a tool beside it and the terminal split.
+
+crowded(TF, Windows) :-
+    crowded(_TW, TF, Windows).
+
+crowded(TW, TF, [Big, Small, Big2]) :-
+    new(TW, tabbed_window('Test', size(400,300))),
+    new(Big, picture(big, size(400, 500))),
+    send(TW, tab, new(TF, tab_frame(Big, one))),
+    send(TW, open),
+    send(TW, resize),
+    send(TF, split, new(Small, picture(small, size(200, 100))), Big, horizontally),
+    send(TF, split, new(Big2, picture(big2, size(400, 500))), Big, horizontally),
+    send(TW, resize).
+
+%       Dragging the gap above the small one makes it taller.  The tiles
+%       above the gap hold on to the size they have, which is not the size
+%       they asked for once anything has had to give way.
+
+test(dragging_a_gap_gives_the_pane_below_it_the_room) :-
+    crowded(TW, TF, [_Big, Small, _Big2]),
+    geometry(Small, area(_, SY, _, H0)),
+    get(TF?tile, border, B),
+    GapY is SY - B//2 - 1,
+    drag(TW, TF, 50, GapY, 50, GapY-60),
+    geometry(Small, area(_, _, _, H1)),
+    H1 > H0.
+
+test(and_dragging_it_back_takes_it_away_again) :-
+    crowded(TW, TF, [_Big, Small, _Big2]),
+    get(TF?tile, border, B),
+    geometry(Small, area(_, SY0, _, _)),
+    G0 is SY0 - B//2 - 1,
+    drag(TW, TF, 50, G0, 50, G0-60),
+    geometry(Small, area(_, SY1, _, H1)),
+    G1 is SY1 - B//2 - 1,
+    drag(TW, TF, 50, G1, 50, G1+40),
+    geometry(Small, area(_, _, _, H2)),
+    H2 < H1.
+
+test(and_none_of_them_collapses_along_the_way) :-
+    crowded(TW, TF, Windows),
+    Windows = [_Big, Small, _Big2],
+    get(TF?tile, border, B),
+    geometry(Small, area(_, SY, _, _)),
+    GapY is SY - B//2 - 1,
+    drag(TW, TF, 50, GapY, 50, GapY-60),
+    forall(member(W, Windows),
+           ( geometry(W, area(_, _, _, H)),
+             H > 0
+           )).
+
 :- end_tests(tab_frame_resize).
 
 
@@ -1097,6 +1352,21 @@ test(the_class_variables_resolve,
     get(@pce, convert, Class, class, TheClass),
     get(TheClass, class_variable, Var, ClassVariable),
     get(ClassVariable, value, _).
+
+test(the_handle_offers_a_window_and_a_tab_of_its_own_on_a_popup,
+     Items == [move_to_new_window, move_to_new_tab,
+               move_to_previous_tab, move_to_next_tab, close]) :-
+    new(P, picture),
+    send(P, display, new(H, split_handle)),
+    get(H, all_recognisers, Recognisers),
+    chain_list(Recognisers, Rs),
+    member(R, Rs),
+    send(R, instance_of, popup_gesture),
+    !,
+    get(R, popup, Popup),
+    get(Popup, members, Chain),
+    chain_list(Chain, Members),
+    findall(V, (member(MI, Members), get(MI, value, V)), Items).
 
 test(the_handle_drags_the_window_it_is_displayed_on) :-
     new(P, picture),

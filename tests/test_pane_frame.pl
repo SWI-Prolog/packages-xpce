@@ -360,6 +360,40 @@ test(a_menu_item_without_a_message_goes_to_the_current_pane,
     get(F, menu_dialog, MD),
     get(MD, client, Client).
 
+%       Alt-<char> to open a popup and the same again to run an item only
+%       works on a bar XPCE draws itself, where the character is
+%       underlined.  A popup has to be able to say which bar it is on --
+%       through however many pull-rights -- for the assignment to know.
+
+test(a_popup_on_the_bar_knows_the_bar, true(Bar == MB)) :-
+    frame(F, _App, _P),
+    get(F, menu_bar, MB),
+    get(MB, member, file, Popup),
+    get(Popup, menu_bar, Bar).
+
+test(and_so_does_a_pull_right_under_it, true(Bar == MB)) :-
+    frame(F, _App, _P),
+    get(F, menu_bar, MB),
+    get(MB, member, file, Popup),
+    send(Popup, append, menu_item(more)),
+    get(Popup, member, more, Item),
+    send(Item, popup, new(Sub, popup(more))),
+    get(Sub, menu_bar, Bar).
+
+test(while_a_popup_on_no_bar_says_nothing, [fail]) :-
+    new(P, popup(loose)),
+    get(P, menu_bar, _).
+
+test(a_popup_of_the_bar_leaves_its_items_alone, true(Accelerators == [@default])) :-
+    frame(F, _App, _P),
+    get(F, menu_bar, MB),
+    get(MB, member, file, Popup),
+    send(Popup, append, menu_item(alpha)),
+    send(Popup, assign_accelerators),
+    get(Popup, member, alpha, Item),
+    get(Item, accelerator, A),
+    Accelerators = [A].
+
 :- end_tests(pane_frame_menu_bar).
 
                  /*******************************
@@ -558,6 +592,183 @@ test(both_frames_keep_a_sensible_current_pane, true(Names == [one, second])) :-
     get(B, current_pane, CB), get(CB, name, NB),
     CB == Pane,                         % the moved one is current in B
     Names = [NA, NB].
+
+%       Dragging the grip moves a pane onto another one and clicking it
+%       picks the pane up, so a window of its own is offered on a popup.
+
+test(detaching_takes_the_pane_out_of_the_window_it_was_in,
+     Names == [one]) :-
+    frame(F, _App, P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    send(P2, detach),
+    get(F, panes, Chain),
+    chain_list(Chain, Panes),
+    findall(N, (member(P, Panes), get(P, name, N)), Names).
+
+test(and_gives_it_a_window_of_its_own, true(Alone == [second])) :-
+    frame(F, _App, _P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    send(P2, detach),
+    get(P2, frame, New),
+    New \== F,
+    get(New, panes, Chain),
+    chain_list(Chain, Panes),
+    findall(N, (member(P, Panes), get(P, name, N)), Alone).
+
+test(the_new_window_belongs_to_the_same_application, true(App2 == App)) :-
+    frame(F, App, _P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    send(P2, detach),
+    get(P2?frame, application, App2).
+
+test(a_pane_that_is_already_alone_has_nowhere_to_go, [fail]) :-
+    frame(_F, _App, P1),
+    send(P1, detach).
+
+%       And a pane sharing a tab with another can be given a tab of its
+%       own, which is the other half of the same offer.
+
+test(a_pane_in_a_split_can_be_given_a_tab_of_its_own,
+     true(Sizes == 1-2)) :-
+    frame(F, _App, P1),
+    pane(second, alpha, P2),
+    send(F, split, P2, P1, vertically),
+    send(P2, move_to_tab),
+    get(P2?pane_tab?windows, size, InItsTab),
+    get(F?tabs?tabs, size, Tabs),
+    Sizes = InItsTab-Tabs.
+
+test(and_stays_in_the_window_it_was_in, true(F2 == F)) :-
+    frame(F, _App, P1),
+    pane(second, alpha, P2),
+    send(F, split, P2, P1, vertically),
+    send(P2, move_to_tab),
+    get(P2, frame, F2).
+
+test(while_a_pane_that_has_a_tab_already_has_nowhere_to_go, [fail]) :-
+    frame(F, _App, _P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    send(P2, move_to_tab).
+
+%       And the way back: a pane that has a tab to itself folds into the
+%       tab beside it, taking its own tab away with it.
+
+test(a_lone_pane_moves_into_the_tab_before_its_own, true(Sizes == 2-1)) :-
+    frame(F, _App, _P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    send(P2, move_to_neighbour_tab, previous),
+    get(P2?pane_tab?windows, size, InItsTab),
+    get(F?tabs?tabs, size, Tabs),
+    Sizes = InItsTab-Tabs.
+
+test(and_shares_the_tab_of_the_pane_that_was_there) :-
+    frame(F, _App, P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    send(P2, move_to_neighbour_tab, previous),
+    get(P1, pane_tab, Tab),
+    get(P2, pane_tab, Tab).
+
+test(and_is_the_one_the_user_is_working_in, true(Current == P2)) :-
+    frame(F, _App, _P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    send(P2, move_to_neighbour_tab, previous),
+    get(F, current_pane, Current).
+
+test(the_tab_after_mine_works_the_same_way) :-
+    frame(F, _App, P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    send(P1, move_to_neighbour_tab, next),
+    get(P1, pane_tab, Tab),
+    get(P2, pane_tab, Tab).
+
+test(the_first_tab_has_none_before_it, [fail]) :-
+    frame(F, _App, P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    send(P1, move_to_neighbour_tab, previous).
+
+test(the_last_tab_has_none_after_it, [fail]) :-
+    frame(F, _App, _P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    send(P2, move_to_neighbour_tab, next).
+
+test(a_pane_sharing_a_tab_stays_where_it_is, [fail]) :-
+    frame(F, _App, P1),
+    pane(second, alpha, P2),
+    send(F, split, P2, P1, vertically),
+    pane(third, alpha, P3),
+    send(F, append_pane, P3, @default, @on),
+    send(P2, move_to_neighbour_tab, next).
+
+%       Each move is offered only where it changes something; closing is
+%       always on offer.  What the popup shows is what the grip's own menu
+%       shows: the same object.
+
+test(the_only_pane_of_a_window_is_offered_no_move, true(Offered == [close])) :-
+    frame(_F, _App, P1),
+    grip_offers(P1, Offered).
+
+test(a_pane_in_a_tab_of_its_own_is_offered_a_window_and_the_tab_before_it,
+     true(Offered == [move_to_new_window, move_to_previous_tab, close])) :-
+    frame(F, _App, _P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    grip_offers(P2, Offered).
+
+test(a_lone_pane_with_a_tab_on_either_side_is_offered_both,
+     true(Offered == [move_to_new_window,
+                      move_to_previous_tab,
+                      move_to_next_tab,
+                      close])) :-
+    frame(F, _App, _P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    pane(third, alpha, P3),
+    send(F, append_pane, P3, @default, @on),
+    grip_offers(P2, Offered).
+
+test(a_pane_sharing_a_tab_is_offered_both,
+     true(Offered == [move_to_new_window, move_to_new_tab, close])) :-
+    frame(F, _App, P1),
+    pane(second, alpha, P2),
+    send(F, split, P2, P1, vertically),
+    grip_offers(P2, Offered).
+
+test(and_closing_takes_it_out_of_the_window, Names == [one]) :-
+    frame(F, _App, P1),
+    pane(second, alpha, P2),
+    send(F, split, P2, P1, vertically),
+    send(P2, close_pane),
+    get(F, panes, Chain),
+    chain_list(Chain, Panes),
+    findall(N, (member(P, Panes), get(P, name, N)), Names).
+
+%!  grip_offers(+Pane, -Items) is det.
+%
+%   What the popup on Pane's grip offers, once its conditions have run.
+
+grip_offers(Pane, Items) :-
+    new(H, split_handle),
+    send(H, pane, Pane),
+    send(@split_handle_popup, update, H),
+    get(@split_handle_popup, members, Chain),
+    chain_list(Chain, Members),
+    findall(V,
+            ( member(MI, Members),
+              get(MI, active, @on),
+              get(MI, value, V)
+            ),
+            Items),
+    send(H, destroy).
 
 :- end_tests(pane_frame_move).
 

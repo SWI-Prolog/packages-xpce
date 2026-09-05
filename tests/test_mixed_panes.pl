@@ -103,7 +103,33 @@ terminal(F, W) :-
     member(W, Panes), send(W, instance_of, epilog_window), !.
 
 
+%       The warning the search used to give -- <-text_buffer sent to a
+%       terminal -- costs nothing but noise, so no outcome betrays it.  A
+%       pane that says when it is asked does.
+
+:- dynamic asked/1.
+
+:- pce_begin_class(nosy_pane, window,
+                   "A pane that records being asked for a buffer").
+
+text_buffer(P, TB:text_buffer) :<-
+    "I have none, but I remember the question"::
+    assertz(test_mixed_panes:asked(P)),
+    fail,
+    TB = @nil.                          % never reached; types the method
+
+:- pce_end_class(nosy_pane).
+
+
 :- begin_tests(mixed_panes).
+
+no_frames :-
+    get(@prolog_ide, members, Members),
+    chain_list(Members, List),
+    forall(( member(F, List),
+             send(F, instance_of, pane_frame)
+           ),
+           send(F, destroy)).
 
 test(an_epilog_window_takes_an_editor, Classes == [epilog_window, emacs_view]) :-
     emacs,
@@ -235,12 +261,165 @@ test(a_buffer_is_not_shown_in_a_window_of_terminals, true(Landed == own)) :-
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, FT),
     new(B, emacs_buffer(@nil, '*not-here*')),
-    get(B, open, tab, F),
+    get(B, open, tab, V),
+    get(V, frame, F),
     (   F == FT ->  Landed = terminal_window ;  Landed = own ).
 
 test(and_a_window_of_terminals_is_not_the_current_frame, [fail]) :-
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, FT),
     get(@emacs, current_frame, FT).
+
+%       Opening a buffer in a window that holds a terminal as well as an
+%       editor.  Each of the three routes has to pick the editor out of
+%       the panes rather than take the first one it finds.
+
+test(a_buffer_opens_in_a_window_that_also_holds_a_terminal,
+     true(Landed == same_window)) :-
+    emacs,
+    mixed_window(F),
+    new(B, emacs_buffer(@nil, '*mixed-open*')),
+    get(B, open, tab, V),
+    get(V, frame, In),
+    (   In == F ->  Landed = same_window ;  Landed = elsewhere ).
+
+test(and_asking_twice_goes_back_to_the_view_it_made, true(Views == 1)) :-
+    emacs,
+    mixed_window(F),
+    new(B, emacs_buffer(@nil, '*mixed-twice*')),
+    get(B, open, tab, V),
+    get(B, open, tab, V),                % the same view, in the same frame
+    get(V, frame, F),
+    get(F, panes, Chain),
+    chain_list(Chain, Panes),
+    aggregate_all(count,
+                  ( member(P, Panes),
+                    send(P, instance_of, emacs_view),
+                    get(P, text_buffer, TB),
+                    TB == B
+                  ),
+                  Views).
+
+test(and_here_uses_the_editor_even_from_the_terminal, true(TB == B)) :-
+    emacs,
+    mixed_window(F),
+    terminal(F, T),
+    send(F, current_pane, T),           % the terminal has the focus
+    new(B, emacs_buffer(@nil, '*mixed-here*')),
+    send(@emacs, show_buffer, F, B, here),
+    editor(F, V),
+    get(V, text_buffer, TB).
+
+test(only_editors_are_asked_which_buffer_they_hold, true(Asked == [])) :-
+    emacs,
+    mixed_window(F),
+    send(F, append_pane, new(nosy_pane), nosy, @off),
+    retractall(test_mixed_panes:asked(_)),
+    new(B, emacs_buffer(@nil, '*mixed-nosy*')),
+    send(@emacs, show_buffer, F, B, tab),
+    findall(P, test_mixed_panes:asked(P), Asked).
+
+%       Dropping a pane onto another gives it the focus: that is where
+%       the mouse is.  The pane it came from has to lose it in the same
+%       breath.  ->input_focus is edge-triggered, so a pane left switched
+%       on can never be switched on again -- what the user sees is that
+%       clicking either pane does nothing and only leaving the application
+%       and coming back repairs it.  That symptom is a ws_enable_text_input
+%       that is never re-issued and cannot be seen from here; that exactly
+%       one pane holds the focus is the invariant behind it.
+
+test(a_dropped_pane_takes_the_focus, true(Focused == [V])) :-
+    emacs,
+    tabbed_window_pair(F, _T, V),
+    send(F, input_focus, @on),          % as if the window manager had
+    drop_onto(F, V),
+    focused(F, Focused).
+
+test(and_the_focus_follows_a_click_afterwards, true(Focused == [T])) :-
+    emacs,
+    tabbed_window_pair(F, T, V),
+    send(F, input_focus, @on),
+    drop_onto(F, V),
+    ignore(send(T, post_event, event(ms_left_down, T, 20, 20))),
+    ignore(send(T, post_event, event(ms_left_up, T, 20, 20))),
+    focused(F, Focused).
+
+%       edit/1 in a window where an editor sits beside a terminal.  The
+%       buffer opens in a tab of its own, and that tab has to stay in
+%       front: the terminal is told it has the keyboard as its own tab
+%       goes away, and used to answer by pulling it back.
+
+test(edit_opens_a_tab_and_it_stays_in_front, true(Pane == view)) :-
+    emacs,
+    mixed_window(F),
+    terminal(F, T),
+    send(F, current_pane, T),
+    new(B, emacs_buffer(@nil, '*edit*')),
+    send(@emacs, show_buffer, F, B, tab),
+    get(F, current_pane, Current),
+    (   send(Current, instance_of, emacs_view)
+    ->  Pane = view
+    ;   Pane = terminal
+    ).
+
+test(and_the_editor_it_opens_is_the_one_it_asked_for, true(TB == B)) :-
+    emacs,
+    mixed_window(F),
+    terminal(F, T),
+    send(F, current_pane, T),
+    new(B, emacs_buffer(@nil, '*edit2*')),
+    send(@emacs, show_buffer, F, B, tab),
+    get(F, current_pane, View),
+    get(View, text_buffer, TB).
+
+%!  tabbed_window_pair(-Frame, -Terminal, -View) is det.
+%
+%   A window with a terminal and an editor in tabs of their own, the
+%   terminal current.  This is `swipl-win' plus edit/1.
+
+tabbed_window_pair(F, T, V) :-
+    no_frames,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    new(B, emacs_buffer(@nil, '*dropped*')),
+    send(@emacs, show_buffer, F, B, tab),
+    editor(F, V),
+    terminal(F, T),
+    send(F, current_pane, T).
+
+%!  drop_onto(+Frame, +Window) is det.
+%
+%   Drag Window onto the bottom half of the pane that is current.
+
+drop_onto(F, Window) :-
+    get(F, current_pane, Target),
+    get(Target, container, tab_frame, Tab),
+    get(Target, size, size(W, H)),
+    X is W//2,
+    Y is H-10,
+    send(Tab, drop, Window, point(X, Y)).
+
+%!  focused(+Frame, -Panes) is det.
+%
+%   The panes of Frame that hold the keyboard focus.  Exactly one should.
+
+focused(F, Panes) :-
+    get(F, panes, Chain),
+    chain_list(Chain, All),
+    findall(P,
+            ( member(P, All),
+              get(P, input_focus, @on)
+            ),
+            Panes).
+
+%!  mixed_window(-Frame) is det.
+%
+%   A window with a terminal and an editor below it.
+
+mixed_window(F) :-
+    no_frames,                          % it is the window PceEmacs finds
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F, @on),
+    send(F, open).
 
 :- end_tests(mixed_panes).

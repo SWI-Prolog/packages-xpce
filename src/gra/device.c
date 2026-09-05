@@ -172,6 +172,8 @@ updatePointedDevice(Device dev, EventObj ev)
   Graphical active[MAX_ACTIVE];
   int n, an = 0;
   Int x, y;
+  Int fx = ZERO, fy = ZERO;		/* the same, in view coordinates */
+  Chain fixed = NIL;
   Name enter, exit;
 
   if ( allButtonsUpEvent(ev) )
@@ -198,12 +200,35 @@ updatePointedDevice(Device dev, EventObj ev)
 
   get_xy_event(ev, dev, OFF, &x, &y);
 
+					/* A window's fixed graphicals are
+					 * placed against the viewport rather
+					 * than the content (see `window
+					 * ->display_fixed'), so they are
+					 * pointed at like any other, but
+					 * hit against a second X,Y. */
+  if ( instanceOfObject(dev, ClassWindow) )
+  { PceWindow sw = (PceWindow)dev;
+
+    if ( notNil(sw->fixed_graphicals) && !emptyChain(sw->fixed_graphicals) )
+    { fixed = sw->fixed_graphicals;
+      get_xy_event(ev, dev, ON, &fx, &fy);
+    }
+  }
+
 					/* See which graphicals are left.
 					 * for_chain for the same reason as
 					 * above. */
   { Graphical gr;
     for_chain(dev->pointed, gr,
-      { if ( gr->displayed == OFF || !inEventAreaGraphical(gr, x, y) )
+      { Int gx = x;
+	Int gy = y;
+
+	if ( notNil(fixed) && memberChain(fixed, gr) )
+	{ gx = fx;
+	  gy = fy;
+	}
+
+	if ( gr->displayed == OFF || !inEventAreaGraphical(gr, gx, gy) )
 	{ DEBUG(NAME_event, Cprintf("Leaving %s\n", pp(gr)));
 	  deleteChain(dev->pointed, gr);
 	  generateEventGraphical(gr, exit);
@@ -231,6 +256,24 @@ updatePointedDevice(Device dev, EventObj ev)
 	    for( n = 0; n < MAX_ACTIVE-1; n++ )
 	      active[n] = active[n+1];
 	    an--;
+	  }
+	}
+      });
+  }
+
+					/* And the fixed layer, which is over
+					 * the content and so comes last. */
+  if ( notNil(fixed) )
+  { Graphical gr;
+
+    for_chain(fixed, gr,
+      { if ( gr->displayed == ON && inEventAreaGraphical(gr, fx, fy) )
+	{ if ( an < MAX_ACTIVE )
+	    active[an++] = gr;
+
+	  if ( memberChain(dev->pointed, gr) != SUCCEED )
+	  { DEBUG(NAME_event, Cprintf("Entering %s\n", pp(gr)));
+	    generateEventGraphical(gr, enter);
 	  }
 	}
       });

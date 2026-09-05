@@ -95,6 +95,18 @@ layout_dialog(W, _Gap:[size], _Size:[size], _Border:[size]) :->
     new(S0, size(0,0)),
     send_super(W, layout_dialog, S0, S0, S0).
 
+%       ->resize is what fits the tabs to the window, and the window
+%       system only sends it once the window has a surface to draw on
+%       (ws_geometry_window(), src/sdl/sdlwindow.c).  A tabbed window
+%       placed by a tile before it is created -- which is what happens
+%       when one is used as a pane -- would keep the size it asked for
+%       rather than the size it was given.  Being placed is enough.
+
+geometry(W, X:[int], Y:[int], Width:[int], Height:[int]) :->
+    "Fit my tabs to the size I am given"::
+    send_super(W, geometry, X, Y, Width, Height),
+    send(W, resize).
+
 new_tab_message(W, Message:'code*') :->
     "What the new-tab button is to do; @nil takes the button away"::
     send(W, slot, new_tab_message, Message),
@@ -154,10 +166,30 @@ make_current(Tab, Window) :-
     ;   true
     ).
 
+%       Losing the focus has to reach the window that has it, and by the
+%       time it is taken away <-current is usually the window it is being
+%       given to -- a frame moves its `input_window\' by activating the new
+%       one, which makes it current, and only then deactivating the old.
+%       So I hand the focus on to a window I remember, not to whichever is
+%       current at the moment I am told.
+
+%       The window I passed the focus to is remembered by a hyper rather
+%       than in a slot of my own: a slot goes on pointing at a pane that
+%       is destroyed while I hold the focus, and sending to it afterwards
+%       is an error.  A hyper is unlinked with either end.
+
 input_focus(W, Focus:bool) :->
     send_super(W, input_focus, Focus),
-    (   get(W, current, Current)
-    ->  send(Current, input_focus, Focus)
+    (   Focus == @on
+    ->  (   get(W, current, Current)
+        ->  send(W, delete_hypers, focus_window),
+            new(_, hyper(W, Current, focus_window, tabbed_window)),
+            send(Current, input_focus, @on)
+        ;   true
+        )
+    ;   get(W, hypered, focus_window, Old)
+    ->  send(W, delete_hypers, focus_window),
+        send(Old, input_focus, @off)
     ;   true
     ).
 
@@ -272,17 +304,20 @@ label_popup(Tab, Popup:popup) :<-
 %       on a left click is therefore repeated here, from labelEventTab().
 
 label_event(T, Ev:event) :->
-    "Raise on a click, rename on a double one, popup on the right button"::
+    "Raise on a click, drag to reorder, rename on a double click"::
     (   send(Ev, is_a, ms_left_down),
         get(T, active, Active),
         Active \== @off
     ->  (   get(T, editable_label, @on),
             get(Ev, multiclick, double)
         ->  send(T, edit_label)
-        ;   send(T?device, on_top, T)
+        ;   send(@tab_move_gesture, event, Ev)  % raises me on ->initiate
         )
     ;   send(@tab_label_recogniser, event, Ev)
     ).
+
+class_variable(edit_width, int, 200,
+               "Room to type a label in, if the label row has it").
 
 edit_label(T) :->
     "Put an editor over my label"::
@@ -291,11 +326,20 @@ edit_label(T) :->
     H > 0,                              % a lone tab may show no label
     get(T, device, Stack),
     send(T, end_label_edit),
-    get(T?label_size, width, W),
     get(T, label_offset, X),
+    get(T, edit_label_width, X, W),
+    send(Stack, hide_tab_buttons),      % one lies over the label I cover
     send(Stack, display, new(TI, tab_label_item(T)), point(X, 0)),
     send(TI, set, X, 0, W, H),
     send(Stack?window, keyboard_focus, TI).
+
+edit_label_width(T, X:int, W:int) :<-
+    "Room for the editor over my label, which is wider than the label"::
+    get(T?label_size, width, LW),
+    get(T, class_variable_value, edit_width, Wanted),
+    get(T?device, area, area(_, _, SW, _)),
+    Room is max(0, SW-X),
+    W is max(LW, min(Wanted, Room)).
 
 close_tab(T) :->
     "Close me; what that means is up to what I hold"::
@@ -306,7 +350,8 @@ end_label_edit(T) :->
     get(T, device, Stack),
     (   get(Stack, member, tab_label_item, TI)
     ->  send(Stack?window, keyboard_focus, @nil),
-        send(TI, destroy)
+        send(TI, destroy),
+        send(Stack, update_tab_buttons)
     ;   true
     ).
 
@@ -342,8 +387,19 @@ labels_laid_out(TS) :->
     "Put the buttons back where the labels are now"::
     ignore(send(TS, update_tab_buttons)).
 
+hide_tab_buttons(TS) :->
+    "Take the buttons off the label row"::
+    get(TS, graphicals, Graphicals),
+    chain_list(Graphicals, List),
+    tab_list(List, Tabs),
+    forall(member(T, Tabs),
+           send(TS, forget_tab_button, T, close_button)),
+    send(TS, forget_tab_button, TS, new_tab_button).
+
 update_tab_buttons(TS) :->
     "A close button per closable tab, and one to add a tab at the end"::
+    \+ get(TS, member, tab_label_item, _),   % a label is being edited and
+                                            % the editor lies over them
     get(TS, graphicals, Graphicals),
     chain_list(Graphicals, List),
     tab_list(List, Tabs),
@@ -449,9 +505,22 @@ tab(TI, Tab:tab) :<-
     "The tab I am editing"::
     get(TI, hypered, tab, Tab).
 
+%       The window system spells these as names -- see the SDL key map --
+%       while a program that sends ->typed a character sends the code.
+
+cancel_key(27).
+cancel_key('ESC').
+
+commit_key(13).
+commit_key('RET').
+
 typed(TI, Id:event_id) :->
-    "Escape puts the old label back"::
-    (   Id == 27
+    "Escape puts the old label back, and so does Return that changes nothing"::
+    (   cancel_key(Id)
+    ->  get(TI, tab, Tab),
+        send(Tab, end_label_edit)
+    ;   commit_key(Id),
+        get(TI, modified, @off)
     ->  get(TI, tab, Tab),
         send(Tab, end_label_edit)
     ;   send_super(TI, typed, Id)
@@ -640,6 +709,70 @@ close_other_tabs(Tab) :->
             message(@arg1, destroy))).
 
 :- pce_end_class(window_tab).
+
+
+                 /*******************************
+                 *        REORDERING TABS       *
+                 *******************************/
+
+/* Dragging a tab label puts the tab somewhere else in the row.  The
+   labels are laid out left to right in the order the tabs are held in,
+   so putting one somewhere else is a matter of moving it in that chain
+   and laying the labels out again.
+*/
+
+:- pce_extend_class(tab_stack).
+
+tab_at(TS, X:int, Tab:tab) :<-
+    "The tab whose label is at X, in my coordinates"::
+    get(TS, graphicals, Chain),
+    chain_list(Chain, Graphicals),
+    member(Tab, Graphicals),
+    send(Tab, instance_of, tab),
+    get(Tab, label_offset, Offset),
+    get(Tab?label_size, width, Width),
+    X >= Offset,
+    X < Offset+Width,
+    !.
+
+move_tab(TS, Tab:tab, Onto:tab) :->
+    "Put Tab where Onto is now"::
+    Tab \== Onto,
+    get(TS, graphicals, Chain),
+    get(Chain, index, Tab, From),
+    get(Chain, index, Onto, To),
+    (   From < To
+    ->  send(Chain, move_after, Tab, Onto)
+    ;   send(Chain, move_before, Tab, Onto)
+    ),
+    send(TS, layout_labels).
+
+:- pce_end_class(tab_stack).
+
+
+:- pce_global(@tab_move_gesture, new(tab_move_gesture)).
+
+:- pce_begin_class(tab_move_gesture, gesture,
+                   "Drag a tab label to put the tab somewhere else").
+
+initialise(G) :->
+    "Drag with the left button"::
+    send_super(G, initialise, left).
+
+initiate(_G, Ev:event) :->
+    "Raise the tab I am about to drag, as a plain click does"::
+    get(Ev, receiver, Tab),
+    send(Tab?device, on_top, Tab).
+
+drag(_G, Ev:event) :->
+    "Put the tab where the pointer has reached"::
+    get(Ev, receiver, Tab),
+    get(Tab, device, Stack),
+    get(Ev, position, Stack, point(X, _Y)),
+    get(Stack, tab_at, X, Onto),
+    ignore(send(Stack, move_tab, Tab, Onto)).
+
+:- pce_end_class(tab_move_gesture).
 
 
 :- pce_begin_class(window_tab_frame, frame,

@@ -4,12 +4,14 @@
 test_libs(colour               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(text_image           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(tab_frame            OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(fixed_graphicals     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(pane_frame           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(emacs_split          OPTIONS ${XPCE_TEST_OPTIONS})
 if(EPILOG)
 test_libs(epilog_tabs          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(mixed_panes          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(undefined            OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(tool_panes           OPTIONS ${XPCE_TEST_OPTIONS})
 endif()
 test_libs(no_display           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(number_conversion    OPTIONS ${XPCE_TEST_OPTIONS})
@@ -23,6 +25,7 @@ test_libs(terminal_glyphs      OPTIONS ${XPCE_TEST_OPTIONS})
 set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:text_image
                      xpce:tab_frame
+                     xpce:fixed_graphicals
                      xpce:pane_frame
                      xpce:emacs_split
                      xpce:no_display
@@ -36,7 +39,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
 
 if(EPILOG)
   list(APPEND XPCE_EXTRA_TESTS xpce:epilog_tabs xpce:mixed_panes
-                               xpce:undefined)
+                               xpce:undefined xpce:tool_panes)
 endif()
 
 # The terminal suite drives a terminal and reads the screen back, so it

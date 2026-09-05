@@ -52,6 +52,7 @@ initialiseWindow(PceWindow sw, Name label, Size size, DisplayObj display)
 
   assign(sw, scale,                toNum(1.0));
   assign(sw, scroll_offset,	   newObject(ClassPoint, EAV));
+  assign(sw, fixed_graphicals,	   newObject(ClassChain, EAV));
   assign(sw, input_focus,	   OFF);
   assign(sw, has_pointer,	   OFF);
   assign(sw, sensitive,		   ON);
@@ -703,6 +704,8 @@ inspectWindow(PceWindow sw, EventObj ev)
 }
 
 
+static status eventFixedWindow(PceWindow sw, EventObj ev);
+
 status
 postEventWindow(PceWindow sw, EventObj ev)
 { int rval = FAIL;
@@ -784,6 +787,14 @@ postEventWindow(PceWindow sw, EventObj ev)
     goto out;
   }
 
+  /* The fixed layer is painted over the content, so it is offered the
+   * event first -- here rather than in a ->event method, as a window
+   * subclass with one of its own would shadow that.  A window holding
+   * the focus is left alone: a gesture in progress owns the pointer.
+   */
+  if ( isNil(sw->focus) && (rval = eventFixedWindow(sw, ev)) )
+    goto out;
+
   /* This code looks a bit awkward, but prevents a -Warray-bounds
    * warning from gcc-11
    */
@@ -817,7 +828,21 @@ out:
       goto out;
   }
 
-  updateCursorWindow(sw);
+  /* A gesture may have grabbed the pointer while handling this event --
+   * `split_move ->start' does, and the window it grabs for need not be
+   * the one the click landed on.  From here on every pointer event goes
+   * to the grabbing window, so it is its cursor that must show; leaving
+   * it to the next event would only change the cursor once the pointer
+   * moves.
+   */
+  { PceWindow grabbed = ws_grabbing_window();
+
+    if ( grabbed && grabbed != sw && !isFreedObj(grabbed) &&
+	 instanceOfObject(grabbed, ClassWindow) )
+      updateCursorWindow(grabbed);
+    else
+      updateCursorWindow(sw);
+  }
 
   assign(sw, current_event, old_event);
 destroyed:
@@ -996,6 +1021,24 @@ computeWindow(PceWindow sw)
 { if ( notNil(sw->request_compute) )
   { computeGraphicalsDevice((Device) sw);
     computeLayoutDevice((Device) sw);
+
+    /* The fixed layer is placed against <-content_area, which is what is
+     * visible less any scrollbar I draw myself -- and a scrollbar is one
+     * of the graphicals just laid out, and comes and goes without my
+     * geometry changing.  So they are placed last, and every time, which
+     * ->compute makes cheap when the answer has not moved.
+     */
+    if ( notNil(sw->fixed_graphicals) )
+    { Cell cell;
+
+      for_cell(cell, sw->fixed_graphicals)
+      { Graphical gr = cell->value;
+
+	requestComputeGraphical(gr, DEFAULT);
+	ComputeGraphical(gr);
+      }
+    }
+
     computeBoundingBoxWindow(sw);
 
     assign(sw, request_compute, NIL);
@@ -1284,6 +1327,142 @@ RedrawAreaWindow(PceWindow sw, IArea a, int clear)
 }
 
 
+/* <-fixed_graphicals are painted after the content and in the coordinates
+ * of what is on screen rather than of what is being shown: the scroll
+ * translation RedrawAreaWindow() put in is taken out again around them.
+ * That is what makes a grip in the corner of a window stay in the corner
+ * however far the window is scrolled.
+ *
+ * `a' arrives in content coordinates, and view = content + scroll_offset,
+ * so the damaged rectangle is moved by the offset for their benefit and
+ * moved back afterwards.
+ */
+
+/* ->display_fixed: graphical, [point]
+ *
+ * Display a graphical in the layer that does not scroll.  It is a
+ * graphical of mine in every other way -- <-device, <-window, <-frame,
+ * ->compute and events all work as usual -- but it is placed in the
+ * coordinates of what is on screen and painted after the content, so it
+ * stays where it is put however far the window is scrolled and is never
+ * covered by what is in it.  <-visible and <-content_area say where
+ * there is room.
+ */
+
+static status
+displayFixedWindow(PceWindow sw, Graphical gr, Point pos)
+{ if ( gr->device == (Device)sw && memberChain(sw->fixed_graphicals, gr) )
+  { if ( notDefault(pos) )
+      setGraphical(gr, pos->x, pos->y, DEFAULT, DEFAULT);
+    succeed;
+  }
+
+  if ( notNil(gr->device) )
+    send(gr->device, NAME_erase, gr, EAV);
+
+  appendChain(sw->fixed_graphicals, gr);
+  assign(gr, device, (Device)sw);
+  requestComputeGraphical(gr, DEFAULT);	/* it is placed against my size,
+					   which it has yet to see */
+  if ( notDefault(pos) )
+  { Variable var;
+
+    if ( (var = getInstanceVariableClass(classOfObject(gr), NAME_autoAlign)) )
+      sendVariable(var, gr, OFF);
+
+    setGraphical(gr, pos->x, pos->y, DEFAULT, DEFAULT);
+  }
+  qadSendv(gr, NAME_reparent, 0, NULL);
+  DisplayedGraphical(gr, ON);
+
+  succeed;
+}
+
+
+/* Events for the fixed layer.  It is painted over the content, so it is
+ * offered the event first, and it is hit-tested in the coordinates of
+ * what is on screen -- `area == ON' -- because that is where it was
+ * drawn.  Everything else falls through to the ordinary device
+ * behaviour.
+ */
+
+/* <-member also finds a graphical of the fixed layer: it is a graphical
+ * of mine, and whoever asks for one by name has no reason to care which
+ * chain it is in.
+ */
+
+static Graphical
+getMemberWindow(PceWindow sw, Name name)
+{ Graphical gr;
+  Cell cell;
+
+  if ( (gr = getMemberDevice((Device)sw, name)) )
+    answer(gr);
+
+  if ( notNil(sw->fixed_graphicals) )
+  { for_cell(cell, sw->fixed_graphicals)
+    { if ( ((Graphical)cell->value)->name == name )
+	answer(cell->value);
+    }
+  }
+
+  fail;
+}
+
+
+static status
+eventFixedWindow(PceWindow sw, EventObj ev)
+{ if ( sw->active != OFF &&
+       notNil(sw->fixed_graphicals) && !emptyChain(sw->fixed_graphicals) )
+  { Cell cell;
+    int ox, oy, x, y;
+
+    offset_windows(sw, ev->window, &ox, &oy);   /* view coordinates: the
+					   same as get_xy_event_window()
+					   with area == ON */
+    x = valInt(ev->x) - ox;
+    y = valInt(ev->y) - oy;
+
+    for_cell(cell, sw->fixed_graphicals)
+    { Graphical gr = cell->value;
+
+      if ( gr->displayed == ON &&
+	   inEventAreaGraphical(gr, toInt(x), toInt(y)) &&
+	   postEvent(ev, gr, DEFAULT) )
+	succeed;
+    }
+  }
+
+  fail;
+}
+
+
+static status
+eraseWindow(PceWindow sw, Graphical gr)
+{ if ( memberChain(sw->fixed_graphicals, gr) )
+  { if ( subGraphical(gr, sw->keyboard_focus) )
+      keyboardFocusWindow(sw, NIL);
+    if ( subGraphical(gr, sw->focus) )
+      focusWindow(sw, NIL, NIL, NIL, NIL);
+
+    if ( gr->displayed == ON )
+      changedAreaGraphical(gr, gr->area->x, gr->area->y,
+			   gr->area->w, gr->area->h);
+
+    deleteChain(sw->recompute, gr);
+    deleteChain(sw->pointed, gr);
+    assign(gr, device, NIL);
+    GcProtect(sw, deleteChain(sw->fixed_graphicals, gr));
+    if ( !isFreedObj(gr) )
+      qadSendv(gr, NAME_reparent, 0, NULL);
+
+    succeed;
+  }
+
+  return eraseDevice((Device)sw, gr);
+}
+
+
 static status
 redrawAreaWindow(PceWindow sw, Area a)
 { Cell cell;
@@ -1293,6 +1472,22 @@ redrawAreaWindow(PceWindow sw, Area a)
 
   for_cell(cell, sw->graphicals)
     RedrawArea(cell->value, a);
+
+  if ( notNil(sw->fixed_graphicals) && !emptyChain(sw->fixed_graphicals) )
+  { int sox = valInt(sw->scroll_offset->x);
+    int soy = valInt(sw->scroll_offset->y);
+
+    r_offset(-sox, -soy);
+    assign(a, x, toInt(valInt(a->x) + sox));
+    assign(a, y, toInt(valInt(a->y) + soy));
+
+    for_cell(cell, sw->fixed_graphicals)
+      RedrawArea(cell->value, a);
+
+    assign(a, x, toInt(valInt(a->x) - sox));
+    assign(a, y, toInt(valInt(a->y) - soy));
+    r_offset(sox, soy);
+  }
 
   if ( notNil(sw->layout_manager) )
       qadSendv(sw->layout_manager, NAME_redrawForeground, 1, (Any*)&a);
@@ -1745,6 +1940,18 @@ geometryWindow(PceWindow sw, Int X, Int Y, Int W, Int H)
   w = valInt(sw->area->w);
   h = valInt(sw->area->h);
 
+  /* The fixed layer is placed against my size -- see <-content_area --
+   * so its members work it out again whenever that changes.  ->resize is
+   * no good to them: the window system only sends it once the window has
+   * a surface, and never for a window that is merely re-laid out.
+   */
+  if ( notNil(sw->fixed_graphicals) )
+  { Cell cell;
+
+    for_cell(cell, sw->fixed_graphicals)
+      requestComputeGraphical(cell->value, DEFAULT);
+  }
+
   ws_geometry_window(sw, x, y, w, h, pen);
 
   succeed;
@@ -1799,6 +2006,40 @@ visible_window(PceWindow sw, IArea a)
   a->h -= 2*p;
 
   succeed;
+}
+
+
+/* <-content_area: the part of <-visible that is not taken by chrome of
+ * the window itself.  A window whose scrollbars live in its decorator
+ * has none inside it and this is <-visible; one that displays its own
+ * scroll_bar -- an editor, a terminal -- has that much less room.  It is
+ * where something placed in the corner belongs, so that it does not sit
+ * on top of the bar.
+ */
+
+static Area
+getContentAreaWindow(PceWindow sw)
+{ iarea a;
+  Cell cell;
+
+  visible_window(sw, &a);
+
+  for_cell(cell, sw->graphicals)
+  { Graphical gr = cell->value;
+
+    if ( instanceOfObject(gr, ClassScrollBar) && gr->displayed == ON )
+    { ScrollBar sb = (ScrollBar)gr;
+
+      if ( sb->orientation == NAME_vertical )
+	a.w -= valInt(gr->area->w);
+      else
+	a.h -= valInt(gr->area->h);
+    }
+  }
+
+  answer(answerObject(ClassArea,
+		      toInt(a.x), toInt(a.y), toInt(a.w), toInt(a.h),
+		      EAV));
 }
 
 
@@ -2339,6 +2580,8 @@ catchAllWindowv(PceWindow sw, Name selector, int argc, Any *argv)
 
 /* Type declarations */
 
+static char *T_displayFixed[] =
+        { "graphical", "position=[point]" };
 static char *T_open[] =
         { "[point]", "display=[display]" };
 static char *T_scrollHV[] =
@@ -2409,6 +2652,8 @@ static vardecl var_window[] =
      NAME_focus, "<-current_event when ->focus was set"),
   IV(NAME_scrollOffset, "point", IV_NONE,
      NAME_internal, "How much the window is scrolled"),
+  IV(NAME_fixedGraphicals, "chain", IV_GET,
+     NAME_organisation, "Graphicals that do not scroll"),
   IV(NAME_popup, "popup*", IV_BOTH,
      NAME_menu, "Popup-menu of the window"),
   IV(NAME_currentEvent, "event*", IV_GET,
@@ -2476,6 +2721,10 @@ static senddecl send_window[] =
      NAME_appearance, "Title a client of this window asked for"),
   SM(NAME_foreground, 1, "[colour]", colourWindow,
      NAME_appearance, "Set foreground colour"),
+  SM(NAME_displayFixed, 2, T_displayFixed, displayFixedWindow,
+     NAME_organisation, "Display a graphical that does not scroll"),
+  SM(NAME_erase, 1, "graphical", eraseWindow,
+     NAME_organisation, "Remove a graphical, scrolling or not"),
   SM(NAME_resize, 0, NULL, resizeWindow,
      NAME_area, "Execute <-resize_message"),
   SM(NAME_catchAll, 2, T_catchAll, catchAllWindowv,
@@ -2557,6 +2806,10 @@ static getdecl get_window[] =
      NAME_repaint, "AABB of pending damage rectangles, or fail if none"),
   GM(NAME_boundingBox, 0, "area", NULL, getBoundingBoxWindow,
      NAME_area, "Union of graphicals"),
+  GM(NAME_member, 1, "graphical", "name", getMemberWindow,
+     NAME_organisation, "Find a graphical of mine by name, fixed or not"),
+  GM(NAME_contentArea, 0, "area", NULL, getContentAreaWindow,
+     NAME_scroll, "<-visible less the scrollbars I display myself"),
   GM(NAME_visible, 0, "area", NULL, getVisibleWindow,
      NAME_area, "New area representing visible part"),
   GM(NAME_size, 0, "size", NULL, getSizeGraphical,

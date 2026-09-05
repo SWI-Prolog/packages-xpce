@@ -170,14 +170,20 @@ detach_window(TF, Window:window) :->
 
 split(TF, Window:window=window,
           Relative:relative_to=[window],
-          Direction:direction=[{horizontally,vertically}]) :->
+          Direction:direction=[{horizontally,vertically,
+                                above,below,left,right}]) :->
     "Add Window by splitting Relative"::
     default(Direction, horizontally, Dir),
-    (   Dir == horizontally
-    ->  Where = below                      % new window below: Terminator
-    ;   Where = right                      % compatible naming
-    ),
+    split_side(Dir, Where),
     send(TF, append, Window, Relative, Where).
+
+%       Splitting a window `horizontally' puts the new one below it, as in
+%       Terminator and the shells; the two names for the same thing are
+%       both in use.  A caller that knows which side it wants says so.
+
+split_side(horizontally, below) :- !.
+split_side(vertically,   right) :- !.
+split_side(Where,        Where).
 
 delete(TF, Window:window) :->
     "Remove a window without destroying it"::
@@ -194,6 +200,7 @@ erase(TF, Gr:graphical) :->
         (   get(TF, slot, closing, @on)
         ->  true
         ;   send(TF, update_current),
+            notify_frame(TF),
             (   get(TF, tile, _)
             ->  send(TF, layout)
             ;   send(TF, empty)
@@ -564,6 +571,23 @@ update_frame_label(TF) :->
                  *            HELPERS           *
                  *******************************/
 
+%!  notify_frame(+TabFrame) is det.
+%
+%   Tell the frame that the pane the user is working in may have
+%   changed.  Losing a window is not always a change of <-current -- the
+%   one that went may not have been the tab's remembered current, only
+%   the one holding the keyboard -- but the frame has to look again
+%   either way, or it goes on showing the name and the menus of a pane
+%   that is no longer there.
+
+notify_frame(TF) :-
+    (   get(TF, frame, Frame),
+        Frame \== @nil,
+        send(Frame, has_send_method, pane_changed)
+    ->  ignore(send(Frame, pane_changed))
+    ;   true
+    ).
+
 %!  decoration(+Window, -Decoration) is det.
 %
 %   The graphical that represents Window on a device.  A window that has
@@ -691,7 +715,7 @@ relative_window(TF, _, Rel) :-
                  *         SPLIT HANDLE         *
                  *******************************/
 
-/** A grip that drags its window onto another one.
+/* A grip that drags its window onto another one.
 
 A window is not a good thing to start a drag on: an editor and a terminal
 both want the pointer for themselves.  So a window that is to be moved by
@@ -738,7 +762,71 @@ place(H, W:window, Inset:[int]) :->
 class_variable(grip_image, name, 'tool/drag-pane.svg',
                "Picture on the grip, drawn at <-handle_size").
 
+variable(pane, window*, both,
+         "Window I move; @nil: the one I am displayed on").
+
+%       A window has a surface of its own, so a grip displayed on the
+%       window behind one is covered by it.  A pane that shows several
+%       windows therefore puts its grip on one of them and says here
+%       which window the grip is really for.
+
+pane(H, Pane:window) :<-
+    "The window I move"::
+    (   get(H, slot, pane, P),
+        P \== @nil
+    ->  Pane = P
+    ;   get(H, window, Pane)
+    ).
+
 :- pce_global(@split_handle_gesture, new(split_handle_gesture)).
+
+%       Dragging the grip moves the window onto another one and clicking
+%       it picks the window up, so neither is free to say "out of here".
+%       That is on a popup, where the label of a tab offers the same
+%       things for a whole tab.  Each move is offered only where it
+%       changes something: a window of my own if I am not the only pane, a
+%       tab of my own if I am sharing one, and the tab beside mine if I
+%       have one to myself.  Closing is always on offer: the grip is the
+%       one thing a pane of any class is sure to carry.
+
+:- pce_global(@split_handle_popup, make_split_handle_popup).
+
+make_split_handle_popup(P) :-
+    new(P, popup),
+    Window = @arg1?pane,
+    send(P, append,
+         menu_item(move_to_new_window,
+                   message(Window, detach),
+                   condition := and(message(Window, has_send_method, detach),
+                                    Window?frame?panes?size > 1))),
+    send(P, append,
+         menu_item(move_to_new_tab,
+                   message(Window, move_to_tab),
+                   condition := and(message(Window, has_send_method,
+                                            move_to_tab),
+                                    Window?pane_tab?windows?size > 1))),
+    forall(neighbour_item(Item, Where, EndGroup),
+           send(P, append,
+                menu_item(Item,
+                          message(Window, move_to_neighbour_tab, Where),
+                          condition := and(message(Window, has_send_method,
+                                                   move_to_neighbour_tab),
+                                           message(Window,
+                                                   can_move_to_neighbour_tab,
+                                                   Where)),
+                          end_group := EndGroup))),
+    send(P, append,
+         menu_item(close,
+                   message(Window, close_pane),
+                   condition := message(Window, has_send_method,
+                                        close_pane))).
+
+%       A tab that holds nothing but this window can be folded into the
+%       tab beside it: the window joins that tab's split and the tab it
+%       came from goes away.
+
+neighbour_item(move_to_previous_tab, previous, @off).
+neighbour_item(move_to_next_tab,     next,     @on).   % a line before Close
 
 initialise(H) :->
     "Create the grip"::
@@ -746,7 +834,48 @@ initialise(H) :->
     move_gesture(How),
     handle_help(How, Help),
     send_super(H, initialise, Image, Help),
-    send(H, recogniser, @split_handle_gesture).
+    send(H, recogniser, @split_handle_gesture),
+    send(H, recogniser, popup_gesture(@split_handle_popup)).
+
+%       I put myself in the corner.  A window asks its fixed graphicals to
+%       work their position out again whenever its size changes, and
+%       <-content_area is what is visible less any scrollbar the window
+%       draws itself, so there is nothing for a pane to do and nothing to
+%       go wrong when it scrolls.
+
+variable(placing, bool := @off, none, "->compute is placing me").
+
+%       Only slots are read here: `<-area', `<-size' and `<-position' all
+%       compute first, and computing is what we are in the middle of.
+%       ->set computes again on the way out -- I am a device -- so it is
+%       kept from coming back round.
+
+compute(H) :->
+    "Put myself in the top right corner of the window I am on"::
+    (   get(H, slot, placing, @on)
+    ->  true
+    ;   send(H, slot, placing, @on),
+        ignore(send(H, place_in_corner)),
+        send(H, slot, placing, @off)
+    ),
+    send_super(H, compute).
+
+place_in_corner(H) :->
+    "Move myself to the corner of the window I am on"::
+    get(H, device, W),
+    W \== @nil,
+    send(W, instance_of, window),
+    get(W, content_area, area(X, Y, AW, _)),
+    get(H, slot, area, Mine),
+    get(Mine, width, HW),
+    get(Mine, x, MX),
+    get(Mine, y, MY),
+    NX is X + AW - HW - 2,
+    NY is Y + 2,
+    (   MX =:= NX, MY =:= NY
+    ->  true
+    ;   send(H, set, NX, NY)
+    ).
 
 :- pce_end_class(split_handle).
 
@@ -761,11 +890,11 @@ class_variable(cursor_border, [colour]*, @default,
                "Border around it; @default: the foreground, @nil: none").
 
 initialise(G) :->
-    send_super(G, initialise, left, @default, @off, @arg1?window).
+    send_super(G, initialise, left, @default, @off, @arg1?pane).
 
 cursor(G, Gr:graphical, Cursor:cursor) :<-
     "A picture of the window being dragged, scaled to fit"::
-    (   get(Gr, window, W),
+    (   get(Gr, pane, W),
         window_cursor(G, W, Cursor)
     ->  true
     ;   get_super(G, cursor, Gr, Cursor)
@@ -994,7 +1123,7 @@ scaled_size(W, H, MaxW, MaxH, SW, SH) :-
                  *          MOVE  MODE          *
                  *******************************/
 
-/** Moving a window to a place picked with the pointer.
+/* Moving a window to a place picked with the pointer.
 
 Dragging a window onto another one asks the window system where the
 pointer is once it has left the window it started on.  Wayland does not

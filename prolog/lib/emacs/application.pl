@@ -149,7 +149,7 @@ show_buffer_menu(Emacs) :->
     ).
 
 
-selection(Emacs, B:emacs_buffer*) :->
+selection(_Emacs, B:emacs_buffer*) :->
     "Select emacs buffer"::
     (   get(@prolog_ide, member, buffer_menu, Menu)
     ->  send(Menu, selection, B)
@@ -203,9 +203,9 @@ goto_source_location(Emacs,
     get(Location, file_name, File),
     send(Emacs, ensure_source_file, File),
     new(B, emacs_buffer(File)),
-    get(B, open, Where, Frame),
+    get(B, open, Where, View),
     send(B, check_modified_file),
-    get(Frame?current_pane, editor, Editor),
+    get(View, editor, Editor),
     get(Editor, mode, Mode),
     (   get(Location, line_no, Line),
         Line \== @nil
@@ -259,9 +259,9 @@ goto_history(Emacs, HE:emacs_history_entry,
     get(HE, get_hyper, fragment, text_buffer, TB),
     get(HE, get_hyper, fragment, start, Start),
     get(HE, get_hyper, fragment, length, Len),
-    get(TB, open, Where, Frame),
+    get(TB, open, Where, View),
     send(TB, check_modified_file),
-    get(Frame?current_pane, editor, Editor),
+    get(View, editor, Editor),
     End is Start+Len,
     send(Editor, caret, Start),
     send(Editor, selection, End, Start, highlight),
@@ -380,26 +380,62 @@ frame(_Emacs, For:'emacs_buffer|emacs_view', Frame:pane_frame) :<-
     get(E, mode, Mode),
     ignore(send(Mode, new_buffer)).
 
+%       A window of the IDE holds terminals and tools as well as views,
+%       so none of the three routes below can take it that a pane of the
+%       frame is an editor.  When the one it needs is not there -- `here'
+%       in a window of terminals, `split' beside nothing to split -- the
+%       buffer opens in a tab of its own, which every window can do.
+
 show_buffer(_Emacs, Frame:pane_frame, B:emacs_buffer,
             How:[{here,tab,split}]) :->
     "Show B in Frame, here, in a tab of its own or beside the view"::
-    (   How == tab
-    ->  (   get(Frame, panes, Panes),
-            get(Panes, find, @arg1?text_buffer == B, View)
-        ->  send(Frame, current_pane, View)
-        ;   send(Frame, append_pane, new(New, emacs_view(B)),
-                 B?name, @on),
-            send(B, update_label),
-            send(New, setup_mode)
-        )
-    ;   How == split
-    ->  get(Frame, current_pane, Rel),
-        send(Frame, split, new(New, emacs_view(B)), Rel, horizontally),
-        send(B, update_label),
-        send(New, setup_mode)
-    ;   get(Frame, current_pane, View),
-        send(View?editor, text_buffer, B)
+    (   How == tab,
+        view_on_buffer(Frame, B, View)
+    ->  send(Frame, current_pane, View)         % it is already open
+    ;   How == split,
+        editor_pane(Frame, Rel)
+    ->  send(Frame, split, new(New, emacs_view(B)), Rel, horizontally),
+        setup_view(B, New)
+    ;   How == here,
+        editor_pane(Frame, View)
+    ->  send(View?editor, text_buffer, B),
+        send(Frame, current_pane, View)
+    ;   send(Frame, append_pane, new(New, emacs_view(B)), B?name, @on),
+        setup_view(B, New)
     ).
+
+setup_view(B, View) :-
+    send(B, update_label),
+    send(View, setup_mode).
+
+%!  editor_pane(+Frame, -View) is semidet.
+%
+%   An emacs_view of Frame to work in: the pane the user is in if that is
+%   one, otherwise the first there is.
+
+editor_pane(Frame, View) :-
+    get(Frame, current_pane, Current),
+    send(Current, instance_of, emacs_view),
+    !,
+    View = Current.
+editor_pane(Frame, View) :-
+    frame_pane(Frame, View),
+    send(View, instance_of, emacs_view),
+    !.
+
+%!  view_on_buffer(+Frame, +Buffer, -View) is semidet.
+
+view_on_buffer(Frame, B, View) :-
+    frame_pane(Frame, View),
+    send(View, instance_of, emacs_view),
+    get(View, text_buffer, TB),
+    TB == B,
+    !.
+
+frame_pane(Frame, Pane) :-
+    get(Frame, panes, Panes),
+    chain_list(Panes, List),
+    member(Pane, List).
 
 %       Every window of the IDE belongs to @prolog_ide, so being a member
 %       no longer says a window is one of PceEmacs's.  Holding an editor
@@ -429,11 +465,7 @@ current_frame(_Emacs, Frame:pane_frame) :<-
 %   True when Frame holds a view a buffer can be shown in.
 
 shows_an_editor(Frame) :-
-    get(Frame, panes, Chain),
-    chain_list(Chain, Panes),
-    member(Pane, Panes),
-    send(Pane, instance_of, emacs_view),
-    !.
+    editor_pane(Frame, _).
 
 
                  /*******************************

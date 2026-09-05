@@ -291,9 +291,8 @@ name(B, Name:name) :->
         ->  send(DictItem, key, BufName)
         ;   send(@emacs_buffers, append, dict_item(BufName, @default, B))
         ),
-        send(B, update_label),
-        send(B?editors, for_some, message(@arg1?frame, label, BufName))
-    ).
+        send(B, update_label)           % reaches the views, their tabs
+    ).                                  % and the frame label from there
 
 
 lookup(_Ctx, File:file*, Name:[name], Buffer:emacs_buffer) :<-
@@ -706,8 +705,13 @@ confirm_reload(_, Frame, _, File) :-
                  *          OPEN WINDOW         *
                  *******************************/
 
-open(B, How:[{here,tab,split,window}], Frame:pane_frame) :<-
-    "Create window for buffer"::
+%       The view is the frame's <-current_pane whichever route was
+%       taken: `@emacs ->show_buffer' either makes the view it found
+%       current or appends one that exposes itself, and a frame of its
+%       own holds nothing else.
+
+open(B, How:[{here,tab,split,window}], View:emacs_view) :<-
+    "Create window for buffer; answer the view showing me"::
     (   How == window
     ->  get(@emacs, frame, B, Frame)
     ;   How == tab,
@@ -723,6 +727,7 @@ open(B, How:[{here,tab,split,window}], Frame:pane_frame) :<-
         send(Frame, expose)
     ;   get(@emacs, frame, B, Frame)
     ),
+    get(Frame, current_pane, View),
     send(B, check_modified_file, Frame).
 
 open(B, How:[{here,tab,split,window}]) :->

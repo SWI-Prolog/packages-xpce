@@ -198,7 +198,9 @@ popupMenuItem(MenuItem mi, PopupObj p)
   { if ( isNil(p) || (isNil(mi->popup) && notNil(mi->menu)) )
       requestComputeGraphical(mi->menu, DEFAULT); /* HACK */
     assign(mi, popup, p);
-    changedMenuItem(mi);
+    if ( notNil(p) )			/* as <-convert does for a popup */
+      assign(p, context, mi);		/* appended as an item: it is what */
+    changedMenuItem(mi);		/* says where the pull-right hangs */
   }
 
   succeed;
