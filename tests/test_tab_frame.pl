@@ -940,6 +940,51 @@ test(no_gesture_inside_a_window) :-
     send(Down, slot, receiver, TF),
     \+ send(@tab_frame_resize_gesture, event, Down).
 
+%       What the tiles have to give up between them is shared out in
+%       proportion to what they are, so a small window keeps a small share
+%       rather than being asked for as many pixels as a large one and
+%       ending with none.
+
+test(a_small_window_keeps_a_share_of_a_space_too_small_for_all) :-
+    crowded(_TF, Windows),
+    forall(member(W, Windows),
+           ( geometry(W, area(_, _, _, H)),
+             H > 0
+           )).
+
+test(and_they_fit_in_the_tab_they_are_in) :-
+    crowded(TF, [A, B, C]),
+    get(TF?tile, border, Border),
+    get(TF, content_size, size(_, Room)),
+    geometry(A, area(_,_,_,HA)),
+    geometry(B, area(_,_,_,HB)),
+    geometry(C, area(_,_,_,HC)),
+    HA+HB+HC + 2*Border =< Room.
+
+test(and_the_small_one_shrinks_in_proportion) :-
+    crowded(_TF, [Big, Small|_]),
+    get(Big?tile, ideal_height, BI),
+    get(Small?tile, ideal_height, SI),
+    geometry(Big, area(_,_,_,BH)),
+    geometry(Small, area(_,_,_,SH)),
+    abs(BH*SI - SH*BI) =< BI+SI.        % the same fraction, give or take
+
+%!  crowded(-TabFrame, -Windows) is det.
+%
+%   A tab holding a tall window, a short one and another tall one, in a
+%   window with room for none of them at their ideal size.  This is a
+%   terminal, a tool beside it and the terminal split.
+
+crowded(TF, [Big, Small, Big2]) :-
+    new(TW, tabbed_window('Test', size(400,300))),
+    new(Big, picture(big, size(400, 500))),
+    send(TW, tab, new(TF, tab_frame(Big, one))),
+    send(TW, open),
+    send(TW, resize),
+    send(TF, split, new(Small, picture(small, size(200, 100))), Big, horizontally),
+    send(TF, split, new(Big2, picture(big2, size(400, 500))), Big, horizontally),
+    send(TW, resize).
+
 :- end_tests(tab_frame_resize).
 
 

@@ -738,6 +738,10 @@ distribute_stretches(stretch *s, int n, int w)
 					/* don't make negative */
 	  if ( !do_grow	&& to_grow > s[j].size )
 	    to_grow = s[j].size;
+	  if ( to_grow < 0 )		/* already past zero: leave it to the
+					   minimum check below, which pins it
+					   and shares the rest out again */
+	    to_grow = 0;
 
 	  s[j].size += (do_grow ? to_grow : -to_grow);
 	  growed += to_grow;
@@ -1057,6 +1061,23 @@ non_empty_tiles(TileObj t)
 }
 
 
+/* <->hor_shrink and <->ver_shrink are an encouragement to get smaller, and
+   distribute_stretches() shares what has to be given up in proportion to
+   it.  On its own that asks a small tile for as many pixels as a large
+   one, which drives the small one to nothing: two terminals beside a
+   thread monitor left the monitor with no height at all.  What a tile has
+   to give is the encouragement over what it is: turn it into that.
+*/
+
+static int
+shrinkability(int weight, int ideal)
+{ if ( weight <= 0 || ideal <= 0 )
+    return 0;
+
+  return (weight * ideal + 99) / 100;	/* never 0 for a tile that may give */
+}
+
+
 static status
 layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah)
 { int border = valInt(t->border);
@@ -1106,7 +1127,7 @@ layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah)
       sp->maximum = INT_MAX;
       sp->ideal   = valInt(t2->idealWidth);
       sp->stretch = valInt(t2->horStretch);
-      sp->shrink  = valInt(t2->horShrink);
+      sp->shrink  = shrinkability(valInt(t2->horShrink), sp->ideal);
       sp++;
     }
 
@@ -1137,7 +1158,7 @@ layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah)
       sp->maximum = INT_MAX;
       sp->ideal   = valInt(t2->idealHeight);
       sp->stretch = valInt(t2->verStretch);
-      sp->shrink  = valInt(t2->verShrink);
+      sp->shrink  = shrinkability(valInt(t2->verShrink), sp->ideal);
       sp++;
     }
 
