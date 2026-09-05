@@ -349,8 +349,67 @@ test(an_editable_label_opens_over_itself) :-
     get(TF, label_offset, X),
     get(TF, label_height, H),
     get(TF?label_size, width, W),
-    get(Item, area, area(X, 0, W, IH)),
-    IH >= H.
+    get(Item, area, area(X, 0, IW, IH)),
+    IH >= H,
+    IW >= W.                            % a label is narrow to type in
+
+%       Room to type in, which is more than the label takes to draw --
+%       there is a whole name to put there.
+
+test(and_is_wider_than_the_label) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    send(TF, edit_label),
+    editor(TF, Item),
+    get(TF?label_size, width, W),
+    get(Item?area, width, IW),
+    IW > W.
+
+test(but_not_wider_than_the_row_it_is_in) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    send(TF, edit_label),
+    editor(TF, Item),
+    get(TF?device?area, width, RowW),
+    get(TF, label_offset, X),
+    get(Item?area, width, IW),
+    X+IW =< RowW.
+
+%       Escape and Return arrive as names from the window system and as
+%       character codes from a program.  Both have to work, or Escape does
+%       nothing where it counts.
+
+test(escape_by_name_leaves_the_label_alone) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    get(TF, label, Was),
+    send(TF, edit_label),
+    editor(TF, Item),
+    send(Item, selection, nope),
+    send(Item, typed, 'ESC'),
+    \+ editor(TF, _),
+    get(TF, label, Was).
+
+test(return_that_changes_nothing_closes_the_editor) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    get(TF, label, Was),
+    send(TF, edit_label),
+    editor(TF, Item),
+    send(Item, typed, 'RET'),
+    \+ editor(TF, _),
+    get(TF, label, Was).
+
+test(while_return_after_typing_takes_what_was_typed) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    send(TF, edit_label),
+    editor(TF, Item),
+    send(Item, selection, renamed),
+    send(Item, modified, @on),
+    send(Item, typed, 'RET'),
+    \+ editor(TF, _),
+    get(TF, label, renamed).
 
 test(what_is_typed_becomes_the_label) :-
     two_tabs(_TW, TF, TF2),
@@ -681,6 +740,25 @@ test(the_buttons_are_not_taken_for_tabs) :-
     CH =:= WH-LH,                       % a button did not count as a label
     get(TW, members, Members),
     get(Members, size, 2).
+
+%       The close button sits over the label, so the editor would cover it
+%       and a click meant for the editor would close the tab instead.
+
+test(the_buttons_go_away_while_a_label_is_edited) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, closable, @on),
+    send(TF, editable_label, @on),
+    close_button(TF, _),
+    send(TF, edit_label),
+    \+ close_button(TF, _).
+
+test(and_come_back_when_the_edit_ends) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, closable, @on),
+    send(TF, editable_label, @on),
+    send(TF, edit_label),
+    send(TF, end_label_edit),
+    close_button(TF, _).
 
 :- end_tests(tab_frame_buttons).
 

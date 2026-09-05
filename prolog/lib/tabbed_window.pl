@@ -316,6 +316,9 @@ label_event(T, Ev:event) :->
     ;   send(@tab_label_recogniser, event, Ev)
     ).
 
+class_variable(edit_width, int, 200,
+               "Room to type a label in, if the label row has it").
+
 edit_label(T) :->
     "Put an editor over my label"::
     get(T, editable_label, @on),
@@ -323,11 +326,20 @@ edit_label(T) :->
     H > 0,                              % a lone tab may show no label
     get(T, device, Stack),
     send(T, end_label_edit),
-    get(T?label_size, width, W),
     get(T, label_offset, X),
+    get(T, edit_label_width, X, W),
+    send(Stack, hide_tab_buttons),      % one lies over the label I cover
     send(Stack, display, new(TI, tab_label_item(T)), point(X, 0)),
     send(TI, set, X, 0, W, H),
     send(Stack?window, keyboard_focus, TI).
+
+edit_label_width(T, X:int, W:int) :<-
+    "Room for the editor over my label, which is wider than the label"::
+    get(T?label_size, width, LW),
+    get(T, class_variable_value, edit_width, Wanted),
+    get(T?device, area, area(_, _, SW, _)),
+    Room is max(0, SW-X),
+    W is max(LW, min(Wanted, Room)).
 
 close_tab(T) :->
     "Close me; what that means is up to what I hold"::
@@ -338,7 +350,8 @@ end_label_edit(T) :->
     get(T, device, Stack),
     (   get(Stack, member, tab_label_item, TI)
     ->  send(Stack?window, keyboard_focus, @nil),
-        send(TI, destroy)
+        send(TI, destroy),
+        send(Stack, update_tab_buttons)
     ;   true
     ).
 
@@ -374,8 +387,19 @@ labels_laid_out(TS) :->
     "Put the buttons back where the labels are now"::
     ignore(send(TS, update_tab_buttons)).
 
+hide_tab_buttons(TS) :->
+    "Take the buttons off the label row"::
+    get(TS, graphicals, Graphicals),
+    chain_list(Graphicals, List),
+    tab_list(List, Tabs),
+    forall(member(T, Tabs),
+           send(TS, forget_tab_button, T, close_button)),
+    send(TS, forget_tab_button, TS, new_tab_button).
+
 update_tab_buttons(TS) :->
     "A close button per closable tab, and one to add a tab at the end"::
+    \+ get(TS, member, tab_label_item, _),   % a label is being edited and
+                                            % the editor lies over them
     get(TS, graphicals, Graphicals),
     chain_list(Graphicals, List),
     tab_list(List, Tabs),
@@ -481,9 +505,22 @@ tab(TI, Tab:tab) :<-
     "The tab I am editing"::
     get(TI, hypered, tab, Tab).
 
+%       The window system spells these as names -- see the SDL key map --
+%       while a program that sends ->typed a character sends the code.
+
+cancel_key(27).
+cancel_key('ESC').
+
+commit_key(13).
+commit_key('RET').
+
 typed(TI, Id:event_id) :->
-    "Escape puts the old label back"::
-    (   Id == 27
+    "Escape puts the old label back, and so does Return that changes nothing"::
+    (   cancel_key(Id)
+    ->  get(TI, tab, Tab),
+        send(Tab, end_label_edit)
+    ;   commit_key(Id),
+        get(TI, modified, @off)
     ->  get(TI, tab, Tab),
         send(Tab, end_label_edit)
     ;   send_super(TI, typed, Id)
