@@ -802,7 +802,23 @@ make_split_handle_popup(P) :-
                    message(Window, move_to_tab),
                    condition := and(message(Window, has_send_method,
                                             move_to_tab),
-                                    Window?pane_tab?windows?size > 1))).
+                                    Window?pane_tab?windows?size > 1))),
+    forall(neighbour_item(Item, Where),
+           send(P, append,
+                menu_item(Item,
+                          message(Window, move_to_neighbour_tab, Where),
+                          condition := and(message(Window, has_send_method,
+                                                   move_to_neighbour_tab),
+                                           message(Window,
+                                                   can_move_to_neighbour_tab,
+                                                   Where))))).
+
+%       A tab that holds nothing but this window can be folded into the
+%       tab beside it: the window joins that tab's split and the tab it
+%       came from goes away.
+
+neighbour_item(move_to_previous_tab, previous).
+neighbour_item(move_to_next_tab,     next).
 
 initialise(H) :->
     "Create the grip"::

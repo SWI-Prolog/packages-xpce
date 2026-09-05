@@ -1235,6 +1235,50 @@ move_to_tab(P) :->
     send(Tab, delete, P),               % take me out without destroying me
     send(F, append_pane, P, @default, @on).
 
+%       The other way round: a pane that has a tab to itself is put into
+%       the tab beside it, which takes its own tab away.  ->append moves
+%       the pane out of the tab it is in, so there is nothing to undo
+%       here; the tab left empty destroys itself.
+
+neighbour_tab(P, Where:{previous,next}, Tab:tab_frame) :<-
+    "The tab before or after mine; fails if there is none"::
+    get(P, pane_tab, Mine),
+    get(Mine, device, Stack),
+    get(Stack, tabs, Tabs),
+    get(Tabs, index, Mine, Rank),
+    (   Where == previous
+    ->  N is Rank-1
+    ;   N is Rank+1
+    ),
+    N >= 1,
+    get(Tabs, nth1, N, Tab).
+
+can_move_to_neighbour_tab(P, Where:{previous,next}) :->
+    "True if my tab holds nothing but me and there is one beside it"::
+    get(P, pane_tab, Mine),
+    get(Mine, windows, Windows),
+    get(Windows, size, 1),              % sharing: ->move_to_tab is the way
+    get(P, neighbour_tab, Where, _).
+
+move_to_neighbour_tab(P, Where:{previous,next}) :->
+    "Move me into the tab before or after mine"::
+    send(P, can_move_to_neighbour_tab, Where),
+    get(P, pane_frame, F),
+    get(P, neighbour_tab, Where, Tab),
+    pane_side(P, Side),
+    send(Tab, append, P, @default, Side),
+    send(F, current_pane, P),
+    send(F, keyboard_focus, P).
+
+%       Same rule as `prolog_ide <-pane_side': a tool says which side of
+%       what is there it belongs on, anything else goes below.
+
+pane_side(P, Side) :-
+    send(P, has_get_method, pane_side),
+    get(P, pane_side, Side),
+    !.
+pane_side(_, below).
+
 detach(P) :->
     "Move me into a window of my own"::
     get(P, pane_frame, F),
