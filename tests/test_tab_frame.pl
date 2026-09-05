@@ -319,11 +319,20 @@ editor(TF, Item) :-
 %   above the tab, so it lies at a negative y.
 
 label_click(TW, TF, Ev) :-
+    label_event(TW, TF, ms_left_down, 10, Ev).
+
+%!  label_event(+TabbedWindow, +Tab, +Kind, +Into, -Event) is det.
+%
+%   An event Into pixels along Tab's label.  `postNamedEvent()' hands
+%   ->label_event the tab as <-receiver, so say so here as well.
+
+label_event(TW, TF, Kind, Into, Ev) :-
     get(TF, label_offset, X),
     get(TF, label_height, H),
-    EX is X+10,
+    EX is X+Into,
     EY is -(H//2),
-    new(Ev, event(ms_left_down, TW, EX, EY)).
+    new(Ev, event(Kind, TW, EX, EY)),
+    send(Ev, slot, receiver, TF).
 
 test(a_label_is_not_editable_unless_asked) :-
     two_tabs(_TW, TF, _TF2),
@@ -415,6 +424,89 @@ test(a_tab_frame_reaches_the_label_popup) :-
     two_tabs(TW, TF, _TF2),
     send(TW, label_popup, new(P, popup)),
     get(TF, label_popup, P).
+
+%       Dragging a label puts the tab somewhere else in the row.  The
+%       labels are laid out in the order the stack holds the tabs in, so
+%       the order of <-tabs is the order they are drawn in.
+
+test(a_tab_can_be_moved_along_the_row, true(Names == [two, one, three])) :-
+    three_tabs(TW, TF1, TF2, _TF3),
+    get(TF2, device, TS),
+    send(TS, move_tab, TF2, TF1),
+    tab_names(TW, Names).
+
+test(and_back_again, true(Names == [one, two, three])) :-
+    three_tabs(TW, TF1, TF2, _TF3),
+    get(TF1, device, TS),
+    send(TS, move_tab, TF2, TF1),
+    send(TS, move_tab, TF1, TF2),
+    tab_names(TW, Names).
+
+test(a_label_says_which_tab_is_at_a_place, true(Name == two)) :-
+    three_tabs(TW, _TF1, TF2, _TF3),
+    get(TF2, device, TS),
+    get(TF2, label_offset, X),
+    get(TS, tab_at, X+2, Tab),
+    get(Tab, name, Name).
+
+test(and_nothing_past_the_end_of_the_row, [fail]) :-
+    three_tabs(_TW, _TF1, _TF2, TF3),
+    get(TF3, device, TS),
+    get(TF3, label_offset, X),
+    get(TF3?label_size, width, W),
+    get(TS, tab_at, X+W+10, _).
+
+test(dragging_a_label_over_another_moves_the_tab,
+     true(Names == [two, one, three])) :-
+    three_tabs(TW, TF1, TF2, _TF3),
+    drag_label(TW, TF2, TF1),
+    tab_names(TW, Names).
+
+test(and_dragging_it_back_puts_it_where_it_was,
+     true(Names == [one, two, three])) :-
+    three_tabs(TW, TF1, TF2, _TF3),
+    drag_label(TW, TF2, TF1),
+    drag_label(TW, TF2, TF1),           % TF1 is on the right of it now
+    tab_names(TW, Names).
+
+test(while_dragging_a_label_over_itself_changes_nothing,
+     true(Names == [one, two, three])) :-
+    three_tabs(TW, _TF1, TF2, _TF3),
+    drag_label(TW, TF2, TF2),
+    tab_names(TW, Names).
+
+%!  drag_label(+TabbedWindow, +Tab, +Onto) is det.
+%
+%   Press Tab's label and drag it onto Onto's, the way the window system
+%   delivers it: to the window, in its coordinates.
+
+drag_label(TW, Tab, Onto) :-
+    get(Tab, device, TS),
+    get(TS, area, area(SX, SY, _, _)),
+    get(Tab, label_height, H),
+    Y is SY + H//2,
+    get(Tab, label_offset, From),
+    get(Onto, label_offset, To),
+    DownX is SX+From+5,
+    DragX is SX+To+2,
+    ignore(send(TW, post_event, event(ms_left_down, TW, DownX, Y))),
+    ignore(send(TW, post_event, event(ms_left_drag, TW, DragX, Y))),
+    ignore(send(TW, post_event, event(ms_left_up,   TW, DragX, Y))).
+
+%!  three_tabs(-TabbedWindow, -One, -Two, -Three) is det.
+
+three_tabs(TW, TF1, TF2, TF3) :-
+    new(TW, tabbed_window('Test', size(400,300))),
+    send(TW, tab, new(TF1, tab_frame(new(_P1, picture), one))),
+    send(TW, tab, new(TF2, tab_frame(new(_P2, picture), two))),
+    send(TW, tab, new(TF3, tab_frame(new(_P3, picture), three))),
+    send(TW, open),
+    send(TW, resize).
+
+tab_names(TW, Names) :-
+    get(TW, tabs, Chain),
+    chain_list(Chain, Tabs),
+    findall(N, (member(T, Tabs), get(T, name, N)), Names).
 
 :- end_tests(tab_frame_label).
 

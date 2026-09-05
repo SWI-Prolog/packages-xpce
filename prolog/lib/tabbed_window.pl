@@ -304,14 +304,14 @@ label_popup(Tab, Popup:popup) :<-
 %       on a left click is therefore repeated here, from labelEventTab().
 
 label_event(T, Ev:event) :->
-    "Raise on a click, rename on a double one, popup on the right button"::
+    "Raise on a click, drag to reorder, rename on a double click"::
     (   send(Ev, is_a, ms_left_down),
         get(T, active, Active),
         Active \== @off
     ->  (   get(T, editable_label, @on),
             get(Ev, multiclick, double)
         ->  send(T, edit_label)
-        ;   send(T?device, on_top, T)
+        ;   send(@tab_move_gesture, event, Ev)  % raises me on ->initiate
         )
     ;   send(@tab_label_recogniser, event, Ev)
     ).
@@ -672,6 +672,70 @@ close_other_tabs(Tab) :->
             message(@arg1, destroy))).
 
 :- pce_end_class(window_tab).
+
+
+                 /*******************************
+                 *        REORDERING TABS       *
+                 *******************************/
+
+/* Dragging a tab label puts the tab somewhere else in the row.  The
+   labels are laid out left to right in the order the tabs are held in,
+   so putting one somewhere else is a matter of moving it in that chain
+   and laying the labels out again.
+*/
+
+:- pce_extend_class(tab_stack).
+
+tab_at(TS, X:int, Tab:tab) :<-
+    "The tab whose label is at X, in my coordinates"::
+    get(TS, graphicals, Chain),
+    chain_list(Chain, Graphicals),
+    member(Tab, Graphicals),
+    send(Tab, instance_of, tab),
+    get(Tab, label_offset, Offset),
+    get(Tab?label_size, width, Width),
+    X >= Offset,
+    X < Offset+Width,
+    !.
+
+move_tab(TS, Tab:tab, Onto:tab) :->
+    "Put Tab where Onto is now"::
+    Tab \== Onto,
+    get(TS, graphicals, Chain),
+    get(Chain, index, Tab, From),
+    get(Chain, index, Onto, To),
+    (   From < To
+    ->  send(Chain, move_after, Tab, Onto)
+    ;   send(Chain, move_before, Tab, Onto)
+    ),
+    send(TS, layout_labels).
+
+:- pce_end_class(tab_stack).
+
+
+:- pce_global(@tab_move_gesture, new(tab_move_gesture)).
+
+:- pce_begin_class(tab_move_gesture, gesture,
+                   "Drag a tab label to put the tab somewhere else").
+
+initialise(G) :->
+    "Drag with the left button"::
+    send_super(G, initialise, left).
+
+initiate(_G, Ev:event) :->
+    "Raise the tab I am about to drag, as a plain click does"::
+    get(Ev, receiver, Tab),
+    send(Tab?device, on_top, Tab).
+
+drag(_G, Ev:event) :->
+    "Put the tab where the pointer has reached"::
+    get(Ev, receiver, Tab),
+    get(Tab, device, Stack),
+    get(Ev, position, Stack, point(X, _Y)),
+    get(Stack, tab_at, X, Onto),
+    ignore(send(Stack, move_tab, Tab, Onto)).
+
+:- pce_end_class(tab_move_gesture).
 
 
 :- pce_begin_class(window_tab_frame, frame,
