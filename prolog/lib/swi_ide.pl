@@ -72,7 +72,7 @@ the IDE components to the autoloading of one single predicate.
 :- pce_autoload(prolog_trace_exception, library('trace/exceptions')).
 :- pce_autoload(prolog_thread_monitor,  library('swi/thread_monitor')).
 :- pce_autoload(prolog_debug_monitor,   library('swi/pce_debug_monitor')).
-:- pce_autoload(xref_frame,             library('pce_xref')).
+:- pce_autoload(xref_tool,              library('pce_xref')).
 
                  /*******************************
                  *            TOPLEVEL          *
@@ -193,11 +193,9 @@ debug_monitor(IDE) :->
 
 xref(IDE) :->
     "Open Cross-Referencer frontend"::
-    (   get(IDE, member, xref_frame, XREF)
-    ->  send(XREF, open)
-    ;   new(XREF, xref_frame),
-        send(XREF, application, IDE),
-        send(XREF, wait),
+    (   get(IDE, tool, xref_tool, XREF)
+    ->  send(IDE, expose_tool, XREF)
+    ;   get(IDE, show_tool, xref_tool, @default, XREF),
         send(XREF, update)
     ).
 

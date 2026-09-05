@@ -38,11 +38,11 @@
 
 /** <module> An IDE tool as a pane
 
-The thread monitor, the source navigator, the debug monitor and the
-debugger status used to be windows of their own, each holding its
-windows, a menu bar and a reporter in a frame.  They are panes now, so
-they can sit in a tab of any window of the IDE beside a terminal, an
-editor or another tool.
+The thread monitor, the source navigator, the debug monitor, the debugger
+status and the cross-referencer used to be windows of their own, each
+holding its windows, a menu bar and a reporter in a frame.  They are
+panes now, so they can sit in a tab of any window of the IDE beside a
+terminal, an editor or another tool.
 
 These check that a tool goes where it should, that there is only ever
 one, that its windows are tiled inside it and that what it has to say
@@ -64,6 +64,7 @@ Run with:
 :- use_module(library(trace/browse), []).
 :- use_module(library(swi/pce_debug_monitor), []).
 :- use_module(library(trace/status), []).
+:- use_module(library(pce_xref), []).
 :- use_module(library(prolog_debug), [spy/1, nospy/1]).
 :- use_module(library(debug), [debug/1, debug/3, nodebug/1]).
 :- use_module(library(pce_util), [chain_list/2]).
@@ -73,7 +74,8 @@ test_tool_panes :-
     run_tests([ tool_panes,
                 navigator_pane,
                 debug_monitor_pane,
-                debug_status_pane
+                debug_status_pane,
+                xref_pane
               ]).
 
 %!  classes(+Frame, -Classes) is det.
@@ -901,3 +903,140 @@ test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :
     get(SD, class_name, Class).
 
 :- end_tests(debug_status_pane).
+
+
+                 /*******************************
+                 *      THE CROSS-REFERENCER    *
+                 *******************************/
+
+/* The cross-referencer carries three windows: the filter across the top,
+the browsers on the left and the workspaces on the right.  The last two
+are tabbed windows of their own, so a tool pane can hold tabs without
+being confused with the tabs of the window it is in.
+*/
+
+%!  xref(-Tool) is det.
+%
+%   The one cross-referencer there is, made if there is none.  It is not
+%   asked to analyse anything: that reads every source file of the
+%   program, in a thread of its own.
+
+xref(F) :-
+    get(@prolog_ide, show_tool, xref_tool, @default, F).
+
+no_xref :-
+    (   get(@prolog_ide, tool, xref_tool, F)
+    ->  send(F, destroy)
+    ;   true
+    ).
+
+:- begin_tests(xref_pane).
+
+test(it_opens_in_a_window_of_the_ide, Classes == [xref_tool]) :-
+    no_frames,
+    no_xref,
+    xref(F),
+    get(F, frame, Frame),
+    send(Frame, instance_of, pane_frame),
+    classes(Frame, Classes).
+
+test(there_is_only_ever_one, true(Again == F)) :-
+    xref(F),
+    send(@prolog_ide, xref),
+    get(@prolog_ide, tool, xref_tool, Again).
+
+test(its_three_windows_are_tiled_inside_it,
+     Names == [filter_dialog, browsers, workspaces]) :-
+    xref(F),
+    get(F, members, Chain),
+    chain_list(Chain, Windows),
+    findall(N, (member(W, Windows), get(W, name, N)), Names).
+
+test(the_tab_is_named_after_it,
+     true(Label == 'SWI-Prolog -- Cross-referencer')) :-
+    xref(F),
+    get(F, frame, Frame),
+    send(Frame, current_pane, F),
+    get(Frame, label, Label).
+
+%       Its two tabbed windows are told apart by name: <-window would ask
+%       by class and both are a plain tabbed_window, and <-member on the
+%       tool answers the window of one of *its* tabs.
+
+test(the_browsers_are_reached_through_the_pane,
+     Names == [xref_file_tree, xref_predicate_browser]) :-
+    xref(F),
+    get(F, browser, files, Tree),
+    get(F, browser, predicates, Predicates),
+    findall(N,
+            ( member(W, [Tree, Predicates]),
+              get(W, class_name, N)
+            ),
+            Names).
+
+test(and_so_are_the_workspaces, true(Class == prolog_file_info)) :-
+    xref(F),
+    get(F, workspace, file_info, @on, @on, WS),
+    get(WS, class_name, Class).
+
+%       A graphical deep in the tool used to reach it with <-frame.
+
+test(a_window_of_the_tool_reaches_the_tool, true(Reached == F)) :-
+    xref(F),
+    get(F, browser, files, Tree),
+    get(Tree, container, xref_tool, Reached).
+
+test(and_so_does_an_item_of_its_filter, true(Reached == F)) :-
+    xref(F),
+    get(F, window, xref_filter_dialog, FD),
+    get(FD, member, filter_on_filename, Item),
+    get(Item, container, xref_tool, Reached).
+
+%       Its menu is one popup of its own on the bar of the window it is
+%       in, with the settings as a pull-right that fills itself in.
+
+test(its_menu_reaches_the_bar_of_the_window_it_is_in,
+     Items == [refresh, settings, about]) :-
+    xref(F),
+    get(F, frame, Frame),
+    send(Frame, current_pane, F),
+    menus(Frame, Menus),
+    memberchk(xref, Menus),
+    get(Frame, menu_bar, MB),
+    get(MB, member, xref, Popup),
+    get(Popup, members, Chain),
+    chain_list(Chain, Members),
+    findall(V, (member(MI, Members), get(MI, value, V)), Items).
+
+test(the_settings_show_what_is_in_force,
+     true(Ticked == [@off, @on, @on])) :-
+    xref(F),
+    get(F, frame, Frame),
+    send(Frame, current_pane, F),
+    get(Frame, menu_bar, MB),
+    get(MB, member, xref, Popup),
+    get(Popup, member, settings, Item),
+    get(Item, popup, Settings),
+    send(F, update_setting_menu, Settings),   % what its update_message does
+    findall(On,
+            ( member(Name, [warn_autoload,   % false by default; the other
+                            warn_not_called, % two are true
+                            hide_system_files]),
+              get(Settings, member, Name, MI),
+              get(MI, selected, On)
+            ),
+            Ticked).
+
+test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :-
+    no_frames,
+    no_xref,
+    epilog_frame(@default, @default, @default, @off, @default, Frame),
+    send(Frame, open),
+    send(@prolog_ide, show_tool, xref_tool, split),
+    get(@prolog_ide, tool, xref_tool, F),
+    \+ get(F?frame, status_dialog, _),
+    send(F, report, progress, 'XREF %s', 'somewhere.pl'),
+    get(F?frame, status_dialog, SD),
+    get(SD, class_name, Class).
+
+:- end_tests(xref_pane).
