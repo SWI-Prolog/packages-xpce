@@ -783,9 +783,11 @@ pane(H, Pane:window) :<-
 %       Dragging the grip moves the window onto another one and clicking
 %       it picks the window up, so neither is free to say "out of here".
 %       That is on a popup, where the label of a tab offers the same
-%       things for a whole tab.  Each is offered only where it changes
-%       something: a window of my own if I am not the only pane, and a tab
-%       of my own if I am sharing one.
+%       things for a whole tab.  Each move is offered only where it
+%       changes something: a window of my own if I am not the only pane, a
+%       tab of my own if I am sharing one, and the tab beside mine if I
+%       have one to myself.  Closing is always on offer: the grip is the
+%       one thing a pane of any class is sure to carry.
 
 :- pce_global(@split_handle_popup, make_split_handle_popup).
 
@@ -803,7 +805,7 @@ make_split_handle_popup(P) :-
                    condition := and(message(Window, has_send_method,
                                             move_to_tab),
                                     Window?pane_tab?windows?size > 1))),
-    forall(neighbour_item(Item, Where),
+    forall(neighbour_item(Item, Where, EndGroup),
            send(P, append,
                 menu_item(Item,
                           message(Window, move_to_neighbour_tab, Where),
@@ -811,14 +813,20 @@ make_split_handle_popup(P) :-
                                                    move_to_neighbour_tab),
                                            message(Window,
                                                    can_move_to_neighbour_tab,
-                                                   Where))))).
+                                                   Where)),
+                          end_group := EndGroup))),
+    send(P, append,
+         menu_item(close,
+                   message(Window, close_pane),
+                   condition := message(Window, has_send_method,
+                                        close_pane))).
 
 %       A tab that holds nothing but this window can be folded into the
 %       tab beside it: the window joins that tab's split and the tab it
 %       came from goes away.
 
-neighbour_item(move_to_previous_tab, previous).
-neighbour_item(move_to_next_tab,     next).
+neighbour_item(move_to_previous_tab, previous, @off).
+neighbour_item(move_to_next_tab,     next,     @on).   % a line before Close
 
 initialise(H) :->
     "Create the grip"::

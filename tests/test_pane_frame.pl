@@ -709,15 +709,16 @@ test(a_pane_sharing_a_tab_stays_where_it_is, [fail]) :-
     send(F, append_pane, P3, @default, @on),
     send(P2, move_to_neighbour_tab, next).
 
-%       Each is offered only where it changes something.  What the popup
-%       shows is what the grip's own menu shows: the same object.
+%       Each move is offered only where it changes something; closing is
+%       always on offer.  What the popup shows is what the grip's own menu
+%       shows: the same object.
 
-test(the_only_pane_of_a_window_is_offered_neither, true(Offered == [])) :-
+test(the_only_pane_of_a_window_is_offered_no_move, true(Offered == [close])) :-
     frame(_F, _App, P1),
     grip_offers(P1, Offered).
 
 test(a_pane_in_a_tab_of_its_own_is_offered_a_window_and_the_tab_before_it,
-     true(Offered == [move_to_new_window, move_to_previous_tab])) :-
+     true(Offered == [move_to_new_window, move_to_previous_tab, close])) :-
     frame(F, _App, _P1),
     pane(second, alpha, P2),
     send(F, append_pane, P2, @default, @on),
@@ -726,7 +727,8 @@ test(a_pane_in_a_tab_of_its_own_is_offered_a_window_and_the_tab_before_it,
 test(a_lone_pane_with_a_tab_on_either_side_is_offered_both,
      true(Offered == [move_to_new_window,
                       move_to_previous_tab,
-                      move_to_next_tab])) :-
+                      move_to_next_tab,
+                      close])) :-
     frame(F, _App, _P1),
     pane(second, alpha, P2),
     send(F, append_pane, P2, @default, @on),
@@ -735,11 +737,20 @@ test(a_lone_pane_with_a_tab_on_either_side_is_offered_both,
     grip_offers(P2, Offered).
 
 test(a_pane_sharing_a_tab_is_offered_both,
-     true(Offered == [move_to_new_window, move_to_new_tab])) :-
+     true(Offered == [move_to_new_window, move_to_new_tab, close])) :-
     frame(F, _App, P1),
     pane(second, alpha, P2),
     send(F, split, P2, P1, vertically),
     grip_offers(P2, Offered).
+
+test(and_closing_takes_it_out_of_the_window, Names == [one]) :-
+    frame(F, _App, P1),
+    pane(second, alpha, P2),
+    send(F, split, P2, P1, vertically),
+    send(P2, close_pane),
+    get(F, panes, Chain),
+    chain_list(Chain, Panes),
+    findall(N, (member(P, Panes), get(P, name, N)), Names).
 
 %!  grip_offers(+Pane, -Items) is det.
 %

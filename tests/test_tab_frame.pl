@@ -1355,7 +1355,7 @@ test(the_class_variables_resolve,
 
 test(the_handle_offers_a_window_and_a_tab_of_its_own_on_a_popup,
      Items == [move_to_new_window, move_to_new_tab,
-               move_to_previous_tab, move_to_next_tab]) :-
+               move_to_previous_tab, move_to_next_tab, close]) :-
     new(P, picture),
     send(P, display, new(H, split_handle)),
     get(H, all_recognisers, Recognisers),
