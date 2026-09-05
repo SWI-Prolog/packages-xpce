@@ -158,10 +158,24 @@ append(TF, Window:window=window,
 attach_window(TF, Window:window) :->
     "Take Window into my tile hierarchy"::
     decoration(Window, Decor),
-    send_super(TF, display, Decor),
+    send(Decor?tile?root, for_all, message(TF, display_tiled, @arg1)),
     send(TF?tile, manager, TF),
     send(TF, update_current),
     send(TF, layout).
+
+%       A window may bring others with it.  `window ->above' and friends
+%       relate two windows through their tiles, and one that is in no tile
+%       manager yet is left hanging on the one it was related to until
+%       that one is taken in.  Class frame walks the tile tree when it
+%       takes a window -- see frameWindow() in src/win/window.c -- so that
+%       all of them arrive together; do the same.
+
+display_tiled(TF, Window:window) :->
+    "Display a window of my tile hierarchy that I do not hold yet"::
+    (   get(Window, device, TF)
+    ->  true
+    ;   send_super(TF, display, Window)
+    ).
 
 detach_window(TF, Window:window) :->
     "Release Window from my tile hierarchy"::

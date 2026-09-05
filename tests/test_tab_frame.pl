@@ -873,6 +873,38 @@ test(moving_a_window_into_a_tab_takes_it_out_of_the_frame) :-
     get(P2, tile_manager, TF),
     get(F?members, size, 0).
 
+%       A window may be related to one that is in no tile manager yet, and
+%       both arrive when that one is taken in.  Class frame walks the tile
+%       tree of the window it takes -- see frameWindow() in
+%       src/win/window.c -- and a tab has to do the same, or the windows
+%       hanging off it are laid out but never displayed.
+
+test(a_window_related_before_its_neighbour_comes_along_with_it,
+     true(Windows == [one, two, three])) :-
+    tabbed(_TW, TF, P1),
+    send(P1, name, one),
+    new(P2, picture), send(P2, name, two),
+    new(P3, picture), send(P3, name, three),
+    send(P3, below, P2),                % P2 is in no tab yet: P3 hangs on
+    send(P2, right, P1),                % it until P2 is taken in
+    get(TF, windows, Chain),
+    chain_list(Chain, List),
+    findall(N, (member(W, List), get(W, name, N)), Windows).
+
+test(and_is_laid_out_where_the_tile_says, true(Below == true)) :-
+    tabbed(_TW, TF, P1),
+    new(P2, picture),
+    new(P3, picture),
+    send(P3, below, P2),
+    send(P2, right, P1),
+    send(TF, layout),
+    geometry(P2, area(_, Y2, _, H2)),
+    geometry(P3, area(_, Y3, _, _)),
+    (   Y3 >= Y2+H2
+    ->  Below = true
+    ;   Below = Y2-H2-Y3
+    ).
+
 test(relating_to_a_tile_works_too) :-      % as class epilog_window does
     tabbed(_TW, TF, P1),
     get(P1, tile, T1),

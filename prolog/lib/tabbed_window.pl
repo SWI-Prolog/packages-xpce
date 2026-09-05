@@ -181,7 +181,8 @@ make_current(Tab, Window) :-
 input_focus(W, Focus:bool) :->
     send_super(W, input_focus, Focus),
     (   Focus == @on
-    ->  (   get(W, current, Current)
+    ->  (   get(W, current, Current),
+            Current \== @nil            % a tab that holds no window yet
         ->  send(W, delete_hypers, focus_window),
             new(_, hyper(W, Current, focus_window, tabbed_window)),
             send(Current, input_focus, @on)
