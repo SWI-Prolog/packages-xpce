@@ -169,6 +169,32 @@ test(a_new_tab_gets_a_label_of_its_own) :-
     send(W, new_tab),
     tabs(F, ['Prolog'-1, 'Prolog 2'-1]).
 
+%       A tab is named when it is added, which is before its terminal has
+%       a thread.  Once the thread is there a Prolog toplevel goes by its
+%       alias, so renaming the thread renames the tab.
+
+test(a_prolog_tab_takes_the_name_of_its_thread) :-
+    epilog(F, W1),
+    send(W1, new_tab),
+    get(F, current_pane, W2),
+    send(W1, thread_connected, con1),
+    send(W2, thread_connected, con2),
+    tabs(F, [con1-1, con2-1]).
+
+test(while_another_profile_keeps_the_name_of_what_it_runs) :-
+    epilog(F, _W),
+    send(F, new_pane, shell),
+    get(F, current_pane, Shell),
+    \+ send(Shell, thread_connected, con2),
+    tabs(F, ['Prolog'-1, 'OS shell'-1]).
+
+test(and_a_tab_the_user_named_keeps_the_name_they_gave_it) :-
+    epilog(F, W),
+    get(W, container, tab_frame, Tab),
+    send(Tab, label_edited, mine),
+    \+ send(W, thread_connected, con1),
+    tabs(F, [mine-1]).
+
 test(a_new_tab_can_take_another_profile) :-
     epilog(F, _W),
     send(F, new_pane, shell),

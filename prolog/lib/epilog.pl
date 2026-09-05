@@ -1850,7 +1850,29 @@ create(T, Parent:[window]) :->
     send_super(T, create, Parent),      % a subwindow is created with the
     get(T, member, terminal, TI),       % window it is displayed on
     get(T, tid, TID),
-    get(TI, connect, TID, _Title).
+    get(TI, connect, TID, Title),
+    (   Title == @default               % it was connected already
+    ->  true
+    ;   ignore(send(T, thread_connected, Title))
+    ).
+
+%       A tab is named when it is added, which is before its terminal has
+%       a thread to be named after, so the name it starts with says what
+%       it runs.  Once the thread is there, a Prolog toplevel goes by its
+%       alias -- con1, con2 -- and the user renames the thread to rename
+%       the tab.  Anything else keeps the name of what it runs: a shell
+%       has a thread too, and `con3' would say nothing about it.
+
+thread_connected(T, Thread:name) :->
+    "Name my tab after the thread that has just been connected"::
+    get(T, terminal, PT),
+    get(PT, profile, prolog),
+    get(T, pane_frame, F),
+    get(T, pane_tab, Tab),
+    get(Tab, renamed, @off),            % the user named it themselves
+    unique_tab_label(F, Thread, 1, Label),
+    send(T, tab_label, Label),
+    send(Tab, label, Label).
 
 sibling(T, W:epilog_window) :<-
     "A new terminal window that continues mine"::
