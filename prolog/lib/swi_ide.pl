@@ -141,8 +141,7 @@ open_exceptions(IDE, Gui:[bool]) :->
 open_navigator(IDE, Where:[directory|source_location]) :->
     "Open Source Navigator"::
     (   send(Where, instance_of, directory)
-    ->  get(IDE, navigator, Where, Navigator),
-        send(Navigator, directory, Where)
+    ->  get(IDE, navigator, Where, _)
     ;   send(Where, instance_of, source_location)
     ->  get(Where, file_name, File),
         file_directory_name(File, Dir),
@@ -153,17 +152,20 @@ open_navigator(IDE, Where:[directory|source_location]) :->
         ),
         get(IDE, navigator, Dir, Navigator),
         send(Navigator, goto, File, LineNo)
-    ;   get(IDE, navigator, Navigator)
-    ),
-    send(Navigator, expose).
+    ;   get(IDE, navigator, _)
+    ).
 
 
 navigator(IDE, Dir:[directory], Navigator:prolog_navigator) :<-
-    "Create or return existing navigator"::
-    (   get(IDE, member, prolog_navigator, Navigator)
-    ->  true
+    "The navigator pane, made and shown if there is none"::
+    (   get(IDE, tool, prolog_navigator, Navigator)
+    ->  send(IDE, expose_tool, Navigator)
     ;   new(Navigator, prolog_navigator(Dir)),
-        send(Navigator, application, IDE)
+        send(IDE, place_tool, Navigator, @default)
+    ),
+    (   Dir == @default
+    ->  true
+    ;   send(Navigator, directory, Dir)
     ).
 
 open_query_window(IDE) :->
@@ -245,20 +247,33 @@ tool(IDE, Class:name, Pane:window) :<-
 show_tool(IDE, Class:name, How:[{frame,tab,split}], Pane:window) :<-
     "Show the tool pane of that class, making one if there is none"::
     (   get(IDE, tool, Class, Pane)
-    ->  get(Pane, frame, F),
-        send(F, current_pane, Pane)
+    ->  send(IDE, expose_tool, Pane)
     ;   Term =.. [Class],
         new(Pane, Term),
-        get(IDE, tool_placement, How, Where),
-        (   Where \== frame,
-            get(IDE, current_frame, F)
-        ->  (   Where == split
-            ->  send(F, split, Pane, @default, ?(IDE, pane_side, Pane))
-            ;   send(F, append_pane, Pane, @default, @on)
-            )
-        ;   new(F, pane_frame(IDE, @default, Pane))
+        send(IDE, place_tool, Pane, How)
+    ).
+
+%       A tool that has something to say about how it is made -- the
+%       navigator takes the directory to root the tree at -- makes itself
+%       and asks for the placing alone.
+
+place_tool(IDE, Pane:window, How:[{frame,tab,split}]) :->
+    "Put a new tool pane in a window of the IDE"::
+    get(IDE, tool_placement, How, Where),
+    (   Where \== frame,
+        get(IDE, current_frame, F)
+    ->  (   Where == split
+        ->  send(F, split, Pane, @default, ?(IDE, pane_side, Pane))
+        ;   send(F, append_pane, Pane, @default, @on)
         )
+    ;   new(_, pane_frame(IDE, @default, Pane))
     ),
+    send(IDE, expose_tool, Pane).
+
+expose_tool(_IDE, Pane:window) :->
+    "Bring the window holding Pane up, with Pane in view"::
+    get(Pane, frame, F),
+    send(F, current_pane, Pane),
     send(F, open),
     send(F, expose).
 

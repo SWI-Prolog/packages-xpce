@@ -38,14 +38,14 @@
 
 /** <module> An IDE tool as a pane
 
-The thread monitor used to be a window of its own: a browser, a graph
-window, a menu bar and a reporter in a frame.  It is a pane now, so it
-can sit in a tab of any window of the IDE beside a terminal, an editor
-or another tool.
+The thread monitor and the source navigator used to be windows of their
+own, each holding its windows, a menu bar and a reporter in a frame.
+They are panes now, so they can sit in a tab of any window of the IDE
+beside a terminal, an editor or another tool.
 
-These check that it goes where it should, that there is only ever one,
-that its two windows are tiled inside it and that its menu reaches the
-bar of whatever window it lands in.
+These check that a tool goes where it should, that there is only ever
+one, that its windows are tiled inside it and that what it has to say
+reaches the bar of whatever window it lands in.
 
 Run with:
 
@@ -60,11 +60,14 @@ Run with:
 :- use_module(library(swi_ide)).
 :- use_module(library(epilog)).
 :- use_module(library(swi/thread_monitor), []).
+:- use_module(library(trace/browse), []).
 :- use_module(library(pce_util), [chain_list/2]).
 :- use_module(library(lists), [member/2]).
 
 test_tool_panes :-
-    run_tests([ tool_panes ]).
+    run_tests([ tool_panes,
+                navigator_pane
+              ]).
 
 %!  classes(+Frame, -Classes) is det.
 
@@ -72,6 +75,47 @@ classes(F, Classes) :-
     get(F, panes, Chain),
     chain_list(Chain, Panes),
     findall(C, (member(P, Panes), get(P, class_name, C)), Classes).
+
+%!  no_frames is det.
+%
+%   Take away every window of the IDE, so that a test that watches a
+%   tool being placed knows which window it is placed in.
+
+no_frames :-
+    get(@prolog_ide, members, Members),
+    chain_list(Members, List),
+    forall(( member(F, List),
+             send(F, instance_of, pane_frame)
+           ),
+           send(F, destroy)).
+
+%!  side_of(+Graphical, +Relative, -Side) is det.
+%
+%   Which side of Relative Graphical landed on.  The tile places a
+%   window's decoration, not the window, so that is what says where it
+%   went.  See `placed_area/2' in library(pane_frame).
+
+side_of(Gr, Relative, Side) :-
+    placed_position(Gr, X, Y),
+    placed_position(Relative, RX, RY),
+    (   Y > RY
+    ->  Side = below
+    ;   Y < RY
+    ->  Side = above
+    ;   X > RX
+    ->  Side = right
+    ;   X < RX
+    ->  Side = left
+    ;   Side = nowhere
+    ).
+
+placed_position(W, X, Y) :-
+    (   get(W, decoration, Decor),
+        Decor \== @nil
+    ->  Placed = Decor
+    ;   Placed = W
+    ),
+    get(Placed, area, area(X, Y, _, _)).
 
 %!  menus(+Frame, -Names) is det.
 
@@ -352,14 +396,6 @@ with_pane_side(Side, Goal) :-
         Goal,
         send(Class, class_variable_value, pane_side, Old)).
 
-no_frames :-
-    get(@prolog_ide, members, Members),
-    chain_list(Members, List),
-    forall(( member(F, List),
-             send(F, instance_of, pane_frame)
-           ),
-           send(F, destroy)).
-
 %!  monitor_side(+Side, -Landed) is det.
 %
 %   Ask for the monitor beside a terminal, with the tool saying it wants
@@ -384,31 +420,6 @@ monitor_side(Side, Landed) :-
               !,
               side_of(TM, Other, Landed)
             ))).
-
-%       The tile places a window's decoration, not the window, so that is
-%       what says where it went.  See `placed_area/2' in library(pane_frame).
-
-side_of(Gr, Relative, Side) :-
-    placed_position(Gr, X, Y),
-    placed_position(Relative, RX, RY),
-    (   Y > RY
-    ->  Side = below
-    ;   Y < RY
-    ->  Side = above
-    ;   X > RX
-    ->  Side = right
-    ;   X < RX
-    ->  Side = left
-    ;   Side = nowhere
-    ).
-
-placed_position(W, X, Y) :-
-    (   get(W, decoration, Decor),
-        Decor \== @nil
-    ->  Placed = Decor
-    ;   Placed = W
-    ),
-    get(Placed, area, area(X, Y, _, _)).
 
 test(a_tool_says_which_side_it_goes_on, true(Landed == left)) :-
     monitor_side(left, Landed).
@@ -459,3 +470,112 @@ test(it_shows_which_one_is_in_force, true(Ticked == [split])) :-
                    )).
 
 :- end_tests(tool_panes).
+
+
+                 /*******************************
+                 *          THE NAVIGATOR       *
+                 *******************************/
+
+/* The source navigator is the second tool to become a pane.  It carries
+three windows rather than two -- a tool bar, the filter and the tree --
+and it asks for the left rather than the bottom, which is what a
+navigator is for.
+*/
+
+%!  navigator(-Navigator) is det.
+%
+%   The one navigator there is, made if there is none.
+
+navigator(SB) :-
+    get(@prolog_ide, show_tool, prolog_navigator, @default, SB).
+
+no_navigator :-
+    (   get(@prolog_ide, tool, prolog_navigator, SB)
+    ->  send(SB, destroy)
+    ;   true
+    ).
+
+:- begin_tests(navigator_pane).
+
+test(it_opens_in_a_window_of_the_ide, Classes == [prolog_navigator]) :-
+    no_frames,
+    no_navigator,
+    navigator(SB),
+    get(SB, frame, F),
+    send(F, instance_of, pane_frame),
+    classes(F, Classes).
+
+test(there_is_only_ever_one, true(Again == SB)) :-
+    navigator(SB),
+    send(@prolog_ide, open_navigator),
+    get(@prolog_ide, tool, prolog_navigator, Again).
+
+test(its_three_windows_are_tiled_inside_it,
+     Names == [tool_dialog, sb_filter_dialog, prolog_source_structure]) :-
+    navigator(SB),
+    get(SB, members, Chain),
+    chain_list(Chain, Windows),
+    findall(N, (member(W, Windows), get(W, class_name, N)), Names).
+
+test(the_tab_is_named_after_it, true(Label == 'SWI-Prolog -- Navigator')) :-
+    navigator(SB),
+    get(SB, frame, F),
+    send(F, current_pane, SB),
+    get(F, label, Label).
+
+test(it_asks_for_the_left, true(Side == left)) :-
+    no_navigator,
+    new(SB, prolog_navigator),
+    get(SB, pane_side, Side),
+    send(SB, destroy).
+
+%       The tool bar acts on the tree and the filter dialog reads it, and
+%       both used to find it through <-frame.  The frame is a window of
+%       the IDE now, so they go through the pane they share.
+
+test(the_tool_bar_is_found_through_the_pane) :-
+    navigator(SB),
+    get(SB, tool_bar, TB),
+    get(TB, client, Client),
+    get(SB, tree, Client).
+
+test(and_so_is_the_tree_the_filter_controls, true(Tree == Mine)) :-
+    navigator(SB),
+    get(SB, window, sb_filter_dialog, FD),
+    get(FD, tree, Tree),
+    get(SB, tree, Mine).
+
+test(so_the_filter_can_still_say_what_to_show, true(Content == all)) :-
+    navigator(SB),
+    get(SB, window, sb_filter_dialog, FD),
+    send(FD, content, all),
+    get(SB?tree, content, Content).
+
+%       A pane has no reporter of its own: it reports on the bar of the
+%       window it is in, which grows one the first time anything asks.
+
+test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :-
+    no_navigator,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_navigator, split),
+    get(@prolog_ide, tool, prolog_navigator, SB),
+    \+ get(SB?frame, status_dialog, _),
+    send(SB, report, status, 'scanning'),
+    get(SB?frame, status_dialog, SD),
+    get(SD, class_name, Class).
+
+test(and_it_lands_on_the_left_of_what_was_there, true(Landed == left)) :-
+    no_frames,
+    no_navigator,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_navigator, split),
+    get(@prolog_ide, tool, prolog_navigator, SB),
+    get(SB, container, tab_frame, Tab),
+    get(Tab, windows, Chain),
+    chain_list(Chain, Windows),
+    member(Other, Windows), Other \== SB, !,
+    side_of(SB, Other, Landed).
+
+:- end_tests(navigator_pane).
