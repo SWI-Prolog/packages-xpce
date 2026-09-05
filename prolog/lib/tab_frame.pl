@@ -781,9 +781,11 @@ pane(H, Pane:window) :<-
 :- pce_global(@split_handle_gesture, new(split_handle_gesture)).
 
 %       Dragging the grip moves the window onto another one and clicking
-%       it picks the window up, so neither is free to say "into a window
-%       of its own".  That is on a popup, where the label of a tab offers
-%       the same thing for a whole tab.
+%       it picks the window up, so neither is free to say "out of here".
+%       That is on a popup, where the label of a tab offers the same
+%       things for a whole tab.  Each is offered only where it changes
+%       something: a window of my own if I am not the only pane, and a tab
+%       of my own if I am sharing one.
 
 :- pce_global(@split_handle_popup, make_split_handle_popup).
 
@@ -794,7 +796,13 @@ make_split_handle_popup(P) :-
          menu_item(move_to_new_window,
                    message(Window, detach),
                    condition := and(message(Window, has_send_method, detach),
-                                    Window?frame?panes?size > 1))).
+                                    Window?frame?panes?size > 1))),
+    send(P, append,
+         menu_item(move_to_new_tab,
+                   message(Window, move_to_tab),
+                   condition := and(message(Window, has_send_method,
+                                            move_to_tab),
+                                    Window?pane_tab?windows?size > 1))).
 
 initialise(H) :->
     "Create the grip"::

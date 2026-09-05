@@ -1225,6 +1225,16 @@ new_window(P) :->
     ),
     send(new(pane_frame(App, @default, New)), open).
 
+move_to_tab(P) :->
+    "Move me out of a split, into a tab of my own"::
+    get(P, pane_frame, F),
+    get(P, pane_tab, Tab),
+    get(Tab, windows, Windows),
+    get(Windows, size, Size),
+    Size > 1,                           % a tab of my own already
+    send(Tab, delete, P),               % take me out without destroying me
+    send(F, append_pane, P, @default, @on).
+
 detach(P) :->
     "Move me into a window of my own"::
     get(P, pane_frame, F),
