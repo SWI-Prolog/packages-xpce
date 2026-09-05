@@ -207,6 +207,7 @@ epilog(M:Options0) :-
     send(Epilog, name, TheName),
     get(Epilog, current_terminal, PT),
     configure_terminal(PT, Profile, Options),
+    ignore(send(PT?window, pane_exposed)),  % the tab was named before this
     ignore(option(object(Epilog), Options)),
 
     send(Epilog, open),
@@ -1867,10 +1868,22 @@ thread_connected(T, Thread:name) :->
     "Name my tab after the thread that has just been connected"::
     get(T, terminal, PT),
     get(PT, profile, prolog),
+    send(T, retitle_tab, Thread).
+
+pane_exposed(T) :->
+    "Take the name of what I run, which I may only know now"::
+    get(T, terminal, PT),
+    terminal_base_label(PT, Base),
+    ignore(send(T, retitle_tab, Base)).
+
+retitle_tab(T, Base:name) :->
+    "Put Base on my tab, made unique, unless the user named it"::
     get(T, pane_frame, F),
     get(T, pane_tab, Tab),
     get(Tab, renamed, @off),            % the user named it themselves
-    unique_tab_label(F, Thread, 1, Label),
+    get(Tab, label, Now),
+    \+ says_the_same(Now, Base),        % renaming would only bump the
+    unique_tab_label(F, Base, 1, Label), % number after it
     send(T, tab_label, Label),
     send(Tab, label, Label).
 
@@ -1955,7 +1968,7 @@ fill_menu_bar(_T, MD:tool_dialog) :->
     send(NewTab, popup,
          new(NewTabPopup, popup(new_tab,
                                 message(@prolog, epilog_tab_with_profile,
-                                        @receiver?frame, @arg1)))),
+                                        @event?receiver?frame, @arg1)))),
     send(NewTabPopup, update_message,
          message(@prolog, epilog_profile_menu, @receiver)),
     send(NewWindow, popup,
@@ -2500,17 +2513,43 @@ terminal_base_label(PT, Label) :-
 %   Base, or Base with a number after it, such that no tab of Frame
 %   carries it already.
 
+%!  says_the_same(+Label, +Base) is semidet.
+%
+%   Label is Base, or Base with a number after it as `unique_tab_label/4'
+%   writes them.  Either way it already says what Base says.
+
+says_the_same(Label, Base) :-
+    (   Label == Base
+    ->  true
+    ;   atom_concat(Base, Rest, Label),
+        atom_concat(' ', Digits, Rest),
+        atom_number(Digits, _)
+    ).
+
 unique_tab_label(F, Base, N, Label) :-
     (   N == 1
     ->  Try = Base
     ;   format(atom(Try), '~w ~d', [Base, N])
     ),
-    (   get(F, tabs, TW),
-        get(TW, tab, Try, _)
+    (   tab_labelled(F, Try)
     ->  N2 is N+1,
         unique_tab_label(F, Base, N2, Label)
     ;   Label = Try
     ).
+
+%!  tab_labelled(+Frame, +Label) is semidet.
+%
+%   A tab of Frame carries Label.  Not `tabbed_window <-tab', which finds
+%   a tab by its name: a tab keeps the name it was made with however it
+%   is labelled afterwards, and it is the label that has to be unique.
+
+tab_labelled(F, Label) :-
+    get(F, tabs, TW),
+    get(TW, tabs, Chain),
+    chain_list(Chain, Tabs),
+    member(Tab, Tabs),
+    get(Tab, label, Label),
+    !.
 
 
 

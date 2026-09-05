@@ -200,6 +200,28 @@ test(a_new_tab_can_take_another_profile) :-
     send(F, new_pane, shell),
     tabs(F, ['Prolog'-1, 'OS shell'-1]).
 
+%       epilog/1 builds the window before it says what the terminal runs,
+%       so the tab it is given says Prolog whatever the profile is.
+
+test(a_window_opened_with_a_profile_says_so_on_its_tab) :-
+    epilog([profile(shell), object(F)]),
+    tabs(F, ['OS shell'-1]).
+
+%       Two tabs may not carry the same label: a tab is found back by it.
+%       A tab keeps the name it was made with however it is labelled
+%       later, so it is the labels that have to be compared.
+
+test(a_second_tab_of_the_same_kind_is_numbered) :-
+    epilog([profile(shell), object(F)]),
+    send(F, new_pane, shell),
+    tabs(F, ['OS shell'-1, 'OS shell 2'-1]).
+
+test(and_a_name_no_tab_carries_is_left_unnumbered) :-
+    epilog([profile(shell), object(F)]),
+    send(F, new_pane, shell),
+    send(F, new_pane, prolog),
+    tabs(F, ['OS shell'-1, 'OS shell 2'-1, 'Prolog'-1]).
+
 test(terminal_windows_counts_over_all_tabs) :-
     epilog(F, W),
     send(W, split, horizontally),
