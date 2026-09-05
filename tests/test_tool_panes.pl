@@ -436,6 +436,83 @@ test(the_monitor_asks_for_the_bottom, true(Side == below)) :-
     get(TM, pane_side, Side),
     send(TM, destroy).
 
+%       A tool pane takes a drop like any other pane: the tab it is in
+%       splits it and the dropped pane takes the half the pointer is
+%       nearest.
+
+test(a_tool_takes_a_drop_and_is_split_by_it,
+     true(Classes == [epilog_window, prolog_thread_monitor, picture])) :-
+    no_frames,
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_thread_monitor, split),
+    get(@prolog_ide, tool, prolog_thread_monitor, TM),
+    send(F, resize),
+    get(TM, container, tab_frame, Tab),
+    placed_position(TM, X, Y),
+    get(TM, size, size(W, H)),
+    PX is X+W-10,                       % the right edge of the tool
+    PY is Y+H//2,
+    get(Tab, drop_target, point(PX, PY), TM),
+    send(Tab, drop, new(P, picture), point(PX, PY)),
+    get(P, tile_manager, Tab),
+    get(Tab, windows, Chain),
+    chain_list(Chain, Windows),
+    findall(C, (member(Win, Windows), get(Win, class_name, C)), Classes).
+
+%       The outline that says where a drop would go is displayed on the
+%       window it covers.  A tool pane is drawn first and its windows
+%       over it, so an outline on the pane itself would be covered: it
+%       goes on the windows it reaches.  ->create is what puts a window
+%       in the <-subwindows of the one it is drawn over, and it does not
+%       run with no display, so the chain is filled in here by hand.
+
+test(the_outline_of_a_drop_on_a_tool_goes_on_its_windows,
+     true(On == [thread_window])) :-
+    no_frames,
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_thread_monitor, split),
+    get(@prolog_ide, tool, prolog_thread_monitor, TM),
+    send(F, resize),
+    as_subwindows(TM),
+    get(TM, container, tab_frame, Tab),
+    send(Tab, drop_feedback, TM, right),
+    get(Tab, drop_feedback, Boxes),
+    chain_list(Boxes, List),
+    findall(N, (member(B, List), get(B?device, class_name, N)), On).
+
+test(and_is_taken_away_again_when_the_pointer_moves_on, [fail]) :-
+    no_frames,
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_thread_monitor, split),
+    get(@prolog_ide, tool, prolog_thread_monitor, TM),
+    send(F, resize),
+    as_subwindows(TM),
+    get(TM, container, tab_frame, Tab),
+    send(Tab, drop_feedback, TM, right),
+    get(Tab, drop_feedback, Boxes),
+    chain_list(Boxes, List),
+    send(Tab, clear_drop_feedback),
+    ( get(Tab, drop_feedback, Left), Left \== @nil
+    ; member(Box, List), object(Box)             % nothing left behind
+    ).
+
+%!  as_subwindows(+Pane) is det.
+%
+%   Say that the windows of Pane are drawn over it, as `window ->create'
+%   does when there is a display to create them on.
+
+as_subwindows(Pane) :-
+    get(Pane, members, Chain),
+    chain_list(Chain, Windows),
+    send(Pane, slot, subwindows, new(Subs, chain)),
+    forall(member(W, Windows), send(Subs, append, W)).
+
 %       And it is on the Settings menu, so it can be changed without
 %       editing a Defaults file.
 
