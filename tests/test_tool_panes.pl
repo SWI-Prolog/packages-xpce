@@ -1141,6 +1141,15 @@ test(a_window_of_a_tool_reaches_the_tool, true(Reached == Tool)) :-
     get(Tool, member, dialog, Dialog),
     get(Dialog, container, man_frame, Reached).
 
+%       And through the tool, whatever the tool knows: the visual
+%       hierarchy asks its manual to inspect what is selected in it.
+
+test(and_through_it_whatever_the_tool_knows, true(M == @manual)) :-
+    open_manual_tool(visual_hierarchy, Tool),
+    get(Tool, window, W),
+    get(W, container, man_frame, T),
+    get(T, manual, M).
+
 test(the_tool_is_not_the_window_it_is_in) :-
     open_manual_tool(class_hierarchy, Tool),
     get(Tool, frame, Frame),

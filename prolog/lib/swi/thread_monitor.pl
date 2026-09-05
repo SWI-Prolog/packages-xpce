@@ -58,7 +58,7 @@
 
 /** <module> XPCE-base SWI-Prolog thread monitor
 
-This library defines  the  class   prolog_thread_monitor,  a  frame that
+This library defines  the  class   prolog_thread_monitor,  a  pane  that
 displays the status of threads.
 */
 

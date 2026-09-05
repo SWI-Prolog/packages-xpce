@@ -262,7 +262,8 @@ class_details(V) :->
 
 object_details(V) :->
     Visual = V->>selection,
-    V->>frame->>manual->>inspect(Visual).
+    Tool = V->>container(man_frame),    % not <-frame: that is a window
+    Tool->>manual->>inspect(Visual).
 
 :- pce_end_class.
 
