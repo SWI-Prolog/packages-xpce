@@ -38,10 +38,11 @@
 
 /** <module> An IDE tool as a pane
 
-The thread monitor, the source navigator and the debug monitor used to
-be windows of their own, each holding its windows, a menu bar and a
-reporter in a frame.  They are panes now, so they can sit in a tab of any
-window of the IDE beside a terminal, an editor or another tool.
+The thread monitor, the source navigator, the debug monitor and the
+debugger status used to be windows of their own, each holding its
+windows, a menu bar and a reporter in a frame.  They are panes now, so
+they can sit in a tab of any window of the IDE beside a terminal, an
+editor or another tool.
 
 These check that a tool goes where it should, that there is only ever
 one, that its windows are tiled inside it and that what it has to say
@@ -62,6 +63,8 @@ Run with:
 :- use_module(library(swi/thread_monitor), []).
 :- use_module(library(trace/browse), []).
 :- use_module(library(swi/pce_debug_monitor), []).
+:- use_module(library(trace/status), []).
+:- use_module(library(prolog_debug), [spy/1, nospy/1]).
 :- use_module(library(debug), [debug/1, debug/3, nodebug/1]).
 :- use_module(library(pce_util), [chain_list/2]).
 :- use_module(library(lists), [member/2]).
@@ -69,7 +72,8 @@ Run with:
 test_tool_panes :-
     run_tests([ tool_panes,
                 navigator_pane,
-                debug_monitor_pane
+                debug_monitor_pane,
+                debug_status_pane
               ]).
 
 %!  classes(+Frame, -Classes) is det.
@@ -792,3 +796,108 @@ test(and_it_lands_along_the_bottom, true(Landed == below)) :-
     side_of(M, Other, Landed).
 
 :- end_tests(debug_monitor_pane).
+
+
+                 /*******************************
+                 *       THE DEBUGGER STATUS    *
+                 *******************************/
+
+/* The debugger status is one dialog: the spy, trace and break points
+with the buttons that set and clear them.  It was a frame holding that
+dialog and a reporter; the dialog is the pane now, with no tool_pane
+around it -- that is for a tool that shows more than one window.
+*/
+
+%!  debug_status(-Pane) is det.
+%
+%   The one debugger status pane there is, made if there is none.
+
+debug_status(D) :-
+    get(@prolog_ide, show_tool, prolog_debug_status, @default, D).
+
+no_debug_status :-
+    (   get(@prolog_ide, tool, prolog_debug_status, D)
+    ->  send(D, destroy)
+    ;   true
+    ).
+
+%!  grip(+Pane, -Handle) is semidet.
+%
+%   The grip Pane is dragged by, on its fixed layer.
+
+grip(Pane, Handle) :-
+    get(Pane, fixed_graphicals, Chain),
+    Chain \== @nil,
+    get(Chain, find, message(@arg1, instance_of, split_handle), Handle).
+
+:- begin_tests(debug_status_pane).
+
+test(it_opens_in_a_window_of_the_ide, Classes == [prolog_debug_status]) :-
+    no_frames,
+    no_debug_status,
+    debug_status(D),
+    get(D, frame, F),
+    send(F, instance_of, pane_frame),
+    classes(F, Classes).
+
+test(there_is_only_ever_one, true(Again == D)) :-
+    debug_status(D),
+    send(@prolog_ide, open_debug_status),
+    get(@prolog_ide, tool, prolog_debug_status, Again).
+
+%       One dialog, not a tool_pane: there is only one window to show.
+
+test(it_is_a_dialog_of_its_own) :-
+    debug_status(D),
+    send(D, instance_of, dialog),
+    \+ send(D, instance_of, tool_pane).
+
+test(the_tab_is_named_after_it, true(Label == 'SWI-Prolog -- Debugging')) :-
+    debug_status(D),
+    get(D, frame, F),
+    send(F, current_pane, D),
+    get(F, label, Label).
+
+test(it_carries_a_grip_to_drag_it_by) :-
+    debug_status(D),
+    grip(D, _).
+
+%       The grip is drawn over whatever the dialog lays out, so ->layout
+%       keeps the corner it sits in clear.
+
+test(and_the_layout_keeps_the_corner_clear) :-
+    debug_status(D),
+    send(D, size, size(600, 300)),
+    send(D, layout, size(600, 300)),
+    grip(D, H),
+    send(H, compute),
+    get(H, area, area(GX, _, _, _)),
+    get(D, member, mode, Mode),
+    get(Mode, right_side, Right),
+    Right =< GX.
+
+test(it_lists_what_is_being_debugged, true(Listed == ['append/3'])) :-
+    debug_status(D),
+    setup_call_cleanup(
+        spy(lists:append/3),
+        ( send(D, update),
+          get(D, member, list_browser, LB),
+          get(LB, members, Chain),
+          chain_list(Chain, Items),
+          findall(N, (member(I, Items), get(I, key, N)), Listed)
+        ),
+        nospy(lists:append/3)).
+
+test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :-
+    no_frames,
+    no_debug_status,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_debug_status, split),
+    get(@prolog_ide, tool, prolog_debug_status, D),
+    \+ get(D?frame, status_dialog, _),
+    send(D, report, warning, 'No predicate'),
+    get(D?frame, status_dialog, SD),
+    get(SD, class_name, Class).
+
+:- end_tests(debug_status_pane).

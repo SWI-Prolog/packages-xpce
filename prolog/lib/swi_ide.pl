@@ -120,10 +120,7 @@ open_console(IDE) :->
 
 open_debug_status(IDE) :->
     "Open/show the status of the debugger"::
-    (   get(IDE, member, prolog_debug_status, W)
-    ->  send(W, expose)
-    ;   send(prolog_debug_status(IDE), open)
-    ).
+    send(IDE, show_tool, prolog_debug_status).
 
 open_exceptions(IDE, Gui:[bool]) :->
     "Open/show exceptions"::

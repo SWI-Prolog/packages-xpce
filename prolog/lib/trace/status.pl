@@ -35,8 +35,7 @@
 
 :- module(prolog_debug_status, []).
 :- use_module(library(pce)).
-:- use_module(library(persistent_frame)).
-:- use_module(library(pce_report)).
+:- use_module(library(pane_frame)).
 :- use_module(library(toolbar)).
 :- use_module(library('trace/clause')).
 :- use_module(library(prolog_predicate_item)).
@@ -53,6 +52,11 @@ This  module  defines  the  class   prolog_debug_status,  a  status  dialog
 representing the current debugger-status (cf.  debugging/0) with entries
 to alter the state of the  debugger   by  changing  the mode and editing
 trace, spy and break-points.
+
+It used to be a frame holding that dialog and a reporter.  The dialog is
+a pane now -- see library(pane_frame) -- so it sits in a tab of any
+window of the IDE or beside a terminal, an editor or another tool, and
+what it has to say goes on the status bar of that window.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 resource(delete, image, image('tool/cut.svg')).
@@ -65,22 +69,9 @@ resource(spy,    image, library('trace/icons/spy.svg')).
     debug_status_window/1.
 
 
-:- pce_begin_class(prolog_debug_status, persistent_frame,
-                   "Show status of Prolog debugger").
-
-initialise(F, App:[application]*) :->
-    send_super(F, initialise('Prolog debugging')),
-    send(F, append, new(prolog_debug_status_dialog)),
-    (   App \== @default, App \== @nil
-    ->  send(F, application, App)
-    ;   true
-    ).
-
-:- pce_end_class(prolog_debug_status).
-
-
-:- pce_begin_class(prolog_debug_status_dialog, dialog,
+:- pce_begin_class(prolog_debug_status, dialog,
                    "View/change debug_status information").
+:- use_class_template(pane).
 
 initialise(D) :->
     send_super(D, initialise),
@@ -122,8 +113,8 @@ initialise(D) :->
                             resource(edit),
                             'Edit predicate/show listing')
               ]),
-    send(D, append, new(reporter)),
     send(D, resize_message, message(D, layout, @arg2)),
+    send(D, display_fixed, new(split_handle)),  % puts itself in the corner
     send(D, update),
     assert(debug_status_window(D)).
 
@@ -131,12 +122,53 @@ unlink(D) :->
     retractall(debug_status_window(D)),
     send_super(D, unlink).
 
+                 /*******************************
+                 *             PANE             *
+                 *******************************/
+
+pane_label(_D, Label:name) :<-
+    "What my tab is called"::
+    Label = 'Debugging'.
+
+%       A pane reports on the bar of the window it is in, which grows one
+%       the first time anything asks.  Both tool bars say what they did,
+%       so ask for the bar rather than lose the first message.
+
+report(D, Kind:name, Fmt:[char_array], Args:any ...) :->
+    "Report on the bar of the window I am in"::
+    (   get(D, frame, F),
+        F \== @nil,
+        send(F, has_get_method, ensure_status_dialog)
+    ->  ignore(get(F, ensure_status_dialog, _))
+    ;   true
+    ),
+    Msg =.. [report, Kind, Fmt|Args],
+    send_super(D, Msg).
+
 layout(D, Size:[size]) :->
     "Fix layout"::
     send_super(D, layout, Size),
     get(D, member, tb2, TB2),
     get(D, member, predicate, PI),
-    send(PI, right_side, TB2?left_side - D?gap?width).
+    send(PI, right_side, TB2?left_side - D?gap?width),
+    get(D, member, mode, Mode),          % the grip has the corner
+    grip_room(D, Room),
+    send(Mode, right_side, Mode?right_side - Room).
+
+%!  grip_room(+Dialog, -Room) is det.
+%
+%   How much of the top right to leave clear.  The grip a pane is dragged
+%   by is drawn there, over everything the dialog lays out, so an item
+%   that reached into the corner would be under it.
+
+grip_room(D, Room) :-
+    get(D, fixed_graphicals, Chain),
+    Chain \== @nil,
+    get(Chain, find, message(@arg1, instance_of, split_handle), H),
+    !,
+    get(H, size, size(W, _)),
+    Room is W+4.
+grip_room(_, 0).
 
 :- pce_group(update).
 
@@ -300,7 +332,7 @@ mode(_D, Mode:{normal,debug,trace}) :->
     ->  tdebug
     ).
 
-:- pce_end_class.
+:- pce_end_class(prolog_debug_status).
 
 
                  /*******************************
