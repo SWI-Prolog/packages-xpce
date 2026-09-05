@@ -192,12 +192,7 @@ thread_monitor(IDE) :->
 
 debug_monitor(IDE) :->
     "Open monitor for debug messages"::
-    (   get(IDE, member, prolog_debug_monitor, Monitor)
-    ->  true
-    ;   new(Monitor, prolog_debug_monitor),
-        send(Monitor, application, IDE)
-    ),
-    send(Monitor, open).
+    send(IDE, show_tool, prolog_debug_monitor).
 
 xref(IDE) :->
     "Open Cross-Referencer frontend"::

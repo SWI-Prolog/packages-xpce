@@ -38,10 +38,10 @@
 
 /** <module> An IDE tool as a pane
 
-The thread monitor and the source navigator used to be windows of their
-own, each holding its windows, a menu bar and a reporter in a frame.
-They are panes now, so they can sit in a tab of any window of the IDE
-beside a terminal, an editor or another tool.
+The thread monitor, the source navigator and the debug monitor used to
+be windows of their own, each holding its windows, a menu bar and a
+reporter in a frame.  They are panes now, so they can sit in a tab of any
+window of the IDE beside a terminal, an editor or another tool.
 
 These check that a tool goes where it should, that there is only ever
 one, that its windows are tiled inside it and that what it has to say
@@ -61,12 +61,15 @@ Run with:
 :- use_module(library(epilog)).
 :- use_module(library(swi/thread_monitor), []).
 :- use_module(library(trace/browse), []).
+:- use_module(library(swi/pce_debug_monitor), []).
+:- use_module(library(debug), [debug/1, debug/3, nodebug/1]).
 :- use_module(library(pce_util), [chain_list/2]).
 :- use_module(library(lists), [member/2]).
 
 test_tool_panes :-
     run_tests([ tool_panes,
-                navigator_pane
+                navigator_pane,
+                debug_monitor_pane
               ]).
 
 %!  classes(+Frame, -Classes) is det.
@@ -579,3 +582,136 @@ test(and_it_lands_on_the_left_of_what_was_there, true(Landed == left)) :-
     side_of(SB, Other, Landed).
 
 :- end_tests(navigator_pane).
+
+
+                 /*******************************
+                 *        THE DEBUG MONITOR     *
+                 *******************************/
+
+/* The debug monitor shows the debug topics beside the messages they
+printed.  Its menu used to be a bar of its own; it goes on the bar of
+whatever window it lands in now, under one popup of its own rather than
+spread over the File and Settings menus of that window.
+*/
+
+%!  debug_monitor(-Monitor) is det.
+%
+%   The one debug monitor there is, made if there is none.
+
+debug_monitor(M) :-
+    get(@prolog_ide, show_tool, prolog_debug_monitor, @default, M).
+
+no_debug_monitor :-
+    (   get(@prolog_ide, tool, prolog_debug_monitor, M)
+    ->  send(M, destroy)
+    ;   true
+    ).
+
+:- begin_tests(debug_monitor_pane).
+
+test(it_opens_in_a_window_of_the_ide, Classes == [prolog_debug_monitor]) :-
+    no_frames,
+    no_debug_monitor,
+    debug_monitor(M),
+    get(M, frame, F),
+    send(F, instance_of, pane_frame),
+    classes(F, Classes).
+
+test(there_is_only_ever_one, true(Again == M)) :-
+    debug_monitor(M),
+    send(@prolog_ide, debug_monitor),
+    get(@prolog_ide, tool, prolog_debug_monitor, Again).
+
+test(its_two_windows_are_tiled_inside_it,
+     Names == [prolog_debug_browser, prolog_debug_view]) :-
+    debug_monitor(M),
+    get(M, members, Chain),
+    chain_list(Chain, Windows),
+    findall(N, (member(W, Windows), get(W, class_name, N)), Names).
+
+test(the_tab_is_named_after_it, true(Label == 'SWI-Prolog -- Debug monitor')) :-
+    debug_monitor(M),
+    get(M, frame, F),
+    send(F, current_pane, M),
+    get(F, label, Label).
+
+%       One popup of its own, on the bar of the window it is in.
+
+test(its_menu_reaches_the_bar_of_the_window_it_is_in,
+     Items == [clear, refresh, save_as, disable_all, enable_all, help]) :-
+    debug_monitor(M),
+    get(M, frame, F),
+    send(F, current_pane, M),
+    menus(F, Menus),
+    memberchk(debug_monitor, Menus),
+    get(F, menu_bar, MB),
+    get(MB, member, debug_monitor, Popup),
+    get(Popup, members, Chain),
+    chain_list(Chain, Members),
+    findall(V, (member(MI, Members), get(MI, value, V)), Items).
+
+%       An item without a message of its own goes to the pane the user is
+%       working in, which is how the actions used to reach the frame.
+
+test(and_its_items_act_on_it, true(Cleared == 0)) :-
+    debug_monitor(M),
+    get(M, frame, F),
+    send(F, current_pane, M),
+    setup_call_cleanup(
+        debug(test_tool_panes_topic),
+        ( debug(test_tool_panes_topic, 'a message', []),
+          get(M?view?text_buffer, size, Size),
+          Size > 0,
+          get(F, menu_dialog, MD),
+          get(MD, client, M),           % an item goes to the pane in view
+          send(MD, action, clear),
+          get(M?view?text_buffer, size, Cleared)
+        ),
+        nodebug(test_tool_panes_topic)).
+
+%       The browser drives the view through the pane they share, not
+%       through <-frame: the frame is a window of the IDE now.
+
+test(selecting_a_topic_highlights_its_messages) :-
+    debug_monitor(M),
+    setup_call_cleanup(
+        debug(test_tool_panes_topic),
+        ( send(M, refresh),
+          get(M, browser, B),
+          get(B, members, Chain),
+          chain_list(Chain, Items),
+          member(DI, Items),
+          get(DI, object, test_tool_panes_topic),
+          !,
+          send(B, selected, DI),
+          get(M?view, styles, Styles),
+          get(Styles, value, test_tool_panes_topic, _)
+        ),
+        nodebug(test_tool_panes_topic)).
+
+test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :-
+    no_frames,
+    no_debug_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_debug_monitor, split),
+    get(@prolog_ide, tool, prolog_debug_monitor, M),
+    \+ get(M?frame, status_dialog, _),
+    send(M, report, status, 'saved'),
+    get(M?frame, status_dialog, SD),
+    get(SD, class_name, Class).
+
+test(and_it_lands_along_the_bottom, true(Landed == below)) :-
+    no_frames,
+    no_debug_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_debug_monitor, split),
+    get(@prolog_ide, tool, prolog_debug_monitor, M),
+    get(M, container, tab_frame, Tab),
+    get(Tab, windows, Chain),
+    chain_list(Chain, Windows),
+    member(Other, Windows), Other \== M, !,
+    side_of(M, Other, Landed).
+
+:- end_tests(debug_monitor_pane).
