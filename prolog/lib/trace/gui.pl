@@ -519,6 +519,36 @@ menu_bar_key(_F, Key:name) :<-
     "Every debugger asks for the same menu bar"::
     Key = debugger.
 
+%       The row of buttons is in my corner, and it is a strip with no
+%       room to spare; the call stack beside it is the next window along.
+
+grip_window(F, W:window) :<-
+    "Drag me by the grip on the call stack"::
+    (   get(F, member, stack, W)
+    ->  true
+    ;   get_super(F, grip_window, W)
+    ).
+
+%       The keyboard belongs to the source while I am the pane the user
+%       is working in: every key it does not use itself is an action for
+%       the tracer -- see `prolog_source_view ->post_event' -- and a caret
+%       drawn as if nothing had the focus says otherwise.  Which of my
+%       windows gets it is <-current's to say: make the source the
+%       current one and hand the focus on again.
+
+input_focus(F, Focus:bool) :->
+    "Give the keyboard to the source"::
+    send_super(F, input_focus, Focus),
+    (   Focus == @on,
+        get(F, source, Src),
+        Src \== @nil,
+        get(F, current, Current),
+        Current \== Src
+    ->  send(F, current, Src),          % and hand it on again, now that
+        send_super(F, input_focus, Focus)   % <-current is the source
+    ;   true
+    ).
+
 member(F, Name:name, Window:window) :<-
     "The window of mine with that name, as class frame did"::
     get(F, members, Windows),

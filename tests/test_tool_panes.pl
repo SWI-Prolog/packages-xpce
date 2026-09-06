@@ -1705,6 +1705,39 @@ test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :
     get(Frame, status_dialog, SD),
     get(SD, class_name, Class).
 
+%       The grip is the handle the window is dragged by.  It goes in the
+%       pane's top right corner, which here is a strip of buttons with no
+%       room to spare, so the debugger sends it to the call stack beside
+%       it -- see `tool_pane <-grip_window'.
+
+test(the_grip_is_on_the_call_stack, true(Name == stack)) :-
+    no_frames,
+    debugger(F),
+    get(F, grip_window, W),
+    get(W, name, Name).
+
+test(and_that_is_the_window_it_is_drawn_on, true(Name == stack)) :-
+    no_frames,
+    debugger(F),
+    get(F, frame, Frame),
+    send(Frame, resize),
+    send(F, place_grip),
+    get(F, grip, Handle),
+    get(Handle, device, Device),
+    get(Device, name, Name).
+
+%       Typing in the debugger is typing in the source: the keys it does
+%       not use itself are the tracer's actions (see ->post_event above).
+%       So the source takes the keyboard when the debugger becomes the
+%       pane in use, and its caret is drawn as having the focus.
+
+test(the_source_takes_the_keyboard, true(Focus == @on)) :-
+    no_frames,
+    debugger(F),
+    send(F, input_focus, @on),
+    get(F, source, Src),
+    get(Src, input_focus, Focus).
+
 test(and_it_can_be_closed_when_nobody_is_waiting, true(Close == @on)) :-
     no_frames,
     debugger(F),
