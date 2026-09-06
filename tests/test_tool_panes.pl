@@ -130,6 +130,16 @@ side_of(Gr, Relative, Side) :-
     ;   Side = nowhere
     ).
 
+%!  placed_area(+Window, -Area) is det.
+
+placed_area(W, area(X, Y, Width, Height)) :-
+    (   get(W, decoration, Decor),
+        Decor \== @nil
+    ->  Placed = Decor
+    ;   Placed = W
+    ),
+    get(Placed, area, area(X, Y, Width, Height)).
+
 placed_position(W, X, Y) :-
     (   get(W, decoration, Decor),
         Decor \== @nil
@@ -1639,6 +1649,52 @@ test(the_action_the_user_picks_is_kept_per_debugger,
     get(Two, return_value, B),
     Answers = [A, B],
     send(Two, destroy).
+
+%       The bindings and the call stack share the row under the buttons
+%       and the source runs the whole width below them.  Which is what
+%       the order of ->right and ->below in ->initialise is for: pair the
+%       two before either is taken in, or the stack ends up beside the
+%       source as well.
+
+test(the_source_runs_below_the_bindings_and_the_stack) :-
+    no_frames,
+    debugger(F),
+    get(F, frame, Frame),
+    send(Frame, resize),
+    get(F, member, bindings, V),
+    get(F, member, stack, S),
+    get(F, source, Src),
+    placed_area(V,   area(VX, VY, VW, VH)),
+    placed_area(S,   area(SX, SY,  _,  _)),
+    placed_area(Src, area( _, CY, CW,  _)),
+    SY =:= VY,                          % the stack shares the row
+    SX >= VX+VW,                        % to the right of the bindings
+    CY >= VY+VH,                        % the source is below them
+    CW > VW.                            % and wider than the bindings
+
+%       A button and a key in the source both tell the tracer what the
+%       user picked; ->return used to reach the debugger because a dialog
+%       hands it to <-frame, which was the debugger.
+
+test(a_button_tells_the_tracer_what_was_picked, true(Picked == creep)) :-
+    no_frames,
+    debugger(F),
+    send(F, mode, wait_user),
+    send(F, slot, return_value, @nil),
+    get(F, member, buttons, D),
+    get(D, member, tool_bar, TB),
+    get(TB, member, creep, Button),
+    send(Button?message, forward),
+    get(F, return_value, Picked).
+
+test(and_so_does_a_key_in_the_source, true(Picked == creep)) :-
+    no_frames,
+    debugger(F),
+    send(F, mode, wait_user),
+    send(F, slot, return_value, @nil),
+    get(F, source, Src),
+    send(Src, post_event, event(32, Src, 10, 10)),   % SPC: creep
+    get(F, return_value, Picked).
 
 test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :-
     no_frames,

@@ -187,8 +187,9 @@ post_event(V, Ev:event) :->
     (   send(Ev, is_a, keyboard),
         get(V, editable, @off),
         get(V, focus_function, @nil),
-        get(V, frame, Tracer),
-        send(Tracer, has_send_method, source_typed),
+        get(V, container, prolog_debugger, Tracer),  % not <-frame: that
+        send(Tracer, has_send_method, source_typed), % is a window of the
+                                                     % IDE now
         send(Tracer, source_typed, Ev)
     ->  true
     ;   send_super(V, post_event, Ev)
@@ -284,8 +285,9 @@ show_range(V, File:'name|emacs_buffer', From:int, To:int, Style:name) :->
     send(V, source, File),
     send(V, caret, To),
     new(F, fragment(V, From, To-From, Style)),
-    ignore(send(V?frame, send_hyper, fragment, free)),
-    new(_, trace_hyper(V?frame, F, fragment, tracer)),
+    get(V, container, prolog_debugger, Tracer),
+    ignore(send(Tracer, send_hyper, fragment, free)),
+    new(_, trace_hyper(Tracer, F, fragment, tracer)),
     send(V, normalise, From, To).
 
 show_line(V, File:'name|emacs_buffer', Line:int, Style:name) :->

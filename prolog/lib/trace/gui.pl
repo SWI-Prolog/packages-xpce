@@ -482,12 +482,16 @@ initialise(F, Level:int, Thread:'int|name') :->
     send(F, append_window, new(D, prolog_button_dialog)),
     send(D, name, buttons),
 
+    %  The bindings and the stack are paired before either is taken in,
+    %  so that they share a row and the source goes across the bottom
+    %  rather than under the bindings alone.
+
     new(V, prolog_bindings_view),
     send(V, label, 'Bindings'),
     send(V, name, bindings),
-    send(F, append_window, V, D, below),
-    send(F, append_window, new(S, prolog_stack_view), V, right),
-    send(F, append_window, new(Src, prolog_source_view), V, below),
+    send(new(S, prolog_stack_view), right, V),
+    send(V, below, D),
+    send(new(Src, prolog_source_view), below, V),
     send(F, source, Src),
     send(S, label, 'Call Stack'),
     send(S, name, stack),
@@ -572,9 +576,11 @@ confirm(F, Action:any) :<-
     get(F, frame, Window),
     send(F, slot, return_value, @nil),
     repeat,
-      get(Window, confirm, _),
-      get(F, slot, return_value, Action),
-      Action \== @nil,
+      (   get(Window, confirm, _)      % somebody answered, but it may
+      ->  get(F, slot, return_value, Action),   % have been another
+          Action \== @nil                       % debugger in this window
+      ;   Action = nodebug             % the window is gone: do not spin
+      ),
     !.
 
 return_action(F, Result:any) :->
@@ -1144,7 +1150,12 @@ initialise(D) :->
 
 make_message(+Action, Action, D,
              message(?(D, container, prolog_debugger), Action)) :- !.
-make_message(Action,  Action, D, message(D, return, Action)).
+make_message(Action,  Action, D,
+             message(?(D, container, prolog_debugger), return, Action)).
+%       Not `message(D, return, Action)': a dialog hands ->return to its
+%       <-frame, which was the debugger while the debugger was a frame.
+%       It is a window of the IDE now, and its ->return would end the
+%       wait without ever telling the tracer what was picked.
 
 typed(D, Id:event_id, Delegate:[bool]) :->
     "Handle typing"::
