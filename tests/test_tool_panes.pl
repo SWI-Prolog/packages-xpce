@@ -907,6 +907,26 @@ test(it_lists_what_is_being_debugged, true(Listed == ['append/3'])) :-
         ),
         nospy(lists:append/3)).
 
+%       A pane that sizes itself to what it holds -- the debugger status
+%       is a dialog -- says it can neither give nor take space, and then
+%       `tile <-can_resize' answers @off and the gap beside it cannot be
+%       dragged at all.  Docking one makes it as willing as the panes it
+%       lands among.
+
+test(the_gap_beside_it_can_be_dragged_once_it_is_docked,
+     true(Gaps == 1)) :-
+    no_frames,
+    no_debug_status,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_debug_status, split),
+    get(@prolog_ide, tool, prolog_debug_status, D),
+    send(F, resize),
+    get(D, container, tab_frame, Tab),
+    get(Tab, root_tile, Tile),
+    get(Tile, resize_areas, Areas),
+    get(Areas, size, Gaps).
+
 test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :-
     no_frames,
     no_debug_status,

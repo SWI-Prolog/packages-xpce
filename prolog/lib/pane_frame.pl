@@ -938,6 +938,37 @@ close_pane(P) :-
     ;   send(P, destroy)
     ).
 
+%       A pane shares the window with the other panes, and the gaps
+%       between them are dragged to redistribute the space.  A window that
+%       sizes itself to what it holds -- class dialog does -- says it can
+%       neither give nor take, and then `tile <-can_resize' answers @off
+%       and the gap beside it cannot be dragged at all.  Docking one makes
+%       it as willing as the panes it lands among; a pane that says how
+%       much it wants to give is left alone.  It has to be said before the
+%       tab lays itself out: `tile <-can_resize' is worked out once and
+%       kept until the hierarchy changes again.
+
+attach_window(Tab, Window:window) :->
+    "Take a pane in, and let it be resized"::
+    ignore(pane_resizable(Window)),     % before the layout: `tile
+    send_super(Tab, attach_window, Window).
+
+pane_resizable(Window) :-
+    (   get(Window, decoration, Decor),
+        Decor \== @nil
+    ->  Placed = Decor
+    ;   Placed = Window
+    ),
+    get(Placed, tile, Tile),
+    Tile \== @nil,
+    forall(member(Attribute, [hor_stretch, hor_shrink,
+                              ver_stretch, ver_shrink]),
+           (   get(Tile, Attribute, Old),
+               Old > 0
+           ->  true
+           ;   send(Tile, Attribute, 100)
+           )).
+
 close_other_tabs(Tab) :->
     "Close the panes of every other tab"::
     get(Tab?device, tabs, Chain),
