@@ -36,7 +36,9 @@
 :- module(pane_frame,
           [ pane_frame_closed_tab/1,    % +Frame
             show_pane/1,                % +Pane
-            pane_status_bar/1           % +Pane
+            pane_status_bar/1,          % +Pane
+            open_pane_frame/2,          % +Term, -Frame
+            open_pane_frame/3           % +Term, -Frame, +Options
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_util), [chain_list/2]).
@@ -45,7 +47,8 @@
 :- use_module(library(tabbed_window), []).
 :- use_module(library(tab_frame), []).
 :- use_module(library(toolbar), []).
-:- use_module(library(lists), [member/2]).
+:- use_module(library(lists), [member/2, memberchk/2]).
+:- use_module(library(apply), [maplist/2, maplist/3]).
 
 /** <module> One main window holding tools in tabs and panes
 
@@ -67,6 +70,24 @@ application differs in lives in two places:
 Every message of the pane protocol is optional: the frame asks with
 ->has_send_method before sending, so a plain window is a usable pane.
 See the `pane' template for the parts a pane would otherwise repeat.
+
+A window can be written down as a Prolog term saying what it holds and
+how it is laid out, and built back from one:
+
+```
+?- get(F, pane_term, Term).
+Term = pane_frame([geometry('1200x800+40+40')],
+                  [ tab([current(true)],
+                        vertical([ 0.7-current(editor([file('foo.pl'),
+                                                       line(120)])),
+                                   0.3-terminal([profile(shell)]) ]))
+                  ]).
+?- open_pane_frame(Term, _F).
+```
+
+See the PANE TERM section below for what a term may say, and
+`open_pane_frame/2' for making a window out of one.  A term can be
+written by hand: everything in it is optional.
 
 @see library(tab_frame) for the tab that holds the panes.
 */
@@ -763,6 +784,449 @@ show_line_number(F, Line:'int|{too_expensive}*') :->
     ;   true
     ).
 
+                 /*******************************
+                 *          PANE TERM           *
+                 *******************************/
+
+/* What I hold, and how it is laid out, as a Prolog term.
+
+    pane_frame(FrameOptions, [Tab, ...])
+    Tab      := tab(TabOptions, Content)
+    Content  := Pane | horizontal([Share-Content, ...])
+                     | vertical([Share-Content, ...])
+    Pane     := Kind | Kind(PaneOptions) | current(Pane)
+
+A pane is written by its <-pane_kind, which is its class name unless it
+says otherwise, and by the <-pane_term it answers -- a tool that has
+nothing to say about itself is simply its name.  Shares are relative:
+[2-A, 1-B] and [0.667-A, 0.333-B] say the same thing.  Everything is
+optional, so `pane_frame([], [tab([], epilog_window)])' is a complete
+description and a term can be written by hand.
+
+Reading a frame never fails.  Building one restores what can be restored
+and reports the rest: a source that has gone, a tool whose class will not
+load, a profile that is no longer defined.
+*/
+
+pane_term(F, Term:prolog) :<-
+    "The term that says what I hold and how it is laid out"::
+    frame_term_options(F, Options),
+    get(F, tabs, TW),
+    get(TW, tabs, Chain),
+    chain_list(Chain, Tabs),
+    maplist(tab_term, Tabs, TabTerms),
+    Term = pane_frame(Options, TabTerms).
+
+pane_term(F, Term:prolog) :->
+    "Hold what Term says, in place of what I hold now"::
+    Term = pane_frame(Options, Tabs),
+    get(F, can_close, @on),             % refused: leave me as I was
+    get(F, tabs, TW),
+    get(TW, tabs, Chain),
+    chain_list(Chain, Old),
+    build_tabs(F, Tabs, Built),
+    Built \== [],                       % nothing came of it: leave me as
+    forall(member(Tab, Old),            % I was rather than empty
+           send(Tab, close)),
+    apply_frame_options(F, Options),
+    expose_current_tab(F, Built),
+    share_room(Built).
+
+%!  share_room(+Built) is det.
+%
+%   Give the windows of every tab their share of it, once all the
+%   rest is in place.  A share is worked out in pixels of the room
+%   there is, and `tab_frame ->layout_natural' takes the ideal sizes
+%   back off the windows at every layout, so this has to be the last
+%   thing done.
+
+share_room(Built) :-
+    forall(member(built_tab(Tab, _, Tree), Built),
+           send(Tab, window_shares, Tree)).
+
+%!  frame_term_options(+Frame, -Options) is det.
+%
+%   What is worth saying about the window itself.  The menu bar and the
+%   label are left out: both are rebuilt from the pane in view at every
+%   ->pane_changed, so neither is state.
+
+frame_term_options(F, Options) :-
+    findall(O, frame_term_option(F, O), Options).
+
+frame_term_option(F, name(Name)) :-
+    get(F, name, Name),
+    \+ gensym_name(Name).
+frame_term_option(F, main(true)) :-
+    get(F, attribute, main, @on).
+frame_term_option(F, label_format(Format)) :-
+    get(F, slot, own_label_format, Fmt),
+    Fmt \== @default,
+    (   Fmt == @nil
+    ->  Format = none
+    ;   Format = Fmt
+    ).
+frame_term_option(F, status_bar(true)) :-
+    get(F, status_dialog, _).
+frame_term_option(F, geometry(Geometry)) :-
+    \+ get(F, status, unmapped),        % a window that was never opened
+    get(F, geometry, Geometry).         % answers 0x0+0+0
+
+%!  gensym_name(+Name) is semidet.
+%
+%   True for the name `name_frame/1' gives a window that was not named by
+%   its caller.  Writing it down would be noise, and reading it back
+%   would clash with the window that has it now.
+
+gensym_name(Name) :-
+    atom_concat(pane_frame, Rest, Name),
+    atom_number(Rest, _).
+
+apply_frame_options(F, Options) :-
+    forall(member(Option, Options),
+           ignore(apply_frame_option(F, Option))).
+
+apply_frame_option(F, name(Name)) :-
+    (   free_frame_name(F, Name)
+    ->  send(F, name, Name)
+    ;   get(F, name, Now),
+        print_message(informational, pane_frame(name_taken(Name, Now)))
+    ).
+apply_frame_option(F, main(true)) :-
+    (   main_frame(F)
+    ->  print_message(informational, pane_frame(main_frame_exists))
+    ;   send(F, attribute, main, @on)
+    ).
+apply_frame_option(F, label_format(none)) :-
+    !,
+    send(F, label_format, @nil).
+apply_frame_option(F, label_format(Format)) :-
+    send(F, label_format, Format).
+apply_frame_option(F, status_bar(true)) :-
+    get(F, ensure_status_dialog, _).
+apply_frame_option(F, geometry(Geometry)) :-
+    send(F, geometry, Geometry).
+
+%!  main_frame(+Frame) is semidet.
+%
+%   True when another window of the same application is the main one.
+
+main_frame(F) :-
+    get(F, application, App),
+    App \== @nil,
+    get(App, members, Members),
+    chain_list(Members, List),
+    member(Other, List),
+    Other \== F,
+    get(Other, attribute, main, @on).
+
+free_frame_name(F, Name) :-
+    (   get(F, application, App),
+        App \== @nil
+    ->  \+ ( get(App, member, Name, Other),
+             Other \== F
+           )
+    ;   true
+    ).
+
+                 /*******************************
+                 *             TABS             *
+                 *******************************/
+
+%!  tab_term(+Tab, -Term) is det.
+%
+%   A tab is its panes and what it is called.  The label is written only
+%   when it is not the one its pane would give it anyway, and `renamed'
+%   with it when the user typed it: without that, ->update_tab_label
+%   takes a hand-typed name straight back off again.
+
+tab_term(Tab, tab(Options, Content)) :-
+    findall(O, tab_term_option(Tab, O), Options),
+    get(Tab, window_tree, Tree),
+    tab_current(Tab, Current),
+    tree_term(Tree, Current, Content).
+
+%!  tab_current(+Tab, -Current) is det.
+%
+%   The pane of a tab that has the keyboard, or @nil when saying so
+%   would mean nothing: a tab holding one pane has no choice.
+
+tab_current(Tab, Current) :-
+    get(Tab, windows, Windows),
+    get(Windows, size, Size),
+    (   Size > 1
+    ->  get(Tab, current, Current)
+    ;   Current = @nil
+    ).
+
+tab_term_option(Tab, label(Label)) :-
+    get(Tab, label, Label),
+    (   get(Tab, renamed, @on)
+    ->  true
+    ;   get(Tab, current, Window),
+        Window \== @nil,
+        \+ ( send(Window, has_get_method, pane_label),
+             get(Window, pane_label, Label)
+           )
+    ).
+tab_term_option(Tab, renamed(true)) :-
+    get(Tab, renamed, @on).
+tab_term_option(Tab, current(true)) :-
+    get(Tab, status, on_top).
+
+%!  tree_term(+Tree, +Current, -Content) is det.
+%
+%   Turn the window tree of a tab into the term for it: `tab_frame
+%   <-window_tree' answers a tree of windows, and each of them is written
+%   as the pane term for it.
+
+tree_term(Window, Current, Term) :-
+    object(Window),
+    !,
+    pane_term_of(Window, Term0),
+    (   Window == Current
+    ->  Term = current(Term0)
+    ;   Term = Term0
+    ).
+tree_term(Node, Current, Term) :-
+    Node =.. [Orientation, Shares],
+    maplist(share_term(Current), Shares, Terms),
+    Term =.. [Orientation, Terms].
+
+share_term(Current, Share-Content, Share-Term) :-
+    tree_term(Content, Current, Term).
+
+%!  pane_term_of(+Pane, -Term) is det.
+%
+%   How a pane is written down.  Both halves of the protocol are
+%   optional: a pane that answers neither is its class name.
+
+pane_term_of(Pane, Term) :-
+    pane_kind(Pane, Kind),
+    (   send(Pane, has_get_method, pane_term),
+        get(Pane, pane_term, Options),
+        Options \== []
+    ->  Term =.. [Kind, Options]
+    ;   Term = Kind
+    ).
+
+pane_kind(Pane, Kind) :-
+    (   send(Pane, has_get_method, pane_kind)
+    ->  get(Pane, pane_kind, Kind)
+    ;   get(Pane, class_name, Kind)
+    ).
+
+                 /*******************************
+                 *           BUILDING           *
+                 *******************************/
+
+%!  build_tabs(+Frame, +Tabs, -Built) is det.
+%
+%   Add a tab for each term that has anything in it.  A tab whose panes
+%   could none of them be made is left out rather than added empty.
+
+build_tabs(_, [], []).
+build_tabs(F, [Term|Terms], Built) :-
+    build_tab(F, Term, Built, Rest),
+    build_tabs(F, Terms, Rest).
+
+build_tab(F, tab(Options, Content), Built, Rest) :-
+    !,
+    (   build_content(F, Content, Tree, First, Current),
+        add_tab(F, Options, Tree, First, Current, Tab)
+    ->  Built = [built_tab(Tab, Options, Tree)|Rest]
+    ;   print_message(warning, pane_frame(empty_tab(Options))),
+        Built = Rest
+    ).
+build_tab(_, Term, Rest, Rest) :-
+    print_message(warning, pane_frame(not_a_tab(Term))).
+
+add_tab(F, Options, Tree, First, Current, Tab) :-
+    tab_label_option(Options, Label),
+    send(F, append_pane, First, Label, @off),
+    get(First, container, tab_frame, Tab),
+    send(Tab, window_tree, Tree),
+    apply_tab_options(Tab, Options),
+    (   Current == @default
+    ->  true
+    ;   send(Tab, current, Current)
+    ).
+
+tab_label_option(Options, Label) :-
+    (   memberchk(label(Label0), Options)
+    ->  Label = Label0
+    ;   Label = @default
+    ).
+
+apply_tab_options(Tab, Options) :-
+    (   memberchk(label(Label), Options),
+        memberchk(renamed(true), Options)
+    ->  send(Tab, rename, Label)
+    ;   true
+    ).
+
+%!  expose_current_tab(+Frame, +Built) is det.
+%
+%   Bring the tab the term marked up, with its own pane in view.  One
+%   ->current_pane does both: it raises the tab the pane is in and tells
+%   me to rebuild my menu bar and my label around it.
+
+expose_current_tab(F, Built) :-
+    (   member(built_tab(Tab, Options, _), Built),
+        memberchk(current(true), Options)
+    ->  true
+    ;   Built = [built_tab(Tab, _, _)|_]
+    ),
+    get(Tab, current, Pane),
+    Pane \== @nil,
+    !,
+    send(F, current_pane, Pane).
+expose_current_tab(_, _).
+
+%!  build_content(+Frame, +Content, -Tree, -First, -Current) is semidet.
+%
+%   Make the panes of one tab and give back the tree `tab_frame
+%   ->window_tree' takes, the pane the tab is opened on and the pane that
+%   is to have the keyboard.  A pane that cannot be made is dropped and a
+%   split left holding one pane collapses onto it, so a term naming a
+%   source that has gone still restores everything else.
+
+build_content(F, current(Term), Window, Window, Window) :-
+    !,
+    build_content(F, Term, Window, Window, _).
+build_content(F, Node, Tree, First, Current) :-
+    Node =.. [Orientation, Shares],
+    split_orientation(Orientation),
+    !,
+    build_shares(F, Shares, Built),
+    Built \== [],
+    (   Built = [built(_, Tree, First, Current)]   % one left: no split
+    ->  true
+    ;   maplist(built_share, Built, Subs),
+        Tree =.. [Orientation, Subs],
+        Built = [built(_, _, First, _)|_],
+        (   member(built(_, _, _, Current0), Built),
+            Current0 \== @default
+        ->  Current = Current0
+        ;   Current = @default
+        )
+    ).
+build_content(F, Term, Window, Window, @default) :-
+    build_pane(F, Term, Window).
+
+build_shares(_, [], []).
+build_shares(F, [Share|Shares], Built) :-
+    share_parts(Share, Weight, Content),
+    (   build_content(F, Content, Tree, First, Current)
+    ->  Built = [built(Weight, Tree, First, Current)|Rest]
+    ;   Built = Rest
+    ),
+    build_shares(F, Shares, Rest).
+
+built_share(built(Weight, Tree, _, _), Weight-Tree).
+
+share_parts(Weight-Content, Weight, Content) :-
+    number(Weight),
+    !.
+share_parts(Content, 1, Content).
+
+split_orientation(horizontal).
+split_orientation(vertical).
+
+%!  build_pane(+Frame, +Term, -Pane) is semidet.
+%
+%   Make one pane and tell it what it is to hold.  A class is created
+%   with no arguments at all -- every pane that can be restored has an
+%   ->initialise that takes none, and one that insists on arguments is
+%   bound to something live that a term cannot bring back.
+
+build_pane(F, Term, Pane) :-
+    kind_options(Term, Kind, Options),
+    pane_class(F, Kind, Class),
+    (   is_class(Class)
+    ->  true
+    ;   print_message(warning, pane_frame(no_class(Kind))),
+        fail
+    ),
+    (   creatable(Class)
+    ->  true
+    ;   print_message(warning, pane_frame(needs_arguments(Kind))),
+        fail
+    ),
+    catch(new(Pane0, Class), E,
+          ( print_message(warning, pane_frame(pane_failed(Kind, E))),
+            fail
+          )),
+    (   send(Pane0, instance_of, window)
+    ->  Pane = Pane0
+    ;   send(Pane0, destroy),
+        print_message(warning, pane_frame(not_a_pane(Kind))),
+        fail
+    ),
+    (   Options == []
+    ->  true
+    ;   send(Pane, has_send_method, pane_term)
+    ->  (   catch(send(Pane, pane_term, Options), E2,
+                  ( print_message(warning,
+                                  pane_frame(pane_failed(Kind, E2))),
+                    fail
+                  ))
+        ->  true
+        ;   print_message(warning, pane_frame(pane_failed(Kind, failed)))
+        )
+    ;   print_message(warning, pane_frame(no_options(Kind, Options)))
+    ).
+
+kind_options(Term, Kind, Options) :-
+    compound(Term),
+    Term =.. [Kind, Options],
+    is_list(Options),
+    !.
+kind_options(Kind, Kind, []) :-
+    atom(Kind).
+
+%!  pane_class(+Frame, +Kind, -Class) is semidet.
+%
+%   The class that makes a pane of that kind.  An application that knows
+%   its tools says so -- `prolog_ide <-pane_class' loads PceEmacs for an
+%   editor and Epilog for a terminal -- and anything else is a class name
+%   that pce_autoload/2 can find.
+
+pane_class(F, Kind, Class) :-
+    (   get(F, application, App),
+        App \== @nil,
+        send(App, has_get_method, pane_class),
+        catch(get(App, pane_class, Kind, Class0), _, fail)
+    ->  Class = Class0                  % the library of a tool that is
+    ;   Class = Kind                    % not in this build will not load
+    ).
+
+%!  is_class(+Name) is semidet.
+%
+%   True when Name names an XPCE class, loading it if pce_autoload/2 knows
+%   where it lives.
+
+is_class(Name) :-
+    catch(get(@pce, convert, Name, class, _), _, fail).
+
+%!  creatable(+Class) is semidet.
+%
+%   True when `new(X, Class)' can be done: every argument of its
+%   ->initialise takes @default.  A class that insists on one is made for
+%   something live -- the debugger for a break level and a thread -- and
+%   is not something a term can bring back.
+
+creatable(Class) :-
+    catch(get(@pce, convert, Class, class, TheClass), _, fail),
+    (   get(TheClass, send_method, initialise, Method)
+    ->  get(Method, types, Types),
+        get(Types, size, Size),
+        forall(between(1, Size, I),
+               ( get(Types, element, I, Type),
+                 send(Type, validate, @default)
+               ))
+    ;   true
+    ).
+
 :- pce_end_class(pane_frame).
 
 
@@ -925,6 +1389,11 @@ label_edited(Tab, Label:name) :->
     "Take the label typed into the editor, and keep it"::
     send(Tab, slot, renamed, @on),
     send_super(Tab, label_edited, Label).
+
+rename(Tab, Label:name) :->
+    "Give me a label of my own, as if the user had typed it"::
+    send(Tab, slot, renamed, @on),
+    send(Tab, label, Label).
 
 %       tab_frame ->status only tells the tabbed window when the stack is
 %       displayed, which is not yet so while a frame is being built.  The
@@ -1514,3 +1983,91 @@ corner_window(TP, W:window) :<-
     ).
 
 :- pce_end_class(tool_pane).
+
+
+                 /*******************************
+                 *        OPEN FROM A TERM      *
+                 *******************************/
+
+%!  open_pane_frame(+Term, -Frame) is semidet.
+%!  open_pane_frame(+Term, -Frame, +Options) is semidet.
+%
+%   Open a window of the IDE holding what Term says.  Term is what
+%   `pane_frame <-pane_term' writes; see the PANE TERM section above for
+%   what it looks like.  Fails, after reporting, when nothing in Term
+%   could be restored.
+%
+%   Options:
+%
+%     - application(+Application)
+%       Application the window belongs to.  Default is @prolog_ide, or
+%       none when library(swi_ide) cannot be loaded.
+%     - open(+Bool)
+%       Open the window (default `true').  A test that only wants the
+%       structure says `false' and never touches the window system.
+
+open_pane_frame(Term, Frame) :-
+    open_pane_frame(Term, Frame, []).
+
+open_pane_frame(Term, Frame, Options) :-
+    frame_application(Options, App),
+    new(Frame, pane_frame(App)),
+    (   memberchk(open(false), Options)
+    ->  true
+    ;   send(Frame, open)          % before it is filled: a share is
+    ),                             % pixels of the room there is
+    (   send(Frame, pane_term, Term)
+    ->  true
+    ;   send(Frame, destroy),
+        fail
+    ).
+
+frame_application(Options, App) :-
+    (   memberchk(application(App0), Options)
+    ->  App = App0
+    ;   catch(use_module(user:library(swi_ide), []), _, fail)
+    ->  App = @prolog_ide
+    ;   App = @default
+    ).
+
+
+                 /*******************************
+                 *           MESSAGES           *
+                 *******************************/
+
+:- multifile
+    prolog:message//1.
+
+prolog:message(pane_frame(Message)) -->
+    pane_frame_message(Message).
+
+pane_frame_message(name_taken(Wanted, Got)) -->
+    [ 'Pane frame: a window is called ~w already; using ~w'-[Wanted, Got] ].
+pane_frame_message(main_frame_exists) -->
+    [ 'Pane frame: there is a main window already' ].
+pane_frame_message(empty_tab(Options)) -->
+    { tab_name(Options, Name) },
+    [ 'Pane frame: nothing of the tab ~w could be restored'-[Name] ].
+pane_frame_message(not_a_tab(Term)) -->
+    [ 'Pane frame: not a tab: ~p'-[Term] ].
+pane_frame_message(needs_arguments(Kind)) -->
+    [ 'Pane frame: ~w cannot be restored: it is made for something live'-
+      [Kind] ].
+pane_frame_message(no_such_file(Path)) -->
+    [ 'Pane frame: ~w is not there; opening it as a new file'-[Path] ].
+pane_frame_message(no_such_profile(Asked, Instead)) -->
+    [ 'Pane frame: there is no profile ~w; running ~w'-[Asked, Instead] ].
+pane_frame_message(no_class(Kind)) -->
+    [ 'Pane frame: there is no pane of kind ~w'-[Kind] ].
+pane_frame_message(not_a_pane(Kind)) -->
+    [ 'Pane frame: ~w is not a window'-[Kind] ].
+pane_frame_message(no_options(Kind, Options)) -->
+    [ 'Pane frame: ~w has nothing to do with ~p'-[Kind, Options] ].
+pane_frame_message(pane_failed(Kind, Reason)) -->
+    [ 'Pane frame: ~w could not be set up (~p)'-[Kind, Reason] ].
+
+tab_name(Options, Name) :-
+    (   memberchk(label(Name), Options)
+    ->  true
+    ;   Name = ''
+    ).

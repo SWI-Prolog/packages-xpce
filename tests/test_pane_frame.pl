@@ -59,7 +59,7 @@ Run with:
 :- use_module(library(plunit)).
 :- use_module(library(pane_frame)).
 :- use_module(library(pce_util), [chain_list/2]).
-:- use_module(library(lists), [member/2]).
+:- use_module(library(lists), [member/2, memberchk/2, reverse/2]).
 
 test_pane_frame :-
     run_tests([ pane_frame_structure,
@@ -70,7 +70,8 @@ test_pane_frame :-
                 pane_frame_opacity,
                 pane_frame_panes,
                 pane_frame_plain_pane,
-                pane_frame_minimum
+                pane_frame_minimum,
+                pane_frame_term
               ]).
 
                  /*******************************
@@ -87,6 +88,7 @@ test_pane_frame :-
 variable(kind,     name := plain, both, "Which menu bar I ask for").
 variable(closable, bool := @on,   both, "Do I agree to be closed?").
 variable(exposed,  int := 0,      both, "Times I was told I am current").
+variable(setting,  name := none,  both, "Something to write down").
 
 class_variable(inactive_opacity, num, 0.6,
                "Fade me while another pane has the focus").
@@ -117,7 +119,33 @@ sibling(P, New:window) :<-
     new(New, tp_pane),
     send(New, kind, P?kind).
 
+%       The pair a pane answers to be written down and built back.
+
+pane_term(P, Options:prolog) :<-
+    get(P, setting, Setting),
+    (   Setting == none
+    ->  Options = []
+    ;   Options = [setting(Setting)]
+    ).
+
+pane_term(P, Options:prolog) :->
+    (   memberchk(setting(Setting), Options)
+    ->  send(P, setting, Setting)
+    ;   true
+    ).
+
 :- pce_end_class(tp_pane).
+
+%       A pane whose class insists on an argument, as `prolog_debugger'
+%       does: it is made for something live and cannot come from a term.
+
+:- pce_begin_class(tp_needs, window, "Pane that needs an argument").
+
+initialise(P, Level:int) :->
+    send_super(P, initialise),
+    send(P, name, Level).
+
+:- pce_end_class(tp_needs).
 
 %       A pane that answers none of it.
 
@@ -1060,3 +1088,217 @@ pane_area(P, Area) :-
     ;   Placed = P
     ),
     get(Placed, area, Area).
+
+
+                 /*******************************
+                 *          PANE TERM           *
+                 *******************************/
+
+/* A window can be written down as a Prolog term and built back from it.
+   These check what goes into the term, that a window built from a term
+   gives the same term again, and that a term naming something that
+   cannot be made restores everything else all the same.
+*/
+
+:- begin_tests(pane_frame_term).
+
+%!  described(-Frame, -Application) is det.
+%
+%   A frame of two tabs: the first holds a tp_pane beside a tp_pane over a
+%   tp_bare, the second a tp_pane that has something to say about itself.
+
+described(F, App) :-
+    frame(F, App, A),
+    send(A, setting, alpha),
+    send(F, split, new(B, tp_pane), A, right),
+    send(B, name, two),
+    send(F, split, new(C, tp_bare), A, below),
+    send(C, name, three),
+    send(F, append_pane, new(D, tp_pane), second, @off),
+    send(D, name, four),
+    send(D, setting, delta).
+
+test(a_pane_that_says_nothing_is_its_class_name, Content == tp_bare) :-
+    frame(F, _App, _P),
+    send(F, append_pane, new(Bare, tp_bare), bare, @off),
+    send(Bare, name, bare),
+    get(F, pane_term, pane_frame(_, [_, tab(_, Content)])).
+
+test(a_pane_that_says_something_carries_its_options,
+     Options == [setting(alpha)]) :-
+    frame(F, _App, P),
+    send(P, setting, alpha),
+    get(F, pane_term, pane_frame(_, [tab(_, tp_pane(Options))])).
+
+test(a_tab_with_one_pane_has_no_split, Content == tp_pane) :-
+    frame(F, _App, _P),
+    get(F, pane_term, pane_frame(_, [tab(_, Content)])).
+
+test(a_split_tab_is_a_tree) :-
+    described(F, _App),
+    get(F, pane_term, pane_frame(_, [tab(_, Content)|_])),
+    assertion(Content = horizontal([_-vertical([_-tp_pane([setting(alpha)]),
+                                                _-current(tp_bare)]),
+                                    _-tp_pane])).
+
+test(the_tab_in_view_is_marked) :-
+    described(F, _App),
+    get(F, pane_term, pane_frame(_, [tab(First, _), tab(Second, _)])),
+    assertion(memberchk(current(true), First)),
+    assertion(\+ memberchk(current(true), Second)).
+
+test(a_renamed_tab_says_so) :-
+    frame(F, _App, P),
+    get(P, container, tab_frame, Tab),
+    send(Tab, rename, 'By hand'),
+    get(F, pane_term, pane_frame(_, [tab(Options, _)])),
+    assertion(memberchk(renamed(true), Options)),
+    assertion(memberchk(label('By hand'), Options)).
+
+test(a_window_of_its_own_label_format_says_so) :-
+    frame(F, _App, _P),
+    get(F, pane_term, pane_frame(Plain, _)),
+    assertion(\+ memberchk(label_format(_), Plain)),
+    send(F, label_format, 'Mine -- %s'),
+    get(F, pane_term, pane_frame(Own, _)),
+    assertion(memberchk(label_format('Mine -- %s'), Own)).
+
+%       A window that was never opened has no geometry worth writing:
+%       <-geometry answers 0x0+0+0 for one, and reading that back would
+%       ask for a window of no size at all.
+
+test(a_window_that_was_never_opened_writes_no_geometry) :-
+    frame(F, _App, _P),
+    get(F, pane_term, pane_frame(Options, _)),
+    assertion(\+ memberchk(geometry(_), Options)).
+
+test(describing_a_window_built_from_a_term_gives_the_same_term) :-
+    described(F, App),
+    get(F, pane_term, Term),
+    open_pane_frame(Term, F2, [application(App), open(false)]),
+    get(F2, pane_term, Again),
+    assertion(Term == Again).
+
+test(a_term_written_by_hand_is_enough,
+     Shape == vertical([tp_pane,tp_pane])) :-
+    new(App, tp_app(test)),
+    open_pane_frame(pane_frame([], [tab([], vertical([tp_pane, tp_pane]))]),
+                    F, [application(App), open(false)]),
+    get(F, pane_term, pane_frame(_, [tab(_, Content)])),
+    pane_term_shape(Content, Shape).
+
+test(a_renamed_tab_keeps_its_name_when_it_is_built_back) :-
+    frame(F, App, P),
+    get(P, container, tab_frame, Tab),
+    send(Tab, rename, 'By hand'),
+    get(F, pane_term, Term),
+    open_pane_frame(Term, F2, [application(App), open(false)]),
+    get(F2, pane_term, pane_frame(_, [tab(Options, _)])),
+    assertion(memberchk(label('By hand'), Options)),
+    assertion(memberchk(renamed(true), Options)).
+
+test(the_marked_tab_is_the_one_in_view) :-
+    described(F, App),
+    get(F, pane_term, pane_frame(FrameOptions, [First, Second])),
+    open_pane_frame(pane_frame(FrameOptions, [Second, First]), F2,
+                    [application(App), open(false)]),
+    get(F2, pane_term, pane_frame(_, [tab(_, _), tab(Options, _)])),
+    assertion(memberchk(current(true), Options)).
+
+%       A class that insists on arguments is made for something live --
+%       the debugger for a break level -- and cannot be built from a term.
+%       What is around it is built all the same.
+
+test(a_pane_that_cannot_be_made_is_left_out, Shape == tp_pane) :-
+    new(App, tp_app(test)),
+    pane_term_messages(
+        open_pane_frame(pane_frame([], [tab([], vertical([tp_needs,
+                                                          tp_pane]))]),
+                        F, [application(App), open(false)]),
+        Messages),
+    get(F, pane_term, pane_frame(_, [tab(_, Content)])),
+    pane_term_shape(Content, Shape),
+    assertion(memberchk(pane_frame(needs_arguments(tp_needs)), Messages)).
+
+test(a_kind_that_is_no_class_is_left_out) :-
+    new(App, tp_app(test)),
+    pane_term_messages(
+        open_pane_frame(pane_frame([], [tab([], vertical([no_such_pane,
+                                                          tp_pane]))]),
+                        F, [application(App), open(false)]),
+        Messages),
+    get(F, pane_term, pane_frame(_, [tab(_, tp_pane)])),
+    assertion(memberchk(pane_frame(no_class(no_such_pane)), Messages)).
+
+test(a_term_with_nothing_in_it_opens_no_window, fail) :-
+    new(App, tp_app(test)),
+    pane_term_messages(
+        open_pane_frame(pane_frame([], [tab([], no_such_pane)]),
+                        _F, [application(App), open(false)]),
+        _Messages).
+
+%       A term sent to a window replaces what it held: the window ends up
+%       holding what the term says and nothing else, and it is still the
+%       window it was.
+
+test(a_term_sent_to_a_window_replaces_what_it_held) :-
+    described(F, _App),
+    send(F, pane_term, pane_frame([], [tab([], tp_pane)])),
+    get(F, pane_term, pane_frame(_, Tabs)),
+    assertion(Tabs = [tab(_, tp_pane)]),
+    get(F, panes, Panes),
+    assertion(get(Panes, size, 1)).
+
+test(a_pane_that_refuses_to_close_stops_the_replacement, fail) :-
+    frame(F, _App, P),
+    send(P, closable, @off),
+    send(F, pane_term, pane_frame([], [tab([], tp_pane)])).
+
+:- end_tests(pane_frame_term).
+
+%!  pane_term_shape(+Content, -Shape) is det.
+%
+%   The content of a tab with the shares dropped, so that a test can
+%   compare the shape alone.
+
+pane_term_shape(current(Content), Shape) :-
+    !,
+    pane_term_shape(Content, Shape).
+pane_term_shape(Content, Shape) :-
+    compound(Content),
+    Content =.. [Orientation, Shares],
+    pane_term_orientation(Orientation),
+    !,
+    findall(S, ( member(Share, Shares),
+                 pane_term_share(Share, Sub),
+                 pane_term_shape(Sub, S)
+               ), Subs),
+    Shape =.. [Orientation, Subs].
+pane_term_shape(Content, Content).
+
+pane_term_orientation(horizontal).
+pane_term_orientation(vertical).
+
+pane_term_share(_-Content, Content) :- !.
+pane_term_share(Content, Content).
+
+%!  pane_term_messages(:Goal, -Messages) is semidet.
+%
+%   Run Goal with the messages it prints collected rather than printed.
+
+:- meta_predicate pane_term_messages(0, -).
+
+pane_term_messages(Goal, Messages) :-
+    nb_setval(pane_term_messages, []),
+    setup_call_cleanup(
+        asserta((user:message_hook(Term, _, _) :-
+                     pane_term_message(Term)), Ref),
+        Goal,
+        ( erase(Ref),
+          nb_getval(pane_term_messages, Collected),
+          reverse(Collected, Messages)
+        )).
+
+pane_term_message(Term) :-
+    nb_getval(pane_term_messages, Old),
+    nb_setval(pane_term_messages, [Term|Old]).
