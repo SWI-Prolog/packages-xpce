@@ -417,10 +417,14 @@ class_variable(background,        colour, grey80).
 class_variable(header_colour,     colour, black,  "Predicate header colour").
 class_variable(header_background, colour, khaki1, "Predicate header background").
 
+%       No label: a label puts a row of its own on the window_decorator I
+%       am held in, and the grip that drags the profiler around lands in
+%       it.  The predicate the details are about is the row the table
+%       writes in bold -- see ->show_predicate -- so nothing is lost.
+
 initialise(W) :->
     send_super(W, initialise),
     send(W, pen, 0),
-    send(W, label, 'Details'),
     send(W, scrollbars, vertical),
     send(W, restrict_scroll, @on),
     send(W, display, new(T, tabular)),
@@ -626,7 +630,6 @@ show_predicate(W, Data:prolog,
     ;   new(Txt, prof_predicate_text(Pred, self))
     ),
     send(T, append, Txt, BG, FG),
-    send(W, label, string('Details -- %s', Txt?string)),
     send(T, next_row).
 
 show_relative(W, Caller:prolog, Role:name) :->

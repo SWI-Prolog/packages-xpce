@@ -1309,6 +1309,33 @@ test(and_so_does_a_text_of_the_details) :-
     !,
     send(Text, details).
 
+%       The details window carries no label of its own: a label puts a row
+%       on the window_decorator it is held in, and the grip that drags the
+%       profiler around would land in that row rather than in the corner
+%       of the window.
+
+test(the_details_carry_no_label_of_their_own, [fail]) :-
+    no_frames,
+    profiler(F),
+    get(F, window, prof_browser, B),
+    get(B?dict?members, head, Item),
+    send(Item, details),                % this used to name the predicate
+    get(F, window, prof_details, W),    % on the label
+    get(W, label, _).
+
+test(so_the_grip_sits_in_the_corner_of_the_window_it_is_on) :-
+    no_frames,
+    profiler(F),
+    get(F, frame, Frame),
+    send(Frame, resize),
+    get(F, corner_window, W),
+    get(W, class_name, prof_details),
+    get(F, grip, Grip),
+    send(F, place_grip),
+    send(Grip, compute),
+    get(Grip, area, area(_, GY, _, _)),
+    GY < 8.
+
 test(how_the_times_are_read_is_the_tools_to_say) :-
     no_frames,
     profiler(F),
