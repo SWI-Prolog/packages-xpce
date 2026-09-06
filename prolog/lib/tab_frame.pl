@@ -38,7 +38,8 @@
 :- use_module(library(dragdrop), []).
 :- use_module(library(help_message), []).
 :- use_module(library(pce_icon_button), []).
-:- use_module(library(lists), [member/2]).
+:- use_module(library(lists), [member/2, sum_list/2, same_length/2]).
+:- use_module(library(apply), [maplist/2, maplist/3, maplist/4]).
 :- use_module(library(debug), [debug/3]).
 
 /** <module> Tab holding a tiled hierarchy of windows
@@ -383,6 +384,219 @@ content_size(TF, Size:size) :<-
         H is H0-LH
     ),
     new(Size, size(W,H)).
+
+                 /*******************************
+                 *         WINDOW TREE          *
+                 *******************************/
+
+/* How my windows are tiled, written down.
+
+`<-window_tree' answers a term whose leaves are the windows themselves and
+whose nodes say how they are divided:
+
+    vertical([0.7-horizontal([0.5-@ed1, 0.5-@ed2]), 0.3-@term])
+
+`->window_tree' arranges the windows of such a term in that shape.  The
+shares are relative: [2-A, 1-B] and [0.667-A, 0.333-B] say the same, and a
+sub-term written without a share takes what it is given.
+
+This is the tile half of describing a pane_frame -- see `pane_frame
+<-pane_term', which puts a term around it saying what the windows are.  A
+tool_pane holds a tab_frame of its own, so the same pair describes the
+inside of a tool if that is ever wanted.
+*/
+
+window_tree(TF, Tree:prolog) :<-
+    "How my windows are tiled, as a term"::
+    get(TF, tile, Tile),
+    tile_tree(Tile, Tree).
+
+%!  tile_tree(+Tile, -Tree) is det.
+%
+%   A leaf tile is the window it manages; a tile with members is the term
+%   of its orientation, holding its members with their share of it.
+
+tile_tree(Tile, Tree) :-
+    get(Tile, members, Members),
+    Members \== @nil,
+    !,
+    get(Tile, orientation, Orientation),
+    chain_list(Members, List),
+    maplist(tile_extent(Orientation), List, Extents),
+    sum_list(Extents, Total),
+    maplist(tile_share(Total), List, Extents, Shares),
+    Tree =.. [Orientation, Shares].
+tile_tree(Tile, Window) :-
+    get(Tile, object, Object),
+    user_window(Object, Window).
+
+tile_share(Total, Tile, Extent, Share-Sub) :-
+    (   Total > 0
+    ->  Share is round(Extent/Total*1000)/1000.0
+    ;   Share = 1.0
+    ),
+    tile_tree(Tile, Sub).
+
+%!  tile_extent(+Orientation, +Tile, -Extent) is det.
+%
+%   How much of the direction it is divided in a tile takes up.
+
+tile_extent(horizontal, Tile, W) :-
+    get(Tile, area, area(_, _, W, _)).
+tile_extent(vertical, Tile, H) :-
+    get(Tile, area, area(_, _, _, H)).
+
+window_tree(TF, Tree:prolog) :->
+    "Arrange my windows in the shape of Tree"::
+    tree_first_window(Tree, First),
+    get(TF, windows, Windows),
+    send(Windows, member, First),       % the anchor must be mine already
+    place_tree(TF, Tree),
+    send(TF, layout).
+
+%       Giving the windows their share of the room is a second step, and
+%       the caller says when: a share is pixels, and `->layout_natural'
+%       takes the ideal sizes back off the windows every time the tab is
+%       laid out afresh.  Sizing while a window is still being built up
+%       therefore holds until the next layout and no longer.  See
+%       `pane_frame ->pane_term', which shapes every tab first and shares
+%       the room out once at the end.
+
+window_shares(TF, Tree:prolog) :->
+    "Give my windows the share of me that Tree asks for"::
+    send(TF, layout),
+    size_tree(TF, Tree).
+
+%!  place_tree(+TabFrame, +Tree) is det.
+%
+%   Relate the windows of Tree, outermost split first.  `tab_frame
+%   ->append' relates the tiles without delegating, so the new tile joins
+%   the row it is put in when that row already runs the right way and
+%   otherwise wraps the window it is put beside -- see
+%   nonDelegatingAboveBelowTile() in src/win/tile.c.  Placing this level
+%   before descending into it is therefore what makes the nesting come
+%   out right: vertical([horizontal([A,B]), C]) is A, then C below A, and
+%   only then B beside A.  Doing it the other way round -- B beside A
+%   first -- leaves C below A alone rather than below both of them.
+
+place_tree(_, Leaf) :-
+    object(Leaf),
+    !.
+place_tree(TF, Node) :-
+    Node =.. [Orientation, Shares],
+    split_direction(Orientation, Where),
+    maplist(share_content, Shares, Contents),
+    Contents = [First|Rest],
+    tree_first_window(First, Anchor),
+    place_siblings(TF, Rest, Anchor, Where),
+    maplist(place_tree(TF), Contents).
+
+place_siblings(_, [], _, _).
+place_siblings(TF, [Content|Rest], Previous, Where) :-
+    tree_first_window(Content, Window),
+    send(TF, append, Window, Previous, Where),
+    place_siblings(TF, Rest, Window, Where).
+
+split_direction(horizontal, right).
+split_direction(vertical,   below).
+
+%!  tree_first_window(+Tree, -Window) is det.
+%
+%   The window a sub-tree is anchored on: the one that is placed for it,
+%   and that its own splits are made around.
+
+tree_first_window(Leaf, Leaf) :-
+    object(Leaf),
+    !.
+tree_first_window(Node, Window) :-
+    Node =.. [_Orientation, [Share|_]],
+    share_content(Share, Content),
+    tree_first_window(Content, Window).
+
+share_content(Share-Content, Content) :-
+    !,
+    number(Share).
+share_content(Content, Content).
+
+%!  size_tree(+TabFrame, +Tree) is det.
+%
+%   Give every window the share of its row the term asks for.  One level
+%   at a time and from the top down: a size is pixels, and the box a
+%   nested row has to divide is only settled once the row holding it has
+%   been divided.  Within one level the total is unaffected by what is
+%   given away -- `tile ->width' redistributes over the same box -- so
+%   the shares of a level can all be worked out before any of them is
+%   applied.  The last member is left to take the remainder: giving every
+%   member a size over-constrains the row.
+
+size_tree(TF, Tree) :-
+    get(TF, tile, Tile),
+    size_tile(Tile, Tree).
+
+size_tile(_, Leaf) :-
+    object(Leaf),
+    !.
+size_tile(Tile, Node) :-
+    Node =.. [Orientation, Shares],
+    get(Tile, members, Members),
+    Members \== @nil,
+    chain_list(Members, Tiles),
+    same_length(Tiles, Shares),
+    !,
+    maplist(share_weight, Shares, Weights),
+    (   maplist(==(@default), Weights)
+    ->  true
+    ;   maplist(tile_extent(Orientation), Tiles, Extents),
+        sum_list(Extents, Total),
+        sum_list(Weights, Sum),
+        Sum > 0,
+        Total > 0
+    ->  give_sizes(Tiles, Weights, Orientation, Total, Sum)
+    ;   true
+    ),
+    maplist(share_content, Shares, Contents),
+    maplist(size_tile, Tiles, Contents).
+size_tile(_, _).                        % the tree no longer fits the tiles
+
+share_weight(Share-_, Share) :- !.
+share_weight(_, @default).
+
+give_sizes([_Last], _, _, _, _) :- !.   % takes what is left over
+give_sizes([Tile|Tiles], [Weight|Weights], Orientation, Total, Sum) :-
+    (   number(Weight)
+    ->  Size is max(1, round(Weight/Sum*Total)),
+        resize_tile(Tile, Orientation, Size)
+    ;   true
+    ),
+    give_sizes(Tiles, Weights, Orientation, Total, Sum).
+
+%!  resize_tile(+Tile, +Orientation, +Size) is det.
+%
+%   Give a tile a size along Orientation, if it can take one: a tile that
+%   can neither stretch nor shrink says so with a zero weight, and sizing
+%   it anyway would take the room from a window that never agreed to give
+%   it.  See `apply_this_tile_layout' in library(persistent_frame).
+
+resize_tile(Tile, horizontal, Size) :-
+    get(Tile, area, area(_, _, W, _)),
+    (   Size > W
+    ->  get(Tile, hor_stretch, Weight)
+    ;   get(Tile, hor_shrink, Weight)
+    ),
+    (   Weight > 0
+    ->  send(Tile, width, Size)
+    ;   true
+    ).
+resize_tile(Tile, vertical, Size) :-
+    get(Tile, area, area(_, _, _, H)),
+    (   Size > H
+    ->  get(Tile, ver_stretch, Weight)
+    ;   get(Tile, ver_shrink, Weight)
+    ),
+    (   Weight > 0
+    ->  send(Tile, height, Size)
+    ;   true
+    ).
 
                  /*******************************
                  *          SEPARATORS          *

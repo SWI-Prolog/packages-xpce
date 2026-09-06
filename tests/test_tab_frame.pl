@@ -66,7 +66,8 @@ test_tab_frame :-
                 tab_frame_members,
                 tab_frame_resize,
                 tab_frame_manager,
-                tab_frame_drop
+                tab_frame_drop,
+                tab_frame_window_tree
               ]).
 
                  /*******************************
@@ -1441,3 +1442,158 @@ test(the_handle_drags_the_window_it_is_displayed_on) :-
         message(@arg1, instance_of, drag_and_drop_gesture), _).
 
 :- end_tests(tab_frame_drop).
+
+
+                 /*******************************
+                 *         WINDOW TREE          *
+                 *******************************/
+
+/* <-window_tree writes down how the windows of a tab are tiled and
+   ->window_tree arranges them that way, both with the windows themselves
+   as the leaves.  What is checked here is the shape, the order in which
+   the splits have to be made and the arithmetic of the shares.
+*/
+
+:- begin_tests(tab_frame_window_tree).
+
+%!  named(-TabbedWindow, -TabFrame, -Windows) is det.
+%
+%   An open tab_frame holding three named pictures, side by side.
+
+named(TW, TF, [A,B,C]) :-
+    new(TW, tabbed_window('Test', size(600,400))),
+    send(TW, tab, new(TF, tab_frame(new(A, picture), one))),
+    send(A, name, a),
+    send(TW, open),
+    send(TW, resize),
+    send(TF, append, new(B, picture), A, right), send(B, name, b),
+    send(TF, append, new(C, picture), B, right), send(C, name, c).
+
+%!  shape(+Tree, -Shape) is det.
+%
+%   Tree with its windows written as their names and its shares dropped,
+%   so that a test can compare the shape alone.
+
+shape(Tree, Name) :-
+    object(Tree),
+    !,
+    get(Tree, name, Name).
+shape(Tree, Shape) :-
+    Tree =.. [Orientation, Shares],
+    findall(S, (member(Share, Shares), share_shape(Share, S)), Subs),
+    Shape =.. [Orientation, Subs].
+
+share_shape(_-Content, Shape) :-
+    !,
+    shape(Content, Shape).
+share_shape(Content, Shape) :-
+    shape(Content, Shape).
+
+%!  share_of(+Tree, +Name, -Share) is semidet.
+%
+%   The share the window called Name has of the row it is in.
+
+share_of(Tree, Name, Share) :-
+    Tree =.. [_, Shares],
+    (   member(Share0-Content, Shares),
+        object(Content),
+        get(Content, name, Name)
+    ->  Share = Share0
+    ;   member(_-Content, Shares),
+        \+ object(Content),
+        share_of(Content, Name, Share)
+    ).
+
+test(one_window_is_its_own_tree, Shape == a) :-
+    tabbed(_TW, TF, P),
+    send(P, name, a),
+    get(TF, window_tree, Tree),
+    shape(Tree, Shape).
+
+test(a_row_reads_back_as_horizontal, Shape == horizontal([a,b,c])) :-
+    named(_TW, TF, _),
+    get(TF, window_tree, Tree),
+    shape(Tree, Shape).
+
+test(a_column_reads_back_as_vertical, Shape == vertical([a,b])) :-
+    tabbed(_TW, TF, A),
+    send(A, name, a),
+    send(TF, append, new(B, picture), A, below),
+    send(B, name, b),
+    get(TF, window_tree, Tree),
+    shape(Tree, Shape).
+
+test(a_nested_tree_reads_back_nested,
+     Shape == horizontal([vertical([a,c]),b])) :-
+    tabbed(_TW, TF, A),
+    send(A, name, a),
+    send(TF, append, new(B, picture), A, right), send(B, name, b),
+    send(TF, append, new(C, picture), A, below), send(C, name, c),
+    get(TF, window_tree, Tree),
+    shape(Tree, Shape).
+
+%       The one that pins the construction order down.  A tree is built
+%       from the outside in: making the inner split first would leave the
+%       last window beside one of the pair rather than below both.
+
+test(the_outermost_split_is_made_first,
+     Shape == vertical([horizontal([a,b]),c])) :-
+    named(_TW, TF, [A,B,C]),
+    send(TF, window_tree, vertical([0.5-horizontal([0.5-A, 0.5-B]),
+                                    0.5-C])),
+    get(TF, window_tree, Tree),
+    shape(Tree, Shape).
+
+test(the_shape_asked_for_is_the_shape_made,
+     Shape == horizontal([a,vertical([b,c])])) :-
+    named(_TW, TF, [A,B,C]),
+    send(TF, window_tree, horizontal([0.5-A,
+                                      0.5-vertical([0.5-B, 0.5-C])])),
+    get(TF, window_tree, Tree),
+    shape(Tree, Shape).
+
+test(shares_are_applied) :-
+    named(_TW, TF, [A,B,C]),
+    send(TF, window_tree, horizontal([0.5-A, 0.25-B, 0.25-C])),
+    send(TF, window_shares, horizontal([0.5-A, 0.25-B, 0.25-C])),
+    get(TF, window_tree, Tree),
+    share_of(Tree, a, ShareA),
+    share_of(Tree, b, ShareB),
+    assertion(abs(ShareA-0.5) < 0.02),
+    assertion(abs(ShareB-0.25) < 0.02).
+
+%       A share says how much of the row a window takes, so it is what it
+%       is relative to the others: [2,1,1] and [0.5,0.25,0.25] ask for the
+%       same thing.
+
+test(shares_are_relative) :-
+    named(_TW, TF, [A,B,C]),
+    send(TF, window_shares, horizontal([2-A, 1-B, 1-C])),
+    get(TF, window_tree, Tree),
+    share_of(Tree, a, ShareA),
+    assertion(abs(ShareA-0.5) < 0.02).
+
+test(shares_read_back_as_they_were_set) :-
+    named(_TW, TF, [A,B,C]),
+    send(TF, window_shares, horizontal([0.5-A, 0.3-B, 0.2-C])),
+    get(TF, window_tree, Tree),
+    send(TF, window_shares, Tree),
+    get(TF, window_tree, Again),
+    assertion(Tree == Again).
+
+%       A window that carries a label or a scroll bar of its own sits in a
+%       window_decorator, and it is the decorator the tile places.  The
+%       tree must answer the window all the same.
+
+test(a_decorated_window_is_unwrapped, Shape == horizontal([a,b])) :-
+    tabbed(_TW, TF, A),
+    send(A, name, a),
+    send(TF, append, new(B, picture), A, right),
+    send(B, name, b),
+    send(B, label, 'Has a label'),
+    get(B, decoration, Decor),
+    assertion(Decor \== @nil),
+    get(TF, window_tree, Tree),
+    shape(Tree, Shape).
+
+:- end_tests(tab_frame_window_tree).
