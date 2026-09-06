@@ -57,9 +57,11 @@ Run with:
 :- use_module(library(plunit)).
 :- use_module(library(epilog)).
 :- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(lists), [member/2, memberchk/2, subtract/3]).
 
 test_epilog_tabs :-
     run_tests([ epilog_main,
+                epilog_thread,
                 epilog_tabs,
                 epilog_split,
                 epilog_move,
@@ -132,6 +134,29 @@ split_orientation(W, Orientation) :-
 %       frame says it is the main one.  Getting that wrong drops swipl-win
 %       through into the ordinary toplevel.
 
+%!  console_child(+Parent, -Debug, -Class) is det.
+%
+%   Make a thread the way a console is made, from a thread that is not
+%   debuggable itself, and answer for a thread created in it.
+
+console_child(Parent, Debug, Class) :-
+    epilog:console_thread_options(Parent, con_test, Options0),
+    subtract(Options0, [at_exit(_), detached(_)], Options),
+    message_queue_create(Q),
+    setup_call_cleanup(
+        thread_create(console_child_(Q), Console, [detached(false)|Options]),
+        ( thread_get_message(Q, child(Debug, Class)),
+          thread_join(Console, _)
+        ),
+        message_queue_destroy(Q)).
+
+console_child_(Q) :-
+    thread_create(thread_get_message(_), Kid, []),
+    thread_property(Kid, debug(Debug)),
+    thread_property(Kid, class(Class)),
+    thread_send_message(Q, child(Debug, Class)),
+    thread_send_message(Kid, done).
+
 :- begin_tests(epilog_main).
 
 test(a_console_asked_for_as_the_main_one_says_so, true(Main == @on)) :-
@@ -147,6 +172,45 @@ test(an_ordinary_console_does_not, [fail]) :-
     get(F, attribute, main, _).
 
 :- end_tests(epilog_main).
+
+
+/* The thread a console runs in.
+
+A thread is created debuggable or not as the thread it inherits from is,
+and the main thread turns its own debugging off while it sits in the
+event loop -- see `ep_wait/1'.  A console asked for what it inherits and
+so was made undebuggable, and so was everything the user created in it:
+`thread_create(rtest_chats(10000), Id)' typed in a console gave a thread
+threads/0 marks as not debuggable.
+*/
+
+:- begin_tests(epilog_thread).
+
+test(a_console_is_debuggable, true(Debug == true)) :-
+    epilog:console_thread_options(main, con_test, Options),
+    memberchk(debug(Debug), Options).
+
+test(and_takes_the_rest_from_the_console_it_was_opened_from,
+     true(Asked == [inherit_from(parent), alias(con_test), class(console)])) :-
+    epilog:console_thread_options(parent, con_test, Options),
+    findall(O,
+            ( member(O, Options),
+              memberchk(O, [inherit_from(_), alias(_), class(_)])
+            ),
+            Asked).
+
+%       Which is what the thread the user creates in a console inherits:
+%       thread_create/3 hands the flag of the thread that creates one on.
+
+test(so_a_thread_created_in_one_is_debuggable_too,
+     true(Debug-Class == true-user)) :-
+    thread_self(Me),
+    setup_call_cleanup(
+        set_thread(self, debug(false)),         % as ep_wait/1 leaves main
+        console_child(Me, Debug, Class),
+        set_thread(self, debug(true))).
+
+:- end_tests(epilog_thread).
 
 
 :- begin_tests(epilog_tabs).

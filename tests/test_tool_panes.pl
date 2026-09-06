@@ -194,6 +194,21 @@ test(it_goes_into_a_window_that_is_already_open,
     send(@prolog_ide, thread_monitor),
     classes(F, Classes).
 
+%       What the monitor says a thread is.  A thread that cannot be
+%       debugged used to be called a system thread, which is a class it
+%       may well not be in: thread_create/3 makes a user thread, and it
+%       is debuggable or not as the thread that made it is.
+
+test(the_monitor_says_what_a_thread_is,
+     Says == [console, console, system, 'no debug', debug, '']) :-
+    findall(Postfix,
+            ( member(Class-Debug, [console-(@nil), console-(@on),
+                                   system-(@nil),
+                                   user-(@nil), user-(@on), user-(@off)]),
+              pce_thread_monitor:label_postfix(Class, Debug, Postfix)
+            ),
+            Says).
+
 test(there_is_only_ever_one, true(Again == TM)) :-
     monitor(TM),
     send(@prolog_ide, thread_monitor),
