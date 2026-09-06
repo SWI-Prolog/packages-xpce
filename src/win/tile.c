@@ -1103,12 +1103,13 @@ static int
 tile_minimum(TileObj t, bool horizontal)
 { int ideal = valInt(horizontal ? t->idealWidth : t->idealHeight);
 
-  if ( t->orientation == NAME_none )
+  if ( t->orientation == NAME_none ||	/* a window, or nothing inside */
+       isNil(t->members) )		/* to ask */
     return ideal < MIN_TILE_SIZE ? ideal : MIN_TILE_SIZE;
 
   { bool along = ((t->orientation == NAME_horizontal) == horizontal);
     int border = valInt(t->border);
-    int nvis   = isNil(t->members) ? 0 : non_empty_tiles(t);
+    int nvis   = non_empty_tiles(t);
     int min    = 0;
     Cell cell;
 
