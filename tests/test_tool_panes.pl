@@ -39,10 +39,11 @@
 /** <module> An IDE tool as a pane
 
 The thread monitor, the source navigator, the debug monitor, the debugger
-status, the cross-referencer and the tools of the XPCE manual used to be
-windows of their own, each holding its windows, a menu bar and a reporter
-in a frame.  They are panes now, so they can sit in a tab of any window
-of the IDE beside a terminal, an editor or another tool.
+status, the cross-referencer, the profiler and the tools of the XPCE
+manual used to be windows of their own, each holding its windows, a menu
+bar and a reporter in a frame.  They are panes now, so they can sit in a
+tab of any window of the IDE beside a terminal, an editor or another
+tool.
 
 These check that a tool goes where it should, that there is only ever
 one, that its windows are tiled inside it and that what it has to say
@@ -66,6 +67,8 @@ Run with:
 :- use_module(library(trace/status), []).
 :- use_module(library(pce_xref), []).
 :- use_module(library(pce_manual), []).
+:- use_module(library(swi/pce_profile), []).
+:- use_module(library(apply), [maplist/3]).
 :- use_module(library(prolog_debug), [spy/1, nospy/1]).
 :- use_module(library(debug), [debug/1, debug/3, nodebug/1]).
 :- use_module(library(pce_util), [chain_list/2]).
@@ -77,6 +80,7 @@ test_tool_panes :-
                 debug_monitor_pane,
                 debug_status_pane,
                 xref_pane,
+                profiler_pane,
                 manual_tool_panes
               ]).
 
@@ -1208,3 +1212,135 @@ test(what_a_tool_has_to_say_grows_a_status_bar,
     get(SD, class_name, Class).
 
 :- end_tests(manual_tool_panes).
+
+
+                 /*******************************
+                 *         THE PROFILER         *
+                 *******************************/
+
+/* The profiler shows the predicates that were sampled beside the details
+of the one selected.  Unlike the other tools it is not a singleton: every
+profile opens a pane of its own, as it opened a frame of its own before.
+*/
+
+%!  profiler(-Tool) is det.
+%
+%   Profile something small and show the result.
+
+profiler(F) :-
+    profile(numlist(1, 10000, _), [time(cpu)]),
+    profile_data(Data),
+    pce_profile:show_profile(Data),
+    get(@prolog_ide, tool, prof_frame, F).
+
+:- begin_tests(profiler_pane).
+
+test(it_opens_in_a_window_of_the_ide, Classes == [prof_frame]) :-
+    no_frames,
+    profiler(F),
+    get(F, frame, Frame),
+    send(Frame, instance_of, pane_frame),
+    classes(Frame, Classes).
+
+test(its_two_windows_are_tiled_inside_it,
+     Names == [prof_browser, prof_details]) :-
+    no_frames,
+    profiler(F),
+    get(F, members, Chain),
+    chain_list(Chain, Windows),
+    findall(N, (member(W, Windows), get(W, class_name, N)), Names).
+
+test(the_tab_is_named_after_it, true(Label == 'SWI-Prolog -- Profile')) :-
+    no_frames,
+    profiler(F),
+    get(F, frame, Frame),
+    send(Frame, current_pane, F),
+    get(Frame, label, Label).
+
+test(its_menu_reaches_the_bar_of_the_window_it_is_in,
+     Items == [sort_by, show_time_as, help]) :-
+    no_frames,
+    profiler(F),
+    get(F, frame, Frame),
+    send(Frame, current_pane, F),
+    menus(Frame, Menus),
+    memberchk(profile, Menus),
+    get(Frame, menu_bar, MB),
+    get(MB, member, profile, Popup),
+    get(Popup, members, Chain),
+    chain_list(Chain, Members),
+    findall(V, (member(MI, Members), get(MI, value, V)), Items).
+
+test(it_lists_what_was_sampled, true(Listed == true)) :-
+    no_frames,
+    profiler(F),
+    get(F, window, prof_browser, B),
+    get(B?dict?members, size, N),
+    (   N > 0
+    ->  Listed = true
+    ;   Listed = N
+    ).
+
+%       Its browser, its details and the texts in them used to reach it
+%       with <-frame; the frame is a window of the IDE now.
+
+test(the_browser_reaches_the_tool_to_show_details) :-
+    no_frames,
+    profiler(F),
+    get(F, window, prof_browser, B),
+    get(B?dict?members, head, Item),
+    send(Item, details),
+    get(F, window, prof_details, W),
+    get(W, tabular, Tabular),
+    get(Tabular?graphicals, size, N),
+    N > 0.
+
+test(and_so_does_a_text_of_the_details) :-
+    no_frames,
+    profiler(F),
+    get(F, window, prof_browser, B),
+    get(B?dict?members, head, Item),
+    send(Item, details),
+    get(F, window, prof_details, W),
+    get(W?tabular, graphicals, Chain),
+    chain_list(Chain, Graphicals),
+    member(Text, Graphicals),
+    send(Text, instance_of, prof_node_text),
+    !,
+    send(Text, details).
+
+test(how_the_times_are_read_is_the_tools_to_say) :-
+    no_frames,
+    profiler(F),
+    send(F, time_view, seconds),
+    send(F, time_view, percentage),
+    send(F, sort_by, ticks, normal).
+
+%       Not a singleton: a second profile is a second pane.
+
+test(every_profile_opens_a_pane_of_its_own, true(Panes == 2)) :-
+    no_frames,
+    profiler(_),
+    profiler(_),
+    get(@prolog_ide, members, Chain),
+    chain_list(Chain, Frames),
+    findall(P,
+            ( member(Frame, Frames),
+              send(Frame, instance_of, pane_frame),
+              get(Frame, panes, Ps),
+              chain_list(Ps, PL),
+              member(P, PL),
+              send(P, instance_of, prof_frame)
+            ),
+            Profilers),
+    length(Profilers, Panes).
+
+test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :-
+    no_frames,
+    profiler(F),
+    get(F, frame, Frame),
+    send(F, report, status, 'loading'),
+    get(Frame, status_dialog, SD),
+    get(SD, class_name, Class).
+
+:- end_tests(profiler_pane).

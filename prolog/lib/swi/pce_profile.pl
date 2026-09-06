@@ -38,9 +38,8 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(lists)).
-:- use_module(library(persistent_frame)).
+:- use_module(library(pane_frame)).
 :- use_module(library(toolbar)).
-:- use_module(library(pce_report)).
 :- use_module(library(tabular)).
 :- use_module(library(prolog_predicate)).
 
@@ -72,15 +71,33 @@ pce_show_profile :-
 
 show_profile(Data) :-
     send(new(F, prof_frame), open),
-    send(F, wait),
     send(F, load_profile, Data).
+
+%!  prof_tool(+Object, -Tool) is semidet.
+%
+%   The profiler a window or graphical of it belongs to.  They used to
+%   reach it with <-frame; the frame is a window of the IDE now and the
+%   profiler is the pane in it.
+
+prof_tool(Obj, Tool) :-
+    get(Obj, container, prof_frame, Tool).
 
 
                  /*******************************
                  *             FRAME            *
                  *******************************/
 
-:- pce_begin_class(prof_frame, persistent_frame,
+/* The profiler as a pane.
+
+It used to be a frame of its own, holding the list of predicates, the
+details, a menu bar and a reporter.  It is a `tool_pane' now -- see
+library(pane_frame) -- so it sits in a tab of a window of the IDE beside
+a terminal, an editor or another tool, and what it has to say goes on the
+status bar of that window.  Every profile still opens one of its own, as
+it did when each was a frame.
+*/
+
+:- pce_begin_class(prof_frame, tool_pane,
                    "Show Prolog profile data").
 
 variable(samples,          int,  get, "Total # samples").
@@ -95,35 +112,68 @@ variable(time_view,        {percentage,seconds} := percentage,
 class_variable(auto_reset, bool, @on, "Reset profiler after collecting").
 
 initialise(F) :->
-    send_super(F, initialise, 'SWI-Prolog profiler'),
-    send(F, append, new(TD, tool_dialog(F))),
-    send(new(B, prof_browser), left, new(prof_details)),
-    send(B, below, TD),
-    send(new(report_dialog), below, B),
-    send(F, fill_dialog, TD).
+    send_super(F, initialise, profiler),
+    send(F, append_window, new(B, prof_browser)),
+    send(F, append_window, new(prof_details), B, right).
 
-fill_dialog(F, TD:tool_dialog) :->
-    send(TD, append, new(File, popup(file))),
-    send(TD, append, new(Sort, popup(sort))),
-    send(TD, append, new(Time, popup(time))),
-    send(TD, append, new(Help, popup(help))),
-    send_list(File, append,
-              [ menu_item(close,
-                          message(F, destroy))
-              ]),
+                 /*******************************
+                 *             PANE             *
+                 *******************************/
+
+pane_label(_F, Label:name) :<-
+    "What my tab is called"::
+    Label = 'Profile'.
+
+menu_bar_key(_F, Key:name) :<-
+    "Every profile asks for the same menu bar"::
+    Key = profiler.
+
+%       One popup of my own rather than items on the menus of the window:
+%       how the profile is sorted and how its times are read are about
+%       the profile, not about the window it happens to be in.
+
+fill_menu_bar(F, MD:tool_dialog) :->
+    "Put my menu on the bar of the window I am in"::
+    get(MD, popup, profile, @on, Popup),
+    send(Popup, append, new(Sort, popup(sort_by))),
     forall(sort_by(Label, Field, Order),
            send(Sort, append,
                 menu_item(Label, message(F, sort_by, Field, Order)))),
+    send(Popup, append, new(Time, popup(show_time_as))),
     get(F?class, instance_variable, time_view, TV),
     get(TV, type, Type),
     get_chain(Type, value_set, Values),
     forall(member(TimeView, Values),
            send(Time, append,
                 menu_item(TimeView, message(F, time_view, TimeView)))),
-    send_list(Help, append,
-              [ menu_item(help,
-                          message(F, help))
-              ]).
+    send(Popup, append, menu_item(help, message(F, help))).
+
+%       A pane reports on the bar of the window it is in, which grows one
+%       the first time anything asks.  Loading says how far it has come,
+%       so ask for the bar rather than lose the first message.
+
+report(F, Kind:name, Fmt:[char_array], Args:any ...) :->
+    "Report on the bar of the window I am in"::
+    (   get(F, frame, Fr),
+        Fr \== @nil,
+        send(Fr, has_get_method, ensure_status_dialog)
+    ->  ignore(get(Fr, ensure_status_dialog, _))
+    ;   true
+    ),
+    Msg =.. [report, Kind, Fmt|Args],
+    send_super(F, Msg).
+
+%       Every profile opens a pane of its own, as it opened a frame of its
+%       own before.  The IDE is asked for at need: the profiler does not
+%       load it to be able to run.
+
+open(F, _Pos:[point], _Display:[display]) :->
+    "Show me in a window of the IDE"::
+    use_module(user:library(swi_ide), []),
+    (   get(F, pane_tab, _)
+    ->  send(@prolog_ide, expose_tool, F)
+    ;   send(@prolog_ide, place_tool, F, @default)
+    ).
 
 
 load_profile(F, ProfData0:[prolog]) :->
@@ -139,7 +189,7 @@ load_profile(F, ProfData0:[prolog]) :->
     send(F, slot, time, Summary.time),
     send(F, slot, nodes, Summary.nodes),
     send(F, slot, ports, Summary.ports),
-    get(F, member, prof_browser, B),
+    get(F, window, prof_browser, B),
     send(F, report, progress, 'Loading profile data ...'),
     send(B, load_profile, ProfData.nodes),
     send(F, report, done),
@@ -157,7 +207,7 @@ show_statistics(F) :->
     get(F, accounting_ticks, Account),
     get(F, time, Time),
     get(F, slot, nodes, Nodes),
-    get(F, member, prof_browser, B),
+    get(F, window, prof_browser, B),
     get(B?dict?members, size, Predicates),
     (   Ticks == 0
     ->  Distortion = 0.0
@@ -171,10 +221,10 @@ show_statistics(F) :->
 
 details(F, From:prolog) :->
     "Show details on node or predicate"::
-    get(F, member, prof_details, W),
+    get(F, window, prof_details, W),
     (   is_dict(From)
     ->  send(W, node, From)
-    ;   get(F, member, prof_browser, B),
+    ;   get(F, window, prof_browser, B),
         get(B?dict, find,
             message(@arg1, has_predicate, prolog(From)),
             DI)
@@ -184,13 +234,13 @@ details(F, From:prolog) :->
 
 sort_by(F, SortBy:name, Order:[{normal,reverse}]) :->
     "Define the key for sorting the flat profile"::
-    get(F, member, prof_browser, B),
+    get(F, window, prof_browser, B),
     send(B, sort_by, SortBy, Order).
 
 time_view(F, TV:name) :->
     send(F, slot, time_view, TV),
-    get(F, member, prof_browser, B),
-    get(F, member, prof_details, W),
+    get(F, window, prof_browser, B),
+    get(F, window, prof_details, W),
     send(B, update_labels),
     send(W, refresh).
 
@@ -246,7 +296,7 @@ resize(B) :->
 
 load_profile(B, Nodes:prolog) :->
     "Load stored profile from the Prolog database"::
-    get(B, frame, Frame),
+    prof_tool(B, Frame),
     get(B, sort_by, SortBy),
     forall(member(Node, Nodes),
            send(B, append, prof_dict_item(Node, SortBy, Frame))),
@@ -275,7 +325,7 @@ sort(B, Order:[{normal,reverse}]) :->
 update_labels(B) :->
     "Update labels of predicates"::
     get(B, sort_by, SortBy),
-    get(B, frame, F),
+    prof_tool(B, F),
     send(B?dict, for_all, message(@arg1, update_label, SortBy, F)).
 
 :- pce_end_class(prof_browser).
@@ -347,7 +397,8 @@ time_key(ticks_children).
 details(DI) :->
     "Show details"::
     get(DI, data, Data),
-    send(DI?dict?browser?frame, details, Data).
+    prof_tool(DI?dict?browser, Tool),
+    send(Tool, details, Data).
 
 :- pce_end_class(prof_dict_item).
 
@@ -390,7 +441,7 @@ title(W) :->
     BG = (background := HBG),
     FG = (colour := HC),
     send(T, append, 'Time',   bold, center, colspan := 2, BG, FG),
-    (   get(W?frame, ports, false)
+    (   prof_tool(W, Tool), get(Tool, ports, false)
     ->  send(T, append, '# Calls', bold, center, colspan := 1,
              valign := center, BG, FG, rowspan := 2)
     ;   send(T, append, 'Port',    bold, center, colspan := 4, BG, FG)
@@ -401,7 +452,7 @@ title(W) :->
     send(T, next_row),
     send(T, append, 'Self',   bold, center, BG, FG),
     send(T, append, 'Children',   bold, center, BG, FG),
-    (   get(W?frame, ports, false)
+    (   prof_tool(W, Tool), get(Tool, ports, false)
     ->  true
     ;   send(T, append, 'Call',   bold, center, BG, FG),
         send(T, append, 'Redo',   bold, center, BG, FG),
@@ -412,7 +463,7 @@ title(W) :->
 
 cluster_title(W, Cycle:int) :->
     get(W, tabular, T),
-    (   get(W?frame, ports, false)
+    (   prof_tool(W, Tool), get(Tool, ports, false)
     ->  Colspan = 4
     ;   Colspan = 7
     ),
@@ -556,14 +607,14 @@ show_predicate(W, Data:prolog,
     BG = (background := HBG),
     FG = (colour := HC),
     Pred = Data.predicate,
-    get(W, frame, Frame),
+    prof_tool(W, Frame),
     get(Frame, render_time, Ticks, Self),
     get(Frame, render_time, ChildTicks, Children),
     get(W, tabular, T),
     Fail is Call+Redo-Exit,
     send(T, append, Self, halign := right, BG, FG),
     send(T, append, Children, halign := right, BG, FG),
-    (   get(W?frame, ports, false)
+    (   prof_tool(W, Tool), get(Tool, ports, false)
     ->  send(T, append, Call, halign := right, BG, FG)
     ;   send(T, append, Call, halign := right, BG, FG),
         send(T, append, Redo, halign := right, BG, FG),
@@ -581,11 +632,11 @@ show_predicate(W, Data:prolog,
 show_relative(W, Caller:prolog, Role:name) :->
     Caller = node(Pred, _Cluster, Ticks, ChildTicks, Calls, Redos, Exits),
     get(W, tabular, T),
-    get(W, frame, Frame),
+    prof_tool(W, Frame),
     (   Pred == '<recursive>'
     ->  send(T, append, new(graphical), colspan := 2),
         send(T, append, Calls, halign := right),
-        (   get(W?frame, ports, false)
+        (   prof_tool(W, Tool), get(Tool, ports, false)
         ->  true
         ;   send(T, append, new(graphical), colspan := 3)
         ),
@@ -594,7 +645,7 @@ show_relative(W, Caller:prolog, Role:name) :->
         get(Frame, render_time, ChildTicks, Children),
         send(T, append, Self, halign := right),
         send(T, append, Children, halign := right),
-        (   get(W?frame, ports, false)
+        (   prof_tool(W, Tool), get(Tool, ports, false)
         ->  send(T, append, Calls, halign := right)
         ;   Fails is Calls+Redos-Exits,
             send(T, append, Calls, halign := right),
@@ -690,7 +741,8 @@ has_help(T) :->
 details(T) :->
     "Show details of clicked predicate"::
     get(T, context, Context),
-    send(T?frame, details, Context).
+    prof_tool(T, Tool),
+    send(Tool, details, Context).
 
 :- pce_end_class(prof_node_text).
 
@@ -704,7 +756,8 @@ initialise(T, Pred:prolog, Role:{parent,self,child}, Cycle:[int]) :->
 details(T) :->
     "Show details of clicked predicate"::
     get(T?context, pi, @on, Head),
-    send(T?frame, details, Head).
+    prof_tool(T, Tool),
+    send(Tool, details, Head).
 
 :- pce_end_class(prof_predicate_text).
 
