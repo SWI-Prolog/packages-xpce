@@ -343,15 +343,6 @@ comment(TV, Comment:char_array) :->
     "Say what I am showing on the bar of the window I am in"::
     send(TV, report, status, Comment).
 
-%       A pane reports on the bar of the window it is in, which grows one
-%       the first time anything asks.
-
-report(TV, Kind:name, Fmt:[char_array], Args:any ...) :->
-    "Report on the bar of the window I am in"::
-    pane_status_bar(TV),
-    Msg =.. [report, Kind, Fmt|Args],
-    send_super(TV, Msg).
-
 source_object(TV, Obj:object) :->
     send(TV, delete_hypers, source),
     new(_, hyper(TV, Obj, source, view)).

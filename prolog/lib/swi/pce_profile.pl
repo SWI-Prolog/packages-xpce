@@ -148,16 +148,6 @@ fill_menu_bar(F, MD:tool_dialog) :->
                 menu_item(TimeView, message(F, time_view, TimeView)))),
     send(Popup, append, menu_item(help, message(F, help))).
 
-%       A pane reports on the bar of the window it is in, which grows one
-%       the first time anything asks.  Loading says how far it has come,
-%       so ask for the bar rather than lose the first message.
-
-report(F, Kind:name, Fmt:[char_array], Args:any ...) :->
-    "Report on the bar of the window I am in"::
-    pane_status_bar(F),
-    Msg =.. [report, Kind, Fmt|Args],
-    send_super(F, Msg).
-
 
 load_profile(F, ProfData0:[prolog]) :->
     "Load stored profile from the Prolog database"::

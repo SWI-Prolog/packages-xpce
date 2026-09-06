@@ -130,16 +130,6 @@ pane_label(_D, Label:name) :<-
     "What my tab is called"::
     Label = 'Debugging'.
 
-%       A pane reports on the bar of the window it is in, which grows one
-%       the first time anything asks.  Both tool bars say what they did,
-%       so ask for the bar rather than lose the first message.
-
-report(D, Kind:name, Fmt:[char_array], Args:any ...) :->
-    "Report on the bar of the window I am in"::
-    pane_status_bar(D),
-    Msg =.. [report, Kind, Fmt|Args],
-    send_super(D, Msg).
-
 layout(D, Size:[size]) :->
     "Fix layout"::
     send_super(D, layout, Size),

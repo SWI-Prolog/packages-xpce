@@ -838,17 +838,6 @@ fill_menu_bar(TM, MD:tool_dialog) :->
                           message(TM, settings))
               ]).
 
-%       A pane reports to the window it is in, which grows a bar the
-%       first time anything wants one.  The monitor says what it is
-%       doing as it runs, so it asks for one as soon as it has something
-%       to say rather than losing the first message.
-
-report(TM, Kind:name, Fmt:[char_array], Args:any ...) :->
-    "Report on the bar of the window I am in"::
-    pane_status_bar(TM),
-    Msg =.. [report, Kind, Fmt|Args],
-    send_super(TM, Msg).
-
                  /*******************************
                  *           SETTINGS           *
                  *******************************/

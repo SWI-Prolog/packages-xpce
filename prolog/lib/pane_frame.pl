@@ -1252,6 +1252,32 @@ pane_label(P, Label:name) :<-
     "What my tab is called; my name unless I say otherwise"::
     get(P?name, label_name, Label).   % as class tab would have written it
 
+%       A pane has no window of its own, so ->open means "put me in one
+%       and bring it up".  It keeps the signature class window gives it:
+%       the window system sends ->open to a window with a position and a
+%       display, and a method of another shape would be a clash rather
+%       than an override -- see `man_frame ->open_centered'.
+
+open(P, _:[point], _:[display]) :->
+    "Show me in a window of the IDE"::
+    show_pane(P).
+
+expose(P) :->
+    "Bring the window I am in up, with me in view"::
+    show_pane(P).
+
+%       What a pane has to say goes on the bar of the window it is in,
+%       which grows one the first time anything asks.  A pane that has a
+%       place of its own to report -- a terminal writes over its own text
+%       -- says so with a ->report of its own, which takes the place of
+%       this one.
+
+report(P, Kind:name, Fmt:[char_array], Args:any ...) :->
+    "Report on the bar of the window I am in"::
+    pane_status_bar(P),
+    Msg =.. [report, Kind, Fmt|Args],
+    send_super(P, Msg).
+
 pane_frame(P, Frame:pane_frame) :<-
     "The frame I am a pane of"::
     get(P, frame, Frame),
@@ -1470,20 +1496,6 @@ place_grip(TP) :->
     ->  true
     ;   send(W, display_fixed, Handle)
     ).
-
-%       A tool has no window of its own, so ->open means "put me in one
-%       and bring it up".  It keeps the signature class window gives it:
-%       the window system sends ->open to a window with a position and a
-%       display, and a method of another shape would be a clash rather
-%       than an override -- see `man_frame ->open_centered'.
-
-open(TP, _:[point], _:[display]) :->
-    "Show me in a window of the IDE"::
-    show_pane(TP).
-
-expose(TP) :->
-    "Bring the window I am in up, with me in view"::
-    show_pane(TP).
 
 corner_window(TP, W:window) :<-
     "The window of mine at my top right"::

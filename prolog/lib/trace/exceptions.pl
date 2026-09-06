@@ -300,22 +300,6 @@ fill_menu_bar(F, MD:tool_dialog) :->
                           message(F, debug_mode, @off))
               ]).
 
-%       A pane reports on the bar of the window it is in, which grows one
-%       the first time anything asks.
-
-report(F, Kind:name, Fmt:[char_array], Args:any ...) :->
-    "Report on the bar of the window I am in"::
-    pane_status_bar(F),
-    Msg =.. [report, Kind, Fmt|Args],
-    send_super(F, Msg).
-
-%       I am a dialog that is a pane, not a `tool_pane', so ->open is
-%       mine to answer; what it does is class tool_pane's ->open as well.
-
-open(F, _:[point], _:[display]) :->
-    "Show me in a window of the IDE"::
-    show_pane(F).
-
                  /*******************************
                  *            MEMBERS           *
                  *******************************/

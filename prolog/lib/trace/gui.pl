@@ -545,16 +545,6 @@ member(F, Name:name, Window:window) :<-
     get(F, members, Windows),
     get(Windows, find, @arg1?name == Name, Window).
 
-%       A pane reports on the bar of the window it is in, which grows one
-%       the first time anything asks.  The tracer says what it is doing at
-%       every port, so ask for the bar rather than lose the first message.
-
-report(F, Kind:name, Fmt:[char_array], Args:any ...) :->
-    "Report on the bar of the window I am in"::
-    pane_status_bar(F),
-    Msg =.. [report, Kind, Fmt|Args],
-    send_super(F, Msg).
-
 %       Closing my tab while the tracer is waiting for an answer would
 %       leave the thread waiting for ever, so it asks what to do instead
 %       and lets the answer take me away.

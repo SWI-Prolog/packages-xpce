@@ -756,15 +756,6 @@ pane_label(F, Label:name) :<-
     get(F, slot, tool_label, Label),
     Label \== @nil.
 
-%       A pane reports on the bar of the window it is in, which grows one
-%       the first time anything asks.
-
-report(F, Kind:name, Fmt:[char_array], Args:any ...) :->
-    "Report on the bar of the window I am in"::
-    pane_status_bar(F),
-    Msg =.. [report, Kind, Fmt|Args],
-    send_super(F, Msg).
-
                  /*******************************
                  *      WHAT A FRAME OFFERED    *
                  *******************************/

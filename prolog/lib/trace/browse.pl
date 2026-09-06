@@ -129,16 +129,6 @@ pane_label(_SB, Label:name) :<-
     "What my tab is called"::
     Label = 'Navigator'.
 
-%       A pane reports on the bar of the window it is in, which grows one
-%       the first time anything asks.  The tree says what it is doing as
-%       it scans, so ask for the bar rather than lose the first message.
-
-report(SB, Kind:name, Fmt:[char_array], Args:any ...) :->
-    "Report on the bar of the window I am in"::
-    pane_status_bar(SB),
-    Msg =.. [report, Kind, Fmt|Args],
-    send_super(SB, Msg).
-
 fill_tool_bar(SB) :->
     "Fill the toolbar"::
     get(SB, tool_bar, TB),

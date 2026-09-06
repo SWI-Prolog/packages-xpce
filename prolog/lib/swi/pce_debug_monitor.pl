@@ -109,15 +109,6 @@ fill_menu_bar(_M, MD:tool_dialog) :->
                 menu_item(help)
               ]).
 
-%       A pane reports on the bar of the window it is in, which grows one
-%       the first time anything asks.
-
-report(M, Kind:name, Fmt:[char_array], Args:any ...) :->
-    "Report on the bar of the window I am in"::
-    pane_status_bar(M),
-    Msg =.. [report, Kind, Fmt|Args],
-    send_super(M, Msg).
-
 :- pce_group(actions).
 
 clear(M) :->

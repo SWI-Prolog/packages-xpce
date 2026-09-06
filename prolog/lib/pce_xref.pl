@@ -198,16 +198,6 @@ fill_menu_bar(F, MD:tool_dialog) :->
          message(F, update_setting_menu, @receiver)),
     send(Popup, append, menu_item(about, message(F, about))).
 
-%       A pane reports on the bar of the window it is in, which grows one
-%       the first time anything asks.  Analysing says which file it is on
-%       as it runs, so ask for the bar rather than lose the first message.
-
-report(F, Kind:name, Fmt:[char_array], Args:any ...) :->
-    "Report on the bar of the window I am in"::
-    pane_status_bar(F),
-    Msg =.. [report, Kind, Fmt|Args],
-    send_super(F, Msg).
-
 about(F) :->
     gxref_version(Version),
     send(@display, inform, F, "Cross-referencer",
