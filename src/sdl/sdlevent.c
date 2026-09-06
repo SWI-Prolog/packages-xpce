@@ -908,15 +908,34 @@ pceUnregisterConsole(waitable_t handle)
   return false;
 }
 
+/**
+ * Turn an SDL event into an xpce event and post it, holding the xpce
+ * lock.  ws_dispatch() itself runs unlocked, so that other threads can
+ * use xpce while we wait for the next event, but making the event and
+ * posting it touch the object base and must be serialised.  The lock is
+ * recursive, so the handlers that claim it themselves (timers, streams,
+ * the menu bar) are unaffected, and the callback into Prolog releases it
+ * for the duration of the call (see pceMTUnlockAll()).
+ */
+
+static void
+dispatch_sdl_event(SDL_Event *ev)
+{ EventObj event;
+
+  pceMTLock();
+  if ( (event=CtoEvent(ev)) )
+    dispatch_event(event);
+  pceMTUnlock();
+}
+
+
 static bool
 dispatch_ready_event(void)
 { ASSERT_SDL_MAIN();
   SDL_Event ev;
 
   if ( SDL_PollEvent(&ev) )
-  { EventObj event = CtoEvent(&ev);
-    if ( event )
-      dispatch_event(event);
+  { dispatch_sdl_event(&ev);
     return true;
   }
 
@@ -1023,9 +1042,7 @@ ws_dispatch(IOSTREAM *input, Any timeout)
 	succeed;
       }
 
-      EventObj event = CtoEvent(&ev);
-      if ( event )
-	dispatch_event(event);
+      dispatch_sdl_event(&ev);
     }
 
     if ( transient )
