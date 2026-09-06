@@ -1909,7 +1909,7 @@ loading(What, How) :-
     image_of_load_state(Stage, How, Img),
     in_pce_thread(update_load_state(Win, TheFile, Img, Stage)).
 
-qlf_part(source(File), File).
+qlf_part(source(File, _Hash), File).
 
 %!  update_load_state(+Win, +File, +Img, +Stage) is det.
 %
