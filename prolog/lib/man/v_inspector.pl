@@ -222,13 +222,13 @@ class_details(T) :->
     "Show the class browser"::
     get(T, object, Object),
     get(Object, '_class', Class),
-    send(T?frame, request_tool_focus, Class).
+    send(?(T, container, man_frame), request_tool_focus, Class).
 
 class_source(T) :->
     "Edit source of related class"::
     get(T, object, Object),
     get(Object, '_class', Class),
-    send(T?frame, request_source, Class).
+    send(?(T, container, man_frame), request_source, Class).
 
 pretty_print(T) :->
     get(T, object, Object),
@@ -627,13 +627,13 @@ class_details(OS) :->
     "Show the class browser"::
     get(OS, object, Object),
     get(Object, '_class', Class),
-    send(OS?frame, request_tool_focus, Class).
+    send(?(OS, container, man_frame), request_tool_focus, Class).
 
 class_source(OS) :->
     "Edit source of related class"::
     get(OS, object, Object),
     get(Object, '_class', Class),
-    send(OS?frame, request_source, Class).
+    send(?(OS, container, man_frame), request_source, Class).
 
 referees(OS) :->
     "Add objects refering to me"::
@@ -728,8 +728,8 @@ random_pos(X, W, OW, OX) :-
 
 check_not_self(Pict, Obj) :-
     send(Obj, '_instance_of', graphical),
-    get(Obj, frame, Frame),
-    get(Pict, frame, Frame),
+    get(Pict, container, man_frame, Tool),   % not <-frame: the tool shares
+    get(Obj, container, man_frame, Tool),    % its window with other panes
     !,
     send(Pict, report, error, 'Can''t inspect myself'),
     fail.
@@ -863,7 +863,8 @@ freed_object(Instance) :-
 
 initialise(F, Manual:man_manual) :->
     send(F, send_super, initialise, Manual, 'PCE Inspector'),
-    send(F, append, new(TD, tool_dialog)),
+    send(F, append, new(TD, tool_dialog(F))),  % on me, not on <-frame:
+                                               % a window of the IDE
     send_list(TD, append,
               [ tool_button(clear,
                             resource(clear),
@@ -908,8 +909,9 @@ grab(F) :->
     "Add a new object from the screen"::
     new(D, select_graphical('Select object to inspect')),
     send(D, attribute, report_to, F),
-    get(D, select,
-        @arg1?frame \== F,
+    get(F, frame, Mine),                % anything but my own window: the
+    get(D, select,                      % tool is a pane of one now
+        @arg1?frame \== Mine,
         F?area?center, Obj),
     send(D, destroy),
     Obj \== @nil,

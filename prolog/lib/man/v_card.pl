@@ -63,9 +63,8 @@ initialise(CE, Manual:man_manual) :->
     send(new(TE, man_html_card), below, D),
     send(new(report_dialog), below, TE),
     send(TE, name, html_card),
-    send(CE, create),                         % compute layout before
-                                              % setting selection
-    send(CE, selected, Manual?selection).
+    send(CE, selected, Manual?selection).      % a pane is laid out by the
+                                              % window it ends up in
 
 fill_dialog(CE) :->
     get(CE, member, dialog, D),

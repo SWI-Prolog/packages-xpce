@@ -70,7 +70,7 @@ initialise(EB, Manual:man_manual) :->
 
 dialog(D) :-
     new(D, dialog),
-    new(EB, D?frame),
+    new(EB, ?(D, container, man_frame)),
     new(B, ?(EB, member, browser)),
     send(D, append,
          new(T, menu(kind, cycle,

@@ -34,7 +34,9 @@
 
 
 :- module(pane_frame,
-          [ pane_frame_closed_tab/1     % +Frame
+          [ pane_frame_closed_tab/1,    % +Frame
+            show_pane/1,                % +Pane
+            pane_status_bar/1           % +Pane
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_util), [chain_list/2]).
@@ -141,6 +143,35 @@ initialise(F, App:application=[application],
     ;   send(F, append_pane, Pane, @default, @on)
     ),
     ignore(send(F, pane_changed)).      % nothing has moved the focus yet
+
+%!  show_pane(+Pane) is det.
+%
+%   Put Pane in a window of the IDE, or bring the window it is in up with
+%   Pane in view.  This is what ->open means for a pane: it has no window
+%   of its own to open.  The IDE is asked for at need, so that a tool of
+%   XPCE's own does not load the Prolog IDE to be able to run.
+
+show_pane(Pane) :-
+    use_module(user:library(swi_ide), []),
+    (   get(Pane, pane_tab, _)          % a pane of a window already.  Not
+    ->  send(@prolog_ide, expose_tool, Pane)  % <-frame: a window that is
+    ;   send(@prolog_ide, place_tool, Pane, @default)  % in none gets one
+    ).
+
+%!  pane_status_bar(+Pane) is det.
+%
+%   Make sure the window Pane is in has a bar to report on.  A pane that
+%   has something to say calls this first: a window grows its status bar
+%   the first time anything wants one -- see <-ensure_status_dialog --
+%   and a pane that is in no window of the IDE has nowhere to grow one.
+
+pane_status_bar(Pane) :-
+    (   get(Pane, frame, Frame),
+        Frame \== @nil,
+        send(Frame, has_get_method, ensure_status_dialog)
+    ->  ignore(get(Frame, ensure_status_dialog, _))
+    ;   true
+    ).
 
 %!  name_frame(+Frame) is det.
 %
@@ -938,6 +969,37 @@ close_pane(P) :-
     ;   send(P, destroy)
     ).
 
+%       A pane shares the window with the other panes, and the gaps
+%       between them are dragged to redistribute the space.  A window that
+%       sizes itself to what it holds -- class dialog does -- says it can
+%       neither give nor take, and then `tile <-can_resize' answers @off
+%       and the gap beside it cannot be dragged at all.  Docking one makes
+%       it as willing as the panes it lands among; a pane that says how
+%       much it wants to give is left alone.  It has to be said before the
+%       tab lays itself out: `tile <-can_resize' is worked out once and
+%       kept until the hierarchy changes again.
+
+attach_window(Tab, Window:window) :->
+    "Take a pane in, and let it be resized"::
+    ignore(pane_resizable(Window)),     % before the layout: `tile
+    send_super(Tab, attach_window, Window).
+
+pane_resizable(Window) :-
+    (   get(Window, decoration, Decor),
+        Decor \== @nil
+    ->  Placed = Decor
+    ;   Placed = Window
+    ),
+    get(Placed, tile, Tile),
+    Tile \== @nil,
+    forall(member(Attribute, [hor_stretch, hor_shrink,
+                              ver_stretch, ver_shrink]),
+           (   get(Tile, Attribute, Old),
+               Old > 0
+           ->  true
+           ;   send(Tile, Attribute, 100)
+           )).
+
 close_other_tabs(Tab) :->
     "Close the panes of every other tab"::
     get(Tab?device, tabs, Chain),
@@ -1189,6 +1251,32 @@ kind for ->split and ->new_tab to have anything to put there.
 pane_label(P, Label:name) :<-
     "What my tab is called; my name unless I say otherwise"::
     get(P?name, label_name, Label).   % as class tab would have written it
+
+%       A pane has no window of its own, so ->open means "put me in one
+%       and bring it up".  It keeps the signature class window gives it:
+%       the window system sends ->open to a window with a position and a
+%       display, and a method of another shape would be a clash rather
+%       than an override -- see `man_frame ->open_centered'.
+
+open(P, _:[point], _:[display]) :->
+    "Show me in a window of the IDE"::
+    show_pane(P).
+
+expose(P) :->
+    "Bring the window I am in up, with me in view"::
+    show_pane(P).
+
+%       What a pane has to say goes on the bar of the window it is in,
+%       which grows one the first time anything asks.  A pane that has a
+%       place of its own to report -- a terminal writes over its own text
+%       -- says so with a ->report of its own, which takes the place of
+%       this one.
+
+report(P, Kind:name, Fmt:[char_array], Args:any ...) :->
+    "Report on the bar of the window I am in"::
+    pane_status_bar(P),
+    Msg =.. [report, Kind, Fmt|Args],
+    send_super(P, Msg).
 
 pane_frame(P, Frame:pane_frame) :<-
     "The frame I am a pane of"::

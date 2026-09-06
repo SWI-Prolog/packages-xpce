@@ -82,7 +82,7 @@ initialise(CB, Manual:man_manual) :->
 %       Create the dialog window
 
 fill_dialog(D) :-
-    get(D, frame, CB),
+    get(D, container, man_frame, CB),
 
     send(D, append, label(reporter)),
 
@@ -159,11 +159,13 @@ fill_picture(P) :-
     send(P, gap, size(5,3)),
     send(P, hor_stretch, 100),
     send(P, hor_shrink, 100),
-    get(P?frame, label_font, Font),
+    get(@display, class_variable_value, label_font, Font),  % as a window
+                                                           % label is drawn
     send(P, append, new(T, label(title, '', Font))),
     send(T, recogniser,
          click_gesture(left, '', double,
-                       message(P?frame, show_initisation_method))),
+                       message(?(P, container, man_frame),
+                               show_initisation_method))),
 
     send(P, append, new(I, man_inheritance_tree)),
     send(I, name, inheritance).

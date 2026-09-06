@@ -39,72 +39,91 @@
 :- use_module(library(debug)).
 :- use_module(library(pce)).
 :- use_module(library(pce_util)).
-:- use_module(library(persistent_frame)).
-:- use_module(library(pce_report)).
+:- use_module(library(pane_frame)).
 :- use_module(library(toolbar)).
+:- autoload(library(swi_ide), [prolog_ide/1]).
 
 :- pce_autoload(finder, library(find_file)).
 :- pce_global(@finder, new(finder)).
 
 prolog_debug_monitor :-
-    send(new(prolog_debug_monitor), open).
+    prolog_ide(debug_monitor).
 
-:- pce_begin_class(prolog_debug_monitor, persistent_frame,
+/* The debug monitor as a pane.
+
+It used to be a frame of its own, holding the topics, the messages, a
+menu bar and a reporter.  It is a `tool_pane' now -- see
+library(pane_frame) -- so it drops into a tab of any window of the IDE,
+or along the bottom of a terminal or an editor in one, and its menu goes
+on the bar of whatever window it ends up in.
+*/
+
+:- pce_begin_class(prolog_debug_monitor, tool_pane,
                    "Manage debug topics").
 
 initialise(M) :->
-    send_super(M, initialise, 'Prolog debug monitor'),
-    new(B, prolog_debug_browser),
-    send(new(V, prolog_debug_view), right, B),
-    send(new(report_dialog), below, B),
-    send(new(D, tool_dialog(M)), above, B),
-    send(V, name, view),
-    send(B, name, browser),
-    send(M, append, B),
-    send(M, fill_tool_dialog, D),
+    send_super(M, initialise, debug_monitor),
+    send(M, append_window, new(B, prolog_debug_browser)),
+    send(M, append_window, new(_V, prolog_debug_view), B, right),
     send(M, refresh).
 
-fill_tool_dialog(_M, D:tool_dialog) :->
-    send(D, append, new(File, popup(file))),
-    send_list(File, append,
+                 /*******************************
+                 *            MEMBERS           *
+                 *******************************/
+
+browser(M, B:prolog_debug_browser) :<-
+    "The list of debug topics"::
+    get(M, window, prolog_debug_browser, B).
+
+view(M, V:prolog_debug_view) :<-
+    "The window the messages are shown in"::
+    get(M, window, prolog_debug_view, V).
+
+                 /*******************************
+                 *             PANE             *
+                 *******************************/
+
+pane_label(_M, Label:name) :<-
+    "What my tab is called"::
+    Label = 'Debug monitor'.
+
+menu_bar_key(_M, Key:name) :<-
+    "Every debug monitor asks for the same menu bar"::
+    Key = debug_monitor.
+
+%       One popup of my own rather than items on the File and Settings
+%       menus of the window: what they do is about the monitor, not about
+%       the window it happens to be in.
+
+fill_menu_bar(_M, MD:tool_dialog) :->
+    "Put my menu on the bar of the window I am in"::
+    get(MD, popup, debug_monitor, @on, Popup),
+    send_list(Popup, append,
               [ menu_item(clear),
-                gap,
-                menu_item(save_as),
-                gap,
-                menu_item(close)
-              ]),
-    send(D, append, new(View, popup(view))),
-    send_list(View, append,
-              [ menu_item(refresh)
-              ]),
-    send(D, append, new(Settings, popup(settings))),
-    send_list(Settings, append,
-              [ menu_item(disable_all),
-                menu_item(enable_all)
-              ]),
-    send(D, append, new(Help, popup(help))),
-    send_list(Help, append,
-              [ menu_item(help)
+                menu_item(refresh),
+                menu_item(save_as,
+                          end_group := @on),
+                menu_item(disable_all),
+                menu_item(enable_all,
+                          end_group := @on),
+                menu_item(help)
               ]).
 
 :- pce_group(actions).
 
 clear(M) :->
-    get(M, member, view, View),
+    get(M, view, View),
     send(View, clear).
 
 refresh(M) :->
-    get(M, member, browser, Browser),
+    get(M, browser, Browser),
     send(Browser, update).
 
 save_as(M) :->
     "Save log messages to file"::
     get(@finder, file, save, FileName),
-    get(M, member, view, View),
+    get(M, view, View),
     send(View, save, FileName).
-
-close(M) :->
-    send(M, destroy).
 
 disable_all(B) :->
     "Disable all debug topics"::
@@ -201,7 +220,8 @@ resize(B) :->
 
 selected(B, DI:dict_item) :->
     get(DI, object, Topic),
-    get(B?frame, member, view, View),
+    get(B, container, prolog_debug_monitor, M),
+    get(M, view, View),
     send(View, hightlight_messages, Topic).
 
 :- pce_group(popup).

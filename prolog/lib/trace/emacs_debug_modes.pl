@@ -52,7 +52,7 @@ save_text(M) :->
 quit(M) :->
     "Destroy the editor"::
     ignore(send(M?text_buffer, save_if_modified)),
-    (   get(M, frame, Frame),
+    (   get(M, container, prolog_debugger, Frame),
         send(Frame, has_send_method, quitted)
     ->  send(Frame, quitted, @on),
         send(Frame, nodebug)

@@ -78,7 +78,7 @@ test :-
 variable(current,    window*,     get,  "Window that has the focus").
 variable(separators, chain,       get,  "Lines drawn between the tiles").
 variable(closing,    bool := @off, get, "I am being destroyed").
-variable(drop_feedback, box*,     get, "Outline of the drop that would happen").
+variable(drop_feedback, chain*,   get, "Outline of the drop that would happen").
 variable(sizing,     bool := @off, none, "A size is being imposed on me").
 variable(window_label, name*,    get,  "Title a window in me asked for").
 
@@ -158,10 +158,24 @@ append(TF, Window:window=window,
 attach_window(TF, Window:window) :->
     "Take Window into my tile hierarchy"::
     decoration(Window, Decor),
-    send_super(TF, display, Decor),
+    send(Decor?tile?root, for_all, message(TF, display_tiled, @arg1)),
     send(TF?tile, manager, TF),
     send(TF, update_current),
     send(TF, layout).
+
+%       A window may bring others with it.  `window ->above' and friends
+%       relate two windows through their tiles, and one that is in no tile
+%       manager yet is left hanging on the one it was related to until
+%       that one is taken in.  Class frame walks the tile tree when it
+%       takes a window -- see frameWindow() in src/win/window.c -- so that
+%       all of them arrive together; do the same.
+
+display_tiled(TF, Window:window) :->
+    "Display a window of my tile hierarchy that I do not hold yet"::
+    (   get(Window, device, TF)
+    ->  true
+    ;   send_super(TF, display, Window)
+    ).
 
 detach_window(TF, Window:window) :->
     "Release Window from my tile hierarchy"::
@@ -451,19 +465,82 @@ drop_feedback(TF, Target:window, Where:{above,below,left,right}) :->
     "Show what a drop on Target would do"::
     get(Target, size, size(W, H)),
     feedback_area(Where, W, H, X, Y, FW, FH),
-    new(Box, box(FW, FH)),
+    send(TF, slot, drop_feedback, new(Boxes, chain)),
+    forall(feedback_zone(Target, area(X, Y, FW, FH), Window, Zone),
+           ( feedback_box(Zone, Box),
+             send(Window, display, Box, Zone?position),
+             send(Boxes, append, Box)
+           )).
+
+feedback_box(area(_, _, W, H), Box) :-
+    new(Box, box(W, H)),
     send(Box, pen, 0),
     send(Box, fill, colour(@default, 80, 130, 200)),
-    send(Box, opacity, 0.3),
-    send(Target, display, Box, point(X, Y)),
-    send(TF, slot, drop_feedback, Box).
+    send(Box, opacity, 0.3).
+
+%!  feedback_zone(+Target, +Area, -Window, -Zone) is nondet.
+%
+%   Window is a window that paints part of Area of Target, and Zone the
+%   part it paints, in the coordinates of Window.  Normally that is
+%   Target itself.  A window that holds sub-windows is drawn first and
+%   they are drawn over it -- see ws_draw_window() in
+%   src/sdl/sdlframe.c -- so an outline displayed on such a window is
+%   covered by them and nothing shows.  It goes on the sub-windows it
+%   reaches instead, which is what makes a drop on a tool pane show the
+%   same outline as a drop on a terminal.  The same reason puts a tool
+%   pane's grip on one of its windows; see `tool_pane ->place_grip'.
+
+feedback_zone(Target, Area, Window, Zone) :-
+    sub_windows(Target, Windows),
+    Windows \== [],
+    !,
+    get(Target, display_position, point(TX, TY)),
+    member(Window, Windows),
+    get(Window, display_position, point(WX, WY)),
+    get(Window, size, size(SW, SH)),
+    OX is WX-TX,                        % where Window sits on Target
+    OY is WY-TY,
+    overlap(Area, area(OX, OY, SW, SH), area(IX, IY, IW, IH)),
+    ZX is IX-OX,                        % in the coordinates of Window
+    ZY is IY-OY,
+    Zone = area(ZX, ZY, IW, IH).
+feedback_zone(Target, Area, Target, Area).
+
+%!  sub_windows(+Window, -Windows) is det.
+%
+%   The windows drawn over Window.  A window that carries scrollbars or a
+%   label is created inside a window_decorator, and it is the decorator
+%   that is the sub-window; the window itself is what is drawn last and
+%   so what an outline has to go on.
+
+sub_windows(W, Windows) :-
+    get(W, subwindows, Chain),
+    Chain \== @nil,
+    !,
+    chain_list(Chain, Subs),
+    findall(Sub, (member(S, Subs), user_window(S, Sub)), Windows).
+sub_windows(_, []).
+
+%!  overlap(+A, +B, -Overlap) is semidet.
+%
+%   The part of A that is also in B.  Fails if they do not meet.
+
+overlap(area(AX, AY, AW, AH), area(BX, BY, BW, BH), area(X, Y, W, H)) :-
+    X is max(AX, BX),
+    Y is max(AY, BY),
+    W is min(AX+AW, BX+BW)-X,
+    H is min(AY+AH, BY+BH)-Y,
+    W > 0,
+    H > 0.
 
 clear_drop_feedback(TF) :->
     "Take the outline away"::
-    (   get(TF, slot, drop_feedback, Box),
-        Box \== @nil
+    (   get(TF, slot, drop_feedback, Boxes),
+        Boxes \== @nil
     ->  send(TF, slot, drop_feedback, @nil),
-        free(Box)
+        chain_list(Boxes, List),
+        forall(member(Box, List), free(Box)),
+        free(Boxes)
     ;   true
     ).
 
@@ -855,10 +932,31 @@ compute(H) :->
     (   get(H, slot, placing, @on)
     ->  true
     ;   send(H, slot, placing, @on),
+        ignore(send(H, update_displayed)),
         ignore(send(H, place_in_corner)),
         send(H, slot, placing, @off)
     ),
     send_super(H, compute).
+
+%       A window that displays a grip may end up inside a tool rather
+%       than as a pane of its own: the source of the debugger is an
+%       `emacs_view', and every emacs_view displays one.  There the tool
+%       is the pane, and dragging one of its windows out from under it is
+%       not on offer -- the tool carries a grip of its own.  So a grip
+%       shows itself only on a window its frame calls a pane, and a frame
+%       that knows nothing of panes leaves every grip alone.
+
+update_displayed(H) :->
+    "Hide myself on a window that is not a pane in its own right"::
+    get(H, pane, Pane),
+    (   get(Pane, frame, Frame),
+        Frame \== @nil,
+        send(Frame, has_get_method, panes),
+        get(Frame, panes, Panes),
+        \+ send(Panes, member, Pane)
+    ->  send(H, displayed, @off)
+    ;   send(H, displayed, @on)
+    ).
 
 place_in_corner(H) :->
     "Move myself to the corner of the window I am on"::
@@ -905,10 +1003,14 @@ cursor(G, Gr:graphical, Cursor:cursor) :<-
 %       with a ->drop.  A tab is the only thing that takes a window, so
 %       ask the tabs of the frame the pointer is over straight away.
 
+%       The outline is what the drag shows, not what it decides: a
+%       preview that cannot be drawn must not stop the pointer from
+%       carrying the window on to somewhere it can be dropped.
+
 drag(G, Ev:event) :->
     "Outline the drop the pointer is over"::
     (   send(G, activate, Ev)
-    ->  send(G, update_target, Ev)
+    ->  ignore(send(G, update_target, Ev))
     ;   true
     ).
 

@@ -254,15 +254,18 @@ copy_reference(V) :->
 
 source(V) :->
     Class = V->>selection->>class,
-    V->>request_source(Class).
+    Tool = V->>container(man_frame),    % not me: these are the tool's
+    Tool->>request_source(Class).
 
 class_details(V) :->
     Class = V->>selection->>class,
-    V->>request_tool_focus(Class).
+    Tool = V->>container(man_frame),
+    Tool->>request_tool_focus(Class).
 
 object_details(V) :->
     Visual = V->>selection,
-    V->>frame->>manual->>inspect(Visual).
+    Tool = V->>container(man_frame),    % not <-frame: that is a window
+    Tool->>manual->>inspect(Visual).
 
 :- pce_end_class.
 
@@ -279,7 +282,8 @@ initialise(F, Manual:[man_manual]) :->
     ;   TheManual = Manual
     ),
     F*>>initialise(TheManual, 'Visual Hierarchy'),
-    F->>append(new(TD, tool_dialog)),
+    F->>append(new(TD, tool_dialog(F))),       % on me, not on <-frame:
+                                               % a window of the IDE
     send_list(TD, append,
               [ tool_button(help,
                             resource(help),
@@ -321,7 +325,8 @@ grab(F) :->
     new(D, select_graphical('Select object from screen')),
     D->>transient_for(F),
     D->>attribute(report_to, F),
-    Obj = D->>select(@arg1?frame \== F, F?area?center),
+    Mine = F->>frame,                   % anything but my own window: the
+    Obj = D->>select(@arg1?frame \== Mine, F?area?center),
     D->>destroy,
     Obj \== @nil,
     F->>window->>visualise(Obj).

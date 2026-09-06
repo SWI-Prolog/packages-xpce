@@ -144,6 +144,29 @@ test(a_pcemacs_window_takes_a_terminal, Classes == [emacs_view, epilog_window]) 
     send(@prolog_ide, new_terminal, F),
     classes(F, Classes).
 
+%       Both panes are dragged by a grip of their own.  An editor
+%       displays one wherever it is, and inside a tool it hides it (see
+%       `split_handle ->update_displayed'); as a pane of a window it is
+%       the thing that moves, so it shows it.
+
+test(both_panes_show_the_grip_they_are_dragged_by,
+     true(Shown == [@on, @on])) :-
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F),
+    send(F, resize),
+    editor(F, V),
+    terminal(F, T),
+    findall(Displayed,
+            ( member(W, [V, T]),
+              get(W, fixed_graphicals, Graphicals),
+              get(Graphicals, find,
+                  message(@arg1, instance_of, split_handle), Handle),
+              send(Handle, compute),
+              get(Handle, displayed, Displayed)
+            ),
+            Shown).
+
 test(the_mode_menus_come_and_go_with_the_editor) :-
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, F),
@@ -156,6 +179,30 @@ test(the_mode_menus_come_and_go_with_the_editor) :-
     send(F, current_pane, T),
     menus(F, Back),
     Back == WithTerminal.                % and took them away again
+
+%       What the window offers, the mode does not offer again: editing
+%       breakpoints and exceptions and viewing the threads and the debug
+%       messages are on the Tools menu of every window of the IDE, and an
+%       editor is a pane of one.
+
+test(the_mode_leaves_the_ide_tools_to_the_window,
+     [ forall(member(Item, [edit_breakpoints, edit_exceptions,
+                            view_threads, view_debug_messages])),
+       fail
+     ]) :-
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F),
+    get(F, menu_bar, MB),
+    get(MB, member, prolog, Popup),
+    get(Popup, member, Item, _).
+
+test(and_the_window_offers_two_of_them_on_its_tools_menu) :-
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    get(F, menu_bar, MB),
+    get(MB, member, tools, Tools),
+    get(Tools, member, edit_breakpoints, _),
+    get(Tools, member, edit_exceptions, _).
 
 test(a_terminal_carries_its_own_menus_into_a_pcemacs_window) :-
     emacs,

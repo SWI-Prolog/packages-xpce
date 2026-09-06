@@ -58,7 +58,7 @@
 
 /** <module> XPCE-base SWI-Prolog thread monitor
 
-This library defines  the  class   prolog_thread_monitor,  a  frame that
+This library defines  the  class   prolog_thread_monitor,  a  pane  that
 displays the status of threads.
 */
 
@@ -837,22 +837,6 @@ fill_menu_bar(TM, MD:tool_dialog) :->
                 menu_item(thread_monitor_settings,
                           message(TM, settings))
               ]).
-
-%       A pane reports to the window it is in, which grows a bar the
-%       first time anything wants one.  The monitor says what it is
-%       doing as it runs, so it asks for one as soon as it has something
-%       to say rather than losing the first message.
-
-report(TM, Kind:name, Fmt:[char_array], Args:any ...) :->
-    "Report on the bar of the window I am in"::
-    (   get(TM, frame, F),
-        F \== @nil,
-        send(F, has_get_method, ensure_status_dialog)
-    ->  ignore(get(F, ensure_status_dialog, _))
-    ;   true
-    ),
-    Msg =.. [report, Kind, Fmt|Args],
-    send_super(TM, Msg).
 
                  /*******************************
                  *           SETTINGS           *

@@ -39,11 +39,11 @@
             xref_file_exports/2         % +File, -Exports
           ]).
 :- use_module(pce).
-:- use_module(persistent_frame).
+:- use_module(pane_frame).
 :- use_module(tabbed_window).
 :- use_module(toolbar).
-:- use_module(pce_report).
 :- use_module(pce_util).
+:- autoload(library(swi_ide), [prolog_ide/1]).
 :- use_module(pce_toc).
 :- use_module(pce_arm).
 :- use_module(pce_tagged_connection).
@@ -127,38 +127,39 @@ XPCE based font-end of the Prolog cross-referencer.  Tasks:
 %   is started in the XPCE thread.
 
 gxref :-
-    in_pce_thread(xref_gui).
-
-xref_gui :-
-    send(new(XREF, xref_frame), open),
-    send(XREF, wait),
-    send(XREF, update).
+    prolog_ide(xref).
 
 
-:- pce_begin_class(xref_frame, persistent_frame,
+/* The cross-referencer as a pane.
+
+It used to be a frame of its own, holding the filter, two tabbed windows
+-- the browsers on the left and the workspaces on the right -- a menu bar
+and a reporter.  It is a `tool_pane' now -- see library(pane_frame) -- so
+it drops into a tab of any window of the IDE, and its menu goes on the
+bar of whatever window it ends up in.
+*/
+
+:- pce_begin_class(xref_tool, tool_pane,
                    "GUI for the Prolog cross-referencer").
 
 initialise(F) :->
-    send_super(F, initialise, 'Prolog XREF'),
-    new(FilterDialog, xref_filter_dialog),
-    send(new(BrowserTabs, tabbed_window), below, FilterDialog),
-    send(BrowserTabs, left, new(WSTabs, tabbed_window)),
+    send_super(F, initialise, xref),
+    send(F, append_window, new(FilterDialog, xref_filter_dialog)),
+    send(F, append_window, new(BrowserTabs, tabbed_window),
+         FilterDialog, below),
+    send(F, append_window, new(WSTabs, tabbed_window), BrowserTabs, right),
     send(BrowserTabs, name, browsers),
     send(BrowserTabs, hor_shrink, 10),
     send(BrowserTabs, hor_stretch, 10),
     send(WSTabs, name, workspaces),
     send_list([BrowserTabs, WSTabs], label_popup, F?tab_popup),
-    send(new(TD, tool_dialog(F)), above, BrowserTabs),
-    send(new(report_dialog), below, BrowserTabs),
-    send(F, append, BrowserTabs),
     send_list(BrowserTabs,
               [ append(new(xref_file_tree), files),
                 append(new(xref_predicate_browser), predicates)
               ]),
     send_list(WSTabs,
               [ append(new(xref_depgraph), dependencies)
-              ]),
-    send(F, fill_toolbar, TD).
+              ]).
 
 tab_popup(_F, P:popup) :<-
     "Popup for tab labels"::
@@ -168,25 +169,34 @@ tab_popup(_F, P:popup) :<-
                 menu_item(detach, message(@arg1, untab))
               ]).
 
-fill_toolbar(F, TD:tool_dialog) :->
-    send(TD, append, new(File, popup(file))),
-    send(TD, append,
+                 /*******************************
+                 *             PANE             *
+                 *******************************/
+
+pane_label(_F, Label:name) :<-
+    "What my tab is called"::
+    Label = 'Cross-referencer'.
+
+menu_bar_key(_F, Key:name) :<-
+    "Every cross-referencer asks for the same menu bar"::
+    Key = xref.
+
+%       One popup of my own rather than items on the menus of the window:
+%       refreshing and what to analyse are about the tool, not about the
+%       window it happens to be in.
+
+fill_menu_bar(F, MD:tool_dialog) :->
+    "Put my menu on the bar of the window I am in"::
+    get(MD, popup, xref, @on, Popup),
+    send(Popup, append, menu_item(refresh, message(F, update))),
+    send(Popup, append,
          new(Settings, popup(settings,
                              message(F, setting, @arg1, @arg2)))),
-    send(TD, append, new(View, popup(view))),
-    send(TD, append, new(Help, popup(help))),
-    send_list(File, append,
-              [ menu_item(close, message(F, destroy))
-              ]),
-    send_list(View, append,
-              [ menu_item(refresh, message(F, update))
-              ]),
-    send_list(Help, append,
-              [ menu_item(about, message(F, about))
-              ]),
     send(Settings, show_current, @on),
     send(Settings, multiple_selection, @on),
-    send(F, update_setting_menu).
+    send(Settings, update_message,
+         message(F, update_setting_menu, @receiver)),
+    send(Popup, append, menu_item(about, message(F, about))).
 
 about(F) :->
     gxref_version(Version),
@@ -198,7 +208,7 @@ about(F) :->
 
 workspace(F, Which:name, Create:[bool], Expose:bool, WS:window) :<-
     "Find named workspace"::
-    get(F, member, workspaces, Tabs),
+    tabbed(F, workspaces, Tabs),
     (   get(Tabs, member, Which, WS)
     ->  true
     ;   Create == @on
@@ -217,7 +227,7 @@ workspace_term(header,    xref_view).
 
 browser(F, Which:name, Browser:browser) :<-
     "Find named browser"::
-    get(F, member, browsers, Tabs),
+    tabbed(F, browsers, Tabs),
     get(Tabs, member, Which, Browser).
 
 update(F) :->
@@ -226,10 +236,10 @@ update(F) :->
 
 update_browsers(F) :->
     "Update the browsers"::
-    get(F, member, browsers, Tabs),
+    tabbed(F, browsers, Tabs),
     send(Tabs?members, for_some,
          message(@arg1, update)),
-    get(F, member, workspaces, WSs),
+    tabbed(F, workspaces, WSs),
     send(WSs?members, for_some,
          message(@arg1, update)).
 
@@ -272,11 +282,8 @@ file_header(F, File:name) :->
 
 :- pce_group(settings).
 
-update_setting_menu(F) :->
-    "Update the menu for the settings with the current values"::
-    get(F, member, tool_dialog, TD),
-    get(TD, member, menu_bar, MB),
-    get(MB, member, settings, Popup),
+update_setting_menu(_F, Popup:popup) :->
+    "Show the settings with the values they have now"::
     send(Popup, clear),
     setting_menu(Entries),
     (   member(Name, Entries),
@@ -299,7 +306,28 @@ setting(F, S:name, PceVal:bool) :->
 pce_to_prolog_bool(@on, true).
 pce_to_prolog_bool(@off, false).
 
-:- pce_end_class(xref_frame).
+:- pce_end_class(xref_tool).
+
+%!  tabbed(+Tool, +Which, -Tabs) is semidet.
+%
+%   The tabbed window of Tool with that name.  Not `tool_pane <-window',
+%   which tells the windows of a tool apart by their class: both of these
+%   are a plain tabbed_window.  Nor <-member, which on a tabbed_window --
+%   and the tool is one -- answers the window of a named tab.
+
+tabbed(F, Which, Tabs) :-
+    get(F, members, Windows),
+    get(Windows, find, and(message(@arg1, instance_of, tabbed_window),
+                           @arg1?name == Which), Tabs).
+
+%!  xref_tool(+Object, -Tool) is semidet.
+%
+%   The cross-referencer a graphical of it belongs to.  It used to be
+%   <-frame; the frame is a window of the IDE now, so the tool is the
+%   pane the graphical is in rather than the window around it.
+
+xref_tool(Obj, Tool) :-
+    get(Obj, container, xref_tool, Tool).
 
 
                  /*******************************
@@ -731,7 +759,8 @@ typed(FFI, Id) :->
     "Activate filter"::
     send_super(FFI, typed, Id),
     get(FFI, displayed_value, Current),
-    get(FFI?frame, browser, files, Tree),
+    xref_tool(FFI, Tool),
+    get(Tool, browser, files, Tree),
     (   send(Current, equal, '')
     ->  send(Tree, filter_file_name, @nil)
     ;   (   pce_text_to_regex(Current, Filter)
@@ -823,8 +852,9 @@ sort(Tree) :->
 
 select_node(Tree, File:name) :->
     "User selected a node"::
-    (   exists_file(File)
-    ->  send(Tree?frame, file_info, File)
+    (   exists_file(File),
+        xref_tool(Tree, Tool)
+    ->  send(Tool, file_info, File)
     ;   true
     ).
 
@@ -1127,7 +1157,10 @@ update(V) :->
     send(V, scroll_to, point(0,0)),
     (   get(V, prolog_file, File),
         File \== @nil
-    ->  send(V?frame, xref_file, File), % Make sure data is up-to-date
+    ->  (   xref_tool(V, Tool)          % make sure data is up-to-date
+        ->  send(Tool, xref_file, File)
+        ;   true
+        ),
         send(V, show_info)
     ;   true
     ).
@@ -1524,11 +1557,13 @@ edit(T) :->
 
 info(T) :->
     get(T, path, Path),
-    send(T?frame, file_info, Path).
+    xref_tool(T, Tool),
+    send(Tool, file_info, Path).
 
 header(T) :->
     get(T, path, Path),
-    send(T?frame, file_header, Path).
+    xref_tool(T, Tool),
+    send(Tool, file_header, Path).
 
 prolog_source(T, Src:string) :<-
     "Import declarations"::

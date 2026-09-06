@@ -72,7 +72,7 @@ the IDE components to the autoloading of one single predicate.
 :- pce_autoload(prolog_trace_exception, library('trace/exceptions')).
 :- pce_autoload(prolog_thread_monitor,  library('swi/thread_monitor')).
 :- pce_autoload(prolog_debug_monitor,   library('swi/pce_debug_monitor')).
-:- pce_autoload(xref_frame,             library('pce_xref')).
+:- pce_autoload(xref_tool,              library('pce_xref')).
 
                  /*******************************
                  *            TOPLEVEL          *
@@ -120,29 +120,20 @@ open_console(IDE) :->
 
 open_debug_status(IDE) :->
     "Open/show the status of the debugger"::
-    (   get(IDE, member, prolog_debug_status, W)
-    ->  send(W, expose)
-    ;   send(prolog_debug_status(IDE), open)
-    ).
+    send(IDE, show_tool, prolog_debug_status).
 
-open_exceptions(IDE, Gui:[bool]) :->
+open_exceptions(_IDE, Gui:[bool]) :->
     "Open/show exceptions"::
-    W = @prolog_exception_window,
-    (   object(W)
-    ->  send(W, expose)
-    ;   (   Gui == @on
-        ->  catch(tdebug, _, guitracer)
-        ;   true
-        ),
-        send(W, application, IDE),
-        send(W, open)
-    ).
+    (   Gui == @on
+    ->  catch(tdebug, _, guitracer)
+    ;   true
+    ),
+    send(@prolog_exception_window, open).
 
 open_navigator(IDE, Where:[directory|source_location]) :->
     "Open Source Navigator"::
     (   send(Where, instance_of, directory)
-    ->  get(IDE, navigator, Where, Navigator),
-        send(Navigator, directory, Where)
+    ->  get(IDE, navigator, Where, _)
     ;   send(Where, instance_of, source_location)
     ->  get(Where, file_name, File),
         file_directory_name(File, Dir),
@@ -153,17 +144,20 @@ open_navigator(IDE, Where:[directory|source_location]) :->
         ),
         get(IDE, navigator, Dir, Navigator),
         send(Navigator, goto, File, LineNo)
-    ;   get(IDE, navigator, Navigator)
-    ),
-    send(Navigator, expose).
+    ;   get(IDE, navigator, _)
+    ).
 
 
 navigator(IDE, Dir:[directory], Navigator:prolog_navigator) :<-
-    "Create or return existing navigator"::
-    (   get(IDE, member, prolog_navigator, Navigator)
-    ->  true
+    "The navigator pane, made and shown if there is none"::
+    (   get(IDE, tool, prolog_navigator, Navigator)
+    ->  send(IDE, expose_tool, Navigator)
     ;   new(Navigator, prolog_navigator(Dir)),
-        send(Navigator, application, IDE)
+        send(IDE, place_tool, Navigator, @default)
+    ),
+    (   Dir == @default
+    ->  true
+    ;   send(Navigator, directory, Dir)
     ).
 
 open_query_window(IDE) :->
@@ -190,20 +184,13 @@ thread_monitor(IDE) :->
 
 debug_monitor(IDE) :->
     "Open monitor for debug messages"::
-    (   get(IDE, member, prolog_debug_monitor, Monitor)
-    ->  true
-    ;   new(Monitor, prolog_debug_monitor),
-        send(Monitor, application, IDE)
-    ),
-    send(Monitor, open).
+    send(IDE, show_tool, prolog_debug_monitor).
 
 xref(IDE) :->
     "Open Cross-Referencer frontend"::
-    (   get(IDE, member, xref_frame, XREF)
-    ->  send(XREF, open)
-    ;   new(XREF, xref_frame),
-        send(XREF, application, IDE),
-        send(XREF, wait),
+    (   get(IDE, tool, xref_tool, XREF)
+    ->  send(IDE, expose_tool, XREF)
+    ;   get(IDE, show_tool, xref_tool, @default, XREF),
         send(XREF, update)
     ).
 
@@ -245,20 +232,33 @@ tool(IDE, Class:name, Pane:window) :<-
 show_tool(IDE, Class:name, How:[{frame,tab,split}], Pane:window) :<-
     "Show the tool pane of that class, making one if there is none"::
     (   get(IDE, tool, Class, Pane)
-    ->  get(Pane, frame, F),
-        send(F, current_pane, Pane)
+    ->  send(IDE, expose_tool, Pane)
     ;   Term =.. [Class],
         new(Pane, Term),
-        get(IDE, tool_placement, How, Where),
-        (   Where \== frame,
-            get(IDE, current_frame, F)
-        ->  (   Where == split
-            ->  send(F, split, Pane, @default, ?(IDE, pane_side, Pane))
-            ;   send(F, append_pane, Pane, @default, @on)
-            )
-        ;   new(F, pane_frame(IDE, @default, Pane))
+        send(IDE, place_tool, Pane, How)
+    ).
+
+%       A tool that has something to say about how it is made -- the
+%       navigator takes the directory to root the tree at -- makes itself
+%       and asks for the placing alone.
+
+place_tool(IDE, Pane:window, How:[{frame,tab,split}]) :->
+    "Put a new tool pane in a window of the IDE"::
+    get(IDE, tool_placement, How, Where),
+    (   Where \== frame,
+        get(IDE, current_frame, F)
+    ->  (   Where == split
+        ->  send(F, split, Pane, @default, ?(IDE, pane_side, Pane))
+        ;   send(F, append_pane, Pane, @default, @on)
         )
+    ;   new(_, pane_frame(IDE, @default, Pane))
     ),
+    send(IDE, expose_tool, Pane).
+
+expose_tool(_IDE, Pane:window) :->
+    "Bring the window holding Pane up, with Pane in view"::
+    get(Pane, frame, F),
+    send(F, current_pane, Pane),
     send(F, open),
     send(F, expose).
 
@@ -461,6 +461,11 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
                           message(IDE, debug_monitor)),
                 menu_item(cross_referencer,
                           message(IDE, xref),
+                          end_group := @on),
+                menu_item(edit_breakpoints,
+                          message(IDE, open_debug_status)),
+                menu_item(edit_exceptions,
+                          message(IDE, open_exceptions, @on),
                           end_group := @on)
               ]),
     send_list(GUI, append,

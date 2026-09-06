@@ -479,7 +479,7 @@ select(D, Show:[bool]) :->
             Location = choice(CH)
         ;   Location = PC
         ),
-        send(D?frame, show_frame, Frame, Location)
+        send(?(D, container, prolog_debugger), show_frame, Frame, Location)
     ;   true
     ).
 

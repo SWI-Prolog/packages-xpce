@@ -100,7 +100,8 @@ timeout(I) :->
 typed(I, Id:event_id) :->
     send(I, slot, last_typed, @pce?mclock),
     send(I, send_super, typed, Id),
-    send(I?frame, typed_in_search_item, Id, I?value_text?string).
+    send(?(I, container, man_frame), typed_in_search_item,
+         Id, I?value_text?string).
 
 :- pce_end_class.
 

@@ -202,11 +202,11 @@ select(N) :->
         get(Tree, member, ClassName, Text),
         send(Text, selected, @on)
     ),
-    send(N?frame, activate_apply).
+    send(?(N, container, man_frame), activate_apply).
 
 open(N) :->
-    "->apply to <-frame"::
-    send(N?frame, apply).
+    "->apply to the tool I am in"::
+    send(?(N, container, man_frame), apply).
 
 
 :- pce_end_class.

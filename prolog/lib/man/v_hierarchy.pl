@@ -99,11 +99,15 @@ created_class(CH, Class:class) :->
     ).
 
 
+%       These are the tool's to answer, not mine: a window reached it
+%       with <-frame while a tool was a frame, and the frame is a window
+%       of the IDE now.  See class man_frame in library(man/v_manual).
+
 select_node(CH, Class:class) :->
-    send(CH, request_selection, Class).
+    send(?(CH, container, man_frame), request_selection, Class).
 
 open_node(CH, Class:class) :->
-    send(CH, request_selection, Class, @on).
+    send(?(CH, container, man_frame), request_selection, Class, @on).
 
 expand_node(CH, Class:class) :->
     get(Class, sub_classes, SubClasses),
@@ -177,7 +181,7 @@ source(CH) :->
     "Show source of selected class"::
     get(CH?tree?selection, head, Node),
     get(Node, identifier, Class),
-    send(CH, request_source, Class).
+    send(?(CH, container, man_frame), request_source, Class).
 
 prune(CH) :->
     "Delete from the hierarchy"::
@@ -192,12 +196,12 @@ selection(CH, Class:class) :<-
 class_browser(CH) :->
     "Show class browser on selected class"::
     get(CH, selection, Class),
-    send(CH, request_tool_focus, Class).
+    send(?(CH, container, man_frame), request_tool_focus, Class).
 
 documentation(CH) :->
     "Show source of selected class"::
     get(CH, selection, Class),
-    send(CH, request_selection, Class, @on).
+    send(?(CH, container, man_frame), request_selection, Class, @on).
 
 expand_tree(CH) :->
     "Expand everything below the selected node"::

@@ -66,7 +66,7 @@ make_man_drag_and_drop_objects(G) :-
 initialise(S, Att:name, Size:size) :->
     "Create from displayed attribute and size"::
     DI = @arg1,
-    new(Tool, S?frame),
+    new(Tool, ?(S, container, man_frame)),
     new(Obj, DI?object),
 
     get(S, list_font, ListFont),
@@ -80,16 +80,17 @@ initialise(S, Att:name, Size:size) :->
     send_list(S, [ver_stretch, ver_shrink], 1000),
     send(S, style, header, style(font := HeaderFont)),
 
-    send(S, select_message,
-         message(S, request_selection, Obj, @off)),
+    Ask = ?(S, container, man_frame),   % not <-frame: that is a window
+    send(S, select_message,             % of the IDE now
+         message(Ask, request_selection, Obj, @off)),
     send(S, open_message,
-         message(S, request_selection, Obj, @on)),
+         message(Ask, request_selection, Obj, @on)),
     send(S?list_browser, recogniser, @man_drag_and_drop_objects),
 
     send(S, popup, new(P, popup(view, @nil))),
     send_list(P, append,
               [ menu_item(select,
-                          message(S, request_selection, Obj, @on))
+                          message(Ask, request_selection, Obj, @on))
               , menu_item(class_browser,
                           message(Tool, request_tool_focus, Obj, @on),
                           @default, @on,
@@ -179,7 +180,8 @@ members(S, Matches:chain) :->
         send(Groups, for_all,
              and(message(S, append_group, Index, @arg1?name, @arg1?value),
                  message(Index, plus, 1))),
-        (   get(S?frame, manual, Manual),
+        (   get(S, container, man_frame, Tool),
+            get(Tool, manual, Manual),
             Manual \== @nil
         ->  send(S, selected, Manual?selection)
         ;   true

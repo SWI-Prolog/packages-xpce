@@ -853,6 +853,38 @@ test(relating_below_adds_to_the_tab) :-
     geometry(P2, area(_,Y2,_,_)),
     Y2 > Y1+H1.
 
+%       A window that carries scrollbars or a label is held through a
+%       window_decorator and is displayed *on* that decorator.  Taking it
+%       from whoever holds it must take the decorator out of that, and
+%       must leave the window where it is: erased from its own decorator
+%       it is never created, and all that is drawn is the decorator's
+%       bare ground.
+
+test(a_window_that_carries_a_label_stays_in_its_decorator) :-
+    new(F, frame('Own')),
+    send(F, append, new(P, picture('Canvas'))),
+    get(P, decoration, Decor),
+    Decor \== @nil,
+    get(P, device, Decor).
+
+test(and_so_it_does_when_it_moves_to_another_frame) :-
+    new(F1, frame('One')),
+    send(F1, append, new(P, picture('Canvas'))),
+    new(F2, frame('Two')),
+    send(F2, append, P),
+    get(P, decoration, Decor),
+    get(P, device, Decor),
+    get(Decor, frame, F2).
+
+test(and_when_it_moves_into_a_tab) :-
+    tabbed(_TW, TF, P1),
+    new(F, frame('Own')),
+    send(F, append, new(P2, picture('Canvas'))),
+    send(TF, append, P2, P1, right),
+    get(P2, decoration, Decor),
+    get(P2, device, Decor),
+    get(P2, tile_manager, TF).
+
 test(moving_a_pane_into_a_frame_takes_it_out_of_the_tab) :-
     tabbed(_TW, TF, P1),
     send(TF, split, new(P2, picture), P1, vertically),
@@ -872,6 +904,38 @@ test(moving_a_window_into_a_tab_takes_it_out_of_the_frame) :-
     get(TF?windows, size, 2),
     get(P2, tile_manager, TF),
     get(F?members, size, 0).
+
+%       A window may be related to one that is in no tile manager yet, and
+%       both arrive when that one is taken in.  Class frame walks the tile
+%       tree of the window it takes -- see frameWindow() in
+%       src/win/window.c -- and a tab has to do the same, or the windows
+%       hanging off it are laid out but never displayed.
+
+test(a_window_related_before_its_neighbour_comes_along_with_it,
+     true(Windows == [one, two, three])) :-
+    tabbed(_TW, TF, P1),
+    send(P1, name, one),
+    new(P2, picture), send(P2, name, two),
+    new(P3, picture), send(P3, name, three),
+    send(P3, below, P2),                % P2 is in no tab yet: P3 hangs on
+    send(P2, right, P1),                % it until P2 is taken in
+    get(TF, windows, Chain),
+    chain_list(Chain, List),
+    findall(N, (member(W, List), get(W, name, N)), Windows).
+
+test(and_is_laid_out_where_the_tile_says, true(Below == true)) :-
+    tabbed(_TW, TF, P1),
+    new(P2, picture),
+    new(P3, picture),
+    send(P3, below, P2),
+    send(P2, right, P1),
+    send(TF, layout),
+    geometry(P2, area(_, Y2, _, H2)),
+    geometry(P3, area(_, Y3, _, _)),
+    (   Y3 >= Y2+H2
+    ->  Below = true
+    ;   Below = Y2-H2-Y3
+    ).
 
 test(relating_to_a_tile_works_too) :-      % as class epilog_window does
     tabbed(_TW, TF, P1),

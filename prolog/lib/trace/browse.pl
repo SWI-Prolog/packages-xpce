@@ -37,9 +37,8 @@
 
 :- module(prolog_navigator, []).
 :- use_module(library(pce)).
-:- use_module(library(persistent_frame)).
+:- use_module(library(pane_frame)).
 :- use_module(library(toc_filesystem)).
-:- use_module(library(pce_report)).
 :- use_module(library(toolbar)).
 % used in load hook: cannot be autoloaded.
 :- use_module(library(trace/util),[canonical_source_file/2]).
@@ -85,25 +84,50 @@ resource(up,          image, image('tool/up.svg')).
 resource(refresh,     image, image('tool/refresh.svg')).
 resource(dbgsettings, image, image('dbgsettings.svg')).
 
-:- pce_begin_class(prolog_navigator, persistent_frame,
+/* The source navigator as a pane.
+
+It used to be a frame of its own, holding a tool bar, the filter and the
+tree.  It is a `tool_pane' now -- see library(pane_frame) -- so it drops
+into a tab of any window of the IDE or, being a navigator, down the left
+of one.  What it has to say goes on the status bar of the window it ends
+up in, so it carries no reporter of its own.
+*/
+
+:- pce_begin_class(prolog_navigator, tool_pane,
                    "Prolog source navigator").
 
+class_variable(pane_side, {above,below,left,right}, left,
+               "A navigator is added down the left").
+
 initialise(SB, Root:[directory]) :->
-    send_super(SB, initialise, 'Prolog Navigator'),
-    send(SB, append, new(D, dialog)),
-    send(new(FD, sb_filter_dialog), below, D),
-    send(new(W, prolog_source_structure(Root)), below, FD),
-    send(D, append, new(tool_bar(W))),
-    send(D, gap, size(0, 2)),
-    send(D, pen, 0),
+    send_super(SB, initialise, navigator),
+    new(W, prolog_source_structure(Root)),
+    send(SB, append_window, new(D, tool_dialog(W))),
+    send(SB, append_window, new(FD, sb_filter_dialog), D, below),
+    send(SB, append_window, W, FD, below),
     send(SB, fill_tool_bar),
-    send(new(report_dialog), below, W),
     send(FD, update_content).
+
+                 /*******************************
+                 *            MEMBERS           *
+                 *******************************/
+
+tree(SB, Tree:prolog_source_structure) :<-
+    "The window the sources are shown in"::
+    get(SB, window, prolog_source_structure, Tree).
 
 tool_bar(SB, TB:tool_bar) :<-
     "Get the toolbar"::
-    get(SB, member, dialog, D),
-    get(D, member, tool_bar, TB).
+    get(SB, window, tool_dialog, D),
+    get(D, tool_bar, @on, TB).
+
+                 /*******************************
+                 *             PANE             *
+                 *******************************/
+
+pane_label(_SB, Label:name) :<-
+    "What my tab is called"::
+    Label = 'Navigator'.
 
 fill_tool_bar(SB) :->
     "Fill the toolbar"::
@@ -126,12 +150,12 @@ fill_tool_bar(SB) :->
 
 goto(SB, File:file, Line:int) :->
     "Expand and highlight tree for given location"::
-    get(SB, member, prolog_source_structure, FB),
+    get(SB, tree, FB),
     send(FB, goto, File, Line).
 
 directory(SB, Dir:directory) :->
     "Make directory visible"::
-    get(SB, member, prolog_source_structure, FB),
+    get(SB, tree, FB),
     send(FB, directory, Dir).
 
 :- pce_end_class(prolog_navigator).
@@ -163,7 +187,8 @@ resize(D) :->
 
 tree(D, Tree:prolog_source_structure) :<-
     "The tree we control"::
-    get(D?frame, member, prolog_source_structure, Tree).
+    get(D, container, prolog_navigator, SB),
+    get(SB, tree, Tree).
 
 content(D, Content:{loaded,prolog,all}) :->
     "Set the content mode of the whole tree"::
@@ -225,7 +250,6 @@ initialise(FB, Root:[directory]) :->
     send(FB, slot, expanded_dirs, new(chain)),
     send(FB, slot, extra_seeds, new(chain)),
     send_super(FB, initialise, Root),
-    send(FB?frame, label, 'SWI-Prolog Navigator'),
     asserta(prolog_overview_window(FB)),
     (   Root == @default
     ->  true
@@ -1870,7 +1894,7 @@ loading(What, How) :-
     image_of_load_state(Stage, How, Img),
     in_pce_thread(update_load_state(Win, TheFile, Img, Stage)).
 
-qlf_part(source(File), File).
+qlf_part(source(File, _Hash), File).
 
 %!  update_load_state(+Win, +File, +Img, +Stage) is det.
 %

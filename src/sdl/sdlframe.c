@@ -392,6 +392,25 @@ ws_window_frame_position_(Any window, FrameObj fr, float *ox, float *oy)
 
       return ws_window_frame_position_(sw->device, fr, ox, oy);
     }
+
+    /* A pane lives on a device inside another window -- see class
+     * tab_frame in library(tab_frame) -- and <-parent only says which
+     * window it was created inside, which is nothing until it has been.
+     * Walk the device chain to the window it is drawn in and go on from
+     * there.
+     */
+    if ( notNil(sw->device) )
+    { PceWindow me = DEFAULT;
+      Int x, y;
+
+      if ( get_absolute_xy_graphical((Graphical)sw, (Device *)&me, &x, &y) &&
+	   instanceOfObject(me, ClassWindow) )
+      { *ox += valNum(x);
+	*oy += valNum(y);
+
+	return ws_window_frame_position_(me, fr, ox, oy);
+      }
+    }
   }
 
   Cprintf("ws_window_frame_position(%s) failed\n", pp(window));
