@@ -372,8 +372,9 @@ run_pce(Goal, Vars, Caller, Id) :-
 in_debug_thread(Object, Goal) :-
     object(Object),
     !,
-    get(Object, frame, Frame),
-    get(Frame, thread, Thread),
+    get(Object, container, prolog_debugger, Frame),  % not <-frame: that
+    get(Frame, thread, Thread),                      % is a window of the
+                                                     % IDE now
     in_debug_thread(Thread, Goal).
 in_debug_thread(Thread, Goal) :-
     thread_self_id(Thread),
@@ -447,7 +448,17 @@ initialise(App) :->
                  *         DEBUGGER FRAME       *
                  *******************************/
 
-:- pce_begin_class(prolog_debugger, persistent_frame,
+/* The debugger as a pane.
+
+It used to be a frame of its own, holding the buttons, the bindings, the
+call stack, the source and a reporter under a menu bar.  It is a
+`tool_pane' now -- see library(pane_frame) -- so it sits in a tab of a
+window of the IDE beside the terminal running the goal, and its menu goes
+on the bar of that window.  There is one per traced thread and break
+level, as there always was.
+*/
+
+:- pce_begin_class(prolog_debugger, tool_pane,
                    "Toplevel driver for the debugger").
 
 variable(source,        any,            both, "Source view").
@@ -458,6 +469,7 @@ variable(trap_port,     name*,          get,  "Last trapped port").
 variable(current_frame, int*,           both, "The most recent frame").
 variable(quitted,       bool := @off,   both, "Asked to quit").
 variable(mode,          name := created,get,  "Current mode").
+variable(return_value,  any*,           both, "Action the user picked").
 
 running_in_pce_thread :-
     pce_thread(Pce), thread_self_id(Pce).
@@ -466,28 +478,17 @@ initialise(F, Level:int, Thread:'int|name') :->
     assertion(running_in_pce_thread),
     send(F, slot, break_level, Level),
     send(F, slot, thread, Thread),
-    send_super(F, initialise, 'SWI-Prolog debugger',
-               application := @prolog_gui),
-    send(F, done_message, message(F, quit)),
-    send(F, append, new(MBD, dialog)),
-    send(MBD, gap, size(0, 2)),
-    send(MBD, pen, 0),
-    send(MBD, append, new(menu_bar)),
-    send(MBD, name, menu_bar_dialog),
-    send(MBD, resize_message, message(MBD, layout, @arg2)),
-    send(F, fill_menu_bar),
-    send(new(D, prolog_button_dialog), below, MBD),
+    send_super(F, initialise, debugger),
+    send(F, append_window, new(D, prolog_button_dialog)),
     send(D, name, buttons),
 
     new(V, prolog_bindings_view),
     send(V, label, 'Bindings'),
     send(V, name, bindings),
-    send(new(S, prolog_stack_view), right, V),
-    send(V, below, D),
-    send(new(Src, prolog_source_view), below, V),
+    send(F, append_window, V, D, below),
+    send(F, append_window, new(S, prolog_stack_view), V, right),
+    send(F, append_window, new(Src, prolog_source_view), V, below),
     send(F, source, Src),
-    send(new(RD, report_dialog), below, Src),
-    send(RD, warning_delay, 0),
     send(S, label, 'Call Stack'),
     send(S, name, stack),
     ignore(send(F, frame_finished, 0)),     % FR_WATCHED issue
@@ -497,6 +498,97 @@ unlink(F) :->
     retractall(gui(_, _, F)),
     clear_clause_info_cache,        % safety first
     send_super(F, unlink).
+
+                 /*******************************
+                 *             PANE             *
+                 *******************************/
+
+pane_label(F, Label:name) :<-
+    "What my tab is called"::
+    get(F, thread, Thread),
+    (   Thread == main
+    ->  Label = 'Debugger'
+    ;   get(string('Debugger [%s]', Thread), value, Label)
+    ).
+
+menu_bar_key(_F, Key:name) :<-
+    "Every debugger asks for the same menu bar"::
+    Key = debugger.
+
+member(F, Name:name, Window:window) :<-
+    "The window of mine with that name, as class frame did"::
+    get(F, members, Windows),
+    get(Windows, find, @arg1?name == Name, Window).
+
+%       A pane reports on the bar of the window it is in, which grows one
+%       the first time anything asks.  The tracer says what it is doing at
+%       every port, so ask for the bar rather than lose the first message.
+
+report(F, Kind:name, Fmt:[char_array], Args:any ...) :->
+    "Report on the bar of the window I am in"::
+    (   get(F, frame, Fr),
+        Fr \== @nil,
+        send(Fr, has_get_method, ensure_status_dialog)
+    ->  ignore(get(Fr, ensure_status_dialog, _))
+    ;   true
+    ),
+    Msg =.. [report, Kind, Fmt|Args],
+    send_super(F, Msg).
+
+open(F, _Pos:[point], _Display:[display]) :->
+    "Show me in a window of the IDE"::
+    use_module(user:library(swi_ide), []),
+    (   get(F, pane_tab, _)
+    ->  send(@prolog_ide, expose_tool, F)
+    ;   send(@prolog_ide, place_tool, F, @default)
+    ).
+
+%       Closing my tab while the tracer is waiting for an answer would
+%       leave the thread waiting for ever, so it asks what to do instead
+%       and lets the answer take me away.
+
+can_close(F, Close:bool) :<-
+    "Only when nobody is waiting for me"::
+    (   get(F, mode, wait_user)
+    ->  send(F, quit),
+        Close = @off
+    ;   Close = @on
+    ).
+
+                 /*******************************
+                 *        WAITING FOR ONE       *
+                 *******************************/
+
+/* The tracer waits here for the user to say what to do next.  `frame
+   <-confirm' runs a nested event loop until `frame ->return' and a pane
+   has no loop of its own, so it borrows the one of the window it is in.
+   Which answer belongs to which debugger is kept here rather than in the
+   window: two threads can be traced at once and their debuggers can
+   share a window.
+*/
+
+confirm(F, Action:any) :<-
+    "Wait for the user to pick an action"::
+    get(F, frame, Window),
+    send(F, slot, return_value, @nil),
+    repeat,
+      get(Window, confirm, _),
+      get(F, slot, return_value, Action),
+      Action \== @nil,
+    !.
+
+return_action(F, Result:any) :->
+    "Give <-confirm the answer it is waiting for"::
+    send(F, slot, return_value, Result),
+    (   get(F, frame, Window),
+        Window \== @nil
+    ->  send(Window, return, Result)
+    ;   true
+    ).
+
+                 /*******************************
+                 *            ACTIONS           *
+                 *******************************/
 
 quit(F) :->
     "User initiated quit"::
@@ -513,13 +605,13 @@ quit(F) :->
         )
     ).
 
-label(F, Label:char_array) :->
-    "Set label, indicating associated thread"::
-    get(F, thread, Thread),
-    (   Thread == main
-    ->  send_super(F, label, Label)
-    ;   send_super(F, label, string('[Thread %s] %s', Thread, Label))
-    ).
+%       My tab is named after the thread I trace -- see <-pane_label --
+%       and the window I am in makes its title out of that, so there is
+%       nothing to put a label on.
+
+label(_F, _Label:char_array) :->
+    "The tab says which thread I trace"::
+    true.
 
 clear_stack_window(F) :->
     "Clear the stack window"::
@@ -535,54 +627,49 @@ clear(F, Content:[bool]) :->
     send(BindingView, clear, Content).
 
 
-fill_menu_bar(F) :->
-    get(F, member, menu_bar_dialog, MBD),
-    get(MBD, member, menu_bar, MB),
-    send(MB, append, new(Tool, popup(tool))),
-    send(MB, append, new(Edit, popup(edit))),
-    send(MB, append, new(View, popup(view))),
-    send(MB, append, new(Comp, popup(compile))),
-    send(MB, append, new(Help, popup(help)), right),
-    send_list(Tool, append,
+%       One popup of my own on the bar of the window I am in.  Its four
+%       menus were named tool, edit, view and compile, which are names an
+%       editor sharing the window uses for menus of its own.
+
+fill_menu_bar(F, MD:tool_dialog) :->
+    "Put my menu on the bar of the window I am in"::
+    get(MD, popup, debugger, @on, Popup),
+    send_list(Popup, append,
               [ menu_item(settings,
-                          message(F, settings),
-                          end_group := @on),
+                          message(F, settings)),
                 menu_item(clear_source_cache,
                           message(@prolog, clear_clause_info_cache),
                           end_group := @on),
-                menu_item(quit,
-                          message(F, quit))
-              ]),
-    send_list(Edit, append,
-              [ menu_item(breakpoints,
+                menu_item(breakpoints,
                           message(F, breakpoints)),
                 menu_item(exceptions,
                           message(F, exceptions),
                           end_group := @on),
                 menu_item(toggle_edit_mode,
-                          message(F, edit),
-                          end_group := @on),
+                          message(F, edit)),
                 menu_item(copy_goal,
-                          message(F, copy_goal))
+                          message(F, copy_goal),
+                          end_group := @on)
               ]),
+    send(Popup, append, new(View, popup(view))),
     send_list(View, append,
               [ menu_item(threads,
                           message(F, show_threads)),
                 new(PT, menu_item(portray_code_lists,
                                   message(F, portray_text)))
               ]),
-    send_list(Comp, append,
-              [ menu_item(make,
-                          message(F, make),
-                          end_group := @on)
-              ]),
-    send_list(Help, append,
-              [ menu_item(help_on_debugger,
-                          message(F, help))
-              ]),
     send(View, show_current, @on),
     send(View, multiple_selection, @on),
-    send(PT, condition, message(F, update_portray_text, PT)).
+    send(PT, condition, message(F, update_portray_text, PT)),
+    send_list(Popup, append,
+              [ menu_item(make,
+                          message(F, make),
+                          end_group := @on),
+                menu_item(help_on_debugger,
+                          message(F, help)),
+                menu_item(quit,
+                          message(F, quit))
+              ]).
 
 settings(_F) :->
     "Edit the preferences"::
@@ -703,7 +790,7 @@ return(Frame, Result:any) :->
     ->  get(Frame, thread, Thread),
         send(Frame, mode, replied),
         (   pce_thread(Thread)
-        ->  send_super(Frame, return, Result)
+        ->  send(Frame, return_action, Result)
         ;   (   get(Frame, quitted, @on)
             ->  send(Frame, destroy)
             ;   true
@@ -748,9 +835,10 @@ tracer_quitted(Frame, Action) :<-
     send(D, append,
          button(cancel,
                 message(D, return, cancel))),
-    send(D, transient_for, Frame),
+    get(Frame, frame, Window),          % the window I am a pane of
+    send(D, transient_for, Window),
     send(D, modal, transient),
-    get(D, confirm_centered, Frame?area?center, Action),
+    get(D, confirm_centered, Window?area?center, Action),
     send(D, destroy),
     (   Action == cancel
     ->  true
@@ -1032,8 +1120,9 @@ initialise(D) :->
     send_super(D, initialise),
     send(D, pen, 0),
     send(D, gap, size(0,0)),
-    get(D, frame, Frame),
-    send(D, append, new(TB, tool_bar(Frame))),
+    send(D, append, new(TB, tool_bar)),  % every button carries its own
+                                        % message; there is no client to
+                                        % fall back on
     (   button(Action, KeyString, Image, Balloon0),
         file_name_extension(Resource, _, Image),
         string_codes(KeyString, Keys),
@@ -1053,7 +1142,8 @@ initialise(D) :->
     ;   true
     ).
 
-make_message(+Action, Action, D, message(D?frame, Action)) :- !.
+make_message(+Action, Action, D,
+             message(?(D, container, prolog_debugger), Action)) :- !.
 make_message(Action,  Action, D, message(D, return, Action)).
 
 typed(D, Id:event_id, Delegate:[bool]) :->

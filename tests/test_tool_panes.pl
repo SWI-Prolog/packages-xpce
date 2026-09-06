@@ -39,11 +39,11 @@
 /** <module> An IDE tool as a pane
 
 The thread monitor, the source navigator, the debug monitor, the debugger
-status, the cross-referencer, the profiler, the exception editor and the
-tools of the XPCE manual used to be windows of their own, each holding
-its windows, a menu bar and a reporter in a frame.  They are panes now,
-so they can sit in a tab of any window of the IDE beside a terminal, an
-editor or another tool.
+status, the cross-referencer, the profiler, the exception editor, the
+source-level debugger and the tools of the XPCE manual used to be windows
+of their own, each holding its windows, a menu bar and a reporter in a
+frame.  They are panes now, so they can sit in a tab of any window of the
+IDE beside a terminal, an editor or another tool.
 
 These check that a tool goes where it should, that there is only ever
 one, that its windows are tiled inside it and that what it has to say
@@ -69,6 +69,9 @@ Run with:
 :- use_module(library(pce_manual), []).
 :- use_module(library(swi/pce_profile), []).
 :- use_module(library(trace/exceptions), []).
+:- use_module(library(trace/trace), []).   % loads trace/gui, which does
+                                          % not survive a use_module of
+                                          % its own
 :- use_module(library(apply), [maplist/3]).
 :- use_module(library(prolog_debug), [spy/1, nospy/1]).
 :- use_module(library(debug), [debug/1, debug/3, nodebug/1]).
@@ -83,6 +86,7 @@ test_tool_panes :-
                 xref_pane,
                 profiler_pane,
                 exception_editor_pane,
+                debugger_pane,
                 manual_tool_panes
               ]).
 
@@ -1533,3 +1537,122 @@ test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :
     get(SD, class_name, Class).
 
 :- end_tests(exception_editor_pane).
+
+
+                 /*******************************
+                 *          THE DEBUGGER        *
+                 *******************************/
+
+/* The source-level debugger carries the buttons, the bindings, the call
+stack and the source.  There is one per traced thread and break level, so
+like the profiler it is not a singleton.
+*/
+
+%!  debugger(-Tool) is det.
+%
+%   A debugger for the main thread at break level 0, placed.  Not through
+%   the tracer: that would want a goal to trace and somebody to answer at
+%   every port.
+
+debugger(F) :-
+    new(F, prolog_debugger(0, main)),
+    send(F, open).
+
+:- begin_tests(debugger_pane).
+
+test(it_opens_in_a_window_of_the_ide, Classes == [prolog_debugger]) :-
+    no_frames,
+    debugger(F),
+    get(F, frame, Frame),
+    send(Frame, instance_of, pane_frame),
+    classes(Frame, Classes).
+
+test(its_four_windows_are_tiled_inside_it,
+     Names == [buttons, bindings, stack, prolog_source_view]) :-
+    no_frames,
+    debugger(F),
+    get(F, members, Chain),
+    chain_list(Chain, Windows),
+    findall(N, (member(W, Windows), get(W, name, N)), Names).
+
+%       Its windows are named, and it used to find them back with
+%       `frame <-member'.
+
+test(and_it_finds_them_back_by_name,
+     Classes == [prolog_button_dialog, prolog_bindings_view,
+                 prolog_stack_view]) :-
+    no_frames,
+    debugger(F),
+    findall(C,
+            ( member(Name, [buttons, bindings, stack]),
+              get(F, member, Name, W),
+              get(W, class_name, C)
+            ),
+            Classes).
+
+%       The tab says which thread it traces; the label it used to put on
+%       its frame is what the window makes its title from.
+
+test(the_tab_says_which_thread_it_traces,
+     true(Label == 'SWI-Prolog -- Debugger')) :-
+    no_frames,
+    debugger(F),
+    get(F, frame, Frame),
+    send(Frame, current_pane, F),
+    get(Frame, label, Label).
+
+test(and_names_the_thread_when_it_is_not_the_main_one,
+     true(Label == 'Debugger [worker]')) :-
+    new(F, prolog_debugger(0, worker)),
+    get(F, pane_label, Label),
+    send(F, destroy).
+
+test(its_menu_reaches_the_bar_of_the_window_it_is_in,
+     Items == [settings, clear_source_cache,
+               breakpoints, exceptions,
+               toggle_edit_mode, copy_goal,
+               view, make, help_on_debugger, quit]) :-
+    no_frames,
+    debugger(F),
+    get(F, frame, Frame),
+    send(Frame, current_pane, F),
+    menus(Frame, Menus),
+    memberchk(debugger, Menus),
+    get(Frame, menu_bar, MB),
+    get(MB, member, debugger, Popup),
+    get(Popup, members, Chain),
+    chain_list(Chain, Members),
+    findall(V, (member(MI, Members), get(MI, value, V)), Items).
+
+%       The tracer waits in <-confirm for an action and ->return_action
+%       gives it one.  Which answer belongs to which debugger is kept per
+%       pane: two threads can be traced at once into one window.
+
+test(the_action_the_user_picks_is_kept_per_debugger,
+     true(Answers == [creep, leap])) :-
+    no_frames,
+    debugger(One),
+    new(Two, prolog_debugger(1, main)),
+    send(One, return_action, creep),
+    send(Two, return_action, leap),
+    get(One, return_value, A),
+    get(Two, return_value, B),
+    Answers = [A, B],
+    send(Two, destroy).
+
+test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :-
+    no_frames,
+    debugger(F),
+    get(F, frame, Frame),
+    \+ get(Frame, status_dialog, _),
+    send(F, report, status, 'Call: foo/1'),
+    get(Frame, status_dialog, SD),
+    get(SD, class_name, Class).
+
+test(and_it_can_be_closed_when_nobody_is_waiting, true(Close == @on)) :-
+    no_frames,
+    debugger(F),
+    send(F, mode, query_finished),
+    get(F, can_close, Close).
+
+:- end_tests(debugger_pane).
