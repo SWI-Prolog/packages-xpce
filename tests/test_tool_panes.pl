@@ -559,6 +559,28 @@ test(the_setting_is_on_the_settings_menu,
     chain_list(Chain, Members),
     findall(V, (member(MI, Members), get(MI, value, V)), Items).
 
+%       It says the sources too, since edit/1 goes by it; see
+%       `prolog_ide <-source_placement'.
+
+test(and_says_that_it_is_about_sources_as_well,
+     true(Label == 'New tools and sources open')) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    get(F, menu_bar, MB),
+    get(MB, member, settings, Settings),
+    get(Settings, member, new_tools_open, Item),
+    get(Item, label, Label).
+
+test(the_setting_says_where_a_source_opens,
+     true(Places == [window, tab, split])) :-
+    findall(Where,
+            ( member(Placement, [frame, tab, split]),
+              with_placement(Placement,
+                             get(@prolog_ide, source_placement, Where))
+            ),
+            Places).
+
 test(it_shows_which_one_is_in_force, true(Ticked == [split])) :-
     no_monitor,
     epilog_frame(@default, @default, @default, @off, @default, F),

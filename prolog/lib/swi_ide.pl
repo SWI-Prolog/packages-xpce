@@ -285,6 +285,19 @@ tool_placement(_IDE, Where:{frame,tab,split}) :->
     get(@pce, convert, prolog_ide, class, Class),
     send(Class, class_variable_value, tool_placement, Where).
 
+%       A source the user asks to see -- edit/1, emacs/1, a location
+%       picked in a tool -- goes by the same setting.  `emacs_buffer
+%       <-open' has words of its own for it: a tool in a window of its
+%       own is a frame, a buffer in one is a window.
+
+source_placement(IDE, Where:{here,tab,split,window}) :<-
+    "Where a source the user asks to see is opened"::
+    get(IDE, tool_placement, @default, Placement),
+    (   Placement == frame
+    ->  Where = window
+    ;   Where = Placement
+    ).
+
 update_tool_placement_menu(IDE, Popup:popup) :->
     "Tick where a tool goes now"::
     get(IDE, tool_placement, @default, Where),
@@ -438,7 +451,8 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
                 menu_item('GUI_preferences',
                           message(IDE, preferences, xpce),
                           end_group := @on),
-                new(Placement, menu_item(new_tools_open))
+                new(Placement, menu_item(new_tools_open, @default,
+                                         'New tools and sources open'))
               ]),
     send(Placement, popup,
          new(PlacementPopup,
