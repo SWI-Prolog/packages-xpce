@@ -151,15 +151,21 @@ layout(D, Size:[size]) :->
     get(D, member, tb2, TB2),
     get(D, member, predicate, PI),
     send(PI, right_side, TB2?left_side - D?gap?width),
-    get(D, member, mode, Mode),          % the grip has the corner
-    grip_room(D, Room),
-    send(Mode, right_side, Mode?right_side - Room).
+    get(D, member, mode, Mode),          % the grip has the corner: move
+    grip_room(D, Room),                  % the menu, do not resize it --
+    send(Mode, x, Mode?x - Room).
 
 %!  grip_room(+Dialog, -Room) is det.
 %
 %   How much of the top right to leave clear.  The grip a pane is dragged
 %   by is drawn there, over everything the dialog lays out, so an item
 %   that reached into the corner would be under it.
+%
+%   `graphical ->right_side' sets the right edge by changing the width,
+%   not by moving: asking for one 20 pixels further left made the menu 20
+%   pixels narrower, and ->layout runs on every resize, so it lost 20
+%   more each time.  ->x moves it, and the dialog puts it back where its
+%   alignment says on the next layout, so nothing accumulates.
 
 grip_room(D, Room) :-
     get(D, fixed_graphicals, Chain),

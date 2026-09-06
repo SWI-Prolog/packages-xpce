@@ -871,18 +871,29 @@ test(it_carries_a_grip_to_drag_it_by) :-
     grip(D, _).
 
 %       The grip is drawn over whatever the dialog lays out, so ->layout
-%       keeps the corner it sits in clear.
+%       keeps the corner it sits in clear.  ->layout runs on every resize,
+%       so making room must not be something that accumulates: `graphical
+%       ->right_side' sets the right edge by changing the width, and
+%       asking for one further left made the menu narrower every time.
 
-test(and_the_layout_keeps_the_corner_clear) :-
+test(and_the_layout_keeps_the_corner_clear,
+     [ forall(member(Width-Times, [600-1, 600-2, 600-3, 800-1, 800-3])),
+       true(Widths-Clear == 185-true)
+     ]) :-
     debug_status(D),
-    send(D, size, size(600, 300)),
-    send(D, layout, size(600, 300)),
+    get(D, member, mode, Mode),
+    forall(between(1, Times, _),
+           ( send(D, size, size(Width, 300)),
+             send(D, layout, size(Width, 300)) )),
+    get(Mode, width, Widths),
     grip(D, H),
     send(H, compute),
     get(H, area, area(GX, _, _, _)),
-    get(D, member, mode, Mode),
     get(Mode, right_side, Right),
-    Right =< GX.
+    (   Right =< GX
+    ->  Clear = true
+    ;   Clear = Right-GX
+    ).
 
 test(it_lists_what_is_being_debugged, true(Listed == ['append/3'])) :-
     debug_status(D),
