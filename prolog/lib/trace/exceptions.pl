@@ -38,11 +38,10 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(apply)).
-:- use_module(library(persistent_frame)).
+:- use_module(library(pane_frame)).
 :- use_module(library(toolbar)).
 :- use_module(library(tabular)).
 :- use_module(library(pce_tick_box)).
-:- use_module(library(pce_report)).
 :- use_module(library(pce_util)).
 :- use_module(library(help_message)).
 
@@ -226,32 +225,63 @@ replace(_, [], []).
                  *             GUI              *
                  *******************************/
 
-:- pce_begin_class(prolog_trace_exception, persistent_frame,
+/* The exception editor as a pane.
+
+It used to be a frame of its own, holding a dialog with the table, a menu
+bar and a reporter.  The dialog is the pane now -- see
+library(pane_frame) -- so it sits in a tab of a window of the IDE beside
+a terminal, an editor or another tool, and what it has to say goes on the
+status bar of that window.  There is one of it, @prolog_exception_window,
+as there always was: the exception hook reaches it by that name.
+*/
+
+:- pce_begin_class(prolog_trace_exception, dialog,
                    "Configure tracing exceptions").
+:- use_class_template(pane).
+
+class_variable(size, size, size(500, 250),
+               "Size I ask the window I am docked in for").
+
+%       The table's columns are rubber, so left to itself it asks for the
+%       width its widest exception term would like -- about 1900 pixels.
+%       That was hidden while this was a frame of its own that remembered
+%       its geometry; a pane hands its wish to the window it is docked in,
+%       which would then open that wide.  It is given a width to start
+%       from, and takes the one it gets from ->resize after that.
 
 initialise(F) :->
-    send_super(F, initialise, 'Manage exception debugging'),
-    send(F, append, new(D, tool_dialog(F))),
-    send(F, create_menu),
-    send(new(W, dialog), below, D),
-    send(W, scrollbars, vertical),
-    send(W, ver_stretch, 100),
-    send(W, ver_shrink, 100),
-    send(W, name, main),
-    send(W, display, new(T, prolog_exception_table)),
-    send(W, resize_message, message(T, table_width, @arg2?width - 2)),
-    send(new(report_dialog), below, W),
+    send_super(F, initialise),
+    send(F, scrollbars, vertical),
+    send(F, ver_stretch, 100),
+    send(F, ver_shrink, 100),
+    send(F, display, new(T, prolog_exception_table)),
+    get(F, class_variable_value, size, size(W, H)),
+    send(T, table_width, W-2),
+    send(F, size, size(W, H)),
+    send(F, resize_message, message(T, table_width, @arg2?width - 2)),
+    send(F, display_fixed, new(split_handle)),  % puts itself in the corner
     install_exception_hook.
 
-create_menu(F) :->
-    get(F, member, tool_dialog, D),
-    send(D, append, new(File, popup(file))),
-    send(D, append, new(Exceptions, popup(exceptions))),
-    send(D, append, new(Debug, popup(debug))),
-    send_list(File, append,
-              [ menu_item(exit, message(F, destroy))
-              ]),
-    send_list(Exceptions, append,
+                 /*******************************
+                 *             PANE             *
+                 *******************************/
+
+pane_label(_F, Label:name) :<-
+    "What my tab is called"::
+    Label = 'Exceptions'.
+
+menu_bar_key(_F, Key:name) :<-
+    "Every exception editor asks for the same menu bar"::
+    Key = exceptions.
+
+%       One popup of my own rather than items on the menus of the window:
+%       which exceptions stop the debugger is about me, not about the
+%       window I happen to be in.
+
+fill_menu_bar(F, MD:tool_dialog) :->
+    "Put my menu on the bar of the window I am in"::
+    get(MD, popup, exceptions, @on, Popup),
+    send_list(Popup, append,
               [ menu_item(clear_all,
                           message(F, clear_all),
                           end_group := @on),
@@ -262,20 +292,46 @@ create_menu(F) :->
                 menu_item('New (error, last)',
                           message(F, new, prolog(error(_,_)), last)),
                 menu_item('New (general, last)',
-                          message(F, new, @default, last))
-              ]),
-    send_list(Debug, append,
-              [ menu_item(debug_mode,
+                          message(F, new, @default, last),
+                          end_group := @on),
+                menu_item(debug_mode,
                           message(F, debug_mode, @on)),
                 menu_item(nodebug_mode,
                           message(F, debug_mode, @off))
               ]).
 
+%       A pane reports on the bar of the window it is in, which grows one
+%       the first time anything asks.
+
+report(F, Kind:name, Fmt:[char_array], Args:any ...) :->
+    "Report on the bar of the window I am in"::
+    (   get(F, frame, Fr),
+        Fr \== @nil,
+        send(Fr, has_get_method, ensure_status_dialog)
+    ->  ignore(get(Fr, ensure_status_dialog, _))
+    ;   true
+    ),
+    Msg =.. [report, Kind, Fmt|Args],
+    send_super(F, Msg).
+
+%       There is one exception editor and the hook refreshes it by name,
+%       so it is not made afresh like the tools that come in numbers.
+
+open(F, _Pos:[point], _Display:[display]) :->
+    "Show me in a window of the IDE"::
+    use_module(user:library(swi_ide), []),
+    (   get(F, pane_tab, _)
+    ->  send(@prolog_ide, expose_tool, F)
+    ;   send(@prolog_ide, place_tool, F, @default)
+    ).
+
+                 /*******************************
+                 *            MEMBERS           *
+                 *******************************/
 
 table(F, Table:tabular) :<-
     "Get the table"::
-    get(F, member, main, W),
-    get(W, member, prolog_exception_table, Table).
+    get(F, member, prolog_exception_table, Table).
 
 new(_F, Term:[prolog], Where0:[{first,last}]) :->
     "Define new exception"::

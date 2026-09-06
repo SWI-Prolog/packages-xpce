@@ -39,11 +39,11 @@
 /** <module> An IDE tool as a pane
 
 The thread monitor, the source navigator, the debug monitor, the debugger
-status, the cross-referencer, the profiler and the tools of the XPCE
-manual used to be windows of their own, each holding its windows, a menu
-bar and a reporter in a frame.  They are panes now, so they can sit in a
-tab of any window of the IDE beside a terminal, an editor or another
-tool.
+status, the cross-referencer, the profiler, the exception editor and the
+tools of the XPCE manual used to be windows of their own, each holding
+its windows, a menu bar and a reporter in a frame.  They are panes now,
+so they can sit in a tab of any window of the IDE beside a terminal, an
+editor or another tool.
 
 These check that a tool goes where it should, that there is only ever
 one, that its windows are tiled inside it and that what it has to say
@@ -68,6 +68,7 @@ Run with:
 :- use_module(library(pce_xref), []).
 :- use_module(library(pce_manual), []).
 :- use_module(library(swi/pce_profile), []).
+:- use_module(library(trace/exceptions), []).
 :- use_module(library(apply), [maplist/3]).
 :- use_module(library(prolog_debug), [spy/1, nospy/1]).
 :- use_module(library(debug), [debug/1, debug/3, nodebug/1]).
@@ -81,6 +82,7 @@ test_tool_panes :-
                 debug_status_pane,
                 xref_pane,
                 profiler_pane,
+                exception_editor_pane,
                 manual_tool_panes
               ]).
 
@@ -1424,3 +1426,110 @@ test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :
     get(SD, class_name, Class).
 
 :- end_tests(profiler_pane).
+
+
+                 /*******************************
+                 *      THE EXCEPTION EDITOR    *
+                 *******************************/
+
+/* The exception editor says which exceptions stop the debugger.  There
+is one of it, @prolog_exception_window: the hook that records an
+exception refreshes it by that name, so it is not made afresh the way the
+profiler is.
+*/
+
+editor(W) :-
+    send(@prolog_ide, open_exceptions),
+    W = @prolog_exception_window.
+
+:- begin_tests(exception_editor_pane).
+
+test(it_opens_in_a_window_of_the_ide, Classes == [prolog_trace_exception]) :-
+    no_frames,
+    editor(W),
+    get(W, frame, Frame),
+    send(Frame, instance_of, pane_frame),
+    classes(Frame, Classes).
+
+test(there_is_one_of_it, true(Again == W)) :-
+    editor(W),
+    editor(Again).
+
+test(the_tab_is_named_after_it, true(Label == 'SWI-Prolog -- Exceptions')) :-
+    no_frames,
+    editor(W),
+    get(W, frame, Frame),
+    send(Frame, current_pane, W),
+    get(Frame, label, Label).
+
+test(its_menu_reaches_the_bar_of_the_window_it_is_in,
+     Items == [clear_all,
+               'New (error, first)', 'New (general, first)',
+               'New (error, last)', 'New (general, last)',
+               debug_mode, nodebug_mode]) :-
+    no_frames,
+    editor(W),
+    get(W, frame, Frame),
+    send(Frame, current_pane, W),
+    menus(Frame, Menus),
+    memberchk(exceptions, Menus),
+    get(Frame, menu_bar, MB),
+    get(MB, member, exceptions, Popup),
+    get(Popup, members, Chain),
+    chain_list(Chain, Members),
+    findall(V, (member(MI, Members), get(MI, value, V)), Items).
+
+%       The table it shows is the pane's own content now, not a window
+%       inside a frame.
+
+test(what_it_shows_is_a_table_of_its_own) :-
+    editor(W),
+    get(W, table, Table),
+    send(Table, instance_of, tabular),
+    get(Table, device, W).
+
+test(and_a_new_exception_reaches_it) :-
+    editor(W),
+    setup_call_cleanup(
+        send(W, clear_all),
+        ( send(W, new, prolog(error(type_error(_, _), _))),
+          get(W, table, Table),
+          get(Table?graphicals, size, Rows),
+          Rows > 0
+        ),
+        send(W, clear_all)).
+
+%       The columns of that table are rubber, so left to itself it asks
+%       for the width its widest exception term would like -- about 1900
+%       pixels.  A frame of its own remembered a size and hid that; a pane
+%       hands its wish to the window it is docked in, which would open
+%       that wide.
+
+test(it_asks_for_a_width_a_window_can_live_with, true(Sane == true)) :-
+    new(W, prolog_trace_exception),
+    get(W, class_variable_value, size, size(Wanted, _)),
+    setup_call_cleanup(
+        send(W, new, prolog(error(type_error(a_long_type_name_indeed,
+                                             a_long_culprit_as_well), _))),
+        ( send(W, refresh),
+          send(W, '_compute_desired_size'),
+          get(W, table, Table),
+          get(Table, area, area(_, _, Width, _)),
+          (   Width =< Wanted
+          ->  Sane = true
+          ;   Sane = Width-Wanted
+          )
+        ),
+        send(W, clear_all)),
+    send(W, destroy).
+
+test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :-
+    no_frames,
+    editor(W),
+    get(W, frame, Frame),
+    \+ get(Frame, status_dialog, _),
+    send(W, report, status, 'saved'),
+    get(Frame, status_dialog, SD),
+    get(SD, class_name, Class).
+
+:- end_tests(exception_editor_pane).

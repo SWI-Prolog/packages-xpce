@@ -122,18 +122,13 @@ open_debug_status(IDE) :->
     "Open/show the status of the debugger"::
     send(IDE, show_tool, prolog_debug_status).
 
-open_exceptions(IDE, Gui:[bool]) :->
+open_exceptions(_IDE, Gui:[bool]) :->
     "Open/show exceptions"::
-    W = @prolog_exception_window,
-    (   object(W)
-    ->  send(W, expose)
-    ;   (   Gui == @on
-        ->  catch(tdebug, _, guitracer)
-        ;   true
-        ),
-        send(W, application, IDE),
-        send(W, open)
-    ).
+    (   Gui == @on
+    ->  catch(tdebug, _, guitracer)
+    ;   true
+    ),
+    send(@prolog_exception_window, open).
 
 open_navigator(IDE, Where:[directory|source_location]) :->
     "Open Source Navigator"::
