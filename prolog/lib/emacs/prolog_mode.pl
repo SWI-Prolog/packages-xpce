@@ -321,7 +321,10 @@ setup_auto_indent(E) :->
         ),
         send(E, indent_tabs, IndentTabs),
         send(E, body_indentation, Indent),
-        send(E, report, inform,
+        %  A remark, not something to acknowledge: `inform' with no bar
+        %  to say it on -- a view is made before the window it goes in --
+        %  becomes a message box the user has to click away.
+        send(E, report, status,
              'Detected: body_indentation=%s, indent_tabs=%s',
              Indent, IndentTabs).
 
