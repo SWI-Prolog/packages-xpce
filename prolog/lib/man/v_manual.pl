@@ -37,6 +37,7 @@
 
 :- use_module(library(pce)).
 :- use_module(library(persistent_frame)).
+:- use_module(library(pane_frame)).
 :- use_module(library(pce_help_file)).
 :- autoload(library(man/classification), [scope/2]).
 :- autoload(library(apply), [maplist/2]).
@@ -760,12 +761,7 @@ pane_label(F, Label:name) :<-
 
 report(F, Kind:name, Fmt:[char_array], Args:any ...) :->
     "Report on the bar of the window I am in"::
-    (   get(F, frame, Fr),
-        Fr \== @nil,
-        send(Fr, has_get_method, ensure_status_dialog)
-    ->  ignore(get(Fr, ensure_status_dialog, _))
-    ;   true
-    ),
+    pane_status_bar(F),
     Msg =.. [report, Kind, Fmt|Args],
     send_super(F, Msg).
 
@@ -819,18 +815,10 @@ label(F, Label:name) :<-
 %       to create it inside.  A method of another shape here is not an
 %       override but a clash, and the send fails.
 
-open(F, _Pos:[point], _Display:[display]) :->
-    "Show me in a window of the IDE"::
-    show_tool_pane(F).
-
 open_centered(F, _Center:[point|frame], _Display:[display],
                  _Grab:[bool]) :->
     "Show me in a window of the IDE"::
-    show_tool_pane(F).
-
-expose(F) :->
-    "Bring the window I am in up, with me in view"::
-    show_tool_pane(F).
+    send(F, open).
 
 keyboard_focus(F, Focus:graphical*) :->
     "Type in one of my windows"::
@@ -856,20 +844,6 @@ can_resize(_F, _Resize:bool) :->
 wait(_F) :->
     "Nothing to wait for: a pane is not a window of the window system"::
     true.
-
-%!  show_tool_pane(+Pane) is det.
-%
-%   Put Pane in a window of the IDE, or bring the one it is in up.  The
-%   IDE is asked for at need: the manual is XPCE's own and does not load
-%   the Prolog IDE to be able to run.
-
-show_tool_pane(F) :-
-    use_module(user:library(swi_ide), []),
-    (   get(F, pane_tab, _)             % a pane of a window already.  Not
-    ->  send(@prolog_ide, expose_tool, F)  % <-frame: a window that is in
-    ;   send(@prolog_ide, place_tool, F, @default)   % none is given one
-    ).
-
 
 user_scope(_F, _Scope:chain) :->
     "Generic operation: fail"::

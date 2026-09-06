@@ -305,25 +305,16 @@ fill_menu_bar(F, MD:tool_dialog) :->
 
 report(F, Kind:name, Fmt:[char_array], Args:any ...) :->
     "Report on the bar of the window I am in"::
-    (   get(F, frame, Fr),
-        Fr \== @nil,
-        send(Fr, has_get_method, ensure_status_dialog)
-    ->  ignore(get(Fr, ensure_status_dialog, _))
-    ;   true
-    ),
+    pane_status_bar(F),
     Msg =.. [report, Kind, Fmt|Args],
     send_super(F, Msg).
 
-%       There is one exception editor and the hook refreshes it by name,
-%       so it is not made afresh like the tools that come in numbers.
+%       I am a dialog that is a pane, not a `tool_pane', so ->open is
+%       mine to answer; what it does is class tool_pane's ->open as well.
 
-open(F, _Pos:[point], _Display:[display]) :->
+open(F, _:[point], _:[display]) :->
     "Show me in a window of the IDE"::
-    use_module(user:library(swi_ide), []),
-    (   get(F, pane_tab, _)
-    ->  send(@prolog_ide, expose_tool, F)
-    ;   send(@prolog_ide, place_tool, F, @default)
-    ).
+    show_pane(F).
 
                  /*******************************
                  *            MEMBERS           *

@@ -56,6 +56,7 @@
 :- use_module(library(pce_report)).
 :- use_module(library(pce_util)).
 :- use_module(library(persistent_frame)).
+:- use_module(library(pane_frame)).
 :- use_module(library(debug)).
 :- if(exists_source(library(threadutil))).
 :- use_module(library(threadutil)).
@@ -550,22 +551,9 @@ member(F, Name:name, Window:window) :<-
 
 report(F, Kind:name, Fmt:[char_array], Args:any ...) :->
     "Report on the bar of the window I am in"::
-    (   get(F, frame, Fr),
-        Fr \== @nil,
-        send(Fr, has_get_method, ensure_status_dialog)
-    ->  ignore(get(Fr, ensure_status_dialog, _))
-    ;   true
-    ),
+    pane_status_bar(F),
     Msg =.. [report, Kind, Fmt|Args],
     send_super(F, Msg).
-
-open(F, _Pos:[point], _Display:[display]) :->
-    "Show me in a window of the IDE"::
-    use_module(user:library(swi_ide), []),
-    (   get(F, pane_tab, _)
-    ->  send(@prolog_ide, expose_tool, F)
-    ;   send(@prolog_ide, place_tool, F, @default)
-    ).
 
 %       Closing my tab while the tracer is waiting for an answer would
 %       leave the thread waiting for ever, so it asks what to do instead

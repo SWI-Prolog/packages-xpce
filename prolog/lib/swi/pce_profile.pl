@@ -154,26 +154,9 @@ fill_menu_bar(F, MD:tool_dialog) :->
 
 report(F, Kind:name, Fmt:[char_array], Args:any ...) :->
     "Report on the bar of the window I am in"::
-    (   get(F, frame, Fr),
-        Fr \== @nil,
-        send(Fr, has_get_method, ensure_status_dialog)
-    ->  ignore(get(Fr, ensure_status_dialog, _))
-    ;   true
-    ),
+    pane_status_bar(F),
     Msg =.. [report, Kind, Fmt|Args],
     send_super(F, Msg).
-
-%       Every profile opens a pane of its own, as it opened a frame of its
-%       own before.  The IDE is asked for at need: the profiler does not
-%       load it to be able to run.
-
-open(F, _Pos:[point], _Display:[display]) :->
-    "Show me in a window of the IDE"::
-    use_module(user:library(swi_ide), []),
-    (   get(F, pane_tab, _)
-    ->  send(@prolog_ide, expose_tool, F)
-    ;   send(@prolog_ide, place_tool, F, @default)
-    ).
 
 
 load_profile(F, ProfData0:[prolog]) :->

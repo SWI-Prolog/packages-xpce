@@ -204,12 +204,7 @@ fill_menu_bar(F, MD:tool_dialog) :->
 
 report(F, Kind:name, Fmt:[char_array], Args:any ...) :->
     "Report on the bar of the window I am in"::
-    (   get(F, frame, Fr),
-        Fr \== @nil,
-        send(Fr, has_get_method, ensure_status_dialog)
-    ->  ignore(get(Fr, ensure_status_dialog, _))
-    ;   true
-    ),
+    pane_status_bar(F),
     Msg =.. [report, Kind, Fmt|Args],
     send_super(F, Msg).
 

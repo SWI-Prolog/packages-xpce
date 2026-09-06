@@ -136,12 +136,7 @@ pane_label(_D, Label:name) :<-
 
 report(D, Kind:name, Fmt:[char_array], Args:any ...) :->
     "Report on the bar of the window I am in"::
-    (   get(D, frame, F),
-        F \== @nil,
-        send(F, has_get_method, ensure_status_dialog)
-    ->  ignore(get(F, ensure_status_dialog, _))
-    ;   true
-    ),
+    pane_status_bar(D),
     Msg =.. [report, Kind, Fmt|Args],
     send_super(D, Msg).
 

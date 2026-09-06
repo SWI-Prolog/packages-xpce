@@ -34,7 +34,9 @@
 
 
 :- module(pane_frame,
-          [ pane_frame_closed_tab/1     % +Frame
+          [ pane_frame_closed_tab/1,    % +Frame
+            show_pane/1,                % +Pane
+            pane_status_bar/1           % +Pane
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_util), [chain_list/2]).
@@ -141,6 +143,35 @@ initialise(F, App:application=[application],
     ;   send(F, append_pane, Pane, @default, @on)
     ),
     ignore(send(F, pane_changed)).      % nothing has moved the focus yet
+
+%!  show_pane(+Pane) is det.
+%
+%   Put Pane in a window of the IDE, or bring the window it is in up with
+%   Pane in view.  This is what ->open means for a pane: it has no window
+%   of its own to open.  The IDE is asked for at need, so that a tool of
+%   XPCE's own does not load the Prolog IDE to be able to run.
+
+show_pane(Pane) :-
+    use_module(user:library(swi_ide), []),
+    (   get(Pane, pane_tab, _)          % a pane of a window already.  Not
+    ->  send(@prolog_ide, expose_tool, Pane)  % <-frame: a window that is
+    ;   send(@prolog_ide, place_tool, Pane, @default)  % in none gets one
+    ).
+
+%!  pane_status_bar(+Pane) is det.
+%
+%   Make sure the window Pane is in has a bar to report on.  A pane that
+%   has something to say calls this first: a window grows its status bar
+%   the first time anything wants one -- see <-ensure_status_dialog --
+%   and a pane that is in no window of the IDE has nowhere to grow one.
+
+pane_status_bar(Pane) :-
+    (   get(Pane, frame, Frame),
+        Frame \== @nil,
+        send(Frame, has_get_method, ensure_status_dialog)
+    ->  ignore(get(Frame, ensure_status_dialog, _))
+    ;   true
+    ).
 
 %!  name_frame(+Frame) is det.
 %
@@ -1439,6 +1470,20 @@ place_grip(TP) :->
     ->  true
     ;   send(W, display_fixed, Handle)
     ).
+
+%       A tool has no window of its own, so ->open means "put me in one
+%       and bring it up".  It keeps the signature class window gives it:
+%       the window system sends ->open to a window with a position and a
+%       display, and a method of another shape would be a clash rather
+%       than an override -- see `man_frame ->open_centered'.
+
+open(TP, _:[point], _:[display]) :->
+    "Show me in a window of the IDE"::
+    show_pane(TP).
+
+expose(TP) :->
+    "Bring the window I am in up, with me in view"::
+    show_pane(TP).
 
 corner_window(TP, W:window) :<-
     "The window of mine at my top right"::
