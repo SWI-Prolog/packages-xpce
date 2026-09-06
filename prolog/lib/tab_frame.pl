@@ -351,12 +351,19 @@ layout_natural(TF) :->
     ;   true
     ).
 
+%       A tab with less room than its windows want lays them out all the
+%       same: leaving them where they were puts them outside the window,
+%       where they are drawn over whatever is there and cannot be reached.
+%       `tile ->layout' keeps every window inside the box it is given and
+%       no smaller than MIN_TILE_SIZE while there is room for that.
+
 layout(TF) :->
     "Distribute my area over my windows"::
-    get(TF, content_size, size(W, H)),
-    (   W > 0, H > 0,
-        get(TF, root_tile, Tile)
-    ->  send(Tile, layout, 0, 0, W, H),
+    get(TF, content_size, size(W0, H0)),
+    (   get(TF, root_tile, Tile)
+    ->  W is max(W0, 0),
+        H is max(H0, 0),
+        send(Tile, layout, 0, 0, W, H),
         send(TF, update_separators)
     ;   true
     ).

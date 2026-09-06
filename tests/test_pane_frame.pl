@@ -69,7 +69,8 @@ test_pane_frame :-
                 pane_frame_move,
                 pane_frame_opacity,
                 pane_frame_panes,
-                pane_frame_plain_pane
+                pane_frame_plain_pane,
+                pane_frame_minimum
               ]).
 
                  /*******************************
@@ -946,3 +947,116 @@ test(a_frame_without_an_application_at_all, Label == 'SWI-Prolog -- Bare') :-
     get(F, label, Label).
 
 :- end_tests(pane_frame_plain_pane).
+
+
+                 /*******************************
+                 *           MINIMUM            *
+                 *******************************/
+
+/* How small a pane may be made.
+
+A window made full screen and shrunk back used to leave the pane at the
+bottom below the edge of the window, where it could not be reached: a tab
+with less room than its windows want left them where they were, and the
+share-out of what there was drove a small pane to nothing.  A pane is
+kept visible (`MIN_TILE_SIZE' of tile.c) while there is room for that,
+and inside the window when there is not.
+*/
+
+:- begin_tests(pane_frame_minimum).
+
+test(a_small_pane_is_not_shrunk_away, true(Kept == [20,20,20])) :-
+    frame(F, _App, One, @off),
+    pane(two, beta, Two),
+    send(F, split, Two, One, below),
+    resize(F, 600, 800),
+    small_pane(Two, 40),                        % dragged down to 40 pixels
+    findall(H,
+            ( member(Height, [400, 200, 120]),
+              resize(F, 600, Height),
+              pane_area(Two, area(_,_,_,H))
+            ),
+            Kept),
+    send(F, destroy).
+
+test(and_the_one_beside_it_gets_what_is_left) :-
+    frame(F, _App, One, @off),
+    pane(two, beta, Two),
+    send(F, split, Two, One, below),
+    resize(F, 600, 800),
+    small_pane(Two, 40),
+    resize(F, 600, 800),
+    pane_area(One, area(_,_,_,H0)),
+    resize(F, 600, 200),
+    pane_area(One, area(_,_,_,H)),
+    H < H0,                                     % it gives what the other
+    send(F, destroy).                           % may not
+
+%       And when even that will not fit, a pane is squeezed to nothing
+%       rather than left where it was, which is over whatever the window
+%       is drawn beside.  A pane with nothing to show is not "outside":
+%       it draws nowhere.
+
+test(a_pane_that_shows_anything_is_inside_the_window,
+     true(Outside == [])) :-
+    frame(F, _App, One, @off),
+    pane(two, beta, Two),
+    send(F, split, Two, One, below),
+    findall(Name-Area,
+            ( member(Height, [800, 400, 200, 120, 60, 40, 20, 10, 800]),
+              resize(F, 600, Height),
+              member(P, [One, Two]),
+              pane_area(P, area(_, Y, _, H)),   % the pattern is xpce's to
+              H > 0,                            % fill in, not =/2's
+              Y+H > Height,
+              get(P, name, Name),
+              Area = Y-H
+            ),
+            Outside),
+    send(F, destroy).
+
+test(and_comes_back_when_there_is_room_again) :-
+    frame(F, _App, One, @off),
+    pane(two, beta, Two),
+    send(F, split, Two, One, below),
+    resize(F, 600, 800),
+    pane_area(Two, area(_,_,_,H0)),
+    resize(F, 600, 40),                         % too small for both
+    resize(F, 600, 800),
+    pane_area(Two, area(_,_,_,H)),
+    H =:= H0,                                   % as it was
+    send(F, destroy).
+
+:- end_tests(pane_frame_minimum).
+
+%!  resize(+Frame, +W, +H) is det.
+%
+%   Lay Frame out at that size.  ->size asks the window system, which has
+%   nothing to say headless; the area is what ->resize works from.
+
+resize(F, W, H) :-
+    get(F, area, Area),
+    send(Area, set, @default, @default, W, H),
+    send(F, resize).
+
+%!  small_pane(+Pane, +Height) is det.
+%
+%   Make Pane as high as dragging the separator between it and the one
+%   above would.
+
+small_pane(P, Height) :-
+    (   get(P, decoration, D), D \== @nil
+    ->  Placed = D
+    ;   Placed = P
+    ),
+    get(Placed, tile, Tile),
+    send(Tile, height, Height).
+
+%!  pane_area(+Pane, -Area) is det.
+
+pane_area(P, Area) :-
+    (   get(P, decoration, D), D \== @nil
+    ->  Placed = D
+    ;   Placed = P
+    ),
+    get(Placed, area, Area).
