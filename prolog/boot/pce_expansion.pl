@@ -546,6 +546,30 @@ meta(bagof(-, :, -)).
 meta(setof(-, :, -)).
 meta(^(-,:)).
 
+%!  prolog:qlf_dependency(+File, -TemplateFile) is nondet.
+%
+%   A template's methods are copied into  every   class  that  uses one,
+%   when that class is compiled. A  .qlf   file  holding such a class
+%   therefore holds a copy of  the  template   as  it  was, and must be
+%   recompiled when the file the  template   comes  from changes. Tell
+%   the compiler so; see '$qlf_add_dependencies'/1.
+%
+%   The clauses that say which class uses which template are compiled
+%   into the file that uses it, which is how the ones of File are told
+%   from the rest.
+
+:- multifile
+    prolog:qlf_dependency/2.
+
+prolog:qlf_dependency(File, TemplateFile) :-
+    clause(pce_principal:pce_uses_template(_Class, Template), true, Ref),
+    clause_property(Ref, file(File)),
+    template_file(Template, TemplateFile).
+
+template_file(Template, File) :-
+    clause(pce_principal:pce_class(Template, _, template, _, _, _), true, Ref),
+    clause_property(Ref, file(File)).
+
 %!  use_template_class_attributes(+Template)
 %
 %   Insert variables, class-variables and directives as if they appeared
