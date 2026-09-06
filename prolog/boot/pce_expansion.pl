@@ -48,6 +48,7 @@
 :- use_module(library(lists),
               [ append/3
               , flatten/2
+              , memberchk/2
               , reverse/2
               ]).
 :- use_module(library(apply),
@@ -563,12 +564,32 @@ meta(^(-,:)).
 
 prolog:qlf_dependency(File, TemplateFile) :-
     clause(pce_principal:pce_uses_template(_Class, Template), true, Ref),
-    clause_property(Ref, file(File)),
+    clause_property(Ref, file(ClassFile)),
+    compiled_into(ClassFile, File),
     template_file(Template, TemplateFile).
 
 template_file(Template, File) :-
     clause(pce_principal:pce_class(Template, _, template, _, _, _), true, Ref),
     clause_property(Ref, file(File)).
+
+%!  compiled_into(+ClassFile, +File) is semidet.
+%
+%   True when the classes of ClassFile went into the .qlf file written
+%   for File: it is File, or File loaded it.  An _aggregate_ .qlf file --
+%   library(emacs/emacs) is one -- holds the files it loads.
+
+compiled_into(File, File) :-
+    !.
+compiled_into(ClassFile, File) :-
+    compiled_into(ClassFile, File, [ClassFile]).
+
+compiled_into(ClassFile, File, Seen) :-
+    source_file_property(ClassFile, load_context(_, Parent:_, _)),
+    \+ memberchk(Parent, Seen),
+    (   Parent == File
+    ->  true
+    ;   compiled_into(Parent, File, [Parent|Seen])
+    ).
 
 %!  use_template_class_attributes(+Template)
 %

@@ -93,6 +93,20 @@ test(the_tools_of_the_ide_depend_on_the_pane_template,
     '$qlf_sources'(Qlf, Sources),
     memberchk(dependency(PaneFrame, _), Sources).
 
+%       An _aggregate_ .qlf file holds the files it loads -- the one of
+%       library(emacs/emacs) holds the editor, which uses the pane
+%       template -- so the file the template comes from is a dependency
+%       of the file that was compiled, not of the one holding the class.
+
+test(and_so_does_a_file_that_only_loads_one,
+     [ setup(compiled_aggregate(Pl, Qlf, Part)),
+       cleanup(remove_files([Pl, Qlf, Part]))
+     ]) :-
+    absolute_file_name(library(pane_frame), PaneFrame,
+                       [ file_type(prolog), access(read) ]),
+    '$qlf_sources'(Qlf, Sources),
+    memberchk(dependency(PaneFrame, _), Sources).
+
 :- end_tests(class_template).
 
 %!  compiled_user(-PlFile, -QlfFile, -TemplateFile) is det.
@@ -122,10 +136,27 @@ compiled_pane(Pl, Qlf) :-
     tmp_file_name('test_template_pane.pl', Pl),
     file_name_extension(Base, pl, Pl),
     file_name_extension(Base, qlf, Qlf),
-    write_file(Pl, pane_source),
+    write_file(Pl, pane_source(test_template_pane)),
     remove_files([Qlf]),
     qcompile(Pl),
     unload_file(Pl).
+
+%!  compiled_aggregate(-PlFile, -QlfFile, -PartFile) is det.
+%
+%   A file that loads another which uses the pane template, compiled to
+%   a .qlf file.  This is the shape of an aggregate .qlf file.
+
+compiled_aggregate(Pl, Qlf, Part) :-
+    tmp_file_name('test_template_part.pl', Part),
+    tmp_file_name('test_template_aggregate.pl', Pl),
+    file_name_extension(Base, pl, Pl),
+    file_name_extension(Base, qlf, Qlf),
+    write_file(Part, pane_source(test_template_part)),
+    write_file(Pl, aggregate_source(Part)),
+    remove_files([Qlf]),
+    qcompile(Pl),
+    unload_file(Pl),
+    unload_file(Part).
 
 tmp_file_name(Base, Path) :-
     current_prolog_flag(tmp_dir, Tmp),
@@ -153,14 +184,17 @@ write_content(user_source(Template), Out) :-
            [:- pce_begin_class(test_template_user, object, "Uses one")]),
     format(Out, '~q.~n', [:- use_class_template(test_template_source)]),
     format(Out, '~q.~n', [:- pce_end_class]).
-write_content(pane_source, Out) :-
-    format(Out, '~q.~n', [:- module(test_template_pane, [])]),
+write_content(pane_source(Class), Out) :-
     format(Out, '~q.~n', [:- use_module(library(pce))]),
     format(Out, '~q.~n', [:- use_module(library(pane_frame))]),
     format(Out, '~q.~n',
-           [:- pce_begin_class(test_template_pane, window, "A pane")]),
+           [:- pce_begin_class(Class, window, "A pane")]),
     format(Out, '~q.~n', [:- use_class_template(pane)]),
     format(Out, '~q.~n', [:- pce_end_class]).
+write_content(aggregate_source(Part), Out) :-
+    format(Out, '~q.~n', [:- module(test_template_aggregate, [])]),
+    format(Out, '~q.~n', [:- use_module(library(pce))]),
+    format(Out, '~q.~n', [:- consult(Part)]).       % as emacs.pl loads its parts
 
 %!  touch(+File, +Reference) is det.
 %
