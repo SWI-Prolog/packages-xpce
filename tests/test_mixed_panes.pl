@@ -144,6 +144,29 @@ test(a_pcemacs_window_takes_a_terminal, Classes == [emacs_view, epilog_window]) 
     send(@prolog_ide, new_terminal, F),
     classes(F, Classes).
 
+%       Both panes are dragged by a grip of their own.  An editor
+%       displays one wherever it is, and inside a tool it hides it (see
+%       `split_handle ->update_displayed'); as a pane of a window it is
+%       the thing that moves, so it shows it.
+
+test(both_panes_show_the_grip_they_are_dragged_by,
+     true(Shown == [@on, @on])) :-
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F),
+    send(F, resize),
+    editor(F, V),
+    terminal(F, T),
+    findall(Displayed,
+            ( member(W, [V, T]),
+              get(W, fixed_graphicals, Graphicals),
+              get(Graphicals, find,
+                  message(@arg1, instance_of, split_handle), Handle),
+              send(Handle, compute),
+              get(Handle, displayed, Displayed)
+            ),
+            Shown).
+
 test(the_mode_menus_come_and_go_with_the_editor) :-
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, F),

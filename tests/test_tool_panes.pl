@@ -1568,6 +1568,14 @@ debugger(F) :-
     new(F, prolog_debugger(0, main)),
     send(F, open).
 
+%!  own_grip(+Window, -Handle) is semidet.
+%
+%   The grip Window displays on itself, if it has one.
+
+own_grip(W, Handle) :-
+    get(W, fixed_graphicals, Graphicals),
+    get(Graphicals, find, message(@arg1, instance_of, split_handle), Handle).
+
 :- begin_tests(debugger_pane).
 
 test(it_opens_in_a_window_of_the_ide, Classes == [prolog_debugger]) :-
@@ -1705,26 +1713,36 @@ test(what_it_has_to_say_grows_a_status_bar, true(Class == pane_status_dialog)) :
     get(Frame, status_dialog, SD),
     get(SD, class_name, Class).
 
-%       The grip is the handle the window is dragged by.  It goes in the
-%       pane's top right corner, which here is a strip of buttons with no
-%       room to spare, so the debugger sends it to the call stack beside
-%       it -- see `tool_pane <-grip_window'.
+%       The grip is the handle the whole debugger is dragged by, and it
+%       goes on the window in its top right corner: the dialog along the
+%       top.
 
-test(the_grip_is_on_the_call_stack, true(Name == stack)) :-
-    no_frames,
-    debugger(F),
-    get(F, grip_window, W),
-    get(W, name, Name).
-
-test(and_that_is_the_window_it_is_drawn_on, true(Name == stack)) :-
+test(the_grip_is_on_the_dialog_along_the_top, true(Name == buttons)) :-
     no_frames,
     debugger(F),
     get(F, frame, Frame),
     send(Frame, resize),
     send(F, place_grip),
     get(F, grip, Handle),
+    send(Handle, compute),
     get(Handle, device, Device),
-    get(Device, name, Name).
+    get(Device, name, Name),
+    get(Handle, displayed, @on).
+
+%       The source carries a grip of its own -- every emacs_view does,
+%       and that is how PceEmacs moves an editor about.  Here it is not a
+%       pane of the window but a window of the debugger, so dragging it
+%       would take the source out of the tool.  It hides itself.
+
+test(the_source_hides_the_grip_it_carries_itself, true(Shown == @off)) :-
+    no_frames,
+    debugger(F),
+    get(F, frame, Frame),
+    send(Frame, resize),
+    get(F, source, Src),
+    own_grip(Src, Handle),
+    send(Handle, compute),
+    get(Handle, displayed, Shown).
 
 %       Typing in the debugger is typing in the source: the keys it does
 %       not use itself are the tracer's actions (see ->post_event above).

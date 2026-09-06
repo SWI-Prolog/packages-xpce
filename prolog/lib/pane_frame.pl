@@ -1431,23 +1431,14 @@ resize(TP, Tab:[tab]) :->
 %       ->compute'.
 
 place_grip(TP) :->
-    "Put the grip on the window that carries it"::
+    "Put the grip on the window in my top right corner"::
     get(TP, grip, Handle),
     Handle \== @nil,
-    get(TP, grip_window, W),
+    get(TP, corner_window, W),
     (   get(Handle, device, W)
     ->  true
     ;   send(W, display_fixed, Handle)
     ).
-
-%       Which of my windows the grip is drawn on.  The one in my corner
-%       unless a tool says otherwise: the corner may be a row of buttons
-%       or a strip too thin to spare the room, and the tool knows which
-%       of its windows can.
-
-grip_window(TP, W:window) :<-
-    "The window my grip is drawn on"::
-    get(TP, corner_window, W).
 
 corner_window(TP, W:window) :<-
     "The window of mine at my top right"::

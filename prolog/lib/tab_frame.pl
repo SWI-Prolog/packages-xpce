@@ -932,10 +932,31 @@ compute(H) :->
     (   get(H, slot, placing, @on)
     ->  true
     ;   send(H, slot, placing, @on),
+        ignore(send(H, update_displayed)),
         ignore(send(H, place_in_corner)),
         send(H, slot, placing, @off)
     ),
     send_super(H, compute).
+
+%       A window that displays a grip may end up inside a tool rather
+%       than as a pane of its own: the source of the debugger is an
+%       `emacs_view', and every emacs_view displays one.  There the tool
+%       is the pane, and dragging one of its windows out from under it is
+%       not on offer -- the tool carries a grip of its own.  So a grip
+%       shows itself only on a window its frame calls a pane, and a frame
+%       that knows nothing of panes leaves every grip alone.
+
+update_displayed(H) :->
+    "Hide myself on a window that is not a pane in its own right"::
+    get(H, pane, Pane),
+    (   get(Pane, frame, Frame),
+        Frame \== @nil,
+        send(Frame, has_get_method, panes),
+        get(Frame, panes, Panes),
+        \+ send(Panes, member, Pane)
+    ->  send(H, displayed, @off)
+    ;   send(H, displayed, @on)
+    ).
 
 place_in_corner(H) :->
     "Move myself to the corner of the window I am on"::
