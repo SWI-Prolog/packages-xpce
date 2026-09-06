@@ -180,10 +180,25 @@ buffers(Emacs, Buffers:chain) :<-
     get(Emacs?buffer_list?members, map, @arg1?object, Buffers).
 
 
-open_file(_Emacs, File:file, How:[{here,tab,split,window}]) :->
+%       Where a source the user asks to see is opened.  A caller that
+%       says nothing gets the setting a window of the IDE offers on its
+%       Settings menu -- see `prolog_ide <-source_placement'; one that
+%       says where, as the popup offering "Edit in new window" does, is
+%       obeyed.
+
+source_placement(_Emacs, How:[{here,tab,split,window}],
+                 Where:{here,tab,split,window}) :<-
+    "Where to open a source; How overrules the setting"::
+    (   How \== @default
+    ->  Where = How
+    ;   get(@prolog_ide, source_placement, Where)
+    ).
+
+open_file(Emacs, File:file, How:[{here,tab,split,window}]) :->
     "Open a file"::
+    get(Emacs, source_placement, How, Where),
     new(B, emacs_buffer(File)),
-    send(B, open, How).
+    send(B, open, Where).
 
 
 find_file(Emacs, Dir:[directory]) :->
@@ -202,8 +217,9 @@ goto_source_location(Emacs,
     ),
     get(Location, file_name, File),
     send(Emacs, ensure_source_file, File),
+    get(Emacs, source_placement, Where, Placement),
     new(B, emacs_buffer(File)),
-    get(B, open, Where, View),
+    get(B, open, Placement, View),
     send(B, check_modified_file),
     get(View, editor, Editor),
     get(Editor, mode, Mode),

@@ -125,24 +125,21 @@ emacs(File:Line:LinePos) :-
     atom(File),
     !,
     start_emacs,
-    source_placement(Where),
     LinePos0 is max(0, LinePos-1),
     new(Loc, source_location(File, Line, LinePos0)),
-    in_pce_thread(send(@emacs, goto_source_location, Loc, Where)).
+    in_pce_thread(send(@emacs, goto_source_location, Loc)).
 emacs(File:Line) :-
     integer(Line),
     atom(File),
     !,
     start_emacs,
-    source_placement(Where),
     in_pce_thread(send(@emacs, goto_source_location,
-                       source_location(File, Line), Where)).
+                       source_location(File, Line))).
 emacs(File) :-
     atom(File),
     !,
     start_emacs,
-    source_placement(Where),
-    in_pce_thread(send(@emacs, open_file, File, Where)).
+    in_pce_thread(send(@emacs, open_file, File)).
 emacs(File) :-
     domain_error(location, File).
 
@@ -150,12 +147,14 @@ emacs(File) :-
 %
 %   Where a source the user asks to see is opened: in a window of its
 %   own, in a tab or beside what is there.  This is the setting on the
-%   Settings menu of every window of the IDE, so that edit/1 puts a file
-%   where the user asked for new things to go.  Only after start_emacs:
-%   the IDE is loaded with PceEmacs.
+%   Settings menu of every window of the IDE.  `@emacs
+%   ->goto_source_location' and ->open_file ask it themselves; the
+%   scratch buffer opens through `emacs_buffer <-open', which means
+%   `here' when it is not told.  Only after start_emacs: the IDE is
+%   loaded with PceEmacs.
 
 source_placement(Where) :-
-    get(@prolog_ide, source_placement, Where).
+    get(@emacs, source_placement, @default, Where).
 
 
 %!  emacs_toplevel is det.

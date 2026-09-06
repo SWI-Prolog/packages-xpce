@@ -62,6 +62,7 @@ Run with:
 :- use_module(library(pce_util), [chain_list/2]).
 :- use_module(library(swi_ide), []).
 :- use_module(library(lists), [member/2, length/2]).
+:- use_module(library(filesex), [directory_file_path/3]).
 
 test_emacs_split :-
     run_tests([ emacs_menu,
@@ -523,7 +524,85 @@ test(and_one_asked_for_in_a_window_of_its_own_gets_one) :-
     get(View, frame, Other),
     Other \== F.
 
+%       A caller that says nothing about where -- edit/1 does not -- is
+%       given the setting; one that says where is obeyed, as the popup
+%       offering "Edit in new window" must be.
+
+test(a_caller_that_says_nothing_gets_the_setting,
+     true(Where == split)) :-
+    with_placement(split, get(@emacs, source_placement, @default, Where)).
+
+test(and_one_that_says_where_is_obeyed,
+     true(Where == here)) :-
+    with_placement(split, get(@emacs, source_placement, here, Where)).
+
+%       Which is what these two do with a source location: they take the
+%       setting when the caller leaves it open.
+
+test(a_source_location_opens_where_the_setting_says,
+     [ setup(source_of_our_own(File)),
+       cleanup(catch(delete_file(File), _, true))
+     ]) :-
+    emacs(_F, _V),
+    get(@emacs, current_frame, Frame),
+    tabs(Frame, Tabs0),
+    with_placement(tab,
+                   send(@emacs, goto_source_location,
+                        source_location(File, 1))),
+    tabs(Frame, Tabs),
+    Tabs =:= Tabs0+1.
+
+test(and_beside_what_is_there_when_that_is_the_setting,
+     [ setup(source_of_our_own(File)),
+       cleanup(catch(delete_file(File), _, true))
+     ]) :-
+    emacs(_F, _V),
+    get(@emacs, current_frame, Frame),
+    tabs(Frame, Tabs0),
+    views(Frame, Views0),
+    length(Views0, Panes0),
+    with_placement(split,
+                   send(@emacs, goto_source_location,
+                        source_location(File, 1))),
+    tabs(Frame, Tabs0),                 % beside what is there, not a tab
+    views(Frame, Views),
+    length(Views, Panes),
+    Panes =:= Panes0+1.
+
+test(and_a_file_opens_the_same_way,
+     [ setup(source_of_our_own(File)),
+       cleanup(catch(delete_file(File), _, true))
+     ]) :-
+    emacs(_F, _V),
+    get(@emacs, current_frame, Frame),
+    tabs(Frame, Tabs0),
+    with_placement(tab, send(@emacs, open_file, File)),
+    tabs(Frame, Tabs),
+    Tabs =:= Tabs0+1.
+
 :- end_tests(emacs_placement).
+
+%!  source_of_our_own(-File) is det.
+%
+%   A file of its own to open: opening the same one twice shows the
+%   view it is already in rather than making another.
+
+:- dynamic
+    source_count/1.
+
+source_of_our_own(File) :-
+    (   retract(source_count(N0))
+    ->  N is N0+1
+    ;   N = 1
+    ),
+    assertz(source_count(N)),
+    current_prolog_flag(tmp_dir, Tmp),
+    format(atom(Base), 'test_emacs_placement_~d.pl', [N]),
+    directory_file_path(Tmp, Base, File),
+    setup_call_cleanup(
+        open(File, write, Out),
+        format(Out, '% a source of our own~n', []),
+        close(Out)).
 
 %!  with_placement(+Placement, :Goal) is semidet.
 %

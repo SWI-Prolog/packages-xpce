@@ -451,6 +451,6 @@ arm(TF, Val:bool) :->
 
 edit(T) :->
     get(T, location, Loc),
-    send(@emacs, goto_source_location, Loc, tab).
+    send(@emacs, goto_source_location, Loc).
 
 :- pce_end_class(source_location_text).
