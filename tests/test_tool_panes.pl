@@ -1185,6 +1185,28 @@ test(and_through_it_whatever_the_tool_knows, true(M == @manual)) :-
     get(W, container, man_frame, T),
     get(T, manual, M).
 
+%       A window inside a tool asks the tool for what the tool answers --
+%       show this class, show its source, select the card for it.  They
+%       used to send those to themselves and let `window ->catch_all'
+%       hand them to <-frame; the frame is a window of the IDE now and
+%       knows none of them.
+
+test(a_window_of_a_tool_asks_the_tool_to_show_something) :-
+    no_frames,
+    open_manual_tool(class_hierarchy, Tool),
+    get(Tool, member, man_class_hierarchy_window, Window),
+    get(@pce, convert, pane_frame, class, Class),
+    send(Window, select_node, Class),
+    send(Window, open_node, Class).
+
+test(and_so_does_the_browser_of_a_summary, true(Asked == Tool)) :-
+    no_frames,
+    open_manual_tool(class_browser, Tool),
+    get(Tool, member, man_summary_browser, Browser),
+    get(Browser, select_message, Message),
+    get(Message, receiver, Receiver),   % ?(browser, container, man_frame)
+    get(Receiver, execute, Asked).
+
 test(the_tool_is_not_the_window_it_is_in) :-
     open_manual_tool(class_hierarchy, Tool),
     get(Tool, frame, Frame),
