@@ -40,6 +40,7 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(help_message)).
+:- use_module(library(pane_frame)).
 :- require([ is_stream/1,
 	     current_blob/2,
 	     member/2,
@@ -78,6 +79,10 @@ resource(not_pinned,    image, image('pin.png')).
 %       Send an ->open message to the XPCE object (default: =true=)
 %       * expose(+Boolean)
 %       Send an ->expose message to the XPCE object (default: =false)
+%       * label(+Atom)
+%       Name the tab the viewer sits in (default: =Term=)
+%       * comment(+Text)
+%       Say what is being shown on the status bar of the window
 %       * write_option(+Options)
 %       Options to pass to write_term/3.  Current defaults are:
 %           - quoted(true)
@@ -115,7 +120,8 @@ tv(Term,Opts) :-
     (option(clear(true),Opts)         -> send(V, clear)               ; true),
     (option(open(true),Opts)          -> send(V, open)                ; true),
     (option(expose(true),Opts)        -> send(V, expose)              ; true),
-    (option(comment(Comment),Opts)    -> send(V, label, Comment)      ; true),
+    (option(label(Label),Opts)        -> send(V, label, Label)        ; true),
+    (option(comment(Comment),Opts)    -> send(V, comment, Comment)    ; true),
     (option(source_object(Frag),Opts) -> send(V, source_object, Frag) ; true),
     get(V, text_buffer, TB),
     setup_call_cleanup(pce_open(TB, write, Fd),
@@ -217,16 +223,28 @@ print_clause_properties(Ref, Out) :-
                  *      CLASS TERM-VIEWER       *
                  *******************************/
 
-:- pce_begin_class(term_viewer, frame,
+/* The term viewer as a pane.
+
+It used to be a frame of its own, holding a dialog of controls above a
+view.  It is a `tool_pane' now -- see library(pane_frame) -- so it drops
+into a tab of the window the debugger is in, beside the bindings it is
+showing a value of.  Its tab says which value that is; the pin still
+decides whether the next one takes this pane over or opens one of its
+own.
+*/
+
+:- pce_begin_class(term_viewer, tool_pane,
                    "Pretty-print a Prolog term").
 
 variable(pinned, bool, get, "View is pinned").
+variable(tool_label, name*, get, "What my tab is called").
 
 initialise(TV) :->
-    send_super(TV, initialise),
+    send_super(TV, initialise, term),
     send(TV, slot, pinned, @off),
-    send(TV, append, new(TD, dialog)),
-    send(new(view), below, TD),
+    send(TV, append_window, new(TD, dialog)),
+    send(TV, append_window, new(V, view), TD, below),
+    send(V, name, view),
     send(TD, border, size(5,2)),
     send(TD, append, new(Pin, bitmap(image(resource(not_pinned))))),
     send(Pin, name, pin),
@@ -253,20 +271,31 @@ unlink(TV) :->
     retractall(term_viewer(TV)),
     send_super(TV, unlink).
 
+%       My windows used to be members of a frame, found by name.  They
+%       are windows of a tool now, and each is the only one of its class.
+
+dialog(TV, D:dialog) :<-
+    "The row of controls above the term"::
+    get(TV, window, dialog, D).
+
+view(TV, V:view) :<-
+    "The window the term is written in"::
+    get(TV, window, view, V).
+
 clear(TV) :->
-    get(TV, member, view, View),
+    get(TV, view, View),
     send(View, clear).
 
 text_buffer(TV, TB:text_buffer) :<-
-    get(TV, member, view, View),
+    get(TV, view, View),
     get(View, text_buffer, TB).
 
 caret(TV, Caret:int) :->
-    get(TV, member, view, View),
+    get(TV, view, View),
     send(View, caret, Caret).
 
 editable(TV, E:bool) :->
-    get(TV, member, view, View),
+    get(TV, view, View),
     send(View, editable, E).
 
 toggle_pinned(TV) :->
@@ -276,7 +305,7 @@ toggle_pinned(TV) :->
 
 pinned(TV, Pinned:bool) :->
     send(TV, slot, pinned, Pinned),
-    get(TV, member, dialog, D),
+    get(TV, dialog, D),
     get(D, member, pin, BM),
     (   Pinned == @off
     ->  Image = not_pinned
@@ -284,12 +313,51 @@ pinned(TV, Pinned:bool) :->
     ),
     send(BM, image, image(resource(Image))).
 
+                 /*******************************
+                 *             PANE             *
+                 *******************************/
+
+%       A tab is too narrow for what this window used to put on its
+%       title -- "Variable X of frame at level 3 running foo/2" -- so the
+%       caller gives a short name for the tab and the sentence goes on
+%       the status bar of the window; see `prolog_bindings_view
+%       ->details'.
+
+label(TV, Label:name) :->
+    "Name my tab"::
+    send(TV, slot, tool_label, Label),
+    (   get(TV, container, pane_frame, Frame)
+    ->  send(Frame, update_tab_label)
+    ;   true
+    ).
+
+pane_label(TV, Label:name) :<-
+    "What my tab is called"::
+    (   get(TV, tool_label, Label),
+        Label \== @nil
+    ->  true
+    ;   Label = 'Term'
+    ).
+
+comment(TV, Comment:char_array) :->
+    "Say what I am showing on the bar of the window I am in"::
+    send(TV, report, status, Comment).
+
+%       A pane reports on the bar of the window it is in, which grows one
+%       the first time anything asks.
+
+report(TV, Kind:name, Fmt:[char_array], Args:any ...) :->
+    "Report on the bar of the window I am in"::
+    pane_status_bar(TV),
+    Msg =.. [report, Kind, Fmt|Args],
+    send_super(TV, Msg).
+
 source_object(TV, Obj:object) :->
     send(TV, delete_hypers, source),
     new(_, hyper(TV, Obj, source, view)).
 
 update(TV) :->
-    get(TV, member, dialog, D),
+    get(TV, dialog, D),
     get(D, member, options, Menu),
     get(Menu, selection, Options),
     make_options([ portray,
@@ -322,7 +390,7 @@ make_options([H0|T0], Selection, [H|T]) :-
 
 show_options(V, Options:prolog) :->
     "Show current option values"::
-    get(V, member, dialog, D),
+    get(V, dialog, D),
     get(D, member, options, Menu),
     send(Menu, selected, max_depth, @off),
     get(D, member, max_depth, DepthItem),

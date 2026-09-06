@@ -1316,6 +1316,10 @@ details(B, Fragment:[prolog_frame_var_fragment], Action:[{view,copy}]) :->
         ),
         format(string(Label), '~w ~w of frame at level ~d running ~w',
                [ VarType, VarName, Level, PredName ]),
+        (   VarType == ''
+        ->  format(string(TabLabel), '~w', [VarName])
+        ;   format(string(TabLabel), '~w ~w', [VarType, VarName])
+        ),
         debug(gtrace(bindings), 'Action ~w on ~w', [Action, Value]),
         (   Action == copy
         ->  (   numbervars(Value, 0, _, [attvar(skip)]),
@@ -1325,7 +1329,8 @@ details(B, Fragment:[prolog_frame_var_fragment], Action:[{view,copy}]) :->
             ;   send(B, report, status, Label)
             )
         ;   view_term(Value,
-                      [ comment(Label),
+                      [ label(TabLabel),
+                        comment(Label),
                         source_object(Frag),
                         expose(true)
                       ])

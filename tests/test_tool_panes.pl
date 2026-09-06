@@ -69,6 +69,7 @@ Run with:
 :- use_module(library(pce_manual), []).
 :- use_module(library(swi/pce_profile), []).
 :- use_module(library(trace/exceptions), []).
+:- use_module(library(trace/viewterm), [view_term/2]).
 :- use_module(library(trace/trace), []).   % loads trace/gui, which does
                                           % not survive a use_module of
                                           % its own
@@ -87,6 +88,7 @@ test_tool_panes :-
                 profiler_pane,
                 exception_editor_pane,
                 debugger_pane,
+                term_viewer_pane,
                 manual_tool_panes
               ]).
 
@@ -1763,3 +1765,93 @@ test(and_it_can_be_closed_when_nobody_is_waiting, true(Close == @on)) :-
     get(F, can_close, Close).
 
 :- end_tests(debugger_pane).
+
+
+                 /*******************************
+                 *         TERM VIEWER          *
+                 *******************************/
+
+/* The window a value is shown in.
+
+Clicking a variable in the bindings of the debugger shows its value here
+-- see `prolog_bindings_view ->details'.  It used to be a frame of its
+own, titled with the variable it was showing; a pane says that on its tab
+and on the status bar of the window it lands in.
+*/
+
+:- begin_tests(term_viewer_pane).
+
+viewer(TV) :-
+    view_term(foo(bar, [1,2,3]),
+              [ label('Variable X'),
+                comment('Variable X of frame at level 3 running foo/2')
+              ]),
+    get(@prolog_ide, tool, term_viewer, TV).
+
+test(it_opens_in_a_window_of_the_ide, Classes == [term_viewer]) :-
+    no_frames,
+    viewer(TV),
+    get(TV, frame, Frame),
+    send(Frame, instance_of, pane_frame),
+    classes(Frame, Classes).
+
+test(its_windows_are_the_controls_and_the_term,
+     Names == [dialog, view]) :-
+    no_frames,
+    viewer(TV),
+    get(TV, members, Chain),
+    chain_list(Chain, Windows),
+    findall(N, (member(W, Windows), get(W, class_name, N)), Names).
+
+test(and_the_term_is_written_in_the_view, true(Text == 'foo(bar,[1,2,3])')) :-
+    no_frames,
+    viewer(TV),
+    get(TV, text_buffer, TB),
+    get(TB?contents, value, Text).
+
+%       The tab used to be the title of a frame, which had room for a
+%       sentence.  The caller gives a name that fits a tab and says the
+%       sentence on the status bar instead.
+
+test(its_tab_is_named_by_whoever_asked_for_it, true(Label == 'Variable X')) :-
+    no_frames,
+    viewer(TV),
+    get(TV, pane_label, Label).
+
+test(and_a_viewer_nobody_named_is_just_a_term, true(Label == 'Term')) :-
+    no_frames,
+    view_term(foo, []),
+    get(@prolog_ide, tool, term_viewer, TV),
+    get(TV, pane_label, Label).
+
+test(what_it_is_showing_goes_on_the_status_bar,
+     true(Class == pane_status_dialog)) :-
+    no_frames,
+    viewer(TV),
+    get(TV, frame, Frame),
+    get(Frame, status_dialog, SD),
+    get(SD, class_name, Class).
+
+%       An unpinned viewer takes the next value; a pinned one is left
+%       where it is and the next value opens a viewer of its own.
+
+test(the_next_value_takes_an_unpinned_viewer_over,
+     true(Panes == [term_viewer])) :-
+    no_frames,
+    viewer(TV),
+    view_term(other(term), [label('Variable Y')]),
+    get(TV, pane_label, 'Variable Y'),
+    get(TV, frame, Frame),
+    classes(Frame, Panes).
+
+test(and_a_pinned_one_is_left_showing_what_it_shows,
+     true(Panes-Label == [term_viewer,term_viewer]-'Variable X')) :-
+    no_frames,
+    viewer(TV),
+    send(TV, pinned, @on),
+    view_term(other(term), [label('Variable Y')]),
+    get(TV, pane_label, Label),
+    get(TV, frame, Frame),
+    classes(Frame, Panes).
+
+:- end_tests(term_viewer_pane).
