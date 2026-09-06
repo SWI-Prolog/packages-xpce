@@ -128,11 +128,6 @@ resource(breakpoint,   image, library('trace/icons/stop.svg')).
           set_breakpoint_condition     = button(prolog),
           delete_breakpoint            = button(prolog),
           -                            = button(prolog),
-          edit_breakpoints             = button(prolog),
-          edit_exceptions              = button(prolog),
-          view_threads                 = button(prolog),
-          view_debug_messages          = button(prolog),
-          -                            = button(prolog),
           make_module                  = key('\\C-c\\C-o') + button(prolog),
           export	               = key('\\C-c\\C-e') + button(prolog),
           check_dependencies           = button(prolog),
@@ -1046,25 +1041,10 @@ prolog_navigator(M) :->
     ).
 
 
-edit_breakpoints(_M) :->
-    "Open Prolog debug settings window"::
-    prolog_ide(open_debug_status).
-
-
-edit_exceptions(_M) :->
-    "Open Prolog Exception editor"::
-    prolog_ide(open_exceptions(@on)).
-
-
-view_threads(_M) :->
-    "View running threads"::
-    prolog_ide(thread_monitor).
-
-
-view_debug_messages(_M) :->
-    "View debug/3 messages"::
-    prolog_ide(debug_monitor).
-
+%       Editing breakpoints and exceptions, viewing the threads and the
+%       debug messages are on the Tools menu of every window of the IDE
+%       -- see `prolog_ide ->fill_menu_bar' -- which an editor is a pane
+%       of.  They are not the editor's to offer as well.
 
 		 /*******************************
 		 *           DABBREV		*

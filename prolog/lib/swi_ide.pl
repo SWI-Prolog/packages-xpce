@@ -461,6 +461,11 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
                           message(IDE, debug_monitor)),
                 menu_item(cross_referencer,
                           message(IDE, xref),
+                          end_group := @on),
+                menu_item(edit_breakpoints,
+                          message(IDE, open_debug_status)),
+                menu_item(edit_exceptions,
+                          message(IDE, open_exceptions, @on),
                           end_group := @on)
               ]),
     send_list(GUI, append,

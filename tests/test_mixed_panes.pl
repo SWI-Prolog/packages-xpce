@@ -157,6 +157,30 @@ test(the_mode_menus_come_and_go_with_the_editor) :-
     menus(F, Back),
     Back == WithTerminal.                % and took them away again
 
+%       What the window offers, the mode does not offer again: editing
+%       breakpoints and exceptions and viewing the threads and the debug
+%       messages are on the Tools menu of every window of the IDE, and an
+%       editor is a pane of one.
+
+test(the_mode_leaves_the_ide_tools_to_the_window,
+     [ forall(member(Item, [edit_breakpoints, edit_exceptions,
+                            view_threads, view_debug_messages])),
+       fail
+     ]) :-
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F),
+    get(F, menu_bar, MB),
+    get(MB, member, prolog, Popup),
+    get(Popup, member, Item, _).
+
+test(and_the_window_offers_two_of_them_on_its_tools_menu) :-
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    get(F, menu_bar, MB),
+    get(MB, member, tools, Tools),
+    get(Tools, member, edit_breakpoints, _),
+    get(Tools, member, edit_exceptions, _).
+
 test(a_terminal_carries_its_own_menus_into_a_pcemacs_window) :-
     emacs,
     new(B, emacs_buffer(@nil, '*mixed-2*')),
