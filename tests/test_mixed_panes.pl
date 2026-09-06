@@ -57,13 +57,17 @@ Run with:
 :- use_module(library(plunit)).
 :- use_module(library(epilog)).
 :- use_module(library(swi_ide)).
+:- use_module(library(pane_frame), [open_pane_frame/3]).
 :- use_module(library(emacs/emacs)).
 :- use_module(library(pce_util), [chain_list/2]).
-:- use_module(library(lists), [member/2, subtract/3, length/2]).
+:- use_module(library(lists), [member/2, subtract/3, length/2,
+                               memberchk/2]).
 :- use_module(library(filesex), [directory_file_path/3]).
 
 test_mixed_panes :-
-    run_tests([ mixed_panes ]).
+    run_tests([ mixed_panes,
+                mixed_panes_term
+              ]).
 
 %       PceEmacs must not take the address of the PceEmacs of whoever
 %       runs the tests, nor leave one behind.
@@ -617,3 +621,107 @@ mixed_window(F) :-
     send(F, open).
 
 :- end_tests(mixed_panes).
+
+
+                 /*******************************
+                 *          PANE TERM           *
+                 *******************************/
+
+/* Writing a window of both kinds down and building it back.  What an
+   editor and a terminal have to say about themselves is theirs -- see
+   `emacs_view <-pane_term' and `epilog_window <-pane_term' -- so this is
+   where the two are checked, beside each other in one window.
+*/
+
+:- begin_tests(mixed_panes_term).
+
+%!  mixed(-Frame, -File) is det.
+%
+%   A window of an editor on a source of our own, over a terminal.
+
+mixed(F, File) :-
+    emacs,
+    source_of_our_own(File),
+    open_pane_frame(pane_frame([],
+                               [ tab([], vertical([ 0.6-editor([file(File)]),
+                                                    0.4-terminal([]) ]))
+                               ]),
+                    F, [open(false)]).
+
+test(an_editor_says_which_source_it_shows) :-
+    mixed(F, File),
+    editor(F, V),
+    get(V, pane_term, Options),
+    assertion(memberchk(file(File), Options)),
+    assertion(memberchk(mode(prolog), Options)).
+
+test(a_terminal_says_which_profile_it_runs) :-
+    mixed(F, _File),
+    terminal(F, W),
+    get(W, pane_term, Options),
+    assertion(memberchk(profile(prolog), Options)).
+
+test(an_editor_is_written_by_what_it_is, Kind == editor) :-
+    mixed(F, _File),
+    editor(F, V),
+    get(V, pane_kind, Kind).
+
+test(a_terminal_is_written_by_what_it_is, Kind == terminal) :-
+    mixed(F, _File),
+    terminal(F, W),
+    get(W, pane_kind, Kind).
+
+test(a_window_of_both_kinds_gives_the_same_term_back) :-
+    mixed(F, _File),
+    get(F, pane_term, Term),
+    open_pane_frame(Term, F2, [open(false)]),
+    get(F2, pane_term, Again),
+    assertion(Term == Again).
+
+test(the_caret_comes_back_where_it_was, Line == 2) :-
+    mixed(F, _File),
+    editor(F, V),
+    send(V, line_number, 2),
+    get(F, pane_term, Term),
+    open_pane_frame(Term, F2, [open(false)]),
+    editor(F2, V2),
+    get(V2, caret, Caret),
+    get(V2, line_number, Caret, Line).
+
+%       A source that is no longer there is opened as a new file, which is
+%       what PceEmacs does for one anywhere else.  The rest of the window
+%       comes back around it.
+
+test(a_source_that_has_gone_leaves_the_rest_standing, Classes == [emacs_view, epilog_window]) :-
+    emacs,
+    source_of_our_own(File),
+    delete_file(File),
+    open_pane_frame(pane_frame([],
+                               [ tab([], vertical([ 0.5-editor([file(File)]),
+                                                    0.5-terminal([]) ]))
+                               ]),
+                    F, [open(false)]),
+    classes(F, Classes).
+
+%       A profile that is no longer defined is reported and the terminal
+%       falls back on `prolog', rather than the window losing a pane.
+
+test(a_profile_that_has_gone_falls_back, Profile == prolog) :-
+    open_pane_frame(pane_frame([],
+                               [ tab([], terminal([profile(no_such_profile)]))
+                               ]),
+                    F, [open(false)]),
+    terminal(F, W),
+    get(W, terminal, PT),
+    get(PT, profile, Profile).
+
+test(a_source_that_has_gone_is_still_said_to_be_gone) :-
+    emacs,
+    source_of_our_own(File),
+    delete_file(File),
+    new(V, emacs_view),
+    send(V, pane_term, [file(File)]),
+    get(V, pane_term, Options),
+    assertion(memberchk(file(File), Options)).
+
+:- end_tests(mixed_panes_term).

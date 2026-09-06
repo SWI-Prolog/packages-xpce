@@ -396,6 +396,24 @@ new_window(_IDE) :->
     use_module(user:library(epilog), []),
     call(epilog:epilog).
 
+%       Which class makes a pane of a kind named in a description of a
+%       window -- see `pane_frame <-pane_term'.  An editor and a terminal
+%       are named for what they are rather than by their class, so a
+%       description reads and writes by hand; every other pane is its own
+%       class name, which pce_autoload/2 above finds when it is asked for.
+
+pane_class(_IDE, Kind:name, Class:name) :<-
+    "The class that makes a pane of that kind"::
+    (   Kind == editor
+    ->  use_module(user:library(pce_emacs), []),
+        call(start_emacs:start_emacs),
+        Class = emacs_view
+    ;   Kind == terminal
+    ->  use_module(user:library(epilog), []),
+        Class = epilog_window
+    ;   Class = Kind
+    ).
+
                  /*******************************
                  *           ACTIONS            *
                  *******************************/
