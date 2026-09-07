@@ -247,6 +247,11 @@ menu_bar_key(V, Key:name) :<-
 pane_exposed(V) :->
     "I have become the current view"::
     send(V, update_labels),
+    (   get(V, mode, Mode),             % the bar was cleared for me: say
+        send(Mode, has_send_method, show_caret_line)  % again what is mine
+    ->  ignore(send(Mode, show_caret_line))
+    ;   true
+    ),
     get(V, text_buffer, TB),
     (   get(V, frame, Frame),
         Frame \== @nil

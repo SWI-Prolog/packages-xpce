@@ -347,6 +347,38 @@ test(the_history_buttons_go_under_the_menus,
     ;   Inside = ButtonsY+ButtonsH-Strip
     ).
 
+%       The bar of a window says what the pane in view has to say.  The
+%       line the caret is on is the editor's, so it goes when another pane
+%       comes into view and is said again when the editor comes back --
+%       `emacs_view ->pane_exposed' asks the mode.
+
+test(the_line_the_caret_is_on_goes_with_the_editor,
+     true(OnTerminal-Back == ''-'Line: 5')) :-
+    no_frames,
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    source_with_room(File),
+    with_placement(split, send(@emacs, goto_source_location,
+                               source_location(File, 5))),
+    get(F, current_pane, View),
+    terminal(F, T),
+    send(F, current_pane, T),
+    bar_line(F, OnTerminal),
+    send(F, current_pane, View),
+    bar_line(F, Back).
+
+%!  bar_line(+Frame, -Line) is det.
+%
+%   What the bar of Frame says about the line the caret is on.
+
+bar_line(F, Line) :-
+    (   get(F, status_dialog, SD)
+    ->  get(SD, member, line, Text),
+        get(Text?string, value, Line)
+    ;   Line = ''
+    ).
+
 test(the_mode_menus_come_and_go_with_the_editor) :-
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, F),

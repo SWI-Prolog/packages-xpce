@@ -543,7 +543,8 @@ do_pane_changed(F) :->
     "Follow the current pane; see ->pane_changed"::
     get(F, current_pane, Pane),
     send(F?menu_dialog, client, Pane),
-    ignore(send(F, update_menu_bar)),
+    ignore(send(F, clear_status)),      % what the pane before had to say
+    ignore(send(F, update_menu_bar)),   % is not about this one
     ignore(send(F, update_tab_label)),
     ignore(send(F, update_label)),
     ignore(send(F, update_opacity)),
@@ -866,6 +867,19 @@ editor_event(F, Ev:event) :->
     "Give a key typed in a pane to the prompter"::
     get(F, status_dialog, SD),
     send(SD, editor_event, Ev).
+
+%       The bar says what the pane in view has to say, and a pane that
+%       comes into view has said nothing yet: the message the pane before
+%       left is not about this one.  A pane that has something to put back
+%       -- an editor says which line the caret is on -- does it from
+%       ->pane_exposed, which runs after this.
+
+clear_status(F) :->
+    "Take away what the pane before had to say"::
+    (   get(F, status_dialog, SD)
+    ->  send(SD, clear)
+    ;   true                            % no bar: nothing to take away
+    ).
 
 show_line_number(F, Line:'int|{too_expensive}*') :->
     "Show the line the caret is on"::
@@ -1680,6 +1694,14 @@ client(D, Client:window) :<-
                  *            REPORT            *
                  *******************************/
 
+clear(D) :->
+    "Take away whatever is on me"::
+    get(D, member, reporter, Label),
+    send(Label, clear),
+    send(D, report_type, @nil),
+    send(D?report_count, value, 0),
+    send(D, show_line_number, @nil).
+
 report(D, Type:name, Fmt:[char_array], Args:any...) :->
     "Show a message on my reporter"::
     (   get(D, report_type, ReportType),
@@ -1870,12 +1892,32 @@ expose(P) :->
 %       place of its own to report -- a terminal writes over its own text
 %       -- says so with a ->report of its own, which takes the place of
 %       this one.
+%
+%       There is one bar and it belongs to the pane in view.  A tool that
+%       keeps itself up to date whether or not anybody is looking -- the
+%       thread monitor says what it found on every update -- wrote over
+%       what the pane the user was working in had to say, from a tab they
+%       could not even see.
 
 report(P, Kind:name, Fmt:[char_array], Args:any ...) :->
-    "Report on the bar of the window I am in"::
-    pane_status_bar(P),
-    Msg =.. [report, Kind, Fmt|Args],
-    send_super(P, Msg).
+    "Report on the bar of the window I am in, if I am the pane in view"::
+    (   pane_in_view(P)
+    ->  pane_status_bar(P),
+        Msg =.. [report, Kind, Fmt|Args],
+        send_super(P, Msg)
+    ;   true
+    ).
+
+%!  pane_in_view(+Pane) is semidet.
+%
+%   True when Pane is the one the user is working in, or is in no window
+%   of the IDE at all and so shares a bar with nobody.
+
+pane_in_view(P) :-
+    (   get(P, pane_frame, Frame)
+    ->  get(Frame, current_pane, P)
+    ;   true
+    ).
 
 pane_frame(P, Frame:pane_frame) :<-
     "The frame I am a pane of"::
