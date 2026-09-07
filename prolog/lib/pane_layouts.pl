@@ -34,13 +34,18 @@
 
 :- module(pane_layouts,
           [ pane_placement/3,           % +Kind, +LiveKinds, -Rule
-            arrangement_kinds/2         % +Arrangement, -Kinds
+            arrangement_kinds/2,        % +Arrangement, -Kinds
+            arrangement_of/2,           % +PaneTerm, -Arrangement
+            record_arrangement/2,       % +Arrangement, +Seconds
+            save_arrangements/0,
+            forget_arrangements/0
           ]).
 :- use_module(library(lists),
               [ member/2, memberchk/2, nth0/3, reverse/2,
                 sum_list/2, append/3
               ]).
-:- use_module(library(apply), [maplist/3, maplist/4, foldl/4]).
+:- use_module(library(apply), [maplist/3]).
+:- use_module(library(filesex), [make_directory_path/1]).
 
 /** <module> Where a new pane goes, from how windows have been arranged
 
@@ -110,11 +115,303 @@ default_arrangement(
 %
 %   Every arrangement that could be used, with what it has earned.  The
 %   ones the system comes with carry a nominal five minutes, so that any
-%   arrangement the user has really worked in outranks them.
+%   arrangement the user has really worked in outranks them and they
+%   answer when nothing else does.
 
 arrangement(Arrangement, Priority) :-
-    default_arrangement(Arrangement),
-    Priority = 300.
+    load_arrangements,
+    get_time(Now),
+    stored(_Shape, Arrangement, Earned, At),
+    decayed(Earned, At, Now, Priority).
+arrangement(Arrangement, 300) :-
+    default_arrangement(Arrangement).
+
+                 /*******************************
+                 *          WHAT IT EARNS       *
+                 *******************************/
+
+/* An arrangement earns the time it is lived in.
+
+Rearranging a window takes several steps -- merge the tab back in, drag
+the pane where it belongs, pull it to the width it should have -- and only
+the state that is then worked in means anything.  An arrangement is
+therefore credited with the time it was on the screen, and an interval
+shorter than a minute is not credited at all, which is what leaves the
+steps on the way out of it.
+
+What is earned decays, so that an arrangement made once and never returned
+to fades rather than having to be unlearned, and a habit that changes
+re-ranks itself.  A priority is thus "seconds of recent use", and two of
+them can simply be compared.
+*/
+
+half_life(2592000).                     % thirty days, in seconds
+worth_recording(60).                    % a minute: less was a step on the way
+
+%!  decayed(+Earned, +At, +Now, -Priority) is det.
+
+decayed(Earned, At, Now, Priority) :-
+    half_life(Half),
+    Priority is Earned * 2 ** (-(Now-At)/Half).
+
+%!  record_arrangement(+Arrangement, +Seconds) is det.
+%
+%   Credit an arrangement with the time it has just been lived in.  An
+%   arrangement is known by its *shape* -- its panes and how they are
+%   tiled, without their sizes -- so that pulling a pane an inch wider
+%   does not fork the record and split what it has earned.  The sizes kept
+%   are the ones last seen.
+
+record_arrangement(Arrangement, Seconds) :-
+    worth_recording(Least),
+    Seconds >= Least,
+    arrangement_shape(Arrangement, Shape),
+    !,
+    load_arrangements,
+    get_time(Now),
+    (   retract(stored(Shape, _, Earned0, At))
+    ->  decayed(Earned0, At, Now, Was)
+    ;   Was = 0
+    ),
+    Earned is Was+Seconds,
+    assertz(stored(Shape, Arrangement, Earned, Now)),
+    set_modified.
+record_arrangement(_, _).
+
+%!  arrangement_shape(+Arrangement, -Shape) is det.
+%
+%   An arrangement with the sizes taken out: what tells one arrangement
+%   from another.
+
+arrangement_shape(pane_frame(_, Tabs), pane_frame([], Shapes)) :-
+    !,
+    maplist(tab_shape, Tabs, Shapes).
+arrangement_shape(Content, Shape) :-
+    content_shape(Content, Shape).
+
+tab_shape(tab(_, Content), tab([], Shape)) :-
+    content_shape(Content, Shape).
+
+content_shape(Content, Content) :-
+    atom(Content),
+    !.
+content_shape(Content, Shape) :-
+    Content =.. [Orientation, Shares],
+    orientation(Orientation),
+    !,
+    maplist(share_content, Shares, Contents),
+    maplist(content_shape, Contents, Subs),
+    Shape =.. [Orientation, Subs].
+content_shape(Content, Kind) :-
+    functor(Content, Kind, 1).
+
+                 /*******************************
+                 *          STRIPPING           *
+                 *******************************/
+
+%!  arrangement_of(+PaneTerm, -Arrangement) is det.
+%
+%   The arrangement a window is in: what `pane_frame <-pane_term' writes,
+%   with everything about the content taken out.  What is left is the
+%   kinds of pane, how they are tiled, their share of the room and how big
+%   the window is.
+
+arrangement_of(pane_frame(Options, Tabs), pane_frame(Kept, Stripped)) :-
+    !,
+    findall(O, (member(O, Options), kept_frame_option(O)), Kept),
+    maplist(strip_tab, Tabs, Stripped).
+arrangement_of(Content, Arrangement) :-
+    strip_content(Content, Arrangement).
+
+kept_frame_option(geometry(_)).
+
+strip_tab(tab(_, Content), tab([], Stripped)) :-
+    strip_content(Content, Stripped).
+
+strip_content(current(Content), Stripped) :-
+    !,
+    strip_content(Content, Stripped).
+strip_content(Content, Content) :-
+    atom(Content),
+    !.
+strip_content(Content, Stripped) :-
+    Content =.. [Orientation, Shares],
+    orientation(Orientation),
+    !,
+    maplist(strip_share, Shares, Pairs),
+    Stripped =.. [Orientation, Pairs].
+strip_content(Content, Kind) :-
+    functor(Content, Kind, 1).
+
+strip_share(Share-Content, Rounded-Stripped) :-
+    number(Share),
+    !,
+    clamped(Share, Rounded),
+    strip_content(Content, Stripped).
+strip_share(Content, Stripped) :-
+    strip_content(Content, Stripped).
+
+%       A pane dragged nearly shut is not an arrangement worth learning,
+%       and one dragged shut altogether cannot be laid out again: a tile
+%       is never given less than MIN_TILE_SIZE.  Two decimals, because a
+%       share is read back and compared.
+
+clamped(Share, Rounded) :-
+    Clamped is min(0.95, max(0.05, Share)),
+    Rounded is round(Clamped*100)/100.0.
+
+                 /*******************************
+                 *           THE STORE          *
+                 *******************************/
+
+/* The arrangements are kept in a file of their own in the XPCE config
+   directory, one term to a line, because they are meant to be read and
+   edited by hand.  It is written when Prolog halts and read the first
+   time anything asks.
+*/
+
+:- dynamic
+    stored/4,                           % Shape, Arrangement, Earned, At
+    loaded/0,
+    modified/0.
+
+set_modified :-
+    (   modified
+    ->  true
+    ;   assertz(modified)
+    ).
+
+%!  arrangements_file(-File) is nondet.
+%
+%   Hook.  Where the arrangements are kept.  The first clause wins, so a
+%   project that wants arrangements of its own -- or a test that must not
+%   touch the user's -- says so:
+%
+%   ```
+%   :- multifile pane_layouts:arrangements_file/1.
+%   pane_layouts:arrangements_file('/path/of/my/project/layouts').
+%   ```
+%
+%   With no clause they live beside the other XPCE settings, in
+%   `xpce/pane_layouts' of the config directory.
+
+:- multifile
+    arrangements_file/1.                % -File
+
+store_file(File) :-
+    arrangements_file(File),
+    !.
+store_file(File) :-
+    absolute_file_name(user_app_config('xpce/pane_layouts'), File,
+                       [ access(none), solutions(first) ]).
+
+%!  load_arrangements is det.
+%
+%   Read the arrangements, once.  A file that cannot be read leaves the
+%   system with the arrangements it comes with, which is a working state.
+
+load_arrangements :-
+    loaded,
+    !.
+load_arrangements :-
+    assertz(loaded),
+    store_file(File),
+    (   exists_file(File)
+    ->  catch(read_arrangements(File), E,
+              print_message(warning, pane_layouts(no_file(File, E))))
+    ;   true
+    ).
+
+read_arrangements(File) :-
+    setup_call_cleanup(
+        open(File, read, In, [encoding(utf8)]),
+        read_terms(In),
+        close(In)).
+
+read_terms(In) :-
+    read_term(In, Term, []),
+    (   Term == end_of_file
+    ->  true
+    ;   read_arrangement(Term),
+        read_terms(In)
+    ).
+
+%       An unknown term costs its own record and no more: a file written
+%       by a later version, or edited by hand into something else, still
+%       gives up everything else it holds.
+
+read_arrangement(arrangement(Arrangement, Earned, At)) =>
+    arrangement_shape(Arrangement, Shape),
+    retractall(stored(Shape, _, _, _)),
+    assertz(stored(Shape, Arrangement, Earned, At)).
+read_arrangement(Term) =>
+    print_message(warning, pane_layouts(unknown_term(Term))).
+
+%!  save_arrangements is det.
+%
+%   Write the arrangements out, dropping the ones that have faded: an
+%   arrangement worth less than the least that is ever credited can never
+%   outrank anything again.
+
+save_arrangements :-
+    modified,
+    !,
+    retractall(modified),
+    store_file(File),
+    catch(write_arrangements(File), E,
+          print_message(warning, pane_layouts(no_file(File, E)))).
+save_arrangements.
+
+write_arrangements(File) :-
+    file_directory_name(File, Dir),
+    make_directory_path(Dir),
+    get_time(Now),
+    worth_recording(Least),
+    findall(arrangement(Arrangement, Rounded, Now),
+            ( stored(_Shape, Arrangement, Earned, At),
+              decayed(Earned, At, Now, Priority),
+              Priority >= Least,
+              Rounded is round(Priority*10)/10.0
+            ),
+            Records),
+    setup_call_cleanup(
+        open(File, write, Out, [encoding(utf8)]),
+        write_records(Out, Records),
+        close(Out)).
+
+write_records(Out, Records) :-
+    write_header(Out),
+    forall(member(Record, Records),
+           format(Out, '~q.~n', [Record])).
+
+write_header(Out) :-
+    format(Out, '/*  How you have arranged the windows of the IDE.~n', []),
+    format(Out, '~n', []),
+    format(Out, '    Each term is a window with the content left out and~n', []),
+    format(Out, '    the seconds of recent use it has earned.  Written when~n', []),
+    format(Out, '    Prolog halts; edit it as you like.~n', []),
+    format(Out, '*/~n~n', []).
+
+%!  forget_arrangements is det.
+%
+%   Throw away everything that has been learned.
+
+forget_arrangements :-
+    retractall(stored(_, _, _, _)),
+    assertz(loaded),
+    set_modified.
+
+                 /*******************************
+                 *           MESSAGES           *
+                 *******************************/
+
+:- multifile
+    prolog:message//1.
+
+prolog:message(pane_layouts(no_file(File, Error))) -->
+    [ 'Window arrangements: cannot use ~w: ~p'-[File, Error] ].
+prolog:message(pane_layouts(unknown_term(Term))) -->
+    [ 'Window arrangements: ignored ~p'-[Term] ].
 
 %!  arrangement_kinds(+Arrangement, -Kinds) is det.
 %

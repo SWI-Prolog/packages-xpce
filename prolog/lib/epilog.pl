@@ -1922,7 +1922,8 @@ new_tab(T) :->
     get(T, sibling, W),
     get(T, frame, Frame),
     send(Frame, append_terminal, W, @on),
-    send(Frame, keyboard_focus, W).
+    send(Frame, keyboard_focus, W),
+    send(Frame, arranged).              % asked for by hand
 
 pane_label(T, Label:name) :<-
     "What my tab is called"::

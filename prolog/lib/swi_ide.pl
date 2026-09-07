@@ -41,7 +41,8 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pane_frame), [pane_kind/2]).
-:- use_module(library(pane_layouts), [pane_placement/3]).
+:- use_module(library(pane_layouts),
+              [pane_placement/3, forget_arrangements/0]).
 :- use_module(library(toolbar), []).
 :- autoload(library(man/v_visual), [ pce_show_visual_tool/0 ]).
 :- autoload(library(www_browser), [www_open_url/1]).
@@ -455,6 +456,7 @@ label_format(_IDE, Format:name) :<-
 
 frame_empty(_IDE, F:pane_frame) :->
     "The last pane of a window was closed"::
+    ignore(send(F, record_arrangement)),  % it never sees ->close
     (   get(F, attribute, main, @on)
     ->  send(F, destroy),
         confirm_open_frames(
@@ -547,6 +549,13 @@ preferences(_IDE, Which:{prolog,xpce}) :->
     "Edit Prolog or GUI preferences"::
     prolog_edit_preferences(Which).
 
+forget_arrangements(_IDE) :->
+    "Throw away the arrangements the IDE has learned"::
+    forget_arrangements,
+    send(@display, inform,
+         'Forgotten.  New panes go where the arrangements that come\n\c
+          with the system say, until you arrange some windows yourself.').
+
 open_url(_IDE, URL:name) :->
     "Open a URL"::
     www_open_url(URL).
@@ -606,6 +615,10 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
     send(PlacementPopup, show_current, @on),
     send(PlacementPopup, update_message,
          message(IDE, update_tool_placement_menu, @receiver)),
+    send(Settings, append,
+         menu_item(forget_arrangements,
+                   message(IDE, forget_arrangements),
+                   'Forget how I arranged windows')),
     send_list(Tools, append,
               [ menu_item(navigator,
                           message(IDE, open_navigator)),

@@ -60,6 +60,16 @@ Run with:
 :- use_module(library(pane_frame)).
 :- use_module(library(pce_util), [chain_list/2]).
 :- use_module(library(lists), [member/2, memberchk/2, reverse/2]).
+:- use_module(library(pane_layouts), [forget_arrangements/0]).
+
+%       An arrangements file of their own: the tests must neither read nor
+%       write the arrangements of whoever runs them.
+
+:- multifile pane_layouts:arrangements_file/1.
+
+pane_layouts:arrangements_file(File) :-
+    current_prolog_flag(tmp_dir, Tmp),
+    atom_concat(Tmp, '/test_pane_frame_store', File).
 
 test_pane_frame :-
     run_tests([ pane_frame_structure,
@@ -72,7 +82,8 @@ test_pane_frame :-
                 pane_frame_plain_pane,
                 pane_frame_minimum,
                 pane_frame_term,
-                pane_frame_split_beside
+                pane_frame_split_beside,
+                pane_frame_arranged
               ]).
 
                  /*******************************
@@ -1365,3 +1376,80 @@ test(the_new_pane_gets_the_keyboard) :-
     assertion(get(F, keyboard_focus, Nav)).
 
 :- end_tests(pane_frame_split_beside).
+
+
+                 /*******************************
+                 *       ARRANGED BY HAND       *
+                 *******************************/
+
+/* A window only teaches the IDE anything once the user has arranged it by
+   hand.  What the IDE does of its own accord must not count, or it would
+   learn its own guesses back.
+*/
+
+:- begin_tests(pane_frame_arranged,
+               [ setup(forget_arrangements),
+                 cleanup(forget_arrangements)
+               ]).
+
+test(a_window_starts_saying_nothing, Arranged == @off) :-
+    frame(F, _App, _P),
+    get(F, arranged, Arranged).
+
+test(and_a_pane_the_ide_puts_there_says_nothing_either, Arranged == @off) :-
+    frame(F, _App, _P),
+    send(F, append_pane, new(_, tp_pane), @default, @on),
+    get(F, arranged, Arranged).
+
+test(nor_does_one_it_puts_beside_what_is_there, Arranged == @off) :-
+    frame(F, _App, A),
+    send(F, split, new(_, tp_pane), A, below),
+    get(F, arranged, Arranged).
+
+test(a_pane_split_by_hand_counts, Arranged == @on) :-
+    frame(F, _App, P),
+    send(P, split, vertically),
+    get(F, arranged, Arranged).
+
+test(a_pane_closed_by_hand_counts, Arranged == @on) :-
+    frame(F, _App, A),
+    send(F, split, new(B, tp_pane), A, below),
+    send(B, close_pane),
+    get(F, arranged, Arranged).
+
+test(a_pane_moved_into_a_tab_of_its_own_counts, Arranged == @on) :-
+    frame(F, _App, A),
+    send(F, split, new(B, tp_pane), A, below),
+    send(B, move_to_tab),
+    get(F, arranged, Arranged).
+
+test(and_a_tab_tells_the_window_it_is_in, Arranged == @on) :-
+    frame(F, _App, P),
+    get(P, container, tab_frame, Tab),
+    send(Tab, arranged),
+    get(F, arranged, Arranged).
+
+%       What is learned is the time an arrangement is lived in.  The clock
+%       is wound back rather than waited on.
+
+test(an_arrangement_lived_in_reaches_the_store) :-
+    frame(F, _App, A),
+    send(F, split, new(_B, tp_pane), A, below),
+    send(F, arranged),
+    get_time(Now),
+    Then is Now-7200,
+    send(F, slot, arranged_since, Then),
+    send(F, record_arrangement),
+    assertion(pane_layouts:stored(_, _, Earned, _)),
+    pane_layouts:stored(_, _, Earned, _),
+    assertion(Earned > 7000),
+    forget_arrangements.
+
+test(and_one_that_lasted_seconds_does_not, fail) :-
+    frame(F, _App, A),
+    send(F, split, new(_B, tp_pane), A, below),
+    send(F, arranged),
+    send(F, record_arrangement),
+    pane_layouts:stored(_, _, _, _).
+
+:- end_tests(pane_frame_arranged).

@@ -359,6 +359,7 @@ untab(TF) :->
     get(TF, current, Window),
     get(TF, display_position, point(X, Y)),
     get(TF, container, tabbed_window, TabbedWindow),
+    send(TF, arranged),                 % the window I am leaving changed
     get(TabbedWindow, frame_window, Window, Window?name, 1, Frame),
     send(Frame, open, point(X, Y+20)).
 
@@ -923,6 +924,15 @@ separator(TF, A:area) :->
 %       does `frame ->keyboard_focus' records the intent without acting on
 %       it -- see releaseFocusFrame() in src/win/frame.c.
 
+arranged(TF) :->
+    "Tell my frame that the user has just arranged its panes"::
+    (   get(TF, frame, Frame),
+        Frame \== @nil,
+        send(Frame, has_send_method, arranged)
+    ->  send(Frame, arranged)
+    ;   true
+    ).
+
 drop(TF, Window:window, Pos:point) :->
     "Put Window beside the window Pos is over"::
     send(TF, preview_drop, @nil),
@@ -930,6 +940,7 @@ drop(TF, Window:window, Pos:point) :->
         Target \== Window
     ->  send(TF, append, Window, Target, Where),
         send(TF, current, Window),
+        send(TF, arranged),
         (   get(TF, frame, Frame),
             Frame \== @nil
         ->  send(Frame, expose)
@@ -1882,7 +1893,12 @@ drag(G, Ev:event) :->
 
 terminate(G, Ev:event) :->
     send(G, resize, Ev),
-    send(G, tile, @nil).
+    send(G, tile, @nil),
+    (   get(Ev, receiver, TF),
+        send(TF, has_send_method, arranged)
+    ->  send(TF, arranged)
+    ;   true
+    ).
 
 resize(G, Ev:event) :->
     "Move the gap to the position of Ev"::

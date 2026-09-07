@@ -50,6 +50,10 @@
 :- use_module(library(toolbar), []).
 :- use_module(library(lists), [member/2, memberchk/2]).
 :- use_module(library(apply), [maplist/2, maplist/3]).
+:- use_module(library(pane_layouts),
+              [ arrangement_of/2, record_arrangement/2,
+                save_arrangements/0
+              ]).
 
 /** <module> One main window holding tools in tabs and panes
 
@@ -108,6 +112,12 @@ variable(own_label_format, '[name]*' := @default, none,
          "Format asked for on me alone; @default: ask elsewhere").
 variable(updating,        bool := @off,   none,
          "->pane_changed is running").
+variable(arranged,        bool := @off,   get,
+         "The user has arranged my panes by hand").
+variable(arrangement,     prolog := @nil, none,
+         "The arrangement they last left me in").
+variable(arranged_since,  prolog := @nil, none,
+         "When they left me in it").
 
 class_variable(label_format, 'name*', 'SWI-Prolog -- %s',
                "Frame label; %s is the label of the tab in view").
@@ -342,6 +352,69 @@ split_beside(F, Pane:window,
     ),
     send(F, keyboard_focus, Pane).
 
+                 /*******************************
+                 *       ARRANGED BY HAND       *
+                 *******************************/
+
+/* Which windows the IDE learns from, and for how long.
+
+A window the IDE placed and the user never touched teaches nothing: the
+IDE would only be learning back its own guesses.  So a window starts
+saying nothing, and the first time the user moves, splits, resizes,
+re-tabs or closes a pane in it by hand it begins to count.
+
+What is counted is the time an arrangement is *lived in*, because putting
+a window right takes several steps -- merge the tab back in, drag the pane
+across, pull it to the width it should have -- and only the state that is
+then worked in means anything.  Each of those steps closes off the one
+before it; the steps themselves last seconds and are thrown away by
+library(pane_layouts), which credits nothing shorter than a minute.
+*/
+
+arranged(F) :->
+    "Note that the user has just arranged my panes"::
+    (   get(F, arranged, @on)
+    ->  send(F, record_arrangement)     % what was there until now
+    ;   send(F, slot, arranged, @on)
+    ),
+    start_arrangement(F).
+
+start_arrangement(F) :-
+    (   frame_arrangement(F, Arrangement)
+    ->  get_time(Now),
+        send(F, slot, arrangement, Arrangement),
+        send(F, slot, arranged_since, Now)
+    ;   true
+    ).
+
+frame_arrangement(F, Arrangement) :-
+    get(F, pane_term, Term),
+    arrangement_of(Term, Arrangement).
+
+record_arrangement(F) :->
+    "Credit the arrangement I am in with the time it has been"::
+    get(F, arranged, @on),
+    get(F, slot, arrangement, Arrangement),
+    Arrangement \== @nil,
+    get(F, slot, arranged_since, Since),
+    Since \== @nil,
+    get_time(Now),
+    Seconds is Now-Since,
+    send(F, slot, arranged_since, Now),
+    record_arrangement(Arrangement, Seconds).
+
+%!  pane_arranged(+Pane) is det.
+%
+%   The user has just moved Pane by hand.  Called by the gestures of the
+%   `pane' template; the plumbing they use is not marked, because a
+%   program placing a pane goes through the same plumbing.
+
+pane_arranged(Pane) :-
+    (   get(Pane, pane_frame, Frame)
+    ->  ignore(send(Frame, arranged))
+    ;   true
+    ).
+
 delete_pane(F, Pane:window, Destroy:[bool]) :->
     "Take Pane out of its tab; destroy me if it was my last"::
     get(F, panes, Panes),
@@ -418,7 +491,8 @@ close(F) :->
             \+ send(F, confirm, 'Close %d tabs?', Count)
         ->  true
         ;   get(F, can_close, @on)
-        ->  send(F, destroy)
+        ->  ignore(send(F, record_arrangement)),
+            send(F, destroy)
         ;   true
         )
     ).
@@ -1443,7 +1517,8 @@ close_tab(Tab) :->
     "Close my panes, which takes me with them"::
     (   get(Tab, frame, Frame),
         Frame \== @nil
-    ->  pane_frame_closed_tab(Frame)
+    ->  pane_frame_closed_tab(Frame),
+        ignore(send(Frame, arranged))   % closing a tab by hand arranges too
     ;   true
     ),
     send(Tab, close).
@@ -1791,14 +1866,16 @@ split(P, Direction:[{horizontally,vertically}]) :->
     (   get(P, pane_frame, Frame)
     ->  send(Frame, keyboard_focus, New)
     ;   true
-    ).
+    ),
+    pane_arranged(P).
 
 new_tab(P) :->
     "Put a new pane like me in a tab of its own"::
     get(P, sibling, New),
     get(P, pane_frame, Frame),
     send(Frame, append_pane, New, @default, @on),
-    send(Frame, keyboard_focus, New).
+    send(Frame, keyboard_focus, New),
+    pane_arranged(New).
 
 new_window(P) :->
     "Put a new pane like me in a window of its own"::
@@ -1817,7 +1894,8 @@ move_to_tab(P) :->
     get(Windows, size, Size),
     Size > 1,                           % a tab of my own already
     send(Tab, delete, P),               % take me out without destroying me
-    send(F, append_pane, P, @default, @on).
+    send(F, append_pane, P, @default, @on),
+    pane_arranged(P).
 
 %       The other way round: a pane that has a tab to itself is put into
 %       the tab beside it, which takes its own tab away.  ->append moves
@@ -1852,7 +1930,8 @@ move_to_neighbour_tab(P, Where:{previous,next}) :->
     pane_side(P, Side),
     send(Tab, append, P, @default, Side),
     send(F, current_pane, P),
-    send(F, keyboard_focus, P).
+    send(F, keyboard_focus, P),
+    pane_arranged(P).
 
 %       Same rule as `prolog_ide <-pane_side': a tool says which side of
 %       what is there it belongs on, anything else goes below.
@@ -1875,6 +1954,7 @@ detach(P) :->
     ;   App = @default
     ),
     get(P, display_position, point(X, Y)),
+    ignore(send(F, arranged)),          % the window I am leaving changed too
     send(F, delete_pane, P, @off),      % take me out without destroying me
     new(New, pane_frame(App, @default, P)),
     send(New, open, point(X, Y+20)).
@@ -1882,7 +1962,11 @@ detach(P) :->
 close_pane(P) :->
     "Close me; my frame goes with me if I was its last pane"::
     (   get(P, pane_frame, Frame)
-    ->  send(Frame, delete_pane, P, @on)
+    ->  send(Frame, delete_pane, P, @on),
+        (   object(Frame)               % it went with its last pane
+        ->  ignore(send(Frame, arranged))
+        ;   true
+        )
     ;   send(P, destroy)
     ).
 
@@ -2056,6 +2140,33 @@ frame_application(Options, App) :-
     ->  App = @prolog_ide
     ;   App = @default
     ).
+
+
+                 /*******************************
+                 *          AT THE END          *
+                 *******************************/
+
+%!  record_open_arrangements is det.
+%
+%   Credit every window that the user arranged with the time it has been
+%   as they left it, and write what has been learned.  A window closed by
+%   hand has already been credited by `pane_frame ->close'; this is for
+%   the ones that are still open when Prolog halts.
+
+record_open_arrangements :-
+    (   object(@display),
+        get(@display, frames, Frames)
+    ->  chain_list(Frames, List),
+        forall(( member(F, List),
+                 send(F, instance_of, pane_frame)
+               ),
+               ignore(send(F, record_arrangement)))
+    ;   true
+    ),
+    save_arrangements.
+
+:- initialization
+   send(@pce, exit_message, message(@prolog, record_open_arrangements)).
 
 
                  /*******************************

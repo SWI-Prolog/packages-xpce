@@ -51,11 +51,22 @@ Run with:
 :- use_module(library(pane_layouts)).
 :- use_module(library(lists), [member/2]).
 
+%       An arrangements file of their own: these must neither read nor
+%       write the arrangements of whoever runs them.
+
+:- multifile pane_layouts:arrangements_file/1.
+
+pane_layouts:arrangements_file(File) :-
+    current_prolog_flag(tmp_dir, Tmp),
+    atom_concat(Tmp, '/test_pane_layouts_store', File).
+
 test_pane_layouts :-
     run_tests([ pane_layouts_kinds,
                 pane_layouts_defaults,
                 pane_layouts_reading,
-                pane_layouts_ranking
+                pane_layouts_ranking,
+                pane_layouts_stripping,
+                pane_layouts_learning
               ]).
 
                  /*******************************
@@ -233,3 +244,146 @@ test(with_both_in_view_an_answer_still_names_a_pane_that_is_there) :-
     assertion(( member(K, Kinds), member(K, [tr_one, tr_two]) )).
 
 :- end_tests(pane_layouts_ranking).
+
+
+                 /*******************************
+                 *          STRIPPING           *
+                 *******************************/
+
+/* An arrangement is what a window says of itself with the content taken
+   out: the kinds of pane, how they are tiled and their share of the room.
+*/
+
+:- begin_tests(pane_layouts_stripping).
+
+test(the_content_of_a_pane_is_left_out,
+     Arrangement == pane_frame([], [tab([], vertical([0.7-editor,
+                                                      0.3-terminal]))])) :-
+    arrangement_of(
+        pane_frame([name(main)],
+                   [tab([label('foo.pl'), current(true)],
+                        vertical([0.7-current(editor([file('foo.pl'),
+                                                      line(120)])),
+                                  0.3-terminal([profile(shell)])]))]),
+        Arrangement).
+
+test(how_big_the_window_was_is_kept,
+     Options == [geometry('1200x800+40+40')]) :-
+    arrangement_of(pane_frame([name(main), geometry('1200x800+40+40')],
+                              [tab([], editor)]),
+                   pane_frame(Options, _)).
+
+%       A share is rounded, so that pulling a pane an inch wider is the
+%       same arrangement rather than a new one, and clamped, because a
+%       pane dragged nearly shut is not an arrangement worth learning.
+
+test(shares_are_rounded, Shares == [0.7, 0.3]) :-
+    arrangement_of(pane_frame([], [tab([], vertical([0.7003-editor,
+                                                     0.2997-terminal]))]),
+                   pane_frame(_, [tab(_, vertical(Pairs))])),
+    findall(S, member(S-_, Pairs), Shares).
+
+test(and_clamped, Shares == [0.95, 0.05]) :-
+    arrangement_of(pane_frame([], [tab([], vertical([0.99-editor,
+                                                     0.01-terminal]))]),
+                   pane_frame(_, [tab(_, vertical(Pairs))])),
+    findall(S, member(S-_, Pairs), Shares).
+
+:- end_tests(pane_layouts_stripping).
+
+                 /*******************************
+                 *           LEARNING           *
+                 *******************************/
+
+/* What an arrangement earns is the time it is lived in, and it decays.
+   These write to a file of their own: the hook says where, so that they
+   leave the arrangements of whoever runs them alone.
+*/
+
+:- begin_tests(pane_layouts_learning,
+               [ setup(forget_arrangements),
+                 cleanup(forget_arrangements)
+               ]).
+
+right(pane_frame([], [tab([], horizontal([0.8-terminal,
+                                          0.2-prolog_navigator]))])).
+below(pane_frame([], [tab([], vertical([0.8-terminal,
+                                        0.2-prolog_navigator]))])).
+
+test(an_arrangement_lived_in_is_learned, Side == right) :-
+    right(A),
+    record_arrangement(A, 7200),
+    pane_placement(prolog_navigator, [terminal], split(_, Side, _)),
+    forget_arrangements.
+
+%       The steps on the way to an arrangement -- merge the tab back in,
+%       drag the pane across, pull it to the width it should have -- last
+%       seconds each.  Only what is then worked in is learned.
+
+test(and_one_that_lasted_seconds_is_not, Side == left) :-
+    right(A),
+    record_arrangement(A, 20),
+    pane_placement(prolog_navigator, [terminal], split(_, Side, _)),
+    forget_arrangements.
+
+test(the_one_lived_in_longest_wins, Side == below) :-
+    right(A), below(B),
+    record_arrangement(A, 600),
+    record_arrangement(B, 7200),
+    pane_placement(prolog_navigator, [terminal], split(_, Side, _)),
+    forget_arrangements.
+
+%       An arrangement returned to keeps what it earned before, so a habit
+%       builds up rather than being replaced each time.
+
+test(what_an_arrangement_earns_adds_up, Side == right) :-
+    right(A), below(B),
+    record_arrangement(A, 4000),
+    record_arrangement(B, 7000),
+    record_arrangement(A, 4000),
+    pane_placement(prolog_navigator, [terminal], split(_, Side, _)),
+    forget_arrangements.
+
+%       And it fades: the same time spent a year ago counts for almost
+%       nothing beside ten minutes yesterday.  The half-life is thirty
+%       days.
+
+test(what_was_earned_long_ago_has_faded, Side == below) :-
+    right(A), below(B),
+    record_arrangement(A, 100000),
+    age_arrangements(365*24*3600),
+    record_arrangement(B, 600),
+    pane_placement(prolog_navigator, [terminal], split(_, Side, _)),
+    forget_arrangements.
+
+%       Pulling a pane a little wider is the same arrangement, not a new
+%       one, so what it has earned is not split between the two.
+
+test(the_same_shape_at_another_size_is_the_same_arrangement, Shares == 1) :-
+    right(A),
+    A = pane_frame(_, [tab(_, horizontal([S1-T, _-N]))]),
+    Wider = pane_frame([], [tab([], horizontal([S1-T, 0.3-N]))]),
+    record_arrangement(A, 600),
+    record_arrangement(Wider, 600),
+    findall(x, pane_layouts:stored(_, _, _, _), Xs),
+    length(Xs, Shares),
+    forget_arrangements.
+
+test(forgetting_puts_back_the_way_it_comes, Side == left) :-
+    right(A),
+    record_arrangement(A, 7200),
+    forget_arrangements,
+    pane_placement(prolog_navigator, [terminal], split(_, Side, _)).
+
+:- end_tests(pane_layouts_learning).
+
+%!  age_arrangements(+Seconds) is det.
+%
+%   Pretend everything learned so far was learned that long ago.
+
+age_arrangements(Expr) :-
+    Seconds is Expr,
+    forall(retract(pane_layouts:stored(Shape, A, Earned, At)),
+           ( Then is At-Seconds,
+             assertz(pane_layouts:stored(Shape, A, Earned, Then))
+           )).

@@ -79,6 +79,16 @@ Run with:
 :- use_module(library(debug), [debug/1, debug/3, nodebug/1]).
 :- use_module(library(pce_util), [chain_list/2]).
 :- use_module(library(pane_frame), [pane_kind/2]).
+
+%       An arrangements file of their own: what these check is where a
+%       pane goes with the arrangements the system comes with, which the
+%       arrangements of whoever runs them must not colour.
+
+:- multifile pane_layouts:arrangements_file/1.
+
+pane_layouts:arrangements_file(File) :-
+    current_prolog_flag(tmp_dir, Tmp),
+    atom_concat(Tmp, '/test_tool_panes_store', File).
 :- use_module(library(lists), [member/2]).
 
 test_tool_panes :-
