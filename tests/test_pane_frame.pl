@@ -273,6 +273,27 @@ test(two_rows_when_it_is_not, Names == [pane_menu_dialog,
     chain_list(Chain, Members),
     findall(N, (member(M, Members), get(M, class_name, N)), Names).
 
+%       A pane starts at the top of the window that holds it.  The stack
+%       inside my tabbed window is a device, placed by the <-offset that
+%       puts the bounding box of what it holds where the dialog wants it,
+%       and that is worked out while a tab still sits <-label_height
+%       below its own top-left -- `relayout_tab_stack' in
+%       src/men/tabstack.c puts the tabs back afterwards.  An offset left
+%       behind draws every pane a label's height too high: the first line
+%       of a terminal, the top of its scrollbar and the grip in its
+%       corner go off the top of the window, and a strip is left blank at
+%       the bottom.
+
+test(a_pane_starts_at_the_top_of_the_window, Y == 0) :-
+    frame(F, _App, P),
+    send(F, open),
+    get(P, area, area(_, PY, _, _)),
+    get(P, device, Tab),
+    get(Tab, area, area(_, TY, _, _)),
+    get(Tab, device, Stack),
+    get(Stack, area, area(_, SY, _, _)),
+    Y is PY+TY+SY.
+
 test(a_frame_without_a_status_bar_has_no_status_dialog, [fail]) :-
     frame(F, _App, _P),
     get(F, status_dialog, _).
