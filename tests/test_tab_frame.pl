@@ -67,7 +67,8 @@ test_tab_frame :-
                 tab_frame_resize,
                 tab_frame_manager,
                 tab_frame_drop,
-                tab_frame_window_tree
+                tab_frame_window_tree,
+                tab_frame_window_group
               ]).
 
                  /*******************************
@@ -1597,3 +1598,196 @@ test(a_decorated_window_is_unwrapped, Shape == horizontal([a,b])) :-
     shape(Tree, Shape).
 
 :- end_tests(tab_frame_window_tree).
+
+
+                 /*******************************
+                 *         WINDOW GROUP         *
+                 *******************************/
+
+/* A window can be put beside a *group* of windows rather than beside one:
+   a navigator belongs down the left of the editor and the terminal
+   together, not to the left of whichever of them is current.  These check
+   that, the flattening that keeps the tree free of nodes that say nothing,
+   and giving the newcomer its share of the row without disturbing the
+   rest.
+*/
+
+:- begin_tests(tab_frame_window_group).
+
+%!  column(-TabbedWindow, -TabFrame, -Windows) is det.
+%
+%   An open tab_frame holding two pictures, one above the other.
+
+column(TW, TF, [A,B]) :-
+    new(TW, tabbed_window('Test', size(900,700))),
+    send(TW, tab, new(TF, tab_frame(new(A, picture), one))),
+    send(A, name, a),
+    send(TW, open),
+    send(TW, resize),
+    send(TF, append, new(B, picture), A, below),
+    send(B, name, b).
+
+%!  nested(-TabbedWindow, -TabFrame, -Windows) is det.
+%
+%   `a' on the left, `b' over `c' on the right.
+
+nested(TW, TF, [A,B,C]) :-
+    new(TW, tabbed_window('Test', size(900,700))),
+    send(TW, tab, new(TF, tab_frame(new(A, picture), one))),
+    send(A, name, a),
+    send(TW, open),
+    send(TW, resize),
+    send(TF, append, new(B, picture), A, right), send(B, name, b),
+    send(TF, append, new(C, picture), B, below), send(C, name, c).
+
+%!  pane(+Name, -Window) is det.
+
+pane(Name, W) :-
+    new(W, picture),
+    send(W, name, Name).
+
+%       The shares are dropped: what these tests are about is the shape.
+
+shape(Tree, Name) :-
+    object(Tree),
+    !,
+    get(Tree, name, Name).
+shape(Tree, Shape) :-
+    Tree =.. [Orientation, Shares],
+    findall(S, ( member(Share, Shares),
+                 share_of(Share, Content),
+                 shape(Content, S)
+               ), Subs),
+    Shape =.. [Orientation, Subs].
+
+share_of(_-Content, Content) :- !.
+share_of(Content, Content).
+
+%!  share_named(+Tree, +Name, -Share) is semidet.
+
+share_named(Tree, Name, Share) :-
+    Tree =.. [_, Shares],
+    (   member(Share0-Content, Shares),
+        object(Content),
+        get(Content, name, Name)
+    ->  Share = Share0
+    ;   member(_-Content, Shares),
+        \+ object(Content),
+        share_named(Content, Name, Share)
+    ).
+
+%       The case the whole thing exists for.  Beside one window the new
+%       one joins that window's row; beside all of them it goes down the
+%       edge of the lot.
+
+test(beside_a_window_is_beside_that_window,
+     Shape == vertical([horizontal([nav,a]),b])) :-
+    column(_TW, TF, [A,_B]),
+    pane(nav, Nav),
+    send(TF, append, Nav, A, left),
+    get(TF, window_tree, Tree),
+    shape(Tree, Shape).
+
+test(beside_them_all_is_down_the_edge,
+     Shape == horizontal([nav,vertical([a,b])])) :-
+    column(_TW, TF, [A,B]),
+    pane(nav, Nav),
+    send(TF, append, Nav, chain(A,B), left),
+    get(TF, window_tree, Tree),
+    shape(Tree, Shape).
+
+test(beside_a_group_is_beside_the_group,
+     Shape == horizontal([a,nav,vertical([b,c])])) :-
+    nested(_TW, TF, [_A,B,C]),
+    pane(nav, Nav),
+    send(TF, append, Nav, chain(B,C), left),
+    get(TF, window_tree, Tree),
+    shape(Tree, Shape).
+
+test(a_group_of_one_is_that_window,
+     Shape == horizontal([a,vertical([horizontal([b,nav]),c])])) :-
+    nested(_TW, TF, [_A,B,_C]),
+    pane(nav, Nav),
+    send(TF, append, Nav, chain(B), right),
+    get(TF, window_tree, Tree),
+    shape(Tree, Shape).
+
+%       A row that already runs the way the new window is to be added is
+%       joined rather than wrapped: wrapping lays out the same but reads
+%       back as a tree with a node in it that says nothing.
+
+test(a_row_that_runs_that_way_is_joined,
+     Shape == horizontal([nav,a,vertical([b,c])])) :-
+    nested(_TW, TF, [A,B,C]),
+    pane(nav, Nav),
+    send(TF, append, Nav, chain(A,B,C), left),
+    get(TF, window_tree, Tree),
+    shape(Tree, Shape).
+
+test(and_a_row_that_does_not_is_wrapped,
+     Shape == vertical([horizontal([a,vertical([b,c])]),bar])) :-
+    nested(_TW, TF, [A,B,C]),
+    pane(bar, Bar),
+    send(TF, append, Bar, chain(A,B,C), below),
+    get(TF, window_tree, Tree),
+    shape(Tree, Shape).
+
+%       Windows that are not a subtree of their own are refused, which is
+%       how a caller finds out that what it asked for cannot be done here.
+
+test(a_group_that_is_not_a_subtree_is_refused, fail) :-
+    nested(_TW, TF, [A,_B,C]),
+    get(TF, window_group, chain(A,C), _).
+
+test(a_group_of_windows_of_another_tab_is_refused, fail) :-
+    nested(_TW, TF, [A,_B,_C]),
+    column(_TW2, _TF2, [A2,_B2]),
+    get(TF, window_group, chain(A,A2), _).
+
+test(the_whole_tab_is_a_group) :-
+    nested(_TW, TF, [A,B,C]),
+    get(TF, window_group, chain(A,B,C), Tile),
+    assertion(get(Tile, super, @nil)).       % the root
+
+                 /*******************************
+                 *            SHARES            *
+                 *******************************/
+
+test(the_newcomer_gets_the_share_it_asked_for) :-
+    nested(_TW, TF, [A,B,C]),
+    get(TF, window_tree, Was),
+    pane(nav, Nav),
+    send(TF, append, Nav, chain(A,B,C), left),
+    send(TF, window_share, Nav, 0.2, Was),
+    get(TF, window_tree, Tree),
+    share_named(Tree, nav, Share),
+    assertion(abs(Share-0.2) < 0.01).
+
+%       Adding a window moves the ideal sizes about at every level, not
+%       only in the row it lands in.  What the rest of the window looked
+%       like has to come back.
+
+test(the_other_rows_keep_the_shares_they_had) :-
+    nested(_TW, TF, [_A,B,C]),
+    get(TF, window_tree, Was),
+    share_named(Was, a, WasA),
+    pane(nav, Nav),
+    send(TF, append, Nav, chain(B,C), above),
+    send(TF, window_share, Nav, 0.3, Was),
+    get(TF, window_tree, Tree),
+    share_named(Tree, a, Share),
+    share_named(Tree, nav, ShareNav),
+    assertion(abs(Share-WasA) < 0.01),
+    assertion(abs(ShareNav-0.3) < 0.01).
+
+test(the_others_in_the_row_keep_their_proportions) :-
+    nested(_TW, TF, [A,B,C]),
+    get(TF, window_tree, Was),
+    pane(nav, Nav),
+    send(TF, append, Nav, chain(A,B,C), left),
+    send(TF, window_share, Nav, 0.2, Was),
+    get(TF, window_tree, Tree),
+    share_named(Tree, a, ShareA),
+    assertion(abs(ShareA-0.4) < 0.01).       % half of what is left
+
+:- end_tests(tab_frame_window_group).

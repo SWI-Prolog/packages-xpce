@@ -38,7 +38,8 @@
 :- use_module(library(dragdrop), []).
 :- use_module(library(help_message), []).
 :- use_module(library(pce_icon_button), []).
-:- use_module(library(lists), [member/2, sum_list/2, same_length/2]).
+:- use_module(library(lists), [member/2, sum_list/2, same_length/2,
+                               last/2, append/2, append/3]).
 :- use_module(library(apply), [maplist/2, maplist/3, maplist/4]).
 :- use_module(library(debug), [debug/3]).
 
@@ -129,9 +130,9 @@ unlink(TF) :->
                  *******************************/
 
 append(TF, Window:window=window,
-           Relative:relative_to=[window],
+           Relative:relative_to=[window|chain],
            Where:where=[{above,below,left,right}]) :->
-    "Add a window, optionally next to an existing one"::
+    "Add a window, optionally beside an existing one or a group of them"::
     send(Window, '_compute_desired_size'),
     release_focus(Window),
     decoration(Window, Decor),
@@ -141,16 +142,131 @@ append(TF, Window:window=window,
     ;   true
     ),
     (   get(TF, tile, _)                   % I already hold windows
-    ->  relative_window(TF, Relative, Rel),
-        decoration(Rel, RelDecor),
-        get(RelDecor, tile, RelTile),
+    ->  default(Where, below, TheWhere),
+        get(TF, relative_tile, Relative, TheWhere, RelTile),
         get(Decor, tile, NewTile),
-        default(Where, below, TheWhere),
         send(NewTile, TheWhere, RelTile, @off)
     ;   true
     ),
     send(TF, attach_window, Decor),
     get(Decor, unlock, _).
+
+%       A window may be put beside a *group* of windows rather than beside
+%       one: a navigator belongs down the left of the editor and the
+%       terminal together, not to the left of whichever of them happens to
+%       be current.  Class tile relates two tiles whatever their place in
+%       the hierarchy -- see nonDelegatingLeftRightTile() in
+%       src/win/tile.c -- so all that is needed is to hand it the tile the
+%       group sits in rather than a leaf.
+
+relative_tile(TF, Relative:'[window|chain]',
+                  Where:{above,below,left,right}, Tile:tile) :<-
+    "The tile a new window is to be related to"::
+    (   Relative \== @default,
+        send(Relative, instance_of, chain)
+    ->  get(TF, window_group, Relative, Group)
+    ;   relative_window(TF, Relative, Rel),
+        decoration(Rel, RelDecor),
+        get(RelDecor, tile, Group)
+    ),
+    flat_tile(Group, Where, Tile).
+
+window_group(TF, Windows:chain, Tile:tile) :<-
+    "The tile holding exactly these windows of mine"::
+    chain_list(Windows, List),
+    List \== [],
+    window_list(TF, Mine),
+    forall(member(W, List), memberchk_eq(W, Mine)),
+    maplist(window_tile, List, Tiles),
+    common_tile(Tiles, Tile),
+    tile_windows(Tile, Leaves),
+    same_windows(List, Leaves).           % no other window in there
+
+window_tile(Window, Tile) :-
+    decoration(Window, Decor),
+    get(Decor, tile, Tile).
+
+%!  common_tile(+Tiles, -Tile) is det.
+%
+%   The smallest tile holding all of Tiles: the last tile the paths from
+%   the root down to each of them have in common.
+
+common_tile([Tile], Tile) :-
+    !.
+common_tile(Tiles, Tile) :-
+    maplist(tile_path, Tiles, Paths),
+    common_path(Paths, Common),
+    last(Common, Tile).
+
+tile_path(Tile, Path) :-
+    (   get(Tile, super, Super),
+        Super \== @nil
+    ->  tile_path(Super, Path0),
+        append(Path0, [Tile], Path)
+    ;   Path = [Tile]
+    ).
+
+common_path([Path], Path) :-
+    !.
+common_path([Path|Paths], Common) :-
+    common_path(Paths, Common0),
+    common_prefix(Path, Common0, Common).
+
+common_prefix([H1|T1], [H2|T2], [H1|T]) :-
+    H1 == H2,
+    !,
+    common_prefix(T1, T2, T).
+common_prefix(_, _, []).
+
+%!  tile_windows(+Tile, -Windows) is det.
+%
+%   The windows managed by Tile and everything below it.
+
+tile_windows(Tile, Windows) :-
+    (   get(Tile, members, Members),
+        Members \== @nil
+    ->  chain_list(Members, List),
+        maplist(tile_windows, List, Nested),
+        append(Nested, Windows)
+    ;   get(Tile, object, Object),
+        user_window(Object, Window),
+        Windows = [Window]
+    ).
+
+same_windows(A, B) :-
+    length(A, N),
+    length(B, N),
+    forall(member(W, A), memberchk_eq(W, B)).
+
+%!  flat_tile(+Group, +Where, -Tile) is det.
+%
+%   `tile ->left' and friends *join* a row when they are handed a tile in
+%   it and otherwise build a row around the tile they are handed.  Handing
+%   them a row that already runs the way we want would therefore wrap it
+%   in a second row of the same direction, which lays out the same but
+%   reads back as a tree with a node too many.  Hand them the tile at that
+%   end of the row instead.
+
+flat_tile(Group, Where, Tile) :-
+    get(Group, members, Members),
+    Members \== @nil,
+    get(Group, orientation, Orientation),
+    where_orientation(Where, Orientation),
+    !,
+    chain_list(Members, List),
+    (   where_first(Where)
+    ->  List = [Tile|_]
+    ;   last(List, Tile)
+    ).
+flat_tile(Tile, _, Tile).
+
+where_orientation(left,  horizontal).
+where_orientation(right, horizontal).
+where_orientation(above, vertical).
+where_orientation(below, vertical).
+
+where_first(left).
+where_first(above).
 
 %       ->attach_window and ->detach_window are my half of the protocol
 %       that lets `window ->below' and friends work on a tab_frame.  See
@@ -466,6 +582,165 @@ window_shares(TF, Tree:prolog) :->
     "Give my windows the share of me that Tree asks for"::
     send(TF, layout),
     size_tree(TF, Tree).
+
+%       A window that has just been put beside the others has to be given
+%       its share of the row it landed in without disturbing the rest.
+%       Two things make that more than setting one number.  `give_sizes'
+%       below leaves the last member of a row to take what is over, so a
+%       whole row has to be written rather than one entry; and relating a
+%       tile moves the ideal sizes about at *other* levels too, so the
+%       proportions everywhere else have to be put back to what they were.
+%       Hence Was: the tree as it was read before the window was added.
+
+window_share(TF, Window:window, Share:real, Was:prolog=[prolog]) :->
+    "Give Window that share of the row it is in, leaving the rest as Was"::
+    get(TF, window_tree, Now),
+    (   Was == @default
+    ->  Before = Now
+    ;   Before = Was
+    ),
+    share_tree(Now, Before, Window, Share, Tree),
+    send(TF, window_shares, Tree).
+
+%!  share_tree(+Now, +Before, +Window, +Share, -Tree) is det.
+%
+%   Now with Window given Share of the row that holds it, every other row
+%   put back to the proportions it has in Before, and a row Before knows
+%   nothing of left as it comes.
+
+share_tree(Now, _Before, _Window, _Share, Now) :-
+    object(Now),
+    !.
+share_tree(Now, Before, Window, Share, Tree) :-
+    Now =.. [Orientation, Shares],
+    maplist(share_content, Shares, Contents),
+    maplist(tree_leaves, Contents, LeafSets),
+    (   memberchk_eq(Window, Contents)
+    ->  row_shares(Contents, LeafSets, Before, Window, Share, New)
+    ;   kept_shares(Shares, LeafSets, Before, Window, New)
+    ),
+    maplist(share_sub(Before, Window, Share), Contents, Subs),
+    maplist(share_pair, New, Subs, Pairs),
+    Tree =.. [Orientation, Pairs].
+
+share_sub(Before, Window, Share, Content, Sub) :-
+    share_tree(Content, Before, Window, Share, Sub).
+
+share_pair(Share, Content, Share-Content).
+
+%!  row_shares(+Contents, +LeafSets, +Before, +Window, +Share, -Shares) is det.
+%
+%   The row Window landed in: it takes Share and the others divide what is
+%   left in the proportions they had.
+
+row_shares(Contents, LeafSets, Before, Window, Share, Shares) :-
+    others(Contents, LeafSets, Window, OtherSets),
+    (   node_shares(Before, OtherSets, Was),
+        sum_list(Was, Total),
+        Total > 0
+    ->  true
+    ;   length(OtherSets, N),
+        length(Was, N),
+        maplist(=(1), Was),
+        Total is max(N, 1)
+    ),
+    Rest is 1-Share,
+    maplist(scaled(Rest, Total), Was, Others),
+    fill_row(Contents, Window, Share, Others, Shares).
+
+others([], [], _, []).
+others([Content|Contents], [Set|Sets], Window, Others) :-
+    (   Content == Window
+    ->  Others = Rest
+    ;   Others = [Set|Rest]
+    ),
+    others(Contents, Sets, Window, Rest).
+
+scaled(Rest, Total, Was, Share) :-
+    Share is Rest*Was/Total.
+
+fill_row([], _, _, _, []).
+fill_row([Content|Contents], Window, Share, Others0, [S|Shares]) :-
+    (   Content == Window
+    ->  S = Share,
+        Others = Others0
+    ;   Others0 = [S|Others]
+    ),
+    fill_row(Contents, Window, Share, Others, Shares).
+
+%!  kept_shares(+Shares, +LeafSets, +Before, +Window, -Kept) is det.
+%
+%   A row Window did not land in keeps the proportions it had before, if
+%   Before has anything to say about it.  Before is the same tree without
+%   Window, so what a row holds is compared with Window taken out of it.
+
+kept_shares(Shares, LeafSets, Before, Window, Kept) :-
+    maplist(without_window(Window), LeafSets, Sets),
+    (   node_shares(Before, Sets, Kept)
+    ->  true
+    ;   maplist(share_number, Shares, Kept)
+    ).
+
+without_window(Window, Set0, Set) :-
+    (   memberchk_eq(Window, Set0)
+    ->  exclude_window(Set0, Window, Set)
+    ;   Set = Set0
+    ).
+
+exclude_window([], _, []).
+exclude_window([W|Ws], Window, Set) :-
+    (   W == Window
+    ->  Set = Rest
+    ;   Set = [W|Rest]
+    ),
+    exclude_window(Ws, Window, Rest).
+
+share_number(Share-_, Share) :-
+    number(Share),
+    !.
+share_number(_, 1).
+
+%!  node_shares(+Tree, +LeafSets, -Shares) is semidet.
+%
+%   The shares of the node of Tree whose members hold exactly these
+%   windows.  A node is found again by what is in it: the tree it is
+%   compared with has a window more, and nothing else to go by.
+
+node_shares(Tree, _LeafSets, _Shares) :-
+    object(Tree),
+    !,
+    fail.
+node_shares(Tree, LeafSets, Shares) :-
+    Tree =.. [_, Pairs],
+    maplist(share_content, Pairs, Contents),
+    maplist(tree_leaves, Contents, Sets),
+    same_sets(Sets, LeafSets),
+    !,
+    maplist(share_number, Pairs, Shares).
+node_shares(Tree, LeafSets, Shares) :-
+    Tree =.. [_, Pairs],
+    maplist(share_content, Pairs, Contents),
+    member(Content, Contents),
+    node_shares(Content, LeafSets, Shares),
+    !.
+
+same_sets([], []).
+same_sets([A|As], [B|Bs]) :-
+    same_windows(A, B),
+    same_sets(As, Bs).
+
+%!  tree_leaves(+Tree, -Windows) is det.
+%
+%   The windows a sub-tree holds.
+
+tree_leaves(Tree, [Tree]) :-
+    object(Tree),
+    !.
+tree_leaves(Tree, Windows) :-
+    Tree =.. [_, Shares],
+    maplist(share_content, Shares, Contents),
+    maplist(tree_leaves, Contents, Nested),
+    append(Nested, Windows).
 
 %!  place_tree(+TabFrame, +Tree) is det.
 %

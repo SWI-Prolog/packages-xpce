@@ -71,7 +71,8 @@ test_pane_frame :-
                 pane_frame_panes,
                 pane_frame_plain_pane,
                 pane_frame_minimum,
-                pane_frame_term
+                pane_frame_term,
+                pane_frame_split_beside
               ]).
 
                  /*******************************
@@ -1302,3 +1303,65 @@ pane_term_messages(Goal, Messages) :-
 pane_term_message(Term) :-
     nb_getval(pane_term_messages, Old),
     nb_setval(pane_term_messages, [Term|Old]).
+
+
+                 /*******************************
+                 *         SPLIT BESIDE         *
+                 *******************************/
+
+/* A tool that belongs down an edge is put beside a group of panes at a
+   share of their room, rather than beside whichever pane is current at
+   half of it.
+*/
+
+:- begin_tests(pane_frame_split_beside).
+
+%!  column(-Frame, -Panes) is det.
+%
+%   A frame whose tab holds one pane above another.
+
+column(F, [A,B]) :-
+    frame(F, _App, A),
+    send(A, name, one),
+    send(F, split, new(B, tp_pane), A, below),
+    send(B, name, two).
+
+pane_shape(Tree, Name) :-
+    object(Tree),
+    !,
+    get(Tree, name, Name).
+pane_shape(Tree, Shape) :-
+    Tree =.. [Orientation, Shares],
+    findall(S, ( member(Share, Shares),
+                 pane_term_share(Share, Content),
+                 pane_shape(Content, S)
+               ), Subs),
+    Shape =.. [Orientation, Subs].
+
+test(a_pane_can_be_put_beside_them_all,
+     Shape == horizontal([nav,vertical([one,two])])) :-
+    column(F, [A,B]),
+    new(Nav, tp_pane),
+    send(Nav, name, nav),
+    send(F, split_beside, Nav, chain(A,B), left),
+    get(A, container, tab_frame, Tab),
+    get(Tab, window_tree, Tree),
+    pane_shape(Tree, Shape).
+
+test(and_takes_the_share_it_was_given) :-
+    column(F, [A,B]),
+    new(Nav, tp_pane),
+    send(Nav, name, nav),
+    send(F, split_beside, Nav, chain(A,B), left, 0.2),
+    get(A, container, tab_frame, Tab),
+    get(Tab, window_tree, Tree),
+    Tree = horizontal([Share-_|_]),
+    assertion(abs(Share-0.2) < 0.02).
+
+test(the_new_pane_gets_the_keyboard) :-
+    column(F, [A,B]),
+    new(Nav, tp_pane),
+    send(F, split_beside, Nav, chain(A,B), left, 0.2),
+    assertion(get(F, keyboard_focus, Nav)).
+
+:- end_tests(pane_frame_split_beside).

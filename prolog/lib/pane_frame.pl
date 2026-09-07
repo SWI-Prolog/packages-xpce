@@ -320,6 +320,27 @@ split(F, Pane:window,
     send(Tab, split, Pane, Rel, Direction),
     send(F, keyboard_focus, Pane).
 
+%       A tool that belongs down an edge -- the navigator down the left of
+%       the editor and the terminal together -- is put beside a *group* of
+%       panes rather than beside the one the user happens to be in, and at
+%       a share of the room rather than half of it.  See `tab_frame
+%       ->append' for the group and `->window_share' for the share.
+
+split_beside(F, Pane:window,
+                Relatives:chain,
+                Side:{above,below,left,right},
+                Share:[real]) :->
+    "Add Pane beside those panes, taking that share of their room"::
+    get(Relatives, head, First),
+    get(First, container, tab_frame, Tab),
+    get(Tab, window_tree, Was),
+    send(Tab, append, Pane, Relatives, Side),
+    (   Share == @default
+    ->  true
+    ;   send(Tab, window_share, Pane, Share, Was)
+    ),
+    send(F, keyboard_focus, Pane).
+
 delete_pane(F, Pane:window, Destroy:[bool]) :->
     "Take Pane out of its tab; destroy me if it was my last"::
     get(F, panes, Panes),
