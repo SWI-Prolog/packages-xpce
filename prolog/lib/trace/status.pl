@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  2001-2020, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  2001-2026, University of Amsterdam
                               SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -79,31 +79,9 @@ initialise(D) :->
     send_list(TB, append,
               [ tool_button(cut,
                             resource(delete),
-                            delete)
-              ]),
-    send(D, append,
-         new(Ch, menu(mode, choice, message(D, mode, @arg1))),
-         right),
-    send_list(Ch, append, [ normal, debug ]),
-    send(Ch, layout, horizontal),
-    send(Ch, alignment, right),
-    send(Ch, reference, point(0, Ch?height)),
-    send(D, append, new(LB, list_browser)),
-    send(LB, select_message, message(D, identify, @arg1)),
-    send(LB, open_message, message(D, edit, @arg1)),
-    send(LB, style, spy, style(icon := resource(spy))),
-    send(LB, style, break, style(icon := resource(stop))),
-    send(LB, style, trace, style(icon := resource(trace))),
-    send(LB, attribute, hor_stretch, 100),
-    send(LB, attribute, ver_stretch, 100),
-    send(D, append, new(PI, prolog_predicate_item(predicate))),
-    send(PI, length, 30),
-    send(PI, reference, point(0, PI?height)),
-    send(D, append, new(TB2, tool_bar(D)), right),
-    send(TB2, name, tb2),
-    send(TB2, alignment, right),
-    send_list(TB2, append,
-              [ tool_button(spy,
+                            delete),
+                gap,
+                tool_button(spy,
                             resource(spy),
                             'Break on (spy) predicate'),
                 tool_button(trace,
@@ -113,14 +91,27 @@ initialise(D) :->
                             resource(edit),
                             'Edit predicate/show listing')
               ]),
-    send(D, resize_message, message(D, layout, @arg2)),
+    send(D, append, new(PI, prolog_predicate_item(predicate)), next_row),
+    send(PI, hor_stretch, 100),
+    send(PI, placeholder, 'Predicate'),
+    send(PI, show_label, @off),
+    send(D, append, new(LB, list_browser)),
+    send(LB, select_message, message(D, identify, @arg1)),
+    send(LB, open_message, message(D, edit, @arg1)),
+    send(LB, style, spy, style(icon := resource(spy))),
+    send(LB, style, break, style(icon := resource(stop))),
+    send(LB, style, trace, style(icon := resource(trace))),
+    send(LB, attribute, hor_stretch, 100),
+    send(LB, attribute, ver_stretch, 100),
     send(D, display_fixed, new(split_handle)),  % puts itself in the corner
     send(D, update),
+    send(D, resize_message, message(D, layout, @arg2)),
     assert(debug_status_window(D)).
 
 unlink(D) :->
     retractall(debug_status_window(D)),
     send_super(D, unlink).
+
 
                  /*******************************
                  *             PANE             *
@@ -129,16 +120,6 @@ unlink(D) :->
 pane_label(_D, Label:name) :<-
     "What my tab is called"::
     Label = 'Debugging'.
-
-layout(D, Size:[size]) :->
-    "Fix layout"::
-    send_super(D, layout, Size),
-    get(D, member, tb2, TB2),
-    get(D, member, predicate, PI),
-    send(PI, right_side, TB2?left_side - D?gap?width),
-    get(D, member, mode, Mode),          % the grip has the corner: move
-    grip_room(D, Room),                  % the menu, do not resize it --
-    send(Mode, x, Mode?x - Room).
 
 %!  grip_room(+Dialog, -Room) is det.
 %
@@ -175,11 +156,6 @@ update(D) :->
         send(D, append_debug, How, Where),
         fail
     ;   true
-    ),
-    get(D, member, mode, Mode),
-    (   current_prolog_flag(debug, true)
-    ->  send(Mode, selection, debug)
-    ;   send(Mode, selection, normal)
     ).
 
 append_debug(D, What:{spy,trace,break}, Where:prolog) :->
@@ -314,14 +290,6 @@ delete(trace, Head) :-
     trace(Head, -all).
 delete(break, breakpoint(Id)) :-
     delete_breakpoint(Id).
-
-mode(_D, Mode:{normal,debug,trace}) :->
-    "Set the run mode for all threads"::
-    (   Mode == normal
-    ->  tnodebug
-    ;   Mode == debug
-    ->  tdebug
-    ).
 
 :- pce_end_class(prolog_debug_status).
 
