@@ -52,9 +52,7 @@
 :- use_module(library(lists), [member/2]).
 :- use_module(library(apply), [maplist/3]).
 :- use_module(library(pane_layouts),
-              [ arrangement_of/2, record_arrangement/2,
-                save_arrangements/0
-              ]).
+              [ arrangement_of/2, record_arrangement/2 ]).
 
 /** <module> One main window holding tools in tabs and panes
 
@@ -2149,9 +2147,10 @@ frame_application(Options, App) :-
 %!  record_open_arrangements is det.
 %
 %   Credit every window that the user arranged with the time it has been
-%   as they left it, and write what has been learned.  A window closed by
-%   hand has already been credited by `pane_frame ->close'; this is for
-%   the ones that are still open when Prolog halts.
+%   as they left it.  A window closed by hand has already been credited by
+%   `pane_frame ->close'; this is for the ones that are still open when
+%   Prolog halts.  What is credited is written down as it is credited, so
+%   there is nothing else left to do here.
 
 record_open_arrangements :-
     (   object(@display)
@@ -2159,8 +2158,7 @@ record_open_arrangements :-
              if(message(@arg1, instance_of, pane_frame),
                 if(message(@arg1, record_arrangement))))
     ;   true
-    ),
-    save_arrangements.
+    ).
 
 :- initialization
    send(@pce, exit_message, message(@prolog, record_open_arrangements)).

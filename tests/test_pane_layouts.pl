@@ -50,6 +50,8 @@ Run with:
 :- use_module(library(plunit)).
 :- use_module(library(pane_layouts)).
 :- use_module(library(lists), [member/2]).
+:- use_module(library(apply), [maplist/3]).
+:- use_module(library(readutil), [read_file_to_terms/3]).
 
 %       An arrangements file of their own: these must neither read nor
 %       write the arrangements of whoever runs them.
@@ -66,7 +68,8 @@ test_pane_layouts :-
                 pane_layouts_reading,
                 pane_layouts_ranking,
                 pane_layouts_stripping,
-                pane_layouts_learning
+                pane_layouts_learning,
+                pane_layouts_log
               ]).
 
                  /*******************************
@@ -300,15 +303,19 @@ test(and_clamped, Shares == [0.95, 0.05]) :-
    leave the arrangements of whoever runs them alone.
 */
 
-:- begin_tests(pane_layouts_learning,
-               [ setup(forget_arrangements),
-                 cleanup(forget_arrangements)
-               ]).
+%       Two arrangements to learn, differing only in which way the
+%       navigator sits beside the terminal.  They are named here rather
+%       than inside a unit, because both units below use them.
 
 right(pane_frame([], [tab([], horizontal([0.8-terminal,
                                           0.2-prolog_navigator]))])).
 below(pane_frame([], [tab([], vertical([0.8-terminal,
                                         0.2-prolog_navigator]))])).
+
+:- begin_tests(pane_layouts_learning,
+               [ setup(forget_arrangements),
+                 cleanup(forget_arrangements)
+               ]).
 
 test(an_arrangement_lived_in_is_learned, Side == right) :-
     right(A),
@@ -377,13 +384,117 @@ test(forgetting_puts_back_the_way_it_comes, Side == left) :-
 
 :- end_tests(pane_layouts_learning).
 
+                 /*******************************
+                 *            THE LOG           *
+                 *******************************/
+
+/* What is learned is appended to the log as it is learned, rather than
+   written out at the end of the session: two instances of the IDE running
+   at once must both be able to add to it, and a hard crash must not cost
+   what was learned before it.
+*/
+
+:- begin_tests(pane_layouts_log,
+               [ setup(forget_arrangements),
+                 cleanup(forget_arrangements)
+               ]).
+
+test(what_is_learned_is_written_down_at_once, Records == 2) :-
+    right(A), below(B),
+    forget_arrangements,
+    record_arrangement(A, 600),
+    record_arrangement(B, 600),
+    log_records(Log),
+    length(Log, Records).
+
+test(and_nothing_shorter_than_a_minute_is, Log == []) :-
+    right(A),
+    forget_arrangements,
+    record_arrangement(A, 20),
+    log_records(Log).
+
+%       Written by the other instance of the IDE while this one was
+%       running: the store is read from the log when it is asked for, so
+%       there is nothing to restart.
+
+test(what_another_instance_wrote_is_picked_up, Side == right) :-
+    right(A),
+    get_time(Now),
+    write_log([used(A, 7200, Now)]),
+    pane_placement(prolog_navigator, [terminal], split(_, Side, _)).
+
+%       A log that has grown long says the same in one record per
+%       arrangement: a record and a summary both say what an arrangement
+%       was worth at the moment they were written.
+
+test(a_long_log_is_summarised, [Records, Side] == [1, right]) :-
+    right(A),
+    get_time(Now),
+    findall(used(A, 60, Now), between(1, 210, _), Log),
+    write_log(Log),
+    record_arrangement(A, 600),
+    log_records(Summary),
+    length(Summary, Records),
+    pane_placement(prolog_navigator, [terminal], split(_, Side, _)).
+
+test(and_keeps_what_was_learned, true(Seconds > 13000)) :-
+    right(A),
+    get_time(Now),
+    findall(used(A, 60, Now), between(1, 210, _), Log),
+    write_log(Log),
+    record_arrangement(A, 600),
+    log_records([used(_, Seconds, _)]).
+
+%       A record from a later version, or a hand-edited file gone wrong,
+%       costs its own record and no more.
+
+test(a_record_that_means_nothing_costs_itself, Side == right) :-
+    right(A),
+    get_time(Now),
+    assertz(pane_layouts:complained(unknown_term(nonsense))),
+    write_log([nonsense, used(A, 7200, Now)]),
+    pane_placement(prolog_navigator, [terminal], split(_, Side, _)).
+
+test(forgetting_empties_the_log, Log == []) :-
+    right(A),
+    record_arrangement(A, 600),
+    forget_arrangements,
+    log_records(Log).
+
+:- end_tests(pane_layouts_log).
+
 %!  age_arrangements(+Seconds) is det.
 %
-%   Pretend everything learned so far was learned that long ago.
+%   Pretend everything learned so far was learned that long ago, by
+%   putting the clock of the log itself back.  The store is read from the
+%   log whenever it is asked for, so this is all it takes.
 
 age_arrangements(Expr) :-
     Seconds is Expr,
-    forall(retract(pane_layouts:stored(Shape, A, Earned, At)),
-           ( Then is At-Seconds,
-             assertz(pane_layouts:stored(Shape, A, Earned, Then))
-           )).
+    log_records(Records),
+    maplist(age_record(Seconds), Records, Aged),
+    write_log(Aged).
+
+age_record(Seconds, used(A, S, At), used(A, S, Then)) :-
+    Then is At-Seconds.
+
+%!  log_records(-Records) is det.
+%!  write_log(+Records) is det.
+%
+%   The log as it stands, and the log as another instance of the IDE --
+%   or the user with an editor -- might leave it.
+
+log_records(Records) :-
+    pane_layouts:store_file(File),
+    (   exists_file(File)
+    ->  read_file_to_terms(File, Records, [])
+    ;   Records = []
+    ).
+
+write_log(Records) :-
+    pane_layouts:store_file(File),
+    setup_call_cleanup(
+        open(File, write, Out, [encoding(utf8)]),
+        forall(member(Record, Records),
+               format(Out, '~q.~n', [Record])),
+        close(Out)).

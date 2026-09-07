@@ -37,7 +37,6 @@
             arrangement_kinds/2,        % +Arrangement, -Kinds
             arrangement_of/2,           % +PaneTerm, -Arrangement
             record_arrangement/2,       % +Arrangement, +Seconds
-            save_arrangements/0,
             forget_arrangements/0
           ]).
 :- use_module(library(lists),
@@ -84,6 +83,8 @@ caller turns the kinds into the panes it has.
 
 :- multifile
     default_arrangement/1.              % -Arrangement
+:- meta_predicate
+    with_store(+, 1).
 
                  /*******************************
                  *         ARRANGEMENTS         *
@@ -154,30 +155,6 @@ worth_recording(60).                    % a minute: less was a step on the way
 decayed(Earned, At, Now, Priority) :-
     half_life(Half),
     Priority is Earned * 2 ** (-(Now-At)/Half).
-
-%!  record_arrangement(+Arrangement, +Seconds) is det.
-%
-%   Credit an arrangement with the time it has just been lived in.  An
-%   arrangement is known by its *shape* -- its panes and how they are
-%   tiled, without their sizes -- so that pulling a pane an inch wider
-%   does not fork the record and split what it has earned.  The sizes kept
-%   are the ones last seen.
-
-record_arrangement(Arrangement, Seconds) :-
-    worth_recording(Least),
-    Seconds >= Least,
-    arrangement_shape(Arrangement, Shape),
-    !,
-    load_arrangements,
-    get_time(Now),
-    (   retract(stored(Shape, _, Earned0, At))
-    ->  decayed(Earned0, At, Now, Was)
-    ;   Was = 0
-    ),
-    Earned is Was+Seconds,
-    assertz(stored(Shape, Arrangement, Earned, Now)),
-    set_modified.
-record_arrangement(_, _).
 
 %!  arrangement_shape(+Arrangement, -Shape) is det.
 %
@@ -265,22 +242,34 @@ clamped(Share, Rounded) :-
                  *           THE STORE          *
                  *******************************/
 
-/* The arrangements are kept in a file of their own in the XPCE config
-   directory, one term to a line, because they are meant to be read and
-   edited by hand.  It is written when Prolog halts and read the first
-   time anything asks.
+/* The arrangements live in a file of their own in the XPCE config
+   directory, kept as a log: what an arrangement has just earned is
+   appended to the file there and then, one term to a line.  Nothing
+   waits for the end of the session, so several instances of the IDE
+   running at once each add what they learn without overwriting the
+   others, and a hard crash costs at most the window that was on the
+   screen at the time.
+
+   Reading the store plays the log back: each record credits the
+   arrangement it names as of when it was written, and the store is where
+   that leaves things.  A record and a summary say the same thing -- this
+   arrangement was worth that many seconds at that moment -- so a log that
+   has grown long can be rewritten as one record per arrangement, and
+   playing *that* back gives the same store again.
+
+   Everything goes through a lock file beside the store, so that two
+   instances appending, or one summarising while another reads, cannot
+   tread on each other.  The log is read whenever it is asked for rather
+   than held in memory over the session, which is what lets one instance
+   pick up what another has just learned.
 */
 
 :- dynamic
     stored/4,                           % Shape, Arrangement, Earned, At
-    loaded/0,
-    modified/0.
+    events/1,                           % records in the log as last read
+    complained/1.                       % what has been warned about
 
-set_modified :-
-    (   modified
-    ->  true
-    ;   assertz(modified)
-    ).
+max_events(200).                        % a longer log is summarised
 
 %!  arrangements_file(-File) is nondet.
 %
@@ -308,89 +297,161 @@ store_file(File) :-
 
 %!  load_arrangements is det.
 %
-%   Read the arrangements, once.  A file that cannot be read leaves the
-%   system with the arrangements it comes with, which is a working state.
+%   Bring the store up to date with the log.  A file that cannot be read
+%   leaves the system with the arrangements it comes with, which is a
+%   working state.
 
 load_arrangements :-
-    loaded,
-    !.
-load_arrangements :-
-    assertz(loaded),
     store_file(File),
     (   exists_file(File)
-    ->  catch(read_arrangements(File), E,
-              print_message(warning, pane_layouts(no_file(File, E))))
-    ;   true
+    ->  with_store(File, read_log)
+    ;   clear_store
     ).
 
-read_arrangements(File) :-
+clear_store :-
+    retractall(stored(_,_,_,_)),
+    retractall(events(_)),
+    assertz(events(0)).
+
+read_log(File) :-
+    clear_store,
     setup_call_cleanup(
         open(File, read, In, [encoding(utf8)]),
-        read_terms(In),
+        read_records(In),
         close(In)).
 
-read_terms(In) :-
+read_records(In) :-
     read_term(In, Term, []),
     (   Term == end_of_file
     ->  true
-    ;   read_arrangement(Term),
-        read_terms(In)
+    ;   replay(Term),
+        count_record,
+        read_records(In)
     ).
 
-%       An unknown term costs its own record and no more: a file written
-%       by a later version, or edited by hand into something else, still
-%       gives up everything else it holds.
+count_record :-
+    retract(events(N0)),
+    N is N0+1,
+    assertz(events(N)).
 
-read_arrangement(arrangement(Arrangement, Earned, At)) =>
-    arrangement_shape(Arrangement, Shape),
-    retractall(stored(Shape, _, _, _)),
-    assertz(stored(Shape, Arrangement, Earned, At)).
-read_arrangement(Term) =>
-    print_message(warning, pane_layouts(unknown_term(Term))).
+%       A record that means nothing to us costs itself and no more: a log
+%       written by a later version, or edited by hand into something else,
+%       still gives up everything else it holds.
 
-%!  save_arrangements is det.
+replay(used(Arrangement, Seconds, At)) =>
+    credit(Arrangement, Seconds, At).
+replay(Term) =>
+    complain(unknown_term(Term)).
+
+%!  credit(+Arrangement, +Seconds, +At) is det.
 %
-%   Write the arrangements out, dropping the ones that have faded: an
-%   arrangement worth less than the least that is ever credited can never
-%   outrank anything again.
+%   Add to what an arrangement has earned, as of the moment the record was
+%   written.  An arrangement is known by its *shape* -- its panes and how
+%   they are tiled, without their sizes -- so that pulling a pane an inch
+%   wider does not fork the record and split what it has earned.  The
+%   sizes kept are the ones last seen.
 
-save_arrangements :-
-    modified,
+credit(Arrangement, Seconds, At) :-
+    arrangement_shape(Arrangement, Shape),
+    (   retract(stored(Shape, _, Earned0, At0))
+    ->  decayed(Earned0, At0, At, Was)
+    ;   Was = 0
+    ),
+    Earned is Was+Seconds,
+    assertz(stored(Shape, Arrangement, Earned, At)).
+
+%!  record_arrangement(+Arrangement, +Seconds) is det.
+%
+%   Credit an arrangement with the time it has just been lived in, and
+%   write that down at once.
+
+record_arrangement(Arrangement, Seconds) :-
+    worth_recording(Least),
+    Seconds >= Least,
     !,
-    retractall(modified),
+    get_time(Now),
     store_file(File),
-    catch(write_arrangements(File), E,
-          print_message(warning, pane_layouts(no_file(File, E)))).
-save_arrangements.
+    with_store(File, add_record(used(Arrangement, Seconds, Now))).
+record_arrangement(_, _).
 
-write_arrangements(File) :-
-    file_directory_name(File, Dir),
-    make_directory_path(Dir),
+%       Under the lock: play back what the others have written since we
+%       last looked, add ours, and either append it or -- if the log has
+%       grown long -- write the whole store back as a summary, which says
+%       the same in one record per arrangement.
+
+add_record(Record, File) :-
+    (   exists_file(File)
+    ->  read_log(File)
+    ;   clear_store
+    ),
+    replay(Record),
+    events(N),
+    max_events(Max),
+    (   N >= Max
+    ->  summarise_log(File)
+    ;   append_record(File, Record)
+    ).
+
+append_record(File, Record) :-
+    (   exists_file(File)
+    ->  Header = false
+    ;   Header = true
+    ),
+    setup_call_cleanup(
+        open(File, append, Out, [encoding(utf8)]),
+        (   (   Header == true
+            ->  write_header(Out)
+            ;   true
+            ),
+            write_record(Out, Record)
+        ),
+        close(Out)),
+    count_record.
+
+%!  summarise_log(+File) is det.
+%
+%   Write the log back as one record per arrangement, dropping the ones
+%   that have faded: an arrangement worth less than the least that is ever
+%   credited can never outrank anything again.
+
+summarise_log(File) :-
     get_time(Now),
     worth_recording(Least),
-    findall(arrangement(Arrangement, Rounded, Now),
+    findall(used(Arrangement, Rounded, Now),
             ( stored(_Shape, Arrangement, Earned, At),
               decayed(Earned, At, Now, Priority),
               Priority >= Least,
               Rounded is round(Priority*10)/10.0
             ),
             Records),
-    setup_call_cleanup(
-        open(File, write, Out, [encoding(utf8)]),
-        write_records(Out, Records),
-        close(Out)).
+    rewrite_log(File, Records).
 
-write_records(Out, Records) :-
-    write_header(Out),
-    forall(member(Record, Records),
-           format(Out, '~q.~n', [Record])).
+%       Written beside the log and renamed over it, so that the log is
+%       either the old one or the new one and never half of either.  We
+%       hold the lock, so nobody has it open to append to.
+
+rewrite_log(File, Records) :-
+    atom_concat(File, '.new', New),
+    setup_call_cleanup(
+        open(New, write, Out, [encoding(utf8)]),
+        (   write_header(Out),
+            forall(member(Record, Records),
+                   write_record(Out, Record))
+        ),
+        close(Out)),
+    rename_file(New, File),
+    read_log(File).
+
+write_record(Out, Record) :-
+    format(Out, '~q.~n', [Record]).
 
 write_header(Out) :-
-    format(Out, '/*  How you have arranged the windows of the IDE.~n', []),
-    format(Out, '~n', []),
-    format(Out, '    Each term is a window with the content left out and~n', []),
-    format(Out, '    the seconds of recent use it has earned.  Written when~n', []),
-    format(Out, '    Prolog halts; edit it as you like.~n', []),
+    format(Out, '/*  How you have arranged the windows of the IDE.~n~n', []),
+    format(Out, '    Each record is a window with the content left~n', []),
+    format(Out, '    out and the seconds it was worked in, as they~n', []),
+    format(Out, '    stood at that moment.  They are added up as the~n', []),
+    format(Out, '    file is read, the older ones counting for less.~n', []),
+    format(Out, '    Edit it as you like.~n', []),
     format(Out, '*/~n~n', []).
 
 %!  forget_arrangements is det.
@@ -398,9 +459,48 @@ write_header(Out) :-
 %   Throw away everything that has been learned.
 
 forget_arrangements :-
-    retractall(stored(_, _, _, _)),
-    assertz(loaded),
-    set_modified.
+    retractall(stored(_,_,_,_)),
+    store_file(File),
+    (   exists_file(File)
+    ->  with_store(File, forget_log)
+    ;   clear_store
+    ).
+
+forget_log(File) :-
+    rewrite_log(File, []).
+
+                 /*******************************
+                 *           THE LOCK           *
+                 *******************************/
+
+%!  with_store(+File, :Goal) is det.
+%
+%   Run call(Goal, File) with the store to ourselves.  The lock is on a
+%   file beside it rather than on the store, because the store is renamed
+%   over when it is summarised while the lock file stays what it is.
+%
+%   A store that cannot be read or written leaves the system with the
+%   arrangements it comes with; it is said once and not again.
+
+with_store(File, Goal) :-
+    catch(ignore(locked_store(File, Goal)), Error,
+          complain(no_file(File, Error))).
+
+locked_store(File, Goal) :-
+    file_directory_name(File, Dir),
+    make_directory_path(Dir),
+    atom_concat(File, '.lock', Lock),
+    setup_call_cleanup(
+        open(Lock, append, Stream, [lock(exclusive)]),
+        call(Goal, File),
+        close(Stream)).
+
+complain(Message) :-
+    (   complained(Message)
+    ->  true
+    ;   assertz(complained(Message)),
+        print_message(warning, pane_layouts(Message))
+    ).
 
                  /*******************************
                  *           MESSAGES           *
