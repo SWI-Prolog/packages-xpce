@@ -1888,9 +1888,13 @@ thread_connected(T, Thread:name) :->
 
 pane_exposed(T) :->
     "Take the name of what I run, which I may only know now"::
-    get(T, terminal, PT),
-    terminal_base_label(PT, Base),
-    ignore(send(T, retitle_tab, Base)).
+    (   get(T, slot, window_label, Label),
+        Label \== @nil                  % a client asked for a title, and
+    ->  true                            % that is what my tab already says
+    ;   get(T, terminal, PT),
+        terminal_base_label(PT, Base),
+        ignore(send(T, retitle_tab, Base))
+    ).
 
 retitle_tab(T, Base:name) :->
     "Put Base on my tab, made unique, unless the user named it"::
