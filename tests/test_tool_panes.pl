@@ -930,17 +930,25 @@ test(it_carries_a_grip_to_drag_it_by) :-
 %       so making room must not be something that accumulates: `graphical
 %       ->right_side' sets the right edge by changing the width, and
 %       asking for one further left made the menu narrower every time.
+%       The menu is as wide as its label and items ask for -- how wide
+%       that is depends on the font, so the test asks that it does not
+%       change rather than what it is.
 
 test(and_the_layout_keeps_the_corner_clear,
      [ forall(member(Width-Times, [600-1, 600-2, 600-3, 800-1, 800-3])),
-       true(Widths-Clear == 185-true)
+       true(Kept-Clear == true-true)
      ]) :-
     debug_status(D),
     get(D, member, mode, Mode),
+    get(Mode, width, W0),
     forall(between(1, Times, _),
            ( send(D, size, size(Width, 300)),
              send(D, layout, size(Width, 300)) )),
-    get(Mode, width, Widths),
+    get(Mode, width, W),
+    (   W == W0
+    ->  Kept = true
+    ;   Kept = W0-W
+    ),
     grip(D, H),
     send(H, compute),
     get(H, area, area(GX, _, _, _)),
