@@ -180,10 +180,38 @@ buffers(Emacs, Buffers:chain) :<-
     get(Emacs?buffer_list?members, map, @arg1?object, Buffers).
 
 
-open_file(_Emacs, File:file, How:[{here,tab,split,window}]) :->
+%       Which window a buffer is shown in: the one PceEmacs was last
+%       working in, if there is one, and otherwise the window of the IDE
+%       the user is in.  A console with no editor in it can hold a tab or
+%       a split as well as any other window; only when there is no window
+%       at all does a buffer get one of its own.
+
+target_frame(Emacs, Frame:pane_frame) :<-
+    "The window to show a buffer in"::
+    (   get(Emacs, current_frame, Frame)        % one holding an editor
+    ->  true
+    ;   get(@prolog_ide, current_frame, Frame)  % the one being worked in
+    ).
+
+%       Where a source the user asks to see is opened.  A caller that
+%       says nothing gets the setting a window of the IDE offers on its
+%       Settings menu -- see `prolog_ide <-source_placement'; one that
+%       says where, as the popup offering "Edit in new window" does, is
+%       obeyed.
+
+source_placement(_Emacs, How:[{here,tab,split,window}],
+                 Where:{here,tab,split,window}) :<-
+    "Where to open a source; How overrules the setting"::
+    (   How \== @default
+    ->  Where = How
+    ;   get(@prolog_ide, source_placement, Where)
+    ).
+
+open_file(Emacs, File:file, How:[{here,tab,split,window}]) :->
     "Open a file"::
+    get(Emacs, source_placement, How, Where),
     new(B, emacs_buffer(File)),
-    send(B, open, How).
+    send(B, open, Where).
 
 
 find_file(Emacs, Dir:[directory]) :->
@@ -202,8 +230,9 @@ goto_source_location(Emacs,
     ),
     get(Location, file_name, File),
     send(Emacs, ensure_source_file, File),
+    get(Emacs, source_placement, Where, Placement),
     new(B, emacs_buffer(File)),
-    get(B, open, Where, View),
+    get(B, open, Placement, View),
     send(B, check_modified_file),
     get(View, editor, Editor),
     get(Editor, mode, Mode),
@@ -244,10 +273,16 @@ ensure_source_file(_Emacs, File) :->
         fail
     ).
 
+%       The pane the user is in need not be a source: a window of the IDE
+%       holds the tools as well, and a tool has no editor to remember a
+%       place in.  ->open_file works from the same view -- see
+%       editor_pane/2 -- so this is the location it is leaving.
+
 location_history(Emacs, Title:title=[char_array]) :->
     "Save current location into history"::
     (   get(Emacs, current_frame, Frame),
-        get(Frame?current_pane, editor, Editor),
+        editor_pane(Frame, View),
+        get(View, editor, Editor),
         get(Editor, mode, Mode)
     ->  send(Mode, location_history, title := Title)
     ;   true
@@ -381,19 +416,20 @@ frame(_Emacs, For:'emacs_buffer|emacs_view', Frame:pane_frame) :<-
     ignore(send(Mode, new_buffer)).
 
 %       A window of the IDE holds terminals and tools as well as views,
-%       so none of the three routes below can take it that a pane of the
-%       frame is an editor.  When the one it needs is not there -- `here'
-%       in a window of terminals, `split' beside nothing to split -- the
-%       buffer opens in a tab of its own, which every window can do.
+%       so `here' -- show the buffer in the editor the user is in -- can
+%       only be done where there is one; the buffer opens in a tab of its
+%       own otherwise, which every window can do.  `split' asks for no
+%       editor: beside what is there is beside whatever pane that is, as
+%       it is for a tool.
 
 show_buffer(_Emacs, Frame:pane_frame, B:emacs_buffer,
             How:[{here,tab,split}]) :->
-    "Show B in Frame, here, in a tab of its own or beside the view"::
+    "Show B in Frame, here, in a tab of its own or beside what is there"::
     (   How == tab,
         view_on_buffer(Frame, B, View)
     ->  send(Frame, current_pane, View)         % it is already open
     ;   How == split,
-        editor_pane(Frame, Rel)
+        get(Frame, current_pane, Rel)
     ->  send(Frame, split, new(New, emacs_view(B)), Rel, horizontally),
         setup_view(B, New)
     ;   How == here,

@@ -1325,15 +1325,10 @@ connect(PT, @default, Title) =>
     thread_self(Me),
     parent_history(PT, Events),
     parent_thread(PT, Parent),
+    console_thread_options(Parent, Alias, Options),
     thread_create(thread_run_interactor(PT, Me, PTY, Init, Goal, CWD, Title,
                                         Events),
-                  Thread,
-                  [ inherit_from(Parent),
-                    detached(true),
-                    alias(Alias),
-                    at_exit(terminated),
-                    class(console)
-                  ]),
+                  Thread, Options),
     asserta(current_prolog_terminal(Thread, PT)),
     thread_get_message(Msg),
     (   Msg = title(Title0)
@@ -1348,6 +1343,26 @@ connect(PT, TID, Title) =>
     get(PT, pty_name, PTY),
     thread_title(Title),
     thread_send_message(Thread, '$epilog'(PT, PTY)).
+
+%!  console_thread_options(+Parent, +Alias, -Options) is det.
+%
+%   Options for the thread of a new  console. It takes the flags of the
+%   console it was opened from, but  not   its  debugging:  a thread is
+%   created debuggable or not as the  thread   it  inherits from is, and
+%   the main thread turns its own debugging   off while it sits in the
+%   event loop -- see ep_wait/1. A console  is a toplevel the user works
+%   in, so it is debuggable whatever made  it, and so is everything the
+%   user creates in it: thread_create/3 hands the flag on.
+
+console_thread_options(Parent, Alias,
+                       [ inherit_from(Parent),
+                         debug(true),
+                         detached(true),
+                         alias(Alias),
+                         at_exit(terminated),
+                         class(console)
+                       ]).
+
 
 %!  set_inject(+PT, +Spec) is det.
 %

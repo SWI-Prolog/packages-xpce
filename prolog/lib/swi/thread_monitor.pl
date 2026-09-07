@@ -181,9 +181,16 @@ update_label(TS) :->
     ;   send(TS, label, string(" %s [%s]", TID, Postfix))
     ).
 
-label_postfix(console, _,    console).
-label_postfix(_,       @nil, system).
-label_postfix(_,       @on,  debug).
+%       What a thread is said to be: what its class is when that says
+%       something, and otherwise what its debugging is.  A thread that
+%       cannot be debugged used to be called a system thread, which is a
+%       class it may well not be in -- thread_create/3 makes a user
+%       thread, debuggable or not.
+
+label_postfix(console, _,    console) :- !.
+label_postfix(system,  _,    system) :- !.
+label_postfix(_,       @nil, 'no debug') :- !.
+label_postfix(_,       @on,  debug) :- !.
 label_postfix(_,       @off, '').
 
 debug_status(TID, Debug) :-

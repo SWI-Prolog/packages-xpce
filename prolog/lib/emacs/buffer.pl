@@ -712,18 +712,10 @@ confirm_reload(_, Frame, _, File) :-
 
 open(B, How:[{here,tab,split,window}], View:emacs_view) :<-
     "Create window for buffer; answer the view showing me"::
-    (   How == window
-    ->  get(@emacs, frame, B, Frame)
-    ;   How == tab,
-        get(@emacs, current_frame, Frame)
-    ->  send(@emacs, show_buffer, Frame, B, tab),
-        send(Frame, expose)
-    ;   How == split,
-        get(@emacs, current_frame, Frame)
-    ->  send(@emacs, show_buffer, Frame, B, split),
-        send(Frame, expose)
-    ;   get(@emacs, current_frame, Frame)
-    ->  send(@emacs, show_buffer, Frame, B, here),
+    (   How \== window,
+        get(@emacs, target_frame, Frame)
+    ->  default(How, here, Where),
+        send(@emacs, show_buffer, Frame, B, Where),
         send(Frame, expose)
     ;   get(@emacs, frame, B, Frame)
     ),

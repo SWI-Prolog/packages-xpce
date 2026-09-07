@@ -553,7 +553,7 @@ event(E, Ev:event) :->
 
 pceemacs_open_drop(_Editor, Paths) :-
     forall(member(P, Paths),
-           ignore(send(@emacs, open_file, P, tab))).
+           ignore(send(@emacs, open_file, P))).
 
 
 paste(E, Which:[{primary,clipboard}]) :->

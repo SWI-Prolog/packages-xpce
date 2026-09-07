@@ -59,7 +59,8 @@ Run with:
 :- use_module(library(swi_ide)).
 :- use_module(library(emacs/emacs)).
 :- use_module(library(pce_util), [chain_list/2]).
-:- use_module(library(lists), [member/2, subtract/3]).
+:- use_module(library(lists), [member/2, subtract/3, length/2]).
+:- use_module(library(filesex), [directory_file_path/3]).
 
 test_mixed_panes :-
     run_tests([ mixed_panes ]).
@@ -108,6 +109,43 @@ terminal(F, W) :-
 %       pane that says when it is asked does.
 
 :- dynamic asked/1.
+
+%!  source_of_our_own(-File) is det.
+%
+%   A Prolog file of its own to open, with a body indented by four, so
+%   that PceEmacs works the layout out and says so.
+
+:- dynamic
+    source_count/1.
+
+source_of_our_own(File) :-
+    (   retract(source_count(N0))
+    ->  N is N0+1
+    ;   N = 1
+    ),
+    assertz(source_count(N)),
+    current_prolog_flag(tmp_dir, Tmp),
+    format(atom(Base), 'test_mixed_source_~d.pl', [N]),
+    directory_file_path(Tmp, Base, File),
+    setup_call_cleanup(
+        open(File, write, Out),
+        format(Out, 'answer(X) :-~n    X = 42.~n', []),
+        close(Out)).
+
+%!  with_placement(+Placement, :Goal) is semidet.
+%
+%   Run Goal with the IDE set to open new things in Placement.
+
+:- meta_predicate with_placement(+, 0).
+
+with_placement(Placement, Goal) :-
+    get(@pce, convert, prolog_ide, class, Class),
+    get(Class, class_variable, tool_placement, Var),
+    get(Var, value, Old),
+    setup_call_cleanup(
+        send(Class, class_variable_value, tool_placement, Placement),
+        Goal,
+        send(Class, class_variable_value, tool_placement, Old)).
 
 :- pce_begin_class(nosy_pane, window,
                    "A pane that records being asked for a buffer").
@@ -166,6 +204,115 @@ test(both_panes_show_the_grip_they_are_dragged_by,
               get(Handle, displayed, Displayed)
             ),
             Shown).
+
+%       A source the user asks to see -- edit/1 -- goes in the window
+%       they are in, even when that window holds no editor: a console can
+%       take a tab or a split like any other.  It used to want a window
+%       with an editor in it and made one of its own when there was none.
+
+test(a_source_opens_in_the_console_the_user_is_in,
+     Classes == [epilog_window, emacs_view]) :-
+    no_frames,
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    source_of_our_own(File),
+    with_placement(tab, send(@emacs, goto_source_location,
+                             source_location(File, 1))),
+    classes(F, Classes).
+
+test(and_beside_the_terminal_when_that_is_the_setting,
+     true(Tabs-Panes == 1-2)) :-
+    no_frames,
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    source_of_our_own(File),
+    with_placement(split, send(@emacs, goto_source_location,
+                               source_location(File, 1))),
+    get(F?tabs?tabs, size, Tabs),
+    classes(F, Cs),
+    length(Cs, Panes).
+
+%       The layout PceEmacs works out from the file is a remark: it goes
+%       on the status bar of the window when there is one to say it on,
+%       and is dropped when there is not -- a view is made before the
+%       window it goes in.  As `inform' it was a message box that had to
+%       be clicked away before the file appeared, and this test hung.
+
+test(what_it_makes_of_the_layout_does_not_stop_for_an_answer,
+     true(Indentation-Tabs == 4-(@off))) :-
+    no_frames,
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    source_of_our_own(File),
+    with_placement(tab, send(@emacs, goto_source_location,
+                             source_location(File, 1))),
+    editor(F, View),
+    get(View, mode, Mode),
+    get(Mode, body_indentation, Indentation),
+    get(View?editor, indent_tabs, Tabs).
+
+%       Where the user asked from is remembered, so that `Back' returns
+%       to it.  Where they were is an editor, and the pane they are in
+%       need not be one: a terminal has no editor to remember a place in,
+%       nor has a tool of the IDE, and asking one for it lost the place
+%       -- and said so.  ->open_file works from the same view.
+%
+%       The one place remembered is the caret the user left: arriving at
+%       the head of a file is not worth remembering -- see `emacs_mode
+%       ->history_not_interesting'.
+
+test(where_a_source_was_asked_for_from_is_remembered,
+     true(Places == 1)) :-
+    no_frames,
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    source_with_room(Asking),
+    with_placement(tab, send(@emacs, goto_source_location,
+                             source_location(Asking, 1))),
+    editor(F, View),
+    get(View, editor, Editor),           % away from the place arriving
+    get(Editor, scan, 0, line, 60, start, Caret),  % there remembered
+    send(Editor, caret, Caret),
+    terminal(F, T),
+    send(F, current_pane, T),            % the pane the user is in is not
+    source_of_our_own(Asked),            % the one that holds the source
+    with_placement(tab, send(@emacs, goto_source_location,
+                             source_location(Asked, 1))),
+    history_places(Asking, Places).
+
+%!  source_with_room(-File) is det.
+%
+%   A source long enough to move the caret away in: a place close to the
+%   last one remembered is not worth remembering again.
+
+source_with_room(File) :-
+    source_of_our_own(File),
+    setup_call_cleanup(
+        open(File, write, Out),
+        forall(between(1, 60, I),
+               format(Out, 'answer(~d, X) :-~n    X = ~d.~n~n', [I, I])),
+        close(Out)).
+
+%!  history_places(+File, -Count) is det.
+%
+%   How many places PceEmacs remembers in File.
+
+history_places(File, Count) :-
+    get(@emacs?history, backward_list, Chain),
+    chain_list(Chain, Entries),
+    findall(HE,
+            ( member(HE, Entries),
+              get(HE, get_hyper, fragment, text_buffer, TB),
+              get(TB, file, PceFile),
+              PceFile \== @nil,
+              get(PceFile, name, File)
+            ),
+            Ours),
+    length(Ours, Count).
 
 test(the_mode_menus_come_and_go_with_the_editor) :-
     emacs,

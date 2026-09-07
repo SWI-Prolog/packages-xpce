@@ -152,9 +152,8 @@ prolog_edit:select_location(Pairs, _Spec, Location) :-
              new(C, button(cancel, message(D, destroy)))),
         send(C, alignment, right),
         send(D, resize_message, message(D, layout, @arg2)),
-        send(D, modal, transient),
         send(D, transient_for, Frame),
-        (   get(D, confirm_centered, Frame?area?center, Rval)
+        (   get(D, confirm_centered, Frame, Rval)
         ->  send(D, destroy),
             Location = Rval
         ;   Location = []

@@ -674,9 +674,12 @@ distribute_stretches(stretch *s, int n, int w)
     grow = w - total_ideal;
 
     if ( grow < 0 && total_shrink == 0 )
-    { for(is_pos = 0, i = 0; i < n; i++)
-        if ( s[i].ideal > 0 || s[i].shrink > 0 )
+    { for(is_pos = 0, i = 0; i < n; i++)	/* who still has something */
+        if ( (s[i].ideal > 0 || s[i].shrink > 0) &&
+	     s[i].ideal > s[i].minimum )	/* to give */
 	  is_pos++;
+      if ( is_pos == 0 )		/* nobody can: share it out over all */
+	is_pos = n;
     } else
       is_pos = n;
 
@@ -689,7 +692,10 @@ distribute_stretches(stretch *s, int n, int w)
       { grow_this = (total_stretch==0 ? grow / n
 				      : (grow * s[i].stretch) / total_stretch);
       } else
-      {	if ( s[i].ideal == 0 && s[i].shrink == 0 )
+      {	/* a tile that is as small as it may get has nothing to give:
+	   what it would have given has to come from the others */
+	if ( (s[i].ideal == 0 && s[i].shrink == 0) ||
+	     s[i].ideal <= s[i].minimum )
 	  grow_this = 0;
 	else
 	  grow_this = (total_shrink ==0 ? grow / is_pos
@@ -735,9 +741,9 @@ distribute_stretches(stretch *s, int n, int w)
 	{ int to_grow = (grow - growed < per_stretchable ? grow - growed
 							 : per_stretchable);
 
-					/* don't make negative */
-	  if ( !do_grow	&& to_grow > s[j].size )
-	    to_grow = s[j].size;
+					/* don't go below the minimum */
+	  if ( !do_grow	&& to_grow > s[j].size - s[j].minimum )
+	    to_grow = s[j].size - s[j].minimum;
 	  if ( to_grow < 0 )		/* already past zero: leave it to the
 					   minimum check below, which pins it
 					   and shares the rest out again */
@@ -1084,6 +1090,46 @@ shrinkability(int weight, int ideal)
 }
 
 
+/* A tile is never laid out smaller than this, so that the window in it
+   stays visible and can be grabbed: a pane squeezed to nothing cannot be
+   dragged back.  A tile that wants less than this -- a menu bar is as
+   high as its buttons and no more -- keeps what it wants; the minimum is
+   an offer of room, not a demand for it.
+*/
+
+#define MIN_TILE_SIZE 20
+
+static int
+tile_minimum(TileObj t, bool horizontal)
+{ int ideal = valInt(horizontal ? t->idealWidth : t->idealHeight);
+
+  if ( t->orientation == NAME_none ||	/* a window, or nothing inside */
+       isNil(t->members) )		/* to ask */
+    return ideal < MIN_TILE_SIZE ? ideal : MIN_TILE_SIZE;
+
+  { bool along = ((t->orientation == NAME_horizontal) == horizontal);
+    int border = valInt(t->border);
+    int nvis   = non_empty_tiles(t);
+    int min    = 0;
+    Cell cell;
+
+    for_cell(cell, t->members)
+    { int m = tile_minimum(cell->value, horizontal);
+
+      if ( along )
+	min += m;			/* they sit next to each other */
+      else if ( m > min )
+	min = m;			/* they cover one another */
+    }
+
+    if ( along && nvis > 1 )
+      min += border * (nvis-1);
+
+    return min < ideal ? min : ideal;	/* never more than it asks for */
+  }
+}
+
+
 static status
 layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah)
 { int border = valInt(t->border);
@@ -1118,6 +1164,8 @@ layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah)
     return send(t->object, NAME_doSet,
 		toInt(x), toInt(y), toInt(w), toInt(h), EAV);
 
+  int x0 = x, y0 = y;			/* where the box starts */
+
   DEBUG(NAME_tile, Cprintf("enter: layoutTile(%s) (%s)\n",
 			   pp(t), pp(t->orientation)));
   if ( t->orientation == NAME_horizontal )
@@ -1129,7 +1177,7 @@ layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah)
     for_cell(cell, t->members)
     { TileObj t2 = cell->value;
 
-      sp->minimum = 0;
+      sp->minimum = tile_minimum(t2, true);
       sp->maximum = INT_MAX;
       sp->ideal   = valInt(t2->idealWidth);
       sp->stretch = valInt(t2->horStretch);
@@ -1142,11 +1190,16 @@ layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah)
     sp = s;
     for_cell(cell, t->members)
     { TileObj t2 = cell->value;
+      int size = sp->size;
+      int room = x0 + w - x;		/* what is left of the box */
 
       if ( sp->size > 0 && placed )
 	x += border;
-      layoutTile(t2, toInt(x), toInt(y), toInt(sp->size), toInt(h));
-      x += sp->size;
+      if ( size > room )		/* the minimums do not fit: keep it
+					   inside rather than out of reach */
+	size = room > 0 ? room : 0;
+      layoutTile(t2, toInt(x), toInt(y), toInt(size), toInt(h));
+      x += size;
       if ( sp->size > 0 )
 	placed = true;
       sp++;
@@ -1160,7 +1213,7 @@ layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah)
     for_cell(cell, t->members)
     { TileObj t2 = cell->value;
 
-      sp->minimum = 0;
+      sp->minimum = tile_minimum(t2, false);
       sp->maximum = INT_MAX;
       sp->ideal   = valInt(t2->idealHeight);
       sp->stretch = valInt(t2->verStretch);
@@ -1173,11 +1226,16 @@ layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah)
     sp = s;
     for_cell(cell, t->members)
     { TileObj t2 = cell->value;
+      int size = sp->size;
+      int room = y0 + h - y;		/* what is left of the box */
 
       if ( sp->size > 0 && placed )
 	y += border;
-      layoutTile(t2, toInt(x), toInt(y), toInt(w), toInt(sp->size));
-      y += sp->size;
+      if ( size > room )		/* the minimums do not fit: keep it
+					   inside rather than out of reach */
+	size = room > 0 ? room : 0;
+      layoutTile(t2, toInt(x), toInt(y), toInt(w), toInt(size));
+      y += size;
       if ( sp->size > 0 )
 	placed = true;
       sp++;

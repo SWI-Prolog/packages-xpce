@@ -321,7 +321,10 @@ setup_auto_indent(E) :->
         ),
         send(E, indent_tabs, IndentTabs),
         send(E, body_indentation, Indent),
-        send(E, report, inform,
+        %  A remark, not something to acknowledge: `inform' with no bar
+        %  to say it on -- a view is made before the window it goes in --
+        %  becomes a message box the user has to click away.
+        send(E, report, status,
              'Detected: body_indentation=%s, indent_tabs=%s',
              Indent, IndentTabs).
 
@@ -795,7 +798,7 @@ find_definition(M, For:prolog_predicate, Where:[{here,tab,split,window}]) :->
         ->  send(Editor, goto_line, Location, title := For?print_name)
         ;   Location = (File:Line)
         ->  send(@emacs, goto_source_location,
-                 source_location(File, Line), tab)
+                 source_location(File, Line), Where)
         )
     ;   \+ is_foreign(For),
         xref_defined(TB, Head, imported(File))      % imported
@@ -833,7 +836,7 @@ find_local_definition(M, For:prolog_predicate) :->
         ->  send(M, goto_line, Location, title := For?print_name)
         ;   Location = (File:Line)
         ->  send(@emacs, goto_source_location,
-                 source_location(File, Line), tab)
+                 source_location(File, Line))
         )
     ;   send(M, report, warning, 'Cannot find %N', For)
     ).
@@ -905,7 +908,7 @@ add_reference(_BM, _Len, Ref) =>
 
 loaded_from(_M, LoadedFrom:source_location) :->
     "Jump to position I'm loaded from"::
-    send(@emacs, goto_source_location, LoadedFrom, tab).
+    send(@emacs, goto_source_location, LoadedFrom).
 
 loaded_from_chain(M, LoadedFrom:chain) :<-
     "Chain with files and locations I'm loaded from"::

@@ -67,6 +67,7 @@ Run with:
 :- use_module(library(trace/status), []).
 :- use_module(library(pce_xref), []).
 :- use_module(library(pce_manual), []).
+:- use_module(library(pce_html_manual), []).  % defines swi_man_xpce
 :- use_module(library(swi/pce_profile), []).
 :- use_module(library(trace/exceptions), []).
 :- use_module(library(trace/viewterm), [view_term/2]).
@@ -193,6 +194,21 @@ test(it_goes_into_a_window_that_is_already_open,
     send(F, open),
     send(@prolog_ide, thread_monitor),
     classes(F, Classes).
+
+%       What the monitor says a thread is.  A thread that cannot be
+%       debugged used to be called a system thread, which is a class it
+%       may well not be in: thread_create/3 makes a user thread, and it
+%       is debuggable or not as the thread that made it is.
+
+test(the_monitor_says_what_a_thread_is,
+     Says == [console, console, system, 'no debug', debug, '']) :-
+    findall(Postfix,
+            ( member(Class-Debug, [console-(@nil), console-(@on),
+                                   system-(@nil),
+                                   user-(@nil), user-(@on), user-(@off)]),
+              pce_thread_monitor:label_postfix(Class, Debug, Postfix)
+            ),
+            Says).
 
 test(there_is_only_ever_one, true(Again == TM)) :-
     monitor(TM),
@@ -559,6 +575,28 @@ test(the_setting_is_on_the_settings_menu,
     chain_list(Chain, Members),
     findall(V, (member(MI, Members), get(MI, value, V)), Items).
 
+%       It says the sources too, since edit/1 goes by it; see
+%       `prolog_ide <-source_placement'.
+
+test(and_says_that_it_is_about_sources_as_well,
+     true(Label == 'New tools and sources open')) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    get(F, menu_bar, MB),
+    get(MB, member, settings, Settings),
+    get(Settings, member, new_tools_open, Item),
+    get(Item, label, Label).
+
+test(the_setting_says_where_a_source_opens,
+     true(Places == [window, tab, split])) :-
+    findall(Where,
+            ( member(Placement, [frame, tab, split]),
+              with_placement(Placement,
+                             get(@prolog_ide, source_placement, Where))
+            ),
+            Places).
+
 test(it_shows_which_one_is_in_force, true(Ticked == [split])) :-
     no_monitor,
     epilog_frame(@default, @default, @default, @off, @default, F),
@@ -893,17 +931,25 @@ test(it_carries_a_grip_to_drag_it_by) :-
 %       so making room must not be something that accumulates: `graphical
 %       ->right_side' sets the right edge by changing the width, and
 %       asking for one further left made the menu narrower every time.
+%       The menu is as wide as its label and items ask for -- how wide
+%       that is depends on the font, so the test asks that it does not
+%       change rather than what it is.
 
 test(and_the_layout_keeps_the_corner_clear,
      [ forall(member(Width-Times, [600-1, 600-2, 600-3, 800-1, 800-3])),
-       true(Widths-Clear == 185-true)
+       true(Kept-Clear == true-true)
      ]) :-
     debug_status(D),
     get(D, member, mode, Mode),
+    get(Mode, width, W0),
     forall(between(1, Times, _),
            ( send(D, size, size(Width, 300)),
              send(D, layout, size(Width, 300)) )),
-    get(Mode, width, Widths),
+    get(Mode, width, W),
+    (   W == W0
+    ->  Kept = true
+    ;   Kept = W0-W
+    ),
     grip(D, H),
     send(H, compute),
     get(H, area, area(GX, _, _, _)),
@@ -1230,6 +1276,53 @@ test(the_tool_is_not_the_window_it_is_in) :-
     get(Tool, frame, Frame),
     Frame \== Tool,
     send(Frame, instance_of, pane_frame).
+
+%       A card viewer keeps a history of what it showed, and the window
+%       that shows a card tells it -- `doc_window <-history_holder'.  It
+%       used to tell <-frame, which was the tool; the frame is a window
+%       of the IDE now and answers no ->add_history, and that took the
+%       whole of `doc_window ->url' down with it: no card appeared.
+
+test(the_history_of_a_card_is_kept_by_the_tool, true(Holder == CE)) :-
+    no_frames,
+    open_manual_tool(card_viewer, CE),
+    get(CE, member, html_card, HC),
+    get(HC, history_holder, Holder).
+
+%!  reference_manual is semidet.
+%
+%   True when the HTML reference manual a card shows was built.
+
+reference_manual :-
+    catch(absolute_file_name(swi_man_xpce('class-frame.html'), _,
+                             [ access(read), file_errors(fail) ]),
+          _, fail).
+
+test(and_a_card_shown_is_a_card_it_remembers,
+     [ condition(reference_manual),
+       true(Recorded == URL)
+     ]) :-
+    no_frames,
+    open_manual_tool(card_viewer, CE),
+    get(CE, member, html_card, HC),
+    get(@pce, convert, frame, class, Class),
+    send(HC, selection, Class),
+    get(HC, url, URL),
+    get(CE?history, current, Recorded).
+
+test(and_so_is_a_link_followed_in_it,
+     [ condition(reference_manual),
+       true(Anchor == 'class-frame-get-confirm_centered')
+     ]) :-
+    no_frames,
+    open_manual_tool(card_viewer, CE),
+    get(CE, member, html_card, HC),
+    get(@pce, convert, frame, class, Class),
+    send(HC, selection, Class),
+    send(HC, goto_url,
+         'class-frame.html#class-frame-get-confirm_centered'),
+    get(CE?history, current, Recorded),
+    atomic_list_concat([_, Anchor], '#', Recorded).
 
 %       man_frame answers a handful of frame methods over the pane, and a
 %       method there must keep the shape class window gives it: ->create
