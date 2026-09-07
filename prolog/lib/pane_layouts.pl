@@ -148,7 +148,7 @@ them can simply be compared.
 */
 
 half_life(2592000).                     % thirty days, in seconds
-worth_recording(60).                    % a minute: less was a step on the way
+worth_recording(10).                    % less was a step on the way
 
 %!  decayed(+Earned, +At, +Now, -Priority) is det.
 
