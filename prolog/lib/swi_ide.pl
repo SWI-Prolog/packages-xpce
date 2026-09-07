@@ -49,7 +49,7 @@
 :- autoload(library(swi_preferences), [prolog_edit_preferences/1]).
 :- autoload(library(pce_openframes), [confirm_open_frames/1]).
 :- use_module(library(pce_util), [chain_list/2]).
-:- use_module(library(lists), [member/2, memberchk/2]).
+:- use_module(library(lists), [member/2]).
 :- require([ pce_image_directory/1,
 	     file_directory_name/2
 	   ]).

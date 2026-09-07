@@ -42,14 +42,15 @@
             pane_kind/2                 % +Pane, -Kind
           ]).
 :- use_module(library(pce)).
+:- use_module(library(swi_ide), []).    % get @prolog_ide application
 :- use_module(library(pce_util), [chain_list/2]).
 :- use_module(library(gensym), [gensym/2]).
 :- use_module(library(pce_template)).
 :- use_module(library(tabbed_window), []).
 :- use_module(library(tab_frame), []).
 :- use_module(library(toolbar), []).
-:- use_module(library(lists), [member/2, memberchk/2]).
-:- use_module(library(apply), [maplist/2, maplist/3]).
+:- use_module(library(lists), [member/2]).
+:- use_module(library(apply), [maplist/3]).
 :- use_module(library(pane_layouts),
               [ arrangement_of/2, record_arrangement/2,
                 save_arrangements/0
@@ -108,7 +109,7 @@ variable(menu_key,        name*  := @nil, get,
          "Identity of the menu bar now in place").
 variable(menu_extensions, chain,          get,
          "Codes run after every rebuild of the menu bar").
-variable(own_label_format, '[name]*' := @default, none,
+variable(own_label_format, [name]* := @default, none,
          "Format asked for on me alone; @default: ask elsewhere").
 variable(updating,        bool := @off,   none,
          "->pane_changed is running").
@@ -184,7 +185,6 @@ initialise(F, App:application=[application],
 %   XPCE's own does not load the Prolog IDE to be able to run.
 
 show_pane(Pane) :-
-    use_module(user:library(swi_ide), []),
     (   get(Pane, pane_tab, _)          % a pane of a window already.  Not
     ->  send(@prolog_ide, expose_tool, Pane)  % <-frame: a window that is
     ;   send(@prolog_ide, place_tool, Pane, @default)  % in none gets one
@@ -2154,13 +2154,10 @@ frame_application(Options, App) :-
 %   the ones that are still open when Prolog halts.
 
 record_open_arrangements :-
-    (   object(@display),
-        get(@display, frames, Frames)
-    ->  chain_list(Frames, List),
-        forall(( member(F, List),
-                 send(F, instance_of, pane_frame)
-               ),
-               ignore(send(F, record_arrangement)))
+    (   object(@display)
+    ->  send(@display?frames, for_all,
+             if(message(@arg1, instance_of, pane_frame),
+                if(message(@arg1, record_arrangement))))
     ;   true
     ),
     save_arrangements.
