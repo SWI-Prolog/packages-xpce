@@ -710,7 +710,7 @@ confirm_reload(_, Frame, _, File) :-
 %       current or appends one that exposes itself, and a frame of its
 %       own holds nothing else.
 
-open(B, How:[{here,tab,split,window}], View:emacs_view) :<-
+open(B, How:[{as_arranged,here,tab,split,window}], View:emacs_view) :<-
     "Create window for buffer; answer the view showing me"::
     (   How \== window,
         get(@emacs, target_frame, Frame)
@@ -722,7 +722,7 @@ open(B, How:[{here,tab,split,window}], View:emacs_view) :<-
     get(Frame, current_pane, View),
     send(B, check_modified_file, Frame).
 
-open(B, How:[{here,tab,split,window}]) :->
+open(B, How:[{as_arranged,here,tab,split,window}]) :->
     "Create window for buffer"::
     get(B, open, How, _).
 

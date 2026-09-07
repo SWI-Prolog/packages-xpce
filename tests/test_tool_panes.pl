@@ -78,6 +78,17 @@ Run with:
 :- use_module(library(prolog_debug), [spy/1, nospy/1]).
 :- use_module(library(debug), [debug/1, debug/3, nodebug/1]).
 :- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(pane_frame), [pane_kind/2]).
+
+%       An arrangements file of their own: what these check is where a
+%       pane goes with the arrangements the system comes with, which the
+%       arrangements of whoever runs them must not colour.
+
+:- multifile pane_layouts:arrangements_file/1.
+
+pane_layouts:arrangements_file(File) :-
+    current_prolog_flag(tmp_dir, Tmp),
+    atom_concat(Tmp, '/test_tool_panes_store', File).
 :- use_module(library(lists), [member/2]).
 
 test_tool_panes :-
@@ -90,7 +101,9 @@ test_tool_panes :-
                 exception_editor_pane,
                 debugger_pane,
                 term_viewer_pane,
-                manual_tool_panes
+                manual_tool_panes,
+                tool_pane_placement,
+                tool_pane_focus
               ]).
 
 %!  classes(+Frame, -Classes) is det.
@@ -563,7 +576,7 @@ as_subwindows(Pane) :-
 %       editing a Defaults file.
 
 test(the_setting_is_on_the_settings_menu,
-     Items == [frame, tab, split]) :-
+     Items == [as_arranged, frame, tab, split]) :-
     no_monitor,
     epilog_frame(@default, @default, @default, @off, @default, F),
     send(F, open),
@@ -926,38 +939,31 @@ test(it_carries_a_grip_to_drag_it_by) :-
     debug_status(D),
     grip(D, _).
 
-%       The grip is drawn over whatever the dialog lays out, so ->layout
-%       keeps the corner it sits in clear.  ->layout runs on every resize,
-%       so making room must not be something that accumulates: `graphical
-%       ->right_side' sets the right edge by changing the width, and
-%       asking for one further left made the menu narrower every time.
-%       The menu is as wide as its label and items ask for -- how wide
-%       that is depends on the font, so the test asks that it does not
-%       change rather than what it is.
+%       The grip is drawn over whatever the dialog lays out, so nothing
+%       the dialog lays out may reach the corner it sits in.  Checked at
+%       more than one width, and more than once at each: whatever keeps
+%       the corner clear must not be something that accumulates.
 
-test(and_the_layout_keeps_the_corner_clear,
+test(and_nothing_is_laid_out_under_the_grip,
      [ forall(member(Width-Times, [600-1, 600-2, 600-3, 800-1, 800-3])),
-       true(Kept-Clear == true-true)
+       true(Under == [])
      ]) :-
     debug_status(D),
-    get(D, member, mode, Mode),
-    get(Mode, width, W0),
     forall(between(1, Times, _),
            ( send(D, size, size(Width, 300)),
              send(D, layout, size(Width, 300)) )),
-    get(Mode, width, W),
-    (   W == W0
-    ->  Kept = true
-    ;   Kept = W0-W
-    ),
     grip(D, H),
     send(H, compute),
-    get(H, area, area(GX, _, _, _)),
-    get(Mode, right_side, Right),
-    (   Right =< GX
-    ->  Clear = true
-    ;   Clear = Right-GX
-    ).
+    get(H, area, Grip),
+    get(D, graphicals, Chain),
+    chain_list(Chain, Graphicals),
+    findall(Name-Area,
+            ( member(G, Graphicals),
+              get(G, area, Area),
+              send(Area, overlap, Grip),
+              get(G, class_name, Name)
+            ),
+            Under).
 
 test(it_lists_what_is_being_debugged, true(Listed == ['append/3'])) :-
     debug_status(D),
@@ -1948,3 +1954,167 @@ test(and_a_pinned_one_is_left_showing_what_it_shows,
     classes(Frame, Panes).
 
 :- end_tests(term_viewer_pane).
+
+
+                 /*******************************
+                 *          PLACEMENT           *
+                 *******************************/
+
+/* Where a new pane lands when the setting is left at `as_arranged': the
+   IDE reads the arrangements of library(pane_layouts) rather than putting
+   everything in a tab.  A navigator belongs down the left of the panes
+   there are, at a fifth of the width; a tool nothing has been arranged
+   with still takes a tab.
+*/
+
+:- begin_tests(tool_pane_placement).
+
+%!  console(-Frame) is det.
+%
+%   An open window of the IDE holding a terminal.
+
+console(F) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open).
+
+%!  tab_shape(+Frame, -Shape) is det.
+%
+%   The panes of the tab in view, by kind, with the shares dropped.
+
+tab_shape(F, Shape) :-
+    get(F, tab, Tab),
+    get(Tab, window_tree, Tree),
+    tree_shape(Tree, Shape).
+
+tree_shape(Tree, Kind) :-
+    object(Tree),
+    !,
+    pane_kind(Tree, Kind).
+tree_shape(Tree, Shape) :-
+    Tree =.. [Orientation, Shares],
+    findall(S, ( member(Share, Shares),
+                 tree_content(Share, Content),
+                 tree_shape(Content, S)
+               ), Subs),
+    Shape =.. [Orientation, Subs].
+
+tree_content(_-Content, Content) :- !.
+tree_content(Content, Content).
+
+%!  tab_share(+Frame, +Kind, -Share) is semidet.
+
+tab_share(F, Kind, Share) :-
+    get(F, tab, Tab),
+    get(Tab, window_tree, Tree),
+    Tree =.. [_, Shares],
+    member(Share-Content, Shares),
+    object(Content),
+    pane_kind(Content, Kind),
+    !.
+
+test(a_navigator_goes_down_the_left_of_what_is_there,
+     Shape == horizontal([prolog_navigator, terminal])) :-
+    console(F),
+    send(@prolog_ide, place_pane, new(_N, prolog_navigator), F),
+    tab_shape(F, Shape).
+
+test(and_takes_the_share_it_was_arranged_at) :-
+    console(F),
+    send(@prolog_ide, place_pane, new(_N, prolog_navigator), F),
+    tab_share(F, prolog_navigator, Share),
+    assertion(abs(Share-0.2) < 0.03).
+
+%       Nothing has been arranged with a thread monitor, so it falls back
+%       on what the IDE has always done with a tool: a tab.
+
+test(a_tool_nothing_says_anything_about_takes_a_tab, Tabs == 2) :-
+    console(F),
+    send(@prolog_ide, place_pane, new(_M, prolog_thread_monitor), F),
+    get(F, tabs, TW),
+    get(TW, tabs, Chain),
+    get(Chain, size, Tabs).
+
+%       And the fixed answers still hold when the user pins one.
+
+test(the_setting_still_overrules, Tabs == 2) :-
+    console(F),
+    send(@prolog_ide, place_pane, new(_N, prolog_navigator), F, tab),
+    get(F, tabs, TW),
+    get(TW, tabs, Chain),
+    get(Chain, size, Tabs).
+
+test(and_a_window_of_its_own_is_a_window_of_its_own, Panes == 1) :-
+    console(F),
+    send(@prolog_ide, place_pane, new(N, prolog_navigator), F, frame),
+    get(N, frame, Own),
+    assertion(Own \== F),
+    get(Own, panes, Chain),
+    get(Chain, size, Panes).
+
+:- end_tests(tool_pane_placement).
+
+
+                 /*******************************
+                 *        FOCUS AND TABS        *
+                 *******************************/
+
+/* Tools → View threads makes a tab; switching back to the terminal has to
+   bring the keyboard with it.  A pane left holding a focus it no longer
+   has is never armed again -- ->input_focus is edge triggered -- so the
+   terminal looked focused and took nothing typed at it until the user
+   left the application and came back.
+*/
+
+:- begin_tests(tool_pane_focus).
+
+%!  console_and_monitor(-Frame, -Terminal, -Monitor) is det.
+%
+%   An open console holding the window-system focus, with the thread
+%   monitor in a tab of its own and in view, as Tools → View threads
+%   leaves it.
+
+console_and_monitor(F, T, M) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(F, input_focus, @on),
+    get(F, panes, Chain),
+    chain_list(Chain, [T|_]),
+    get(@prolog_ide, show_tool, prolog_thread_monitor, tab, M).
+
+%!  keys_go_to(+Frame, -Pane) is semidet.
+%
+%   The pane of Frame that what is typed reaches.  A tool holds windows of
+%   its own, so the window with the focus may be inside the pane.
+
+keys_go_to(F, Pane) :-
+    get(F, hypered, input_window, W),
+    (   get(W, container, tool_pane, Tool)
+    ->  Pane = Tool
+    ;   Pane = W
+    ).
+
+test(the_monitor_takes_the_keys_when_it_is_made, Goes == M) :-
+    console_and_monitor(F, _T, M),
+    keys_go_to(F, Goes).
+
+test(and_the_terminal_takes_them_back, Goes == T) :-
+    console_and_monitor(F, T, _M),
+    send(F, current_pane, T),
+    keys_go_to(F, Goes).
+
+%       The one the report was about: the terminal is in view and looks
+%       focused, and the keys go to the monitor.
+
+test(and_the_monitor_lets_go_of_them, Focused == [terminal]) :-
+    console_and_monitor(F, T, _M),
+    send(F, current_pane, T),
+    get(F, panes, Chain),
+    chain_list(Chain, Panes),
+    findall(Kind, ( member(P, Panes),
+                    get(P, input_focus, @on),
+                    pane_kind(P, Kind)
+                  ), Focused).
+
+:- end_tests(tool_pane_focus).

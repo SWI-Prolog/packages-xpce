@@ -100,6 +100,14 @@ tabs(F, Tabs) :-
 terminals(F, Count) :-
     get(F?panes, size, Count).
 
+%!  expose(+Frame, +Window) is det.
+%
+%   Bring the tab holding Window to the front, as clicking it does.
+
+expose(F, W) :-
+    get(F, tabs, TW),
+    send(TW, on_top, W).
+
 %!  at_edge(+Window, +Where, -Pos) is det.
 %
 %   A point just inside an edge of Window, in the coordinates its tab lays
@@ -285,6 +293,21 @@ test(and_a_name_no_tab_carries_is_left_unnumbered) :-
     send(F, new_pane, shell),
     send(F, new_pane, prolog),
     tabs(F, ['OS shell'-1, 'OS shell 2'-1, 'Prolog'-1]).
+
+%       A tab coming to the front takes the name of what it runs, which
+%       it may only know then.  A client that has asked for a title -- a
+%       shell running something that sets one -- has said what the tab is
+%       to be called, and going to another tab and back must not talk over
+%       it with the name of the shell it runs.
+
+test(a_title_a_client_asked_for_outlives_a_look_at_another_tab) :-
+    epilog([profile(shell), object(F)]),
+    get(F, current_pane, W),
+    send(W, window_label, claude),
+    send(F, new_pane, shell),
+    tabs(F, [claude-1, 'OS shell'-1]),
+    expose(F, W),
+    tabs(F, [claude-1, 'OS shell'-1]).
 
 test(terminal_windows_counts_over_all_tabs) :-
     epilog(F, W),

@@ -45,6 +45,7 @@
 :- use_module(library(pce_util)).
 :- use_module(library(pce_drop_target), [drop_target_event/4]).
 :- use_module(library(debug)).
+:- use_module(library(lists), [memberchk/2]).
 
 :- require([ between/3,
              atomic_list_concat/2,
@@ -263,6 +264,59 @@ frame_active(V, Val:bool) :->
 sibling(V, New:emacs_view) :<-
     "A second view on my buffer"::
     new(New, emacs_view(V?text_buffer)).
+
+%       What is worth writing down about an editor: the source it shows
+%       and where the caret is in it.  A line and a column rather than a
+%       caret index: an index means nothing to a reader and is wrong as
+%       soon as the file is edited by anything else.
+
+pane_kind(_V, Kind:name) :<-
+    "How I am written in a description of a window"::
+    Kind = editor.
+
+pane_term(V, Options:prolog) :<-
+    "The source I show and where the caret is in it"::
+    get(V, text_buffer, TB),
+    (   get(TB, file, File),
+        File \== @nil
+    ->  get(File, absolute_path, Path),
+        Where = file(Path)
+    ;   get(TB, name, Name),
+        Where = buffer(Name)
+    ),
+    get(V, caret, Caret),
+    get(V, line_number, Caret, Line),
+    get(V, column, Caret, Column),
+    get(TB, mode, Mode),
+    Options = [Where, line(Line), column(Column), mode(Mode)].
+
+pane_term(V, Options:prolog) :->
+    "Show the source a description asks for"::
+    (   memberchk(file(Path), Options)
+    ->  (   exists_file(Path)
+        ->  true
+        ;   print_message(informational, pane_frame(no_such_file(Path)))
+        ),
+        send(V, text_buffer, emacs_buffer(Path))
+    ;   memberchk(buffer(Name), Options),
+        get(@emacs_buffers, member, Name, TB)
+    ->  send(V, text_buffer, TB)
+    ;   true
+    ),
+    (   memberchk(mode(Mode), Options),
+        get(V, mode, Now),
+        \+ get(Now, name, Mode)
+    ->  send(V, mode, Mode)
+    ;   true
+    ),
+    (   memberchk(line(Line), Options)
+    ->  send(V, line_number, Line),
+        (   memberchk(column(Column), Options)
+        ->  send(V, column, Column)
+        ;   true
+        )
+    ;   true
+    ).
 
 :- pce_group(mode).
 

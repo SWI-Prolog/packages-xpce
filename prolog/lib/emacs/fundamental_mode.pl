@@ -999,7 +999,8 @@ split_view(M, Direction:{horizontally,vertically}) :->
     send(TF, split, new(New, emacs_view(Buffer)), V, Direction),
     send(Buffer, update_label),
     get(M, caret, Here),
-    send(New?editor, caret, Here).
+    send(New?editor, caret, Here),
+    send(TF, arranged).                 % C-x 2 arranges the window by hand
 
 only_window(M) :->
     "Close the other views of this tab"::
@@ -1008,7 +1009,9 @@ only_window(M) :->
     (   Views = [_,_|_]
     ->  forall(( member(Other, Views), Other \== V ),
                send(Other, destroy)),
-        send(V?frame, keyboard_focus, V)
+        send(V?frame, keyboard_focus, V),
+        get(M, tab, TF),
+        send(TF, arranged)              % and so does C-x 1
     ;   send(M, report, status, 'Single view')
     ).
 
@@ -1020,6 +1023,7 @@ delete_window(M) :->
     ->  get(V, frame, Frame),
         get(M, tab, TF),
         send(V, destroy),
+        send(TF, arranged),             % and C-x 0
         (   get(TF, current, New)
         ->  send(Frame, keyboard_focus, New)
         ;   true

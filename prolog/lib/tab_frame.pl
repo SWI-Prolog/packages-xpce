@@ -38,7 +38,9 @@
 :- use_module(library(dragdrop), []).
 :- use_module(library(help_message), []).
 :- use_module(library(pce_icon_button), []).
-:- use_module(library(lists), [member/2]).
+:- use_module(library(lists), [member/2, sum_list/2, same_length/2,
+                               last/2, append/2, append/3]).
+:- use_module(library(apply), [maplist/2, maplist/3, maplist/4]).
 :- use_module(library(debug), [debug/3]).
 
 /** <module> Tab holding a tiled hierarchy of windows
@@ -128,9 +130,9 @@ unlink(TF) :->
                  *******************************/
 
 append(TF, Window:window=window,
-           Relative:relative_to=[window],
+           Relative:relative_to=[window|chain],
            Where:where=[{above,below,left,right}]) :->
-    "Add a window, optionally next to an existing one"::
+    "Add a window, optionally beside an existing one or a group of them"::
     send(Window, '_compute_desired_size'),
     release_focus(Window),
     decoration(Window, Decor),
@@ -140,16 +142,131 @@ append(TF, Window:window=window,
     ;   true
     ),
     (   get(TF, tile, _)                   % I already hold windows
-    ->  relative_window(TF, Relative, Rel),
-        decoration(Rel, RelDecor),
-        get(RelDecor, tile, RelTile),
+    ->  default(Where, below, TheWhere),
+        get(TF, relative_tile, Relative, TheWhere, RelTile),
         get(Decor, tile, NewTile),
-        default(Where, below, TheWhere),
         send(NewTile, TheWhere, RelTile, @off)
     ;   true
     ),
     send(TF, attach_window, Decor),
     get(Decor, unlock, _).
+
+%       A window may be put beside a *group* of windows rather than beside
+%       one: a navigator belongs down the left of the editor and the
+%       terminal together, not to the left of whichever of them happens to
+%       be current.  Class tile relates two tiles whatever their place in
+%       the hierarchy -- see nonDelegatingLeftRightTile() in
+%       src/win/tile.c -- so all that is needed is to hand it the tile the
+%       group sits in rather than a leaf.
+
+relative_tile(TF, Relative:'[window|chain]',
+                  Where:{above,below,left,right}, Tile:tile) :<-
+    "The tile a new window is to be related to"::
+    (   Relative \== @default,
+        send(Relative, instance_of, chain)
+    ->  get(TF, window_group, Relative, Group)
+    ;   relative_window(TF, Relative, Rel),
+        decoration(Rel, RelDecor),
+        get(RelDecor, tile, Group)
+    ),
+    flat_tile(Group, Where, Tile).
+
+window_group(TF, Windows:chain, Tile:tile) :<-
+    "The tile holding exactly these windows of mine"::
+    chain_list(Windows, List),
+    List \== [],
+    window_list(TF, Mine),
+    forall(member(W, List), memberchk_eq(W, Mine)),
+    maplist(window_tile, List, Tiles),
+    common_tile(Tiles, Tile),
+    tile_windows(Tile, Leaves),
+    same_windows(List, Leaves).           % no other window in there
+
+window_tile(Window, Tile) :-
+    decoration(Window, Decor),
+    get(Decor, tile, Tile).
+
+%!  common_tile(+Tiles, -Tile) is det.
+%
+%   The smallest tile holding all of Tiles: the last tile the paths from
+%   the root down to each of them have in common.
+
+common_tile([Tile], Tile) :-
+    !.
+common_tile(Tiles, Tile) :-
+    maplist(tile_path, Tiles, Paths),
+    common_path(Paths, Common),
+    last(Common, Tile).
+
+tile_path(Tile, Path) :-
+    (   get(Tile, super, Super),
+        Super \== @nil
+    ->  tile_path(Super, Path0),
+        append(Path0, [Tile], Path)
+    ;   Path = [Tile]
+    ).
+
+common_path([Path], Path) :-
+    !.
+common_path([Path|Paths], Common) :-
+    common_path(Paths, Common0),
+    common_prefix(Path, Common0, Common).
+
+common_prefix([H1|T1], [H2|T2], [H1|T]) :-
+    H1 == H2,
+    !,
+    common_prefix(T1, T2, T).
+common_prefix(_, _, []).
+
+%!  tile_windows(+Tile, -Windows) is det.
+%
+%   The windows managed by Tile and everything below it.
+
+tile_windows(Tile, Windows) :-
+    (   get(Tile, members, Members),
+        Members \== @nil
+    ->  chain_list(Members, List),
+        maplist(tile_windows, List, Nested),
+        append(Nested, Windows)
+    ;   get(Tile, object, Object),
+        user_window(Object, Window),
+        Windows = [Window]
+    ).
+
+same_windows(A, B) :-
+    length(A, N),
+    length(B, N),
+    forall(member(W, A), memberchk_eq(W, B)).
+
+%!  flat_tile(+Group, +Where, -Tile) is det.
+%
+%   `tile ->left' and friends *join* a row when they are handed a tile in
+%   it and otherwise build a row around the tile they are handed.  Handing
+%   them a row that already runs the way we want would therefore wrap it
+%   in a second row of the same direction, which lays out the same but
+%   reads back as a tree with a node too many.  Hand them the tile at that
+%   end of the row instead.
+
+flat_tile(Group, Where, Tile) :-
+    get(Group, members, Members),
+    Members \== @nil,
+    get(Group, orientation, Orientation),
+    where_orientation(Where, Orientation),
+    !,
+    chain_list(Members, List),
+    (   where_first(Where)
+    ->  List = [Tile|_]
+    ;   last(List, Tile)
+    ).
+flat_tile(Tile, _, Tile).
+
+where_orientation(left,  horizontal).
+where_orientation(right, horizontal).
+where_orientation(above, vertical).
+where_orientation(below, vertical).
+
+where_first(left).
+where_first(above).
 
 %       ->attach_window and ->detach_window are my half of the protocol
 %       that lets `window ->below' and friends work on a tab_frame.  See
@@ -242,6 +359,7 @@ untab(TF) :->
     get(TF, current, Window),
     get(TF, display_position, point(X, Y)),
     get(TF, container, tabbed_window, TabbedWindow),
+    send(TF, arranged),                 % the window I am leaving changed
     get(TabbedWindow, frame_window, Window, Window?name, 1, Frame),
     send(Frame, open, point(X, Y+20)).
 
@@ -282,6 +400,27 @@ current(TF, Window:window) :->
     "Make Window the current one"::
     send(TF, slot, current, Window),
     (   get(TF, frame, Frame),
+        Frame \== @nil
+    ->  send(Frame, keyboard_focus, Window)
+    ;   true
+    ).
+
+%       `tab_stack ->on_top' ends by sending the tab it raised ->advance,
+%       to put the keyboard focus on the first item of a tab that holds
+%       dialog items.  I hold windows, and each of them looks after its
+%       own keyboard focus; what "the focus of this tab" means for me is
+%       simply <-current, which ->current has already told my frame.
+%       Letting `device ->advance' hunt for an item instead walks out of
+%       the tab and hands the frame a window of whichever tab it finds,
+%       which leaves the pane the user just switched to looking focused
+%       while the keys go somewhere else.
+
+advance(TF, _From:[graphical]*, _Propagate:[bool],
+            _Direction:[{forwards,backwards}]) :->
+    "Give the keyboard to the window I am showing"::
+    (   get(TF, current, Window),
+        Window \== @nil,
+        get(TF, frame, Frame),
         Frame \== @nil
     ->  send(Frame, keyboard_focus, Window)
     ;   true
@@ -385,6 +524,378 @@ content_size(TF, Size:size) :<-
     new(Size, size(W,H)).
 
                  /*******************************
+                 *         WINDOW TREE          *
+                 *******************************/
+
+/* How my windows are tiled, written down.
+
+`<-window_tree' answers a term whose leaves are the windows themselves and
+whose nodes say how they are divided:
+
+    vertical([0.7-horizontal([0.5-@ed1, 0.5-@ed2]), 0.3-@term])
+
+`->window_tree' arranges the windows of such a term in that shape.  The
+shares are relative: [2-A, 1-B] and [0.667-A, 0.333-B] say the same, and a
+sub-term written without a share takes what it is given.
+
+This is the tile half of describing a pane_frame -- see `pane_frame
+<-pane_term', which puts a term around it saying what the windows are.  A
+tool_pane holds a tab_frame of its own, so the same pair describes the
+inside of a tool if that is ever wanted.
+*/
+
+window_tree(TF, Tree:prolog) :<-
+    "How my windows are tiled, as a term"::
+    get(TF, tile, Tile),
+    tile_tree(Tile, Tree).
+
+%!  tile_tree(+Tile, -Tree) is det.
+%
+%   A leaf tile is the window it manages; a tile with members is the term
+%   of its orientation, holding its members with their share of it.
+
+tile_tree(Tile, Tree) :-
+    get(Tile, members, Members),
+    Members \== @nil,
+    !,
+    get(Tile, orientation, Orientation),
+    chain_list(Members, List),
+    maplist(tile_extent(Orientation), List, Extents),
+    sum_list(Extents, Total),
+    maplist(tile_share(Total), List, Extents, Shares),
+    Tree =.. [Orientation, Shares].
+tile_tree(Tile, Window) :-
+    get(Tile, object, Object),
+    user_window(Object, Window).
+
+tile_share(Total, Tile, Extent, Share-Sub) :-
+    (   Total > 0
+    ->  Share is round(Extent/Total*1000)/1000.0
+    ;   Share = 1.0
+    ),
+    tile_tree(Tile, Sub).
+
+%!  tile_extent(+Orientation, +Tile, -Extent) is det.
+%
+%   How much of the direction it is divided in a tile takes up.
+
+tile_extent(horizontal, Tile, W) :-
+    get(Tile, area, area(_, _, W, _)).
+tile_extent(vertical, Tile, H) :-
+    get(Tile, area, area(_, _, _, H)).
+
+window_tree(TF, Tree:prolog) :->
+    "Arrange my windows in the shape of Tree"::
+    tree_first_window(Tree, First),
+    get(TF, windows, Windows),
+    send(Windows, member, First),       % the anchor must be mine already
+    place_tree(TF, Tree),
+    send(TF, layout).
+
+%       Giving the windows their share of the room is a second step, and
+%       the caller says when: a share is pixels, and `->layout_natural'
+%       takes the ideal sizes back off the windows every time the tab is
+%       laid out afresh.  Sizing while a window is still being built up
+%       therefore holds until the next layout and no longer.  See
+%       `pane_frame ->pane_term', which shapes every tab first and shares
+%       the room out once at the end.
+
+window_shares(TF, Tree:prolog) :->
+    "Give my windows the share of me that Tree asks for"::
+    send(TF, layout),
+    size_tree(TF, Tree).
+
+%       A window that has just been put beside the others has to be given
+%       its share of the row it landed in without disturbing the rest.
+%       Two things make that more than setting one number.  `give_sizes'
+%       below leaves the last member of a row to take what is over, so a
+%       whole row has to be written rather than one entry; and relating a
+%       tile moves the ideal sizes about at *other* levels too, so the
+%       proportions everywhere else have to be put back to what they were.
+%       Hence Was: the tree as it was read before the window was added.
+
+window_share(TF, Window:window, Share:real, Was:prolog=[prolog]) :->
+    "Give Window that share of the row it is in, leaving the rest as Was"::
+    get(TF, window_tree, Now),
+    (   Was == @default
+    ->  Before = Now
+    ;   Before = Was
+    ),
+    share_tree(Now, Before, Window, Share, Tree),
+    send(TF, window_shares, Tree).
+
+%!  share_tree(+Now, +Before, +Window, +Share, -Tree) is det.
+%
+%   Now with Window given Share of the row that holds it, every other row
+%   put back to the proportions it has in Before, and a row Before knows
+%   nothing of left as it comes.
+
+share_tree(Now, _Before, _Window, _Share, Now) :-
+    object(Now),
+    !.
+share_tree(Now, Before, Window, Share, Tree) :-
+    Now =.. [Orientation, Shares],
+    maplist(share_content, Shares, Contents),
+    maplist(tree_leaves, Contents, LeafSets),
+    (   memberchk_eq(Window, Contents)
+    ->  row_shares(Contents, LeafSets, Before, Window, Share, New)
+    ;   kept_shares(Shares, LeafSets, Before, Window, New)
+    ),
+    maplist(share_sub(Before, Window, Share), Contents, Subs),
+    maplist(share_pair, New, Subs, Pairs),
+    Tree =.. [Orientation, Pairs].
+
+share_sub(Before, Window, Share, Content, Sub) :-
+    share_tree(Content, Before, Window, Share, Sub).
+
+share_pair(Share, Content, Share-Content).
+
+%!  row_shares(+Contents, +LeafSets, +Before, +Window, +Share, -Shares) is det.
+%
+%   The row Window landed in: it takes Share and the others divide what is
+%   left in the proportions they had.
+
+row_shares(Contents, LeafSets, Before, Window, Share, Shares) :-
+    others(Contents, LeafSets, Window, OtherSets),
+    (   node_shares(Before, OtherSets, Was),
+        sum_list(Was, Total),
+        Total > 0
+    ->  true
+    ;   length(OtherSets, N),
+        length(Was, N),
+        maplist(=(1), Was),
+        Total is max(N, 1)
+    ),
+    Rest is 1-Share,
+    maplist(scaled(Rest, Total), Was, Others),
+    fill_row(Contents, Window, Share, Others, Shares).
+
+others([], [], _, []).
+others([Content|Contents], [Set|Sets], Window, Others) :-
+    (   Content == Window
+    ->  Others = Rest
+    ;   Others = [Set|Rest]
+    ),
+    others(Contents, Sets, Window, Rest).
+
+scaled(Rest, Total, Was, Share) :-
+    Share is Rest*Was/Total.
+
+fill_row([], _, _, _, []).
+fill_row([Content|Contents], Window, Share, Others0, [S|Shares]) :-
+    (   Content == Window
+    ->  S = Share,
+        Others = Others0
+    ;   Others0 = [S|Others]
+    ),
+    fill_row(Contents, Window, Share, Others, Shares).
+
+%!  kept_shares(+Shares, +LeafSets, +Before, +Window, -Kept) is det.
+%
+%   A row Window did not land in keeps the proportions it had before, if
+%   Before has anything to say about it.  Before is the same tree without
+%   Window, so what a row holds is compared with Window taken out of it.
+
+kept_shares(Shares, LeafSets, Before, Window, Kept) :-
+    maplist(without_window(Window), LeafSets, Sets),
+    (   node_shares(Before, Sets, Kept)
+    ->  true
+    ;   maplist(share_number, Shares, Kept)
+    ).
+
+without_window(Window, Set0, Set) :-
+    (   memberchk_eq(Window, Set0)
+    ->  exclude_window(Set0, Window, Set)
+    ;   Set = Set0
+    ).
+
+exclude_window([], _, []).
+exclude_window([W|Ws], Window, Set) :-
+    (   W == Window
+    ->  Set = Rest
+    ;   Set = [W|Rest]
+    ),
+    exclude_window(Ws, Window, Rest).
+
+share_number(Share-_, Share) :-
+    number(Share),
+    !.
+share_number(_, 1).
+
+%!  node_shares(+Tree, +LeafSets, -Shares) is semidet.
+%
+%   The shares of the node of Tree whose members hold exactly these
+%   windows.  A node is found again by what is in it: the tree it is
+%   compared with has a window more, and nothing else to go by.
+
+node_shares(Tree, _LeafSets, _Shares) :-
+    object(Tree),
+    !,
+    fail.
+node_shares(Tree, LeafSets, Shares) :-
+    Tree =.. [_, Pairs],
+    maplist(share_content, Pairs, Contents),
+    maplist(tree_leaves, Contents, Sets),
+    same_sets(Sets, LeafSets),
+    !,
+    maplist(share_number, Pairs, Shares).
+node_shares(Tree, LeafSets, Shares) :-
+    Tree =.. [_, Pairs],
+    maplist(share_content, Pairs, Contents),
+    member(Content, Contents),
+    node_shares(Content, LeafSets, Shares),
+    !.
+
+same_sets([], []).
+same_sets([A|As], [B|Bs]) :-
+    same_windows(A, B),
+    same_sets(As, Bs).
+
+%!  tree_leaves(+Tree, -Windows) is det.
+%
+%   The windows a sub-tree holds.
+
+tree_leaves(Tree, [Tree]) :-
+    object(Tree),
+    !.
+tree_leaves(Tree, Windows) :-
+    Tree =.. [_, Shares],
+    maplist(share_content, Shares, Contents),
+    maplist(tree_leaves, Contents, Nested),
+    append(Nested, Windows).
+
+%!  place_tree(+TabFrame, +Tree) is det.
+%
+%   Relate the windows of Tree, outermost split first.  `tab_frame
+%   ->append' relates the tiles without delegating, so the new tile joins
+%   the row it is put in when that row already runs the right way and
+%   otherwise wraps the window it is put beside -- see
+%   nonDelegatingAboveBelowTile() in src/win/tile.c.  Placing this level
+%   before descending into it is therefore what makes the nesting come
+%   out right: vertical([horizontal([A,B]), C]) is A, then C below A, and
+%   only then B beside A.  Doing it the other way round -- B beside A
+%   first -- leaves C below A alone rather than below both of them.
+
+place_tree(_, Leaf) :-
+    object(Leaf),
+    !.
+place_tree(TF, Node) :-
+    Node =.. [Orientation, Shares],
+    split_direction(Orientation, Where),
+    maplist(share_content, Shares, Contents),
+    Contents = [First|Rest],
+    tree_first_window(First, Anchor),
+    place_siblings(TF, Rest, Anchor, Where),
+    maplist(place_tree(TF), Contents).
+
+place_siblings(_, [], _, _).
+place_siblings(TF, [Content|Rest], Previous, Where) :-
+    tree_first_window(Content, Window),
+    send(TF, append, Window, Previous, Where),
+    place_siblings(TF, Rest, Window, Where).
+
+split_direction(horizontal, right).
+split_direction(vertical,   below).
+
+%!  tree_first_window(+Tree, -Window) is det.
+%
+%   The window a sub-tree is anchored on: the one that is placed for it,
+%   and that its own splits are made around.
+
+tree_first_window(Leaf, Leaf) :-
+    object(Leaf),
+    !.
+tree_first_window(Node, Window) :-
+    Node =.. [_Orientation, [Share|_]],
+    share_content(Share, Content),
+    tree_first_window(Content, Window).
+
+share_content(Share-Content, Content) :-
+    !,
+    number(Share).
+share_content(Content, Content).
+
+%!  size_tree(+TabFrame, +Tree) is det.
+%
+%   Give every window the share of its row the term asks for.  One level
+%   at a time and from the top down: a size is pixels, and the box a
+%   nested row has to divide is only settled once the row holding it has
+%   been divided.  Within one level the total is unaffected by what is
+%   given away -- `tile ->width' redistributes over the same box -- so
+%   the shares of a level can all be worked out before any of them is
+%   applied.  The last member is left to take the remainder: giving every
+%   member a size over-constrains the row.
+
+size_tree(TF, Tree) :-
+    get(TF, tile, Tile),
+    size_tile(Tile, Tree).
+
+size_tile(_, Leaf) :-
+    object(Leaf),
+    !.
+size_tile(Tile, Node) :-
+    Node =.. [Orientation, Shares],
+    get(Tile, members, Members),
+    Members \== @nil,
+    chain_list(Members, Tiles),
+    same_length(Tiles, Shares),
+    !,
+    maplist(share_weight, Shares, Weights),
+    (   maplist(==(@default), Weights)
+    ->  true
+    ;   maplist(tile_extent(Orientation), Tiles, Extents),
+        sum_list(Extents, Total),
+        sum_list(Weights, Sum),
+        Sum > 0,
+        Total > 0
+    ->  give_sizes(Tiles, Weights, Orientation, Total, Sum)
+    ;   true
+    ),
+    maplist(share_content, Shares, Contents),
+    maplist(size_tile, Tiles, Contents).
+size_tile(_, _).                        % the tree no longer fits the tiles
+
+share_weight(Share-_, Share) :- !.
+share_weight(_, @default).
+
+give_sizes([_Last], _, _, _, _) :- !.   % takes what is left over
+give_sizes([Tile|Tiles], [Weight|Weights], Orientation, Total, Sum) :-
+    (   number(Weight)
+    ->  Size is max(1, round(Weight/Sum*Total)),
+        resize_tile(Tile, Orientation, Size)
+    ;   true
+    ),
+    give_sizes(Tiles, Weights, Orientation, Total, Sum).
+
+%!  resize_tile(+Tile, +Orientation, +Size) is det.
+%
+%   Give a tile a size along Orientation, if it can take one: a tile that
+%   can neither stretch nor shrink says so with a zero weight, and sizing
+%   it anyway would take the room from a window that never agreed to give
+%   it.  See `apply_this_tile_layout' in library(persistent_frame).
+
+resize_tile(Tile, horizontal, Size) :-
+    get(Tile, area, area(_, _, W, _)),
+    (   Size > W
+    ->  get(Tile, hor_stretch, Weight)
+    ;   get(Tile, hor_shrink, Weight)
+    ),
+    (   Weight > 0
+    ->  send(Tile, width, Size)
+    ;   true
+    ).
+resize_tile(Tile, vertical, Size) :-
+    get(Tile, area, area(_, _, _, H)),
+    (   Size > H
+    ->  get(Tile, ver_stretch, Weight)
+    ;   get(Tile, ver_shrink, Weight)
+    ),
+    (   Weight > 0
+    ->  send(Tile, height, Size)
+    ;   true
+    ).
+
+                 /*******************************
                  *          SEPARATORS          *
                  *******************************/
 
@@ -434,6 +945,15 @@ separator(TF, A:area) :->
 %       does `frame ->keyboard_focus' records the intent without acting on
 %       it -- see releaseFocusFrame() in src/win/frame.c.
 
+arranged(TF) :->
+    "Tell my frame that the user has just arranged its panes"::
+    (   get(TF, frame, Frame),
+        Frame \== @nil,
+        send(Frame, has_send_method, arranged)
+    ->  send(Frame, arranged)
+    ;   true
+    ).
+
 drop(TF, Window:window, Pos:point) :->
     "Put Window beside the window Pos is over"::
     send(TF, preview_drop, @nil),
@@ -441,6 +961,7 @@ drop(TF, Window:window, Pos:point) :->
         Target \== Window
     ->  send(TF, append, Window, Target, Where),
         send(TF, current, Window),
+        send(TF, arranged),
         (   get(TF, frame, Frame),
             Frame \== @nil
         ->  send(Frame, expose)
@@ -1393,7 +1914,12 @@ drag(G, Ev:event) :->
 
 terminate(G, Ev:event) :->
     send(G, resize, Ev),
-    send(G, tile, @nil).
+    send(G, tile, @nil),
+    (   get(Ev, receiver, TF),
+        send(TF, has_send_method, arranged)
+    ->  send(TF, arranged)
+    ;   true
+    ).
 
 resize(G, Ev:event) :->
     "Move the gap to the position of Ev"::

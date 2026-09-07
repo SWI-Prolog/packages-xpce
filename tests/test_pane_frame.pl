@@ -59,7 +59,17 @@ Run with:
 :- use_module(library(plunit)).
 :- use_module(library(pane_frame)).
 :- use_module(library(pce_util), [chain_list/2]).
-:- use_module(library(lists), [member/2]).
+:- use_module(library(lists), [member/2, memberchk/2, reverse/2]).
+:- use_module(library(pane_layouts), [forget_arrangements/0]).
+
+%       An arrangements file of their own: the tests must neither read nor
+%       write the arrangements of whoever runs them.
+
+:- multifile pane_layouts:arrangements_file/1.
+
+pane_layouts:arrangements_file(File) :-
+    current_prolog_flag(tmp_dir, Tmp),
+    atom_concat(Tmp, '/test_pane_frame_store', File).
 
 test_pane_frame :-
     run_tests([ pane_frame_structure,
@@ -70,7 +80,11 @@ test_pane_frame :-
                 pane_frame_opacity,
                 pane_frame_panes,
                 pane_frame_plain_pane,
-                pane_frame_minimum
+                pane_frame_minimum,
+                pane_frame_term,
+                pane_frame_split_beside,
+                pane_frame_arranged,
+                pane_frame_tab_focus
               ]).
 
                  /*******************************
@@ -87,6 +101,7 @@ test_pane_frame :-
 variable(kind,     name := plain, both, "Which menu bar I ask for").
 variable(closable, bool := @on,   both, "Do I agree to be closed?").
 variable(exposed,  int := 0,      both, "Times I was told I am current").
+variable(setting,  name := none,  both, "Something to write down").
 
 class_variable(inactive_opacity, num, 0.6,
                "Fade me while another pane has the focus").
@@ -117,7 +132,33 @@ sibling(P, New:window) :<-
     new(New, tp_pane),
     send(New, kind, P?kind).
 
+%       The pair a pane answers to be written down and built back.
+
+pane_term(P, Options:prolog) :<-
+    get(P, setting, Setting),
+    (   Setting == none
+    ->  Options = []
+    ;   Options = [setting(Setting)]
+    ).
+
+pane_term(P, Options:prolog) :->
+    (   memberchk(setting(Setting), Options)
+    ->  send(P, setting, Setting)
+    ;   true
+    ).
+
 :- pce_end_class(tp_pane).
+
+%       A pane whose class insists on an argument, as `prolog_debugger'
+%       does: it is made for something live and cannot come from a term.
+
+:- pce_begin_class(tp_needs, window, "Pane that needs an argument").
+
+initialise(P, Level:int) :->
+    send_super(P, initialise),
+    send(P, name, Level).
+
+:- pce_end_class(tp_needs).
 
 %       A pane that answers none of it.
 
@@ -1060,3 +1101,446 @@ pane_area(P, Area) :-
     ;   Placed = P
     ),
     get(Placed, area, Area).
+
+
+                 /*******************************
+                 *          PANE TERM           *
+                 *******************************/
+
+/* A window can be written down as a Prolog term and built back from it.
+   These check what goes into the term, that a window built from a term
+   gives the same term again, and that a term naming something that
+   cannot be made restores everything else all the same.
+*/
+
+:- begin_tests(pane_frame_term).
+
+%!  described(-Frame, -Application) is det.
+%
+%   A frame of two tabs: the first holds a tp_pane beside a tp_pane over a
+%   tp_bare, the second a tp_pane that has something to say about itself.
+
+described(F, App) :-
+    frame(F, App, A),
+    send(A, setting, alpha),
+    send(F, split, new(B, tp_pane), A, right),
+    send(B, name, two),
+    send(F, split, new(C, tp_bare), A, below),
+    send(C, name, three),
+    send(F, append_pane, new(D, tp_pane), second, @off),
+    send(D, name, four),
+    send(D, setting, delta).
+
+test(a_pane_that_says_nothing_is_its_class_name, Content == tp_bare) :-
+    frame(F, _App, _P),
+    send(F, append_pane, new(Bare, tp_bare), bare, @off),
+    send(Bare, name, bare),
+    get(F, pane_term, pane_frame(_, [_, tab(_, Content)])).
+
+test(a_pane_that_says_something_carries_its_options,
+     Options == [setting(alpha)]) :-
+    frame(F, _App, P),
+    send(P, setting, alpha),
+    get(F, pane_term, pane_frame(_, [tab(_, tp_pane(Options))])).
+
+test(a_tab_with_one_pane_has_no_split, Content == tp_pane) :-
+    frame(F, _App, _P),
+    get(F, pane_term, pane_frame(_, [tab(_, Content)])).
+
+test(a_split_tab_is_a_tree) :-
+    described(F, _App),
+    get(F, pane_term, pane_frame(_, [tab(_, Content)|_])),
+    assertion(Content = horizontal([_-vertical([_-tp_pane([setting(alpha)]),
+                                                _-current(tp_bare)]),
+                                    _-tp_pane])).
+
+test(the_tab_in_view_is_marked) :-
+    described(F, _App),
+    get(F, pane_term, pane_frame(_, [tab(First, _), tab(Second, _)])),
+    assertion(memberchk(current(true), First)),
+    assertion(\+ memberchk(current(true), Second)).
+
+test(a_renamed_tab_says_so) :-
+    frame(F, _App, P),
+    get(P, container, tab_frame, Tab),
+    send(Tab, rename, 'By hand'),
+    get(F, pane_term, pane_frame(_, [tab(Options, _)])),
+    assertion(memberchk(renamed(true), Options)),
+    assertion(memberchk(label('By hand'), Options)).
+
+test(a_window_of_its_own_label_format_says_so) :-
+    frame(F, _App, _P),
+    get(F, pane_term, pane_frame(Plain, _)),
+    assertion(\+ memberchk(label_format(_), Plain)),
+    send(F, label_format, 'Mine -- %s'),
+    get(F, pane_term, pane_frame(Own, _)),
+    assertion(memberchk(label_format('Mine -- %s'), Own)).
+
+%       A window that was never opened has no geometry worth writing:
+%       <-geometry answers 0x0+0+0 for one, and reading that back would
+%       ask for a window of no size at all.
+
+test(a_window_that_was_never_opened_writes_no_geometry) :-
+    frame(F, _App, _P),
+    get(F, pane_term, pane_frame(Options, _)),
+    assertion(\+ memberchk(geometry(_), Options)).
+
+test(describing_a_window_built_from_a_term_gives_the_same_term) :-
+    described(F, App),
+    get(F, pane_term, Term),
+    open_pane_frame(Term, F2, [application(App), open(false)]),
+    get(F2, pane_term, Again),
+    assertion(Term == Again).
+
+test(a_term_written_by_hand_is_enough,
+     Shape == vertical([tp_pane,tp_pane])) :-
+    new(App, tp_app(test)),
+    open_pane_frame(pane_frame([], [tab([], vertical([tp_pane, tp_pane]))]),
+                    F, [application(App), open(false)]),
+    get(F, pane_term, pane_frame(_, [tab(_, Content)])),
+    pane_term_shape(Content, Shape).
+
+test(a_renamed_tab_keeps_its_name_when_it_is_built_back) :-
+    frame(F, App, P),
+    get(P, container, tab_frame, Tab),
+    send(Tab, rename, 'By hand'),
+    get(F, pane_term, Term),
+    open_pane_frame(Term, F2, [application(App), open(false)]),
+    get(F2, pane_term, pane_frame(_, [tab(Options, _)])),
+    assertion(memberchk(label('By hand'), Options)),
+    assertion(memberchk(renamed(true), Options)).
+
+test(the_marked_tab_is_the_one_in_view) :-
+    described(F, App),
+    get(F, pane_term, pane_frame(FrameOptions, [First, Second])),
+    open_pane_frame(pane_frame(FrameOptions, [Second, First]), F2,
+                    [application(App), open(false)]),
+    get(F2, pane_term, pane_frame(_, [tab(_, _), tab(Options, _)])),
+    assertion(memberchk(current(true), Options)).
+
+%       A class that insists on arguments is made for something live --
+%       the debugger for a break level -- and cannot be built from a term.
+%       What is around it is built all the same.
+
+test(a_pane_that_cannot_be_made_is_left_out, Shape == tp_pane) :-
+    new(App, tp_app(test)),
+    pane_term_messages(
+        open_pane_frame(pane_frame([], [tab([], vertical([tp_needs,
+                                                          tp_pane]))]),
+                        F, [application(App), open(false)]),
+        Messages),
+    get(F, pane_term, pane_frame(_, [tab(_, Content)])),
+    pane_term_shape(Content, Shape),
+    assertion(memberchk(pane_frame(needs_arguments(tp_needs)), Messages)).
+
+test(a_kind_that_is_no_class_is_left_out) :-
+    new(App, tp_app(test)),
+    pane_term_messages(
+        open_pane_frame(pane_frame([], [tab([], vertical([no_such_pane,
+                                                          tp_pane]))]),
+                        F, [application(App), open(false)]),
+        Messages),
+    get(F, pane_term, pane_frame(_, [tab(_, tp_pane)])),
+    assertion(memberchk(pane_frame(no_class(no_such_pane)), Messages)).
+
+test(a_term_with_nothing_in_it_opens_no_window, fail) :-
+    new(App, tp_app(test)),
+    pane_term_messages(
+        open_pane_frame(pane_frame([], [tab([], no_such_pane)]),
+                        _F, [application(App), open(false)]),
+        _Messages).
+
+%       A term sent to a window replaces what it held: the window ends up
+%       holding what the term says and nothing else, and it is still the
+%       window it was.
+
+test(a_term_sent_to_a_window_replaces_what_it_held) :-
+    described(F, _App),
+    send(F, pane_term, pane_frame([], [tab([], tp_pane)])),
+    get(F, pane_term, pane_frame(_, Tabs)),
+    assertion(Tabs = [tab(_, tp_pane)]),
+    get(F, panes, Panes),
+    assertion(get(Panes, size, 1)).
+
+test(a_pane_that_refuses_to_close_stops_the_replacement, fail) :-
+    frame(F, _App, P),
+    send(P, closable, @off),
+    send(F, pane_term, pane_frame([], [tab([], tp_pane)])).
+
+:- end_tests(pane_frame_term).
+
+%!  pane_term_shape(+Content, -Shape) is det.
+%
+%   The content of a tab with the shares dropped, so that a test can
+%   compare the shape alone.
+
+pane_term_shape(current(Content), Shape) :-
+    !,
+    pane_term_shape(Content, Shape).
+pane_term_shape(Content, Shape) :-
+    compound(Content),
+    Content =.. [Orientation, Shares],
+    pane_term_orientation(Orientation),
+    !,
+    findall(S, ( member(Share, Shares),
+                 pane_term_share(Share, Sub),
+                 pane_term_shape(Sub, S)
+               ), Subs),
+    Shape =.. [Orientation, Subs].
+pane_term_shape(Content, Content).
+
+pane_term_orientation(horizontal).
+pane_term_orientation(vertical).
+
+pane_term_share(_-Content, Content) :- !.
+pane_term_share(Content, Content).
+
+%!  pane_term_messages(:Goal, -Messages) is semidet.
+%
+%   Run Goal with the messages it prints collected rather than printed.
+
+:- meta_predicate pane_term_messages(0, -).
+
+pane_term_messages(Goal, Messages) :-
+    nb_setval(pane_term_messages, []),
+    setup_call_cleanup(
+        asserta((user:message_hook(Term, _, _) :-
+                     pane_term_message(Term)), Ref),
+        Goal,
+        ( erase(Ref),
+          nb_getval(pane_term_messages, Collected),
+          reverse(Collected, Messages)
+        )).
+
+pane_term_message(Term) :-
+    nb_getval(pane_term_messages, Old),
+    nb_setval(pane_term_messages, [Term|Old]).
+
+
+                 /*******************************
+                 *         SPLIT BESIDE         *
+                 *******************************/
+
+/* A tool that belongs down an edge is put beside a group of panes at a
+   share of their room, rather than beside whichever pane is current at
+   half of it.
+*/
+
+:- begin_tests(pane_frame_split_beside).
+
+%!  column(-Frame, -Panes) is det.
+%
+%   A frame whose tab holds one pane above another.
+
+column(F, [A,B]) :-
+    frame(F, _App, A),
+    send(A, name, one),
+    send(F, split, new(B, tp_pane), A, below),
+    send(B, name, two).
+
+pane_shape(Tree, Name) :-
+    object(Tree),
+    !,
+    get(Tree, name, Name).
+pane_shape(Tree, Shape) :-
+    Tree =.. [Orientation, Shares],
+    findall(S, ( member(Share, Shares),
+                 pane_term_share(Share, Content),
+                 pane_shape(Content, S)
+               ), Subs),
+    Shape =.. [Orientation, Subs].
+
+test(a_pane_can_be_put_beside_them_all,
+     Shape == horizontal([nav,vertical([one,two])])) :-
+    column(F, [A,B]),
+    new(Nav, tp_pane),
+    send(Nav, name, nav),
+    send(F, split_beside, Nav, chain(A,B), left),
+    get(A, container, tab_frame, Tab),
+    get(Tab, window_tree, Tree),
+    pane_shape(Tree, Shape).
+
+test(and_takes_the_share_it_was_given) :-
+    column(F, [A,B]),
+    new(Nav, tp_pane),
+    send(Nav, name, nav),
+    send(F, split_beside, Nav, chain(A,B), left, 0.2),
+    get(A, container, tab_frame, Tab),
+    get(Tab, window_tree, Tree),
+    Tree = horizontal([Share-_|_]),
+    assertion(abs(Share-0.2) < 0.02).
+
+test(the_new_pane_gets_the_keyboard) :-
+    column(F, [A,B]),
+    new(Nav, tp_pane),
+    send(F, split_beside, Nav, chain(A,B), left, 0.2),
+    assertion(get(F, keyboard_focus, Nav)).
+
+:- end_tests(pane_frame_split_beside).
+
+
+                 /*******************************
+                 *       ARRANGED BY HAND       *
+                 *******************************/
+
+/* A window only teaches the IDE anything once the user has arranged it by
+   hand.  What the IDE does of its own accord must not count, or it would
+   learn its own guesses back.
+*/
+
+:- begin_tests(pane_frame_arranged,
+               [ setup(forget_arrangements),
+                 cleanup(forget_arrangements)
+               ]).
+
+test(a_window_starts_saying_nothing, Arranged == @off) :-
+    frame(F, _App, _P),
+    get(F, arranged, Arranged).
+
+%       And it holds no arrangement and no clock until it does.  A slot of
+%       type `prolog' takes a Prolog term, so `none' rather than @nil says
+%       "nothing yet": @nil is not one, and declaring it as the default
+%       costs a warning for every window ever made.
+
+test(and_holds_no_arrangement_and_no_clock, Slots == [none, none]) :-
+    frame(F, _App, _P),
+    get(F, slot, arrangement, Arrangement),
+    get(F, slot, arranged_since, Since),
+    Slots = [Arrangement, Since].
+
+test(and_a_pane_the_ide_puts_there_says_nothing_either, Arranged == @off) :-
+    frame(F, _App, _P),
+    send(F, append_pane, new(_, tp_pane), @default, @on),
+    get(F, arranged, Arranged).
+
+test(nor_does_one_it_puts_beside_what_is_there, Arranged == @off) :-
+    frame(F, _App, A),
+    send(F, split, new(_, tp_pane), A, below),
+    get(F, arranged, Arranged).
+
+test(a_pane_split_by_hand_counts, Arranged == @on) :-
+    frame(F, _App, P),
+    send(P, split, vertically),
+    get(F, arranged, Arranged).
+
+test(a_pane_closed_by_hand_counts, Arranged == @on) :-
+    frame(F, _App, A),
+    send(F, split, new(B, tp_pane), A, below),
+    send(B, close_pane),
+    get(F, arranged, Arranged).
+
+test(a_pane_moved_into_a_tab_of_its_own_counts, Arranged == @on) :-
+    frame(F, _App, A),
+    send(F, split, new(B, tp_pane), A, below),
+    send(B, move_to_tab),
+    get(F, arranged, Arranged).
+
+test(and_a_tab_tells_the_window_it_is_in, Arranged == @on) :-
+    frame(F, _App, P),
+    get(P, container, tab_frame, Tab),
+    send(Tab, arranged),
+    get(F, arranged, Arranged).
+
+%       What is learned is the time an arrangement is lived in.  The clock
+%       is wound back rather than waited on.
+
+test(an_arrangement_lived_in_reaches_the_store) :-
+    frame(F, _App, A),
+    send(F, split, new(_B, tp_pane), A, below),
+    send(F, arranged),
+    get_time(Now),
+    Then is Now-7200,
+    send(F, slot, arranged_since, Then),
+    send(F, record_arrangement),
+    assertion(pane_layouts:stored(_, _, Earned, _)),
+    pane_layouts:stored(_, _, Earned, _),
+    assertion(Earned > 7000),
+    forget_arrangements.
+
+test(and_one_that_lasted_seconds_does_not, fail) :-
+    frame(F, _App, A),
+    send(F, split, new(_B, tp_pane), A, below),
+    send(F, arranged),
+    send(F, record_arrangement),
+    pane_layouts:stored(_, _, _, _).
+
+:- end_tests(pane_frame_arranged).
+
+
+                 /*******************************
+                 *        FOCUS AND TABS        *
+                 *******************************/
+
+/* Switching tabs has to move the keyboard with it.  The pane in view must
+   be the one the frame sends keys to, and it must be the only one that
+   believes it has them: ->input_focus is edge triggered, so a pane left
+   holding @on is never armed again and the window system is never told to
+   send it text.  That is the shape of the bug where a tab looks focused
+   and typing does nothing until you leave the application and come back.
+*/
+
+:- begin_tests(pane_frame_tab_focus).
+
+%!  two_tabs(-Frame, -First, -Second) is det.
+%
+%   An open frame of two tabs, holding the window-system focus as it would
+%   when the user is working in it.
+
+two_tabs(F, A, B) :-
+    frame(F, _App, A),
+    send(A, name, first),
+    send(F, append_pane, new(B, tp_pane), second, @on),
+    send(B, name, second),
+    send(F, open),
+    send(F, input_focus, @on).
+
+%!  focused(+Frame, -Panes) is det.
+%
+%   The panes of Frame that believe they have the keyboard.
+
+focused(F, Names) :-
+    get(F, panes, Chain),
+    chain_list(Chain, Panes),
+    findall(Name, ( member(P, Panes),
+                    get(P, input_focus, @on),
+                    get(P, name, Name)
+                  ), Names).
+
+%!  keys_go_to(+Frame, -Name) is semidet.
+%
+%   The pane the frame sends what is typed to.
+
+keys_go_to(F, Name) :-
+    get(F, hypered, input_window, W),
+    get(W, name, Name).
+
+test(the_pane_in_view_is_the_one_that_gets_the_keys, Goes == second) :-
+    two_tabs(F, _A, _B),
+    keys_go_to(F, Goes).
+
+test(and_it_is_still_so_after_switching_tabs, Goes == first) :-
+    two_tabs(F, A, _B),
+    send(F, current_pane, A),
+    keys_go_to(F, Goes).
+
+test(and_after_switching_back, Goes == second) :-
+    two_tabs(F, A, B),
+    send(F, current_pane, A),
+    send(F, current_pane, B),
+    keys_go_to(F, Goes).
+
+%       The one that matters: a pane left holding the focus it no longer
+%       has is never armed again, so it looks focused and takes nothing.
+
+test(only_the_pane_in_view_believes_it_has_the_keys, Focused == [first]) :-
+    two_tabs(F, A, _B),
+    send(F, current_pane, A),
+    focused(F, Focused).
+
+test(and_the_one_left_behind_lets_go, Focused == [second]) :-
+    two_tabs(F, A, B),
+    send(F, current_pane, A),
+    send(F, current_pane, B),
+    focused(F, Focused).
+
+:- end_tests(pane_frame_tab_focus).

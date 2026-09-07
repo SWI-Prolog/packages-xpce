@@ -57,13 +57,20 @@ Run with:
 :- use_module(library(plunit)).
 :- use_module(library(epilog)).
 :- use_module(library(swi_ide)).
+:- use_module(library(pane_frame), [open_pane_frame/3]).
 :- use_module(library(emacs/emacs)).
+:- use_module(library(emacs/bookmarks), []).
+:- use_module(library(emacs/buffer_menu), []).
 :- use_module(library(pce_util), [chain_list/2]).
-:- use_module(library(lists), [member/2, subtract/3, length/2]).
+:- use_module(library(lists), [member/2, subtract/3, length/2,
+                               memberchk/2]).
 :- use_module(library(filesex), [directory_file_path/3]).
 
 test_mixed_panes :-
-    run_tests([ mixed_panes ]).
+    run_tests([ mixed_panes,
+                mixed_panes_term,
+                mixed_panes_emacs_tools
+              ]).
 
 %       PceEmacs must not take the address of the PceEmacs of whoever
 %       runs the tests, nor leave one behind.
@@ -617,3 +624,195 @@ mixed_window(F) :-
     send(F, open).
 
 :- end_tests(mixed_panes).
+
+
+                 /*******************************
+                 *          PANE TERM           *
+                 *******************************/
+
+/* Writing a window of both kinds down and building it back.  What an
+   editor and a terminal have to say about themselves is theirs -- see
+   `emacs_view <-pane_term' and `epilog_window <-pane_term' -- so this is
+   where the two are checked, beside each other in one window.
+*/
+
+:- begin_tests(mixed_panes_term).
+
+%!  mixed(-Frame, -File) is det.
+%
+%   A window of an editor on a source of our own, over a terminal.
+
+mixed(F, File) :-
+    emacs,
+    source_of_our_own(File),
+    open_pane_frame(pane_frame([],
+                               [ tab([], vertical([ 0.6-editor([file(File)]),
+                                                    0.4-terminal([]) ]))
+                               ]),
+                    F, [open(false)]).
+
+test(an_editor_says_which_source_it_shows) :-
+    mixed(F, File),
+    editor(F, V),
+    get(V, pane_term, Options),
+    assertion(memberchk(file(File), Options)),
+    assertion(memberchk(mode(prolog), Options)).
+
+test(a_terminal_says_which_profile_it_runs) :-
+    mixed(F, _File),
+    terminal(F, W),
+    get(W, pane_term, Options),
+    assertion(memberchk(profile(prolog), Options)).
+
+test(an_editor_is_written_by_what_it_is, Kind == editor) :-
+    mixed(F, _File),
+    editor(F, V),
+    get(V, pane_kind, Kind).
+
+test(a_terminal_is_written_by_what_it_is, Kind == terminal) :-
+    mixed(F, _File),
+    terminal(F, W),
+    get(W, pane_kind, Kind).
+
+test(a_window_of_both_kinds_gives_the_same_term_back) :-
+    mixed(F, _File),
+    get(F, pane_term, Term),
+    open_pane_frame(Term, F2, [open(false)]),
+    get(F2, pane_term, Again),
+    assertion(Term == Again).
+
+test(the_caret_comes_back_where_it_was, Line == 2) :-
+    mixed(F, _File),
+    editor(F, V),
+    send(V, line_number, 2),
+    get(F, pane_term, Term),
+    open_pane_frame(Term, F2, [open(false)]),
+    editor(F2, V2),
+    get(V2, caret, Caret),
+    get(V2, line_number, Caret, Line).
+
+%       A source that is no longer there is opened as a new file, which is
+%       what PceEmacs does for one anywhere else.  The rest of the window
+%       comes back around it.
+
+test(a_source_that_has_gone_leaves_the_rest_standing, Classes == [emacs_view, epilog_window]) :-
+    emacs,
+    source_of_our_own(File),
+    delete_file(File),
+    open_pane_frame(pane_frame([],
+                               [ tab([], vertical([ 0.5-editor([file(File)]),
+                                                    0.5-terminal([]) ]))
+                               ]),
+                    F, [open(false)]),
+    classes(F, Classes).
+
+%       A profile that is no longer defined is reported and the terminal
+%       falls back on `prolog', rather than the window losing a pane.
+
+test(a_profile_that_has_gone_falls_back, Profile == prolog) :-
+    open_pane_frame(pane_frame([],
+                               [ tab([], terminal([profile(no_such_profile)]))
+                               ]),
+                    F, [open(false)]),
+    terminal(F, W),
+    get(W, terminal, PT),
+    get(PT, profile, Profile).
+
+test(a_source_that_has_gone_is_still_said_to_be_gone) :-
+    emacs,
+    source_of_our_own(File),
+    delete_file(File),
+    new(V, emacs_view),
+    send(V, pane_term, [file(File)]),
+    get(V, pane_term, Options),
+    assertion(memberchk(file(File), Options)).
+
+:- end_tests(mixed_panes_term).
+
+
+                 /*******************************
+                 *         EMACS TOOLS          *
+                 *******************************/
+
+/* Every window of the IDE belongs to @prolog_ide, the bookmark editor and
+   the buffer menu among them.  What they ask of *PceEmacs* -- which
+   buffers are open, opening a source -- has to go to @emacs all the same:
+   @prolog_ide answers none of it, and asking it warns and takes the wrong
+   branch.
+*/
+
+:- begin_tests(mixed_panes_emacs_tools).
+
+%!  bookmarks(-Editor) is det.
+
+bookmarks(BM) :-
+    emacs,
+    new(BM, emacs_bookmark_editor).
+
+%!  hits(+Editor, -Bookmarks) is det.
+
+hits(BM, Marks) :-
+    get(BM, tree, Tree),
+    get(Tree, root, Root),
+    findall(M, node_bookmark(Root, M), Marks).
+
+node_bookmark(Node, M) :-
+    get(Node, sons, Sons),
+    Sons \== @nil,
+    chain_list(Sons, List),
+    member(Son, List),
+    (   get(Son, identifier, M),
+        send(M, instance_of, emacs_bookmark)
+    ;   node_bookmark(Son, M)
+    ).
+
+%       A hit in a file that is open is linked to the buffer showing it,
+%       and its title comes from that buffer.  With the question put to
+%       @prolog_ide the file counted as not open, and the hit came back
+%       unlinked, with its title read off the disk.
+
+test(a_hit_in_an_open_file_is_linked_to_its_buffer) :-
+    source_of_our_own(File),
+    new(_B, emacs_buffer(File)),
+    bookmarks(BM),
+    send(BM, lsp_add, File,
+         #{ start: #{line:1, character:4},
+            end:   #{line:1, character:5} }, @nil),
+    hits(BM, [Mark|_]),
+    assertion(get(Mark, hypered, fragment, _)),
+    get(Mark, title, Title),
+    assertion(send(Title, sub, 'X = 42')).
+
+test(a_hit_in_a_file_that_is_not_open_is_a_plain_bookmark) :-
+    source_of_our_own(File),
+    bookmarks(BM),
+    send(BM, lsp_add, File,
+         #{ start: #{line:1, character:4},
+            end:   #{line:1, character:5} }, @nil),
+    hits(BM, [Mark|_]),
+    assertion(\+ get(Mark, hypered, fragment, _)).
+
+%       The title of a hit may be left to the caller, said outright, or
+%       given as @nil for none: the type has to allow all three.
+
+test(a_hit_can_be_given_no_title_at_all, Title == '') :-
+    source_of_our_own(File),
+    bookmarks(BM),
+    send(BM, lsp_add, File,
+         #{ start: #{line:0, character:0},
+            end:   #{line:0, character:1} }, @nil),
+    hits(BM, [Mark|_]),
+    get(Mark?title, value, Title).
+
+%       Files dropped on the buffer menu are opened by PceEmacs, not by
+%       the IDE the window belongs to.
+
+test(files_dropped_on_the_buffer_menu_are_opened) :-
+    emacs,
+    source_of_our_own(File),
+    new(Menu, emacs_buffer_menu(@emacs)),
+    get(Menu, member, browser, Browser),
+    send(Browser, drop_files, chain(file(File)), point(0,0)),
+    assertion(get(@emacs, file_buffer, File, _)).
+
+:- end_tests(mixed_panes_emacs_tools).

@@ -299,14 +299,17 @@ append_hit(F, Buffer:emacs_buffer, Start:int, End0:[int]) :->
 %
 %   Add  a  hit  from  an  LSP  server.  If  the  file  is  loaded  used
 %   ->append_hit, else create the hit as a non-loaded file.
+%
+%   `@emacs' rather than my <-application: every window of the IDE belongs
+%   to @prolog_ide, and which buffers are open is PceEmacs's to answer.
 
-lsp_add(F, File:name, LSPRange:prolog, Title:[string]) :->
+lsp_add(F, File:name, LSPRange:prolog, Title:'[string]*') :->
     "Add an LSP position"::
     #{start:RangeStart, end:RangeEnd} :< LSPRange,
     #{line:Line, character:LinePos} :< RangeStart,
     #{line:EndLine, character:EndPos} :< RangeEnd,
     Line1 is Line+1,
-    (   get(F?application, file_buffer, File, Buffer)
+    (   get(@emacs, file_buffer, File, Buffer)
     ->  get(Buffer, lsp_offset, Line, LinePos, Start),
         get(Buffer, lsp_offset, EndLine, EndPos, End),
         send(F, append_hit, Buffer, Start, End)

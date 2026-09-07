@@ -1888,9 +1888,13 @@ thread_connected(T, Thread:name) :->
 
 pane_exposed(T) :->
     "Take the name of what I run, which I may only know now"::
-    get(T, terminal, PT),
-    terminal_base_label(PT, Base),
-    ignore(send(T, retitle_tab, Base)).
+    (   get(T, slot, window_label, Label),
+        Label \== @nil                  % a client asked for a title, and
+    ->  true                            % that is what my tab already says
+    ;   get(T, terminal, PT),
+        terminal_base_label(PT, Base),
+        ignore(send(T, retitle_tab, Base))
+    ).
 
 retitle_tab(T, Base:name) :->
     "Put Base on my tab, made unique, unless the user named it"::
@@ -1922,7 +1926,8 @@ new_tab(T) :->
     get(T, sibling, W),
     get(T, frame, Frame),
     send(Frame, append_terminal, W, @on),
-    send(Frame, keyboard_focus, W).
+    send(Frame, keyboard_focus, W),
+    send(Frame, arranged).              % asked for by hand
 
 pane_label(T, Label:name) :<-
     "What my tab is called"::
@@ -1943,6 +1948,60 @@ tab_label(T, Label:name) :->
 menu_bar_key(_T, Key:name) :<-
     "Every terminal asks for the same menu bar"::
     Key = epilog.
+
+%       What is worth writing down about a terminal: what it runs and
+%       where.  Not the thread, and not what has scrolled past: a restored
+%       terminal is a new terminal running the same profile in the same
+%       directory, which is what <-sibling makes of a live one.  Only what
+%       differs from the profile is written, so a term stays short and
+%       follows the profile when that is changed.
+
+pane_kind(_T, Kind:name) :<-
+    "How I am written in a description of a window"::
+    Kind = terminal.
+
+pane_term(T, Options:prolog) :<-
+    "The profile I run and the directory I run it in"::
+    get(T, terminal, PT),
+    get(PT, profile, Profile),
+    profile_options(Profile, FromProfile),
+    findall(O, terminal_option(PT, FromProfile, O), Rest),
+    Options = [profile(Profile)|Rest].
+
+terminal_option(PT, FromProfile, cwd(CWD)) :-
+    get(PT, working_directory, CWD),
+    \+ option(cwd(CWD), FromProfile).
+terminal_option(PT, FromProfile, goal(Goal)) :-
+    get(PT, goal, Goal),
+    Goal \== prolog,                    % what the slot says anyway
+    \+ option(goal(Goal), FromProfile).
+terminal_option(PT, FromProfile, init(Init)) :-
+    get(PT, goal_init, Init),
+    Init \== version,
+    \+ option(init(Init), FromProfile).
+
+pane_term(T, Options:prolog) :->
+    "Run what a description asks for"::
+    option(profile(Asked), Options, prolog),
+    known_profile(Asked, Profile),
+    profile_options(Profile, FromProfile),
+    merge_options(Options, FromProfile, All),
+    get(T, terminal, PT),
+    configure_terminal(PT, Profile, All).
+
+%!  known_profile(+Asked, -Profile) is det.
+%
+%   A description may name a profile that is no longer defined -- it was
+%   written on another machine, or the clause defining it has gone.  Fall
+%   back on the plain Prolog one rather than lose the terminal, as
+%   current_profile/2 carries on past a profile it cannot work out.
+
+known_profile(Asked, Profile) :-
+    (   catch(profile_options(Asked, _), _, fail)
+    ->  Profile = Asked
+    ;   print_message(warning, pane_frame(no_such_profile(Asked, prolog))),
+        Profile = prolog
+    ).
 
 unlink(T) :->
     "Save the command line history of my terminal"::

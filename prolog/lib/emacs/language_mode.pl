@@ -748,7 +748,7 @@ expand_tag(M, Tag:[name], TheTag:name) :<-
     ).
 
 
-find_tag(M, Tag:emacs_tag, Where:[{here,tab,split,window}], Editor:editor) :<-
+find_tag(M, Tag:emacs_tag, Where:[{as_arranged,here,tab,split,window}], Editor:editor) :<-
     "Jump to indicated tag entry"::
     (   get(M, directory, Dir),
         find_tag_from_dir(Dir, TagFile),
