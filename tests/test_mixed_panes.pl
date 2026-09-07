@@ -732,6 +732,17 @@ test(a_terminal_is_written_by_what_it_is, Kind == terminal) :-
     terminal(F, W),
     get(W, pane_kind, Kind).
 
+%       A window that is not open yet has still been given a size, and
+%       the shares are shares of that.  Fitting one lays every pane out
+%       at the least it will take, which leaves the tab exactly the room
+%       its panes insist on: no arrangement of it is possible, and the
+%       term it gives back is not the one it was built from.
+
+test(and_gives_back_the_shares_it_was_asked_for, Shares == [0.6, 0.4]) :-
+    mixed(F, _File),
+    get(F, pane_term, pane_frame(_, [tab(_, vertical(Tree))])),
+    findall(Share, member(Share-_, Tree), Shares).
+
 test(a_window_of_both_kinds_gives_the_same_term_back) :-
     mixed(F, _File),
     get(F, pane_term, Term),

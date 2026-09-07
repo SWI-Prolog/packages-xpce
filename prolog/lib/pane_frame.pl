@@ -939,6 +939,7 @@ pane_term(F, Term:prolog) :->
            send(Tab, close)),
     apply_frame_options(F, Options),
     expose_current_tab(F, Built),
+    send(F, resize),                    % see share_room/1
     share_room(Built).
 
 %!  share_room(+Built) is det.
@@ -948,6 +949,14 @@ pane_term(F, Term:prolog) :->
 %   there is, and `tab_frame ->layout_natural' takes the ideal sizes
 %   back off the windows at every layout, so this has to be the last
 %   thing done.
+%
+%   ->resize first, because the room has to be there to divide.  A
+%   window that is not open yet has only been fitted -- every pane laid
+%   out at the size it asks for, which in a tab is the least it will
+%   take -- and shares of that are not shares of anything: the tab has
+%   exactly the room its panes insist on and no arrangement of it is
+%   possible.  ->resize is what the window system sends when a window
+%   is given its size, and it hands the panes the room the frame has.
 
 share_room(Built) :-
     forall(member(built_tab(Tab, _, Tree), Built),
