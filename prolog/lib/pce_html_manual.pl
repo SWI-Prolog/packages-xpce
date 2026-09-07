@@ -612,14 +612,16 @@ goto_url(MHC, URLSpec:name, _Dir:[{forward,backward}]) :->
 
 %!  notify_link_followed(+MHC, +AbsURL) is det.
 %
-%   When the click resolves to a live xpce object, update the
-%   selection slot and tell the enclosing frame so the navigation
-%   history can record the new location. Silent when the URL can't
-%   be reversed (e.g. external sections).
+%   Tell whoever keeps the history of this card where the click went, so
+%   the navigation history records the new location.  Not =|<-frame|=:
+%   the tool is a pane of a window of the IDE now, and the frame is that
+%   window.  Silent when there is nobody to tell.
 
 notify_link_followed(MHC, AbsURL) :-
-    get(MHC, frame, Frame),
-    send(Frame, add_history, AbsURL).
+    (   get(MHC, history_holder, Holder)
+    ->  send(Holder, add_history, AbsURL)
+    ;   true
+    ).
 
 :- pce_end_class.
 

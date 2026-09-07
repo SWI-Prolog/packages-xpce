@@ -138,6 +138,17 @@ show(DW, Tokens:prolog, Mode:[doc_mode]) :->
     get(DW, parbox, PB),
     send(PB, show, Tokens, Mode).
 
+%       Who is told what page is shown.  A document window used to be a
+%       window of the frame that keeps the history; it can be a window of
+%       a tool that is a pane of a window of the IDE now -- see class
+%       man_card_editor -- and then <-frame is that window, which knows
+%       nothing about the document.  Ask whoever keeps a history.
+
+history_holder(DW, Holder:visual) :<-
+    "The object that keeps the history of the pages I show"::
+    get(DW, container,
+        message(@arg1, has_send_method, add_history), Holder).
+
 url(DW, URLSpec:name*) :->
     "Switch to indicated url"::
     (   URLSpec == @nil
@@ -146,7 +157,10 @@ url(DW, URLSpec:name*) :->
         send(DW, slot, url, @nil)
     ;   labeled_url(URLSpec, URL, Label),
         get(DW, frame, Frame),
-        catch(send(Frame, add_history, URL), _, true),
+        (   get(DW, history_holder, Holder)
+        ->  send(Holder, add_history, URL)
+        ;   true
+        ),
         (   get(DW, url, URL)
         ->  true
         ;   send(Frame, busy_cursor),

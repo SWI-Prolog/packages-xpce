@@ -67,6 +67,7 @@ Run with:
 :- use_module(library(trace/status), []).
 :- use_module(library(pce_xref), []).
 :- use_module(library(pce_manual), []).
+:- use_module(library(pce_html_manual), []).  % defines swi_man_xpce
 :- use_module(library(swi/pce_profile), []).
 :- use_module(library(trace/exceptions), []).
 :- use_module(library(trace/viewterm), [view_term/2]).
@@ -1275,6 +1276,53 @@ test(the_tool_is_not_the_window_it_is_in) :-
     get(Tool, frame, Frame),
     Frame \== Tool,
     send(Frame, instance_of, pane_frame).
+
+%       A card viewer keeps a history of what it showed, and the window
+%       that shows a card tells it -- `doc_window <-history_holder'.  It
+%       used to tell <-frame, which was the tool; the frame is a window
+%       of the IDE now and answers no ->add_history, and that took the
+%       whole of `doc_window ->url' down with it: no card appeared.
+
+test(the_history_of_a_card_is_kept_by_the_tool, true(Holder == CE)) :-
+    no_frames,
+    open_manual_tool(card_viewer, CE),
+    get(CE, member, html_card, HC),
+    get(HC, history_holder, Holder).
+
+%!  reference_manual is semidet.
+%
+%   True when the HTML reference manual a card shows was built.
+
+reference_manual :-
+    catch(absolute_file_name(swi_man_xpce('class-frame.html'), _,
+                             [ access(read), file_errors(fail) ]),
+          _, fail).
+
+test(and_a_card_shown_is_a_card_it_remembers,
+     [ condition(reference_manual),
+       true(Recorded == URL)
+     ]) :-
+    no_frames,
+    open_manual_tool(card_viewer, CE),
+    get(CE, member, html_card, HC),
+    get(@pce, convert, frame, class, Class),
+    send(HC, selection, Class),
+    get(HC, url, URL),
+    get(CE?history, current, Recorded).
+
+test(and_so_is_a_link_followed_in_it,
+     [ condition(reference_manual),
+       true(Anchor == 'class-frame-get-confirm_centered')
+     ]) :-
+    no_frames,
+    open_manual_tool(card_viewer, CE),
+    get(CE, member, html_card, HC),
+    get(@pce, convert, frame, class, Class),
+    send(HC, selection, Class),
+    send(HC, goto_url,
+         'class-frame.html#class-frame-get-confirm_centered'),
+    get(CE?history, current, Recorded),
+    atomic_list_concat([_, Anchor], '#', Recorded).
 
 %       man_frame answers a handful of frame methods over the pane, and a
 %       method there must keep the shape class window gives it: ->create
