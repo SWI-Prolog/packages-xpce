@@ -102,7 +102,8 @@ test_tool_panes :-
                 debugger_pane,
                 term_viewer_pane,
                 manual_tool_panes,
-                tool_pane_placement
+                tool_pane_placement,
+                tool_pane_focus
               ]).
 
 %!  classes(+Frame, -Classes) is det.
@@ -2052,3 +2053,68 @@ test(and_a_window_of_its_own_is_a_window_of_its_own, Panes == 1) :-
     get(Chain, size, Panes).
 
 :- end_tests(tool_pane_placement).
+
+
+                 /*******************************
+                 *        FOCUS AND TABS        *
+                 *******************************/
+
+/* Tools → View threads makes a tab; switching back to the terminal has to
+   bring the keyboard with it.  A pane left holding a focus it no longer
+   has is never armed again -- ->input_focus is edge triggered -- so the
+   terminal looked focused and took nothing typed at it until the user
+   left the application and came back.
+*/
+
+:- begin_tests(tool_pane_focus).
+
+%!  console_and_monitor(-Frame, -Terminal, -Monitor) is det.
+%
+%   An open console holding the window-system focus, with the thread
+%   monitor in a tab of its own and in view, as Tools → View threads
+%   leaves it.
+
+console_and_monitor(F, T, M) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(F, input_focus, @on),
+    get(F, panes, Chain),
+    chain_list(Chain, [T|_]),
+    get(@prolog_ide, show_tool, prolog_thread_monitor, tab, M).
+
+%!  keys_go_to(+Frame, -Pane) is semidet.
+%
+%   The pane of Frame that what is typed reaches.  A tool holds windows of
+%   its own, so the window with the focus may be inside the pane.
+
+keys_go_to(F, Pane) :-
+    get(F, hypered, input_window, W),
+    (   get(W, container, tool_pane, Tool)
+    ->  Pane = Tool
+    ;   Pane = W
+    ).
+
+test(the_monitor_takes_the_keys_when_it_is_made, Goes == M) :-
+    console_and_monitor(F, _T, M),
+    keys_go_to(F, Goes).
+
+test(and_the_terminal_takes_them_back, Goes == T) :-
+    console_and_monitor(F, T, _M),
+    send(F, current_pane, T),
+    keys_go_to(F, Goes).
+
+%       The one the report was about: the terminal is in view and looks
+%       focused, and the keys go to the monitor.
+
+test(and_the_monitor_lets_go_of_them, Focused == [terminal]) :-
+    console_and_monitor(F, T, _M),
+    send(F, current_pane, T),
+    get(F, panes, Chain),
+    chain_list(Chain, Panes),
+    findall(Kind, ( member(P, Panes),
+                    get(P, input_focus, @on),
+                    pane_kind(P, Kind)
+                  ), Focused).
+
+:- end_tests(tool_pane_focus).

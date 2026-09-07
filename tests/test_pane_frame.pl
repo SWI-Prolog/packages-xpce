@@ -83,7 +83,8 @@ test_pane_frame :-
                 pane_frame_minimum,
                 pane_frame_term,
                 pane_frame_split_beside,
-                pane_frame_arranged
+                pane_frame_arranged,
+                pane_frame_tab_focus
               ]).
 
                  /*******************************
@@ -1464,3 +1465,82 @@ test(and_one_that_lasted_seconds_does_not, fail) :-
     pane_layouts:stored(_, _, _, _).
 
 :- end_tests(pane_frame_arranged).
+
+
+                 /*******************************
+                 *        FOCUS AND TABS        *
+                 *******************************/
+
+/* Switching tabs has to move the keyboard with it.  The pane in view must
+   be the one the frame sends keys to, and it must be the only one that
+   believes it has them: ->input_focus is edge triggered, so a pane left
+   holding @on is never armed again and the window system is never told to
+   send it text.  That is the shape of the bug where a tab looks focused
+   and typing does nothing until you leave the application and come back.
+*/
+
+:- begin_tests(pane_frame_tab_focus).
+
+%!  two_tabs(-Frame, -First, -Second) is det.
+%
+%   An open frame of two tabs, holding the window-system focus as it would
+%   when the user is working in it.
+
+two_tabs(F, A, B) :-
+    frame(F, _App, A),
+    send(A, name, first),
+    send(F, append_pane, new(B, tp_pane), second, @on),
+    send(B, name, second),
+    send(F, open),
+    send(F, input_focus, @on).
+
+%!  focused(+Frame, -Panes) is det.
+%
+%   The panes of Frame that believe they have the keyboard.
+
+focused(F, Names) :-
+    get(F, panes, Chain),
+    chain_list(Chain, Panes),
+    findall(Name, ( member(P, Panes),
+                    get(P, input_focus, @on),
+                    get(P, name, Name)
+                  ), Names).
+
+%!  keys_go_to(+Frame, -Name) is semidet.
+%
+%   The pane the frame sends what is typed to.
+
+keys_go_to(F, Name) :-
+    get(F, hypered, input_window, W),
+    get(W, name, Name).
+
+test(the_pane_in_view_is_the_one_that_gets_the_keys, Goes == second) :-
+    two_tabs(F, _A, _B),
+    keys_go_to(F, Goes).
+
+test(and_it_is_still_so_after_switching_tabs, Goes == first) :-
+    two_tabs(F, A, _B),
+    send(F, current_pane, A),
+    keys_go_to(F, Goes).
+
+test(and_after_switching_back, Goes == second) :-
+    two_tabs(F, A, B),
+    send(F, current_pane, A),
+    send(F, current_pane, B),
+    keys_go_to(F, Goes).
+
+%       The one that matters: a pane left holding the focus it no longer
+%       has is never armed again, so it looks focused and takes nothing.
+
+test(only_the_pane_in_view_believes_it_has_the_keys, Focused == [first]) :-
+    two_tabs(F, A, _B),
+    send(F, current_pane, A),
+    focused(F, Focused).
+
+test(and_the_one_left_behind_lets_go, Focused == [second]) :-
+    two_tabs(F, A, B),
+    send(F, current_pane, A),
+    send(F, current_pane, B),
+    focused(F, Focused).
+
+:- end_tests(pane_frame_tab_focus).

@@ -405,6 +405,27 @@ current(TF, Window:window) :->
     ;   true
     ).
 
+%       `tab_stack ->on_top' ends by sending the tab it raised ->advance,
+%       to put the keyboard focus on the first item of a tab that holds
+%       dialog items.  I hold windows, and each of them looks after its
+%       own keyboard focus; what "the focus of this tab" means for me is
+%       simply <-current, which ->current has already told my frame.
+%       Letting `device ->advance' hunt for an item instead walks out of
+%       the tab and hands the frame a window of whichever tab it finds,
+%       which leaves the pane the user just switched to looking focused
+%       while the keys go somewhere else.
+
+advance(TF, _From:[graphical]*, _Propagate:[bool],
+            _Direction:[{forwards,backwards}]) :->
+    "Give the keyboard to the window I am showing"::
+    (   get(TF, current, Window),
+        Window \== @nil,
+        get(TF, frame, Frame),
+        Frame \== @nil
+    ->  send(Frame, keyboard_focus, Window)
+    ;   true
+    ).
+
 update_current(TF) :->
     "Keep <-current on a window I still hold"::
     window_list(TF, List),
