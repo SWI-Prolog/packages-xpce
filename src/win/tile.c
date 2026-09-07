@@ -1413,23 +1413,29 @@ forResizeAreaTile(TileObj t, for_tile_func func, Any ctx)
       { if ( getCanResizeTile(t2) == ON )
 	{ int x0 = valInt(t2->area->x) + valInt(t2->area->w);
 	  int x1 = valInt(t3->area->x);
-	  void *rc = (*func)(ctx, t2,
-			     toInt(x0), t->area->y,
-			     toInt(x1-x0), t->area->h);
 
-	  if ( rc )
-	    return rc;
+	  if ( x1 > x0 )		/* there is a gap: see below */
+	  { void *rc = (*func)(ctx, t2,
+			       toInt(x0), t->area->y,
+			       toInt(x1-x0), t->area->h);
+
+	    if ( rc )
+	      return rc;
+	  }
 	}
       } else
       { if ( getCanResizeTile(t2) == ON )
 	{ int y0 = valInt(t2->area->y) + valInt(t2->area->h);
 	  int y1 = valInt(t3->area->y);
-	  void *rc = (*func)(ctx, t2,
-			     t->area->x, toInt(y0),
-			     t->area->w, toInt(y1-y0));
 
-	  if ( rc  )
-	    return rc;
+	  if ( y1 > y0 )		/* there is a gap: see below */
+	  { void *rc = (*func)(ctx, t2,
+			       t->area->x, toInt(y0),
+			       t->area->w, toInt(y1-y0));
+
+	    if ( rc  )
+	      return rc;
+	  }
 	}
       }
     }
@@ -1444,6 +1450,15 @@ forResizeAreaTile(TileObj t, for_tile_func func, Any ctx)
 resizable sub-tiles.  The frame paints these  using the window system (see
 ws_draw_resize_frame()).  A tile hierarchy that  lives inside a graphical
 device (see class tab_frame) paints them itself and thus needs the areas.
+
+A member laid out with no size at all leaves no gap after it -- see the
+comment at non_empty_tiles(), which is what withholds the border in that
+case.  Reporting one anyway is worse than useless: the gap is a rectangle
+of zero height, ws_draw_resize_area_frame() draws a line down the middle
+of it, and the middle of nothing is the first row of the tile that
+follows.  On MacOS, where the menus are shown natively and the dialog
+that carries the menu bar asks for no height, that line lands on the top
+row of the pane below.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static void *
