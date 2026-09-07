@@ -41,11 +41,12 @@
             forget_arrangements/0
           ]).
 :- use_module(library(lists),
-              [ member/2, memberchk/2, nth0/3, reverse/2,
+              [ member/2, nth0/3, reverse/2,
                 sum_list/2, append/3
               ]).
 :- use_module(library(apply), [maplist/3]).
 :- use_module(library(filesex), [make_directory_path/1]).
+:- use_module(library(aggregate), [aggregate_all/3]).
 
 /** <module> Where a new pane goes, from how windows have been arranged
 
@@ -503,8 +504,7 @@ score(Kinds, Want, Priority, Score) :-
     Score is Priority*Shared/Total.
 
 intersection_count(Kinds, Want, Count) :-
-    findall(K, (member(K, Kinds), memberchk(K, Want)), Shared),
-    length(Shared, Count).
+    aggregate_all(count, (member(K, Kinds), memberchk(K, Want)), Count).
 
 union_count(Kinds, Want, Count) :-
     append(Kinds, Want, All),
