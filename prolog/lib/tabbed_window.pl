@@ -332,7 +332,8 @@ edit_label(T) :->
     send(Stack, hide_tab_buttons),      % one lies over the label I cover
     send(Stack, display, new(TI, tab_label_item(T)), point(X, 0)),
     send(TI, set, X, 0, W, H),
-    send(Stack?window, keyboard_focus, TI).
+    send(Stack?window, keyboard_focus, TI),
+    send(TI, select_all).               % typing replaces the name I have
 
 edit_label_width(T, X:int, W:int) :<-
     "Room for the editor over my label, which is wider than the label"::

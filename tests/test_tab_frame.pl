@@ -355,6 +355,18 @@ test(an_editable_label_opens_over_itself) :-
     IH >= H,
     IW >= W.                            % a label is narrow to type in
 
+%       The name a tab has is what you are usually replacing, not what you
+%       want to edit a letter of, so it starts out selected.
+
+test(and_starts_out_selected_so_typing_replaces_the_name) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    send(TF, edit_label),
+    editor(TF, Item),
+    send(Item, typed, 0'x),
+    get(Item, selection, Typed),
+    send(Typed, equal, x).
+
 %       Room to type in, which is more than the label takes to draw --
 %       there is a whole name to put there.
 
