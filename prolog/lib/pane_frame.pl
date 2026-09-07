@@ -939,7 +939,7 @@ pane_term(F, Term:prolog) :->
            send(Tab, close)),
     apply_frame_options(F, Options),
     expose_current_tab(F, Built),
-    send(F, resize),                    % see share_room/1
+    settle_room(F),                     % see share_room/1
     share_room(Built).
 
 %!  share_room(+Built) is det.
@@ -950,13 +950,23 @@ pane_term(F, Term:prolog) :->
 %   back off the windows at every layout, so this has to be the last
 %   thing done.
 %
-%   ->resize first, because the room has to be there to divide.  A
-%   window that is not open yet has only been fitted -- every pane laid
-%   out at the size it asks for, which in a tab is the least it will
-%   take -- and shares of that are not shares of anything: the tab has
-%   exactly the room its panes insist on and no arrangement of it is
-%   possible.  ->resize is what the window system sends when a window
-%   is given its size, and it hands the panes the room the frame has.
+%   The room has to be there to divide, and a window that has not been
+%   opened has none: it has only been fitted -- every pane laid out at
+%   the size it asks for, which in a tab is the least it will take --
+%   and shares of that are not shares of anything.  The tab has exactly
+%   the room its panes insist on, no arrangement of it is possible, and
+%   the term it gives back is not the one it was built from.
+%   `settle_room' hands the panes the room the frame has, by sending
+%   what the window system sends when a window is given its size.  An
+%   open window was given its room when it opened and is left alone:
+%   laying it out again from here puts its panes where they were before
+%   its bars took theirs.
+
+settle_room(F) :-
+    (   get(F, status, unmapped)
+    ->  send(F, resize)
+    ;   true
+    ).
 
 share_room(Built) :-
     forall(member(built_tab(Tab, _, Tree), Built),
