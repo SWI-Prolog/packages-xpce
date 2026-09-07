@@ -273,10 +273,16 @@ ensure_source_file(_Emacs, File) :->
         fail
     ).
 
+%       The pane the user is in need not be a source: a window of the IDE
+%       holds the tools as well, and a tool has no editor to remember a
+%       place in.  ->open_file works from the same view -- see
+%       editor_pane/2 -- so this is the location it is leaving.
+
 location_history(Emacs, Title:title=[char_array]) :->
     "Save current location into history"::
     (   get(Emacs, current_frame, Frame),
-        get(Frame?current_pane, editor, Editor),
+        editor_pane(Frame, View),
+        get(View, editor, Editor),
         get(Editor, mode, Mode)
     ->  send(Mode, location_history, title := Title)
     ;   true

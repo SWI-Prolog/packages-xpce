@@ -254,6 +254,66 @@ test(what_it_makes_of_the_layout_does_not_stop_for_an_answer,
     get(Mode, body_indentation, Indentation),
     get(View?editor, indent_tabs, Tabs).
 
+%       Where the user asked from is remembered, so that `Back' returns
+%       to it.  Where they were is an editor, and the pane they are in
+%       need not be one: a terminal has no editor to remember a place in,
+%       nor has a tool of the IDE, and asking one for it lost the place
+%       -- and said so.  ->open_file works from the same view.
+%
+%       The one place remembered is the caret the user left: arriving at
+%       the head of a file is not worth remembering -- see `emacs_mode
+%       ->history_not_interesting'.
+
+test(where_a_source_was_asked_for_from_is_remembered,
+     true(Places == 1)) :-
+    no_frames,
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    source_with_room(Asking),
+    with_placement(tab, send(@emacs, goto_source_location,
+                             source_location(Asking, 1))),
+    editor(F, View),
+    get(View, editor, Editor),           % away from the place arriving
+    get(Editor, scan, 0, line, 60, start, Caret),  % there remembered
+    send(Editor, caret, Caret),
+    terminal(F, T),
+    send(F, current_pane, T),            % the pane the user is in is not
+    source_of_our_own(Asked),            % the one that holds the source
+    with_placement(tab, send(@emacs, goto_source_location,
+                             source_location(Asked, 1))),
+    history_places(Asking, Places).
+
+%!  source_with_room(-File) is det.
+%
+%   A source long enough to move the caret away in: a place close to the
+%   last one remembered is not worth remembering again.
+
+source_with_room(File) :-
+    source_of_our_own(File),
+    setup_call_cleanup(
+        open(File, write, Out),
+        forall(between(1, 60, I),
+               format(Out, 'answer(~d, X) :-~n    X = ~d.~n~n', [I, I])),
+        close(Out)).
+
+%!  history_places(+File, -Count) is det.
+%
+%   How many places PceEmacs remembers in File.
+
+history_places(File, Count) :-
+    get(@emacs?history, backward_list, Chain),
+    chain_list(Chain, Entries),
+    findall(HE,
+            ( member(HE, Entries),
+              get(HE, get_hyper, fragment, text_buffer, TB),
+              get(TB, file, PceFile),
+              PceFile \== @nil,
+              get(PceFile, name, File)
+            ),
+            Ours),
+    length(Ours, Count).
+
 test(the_mode_menus_come_and_go_with_the_editor) :-
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, F),
