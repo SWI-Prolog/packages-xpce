@@ -38,7 +38,8 @@
             show_pane/1,                % +Pane
             pane_status_bar/1,          % +Pane
             open_pane_frame/2,          % +Term, -Frame
-            open_pane_frame/3           % +Term, -Frame, +Options
+            open_pane_frame/3,          % +Term, -Frame, +Options
+            pane_kind/2                 % +Pane, -Kind
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_util), [chain_list/2]).
@@ -1029,6 +1030,11 @@ pane_term_of(Pane, Term) :-
     ->  Term =.. [Kind, Options]
     ;   Term = Kind
     ).
+
+%!  pane_kind(+Pane, -Kind) is det.
+%
+%   What a pane is called in a description of a window: what it says of
+%   itself, and otherwise its class name.
 
 pane_kind(Pane, Kind) :-
     (   send(Pane, has_get_method, pane_kind)

@@ -40,14 +40,15 @@
             prolog_ide/1                % +Action
           ]).
 :- use_module(library(pce)).
-:- use_module(library(pane_frame), []).
+:- use_module(library(pane_frame), [pane_kind/2]).
+:- use_module(library(pane_layouts), [pane_placement/3]).
 :- use_module(library(toolbar), []).
 :- autoload(library(man/v_visual), [ pce_show_visual_tool/0 ]).
 :- autoload(library(www_browser), [www_open_url/1]).
 :- autoload(library(swi_preferences), [prolog_edit_preferences/1]).
 :- autoload(library(pce_openframes), [confirm_open_frames/1]).
 :- use_module(library(pce_util), [chain_list/2]).
-:- use_module(library(lists), [member/2]).
+:- use_module(library(lists), [member/2, memberchk/2]).
 :- require([ pce_image_directory/1,
 	     file_directory_name/2
 	   ]).
@@ -101,7 +102,7 @@ prolog_ide(Action) :-
 
 :- pce_begin_class(prolog_ide, application, "Prolog IDE application").
 
-class_variable(tool_placement, {frame,tab,split}, tab,
+class_variable(tool_placement, {as_arranged,frame,tab,split}, as_arranged,
                "Where a tool the user asks for is put").
 
 initialise(IDE) :->
@@ -242,18 +243,137 @@ show_tool(IDE, Class:name, How:[{frame,tab,split}], Pane:window) :<-
 %       navigator takes the directory to root the tree at -- makes itself
 %       and asks for the placing alone.
 
-place_tool(IDE, Pane:window, How:[{frame,tab,split}]) :->
+place_tool(IDE, Pane:window, How:[{as_arranged,frame,tab,split}]) :->
     "Put a new tool pane in a window of the IDE"::
-    get(IDE, tool_placement, How, Where),
-    (   Where \== frame,
-        get(IDE, current_frame, F)
-    ->  (   Where == split
-        ->  send(F, split, Pane, @default, ?(IDE, pane_side, Pane))
-        ;   send(F, append_pane, Pane, @default, @on)
-        )
-    ;   new(_, pane_frame(IDE, @default, Pane))
-    ),
+    send(IDE, place_pane, Pane, @default, How),
     send(IDE, expose_tool, Pane).
+
+                 /*******************************
+                 *          PLACEMENT           *
+                 *******************************/
+
+/* Where a new pane goes.
+
+Everything the IDE is asked to show that it has to find a place for comes
+through here: a tool, a source, a terminal.  What decides is
+`prolog_ide.tool_placement': one of the three fixed answers, or
+`as_arranged', which reads the arrangements of library(pane_layouts) and
+answers from the way windows holding these panes have been arranged.
+
+An arrangement can say what no fixed answer can: which of the panes there
+already the new one belongs beside, on which edge of them, and how much of
+their room it takes.
+*/
+
+placement(IDE, Pane:window, Frame:'pane_frame*',
+               How:[name], Placement:prolog) :<-
+    "Where Pane goes: window, tab or split(Panes, Side, Share)"::
+    get(IDE, tool_placement, How, Where),
+    (   Where == as_arranged,
+        Frame \== @nil,
+        arranged_placement(Pane, Frame, Arranged)
+    ->  Placement = Arranged
+    ;   fixed_placement(Where, Frame, Pane, Placement)
+    ).
+
+%!  fixed_placement(+Where, +Frame, +Pane, -Placement) is det.
+%
+%   What the three answers the user can pin the setting to mean.  A window
+%   of its own is also what is left when there is no window to put a pane
+%   in, and a tab is what `as_arranged' falls back on when no arrangement
+%   has anything to say -- which is what the IDE has always done.
+
+fixed_placement(frame, _Frame, _Pane, window) :-
+    !.
+fixed_placement(_Where, @nil, _Pane, window) :-
+    !.
+fixed_placement(split, Frame, Pane, split(Relatives, Side, @default)) :-
+    get(Frame, current_pane, Rel),
+    !,
+    new(Relatives, chain(Rel)),
+    get(@prolog_ide, pane_side, Pane, Side).
+fixed_placement(_Where, _Frame, _Pane, tab).
+
+%!  arranged_placement(+Pane, +Frame, -Placement) is semidet.
+%
+%   What the arrangements say about a pane of this kind in this window.
+%   The library answers in kinds; the panes of those kinds in the tab the
+%   user is in are what the new one is put beside.
+
+arranged_placement(Pane, Frame, Placement) :-
+    pane_kind(Pane, Kind),
+    frame_kinds(Frame, LiveKinds),
+    pane_placement(Kind, LiveKinds, Rule),
+    rule_placement(Rule, Frame, Placement).
+
+rule_placement(window, _Frame, window).
+rule_placement(tab, _Frame, tab).
+rule_placement(split(Kinds, Side, Share), Frame, Placement) :-
+    (   tab_panes(Frame, Kinds, Relatives)
+    ->  Placement = split(Relatives, Side, Share)
+    ;   Placement = tab
+    ).
+
+frame_kinds(Frame, Kinds) :-
+    get(Frame, panes, Panes),
+    chain_list(Panes, List),
+    findall(Kind, ( member(Pane, List),
+                    pane_kind(Pane, Kind)
+                  ), Kinds0),
+    sort(Kinds0, Kinds).
+
+%!  tab_panes(+Frame, +Kinds, -Panes) is semidet.
+%
+%   The panes of the tab the user is in that are of one of these kinds.
+
+tab_panes(Frame, Kinds, Panes) :-
+    get(Frame, tab, Tab),
+    get(Tab, windows, Windows),
+    chain_list(Windows, List),
+    findall(Pane, ( member(Pane, List),
+                    pane_kind(Pane, Kind),
+                    memberchk(Kind, Kinds)
+                  ), Selected),
+    Selected \== [],
+    chain_list(Panes, Selected).
+
+place_pane(IDE, Pane:window,
+                Frame:frame=[pane_frame],
+                How:how=[name],
+                Label:label=[name]) :->
+    "Put Pane where the user last put one like it"::
+    (   Frame == @default
+    ->  (   get(IDE, current_frame, F)
+        ->  true
+        ;   F = @nil
+        )
+    ;   F = Frame
+    ),
+    get(IDE, placement, Pane, F, How, Placement),
+    apply_placement(IDE, F, Pane, Placement, Label).
+
+%!  apply_placement(+IDE, +Frame, +Pane, +Placement, +Label) is det.
+%
+%   Splitting can still turn out to be impossible: the panes an
+%   arrangement names may not sit together in the window as it is now.
+%   Try them, then the whole tab -- down an edge of everything is a
+%   faithful reading of any arrangement -- and failing that take a tab.
+
+apply_placement(IDE, _Frame, Pane, window, _Label) :-
+    !,
+    send(new(pane_frame(IDE, @default, Pane)), open).
+apply_placement(_IDE, Frame, Pane, split(Relatives, Side, Share), Label) :-
+    !,
+    (   send(Frame, split_beside, Pane, Relatives, Side, Share)
+    ->  true
+    ;   get(Frame, tab, Tab),
+        get(Tab, windows, All),
+        send(Frame, split_beside, Pane, All, Side, Share)
+    ->  true
+    ;   send(Frame, append_pane, Pane, Label, @on)
+    ).
+apply_placement(_IDE, Frame, Pane, _Tab, Label) :-
+    send(Frame, append_pane, Pane, Label, @on).
 
 expose_tool(_IDE, Pane:window) :->
     "Bring the window holding Pane up, with Pane in view"::
@@ -273,14 +393,14 @@ pane_side(_IDE, Pane:window, Side:{above,below,left,right}) :<-
     ;   Side = below
     ).
 
-tool_placement(IDE, How:[{frame,tab,split}], Where:name) :<-
+tool_placement(IDE, How:[{as_arranged,frame,tab,split}], Where:name) :<-
     "Where a new tool goes; How overrules the setting"::
     (   How \== @default
     ->  Where = How
     ;   get(IDE, class_variable_value, tool_placement, Where)
     ).
 
-tool_placement(_IDE, Where:{frame,tab,split}) :->
+tool_placement(_IDE, Where:{as_arranged,frame,tab,split}) :->
     "Say where a tool the user asks for is to be put"::
     get(@pce, convert, prolog_ide, class, Class),
     send(Class, class_variable_value, tool_placement, Where).
@@ -290,7 +410,7 @@ tool_placement(_IDE, Where:{frame,tab,split}) :->
 %       <-open' has words of its own for it: a tool in a window of its
 %       own is a frame, a buffer in one is a window.
 
-source_placement(IDE, Where:{here,tab,split,window}) :<-
+source_placement(IDE, Where:{as_arranged,here,tab,split,window}) :<-
     "Where a source the user asks to see is opened"::
     get(IDE, tool_placement, @default, Placement),
     (   Placement == frame
@@ -477,7 +597,9 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
              popup(tool_placement,
                    message(IDE, tool_placement, @arg1)))),
     send_list(PlacementPopup, append,
-              [ menu_item(frame, @default, 'In a window of its own'),
+              [ menu_item(as_arranged, @default,
+                          'As you arranged them before'),
+                menu_item(frame, @default, 'In a window of its own'),
                 menu_item(tab,   @default, 'In a tab'),
                 menu_item(split, @default, 'Beside what is there')
               ]),

@@ -298,7 +298,7 @@ start_process(B) :->
     ).
 
 
-open(B, Where:[{here,tab,split,window}]) :->
+open(B, Where:[{as_arranged,here,tab,split,window}]) :->
     "Create window for buffer"::
     get(B, open, Where, View),
     send(View?editor, caret, @default),
@@ -659,7 +659,7 @@ link(F, F2:emacs_link_fragment) :->
     send(F2, slot, link, F).
 
 
-follow(F, Where:[{here,tab,split,window}]) :->
+follow(F, Where:[{as_arranged,here,tab,split,window}]) :->
     "Goto other end of link"::
     get(F, link, F2),
     get(F2, text_buffer, B),

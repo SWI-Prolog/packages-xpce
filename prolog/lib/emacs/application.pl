@@ -199,15 +199,15 @@ target_frame(Emacs, Frame:pane_frame) :<-
 %       says where, as the popup offering "Edit in new window" does, is
 %       obeyed.
 
-source_placement(_Emacs, How:[{here,tab,split,window}],
-                 Where:{here,tab,split,window}) :<-
+source_placement(_Emacs, How:[{as_arranged,here,tab,split,window}],
+                 Where:{as_arranged,here,tab,split,window}) :<-
     "Where to open a source; How overrules the setting"::
     (   How \== @default
     ->  Where = How
     ;   get(@prolog_ide, source_placement, Where)
     ).
 
-open_file(Emacs, File:file, How:[{here,tab,split,window}]) :->
+open_file(Emacs, File:file, How:[{as_arranged,here,tab,split,window}]) :->
     "Open a file"::
     get(Emacs, source_placement, How, Where),
     new(B, emacs_buffer(File)),
@@ -221,7 +221,7 @@ find_file(Emacs, Dir:[directory]) :->
 
 goto_source_location(Emacs,
                      Location:source_location,
-                     Where:where=[{here,tab,split,window}],
+                     Where:where=[{as_arranged,here,tab,split,window}],
                      Title:title=[char_array]*) :->
     "Visit the indicated source-location"::
     (   Title == @nil
@@ -289,7 +289,7 @@ location_history(Emacs, Title:title=[char_array]) :->
     ).
 
 goto_history(Emacs, HE:emacs_history_entry,
-             Where:where=[{here,tab,split,window}]) :->
+             Where:where=[{as_arranged,here,tab,split,window}]) :->
     "Go back to an old history location"::
     get(HE, get_hyper, fragment, text_buffer, TB),
     get(HE, get_hyper, fragment, start, Start),
@@ -423,11 +423,19 @@ frame(_Emacs, For:'emacs_buffer|emacs_view', Frame:pane_frame) :<-
 %       it is for a tool.
 
 show_buffer(_Emacs, Frame:pane_frame, B:emacs_buffer,
-            How:[{here,tab,split}]) :->
+            How:[{as_arranged,here,tab,split}]) :->
     "Show B in Frame, here, in a tab of its own or beside what is there"::
-    (   How == tab,
+    (   reuses_a_view(How),
         view_on_buffer(Frame, B, View)
     ->  send(Frame, current_pane, View)         % it is already open
+    ;   How == as_arranged,
+        editor_pane(Frame, View)
+    ->  send(View?editor, text_buffer, B),      % an editor to show it in
+        send(Frame, current_pane, View)
+    ;   How == as_arranged
+    ->  send(@prolog_ide, place_pane, new(New, emacs_view(B)),
+             Frame, @default, B?name),
+        setup_view(B, New)
     ;   How == split,
         get(Frame, current_pane, Rel)
     ->  send(Frame, split, new(New, emacs_view(B)), Rel, horizontally),
@@ -439,6 +447,16 @@ show_buffer(_Emacs, Frame:pane_frame, B:emacs_buffer,
     ;   send(Frame, append_pane, new(New, emacs_view(B)), B?name, @on),
         setup_view(B, New)
     ).
+
+%       A source the user asks to see goes in the editor that is already
+%       showing it, whether they asked for a tab or left it to the way
+%       they arrange their windows.  Left to that, a window that holds an
+%       editor at all shows it there: an arrangement says where an editor
+%       lives, and one lives there already.  Only a window with none has
+%       to be asked where one goes.
+
+reuses_a_view(tab).
+reuses_a_view(as_arranged).
 
 setup_view(B, View) :-
     send(B, update_label),

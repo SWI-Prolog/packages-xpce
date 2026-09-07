@@ -78,6 +78,7 @@ Run with:
 :- use_module(library(prolog_debug), [spy/1, nospy/1]).
 :- use_module(library(debug), [debug/1, debug/3, nodebug/1]).
 :- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(pane_frame), [pane_kind/2]).
 :- use_module(library(lists), [member/2]).
 
 test_tool_panes :-
@@ -90,7 +91,8 @@ test_tool_panes :-
                 exception_editor_pane,
                 debugger_pane,
                 term_viewer_pane,
-                manual_tool_panes
+                manual_tool_panes,
+                tool_pane_placement
               ]).
 
 %!  classes(+Frame, -Classes) is det.
@@ -563,7 +565,7 @@ as_subwindows(Pane) :-
 %       editing a Defaults file.
 
 test(the_setting_is_on_the_settings_menu,
-     Items == [frame, tab, split]) :-
+     Items == [as_arranged, frame, tab, split]) :-
     no_monitor,
     epilog_frame(@default, @default, @default, @off, @default, F),
     send(F, open),
@@ -1948,3 +1950,102 @@ test(and_a_pinned_one_is_left_showing_what_it_shows,
     classes(Frame, Panes).
 
 :- end_tests(term_viewer_pane).
+
+
+                 /*******************************
+                 *          PLACEMENT           *
+                 *******************************/
+
+/* Where a new pane lands when the setting is left at `as_arranged': the
+   IDE reads the arrangements of library(pane_layouts) rather than putting
+   everything in a tab.  A navigator belongs down the left of the panes
+   there are, at a fifth of the width; a tool nothing has been arranged
+   with still takes a tab.
+*/
+
+:- begin_tests(tool_pane_placement).
+
+%!  console(-Frame) is det.
+%
+%   An open window of the IDE holding a terminal.
+
+console(F) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open).
+
+%!  tab_shape(+Frame, -Shape) is det.
+%
+%   The panes of the tab in view, by kind, with the shares dropped.
+
+tab_shape(F, Shape) :-
+    get(F, tab, Tab),
+    get(Tab, window_tree, Tree),
+    tree_shape(Tree, Shape).
+
+tree_shape(Tree, Kind) :-
+    object(Tree),
+    !,
+    pane_kind(Tree, Kind).
+tree_shape(Tree, Shape) :-
+    Tree =.. [Orientation, Shares],
+    findall(S, ( member(Share, Shares),
+                 tree_content(Share, Content),
+                 tree_shape(Content, S)
+               ), Subs),
+    Shape =.. [Orientation, Subs].
+
+tree_content(_-Content, Content) :- !.
+tree_content(Content, Content).
+
+%!  tab_share(+Frame, +Kind, -Share) is semidet.
+
+tab_share(F, Kind, Share) :-
+    get(F, tab, Tab),
+    get(Tab, window_tree, Tree),
+    Tree =.. [_, Shares],
+    member(Share-Content, Shares),
+    object(Content),
+    pane_kind(Content, Kind),
+    !.
+
+test(a_navigator_goes_down_the_left_of_what_is_there,
+     Shape == horizontal([prolog_navigator, terminal])) :-
+    console(F),
+    send(@prolog_ide, place_pane, new(_N, prolog_navigator), F),
+    tab_shape(F, Shape).
+
+test(and_takes_the_share_it_was_arranged_at) :-
+    console(F),
+    send(@prolog_ide, place_pane, new(_N, prolog_navigator), F),
+    tab_share(F, prolog_navigator, Share),
+    assertion(abs(Share-0.2) < 0.03).
+
+%       Nothing has been arranged with a thread monitor, so it falls back
+%       on what the IDE has always done with a tool: a tab.
+
+test(a_tool_nothing_says_anything_about_takes_a_tab, Tabs == 2) :-
+    console(F),
+    send(@prolog_ide, place_pane, new(_M, prolog_thread_monitor), F),
+    get(F, tabs, TW),
+    get(TW, tabs, Chain),
+    get(Chain, size, Tabs).
+
+%       And the fixed answers still hold when the user pins one.
+
+test(the_setting_still_overrules, Tabs == 2) :-
+    console(F),
+    send(@prolog_ide, place_pane, new(_N, prolog_navigator), F, tab),
+    get(F, tabs, TW),
+    get(TW, tabs, Chain),
+    get(Chain, size, Tabs).
+
+test(and_a_window_of_its_own_is_a_window_of_its_own, Panes == 1) :-
+    console(F),
+    send(@prolog_ide, place_pane, new(N, prolog_navigator), F, frame),
+    get(N, frame, Own),
+    assertion(Own \== F),
+    get(Own, panes, Chain),
+    get(Chain, size, Panes).
+
+:- end_tests(tool_pane_placement).

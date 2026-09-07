@@ -488,8 +488,8 @@ test(the_setting_says_where_a_source_opens,
             ),
             Places).
 
-test(and_a_tab_is_what_it_asks_for_by_default,
-     true(Where == tab)) :-
+test(and_by_default_it_asks_for_the_way_you_arrange_them,
+     true(Where == as_arranged)) :-
     start_emacs:source_placement(Where).
 
 %       What each answer does with a source, which is `emacs_buffer

@@ -150,7 +150,7 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     pce_icon_button.pl
     pce_identifier_item.pl pce_image_browser.pl pce_image_item.pl
     pce_image.pl pce_main.pl pce_manual.pl pce_meta.pl pce_html_manual.pl
-    pce_objects.pl pce.pl pce_progress.pl pane_frame.pl
+    pce_objects.pl pce.pl pce_progress.pl pane_frame.pl pane_layouts.pl
     pce_prolog_xref.pl pce_prompter.pl pce_regex_compat.pl pce_renew.pl
     pce_report.pl pce_require.pl pce_select_set_item.pl
     pce_server.pl pce_set_item.pl pce_shell.pl pce_style_item.pl
