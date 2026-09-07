@@ -321,6 +321,32 @@ history_places(File, Count) :-
             Ours),
     length(Ours, Count).
 
+%       The two history buttons are the editor's chrome, and they go on a
+%       tool bar under the menus -- see `emacs_view ->fill_tool_bar' and
+%       class tool_dialog.  A bar built into a dialog that was laid out
+%       long ago is not placed until the dialog lays itself out again:
+%       they sat in the corner the menus are in, drawn over them, and the
+%       strip never took the room for a second row.
+
+test(the_history_buttons_go_under_the_menus,
+     true(Below-Inside == true-true)) :-
+    emacs,
+    mixed_window(F),
+    get(F, menu_dialog, MD),
+    get(MD, menu_bar, @on, MB),
+    get(MD, tool_bar, @on, TB),
+    get(MB, area, area(_, MenusY, _, MenusH)),
+    get(TB, area, area(_, ButtonsY, _, ButtonsH)),
+    (   ButtonsY >= MenusY+MenusH
+    ->  Below = true
+    ;   Below = ButtonsY-(MenusY+MenusH)
+    ),
+    get(MD, height, Strip),
+    (   ButtonsY+ButtonsH =< Strip
+    ->  Inside = true
+    ;   Inside = ButtonsY+ButtonsH-Strip
+    ).
+
 test(the_mode_menus_come_and_go_with_the_editor) :-
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, F),

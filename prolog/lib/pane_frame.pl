@@ -49,7 +49,7 @@
 :- use_module(library(tabbed_window), []).
 :- use_module(library(tab_frame), []).
 :- use_module(library(toolbar), []).
-:- use_module(library(lists), [member/2]).
+:- use_module(library(lists), [member/2, max_list/2]).
 :- use_module(library(apply), [maplist/3]).
 :- use_module(library(pane_layouts),
               [ arrangement_of/2, record_arrangement/2 ]).
@@ -662,7 +662,8 @@ update_menu_bar(F, Force:[bool]) :->
         ->  ignore(send(Pane, fill_menu_bar, MD))
         ;   true
         ),
-        send(F?menu_extensions, for_all, message(@arg1, forward, MD))
+        send(F?menu_extensions, for_all, message(@arg1, forward, MD)),
+        ignore(send(MD, lay_out_bars))
     ).
 
 %       A menu somebody added at runtime -- see Epilog's win_insert_menu/2
@@ -1346,6 +1347,35 @@ initialise(MD, Client:[object]) :->
 client(MD, Client:[object]) :->
     "Say which object a menu item without a message goes to"::
     send(MD, slot, client, Client).
+
+%       The bar is built into a dialog that was laid out long ago, and a
+%       bar built afterwards is not placed until the dialog lays itself
+%       out again: the tool bar `tool_dialog <-tool_bar' puts below the
+%       menu bar sat in the corner the menus are in, drawn over them.
+%       ->height asks my tile for the room -- see requestGeometryWindow()
+%       in src/win/window.c -- which is what makes the strip grow for a
+%       second row and shrink back when there is nothing on it.
+
+lay_out_bars(MD) :->
+    "Place my bars and take the room they need"::
+    send(MD, layout),
+    get(MD, border, size(_, BH)),
+    get(MD, graphicals, Chain),
+    chain_list(Chain, Bars),
+    findall(Bottom,
+            ( member(Bar, Bars),
+              get(Bar, displayed, @on),
+              get(Bar, area, area(_, Y, _, H)),
+              Bottom is Y+H
+            ),
+            Bottoms),
+    Bottoms \== [],
+    max_list(Bottoms, Deepest),
+    Height is Deepest+2*BH,
+    (   get(MD, height, Height)
+    ->  true
+    ;   send(MD, height, Height)
+    ).
 
 menu_bar(MD, Create:[bool], MB:menu_bar) :<-
     "Get (or create) the menu bar"::
