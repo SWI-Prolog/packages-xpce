@@ -1396,6 +1396,17 @@ test(a_window_starts_saying_nothing, Arranged == @off) :-
     frame(F, _App, _P),
     get(F, arranged, Arranged).
 
+%       And it holds no arrangement and no clock until it does.  A slot of
+%       type `prolog' takes a Prolog term, so `none' rather than @nil says
+%       "nothing yet": @nil is not one, and declaring it as the default
+%       costs a warning for every window ever made.
+
+test(and_holds_no_arrangement_and_no_clock, Slots == [none, none]) :-
+    frame(F, _App, _P),
+    get(F, slot, arrangement, Arrangement),
+    get(F, slot, arranged_since, Since),
+    Slots = [Arrangement, Since].
+
 test(and_a_pane_the_ide_puts_there_says_nothing_either, Arranged == @off) :-
     frame(F, _App, _P),
     send(F, append_pane, new(_, tp_pane), @default, @on),

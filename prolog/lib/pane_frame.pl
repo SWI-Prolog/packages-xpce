@@ -114,10 +114,10 @@ variable(updating,        bool := @off,   none,
          "->pane_changed is running").
 variable(arranged,        bool := @off,   get,
          "The user has arranged my panes by hand").
-variable(arrangement,     prolog := @nil, none,
-         "The arrangement they last left me in").
-variable(arranged_since,  prolog := @nil, none,
-         "When they left me in it").
+variable(arrangement,     prolog := none, none,
+         "The arrangement they last left me in; none: not yet").
+variable(arranged_since,  prolog := none, none,
+         "When they left me in it; none: not yet").
 
 class_variable(label_format, 'name*', 'SWI-Prolog -- %s',
                "Frame label; %s is the label of the tab in view").
@@ -395,9 +395,9 @@ record_arrangement(F) :->
     "Credit the arrangement I am in with the time it has been"::
     get(F, arranged, @on),
     get(F, slot, arrangement, Arrangement),
-    Arrangement \== @nil,
+    Arrangement \== none,
     get(F, slot, arranged_since, Since),
-    Since \== @nil,
+    Since \== none,
     get_time(Now),
     Seconds is Now-Since,
     send(F, slot, arranged_since, Now),
