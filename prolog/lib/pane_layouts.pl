@@ -138,8 +138,8 @@ Rearranging a window takes several steps -- merge the tab back in, drag
 the pane where it belongs, pull it to the width it should have -- and only
 the state that is then worked in means anything.  An arrangement is
 therefore credited with the time it was on the screen, and an interval
-shorter than a minute is not credited at all, which is what leaves the
-steps on the way out of it.
+too short to have been worked in is not credited at all, which is what
+leaves the steps on the way out of it.
 
 What is earned decays, so that an arrangement made once and never returned
 to fades rather than having to be unlearned, and a habit that changes

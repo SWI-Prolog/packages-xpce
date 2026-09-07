@@ -365,8 +365,8 @@ What is counted is the time an arrangement is *lived in*, because putting
 a window right takes several steps -- merge the tab back in, drag the pane
 across, pull it to the width it should have -- and only the state that is
 then worked in means anything.  Each of those steps closes off the one
-before it; the steps themselves last seconds and are thrown away by
-library(pane_layouts), which credits nothing shorter than a minute.
+before it; the steps themselves are over in moments and are thrown away
+by library(pane_layouts), which credits nothing that barely lasted.
 */
 
 arranged(F) :->

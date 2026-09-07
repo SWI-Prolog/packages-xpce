@@ -329,7 +329,8 @@ test(an_arrangement_lived_in_is_learned, Side == right) :-
 
 test(and_one_that_lasted_seconds_is_not, Side == left) :-
     right(A),
-    record_arrangement(A, 20),
+    too_short(Short),
+    record_arrangement(A, Short),
     pane_placement(prolog_navigator, [terminal], split(_, Side, _)),
     forget_arrangements.
 
@@ -407,10 +408,11 @@ test(what_is_learned_is_written_down_at_once, Records == 2) :-
     log_records(Log),
     length(Log, Records).
 
-test(and_nothing_shorter_than_a_minute_is, Log == []) :-
+test(and_nothing_that_barely_lasted_is, Log == []) :-
     right(A),
     forget_arrangements,
-    record_arrangement(A, 20),
+    too_short(Short),
+    record_arrangement(A, Short),
     log_records(Log).
 
 %       Written by the other instance of the IDE while this one was
@@ -477,6 +479,15 @@ age_arrangements(Expr) :-
 
 age_record(Seconds, used(A, S, At), used(A, S, Then)) :-
     Then is At-Seconds.
+
+%!  too_short(-Seconds) is det.
+%
+%   A time too short to be credited, whatever the least that is ever
+%   credited has been set to.
+
+too_short(Seconds) :-
+    pane_layouts:worth_recording(Least),
+    Seconds is Least/2.
 
 %!  log_records(-Records) is det.
 %!  write_log(+Records) is det.
