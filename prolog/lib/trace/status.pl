@@ -121,27 +121,6 @@ pane_label(_D, Label:name) :<-
     "What my tab is called"::
     Label = 'Debugging'.
 
-%!  grip_room(+Dialog, -Room) is det.
-%
-%   How much of the top right to leave clear.  The grip a pane is dragged
-%   by is drawn there, over everything the dialog lays out, so an item
-%   that reached into the corner would be under it.
-%
-%   `graphical ->right_side' sets the right edge by changing the width,
-%   not by moving: asking for one 20 pixels further left made the menu 20
-%   pixels narrower, and ->layout runs on every resize, so it lost 20
-%   more each time.  ->x moves it, and the dialog puts it back where its
-%   alignment says on the next layout, so nothing accumulates.
-
-grip_room(D, Room) :-
-    get(D, fixed_graphicals, Chain),
-    Chain \== @nil,
-    get(Chain, find, message(@arg1, instance_of, split_handle), H),
-    !,
-    get(H, size, size(W, _)),
-    Room is W+4.
-grip_room(_, 0).
-
 :- pce_group(update).
 
 clear(D) :->
@@ -325,17 +304,3 @@ prolog:message_action(trace(Head, []), _Level) :-
     debug_status_window(D),
     get(D, item, trace, Head, DI),
     free(DI).
-prolog:message_action(debug_mode(OnOff), _Level) :-
-    debug_status_window(D),
-    get(D, member, mode, Mode),
-    (   OnOff == off
-    ->  send(Mode, selection, normal)
-    ;   send(Mode, selection, debug)
-    ).
-prolog:message_action(trace_mode(_OnOff), _Level) :-
-    debug_status_window(D),
-    get(D, member, mode, Mode),
-    (   current_prolog_flag(debug, true)
-    ->  send(Mode, selection, debug)
-    ;   send(Mode, selection, normal)
-    ).

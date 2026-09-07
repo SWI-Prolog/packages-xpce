@@ -938,38 +938,31 @@ test(it_carries_a_grip_to_drag_it_by) :-
     debug_status(D),
     grip(D, _).
 
-%       The grip is drawn over whatever the dialog lays out, so ->layout
-%       keeps the corner it sits in clear.  ->layout runs on every resize,
-%       so making room must not be something that accumulates: `graphical
-%       ->right_side' sets the right edge by changing the width, and
-%       asking for one further left made the menu narrower every time.
-%       The menu is as wide as its label and items ask for -- how wide
-%       that is depends on the font, so the test asks that it does not
-%       change rather than what it is.
+%       The grip is drawn over whatever the dialog lays out, so nothing
+%       the dialog lays out may reach the corner it sits in.  Checked at
+%       more than one width, and more than once at each: whatever keeps
+%       the corner clear must not be something that accumulates.
 
-test(and_the_layout_keeps_the_corner_clear,
+test(and_nothing_is_laid_out_under_the_grip,
      [ forall(member(Width-Times, [600-1, 600-2, 600-3, 800-1, 800-3])),
-       true(Kept-Clear == true-true)
+       true(Under == [])
      ]) :-
     debug_status(D),
-    get(D, member, mode, Mode),
-    get(Mode, width, W0),
     forall(between(1, Times, _),
            ( send(D, size, size(Width, 300)),
              send(D, layout, size(Width, 300)) )),
-    get(Mode, width, W),
-    (   W == W0
-    ->  Kept = true
-    ;   Kept = W0-W
-    ),
     grip(D, H),
     send(H, compute),
-    get(H, area, area(GX, _, _, _)),
-    get(Mode, right_side, Right),
-    (   Right =< GX
-    ->  Clear = true
-    ;   Clear = Right-GX
-    ).
+    get(H, area, Grip),
+    get(D, graphicals, Chain),
+    chain_list(Chain, Graphicals),
+    findall(Name-Area,
+            ( member(G, Graphicals),
+              get(G, area, Area),
+              send(Area, overlap, Grip),
+              get(G, class_name, Name)
+            ),
+            Under).
 
 test(it_lists_what_is_being_debugged, true(Listed == ['append/3'])) :-
     debug_status(D),
