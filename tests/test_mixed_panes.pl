@@ -59,6 +59,8 @@ Run with:
 :- use_module(library(swi_ide)).
 :- use_module(library(pane_frame), [open_pane_frame/3]).
 :- use_module(library(emacs/emacs)).
+:- use_module(library(emacs/bookmarks), []).
+:- use_module(library(emacs/buffer_menu), []).
 :- use_module(library(pce_util), [chain_list/2]).
 :- use_module(library(lists), [member/2, subtract/3, length/2,
                                memberchk/2]).
@@ -66,7 +68,8 @@ Run with:
 
 test_mixed_panes :-
     run_tests([ mixed_panes,
-                mixed_panes_term
+                mixed_panes_term,
+                mixed_panes_emacs_tools
               ]).
 
 %       PceEmacs must not take the address of the PceEmacs of whoever
@@ -725,3 +728,91 @@ test(a_source_that_has_gone_is_still_said_to_be_gone) :-
     assertion(memberchk(file(File), Options)).
 
 :- end_tests(mixed_panes_term).
+
+
+                 /*******************************
+                 *         EMACS TOOLS          *
+                 *******************************/
+
+/* Every window of the IDE belongs to @prolog_ide, the bookmark editor and
+   the buffer menu among them.  What they ask of *PceEmacs* -- which
+   buffers are open, opening a source -- has to go to @emacs all the same:
+   @prolog_ide answers none of it, and asking it warns and takes the wrong
+   branch.
+*/
+
+:- begin_tests(mixed_panes_emacs_tools).
+
+%!  bookmarks(-Editor) is det.
+
+bookmarks(BM) :-
+    emacs,
+    new(BM, emacs_bookmark_editor).
+
+%!  hits(+Editor, -Bookmarks) is det.
+
+hits(BM, Marks) :-
+    get(BM, tree, Tree),
+    get(Tree, root, Root),
+    findall(M, node_bookmark(Root, M), Marks).
+
+node_bookmark(Node, M) :-
+    get(Node, sons, Sons),
+    Sons \== @nil,
+    chain_list(Sons, List),
+    member(Son, List),
+    (   get(Son, identifier, M),
+        send(M, instance_of, emacs_bookmark)
+    ;   node_bookmark(Son, M)
+    ).
+
+%       A hit in a file that is open is linked to the buffer showing it,
+%       and its title comes from that buffer.  With the question put to
+%       @prolog_ide the file counted as not open, and the hit came back
+%       unlinked, with its title read off the disk.
+
+test(a_hit_in_an_open_file_is_linked_to_its_buffer) :-
+    source_of_our_own(File),
+    new(_B, emacs_buffer(File)),
+    bookmarks(BM),
+    send(BM, lsp_add, File,
+         #{ start: #{line:1, character:4},
+            end:   #{line:1, character:5} }, @nil),
+    hits(BM, [Mark|_]),
+    assertion(get(Mark, hypered, fragment, _)),
+    get(Mark, title, Title),
+    assertion(send(Title, sub, 'X = 42')).
+
+test(a_hit_in_a_file_that_is_not_open_is_a_plain_bookmark) :-
+    source_of_our_own(File),
+    bookmarks(BM),
+    send(BM, lsp_add, File,
+         #{ start: #{line:1, character:4},
+            end:   #{line:1, character:5} }, @nil),
+    hits(BM, [Mark|_]),
+    assertion(\+ get(Mark, hypered, fragment, _)).
+
+%       The title of a hit may be left to the caller, said outright, or
+%       given as @nil for none: the type has to allow all three.
+
+test(a_hit_can_be_given_no_title_at_all, Title == '') :-
+    source_of_our_own(File),
+    bookmarks(BM),
+    send(BM, lsp_add, File,
+         #{ start: #{line:0, character:0},
+            end:   #{line:0, character:1} }, @nil),
+    hits(BM, [Mark|_]),
+    get(Mark?title, value, Title).
+
+%       Files dropped on the buffer menu are opened by PceEmacs, not by
+%       the IDE the window belongs to.
+
+test(files_dropped_on_the_buffer_menu_are_opened) :-
+    emacs,
+    source_of_our_own(File),
+    new(Menu, emacs_buffer_menu(@emacs)),
+    get(Menu, member, browser, Browser),
+    send(Browser, drop_files, chain(file(File)), point(0,0)),
+    assertion(get(@emacs, file_buffer, File, _)).
+
+:- end_tests(mixed_panes_emacs_tools).

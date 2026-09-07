@@ -143,11 +143,12 @@ attach_popup(B) :->
               ]).
 
 
-drop_files(B, Files:chain, _At:point) :->
+drop_files(_B, Files:chain, _At:point) :->
     "Drag-and-drop interface"::
-    get(B, application, Emacs),
-    send(Files, for_all,
-         message(Emacs, open_file, @arg1)).
+    send(Files, for_all,             % @emacs, not my <-application: every
+         message(@emacs, open_file, @arg1)).  % window of the IDE belongs
+                                     % to @prolog_ide, and opening a source
+                                     % is PceEmacs's to do
 
 :- pce_end_class(emacs_buffer_browser).
 
