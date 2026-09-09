@@ -2128,6 +2128,26 @@ test(insert_lines, [setup(current_test_terminal(T))]) :-
     assert_rows(T, [l1,'','','',l2,l3,l4,l5,l6,l7,l8,l9,'']),
     assert_cursor(T, 0, 1).
 
+%       IL and DL leave the caret in the column it was in.  ECMA-48
+%       takes it to the line home position, but no terminal a client is
+%       written against does that: xterm and tmux both leave the column
+%       alone, and an editor that opens a line in the middle of one and
+%       writes on it wrote at the left margin here.
+
+test(insert_lines_keeps_the_column, [setup(current_test_terminal(T))]) :-
+    nine_lines(T),
+    out(T, '\e[2;5H\e[L'),
+    assert_cursor(T, 4, 1),
+    out(T, 'X'),
+    assert_rows(T, [l1,'    X',l2,l3,l4,l5,l6,l7,l8,l9,'']).
+
+test(delete_lines_keeps_the_column, [setup(current_test_terminal(T))]) :-
+    nine_lines(T),
+    out(T, '\e[2;5H\e[M'),
+    assert_cursor(T, 4, 1),
+    out(T, 'X'),
+    assert_rows(T, [l1,'l3  X',l4,l5,l6,l7,l8,l9,'']).
+
 test(insert_lines_pushes_off_the_screen,
      [setup(current_test_terminal(T))]) :-
     %  A full screen has no room below, so what is pushed past the

@@ -74,6 +74,8 @@ pane_layouts:arrangements_file(File) :-
 test_pane_frame :-
     run_tests([ pane_frame_structure,
                 pane_frame_menu_bar,
+                menu_bar_chains,
+                pane_menu_bar_order,
                 pane_frame_label,
                 pane_frame_focus,
                 pane_frame_move,
@@ -229,6 +231,23 @@ items(Popup, Items) :-
     chain_list(Chain, List),
     findall(V, (member(MI, List), get(MI, value, V)), Items).
 
+%!  bar_members(+MenuBar, -Names:list) is det.
+%!  bar_buttons(+MenuBar, -Names:list) is det.
+%
+%   The popups of a bar by name, off each of its two chains.  <-buttons
+%   is what XPCE draws; <-members is what the native menu bar walks and
+%   what ->key steps through.  The two must agree.
+
+bar_members(MB, Names) :-
+    get(MB, members, Chain),
+    chain_list(Chain, List),
+    findall(N, (member(P, List), get(P, name, N)), Names).
+
+bar_buttons(MB, Names) :-
+    get(MB, buttons, Chain),
+    chain_list(Chain, List),
+    findall(N, (member(B, List), get(B, popup, P), get(P, name, N)), Names).
+
 %!  opacities(+Frame, -Pairs:list) is det.
 %
 %   <-opacity of every pane of the tab in view, by name.
@@ -272,6 +291,27 @@ test(two_rows_when_it_is_not, Names == [pane_menu_dialog,
     get(F, members, Chain),
     chain_list(Chain, Members),
     findall(N, (member(M, Members), get(M, class_name, N)), Names).
+
+%       A pane starts at the top of the window that holds it.  The stack
+%       inside my tabbed window is a device, placed by the <-offset that
+%       puts the bounding box of what it holds where the dialog wants it,
+%       and that is worked out while a tab still sits <-label_height
+%       below its own top-left -- `relayout_tab_stack' in
+%       src/men/tabstack.c puts the tabs back afterwards.  An offset left
+%       behind draws every pane a label's height too high: the first line
+%       of a terminal, the top of its scrollbar and the grip in its
+%       corner go off the top of the window, and a strip is left blank at
+%       the bottom.
+
+test(a_pane_starts_at_the_top_of_the_window, Y == 0) :-
+    frame(F, _App, P),
+    send(F, open),
+    get(P, area, area(_, PY, _, _)),
+    get(P, device, Tab),
+    get(Tab, area, area(_, TY, _, _)),
+    get(Tab, device, Stack),
+    get(Stack, area, area(_, SY, _, _)),
+    Y is PY+TY+SY.
 
 test(a_frame_without_a_status_bar_has_no_status_dialog, [fail]) :-
     frame(F, _App, _P),
@@ -381,14 +421,14 @@ test(a_pane_asking_for_another_bar_does_rebuild_it, true(MB1 \== MB2)) :-
     get(Popup2, members, C2), get(C2, head, MB2).
 
 test(an_extension_is_put_on_at_once,
-     Menus == [file-[quit], edit-[alpha], tools-[extra]]) :-
+     Menus == [file-[quit], tools-[extra], edit-[alpha]]) :-
     frame(F, _App, _P),
     send(F, extend_menu_bar,
          message(@arg1, append, create(menu_item, extra), tools)),
     menus(F, Menus).
 
 test(an_extension_survives_a_rebuild,
-     Menus == [file-[quit], edit-[gamma], tools-[extra]]) :-
+     Menus == [file-[quit], tools-[extra], edit-[gamma]]) :-
     frame(F, _App, P1),
     send(F, extend_menu_bar,
          message(@arg1, append, create(menu_item, extra), tools)),
@@ -437,6 +477,94 @@ test(a_popup_of_the_bar_leaves_its_items_alone, true(Accelerators == [@default])
     Accelerators = [A].
 
 :- end_tests(pane_frame_menu_bar).
+
+%       A plain menu_bar, to say what ->append and ->delete owe the two
+%       chains.  <-members used to be plain append order whatever was
+%       asked for, so a bar built with `before' walked one way and drew
+%       another.
+
+:- begin_tests(menu_bar_chains).
+
+test(before_places_the_popup_on_both_chains,
+     Chains == [[a,c,b],[a,c,b]]) :-
+    new(MB, menu_bar),
+    send(MB, append, new(popup(a))),
+    send(MB, append, new(popup(b))),
+    send(MB, append, new(popup(c)), @default, b),
+    bar_members(MB, M),
+    bar_buttons(MB, B),
+    Chains = [M,B].
+
+test(a_right_aligned_popup_stays_last_on_both,
+     Chains == [[a,b,h],[a,b,h]]) :-
+    new(MB, menu_bar),
+    send(MB, append, new(popup(a))),
+    send(MB, append, new(popup(h)), right),
+    send(MB, append, new(popup(b))),
+    bar_members(MB, M),
+    bar_buttons(MB, B),
+    Chains = [M,B].
+
+test(delete_takes_the_popup_off_both,
+     Chains == [[a,c],[a,c]]) :-
+    new(MB, menu_bar),
+    send(MB, append, new(popup(a))),
+    send(MB, append, new(P, popup(b))),
+    send(MB, append, new(popup(c))),
+    send(MB, delete, P),
+    bar_members(MB, M),
+    bar_buttons(MB, B),
+    Chains = [M,B].
+
+:- end_tests(menu_bar_chains).
+
+%       The bar of a pane_frame is assembled from two sides -- the
+%       application, then the pane in view, then whatever an extension
+%       added -- so the bar decides where a menu goes rather than the
+%       order in which it arrives.
+
+:- begin_tests(pane_menu_bar_order).
+
+test(the_menus_come_out_in_the_order_the_bar_names,
+     Chains == [[file,settings,'GUI',edit,browse,help],
+                [file,settings,'GUI',edit,browse,help]]) :-
+    new(MB, pane_menu_bar),
+    forall(member(Name, [help, settings, edit, file, browse, 'GUI']),
+           send(MB, append, new(pane_popup(Name)))),
+    bar_members(MB, M),
+    bar_buttons(MB, B),
+    Chains = [M,B].
+
+%       Two menus the list does not name both take the place of `*', and
+%       there they keep the order they were appended in.
+
+test(a_menu_the_list_does_not_name_goes_before_help,
+     Names == [file,alpha,beta,help]) :-
+    new(MB, pane_menu_bar),
+    forall(member(Name, [help, alpha, beta, file]),
+           send(MB, append, new(pane_popup(Name)))),
+    bar_members(MB, Names).
+
+test(a_caller_who_names_the_menu_to_come_before_is_obeyed,
+     Names == [edit,file,help]) :-
+    new(MB, pane_menu_bar),
+    send(MB, append, new(pane_popup(file))),
+    send(MB, append, new(pane_popup(help))),
+    send(MB, append, new(pane_popup(edit)), @default, file),
+    bar_members(MB, Names).
+
+%       `right' is the escape hatch: it means "after them all", which is
+%       what win_insert_menu/2 promises for a menu added with `-'.
+
+test(and_so_is_a_caller_who_says_right,
+     Names == [file,help,loose]) :-
+    new(MB, pane_menu_bar),
+    send(MB, append, new(pane_popup(file))),
+    send(MB, append, new(pane_popup(help))),
+    send(MB, append, new(pane_popup(loose)), right),
+    bar_members(MB, Names).
+
+:- end_tests(pane_menu_bar_order).
 
                  /*******************************
                  *            LABEL             *

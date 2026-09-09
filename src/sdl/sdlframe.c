@@ -543,6 +543,18 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
   if ( wsw )
   { ASSERT_SDL_MAIN();
     Area a = sw->area;
+
+    /* A window may be laid out with no room at all: a dialog holding
+     * only a menu_bar that is shown natively asks for no height -- see
+     * the comment at non_empty_tiles() in src/win/tile.c.  It has
+     * nothing to show, and drawing it anyway shows something: the
+     * SDL_RenderRect() below draws the outline of the rectangle, which
+     * for a height of zero is a line right across the window under it.
+     */
+
+    if ( valInt(a->w) <= 0 || valInt(a->h) <= 0 )
+      return;
+
     SDL_FRect dstrect = Area2FRect(a);
     float scale = SDL_GetWindowPixelDensity(wfr->ws_window);
 
@@ -1163,6 +1175,9 @@ composite_window_to_cairo(cairo_t *cr, PceWindow sw,
 			   float ox, float oy, float scale)
 { WsWindow wsw = sw->ws_ref;
   if ( !wsw || !wsw->backing )
+    return;
+  if ( valInt(sw->area->w) <= 0 ||	/* nothing to show: see */
+       valInt(sw->area->h) <= 0 )	/* ws_draw_window() */
     return;
 
   float wx = (ox + valInt(sw->area->x)) * scale;

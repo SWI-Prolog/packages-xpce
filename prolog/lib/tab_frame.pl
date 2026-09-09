@@ -828,7 +828,9 @@ share_content(Content, Content).
 
 size_tree(TF, Tree) :-
     get(TF, tile, Tile),
-    size_tile(Tile, Tree).
+    size_tile(Tile, Tree),
+    send(Tile, rebalance).      % the shares are a wish, not just a size:
+                                % keep them through a resize of the window
 
 size_tile(_, Leaf) :-
     object(Leaf),
@@ -1914,6 +1916,8 @@ drag(G, Ev:event) :->
 
 terminate(G, Ev:event) :->
     send(G, resize, Ev),
+    get(G, tile, Tile),
+    send(Tile?root, rebalance),
     send(G, tile, @nil),
     (   get(Ev, receiver, TF),
         send(TF, has_send_method, arranged)

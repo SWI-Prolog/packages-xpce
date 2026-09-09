@@ -7909,6 +7909,42 @@ rlc_caret_down(RlcData b, int arg)
 }
 
 
+/* The visual column the caret is on, with a pending wrap resolved.
+ *
+ * A character written in the last column leaves the caret one column
+ * past the right margin, so that a combining mark still attaches to it
+ * and the wrap happens only when the next base arrives -- see rlc_put().
+ * That position is not one the client can be told about or move from:
+ * to everything below, the caret is on the last column.  ECMA-48 says
+ * so as well, which is why cursor motion cancels the pending wrap:
+ * `CSI C' at the right margin stays there rather than stepping over it.
+ */
+
+static int
+rlc_caret_vcol(RlcData b)
+{ int vcol = rlc_cell_to_vcol(&b->lines[b->caret_y], b->caret_x);
+
+  return vcol >= b->width ? b->width-1 : vcol;
+}
+
+
+/* Put the caret on a visual column of the line it is on.  Cells and
+ * columns only match 1:1 for plain narrow content, so moving between
+ * lines is a matter of columns: the same column is a different cell on
+ * a line that holds combining marks or wide characters.
+ */
+
+static void
+rlc_caret_to_vcol(RlcData b, int vcol)
+{ b->caret_x = rlc_vcol_to_cell(&b->lines[b->caret_y],
+				Bounds(vcol, 0, b->width-1));
+  if ( b->caret_x > LINE_CELL_CAPACITY(b) - 1 )
+    b->caret_x = LINE_CELL_CAPACITY(b) - 1;
+
+  b->changed |= CHG_CARET;
+}
+
+
 /* Cursor motion stops at the edge of the line.
  *
  * Only writing a character wraps: ECMA-48 has CUF not pass the last
@@ -7928,7 +7964,9 @@ rlc_caret_down(RlcData b, int arg)
 
 static void
 rlc_cursor_forward(RlcData b, int arg)
-{ while(arg-- > 0)
+{ b->caret_x = rlc_vcol_to_cell(&b->lines[b->caret_y], rlc_caret_vcol(b));
+
+  while(arg-- > 0)
   { RlcTextLine tl = &b->lines[b->caret_y];
     int cur_vcol = rlc_cell_to_vcol(tl, b->caret_x);
     int new_vcol = cur_vcol + 1;
@@ -10081,10 +10119,10 @@ rlc_putansi(RlcData b, int chr)
 	  CMD(rlc_set_caret(b, col, row));
 	  break;
 	}
-	case 'd':
+	case 'd':		/* CSI Ps d — Line Position Absolute (VPA) */
 	{ rlc_need_arg(b, 1, 1); /* row */
 	  int row = Bounds(b->argv[0], 1, b->window_size)-1;
-	  int col = b->caret_x;
+	  int col = rlc_caret_vcol(b);	/* the column, not the cell */
 	  CMD(rlc_set_caret(b, col, row));
 	  break;
 	}
@@ -10103,13 +10141,19 @@ rlc_putansi(RlcData b, int chr)
 	  break;
 	}
 	case 'A':
-	  rlc_need_arg(b, 1, 1);
+	{ rlc_need_arg(b, 1, 1);
+	  int vcol = rlc_caret_vcol(b);	/* CUU moves within a column */
 	  CMD(rlc_caret_up(b, b->argv[0]));
+	  rlc_caret_to_vcol(b, vcol);
 	  break;
+	}
 	case 'B':
-	  rlc_need_arg(b, 1, 1);
+	{ rlc_need_arg(b, 1, 1);
+	  int vcol = rlc_caret_vcol(b);	/* CUD moves within a column */
 	  CMD(rlc_caret_down(b, b->argv[0]));
+	  rlc_caret_to_vcol(b, vcol);
 	  break;
+	}
 	case 'C':
 	  rlc_need_arg(b, 1, 1);
 	  CMD(rlc_cursor_forward(b, b->argv[0]));
@@ -10244,9 +10288,18 @@ rlc_putansi(RlcData b, int chr)
 	case 'M':		/* CSI Ps M — Delete Line(s) (DL) */
 	{ rlc_need_arg(b, 1, 1);
 	  int count = b->argv[0] < 1 ? 1 : b->argv[0];
+	  /* The caret keeps the column it is on.  ECMA-48 takes it to the
+	   * line home position, but no terminal a client is written
+	   * against does that -- xterm and tmux both leave the column
+	   * alone -- and an editor that opens a line in the middle of one
+	   * and writes on it landed at the left margin here.  The column
+	   * rather than the cell: the lines moved under the caret and the
+	   * one it lands on may hold a different number of cells before
+	   * that column.
+	   */
+	  int vcol = rlc_caret_vcol(b);
 	  CMD(rlc_scroll_region(b, b->caret_y, chr == 'L' ? count : -count));
-	  b->caret_x = 0;	/* ECMA-48: caret to the line home position */
-	  b->changed |= CHG_CARET;
+	  rlc_caret_to_vcol(b, vcol);
 	  break;
 	}
 	/* The parameter prefixes of ECMA-48, 0x3c..0x3f.  A sequence
@@ -10296,7 +10349,7 @@ rlc_putansi(RlcData b, int chr)
 	  /* \e[6n: report row and column */
 	  if ( b->argc == 1 && b->argv[0] == 6 )
 	  { int row = rlc_count_lines(b, b->window_start, b->caret_y)+1;
-	    int col = b->caret_x+1;
+	    int col = rlc_caret_vcol(b)+1;	/* the column, not the cell */
 	    char buf[100];
 	    snprintf(buf, sizeof(buf), S_ESC"[%d;%dR", row, col);
 	    rlc_send(b, buf, strlen(buf));

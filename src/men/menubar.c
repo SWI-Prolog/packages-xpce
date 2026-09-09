@@ -574,58 +574,64 @@ clearMenuBar(MenuBar mb)
 }
 
 
+/* The bar keeps two chains: <-buttons, which it draws, and <-members,
+   which the native menu bar walks (see pce_menubar_popup()) and which
+   ->key uses to step from one popup to the next.  Both must come out in
+   the same order, so the insertion point is worked out once and used
+   for both.
+*/
+
 static status
 appendMenuBar(MenuBar mb, PopupObj p, Name alignment, Any before)
 { Button bbutton = NIL;
+  Button b;
+
+  if ( memberChain(mb->members, p) )
+    succeed;
 
   if ( notDefault(before) )
   { Cell cell;
 
     for_cell(cell, mb->buttons)
-    { Button b = cell->value;
-      if ( before == b->popup ||
-	   before == b->popup->name )
-      { bbutton = b;
+    { Button b2 = cell->value;
+      if ( before == b2->popup ||
+	   before == b2->popup->name )
+      { bbutton = b2;
 	break;
       }
     }
   }
 
-  if ( !memberChain(mb->members, p) )
-  { Button b = newObject(ClassButton, p->name, NIL, EAV);
+  if ( isNil(bbutton) && alignment != NAME_right )
+  { Cell cell;				/* a left menu stays left of the */
+					/* right-aligned ones */
+    for_cell(cell, mb->buttons)
+    { Button b2 = cell->value;
 
-    labelDialogItem((DialogItem)b, p->label);
-    appendChain(mb->members, p);
-    assign(p, context, mb);
-
-    if ( alignment == NAME_right )
-    { insertBeforeChain(mb->buttons, b, bbutton);
-      assign(b, alignment, NAME_right);
-    } else
-    { if ( isNil(bbutton) )
-      { Cell cell;
-
-	for_cell(cell, mb->buttons)
-	{ Button b2 = cell->value;
-
-	  if ( b2->alignment == NAME_right )
-	  { bbutton = b2;
-	    break;
-	  }
-	}
+      if ( b2->alignment == NAME_right )
+      { bbutton = b2;
+	break;
       }
-      insertBeforeChain(mb->buttons, b, bbutton);
     }
-
-    assign(b, popup, p);
-    obtainClassVariablesObject(mb);
-    assign(b, label_font, mb->label_font);
-    assign(b, pen,        mb->pen);
-    assign(b, radius,     mb->radius);
-    send(p, NAME_format, getSlotObject(mb, NAME_format), EAV);
-    ws_menubar_changed(mb);
-    requestComputeGraphical(mb, DEFAULT);
   }
+
+  b = newObject(ClassButton, p->name, NIL, EAV);
+  labelDialogItem((DialogItem)b, p->label);
+  insertBeforeChain(mb->members, p, isNil(bbutton) ? NIL : bbutton->popup);
+  assign(p, context, mb);
+
+  insertBeforeChain(mb->buttons, b, bbutton);
+  if ( alignment == NAME_right )
+    assign(b, alignment, NAME_right);
+
+  assign(b, popup, p);
+  obtainClassVariablesObject(mb);
+  assign(b, label_font, mb->label_font);
+  assign(b, pen,        mb->pen);
+  assign(b, radius,     mb->radius);
+  send(p, NAME_format, getSlotObject(mb, NAME_format), EAV);
+  ws_menubar_changed(mb);
+  requestComputeGraphical(mb, DEFAULT);
 
   succeed;
 }
@@ -651,7 +657,24 @@ getMemberMenuBar(MenuBar mb, Any obj)
 
 static status
 deleteMenuBar(MenuBar mb, PopupObj p)
-{ deleteChain(mb->members, p);
+{ Cell cell;
+
+  deleteChain(mb->members, p);
+
+  for_cell(cell, mb->buttons)		/* the button drawn for it goes too */
+  { Button b = cell->value;
+
+    if ( b->popup == p )
+    { deleteChain(mb->buttons, b);
+      break;
+    }
+  }
+
+  if ( mb->current == p )
+    assign(mb, current, NIL);
+  if ( p->context == (Any)mb )
+    assign(p, context, NIL);
+
   ws_menubar_changed(mb);
   requestComputeGraphical(mb, DEFAULT);
 

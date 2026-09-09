@@ -49,7 +49,7 @@
 :- use_module(library(tabbed_window), []).
 :- use_module(library(tab_frame), []).
 :- use_module(library(toolbar), []).
-:- use_module(library(lists), [member/2]).
+:- use_module(library(lists), [member/2, max_list/2]).
 :- use_module(library(apply), [maplist/3]).
 :- use_module(library(pane_layouts),
               [ arrangement_of/2, record_arrangement/2 ]).
@@ -543,7 +543,8 @@ do_pane_changed(F) :->
     "Follow the current pane; see ->pane_changed"::
     get(F, current_pane, Pane),
     send(F?menu_dialog, client, Pane),
-    ignore(send(F, update_menu_bar)),
+    ignore(send(F, clear_status)),      % what the pane before had to say
+    ignore(send(F, update_menu_bar)),   % is not about this one
     ignore(send(F, update_tab_label)),
     ignore(send(F, update_label)),
     ignore(send(F, update_opacity)),
@@ -656,13 +657,15 @@ update_menu_bar(F, Force:[bool]) :->
         send(F, slot, menu_key, Key),
         get(F, menu_dialog, MD),
         send(MD?menu_bar, clear),
+        ignore(send(MD, clear_tool_bar)),
         ignore(send(F, fill_menu_bar, MD)),
         (   get(F, current_pane, Pane),
             send(Pane, has_send_method, fill_menu_bar)
         ->  ignore(send(Pane, fill_menu_bar, MD))
         ;   true
         ),
-        send(F?menu_extensions, for_all, message(@arg1, forward, MD))
+        send(F?menu_extensions, for_all, message(@arg1, forward, MD)),
+        ignore(send(MD, lay_out_bars))
     ).
 
 %       A menu somebody added at runtime -- see Epilog's win_insert_menu/2
@@ -866,6 +869,19 @@ editor_event(F, Ev:event) :->
     get(F, status_dialog, SD),
     send(SD, editor_event, Ev).
 
+%       The bar says what the pane in view has to say, and a pane that
+%       comes into view has said nothing yet: the message the pane before
+%       left is not about this one.  A pane that has something to put back
+%       -- an editor says which line the caret is on -- does it from
+%       ->pane_exposed, which runs after this.
+
+clear_status(F) :->
+    "Take away what the pane before had to say"::
+    (   get(F, status_dialog, SD)
+    ->  send(SD, clear)
+    ;   true                            % no bar: nothing to take away
+    ).
+
 show_line_number(F, Line:'int|{too_expensive}*') :->
     "Show the line the caret is on"::
     (   Line == @nil                    % nothing to say: do not grow a bar
@@ -904,6 +920,7 @@ load, a profile that is no longer defined.
 
 pane_term(F, Term:prolog) :<-
     "The term that says what I hold and how it is laid out"::
+    settle_room(F),                     % see settle_room/1
     frame_term_options(F, Options),
     get(F, tabs, TW),
     get(TW, tabs, Chain),
@@ -924,7 +941,35 @@ pane_term(F, Term:prolog) :->
            send(Tab, close)),
     apply_frame_options(F, Options),
     expose_current_tab(F, Built),
+    settle_room(F),                     % see settle_room/1
     share_room(Built).
+
+%!  settle_room(+Frame) is det.
+%
+%   Hand the panes the room the frame has, so that there is room to
+%   divide and shares to read off.  A window that has not been opened
+%   has none: it has only been fitted -- every pane laid out at the
+%   size it asks for, which in a tab is the least it will take -- and
+%   shares of that are not shares of anything.  The tab has exactly the
+%   room its panes insist on, no arrangement of it is possible, and the
+%   term it gives back is neither the one it was built from nor the one
+%   the same window gives once it is opened.  ->resize is what the
+%   window system sends when a window is given its size; sending it
+%   here lays the panes out in the frame as it stands.  An open window
+%   was given its room when it opened and is left alone: laying it out
+%   again from here puts its panes where they were before its bars took
+%   theirs.
+%
+%   Both directions of <-/->pane_term settle the room: the shares one
+%   writes are pixels of it, and the shares the other reads are pixels
+%   of it too, so reading a window that was built but never opened has
+%   to divide the same room the building did.
+
+settle_room(F) :-
+    (   get(F, status, unmapped)
+    ->  send(F, resize)
+    ;   true
+    ).
 
 %!  share_room(+Built) is det.
 %
@@ -1347,15 +1392,115 @@ client(MD, Client:[object]) :->
     "Say which object a menu item without a message goes to"::
     send(MD, slot, client, Client).
 
+%       The bar is built into a dialog that was laid out long ago, and a
+%       bar built afterwards is not placed until the dialog lays itself
+%       out again: the tool bar `tool_dialog <-tool_bar' puts below the
+%       menu bar sat in the corner the menus are in, drawn over them.
+%       ->height asks my tile for the room -- see requestGeometryWindow()
+%       in src/win/window.c -- which is what makes the strip grow for a
+%       second row and shrink back when there is nothing on it.
+
+lay_out_bars(MD) :->
+    "Place my bars and take the room they need"::
+    send(MD, layout),
+    send(MD, place_bars),
+    get(MD, border, size(_, BH)),
+    get(MD, graphicals, Chain),
+    chain_list(Chain, Bars),
+    findall(Bottom,
+            ( member(Bar, Bars),
+              get(Bar, displayed, @on),
+              get(Bar, area, area(_, Y, _, H)),
+              Bottom is Y+H
+            ),
+            Bottoms),
+    Bottoms \== [],
+    max_list(Bottoms, Deepest),
+    Height is Deepest+2*BH,
+    (   get(MD, height, Height)
+    ->  true
+    ;   send(MD, height, Height)
+    ).
+
+%       The row runs menus at the left and buttons at the right, both
+%       against the top.  The dialog lays its items out one after the
+%       other and lines them up on their baselines, which puts the
+%       buttons hard against the last menu and the menus low in the row.
+%       ->layout_dialog runs whenever the strip is laid out afresh -- on
+%       a resize as well as on a rebuild -- so this holds.
+
+layout_dialog(MD, Gap:[size], Size:[size], Border:[size]) :->
+    "Lay my bars out, then put them where they belong"::
+    send_super(MD, layout_dialog, Gap, Size, Border),
+    send(MD, place_bars).
+
+resize(MD) :->
+    "The right edge moved; the buttons go with it"::
+    send_super(MD, resize),
+    send(MD, place_bars).
+
+place_bars(MD) :->
+    "Menus at the left, buttons at the right, both at the top"::
+    (   get(MD, member, menu_bar, MB),
+        get(MB, displayed, @on)
+    ->  send(MB, set, 0, 0)
+    ;   true
+    ),
+    (   get(MD, member, tool_bar, TB),
+        get(TB, displayed, @on)
+    ->  get(MD, width, Width),
+        get(TB, width, BW),
+        X is max(0, Width-BW),
+        send(TB, set, X, 0)
+    ;   true
+    ).
+
 menu_bar(MD, Create:[bool], MB:menu_bar) :<-
     "Get (or create) the menu bar"::
     (   get(MD, member, menu_bar, MB)
     ->  true
     ;   Create == @on
     ->  (   get(MD, tool_bar, TB)
-        ->  send(new(MB, pane_menu_bar), above, TB)
+        ->  send(new(MB, pane_menu_bar), left, TB)
         ;   send_super(MD, append, new(MB, pane_menu_bar))
         )
+    ).
+
+%       The buttons of the pane in view go at the right of the row the
+%       menus are in, not on a row of their own: two of them are not
+%       worth a strip across the window.  ->place_bars is what puts them
+%       against the right edge; appending them here only says they share
+%       the row with the menus.
+
+tool_bar(MD, Create:[bool], TB:tool_bar) :<-
+    "Get (or create) the tool bar, at the right of the menus"::
+    (   get(MD, member, tool_bar, TB)
+    ->  true
+    ;   Create == @on
+    ->  (   get(MD, client, Client),
+            Client \== @default
+        ->  true
+        ;   get(MD, frame, Client)
+        ),
+        get(MD, menu_bar, @on, MB),
+        send(new(TB, tool_bar(Client)), right, MB)
+    ).
+
+%       What is on the tool bar belongs to the pane in view, as the menus
+%       do, so it is taken away and put back at every ->update_menu_bar
+%       and a pane that has nothing to put there leaves the row to the
+%       menus.  The bar is hidden rather than emptied: the buttons are
+%       made once and kept, and destroying them here would take the
+%       keyboard focus with them -- ->erase on a window clears its
+%       <-keyboard_focus and its <-focus (see eraseWindow() in
+%       src/win/window.c), and ->update_menu_bar runs in the middle of
+%       ->pane_changed, which is where the focus is being handed over.
+
+clear_tool_bar(MD) :->
+    "Take my tool bar away until the pane in view asks for it"::
+    (   get(MD, member, tool_bar, TB)
+    ->  send(TB, displayed, @off)
+    ;   true
     ).
 
 %       A popup on my bar is a pane_popup: the bar is assembled from two
@@ -1382,10 +1527,63 @@ assign_accelerators(_) :->
 :- pce_begin_class(pane_menu_bar, menu_bar,
                    "Menu bar of a pane_frame").
 
+%       The bar is assembled from two sides -- the application first,
+%       then the pane in view, then whatever `->extend_menu_bar' added --
+%       and neither can know what the other will put on.  So the bar says
+%       where a menu goes rather than the order in which it happens to
+%       arrive: `->append' looks the name up in <-menu_order and passes
+%       the menu it must come before to the super.  A name that is not in
+%       the list takes the place of `*': that is a mode's own menu
+%       (prolog, sgml, LaTeX, ...) or a tool pane's (xref, threads, ...).
+
+class_variable(menu_order, chain,
+               chain(file, settings, tools, debug, 'GUI',
+                     edit, browse, compile, '*', help),
+               "Order the pulldown menus appear in").
+
 initialise(MB) :->
     "Create empty, under the name my dialog looks me up by"::
     send_super(MB, initialise),
     send(MB, name, menu_bar).
+
+rank(MB, Name:name, Rank:int) :<-
+    "Where a menu of this name belongs on me"::
+    get(MB, class_variable_value, menu_order, Order),
+    (   get(Order, index, Name, Rank)
+    ->  true
+    ;   get(Order, index, '*', Rank)
+    ).
+
+%       Strictly greater: two menus that both take the place of `*' keep
+%       the order in which they were appended.
+
+before(MB, Name:name, Before:name) :<-
+    "The menu on me the named one must come before"::
+    get(MB, rank, Name, Rank),
+    get(MB, members, Chain),
+    chain_list(Chain, Popups),
+    member(Popup, Popups),
+    get(Popup, name, Before),
+    get(MB, rank, Before, OtherRank),
+    OtherRank > Rank,
+    !.
+
+%       A caller who names the menu to come before knows better, and so
+%       does one who says `right': that means "after them all", which is
+%       what win_insert_menu/2 promises for a menu added with `-'.  Both
+%       go through unranked.
+
+append(MB, Popup:'member=popup', Alignment:'[{left,right}]',
+           Before:'[name|popup]') :->
+    "Append a popup at the place its name asks for"::
+    (   Before \== @default
+    ->  send_super(MB, append, Popup, Alignment, Before)
+    ;   Alignment == right
+    ->  send_super(MB, append, Popup, Alignment)
+    ;   get(MB, before, Popup?name, TheBefore)
+    ->  send_super(MB, append, Popup, Alignment, TheBefore)
+    ;   send_super(MB, append, Popup, Alignment)
+    ).
 
 assign_accelerators(_) :->
     "Accelerators are defined by the panes"::
@@ -1650,6 +1848,14 @@ client(D, Client:window) :<-
                  *            REPORT            *
                  *******************************/
 
+clear(D) :->
+    "Take away whatever is on me"::
+    get(D, member, reporter, Label),
+    send(Label, clear),
+    send(D, report_type, @nil),
+    send(D?report_count, value, 0),
+    send(D, show_line_number, @nil).
+
 report(D, Type:name, Fmt:[char_array], Args:any...) :->
     "Show a message on my reporter"::
     (   get(D, report_type, ReportType),
@@ -1840,12 +2046,32 @@ expose(P) :->
 %       place of its own to report -- a terminal writes over its own text
 %       -- says so with a ->report of its own, which takes the place of
 %       this one.
+%
+%       There is one bar and it belongs to the pane in view.  A tool that
+%       keeps itself up to date whether or not anybody is looking -- the
+%       thread monitor says what it found on every update -- wrote over
+%       what the pane the user was working in had to say, from a tab they
+%       could not even see.
 
 report(P, Kind:name, Fmt:[char_array], Args:any ...) :->
-    "Report on the bar of the window I am in"::
-    pane_status_bar(P),
-    Msg =.. [report, Kind, Fmt|Args],
-    send_super(P, Msg).
+    "Report on the bar of the window I am in, if I am the pane in view"::
+    (   pane_in_view(P)
+    ->  pane_status_bar(P),
+        Msg =.. [report, Kind, Fmt|Args],
+        send_super(P, Msg)
+    ;   true
+    ).
+
+%!  pane_in_view(+Pane) is semidet.
+%
+%   True when Pane is the one the user is working in, or is in no window
+%   of the IDE at all and so shares a bar with nobody.
+
+pane_in_view(P) :-
+    (   get(P, pane_frame, Frame)
+    ->  get(Frame, current_pane, P)
+    ;   true
+    ).
 
 pane_frame(P, Frame:pane_frame) :<-
     "The frame I am a pane of"::

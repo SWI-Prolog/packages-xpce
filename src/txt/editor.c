@@ -4220,6 +4220,9 @@ scrollVerticalEditor(Editor e, Name dir, Name unit, Int amount)
 { TextBuffer tb = e->text_buffer;
   Int start;
 
+  if ( isNil(tb) || isNil(e->text_image) )
+    fail;				/* editor has been destroyed */
+
   endIsearchEditor(e, OFF);
   markStatusEditor(e, NAME_inactive);
 

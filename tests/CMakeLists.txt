@@ -21,6 +21,7 @@ test_libs(object_reference     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(scrollbar            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(terminal_osc         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(terminal_bce         OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(terminal_margin      OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(terminal_palette     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(terminal_glyphs      OPTIONS ${XPCE_TEST_OPTIONS})
 
@@ -38,6 +39,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:scrollbar
                      xpce:terminal_osc
                      xpce:terminal_bce
+                     xpce:terminal_margin
                      xpce:terminal_palette
                      xpce:terminal_glyphs)
 

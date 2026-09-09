@@ -39,6 +39,8 @@ static int	 tryDragScrollGesture(Gesture g, EventObj ev);
 static int	 cancelDragScrollGesture(Gesture g);
 static Graphical getScrollTarget(Gesture g, EventObj ev);
 
+#define aliveObj(o) (isObject(o) && notNil(o) && !isFreedObj(o))
+
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 A  gesture describes  a  sequence  of mouse-events,   starting  with a
 button-down upto the corresponding button-up event.
@@ -124,6 +126,7 @@ cancelGesture(Gesture g, EventObj ev)
   EventObj fe = sw->focus_event;
   EventObj oev;
 
+  cancelDragScrollGesture(g);
   addCodeReference(fe);
   assign(g, active, OFF);
   send(sw, NAME_focus, NIL, EAV);
@@ -248,7 +251,7 @@ scrollMessage(Gesture g, EventObj ev,
 	 isAEvent(ev, NAME_area)) )
     fail;
 
-  if ( !(gr = getScrollTarget(g, ev)) )
+  if ( !(gr = getScrollTarget(g, ev)) || !aliveObj(gr) )
     fail;
   if ( !get_xy_event(ev, gr, ON, &X, &Y) )
     fail;
@@ -292,12 +295,35 @@ scrollMessage(Gesture g, EventObj ev,
 }
 
 
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+The drag-scroll timer keeps running until  the   button  goes  up. If the
+up-event never arrives (e.g., the window   is destroyed while dragging or
+the release happens outside our windows), the timer may fire on an object
+that no longer exists.  Sending  to  a   destroyed  object  reads  NIL or
+garbage from its slots, which crashes.  Verify the target before scrolling.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+static int
+validDragScrollGesture(Gesture g)
+{ EventObj ev = g->drag_scroll_event;
+
+  return ( aliveObj(ev) &&
+	   aliveObj(ev->receiver) &&
+	   aliveObj(ev->window) );
+}
+
+
 static int
 scrollGesture(Gesture g)
 { Name msg;
   Int amount;
   Graphical gr;
   Name dir = NAME_forwards;
+
+  if ( !validDragScrollGesture(g) )
+  { cancelDragScrollGesture(g);
+    fail;
+  }
 
   if ( !scrollMessage(g, g->drag_scroll_event, &gr, &msg, &amount) )
     fail;

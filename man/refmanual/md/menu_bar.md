@@ -75,8 +75,10 @@ thereof.   See also example _Menu Bar_.
     @see menu_bar->label_font
 
 - menu_bar<-members: chain
-    Chain of popup objects.  The `popup <-labels` are displayed
-    left-to-right from from this chain.
+    Chain of popup objects, in the order they appear on the bar.
+    The bar itself draws from <-buttons; this chain is what a
+    native menu bar is built from and what ->key steps through.
+    ->append keeps the two in step.
 
 
 ## Send methods {#class-menu_bar-send}
@@ -127,6 +129,12 @@ thereof.   See also example _Menu Bar_.
     	send(MB, append, new(F, popup(file))),
     	send(MB, append, new(H, popup(help)), right),
     	...,
+
+    The `before` argument names the popup the new one is placed
+    in front of, either as the popup itself or by its `<-name`.
+    Without it the popup is appended, in front of any popup that
+    was appended with alignment `right`.  Either way the popup
+    lands at the same place on <-members and on <-buttons.
 
     @see menu_bar->delete
     @see menu_bar->clear

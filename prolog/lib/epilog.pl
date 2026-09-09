@@ -2181,19 +2181,15 @@ epilog_with_profile(Profile) :-
 
 %!  debug_popup(+MenuDialog, -Popup) is det.
 %
-%   The Debug menu, made if it is not there yet.  In a window of Epilog's
-%   own it goes where it has always been, before the GUI menu; in a window
-%   belonging to something else it goes at the end.
+%   The Debug menu, made if it is not there yet.  Where it goes is the
+%   bar's business -- see `pane_menu_bar <-menu_order', which names it
+%   before the GUI menu, where it has always been.
 
 debug_popup(MD, Debug) :-
     get(MD, menu_bar, @on, MB),
     (   get(MB, member, debug, Debug)
     ->  true
-    ;   new(Debug, pane_popup(debug)),
-        (   get(MB, member, 'GUI', _)
-        ->  send(MB, append, Debug, @default, 'GUI')
-        ;   send(MB, append, Debug)
-        )
+    ;   send(MB, append, new(Debug, pane_popup(debug)))
     ).
 
 
@@ -2834,8 +2830,12 @@ ep_insert_menu(MD, Label, Before) :-
     get(MD, menu_bar, @on, MB),
     mb_insert_menu(MB, Label, Before).
 
+%       `-' means the menu is added to the right.  A plain append would
+%       now be ranked into the middle of the bar, so say `right', which
+%       `pane_menu_bar ->append' lets through unranked.
+
 mb_insert_menu(MB, Label, '-') =>
-    send(MB, append, popup(Label)).
+    send(MB, append, popup(Label), right).
 mb_insert_menu(MB, Label, Before) =>
     send(MB, append, popup(Label), before := Before).
 

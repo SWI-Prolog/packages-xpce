@@ -266,6 +266,44 @@ test(and_goes_again_when_another_pane_has_the_focus) :-
     menus(MF, WithOther),
     \+ memberchk(threads, WithOther).
 
+%       There is one bar and it belongs to the pane in view.  The monitor
+%       keeps itself up to date whether or not anybody is looking, and
+%       what it found used to be written over what the pane the user was
+%       working in had to say -- from a tab they could not even see.
+
+test(the_bar_belongs_to_the_pane_in_view,
+     true(InView-Switched-OutOfView == watching-''-'')) :-
+    no_frames,
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_thread_monitor, tab),
+    get(@prolog_ide, tool, prolog_thread_monitor, TM),
+    get(TM, frame, MF),
+    send(MF, current_pane, TM),
+    send(TM, report, status, watching),
+    bar_message(MF, InView),
+    get(MF, panes, Chain),
+    chain_list(Chain, Panes),
+    member(Other, Panes), Other \== TM, !,
+    send(MF, current_pane, Other),      % the pane before it had its say
+    bar_message(MF, Switched),
+    send(TM, report, status, 'found a thread'),
+    bar_message(MF, OutOfView).
+
+%!  bar_message(+Frame, -Message) is det.
+%
+%   What the bar of Frame says; '' when it says nothing or has no bar.
+
+bar_message(F, Message) :-
+    (   get(F, status_dialog, SD),
+        get(SD, member, reporter, Reporter),
+        get(Reporter, selection, Selection),
+        Selection \== @nil
+    ->  get(Selection, value, Message)
+    ;   Message = ''
+    ).
+
 test(the_window_is_named_after_it, true(Label == 'SWI-Prolog -- Threads')) :-
     monitor(TM),
     get(TM, frame, F),

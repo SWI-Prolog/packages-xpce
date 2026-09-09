@@ -88,7 +88,22 @@ resize(W, Tab:[tab]) :->
     ->  send(Tabs, for_all,
              message(@arg1, size, size(Width,TabH)))
     ;   send(Tab, size, size(Width,TabH))
-    ).
+    ),
+    send(TS, set, 0, 0).          % see below
+
+%       The stack starts at my top-left, always.  A device is placed by
+%       its <-offset, which the dialog works out so that the bounding box
+%       of what the device holds lands where the dialog wants it, and it
+%       works that out while a tab still sits <-label_height below its
+%       own top-left -- see `relayout_tab_stack' in src/men/tabstack.c,
+%       which puts the tabs back afterwards.  The offset it left behind
+%       does not go with them, so everything the stack holds is drawn a
+%       label's height too high: in a tabbed_window used as a pane the
+%       top of the pane goes off the top of the window -- the first line
+%       of a terminal, the top of its scrollbar, the grip in its corner
+%       -- and a strip is left blank at the bottom.  The label row is
+%       drawn above each tab, at a negative y of its own, so the stack
+%       wants no room for it here.
 
 layout_dialog(W, _Gap:[size], _Size:[size], _Border:[size]) :->
     "Overrule to deal with nested tabbed windows"::
@@ -332,7 +347,8 @@ edit_label(T) :->
     send(Stack, hide_tab_buttons),      % one lies over the label I cover
     send(Stack, display, new(TI, tab_label_item(T)), point(X, 0)),
     send(TI, set, X, 0, W, H),
-    send(Stack?window, keyboard_focus, TI).
+    send(Stack?window, keyboard_focus, TI),
+    send(TI, select_all).               % typing replaces the name I have
 
 edit_label_width(T, X:int, W:int) :<-
     "Room for the editor over my label, which is wider than the label"::

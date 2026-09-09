@@ -1465,7 +1465,10 @@ tileResizeEvent(EventObj ev)
       }
 
       if ( ev->id == NAME_msLeftUp )
+      { rebalanceTile(getRootTile(sub));	/* keep the new proportions
+						   when the frame is resized */
 	resizingTile = NIL;
+      }
 
       succeed;
     }

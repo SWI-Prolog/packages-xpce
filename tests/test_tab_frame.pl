@@ -355,6 +355,18 @@ test(an_editable_label_opens_over_itself) :-
     IH >= H,
     IW >= W.                            % a label is narrow to type in
 
+%       The name a tab has is what you are usually replacing, not what you
+%       want to edit a letter of, so it starts out selected.
+
+test(and_starts_out_selected_so_typing_replaces_the_name) :-
+    two_tabs(_TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    send(TF, edit_label),
+    editor(TF, Item),
+    send(Item, typed, 0'x),
+    get(Item, selection, Typed),
+    send(Typed, equal, x).
+
 %       Room to type in, which is more than the label takes to draw --
 %       there is a whole name to put there.
 
@@ -1169,6 +1181,99 @@ test(and_none_of_them_collapses_along_the_way) :-
              H > 0
            )).
 
+%!  stacked(-TabbedWindow, -TabFrame, -Top, -Bottom) is det.
+%
+%   A window of a known size holding two panes above one another.
+
+stacked(TW, TF, P1, P2) :-
+    new(TW, tabbed_window('Test')),
+    send(TW, tab, new(TF, tab_frame(new(P1, picture(a, size(400,200))), one))),
+    send(TW, open),
+    window_height(TW, 600),
+    send(TF, split, new(P2, picture(b, size(400,200))), P1, horizontally),
+    send(TW, resize).
+
+%!  window_height(+TabbedWindow, +Height) is det.
+%
+%   Give the window a new height, the way the window manager does.
+
+window_height(TW, H) :-
+    get(TW, area, area(_,_,W,_)),
+    send(TW, size, size(W, H)),
+    send(TW, resize).
+
+%!  drag_gap(+TabbedWindow, +TabFrame, +Top, +Delta) is det.
+%
+%   Drag the gap below Top over Delta pixels.
+
+drag_gap(TW, TF, Top, Delta) :-
+    geometry(Top, area(_, Y, _, H)),
+    get(TF?tile, border, B),
+    Gap is Y+H+B//2,
+    drag(TW, TF, 50, Gap, 50, Gap+Delta).
+
+%!  same_share(+H1, +H2, +NH1, +NH2) is semidet.
+%
+%   The two panes hold the same fraction of the room they share.  It is a
+%   fraction rather than a ratio: rounding and the minimum size a pane is
+%   laid out at (see MIN_TILE_SIZE) make it approximate.
+
+same_share(H1, H2, NH1, NH2) :-
+    Share0 is H1/(H1+H2),
+    Share  is NH1/(NH1+NH2),
+    abs(Share-Share0) < 0.02.
+
+%       A hand resize says what the panes should be, not merely what they
+%       happen to be: ->rebalance turns the sizes the drag left behind
+%       into the wish, so resizing the window afterwards keeps the panes
+%       at the relative sizes the user gave them.  Before, everything up
+%       to the dragged edge held on to its size and the pane below it took
+%       all of what a resize brought or gave all of what it took away.
+
+test(a_hand_resize_keeps_its_share_when_the_window_grows) :-
+    stacked(TW, TF, P1, P2),
+    drag_gap(TW, TF, P1, -100),
+    geometry(P1, area(_,_,_,H1)),
+    geometry(P2, area(_,_,_,H2)),
+    window_height(TW, 900),
+    geometry(P1, area(_,_,_,NH1)),
+    geometry(P2, area(_,_,_,NH2)),
+    NH1 > H1,                           % it grew along
+    same_share(H1, H2, NH1, NH2).
+
+test(a_hand_resize_keeps_its_share_when_the_window_shrinks) :-
+    stacked(TW, TF, P1, P2),
+    drag_gap(TW, TF, P1, -100),
+    geometry(P1, area(_,_,_,H1)),
+    geometry(P2, area(_,_,_,H2)),
+    window_height(TW, 300),
+    geometry(P1, area(_,_,_,NH1)),
+    geometry(P2, area(_,_,_,NH2)),
+    NH1 < H1,                           % it gave along
+    same_share(H1, H2, NH1, NH2).
+
+%       What ->rebalance asks for is the size the pane has now.
+
+test(a_hand_resize_becomes_the_size_the_panes_ask_for) :-
+    stacked(TW, TF, P1, _P2),
+    drag_gap(TW, TF, P1, -100),
+    geometry(P1, area(_,_,_,H1)),
+    get(P1?tile, ideal_height, H1).
+
+%       A tile that never stretched is fixed by whoever built it -- a menu
+%       bar is as high as its buttons and no more -- and a rebalance may
+%       not turn it into a pane that takes its share.
+
+test(a_pane_that_was_never_resizable_is_not_made_one) :-
+    stacked(_TW, TF, P1, P2),
+    send(P2?tile, ver_stretch, 0),
+    send(P2?tile, ver_shrink, 0),
+    send(TF?tile, rebalance),
+    get(P2?tile, ver_stretch, 0),
+    get(P2?tile, ver_shrink, 0),
+    get(P1?tile, ver_stretch, S),
+    S > 0.
+
 :- end_tests(tab_frame_resize).
 
 
@@ -1557,6 +1662,21 @@ test(shares_are_applied) :-
     named(_TW, TF, [A,B,C]),
     send(TF, window_tree, horizontal([0.5-A, 0.25-B, 0.25-C])),
     send(TF, window_shares, horizontal([0.5-A, 0.25-B, 0.25-C])),
+    get(TF, window_tree, Tree),
+    share_of(Tree, a, ShareA),
+    share_of(Tree, b, ShareB),
+    assertion(abs(ShareA-0.5) < 0.02),
+    assertion(abs(ShareB-0.25) < 0.02).
+
+%       A share is a wish rather than merely a size: what the tree asks for
+%       is kept when the window holding it is resized.
+
+test(the_shares_a_tree_asks_for_survive_a_resize) :-
+    named(TW, TF, [A,B,C]),
+    send(TF, window_shares, horizontal([0.5-A, 0.25-B, 0.25-C])),
+    get(TW, area, area(_,_,_,H)),
+    send(TW, size, size(900, H)),
+    send(TW, resize),
     get(TF, window_tree, Tree),
     share_of(Tree, a, ShareA),
     share_of(Tree, b, ShareB),

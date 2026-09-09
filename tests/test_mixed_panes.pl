@@ -321,6 +321,103 @@ history_places(File, Count) :-
             Ours),
     length(Ours, Count).
 
+%       The two history buttons are the editor's chrome, and they go at
+%       the right of the row the menus are in -- two buttons are not
+%       worth a strip of their own.  See `pane_menu_dialog ->place_bars',
+%       which is what puts the menus at the left and the buttons at the
+%       right, and `emacs_view ->fill_tool_bar', which puts them there.
+
+test(the_history_buttons_go_at_the_right_of_the_menus,
+     true(SameRow-AtRight == true-true)) :-
+    emacs,
+    mixed_window(F),
+    get(F, menu_dialog, MD),
+    get(MD, menu_bar, @on, MB),
+    get(MD, tool_bar, @on, TB),
+    get(TB?graphicals, size, Buttons),
+    Buttons > 0,
+    get(MB, area, area(_, MenusY, _, _)),
+    get(TB, area, area(ButtonsX, ButtonsY, ButtonsW, _)),
+    (   MenusY =:= ButtonsY
+    ->  SameRow = true
+    ;   SameRow = MenusY-ButtonsY
+    ),
+    get(MD, width, Width),
+    (   ButtonsX+ButtonsW =:= Width
+    ->  AtRight = true
+    ;   AtRight = ButtonsX+ButtonsW-Width
+    ).
+
+%       They belong to the pane in view: a window showing a terminal has
+%       no history to walk.  The bar is emptied and filled again with the
+%       menus, so they come and go with the editor rather than sitting
+%       there once put.
+
+test(and_go_away_when_a_terminal_comes_into_view, Shown == [@on, @off, @on]) :-
+    emacs,
+    mixed_window(F),
+    get(F, menu_dialog, MD),
+    get(MD, tool_bar, @on, TB),
+    get(TB, displayed, WithEditor),
+    editor(F, V),
+    terminal(F, T),
+    send(F, current_pane, T),
+    get(TB, displayed, WithTerminal),
+    send(F, current_pane, V),
+    get(TB, displayed, Again),
+    Shown = [WithEditor, WithTerminal, Again].
+
+test(and_the_strip_gives_the_room_back, true(Grown-Back == true-true)) :-
+    emacs,
+    mixed_window(F),
+    get(F, menu_dialog, MD),
+    get(MD, menu_bar, @on, MB),
+    get(MB, height, Menus),
+    get(MD, height, WithButtons),
+    (   WithButtons > Menus
+    ->  Grown = true
+    ;   Grown = WithButtons-Menus
+    ),
+    terminal(F, T),
+    send(F, current_pane, T),
+    get(MD, height, Without),
+    (   Without =:= Menus
+    ->  Back = true
+    ;   Back = Without-Menus
+    ).
+
+%       The bar of a window says what the pane in view has to say.  The
+%       line the caret is on is the editor's, so it goes when another pane
+%       comes into view and is said again when the editor comes back --
+%       `emacs_view ->pane_exposed' asks the mode.
+
+test(the_line_the_caret_is_on_goes_with_the_editor,
+     true(OnTerminal-Back == ''-'Line: 5')) :-
+    no_frames,
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    source_with_room(File),
+    with_placement(split, send(@emacs, goto_source_location,
+                               source_location(File, 5))),
+    get(F, current_pane, View),
+    terminal(F, T),
+    send(F, current_pane, T),
+    bar_line(F, OnTerminal),
+    send(F, current_pane, View),
+    bar_line(F, Back).
+
+%!  bar_line(+Frame, -Line) is det.
+%
+%   What the bar of Frame says about the line the caret is on.
+
+bar_line(F, Line) :-
+    (   get(F, status_dialog, SD)
+    ->  get(SD, member, line, Text),
+        get(Text?string, value, Line)
+    ;   Line = ''
+    ).
+
 test(the_mode_menus_come_and_go_with_the_editor) :-
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, F),
@@ -410,6 +507,43 @@ test(and_a_terminal_leaves_it_to_the_application, true(Label == Expected)) :-
     get(F, tab_label, TabLabel),
     get(string('SWI-Prolog -- %s', TabLabel), value, Expected),
     get(F, label, Label).
+
+%       The bar is assembled from two sides -- the application first,
+%       then the pane in view -- so where a menu lands is the bar's
+%       business rather than the order the two halves happen to append
+%       in.  `pane_menu_bar <-menu_order' names it; Help is last on
+%       either bar.  Asserted outright: the whole point is the order.
+
+test(the_menus_of_an_editor_come_out_in_the_order_the_bar_names,
+     Names == [file, settings, tools, 'GUI',
+               edit, browse, compile, prolog, help]) :-
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F),
+    menus(F, Names).
+
+test(and_so_do_the_menus_of_a_terminal,
+     Names == [file, settings, tools, debug, 'GUI', help]) :-
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F),
+    terminal(F, T),
+    send(F, current_pane, T),
+    menus(F, Names).
+
+%       <-buttons is what XPCE draws; <-members is what the native menu
+%       bar of MacOS walks and what ->key steps through.  Comparing them
+%       is the only way to see from here that the native bar agrees.
+
+test(the_bar_walks_the_menus_in_the_order_it_draws_them,
+     true(Members == Buttons)) :-
+    emacs,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(@prolog_ide, new_editor, F),
+    menus(F, Buttons),
+    get(F, menu_bar, MB),
+    chain_list(MB?members, Popups),
+    findall(N, (member(P, Popups), get(P, name, N)), Members).
 
 %       The point of one application for the whole IDE: dropping a
 %       terminal onto an editor and dropping an editor onto a terminal
@@ -673,6 +807,17 @@ test(a_terminal_is_written_by_what_it_is, Kind == terminal) :-
     mixed(F, _File),
     terminal(F, W),
     get(W, pane_kind, Kind).
+
+%       A window that is not open yet has still been given a size, and
+%       the shares are shares of that.  Fitting one lays every pane out
+%       at the least it will take, which leaves the tab exactly the room
+%       its panes insist on: no arrangement of it is possible, and the
+%       term it gives back is not the one it was built from.
+
+test(and_gives_back_the_shares_it_was_asked_for, Shares == [0.6, 0.4]) :-
+    mixed(F, _File),
+    get(F, pane_term, pane_frame(_, [tab(_, vertical(Tree))])),
+    findall(Share, member(Share-_, Tree), Shares).
 
 test(a_window_of_both_kinds_gives_the_same_term_back) :-
     mixed(F, _File),

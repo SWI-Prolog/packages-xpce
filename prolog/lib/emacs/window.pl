@@ -247,6 +247,11 @@ menu_bar_key(V, Key:name) :<-
 pane_exposed(V) :->
     "I have become the current view"::
     send(V, update_labels),
+    (   get(V, mode, Mode),             % the bar was cleared for me: say
+        send(Mode, has_send_method, show_caret_line)  % again what is mine
+    ->  ignore(send(Mode, show_caret_line))
+    ;   true
+    ),
     get(V, text_buffer, TB),
     (   get(V, frame, Frame),
         Frame \== @nil
@@ -345,9 +350,11 @@ fill_menu_bar(V, MD:tool_dialog) :->
          message(V, append_menu_items, MB, Mode, @arg1?name, @arg1?value)).
 
 %       The two history buttons live on the tool bar rather than in a
-%       menu, and the tool bar is not rebuilt when the menu bar is, so
-%       they are put there once.  They are the editor's, not the
-%       application's: a window showing a terminal has no history to walk.
+%       menu.  They are the editor's, not the application's -- a window
+%       showing a terminal has no history to walk -- so the bar is shown
+%       whenever the menus are rebuilt for me and hidden again when
+%       another pane comes into view: see `pane_menu_dialog
+%       ->clear_tool_bar'.  The buttons themselves are made once.
 
 fill_tool_bar(_V, MD:tool_dialog) :->
     "Put the history buttons on the tool bar"::
@@ -357,13 +364,16 @@ fill_tool_bar(_V, MD:tool_dialog) :->
                                 % on their own look stranded.  The
                                 % history is on the Browse menu and on
                                 % Control-Command-Left/Right.
-    ;   get(MD, tool_bar, @on, TB),
-        get(TB?graphicals, size, 0)
-    ->  get(@emacs, history, History),
-        get(History, button, forward, Forward),
-        get(History, button, backward, Backward),
-        send_list(TB, append, [Backward,Forward]),
-        send_list([Backward,Forward], activate)
+    ;   get(MD, tool_bar, @on, TB)
+    ->  (   get(TB?graphicals, size, 0)
+        ->  get(@emacs, history, History),
+            get(History, button, forward, Forward),
+            get(History, button, backward, Backward),
+            send_list(TB, append, [Backward,Forward]),
+            send_list([Backward,Forward], activate)
+        ;   true
+        ),
+        send(TB, displayed, @on)
     ;   true
     ).
 
@@ -372,11 +382,7 @@ append_menu_items(_V, MB:menu_bar, Mode:emacs_mode,
     "Add the entries of one mode menu to the bar"::
     (   get(MB, member, Name, Popup)
     ->  true
-    ;   new(Popup, pane_popup(Name)),
-        (   Name == help
-        ->  send(MB, append, Popup, right)
-        ;   send(MB, append, Popup)
-        )
+    ;   send(MB, append, new(Popup, pane_popup(Name)))
     ),
     send(Entries, for_some, message(Popup, append_item, Mode, @arg1)).
 

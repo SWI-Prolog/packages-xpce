@@ -1391,6 +1391,84 @@ out:
   answer(t->canResize);
 }
 
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+After a hand resize the tiles left of (above) the dragged edge hold the
+size they were given: setTile() takes their stretch and shrink away for
+that.  What is left is a stack in which one tile takes all that a resize
+of the frame brings and the others take none, so the panes no longer keep
+the relative sizes the user just gave them.  ->rebalance turns the layout
+as it is now into the wish: every tile asks for the size it has, and asks
+for its share of what is added in proportion to that size.
+
+<->hor_shrink is proportional already: layoutTile() hands it to
+distribute_stretches() through shrinkability(), which multiplies it by
+the ideal size.  <->hor_stretch is a flat weight -- three tiles of 100,
+200 and 300 with the default 100 each grow by the same number of pixels
+-- so it is the one that has to be made proportional.  The weights are
+normalised to average 100, the default, as computeTile() hands them up to
+the super-tile with Max()/Min() and a weight in pixels would there
+outvote everything else.
+
+A tile that never stretched is fixed by whoever built it (a menu bar is
+as high as its buttons and no more) and must stay that way;
+ICanResizeTile() tells it from one that setTile() has zeroed, which is
+marked <-resized.  A tile laid out with no size at all is left alone as
+well: a share of nothing is nothing, and it would never come back.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+status
+rebalanceTile(TileObj t)
+{ Cell cell;
+
+  if ( isNil(t->members) || t->orientation == NAME_none )
+    succeed;
+
+  { bool horizontal = (t->orientation == NAME_horizontal);
+    int total = 0, n = 0;
+
+    for_cell(cell, t->members)
+    { TileObj t2 = cell->value;
+      int size = valInt(horizontal ? t2->area->w : t2->area->h);
+
+      if ( size > 0 && ICanResizeTile(t2, t->orientation) )
+      { total += size;
+	n++;
+      }
+    }
+
+    for_cell(cell, t->members)
+    { TileObj t2 = cell->value;
+      int size = valInt(horizontal ? t2->area->w : t2->area->h);
+
+      if ( total > 0 && size > 0 && ICanResizeTile(t2, t->orientation) )
+      { int weight = (100*n*size + total/2)/total;
+
+	if ( weight < 1 )		/* it must keep a say */
+	  weight = 1;
+
+	DEBUG(NAME_tile, Cprintf("rebalance %s: %d (%d)\n",
+				 pp(t2), size, weight));
+
+	if ( horizontal )
+	{ assign(t2, idealWidth, toInt(size));
+	  assign(t2, horStretch, toInt(weight));
+	  assign(t2, horShrink,  toInt(100));
+	} else
+	{ assign(t2, idealHeight, toInt(size));
+	  assign(t2, verStretch,  toInt(weight));
+	  assign(t2, verShrink,   toInt(100));
+	}
+      }
+    }
+  }
+
+  for_cell(cell, t->members)
+    rebalanceTile(cell->value);
+
+  succeed;
+}
+
 void *
 forResizeAreaTile(TileObj t, for_tile_func func, Any ctx)
 { if ( notNil(t->members) )
@@ -1413,23 +1491,29 @@ forResizeAreaTile(TileObj t, for_tile_func func, Any ctx)
       { if ( getCanResizeTile(t2) == ON )
 	{ int x0 = valInt(t2->area->x) + valInt(t2->area->w);
 	  int x1 = valInt(t3->area->x);
-	  void *rc = (*func)(ctx, t2,
-			     toInt(x0), t->area->y,
-			     toInt(x1-x0), t->area->h);
 
-	  if ( rc )
-	    return rc;
+	  if ( x1 > x0 )		/* there is a gap: see below */
+	  { void *rc = (*func)(ctx, t2,
+			       toInt(x0), t->area->y,
+			       toInt(x1-x0), t->area->h);
+
+	    if ( rc )
+	      return rc;
+	  }
 	}
       } else
       { if ( getCanResizeTile(t2) == ON )
 	{ int y0 = valInt(t2->area->y) + valInt(t2->area->h);
 	  int y1 = valInt(t3->area->y);
-	  void *rc = (*func)(ctx, t2,
-			     t->area->x, toInt(y0),
-			     t->area->w, toInt(y1-y0));
 
-	  if ( rc  )
-	    return rc;
+	  if ( y1 > y0 )		/* there is a gap: see below */
+	  { void *rc = (*func)(ctx, t2,
+			       t->area->x, toInt(y0),
+			       t->area->w, toInt(y1-y0));
+
+	    if ( rc  )
+	      return rc;
+	  }
 	}
       }
     }
@@ -1444,6 +1528,15 @@ forResizeAreaTile(TileObj t, for_tile_func func, Any ctx)
 resizable sub-tiles.  The frame paints these  using the window system (see
 ws_draw_resize_frame()).  A tile hierarchy that  lives inside a graphical
 device (see class tab_frame) paints them itself and thus needs the areas.
+
+A member laid out with no size at all leaves no gap after it -- see the
+comment at non_empty_tiles(), which is what withholds the border in that
+case.  Reporting one anyway is worse than useless: the gap is a rectangle
+of zero height, ws_draw_resize_area_frame() draws a line down the middle
+of it, and the middle of nothing is the first row of the tile that
+follows.  On MacOS, where the menus are shown natively and the dialog
+that carries the menu bar asks for no height, that line lands on the top
+row of the pane below.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static void *
@@ -1620,7 +1713,9 @@ static senddecl send_tile[] =
   SM(NAME_unrelate, 0, NULL, unrelateTile,
      NAME_layout, "Remove me from my super-tile"),
   SM(NAME_manager, 1, "object*", managerTileMethod,
-     NAME_organisation, "Object that manages this hierarchy")
+     NAME_organisation, "Object that manages this hierarchy"),
+  SM(NAME_rebalance, 0, NULL, rebalanceTile,
+     NAME_resize, "Ask for the current sizes, and shares in proportion")
 };
 
 /* Get Methods */
