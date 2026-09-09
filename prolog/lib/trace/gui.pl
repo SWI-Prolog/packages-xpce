@@ -520,6 +520,25 @@ menu_bar_key(_F, Key:name) :<-
     "Every debugger asks for the same menu bar"::
     Key = debugger.
 
+%       Where I go the first time I am shown.  A debugger belongs to a
+%       thread, so the window I am put in is the one that thread is
+%       talking in rather than whichever window of the IDE comes first.
+%       How I am put there -- a tab, or beside what is already in it --
+%       is `prolog_ide <-placement's to say, as it is for any tool; only
+%       the window is mine to choose.  A thread with no window of its own
+%       leaves me to be placed as any other tool is.
+
+open(F, Pos:[point], Display:[display]) :->
+    "Show me in the window running the thread I debug"::
+    (   \+ get(F, pane_tab, _),         % I am in no window yet
+        get(F, thread, Thread),
+        Thread \== @nil,
+        get(@prolog_ide, thread_frame, Thread, Frame)
+    ->  send(@prolog_ide, place_pane, F, Frame),
+        send(@prolog_ide, expose_tool, F)
+    ;   send_super(F, open, Pos, Display)
+    ).
+
 %       The keyboard belongs to the source while I am the pane the user
 %       is working in: every key it does not use itself is an action for
 %       the tracer -- see `prolog_source_view ->post_event' -- and a caret

@@ -135,8 +135,14 @@ test(and_an_editor_above_the_terminal,
     Rule = split(_, _, Share),
     assertion(abs(Share-0.7) < 0.001).
 
-test(a_debugger_gets_a_window_of_its_own, Rule == window) :-
+test(a_debugger_gets_a_tab_beside_the_terminal, Rule == tab) :-
     pane_placement(prolog_debugger, [editor, terminal], Rule).
+
+%       And says nothing about a window that runs no terminal, which
+%       leaves the caller with the setting.
+
+test(a_debugger_has_no_answer_without_a_terminal, fail) :-
+    pane_placement(prolog_debugger, [editor], _).
 
 %       A kind nothing has been arranged with has no answer here, and the
 %       caller falls back on the setting -- which is what the IDE has

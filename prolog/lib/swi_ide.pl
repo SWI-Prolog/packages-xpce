@@ -433,6 +433,37 @@ current_frame(IDE, F:pane_frame) :<-
     send(F, on_current_desktop),
     !.
 
+%       A tool that belongs to a thread -- the debugger -- goes in the
+%       window that thread is talking in rather than in whichever window
+%       comes first.  The terminal is asked what it runs; a pane that has
+%       no thread, or whose thread has since gone, simply does not answer.
+
+thread_frame(IDE, Thread:'int|name', F:pane_frame) :<-
+    "The window of mine holding the terminal Thread runs in"::
+    get(IDE, members, Frames),
+    chain_list(Frames, List),
+    member(F, List),
+    send(F, instance_of, pane_frame),
+    get(F, panes, Panes),
+    chain_list(Panes, PaneList),
+    member(Pane, PaneList),
+    pane_kind(Pane, terminal),
+    get(Pane, thread, Runs),
+    same_thread(Runs, Thread),
+    !.
+
+%!  same_thread(+Thread1, +Thread2) is semidet.
+%
+%   True when both name the same thread.  A thread reaches us as its
+%   alias from one side and as its id from the other, so the ids are
+%   compared; a thread that has ended is nobody.
+
+same_thread(Thread, Thread) :-
+    !.
+same_thread(Thread1, Thread2) :-
+    catch(thread_property(Thread1, id(Id)), _, fail),
+    catch(thread_property(Thread2, id(Id)), _, fail).
+
                  /*******************************
                  *          THE WINDOWS         *
                  *******************************/

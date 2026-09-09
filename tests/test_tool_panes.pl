@@ -1707,6 +1707,28 @@ debugger(F) :-
     new(F, prolog_debugger(0, main)),
     send(F, open).
 
+%!  terminal_running(+Frame, +Thread) is det.
+%
+%   Say that the terminal of Frame runs Thread.  A terminal connects to a
+%   thread when its window is created, which needs a display; these tests
+%   run without one, so what a terminal runs is said here instead.
+
+:- dynamic faked_terminal/2.
+
+terminal_running(Frame, Thread) :-
+    get(Frame, panes, Chain),
+    chain_list(Chain, Panes),
+    member(Pane, Panes),
+    pane_kind(Pane, terminal),
+    !,
+    get(Pane, terminal, PT),
+    assertz(epilog:current_prolog_terminal(Thread, PT)),
+    assertz(faked_terminal(Thread, PT)).
+
+forget_terminal_threads :-
+    forall(retract(faked_terminal(Thread, PT)),
+           retractall(epilog:current_prolog_terminal(Thread, PT))).
+
 %!  own_grip(+Window, -Handle) is semidet.
 %
 %   The grip Window displays on itself, if it has one.
@@ -1723,6 +1745,27 @@ test(it_opens_in_a_window_of_the_ide, Classes == [prolog_debugger]) :-
     get(F, frame, Frame),
     send(Frame, instance_of, pane_frame),
     classes(Frame, Classes).
+
+%       A debugger belongs to a thread, so it goes in the window that
+%       thread is talking in rather than in whichever window of the IDE
+%       comes first -- and beside the terminal as a tab, which is what
+%       the arrangements the system comes with say of a debugger.
+
+test(it_goes_in_the_window_the_thread_runs_in,
+     [ Landed-Tabs == [epilog_window, prolog_debugger]-2,
+       cleanup(forget_terminal_threads)
+     ]) :-
+    no_frames,
+    epilog_frame(@default, @default, @default, @off, @default, F1),
+    epilog_frame(@default, @default, @default, @off, @default, F2),
+    send(F1, open),
+    send(F2, open),
+    terminal_running(F2, main),         % the second window runs `main'
+    debugger(D),
+    get(D, pane_frame, Frame),
+    assertion(Frame == F2),
+    classes(Frame, Landed),
+    get(Frame?tabs?tabs, size, Tabs).
 
 test(its_four_windows_are_tiled_inside_it,
      Names == [buttons, bindings, stack, prolog_source_view]) :-
