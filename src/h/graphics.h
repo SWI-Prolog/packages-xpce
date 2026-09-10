@@ -223,7 +223,7 @@ NewClass(tileobj)
   Int		verStretch;		/* Vertical stretchability */
   Int		verShrink;		/* Vertical shrinkability */
   BoolObj	canResize;		/* Can be resized by user? */
-  BoolObj	resized;		/* Was given a size (see setTile()) */
+  Name		resized;		/* Sizes given by hand (see setTile()) */
   Int		border;			/* Border between subtiles */
   Int		border_root;		/* Border around the root tile */
   Name		orientation;		/* none, horizontal, vertical */

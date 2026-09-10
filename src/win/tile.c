@@ -39,6 +39,7 @@ static status	layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah);
 static status	computeTile(TileObj t);
 static void	relatedTile(TileObj t1, TileObj t2, Any manager);
 static void	invalidateCanResizeTile(TileObj t);
+static status	ICanResizeTile(TileObj t, Name dir);
 
 #define Max(a, b)	(valInt(a) > valInt(b) ? (a) : (b))
 #define Min(a, b)	(valInt(a) < valInt(b) ? (a) : (b))
@@ -72,7 +73,7 @@ initialiseTile(TileObj t, Any object, Int w, Int h)
   assign(t, verStretch,  toInt(100));
   assign(t, verShrink,   toInt(100));
   assign(t, canResize,   DEFAULT);
-  assign(t, resized,     OFF);
+  assign(t, resized,     NAME_none);
   assign(t, orientation, NAME_none);
   assign(t, members, NIL);		/* subtiles */
   assign(t, super,   NIL);		/* super-tile */
@@ -890,8 +891,61 @@ join_stretches(stretch *stretches, int len, stretch *r)
 
 
 
-status
-setTile(TileObj t, Int x, Int y, Int w, Int h)
+/* A tile is given a size for either of two reasons.  The window in it
+ * asks for the room its content needs -- a dialog that has laid its
+ * items out afresh sends ->request_geometry, see requestGeometryWindow()
+ * in window.c -- or somebody hands out sizes: the user dragging the gap
+ * after a tile, or a manager giving its panes their share.  The latter
+ * arrives through `tile ->width' and ->height and is what `hand' says.
+ *
+ * Only a size given by hand makes the tile hold on to it: a menu bar
+ * that grows a row asks for the room and is laid out again like anything
+ * else.  Holding on to a size means giving up stretch and shrink, which
+ * is what ICanResizeTile() reads to see whether the user may drag an
+ * edge, so a tile that could be resized before is marked <-resized to say
+ * that it still can.  It is only ever a mark on what a tile could already
+ * do: a strip that was fixed stays fixed, or the user could drag it shut
+ * -- and a strip dragged shut cannot be opened again.
+ */
+
+static void
+markResizedTile(TileObj t, Name dim)	/* NAME_width or NAME_height */
+{ if ( t->resized == NAME_none )
+    assign(t, resized, dim);
+  else if ( t->resized != dim )
+    assign(t, resized, NAME_both);
+}
+
+
+static int
+isResizedTile(TileObj t, Name dim)
+{ return t->resized == dim || t->resized == NAME_both;
+}
+
+
+/* Must the tiles before `t' hold on to the size they have?  A size given
+ * by hand is a share: it is held, and the ones before it hold theirs, or
+ * the layout hands the room straight back.  A window asking for the room
+ * its content needs is not, and then there has to be something after it
+ * to give way: freezing everything before the last tile of a stack buys
+ * nothing and leaves the stack without stretch at all, after which a
+ * resize of the frame is shared out over all of it, dialogs included.
+ */
+
+static int
+freezeBeforeTile(TileObj t, int hand)
+{ Cell tail;
+
+  if ( hand )
+    return TRUE;
+
+  tail = t->super->members->tail;
+  return notNil(tail) && tail->value != t;
+}
+
+
+static status
+set_tile(TileObj t, Int x, Int y, Int w, Int h, int hand)
 { TileObj super;
 
   DEBUG(NAME_tile,
@@ -903,16 +957,21 @@ setTile(TileObj t, Int x, Int y, Int w, Int h)
    * too small to resize.  A size of exactly 0 means there is nothing to
    * show, though: keep that, or an empty window (e.g. a dialog holding
    * only a natively displayed menu_bar) still claims a visible strip.
+   * A size given by hand does not say that: dragging a gap shut puts
+   * the tile out of reach of the pointer and there is no way back.
    */
-  if ( notDefault(w) && valInt(w) > 0 && valInt(w) < valInt(t->border) )
+  if ( notDefault(w) && (hand || valInt(w) > 0) &&
+       valInt(w) < valInt(t->border) )
     w = t->border;
-  if ( notDefault(h) && valInt(h) > 0 && valInt(h) < valInt(t->border) )
+  if ( notDefault(h) && (hand || valInt(h) > 0) &&
+       valInt(h) < valInt(t->border) )
     h = t->border;
 
   if ( notDefault(w) )
   { assign(t, idealWidth, w);
 
-    if ( t->enforced == ON && notNil(t->super) )
+    if ( t->enforced == ON && notNil(t->super) &&
+	 freezeBeforeTile(t, hand) )
     { Cell cell;
       int before = TRUE;
       int hs = 0, hg = 0;
@@ -925,10 +984,11 @@ setTile(TileObj t, Int x, Int y, Int w, Int h)
 	    assign(t2, idealWidth, t2->area->w); /* the size they have: it is */
 					/* not <-ideal_width once anything */
 					/* has had to give way */
-	  assign(t2, horStretch, ZERO); /* hold on to the size they have */
-	  assign(t2, horShrink,  ZERO);
-	  assign(t2, resized,    ON);	/* but stay resizable, see */
-	  if ( t2 == t )		/* ICanResizeTile() */
+	  if ( hand && ICanResizeTile(t2, NAME_horizontal) )
+	    markResizedTile(t2, NAME_width);	/* but stay resizable, see */
+	  assign(t2, horStretch, ZERO);		/* ICanResizeTile() */
+	  assign(t2, horShrink,  ZERO);	/* hold on to the size they have */
+	  if ( t2 == t )
 	    before = FALSE;
 	} else
 	{ hs += valInt(t2->horShrink);
@@ -957,7 +1017,8 @@ setTile(TileObj t, Int x, Int y, Int w, Int h)
   if ( notDefault(h) )
   { assign(t, idealHeight, h);
 
-    if ( t->enforced == ON && notNil(t->super) )
+    if ( t->enforced == ON && notNil(t->super) &&
+	 freezeBeforeTile(t, hand) )
     { Cell cell;
       int before = TRUE;
       int vs = 0, vg = 0;
@@ -968,9 +1029,10 @@ setTile(TileObj t, Int x, Int y, Int w, Int h)
 	if ( before )
 	{ if ( t2 != t && valInt(t2->area->h) > 0 )
 	    assign(t2, idealHeight, t2->area->h);	/* see above */
+	  if ( hand && ICanResizeTile(t2, NAME_vertical) )
+	    markResizedTile(t2, NAME_height);
 	  assign(t2, verStretch, ZERO);
 	  assign(t2, verShrink,  ZERO);
-	  assign(t2, resized,    ON);
 	  if ( t2 == t )
 	    before = FALSE;
 	} else
@@ -1009,6 +1071,12 @@ setTile(TileObj t, Int x, Int y, Int w, Int h)
   }
 
   succeed;
+}
+
+
+status
+setTile(TileObj t, Int x, Int y, Int w, Int h)
+{ return set_tile(t, x, y, w, h, FALSE);
 }
 
 
@@ -1278,15 +1346,20 @@ yTile(TileObj t, Int y)
 }
 
 
+/* ->width and ->height are how a size is handed out: the frame's
+ * separator drag (see tileResizeEvent() in frame.c), the resize gesture
+ * of a manager and the shares it gives its panes all end here.
+ */
+
 static status
 widthTile(TileObj t, Int w)
-{ return setTile(t, DEFAULT, DEFAULT, w, DEFAULT);
+{ return set_tile(t, DEFAULT, DEFAULT, w, DEFAULT, TRUE);
 }
 
 
 static status
 heightTile(TileObj t, Int h)
-{ return setTile(t, DEFAULT, DEFAULT, DEFAULT, h);
+{ return set_tile(t, DEFAULT, DEFAULT, DEFAULT, h, TRUE);
 }
 
 
@@ -1337,22 +1410,23 @@ and there is at least one tile below/right of it that can be resized.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 /* Can `t' take part in a resize along `dir'?  A tile that has been given
- * a size no longer stretches -- setTile() takes that away so that it holds
- * the size it was given -- but it can be given another one, which is what
- * dragging its edge does.  A tile that never stretched is fixed by whoever
- * built it and stays that way.
+ * a size by hand no longer stretches -- set_tile() takes that away so that
+ * it holds the size it was given -- but it can be given another one, which
+ * is what dragging its edge does.  A tile that never stretched is fixed by
+ * whoever built it and stays that way: asking for the room its content
+ * needs is not the same as being given a size, and does not make its edge
+ * a handle.
  */
 
 static status
 ICanResizeTile(TileObj t, Name dir)
-{ if ( t->resized == ON )
-    succeed;
-
-  if ( dir == NAME_horizontal )
-  { if ( t->horShrink != ZERO || t->horStretch != ZERO )
+{ if ( dir == NAME_horizontal )
+  { if ( isResizedTile(t, NAME_width) ||
+	 t->horShrink != ZERO || t->horStretch != ZERO )
       succeed;
   } else
-  { if ( t->verShrink != ZERO || t->verStretch != ZERO )
+  { if ( isResizedTile(t, NAME_height) ||
+	 t->verShrink != ZERO || t->verStretch != ZERO )
       succeed;
   }
 
@@ -1412,8 +1486,8 @@ outvote everything else.
 
 A tile that never stretched is fixed by whoever built it (a menu bar is
 as high as its buttons and no more) and must stay that way;
-ICanResizeTile() tells it from one that setTile() has zeroed, which is
-marked <-resized.  A tile laid out with no size at all is left alone as
+ICanResizeTile() tells it from one that set_tile() has zeroed after a
+size was given by hand, which is marked <-resized.  A tile laid out with no size at all is left alone as
 well: a share of nothing is nothing, and it would never come back.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -1647,8 +1721,8 @@ static vardecl var_tile[] =
      NAME_resize, "Encouragement to get lower"),
   IV(NAME_canResize, "[bool]", IV_SEND,
      NAME_resize, "Can be resized by user?"),
-  IV(NAME_resized, "bool", IV_NONE,
-     NAME_resize, "Has been given a size by ->set and friends"),
+  IV(NAME_resized, "{none,width,height,both}", IV_NONE,
+     NAME_resize, "Has been given a size by ->width and ->height"),
   SV(NAME_border, "int", IV_GET|IV_STORE, borderTile,
      NAME_appearance, "Distance between areas"),
   IV(NAME_borderRoot, "int", IV_BOTH,

@@ -83,6 +83,7 @@ test_pane_frame :-
                 pane_frame_panes,
                 pane_frame_plain_pane,
                 pane_frame_minimum,
+                pane_frame_strips,
                 pane_frame_term,
                 pane_frame_split_beside,
                 pane_frame_arranged,
@@ -1197,6 +1198,137 @@ test(and_comes_back_when_there_is_room_again) :-
     send(F, destroy).
 
 :- end_tests(pane_frame_minimum).
+
+
+                 /*******************************
+                 *            STRIPS            *
+                 *******************************/
+
+/* The menu bar and the status bar are as high as what they carry and no
+more: they are laid out by the frame, not by hand, and the user cannot
+drag them.  They stopped being that as soon as one of them asked for the
+room it needed -- the status bar growing for a prompter, the menu strip
+taking a second row -- because `tile ->set' made every tile it froze
+resizable, whether the size came from a hand or from the window in it.
+The gap under the menu bar then became a handle, and the strip dragged
+shut could not be opened again.
+*/
+
+:- begin_tests(pane_frame_strips).
+
+test(the_menu_bar_is_not_a_handle, true(Can == @off)) :-
+    frame(F, _App, _One, @on),
+    resize(F, 600, 800),
+    strip_can_resize(F, pane_menu_dialog, Can),
+    send(F, destroy).
+
+test(a_grown_status_bar_leaves_the_menu_bar_alone, true(Kept == [H0,@off])) :-
+    frame(F, _App, _One, @on),
+    resize(F, 600, 800),
+    strip_height(F, pane_menu_dialog, H0),
+    grow_status_bar(F, 20),                     % what ->prompter does
+    strip_height(F, pane_menu_dialog, H),
+    strip_can_resize(F, pane_menu_dialog, Can),
+    Kept = [H,Can],
+    send(F, destroy).
+
+test(a_grown_status_bar_leaves_the_panes_the_room, true(Grown == One)) :-
+    frame(F, _App, _One, @on),
+    resize(F, 600, 800),
+    grow_status_bar(F, 20),
+    frame_heights(F, 600, 900, [Menu0,Panes0,Status0]),
+    frame_heights(F, 600, 1100, [Menu,Panes,Status]),
+    findall(What,
+            ( member(What-Was-Is, [menu-Menu0-Menu,
+                                   panes-Panes0-Panes,
+                                   status-Status0-Status]),
+              Is > Was
+            ),
+            Grown),
+    One = [panes],
+    send(F, destroy).
+
+%       What the frame's own drag gesture does must still work: a pane
+%       given a size holds it, and the gap after it stays a handle.
+
+test(a_pane_given_a_size_stays_a_handle, true(Can == @on)) :-
+    frame(F, _App, One, @off),
+    pane(two, beta, Two),
+    send(F, split, Two, One, below),
+    resize(F, 600, 800),
+    small_pane(One, 100),
+    pane_tile(One, Tile),
+    can_resize(Tile, Can),
+    send(F, destroy).
+
+%       A pane dragged shut keeps enough of itself to be grabbed again.
+
+test(a_pane_dragged_shut_can_be_opened, true(H > 0)) :-
+    frame(F, _App, One, @off),
+    pane(two, beta, Two),
+    send(F, split, Two, One, below),
+    resize(F, 600, 800),
+    small_pane(One, 0),
+    pane_area(One, area(_,_,_,H)),
+    send(F, destroy).
+
+:- end_tests(pane_frame_strips).
+
+%!  strip_can_resize(+Frame, +Class, -Can) is det.
+%!  strip_height(+Frame, +Class, -Height) is det.
+%
+%   Whether the gap under the menu or status bar is a handle, and how
+%   high the bar is.
+
+strip_can_resize(F, Class, Can) :-
+    get(F, member(Class), W),
+    get(W, tile, Tile),
+    can_resize(Tile, Can).
+
+strip_height(F, Class, H) :-
+    get(F, member(Class), W),
+    get(W, height, H).
+
+%!  can_resize(+Tile, -Can) is det.
+%
+%   <-can_resize is cached until tiles are related or dropped; ask it
+%   afresh, as splitting a pane would.
+
+can_resize(Tile, Can) :-
+    send(Tile, can_resize, @default),
+    get(Tile, can_resize, Can).
+
+%!  grow_status_bar(+Frame, +Extra) is det.
+%
+%   Give the status bar Extra pixels, as `pane_status_dialog ->prompter'
+%   does for a prompter that does not fit.
+
+grow_status_bar(F, Extra) :-
+    get(F, member(pane_status_dialog), SD),
+    get(SD, height, H0),
+    H is H0+Extra,
+    send(SD, height, H).
+
+%!  frame_heights(+Frame, +W, +H, -Heights) is det.
+%
+%   Lay the frame out at W by H and answer the height of the menu bar,
+%   the panes and the status bar.
+
+frame_heights(F, W, H, [Menu,Panes,Status]) :-
+    resize(F, W, H),
+    strip_height(F, pane_menu_dialog, Menu),
+    strip_height(F, pane_status_dialog, Status),
+    get(F, member(pane_tabbed_window), TW),
+    get(TW, height, Panes).
+
+%!  pane_tile(+Pane, -Tile) is det.
+
+pane_tile(P, Tile) :-
+    (   get(P, decoration, D), D \== @nil
+    ->  Placed = D
+    ;   Placed = P
+    ),
+    get(Placed, tile, Tile).
 
 %!  resize(+Frame, +W, +H) is det.
 %
