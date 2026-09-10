@@ -389,7 +389,7 @@ static void	typed_char(RlcData b, int chr);
 static void	rlc_putansi(RlcData b, int chr);
 static void	rlc_update(rlc_console c);
 static void	changed_caret(RlcData b);
-static bool	rlc_open_pty_pair(RlcData b, int cols, int rows);
+static bool	rlc_open_pty_pair(RlcData b);
 static void	rlc_close_connection(RlcData b);
 static ssize_t	rlc_send(RlcData b, const char *buffer, size_t count);
 static int	rlc_foreground_process(RlcData b);
@@ -2913,7 +2913,7 @@ getPtyNameTerminalImage(TerminalImage ti)
   RlcData b = ti->data;
 
   if ( !b->pty.slave_name[0] )
-  { if ( !rlc_open_pty_pair(b, 80, 25) )
+  { if ( !rlc_open_pty_pair(b) )
       fail;
   }
 
@@ -6547,6 +6547,20 @@ rlc_resize_pixel_units(RlcData b, int w, int h)
   rlc_resize(b, nw, nh);
   rlc_request_redraw(b);
   rlc_resize_pty(b, nw, nh);
+}
+
+
+/* Size to give a pty we are about to create.  The pty is created lazily,
+ * after the window has been laid out, so it must be told the size the
+ * terminal already has: the resize that would tell it comes only when
+ * the size changes again, and a client asking the tty for its size
+ * (tty_size/2) does so long before that.
+ */
+
+static void
+rlc_pty_size(RlcData b, int *cols, int *rows)
+{ *cols = b->width       > 0 ? b->width       : 80;
+  *rows = b->window_size > 0 ? b->window_size : 25;
 }
 
 		 /*******************************
@@ -10533,8 +10547,10 @@ open_pty_slave(RlcData b)
  */
 
 static bool
-rlc_open_pty_pair(RlcData b, int cols, int rows)
-{ memset(&b->pty, 0, sizeof(b->pty));
+rlc_open_pty_pair(RlcData b)
+{ int cols, rows;
+
+  memset(&b->pty, 0, sizeof(b->pty));
   for(int i=0; i<3; i++)
     b->pty.client_fd[i] = -1;
 
@@ -10568,6 +10584,8 @@ rlc_open_pty_pair(RlcData b, int cols, int rows)
   b->pty.open = true;
   b->pty.watch = add_fd_to_watch(b->pty.master_fd, FD_READY_TERMINAL, b->object);
   pceRegisterConsole(b->pty.slave_fd, CON_DRAIN_TCFLUSH);
+  rlc_pty_size(b, &cols, &rows);
+  rlc_resize_pty(b, cols, rows);
 
   return true;
 }
@@ -10886,7 +10904,7 @@ getPrologStreamTerminalImage(Any obj,
     IOSTREAM *e = NULL;
 
     if ( !b->pty.open &&
-	 !rlc_open_pty_pair(b, 80, 25) )
+	 !rlc_open_pty_pair(b) )
       return false;
 
     i = Sopen_file(b->pty.slave_name, "r");
@@ -10943,11 +10961,14 @@ rlc_create_pipes(RlcData b)
 }
 
 static bool
-rlc_open_pty_pair(RlcData b, int cols, int rows)
-{ if ( !rlc_create_pipes(b) )
+rlc_open_pty_pair(RlcData b)
+{ int cols, rows;
+
+  if ( !rlc_create_pipes(b) )
     return false;
 
-  COORD size = { cols, rows };
+  rlc_pty_size(b, &cols, &rows);
+  COORD size = { (SHORT)cols, (SHORT)rows };
   if ( CreatePseudoConsole(size, b->ptycon.hTaskIn, b->ptycon.hTaskOut,
 			   0, &b->ptycon.hPC) != S_OK )
   { Cprintf("Failed to create PtyCon\n");
@@ -11326,7 +11347,7 @@ launchTerminalImage(TerminalImage ti, CharArray cmdline)
   SIZE_T attrSize = 0;
 
   if ( !b->ptycon.hPC &&
-       !rlc_open_pty_pair(b, 80, 25) )
+       !rlc_open_pty_pair(b) )
     fail;
 
   InitializeProcThreadAttributeList(NULL, 1, 0, &attrSize);
