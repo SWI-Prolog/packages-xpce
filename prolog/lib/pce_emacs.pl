@@ -34,17 +34,15 @@
 */
 
 :- module(start_emacs,
-          [ emacs/0
-          , emacs/1                             % x File
-          , start_emacs/0
-          , emacs_server/0
-          , emacs_toplevel/0
+          [ emacs/0,
+            emacs/1,                            % +File[[:Line]:LinePos]
+            start_emacs/0,
+            emacs_server/0,
+            emacs_toplevel/0
           ]).
 :- use_module(library(pce)).
-:- require([ append/3
-           , maplist/3
-           , unix/1
-           ]).
+:- autoload(library(apply)).
+:- autoload(library(error)).
 
 :- pce_autoload(emacs,      library('emacs/emacs')).
 :- pce_autoload(emacs_view, library('emacs/emacs')).
@@ -120,28 +118,19 @@ emacs :-
 %   Line and LinePos count from 1, as   for edit/1.  The `line_pos` of
 %   an xpce source_location counts from 0.
 
-emacs(File:Line:LinePos) :-
-    integer(Line),
-    integer(LinePos),
-    atom(File),
-    !,
+emacs(File:Line:LinePos), integer(Line), integer(LinePos), atom(File) =>
     start_emacs,
     LinePos0 is max(0, LinePos-1),
-    new(Loc, source_location(File, Line, LinePos0)),
-    in_pce_thread(send(@emacs, goto_source_location, Loc)).
-emacs(File:Line) :-
-    integer(Line),
-    atom(File),
-    !,
+    in_pce_thread(send(@emacs, goto_source_location,
+                       source_location(File, Line, LinePos0))).
+emacs(File:Line), integer(Line), atom(File) =>
     start_emacs,
     in_pce_thread(send(@emacs, goto_source_location,
                        source_location(File, Line))).
-emacs(File) :-
-    atom(File),
-    !,
+emacs(File), atom(File) =>
     start_emacs,
     in_pce_thread(send(@emacs, open_file, File)).
-emacs(File) :-
+emacs(File) =>
     domain_error(location, File).
 
 %!  source_placement(-Where) is det.
