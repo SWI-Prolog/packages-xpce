@@ -107,6 +107,7 @@ variable(recall,   int,          get,  "Recall last #samples").
 variable(lastcpu,  num*,         get,  "CPU at last call").
 variable(lastwall, num*,         get,  "Wall at last call").
 variable(leftcpu,  int := 0,     none, "Pass-through").
+variable(cpuprec,  int*,	 get,  "CPU Percentage").
 variable(profiling,bool := @off, get,  "Am I being profiled?").
 variable(thread_class, name*,    get,  "Class of the thread").
 variable(debug,    bool*,	 get,  "Debugging status").
@@ -129,6 +130,7 @@ update(TS, Status:prolog, CpuH:[int]) :->
         get(TS, object, History),
         (   State == running
         ->  get(TS, cpu_percentage, CPU),
+            send(TS, slot, cpuprec, CPU),
             CPULine is round(CPU*CPUH/100),
             atom_concat(running_, CPULine, RunningStyle),
             send(TS, state, running, RunningStyle),
@@ -530,20 +532,22 @@ report_status(TB, TS:thread_status) :->
         send(TB, report, status,
              'Thread %s/%s ERROR: %s (%.3f sec CPU)',
              Class, TID, Message, RTime)
-    ;   atomic(Status)
-    ->  send(TB, report, status,
-             'Thread %s/%s status: %s (%.3f sec CPU)',
-             Class, TID, Status, RTime)
-    ;   new(S, text_buffer),
-        pce_open(S, write, Out),
-        write_term(Out, Status, [ max_depth(5),
-                                  quoted(true),
-                                  portray(true)
-                                ]),
-        close(Out),
-        send(TB, report, status,
-             'Thread %s/%s status: %s (%.3f sec CPU)',
-             Class, TID, S?contents, RTime)
+    ;   format(string(StatString), '~W',
+               [ Status,
+                 [ max_depth(5),
+                   quoted(true),
+                   portray(true)
+                 ]
+               ]),
+        (   get(TS, cpuprec, Prec),
+            Prec \== @nil
+        ->  send(TB, report, status,
+                 'Thread %s/%s status: %s (%.3f sec; %d%% CPU)',
+                 Class, TID, StatString, RTime, Prec)
+        ;   send(TB, report, status,
+                 'Thread %s/%s status: %s (%.3f sec CPU)',
+                 Class, TID, StatString, RTime)
+        )
     ).
 
 special_exception(error(_,_)).
