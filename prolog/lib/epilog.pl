@@ -558,8 +558,6 @@ variable(fold_previous, bool,                 both,
 variable(current_link,	name*,                get,  "Link under popup").
 variable(current_block,	terminal_block*,      get,  "Block under popup").
 
-class_variable(inactive_opacity, num, 0.5,
-               "Opacity if terminal does not have the focus").
 class_variable(inject_tries, int, [windows(5), unix(20)],
                "Times to look for a reader of inject(Spec) text").
 class_variable(fold_previous, bool, @off,
@@ -1210,15 +1208,6 @@ event(T, Ev:event) :->
                           'Drop Prolog source file(s) to consult',
                           epilog_consult_drop)
     ).
-
-input_focus(PT, Focus:bool) :->
-    "We gained/lost the focus"::
-    send_super(PT, input_focus, Focus),
-    (   Focus == @on
-    ->  Opacity = 1
-    ;   get(PT, class_variable_value, inactive_opacity, Opacity)
-    ),
-    send(PT, opacity, Opacity).
 
 split(T, Dir:{horizontally,vertically}) :->
     "Split this terminal"::
