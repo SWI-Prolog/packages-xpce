@@ -133,7 +133,7 @@ buffer(Helper, Database:name, Interactive:[bool], Buffer:hlp_buffer) :<-
             )
         ;   Interactive == @on,
             (   get(@pce, is_runtime_system, @on)
-            ->  send(@display, inform,
+            ->  send(@display, inform, Helper, @default,
                      'No help available for "%s"', Database),
                 fail
             ;   send(@display, confirm, Helper, @default,

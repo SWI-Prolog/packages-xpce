@@ -983,7 +983,7 @@ prolog_manual(M, On:[name]) :->
         ;   prolog_manual(On)
         )
     ->  true
-    ;   send(M, report, "No console for running help/1")
+    ;   send(M, report, warning, "No console for running help/1")
     ).
 
 %!  prolog_manual(+Topic)

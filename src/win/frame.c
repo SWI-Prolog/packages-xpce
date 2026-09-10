@@ -388,7 +388,7 @@ wmDeleteFrame(FrameObj fr)
     fail;
 
   if ( fr->confirm_done == ON )
-  { TRY(send(fr->display, NAME_confirm,
+  { TRY(send(fr->display, NAME_confirm, fr, DEFAULT,
 	     CtoName("Delete window ``%s''"), fr->label, EAV));
   }
 

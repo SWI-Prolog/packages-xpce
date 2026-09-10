@@ -1977,7 +1977,7 @@ fill_editor_dialog(D) :-
                           message(?(Frame, member, model), postscript_as),
                           end_group := @on),
                 menu_item(destroy,
-                          and(message(D?display, confirm,
+                          and(message(D?display, confirm, D, @default,
                                       'Destroy behaviour model?'),
                               message(Frame, destroy))),
                 menu_item(quit,

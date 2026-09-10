@@ -87,7 +87,7 @@ open_demo(_F, Browser:browser) :->
     (   (   DictItem == @nil
         ;   get(DictItem, style, title)
         )
-    ->  send(@display, inform, 'First select a demo')
+    ->  send(@display, inform, Browser, @default, 'First select a demo')
     ;   get(DictItem, key, Name),
         (   (   demo(Name, Summary, File, Predicate)
             ;   contribution(Name, Summary, _Author, File, Predicate)
@@ -109,7 +109,7 @@ view_source(_F, Browser:browser) :->
     "View source for a demo program"::
     get(Browser, selection, DictItem),
     (   DictItem == @nil
-    ->  send(@display, inform, 'First select a demo')
+    ->  send(@display, inform, Browser, @default, 'First select a demo')
     ;   get(DictItem, key, Name),
         (   demo(Name, _, File, _)
         ;   contribution(Name, _, _Author, File, _)

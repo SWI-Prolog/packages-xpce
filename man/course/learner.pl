@@ -72,7 +72,7 @@ make_graph_editor(E) :-
                           message(@prolog, add_new_box,
                                   E, E?focus_event?position)),
                 menu_item(clear,
-                          and(message(@display, confirm,
+                          and(message(@display, confirm, E, @default,
                                       'Clear entire drawing?'),
                               message(E, clear)))
               ]),

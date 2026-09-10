@@ -673,8 +673,8 @@ chess' coordinate system into ours  and  call move/3 to make the moves
 on the board.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
-warn(Utterance, _Board) :-
-    send(@display, inform, Utterance).
+warn(Utterance, Board) :-
+    send(@display, inform, Board, @default, Utterance).
 
 player_move(CFX, CFY, CTX, CTY, Board) :-
     chess_x(FX, CFX),

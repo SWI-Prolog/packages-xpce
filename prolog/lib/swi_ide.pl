@@ -583,7 +583,7 @@ preferences(_IDE, Which:{prolog,xpce}) :->
 forget_arrangements(_IDE) :->
     "Throw away the arrangements the IDE has learned"::
     forget_arrangements,
-    send(@display, inform,
+    send(@display, inform, @default, @default,
          'Forgotten.  New panes go where the arrangements that come\n\c
           with the system say, until you arrange some windows yourself.').
 

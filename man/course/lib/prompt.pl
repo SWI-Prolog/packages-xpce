@@ -93,7 +93,8 @@ read_prompter(P, Label:Type = Value) :-
         ->  RVal = Val
         ;   Value = Val
         )
-    ;   send(@display, inform, '%s should be a %s', Label, Type),
+    ;   send(@display, inform, P, @default,
+             '%s should be a %s', Label, Type),
         fail
     ).
 

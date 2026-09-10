@@ -80,7 +80,7 @@ view(P, Dir, Pattern) :-
     file_pattern_to_regex(Pattern, Regex),
     get(D, files, Regex, Files),
     (   send(Files, empty)
-    ->  send(@display, inform, 'No matching images')
+    ->  send(@display, inform, P, @default, 'No matching images')
     ;   send(P, clear),
         get(D?path, ensure_suffix, /, DirName),
         send(P?frame, label, string('Images from %s%s', DirName, Pattern)),

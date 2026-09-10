@@ -402,7 +402,8 @@ prompt_name(D, For:name, Name:name) :<-
 
 delete_dir(D, Name:name) :->
     "Delete named directory"::
-    send(D?display, confirm, 'Delete directory "%s"?', Name),
+    send(D?display, confirm, D, 'File finder',
+         'Delete directory "%s"?', Name),
     get(D, directory, Dir),
     get(Dir, directory, Name, SubDir),
     send(SubDir, remove),
@@ -424,7 +425,8 @@ rename_dir(D, Name:name) :->
 
 delete_file(D, Name:name) :->
     "Delete named file"::
-    send(D?display, confirm, 'Delete file "%s"?', Name),
+    send(D?display, confirm, D, 'File finder',
+         'Delete file "%s"?', Name),
     get(D, directory, Dir),
     get(Dir, file, Name, File),
     send(File, remove),
