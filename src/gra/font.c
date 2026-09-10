@@ -144,7 +144,8 @@ getConvertFont(Class class, Name name)
 
 FontObj
 getCopyFont(FontObj f)
-{ FontObj copy = allocObject(classOfObject(f), FALSE);
+{ Class class = classOfObject(f);
+  FontObj copy = allocObject(class, FALSE);
 
   ws_create_font(f);
   assign(copy, family,      f->family);
@@ -155,6 +156,7 @@ getCopyFont(FontObj f)
   assign(copy, descent,     f->descent);
   assign(copy, fixed_width, f->fixed_width);
   copy->ws_ref = ws_clone_ws_font(f->ws_ref);
+  createdClass(class, copy, NAME_copy);
 
   answer(copy);
 }
