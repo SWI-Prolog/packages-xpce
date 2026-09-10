@@ -853,17 +853,16 @@ RedrawArea(Any obj, Area area)
   else
     ofg = NULL;
 
-/* The group is pushed around a window as well as around anything else: a
-   window is drawn into the frame's surface like any other graphical, so
-   <-opacity is as meaningful on one.  Fading a window is how a frame shows
-   which of its panes has the focus; see library(pane_frame).  Wrapping the
-   decorator instead is no good: the window inside it comes back here and
-   would stay opaque.  Nothing is pushed while <-opacity is 1.0, so the
-   ordinary case pays nothing.
+/* <-opacity fades what a graphical paints into the surface it shares with
+   the graphicals around it.  A window paints nothing there: it has a
+   surface of its own that the frame composites, so fading a window -- how
+   a frame shows which of its panes has the focus, see library(pane_frame)
+   -- happens where that compositing does, in ws_draw_window().  Nothing is
+   pushed while <-opacity is 1.0, so the ordinary case pays nothing.
 */
 
   double op = valNum(gr->opacity);
-  bool use_group = (op < 1.0);
+  bool use_group = ( op < 1.0 && !instanceOfObject(gr, ClassWindow) );
 
   if ( use_group )
     r_push_group();

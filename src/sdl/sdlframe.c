@@ -535,8 +535,34 @@ subwindow_offset(PceWindow sw, PceWindow sub, float *ox, float *oy)
 }
 
 
+/* How far a window and everything drawn inside it is faded.  A window
+ * that has scrollbars or a label is wrapped in a window_decorator and
+ * the two are one thing to the user, so <-opacity of either fades both:
+ * library(pane_frame) sets it on the pane, which is the window inside.
+ * See ws_draw_window().
+ */
+
+static double
+window_group_opacity(PceWindow sw)
+{ double op = valNum(sw->opacity);
+
+  if ( instanceOfObject(sw, ClassWindowDecorator) )
+    op *= valNum(((WindowDecorator)sw)->window->opacity);
+
+  return op;
+}
+
+
+/**
+ * Draw one window of `fr` and the windows it holds.
+ *
+ * @param off Where the window sits in the frame.
+ * @param opacity Alpha to draw this window and its children with; see
+ *        window_group_opacity().
+ */
+
 static void
-ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
+ws_draw_window(FrameObj fr, PceWindow sw, foffset *off, double opacity)
 { WsFrame  wfr = fr->ws_ref;
   WsWindow wsw = sw->ws_ref;
 
@@ -547,9 +573,7 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
     /* A window may be laid out with no room at all: a dialog holding
      * only a menu_bar that is shown natively asks for no height -- see
      * the comment at non_empty_tiles() in src/win/tile.c.  It has
-     * nothing to show, and drawing it anyway shows something: the
-     * SDL_RenderRect() below draws the outline of the rectangle, which
-     * for a height of zero is a line right across the window under it.
+     * nothing to show, and drawing it anyway shows something.
      */
 
     if ( valInt(a->w) <= 0 || valInt(a->h) <= 0 )
@@ -566,9 +590,7 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
 		  pp(sw), pp(fr),
 		  valInt(a->x), valInt(a->y), valInt(a->w), valInt(a->h)));
 
-    SDL_Color  bg = pceColour2SDL_Color(sw->background);
-    SDL_SetRenderDrawColor(wfr->ws_renderer, bg.r, bg.g, bg.b, bg.a);
-    SDL_RenderRect(wfr->ws_renderer, &dstrect);
+    SDL_Color bg = pceColour2SDL_Color(sw->background);
 
     cairo_surface_flush(wsw->backing);
     int width    = cairo_image_surface_get_width(wsw->backing);
@@ -586,6 +608,7 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
 				       SDL_PIXELFORMAT_ARGB8888,
 				       SDL_TEXTUREACCESS_STREAMING,
 				       width, height);
+      SDL_SetTextureBlendMode(wsw->texture, SDL_BLENDMODE_BLEND);
       SDL_UpdateTexture(wsw->texture, NULL, data, stride);
     } else
     { for(int i=0; i<wsw->ndirty; i++)
@@ -598,6 +621,7 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
     }
     wsw->ndirty = 0;
 
+    SDL_SetTextureAlphaModFloat(wsw->texture, (float)opacity);
     SDL_RenderTexture(wfr->ws_renderer, wsw->texture, NULL, &dstrect);
     if ( wfr->flash_end_ms && SDL_GetTicks() < wfr->flash_end_ms )
     { int lum = (int)(0.299f*bg.r + 0.587f*bg.g + 0.114f*bg.b);
@@ -619,7 +643,7 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
       off2.x = off->x + valNum(sw->area->x);
       off2.y = off->y + valNum(sw->area->y);
       WindowDecorator dw = (WindowDecorator)sw;
-      ws_draw_window(fr, dw->window, &off2);
+      ws_draw_window(fr, dw->window, &off2, opacity);
     }
     if ( notNil(sw->subwindows) && !emptyChain(sw->subwindows) )
     { Cell cell;
@@ -638,7 +662,7 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
 	      Cprintf("Drawing subwindow %s of %s at %f,%f\n",
 		      pp(sub), pp(sw), off2.x, off2.y));
 
-	ws_draw_window(fr, sub, &off2);
+	ws_draw_window(fr, sub, &off2, opacity*window_group_opacity(sub));
       }
     }
   }
@@ -717,7 +741,9 @@ ws_draw_frame(FrameObj fr)
   Cell cell;
   for_cell(cell, fr->members)
   { foffset off = {0.0f,0.0f};
-    ws_draw_window(fr, cell->value, &off);
+    PceWindow sw = cell->value;
+
+    ws_draw_window(fr, sw, &off, window_group_opacity(sw));
   }
   ws_draw_resize_frame(fr);
   SDL_RenderPresent(wfr->ws_renderer);
@@ -1244,7 +1270,7 @@ ws_set_label_frame(FrameObj fr)
  */
 static void
 composite_window_to_cairo(cairo_t *cr, PceWindow sw,
-			   float ox, float oy, float scale)
+			   float ox, float oy, float scale, double opacity)
 { WsWindow wsw = sw->ws_ref;
   if ( !wsw || !wsw->backing )
     return;
@@ -1256,14 +1282,14 @@ composite_window_to_cairo(cairo_t *cr, PceWindow sw,
   float wy = (oy + valInt(sw->area->y)) * scale;
   cairo_surface_flush(wsw->backing);
   cairo_set_source_surface(cr, wsw->backing, wx, wy);
-  cairo_paint(cr);
+  cairo_paint_with_alpha(cr, opacity);
 
   if ( instanceOfObject(sw, ClassWindowDecorator) )
   { WindowDecorator dw = (WindowDecorator)sw;
     composite_window_to_cairo(cr, dw->window,
 			      ox + valNum(sw->area->x),
 			      oy + valNum(sw->area->y),
-			      scale);
+			      scale, opacity);
   }
   if ( notNil(sw->subwindows) && !emptyChain(sw->subwindows) )
   { Cell cell;
@@ -1276,7 +1302,7 @@ composite_window_to_cairo(cairo_t *cr, PceWindow sw,
       composite_window_to_cairo(cr, sub,
 				ox + valNum(sw->area->x) + sx,
 				oy + valNum(sw->area->y) + sy,
-				scale);
+				scale, opacity*window_group_opacity(sub));
     }
   }
 }
@@ -1358,7 +1384,11 @@ ws_image_of_frame(FrameObj fr)
 
   Cell cell;
   for_cell(cell, fr->members)
-    composite_window_to_cairo(cr, cell->value, 0.0f, 0.0f, scale);
+  { PceWindow member = cell->value;
+
+    composite_window_to_cairo(cr, member, 0.0f, 0.0f, scale,
+			      window_group_opacity(member));
+  }
 
   return pixel_image_finish(surf, cr, fw, fh);
 }
@@ -1396,10 +1426,10 @@ ws_image_of_window(PceWindow sw)
    * the frame; the offset below takes that back out, so the window
    * lands on the origin of a surface of its own size.
    */
-  composite_window_to_cairo(cr, sw,
-			    -(float)valInt(sw->area->x),
+  composite_window_to_cairo(cr, sw,			/* an image of a window */
+			    -(float)valInt(sw->area->x),	/* is not faded */
 			    -(float)valInt(sw->area->y),
-			    scale);
+			    scale, 1.0);
 
   return pixel_image_finish(surf, cr, ww, wh);
 }
