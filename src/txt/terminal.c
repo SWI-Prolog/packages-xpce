@@ -173,6 +173,20 @@ tc_display_width(const text_char *tc)
   return tc->flags.width;		/* 0 for combining marks, 1 for normal */
 }
 
+/* The Block Elements are drawn as rectangles of the cell rather than as
+ * glyphs of the font; see block_element_rects() below for why and for
+ * which ones.  Both the width classification here and the painting need
+ * to know, so the answer comes from that one function.
+ */
+
+typedef struct
+{ int x, y, w, h;			/* eighths of the cell */
+} cell_rect;
+
+#define MAX_CELL_RECTS 4
+
+static int	block_element_rects(int code, cell_rect *r);
+
 /** Cells occupied by `c` when drawn in `font` over a `cw`-pixel grid.
  *
  * uchar_display_width() classifies from static Unicode tables + host
@@ -188,8 +202,12 @@ tc_display_width(const text_char *tc)
 static inline int
 terminal_char_cells(uchar_t c, FontObj font, double cw)
 { int dw = uchar_display_width(c);
+  cell_rect rects[MAX_CELL_RECTS];
   if ( dw != 1 || c < 0x80 )
     return dw;
+  if ( block_element_rects(c, rects) > 0 )
+    return 1;			/* we draw it; the font's advance says
+				   nothing about how wide it is */
   double aw = c_width(c, font);
   if ( aw > cw * 1.5 )
     return 2;
@@ -5545,12 +5563,6 @@ rlc_scroll_lines(RlcData b, int lines)
  * are left to the font: they are a texture rather than a shape, and a
  * rectangle is not what they are made of.
  */
-
-typedef struct
-{ int x, y, w, h;			/* eighths of the cell */
-} cell_rect;
-
-#define MAX_CELL_RECTS 4
 
 static int
 block_element_rects(int code, cell_rect *r)
