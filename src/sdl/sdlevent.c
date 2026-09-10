@@ -324,6 +324,23 @@ ws_grabbing_window(void)
   return NULL;
 }
 
+
+/* The window the pointer is in, if any.  SDL has one cursor for the
+ * whole application, so this is the window that decides which shape it
+ * must have.
+ */
+
+PceWindow
+ws_pointer_window(void)
+{ if ( notNil(pointer_window) &&
+       instanceOfObject(pointer_window, ClassWindow) &&
+       !onFlag(pointer_window, F_FREED|F_FREEING) )
+    return pointer_window;
+
+  return NULL;
+}
+
+
 /* Hold a code reference while we grab, as we do for the mouse tracking
    window.  A menu item that destroys its own window -- Epilog's "Halt
    Prolog" is one -- is executed while its menu bar still holds the

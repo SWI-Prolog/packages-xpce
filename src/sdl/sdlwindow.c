@@ -257,8 +257,6 @@ ws_window_cursor(PceWindow sw, CursorObj cursor)
     return;
 
   SDL_Cursor *c = pceCursor2SDL_Cursor(cursor);
-  if ( c )
-  { ASSERT_SDL_MAIN();
-    SDL_SetCursor(c);
-  }
+  ASSERT_SDL_MAIN();
+  SDL_SetCursor(c ? c : SDL_GetDefaultCursor()); /* the window may have none */
 }

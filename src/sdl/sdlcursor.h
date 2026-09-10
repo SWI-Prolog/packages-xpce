@@ -45,7 +45,9 @@ void ws_destroy_cursor(CursorObj c, DisplayObj d);
 
 static inline SDL_Cursor *
 pceCursor2SDL_Cursor(CursorObj c)
-{ if ( !c->ws_ref )
+{ if ( !c || isNil(c) || isDefault(c) )	/* `cursor*' slots may be @nil */
+    return NULL;
+  if ( !c->ws_ref )
     ws_create_cursor(c, CurrentDisplay(NIL));
   return c->ws_ref;
 }
