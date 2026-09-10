@@ -365,9 +365,8 @@ pcerefer(Obj, From, Type, Where, All, Found) :-
     Obj \== All,
     From \== All,
     !,
-    get(From, '_class_name', ClassName),
-    format('~t~8|~w ~w of ~w/~w --> ~p~n',
-           [Type, Where, From, ClassName, Obj]),
+    format('~t~8|~w ~w of ~w --> ~p~n',
+           [Type, Where, From, Obj]),
     send(Found, plus, 1).
 pcerefer(_, _, _, _, _, _).
 
