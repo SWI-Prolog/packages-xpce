@@ -16,6 +16,7 @@ COMMON=	intro.tex starting.tex globalarch.tex online.tex debug.tex \
 	interface.tex graphics.tex pceprolog.tex memory.tex \
 	glossary.tex techniques.tex report.tex font.tex hyper.tex \
 	udc.tex dragdrop.tex dragdropdemo.tex control.tex whoiswho.tex \
+	panes.tex \
 	namedref.tex ugraphics.tex code.tex classvar.tex diaedit.tex \
 	dialog.tex wysiwyg.tex frame.tex error.tex application.tex \
 	resource.tex images.tex summary.tex body.tex driver.tex \

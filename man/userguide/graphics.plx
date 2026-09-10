@@ -107,7 +107,7 @@ overview of the primitive graphicals.
 		  by class \class{line}. \\
 \hline
 \class{bezier}	& Bezier curve.  Both quadratic and cubic Biezer
- 	          curves are supported. \\
+	          curves are supported. \\
 \hline
 \class{bitmap}	& Visualisation of an image.  Both monochrome and
 		  full-colour images are supported.  Images can have
@@ -191,8 +191,8 @@ compound graphical objects are shown in \tabref{compoundgraphics}.
 
 \section{Opacity}				\label{sec:opacity}
 
-Every \class{graphical} has an \tt{<-opacity} slot, a number between
-\tt{0.0} (fully transparent) and \tt{1.0} (fully opaque, the default).
+Every \class{graphical} has an \texttt{<-opacity} slot, a number between
+\texttt{0.0} (fully transparent) and \texttt{1.0} (fully opaque, the default).
 Values outside that range are clamped.  On a primitive such as a
 \class{box} or \class{text}, opacity blends the shape against whatever
 is behind it; on a \class{device} or \class{figure} the children are
@@ -200,9 +200,9 @@ composited fully opaque first and the whole group is then blended,
 so overlapping children do not darken each other.  This is different
 from giving each child its own opacity, which makes overlaps visible.
 Per-pixel alpha in a \class{colour} (the alpha component of an RGBA
-specification) modulates only that colour; \tt{<-opacity} modulates
-everything the graphical and its children draw.  The \tt{Opacity} demo
-in the demo browser shows both modes side by side.
+specification) modulates only that colour; \texttt{<-opacity} modulates
+everything the graphical and its children draw. The \texttt{Opacity}
+demo in the demo browser shows both modes side by side.
 
 
 \section{Connecting graphical objects}		\label{sec:connection}

@@ -34,7 +34,7 @@ per-user `Defaults` the first time you edit your XPCE preferences, so
 you start with a worked example you can uncomment.
 
 In Epilog the per-user file is opened (creating it from
-`Defaults.user` on first use) via _Settings → Preferences → XPCE_, which
+`Defaults.user` on first use) via _Settings → GUI preferences_, which
 runs `prolog_edit_preferences(xpce)` from `library(swi_preferences)` —
 the same hook is available to your own code if you want to drive it
 programmatically.

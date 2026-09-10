@@ -24,6 +24,7 @@
 \include{udc}
 \include{threads}
 \include{classvar}
+\include{panes}
 \include{resource}
 \include{techniques}
 \include{libs}

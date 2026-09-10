@@ -20,6 +20,77 @@
 
 ! display.theme:	dark
 
+! Panes: the layout of a window of the IDE.
+!
+! The IDE tools are organized as _panes_.  A toplevel window holds a
+! _menu bar_, a set of _tabs_ and each tab holds a tiled hierarchy of
+! panes that hold the actual tools.  A pane has a little _grip_ at its
+! top-right corner that can be clicked to _drag_ the pane and reorganize
+! the pane layout of this window or move it to another window.  The grip
+! also has a menu, providing several operations to modify the window
+! layout.  For details, see
+!
+!  - https://eu.swi-prolog.org/download/xpce/doc/prolog/userguide.pdf
+
+! Default placement.  Initial value for the __Settings/New tools and sources
+! open__ menu. Values are `as_arranged`, `tab`, `split` or `frame`.
+!prolog_ide.tool_placement:	as_arranged
+
+! Which side of what is already there a tool is added on when it is split
+! in.  Each tool has a default of its own: the navigator goes down the
+! left, everything else along the bottom.  The `*' form says it for every
+! tool at once and, being in this file, wins over the ones above it.
+!prolog_navigator.pane_side:		left
+!prolog_thread_monitor.pane_side:	below
+!prolog_debug_monitor.pane_side:	below
+!prolog_debugger.pane_side:		below
+!xref_tool.pane_side:			below
+!*.pane_side:				right
+
+! Give a pane the keyboard focus as soon as the pointer enters it rather
+! than when it is clicked.
+
+!pane_frame.focus_on_enter:	@on
+
+! Fade the panes that have not got the keyboard focus, so it is clear
+! which one the keyboard talks to.  1.0 (the default) fades nothing.
+
+!pane_frame.inactive_opacity:	0.8
+
+! Order of the pulldown menus.  The bar is assembled from two sides --
+! the menus every pane of the window shares and the menus of the pane in
+! view -- and this says where each of them lands.  A menu whose name is
+! not in the list takes the place of `*'.
+
+!pane_menu_bar.menu_order:	[ file, settings, tools, debug, 'GUI',	   \
+!				  edit, browse, compile, '*', help	   \
+!				]
+
+! Splitting and resizing.  A line is drawn in every gap that can be
+! dragged; @nil draws it in the foreground colour.  The border is the
+! margin around the whole tiling (0: out to the edges of the tab).  The
+! split bias weights the top and bottom zones when a pane is dropped on
+! another: above 1 the left and right zones grow, and those are the
+! commoner split.
+
+!tab_frame.separator_colour:	grey60
+!tab_frame.tile_border_root:	4
+!tab_frame.split_bias:		2
+
+! The grip in the corner of a pane, and the picture on it.
+
+!pane_handle.handle_size:	size(16,16)
+!split_handle.grip_image:	'tool/drag-pane.svg'
+
+! While a pane is dragged the cursor is a picture of the pane itself.
+! The size below is the largest that picture is drawn; the border is the
+! line around it (@default: the foreground colour, @nil: none).  Naming a
+! cursor does away with the picture altogether.
+
+!split_handle_gesture.cursor_size:	size(96,96)
+!split_handle_gesture.cursor_border:	@nil
+!split_handle_gesture.cursor:		move
+
 ! Epilog Prolog console settings
 !terminal_image.save_lines:      10000
 !terminal_image.background:      white
