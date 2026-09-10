@@ -379,6 +379,11 @@ window(TF, Window:window) :<-
 %       way out keeps a destroyed window from being handed out: erasing
 %       one is not always something we are told about directly, as it is
 %       the window_decorator that is my graphical.
+%
+%       A window of mine may itself hold windows -- a tabbed window used
+%       as a pane, see `pane_stack' in library(pane_frame) -- and then the
+%       focus is on one of *those*.  The window of mine it is in is the
+%       one that has it.
 
 current(TF, Window:window) :<-
     "Window holding the keyboard focus"::
@@ -387,8 +392,8 @@ current(TF, Window:window) :<-
         Frame \== @nil,
         get(Frame, keyboard_focus, KF),
         KF \== @nil,
-        memberchk_eq(KF, List)
-    ->  Window = KF
+        focused_window(KF, List, Focused)
+    ->  Window = Focused
     ;   get(TF, slot, current, W),
         W \== @nil,
         memberchk_eq(W, List)
@@ -425,6 +430,20 @@ advance(TF, _From:[graphical]*, _Propagate:[bool],
     ->  send(Frame, keyboard_focus, Window)
     ;   true
     ).
+
+%!  focused_window(+Focus, +Windows, -Window) is semidet.
+%
+%   The window of Windows the keyboard focus is in, climbing out of the
+%   tabbed windows it may be nested in.
+
+focused_window(Focus, Windows, Window) :-
+    memberchk_eq(Focus, Windows),
+    !,
+    Window = Focus.
+focused_window(Focus, Windows, Window) :-
+    get(Focus, contained_in, Up),       % <-container answers Focus itself
+    get(Up, container, tabbed_window, Outer),   % when it is one already
+    focused_window(Outer, Windows, Window).
 
 update_current(TF) :->
     "Keep <-current on a window I still hold"::
