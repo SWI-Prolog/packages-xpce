@@ -565,6 +565,27 @@ test(and_so_is_a_caller_who_says_right,
     send(MB, append, new(pane_popup(loose)), right),
     bar_members(MB, Names).
 
+%       A Defaults file cannot say `GUI' or `*' without quoting them, and
+%       the parser reads a quoted name as a string.  The order must be
+%       read all the same.
+
+test(an_order_written_in_a_defaults_file_is_read_as_names,
+     [ setup(set_menu_order(chain(string(file), string('GUI'),
+                                  string('*'), string(help)), Old)),
+       cleanup(set_menu_order(Old, _)),
+       Names == [file,'GUI',prolog,help]
+     ]) :-
+    new(MB, pane_menu_bar),
+    forall(member(Name, [help, prolog, 'GUI', file]),
+           send(MB, append, new(pane_popup(Name)))),
+    bar_members(MB, Names).
+
+set_menu_order(New, Old) :-
+    get(@pce, convert, pane_menu_bar, class, Class),
+    get(Class, class_variable, menu_order, CV),
+    get(CV, value, Old),
+    send(CV, value, New).
+
 :- end_tests(pane_menu_bar_order).
 
                  /*******************************

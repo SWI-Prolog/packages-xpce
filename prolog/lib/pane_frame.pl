@@ -51,7 +51,7 @@
 :- use_module(library(tabbed_window), []).
 :- use_module(library(tab_frame), []).
 :- use_module(library(toolbar), []).
-:- use_module(library(lists), [member/2, max_list/2]).
+:- use_module(library(lists), [member/2, max_list/2, nth1/3]).
 :- use_module(library(apply), [maplist/3]).
 :- use_module(library(pane_layouts),
               [ arrangement_of/2, record_arrangement/2 ]).
@@ -1650,11 +1650,26 @@ initialise(MB) :->
 
 rank(MB, Name:name, Rank:int) :<-
     "Where a menu of this name belongs on me"::
-    get(MB, class_variable_value, menu_order, Order),
-    (   get(Order, index, Name, Rank)
+    menu_order(MB, Order),
+    (   nth1(Rank, Order, Name)
     ->  true
-    ;   get(Order, index, '*', Rank)
+    ;   nth1(Rank, Order, '*')
     ).
+
+%!  menu_order(+MenuBar, -Order) is semidet.
+%
+%   The names in <-menu_order, as a list.  A name written between quotes
+%   in a Defaults file -- and 'GUI' and '*' have to be -- is read as a
+%   string rather than as a name, so the elements are converted rather
+%   than compared as they come.
+
+menu_order(MB, Order) :-
+    get(MB, class_variable_value, menu_order, Chain),
+    chain_list(Chain, List),
+    maplist(element_name, List, Order).
+
+element_name(Elem, Name) :-
+    get(@pce, convert, Elem, name, Name).
 
 %       Strictly greater: two menus that both take the place of `*' keep
 %       the order in which they were appended.
