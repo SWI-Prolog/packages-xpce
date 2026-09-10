@@ -92,6 +92,18 @@ End;
 #define Control(x) (x & 037)
 #define Meta(x)    (x + META_OFFSET)
 
+/* Value range of the `char' type: a code point, optionally Meta-modified.
+ * Keep this in sync with getCharType() in ker/type.c.
+ */
+
+static inline int
+isCharCode(intptr_t c)
+{ if ( c >= META_OFFSET )
+    c -= META_OFFSET;
+
+  return c >= 0 && c <= UNICODE_MAX;
+}
+
 GLOBAL SyntaxTable DefaultSyntaxTable;	/* Systems default table */
 extern unsigned short char_flags[];	/* Initial flags table */
 extern unsigned short syntax_spec_code[]; /* Char --> syntax (for \sC regex) */

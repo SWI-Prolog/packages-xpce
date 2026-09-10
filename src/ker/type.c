@@ -543,7 +543,7 @@ argType(const Type t, const Any val, const Any ctx)
 
 static inline status
 charType(const Type t, const Any val, const Any ctx)
-{ return isInteger(val) && valInt(val) >= 0 && valInt(val) <= UNICODE_MAX;
+{ return isInteger(val) && isCharCode(valInt(val));
 }
 
 
@@ -762,7 +762,7 @@ getCharType(const Type t, const Any val, const Any ctx)
   } else
   { Int i = toInteger(val);
 
-    if ( valInt(i) >= 0 && valInt(i) <= 2*META_OFFSET )
+    if ( i && isCharCode(valInt(i)) )
       return i;
   }
 
