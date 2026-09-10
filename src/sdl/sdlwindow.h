@@ -37,12 +37,19 @@
 #include "SDL3/SDL.h"
 #include <cairo/cairo.h>
 
+#define MAX_DIRTY_RECTS 8		/* Damage rectangles we keep apart */
+
 typedef struct
 { cairo_surface_t *backing;
   SDL_Texture *texture;
   double scale;			/* pixel density */
   int w;
   int h;
+					/* Damage since the last upload of */
+					/* `backing` into `texture` (device */
+					/* pixels).  See ws_dirty_window(). */
+  int ndirty;
+  SDL_Rect dirty[MAX_DIRTY_RECTS];
 } ws_window, *WsWindow;
 
 status ws_created_window(PceWindow sw);
@@ -54,5 +61,7 @@ void ws_flash_area_window(PceWindow sw, int x, int y, int w, int h, int msecs);
 void ws_flash_window(PceWindow sw, int msecs);
 void ws_move_pointer(PceWindow sw, int x, int y);
 void ws_window_cursor(PceWindow sw, CursorObj cursor);
+void ws_dirty_window(PceWindow sw, int x, int y, int w, int h);
+void ws_dirty_all_window(PceWindow sw);
 
 #endif /* RAYWINDOW_H */

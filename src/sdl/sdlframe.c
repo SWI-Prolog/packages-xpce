@@ -574,19 +574,31 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
     int width    = cairo_image_surface_get_width(wsw->backing);
     int height   = cairo_image_surface_get_height(wsw->backing);
     int stride   = cairo_image_surface_get_stride(wsw->backing);
-    Uint32 *data = (Uint32 *)cairo_image_surface_get_data(wsw->backing);
-    SDL_Surface *sdl_surf = SDL_CreateSurfaceFrom(width, height,
-						  SDL_PIXELFORMAT_ARGB8888,
-						  data, stride);
+    Uint8 *data  = cairo_image_surface_get_data(wsw->backing);
+
+    /* Uploading the  backing is  the expensive part  of drawing  a frame.
+     * A new texture must be filled completely; an existing one only needs
+     * the region the redraw changed.  See ws_dirty_window().
+     */
+
     if ( !wsw->texture )
-      wsw->texture = SDL_CreateTexture(wfr->ws_renderer,
+    { wsw->texture = SDL_CreateTexture(wfr->ws_renderer,
 				       SDL_PIXELFORMAT_ARGB8888,
 				       SDL_TEXTUREACCESS_STREAMING,
 				       width, height);
+      SDL_UpdateTexture(wsw->texture, NULL, data, stride);
+    } else
+    { for(int i=0; i<wsw->ndirty; i++)
+      { SDL_Rect *r = &wsw->dirty[i];
 
-    SDL_UpdateTexture(wsw->texture, NULL, data, stride);
+	SDL_UpdateTexture(wsw->texture, r,
+			  data + (size_t)r->y*stride + (size_t)r->x*4,
+			  stride);
+      }
+    }
+    wsw->ndirty = 0;
+
     SDL_RenderTexture(wfr->ws_renderer, wsw->texture, NULL, &dstrect);
-    SDL_DestroySurface(sdl_surf);
     if ( wfr->flash_end_ms && SDL_GetTicks() < wfr->flash_end_ms )
     { int lum = (int)(0.299f*bg.r + 0.587f*bg.g + 0.114f*bg.b);
       Uint8 v = lum > 128 ? 0 : 255;		/* dark on light, light on dark */
@@ -631,6 +643,62 @@ ws_draw_window(FrameObj fr, PceWindow sw, foffset *off)
     }
   }
 }
+
+/* The renderer lost the contents of its textures
+ * (SDL_EVENT_RENDER_TARGETS_RESET) or the device holding them
+ * (SDL_EVENT_RENDER_DEVICE_RESET).  We normally upload no more than
+ * what a redraw changed, so the textures must be thrown away and
+ * filled from the backing surfaces again.
+ */
+
+static void
+reset_texture_window(PceWindow sw)
+{ WsWindow wsw = sw->ws_ref;
+
+  if ( wsw )
+  { if ( wsw->texture )
+    { ASSERT_SDL_MAIN();
+      SDL_DestroyTexture(wsw->texture);
+      wsw->texture = NULL;
+    }
+    ws_dirty_all_window(sw);
+  }
+
+  if ( instanceOfObject(sw, ClassWindowDecorator) )
+    reset_texture_window(((WindowDecorator)sw)->window);
+  if ( notNil(sw->subwindows) )
+  { Cell cell;
+
+    for_cell(cell, sw->subwindows)
+      reset_texture_window(cell->value);
+  }
+}
+
+
+static void
+ws_reset_textures(void)
+{ DisplayManager dm = TheDisplayManager();
+  Cell c1;
+
+  for_cell(c1, dm->members)
+  { DisplayObj d = c1->value;
+    Cell c2;
+
+    for_cell(c2, d->frames)
+    { FrameObj fr = c2->value;
+      Cell c3;
+
+      if ( !ws_created_frame(fr) )
+	continue;
+
+      for_cell(c3, fr->members)
+	reset_texture_window(c3->value);
+
+      ws_draw_frame(fr);
+    }
+  }
+}
+
 
 bool
 ws_draw_frame(FrameObj fr)
@@ -704,7 +772,13 @@ ws_redraw_changed_frames(void)
 
 bool				/* true when processed */
 sdl_frame_event(SDL_Event *ev)
-{ FrameObj fr = wsid_to_frame(ev->window.windowID);
+{ if ( ev->type == SDL_EVENT_RENDER_TARGETS_RESET ||
+       ev->type == SDL_EVENT_RENDER_DEVICE_RESET )
+  { ws_reset_textures();
+    return true;
+  }
+
+  FrameObj fr = wsid_to_frame(ev->window.windowID);
 
   if ( fr )
   { switch(ev->type)

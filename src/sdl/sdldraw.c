@@ -67,6 +67,7 @@ typedef struct
   cairo_t      *cr;			/* Cairo context */
   int		offset_x;		/* Paint offset in X direction */
   int		offset_y;		/* Paint offset in Y direction */
+  SDL_Rect	clip_base;		/* Region we may paint (device px) */
   int		fixed_colours;		/* Colours are fixed */
   Any		colour;			/* Current colour */
   Any		background;		/* Background colour */
@@ -344,6 +345,18 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
   /* do we need to clip? */
   cairo_scale(context.cr, wsw->scale, wsw->scale);
 
+  { int cx = X(x), cy = Y(y), cw = w, ch = h;
+
+    NormaliseArea(cx, cy, cw, ch);
+    context.clip_base.x = (int)floor(cx*wsw->scale);
+    context.clip_base.y = (int)floor(cy*wsw->scale);
+    context.clip_base.w = (int)ceil ((cx+cw)*wsw->scale) - context.clip_base.x;
+    context.clip_base.h = (int)ceil ((cy+ch)*wsw->scale) - context.clip_base.y;
+    ws_dirty_window(sw,
+		    context.clip_base.x, context.clip_base.y,
+		    context.clip_base.w, context.clip_base.h);
+  }
+
   d_clip(x, y, w, h);
   if ( clear )
     r_fill(x, y, w, h, context.background);
@@ -426,6 +439,33 @@ d_done_pdf(void)
 }
 
 
+/* Intersect the clipping region with <-clip_base, the area d_window()
+ * was asked to repaint.  d_clip() and d_clip_done() both discard the
+ * clipping region rather than restoring the enclosing one, so without
+ * this a graphical that clips itself lifts the clip of the window it
+ * is in and the ones painted after it may paint anywhere.  We must
+ * know what a redraw changed to upload no more than that (see
+ * ws_dirty_window()), so this has to hold.
+ *
+ * The base is in device pixels because the current transformation is
+ * whatever the graphical being painted made of it.
+ */
+
+static void
+d_clip_to_base(void)
+{ if ( context.clip_base.w > 0 )
+  { cairo_matrix_t m;
+
+    cairo_get_matrix(CR, &m);
+    cairo_identity_matrix(CR);
+    cairo_rectangle(CR,
+		    context.clip_base.x, context.clip_base.y,
+		    context.clip_base.w, context.clip_base.h);
+    cairo_clip(CR);
+    cairo_set_matrix(CR, &m);
+  }
+}
+
 /**
  * Define a clipping region for subsequent drawing operations.
  *
@@ -441,6 +481,7 @@ d_clip(int x, int y, int w, int h)
   cairo_reset_clip(CR);
   cairo_rectangle(CR, x, y, w, h);
   cairo_clip(CR);
+  d_clip_to_base();
 }
 
 /**
@@ -469,6 +510,7 @@ d_done(void)
 void
 d_clip_done(void)
 { cairo_reset_clip(CR);
+  d_clip_to_base();
 }
 
 /**
