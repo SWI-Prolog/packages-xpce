@@ -254,17 +254,33 @@ bookmark(F, BM:emacs_bookmark, Sort:[bool]) :->
             ;   send(FileName, prefix, RootPath)
             )
         ->  !
-        ;   file_directory_name(RootPath, Parent),
-            (   Parent == RootPath
-            ->  !, fail
-            ;   send(Tree, root,
-                     emacs_toc_bookmark_folder(Parent),
-                     @on),
-                fail
-            )
+        ;   parent_directory(RootPath, Parent)
+        ->  send(Tree, root,
+                 emacs_toc_bookmark_folder(Parent),
+                 @on),
+            fail
+        ;   %  The root is a root of the file system and the bookmark
+            %  is not below it: on Windows it is on another drive.
+            %  What holds them all is the root with no path of its own.
+            send(Tree, root,
+                 emacs_toc_bookmark_folder(/),
+                 @on),
+            !
         )
     ),
     send(Tree?root, append, BM, Sort).
+
+%!  parent_directory(+Dir, -Parent) is semidet.
+%
+%   The directory holding Dir, failing when Dir is a root of the file
+%   system.  file_directory_name/2 does not say so itself: it answers
+%   "C:" for "C:/" and then "." for "C:", neither of which is a
+%   directory above the one asked about.
+
+parent_directory(Dir, Parent) :-
+    file_directory_name(Dir, Parent),
+    Parent \== Dir,
+    send(Dir, prefix, Parent).
 
 append_hit(F, Buffer:emacs_buffer, Start:int, End0:[int]) :->
     "Add bookmark for indicated line"::
