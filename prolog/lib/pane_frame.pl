@@ -39,8 +39,10 @@
             pane_status_bar/1,          % +Pane
             open_pane_frame/2,          % +Term, -Frame
             open_pane_frame/3,          % +Term, -Frame, +Options
-            pane_kind/2                 % +Pane, -Kind
-          ]).
+            pane_kind/2,                % +Pane, -Kind
+            pane_tree_term/4,           % :Leaf, +Tree, +Current, -Content
+            build_pane_tree/5           % :MakeLeaf, +Content, -Tree,
+          ]).                           %   -First, -Current
 :- use_module(library(pce)).
 :- use_module(library(swi_ide), []).    % get @prolog_ide application
 :- use_module(library(pce_util), [chain_list/2]).
@@ -53,6 +55,12 @@
 :- use_module(library(apply), [maplist/3]).
 :- use_module(library(pane_layouts),
               [ arrangement_of/2, record_arrangement/2 ]).
+
+:- meta_predicate
+    pane_tree_term(2, +, +, -),
+    share_term(2, +, +, -),
+    build_pane_tree(2, +, -, -, -),
+    build_shares(2, +, -).
 
 /** <module> One main window holding tools in tabs and panes
 
@@ -74,6 +82,13 @@ application differs in lives in two places:
 Every message of the pane protocol is optional: the frame asks with
 ->has_send_method before sending, so a plain window is a usable pane.
 See the `pane' template for the parts a pane would otherwise repeat.
+
+A pane need not be one window.  A `pane_stack' holds its windows in tabs
+of its own: `tool_pane' uses a single tab to lay a tool's windows out
+side by side, and `emacs_pane' (see library(emacs/window)) uses many, one
+per source.  A stack with tabs is a *group*: the frame looks inside it
+for the pane the user is really working in -- see <-current_pane -- and
+<-pane_group is the way back out to the pane its tab tiles.
 
 A window can be written down as a Prolog term saying what it holds and
 how it is laid out, and built back from one:
@@ -297,15 +312,65 @@ panes(F, Panes:chain) :<-
     get(F, tabs, TW),
     get(TW, members, Panes).
 
+%       A pane may be a *group*: a pane_stack holding a tab per source,
+%       as PceEmacs does.  Everything I ask of a pane -- what it is
+%       called, which menu bar it wants, that it has come into view -- is
+%       answered by the window inside it that the user is really working
+%       in, and so is every `get(Frame, current_pane, View)' in PceEmacs.
+%       So <-current_pane looks inside, and <-pane_group is the way back
+%       out for the few things that are about the pane my *tab* tiles:
+%       putting another pane beside it, fading it, writing it down.
+%
+%       Looking inside is by asking: only a class that answers
+%       <-current_pane is looked into.  A tool is its windows and answers
+%       none, and stays the one pane it is.
+
 current_pane(F, Pane:window) :<-
-    "The pane the user is working in"::
+    "The pane the user is working in, inside a group if it is one"::
     get(F, tabs, TW),
-    get(TW, current, Pane).
+    get(TW, current, Outer),
+    inner_pane(Outer, Pane).
 
 current_pane(F, Pane:window) :->
     "Make Pane the one the user is working in"::
+    pane_group(Pane, Group),
+    (   Group == Pane
+    ->  true
+    ;   send(Group, current, Pane)      % the tab of the group holding it
+    ),
     get(F, tabs, TW),
-    send(TW, current, Pane).
+    send(TW, current, Group).
+
+pane_group(_F, Pane:window, Group:window) :<-
+    "The pane my tab tiles that holds Pane"::
+    pane_group(Pane, Group).
+
+%!  inner_pane(+Outer, -Pane) is det.
+%
+%   The window the user is working in, inside however many groups.
+
+inner_pane(P0, P) :-
+    (   send(P0, has_get_method, current_pane),
+        get(P0, current_pane, P1),
+        P1 \== @nil,
+        P1 \== P0
+    ->  inner_pane(P1, P)
+    ;   P = P0
+    ).
+
+%!  pane_group(+Pane, -Group) is det.
+%
+%   The other way: climb out of the groups Pane is in until the tab
+%   holding it is a tab of a window, which is the one my tabbed window
+%   tiles.  A pane that is in no group at all is its own group.
+
+pane_group(Pane, Group) :-
+    (   get(Pane, container, tab_frame, Tab),
+        \+ send(Tab, instance_of, pane_tab),
+        get(Tab, container, tabbed_window, Outer)
+    ->  pane_group(Outer, Group)
+    ;   Group = Pane
+    ).
 
                  /*******************************
                  *            PANES             *
@@ -322,9 +387,10 @@ split(F, Pane:window,
                                above,below,left,right}]) :->
     "Add Pane beside Relative, in the tab Relative is in"::
     (   Relative == @default
-    ->  get(F, current_pane, Rel)
-    ;   Rel = Relative
+    ->  get(F, current_pane, Rel0)
+    ;   Rel0 = Relative
     ),
+    pane_group(Rel0, Rel),              % beside the group, not inside it
     get(Rel, container, tab_frame, Tab),
     send(Tab, split, Pane, Rel, Direction),
     send(F, keyboard_focus, Pane).
@@ -340,7 +406,8 @@ split_beside(F, Pane:window,
                 Side:{above,below,left,right},
                 Share:[real]) :->
     "Add Pane beside those panes, taking that share of their room"::
-    get(Relatives, head, First),
+    get(Relatives, head, First0),
+    pane_group(First0, First),
     get(First, container, tab_frame, Tab),
     get(Tab, window_tree, Was),
     send(Tab, append, Pane, Relatives, Side),
@@ -413,20 +480,35 @@ pane_arranged(Pane) :-
     ;   true
     ).
 
+%       A pane inside a group is taken out of the group: it is the group
+%       my tab tiles, and the group looks after itself when its last
+%       window goes -- see `pane_stack ->empty'.  Only the last *group*
+%       is the last of me.
+
 delete_pane(F, Pane:window, Destroy:[bool]) :->
     "Take Pane out of its tab; destroy me if it was my last"::
-    get(F, panes, Panes),
-    (   get(Panes, size, Size),
-        Size > 1
-    ->  get(Pane, container, tab_frame, Tab),
+    (   last_pane(F, Pane)
+    ->  send(F, empty)
+    ;   get(Pane, container, tab_frame, Tab),
         send(Tab, delete, Pane),
         (   Destroy == @on
         ->  send(Pane, destroy)
         ;   true
         ),
         send(F, pane_changed)
-    ;   send(F, empty)
     ).
+
+%!  last_pane(+Frame, +Pane) is semidet.
+%
+%   True when taking Pane away would leave Frame with nothing.  A pane
+%   inside a group is never the last: the group looks after itself when
+%   its last window goes -- see `pane_stack ->empty' -- and asks me to
+%   take *it* away, which is when the count applies.
+
+last_pane(F, Pane) :-
+    pane_group(Pane, Pane),
+    get(F, panes, Panes),
+    get(Panes, size, 1).
 
 new_pane(F, Kind:[name]) :->
     "Add a pane of the kind my application makes"::
@@ -762,7 +844,8 @@ update_label(F) :->
 update_opacity(F) :->
     "Fade every pane of the tab in view but the current one"::
     get(F, tab, Tab),
-    get(F, current_pane, Current),
+    get(F, current_pane, Current0),
+    pane_group(Current0, Current),      % my tab tiles groups, not views
     get(Tab, windows, Chain),
     chain_list(Chain, Panes),
     forall(member(P, Panes),
@@ -1118,21 +1201,31 @@ tab_term_option(Tab, current(true)) :-
 %   <-window_tree' answers a tree of windows, and each of them is written
 %   as the pane term for it.
 
-tree_term(Window, Current, Term) :-
+tree_term(Tree, Current, Content) :-
+    pane_tree_term(pane_term_of, Tree, Current, Content).
+
+%!  pane_tree_term(:Leaf, +Tree, +Current, -Content) is det.
+%
+%   The same over any tab that tiles windows, with Leaf saying how one
+%   window is written down: call(Leaf, Window, Term).  A group of panes
+%   with tabs of its own uses this to write what it holds -- see
+%   `emacs_pane <-pane_term' in library(emacs/window).
+
+pane_tree_term(Leaf, Window, Current, Term) :-
     object(Window),
     !,
-    pane_term_of(Window, Term0),
+    call(Leaf, Window, Term0),
     (   Window == Current
     ->  Term = current(Term0)
     ;   Term = Term0
     ).
-tree_term(Node, Current, Term) :-
+pane_tree_term(Leaf, Node, Current, Term) :-
     Node =.. [Orientation, Shares],
-    maplist(share_term(Current), Shares, Terms),
+    maplist(share_term(Leaf, Current), Shares, Terms),
     Term =.. [Orientation, Terms].
 
-share_term(Current, Share-Content, Share-Term) :-
-    tree_term(Content, Current, Term).
+share_term(Leaf, Current, Share-Content, Share-Term) :-
+    pane_tree_term(Leaf, Content, Current, Term).
 
 %!  pane_term_of(+Pane, -Term) is det.
 %
@@ -1234,14 +1327,23 @@ expose_current_tab(_, _).
 %   split left holding one pane collapses onto it, so a term naming a
 %   source that has gone still restores everything else.
 
-build_content(F, current(Term), Window, Window, Window) :-
+build_content(F, Content, Tree, First, Current) :-
+    build_pane_tree(build_pane(F), Content, Tree, First, Current).
+
+%!  build_pane_tree(:MakeLeaf, +Content, -Tree, -First, -Current) is semidet.
+%
+%   The same over any tab that tiles windows, with MakeLeaf saying how one
+%   window is made: call(MakeLeaf, Term, Window), which may fail.  See
+%   `emacs_pane ->pane_term' in library(emacs/window).
+
+build_pane_tree(Make, current(Term), Window, Window, Window) :-
     !,
-    build_content(F, Term, Window, Window, _).
-build_content(F, Node, Tree, First, Current) :-
+    build_pane_tree(Make, Term, Window, Window, _).
+build_pane_tree(Make, Node, Tree, First, Current) :-
     Node =.. [Orientation, Shares],
     split_orientation(Orientation),
     !,
-    build_shares(F, Shares, Built),
+    build_shares(Make, Shares, Built),
     Built \== [],
     (   Built = [built(_, Tree, First, Current)]   % one left: no split
     ->  true
@@ -1254,17 +1356,17 @@ build_content(F, Node, Tree, First, Current) :-
         ;   Current = @default
         )
     ).
-build_content(F, Term, Window, Window, @default) :-
-    build_pane(F, Term, Window).
+build_pane_tree(Make, Term, Window, Window, @default) :-
+    call(Make, Term, Window).
 
 build_shares(_, [], []).
-build_shares(F, [Share|Shares], Built) :-
+build_shares(Make, [Share|Shares], Built) :-
     share_parts(Share, Weight, Content),
-    (   build_content(F, Content, Tree, First, Current)
+    (   build_pane_tree(Make, Content, Tree, First, Current)
     ->  Built = [built(Weight, Tree, First, Current)|Rest]
     ;   Built = Rest
     ),
-    build_shares(F, Shares, Rest).
+    build_shares(Make, Shares, Rest).
 
 built_share(built(Weight, Tree, _, _), Weight-Tree).
 
@@ -2207,31 +2309,32 @@ event(P, Ev:event) :->
 
 
                  /*******************************
-                 *          TOOL PANE           *
+                 *          PANE STACK          *
                  *******************************/
 
-/* A pane that shows more than one window.
+/* A pane that holds its windows in tabs.
 
-Most panes are one window: a terminal, an editor.  A tool is usually
-several -- the thread monitor is a list of threads beside a graph -- and
-they have to be laid out against one another and to travel together.
+Most panes are one window: a terminal, a single editor.  Some are not: a
+tool is usually several windows -- the thread monitor is a list of
+threads beside a graph -- that have to be laid out against one another
+and to travel together, and PceEmacs wants a tab per source with the
+tabs belonging to the editor rather than to the window it is in.
 
-A tabbed_window holding a single tab_frame does both.  A tab_frame lays
-windows out with a tile the way class frame does for its members, so the
-windows can be arranged and the gaps between them dragged; a lone tab
+A tabbed_window holding tab_frames does both.  A tab_frame lays windows
+out with a tile the way class frame does for its members, so the windows
+of a tab can be arranged and the gaps between them dragged; a lone tab
 shows no label; and to everything outside it is one window, so it drops
 into a tab of a window of the IDE like any other pane.
 
-    :- pce_begin_class(my_tool, tool_pane, "...").
-
-    initialise(T) :->
-        send_super(T, initialise, my_tool),
-        send(T, append_window, new(B, my_browser)),
-        send(T, append_window, new(my_view), B, right).
+A subclass holding a single tab is a tool -- see tool_pane below.  One
+holding many is a *group*: the frame looks inside it for the pane the
+user is really working in, which is what `pane_frame <-current_pane'
+does with the optional <-current_pane below.  See `emacs_pane' in
+library(emacs/window).
 */
 
-:- pce_begin_class(tool_pane, tabbed_window,
-                   "A pane of the IDE showing more than one window").
+:- pce_begin_class(pane_stack, tabbed_window,
+                   "A pane of the IDE that holds its windows in tabs").
 :- use_class_template(pane).
 
 variable(grip, split_handle*, get, "The grip I am dragged by").
@@ -2246,30 +2349,22 @@ variable(grip, split_handle*, get, "The grip I am dragged by").
 class_variable(pane_side, {above,below,left,right}, below,
                "Which side of what is there I am added on").
 
+%       The windows in me carry grips of their own -- every emacs_view
+%       does -- but a grip shows itself only on a window its frame calls
+%       a pane, and the pane here is me.  See `split_handle
+%       ->update_displayed': they hide themselves and mine is the one
+%       that is seen.
+
 initialise(TP, Label:[name]) :->
     "Create empty, with a grip to drag me by"::
     send_super(TP, initialise, Label),
-    send(TP, hide_single_label, @on),   % I am one pane, not a tab strip
     send(TP, slot, grip, new(H, split_handle)),
-    send(H, pane, TP).                  % it moves me, not the window it is on
+    send(H, pane, TP).                  % it moves me, not the window it
+                                        % is on
 
 pane_side(TP, Side:{above,below,left,right}) :<-
     "Which side of what is there I am added on"::
     get(TP, class_variable_value, pane_side, Side).
-
-append_window(TP, Window:window,
-                  Relative:relative_to=[window],
-                  Where:where=[{above,below,left,right}]) :->
-    "Add a window beside the ones I have"::
-    (   get(TP, content, Tab)
-    ->  send(Tab, append, Window, Relative, Where)
-    ;   send(TP, tab, tab_frame(Window, TP?name))
-    ).
-
-content(TP, Tab:tab_frame) :<-
-    "The tab my windows are tiled in"::
-    get(TP, tabs, Tabs),
-    get(Tabs, head, Tab).
 
 %       Not <-member: on a tabbed_window that answers the window of a
 %       named tab.  The windows of a tool are told apart by their class.
@@ -2303,7 +2398,7 @@ place_grip(TP) :->
 
 corner_window(TP, W:window) :<-
     "The window of mine at my top right"::
-    get(TP, content, Tab),
+    get(TP, current_tab, Tab),
     get(Tab, windows, Chain),
     chain_list(Chain, Windows),
     Windows \== [],
@@ -2316,6 +2411,104 @@ corner_window(TP, W:window) :<-
     ->  true
     ;   Windows = [W|_]
     ).
+
+current_tab(TP, Tab:tab_frame) :<-
+    "The tab of mine that is in view"::
+    (   get(TP, on_top, Tab0)
+    ->  Tab = Tab0
+    ;   get(TP, tabs, Tabs),
+        get(Tabs, head, Tab)
+    ).
+
+on_top(TP, Tab:tab_frame) :<-
+    "The tab of mine that is on top; fails while there is none"::
+    get(TP, tabs, Tabs),
+    get(Tabs, find, @arg1?status == on_top, Tab).
+
+%       Switching between my tabs moves the pane the user is working in
+%       without touching the frame's tabs, so the frame has to be told:
+%       its menu bar, its title and its bar at the bottom all follow the
+%       pane in view.  Cf. `pane_tabbed_window ->current'.
+
+current(TP, Window:window) :->
+    "Make Window the one I show and tell the frame"::
+    send_super(TP, current, Window),
+    (   get(TP, pane_frame, Frame),
+        send(Frame, has_send_method, pane_changed)
+    ->  send(Frame, pane_changed)
+    ;   true
+    ).
+
+%       What is asked of a pane and answered by the windows in it.  My
+%       last tab going takes me with it; being asked to close closes them
+%       rather than me, and I go when the last of them does.
+
+empty(TP) :->
+    "My last tab was closed"::
+    (   get(TP, pane_frame, Frame)
+    ->  send(Frame, delete_pane, TP, @on)
+    ;   send(TP, destroy)
+    ).
+
+can_close(TP, Reply:bool) :<-
+    "@on if every window of mine agrees to be closed"::
+    get(TP, members, Windows),
+    chain_list(Windows, List),
+    (   member(W, List),
+        send(W, has_get_method, can_close),
+        \+ get(W, can_close, @on)
+    ->  Reply = @off
+    ;   Reply = @on
+    ).
+
+close_pane(TP) :->
+    "Close my windows, which takes me with them"::
+    get(TP, members, Windows),
+    chain_list(Windows, List),
+    forall(member(W, List), close_pane(W)).
+
+:- pce_end_class(pane_stack).
+
+
+                 /*******************************
+                 *          TOOL PANE           *
+                 *******************************/
+
+/* A pane that shows more than one window.
+
+A tool is one pane made of several windows, and thus a pane_stack with a
+single tab: a lone tab shows no label, so the tool looks like the one
+pane it is.
+
+    :- pce_begin_class(my_tool, tool_pane, "...").
+
+    initialise(T) :->
+        send_super(T, initialise, my_tool),
+        send(T, append_window, new(B, my_browser)),
+        send(T, append_window, new(my_view), B, right).
+*/
+
+:- pce_begin_class(tool_pane, pane_stack,
+                   "A pane of the IDE showing more than one window").
+
+initialise(TP, Label:[name]) :->
+    "Create empty, showing no tab strip"::
+    send_super(TP, initialise, Label),
+    send(TP, hide_single_label, @on).   % I am one pane, not a tab strip
+
+append_window(TP, Window:window,
+                  Relative:relative_to=[window],
+                  Where:where=[{above,below,left,right}]) :->
+    "Add a window beside the ones I have"::
+    (   get(TP, content, Tab)
+    ->  send(Tab, append, Window, Relative, Where)
+    ;   send(TP, tab, tab_frame(Window, TP?name))
+    ).
+
+content(TP, Tab:tab_frame) :<-
+    "The tab my windows are tiled in"::
+    get(TP, tabs, Tabs),
+    get(Tabs, head, Tab).
 
 :- pce_end_class(tool_pane).
 

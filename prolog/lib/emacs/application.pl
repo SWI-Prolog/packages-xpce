@@ -276,12 +276,12 @@ ensure_source_file(_Emacs, File) :->
 %       The pane the user is in need not be a source: a window of the IDE
 %       holds the tools as well, and a tool has no editor to remember a
 %       place in.  ->open_file works from the same view -- see
-%       editor_pane/2 -- so this is the location it is leaving.
+%       editor_view/2 -- so this is the location it is leaving.
 
 location_history(Emacs, Title:title=[char_array]) :->
     "Save current location into history"::
     (   get(Emacs, current_frame, Frame),
-        editor_pane(Frame, View),
+        editor_view(Frame, View),
         get(View, editor, Editor),
         get(Editor, mode, Mode)
     ->  send(Mode, location_history, title := Title)
@@ -408,7 +408,8 @@ frame(_Emacs, For:'emacs_buffer|emacs_view', Frame:pane_frame) :<-
     ->  View = For
     ;   new(View, emacs_view(For))
     ),
-    new(Frame, pane_frame(@prolog_ide, 'PceEmacs', View, @on)),
+    new(Frame, pane_frame(@prolog_ide, 'PceEmacs',
+                          emacs_pane(View), @on)),
     send(View?text_buffer, update_label),
     send(Frame, open),
     get(View, editor, E),
@@ -417,43 +418,54 @@ frame(_Emacs, For:'emacs_buffer|emacs_view', Frame:pane_frame) :<-
 
 %       A window of the IDE holds terminals and tools as well as views,
 %       so `here' -- show the buffer in the editor the user is in -- can
-%       only be done where there is one; the buffer opens in a tab of its
-%       own otherwise, which every window can do.  `split' asks for no
-%       editor: beside what is there is beside whatever pane that is, as
-%       it is for a tool.
+%       only be done where there is one.  Everything else goes to the
+%       editor of the window, which holds a tab per source of its own
+%       (see `emacs_pane'), and a window that has no editor yet is given
+%       one where the user's arrangements say an editor goes.
 
 show_buffer(_Emacs, Frame:pane_frame, B:emacs_buffer,
             How:[{as_arranged,here,tab,split}]) :->
-    "Show B in Frame, here, in a tab of its own or beside what is there"::
+    "Show B in Frame, here, in a tab of the editor or beside what is there"::
     (   reuses_a_view(How),
         view_on_buffer(Frame, B, View)
     ->  send(Frame, current_pane, View)         % it is already open
-    ;   How == as_arranged,
-        editor_pane(Frame, View)
-    ->  send(View?editor, text_buffer, B),      % an editor to show it in
+    ;   How == here,
+        editor_view(Frame, View)
+    ->  send(View?editor, text_buffer, B),      % this very editor
         send(Frame, current_pane, View)
-    ;   How == as_arranged
-    ->  send(@prolog_ide, place_pane, new(New, emacs_view(B)),
-             Frame, @default, B?name),
+    ;   How == split,
+        editor_view(Frame, View)
+    ->  get(View, pane_tab, Tab),               % beside it, in its own tab
+        send(Tab, split, new(New, emacs_view(B)), View, horizontally),
+        send(Frame, current_pane, New),
         setup_view(B, New)
+    ;   editor_pane(Frame, Editor)              % `tab' and `as_arranged'
+    ->  send(Editor, append_view, new(New, emacs_view(B)), B?name),
+        setup_view(B, New)
+    ;   new_editor(Frame, B, How, New)          % no editor in this window
+    ->  setup_view(B, New)
+    ).
+
+%!  new_editor(+Frame, +Buffer, +How, -View) is semidet.
+%
+%   Give a window with no editor in it one, showing Buffer: where the
+%   user's arrangements say an editor goes, beside what is there, or in a
+%   tab of the window, as they asked for.
+
+new_editor(Frame, B, How, New) :-
+    new(Editor, emacs_pane(new(New, emacs_view(B)))),
+    (   How == as_arranged
+    ->  send(@prolog_ide, place_pane, Editor, Frame, @default, B?name)
     ;   How == split,
         get(Frame, current_pane, Rel)
-    ->  send(Frame, split, new(New, emacs_view(B)), Rel, horizontally),
-        setup_view(B, New)
-    ;   How == here,
-        editor_pane(Frame, View)
-    ->  send(View?editor, text_buffer, B),
-        send(Frame, current_pane, View)
-    ;   send(Frame, append_pane, new(New, emacs_view(B)), B?name, @on),
-        setup_view(B, New)
+    ->  send(Frame, split, Editor, Rel, horizontally),
+        send(Frame, current_pane, New)
+    ;   send(Frame, append_pane, Editor, B?name, @on)
     ).
 
 %       A source the user asks to see goes in the editor that is already
 %       showing it, whether they asked for a tab or left it to the way
-%       they arrange their windows.  Left to that, a window that holds an
-%       editor at all shows it there: an arrangement says where an editor
-%       lives, and one lives there already.  Only a window with none has
-%       to be asked where one goes.
+%       they arrange their windows.
 
 reuses_a_view(tab).
 reuses_a_view(as_arranged).
@@ -462,20 +474,31 @@ setup_view(B, View) :-
     send(B, update_label),
     send(View, setup_mode).
 
-%!  editor_pane(+Frame, -View) is semidet.
+%!  editor_view(+Frame, -View) is semidet.
 %
 %   An emacs_view of Frame to work in: the pane the user is in if that is
 %   one, otherwise the first there is.
 
-editor_pane(Frame, View) :-
+editor_view(Frame, View) :-
     get(Frame, current_pane, Current),
     send(Current, instance_of, emacs_view),
     !,
     View = Current.
-editor_pane(Frame, View) :-
+editor_view(Frame, View) :-
     frame_pane(Frame, View),
     send(View, instance_of, emacs_view),
     !.
+
+%!  editor_pane(+Frame, -Editor) is semidet.
+%
+%   The editor of Frame: the pane its views live in.  There is at most
+%   one per tab of the window and normally one per window; the one the
+%   user is in comes first, as with editor_view/2.
+
+editor_pane(Frame, Editor) :-
+    editor_view(Frame, View),
+    get(Frame, pane_group, View, Editor),
+    send(Editor, instance_of, emacs_pane).
 
 %!  view_on_buffer(+Frame, +Buffer, -View) is semidet.
 
@@ -486,10 +509,23 @@ view_on_buffer(Frame, B, View) :-
     TB == B,
     !.
 
+%       <-panes answers the panes a tab of the window tiles, and the
+%       editor is one of those: the views are inside it.  Every window a
+%       source could be showing in is therefore a pane or a window of one.
+
 frame_pane(Frame, Pane) :-
     get(Frame, panes, Panes),
     chain_list(Panes, List),
-    member(Pane, List).
+    member(P, List),
+    pane_window(P, Pane).
+
+pane_window(P, Window) :-
+    (   send(P, instance_of, emacs_pane)
+    ->  get(P, members, Chain),
+        chain_list(Chain, Windows),
+        member(Window, Windows)
+    ;   Window = P
+    ).
 
 %       Every window of the IDE belongs to @prolog_ide, so being a member
 %       no longer says a window is one of PceEmacs's.  Holding an editor
@@ -519,7 +555,7 @@ current_frame(_Emacs, Frame:pane_frame) :<-
 %   True when Frame holds a view a buffer can be shown in.
 
 shows_an_editor(Frame) :-
-    editor_pane(Frame, _).
+    editor_view(Frame, _).
 
 
                  /*******************************

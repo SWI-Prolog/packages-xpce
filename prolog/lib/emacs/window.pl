@@ -40,12 +40,17 @@
 :- use_module(library(pce)).
 :- use_module(library(tabbed_window)).
 :- use_module(library(tab_frame)).
-:- use_module(library(pane_frame), [pane_frame_closed_tab/1]).
+:- use_module(library(pane_frame),
+              [ pane_frame_closed_tab/1,
+                pane_tree_term/4,
+                build_pane_tree/5
+              ]).
 :- use_module(prompt).
 :- use_module(library(pce_util)).
 :- use_module(library(pce_drop_target), [drop_target_event/4]).
 :- use_module(library(debug)).
-:- use_module(library(lists), [memberchk/2]).
+:- use_module(library(lists), [member/2, memberchk/2]).
+:- use_module(library(apply), [maplist/3]).
 
 :- require([ between/3,
              atomic_list_concat/2,
@@ -198,8 +203,23 @@ update_labels(V) :->
     (   get(V, label, Label),
         get(V, container, tab, Tab),
         current_in_tab(Tab, V)
-    ->  send(Tab, label, Label)         % the frame follows the tab; see
-    ;   true                            % `pane_frame ->update_label'
+    ->  send(Tab, label, Label),
+        update_frame_labels(V)
+    ;   true
+    ).
+
+%       My tab is the editor's, not the window's: the window makes its
+%       title out of the label of *its* tab, so that one has to be told
+%       as well.  ->update_tab_label takes the name from the pane the
+%       user is working in, which is me if this is about me at all.
+
+update_frame_labels(V) :-
+    (   get(V, frame, Frame),
+        Frame \== @nil,
+        send(Frame, has_send_method, update_tab_label)
+    ->  ignore(send(Frame, update_tab_label)),
+        ignore(send(Frame, update_label))
+    ;   true
     ).
 
 %       current_in_tab(+Tab, +View)
@@ -269,6 +289,68 @@ frame_active(V, Val:bool) :->
 sibling(V, New:emacs_view) :<-
     "A second view on my buffer"::
     new(New, emacs_view(V?text_buffer)).
+
+%       A view is not a pane of a window in its own right -- the editor
+%       it is in is -- so wherever the pane template would make a view
+%       one, it is the editor that has to be made instead.  ->split is
+%       not among them: that splits the tab of the editor I am in, which
+%       is where a second view belongs.
+
+new_window(V) :->
+    "Put a new view like me in a window of its own"::
+    get(V, sibling, New),
+    (   get(V, pane_frame, Frame)
+    ->  get(Frame, application, App)
+    ;   App = @default
+    ),
+    send(new(pane_frame(App, @default, emacs_pane(New))), open).
+
+detach(V) :->
+    "Move me into a window of my own"::
+    get(V, pane_frame, F),
+    get(F, panes, Panes),
+    get(Panes, size, Size),
+    Size > 1,                           % alone already: nothing to do
+    (   get(F, application, App0),
+        App0 \== @nil
+    ->  App = App0
+    ;   App = @default
+    ),
+    get(V, display_position, point(X, Y)),
+    ignore(send(F, arranged)),
+    send(F, delete_pane, V, @off),      % take me out without destroying me
+    new(New, pane_frame(App, @default, emacs_pane(V))),
+    send(New, open, point(X, Y+20)).
+
+move_to_tab(V) :->
+    "Move me out of a split, into a tab of the editor"::
+    get(V, pane_tab, Tab),
+    get(Tab, windows, Windows),
+    get(Windows, size, Size),
+    Size > 1,                           % a tab of my own already
+    get(V, pane_frame, F),
+    editor_of(V, F, Group),
+    send(Tab, delete, V),               % take me out without destroying me
+    send(Group, append_view, V),
+    ignore(send(F, arranged)).
+
+new_tab(V) :->
+    "Put a new view like me in a tab of the editor"::
+    get(V, sibling, New),
+    get(V, pane_frame, F),
+    editor_of(V, F, Group),
+    send(Group, append_view, New),
+    send(F, keyboard_focus, New),
+    ignore(send(F, arranged)).
+
+%!  editor_of(+View, +Frame, -Editor) is semidet.
+%
+%   The editor View is a view of; fails if it is a pane of the window in
+%   its own right, which is what it is while it is being moved about.
+
+editor_of(V, F, Group) :-
+    get(F, pane_group, V, Group),
+    send(Group, instance_of, emacs_pane).
 
 %       What is worth writing down about an editor: the source it shows
 %       and where the caret is in it.  A line and a column rather than a
@@ -498,6 +580,211 @@ make_arg_vector(_, _, _, _).
 
 
 :- pce_end_class(emacs_view).
+
+
+                 /*******************************
+                 *        THE EDITOR PANE       *
+                 *******************************/
+
+/* PceEmacs keeps its tabs to itself.
+
+A window of the IDE holds tools and terminals beside its sources, and
+its tabs are whole layouts: opening a source in one of those would take
+whatever sits beside the editor off the screen.  So the editor is a pane
+that holds tabs of its own -- one per source -- and the tabs of the
+window stay what they are for.  It is a pane_stack, the same class the
+tools of the IDE are made of; see library(pane_frame).
+
+Each of those tabs is a tab_frame and so may hold more than one view:
+C-x 2 and C-x 3 split inside the tab the user is in, and the other tabs
+of the editor keep the views they have.  `emacs_mode <-tab' is
+`get(View, container, tab_frame, TF)', which now finds the editor's own
+tab rather than the frame's -- which is what makes the window commands
+go on working unchanged.
+*/
+
+:- pce_begin_class(emacs_tab, tab_frame,
+                   "Tab of the editor, holding one or more views").
+
+class_variable(editable_label, bool, @off,
+               "I am named after my buffer, so not by the user").
+class_variable(closable,       bool, @on,
+               "I carry a button to close me").
+
+close_tab(Tab) :->
+    "Close my views, which takes me with them"::
+    get(Tab, windows, Chain),
+    chain_list(Chain, Views),
+    forall(member(V, Views), send(V, close_pane)).
+
+:- pce_end_class(emacs_tab).
+
+
+:- pce_begin_class(emacs_pane, pane_stack,
+                   "The editor of a window of the IDE: sources in tabs").
+
+initialise(EP, View:view=[emacs_view], Label:label=[name]) :->
+    "Create showing View, or a scratch buffer"::
+    send_super(EP, initialise, Label),
+    send(EP, hide_single_label, @on),   % one source needs no tab strip
+    (   View == @default
+    ->  new(V, emacs_view)
+    ;   V = View
+    ),
+    send(EP, append_view, V).
+
+%       The frame looks inside me for the pane the user is working in;
+%       see `pane_frame <-current_pane'.  Everything it asks of a pane --
+%       the menu bar it wants, what it is called, that it has come into
+%       view -- is thus answered by the view, as it was when a view was a
+%       pane in its own right.
+
+current_pane(EP, View:window) :<-
+    "The view I am showing"::
+    get(EP, current, View).
+
+pane_kind(_EP, Kind:name) :<-
+    "How I am written in a description of a window"::
+    Kind = editor.
+
+pane_label(EP, Label:name) :<-
+    "What my tab is called: the source I show"::
+    get(EP, current_pane, View),
+    get(View, pane_label, Label).
+
+tab_editable_label(_EP, Editable:bool) :<-
+    "My tab is named after my buffer, so it is not renamed by hand"::
+    Editable = @off.
+
+sibling(EP, New:emacs_pane) :<-
+    "A second editor on the source I show"::
+    get(EP, current_pane, View),
+    new(New, emacs_pane(emacs_view(View?text_buffer))).
+
+new_tab(_EP, Window:window, Label:[name], Tab:tab) :<-
+    "A tab of mine holds one or more views"::
+    (   Label == @default,
+        send(Window, has_get_method, pane_label)
+    ->  get(Window, pane_label, TheLabel)
+    ;   TheLabel = Label
+    ),
+    new(Tab, emacs_tab(Window, TheLabel)).
+
+append_view(EP, View:emacs_view, Label:[name]) :->
+    "Show View in a tab of mine, and in the window I am in"::
+    send(EP, append, View, Label, @on),
+    (   get(EP, pane_frame, Frame)      % my tab is up; the window's tab
+    ->  send(Frame, current_pane, View) % holding me has to come up too
+    ;   true
+    ).
+
+                 /*******************************
+                 *       WRITTEN DOWN           *
+                 *******************************/
+
+%       What is worth writing down about an editor: the sources it shows,
+%       tab by tab, and how the views of a tab that holds several are
+%       tiled.  The grammar is my own -- library(pane_layouts) strips me
+%       to the kind `editor' and never looks inside -- but it is written
+%       and read with the same walkers `pane_frame' uses for a tab of a
+%       window, so there is one place that knows how a tiling is a term.
+%
+%       An editor showing a single source is written as that source and
+%       no more: `editor([file('foo.pl'), line(120)])', which is what a
+%       window of one editor has always said and what a term written by
+%       hand says.  Only an editor with tabs or a split of its own needs
+%       the rest of the grammar.
+
+pane_term(EP, Options:prolog) :<-
+    "The sources I show, tab by tab"::
+    get(EP, tabs, Chain),
+    chain_list(Chain, Tabs),
+    (   single_view(EP, Tabs, View)
+    ->  get(View, pane_term, Options)
+    ;   maplist(view_tab_term(EP), Tabs, Terms),
+        Options = [tabs(Terms)]
+    ).
+
+pane_term(EP, Options:prolog) :->
+    "Show the sources a description asks for"::
+    (   memberchk(tabs(Terms), Options)
+    ->  get(EP, tabs, Chain0),
+        chain_list(Chain0, Had),
+        build_view_tabs(EP, Terms, Built),
+        Built \== [],                   % nothing restored: keep what I have
+        forall(member(Old, Had), send(Old, destroy)),
+        expose_view_tab(EP, Built)
+    ;   get(EP, current_pane, View),    % one source: my options are its
+        send(View, pane_term, Options)
+    ).
+
+%!  single_view(+Editor, +Tabs, -View) is semidet.
+%
+%   The one view of an editor that shows a single source.
+
+single_view(EP, [Tab], View) :-
+    get(Tab, windows, Windows),
+    get(Windows, size, 1),
+    get(EP, current_pane, View).
+
+view_tab_term(EP, Tab, tab(Options, Content)) :-
+    findall(O, view_tab_option(EP, Tab, O), Options),
+    get(Tab, window_tree, Tree),
+    tab_current_view(Tab, Current),
+    pane_tree_term(view_term, Tree, Current, Content).
+
+view_tab_option(EP, Tab, current(true)) :-
+    get(EP, on_top, Tab).
+
+%       Which view has the keyboard is worth saying only where there is a
+%       choice; a tab holding one view has none.
+
+tab_current_view(Tab, Current) :-
+    get(Tab, windows, Windows),
+    (   get(Windows, size, Size),
+        Size > 1
+    ->  get(Tab, current, Current)
+    ;   Current = @nil
+    ).
+
+view_term(View, view(Options)) :-
+    get(View, pane_term, Options).
+
+build_view_tabs(_, [], []).
+build_view_tabs(EP, [Term|Terms], Built) :-
+    (   build_view_tab(EP, Term, Tab, Options)
+    ->  Built = [built(Tab, Options)|Rest]
+    ;   Built = Rest
+    ),
+    build_view_tabs(EP, Terms, Rest).
+
+build_view_tab(EP, tab(Options, Content), Tab, Options) :-
+    build_pane_tree(make_view, Content, Tree, First, Current),
+    send(EP, append, First, @default, @off),
+    get(First, container, emacs_tab, Tab),
+    send(Tab, window_tree, Tree),
+    (   Current == @default
+    ->  true
+    ;   send(Tab, current, Current)
+    ).
+
+make_view(view(Options), View) :-
+    new(View, emacs_view),
+    send(View, pane_term, Options).
+
+expose_view_tab(EP, Built) :-
+    (   member(built(Tab, Options), Built),
+        memberchk(current(true), Options)
+    ->  true
+    ;   Built = [built(Tab, _)|_]
+    ),
+    get(Tab, current, View),
+    View \== @nil,
+    !,
+    send(EP, current, View).
+expose_view_tab(_, _).
+
+:- pce_end_class(emacs_pane).
 
 
 :- pce_begin_class(emacs_editor, editor, "Generic PceEmacs editor").

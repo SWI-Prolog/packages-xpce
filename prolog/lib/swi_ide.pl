@@ -289,8 +289,9 @@ fixed_placement(frame, _Frame, _Pane, window) :-
 fixed_placement(_Where, @nil, _Pane, window) :-
     !.
 fixed_placement(split, Frame, Pane, split(Relatives, Side, @default)) :-
-    get(Frame, current_pane, Rel),
+    get(Frame, current_pane, Current),
     !,
+    get(Frame, pane_group, Current, Rel),   % beside the editor, not in it
     new(Relatives, chain(Rel)),
     get(@prolog_ide, pane_side, Pane, Side).
 fixed_placement(_Where, _Frame, _Pane, tab).
@@ -522,9 +523,10 @@ new_editor(_IDE, F:pane_frame, Split:[bool]) :->
     call(start_emacs:start_emacs),      % the module of library(pce_emacs)
     new(B, emacs_buffer(@nil, '*scratch*')),
     new(V, emacs_view(B)),
+    new(EP, emacs_pane(V)),             % the editor holds its own tabs
     (   Split == @on
-    ->  send(F, split, V, @default, vertically)
-    ;   send(F, append_pane, V, @default, @on)
+    ->  send(F, split, EP, @default, vertically)
+    ;   send(F, append_pane, EP, @default, @on)
     ),
     send(B, update_label),
     send(V, setup_mode),
@@ -560,7 +562,7 @@ pane_class(_IDE, Kind:name, Class:name) :<-
     (   Kind == editor
     ->  use_module(user:library(pce_emacs), []),
         call(start_emacs:start_emacs),
-        Class = emacs_view
+        Class = emacs_pane
     ;   Kind == terminal
     ->  use_module(user:library(epilog), []),
         Class = epilog_window

@@ -102,9 +102,30 @@ menus(F, Names) :-
 %!  editor(+Frame, -View) is det.
 %!  terminal(+Frame, -Window) is det.
 
+%       PceEmacs is one pane holding a tab per source, so the views are
+%       windows *of* a pane rather than panes -- see `emacs_pane'.
+%       windows/2 is every window the user works in, whichever it is.
+
+windows(F, Windows) :-
+    get(F, panes, Chain),
+    chain_list(Chain, Panes),
+    findall(W, ( member(P, Panes), pane_window(P, W) ), Windows).
+
+pane_window(P, W) :-
+    (   send(P, instance_of, emacs_pane)
+    ->  get(P, members, Chain),
+        chain_list(Chain, Views),
+        member(W, Views)
+    ;   W = P
+    ).
+
 editor(F, V) :-
+    windows(F, Windows),
+    member(V, Windows), send(V, instance_of, emacs_view), !.
+
+editor_pane(F, EP) :-
     get(F, panes, Chain), chain_list(Chain, Panes),
-    member(V, Panes), send(V, instance_of, emacs_view), !.
+    member(EP, Panes), send(EP, instance_of, emacs_pane), !.
 
 terminal(F, W) :-
     get(F, panes, Chain), chain_list(Chain, Panes),
@@ -176,23 +197,23 @@ no_frames :-
            ),
            send(F, destroy)).
 
-test(an_epilog_window_takes_an_editor, Classes == [epilog_window, emacs_view]) :-
+test(an_epilog_window_takes_an_editor, Classes == [epilog_window, emacs_pane]) :-
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, F),
     send(@prolog_ide, new_editor, F),
     classes(F, Classes).
 
-test(a_pcemacs_window_takes_a_terminal, Classes == [emacs_view, epilog_window]) :-
+test(a_pcemacs_window_takes_a_terminal, Classes == [emacs_pane, epilog_window]) :-
     emacs,
     new(B, emacs_buffer(@nil, '*mixed-1*')),
     get(@emacs, frame, B, F),
     send(@prolog_ide, new_terminal, F),
     classes(F, Classes).
 
-%       Both panes are dragged by a grip of their own.  An editor
-%       displays one wherever it is, and inside a tool it hides it (see
-%       `split_handle ->update_displayed'); as a pane of a window it is
-%       the thing that moves, so it shows it.
+%       Both panes are dragged by a grip of their own.  A grip shows
+%       itself only on a window its frame calls a pane (see `split_handle
+%       ->update_displayed'), so it is the editor that shows one and the
+%       views inside it that hide theirs.
 
 test(both_panes_show_the_grip_they_are_dragged_by,
      true(Shown == [@on, @on])) :-
@@ -200,17 +221,28 @@ test(both_panes_show_the_grip_they_are_dragged_by,
     epilog_frame(@default, @default, @default, @off, @default, F),
     send(@prolog_ide, new_editor, F),
     send(F, resize),
-    editor(F, V),
+    editor_pane(F, EP),
     terminal(F, T),
     findall(Displayed,
-            ( member(W, [V, T]),
-              get(W, fixed_graphicals, Graphicals),
-              get(Graphicals, find,
-                  message(@arg1, instance_of, split_handle), Handle),
+            ( member(W, [EP, T]),
+              grip(W, Handle),
               send(Handle, compute),
               get(Handle, displayed, Displayed)
             ),
             Shown).
+
+%       A pane that holds windows keeps its grip on the window in its
+%       corner, so it is asked for it rather than searched for one.
+
+grip(W, Handle) :-
+    (   send(W, has_get_method, grip),
+        get(W, grip, Handle),
+        Handle \== @nil
+    ->  true
+    ;   get(W, fixed_graphicals, Graphicals),
+        get(Graphicals, find,
+            message(@arg1, instance_of, split_handle), Handle)
+    ).
 
 %       A source the user asks to see -- edit/1 -- goes in the window
 %       they are in, even when that window holds no editor: a console can
@@ -218,7 +250,7 @@ test(both_panes_show_the_grip_they_are_dragged_by,
 %       with an editor in it and made one of its own when there was none.
 
 test(a_source_opens_in_the_console_the_user_is_in,
-     Classes == [epilog_window, emacs_view]) :-
+     Classes == [epilog_window, emacs_pane]) :-
     no_frames,
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, F),
@@ -469,8 +501,8 @@ test(both_kinds_of_pane_side_by_side_in_one_tab, true(N == 2)) :-
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, F),
     send(@prolog_ide, new_editor, F, @on),  % split, rather than a tab of its own
-    editor(F, V),
-    get(V, container, tab_frame, Tab),
+    editor_pane(F, EP),
+    get(EP, container, tab_frame, Tab),
     get(Tab?windows, size, N).
 
 test(the_menu_bar_follows_the_focus_inside_one_tab) :-
@@ -618,6 +650,22 @@ test(a_buffer_opens_in_a_window_that_also_holds_a_terminal,
     get(V, frame, In),
     (   In == F ->  Landed = same_window ;  Landed = elsewhere ).
 
+%       The point of the editor holding its own tabs: a second source
+%       takes one of those, so the window keeps its one layout and the
+%       terminal beside the editor stays on the screen.
+
+test(a_second_source_takes_a_tab_of_the_editor,
+     true(Layouts-Panes-Sources == 1-2-2)) :-
+    emacs,
+    mixed_window(F),
+    new(B, emacs_buffer(@nil, '*mixed-tab*')),
+    send(@emacs, show_buffer, F, B, as_arranged),
+    get(F?tabs?tabs, size, Layouts),
+    classes(F, Classes),
+    length(Classes, Panes),
+    editor_pane(F, EP),
+    get(EP?tabs, size, Sources).
+
 test(and_asking_twice_goes_back_to_the_view_it_made, true(Views == 1)) :-
     emacs,
     mixed_window(F),
@@ -625,8 +673,7 @@ test(and_asking_twice_goes_back_to_the_view_it_made, true(Views == 1)) :-
     get(B, open, tab, V),
     get(B, open, tab, V),                % the same view, in the same frame
     get(V, frame, F),
-    get(F, panes, Chain),
-    chain_list(Chain, Panes),
+    windows(F, Panes),
     aggregate_all(count,
                   ( member(P, Panes),
                     send(P, instance_of, emacs_view),
@@ -666,15 +713,17 @@ test(only_editors_are_asked_which_buffer_they_hold, true(Asked == [])) :-
 test(a_dropped_pane_takes_the_focus, true(Focused == [V])) :-
     emacs,
     tabbed_window_pair(F, _T, V),
-    send(F, input_focus, @on),          % as if the window manager had
-    drop_onto(F, V),
+    editor_pane(F, EP),                 % the editor is the pane; V is the
+    send(F, input_focus, @on),          % view in it that gets the focus
+    drop_onto(F, EP),
     focused(F, Focused).
 
 test(and_the_focus_follows_a_click_afterwards, true(Focused == [T])) :-
     emacs,
-    tabbed_window_pair(F, T, V),
+    tabbed_window_pair(F, T, _V),
+    editor_pane(F, EP),
     send(F, input_focus, @on),
-    drop_onto(F, V),
+    drop_onto(F, EP),
     ignore(send(T, post_event, event(ms_left_down, T, 20, 20))),
     ignore(send(T, post_event, event(ms_left_up, T, 20, 20))),
     focused(F, Focused).
@@ -739,8 +788,7 @@ drop_onto(F, Window) :-
 %   The panes of Frame that hold the keyboard focus.  Exactly one should.
 
 focused(F, Panes) :-
-    get(F, panes, Chain),
-    chain_list(Chain, All),
+    windows(F, All),
     findall(P,
             ( member(P, All),
               get(P, input_focus, @on)
@@ -826,6 +874,16 @@ test(a_window_of_both_kinds_gives_the_same_term_back) :-
     get(F2, pane_term, Again),
     assertion(Term == Again).
 
+test(an_editor_with_tabs_of_its_own_gives_the_same_term_back) :-
+    mixed(F, _File),
+    editor_pane(F, EP),
+    new(B, emacs_buffer(@nil, '*second-source*')),
+    send(EP, append_view, emacs_view(B)),
+    get(F, pane_term, Term),
+    open_pane_frame(Term, F2, [open(false)]),
+    get(F2, pane_term, Again),
+    assertion(Term == Again).
+
 test(the_caret_comes_back_where_it_was, Line == 2) :-
     mixed(F, _File),
     editor(F, V),
@@ -840,7 +898,7 @@ test(the_caret_comes_back_where_it_was, Line == 2) :-
 %       what PceEmacs does for one anywhere else.  The rest of the window
 %       comes back around it.
 
-test(a_source_that_has_gone_leaves_the_rest_standing, Classes == [emacs_view, epilog_window]) :-
+test(a_source_that_has_gone_leaves_the_rest_standing, Classes == [emacs_pane, epilog_window]) :-
     emacs,
     source_of_our_own(File),
     delete_file(File),

@@ -37,10 +37,13 @@
 
 /** <module> Tests for splitting windows in PceEmacs
 
-An Emacs tab holds its views in a tab_frame (see library(tab_frame)), so
-that a tab can show more than one view.  These test the window commands
-over those views and the rule that the label of the tab and of the frame
-follows the view that has the focus.
+PceEmacs is one pane of a window of the IDE -- an `emacs_pane', see
+library(emacs/window) -- that holds a tab per source of its own.  Each of
+those tabs is a tab_frame (see library(tab_frame)) and so may show more
+than one view.  These test the window commands over the views of a tab,
+the rule that the label of the tab and of the frame follows the view that
+has the focus, and that a source the user asks for takes a tab of the
+editor rather than one of the window.
 
 Run with:
 
@@ -61,7 +64,8 @@ Run with:
 :- use_module(library(pce_emacs)).
 :- use_module(library(pce_util), [chain_list/2]).
 :- use_module(library(swi_ide), []).
-:- use_module(library(lists), [member/2, length/2]).
+:- use_module(library(lists), [member/2]).
+:- use_module(library(pane_frame), [open_pane_frame/3]).
 :- use_module(library(filesex), [directory_file_path/3]).
 
 test_emacs_split :-
@@ -128,10 +132,29 @@ frame_label(F, TabLabel) :-
     Label == Expected.
 
 %!  tabs(+Frame, -Count) is det.
+%
+%   How many tabs the *window* has.  A tab of the window is a layout: the
+%   panes in it and how they are tiled.
 
 tabs(F, Count) :-
     get(F, tabs, TW),
     get(TW?tabs, size, Count).
+
+%!  editor(+Frame, -Editor) is det.
+%
+%   The pane of Frame the views live in.
+
+editor(F, Editor) :-
+    get(F, current_pane, V),
+    get(F, pane_group, V, Editor).
+
+%!  source_tabs(+Frame, -Count) is det.
+%
+%   How many tabs the *editor* has: one per source.
+
+source_tabs(F, Count) :-
+    editor(F, Editor),
+    get(Editor?tabs, size, Count).
 
 %!  split_orientation(+View, -Orientation) is semidet.
 %
@@ -194,13 +217,75 @@ test(a_tab_holds_its_views_in_a_tab_frame) :-
     emacs(_F, V),
     get(V, container, tab_frame, _).
 
-test(a_new_tab_is_a_tab_of_its_own) :-
+test(a_new_tab_is_a_tab_of_the_editor) :-
     emacs(F, _V),
     tabs(F, 1),
+    source_tabs(F, 1),
     scratch(B),
     send(@emacs, show_buffer, F, B, tab),
-    tabs(F, 2),
+    tabs(F, 1),                         % the window keeps its one layout
+    source_tabs(F, 2),
     views(F, [_]).
+
+test(and_the_editor_is_still_the_one_pane_of_the_window) :-
+    emacs(F, _V),
+    scratch(B),
+    send(@emacs, show_buffer, F, B, tab),
+    get(F, panes, Panes),
+    get(Panes, size, 1),
+    editor(F, Editor),
+    send(Editor, instance_of, emacs_pane).
+
+%       What edit/1 and find-definition do, left to the way the user
+%       arranges their windows: the source they ask for takes a tab of
+%       the editor rather than the editor that is there.
+
+test(a_source_opens_in_a_tab_of_the_editor) :-
+    emacs(F, V),
+    source_tabs(F, 1),
+    scratch(B),
+    send(@emacs, show_buffer, F, B, as_arranged),
+    source_tabs(F, 2),
+    tabs(F, 1),
+    get(F, current_pane, New),
+    New \== V,                          % the view that was there kept
+    get(New, text_buffer, B),           % the source it was showing
+    get(V, text_buffer, Was),
+    Was \== B.
+
+test(closing_the_last_tab_of_an_editor_takes_it_out_of_the_window) :-
+    emacs(F, _V),
+    editor(F, EP),
+    send(EP, split, vertically),         % a second editor beside it
+    get(F?panes, size, 2),
+    get(EP, members, Chain),
+    chain_list(Chain, Views),
+    forall(member(W, Views), send(W, close_pane)),
+    get(F?panes, size, 1),
+    \+ object(EP).
+
+%       An editor showing one source is written as that source; one with
+%       tabs of its own writes them, and gives the same window back.
+
+test(an_editor_of_one_source_is_written_as_that_source) :-
+    emacs(F, _V),
+    get(F, pane_term, pane_frame(_, [tab(_, editor(Options))])),
+    memberchk(buffer(_), Options).
+
+test(the_editor_writes_down_the_tabs_it_holds) :-
+    emacs(F, _V),
+    scratch(B),
+    send(@emacs, show_buffer, F, B, tab),
+    get(F, pane_term, Term),
+    Term = pane_frame(_, [tab(_, editor(Options))]),
+    memberchk(tabs(Tabs), Options),
+    length(Tabs, 2),
+    open_pane_frame(Term, F2, [open(false)]),
+    source_tabs(F2, 2),
+    get(F2, pane_term, Again),
+    Again = pane_frame(_, [tab(_, editor(Options2))]),
+    memberchk(tabs(Tabs2), Options2),
+    Tabs2 == Tabs.
 
 :- end_tests(emacs_tabs).
 
@@ -285,10 +370,25 @@ test(a_buffer_asked_for_opens_a_tab_when_not_split) :-
     scratch(B),
     mode(F, M),
     send(M, show_buffer, B),            % what C-x C-f and C-x b do
-    tabs(F, 2),
+    source_tabs(F, 2),
     views(F, [_]),
     get(V, text_buffer, B0),
     B0 \== B.                           % the old view kept its buffer
+
+%       A tab of the editor holds the views it was split into, and the
+%       other tabs keep theirs.
+
+test(a_split_stays_in_the_tab_it_was_made_in) :-
+    emacs(F, V1),
+    scratch(B),
+    send(@emacs, show_buffer, F, B, tab),
+    source_tabs(F, 2),
+    mode(F, M),
+    send(M, split_window),              % C-x 2 in the tab we are in
+    views(F, [_, _]),
+    send(F, current_pane, V1),          % back to the tab we came from
+    views(F, [V1]),
+    source_tabs(F, 2).
 
 test(a_buffer_asked_for_reuses_the_pane_when_split) :-
     emacs(F, V1),
@@ -498,11 +598,13 @@ test(and_by_default_it_asks_for_the_way_you_arrange_them,
 test(a_source_asked_for_in_a_tab_opens_in_one) :-
     emacs(_F, _V),
     get(@emacs, current_frame, Frame),  % which window is not this test's
-    tabs(Frame, Tabs0),                 % business; see <-current_frame
+    source_tabs(Frame, Tabs0),          % business; see <-current_frame
+    tabs(Frame, Layouts),
     scratch(B),
     send(B, open, tab),
-    tabs(Frame, Tabs),
-    Tabs =:= Tabs0+1.
+    source_tabs(Frame, Tabs),
+    Tabs =:= Tabs0+1,
+    tabs(Frame, Layouts).               % a tab of the editor, not of the
 
 test(and_one_asked_for_beside_what_is_there_splits) :-
     emacs(_F, _V),
@@ -545,11 +647,11 @@ test(a_source_location_opens_where_the_setting_says,
      ]) :-
     emacs(_F, _V),
     get(@emacs, current_frame, Frame),
-    tabs(Frame, Tabs0),
+    source_tabs(Frame, Tabs0),
     with_placement(tab,
                    send(@emacs, goto_source_location,
                         source_location(File, 1))),
-    tabs(Frame, Tabs),
+    source_tabs(Frame, Tabs),
     Tabs =:= Tabs0+1.
 
 test(and_beside_what_is_there_when_that_is_the_setting,
@@ -575,9 +677,9 @@ test(and_a_file_opens_the_same_way,
      ]) :-
     emacs(_F, _V),
     get(@emacs, current_frame, Frame),
-    tabs(Frame, Tabs0),
+    source_tabs(Frame, Tabs0),
     with_placement(tab, send(@emacs, open_file, File)),
-    tabs(Frame, Tabs),
+    source_tabs(Frame, Tabs),
     Tabs =:= Tabs0+1.
 
 :- end_tests(emacs_placement).
