@@ -304,7 +304,7 @@ pane_term(V, Options:prolog) :->
         ),
         send(V, text_buffer, emacs_buffer(Path))
     ;   memberchk(buffer(Name), Options),
-        get(@emacs_buffers, member, Name, TB)
+        get(@emacs, buffer, Name, TB)   % <-member of the dict is the item
     ->  send(V, text_buffer, TB)
     ;   true
     ),
