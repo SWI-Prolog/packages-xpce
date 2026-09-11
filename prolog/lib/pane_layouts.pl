@@ -93,9 +93,10 @@ caller turns the kinds into the panes it has.
 %       The arrangements the system comes with.  They say the things that
 %       have no good single answer today: a navigator or a list of
 %       buffers belongs down the left at a fifth of the width, a terminal
-%       below the editor at a third of the height, a debugger in a tab
-%       beside the terminal it is debugging.  Anything not mentioned
-%       falls through to a tab, which is what the IDE has always done.
+%       or a list of bookmarks below the editor at a third of the height,
+%       a debugger in a tab beside the terminal it is debugging.
+%       Anything not mentioned falls through to a tab, which is what the
+%       IDE has always done.
 %
 %       They are clauses rather than data in a file so that a user's init
 %       file or a project can add its own.
@@ -112,6 +113,8 @@ default_arrangement(
                                                       0.3-terminal])]))])).
 default_arrangement(
     pane_frame([], [tab([], horizontal([0.2-emacs_buffer_menu, 0.8-editor]))])).
+default_arrangement(
+    pane_frame([], [tab([], horizontal([0.8-editor, 0.2-emacs_bookmark_editor]))])).
 default_arrangement(
     pane_frame([], [ tab([], terminal),
                      tab([], prolog_debugger)

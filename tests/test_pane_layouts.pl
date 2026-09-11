@@ -136,6 +136,12 @@ test(and_splits_the_editor_alone_in_a_window_that_runs_one,
      Rule == split([editor], left, 0.2)) :-
     pane_placement(emacs_buffer_menu, [editor, terminal], Rule).
 
+test(a_list_of_bookmarks_goes_right_of_the_editor,
+     Rule = split([editor], right, Share)) :-
+    pane_placement(emacs_bookmark_editor, [editor, terminal], Rule),
+    Rule = split(_, _, Share),
+    assertion(abs(Share-0.2) < 0.001).
+
 test(a_terminal_goes_below_the_editor,
      Rule = split([editor], below, Share)) :-
     pane_placement(terminal, [editor], Rule),

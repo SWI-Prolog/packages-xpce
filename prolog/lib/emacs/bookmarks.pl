@@ -41,8 +41,7 @@
 :- use_module(library(swi_ide), []).
 :- use_module(library(toolbar)).
 :- use_module(library(pce_toc)).
-:- use_module(library(pce_report)).
-:- use_module(library(persistent_frame)).
+:- use_module(library(pane_frame)).
 :- use_module(library(debug)).
 :- use_module(library(pce_util)).
 
@@ -82,13 +81,32 @@ resource(open,   image, image('tool/edit.svg')).
 resource(pin,    image, image('pin.png')).
 resource(pinned, image, image('pinned.png')).
 
-:- pce_begin_class(emacs_bookmark_editor, persistent_frame,
+/* Bookmarks and hits as a pane.
+
+It used to be a frame of its own, holding a tool bar, the tree of
+bookmarks, the note being written and a reporter.  It is a `tool_pane'
+now -- see library(pane_frame) -- so it drops into a tab of any window of
+the IDE or, being a list of places to go to in what is being edited,
+along the bottom of the editor.  What it has to say goes on the status
+bar of the window it ends up in, so it carries no reporter of its own.
+
+There is more than one: `@emacs_mark_list' holds the bookmarks the user
+keeps, and each unpinned hit list of `find_references_editor/2' is
+another.  They are told apart by <-persists and by <-label, which is what
+their tabs are called.
+*/
+
+:- pce_begin_class(emacs_bookmark_editor, tool_pane,
                    "PceEmacs bookmark administration and viewing").
+
+class_variable(pane_side, {above,below,left,right}, below,
+               "A list of places to go to is added below the editor").
 
 variable(persists,     bool,         get, "Bookmarks are persistent").
 variable(file,         file*,        get, "File for holding the bookmarks").
 variable(exit_message, code*,        get, "Registered exit message").
 variable(pinned,       bool := @off, get, "Pin: do not reuse for the next query").
+variable(label,        name* := @nil, get, "What my tab is called").
 
 initialise(BM,
            Title:title=[string],
@@ -96,25 +114,24 @@ initialise(BM,
            Notes:notes=[bool]) :->
     default(Title, "PceEmacs bookmarks", TheTitle),
     default(Persist, @off, ThePersist),
-    send_super(BM, initialise, TheTitle),
-    send(BM, persistent_subwindow_layout, @off),
-    send(BM, application, @prolog_ide),  % every window of the IDE does
+    send_super(BM, initialise, bookmarks),
     send(BM, slot, persists, ThePersist),
     (   ThePersist == @off
     ->  assert(references_editor(BM))
     ;   true
     ),
-    send(BM, done_message, message(BM, close)),
-    send(BM, append, new(D, dialog)),
+    send(BM, append_window, new(D, dialog)),
     send(BM, fill_dialog),
     initial_directory(Dir),
-    send(emacs_bookmark_window(Dir, cwd), below, D),
+    send(BM, append_window, new(W, emacs_bookmark_window(Dir, cwd)), D, below),
     (   (Persist == @on; Notes == @on)
-    ->  send(new(V, view(size := size(40,8))), below, D),
-        send(V, font, normal),
-        send(V, ver_stretch, 0)
-    ;   true
+    ->  send(BM, append_window,
+             new(V, view(size := size(40,4))), W, below),
+        send(V, font, normal),          % four lines, not eight: a pane
+        send(V, ver_stretch, 0)         % is a strip, and the tree is what
+    ;   true                            % the room in it is for
     ),
+    send(BM, label, TheTitle),
     (   Persist == @on
     ->  send(@pce, exit_message, new(Msg, message(BM, save))),
         send(BM, slot, exit_message, Msg),
@@ -130,15 +147,44 @@ initial_directory(Dir) :-
     ;   Dir = CWD
     ).
 
-close(BM) :->
-    "User initiated close"::
+%       A pane is closed the way every other pane of a window is, and
+%       `@emacs_mark_list' makes itself again the next time anybody asks
+%       for it.  What it holds is written out first: ->unlink is too late
+%       for that, as <-tree is a window of mine and `pane_frame
+%       ->delete_pane' has taken me out of my window by then.
+
+close_pane(BM) :->
+    "Write out what I hold, then close as any pane does"::
     (   get(BM, persists, @on)
-    ->  send(BM, status, hidden)
-    ;   send(BM, destroy)
+    ->  ignore(send(BM, save))
+    ;   true
+    ),
+    send_super(BM, close_pane).
+
+close(BM) :->
+    "Take me out of the window I am in"::
+    send(BM, close_pane).
+
+%       What my tab is called.  It is set rather than taken from my name,
+%       as a hit list is called after what was searched for; see
+%       find_references_editor/2.
+
+label(BM, Label:name) :->
+    "Name me and the tab I am in"::
+    send(BM, slot, label, Label),
+    (   get(BM, pane_frame, Frame)
+    ->  ignore(send(Frame, update_tab_label)),
+        ignore(send(Frame, update_label))
+    ;   true
     ).
 
+pane_label(BM, Label:name) :<-
+    "What my tab is called"::
+    get(BM, slot, label, Label),
+    Label \== @nil.
+
 fill_dialog(BM) :->
-    get(BM, member, dialog, D),
+    get(BM, window, dialog, D),
     send(D, pen, 0),
     send(D, gap, size(0, 5)),
     send(BM, add_pin),
@@ -154,13 +200,11 @@ fill_dialog(BM) :->
               [ tool_button(goto, resource(open), 'Open editor'),
                 tool_button(cut,  resource(cut),  'Delete selection')
               ]),
-    send(D, append, graphical(0,0,10,1), right), % make a gap
-    send(D, append, new(reporter), right),
     send(D, resize_message, message(D, layout, @arg2)).
 
 add_pin(BM) :->
     (   get(BM, persists, @off)
-    ->  get(BM, member, dialog, D),
+    ->  get(BM, window, dialog, D),
         send(D, append, new(Pin, bitmap(image(resource(pin)))), right),
         send(Pin, name, pin),
         get(@pce, convert, normal, font, Font),
@@ -180,8 +224,8 @@ unlink(BM) :->
     ->  true
     ;   get(@pce, exit_messages, Chain),
         send(Chain, delete_all, Msg),
-        send(BM, save)
-    ),
+        ignore(send(BM, save))          % a ->unlink that fails leaves the
+    ),                                  % window half taken apart
     send_super(BM, unlink).
 
 toggle_pinned(BM) :->
@@ -193,7 +237,7 @@ toggle_pinned(BM) :->
 pinned(BM, Pinned:bool) :->
     "Set pinned state and update pin button icon"::
     send(BM, slot, pinned, Pinned),
-    get(BM, member, dialog, D),
+    get(BM, window, dialog, D),
     get(D, member, pin, Btn),
     (   Pinned == @off
     ->  send(Btn, image, image(resource(pin)))
@@ -202,21 +246,21 @@ pinned(BM, Pinned:bool) :->
 
 clear(BM) :->
     "Remove all bookmarks from the tree"::
-    get(BM, member, emacs_bookmark_window, BW),
+    get(BM, window, emacs_bookmark_window, BW),
     send(BW, clear),
     initial_directory(CWD),
     send(BW, root, emacs_toc_bookmark_folder(CWD, directory)).
 
 tree(BM, Tree:toc_tree) :<-
-    get(BM, member, emacs_bookmark_window, W),
+    get(BM, window, emacs_bookmark_window, W),
     get(W, tree, Tree).
 
 view(BM, V:view) :<-
     "View for annotations"::
-    get(BM, member, view, V).
+    get(BM, window, view, V).
 
 selection(BM, Sel:'name|emacs_bookmark') :<-
-    get(BM, member, emacs_bookmark_window, W),
+    get(BM, window, emacs_bookmark_window, W),
     get(W, selection, Sel0),
     get(Sel0, map, @arg1?identifier, Sel1),
     get(Sel1, head, Sel).
@@ -225,7 +269,7 @@ selection(BM, Sel:'name|emacs_bookmark') :<-
 
 goto(BM) :->
     "Edit current selection"::
-    get(BM, member, emacs_bookmark_window, W),
+    get(BM, window, emacs_bookmark_window, W),
     (   get(BM, selection, Sel),
         send(Sel, instance_of, emacs_bookmark)
     ->  send(W, open_node, Sel)
@@ -234,7 +278,7 @@ goto(BM) :->
 
 cut(BM) :->
     "Delete selected nodes"::
-    get(BM, member, emacs_bookmark_window, W),
+    get(BM, window, emacs_bookmark_window, W),
     (   get(W, selection, Nodes),
         \+ send(Nodes, empty)
     ->  send(Nodes, for_all, message(@arg1, delete_tree))
@@ -365,7 +409,7 @@ update_bookmarks(_F, TB:emacs_buffer) :->
 current(F, BM:emacs_bookmark*, UpdateSelection:[bool]) :->
     "Make this bookmark the current one"::
     (   UpdateSelection \== @off,
-        get(F, member, emacs_bookmark_window, BW)
+        get(F, window, emacs_bookmark_window, BW)
     ->  send(BW, selection, BM)
     ;   true
     ),
@@ -518,16 +562,22 @@ open_node(BW, Id:any) :->
         )
     ).
 
+%       Not <-frame: that is the window of the IDE I am a pane of now.
+
+editor(BW, BM:emacs_bookmark_editor) :<-
+    "The pane I am part of"::
+    get(BW, container, emacs_bookmark_editor, BM).
+
 select_node(BW, Id:any) :->
     "User selected a node"::
     (   send(Id, instance_of, emacs_bookmark)
-    ->  send(BW?frame, current, Id)
+    ->  send(BW?editor, current, Id)
     ;   true
     ).
 
 selection(BW, Sel:any*) :->
     (   Sel == @nil
-    ->  send(BW?frame, current, @nil, @off)
+    ->  send(BW?editor, current, @nil, @off)
     ;   true
     ),
     send_super(BW, selection, Sel).
