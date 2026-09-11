@@ -69,6 +69,7 @@ test_pane_layouts :-
                 pane_layouts_ranking,
                 pane_layouts_stripping,
                 pane_layouts_learning,
+                pane_layouts_keeping,
                 pane_layouts_log
               ]).
 
@@ -409,6 +410,91 @@ test(forgetting_puts_back_the_way_it_comes, Side == left) :-
     pane_placement(prolog_navigator, [terminal], split(_, Side, _)).
 
 :- end_tests(pane_layouts_learning).
+
+                 /*******************************
+                 *           KEEPING            *
+                 *******************************/
+
+/* An arrangement the user asks to keep answers over anything that has
+   been learned, stays until it is replaced, and is replaced only by
+   another for the same set of panes.  `right' and `below' are the two
+   named above; with neither of them the answer is the one the system
+   comes with, which is `left'.
+*/
+
+:- begin_tests(pane_layouts_keeping,
+               [ setup(forget_arrangements),
+                 cleanup(forget_arrangements)
+               ]).
+
+test(what_is_kept_beats_what_is_learned, Side == right) :-
+    below(Below),
+    right(Right),
+    record_arrangement(Below, 360000),  % a hundred hours in the other one
+    remember_arrangement(Right),
+    pane_placement(prolog_navigator, [terminal], split(_, Side, _)).
+
+%       And goes on doing so however long another is worked in
+%       afterwards: it is not a head start, it is a tier of its own.
+
+test(and_goes_on_beating_it, Side == right) :-
+    right(Right),
+    below(Below),
+    remember_arrangement(Right),
+    record_arrangement(Below, 360000),
+    pane_placement(prolog_navigator, [terminal], split(_, Side, _)).
+
+test(keeping_another_for_the_same_panes_replaces_it, Side == below) :-
+    right(Right),
+    below(Below),
+    remember_arrangement(Right),
+    remember_arrangement(Below),
+    pane_placement(prolog_navigator, [terminal], split(_, Side, _)).
+
+%       Replaced only for the same panes: what is kept for a window that
+%       runs a terminal says nothing about one that does not.
+
+test(one_is_kept_for_each_set_of_panes, Kept == 2) :-
+    right(Right),
+    remember_arrangement(Right),
+    remember_arrangement(
+        pane_frame([], [tab([], horizontal([0.3-prolog_navigator,
+                                            0.7-editor]))])),
+    findall(x, pane_layouts:kept(_, _, _), Xs),
+    length(Xs, Kept).
+
+%       Summarising the log drops what has faded.  What is kept does not
+%       fade and is written out again.
+
+test(summarising_the_log_keeps_it, Side == right) :-
+    right(Right),
+    remember_arrangement(Right),
+    fill_log,
+    pane_placement(prolog_navigator, [terminal], split(_, Side, _)).
+
+test(and_forgetting_throws_it_away_too, Side == left) :-
+    right(Right),
+    remember_arrangement(Right),
+    forget_arrangements,
+    pane_placement(prolog_navigator, [terminal], split(_, Side, _)).
+
+:- end_tests(pane_layouts_keeping).
+
+%!  fill_log is det.
+%
+%   Write enough records that the next one summarises the log.  They are
+%   all of kinds nothing else here asks about.
+
+fill_log :-
+    pane_layouts:max_events(Max),
+    N is Max+1,
+    forall(between(1, N, I),
+           ( Share is 0.1+I/1000,
+             record_arrangement(
+                 pane_frame([], [tab([], horizontal([Share-tr_one,
+                                                     0.5-tr_two]))]),
+                 600)
+           )).
 
                  /*******************************
                  *            THE LOG           *

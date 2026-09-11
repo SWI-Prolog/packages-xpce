@@ -37,6 +37,7 @@
             arrangement_kinds/2,        % +Arrangement, -Kinds
             arrangement_of/2,           % +PaneTerm, -Arrangement
             record_arrangement/2,       % +Arrangement, +Seconds
+            remember_arrangement/1,     % +Arrangement
             forget_arrangements/0
           ]).
 :- use_module(library(lists),
@@ -120,19 +121,26 @@ default_arrangement(
                      tab([], prolog_debugger)
                    ])).
 
-%!  arrangement(-Arrangement, -Priority) is nondet.
+%!  arrangement(-Arrangement, -Tier, -Priority) is nondet.
 %
-%   Every arrangement that could be used, with what it has earned.  The
-%   ones the system comes with carry a nominal five minutes, so that any
-%   arrangement the user has really worked in outranks them and they
-%   answer when nothing else does.
+%   Every arrangement that could be used, with what it has earned.  An
+%   arrangement the user asked to keep -- see remember_arrangement/1 --
+%   is in a tier of its own above everything else, so that no amount of
+%   working in another one displaces it; within that tier the one that
+%   fits the window best is still the one read, which is what its
+%   priority of 1 leaves to say.  The ones the system comes with carry a
+%   nominal five minutes, so that any arrangement the user has really
+%   worked in outranks them and they answer when nothing else does.
 
-arrangement(Arrangement, Priority) :-
+arrangement(Arrangement, 1, 1) :-
+    load_arrangements,
+    kept(_Kinds, Arrangement, _At).
+arrangement(Arrangement, 0, Priority) :-
     load_arrangements,
     get_time(Now),
     stored(_Shape, Arrangement, Earned, At),
     decayed(Earned, At, Now, Priority).
-arrangement(Arrangement, 300) :-
+arrangement(Arrangement, 0, 300) :-
     default_arrangement(Arrangement).
 
                  /*******************************
@@ -273,6 +281,7 @@ clamped(Share, Rounded) :-
 
 :- dynamic
     stored/4,                           % Shape, Arrangement, Earned, At
+    kept/3,                             % Kinds, Arrangement, At
     events/1,                           % records in the log as last read
     complained/1.                       % what has been warned about
 
@@ -317,6 +326,7 @@ load_arrangements :-
 
 clear_store :-
     retractall(stored(_,_,_,_)),
+    retractall(kept(_,_,_)),
     retractall(events(_)),
     assertz(events(0)).
 
@@ -347,6 +357,8 @@ count_record :-
 
 replay(used(Arrangement, Seconds, At)) =>
     credit(Arrangement, Seconds, At).
+replay(kept(Arrangement, At)) =>
+    keep(Arrangement, At).
 replay(Term) =>
     complain(unknown_term(Term)).
 
@@ -380,6 +392,33 @@ record_arrangement(Arrangement, Seconds) :-
     store_file(File),
     with_store(File, add_record(used(Arrangement, Seconds, Now))).
 record_arrangement(_, _).
+
+%!  remember_arrangement(+Arrangement) is det.
+%
+%   Keep Arrangement for as long as the store lasts.  It answers over
+%   anything that has been learned, however long that has been worked in,
+%   and the log being summarised does not drop it.
+%
+%   One is kept for each set of pane kinds, so asking again for a window
+%   holding the same tools replaces what was kept for them: there is one
+%   answer to "where do these go", and it is the last one given.
+
+remember_arrangement(Arrangement) :-
+    get_time(Now),
+    store_file(File),
+    with_store(File, add_record(kept(Arrangement, Now))).
+
+%!  keep(+Arrangement, +At) is det.
+%
+%   Replay of a `kept' record.  Keyed by the kinds rather than by the
+%   shape: what the user asked to keep is where these panes go, so a new
+%   answer for the same panes takes the place of the old one however
+%   differently they are tiled in it.
+
+keep(Arrangement, At) :-
+    arrangement_kinds(Arrangement, Kinds),
+    retractall(kept(Kinds, _, _)),
+    assertz(kept(Kinds, Arrangement, At)).
 
 %       Under the lock: play back what the others have written since we
 %       last looked, add ours, and either append it or -- if the log has
@@ -424,13 +463,17 @@ append_record(File, Record) :-
 summarise_log(File) :-
     get_time(Now),
     worth_recording(Least),
+    findall(kept(Arrangement, At),
+            kept(_Kinds, Arrangement, At),
+            Keeps),
     findall(used(Arrangement, Rounded, Now),
             ( stored(_Shape, Arrangement, Earned, At),
               decayed(Earned, At, Now, Priority),
               Priority >= Least,
               Rounded is round(Priority*10)/10.0
             ),
-            Records),
+            Used),
+    append(Keeps, Used, Records),
     rewrite_log(File, Records).
 
 %       Written beside the log and renamed over it, so that the log is
@@ -454,19 +497,27 @@ write_record(Out, Record) :-
 
 write_header(Out) :-
     format(Out, '/*  How you have arranged the windows of the IDE.~n~n', []),
-    format(Out, '    Each record is a window with the content left~n', []),
-    format(Out, '    out and the seconds it was worked in, as they~n', []),
-    format(Out, '    stood at that moment.  They are added up as the~n', []),
-    format(Out, '    file is read, the older ones counting for less.~n', []),
+    format(Out, '    A `used\' record is a window with the content~n', []),
+    format(Out, '    left out and the seconds it was worked in, as~n', []),
+    format(Out, '    they stood at that moment.  They are added up~n', []),
+    format(Out, '    as the file is read, the older ones counting~n', []),
+    format(Out, '    for less.~n~n', []),
+    format(Out, '    A `kept\' record is a window you asked to keep.~n', []),
+    format(Out, '    It does not fade and answers over the rest,~n', []),
+    format(Out, '    until you keep another holding the same panes.~n~n', []),
     format(Out, '    Edit it as you like.~n', []),
     format(Out, '*/~n~n', []).
 
 %!  forget_arrangements is det.
 %
-%   Throw away everything that has been learned.
+%   Throw away everything that has been learned, and everything the user
+%   asked to keep: the menu item says "forget how I arranged windows",
+%   and an arrangement that went on answering after that would be a
+%   puzzle rather than a help.
 
 forget_arrangements :-
     retractall(stored(_,_,_,_)),
+    retractall(kept(_,_,_)),
     store_file(File),
     (   exists_file(File)
     ->  with_store(File, forget_log)
@@ -586,8 +637,8 @@ orientation(vertical).
 
 pane_placement(Kind, LiveKinds, Rule) :-
     sort([Kind|LiveKinds], Want),
-    findall(Score-Arrangement,
-            ( arrangement(Arrangement, Priority),
+    findall(Tier-Score-Arrangement,
+            ( arrangement(Arrangement, Tier, Priority),
               arrangement_kinds(Arrangement, Kinds),
               memberchk(Kind, Kinds),
               score(Kinds, Want, Priority, Score)

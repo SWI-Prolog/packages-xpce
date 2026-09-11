@@ -54,7 +54,9 @@
 :- use_module(library(lists), [member/2, max_list/2, nth1/3, last/2]).
 :- use_module(library(apply), [maplist/3]).
 :- use_module(library(pane_layouts),
-              [ arrangement_of/2, record_arrangement/2 ]).
+              [ arrangement_of/2, record_arrangement/2,
+                remember_arrangement/1
+              ]).
 
 :- meta_predicate
     pane_tree_term(2, +, +, -),
@@ -455,6 +457,15 @@ start_arrangement(F) :-
 frame_arrangement(F, Arrangement) :-
     get(F, pane_term, Term),
     arrangement_of(Term, Arrangement).
+
+%       What the user asks the Settings menu to keep.  Not the
+%       arrangement <-arranged has been timing -- that is the one I was in
+%       when they last moved something -- but the one I am in now.
+
+remember_arrangement(F) :->
+    "Keep the way I am arranged for windows holding these panes"::
+    frame_arrangement(F, Arrangement),
+    remember_arrangement(Arrangement).
 
 record_arrangement(F) :->
     "Credit the arrangement I am in with the time it has been"::
@@ -1819,6 +1830,16 @@ free_items_([MI|T], P, FreeRank, Free) :-
 %       items above it.  This waits until the menu opens: everybody who
 %       fills the bar has had a turn by then, so the item the line goes
 %       under is the one it will still be under when the menu is drawn.
+%
+%       The tick a command is left wearing goes at the same moment.  A
+%       menu that holds settings as well as commands takes a set of them
+%       -- <-multiple_selection is @on, so that any number can be on at
+%       once -- and `popup ->execute' toggles whatever was picked in such
+%       a menu, which leaves a tick beside a command that nothing ever
+%       takes off again.  What says an item is a setting is its
+%       <-condition: that is what the super runs to say whether the
+%       setting is on.  An item without one is a command and wears no
+%       tick.
 
 update(P, Context:any) :->
     "Close the group above the items ranked at the end"::
@@ -1828,7 +1849,17 @@ update(P, Context:any) :->
     ->  send(MI, end_group, @on)
     ;   true
     ),
+    send(P, untick_commands),
     send_super(P, update, Context).
+
+untick_commands(P) :->
+    "Take the tick off every item of mine that is a command"::
+    get(P, members, Chain),
+    chain_list(Chain, Items),
+    forall(( member(Item, Items),
+             get(Item, condition, @nil)
+           ),
+           send(Item, selected, @off)).
 
 assign_accelerators(_) :->
     "Accelerators are defined by the panes"::
@@ -2341,6 +2372,7 @@ new_window(P) :->
     ;   App = @default
     ),
     send(new(pane_frame(App, @default, New)), open).
+
 
 move_to_tab(P) :->
     "Move me out of a split, into a tab of my own"::

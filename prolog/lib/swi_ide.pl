@@ -582,6 +582,18 @@ preferences(_IDE, Which:{prolog,xpce}) :->
     "Edit Prolog or GUI preferences"::
     prolog_edit_preferences(Which).
 
+%       The IDE learns where panes go from how long a window is worked
+%       in, which takes a while to come round and fades again.  This says
+%       it outright: the window as it stands is where panes of these kinds
+%       go, and stays so until it is said again for the same panes.
+
+remember_arrangement(_IDE, F:pane_frame) :->
+    "Keep the way this window is arranged"::
+    send(F, remember_arrangement),
+    send(@display, inform, F, @default,
+         'Remembered.  A window holding these panes is arranged this way\n\c
+          until you say so again for the same panes.').
+
 forget_arrangements(_IDE) :->
     "Throw away the arrangements the IDE has learned"::
     forget_arrangements,
@@ -641,6 +653,10 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
     send(PlacementPopup, show_current, @on),
     send(PlacementPopup, update_message,
          message(IDE, update_tool_placement_menu, @receiver)),
+    send(Settings, append,
+         menu_item(remember_arrangement,
+                   message(IDE, remember_arrangement, F),
+                   'Remember how this window is arranged')),
     send(Settings, append,
          menu_item(forget_arrangements,
                    message(IDE, forget_arrangements),
