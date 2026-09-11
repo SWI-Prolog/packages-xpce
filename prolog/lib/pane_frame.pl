@@ -51,7 +51,7 @@
 :- use_module(library(tabbed_window), []).
 :- use_module(library(tab_frame), []).
 :- use_module(library(toolbar), []).
-:- use_module(library(lists), [member/2, max_list/2, nth1/3]).
+:- use_module(library(lists), [member/2, max_list/2, nth1/3, last/2]).
 :- use_module(library(apply), [maplist/3]).
 :- use_module(library(pane_layouts),
               [ arrangement_of/2, record_arrangement/2 ]).
@@ -1714,6 +1714,121 @@ assign_accelerators(_) :->
 
 class_variable(accelerator_font, font, small,
                "Font the accelerator is written in").
+
+%       The items of a menu arrive from two sides, as the menus of the
+%       bar do: the application puts `close window' and `quit' on the
+%       File menu, and the pane in view puts what it can do with a file
+%       there afterwards.  So the menu says where an item goes rather
+%       than the order it happens to arrive in -- `->append' looks the
+%       name up in <-item_order and hands the super the item it must come
+%       before.  Only the ones that belong at the end need naming: every
+%       other name takes the place of `*' and keeps the order it came in.
+
+class_variable(item_order, chain,
+               chain('*', close_window, halt_prolog),
+               "Order the items of a menu appear in").
+
+rank(P, Name:name, Rank:int) :<-
+    "Where an item of this name belongs on me"::
+    item_order(P, Order),
+    (   nth1(Rank, Order, Name)
+    ->  true
+    ;   nth1(Rank, Order, '*')
+    ).
+
+%!  item_order(+Popup, -Order) is semidet.
+%
+%   The names in <-item_order, as a list.  As with `pane_menu_bar
+%   <-menu_order', `*' has to be written between quotes in a Defaults
+%   file and comes back as a string, so the elements are converted.
+
+item_order(P, Order) :-
+    get(P, class_variable_value, item_order, Chain),
+    chain_list(Chain, List),
+    maplist(element_name, List, Order).
+
+before(P, Name:name, Before:menu_item) :<-
+    "The item on me the named one must come before"::
+    get(P, rank, Name, Rank),
+    get(P, members, Chain),
+    chain_list(Chain, Items),
+    member(Before, Items),
+    get(Before, value, ItsName),
+    get(P, rank, ItsName, ItsRank),
+    ItsRank > Rank,
+    !.
+
+append(P, Item:'menu_item|{gap}') :->
+    "Append an item at the place its name asks for"::
+    (   Item == gap
+    ->  (   get(P, last_free_item, MI)
+        ->  send(MI, end_group, @on)
+        ;   true
+        )
+    ;   get(P, before, Item?value, Before)
+    ->  send(P, insert_before, Item, Before)
+    ;   send_super(P, append, Item)
+    ).
+
+%       `tool_dialog ->append' puts an item on a named menu by naming the
+%       item it must come before -- see `prolog_terminal ->fill_menu_bar'
+%       -- and that item belongs to another pane as often as not.  The
+%       super appends at the end when it cannot find the name, which is
+%       how what a pane adds ends up below `close window'; ask for the
+%       place the name deserves instead.
+
+insert_before(P, Item:menu_item, Before:[name|menu_item]) :->
+    "Insert before the named item, or where <-item_order says"::
+    (   Before \== @default,
+        get(P, member, Before, Other)
+    ->  send_super(P, insert_before, Item, Other)
+    ;   send(P, append, Item)
+    ).
+
+%       A gap ends the group of the item it follows, and that is the last
+%       item appended rather than the last item on the menu: the ones the
+%       application put at the end are ranked past it.
+
+last_free_item(P, MI:menu_item) :<-
+    "The item a gap appended now would follow"::
+    get(P, members, Chain),
+    chain_list(Chain, Items),
+    free_items(P, Items, Free),
+    last(Free, MI).
+
+%!  free_items(+Popup, +Items, -Free) is det.
+%
+%   The leading Items that no rank of their own puts at the end.  The
+%   items sit in rank order, so this is a prefix of the list.
+
+free_items(P, Items, Free) :-
+    get(P, rank, '*', FreeRank),
+    free_items_(Items, P, FreeRank, Free).
+
+free_items_([], _, _, []).
+free_items_([MI|T], P, FreeRank, Free) :-
+    get(MI, value, Name),
+    get(P, rank, Name, Rank),
+    (   Rank =< FreeRank
+    ->  Free = [MI|Free1],
+        free_items_(T, P, FreeRank, Free1)
+    ;   Free = []
+    ).
+
+%       A line separates what the application put at the end from the
+%       items above it.  This waits until the menu opens: everybody who
+%       fills the bar has had a turn by then, so the item the line goes
+%       under is the one it will still be under when the menu is drawn.
+
+update(P, Context:any) :->
+    "Close the group above the items ranked at the end"::
+    (   get(P, last_free_item, MI),
+        get(P?members, tail, Tail),
+        Tail \== MI
+    ->  send(MI, end_group, @on)
+    ;   true
+    ),
+    send_super(P, update, Context).
 
 assign_accelerators(_) :->
     "Accelerators are defined by the panes"::

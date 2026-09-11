@@ -607,6 +607,7 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
     get(MD, menu_bar, @on, MB),
     send(MB, append, new(File,     pane_popup(file))),
     send(MB, append, new(Settings, pane_popup(settings))),
+    settings_menu_marks(Settings),
     send(MB, append, new(Tools,    pane_popup(tools))),
     send(MB, append, new(GUI,      pane_popup('GUI'))),
     send(MB, append, new(Help,     pane_popup(help))),
@@ -697,8 +698,17 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
                 menu_item('SWI-Prolog GUI tools',
                           message(IDE, open_url,
                                   'https://github.com/SWI-Prolog/packages-xpce/wiki'))
-              ]),
-    send(Settings, show_current, @on),
-    send(Settings, multiple_selection, @on).
+              ]).
+
+%       Some of what a pane puts on the Settings menu is a setting that
+%       is either on or off -- see `prolog_terminal ->fill_menu_bar' --
+%       so the menu shows a tick beside the ones that are on.  It is told
+%       so before anything is on it: a menu that holds a single value
+%       ticks its first item as soon as it is computed, and the first
+%       item here is a command.
+
+settings_menu_marks(Settings) :-
+    send(Settings, multiple_selection, @on),
+    send(Settings, show_current, @on).
 
 :- pce_end_class(prolog_ide).
