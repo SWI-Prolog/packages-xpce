@@ -196,6 +196,7 @@ set(XPCE_DATA_prolog_lib_draw align.pl attribute.pl canvas.pl config.pl draw.pl
     exportpl.pl gesture.pl importpl.pl menu.pl README shapes.pl undo.pl)
 
 set(XPCE_DATA_prolog_lib_emacs annotate_mode.pl application.pl bookmarks.pl
+    bookmark_store.pl
     buffer_menu.pl buffer.pl chr_mode.pl c_mode.pl cpp_mode.pl dde_server.pl
     emacs.pl find.pl fundamental_mode.pl gdb.pl
     help.pl history.pl hit_list.pl html_mode.pl java_mode.pl xsb_mode.pl

@@ -44,22 +44,25 @@
 :- use_module(library(pane_frame)).
 :- use_module(library(debug)).
 :- use_module(library(pce_util)).
+:- use_module(library(emacs/bookmark_store),
+              [ bookmark_store_load/1, bookmark_store_save/1,
+                bookmark_store_forget/1, bookmark_store_tidy/0,
+                bookmark_store_id/1, bookmark_store_file/1
+              ]).
 
-:- require([ '$my_file'/1,
-	     call_cleanup/2,
-	     file_directory_name/2,
-	     term_to_atom/2,
+:- require([ file_directory_name/2,
 	     absolute_file_name/3,
 	     default/3,
-	     get_chain/3,
+	     member/2,
 	     send_list/3
 	   ]).
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 This module provides the first  definition   of  an advanced bookmarking
-system   for   PceEmacs.   Bookmarks    are     kept    in    the   file
-<config>/emacs_bookmarks as Prolog data. Bookmarks  can be annotated and
-are time-stampted.
+system for PceEmacs.  Bookmarks can  be   annotated  and are timestamped.
+They are kept by library(emacs/bookmark_store), which writes each one
+down as it is made, annotated or thrown  away, so that several instances
+of PceEmacs running at once do not overwrite each other's.
 
 The bookmark mechanism is available through the Browse menu of PceEmacs.
 
@@ -103,7 +106,6 @@ class_variable(pane_side, {above,below,left,right}, below,
                "A list of places to go to is added below the editor").
 
 variable(persists,     bool,         get, "Bookmarks are persistent").
-variable(file,         file*,        get, "File for holding the bookmarks").
 variable(exit_message, code*,        get, "Registered exit message").
 variable(pinned,       bool := @off, get, "Pin: do not reuse for the next query").
 variable(label,        name* := @nil, get, "What my tab is called").
@@ -126,7 +128,7 @@ initialise(BM,
     send(BM, append_window, new(W, emacs_bookmark_window(Dir, cwd)), D, below),
     (   (Persist == @on; Notes == @on)
     ->  send(BM, append_window,
-             new(V, view(size := size(40,4))), W, below),
+             new(V, emacs_bookmark_note(size := size(40,4))), W, below),
         send(V, placeholder, "Make notes here"),
         send(V, font, normal),          % four lines, not eight: a pane
         send(V, ver_stretch, 0)         % is a strip, and the tree is what
@@ -138,7 +140,8 @@ initialise(BM,
         send(BM, slot, exit_message, Msg),
         ignore(send(BM, load))
     ;   true
-    ).
+    ),
+    send(BM, current, @nil).            % nothing selected: no note to write
 
 initial_directory(Dir) :-
     working_directory(CWD, CWD),
@@ -248,6 +251,7 @@ pinned(BM, Pinned:bool) :->
 clear(BM) :->
     "Remove all bookmarks from the tree"::
     get(BM, window, emacs_bookmark_window, BW),
+    send(BM, current, @nil),
     send(BW, clear),
     initial_directory(CWD),
     send(BW, root, emacs_toc_bookmark_folder(CWD, directory)).
@@ -256,9 +260,9 @@ tree(BM, Tree:toc_tree) :<-
     get(BM, window, emacs_bookmark_window, W),
     get(W, tree, Tree).
 
-view(BM, V:view) :<-
+view(BM, V:emacs_bookmark_note) :<-
     "View for annotations"::
-    get(BM, window, view, V).
+    get(BM, window, emacs_bookmark_note, V).
 
 selection(BM, Sel:'name|emacs_bookmark') :<-
     get(BM, window, emacs_bookmark_window, W),
@@ -282,14 +286,34 @@ cut(BM) :->
     get(BM, window, emacs_bookmark_window, W),
     (   get(W, selection, Nodes),
         \+ send(Nodes, empty)
-    ->  send(Nodes, for_all, message(@arg1, delete_tree))
+    ->  send(BM, current, @nil),
+        get(Nodes, copy, Copy),         % deleting takes them out of it
+        send(Copy, for_all, message(BM, delete_node, @arg1))
     ;   send(BM, report, warning, 'No selection')
     ).
 
+delete_node(BM, Node:toc_node) :->
+    "Delete Node, forgetting the bookmarks below it"::
+    (   get(BM, persists, @on)
+    ->  get(Node, bookmarks, Marks),
+        send(Marks, for_all, message(BM, forget, @arg1))
+    ;   true
+    ),
+    send(Node, delete_tree).
+
+forget(_BM, Mark:emacs_bookmark) :->
+    "Take Mark out of the store"::
+    get(Mark, id, Id),
+    bookmark_store_forget(Id).
+
 :- pce_group(interface).
 
-bookmark(F, BM:emacs_bookmark, Sort:[bool]) :->
+bookmark(F, BM:emacs_bookmark, Sort:[bool], Store:[bool]) :->
     "Append a bookmark"::
+    (   get(F, persists, @on)
+    ->  send(BM, slot, persists, @on)
+    ;   true
+    ),
     get(BM, file_name, FileName),
     get(F, tree, Tree),
     (   between(1, 1000, _),
@@ -313,7 +337,11 @@ bookmark(F, BM:emacs_bookmark, Sort:[bool]) :->
             !
         )
     ),
-    send(Tree?root, append, BM, Sort).
+    send(Tree?root, append, BM, Sort),
+    (   Store == @off
+    ->  true
+    ;   send(BM, store)
+    ).
 
 %!  parent_directory(+Dir, -Parent) is semidet.
 %
@@ -401,10 +429,19 @@ loaded_buffer(F, TB:emacs_buffer) :->
     get(F, tree, Tree),
     send(Tree?root, loaded_buffer, TB).
 
-update_bookmarks(_F, TB:emacs_buffer) :->
+%       PceEmacs re-colours a buffer whenever it falls idle, and that
+%       moves the bookmarks in it; writing each of those down would fill
+%       the log while the user types.  A bookmark says where it is in the
+%       file on disk, so what is worth writing down is a buffer saved.
+
+update_bookmarks(F, TB:emacs_buffer) :->
     "PceEmacs has saved this buffer"::
+    (   get(F, persists, @on)
+    ->  Then = message(@arg1, send_hyper, bookmark, store)
+    ;   Then = @default
+    ),
     send(TB, for_all_fragments,
-         if(message(@arg1, send_hyper, bookmark, update))).
+         if(message(@arg1, send_hyper, bookmark, update), Then)).
 
 
 current(F, BM:emacs_bookmark*, UpdateSelection:[bool]) :->
@@ -415,19 +452,17 @@ current(F, BM:emacs_bookmark*, UpdateSelection:[bool]) :->
     ;   true
     ),
     (   get(F, view, View)
-    ->  (   get(View, modified, @on),
-            get(View, hypered, bookmark, BM2)
-        ->  send(BM2, note, View?contents)
-        ;   true
-        ),
+    ->  send(View, save_note),
         send(View, delete_hypers, bookmark),
         get(View, editor, Editor),
         get(Editor, text_image, TextImage),
         (   BM == @nil
         ->  send(Editor, clear),
             send(Editor, editable, @off),
+            send(Editor, placeholder, "Select a bookmark to annotate"),
             send(TextImage, background, grey80)
         ;   new(_, hyper(View, BM, bookmark, editor)),
+            send(Editor, placeholder, "Make notes here"),
             (   get(BM, note, Note),
                 Note \== @nil
             ->  send(Editor, contents, Note),
@@ -443,42 +478,30 @@ current(F, BM:emacs_bookmark*, UpdateSelection:[bool]) :->
 
 :- pce_group(file).
 
+%       A bookmark is written down the moment it is made, annotated,
+%       moved or thrown away -- see library(emacs/bookmark_store) -- so
+%       there is nothing left to write out here.  What ->save still has
+%       to do is put away the note the user is typing, which belongs to
+%       the bookmark it is about only once the caret leaves it, and tidy
+%       the log while we are at it.
+
 save(BM) :->
-    "Save bookmarks to file"::
+    "Put away the note being typed and tidy the store"::
     send(BM, current, @nil),
-    get(BM, bookmarks_file, write, File),
-    get(BM, tree, Tree),
-    get(Tree, root, Root),
-    ignore(pce_catch_error(_, send(file(File), backup))),
-    (   catch(setup_call_cleanup(
-                  open(File, write, Fd),
-                  ( format(Fd, '/* PceEmacs Bookmarks */~n~n', []),
-                    send(Root, save, Fd)
-                  ),
-                  close(Fd)),
-              _, fail)
-    ->  send(BM, report, status, 'Saved bookmarks to %s', File)
-    ;   send(BM, report, status, 'Failed to save bookmarks to %s', File)
+    (   get(BM, persists, @on)
+    ->  bookmark_store_tidy,
+        bookmark_store_file(File),
+        send(BM, report, status, 'Saved bookmarks to %s', File)
+    ;   true
     ).
 
 load(BM) :->
-    "Load bookmarks from file"::
-    get(BM, bookmarks_file, File),
-    catch(open(File, read, Fd), _, fail),
-    call_cleanup(( read(Fd, Term0),
-                   load_bookmarks(Term0, Fd, BM)
-                 ),
-                 close(Fd)).
+    "Load bookmarks from the store"::
+    bookmark_store_load(Bookmarks),
+    forall(member(Bookmark, Bookmarks),
+           load_bookmark(Bookmark, BM)).
 
-
-load_bookmarks(end_of_file, _, _) :- !.
-load_bookmarks(Term, Fd, BM) :-
-    !,
-    load_bookmark(Term, BM),
-    read(Fd, Term2),
-    load_bookmarks(Term2, Fd, BM).
-
-load_bookmark(bookmark(File0, Line, Pos, Len, Title, Stamp, Note), BM) =>
+load_bookmark(bookmark(Id, File0, Line, Pos, Len, Title, Stamp, Note), BM) :-
     (   absolute_file_name(File0,
                            [ access(read),
                              file_errors(fail)
@@ -487,38 +510,17 @@ load_bookmark(bookmark(File0, Line, Pos, Len, Title, Stamp, Note), BM) =>
     ->  new(Created, date),
         FStamp is float(Stamp),             % avoid overflow
         send(Created, posix_value, FStamp),
-        send(BM, bookmark,
-             new(M, emacs_bookmark(File, Line, Pos, Len, Title,
-                                   Created, Note)),
-             @off),                 % do not sort
+        new(M, emacs_bookmark(File, Line, Pos, Len, Title,
+                              Created, Note)),
+        send(M, slot, id, Id),
+        send(BM, bookmark, M,
+             @off,                  % do not sort
+             @off),                 % and do not write it back
         (   get(@emacs, file_buffer, File, Buffer)
         ->  send(M, link, Buffer)
         ;   true
         )
     ;   true
-    ).
-load_bookmark(bookmark(File0, Line, Title, Stamp, Note), BM) =>
-    load_bookmark(bookmark(File0, Line, 0, 0, Title, Stamp, Note), BM).
-load_bookmark(Term, BM) =>
-    term_to_atom(Term, Atom),
-    send(BM, report, warning, 'Unknown term in bookmarks file: %s', Atom).
-
-bookmarks_file(BM, Access:[{read,write}], File:name) :<-
-    "Get the file for bookmarks persistency"::
-    (   get(BM, file, F),
-        F \== @nil,
-        default(Access, read, TheAccess),
-        send(F, access, TheAccess)
-    ->  get(F, absolute_path, File)
-    ;   get(@pce, application_data, DataDir),
-        (   Access == write
-        ->  get(DataDir, path, Path),
-            '$my_file'(Path)                % process owns path
-        ;   true
-        ),
-        get(DataDir, file, emacs_bookmarks, F),
-        get(F, absolute_path, File),
-        send(BM, slot, file, File)          % use the absolute path
     ).
 
 :- pce_end_class(emacs_bookmark_editor).
@@ -557,7 +559,7 @@ open_node(BW, Id:any) :->
                      'Marked file "%s" does not exist.\nDelete bookmark?',
                      File)
             ->  get(BW, node, Id, Node),
-                send(Node, delete_tree)
+                send(BW?editor, delete_node, Node)
             ;   true
             )
         )
@@ -573,7 +575,7 @@ select_node(BW, Id:any) :->
     "User selected a node"::
     (   send(Id, instance_of, emacs_bookmark)
     ->  send(BW?editor, current, Id)
-    ;   true
+    ;   send(BW?editor, current, @nil, @off)
     ).
 
 selection(BW, Sel:any*) :->
@@ -584,6 +586,38 @@ selection(BW, Sel:any*) :->
     send_super(BW, selection, Sel).
 
 :- pce_end_class.
+
+/* The note on the bookmark that is selected.
+
+A note is the user's to write and the bookmark's to keep, and the two are
+only brought together when the writing stops.  That is when the caret
+leaves the note -- ->input_focus below -- and when another bookmark is
+selected, which is `emacs_bookmark_editor ->current'.  Closing the pane
+and leaving PceEmacs both go through ->current as well, so a note is
+never left only on the screen.
+*/
+
+:- pce_begin_class(emacs_bookmark_note, view,
+                   "Annotation on the selected bookmark").
+
+input_focus(V, Focus:bool) :->
+    "Put the note away when the caret leaves me"::
+    (   Focus == @off
+    ->  ignore(send(V, save_note))
+    ;   true
+    ),
+    send_super(V, input_focus, Focus).
+
+save_note(V) :->
+    "Give what has been typed to the bookmark it is about"::
+    (   get(V, modified, @on),
+        get(V, hypered, bookmark, BM)
+    ->  send(BM, note, V?contents),
+        send(V?editor, modified, @off)
+    ;   true
+    ).
+
+:- pce_end_class(emacs_bookmark_note).
 
 :- pce_begin_class(emacs_toc_bookmark_folder, toc_folder,
                    "Represent directory in bookmarks").
@@ -680,15 +714,10 @@ sub_directory(Path, File, SubPath) :-
     ).
 
 
-save(F, Fd:prolog) :->
-    "Save bookmarks to file"::
-    get_chain(F, sons, Sons),
-    save_sons(Sons, Fd).
-
-save_sons([], _).
-save_sons([H|T], Fd) :-
-    send(H, save, Fd),
-    save_sons(T, Fd).
+bookmarks(F, Marks:chain) :<-
+    "The bookmarks below me"::
+    new(Marks, chain),
+    send(F?sons, for_all, message(Marks, merge, @arg1?bookmarks)).
 
 loaded_buffer(F, TB:emacs_buffer) :->
     "PceEmacs has loaded this buffer"::
@@ -773,14 +802,10 @@ append(_F, _BM:emacs_bookmark) :->
     "Can't append to a file"::
     fail.
 
-save(F, Fd:prolog) :->
-    "Save bookmarks to file"::
-    $,
+bookmarks(F, Marks:chain) :<-
+    "Just me"::
     get(F, identifier, BM),
-    get(BM, term, Term),
-    Term = bookmark(File, Line, LinePos, Length, Title, Stamp, NoteText),
-    format(Fd, 'bookmark(~q, ~q, ~q, ~q, ~q, ~0f, ~q).~n',
-           [File, Line, LinePos, Length, Title, Stamp, NoteText]).
+    new(Marks, chain(BM)).
 
 loaded_buffer(F, TB:emacs_buffer) :->
     "PceEmacs has loaded this buffer"::
@@ -819,8 +844,10 @@ compare(F, N2:toc_node, Diff:{smaller,equal,larger}) :<-
 
 variable(title,    string,              get,  "Represented title").
 variable(created,  date,                get,  "Date of creation").
-variable(note,     string*,             both, "Annotation").
+variable(note,     string*,             get,  "Annotation").
 variable(node,     emacs_toc_bookmark*, get,  "Visualiser").
+variable(id,       name* := @nil,       none, "Name in the store").
+variable(persists, bool := @off,        get,  "I am kept in the store").
 
 initialise(BM,
            File:file=name, Line:line=int,
@@ -837,9 +864,16 @@ initialise(BM,
     default(Note, @nil, TheNote),
     send(BM, slot, note, TheNote).
 
+%       <-term does not refresh me first.  What refreshes a bookmark is
+%       ->update, and the moment worth writing one down is when the buffer
+%       it is in has been saved -- see `emacs_bookmark_editor
+%       ->update_bookmarks'.  Until then a bookmark says where it is in
+%       the file on disk, which is where another session reading it back
+%       will look.
+
 term(BM, Term:prolog) :<-
     "Describe bookmark as a Prolog term"::
-    ignore(send(BM, update)),
+    get(BM, id, Id),
     get(BM, file_name, File),
     get(BM, line_no, Line),
     get(BM, line_pos, LinePos),
@@ -851,7 +885,47 @@ term(BM, Term:prolog) :<-
     ->  get(Note, value, NoteText)
     ;   NoteText = ''
     ),
-    Term = bookmark(File, Line, LinePos, Length, Title, Stamp, NoteText).
+    Term = bookmark(Id, File, Line, LinePos, Length, Title, Stamp, NoteText).
+
+id(BM, Id:name) :<-
+    "The name I am stored under, made when first asked for"::
+    (   get(BM, slot, id, Id0),
+        Id0 \== @nil
+    ->  Id = Id0
+    ;   bookmark_store_id(Id),
+        send(BM, slot, id, Id)
+    ).
+
+note(BM, Note:string*) :->
+    "Annotate me and write that down"::
+    (   get(BM, note, Note0),
+        same_note(Note0, Note)
+    ->  true
+    ;   send(BM, slot, note, Note),
+        send(BM, store)
+    ).
+
+%       An editor is `modified' after anything at all has been typed in
+%       it, a word put there and taken away again included, and the note
+%       is put away whenever the caret leaves.  Comparing the text keeps
+%       those out of the store.  A note typed away to nothing is no note,
+%       or visiting a bookmark that has none would write a record.
+
+same_note(A, B) :-
+    note_text(A, Text),
+    note_text(B, Text).
+
+note_text(@nil, '') :- !.
+note_text(Note, Text) :-
+    get(Note, value, Text).
+
+store(BM) :->
+    "Write me to the store, if that is where I live"::
+    (   get(BM, persists, @on)
+    ->  get(BM, term, Term),
+        bookmark_store_save(Term)
+    ;   true
+    ).
 
 exists(BM) :->
     "Test whether associated file exists"::
