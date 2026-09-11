@@ -2371,7 +2371,9 @@ new_window(P) :->
     ->  get(Frame, application, App)
     ;   App = @default
     ),
-    send(new(pane_frame(App, @default, New)), open).
+    send(new(pane_frame(App, @default, New)), open),
+    pane_arranged(New).                 % a window of its own is an
+                                        % arrangement to learn as well
 
 
 move_to_tab(P) :->
@@ -2445,7 +2447,8 @@ detach(P) :->
     ignore(send(F, arranged)),          % the window I am leaving changed too
     send(F, delete_pane, P, @off),      % take me out without destroying me
     new(New, pane_frame(App, @default, P)),
-    send(New, open, point(X, Y+20)).
+    send(New, open, point(X, Y+20)),
+    pane_arranged(P).
 
 close_pane(P) :->
     "Close me; my frame goes with me if I was its last pane"::

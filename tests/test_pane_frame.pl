@@ -816,6 +816,40 @@ test(the_new_window_belongs_to_the_same_application, true(App2 == App)) :-
     send(P2, detach),
     get(P2?frame, application, App2).
 
+%       And it counts from the moment it is made.  A window the IDE placed
+%       and the user never touched teaches nothing -- see "arranged by
+%       hand" in library(pane_frame) -- but one the user has just dragged
+%       a pane out into is as arranged as they come, and until it said so
+%       a tool given a window of its own could never be learned.
+
+test(and_starts_counting_at_once, true(Arranged == @on)) :-
+    frame(F, _App, _P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @on),
+    send(P2, detach),
+    get(P2?frame, arranged, Arranged).
+
+test(as_does_a_window_a_pane_was_asked_to_make, true(Arranged == @on)) :-
+    frame(_F, _App, P1),
+    send(P1, new_window),
+    get(P1, sibling, _),                % it made one like itself
+    the_other_frame(P1, New),
+    get(New, arranged, Arranged).
+
+%!  the_other_frame(+Pane, -Frame) is semidet.
+%
+%   The window ->new_window has just made: the one its application holds
+%   that is not the one Pane is in.
+
+the_other_frame(Pane, Frame) :-
+    get(Pane, pane_frame, Mine),
+    get(Mine, application, App),
+    get(App, members, Chain),
+    chain_list(Chain, Frames),
+    member(Frame, Frames),
+    Frame \== Mine,
+    !.
+
 test(a_pane_that_is_already_alone_has_nowhere_to_go, [fail]) :-
     frame(_F, _App, P1),
     send(P1, detach).

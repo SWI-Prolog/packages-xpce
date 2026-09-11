@@ -641,7 +641,7 @@ pane_placement(Kind, LiveKinds, Rule) :-
             ( arrangement(Arrangement, Tier, Priority),
               arrangement_kinds(Arrangement, Kinds),
               memberchk(Kind, Kinds),
-              score(Kinds, Want, Priority, Score)
+              score(Kinds, Kind, Want, Priority, Score)
             ),
             Scored),
     sort(1, @>=, Scored, Best),
@@ -649,14 +649,24 @@ pane_placement(Kind, LiveKinds, Rule) :-
     arrangement_rule(Arrangement, Kind, LiveKinds, Rule),
     !.
 
-%!  score(+Kinds, +Want, +Priority, -Score) is det.
+%!  score(+Kinds, +Kind, +Want, +Priority, -Score) is det.
 %
 %   How well an arrangement answers for a window that is to hold Want.
 %   The factor is 1 when the arrangement is exactly that window, so an
 %   exact match wins between equals while an arrangement that has been
 %   lived in far longer can still win over one that has hardly been used.
+%
+%   An arrangement holding nothing but the kind being placed is the
+%   window that pane would have to itself, and is read against *that*
+%   window rather than against the one the user is working in: what it
+%   says is "one of these lives alone", and the panes it does not hold
+%   are the whole of its point rather than a poor fit.  Without this a
+%   tool dragged out to a window of its own could never say so, as
+%   sharing one kind out of three is all such an arrangement can ever do.
 
-score(Kinds, Want, Priority, Score) :-
+score([Kind], Kind, _Want, Priority, Priority) :-
+    !.
+score(Kinds, _Kind, Want, Priority, Score) :-
     intersection_count(Kinds, Want, Shared),
     union_count(Kinds, Want, Total),
     Score is Priority*Shared/Total.

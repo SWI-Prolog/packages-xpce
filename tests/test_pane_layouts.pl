@@ -403,6 +403,25 @@ test(the_same_shape_at_another_size_is_the_same_arrangement, Shares == 1) :-
     length(Xs, Shares),
     forget_arrangements.
 
+%       A tool dragged out to a window of its own is learned like
+%       anything else.  An arrangement holding nothing but that pane is
+%       read against the window it would have to itself rather than
+%       against the one being worked in: sharing one kind out of three is
+%       the most such an arrangement could ever do, which would leave a
+%       tool unable to say it lives alone.
+
+test(a_window_of_its_own_is_learned_like_anything_else, Rule == window) :-
+    record_arrangement(pane_frame([], [tab([], prolog_navigator)]), 3600),
+    pane_placement(prolog_navigator, [editor, terminal], Rule),
+    forget_arrangements.
+
+test(and_is_not_read_as_a_poor_fit, Rule == window) :-
+    right(Right),                       % navigator beside a terminal
+    record_arrangement(Right, 600),
+    record_arrangement(pane_frame([], [tab([], prolog_navigator)]), 600),
+    pane_placement(prolog_navigator, [terminal], Rule),
+    forget_arrangements.
+
 test(forgetting_puts_back_the_way_it_comes, Side == left) :-
     right(A),
     record_arrangement(A, 7200),
