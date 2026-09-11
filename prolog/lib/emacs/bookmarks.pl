@@ -127,6 +127,7 @@ initialise(BM,
     (   (Persist == @on; Notes == @on)
     ->  send(BM, append_window,
              new(V, view(size := size(40,4))), W, below),
+        send(V, placeholder, "Make notes here"),
         send(V, font, normal),          % four lines, not eight: a pane
         send(V, ver_stretch, 0)         % is a strip, and the tree is what
     ;   true                            % the room in it is for

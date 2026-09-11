@@ -1120,6 +1120,44 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
 }
 
 
+/* An editor that holds no text writes its <-placeholder where the text
+ * would be, in the text colour faded to `editor.placeholder_opacity', so
+ * that it reads as a prompt rather than as content.  It is painted here
+ * rather than by the editor because the text image covers the text area
+ * and clears it on every redraw.  Nothing else that carries a text image
+ * -- a list_browser -- has a placeholder, hence the class test.
+ */
+
+static void
+paint_placeholder(TextImage ti)
+{ Editor e;
+  TextLine l;
+  Any c;
+  Any old;
+
+  if ( !instanceOfObject(ti->device, ClassEditor) )
+    return;
+  e = (Editor)ti->device;
+  if ( isNil(e->placeholder) ||
+       e->text_buffer->size != 0 ||
+       !ti->map || ti->map->length == 0 )
+    return;
+
+  l = &ti->map->lines[ti->map->skip];
+  c = r_colour(DEFAULT);
+  if ( instanceOfObject(c, ClassColour) )
+  { Real f = getClassVariableValueObject(e, NAME_placeholderOpacity);
+    c = getFadeColour(c, f);
+  }
+
+  old = r_colour(c);
+  str_string(&e->placeholder->data, e->font,
+	     TXT_X_MARGIN, l->y, ti->w - 2*TXT_X_MARGIN, l->h,
+	     NAME_left, NAME_top, NIL, 0);
+  r_colour(old);
+}
+
+
 static void
 paint_area(TextImage ti, Area a, int x, int y, int w, int h)
 { int p = valInt(ti->pen);
@@ -1567,6 +1605,7 @@ RedrawAreaTextImage(TextImage ti, Area a)
   r_thickness(1);			/* default for underlining */
   r_dash(NAME_none);
   paint_area(ti, a, sx, sy, w, h);
+  paint_placeholder(ti);
   r_offset(-ox, -oy);
   r_background(obg);
 

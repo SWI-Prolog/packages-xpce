@@ -170,6 +170,7 @@ NewClass(editor)
   Int		dabbrev_origin;		/* Start of dabbrev word */
   Name		dabbrev_mode;		/* Current dabbrev mode */
   Chain		dabbrev_candidates;	/* Dabbrev user candidates */
+  CharArray	placeholder;		/* Shown while I hold no text */
 					/* Private data */
   intptr_t	internal_mark;		/* Internally used mark */
   FragmentCache fragment_cache;		/* Cache to compute frament overlap */

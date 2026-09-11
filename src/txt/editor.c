@@ -60,6 +60,7 @@ static status		columnEditor(Editor, Int);
 static status		ChangedRegionEditor(Editor, Int, Int);
 static status		ChangedEditor(Editor);
 static status		nfdStyleEditor(Editor, Style);
+static status		placeholderEditor(Editor, CharArray);
 static status		appendKill(CharArray);
 static status		prependKill(CharArray);
 static status		geometryEditor(Editor, Int, Int, Int, Int);
@@ -195,6 +196,7 @@ initialiseEditor(Editor e, TextBuffer tb, Int w, Int h, Int tmw)
   assign(e, dabbrev_reject, NIL);
   assign(e, dabbrev_pos, NIL);
   assign(e, dabbrev_origin, NIL);
+  assign(e, placeholder, NIL);
   assign(e, styles, newObject(ClassSheet, EAV));
 
   e->fragment_cache = newFragmentCache(e);
@@ -604,6 +606,23 @@ static status
 nfdStyleEditor(Editor e, Style style)
 { assign(e, nfd_style, style);
   ChangedEditor(e);
+
+  succeed;
+}
+
+/* What an editor that holds no text shows in place of it, so that an
+ * empty one can say what it is for.  `text_image' paints it -- see
+ * paint_placeholder() in textimage.c -- as that is what covers the text
+ * area and clears it on every redraw.
+ */
+
+static status
+placeholderEditor(Editor e, CharArray placeholder)
+{ if ( e->placeholder != placeholder )
+  { assign(e, placeholder, placeholder);
+    if ( e->text_buffer->size == 0 )
+      changedEntireImageGraphical(e->text_image);  /* no line changed */
+  }
 
   succeed;
 }
@@ -5203,6 +5222,8 @@ static vardecl var_editor[] =
      NAME_internal, "Current dabbrev search mode"),
   IV(NAME_dabbrevCandidates, "chain*", IV_NONE,
      NAME_internal, "Current dabbrev candidates"),
+  SV(NAME_placeholder, "char_array*", IV_GET|IV_STORE, placeholderEditor,
+     NAME_appearance, "Text shown while I hold none"),
   IV(NAME_internalMark, "alien:int", IV_NONE,
      NAME_internal, "Additional mark for internal use"),
   IV(NAME_fragmentCache, "alien:FragmentCache", IV_NONE,
@@ -5663,6 +5684,8 @@ static classvardecl rc_editor[] =
      "`Key = selector' binding list"),
   RC(NAME_pen, "0..", UXWIN("0", "1"),
      "Thickness of box around editor"),
+  RC(NAME_placeholderOpacity, "0.0..1.0", "0.5",
+     "How much of the text colour <-placeholder is written in"),
   RC(NAME_rightMargin, "int", "72",
      "Auto-fill margin width"),
   RC(NAME_selectModifier, "modifier", "s",
