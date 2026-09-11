@@ -172,7 +172,13 @@ backgroundBrowser(Browser b, Any bg)
 
 static Chain
 getContainsBrowser(Browser b)
-{ answer(getContainsListBrowser(b->list_browser));
+{ Chain ch = addFixedGraphicalsWindow((PceWindow)b,
+				      getContainsListBrowser(b->list_browser));
+
+  if ( ch )
+    answer(ch);
+
+  fail;
 }
 
 

@@ -226,4 +226,34 @@ test(and_less_the_bar_when_it_does, true(Narrower == true)) :-
     ;   Narrower = false
     ).
 
+%       A fixed graphical is a graphical of the window, so <-contains
+%       answers it and ->destroy takes it with the window: a grip left
+%       behind by the pane it belonged to shows up in checkpce/0 as a
+%       chain of freed objects, which is how this was found.
+
+test(it_is_among_what_the_window_contains,
+     true(Names == [box, tfg_box, tfg_box])) :-
+    window(P, _A, _B),
+    get(P, contains, Chain),
+    classes(Chain, Names).
+
+test(a_browser_answers_it_as_well_as_its_dict,
+     true(Names == [dict, tfg_box])) :-
+    new(F, frame('test_fixed_graphicals')),
+    send(F, append, new(B, browser)),
+    send(B, display_fixed, new(_, tfg_box(16,16))),
+    send(F, open),
+    get(B, contains, Chain),
+    classes(Chain, Names).
+
+test(destroying_the_window_takes_it_along, true(Alive == false)) :-
+    window(P, _A, B),
+    send(P, destroy),
+    (   object(B) ->  Alive = true ;  Alive = false ).
+
+test(freeing_the_window_leaves_it_pointing_nowhere, true(Device == @nil)) :-
+    window(P, _A, B),
+    send(P, free),
+    get(B, device, Device).
+
 :- end_tests(fixed_graphicals).

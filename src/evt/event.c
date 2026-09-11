@@ -1132,6 +1132,7 @@ makeClassEvent(Class class)
 { Int t;
 
   declareClass(class, &event_decls);
+  cloneStyleVariableClass(class, NAME_frame,    NAME_reference);
   cloneStyleVariableClass(class, NAME_receiver, NAME_reference);
   cloneStyleVariableClass(class, NAME_window,   NAME_reference);
   init_event_tree();

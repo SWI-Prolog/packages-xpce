@@ -2502,7 +2502,7 @@ library(emacs/window).
                    "A pane of the IDE that holds its windows in tabs").
 :- use_class_template(pane).
 
-variable(grip, split_handle*, get, "The grip I am dragged by").
+variable(grip, split_handle*, none, "The grip I am dragged by").
 
 %       Where I belong in a window that already has something in it: a
 %       navigator down the left, a monitor along the bottom.  It is a
@@ -2526,6 +2526,33 @@ initialise(TP, Label:[name]) :->
     send(TP, slot, grip, new(H, split_handle)),
     send(H, pane, TP).                  % it moves me, not the window it
                                         % is on
+
+%       The grip is displayed on one of my windows rather than on me, so
+%       that window takes it along when it is destroyed -- closing one of
+%       my tabs does that while I stay.  A new one is made here when that
+%       happened, and ->unlink takes it with me when it is the other way
+%       round.
+
+grip(TP, H:split_handle) :<-
+    "The grip I am dragged by"::
+    (   get(TP, slot, grip, H0),
+        H0 \== @nil,
+        object(H0)
+    ->  H = H0
+    ;   send(TP, slot, grip, new(H, split_handle)),
+        send(H, pane, TP)
+    ).
+
+unlink(TP) :->
+    "Take my grip with me"::
+    (   get(TP, slot, grip, H),
+        H \== @nil,
+        object(H)
+    ->  send(TP, slot, grip, @nil),
+        free(H)
+    ;   true
+    ),
+    send_super(TP, unlink).
 
 pane_side(TP, Side:{above,below,left,right}) :<-
     "Which side of what is there I am added on"::
@@ -2553,9 +2580,8 @@ resize(TP, Tab:[tab]) :->
 
 place_grip(TP) :->
     "Put the grip on the window in my top right corner"::
-    get(TP, grip, Handle),
-    Handle \== @nil,
     get(TP, corner_window, W),
+    get(TP, grip, Handle),
     (   get(Handle, device, W)
     ->  true
     ;   send(W, display_fixed, Handle)

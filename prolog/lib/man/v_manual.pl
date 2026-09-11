@@ -860,6 +860,25 @@ quit(F) :->
     "Destroy a tool"::
     send(F?manual, destroy_tool, F).
 
+%       A tool is not always closed through the manual: closing the tab
+%       it is in, or the window that holds the tab, destroys it where it
+%       stands.  The manual keeps its tools in a sheet, so it has to hear
+%       about that however it happens or the sheet ends up holding freed
+%       frames -- checkpce/0 reports those.
+
+unlink(F) :->
+    "Take myself out of the manual's tool table"::
+    (   get(F, slot, manual, M),
+        M \== @nil,
+        object(M),
+        get(M, tools, Tools)
+    ->  send(Tools, for_all,
+             if(@arg1?value == F,
+                message(Tools, delete, @arg1?name)))
+    ;   true
+    ),
+    send_super(F, unlink).
+
 
                 /********************************
                 *      GENERIC USER ACTIONS     *

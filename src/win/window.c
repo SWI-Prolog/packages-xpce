@@ -178,6 +178,17 @@ unlinkWindow(PceWindow sw)
   unlinkedWindowEvent(sw);
   uncreateWindow(sw);
   unlink_changes_data_window(sw);
+
+					/* A graphical of mine may not be */
+					/* left pointing at me after I am */
+					/* gone.  unlinkDevice() below does */
+					/* this for the scrolling layer. */
+  if ( notNil(sw->fixed_graphicals) )
+  { Graphical gr;
+
+    for_chain(sw->fixed_graphicals, gr, DeviceGraphical(gr, NIL));
+  }
+
   unlinkDevice((Device) sw);
 
   if ( notNil(sw->frame) )
@@ -1385,6 +1396,42 @@ displayFixedWindow(PceWindow sw, Graphical gr, Point pos)
  * drawn.  Everything else falls through to the ordinary device
  * behaviour.
  */
+
+/* <-contains also answers the fixed layer: a fixed graphical is a
+ * graphical of mine like any other, so ->destroy must take it with me
+ * and a tool that walks the visual hierarchy must find it.  Both go
+ * through <-contains.  See `visual ->destroy'.
+ *
+ * A subclass that answers something else of its own -- a browser answers
+ * the dict it shows rather than the graphicals that draw it -- adds its
+ * fixed layer to that with addFixedGraphicalsWindow().
+ */
+
+Chain
+addFixedGraphicalsWindow(PceWindow sw, Chain ch)
+{ if ( notNil(sw->fixed_graphicals) && !emptyChain(sw->fixed_graphicals) )
+  { Chain all = answerObject(ClassChain, EAV);
+    Cell cell;
+
+    if ( ch )
+    { for_cell(cell, ch)
+	appendChain(all, cell->value);
+    }
+    for_cell(cell, sw->fixed_graphicals)
+      appendChain(all, cell->value);
+
+    return all;
+  }
+
+  return ch;
+}
+
+
+static Chain
+getContainsWindow(PceWindow sw)
+{ answer(addFixedGraphicalsWindow(sw, sw->graphicals));
+}
+
 
 /* <-member also finds a graphical of the fixed layer: it is a graphical
  * of mine, and whoever asks for one by name has no reason to care which
@@ -2808,6 +2855,8 @@ static getdecl get_window[] =
      NAME_area, "Union of graphicals"),
   GM(NAME_member, 1, "graphical", "name", getMemberWindow,
      NAME_organisation, "Find a graphical of mine by name, fixed or not"),
+  GM(NAME_contains, 0, "chain", NULL, getContainsWindow,
+     DEFAULT, "Graphicals of mine, fixed or not"),
   GM(NAME_contentArea, 0, "area", NULL, getContentAreaWindow,
      NAME_scroll, "<-visible less the scrollbars I display myself"),
   GM(NAME_visible, 0, "area", NULL, getVisibleWindow,

@@ -98,6 +98,7 @@ COMMON(status)	createdWindow(PceWindow sw);
 COMMON(Any)	tileManagerWindow(PceWindow sw);
 COMMON(status)	grabPointerWindow(PceWindow sw, BoolObj val);
 COMMON(status)	unlinkWindow(PceWindow sw);
+COMMON(Chain)	addFixedGraphicalsWindow(PceWindow sw, Chain ch);
 COMMON(PceWindow) userWindow(PceWindow sw);
 COMMON(status)	updatePositionWindow(PceWindow sw);
 COMMON(status)	resizeWindow(PceWindow sw);
