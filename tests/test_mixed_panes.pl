@@ -1014,7 +1014,7 @@ test(files_dropped_on_the_buffer_menu_are_opened) :-
     emacs,
     source_of_our_own(File),
     new(Menu, emacs_buffer_menu(@emacs)),
-    get(Menu, member, browser, Browser),
+    get(Menu, browser, Browser),
     send(Browser, drop_files, chain(file(File)), point(0,0)),
     assertion(get(@emacs, file_buffer, File, _)).
 

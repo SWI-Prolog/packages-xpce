@@ -141,17 +141,14 @@ editor_event(_Emacs, Ev:event) :->
 
 :- pce_group(buffer).
 
-show_buffer_menu(Emacs) :->
+show_buffer_menu(_Emacs) :->
     "Show the buffer menu"::
-    (   get(@prolog_ide, member, buffer_menu, Menu)
-    ->  send(Menu, expose)
-    ;   send(emacs_buffer_menu(Emacs), open)
-    ).
+    send(@prolog_ide, show_tool, emacs_buffer_menu).
 
 
 selection(_Emacs, B:emacs_buffer*) :->
     "Select emacs buffer"::
-    (   get(@prolog_ide, member, buffer_menu, Menu)
+    (   get(@prolog_ide, tool, emacs_buffer_menu, Menu)
     ->  send(Menu, selection, B)
     ;   true
     ).

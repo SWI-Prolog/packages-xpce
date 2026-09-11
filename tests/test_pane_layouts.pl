@@ -123,6 +123,19 @@ test(a_navigator_goes_down_the_left_of_everything,
     assertion(Kinds == [editor, terminal]),
     assertion(abs(Share-0.2) < 0.001).
 
+test(a_list_of_buffers_goes_down_the_left_of_the_editor,
+     Rule = split([editor], left, Share)) :-
+    pane_placement(emacs_buffer_menu, [editor], Rule),
+    Rule = split(_, _, Share),
+    assertion(abs(Share-0.2) < 0.001).
+
+%       Beside the editor rather than down the whole window: the terminal
+%       under the editor keeps its width.
+
+test(and_splits_the_editor_alone_in_a_window_that_runs_one,
+     Rule == split([editor], left, 0.2)) :-
+    pane_placement(emacs_buffer_menu, [editor, terminal], Rule).
+
 test(a_terminal_goes_below_the_editor,
      Rule = split([editor], below, Share)) :-
     pane_placement(terminal, [editor], Rule),

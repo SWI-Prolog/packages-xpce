@@ -115,9 +115,6 @@
           -                        = button(edit),
           insert_symbol            = button(edit) +
                                      key('\\C-x8RET') + key('\\C-x8s'),
-          -                        = button(edit),
-          editor_preferences       = button(edit),
-          prolog_preferences       = button(edit),
 
           prefix                   = key('\\C-x8'),
 
@@ -130,7 +127,6 @@
           delete_window            = key('\\C-x0') + button(browse),
           other_window             = key('\\C-xo') + button(browse),
           new_frame                = key('\\C-x52') + button(browse),
-          terminal_in_a_new_tab    = button(browse),
           -                        = button(browse),
           history_backward         = key('\\C-\\s-<cursor_left>') +
                                      button(browse),
@@ -147,7 +143,8 @@
           compile                  = button(compile),
 
                                         % HELP menu
-          help                     = button(help),
+          -                        = button(help),
+          help_on_emacs            = button(help),
           help_on_mode             = button(help),
           customise                = button(help),
           -                        = button(help),
@@ -155,10 +152,7 @@
                                         + key('\\C-hb')
                                         + button(help),
           describe_key             = key('\\C-hk') + button(help),
-          describe_function        = key('\\C-hf') + button(help),
-          -                        = button(help),
-          manual_entry             = button(help),
-          xpce_manual              = button(help)
+          describe_function        = key('\\C-hf') + button(help)
         ],
         [
         ]).
@@ -1040,12 +1034,6 @@ other_window(M) :->
     ;   send(M, report, status, 'Single view')
     ).
 
-terminal_in_a_new_tab(M) :->
-    "Open an Epilog terminal in a tab of this window"::
-    get(M, view, V),
-    get(V, frame, Frame),
-    send(@prolog_ide, new_terminal, Frame).
-
 new_frame(M) :->
     "Open this buffer in a frame of its own"::
     get(M, text_buffer, Buffer),
@@ -1233,7 +1221,7 @@ font_default(M) :->
 
 :- pce_group(help).
 
-help(_) :->
+help_on_emacs(_) :->
     "Display general help"::
     send(@emacs, help).
 

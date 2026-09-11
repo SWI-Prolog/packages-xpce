@@ -121,7 +121,6 @@ resource(breakpoint,   image, library('trace/icons/stop.svg')).
           compile                      = -button(compile),
 
                                         % extend the menus
-          prolog_manual                = button(help),
           (spy)                        = button(prolog),
           trace                        = button(prolog),
           break_at                     = key('\\C-cb') + button(prolog),
@@ -150,9 +149,6 @@ resource(breakpoint,   image, library('trace/icons/stop.svg')).
           backward_clause              = key('\\ea'),
           backward_predicate           = key('\\e['),
           forward_predicate            = key('\\e]'),
-
-          -                            = button(browse),
-          prolog_navigator             = button(browse) + key('\\C-c\\C-n'),
 
           colourise_or_recenter        = key('\\C-l'),
           colourise_buffer             = key('<f5>')
