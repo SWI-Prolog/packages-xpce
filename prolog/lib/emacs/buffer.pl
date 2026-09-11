@@ -728,6 +728,58 @@ open(B, How:[{as_arranged,here,tab,split,window}]) :->
 
 
                  /*******************************
+                 *          PROPERTIES          *
+                 *******************************/
+
+%       A window saying what this buffer is.  It was `->identify' until
+%       2002 and lived on `emacs_mode' until the list of buffers needed
+%       to ask about a buffer that is in no window.  A buffer with more
+%       to say refines <-properties -- see `emacs_process_buffer'.
+
+properties(B) :->
+    "Show a window describing me"::
+    get(B, properties, _).
+
+properties(B, V:view) :<-
+    "Show a window describing me and answer it"::
+    get(B, name, Name),
+    get(B, modified, Modified),
+    get(B, size, Size),
+    get(B, line_number, Lines),
+    get(B, mode, Mode),
+    new(V, view(string('Buffer %s', Name), size(60, 8))),
+    send(V, confirm_done, @off),
+    send(V, tab_stops, vector(200)),
+    send(V, appendf, 'Buffer Name:\t%s\n', Name),
+    send(V, appendf, 'Mode:\t%s\n', Mode),
+    send(V, appendf, 'Modified:\t%s\n', Modified?name),
+    send(V, appendf, 'Size:\t%d characters; %d lines\n', Size, Lines-1),
+    get(B, file, File),
+    (   Modified == @on,
+        File \== @nil
+    ->  get(File, size, FileSize),
+        send(V, appendf, 'File Size:\t%d characters\n', FileSize)
+    ;   true
+    ),
+    (   File \== @nil
+    ->  get(File, absolute_path, Path),
+        send(V, appendf, 'Path:\t%s\n', Path),
+        send(V, appendf, 'Encoding:\t%s (BOM=%s, NL=%s)\n',
+             File?encoding, File?bom, File?newline_mode)
+    ;   send(V, appendf, 'Path:\t<No file>\n')
+    ),
+    send(V, caret, 0),
+    send(new(D, dialog), below, V),
+    send(D, append, button(close, message(V, destroy))),
+    (   get(B, editors, Editors),
+        get(Editors, head, Editor),
+        get(Editor, frame, Frame)
+    ->  send(V, open_centered, Frame?area?center)
+    ;   send(V, open)
+    ).
+
+
+                 /*******************************
                  *            MODE              *
                  *******************************/
 

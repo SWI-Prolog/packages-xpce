@@ -267,8 +267,9 @@ kill(B) :->
     ).
 
 
-properties(B) :->
-    get(B, properties, V),
+properties(B, V:view) :<-
+    "Say what I am running as well"::
+    get_super(B, properties, V),
     get(B, process, Process),
     send(V, appendf, 'Command:\t%s\n', Process?name),
     send(V, appendf, 'Arguments:\t'),

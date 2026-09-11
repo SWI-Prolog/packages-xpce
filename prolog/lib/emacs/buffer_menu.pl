@@ -132,7 +132,7 @@ initialise(B, Emacs:emacs) :->
     "Create for Emacs"::
     send_super(B, initialise, 'Emacs buffers'),
     send(B, name, browser),
-    send(B, open_message, message(@arg1?object, open)),
+    send(B, open_message, message(@arg1?object, open, tab)),
     send(B, tab_stops, vector(150)),
     send(B, attach_popup),
     send(B, dict, Emacs?buffer_list).
@@ -160,12 +160,12 @@ attach_popup(B) :->
          message(B, selection, @arg1)),
     send_list(P, append,
               [ menu_item(open_buffer,
-                          message(Buffer, open)),
+                          message(Buffer, open, tab)),
                 menu_item(open_new_window,
-                          message(Buffer, open, @on),
+                          message(Buffer, open, window),
                           @default, @on),
-                menu_item(identify,
-                          message(Buffer, identify),
+                menu_item(properties,
+                          message(Buffer, properties),
                           @default, @on),
                 menu_item(kill_buffer,
                           message(Buffer, kill))
