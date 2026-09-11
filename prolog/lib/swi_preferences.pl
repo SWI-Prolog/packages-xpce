@@ -38,7 +38,7 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_tick_box)).
-:- autoload(library(lists), [member/2]).
+:- autoload(library(filesex), [make_directory_path/1]).
 :- autoload(library(pce_emacs), [start_emacs/0]).
 :- autoload(library(swi_compatibility), [auto_call/1]).
 
@@ -70,10 +70,7 @@ pce_edit_preferences(What) :-
     (   \+ access_file(File, exist)
     ->  send(@display, confirm, @default, @default,
              'Preferences file %s doesn''t exist.\nCreate it?', File),
-        (   default_preferences(What, DefFile)
-        ->  copy_file(DefFile, File)
-        ;   true
-        )
+        create_preferences(What, File)
     ;   access_file(File, write)
     ->  true
     ;   send(@display, inform, @default, @default,
@@ -81,16 +78,34 @@ pce_edit_preferences(What) :-
     ),
     send(@emacs, goto_source_location, File).
 
+%!  create_preferences(+What, +File) is det.
+%
+%   Create the preferences file File.  If  we   have  a  template, use a
+%   copy.  Else create an empty file.   Either way the file must exist
+%   before we can open it in PceEmacs.
+
+create_preferences(What, File) :-
+    (   default_preferences(What, DefFile)
+    ->  copy_file(DefFile, File)
+    ;   setup_call_cleanup(open(File, write, Out), true, close(Out))
+    ).
+
 locate_preferences(xpce, File) :-
     ensure_xpce_config_dir(Dir),
     get(string('%s/Defaults', Dir), value, File).
 locate_preferences(prolog, File) :-
     prolog_init_file(Base),
-    member(Access, [read,write]),
-    absolute_file_name(user_app_config(Base), File,
-                       [ access(Access),
-                         file_errors(fail)
-                       ]),
+    (   absolute_file_name(user_app_config(Base), File,
+                           [ access(read),
+                             file_errors(fail)
+                           ])
+    ->  true
+    ;   absolute_file_name(user_app_config(Base), File,
+                           [ file_errors(fail)
+                           ]),
+        file_directory_name(File, Dir),
+        catch(make_directory_path(Dir), _, fail)
+    ),
     !.
 
 %!  prolog_init_file(-Base)
@@ -115,11 +130,7 @@ prolog_init_file('init.pl').
 %   it, so the user can be presented a starting point.
 
 default_preferences(prolog, File) :-
-    member(Location,
-           [ swi('customize/swipl.ini'),
-             swi('customize/dotswiplrc')
-           ]),
-    absolute_file_name(Location, File,
+    absolute_file_name(swi('customize/init.pl'), File,
                        [ access(read),
                          file_errors(fail)
                        ]),
