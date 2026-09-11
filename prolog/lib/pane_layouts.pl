@@ -45,8 +45,11 @@
                 sum_list/2, append/3
               ]).
 :- use_module(library(apply), [maplist/3]).
-:- use_module(library(filesex), [make_directory_path/1]).
 :- use_module(library(aggregate), [aggregate_all/3]).
+:- use_module(library(log_store),
+              [ with_log_store/2, read_log_store/3,
+                append_log_store/3, rewrite_log_store/3
+              ]).
 
 /** <module> Where a new pane goes, from how windows have been arranged
 
@@ -84,8 +87,6 @@ caller turns the kinds into the panes it has.
 
 :- multifile
     default_arrangement/1.              % -Arrangement
-:- meta_predicate
-    with_store(+, 1).
 
                  /*******************************
                  *         ARRANGEMENTS         *
@@ -261,12 +262,8 @@ clamped(Share, Rounded) :-
                  *******************************/
 
 /* The arrangements live in a file of their own in the XPCE config
-   directory, kept as a log: what an arrangement has just earned is
-   appended to the file there and then, one term to a line.  Nothing
-   waits for the end of the session, so several instances of the IDE
-   running at once each add what they learn without overwriting the
-   others, and a hard crash costs at most the window that was on the
-   screen at the time.
+   directory, kept as a log -- see library(log_store) for why, and for
+   the file and the lock on it.
 
    Reading the store plays the log back: each record credits the
    arrangement it names as of when it was written, and the store is where
@@ -274,12 +271,6 @@ clamped(Share, Rounded) :-
    arrangement was worth that many seconds at that moment -- so a log that
    has grown long can be rewritten as one record per arrangement, and
    playing *that* back gives the same store again.
-
-   Everything goes through a lock file beside the store, so that two
-   instances appending, or one summarising while another reads, cannot
-   tread on each other.  The log is read whenever it is asked for rather
-   than held in memory over the session, which is what lets one instance
-   pick up what another has just learned.
 */
 
 :- dynamic
@@ -323,7 +314,7 @@ store_file(File) :-
 load_arrangements :-
     store_file(File),
     (   exists_file(File)
-    ->  with_store(File, read_log)
+    ->  with_log_store(File, read_log)
     ;   clear_store
     ).
 
@@ -335,19 +326,9 @@ clear_store :-
 
 read_log(File) :-
     clear_store,
-    setup_call_cleanup(
-        open(File, read, In, [encoding(utf8)]),
-        read_records(In),
-        close(In)).
-
-read_records(In) :-
-    read_term(In, Term, []),
-    (   Term == end_of_file
-    ->  true
-    ;   replay(Term),
-        count_record,
-        read_records(In)
-    ).
+    read_log_store(File, replay, N),
+    retractall(events(_)),
+    assertz(events(N)).
 
 count_record :-
     retract(events(N0)),
@@ -393,7 +374,7 @@ record_arrangement(Arrangement, Seconds) :-
     !,
     get_time(Now),
     store_file(File),
-    with_store(File, add_record(used(Arrangement, Seconds, Now))).
+    with_log_store(File, add_record(used(Arrangement, Seconds, Now))).
 record_arrangement(_, _).
 
 %!  remember_arrangement(+Arrangement) is det.
@@ -409,7 +390,7 @@ record_arrangement(_, _).
 remember_arrangement(Arrangement) :-
     get_time(Now),
     store_file(File),
-    with_store(File, add_record(kept(Arrangement, Now))).
+    with_log_store(File, add_record(kept(Arrangement, Now))).
 
 %!  keep(+Arrangement, +At) is det.
 %
@@ -438,24 +419,9 @@ add_record(Record, File) :-
     max_events(Max),
     (   N >= Max
     ->  summarise_log(File)
-    ;   append_record(File, Record)
+    ;   append_log_store(File, write_header, Record),
+        count_record
     ).
-
-append_record(File, Record) :-
-    (   exists_file(File)
-    ->  Header = false
-    ;   Header = true
-    ),
-    setup_call_cleanup(
-        open(File, append, Out, [encoding(utf8)]),
-        (   (   Header == true
-            ->  write_header(Out)
-            ;   true
-            ),
-            write_record(Out, Record)
-        ),
-        close(Out)),
-    count_record.
 
 %!  summarise_log(+File) is det.
 %
@@ -479,24 +445,9 @@ summarise_log(File) :-
     append(Keeps, Used, Records),
     rewrite_log(File, Records).
 
-%       Written beside the log and renamed over it, so that the log is
-%       either the old one or the new one and never half of either.  We
-%       hold the lock, so nobody has it open to append to.
-
 rewrite_log(File, Records) :-
-    atom_concat(File, '.new', New),
-    setup_call_cleanup(
-        open(New, write, Out, [encoding(utf8)]),
-        (   write_header(Out),
-            forall(member(Record, Records),
-                   write_record(Out, Record))
-        ),
-        close(Out)),
-    rename_file(New, File),
+    rewrite_log_store(File, write_header, Records),
     read_log(File).
-
-write_record(Out, Record) :-
-    format(Out, '~q.~n', [Record]).
 
 write_header(Out) :-
     format(Out, '/*  How you have arranged the windows of the IDE.~n~n', []),
@@ -523,7 +474,7 @@ forget_arrangements :-
     retractall(kept(_,_,_)),
     store_file(File),
     (   exists_file(File)
-    ->  with_store(File, forget_log)
+    ->  with_log_store(File, forget_log)
     ;   clear_store
     ).
 
@@ -531,30 +482,11 @@ forget_log(File) :-
     rewrite_log(File, []).
 
                  /*******************************
-                 *           THE LOCK           *
+                 *           MESSAGES           *
                  *******************************/
 
-%!  with_store(+File, :Goal) is det.
-%
-%   Run call(Goal, File) with the store to ourselves.  The lock is on a
-%   file beside it rather than on the store, because the store is renamed
-%   over when it is summarised while the lock file stays what it is.
-%
-%   A store that cannot be read or written leaves the system with the
-%   arrangements it comes with; it is said once and not again.
-
-with_store(File, Goal) :-
-    catch(ignore(locked_store(File, Goal)), Error,
-          complain(no_file(File, Error))).
-
-locked_store(File, Goal) :-
-    file_directory_name(File, Dir),
-    make_directory_path(Dir),
-    atom_concat(File, '.lock', Lock),
-    setup_call_cleanup(
-        open(Lock, append, Stream, [lock(exclusive)]),
-        call(Goal, File),
-        close(Stream)).
+%       Said once and not again: a log that has something in it we do not
+%       understand has it on every read.
 
 complain(Message) :-
     (   complained(Message)
@@ -563,15 +495,9 @@ complain(Message) :-
         print_message(warning, pane_layouts(Message))
     ).
 
-                 /*******************************
-                 *           MESSAGES           *
-                 *******************************/
-
 :- multifile
     prolog:message//1.
 
-prolog:message(pane_layouts(no_file(File, Error))) -->
-    [ 'Window arrangements: cannot use ~w: ~p'-[File, Error] ].
 prolog:message(pane_layouts(unknown_term(Term))) -->
     [ 'Window arrangements: ignored ~p'-[Term] ].
 
