@@ -12,6 +12,7 @@ test_libs(pane_layouts         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(class_template       OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(emacs_split          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(event_clone          OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(prolog_mode          OPTIONS ${XPCE_TEST_OPTIONS})
 if(EPILOG)
 test_libs(epilog_tabs          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(mixed_panes          OPTIONS ${XPCE_TEST_OPTIONS})
@@ -39,6 +40,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:class_template
                      xpce:emacs_split
                      xpce:event_clone
+                     xpce:prolog_mode
                      xpce:no_display
                      xpce:number_conversion
                      xpce:object_reference

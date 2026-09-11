@@ -2051,9 +2051,10 @@ setup_margin(M) :->
 
 forward_clause(M, Start:int, EOC:int) :<-
     "Find end of first clause after Start"::
-    new(Here, number(Start)),
+    get(M, text_buffer, TB),            % a mode is not a text_buffer: it
+    new(Here, number(Start)),           % only delegates to the editor
     repeat,
-    (   send(@prolog_full_stop, search, M, Here)
+    (   send(@prolog_full_stop, search, TB, Here)
     ->  get(@prolog_full_stop, register_start, 1, Stop),
         (   get(M, scan_syntax, 0, Stop, tuple(code,_))
         ->  !,
