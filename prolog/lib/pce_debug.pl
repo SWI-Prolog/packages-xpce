@@ -168,23 +168,40 @@ non_object_reference('_handle_to_itf_table').
 
 %!  add_prolog_references(+Chain, -PrologRefs, -Freed) is det.
 %
-%   Add all Prolog blob references to Chain.
+%   Add to Chain the Prolog blob references that Prolog holds on to.
+%   See held_reference/1.
 %
 %   @arg PrologRefs is the number of life Prolog blobs.
 %   @arg Freed is the number of blobs that refer to freed PCE objects.
-%   @see garbage_collect_atoms/0 may be called to minimize the set.
 
 add_prolog_references(Chain, PrologRefs, Freed) :-
     get(Chain, size, Size0),
     State = freed(0),
     forall(( current_blob(Ref, pce),
              Ref \== Chain,
+             held_reference(Ref),
              existing_object(Ref, State)
            ),
            send(Chain, '_append', Ref)),
     get(Chain, size, AllObjects),
     PrologRefs is AllObjects-Size0,
     arg(1, State, Freed).
+
+%!  held_reference(+Ref) is semidet.
+%
+%   True if something registered the blob Ref: a clause, a record or
+%   foreign code.  A blob that is only on a Prolog stack is left out.
+%   The atom GC scans the stacks conservatively: it marks what a thread
+%   dropped long ago as well as what is above the top of its local
+%   stack.  Such a stale blob keeps its object alive, and taken as a
+%   root it shows objects that died with the window that held them as
+%   freed objects inside life ones.  The price is that objects held
+%   only by a running goal, a global variable or a message queue are
+%   not checked.
+
+held_reference(Ref) :-
+    '$atom_references'(Ref, Count),
+    Count > 0.
 
 existing_object(Ref, _State) :-
     object(Ref),
@@ -271,13 +288,13 @@ describe_location(_, '<no source>').
 %   inside life instances.  The root objects are
 %
 %     - Global objects (e.g., `@display`)
-%     - Objects reachable from Prolog _blobs_ of type `pce`.  This set
-%       is first minimized by running garbage_collect_atoms/0.
+%     - Objects reachable from Prolog _blobs_ of type `pce` that are
+%       held by a clause, a record or foreign code.  See
+%       held_reference/1.
 
 check_pce_database :-
     pce_global_objects(All),
     get(All, size, Globals),
-    garbage_collect_atoms,
     add_prolog_references(All, PrologRefs, Freed),
     print_message(information, pce(checking(Globals, PrologRefs, Freed))),
     send(All, '_check'),
