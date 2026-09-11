@@ -49,6 +49,7 @@ static status	resetTextItem(TextItem ti);
 static int	combo_flags(TextItem ti);
 static status	detachTimerTextItem(TextItem ti);
 static int	text_item_clear_width(TextItem ti);
+static int	clear_icon_shown(TextItem ti);
 
 #define STEPPER_BOX_W   14
 #define STEPPER_BOX_GAP 5
@@ -164,7 +165,7 @@ RedrawAreaTextItem(TextItem ti, Area a)
   } else
     repaintText(vt, tx, ty, tw, th);
 
-  if ( clrw > 0 && getSizeCharArray(vt->string) != ZERO )
+  if ( clear_icon_shown(ti) )
   { Image ci = ti->clear_image;
     int iw = valInt(ci->size->w);
     int ih = valInt(ci->size->h);
@@ -840,11 +841,17 @@ text_item_combo_width(TextItem ti)
    space is reserved as soon as a <-clear_image is set (and the style is
    `normal') so the field does not reflow when the icon appears; the icon
    itself is only painted/clickable while the field is non-empty.
+
+   A field the user cannot type in cannot be cleared either, so one that
+   is not <-editable reserves nothing and shows nothing: the whole width
+   is for the text.  `->editable' asks for a recompute, as this changes
+   the width the field asks its dialog for.
 */
 
 static int
 text_item_clear_width(TextItem ti)
-{ if ( notNil(ti->clear_image) && ti->style == NAME_normal )
+{ if ( notNil(ti->clear_image) && ti->style == NAME_normal &&
+       ti->editable == ON )
   { int iw = valInt(ti->clear_image->size->w);
     int ex = (int)valNum(getExFont(ti->value_text->font));
 
@@ -1090,7 +1097,7 @@ eventTextItem(TextItem ti, EventObj ev)
 	}
       }
 
-      if ( clear_icon_shown(ti) && ti->editable == ON )
+      if ( clear_icon_shown(ti) )
       { Int X, Y;
 	int x, y;
 	int clrw = text_item_clear_width(ti);
@@ -1449,6 +1456,7 @@ editableTextItem(TextItem ti, BoolObj val)
   { assign(ti, editable, val);
     if ( val == OFF && notNil(ti->device) )
       send(ti->device, NAME_advance, ti, EAV);
+    requestComputeGraphical(ti, DEFAULT);  /* the clear icon comes and goes */
     changedDialogItem(ti);
   }
 

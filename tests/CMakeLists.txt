@@ -4,6 +4,7 @@
 test_libs(colour               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(text_image           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(editor_placeholder   OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(text_item            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(tab_frame            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(fixed_graphicals     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(pane_frame           OPTIONS ${XPCE_TEST_OPTIONS})
@@ -29,6 +30,7 @@ test_libs(terminal_glyphs      OPTIONS ${XPCE_TEST_OPTIONS})
 set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:text_image
                      xpce:editor_placeholder
+                     xpce:text_item
                      xpce:tab_frame
                      xpce:fixed_graphicals
                      xpce:pane_frame
