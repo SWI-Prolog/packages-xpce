@@ -95,9 +95,10 @@ caller turns the kinds into the panes it has.
 %       have no good single answer today: a navigator or a list of
 %       buffers belongs down the left at a fifth of the width, a terminal
 %       or a list of bookmarks below the editor at a third of the height,
-%       a debugger in a tab beside the terminal it is debugging.
-%       Anything not mentioned falls through to a tab, which is what the
-%       IDE has always done.
+%       a debugger in a tab beside the terminal it is debugging, a symbol
+%       picker in a window of its own, being a thing you pick from while
+%       typing elsewhere.  Anything not mentioned falls through to a tab,
+%       which is what the IDE has always done.
 %
 %       They are clauses rather than data in a file so that a user's init
 %       file or a project can add its own.
@@ -120,6 +121,8 @@ default_arrangement(
     pane_frame([], [ tab([], terminal),
                      tab([], prolog_debugger)
                    ])).
+default_arrangement(
+    pane_frame([], [tab([], symbol_picker)])).
 
 %!  arrangement(-Arrangement, -Tier, -Priority) is nondet.
 %

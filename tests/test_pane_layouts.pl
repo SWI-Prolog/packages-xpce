@@ -155,6 +155,12 @@ test(and_an_editor_above_the_terminal,
     Rule = split(_, _, Share),
     assertion(abs(Share-0.7) < 0.001).
 
+%       A thing you pick from while typing elsewhere belongs in a window
+%       of its own, whatever the window you are typing in holds.
+
+test(a_symbol_picker_gets_a_window_of_its_own, Rule == window) :-
+    pane_placement(symbol_picker, [editor, terminal], Rule).
+
 test(a_debugger_gets_a_tab_beside_the_terminal, Rule == tab) :-
     pane_placement(prolog_debugger, [editor, terminal], Rule).
 

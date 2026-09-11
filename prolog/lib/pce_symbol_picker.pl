@@ -38,7 +38,7 @@
             pick_symbol/1               % -Code
           ]).
 :- use_module(library(pce)).
-:- use_module(library(pce_report)).
+:- use_module(library(pane_frame)).
 :- use_module(library(toolbar)).
 :- autoload(library(unicode/blocks), [unicode_block/3]).
 :- autoload(library(apply), [include/3]).
@@ -473,7 +473,17 @@ resource(logo_unicode,  image, image('logo/New_Unicode_logo.svg')).
 resource(ublock_user,   image, image('tool/user.svg')).
 resource(clear_recents, image, image('tool/wipe.svg')).
 
-:- pce_begin_class(symbol_picker, frame,
+/* The picker as a pane.
+
+It used to be a frame of its own.  It is a `tool_pane' now -- see
+library(pane_frame) -- so it drops into a tab of any window of the IDE or
+beside what is there; the arrangements the system comes with give it a
+window of its own, which is where a thing you pick from while typing
+elsewhere belongs.  What it has to say goes on the status bar of the
+window it ends up in, so it carries no reporter of its own.
+*/
+
+:- pce_begin_class(symbol_picker, tool_pane,
                    "Pick a Unicode symbol from a code range").
 
 variable(pick_mode,
@@ -497,13 +507,12 @@ class_variable(symbol_font, font, font(sans, normal, 16)).
 
 initialise(SP) :->
     load_recents,
-    send_super(SP, initialise, 'Symbol picker'),
-    send(SP, done_message, message(SP, destroy)),
+    send_super(SP, initialise, symbol_picker),
 
     new(FilterMsg, message(SP, filter)),
     new(RangeMsg,  message(SP, range_selected, @arg1?key)),
 
-    send(SP, append, new(D, dialog)),
+    send(SP, append_window, new(D, dialog)),
     send(D, name, controls),
     send(D, gap, size(8,4)),
     send(D, append, new(TB, tool_bar(SP))),
@@ -529,13 +538,15 @@ initialise(SP) :->
     send(Filter, show_label, @off),
     send(TB, reference, Filter?reference),
 
-    send(new(R, picture(recents, size(450, 60))), below, D),
+    send(SP, append_window, new(R, picture(recents, size(450, 60))),
+         D, below),
     send(R, name, recents),
     send(R, ver_shrink, 0),
     send(R, ver_stretch, 0),
     send(R, scrollbars, none),
 
-    new(B, browser('Code range', size(28, 10))),
+    send(SP, append_window, new(B, browser('Code range', size(28, 10))),
+         R, below),
     send(B, name, ranges),
     send(B, select_message, RangeMsg),
     send(B, open_message,   RangeMsg),
@@ -553,15 +564,27 @@ initialise(SP) :->
 
     format(string(Row), '~20c', [0'W]),
     get(Font, width, Row, GridW),
-    send(new(G, picture(grid, size(GridW, 100))), right, B),
+    send(SP, append_window, new(G, picture(grid, size(GridW, 100))),
+         B, right),
     send(G, name, grid),
     send(G, scrollbars, both),
 
-    send(G, below, R),
-    send(new(report_dialog), below, G),
+    %  How big a window of my own should be.  A pane otherwise takes the
+    %  size of whatever it is put in, and class tabbed_window -- which is
+    %  what a tool pane is -- has a size of its own rather than one the
+    %  windows tiled in it ask for.
+
+    format(string(Cols), '~28c', [0'W]),
+    get(Font, width, Cols, RangesW),
+    get(Font, height, LineH),
+    get(D, height, ControlsH),
+    PaneW is max(450, RangesW+GridW),
+    PaneH is ControlsH+60+12*LineH,
+    send(SP, size, size(PaneW, PaneH)),
 
     send(SP, fill_ranges, ''),
     send(SP, update_recents),
+
     (   initial_range_name(Init)
     ->  send(SP, select_range, Init)
     ;   send(SP, report, warning, 'No code ranges available')
@@ -586,10 +609,38 @@ show(SP, Client:[object]*) :->
     ->  true
     ;   send(SP, client, Client)
     ),
-    (   get(SP, status, unmapped)
-    ->  send(SP, open)
-    ;   send(SP, expose)
-    ).
+    send(SP, expose).                   % a pane in no window gets one
+
+                 /*******************************
+                 *             PANE             *
+                 *******************************/
+
+pane_label(_SP, Label:name) :<-
+    "What my tab is called"::
+    Label = 'Symbol picker'.
+
+%       My windows are told apart by name rather than by class: the
+%       recents and the grid are both pictures.  Not <-member: on a
+%       tabbed_window that answers the window of a named tab.
+
+part(SP, Name:name, W:window) :<-
+    "The window of mine with this name"::
+    get(SP, members, Chain),
+    chain_list(Chain, Windows),
+    member(W, Windows),
+    get(W, name, Name),
+    !.
+
+%!  own_window(+SP, +Frame) is semidet.
+%
+%   Frame is a window the picker has to itself.  That is where it goes
+%   unless the user says otherwise, and it is never a window to type a
+%   symbol into.
+
+own_window(SP, Frame) :-
+    get(SP, frame, Frame),
+    get(Frame, panes, Panes),
+    get(Panes, size, 1).
 
 client(SP, Client:object) :->
     "Set the frame that receives typed symbols"::
@@ -604,18 +655,23 @@ client(SP, Client:object) :->
     ;   send(SP, slot, target_frame, Fr)
     ).
 
+%       A modal pick takes a window of its own whatever the arrangements
+%       say: it is answered by the window closing, and a window holding
+%       anything else would be held shut with it.
+
 pick(SP, Code:int) :<-
     "Modally pick a symbol; fails when cancelled"::
     send(SP, slot, pick_mode, return),
-    get(SP, confirm_centered, Reply),
+    send(@prolog_ide, place_tool, SP, frame),
+    get(SP, frame, Frame),
+    get(Frame, confirm_centered, Reply),
     Reply \== @nil,
     Code = Reply.
 
 on_focus(SP, Fr:frame) :->
     "Track the application frame that just gained keyboard focus"::
     (   object(Fr),
-        Fr \== SP,
-        \+ send(Fr, instance_of, symbol_picker)
+        \+ own_window(SP, Fr)
     ->  send(SP, slot, target_frame, Fr),
         send(SP, adopt_target_font)
     ;   true
@@ -643,7 +699,7 @@ capture_target(SP) :->
     get(@display, frames, Frames),
     chain_list(Frames, List),
     (   member(Fr, List),
-        Fr \== SP,
+        \+ own_window(SP, Fr),
         get(Fr, input_focus, @on)
     ->  send(SP, slot, target_frame, Fr),
         send(SP, adopt_target_font)
@@ -657,7 +713,7 @@ capture_target(SP) :->
 
 fill_ranges(SP, Filter:name) :->
     "Populate the list browser; show only ranges matching Filter"::
-    get(SP, member, ranges, LB),
+    get(SP, part, ranges, LB),
     (   get(LB, selection, OldSel),
         OldSel \== @nil
     ->  get(OldSel, key, OldName)
@@ -714,7 +770,7 @@ matches(Filter, Name) :-
 filter_mode(SP, Mode:name) :->
     "Switch the filter between block names and character names"::
     send(SP, slot, filter_mode, Mode),
-    get(SP, member, controls, D),
+    get(SP, part, controls, D),
     (   get(D, member, filter_mode, MM)
     ->  send(MM, selection, Mode)
     ;   true
@@ -728,7 +784,7 @@ filter_mode(SP, Mode:name) :->
 
 filter(SP) :->
     "Apply the current filter expression"::
-    get(SP, member, controls, D),
+    get(SP, part, controls, D),
     get(D, member, filter, Item),
     get(Item, selection, Text),
     get(SP, filter_mode, Mode),
@@ -736,7 +792,7 @@ filter(SP) :->
     ->  send(SP, apply_char_filter, Text)
     ;   send(SP, slot, match_index, @nil),
         send(SP, fill_ranges, Text),
-        get(SP, member, ranges, LB),
+        get(SP, part, ranges, LB),
         get(LB?dict?members, size, N),
         send(SP, report, status, '%d matching blocks', N),
         (   get(SP, range_name, RN), RN \== @nil,
@@ -761,7 +817,7 @@ apply_char_filter(SP, Text:name) :->
         ;   char_match_index(Text, Index, Total),
             send(SP, slot, match_index, Index),
             send(SP, fill_ranges, ''),
-            get(SP, member, ranges, LB),
+            get(SP, part, ranges, LB),
             get(LB?dict?members, size, NB),
             (   NB > 0
             ->  get(LB?dict?members, head, First),
@@ -780,7 +836,7 @@ apply_char_filter(SP, Text:name) :->
 
 clear_grid(SP) :->
     "Remove all symbols from the grid"::
-    get(SP, member, grid, G),
+    get(SP, part, grid, G),
     send(G, clear).
 
 range_selected(SP, Name:name) :->
@@ -791,7 +847,7 @@ select_range(SP, Name:name) :->
     "Display the named range in the grid"::
     (   range_view_cells(SP, Name, Cells)
     ->  send(SP, slot, range_name, Name),
-        get(SP, member, ranges, LB),
+        get(SP, part, ranges, LB),
         (   get(LB?dict, member, Name, _)
         ->  send(LB, selection, Name)
         ;   true
@@ -898,7 +954,7 @@ update_last_range(Name) :-
 
 fill_grid(SP) :->
     "Re-draw the symbols of the current range"::
-    get(SP, member, grid, G),
+    get(SP, part, grid, G),
     send(G, clear),
     new(Fmt, format(horizontal, 1, @on)),
     send(Fmt, column_sep, 6),
@@ -908,7 +964,8 @@ fill_grid(SP) :->
     get(SP, symbol_font, Font),
     range_view_cells(SP, Name, Cells0),
     renderable_cells(Cells0, Font, Cells),
-    fill_grid_rows(G, Font, Cells).
+    fill_grid_rows(G, Font, Cells),
+    send(G, scroll_to, point(0,0)).
 
 %   Drop emit cells the font cannot show; keep curated pairs as-is.
 
@@ -972,9 +1029,23 @@ printable_char(C) :-
 		 *           RECENTS            *
 		 *******************************/
 
+%!  <-recents_height
+%
+%   The row of recents is one line of the symbol font.  It says so itself
+%   rather than leaving it to the tiling: `tab_frame ->append' sizes a
+%   window from what it holds, and this one holds nothing until it is
+%   filled.  It is asked again whenever it is filled, so that it follows
+%   the font.
+
+recents_height(SP, H:int) :<-
+    "How tall the row of recent symbols is"::
+    get(SP, symbol_font, Font),
+    get(Font, height, FH),
+    H is FH+6.
+
 update_recents(SP) :->
     "Re-draw the row of recently picked symbols"::
-    get(SP, member, recents, R),
+    get(SP, part, recents, R),
     send(R, clear),
     new(Fmt, format(horizontal, 1, @on)),
     send(Fmt, row_sep, 2),
@@ -989,7 +1060,8 @@ update_recents(SP) :->
         new(Cell, picker_cell(S, Font)),
         send(Cell, slot, actions, Map),
         send(R, display, Cell)
-    ).
+    ),
+    send(R, height, SP?recents_height).
 
 clear_recents(SP) :->
     "Forget the recents list"::
@@ -1030,7 +1102,7 @@ pick_pair(SP, Open:int, Close:int) :->
     "Pick a matching pair: emit Open, Close and a backward-character"::
     get(SP, pick_mode, Mode),
     (   Mode == return
-    ->  send(SP, return, Open)
+    ->  send(SP?frame, return, Open)
     ;   Mode == type,
         send(SP, type_symbol, Open),
         send(SP, type_symbol, Close),
@@ -1049,7 +1121,7 @@ pick_code(SP, Code:int) :->
     "Called by picker_cell when the user clicks a symbol"::
     get(SP, pick_mode, Mode),
     (   Mode == return
-    ->  send(SP, return, Code)
+    ->  send(SP?frame, return, Code)
     ;   Mode == type,
         send(SP, type_symbol, Code)          % may fail if no target
     ->  add_recent(emit(Code)),
@@ -1082,16 +1154,33 @@ type_symbol(SP, Code:int) :->
     get(SP, target_frame, Fr),
     Fr \== @nil,
     object(Fr),
-    Fr \== SP,
+    \+ typing_into_myself(SP, Fr),
     new(Ev, event(Code, Fr)),
     send(Fr, post_event, Ev).
+
+%!  typing_into_myself(+SP, +Frame) is semidet.
+%
+%   The symbol would land in the picker rather than in what the user is
+%   writing: a frame hands a key to the window that has its keyboard
+%   focus, and that window is one of mine.  It cannot happen while the
+%   picker has a window of its own; it can once it is docked beside the
+%   thing being typed in, and then the clipboard is the way to hand a
+%   symbol over.
+
+typing_into_myself(SP, Frame) :-
+    get(Frame, keyboard_focus, Win),
+    Win \== @nil,
+    (   Win == SP
+    ;   get(Win, container, symbol_picker, SP)
+    ),
+    !.
 
 type_ctrl(SP, Char:name) :->
     "Post a control-modified key (e.g. ^B) to the target frame"::
     get(SP, target_frame, Fr),
     Fr \== @nil,
     object(Fr),
-    Fr \== SP,
+    \+ typing_into_myself(SP, Fr),
     ctrl(Char, Ctrl),
     new(Ev, event(Ctrl, Fr, button_mask := 1)), % 1 = BUTTON_control
     send(Fr, post_event, Ev).
@@ -1117,18 +1206,36 @@ initialise(C, S:string, Font:font) :->
     send_super(C, initialise, S, left, Font),
     send(C, slot, actions, []).
 
+%       Not <-frame: that is the window of the IDE the picker is a pane
+%       of now, and in a window of its own it is not even that -- a pane
+%       is asked for by <-container.
+
+picker(C, SP:symbol_picker) :<-
+    "The picker I am part of"::
+    get(C, container, symbol_picker, SP).
+
+%       Anything class text does not handle and that is not an area_exit
+%       used to be asked which symbol it was over, by handing <-pointed
+%       the event and leaving it to convert itself to a point.  That
+%       conversion is <-position relative to the event's <-receiver, and
+%       it raises rather than fails when the event has no position to
+%       give: the picker sees events it never saw as a frame of its own,
+%       a pane being a window among others rather than one on its own.
+
 event(C, Ev:event) :->
     (   send_super(C, event, Ev)
     ->  true
     ;   send(Ev, is_a, area_exit)
     ->  send(C, report, status, '')
-    ;   get(C, pointed, Ev, @off, Index),
+    ;   send(Ev, is_a, mouse),          % a focus event has no position
+        get(Ev, position, C, At),       % relative to me rather than to
+        get(C, pointed, At, @off, Index),   % whatever the receiver is
         Index >= 0,
         get(C, actions, Actions),
         nth0(Index, Actions, Action)
     ->  (   send(Ev, is_a, ms_left_up)
-        ->  send(C?frame, pick_action, Action)
-        ;   send(C?frame, capture_target),
+        ->  send(C?picker, pick_action, Action)
+        ;   send(C?picker, capture_target),
             action_status(Action, Status),
             send(C, report, status, Status)
         )
