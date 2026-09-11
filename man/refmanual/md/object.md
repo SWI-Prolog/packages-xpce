@@ -36,6 +36,20 @@ specification.  See:
 
     Normally invoked through the Prolog predicate checkpce/0.
 
+    Each reported inconsistency is followed by the path from the checked
+    object to the object that holds the illegal value.  Each step of this
+    path is printed as the object followed by the slot we descend in.  The
+    slot is printed as `<-name` for an instance variable, as `[index]` for
+    an element of a chain or vector and as `{key}` for a key of a hash
+    table.  For example:
+
+	[PCE warning: <pce>(0x327ad700,vector): Freed object in element 2: ...]
+		Path from checked object:
+		  @pce/pce <-all_attributes
+		  <pce>(0x327ad6c0,chain)[1]
+		  <pce>(0x327a5080,attribute) <-value
+		  <pce>(0x327ad700,vector)[2]
+
     **Diagnostics**: See related error objects
 
     @see !freed_value_value

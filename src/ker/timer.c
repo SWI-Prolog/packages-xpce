@@ -50,6 +50,7 @@ initialiseTimer(Timer tm, Num interval, Code msg)
   assign(tm, status,   NAME_idle);
   assign(tm, service,  OFF);
   assign(tm, times,    NIL);
+  assign(tm, sdl_timer, NIL);
 
   intervalTimer(tm, interval);
 
@@ -232,8 +233,8 @@ static vardecl var_timer[] =
      NAME_debugging, "If @on, execution cannot be debugged"),
   IV(NAME_times, "int*", IV_GET,
      NAME_status, "Times left to fire (@nil: no limit)"),
-  IV(NAME_sdlTimer, "int", IV_GET,
-     NAME_internal, "SDL timer handle")
+  IV(NAME_sdlTimer, "int*", IV_GET,
+     NAME_internal, "SDL timer handle (@nil if not scheduled)")
 };
 
 /* Send Methods */

@@ -38,7 +38,8 @@
 #include <h/interface.h>
 #include <rel/proto.h>
 
-static int	check_object(Any, BoolObj, HashTable, int);
+typedef struct check_path check_path;
+static int	check_object(Any, BoolObj, HashTable, int, check_path *);
 static status	makeTempObject(Any obj);
 
 		 /*******************************
@@ -2224,17 +2225,72 @@ getConvertObject(Any ctx, Any x)
 		*           CHECK		*
 		********************************/
 
+/* While  checking an  object graph  we maintain  the path  from the  seed
+   object to the  object currently being checked.  Each  step of the path
+   is a  tuple of an object  and the slot  of this object we  descend in.
+   The  slot is  the  name  of an  instance  variable,  an index  into  a
+   chain or vector  or the key of a hash  table.  If an inconsistency  is
+   found we  print this path,  which tells us how  the faulty  object was
+   reached from the checked object.
+*/
+
+#define CP_NONE	 0			/* end of the path */
+#define CP_SLOT	 1			/* <-name */
+#define CP_INDEX 2			/* [index] */
+#define CP_KEY	 3			/* {key} */
+
+struct check_path
+{ check_path *parent;			/* path to the container */
+  Any	      obj;			/* object being checked */
+  Any	      slot;			/* slot, index or key in obj */
+  int	      kind;			/* CP_* */
+};
+
+static void
+print_check_step(check_path *path)
+{ if ( path->parent )
+    print_check_step(path->parent);
+
+  Cprintf("\t  %s", pp(path->obj));
+  switch(path->kind)
+  { case CP_SLOT:
+      Cprintf(" <-%s", strName(path->slot));
+      break;
+    case CP_INDEX:
+      Cprintf("[%ld]", (long)valInt(path->slot));
+      break;
+    case CP_KEY:
+      Cprintf("{%s}", pp(path->slot));
+      break;
+  }
+  Cprintf("\n");
+}
+
+
+static void
+print_check_path(check_path *path)
+{ if ( path && path->parent )
+  { Cprintf("\tPath from checked object:\n");
+    print_check_step(path);
+  }
+}
+
+
 static int
-checkExtensonsObject(Any obj, BoolObj recursive, HashTable done, int errs)
+checkExtensonsObject(Any obj, BoolObj recursive, HashTable done, int errs,
+		     check_path *here)
 { Any val;
 
 #define CheckExt(att, get, attname) \
   { if ( onFlag(obj, att) ) \
-    { if ( !(val = get(obj, OFF)) ) \
+    { here->kind = CP_SLOT; \
+      here->slot = attname; \
+      if ( !(val = get(obj, OFF)) ) \
       { errorPce(obj, NAME_noExtension, attname); \
+	print_check_path(here); \
 	errs++; \
       } \
-      errs = check_object(val, recursive, done, errs); \
+      errs = check_object(val, recursive, done, errs, here); \
     } \
   }
 
@@ -2254,11 +2310,17 @@ checkExtensonsObject(Any obj, BoolObj recursive, HashTable done, int errs)
 
 
 static int
-check_object(Any obj, BoolObj recursive, HashTable done, int errs)
+check_object(Any obj, BoolObj recursive, HashTable done, int errs,
+	     check_path *parent)
 { Instance inst = obj;
   Class class;
   int slots;
   int i;
+  check_path here = { .parent = parent,
+		      .obj    = obj,
+		      .slot   = NIL,
+		      .kind   = CP_NONE
+		    };
 
   if ( recursive == ON )
   { if ( getMemberHashTable(done, obj) )
@@ -2268,6 +2330,7 @@ check_object(Any obj, BoolObj recursive, HashTable done, int errs)
 
   if ( !isProperObject(obj) )
   { errorPce(CtoName(pp(obj)), NAME_noProperObject);
+    print_check_path(&here);
     return errs + 1;
   }
 
@@ -2276,11 +2339,14 @@ check_object(Any obj, BoolObj recursive, HashTable done, int errs)
       return errs;
 
     errorPce(obj, NAME_creating);
+    print_check_path(&here);
     errs++;
   }
 
   if ( onFlag(obj, F_OBTAIN_CLASSVARS) )
-    errorPce(obj, NAME_classVariablesNotObtained);
+  { errorPce(obj, NAME_classVariablesNotObtained);
+    print_check_path(&here);
+  }
 
   DEBUG(NAME_codeReferences,
 	if ( codeRefsObject(obj) != 0 )
@@ -2292,7 +2358,7 @@ check_object(Any obj, BoolObj recursive, HashTable done, int errs)
   slots = valInt(class->slots);
 
 #define Test(x) if ( isObject(x) ) \
-		     (errs = check_object(x, recursive, done, errs))
+		     (errs = check_object(x, recursive, done, errs, &here))
 
   for(i=0; i<slots; i++)
   { if ( isPceSlot(class, i) )
@@ -2312,16 +2378,22 @@ check_object(Any obj, BoolObj recursive, HashTable done, int errs)
 	   ((Class)obj)->realised != ON )
 	continue;
 
+      here.kind = CP_SLOT;
+      here.slot = var->name;
+
       if ( !validateType(var->type, value, obj) )
       { errorPce(obj, NAME_badSlotValue, var, value);
+	print_check_path(&here);
 	errs++;
       } else if ( isObject(value) )
       { if ( isFreedObj(value) )
 	{ errorPce(obj, NAME_freedSlotValue, var, CtoName(pp(value)));
+	  print_check_path(&here);
 	  errs++;
 	} else if ( recursive == ON && isObject(value) )
 	{ if ( !isProperObject(value) )
 	  { errorPce(obj, NAME_badSlotValue, var, CtoName(pp(value)));
+	    print_check_path(&here);
 	    errs++;
 	  } else
 	    Test(value);
@@ -2330,22 +2402,27 @@ check_object(Any obj, BoolObj recursive, HashTable done, int errs)
     }
   }
 
-  errs = checkExtensonsObject(obj, recursive, done, errs);
+  errs = checkExtensonsObject(obj, recursive, done, errs, &here);
 
   if ( instanceOfObject(obj, ClassChain) )
   { Cell cell;
     int i = 1;
 
+    here.kind = CP_INDEX;
     for_cell(cell, (Chain) obj)
-    { if ( isObject(cell->value) )
+    { here.slot = toInt(i);
+
+      if ( isObject(cell->value) )
       { if ( isFreedObj(cell->value) )
 	{ errorPce(obj, NAME_freedCellValue,
 		   toInt(i), CtoName(pp(cell->value)));
+	  print_check_path(&here);
 	  errs++;
 	} else if ( recursive == ON && isObject(cell->value) )
 	{ if ( !isProperObject(cell->value) )
 	  { errorPce(obj, NAME_badCellCalue,
 		     toInt(i), CtoName(pp(cell->value)));
+	    print_check_path(&here);
 	    errs++;
 	  } else
 	    Test(cell->value);
@@ -2354,16 +2431,20 @@ check_object(Any obj, BoolObj recursive, HashTable done, int errs)
       i++;
     }
   } else if ( instanceOfObject(obj, ClassVector) )
-  { for_vector((Vector) obj, Any value,
+  { here.kind = CP_INDEX;
+    for_vector((Vector) obj, Any value,
+	       here.slot = toInt(_iv);
 	       if ( isObject(value) )
 	       { if ( isFreedObj(value) )
 		 { errorPce(obj, NAME_freedElementValue,
 			    toInt(_iv), CtoName(pp(value)));
+		   print_check_path(&here);
 		   errs++;
 		 } else if ( recursive == ON && isObject(value) )
 		 { if ( !isProperObject(value) )
 		   { errorPce(obj, NAME_badElementValue,
 			      toInt(_iv), CtoName(pp(value)));
+		     print_check_path(&here);
 		     errs++;
 		   } else
 		     Test(value);
@@ -2377,16 +2458,21 @@ check_object(Any obj, BoolObj recursive, HashTable done, int errs)
       errs++;
     }
 
+    here.kind = CP_KEY;
     for_hash_table(ht, s,
-		   { if ( isObject(s->name) )
+		   { here.slot = s->name;
+
+		     if ( isObject(s->name) )
 		     { if ( isFreedObj(s->name) )
 		       { errorPce(ht, NAME_freedKeyValue,
 				  CtoName(pp(s->name)), s->value);
+			 print_check_path(&here);
 			 errs++;
 		       } else if ( recursive == ON && isObject(s->name) )
 		       { if ( !isProperObject(s->name) )
 			 { errorPce(ht, NAME_badKeyValue,
 				    CtoName(pp(s->name)), s->value);
+			   print_check_path(&here);
 			   errs++;
 			 } else
 			   Test(s->name);
@@ -2396,11 +2482,13 @@ check_object(Any obj, BoolObj recursive, HashTable done, int errs)
 		     { if ( isFreedObj(s->value) )
 		       { errorPce(ht, NAME_freedValueValue,
 				  s->name, CtoName(pp(s->value)));
+			 print_check_path(&here);
 			 errs++;
 		       } else if ( recursive == ON && isObject(s->value) )
 		       { if ( !isProperObject(s->value) )
 			 { errorPce(ht, NAME_badValueValue,
 				    s->name, CtoName(pp(s->value)));
+			   print_check_path(&here);
 			   errs++;
 			 } else
 			   Test(s->value);
@@ -2427,7 +2515,7 @@ CheckObject(Any obj, BoolObj recursive)
     done = createHashTable(toInt(200), NAME_none);
   }
 
-  errs = check_object(obj, recursive, done, 0);
+  errs = check_object(obj, recursive, done, 0, NULL);
 
   if ( notNil(done) )
   { errorPce(obj, NAME_checkedObjects, done->size);

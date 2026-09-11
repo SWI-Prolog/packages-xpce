@@ -221,9 +221,11 @@ check_classes :-
     ).
 
 check_redefined_methods :-
-    findall(S, redefined_send_method(S), SL),
+    findall(S, ( redefined_send_method(S),
+                 \+ deliberately_redefined_method(S)), SL),
     maplist(report_redefined_method, SL),
-    findall(G, redefined_get_method(G), GL),
+    findall(G, ( redefined_get_method(G),
+                 \+ deliberately_redefined_method(G)), GL),
     maplist(report_redefined_method, GL),
     SL == [],
     GL == [].
@@ -241,11 +243,11 @@ redefined_get_method(method(Class, Sel, B0, B1)) :-
     ;   fail
     ).
 
-report_redefined_method(method(_, _, B0, B1)) :-
-    arg(1, B0, Id0),                % deliberate redefinition
+deliberately_redefined_method(method(_, _, B0, B1)) :-
+    arg(1, B0, Id0),
     arg(1, B1, Id1),
-    Id0 \== Id1,
-    !.
+    Id0 \== Id1.
+
 report_redefined_method(method(Class, Sel, B0, B1)) :-
     describe_location(B1, Loc1),
     (   Loc1 = File:Line
@@ -263,10 +265,19 @@ describe_location(_, '<no source>').
 
 
 %!  check_pce_database
+%
+%   Find a set of _root_ objects and recursively look for instances that
+%   violate their slot type  as  well   as  freed  instances that appear
+%   inside life instances.  The root objects are
+%
+%     - Global objects (e.g., `@display`)
+%     - Objects reachable from Prolog _blobs_ of type `pce`.  This set
+%       is first minimized by running garbage_collect_atoms/0.
 
 check_pce_database :-
     pce_global_objects(All),
     get(All, size, Globals),
+    garbage_collect_atoms,
     add_prolog_references(All, PrologRefs, Freed),
     print_message(information, pce(checking(Globals, PrologRefs, Freed))),
     send(All, '_check'),
