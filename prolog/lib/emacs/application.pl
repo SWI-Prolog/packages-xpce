@@ -633,9 +633,23 @@ chrome_server(_Emacs) :->
                  *       USER EXTENSIONS        *
                  *******************************/
 
+%!  user_customisation is semidet.
+%
+%   True when PceEmacs may load the files of whoever is running it: the
+%   mode extensions of ->load_user_extension and the init file of
+%   ->load_user_init_file.  The `xpce_defaults' flag set to `none' says
+%   it may not; see user_pce_defaults/1 of library(pce).  That is what a
+%   test wants: a mode extension of theirs is no more a reason for the
+%   suite to fail than a preference of theirs is.
+
+user_customisation :-
+    \+ current_prolog_flag(xpce_defaults, none),
+    \+ current_prolog_flag(xpce_defaults, false).
+
 load_user_extension(_Emacs, Base:name) :->
     "Load Prolog user file with this base-name"::
-    (   absolute_file_name(emacs_user_library(Base),
+    (   user_customisation,
+        absolute_file_name(emacs_user_library(Base),
                            [ access(read),
                              file_type(prolog),
                              file_errors(fail)
@@ -652,7 +666,8 @@ load_user_init_file(_Emacs) :->
     ->  Base = 'pceemacs.ini'
     ;   Base = '.pceemacsrc'
     ),
-    (   absolute_file_name(user_profile(Base),
+    (   user_customisation,
+        absolute_file_name(user_profile(Base),
                            [ access(read),
                              file_errors(fail)
                            ],
