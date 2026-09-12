@@ -9057,13 +9057,20 @@ rlc_copy_line(RlcTextLine dst, const RlcTextLine src)
  * The blocks that name these lines stay: rlc_erase_display() does not
  * sweep them while the alternate screen is up, so their anchors name the
  * same slots again once the lines come back and the folds close again.
+ *
+ * The walk stops at the last line of the buffer, which is a line like
+ * any other and on the screen with the rest: counting to it and not
+ * saving it dropped the text a client had written without a newline
+ * after it, which is the prompt of the session `less' was started from.
  */
 
 static void
 rlc_save_screen(RlcData b)
 { rlc_destroy_saved_screen(b);
-  int lines = rlc_count_lines(b, b->window_start,
-			      rlc_view_add(b, b->window_start, b->window_size));
+  int end   = rlc_view_add(b, b->window_start, b->window_size);
+  int lines = rlc_count_lines(b, b->window_start, end);
+  if ( end == b->last )
+    lines++;
   b->saved.height = lines;
   b->saved.lines = rlc_malloc(sizeof(rlc_text_line) * lines);
   b->saved.caret_x = b->caret_x;
@@ -9107,13 +9114,14 @@ rlc_restore_screen(RlcData b)
     }
     rlc_free(tls);
 
-    if ( rlc_count_lines(b, b->window_start, b->last) < count )
-    { b->last = rlc_add_lines(b, b->window_start, count);
-      rlc_free_line(b, b->last);
-    }
+    /* The last line saved is the last line of the buffer: its text came
+     * back with the rest, so it is not freed here.
+     */
+    if ( rlc_count_lines(b, b->window_start, b->last) < count-1 )
+      b->last = rlc_add_lines(b, b->window_start, count-1);
     b->caret_x = Bounds(b->saved.caret_x, 0, b->width-1);
     b->caret_y = rlc_add_lines(b, b->window_start,
-			       Bounds(b->saved.caret_y, 0, count));
+			       Bounds(b->saved.caret_y, 0, count-1));
     rlc_sweep_blocks(b);		/* the folds close again over the lines
 					   that came back; a block below the
 					   window, whose lines the erase took

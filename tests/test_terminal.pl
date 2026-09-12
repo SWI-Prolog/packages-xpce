@@ -2598,6 +2598,17 @@ test(an_alternate_screen_erasing_keeps_the_blocks_under_it,
     assert_rows(T, Screen),
     assertion(get(Block, folded, @on)).
 
+test(the_alternate_screen_gives_back_the_line_it_started_on,
+     [setup(current_test_terminal(T))]) :-
+    %  The last line of the buffer is a line like any other and on the
+    %  screen with the rest.  Counting up to it and saving the lines
+    %  before it dropped whatever had been written without a newline
+    %  after it, which is the prompt the application was started from.
+    buffer(T, 'aap\r\nnoot\r\nmies'),
+    alt_screen(T, 'ALT'),
+    normal_screen(T),
+    assert_rows(T, [aap, noot, mies]).
+
 test(a_private_prefix_swallows_its_sequence,
      [setup(current_test_terminal(T))]) :-
     %  ECMA-48 reserves 0x3c..0x3f as parameter prefixes, and a
