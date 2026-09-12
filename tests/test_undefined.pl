@@ -119,12 +119,17 @@ undefined_in_xpce(Undefined) :-
 
 %!  known_undefined(?PI) is nondet.
 %
-%   References that are meant to be there.  Both are reached only if the
-%   library that defines them is loaded first, which is what auto_call/1
-%   and the autoloader are for.
+%   References that are meant to be there.  The first two are reached only
+%   if the library that defines them is loaded first, which is what
+%   auto_call/1 and the autoloader are for.  The last is only there if the
+%   documentation is installed.
 
 known_undefined(emacs_fundamental_mode:editpce/1).  % auto_call/1, pce_debug
 known_undefined(epilog:attach_terminal/4).          % library(editline)
+% library(help) is only installed if the documentation is built.  See
+% the use of ``INSTALL_DOCUMENTATION`` in src/CMakeLists.txt.
+known_undefined(emacs_language_mode:help/1) :-
+    \+ exists_source(library(help)).
 
 :- begin_tests(undefined).
 
