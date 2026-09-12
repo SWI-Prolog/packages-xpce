@@ -7541,7 +7541,16 @@ rlc_restamp_folds(RlcData b)
     b->lines[l].fold_head = false;
   }
 
-  if ( !ti || isNil(ti->blocks) )
+  /* Nothing is folded while the alternate screen is up.  The window is
+   * the application's, and the lines under it are the normal screen's:
+   * an anchor that names one of them says where a fold goes there and
+   * not here.  The lines the application writes reach those slots as it
+   * fills the window, and stamping its own rows as hidden took them off
+   * the screen under it, which is `less' on a session with folds coming
+   * up scrambled.  The blocks keep <-folded, so rlc_restore_screen()
+   * closes the folds again over the lines it gives back.
+   */
+  if ( !ti || isNil(ti->blocks) || rlc_alt_screen(b) )
   { b->folds = 0;
     return;
   }

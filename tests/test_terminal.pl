@@ -2516,6 +2516,74 @@ test(the_alternate_screen_gives_back_what_a_fold_hides,
     assertion(marker_on_screen(T, 'l30')),
     assertion(marker_on_screen(T, '?- two.')).
 
+%!  folded_session(+T, -Rows) is det.
+%
+%   A session of marked commands that is longer than the window, every
+%   one of them folded, as `fold_previous' leaves it.  Two things come
+%   of that and the test below needs both: the commands above the
+%   window are folds that stay while an application has the window, and
+%   the blocks of the ones inside it name the very lines the
+%   application writes over.
+%
+%   Written in one go: a command per out/2 would spend a second of the
+%   test on waiting for the screen to settle.
+
+folded_session(T, Rows) :-
+    T = terminal(_, xpce(_, TI)),
+    send(TI, fold_previous, @off),      % these tests fold by hand
+    out(T, '\e[3J\e[H\e[2J'),           % start the ring over
+    term_rows(T, Rows),
+    N is Rows+10,
+    findall(Text,
+            ( between(1, N, I),
+              findall(L, ( between(1, 3, J),
+                           format(atom(L), 'out~w-~w\r\n', [I,J])
+                         ), Ls),
+              atomic_list_concat(Ls, Out),
+              format(atom(Text),
+                     '\e]133;A\a?- \e]133;B\agoal~w.\r\n\e]133;C\a~w\e]133;D\a',
+                     [I, Out])
+            ), Texts),
+    out(T, Texts),
+    term_blocks(T, Blocks),
+    forall(member(B, Blocks), send(B, fold)).
+
+%!  alt_lines(+T, +From, +To) is det.
+%
+%   Write numbered lines to the alternate screen, the last of them
+%   without a newline after it, as a full screen application paints.
+
+alt_lines(T, From, To) :-
+    findall(L, ( between(From, To, K),
+                 ( K =:= To -> Nl = '' ; Nl = '\r\n' ),
+                 format(atom(L), 'alt~w~w', [K, Nl])
+               ), Ls),
+    out(T, Ls).
+
+test(scrolling_an_alternate_screen_over_folded_blocks,
+     [ setup(current_test_terminal(T)),
+       cleanup(normal_screen(T))
+     ]) :-
+    %  The blocks of the session name lines the application writes over,
+    %  and they name them again as it fills the window: the ring
+    %  positions are the same.  Stamping the fold bits from them there
+    %  marked the application's own rows as hidden, which took them off
+    %  the screen and put the caret in the middle of it -- `less' on a
+    %  session with folds, coming up scrambled.
+    folded_session(T, Rows),
+    alt_screen(T, ''),
+    alt_lines(T, 1, Rows),
+    Scroll = 5,
+    forall(between(1, Scroll, K),
+           ( M is Rows+K,
+             out(T, ['\r\n', alt, M]) )),
+    First is Scroll+1,
+    Last is Rows+Scroll,
+    findall(L, ( between(First, Last, K),
+                 format(atom(L), 'alt~w', [K])
+               ), Expected),
+    assert_rows(T, Expected).
+
 test(a_private_prefix_swallows_its_sequence,
      [setup(current_test_terminal(T))]) :-
     %  ECMA-48 reserves 0x3c..0x3f as parameter prefixes, and a
