@@ -2584,6 +2584,20 @@ test(scrolling_an_alternate_screen_over_folded_blocks,
                ), Expected),
     assert_rows(T, Expected).
 
+test(an_alternate_screen_erasing_keeps_the_blocks_under_it,
+     [setup(current_test_terminal(T))]) :-
+    %  ED 0 is how a full screen application redraws, and what it erases
+    %  is its own screen.  Sweeping the blocks there let go of the ones
+    %  naming the lines under it, which are coming back: the session
+    %  returned from `less' with its folds open.
+    folded_screen(T, Block),
+    Screen = [top, '?- one.', '?- two.', t1, t2, t3],
+    alt_screen(T, 'ALT'),
+    out(T, '\e[H\e[J'),                 % redraw: home, then erase below
+    normal_screen(T),
+    assert_rows(T, Screen),
+    assertion(get(Block, folded, @on)).
+
 test(a_private_prefix_swallows_its_sequence,
      [setup(current_test_terminal(T))]) :-
     %  ECMA-48 reserves 0x3c..0x3f as parameter prefixes, and a

@@ -8530,12 +8530,21 @@ rlc_clear_from_cursor(RlcData b)
     b->first = 0;
     b->last = 0;
   }
-  rlc_sweep_blocks(b);			/* the lines below the caret are
+  if ( !rlc_alt_screen(b) )
+    rlc_sweep_blocks(b);		/* the lines below the caret are
 					 * gone; a block that lived only
 					 * there has nothing left to name.
 					 * This is the `cl' of a Windows
 					 * client: libedit's fake termcap
-					 * clears with CUP home + ED 0. */
+					 * clears with CUP home + ED 0.
+					 *
+					 * Not on the alternate screen: what
+					 * it erases is its own, and the
+					 * blocks name the normal screen's
+					 * lines under it, which are coming
+					 * back.  Sweeping them there is
+					 * `less' losing the folds of the
+					 * session it was started from. */
   b->changed |= CHG_CHANGED|CHG_CLEAR|CHG_CARET;
 }
 
