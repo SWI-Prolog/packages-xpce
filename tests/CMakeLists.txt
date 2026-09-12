@@ -39,6 +39,8 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:fixed_graphicals
                      xpce:pane_frame
                      xpce:pane_layouts
+                     xpce:bookmark_store
+                     xpce:bookmarks
                      xpce:class_template
                      xpce:emacs_split
                      xpce:event_clone
