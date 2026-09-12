@@ -106,7 +106,7 @@ initialise(SB, Root:[directory]) :->
     send(SB, append_window, new(FD, sb_filter_dialog), D, below),
     send(SB, append_window, W, FD, below),
     send(SB, fill_tool_bar),
-    send(FD, update_content).
+    send(SB, update_content).
 
                  /*******************************
                  *            MEMBERS           *
@@ -132,6 +132,7 @@ pane_label(_SB, Label:name) :<-
 fill_tool_bar(SB) :->
     "Fill the toolbar"::
     get(SB, tool_bar, TB),
+    send(TB, reference, point(0, 20)),
     send_list(TB, append,
               [ tool_button(up,
                             resource(up),
@@ -146,7 +147,16 @@ fill_tool_bar(SB) :->
                 tool_button(edit,
                             resource(edit),
                             'Open file in editor')
-              ]).
+              ]),
+    send(SB, append_content_menu).
+
+append_content_menu(SB) :->
+    get(SB, window, tool_dialog, D),
+    send(D, append, new(M, menu(content, cycle,
+                                message(SB, content, @arg1))), right),
+    forall(content_mode(Mode, Label, _),
+           send(M, append, menu_item(Mode, @default, Label))),
+    send(M, label, "Show:").
 
 goto(SB, File:file, Line:int) :->
     "Expand and highlight tree for given location"::
@@ -157,6 +167,19 @@ directory(SB, Dir:directory) :->
     "Make directory visible"::
     get(SB, tree, FB),
     send(FB, directory, Dir).
+
+content(SB, Content:{loaded,prolog,all}) :->
+    "Set the content mode of the whole tree"::
+    get(SB, tree, Tree),
+    send(Tree, content, Content).
+
+update_content(SB) :->
+    "Show the content mode of the tree"::
+    get(SB, tree, Tree),
+    get(Tree, content, Content),
+    get(SB, window, tool_dialog, TD),
+    get(TD, member, content, Menu),
+    send(Menu, selection, Content).
 
 :- pce_end_class(prolog_navigator).
 
@@ -175,12 +198,9 @@ initialise(D) :->
     send(D, name, filter_dialog),
     send(D, gap, size(5, 2)),
     send(D, pen, 0),
-    send(D, append, new(M, menu(content, cycle,
-                                message(D, content, @arg1)))),
-    send(M, label, 'Show:'),
-    forall(content_mode(Mode, Label, _),
-           send(M, append, menu_item(Mode, @default, Label))),
-    send(D, append, new(sb_file_filter_item(filter)), right).
+    send(D, append, new(F, sb_file_filter_item(filter))),
+    send(F, show_label, @off),
+    send(F, placeholder, "Filter files").
 
 resize(D) :->
     send(D, layout, D?visible?size).
@@ -189,18 +209,6 @@ tree(D, Tree:prolog_source_structure) :<-
     "The tree we control"::
     get(D, container, prolog_navigator, SB),
     get(SB, tree, Tree).
-
-content(D, Content:{loaded,prolog,all}) :->
-    "Set the content mode of the whole tree"::
-    get(D, tree, Tree),
-    send(Tree, content, Content).
-
-update_content(D) :->
-    "Show the content mode of the tree"::
-    get(D, tree, Tree),
-    get(Tree, content, Content),
-    get(D, member, content, Menu),
-    send(Menu, selection, Content).
 
 :- pce_end_class(sb_filter_dialog).
 

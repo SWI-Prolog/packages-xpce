@@ -744,11 +744,23 @@ test(and_so_is_the_tree_the_filter_controls, true(Tree == Mine)) :-
     get(FD, tree, Tree),
     get(SB, tree, Mine).
 
-test(so_the_filter_can_still_say_what_to_show, true(Content == all)) :-
+test(so_the_tool_can_still_say_what_to_show, true(Content == all)) :-
     navigator(SB),
-    get(SB, window, sb_filter_dialog, FD),
-    send(FD, content, all),
+    send(SB, content, all),
     get(SB?tree, content, Content).
+
+%       ->content is a method of the tool since the menu that sends it
+%       moved from the filter dialog to the tool bar.  There
+%       ->update_content shows which mode the tree is in, which is what
+%       the tool does with it when it opens.
+
+test(and_the_menu_on_the_tool_bar_shows_the_mode, true(Selection == all)) :-
+    navigator(SB),
+    send(SB, content, all),
+    send(SB, update_content),
+    get(SB, window, tool_dialog, TD),
+    get(TD, member, content, Menu),
+    get(Menu, selection, Selection).
 
 %       A pane has no reporter of its own: it reports on the bar of the
 %       window it is in, which grows one the first time anything asks.
