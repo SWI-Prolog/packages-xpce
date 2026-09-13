@@ -2327,12 +2327,21 @@ report(P, Kind:name, Fmt:[char_array], Args:any ...) :->
 
 %!  pane_in_view(+Pane) is semidet.
 %
-%   True when Pane is the one the user is working in, or is in no window
-%   of the IDE at all and so shares a bar with nobody.
+%   True when Pane is the one the user is working in, or the group that
+%   holds it, or is in no window of the IDE at all and so shares a bar
+%   with nobody.  A report climbs from the window it was made in to the
+%   frame, and a group -- PceEmacs is one, a tab per source -- lies on
+%   the way: <-current_pane is the view inside it, so a group that only
+%   asked whether it *is* the current pane threw away everything its own
+%   views had to say.
 
 pane_in_view(P) :-
     (   get(P, pane_frame, Frame)
-    ->  get(Frame, current_pane, P)
+    ->  get(Frame, current_pane, Current),
+        (   Current == P
+        ->  true
+        ;   pane_group(Current, P)      % I am the group it is in
+        )
     ;   true
     ).
 

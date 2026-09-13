@@ -450,6 +450,72 @@ bar_line(F, Line) :-
     ;   Line = ''
     ).
 
+%       What the editor has to say goes on the bar too.  A report climbs
+%       from the window that made it to the frame, and the editor is a
+%       window *of* a pane rather than a pane: PceEmacs holds its sources
+%       in tabs of one pane, so `emacs_pane' lies on the way up.  See
+%       `pane_in_view' in library(pane_frame).
+
+test(what_the_editor_reports_reaches_the_bar, true(Said == 'Hello there')) :-
+    emacs,
+    mixed_window(F),
+    get(F, current_pane, View),
+    send(View?editor, report, status, 'Hello there'),
+    bar_report(F, Said).
+
+%       Feedback while the user is typing: an incremental search says
+%       what it is looking for and whether it found it, from C.
+
+test(an_incremental_search_says_what_it_is_looking_for,
+     true(Started-Typing-Failing ==
+          'ISearch forward (type to search)'-
+          'Isearch forward an'-
+          'Failing ISearch: anz')) :-
+    emacs,
+    mixed_window(F),
+    get(F, current_pane, View),
+    get(View, editor, E),
+    send(E?text_buffer, insert, 0, 'an answer\n'),
+    send(E, caret, 0),                  % search forward from the start
+    send(E, isearch_forward),
+    bar_report(F, Started),
+    send(E, typed, 0'a),
+    send(E, typed, 0'n),
+    bar_report(F, Typing),
+    send(E, typed, 0'z),
+    bar_report(F, Failing).
+
+%       Only the pane in view has the bar: a source in another tab of the
+%       editor keeps what it has to say to itself.
+
+test(a_source_in_another_tab_does_not_write_on_the_bar,
+     true(Said == 'From the front')) :-
+    emacs,
+    mixed_window(F),
+    get(F, current_pane, Front),
+    new(B, emacs_buffer(@nil, '*mixed-report*')),
+    get(B, open, tab, Behind),
+    send(F, current_pane, Front),
+    send(Front?editor, report, status, 'From the front'),
+    send(Behind?editor, report, status, 'From behind'),
+    bar_report(F, Said).
+
+%!  bar_report(+Frame, -Message) is det.
+%
+%   What the bar of Frame was last told to say.
+
+bar_report(F, Message) :-
+    (   get(F, status_dialog, SD),
+        get(SD, member, reporter, Label),
+        get(Label, selection, Selection),
+        Selection \== @nil
+    ->  (   send(Selection, instance_of, char_array)
+        ->  get(Selection, value, Message)
+        ;   Message = Selection
+        )
+    ;   Message = ''
+    ).
+
 test(the_mode_menus_come_and_go_with_the_editor) :-
     emacs,
     epilog_frame(@default, @default, @default, @off, @default, F),
