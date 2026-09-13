@@ -9,6 +9,7 @@ test_libs(tab_frame            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(fixed_graphicals     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(pane_frame           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(pane_layouts         OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(barchart             OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(bookmark_store       OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(bookmarks            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(class_template       OPTIONS ${XPCE_TEST_OPTIONS})
@@ -39,6 +40,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:fixed_graphicals
                      xpce:pane_frame
                      xpce:pane_layouts
+                     xpce:barchart
                      xpce:bookmark_store
                      xpce:bookmarks
                      xpce:class_template

@@ -417,10 +417,13 @@ update_position(BBG) :->
 :- pce_end_class.
 
 
-:- pce_begin_class(bar_label, device,
+:- pce_begin_class(bar_label, figure,
                    "Label attached to a bar").
 
 variable(text, text, get, "Represented text object").
+
+class_variable(gap,      '0..', 5,  "Distance between bar and label").
+class_variable(rotation, int,   90, "Rotation for labels of vertical bars").
 
 initialise(BL, Bar:'bar|bar_stack|graphical') :->
     send_super(BL, initialise),
@@ -433,25 +436,21 @@ initialise(BL, Bar:'bar|bar_stack|graphical') :->
     send(Bar?device, display, BL).
 
 update_label(BL) :->
+    "Place the text left of my origin, rotated for vertical bars"::
     send(BL, clear),
+    send(BL, transform, @nil),
     get(BL, text, T),
+    get(BL, gap, Gap),
+    get(T, width, TW),
+    TX is -TW - Gap,
+    send(T, x, TX),
+    send(T, center_y, 0),
+    send(BL, display, T),
     get(BL, bar, Bar),
-    (   get(Bar, orientation, horizontal),
-        send(T, alignment, right),
-        send(T, center_y, 0),
-        get(T, width, TW),
-        TX is -TW - 5,
-        send(T, x, TX),
-        send(BL, display, T)
-    ;   new(I, image(@nil, T?width, T?height)),
-        send(I, hot_spot, point(T?width+5, T?height/2)),
-        send(I, draw_in, T),
-        get(I, rotate, 90, I2),     % 60?
-        free(I),
-        get(I2, hot_spot, point(HX, HY)),
-        new(BM, bitmap(I2)),
-        send(BM, transparent, @on),
-        send(BL, display, BM, point(-HX, -HY))
+    (   get(Bar, orientation, vertical)
+    ->  get(BL, rotation, Degrees),
+        send(BL, rotate, -Degrees)      % anti-clockwise
+    ;   true
     ).
 
 font(BL, Font:font) :->
