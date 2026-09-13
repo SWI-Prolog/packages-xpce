@@ -199,6 +199,11 @@ demo('Opacity',
      demo(opacity),
      opacity_demo).
 
+demo('Chart gallery',
+     'Curves, axes and bar charts from library(plot)',
+     demo(charts),
+     charts_demo).
+
 demo('London Tube',
      'Interactive London tube map: zoom, pan, search and toggle lines',
      demo(tube_gui),

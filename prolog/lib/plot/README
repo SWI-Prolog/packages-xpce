@@ -1,5 +1,7 @@
-Plotting graphs and charts. For a   short  demo, please consult demo.pl.
-Documentation for this library is in the XPCE/Prolog Userguide.
+Plotting graphs and charts.  For a  short  demo, please consult demo.pl;
+library('demo/charts') is a gallery covering both this library and
+library('plot/barchart').  Documentation for this library is in the
+XPCE/Prolog Userguide.
 
 In XPCE 5.1.3 a number of extensions have been implemented to improve
 flexablity.  These are:

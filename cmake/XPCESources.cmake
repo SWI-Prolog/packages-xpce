@@ -264,7 +264,8 @@ set(XPCE_DATA_prolog_contrib contrib.pl README)
 
 set(XPCE_DATA_prolog_contrib_rubik maplist.pl README rubikpce.pl rubik.pl)
 
-set(XPCE_DATA_prolog_demo arc.pl chess.pl colour.pl constraint.pl cursor.pl
+set(XPCE_DATA_prolog_demo arc.pl charts.pl chess.pl colour.pl constraint.pl
+    cursor.pl
     dragdrop_file.pl event_hierarchy.pl fontviewer.pl graph.pl hsvcolour.pl
     imageviewer.pl ispell.pl juggler.pl kangaroo.pl opacity.pl pce_demo.pl
     tabframe.pl transform.pl tube_gui.pl tube.pl tube.json
