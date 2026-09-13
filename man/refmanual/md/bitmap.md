@@ -5,20 +5,26 @@ to manipulate the pixels of a bitmaps thus can be found with class
 image.
 
 Bitmaps (images) come in two flavours.  If `image <-kind` =
-bitmap, the elements of the bitmap are regarded as booleans.
-Boolean true (@on) is displayed in the <-colour of the bitmap
-and Boolean false (@off) is displayed in the current background
-or not painted if <-transparent equals @on.  If `image <-kind`
+bitmap, the elements of the bitmap are regarded as booleans:
+boolean true (@on) is painted in the <-colour of the bitmap and
+boolean false (@off) in the current background.  If `image <-kind`
 is pixmap each individual pixel represents a colour.
+
+Transparency comes from the image rather than from the bitmap: pixels
+that the image's alpha channel calls transparent are not painted, and
+the bitmap lets whatever is behind it show through.  Use
+`image->has_alpha` to test whether an image has such pixels.  Older
+versions had a `bitmap<->transparent` to say that the @off pixels of a
+bitmap-kind image should not be painted, and took it as the second
+argument of `->initialise`; both are gone.
 
 **Bugs**:
 
 Stencils are not implemented.
 
-A bitmap always paints all the pixels inside it's area.  Support for
-partly transparent bitmaps should be provided.
-
-There are no means for scaling bitmaps.
+There are no means for scaling bitmaps: `->geometry` moves a bitmap but
+ignores the requested size.  Scale the image instead, with
+`image<-scale`.
 
 @see class image
 @see bitmap-status
@@ -77,7 +83,7 @@ There are no means for scaling bitmaps.
 
     **Diagnostics**: Fails silently on bad format or non-existing file.
 
-    @see bitmap->save
+    @see image->save
 
 ## Get methods {#class-bitmap-get}
 

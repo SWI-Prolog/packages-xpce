@@ -203,7 +203,7 @@ Class \class{bool} defines two instances: @on and @off, representing
 `true' and `false'.  The use cannot create instances of this class.
 \begin{code}
 ...,
-send(Image, transparent, @on)
+send(Text, transparent, @on)
 ...
 \end{code}
 
