@@ -2247,11 +2247,27 @@ struct check_path
 };
 
 static void
+print_check_state(Any obj)
+{ if ( isObject(obj) && isProperObject(obj) )
+  { Cprintf(" (refs=%ld, code_refs=%ld%s%s%s%s%s%s)",
+	    (long)refsObject(obj), (long)codeRefsObject(obj),
+	    isFreedObj(obj)    ? ", freed"     : "",
+	    isFreeingObj(obj)  ? ", freeing"   : "",
+	    isCreatingObj(obj) ? ", creating"  : "",
+	    lockedObj(obj)     ? ", locked"    : "",
+	    isProtectedObj(obj)? ", protected" : "",
+	    isAnswerObj(obj)   ? ", answer"    : "");
+  }
+}
+
+
+static void
 print_check_step(check_path *path)
 { if ( path->parent )
     print_check_step(path->parent);
 
   Cprintf("\t  %s", pp(path->obj));
+  print_check_state(path->obj);
   switch(path->kind)
   { case CP_SLOT:
       Cprintf(" <-%s", strName(path->slot));
@@ -2260,7 +2276,9 @@ print_check_step(check_path *path)
       Cprintf("[%ld]", (long)valInt(path->slot));
       break;
     case CP_KEY:
-      Cprintf("{%s}", pp(path->slot));
+      Cprintf("{%s", pp(path->slot));
+      print_check_state(path->slot);
+      Cprintf("}");
       break;
   }
   Cprintf("\n");
