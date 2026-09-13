@@ -49,8 +49,13 @@ SDL driver paints nothing.
 
 Run with:
 
-    swipl -g test_pane_frame -t halt \
+    swipl -Dxpce_defaults=none -g test_pane_frame -t halt \
           packages/xpce/tests/test_pane_frame.pl
+
+`-Dxpce_defaults=none' is how ctest runs these, and is not optional: a
+personal Defaults file setting e.g. the opacity of an inactive pane is
+read otherwise, and the tests that check a class variable's default then
+see the value you chose rather than the one shipped.
 */
 
 :- set_prolog_flag('SDL_VIDEODRIVER', dummy).
@@ -716,6 +721,80 @@ test(unless_it_is_asked_to, true(Current == P3)) :-
     send(F, keyboard_focus, P1),
     with_focus_on_enter(@on, enter(P3)),
     get(F, current_pane, Current).
+
+%       A pane is not a member of its frame -- it lives on a device in
+%       the tree -- so the frame cannot find it by scanning members.  It
+%       is armed through <-keyboard_focus, and used to be disarmed by a
+%       scan, which reached nothing: the pane went on drawing an active
+%       caret and telling its client the focus was in while the window
+%       system had given the keyboard to another window.  Moving the
+%       focus between panes always worked, because that does not come
+%       through ->input_focus.
+
+test(the_window_system_taking_the_focus_deactivates_the_pane,
+     true([Focus,Left] == [@off,@off])) :-
+    focused_frame(F, P1, P2),
+    send(F, input_focus, @off),
+    get(P2, input_focus, Focus),
+    get(P1, input_focus, Left).
+
+test(and_giving_it_back_activates_the_same_pane,
+     true([Focus,Left] == [@on,@off])) :-
+    focused_frame(F, P1, P2),
+    send(F, input_focus, @off),
+    send(F, input_focus, @on),
+    get(P2, input_focus, Focus),
+    get(P1, input_focus, Left).
+
+%       The other half of the same asymmetry.  A tab put on top
+%       initialises the keyboard focus of what it holds, but the first
+%       tab appended to a stack becomes the top one without going
+%       through ->on_top, so it did not.  A window that had only ever
+%       been appended to therefore showed a pane it had never made its
+%       <-keyboard_focus, and the window system handing it the keyboard
+%       activated nothing: the first keystroke went nowhere until the
+%       pointer entered the pane or another tab was made current.
+
+test(a_new_window_arms_the_pane_it_was_built_with,
+     true([Focus,Armed] == [one,@on])) :-
+    frame(F, _App, P1),
+    focus_name(F, Focus),
+    send(F, input_focus, @on),
+    get(P1, input_focus, Armed).
+
+test(and_so_does_one_whose_first_pane_is_appended,
+     true([Focus,Armed] == [alone,@on])) :-
+    new(App, tp_app(test)),
+    new(F, pane_frame(App)),
+    pane(alone, alpha, P),
+    send(F, append_pane, P, @default, @on),
+    focus_name(F, Focus),
+    send(F, input_focus, @on),
+    get(P, input_focus, Armed).
+
+%!  focused_frame(-Frame, -Pane1, -Pane2) is det.
+%
+%   A frame of two panes holding the focus, as if the window system had
+%   given it, with Pane2 the one that has it.
+
+focused_frame(F, P1, P2) :-
+    frame(F, _App, P1),
+    pane(two, beta, P2),
+    send(F, split, P2, P1, vertically),
+    send(F, keyboard_focus, P2),
+    send(F, input_focus, @on),
+    assertion(get(P2, input_focus, @on)).
+
+%!  focus_name(+Frame, -Name) is det.
+%
+%   The name of the window Frame would send a keystroke to, or `none'.
+
+focus_name(F, Name) :-
+    (   get(F, keyboard_focus, W),
+        W \== @nil
+    ->  get(W, name, Name)
+    ;   Name = none
+    ).
 
 :- end_tests(pane_frame_focus).
 

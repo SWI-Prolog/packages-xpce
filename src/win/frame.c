@@ -1320,6 +1320,22 @@ inputFocusFrame(FrameObj fr, BoolObj val)
       forwardFocusDisplayManager(fr);
     } else
     { Cell cell;
+      PceWindow iw = getHyperedObject(fr, NAME_inputWindow, DEFAULT);
+
+      /* The window holding the focus need not be a member of mine.  A
+	 pane lives on a device somewhere in my tree (see class
+	 pane_frame), and the branch above did not find it by scanning
+	 members either: it asked <-keyboard_focus.  Scanning members
+	 here therefore misses it, and the pane goes on claiming the
+	 keyboard -- drawing an active caret, telling its client the
+	 focus is in -- while the window system has given it to another
+	 window.  Turning the focus over between panes still worked,
+	 because that goes through ->input_window rather than here.
+
+	 The hyper is left in place: it is how I find the pane again
+	 when the focus comes back (see getKeyboardFocusFrame()). */
+      if ( iw )
+	send(iw, NAME_inputFocus, OFF, EAV);
       for_cell(cell, fr->members)
 	send(cell->value, NAME_inputFocus, OFF, EAV);
     }

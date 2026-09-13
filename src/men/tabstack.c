@@ -263,6 +263,15 @@ eventTabStack(TabStack t, EventObj ev)
 		 *	     MEMBERS		*
 		 *******************************/
 
+/* The first tab appended becomes the top one here rather than through
+ * ->on_top, which is where a tab put on top initialises its keyboard
+ * focus.  It must do the same, or a stack that has only ever been
+ * appended to has a tab in view that nothing in it holds the keyboard
+ * for: in a pane_frame that is a window showing a pane it never made
+ * its <-keyboard_focus, so the window system handing it the keyboard
+ * activates nothing and the first keystroke goes nowhere.
+ */
+
 static status
 appendTabStack(TabStack ts, Tab t)
 { setGraphical(t, ZERO, ZERO, DEFAULT, DEFAULT);
@@ -270,6 +279,7 @@ appendTabStack(TabStack ts, Tab t)
 
   if ( ts->graphicals->size == ONE )
   { send(t, NAME_status, NAME_onTop, EAV);
+    send(t, NAME_advance, EAV);		/* initialise keyboard focus */
   } else
   { send(t, NAME_status, NAME_hidden, EAV);
     send(ts, NAME_layoutLabels, EAV);
