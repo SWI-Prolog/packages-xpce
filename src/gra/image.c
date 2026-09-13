@@ -319,6 +319,14 @@ loadImage(Image image, SourceSink file, CharArray path)
 }
 
 
+/* PNG is the only format the backend writes, and thus the only one the
+ * `format' argument accepts.  xpce 6 listed the X11-era formats (xbm,
+ * pnm, gif, ...); none of them are written any more.
+ *
+ * The default `in' is <-file, which is a source_sink rather than a file
+ * and need not be one we can write: ws_save_image_file() checks.
+ */
+
 static status
 saveImage(Image image, SourceSink file, Name fmt)
 { if ( isDefault(file) )
@@ -803,7 +811,7 @@ static char *T_initialise[] =
 	{ "name=[source_sink]*", "width=[int]", "height=[int]",
 	  "kind=[{bitmap,pixmap}]" };
 static char *T_save[] =
-	{ "in=[source_sink]", "format=[{xbm,xpm,pnm,pbm,pgm,ppm,jpeg,gif}]" };
+	{ "in=[file]", "format=[{png}]" };
 static char *T_resize[] =
 	{ "width=int", "height=int" };
 static char *T_xAint_yAint[] =
@@ -856,7 +864,7 @@ static senddecl send_image[] =
   SM(NAME_load, 2, T_load, loadImage,
      NAME_file, "Load image from file (searching in path)"),
   SM(NAME_save, 2, T_save, saveImage,
-     NAME_file, "Save image to file in specified format"),
+     NAME_file, "Save image to file (PNG)"),
   SM(NAME_pixel, 3, T_pixel, pixelImage,
      NAME_pixel, "Set pixel at x-y to bool or colour"),
   SM(NAME_Xclose, 1, "display", XcloseImage,

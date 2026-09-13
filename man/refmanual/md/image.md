@@ -129,10 +129,15 @@ PNG output.
 
     @see pce_image_directory/1
 
-- image->save: in=[source_sink], format=[name]
-    Write the image to a file.  Only `png` is currently supported;
-    omitting `format` saves as PNG.  Other format values are
-    rejected with a console message.
+- image->save: in=[file], format=[{png}]
+    Write the image to a file.  PNG is the only format that can be
+    written, so `format` only serves to say so explicitly and may be
+    omitted.  xpce 6 accepted a range of X11-era formats here (`xbm`,
+    `pnm`, `gif`, ...); none of these are written any more.
+
+    `in` defaults to <-file, the file the image was loaded from.  That
+    is a source_sink rather than a file: if it is not something we can
+    write to, ->save fails with a message on the console.
 
 - image->resize: width=int, height=int
     Resize the image to the indicated dimensions, preserving the
