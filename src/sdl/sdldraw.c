@@ -2294,8 +2294,31 @@ c_width(uchar_t c, FontObj font)
   }
 }
 
+/**
+ * Render UTF-8 text, condensed horizontally to `xscale` of its natural
+ * advance.
+ *
+ * A caller laying text out on a grid of its own -- the terminal -- has
+ * a width the run must not exceed, and a font is free to disagree: a
+ * glyph taken from a fallback face is regularly half again as wide as
+ * the cell it has to sit in.  Squeezing it is the graceful way out.  It
+ * keeps the whole glyph, unlike clipping, and at the ratios this is
+ * called with (mostly 1.1-1.2, occasionally 2) it reads as a slightly
+ * narrow symbol rather than a broken one.
+ *
+ * `xscale` >= 1 draws unscaled: nothing needs squeezing, and the
+ * transform would only cost a save/restore.
+ *
+ * @param u      UTF-8 text
+ * @param len    Its length in bytes
+ * @param x      Left edge of the run
+ * @param y      Its baseline
+ * @param font   Font to draw in
+ * @param xscale Horizontal scale factor, in (0, 1] to condense
+ */
 void
-s_print_utf8(const char *u, size_t len, int x, int y, FontObj font)
+s_print_utf8_scaled(const char *u, size_t len, int x, int y, FontObj font,
+		    double xscale)
 { DEBUG(NAME_draw,
 	{ const char *du = u;
 	  char buf[100];
@@ -2307,8 +2330,9 @@ s_print_utf8(const char *u, size_t len, int x, int y, FontObj font)
 	    buf[dlen] = 0;
 	    du = buf;
 	  }
-	  Cprintf("s_print_utf8(\"%s\", %d, %d, %d, %s) (color: %s)\n",
-		  du, len, x, y, pp(font), pp(context.colour));
+	  Cprintf("s_print_utf8(\"%s\", %d, %d, %d, %s) "
+		  "(color: %s, xscale: %.2f)\n",
+		  du, len, x, y, pp(font), pp(context.colour), xscale);
 	});
 
   Translate(x, y);
@@ -2323,8 +2347,29 @@ s_print_utf8(const char *u, size_t len, int x, int y, FontObj font)
    * shifting the unselected tail. */
   pango_layout_set_text(layout, u, len);
   int baseline = pango_layout_get_baseline(layout);
-  cairo_move_to(CR, x, y-P2D(baseline));
-  pango_cairo_show_layout(CR, layout);
+  double ty = y-P2D(baseline);
+
+  if ( xscale < 1.0 )
+  { cairo_save(CR);
+    cairo_translate(CR, x, ty);
+    cairo_scale(CR, xscale, 1.0);
+    /* The layout was synced to the unscaled matrix by
+       pce_cairo_set_font(); re-sync it so Pango shapes and hints for
+       the matrix we are actually drawing under. */
+    pango_cairo_update_layout(CR, layout);
+    cairo_move_to(CR, 0.0, 0.0);
+    pango_cairo_show_layout(CR, layout);
+    cairo_restore(CR);
+  } else
+  { cairo_move_to(CR, x, ty);
+    pango_cairo_show_layout(CR, layout);
+  }
+}
+
+
+void
+s_print_utf8(const char *u, size_t len, int x, int y, FontObj font)
+{ s_print_utf8_scaled(u, len, x, y, font, 1.0);
 }
 
 /**

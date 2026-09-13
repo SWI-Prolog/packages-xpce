@@ -40,7 +40,7 @@
 :- use_module(library(aggregate), [aggregate_all/3]).
 :- use_module(library(debug), [assertion/1]).
 
-/** <module> Test how the xpce terminal draws the Block Elements
+/** <module> Test how the xpce terminal fits a glyph to its cell
 
 A font lays its glyphs out in its own em box, which is not the cell: the
 box is placed by the baseline and is shorter than the line height a
@@ -53,6 +53,11 @@ These tests write blocks that must meet and read the pixels back to see
 that they do.  They ask nothing about where the cell is: a shape drawn
 from the font is not a little wrong but visibly broken, and what says so
 is the background showing through a seam that should not exist.
+
+The em box is too narrow as often as it is too short.  The last test
+takes the other side of the same question: a glyph the font draws wider
+than the columns Unicode gives the character has to be made to fit,
+because the width belongs to the client (see test_terminal_width.pl).
 */
 
 test_terminal_glyphs :-
@@ -190,6 +195,24 @@ no_ink_after_paper([other|T], SawPaper) :-
 ink_length(Classes, N) :-
     aggregate_all(count, member(ink, Classes), N).
 
+%!  glyph_ink_columns(+Terminal, +Char, -Xs) is det.
+%
+%   The x coordinates at which Char, written alone on an otherwise
+%   empty screen, puts ink.  Only the left of the window is looked at:
+%   the question is always about the first cell or two, and a pixel
+%   read is not cheap.
+
+glyph_ink_columns(TI, Char, Xs) :-
+    write_blocks(TI, [Char]),
+    image_of(TI, Img, W, H),
+    LastX is min(W, 120)-1,
+    LastY is H-1,
+    findall(X, ( between(0, LastX, X),
+                 between(0, LastY, Y),
+                 class_at(Img, X, Y, ink)
+               ), Inked),
+    sort(Inked, Xs).
+
 %!  inked_row(+Terminal, -Y) is semidet.
 %!  inked_column(+Terminal, -X) is semidet.
 %
@@ -289,5 +312,22 @@ test(quadrants_reach_the_top_of_their_cell,
            ( scan_y(TI, X, Column),
              assertion(solid(Column))
            )).
+
+test(a_glyph_the_font_draws_too_wide_stays_in_its_cell,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    %  A full block is painted as the rectangle of its cell, so its ink
+    %  is exactly one cell wide: the boundary no one-column character
+    %  may cross.
+    glyph_ink_columns(TI, '\u2588', Cell),
+    last(Cell, CellRight),
+    %  U+23BF LEFT PARENTHESIS LOWER HOOK is one column to every
+    %  wcwidth, and on macOS comes from a fallback face that draws it
+    %  at about 1.6 cells.  We may not answer 2 columns for it -- the
+    %  client counts 1 either way -- so it has to be condensed into the
+    %  one column it has.
+    glyph_ink_columns(TI, '\u23bf', Hook),
+    assertion(Hook \== []),
+    last(Hook, HookRight),
+    assertion(HookRight =< CellRight).
 
 :- end_tests(terminal_glyphs).

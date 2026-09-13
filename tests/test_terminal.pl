@@ -806,7 +806,8 @@ exclude_leading_dots(T, T).
 %                   - a caret waiting to wrap is reported one column
 %                     past the last, rather than on it
 %       wcwidth_font  - the line editor and the screen agree on column
-%                     widths because both ask the terminal's font
+%                     widths because both ask the terminal (<-cwidth)
+%                     rather than each keeping its own table
 %       program_output
 %                   - term_output/2 works, i.e. we can write to the
 %                     screen without going through the line editor

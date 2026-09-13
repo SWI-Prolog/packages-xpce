@@ -31,6 +31,7 @@ test_libs(terminal_bce         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(terminal_margin      OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(terminal_palette     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(terminal_glyphs      OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(terminal_width       OPTIONS ${XPCE_TEST_OPTIONS})
 
 set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:text_image
@@ -55,7 +56,8 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:terminal_bce
                      xpce:terminal_margin
                      xpce:terminal_palette
-                     xpce:terminal_glyphs)
+                     xpce:terminal_glyphs
+                     xpce:terminal_width)
 
 if(EPILOG)
   list(APPEND XPCE_EXTRA_TESTS xpce:epilog_tabs xpce:mixed_panes

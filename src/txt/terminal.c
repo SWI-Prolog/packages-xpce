@@ -175,8 +175,7 @@ tc_display_width(const text_char *tc)
 
 /* The Block Elements are drawn as rectangles of the cell rather than as
  * glyphs of the font; see block_element_rects() below for why and for
- * which ones.  Both the width classification here and the painting need
- * to know, so the answer comes from that one function.
+ * which ones.
  */
 
 typedef struct
@@ -187,31 +186,23 @@ typedef struct
 
 static int	block_element_rects(int code, cell_rect *r);
 
-/** Cells occupied by `c` when drawn in `font` over a `cw`-pixel grid.
+/** Cells occupied by `c` in the terminal's column grid.
  *
- * uchar_display_width() classifies from static Unicode tables + host
- * wcwidth.  That reports 1 for BMP symbol blocks (Dingbats U+2700-U+27BF,
- * Misc Symbols U+2600-U+26FF, Misc Technical U+2300-U+23FF, some
- * arrows, …) that emoji-presenting fonts actually draw at ~2 cells
- * wide.  Trust the static classification when it says 0 (combining) or
- * 2 (wide), and for ASCII; otherwise consult the font's own measured
- * advance and promote to width 2 when the glyph is visibly wider than
- * one cell.  c_width() is backed by the SDL font's lazy per-code-point
- * cache, so the Pango round-trip happens at most once per (font, char).
+ * The grid is a contract with whatever writes to the pty.  That program
+ * lays its output out with its own wcwidth() — EastAsianWidth W/F is
+ * two columns, everything else printable is one — and then positions
+ * the cursor by counting those columns.  It cannot see our font, so the
+ * only classification we may use is the same static Unicode one, which
+ * is what uchar_display_width() gives.
+ *
+ * A font that draws a glyph wider than the cells Unicode allots it is
+ * therefore a *painting* problem, never a width problem: widening the
+ * grid slot instead puts us a column ahead of the client for the rest
+ * of the line.  paint_chunks() condenses such a glyph into its cells.
  */
 static inline int
-terminal_char_cells(uchar_t c, FontObj font, double cw)
-{ int dw = uchar_display_width(c);
-  cell_rect rects[MAX_CELL_RECTS];
-  if ( dw != 1 || c < 0x80 )
-    return dw;
-  if ( block_element_rects(c, rects) > 0 )
-    return 1;			/* we draw it; the font's advance says
-				   nothing about how wide it is */
-  double aw = c_width(c, font);
-  if ( aw > cw * 1.5 )
-    return 2;
-  return 1;
+terminal_char_cells(uchar_t c)
+{ return uchar_display_width(c);
 }
 
 
@@ -2450,16 +2441,15 @@ not_a_character(uchar_t c)
 }
 
 
-/* Return the number of terminal columns occupied by code point `chr`
- * when drawn in this terminal's font.
+/* Return the number of terminal columns occupied by code point `chr`.
  *
- * This exposes terminal_char_cells() -- the classification the renderer
+ * This exposes terminal_char_cells() -- the classification the grid
  * itself uses -- so that clients needing to predict our layout have a
  * single point of truth rather than a second, drifting copy.  It is in
  * particular consulted by library(editline) (through the hook
  * editline:el_wcwidth/2) so that libedit's cursor arithmetic agrees
- * with what we paint for the symbol and emoji code points that the
- * static Unicode tables call width 1 but the font draws twice as wide.
+ * with our column grid.  Note that the answer deliberately does not
+ * depend on the font: see terminal_char_cells().
  *
  * Fails while the terminal has no buffer or cell metrics yet, or if
  * `chr` is not a drawable character, leaving the caller to fall back on
@@ -2473,7 +2463,7 @@ getCwidthTerminalImage(TerminalImage ti, Int chr)
   if ( !b || b->cw <= 0.0 || not_a_character(c) )
     fail;
 
-  answer(toInt(terminal_char_cells(c, ti->font, b->cw)));
+  answer(toInt(terminal_char_cells(c)));
 }
 
 static status
@@ -5700,9 +5690,34 @@ paint_chunks(const text_char *cells, int n,
 
     if ( i - chunk_i == 1 &&
 	 (nrects=block_element_rects(c[chunk_i].code, rects)) > 0 )
-      paint_block_element(rects, nrects, x0, ctop, chunk_w, ch);
-    else
-      s_print_utf8(chunk_u, chunk_ulen, x0, ty, font);
+    { paint_block_element(rects, nrects, x0, ctop, chunk_w, ch);
+    } else
+    { /* A font may draw a glyph wider than the columns Unicode gives
+	 it: on macOS U+23BF and friends resolve to a symbol face that
+	 draws them at ~1.6 cells, and a character the font has no glyph
+	 for comes back as a "missing glyph" box that is wider still.  The
+	 grid may not grow to accommodate that -- it is shared with the
+	 client, which cannot see our font; see terminal_char_cells().
+	 Condense the glyph into its own cells instead, which keeps all of
+	 it, where clipping would cut the right off a great many symbols.
+	 c_width() is the font's cached per-code-point advance, so the
+	 measurement costs nothing after the first time we see the
+	 character.  ASCII is excluded up front: it is the common case and
+	 always fits.  So is everything above the BMP: the width cache does
+	 not hold those, so asking would mean a Pango round-trip on every
+	 repaint, and what is up there is emoji, which the font draws at
+	 the two cells they are classified as. */
+      double xscale = 1.0;
+
+      if ( c[chunk_i].code >= 0x80 && c[chunk_i].code <= 0xFFFF )
+      { double aw = c_width(c[chunk_i].code, font);
+
+	if ( aw > chunk_w )
+	  xscale = (double)chunk_w / aw;
+      }
+
+      s_print_utf8_scaled(chunk_u, chunk_ulen, x0, ty, font, xscale);
+    }
     if (underline)
       r_underline(font, x0, ty, chunk_w, DEFAULT, underline_texture);
     if (strike)
@@ -8674,7 +8689,7 @@ rlc_trim_past_margin(RlcData b, RlcTextLine tl)
 static void
 rlc_put(RlcData b, int chr)
 { RlcTextLine tl = rlc_prepare_line(b, b->caret_y);
-  int dw = terminal_char_cells((uchar_t)chr, b->object->font, b->cw);
+  int dw = terminal_char_cells((uchar_t)chr);
   tlog("rlc_put(0x%X) entry caret_x=%d width=%d\n",
        chr, b->caret_x, dw);
   if ( dw == 0 )
