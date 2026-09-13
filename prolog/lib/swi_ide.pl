@@ -510,8 +510,17 @@ close_frame(_IDE, F:pane_frame, Prolog:prolog=[bool]) :->
                  *            PANES             *
                  *******************************/
 
+%       ->new_pane is the application half of the pane_frame protocol:
+%       the frame sends it when the new-tab button at the end of the
+%       label row is pressed, and answering it at all is what puts that
+%       button there (see `pane_frame ->initialise').  File->New does not
+%       come here.  Epilog's items send ->new_tab to the terminal and
+%       PceEmacs opens its buffer itself, which is why the tab either of
+%       them makes lands beside the one in view while the button's goes
+%       at the end -- see `pane_frame ->append_pane'.
+
 new_pane(IDE, F:pane_frame, Kind:[name]) :->
-    "The new-tab button and File->New: an editor, or a terminal"::
+    "Make the pane the new-tab button asks for: an editor, or a terminal"::
     (   Kind == editor
     ->  send(IDE, new_editor, F)
     ;   send(IDE, new_terminal, F, @off, Kind)

@@ -86,6 +86,7 @@ test_pane_frame :-
                 pane_frame_move,
                 pane_frame_opacity,
                 pane_frame_panes,
+                pane_frame_tab_order,
                 pane_frame_plain_pane,
                 pane_frame_minimum,
                 pane_frame_strips,
@@ -189,6 +190,23 @@ fill_menu_bar(_App, MD:tool_dialog, _F:frame) :->
     send(Popup, append, menu_item(quit)).
 
 :- pce_end_class(tp_app).
+
+%       The new-tab button is only there when the application answers
+%       ->new_pane, and it is the application that appends the pane.
+%       Only the tab-order tests want one, because a frame built on it
+%       has the button in its label row.
+
+:- pce_begin_class(tp_making_app, tp_app,
+                   "Application that answers the new-tab button").
+
+new_pane(_App, F:pane_frame, _Kind:[name]) :->
+    "Make the pane the new-tab button asks for"::
+    new(P, tp_pane),
+    send(P, name, made),
+    send(P, kind, alpha),
+    send(F, append_pane, P, 'Made', @on).
+
+:- pce_end_class(tp_making_app).
 
                  /*******************************
                  *            HELPERS           *
@@ -1221,6 +1239,108 @@ test(a_pane_that_says_nothing_agrees_to_close, true(Reply == @on)) :-
 
 %       Every message of the protocol is optional.  A window that answers
 %       none of it must still make a usable frame.
+
+                 /*******************************
+                 *          TAB ORDER           *
+                 *******************************/
+
+/* A tab made on purpose -- Command-T, the new-tab button, File->New, a
+   tool being placed -- goes next to the one it was made from rather than
+   at the far end of a row that may be long.  Rebuilding a saved
+   arrangement is the exception, and says so with `@nil'; that the order
+   survives a round trip is checked by pane_frame_term.
+*/
+
+:- begin_tests(pane_frame_tab_order).
+
+%!  tab_row(+Frame, -Labels:list) is det.
+%
+%   The labels of Frame's tabs, left to right.
+
+tab_row(F, Labels) :-
+    get(F, tabs, TW),
+    get(TW, tabs, Tabs),
+    chain_list(Tabs, List),
+    findall(L, ( member(T, List), get(T, label, L) ), Labels).
+
+%!  back_in_the_middle(-Frame, -Middle) is det.
+%
+%   A frame whose row reads One, A, B, with the user back in A -- the
+%   middle of the row, so that where the next tab lands says something.
+%   The three are built left to right: each is added beside the one
+%   before it, which is the end of the row.
+
+back_in_the_middle(F, A) :-
+    frame(F, _App, _P1),
+    pane(a, alpha, A), send(F, append_pane, A, 'A', @on),
+    pane(b, beta,  B), send(F, append_pane, B, 'B', @on),
+    assertion(tab_row(F, ['One', 'A', 'B'])),
+    send(F, current_pane, A).
+
+test(a_new_tab_goes_beside_the_one_it_was_made_from,
+     Row == ['One', 'A', 'New', 'B']) :-
+    back_in_the_middle(F, _A),
+    pane(new, alpha, New),
+    send(F, append_pane, New, 'New', @on),
+    tab_row(F, Row).
+
+test(and_the_new_one_is_the_one_in_view, Current == new) :-
+    back_in_the_middle(F, _A),
+    pane(new, alpha, New),
+    send(F, append_pane, New, 'New', @on),
+    get(F, current_pane, Pane),
+    get(Pane, name, Current).
+
+%       The pane the user is in need not be the tab: a tab holds a whole
+%       split.  What the new one goes after is the tab, not the pane.
+
+test(a_pane_in_a_split_puts_the_tab_after_the_whole_split,
+     Row == ['One', 'S', 'New', 'B']) :-
+    back_in_the_middle(F, A),
+    pane(s, alpha, S),
+    send(F, split, S, A, vertically),   % A's tab now holds A and S
+    pane(new, alpha, New),
+    send(F, append_pane, New, 'New', @on),
+    tab_row(F, Row).
+
+%       The button, though, is at the end of the label row, and that is
+%       where the tab it makes belongs.
+
+test(the_new_tab_button_puts_its_tab_at_the_end,
+     Row == ['One', 'A', 'B', 'Made']) :-
+    making_frame(F, A),
+    send(F, current_pane, A),
+    send(F, new_pane),                  % the button was pressed
+    tab_row(F, Row).
+
+test(and_that_tab_is_the_one_in_view, Current == made) :-
+    making_frame(F, A),
+    send(F, current_pane, A),
+    send(F, new_pane),
+    get(F, current_pane, Pane),
+    get(Pane, name, Current).
+
+%!  making_frame(-Frame, -Middle) is det.
+%
+%   back_in_the_middle/2 over an application that answers the new-tab
+%   button.
+
+making_frame(F, A) :-
+    new(App, tp_making_app(test)),
+    new(P1, tp_pane), send(P1, name, one), send(P1, kind, alpha),
+    new(F, pane_frame(App, @default, P1)),
+    pane(a, alpha, A), send(F, append_pane, A, 'A', @on),
+    pane(b, beta,  B), send(F, append_pane, B, 'B', @on),
+    assertion(tab_row(F, ['One', 'A', 'B'])).
+
+test(a_tab_can_still_be_asked_for_at_the_end,
+     Row == ['One', 'A', 'B', 'Last']) :-
+    back_in_the_middle(F, _A),
+    pane(last, alpha, Last),
+    send(F, append_pane, Last, 'Last', @on, @nil),
+    tab_row(F, Row).
+
+:- end_tests(pane_frame_tab_order).
 
 :- begin_tests(pane_frame_plain_pane).
 

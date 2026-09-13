@@ -220,15 +220,39 @@ input_focus(W, Focus:bool) :->
 %       appear to work properly. If Expose == @on the tab is immediately
 %       brought to the top.
 
-append(W, Window:window=window, Label:name=[name], Expose:expose=[bool]) :->
+append(W, Window:window=window, Label:name=[name], Expose:expose=[bool],
+          After:after=[window]) :->
     "Append a window to the tabs"::
     send(Window, '_compute_desired_size'),
     get(W, new_tab, Window, Label, Tab),
     send(W, tab, Tab),
+    (   After == @default
+    ->  true
+    ;   move_tab_after(W, Tab, After)
+    ),
     (   Expose == @on
     ->  send(W, resize, Tab),
         get_super(W, member, tab_stack, TS),
         send(TS, on_top, Tab)
+    ;   true
+    ).
+
+%       move_tab_after(+TabbedWindow, +Tab, +Window)
+%
+%       Put Tab straight after the one holding Window rather than at the
+%       end of the row.  A tab the user asks for belongs next to the one
+%       they asked from; the far end of a row that may be long is not
+%       where they are looking.  The row is the order of the tabs in the
+%       stack, so moving the tab there is all it takes -- `graphical
+%       ->expose' with a reference does exactly that, and the labels are
+%       laid out again over the new order.
+
+move_tab_after(W, Tab, Window) :-
+    (   get(Window, container, tab, Ref),
+        Ref \== Tab
+    ->  send(Tab, expose, Ref),
+        get_super(W, member, tab_stack, TS),
+        send(TS, layout_labels)
     ;   true
     ).
 

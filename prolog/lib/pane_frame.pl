@@ -128,6 +128,8 @@ variable(own_label_format, [name]* := @default, none,
          "Format asked for on me alone; @default: ask elsewhere").
 variable(updating,        bool := @off,   none,
          "->pane_changed is running").
+variable(append_at_end,   bool := @off,   none,
+         "->append_pane puts its tab at the end of the row").
 variable(arranged,        bool := @off,   get,
          "The user has arranged my panes by hand").
 variable(arrangement,     prolog := none, none,
@@ -378,10 +380,31 @@ pane_group(Pane, Group) :-
                  *            PANES             *
                  *******************************/
 
-append_pane(F, Pane:window, Label:[name], Expose:[bool]) :->
-    "Add Pane in a tab of its own"::
+append_pane(F, Pane:window, Label:[name], Expose:[bool],
+               After:[window]*) :->
+    "Add Pane in a tab of its own, by default beside the current one"::
     get(F, tabs, TW),
-    send(TW, append, Pane, Label, Expose).
+    after_pane(F, After, Where),
+    send(TW, append, Pane, Label, Expose, Where).
+
+%       Where a new tab goes.  A tab made on purpose -- Command-T,
+%       File->New, a tool being placed -- belongs beside the one it was
+%       made from, so `@default' means the current pane.  `@nil' is the
+%       way to say the end of the row, which is what rebuilding a saved
+%       arrangement needs: those tabs come back in the order they were
+%       written.  The new-tab button says the same with a slot; see
+%       ->new_pane.
+
+after_pane(F, @default, Where) :-
+    !,
+    (   get(F, slot, append_at_end, @on)
+    ->  Where = @default
+    ;   get(F, current_pane, Where)
+    ->  true
+    ;   Where = @default                % no tabs yet: nothing to go after
+    ).
+after_pane(_, @nil, @default) :- !.
+after_pane(_, Pane, Pane).
 
 split(F, Pane:window,
          Relative:relative_to=[window],
@@ -526,7 +549,17 @@ new_pane(F, Kind:[name]) :->
     get(F, application, App),
     App \== @nil,
     send(App, has_send_method, new_pane),
-    send(App, new_pane, F, Kind).
+    %  This is the new-tab button, and the button is at the end of the
+    %  label row: the tab it makes belongs there rather than beside the
+    %  one in view, which is where a tab asked for from inside a pane
+    %  goes.  The application is what appends the pane, so saying it
+    %  with a slot keeps the ->new_pane protocol as it is -- every
+    %  application answering it would otherwise have to carry a position
+    %  argument through to its ->append_pane.
+    setup_call_cleanup(
+        send(F, slot, append_at_end, @on),
+        ignore(send(App, new_pane, F, Kind)),
+        send(F, slot, append_at_end, @off)).
 
 empty(F) :->
     "My last pane is gone"::
@@ -1290,7 +1323,7 @@ build_tab(_, Term, Rest, Rest) :-
 
 add_tab(F, Options, Tree, First, Current, Tab) :-
     tab_label_option(Options, Label),
-    send(F, append_pane, First, Label, @off),
+    send(F, append_pane, First, Label, @off, @nil),  % in the saved order
     get(First, container, tab_frame, Tab),
     send(Tab, window_tree, Tree),
     apply_tab_options(Tab, Options),
