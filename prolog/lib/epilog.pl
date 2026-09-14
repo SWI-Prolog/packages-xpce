@@ -337,7 +337,7 @@ epilog_attach(Options) :-
     set_prolog_flag(query_debug_settings, debug(false, false)),
     set_prolog_flag(hyperlink_term, true),
     set_prolog_flag(color_term, true),
-    attach_terminal(PT, PTY, _Title, []),
+    attach_terminal(PT, PTY, []),
     asserta(current_prolog_terminal(Thread, PT)),
     asserta(attached_terminal(PT, RestoreContext)).
 
