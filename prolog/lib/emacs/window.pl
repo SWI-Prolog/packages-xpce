@@ -617,7 +617,57 @@ close_tab(Tab) :->
     chain_list(Chain, Views),
     forall(member(V, Views), send(V, close_pane)).
 
+%       Not `tab_frame ->close_other_tabs': that destroys the tabs, which
+%       would take a modified buffer along without asking.
+
+close_other_tabs(Tab) :->
+    "Close the views of every other tab of the editor"::
+    get(Tab?device, tabs, Chain),
+    chain_list(Chain, Tabs),
+    forall(( member(Other, Tabs),
+             Other \== Tab,
+             object(Other)
+           ),
+           send(Other, close_tab)).
+
+%       Not `tab_frame ->untab' either: that asks the tabbed_window for a
+%       frame, and an editor's view lives in a pane_frame.  Cf. `emacs_view
+%       ->detach', which does this for a view that is a pane of the window.
+
+untab(Tab) :->
+    "Move the view I show into a window of its own"::
+    get(Tab, current, V),
+    get(V, pane_frame, F),
+    (   get(F, application, App0),
+        App0 \== @nil
+    ->  App = App0
+    ;   App = @default
+    ),
+    get(V, display_position, point(X, Y)),
+    send(Tab, delete, V),               % take it out without destroying it
+    ignore(send(F, arranged)),
+    new(New, pane_frame(App, @default, emacs_pane(V))),
+    send(New, open, point(X, Y+20)).
+
 :- pce_end_class(emacs_tab).
+
+
+:- pce_global(@emacs_tab_popup, make_emacs_tab_popup).
+
+make_emacs_tab_popup(P) :-
+    new(P, popup),
+    Tab = @arg1,
+    Cond = (Tab?device?tabs?size \== 1),
+    send_list(P, append,
+              [ menu_item(close_tab,
+                          message(Tab, close_tab)),
+                menu_item(close_other_tabs,
+                          message(Tab, close_other_tabs),
+                          condition := Cond),
+                menu_item(move_to_new_window,
+                          message(Tab, untab),
+                          condition := Cond)
+              ]).
 
 
 :- pce_begin_class(emacs_pane, pane_stack,
@@ -627,6 +677,7 @@ initialise(EP, View:view=[emacs_view], Label:label=[name]) :->
     "Create showing View, or a scratch buffer"::
     send_super(EP, initialise, Label),
     send(EP, hide_single_label, @on),   % one source needs no tab strip
+    send(EP, label_popup, @emacs_tab_popup),
     (   View == @default
     ->  new(V, emacs_view)
     ;   V = View

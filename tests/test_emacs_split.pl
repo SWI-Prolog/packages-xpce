@@ -447,6 +447,42 @@ test(a_view_tab_is_not_renamed_by_hand) :-
     get(Tab, editable_label, @off),
     \+ send(Tab, edit_label).
 
+%   The editor keeps its tabs to itself, so the popup the window puts on
+%   its own tabs does not reach them: the editor carries one of its own.
+
+test(a_view_tab_has_a_popup) :-
+    emacs(_F, V),
+    get(V, container, tab_frame, Tab),
+    get(Tab, label_popup, P),
+    get(P, member, close_other_tabs, _).
+
+test(close_other_tabs_leaves_the_tab) :-
+    emacs(F, _V),
+    scratch(B1),
+    send(@emacs, show_buffer, F, B1, tab),
+    scratch(B2),
+    send(@emacs, show_buffer, F, B2, tab),
+    source_tabs(F, 3),
+    get(F, current_pane, V),
+    get(V, container, tab_frame, Tab),
+    send(Tab, close_other_tabs),
+    source_tabs(F, 1),
+    object(Tab),
+    get(F, current_pane, V).
+
+test(a_view_tab_moves_to_a_new_window) :-
+    emacs(F, V1),
+    scratch(B),
+    send(@emacs, show_buffer, F, B, tab),
+    get(F, current_pane, V2),
+    V2 \== V1,
+    get(V2, container, tab_frame, Tab),
+    send(Tab, untab),
+    source_tabs(F, 1),
+    get(V2, frame, F2),
+    F2 \== F,
+    get(F, current_pane, V1).
+
 test(a_view_carries_a_grip) :-
     emacs(_F, V),
     get(V, member, split_handle, H),
