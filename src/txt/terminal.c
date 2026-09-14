@@ -414,6 +414,8 @@ static int	rlc_cluster_distance(RlcData b, int l1, int c1,
 static bool	rlc_selection_in_input(RlcData b, int *sl, int *sc,
 				       int *el, int *ec);
 static bool	rlc_selection_on_input(RlcData b);
+static bool	rlc_first_input(RlcData b, int *sl, int *sc,
+					int *el, int *ec);
 static status	clearSelectionTerminalImage(TerminalImage ti);
 static void	dropInputSelectionTerminalImage(TerminalImage ti);
 static void	rlc_resize_pty(RlcData b, int cols, int rows);
@@ -2474,6 +2476,29 @@ clearSelectionTerminalImage(TerminalImage ti)
   succeed;
 }
 
+/* Send text as a paste: between the brackets of DEC private mode 2004
+ * when the client asked for them, so that its line editor inserts the
+ * text rather than acting on the keys in it -- a TAB that completes, a
+ * newline that enters the line.
+ */
+
+static bool
+rlc_send_pasted(RlcData b, const char *u, size_t ulen)
+{ const char *bsm_start = S_ESC"[200~";
+  const char *bsm_end = S_ESC"[201~";
+
+  if ( b->bracketed_paste_mode )
+    rlc_send(b, bsm_start, strlen(bsm_start));
+  if ( rlc_send(b, u, ulen) != ulen )
+  { Cprintf("Failed to send %s\n", u);
+    return false;
+  }
+  if ( b->bracketed_paste_mode )
+    rlc_send(b, bsm_end, strlen(bsm_end));
+
+  return true;
+}
+
 static status
 pasteTerminalImage(TerminalImage ti, Name which)
 { if ( isDefault(which) )
@@ -2481,8 +2506,6 @@ pasteTerminalImage(TerminalImage ti, Name which)
   StringObj str = get(CurrentDisplay(ti), NAME_paste, which, EAV);
   size_t ulen;
   const char *u = stringToUTF8(&str->data, &ulen);
-  const char *bsm_start = S_ESC"[200~";
-  const char *bsm_end = S_ESC"[201~";
 
   /* A clipboard paste replaces the selection, as it would in any
    * editor.  Not a primary one: that is the middle-click paste, whose
@@ -2493,16 +2516,8 @@ pasteTerminalImage(TerminalImage ti, Name which)
   if ( which != NAME_clipboard || !send(ti, NAME_deleteSelection, EAV) )
     clearSelectionTerminalImage(ti);
   DEBUG(NAME_paste, Cprintf("Paste %zd bytes from %s\n", ulen, pp(which)));
-  if ( ti->data->bracketed_paste_mode )
-    rlc_send(ti->data, bsm_start, strlen(bsm_start));
-  if ( rlc_send(ti->data, u, ulen) != ulen )
-  { Cprintf("Failed to send %s\n", u);
-    fail;
-  }
-  if ( ti->data->bracketed_paste_mode )
-    rlc_send(ti->data, bsm_end, strlen(bsm_end));
 
-  succeed;
+  return rlc_send_pasted(ti->data, u, ulen);
 }
 
 static status
@@ -2646,21 +2661,110 @@ dropInputSelectionTerminalImage(TerminalImage ti)
  *	then hand it one delete per grapheme cluster.
  */
 
-static status
-deleteSelectionTerminalImage(TerminalImage ti)
-{ RlcData b = ti->data;
-  int sl, sc, el, ec, n, i;
+/* rlc_delete_input()
+ *	Delete [(sl,sc), (el,ec)) of the line being edited.  We can only
+ *	ask: walk the caret of the line editor to the end of the range and
+ *	hand it a DEL per grapheme cluster.  Unlike a kill command this
+ *	also works in vi insert mode, and it leaves the kill buffer alone.
+ */
 
-  if ( !rlc_selection_in_input(b, &sl, &sc, &el, &ec) )
-    fail;
+static void
+rlc_delete_input(RlcData b, int sl, int sc, int el, int ec)
+{ int n, i;
 
   if ( (n=rlc_cluster_distance(b, sl, sc, el, ec)) > 0 )
   { rlc_caret_to(b, el, ec);
     for(i=0; i<n; i++)
       rlc_send(b, "\177", 1);		/* DEL: ->delete_prev_char */
   }
+}
 
+static status
+deleteSelectionTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+  int sl, sc, el, ec;
+
+  if ( !rlc_selection_in_input(b, &sl, &sc, &el, &ec) )
+    fail;
+
+  rlc_delete_input(b, sl, sc, el, ec);
   rlc_set_selection(b, 0, 0, 0, 0);
+  succeed;
+}
+
+
+/* <-input, ->clear_input and ->send_input act on the first line of a
+ * command while the client reads it; see rlc_first_input().  Together
+ * they let a command be typed while the user is halfway a line: take
+ * the line out, type the command and put the line back when the client
+ * asks for the next one.
+ *
+ * <-input answers tuple(Text, Tail): the text of that line and the
+ * number of grapheme clusters behind the caret, which is what
+ * ->send_input needs to put the caret back.
+ */
+
+static Tuple
+getInputTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+  int sl, sc, el, ec, tail;
+  uchar_t *text;
+  StringObj str;
+
+  if ( !b || !rlc_first_input(b, &sl, &sc, &el, &ec) )
+    fail;
+
+  if ( rlc_sel_lt(b, b->caret_y, b->caret_x, sl, sc) )
+    tail = rlc_cluster_distance(b, sl, sc, el, ec);
+  else
+    tail = rlc_cluster_distance(b, b->caret_y, b->caret_x, el, ec);
+
+  if ( !(text=rlc_read_from_window(b, sl, sc, el, ec, "", 0)) )
+    fail;
+  str = TCHAR2String(text);
+  rlc_free(text);
+  if ( !str )
+    fail;
+
+  answer(answerObject(ClassTuple, str, toInt(tail), EAV));
+}
+
+
+static status
+clearInputTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+  int sl, sc, el, ec;
+
+  if ( !b || !rlc_first_input(b, &sl, &sc, &el, &ec) )
+    fail;
+
+  rlc_delete_input(b, sl, sc, el, ec);
+  succeed;
+}
+
+
+static status
+sendInputTerminalImage(TerminalImage ti, CharArray text, Int tail)
+{ RlcData b = ti->data;
+  int sl, sc, el, ec;
+  size_t ulen;
+  const char *u;
+
+  if ( !b || !rlc_first_input(b, &sl, &sc, &el, &ec) )
+    fail;
+
+  u = stringToUTF8(&text->data, &ulen);
+  if ( !rlc_send_pasted(b, u, ulen) )
+    fail;
+
+  if ( notDefault(tail) )
+  { const char *left = b->app_escape ? S_ESC"OD" : S_ESC"[D";
+    int i, n = valInt(tail);
+
+    for(i=0; i<n; i++)			/* the caret back where it was */
+      rlc_send(b, left, strlen(left));
+  }
+
   succeed;
 }
 
@@ -3751,6 +3855,8 @@ static char *T_workingDirectory[] =
 { "directory=name*", "host=name*" };
 static char *T_promptMark[] =
 { "kind={prompt,input,output,end}", "continuation=[bool]" };
+static char *T_sendInput[] =
+{ "text=char_array", "tail=[0..]" };
 static char *T_print[] =
 { "start=[int]", "count=[int]" };
 static char *T_find[] =
@@ -3904,6 +4010,10 @@ static senddecl send_terminal_image[] =
      NAME_search, "Focus function of an incremental search"),
   SM(NAME_send, 1, "text=char_array", sendTerminalImage,
      NAME_insert, "Send text to the connected process"),
+  SM(NAME_clearInput, 0, NULL, clearInputTerminalImage,
+     NAME_insert, "Delete the first line of a command being edited"),
+  SM(NAME_sendInput, 2, T_sendInput, sendInputTerminalImage,
+     NAME_insert, "Paste into the first line of a command being edited"),
   SM(NAME_insert, 1, "text=char_array", insertTerminalImage,
      NAME_insert, "Insert text at caret (moves caret)"),
   SM(NAME_print, 2, T_print, printTerminalImage,
@@ -3930,6 +4040,8 @@ static getdecl get_terminal_image[] =
   GM(NAME_ttyEcho, 0, "bool", NULL,
      getTtyEchoTerminalImage,
      NAME_process, "Whether the tty echoes what we send it"),
+  GM(NAME_input, 0, "tuple", NULL, getInputTerminalImage,
+     NAME_insert, "tuple(Text, Tail) of the command line being edited"),
   GM(NAME_foregroundDirectory, 0, "directory=name", NULL,
      getForegroundDirectoryTerminalImage,
      NAME_process, "Working directory of <-foreground_process"),
@@ -4619,6 +4731,37 @@ rlc_selection_on_input(RlcData b)
 
   return rlc_sel_lt(b, sl, sc, lel, lec) &&	/* starts before its end */
 	 rlc_sel_lt(b, isl, isc, el, ec);	/* ends after its start */
+}
+
+
+/* rlc_first_input()
+ *	Is the client reading the first line of a command, and if so, where
+ *	does that line run?  From where the client marked its input (OSC
+ *	133 `B') to the end of the text on the logical line of the caret.
+ *
+ *	Only a prompt the client does not mark `k=s' counts.  A `k=s'
+ *	prompt asks for more of an input the client has not finished
+ *	collecting, and what it has read of it cannot be taken back.  The
+ *	Prolog toplevel is such a client: once the prompt of a query is
+ *	used, everything it reads is a continuation, a read/1 of the goal
+ *	that runs included.  A client that marks no prompts tells us
+ *	nothing, and neither does bracketed paste: it is on for every line
+ *	that is edited, not just for the first.
+ */
+
+static bool
+rlc_first_input(RlcData b, int *sl, int *sc, int *el, int *ec)
+{ if ( !b->prompt_marks || !b->input_active || b->input_continued ||
+       !rlc_input_start(b, b->caret_y, sl, sc) )
+    return false;
+
+  rlc_logical_end(b, b->caret_y, el, ec);
+  if ( rlc_sel_lt(b, *el, *ec, *sl, *sc) )
+  { *el = *sl;				/* nothing typed behind the mark */
+    *ec = *sc;
+  }
+
+  return true;
 }
 
 
@@ -7871,6 +8014,7 @@ rlc_reset(RlcData b)
   b->bracketed_paste_mode = false;
   b->prompt_marks         = false;
   b->input_active         = false;
+  b->input_continued      = false;
   rlc_drop_blocks(b);
   b->focus_inout_events   = false;
   b->alt_scroll           = true;
@@ -9230,6 +9374,7 @@ rlc_set_dec_mode(RlcData b, int mode)
       b->bracketed_paste_mode = true;
       b->prompt_marks         = false;	/* until this prompt marks itself */
       b->input_active         = false;
+      b->input_continued      = false;
       break;
     default:
       DEBUG(NAME_term, Cprintf("Set unknown DEC private mode %d\n", mode));
@@ -9752,7 +9897,8 @@ promptMarkTerminalImage(TerminalImage ti, Name kind, BoolObj continuation)
   b->prompt_marks = true;
 
   if ( kind == NAME_prompt )
-  { b->input_active = false;
+  { b->input_active    = false;
+    b->input_continued = isOn(continuation); /* see rlc_first_input() */
     if ( a && isOn(continuation) )
     { /* A secondary prompt: the client is asking for another line of
        * an input it has not finished collecting, which is one command

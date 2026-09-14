@@ -246,6 +246,7 @@ typedef struct rlc_data
   bool		bracketed_paste_mode;	/* DEC Private Mode 2004 */
   bool		prompt_marks;		/* client marks its prompts */
   bool		input_active;		/* OSC 133: between B and C */
+  bool		input_continued;	/* OSC 133: the last A was k=s */
   int		input_line;		/* OSC 133 B: where the input */
   int		input_char;		/* the user edits starts */
   int		next_block_id;		/* <-id of the next terminal_block */

@@ -547,6 +547,7 @@ variable(goal,          prolog := prolog,     both, "Main goal").
 variable(profile,       name := prolog,       both, "Profile used to create").
 variable(process_cwd,   [name]*,              both, "Directory for processes").
 variable(inject_items,  prolog := '',         both, "Lines/goals to type when connected").
+variable(saved_input,   prolog := none,       both, "Line to restore after ->inject").
 variable(popup,         popup*,               get,  "Terminal popup").
 variable(popup_gesture, popup_gesture*,       none, "Gesture to show menu").
 variable(block_popup,   popup*,               get,  "Popup for a block marker").
@@ -830,7 +831,7 @@ consult_link(PT) :->
 :- pce_group(blocks).
 
 prompt_mark(PT, Kind:{prompt,input,output,end}, Cont:[bool]) :->
-    "Fold the command before this one when one is entered"::
+    "Fold the previous command; restore the line ->inject took out"::
     send_super(PT, prompt_mark, Kind, Cont),
     (   Kind == output,                 % the line was entered
         get(PT, fold_previous, @on),
@@ -838,8 +839,29 @@ prompt_mark(PT, Kind:{prompt,input,output,end}, Cont:[bool]) :->
         get(Blocks, tail, Current),
         get(Blocks, previous, Current, Previous)
     ->  ignore(send(Previous, fold))
+    ;   Kind == input,
+        get(PT, saved_input, saved(Text, Tail)),
+        get(PT, input, _)               % the first line of a query
+    ->  send(PT, saved_input, none),
+        restore_input(PT, Text, Tail)
     ;   true
     ).
+
+%!  restore_input(+PT, +Text, +Tail) is det.
+%
+%   Put back the line ->inject took out.  We may not write to the
+%   terminal from ->prompt_mark, as the mark is still being parsed, so
+%   a timer does it.  The timer is part of PT, like the one of
+%   wait_for_reader/1.
+
+restore_input(PT, Text, Tail) :-
+    (   get(PT, hypered, restore_timer, Old)
+    ->  free(Old)
+    ;   true
+    ),
+    new(Timer, timer(0, message(PT, send_input, Text, Tail))),
+    new(_, partof_hyper(PT, Timer, restore_timer, terminal)),
+    send(Timer, start, once).
 
 
 %       The OSC 133 marks of the commandline editor divide the window
@@ -1000,8 +1022,27 @@ prompt_step(PT, Dir) :-
     nth0(To, Blocks, Block),
     send(Block, scroll_to).
 
-inject(PT, Command:prolog) :->
-    "Inject Prolog goal in commandline"::
+inject(PT, Command:prolog, Now:[bool]) :->
+    "Inject Prolog goal in commandline; if Now, run it now or fail"::
+    %  Without Now we type the command, whatever reads it.  With Now we
+    %  only type it if the toplevel reads the first line of a query.  If
+    %  the user started that line, we take it out and put it back when
+    %  the toplevel asks for the next query; see prompt_mark/3.
+    (   Now == @on
+    ->  get(PT, input, Input),
+        get(Input, first, TextObj),
+        get(TextObj, value, Text),
+        (   Text == ''
+        ->  type_command(PT, Command)
+        ;   get(Input, second, Tail),
+            send(PT, clear_input),
+            type_command(PT, Command),
+            send(PT, saved_input, saved(Text, Tail))
+        )
+    ;   type_command(PT, Command)
+    ).
+
+type_command(PT, Command) :-
     plain_command(Command, Plain),
     format(string(Cmd), '~q.\r', [Plain]),
     send(PT, send, Cmd).
@@ -2543,10 +2584,10 @@ in_view(Window) :-
             get(Tab, status, on_top)
           ), _, fail).
 
-inject(F, Command:prolog) :->
+inject(F, Command:prolog, Now:[bool]) :->
     "Inject a command into the terminal in view"::
     get(F, current_terminal, Term),
-    send(Term, inject, Command).
+    send(Term, inject, Command, Now).
 
 :- pce_end_class.
 

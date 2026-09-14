@@ -821,4 +821,53 @@ test(a_block_dies_with_its_lines,
     blocks(TI, Left),
     assertion(\+ memberchk(B1, Left)).
 
+%!  input(+Terminal, -Text, -Tail) is semidet.
+%
+%   <-input as Prolog data.
+
+input(TI, Text, Tail) :-
+    get(TI, input, Tuple),
+    get(Tuple, first, S), text(S, Text),
+    get(Tuple, second, Tail).
+
+test(input_of_the_first_line,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    send(TI, prompt_mark, prompt),
+    send(TI, insert, '?- '),
+    send(TI, prompt_mark, input),
+    assertion(input(TI, '', 0)),
+    send(TI, insert, 'foo(X'),
+    assertion(input(TI, 'foo(X', 0)),
+    send(TI, insert, '\e[2D'),          % caret two to the left
+    assertion(input(TI, 'foo(X', 2)).
+
+test(no_input_while_not_reading,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    assertion(\+ get(TI, input, _)),    % nothing marked
+    send(TI, prompt_mark, prompt),
+    send(TI, insert, '?- '),
+    send(TI, prompt_mark, input),
+    send(TI, insert, 'sleep(5).\r\n'),
+    send(TI, prompt_mark, output),
+    assertion(\+ get(TI, input, _)).    % a command runs
+
+test(no_input_at_a_continuation,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    send(TI, prompt_mark, prompt),
+    send(TI, insert, '?- '),
+    send(TI, prompt_mark, input),
+    send(TI, insert, 'read(X).\r\n'),
+    send(TI, prompt_mark, output),
+    send(TI, prompt_mark, prompt, @on), % read/1 at `|: '
+    send(TI, insert, '|: '),
+    send(TI, prompt_mark, input),
+    assertion(\+ get(TI, input, _)),
+    send(TI, insert, 'a.\r\n'),
+    send(TI, prompt_mark, output),
+    send(TI, prompt_mark, end),
+    send(TI, prompt_mark, prompt),      % the next query
+    send(TI, insert, '?- '),
+    send(TI, prompt_mark, input),
+    assertion(input(TI, '', 0)).
+
 :- end_tests(terminal_osc133).
