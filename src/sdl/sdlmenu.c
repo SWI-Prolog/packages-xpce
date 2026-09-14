@@ -226,6 +226,74 @@ ws_checkbox_size(int flags, int *w, int *h)
   fail;
 }
 
+/* SDL_ShowMessageBox() blocks the calling thread until the user closes
+   the box.  On Wayland it runs zenity as a separate process, so if the
+   main thread makes the call, no events are processed, the windows are
+   not redrawn and the compositor may report the application as not
+   responding.  We therefore run it in a helper thread while the main
+   thread keeps dispatching events (see sdl_dispatch_without_input()).
+*/
+
+#if !defined(__APPLE__) && !defined(__WINDOWS__)
+#define MESSAGE_BOX_THREAD 1
+#endif
+
+#ifdef MESSAGE_BOX_THREAD
+
+typedef struct
+{ SDL_MessageBoxData *data;
+  int		      buttonid;
+  bool		      rc;
+  SDL_AtomicInt	      done;
+} message_box_job;
+
+static int SDLCALL
+message_box_thread(void *closure)
+{ message_box_job *job = closure;
+
+  job->rc = SDL_ShowMessageBox(job->data, &job->buttonid);
+  SDL_SetAtomicInt(&job->done, 1);
+  sdl_alert();
+
+  return 0;
+}
+
+static bool
+message_box_done(void *closure)
+{ message_box_job *job = closure;
+
+  return SDL_GetAtomicInt(&job->done);
+}
+
+static bool
+wayland_driver(void)
+{ const char *driver = SDL_GetCurrentVideoDriver();
+
+  return driver && strcmp(driver, "wayland") == 0;
+}
+#endif /*MESSAGE_BOX_THREAD*/
+
+static bool
+show_message_box(SDL_MessageBoxData *data, int *buttonid)
+{
+#ifdef MESSAGE_BOX_THREAD
+  if ( SDL_IsMainThread() && wayland_driver() )
+  { message_box_job job = { .data = data, .buttonid = *buttonid };
+    SDL_Thread *thread;
+
+    SDL_SetAtomicInt(&job.done, 0);
+    if ( (thread=SDL_CreateThread(message_box_thread, "message-box", &job)) )
+    { sdl_dispatch_without_input(message_box_done, &job);
+      SDL_WaitThread(thread, NULL);
+      *buttonid = job.buttonid;
+      return job.rc;
+    }
+  }
+#endif
+
+  return SDL_ShowMessageBox(data, buttonid);
+}
+
 /**
  * Show a message box with the specified message and flags.
  *
@@ -243,9 +311,14 @@ ws_message_box(Any client, CharArray title, CharArray msg, int flags)
       .buttons = btns
     };
 
-  data.message = stringToUTF8(&msg->data, NULL);
-  if ( notDefault(title) )
-    data.title = stringToUTF8(&title->data, NULL);
+  /* Copy: the ring buffer of stringToUTF8() is reused while we dispatch */
+  char *message = SDL_strdup(stringToUTF8(&msg->data, NULL));
+  char *title_s = notDefault(title) ? SDL_strdup(stringToUTF8(&title->data,
+								NULL))
+				    : NULL;
+  data.message = message;
+  if ( title_s )
+    data.title = title_s;
 
   FrameObj fr = getFrameVisual(client);
   DEBUG(NAME_inform,
@@ -280,8 +353,10 @@ ws_message_box(Any client, CharArray title, CharArray msg, int flags)
   }
 
   int buttonid = MBX_NOTHANDLED;
-  if ( SDL_ShowMessageBox(&data, &buttonid) )
-    return buttonid;
+  bool rc = show_message_box(&data, &buttonid);
 
-  return MBX_NOTHANDLED;
+  SDL_free(message);
+  SDL_free(title_s);
+
+  return rc ? buttonid : MBX_NOTHANDLED;
 }

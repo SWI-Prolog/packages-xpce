@@ -51,6 +51,7 @@ Any ws_event_in_subwindow(EventObj ev, Any root);
 int ws_wait_for_key(int maxwait);
 DisplayObj ws_last_display_from_event(void);
 void sdl_alert(void);
+void sdl_dispatch_without_input(bool (*done)(void *closure), void *closure);
 
 /* Console drain registry (see sdlevent.c). */
 typedef enum

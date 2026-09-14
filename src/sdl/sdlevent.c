@@ -929,10 +929,43 @@ pceUnregisterConsole(waitable_t handle)
  * for the duration of the call (see pceMTUnlockAll()).
  */
 
+static int  input_blocked = 0;		/* see sdl_dispatch_without_input() */
+static int  held_count = 0;
+static SDL_Event held_events[16];
+
+static bool
+hold_user_input(const SDL_Event *ev)
+{ switch(ev->type)
+  { case SDL_EVENT_MOUSE_BUTTON_UP:
+      if ( held_count < (int)(sizeof(held_events)/sizeof(held_events[0])) )
+	held_events[held_count++] = *ev;
+      return true;
+    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+    case SDL_EVENT_MOUSE_MOTION:
+    case SDL_EVENT_MOUSE_WHEEL:
+    case SDL_EVENT_KEY_DOWN:
+    case SDL_EVENT_KEY_UP:
+    case SDL_EVENT_TEXT_INPUT:
+    case SDL_EVENT_TEXT_EDITING:
+    case SDL_EVENT_TEXT_EDITING_CANDIDATES:
+    case SDL_EVENT_DROP_BEGIN:
+    case SDL_EVENT_DROP_FILE:
+    case SDL_EVENT_DROP_TEXT:
+    case SDL_EVENT_DROP_POSITION:
+    case SDL_EVENT_DROP_COMPLETE:
+      return true;
+    default:
+      return false;
+  }
+}
+
 static void
 dispatch_sdl_event(SDL_Event *ev)
 { EventObj event;
   AnswerMark mark;
+
+  if ( input_blocked && hold_user_input(ev) )
+    return;
 
   pceMTLock();
   markAnswerStack(mark);		/* CtoEvent() creates answer objects */
@@ -1228,4 +1261,30 @@ sdl_alert(void)
 { SDL_Event ev = {0};
   ev.type = MY_EVENT_ALERT;
   SDL_PushEvent(&ev);
+}
+
+/**
+ * Keep the event loop running in the main thread until done(closure)
+ * returns true, while user input is not delivered.  This is used while
+ * another thread runs a blocking native dialog: windows keep redrawing
+ * and timers and streams keep being served, but the application cannot
+ * be operated behind the dialog's back.  Keyboard, text, wheel, motion,
+ * button-press and drop events are discarded.  Button releases are held
+ * and re-queued afterwards, so a gesture that started the dialog still
+ * sees its release.  The code that makes done() true must call
+ * sdl_alert() to wake us up.
+ */
+
+void
+sdl_dispatch_without_input(bool (*done)(void *closure), void *closure)
+{ ASSERT_SDL_MAIN();
+
+  input_blocked++;
+  while( !(*done)(closure) )
+    ws_dispatch(NULL, DEFAULT);
+  if ( --input_blocked == 0 )
+  { for(int i=0; i<held_count; i++)
+      SDL_PushEvent(&held_events[i]);
+    held_count = 0;
+  }
 }
