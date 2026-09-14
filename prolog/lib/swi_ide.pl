@@ -1,9 +1,9 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@cs.vu.nl
-    WWW:           http://www.swi-prolog.org
-    Copyright (c)  2002-2025, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org
+    Copyright (c)  2002-2026, University of Amsterdam
                               VU University Amsterdam
                               CWI, Amsterdam
                               SWI-Prolog Solutions b.v.
@@ -41,18 +41,17 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pane_frame), [pane_kind/2]).
-:- use_module(library(pane_layouts),
-              [pane_placement/3, forget_arrangements/0]).
+:- use_module(library(pane_layouts), [pane_placement/3, forget_arrangements/0]).
 :- use_module(library(toolbar), []).
-:- autoload(library(man/v_visual), [ pce_show_visual_tool/0 ]).
+:- autoload(library(man/v_visual), [pce_show_visual_tool/0]).
 :- autoload(library(www_browser), [www_open_url/1]).
 :- autoload(library(swi_preferences), [prolog_edit_preferences/1]).
 :- autoload(library(pce_openframes), [confirm_open_frames/1]).
-:- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(pce_util), [chain_list/2, send_list/3]).
 :- use_module(library(lists), [member/2]).
-:- require([ pce_image_directory/1,
-	     file_directory_name/2
-	   ]).
+:- autoload(library(gui_tracer), [guitracer/0]).
+:- autoload(library(pce_image), [pce_image_directory/1]).
+:- autoload(library(threadutil), [tdebug/0, interactor/0]).
 
 /** <module> SWI-Prolog IDE controller
 
@@ -192,6 +191,25 @@ visual_hierarchy(_IDE) :->
     ->  send(@manual, start_tool, visual_hierarchy)
     ;   pce_show_visual_tool
     ).
+
+%   Get the current Epilog terminal.  There are three steps:
+%     - If the tab of the current event holds a terminal, use that
+%     - Use the last used Epilog terminal
+%     - See if we have any Epilog terminals.
+
+current_epilog(IDE, PrologTerminal:prolog_terminal) :<-
+    "Get the current Prolog terminal"::
+    current_predicate(epilog:current_epilog/1),
+    (   send(@event, instance_of, event),
+        get(@event?receiver, container, pane_tab, Tab),
+        get(Tab?members, find, message(@arg1, instance_of, epilog_window), W)
+    ->  get(W, terminal, PrologTerminal)
+    ;   autoload_call(current_epilog(PrologTerminal))
+    ->  true
+    ;   get(IDE, tool, epilog_window, W),
+        get(W, terminal, PrologTerminal)
+    ).
+
 
                  /*******************************
                  *          TOOL PANES          *
@@ -415,14 +433,12 @@ update_tool_placement_menu(IDE, Popup:popup) :->
     get(IDE, tool_placement, @default, Where),
     send(Popup, selection, Where).
 
-current_frame(IDE, F:pane_frame) :<-
+current_frame(IDE, Frame:pane_frame) :<-
     "A window of mine to put a tool in"::
-    get(IDE, members, Frames),
-    chain_list(Frames, List),
-    member(F, List),
-    send(F, instance_of, pane_frame),
-    send(F, on_current_desktop),
-    !.
+    get(IDE?members, find,
+        and(message(@arg1, instance_of, pane_frame),
+            message(@arg1, on_current_desktop)),
+        Frame).
 
 %       A tool that belongs to a thread -- the debugger -- goes in the
 %       window that thread is talking in rather than in whichever window

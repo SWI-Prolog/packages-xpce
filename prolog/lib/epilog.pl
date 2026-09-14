@@ -42,6 +42,7 @@
                                        % Adjust window
             set_epilog/1,	       % +Option
                                        % Misc helpers
+            current_epilog/1,          % -PrologTerminal
             run_in_help_epilog/1       % :Goal
           ]).
 :- use_module(library(pce)).
@@ -61,13 +62,11 @@
 :- use_module(library(editline),
               [el_unwrap/1, el_history_events/2, el_add_history/2, el_wrap/1]).
 :- use_module(library(solution_sequences), [distinct/2]).
-:- use_module(library(lists), [reverse/2, member/2, memberchk/2, nth0/3]).
+:- use_module(library(lists), [reverse/2, member/2, nth0/3]).
 :- use_module(library(option),
               [meta_options/3, option/3, option/2, merge_options/3,
                select_option/3]).
 :- use_module(library(prolog_history), [prolog_history/1]).
-:- use_module(library(swi_preferences), [prolog_edit_preferences/1]).
-:- use_module(library(pce_openframes), [confirm_open_frames/1]).
 :- use_module(library(ansi_term), [ansi_format/3]).
 :- use_module(library(error),
               [existence_error/2, must_be/2, permission_error/3]).
@@ -209,6 +208,7 @@ epilog(M:Options0) :-
     configure_terminal(PT, Profile, Options),
     ignore(send(PT?window, pane_exposed)),  % the tab was named before this
     ignore(option(object(Epilog), Options)),
+    set_active_terminal(PT),
 
     send(Epilog, open),
     (   get(Epilog, attribute, main, @on)
@@ -418,6 +418,14 @@ fix_term :-
 
 ep_has_console(Thread) :-
     current_prolog_terminal(Thread, _PT).
+
+%!  current_epilog(-PrologTerminal) is semidet.
+%
+%   True when PrologTerminal is the currently active terminal.
+
+current_epilog(PrologTerminal) :-
+    active_terminal(PrologTerminal),
+    !.
 
 %!  setup_history
 %
@@ -709,6 +717,7 @@ block_popup(PT, Terminal) :-
               ]).
 
 unlink(PT) :->
+    retractall(active_terminal(PT)),
     catch(unlink_terminal_thread(PT), error(_,_), true),
     uncapture_messages(PT),
     send_super(PT, unlink).
@@ -1257,17 +1266,19 @@ event(T, Ev:event) :->
     ->  (   send(Ev, is_a, activate_keyboard_focus)
         ->  send(T?frame, current_terminal, T)
         ;   send(Ev, is_a, 'RET')
-        ->  retractall(active_terminal(_)),
-            asserta(active_terminal(T))
+        ->  set_active_terminal(T)
         ;   true
         )
-
     ;   send(Ev, is_a, ms_right_down)
     ->  send(T, show_popup, Ev)
     ;   drop_target_event(T, Ev,
                           'Drop Prolog source file(s) to consult',
                           epilog_consult_drop)
     ).
+
+set_active_terminal(PT) :-
+    retractall(active_terminal(_)),
+    asserta(active_terminal(PT)).
 
 split(T, Dir:{horizontally,vertically}) :->
     "Split this terminal"::
@@ -2590,7 +2601,8 @@ current_terminal(F, Terminal:prolog_terminal) :->
     ;   in_view(Window)
     ->  send(F, current_pane, Window)
     ;   true
-    ).
+    ),
+    set_active_terminal(Terminal).
 
 %!  in_view(+Window) is semidet.
 %
