@@ -166,7 +166,8 @@ non_object_reference('_object_to_itf_table').
 non_object_reference('_name_to_itf_table').
 non_object_reference('_handle_to_itf_table').
 
-%!  add_prolog_references(+Chain, -PrologRefs, -Freed) is det.
+%!  add_prolog_references(+Chain, -PrologRefs, -Reclaimed, -Freed) is
+%!                        det.
 %
 %   Add to Chain the Prolog blob references that Prolog holds on to.
 %   See held_reference/1.
@@ -174,8 +175,9 @@ non_object_reference('_handle_to_itf_table').
 %   @arg PrologRefs is the number of life Prolog blobs.
 %   @arg Freed is the number of blobs that refer to freed PCE objects.
 
-add_prolog_references(Chain, PrologRefs, Freed) :-
+add_prolog_references(Chain, PrologRefs, Reclaimed, Freed) :-
     get(Chain, size, Size0),
+    gc_pce_blobs(Reclaimed),
     State = freed(0),
     forall(( current_blob(Ref, pce),
              Ref \== Chain,
@@ -186,6 +188,13 @@ add_prolog_references(Chain, PrologRefs, Freed) :-
     get(Chain, size, AllObjects),
     PrologRefs is AllObjects-Size0,
     arg(1, State, Freed).
+
+gc_pce_blobs(Reclaimed) :-
+    aggregate_all(count, current_blob(Ref, pce), Count0),
+    garbage_collect_atoms,
+    aggregate_all(count, current_blob(Ref, pce), Count1),
+    Reclaimed is Count0 - Count1.
+
 
 %!  held_reference(+Ref) is semidet.
 %
@@ -295,8 +304,9 @@ describe_location(_, '<no source>').
 check_pce_database :-
     pce_global_objects(All),
     get(All, size, Globals),
-    add_prolog_references(All, PrologRefs, Freed),
-    print_message(information, pce(checking(Globals, PrologRefs, Freed))),
+    add_prolog_references(All, PrologRefs, Reclaimed, Freed),
+    print_message(information,
+                  pce(checking(Globals, PrologRefs, Reclaimed, Freed))),
     send(All, '_check'),
     send(All, done).
 
@@ -427,8 +437,8 @@ prolog:message(error(pce(redefined_method(Class, Sel, B0, B1)), _)) -->
     [ '~w: ~w~w~w redefined'-[Loc1, Class, Arrow, Sel], nl,
       '\tFirst definition at ~w'-[Loc0]
     ].
-prolog:message(pce(checking(AllObjects, PrologRefs, Freed))) -->
-    [ 'PCE: Checking ~D global objects, ~D Prolog references.'-
-      [AllObjects, PrologRefs], nl,
-      'PCE: ~D Prolog references to freed objects'-[Freed]
+prolog:message(pce(checking(AllObjects, PrologRefs, Reclaimed, Freed))) -->
+    [ 'PCE: Checking ~D global objects, ~D Prolog references (~D freed).'-
+      [AllObjects, PrologRefs, Freed], nl,
+      'PCE: ~D Prolog references from stacks reclaimed'-[Reclaimed]
     ].
