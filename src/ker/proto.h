@@ -115,8 +115,10 @@ COMMON(status)	errorTypeMismatch(Any rec, Any impl, int arg, Type type, Any val)
 COMMON(void)	pushAnswerObject(Any obj);
 COMMON(void)	deleteAnswerObject(Any obj);
 COMMON(export void) _rewindAnswerStack(AnswerMark *mark, Any obj);
+COMMON(void)	rewindAnswerStackToBase(void);
 COMMON(void)	initAnswerStack(void);
 COMMON(void)	resetAnswerStack(void);
+COMMON(void)	destroyAnswerStack(void);
 COMMON(Int)	countAnswerStack(void);
 
 /* /home/jan/src/pl/packages/xpce/src/ker/getmethod.c */

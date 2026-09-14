@@ -328,6 +328,12 @@ pceDrainHostReferences(void)
        CurrentGoal )		/* only at the host boundary; see below */
     return;
 
+  if ( AnswerStack != &AnswerStackBaseCell )
+  { draining = true;			/* see rewindAnswerStackToBase() */
+    rewindAnswerStackToBase();
+    draining = false;
+  }
+
   if ( !(d=delayed_host_refs) ||
        !__sync_bool_compare_and_swap(&delayed_host_refs, d, NULL) )
     return;

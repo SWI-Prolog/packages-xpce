@@ -1563,17 +1563,23 @@ struct var_extension
 		*        INCREMENTAL GC		*
 		********************************/
 
+typedef intptr_t AnswerMark;		/* Mark to the answer stack */
 typedef struct to_cell *ToCell;		/* TemporaryObjectCell */
 
 struct to_cell
-{ ToCell	next;			/* Next of the stack */
+{ ToCell	above;			/* Towards the top, or NULL */
+  ToCell	next;			/* Next of the stack */
   Any		value;			/* Object there */
-  long		index;			/* Index of the mark */
+  AnswerMark	index;			/* Index of the mark */
 };
 
 GLOBAL int	deferredUnalloced;	/* # deferred unallocs in ->free */
 
-typedef intptr_t AnswerMark;
+typedef struct answer_table		/* object --> its cell on the AnswerStack */
+{ ToCell       *cells;			/* open addressing, linear probing */
+  size_t	size;			/* # slots (a power of 2) */
+  size_t	count;			/* # cells in the table */
+} answer_table;
 
 #define markAnswerStack(mark)	{(mark) = AnswerStack->index;}
 #define rewindAnswerStack(mark, obj) \

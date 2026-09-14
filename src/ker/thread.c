@@ -54,7 +54,8 @@ createPceThreadData(void)
 void
 destroyPceThreadData(void)
 { if ( pce_thread_data )
-  { free(pce_thread_data);
+  { destroyAnswerStack();
+    free(pce_thread_data);
     pce_thread_data = NULL;
   }
 }

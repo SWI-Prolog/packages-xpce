@@ -43,6 +43,8 @@ typedef struct
   int			bind_nesting;	  /* Nesting in message resolving */
   struct to_cell	answer_stack_base_cell; /* AnswerStack */
   ToCell		answer_stack;
+  answer_table		answer_table;	  /* object --> cell on answer_stack */
+  AnswerMark		answer_high;	  /* index of the last pushed cell */
 } thread_data, *ThreadData;
 
 #ifdef _MSC_VER
