@@ -910,10 +910,13 @@ eraseDevice(Device dev, Graphical gr)
     if ( gr->displayed == ON )
       displayedGraphicalDevice(dev, gr, OFF);
 
-    deleteChain(dev->recompute, gr);
-    deleteChain(dev->pointed, gr);
+    if ( notNil(dev->recompute) )
+      deleteChain(dev->recompute, gr);
+    if ( notNil(dev->pointed) )
+      deleteChain(dev->pointed, gr);
     assign(gr, device, NIL);
-    GcProtect(dev, deleteChain(dev->graphicals, gr));
+    if ( notNil(dev->graphicals) )
+      GcProtect(dev, deleteChain(dev->graphicals, gr));
     if ( !isFreedObj(gr) )
       qadSendv(gr, NAME_reparent, 0, NULL);
   }

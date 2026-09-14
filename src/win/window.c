@@ -1486,7 +1486,8 @@ eventFixedWindow(PceWindow sw, EventObj ev)
 
 static status
 eraseWindow(PceWindow sw, Graphical gr)
-{ if ( memberChain(sw->fixed_graphicals, gr) )
+{ if ( notNil(sw->fixed_graphicals) &&
+       memberChain(sw->fixed_graphicals, gr) )
   { if ( subGraphical(gr, sw->keyboard_focus) )
       keyboardFocusWindow(sw, NIL);
     if ( subGraphical(gr, sw->focus) )
