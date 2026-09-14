@@ -2627,7 +2627,14 @@ tab_labelled(F, Label) :-
 
 capture_messages(PrologTerminal) :-
     thread_self(main),
-    terminal_input(PrologTerminal, _PTY, _In,Out,Error, _EditLine),
+    (   between(1, 10, _),              % Wait for terminal to become ready
+        (   terminal_input(PrologTerminal, _PTY, _In,Out,Error, _EditLine)
+        ->  true
+        ;   pce_principal:pce_dispatch(-1, 0.25),
+            fail
+        )
+    ->  true
+    ),
     stream_property(Stdout, alias(user_output)),
     stream_property(Stderr, alias(user_error)),
     Stdout \== Out,
