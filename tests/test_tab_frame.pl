@@ -459,6 +459,33 @@ test(escape_leaves_the_label_alone) :-
     \+ editor(TF, _),
     get(TF, label, Was).
 
+%       The editor takes the frame's focus from the window that had it,
+%       so that one stops showing a cursor, and gives it back when done.
+
+test(editing_a_label_takes_the_focus_and_gives_it_back) :-
+    two_tabs(TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    get(TW, frame, Frame),
+    get(TF, current, P),
+    send(Frame, keyboard_focus, P),
+    send(TF, edit_label),
+    get(Frame, keyboard_focus, TW),
+    editor(TF, Item),
+    send(Item, typed, 'ESC'),
+    get(Frame, keyboard_focus, P).
+
+test(and_after_renaming_as_well) :-
+    two_tabs(TW, TF, _TF2),
+    send(TF, editable_label, @on),
+    get(TW, frame, Frame),
+    get(TF, current, P),
+    send(Frame, keyboard_focus, P),
+    send(TF, edit_label),
+    editor(TF, Item),
+    send(Item, selection, renamed),
+    send(Item, execute),
+    get(Frame, keyboard_focus, P).
+
 %   ->label_event has to raise the tab itself: class tab defines it, so
 %   the one in library(tabbed_window) replaces it rather than adding to it.
 

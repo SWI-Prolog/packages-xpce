@@ -193,9 +193,21 @@ make_current(Tab, Window) :-
 %       is destroyed while I hold the focus, and sending to it afterwards
 %       is an error.  A hyper is unlinked with either end.
 
+%       While a label is edited the keys are for the editor over it, which
+%       is mine, so the window of the tab must not look as if it has them.
+%       <-keyboard_focus cannot tell: `window ->keyboard_focus' moves the
+%       frame's focus to me before it records the editor as mine.
+
 input_focus(W, Focus:bool) :->
     send_super(W, input_focus, Focus),
-    (   Focus == @on
+    (   Focus == @on,
+        editing_label(W)
+    ->  (   get(W, hypered, focus_window, Old)
+        ->  send(W, delete_hypers, focus_window),
+            send(Old, input_focus, @off)
+        ;   true
+        )
+    ;   Focus == @on
     ->  (   get(W, current, Current),
             Current \== @nil            % a tab that holds no window yet
         ->  send(W, delete_hypers, focus_window),
@@ -208,6 +220,10 @@ input_focus(W, Focus:bool) :->
         send(Old, input_focus, @off)
     ;   true
     ).
+
+editing_label(W) :-
+    get_super(W, member, tab_stack, TS),
+    get(TS, member, tab_label_item, _).
 
 :- pce_group(members).
 
@@ -371,8 +387,54 @@ edit_label(T) :->
     send(Stack, hide_tab_buttons),      % one lies over the label I cover
     send(Stack, display, new(TI, tab_label_item(T)), point(X, 0)),
     send(TI, set, X, 0, W, H),
-    send(Stack?window, keyboard_focus, TI),
+    get(Stack, window, TW),
+    take_frame_focus(TW, TI),
+    send(TW, keyboard_focus, TI),
     send(TI, select_all).               % typing replaces the name I have
+
+%!  take_frame_focus(+Window, +Item) is det.
+%!  restore_frame_focus(+Old) is det.
+%
+%   The label editor is in the window the tabs are on, while the frame's
+%   keyboard focus is normally on a window inside one of them.  Unless
+%   the frame is told, that window keeps showing an active cursor beside
+%   the editor, and when the editor goes believes it still has the focus
+%   while it does not.  So the frame gives the focus to the window of the
+%   editor and it goes back to where it was when the edit ends.  This is
+%   `frame ->keyboard_focus' itself: a subclass may take moving the focus
+%   for the user moving elsewhere, which this is not.
+
+take_frame_focus(TW, TI) :-
+    get(TW, frame, Frame),
+    Frame \== @nil,
+    !,
+    (   focus_to_restore(Frame, TW, Old)
+    ->  new(_, hyper(TI, Old, restore_focus, label_item))
+    ;   true
+    ),
+    send_class(Frame, frame, keyboard_focus(TW)).
+take_frame_focus(_, _).
+
+%       The click on the label that opens the editor already made me the
+%       frame's focus (see postEventWindow()), and I passed it on to the
+%       window of my tab: that one is what the user was typing in.
+
+focus_to_restore(Frame, TW, Old) :-
+    get(Frame, keyboard_focus, KF),
+    KF \== @nil,
+    (   KF \== TW
+    ->  Old = KF
+    ;   get(TW, hypered, focus_window, Old)
+    ).
+
+restore_frame_focus(Old) :-
+    (   Old \== @nil,
+        object(Old),
+        get(Old, frame, Frame),
+        Frame \== @nil
+    ->  send(Frame, keyboard_focus, Old)
+    ;   true
+    ).
 
 edit_label_width(T, X:int, W:int) :<-
     "Room for the editor over my label, which is wider than the label"::
@@ -391,7 +453,12 @@ end_label_edit(T) :->
     get(T, device, Stack),
     (   get(Stack, member, tab_label_item, TI)
     ->  send(Stack?window, keyboard_focus, @nil),
-        send(TI, destroy),
+        (   get(TI, hypered, restore_focus, Old)
+        ->  true
+        ;   Old = @nil
+        ),
+        send(TI, destroy),              % takes the hyper along
+        restore_frame_focus(Old),
         send(Stack, update_tab_buttons)
     ;   true
     ).

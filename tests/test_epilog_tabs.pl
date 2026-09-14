@@ -411,6 +411,55 @@ test(a_terminal_tab_can_be_renamed) :-
     get(Tab, label, 'build log'),
     tabs(F, ['build log'-1, 'Prolog 2'-1]).
 
+%   Editing the label takes the keyboard from the terminal and gives it
+%   back.  A frame on dummy-SDL never gets the input focus from the window
+%   system, so it is told it has it: without that nothing is activated or
+%   deactivated at all.
+
+test(renaming_a_tab_deactivates_the_terminal_and_restores_it) :-
+    epilog(F, W),
+    send(W, new_tab),
+    setup_call_cleanup(
+        send(F, input_focus, @on),
+        rename_with_focus(F),
+        send(F, input_focus, @off)).
+
+%   A click on the label makes the window the tabs are on the frame's
+%   focus before the double click opens the editor; it passes the focus
+%   on to the terminal, which is where it has to go back to.
+
+test(renaming_after_a_click_on_the_labels_restores_the_terminal) :-
+    epilog(F, W),
+    send(W, new_tab),
+    setup_call_cleanup(
+        send(F, input_focus, @on),
+        rename_with_focus(F, labels),
+        send(F, input_focus, @off)).
+
+rename_with_focus(F) :-
+    rename_with_focus(F, terminal).
+
+rename_with_focus(F, Clicked) :-
+    get(F, current_pane, T),
+    send(F, keyboard_focus, T),
+    (   Clicked == labels
+    ->  get(F, tabs, TW),
+        send(F, keyboard_focus, TW),
+        get(T, input_focus, @on)        % the tabbed window passed it on
+    ;   true
+    ),
+    get(T, input_focus, @on),
+    get(T, container, tab_frame, Tab),
+    send(Tab, edit_label),
+    get(T, input_focus, @off),
+    get(Tab?device, member, tab_label_item, Item),
+    send(Item, selection, renamed),
+    send(Item, modified, @on),
+    send(Item, typed, 'RET'),
+    get(Tab, label, renamed),
+    get(F, keyboard_focus, T),
+    get(T, input_focus, @on).
+
 test(a_terminal_carries_a_grip) :-
     epilog(_F, W),
     get(W, member, split_handle, H),
