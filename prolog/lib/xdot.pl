@@ -582,7 +582,7 @@ render_ops_([Op|T], Fig, Ymax, S0, S) :-
 %   bitmask (bit 1 = bold, 2 = italic, 4 = underline, ...); it is set
 %   by the `t` op and consumed at the next `T` op.
 
-initial_state(gs(black, black, font(normal,roman,14), solid, 1, 0)).
+initial_state(gs(black, black, font(sans,normal,14), solid, 1, 0)).
 
 
                  /*******************************
@@ -717,7 +717,7 @@ font_from_op(Op, gs(_,_,_,_,_,_), font(Family, Style, Size)) :-
     font_scale(Scale),
     Size is max(1, Size0 * 72 / (96 * Scale)),
     font_family(Face, Family),
-    Style = roman.
+    Style = normal.
 
 font_scale(Scale) :-
     (   get(class(font), class_variable, scale, X),
@@ -728,11 +728,11 @@ font_scale(Scale) :-
 
 font_family(Face, Family) :-
     string_lower(Face, Lower),
-    (   sub_string(Lower, _, _, _, "mono")    -> Family = fixed
-    ;   sub_string(Lower, _, _, _, "courier") -> Family = fixed
+    (   sub_string(Lower, _, _, _, "mono")    -> Family = mono
+    ;   sub_string(Lower, _, _, _, "courier") -> Family = mono
     ;   sub_string(Lower, _, _, _, "times")   -> Family = serif
     ;   sub_string(Lower, _, _, _, "serif")   -> Family = serif
-    ;   Family = normal
+    ;   Family = sans
     ).
 
 style_from_op(Op, gs(Fill,Pen,F,_,W0,Fl), gs(Fill,Pen,F,Style,W,Fl)) :-
@@ -889,7 +889,7 @@ fit_font(TFont0, _, _, XpceW, DotW, TFont0) :-
     abs(XpceW - DotW) < 3, !.
 fit_font(_, font(Family,_,Size0), Flags, XpceW, DotW, TFont) :-
     NewSize is Size0 * DotW / XpceW,
-    text_font(font(Family, roman, NewSize), Flags, TFont).
+    text_font(font(Family, normal, NewSize), Flags, TFont).
 
 text_center_at(Align, TW, Font, Xd, Yd, Ymax, Cx, Cy) :-
     get(Font, ascent, Ascent),
@@ -911,7 +911,7 @@ text_font(font(Family, _, Size), Flags, TFont) :-
 text_style_weight(Flags, italic, bold)   :- Flags /\ 3 =:= 3, !.
 text_style_weight(Flags, italic, normal) :- Flags /\ 2 =\= 0, !.
 text_style_weight(Flags, bold,   bold)   :- Flags /\ 1 =\= 0, !.
-text_style_weight(_,     roman,  normal).
+text_style_weight(_,     normal, normal).
 
 align_x_offset("l", TW, DX) :- DX is  TW/2.
 align_x_offset("c", _,  0).
