@@ -67,7 +67,6 @@ the IDE components to the autoloading of one single predicate.
 
 :- pce_image_directory(library('trace/icons')).
 
-:- pce_autoload(swi_console,            library('swi/swi_console')).
 :- pce_autoload(prolog_debug_status,    library('trace/status')).
 :- pce_autoload(prolog_navigator,       library('trace/browse')).
 :- pce_autoload(prolog_query_frame,     library('trace/query')).
@@ -110,15 +109,6 @@ initialise(IDE) :->
     "Create as service application"::
     send_super(IDE, initialise, prolog_ide),
     send(IDE, kind, service).
-
-open_console(IDE) :->
-    "Open SWI-Prolog Cross-Referencer frontend"::
-    (   get(IDE, member, swi_console, Console)
-    ->  send(Console, open)
-    ;   new(Console, swi_console),
-        send(Console, application, IDE),
-        send(Console, wait)
-    ).
 
 open_debug_status(IDE) :->
     "Open/show the status of the debugger"::

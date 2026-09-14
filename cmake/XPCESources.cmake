@@ -224,10 +224,9 @@ set(XPCE_DATA_prolog_lib_math expandmath.pl)
 
 set(XPCE_DATA_prolog_lib_plot axis.pl barchart.pl demo.pl plotter.pl README)
 
-set(XPCE_DATA_prolog_lib_swi pce_debug_monitor.pl swi_console.pl
-    thread_monitor.pl)
+set(XPCE_DATA_prolog_lib_swi pce_debug_monitor.pl)
 if(MULTI_THREADED)
-list(APPEND XPCE_DATA_prolog_lib_swi pce_profile.pl)
+list(APPEND XPCE_DATA_prolog_lib_swi thread_monitor.pl pce_profile.pl)
 endif()
 
 set(XPCE_DATA_prolog_lib_trace browse.pl browse_xref.pl clause.pl
