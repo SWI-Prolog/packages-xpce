@@ -387,24 +387,22 @@ ws_event_destroyed_target(Any window)
 
 static void
 post_area_event(Any window, Name id, float x, float y, Any buttons)
-{ EventObj ev;
-
-  if ( onFlag(window, F_FREED|F_FREEING) )
+{ if ( onFlag(window, F_FREED|F_FREEING) )
     return;
 
-  if ( (ev=answerObject(ClassEvent, id, window,
-			toInt(x), toInt(y), buttons, EAV)) )
-  { AnswerMark mark;
+  ServiceMode(is_service_window(window),
+	      { AnswerMark mark;
+		EventObj ev;
 
-    ServiceMode(is_service_window(window),
-		{ markAnswerStack(mark);
-		  addCodeReference(ev);
+		markAnswerStack(mark);	/* before creating the event */
+		if ( (ev=answerObject(ClassEvent, id, window,
+				      toInt(x), toInt(y), buttons, EAV)) )
+		{ addCodeReference(ev);
 		  postNamedEvent(ev, window, DEFAULT, NAME_postEvent);
 		  delCodeReference(ev);
-		  freeableObj(ev);
-		  rewindAnswerStack(mark, NIL);
-		});
-  }
+		}
+		rewindAnswerStack(mark, NIL);
+	      });
 }
 
 
@@ -843,7 +841,6 @@ CtoEvent(SDL_Event *event)
 static bool
 dispatch_event(EventObj ev)
 { Any target = ev->window;
-  AnswerMark mark;
   status rc;
 
   DEBUG(NAME_event,
@@ -859,12 +856,9 @@ dispatch_event(EventObj ev)
   }
 
   ServiceMode(is_service_window(target),
-	      { markAnswerStack(mark);
-		addCodeReference(ev);
+	      { addCodeReference(ev);
 		rc = postNamedEvent(ev, target, DEFAULT, NAME_postEvent);
 		delCodeReference(ev);
-		freeableObj(ev);
-		rewindAnswerStack(mark, NIL);
 	      });
 
   return rc;
@@ -938,10 +932,13 @@ pceUnregisterConsole(waitable_t handle)
 static void
 dispatch_sdl_event(SDL_Event *ev)
 { EventObj event;
+  AnswerMark mark;
 
   pceMTLock();
+  markAnswerStack(mark);		/* CtoEvent() creates answer objects */
   if ( (event=CtoEvent(ev)) )
     dispatch_event(event);
+  rewindAnswerStack(mark, NIL);
   pceMTUnlock();
 }
 
