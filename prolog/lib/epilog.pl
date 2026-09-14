@@ -826,7 +826,7 @@ consult_link(PT) :->
     "Consult linked file"::
     get(PT, current_link, Link),
     link_file_location(Link, File, _Location),
-    send(PT, inject, consult(File)).
+    send(PT, inject, consult(File), @on, signal).
 
 :- pce_group(blocks).
 
@@ -1022,22 +1022,41 @@ prompt_step(PT, Dir) :-
     nth0(To, Blocks, Block),
     send(Block, scroll_to).
 
-inject(PT, Command:prolog, Now:[bool]) :->
+%  Without Now we type the command, whatever reads it.  With Now we
+%  only type it if the toplevel reads the first line of a query.  If
+%  the user started that line, we take it out and put it back when
+%  the toplevel asks for the next query; see prompt_mark/3.
+
+inject(PT, Command:prolog,
+       Now:now=[bool], OnFail:on_fail=[{fail,warning,signal}]) :->
     "Inject Prolog goal in commandline; if Now, run it now or fail"::
-    %  Without Now we type the command, whatever reads it.  With Now we
-    %  only type it if the toplevel reads the first line of a query.  If
-    %  the user started that line, we take it out and put it back when
-    %  the toplevel asks for the next query; see prompt_mark/3.
     (   Now == @on
-    ->  get(PT, input, Input),
-        get(Input, first, TextObj),
-        get(TextObj, value, Text),
-        (   Text == ''
-        ->  type_command(PT, Command)
-        ;   get(Input, second, Tail),
-            send(PT, clear_input),
-            type_command(PT, Command),
-            send(PT, saved_input, saved(Text, Tail))
+    ->  (   get(PT, input, tuple(TextObj, Tail))
+        ->  (   get(TextObj, size, 0)
+            ->  type_command(PT, Command)
+            ;   send(PT, clear_input),
+                type_command(PT, Command),
+                send(PT, saved_input, saved(TextObj, Tail))
+            )
+        ;   OnFail == warning
+        ->  get(PT, frame, Frame),
+            plain_command(Command, Plain),
+            format(string(Cmd), '~q.', [Plain]),
+            send(@display, inform, Frame, "SWI-Prolog",
+                 "Cannot inject \"%s\" into the console \c
+                 because the console is currently not reading commands.", Cmd)
+        ;   OnFail == signal
+        ->  get(PT, thread, Thread),
+            (   atom(Thread)
+            ->  Id = Thread
+            ;   thread_property(Thread, id(Id))
+            ),
+            thread_signal(Thread, Command),
+            plain_command(Command, Plain),
+            format(string(Cmd), '~q.', [Plain]),
+            send(PT, report, status,
+                 "Sent %s to thread %s", Cmd, Id)
+        ;   fail
         )
     ;   type_command(PT, Command)
     ).
@@ -1079,7 +1098,7 @@ debug_mode(PT) :->
     (   terminal_prolog_flag(PT, query_debug_settings,
                              debug(Debugging, _Tracing), -)
     ->  debug_toggle_command(Debugging, Negate),
-        send(PT, inject, Negate)
+        send(PT, inject, Negate, @on, signal)
     ;   true
     ).
 
@@ -1091,7 +1110,7 @@ trace_mode(PT) :->
     (   terminal_prolog_flag(PT, query_debug_settings,
                              debug(_Debugging, Tracing), -)
     ->  trace_toggle_command(Tracing, Negate),
-        send(PT, inject, Negate)
+        send(PT, inject, Negate, @on, signal)
     ;   true
     ).
 
@@ -1100,13 +1119,13 @@ trace_toggle_command(false, trace).
 
 debugging(PT) :->
     "Show debugging status"::
-    send(PT, inject, debugging).
+    send(PT, inject, debugging, @on, signal).
 
 gui_debug(PT) :->
     "Toggle Prolog GUI tracer"::
     (   terminal_prolog_flag(PT, gui_tracer, GuiDebug, false)
     ->  gui_debug_toggle_command(GuiDebug, Negate),
-        send(PT, inject, Negate)
+        send(PT, inject, Negate, @on, signal)
     ;   true
     ).
 
@@ -1115,7 +1134,7 @@ gui_debug_toggle_command(false, guitracer).
 
 make(PT) :->
     "Inject make/0"::
-    send(PT, inject, make).
+    send(PT, inject, make, @on, signal).
 
 close(PT) :->
     "Close this Prolog shell"::
@@ -1414,14 +1433,15 @@ must_be_inject_item(Item) :-
     ;   must_be(callable, Item)
     ).
 
+%  Text that arrives while a client is  still setting the terminal up is
+%  displayed twice: the client reads and echoes it during its setup, and
+%  its line editor draws it again at   the prompt. We therefore wait for
+%  inject_ready/1, and type anyway when it   does not come. First called
+%  from thread_run_interactor/8, i.e., after  the   client  ran its init
+%  goal, and by the timer below after that.
+
 inject_pending(PT) :->
     "Type the inject(Spec) items once a client reads them"::
-    %  Text that arrives while a client is still setting the terminal up
-    %  is displayed twice: the client reads and echoes it during its
-    %  setup, and its line editor draws it again at the prompt.  We
-    %  therefore wait for inject_ready/1, and type anyway when it does
-    %  not come.  First called from thread_run_interactor/8, i.e., after
-    %  the client ran its init goal, and by the timer below after that.
     (   get(PT, inject_items, Items),
         is_list(Items)                          % `` when there is nothing
     ->  (   inject_ready(PT)
@@ -1678,7 +1698,7 @@ epilog_consult_drop(Terminal, Paths) :-
     split_dropped_files(Paths, PrologOS, OtherOS),
     (   PrologOS \== []
     ->  prolog_path_list(PrologOS, PrologFiles),
-        send(Terminal, inject, consult(PrologFiles))
+        send(Terminal, inject, consult(PrologFiles), @on, signal)
     ;   OtherOS \== []
     ->  rejection_text(OtherOS, Msg),
         drop_target_show_rejected(Terminal, Msg, 1.5)
@@ -1726,7 +1746,7 @@ consult(PT) :->
         default := CWD,
         allow_many := @on, FileChain),
     chain_list(FileChain, Files),
-    send(PT, inject, consult(Files)).
+    send(PT, inject, consult(Files), @on, signal).
 
 edit_file(PT) :->
     "Ask for a file and edit it"::
@@ -2584,10 +2604,11 @@ in_view(Window) :-
             get(Tab, status, on_top)
           ), _, fail).
 
-inject(F, Command:prolog, Now:[bool]) :->
+inject(F, Command:prolog,
+       Now:now=[bool], OnFail:on_fail=[{fail,warning,signal}]) :->
     "Inject a command into the terminal in view"::
     get(F, current_terminal, Term),
-    send(Term, inject, Command, Now).
+    send(Term, inject, Command, Now, OnFail).
 
 :- pce_end_class.
 
@@ -2733,7 +2754,7 @@ run_in_help_epilog(Goal) :-
     get(@prolog_ide, member, help, Epilog),
     !,
     send(Epilog, expose),
-    send(Epilog, inject, Goal).
+    send(Epilog, inject, Goal, @on).
 run_in_help_epilog(Goal) :-
     epilog([ title('SWI-Prolog -- help'),
              name(help),
@@ -2741,7 +2762,7 @@ run_in_help_epilog(Goal) :-
            ]),
     get(@prolog_ide, member, help, Epilog),
     !,
-    send(Epilog, inject, Goal).
+    send(Epilog, inject, Goal, @on).
 
 
                 /*******************************
@@ -2918,7 +2939,8 @@ insert_in_popup(Epilog, Popup, Item, Before, Goal) =>
     send(Popup, insert_before, Before, menu_item(Item, Msg)).
 
 message_to_prolog(Epilog, Goal, Msg) :-
-    new(Msg, message(Epilog, inject, prolog(Goal))).
+    new(Msg, message(Epilog, inject, prolog(Goal), @on)).
+
 
                 /*******************************
                 *           MESSAGES           *
