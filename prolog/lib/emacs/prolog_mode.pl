@@ -697,8 +697,11 @@ make(E) :->                             % SWI-Prolog specific
     "Run `make/0' in the Prolog window"::
     send(E, close_warning_window),
     send(@emacs, save_some_buffers),
-    make,
-    send(E, report, status, 'Make done').
+    (   get(@prolog_ide, current_epilog, PT)
+    ->  send(PT, inject, make, @on, signal)
+    ;   make,
+        send(E, report, status, 'Make done')
+    ).
 
 compile_buffer(E) :->
     "Save current buffer and (re)consult its file"::
@@ -709,13 +712,24 @@ compile_buffer(E) :->
         get(File, absolute_path, Path0),
         absolute_file_name(Path0, Path),
         master_load_file(Path, [], ToLoad),
-        print_message(silent, emacs(consult(user:ToLoad))),
-        make:reload_file(ToLoad),
-        print_message(silent, emacs(consulted(user:ToLoad))),
-        send(E, report, status, '%s compiled', ToLoad)
+        emacs_reload_file(E, ToLoad)
     ;   send(E, report, error,
              'Buffer is not connected to a file')
     ).
+
+emacs_reload_file(_E, ToLoad) :-
+    get(@prolog_ide, current_epilog, PT),
+    !,
+    (   source_file(ToLoad)
+    ->  Command = consult(ToLoad)
+    ;   Command = make_reload_file(ToLoad)
+    ),
+    send(PT, inject, Command, @on, signal).
+emacs_reload_file(E, ToLoad) :-
+    print_message(silent, emacs(consult(user:ToLoad))),
+    make:reload_file(ToLoad),
+    print_message(silent, emacs(consulted(user:ToLoad))),
+    send(E, report, status, '%s compiled', ToLoad).
 
 %!  master_load_file(+File, +Seen, -MasterFile) is det.
 %
@@ -1088,16 +1102,31 @@ consult_region(M, From:[int], To:[int]) :->
     send(File, append, ?(M, contents, Start, Size)),
     send(File, newline),            % make sure it ends with a newline
     send(File, close),
-    get(File, name, TmpNam),
-    consult(user:TmpNam),
-    send(M, report, status, 'Region consulted'),
-    send(File, remove).
-
+    send(M, consult_tmp_file(File)).
 
 consult_selection(M) :->
     "Consult selected text"::
     get(M, selection, point(From, To)),
     send(M, consult_region, From, To).
+
+consult_tmp_file(E, File:file) :->
+    "Consult File and remove it"::
+    send(E, close_warning_window),
+    get(File, name, TmpNam),
+    (   get(@prolog_ide, current_epilog, PT)
+    ->  send(PT, inject, emacs_consult_and_remove(TmpNam), @on, signal)
+    ;   consult(user:TmpNam),
+        send(E, report, status, 'Region consulted'),
+        send(File, remove)
+    ).
+
+:- meta_predicate
+    system:emacs_consult_and_remove(:).
+
+system:emacs_consult_and_remove(M:File) :-
+    call_cleanup(
+        consult(M:File),
+        delete_file(File)).
 
 
 		 /*******************************
