@@ -106,6 +106,7 @@ initialiseEvent(EventObj e, Name id, Any window,
   assign(e, x,		x);
   assign(e, y,		y);
   assign(e, buttons,	bts);
+  assign(e, rotation,	NIL);
   e->time = t;
 
   if ( isDownEvent(e) )
@@ -962,8 +963,8 @@ getDisplayEvent(EventObj ev)
 		 *******************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Deal with scroll-mice and trackpads, mapping   events  with a `rotation`
-attribute to vertical scroll events.  Normally  a mouse scroll wheel has
+Deal with scroll-mice and trackpads, mapping  `wheel` events and their
+<-rotation to vertical scroll events.  Normally  a mouse scroll wheel has
 tick that are reported as 15 degrees rotations.
 
 @tbd We should also handle horizontal   scrolling  and smooth scrolling.
@@ -976,17 +977,17 @@ mapWheelMouseEvent(EventObj ev, Any rec)
 { if ( ev->id == NAME_wheel )
   { Name dir, unit;
     Int count;
-    Int rot_obj = getAttributeObject(ev, NAME_rotation);
 
-    if ( !rot_obj )
+    if ( isNil(ev->rotation) )
       fail;				/* Error? */
-    intptr_t rot = valInt(rot_obj);
+    intptr_t rot = valInt(ev->rotation);
 
     if ( isDefault(rec) )
       rec = ev->receiver;
 
     DEBUG(NAME_wheel,
-	  Cprintf("mapWheelMouseEvent() on %s, rot=%s\n", pp(rec), pp(rot)));
+	  Cprintf("mapWheelMouseEvent() on %s, rot=%s\n",
+		  pp(rec), pp(ev->rotation)));
 
     if ( !hasSendMethodObject(rec, NAME_scrollVertical) )
       fail;
@@ -1045,6 +1046,8 @@ static vardecl var_event[] =
      NAME_position, "X-coordinate, relative to window"),
   IV(NAME_y, "pixels=int", IV_GET,
      NAME_position, "Y-coordinate, relative to window"),
+  IV(NAME_rotation, "degrees=int*", IV_GET,
+     NAME_classify, "`wheel' events: rotation, 15 per notch"),
   IV(NAME_position, "point*", IV_NONE,
      NAME_position, "Last calculated position"),
   IV(NAME_time, "alien:Time", IV_NONE,

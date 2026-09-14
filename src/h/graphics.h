@@ -869,6 +869,7 @@ NewClass(eventobj)
   Int		buttons;		/* Bit mask of button positions */
   Int		x;			/* X coordinate relative to window */
   Int		y;			/* Y coordinate relative to window */
+  Int		rotation;		/* Wheel rotation (degrees) or NIL */
   Point		position;		/* Computed Position */
   uintptr_t	time;			/* Time of event in milliseconds */
 End;

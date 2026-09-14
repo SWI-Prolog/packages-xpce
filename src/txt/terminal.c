@@ -702,9 +702,9 @@ clickedLinkTerminalImage(TerminalImage ti, Name href)
 
 static bool
 rlc_wheel_notches(EventObj ev, int *notches)
-{ Int rot = getAttributeObject(ev, NAME_rotation);
+{ Int rot = ev->rotation;
 
-  if ( !rot )
+  if ( isNil(rot) )
     return false;
 
   int deg = valInt(rot);		/* a notch is 15 degrees */

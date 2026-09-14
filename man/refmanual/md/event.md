@@ -84,11 +84,11 @@ example-- type _3_ into _\C-c_.
     One event requires special treatment.  This is the event related
     to `wheel-mice`, mice normally having two buttons and a
     scroll-wheel.  Rotations of the scroll-wheel are mapped to an
-    event object with <-id: wheel.  Conform the Microsoft windows
-    conventions, this event is has a `rotation` attribute,
-    associate using `->attribute`.  The rotation has the value 120
-    if the wheel is rotated from the user and -120 when rotated
-    towards the user.
+    event object with <-id: wheel.  The rotation is available as
+    <-rotation, which is @nil for all other events.  A notch of the
+    wheel is a rotation of 15 degrees.  The value is positive if the
+    wheel is rotated from the user and negative when rotated towards
+    the user.
 
     In the X11 version, wheel-events are normally mapped to
     the virtual mouse-buttons 4 and 5.  If the class-variable

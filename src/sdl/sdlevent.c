@@ -476,6 +476,7 @@ CtoEvent(SDL_Event *event)
   Any name = NULL;
   Name ctx_name = NULL;
   Any ctx = NULL;
+  Int rotation = NULL;			/* wheel events */
   SDL_WindowID wid = 0;
   FrameObj frame = NIL;		/* ev->frame */
   Any window;			/* ev->window */
@@ -548,7 +549,6 @@ CtoEvent(SDL_Event *event)
       wid  = event->wheel.windowID;
       time = event->wheel.timestamp/1000000;
       name = NAME_wheel;
-      ctx_name = NAME_rotation;
       int dy = 0;
 #if SDL_VERSION_ATLEAST(3, 2, 12)
       dy = event->wheel.integer_y;
@@ -568,7 +568,7 @@ CtoEvent(SDL_Event *event)
 		    ? " (flipped)" : ""));
       if ( dy )
       { last_time = time;
-	ctx = toInt(dy*15);
+	rotation = toInt(dy*15);
 	break;
       }
       fail;
@@ -828,6 +828,8 @@ CtoEvent(SDL_Event *event)
   if ( ev )
   { assign(ev, frame, frame);
 
+    if ( rotation )
+      assign(ev, rotation, rotation);
     if ( ctx_name )
       attributeObject(ev, ctx_name, ctx);
   } else

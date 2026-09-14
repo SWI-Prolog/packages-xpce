@@ -1006,9 +1006,9 @@ eventMenu(Menu m, EventObj ev)
   { makeButtonGesture();
 
     if ( m->feedback == NAME_showSelectionOnly && ev->id == NAME_wheel )
-    { Int rot = getAttributeObject(ev, NAME_rotation);
+    { Int rot = ev->rotation;
 
-      if ( rot )
+      if ( notNil(rot) )
       { if ( nextMenu(m, valInt(rot) < 0 ? NAME_up : NAME_down) )
 	{ if ( !send(m->device, NAME_modifiedItem, m, ON, EAV) )
 	    forwardMenu(m, m->message, ev);
