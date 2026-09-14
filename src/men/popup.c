@@ -429,8 +429,9 @@ kbdSelectPopup(PopupObj p, MenuItem mi)
 
 
 static status
-typedPopup(PopupObj p, Any id)
-{ int prev;
+typedPopup(PopupObj p, Any ev)
+{ Any id = (instanceOfObject(ev, ClassEvent) ? ((EventObj)ev)->id : ev);
+  int prev;
 
   if ( id == toInt(13) )			/* RETURN ... */
   { return kbdSelectPopup(p, p->preview);
@@ -451,7 +452,7 @@ typedPopup(PopupObj p, Any id)
 
     succeed;
   } else
-  { Name key = characterName(id);		/* accelerator of item */
+  { Name key = characterName(ev);		/* accelerator of item */
     Cell cell;
 
     for_cell(cell, p->members)
@@ -565,7 +566,7 @@ eventPopup(PopupObj p, EventObj ev)
       succeed;
     }
   } else if ( isAEvent(ev, NAME_keyboard) )
-  { return typedPopup(p, ev->id);
+  { return typedPopup(p, ev);
   }
 
   succeed;				/* accept all events */

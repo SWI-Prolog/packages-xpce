@@ -293,9 +293,9 @@ isAEvent(EventObj e, Any id)
   if ( isInteger(e->id) )
   { int c = valInt(e->id);
 
-    if      ( c < 32 || c == 127 )		nm = NAME_control;
-    else if ( c >= 32 && c < META_OFFSET )	nm = NAME_printable;
-    else if ( c >= META_OFFSET   )		nm = NAME_meta;
+    if      ( valInt(e->buttons) & BUTTON_meta ) nm = NAME_meta;
+    else if ( c < 32 || c == 127 )		nm = NAME_control;
+    else if ( c >= 32 )				nm = NAME_printable;
     else					fail;
   } else if ( isName(e->id) )
   { nm = e->id;

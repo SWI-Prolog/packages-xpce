@@ -154,9 +154,7 @@ state_to_buttons(SDL_MouseButtonFlags flags, SDL_Keymod mod)
 static Any
 keycode_to_name(SDL_Event *event)
 { if ( event->key.key >= 32 && event->key.key < DEL )
-  { if ( event->key.mod & MetaMask )
-      return toInt(Meta(event->key.key));
-    if ( event->key.mod & ControlMask )
+  { if ( event->key.mod & ControlMask )
     { /* The C0 controls: Control() strips all but the low five bits,
        * which turns `@' into NUL, the letters into 1..26 and the five
        * keys after `Z' into 27..31, giving us ^[, ^\, ^] and friends.
@@ -185,7 +183,10 @@ keycode_to_name(SDL_Event *event)
       else
 	return toInt(key);
     }
-    if ( event->key.mod & SDL_KMOD_GUI )
+    /* Meta is not part of the id: the event's buttons carry it, as
+     * they carry the other modifiers.
+     */
+    if ( event->key.mod & (SDL_KMOD_GUI|MetaMask) )
       return toInt(event->key.key);
   }
 

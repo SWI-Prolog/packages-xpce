@@ -3832,9 +3832,16 @@ searchDirectionEditor(Editor e, Name dir)
 
 static status
 IsearchEditor(Editor e, EventId id)
-{ Int chr = id;				/* TBD: test for character */
+{ Int chr;				/* TBD: test for character */
   Name cnm = characterName(id);
   Name cmd = getKeyBindingEditor(e, cnm);
+  bool meta = false;
+
+  if ( instanceOfObject(id, ClassEvent) )
+  { meta = (valInt(((EventObj)id)->buttons) & BUTTON_meta);
+    id   = ((EventObj)id)->id;
+  }
+  chr = id;
 
   if ( cmd == NAME_keyboardQuit )	/* abort the search */
   { selection_editor(e, e->search_origin, e->search_origin, NAME_inactive);
@@ -3866,7 +3873,7 @@ IsearchEditor(Editor e, EventId id)
     succeed;
   }
 
-  if ( !isInteger(id) )
+  if ( !isInteger(id) || meta )
   { endIsearchEditor(e, ON);
     fail;
   }
@@ -3889,8 +3896,7 @@ IsearchEditor(Editor e, EventId id)
       fail;
   }
 
-  if ( valInt(chr) < Meta(0) &&
-       tisprint(e->text_buffer->syntax, valInt(chr)) )
+  if ( tisprint(e->text_buffer->syntax, valInt(chr)) )
     return executeSearchEditor(e, chr, DEFAULT);
 
   endIsearchEditor(e, ON);
@@ -5373,11 +5379,11 @@ static senddecl send_editor[] =
      NAME_delete, "Kill words forward"),
   SM(NAME_reference, 1, "point", referenceEditor,
      NAME_dialogItem, "Set reference as dialog_item"),
-  SM(NAME_DabbrevExpand, 1, "event_id", DabbrevExpandEditor,
+  SM(NAME_DabbrevExpand, 1, "event|event_id", DabbrevExpandEditor,
      NAME_editContinue, "Focus function"),
-  SM(NAME_Isearch, 1, "event_id", IsearchEditor,
+  SM(NAME_Isearch, 1, "event|event_id", IsearchEditor,
      NAME_editContinue, "Focus function"),
-  SM(NAME_StartIsearch, 1, "event_id", StartIsearchEditor,
+  SM(NAME_StartIsearch, 1, "event|event_id", StartIsearchEditor,
      NAME_editContinue, "Focus function"),
   SM(NAME_WantsKeyboardFocus, 0, NULL, succeedObject,
      NAME_event, "Test if ready to accept input (true)"),

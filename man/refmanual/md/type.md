@@ -84,7 +84,6 @@ not be changed, except as part of their definition process.
     			* \n, \t, \r, \f, \b with their usual meaning
     			* ^<char> for control characters
     			* \C-<char> for control characters
-    - M- followed by any of above to form meta characters.
 
     - int_range [<low>..<high>]
     		Context:		tuple(low, high).

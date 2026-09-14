@@ -97,7 +97,7 @@ timeout(I) :->
     send(I?display, busy_cursor, @nil).
 
 
-typed(I, Id:event_id) :->
+typed(I, Id:'event|event_id') :->
     send(I, slot, last_typed, @pce?mclock),
     send(I, send_super, typed, Id),
     send(?(I, container, man_frame), typed_in_search_item,

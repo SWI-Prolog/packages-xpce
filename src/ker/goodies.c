@@ -443,16 +443,12 @@ characterName(Any chr)
     { c = valInt(chr);
       name = chrName(c);
       ctrl = (c < ' ' && !name);
-      meta = ( c >= META_OFFSET );
     } else
       return chr;
   }
 
   if ( name == NAME_ESC )
     return UTF8ToName("\\e");
-
-  if ( c >= META_OFFSET )
-    c -= META_OFFSET;
 
   if ( meta )
     out = stpcpy(out, "\\e");	/* TBD: Turn into M- and use as second */

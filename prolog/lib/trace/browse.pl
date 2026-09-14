@@ -216,7 +216,7 @@ tree(D, Tree:prolog_source_structure) :<-
 :- pce_begin_class(sb_file_filter_item, text_item,
                    "Filter files as you type").
 
-typed(FFI, Id:event_id) :->
+typed(FFI, Id:'event|event_id') :->
     "Activate the filter"::
     send_super(FFI, typed, Id),
     get(FFI, displayed_value, Current),

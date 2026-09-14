@@ -200,7 +200,7 @@ example-- type _3_ into _\C-c_.
     	    printable
     	        32..126
     	    meta
-    	        128..255
+    	        any character typed with the meta-key held down
 
     The demo tool _Events_ displays @event-hierarchy.
 

@@ -622,8 +622,15 @@ cancel_key('ESC').
 commit_key(13).
 commit_key('RET').
 
-typed(TI, Id:event_id) :->
+key_id(Ev, Id) :-
+    blob(Ev, pce),                      % an event object
+    !,
+    get(Ev, id, Id).
+key_id(Id, Id).
+
+typed(TI, Ev:'event|event_id') :->
     "Escape puts the old label back, and so does Return that changes nothing"::
+    key_id(Ev, Id),
     (   cancel_key(Id)
     ->  get(TI, tab, Tab),
         send(Tab, end_label_edit)
@@ -631,7 +638,7 @@ typed(TI, Id:event_id) :->
         get(TI, modified, @off)
     ->  get(TI, tab, Tab),
         send(Tab, end_label_edit)
-    ;   send_super(TI, typed, Id)
+    ;   send_super(TI, typed, Ev)
     ).
 
 :- pce_end_class(tab_label_item).

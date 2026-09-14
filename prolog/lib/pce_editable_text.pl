@@ -141,7 +141,7 @@ advance(T) :->
     get(T, editable, @on).
 
 
-typed(T, Id:event_id) :->
+typed(T, Id:'event|event_id') :->
     "Handle keyboard input"::
     get(T, show_caret, @on),
     send(@editable_text_key_binding, typed, Id, T).

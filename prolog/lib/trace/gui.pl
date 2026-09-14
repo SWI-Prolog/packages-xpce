@@ -774,7 +774,7 @@ refresh_bindings(GUI) :->
                  *            EVENT             *
                  *******************************/
 
-source_typed(Frame, Typed:event_id) :->
+source_typed(Frame, Typed:'event|event_id') :->
     "Forward a typing event to the button-dialog"::
     get(Frame, member, buttons, Dialog),
     send(Dialog, typed, Typed).
@@ -1174,11 +1174,23 @@ make_message(Action,  Action, D,
 %       It is a window of the IDE now, and its ->return would end the
 %       wait without ever telling the tracer what was picked.
 
-typed(D, Id:event_id, Delegate:[bool]) :->
+%       plain_key(+EventOrId, -Key) is semidet.
+%
+%       Key is the character typed without the meta key held.
+
+plain_key(Ev, Key) :-
+    blob(Ev, pce),                      % an event object
+    !,
+    \+ send(Ev, is_a, meta),
+    get(Ev, id, Key).
+plain_key(Key, Key).
+
+typed(D, Id:'event|event_id', Delegate:[bool]) :->
     "Handle typing"::
-    (   get(D, find, @default,
+    (   plain_key(Id, Key),
+        get(D, find, @default,
             and(message(@arg1, has_get_method, keys),
-                message(@arg1?keys, member, Id)),
+                message(@arg1?keys, member, Key)),
             Button)
     ->  send(Button, execute)
     ;   Delegate == @on

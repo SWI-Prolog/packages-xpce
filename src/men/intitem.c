@@ -260,7 +260,7 @@ static senddecl send_int_item[] =
      DEFAULT, "Create from name, selection and font"),
   SM(NAME_range, 2, T_range, rangeIntItem,
      NAME_type, "Allowed range"),
-  SM(NAME_typed, 1, "event_id", typedIntItem,
+  SM(NAME_typed, 1, "event|event_id", typedIntItem,
      NAME_event, "Process keyboard event"),
   SM(NAME_increment, 0, NULL, incrementIntItem,
      NAME_selection, "Increment the selection"),

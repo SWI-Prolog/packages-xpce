@@ -737,11 +737,6 @@ charpToChar(char *s)
   { return toupper(s[1]) - '@';
   } else if ( prefixstr(s, "\\C-") && s[4] == EOS )
   { return toupper(s[3]) - '@';
-  } else if ( prefixstr(s, "M-") || prefixstr(s, "\\e") )
-  { int c;
-
-    if ( (c = charpToChar(s+2)) >= 0 )
-      return c + META_OFFSET;
   }
 
   return -1;

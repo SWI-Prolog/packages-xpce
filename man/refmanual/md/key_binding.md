@@ -195,8 +195,9 @@ tables.
     	| @ ... ~       | 33..126 | Normal printable characters   |
     	| DEL           | 127     | The delete-key                |
 
-    The meta-characters (ASCII 128..255) are mapped onto \e, followed by the
-    0. .127 symbolic name.
+    A key typed with the meta (Alt) key held down is named \e, followed by
+    the name of the key without meta.  The event's <-id is the plain
+    character; the meta key is in its <-buttons.
 
     @see key_binding-bindings
 

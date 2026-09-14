@@ -2323,7 +2323,7 @@ static char *T_find[] =
 static char *T_pointedObjects[] =
         { "at=point|event", "append_to=[chain]" };
 static char *T_typed[] =
-        { "event_id", "[bool]" };
+        { "event|event_id", "[bool]" };
 static char *T_format[] =
         { "format*|name", "[any]" };
 static char *T_layout[] =

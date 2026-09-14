@@ -345,10 +345,10 @@ typedKeyBinding(KeyBinding kb, Any id, Graphical receiver)
 	reset |= RESET_ARGUMENT;
 					/* Universal argument specification */
       } else if ( cmd == NAME_digitArgument && isInteger(id) )
-      { if ( valInt(id) == Meta('-') && isDefault(kb->argument) )
+      { if ( valInt(id) == '-' && isDefault(kb->argument) )
 	  assign(kb, argument, toInt(-1));
 	else
-	{ int chr = valInt(id) - Meta('0');
+	{ int chr = valInt(id) - '0';
 
 	  if ( chr >= 0 && chr <= 9 )
 	  { if ( isDefault(kb->argument) )
@@ -629,12 +629,12 @@ initInsertKeyBinding(KeyBinding kb)
 
 static status
 initArgumentKeyBinding(KeyBinding kb)
-{ int i;
+{ char key[] = "\\e0";
 
-  for(i = Meta('0'); i <= Meta('9'); i++ )
-    functionKeyBinding(kb, characterName(toInt(i)), NAME_digitArgument);
+  for(key[2] = '0'; key[2] <= '9'; key[2]++ )
+    functionKeyBinding(kb, CtoName(key), NAME_digitArgument);
 
-  functionKeyBinding(kb, characterName(toInt(Meta('-'))),
+  functionKeyBinding(kb, CtoName("\\e-"),
 		     NAME_digitArgument);
   functionKeyBinding(kb, characterName(toInt(Control('u'))),
 		     NAME_universalArgument);

@@ -189,7 +189,7 @@ getContainsBrowser(Browser b)
 /* Type declarations */
 
 static char *T_typed[] =
-        { "event_id", "delegate=[bool]" };
+        { "event|event_id", "delegate=[bool]" };
 static char *T_initialise[] =
         { "label=[name]", "size=[size]", "display=[display]" };
 static char *T_requestGeometry[] =

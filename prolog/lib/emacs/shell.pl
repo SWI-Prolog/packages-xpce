@@ -424,14 +424,14 @@ insert_history(N, Chain, E) :-
     insert_history(NN, Chain, E).
 
 
-backward_history(E, Id:event_id) :->
+backward_history(E, _Id:event_id) :->
     "Insert last command"::
     send(E, current_history, 0),
     send(E, focus_function, '_history'),
-    send(E, '_history', Id).
+    send(E, '_history', @event).        % the id has lost the meta key
 
 
-'_history'(E, Id:event_id) :->
+'_history'(E, Id:'event|event_id') :->
     get(E?bindings, function, Id, Func),
     get(E, text_buffer, B),
     get(B, history, Chain),

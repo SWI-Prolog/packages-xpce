@@ -79,29 +79,21 @@ End;
 #define streq(s, t)	((s) && (t) && (strcmp((s), (t)) == 0))
 
 #define UNICODE_MAX		(0x10FFFF)
-/* META_OFFSET must sit above the full Unicode range; (1<<16) collided
- * with non-BMP code points (emoji, non-BMP CJK), causing the terminal
- * widget to misclassify a typed 🤩 (U+1F929) as "Meta+<byte>" and
- * emit ESC <byte> instead of the emoji. */
-#define META_OFFSET		(1L<<21)
 
 #define EOS	0			/* end of string */
 #define ESC	27			/* char escape */
 #define TAB	9			/* tab character */
 #define DEL	127			/* delete character */
 #define Control(x) (x & 037)
-#define Meta(x)    (x + META_OFFSET)
 
-/* Value range of the `char' type: a code point, optionally Meta-modified.
+/* Value range of the `char' type: a code point.  The meta modifier is
+ * not part of a character; events carry it as BUTTON_meta.
  * Keep this in sync with getCharType() in ker/type.c.
  */
 
 static inline int
 isCharCode(intptr_t c)
-{ if ( c >= META_OFFSET )
-    c -= META_OFFSET;
-
-  return c >= 0 && c <= UNICODE_MAX;
+{ return c >= 0 && c <= UNICODE_MAX;
 }
 
 GLOBAL SyntaxTable DefaultSyntaxTable;	/* Systems default table */

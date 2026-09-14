@@ -131,7 +131,7 @@ eventPopupGesture(PopupGesture g, EventObj ev)
   { Name key;
 
     TRY(updatePopupGesture(g, ev));
-    key = characterName(getIdEvent(ev));
+    key = characterName(ev);
 
     if ( send(g->current, NAME_key, key, EAV) )
     { Any context = g->context;

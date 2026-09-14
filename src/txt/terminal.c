@@ -1303,8 +1303,6 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   { chr = valInt(ev->id);
   } else if ( ev->id == NAME_BS )
   { chr = 127;
-    if ( valInt(ev->buttons) & BUTTON_meta )
-      chr += META_OFFSET;
   } else if ( ev->id == NAME_DEL )
   { seq = tilde_seq(buf, sizeof(buf), 3, mod);
   } else if ( ev->id == NAME_TAB )
@@ -1322,13 +1320,9 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
       seq = buf;
     } else
     { chr = '\t';
-      if ( valInt(ev->buttons) & BUTTON_meta )
-	chr += META_OFFSET;
     }
   } else if ( ev->id == NAME_RET )
   { chr = '\r';
-    if ( valInt(ev->buttons) & BUTTON_meta )
-      chr += META_OFFSET;
   } else if ( ev->id == NAME_ESC )
   { chr = ESC;
   } else if ( ev->id == NAME_cursorUp )
@@ -1351,9 +1345,10 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   } else
     fail;
 
-  if ( !seq && chr >= META_OFFSET )
+  /* Alt sends ESC ahead of the key, as xterm's metaSendsEscape */
+  if ( !seq && (btns & BUTTON_meta) && chr >= 0 && chr < 128 )
   { buf[0] = ESC;
-    buf[1] = chr-META_OFFSET;
+    buf[1] = chr;
     buf[2] = 0;
     seq = buf;
   }
@@ -2243,7 +2238,7 @@ IsearchTerminalImage(TerminalImage ti, EventObj ev)
        ev->id == NAME_ESC || ev->id == NAME_RET )
     return endIsearchTerminalImage(ti, ON);
 
-  if ( chr >= ' ' && chr < META_OFFSET )
+  if ( chr >= ' ' && !(valInt(ev->buttons) & BUTTON_meta) )
     return executeIsearchTerminalImage(ti, toInt(chr), false);
 
   endIsearchTerminalImage(ti, ON);	/* let the key mean what it means */
