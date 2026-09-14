@@ -1160,11 +1160,13 @@ save_history(PT) :-
     terminal_input(PT, _PTY, _In, _Out, _Err, true),
     current_prolog_terminal(Thread, PT),
     !,
-    call_in_thread(Thread,
-                   catch(prolog_history(save), error(_,_), true),
-                   [ timeout(0.1),
-                     on_timeout(true)
-                   ]).
+    catch(call_in_thread(Thread,
+                         catch(prolog_history(save), error(_,_), true),
+                         [ timeout(0.1),
+                           on_timeout(true)
+                         ]),
+          error(existence_error(thread, Thread), _),
+          true).
 save_history(_).
 
 history_events(PT, Events:prolog) :<-
