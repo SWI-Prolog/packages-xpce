@@ -61,11 +61,15 @@ make_colour_browser(CB, DataBase) :-
     send(CB, font, fixed),
     get(CB?font, width, "medium_sea_green  255 255 255 #ffffff", Width),
 
-    send(CB?key_binding, function,  % pretend arrow up/down not only
+    % get a private version of the binding table
+    get(CB?key_binding, clone, KB),
+    send(CB, key_binding, KB),
+
+    send(KB, function,              % pretend arrow up/down not only
          '<cursor_down>',           % do the preview, but also show
          and(message(CB, next_line),% the colour immediately
              message(CB, enter))),
-    send(CB?key_binding, function,
+    send(KB, function,
          '<cursor_up>',
          and(message(CB, previous_line),
              message(CB, enter))),
