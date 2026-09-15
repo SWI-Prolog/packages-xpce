@@ -509,3 +509,26 @@ ns_menubar_forget(void *mb)
 { if ( mb && mb == installed_mb )
     ns_menubar_install(NULL);
 }
+
+
+		 /*******************************
+		 *	    MODIFIERS		*
+		 *******************************/
+
+/* +modifierFlags is the state of the keys now, not as SDL remembers
+ * it.  SDL misses a modifier that went down while another window had
+ * the focus.
+ */
+
+unsigned
+ns_current_modifiers(void)
+{ NSEventModifierFlags f = [NSEvent modifierFlags];
+  unsigned mods = 0;
+
+  if ( f & NSEventModifierFlagShift )   mods |= PCE_MOD_SHIFT;
+  if ( f & NSEventModifierFlagControl ) mods |= PCE_MOD_CONTROL;
+  if ( f & NSEventModifierFlagOption )  mods |= PCE_MOD_OPTION;
+  if ( f & NSEventModifierFlagCommand ) mods |= PCE_MOD_COMMAND;
+
+  return mods;
+}

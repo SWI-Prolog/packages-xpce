@@ -42,6 +42,9 @@
 #include "sdlframe.h"
 #include "sdltimer.h"
 #include "sdlstream.h"
+#ifdef __APPLE__
+#include "sdlnsmenu.h"
+#endif
 #ifdef HAVE_POLL
 #include <poll.h>
 #endif
@@ -668,6 +671,16 @@ CtoEvent(SDL_Event *event)
     { SDL_Keymod isdown = (SDL_KMOD_LCTRL|SDL_KMOD_RCTRL|SDL_KMOD_GUI);
 #ifndef __APPLE__
       isdown |= SDL_KMOD_LALT;
+#else
+      /* SDL forgets the modifiers when a window loses the focus and
+       * learns them again only when they change.  Option held while
+       * the focus moves to a new window -- from M-x into its prompt --
+       * then arrives without SDL_KMOD_ALT, the key-down is not held
+       * back and the text MacOS composed from Option is typed.
+       */
+      if ( !(event->key.mod & SDL_KMOD_ALT) &&
+	   (ns_current_modifiers() & PCE_MOD_OPTION) )
+	event->key.mod |= SDL_KMOD_LALT;
 #endif
 
       lastmod = event->key.mod;

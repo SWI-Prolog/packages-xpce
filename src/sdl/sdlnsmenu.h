@@ -127,5 +127,7 @@ void	ns_menubar_forget(void *mb);
  * to ns_menubar_install() in pce_menu_item.
  */
 bool	ns_menubar_owns_key(const char *key, unsigned mods);
+/* The modifier keys that are down right now, as a PCE_MOD_* mask. */
+unsigned ns_current_modifiers(void);
 
 #endif /* SDLNSMENU_H */
