@@ -561,7 +561,7 @@ static status
 unlinkTerminalImage(TerminalImage ti)
 { ScrollBar sb = ti->scroll_bar;
 
-  if ( sb )
+  if ( sb && notNil(sb) )
   { assign(ti, scroll_bar, NIL);
     send(sb, NAME_destroy, EAV);
   }
