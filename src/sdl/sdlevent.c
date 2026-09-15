@@ -695,7 +695,8 @@ CtoEvent(SDL_Event *event)
       keyinput_time  = 0;
       keyboard_timer = SDL_AddTimer(KEYBOARD_DELAY, tm_keyboard_timeout, NULL);
       DEBUG(NAME_keyboard,
-	    Cprintf("Delaying keyboard down event at %" PRIu64 "\n"));
+	    Cprintf("Delaying keyboard down event at %" PRIu64 "\n",
+		    event->key.timestamp));
       fail;
     }
     case MY_EVENT_KEYDOWN_TIMEOUT:
