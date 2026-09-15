@@ -206,9 +206,12 @@ removal).  Most applications never reference any other display than
     @see topic Finding References
     @see display<-inspect_handlers
 
-- display->has_visible_frames
+- display->has_visible_frames: keep_alive=[bool]
     Succeeds if at least one frame on this display is currently
-    visible.
+    visible.  If `keep_alive` is `@on`, only frames whose
+    `frame <-keep_alive` is `@on` count.
+
+    @see frame<-keep_alive
 
 
 ## Get methods {#class-display-get}

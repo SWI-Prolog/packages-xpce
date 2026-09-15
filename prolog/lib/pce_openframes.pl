@@ -44,8 +44,9 @@
 
 %!  confirm_open_frames(+Options)
 %
-%   If there are open frames, show a dialog that offers the choice to
-%   close them, continue or quit Prolog.  Options:
+%   If there are open frames that keep the application alive (see
+%   `frame<-keep_alive`), show a dialog that offers the choice to close
+%   them, continue or quit Prolog.  Options:
 %
 %       - transient_for(Frame)
 %         Open the frame as a transient for Frame and ignore the fact
@@ -62,14 +63,17 @@ confirm_open_frames(Options) :-
     ;   option(message(Msg), Options, @default),
         new(D, confirm_open_frames(Msg, Frames)),
         send(D, transient_for, Frame),
-        send(D, open_centered, Frame)
+        send(D, open_centered, Frame),
+        send(D?frame, keep_alive, @on)
     ).
 confirm_open_frames(Options) :-
     open_frames(Frames),
     (   Frames == []
     ->  true
     ;   option(message(Msg), Options, @default),
-        send(new(confirm_open_frames(Msg, Frames)), open_centered)
+        new(D, confirm_open_frames(Msg, Frames)),
+        send(D, open_centered),
+        send(D?frame, keep_alive, @on)  % do not end Prolog under the user
     ).
 
 :- pce_begin_class(confirm_open_frames, dialog,
@@ -120,4 +124,5 @@ display_open_frames(Display, Frames) :-
 is_open_frame(Frame) :-
     get(Frame, status, Status),
     Status \== unmapped,
-    Status \== hidden.
+    Status \== hidden,
+    get(Frame, keep_alive, @on).

@@ -51,9 +51,13 @@ created at boot time.  Its responsibilities are:
     @see display->synchronise
     @see graphical->compute
 
-- display_manager->has_visible_frames
+- display_manager->has_visible_frames: keep_alive=[bool]
     Succeeds if any attached display has at least one visible frame
-    (used to decide when the application can exit).
+    (used to decide when the application can exit).  If `keep_alive`
+    is `@on`, only frames whose `frame <-keep_alive` is `@on` count.
+
+    @see display->has_visible_frames
+    @see frame<-keep_alive
 
 
 ## Get methods {#class-display_manager-get}

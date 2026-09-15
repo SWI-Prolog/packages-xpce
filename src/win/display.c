@@ -255,14 +255,15 @@ DPIDisplay(DisplayObj d, Any arg)
 
 
 status
-hasVisibleFramesDisplay(DisplayObj d)
+hasVisibleFramesDisplay(DisplayObj d, BoolObj keep_alive)
 { if ( notNil(d->frames) )
   { Cell cell;
 
     for_cell(cell, d->frames)
     { FrameObj fr = cell->value;
       if ( !onFlag(fr, F_FREED|F_FREEING) )
-      { if ( fr->status != NAME_unmapped && fr->status != NAME_hidden )
+      { if ( fr->status != NAME_unmapped && fr->status != NAME_hidden &&
+	     (keep_alive != ON || get(fr, NAME_keepAlive, EAV) == ON) )
 	  succeed;
       }
     }
@@ -684,8 +685,8 @@ static senddecl send_display[] =
      NAME_event, "Policy for the on-screen keyboard on text-input focus"),
   SM(NAME_dpi, 1, "size|int", DPIDisplay,
      NAME_dimension, "Resolution in dots per inch"),
-  SM(NAME_hasVisibleFrames, 0, NULL, hasVisibleFramesDisplay,
-     NAME_organisation, "True if there is at least one visible frame")
+  SM(NAME_hasVisibleFrames, 1, "keep_alive=[bool]", hasVisibleFramesDisplay,
+     NAME_organisation, "True if there is a visible (keep_alive) frame")
 };
 
 /* Get Methods */

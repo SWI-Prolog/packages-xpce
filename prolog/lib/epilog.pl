@@ -139,7 +139,7 @@ ep_wait__ :-
     halt.
 
 ep_main_end :-
-    \+ send(@display_manager, has_visible_frames),
+    \+ send(@display_manager, has_visible_frames, @on),
     !.
 ep_main_end :-
     \+ ep_main_running.
@@ -177,8 +177,9 @@ ep_main_end :-
 %       Background colour for the terminal.
 %     - main(+Bool)
 %       If `true`, act as main window.   In this case epilog/1
-%       runs the main thread and returns after all windows have
-%       been closed.
+%       runs the main thread and halts after the last window that
+%       wants to keep the application alive has been closed.  See
+%       `frame<-keep_alive`.
 %     - object(-Epilog)
 %       Get the xpce object reference for the created terminal.
 
@@ -1942,6 +1943,10 @@ create(T, Parent:[window]) :->
 %       alias -- con1, con2 -- and the user renames the thread to rename
 %       the tab.  Anything else keeps the name of what it runs: a shell
 %       has a thread too, and `con3' would say nothing about it.
+
+keep_alive(_T, Keep:bool) :<-
+    "A terminal keeps the application alive"::
+    Keep = @on.
 
 thread_connected(T, Thread:name) :->
     "Name my tab after the thread that has just been connected"::

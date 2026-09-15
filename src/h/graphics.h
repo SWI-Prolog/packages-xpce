@@ -854,6 +854,7 @@ NewClass(frameobj)
   BoolObj	can_delete;		/* User can delete the frame */
   BoolObj	can_resize;		/* User can resize the frame */
   BoolObj	confirm_done;		/* User must confirm delete */
+  BoolObj	keep_alive;		/* Application must not end */
   BoolObj	fitting;		/* We are running ->fit */
   Sheet		wm_protocols;		/* WM protocols understood */
 					/* start private data */

@@ -44,6 +44,10 @@ imply X-specific semantics.
     Initial value of `<-confirm_done`: whether `->wm_delete` should
     pop up a confirmation dialog.
 
+- frame.keep_alive: bool = @off
+    Initial value of `<-keep_alive`: whether the frame keeps the
+    application alive while it is visible.
+
 - frame.geometry: name* = @nil
     When set, determines the default size and position used by
     `->create`/`->open`.  When @nil, the size is determined by the
@@ -231,6 +235,21 @@ imply X-specific semantics.
 
     @see frame->keyboard_focus
     @see frame->input_window
+
+- frame<->keep_alive: bool
+    When `@on`, the application must not end while this frame is
+    visible.  An application main loop such as Epilog's `ep_main/0`
+    halts once `display_manager ->has_visible_frames: @on` fails, so
+    tools, demos and other windows that answer `@off` do not keep
+    Prolog running.
+
+    Defaults to the value of the `keep_alive` class variable (off).
+    The get method returns the slot; subclasses refine it.  E.g.,
+    `pane_frame` answers `@on` if one of its panes does, where an
+    Epilog terminal always does and a PceEmacs view does while its
+    buffer holds unsaved changes to a file.
+
+    @see display_manager->has_visible_frames
 
 - frame<->sensitive: bool
     When `@off` the frame ignores all user input.  Used internally

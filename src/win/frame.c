@@ -692,6 +692,16 @@ getSizeFrame(FrameObj fr)
 }
 
 
+/* Subclasses refine this, e.g., to keep the application alive while
+   they hold a terminal or unsaved data.
+*/
+
+static BoolObj
+getKeepAliveFrame(FrameObj fr)
+{ answer(fr->keep_alive);
+}
+
+
 static Point
 getPositionFrame(FrameObj fr)
 { answer(getPositionArea(fr->area));
@@ -1988,6 +1998,8 @@ static vardecl var_frame[] =
      NAME_permission, "Frame can be resized by user"),
   IV(NAME_confirmDone, "bool", IV_BOTH,
      NAME_permission, "Ask confirmation on user-delete"),
+  IV(NAME_keepAlive, "bool", IV_SEND,
+     NAME_organisation, "@on: application must not end while I am visible"),
   IV(NAME_fitting, "bool", IV_BOTH,
      NAME_internal, "We are running ->fit"),
   IV(NAME_wmProtocols, "sheet", IV_GET,
@@ -2142,6 +2154,8 @@ static getdecl get_frame[] =
      NAME_area, "Position on the display"),
   GM(NAME_size, 0, "size", NULL, getSizeFrame,
      NAME_area, "Size on the display"),
+  GM(NAME_keepAlive, 0, "bool", NULL, getKeepAliveFrame,
+     NAME_organisation, "@on if the application must not end while I am visible"),
   GM(NAME_image, 0, "image", NULL, getImageFrame,
      NAME_conversion, "Image with the pixels of the frame"),
   GM(NAME_keyboardFocus, 0, "window", NULL, getKeyboardFocusFrame,
@@ -2180,6 +2194,8 @@ static classvardecl rc_frame[] =
      "Default cursor displayed by ->busy_cursor"),
   RC(NAME_confirmDone, "bool", "@off",
      "Show confirmer on `Delete'"),
+  RC(NAME_keepAlive, "bool", "@off",
+     "Keep the application alive while visible"),
   RC(NAME_geometry, "name*", "@nil",
      "Position/size of the frame"),
   RC(NAME_iconLabel, "name*", "@nil",

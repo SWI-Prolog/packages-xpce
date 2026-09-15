@@ -497,10 +497,13 @@ frame_empty(_IDE, F:pane_frame) :->
     ignore(send(F, record_arrangement)),  % it never sees ->close
     (   get(F, attribute, main, @on)
     ->  send(F, destroy),
-        confirm_open_frames(
-            [ message("The main Prolog console was closed\n\c
-                       while there are open windows")
-            ])
+        (   send(@display_manager, has_visible_frames, @on)
+        ->  confirm_open_frames(
+                [ message("The main Prolog console was closed\n\c
+                           while there are open windows")
+                ])
+        ;   halt
+        )
     ;   send(F, destroy)
     ).
 

@@ -632,6 +632,24 @@ can_close(F, Reply:bool) :<-
     ;   Reply = @on
     ).
 
+%       I keep the application alive if I was told to or if one of my
+%       panes wants to stay: a terminal, an editor with unsaved changes.
+%       A tool pane answers no <-keep_alive and does not keep it alive.
+
+keep_alive(F, Reply:bool) :<-
+    "@on if I or one of my panes must keep the application alive"::
+    (   (   get_super(F, keep_alive, @on)
+        ;   get(F, panes, Panes),
+            get(Panes, find, @keep_alive_pane, _)
+        )
+    ->  Reply = @on
+    ;   Reply = @off
+    ).
+
+:- pce_global(@keep_alive_pane,
+              new(and(message(@arg1, has_get_method, keep_alive),
+                      @arg1?keep_alive == @on))).
+
 confirm(F, Format:char_array, Args:any...) :->
     "Ask the user a yes/no question, centred on me"::
     new(D, dialog('Confirm action')),
@@ -2705,6 +2723,14 @@ can_close(TP, Reply:bool) :<-
         \+ get(W, can_close, @on)
     ->  Reply = @off
     ;   Reply = @on
+    ).
+
+keep_alive(TP, Reply:bool) :<-
+    "@on if one of my windows must keep the application alive"::
+    (   get(TP, members, Windows),
+        get(Windows, find, @keep_alive_pane, _)
+    ->  Reply = @on
+    ;   Reply = @off
     ).
 
 close_pane(TP) :->

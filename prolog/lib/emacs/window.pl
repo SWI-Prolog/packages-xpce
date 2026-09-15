@@ -264,6 +264,16 @@ menu_bar_key(V, Key:name) :<-
     get(V, mode, Mode),
     get(Mode, name, Key).
 
+keep_alive(V, Keep:bool) :<-
+    "@on if my buffer holds unsaved changes to a file"::
+    (   get(V, text_buffer, TB),
+        get(TB, file, File),
+        File \== @nil,
+        get(TB, modified, @on)
+    ->  Keep = @on
+    ;   Keep = @off
+    ).
+
 pane_exposed(V) :->
     "I have become the current view"::
     send(V, update_labels),
