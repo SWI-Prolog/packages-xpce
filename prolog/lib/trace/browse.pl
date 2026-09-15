@@ -1463,7 +1463,7 @@ initialise(CF, Class:name, Summary:[string], Image:[image]) :->
     "Create from ClassName, Summary and Image"::
     default(Summary, @nil, Sum),
     (   Image == @default
-    ->  file_image('class.svg', Img)
+    ->  file_to_image('user_class.svg', Img)
     ;   Img = Image
     ),
     send_super(CF, initialise, Class, @default, Img),
@@ -1494,19 +1494,19 @@ make_class_toc_enter(Term, Class, _Key, TE) :-
 
 make_class_toc_enter(xpce_method(send(Class, Name, _Doc)), Class, TE) :-
     atomic_list_concat([send, Name, Class], $, Id),
-    file_image('send.svg', Img),
+    file_to_image('send.svg', Img),
     new(TE, toc_xpce_entity(Name, Id, Img)).
 make_class_toc_enter(xpce_method(get(Class, Name, _Doc)), Class, TE) :-
     atomic_list_concat([get, Name, Class], $, Id),
-    file_image('get.svg', Img),
+    file_to_image('get.svg', Img),
     new(TE, toc_xpce_entity(Name, Id, Img)).
 make_class_toc_enter(xpce_variable(Class, Name, _Doc), Class, TE) :-
     atomic_list_concat([var, Name, Class], $, Id),
-    file_image('ivar.svg', Img),
+    file_to_image('ivar.svg', Img),
     new(TE, toc_xpce_entity(Name, Id, Img)).
 make_class_toc_enter(xpce_class_variable(Class, Name, _Doc), Class, TE) :-
     atomic_list_concat([cvar, Name, Class], $, Id),
-    file_image('classvar.svg', Img),
+    file_to_image('classvar.svg', Img),
     new(TE, toc_xpce_entity(Name, Id, Img)).
 
 identify(CF) :->

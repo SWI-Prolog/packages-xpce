@@ -234,9 +234,8 @@ set(XPCE_DATA_prolog_lib_trace browse.pl browse_xref.pl clause.pl
     query.pl README settings.pl source.pl stack.pl status.pl test.pl
     trace.pl util.pl viewterm.pl)
 
-set(XPCE_DATA_prolog_lib_trace_icons
-    break.png breakpoint.png bug.png classext.png class.png classvar.png
-    debug.png eyes.png get.png ivar.png locate.png nostop.png send.png)
+set(XPCE_DATA_prolog_lib_trace_icons break.png breakpoint.png bug.png
+    debug.png eyes.png locate.png nostop.png)
 
 # SVG Images (must be merged with above)
 list(APPEND XPCE_DATA_prolog_lib_trace_icons
@@ -293,7 +292,8 @@ set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png
 
     opendir.svg closedir.svg document.svg builtin_classflash.svg
     builtin_class.svg user_classflash.svg user_class.svg sign_alert.svg
-    sign_ok.svg juggler1.svg juggler2.svg juggler3.svg juggler4.svg
+    sign_ok.svg send.svg get.svg ivar.svg classvar.svg
+    juggler1.svg juggler2.svg juggler3.svg juggler4.svg
     juggler5.svg kangaroo_10.svg kangaroo_11.svg kangaroo_1.svg
     kangaroo_2.svg kangaroo_3.svg kangaroo_4.svg kangaroo_5.svg
     kangaroo_6.svg kangaroo_7.svg kangaroo_8.svg kangaroo_9.svg)
