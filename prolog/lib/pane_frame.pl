@@ -1534,9 +1534,22 @@ initialise(MD, Client:[object]) :->
     send(MD, border, size(0,0)),
     send(MD, pen, 0).
 
+%       The tool bar has a <-client of its own, taken from mine when it
+%       is made.  It must follow mine: the pane it was made for may be
+%       closed while the bar lives on, and `tool_button ->activate' asks
+%       the bar for its client.
+
 client(MD, Client:[object]) :->
     "Say which object a menu item without a message goes to"::
-    send(MD, slot, client, Client).
+    send(MD, slot, client, Client),
+    (   get(MD, member, tool_bar, TB)
+    ->  (   Client == @default
+        ->  get(MD, frame, TBClient)
+        ;   TBClient = Client
+        ),
+        send(TB, client, TBClient)
+    ;   true
+    ).
 
 %       The bar is built into a dialog that was laid out long ago, and a
 %       bar built afterwards is not placed until the dialog lays itself
