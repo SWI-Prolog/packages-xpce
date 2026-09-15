@@ -328,6 +328,7 @@ NewClass(terminal_image)
   Name		working_directory;	/* Directory the client reported */
   Name		host;			/* ... and the host it is on */
   Chain		blocks;			/* terminal_block objects, oldest first */
+  Timer		drag_scroll_timer;	/* Scrolls while dragging outside */
   struct rlc_data *data;		/* The buffered data */
 End;
 

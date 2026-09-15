@@ -522,6 +522,7 @@ rlc_check_assertions(RlcData b)
 #ifdef __WINDOWS__
 static status launchTerminalImage(TerminalImage ti, CharArray cmdline);
 #endif
+static void	stopDragScrollTerminalImage(TerminalImage ti);
 
 static status
 initialiseTerminalImage(TerminalImage ti, Int w, Int h)
@@ -540,6 +541,7 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h)
   assign(ti, search_wrapped_warned, OFF);
   assign(ti, working_directory, NIL);
   assign(ti, blocks, newObject(ClassChain, EAV));
+  assign(ti, drag_scroll_timer, NIL);
   obtainClassVariablesObject(ti);
   /* The class variables name the variant fonts by alias; they need the
      same pitch check as the ones ->font derives. */
@@ -561,6 +563,7 @@ static status
 unlinkTerminalImage(TerminalImage ti)
 { ScrollBar sb = ti->scroll_bar;
 
+  stopDragScrollTerminalImage(ti);
   if ( sb && notNil(sb) )
   { assign(ti, scroll_bar, NIL);
     send(sb, NAME_destroy, EAV);
@@ -1025,6 +1028,96 @@ inputFocusTerminalImage(TerminalImage ti, BoolObj val)
 }
 
 
+/* Drag-scrolling.  Dragging the selection above or below the window
+ * scrolls towards the pointer and extends the selection over what comes
+ * into view.  A timer does the steps, so the pointer need not move to
+ * keep it going; the further out it is, the more lines a step takes.
+ */
+
+#define DRAG_SCROLL_INTERVAL 0.05	/* seconds between steps */
+
+static int
+rlc_drag_scroll_lines(TerminalImage ti, int y)
+{ RlcData b = ti->data;
+  int h = valInt(ti->area->h);
+  int lines;
+
+  if ( rlc_alt_screen(b) )		/* no scroll-back to scroll */
+    return 0;
+  if ( y < 0 )
+    lines = -(1 - y/b->ch);
+  else if ( y >= h )
+    lines = 1 + (y-h)/b->ch;
+  else
+    return 0;
+
+  if ( abs(lines) > b->window_size )
+    lines = lines < 0 ? -b->window_size : b->window_size;
+
+  return lines;
+}
+
+static void
+stopDragScrollTerminalImage(TerminalImage ti)
+{ if ( notNil(ti->drag_scroll_timer) )
+  { stopTimer(ti->drag_scroll_timer);
+    assign(ti, drag_scroll_timer, NIL);
+  }
+}
+
+/* Extend the selection to the pointer.  Outside the window that is the
+ * nearest row inside it: rlc_translate_mouse() would take the row below
+ * the last one, which is out of view.
+ */
+
+static void
+rlc_drag_extend_selection(TerminalImage ti)
+{ RlcData b = ti->data;
+  int h = valInt(ti->area->h);
+  int y = b->drag_y;
+
+  if ( y < 0 )
+    y = 0;
+  else if ( y >= h )
+    y = h-1;
+
+  rlc_extend_selection(b, b->drag_x, y);
+}
+
+static void
+dragSelectionTerminalImage(TerminalImage ti, int x, int y)
+{ RlcData b = ti->data;
+
+  b->drag_x = x;
+  b->drag_y = y;
+  rlc_drag_extend_selection(ti);
+
+  if ( !rlc_drag_scroll_lines(ti, y) )
+  { stopDragScrollTerminalImage(ti);
+  } else if ( isNil(ti->drag_scroll_timer) )
+  { assign(ti, drag_scroll_timer,
+	   newObject(ClassTimer, CtoReal(DRAG_SCROLL_INTERVAL),
+		     newObject(ClassMessage, ti, NAME_dragScroll, EAV), EAV));
+    startTimer(ti->drag_scroll_timer, NAME_repeat, DEFAULT);
+  }
+}
+
+static status
+dragScrollTerminalImage(TerminalImage ti)
+{ RlcData b = ti->data;
+  int lines;
+
+  if ( !b || !(lines = rlc_drag_scroll_lines(ti, b->drag_y)) )
+  { stopDragScrollTerminalImage(ti);
+    succeed;
+  }
+
+  rlc_scroll_lines(b, lines);
+  rlc_drag_extend_selection(ti);
+
+  succeed;
+}
+
 static status
 eventTerminalImage(TerminalImage ti, EventObj ev)
 { if ( ev->id == NAME_locMove )
@@ -1085,6 +1178,14 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     get_xy_event(ev, ti, ON, &x, &y);
     if ( rlc_fold_at_gutter(ti, valInt(x), valInt(y)) )
       succeed;				/* ->msLeftUp does the folding */
+    stopDragScrollTerminalImage(ti);
+    /* Keep the drag ours when the pointer leaves the terminal, so
+     * dragging past its edge can scroll.  The window drops the focus
+     * again on the button going up.
+     */
+    if ( instanceOfObject(ev->window, ClassWindow) )
+      focusWindow(ev->window, (Graphical)ti, NIL, DEFAULT,
+		  getButtonEvent(ev));
     if ( valInt(ev->buttons) & BUTTON_shift )
     { rlc_extend_selection(b, valInt(x), valInt(y));
     } else
@@ -1103,6 +1204,7 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
   { RlcData b = ti->data;
     Int x, y;
     TerminalBlock fold;
+    stopDragScrollTerminalImage(ti);
     get_xy_event(ev, ti, ON, &x, &y);
     if ( (fold=rlc_fold_at_gutter(ti, valInt(x), valInt(y))) )
       return send(fold, NAME_toggleFold, EAV);
@@ -1126,10 +1228,9 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     succeed;
   }
   if ( isAEvent(ev, NAME_msLeftDrag) )
-  { RlcData b = ti->data;
-    Int x, y;
+  { Int x, y;
     get_xy_event(ev, ti, ON, &x, &y);
-    rlc_extend_selection(b, valInt(x), valInt(y));
+    dragSelectionTerminalImage(ti, valInt(x), valInt(y));
     succeed;
   }
   if ( isAEvent(ev, NAME_msRightUp) )
@@ -3928,6 +4029,8 @@ static vardecl var_terminal_image[] =
      NAME_process, "Host it reported that directory on (@nil: this one)"),
   IV(NAME_blocks, "chain", IV_GET,
      NAME_process, "terminal_block objects, oldest first"),
+  IV(NAME_dragScrollTimer, "timer*", IV_NONE,
+     NAME_scroll, "Scrolls while the selection is dragged outside"),
   IV(NAME_data, "alien:RlcData", IV_NONE,
      NAME_cache, "Line buffer and related data")
 };
@@ -3947,6 +4050,8 @@ static senddecl send_terminal_image[] =
      NAME_scroll, "Update bubble of given scroll_bar object"),
   SM(NAME_scrollVertical, 3, T_scrollVertical, scrollVerticalTerminalImage,
      NAME_scroll, "Trap scroll_bar request"),
+  SM(NAME_dragScroll, 0, NULL, dragScrollTerminalImage,
+     NAME_scroll, "Scroll and extend the selection dragged outside"),
   SM(NAME_WantsKeyboardFocus, 0, NULL, succeedObject,
      NAME_event, "Test if ready to accept input (true)"),
   SM(NAME_event, 1, "event", eventTerminalImage,

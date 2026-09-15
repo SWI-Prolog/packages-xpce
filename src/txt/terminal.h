@@ -184,6 +184,8 @@ typedef struct rlc_data
   int		sel_start_char;		/* starting char for selection */
   int		sel_end_line;		/* ending line for selection */
   int		sel_end_char;		/* ending char for selection */
+  int		drag_x;			/* last pointer position of a */
+  int		drag_y;			/* selection drag */
   struct				/* Incremental search; the hit is */
   { int	origin_line;			/* the selection, so all we keep is */
     int	origin_char;			/* where the search started ... */
