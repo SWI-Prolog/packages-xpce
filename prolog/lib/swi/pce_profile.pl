@@ -167,6 +167,7 @@ load_profile(F, ProfData0:[prolog]) :->
     send(B, load_profile, ProfData.nodes),
     send(F, report, done),
     send(F, show_statistics),
+    send(B, select_interesting),
     (   get(F, auto_reset, @on)
     ->  reset_profiler
     ;   true
@@ -274,6 +275,42 @@ load_profile(B, Nodes:prolog) :->
     forall(member(Node, Nodes),
            send(B, append, prof_dict_item(Node, SortBy, Frame))),
     send(B, sort).
+
+select_interesting(B) :->
+    "Select the most interesting predicate and show its details"::
+    get(B, sort_by, SortBy),
+    get_chain(B?dict, members, Items),
+    prof_tool(B, F),
+    (   interesting_item(SortBy, Items, F, DI)
+    ->  send(B, selection, DI),
+        send(B, normalise, DI),
+        send(DI, details)
+    ;   true
+    ).
+
+%   interesting_item(+SortBy, +Items, +Frame, -Item) is semidet.
+%
+%   In a cumulative profile the top is a chain of predicates that are
+%   active (nearly) all the time, such as the goal being profiled.  The
+%   interesting one is the first below that, which we take to be the
+%   first using less than 90% of the time.  Otherwise it is the first.
+
+interesting_item(SortBy, Items, F, DI) :-
+    cumulative_key(SortBy),
+    !,
+    get(F, ticks, Total),
+    get(F, accounting_ticks, Accounting),
+    Limit is 0.9*(Total-Accounting),
+    (   member(DI, Items),
+        get(DI, value, SortBy, Ticks),
+        Ticks < Limit
+    ->  true
+    ;   Items = [DI|_]
+    ).
+interesting_item(_, [DI|_], _, DI).
+
+cumulative_key(ticks).
+cumulative_key(ticks_siblings).
 
 update_label(B) :->
     get(B, sort_by, Sort),
