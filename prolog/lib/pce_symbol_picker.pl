@@ -1029,7 +1029,7 @@ printable_char(C) :-
 		 *           RECENTS            *
 		 *******************************/
 
-%!  <-recents_height
+%   <-recents_height
 %
 %   The row of recents is one line of the symbol font.  It says so itself
 %   rather than leaving it to the tiling: `tab_frame ->append' sizes a
