@@ -371,7 +371,7 @@ gtrace(TS) :->
 
 variable(recall,     int := 360, get, "#samples recalled").
 variable(cpu_height, int := 20,  get, "Height of CPU image").
-class_variable(size, size, size(10, 10)).
+class_variable(size, size, size(20, 10)).
 
 initialise(TB) :->
     send_super(TB, initialise),
