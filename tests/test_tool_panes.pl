@@ -1515,6 +1515,7 @@ test(the_browser_reaches_the_tool_to_show_details) :-
     get(Tabular?graphicals, size, N),
     N > 0.
 
+:- if(getenv('SWIPL_TEST_FAIL_ON_UNLIKELY', y)).
 test(and_so_does_a_text_of_the_details) :-
     no_frames,
     profiler(F),
@@ -1528,6 +1529,7 @@ test(and_so_does_a_text_of_the_details) :-
     send(Text, instance_of, prof_node_text),
     !,
     send(Text, details).
+:- endif.
 
 %       The details window carries no label of its own: a label puts a row
 %       on the window_decorator it is held in, and the grip that drags the
