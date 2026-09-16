@@ -37,6 +37,7 @@
 #include "sdl.h"
 #include "sdlinput.h"
 #include "sdlevent.h"
+#include "sdlframe.h"
 #ifndef __WINDOWS__
 #include <pwd.h>
 #include <unistd.h>
@@ -94,6 +95,7 @@ setPceThread(const char *app_name)
 		      CtoName(driver ? driver : "<default>"));
     }
     ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
+    sdl_start_live_resize_watch();
     start_fd_watcher_thread();
 
     /* Register the program's stdin as a drainable console iff it is a

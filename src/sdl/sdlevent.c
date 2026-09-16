@@ -985,10 +985,12 @@ dispatch_sdl_event(SDL_Event *ev)
     return;
 
   pceMTLock();
-  markAnswerStack(mark);		/* CtoEvent() creates answer objects */
-  if ( (event=CtoEvent(ev)) )
-    dispatch_event(event);
-  rewindAnswerStack(mark, NIL);
+  if ( !sdl_live_resize_handled(ev) ) /* already done from the modal loop */
+  { markAnswerStack(mark);		/* CtoEvent() creates answer objects */
+    if ( (event=CtoEvent(ev)) )
+      dispatch_event(event);
+    rewindAnswerStack(mark, NIL);
+  }
   pceMTUnlock();
 }
 

@@ -792,6 +792,107 @@ ws_redraw_changed_frames(void)
 }
 
 
+		 /*******************************
+		 *	    LIVE RESIZE		*
+		 *******************************/
+
+/* On MacOS and Windows the OS runs a modal event loop while the user
+ * drags a window border (Cocoa's resize tracking loop, Win32's
+ * WM_ENTERSIZEMOVE loop).  Our main loop is blocked inside
+ * SDL_WaitEvent() (see ws_dispatch()) for the whole drag, so the
+ * SDL_EVENT_WINDOW_RESIZED and SDL_EVENT_WINDOW_EXPOSED events SDL
+ * generates from inside that loop are queued but not processed: the
+ * window only gets its new content after the user releases the mouse.
+ * MacOS meanwhile stretches the last Metal drawable and Windows pads
+ * with black.  X11 and Wayland have no modal loop, so there resizing
+ * is immediate.
+ *
+ * SDL_AddEventWatch() callbacks run at SDL_PushEvent() time, i.e., on
+ * the main thread from inside the modal loop, which is our only chance
+ * to react.  SDL meets us half way: while a live resize is in progress
+ * it runs a ~60Hz timer calling SDL_OnWindowLiveResizeUpdate(), which
+ * posts SDL_EVENT_WINDOW_EXPOSED for applications that (like us) do not
+ * use the SDL_AppIterate() callback API.
+ *
+ * Note that events handled here are still added to the queue.  We
+ * record the timestamp of the last one we processed in the frame so
+ * that sdl_live_resize_handled() can drop them when the main loop gets
+ * to run again.  Without that, a three second drag ends in a replay of
+ * some 200 full repaints.
+ */
+
+static int in_live_resize = 0;		/* do not recurse */
+
+static bool
+live_resize_event(const SDL_Event *ev)
+{ return ( ev->type == SDL_EVENT_WINDOW_RESIZED ||
+	   ev->type == SDL_EVENT_WINDOW_EXPOSED );
+}
+
+
+static bool SDLCALL
+live_resize_watch(void *closure, SDL_Event *ev)
+{ (void)closure;
+
+  if ( !live_resize_event(ev) ||
+       !SDL_IsMainThread() ||	/* watches may be called from any thread */
+       in_live_resize )
+    return true;
+
+  in_live_resize++;
+  if ( pceMTTryLock() )		/* blocking would freeze the modal loop */
+  { FrameObj fr = wsid_to_frame(ev->window.windowID);
+    WsFrame wfr = fr ? fr->ws_ref : NULL;
+
+    if ( wfr && ws_created_frame(fr) )
+    { AnswerMark mark;
+
+      markAnswerStack(mark);
+      if ( ev->type == SDL_EVENT_WINDOW_RESIZED )
+	sdl_frame_event(ev);	/* update the area and run the tile layout */
+      RedrawDisplayManager(TheDisplayManager());
+      if ( ChangedFrames )
+	deleteChain(ChangedFrames, fr);	/* paint it here and now, rather */
+      ws_draw_frame(fr);		/* than through WM_PAINT on Windows */
+      ws_redraw_changed_frames();	/* other frames, if any */
+      rewindAnswerStack(mark, NIL);
+      wfr->live_ts = ev->common.timestamp;
+    }
+    pceMTUnlock();
+  }
+  in_live_resize--;
+
+  return true;			/* ignored for event watches */
+}
+
+
+void
+sdl_start_live_resize_watch(void)
+{ SDL_AddEventWatch(live_resize_watch, NULL);
+}
+
+
+/**
+ * Did live_resize_watch() already deal with this event?  Called from
+ * the normal dispatch loop with the xpce lock held.
+ *
+ * @return true if the event may be discarded.
+ */
+
+bool
+sdl_live_resize_handled(const SDL_Event *ev)
+{ if ( live_resize_event(ev) )
+  { FrameObj fr = wsid_to_frame(ev->window.windowID);
+    WsFrame wfr = fr ? fr->ws_ref : NULL;
+
+    if ( wfr && wfr->live_ts && ev->common.timestamp <= wfr->live_ts )
+      return true;
+  }
+
+  return false;
+}
+
+
 /**
  * @see https://wiki.libsdl.org/SDL3/SDL_WindowEvent
  */

@@ -42,6 +42,7 @@ typedef struct
   SDL_WindowID  ws_id;		/* Integer identifier for the event */
   Uint64	 flash_end_ms;	/* SDL_GetTicks() deadline; 0 = not flashing */
   SDL_FRect	 flash_rect;	/* overlay area (renderer coords); zero = full frame */
+  Uint64	 live_ts;	/* timestamp of last live-resize event handled */
 #ifdef __WINDOWS__
   HWND		hwnd;		/* Windows handle */
 #endif
@@ -53,6 +54,8 @@ WsFrame sdl_frame(FrameObj fr, bool create);
 bool ws_draw_frame(FrameObj fr);
 Uint32 SDLCALL flash_end_callback(void *userdata, SDL_TimerID id, Uint32 interval);
 bool sdl_frame_event(SDL_Event *ev);
+void sdl_start_live_resize_watch(void);
+bool sdl_live_resize_handled(const SDL_Event *ev);
 void ws_redraw_changed_frames(void);
 bool ws_window_frame_position(Any window, FrameObj fr, float *ox, float *oy);
 status ws_enable_text_input(Graphical gr, BoolObj enable);
