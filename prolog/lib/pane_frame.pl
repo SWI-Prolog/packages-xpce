@@ -800,7 +800,8 @@ update_menu_bar(F, Force:[bool]) :->
         ),
         send(F, slot, menu_key, Key),
         get(F, menu_dialog, MD),
-        send(MD?menu_bar, clear),
+        get(MD, menu_bar, MB),
+        clear_menu_bar(MB),
         ignore(send(MD, clear_tool_bar)),
         ignore(send(F, fill_menu_bar, MD)),
         (   get(F, current_pane, Pane),
@@ -811,6 +812,16 @@ update_menu_bar(F, Force:[bool]) :->
         send(F?menu_extensions, for_all, message(@arg1, forward, MD)),
         ignore(send(MD, lay_out_bars))
     ).
+
+%       Taking a popup off the bar does not free it: its items refer to it.
+%       Everything that fills the bar makes its popups anew on every
+%       rebuild, so the old ones are freed.
+
+clear_menu_bar(MB) :-
+    get(MB?members, copy, Popups),
+    send(MB, clear),
+    send(Popups, for_all, message(@arg1, free)),
+    send(Popups, done).
 
 %       A menu somebody added at runtime -- see Epilog's win_insert_menu/2
 %       -- cannot simply be put on the bar: the next pane switch would

@@ -500,6 +500,46 @@ test(a_popup_of_the_bar_leaves_its_items_alone, true(Accelerators == [@default])
     get(Item, accelerator, A),
     Accelerators = [A].
 
+%       The bar is rebuilt from new popups.  Taking the old ones off the
+%       bar did not free them: their items refer to them.  A pull-right
+%       is freed with the item that owns it.
+%
+%       `pane_popup ->append' hands the items of a menu to Prolog, and a
+%       Prolog reference keeps an item alive until the atom garbage
+%       collector drops it.  So we reclaim before counting.  That
+%       collector scans the stacks conservatively and may keep a few, so
+%       the bar may grow by less than one rebuild: without freeing the
+%       old popups five rebuilds leave some forty menu objects behind.
+
+:- public tp_pull_right/1.
+
+tp_pull_right(MD) :-
+    get(MD, popup, tools, @on, Tools),
+    send(Tools, append, popup(more)),
+    send(Tools?members?tail?popup, append, menu_item(deeper)).
+
+live_menus(N) :-
+    garbage_collect,
+    garbage_collect_atoms,
+    ignore(get(@pce, version, _)),      % drains what the collector freed
+    garbage_collect_atoms,              % what the drain freed may free more
+    ignore(get(@pce, version, _)),
+    aggregate_all(sum(Live),
+                  ( member(Class, [menu_item, popup]),
+                    get(class(Class), no_created, @on, Created),
+                    get(class(Class), no_freed, @on, Freed),
+                    Live is Created-Freed
+                  ),
+                  N).
+
+test(rebuilding_frees_the_old_menus, true(Grown < 8)) :-
+    frame(F, _App, _P),
+    send(F, extend_menu_bar, message(@prolog, tp_pull_right, @arg1)),
+    live_menus(N0),
+    forall(between(1, 5, _), send(F, update_menu_bar, @on)),
+    live_menus(N1),
+    Grown is N1-N0.
+
 :- end_tests(pane_frame_menu_bar).
 
 %       A plain menu_bar, to say what ->append and ->delete owe the two
