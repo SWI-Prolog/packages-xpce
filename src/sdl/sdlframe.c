@@ -727,7 +727,7 @@ ws_reset_textures(void)
 bool
 ws_draw_frame(FrameObj fr)
 { if ( !ws_created_frame(fr) )
-    false;
+    return false;
 
   WsFrame wfr = fr->ws_ref;
   ASSERT_SDL_MAIN();
