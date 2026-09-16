@@ -220,15 +220,19 @@ getUnresolvedTypesPce(Pce pce)
   for_hash_table(TypeTable, s,
 		 { Type t = s->value;
 		   if ( t->kind == NAME_class )
-		   { Class class = t->context;
-		     if ( isNil(class->super_class) )
-		       appendChain(ch, t);
-		     if ( isName(class) )
-		     { if ( (class = getMemberHashTable(classTable, class)) )
-			 assign(t, context, class);
-		       else
-			 appendChain(ch, t);
+		   { Any ctx = t->context;	/* a class or its name */
+		     Class class;
+
+		     if ( isName(ctx) &&
+			  (class = getMemberHashTable(classTable, ctx)) &&
+			  instanceOfObject(class, ClassClass) )
+		     { assign(t, context, class);
+		       ctx = class;
 		     }
+
+		     if ( isName(ctx) ||
+			  isNil(((Class)ctx)->super_class) )
+		       appendChain(ch, t);
 		   }
 		 });
 

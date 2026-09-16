@@ -46,6 +46,7 @@ fontName(Name family, Name style, Int points, Name weight)
 { string s;
   Any av[4];
   Name rc;
+  StringObj fmt;
 
   if ( (weight == NAME_normal || weight == toInt(400)) ||
        (style == NAME_bold && (weight == NAME_bold || weight == toInt(700))) )
@@ -53,15 +54,18 @@ fontName(Name family, Name style, Int points, Name weight)
     av[1] = style;
     av[2] = points;
 
-    str_writefv(&s, (CharArray)CtoTempString("%s_%s_%.2f"), 3, av);
+    fmt = CtoTempString("%s_%s_%.2f");
+    str_writefv(&s, (CharArray)fmt, 3, av);
   } else
   { av[0] = family;
     av[1] = weight;
     av[2] = style;
     av[3] = points;
 
-    str_writefv(&s, (CharArray)CtoTempString("%s_%s_%s_%.2f"), 4, av);
+    fmt = CtoTempString("%s_%s_%s_%.2f");
+    str_writefv(&s, (CharArray)fmt, 4, av);
   }
+  considerPreserveObject(fmt);
 
   str_downcase(&s, 0, s.s_size);
   str_translate(&s, ' ', '_');
