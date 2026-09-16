@@ -2,8 +2,8 @@
 
     Author:        Jan Wielemaker and Anjo Anjewierden
     E-mail:        jan@swi-prolog.org
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1995-2025, University of Amsterdam
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1995-2026, University of Amsterdam
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -41,6 +41,7 @@ initialiseDisplayManager(DisplayManager dm)
 { assign(dm, members, newObject(ClassChain, EAV));
   assign(dm, focus_message, NIL);
 
+  obtainClassVariablesObject(dm);
   protectObject(dm);
 
   succeed;
@@ -164,8 +165,6 @@ redrawDisplayManager(DisplayManager dm)
 
   if ( ChangedWindows && !emptyChain(ChangedWindows) )
   { PceWindow sw = WindowOfLastEvent();
-
-    obtainClassVariablesObject(dm);
 
     TestBreakDraw(dm);
     if ( sw && memberChain(ChangedWindows, sw) )

@@ -119,6 +119,8 @@ imageBitmap(BitmapObj bm, Image image)
 
     CHANGING_GRAPHICAL(bm,
       addRefObj(bm);			/* avoid drop-out */
+      if ( notNil(bm->image) && bm->image->bitmap == bm )
+	assign(bm->image, bitmap, NIL);
       assign(bm, image, image);
       sizeArea(bm->area, image->size);
       if ( image->access == NAME_both && isNil(image->bitmap) )

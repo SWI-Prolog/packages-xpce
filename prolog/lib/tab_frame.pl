@@ -228,8 +228,7 @@ tile_windows(Tile, Windows) :-
     ->  chain_list(Members, List),
         maplist(tile_windows, List, Nested),
         append(Nested, Windows)
-    ;   get(Tile, object, Object),
-        user_window(Object, Window),
+    ;   get(Tile?object, user_window, Window),
         Windows = [Window]
     ).
 
@@ -584,8 +583,7 @@ tile_tree(Tile, Tree) :-
     maplist(tile_share(Total), List, Extents, Shares),
     Tree =.. [Orientation, Shares].
 tile_tree(Tile, Window) :-
-    get(Tile, object, Object),
-    user_window(Object, Window).
+    get(Tile?object, user_window, Window).
 
 tile_share(Total, Tile, Extent, Share-Sub) :-
     (   Total > 0
@@ -975,8 +973,15 @@ arranged(TF) :->
     ;   true
     ).
 
-drop(TF, Window:window, Pos:point) :->
+%       The argument is typed `object' rather than `window': a
+%       drag_and_drop_gesture offers anything dragged over a pane to the
+%       nearest container with a ->drop, converting it to the type asked
+%       for, and a graphical converts to its <-window.  A directory dragged
+%       out of a tree would be taken for the tree's pane.
+
+drop(TF, Window:object, Pos:point) :->
     "Put Window beside the window Pos is over"::
+    send(Window, instance_of, window),
     send(TF, preview_drop, @nil),
     (   drop_zone(TF, Pos, Target, Where),
         Target \== Window
@@ -991,10 +996,11 @@ drop(TF, Window:window, Pos:point) :->
     ;   true
     ).
 
-preview_drop(TF, Window:window*, Pos:[point]) :->
+preview_drop(TF, Window:object*, Pos:[point]) :->
     "Outline the half of the receiver Window would take"::
     send(TF, clear_drop_feedback),
     (   Window \== @nil,
+        send(Window, instance_of, window),
         Pos \== @default,
         drop_zone(TF, Pos, Target, Where),
         Target \== Window
@@ -1064,11 +1070,12 @@ feedback_zone(Target, Area, Target, Area).
 
 sub_windows(W, Windows) :-
     get(W, subwindows, Chain),
-    Chain \== @nil,
-    !,
-    chain_list(Chain, Subs),
-    findall(Sub, (member(S, Subs), user_window(S, Sub)), Windows).
-sub_windows(_, []).
+    (   Chain == @nil
+    ->  Windows = []
+    ;   get(Chain, map, @arg1?user_window, WindowChain),
+        chain_list(WindowChain, Windows),
+        free(WindowChain)
+    ).
 
 %!  overlap(+A, +B, -Overlap) is semidet.
 %
@@ -1087,8 +1094,7 @@ clear_drop_feedback(TF) :->
     (   get(TF, slot, drop_feedback, Boxes),
         Boxes \== @nil
     ->  send(TF, slot, drop_feedback, @nil),
-        chain_list(Boxes, List),
-        forall(member(Box, List), free(Box)),
+        send(Boxes, for_all, message(@arg1, free)),
         free(Boxes)
     ;   true
     ).
@@ -1241,31 +1247,18 @@ release_focus(Window) :-
     ;   true
     ).
 
-%!  user_window(+Graphical, -Window) is det.
-%
-%   Inverse of decoration/2.
-
-user_window(W0, W) :-
-    (   send(W0, instance_of, window_decorator),
-        get(W0, window, W1),
-        W1 \== @nil
-    ->  W = W1
-    ;   W = W0
-    ).
-
 %!  window_list(+TabFrame, -Windows) is det.
 %
 %   The windows TabFrame holds, as a Prolog list.
 
 window_list(TF, Windows) :-
     get(TF, graphicals, Graphicals),
-    chain_list(Graphicals, List),
-    findall(W,
-            ( member(Gr, List),
-              send(Gr, instance_of, window),
-              user_window(Gr, W)
-            ),
-            Windows).
+    new(Ch, chain),
+    send(Graphicals, for_all,
+         if(message(@arg1, instance_of, window),
+            message(Ch, append, @arg1?user_window))),
+    chain_list(Ch, Windows),
+    free(Ch).
 
 %!  drop_zone(+TabFrame, +Pos, -Target, -Where) is semidet.
 %

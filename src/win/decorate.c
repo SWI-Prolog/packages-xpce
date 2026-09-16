@@ -358,6 +358,14 @@ getLabelWindowDecorator(WindowDecorator dw)
   fail;
 }
 
+static PceWindow
+getUserWindowWindowDecorator(WindowDecorator dw)
+{ if ( notNil(dw->window) )
+    answer(dw->window);
+
+  answer((PceWindow) dw);
+}
+
 
 		 /*******************************
 		 *	 CLASS DECLARATION	*
@@ -429,8 +437,12 @@ static senddecl send_windowDecorator[] =
 static getdecl get_windowDecorator[] =
 { GM(NAME_label, 0, "char_array", NULL, getLabelWindowDecorator,
      NAME_label, "Currently displayed label"),
-  GM(NAME_scrollbars, 0, "{none,horizontal,vertical,both}", NULL, getScrollbarsWindowDecorator,
-     NAME_scroll, "Available scrollbars")
+  GM(NAME_scrollbars, 0, "{none,horizontal,vertical,both}", NULL,
+     getScrollbarsWindowDecorator,
+     NAME_scroll, "Available scrollbars"),
+  GM(NAME_userWindow, 0, "window", NULL,
+     getUserWindowWindowDecorator,
+     NAME_client, "The window decorated or myself")
 };
 
 /* Resources */

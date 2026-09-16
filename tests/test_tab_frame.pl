@@ -1388,6 +1388,25 @@ test(dropping_from_another_tab_moves_the_window) :-
     \+ object(TF2),                    % the tab it left was empty
     get(TW?tabs, size, 1).
 
+%   What a drag_and_drop_gesture offers is converted to the type ->drop
+%   asks for, and a graphical converts to its <-window.  Something dragged
+%   out of a pane is not that pane being moved.
+
+test(a_graphical_of_a_pane_is_not_previewed_as_the_pane) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, horizontally),
+    send(P2, display, new(T, text(dragged))),
+    at(P1, right, Pos),
+    send(TF, preview_drop, T, Pos),
+    get(TF, drop_feedback, @nil).
+
+test(a_graphical_of_a_pane_does_not_move_the_pane, [fail]) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, horizontally),
+    send(P2, display, new(T, text(dragged))),
+    at(P1, right, Pos),
+    send(TF, drop, T, Pos).
+
 test(dropping_a_window_on_itself_does_nothing) :-
     tabbed(_TW, TF, P1),
     send(TF, split, new(P2, picture), P1, horizontally),

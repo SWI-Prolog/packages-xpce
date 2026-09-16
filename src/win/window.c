@@ -2252,6 +2252,10 @@ getFrameWindow(PceWindow sw, BoolObj create)
   fail;
 }
 
+static PceWindow
+getUserWindowWindow(PceWindow w)
+{ answer(w);
+}
 
 static status
 mergeFramesWindow(PceWindow w1, PceWindow w2)
@@ -2846,6 +2850,8 @@ static getdecl get_window[] =
      DEFAULT, "Tile of window (create if not there)"),
   GM(NAME_tileManager, 0, "object", NULL, getTileManagerWindow,
      NAME_layout, "Frame or device managing my tile"),
+  GM(NAME_userWindow, 0, "window", NULL, getUserWindowWindow,
+     NAME_client, "Self.  Refined in window_decorator"),
   GM(NAME_foreground, 0, "colour", NULL, getForegroundWindow,
      NAME_appearance, "Get foreground colour"),
   GM(NAME_image, 0, "image", NULL, getImageWindow,
