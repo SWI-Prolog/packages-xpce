@@ -1434,6 +1434,10 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   { seq = final_seq(buf, sizeof(buf), 'C', mod, b->app_escape);
   } else if ( ev->id == NAME_cursorLeft )
   { seq = final_seq(buf, sizeof(buf), 'D', mod, b->app_escape);
+  } else if ( ev->id == NAME_end )	/* unmodified: ->cursor_end */
+  { seq = final_seq(buf, sizeof(buf), 'F', mod, b->app_escape);
+  } else if ( ev->id == NAME_cursorHome ) /* unmodified: ->cursor_home */
+  { seq = final_seq(buf, sizeof(buf), 'H', mod, b->app_escape);
   } else if ( ev->id == NAME_delete )
   { seq = tilde_seq(buf, sizeof(buf), 3, mod);
   } else if ( (fn=function_key_number(ev->id)) )
@@ -2912,16 +2916,18 @@ cutTerminalImage(TerminalImage ti)
 
 static status
 cursorEndTerminalImage(TerminalImage ti)
-{ RlcData b = ti->data;
-  const char *seq = b->app_escape ? S_ESC"OF" : S_ESC"[F";
+{ char buf[16];
+  const char *seq = final_seq(buf, sizeof(buf), 'F', 0, ti->data->app_escape);
+
   rlc_send(ti->data, seq, strlen(seq));
   succeed;
 }
 
 static status
 cursorHomeTerminalImage(TerminalImage ti)
-{ RlcData b = ti->data;
-  const char *seq = b->app_escape ? S_ESC"OH" : S_ESC"[H";
+{ char buf[16];
+  const char *seq = final_seq(buf, sizeof(buf), 'H', 0, ti->data->app_escape);
+
   rlc_send(ti->data, seq, strlen(seq));
   succeed;
 }

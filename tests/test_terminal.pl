@@ -489,15 +489,15 @@ term_move(terminal(_, xpce(_, TI)), Col, Row) :-
 %
 %   Turn the wheel Ticks notches over cell (Col,Row), positive being
 %   away from the user.  Buttons is the modifier mask.  Unlike a button
-%   event, a wheel event carries how far it turned as an attribute
-%   rather than as an initialisation argument, 15 degrees to the notch;
-%   see mapWheelMouseEvent() in packages/xpce/src/evt/event.c.
+%   event, a wheel event carries how far it turned in its <-rotation
+%   slot rather than as an initialisation argument, 15 degrees to the
+%   notch; see mapWheelMouseEvent() in packages/xpce/src/evt/event.c.
 
 term_wheel(terminal(_, xpce(_, TI)), Col, Row, Ticks, Buttons) :-
     cell_pixel(TI, Col, Row, X, Y),
     Rotation is Ticks*15,
     new(Ev, event(wheel, TI, X, Y, Buttons, 0)),
-    send(Ev, attribute, rotation, Rotation),
+    send(Ev, slot, rotation, Rotation),
     send(TI, event, Ev),
     drive(0.2).
 
@@ -6222,6 +6222,19 @@ test(modified_cursor_keys,
     hit(T, cursor_up, Control),
     hit(T, cursor_left, Shift),
     assertion(client_reads(T, '^[[1;5A^[[1;2D')).
+
+test(modified_home_and_end_keys,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    %  Only the plain keys have a binding (->cursor_end, ->cursor_home);
+    %  with a modifier they used to fall through and were dropped.
+    button_control(Control),
+    button_shift(Shift),
+    hit(T, end),
+    hit(T, end, Control),
+    hit(T, cursor_home, Shift),
+    assertion(client_reads(T, '^[[F^[[1;5F^[[1;2H')).
 
 test(application_mode_leaves_modifiers_alone,
      [ setup(fkeys_begin(T)),
