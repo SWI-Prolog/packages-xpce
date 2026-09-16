@@ -68,6 +68,20 @@ unlinkMenuItem(MenuItem mi)
 { if ( notNil(mi->menu) )
     deleteMenu(mi->menu, mi);
 
+  /* A pull-right whose context is this item is ours.  Its own items
+   * refer to it, so it would survive when we let go of it.  Its context
+   * is @nil if unlinkMenu() broke the cycle between it and us.
+   */
+  if ( notNil(mi->popup) &&
+       (mi->popup->context == (Any)mi || isNil(mi->popup->context)) )
+  { PopupObj p = mi->popup;
+
+    addCodeReference(p);
+    assign(mi, popup, NIL);
+    freeObject(p);
+    delCodeReference(p);
+  }
+
   succeed;
 }
 

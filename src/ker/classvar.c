@@ -377,6 +377,33 @@ getClassVariableClass(Class class, Name name)
 }
 
 
+/* As getClassVariableClass(), but without side effects: it neither fills
+ * the class_variable_table cache nor creates sub-class variables.  Used
+ * by Object->_check, which must not modify the object base it traverses.
+ */
+
+int
+hasClassVariableClass(Class class, Name name)
+{ for( ; notNil(class); class = class->super_class )
+  { Cell cell;
+
+    if ( instanceOfObject(class->class_variable_table, ClassHashTable) &&
+	 getMemberHashTable(class->class_variable_table, name) )
+      return TRUE;
+    if ( instanceOfObject(class->class_variables, ClassChain) )
+    { for_cell(cell, class->class_variables)
+      { ClassVariable cv = cell->value;
+
+	if ( cv->name == name )
+	  return TRUE;
+      }
+    }
+  }
+
+  return FALSE;
+}
+
+
 status
 classVariableValueClass(Class cl, Name name, Any val)
 { ClassVariable cv;

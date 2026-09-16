@@ -118,6 +118,8 @@ makeClassBool(Class class)
   cloneStyleClass(class, NAME_none);
 
   ON->class = OFF->class = class;
+  createdObject(ON,  NAME_new);
+  createdObject(OFF, NAME_new);
   newAssoc(NAME_on,  ON);
   newAssoc(NAME_off, OFF);
 

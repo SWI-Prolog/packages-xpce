@@ -719,6 +719,11 @@ pceExecuteGoal(PceGoal g)
   { status rval;
     Method m = g->implementation;
     void *prof_node;
+    Any receiver = g->receiver;
+    bool protect = isObject(receiver);
+
+    if ( protect )			/* the method may drop the last */
+      addCodeReference(receiver);	/* reference to its receiver */
 
     DEBUGGER(pcePrintEnterGoal(g));
     if ( PceProfile.call )
@@ -1000,6 +1005,8 @@ out:
     if ( prof_node && PceProfile.exit )
       (*PceProfile.exit)(prof_node);
     DEBUGGER(pcePrintReturnGoal(g, rval));
+    if ( protect )
+      delCodeReference(receiver);
     return rval;
 					/* end of method-implemtation */
 
@@ -1433,16 +1440,27 @@ qadSendv(Any r, Name selector, int ac, Any *av)
 
   if ( instanceOfObject(implementation, ClassSendMethod) &&
        (f=implementation->function) &&
-       offDFlag(implementation, D_CXX|D_TRACE|D_BREAK))
-  { switch(ac)
-    { case 0: return (*(SendFunc0)f)(r);
-      case 1: return (*(SendFunc1)f)(r, av[0]);
-      case 2: return (*(SendFunc2)f)(r, av[0],av[1]);
-      case 3: return (*(SendFunc3)f)(r, av[0],av[1],av[2]);
-      case 4: return (*(SendFunc4)f)(r, av[0],av[1],av[2],av[3]);
-      case 5: return (*(SendFunc5)f)(r, av[0],av[1],av[2],av[3],av[4]);
-      case 6: return (*(SendFunc6)f)(r, av[0],av[1],av[2],av[3],av[4],av[5]);
+       offDFlag(implementation, D_CXX|D_TRACE|D_BREAK) &&
+       ac <= 6 )
+  { status rval = FAIL;
+    bool obj = isObject(r);
+
+    if ( obj )
+      addCodeReference(r);		/* the method may drop the last */
+    switch(ac)				/* reference to its receiver */
+    { case 0: rval = (*(SendFunc0)f)(r); break;
+      case 1: rval = (*(SendFunc1)f)(r, av[0]); break;
+      case 2: rval = (*(SendFunc2)f)(r, av[0],av[1]); break;
+      case 3: rval = (*(SendFunc3)f)(r, av[0],av[1],av[2]); break;
+      case 4: rval = (*(SendFunc4)f)(r, av[0],av[1],av[2],av[3]); break;
+      case 5: rval = (*(SendFunc5)f)(r, av[0],av[1],av[2],av[3],av[4]); break;
+      case 6: rval = (*(SendFunc6)f)(r, av[0],av[1],av[2],av[3],av[4],av[5]);
+	      break;
     }
+    if ( obj )
+      delCodeReference(r);
+
+    return rval;
   }
 
   return vm_send(r, selector, classOfObject(r), ac, av);

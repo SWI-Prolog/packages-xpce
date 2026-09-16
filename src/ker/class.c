@@ -42,7 +42,7 @@ static Variable	getLocaliseInstanceVariableClass(Class class, Name name);
 static Any	bindMethod(Class class, Name code, Name selector);
 static status	lazyBindingClass(Class class, Name which, BoolObj val);
 
-#define CLASS_PCE_SLOTS 41
+#define CLASS_PCE_SLOTS 42
 
 #define InstanceSize(c)	offsetof(struct instance, slots[valInt((c)->slots)])
 #define SlotsClass(c) \
@@ -68,9 +68,10 @@ resetSlotsClass(Class class, Name name)
   class->super_class            = NIL;
   class->sub_classes            = NIL;
 
-  assign(class, name,	    name);
-  assign(class, no_created, ZERO);
-  assign(class, no_freed,   ZERO);
+  assign(class, name,	      name);
+  assign(class, no_created,   ZERO);
+  assign(class, no_freed,     ZERO);
+  assign(class, no_reachable, ZERO);
 }
 
 
@@ -431,6 +432,7 @@ _bootClass(Name name, Name super_name,
     assign(cl, resolve_method_message, NIL);
   }
 
+  createdObject(cl, NAME_new);		/* defineClass() skips boot classes */
   DEBUG_BOOT(Cprintf("ok\n"));
 
   return cl;
@@ -607,8 +609,9 @@ initialiseClass(Class class, Name name, Class super)
   realiseClass(super);
   fill_slots_class(class, super);
   assign(class, creator, inBoot ? NAME_builtIn : NAME_host);
-  assign(class, no_created, ZERO);
-  assign(class, no_freed,   ZERO);
+  assign(class, no_created,   ZERO);
+  assign(class, no_freed,     ZERO);
+  assign(class, no_reachable, ZERO);
   numberTreeClass(ClassObject, 0);
 
   succeed;
@@ -1871,29 +1874,36 @@ deleteGetMethodClass(Class class, Name selector)
 }
 
 
-Int
-getNoCreatedClass(Class class, BoolObj subtoo)
+/* Sum the Int slot at `offset`, optionally including all sub-classes */
+
+static Int
+getCountClass(Class class, BoolObj subtoo, size_t offset)
 { Cell cell;
-  Int rval = class->no_created;
+  Int rval = *(Int *)((char *)class + offset);
 
   if ( notNil(class->sub_classes) && subtoo == ON )
     for_cell(cell, class->sub_classes)
-      rval = add(rval, getNoCreatedClass(cell->value, subtoo));
+      rval = add(rval, getCountClass(cell->value, subtoo, offset));
 
   answer(rval);
 }
 
 
 Int
+getNoCreatedClass(Class class, BoolObj subtoo)
+{ answer(getCountClass(class, subtoo, offsetof(struct class, no_created)));
+}
+
+
+Int
 getNoFreedClass(Class class, BoolObj subtoo)
-{ Cell cell;
-  Int rval = class->no_freed;
+{ answer(getCountClass(class, subtoo, offsetof(struct class, no_freed)));
+}
 
-  if ( notNil(class->sub_classes) && subtoo == ON )
-    for_cell(cell, class->sub_classes)
-      rval = add(rval, getNoFreedClass(cell->value, subtoo));
 
-  answer(rval);
+static Int
+getNoReachableClass(Class class, BoolObj subtoo)
+{ answer(getCountClass(class, subtoo, offsetof(struct class, no_reachable)));
 }
 
 
@@ -2271,6 +2281,8 @@ makeClassClass(Class class)
 	     "Number of instances created");
   localClass(class, NAME_noFreed, NAME_statistics, "int", NAME_none,
 	     "Number of instances freed");
+  localClass(class, NAME_noReachable, NAME_statistics, "int", NAME_none,
+	     "Number of instances reached by the last recursive ->_check");
   localClass(class, NAME_solid, NAME_repaint, "bool", NAME_none,
 	     "Graphicals: image affects ALL pixels");
   localClass(class, NAME_selectionStyle, NAME_selection,
@@ -2517,6 +2529,9 @@ makeClassClass(Class class)
   getMethod(class, NAME_noCreated, NAME_statistics, "int", 1, "sub_too=[bool]",
 	    "How many instances were created",
 	    getNoCreatedClass);
+  getMethod(class, NAME_noReachable, NAME_statistics, "int", 1, "sub_too=[bool]",
+	    "How many instances were reached by the last recursive ->_check",
+	    getNoReachableClass);
   getMethod(class, NAME_noFreed, NAME_statistics, "int", 1, "sub_too=[bool]",
 	    "How many instances were freed",
 	    getNoFreedClass);

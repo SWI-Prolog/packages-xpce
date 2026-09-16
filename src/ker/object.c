@@ -97,7 +97,12 @@ delRefObject(Any from, Any to)
     freeableObj(to);
   } else
   { delRefObj(to);
-    checkDeferredUnalloc(to);
+    if ( isFreedObj(to) )
+    { checkDeferredUnalloc(to);		/* may unalloc `to` */
+    } else if ( noRefsObj(to) &&	/* last (code) reference: free it */
+		!onFlag(to, F_LOCKED|F_PROTECTED|F_ANSWER) )
+    { freeObject(to);
+    }
   }
 }
 
@@ -2285,9 +2290,14 @@ print_check_step(check_path *path)
 }
 
 
+static bool check_silent = false;	/* ->_check(silent := @on) */
+
 static void
 print_check_path(check_path *path)
-{ if ( path && path->parent )
+{ if ( check_silent )
+    return;
+
+  if ( path && path->parent )
   { Cprintf("\tPath from checked object:\n");
     print_check_step(path);
   }
@@ -2389,7 +2399,7 @@ check_object(Any obj, BoolObj recursive, HashTable done, int errs,
       }
 
       if ( isClassDefault(value) &&
-	   getClassVariableClass(class, var->name) )
+	   hasClassVariableClass(class, var->name) )
 	continue;
       if ( isClassDefault(value) &&
 	   instanceOfObject(obj, ClassClass) &&
@@ -2413,6 +2423,10 @@ check_object(Any obj, BoolObj recursive, HashTable done, int errs,
 	  { errorPce(obj, NAME_badSlotValue, var, CtoName(pp(value)));
 	    print_check_path(&here);
 	    errs++;
+	  } else if ( var->name == NAME_instances &&
+		      instanceOfObject(obj, ClassClass) )
+	  { if ( !getMemberHashTable(done, value) ) /* recorded instances */
+	      appendHashTable(done, value, NIL);	/* are not reachable */
 	  } else
 	    Test(value);
 	}
@@ -2520,32 +2534,76 @@ check_object(Any obj, BoolObj recursive, HashTable done, int errs,
 }
 
 
+/* A recursive check sets class<-no_reachable to the number of instances
+ * reached.  If `checked` is given, it is used to record the reached
+ * objects and left to the caller.  It should be empty and not refer to
+ * its keys.
+ */
+
 status
-CheckObject(Any obj, BoolObj recursive)
+CheckObject(Any obj, BoolObj recursive, HashTable checked, BoolObj silent)
 { HashTable done = NIL;
+  bool quiet = (silent == ON);
+  bool old_silent = check_silent;
   int errs;
 
   if ( isDefault(recursive) )
     recursive = ON;
 
+  if ( quiet )				/* walk it, but say nothing and */
+  { check_silent = true;		/* do not fail on what we find */
+    catchErrorPce(PCE, DEFAULT);
+  }
+
   if ( recursive == ON )
   { checkNames(TRUE);
-    done = createHashTable(toInt(200), NAME_none);
+    done = isDefault(checked)
+		? newObject(ClassHashTable, toInt(200), NAME_none, EAV)
+		: checked;
+    for_hash_table(classTable, s,
+		   { if ( instanceOfObject(s->value, ClassClass) )
+		       assign((Class)s->value, no_reachable, ZERO);
+		   });
   }
 
   errs = check_object(obj, recursive, done, 0, NULL);
 
   if ( notNil(done) )
-  { errorPce(obj, NAME_checkedObjects, done->size);
-    freeHashTable(done);
+  { for_hash_table(done, s,
+		   { if ( isProperObject(s->name) )
+		     { Class class = classOfObject(s->name);
+
+		       incrInt(class->no_reachable);
+		     }
+		   });
+    errorPce(obj, NAME_checkedObjects, done->size);
+    if ( done != checked )
+      freeObject(done);
+  }
+
+  if ( quiet )
+  { catchPopPce(PCE);
+    check_silent = old_silent;
+    succeed;
   }
 
   return errs == 0;
 }
 
 
+/* Walk the references held by obj: slots, chain cells, vector elements
+ * and hash table entries, calling func(holder, kind, where, value,
+ * closure) for each.  A hash table entry is reported twice: as kind
+ * `key` (where is the key, value the value) and as kind `name` (where
+ * is the value, value the key).
+ */
+
+typedef void (*ReferenceFunc)(Any holder, Name kind, Any where, Any value,
+			      void *closure);
+
 static status
-for_slot_reference_object(Any obj, Code msg, BoolObj recursive, HashTable done)
+for_slot_reference_object(Any obj, BoolObj recursive, HashTable done,
+			  ReferenceFunc func, void *closure)
 { Instance inst = obj;
   Class class;
   int slots;
@@ -2575,12 +2633,11 @@ for_slot_reference_object(Any obj, Code msg, BoolObj recursive, HashTable done)
 	continue;
       }
 
-      if ( isDefault(value) && getClassVariableClass(class, var->name) )
-	value = getGetVariable(var, inst);
-
-      forwardCode(msg, inst, NAME_slot, var->name, value, EAV);
-      if ( recursive == ON && isObject(value) )
-	for_slot_reference_object(value, msg, recursive, done);
+      (*func)(inst, NAME_slot, var->name, value, closure);
+      if ( recursive == ON && isObject(value) &&
+	   !(var->name == NAME_instances &&	/* recorded instances are */
+	     instanceOfObject(obj, ClassClass)) ) /* not held by the class */
+	for_slot_reference_object(value, recursive, done, func, closure);
     }
   }
 
@@ -2589,28 +2646,31 @@ for_slot_reference_object(Any obj, Code msg, BoolObj recursive, HashTable done)
     int n = 1;
 
     for_cell(cell, (Chain) obj)
-    { forwardCode(msg, obj, NAME_cell, toInt(n), cell->value, EAV);
+    { (*func)(obj, NAME_cell, toInt(n), cell->value, closure);
 
       if ( recursive == ON && isObject(cell->value) )
-	for_slot_reference_object(cell->value, msg, recursive, done);
+	for_slot_reference_object(cell->value, recursive, done,
+				  func, closure);
       n++;
     }
   } else if ( instanceOfObject(obj, ClassVector) )
   { for_vector((Vector) obj, Any value,
-	       forwardCode(msg, NAME_element, obj, toInt(_iv), value, EAV);
+	       (*func)(obj, NAME_element, toInt(_iv), value, closure);
 	       if ( recursive == ON && isObject(value) )
-		 for_slot_reference_object(value, msg, recursive, done););
+		 for_slot_reference_object(value, recursive, done,
+					   func, closure););
   } else if ( instanceOfObject(obj, ClassHashTable) )
   { for_hash_table((HashTable) obj, s,
-		   { forwardCode(msg, obj, NAME_key, s->name, s->value, EAV);
+		   { (*func)(obj, NAME_key, s->name, s->value, closure);
+		     (*func)(obj, NAME_name, s->value, s->name, closure);
 
 		     if ( recursive == ON )
 		     { if ( isObject(s->name) )
-			 for_slot_reference_object(s->name, msg,
-						   recursive, done);
+			 for_slot_reference_object(s->name, recursive, done,
+						   func, closure);
 		       if ( isObject(s->value) )
-			 for_slot_reference_object(s->value, msg,
-						   recursive, done);
+			 for_slot_reference_object(s->value, recursive, done,
+						   func, closure);
 		     }
 		   });
   }
@@ -2619,19 +2679,117 @@ for_slot_reference_object(Any obj, Code msg, BoolObj recursive, HashTable done)
 }
 
 
+/* `done` holds the objects visited by a recursive walk.  It belongs to
+ * the caller: one table serves a whole operation, and the caller knows
+ * that its own table is not a holder of anything it finds.
+ */
+
+static status
+walk_references(Any obj, BoolObj recursive, HashTable done,
+		ReferenceFunc func, void *closure)
+{ return for_slot_reference_object(obj, recursive, done, func, closure);
+}
+
+
+static void
+forward_reference(Any holder, Name kind, Any where, Any value, void *closure)
+{ if ( kind != NAME_name )		/* keys are reported as `key` */
+    forwardCode((Code)closure, holder, kind, where, value, EAV);
+}
+
+
 static status
 forSlotReferenceObject(Any obj, Code msg, BoolObj recursive)
-{ HashTable done = NULL;
+{ HashTable done = NIL;
+  status rc;
 
   if ( isDefault(recursive) )
     recursive = ON;
   if ( recursive == ON )
-    done = createHashTable(toInt(200), NAME_none);
+    done = newObject(ClassHashTable, toInt(200), NAME_none, EAV);
 
-  for_slot_reference_object(obj, msg, recursive, done);
+  rc = walk_references(obj, recursive, done, forward_reference, msg);
 
   if ( notNil(done) )
-    freeHashTable(done);
+    freeObject(done);
+
+  return rc;
+}
+
+
+/* ->_find_holders records the references to the objects in targets in
+ * the hash table result.  It runs no code: running code for an arbitrary
+ * holder is not safe, as a function object is evaluated when passed as
+ * argument and a binding (name := value) is used as a named argument.
+ * Each reference adds 5 entries, keyed 0, 1, ...: holder, kind, where,
+ * target and whether the holder may be used as argument.  Result should
+ * not refer to its values.
+ */
+
+typedef struct
+{ HashTable targets;
+  HashTable result;
+  HashTable done;			/* visited by the recursive walk */
+  intptr_t  count;
+} find_holders_context;
+
+static void
+record_holder(find_holders_context *ctx, Any value)
+{ appendHashTable(ctx->result, toInt(ctx->count++), value);
+}
+
+static void
+find_holder_reference(Any holder, Name kind, Any where, Any value,
+		      void *closure)
+{ find_holders_context *ctx = closure;
+
+  if ( isObject(value) &&
+       getMemberHashTable(ctx->targets, value) &&
+       holder != ctx->targets && holder != ctx->result &&
+       holder != (Any)ctx->done &&
+       !instanceOfObject(holder, ClassVar) )
+  { int plain = !(instanceOfObject(holder, ClassFunction) ||
+		  onFlag(holder, F_ISBINDING) ||
+		  isHostData(holder));
+
+    record_holder(ctx, holder);
+    record_holder(ctx, kind);
+    record_holder(ctx, kind == NAME_key || kind == NAME_name ? NIL : where);
+    record_holder(ctx, value);
+    record_holder(ctx, plain ? ON : OFF);
+  }
+}
+
+static status
+findHoldersObject(Any obj, HashTable targets, HashTable result,
+		  BoolObj recursive, Chain tables)
+{ find_holders_context ctx = { targets, result, NIL, valInt(result->size) };
+
+  if ( isDefault(recursive) )
+    recursive = ON;
+  if ( recursive == ON )
+    ctx.done = newObject(ClassHashTable, toInt(200), NAME_none, EAV);
+
+  walk_references(obj, recursive, ctx.done, find_holder_reference, &ctx);
+
+  if ( notDefault(tables) )		/* the recorded instances */
+  { Cell cell;
+
+    for_cell(cell, tables)
+    { if ( instanceOfObject(cell->value, ClassHashTable) )
+      { for_hash_table((HashTable)cell->value, s,
+		       { if ( s->name != targets && s->name != result &&
+			      s->name != (Any)ctx.done &&
+			      isProperObject(s->name) )
+			   walk_references(s->name, OFF, NIL,
+					   find_holder_reference, &ctx);
+		       });
+      }
+    }
+  }
+
+  if ( notNil(ctx.done) )
+    freeObject(ctx.done);
 
   succeed;
 }
@@ -2810,6 +2968,11 @@ char *T_report[] =
 
 static char *T_forSlotReference[] =
         { "action=code", "recursive=[bool]" };
+static char *T_findHolders[] =
+        { "targets=hash_table", "result=hash_table", "recursive=[bool]",
+	  "instance_tables=[chain]" };
+static char *T_check[] =
+        { "recursive=[bool]", "checked=[hash_table]", "silent=[bool]" };
 static char *T_attribute[] =
         { "attribute|name", "value=[any]" };
 static char *T_error[] =
@@ -2849,6 +3012,8 @@ static senddecl send_object[] =
      NAME_compare, "Test if i'm the same object as the argument"),
   SM(NAME_forSlotReference, 2, T_forSlotReference, forSlotReferenceObject,
      NAME_debugging, "Run code on object-slot-value references"),
+  SM(NAME_FindHolders, 4, T_findHolders, findHoldersObject,
+     NAME_debugging, "Record references to targets in result"),
   SM(NAME_convertLoadedObject, 2, T_convertLoadedObject, convertLoadedObjectObject,
      NAME_file, "Called by File <-object if conversion might be required"),
   SM(NAME_initialiseNewSlot, 1, "new=variable", initialiseNewSlotObject,
@@ -2937,7 +3102,7 @@ static senddecl send_object[] =
   ,
   SM(NAME_inspect, 1, "bool", inspectObject,
      NAME_debugging, "Forward changes via classes' changed_messages"),
-  SM(NAME_Check, 1, "recursive=[bool]", CheckObject,
+  SM(NAME_Check, 3, T_check, CheckObject,
      NAME_debugging, "Check types for all instance-variables of object")
 #endif /*O_RUNTIME*/
 };

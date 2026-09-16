@@ -593,7 +593,10 @@ computeGraphicalsDevice(Device dev)
     ArgVector(array, size);
 
     for(i=0, cell = ch->head; notNil(cell); cell = cell->next)
-      array[i++] = cell->value;
+    { array[i] = cell->value;
+      addCodeReference(array[i]);	/* clearChain() may hold the last */
+      i++;				/* reference to them */
+    }
 
     clearChain(ch);
     for(i=0; i<size; i++)
@@ -603,6 +606,7 @@ computeGraphicalsDevice(Device dev)
       { qadSendv(gr, NAME_compute, 0, NULL);
 	assign(gr, request_compute, NIL);
       }
+      delCodeReference(gr);
     }
   }
 
@@ -900,6 +904,8 @@ eraseDevice(Device dev, Graphical gr)
 { if ( gr->device == dev )
   { PceWindow sw = getWindowGraphical((Graphical) dev);
 
+    addCodeReference(gr);		/* the device may hold the last */
+					/* reference to gr */
     if ( sw )
     { if ( subGraphical(gr, sw->keyboard_focus) )
 	keyboardFocusWindow(sw, NIL);
@@ -919,6 +925,7 @@ eraseDevice(Device dev, Graphical gr)
       GcProtect(dev, deleteChain(dev->graphicals, gr));
     if ( !isFreedObj(gr) )
       qadSendv(gr, NAME_reparent, 0, NULL);
+    delCodeReference(gr);
   }
 
   succeed;

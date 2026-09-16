@@ -1,9 +1,10 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
-    Copyright (c)  1985-2002, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/projects/xpce/
+    Copyright (c)  1985-2026, University of Amsterdam
+			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -537,6 +538,17 @@ getShiftsHashTable(HashTable ht)
 
 #endif /* O_COUNT */
 
+
+/* ->_member: <-member types its key as `any', which excludes host data.
+   This one takes anything, so it can be asked about an arbitrary object.
+*/
+
+static status
+memberHashTable(HashTable ht, Any key)
+{ return getMemberHashTable(ht, key) ? SUCCEED : FAIL;
+}
+
+
 		 /*******************************
 		 *	 CLASS DECLARATION	*
 		 *******************************/
@@ -547,6 +559,8 @@ static char *T_actionAcode_safeADboolD[] =
         { "action=code", "safe=[bool]" };
 static char *T_append[] =
         { "key=any", "value=any" };
+static char *T_Append[] =
+        { "key=any|function", "value=any|function" };
 static char *T_convertOldSlot[] =
         { "name", "any" };
 static char *T_initialise[] =
@@ -574,6 +588,8 @@ static senddecl send_hashTable[] =
      DEFAULT, "Clear table"),
   SM(NAME_append, 2, T_append, appendHashTable,
      NAME_add, "Append association to table"),
+  SM(NAME_Append, 2, T_Append, appendHashTable,
+     NAME_add, "Append association to table (accept functions)"),
   SM(NAME_convertOldSlot, 2, T_convertOldSlot, convertOldSlotHashTable,
      NAME_compatibility, "File <-object conversion"),
   SM(NAME_clear, 0, NULL, clearHashTable,
@@ -595,7 +611,9 @@ static senddecl send_hashTable[] =
   SM(NAME_buckets, 1, "int", bucketsHashTable,
      NAME_storage, "Number of buckets in the table"),
   SM(NAME_empty, 0, NULL, emptyHashTable,
-     NAME_test, "Test if hash_table has no elements")
+     NAME_test, "Test if hash_table has no elements"),
+  SM(NAME_Member, 1, "key=unchecked", memberHashTable,
+     NAME_test, "Test if key is in the table, whatever it is")
 };
 
 /* Get Methods */

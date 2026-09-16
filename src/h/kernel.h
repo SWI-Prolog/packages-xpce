@@ -964,8 +964,8 @@ typedef struct _classdecl
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE
 
-If you  add/delete slots, do  not forget to  change PCE_CLASS_SLOTS in
-pce-class.c
+If you  add/delete slots, do  not forget to  change CLASS_PCE_SLOTS in
+ker/class.c
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 NewClass(class)
@@ -986,6 +986,7 @@ NewClass(class)
   Sheet		features;		/* installed features */
   Int		no_created;		/* how many were created */
   Int		no_freed;		/* how many were freed */
+  Int		no_reachable;		/* reached by last ->_check */
   BoolObj	solid;			/* graphicals: OFF by default */
   Name		selection_style;	/* graphicals: feedback selected */
   Chain		handles;		/* graphicals only: connection pts */

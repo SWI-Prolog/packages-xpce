@@ -58,7 +58,8 @@ test_object_reference :-
                 reference_lifetime,
                 reference_free,
                 reference_as_xref_source,
-                weak_reference
+                weak_reference,
+                free_during_method
               ]).
 
 %!  reclaim is det.
@@ -421,6 +422,26 @@ test(clean_after_free) :-
 :- end_tests(reference_as_xref_source).
 
 
+%  A method may drop the last reference to its receiver.  The click
+%  gesture below destroys its window on the up event.  That frees the box
+%  and with it the gesture, while the gesture still handles the event.
+%  Crashed (use after free) before the receiver of a method was protected
+%  by a code reference.
+
+:- begin_tests(free_during_method).
+
+test(gesture_destroys_its_window) :-
+    new(W, picture),
+    send(W, display, new(B, box(50,50)), point(10,10)),
+    send(B, recogniser,
+         click_gesture(left, '', single, message(W, destroy))),
+    send(event(ms_left_down, W, 20, 20), post, B),
+    send(event(ms_left_up, W, 20, 20), post, B),
+    assertion(\+ object(W)).
+
+:- end_tests(free_during_method).
+
+
 %  A tool that monitors the object base must be able to hold a handle
 %  without extending the object's life.  hash_table(Buckets, none) is that
 %  handle: it creates no reference, so the object stays collectable.
@@ -443,12 +464,16 @@ test(weak_table_does_not_own_its_entries) :-
     freed_points(F1),
     assertion(F1 > F0).
 
+%  T must stay alive: freeing the table frees the point it owns.
+
 test(normal_table_owns_its_entries) :-
     new(T, hash_table),
     freed_points(F0),
     add_point(T),
     garbage_collect, garbage_collect_atoms, ignore(get(@pce, version, _)),
     freed_points(F1),
+    get(T, size, Size),
+    assertion(Size == 1),
     assertion(F1 == F0).
 
 test(weak_table_still_looks_up,

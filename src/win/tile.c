@@ -116,9 +116,11 @@ cleanTile(TileObj t)
       replaceChain(super->members, t, child);
       assign(child, super, super);
     } else
-    { assign(child, super, NIL);
+    { addCodeReference(t);		/* child->super may be the last */
+      assign(child, super, NIL);	/* reference to t */
       assign(child, manager, t->manager);
       freeObject(t);
+      delCodeReference(t);
     }
 
     invalidateCanResizeTile(getRootTile(child));

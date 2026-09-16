@@ -95,6 +95,12 @@ unlinkMenu(Menu m)
     { MenuItem mi = cell->value;
 
       assign(mi, menu, NIL);
+      /* A pull-right of the item refers back to it through <-context.
+       * That cycle keeps the item alive; break it so the item, and with
+       * it the pull-right, is freed.  See unlinkMenuItem().
+       */
+      if ( notNil(mi->popup) && mi->popup->context == (Any)mi )
+	assign(mi->popup, context, NIL);
     }
     clearChain(m->members);
   }

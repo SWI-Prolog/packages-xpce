@@ -275,7 +275,7 @@ COMMON(Any)	getClassVariableValueObject(Any obj, Name name);
 COMMON(status)	obtainClassVariablesObject(Any obj);
 COMMON(status)	convertLoadedObjectObject(Any obj, Int oldversion, Int currentversion);
 COMMON(Any)	getConvertObject(Any ctx, Any x);
-COMMON(status)	CheckObject(Any obj, BoolObj recursive);
+COMMON(status)	CheckObject(Any obj, BoolObj recursive, HashTable checked, BoolObj silent);
 COMMON(status)	errorObjectv(Any obj, Error e, int argc, Any *argv);
 COMMON(Name)	getManIdObject(Any obj);
 COMMON(status)	makeClassObject(Class class);
@@ -382,6 +382,7 @@ COMMON(status)	makeClassVariable(Class class);
 /* /home/jan/src/pl/packages/xpce/src/ker/classvar.c */
 COMMON(Any)	getValueClassVariable(ClassVariable cv);
 COMMON(ClassVariable) getClassVariableClass(Class class, Name name);
+COMMON(int)	hasClassVariableClass(Class class, Name name);
 COMMON(status)	classVariableValueClass(Class cl, Name name, Any val);
 COMMON(Any)	getClassVariableValueClass(Class cl, Name name);
 COMMON(status)	attach_class_variable(Class cl, Name name, const char *type, const char *def, const char *doc);

@@ -168,6 +168,8 @@ static char *T_convertLoadedObject[] =
         { "int", "int" };
 static char *T_sendSuper[] =
         { "selector=name", "argument=unchecked ..." };
+static char *T_check[] =
+        { "recursive=[bool]", "checked=[hash_table]", "silent=[bool]" };
 
 /* Instance Variables */
 
@@ -181,7 +183,7 @@ vardecl var_function[] =
 /* Send Methods */
 
 static senddecl send_function[] =
-{ SM(NAME_Check, 1, "[bool]", CheckObject,
+{ SM(NAME_Check, 3, T_check, CheckObject,
      DEFAULT, "Check obtainer instead of result"),
   SM(NAME_Free, 0, NULL, freeObject,
      DEFAULT, "Free obtainer instead of result"),

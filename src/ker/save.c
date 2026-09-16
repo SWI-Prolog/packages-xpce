@@ -971,7 +971,7 @@ loadObject(IOSTREAM *fd)
 
 		  createdClass(def->class, obj, NAME_loaded);
 
-		  DEBUG(NAME_save, CheckObject(obj, OFF));
+		  DEBUG(NAME_save, CheckObject(obj, OFF, DEFAULT, DEFAULT));
 		  delCodeReference(obj);
 
 		  return obj;
@@ -993,7 +993,7 @@ loadObject(IOSTREAM *fd)
 		    valueSheet(sh, def->name[i], slotValue);
 		  }
 
-		  DEBUG(NAME_save, CheckObject(sh, OFF));
+		  DEBUG(NAME_save, CheckObject(sh, OFF, DEFAULT, DEFAULT));
 		  return sh;
 		}
 	      }
