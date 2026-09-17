@@ -313,6 +313,11 @@ test(quadrants_reach_the_top_of_their_cell,
              assertion(solid(Column))
            )).
 
+%       Depends on the fonts installed: with only DejaVu (as on a
+%       Launchpad builder) U+23BF has no glyph at all and the missing-glyph
+%       box that is drawn instead crosses the cell boundary.
+
+:- if(getenv('SWIPL_TEST_FAIL_ON_UNLIKELY', y)).
 test(a_glyph_the_font_draws_too_wide_stays_in_its_cell,
      [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
     %  A full block is painted as the rectangle of its cell, so its ink
@@ -329,5 +334,6 @@ test(a_glyph_the_font_draws_too_wide_stays_in_its_cell,
     assertion(Hook \== []),
     last(Hook, HookRight),
     assertion(HookRight =< CellRight).
+:- endif.
 
 :- end_tests(terminal_glyphs).
