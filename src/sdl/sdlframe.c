@@ -151,6 +151,52 @@ sdl_parent_window(FrameObj fr, FrameObj *frp)
   return NULL;
 }
 
+#ifdef __APPLE__
+/* SDL's popup constraining is disabled on MacOS (see ws_create_frame()),
+   so we must keep popups inside the display ourselves.  Popup positions
+   are relative to the parent, so we first translate to global
+   coordinates, clamp against the usable bounds of the display holding
+   the popup's origin and translate back.
+*/
+
+static void
+constrain_popup(SDL_Window *parent, int *x, int *y, int w, int h)
+{ int gx = *x, gy = *y;
+
+  for(SDL_Window *p = parent; p; p = SDL_GetWindowParent(p))
+  { int px, py;
+
+    if ( !SDL_GetWindowPosition(p, &px, &py) )
+      return;
+    gx += px;
+    gy += py;
+    if ( !(SDL_GetWindowFlags(p) & (SDL_WINDOW_POPUP_MENU|SDL_WINDOW_TOOLTIP)) )
+      break;
+  }
+
+  SDL_Point pt = { gx, gy };
+  SDL_DisplayID id = SDL_GetDisplayForPoint(&pt);
+  SDL_Rect r;
+
+  if ( !id || !SDL_GetDisplayUsableBounds(id, &r) )
+    return;
+
+  int nx = gx, ny = gy;
+  if ( nx + w > r.x + r.w ) nx = r.x + r.w - w;
+  if ( ny + h > r.y + r.h ) ny = r.y + r.h - h;
+  if ( nx < r.x ) nx = r.x;
+  if ( ny < r.y ) ny = r.y;
+
+  DEBUG(NAME_popup,
+	if ( nx != gx || ny != gy )
+	  Cprintf("Constrain popup %dx%d from %d,%d to %d,%d\n",
+		  w, h, gx, gy, nx, ny));
+
+  *x += nx - gx;
+  *y += ny - gy;
+}
+#endif
+
 /**
  * Create the specified frame.
  *
@@ -171,6 +217,9 @@ ws_create_frame(FrameObj fr)
 
   if ( fr->kind == NAME_popup && parent )
   { focusable = false;
+#ifdef __APPLE__
+    constrain_popup(parent, &x, &y, w, h);
+#endif
     SDL_PropertiesID props = SDL_CreateProperties();
     SDL_SetPointerProperty(props, SDL_PROP_WINDOW_CREATE_PARENT_POINTER,
 			   parent);
@@ -1290,6 +1339,14 @@ ws_geometry_frame(FrameObj fr, Int x, Int y, Int w, Int h, DisplayObj dsp)
       { ix += valInt(dsp->area->x);
 	iy += valInt(dsp->area->y);
       }
+#ifdef __APPLE__
+      SDL_Window *parent;
+      if ( fr->kind == NAME_popup && (parent=sdl_parent_window(fr, NULL)) )
+      { int iw = isDefault(w) ? valInt(fr->area->w) : valInt(w);
+	int ih = isDefault(h) ? valInt(fr->area->h) : valInt(h);
+	constrain_popup(parent, &ix, &iy, iw, ih);
+      }
+#endif
 
 #if O_HDPX
       float scale = ws_pixel_density_display(fr);
