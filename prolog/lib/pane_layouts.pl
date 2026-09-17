@@ -303,7 +303,7 @@ store_file(File) :-
     !.
 store_file(File) :-
     absolute_file_name(user_app_config('xpce/pane_layouts'), File,
-                       [ access(none), solutions(first) ]).
+                       [ access(none), solutions(first), file_errors(fail) ]).
 
 %!  load_arrangements is det.
 %
@@ -312,8 +312,8 @@ store_file(File) :-
 %   working state.
 
 load_arrangements :-
-    store_file(File),
-    (   exists_file(File)
+    (   store_file(File),
+        exists_file(File)
     ->  with_log_store(File, read_log)
     ;   clear_store
     ).
@@ -373,8 +373,7 @@ record_arrangement(Arrangement, Seconds) :-
     Seconds >= Least,
     !,
     get_time(Now),
-    store_file(File),
-    with_log_store(File, add_record(used(Arrangement, Seconds, Now))).
+    add_record(used(Arrangement, Seconds, Now)).
 record_arrangement(_, _).
 
 %!  remember_arrangement(+Arrangement) is det.
@@ -389,8 +388,7 @@ record_arrangement(_, _).
 
 remember_arrangement(Arrangement) :-
     get_time(Now),
-    store_file(File),
-    with_log_store(File, add_record(kept(Arrangement, Now))).
+    add_record(kept(Arrangement, Now)).
 
 %!  keep(+Arrangement, +At) is det.
 %
@@ -407,7 +405,15 @@ keep(Arrangement, At) :-
 %       Under the lock: play back what the others have written since we
 %       last looked, add ours, and either append it or -- if the log has
 %       grown long -- write the whole store back as a summary, which says
-%       the same in one record per arrangement.
+%       the same in one record per arrangement.  Without a config
+%       directory the record lives in memory only.
+
+add_record(Record) :-
+    store_file(File),
+    !,
+    with_log_store(File, add_record(Record)).
+add_record(Record) :-
+    replay(Record).
 
 add_record(Record, File) :-
     (   exists_file(File)
@@ -472,8 +478,8 @@ write_header(Out) :-
 forget_arrangements :-
     retractall(stored(_,_,_,_)),
     retractall(kept(_,_,_)),
-    store_file(File),
-    (   exists_file(File)
+    (   store_file(File),
+        exists_file(File)
     ->  with_log_store(File, forget_log)
     ;   clear_store
     ).

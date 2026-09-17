@@ -39,7 +39,7 @@
             bookmark_store_forget/1,    % +Id
             bookmark_store_tidy/0,
             bookmark_store_id/1,        % -Id
-            bookmark_store_file/1       % -File
+            bookmark_store_file/1       % -File (semidet)
           ]).
 :- use_module(library(pairs), [pairs_values/2]).
 :- use_module(library(aggregate), [aggregate_all/3]).
@@ -97,16 +97,18 @@ max_events(500).                        % a longer log is tidied
 :- multifile
     bookmarks_file/1.                   % -File
 
-%!  bookmark_store_file(-File) is det.
+%!  bookmark_store_file(-File) is semidet.
 %
 %   The file the bookmarks are kept in, whether or not it exists yet.
+%   Fails if there is no config directory, for example because `HOME`
+%   does not exist.  The bookmarks then live as long as the process.
 
 bookmark_store_file(File) :-
     bookmarks_file(File),
     !.
 bookmark_store_file(File) :-
     absolute_file_name(user_app_config('xpce/emacs_bookmarks'), File,
-                       [ access(none), solutions(first) ]).
+                       [ access(none), solutions(first), file_errors(fail) ]).
 
 %!  bookmark_store_load(-Bookmarks) is det.
 %
@@ -115,8 +117,8 @@ bookmark_store_file(File) :-
 %   is a working state.
 
 bookmark_store_load(Bookmarks) :-
-    bookmark_store_file(File),
-    (   exists_file(File)
+    (   bookmark_store_file(File),
+        exists_file(File)
     ->  with_log_store(File, read_log)
     ;   clear_store
     ),
@@ -226,7 +228,10 @@ bookmark_store_forget(Id) :-
 
 add_record(Record) :-
     bookmark_store_file(File),
+    !,
     with_log_store(File, add_record(Record)).
+add_record(Record) :-
+    replay(Record).
 
 add_record(Record, File) :-
     (   exists_file(File)
@@ -250,8 +255,8 @@ add_record(Record, File) :-
 %   that has been thrown away along the way.
 
 bookmark_store_tidy :-
-    bookmark_store_file(File),
-    (   exists_file(File)
+    (   bookmark_store_file(File),
+        exists_file(File)
     ->  with_log_store(File, tidy_log)
     ;   true
     ).

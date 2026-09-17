@@ -488,9 +488,9 @@ current(F, BM:emacs_bookmark*, UpdateSelection:[bool]) :->
 save(BM) :->
     "Put away the note being typed and tidy the store"::
     send(BM, current, @nil),
-    (   get(BM, persists, @on)
+    (   get(BM, persists, @on),
+        bookmark_store_file(File)
     ->  bookmark_store_tidy,
-        bookmark_store_file(File),
         send(BM, report, status, 'Saved bookmarks to %s', File)
     ;   true
     ).
