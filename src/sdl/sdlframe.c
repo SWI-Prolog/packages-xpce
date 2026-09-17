@@ -846,11 +846,15 @@ live_resize_watch(void *closure, SDL_Event *ev)
 
     if ( wfr && ws_created_frame(fr) )
     { AnswerMark mark;
+      DisplayManager dm = TheDisplayManager();
+      BoolObj test_queue = dm->test_queue;
 
       markAnswerStack(mark);
       if ( ev->type == SDL_EVENT_WINDOW_RESIZED )
 	sdl_frame_event(ev);	/* update the area and run the tile layout */
-      RedrawDisplayManager(TheDisplayManager());
+      dm->test_queue = OFF;	/* the queue cannot drain in the modal loop */
+      RedrawDisplayManager(dm);
+      dm->test_queue = test_queue;
       if ( ChangedFrames )
 	deleteChain(ChangedFrames, fr);	/* paint it here and now, rather */
       ws_draw_frame(fr);		/* than through WM_PAINT on Windows */
