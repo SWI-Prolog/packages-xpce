@@ -297,7 +297,7 @@ make_transparent_menu(Menu) :-
     send(Proto, display, new(B, box(30,16))),
     send(B, fill, colour(grey70)),
     send(Proto, display, new(T, text('T', left,
-                                      font(screen, roman, 10)))),
+                                      font(mono, normal, 10)))),
     send(T, center, B?center),
     send(Proto, send_method, send_method(transparent, vector(bool),
                                          message(T, transparent, @arg1))),

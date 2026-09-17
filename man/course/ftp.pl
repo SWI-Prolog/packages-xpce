@@ -194,8 +194,8 @@ abort(F) :->
                  *******************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Node in the ftp-directory/file hierarhy.    Directory  nodes are printed
-bold, file nodes in normal roman font.  This class defines handling of a
+Node in the ftp-directory/file  hierarhy.   Directory  nodes are printed
+bold, file nodes in normal  font.  This   class  defines  handling  of a
 selection  (inverted  item),  attaching  a  popup  menu  and  the  basic
 operations (expand, collapse, view, etc.).
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
@@ -236,8 +236,8 @@ variable(type,  {file,directory},       get,    "Type of the node").
 initialise(N, Type:{file,directory}, Name:name, Size:[int]) :->
     "Create from type, name and size"::
     (   Type == directory
-    ->  Font = font(helvetica, bold, 12)
-    ;   Font = font(helvetica, roman, 12)
+    ->  Font = font(sans, bold, 12)
+    ;   Font = font(sans, normal, 12)
     ),
     new(T, text(Name, left, Font)),
     send(N, send_super, initialise, T),
@@ -397,9 +397,7 @@ getpass(anonymous, EMail) :-
 getpass(User, Passwd) :-
     new(D, dialog('Enter Password')),
     send(D, append, new(T, text_item(User, ''))),
-    send(T, value_font,
-         font(screen, roman, 2,
-              '-*-terminal-medium-r-normal-*-2-*-*-*-*-*-iso8859-*')),
+    send(T, value_font, font(mono, normal, 2)),
     send(D, append, button(ok, message(D, return, T?selection))),
     send(D, append, button(cancel, message(D, return, @nil))),
     send(D, default_button, ok),

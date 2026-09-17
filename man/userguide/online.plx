@@ -334,10 +334,10 @@ If defined, this method describes the lookup an already
 defined instance instead of object creation.  For example
 
 \begin{code}
-1 ?- new(X, font(screen, roman, 13)).
-X = @screen_roman_13
-2 ?- new(Y, font(screen, roman, 13)).
-Y = @screen_roman_13
+1 ?- new(X, font(mono, normal, 13)).
+X = @mono_normal_13
+2 ?- new(Y, font(mono, normal, 13)).
+Y = @mono_normal_13
 \end{code}
 
 The same instance of the reusable font instance is returned on a second

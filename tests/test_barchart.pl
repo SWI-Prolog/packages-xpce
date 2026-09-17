@@ -155,7 +155,7 @@ test(font_update) :-
     chart(vertical, BC),
     label(BC, longer, L, _, _),
     forall(between(1, 3, _),
-           send(L, font, font(screen, roman, 13))),
+           send(L, font, font(mono, normal, 13))),
     label(BC, longer, _, area(_,_,W,H), size(TW,TH)),
     assertion(W == TH),
     assertion(H == TW).

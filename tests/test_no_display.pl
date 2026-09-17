@@ -111,7 +111,7 @@ test(image_can_be_drawn) :-
 %  Pango measures text, not the window system.
 
 test(font_has_metrics) :-
-    get(font(screen, roman, 12), width, W),
+    get(font(mono, normal, 12), width, W),
     assertion(integer(W)),
     assertion(W > 0).
 

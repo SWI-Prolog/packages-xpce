@@ -188,8 +188,8 @@ default fonts for their role.
     Return a font with the same family, style and weight but
     `<-points` multiplied by the argument:
 
-    	?- get(font(sans, roman, 10), rescale, 1.3, F).
-    	F = @sans_roman_13.
+	?- get(font(sans, normal, 10), rescale, 1.3, F).
+	F = @sans_normal_13.
 
 - font<-fixed_width: -> bool
     @on when every glyph has the same advance, @off when the font
