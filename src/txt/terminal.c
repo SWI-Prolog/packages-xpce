@@ -10127,12 +10127,17 @@ osc_command(RlcData b, int param, const uchar_t *link)
       if ( link[0] == '?' && link[1] == 0 )
       { COLORRGBA rgba = fill_rgba(param == 10 ? ti->colour : ti->background);
 	char buf[64];
+	/* Four hex digits per channel, the 8 bit value doubled, as
+	 * xterm reports them.  Two would be just as valid an X colour
+	 * name, but termenv, which is what a Go client asks with, only
+	 * accepts a reply of the length xterm's has.
+	 */
 	snprintf(buf, sizeof(buf),
-		 S_ESC"]%d;rgb:%02x/%02x/%02x"S_ESC"\\",
+		 S_ESC"]%d;rgb:%02x%02x/%02x%02x/%02x%02x"S_ESC"\\",
 		 param,
-		 (unsigned)ColorRValue(rgba),
-		 (unsigned)ColorGValue(rgba),
-		 (unsigned)ColorBValue(rgba));
+		 (unsigned)ColorRValue(rgba), (unsigned)ColorRValue(rgba),
+		 (unsigned)ColorGValue(rgba), (unsigned)ColorGValue(rgba),
+		 (unsigned)ColorBValue(rgba), (unsigned)ColorBValue(rgba));
 	rlc_send(b, buf, strlen(buf));
       } else
       { COLORRGBA rgba;
@@ -10845,6 +10850,40 @@ open_pty_slave(RlcData b)
 }
 
 /**
+ * Open one of the three client streams on the slave side of our pty.
+ *
+ * The descriptor is read-write whichever direction the stream itself
+ * runs in.  A terminal is one device that a program both reads and
+ * writes, and on a real one stdin, stdout and stderr are the same
+ * read-write description; code that asks the terminal a question
+ * relies on that.  Writing the query to stdout and reading the answer
+ * from it is what termenv does (the OSC 10/11 colour queries of every
+ * Go TUI, `gh' among them), and a write-only stdout makes that read
+ * fail with EBADF.  The answer then stays in the input queue and the
+ * next program to read stdin finds an escape sequence it never asked
+ * for.
+ *
+ * Unlike the descriptor, the stream keeps the direction asked for:
+ * only the client's stdin is an input stream.  The descriptor is the
+ * part a child process inherits, and the part that has to look like a
+ * terminal.
+ */
+
+static IOSTREAM *
+open_pty_client_stream(RlcData b, const char *mode)
+{ int fd = open(b->pty.slave_name, O_RDWR|O_NOCTTY);
+
+  if ( fd < 0 )
+    return NULL;
+
+  IOSTREAM *s = Sfdopen(fd, mode);
+  if ( !s )
+    close(fd);
+
+  return s;
+}
+
+/**
  * Establish  a pty  pair between  the xpce  terminal and  the client.
  * Normally,  the client  is a  Prolog  thread, but  this design  also
  * allows  forking and  attaching  an arbitrary  process  to our  xpce
@@ -11212,9 +11251,9 @@ getPrologStreamTerminalImage(Any obj,
 	 !rlc_open_pty_pair(b) )
       return false;
 
-    i = Sopen_file(b->pty.slave_name, "r");
-    o = Sopen_file(b->pty.slave_name, "w");
-    e = Sopen_file(b->pty.slave_name, "w");
+    i = open_pty_client_stream(b, "r");
+    o = open_pty_client_stream(b, "w");
+    e = open_pty_client_stream(b, "w");
 
     if ( i && o && e )
     { set_stream_properties(i,o,e);
