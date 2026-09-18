@@ -769,7 +769,6 @@ stdXPMImage(Name name, Name kind, Image *global, char **bits)
 #include "bitmaps/mark.xpm"
 #include "bitmaps/nomark.xpm"
 #include "bitmaps/mark_handle.xpm"
-#include "bitmaps/ms_left_arrow.xpm"
 
 static void
 standardImages(void)
@@ -786,7 +785,6 @@ standardImages(void)
   stdXPMImage(NAME_treeCollapsedImage, B, NULL,		       cnode_xpm);
   stdXPMImage(NAME_markImage,          P, &MARK_IMAGE,	       mark_xpm);
   stdXPMImage(NAME_nomarkImage,        P, &NOMARK_IMAGE,       nomark_xpm);
-  stdXPMImage(NAME_msLeftArrowImage,   B, NULL,                ms_left_arrow_xpm);
   stdXPMImage(NAME_markHandleImage,    B, &MARK_HANDLE_IMAGE,  mark_handle_xpm);
   stdXPMImage(NAME_nullImage,          B, &NULL_IMAGE,         NULL);
 #undef P

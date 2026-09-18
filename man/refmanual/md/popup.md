@@ -123,7 +123,7 @@ not supported.
     This method locates the `current` item using <-item_from_event
     and activates this using ->preview.  If the drag event is on an
     item with a `menu_item <-popup` and the event is near the popup
-    marker (see <-popup_image), the pullright menu is activated by
+    marker, the pullright menu is activated by
     invoking ->show_pullright_menu.
 
 - popup->end_group: bool

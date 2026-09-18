@@ -346,10 +346,7 @@ showPullrightMenuPopup(PopupObj p, MenuItem mi, EventObj ev, Any context)
     int rx;
 
     area_menu_item((Menu)p, mi, &ix, &iy, &iw, &ih);
-    if ( notNil(p->popup_image) )
-      rx = ix+iw-valInt(p->popup_image->size->w);
-    else
-      rx = ix+iw-8;
+    rx = ix+iw-popup_indicator_width((Menu)p, mi);
 
     previewMenu((Menu) p, mi);
     pos = tempObject(ClassPoint, toInt(rx), toInt(iy), EAV);
@@ -376,10 +373,7 @@ inPullRigthPopup(PopupObj p, MenuItem mi, EventObj ev)
   int rx;
 
   area_menu_item((Menu)p, mi, &ix, &iy, &iw, &ih);
-  if ( notNil(p->popup_image) )
-    rx = ix+iw-valInt(p->popup_image->size->w);
-  else
-    rx = ix+iw-8;
+  rx = ix+iw-popup_indicator_width((Menu)p, mi);
   rx -= 2*valInt(p->border);
 
   if ( !get_xy_event(ev, p, ON, &ex, &ey) )
@@ -733,9 +727,6 @@ static classvardecl rc_popup[] =
      "Marker for items in selection"),
   RC(NAME_pen, "int", "0",
      "Thickness of the drawing-pen"),
-  RC(NAME_popupImage, "image*",
-     UXWIN("@nil", "@ms_left_arrow_image"),
-     "Marker for items with popup"),
   RC(NAME_previewFeedback, "name", UXWIN("box", "colour"),
      "Feedback on `preview' item"),
   RC(NAME_showLabel, "bool", "@off",

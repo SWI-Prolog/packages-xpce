@@ -481,15 +481,10 @@ item_mark_y(Menu m, int y, int h, int mh)
 static status
 compute_popup_indicator(Menu m, MenuItem mi, double *w, double *h)
 { if ( notNil(mi->popup) )
-  { if ( notNil(m->popup_image) )
-    { Image pi = m->popup_image;
-      *w = valInt(pi->size->w);
-      *h = valInt(pi->size->h);
-    } else
-    { double ex = valNum(getExFont(m->label_font));
-      *w = ex+4;
-      *h = *w;
-    }
+  { double ex = valNum(getExFont(m->label_font));
+
+    *w = ex+4;
+    *h = *w;
 
     succeed;
   }
@@ -500,12 +495,22 @@ compute_popup_indicator(Menu m, MenuItem mi, double *w, double *h)
 }
 
 
+int
+popup_indicator_width(Menu m, MenuItem mi)
+{ double iw, ih;
+
+  compute_popup_indicator(m, mi, &iw, &ih);
+
+  return (int)(iw+0.5);
+}
+
+
 static void
 draw_popup_indicator(Menu m, MenuItem mi,
 		     int x, int y, int w, int h, /* Menu item area */
 		     int b)			 /* Border */
-{ Elevation z;
-  double iw, ih, ix, iy;
+{ double iw, ih, ix, iy;
+  double cw, ch, cx, cy, pen;
 
   if ( !instanceOfObject(m, ClassPopup) )
     return;
@@ -516,12 +521,16 @@ draw_popup_indicator(Menu m, MenuItem mi,
 					    y + h - ih);
   ix = x+w-b-iw;
 
-  if ( notNil(m->popup_image) )
-  { r_image(m->popup_image, 0, 0, ix, iy, iw, ih);
-  } else if ( (z = getClassVariableValueObject(m, NAME_elevation)) )
-  { r_3d_triangle(ix, iy+ih, ix, iy, ix+iw, iy+ih/2,
-		  z, m->preview != mi, 0x3);
-  }
+					/* Windows style ">" chevron */
+  cw = iw*0.35;
+  ch = ih*0.55;
+  cx = ix + (iw-cw)/2;
+  cy = iy + (ih-ch)/2;
+  pen = r_thickness(max(1.0, ih/8.0));
+  r_dash(NAME_none);
+  r_line(cx,    cy,        cx+cw, cy+ch/2);
+  r_line(cx+cw, cy+ch/2,   cx,    cy+ch);
+  r_thickness(pen);
 }
 
 
@@ -1891,12 +1900,6 @@ onImageMenu(Menu m, Image image)
 
 
 static status
-popupImageMenu(Menu m, Image image)
-{ return assignGraphical(m, NAME_popupImage, image);
-}
-
-
-static status
 borderMenu(Menu m, Int b)
 { return assignGraphical(m, NAME_border, b);
 }
@@ -2202,8 +2205,6 @@ static vardecl var_menu[] =
      NAME_appearance, "Left mark if selected equals @on"),
   SV(NAME_offImage, "image=image|{marked}*", IV_GET|IV_STORE, offImageMenu,
      NAME_appearance, "Left mark if selected equals @off"),
-  SV(NAME_popupImage, "image=image*", IV_GET|IV_STORE, popupImageMenu,
-     NAME_appearance, "Right mark if popup not equal @nil"),
   IV(NAME_acceleratorFont, "font=font*", IV_GET,
      NAME_appearance, "When not @nil, font for accelerators"),
   IV(NAME_acceleratorColour, "colour=[colour]", IV_BOTH,
@@ -2366,8 +2367,6 @@ static classvardecl rc_menu[] =
      "Marker for items in selection"),
   RC(NAME_pen, "int", "0",
      "Thickness of pen around items"),
-  RC(NAME_popupImage, "image*", "@nil",
-     "Marker for items with popup"),
   RC(NAME_previewElevation, "elevation*", "0",
      "Elevation of item in preview mode"),
   RC(NAME_previewFeedback, "name", "box",

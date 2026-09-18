@@ -236,10 +236,6 @@ around it.
 
     @see menu-off_image
 
-- menu<-popup_image: image=image*
-    Image painted to the right of items that have a popup associated with
-    them.  Only applicable to popup menu's with pullright submenu's in them.
-
 - menu<-preview: item=menu_item*
     Menu_item in the preview state. Currently only used for popup-menu's.
 
@@ -261,9 +257,8 @@ around it.
 
 - menu<-right_offset: offset=0..
     Right-margin between the item and its surrounding box.  Its value is 0
-    if `Menu <-popup_image` equals @nil or there is no item in the menu that
-    has a <->popup.  Otherwise it is the width of `Menu <-popup_image` plus
-    `Menu <-border`.
+    if there is no item in the menu that has a <->popup.  Otherwise it is
+    the width of the pullright marker plus `Menu <-border`.
 
 - menu<-show_label: show=bool
     If @on, the label is formatted in `Menu <-label_font` in the box

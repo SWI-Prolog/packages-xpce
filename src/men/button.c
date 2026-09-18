@@ -255,11 +255,7 @@ computeButton(Button b)
 
       h += 6; w += 10 + valInt(b->radius);
       if ( notNil(b->popup) )
-      { if ( notNil(b->popup->popup_image) )
-	  w += valInt(b->popup->popup_image->size->w) + ex;
-	else
-	  w += 3*ex;
-      }
+	w += 3*ex;
       w = max(valInt(size->w), w);
       h = max(valInt(size->h), h);
     }

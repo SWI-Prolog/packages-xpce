@@ -1902,7 +1902,6 @@ scope('M.menu.S.off', advanced).
 scope('M.menu.S.off_image', obscure).
 scope('M.menu.S.on', advanced).
 scope('M.menu.S.on_image', obscure).
-scope('M.menu.S.popup_image', obscure).
 scope('M.menu.S.prepend', obscure).
 scope('M.menu.S.preview', advanced_programming).
 scope('M.menu.S.restore', obscure).
@@ -3394,7 +3393,6 @@ scope('R.menu.mark_elevation', advanced).
 scope('R.menu.off_image', advanced).
 scope('R.menu.on_image', advanced).
 scope('R.menu.pen', advanced).
-scope('R.menu.popup_image', advanced).
 scope('R.menu.preview_elevation', advanced).
 scope('R.menu.preview_feedback', basic).
 scope('R.menu.selected_background', advanced).
@@ -3441,7 +3439,6 @@ scope('R.popup.multiple_selection', basic_programming).
 scope('R.popup.off_image', advanced).
 scope('R.popup.on_image', advanced).
 scope('R.popup.pen', basic).
-scope('R.popup.popup_image', advanced).
 scope('R.popup.preview_elevation', advanced).
 scope('R.popup.preview_feedback', basic).
 scope('R.popup.show_label', basic).
@@ -4842,7 +4839,6 @@ scope('V.menu.on_image', obscure).
 scope('V.menu.opacity', advanced).
 scope('V.menu.pen', advanced).
 scope('V.menu.popup', advanced).
-scope('V.menu.popup_image', obscure).
 scope('V.menu.preview', advanced_programming).
 scope('V.menu.preview_feedback', advanced).
 scope('V.menu.reference', advanced).
@@ -5174,7 +5170,6 @@ scope('V.popup.on_image', advanced).
 scope('V.popup.opacity', advanced).
 scope('V.popup.pen', advanced).
 scope('V.popup.popup', advanced).
-scope('V.popup.popup_image', advanced).
 scope('V.popup.preview', advanced).
 scope('V.popup.preview_feedback', advanced).
 scope('V.popup.pullright', internal).
