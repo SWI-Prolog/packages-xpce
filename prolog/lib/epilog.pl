@@ -1265,7 +1265,7 @@ event(T, Ev:event) :->
     "Handle popup and drag-and-drop"::
     (   send_super(T, event, Ev)
     ->  (   send(Ev, is_a, activate_keyboard_focus)
-        ->  send(T?frame, current_terminal, T)
+        ->  activated(T)
         ;   send(Ev, is_a, 'RET')
         ->  set_active_terminal(T)
         ;   true
@@ -1275,6 +1275,25 @@ event(T, Ev:event) :->
     ;   drop_target_event(T, Ev,
                           'Drop Prolog source file(s) to consult',
                           epilog_consult_drop)
+    ).
+
+%!  activated(+Terminal) is det.
+%
+%   Terminal was given the keyboard.  Tell the window it is a pane of, so
+%   that the window knows which of its terminals the user is working in.
+%
+%   The window need not be a pane_frame: `epilog_window ->initialise' asks
+%   class window for a frame by giving it a title, so a terminal that is
+%   in no window of the IDE -- one taken out of its tab, or not yet put in
+%   one -- still has a plain frame, and a plain frame knows nothing about
+%   terminals.  Then all there is to do is note that this is the terminal
+%   being worked in, which is what `pane_frame ->current_terminal' ends
+%   with as well.
+
+activated(T) :-
+    (   get(T?window, pane_frame, Frame)
+    ->  send(Frame, current_terminal, T)
+    ;   set_active_terminal(T)
     ).
 
 set_active_terminal(PT) :-
