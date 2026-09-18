@@ -1492,7 +1492,6 @@ update_displayed(H) :->
     "Hide myself on a window that is not a pane in its own right"::
     get(H, pane, Pane),
     (   get(Pane, frame, Frame),
-        Frame \== @nil,
         send(Frame, has_get_method, panes),
         get(Frame, panes, Panes),
         \+ send(Panes, member, Pane)
@@ -1503,19 +1502,12 @@ update_displayed(H) :->
 place_in_corner(H) :->
     "Move myself to the corner of the window I am on"::
     get(H, device, W),
-    W \== @nil,
     send(W, instance_of, window),
     get(W, content_area, area(X, Y, AW, _)),
-    get(H, slot, area, Mine),
-    get(Mine, width, HW),
-    get(Mine, x, MX),
-    get(Mine, y, MY),
+    get(H, slot, area, area(_, _, HW, _)),
     NX is X + AW - HW - 2,
     NY is Y + 2,
-    (   MX =:= NX, MY =:= NY
-    ->  true
-    ;   send(H, set, NX, NY)
-    ).
+    send(H, set, NX, NY).
 
 :- pce_end_class(split_handle).
 
@@ -1566,10 +1558,9 @@ update_target(G, Ev:event) :->
         send(G, slot, target, @nil)
     ).
 
-forget_target(G, Keep:'tab_frame*') :->
+forget_target(G, Keep:tab_frame*) :->
     "Take the outline away, unless Keep is still the target"::
     (   get(G, target, Old),
-        Old \== @nil,
         Old \== Keep,
         send(Old, has_send_method, preview_drop)
     ->  send(Old, preview_drop, @nil)
