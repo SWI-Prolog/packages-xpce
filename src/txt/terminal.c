@@ -407,7 +407,7 @@ static bool	rlc_client_owns_terminal(RlcData b);
 static bool	rlc_foreground_directory(RlcData b, char *buf, size_t size);
 static int	rlc_interrupt_char(RlcData b);
 static int	rlc_suspend_char(RlcData b);
-static bool	rlc_caret_to_click(RlcData b, int x, int y);
+static bool	rlc_caret_to_selection_end(RlcData b, int x, int y);
 static void	rlc_caret_to(RlcData b, int line, int chr);
 static int	rlc_cluster_distance(RlcData b, int l1, int c1,
 				     int l2, int c2);
@@ -1082,6 +1082,7 @@ rlc_drag_extend_selection(TerminalImage ti)
     y = h-1;
 
   rlc_extend_selection(b, b->drag_x, y);
+  rlc_caret_to_selection_end(b, b->drag_x, y);
 }
 
 static void
@@ -1179,6 +1180,8 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     if ( rlc_fold_at_gutter(ti, valInt(x), valInt(y)) )
       succeed;				/* ->msLeftUp does the folding */
     stopDragScrollTerminalImage(ti);
+    b->caret_asked.valid = false;	/* a new gesture starts from the */
+					/* caret as it is now */
     /* Keep the drag ours when the pointer leaves the terminal, so
      * dragging past its edge can scroll.  The window drops the focus
      * again on the button going up.
@@ -1198,6 +1201,11 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
       } else
 	rlc_start_selection(b, valInt(x), valInt(y));
     }
+    /* Track the pointer with the caret from here, as an editor does:
+     * pressing puts it at the click and dragging carries it along, so
+     * that it ends up at the end of the selection.
+     */
+    rlc_caret_to_selection_end(b, valInt(x), valInt(y));
     succeed;
   }
   if ( isAEvent(ev, NAME_msLeftUp) )
@@ -1214,11 +1222,13 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
 	 notNil(ti->link_message) )
     { Name href = TCHAR2Name(lnk);
       clickedLinkTerminalImage(ti, href);
-    } else if ( rlc_has_selection(b) )
-    { if ( isOn(getClassVariableValueObject(ti, NAME_autoCopy)) )
+    } else
+    { rlc_caret_to_selection_end(b, valInt(x), valInt(y));
+      if ( rlc_has_selection(b) &&
+	   isOn(getClassVariableValueObject(ti, NAME_autoCopy)) )
 	send(ti, NAME_copy, EAV);
-    } else				/* a click, not a drag */
-      rlc_caret_to_click(b, valInt(x), valInt(y));
+    }
+    b->caret_asked.valid = false;	/* the gesture is over */
     /* Not from rlc_set_selection(): the tally is over the whole
      * scroll-back, which is too much to count for every motion event of
      * a drag, and a number that flickers while the selection is still
@@ -1239,7 +1249,9 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     { Int x, y;
 
       get_xy_event(ev, ti, ON, &x, &y);
+      b->caret_asked.valid = false;	/* not part of a left drag */
       rlc_extend_selection(b, valInt(x), valInt(y));
+      rlc_caret_to_selection_end(b, valInt(x), valInt(y));
       if ( rlc_has_selection(b) &&
 	   getClassVariableValueObject(ti, NAME_autoCopy) )
 	send(ti, NAME_copy, EAV);
@@ -4592,15 +4604,19 @@ rlc_translate_mouse(RlcData b, int x, int y, int *line, int *chr)
 }
 
 
-/* Move the client's caret to a clicked position.
+/* Move the client's caret to where the mouse points.
  *
  * The line being edited belongs to the client, not to us, so we cannot
  * put the caret anywhere: we can only ask, and the request every line
  * editor understands is cursor-left and cursor-right.  Count the
- * grapheme clusters between the caret and the click and send that
+ * grapheme clusters between the caret and the target and send that
  * many.  Only inside the logical line the caret is on -- the line
  * being edited -- so a click anywhere else still just starts a
  * selection.
+ *
+ * The caret follows the pointer for the whole gesture, as it does in an
+ * editor: to the click on the way down, along with a drag, and so to
+ * the end of a selection that the drag makes.
  *
  * And only while a line editor is there to understand the request.
  * The client that asks for a single character -- the Prolog tracer at
@@ -4694,23 +4710,23 @@ rlc_input_start(RlcData b, int line, int *sl, int *sc)
 }
 
 
-/* rlc_caret_to()
- *	Walk the caret of the line being edited to (line, chr) by handing
- *	the client cursor keys.  We do not move it ourselves: the program
- *	on the terminal owns the line, and only it knows what a step
- *	across a grapheme cluster costs.
+/* rlc_caret_move()
+ *	Walk the caret of the line being edited from (fl, fc) to
+ *	(line, chr) by handing the client cursor keys.  We do not move it
+ *	ourselves: the program on the terminal owns the line, and only it
+ *	knows what a step across a grapheme cluster costs.
  */
 
 static void
-rlc_caret_to(RlcData b, int line, int chr)
+rlc_caret_move(RlcData b, int fl, int fc, int line, int chr)
 { const char *seq;
   int n, i;
 
-  if ( rlc_sel_lt(b, line, chr, b->caret_y, b->caret_x) )
-  { n = rlc_cluster_distance(b, line, chr, b->caret_y, b->caret_x);
+  if ( rlc_sel_lt(b, line, chr, fl, fc) )
+  { n = rlc_cluster_distance(b, line, chr, fl, fc);
     seq = b->app_escape ? S_ESC"OD" : S_ESC"[D";
   } else
-  { n = rlc_cluster_distance(b, b->caret_y, b->caret_x, line, chr);
+  { n = rlc_cluster_distance(b, fl, fc, line, chr);
     seq = b->app_escape ? S_ESC"OC" : S_ESC"[C";
   }
 
@@ -4719,15 +4735,45 @@ rlc_caret_to(RlcData b, int line, int chr)
 }
 
 
+/* rlc_caret_to()
+ *	Ask for the caret at (line, chr), counting from where it is now.
+ */
+
+static void
+rlc_caret_to(RlcData b, int line, int chr)
+{ rlc_caret_move(b, b->caret_y, b->caret_x, line, chr);
+}
+
+
+/* rlc_caret_track()
+ *	The same, for the mouse.  A drag asks on every motion event,
+ *	which is faster than the round trip through the client: counting
+ *	from the caret on the screen would count the keys still under way
+ *	a second time and walk past the pointer.  Count from where those
+ *	keys leave it instead.  Only for as long as the gesture lasts:
+ *	->ms_left_down drops the bookkeeping, so anything else that moves
+ *	the caret in between is no concern of ours.
+ */
+
+static void
+rlc_caret_track(RlcData b, int line, int chr)
+{ int fl = b->caret_asked.valid ? b->caret_asked.line : b->caret_y;
+  int fc = b->caret_asked.valid ? b->caret_asked.chr  : b->caret_x;
+
+  rlc_caret_move(b, fl, fc, line, chr);
+  b->caret_asked.line  = line;
+  b->caret_asked.chr   = chr;
+  b->caret_asked.valid = true;
+}
+
+
 static bool
-rlc_caret_to_click(RlcData b, int x, int y)
-{ int line, chr;
-  int sl, sc;
+rlc_caret_to_position(RlcData b, int line, int chr)
+{ int sl, sc;
 
   if ( !rlc_editing_line(b) )		/* nobody is editing a line */
     return false;
 
-  rlc_translate_mouse(b, x, y, &line, &chr);
   if ( !rlc_between(b, b->first, b->last, line) ||
        rlc_logical_start(b, line) != rlc_logical_start(b, b->caret_y) )
     return false;
@@ -4738,9 +4784,42 @@ rlc_caret_to_click(RlcData b, int x, int y)
     chr  = sc;				/* the start of the input */
   }
 
-  rlc_caret_to(b, line, chr);
+  rlc_caret_track(b, line, chr);
 
   return true;
+}
+
+
+/* rlc_caret_to_selection_end()
+ *	Put the caret where the pointer at (x, y) leaves the selection it
+ *	is making: at the end of it the pointer is at, as dragging over
+ *	text does in an editor.  For a selection by the character that is
+ *	the pointer itself; for one by word or line it is the end of the
+ *	word or the line the pointer is in, which is the end of the
+ *	selection away from where the gesture started.
+ *
+ *	Nothing happens if that end is not in the line being edited: a
+ *	selection made over the output above it is not the caret's
+ *	business.
+ */
+
+static bool
+rlc_caret_to_selection_end(RlcData b, int x, int y)
+{ int line, chr;
+
+  rlc_translate_mouse(b, x, y, &line, &chr);
+
+  if ( b->sel_unit != SEL_CHAR && rlc_has_selection(b) )
+  { if ( rlc_sel_lt(b, line, chr, b->sel_org_line, b->sel_org_char) )
+    { line = b->sel_start_line;
+      chr  = b->sel_start_char;
+    } else
+    { line = b->sel_end_line;
+      chr  = b->sel_end_char;
+    }
+  }
+
+  return rlc_caret_to_position(b, line, chr);
 }
 
 
@@ -9775,7 +9854,7 @@ report_directory(RlcData b, Name dir, Name host)
  * <-blocks of the terminal, which is what lets a block be copied, jumped
  * to or folded away long after it was printed.  The mouse takes its own
  * two things from the same marks: whether the client is reading a line
- * right now and where that line starts.  See rlc_caret_to_click().
+ * right now and where that line starts.  See rlc_caret_to_position().
  *
  * The marks arrive more often than the commands do.  `A' and `B' live
  * inside the prompt string of the client, so it emits them again every

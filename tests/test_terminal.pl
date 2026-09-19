@@ -480,6 +480,22 @@ term_click_elsewhere(T) :-
     Last is Rows-1,
     term_click(T, 0, Last, 0).
 
+%!  term_press(+T, +Col, +Row) is det.
+%!  term_release(+T, +Col, +Row) is det.
+%
+%   The two halves of a click on their own, for a test that looks at
+%   what the button going down does before it comes up again.
+
+term_press(terminal(_, xpce(_, TI)), Col, Row) :-
+    cell_pixel(TI, Col, Row, X, Y),
+    send(TI, event, new(_, event(ms_left_down, TI, X, Y, 0, 0))),
+    drive(0.3).
+
+term_release(terminal(_, xpce(_, TI)), Col, Row) :-
+    cell_pixel(TI, Col, Row, X, Y),
+    send(TI, event, new(_, event(ms_left_up, TI, X, Y, 0, 0))),
+    drive(0.3).
+
 term_move(terminal(_, xpce(_, TI)), Col, Row) :-
     cell_pixel(TI, Col, Row, X, Y),
     ignore(send(TI, event, new(_, event(loc_move, TI, X, Y, 0, 0)))),
@@ -1640,8 +1656,11 @@ term_terminfo(terminal(epilog, _), TERM) :-
 
 %!  click(+Terminal, +Col, +Row) is det.
 %!  drag(+Terminal, +Col1, +Row1, +Col2, +Row2) is det.
+%!  press(+Terminal, +Col, +Row) is det.
+%!  release(+Terminal, +Col, +Row) is det.
 %
-%   Synthesise a left-button click, and a press-move-release.
+%   Synthesise a left-button click, a press-move-release, and either
+%   half of a click on its own.
 
 click(T, Col, Row) :-
     term_click(T, Col, Row).
@@ -1651,6 +1670,12 @@ click(T, Col, Row, Buttons) :-
 
 drag(T, Col1, Row1, Col2, Row2) :-
     term_drag(T, Col1, Row1, Col2, Row2).
+
+press(T, Col, Row) :-
+    term_press(T, Col, Row).
+
+release(T, Col, Row) :-
+    term_release(T, Col, Row).
 
 move(T, Col, Row) :-
     term_move(T, Col, Row).
@@ -3252,7 +3277,13 @@ test(click_moves_the_caret, [setup(test_begin(T))]) :-
                "caret went from ~w to ~w, expected ~w~n", [C1, C2, C1+8]),
         assertion(C2 =:= C1+8)
     ),
-    click(T, 20, R),                    % clicking again changes nothing
+    %  Clicking the same cell again changes nothing.  By way of a
+    %  click somewhere else: two clicks on one cell are a double click
+    %  here whatever the time between them (see term_double_click/3),
+    %  and a double click selects a word and takes the caret to the end
+    %  of it.
+    click(T, 12, R),
+    click(T, 20, R),
     assert_cursor(T, C2, R).
 
 test(click_moves_the_caret_without_bracketed_paste,
@@ -3369,11 +3400,45 @@ test(click_while_reading_one_char, [setup(test_begin(T))]) :-
     assertion(wait_until(marker_on_screen(T, 'got 120'), 15)),
     assertion(wait_for_prompt(T)).
 
-test(drag_selects_and_leaves_the_caret, [setup(test_begin(T))]) :-
+test(press_moves_the_caret, [setup(test_begin(T))]) :-
+    %  The caret goes where the button goes down.  Waiting for it to
+    %  come up again is what no editor does, and it is the press that
+    %  says where a selection dragged from here starts.
     type(T, 'hello world, this is the input line'),
     drive(0.3),
+    cursor(T, End, R),
+    press(T, 12, R),
+    cursor(T, C1, R1),
+    assertion(R1 =:= R),
+    assertion(C1 < End),
+    release(T, 12, R),
+    assert_cursor(T, C1, R).
+
+test(drag_carries_the_caret, [setup(test_begin(T))]) :-
+    %  Dragging a selection out of the line being edited takes the
+    %  caret along and leaves it at the end of the selection.  Asserted
+    %  as a distance rather than a column, as in click_moves_the_caret.
+    type(T, 'hello world, this is the input line'),
+    drive(0.3),
+    cursor(T, _End, R),
+    click(T, 10, R),
+    cursor(T, C1, _),
+    drag(T, 14, R, 22, R),              % press four cells on, drag eight
+    cursor(T, C2, R2),
+    assertion(R2 =:= R),
+    assertion(C2 =:= C1+12),
+    assertion(term_has_selection(T)).
+
+test(drag_outside_the_input_line, [setup(test_begin(T))]) :-
+    %  A selection made over the output above the input is not the
+    %  caret's business, as a click there is not.
+    rows_above(T, 2),
+    type(T, 'hello'),
+    drive(0.3),
     cursor(T, C, R),
-    drag(T, 10, R, 20, R),
+    Above is R-2,
+    assertion(Above >= 0),
+    drag(T, 2, Above, 8, Above),
     assert_cursor(T, C, R),
     assertion(term_has_selection(T)).
 

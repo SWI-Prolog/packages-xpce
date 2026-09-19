@@ -186,6 +186,11 @@ typedef struct rlc_data
   int		sel_end_char;		/* ending char for selection */
   int		drag_x;			/* last pointer position of a */
   int		drag_y;			/* selection drag */
+  struct				/* where the keys we handed the */
+  { int	line;				/* client leave its caret once */
+    int	chr;				/* it has echoed them; only */
+    bool valid;				/* during a mouse gesture */
+  } caret_asked;
   struct				/* Incremental search; the hit is */
   { int	origin_line;			/* the selection, so all we keep is */
     int	origin_char;			/* where the search started ... */
