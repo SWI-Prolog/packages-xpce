@@ -334,8 +334,7 @@ epilog_attach(Options) :-
     thread_get_message('$epilog'(PT, PTY)),
     prolog_listen(this_thread_exit, terminated),
     set_prolog_flag(query_debug_settings, debug(false, false)),
-    set_prolog_flag(hyperlink_term, true),
-    set_prolog_flag(color_term, true),
+    set_terminal_flags,
     attach_terminal(PT, PTY, []),
     asserta(current_prolog_terminal(Thread, PT)),
     asserta(attached_terminal(PT, RestoreContext)).
@@ -1546,8 +1545,7 @@ inject_item(PT, Goal) :-
 
 thread_run_interactor(PT, Creator, PTY, Init, Goal, CWD, Title, History) :-
     set_prolog_flag(query_debug_settings, debug(false, false)),
-    set_prolog_flag(hyperlink_term, true),
-    set_prolog_flag(color_term, true),
+    set_terminal_flags,
     set_prolog_flag(console_menu, true),
     Error = error(Formal,_),
     (   catch(attach_terminal(PT, PTY, History), Error, true)
@@ -1562,6 +1560,19 @@ thread_run_interactor(PT, Creator, PTY, Init, Goal, CWD, Title, History) :-
         )
     ;   thread_send_message(Creator, false)
     ).
+
+%!  set_terminal_flags is det.
+%
+%   Tell library(ansi_term) that our terminal  handles colour and OSC 8
+%   hyperlinks.  Both flags are set  _globally_.   Using
+%   set_prolog_flag/2  would  only  affect  the  calling  thread  once  a
+%   second thread has been created, while  other threads write to the
+%   same terminal.  Notably, goals  handed   to  in_pce_thread/1  run in
+%   the xpce event thread, which predates the terminal.
+
+set_terminal_flags :-
+    create_prolog_flag(hyperlink_term, true, [type(boolean)]),
+    create_prolog_flag(color_term,     true, [type(boolean)]).
 
 attach_terminal(PT, PTY, History) :-
     exists_source(library(editline)),
