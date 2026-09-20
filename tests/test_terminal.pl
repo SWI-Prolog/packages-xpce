@@ -6313,6 +6313,47 @@ test(application_mode_leaves_modifiers_alone,
     hit(T, cursor_up, Control),
     assertion(client_reads(T, '^[OA^[[1;5A')).
 
+test(page_keys_go_to_the_client,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    %  The page keys used to scroll the scroll back whatever was
+    %  running, which left `less', `man', `vim' and every other client
+    %  that is paged with them a key short.
+    hit(T, page_up),
+    hit(T, page_down),
+    assertion(client_reads(T, '^[[5~^[[6~')).
+
+test(modified_page_keys,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    button_control(Control),
+    hit(T, page_up, Control),
+    assertion(client_reads(T, '^[[5;5~')).
+
+test(shift_page_keys_stay_at_the_window,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    %  Shift is the user's way out, as it is for the wheel: it keeps
+    %  the key on this side, where it scrolls what scroll back there
+    %  is, and the client never sees it.
+    button_shift(Shift),
+    hit(T, page_up, Shift),
+    hit(T, page_down, Shift),
+    assertion(client_reads(T, '')).
+
+test(page_keys_scroll_at_the_prompt, [setup(test_begin(T))]) :-
+    %  Nothing owns the terminal here, so the keys are the window's
+    %  own again: there is scroll back to scroll and nobody else to
+    %  read them.
+    scrollback(T, 60),
+    row_text(T, 0, Before),
+    hit(T, page_up),
+    row_text(T, 0, After),
+    assertion(Before \== After).
+
 test(debugger_keys_go_to_the_client,
      [ setup(fkeys_begin(T)),
        cleanup(stop_foreground(T))

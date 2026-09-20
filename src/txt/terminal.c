@@ -1291,6 +1291,13 @@ function_key_number(Any id)
  * user started: a key the window keeps for itself is one that program
  * can never be given.
  *
+ * Page Up and Page Down go the same way, and also while the alternate
+ * screen is up: `less', `man', `vim' and the pagers of this world are
+ * read with those keys and there is no scroll back for the window to
+ * scroll for as long as one of them owns the screen.  Shift is the
+ * user's way out, as it is for the wheel (see rlc_alt_scroll()): it
+ * keeps the key on this side and scrolls what scroll back there is.
+ *
  * Meta combinations do not produce a control character, so the
  * window's own bindings keep working throughout.  Ctrl+Shift does
  * produce one -- the keymap ignores the shift -- and is dealt with in
@@ -1300,7 +1307,13 @@ function_key_number(Any id)
 
 static bool
 clientOwnsKeyTerminalImage(TerminalImage ti, EventObj ev)
-{ if ( !rlc_client_owns_terminal(ti->data) )
+{ RlcData b = ti->data;
+
+  if ( ev->id == NAME_pageUp || ev->id == NAME_pageDown )
+    return ( !(valInt(ev->buttons) & BUTTON_shift) &&
+	     (rlc_alt_screen(b) || rlc_client_owns_terminal(b)) );
+
+  if ( !rlc_client_owns_terminal(b) )
     return false;
 
   return ( (isInteger(ev->id) && valInt(ev->id) < 32) ||
@@ -1452,6 +1465,18 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
   { seq = final_seq(buf, sizeof(buf), 'H', mod, b->app_escape);
   } else if ( ev->id == NAME_delete )
   { seq = tilde_seq(buf, sizeof(buf), 3, mod);
+  } else if ( ev->id == NAME_pageUp || ev->id == NAME_pageDown )
+  { /* The unmodified keys are bound to ->cursor_page_up and
+     * ->cursor_page_down, which only get here through the binding
+     * being skipped for a client that owns them.  A modified one has
+     * no binding and arrives here whether or not there is a client to
+     * read it; without one we scroll, as the plain key does.
+     */
+    if ( !clientOwnsKeyTerminalImage(ti, ev) )
+      return send(ti, ev->id == NAME_pageUp ? NAME_cursorPageUp
+					    : NAME_cursorPageDown, EAV);
+
+    seq = tilde_seq(buf, sizeof(buf), ev->id == NAME_pageUp ? 5 : 6, mod);
   } else if ( (fn=function_key_number(ev->id)) )
   { static const int tilde[] = {15,17,18,19,20,21,23,24}; /* F5..F12 */
 
@@ -2943,6 +2968,12 @@ cursorHomeTerminalImage(TerminalImage ti)
   rlc_send(ti->data, seq, strlen(seq));
   succeed;
 }
+
+/* ->cursor_page_up, ->cursor_page_down: scroll the scroll back by a
+ * page.  These are what the Page Up and Page Down keys are bound to
+ * while the window owns them; a client that owns them instead is sent
+ * `CSI 5~'/`CSI 6~' by ->typed.
+ */
 
 static status
 cursorPageUpTerminalImage(TerminalImage ti)
