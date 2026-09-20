@@ -1269,7 +1269,7 @@ event(T, Ev:event) :->
         ->  set_active_terminal(T)
         ;   true
         )
-    ;   send(Ev, is_a, ms_right_down)
+    ;   send(Ev, is_popup)
     ->  send(T, show_popup, Ev)
     ;   drop_target_event(T, Ev,
                           'Drop Prolog source file(s) to consult',

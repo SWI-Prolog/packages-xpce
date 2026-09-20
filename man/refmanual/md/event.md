@@ -224,6 +224,16 @@ example-- type _3_ into _\C-c_.
 
     @see event->is_down
 
+- event->is_popup
+    Succeeds if the event asks for a popup (context) menu.  This is the
+    right mouse-button going down.  On MacOS, Control-left-down is the
+    documented alternative for the secondary click and is accepted as
+    well.  Class popup_gesture uses this test, as does code that
+    triggers a popup without using a gesture.
+
+    @see event->is_down
+    @see class popup_gesture
+
 - event->post: to=graphical, recogniser=[recogniser]
     This method is the central function for delivering events to graphical
     objects.  This method takes care of automatically grabbing the

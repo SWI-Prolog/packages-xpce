@@ -25,6 +25,7 @@ endif()
 test_libs(no_display           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(number_conversion    OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(object_reference     OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(popup_event          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(scrollbar            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(terminal_osc         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(terminal_client      OPTIONS ${XPCE_TEST_OPTIONS})
@@ -52,6 +53,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:no_display
                      xpce:number_conversion
                      xpce:object_reference
+                     xpce:popup_event
                      xpce:scrollbar
                      xpce:terminal_osc
                      xpce:terminal_client

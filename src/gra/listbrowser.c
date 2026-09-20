@@ -977,7 +977,7 @@ eventListBrowser(ListBrowser lb, EventObj ev)
   if ( isAEvent(ev, NAME_button) )
   { DictItem di = getDictItemListBrowser(lb, ev);
 
-    if ( di && notNil(lb->popup) && isAEvent(ev, NAME_msRightDown) )
+    if ( di && notNil(lb->popup) && isPopupEvent(ev) )
     { send(popupGesture(), NAME_context, di, EAV);
 
       if ( !postEvent(ev, (Graphical) lb, popupGesture()) )

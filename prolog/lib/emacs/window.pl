@@ -1569,7 +1569,7 @@ event(M, Ev:event) :->
     (   get(M, all_recognisers, Chain),
             get(Chain, find,
                 message(@arg1, event, Ev), _)
-    ;   send(Ev, is_a, ms_right_down), % show fragment popup (if any)
+    ;   send(Ev, is_popup),         % show fragment popup (if any)
         get(M?text_image, index, Caret),
         get(M?text_buffer, find_all_fragments,
             message(@arg1, overlap, Caret),

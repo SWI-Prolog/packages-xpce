@@ -17,6 +17,7 @@ COMMON(status)	eventName(Name name);
 COMMON(status)	allButtonsUpEvent(EventObj e);
 COMMON(status)	isUpEvent(EventObj e);
 COMMON(status)	isDownEvent(EventObj e);
+COMMON(status)	isPopupEvent(EventObj e);
 COMMON(Name)	getButtonEvent(EventObj e);
 COMMON(status)	isDragEvent(EventObj ev);
 COMMON(status)	hasModifierEvent(EventObj ev, Modifier m);

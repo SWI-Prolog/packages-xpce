@@ -201,8 +201,9 @@ make_isp_value_text_popup(P) :-
                                   message(@receiver, pretty_print))),
                 click_gesture(left, '', double,
                               message(@receiver, expand)),
-                handler(ms_right_down, and(message(@receiver, select),
-                                           new(or))),
+                handler(button, and(message(@event, is_popup),
+                                    message(@receiver, select),
+                                    new(or))),
                 popup_gesture(@isp_value_text_popup)))).
 
 

@@ -91,6 +91,41 @@ updatePopupGesture(PopupGesture g, EventObj ev)
 }
 
 
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+On MacOS, Control-left-click is the documented alternative for the
+secondary click.  See isPopupEvent().  A gesture only tests <-button and
+<-modifier while matching the down event: ->event below deals with the
+up event itself and drag events are button independent.  That allows us
+to run the normal gesture machinery with <-button and <-modifier set to
+the click that actually arrived, rather than duplicating the activation
+sequence here.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+static status
+dispatchPopupGesture(PopupGesture g, EventObj ev)
+{ Modifier m = g->modifier;
+
+  if ( g->button == NAME_right && isDownEvent(ev) &&
+       isPopupEvent(ev) && getButtonEvent(ev) != NAME_right &&
+       m->shift != NAME_down &&		/* Control is the emulation, so */
+       m->meta  != NAME_down &&		/* a gesture asking for another */
+       m->gui   != NAME_down )		/* modifier is not emulated */
+  { Name button = g->button;
+    status rc;
+
+    assign(g, button, getButtonEvent(ev));
+    assign(g, modifier, MODIFIER_control);
+    rc = eventGesture(g, ev);
+    assign(g, button, button);
+    assign(g, modifier, m);
+
+    return rc;
+  }
+
+  return eventGesture(g, ev);
+}
+
+
 static status
 eventPopupGesture(PopupGesture g, EventObj ev)
 { if ( g->status == NAME_active && isUpEvent(ev) )
@@ -124,7 +159,7 @@ eventPopupGesture(PopupGesture g, EventObj ev)
   } else if ( notNil(g->current) && g->current->displayed == ON )
     return postEvent(ev, (Graphical) g->current, DEFAULT);
 
-  if ( eventGesture(g, ev) )
+  if ( dispatchPopupGesture(g, ev) )
     succeed;
 
   if ( g->status == NAME_active && isAEvent(ev, NAME_keyboard) )

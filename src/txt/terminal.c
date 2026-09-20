@@ -1119,6 +1119,19 @@ dragScrollTerminalImage(TerminalImage ti)
   succeed;
 }
 
+/* Following a link is Control-click, except on MacOS, where that asks
+ * for the popup menu (see isPopupEvent()).  There it is Command-click,
+ * which is what Terminal.app and iTerm2 use to open a URL.  Option is
+ * not available: a terminal sends it to the application as the Meta
+ * modifier and MacOS uses Option-drag for a rectangular selection.
+ */
+
+#ifdef __APPLE__
+#define BUTTON_follow_link (BUTTON_gui)
+#else
+#define BUTTON_follow_link (BUTTON_control)
+#endif
+
 static status
 eventTerminalImage(TerminalImage ti, EventObj ev)
 { if ( ev->id == NAME_locMove )
@@ -1175,6 +1188,10 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
   if ( isAEvent(ev, NAME_msLeftDown) )
   { RlcData b = ti->data;
     Int x, y;
+
+    if ( isPopupEvent(ev) )		/* MacOS Control-click asks for the */
+      fail;				/* menu, not for a selection */
+
     endIsearchTerminalImage(ti, OFF);	/* the mouse takes the selection */
     get_xy_event(ev, ti, ON, &x, &y);
     if ( rlc_fold_at_gutter(ti, valInt(x), valInt(y)) )
@@ -1217,7 +1234,7 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
     if ( (fold=rlc_fold_at_gutter(ti, valInt(x), valInt(y))) )
       return send(fold, NAME_toggleFold, EAV);
     static const uchar_t *lnk;
-    if ( (valInt(ev->buttons) & BUTTON_control) &&
+    if ( (valInt(ev->buttons) & BUTTON_follow_link) &&
 	 (lnk=rlc_clicked_link(b, valInt(x), valInt(y))) &&
 	 notNil(ti->link_message) )
     { Name href = TCHAR2Name(lnk);

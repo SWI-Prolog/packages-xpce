@@ -51,6 +51,14 @@ instances of this class is often not necessary.
     This facility makes keyboard accelerators associated with the popup
     active.
 
+    If the gesture is bound to the right button (the default), it also
+    activates on any event for which `event ->is_popup` succeeds.  On
+    MacOS this makes Control-left-click open the popup, which is the
+    platform convention.  This is not done if the gesture requires the
+    shift, meta or command modifier.
+
+    @see event->is_popup
+
 - popup_gesture->initialise: popup=[popup|function], button=[button_name], modifier=[modifier]
     Create from popup object, button name and modifier.  By default is a
     popup associated to the right button.   Note that the popup argument

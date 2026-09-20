@@ -86,7 +86,10 @@ keystrokes and hovered hyperlinks.
     `terminal_block`.
 
 - terminal_image<->link_message: code*
-    Optional code invoked when a hyperlink is activated.
+    Optional code invoked when a hyperlink is activated.  A link is
+    followed by Control-clicking it, or, on MacOS, by Command-clicking
+    it: Control-click asks for the popup menu there.  See `event
+    ->is_popup`.
 
 - terminal_image<->scroll_bar: scroll_bar*
     Associated scroll_bar (driven by `->bubble_scroll_bar`).

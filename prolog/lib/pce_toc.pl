@@ -492,22 +492,43 @@ open(Node) :->
 
 :- pce_global(@toc_node_format, make_toc_node_format).
 :- pce_global(@toc_node, new(@receiver?node)).
-:- pce_global(@toc_node_recogniser,
-              new(handler_group(click_gesture(left, '', single,
-                                              message(@toc_node, select)),
-                                click_gesture(left, c, single,
-                                              message(@toc_node, select, @on)),
-                                click_gesture(left, '', double,
-                                              message(@toc_node, open)),
-                                handler(ms_right_down,
-                                        and(message(@toc_node, select),
-                                            new(or))),
-                                popup_gesture(?(@receiver?window, popup,
-                                                @toc_node?identifier)),
-                                handler(area_enter,
-                                        message(@receiver, entered, @on)),
-                                handler(area_exit,
-                                        message(@receiver, entered, @off))))).
+:- pce_global(@toc_node_recogniser, make_toc_node_recogniser).
+
+%!  make_toc_node_recogniser(-Recogniser) is det.
+%
+%   Recogniser attached to the nodes of a toc_window.
+
+make_toc_node_recogniser(G) :-
+    add_to_selection_modifier(Mod),
+    new(G, handler_group(click_gesture(left, '', single,
+                                       message(@toc_node, select)),
+                         click_gesture(left, Mod, single,
+                                       message(@toc_node, select, @on)),
+                         click_gesture(left, '', double,
+                                       message(@toc_node, open)),
+                         handler(button,
+                                 and(message(@event, is_popup),
+                                     message(@toc_node, select),
+                                     new(or))),
+                         popup_gesture(?(@receiver?window, popup,
+                                         @toc_node?identifier)),
+                         handler(area_enter,
+                                 message(@receiver, entered, @on)),
+                         handler(area_exit,
+                                 message(@receiver, entered, @off)))).
+
+%!  add_to_selection_modifier(-Modifier) is det.
+%
+%   Modifier that adds the node under the pointer to the selection.
+%   MacOS uses Control-click to ask for a popup menu (see `event
+%   ->is_popup'), so it uses Command-click here, which is the platform
+%   binding for extending a selection anyway.
+
+add_to_selection_modifier(Modifier) :-
+    (   current_prolog_flag(apple, true)
+    ->  Modifier = g
+    ;   Modifier = c
+    ).
 
 
 :- pce_global(@toc_drag_and_drop_recogniser,

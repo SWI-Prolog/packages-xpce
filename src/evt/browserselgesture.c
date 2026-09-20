@@ -112,6 +112,17 @@ verifyBrowserSelectGesture(BrowserSelectGesture g, EventObj ev)
 }
 
 
+/* Toggle an item in the selection.  MacOS uses Control-click to ask for
+ * a popup (see isPopupEvent()), so it uses Command-click here, which is
+ * what the platform uses anyway.
+ */
+
+#ifdef __APPLE__
+#define BUTTON_toggle_select (BUTTON_control|BUTTON_gui)
+#else
+#define BUTTON_toggle_select (BUTTON_control)
+#endif
+
 static status
 selectBrowserSelectGesture(BrowserSelectGesture g, EventObj ev)
 { ListBrowser lb = get_list_browser(ev);
@@ -123,7 +134,7 @@ selectBrowserSelectGesture(BrowserSelectGesture g, EventObj ev)
     } else
     { if ( valInt(ev->buttons) & BUTTON_shift )
       { send(lb, NAME_changeSelection, NAME_extend, di, EAV);
-      } else if ( valInt(ev->buttons) & BUTTON_control )
+      } else if ( valInt(ev->buttons) & BUTTON_toggle_select )
       { send(lb, NAME_changeSelection, NAME_toggle, di, EAV);
       } else
 	send(lb, NAME_changeSelection, NAME_set, di, EAV);
