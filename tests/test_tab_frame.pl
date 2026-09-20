@@ -858,6 +858,45 @@ test(on_top_selects_the_window_in_the_tab) :-
     send(TW, on_top, P1),
     get(TF, current, P1).
 
+%       Deleting the window that has the focus hands it to the window
+%       that takes over the room: the one after it, and the one before it
+%       when it was the last.  <-windows is in the order the windows were
+%       displayed, which is not the order they are laid out in, so a tab
+%       that simply fell back on its first window pulled the focus to the
+%       far side of the tab.
+
+test(delete_gives_the_focus_to_the_next) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, right),
+    send(TF, split, new(P3, picture), P2, right),
+    send(TF, current, P2),
+    send(TF, delete, P2),
+    get(TF, current, P3).
+
+test(delete_of_the_last_gives_the_focus_to_the_previous) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, right),
+    send(TF, split, new(P3, picture), P2, right),
+    send(TF, current, P3),
+    send(TF, delete, P3),
+    get(TF, current, P2).
+
+test(delete_finds_the_neighbour_across_a_split) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, left),
+    send(TF, split, new(P3, picture), P2, below),
+    send(TF, current, P1),
+    send(TF, delete, P1),
+    get(TF, current, P3).         % the group is on my left: its bottom
+
+test(delete_of_an_idle_window_leaves_the_focus_alone) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(P2, picture), P1, right),
+    send(TF, split, new(P3, picture), P2, right),
+    send(TF, current, P1),
+    send(TF, delete, P3),
+    get(TF, current, P1).
+
 :- end_tests(tab_frame_members).
 
 

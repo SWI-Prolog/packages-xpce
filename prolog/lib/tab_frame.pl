@@ -330,11 +330,15 @@ erase(TF, Gr:graphical) :->
     (   send(Gr, instance_of, window),
         get(Gr, slot, tile, Tile),
         Tile \== @nil
-    ->  send(Tile, unrelate),
+    ->  (   neighbour_window(Tile, Next)  % while the tree still holds Tile
+        ->  true
+        ;   Next = @default
+        ),
+        send(Tile, unrelate),
         send_super(TF, erase, Gr),
         (   get(TF, slot, closing, @on)
         ->  true
-        ;   send(TF, update_current),
+        ;   send(TF, update_current, Next),
             notify_frame(TF),
             (   get(TF, tile, _)
             ->  send(TF, layout)
@@ -449,16 +453,59 @@ focused_window(Focus, Windows, Window) :-
     get(Up, container, tabbed_window, Outer),   % when it is one already
     focused_window(Outer, Windows, Window).
 
-update_current(TF) :->
+update_current(TF, Prefer:prefer=[window]) :->
     "Keep <-current on a window I still hold"::
     window_list(TF, List),
     (   get(TF, slot, current, Cur),
         Cur \== @nil,
         memberchk_eq(Cur, List)
     ->  true
-    ;   List = [W|_]
-    ->  send(TF, current, W)            % ->current, so that the focus and
-    ;   send(TF, slot, current, @nil)   % whatever follows it come along
+    ;   Prefer \== @default,
+        memberchk_eq(Prefer, List)
+    ->  send(TF, current, Prefer)       % ->current, so that the focus and
+    ;   List = [W|_]                    % whatever follows it come along
+    ->  send(TF, current, W)
+    ;   send(TF, slot, current, @nil)
+    ).
+
+%!  neighbour_window(+Tile, -Window) is semidet.
+%
+%   The window that takes over the room Tile leaves behind: the one in
+%   the tile beside it, the tile after it if there is one and the tile
+%   before it otherwise, descending to the leaf on the side Tile was on.
+%   A tile that is an only child leaves its room to whatever is beside
+%   its parent, so climb.  Must be asked before `tile ->unrelate', which
+%   is what takes Tile out of the tree.
+
+neighbour_window(Tile, Window) :-
+    neighbour_tile(Tile, Neighbour, Side),
+    tile_windows(Neighbour, Windows),
+    (   Side == after
+    ->  Windows = [Window|_]
+    ;   last(Windows, Window)
+    ).
+
+neighbour_tile(Tile, Neighbour, Side) :-
+    get(Tile, super, Super),
+    Super \== @nil,
+    (   get(Super, members, Members),
+        Members \== @nil,
+        chain_list(Members, List),
+        beside(List, Tile, Neighbour0, Side0)
+    ->  Neighbour = Neighbour0,
+        Side = Side0
+    ;   neighbour_tile(Super, Neighbour, Side)
+    ).
+
+beside(List, Tile, Neighbour, Side) :-
+    (   append(_, [T,Next|_], List),
+        T == Tile
+    ->  Neighbour = Next,
+        Side = after
+    ;   append(_, [Prev,T], List),
+        T == Tile
+    ->  Neighbour = Prev,
+        Side = before
     ).
 
                  /*******************************
