@@ -36,6 +36,7 @@
 :- use_module(library(pce)).
 :- use_module(library(pce_util), [default/3, chain_list/2]).
 :- use_module(library(dragdrop), []).
+:- use_module(library(tabbed_window), []).
 :- use_module(library(help_message), []).
 :- use_module(library(pce_icon_button), []).
 :- use_module(library(lists), [member/2, sum_list/2, same_length/2,
@@ -55,6 +56,10 @@ Where class window_tab (see library(tabbed_window))   holds exactly _one_
 window and resizes it by hand, a  tab_frame   keeps  the tiles alive: the
 windows in it are related through the same class tile hierarchy the frame
 uses, and ->layout runs `tile ->layout' over the tab's content area.
+
+A window that displays a split_handle is  moved by dragging that grip: to
+another window, which splits to make room  for it, or to the tab bar, which
+gives it a tab of its own.
 
 Simple example:
 
@@ -1331,6 +1336,289 @@ relative_window(TF, _, Rel) :-
 
 
                  /*******************************
+                 *          THE TAB BAR         *
+                 *******************************/
+
+/* A window dropped on the label row is given a tab of its own, where one
+dropped on another window splits that window.  The tabbed window the row
+belongs to answers that drop: the row is its, and so is the order the tabs
+are kept in.  Where in the row the pointer is says where the new tab goes.
+
+The row is thin, and a tabbed window showing a single tab hides its label
+altogether -- which is exactly when there is most reason to make a second
+tab.  So the band directly above the row counts as the same target: in a
+pane_frame that is the menu bar, which is always there and has room to
+spare.  See tab_bar_position/4.
+
+What the drop would do is shown as a ghost of the label the new tab will
+carry, drawn where it will appear.
+*/
+
+:- pce_extend_class(tabbed_window).
+
+variable(drop_ghost, graphical*, get,
+         "Ghost of the tab a drop would make").
+
+%       The argument is typed `object' for the same reason as `tab_frame
+%       ->drop': a drag_and_drop_gesture offers whatever is being dragged
+%       to the nearest container with a ->drop, and only a window is a
+%       thing that can become a tab.
+
+drop(TW, Window:object, Pos:point) :->
+    "Give Window a tab of its own, at Pos of my label row"::
+    send(Window, instance_of, window),
+    send(TW, preview_drop, @nil),
+    get(TW, tab_stack, TS),
+    get(TS, insertion_at, Pos?x, Before),
+    (   own_tab(TW, Window, Tab)
+    ->  send(TS, place_tab, Tab, Before)   % it is a tab already: reorder it
+    ;   send(TW, append_tab, Window, Before)
+    ),
+    send(TW, tabs_arranged).
+
+append_tab(TW, Window:window, Before:'tab*') :->
+    "Put Window in a tab of its own, before Before (@nil: at the end)"::
+    send(TW, append, Window, @default, @on),
+    get(Window, container, tab, Tab),
+    get(TW, tab_stack, TS),
+    send(TS, place_tab, Tab, Before).
+
+%       ->expose: a window dropped into another frame must work there.
+%       See `tab_frame ->drop', which says the same after a split.
+
+tabs_arranged(TW) :->
+    "Tell my frame that the user has just arranged its tabs"::
+    (   get(TW, frame, Frame),
+        Frame \== @nil
+    ->  (   send(Frame, has_send_method, arranged)
+        ->  send(Frame, arranged)
+        ;   true
+        ),
+        send(Frame, expose)
+    ;   true
+    ).
+
+preview_drop(TW, Window:object*, Pos:[point]) :->
+    "Show the tab a drop of Window at Pos would make"::
+    send(TW, clear_drop_ghost),
+    (   Window \== @nil,
+        send(Window, instance_of, window),
+        Pos \== @default
+    ->  ignore(send(TW, show_drop_ghost, Window, Pos))
+    ;   true
+    ).
+
+show_drop_ghost(TW, Window:window, Pos:point) :->
+    "Draw the label the tab a drop of Window at Pos would make"::
+    get(TW, tab_stack, TS),
+    get(TS, insertion_at, Pos?x, Before),
+    top_tab(TS, Top),
+    ghost_label(Top, Window, Label),
+    ghost_width(Top, Label, W),
+    ghost_place(TW, TS, Top, Before, W, Device, area(X, Y, GW, H)),
+    get(Top, label_font, Font),
+    send(Device, display, new(G, tab_drop_ghost(Label, Font))),
+    send(G, place, X, Y, GW, H),
+    send(TW, slot, drop_ghost, G).
+
+clear_drop_ghost(TW) :->
+    "Take the ghost away"::
+    (   get(TW, slot, drop_ghost, G),
+        G \== @nil
+    ->  send(TW, slot, drop_ghost, @nil),
+        (   object(G)                   % the stack it was on may have gone
+        ->  send(G, destroy)
+        ;   true
+        )
+    ;   true
+    ).
+
+:- pce_end_class(tabbed_window).
+
+%!  own_tab(+TabbedWindow, +Window, -Tab) is semidet.
+%
+%   Tab is a tab of TabbedWindow that holds Window and nothing else.
+%   Dropping such a window on the row is not a move but a reorder: it has
+%   the tab a drop would make already.  A window inside a group answers
+%   the tab of its group, which is not one of mine.
+
+own_tab(TW, Window, Tab) :-
+    get(Window, container, tab, Tab),
+    get(TW, tab_stack, TS),
+    get(Tab, device, TS),
+    get(Tab, windows, Windows),
+    get(Windows, size, 1).
+
+%!  top_tab(+Stack, -Tab) is semidet.
+%
+%   The tab in view, which is the one whose label row is on show.
+
+top_tab(TS, Tab) :-
+    get(TS, tabs, Tabs),
+    (   get(Tabs, find, @arg1?status == on_top, Found)
+    ->  Tab = Found
+    ;   get(Tabs, head, Tab)
+    ).
+
+%!  ghost_label(+Tab, +Window, -Label) is det.
+%
+%   What the tab a drop of Window would make is called.  The same rule
+%   `pane_tabbed_window <-new_tab' goes by, and then the same step from a
+%   name to a label a tab takes when it is made -- see nameDialogGroup()
+%   in src/men/diagroup.c -- so that the ghost carries the name the tab
+%   will.
+
+ghost_label(Tab, Window, Label) :-
+    (   send(Window, has_get_method, pane_label),
+        get(Window, pane_label, PaneLabel),
+        PaneLabel \== @nil
+    ->  Name = PaneLabel
+    ;   get(Window, name, Name)
+    ),
+    (   get(Tab, label_name, Name, TheLabel)
+    ->  Label = TheLabel
+    ;   Label = Name
+    ).
+
+%!  ghost_width(+Tab, +Label, -Width) is det.
+%
+%   How wide the label of the new tab will be.  A label is its text plus
+%   room for the close button and a margin -- see computeLabelTab() in
+%   src/men/tab.c -- and rather than work that out again here, take the
+%   room an existing label leaves around its own text.
+
+ghost_width(Tab, Label, Width) :-
+    get(Tab, label_font, Font),
+    get(Font, width, Label, TextWidth),
+    (   label_padding(Tab, Font, Pad)
+    ->  true
+    ;   get(Font, height, Pad)
+    ),
+    Width is TextWidth+Pad.
+
+label_padding(Tab, Font, Pad) :-
+    get(Tab, label, Own),
+    Own \== @nil,
+    get(Font, width, Own, OwnWidth),
+    get(Tab?label_size, width, LabelWidth),
+    Pad is LabelWidth-OwnWidth,
+    Pad > 0.
+
+%!  ghost_place(+TabbedWindow, +Stack, +Top, +Before, +Width,
+%!              -Device, -Area) is semidet.
+%
+%   Where to draw the ghost of a new tab of Width that goes before Before
+%   (@nil: at the end of the row), and on what.  Normally that is the
+%   label row of Stack.  A tabbed window showing a single tab hides its
+%   label and then there is no row to draw in; the ghost goes at the
+%   bottom of the band above instead -- the menu bar the drop came from --
+%   at the place in the row the label will take once there is one.
+
+ghost_place(TW, TS, Top, Before, Width, Device, area(X, Y, Width, H)) :-
+    insertion_x(TS, Before, RowX),
+    (   get(Top, label_height, LH),
+        LH > 0
+    ->  Device = TS,
+        X = RowX,
+        Y = 0,
+        H = LH
+    ;   bar_backdrop(TW, Device, DX, DH),
+        get(Top?label_size, height, LabelH),
+        H is min(LabelH, DH),
+        X is RowX+DX,
+        Y is DH-H
+    ).
+
+%!  insertion_x(+Stack, +Before, -X) is det.
+%
+%   Where in the row the label of a new tab that goes before Before
+%   starts; @nil: after the last label.  A hidden label still has its
+%   size, so this answers where the labels will be as soon as a second
+%   tab brings the row back.
+
+insertion_x(TS, Before, X) :-
+    Before == @nil,
+    !,
+    get(TS, tabs, Tabs),
+    (   get(Tabs, tail, Last)
+    ->  get(Last, label_offset, Offset),
+        get(Last?label_size, width, Width),
+        X is Offset+Width
+    ;   X = 0
+    ).
+insertion_x(_TS, Before, X) :-
+    get(Before, label_offset, X).
+
+%!  bar_backdrop(+TabbedWindow, -Window, -DX, -Height) is semidet.
+%
+%   Window is the window of the frame that sits directly above the label
+%   row of TabbedWindow -- the menu bar of a pane_frame -- Height its
+%   height and DX what separates its left edge from the row.  It is both
+%   the rest of the target a drop on the row has and what the ghost is
+%   drawn on while the row itself is hidden.
+
+bar_backdrop(TW, Above, DX, Height) :-
+    get(TW, frame, Frame),
+    Frame \== @nil,
+    get(TW, display_position, point(TX, TY)),
+    get(TW, size, size(TWidth, _)),
+    get(Frame, members, Members),
+    chain_list(Members, List),
+    findall(Bottom-W,
+            ( member(W, List),
+              W \== TW,
+              send(W, instance_of, window),
+              get(W, display_position, point(WX, WY)),
+              get(W, size, size(WW, WH)),
+              Bottom is WY+WH,
+              Bottom =< TY,             % above me
+              WX < TX+TWidth,           % and over my columns
+              WX+WW > TX
+            ),
+            Candidates),
+    Candidates \== [],
+    sort(1, @>=, Candidates, [_-Above|_]),      % the lowest of them
+    get(Above, display_position, point(AX, _)),
+    get(Above, size, size(_, Height)),
+    DX is TX-AX.
+
+
+:- pce_begin_class(tab_drop_ghost, device,
+                   "Label of the tab a drop would make").
+
+class_variable(colour, colour, colour(@default, 80, 130, 200),
+               "Fill of the ghost; the colour a split is outlined in").
+class_variable(opacity, num, 0.3,
+               "How much of what is under the ghost still shows").
+
+initialise(G, Label:name, Font:font) :->
+    "Create a ghost carrying Label"::
+    send_super(G, initialise),
+    get(G, class_variable_value, colour, Colour),
+    get(G, class_variable_value, opacity, Opacity),
+    send(G, display, new(B, box(10, 10))),
+    send(B, name, background),
+    send(B, pen, 0),
+    send(B, fill, Colour),
+    send(B, opacity, Opacity),
+    send(G, display, new(T, text(Label, center, Font))),
+    send(T, name, label).
+
+place(G, X:int, Y:int, W:int, H:int) :->
+    "Take the place in the label row the new tab would"::
+    get(G, member, background, B),
+    send(B, set, 0, 0, W, H),
+    get(G, member, label, T),
+    get(T, size, size(TW, TH)),
+    TX is max(0, (W-TW)//2),
+    TY is max(0, (H-TH)//2),
+    send(T, set, TX, TY),
+    send(G, set, X, Y).
+
+:- pce_end_class(tab_drop_ghost).
+
+
+                 /*******************************
                  *         SPLIT HANDLE         *
                  *******************************/
 
@@ -1340,7 +1628,9 @@ A window is not a good thing to start a drag on: an editor and a terminal
 both want the pointer for themselves.  So a window that is to be moved by
 hand displays a split_handle, a small grip that does nothing else.  Drag
 it onto another window and the receiver splits to make room; which of its
-halves is taken follows the pointer.
+halves is taken follows the pointer.  Drag it onto the tab bar instead --
+the label row, or the menu bar above it -- and the window is given a tab
+of its own, where in the row the pointer says.
 
 The window it moves is its <-window, so any window can have one: display
 it and place it from ->resize.
@@ -1549,16 +1839,16 @@ drag(G, Ev:event) :->
     ).
 
 update_target(G, Ev:event) :->
-    "Find the tab under the pointer and let it show the drop"::
-    (   drop_context(G, Ev, Tab, Pos)
-    ->  send(G, forget_target, Tab),
-        send(G, slot, target, Tab),
-        send(Tab, preview_drop, G?source, Pos)
+    "Find what is under the pointer and let it show the drop"::
+    (   drop_context(G, Ev, Receiver, Pos)
+    ->  send(G, forget_target, Receiver),
+        send(G, slot, target, Receiver),
+        send(Receiver, preview_drop, G?source, Pos)
     ;   send(G, forget_target, @nil),
         send(G, slot, target, @nil)
     ).
 
-forget_target(G, Keep:tab_frame*) :->
+forget_target(G, Keep:graphical*) :->
     "Take the outline away, unless Keep is still the target"::
     (   get(G, target, Old),
         Old \== Keep,
@@ -1578,8 +1868,8 @@ terminate(G, Ev:event) :->
         ;   true
         )
     ;   send(Ev?window, focus_cursor, @nil),
-        (   drop_context(G, Ev, Tab, Pos)
-        ->  send(Tab, drop, G?source, Pos)
+        (   drop_context(G, Ev, Receiver, Pos)
+        ->  send(Receiver, drop, G?source, Pos)
         ;   debug(split_handle, 'let go with no target under the pointer', [])
         )
     ),
@@ -1625,31 +1915,69 @@ border_colour(G, W, Colour) :-
     ;   Colour = Border
     ).
 
-%!  drop_context(+Gesture, +Event, -Tab, -Pos) is semidet.
+%!  drop_context(+Gesture, +Event, -Receiver, -Pos) is semidet.
 %
-%   Tab is the tab the drop would go to and Pos where the pointer is in
-%   the coordinates it lays its windows out in.  The pointer may be over
-%   another window of the application, so every tab that is on top of its
-%   stack is a candidate, in the frame the drag started in first.
+%   Receiver is what the drop would go to and Pos where the pointer is in
+%   its coordinates.  The pointer may be over another window of the
+%   application, so every tab that is on top of its stack is a candidate,
+%   in the frame the drag started in first.
 
-drop_context(G, Ev, Tab, Pos) :-
+drop_context(G, Ev, Receiver, Pos) :-
     get(G, source, Source),
     Source \== @nil,
     pointer_position(Ev, X, Y),
     candidate_tab(Source, Tab),
-    tab_position(Tab, X, Y, Pos),
-    get(Pos, x, PX),
-    get(Pos, y, PY),
-    (   get(Tab, drop_target, Pos, Target)
-    ->  get(Tab, drop_side, Pos, _0Side)
-    ;   Target = none,
-        _0Side = none
+    tab_position(Tab, X, Y, TabPos),
+    get(TabPos, x, _0PX),
+    get(TabPos, y, _0PY),
+    (   drop_receiver(Tab, Source, TabPos, Receiver, Pos)
+    ->  _0Answer = Receiver
+    ;   _0Answer = none
     ),
-    debug(split_handle, 'dragging ~w at ~d,~d of ~w -> ~w ~w',
-          [Source, PX, PY, Tab, Target, _0Side]),
-    Target \== none,
-    Target \== Source,
+    debug(split_handle, 'dragging ~w at ~d,~d of ~w -> ~w',
+          [Source, _0PX, _0PY, Tab, _0Answer]),
+    _0Answer \== none,
     !.
+
+%!  drop_receiver(+Tab, +Source, +Pos, -Receiver, -RPos) is semidet.
+%
+%   What answers a drop of Source at Pos of Tab, and where Pos is in the
+%   coordinates of that receiver.  Over the windows of Tab it is Tab
+%   itself, which splits the window under the pointer; on the label row
+%   above them -- or on the band above that -- it is the tabbed window
+%   Tab is in, which gives Source a tab of its own.
+
+drop_receiver(Tab, _Source, Pos, TW, RPos) :-
+    tab_bar_position(Tab, Pos, TW, RPos),
+    !.
+drop_receiver(Tab, Source, Pos, Tab, Pos) :-
+    get(Tab, drop_target, Pos, Target),
+    Target \== Source.
+
+%!  tab_bar_position(+Tab, +Pos, -TabbedWindow, -RPos) is semidet.
+%
+%   TabbedWindow is the one whose label row Pos is on, and RPos is Pos in
+%   its coordinates, where the row is the strip below y=0 and the band
+%   above the row -- the menu bar -- is at a negative y.  Pos is in the
+%   coordinates Tab lays its windows out in, which start a label's height
+%   lower and at the same x.
+
+tab_bar_position(Tab, Pos, TW, point(PX, RY)) :-
+    get(Pos, y, PY),
+    PY < 0,                             % above the windows of the tab
+    get(Tab, container, tabbed_window, TW),
+    send(TW, has_send_method, drop),
+    get(Pos, x, PX),
+    PX >= 0,
+    get(TW, size, size(Width, _)),
+    PX < Width,
+    get(Tab, label_height, LH),
+    (   bar_backdrop(TW, _, _, Band)
+    ->  true
+    ;   Band = 0
+    ),
+    PY >= -(LH+Band),
+    RY is PY+LH.
 
 %!  pointer_position(+Event, -X, -Y) is semidet.
 %
@@ -1702,7 +2030,8 @@ move_gesture(click).
 %   What the grip says it is for.  Both gestures are always on it, but the
 %   one that works everywhere is the one worth naming.
 
-handle_help(drag,  'Drag onto another window to put this one beside it').
+handle_help(drag,  'Drag onto another window to put this one beside it, \c
+                    or onto the tab bar for a tab of its own').
 handle_help(click, 'Click to pick this window up, then click where it goes').
 
 %!  window_positions_known is semidet.
@@ -1778,7 +2107,7 @@ any frame.
                    "Moving a window to a place picked with the pointer").
 
 variable(source,   window*,    get, "Window waiting to be put somewhere").
-variable(target,   tab_frame*, get, "Tab the pointer is over").
+variable(target,   graphical*, get, "Tab or label row the pointer is over").
 
 :- pce_global(@split_move, new(split_move)).
 :- pce_global(@split_move_recogniser, make_split_move_recogniser).
@@ -1799,7 +2128,8 @@ start(M, Source:window, Handle:graphical) :->
     send(Source, focus, Handle, @split_move_recogniser, Cursor, @nil),
     send(Source, grab_pointer, @on),
     send(Source, report, status,
-         'Click the window to put this one beside, or right-click to cancel').
+         'Click the window to put this one beside, the tab bar for a tab \c
+          of its own, or right-click to cancel').
 
 stop(M) :->
     "Put the window down again"::
@@ -1819,10 +2149,10 @@ cancel(M) :->
 
 preview(M, Ev:event) :->
     "Outline the drop the pointer is over"::
-    (   move_context(M, Ev, Tab, Pos)
-    ->  send(M, forget_target, Tab),
-        send(M, slot, target, Tab),
-        send(Tab, preview_drop, M?source, Pos)
+    (   move_context(M, Ev, Receiver, Pos)
+    ->  send(M, forget_target, Receiver),
+        send(M, slot, target, Receiver),
+        send(Receiver, preview_drop, M?source, Pos)
     ;   send(M, forget_target, @nil)
     ).
 
@@ -1830,14 +2160,14 @@ drop(M, Ev:event) :->
     "Put the window where the pointer is"::
     get(M, slot, source, Source),
     Source \== @nil,
-    (   move_context(M, Ev, Tab, Pos)
+    (   move_context(M, Ev, Receiver, Pos)
     ->  send(M, forget_target, @nil),
         send(M, stop),                  % let go before moving the window
-        send(Tab, drop, Source, Pos)
+        send(Receiver, drop, Source, Pos)
     ;   send(M, stop)
     ).
 
-forget_target(M, Keep:'tab_frame*') :->
+forget_target(M, Keep:'graphical*') :->
     "Take the outline away, unless Keep is still the target"::
     (   get(M, slot, target, Old),
         Old \== @nil,
@@ -1849,19 +2179,19 @@ forget_target(M, Keep:'tab_frame*') :->
 
 :- pce_end_class(split_move).
 
-%!  move_context(+Move, +Event, -Tab, -Pos) is semidet.
+%!  move_context(+Move, +Event, -Receiver, -Pos) is semidet.
 %
-%   Tab is the tab the pointer is over and Pos where it is in the
-%   coordinates Tab lays its windows out in.
+%   Receiver is what the pointer is over -- a tab to split or the label
+%   row of the tabbed window it is in -- and Pos where the pointer is in
+%   the coordinates of that receiver.
 
-move_context(M, Ev, Tab, Pos) :-
+move_context(M, Ev, Receiver, Pos) :-
     get(M, slot, source, Source),
     Source \== @nil,
     grab_position(Ev, Frame, X, Y),
     frame_tab_frame(Frame, Tab),
-    tab_position(Tab, X, Y, Pos),
-    get(Tab, drop_target, Pos, Target),
-    Target \== Source.
+    tab_position(Tab, X, Y, TabPos),
+    drop_receiver(Tab, Source, TabPos, Receiver, Pos).
 
 %!  grab_position(+Event, -Frame, -X, -Y) is semidet.
 %

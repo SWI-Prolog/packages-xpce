@@ -67,6 +67,7 @@ test_tab_frame :-
                 tab_frame_resize,
                 tab_frame_manager,
                 tab_frame_drop,
+                tab_frame_tab_bar,
                 tab_frame_window_tree,
                 tab_frame_window_group
               ]).
@@ -1594,6 +1595,317 @@ test(the_handle_drags_the_window_it_is_displayed_on) :-
         message(@arg1, instance_of, drag_and_drop_gesture), _).
 
 :- end_tests(tab_frame_drop).
+
+
+:- begin_tests(tab_frame_tab_bar).
+
+%   Dropping a window on the tab bar -- the label row, or the band above
+%   it -- gives it a tab of its own rather than splitting a window.  The
+%   tabbed window answers that drop, and a ghost of the label the new tab
+%   will carry says where it is about to go.
+
+%!  labels(+TabbedWindow, -Labels) is det.
+
+labels(TW, Labels) :-
+    get(TW, tabs, Tabs),
+    chain_list(Tabs, List),
+    findall(L, (member(T, List), get(T, label, L)), Labels).
+
+%!  row_x(+TabbedWindow, +Which, -X) is det.
+%
+%   An x on the label row: over the left half of the Nth label, or past
+%   the last one.
+
+row_x(TW, nth(N), X) :-
+    get(TW, tabs, Tabs),
+    get(Tabs, nth1, N, Tab),
+    get(Tab, label_offset, Offset),
+    X is Offset+2.
+row_x(TW, end, X) :-
+    get(TW, tabs, Tabs),
+    get(Tabs, tail, Last),
+    get(Last, label_offset, Offset),
+    get(Last?label_size, width, Width),
+    X is Offset+Width+5.
+
+%!  row_point(+Tab, +X, -Point) is det.
+%
+%   A point on the label row of Tab, in the coordinates its windows are
+%   laid out in: the row is drawn above them, at a negative y.
+
+row_point(Tab, X, point(X, Y)) :-
+    get(Tab, label_height, LH),
+    Y is -(LH//2)-1.
+
+%!  event_point(+Tab, +X, +Window, -EX, -EY) is det.
+%
+%   Where the pointer is on the label row of Tab, in the coordinates of
+%   Window: what a drag started on Window reports once it has moved
+%   there.
+
+event_point(Tab, X, Window, EX, EY) :-
+    get(Tab, display_position, point(TX, TY)),
+    get(Tab, offset, point(OX, OY)),
+    get(Tab, label_height, LH),
+    get(Window, display_position, point(WX, WY)),
+    EX is TX+OX+X-WX,
+    EY is TY+OY-LH//2-WY.
+
+%!  grip(+Window, -Handle, -X, -Y) is det.
+%
+%   A grip on Window and the middle of it.
+
+grip(Window, H, X, Y) :-
+    send(Window, display, new(H, split_handle)),
+    send(H, place, Window),
+    get(H, area, area(HX, HY, HW, HH)),
+    X is HX+HW//2,
+    Y is HY+HH//2.
+
+%!  with_bar(-TabbedWindow, -Tab, -Window, -Dialog) is det.
+%
+%   A frame with a dialog above a tabbed window that shows a single tab,
+%   whose label is therefore hidden: the band the dialog fills is then
+%   the only tab bar there is.
+
+with_bar(TW, TF, P, D) :-
+    new(D, dialog),
+    send(D, append, button(hello)),
+    new(TW, tabbed_window('Test', size(400,300))),
+    send(TW, hide_single_label, @on),
+    send(TW, tab, new(TF, tab_frame(new(P, picture), one))),
+    send(TW, below, D),
+    send(D, open),
+    send(TW, resize).
+
+test(the_row_says_where_a_new_tab_goes) :-
+    two_tabs(TW, TF1, TF2),
+    get(TW, tab_stack, TS),
+    row_x(TW, nth(1), X1),
+    get(TS, insertion_at, X1, TF1),
+    row_x(TW, nth(2), X2),
+    get(TS, insertion_at, X2, TF2),
+    row_x(TW, end, X3),
+    get(TS, insertion_at, X3, @nil).
+
+test(the_right_half_of_a_label_is_the_place_after_it) :-
+    two_tabs(TW, _TF1, TF2),
+    get(TW, tab_stack, TS),
+    get(TF2, label_offset, Offset),
+    get(TF2?label_size, width, Width),
+    X is Offset+Width-2,
+    get(TS, insertion_at, X, @nil).      % the last one: after it is the end
+
+test(a_tab_is_put_where_the_row_says, Labels == ['Two', 'One']) :-
+    two_tabs(TW, TF1, TF2),
+    get(TW, tab_stack, TS),
+    send(TS, place_tab, TF2, TF1),
+    labels(TW, Labels).
+
+test(a_tab_is_put_at_the_end_of_the_row, Labels == ['Two', 'One']) :-
+    two_tabs(TW, TF1, _TF2),
+    get(TW, tab_stack, TS),
+    send(TS, place_tab, TF1, @nil),
+    labels(TW, Labels).
+
+test(dropping_a_window_on_the_row_gives_it_a_tab,
+     Labels == ['Three', 'One', 'Two']) :-
+    two_tabs(TW, TF1, _TF2),
+    get(TF1?windows, head, P1),
+    send(TF1, split, new(P3, picture), P1, horizontally),
+    send(P3, name, three),
+    row_x(TW, nth(1), X),
+    row_point(TF1, X, Pos),
+    send(TW, drop, P3, Pos),
+    get(P3, container, tab, New),
+    get(New, label, 'Three'),
+    get(TF1?windows, size, 1),          % and left the tab it was in
+    labels(TW, Labels).
+
+test(the_new_tab_lands_where_the_pointer_is,
+     Labels == ['One', 'Two', 'Three']) :-
+    two_tabs(TW, TF1, _TF2),
+    get(TF1?windows, head, P1),
+    send(TF1, split, new(P3, picture), P1, horizontally),
+    send(P3, name, three),
+    row_x(TW, end, X),
+    row_point(TF1, X, Pos),
+    send(TW, drop, P3, Pos),
+    labels(TW, Labels).
+
+%   A window that has a tab to itself has the tab a drop would make
+%   already, so the drop moves that tab in the row rather than making
+%   another one.
+
+test(dropping_a_lone_tab_on_the_row_reorders_it,
+     Labels == ['Two', 'One']) :-
+    two_tabs(TW, TF1, _TF2),
+    get(TF1?windows, head, P1),
+    row_x(TW, end, X),
+    row_point(TF1, X, Pos),
+    send(TW, drop, P1, Pos),
+    get(TW?tabs, size, 2),
+    labels(TW, Labels).
+
+test(the_ghost_carries_the_label_the_new_tab_will, Shows == 'Three') :-
+    two_tabs(TW, TF1, _TF2),
+    get(TF1?windows, head, P1),
+    send(TF1, split, new(P3, picture), P1, horizontally),
+    send(P3, name, three),
+    row_x(TW, nth(1), X),
+    row_point(TF1, X, Pos),
+    send(TW, preview_drop, P3, Pos),
+    get(TW, drop_ghost, Ghost),
+    Ghost \== @nil,
+    get(Ghost, member, label, Text),
+    get(Text, string, String),
+    get(String, value, Shows).
+
+test(the_ghost_takes_the_place_the_label_will) :-
+    two_tabs(TW, TF1, TF2),
+    get(TF1?windows, head, P1),
+    send(TF1, split, new(P3, picture), P1, horizontally),
+    row_x(TW, nth(2), X),
+    row_point(TF1, X, Pos),
+    send(TW, preview_drop, P3, Pos),
+    get(TW, drop_ghost, Ghost),
+    get(Ghost, area, area(GX, 0, _, GH)),
+    get(TF2, label_offset, GX),         % where the second label is now
+    get(TF1, label_height, GH).
+
+test(the_ghost_goes_away_again) :-
+    two_tabs(TW, TF1, _TF2),
+    get(TF1?windows, head, P1),
+    send(TF1, split, new(P3, picture), P1, horizontally),
+    row_x(TW, nth(1), X),
+    row_point(TF1, X, Pos),
+    send(TW, preview_drop, P3, Pos),
+    get(TW, drop_ghost, Ghost),
+    Ghost \== @nil,
+    send(TW, preview_drop, @nil),
+    get(TW, drop_ghost, @nil),
+    \+ object(Ghost).
+
+test(a_drop_takes_the_ghost_away) :-
+    two_tabs(TW, TF1, _TF2),
+    get(TF1?windows, head, P1),
+    send(TF1, split, new(P3, picture), P1, horizontally),
+    row_x(TW, nth(1), X),
+    row_point(TF1, X, Pos),
+    send(TW, preview_drop, P3, Pos),
+    send(TW, drop, P3, Pos),
+    get(TW, drop_ghost, @nil).
+
+test(dragging_the_grip_to_the_row_makes_a_tab,
+     Labels == ['One', 'Two', 'Three']) :-
+    two_tabs(TW, TF1, _TF2),
+    get(TF1?windows, head, P1),
+    send(TF1, split, new(P3, picture), P1, horizontally),
+    send(P3, name, three),
+    grip(P3, _H, DownX, DownY),
+    row_x(TW, end, X),
+    event_point(TF1, X, P3, EX, EY),
+    send(P3, post_event, event(ms_left_down, P3, DownX, DownY)),
+    send(P3, post_event, event(ms_left_drag, P3, EX, EY)),
+    get(TW, drop_ghost, Ghost),
+    Ghost \== @nil,                     % the ghost is up while it is there
+    send(P3, post_event, event(ms_left_up, P3, EX, EY)),
+    get(TW, drop_ghost, @nil),
+    labels(TW, Labels).
+
+%   The row of another window is a target as well: the window is dragged
+%   there and arrives in a tab of its own.  A drag finds the window under
+%   the pointer by its place on the display, and the frames these tests
+%   make are leaked, so the one dropped on is opened where no other test
+%   leaves one.
+
+test(dragging_onto_the_row_of_another_frame_takes_the_window_there,
+     Labels == ['Three', 'One']) :-
+    tabbed_at(0, 0, _TW1, TF1, P1),
+    tabbed_at(1300, 500, TW2, TF2, _P2),
+    send(TF1, split, new(P3, picture), P1, horizontally),
+    send(P3, name, three),
+    grip(P3, _H, DownX, DownY),
+    event_point(TF2, 2, P3, EX, EY),
+    send(P3, post_event, event(ms_left_down, P3, DownX, DownY)),
+    send(P3, post_event, event(ms_left_drag, P3, EX, EY)),
+    get(TW2, drop_ghost, Ghost),
+    Ghost \== @nil,
+    send(P3, post_event, event(ms_left_up, P3, EX, EY)),
+    get(P3, container, tab, New),
+    get(TW2, tab_stack, Stack),
+    get(New, device, Stack),
+    labels(TW2, Labels).
+
+%   Clicking the grip picks the window up; the next click puts it down,
+%   on the row as well as on a window.
+
+test(carrying_a_window_to_the_row_makes_a_tab,
+     Labels == ['Three', 'One']) :-
+    tabbed_at(0, 0, _TW1, TF1, P1),
+    tabbed_at(700, 0, TW2, TF2, _P2),
+    send(TF1, split, new(P3, picture), P1, horizontally),
+    send(P3, name, three),
+    grip(P3, _H, X, Y),
+    send(P3, post_event, event(ms_left_down, P3, X, Y)),
+    send(P3, post_event, event(ms_left_up, P3, X, Y)),
+    get(@split_move, source, P3),
+    get(TF2, label_height, LH),
+    RY is -(LH//2)-1,
+    post_grabbed(P3, loc_move, TF2, 2, RY),
+    get(TW2, drop_ghost, Ghost),
+    Ghost \== @nil,
+    post_grabbed(P3, ms_left_up, TF2, 2, RY),
+    get(@split_move, source, @nil),
+    get(TW2, drop_ghost, @nil),
+    labels(TW2, Labels).
+
+%   A tabbed window showing one tab hides its label, and then the row is
+%   not there to be dropped on.  The band above it -- the menu bar of a
+%   pane_frame -- is the target instead, and the ghost goes there.
+
+test(the_band_above_the_row_is_a_target_too) :-
+    with_bar(TW, TF, _P, _D),
+    get(TF, label_height, 0),
+    tab_frame:tab_bar_position(TF, point(10, -3), Over, _Pos),
+    Over == TW.
+
+test(above_the_band_is_no_target) :-
+    with_bar(_TW, TF, _P, D),
+    get(D, size, size(_, DH)),
+    Y is -DH-10,
+    \+ tab_frame:tab_bar_position(TF, point(10, Y), _, _).
+
+test(beside_the_row_is_no_target) :-
+    two_tabs(TW, TF1, _TF2),
+    get(TW, size, size(Width, _)),
+    X is Width+10,
+    row_point(TF1, X, point(_, Y)),
+    \+ tab_frame:tab_bar_position(TF1, point(X, Y), _, _).
+
+test(the_ghost_goes_on_the_band_while_the_row_is_hidden) :-
+    with_bar(TW, TF, P, D),
+    send(TF, split, new(P2, picture), P, horizontally),
+    send(P2, name, two),
+    tab_frame:tab_bar_position(TF, point(10, -3), TW, Pos),
+    send(TW, preview_drop, P2, Pos),
+    get(TW, drop_ghost, Ghost),
+    get(Ghost, device, D),              % on the dialog, not on the stack
+    get(D, size, size(_, DH)),
+    get(Ghost, area, area(_, _, _, GH)),
+    GH =< DH.
+
+test(dropping_on_the_band_makes_a_tab, Labels == ['Two', 'One']) :-
+    with_bar(TW, TF, P, _D),
+    send(TF, split, new(P2, picture), P, horizontally),
+    send(P2, name, two),
+    tab_frame:tab_bar_position(TF, point(10, -3), TW, Pos),
+    send(TW, drop, P2, Pos),
+    get(TF, label_height, LH),
+    LH > 0,                             % a second tab brings the row back
+    labels(TW, Labels).
+
+:- end_tests(tab_frame_tab_bar).
 
 
                  /*******************************

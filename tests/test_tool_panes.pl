@@ -423,6 +423,35 @@ test(and_the_window_it_left_stops_saying_its_name,
     send(Tab2, drop, TM, point(X, Y)),
     get(From, label, Label).
 
+%       The other place a tool can be dragged to is the tab bar, where it
+%       is given a tab of its own.  A window showing a single tab hides
+%       its label row, so what is left of the bar is the menu bar above
+%       it -- which is the target that is always there.  The ghost that
+%       comes up while the pointer is over it carries the name the new
+%       tab will get.
+
+test(dragging_a_tool_to_the_menu_bar_gives_it_a_tab,
+     true([Tabs, Shows] == [2, Label])) :-
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    send(@prolog_ide, show_tool, prolog_thread_monitor, split),
+    get(@prolog_ide, tool, prolog_thread_monitor, TM),
+    get(TM, frame, Frame),
+    get(Frame, tabs, TW),
+    get(TM, container, tab_frame, Tab),
+    get(Tab, label_height, 0),          % one tab: no row of its own
+    tab_frame:tab_bar_position(Tab, point(10, -3), TW, Pos),
+    send(TW, preview_drop, TM, Pos),
+    get(TW, drop_ghost, Ghost),
+    get(Ghost, member, label, Text),
+    get(Text?string, value, Shows),
+    send(TW, drop, TM, Pos),
+    get(TW, drop_ghost, @nil),
+    get(TM, container, tab, New),
+    get(New, label, Label),
+    get(TW?tabs, size, Tabs).
+
 %       Where a tool goes is one setting on the application, so it can be
 %       said once in a Defaults file and hold for every tool.  Which
 %       window it lands in is <-current_frame's to say and depends on

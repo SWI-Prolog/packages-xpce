@@ -281,6 +281,14 @@ tabs(W, Tabs:chain) :<-
     get_super(W, member, tab_stack, TS),
     get(TS, tabs, Tabs).
 
+%       The stack is laid out at my top-left and takes no offset of its
+%       own (see ->resize), so its coordinates are mine: a point on my
+%       label row is at the same place in both.
+
+tab_stack(W, TS:tab_stack) :<-
+    "The device my tabs and their labels are in"::
+    get_super(W, member, tab_stack, TS).
+
 member(W, Name:name, Window:window) :<-
     "Get named window from tabbed window"::
     get_super(W, member, tab_stack, TS),
@@ -849,6 +857,41 @@ tab_at(TS, X:int, Tab:tab) :<-
     X >= Offset,
     X < Offset+Width,
     !.
+
+insertion_at(TS, X:int, Before:'tab*') :<-
+    "The tab a label dropped at X would go before; @nil: at the end"::
+    get(TS, tabs, Tabs),
+    chain_list(Tabs, List),
+    (   member(T, List),
+        get(T, label_offset, Offset),
+        get(T?label_size, width, Width),
+        X < Offset+Width//2             % over the left half of this label
+    ->  Before = T
+    ;   Before = @nil
+    ).
+
+%       The labels are laid out left to right in the order the tabs are
+%       held in, so a tab is put somewhere else in the row by moving it in
+%       that chain, as ->move_tab does.  The chain holds the buttons on
+%       the row as well, so a tab goes to the end of the row by moving it
+%       after the last tab rather than to the end of the chain.
+
+place_tab(TS, Tab:tab, Before:'tab*') :->
+    "Put Tab in the row before Before; @nil: at the end"::
+    get(TS, tabs, Tabs),
+    chain_list(Tabs, List),
+    (   Before == @nil
+    ->  last(List, Ref),
+        Move = move_after
+    ;   Ref = Before,
+        Move = move_before
+    ),
+    (   Ref == Tab
+    ->  true
+    ;   get(TS, graphicals, Chain),
+        send(Chain, Move, Tab, Ref),
+        send(TS, layout_labels)
+    ).
 
 move_tab(TS, Tab:tab, Onto:tab) :->
     "Put Tab where Onto is now"::
