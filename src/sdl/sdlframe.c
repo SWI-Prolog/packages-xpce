@@ -47,6 +47,7 @@
 			       fr->members->head->value )
 
 bool		ws_draw_frame(FrameObj fr);
+static void	ws_restore_text_input(FrameObj fr);
 
 
 WsFrame
@@ -1027,6 +1028,7 @@ sdl_frame_event(SDL_Event *ev)
       }
       case SDL_EVENT_WINDOW_FOCUS_GAINED:
       { PceWindow sw = ws_grabbing_window();
+	status rc;
 
 	ws_menubar_activate_frame(fr);	/* show this frame's native menu */
 	if ( sw )
@@ -1046,7 +1048,9 @@ sdl_frame_event(SDL_Event *ev)
 		Cprintf("Input focus on %s (not grabbing)\n",
 			pp(fr)));
 	}
-	return send(fr, NAME_inputFocus, ON, EAV);
+	rc = send(fr, NAME_inputFocus, ON, EAV);
+	ws_restore_text_input(fr);
+	return rc;
       }
       case SDL_EVENT_WINDOW_FOCUS_LOST:
       { PceWindow sw = ws_grabbing_window();
@@ -1143,6 +1147,7 @@ ws_enable_text_input(Graphical gr, BoolObj enable)
       DEBUG(NAME_keyboard,
 	    Cprintf("ws_enable_text_input() %s -> %s: %s\n",
 		    pp(gr), pp(fr), pp(enable)));
+      wfr->text_input = isOn(enable);	/* what we must restore below */
       if ( isOn(enable) )
 	return SDL_StartTextInput(wfr->ws_window);
       else
@@ -1151,6 +1156,42 @@ ws_enable_text_input(Graphical gr, BoolObj enable)
   }
 
   fail;
+}
+
+
+/**
+ * Put the platform text input state back to what xpce last asked for.
+ *
+ * Called when the frame regains the keyboard.  `frame ->input_focus' is
+ * edge triggered: a frame that already believes it has the focus runs
+ * neither ->input_focus nor, through it, ws_enable_text_input(), so
+ * nothing re-issues SDL_StartTextInput().  FOCUS_LOST above does stop
+ * text input while a window of _another_ frame holds a grab, leaving
+ * xpce's idea of the focus alone on purpose.  If that grab is gone when
+ * the focus returns -- a confirmer, a popup or a completer that closed
+ * while we were away -- the frame is left looking focussed, caret and
+ * all, while SDL sends no SDL_EVENT_TEXT_INPUT for it: typing printable
+ * characters does nothing, and only taking the focus away and back
+ * (which does change ->input_focus) revives it.
+ *
+ * @param fr Pointer to the FrameObj that just gained the focus.
+ */
+static void
+ws_restore_text_input(FrameObj fr)
+{ WsFrame wfr = fr->ws_ref;
+
+  if ( wfr && wfr->ws_window )
+  { ASSERT_SDL_MAIN();
+    if ( wfr->text_input != SDL_TextInputActive(wfr->ws_window) )
+    { DEBUG(NAME_keyboard,
+	    Cprintf("ws_restore_text_input() %s: %s\n",
+		    pp(fr), wfr->text_input ? "on" : "off"));
+      if ( wfr->text_input )
+	SDL_StartTextInput(wfr->ws_window);
+      else
+	SDL_StopTextInput(wfr->ws_window);
+    }
+  }
 }
 
 /**

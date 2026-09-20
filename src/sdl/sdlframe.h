@@ -43,6 +43,7 @@ typedef struct
   Uint64	 flash_end_ms;	/* SDL_GetTicks() deadline; 0 = not flashing */
   SDL_FRect	 flash_rect;	/* overlay area (renderer coords); zero = full frame */
   Uint64	 live_ts;	/* timestamp of last live-resize event handled */
+  bool		 text_input;	/* xpce asked for text input on this frame */
 #ifdef __WINDOWS__
   HWND		hwnd;		/* Windows handle */
 #endif
