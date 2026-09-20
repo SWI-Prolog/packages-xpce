@@ -62,6 +62,7 @@ COMMON(PceWindow) getKeyboardFocusFrame(FrameObj fr);
 COMMON(bool)	focusFollowsMouseFrame(FrameObj fr);
 COMMON(status)	redrawFrame(FrameObj fr, Area a);
 COMMON(FrameObj) blockedByModalFrame(FrameObj fr);
+COMMON(FrameObj) getNextFocusFrame(FrameObj fr);
 COMMON(status)	eventFrame(FrameObj fr, EventObj ev);
 COMMON(status)	makeClassFrame(Class class);
 

@@ -717,6 +717,27 @@ imply X-specific semantics.
 - frame<-keyboard_focus: -> window
     Window currently designated to receive keyboard input.
 
+- frame<-next_focus: -> frame
+    The frame that is to be offered the keyboard when this one gives it
+    up, i.e. when it is closed or hidden.  This is the most recently used
+    other frame of `<-application`, whose `<-members` are kept in that
+    order by `application ->first`; a frame outside an application falls
+    back on the frames of its `<-display`.  Only a frame whose `<-kind`
+    is `toplevel` and that is currently open qualifies.  Fails if there
+    is no such frame.
+
+    This answers a question; it does not move the focus.  Normally
+    nothing has to: which window is activated when one closes is decided
+    by the window system, which knows its own focus policy -- under X11
+    that policy may well be "whatever the pointer is now over", and an
+    application that raises a window of its own on top of it is fighting
+    the user.  XPCE uses `<-next_focus` only where a platform leaves the
+    question unanswered, which on MacOS it does for the windows SDL
+    creates.
+
+    @see frame<-keyboard_focus for the window inside a frame.
+    @see application->first, which is what makes the order an order of use.
+
 - frame<-confirm: position=[point], display=[display], grab=[bool] -> return_value=any
     Open the frame (if not yet opened) and block until `->return` is
     invoked.  Used to implement modal prompts.

@@ -113,6 +113,48 @@ uncreate_windows_frame(FrameObj fr)
   }
 }
 
+#ifdef __APPLE__
+/**
+ * Hand the keyboard to another frame of the same application.
+ *
+ * Closing a window is the window system's business: it knows its own
+ * focus policy, which on X11 may well be "whatever the pointer is now
+ * over", and an application that raises a window of its own on top of
+ * that is fighting the user.  AppKit has no such policy to respect --
+ * it activates the next window of the application itself -- but it does
+ * not do so for the windows SDL creates, and closing the window opened
+ * with Command-N leaves the one it was opened from visible but inactive,
+ * with no caret and no keys.  Do it ourselves on MacOS only.
+ *
+ * Cocoa reports a new key window while SDL_DestroyWindow() is still
+ * running, so SDL already knows whether anything took over; leave it
+ * alone if it did.  Called only for a frame that had the keyboard: the
+ * window the user was working in is the one to give it back to, and
+ * closing a background window must raise nothing at all.
+ *
+ * @param fr Pointer to the FrameObj whose window has just been destroyed.
+ */
+
+static void
+ws_pass_on_input_focus(FrameObj fr)
+{ FrameObj next;
+
+  if ( SDL_GetKeyboardFocus() )		/* the platform found one after all */
+    return;
+
+  if ( (next=getNextFocusFrame(fr)) )
+  { WsFrame wfr = next->ws_ref;
+
+    if ( wfr && wfr->ws_window )
+    { DEBUG(NAME_keyboard,
+	    Cprintf("%s went away with the keyboard; passing it to %s\n",
+		    pp(fr), pp(next)));
+      SDL_RaiseWindow(wfr->ws_window);
+    }
+  }
+}
+#endif /*__APPLE__*/
+
 /**
  * Uncreate or destroy the specified frame.
  *
@@ -124,12 +166,19 @@ ws_uncreate_frame(FrameObj fr)
 
   if ( f && f->ws_window )
   { ASSERT_SDL_MAIN();
+#ifdef __APPLE__
+    bool had_focus = SDL_GetKeyboardFocus() == f->ws_window;
+#endif
     deleteChain(ChangedFrames, fr);
     SDL_DestroyRenderer(f->ws_renderer);
     SDL_DestroyWindow(f->ws_window);
     unalloc(sizeof(*f), f);
     fr->ws_ref = NULL;
     uncreate_windows_frame(fr);
+#ifdef __APPLE__
+    if ( had_focus )
+      ws_pass_on_input_focus(fr);
+#endif
   }
 
   ws_event_destroyed_target(fr);

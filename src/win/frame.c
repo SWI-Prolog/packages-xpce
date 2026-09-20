@@ -1435,6 +1435,55 @@ blockedByModalFrame(FrameObj fr)
   fail;
 }
 
+		 /*******************************
+		 *	   FOCUS ORDER		*
+		 *******************************/
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+<-next_focus: which frame is to be offered the keyboard when `fr' gives
+it up?  The most recently used other frame of the same application:
+`pane_frame ->input_focus' keeps <-application's members in that order by
+sending `application ->first' every time a frame is activated.  A frame
+that belongs to no application falls back on the frames of its display,
+where the order says nothing, but where there is normally only one
+candidate anyway.
+
+Only a toplevel qualifies.  A transient is handed the keyboard by the
+window system along with the owner it declared, and a popup must never
+hold it at all.
+
+This answers a question; it does not move the focus.  Normally nothing
+has to: the window system decides who gets the keyboard when a window
+closes, and it knows its own focus policy -- which under X11 may well be
+"whatever the pointer is now over".  It is used where a platform leaves
+the question unanswered; see ws_pass_on_input_focus() in sdlframe.c.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+FrameObj
+getNextFocusFrame(FrameObj fr)
+{ Chain candidates = NIL;
+  Cell cell;
+
+  if ( notNil(fr->application) )
+    candidates = fr->application->members;
+  else if ( notNil(fr->display) )
+    candidates = fr->display->frames;
+
+  if ( isNil(candidates) )
+    fail;
+
+  for_cell(cell, candidates)
+  { FrameObj fr2 = cell->value;
+
+    if ( fr2 != fr &&
+	 fr2->kind == NAME_toplevel &&
+	 isOpenFrameStatus(fr2->status) )
+      return fr2;
+  }
+
+  fail;
+}
+
 static TileObj resizingTile = NIL;
 
 static status
@@ -2160,6 +2209,8 @@ static getdecl get_frame[] =
      NAME_conversion, "Image with the pixels of the frame"),
   GM(NAME_keyboardFocus, 0, "window", NULL, getKeyboardFocusFrame,
      NAME_focus, "Window for default keyboard input"),
+  GM(NAME_nextFocus, 0, "frame", NULL, getNextFocusFrame,
+     NAME_focus, "Frame to be offered the keyboard when I give it up"),
   GM(NAME_closed, 0, "bool", NULL, getClosedFrame,
      NAME_icon, "Open (@off) or iconic (@on)"),
   GM(NAME_tile, 0, "tile", NULL, getTileFrame,
