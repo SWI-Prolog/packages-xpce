@@ -933,9 +933,21 @@ static bool SDLCALL
 live_resize_watch(void *closure, SDL_Event *ev)
 { (void)closure;
 
+  /* (*) The watch runs at SDL_PushEvent() time, so an SDL call made
+   * while we are painting -- SDL_SetWindowSize() from a `frame ->size'
+   * that a ->compute or a ->_redraw_area asks for, say -- arrives here
+   * with a drawing context open on a window.  Laying out and painting
+   * from under that context paints the window a second time inside its
+   * own redraw, clipped to what the outer one was given, and a window
+   * that the layout resizes has the backing store its open context
+   * draws into destroyed by ws_geometry_window().  The event stays in
+   * the queue, so the main loop deals with it when the paint is done.
+   */
+
   if ( !live_resize_event(ev) ||
        !SDL_IsMainThread() ||	/* watches may be called from any thread */
-       in_live_resize )
+       in_live_resize ||
+       getRedrawing() )		/* we are painting; see (*) */
     return true;
 
   in_live_resize++;

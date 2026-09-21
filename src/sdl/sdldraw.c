@@ -315,9 +315,14 @@ d_window(PceWindow sw, int x, int y, int w, int h, int clear, int limit)
 		valInt(sw->scroll_offset->x),
 		valInt(sw->scroll_offset->y)));
 
+  /* A redraw re-entered from inside a redraw of the same window: the
+   * inner one paints under the clip and the damage bookkeeping of the
+   * outer one, which is the best we can do once we are here.  See
+   * live_resize_watch() in sdlframe.c for how we got here.
+   */
   if ( context.open && context.window == sw )
-  { Cprintf("d_window(%s): Context is already open\n",
-	    pp(sw));
+  { DEBUG(NAME_redraw,
+	  Cprintf("d_window(%s): Context is already open\n", pp(sw)));
     context.open++;
     succeed;
   }
