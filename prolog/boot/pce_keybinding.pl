@@ -360,6 +360,22 @@ key_name('<cursor_home>',  'Home').
 key_name('<end>',          'End').
 key_name('<page_up>',      'PageUp').
 key_name('<page_down>',    'PageDown').
+key_name('<begin>',        'Begin').
+key_name('<insert>',       'Insert').
+key_name('<find>',         'Find').
+key_name('<select>',       'Select').
+key_name('<execute>',      'Execute').
+key_name('<print>',        'Print').
+key_name('<pause>',        'Pause').
+key_name('<break>',        'Break').
+key_name('<menu>',         'Menu').
+key_name('<help>',         'Help').
+key_name('<undo>',         'Undo').
+key_name('<redo>',         'Redo').
+key_name('<cancel>',       'Cancel').
+key_name('<cut>',          'Cut').
+key_name('<copy>',         'Copy').
+key_name('<paste>',        'Paste').
 
 %       Keys characterName() writes as a bare uppercase name.
 
@@ -378,8 +394,8 @@ key_name('BS',  'Backspace').
 key_name('DEL', 'Delete').
 key_name('ESC', 'Esc').
 
-key_name(Key, Name) :-                  % <f1> ... <f12>
-    between(1, 12, N),
+key_name(Key, Name) :-                  % <f1> ... <f24>
+    between(1, 24, N),
     atomic_list_concat(['<f', N, '>'], Key),
     atomic_list_concat(['F', N], Name).
 

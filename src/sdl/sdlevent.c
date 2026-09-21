@@ -221,6 +221,48 @@ keycode_to_name(SDL_Event *event)
     case SDLK_F11:	 return NAME_f11;
     case SDLK_F12:	 return NAME_f12;
 
+      /* F13..F24 are on a few full-size keyboards and on the Mac,
+	 where the row above the number row runs that far.  X11 and
+	 the terminfo entries of this world know them, so a client
+	 that binds them can be given them (see typedTerminalImage()
+	 in src/txt/terminal.c).
+       */
+    case SDLK_F13:	 return NAME_f13;
+    case SDLK_F14:	 return NAME_f14;
+    case SDLK_F15:	 return NAME_f15;
+    case SDLK_F16:	 return NAME_f16;
+    case SDLK_F17:	 return NAME_f17;
+    case SDLK_F18:	 return NAME_f18;
+    case SDLK_F19:	 return NAME_f19;
+    case SDLK_F20:	 return NAME_f20;
+    case SDLK_F21:	 return NAME_f21;
+    case SDLK_F22:	 return NAME_f22;
+    case SDLK_F23:	 return NAME_f23;
+    case SDLK_F24:	 return NAME_f24;
+
+      /* The named keys: the editing key that is not Delete, and the
+	 keys the VT220 and the Sun and HP keyboards after it put
+	 beside the alphabet.  xpce has had event ids for these all
+	 along -- see initial_tree[] in src/evt/event.c -- but nothing
+	 produced them, so <-key of an editor or a terminal could name
+	 a key the window would never see.
+       */
+    case SDLK_INSERT:	 return NAME_insert;
+    case SDLK_PRINTSCREEN: return NAME_print;
+    case SDLK_APPLICATION:		/* the key beside the right Ctrl */
+    case SDLK_MENU:	 return NAME_menu;
+    case SDLK_HELP:	 return NAME_help;
+    case SDLK_FIND:	 return NAME_find;
+    case SDLK_SELECT:	 return NAME_select;
+    case SDLK_EXECUTE:	 return NAME_execute;
+    case SDLK_UNDO:	 return NAME_undo;
+    case SDLK_AGAIN:	 return NAME_redo;
+    case SDLK_CUT:	 return NAME_cut;
+    case SDLK_COPY:	 return NAME_copy;
+    case SDLK_PASTE:	 return NAME_paste;
+    case SDLK_STOP:			/* both are Sun's L1/Cancel */
+    case SDLK_CANCEL:	 return NAME_cancel;
+
       /* The keypad sends SDLK_KP_* events, with or without
 	 numlock.   Here we assign the functions.  Next, we
 	 use the text input distinction to see whether the
@@ -237,6 +279,8 @@ keycode_to_name(SDL_Event *event)
     case SDLK_KP_1:	 return NAME_end;
     case SDLK_KP_9:	 return NAME_pageUp;
     case SDLK_KP_3:	 return NAME_pageDown;
+    case SDLK_KP_0:	 return NAME_insert;
+    case SDLK_KP_5:	 return NAME_begin;
     case SDLK_KP_PERIOD: return NAME_DEL;
     case SDLK_KP_ENTER:	 return NAME_RET;
   }

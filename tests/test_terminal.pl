@@ -6354,6 +6354,72 @@ test(page_keys_scroll_at_the_prompt, [setup(test_begin(T))]) :-
     row_text(T, 0, After),
     assertion(Before \== After).
 
+test(f13_to_f16_are_the_shifted_ss3_keys,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    %  The second row of function keys, which full size PC keyboards
+    %  and the Mac have.  xterm's terminfo spells them as Shift+F1..F12
+    %  -- kf13=\E[1;2P through kf24=\E[24;2~ -- which is also what a
+    %  keyboard without that row produces for them.
+    forall(member(K, [f13,f14,f15,f16]),
+           hit(T, K)),
+    assertion(client_reads(T, '^[[1;2P^[[1;2Q^[[1;2R^[[1;2S')).
+
+test(f17_to_f24_are_the_shifted_numbered_keys,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    forall(member(K, [f17,f18,f19,f20,f21,f22,f23,f24]),
+           hit(T, K)),
+    assertion(client_reads(
+                  T, '^[[15;2~^[[17;2~^[[18;2~^[[19;2~\c
+                      ^[[20;2~^[[21;2~^[[23;2~^[[24;2~')).
+
+test(modified_second_row_function_keys,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    %  A modifier joins the shift the key already carries: Ctrl+F13 is
+    %  Ctrl+Shift+F1, which is the 6 in `CSI 1;6P'.
+    button_control(Control),
+    button_shift(Shift),
+    hit(T, f13, Control),
+    hit(T, f17, Shift),
+    assertion(client_reads(T, '^[[1;6P^[[15;2~')).
+
+test(the_other_editing_keys,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    %  Insert, Find and Select: the VT220 editing keys that are not
+    %  Home, End, Page Up, Page Down and Delete.  Insert in particular
+    %  is on every keyboard and reached no client at all.
+    hit(T, insert),
+    hit(T, find),
+    hit(T, select),
+    assertion(client_reads(T, '^[[2~^[[1~^[[4~')).
+
+test(the_middle_of_the_keypad,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    %  KP_5 with NumLock off.  It takes SS3 in application mode, as
+    %  the cursor keys do.
+    hit(T, begin),
+    assertion(client_reads(T, '^[[E')).
+
+test(the_clipboard_keys_are_the_windows_own,
+     [ setup(fkeys_begin(T)),
+       cleanup(stop_foreground(T))
+     ]) :-
+    %  Cut, Copy and Paste act on the window -- there is no sequence to
+    %  send a client for them -- so the client must not see them.  Copy
+    %  needs something to take, which is what the selection is for.
+    term_select(T, 0, 10),
+    hit(T, copy),
+    assertion(client_reads(T, '')).
+
 test(debugger_keys_go_to_the_client,
      [ setup(fkeys_begin(T)),
        cleanup(stop_foreground(T))

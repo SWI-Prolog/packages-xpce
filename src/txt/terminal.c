@@ -1280,13 +1280,15 @@ eventTerminalImage(TerminalImage ti, EventObj ev)
   fail;
 }
 
-/* 1..12 if `id' is a function key event, else 0. */
+/* 1..24 if `id' is a function key event, else 0. */
 
 static int
 function_key_number(Any id)
 { const Name fkeys[] =
-  { NAME_f1, NAME_f2, NAME_f3,  NAME_f4,  NAME_f5,  NAME_f6,
-    NAME_f7, NAME_f8, NAME_f9,  NAME_f10, NAME_f11, NAME_f12
+  { NAME_f1,  NAME_f2,  NAME_f3,  NAME_f4,  NAME_f5,  NAME_f6,
+    NAME_f7,  NAME_f8,  NAME_f9,  NAME_f10, NAME_f11, NAME_f12,
+    NAME_f13, NAME_f14, NAME_f15, NAME_f16, NAME_f17, NAME_f18,
+    NAME_f19, NAME_f20, NAME_f21, NAME_f22, NAME_f23, NAME_f24
   };
 
   for(size_t i=0; i<sizeof(fkeys)/sizeof(*fkeys); i++)
@@ -1371,8 +1373,8 @@ final_seq(char *buf, size_t size, int final, int mod, bool app)
   return buf;
 }
 
-/* Keys xterm reports as `CSI <num> ~': Delete and F5..F12.  With a
- * modifier the number is followed by `; <mod>'.
+/* Keys xterm reports as `CSI <num> ~': Insert, Delete, Find, Select and
+ * F5..F12.  With a modifier the number is followed by `; <mod>'.
  */
 
 static const char *
@@ -1383,6 +1385,17 @@ tilde_seq(char *buf, size_t size, int num, int mod)
     snprintf(buf, size, S_ESC"[%d~", num);
 
   return buf;
+}
+
+/* The same modifier parameter with the shift bit set.  It is 1 plus a
+ * bit per modifier, so a key that had none becomes 2 (shift alone).
+ */
+
+static int
+shifted_modifier(int mod)
+{ int m = mod ? mod-1 : 0;
+
+  return (m|0x1)+1;
 }
 
 static status
@@ -1494,8 +1507,25 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
 					    : NAME_cursorPageDown, EAV);
 
     seq = tilde_seq(buf, sizeof(buf), ev->id == NAME_pageUp ? 5 : 6, mod);
+  } else if ( ev->id == NAME_insert )
+  { seq = tilde_seq(buf, sizeof(buf), 2, mod);
+  } else if ( ev->id == NAME_find )	/* the VT220 editing keys that */
+  { seq = tilde_seq(buf, sizeof(buf), 1, mod);	/* are not Home and End */
+  } else if ( ev->id == NAME_select )
+  { seq = tilde_seq(buf, sizeof(buf), 4, mod);
+  } else if ( ev->id == NAME_begin )	/* the middle of the keypad */
+  { seq = final_seq(buf, sizeof(buf), 'E', mod, b->app_escape);
   } else if ( (fn=function_key_number(ev->id)) )
   { static const int tilde[] = {15,17,18,19,20,21,23,24}; /* F5..F12 */
+
+    /* F13..F24 are Shift+F1..F12: that is what the terminfo entry for
+     * xterm says they send (kf13=\E[1;2P ... kf24=\E[24;2~), and it is
+     * what a keyboard without that second row produces for them.
+     */
+    if ( fn > 12 )
+    { fn -= 12;
+      mod = shifted_modifier(mod);
+    }
 
     if ( fn <= 4 )
       seq = final_seq(buf, sizeof(buf), 'P'+fn-1, mod, true);

@@ -727,6 +727,9 @@ static kbDef text[] =
   { "\\C-c",		NAME_copy },
   { "\\C-v",		NAME_paste },
   { "\\C-y",		NAME_paste },
+  { "<cut>",		NAME_cut },
+  { "<copy>",		NAME_copy },
+  { "<paste>",		NAME_paste },
 
   { NULL,		NULL }
 };
@@ -738,6 +741,9 @@ static kbDef text_item[] =
   { "\\C-c",		NAME_copy },
   { "\\C-v",		NAME_paste },
   { "\\C-y",		NAME_paste },
+  { "<cut>",		NAME_cut },
+  { "<copy>",		NAME_copy },
+  { "<paste>",		NAME_paste },
   { "\\C-u",		NAME_clear },
   { "\\C-g",		NAME_keyboardQuit },
   { "RET",		NAME_enter },
@@ -876,6 +882,14 @@ static kbDef editor[] =
   { "\\e/",		      NAME_dabbrevExpand },
   { "\\eDEL",		      NAME_backwardKillWord },
 
+  /* The keys a keyboard that has them sends in their own right, rather
+   * than as the chord some other keyboard needs.  See keycode_to_name()
+   * in src/sdl/sdlevent.c.
+   */
+  { "<cut>",		      NAME_cut },
+  { "<copy>",		      NAME_copy },
+  { "<paste>",		      NAME_paste },
+
   { "\\C-x\\C-x",	      NAME_exchangePointAndMark },
   { "\\C-xh",		      NAME_markWholeBuffer },
   { "\\C-x\\C-o",	      NAME_deleteBlankLines },
@@ -898,6 +912,12 @@ static kbDef terminal[] =
   { "\\C-c",		NAME_copyOrInterrupt },
   { "\\C-v",		NAME_paste },
   { "\\C-v",		NAME_paste },
+  /* The clipboard keys are the window's own: there is no sequence to
+   * send a client for them, and ^C is the interrupt here.
+   */
+  { "<cut>",		NAME_cut },
+  { "<copy>",		NAME_copy },
+  { "<paste>",		NAME_paste },
   { "\\C-\\S-a",	NAME_selectAll },
   { "\\C-\\S-f",	NAME_isearchBackward },
   /* Only while a selection says what to look for; without one they fail
