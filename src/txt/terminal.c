@@ -7188,6 +7188,42 @@ move_link_positions(RlcTextLine tl, int offset)
     hr->start += offset;
 }
 
+/* Remove the first `drop` cells of `line`, and the links that lived in
+ * them.  Rewrapping the oldest line of a full ring has nowhere to put
+ * the part that no longer fits (see rlc_resize()), so there the head of
+ * the line is what scrolls off.
+ */
+
+static void
+rlc_drop_line_head(RlcData b, int line, int drop)
+{ RlcTextLine tl = &b->lines[line];
+  href *next;
+
+  assert(drop > 0 && drop <= tl->size);
+
+  memmove(tl->text, &tl->text[drop], (tl->size-drop)*sizeof(text_char));
+  tl->size -= drop;
+  tl->text  = rlc_realloc(tl->text, tl->size == 0
+				      ? sizeof(text_char)
+				      : tl->size*sizeof(text_char));
+  tl->adjusted = true;
+
+  for(href *hr = tl->links; hr; hr=next)
+  { next = hr->next;
+
+    if ( hr->start + hr->length <= drop )	/* gone with the head */
+    { unlink_href(tl, hr);
+      rlc_free_link(b, hr);
+    } else if ( hr->start < drop )		/* partly gone */
+    { hr->length -= drop - hr->start;
+      hr->start   = 0;
+    } else
+      hr->start -= drop;
+  }
+
+  rlc_check_links(tl);
+}
+
 /* When two hrefs merge, retarget b->armed_href so hover survives the
  * splice.  Anything else that frees an href will fall back to clearing
  * armed_href in rlc_free_link. */
@@ -7472,7 +7508,16 @@ rlc_resize(RlcData b, int w, int h)
 			     tl->softreturn ? "(soft)" : ""));
     if ( tl->size > w )
     { DEBUG(NAME_term, Cprintf("  Truncate\n"));
-      if ( !tl->softreturn )		/* hard --> soft */
+      if ( !tl->softreturn && i == b->first && PrevLine(b, i) == b->last )
+      { /* The oldest line must be wrapped, but the ring is full: the only
+	 * line rlc_shift_lines_down() can give up is this one, and it
+	 * would throw away the very text we are rewrapping.  The line the
+	 * wrap needs is the line we do not have, so the head of the line
+	 * scrolls off, leaving what its last wrapped line would hold.
+	 */
+	DEBUG(NAME_term, Cprintf("    drop head of oldest line\n"));
+	rlc_drop_line_head(b, i, tl->size - w);
+      } else if ( !tl->softreturn )	/* hard --> soft */
       { DEBUG(NAME_term,
 	      Cprintf("    hard -> soft\n");
 	      Dprint_lines(b, i, i));
