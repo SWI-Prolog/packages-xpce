@@ -380,6 +380,8 @@ COMMON(Name)	getGroupVariable(Variable v);
 COMMON(status)	makeClassVariable(Class class);
 
 /* /home/jan/src/pl/packages/xpce/src/ker/classvar.c */
+COMMON(Any)	getDefaultValueClassVariable(ClassVariable cv);
+COMMON(Any)	getClassVariableDefaultValueClass(Class cl, Name name);
 COMMON(Any)	getValueClassVariable(ClassVariable cv);
 COMMON(ClassVariable) getClassVariableClass(Class class, Name name);
 COMMON(int)	hasClassVariableClass(Class class, Name name);

@@ -250,6 +250,42 @@ getStringValueClassVariable(ClassVariable cv)
 }
 
 
+/* Value the class variable was declared with, ignoring anything read
+ * from a Defaults file.  This is the fallback for <-value, but is also
+ * used on its own to complete a class variable that holds a set of
+ * definitions from which the user may have left some out.  See
+ * makeBuiltinFonts().
+ */
+
+Any
+getDefaultValueClassVariable(ClassVariable cv)
+{ Any rval;
+
+  if ( onDFlag(cv, DCV_TEXTUAL) )
+    rval = qadGetv(cv, NAME_convertString, 1, (Any *)&cv->cv_default);
+  else
+    rval = checkType(cv->cv_default, cv->type, cv->context);
+
+  if ( !rval )
+  { errorPce(cv, NAME_cannotConvertProgramDefault, cv->cv_default);
+    fail;
+  }
+
+  answer(rval);
+}
+
+
+Any
+getClassVariableDefaultValueClass(Class cl, Name name)
+{ ClassVariable cv;
+
+  if ( (cv = getClassVariableClass(cl, name)) )
+    answer(getDefaultValueClassVariable(cv));
+
+  fail;
+}
+
+
 Any
 getValueClassVariable(ClassVariable cv)
 { if ( cv->value == NotObtained )
@@ -261,17 +297,8 @@ getValueClassVariable(ClassVariable cv)
 	errorPce(cv, NAME_cannotConvertDefault, str);
     }
 
-    if ( !rval )
-    { if ( onDFlag(cv, DCV_TEXTUAL) )
-	rval = qadGetv(cv, NAME_convertString, 1, (Any *)&cv->cv_default);
-      else
-	rval = checkType(cv->cv_default, cv->type, cv->context);
-
-      if ( !rval )
-      { errorPce(cv, NAME_cannotConvertProgramDefault, cv->cv_default);
-	fail;
-      }
-    }
+    if ( !rval && !(rval=getDefaultValueClassVariable(cv)) )
+      fail;
 
     assign(cv, value, rval);
     if ( str )

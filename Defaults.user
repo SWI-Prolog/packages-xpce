@@ -201,7 +201,8 @@
 !ispell.spell_program:	'ispell -d british -t -l'
 
 ! Binding for the logical font-names.  You can bind any name to any
-! font here.
+! font here.  Aliases you leave out keep their built-in value, so the
+! list below only needs to mention the ones you want to change.
 
 ! font.system_fonts:	[ normal    := font(sans, normal, 12), \
 !			  bold      := font(sans, bold,   12), \
@@ -225,7 +226,8 @@
 ! You can use XPCE's font viewer to find a pleasant font and
 ! modify this table.  The value is a ,-separated list of Pango
 ! font families that are tried in order. "Noto" is the default
-! on Linux.
+! on Linux.  As with the fonts above, families you leave out keep
+! their built-in value.
 
 ! font.pango_families:	[ sans  := "Noto Sans,sans", \
 !			  serif := "Noto Serif,serif", \

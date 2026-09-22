@@ -7,6 +7,7 @@ test_libs(editor_placeholder   OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(text_item            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(tab_frame            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(fixed_graphicals     OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(font_alias           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(pane_frame           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(pane_layouts         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(barchart             OPTIONS ${XPCE_TEST_OPTIONS})
@@ -43,6 +44,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:text_item
                      xpce:tab_frame
                      xpce:fixed_graphicals
+                     xpce:font_alias
                      xpce:pane_frame
                      xpce:pane_layouts
                      xpce:barchart

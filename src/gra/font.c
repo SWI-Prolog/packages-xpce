@@ -38,7 +38,10 @@
 
 static Int	getPointsFont(FontObj f);
 static status	loadFontFamilies(void);
+static status	loadFontFamilyChain(Chain ch);
 static status	loadFontAliases(Name res);
+static status	loadFontAliasChain(Chain ch);
+static Chain	getBuiltinChainFont(Name cv);
 static status	fontAlias(Name name, FontObj font, BoolObj force);
 
 static Name
@@ -212,7 +215,19 @@ makeBuiltinFonts(void)
 
   if ( loadFontFamilies() &&	/* Family -> Pango Family */
        loadFontAliases(NAME_systemFonts) )
-  { loadFontAliases(NAME_userFonts);
+  { Chain ch;
+
+    loadFontAliases(NAME_userFonts);
+					/* Complete both tables from the
+					   built-in class variable values,
+					   so a user that overrules them
+					   only needs to mention the
+					   entries they want to change. */
+    if ( (ch=getBuiltinChainFont(NAME_pangoFamilies)) )
+      loadFontFamilyChain(ch);
+    if ( (ch=getBuiltinChainFont(NAME_systemFonts)) )
+      loadFontAliasChain(ch);
+
     succeed;
   }
 
@@ -375,32 +390,56 @@ getPair(Any obj, Any *key, Any *value)
 
 
 static status
+loadFontAliasChain(Chain ch)
+{ Cell cell;
+  Type type_font = nameToType(NAME_font);
+
+  for_cell(cell, ch)
+  { Name name;
+    FontObj font;
+    Any n, f;
+
+    if ( !getPair(cell->value, &n, &f) )
+      continue;
+
+    if ( !(name = checkType(n, TypeName, ClassFont)) ||
+	 !(font = checkType(f, type_font, ClassFont)) )
+      errorPce(ClassFont, NAME_badFontAlias, n, f);
+    else
+      fontAlias(name, font, OFF);
+  }
+
+  succeed;
+}
+
+
+static status
 loadFontAliases(Name res)
 { Chain ch = getClassVariableValueClass(ClassFont, res);
 
   if ( ch )
-  { Cell cell;
-    Type type_font = nameToType(NAME_font);
-
-    for_cell(cell, ch)
-    { Name name;
-      FontObj font;
-      Any n, f;
-
-      if ( !getPair(cell->value, &n, &f) )
-	continue;
-
-      if ( !(name = checkType(n, TypeName, ClassFont)) ||
-	   !(font = checkType(f, type_font, ClassFont)) )
-	errorPce(ClassFont, NAME_badFontAlias, n, f);
-      else
-	fontAlias(name, font, OFF);
-    }
-
-    succeed;
-  }
+    return loadFontAliasChain(ch);
 
   fail;
+}
+
+
+/* Value one of our chain class variables was declared with, ignoring
+ * the Defaults files.  A user that overrules e.g. font.system_fonts
+ * typically only mentions the entries they want to change.  As neither
+ * fontAlias() nor loadFontFamilyChain() overwrites an entry that is
+ * already defined, walking over this chain after the user defined
+ * values have been loaded completes the table with the omitted ones.
+ */
+
+static Chain
+getBuiltinChainFont(Name cv)
+{ Chain ch = getClassVariableDefaultValueClass(ClassFont, cv);
+
+  if ( ch && instanceOfObject(ch, ClassChain) )
+    return ch;
+
+  return NULL;
 }
 
 
@@ -414,31 +453,36 @@ fontAlias(Name name, FontObj font, BoolObj force)
 
 
 static status
+loadFontFamilyChain(Chain ch)
+{ Cell cell;
+
+  for_cell(cell, ch)
+  { Name name;
+    Name pname;
+    Any n, f;
+
+    if ( !getPair(cell->value, &n, &f) )
+      continue;
+
+    if ( !(name  = checkType(n, TypeName, ClassFont)) ||
+	 !(pname = checkType(f, TypeName, ClassFont)) )
+    { errorPce(ClassFont, NAME_badPangoFamily, n, f);
+    } else
+    { if ( !getMemberHashTable(FontFamilyTable, name) )
+	appendHashTable(FontFamilyTable, name, pname);
+    }
+  }
+
+  succeed;
+}
+
+
+static status
 loadFontFamilies(void)
 { Chain ch = getClassVariableValueClass(ClassFont, NAME_pangoFamilies);
 
   if ( ch )
-  { Cell cell;
-
-    for_cell(cell, ch)
-    { Name name;
-      Name pname;
-      Any n, f;
-
-      if ( !getPair(cell->value, &n, &f) )
-	continue;
-
-      if ( !(name  = checkType(n, TypeName, ClassFont)) ||
-	   !(pname = checkType(f, TypeName, ClassFont)) )
-      { errorPce(ClassFont, NAME_badPangoFamily, n, f);
-      } else
-      { if ( !getMemberHashTable(FontFamilyTable, name) )
-	  appendHashTable(FontFamilyTable, name, pname);
-      }
-    }
-
-    succeed;
-  }
+    return loadFontFamilyChain(ch);
 
   fail;
 }
@@ -552,11 +596,11 @@ static classvardecl rc_font[] =
      "  boldlarge := font(sans, bold,   14),\n"
      "  huge      := font(sans, normal, 18),\n"
      "  boldhuge  := font(sans, bold,   18),\n"
-     "  fixed     := font(mono, normal, 12),\n"
-     "  tt        := font(mono, normal, 12),\n"
-     "  boldtt    := font(mono, bold,   12),\n"
-     "  itt       := font(mono, italic, 12),\n"
-     "  bitt      := font(mono, italic, 12, bold)\n"
+     "  fixed     := font(mono, normal, 14),\n"
+     "  tt        := font(mono, normal, 14),\n"
+     "  boldtt    := font(mono, bold,   14),\n"
+     "  itt       := font(mono, italic, 14),\n"
+     "  bitt      := font(mono, italic, 14, bold)\n"
      "]",
      "Predefined font-aliases"),
   RC(NAME_pangoFamilies, "chain",

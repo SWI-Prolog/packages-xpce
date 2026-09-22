@@ -24,7 +24,10 @@ normally refers to a font by its *alias* name held in the
 	send(Editor, font, normal).
 
 The aliases are seeded from the `font.system_fonts` and (when
-present) `font.user_fonts` class variables.  See `<-convert` for the
+present) `font.user_fonts` class variables.  Any alias these leave
+undefined is added from the built-in value of `font.system_fonts`, so
+a `Defaults` file that overrules `font.system_fonts` only needs to
+mention the aliases it wants to change.  See `<-convert` for the
 accepted name forms.
 
 The xpce `<-family` slot is translated to a Pango family by looking
@@ -64,15 +67,18 @@ default fonts for their role.
 - font.system_fonts: chain
     Seed for `@font_aliases`: pairs of alias name → font object
     (`normal := font(sans, normal, 12)`, `tt := font(mono, normal,
-    12)`, ...).  The default list defines `normal`, `bold`,
+    14)`, ...).  The default list defines `normal`, `bold`,
     `italic`, `small`, `large`, `boldlarge`, `huge`, `boldhuge`,
-    `fixed`, `tt`, `boldtt`, `itt` and `bitt`.
+    `fixed`, `tt`, `boldtt`, `itt` and `bitt`; aliases omitted from
+    an overruling definition keep their built-in value.
 
 - font.pango_families: chain
     Seed for `@font_families`: pairs that map an xpce generic
     family name (`mono`, `sans`, `serif`, plus legacy `helvetica`,
     `times`, `screen`) to a Pango family name (or a
-    comma-separated list of fallbacks).
+    comma-separated list of fallbacks).  As with `font.system_fonts`,
+    families omitted from an overruling definition keep their
+    built-in value.
 
 - font.no_font: font = normal
     Substitute used when an explicitly-requested font cannot be
