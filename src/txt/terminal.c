@@ -335,7 +335,9 @@ static void	assign_variant_fonts(TerminalImage ti, FontObj bold,
 static void	rlc_destroy_buffer(RlcData b);
 static bool	rlc_caret_xy(RlcData b, int *x, int *y);
 static void	rlc_resize_pixel_units(RlcData b, int w, int h);
-static RlcData	rlc_make_buffer(int w, int h);
+static void	rlc_pixels_to_cells(RlcData b, int w, int h,
+				    int *cols, int *rows);
+static RlcData	rlc_make_buffer(int h);
 static int	rlc_count_lines(RlcData b, int from, int to);
 static void	rlc_add_line(RlcData b);
 static void	rlc_open_line(RlcData b);
@@ -550,13 +552,17 @@ initialiseTerminalImage(TerminalImage ti, Int w, Int h)
   assign_variant_fonts(ti, ti->bold_font, ti->italic_font,
 		       ti->bold_italic_font);
 
-  // compute width in characters from w
-  int cw = (double)valInt(w)/c_width('m', ti->font);
-
-  RlcData b = rlc_make_buffer(cw, valInt(ti->save_lines));
+  RlcData b = rlc_make_buffer(valInt(ti->save_lines));
   ti->data = b;
   b->object = ti;
   rlc_init_text_dimensions(b, ti->font);
+  /* The size in cells follows from the size in pixels.  Later only a
+   * change of either makes us compute it again, so a terminal that is
+   * never resized had 25 rows whatever its height.  The buffer is still
+   * empty: there is nothing to rewrap.
+   */
+  rlc_pixels_to_cells(b, valInt(w), valInt(h), &b->width, &b->window_size);
+  b->scroll_bottom = b->window_size-1;
 
   succeed;
 }
@@ -6967,10 +6973,20 @@ rlc_normalise(RlcData b)
 }
 
 
+/* Columns and rows that fit in `w' by `h' pixels. */
+
+static void
+rlc_pixels_to_cells(RlcData b, int w, int h, int *cols, int *rows)
+{ *cols = max(20, w/b->cw)-2;		/* 1 character space for margins */
+  *rows = max(1, h/b->ch);
+}
+
+
 static void
 rlc_resize_pixel_units(RlcData b, int w, int h)
-{ int nw = max(20, w/b->cw)-2;		/* 1 character space for margins */
-  int nh = max(1, h/b->ch);
+{ int nw, nh;
+
+  rlc_pixels_to_cells(b, w, h, &nw, &nh);
 
   DEBUG(NAME_term,
 	Cprintf("rlc_resize_pixel_units(%p, %d, %d) (%dx%d)\n",
@@ -7044,7 +7060,7 @@ chars_columns(const text_char *chars, int len)
 		 *******************************/
 
 static RlcData
-rlc_make_buffer(int w, int h)
+rlc_make_buffer(int h)
 { RlcData b = rlc_malloc(sizeof(rlc_data));
   int i;
 
@@ -7052,7 +7068,7 @@ rlc_make_buffer(int w, int h)
   b->magic = RLC_MAGIC;
 
   b->height         = h;
-  b->width          = w;
+  b->width          = 80;		/* until we know the pixel size */
   b->window_size    = 25;
   b->scroll_top     = 0;
   b->scroll_bottom  = b->window_size-1;

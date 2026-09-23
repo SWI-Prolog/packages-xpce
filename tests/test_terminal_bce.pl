@@ -174,13 +174,9 @@ painted(TI) :-
 
 %!  to_last_row(+Terminal) is det.
 %
-%   Put the caret on the last row of an empty window.  The terminal
-%   counts its rows from its size only once that changes, and until
-%   then it has more of them than the window shows: the line feed would
-%   scroll in a line below the bottom of the window.
+%   Put the caret on the last row of an empty window.
 
 to_last_row(TI) :-
-    send(TI, height, 480),
     get(TI, rows, Rows),
     N is Rows-1,
     length(NLs, N),
