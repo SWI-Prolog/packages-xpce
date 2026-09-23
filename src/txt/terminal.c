@@ -344,6 +344,7 @@ static text_flags rlc_eol_flags(const RlcTextLine tl);
 static void	rlc_caret_down(RlcData b, int arg);
 static void	rlc_init_tabs(RlcData b);
 static void	rlc_erase_display(RlcData b);
+static void	rlc_erase_tail(RlcData b, RlcTextLine tl, bool bce);
 static void	rlc_restore_screen(RlcData b);
 static void	rlc_save_screen(RlcData b);
 static void	rlc_update_scrollbar(RlcData b);
@@ -8220,6 +8221,10 @@ rlc_region_size(RlcData b, int line, int bottom)
  * bottom (ANSI DL).  Both are the same walk over the region, run from
  * opposite ends: copying towards the end content moves to means each
  * line is read before it is overwritten.
+ *
+ * As in xterm, the empty lines take the current background colour
+ * (`bce'), as does a line a line feed scrolls into the window (see
+ * rlc_caret_down()).
  */
 
 static void
@@ -8251,7 +8256,7 @@ rlc_scroll_region(RlcData b, int line, int shift)
   { int l = rlc_add_lines(b, from, (move+i)*step);
 
     rlc_reinit_line(b, l);
-    b->lines[l].changed |= CHG_CHANGED;
+    rlc_erase_tail(b, &b->lines[l], true); /* bce: takes the background */
   }
 
   if ( b->folds )			/* the fold bits travelled with the */
@@ -8394,7 +8399,10 @@ rlc_caret_down(RlcData b, int arg)
       continue;				/* the caret stays where it is */
     }
     if ( b->caret_y == b->last )
-      rlc_add_line(b);			/* rlc_open_line() clears its flags */
+    { rlc_add_line(b);			/* rlc_open_line() clears its flags */
+      if ( rlc_window_row(b, b->last) >= b->window_size )
+	rlc_erase_tail(b, &b->lines[b->last], true); /* scrolls in: bce */
+    }
     b->caret_y = NextLine(b, b->caret_y);
     /* Do NOT clear softreturn here.  Moving the caret says nothing
      * about how the line it lands on ends, and a client that walks
