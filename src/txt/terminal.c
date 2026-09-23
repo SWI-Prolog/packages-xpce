@@ -384,6 +384,7 @@ static void	rlc_free_links(RlcData b, href *links);
 static void	rlc_check_links(RlcTextLine tl);
 static void	rlc_link_cells(RlcData b, RlcTextLine tl, int start, int len);
 static void	rlc_link_end(RlcData b);
+static bool	rlc_href_armed(RlcData b, int line, href *hr);
 static bool	rlc_copy(RlcData b, Name to);
 static void	rlc_request_redraw(RlcData b);
 static void	rlc_redraw(RlcData b, int x, int y, int w, int h);
@@ -2539,7 +2540,7 @@ getCellStyleTerminalImage(TerminalImage ti, Int column, Int row)
   if ( tl->text && cell < tl->size && tl->text[cell].flags.link )
   { for(href *hr = tl->links; hr; hr = hr->next)
     { if ( cell >= hr->start && cell <= hr->start + hr->length )
-      { Style ls = ( hr == b->armed_href &&
+      { Style ls = ( rlc_href_armed(b, line, hr) &&
 		     notNil(ti->link_armed_style) &&
 		     !isDefault(ti->link_armed_style)
 		     ? ti->link_armed_style : ti->link_style );
@@ -6576,7 +6577,7 @@ rlc_paint_text(RlcData b,
   int armed_from = 0, armed_to = 0;
   if ( b->armed_href && tl->text )
   { for(href *hr = tl->links; hr; hr = hr->next)
-    { if ( hr == b->armed_href )
+    { if ( rlc_href_armed(b, (int)(tl - b->lines), hr) )
       { int f = hr->start - cell_from;
 	int e = f + hr->length + 1;	/* href->length is inclusive */
 	if ( f < 0   ) f = 0;
@@ -7323,7 +7324,18 @@ move_links_soft(RlcData b, RlcTextLine from, RlcTextLine to)
       hr->next = to->links;
       to->links = hr;
     } else if ( hr->start + hr->length > from->size )
-    { rlc_add_link(to, hr->link, 0, hr->start + hr->length - from->size);
+    { int moved = hr->start + hr->length - from->size;
+      href *hr2;
+
+      for(hr2 = to->links; hr2; hr2=hr2->next)
+      { if ( hr2->start == moved && ucscmp(hr->link, hr2->link) == 0 )
+	  break;
+      }
+      if ( hr2 )			/* `to` holds the rest of the link */
+      { hr2->start = 0;
+	hr2->length += moved;
+      } else
+	rlc_add_link(to, hr->link, 0, moved);
       hr->length = from->size - hr->start;
     }
   next_link:
@@ -9452,6 +9464,67 @@ rlc_link_cells(RlcData b, RlcTextLine tl, int start, int len)
     hr->length += len;
   else
     rlc_add_link(tl, b->link_url, start, len);
+}
+
+/* A link that wraps has an href on each line it covers.  Find the href
+ * on the line before (dir < 0) or after (dir > 0) `*line` that continues
+ * `hr` across the soft return, updating `*line`, or NULL.
+ */
+
+static href *
+rlc_href_continued(RlcData b, int *line, href *hr, int dir)
+{ RlcTextLine tl = &b->lines[*line];
+  int l;
+
+  if ( dir < 0 )
+  { if ( hr->start != 0 || *line == b->first )
+      return NULL;
+    l = PrevLine(b, *line);
+    RlcTextLine pl = &b->lines[l];
+    if ( !pl->softreturn )
+      return NULL;
+    for(href *h = pl->links; h; h = h->next)
+    { if ( h->start + h->length == pl->size &&
+	   ucscmp(h->link, hr->link) == 0 )
+      { *line = l;
+	return h;
+      }
+    }
+  } else
+  { if ( !tl->softreturn || hr->start + hr->length != tl->size ||
+	 *line == b->last )
+      return NULL;
+    l = NextLine(b, *line);
+    for(href *h = b->lines[l].links; h; h = h->next)
+    { if ( h->start == 0 && ucscmp(h->link, hr->link) == 0 )
+      { *line = l;
+	return h;
+      }
+    }
+  }
+
+  return NULL;
+}
+
+/* True if `hr` on `line` is part of the hovered link: the href under the
+ * mouse or one that continues it on the lines it wraps over.
+ */
+
+static bool
+rlc_href_armed(RlcData b, int line, href *hr)
+{ if ( !b->armed_href )
+    return false;
+
+  for(int dir = -1; dir <= 1; dir += 2)
+  { int l = line;
+
+    for(href *h = hr; h; h = rlc_href_continued(b, &l, h, dir))
+    { if ( h == b->armed_href )
+	return true;
+    }
+  }
+
+  return false;
 }
 
 		 /*******************************

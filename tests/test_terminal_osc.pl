@@ -340,6 +340,81 @@ one_cell_link(Cell, Text) :-
 link_pixel(TI, X, URL) :-
     get(TI, link, point(X, 1), URL).
 
+% Hovering a link that wraps over several lines arms all of it, not only
+% the line under the mouse.  First for a label that was wrapped as it was
+% written, then for one that wraps because the window narrowed, and
+% again after widening it back.
+
+test(armed_wrap, [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    get(TI, columns, Columns),
+    Len is Columns+20,
+    insert_link(TI, 'file:///tmp/wrap', Len),
+    hover(TI, 5, 1),
+    Last is Columns-1,
+    assertion(armed(TI, 0, 0)),
+    assertion(armed(TI, Last, 0)),
+    assertion(armed(TI, 19, 1)).
+
+test(armed_rewrap, [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    get(TI, width, W0),
+    insert_link(TI, 'file:///tmp/rewrap', 60),
+    send(TI, width, 300),                   % three rows
+    get(TI, columns, Columns),
+    assertion(Columns < 30),
+    link_cells(Columns, 60, Cells),
+    hover(TI, 5, 1),
+    assertion(forall(member(C-R, Cells), armed(TI, C, R))),
+    send(TI, width, 480),                   % merged rows overflow again
+    get(TI, columns, Columns2),
+    assertion(Columns2 > 30),
+    link_cells(Columns2, 60, Cells2),
+    hover(TI, 5, 1),
+    assertion(forall(member(C-R, Cells2), armed(TI, C, R))),
+    send(TI, width, W0),
+    hover(TI, 5, 0),
+    assertion(forall(between(0, 59, C), armed(TI, C, 0))).
+
+insert_link(TI, URL, Len) :-
+    send(TI, link_armed_style, style(colour := red)),
+    send(TI, link_message, message(@prolog, true)),
+    osc8(URL, Open),
+    osc8('', Close),
+    length(Codes, Len),
+    maplist(=(0'x), Codes),
+    atom_codes(Label, Codes),
+    atomic_list_concat([Open, Label, Close], Text),
+    send(TI, insert, Text).
+
+%!  hover(+Terminal, +Column, +Row) is det.
+%
+%   Move the mouse to the centre of cell Column,Row.
+
+hover(TI, Column, Row) :-
+    get(TI, font, Font),
+    get(Font, avg_char_width, CW),
+    get(Font, height, CH),
+    X is round((Column+1)*CW + CW/2),
+    Y is round(Row*CH + CH/2),
+    ignore(send(TI, event, new(_, event(loc_move, TI, X, Y, 0, 0)))).
+
+%!  armed(+Terminal, +Column, +Row) is semidet.
+%
+%   Cell Column,Row is painted as a hovered link.
+
+armed(TI, Column, Row) :-
+    get(TI, link_armed_style, Armed),
+    get(TI, cell_style, Column, Row, Style),
+    Style == Armed.
+
+link_cells(Columns, Len, Cells) :-
+    Max is Len-1,
+    findall(C-R,
+            ( between(0, Max, I),
+              R is I // Columns,
+              C is I mod Columns
+            ),
+            Cells).
+
 :- end_tests(terminal_osc8).
 
 /** <module> Test the OSC 133 semantic prompt marks
