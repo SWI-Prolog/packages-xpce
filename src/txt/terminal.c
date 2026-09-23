@@ -7713,18 +7713,22 @@ rlc_copy_links(const href *links)
 }
 
 
+/* Let go of a line.  This resets it also if it has no text: a line an
+ * insert (IL) or a scroll opened has none, but an erase with a background
+ * colour (see rlc_erase_line()) records that on it, and a line that kept
+ * it painted the next text written in its slot over that background.
+ */
+
 static void
 rlc_free_line(RlcData b, int line)
 { RlcTextLine tl = &b->lines[line];
-  if ( tl->text )
-  { rlc_free(tl->text);
-    rlc_reinit_line(b, line);
-  }
   href *links = tl->links;
+
+  if ( tl->text )
+    rlc_free(tl->text);
+  rlc_reinit_line(b, line);
   if ( links )
-  { tl->links = NULL;
     rlc_free_links(b, links);
-  }
 }
 
 
@@ -7778,6 +7782,7 @@ rlc_open_line(RlcData b)
   b->lines[i].adjusted   = false;
   b->lines[i].size       = 0;
   b->lines[i].softreturn = false;
+  b->lines[i].eol_erased = false;
   b->lines[i].folded     = false;
   b->lines[i].fold_head  = false;
   b->lines[i].line_no    = i;
@@ -8860,6 +8865,27 @@ rlc_blank_cells(RlcData b, RlcTextLine tl, int from, int to)
 }
 
 
+/** Record the erase of the tail of a line, which has been truncated
+ * already.  If `bce' holds and a background colour is in effect, the
+ * cells to the right of the text are painted in it.
+ */
+
+static void
+rlc_erase_tail(RlcData b, RlcTextLine tl, bool bce)
+{ if ( bce && b->sgr_flags.bg != PAL_DEFAULT )
+  { tl->eol_flags       = b->sgr_flags;
+    tl->eol_flags.width = 1;
+    tl->eol_flags.link  = 0;		/* no href covers the padding */
+    tl->eol_erased      = true;
+  } else
+  { tl->eol_erased      = false;
+  }
+
+  tl->softreturn = false;		/* what wrapped is gone */
+  tl->changed |= CHG_CHANGED|CHG_CLEAR;
+}
+
+
 /** Erase in line (EL): 0 erases from the caret to the end of the line,
  * 1 from the start of the line up to and including the caret and 2 the
  * whole line.  The caret does not move.
@@ -8900,17 +8926,7 @@ rlc_erase_line(RlcData b, int mode)
       return;
   }
 
-  if ( bce && b->sgr_flags.bg != PAL_DEFAULT )
-  { tl->eol_flags       = b->sgr_flags;
-    tl->eol_flags.width = 1;
-    tl->eol_flags.link  = 0;		/* no href covers the padding */
-    tl->eol_erased      = true;
-  } else
-  { tl->eol_erased      = false;
-  }
-
-  tl->softreturn = false;		/* what wrapped is gone */
-  tl->changed |= CHG_CHANGED|CHG_CLEAR;
+  rlc_erase_tail(b, tl, bce);
 }
 
 /** Flags to paint the cells to the right of the text of a line with.
@@ -8940,8 +8956,7 @@ rlc_erase_above(RlcData b)
   { RlcTextLine tl = &b->lines[line];
 
     tl->size = 0;
-    tl->softreturn = false;
-    tl->changed |= CHG_CHANGED|CHG_CLEAR;
+    rlc_erase_tail(b, tl, true);
     if ( line == b->last )		/* the caret is off screen */
       return;
   }

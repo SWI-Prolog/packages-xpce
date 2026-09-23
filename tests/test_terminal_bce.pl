@@ -230,4 +230,25 @@ test(background_survives_the_alternate_screen,
     tail_colours(TI, Restored),
     assertion(Restored == Painted).
 
+% The painted tail belongs to the line, so letting go of the line must
+% let go of it too.  A line opened by an insert (IL) has no text, and
+% erasing it with a background colour left that erase in the slot after
+% the display was cleared: the next line written there came up with the
+% old background behind it.  This is the input box of a full screen
+% client showing up at rows it no longer occupies.
+
+test(erase_does_not_outlive_the_line,
+     [setup(terminal(TI)), cleanup(destroy_terminal(TI))]) :-
+    bg(Bg),
+    send(TI, insert, 'text\r\n.\r\n'),
+    settle(TI),
+    tail_colours(TI, Plain),
+    atomic_list_concat(['\e[2J\e[H\e[L', Bg, '\e[2K\e[0m'], Erase),
+    send(TI, insert, Erase),
+    send(TI, insert, '\e[2J\e[H'),
+    send(TI, insert, 'text\r\n.\r\n'),
+    settle(TI),
+    tail_colours(TI, Reused),
+    assertion(Reused == Plain).
+
 :- end_tests(terminal_bce).
