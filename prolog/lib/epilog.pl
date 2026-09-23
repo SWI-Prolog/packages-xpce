@@ -651,8 +651,8 @@ initialise(PT) :->
                 menu_item(select_all,
                           message(Terminal, select_all),
                           end_group := @on),
-                menu_item(consult_linked_file,
-                          message(Terminal, consult_link),
+                menu_item(link,
+                          message(Terminal, link_action),
                           end_group := @on),
                 menu_item(copy_command,
                           message(Terminal, copy_block, command)),
@@ -817,23 +817,50 @@ connect(PT, TID:[name|int], Title:[name]) :<-
 update_popup(PT, P:popup, Ev:event) :->
     "Update the popup"::
     update_block_items(PT, P, Ev),
-    get(P, member, consult_linked_file, Item),
+    get(P, member, link, Item),
     (   get(PT, link, Ev, Link),
-        link_file_location(Link, File, _Location)
+        link_action(Link, _Action, Label)
     ->  send(Item, active, @on),
         send(PT, slot, current_link, Link),
-        file_base_name(File, Base),
-        send(Item, label, string('Consult %s', Base))
+        send(Item, label, Label)
     ;   send(Item, active, @off),
         send(PT, slot, current_link, @nil),
-        send(Item, label, 'Consult linked file')
+        send(Item, label, 'Linked file')
     ).
 
-consult_link(PT) :->
-    "Consult linked file"::
+link_action(PT) :->
+    "Consult, open or copy the link the popup was on"::
     get(PT, current_link, Link),
+    Link \== @nil,
+    link_action(Link, Action, _Label),
+    run_link_action(Action, PT).
+
+%!  link_action(+Link, -Action, -Label) is semidet.
+%
+%   What the popup offers for Link:  consult   a  Prolog  file, open any
+%   other file with the desktop's application for it  and copy the link
+%   of anything else, typically an http(s):// URL.
+
+link_action(Link, consult(File), Label) :-
     link_file_location(Link, File, _Location),
+    file_name_extension(_, Ext, File),
+    user:prolog_file_type(Ext, prolog),
+    !,
+    file_base_name(File, Base),
+    format(string(Label), 'Consult ~w', [Base]).
+link_action(Link, open(File), Label) :-
+    link_file_location(Link, File, _Location),
+    !,
+    file_base_name(File, Base),
+    format(string(Label), 'Open ~w', [Base]).
+link_action(Link, copy(Link), "Copy link").
+
+run_link_action(consult(File), PT) :-
     send(PT, inject, consult(File), @on, signal).
+run_link_action(open(File), _PT) :-
+    desktop_open(File).
+run_link_action(copy(Link), _PT) :-
+    send(@display, copy, Link).
 
 :- pce_group(blocks).
 
