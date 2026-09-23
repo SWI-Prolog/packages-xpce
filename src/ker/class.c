@@ -1601,9 +1601,32 @@ attachLazyGetMethodClass(Class class, const getdecl *gm)
   return m;
 }
 
+/* Methods whose binding by the host is in progress in this thread.  A
+   bind runs Prolog, which may need other lazy methods, for example if a
+   signal handler runs in the callback.  Only asking the host again for
+   the method it is binding is refused: that would loop.
+*/
+
+struct bind_frame
+{ Class		class;
+  Name		code;
+  Name		selector;
+  BindFrame	parent;
+};
+
 void
 resetMessageResolve(void)
-{ BindNesting = 0;
+{ BindingMethods = NULL;
+}
+
+static bool
+isBindingMethod(Class class, Name code, Name selector)
+{ for(BindFrame f = BindingMethods; f; f = f->parent)
+  { if ( f->class == class && f->code == code && f->selector == selector )
+      return true;
+  }
+
+  return false;
 }
 
 static Any
@@ -1627,8 +1650,10 @@ bindMethod(Class class, Name code, Name selector)
     }
   }
 
-  if ( !BindNesting )
-  { BindNesting++;
+  if ( !isBindingMethod(class, code, selector) )
+  { struct bind_frame frame = { class, code, selector, BindingMethods };
+
+    BindingMethods = &frame;
     if ( notNil((c=class->resolve_method_message)) && notDefault(c) )
     { if ( instanceOfObject(c, ClassCode) )
       { DEBUG(NAME_class,
@@ -1637,7 +1662,7 @@ bindMethod(Class class, Name code, Name selector)
 	rval = forwardCode(c, code, class->name, selector, EAV);
       }
     }
-    BindNesting--;
+    BindingMethods = frame.parent;
   }
 
   if ( isDefault(selector) )

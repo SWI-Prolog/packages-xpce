@@ -35,12 +35,14 @@
 #ifndef PCE_THREAD_INCLUDED
 #define PCE_THREAD_INCLUDED 1
 
+typedef struct bind_frame *BindFrame;	/* see class.c */
+
 typedef struct
 { PceGoal		current_goal;	  /* See passing.c */
   VarEnvironment	var_environment;  /* see var.c */
   int			service_mode;	  /* PCE_EXEC_* */
   int			max_goal_depth;	  /* Max recursion level */
-  int			bind_nesting;	  /* Nesting in message resolving */
+  BindFrame		binding;	  /* Methods being resolved */
   struct to_cell	answer_stack_base_cell; /* AnswerStack */
   ToCell		answer_stack;
   answer_table		answer_table;	  /* object --> cell on answer_stack */
@@ -71,7 +73,7 @@ TheThreadData(void)
 #define CurrentGoal         (TheThreadData()->current_goal)
 #define TheServiceMode      (TheThreadData()->service_mode)
 #define MaxGoalDepth        (TheThreadData()->max_goal_depth)
-#define BindNesting         (TheThreadData()->bind_nesting)
+#define BindingMethods      (TheThreadData()->binding)
 #define AnswerStackBaseCell (TheThreadData()->answer_stack_base_cell)
 #define AnswerStack	    (TheThreadData()->answer_stack)
 
