@@ -269,6 +269,8 @@ make_prompt_binding(G) :-
     new(Window, @receiver?window),
     new(Back, message(Window, backwards)),
     new(Forw, message(Window, forwards)),
+    new(Quit, and(message(@receiver, keyboard_quit),
+                  message(Window, cancel))),
 
     new(G, key_binding(emacs_prompter, text_item)),
     send(G, function, 'TAB', complete_or_next),
@@ -278,8 +280,8 @@ make_prompt_binding(G) :-
     send(G, function, '\\ep', Back),        % traditional Emacs
     send(G, function, page_down, Forw),
     send(G, function, '\\en', Forw),
-    send(G, function, '\\C-g', and(message(@receiver, keyboard_quit),
-                                   message(Window, cancel))).
+    send(G, function, '\\C-g', Quit),
+    send(G, function, '\\e', Quit).       % ESC; Alt-p/n arrive as \ep/\en
 
 initialise(D, Mode:emacs_mode, Impl:any, Argv:vector) :->
     (   send(Impl, has_get_method, summary),
