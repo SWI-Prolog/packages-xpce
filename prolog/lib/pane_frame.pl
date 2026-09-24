@@ -722,7 +722,11 @@ keyboard_focus(F, W:[window]*) :->
     ->  send_super(F, keyboard_focus, SD)
     ;   send_super(F, keyboard_focus, W),
         (   send(W, instance_of, window)
-        ->  send(F, pane_changed)
+        ->  (   get(W, container, tab_frame, Tab)
+            ->  send(Tab, remember_focus, W)
+            ;   true
+            ),
+            send(F, pane_changed)
         ;   true
         )
     ).

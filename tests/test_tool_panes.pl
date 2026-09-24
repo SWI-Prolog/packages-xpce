@@ -2241,4 +2241,28 @@ test(and_the_monitor_lets_go_of_them, Focused == [terminal]) :-
                     pane_kind(P, Kind)
                   ), Focused).
 
+%       A tab remembers the pane last worked in, which is the one it
+%       shows again when it comes back into view and the one it is named
+%       after while it is hidden.  A click moves the focus without asking
+%       the tab, and it used to go on naming the monitor it had last been
+%       told about: switching away turned the label of the tab into
+%       "Threads" and switching back gave the keys to the monitor.
+
+test(a_hidden_tab_remembers_the_pane_clicked_last,
+     true(Hidden-Back == P-P)) :-
+    no_frames,
+    no_monitor,
+    epilog_frame(@default, @default, @default, @off, @default, F),
+    send(F, open),
+    get(F, panes, Chain),
+    chain_list(Chain, [T|_]),
+    send(F, append_pane, new(P, picture), @default, @on),
+    send(@prolog_ide, show_tool, prolog_thread_monitor, split),
+    send(F, keyboard_focus, P),         % what a click on it does
+    get(P, container, pane_tab, Tab),
+    send(F, current_pane, T),
+    get(Tab, current, Hidden),
+    send(F, current_pane, P),
+    get(F, current_pane, Back).
+
 :- end_tests(tool_pane_focus).

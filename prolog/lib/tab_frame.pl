@@ -418,6 +418,27 @@ current(TF, Window:window) :->
     ;   true
     ).
 
+%       The focus moves without asking me: a click goes straight to the
+%       window.  <-current finds it while it is in one of my windows, but
+%       once my tab is hidden the focus is elsewhere and <-current falls
+%       back on the slot, which must then name the window last worked in
+%       rather than the one last made current by ->current.  So the frame
+%       tells me, and I tell the tab_frame I am in, if any.
+
+remember_focus(TF, Focus:window) :->
+    "Focus got the keyboard; remember which window of mine holds it"::
+    window_list(TF, List),
+    (   focused_window(Focus, List, Window)
+    ->  send(TF, slot, current, Window)
+    ;   true
+    ),
+    (   get(TF, container, tabbed_window, TW),
+        get(TW, contained_in, Up),
+        get(Up, container, tab_frame, Outer)
+    ->  send(Outer, remember_focus, Focus)
+    ;   true
+    ).
+
 %       `tab_stack ->on_top' ends by sending the tab it raised ->advance,
 %       to put the keyboard focus on the first item of a tab that holds
 %       dialog items.  I hold windows, and each of them looks after its
