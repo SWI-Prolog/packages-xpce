@@ -3321,19 +3321,36 @@ XPCE_INPUT(void)
 }
 
 
+/* During halt, Prolog's output streams may be gone while xpce still
+ * prints, e.g., debug messages from destroying windows.  Fall back to
+ * C stderr then.
+ */
+
 void
 pl_Cvprintf(const char *fmt, va_list args)
 { IOSTREAM *s = XPCE_OUTPUT();
-  Svfprintf(s, fmt, args);
-  PL_release_stream(s);
+
+  if ( s )
+  { Svfprintf(s, fmt, args);
+    PL_release_stream(s);
+  } else
+  { vfprintf(stderr, fmt, args);
+  }
 }
 
 
 static int
 pl_Cputchar(int c)
 { IOSTREAM *s = XPCE_OUTPUT();
-  int rc = Sputcode(c, s);
-  PL_release_stream(s);
+  int rc;
+
+  if ( s )
+  { rc = Sputcode(c, s);
+    PL_release_stream(s);
+  } else
+  { rc = fputc(c, stderr);
+  }
+
   return rc;
 }
 
@@ -3341,8 +3358,13 @@ pl_Cputchar(int c)
 static void
 pl_Cflush(void)
 { IOSTREAM *s = XPCE_OUTPUT();
-  Sflush(s);
-  PL_release_stream(s);
+
+  if ( s )
+  { Sflush(s);
+    PL_release_stream(s);
+  } else
+  { fflush(stderr);
+  }
 }
 
 
