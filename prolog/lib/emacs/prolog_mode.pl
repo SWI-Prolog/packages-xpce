@@ -1393,32 +1393,34 @@ read_selection(E, Terms:prolog) :<-
 read_terms_in_range(E, From, To, Terms) :-
     To > From,
     !,
+    buffer_read_options(E, Options),
     setup_call_cleanup(
         pce_open(E, read, In),
         ( seek(In, From, bof, _),
-          read_terms_to(In, To, Terms)
+          read_terms_to(In, To, Options, Terms)
         ),
         close(In)).
 read_terms_in_range(_, _, _, []).
 
-read_terms_to(In, End, Terms) :-
-    quiet_read_next(In, Term, _, Here),
+read_terms_to(In, End, Options, Terms) :-
+    quiet_read_next(In, Options, Term, _, Here),
     !,
     (   Term == end_of_file
     ->  Terms = []
     ;   (   Here > End
         ->  Terms = []
         ;   Terms = [Term|Rest],
-            read_terms_to(In, End, Rest)
+            read_terms_to(In, End, Options, Rest)
         )
     ).
-read_terms_to(_, _, []).
+read_terms_to(_, _, _, []).
 
 find_dependencies(E, Range:point) :<-
     "Get start and end of dependencies"::
+    buffer_read_options(E, Options),
     setup_call_cleanup(
         pce_open(E, read, In),
-        find_dependencies(In, #{}, Dict),
+        find_dependencies(In, Options, #{}, Dict),
         close(In)),
     get(E, text_buffer, TB),
     (   _{start:Start, end:End0} :< Dict
@@ -1432,11 +1434,11 @@ find_dependencies(E, Range:point) :<-
         new(Range, point(Start, Start))
     ).
 
-find_dependencies(In, State0, State) :-
-    quiet_read_next(In, Term, F, T),
+find_dependencies(In, Options, State0, State) :-
+    quiet_read_next(In, Options, Term, F, T),
     (   Term = :-(Directive)
     ->  update_dep_state(Directive, F, T, State0, State1),
-        find_dependencies(In, State1, State)
+        find_dependencies(In, Options, State1, State)
     ;   State = State0.put(program_start, F)
     ).
 
@@ -1457,11 +1459,12 @@ is_dependency(use_module(_)).
 is_dependency(autoload(_,_)).
 is_dependency(use_module(_,_)).
 
-quiet_read_next(In, Term, From, To) :-
+quiet_read_next(In, Options, Term, From, To) :-
     between(1, 10, _),
     read_term(In, Term,
               [ syntax_errors(quiet),
                 term_position(Pos)
+              | Options
               ]),
     nonvar(Term),
     stream_position_data(char_count, Pos, From),
@@ -1742,11 +1745,35 @@ read_term_from_stream(TB, Fd, Start,
 
 
 :- if(predicate_property(xref_prolog_flag(_,_,_,_), defined)).
-xref_flag_option(TB, var_prefix(Bool)) :-
-    xref_prolog_flag(TB, var_prefix, Bool, _Line).
+xref_flag_option(TB, var_prefix(Prefix)) :-
+    xref_prolog_flag(TB, var_prefix, Prefix, _Line).
 :- else.
 xref_flag_option(_, _) :- fail.
 :- endif.
+
+%!  buffer_read_options(+Editor, -Options) is det.
+%
+%   Options for read_term/3 that reflect syntax flags set by the
+%   buffer.
+
+buffer_read_options(E, Options) :-
+    get(E, text_buffer, TB),
+    findall(Opt, xref_flag_option(TB, Opt), Options).
+
+%!  singleton_prefix(+Editor, -Prefix) is det.
+%
+%   Prefix is the var_prefix character if the buffer sets the flag
+%   `var_prefix` to a symbol character, e.g., `?`.  Otherwise it is ''.
+%   With prefix `?`, a singleton `?x` is renamed to `?_x` and the
+%   anonymous variable is `?_`.
+
+singleton_prefix(E, Prefix) :-
+    get(E, text_buffer, TB),
+    xref_flag_option(TB, var_prefix(Prefix)),
+    atom_length(Prefix, 1),
+    char_type(Prefix, prolog_symbol),
+    !.
+singleton_prefix(_, '').
 
 check_clause(M, From:from=[int], Repair:repair=[bool]) :->
     "Check syntax of clause"::
@@ -1772,11 +1799,14 @@ replace_singletons(M, Start:int, End:int) :->
 '_replace_singletons'(M, Id:event_id) :->
     get(M, attribute, singletons, Frags),
     get(Frags, delete_head, Frag),
+    singleton_prefix(M, Prefix),
     (   (   Id == 0'y
-        ->  send(Frag, insert, 0, '_'),
+        ->  atom_length(Prefix, Offset),
+            send(Frag, insert, Offset, '_'),
             send(Frag, free)
         ;   Id == 0'_
-        ->  send(Frag, string, '_'),
+        ->  atom_concat(Prefix, '_', Anon),
+            send(Frag, string, Anon),
             send(Frag, free)
         ;   Id == 0'n
         ->  true
@@ -1802,8 +1832,10 @@ prepare_replace_singletons(M) :-
     get(F0, start, S),
     get(F0, end, E),
     send(M, selection, S, E, highlight),
+    singleton_prefix(M, P),
     send(M, report, status,
-         'Replace singleton? (''y'' --> _Name, ''_'' --> _, ''n'')').
+         'Replace singleton? (''y'' --> ~w_Name, ''_'' --> ~w_, ''n'')',
+         P, P).
 
 
                  /*******************************
