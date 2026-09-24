@@ -580,6 +580,9 @@ binding('\\C-x',     prefix_or_cut).  % cut when there is a selection
 binding('\\C-x8',    prefix).
 binding('\\C-x8RET', insert_symbol).
 binding('\\C-x8s',   insert_symbol).
+binding('\\C-x2',    split_horizontally). % Emacs compatibility
+binding('\\C-x3',    split_vertically).
+binding('\\C-x0',    delete_window).
 binding('\\C-\\S-o', split_horizontally). % Terminator compatibility
 binding('\\C-\\S-e', split_vertically).
 binding('\\C-\\S-i', new_window).
@@ -1337,6 +1340,14 @@ split_horizontally(T) :->
 split_vertically(T) :->
     "Split terminal vertically"::
     send(T, split, vertically).
+
+delete_window(T) :->
+    "Close this terminal, unless it is all its window shows"::
+    get(T, window, Window),
+    (   send(Window, last_in_frame)
+    ->  send(T, report, status, 'Single terminal')
+    ;   send(Window, close_pane)
+    ).
 
 new_tab(T) :->
     "Open a new terminal in a tab of this window"::

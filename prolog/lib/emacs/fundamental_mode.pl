@@ -986,7 +986,7 @@ only_window(M) :->
     ).
 
 delete_window(M) :->
-    "Close this view, keeping the others of this tab"::
+    "Close this view, keeping the others of this tab or window"::
     get(M, view, V),
     get(M, views, Views),
     (   Views = [_,_|_]
@@ -998,7 +998,9 @@ delete_window(M) :->
         ->  send(Frame, keyboard_focus, New)
         ;   true
         )
-    ;   send(M, report, warning, 'Cannot close the only view of a tab')
+    ;   \+ send(V, last_in_frame)       % the window shows more: a console
+    ->  send(V, close_pane)
+    ;   send(M, report, warning, 'Cannot close the only view of a window')
     ).
 
 other_window(M) :->

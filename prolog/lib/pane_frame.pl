@@ -2545,6 +2545,27 @@ close_pane(P) :->
     ;   send(P, destroy)
     ).
 
+last_in_frame(P) :->
+    "Succeed if closing me would leave my frame empty"::
+    last_in_frame(P).
+
+%!  last_in_frame(+Window) is semidet.
+%
+%   True when Window is all its frame shows.  A window inside a group is
+%   so if it is the only window of its tab, that tab the only tab of the
+%   group, and the group all the frame shows.
+
+last_in_frame(W) :-
+    get(W, container, tab_frame, Tab),
+    (   send(Tab, instance_of, pane_tab)
+    ->  get(W, frame, Frame),
+        get(Frame?panes, size, 1)
+    ;   get(Tab?windows, size, 1),
+        get(Tab, container, tabbed_window, Group),
+        get(Group?tabs, size, 1),
+        last_in_frame(Group)
+    ).
+
 event(P, Ev:event) :->
     "Let my frame decide whether entering me gives me the focus"::
     (   send(Ev, is_a, area_enter),

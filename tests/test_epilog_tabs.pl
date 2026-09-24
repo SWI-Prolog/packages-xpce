@@ -515,6 +515,29 @@ test(closing_one_terminal_leaves_the_others) :-
     tabs(F, ['Prolog'-1]),
     terminals(F, 1).
 
+%       \C-x 0 closes a terminal as long as the window shows something
+%       else.
+
+test(delete_window_leaves_the_others) :-
+    epilog(F, W),
+    send(W, split, horizontally),
+    send(W?terminal, delete_window),
+    tabs(F, ['Prolog'-1]),
+    terminals(F, 1).
+
+test(delete_window_closes_the_only_terminal_of_a_tab) :-
+    epilog(F, W),
+    send(W, new_tab),
+    tabs(F, ['Prolog'-1, 'Prolog 2'-1]),
+    send(W?terminal, delete_window),
+    tabs(F, ['Prolog 2'-1]).
+
+test(delete_window_keeps_the_last_terminal) :-
+    epilog(F, W),
+    send(W?terminal, delete_window),
+    tabs(F, ['Prolog'-1]),
+    terminals(F, 1).
+
 test(closing_a_tab_closes_its_terminals) :-
     epilog(F, W),
     send(W, split, horizontally),

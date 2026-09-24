@@ -356,6 +356,33 @@ test(the_only_view_of_a_tab_is_kept) :-
     send(M2, only_window),
     views(F, [V]).
 
+%       The only view of a tab goes if the window shows something else:
+%       another pane beside the editor, or another source in it.
+
+test(delete_window_closes_a_view_beside_another_pane) :-
+    emacs(F, V),
+    editor(F, EP),
+    send(EP, split, vertically),         % a second pane beside it
+    get(F?panes, size, 2),
+    send(F, current_pane, V),           % splitting moved the focus
+    mode(F, M),
+    send(M, delete_window),
+    \+ object(V),
+    \+ object(EP),
+    get(F?panes, size, 1).
+
+test(delete_window_closes_the_tab_of_a_source) :-
+    emacs(F, V),
+    scratch(B),
+    send(@emacs, show_buffer, F, B, tab),
+    source_tabs(F, 2),
+    send(F, current_pane, V),
+    get(V, editor, E),
+    get(E, mode, M),
+    send(M, delete_window),
+    \+ object(V),
+    source_tabs(F, 1).
+
 test(split_shows_the_buffer_beside_the_view) :-
     emacs(F, V1),
     scratch(B),
