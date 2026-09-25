@@ -371,7 +371,8 @@ pce_lost_objects(Top) :-
               Live is Created-Freed,
               Lost is Live-Reached,
               Lost =\= 0,
-              get(Class, name, Name)
+              get(Class, name, Name),
+              Name \== name
             ),
             Pairs),
     send(Roots, free),                  % see check_pce_database/0
@@ -389,7 +390,7 @@ pce_lost_objects(Top) :-
     forall(member(Lost-lost(Name, Live, Reached), TopPairs),
            format('~w~t~32|~t~D~10+~t~D~10+~t~D~10+~n',
                   [Name, Live, Reached, Lost])),
-    format('~w~t~32|~t~D~30+~n', ['Total lost', Total]).
+    ansi_format(bold, '~w~t~32|~t~D~30+~n', ['Total lost', Total]).
 
 %!  pce_lost_instances(+Class, -Objects:list) is det.
 %
