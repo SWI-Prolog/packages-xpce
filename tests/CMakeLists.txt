@@ -69,6 +69,17 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:terminal_rewrap
                      xpce:redraw_reentrance)
 
+# process_encoding checks the bytes on the wire using od and iconv
+
+if(NOT WIN32)
+  find_program(PROG_OD od)
+  find_program(PROG_ICONV iconv)
+  if(PROG_OD AND PROG_ICONV)
+    test_libs(process_encoding OPTIONS ${XPCE_TEST_OPTIONS})
+    list(APPEND XPCE_EXTRA_TESTS xpce:process_encoding)
+  endif()
+endif()
+
 if(EPILOG)
   list(APPEND XPCE_EXTRA_TESTS xpce:epilog_tabs xpce:mixed_panes
                                xpce:undefined xpce:tool_panes)

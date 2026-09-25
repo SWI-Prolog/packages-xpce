@@ -1650,6 +1650,7 @@ COMMON(status)	initialiseSourceSink(SourceSink ss);
 COMMON(IOSTREAM *)	Sopen_object(Any obj, const char *mode);
 COMMON(status)	setStreamEncodingSourceSink(SourceSink ss, IOSTREAM *fd);
 COMMON(Name)	encoding_to_name(IOENC encoding);
+COMMON(IOENC)	name_to_encoding(Name name);
 
 #if O_CPLUSPLUS
 COMMON(status )	callCPlusPlusProc(void *f, int ac, const Any av[]);

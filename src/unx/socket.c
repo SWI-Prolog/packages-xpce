@@ -308,7 +308,9 @@ cloneSocket(Socket s, Socket clone)
   clone->ws_ref = 0;
 #endif
   clone->input_buffer = NULL;
-  clone->input_allocated = s->input_p = 0;
+  clone->input_allocated = clone->input_p = 0;
+  clone->input_pending = NULL;
+  clone->input_pending_len = 0;
 
   succeed;
 }

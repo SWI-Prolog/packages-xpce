@@ -219,10 +219,22 @@ ws_listen_socket(Socket s)
  */
 status
 ws_write_stream_data(Stream s, void *data, int len)
-{ if ( s->wrfd < 0 )
+{ char *p = data;
+
+  if ( s->wrfd < 0 )
     return errorPce(s, NAME_notOpen);
-  if ( write(s->wrfd, data, len) != len )
-    return errorPce(s, NAME_ioError, getOsErrorPce(PCE));
+
+  while( len > 0 )		/* write() may be partial, e.g., on a pipe */
+  { ssize_t n = write(s->wrfd, p, len);
+
+    if ( n < 0 )
+    { if ( errno == EINTR )
+	continue;
+      return errorPce(s, NAME_ioError, getOsErrorPce(PCE));
+    }
+    p   += n;
+    len -= (int)n;
+  }
 
   succeed;
 }

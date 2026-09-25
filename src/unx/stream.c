@@ -63,6 +63,8 @@ initialiseStream(Stream s, Int rfd, Int wfd, Code input, Any sep)
   s->ws_ref = 0;
   s->input_buffer = NULL;
   s->input_allocated = s->input_p = 0;
+  s->input_pending = NULL;
+  s->input_pending_len = 0;
 
   if ( isDefault(rfd) )   rfd = NIL;
   if ( isDefault(wfd) )   wfd = NIL;
@@ -73,6 +75,7 @@ initialiseStream(Stream s, Int rfd, Int wfd, Code input, Any sep)
   if ( notNil(wfd) ) s->wrfd = valInt(wfd);
 
   assign(s, input_message, input);
+  assign(s, encoding, getClassVariableValueObject(s, NAME_encoding));
   recordSeparatorStream(s, sep);
 
   succeed;
@@ -112,6 +115,12 @@ closeInputStream(Stream s)
     { pceFree(s->input_buffer);
       s->input_buffer = NULL;
     }
+    s->input_allocated = s->input_p = 0;
+    if ( s->input_pending )
+    { pceFree(s->input_pending);
+      s->input_pending = NULL;
+    }
+    s->input_pending_len = 0;
   }
 
   succeed;
@@ -158,35 +167,152 @@ inputStream(Stream s, Int fd)
 
 #define BLOCKSIZE 1024
 #define ALLOCSIZE 1024
+#define MAX_PENDING 16			/* >= longest incomplete sequence */
 
 #define Round(n, r) (((n) + (r) - 1) & ~((r)-1))
 
-void
-add_data_stream(Stream s, char *data, int len)
-{ char *q;
+static IOENC
+stream_encoding(Stream s)
+{ IOENC enc = name_to_encoding(s->encoding);
 
-  if ( !s->input_buffer )
-  { s->input_allocated = Round(len+1, ALLOCSIZE);
-    s->input_buffer = pceMalloc(s->input_allocated);
-    s->input_p = 0;
-  } else if ( s->input_p + len >= s->input_allocated )
-  { s->input_allocated = Round(s->input_p + len + 1, ALLOCSIZE);
-    s->input_buffer = pceRealloc(s->input_buffer, s->input_allocated);
+  return enc == ENC_UNKNOWN ? ENC_UTF8 : enc;
+}
+
+
+/* Length of the prefix of data that holds only complete characters
+ * for enc.  The remainder is kept until more data arrives.
+ */
+
+static size_t
+complete_prefix(IOENC enc, const unsigned char *data, size_t len)
+{ switch(enc)
+  { case ENC_UTF8:
+    { size_t i = len;
+
+      for(size_t back=1; i > 0 && back <= 4; back++)
+      { int c = data[--i];
+
+	if ( (c&0xc0) != 0x80 )		/* not a continuation byte */
+	{ size_t need = c >= 0xf0 && c < 0xf8 ? 4 :
+			c >= 0xe0 && c < 0xf0 ? 3 :
+			c >= 0xc0 && c < 0xe0 ? 2 : 1;
+
+	  return back < need ? i : len;
+	}
+      }
+
+      return len;
+    }
+    case ENC_UTF16BE:
+    case ENC_UTF16LE:
+    { size_t n = len & ~(size_t)1;
+
+      if ( n >= 2 )
+      { int u = ( enc == ENC_UTF16BE ? (data[n-2]<<8)|data[n-1]
+				     : (data[n-1]<<8)|data[n-2] );
+	if ( u >= 0xd800 && u <= 0xdbff )	/* high surrogate */
+	  n -= 2;
+      }
+
+      return n;
+    }
+    case ENC_ANSI:
+    { mbstate_t state;
+      size_t i = 0;
+
+      memset(&state, 0, sizeof(state));
+      while( i < len )
+      { size_t rc = mbrlen((const char *)data+i, len-i, &state);
+
+	if ( rc == (size_t)-2 )
+	  return i;
+	if ( rc == (size_t)-1 || rc == 0 )
+	{ memset(&state, 0, sizeof(state));
+	  i++;
+	} else
+	  i += rc;
+      }
+
+      return len;
+    }
+    default:
+      return len;
   }
-
-  q = (char *)&s->input_buffer[s->input_p];
-  memcpy(q, data, len);
-  s->input_p += len;
 }
 
 
 static void
-write_byte(unsigned char byte)
-{ if ( byte < 32 || (byte >= 127 && byte < 128+32) || byte == 255 )
-  { char buf[10];
+add_char_stream(Stream s, int c)
+{ if ( s->input_p >= s->input_allocated )
+  { s->input_allocated = Round(s->input_p + 1, ALLOCSIZE);
+    s->input_buffer = pceRealloc(s->input_buffer,
+				 s->input_allocated * sizeof(charW));
+  }
+
+  s->input_buffer[s->input_p++] = c;
+}
+
+
+/* Decode data using the stream's encoding and add it to the input
+ * buffer.  An incomplete multibyte sequence at the end is saved in
+ * input_pending and prepended to the next block.
+ */
+
+void
+add_data_stream(Stream s, char *data, int len)
+{ IOENC enc = stream_encoding(s);
+  unsigned char *bytes = (unsigned char *)data;
+  unsigned char *joined = NULL;
+  size_t size = len;
+  size_t n;
+
+  if ( s->input_pending_len > 0 )
+  { size = s->input_pending_len + len;
+    joined = pceMalloc(size);
+    memcpy(joined, s->input_pending, s->input_pending_len);
+    memcpy(joined+s->input_pending_len, data, len);
+    bytes = joined;
+    s->input_pending_len = 0;
+  }
+
+  n = complete_prefix(enc, bytes, size);
+  if ( size-n > MAX_PENDING )
+    n = size;
+  if ( n < size )
+  { if ( !s->input_pending )
+      s->input_pending = pceMalloc(MAX_PENDING);
+    memcpy(s->input_pending, bytes+n, size-n);
+    s->input_pending_len = size-n;
+  }
+
+  if ( enc == ENC_OCTET || enc == ENC_ISO_LATIN_1 )
+  { for(size_t i=0; i<n; i++)
+      add_char_stream(s, bytes[i]);
+  } else if ( n > 0 )
+  { IOSTREAM *fd = Sopen_string(NULL, (char *)bytes, n, "r");
+
+    if ( fd )
+    { int c;
+
+      fd->encoding = enc;
+      while( (c=Sgetcode(fd)) != EOF )
+	add_char_stream(s, c);
+      Sclose(fd);
+    }
+  }
+
+  if ( joined )
+    pceFree(joined);
+}
+
+
+static void
+write_char(int c)
+{ if ( c < 32 || (c >= 127 && c < 128+32) )
+  { char buf[16];
     char *prt = buf;
 
-    switch(byte)
+    switch(c)
     { case '\t':
 	prt = "\\t";
         break;
@@ -200,28 +326,33 @@ write_byte(unsigned char byte)
 	prt = "\\b";
 	break;
       default:
-	snprintf(buf, sizeof(buf), "<%d>", byte);
+	snprintf(buf, sizeof(buf), "<%d>", c);
     }
 
     Cprintf("%s", prt);
   } else
-    Cputchar(byte);
+    Cputchar(c);
 }
 
 
 static void
-write_buffer(const char *buf, int size)
+write_buffer(const charW *buf, int size)
 { if ( size > 50 )
   { write_buffer(buf, 25);
     Cprintf(" ... ");
     write_buffer(buf + size - 25, 25);
   } else
-  { const unsigned char *ubuf = (const unsigned char*)buf;
-
-    for(int n=0; n<size; n++)
-    { write_byte(ubuf[n]);
-    }
+  { for(int n=0; n<size; n++)
+      write_char(buf[n]);
   }
+}
+
+
+static void
+str_set_input_stream(PceString str, Stream s, size_t len)
+{ str_inithdr(str, TRUE);
+  str->s_size = (int)len;
+  str->s_textW = s->input_buffer;
 }
 
 
@@ -234,26 +365,22 @@ dispatch_stream(Stream s, int size, int discard)
   assert(size <= s->input_p);
 
   markAnswerStack(mark);
-  str_set_n_ascii(&q, size, (char *)s->input_buffer);
+  str_set_input_stream(&q, s, size);
   str = StringToString(&q);
   if ( discard )
   { pceFree(s->input_buffer);
     s->input_buffer = NULL;
     s->input_allocated = s->input_p = 0;
   } else
-  { memcpy((char *)s->input_buffer,
-	   (char *)&s->input_buffer[size],
-	   s->input_p - size);
+  { memmove(s->input_buffer, &s->input_buffer[size],
+	    (s->input_p - size) * sizeof(charW));
     s->input_p -= size;
   }
 
   DEBUG(NAME_input,
-	{ int n = valInt(getSizeCharArray(str));
-
-	  Cprintf("Sending: %d characters, `", n);
-	  write_buffer(strName(str), n);
-	  Cprintf("'\n\tLeft: %d characters, `", s->input_p);
-	  write_buffer((char *)s->input_buffer, s->input_p);
+	{ Cprintf("Sending: %d characters, %s", size, pp(str));
+	  Cprintf("\n\tLeft: %d characters, `", s->input_p);
+	  write_buffer(s->input_buffer, s->input_p);
 	  Cprintf("'\n");
 	});
 
@@ -293,7 +420,7 @@ dispatch_input_stream(Stream s)
     { Regex re = s->record_separator;
       string str;
 
-      str_set_n_ascii(&str, s->input_p, (char *)s->input_buffer);
+      str_set_input_stream(&str, s, s->input_p);
       if ( search_string_regex(re, &str) )
       { int size = valInt(getRegisterEndRegex(s->record_separator, ZERO));
 
@@ -317,38 +444,19 @@ handleInputStream(Stream s)
     fail;
 
   if ( (n = ws_read_stream_data(s, buf, BLOCKSIZE, DEFAULT)) > 0 )
-  { if ( isNil(s->input_message) )	/* modal */
-      add_data_stream(s, buf, n);
-    else if ( isNil(s->record_separator) && !s->input_buffer )
-    { string q;
-      Any str;
-      AnswerMark mark;
-      markAnswerStack(mark);
+  { intptr_t here = s->input_p;
 
-      DEBUG(NAME_input,
-	    { Cprintf("Read (%d chars, unbuffered): `", n);
-	      write_buffer(buf, n);
-	      Cprintf("'\n");
-	    });
+    add_data_stream(s, buf, n);
 
-      str_set_n_ascii(&q, n, buf);
-      str = StringToString(&q);
-      addCodeReference(s);
-      forwardReceiverCodev(s->input_message, s, 1, &str);
-      delCodeReference(s);
+    DEBUG(NAME_input,
+	  { Cprintf("Read (%d bytes, %d chars): `",
+		    n, (int)(s->input_p-here));
+	    write_buffer(&s->input_buffer[here], (int)(s->input_p-here));
+	    Cprintf("'\n");
+	  });
 
-      rewindAnswerStack(mark, NIL);
-    } else
-    { add_data_stream(s, buf, n);
-
-      DEBUG(NAME_input,
-	    { Cprintf("Read (%d chars): `", n);
-	      write_buffer((char *)&s->input_buffer[s->input_p-n], n);
-	      Cprintf("'\n");
-	    });
-
+    if ( notNil(s->input_message) )
       dispatch_input_stream(s);
-    }
   } else if ( n != -2 )			/* Win 9x errornous WSAEWOULDBLOCK */
   {
     DEBUG(NAME_stream,
@@ -369,20 +477,65 @@ handleInputStream(Stream s)
 		 *       OUTPUT HANDLING	*
 		 *******************************/
 
+/* Write str to s.  The Prolog stream layer encodes the text into a
+ * memory buffer that is written in one go.  Doing the I/O ourselves
+ * keeps I/O errors xpce errors rather than Prolog stream errors.
+ */
+
+static status
+writeStringStream(Stream s, PceString str)
+{ IOENC enc = stream_encoding(s);
+  char tmp[4096];
+  char *buf = tmp;
+  size_t size = sizeof(tmp);
+  IOSTREAM *fd;
+  status rc = SUCCEED;
+
+  if ( s->wrfd < 0 )
+    return errorPce(s, NAME_notOpen);
+  if ( str->s_size == 0 )
+    succeed;
+  if ( isstrA(str) && (enc == ENC_OCTET || enc == ENC_ISO_LATIN_1) )
+    return ws_write_stream_data(s, str->s_textA, str->s_size);
+
+  if ( !(fd = Sopenmem(&buf, &size, "wb")) )
+    return errorPce(s, NAME_ioError, OsError());
+  fd->encoding = enc;
+
+  for(int i=0; i<str->s_size; i++)
+  { int c = str_fetch(str, i);
+
+    if ( Scanrepresent(c, fd) < 0 )
+    { rc = errorPce(s, NAME_representation, NAME_encoding);
+      break;
+    }
+    Sputcode(c, fd);
+  }
+
+  if ( Sclose(fd) < 0 && rc )
+    rc = errorPce(s, NAME_ioError, OsError());
+  if ( rc )
+    rc = ws_write_stream_data(s, buf, (int)size);
+  if ( buf != tmp )
+    Sfree(buf);
+
+  return rc;
+}
+
+
 static status
 appendStream(Stream s, CharArray data)
-{ PceString str = &data->data;
-  int l = str_datasize(str);
-
-  return ws_write_stream_data(s, str->s_text, l);
+{ return writeStringStream(s, &data->data);
 }
 
 
 static status
 newlineStream(Stream s)
 { static char nl[] = "\n";
+  string str;
 
-  return ws_write_stream_data(s, nl, 1);
+  str_set_n_ascii(&str, 1, nl);
+  return writeStringStream(s, &str);
 }
 
 
@@ -402,14 +555,7 @@ formatStream(Stream s, CharArray fmt, int argc, Any *argv)
   status rc;
 
   str_writefv(&tmp, fmt, argc, argv);
-  if ( isstrA(&tmp) )
-  { rc = ws_write_stream_data(s, tmp.s_textA, tmp.s_size);
-  } else
-  { Cprintf("TBD: wide characters in stream->format");
-
-    rc = FALSE;
-  }
-
+  rc = writeStringStream(s, &tmp);
   str_unalloc(&tmp);
 
   return rc;
@@ -449,7 +595,7 @@ getReadLineStream(Stream s, Real timeout)
 
   while(s->rdfd >= 0)
   { if ( s->input_buffer )
-    { unsigned char *q;
+    { charW *q;
       int n;
 
       DEBUG(NAME_stream, Cprintf("Scanning %d chars\n", s->input_p));
@@ -459,10 +605,10 @@ getReadLineStream(Stream s, Real timeout)
 	  size_t len = (q-s->input_buffer)+1;
 	  StringObj rval;
 
-	  str_set_n_ascii(&str, len, (char *)s->input_buffer);
+	  str_set_input_stream(&str, s, len);
 	  rval = StringToString(&str);
-	  memmove((char *)s->input_buffer,
-		  (char *)&s->input_buffer[len], s->input_p - len);
+	  memmove(s->input_buffer, &s->input_buffer[len],
+		  (s->input_p - len) * sizeof(charW));
 	  s->input_p -= len;
 
 	  return rval;
@@ -569,6 +715,8 @@ static vardecl var_stream[] =
   SV(NAME_recordSeparator, "regex|int*", IV_GET|IV_STORE,
      recordSeparatorStream,
      NAME_input, "Regex that describes the record separator"),
+  IV(NAME_encoding, "{octet,ascii,iso_latin_1,text,utf8,unicode_be,unicode_le}", IV_BOTH,
+     NAME_encoding, "Encoding of the byte stream"),
   IV(NAME_wrfd, "alien:int", IV_NONE,
      NAME_internal, "File-handle to write to stream"),
   IV(NAME_rdfd, "alien:int", IV_NONE,
@@ -577,12 +725,16 @@ static vardecl var_stream[] =
      NAME_internal, "Stream used for <-read_line"),
   IV(NAME_wsRef, "alien:WsRef", IV_NONE,
      NAME_internal, "Window system synchronisation"),
-  IV(NAME_inputBuffer, "alien:char *", IV_NONE,
-     NAME_internal, "Buffer for collecting input-data"),
+  IV(NAME_inputBuffer, "alien:charW *", IV_NONE,
+     NAME_internal, "Buffer for collecting decoded input"),
   IV(NAME_inputAllocated, "alien:int", IV_NONE,
      NAME_internal, "Allocated size of input_buffer"),
   IV(NAME_inputP, "alien:int", IV_NONE,
-     NAME_internal, "Number of characters in input_buffer")
+     NAME_internal, "Number of characters in input_buffer"),
+  IV(NAME_inputPending, "alien:unsigned char *", IV_NONE,
+     NAME_internal, "Incomplete multibyte sequence"),
+  IV(NAME_inputPendingLen, "alien:int", IV_NONE,
+     NAME_internal, "Number of bytes in input_pending")
 };
 
 /* Send Methods */
@@ -623,12 +775,10 @@ static getdecl get_stream[] =
 
 /* Resources */
 
-#define rc_stream NULL
-/*
 static classvardecl rc_stream[] =
-{
+{ RC(NAME_encoding, NULL, "utf8",
+     "Default encoding of the byte stream")
 };
-*/
 
 /* Class Declaration */
 
@@ -657,20 +807,26 @@ static vardecl var_stream[] =
      NAME_input, "Forwarded on input from the stream"),
   IV(NAME_recordSeparator, "regex|int*", IV_GET,
      NAME_input, "Regex that describes the record separator"),
+  IV(NAME_encoding, "{octet,ascii,iso_latin_1,text,utf8,unicode_be,unicode_le}", IV_GET,
+     NAME_encoding, "Encoding of the byte stream"),
   IV(NAME_wrfd, "alien:int", IV_NONE,
      NAME_internal, "File-handle to write to stream"),
   IV(NAME_rdfd, "alien:int", IV_NONE,
      NAME_internal, "File-handle to read from stream"),
   IV(NAME_rdstream, "alien:FILE *", IV_NONE,
      NAME_internal, "Stream used for <-read_line"),
-  IV(NAME_inputBuffer, "alien:char *", IV_NONE,
-     NAME_internal, "Buffer for collecting input-data"),
+  IV(NAME_wsRef, "alien:WsRef", IV_NONE,
+     NAME_internal, "Window System synchronisation"),
+  IV(NAME_inputBuffer, "alien:charW *", IV_NONE,
+     NAME_internal, "Buffer for collecting decoded input"),
   IV(NAME_inputAllocated, "alien:int", IV_NONE,
      NAME_internal, "Allocated size of input_buffer"),
   IV(NAME_inputP, "alien:int", IV_NONE,
      NAME_internal, "Number of characters in input_buffer"),
-  IV(NAME_wsRef, "alien:WsRef", IV_NONE,
-     NAME_internal, "Window System synchronisation")
+  IV(NAME_inputPending, "alien:unsigned char *", IV_NONE,
+     NAME_internal, "Incomplete multibyte sequence"),
+  IV(NAME_inputPendingLen, "alien:int", IV_NONE,
+     NAME_internal, "Number of bytes in input_pending")
 };
 
 /* Send Methods */

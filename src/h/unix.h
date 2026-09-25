@@ -85,13 +85,16 @@
 #define ABSTRACT_STREAM \
   Code		input_message;		/* Message forwarded on input */ \
   Any		record_separator;	/* Separate input records */ \
+  Name		encoding;		/* Encoding of the byte stream */ \
   intptr_t	wrfd;			/* FD to write to process */ \
   intptr_t	rdfd;			/* FD to read from process */ \
   FILE *	rdstream;		/* Stream to read from process */ \
   WsRef		ws_ref;			/* Window System Handle */ \
-  unsigned char * input_buffer;		/* Input buffer */ \
+  charW *	input_buffer;		/* Decoded input */ \
   intptr_t	input_allocated;	/* Allocated size of buffer */ \
-  intptr_t	input_p;		/* Pointer into input buffer */
+  intptr_t	input_p;		/* Characters in input buffer */ \
+  unsigned char * input_pending;	/* Incomplete multibyte sequence */ \
+  intptr_t	input_pending_len;	/* Bytes in input_pending */
 
 
 NewClass(fileobj)

@@ -100,18 +100,28 @@ encoding_to_name(IOENC enc)
 
 
 
-status
-setStreamEncodingSourceSink(SourceSink ss, IOSTREAM *fd)
+IOENC
+name_to_encoding(Name name)
 { const encname *en;
 
   for(en=enc_names; en->name; en++)
-  { if ( ss->encoding == en->name )
-    { fd->encoding = en->code;
-      succeed;
-    }
+  { if ( en->name == name )
+      return en->code;
   }
 
-  return errorPce(ss, NAME_unknownEncoding, ss->encoding);
+  return ENC_UNKNOWN;
+}
+
+
+status
+setStreamEncodingSourceSink(SourceSink ss, IOSTREAM *fd)
+{ IOENC enc = name_to_encoding(ss->encoding);
+
+  if ( enc == ENC_UNKNOWN )
+    return errorPce(ss, NAME_unknownEncoding, ss->encoding);
+
+  fd->encoding = enc;
+  succeed;
 }
 
 
