@@ -1,10 +1,11 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        J.Wielemaker@vu.nl
-    WWW:           http://www.swi-prolog.org/packages/xpce/
-    Copyright (c)  1995-2015, University of Amsterdam
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/packages/xpce/
+    Copyright (c)  1995-2026, University of Amsterdam
                               VU University Amsterdam
+                              SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -38,8 +39,7 @@
           , ispell/1
           ]).
 :- use_module(library(pce)).
-:- require([ send_list/3
-           ]).
+:- use_module(library(pce_util)).
 
 /** <module> An ispell interface for XPCE
 
@@ -148,6 +148,7 @@ class_variable(error_style,   style, style(colour := red),
 variable(word,     name*,       get,    "Currently handled word").
 variable(fragment, fragment*,   get,    "Currently handled fragment").
 variable(ispell,   process*,    none,   "The ispell -a process").
+variable(process,  process*,	get,	"Bulk speller").
 
                 /********************************
                 *         CREATE/DESTROY        *
@@ -177,7 +178,7 @@ are setup.
 
 initialise(F, File:[file]) :->
     "Create from file"::
-    send(F, send_super, initialise, 'Ispell'),
+    send_super(F, initialise, 'Ispell'),
     send(F, append, new(V, view)),
     send(F, append, new(D, dialog)),
     send(F, append, new(B, browser)),
@@ -392,21 +393,23 @@ using `process ->wait'.
 spell(F) :->
     send(F, clear_errors),
     get(F?view, contents, String),
-    (   send(String, is_wide)
-    ->  send(F, report, error, 'Cannot spell Unicode data (yet)'),
-        fail
-    ;   true
-    ),
     get(F, ispell_program, Prog),
     new(P, process('/bin/sh', '-c', string('%s -l | sort -u', Prog))),
+    send(F, slot, process, P),
     send(P, use_tty, @off),
     send(P, input_message, message(F, mark_word, @arg1)),
+    send(P, terminate_message, message(F, terminated, @receiver, @arg1)),
     send(F, report, progress, 'Running "%s" ...', Prog),
     send(P, open),
-    send(P, append, String),
-    send(P, close),
-    send(P, wait),                          % wait for completion
-    send(P, free),
+    Error = error(_,_),
+    catch(call_cleanup(send(P, append, String),
+                       send(P, close)),
+          Error,
+          (   print_message(warning, Error),fail)).
+
+terminated(F, _P:process, _Status:'int|name') :->
+    "Spell process has completed"::
+    send(F, slot, process, @nil),         % this will drop the process
     get(F?errors?dict?members, size, Errors),
     send(F, report, done, 'Spelling done. %d Errors', Errors).
 
