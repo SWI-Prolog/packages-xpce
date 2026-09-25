@@ -56,9 +56,10 @@
 :- autoload(library(pce_meta), [pce_to_method/2]).
 :- autoload(library(pce_util), [chain_list/2]).
 :- autoload(library(error), [existence_error/2]).
-:- autoload(library(lists), [append/3, member/2, numlist/3, sum_list/2]).
+:- autoload(library(lists), [append/3, member/2, sum_list/2]).
 :- autoload(library(pairs), [pairs_keys/2]).
 :- use_module(library(debug), [debug/3]).
+:- use_module(library(ansi_term), [ansi_format/3]).
 
 :- set_prolog_flag(generate_debug_info, false).
 :- meta_predicate test(0,-).
@@ -381,8 +382,10 @@ pce_lost_objects(Top) :-
     N is min(Top, Len),
     length(TopPairs, N),
     append(TopPairs, _, Sorted),
-    format('~w~t~32|~t~w~10+~t~w~10+~t~w~10+~n',
-           [class, live, reached, lost]),
+    format('~`\u2015t~*|~n', [62]),
+    ansi_format(bold, '~w~t~32|~t~w~10+~t~w~10+~t~w~10+~n',
+                [class, live, reached, lost]),
+    format('~`\u2015t~*|~n', [62]),
     forall(member(Lost-lost(Name, Live, Reached), TopPairs),
            format('~w~t~32|~t~D~10+~t~D~10+~t~D~10+~n',
                   [Name, Live, Reached, Lost])),
