@@ -624,6 +624,15 @@ changedImageGraphical(Any obj, Int x, Int y, Int w, Int h)
 	cy += oy;
       }
 
+      /* As in changedAreaGraphical(): the fixed layer is placed in the
+       * coordinates of what is on screen.
+       */
+      if ( (Any)sw != obj && notNil(sw->fixed_graphicals) &&
+	   memberChain(sw->fixed_graphicals, gr) )
+      { cx -= valInt(sw->scroll_offset->x);
+	cy -= valInt(sw->scroll_offset->y);
+      }
+
       cx -= 1; cy -= 1; cw += 2; ch += 2;
 				/* Antialiased strokes and non-integer
 				 * coords can paint just outside the

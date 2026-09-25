@@ -1384,7 +1384,10 @@ displayFixedWindow(PceWindow sw, Graphical gr, Point pos)
     setGraphical(gr, pos->x, pos->y, DEFAULT, DEFAULT);
   }
   qadSendv(gr, NAME_reparent, 0, NULL);
-  DisplayedGraphical(gr, ON);
+  if ( gr->displayed == ON )		/* moved here from another window: */
+    displayedGraphicalDevice((Device)sw, gr, ON); /* nothing else asks */
+  else					/* for it to be painted here */
+    DisplayedGraphical(gr, ON);
 
   succeed;
 }
