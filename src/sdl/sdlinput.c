@@ -368,7 +368,7 @@ poll_thread_fn(void *unused)
     }
     if ( removed )
     { for(int i=MAX_FDS-1; i>=0; i--)
-      { if ( watch->state != WATCH_FREE )
+      { if ( fd_meta[i].state != WATCH_FREE )
 	{ int expected = watch_max;
 	  if ( i < watch_max )
 #ifdef _MSC_VER
@@ -413,7 +413,8 @@ poll_thread_fn(void *unused)
     }
 
     for (int i = 1; i < nfds; ++i)
-    { if ( (poll_fds[i].revents & POLLIN) )
+    { /* EOF on a pipe is reported as POLLHUP without POLLIN */
+      if ( (poll_fds[i].revents & (POLLIN|POLLHUP|POLLERR)) )
       { FDWatch *watch = &fd_meta[meta_id[i]];
 
 	if ( watch_buffers(watch) )
