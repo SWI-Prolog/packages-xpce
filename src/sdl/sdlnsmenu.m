@@ -413,6 +413,15 @@ ns_menubar_setup(const char *appname)
     [appitem setSubmenu:app_menu];
     [main_menu addItem:appitem];
 
+    /* Up to macOS 10.15, -setWindowsMenu: looks the menu up in the
+     * main menu and asserts it is there (NSMenu -itemAtIndex: with
+     * index -1).  ns_menubar_install() rebuilds this item in place.
+     */
+    NSMenuItem *witem = [[NSMenuItem alloc] initWithTitle:@"Window"
+					    action:NULL keyEquivalent:@""];
+    [witem setSubmenu:window_menu];
+    [main_menu addItem:witem];
+
     [NSApp setMainMenu:main_menu];
     [NSApp setWindowsMenu:window_menu];
   }
