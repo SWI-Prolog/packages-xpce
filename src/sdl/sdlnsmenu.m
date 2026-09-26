@@ -390,6 +390,28 @@ build_app_menu(const char *appname)
 }
 
 
+/* The standard Window menu.  AppKit appends the window list.  Up to at
+ * least macOS 12, -setWindowsMenu: indexes into the menu it is given
+ * and asserts (NSMenu -itemAtIndex: with index -1) if it is empty.
+ *
+ * No key equivalents: Command-M is not ours to take from the editor.
+ * The actions go to the key window through the responder chain.
+ */
+
+static void
+build_window_menu(void)
+{ window_menu = [[NSMenu alloc] initWithTitle:@"Window"];
+
+  [window_menu addItemWithTitle:@"Minimize"
+	       action:@selector(performMiniaturize:) keyEquivalent:@""];
+  [window_menu addItemWithTitle:@"Zoom"
+	       action:@selector(performZoom:) keyEquivalent:@""];
+  [window_menu addItem:[NSMenuItem separatorItem]];
+  [window_menu addItemWithTitle:@"Bring All to Front"
+	       action:@selector(arrangeInFront:) keyEquivalent:@""];
+}
+
+
 		 /*******************************
 		 *	     ENTRIES		*
 		 *******************************/
@@ -403,7 +425,7 @@ ns_menubar_setup(const char *appname)
   { menu_target = [[XPCEMenuTarget alloc] init];
 
     build_app_menu(appname);
-    window_menu = [[NSMenu alloc] initWithTitle:@"Window"];
+    build_window_menu();
 
     main_menu = [[NSMenu alloc] initWithTitle:@""];
     [main_menu setAutoenablesItems:NO];
@@ -413,9 +435,8 @@ ns_menubar_setup(const char *appname)
     [appitem setSubmenu:app_menu];
     [main_menu addItem:appitem];
 
-    /* Up to macOS 10.15, -setWindowsMenu: looks the menu up in the
-     * main menu and asserts it is there (NSMenu -itemAtIndex: with
-     * index -1).  ns_menubar_install() rebuilds this item in place.
+    /* The Window menu goes into the main menu before it is registered.
+     * ns_menubar_install() rebuilds this item in place.
      */
     NSMenuItem *witem = [[NSMenuItem alloc] initWithTitle:@"Window"
 					    action:NULL keyEquivalent:@""];
