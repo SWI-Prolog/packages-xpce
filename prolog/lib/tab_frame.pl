@@ -377,6 +377,10 @@ windows(TF, Windows:chain) :<-
     new(Windows, chain),
     forall(member(W, List), send(Windows, append, W)).
 
+members(TF, Windows:chain) :<-
+    "Same as <-windows; compatible with frame <-members"::
+    get(TF, windows, Windows).
+
 window(TF, Window:window) :<-
     "The window that has the focus (see <-current)"::
     get(TF, current, Window).
