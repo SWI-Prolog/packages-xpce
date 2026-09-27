@@ -502,8 +502,23 @@ ws_get_selection(DisplayObj d, Name which, Name target)
   { char *text = NULL;
 
     if ( which == NAME_clipboard )
-      text = SDL_GetClipboardText();
-    else if ( which == NAME_primary )
+    { text = SDL_GetClipboardText();
+#ifdef __APPLE__
+      /* SDL asks the pasteboard for the MIME type text/plain;charset=utf-8,
+	 which MacOS 10.15 does not map to a UTI it holds, so the text of
+	 other applications reads as "" (SDL issue #13737).  A tag without
+	 a '/' is passed to the pasteboard as a UTI.
+      */
+      if ( text && !text[0] )
+      { void *data = SDL_GetClipboardData("public.utf8-plain-text", NULL);
+
+	if ( data )
+	{ SDL_free(text);
+	  text = data;
+	}
+      }
+#endif
+    } else if ( which == NAME_primary )
       text = SDL_GetPrimarySelectionText();
 
     if ( text )
