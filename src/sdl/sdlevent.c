@@ -296,6 +296,8 @@ static SDL_Keymod lastmod = SDL_KMOD_NONE;
 static Any grabbing_window = NIL;
 static Any mouse_tracking_window = NIL; /* Window or Frame */
 static Any pointer_window = NIL;	/* Window holding the pointer */
+static Any drop_tracking_window = NIL;	/* Window of the last drop_position */
+static float drop_tracking_x, drop_tracking_y; /* its position there */
 static Uint8 mouse_tracking_button;
 static SDL_WindowID mouse_tracking_wid = 0;
 static SDL_DisplayID last_display_id = 0;
@@ -408,9 +410,32 @@ ev_event_grab_window(Any window)
     addCodeReference(grabbing_window);
 }
 
+/* A drop sequence belongs to the window the user dragged over.  SDL
+   gives drop_file, drop_text and drop_complete no position of their
+   own: they carry that of the last drop_position, which every
+   drop_complete resets to (0,0).  Routing them by position is thus
+   fragile: the files may go to whatever is at the top-left of the
+   frame, and the window showing the drop hint never hears the drop
+   has completed.  Send them to the window of the last drop_position.
+*/
+
+static void
+set_drop_tracking_window(Any window)
+{ if ( window == drop_tracking_window )
+    return;
+
+  if ( notNil(drop_tracking_window) )
+    delCodeReference(drop_tracking_window);
+  drop_tracking_window = window;
+  if ( notNil(drop_tracking_window) )
+    addCodeReference(drop_tracking_window);
+}
+
 void
 ws_event_destroyed_target(Any window)
-{ if ( window == mouse_tracking_window )
+{ if ( window == drop_tracking_window )
+    set_drop_tracking_window(NIL);
+  if ( window == mouse_tracking_window )
   { delCodeReference(mouse_tracking_window);
     mouse_tracking_window = NIL;
   }
@@ -498,6 +523,34 @@ update_pointer_window(Any window, FrameObj frame,
     ws_window_frame_position(window, frame, &ox, &oy);
     post_area_event(window, NAME_areaEnter, fx-ox, fy-oy, buttons);
   }
+}
+
+
+/* A drag moved from the window of the last drop_position to `window'.
+   SDL only reports leaving the frame (as drop_complete), so tell the old
+   window the drag left by sending it a drop_complete without files.
+   This removes e.g. the drop hint of pce_drop_target.pl.  The window
+   passes the event to the graphical below it, so we must use the last
+   position inside the old window rather than the current one.  `x' and
+   `y' are relative to `window'.
+*/
+
+static void
+update_drop_tracking_window(Any window, float x, float y)
+{ Any old = drop_tracking_window;
+  float old_x = drop_tracking_x, old_y = drop_tracking_y;
+
+  drop_tracking_x = x;
+  drop_tracking_y = y;
+  if ( old == window )
+    return;
+
+  addCodeReference(old);		/* survives set_drop_tracking_window() */
+  set_drop_tracking_window(window);	/* update before we post */
+
+  if ( notNil(old) && !onFlag(old, F_FREED|F_FREEING) )
+    post_area_event(old, NAME_dropComplete, old_x, old_y, ZERO);
+  delCodeReference(old);
 }
 
 
@@ -797,7 +850,34 @@ CtoEvent(SDL_Event *event)
   float x = fx*scale;
   float y = fy*scale;
   float frame_x = x, frame_y = y;	/* for update_pointer_window() */
-  if ( notNil(mouse_tracking_window) )
+  bool drop_tracked = false;
+  switch ( event->type )
+  { case SDL_EVENT_DROP_BEGIN:
+    case SDL_EVENT_DROP_FILE:
+    case SDL_EVENT_DROP_TEXT:
+    case SDL_EVENT_DROP_COMPLETE:
+      if ( notNil(drop_tracking_window) )
+      { float ox=0, oy=0;
+
+	if ( !onFlag(drop_tracking_window, F_FREED|F_FREEING) &&
+	     ws_created_window(drop_tracking_window) &&
+	     ws_window_frame_position(drop_tracking_window, frame, &ox, &oy) )
+	{ window = drop_tracking_window;
+	  x -= ox;
+	  y -= oy;
+	  drop_tracked = true;
+	}
+	if ( event->type == SDL_EVENT_DROP_COMPLETE || !drop_tracked )
+	  set_drop_tracking_window(NIL);
+      }
+      break;
+    default:
+      break;
+  }
+
+  if ( drop_tracked )
+  { /* window, x and y are set above */
+  } else if ( notNil(mouse_tracking_window) )
   { if ( onFlag(mouse_tracking_window, F_FREED|F_FREEING) ||
 	 !ws_created_window(mouse_tracking_window) )
     { Cprintf("Mouse tracking window (%s) is lost?\n",
@@ -846,6 +926,9 @@ CtoEvent(SDL_Event *event)
       addCodeReference(mouse_tracking_window);
     }
   }
+
+  if ( event->type == SDL_EVENT_DROP_POSITION )
+    update_drop_tracking_window(window, x, y);
 
   /* For mouse events, read modifiers live: cached lastmod can be stale
    * because event->key.mod on KEY_UP is not always reliable (we have
