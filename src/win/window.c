@@ -656,8 +656,9 @@ offset_windows(PceWindow w1, Any w2, int *X, int *Y)
       *X = (ox1 + valInt(a1->x)) - (ox2 + valInt(a2->x));
       *Y = (oy1 + valInt(a1->y)) - (oy2 + valInt(a2->y));
     }
-  } else				/* subwindows */
-  { Cprintf("offset_windows(%s, %s) ???\n", pp(w1), pp(w2));
+  } else		/* not (or no longer) in a frame, e.g., during teardown */
+  { DEBUG(NAME_window,
+	  Cprintf("offset_windows(%s, %s): no frame\n", pp(w1), pp(w2)));
     *X = *Y = 0;
   }
 }
