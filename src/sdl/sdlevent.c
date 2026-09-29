@@ -298,6 +298,7 @@ static Any mouse_tracking_window = NIL; /* Window or Frame */
 static Any pointer_window = NIL;	/* Window holding the pointer */
 static Any drop_tracking_window = NIL;	/* Window of the last drop_position */
 static float drop_tracking_x, drop_tracking_y; /* its position there */
+static bool drop_tracking_done = false;	/* drop_complete was delivered */
 static Uint8 mouse_tracking_button;
 static SDL_WindowID mouse_tracking_wid = 0;
 static SDL_DisplayID last_display_id = 0;
@@ -417,6 +418,13 @@ ev_event_grab_window(Any window)
    fragile: the files may go to whatever is at the top-left of the
    frame, and the window showing the drop hint never hears the drop
    has completed.  Send them to the window of the last drop_position.
+
+   We keep this window after drop_complete.  Using X11, SDL reports
+   XdndLeave, which the source sends before it drops, as drop_complete.
+   The data follows as a new sequence drop_begin, drop_file ...,
+   drop_complete without a drop_position.  As SDL has reset the
+   position by then, we also use the position of the last
+   drop_position.
 */
 
 static void
@@ -539,16 +547,18 @@ static void
 update_drop_tracking_window(Any window, float x, float y)
 { Any old = drop_tracking_window;
   float old_x = drop_tracking_x, old_y = drop_tracking_y;
+  bool done = drop_tracking_done;	/* old already had drop_complete */
 
   drop_tracking_x = x;
   drop_tracking_y = y;
+  drop_tracking_done = false;
   if ( old == window )
     return;
 
   addCodeReference(old);		/* survives set_drop_tracking_window() */
   set_drop_tracking_window(window);	/* update before we post */
 
-  if ( notNil(old) && !onFlag(old, F_FREED|F_FREEING) )
+  if ( notNil(old) && !done && !onFlag(old, F_FREED|F_FREEING) )
     post_area_event(old, NAME_dropComplete, old_x, old_y, ZERO);
   delCodeReference(old);
 }
@@ -863,12 +873,14 @@ CtoEvent(SDL_Event *event)
 	     ws_created_window(drop_tracking_window) &&
 	     ws_window_frame_position(drop_tracking_window, frame, &ox, &oy) )
 	{ window = drop_tracking_window;
-	  x -= ox;
-	  y -= oy;
+	  x = drop_tracking_x;
+	  y = drop_tracking_y;
 	  drop_tracked = true;
 	}
-	if ( event->type == SDL_EVENT_DROP_COMPLETE || !drop_tracked )
+	if ( !drop_tracked )
 	  set_drop_tracking_window(NIL);
+	else if ( event->type == SDL_EVENT_DROP_COMPLETE )
+	  drop_tracking_done = true;	/* see set_drop_tracking_window() */
       }
       break;
     default:
