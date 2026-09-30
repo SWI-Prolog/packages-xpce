@@ -51,7 +51,7 @@
 :- use_module(library(lists), [member/2]).
 :- autoload(library(gui_tracer), [guitracer/0]).
 :- autoload(library(pce_image), [pce_image_directory/1]).
-:- autoload(library(threadutil), [tdebug/0, interactor/0]).
+:- autoload(library(threadutil), [tdebug/0]).
 
 /** <module> SWI-Prolog IDE controller
 
@@ -159,10 +159,6 @@ open_query_window(IDE) :->
         send(QF, application, IDE)
     ),
     send(QF, expose).
-
-open_interactor(_) :->
-    "Create a new interactor window"::
-    autoload_call(interactor).
 
 thread_monitor(IDE) :->
     "Open a monitor for running threads"::
@@ -550,13 +546,28 @@ new_editor(_IDE, F:pane_frame, Split:[bool]) :->
     send(V, setup_mode),
     send(F, keyboard_focus, V).
 
-new_terminal(_IDE, F:pane_frame, Split:[bool], Profile:[name]) :->
+%       Split is @on to split the pane in view, or the side of Beside
+%       (default the pane in view) to put the terminal on, taking Share
+%       of the room -- the tracer opens a low one below itself this way.
+
+new_terminal(_IDE, F:pane_frame,
+             Split:split=[bool|{above,below,left,right}],
+             Profile:profile=[name],
+             Beside:beside=[window],
+             Share:share=[real]) :->
     "Put an Epilog terminal in this window"::
     use_module(user:library(epilog), []),
     (   Split == @on
     ->  new(W, epilog_window),
         send(F, split, W, @default, vertically),
         send(F, keyboard_focus, W)
+    ;   atom(Split)                     % a side
+    ->  (   Beside == @default
+        ->  get(F, current_pane, Rel)
+        ;   Rel = Beside
+        ),
+        new(W, epilog_window),
+        send(F, split_beside, W, chain(Rel), Split, Share)
     ;   (   Profile == @default
         ->  TheProfile = prolog
         ;   TheProfile = Profile

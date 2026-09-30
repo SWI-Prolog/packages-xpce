@@ -239,7 +239,7 @@ set(XPCE_DATA_prolog_lib_trace_icons break.png breakpoint.png bug.png
 
 # SVG Images (must be merged with above)
 list(APPEND XPCE_DATA_prolog_lib_trace_icons
-     abort.svg interactor.svg nodebug.svg port_fail.svg stop.svg creep.svg
+     abort.svg terminal.svg nodebug.svg port_fail.svg stop.svg creep.svg
      interrupt.svg port_call.svg port_redo.svg fail.svg into.svg
      port_except.svg retry.svg finish.svg leap.svg port_exit.svg
      skip.svg trace.svg

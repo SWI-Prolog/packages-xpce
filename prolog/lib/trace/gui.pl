@@ -996,9 +996,10 @@ check_console(F) :->
         fail
     ).
 
-interactor(_F) :->
-    "Open a new interactor"::
-    prolog_ide(open_interactor).
+terminal(F) :->
+    "Open a new terminal in a low pane below the debugger"::
+    get(F, frame, Window),
+    send(@prolog_ide, new_terminal, Window, below, @default, F, 0.25).
 
 copy_goal(F) :->
     "Copy the current goal into the copy-buffer"::
@@ -1125,7 +1126,7 @@ button(+nostop_or_spy, "-",   'nostopspy.svg',       'Delete break- or spy-point
 button(gap,            -,     -,                     -).
 button(+details,       "v",   'details.svg',         'Show (variable) details').
 button(+browse,        "",    'butterfly.svg',       'Browse program structure').
-button(+interactor,    "B",   'interactor.svg',      'Open new console').
+button(+terminal,      "B",   'terminal.svg',        'Open new terminal').
 button(gap,            -,     -,                     -).
 button(+edit,          "e",   'tool/pencil.svg',     'Toggle read-only/edit-mode').
 
