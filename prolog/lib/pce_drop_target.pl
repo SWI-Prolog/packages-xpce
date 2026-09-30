@@ -40,6 +40,9 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_util), [chain_list/2]).
+:- use_module(library(uri), [uri_file_name/2]).
+:- use_module(library(lists), [member/2]).
+:- use_module(library(apply), [maplist/3, exclude/3]).
 
 :- pce_autoload(partof_hyper, library(hyper)).
 
@@ -98,10 +101,59 @@ drop_target_event(Target, Ev, _, _) :-
     !,
     get(Ev, attribute, path, Path),
     drop_target_collect(Target, Path).
+drop_target_event(Target, Ev, _, _) :-
+    send(Ev, is_a, drop_text),
+    drop_text_is_file_list,
+    get(Ev, attribute, text, TextObj),
+    get(TextObj, value, Text),
+    drop_text_files(Text, Paths),
+    !,
+    forall(member(Path, Paths),
+           drop_target_collect(Target, Path)).
 drop_target_event(Target, Ev, _, OnComplete) :-
     send(Ev, is_a, drop_complete),
     !,
     drop_target_finish(Target, OnComplete).
+
+%!  drop_text_is_file_list is semidet.
+%
+%   Work around SDL before 3.4.4 on X11.  It uses the first type the
+%   source offers and, if a file manager lists text before
+%   `text/uri-list`, reports the files as drop_text holding a file
+%   name or `file://` URI.  SDL 3.4.4 always prefers `text/uri-list`.
+
+drop_text_is_file_list :-
+    get(@pce, window_system_driver, x11),
+    get(@pce, window_system_version, Version),
+    Version < 30404.
+
+%!  drop_text_files(+Text, -Paths) is semidet.
+%
+%   True when Text holds one or more lines that are all an absolute
+%   file name or a `file://` URI of an existing file or directory.
+%   Empty lines and `#` comment lines, as used by `text/uri-list`, are
+%   ignored.
+
+drop_text_files(Text, Paths) :-
+    split_string(Text, "\n", "\r\s\t", Lines0),
+    exclude(ignore_uri_list_line, Lines0, Lines),
+    Lines \== [],
+    maplist(drop_text_file, Lines, Paths).
+
+ignore_uri_list_line("").
+ignore_uri_list_line(Line) :-
+    sub_string(Line, 0, _, _, "#").
+
+drop_text_file(Line, Path) :-
+    (   sub_string(Line, 0, _, _, "file:")
+    ->  uri_file_name(Line, Path)
+    ;   atom_string(Path, Line),
+        is_absolute_file_name(Path)
+    ),
+    (   exists_file(Path)
+    ->  true
+    ;   exists_directory(Path)
+    ).
 
 drop_target_start(Target, Hint) :-
     (   get(Target, attribute, drop_hint, _)
