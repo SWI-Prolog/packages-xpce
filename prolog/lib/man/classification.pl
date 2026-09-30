@@ -5051,7 +5051,6 @@ scope('V.pce.trap_errors', basic).
 scope('V.pce.version', advanced).
 scope('V.pce.window_system', advanced).
 scope('V.pce.window_system_driver', advanced).
-scope('V.pce.window_system_revision', advanced).
 scope('V.pce.window_system_version', advanced).
 scope('V.pen.colour', advanced).
 scope('V.pen.texture', advanced).

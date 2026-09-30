@@ -119,7 +119,6 @@ setPceThread(const char *app_name)
     }
 
     assign(PCE, window_system_version,  toInt(ws_version()));
-    assign(PCE, window_system_revision, toInt(ws_revision()));
     assign(PCE, window_system_driver,   CtoName(ws_driver()));
   }
 
@@ -139,23 +138,17 @@ not_on_sdl_main_thread(void)
 
 
 /**
- * Retrieve the major version number of the SDL backend.
+ * Retrieve the version of the SDL library we are running against.
  *
- * @return Integer representing the version number.
+ * @return 10000*Major+100*Minor+Patch, compatible with pce<-version
  */
 int
 ws_version(void)
-{ return SDL_GetVersion() / 1000000;
-}
+{ int v = SDL_GetVersion();
 
-/**
- * Retrieve the revision number of the Raylib backend.
- *
- * @return Integer representing the revision.
- */
-int
-ws_revision(void)
-{ return (SDL_GetVersion() / 1000)%100;
+  return ( SDL_VERSIONNUM_MAJOR(v)*10000 +
+	   SDL_VERSIONNUM_MINOR(v)*100 +
+	   SDL_VERSIONNUM_MICRO(v) );
 }
 
 const char *

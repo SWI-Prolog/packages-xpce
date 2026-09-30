@@ -569,18 +569,29 @@ getNoFreedPce(Pce pce)
 }
 
 
+/* Major (div=10000), minor (100) or patch (1) of <-window_system_version */
+
+static Int
+wsVersionPart(Pce pce, int div)
+{ intptr_t v = ( isInteger(pce->window_system_version)
+		 ? valInt(pce->window_system_version)/div : 0 );
+
+  return toInt(div == 10000 ? v : v%100);
+}
+
+
 static status
 bannerPce(Pce pce)
 { Name host = get(HostObject(), NAME_system, EAV);
 
-  writef("XPCE %s for %s-%s and SDL%d.%d on %s\n",
+  writef("XPCE %s for %s-%s and SDL%d.%d.%d on %s\n",
 	 pce->version,
 	 pce->machine,
 	 pce->operating_system,
-	 pce->window_system_version,
-	 pce->window_system_revision
-	,pce->window_system_driver
-    );
+	 wsVersionPart(pce, 10000),
+	 wsVersionPart(pce, 100),
+	 wsVersionPart(pce, 1),
+	 pce->window_system_driver);
   writef("Copyright (C) 1993-2026 University of Amsterdam, SWI-Prolog Solutions b.v.\n"
 	 "XPCE comes with ABSOLUTELY NO WARRANTY. "
 	 "This is free software,\nand you are welcome to redistribute it "
@@ -614,9 +625,10 @@ infoPce(Pce pce)
   writef("	Release:            %s\n", pce->version);
   writef("	System:             %s\n", pce->machine);
   writef("	Operating System:   %s\n", pce->operating_system);
-  writef("	Graphics library:   SDL%s.%s\n",
-	 pce->window_system_version,
-	 pce->window_system_revision);
+  writef("	Graphics library:   SDL%d.%d.%d\n",
+	 wsVersionPart(pce, 10000),
+	 wsVersionPart(pce, 100),
+	 wsVersionPart(pce, 1));
   writef("	SDL driver:         %s\n",
 	 pce->window_system_driver),
   writef("\n");
@@ -1219,9 +1231,7 @@ static vardecl var_pce[] =
   IV(NAME_windowSystem, "{x11,windows,sdl}", IV_GET,
      NAME_version, "Basic window system used"),
   IV(NAME_windowSystemVersion, "int*", IV_GET,
-     NAME_version, "Major version of the window system"),
-  IV(NAME_windowSystemRevision, "int*", IV_GET,
-     NAME_version, "Minor version of the window system"),
+     NAME_version, "Window system version as 10000*Major+100*Minor+Patch"),
   IV(NAME_windowSystemDriver, "name*", IV_GET,
      NAME_version, "Video driver used by SDL"),
   IV(NAME_features, "chain", IV_GET,

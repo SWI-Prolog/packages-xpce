@@ -207,7 +207,7 @@ etc.
     	win95	DOS-7 based Windows (95,98,ME,...)
     	winnt	NT based Windows (NT, 2000)
 
-    See also <-machine, <-window_system, <-window_system_revision
+    See also <-machine, <-window_system, <-window_system_version
     and ->has_feature.
 
     @see pce-machine

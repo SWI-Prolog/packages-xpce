@@ -55,7 +55,6 @@ void	not_on_sdl_main_thread(void);
 
 void ws_initialise(int argc, char **argv);
 int ws_version(void);
-int ws_revision(void);
 const char *ws_driver(void);
 Int ws_default_scrollbar_width(void);
 Name ws_user(void);

@@ -1214,8 +1214,7 @@ NewClass(pce)
   Name		machine;		/* Architecture */
   Name		operating_system;	/* Name of operating system*/
   Name		window_system;		/* x11, windows or sdl */
-  Int		window_system_version;	/* Major version of window system */
-  Int		window_system_revision;	/* Minor version of window_system */
+  Int		window_system_version;	/* 10000*Major+100*Minor+Patch */
   Name		window_system_driver;	/* Backend driver */
   Chain		features;		/* Installed features */
 End;
