@@ -1492,7 +1492,7 @@ test(it_opens_in_a_window_of_the_ide, Classes == [prof_frame]) :-
     classes(Frame, Classes).
 
 test(its_two_windows_are_tiled_inside_it,
-     Names == [prof_browser, prof_details]) :-
+     Names == [prof_browser, prof_tabs]) :-
     no_frames,
     profiler(F),
     get(F, members, Chain),
@@ -1580,12 +1580,120 @@ test(so_the_grip_sits_in_the_corner_of_the_window_it_is_on) :-
     get(F, frame, Frame),
     send(Frame, resize),
     get(F, corner_window, W),
-    get(W, class_name, prof_details),
+    get(W, class_name, prof_tabs),
     get(F, grip, Grip),
     send(F, place_grip),
     send(Grip, compute),
     get(Grip, area, area(_, GY, _, _)),
     GY < 8.
+
+%       The details and the call graph are tabs on the right.  The graph
+%       takes graphviz, and is only drawn while its tab is on top.
+
+test(the_details_and_graph_are_tabs_of_its_right_window,
+     Names == [details, call_graph]) :-
+    no_frames,
+    profiler(F),
+    get(F, window, prof_tabs, T),
+    get(T, tabs, Chain),
+    chain_list(Chain, Tabs),
+    findall(N, (member(Tab, Tabs), get(Tab, name, N)), Names).
+
+test(the_graph_waits_until_it_can_be_seen, Stale == @on) :-
+    no_frames,
+    profiler(F),
+    get(F, window, prof_graph, G),
+    get(G, stale, Stale).
+
+test(the_graph_is_drawn_when_its_tab_comes_on_top,
+     [ condition(has_dot),
+       true(Stale-Drawn == @off-true)
+     ]) :-
+    no_frames,
+    profiler(F),
+    get(F, window, prof_tabs, T),
+    send(T, on_top, call_graph),
+    get(F, window, prof_graph, G),
+    get(G, stale, Stale),
+    get(G?xdot, graphicals, Chain),
+    (   get(Chain, find, message(@arg1, instance_of, xdot_node), _)
+    ->  Drawn = true
+    ;   Drawn = false
+    ).
+
+test(clicking_a_node_of_the_graph_makes_it_current,
+     [ condition(has_dot),
+       true(Pred \== Pred0)
+     ]) :-
+    no_frames,
+    profiler(F),
+    get(F, window, prof_tabs, T),
+    send(T, on_top, call_graph),
+    get(F, window, prof_graph, G),
+    get(G, node, Data0),
+    Pred0 = Data0.predicate,
+    get(G, ids, Ids),
+    member(Id-P, Ids),
+    P \== Pred0,
+    get(F, node_data, P, _),            % one that was sampled
+    !,
+    get(G?xdot, member, Id, Node),
+    send(G, clicked, Node),
+    get(G, node, Data),
+    Pred = Data.predicate.
+
+%       Dragging the graph past the edge of its window brings up a
+%       scrollbar, which resizes the window.  That must not fit the graph
+%       again, undoing the drag.
+
+test(a_moved_graph_stays_where_it_was_put,
+     [ condition(has_dot),
+       true(TX == 150)
+     ]) :-
+    no_frames,
+    profiler(F),
+    get(F, window, prof_tabs, T),
+    send(T, on_top, call_graph),
+    get(F, window, prof_graph, G),
+    get(G, xdot, X),
+    new(Tr, transform),
+    send(Tr, set, 1, 0, 0, 1, 150, 0),
+    send(X, transform, Tr),
+    send(G, resize),
+    get(X?transform, tx, TX).
+
+%       Pruning the callers or callees of a predicate in the graph.
+
+test(few_relatives_are_all_shown, Kept == 5) :-
+    numlist(1, 5, Ns),
+    findall(r(0, 1, N), member(N, Ns), Rs),
+    pce_profile:prune_relatives(Rs, limits(2, 2, 6, 12, 30), K),
+    length(K, Kept).
+
+test(relatives_that_share_the_time_are_all_shown, Kept == 10) :-
+    numlist(1, 10, Ns),
+    findall(r(T, 1, N), (member(N, Ns), T is 9+N mod 3), Rs),
+    pce_profile:prune_relatives(Rs, limits(2, 2, 6, 12, 30), K),
+    length(K, Kept).
+
+test(relatives_that_take_next_to_nothing_are_not,
+     Kept == [r(900, 1, heavy)]) :-
+    numlist(1, 20, Ns),
+    findall(r(5, 1, N), member(N, Ns), Light),
+    pce_profile:prune_relatives([r(900, 1, heavy)|Light],
+                                limits(2, 2, 6, 12, 30), Kept).
+
+test(no_more_relatives_than_max_relatives, Kept == 12) :-
+    numlist(1, 20, Ns),
+    findall(r(10, 1, N), member(N, Ns), Rs),
+    pce_profile:prune_relatives(Rs, limits(2, 2, 6, 12, 30), K),
+    length(K, Kept).
+
+has_dot :-
+    absolute_file_name(path(dot), _,
+                       [ access(execute),
+                         file_errors(fail)
+                       ]).
 
 test(how_the_times_are_read_is_the_tools_to_say) :-
     no_frames,

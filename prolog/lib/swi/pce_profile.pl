@@ -38,10 +38,17 @@
           ]).
 :- use_module(library(pce)).
 :- use_module(library(lists)).
+:- use_module(library(apply)).
+:- use_module(library(pairs)).
+:- use_module(library(yall)).
+:- use_module(library(dcg/basics)).
+:- use_module(library(debug)).
 :- use_module(library(pane_frame)).
 :- use_module(library(toolbar)).
 :- use_module(library(tabular)).
 :- use_module(library(prolog_predicate)).
+:- use_module(library(tabbed_window), []).
+:- use_module(library(xdot), []).
 
 :- require([ auto_call/1,
 	     reset_profiler/0,
@@ -114,7 +121,7 @@ class_variable(auto_reset, bool, @on, "Reset profiler after collecting").
 initialise(F) :->
     send_super(F, initialise, profiler),
     send(F, append_window, new(B, prof_browser)),
-    send(F, append_window, new(prof_details), B, right).
+    send(F, append_window, new(prof_tabs), B, right).
 
                  /*******************************
                  *             PANE             *
@@ -195,16 +202,22 @@ show_statistics(F) :->
 
 details(F, From:prolog) :->
     "Show details on node or predicate"::
-    get(F, window, prof_details, W),
     (   is_dict(From)
-    ->  send(W, node, From)
-    ;   get(F, window, prof_browser, B),
-        get(B?dict, find,
-            message(@arg1, has_predicate, prolog(From)),
-            DI)
-    ->  get(DI, data, Node),
-        send(W, node, Node)
-    ).
+    ->  Node = From
+    ;   get(F, node_data, From, Node)
+    ),
+    get(F, window, prof_details, W),
+    send(W, node, Node),
+    get(F, window, prof_graph, G),
+    send(G, node, Node).
+
+node_data(F, Pred:prolog, Node:prolog) :<-
+    "The profile data of a predicate; fails if it was not sampled"::
+    get(F, window, prof_browser, B),
+    get(B?dict, find,
+        message(@arg1, has_predicate, prolog(Pred)),
+        DI),
+    get(DI, data, Node).
 
 sort_by(F, SortBy:name, Order:[{normal,reverse}]) :->
     "Define the key for sorting the flat profile"::
@@ -215,8 +228,10 @@ time_view(F, TV:name) :->
     send(F, slot, time_view, TV),
     get(F, window, prof_browser, B),
     get(F, window, prof_details, W),
+    get(F, window, prof_graph, G),
     send(B, update_labels),
-    send(W, refresh).
+    send(W, refresh),
+    send(G, refresh).
 
 render_time(F, Ticks:int, Rendered:any) :<-
     "Render a time constant"::
@@ -677,6 +692,611 @@ show_relative(W, Caller:prolog, Role:name) :->
 
 
 :- pce_end_class(prof_details).
+
+
+                 /*******************************
+                 *        RIGHT-HAND TABS       *
+                 *******************************/
+
+/* The details and the call graph are two views of the same node, so
+they share the right of the profiler as tabs.  The graph is drawn by
+graphviz, which takes a process, so it is only drawn when it can be
+seen: a node that is selected while the details are on top only marks
+it stale, and it is drawn when its tab comes up.
+*/
+
+:- pce_begin_class(prof_tabs, tabbed_window,
+                   "Details and call graph of the current node").
+
+initialise(W) :->
+    send_super(W, initialise),
+    send(W, append, new(prof_details), details),
+    send(W, append, new(prof_graph), call_graph).
+
+new_tab(_W, Window:window, Label:[name], Tab:tab) :<-
+    "Create the tab that is to hold Window"::
+    new(Tab, prof_tab(Window, Label)).
+
+:- pce_end_class(prof_tabs).
+
+:- pce_begin_class(prof_tab, window_tab,
+                   "Tab of the details or call graph").
+
+status(T, Status:{on_top,hidden}) :->
+    "Draw the graph when its tab comes on top"::
+    send_super(T, status, Status),
+    (   Status == on_top,
+        get(T, window, Window),
+        send(Window, instance_of, prof_graph)
+    ->  send(Window, update)
+    ;   true
+    ).
+
+:- pce_end_class(prof_tab).
+
+
+                 /*******************************
+                 *          CALL GRAPH          *
+                 *******************************/
+
+/* A call graph around the current node, as kcachegrind shows it: the
+node in the middle, its callers above and its callees below, each box
+tinted by the time spent in it and its children, and each arrow as
+thick as the time that flows along it.
+
+A graph is only of use as long as it can be read, so it is pruned once
+it grows, but no sooner.  The callers or callees of a predicate are all
+shown as long as there are at most `prune_above' of them.  Of more, only
+those that take at least half their fair share of the time spent in
+them are, and at most `max_relatives': ten callees that take about the
+same time all stay, while of a callee that takes most of the time and
+twenty that take next to nothing, only the first does.  Beyond the
+direct relatives of the node in the middle, the graph grows level by
+level, the heaviest calls first, up to `max_nodes'.  The details list
+all relatives.  The times on a call further out are
+those of all its calls, not only of the ones made on behalf of the node
+in the middle: the profile does not tell those apart.
+*/
+
+:- pce_begin_class(prof_graph, xdot_window,
+                   "Call graph around the current node").
+
+variable(node,  prolog,       get, "Currently shown node").
+variable(stale, bool := @off, get, "The node changed since it was drawn").
+variable(ids,   prolog,       get, "Id-Predicate pairs of the graph nodes").
+variable(fitted, prolog,      none, "Transform left by ->fit, or `none'").
+
+class_variable(caller_depth, '1..', 2,   "Levels of callers shown").
+class_variable(callee_depth, '1..', 2,   "Levels of callees shown").
+class_variable(natural_zoom, num, 1.5,
+               "Zoom of a graph that fits at this scale").
+class_variable(prune_above,  '1..', 6,
+               "Callers or callees that are all shown").
+class_variable(max_relatives, '1..', 12,
+               "Most callers or callees shown").
+class_variable(max_nodes,    '1..', 30,
+               "Nodes beyond which no further levels are added").
+
+initialise(W) :->
+    send_super(W, initialise, @default, call_graph, size(300,200)),
+    send(W, slot, fitted, none),
+    get(W, xdot, X),
+    send(X, node_clicked, message(W, clicked, @arg1)),
+    new(P, popup),
+    send_list(P, append,
+              [ menu_item(details, message(W, clicked, @arg1)),
+                menu_item(edit, message(W, edit, @arg1))
+              ]),
+    send(X, node_popup, P).
+
+node(W, Data:prolog) :->
+    "Show the call graph around a node"::
+    send(W, slot, node, Data),
+    send(W, refresh).
+
+refresh(W) :->
+    "Draw again, now if I can be seen, else when I can"::
+    send(W, slot, stale, @on),
+    send(W, update).
+
+update(W) :->
+    "Draw the graph if it changed and I can be seen"::
+    (   get(W, stale, @on),
+        get(W, node, Data),
+        Data \== @nil,
+        get(W, container, tab, Tab),
+        get(Tab, status, on_top)
+    ->  send(W, slot, stale, @off),
+        send(W, render, Data)
+    ;   true
+    ).
+
+render(W, Data:prolog) :->
+    "Lay out and display the call graph around Data"::
+    prof_tool(W, Tool),
+    get(W, class_variable_value, caller_depth, CallerDepth),
+    get(W, class_variable_value, callee_depth, CalleeDepth),
+    get(W, class_variable_value, prune_above, PruneAbove),
+    get(W, class_variable_value, max_relatives, MaxRelatives),
+    get(W, class_variable_value, max_nodes, MaxNodes),
+    get(Tool, ticks, Ticks),
+    get(Tool, accounting_ticks, Accounting),
+    Total is max(1, Ticks-Accounting),
+    call_graph(Tool, Data,
+               limits(CallerDepth, CalleeDepth,
+                      PruneAbove, MaxRelatives, MaxNodes),
+               Edges),
+    graph_preds(Data.predicate, Edges, Preds),
+    pairs_keys_values(Ids, IdList, Preds),
+    numbered_ids(Preds, 0, IdList),
+    send(W, slot, ids, Ids),
+    graph_colours(W, Colours),
+    phrase(dot_graph(Tool, Data.predicate, Total, Colours, Ids, Edges),
+           Codes),
+    string_codes(Dot, Codes),
+    debug(profile(graph), '~s', [Dot]),
+    get(W, xdot, X),
+    (   catch(send(X, load, Dot), E,
+              ( print_message(warning, E),
+                fail
+              ))
+    ->  send(W, star),
+        send(W, fit)
+    ;   send(X, clear, destroy),
+        send(X, transform, @nil),
+        send(X, display, text('Cannot draw the call graph.\n\c
+                               Is graphviz (dot) installed?')),
+        send(X, center, W?visible?center)
+    ).
+
+%       A new size fits the graph again, unless the user moved or
+%       zoomed it since it was fitted: the scrollbars that come and go as
+%       they drag it past my edges change my size as well, and fitting
+%       then undoes what they just did.
+
+fit(W) :->
+    "Fit the graph and remember the transform that left"::
+    send_super(W, fit),
+    get(W?xdot, transform, T),
+    transform_state(T, State),
+    send(W, slot, fitted, State).
+
+resize(W) :->
+    "Fit the graph to the new size if the user did not move it"::
+    send_super(W, resize),
+    (   get(W, stale, @off),
+        get(W, slot, fitted, State),
+        State \== none,
+        get(W?xdot, transform, T),
+        transform_state(T, State)
+    ->  send(W, fit)
+    ;   true
+    ).
+
+transform_state(@nil, identity) :- !.
+transform_state(T, State) :-
+    get(T, xx, XX), get(T, xy, XY),
+    get(T, yx, YX), get(T, yy, YY),
+    get(T, tx, TX), get(T, ty, TY),
+    (   XX =:= 1, XY =:= 0, YX =:= 0, YY =:= 1, TX =:= 0, TY =:= 0
+    ->  State = identity                % a click makes one; see pan_zoom
+    ;   State = t(XX,XY,YX,YY,TX,TY)
+    ).
+
+%       The current node stands out by a star behind it, as in
+%       kcachegrind.  Its spikes reach out from an ellipse through the
+%       corners of the box.
+
+star(W) :->
+    "Put a star behind the current node"::
+    get(W, xdot, X),
+    (   get(X, member, n0, Node)
+    ->  get(Node, area, area(NX, NY, NW, NH)),
+        CX is NX + NW/2,
+        CY is NY + NH/2,
+        IRX is NW/2*sqrt(2) + 2,
+        IRY is NH/2*sqrt(2) + 2,
+        Spike = 12,
+        Points = 14,
+        new(Star, path),
+        send(Star, closed, @on),
+        Last is 2*Points-1,
+        forall(between(0, Last, I),
+               ( A is I*pi/Points - pi/2,
+                 (   I mod 2 =:= 0
+                 ->  RX = IRX+Spike, RY = IRY+Spike
+                 ;   RX = IRX, RY = IRY
+                 ),
+                 PX is round(CX + RX*cos(A)),
+                 PY is round(CY + RY*sin(A)),
+                 send(Star, append, point(PX, PY))
+               )),
+        send(Star, pen, 0),
+        send(Star, fill, colour(@default, 128, 128, 128, 80)),
+        send(X, display, Star),
+        send(Star, hide, Node)          % in front of the graph's background
+    ;   true
+    ).
+
+pred(W, Node:xdot_node, Pred:prolog) :<-
+    "Predicate shown by a node of the graph"::
+    get(W, ids, Ids),
+    get(Node, name, Id),
+    memberchk(Id-Pred, Ids).
+
+clicked(W, Node:xdot_node) :->
+    "Make the clicked predicate the current one"::
+    get(W, pred, Node, Pred),
+    get(W, node, Data),
+    (   Pred == Data.predicate
+    ->  true
+    ;   prof_tool(W, Tool),
+        send(Tool, details, Pred)
+    ).
+
+edit(W, Node:xdot_node) :->
+    "Edit the predicate of a node"::
+    get(W, pred, Node, Pred),
+    (   object(Pred)
+    ->  send(Pred, edit)
+    ;   new(PP, prolog_predicate(Pred)),
+        send(PP, edit)
+    ).
+
+:- pce_end_class(prof_graph).
+
+numbered_ids([], _, []).
+numbered_ids([_|T0], N, [Id|T]) :-
+    atom_concat(n, N, Id),
+    N1 is N+1,
+    numbered_ids(T0, N1, T).
+
+%!  graph_colours(+Window, -Colours) is det.
+%
+%   The colours of the arrows and their labels follow those of the
+%   window, so the graph reads in a dark theme as well.  The boxes are
+%   tinted by themselves and keep black text.
+
+graph_colours(W, colours(FG)) :-
+    get(W, foreground, Colour0),
+    (   send(Colour0, instance_of, colour)
+    ->  Colour = Colour0
+    ;   get(@display, foreground, Colour)
+    ),
+    colour_hex(Colour, FG).
+
+colour_hex(Colour, Hex) :-
+    get(Colour, red, R0),
+    get(Colour, green, G0),
+    get(Colour, blue, B0),
+    maplist(byte, [R0,G0,B0], [R,G,B]),
+    format(atom(Hex), '#~|~`0t~16r~2+~|~`0t~16r~2+~|~`0t~16r~2+', [R,G,B]).
+
+byte(V, B) :-
+    (   V > 255
+    ->  B is V >> 8
+    ;   B = V
+    ).
+
+%!  call_graph(+Tool, +Data, +Limits, -Edges) is det.
+%
+%   Edges is a list of edge(Caller, Callee, Ticks, Calls) around the node
+%   Data.  Limits is a term
+%
+%       limits(CallerDepth, CalleeDepth, PruneAbove, MaxRelatives, MaxNodes)
+%
+%   The direct callers and callees of Data are there as far as
+%   pred_edges/5 keeps them.  From those it walks CallerDepth-1 levels
+%   up and CalleeDepth-1 levels down, while the graph has fewer than
+%   MaxNodes nodes.  A call is there once, as found first.
+
+call_graph(Tool, Data, Limits, Edges) :-
+    Limits = limits(CallerDepth, CalleeDepth, _, _, _),
+    Pred = Data.predicate,
+    pred_edges(callers, Pred, Data, Limits, Callers),
+    pred_edges(callees, Pred, Data, Limits, Callees),
+    edge_ends(callers, Callers, Up),
+    edge_ends(callees, Callees, Down),
+    append([[Pred], Up, Down], Seen0),
+    list_to_set(Seen0, Seen),
+    append(Callers, Callees, Direct),
+    MoreUp is CallerDepth-1,
+    MoreDown is CalleeDepth-1,
+    walk(MoreUp-Up, MoreDown-Down, Tool, Limits, Seen, Direct, Edges1),
+    unique_edges(Edges1, Edges).
+
+%!  walk(+Up, +Down, +Tool, +Limits, +Seen, +Edges0, -Edges) is det.
+%
+%   Add a level of callers above the predicates in Up and of callees
+%   below those in Down, both Depth-Frontier pairs.  The calls of a
+%   level are added heaviest first; a call to a predicate that is not
+%   yet in the graph is only added while there is room for it.
+
+walk(UpDepth-Ups, DownDepth-Downs, Tool, Limits, Seen, Edges0, Edges) :-
+    candidates(callers, UpDepth, Ups, Tool, Limits, Above),
+    candidates(callees, DownDepth, Downs, Tool, Limits, Below),
+    append(Above, Below, Candidates),
+    (   Candidates == []
+    ->  Edges = Edges0
+    ;   map_list_to_pairs(candidate_ticks, Candidates, Keyed),
+        sort(1, @>=, Keyed, Sorted),
+        pairs_values(Sorted, Ordered),
+        Limits = limits(_, _, _, _, MaxNodes),
+        admit(Ordered, MaxNodes, Seen, Seen1, New, NewUps, NewDowns),
+        append(Edges0, New, Edges1),
+        UpDepth1 is UpDepth-1,
+        DownDepth1 is DownDepth-1,
+        walk(UpDepth1-NewUps, DownDepth1-NewDowns, Tool, Limits, Seen1,
+             Edges1, Edges)
+    ).
+
+candidates(_, Depth, _, _, _, []) :-
+    Depth =< 0,
+    !.
+candidates(Dir, _, Frontier, Tool, Limits, Candidates) :-
+    findall(Dir-E,
+            ( member(P, Frontier),
+              get(Tool, node_data, P, Data),
+              pred_edges(Dir, P, Data, Limits, PEdges),
+              member(E, PEdges)
+            ),
+            Candidates).
+
+candidate_ticks(_-edge(_, _, Ticks, _), Ticks).
+
+admit([], _, Seen, Seen, [], [], []).
+admit([Dir-E|T], Max, Seen0, Seen, Edges, Ups, Downs) :-
+    new_end(Dir, E, End),
+    (   memberchk(End, Seen0)
+    ->  Edges = [E|Edges1],
+        admit(T, Max, Seen0, Seen, Edges1, Ups, Downs)
+    ;   length(Seen0, Nodes),
+        Nodes < Max
+    ->  Edges = [E|Edges1],
+        (   Dir == callers
+        ->  Ups = [End|Ups1], Downs = Downs1
+        ;   Downs = [End|Downs1], Ups = Ups1
+        ),
+        admit(T, Max, [End|Seen0], Seen, Edges1, Ups1, Downs1)
+    ;   admit(T, Max, Seen0, Seen, Edges, Ups, Downs)
+    ).
+
+new_end(callers, edge(End, _, _, _), End).
+new_end(callees, edge(_, End, _, _), End).
+
+%!  pred_edges(+Dir, +Pred, +Data, +Limits, -Edges) is det.
+%
+%   The calls to (callers) or from (callees) Pred, as far as
+%   prune_relatives/3 keeps them.  The relatives of a predicate are
+%   split by the cycles it is part of; the calls between the same two
+%   predicates are summed here.  Recursion shows as one call of Pred to
+%   itself, taken from the callers only, as that is where the profile
+%   lists it.
+
+pred_edges(Dir, Pred, Data, Limits, Edges) :-
+    findall(Other-t(Ticks,Calls),
+            ( member(node(Other, _Cycle, Self, Children, Calls, _, _),
+                     Data.Dir),
+              Other \== '<recursive>',
+              Ticks is Self+Children
+            ),
+            Pairs0),
+    keysort(Pairs0, Pairs),
+    group_pairs_by_key(Pairs, Grouped),
+    findall(r(Ticks, Calls, Other),
+            ( member(Other-Ts, Grouped),
+              sum_ticks(Ts, Ticks, Calls)
+            ),
+            Relatives),
+    prune_relatives(Relatives, Limits, Kept),
+    findall(Edge,
+            ( member(r(Ticks, Calls, Other), Kept),
+              edge(Dir, Pred, Other, Ticks, Calls, Edge)
+            ),
+            Edges0),
+    (   Dir == callers,
+        member(node('<recursive>', _, _, _, RCalls, _, _), Data.callers)
+    ->  Edges = [edge(Pred, Pred, 0, RCalls)|Edges0]
+    ;   Edges = Edges0
+    ).
+
+%!  prune_relatives(+Relatives, +Limits, -Kept) is det.
+%
+%   Up to PruneAbove relatives are all kept.  Of more, keep those that
+%   take at least half their fair share, Total/N, of the time, at most
+%   MaxRelatives of them, heaviest first.  Relatives that take no time
+%   go with that, unless none of them takes any.
+
+prune_relatives(Relatives, limits(_, _, PruneAbove, MaxRelatives, _),
+                Kept) :-
+    length(Relatives, N),
+    (   N =< PruneAbove
+    ->  Kept = Relatives
+    ;   foldl([r(T,_,_), S0, S]>>(S is S0+T), Relatives, 0, Total),
+        include(fair_share(N, Total), Relatives, Fair),
+        sort(0, @>=, Fair, Heaviest),
+        max_prefix(Heaviest, MaxRelatives, Kept)
+    ).
+
+fair_share(N, Total, r(Ticks, _, _)) :-
+    Ticks*2*N >= Total.
+
+max_prefix(List, Max, Prefix) :-
+    length(List, Len),
+    Len > Max,
+    !,
+    length(Prefix, Max),
+    append(Prefix, _, List).
+max_prefix(List, _, List).
+
+sum_ticks(Ts, Ticks, Calls) :-
+    foldl([t(T,C), T0-C0, T1-C1]>>(T1 is T0+T, C1 is C0+C),
+          Ts, 0-0, Ticks-Calls).
+
+edge(callers, Pred, Other, Ticks, Calls, edge(Other, Pred, Ticks, Calls)).
+edge(callees, Pred, Other, Ticks, Calls, edge(Pred, Other, Ticks, Calls)).
+
+edge_ends(callers, Edges, Ends) :-
+    findall(P, (member(edge(P,To,_,_), Edges), P \== To), Ends).
+edge_ends(callees, Edges, Ends) :-
+    findall(P, (member(edge(From,P,_,_), Edges), P \== From), Ends).
+
+unique_edges(Edges, Unique) :-
+    unique_edges(Edges, [], Unique).
+
+unique_edges([], _, []).
+unique_edges([E|T0], Seen, T) :-
+    E = edge(From, To, _, _),
+    memberchk(From-To, Seen),
+    !,
+    unique_edges(T0, Seen, T).
+unique_edges([E|T0], Seen, [E|T]) :-
+    E = edge(From, To, _, _),
+    unique_edges(T0, [From-To|Seen], T).
+
+%!  graph_preds(+Pred, +Edges, -Preds) is det.
+%
+%   The predicates in the graph, Pred first.
+
+graph_preds(Pred, Edges, [Pred|Preds]) :-
+    findall(P, ( member(edge(From,To,_,_), Edges),
+                 ( P = From ; P = To ),
+                 P \== Pred
+               ),
+            Preds0),
+    list_to_set(Preds0, Preds).
+
+%!  dot_graph(+Tool, +Pred, +Total, +Colours, +Ids, +Edges)//
+%
+%   The call graph in the dot language.
+
+dot_graph(Tool, Pred, Total, colours(FG), Ids, Edges) -->
+    "digraph calls {\n",
+    "  graph [rankdir=TB nodesep=0.25 ranksep=0.45];\n",
+    "  node [shape=box style=filled fontname=\"Helvetica\" \c
+     fontsize=10 fontcolor=\"black\" color=\"#606060\"];\n",
+    "  edge [fontname=\"Helvetica\" fontsize=9 arrowsize=0.7 ",
+    "color=", dot_string(FG), " fontcolor=", dot_string(FG), "];\n",
+    dot_nodes(Ids, Tool, Pred, Total),
+    dot_edges(Edges, Tool, Total, Ids),
+    "}\n".
+
+dot_nodes([], _, _, _) --> [].
+dot_nodes([Id-P|T], Tool, Pred, Total) -->
+    { node_attrs(Tool, P, Pred, Total, Attrs) },
+    "  ", atom(Id), " [", dot_attrs(Attrs), "];\n",
+    dot_nodes(T, Tool, Pred, Total).
+
+node_attrs(Tool, P, Pred, Total, Attrs) :-
+    pred_label(P, Name),
+    short_pred_label(P, Short),
+    (   get(Tool, node_data, P, Data)
+    ->  Self = Data.ticks_self,
+        Incl is Self + Data.ticks_siblings,
+        time_text(Tool, Incl, InclText),
+        time_text(Tool, Self, SelfText),
+        format(string(Label), '~w\n~w (self ~w)', [Short, InclText, SelfText]),
+        format(string(Tooltip),
+               '~w\nTime: ~w, self ~w\nCall: ~D, redo: ~D, exit: ~D',
+               [ Name, InclText, SelfText,
+                 Data.call, Data.redo, Data.exit
+               ]),
+        heat_colour(Incl, Total, Fill)
+    ;   Label = Short,
+        Tooltip = Name,
+        Fill = '#f0f0f0'
+    ),
+    (   P == Pred
+    ->  Extra = [penwidth=2.5, color='#202020',
+                 fontname='Helvetica-Bold']
+    ;   Extra = []
+    ),
+    Attrs = [label=Label, tooltip=Tooltip, fillcolor=Fill|Extra].
+
+pred_label(P, Label) :-
+    atom(P),
+    sub_atom(P, 0, _, _, <),
+    !,
+    Label = P.
+pred_label(P, Label) :-
+    pce_predicate_label(P, Label0),
+    (   atom(Label0)
+    ->  Label = Label0
+    ;   get(Label0, value, Label)
+    ).
+
+%   The boxes leave out the module, which the tooltip still shows: it
+%   takes room and is rarely what tells the predicates apart.
+
+short_pred_label(_:PI, Label) :-
+    !,
+    pred_label(PI, Label).
+short_pred_label(P, Label) :-
+    pred_label(P, Label).
+
+time_text(Tool, Ticks, Text) :-
+    get(Tool, render_time, Ticks, Rendered),
+    (   atom(Rendered)
+    ->  Text = Rendered
+    ;   get(Rendered, value, Text)
+    ).
+
+%!  heat_colour(+Ticks, +Total, -Colour) is det.
+%
+%   From pale yellow for nothing to orange for all of the time.
+
+heat_colour(Ticks, Total, Colour) :-
+    F is min(1.0, Ticks/float(Total)),
+    G is round(250 - F*110),
+    B is round(215 - F*165),
+    format(atom(Colour), '#ff~|~`0t~16r~2+~|~`0t~16r~2+', [G, B]).
+
+dot_edges([], _, _, _) --> [].
+dot_edges([edge(From,To,Ticks,Calls)|T], Tool, Total, Ids) -->
+    { memberchk(FromId-From, Ids),
+      memberchk(ToId-To, Ids),
+      edge_attrs(Tool, Ticks, Calls, Total, Attrs)
+    },
+    "  ", atom(FromId), " -> ", atom(ToId), " [", dot_attrs(Attrs), "];\n",
+    dot_edges(T, Tool, Total, Ids).
+
+edge_attrs(Tool, Ticks, Calls, Total, [label=Label, penwidth=Width]) :-
+    (   Ticks > 0
+    ->  time_text(Tool, Ticks, TimeText),
+        format(string(Label), '~w\n~D×', [TimeText, Calls])
+    ;   format(string(Label), '~D×', [Calls])
+    ),
+    Width is round(10*(1 + 4*min(1.0, Ticks/float(Total))))/10.0.
+
+dot_attrs([]) --> [].
+dot_attrs([Name=Value|T]) -->
+    atom(Name), "=", dot_value(Value),
+    (   { T == [] }
+    ->  []
+    ;   " ",
+        dot_attrs(T)
+    ).
+
+dot_value(Value) -->
+    { number(Value) },
+    !,
+    number(Value).
+dot_value(Value) -->
+    dot_string(Value).
+
+dot_string(Text) -->
+    { atom_codes(Text, Codes) },
+    "\"", dot_chars(Codes), "\"".
+
+dot_chars([]) --> [].
+dot_chars([H|T]) -->
+    dot_char(H),
+    dot_chars(T).
+
+dot_char(0'")  --> !, "\\\"".
+dot_char(0'\\) --> !, "\\\\".
+dot_char(0'\n) --> !, "\\n".
+dot_char(C)    --> [C].
 
 
 :- pce_begin_class(prof_node_text, text,
