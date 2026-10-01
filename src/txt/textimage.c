@@ -1942,25 +1942,26 @@ tabDistanceTextImage(TextImage ti, Int tab)
 }
 
 
+/* The lines laid out with the old tab stops must be laid out again, or
+   they keep showing them until something else changes them.
+*/
+
 status
 tabStopsTextImage(TextImage ti, Vector v)
-{ if ( isNil(v) )
-    assign(ti, tab_stops, v);
-  else
+{ if ( notNil(v) )
   { int i;
 
-    for(i=1; i<valInt(v->size); i++)
+    for(i=1; i<=valInt(v->size); i++)
     { Int s;
 
       if ( !(s = checkType(getElementVector(v, toInt(i)), TypeInt, NIL)) )
 	return errorPce(v, NAME_elementType, toInt(i), TypeInt);
       elementVector(v, toInt(i), s);
     }
-
-    assign(ti, tab_stops, v);
   }
 
-  succeed;
+  assign(ti, tab_stops, v);
+  return ChangedEntireTextImage(ti);
 }
 
 
