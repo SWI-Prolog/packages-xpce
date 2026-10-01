@@ -282,14 +282,44 @@ restore_slot(_, _, _).
 %   If Obj has a `tooltip` attribute (from graphviz), wire it up as
 %   the graphical's `->help_message(tag, ...)` — library(help_message)
 %   pops it up as a balloon after the mouse rests on the group.
-%   Skip empty tooltip strings.
+%   Skip empty tooltip strings.  Graphviz passes the escapes of its
+%   escString type through, so a line break arrives as `\n`.
 
 set_tooltip(G, Obj) :-
     get_dict(tooltip, Obj, TooltipStr),
     TooltipStr \== "",
     !,
-    send(G, help_message, tag, string(TooltipStr)).
+    unescape_string(TooltipStr, Text),
+    send(G, help_message, tag, string('%s', Text)).
 set_tooltip(_, _).
+
+%!  unescape_string(+EscString, -Text) is det.
+%
+%   Translate the line breaks of a graphviz escString:  `\n`, `\l`
+%   and `\r` end a centred, left- or right-aligned line, which is all
+%   the same to a tooltip.  `\\` is a backslash.  Other escapes, such
+%   as `\N` for the node name, are left alone.
+
+unescape_string(Esc, Text) :-
+    string_codes(Esc, Codes0),
+    phrase(unescape(Codes), Codes0),
+    string_codes(Text, Codes).
+
+unescape([0'\n|T]) -->
+    "\\", [C],
+    { memberchk(C, `nlr`) },
+    !,
+    unescape(T).
+unescape([0'\\|T]) -->
+    "\\\\",
+    !,
+    unescape(T).
+unescape([C|T]) -->
+    [C],
+    !,
+    unescape(T).
+unescape([]) -->
+    [].
 
 %!  set_url(+Graphical, +Obj) is det.
 %
