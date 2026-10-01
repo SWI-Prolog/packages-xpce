@@ -476,8 +476,11 @@ edge_name(_, Tail, Head, Name) :-
 :- pce_begin_class(xdot_window, picture,
                    "Pan/zoom viewer for graphviz xdot output").
 
-variable(natural_zoom, num := 1.0, both,
+variable(natural_zoom, num, both,
          "Preferred zoom for ->fit if the graph fits at this scale").
+
+class_variable(natural_zoom, num, 1.0,
+               "Default preferred zoom for ->fit").
 
 initialise(W, Source:[file]*, Label:[name], Size:[size]) :->
     "Create the viewer; if Source is given, load it and fit"::
