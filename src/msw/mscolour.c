@@ -57,6 +57,7 @@ static const struct system_colour window_colours[] =
   { "sys_dialog_foreground",	   COLOR_BTNTEXT },
   { "sys_button_background",	   COLOR_BTNFACE },
   { "sys_button_foreground",	   COLOR_BTNTEXT },
+  { "sys_button_pressed",	   COLOR_3DLIGHT },
   { "sys_selection_background",	   COLOR_HIGHLIGHT },
   { "sys_selection_foreground",	   COLOR_HIGHLIGHTTEXT },
   { "sys_tooltip_background",	   COLOR_INFOBK },

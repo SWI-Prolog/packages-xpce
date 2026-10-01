@@ -32,16 +32,18 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef SDLNSCOLOUR_H
-#define SDLNSCOLOUR_H
+#ifndef SDLSYSCOLOUR_H
+#define SDLSYSCOLOUR_H
 
-#include "sdlsyscolour.h"
-
-/* Bridge to the MacOS system colours (sdlnscolour.m).  As with
- * sdlnsmenu.h, the Objective-C side cannot include XPCE headers, so the
- * colours are passed back through a plain C callback.
+/* Callback through which the platform backends for the system colours
+ * (sdlnscolour.m, sdlkdecolour.c) pass the colours they find to
+ * load_system_colours() in sdlcolour.c.  This is plain C, so the
+ * Objective-C side does not need XPCE headers.  Components are 0..255.
  */
 
-void	ns_system_colours(sys_colour_callback add, void *closure);
+typedef void (*sys_colour_callback)(const char *name,
+				    unsigned r, unsigned g,
+				    unsigned b, unsigned a,
+				    void *closure);
 
-#endif /*SDLNSCOLOUR_H*/
+#endif /*SDLSYSCOLOUR_H*/

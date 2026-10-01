@@ -121,6 +121,7 @@ static const struct
   { "sys_dialog_foreground",	"labelColor" },
   { "sys_button_background",	"controlColor" },
   { "sys_button_foreground",	"controlTextColor" },
+  { "sys_button_pressed",	"selectedControlColor" },
   { "sys_selection_background",	"selectedContentBackgroundColor" },
   { "sys_selection_foreground",	"alternateSelectedControlTextColor" },
   { "sys_tooltip_background",	"windowBackgroundColor" },
@@ -177,7 +178,7 @@ ns_colour_rgba(const char *selector, const ns_rgba *under, ns_rgba *c)
 }
 
 static void
-add_colour(ns_colour_callback add, void *closure,
+add_colour(sys_colour_callback add, void *closure,
 	   const char *name, const ns_rgba *c)
 { (*add)(name,
 	 (unsigned)(c->r*255.0+0.5),
@@ -235,7 +236,7 @@ system_appearance(void)
 }
 
 static void
-resolve_colours(ns_colour_callback add, void *closure)
+resolve_colours(sys_colour_callback add, void *closure)
 { ns_rgba bg, c;
   const ns_rgba *under = NULL;
   char name[100];
@@ -256,7 +257,7 @@ resolve_colours(ns_colour_callback add, void *closure)
 }
 
 void
-ns_system_colours(ns_colour_callback add, void *closure)
+ns_system_colours(sys_colour_callback add, void *closure)
 { @autoreleasepool
   { NSAppearance *appearance = system_appearance();
 

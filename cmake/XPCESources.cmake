@@ -79,6 +79,9 @@ if(APPLE)
   # a builtin type, so XPCE's `typedef struct class * Class' would be
   # silently ignored.
   list(APPEND SDL_SRC sdlnsmenu.m sdlnscolour.m)
+elseif(NOT WIN32)
+  # System colours from the KDE colour scheme
+  list(APPEND SDL_SRC sdlkdecolour.c)
 endif()
 if(WIN32)
   set(MSW_SRC	mswin.c msprocess.c msuxnt.c mscolour.c)

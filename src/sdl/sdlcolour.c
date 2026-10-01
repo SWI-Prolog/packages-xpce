@@ -39,6 +39,8 @@
 #include <msw/mscolour.h>
 #elif defined(__APPLE__)
 #include "sdlnscolour.h"
+#else
+#include "sdlkdecolour.h"
 #endif
 
 static HashTable ColourNames;		/* name --> rgb (packed in Int) */
@@ -52,7 +54,7 @@ static Name	canonical_colour_name(Name in);
 
 /* System colours.  The sys_* names are defined on all platforms.  The
  * platform backend defines them from the user's desktop settings,
- * together with platform specific names (win_*, mac_*).  Names the
+ * together with platform specific names (win_*, mac_*, kde_*).  Names the
  * backend leaves undefined get the fallback below, which is xpce's
  * traditional Unix look.  The mapping is documented in the userguide,
  * section "System colours" (man/userguide/images.plx).
@@ -68,6 +70,7 @@ static const struct sys_colour
   { "sys_dialog_foreground",	RGBA(  0,   0,   0, 255) },
   { "sys_button_background",	RGBA(204, 204, 204, 255) },
   { "sys_button_foreground",	RGBA(  0,   0,   0, 255) },
+  { "sys_button_pressed",	RGBA(179, 179, 179, 255) }, /* grey70 */
   { "sys_selection_background",	RGBA(  0,   0,   0, 255) },
   { "sys_selection_foreground",	RGBA(255, 255, 255, 255) },
   { "sys_tooltip_background",	RGBA(255, 211, 155, 255) }, /* burlywood1 */
@@ -88,11 +91,11 @@ add_system_colour(HashTable cn, const char *name, COLORRGBA rgba)
     appendHashTable(cn, key, toInt(rgba));
 }
 
-#ifdef __APPLE__
+#ifndef __WINDOWS__
 static void
-add_ns_colour(const char *name,
-	      unsigned r, unsigned g, unsigned b, unsigned a,
-	      void *closure)
+add_platform_colour(const char *name,
+		    unsigned r, unsigned g, unsigned b, unsigned a,
+		    void *closure)
 { add_system_colour(closure, name, RGBA(r, g, b, a));
 }
 #endif
@@ -103,7 +106,9 @@ load_system_colours(HashTable cn)
 #ifdef __WINDOWS__
   ws_system_colours(cn);
 #elif defined(__APPLE__)
-  ns_system_colours(add_ns_colour, cn);
+  ns_system_colours(add_platform_colour, cn);
+#else
+  kde_system_colours(add_platform_colour, cn);
 #endif
 
   for(const struct sys_colour *sc = sys_colours; sc->name; sc++)

@@ -43,69 +43,107 @@ settings.  \tabref{syscolours} shows how they are mapped on each
 platform.
     \item [Platform specific names]
 Colours that only make sense on one platform use a platform prefix:
-\const{win_} on Windows and \const{mac_} on MacOS.  These names are
+\const{win_} on Windows, \const{mac_} on MacOS and \const{kde_} on
+KDE.  These names are
 \emph{not} defined on the other platforms, so using them makes an
 application non-portable.
 \end{itemlist}
 
 \begin{table}
 \begin{center}
-\begin{tabular}{|l|l|l|l|}
+\begin{tabular}{|l|l|l|l|l|}
 \hline
-\bf Name & \bf Windows & \bf MacOS & \bf Other \\
+\bf Name & \bf Windows & \bf MacOS & \bf KDE & \bf Fallback \\
 \hline
-\const{sys_window_background}	& \const{COLOR_WINDOW}
-				& \const{textBackgroundColor}
-				& white \\
-\const{sys_window_foreground}	& \const{COLOR_WINDOWTEXT}
-				& \const{textColor}
-				& black \\
-\const{sys_dialog_background}	& \const{COLOR_BTNFACE}
-				& \const{windowBackgroundColor}
-				& grey80 \\
-\const{sys_dialog_foreground}	& \const{COLOR_BTNTEXT}
-				& \const{labelColor}
-				& black \\
-\const{sys_button_background}	& \const{COLOR_BTNFACE}
-				& \const{controlColor}
-				& grey80 \\
-\const{sys_button_foreground}	& \const{COLOR_BTNTEXT}
-				& \const{controlTextColor}
-				& black \\
-\const{sys_selection_background} & \const{COLOR_HIGHLIGHT}
-				& \const{selectedContentBackgroundColor}
-				& black \\
-\const{sys_selection_foreground} & \const{COLOR_HIGHLIGHTTEXT}
-				& \const{alternateSelectedControlTextColor}
-				& white \\
-\const{sys_tooltip_background}	& \const{COLOR_INFOBK}
-				& \const{windowBackgroundColor}
-				& burlywood1 \\
-\const{sys_tooltip_foreground}	& \const{COLOR_INFOTEXT}
-				& \const{labelColor}
-				& black \\
-\const{sys_inactive}		& \const{COLOR_GRAYTEXT}
-				& \const{disabledControlTextColor}
-				& grey50 \\
-\const{sys_link}		& \const{COLOR_HOTLIGHT}
-				& \const{linkColor}
-				& \#0000ee \\
-\const{sys_accent}		& \const{COLOR_HIGHLIGHT}
-				& \const{controlAccentColor}
-				& dodger_blue \\
-\const{sys_separator}		& \const{COLOR_BTNSHADOW}
-				& \const{separatorColor}
-				& grey50 \\
-\const{sys_shadow}		& \const{COLOR_BTNSHADOW}
-				& \const{tertiaryLabelColor}
-				& grey50 \\
+\const{sys_window_background}
+	& \const{COLOR_WINDOW}
+	& \const{textBackgroundColor}
+	& \const{View} BackgroundNormal
+	& white \\
+\const{sys_window_foreground}
+	& \const{COLOR_WINDOWTEXT}
+	& \const{textColor}
+	& \const{View} ForegroundNormal
+	& black \\
+\const{sys_dialog_background}
+	& \const{COLOR_BTNFACE}
+	& \const{windowBackgroundColor}
+	& \const{Window} BackgroundNormal
+	& grey80 \\
+\const{sys_dialog_foreground}
+	& \const{COLOR_BTNTEXT}
+	& \const{labelColor}
+	& \const{Window} ForegroundNormal
+	& black \\
+\const{sys_button_background}
+	& \const{COLOR_BTNFACE}
+	& \const{controlColor}
+	& \const{Button} BackgroundNormal
+	& grey80 \\
+\const{sys_button_foreground}
+	& \const{COLOR_BTNTEXT}
+	& \const{controlTextColor}
+	& \const{Button} ForegroundNormal
+	& black \\
+\const{sys_button_pressed}
+	& \const{COLOR_3DLIGHT}
+	& \const{selectedControlColor}
+	& \const{Button} BackgroundAlternate
+	& grey70 \\
+\const{sys_selection_background}
+	& \const{COLOR_HIGHLIGHT}
+	& \const{selectedContentBackgroundColor}
+	& \const{Selection} BackgroundNormal
+	& black \\
+\const{sys_selection_foreground}
+	& \const{COLOR_HIGHLIGHTTEXT}
+	& \const{alternateSelectedControlTextColor}
+	& \const{Selection} ForegroundNormal
+	& white \\
+\const{sys_tooltip_background}
+	& \const{COLOR_INFOBK}
+	& \const{windowBackgroundColor}
+	& \const{Tooltip} BackgroundNormal
+	& burlywood1 \\
+\const{sys_tooltip_foreground}
+	& \const{COLOR_INFOTEXT}
+	& \const{labelColor}
+	& \const{Tooltip} ForegroundNormal
+	& black \\
+\const{sys_inactive}
+	& \const{COLOR_GRAYTEXT}
+	& \const{disabledControlTextColor}
+	& \const{Window} ForegroundInactive
+	& grey50 \\
+\const{sys_link}
+	& \const{COLOR_HOTLIGHT}
+	& \const{linkColor}
+	& \const{View} ForegroundLink
+	& \#0000ee \\
+\const{sys_accent}
+	& \const{COLOR_HIGHLIGHT}
+	& \const{controlAccentColor}
+	& \const{General} AccentColor
+	& dodger_blue \\
+\const{sys_separator}
+	& \const{COLOR_BTNSHADOW}
+	& \const{separatorColor}
+	& (derived)
+	& grey50 \\
+\const{sys_shadow}
+	& \const{COLOR_BTNSHADOW}
+	& \const{tertiaryLabelColor}
+	& (derived)
+	& grey50 \\
 \hline
 \end{tabular}
 \end{center}
 \caption{Mapping of the \const{sys_} colour names.  The Windows column
 	 names the argument to GetSysColor(), the MacOS column the
-	 NSColor class method.  The Other column is used on all other
-	 platforms and if the platform does not provide the colour.}
+	 NSColor class method and the KDE column the group (without
+	 \const{Colors:}) and key in \file{kdeglobals}.  The Fallback
+	 column is used on all other platforms and if the platform does
+	 not provide the colour.}
 \label{tab:syscolours}
 \end{table}
 
@@ -182,10 +220,35 @@ Many of them are translucent.  These are composed over
 
 MacOS has no tooltip colours.  The tooltip colours are therefore the
 same as the dialog colours.
+    \item [KDE]
+On Unix systems other than MacOS, \product{} uses the KDE colour scheme
+if the environment variable \env{XDG_CURRENT_DESKTOP} contains
+\const{KDE} or \env{KDE_FULL_SESSION} is \const{true}.  The colour
+scheme is read from the \file{kdeglobals} files in the directories of
+\env{XDG_CONFIG_DIRS} (default \file{/etc/xdg}) and
+\env{XDG_CONFIG_HOME} (default \file{\Stilde{}/.config}), where the latter
+takes precedence.  This does not require the KDE or Qt libraries.
+
+All colours of the groups \const{[Colors:\em Group]}, including
+sub-groups such as \const{[Colors:Header][Inactive]}, and of the group
+\const{[WM]} are defined as \const{kde_<group>_<key>}, converted to
+snake case.  For example, \const{BackgroundNormal} in
+\const{[Colors:View]} becomes \const{kde_view_background_normal} and
+\const{activeBackground} in \const{[WM]} becomes
+\const{kde_wm_active_background}.  \const{AccentColor} in
+\const{[General]} becomes \const{kde_accent}.
+
+If \file{kdeglobals} does not define a colour that is used for a
+\const{sys_} name, \product{} uses the colour of the default KDE scheme,
+Breeze Light.  If there is no \const{AccentColor}, \const{sys_accent} is
+\const{DecorationFocus} of \const{[Colors:View]}.  KDE has no separator
+and shadow colours.  These are computed by mixing
+\const{sys_dialog_foreground} into \const{sys_dialog_background} for
+20\% (separator) and 40\% (shadow).
     \item [Other platforms]
-On other platforms (Unix/Linux) the system colours have fixed values
-that reproduce \product{}'s traditional look.  They do not depend on the
-desktop settings.
+On other platforms, such as Linux running GNOME, the system colours
+have fixed values that reproduce \product{}'s traditional look.  They
+do not depend on the desktop settings.
 \end{itemlist}
 
 The system colours are determined when \product{} looks up a colour name
@@ -195,7 +258,8 @@ to use them.
 
 \index{dark theme}%
 If \const{sys_window_background} is dark, which is the case on MacOS in
-dark mode and on Windows using a dark high-contrast theme, the SWI-Prolog
+dark mode, on KDE using a dark colour scheme and on Windows using a dark
+high-contrast theme, the SWI-Prolog
 \const{dark} theme (\file{library(theme/dark)}) leaves the basic colours
 of windows and dialogs to the system colours.
 

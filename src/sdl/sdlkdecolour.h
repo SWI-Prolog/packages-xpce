@@ -32,16 +32,15 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef SDLNSCOLOUR_H
-#define SDLNSCOLOUR_H
-
+#ifndef SDLKDECOLOUR_H
+#define SDLKDECOLOUR_H
+#include <stdbool.h>
 #include "sdlsyscolour.h"
 
-/* Bridge to the MacOS system colours (sdlnscolour.m).  As with
- * sdlnsmenu.h, the Objective-C side cannot include XPCE headers, so the
- * colours are passed back through a plain C callback.
+/* System colours from the KDE colour scheme (sdlkdecolour.c).  Returns
+ * false, without calling `add`, if we are not running under KDE.
  */
 
-void	ns_system_colours(sys_colour_callback add, void *closure);
+bool	kde_system_colours(sys_colour_callback add, void *closure);
 
-#endif /*SDLNSCOLOUR_H*/
+#endif /*SDLKDECOLOUR_H*/

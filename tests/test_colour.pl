@@ -94,6 +94,7 @@ sys_colour(sys_dialog_background).
 sys_colour(sys_dialog_foreground).
 sys_colour(sys_button_background).
 sys_colour(sys_button_foreground).
+sys_colour(sys_button_pressed).
 sys_colour(sys_selection_background).
 sys_colour(sys_selection_foreground).
 sys_colour(sys_tooltip_background).
