@@ -37,5 +37,6 @@
 #define MSCOLOUR_H_INCLUDED
 
 void ws_system_colours(HashTable ColourNames);
+bool ws_dark_system_colours(void);
 
 #endif /*MSCOLOUR_H_INCLUDED*/

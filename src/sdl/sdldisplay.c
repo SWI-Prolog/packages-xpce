@@ -36,6 +36,9 @@
 #include <h/graphics.h>
 #include "sdldisplay.h"
 #include "sdluserevent.h"
+#ifdef __WINDOWS__
+#include <msw/mscolour.h>
+#endif
 #include <math.h>
 
 static void	ws_open_display(DisplayObj d, SDL_DisplayID id);
@@ -551,6 +554,11 @@ Name
 ws_get_system_theme_display(DisplayObj d)
 { ASSERT_SDL_MAIN();
   SDL_SystemTheme theme = SDL_GetSystemTheme();
+
+#ifdef __WINDOWS__
+  if ( theme != SDL_SYSTEM_THEME_DARK && ws_dark_system_colours() )
+    theme = SDL_SYSTEM_THEME_DARK;
+#endif
 
   switch(theme)
   { case SDL_SYSTEM_THEME_UNKNOWN:

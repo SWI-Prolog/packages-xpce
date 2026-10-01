@@ -128,3 +128,19 @@ ws_system_colours(HashTable ColourNames)
     ws_system_colour(ColourNames, sc->name, rgb);
   }
 }
+
+
+/* True if the window background of the system colours is dark.  This is
+ * the case for contrast themes such as "Night sky", which do not set the
+ * dark mode reported by SDL_GetSystemTheme().
+ */
+
+bool
+ws_dark_system_colours(void)
+{ COLORREF rgb = GetSysColor(COLOR_WINDOW);
+  double y = ( 0.299*GetRValue(rgb) +
+	       0.587*GetGValue(rgb) +
+	       0.114*GetBValue(rgb) );
+
+  return y < 128.0;
+}
