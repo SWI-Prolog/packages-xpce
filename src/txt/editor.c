@@ -5661,7 +5661,7 @@ static getdecl get_editor[] =
 /* Resources */
 
 static classvardecl rc_editor[] =
-{ RC(NAME_background, "colour|pixmap", "white",
+{ RC(NAME_background, "colour|pixmap", UXWIN("white", "win_window"),
      "Colour/fill pattern of the background"),
   RC(NAME_caretModifier, "modifier", "",
      "Modify caret using this modifier"),

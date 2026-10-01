@@ -776,10 +776,10 @@ standardImages(void)
 #define P NAME_pixmap
 #define B NAME_bitmap
   stdXPMImage(NAME_pceImage,	       P, NULL,		       swipl48_xpm);
-  stdXPMImage(NAME_scrollUpImage,      P, &SCROLL_UP_IMAGE,    up_xpm);
-  stdXPMImage(NAME_scrollDownImage,    P, &SCROLL_DOWN_IMAGE,  down_xpm);
-  stdXPMImage(NAME_scrollLeftImage,    P, &SCROLL_LEFT_IMAGE,  left_xpm);
-  stdXPMImage(NAME_scrollRightImage,   P, &SCROLL_RIGHT_IMAGE, right_xpm);
+  stdXPMImage(NAME_scrollUpImage,      B, &SCROLL_UP_IMAGE,    up_xpm);
+  stdXPMImage(NAME_scrollDownImage,    B, &SCROLL_DOWN_IMAGE,  down_xpm);
+  stdXPMImage(NAME_scrollLeftImage,    B, &SCROLL_LEFT_IMAGE,  left_xpm);
+  stdXPMImage(NAME_scrollRightImage,   B, &SCROLL_RIGHT_IMAGE, right_xpm);
   stdXPMImage(NAME_exclamationImage,   P, &EXCLAMATION_IMAGE,  exclamation_xpm);
   stdXPMImage(NAME_treeExpandedImage,  B, NULL,		       enode_xpm);
   stdXPMImage(NAME_treeCollapsedImage, B, NULL,		       cnode_xpm);

@@ -166,9 +166,9 @@ class_variable(git_grep_command, string,
                'git --no-pager grep --no-color -n %s',
                "Command of M-x git-grep").
 class_variable(shell_command, chain*,
-               when(@pce?window_system == windows,
-                    @nil,
-                    chain('/bin/sh', '-c')),
+               [ windows(@nil),
+                 unix(chain('/bin/sh', '-c'))
+               ],
                "Command for running grep, make, etc.").
 class_variable(auto_colourise_size_limit, int, 50000,
                "Auto-colourise if buffer is smaller then this").

@@ -345,10 +345,17 @@ draw_arrow(ScrollBar s, int x, int y, int w, int h, Name which, int up)
   else /* ( which == NAME_right ) */ img = SCROLL_RIGHT_IMAGE;
 
   if ( img )
-  { iw = valInt(img->size->w);
+  { Any c = getClassVariableValueObject(s, NAME_arrowColour);
+    Any old = NULL;
+
+    if ( c && notDefault(c) )
+      old = r_colour(c);
+    iw = valInt(img->size->w);
     ih = valInt(img->size->h);
 
     r_image(img, 0, 0, x+(w-iw)/2, y+(h-ih)/2, iw, ih);
+    if ( old )
+      r_colour(old);
   } else
   { Cprintf("No scroll_bar arrow image\n");
   }
@@ -1064,6 +1071,8 @@ static classvardecl rc_scrollBar[] =
      "Colour of background parts"),
   RC(NAME_colour, "[colour]", UXWIN("@_dialog_bg", "win_btnface"),
      "Colour of foreground parts"),
+  RC(NAME_arrowColour, "[colour]", UXWIN("black", "win_menutext"),
+     "Colour of the line up/down arrows"),
   RC(NAME_distance, "int", UXWIN("2", "0"),
      "Distance to graphical"),
   RC(NAME_elevation, "elevation*",

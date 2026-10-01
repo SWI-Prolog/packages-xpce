@@ -45,14 +45,15 @@ make_help_message_window(W) :-
                    "Window to display <-help_message").
 
 class_variable(background, colour,
-               when(@pce?window_system == windows,
-                    win_infobk,
-                    burlywood1),
-               "Ballon background").
-class_variable(foreground, colour,
-               when(@pce?window_system == windows,
-                    win_infotext,
-                    black)).
+               [ windows(win_infobk),
+                 unix(burlywood1)
+               ],
+               "Balloon background").
+class_variable(colour, colour,
+               [ windows(win_infotext),
+                 unix(black)
+               ],
+               "Balloon text and border colour").
 
 variable(handler,       handler,        get, "Handler for intercept").
 variable(message,       string*,        get, "Currently displayed message").
@@ -64,7 +65,9 @@ initialise(W) :->
     get(W, frame, Frame),
     send(Frame, kind, popup),
     send(Frame, sensitive, @off),
-    send(Frame?tile, border, 0),
+    send(Frame?tile, border, 1),       % border in the text colour
+    get(W, colour, Colour),
+    send(Frame, background, Colour),
     send(W, gap, size(5, 2)),
     send(W, append, new(L, label(feedback, '', normal))),
     send(L, length, 0),

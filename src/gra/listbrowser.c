@@ -1840,7 +1840,7 @@ static getdecl get_listBrowser[] =
 /* Resources */
 
 static classvardecl rc_listBrowser[] =
-{ RC(NAME_background, "colour|pixmap", "white",
+{ RC(NAME_background, "colour|pixmap", UXWIN("white", "win_window"),
      "Colour/fill pattern of the background"),
   RC(NAME_clearSelectionOnSearch, "bool", "@on",
      "@on: clear selection when searching"),

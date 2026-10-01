@@ -2607,7 +2607,7 @@ static classvardecl rc_textImage[] =
      "Tabstop interval (pixels)"),
   RC(NAME_wrap, "{none,character,word}", "character",
      "Wrap unit for long lines"),
-  RC(NAME_colour, RC_REFINE, "black", NULL)
+  RC(NAME_colour, RC_REFINE, UXWIN("black", "win_windowtext"), NULL)
 };
 
 /* Class Declaration */

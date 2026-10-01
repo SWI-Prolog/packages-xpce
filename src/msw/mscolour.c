@@ -67,7 +67,6 @@ static const struct system_colour window_colours[] =
   { "win_3dshadow",		   COLOR_3DSHADOW },
   { "win_activeborder",		   COLOR_ACTIVEBORDER },
   { "win_activecaption",	   COLOR_ACTIVECAPTION },
-  { "win_activecaption",	   COLOR_ACTIVECAPTION },
   { "win_appworkspace",		   COLOR_APPWORKSPACE },
   { "win_background",		   COLOR_BACKGROUND },
   { "win_btnface",		   COLOR_BTNFACE },
@@ -93,6 +92,10 @@ static const struct system_colour window_colours[] =
   { "win_infobk",		   COLOR_INFOBK },
   { "win_infotext",		   COLOR_INFOTEXT },
   { "win_menu",			   COLOR_MENU },
+#ifdef COLOR_MENUBAR
+  { "win_menubar",		   COLOR_MENUBAR },
+  { "win_menuhilight",		   COLOR_MENUHILIGHT },
+#endif
   { "win_menutext",		   COLOR_MENUTEXT },
   { "win_scrollbar",		   COLOR_SCROLLBAR },
   { "win_window",		   COLOR_WINDOW },

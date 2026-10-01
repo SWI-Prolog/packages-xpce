@@ -417,7 +417,7 @@ static classvardecl rc_textMargin[] =
      "Placement relative to the image"),
   RC(NAME_elevation, "elevation*", "@nil",
      "Elevation from the background"),
-  RC(NAME_background, "[colour|pixmap]", "white",
+  RC(NAME_background, "[colour|pixmap]", UXWIN("white", "win_window"),
      "Background colour for the text"),
   RC(NAME_fragmentCursor, "cursor*", "pointer",
      "Cursor when hovering a fragment")
