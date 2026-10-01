@@ -1514,8 +1514,8 @@ test(it_opens_in_a_window_of_the_ide, Classes == [prof_frame]) :-
     send(Frame, instance_of, pane_frame),
     classes(Frame, Classes).
 
-test(its_two_windows_are_tiled_inside_it,
-     Names == [prof_browser, prof_tabs]) :-
+test(its_windows_are_tiled_inside_it,
+     Names == [prof_browser, prof_tabs, prof_filter_dialog]) :-
     no_frames,
     profiler(F),
     get(F, members, Chain),
@@ -1717,6 +1717,65 @@ has_dot :-
                        [ access(execute),
                          file_errors(fail)
                        ]).
+
+%       Typing in the filter above the browser shows only the predicates
+%       that match; the details and the graph still reach the others.
+
+test(the_filter_shows_what_matches,
+     [ Others == [] ]) :-
+    no_frames,
+    profiler(F),
+    type_filter(F, "numl"),
+    get(F, window, prof_browser, B),
+    get(B?dict, members, Chain),
+    chain_list(Chain, Items),
+    assertion(Items \== []),
+    findall(Key,
+            ( member(DI, Items),
+              get(DI, key, Key),
+              \+ sub_atom(Key, _, _, _, numl)
+            ), Others).
+
+test(an_empty_filter_shows_all, Shown == All) :-
+    no_frames,
+    profiler(F),
+    type_filter(F, "numl"),
+    type_filter(F, ""),
+    get(F, window, prof_browser, B),
+    get(B?dict?members, size, Shown),
+    get(B?all_items, size, All).
+
+test(the_clear_button_shows_all, Shown == All) :-
+    no_frames,
+    profiler(F),
+    type_filter(F, "numl"),
+    get(F, window, prof_filter_dialog, D),
+    get(D, member, filter, I),
+    send(I, clear),                     % what the button sends
+    get(F, window, prof_browser, B),
+    get(B?dict?members, size, Shown),
+    get(B?all_items, size, All).
+
+test(what_the_filter_hides_can_still_be_shown) :-
+    no_frames,
+    profiler(F),
+    get(F, window, prof_browser, B),
+    get(B?all_items, head, Item),
+    get(Item, data, Data),
+    type_filter(F, "no_such_predicate_name"),
+    get(B?dict?members, size, 0),
+    send(F, details, Data.predicate).
+
+type_filter(F, Text) :-
+    get(F, window, prof_filter_dialog, D),
+    get(D, member, filter, I),
+    send(I, displayed_value, ''),
+    string_codes(Text, Codes),
+    (   Codes == []
+    ->  send(I, displayed_value, x),
+        send(I, typed, 8)               % backspace
+    ;   forall(member(C, Codes), send(I, typed, C))
+    ).
 
 test(how_the_times_are_read_is_the_tools_to_say) :-
     no_frames,

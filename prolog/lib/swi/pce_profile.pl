@@ -49,6 +49,7 @@
 :- use_module(library(prolog_predicate)).
 :- use_module(library(tabbed_window), []).
 :- use_module(library(xdot), []).
+:- use_module(library(pce_filter_item), []).
 
 :- require([ auto_call/1,
 	     reset_profiler/0,
@@ -121,7 +122,8 @@ class_variable(auto_reset, bool, @on, "Reset profiler after collecting").
 initialise(F) :->
     send_super(F, initialise, profiler),
     send(F, append_window, new(B, prof_browser)),
-    send(F, append_window, new(prof_tabs), B, right).
+    send(F, append_window, new(prof_tabs), B, right),
+    send(F, append_window, new(prof_filter_dialog), B, above).
 
                  /*******************************
                  *             PANE             *
@@ -189,7 +191,7 @@ show_statistics(F) :->
     get(F, time, Time),
     get(F, slot, nodes, Nodes),
     get(F, window, prof_browser, B),
-    get(B?dict?members, size, Predicates),
+    get(B?all_items, size, Predicates),
     (   Ticks == 0
     ->  Distortion = 0.0
     ;   Distortion is 100.0*(Account/Ticks)
@@ -214,7 +216,7 @@ details(F, From:prolog) :->
 node_data(F, Pred:prolog, Node:prolog) :<-
     "The profile data of a predicate; fails if it was not sampled"::
     get(F, window, prof_browser, B),
-    get(B?dict, find,
+    get(B?all_items, find,
         message(@arg1, has_predicate, prolog(Pred)),
         DI),
     get(DI, data, Node).
@@ -262,18 +264,57 @@ help(_) :->
 
 
                  /*******************************
+                 *            FILTER            *
+                 *******************************/
+
+:- pce_begin_class(prof_filter_dialog, dialog,
+                   "Filter the predicates of the flat profile").
+
+class_variable(border, size, size(0,0)).
+
+initialise(D) :->
+    send_super(D, initialise),
+    send(D, gap, size(5, 2)),
+    send(D, pen, 0),
+    send(D, append,
+         new(F, filter_item(filter, message(D, filter, @arg1),
+                            "Filter predicates"))),
+    send(F, show_label, @off).
+
+resize(D) :->
+    send(D, layout, D?visible?size).
+
+filter(D, Filter:regex*) :->
+    "Only show the predicates that match Filter"::
+    prof_tool(D, Tool),
+    get(Tool, window, prof_browser, B),
+    send(B, filter, Filter).
+
+:- pce_end_class(prof_filter_dialog).
+
+
+                 /*******************************
                  *     FLAT PROFILE BROWSER     *
                  *******************************/
+
+/* The browser holds all predicates in <-all_items, sorted, and shows
+those that match <-filter.  Lookups by predicate go through
+<-all_items, so the details and the call graph reach predicates that
+the filter hides.
+*/
 
 :- pce_begin_class(prof_browser, browser,
                    "Show flat profile in browser").
 
 class_variable(size, size, size(40,20)).
 
-variable(sort_by,  name := ticks, get, "How the items are sorted").
+variable(sort_by,   name := ticks, get, "How the items are sorted").
+variable(all_items, chain,         get, "All items, shown or not").
+variable(filter,    regex*,        get, "Only show items matching this").
 
 initialise(B) :->
     send_super(B, initialise),
+    send(B, slot, all_items, new(chain)),
     send(B, update_label),
     send(B, select_message, message(@arg1, details)).
 
@@ -287,8 +328,9 @@ load_profile(B, Nodes:prolog) :->
     "Load stored profile from the Prolog database"::
     prof_tool(B, Frame),
     get(B, sort_by, SortBy),
+    get(B, all_items, All),
     forall(member(Node, Nodes),
-           send(B, append, prof_dict_item(Node, SortBy, Frame))),
+           send(All, append, prof_dict_item(Node, SortBy, Frame))),
     send(B, sort).
 
 select_interesting(B) :->
@@ -345,13 +387,46 @@ sort(B, Order:[{normal,reverse}]) :->
     ->  sort_by(_, Sort, TheOrder)
     ;   TheOrder = Order
     ),
-    send_super(B, sort, ?(@arg1, compare, @arg2, Sort, TheOrder)).
+    get(B, all_items, All),
+    send(All, sort, ?(@arg1, compare, @arg2, Sort, TheOrder)),
+    send(B, show_items).
+
+filter(B, Filter:regex*) :->
+    "Only show the predicates whose label matches Filter"::
+    send(B, slot, filter, Filter),
+    send(B, show_items).
+
+%       The items stay in <-all_items, so taking them out of the
+%       dictionary does not destroy them.
+
+show_items(B) :->
+    "Show the items of <-all_items that match <-filter"::
+    (   get(B, selection, Selection)
+    ->  true
+    ;   Selection = @nil
+    ),
+    send(B?dict, clear),
+    get(B, all_items, All),
+    get(B, filter, Filter),
+    (   Filter == @nil
+    ->  send(All, for_all, message(B, append, @arg1))
+    ;   send(All, for_all,
+             if(message(Filter, search, @arg1?key),
+                message(B, append, @arg1)))
+    ),
+    (   Selection \== @nil,
+        get(Selection, dict, Dict),
+        Dict \== @nil
+    ->  send(B, selection, Selection),
+        send(B, normalise, Selection)
+    ;   true
+    ).
 
 update_labels(B) :->
     "Update labels of predicates"::
     get(B, sort_by, SortBy),
     prof_tool(B, F),
-    send(B?dict, for_all, message(@arg1, update_label, SortBy, F)).
+    send(B?all_items, for_all, message(@arg1, update_label, SortBy, F)).
 
 :- pce_end_class(prof_browser).
 
