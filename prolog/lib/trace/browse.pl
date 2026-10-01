@@ -40,6 +40,7 @@
 :- use_module(library(pane_frame)).
 :- use_module(library(toc_filesystem)).
 :- use_module(library(toolbar)).
+:- use_module(library(pce_filter_item), []).
 % used in load hook: cannot be autoloaded.
 :- use_module(library(trace/util),[canonical_source_file/2]).
 
@@ -60,7 +61,7 @@
 :- autoload(library(pce_image),[pce_image_directory/1]).
 :- autoload(library(pce_manual),[manpce/1,manpce/0]).
 :- autoload(library(pce_util),
-	    [send_list/3,default/3,get_chain/3,chain_list/2,pce_text_to_regex/2]).
+	    [send_list/3,default/3,get_chain/3,chain_list/2]).
 :- autoload(library(prolog_source),
 	    [ prolog_open_source/2,
 	      prolog_read_source_term/4,
@@ -198,9 +199,10 @@ initialise(D) :->
     send(D, name, filter_dialog),
     send(D, gap, size(5, 2)),
     send(D, pen, 0),
-    send(D, append, new(F, sb_file_filter_item(filter))),
-    send(F, show_label, @off),
-    send(F, placeholder, "Filter files").
+    send(D, append,
+         new(F, filter_item(filter, message(D, file_filter, @arg1),
+                            "Filter files"))),
+    send(F, show_label, @off).
 
 resize(D) :->
     send(D, layout, D?visible?size).
@@ -210,25 +212,12 @@ tree(D, Tree:prolog_source_structure) :<-
     get(D, container, prolog_navigator, SB),
     get(SB, tree, Tree).
 
+file_filter(D, Filter:regex*) :->
+    "Only show files that match Filter"::
+    get(D, tree, Tree),
+    send(Tree, file_filter, Filter).
+
 :- pce_end_class(sb_filter_dialog).
-
-
-:- pce_begin_class(sb_file_filter_item, text_item,
-                   "Filter files as you type").
-
-typed(FFI, Id:'event|event_id') :->
-    "Activate the filter"::
-    send_super(FFI, typed, Id),
-    get(FFI, displayed_value, Current),
-    get(FFI?device, tree, Tree),
-    (   send(Current, equal, '')
-    ->  send(Tree, file_filter, @nil)
-    ;   pce_text_to_regex(Current, Filter)
-    ->  send(Tree, file_filter, Filter)
-    ;   send(FFI, report, status, 'Incomplete expression')
-    ).
-
-:- pce_end_class(sb_file_filter_item).
 
 
 :- pce_begin_class(prolog_source_structure, toc_filesystem,

@@ -52,6 +52,7 @@
 :- use_module(library(prolog_xref)).
 :- use_module(print_graphics).
 :- use_module(tabular).
+:- use_module(pce_filter_item, []).
 :- use_module(library(lists)).
 :- use_module(library(autowin)).
 :- use_module(library(broadcast)).
@@ -744,32 +745,20 @@ initialise(D) :->
     send(D, hor_stretch, 100),
     send(D, hor_shrink, 100),
     send(D, name, filter_dialog),
-    send(D, append, xref_file_filter_item(filter_on_filename)).
+    send(D, append,
+         filter_item(filter_on_filename,
+                     message(D, filter_file_name, @arg1))).
 
 resize(D) :->
     send(D, layout, D?visible?size).
 
-:- pce_end_class(xref_filter_dialog).
-
-
-:- pce_begin_class(xref_file_filter_item, text_item,
-                   "Filter files as you type").
-
-typed(FFI, Id) :->
-    "Activate filter"::
-    send_super(FFI, typed, Id),
-    get(FFI, displayed_value, Current),
-    xref_tool(FFI, Tool),
+filter_file_name(D, Filter:regex*) :->
+    "Only show files whose name matches Filter"::
+    xref_tool(D, Tool),
     get(Tool, browser, files, Tree),
-    (   send(Current, equal, '')
-    ->  send(Tree, filter_file_name, @nil)
-    ;   (   pce_text_to_regex(Current, Filter)
-        ->  send(Tree, filter_file_name, Filter)
-        ;   send(FFI, report, status, 'Incomplete expression')
-        )
-    ).
+    send(Tree, filter_file_name, Filter).
 
-:- pce_end_class(xref_file_filter_item).
+:- pce_end_class(xref_filter_dialog).
 
 
 

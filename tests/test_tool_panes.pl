@@ -773,6 +773,20 @@ test(and_so_is_the_tree_the_filter_controls, true(Tree == Mine)) :-
     get(FD, tree, Tree),
     get(SB, tree, Mine).
 
+%       Its filter is a filter_item: typing in it filters the tree and
+%       the clear button at its right takes the filter away.
+
+test(its_filter_filters_the_tree_until_cleared,
+     true(Typed-Cleared == regex-(@nil))) :-
+    navigator(SB),
+    get(SB, window, sb_filter_dialog, FD),
+    get(FD, member, filter, Item),
+    send(Item, typed, 0'p),
+    get(SB?tree, file_filter, Filter),
+    get(Filter, class_name, Typed),
+    send(Item, clear),
+    get(SB?tree, file_filter, Cleared).
+
 test(so_the_tool_can_still_say_what_to_show, true(Content == all)) :-
     navigator(SB),
     send(SB, content, all),
@@ -1171,6 +1185,15 @@ test(a_window_of_the_tool_reaches_the_tool, true(Reached == F)) :-
     xref(F),
     get(F, browser, files, Tree),
     get(Tree, container, xref_tool, Reached).
+
+%       Typing in its filter and clearing it reach the file tree.
+
+test(its_filter_reaches_the_file_tree) :-
+    xref(F),
+    get(F, window, xref_filter_dialog, FD),
+    get(FD, member, filter_on_filename, Item),
+    send(Item, typed, 0'p),
+    send(Item, clear).
 
 test(and_so_does_an_item_of_its_filter, true(Reached == F)) :-
     xref(F),
