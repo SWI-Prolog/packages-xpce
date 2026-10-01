@@ -2669,11 +2669,22 @@ pane_side(TP, Side:{above,below,left,right}) :<-
 
 %       Not <-member: on a tabbed_window that answers the window of a
 %       named tab.  The windows of a tool are told apart by their class.
+%       A window of a tool may itself be a tabbed_window holding more of
+%       them, as the details and call graph of the profiler are; those
+%       are the tool's windows as well.
 
 window(TP, Class:name, W:window) :<-
     "A window of mine of the given class"::
-    get(TP, members, Windows),
-    get(Windows, find, message(@arg1, instance_of, Class), W).
+    get(TP, members, Chain),
+    chain_list(Chain, Windows),
+    (   member(W, Windows),
+        send(W, instance_of, Class)
+    ->  true
+    ;   member(TW, Windows),
+        send(TW, instance_of, tabbed_window),
+        get(TW?members, find, message(@arg1, instance_of, Class), W)
+    ->  true
+    ).
 
 resize(TP, Tab:[tab]) :->
     "Keep the grip on the window in my corner"::
