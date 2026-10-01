@@ -54,7 +54,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <strings.h>
+#include <stdbool.h>
 #include "sdlkdecolour.h"
 
 #define KDE_NAME_SIZE 80
@@ -114,33 +114,6 @@ static const struct
   { "sys_link",			"kde_view_foreground_link" },
   { NULL,			NULL }
 };
-
-
-static bool
-running_kde(void)
-{ const char *desktop = getenv("XDG_CURRENT_DESKTOP");
-  const char *full = getenv("KDE_FULL_SESSION");
-
-  if ( full && strcasecmp(full, "true") == 0 )
-    return true;
-
-  if ( desktop )			/* colon separated list */
-  { const char *s = desktop;
-
-    while(*s)
-    { const char *e = strchr(s, ':');
-      size_t len = e ? (size_t)(e-s) : strlen(s);
-
-      if ( len == 3 && strncasecmp(s, "KDE", 3) == 0 )
-	return true;
-      s += len;
-      if ( *s == ':' )
-	s++;
-    }
-  }
-
-  return false;
-}
 
 
 static kde_colour *
@@ -382,14 +355,13 @@ add_mixed_colour(sys_colour_callback add, void *closure, const char *name,
   add_colour(add, closure, name, &c);
 }
 
-bool
+void
 kde_system_colours(sys_colour_callback add, void *closure)
 { kde_table t;
   kde_colour *c, *bg, *fg;
 
-  if ( !running_kde() ||
-       !(t.colours = malloc(KDE_MAX_COLOURS*sizeof(kde_colour))) )
-    return false;
+  if ( !(t.colours = malloc(KDE_MAX_COLOURS*sizeof(kde_colour))) )
+    return;
   t.count = 0;
 
   for(const kde_colour *d = breeze_light; d->name[0]; d++)
@@ -415,5 +387,4 @@ kde_system_colours(sys_colour_callback add, void *closure)
   }
 
   free(t.colours);
-  return true;
 }

@@ -80,8 +80,8 @@ if(APPLE)
   # silently ignored.
   list(APPEND SDL_SRC sdlnsmenu.m sdlnscolour.m)
 elseif(NOT WIN32)
-  # System colours from the KDE colour scheme
-  list(APPEND SDL_SRC sdlkdecolour.c)
+  # System colours from the KDE colour scheme and for GNOME
+  list(APPEND SDL_SRC sdlkdecolour.c sdlgnomecolour.c)
 endif()
 if(WIN32)
   set(MSW_SRC	mswin.c msprocess.c msuxnt.c mscolour.c)

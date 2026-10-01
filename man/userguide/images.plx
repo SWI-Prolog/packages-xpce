@@ -39,12 +39,12 @@ The names starting with \const{sys_} are defined on all platforms.  They
 denote a role, such as the background of a window or the colours of a
 selection.  \product{}'s own defaults use these names, and portable
 applications should use them if they want to follow the desktop
-settings.  \tabref{syscolours} shows how they are mapped on each
+settings.  \Tabref{syscolours} shows how they are mapped on each
 platform.
     \item [Platform specific names]
 Colours that only make sense on one platform use a platform prefix:
 \const{win_} on Windows, \const{mac_} on MacOS and \const{kde_} on
-KDE.  These names are
+KDE.  On GNOME there are no platform specific names.  These names are
 \emph{not} defined on the other platforms, so using them makes an
 application non-portable.
 \end{itemlist}
@@ -142,8 +142,9 @@ application non-portable.
 	 names the argument to GetSysColor(), the MacOS column the
 	 NSColor class method and the KDE column the group (without
 	 \const{Colors:}) and key in \file{kdeglobals}.  The Fallback
-	 column is used on all other platforms and if the platform does
-	 not provide the colour.}
+	 column is used on other platforms and if the platform does not
+	 provide the colour.  GNOME is described separately in
+	 \tabref{gnomecolours}.}
 \label{tab:syscolours}
 \end{table}
 
@@ -245,10 +246,70 @@ Breeze Light.  If there is no \const{AccentColor}, \const{sys_accent} is
 and shadow colours.  These are computed by mixing
 \const{sys_dialog_foreground} into \const{sys_dialog_background} for
 20\% (separator) and 40\% (shadow).
+    \item [GNOME]
+GNOME does not publish its colours.  If \env{XDG_CURRENT_DESKTOP}
+contains \const{GNOME} (and we are not running under KDE),
+\product{} uses a built-in copy of the libadwaita palette.  It asks the
+XDG Desktop Portal (namespace \const{org.freedesktop.appearance}) for
+the following settings:
+
+\begin{itemlist}
+    \item [\const{color-scheme}]
+If this is \const{1} (prefer dark), the dark palette is used.
+Otherwise the light palette is used.
+    \item [\const{contrast}]
+If this is \const{1} (high contrast), the text colours are opaque and
+the separator and shadow colours are stronger.
+    \item [\const{accent-color}]
+The accent colour, available since GNOME~47.  If it is missing or out
+of range, \product{} uses the default libadwaita accent, \#3584e4.  The
+text on a selection is white, unless the accent colour is light.
+\end{itemlist}
+
+\Tabref{gnomecolours} shows the result.  The \emph{ink} is the text
+colour of libadwaita: \verb$rgba(0,0,6,0.8)$ in the light palette and
+white in the dark palette.  A percentage means that this fraction of the
+ink is composed over the window background, which is how libadwaita
+defines these colours in its CSS.  There are no \const{gnome_} colour
+names.
+
+The portal is accessed over D-Bus using GIO.  If \product{} was built
+without GIO, or there is no portal, the light palette with the default
+accent colour is used.
+
+\begin{table}
+\begin{center}
+\begin{tabular}{|l|l|l|l|}
+\hline
+\bf Name & \bf Derived from & \bf Light & \bf Dark \\
+\hline
+\const{sys_window_background} & view background & \#ffffff & \#1d1d20 \\
+\const{sys_window_foreground} & ink & \#333338 & \#ffffff \\
+\const{sys_dialog_background} & window background & \#fafafb & \#222226 \\
+\const{sys_dialog_foreground} & ink & \#323237 & \#ffffff \\
+\const{sys_button_background} & 10\% ink & \#e6e6e7 & \#38383c \\
+\const{sys_button_foreground} & ink & \#323237 & \#ffffff \\
+\const{sys_button_pressed} & 30\% ink & \#bebec0 & \#646467 \\
+\const{sys_selection_background} & accent & \#3584e4 & \#3584e4 \\
+\const{sys_selection_foreground} & white or black & \#ffffff & \#ffffff \\
+\const{sys_tooltip_background} & 80\% \#000006 & \#323237 & \#07070c \\
+\const{sys_tooltip_foreground} & white & \#ffffff & \#ffffff \\
+\const{sys_inactive} & 50\% ink & \#969699 & \#919193 \\
+\const{sys_link} & accent & \#3584e4 & \#3584e4 \\
+\const{sys_accent} & accent & \#3584e4 & \#3584e4 \\
+\const{sys_separator} & 15\% ink & \#dcdcde & \#434347 \\
+\const{sys_shadow} & 30\% ink & \#bebec0 & \#646467 \\
+\hline
+\end{tabular}
+\end{center}
+\caption{The \const{sys_} colours on GNOME, using the default accent colour
+	 and normal contrast.}
+\label{tab:gnomecolours}
+\end{table}
     \item [Other platforms]
-On other platforms, such as Linux running GNOME, the system colours
-have fixed values that reproduce \product{}'s traditional look.  They
-do not depend on the desktop settings.
+On other platforms, such as Linux running Xfce, the system colours have
+fixed values that reproduce \product{}'s traditional look.  They do not
+depend on the desktop settings.
 \end{itemlist}
 
 The system colours are determined when \product{} looks up a colour name
@@ -258,8 +319,8 @@ to use them.
 
 \index{dark theme}%
 If \const{sys_window_background} is dark, which is the case on MacOS in
-dark mode, on KDE using a dark colour scheme and on Windows using a dark
-high-contrast theme, the SWI-Prolog
+dark mode, on KDE using a dark colour scheme, on GNOME using the dark
+style and on Windows using a dark high-contrast theme, the SWI-Prolog
 \const{dark} theme (\file{library(theme/dark)}) leaves the basic colours
 of windows and dialogs to the system colours.
 

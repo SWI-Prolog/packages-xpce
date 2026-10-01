@@ -41,6 +41,7 @@
 #include "sdlnscolour.h"
 #else
 #include "sdlkdecolour.h"
+#include "sdlgnomecolour.h"
 #endif
 
 static HashTable ColourNames;		/* name --> rgb (packed in Int) */
@@ -100,6 +101,37 @@ add_platform_colour(const char *name,
 }
 #endif
 
+#if !defined(__WINDOWS__) && !defined(__APPLE__)
+/* True if `name` appears in the colon separated $XDG_CURRENT_DESKTOP,
+ * e.g., `ubuntu:GNOME`.
+ */
+
+static bool
+xdg_current_desktop(const char *name)
+{ const char *s = getenv("XDG_CURRENT_DESKTOP");
+  size_t nlen = strlen(name);
+
+  while( s && *s )
+  { const char *e = strchr(s, ':');
+    size_t len = e ? (size_t)(e-s) : strlen(s);
+
+    if ( len == nlen && strncasecmp(s, name, len) == 0 )
+      return true;
+    s = e ? e+1 : NULL;
+  }
+
+  return false;
+}
+
+static bool
+running_kde(void)
+{ const char *full = getenv("KDE_FULL_SESSION");
+
+  return xdg_current_desktop("KDE") ||
+	 (full && strcasecmp(full, "true") == 0);
+}
+#endif
+
 static void
 load_system_colours(HashTable cn)
 {
@@ -108,7 +140,10 @@ load_system_colours(HashTable cn)
 #elif defined(__APPLE__)
   ns_system_colours(add_platform_colour, cn);
 #else
-  kde_system_colours(add_platform_colour, cn);
+  if ( running_kde() )
+    kde_system_colours(add_platform_colour, cn);
+  else if ( xdg_current_desktop("GNOME") )
+    gnome_system_colours(add_platform_colour, cn);
 #endif
 
   for(const struct sys_colour *sc = sys_colours; sc->name; sc++)

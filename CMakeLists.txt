@@ -43,6 +43,14 @@ set(GUI_LIBRARIES
     PkgConfig::PANGOCAIRO)
 if(APPLE)
   list(APPEND GUI_LIBRARIES "-framework Cocoa")
+elseif(NOT WIN32)
+  # GIO is used to read the GNOME appearance settings (accent colour,
+  # dark/light) from the XDG Desktop Portal.  See sdlgnomecolour.c.
+  pkg_check_modules(GIO IMPORTED_TARGET gio-2.0)
+  if(GIO_FOUND)
+    set(HAVE_GIO 1)
+    list(APPEND GUI_LIBRARIES PkgConfig::GIO)
+  endif()
 endif()
 
 if(WIN32)

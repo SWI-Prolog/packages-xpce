@@ -32,14 +32,14 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef SDLKDECOLOUR_H
-#define SDLKDECOLOUR_H
+#ifndef SDLGNOMECOLOUR_H
+#define SDLGNOMECOLOUR_H
 #include "sdlsyscolour.h"
 
-/* System colours from the KDE colour scheme (sdlkdecolour.c).  Called
- * by load_system_colours() if we are running under KDE.
+/* System colours for GNOME (sdlgnomecolour.c).  Called by
+ * load_system_colours() if we are running under GNOME.
  */
 
-void	kde_system_colours(sys_colour_callback add, void *closure);
+void	gnome_system_colours(sys_colour_callback add, void *closure);
 
-#endif /*SDLKDECOLOUR_H*/
+#endif /*SDLGNOMECOLOUR_H*/

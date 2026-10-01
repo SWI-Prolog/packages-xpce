@@ -116,3 +116,4 @@
 #cmakedefine MONO_FAMILY @MONO_FAMILY@
 #cmakedefine SANS_FAMILY @SANS_FAMILY@
 #cmakedefine SERIF_FAMILY @SERIF_FAMILY@
+#cmakedefine HAVE_GIO @HAVE_GIO@
