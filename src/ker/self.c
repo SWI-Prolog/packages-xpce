@@ -1378,28 +1378,39 @@ static getdecl get_pce[] =
 
 /* Resources */
 
+/* The button elevation and window pen differ per platform.  On
+   Windows, the button relief uses the Windows 3D colours.  On MacOS
+   the relief and shadow are derived from the background (see
+   r_elevation_relief()), which works for both light and dark system
+   colours.  Elsewhere we use the traditional fixed greys.
+ */
+
+#ifdef __WINDOWS__
+#define BUTTON_ELEVATION \
+	"elevation(button, 1, sys_button_background,\n" \
+	"	   win_3dhighlight, win_3dshadow, '3d', win_3dlight)"
+#elif defined(__APPLE__)
+#define BUTTON_ELEVATION \
+	"elevation(button, 2, sys_button_background)"
+#else
+#define BUTTON_ELEVATION \
+	"elevation(button, 2, sys_button_background,\n" \
+	"	   grey95, grey50, '3d', grey70)"
+#endif
+
 static classvardecl rc_pce[] =
 { RC(NAME_initialise, "code*",
-     UXWIN(/*UNIX*/
-	   "and(_dialog_bg        @= colour(grey80),\n"
-	   "    _button_elevation @= elevation(button, 2, grey80,\n"
-	   "				       grey95, grey50,\n"
-	   "				       '3d', grey70),\n"
-	   "    _mark_elevation   @= elevation(mark, 0),\n"
-	   "    _win_pen	  @= number(0))",
-	   /*__WINDOWS__*/
-           "and(_dialog_bg        @= colour(win_btnface),\n"
-	   "    _dialog_fg        @= colour(win_btntext),\n"
-	   "    _button_elevation @= elevation(button, 1, win_btnface,\n"
-	   "				       win_3dhighlight, win_3dshadow,\n"
-	   "				      '3d', win_3dlight),\n"
-	   "    _mark_elevation   @= elevation(mark, 0),\n"
-	   "    _graph_bg         @= colour(win_window),\n"
-	   "    _win_pen          @= number(1),\n"
-	   "    _isearch_style    @= style(background := green),\n"
-	   "    _select_style	  @= style(background := win_highlight,\n"
-	   "                               colour     := win_highlighttext),\n"
-	   "    _txt_height       @= elevation(@nil, 2, win_window))"),
+     "and(_dialog_bg        @= colour(sys_dialog_background),\n"
+     "    _dialog_fg        @= colour(sys_dialog_foreground),\n"
+     "    _graph_bg         @= colour(sys_window_background),\n"
+     "    _button_elevation @= " BUTTON_ELEVATION ",\n"
+     "    _mark_elevation   @= elevation(mark, 0),\n"
+     "    _win_pen          @= number(" UXWIN("0", "1") "),\n"
+     "    _isearch_style    @= style(background := green),\n"
+     "    _select_style     @= style(\n"
+     "			     background := sys_selection_background,\n"
+     "			     colour     := sys_selection_foreground),\n"
+     "    _txt_height       @= elevation(@nil, 2, sys_window_background))",
      "Code object to run when initialising defaults")
 };
 

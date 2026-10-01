@@ -50,14 +50,24 @@ Updated with new colors at Jul 23, 2005 using MSVC 6.0 documentation
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 static const struct system_colour window_colours[] =
-{ { "sys_scrollbar_background",	   COLOR_BTNFACE },
-  { "sys_dialog_background",	   COLOR_MENU },
-  { "sys_dialog_foreground",	   COLOR_MENUTEXT },
+{ /* The common sys_* names (see load_system_colours() in sdlcolour.c) */
   { "sys_window_background",	   COLOR_WINDOW },
   { "sys_window_foreground",	   COLOR_WINDOWTEXT },
-  { "sys_relief",		   COLOR_BTNFACE },
-  { "sys_shadow",		   COLOR_BTNSHADOW },
+  { "sys_dialog_background",	   COLOR_BTNFACE },
+  { "sys_dialog_foreground",	   COLOR_BTNTEXT },
+  { "sys_button_background",	   COLOR_BTNFACE },
+  { "sys_button_foreground",	   COLOR_BTNTEXT },
+  { "sys_selection_background",	   COLOR_HIGHLIGHT },
+  { "sys_selection_foreground",	   COLOR_HIGHLIGHTTEXT },
+  { "sys_tooltip_background",	   COLOR_INFOBK },
+  { "sys_tooltip_foreground",	   COLOR_INFOTEXT },
   { "sys_inactive",		   COLOR_GRAYTEXT },
+#ifdef COLOR_HOTLIGHT
+  { "sys_link",			   COLOR_HOTLIGHT },
+#endif
+  { "sys_accent",		   COLOR_HIGHLIGHT },
+  { "sys_separator",		   COLOR_BTNSHADOW },
+  { "sys_shadow",		   COLOR_BTNSHADOW },
 
   { "win_3ddkshadow",		   COLOR_3DDKSHADOW },
   { "win_3dface",		   COLOR_3DFACE },

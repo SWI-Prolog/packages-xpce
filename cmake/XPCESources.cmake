@@ -74,10 +74,11 @@ set(SDL_SRC	sdl.c sdldisplay.c sdlfont.c sdlmenu.c sdlwindow.c
 		sdlcursor.c  sdlevent.c    sdlimage.c  sdltimer.c
 		sdlmenubar.c)
 if(APPLE)
-  # The Cocoa half of the native menu bar.  It must be a separate
-  # translation unit: in Objective-C `Class' is a builtin type, so
-  # XPCE's `typedef struct class * Class' would be silently ignored.
-  list(APPEND SDL_SRC sdlnsmenu.m)
+  # The Cocoa halves of the native menu bar and the system colours.
+  # They must be separate translation units: in Objective-C `Class' is
+  # a builtin type, so XPCE's `typedef struct class * Class' would be
+  # silently ignored.
+  list(APPEND SDL_SRC sdlnsmenu.m sdlnscolour.m)
 endif()
 if(WIN32)
   set(MSW_SRC	mswin.c msprocess.c msuxnt.c mscolour.c)

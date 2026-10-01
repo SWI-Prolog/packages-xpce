@@ -81,4 +81,27 @@ test(lookup_after_free) :-
     assertion(rgb(R,G,B) == rgb(1,2,3)),
     free(C2).
 
+test(system_colours) :-
+    %  The sys_* names are defined on all platforms; see the userguide,
+    %  section "System colours".
+    get(@pce, convert, white, colour, _),       % load the name table
+    forall(sys_colour(Name),
+           assertion(get(@colour_names, member, Name, _))).
+
+sys_colour(sys_window_background).
+sys_colour(sys_window_foreground).
+sys_colour(sys_dialog_background).
+sys_colour(sys_dialog_foreground).
+sys_colour(sys_button_background).
+sys_colour(sys_button_foreground).
+sys_colour(sys_selection_background).
+sys_colour(sys_selection_foreground).
+sys_colour(sys_tooltip_background).
+sys_colour(sys_tooltip_foreground).
+sys_colour(sys_inactive).
+sys_colour(sys_link).
+sys_colour(sys_accent).
+sys_colour(sys_separator).
+sys_colour(sys_shadow).
+
 :- end_tests(colour).

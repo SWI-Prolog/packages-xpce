@@ -829,7 +829,7 @@ LoadColourNames(void)
       }
     }
 
-    ws_system_colours(ColourNames);
+    load_system_colours(ColourNames);
   }
 
   return ColourNames;

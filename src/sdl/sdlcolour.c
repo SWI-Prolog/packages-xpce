@@ -37,16 +37,79 @@
 #include "sdlcolour.h"
 #ifdef __WINDOWS__
 #include <msw/mscolour.h>
-#else
-#define ws_system_colours(cn) (void)0
+#elif defined(__APPLE__)
+#include "sdlnscolour.h"
 #endif
 
 static HashTable ColourNames;		/* name --> rgb (packed in Int) */
 static Chain	 CSSColourList;		/* name (for preserved ordering) */
 
+static void	load_system_colours(HashTable cn);
+
 #include "csscolours.c"			/* get CSS colour names */
 
 static Name	canonical_colour_name(Name in);
+
+/* System colours.  The sys_* names are defined on all platforms.  The
+ * platform backend defines them from the user's desktop settings,
+ * together with platform specific names (win_*, mac_*).  Names the
+ * backend leaves undefined get the fallback below, which is xpce's
+ * traditional Unix look.  The mapping is documented in the userguide,
+ * section "System colours" (man/userguide/images.plx).
+ */
+
+static const struct sys_colour
+{ const char *name;
+  COLORRGBA   fallback;
+} sys_colours[] =
+{ { "sys_window_background",	RGBA(255, 255, 255, 255) },
+  { "sys_window_foreground",	RGBA(  0,   0,   0, 255) },
+  { "sys_dialog_background",	RGBA(204, 204, 204, 255) }, /* grey80 */
+  { "sys_dialog_foreground",	RGBA(  0,   0,   0, 255) },
+  { "sys_button_background",	RGBA(204, 204, 204, 255) },
+  { "sys_button_foreground",	RGBA(  0,   0,   0, 255) },
+  { "sys_selection_background",	RGBA(  0,   0,   0, 255) },
+  { "sys_selection_foreground",	RGBA(255, 255, 255, 255) },
+  { "sys_tooltip_background",	RGBA(255, 211, 155, 255) }, /* burlywood1 */
+  { "sys_tooltip_foreground",	RGBA(  0,   0,   0, 255) },
+  { "sys_inactive",		RGBA(127, 127, 127, 255) }, /* grey50 */
+  { "sys_link",			RGBA(  0,   0, 238, 255) },
+  { "sys_accent",		RGBA( 30, 144, 255, 255) }, /* dodger_blue */
+  { "sys_separator",		RGBA(127, 127, 127, 255) },
+  { "sys_shadow",		RGBA(127, 127, 127, 255) },
+  { NULL,			0 }
+};
+
+static void
+add_system_colour(HashTable cn, const char *name, COLORRGBA rgba)
+{ Name key = CtoKeyword(name);
+
+  if ( !getMemberHashTable(cn, key) )
+    appendHashTable(cn, key, toInt(rgba));
+}
+
+#ifdef __APPLE__
+static void
+add_ns_colour(const char *name,
+	      unsigned r, unsigned g, unsigned b, unsigned a,
+	      void *closure)
+{ add_system_colour(closure, name, RGBA(r, g, b, a));
+}
+#endif
+
+static void
+load_system_colours(HashTable cn)
+{
+#ifdef __WINDOWS__
+  ws_system_colours(cn);
+#elif defined(__APPLE__)
+  ns_system_colours(add_ns_colour, cn);
+#endif
+
+  for(const struct sys_colour *sc = sys_colours; sc->name; sc++)
+    add_system_colour(cn, sc->name, sc->fallback);
+}
+
 
 Int
 getNamedRGB(Name name)

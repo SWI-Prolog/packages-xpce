@@ -44,15 +44,9 @@ make_help_message_window(W) :-
 :- pce_begin_class(help_message_window, dialog,
                    "Window to display <-help_message").
 
-class_variable(background, colour,
-               [ windows(win_infobk),
-                 unix(burlywood1)
-               ],
+class_variable(background, colour, sys_tooltip_background,
                "Balloon background").
-class_variable(colour, colour,
-               [ windows(win_infotext),
-                 unix(black)
-               ],
+class_variable(colour, colour, sys_tooltip_foreground,
                "Balloon text and border colour").
 
 variable(handler,       handler,        get, "Handler for intercept").

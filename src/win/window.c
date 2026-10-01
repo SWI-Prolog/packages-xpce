@@ -2886,7 +2886,7 @@ static getdecl get_window[] =
 /* Resources */
 
 static classvardecl rc_window[] =
-{ RC(NAME_background,        "colour|pixmap",  UXWIN("white", "@_graph_bg"), NULL),
+{ RC(NAME_background,        "colour|pixmap",  "@_graph_bg", NULL),
   RC(NAME_cursor,            "cursor",        "arrow",                       NULL),
   RC(NAME_pen,               "0..",	      "@_win_pen",                   NULL),
   RC(NAME_selectionHandles,  RC_REFINE,	      "@nil",			 NULL),

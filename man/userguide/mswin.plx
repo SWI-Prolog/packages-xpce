@@ -67,6 +67,9 @@ controller objects according to the user's preferences.
 
 If the name of the Windows API colours are COLOR_SOMETHING, the \product{}
 name is \const{win_something}.  The full list is in \tabref{wincolours}.
+These names are only defined on Windows.  Portable applications should
+use the \const{sys_} colour names, which \product{} maps to the
+corresponding Windows colours as described in \secref{syscolours}.
 
 \begin{table}
 \begin{center}

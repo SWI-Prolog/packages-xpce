@@ -24,6 +24,181 @@ As long as you are not using many colours, which is normally the case
 as long as you do not handle full-colour images, there is no problem.
 This is why this general topic is handled in the section on images.
 
+
+\subsubsection{System colours}			\label{sec:syscolours}
+
+\index{colour,system}\index{system colours}%
+Besides the CSS and X11 colour names, \product{} defines colour names
+that reflect the colours chosen by the user in the desktop settings,
+such as the light or dark appearance, a high-contrast theme or the
+accent colour.  There are two groups of system colours:
+
+\begin{itemlist}
+    \item [Common names]
+The names starting with \const{sys_} are defined on all platforms.  They
+denote a role, such as the background of a window or the colours of a
+selection.  \product{}'s own defaults use these names, and portable
+applications should use them if they want to follow the desktop
+settings.  \tabref{syscolours} shows how they are mapped on each
+platform.
+    \item [Platform specific names]
+Colours that only make sense on one platform use a platform prefix:
+\const{win_} on Windows and \const{mac_} on MacOS.  These names are
+\emph{not} defined on the other platforms, so using them makes an
+application non-portable.
+\end{itemlist}
+
+\begin{table}
+\begin{center}
+\begin{tabular}{|l|l|l|l|}
+\hline
+\bf Name & \bf Windows & \bf MacOS & \bf Other \\
+\hline
+\const{sys_window_background}	& \const{COLOR_WINDOW}
+				& \const{textBackgroundColor}
+				& white \\
+\const{sys_window_foreground}	& \const{COLOR_WINDOWTEXT}
+				& \const{textColor}
+				& black \\
+\const{sys_dialog_background}	& \const{COLOR_BTNFACE}
+				& \const{windowBackgroundColor}
+				& grey80 \\
+\const{sys_dialog_foreground}	& \const{COLOR_BTNTEXT}
+				& \const{labelColor}
+				& black \\
+\const{sys_button_background}	& \const{COLOR_BTNFACE}
+				& \const{controlColor}
+				& grey80 \\
+\const{sys_button_foreground}	& \const{COLOR_BTNTEXT}
+				& \const{controlTextColor}
+				& black \\
+\const{sys_selection_background} & \const{COLOR_HIGHLIGHT}
+				& \const{selectedContentBackgroundColor}
+				& black \\
+\const{sys_selection_foreground} & \const{COLOR_HIGHLIGHTTEXT}
+				& \const{alternateSelectedControlTextColor}
+				& white \\
+\const{sys_tooltip_background}	& \const{COLOR_INFOBK}
+				& \const{windowBackgroundColor}
+				& burlywood1 \\
+\const{sys_tooltip_foreground}	& \const{COLOR_INFOTEXT}
+				& \const{labelColor}
+				& black \\
+\const{sys_inactive}		& \const{COLOR_GRAYTEXT}
+				& \const{disabledControlTextColor}
+				& grey50 \\
+\const{sys_link}		& \const{COLOR_HOTLIGHT}
+				& \const{linkColor}
+				& \#0000ee \\
+\const{sys_accent}		& \const{COLOR_HIGHLIGHT}
+				& \const{controlAccentColor}
+				& dodger_blue \\
+\const{sys_separator}		& \const{COLOR_BTNSHADOW}
+				& \const{separatorColor}
+				& grey50 \\
+\const{sys_shadow}		& \const{COLOR_BTNSHADOW}
+				& \const{tertiaryLabelColor}
+				& grey50 \\
+\hline
+\end{tabular}
+\end{center}
+\caption{Mapping of the \const{sys_} colour names.  The Windows column
+	 names the argument to GetSysColor(), the MacOS column the
+	 NSColor class method.  The Other column is used on all other
+	 platforms and if the platform does not provide the colour.}
+\label{tab:syscolours}
+\end{table}
+
+The following notes apply to the mapping:
+
+\begin{itemlist}
+    \item [Windows]
+The \const{win_} names are documented in \secref{mswin}.  Windows does
+not provide the accent colour through GetSysColor(), so
+\const{sys_accent} is the same as \const{sys_selection_background}.
+    \item [MacOS]
+All \const{mac_} names are derived from an NSColor class method: the
+method name without the \const{Color} suffix, converted to snake case
+and prefixed with \const{mac_}.  For example,
+\const{selectedContentBackgroundColor} becomes
+\const{mac_selected_content_background}.  The names defined are
+\const{mac_label},
+\const{mac_secondary_label},
+\const{mac_tertiary_label},
+\const{mac_quaternary_label},
+\const{mac_text},
+\const{mac_placeholder_text},
+\const{mac_selected_text},
+\const{mac_text_background},
+\const{mac_selected_text_background},
+\const{mac_keyboard_focus_indicator},
+\const{mac_unemphasized_selected_text},
+\const{mac_unemphasized_selected_text_background},
+\const{mac_link},
+\const{mac_separator},
+\const{mac_selected_content_background},
+\const{mac_unemphasized_selected_content_background},
+\const{mac_selected_menu_item_text},
+\const{mac_grid},
+\const{mac_header_text},
+\const{mac_control_accent},
+\const{mac_control},
+\const{mac_control_background},
+\const{mac_control_text},
+\const{mac_disabled_control_text},
+\const{mac_selected_control},
+\const{mac_selected_control_text},
+\const{mac_alternate_selected_control_text},
+\const{mac_window_background},
+\const{mac_window_frame_text},
+\const{mac_under_page_background},
+\const{mac_find_highlight},
+\const{mac_highlight},
+\const{mac_shadow},
+the fill colours \const{mac_system_fill},
+\const{mac_secondary_system_fill},
+\const{mac_tertiary_system_fill},
+\const{mac_quaternary_system_fill} and
+\const{mac_quinary_system_fill}, and the adaptive colours
+\const{mac_system_red},
+\const{mac_system_orange},
+\const{mac_system_yellow},
+\const{mac_system_green},
+\const{mac_system_mint},
+\const{mac_system_teal},
+\const{mac_system_cyan},
+\const{mac_system_blue},
+\const{mac_system_indigo},
+\const{mac_system_purple},
+\const{mac_system_pink},
+\const{mac_system_brown} and
+\const{mac_system_gray}.  Colours that are not provided by the running
+version of MacOS are not defined.
+
+MacOS colours depend on the appearance (light, dark or increased
+contrast).  They are resolved using the appearance of the application.
+Many of them are translucent.  These are composed over
+\const{mac_window_background}, so all system colours are opaque.
+
+MacOS has no tooltip colours.  The tooltip colours are therefore the
+same as the dialog colours.
+    \item [Other platforms]
+On other platforms (Unix/Linux) the system colours have fixed values
+that reproduce \product{}'s traditional look.  They do not depend on the
+desktop settings.
+\end{itemlist}
+
+The system colours are determined when \product{} looks up a colour name
+for the first time, normally while it starts up.  Changes to the desktop
+settings after that are not picked up, so \product{} must be restarted
+to use them.
+
+\index{dark theme}%
+If \const{sys_window_background} is dark, which is the case on MacOS in
+dark mode and on Windows using a dark high-contrast theme, the SWI-Prolog
+\const{dark} theme (\file{library(theme/dark)}) leaves the basic colours
+of windows and dialogs to the system colours.
+
 Displays differ in the number of colours they can display simultaneously
 and whether this set can be changed or not. X11 defines 6 types of
 \idx{visuals}.  Luckily, these days only three models are popular.

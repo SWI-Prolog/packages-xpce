@@ -416,7 +416,7 @@ static classvardecl rc_dialog[] =
   RC(NAME_border, "[size]", "@default",
      "Distance between contents and edge"),
   RC(NAME_background, RC_REFINE, "@_dialog_bg", NULL),
-  RC(NAME_colour, RC_REFINE, UXWIN("@default", "@_dialog_fg"), NULL)
+  RC(NAME_colour, RC_REFINE, "@_dialog_fg", NULL)
 };
 
 /* Class Declaration */
