@@ -313,9 +313,31 @@ depend on the desktop settings.
 \end{itemlist}
 
 The system colours are determined when \product{} looks up a colour name
-for the first time, normally while it starts up.  Changes to the desktop
-settings after that are not picked up, so \product{} must be restarted
-to use them.
+for the first time, normally while it starts up.  They are reloaded by
+`display_manager ->system_colours_changed', which also redraws all
+windows.  Named colour objects for the system colours, such as
+\exam{colour(sys_dialog_background)}, are updated in place, so all
+graphicals that use them get the new colour.  \product{} sends this
+message to \exam{@display_manager} if it is told that the desktop
+settings changed:
+
+\begin{itemlist}
+    \item [All platforms]
+If the user switches between light and dark mode.
+    \item [MacOS]
+Also if the user changes the accent colour, the highlight colour or the
+contrast.
+\end{itemlist}
+
+Other changes, such as a new accent colour on Windows, KDE or GNOME
+or another KDE colour scheme with the same brightness, are not noticed.
+The application may send ->system_colours_changed itself, or
+\product{} must be restarted.
+
+Only the colours are reloaded.  The SWI-Prolog theme
+(\file{library(theme/dark)}) is selected when \product{} starts and is
+not changed.  The colours the theme defines, for example for syntax
+highlighting, therefore remain those for the appearance at startup.
 
 \index{dark theme}%
 If \const{sys_window_background} is dark, which is the case on MacOS in

@@ -223,6 +223,10 @@ sdl_display_event(SDL_Event *ev)
 	ws_poll_dimensions_display(dsp);
       return true;
     }
+    case SDL_EVENT_SYSTEM_THEME_CHANGED:
+      DEBUG(NAME_colour, Cprintf("System theme changed\n"));
+      send(TheDisplayManager(), NAME_systemColoursChanged, EAV);
+      return true;
   }
 
   fail;

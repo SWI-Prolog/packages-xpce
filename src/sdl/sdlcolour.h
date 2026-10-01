@@ -82,6 +82,7 @@ pceColour2SDL_Color(Colour c)
 }
 
 Int getNamedRGB(Name name);
+int ws_reload_system_colours(void);
 
 Colour ws_pixel_to_colour(COLORRGBA pixel);
 

@@ -38,6 +38,9 @@
 #include "sdlinput.h"
 #include "sdlevent.h"
 #include "sdlframe.h"
+#ifdef __APPLE__
+#include "sdlnscolour.h"
+#endif
 #ifndef __WINDOWS__
 #include <pwd.h>
 #include <unistd.h>
@@ -95,6 +98,9 @@ setPceThread(const char *app_name)
 		      CtoName(driver ? driver : "<default>"));
     }
     ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
+#ifdef __APPLE__
+    ns_watch_system_colours();
+#endif
     sdl_start_live_resize_watch();
     start_fd_watcher_thread();
 

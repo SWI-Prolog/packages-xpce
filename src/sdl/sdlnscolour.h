@@ -43,5 +43,6 @@
  */
 
 void	ns_system_colours(sys_colour_callback add, void *closure);
+void	ns_watch_system_colours(void);
 
 #endif /*SDLNSCOLOUR_H*/

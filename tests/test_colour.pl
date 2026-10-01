@@ -88,6 +88,19 @@ test(system_colours) :-
     forall(sys_colour(Name),
            assertion(get(@colour_names, member, Name, _))).
 
+test(reload_system_colours) :-
+    %  ->system_colours_changed restores the table entry and updates
+    %  the existing Colour object, which is what drawing uses.
+    get(@pce, convert, sys_accent, colour, C),
+    get(C, rgba, Orig),
+    send(@colour_names, append, sys_accent, 12345),
+    send(C, slot, rgba, 12345),
+    send(@display_manager, system_colours_changed),
+    get(C, rgba, New),
+    get(@colour_names, member, sys_accent, InTable),
+    assertion(New == Orig),
+    assertion(InTable == Orig).
+
 sys_colour(sys_window_background).
 sys_colour(sys_window_foreground).
 sys_colour(sys_dialog_background).

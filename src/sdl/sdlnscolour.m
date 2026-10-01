@@ -45,6 +45,7 @@
 #import <Cocoa/Cocoa.h>
 #import <objc/message.h>
 #include <stdbool.h>
+#include <SDL3/SDL.h>
 #include "sdlnscolour.h"
 
 /* AppKit named colours.  Each is exported as mac_<name>, where <name> is
@@ -277,4 +278,31 @@ ns_system_colours(sys_colour_callback add, void *closure)
 #pragma clang diagnostic pop
     }
   }
+}
+
+/* SDL reports switching between light and dark using
+ * SDL_EVENT_SYSTEM_THEME_CHANGED.  MacOS also changes the system
+ * colours if the user selects another accent or highlight colour or
+ * increases the contrast.  We report these changes using the same
+ * event, which reloads the system colours.
+ */
+
+void
+ns_watch_system_colours(void)
+{ static bool done = false;
+
+  if ( done )
+    return;
+  done = true;
+
+  [[NSNotificationCenter defaultCenter]
+    addObserverForName:NSSystemColorsDidChangeNotification
+		object:nil
+		 queue:[NSOperationQueue mainQueue]
+	    usingBlock:^(NSNotification *note) {
+	      (void)note;
+	      SDL_Event ev = { .type = SDL_EVENT_SYSTEM_THEME_CHANGED };
+	      ev.common.timestamp = SDL_GetTicksNS();
+	      SDL_PushEvent(&ev);
+	    }];
 }

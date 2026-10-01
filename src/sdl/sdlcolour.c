@@ -151,6 +151,52 @@ load_system_colours(HashTable cn)
 }
 
 
+/* Change the value of a named Colour object.  The reverse table maps
+ * an RGBA value to one Colour.  If that is `c` for the old value we
+ * remove it, and we only map the new value to `c` if no other colour
+ * claims it.
+ */
+
+static void
+rgba_named_colour(Colour c, Int rgba)
+{ if ( getMemberHashTable(RevColourTable, c->rgba) == c )
+    deleteHashTable(RevColourTable, c->rgba);
+  assign(c, rgba, rgba);
+  if ( !getMemberHashTable(RevColourTable, rgba) )
+    appendHashTable(RevColourTable, rgba, c);
+}
+
+/* Reload the system colours after the user changed the desktop
+ * settings.  Each name that changed gets its new value, and so does the
+ * Colour object of that name if it exists.  As drawing uses the Colour
+ * objects, the caller only needs to redraw the windows.  Returns the
+ * number of colours that changed.
+ */
+
+int
+ws_reload_system_colours(void)
+{ HashTable cn = LoadColourNames();
+  HashTable fresh = createHashTable(toInt(256), NAME_none);
+  int changed = 0;
+
+  load_system_colours(fresh);
+  for_hash_table(fresh, s,
+		 { if ( getMemberHashTable(cn, s->name) != s->value )
+		   { Colour c;
+
+		     appendHashTable(cn, s->name, s->value);
+		     if ( (c=getMemberHashTable(ColourTable, s->name)) &&
+			  c->kind == NAME_named )
+		       rgba_named_colour(c, s->value);
+		     changed++;
+		   }
+		 });
+  freeHashTable(fresh);
+
+  return changed;
+}
+
+
 Int
 getNamedRGB(Name name)
 { Int Rgb;

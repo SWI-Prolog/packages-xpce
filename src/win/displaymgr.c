@@ -191,6 +191,46 @@ redrawDisplayManager(DisplayManager dm)
 }
 
 
+/* Redraw a window and the windows displayed inside it */
+
+static void
+redraw_window_tree(PceWindow sw)
+{ Cell cell;
+
+  redrawWindow(sw, DEFAULT);
+  for_cell(cell, sw->graphicals)
+  { if ( instanceOfObject(cell->value, ClassWindow) )
+      redraw_window_tree(cell->value);
+  }
+}
+
+/* Called if the user changed the desktop settings: reload the system
+ * colours (sys_*, etc.) and redraw all windows.
+ */
+
+static status
+systemColoursChangedDisplayManager(DisplayManager dm)
+{ if ( ws_reload_system_colours() > 0 )
+  { Cell dcell, fcell, wcell;
+
+    for_cell(dcell, dm->members)
+    { DisplayObj d = dcell->value;
+
+      for_cell(fcell, d->frames)
+      { FrameObj fr = fcell->value;
+
+	for_cell(wcell, fr->members)
+	{ if ( instanceOfObject(wcell->value, ClassWindow) )
+	    redraw_window_tree(wcell->value);
+	}
+      }
+    }
+  }
+
+  succeed;
+}
+
+
 status
 RedrawDisplayManager(DisplayManager dm)
 { return sendv(dm, NAME_redraw, 0, NULL);
@@ -282,7 +322,9 @@ static senddecl send_displayManager[] =
      NAME_event, "Flush all pending changes to the screen"),
   SM(NAME_hasVisibleFrames, 1, "keep_alive=[bool]",
      hasVisibleFramesDisplayManager,
-     NAME_organisation, "True if there is a visible (keep_alive) frame")
+     NAME_organisation, "True if there is a visible (keep_alive) frame"),
+  SM(NAME_systemColoursChanged, 0, NULL, systemColoursChangedDisplayManager,
+     NAME_colour, "Reload the system colours and redraw")
 };
 
 /* Get Methods */
