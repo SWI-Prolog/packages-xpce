@@ -174,6 +174,7 @@ load_profile(F, ProfData0:[prolog]) :->
     get(F, window, prof_browser, B),
     send(F, report, progress, 'Loading profile data ...'),
     send(B, load_profile, ProfData.nodes),
+    send(B, fit_width),
     send(F, report, done),
     send(F, show_statistics),
     send(B, select_interesting),
@@ -276,6 +277,8 @@ initialise(D) :->
     send_super(D, initialise),
     send(D, gap, size(5, 2)),
     send(D, pen, 0),
+    send(D, hor_stretch, 100),          % the browser decides the width
+    send(D, hor_shrink, 100),
     send(D, append,
          new(F, filter_item(filter, message(D, filter, @arg1),
                             "Filter predicates"))),
@@ -307,6 +310,8 @@ the filter hides.
                    "Show flat profile in browser").
 
 class_variable(size, size, size(40,20)).
+class_variable(max_width, '1..100', 60,
+               "Most percentage of the profiler ->fit_width takes").
 
 variable(sort_by,   name := ticks, get, "How the items are sorted").
 variable(all_items, chain,         get, "All items, shown or not").
@@ -323,6 +328,43 @@ resize(B) :->
     get(B?text_image, width, W),
     get(B?font, width, '100.0%', ColW),
     send(B, tab_stops, vector(W-ColW-15)).
+
+%       The column holding me and the filter above me is made as wide as
+%       the longest predicate, a space and the widest time, "100.0%".
+%       Not wider than max_width of the profiler, though: one long name
+%       would push the details off the window.
+
+fit_width(B) :->
+    "Make my column as wide as my longest predicate"::
+    get(B, font, Font),
+    new(Max, number(0)),
+    send(B?all_items, for_all,
+         message(Max, maximum, ?(Font, width, @arg1?key))),
+    get(Max, value, KeyW),
+    get(Font, width, ' 100.0%', ColW),
+    get(B?scroll_bar, width, SBW),      % <-text_image is not laid out yet
+    Wanted is KeyW + ColW + 15 + SBW + 10,
+    (   get(B, tile, Tile),
+        column_tile(Tile, Column, Row)
+    ->  get(Row?area, width, RowW),
+        get(B, class_variable_value, max_width, MaxPct),
+        Width is min(Wanted, round(RowW*MaxPct/100)),
+        send(Column, width, Width)
+    ;   send(B, width, Wanted)
+    ).
+
+%   column_tile(+Tile, -Column, -Row) is semidet.
+%
+%   Column is the tile that holds Tile and sits in the horizontal Row.
+
+column_tile(Tile, Column, Row) :-
+    get(Tile, super, Super),
+    Super \== @nil,
+    (   get(Super, orientation, horizontal)
+    ->  Column = Tile,
+        Row = Super
+    ;   column_tile(Super, Column, Row)
+    ).
 
 load_profile(B, Nodes:prolog) :->
     "Load stored profile from the Prolog database"::

@@ -1777,6 +1777,26 @@ type_filter(F, Text) :-
     ;   forall(member(C, Codes), send(I, typed, C))
     ).
 
+%       The browser is made as wide as its longest predicate and a time,
+%       unless that takes more than <-max_width percent of the profiler.
+
+test(the_browser_fits_its_longest_predicate) :-
+    no_frames,
+    profiler(F),
+    get(F, window, prof_browser, B),
+    get(B, font, Font),
+    new(Max, number(0)),
+    send(B?all_items, for_all,
+         message(Max, maximum, ?(Font, width, @arg1?key))),
+    get(Max, value, KeyW),
+    get(Font, width, ' 100.0%', ColW),
+    get(B, class_variable_value, max_width, Pct),
+    get(F?area, width, FW),
+    get(B, width, BW),
+    assertion(( BW >= KeyW + ColW
+              ; BW >= FW*Pct/100 - 10
+              )).
+
 test(how_the_times_are_read_is_the_tools_to_say) :-
     no_frames,
     profiler(F),
