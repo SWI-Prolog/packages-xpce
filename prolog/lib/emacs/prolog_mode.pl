@@ -46,6 +46,8 @@
 :- use_module(library(pce_meta)).
 :- use_module(library(pce_prolog_xref)).
 :- use_module(library(prolog_colour)).
+:- use_module(library(pce_theme),
+              [ensure_theme_colours/0, syntax_colour_name/3]).
 :- use_module(library(prolog_predicate)).       % class prolog_predicate
 :- use_module(library(prolog_source)).
 :- autoload(library(prolog_codewalk), [prolog_walk_code/1]).
@@ -2348,24 +2350,34 @@ reload_styles(M) :->
 %!  style(-Class, -Name, -StyleObject) is nondet.
 %
 %   Enumerate the known styles, assign a name for them and create an
-%   XPCE style object.
+%   XPCE style object.  The colours of the style refer to the theme
+%   colour for Class (see syntax_colour_name/3), such that the style
+%   follows the theme.
 
 :- public
     style/3.                        % Used by completion extension
 
 style(Class, Name, Style) :-
+    ensure_theme_colours,
     syntax_colour(Class, Attributes),
     copy_term(Class, Copy),
     numbervars(Copy, 0, _),
     term_to_atom(Copy, Name),
-    maplist(style_attribute, Attributes, PceArgs),
+    maplist(style_attribute(Class), Attributes, PceArgs),
     (   PceArgs == []
     ->  Style = @default
     ;   Style =.. [style|PceArgs]
     ).
 
-style_attribute(Attr, Name := Value) :-
-    Attr =.. [Name,Value].
+style_attribute(Class, Attr, Name := Value) :-
+    Attr =.. [Name,Value0],
+    (   theme_attribute(Name)
+    ->  syntax_colour_name(Class, Name, Value)
+    ;   Value = Value0
+    ).
+
+theme_attribute(colour).
+theme_attribute(background).
 
 colourise_buffer(M) :->
     "Do cross-referencing and colourising of the whole buffer"::

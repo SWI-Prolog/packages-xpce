@@ -237,8 +237,7 @@ get_pce_version :-
 
 on_load :-
     setup_theme,
-    use_module(library(pce_theme), []),
-    pce_theme:init_theme.
+    use_module(library(pce_theme), []).
 
 %!  run_on_load
 %

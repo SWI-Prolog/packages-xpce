@@ -64,7 +64,7 @@ theme.  There are two sources:
 
   - semantic_colour/3 clauses, declared by the library that uses the
     colour.
-  - The PceEmacs syntax highlighting styles of def_style/2 in
+  - The PceEmacs syntax highlighting styles of syntax_colour/2 in
     library(prolog_colour).  The names are derived from the style
     class by syntax_colour_name/3.
 
@@ -209,9 +209,11 @@ attribute_suffix(background, [bg]).
 %
 %   Name is the semantic colour for a colour of the PceEmacs syntax
 %   highlighting style for Class, whose value in the light theme is
-%   Default.  This enumerates def_style/2 of library(prolog_colour) if
-%   this library is loaded.  If two classes map to the same name, the
-%   first wins, as def_style/2 is used with first-match semantics.
+%   Default.  This enumerates syntax_colour/2 of library(prolog_colour)
+%   if this library is loaded.  This includes def_style/2 and the hook
+%   prolog_colour:style/2 that is used by language modes to add
+%   classes.  If two classes map to the same name, the first wins, as
+%   syntax_colour/2 is used with first-match semantics.
 
 syntax_colour(Name, Class, Default) :-
     findall(N-(C-D), syntax_colour_(N, C, D), Pairs),
@@ -219,8 +221,8 @@ syntax_colour(Name, Class, Default) :-
     member(Name-(Class-Default), Unique).
 
 syntax_colour_(Name, Class, Default) :-
-    current_predicate(prolog_colour:def_style/2),
-    prolog_colour:def_style(Class, Attributes),
+    current_predicate(prolog_colour:syntax_colour/2),
+    prolog_colour:syntax_colour(Class, Attributes),
     member(Attr, Attributes),
     Attr =.. [Attribute, Default],
     attribute_suffix(Attribute, _),
@@ -254,11 +256,12 @@ semantic_colour_name(Name, Default) :-
 
 %!  init_theme
 %
-%   Called by library(pce) after the theme is set up.  Selects the
-%   initial theme and makes the theme follow the system if the user did
-%   not fix the theme.
+%   Select the initial theme and make the theme follow the system if
+%   the user did not fix the theme.  This runs when this library is
+%   loaded, which library(pce) does after setting up the theme.
 
 :- public init_theme/0.
+:- initialization(init_theme).
 
 init_theme :-
     initial_theme(Theme),

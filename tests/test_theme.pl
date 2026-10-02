@@ -176,6 +176,26 @@ test(issues_bad, Issues == [ unknown(test_theme_no_such_name),
     theme_issues(test_bad, Issues0),
     test_issues(Issues0, Issues).
 
+test(dark_theme_complete, Errors == []) :-
+    %  library(theme/dark) defines all syntax colours and nothing else.
+    %  If this fails after adding a style to library(prolog_colour),
+    %  add its colour to library(theme/dark).  See check_theme/1.
+    use_module(library(prolog_colour), []),
+    use_module(library(theme/dark), []),
+    theme_issues(dark, Issues),
+    exclude(informational_issue, Issues, Issues1),
+    exclude(test_issue, Issues1, Errors).
+test(prolog_mode_style, [Class == theme_colour, Same == true]) :-
+    %  PceEmacs styles refer to the theme colour of their class
+    use_module(library(emacs/prolog_mode), []),
+    emacs_prolog_mode:style(comment(_), _, Style),
+    get(Style, colour, C),
+    get(C, class_name, Class),
+    get(@colours, member, syntax_comment, C2),
+    ( C == C2 -> Same = true ; Same = false ).
+
+informational_issue(redundant(_)).
+
 %   Only consider the issues about the test colours, as the other
 %   semantic colours depend on the loaded libraries.
 
