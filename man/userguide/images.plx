@@ -234,6 +234,11 @@ the same, \const{sys_dialog_background} is
 \const{windowBackgroundColor} (\#ebebeb light, \#303030 dark).  This
 is about the sidebar colour used on GNOME.
 
+\const{disabledControlTextColor} is translucent and disabled text
+appears on dialogs as well as on buttons.  \const{sys_inactive} is this
+colour composed over either \const{sys_dialog_background} or
+\const{sys_button_background}, whichever remains most visible on both.
+
 MacOS has no tooltip colours.  The tooltip colours are therefore the
 same as the dialog colours.
     \item [KDE]

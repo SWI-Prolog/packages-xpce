@@ -46,6 +46,7 @@
 #import <objc/message.h>
 #include <stdbool.h>
 #include <math.h>
+#include <string.h>
 #include <SDL3/SDL.h>
 #include "sdlnscolour.h"
 
@@ -267,6 +268,43 @@ dialog_background(const ns_rgba *window, ns_rgba *c)
     ns_colour_rgba("secondarySystemFillColor", window, c);
 }
 
+static double
+luminance(const ns_rgba *c)
+{ return 0.299*c->r + 0.587*c->g + 0.114*c->b;
+}
+
+/* The colour for inactive (disabled) text.  disabledControlTextColor is
+ * translucent and disabled text appears on dialogs as well as on
+ * buttons.  Composed over the dialog background it may be the same as
+ * the button background, e.g., in dark mode, where both are white at
+ * 25% opacity, making the label of a disabled button invisible.  We
+ * compose it over the dialog and the button background and use the
+ * one that remains most visible on both.
+ */
+
+static bool
+inactive_colour(const ns_rgba *dialog_bg, ns_rgba *c)
+{ ns_rgba button_bg, on_dialog, on_button;
+
+  if ( !ns_colour_rgba("disabledControlTextColor", dialog_bg, &on_dialog) )
+    return false;
+  if ( !ns_colour_rgba("controlColor", dialog_bg, &button_bg) ||
+       !ns_colour_rgba("disabledControlTextColor", &button_bg, &on_button) )
+  { *c = on_dialog;
+    return true;
+  }
+
+  double ld = luminance(dialog_bg);
+  double lb = luminance(&button_bg);
+  double l1 = luminance(&on_dialog);
+  double l2 = luminance(&on_button);
+  double min1 = fmin(fabs(l1-ld), fabs(l1-lb));
+  double min2 = fmin(fabs(l2-ld), fabs(l2-lb));
+
+  *c = min1 >= min2 ? on_dialog : on_button;
+  return true;
+}
+
 static void
 resolve_colours(sys_colour_callback add, void *closure)
 { ns_rgba bg, dialog_bg, c;
@@ -295,7 +333,10 @@ resolve_colours(sys_colour_callback add, void *closure)
 
     if ( !sel )
       add_colour(add, closure, sys_colours[i].name, &dialog_bg);
-    else if ( ns_colour_rgba(sel, &dialog_bg, &c) )
+    else if ( strcmp(sys_colours[i].name, "sys_inactive") == 0 )
+    { if ( inactive_colour(&dialog_bg, &c) )
+	add_colour(add, closure, sys_colours[i].name, &c);
+    } else if ( ns_colour_rgba(sel, &dialog_bg, &c) )
       add_colour(add, closure, sys_colours[i].name, &c);
   }
 }
