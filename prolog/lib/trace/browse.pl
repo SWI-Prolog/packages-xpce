@@ -223,8 +223,8 @@ file_filter(D, Filter:regex*) :->
 :- pce_begin_class(prolog_source_structure, toc_filesystem,
                    "Browser for (prolog) source-files").
 
-class_variable(background,   colour, white).
-class_variable(colour,       colour, black).
+class_variable(background,   colour, ui_window_background).
+class_variable(colour,       colour, ui_window_foreground).
 class_variable(auto_refresh, int*, @nil).
 class_variable(size,    size,   size(200, 500),
                "Intial window size").

@@ -38,6 +38,18 @@
           [ current_source_buffer/2     % +File, -Buffer
           ]).
 :- use_module(library(pce)).
+:- use_module(library(pce_theme), [theme_colours/1]).
+
+:- theme_colours([ debug_port_call      = green,
+                   debug_port_break     = cyan,
+                   debug_port_exit      = green,
+                   debug_port_redo      = yellow,
+                   debug_port_fail      = '#ff8080',
+                   debug_port_exception = magenta,
+                   debug_port_unify     = sky_blue,
+                   debug_port_choice    = yellow,
+                   debug_port_frame     = '#d6dc5e'
+                 ]).
 :- use_module(library(debug)).
 :- use_module(library(pce_emacs)).
 :- use_module(util).
@@ -99,15 +111,29 @@ make_value(icon, Resource, Icon) =>
 make_value(_, Value0, Value) =>
     Value = Value0.
 
-def_style(call,         [background(green),     icon(resource(port_call))]).
-def_style(break,        [background(cyan)]).
-def_style(exit,         [background(green),     icon(resource(port_exit))]).
-def_style(redo,         [background(yellow),    icon(resource(port_redo))]).
-def_style(fail,         [background('#ff8080'), icon(resource(port_fail))]).
-def_style(exception,    [background(magenta),   icon(resource(port_except))]).
-def_style(unify,        [background(sky_blue)]).
-def_style(choice,       [background(yellow),    icon(resource(port_ndet))]).
-def_style(frame,        [background('#d6dc5e'), icon(resource(port_stack))]).
+def_style(call,       [ background(debug_port_call),
+                        icon(resource(port_call))
+                      ]).
+def_style(break,      [ background(debug_port_break) ]).
+def_style(exit,       [ background(debug_port_exit),
+                        icon(resource(port_exit))
+                      ]).
+def_style(redo,       [ background(debug_port_redo),
+                        icon(resource(port_redo))
+                      ]).
+def_style(fail,       [ background(debug_port_fail),
+                        icon(resource(port_fail))
+                      ]).
+def_style(exception,  [ background(debug_port_exception),
+                        icon(resource(port_except))
+                      ]).
+def_style(unify,      [ background(debug_port_unify) ]).
+def_style(choice,     [ background(debug_port_choice),
+                        icon(resource(port_ndet))
+                      ]).
+def_style(frame,      [ background(debug_port_frame),
+                        icon(resource(port_stack))
+                      ]).
 def_style(breakpoint,   [icon(resource(port_stop))]).
 
 

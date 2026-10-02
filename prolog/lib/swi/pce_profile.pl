@@ -37,6 +37,11 @@
           [ pce_show_profile/0
           ]).
 :- use_module(library(pce)).
+:- use_module(library(pce_theme), [theme_colours/1]).
+
+:- theme_colours([ prof_header_background = khaki1,
+                   prof_node              = blue
+                 ]).
 :- use_module(library(lists)).
 :- use_module(library(apply)).
 :- use_module(library(pairs)).
@@ -557,7 +562,8 @@ variable(node,    prolog,  get, "Currently shown node").
 
 class_variable(background,        colour, grey80).
 class_variable(header_colour,     colour, black,  "Predicate header colour").
-class_variable(header_background, colour, khaki1, "Predicate header background").
+class_variable(header_background, colour, prof_header_background,
+               "Predicate header background").
 
 %       No label: a label puts a row of its own on the window_decorator I
 %       am held in, and the grip that drags the profiler around lands in
@@ -1422,7 +1428,7 @@ dot_char(C)    --> [C].
 variable(context,   any,                 get, "Represented executable").
 variable(role,      {parent,self,child}, get, "Represented role").
 
-class_variable(colour, colour, blue).
+class_variable(colour, colour, prof_node).
 
 initialise(T, Context:any, Role:{parent,self,child}, Cycle:[int]) :->
     send(T, slot, context, Context),

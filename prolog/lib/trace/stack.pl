@@ -240,8 +240,8 @@ clean_level(Text) :-
 
 variable(members,       hash_table,  get, "Frame --> Visualiser table").
 
-class_variable(background, colour, white).
-class_variable(colour,     colour, black).
+class_variable(background, colour, ui_window_background).
+class_variable(colour,     colour, ui_window_foreground).
 
 initialise(B) :->
     assertion(running_in_pce_thread),
@@ -387,7 +387,7 @@ frame_finished(B, Fr:int) :->
 
 :- pce_begin_class(prolog_stack_link, line).
 
-class_variable(colour, colour, black).
+class_variable(colour, colour, ui_window_foreground).
 
 :- pce_end_class.
 
@@ -419,8 +419,8 @@ variable(choice,           int*,        get, "Id of choice-point").
 variable(frame_level,      int,         get, "Nesting of the frame").
 variable(style,		   name,	get, "Style of frame").
 
-class_variable(background, colour, white).
-class_variable(colour,     colour, black).
+class_variable(background, colour, ui_window_background).
+class_variable(colour,     colour, ui_window_foreground).
 
 :- pce_global(@prolog_stack_frame_recogniser,
               new(click_gesture(left, '', single,

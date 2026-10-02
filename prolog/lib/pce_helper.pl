@@ -34,6 +34,10 @@
 
 :- module(pce_help, []).
 :- use_module(library(pce)).
+:- use_module(library(pce_theme), [theme_colours/1]).
+
+:- theme_colours([ help_link = dodgerblue
+                 ]).
 :- use_module(library(pce_prompter)).
 :- require([ auto_call/1
            , ignore/1
@@ -289,7 +293,7 @@ class_variable(text_font,             font,  normal).
 class_variable(bold_font,             font,  bold).
 class_variable(emphasize_font,        font,  italic).
 class_variable(size,                  size,  size(88, 20)).
-class_variable(jump_style,            style, style(colour := dodgerblue,
+class_variable(jump_style,            style, style(colour := help_link,
                                                    underline := @on)).
 class_variable(keyword_style,         style, style(font := bold)).
 

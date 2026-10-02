@@ -38,6 +38,10 @@
 :- use_module(library(lists)).
 :- use_module(library(debug)).
 :- use_module(library(pce)).
+:- use_module(library(pce_theme), [theme_colours/1]).
+
+:- theme_colours([ debug_enabled_background = green
+                 ]).
 :- use_module(library(pce_util)).
 :- use_module(library(pane_frame)).
 :- use_module(library(toolbar)).
@@ -165,7 +169,8 @@ update_monitor_browsers :-
 :- pce_begin_class(prolog_debug_browser, browser,
                    "Show current debug topics").
 
-class_variable(enabled_style, style, style(background := green)).
+class_variable(enabled_style, style,
+               style(background := debug_enabled_background)).
 
 initialise(B) :->
     send_super(B, initialise),

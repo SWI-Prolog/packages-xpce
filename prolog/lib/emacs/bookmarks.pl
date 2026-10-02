@@ -38,6 +38,10 @@
           [ find_references_editor/2             % +Title, -Editor
           ]).
 :- use_module(library(pce)).
+:- use_module(library(pce_theme), [theme_colours/1]).
+
+:- theme_colours([ emacs_bookmark_hit = yellow
+                 ]).
 :- use_module(library(swi_ide), []).
 :- use_module(library(toolbar)).
 :- use_module(library(pce_toc)).
@@ -746,7 +750,7 @@ class_variable(style_title, style,
                style(font := fixed)).
 class_variable(style_hit, style,
                style(font := fixed,
-                     background := yellow)).
+                     background := emacs_bookmark_hit)).
 
 initialise(F, BM:emacs_bookmark) :->
     bookmark_label(F, BM, Label),

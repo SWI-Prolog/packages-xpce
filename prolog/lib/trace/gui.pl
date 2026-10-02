@@ -51,6 +51,10 @@
             prolog_tracer/3             % +Thread, -Ref, +Create
           ]).
 :- use_module(library(pce)).
+:- use_module(library(pce_theme), [theme_colours/1]).
+
+:- theme_colours([ debug_inactive_background = grey80
+                 ]).
 :- use_module(library(lists)).
 :- use_module(library(toolbar)).
 :- use_module(library(pce_report)).
@@ -1253,8 +1257,8 @@ class_variable(size,    size,   size(40,11), "Initial size").
 
 variable(prolog_frame, int*, both, "Frame who's variables we are showing").
 
-class_variable(background_active,   colour, white).
-class_variable(background_inactive, colour, grey80).
+class_variable(background_active,   colour, ui_window_background).
+class_variable(background_inactive, colour, debug_inactive_background).
 
 :- pce_global(@prolog_binding_recogniser,
               make_prolog_binding_recogniser).

@@ -35,9 +35,11 @@
 :- module(pce_theme,
           [ apply_theme/1,              % +Theme
             ensure_theme_colours/0,
+            theme_colours/1,            % +List
             current_theme/1,            % -Theme
             syntax_colour_name/3,       % +Class, +Attribute, -Name
             check_theme/1,              % +Theme
+            load_theme_libraries/0,
             theme_issues/2              % +Theme, -Issues
           ]).
 :- use_module(library(pce)).
@@ -66,8 +68,8 @@ theme.  There are three sources:
     defaults of the xpce classes.  These are the `ui_*` colours for
     the basic user interface elements and the `ansi_*` colours of the
     terminal.  See builtin_colour/2.
-  - semantic_colour/3 clauses, declared by the library that uses the
-    colour.
+  - theme_colours/1 directives and semantic_colour/3 clauses, used by
+    the library that uses the colours.
   - The PceEmacs syntax highlighting styles of syntax_colour/2 in
     library(prolog_colour).  The names are derived from the style
     class by syntax_colour_name/3.
@@ -84,7 +86,11 @@ apply_theme/1 can switch between themes at any time.
 
 :- dynamic
     current_theme_/1,
-    builtin_colours_/1.
+    builtin_colours_/1,
+    declared_colour/3.                  % Name, Default, Module
+
+:- meta_predicate
+    theme_colours(:).
 
 %!  semantic_colour(?Name, ?Default, ?Comment) is nondet.
 %
@@ -99,6 +105,29 @@ apply_theme/1 can switch between themes at any time.
 %   in Theme.  Value is the same as for the default of
 %   semantic_colour/3.  This is normally defined in the theme file,
 %   e.g., library(theme/dark).
+
+%!  theme_colours(+List) is det.
+%
+%   Declare the semantic colours used by a library.  List is a list of
+%   `Name = Default`, where Default is the value in the `light` theme.
+%   The colours are created immediately, so the library can refer to
+%   them by name, for example in a class variable default.  Use as a
+%   directive:
+%
+%   ```
+%   :- theme_colours([ prof_header_background = khaki1 ]).
+%
+%   class_variable(header_background, colour, prof_header_background).
+%   ```
+
+theme_colours(M:List) :-
+    must_be(list, List),
+    forall(member(Name = Default, List),
+           ( must_be(atom, Name),
+             retractall(declared_colour(Name, _, _)),
+             assertz(declared_colour(Name, Default, M))
+           )),
+    ensure_theme_colours.
 
 %!  current_theme(-Theme) is det.
 %
@@ -172,6 +201,9 @@ colour_value(_, Name, Value) :-
 
 default_colour(Name, Value) :-
     builtin_colour(Name, Value),
+    !.
+default_colour(Name, Value) :-
+    declared_colour(Name, Value, _),
     !.
 default_colour(Name, Value) :-
     semantic_colour(Name, Value, _),
@@ -254,11 +286,16 @@ first_per_key([K-V|T0], Seen, T) :-
 semantic_colour_name(Name, Default) :-
     builtin_colour(Name, Default).
 semantic_colour_name(Name, Default) :-
-    semantic_colour(Name, Default, _),
+    declared_colour(Name, Default, _),
     \+ builtin_colour(Name, _).
+semantic_colour_name(Name, Default) :-
+    semantic_colour(Name, Default, _),
+    \+ builtin_colour(Name, _),
+    \+ declared_colour(Name, _, _).
 semantic_colour_name(Name, Default) :-
     syntax_colour(Name, _, Default),
     \+ builtin_colour(Name, _),
+    \+ declared_colour(Name, _, _),
     \+ semantic_colour(Name, _, _).
 
 %!  builtin_colour(?Name, ?Default) is nondet.
@@ -361,11 +398,12 @@ fixed_theme :-
 %   Verify the colour/3 facts of Theme against the known semantic
 %   colours.  Prints the issues found by theme_issues/2 and fails if
 %   there are errors.  Note that only semantic colours of loaded
-%   libraries are known.  This predicate loads library(prolog_colour)
-%   to know the syntax highlighting colours.
+%   libraries are known.  This predicate loads the libraries of the
+%   development tools that declare semantic colours (see
+%   theme_library/1).
 
 check_theme(Theme) :-
-    use_module(library(prolog_colour), []),
+    load_theme_libraries,
     load_theme(Theme),
     theme_issues(Theme, Issues),
     forall(member(Issue, Issues),
@@ -375,6 +413,28 @@ check_theme(Theme) :-
     \+ ( member(Issue, Issues),
          issue_level(Issue, error)
        ).
+
+%!  theme_library(?Library) is nondet.
+%
+%   Libraries that declare semantic colours.  These are loaded by
+%   check_theme/1 and load_theme_libraries/0.
+
+theme_library(library(prolog_colour)).
+theme_library(library(trace/trace)).            % graphical debugger
+theme_library(library(swi/pce_profile)).
+theme_library(library(swi/pce_debug_monitor)).
+theme_library(library(pce_xref)).
+theme_library(library(emacs/bookmarks)).
+theme_library(library(pce_helper)).
+
+%!  load_theme_libraries is det.
+%
+%   Load all libraries that declare semantic colours, such that
+%   theme_issues/2 knows all of them.
+
+load_theme_libraries :-
+    forall(theme_library(Lib),
+           use_module(Lib, [])).
 
 issue_level(missing(_),        warning).
 issue_level(unknown(_),        error).

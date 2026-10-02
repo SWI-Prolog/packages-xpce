@@ -177,10 +177,11 @@ test(issues_bad, Issues == [ unknown(test_theme_no_such_name),
     test_issues(Issues0, Issues).
 
 test(dark_theme_complete, Errors == []) :-
-    %  library(theme/dark) defines all syntax colours and nothing else.
-    %  If this fails after adding a style to library(prolog_colour),
-    %  add its colour to library(theme/dark).  See check_theme/1.
-    use_module(library(prolog_colour), []),
+    %  library(theme/dark) defines all semantic colours and nothing
+    %  else.  If this fails after adding a style to
+    %  library(prolog_colour) or a semantic colour to a library, add its
+    %  colour to library(theme/dark).  See check_theme/1.
+    load_theme_libraries,
     use_module(library(theme/dark), []),
     theme_issues(dark, Issues),
     exclude(informational_issue, Issues, Issues1),

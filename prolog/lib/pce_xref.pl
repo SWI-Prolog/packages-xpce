@@ -43,6 +43,14 @@
 :- use_module(tabbed_window).
 :- use_module(toolbar).
 :- use_module(pce_util).
+:- use_module(library(pce_theme), [theme_colours/1]).
+
+:- theme_colours([ xref_node_background = grey80,
+                   xref_node_foreground = black,
+                   xref_predicate       = dark_green,
+                   xref_autoload        = navy_blue,
+                   xref_global          = navy_blue
+                 ]).
 :- autoload(library(swi_ide), [prolog_ide/1]).
 :- use_module(pce_toc).
 :- use_module(pce_arm).
@@ -490,8 +498,10 @@ preview_drop(G, Obj:object*, Pos:point) :->
 :- send(@class, handle, handle(w/2, h, link, south)).
 :- send(@class, handle, handle(0, h/2, link, east)).
 
-class_variable(background, colour, grey80, "Default background colour").
-class_variable(colour,     colour, black,  "Default colour").
+class_variable(background, colour, xref_node_background,
+               "Default background colour").
+class_variable(colour,     colour, xref_node_foreground,
+               "Default colour").
 class_variable(font,       font,   bold,   "Default font").
 
 initialise(N, File:name) :->
@@ -1392,9 +1402,9 @@ variable(callable,       prolog, get, "Predicate indicator").
 variable(classification, [name], get, "Classification of the predicate").
 variable(file,           name*,  get, "File of predicate").
 
-class_variable(colour,            colour, dark_green).
-class_variable(colour_autoload,   colour, navy_blue).
-class_variable(colour_global,     colour, navy_blue).
+class_variable(colour,            colour, xref_predicate).
+class_variable(colour_autoload,   colour, xref_autoload).
+class_variable(colour_global,     colour, xref_global).
 class_variable(colour_undefined,  colour, red).
 class_variable(colour_not_called, colour, red).
 
