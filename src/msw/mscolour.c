@@ -129,6 +129,93 @@ ws_system_colour(HashTable ColourNames, const char *name, COLORREF rgb)
 }
 
 
+/* Windows dark mode does not change the colours returned by
+ * GetSysColor(): these remain the light colours unless the user selects
+ * a contrast theme.  If the user selected dark mode for applications
+ * and no contrast theme is active, we define the sys_* colours from the
+ * palette below, which follows the Windows 11 dark appearance.  The
+ * win_* names keep the values from GetSysColor().
+ */
+
+static const struct dark_colour
+{ char	   *name;
+  COLORREF  rgb;
+} dark_colours[] =
+{ { "sys_window_background",	RGB( 32,  32,  32) },
+  { "sys_window_foreground",	RGB(255, 255, 255) },
+  { "sys_dialog_background",	RGB( 43,  43,  43) },
+  { "sys_dialog_foreground",	RGB(255, 255, 255) },
+  { "sys_button_background",	RGB( 55,  55,  55) },
+  { "sys_button_foreground",	RGB(255, 255, 255) },
+  { "sys_button_pressed",	RGB( 69,  69,  69) },
+  { "sys_tooltip_background",	RGB( 43,  43,  43) },
+  { "sys_tooltip_foreground",	RGB(255, 255, 255) },
+  { "sys_inactive",		RGB(138, 138, 138) },
+  { "sys_link",			RGB( 96, 205, 255) },
+  { "sys_separator",		RGB( 69,  69,  69) },
+  { "sys_shadow",		RGB( 16,  16,  16) },
+  { NULL,			0 }
+};
+
+static bool
+high_contrast(void)
+{ HIGHCONTRASTW hc = { .cbSize = sizeof(hc) };
+
+  return ( SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(hc), &hc, 0) &&
+	   (hc.dwFlags & HCF_HIGHCONTRASTON) );
+}
+
+static bool
+reg_dword(const wchar_t *key, const wchar_t *name, DWORD *value)
+{ DWORD size = sizeof(*value);
+
+  return RegGetValueW(HKEY_CURRENT_USER, key, name, RRF_RT_REG_DWORD,
+		      NULL, value, &size) == ERROR_SUCCESS;
+}
+
+static bool
+dark_mode(void)
+{ DWORD light;
+
+  return ( reg_dword(L"Software\\Microsoft\\Windows\\CurrentVersion"
+		     L"\\Themes\\Personalize", L"AppsUseLightTheme", &light) &&
+	   light == 0 &&
+	   !high_contrast() );
+}
+
+/* The accent colour as selected in Personalization/Colors.  It is
+ * stored as 0xAABBGGRR, so the low 24 bits are a COLORREF.  Default
+ * to the Windows default blue.
+ */
+
+static COLORREF
+accent_colour(void)
+{ DWORD abgr;
+
+  if ( reg_dword(L"Software\\Microsoft\\Windows\\DWM", L"AccentColor",
+		 &abgr) )
+    return abgr & 0xffffff;
+
+  return RGB(0, 120, 212);
+}
+
+static void
+ws_dark_mode_colours(HashTable ColourNames)
+{ COLORREF accent = accent_colour();
+  double y = ( 0.299*GetRValue(accent) +
+	       0.587*GetGValue(accent) +
+	       0.114*GetBValue(accent) );
+
+  for(const struct dark_colour *dc = dark_colours; dc->name; dc++)
+    ws_system_colour(ColourNames, dc->name, dc->rgb);
+
+  ws_system_colour(ColourNames, "sys_accent", accent);
+  ws_system_colour(ColourNames, "sys_selection_background", accent);
+  ws_system_colour(ColourNames, "sys_selection_foreground",
+		   y < 160.0 ? RGB(255, 255, 255) : RGB(0, 0, 0));
+}
+
+
 void
 ws_system_colours(HashTable ColourNames)
 { const struct system_colour *sc = window_colours;
@@ -138,6 +225,9 @@ ws_system_colours(HashTable ColourNames)
 
     ws_system_colour(ColourNames, sc->name, rgb);
   }
+
+  if ( dark_mode() )
+    ws_dark_mode_colours(ColourNames);
 }
 
 
@@ -154,4 +244,53 @@ ws_dark_system_colours(void)
 	       0.114*GetBValue(rgb) );
 
   return y < 128.0;
+}
+
+
+/* SDL reports switching between light and dark using
+ * SDL_EVENT_SYSTEM_THEME_CHANGED, but only if the light/dark setting
+ * changed.  Windows announces a new contrast theme by broadcasting
+ * WM_SYSCOLORCHANGE and a new accent colour by broadcasting
+ * WM_SETTINGCHANGE for "ImmersiveColorSet" to all top level windows.
+ * SDL ignores these, so we create a hidden top level window that
+ * receives them and reports them using SDL_EVENT_SYSTEM_THEME_CHANGED,
+ * which reloads the system colours.  This must run in the SDL main
+ * thread, such that SDL's event loop dispatches the messages for our
+ * window.
+ */
+
+static LRESULT CALLBACK
+sys_colour_wnd_proc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{ if ( msg == WM_SYSCOLORCHANGE ||
+       ( msg == WM_SETTINGCHANGE && lParam &&
+	 wcscmp((const wchar_t*)lParam, L"ImmersiveColorSet") == 0 ) )
+  { SDL_Event ev = { .type = SDL_EVENT_SYSTEM_THEME_CHANGED };
+
+    ev.common.timestamp = SDL_GetTicksNS();
+    SDL_PushEvent(&ev);
+    return 0;
+  }
+
+  return DefWindowProcW(hwnd, msg, wParam, lParam);
+}
+
+void
+ws_watch_system_colours(void)
+{ static bool done = false;
+  HINSTANCE instance = GetModuleHandleW(NULL);
+  WNDCLASSW wc = {0};
+
+  if ( done )
+    return;
+  done = true;
+
+  wc.lpfnWndProc   = sys_colour_wnd_proc;
+  wc.hInstance     = instance;
+  wc.lpszClassName = L"XPCE_SysColourWatcher";
+  if ( !RegisterClassW(&wc) )
+    return;
+
+  /* Not HWND_MESSAGE: message-only windows do not receive broadcasts */
+  CreateWindowExW(WS_EX_TOOLWINDOW, wc.lpszClassName, L"", WS_POPUP,
+		  0, 0, 0, 0, NULL, NULL, instance, NULL);
 }

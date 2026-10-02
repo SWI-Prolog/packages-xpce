@@ -155,6 +155,12 @@ The following notes apply to the mapping:
 The \const{win_} names are documented in \secref{mswin}.  Windows does
 not provide the accent colour through GetSysColor(), so
 \const{sys_accent} is the same as \const{sys_selection_background}.
+Windows dark mode does not change the colours of GetSysColor().  If
+the user selected dark mode for applications and no contrast theme is
+active, the \const{sys_} names therefore use a dark palette that
+follows the Windows~11 dark appearance, while \const{sys_accent} and
+\const{sys_selection_background} use the accent colour selected by
+the user.  The \const{win_} names always use GetSysColor().
     \item [MacOS]
 All \const{mac_} names are derived from an NSColor class method: the
 method name without the \const{Color} suffix, converted to snake case
@@ -324,12 +330,14 @@ settings changed:
 \begin{itemlist}
     \item [All platforms]
 If the user switches between light and dark mode.
+    \item [Windows]
+Also if the user selects another contrast theme or accent colour.
     \item [MacOS]
 Also if the user changes the accent colour, the highlight colour or the
 contrast.
 \end{itemlist}
 
-Other changes, such as a new accent colour on Windows, KDE or GNOME
+Other changes, such as a new accent colour on KDE or GNOME
 or another KDE colour scheme with the same brightness, are not noticed.
 The application may send ->system_colours_changed itself, or
 \product{} must be restarted.
@@ -342,9 +350,11 @@ highlighting, therefore remain those for the appearance at startup.
 \index{dark theme}%
 If \const{sys_window_background} is dark, which is the case on MacOS in
 dark mode, on KDE using a dark colour scheme, on GNOME using the dark
-style and on Windows using a dark high-contrast theme, the SWI-Prolog
-\const{dark} theme (\file{library(theme/dark)}) leaves the basic colours
-of windows and dialogs to the system colours.
+style and on Windows in dark mode or using a dark contrast theme, the
+SWI-Prolog \const{dark} theme (\file{library(theme/dark)}) leaves the
+basic colours of windows, dialogs and menus to the system colours.
+These follow switching between light and dark while \product{} is
+running.
 
 Displays differ in the number of colours they can display simultaneously
 and whether this set can be changed or not. X11 defines 6 types of

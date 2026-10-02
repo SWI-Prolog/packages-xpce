@@ -41,6 +41,9 @@
 #ifdef __APPLE__
 #include "sdlnscolour.h"
 #endif
+#ifdef __WINDOWS__
+#include <msw/mscolour.h>
+#endif
 #ifndef __WINDOWS__
 #include <pwd.h>
 #include <unistd.h>
@@ -100,6 +103,8 @@ setPceThread(const char *app_name)
     ChangedFrames = globalObject(NAME_changedFrames, ClassChain, EAV);
 #ifdef __APPLE__
     ns_watch_system_colours();
+#elif defined(__WINDOWS__)
+    ws_watch_system_colours();
 #endif
     sdl_start_live_resize_watch();
     start_fd_watcher_thread();

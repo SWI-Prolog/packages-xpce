@@ -38,5 +38,6 @@
 
 void ws_system_colours(HashTable ColourNames);
 bool ws_dark_system_colours(void);
+void ws_watch_system_colours(void);
 
 #endif /*MSCOLOUR_H_INCLUDED*/
