@@ -205,8 +205,8 @@ redraw_window_tree(PceWindow sw)
   }
 }
 
-/* Redraw all windows after colour objects changed their value in place,
- * e.g., using colour->rgba.
+/* Redraw all windows after colours changed their value in place, e.g.,
+ * after changing the value of theme colours.
  */
 
 static status
@@ -230,14 +230,17 @@ coloursChangedDisplayManager(DisplayManager dm)
 }
 
 /* Called if the user changed the desktop settings: reload the system
- * colours (sys_*, etc.), send <-system_colours_message, which allows
- * the application to update its own colours, e.g., for a new theme, and
- * redraw all windows.
+ * colours (sys_*, etc.), make the theme colours follow them, send
+ * <-system_colours_message, which allows the application to select
+ * another theme, and redraw all windows.
  */
 
 static status
 systemColoursChangedDisplayManager(DisplayManager dm)
 { int changed = ws_reload_system_colours();
+
+  if ( changed > 0 )
+    invalidateThemeColours();	/* may be derived from system colours */
 
   if ( notNil(dm->system_colours_message) )
   { forwardCodev(dm->system_colours_message, 0, NULL);

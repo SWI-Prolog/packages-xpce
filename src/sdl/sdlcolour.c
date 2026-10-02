@@ -204,7 +204,9 @@ getNamedRGB(Name name)
 status
 ws_named_colour(Colour c)
 { if ( isDefault(c->rgba) )
-  { if ( c->kind == NAME_named )
+  { if ( c->kind == NAME_theme )
+      return resolveThemeColour((ThemeColour)c);
+    if ( c->kind == NAME_named )
     { Int Rgb = getNamedRGB(c->name);
 
       if ( Rgb )

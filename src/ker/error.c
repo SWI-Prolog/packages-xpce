@@ -565,6 +565,12 @@ static const error_def errors[] =
   { NAME_pixelMismatch,		0,
     "%O: Incompatible pixel-type: %O" },
 
+					/* Colours */
+  { NAME_cyclicThemeColour,	ET_WARNING|EF_PRINT,
+    "%N: Cyclic theme colour definition (using grey50)" },
+  { NAME_noNamedColour,		ET_WARNING|EF_PRINT,
+    "%N: Unknown colour %s (using grey50)" },
+
 					/* Miscellaneous */
   { NAME_readOnly,		0,
     "%N: Read only" },

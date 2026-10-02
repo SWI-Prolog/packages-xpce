@@ -751,11 +751,18 @@ NewClass(cursorobj)
 End;
 
 
-NewClass(colour)
-  Name		name;			/* Name of the colour (red, ...) */
-  Name		kind;			/* `named' or `rgb' */
+#define ABSTRACT_COLOUR \
+  Name		name;			/* Name of the colour (red, ...) */ \
+  Name		kind;			/* `named', `rgb' or `theme' */ \
   Int		rgba;			/* 32-bit encoded RGBA */
-  Name		access;			/* `read' or `both' */
+
+NewClass(colour)
+  ABSTRACT_COLOUR
+End;
+
+NewClass(theme_colour)
+  ABSTRACT_COLOUR
+  Any		value;			/* Name or colour it is derived from */
 End;
 
 

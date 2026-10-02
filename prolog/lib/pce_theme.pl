@@ -33,8 +33,8 @@
 */
 
 :- module(pce_theme,
-          [ theme_colour/2,             % +Name, -Colour
-            apply_theme/1,              % +Theme
+          [ apply_theme/1,              % +Theme
+            ensure_theme_colours/0,
             current_theme/1,            % -Theme
             syntax_colour_name/3,       % +Class, +Attribute, -Name
             check_theme/1,              % +Theme
@@ -42,8 +42,7 @@
           ]).
 :- use_module(library(pce)).
 :- autoload(library(apply), [maplist/3, exclude/3]).
-:- autoload(library(error),
-            [must_be/2, existence_error/2, domain_error/2]).
+:- autoload(library(error), [must_be/2, existence_error/2]).
 :- autoload(library(lists), [member/2, append/2, append/3]).
 :- autoload(library(ordsets), [ord_subtract/3]).
 :- autoload(library(pairs), [pairs_keys/2, group_pairs_by_key/2]).
@@ -52,9 +51,13 @@
 
 A _semantic colour_ is a colour whose name describes its role, such as
 `syntax_comment`, rather than its value.  Its value depends on the
-_theme_.  The colour is a read/write xpce colour object of that name,
-so everything that refers to the colour, directly or by name, follows
-a change of the theme after the windows are redrawn.
+_theme_.  The colour is an xpce `theme_colour` object of that name, so
+everything that refers to the colour, directly or by name, follows a
+change of the theme after the windows are redrawn.  The value of a
+theme colour is the name of another colour, which may be a system
+colour such as `sys_window_background` or another theme colour.  The
+RGB value is computed when it is needed, so theme colours may refer to
+each other in any order.
 
 Semantic colours are declared with their value for the default `light`
 theme.  There are two sources:
@@ -76,7 +79,6 @@ apply_theme/1 can switch between themes at any time.
     colour/3.                           % ?Theme, ?Name, ?Value
 
 :- dynamic
-    theme_colour_object/2,              % Name, Colour
     current_theme_/1.
 
 %!  semantic_colour(?Name, ?Default, ?Comment) is nondet.
@@ -93,34 +95,6 @@ apply_theme/1 can switch between themes at any time.
 %   semantic_colour/3.  This is normally defined in the theme file,
 %   e.g., library(theme/dark).
 
-%!  theme_colour(+Name, -Colour) is det.
-%
-%   Colour is the xpce colour object for the semantic colour Name.  The
-%   object is created on first use with its value in the current theme
-%   and is updated by apply_theme/1.
-
-theme_colour(Name, Colour) :-
-    theme_colour_object(Name, Colour),
-    !.
-theme_colour(Name, Colour) :-
-    must_be(atom, Name),
-    with_mutex(pce_theme, new_theme_colour(Name, Colour)).
-
-new_theme_colour(Name, Colour) :-
-    theme_colour_object(Name, Colour),
-    !.
-new_theme_colour(Name, Colour) :-
-    current_theme(Theme),
-    resolve(Theme, Name, Value),
-    (   get(@colours, member, Name, Colour)
-    ->  true
-    ;   new(Colour, colour(Name, 0, 0, 0))
-    ),
-    send(Colour, access, both),
-    send(Colour, lock_object, @on),
-    send(Colour, rgba, Value),
-    assertz(theme_colour_object(Name, Colour)).
-
 %!  current_theme(-Theme) is det.
 %
 %   Theme is the active theme.  This is `light` if no theme has been
@@ -135,8 +109,8 @@ current_theme(light).
 %!  apply_theme(+Theme) is det.
 %
 %   Make Theme the active theme.  This loads library(theme/Theme) if
-%   it exists, updates all semantic colours that are in use and
-%   redraws all windows.  The `light` theme uses the default values of
+%   it exists, sets the value of all semantic colours and redraws all
+%   windows.  The `light` theme uses the default values of
 %   the semantic colours and does not load library(theme/light), which
 %   only defines colours for the Prolog console.
 
@@ -153,10 +127,22 @@ update_theme(Theme0) :-
 update_colours(Theme) :-
     retractall(current_theme_(_)),
     assertz(current_theme_(Theme)),
-    forall(theme_colour_object(Name, Colour),
-           ( resolve(Theme, Name, Value),
-             send(Colour, rgba, Value)
+    forall(semantic_colour_name(Name, _),
+           ( colour_value(Theme, Name, Value),
+             new(_, theme_colour(Name, Value))
            )).
+
+%!  ensure_theme_colours is det.
+%
+%   Make sure all known semantic colours exist as xpce `theme_colour`
+%   objects.  apply_theme/1 creates the semantic colours that are known
+%   at that moment.  Libraries that declare semantic colours or load
+%   library(prolog_colour) later call this before using their colours.
+%   Creating an existing theme colour with the same value does nothing.
+
+ensure_theme_colours :-
+    current_theme(Theme),
+    with_mutex(pce_theme, update_colours(Theme)).
 
 canonical_theme(default, light) :- !.
 canonical_theme(Theme, Theme).
@@ -172,27 +158,6 @@ load_theme(Theme) :-
     !.
 load_theme(Theme) :-
     existence_error(theme, Theme).
-
-%!  resolve(+Theme, +Name, -Colour) is det.
-%
-%   Colour is the colour object that holds the value of Name in Theme.
-%   If the value is another semantic colour, this is resolved
-%   recursively.  Otherwise it is converted to an xpce colour.
-
-resolve(Theme, Name, Colour) :-
-    resolve(Theme, Name, [], Colour).
-
-resolve(Theme, Name, Seen, Colour) :-
-    (   memberchk(Name, Seen)
-    ->  domain_error(acyclic_theme_colour, Name)
-    ;   colour_value(Theme, Name, Value)
-    ->  (   atom(Value),
-            colour_value(Theme, Value, _)
-        ->  resolve(Theme, Value, [Name|Seen], Colour)
-        ;   get(@pce, convert, Value, colour, Colour)
-        )
-    ;   existence_error(semantic_colour, Name)
-    ).
 
 colour_value(Theme, Name, Value) :-
     colour(Theme, Name, Value),

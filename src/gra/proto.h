@@ -28,6 +28,9 @@ COMMON(Colour)	getFadeColour(Colour c, Real f);
 COMMON(Int)	getIntensityColour(Colour c);
 COMMON(status)	rgbaColour(Colour c, Int rgba);
 COMMON(status)	makeClassColour(Class class);
+COMMON(status)	makeClassThemeColour(Class class);
+COMMON(status)	resolveThemeColour(ThemeColour tc);
+COMMON(int)	invalidateThemeColours(void);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/coords.c */
 COMMON(bool)	deviceLocalToWindowCoord(Device dev, double lx, double ly,

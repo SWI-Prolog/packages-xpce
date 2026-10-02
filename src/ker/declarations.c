@@ -134,6 +134,9 @@ static struct class_definition classdefs[] =
   { NAME_colour, NAME_object, makeClassColour,
     &ClassColour, "Colour (RGB) definition" },
 
+  { NAME_themeColour, NAME_colour, makeClassThemeColour,
+    &ClassThemeColour, "Colour whose value follows the theme" },
+
   { NAME_connectGesture, NAME_gesture, makeClassConnectGesture,
     &ClassConnectGesture, "Gesture to connect two objects by dragging" },
 

@@ -101,66 +101,68 @@ test(reload_system_colours) :-
     assertion(New == Orig),
     assertion(InTable == Orig).
 
-test(set_rgba, RGB == rgb(255,0,0)) :-
-    new(C, colour(test_colour_set, 1, 2, 3)),
-    send(C, access, both),
-    send(C, rgba, red),
-    colour_rgb(C, RGB),
-    free(C).
-test(set_rgba_from_int, RGB == rgb(4,5,6)) :-
-    new(C, colour(test_colour_set_int, 1, 2, 3)),
-    send(C, access, both),
-    get(@pce, convert, '#040506', colour, From),
-    get(From, rgba, Rgba),
-    send(C, rgba, Rgba),
-    colour_rgb(C, RGB),
-    free(C).
-test(set_rgba_read_only, [RGB == rgb(1,2,3), Access == read]) :-
-    new(C, colour(test_colour_read_only, 1, 2, 3)),
-    get(C, access, Access),
-    \+ pce_catch_error(read_only, send(C, rgba, red)),
-    colour_rgb(C, RGB),
-    free(C).
-test(read_only_in_reverse_table, Same == true) :-
-    new(C, colour(test_colour_read_only_rev, 11, 12, 13)),
+test(named_rgb_in_reverse_table, Same == true) :-
+    new(C, colour(test_colour_named_rgb, 11, 12, 13)),
     new(Lookup, colour(@default, 11, 12, 13)),
     same(Lookup, C, Same),
     free(C).
-test(read_write_not_in_reverse_table, Same == false) :-
-    %  A read/write colour may change its value, so it must not be the
-    %  answer to looking up a colour from its RGBA.
-    new(C, colour(test_colour_read_write, 14, 15, 16)),
-    send(C, access, both),
+test(theme_colour, [RGB == rgb(255,0,0), Kind == theme]) :-
+    new(C, theme_colour(test_colour_theme, red)),
+    colour_rgb(C, RGB),
+    get(C, kind, Kind).
+test(theme_colour_by_name, Same == true) :-
+    new(C, theme_colour(test_colour_by_name, red)),
+    get(@pce, convert, test_colour_by_name, colour, C2),
+    same(C, C2, Same).
+test(theme_colour_value, RGB == rgb(0,0,255)) :-
+    new(C, theme_colour(test_colour_value, red)),
+    colour_rgb(C, _),
+    send(C, value, blue),
+    colour_rgb(C, RGB).
+test(theme_colour_lookup, [Same == true, RGB == rgb(0,255,0)]) :-
+    %  Creating an existing theme colour changes its value
+    new(C, theme_colour(test_colour_lookup, red)),
+    new(C2, theme_colour(test_colour_lookup, '#00ff00')),
+    same(C, C2, Same),
+    colour_rgb(C, RGB).
+test(theme_colour_alias_first, [RGB1 == rgb(1,2,3), RGB2 == rgb(4,5,6)]) :-
+    %  The value is resolved when needed, so an alias may be created
+    %  before its target and follows changes of the target.
+    new(A, theme_colour(test_colour_alias, test_colour_target)),
+    new(T, theme_colour(test_colour_target, '#010203')),
+    colour_rgb(A, RGB1),
+    send(T, value, '#040506'),
+    colour_rgb(A, RGB2).
+test(theme_colour_not_in_reverse_table, Same == false) :-
+    new(C, theme_colour(test_colour_reverse, '#0e0f10')),
+    colour_rgb(C, _),
     new(Lookup, colour(@default, 14, 15, 16)),
-    same(Lookup, C, Same),
-    free(C).
-test(set_rgba_leaves_reverse_table, [OldSame == false, NewSame == false]) :-
-    new(C, colour(@default, 21, 22, 23)),
-    send(C, access, both),
-    get(C, rgba, OldRgba),
-    send(C, rgba, colour(@default, 24, 25, 26)),
-    get(C, rgba, NewRgba),
-    ( get(@rgba, member, OldRgba, Old) -> true ; Old = none ),
-    ( get(@rgba, member, NewRgba, New) -> true ; New = none ),
-    same(Old, C, OldSame),
-    same(New, C, NewSame),
-    free(C).
-test(read_only_again_in_reverse_table, Same == true) :-
-    new(C, colour(test_colour_back_to_read, 17, 18, 19)),
-    send(C, access, both),
-    send(C, access, read),
-    get(C, rgba, Rgba),
-    get(@rgba, member, Rgba, Found),
-    same(Found, C, Same),
-    free(C).
-test(locked_colour_survives, [Unlocked == gone, Locked == alive]) :-
-    %  A colour created as part of a graphical is freed with it, unless
-    %  it is locked.  Theme colours are locked.
-    gc_colour(test_colour_unlocked, false, Unlocked),
-    gc_colour(test_colour_locked, true, Locked),
-    get(@colours, member, test_colour_locked, C),
-    send(C, lock_object, @off),
-    free(C).
+    same(Lookup, C, Same).
+test(theme_colour_cycle, RGB == rgb(127,127,127)) :-
+    new(C, theme_colour(test_colour_cycle1, test_colour_cycle2)),
+    new(_, theme_colour(test_colour_cycle2, test_colour_cycle1)),
+    pce_catch_error(cyclic_theme_colour, colour_rgb(C, RGB)).
+test(theme_colour_follows_system, RGB == Orig) :-
+    %  A theme colour derived from a system colour follows a reload
+    new(C, theme_colour(test_colour_sys, sys_accent)),
+    colour_rgb(C, Orig),
+    get(@pce, convert, sys_accent, colour, Sys),
+    get(Sys, rgba, SysRgba),
+    send(@colour_names, append, sys_accent, 12345),
+    send(Sys, slot, rgba, 12345),
+    send(C, value, white),              % resolve again from the
+    send(C, value, sys_accent),         % changed system colour
+    colour_rgb(C, Stale),
+    assertion(Stale \== Orig),
+    send(@display_manager, system_colours_changed),
+    colour_rgb(C, RGB),
+    get(Sys, rgba, SysRgba).
+test(locked_colour_survives, [Plain == gone, Theme == alive]) :-
+    %  A colour created as part of a graphical is freed with it.  A
+    %  theme colour is locked and survives.
+    gc_colour(colour(test_colour_plain, 1, 2, 3), test_colour_plain, Plain),
+    gc_colour(theme_colour(test_colour_locked, red), test_colour_locked,
+              Theme).
 test(system_colours_message, Called == true) :-
     nb_setval(test_colour_called, false),
     setup_call_cleanup(
@@ -181,14 +183,9 @@ colour_rgb(C, rgb(R,G,B)) :-
     get(C, green, G),
     get(C, blue, B).
 
-gc_colour(Name, Lock, State) :-
+gc_colour(Term, Name, State) :-
     new(Box, box),
-    send(Box, colour, colour(Name, 1, 2, 3)),
-    (   Lock == true
-    ->  get(Box, colour, C),
-        send(C, lock_object, @on)
-    ;   true
-    ),
+    send(Box, colour, Term),
     free(Box),
     (   get(@colours, member, Name, _)
     ->  State = alive

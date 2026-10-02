@@ -96,9 +96,7 @@ defcolourname(Int r, Int g, Int b, Int a)
 
 static status
 initialiseColour(Colour c, Name name, Int r, Int g, Int b, Int a, Name model)
-{ assign(c, access, NAME_read);
-
-  if ( notDefault(name) )
+{ if ( notDefault(name) )
     assign(c, name, name);
 
   if ( isDefault(a) )
@@ -132,12 +130,11 @@ initialiseColour(Colour c, Name name, Int r, Int g, Int b, Int a, Name model)
 }
 
 
-/* Colours are read-only by default.  A colour with access `both' may
- * change its value using ->rgba, e.g., because it follows the theme.
- * The reverse table maps an RGBA value to a colour to answer a lookup
- * from RGB values.  A read/write colour is not a valid answer, so it is
- * never in this table.  A read-only colour claims the slot for its
- * value if no other colour does.
+/* The reverse table maps an RGBA value to a colour to answer a lookup
+ * from RGB values.  A colour that changes its value claims the slot for
+ * its new value if no other colour does.  The value of a theme colour
+ * changes with the theme, so it is not a valid answer.  Theme colours
+ * are never added to this table.
  */
 
 static void
@@ -148,16 +145,15 @@ unregister_rgba(Colour c)
 
 static void
 register_rgba(Colour c)
-{ if ( c->access == NAME_read &&
-       isInteger(c->rgba) &&
+{ if ( isInteger(c->rgba) &&
        !getMemberHashTable(RevColourTable, c->rgba) )
     appendHashTable(RevColourTable, c->rgba, c);
 }
 
 /* Change the RGBA value of a colour in place.  Drawing uses the Colour
  * object, so the windows show the new value after they are redrawn.
- * This is used for colours whose value follows the system settings and
- * by ->rgba.
+ * This is used for the system colours, whose value follows the
+ * desktop settings.
  */
 
 status
@@ -165,35 +161,6 @@ rgbaColour(Colour c, Int rgba)
 { unregister_rgba(c);
   assign(c, rgba, rgba);
   register_rgba(c);
-
-  succeed;
-}
-
-
-static status
-setRgbaColour(Colour c, Any value)
-{ if ( c->access != NAME_both )
-    return errorPce(c, NAME_readOnly);
-
-  if ( instanceOfObject(value, ClassColour) )
-  { Colour from = value;
-
-    if ( isDefault(from->rgba) )
-      fail;				/* unknown named colour */
-    value = from->rgba;
-  }
-
-  return rgbaColour(c, value);
-}
-
-
-static status
-accessColour(Colour c, Name access)
-{ if ( c->access != access )
-  { unregister_rgba(c);
-    assign(c, access, access);
-    register_rgba(c);
-  }
 
   succeed;
 }
@@ -238,7 +205,7 @@ getLookupColour(Class class, Name name, Int r, Int g, Int b, Int a, Name model)
 
 static Name
 getStorageReferenceColour(Colour c)
-{ if ( c->kind == NAME_named )
+{ if ( c->kind == NAME_named || c->kind == NAME_theme )
     answer(c->name);
   else
     answer(defcolourname(getRedColour(c),
@@ -257,6 +224,8 @@ equalColour(Colour c1, Colour c2)
   { if ( c1->name == c2->name )
       succeed;
 
+    ws_named_colour(c1);
+    ws_named_colour(c2);
     if ( c1->rgba == c2->rgba )
       succeed;
   }
@@ -277,8 +246,6 @@ loadColour(Colour c, IOSTREAM *fd, ClassDef def)
 
   if ( c->kind == NAME_named && !isInteger(c->rgba) )
     assign(c, rgba, DEFAULT);
-  if ( !isName(c->access) )
-    assign(c, access, NAME_read);
 
   succeed;
 }
@@ -763,12 +730,10 @@ static char *T_initialise[] =
 static vardecl var_colour[] =
 { IV(NAME_name, "name|int", IV_GET,
      NAME_name, "Name of the colour"),
-  IV(NAME_kind, "{named,rgb}", IV_GET,
-     NAME_kind, "From colour-name database or user-defined"),
+  IV(NAME_kind, "{named,rgb,theme}", IV_GET,
+     NAME_kind, "From colour-name database, user-defined or theme"),
   IV(NAME_rgba, "[int]", IV_GET,
-     NAME_colour, "Encoded RGBA tuple"),
-  IV(NAME_access, "{read,both}", IV_GET,
-     NAME_colour, "If `both', ->rgba may change the value")
+     NAME_colour, "Encoded RGBA tuple")
 };
 
 /* Send Methods */
@@ -779,11 +744,7 @@ static senddecl send_colour[] =
   SM(NAME_unlink, 0, NULL, unlinkColour,
      DEFAULT, "Deallocate the colour object"),
   SM(NAME_equal, 1, "any", equalColour,
-     DEFAULT, "Test if colours have equal RGB"),
-  SM(NAME_rgba, 1, "colour|int", setRgbaColour,
-     NAME_colour, "Change the RGBA value of a read/write colour"),
-  SM(NAME_access, 1, "{read,both}", accessColour,
-     NAME_colour, "Make the colour read-only or read/write")
+     DEFAULT, "Test if colours have equal RGB")
 };
 
 /* Get Methods */
@@ -835,6 +796,7 @@ static classvardecl rc_colour[] =
 /* Class Declaration */
 
 static Name colour_termnames[] = { NAME_name };
+static Name colour_termnames2[] = { NAME_name, NAME_value };
 
 ClassDecl(colour_decls,
 	  var_colour, send_colour, get_colour, rc_colour,
@@ -858,6 +820,180 @@ makeClassColour(Class class)
   GREY50_COLOUR = newObject(ClassColour, NAME_grey50,    EAV);
   BLACK_COLOUR  = newObject(ClassColour, NAME_black,     EAV);
   BLUE_COLOUR   = newObject(ClassColour, NAME_royalblue, EAV);
+
+  succeed;
+}
+
+
+		 /*******************************
+		 *	   THEME COLOURS	*
+		 *******************************/
+
+/* A theme colour is a colour whose name describes its role, e.g.,
+ * `syntax_comment'.  Its value is the name of another colour, possibly
+ * another theme colour, or a colour object.  The RGBA value is computed
+ * from the value when it is needed: changing the value of any theme
+ * colour, or reloading the system colours, resets the RGBA of all theme
+ * colours to @default.  ws_named_colour() resolves it again on the next
+ * use.  This makes the order in which theme colours are created or
+ * changed irrelevant.  Theme colours are locked, so they are never
+ * garbage collected.
+ */
+
+static Chain ThemeColours;		/* All theme colours */
+#define MAX_THEME_COLOUR_DEPTH 100
+
+static status
+initialiseThemeColour(ThemeColour tc, Name name, Any value)
+{ assign(tc, name,  name);
+  assign(tc, kind,  NAME_theme);
+  assign(tc, rgba,  DEFAULT);
+  assign(tc, value, value);
+
+  appendHashTable(ColourTable, name, tc);
+  appendChain(ThemeColours, tc);
+  lockObject(tc, ON);
+
+  succeed;
+}
+
+
+static status
+unlinkThemeColour(ThemeColour tc)
+{ deleteChain(ThemeColours, tc);
+
+  return unlinkColour((Colour)tc);
+}
+
+
+/* Creating a theme colour that already exists changes its value and
+ * returns the existing object.
+ */
+
+static status valueThemeColour(ThemeColour tc, Any value);
+
+static ThemeColour
+getLookupThemeColour(Class class, Name name, Any value)
+{ Colour c = getMemberHashTable(ColourTable, name);
+
+  if ( c && instanceOfObject(c, ClassThemeColour) )
+  { valueThemeColour((ThemeColour)c, value);
+    answer((ThemeColour)c);
+  }
+
+  fail;
+}
+
+
+static status
+valueThemeColour(ThemeColour tc, Any value)
+{ if ( tc->value != value )
+  { assign(tc, value, value);
+    invalidateThemeColours();
+  }
+
+  succeed;
+}
+
+
+/* Reset the RGBA value of all theme colours, such that they are
+ * resolved again from their value on the next use.  Returns the number
+ * of theme colours.
+ */
+
+int
+invalidateThemeColours(void)
+{ int count = 0;
+  Cell cell;
+
+  if ( !ThemeColours )
+    return 0;
+
+  for_cell(cell, ThemeColours)
+  { ThemeColour tc = cell->value;
+
+    assign(tc, rgba, DEFAULT);
+    count++;
+  }
+
+  return count;
+}
+
+
+/* Compute the RGBA value of a theme colour by following its value
+ * through other theme colours until we find a resolved theme colour or
+ * an ordinary colour.  An unknown colour name or a cycle prints a
+ * message and resolves to grey50.
+ */
+
+status
+resolveThemeColour(ThemeColour tc)
+{ Any v = tc->value;
+  Int rgba = 0;
+
+  for(int depth=0; ; depth++)
+  { Colour c;
+
+    if ( depth > MAX_THEME_COLOUR_DEPTH )
+    { errorPce(tc, NAME_cyclicThemeColour);
+      break;
+    }
+
+    if ( instanceOfObject(v, ClassColour) )
+      c = v;
+    else if ( !(c = getConvertColour(ClassColour, v)) )
+    { errorPce(tc, NAME_noNamedColour, v);
+      break;
+    }
+
+    if ( instanceOfObject(c, ClassThemeColour) && isDefault(c->rgba) )
+    { v = ((ThemeColour)c)->value;
+      continue;
+    }
+
+    ws_named_colour(c);
+    rgba = c->rgba;
+    break;
+  }
+
+  if ( !rgba )
+    rgba = toInt(RGBA(127,127,127,255));
+  assign(tc, rgba, rgba);
+
+  succeed;
+}
+
+
+static char *T_themeColour[] = { "name=name", "value=name|colour" };
+
+static vardecl var_themeColour[] =
+{ IV(NAME_value, "name|colour", IV_GET,
+     NAME_colour, "Colour name or colour this colour is derived from")
+};
+
+static senddecl send_themeColour[] =
+{ SM(NAME_initialise, 2, T_themeColour, initialiseThemeColour,
+     DEFAULT, "Create from semantic name and value"),
+  SM(NAME_unlink, 0, NULL, unlinkThemeColour,
+     DEFAULT, "Remove from the theme colours"),
+  SM(NAME_value, 1, "name|colour", valueThemeColour,
+     NAME_colour, "Change the value; all theme colours are resolved again")
+};
+
+static getdecl get_themeColour[] =
+{ GM(NAME_lookup, 2, "theme_colour", T_themeColour, getLookupThemeColour,
+     NAME_oms, "Existing theme colour with this name")
+};
+
+ClassDecl(themeColour_decls,
+	  var_themeColour, send_themeColour, get_themeColour, NULL,
+	  2, colour_termnames2);
+
+status
+makeClassThemeColour(Class class)
+{ declareClass(class, &themeColour_decls);
+
+  ThemeColours = globalObject(NAME_themeColours, ClassChain, EAV);
 
   succeed;
 }

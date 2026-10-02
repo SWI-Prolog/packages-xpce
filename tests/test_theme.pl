@@ -73,11 +73,12 @@ pce_theme:colour(test_bad,  test_theme_no_such_name, black).
 
 :- begin_tests(theme, [cleanup(apply_theme(light))]).
 
-test(light_default, [RGB == rgb(255,0,0), Access == both, Locked == @on]) :-
+test(light_default, [RGB == rgb(255,0,0), Class == theme_colour,
+                     Locked == @on]) :-
     apply_theme(light),
     theme_colour(test_theme_fg, C),
     colour_rgb(C, RGB),
-    get(C, access, Access),
+    get(C, class_name, Class),
     get(C, lock_object, Locked).
 test(named_reference, Same == true) :-
     %  Referring to the colour by name gives the same object, so
@@ -129,7 +130,7 @@ test(system_colours_message, RGB == rgb(0,0,255)) :-
     setup_call_cleanup(
         ( set_prolog_flag(theme, test_dark),
           pce_theme:init_theme,
-          send(C, rgba, green),
+          send(C, value, green),
           send(@display_manager, system_colours_changed)
         ),
         colour_rgb(C, RGB),
@@ -185,6 +186,10 @@ test_issue(Issue) :-
     arg(1, Issue, Name),
     atom(Name),
     sub_atom(Name, 0, _, _, test_theme_).
+
+theme_colour(Name, C) :-
+    ensure_theme_colours,
+    get(@colours, member, Name, C).
 
 colour_rgb(C, rgb(R,G,B)) :-
     get(C, red, R),

@@ -342,19 +342,28 @@ or another KDE colour scheme with the same brightness, are not noticed.
 The application may send ->system_colours_changed itself, or
 \product{} must be restarted.
 
-After reloading the system colours and before redrawing,
-->system_colours_changed sends `display_manager <-system_colours_message'
-if this is not \const{@nil}.  This allows the application to update its
-own colours, for example for another theme.  Colours are read-only by
-default.  An application colour that must follow such changes is
-created with a name and RGB values, e.g., \exam{colour(my_background,
-255, 255, 255)}, made read/write using `colour ->access: both' and
-locked using `object ->lock_object' such that it is not garbage
-collected.  Its value is changed in place using `colour ->rgba', which
-accepts another colour or an encoded RGBA value.  A read/write colour
-is never returned when looking up a colour from its RGB values.  After
-changing colours, `display_manager ->colours_changed' redraws all
-windows.
+\index{theme colour}%
+After reloading the system colours, the theme colours are resolved
+again (see below).  Next, ->system_colours_changed sends
+`display_manager <-system_colours_message' if this is not
+\const{@nil}, which allows the application to select another theme.
+Finally, all windows are redrawn.
+
+A \idx{theme colour} is an instance of class \class{theme_colour}, a
+subclass of \class{colour}.  It is created from a name that describes
+its role and a value, e.g., \exam{theme_colour(syntax_comment,
+dark_green)}.  The value is the name of another colour, which may be
+another theme colour or a system colour, or a colour object.  The RGB
+value is computed when it is needed by following the value through
+other theme colours.  Changing the value of a theme colour using
+`theme_colour ->value', or creating it again with another value, makes
+all theme colours compute their RGB value again on their next use.
+Theme colours may therefore refer to each other in any order.  Theme
+colours are locked, so they are never garbage collected, and they are
+never returned when looking up a colour from its RGB values.  After
+changing theme colours, `display_manager ->colours_changed' redraws all
+windows.  The library \pllib{pce_theme} uses theme colours to switch
+themes while \product{} is running.
 
 Only the colours are reloaded.  The SWI-Prolog theme
 (\file{library(theme/dark)}) is selected when \product{} starts and is
