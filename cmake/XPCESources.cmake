@@ -298,9 +298,7 @@ set(XPCE_DATA_bitmaps bishop.png box.png bullet.png bullseye.png
     builtin_class.svg user_classflash.svg user_class.svg sign_alert.svg
     sign_ok.svg send.svg get.svg ivar.svg classvar.svg
     juggler1.svg juggler2.svg juggler3.svg juggler4.svg
-    juggler5.svg kangaroo_10.svg kangaroo_11.svg kangaroo_1.svg
-    kangaroo_2.svg kangaroo_3.svg kangaroo_4.svg kangaroo_5.svg
-    kangaroo_6.svg kangaroo_7.svg kangaroo_8.svg kangaroo_9.svg)
+    juggler5.svg)
 
 
 set(XPCE_DATA_bitmaps_16x16 alert.png arrow_length.png arrows.png
