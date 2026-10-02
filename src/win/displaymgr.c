@@ -40,6 +40,7 @@ static status
 initialiseDisplayManager(DisplayManager dm)
 { assign(dm, members, newObject(ClassChain, EAV));
   assign(dm, focus_message, NIL);
+  assign(dm, system_colours_message, NIL);
 
   obtainClassVariablesObject(dm);
   protectObject(dm);
@@ -204,28 +205,47 @@ redraw_window_tree(PceWindow sw)
   }
 }
 
+/* Redraw all windows after colour objects changed their value in place,
+ * e.g., using colour->rgba.
+ */
+
+static status
+coloursChangedDisplayManager(DisplayManager dm)
+{ Cell dcell, fcell, wcell;
+
+  for_cell(dcell, dm->members)
+  { DisplayObj d = dcell->value;
+
+    for_cell(fcell, d->frames)
+    { FrameObj fr = fcell->value;
+
+      for_cell(wcell, fr->members)
+      { if ( instanceOfObject(wcell->value, ClassWindow) )
+	  redraw_window_tree(wcell->value);
+      }
+    }
+  }
+
+  succeed;
+}
+
 /* Called if the user changed the desktop settings: reload the system
- * colours (sys_*, etc.) and redraw all windows.
+ * colours (sys_*, etc.), send <-system_colours_message, which allows
+ * the application to update its own colours, e.g., for a new theme, and
+ * redraw all windows.
  */
 
 static status
 systemColoursChangedDisplayManager(DisplayManager dm)
-{ if ( ws_reload_system_colours() > 0 )
-  { Cell dcell, fcell, wcell;
+{ int changed = ws_reload_system_colours();
 
-    for_cell(dcell, dm->members)
-    { DisplayObj d = dcell->value;
-
-      for_cell(fcell, d->frames)
-      { FrameObj fr = fcell->value;
-
-	for_cell(wcell, fr->members)
-	{ if ( instanceOfObject(wcell->value, ClassWindow) )
-	    redraw_window_tree(wcell->value);
-	}
-      }
-    }
+  if ( notNil(dm->system_colours_message) )
+  { forwardCodev(dm->system_colours_message, 0, NULL);
+    changed++;
   }
+
+  if ( changed > 0 )
+    return coloursChangedDisplayManager(dm);
 
   succeed;
 }
@@ -308,7 +328,9 @@ static vardecl var_displayManager[] =
   IV(NAME_testQueue, "bool", IV_BOTH,
      NAME_event, "Test queue in event-loop"),
   IV(NAME_focusMessage, "code*", IV_BOTH,
-     NAME_event, "Sent with the frame that gained keyboard focus")
+     NAME_event, "Sent with the frame that gained keyboard focus"),
+  IV(NAME_systemColoursMessage, "code*", IV_BOTH,
+     NAME_colour, "Sent after reloading the system colours")
 };
 
 /* Send Methods */
@@ -324,7 +346,9 @@ static senddecl send_displayManager[] =
      hasVisibleFramesDisplayManager,
      NAME_organisation, "True if there is a visible (keep_alive) frame"),
   SM(NAME_systemColoursChanged, 0, NULL, systemColoursChangedDisplayManager,
-     NAME_colour, "Reload the system colours and redraw")
+     NAME_colour, "Reload the system colours and redraw"),
+  SM(NAME_coloursChanged, 0, NULL, coloursChangedDisplayManager,
+     NAME_colour, "Redraw all windows after colours changed")
 };
 
 /* Get Methods */

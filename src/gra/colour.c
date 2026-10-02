@@ -96,7 +96,9 @@ defcolourname(Int r, Int g, Int b, Int a)
 
 static status
 initialiseColour(Colour c, Name name, Int r, Int g, Int b, Int a, Name model)
-{ if ( notDefault(name) )
+{ bool named = notDefault(name);
+
+  if ( named )
     assign(c, name, name);
 
   if ( isDefault(a) )
@@ -124,9 +126,43 @@ initialiseColour(Colour c, Name name, Int r, Int g, Int b, Int a, Name model)
 		    getMethodFromFunction((Any(*)())initialiseColour));
 
   appendHashTable(ColourTable, c->name, c);
-  appendHashTable(RevColourTable, c->rgba, c);
+  if ( !(c->kind == NAME_rgb && named) )
+    appendHashTable(RevColourTable, c->rgba, c);
 
   succeed;
+}
+
+
+/* Change the RGBA value of a colour in place.  Drawing uses the Colour
+ * object, so the windows show the new value after they are redrawn.
+ * This is used for colours whose value follows the system settings or
+ * the theme.  Such a colour is not a valid answer for looking up a
+ * colour from its RGBA value, so it is removed from the reverse table
+ * and not added for the new value.  For the same reason, a colour
+ * created from a name and RGB values is never in the reverse table.
+ */
+
+status
+rgbaColour(Colour c, Int rgba)
+{ if ( getMemberHashTable(RevColourTable, c->rgba) == c )
+    deleteHashTable(RevColourTable, c->rgba);
+  assign(c, rgba, rgba);
+
+  succeed;
+}
+
+
+static status
+setRgbaColour(Colour c, Any value)
+{ if ( instanceOfObject(value, ClassColour) )
+  { Colour from = value;
+
+    if ( isDefault(from->rgba) )
+      fail;				/* unknown named colour */
+    value = from->rgba;
+  }
+
+  return rgbaColour(c, value);
 }
 
 
@@ -706,7 +742,9 @@ static senddecl send_colour[] =
   SM(NAME_unlink, 0, NULL, unlinkColour,
      DEFAULT, "Deallocate the colour object"),
   SM(NAME_equal, 1, "any", equalColour,
-     DEFAULT, "Test if colours have equal RGB")
+     DEFAULT, "Test if colours have equal RGB"),
+  SM(NAME_rgba, 1, "colour|int", setRgbaColour,
+     NAME_colour, "Change the RGBA value in place")
 };
 
 /* Get Methods */

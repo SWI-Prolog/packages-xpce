@@ -342,6 +342,18 @@ or another KDE colour scheme with the same brightness, are not noticed.
 The application may send ->system_colours_changed itself, or
 \product{} must be restarted.
 
+After reloading the system colours and before redrawing,
+->system_colours_changed sends `display_manager <-system_colours_message'
+if this is not \const{@nil}.  This allows the application to update its
+own colours, for example for another theme.  An application colour that
+must follow such changes is created with a name and RGB values, e.g.,
+\exam{colour(my_background, 255, 255, 255)}, and locked using
+`object ->lock_object' such that it is not garbage collected.  Its value
+is changed in place using `colour ->rgba', which accepts another colour
+or an encoded RGBA value.  Like the system colours, such a colour is not
+returned when looking up a colour from its RGB values.  After changing
+colours, `display_manager ->colours_changed' redraws all windows.
+
 Only the colours are reloaded.  The SWI-Prolog theme
 (\file{library(theme/dark)}) is selected when \product{} starts and is
 not changed.  The colours the theme defines, for example for syntax

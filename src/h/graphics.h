@@ -818,6 +818,8 @@ NewClass(display_manager)
   BoolObj	test_queue;		/* Test queue during redraw */
   Code		focus_message;		/* Sent with the frame that gained
 					   keyboard focus */
+  Code		system_colours_message;	/* Sent after reloading the
+					   system colours */
 End;
 
 
