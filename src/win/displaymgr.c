@@ -194,24 +194,16 @@ redrawDisplayManager(DisplayManager dm)
 
 /* Redraw a window and the windows displayed inside it */
 
-static void
-redraw_window_tree(PceWindow sw)
-{ Cell cell;
-
-  redrawWindow(sw, DEFAULT);
-  for_cell(cell, sw->graphicals)
-  { if ( instanceOfObject(cell->value, ClassWindow) )
-      redraw_window_tree(cell->value);
-  }
-}
-
 /* Redraw all windows after colours changed their value in place, e.g.,
- * after changing the value of theme colours.
+ * after changing the value of theme colours.  Windows may be nested in
+ * other devices, e.g., the tabs of a tab_stack, so we walk all devices
+ * of each frame using an agenda.
  */
 
 static status
 coloursChangedDisplayManager(DisplayManager dm)
-{ Cell dcell, fcell, wcell;
+{ Chain agenda = answerObject(ClassChain, EAV);
+  Cell dcell, fcell, wcell;
 
   for_cell(dcell, dm->members)
   { DisplayObj d = dcell->value;
@@ -220,11 +212,22 @@ coloursChangedDisplayManager(DisplayManager dm)
     { FrameObj fr = fcell->value;
 
       for_cell(wcell, fr->members)
-      { if ( instanceOfObject(wcell->value, ClassWindow) )
-	  redraw_window_tree(wcell->value);
-      }
+	appendChain(agenda, wcell->value);
     }
   }
+
+  Any gr;
+  while( (gr = getDeleteHeadChain(agenda)) )
+  { if ( instanceOfObject(gr, ClassWindow) )
+      redrawWindow(gr, DEFAULT);
+    if ( instanceOfObject(gr, ClassDevice) )
+    { Cell cell;
+
+      for_cell(cell, ((Device)gr)->graphicals)
+	appendChain(agenda, cell->value);
+    }
+  }
+  doneObject(agenda);
 
   succeed;
 }
