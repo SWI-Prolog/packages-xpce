@@ -562,7 +562,7 @@ has_attribute(I, Att:name) :->
 draw_attribute(I, Att:name, Val:any) :->
     "Set attribute of prototype"::
     send(I?proto, draw_attribute, Att, Val),
-    send(I, repaint_proto),
+    send(I, paint_proto),
     send(I?window, modified, @on).
 
 
