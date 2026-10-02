@@ -60,8 +60,12 @@ RGB value is computed when it is needed, so theme colours may refer to
 each other in any order.
 
 Semantic colours are declared with their value for the default `light`
-theme.  There are two sources:
+theme.  There are three sources:
 
+  - The theme colours of xpce itself, used by the class variable
+    defaults of the xpce classes.  These are the `ui_*` colours for
+    the basic user interface elements and the `ansi_*` colours of the
+    terminal.  See builtin_colour/2.
   - semantic_colour/3 clauses, declared by the library that uses the
     colour.
   - The PceEmacs syntax highlighting styles of syntax_colour/2 in
@@ -79,7 +83,8 @@ apply_theme/1 can switch between themes at any time.
     colour/3.                           % ?Theme, ?Name, ?Value
 
 :- dynamic
-    current_theme_/1.
+    current_theme_/1,
+    builtin_colours_/1.
 
 %!  semantic_colour(?Name, ?Default, ?Comment) is nondet.
 %
@@ -166,6 +171,9 @@ colour_value(_, Name, Value) :-
     default_colour(Name, Value).
 
 default_colour(Name, Value) :-
+    builtin_colour(Name, Value),
+    !.
+default_colour(Name, Value) :-
     semantic_colour(Name, Value, _),
     !.
 default_colour(Name, Value) :-
@@ -244,10 +252,44 @@ first_per_key([K-V|T0], Seen, T) :-
 %   Enumerate all known semantic colours with their default value.
 
 semantic_colour_name(Name, Default) :-
-    semantic_colour(Name, Default, _).
+    builtin_colour(Name, Default).
+semantic_colour_name(Name, Default) :-
+    semantic_colour(Name, Default, _),
+    \+ builtin_colour(Name, _).
 semantic_colour_name(Name, Default) :-
     syntax_colour(Name, _, Default),
+    \+ builtin_colour(Name, _),
     \+ semantic_colour(Name, _, _).
+
+%!  builtin_colour(?Name, ?Default) is nondet.
+%
+%   True when Name is a theme colour defined by xpce itself with
+%   Default as value in the `light` theme.  These are used by the class
+%   variable defaults of the xpce classes and are available in the
+%   xpce hash table @theme_colour_defaults.
+
+builtin_colour(Name, Default) :-
+    builtin_colours(Pairs),
+    member(Name-Default, Pairs).
+
+builtin_colours(Pairs) :-
+    builtin_colours_(Pairs0),
+    !,
+    Pairs = Pairs0.
+builtin_colours(Pairs) :-
+    get(@pce, convert, white, colour, _), % realise class theme_colour
+    new(Chain, chain),
+    send(@theme_colour_defaults, for_all,
+         message(Chain, append, create(tuple, @arg1, @arg2))),
+    chain_list(Chain, Tuples),
+    findall(Name-Default,
+            ( member(T, Tuples),
+              get(T, first, Name),
+              get(T, second, Default)
+            ), Pairs0),
+    free(Chain),
+    msort(Pairs0, Pairs),
+    asserta(builtin_colours_(Pairs)).
 
 
 		 /*******************************

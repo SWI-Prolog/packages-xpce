@@ -244,8 +244,8 @@ static classvardecl rc_textCursor[] =
   RC(NAME_proportionalFontStyle, "name", "xpce",
      "->style for proportional fonts"),
   RC(NAME_style, NULL, "xpce", NULL),
-  RC(NAME_colour, RC_REFINE, "red", NULL),
-  RC(NAME_inactiveColour, RC_REFINE, "grey50", NULL),
+  RC(NAME_colour, RC_REFINE, "ui_cursor", NULL),
+  RC(NAME_inactiveColour, RC_REFINE, "ui_cursor_inactive", NULL),
   RC(NAME_height, "int", "11", "Height as xpce cursor")
 };
 

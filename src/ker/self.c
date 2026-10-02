@@ -1397,17 +1397,17 @@ static getdecl get_pce[] =
 
 static classvardecl rc_pce[] =
 { RC(NAME_initialise, "code*",
-     "and(_dialog_bg        @= colour(sys_dialog_background),\n"
-     "    _dialog_fg        @= colour(sys_dialog_foreground),\n"
-     "    _graph_bg         @= colour(sys_window_background),\n"
+     "and(_dialog_bg        @= colour(ui_dialog_background),\n"
+     "    _dialog_fg        @= colour(ui_dialog_foreground),\n"
+     "    _graph_bg         @= colour(ui_window_background),\n"
      "    _button_elevation @= " BUTTON_ELEVATION ",\n"
      "    _mark_elevation   @= elevation(mark, 0),\n"
      "    _win_pen          @= number(" UXWIN("0", "1") "),\n"
-     "    _isearch_style    @= style(background := green),\n"
+     "    _isearch_style    @= style(background := ui_isearch_background),\n"
      "    _select_style     @= style(\n"
-     "			     background := sys_selection_background,\n"
-     "			     colour     := sys_selection_foreground),\n"
-     "    _txt_height       @= elevation(@nil, 2, sys_window_background))",
+     "			     background := ui_selection_background,\n"
+     "			     colour     := ui_selection_foreground),\n"
+     "    _txt_height       @= elevation(@nil, 2, ui_window_background))",
      "Code object to run when initialising defaults")
 };
 

@@ -1840,7 +1840,7 @@ static getdecl get_listBrowser[] =
 /* Resources */
 
 static classvardecl rc_listBrowser[] =
-{ RC(NAME_background, "colour|pixmap", "sys_window_background",
+{ RC(NAME_background, "colour|pixmap", "ui_window_background",
      "Colour/fill pattern of the background"),
   RC(NAME_clearSelectionOnSearch, "bool", "@on",
      "@on: clear selection when searching"),
@@ -1848,9 +1848,7 @@ static classvardecl rc_listBrowser[] =
      "Default cursor"),
   RC(NAME_font, "font", "normal",
      "Default font"),
-  RC(NAME_isearchStyle, "[style]",
-     UXWIN("style(background := green)",
-	   "@_isearch_style"),
+  RC(NAME_isearchStyle, "[style]", "@_isearch_style",
      "Style for incremental search"),
   RC(NAME_labelFont, "font", "bold",
      "Font used to display the label"),
@@ -1858,9 +1856,7 @@ static classvardecl rc_listBrowser[] =
      "Thickness of box around list_browser"),
   RC(NAME_searchIgnoreCase, "bool", "@on",
      "@on: ignore case when searching"),
-  RC(NAME_selectionStyle, "[style]",
-     UXWIN("style(background := black, colour := white)",
-	   "@_select_style"),
+  RC(NAME_selectionStyle, "[style]", "@_select_style",
      "Style object for <-selection"),
   RC(NAME_size, "size", "size(15,10)",
      "Default size in `characters x lines'")

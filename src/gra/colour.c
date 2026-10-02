@@ -183,9 +183,24 @@ unlinkColour(Colour c)
 }
 
 
+/* The built-in theme colours are created when class theme_colour is
+ * realised.  Classes are realised on first use, so we must realise it
+ * before looking up a colour by name.
+ */
+
+static Chain ThemeColours;		/* All theme colours */
+
+static inline void
+ensure_theme_colours(void)
+{ if ( !ThemeColours )
+    realiseClass(ClassThemeColour);
+}
+
+
 static Colour
 getLookupColour(Class class, Name name, Int r, Int g, Int b, Int a, Name model)
-{ if ( isDefault(a) )
+{ ensure_theme_colours();
+  if ( isDefault(a) )
     a = toInt(255);
 
   if ( isDefault(name) && notDefault(r) && notDefault(g) && notDefault(b) )
@@ -275,6 +290,7 @@ getConvertColour(Class class, Name name)
 { Colour c;
   char *s;
 
+  ensure_theme_colours();
   if ( (c = getMemberHashTable(ColourTable, name)) )
     answer(c);
 
@@ -840,7 +856,6 @@ makeClassColour(Class class)
  * garbage collected.
  */
 
-static Chain ThemeColours;		/* All theme colours */
 #define MAX_THEME_COLOUR_DEPTH 100
 
 static status
@@ -989,11 +1004,77 @@ ClassDecl(themeColour_decls,
 	  var_themeColour, send_themeColour, get_themeColour, NULL,
 	  2, colour_termnames2);
 
+/* Theme colours used by the class variable defaults of xpce.  The
+ * value is used by the default `light' theme.  Most basic colours are
+ * derived from the system colours.  A theme may map them to other
+ * colours, e.g., to use a dark theme on a light desktop.  The values
+ * are available as @theme_colour_defaults, which library(pce_theme)
+ * uses to reset them when switching themes.
+ */
+
+static const struct builtin_theme_colour
+{ const char *name;
+  const char *value;
+} builtin_theme_colours[] =
+{ /* Basic colours of windows */
+  { "ui_window_background",	    "sys_window_background" },
+  { "ui_window_foreground",	    "sys_window_foreground" },
+  { "ui_dialog_background",	    "sys_dialog_background" },
+  { "ui_dialog_foreground",	    "sys_dialog_foreground" },
+  { "ui_selection_background",	    "sys_selection_background" },
+  { "ui_selection_foreground",	    "sys_selection_foreground" },
+  { "ui_margin_background",	    "ui_window_background" },
+  { "ui_scrollbar_background",	    "grey66" },
+  /* Text */
+  { "ui_text_selection_background", "yellow" },
+  { "ui_isearch_background",	    "green" },
+  { "ui_isearch_other_background",  "pale_turquoise" },
+  { "ui_link",			    "blue" },
+  { "ui_fold",			    "grey50" },
+  { "ui_cursor",		    "red" },
+  { "ui_cursor_inactive",	    "grey50" },
+  /* Dialog items */
+  { "ui_inactive",		    "grey60" },
+  { "ui_placeholder",		    "grey60" },
+  { "ui_accelerator",		    "grey30" },
+  /* ANSI terminal colours */
+  { "ansi_black",		    "black" },
+  { "ansi_red",			    "red3" },
+  { "ansi_green",		    "green3" },
+  { "ansi_yellow",		    "yellow3" },
+  { "ansi_blue",		    "blue2" },
+  { "ansi_magenta",		    "magenta3" },
+  { "ansi_cyan",		    "cyan3" },
+  { "ansi_white",		    "gray90" },
+  { "ansi_bright_black",	    "gray50" },
+  { "ansi_bright_red",		    "red" },
+  { "ansi_bright_green",	    "green" },
+  { "ansi_bright_yellow",	    "yellow" },
+  { "ansi_bright_blue",		    "blue" },
+  { "ansi_bright_magenta",	    "magenta" },
+  { "ansi_bright_cyan",		    "cyan" },
+  { "ansi_bright_white",	    "white" },
+  { NULL,			    NULL }
+};
+
+
 status
 makeClassThemeColour(Class class)
 { declareClass(class, &themeColour_decls);
 
   ThemeColours = globalObject(NAME_themeColours, ClassChain, EAV);
+  HashTable defaults = globalObject(NAME_themeColourDefaults,
+				    ClassHashTable, EAV);
+
+  for(const struct builtin_theme_colour *bc = builtin_theme_colours;
+      bc->name;
+      bc++)
+  { Name name  = CtoName(bc->name);
+    Name value = CtoName(bc->value);
+
+    appendHashTable(defaults, name, value);
+    newObject(ClassThemeColour, name, value, EAV);
+  }
 
   succeed;
 }

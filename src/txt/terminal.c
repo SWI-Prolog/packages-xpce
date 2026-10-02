@@ -4310,19 +4310,19 @@ static classvardecl rc_terminal_image[] =
      "Default cursor"),
   RC(NAME_linkCursor, "cursor", "pointer",
      "Default cursor when hovering a link"),
-  RC(NAME_background, "colour", "sys_window_background",
+  RC(NAME_background, "colour", "ui_window_background",
      "Colour of the background"),
-  RC(NAME_colour, "colour", "sys_window_foreground",
+  RC(NAME_colour, "colour", "ui_window_foreground",
      "Colour for the foreground"),
   RC(NAME_selectionStyle, "[style]",
-     UXWIN("style(background := yellow)",
+     UXWIN("style(background := ui_text_selection_background)",
 	   "@_select_style"),
      "Style for <-selection"),
   RC(NAME_isearchStyle, "style*",
-     "style(background := green)",
+     "style(background := ui_isearch_background)",
      "Style for the hit of an incremental search"),
   RC(NAME_isearchOtherStyle, "style*",
-     "style(background := pale_turquoise)",
+     "style(background := ui_isearch_other_background)",
      "Style for its other matches on the page (@nil for none)"),
   RC(NAME_exactCase, "bool", "@off",
      "Incremental search is case sensitive"),
@@ -4331,13 +4331,13 @@ static classvardecl rc_terminal_image[] =
   RC(NAME_nfdStyle, "style*", "@nil",
      "Style for NFD grapheme clusters (default off)"),
   RC(NAME_linkStyle, "style*",
-     "style(colour := blue, underline := dotted)",
+     "style(colour := ui_link, underline := dotted)",
      "Style for hyperlinks"),
   RC(NAME_linkArmedStyle, "style*",
-     "style(colour := blue, underline := @on)",
+     "style(colour := ui_link, underline := @on)",
      "Style for the hyperlink under the mouse"),
   RC(NAME_foldStyle, "style*",
-     "style(colour := grey50)",
+     "style(colour := ui_fold)",
      "Style for the fold marker and its tally (@nil for none)"),
   RC(NAME_autoCopy, "bool", UXWINMAC("@on", "@off", "@off"),
      "Automatically copy selected text to the clipboard"),
@@ -4355,23 +4355,23 @@ static classvardecl rc_terminal_image[] =
      "Bold italic font"),
   RC(NAME_ansiColours, "vector*",
      "vector("
-     "colour(black),"
-     "colour(red3),"
-     "colour(green3),"
-     "colour(yellow3),"
-     "colour(blue2),"
-     "colour(magenta3),"
-     "colour(cyan3),"
-     "colour(gray90),"
+     "colour(ansi_black),"
+     "colour(ansi_red),"
+     "colour(ansi_green),"
+     "colour(ansi_yellow),"
+     "colour(ansi_blue),"
+     "colour(ansi_magenta),"
+     "colour(ansi_cyan),"
+     "colour(ansi_white),"
      /* Bright versions */
-     "colour(gray50),"
-     "colour(red),"
-     "colour(green),"
-     "colour(yellow),"
-     "colour(blue),"		/* TBD: 92,92,255 */
-     "colour(magenta),"
-     "colour(cyan),"
-     "colour(white)"
+     "colour(ansi_bright_black),"
+     "colour(ansi_bright_red),"
+     "colour(ansi_bright_green),"
+     "colour(ansi_bright_yellow),"
+     "colour(ansi_bright_blue),"
+     "colour(ansi_bright_magenta),"
+     "colour(ansi_bright_cyan),"
+     "colour(ansi_bright_white)"
      ")",
      "The ANSI colours")
 };

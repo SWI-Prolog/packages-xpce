@@ -1851,7 +1851,7 @@ static classvardecl rc_textItem[] =
   RC(NAME_repeatInterval, "num", "0.06",
      "Interval between repeats"),
   RC(NAME_look, RC_REFINE, UXWIN("xpce", "win"), NULL),
-  RC(NAME_placeholderColour, "colour", "grey60",
+  RC(NAME_placeholderColour, "colour", "ui_placeholder",
      "Colour for the placeholder"),
   RC(NAME_elevation, RC_REFINE,
      UXWIN("0.25mm", "@_txt_height"),

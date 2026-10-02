@@ -2600,7 +2600,7 @@ static getdecl get_textImage[] =
 
 static classvardecl rc_textImage[] =
 { RC(NAME_background, "colour",
-     "sys_window_background",
+     "ui_window_background",
      "Background colour for the text"),
   RC(NAME_elevation, "elevation*", "1",
      "Elevation from the background"),
@@ -2608,7 +2608,7 @@ static classvardecl rc_textImage[] =
      "Tabstop interval (pixels)"),
   RC(NAME_wrap, "{none,character,word}", "character",
      "Wrap unit for long lines"),
-  RC(NAME_colour, RC_REFINE, "sys_window_foreground", NULL)
+  RC(NAME_colour, RC_REFINE, "ui_window_foreground", NULL)
 };
 
 /* Class Declaration */

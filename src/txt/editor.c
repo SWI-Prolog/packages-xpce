@@ -5661,7 +5661,7 @@ static getdecl get_editor[] =
 /* Resources */
 
 static classvardecl rc_editor[] =
-{ RC(NAME_background, "colour|pixmap", "sys_window_background",
+{ RC(NAME_background, "colour|pixmap", "ui_window_background",
      "Colour/fill pattern of the background"),
   RC(NAME_caretModifier, "modifier", "",
      "Modify caret using this modifier"),
@@ -5679,12 +5679,10 @@ static classvardecl rc_editor[] =
      "Font used to display the label"),
   RC(NAME_indentIncrement, "int", "2",
      "Indent/undent amount"),
-  RC(NAME_isearchStyle, "style",
-     UXWIN("style(background := green)",
-	   "@_isearch_style"),
+  RC(NAME_isearchStyle, "style", "@_isearch_style",
      "Style for incremental search"),
   RC(NAME_isearchOtherStyle, "style",
-     "style(background := pale_turquoise)",
+     "style(background := ui_isearch_other_background)",
      "Style for `other matches' in incremental search"),
   RC(NAME_keyBinding, "string", "",
      "`Key = selector' binding list"),
@@ -5697,7 +5695,7 @@ static classvardecl rc_editor[] =
   RC(NAME_selectModifier, "modifier", "s",
      "Modify selection using this modifier"),
   RC(NAME_selectionStyle, "[style]",
-     UXWIN("style(background := yellow)",
+     UXWIN("style(background := ui_text_selection_background)",
 	   "@_select_style"),
      "Style for <-selection"),
   RC(NAME_nfdStyle, "style*", "@nil",
