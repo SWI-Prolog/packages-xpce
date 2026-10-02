@@ -67,7 +67,7 @@ application non-portable.
 	& black \\
 \const{sys_dialog_background}
 	& \const{COLOR_BTNFACE}
-	& \const{windowBackgroundColor}
+	& \const{windowBackgroundColor}$^*$
 	& \const{Window} BackgroundNormal
 	& grey80 \\
 \const{sys_dialog_foreground}
@@ -102,7 +102,7 @@ application non-portable.
 	& white \\
 \const{sys_tooltip_background}
 	& \const{COLOR_INFOBK}
-	& \const{windowBackgroundColor}
+	& \const{windowBackgroundColor}$^*$
 	& \const{Tooltip} BackgroundNormal
 	& burlywood1 \\
 \const{sys_tooltip_foreground}
@@ -222,8 +222,17 @@ version of MacOS are not defined.
 
 MacOS colours depend on the appearance (light, dark or increased
 contrast).  They are resolved using the appearance of the application.
-Many of them are translucent.  These are composed over
-\const{mac_window_background}, so all system colours are opaque.
+Many of them are translucent.  The \const{mac_} colours are composed over
+\const{mac_window_background} and the \const{sys_} colours over
+\const{sys_dialog_background}, so all system colours are opaque.
+
+$^*$Up to MacOS~15, \const{windowBackgroundColor} is a grey that differs
+from the content background.  Since MacOS~26 both are the same, which
+would make dialogs indistinguishable from content windows.  If they are
+the same, \const{sys_dialog_background} is
+\const{secondarySystemFillColor} composed over
+\const{windowBackgroundColor} (\#ebebeb light, \#303030 dark).  This
+is about the sidebar colour used on GNOME.
 
 MacOS has no tooltip colours.  The tooltip colours are therefore the
 same as the dialog colours.

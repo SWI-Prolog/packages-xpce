@@ -45,6 +45,7 @@
 #import <Cocoa/Cocoa.h>
 #import <objc/message.h>
 #include <stdbool.h>
+#include <math.h>
 #include <SDL3/SDL.h>
 #include "sdlnscolour.h"
 
@@ -110,7 +111,10 @@ static const char *ns_colours[] =
   NULL
 };
 
-/* The common sys_* names (see load_system_colours() in sdlcolour.c) */
+/* The common sys_* names (see load_system_colours() in sdlcolour.c).
+ * A NULL selector stands for the dialog background (see
+ * dialog_background()).
+ */
 
 static const struct
 { const char *name;
@@ -118,14 +122,14 @@ static const struct
 } sys_colours[] =
 { { "sys_window_background",	"textBackgroundColor" },
   { "sys_window_foreground",	"textColor" },
-  { "sys_dialog_background",	"windowBackgroundColor" },
+  { "sys_dialog_background",	NULL },
   { "sys_dialog_foreground",	"labelColor" },
   { "sys_button_background",	"controlColor" },
   { "sys_button_foreground",	"controlTextColor" },
   { "sys_button_pressed",	"selectedControlColor" },
   { "sys_selection_background",	"selectedContentBackgroundColor" },
   { "sys_selection_foreground",	"alternateSelectedControlTextColor" },
-  { "sys_tooltip_background",	"windowBackgroundColor" },
+  { "sys_tooltip_background",	NULL },
   { "sys_tooltip_foreground",	"labelColor" },
   { "sys_inactive",		"disabledControlTextColor" },
   { "sys_link",			"linkColor" },
@@ -236,9 +240,36 @@ system_appearance(void)
 					     : NSAppearanceNameAqua)];
 }
 
+static bool
+same_colour(const ns_rgba *c1, const ns_rgba *c2)
+{ const CGFloat eps = 4.0/255.0;
+
+  return ( fabs(c1->r-c2->r) < eps &&
+	   fabs(c1->g-c2->g) < eps &&
+	   fabs(c1->b-c2->b) < eps );
+}
+
+/* The background for dialogs.  Up to MacOS 15, windowBackgroundColor is
+ * a light or dark grey that differs from the content background
+ * (textBackgroundColor).  Since MacOS 26, both are the same, which makes
+ * dialogs indistinguishable from content windows.  In that case we
+ * compose secondarySystemFillColor over it, which gives about the
+ * sidebar colour of libadwaita that we use on GNOME.
+ */
+
+static void
+dialog_background(const ns_rgba *window, ns_rgba *c)
+{ ns_rgba text;
+
+  *c = *window;
+  if ( ns_colour_rgba("textBackgroundColor", NULL, &text) &&
+       same_colour(window, &text) )
+    ns_colour_rgba("secondarySystemFillColor", window, c);
+}
+
 static void
 resolve_colours(sys_colour_callback add, void *closure)
-{ ns_rgba bg, c;
+{ ns_rgba bg, dialog_bg, c;
   const ns_rgba *under = NULL;
   char name[100];
 
@@ -251,8 +282,20 @@ resolve_colours(sys_colour_callback add, void *closure)
       add_colour(add, closure, name, &c);
   }
 
+  if ( !under )
+    return;
+  dialog_background(under, &dialog_bg);
+
+  /* The sys_* colours are mostly used on dialogs.  Compose them over the
+   * dialog background, so translucent ones such as the separator remain
+   * visible.
+   */
   for(int i=0; sys_colours[i].name; i++)
-  { if ( ns_colour_rgba(sys_colours[i].selector, under, &c) )
+  { const char *sel = sys_colours[i].selector;
+
+    if ( !sel )
+      add_colour(add, closure, sys_colours[i].name, &dialog_bg);
+    else if ( ns_colour_rgba(sel, &dialog_bg, &c) )
       add_colour(add, closure, sys_colours[i].name, &c);
   }
 }
