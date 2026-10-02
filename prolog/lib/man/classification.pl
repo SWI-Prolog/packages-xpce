@@ -648,6 +648,7 @@ scope('M.colour.G.hilite', internal).
 scope('M.colour.G.hue', advanced).
 scope('M.colour.G.intensity', obscure).
 scope('M.colour.G.lookup', internal).
+scope('M.colour.G.mix', advanced).
 scope('M.colour.G.red', advanced).
 scope('M.colour.G.reduce', internal).
 scope('M.colour.G.saturnation', advanced).
@@ -3484,6 +3485,8 @@ scope('R.source_sink.encoding', advanced).
 scope('R.tab.elevation', advanced).
 scope('R.tab.gap', advanced).
 scope('R.tab.inactive_colour', advanced).
+scope('R.tab.indicator_colour', advanced).
+scope('R.tab.indicator_width', advanced).
 scope('R.tab.label_font', advanced).
 scope('R.tab.label_format', advanced).
 scope('R.tab.label_size', advanced).

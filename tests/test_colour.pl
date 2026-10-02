@@ -157,6 +157,19 @@ test(theme_colour_follows_system, RGB == Orig) :-
     send(@display_manager, system_colours_changed),
     colour_rgb(C, RGB),
     get(Sys, rgba, SysRgba).
+test(mix, [Half == rgb(128,128,128), Same == rgb(0,0,0),
+            Other == rgb(255,255,255)]) :-
+    get(@pce, convert, black, colour, Black),
+    get(@pce, convert, white, colour, White),
+    get(Black, mix, White, Mid), colour_rgb(Mid, Half),
+    get(Black, mix, White, 0.0, C0), colour_rgb(C0, Same),
+    get(Black, mix, White, 1.0, C1), colour_rgb(C1, Other).
+test(mix_down, RGB == rgb(229,229,229)) :-
+    %  Mixing a light colour towards a dark one darkens it
+    get(@pce, convert, white, colour, White),
+    get(@pce, convert, black, colour, Black),
+    get(White, mix, Black, 0.1, C),
+    colour_rgb(C, RGB).
 test(locked_colour_survives, [Plain == gone, Theme == alive]) :-
     %  A colour created as part of a graphical is freed with it.  A
     %  theme colour is locked and survives.

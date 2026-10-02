@@ -342,6 +342,48 @@ statusTab(Tab t, Name stat)
 #define RMOVE(p, dx, dy) p->x = p[-1].x + (dx), p->y = p[-1].y + (dy), p++
 
 
+/* Feedback for the tab on top.  Moving the background of the hidden
+ * tabs a little towards the text colour and dimming their labels works
+ * for light and dark themes alike: the tab on top has the background of
+ * its contents.  An indicator line in the accent colour on top of the
+ * label of the tab on top makes it stand out clearly, as many current
+ * applications do.
+ */
+
+static Real
+hidden_fill_factor(void)
+{ static Real f;
+
+  if ( !f )
+  { f = CtoReal(0.08);
+    lockObject(f, ON);
+  }
+
+  return f;
+}
+
+static Real
+hidden_label_factor(void)
+{ static Real f;
+
+  if ( !f )
+  { f = CtoReal(0.35);
+    lockObject(f, ON);
+  }
+
+  return f;
+}
+
+static void
+draw_indicator(Tab t, int x, int y, int w)
+{ Any c = getClassVariableValueObject(t, NAME_indicatorColour);
+  Int iw = getClassVariableValueObject(t, NAME_indicatorWidth);
+
+  if ( c && instanceOfObject(c, ClassColour) && iw && valInt(iw) > 0 )
+    r_fill(x, y, w, valInt(iw), c);
+}
+
+
 static status
 RedrawAreaTab(Tab t, Area a)
 { int x, y, w, h;
@@ -401,6 +443,7 @@ RedrawAreaTab(Tab t, Area a)
     RMOVE(p, -w, 0);
 
     r_3d_rectangular_polygon(p-pts, pts, e, DRAW_3D_FILLED|DRAW_3D_CLOSED);
+    draw_indicator(t, x+loff+1, y, lw-1);
 
     RedrawLabelDialogGroup((DialogGroup)t, 0,
 			   x+loff+ex, y+HIDDEN_TAB_SHRINK+LOWER_LABEL, lw-2*ex, lh-HIDDEN_TAB_SHRINK,
@@ -429,18 +472,20 @@ RedrawAreaTab(Tab t, Area a)
   } else /* if ( t->status == NAME_hidden ) */
   { fpoint pts[6];
     FPoint p = pts;
-    Colour obg = r_background(DEFAULT);
-    static Real dot9;
+    Any obg = r_background(DEFAULT);
+    Any fg  = r_colour(DEFAULT);
+    Any lfg = NULL;
 
-    if ( !dot9 )
-    { dot9 = CtoReal(0.85);
-      lockObject(dot9, ON);
-    }
-
+    r_colour(fg);
     y  += HIDDEN_TAB_SHRINK;
     lh -= HIDDEN_TAB_SHRINK;
 
-    r_fill(x+loff+1, y, lw-1, lh, getReduceColour(obg, dot9));
+    if ( instanceOfObject(obg, ClassColour) &&
+	 instanceOfObject(fg, ClassColour) )
+    { r_fill(x+loff+1, y, lw-1, lh,
+	     getMixColour(obg, fg, hidden_fill_factor()));
+      lfg = getMixColour(fg, obg, hidden_label_factor());
+    }
 
     GOTO(p, x+loff, y+lh);		/* bottom-left */
     RMOVE(p, 0, -lh+r+1);		/* top-left */
@@ -451,10 +496,14 @@ RedrawAreaTab(Tab t, Area a)
 
     r_3d_rectangular_polygon(p-pts, pts, e, DRAW_3D_FILLED);
 
+    if ( lfg )
+      r_colour(lfg);
     RedrawLabelDialogGroup((DialogGroup)t, 0,
 			   x+loff+ex, y+LOWER_LABEL, lw-2*ex, lh,
 			   t->label_format, NAME_center,
 			   lflags);
+    if ( lfg )
+      r_colour(fg);
   }
 
   return RedrawAreaGraphical(t, a);
@@ -657,7 +706,11 @@ static classvardecl rc_tab[] =
   RC(NAME_editableLabel, "bool", "@off",
      "Label can be edited in place"),
   RC(NAME_closable, "bool", "@off",
-     "Label carries a button to close the tab")
+     "Label carries a button to close the tab"),
+  RC(NAME_indicatorColour, "colour*", "ui_accent",
+     "Colour of the line on top of the label of the tab on top"),
+  RC(NAME_indicatorWidth, "0..", "3",
+     "Width of this line")
 };
 
 /* Class Declaration */

@@ -25,6 +25,7 @@ COMMON(Int)	getBlueColour(Colour c);
 COMMON(Colour)	getHiliteColour(Colour c, Real h);
 COMMON(Colour)	getReduceColour(Colour c, Real re);
 COMMON(Colour)	getFadeColour(Colour c, Real f);
+COMMON(Colour)	getMixColour(Colour c, Colour with, Real f);
 COMMON(Int)	getIntensityColour(Colour c);
 COMMON(status)	rgbaColour(Colour c, Int rgba);
 COMMON(status)	makeClassColour(Class class);

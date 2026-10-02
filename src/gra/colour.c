@@ -531,6 +531,34 @@ getFadeColour(Colour c, Real f)
 }
 
 
+/* Return the colour that is `factor' of the way from C towards WITH.
+ * 0.0 returns C and 1.0 returns WITH.  This is used to derive colours
+ * that work on light and dark backgrounds alike, e.g., moving a
+ * background a little towards the text colour.
+ */
+
+Colour
+getMixColour(Colour c, Colour with, Real f)
+{ float mf = isDefault(f) ? 0.5 : valReal(f);
+
+  if ( isDefault(c->rgba) )
+    ws_named_colour(c);
+  if ( isDefault(with->rgba) )
+    ws_named_colour(with);
+
+  COLORRGBA c1 = valInt(c->rgba);
+  COLORRGBA c2 = valInt(with->rgba);
+  int r1 = (int)ColorRValue(c1), r2 = (int)ColorRValue(c2);
+  int g1 = (int)ColorGValue(c1), g2 = (int)ColorGValue(c2);
+  int b1 = (int)ColorBValue(c1), b2 = (int)ColorBValue(c2);
+  int r = r1 + (int)lround((r2-r1)*mf);
+  int g = g1 + (int)lround((g2-g1)*mf);
+  int b = b1 + (int)lround((b2-b1)*mf);
+
+  return associateColour(c, toInt(r), toInt(g), toInt(b), getAlphaColour(c));
+}
+
+
 Int
 getIntensityColour(Colour c)
 { if ( isDefault(c->rgba) )
@@ -738,6 +766,8 @@ getDistanceColour(Colour me, Any to)
 
 /* Type declarations */
 
+static char *T_mix[] =
+	{ "with=colour", "factor=[0.0..1.0]" };
 static char *T_lookup[] =
 	{ "[name|int]",
 	  "red=[0..360]", "green=[0..255]", "blue=[0..255]",
@@ -778,6 +808,8 @@ static getdecl get_colour[] =
      NAME_3d, "Reduced version of the colour"),
   GM(NAME_fade, 1, "colour", "factor=[0.0..1.0]", getFadeColour,
      NAME_3d, "Same RGB with alpha multiplied by factor"),
+  GM(NAME_mix, 2, "colour", T_mix, getMixColour,
+     NAME_colour, "Colour factor of the way towards another colour"),
   GM(NAME_convert, 1, "colour", "name", getConvertColour,
      NAME_conversion, "Convert X-colour name"),
   GM(NAME_storageReference, 0, "name", NULL, getStorageReferenceColour,

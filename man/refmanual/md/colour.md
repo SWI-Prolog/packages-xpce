@@ -176,6 +176,14 @@ sections _System colours_ and _Themes_ of the XPCE User Guide.
     graphical opacity slot.  Like `<-hilite` and `<-reduce`, the
     result is cached against the source colour via `@colours`.
 
+- colour<-mix: with=colour, factor=[0.0..1.0] -> colour
+    Return the colour that is `factor` of the way from this colour
+    towards `with`.  `0.0` returns this colour and `1.0` returns `with`.
+    The default factor is 0.5.  Mixing a background a little towards
+    the text colour derives a colour that stands out on light and dark
+    backgrounds alike.  Like `<-hilite`, the result is associated with
+    the source colour.
+
 - colour<-convert: name -> colour
     Type-checker hook.  First looks the name up in `@colours`
     (already-constructed colours).  Otherwise:

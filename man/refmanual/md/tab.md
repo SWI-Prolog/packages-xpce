@@ -14,7 +14,23 @@ Tabs are normally used to establish settings for a system
 that has many settings.  Groups of related settings will be
 placed on a separate tab.
 
+The tab on top has the background of its contents.  The labels of the
+hidden tabs have their background moved a little towards the text
+colour and dimmed text.  This works for light and dark themes alike.
+A line in the accent colour on top of the label of the tab on top
+makes it stand out clearly.
+
 See also class tab_stack.
+
+
+## Class variables {#class-tab-classvars}
+
+- tab.indicator_colour: colour* = ui_accent
+    Colour of the line on top of the label of the tab on top.  @nil
+    omits the line.
+
+- tab.indicator_width: 0.. = 3
+    Width of this line.  0 omits the line.
 
 
 ## Instance variables {#class-tab-instvars}
