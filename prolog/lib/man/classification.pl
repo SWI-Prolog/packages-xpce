@@ -223,6 +223,7 @@ scope('C.text_cursor', basic).
 scope('C.text_image', basic).
 scope('C.text_item', basic).
 scope('C.text_margin', basic).
+scope('C.theme_colour', advanced).
 scope('C.tile', basic).
 scope('C.timer', basic).
 scope('C.tokeniser', basic).
@@ -641,6 +642,7 @@ scope('M.colour.G.alpha', advanced).
 scope('M.colour.G.blue', advanced).
 scope('M.colour.G.convert', internal).
 scope('M.colour.G.distance', advanced).
+scope('M.colour.G.fade', advanced).
 scope('M.colour.G.green', advanced).
 scope('M.colour.G.hilite', internal).
 scope('M.colour.G.hue', advanced).
@@ -944,9 +946,11 @@ scope('M.display_manager.G.member', obscure).
 scope('M.display_manager.G.primary', advanced).
 scope('M.display_manager.G.window_of_last_event', advanced).
 scope('M.display_manager.S.append', internal).
+scope('M.display_manager.S.colours_changed', advanced).
 scope('M.display_manager.S.has_visible_frames', advanced).
 scope('M.display_manager.S.initialise', internal).
 scope('M.display_manager.S.redraw', advanced).
+scope('M.display_manager.S.system_colours_changed', advanced).
 scope('M.edit_text_gesture.S.drag', advanced).
 scope('M.edit_text_gesture.S.event', advanced).
 scope('M.edit_text_gesture.S.initialise', advanced).
@@ -2945,6 +2949,10 @@ scope('M.text_margin.S.event', advanced).
 scope('M.text_margin.S.gap', obscure).
 scope('M.text_margin.S.icon_size', advanced).
 scope('M.text_margin.S.initialise', obscure).
+scope('M.theme_colour.G.lookup', internal).
+scope('M.theme_colour.S.initialise', advanced).
+scope('M.theme_colour.S.unlink', advanced).
+scope('M.theme_colour.S.value', advanced).
 scope('M.tile.G.can_resize', advanced).
 scope('M.tile.G.root', advanced).
 scope('M.tile.G.sub_tile_to_resize', obscure).
@@ -3239,6 +3247,8 @@ scope('R.click_gesture.cursor', basic).
 scope('R.click_gesture.execute_cursor', basic).
 scope('R.click_gesture.max_drag_distance', advanced).
 scope('R.click_gesture.modifier', basic_programming).
+scope('R.colour.dark_hilite_factor', obscure).
+scope('R.colour.fade_factor', obscure).
 scope('R.colour.hilite_factor', obscure).
 scope('R.colour.reduce_factor', obscure).
 scope('R.connect_gesture.button', basic).
@@ -4208,6 +4218,7 @@ scope('V.display.work_area', advanced).
 scope('V.display.ws_ref', internal).
 scope('V.display_manager.focus_message', advanced).
 scope('V.display_manager.members', advanced).
+scope('V.display_manager.system_colours_message', advanced).
 scope('V.display_manager.test_queue', advanced).
 scope('V.edit_text_gesture.activate', internal).
 scope('V.edit_text_gesture.active', advanced).
@@ -5809,6 +5820,7 @@ scope('V.text_margin.pen', advanced).
 scope('V.text_margin.request_compute', advanced).
 scope('V.text_margin.selected', advanced).
 scope('V.text_margin.texture', advanced).
+scope('V.theme_colour.value', advanced).
 scope('V.tile.area', advanced).
 scope('V.tile.border', advanced).
 scope('V.tile.can_resize', advanced).
