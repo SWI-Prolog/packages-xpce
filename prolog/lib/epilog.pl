@@ -78,6 +78,7 @@
 :- autoload(library(desktop), [desktop_open/1]).
 :- autoload(library(process), [process_create/3, process_wait/2]).
 :- autoload(library(shell), [shell_command/1]).
+:- autoload(library(pce_theme), [adaptive_colour/3]).
 
 :- meta_predicate
     epilog(:),
@@ -174,7 +175,16 @@ ep_main_end :-
 %       which runs in the Prolog thread, this is read by whoever reads
 %       the terminal, e.g., the shell of goal(shell).
 %     - background(+Colour)
-%       Background colour for the terminal.
+%       Background colour for the terminal.  Colour is a colour name,
+%       a term rgb(R,G,B), or a list `Theme = Colour`, e.g.,
+%       `[light=lightgoldenrodyellow, dark='#33301e']`.  A single
+%       colour, or the colour for the `light` theme, is adapted to the
+%       active theme: if a dark theme is active, a light colour becomes
+%       a dark colour of the same hue and vice versa.  See
+%       adaptive_colour/3.
+%     - foreground(+Colour)
+%       Text colour for the terminal.  Colour is the same as for
+%       background(Colour).
 %     - main(+Bool)
 %       If `true`, act as main window.   In this case epilog/1
 %       runs the main thread and halts after the last window that
@@ -294,7 +304,48 @@ configure_terminal(PT, Profile, Options) :-
     on_option(goal(Goal),            Options, send(PT, goal, Goal)),
     on_option(cwd(CWD),              Options, send(PT, process_cwd, CWD)),
     on_option(inject(Text),          Options, set_inject(PT, Text)),
-    on_option(background(Colour),    Options, send(PT, background, Colour)).
+    on_option(background(Colour),    Options,
+              set_profile_colour(PT, Profile, background, Colour)),
+    on_option(foreground(Colour),    Options,
+              set_profile_colour(PT, Profile, foreground, Colour)).
+
+%!  set_profile_colour(+Terminal, +Profile, +Which, +Colour) is det.
+%
+%   Set a colour of a terminal from a profile.  The colour is the theme
+%   colour `epilog_<profile>_<which>`.  Colour may also be a colour
+%   object, e.g., when copying the colour of an existing terminal.
+
+set_profile_colour(PT, _Profile, Which, Colour), Colour = @_ =>
+    set_colour(Which, PT, Colour).
+set_profile_colour(PT, Profile, Which, Spec) =>
+    format(atom(Name), 'epilog_~w_~w', [Profile, Which]),
+    theme_colour(Name, Which, Spec, Colour),
+    set_colour(Which, PT, Colour).
+
+%!  theme_colour(+Name, +Which, +Spec, -Colour) is det.
+%
+%   Define the theme colour Name from Spec, the colour the user asked
+%   for, which adapts to the theme.  See adaptive_colour/3.
+
+theme_colour(Name, Which, Spec0, Name) :-
+    theme_spec(Spec0, Spec),
+    colour_reference(Which, Reference),
+    adaptive_colour(Name, Spec, Reference).
+
+theme_spec(List, Spec), is_list(List) =>
+    maplist(theme_spec_value, List, Spec).
+theme_spec(Colour, Spec) =>
+    pce_colour(Colour, Spec).
+
+theme_spec_value(Theme=Colour0, Theme=Colour) :-
+    pce_colour(Colour0, Colour).
+
+%   The theme colour whose brightness the colour must agree with.
+
+colour_reference(background,           ui_window_background).
+colour_reference(foreground,           ui_window_foreground).
+colour_reference(selection_background, ui_text_selection_background).
+colour_reference(selection_foreground, ui_window_foreground).
 
 %!  on_option(+Option, +Options, :Goal) is det.
 %
@@ -2864,6 +2915,8 @@ run_in_help_epilog(Goal) :-
 %     - background(+Color)
 %     - selection_foreground(+Color)
 %     - selection_background(+Color)
+%       Color is the same as for the background(Colour) option of
+%       epilog/1.  It adapts to the active theme.
 %     - menu(+Label, +Before)
 %       Add a new popup to the Epilog   menu.  The popus is added before
 %       Before. If Before is `-`, the new popup is added to the right.
@@ -2902,9 +2955,11 @@ set_epilog(M:menu_item(PopupName, Item, Before, Goal)) =>
 %   Set console colours.
 
 win_window_color(Which, Color) :-
-    pce_colour(Color, Object),
     terminal(Term),
-    set_colour(Which, Term, Object).
+    Term = @Ref,
+    format(atom(Name), 'epilog_terminal_~w_~w', [Ref, Which]),
+    theme_colour(Name, Which, Color, Colour),
+    set_colour(Which, Term, Colour).
 
 pce_colour(rgb(R,G,B), Name) =>
     format(atom(Name), '#~|~`0t~16r~2+~`0t~16r~2+~`0t~16r~2+',
