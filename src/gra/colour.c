@@ -96,9 +96,9 @@ defcolourname(Int r, Int g, Int b, Int a)
 
 static status
 initialiseColour(Colour c, Name name, Int r, Int g, Int b, Int a, Name model)
-{ bool named = notDefault(name);
+{ assign(c, access, NAME_read);
 
-  if ( named )
+  if ( notDefault(name) )
     assign(c, name, name);
 
   if ( isDefault(a) )
@@ -126,27 +126,45 @@ initialiseColour(Colour c, Name name, Int r, Int g, Int b, Int a, Name model)
 		    getMethodFromFunction((Any(*)())initialiseColour));
 
   appendHashTable(ColourTable, c->name, c);
-  if ( !(c->kind == NAME_rgb && named) )
-    appendHashTable(RevColourTable, c->rgba, c);
+  appendHashTable(RevColourTable, c->rgba, c);
 
   succeed;
 }
 
 
+/* Colours are read-only by default.  A colour with access `both' may
+ * change its value using ->rgba, e.g., because it follows the theme.
+ * The reverse table maps an RGBA value to a colour to answer a lookup
+ * from RGB values.  A read/write colour is not a valid answer, so it is
+ * never in this table.  A read-only colour claims the slot for its
+ * value if no other colour does.
+ */
+
+static void
+unregister_rgba(Colour c)
+{ if ( getMemberHashTable(RevColourTable, c->rgba) == c )
+    deleteHashTable(RevColourTable, c->rgba);
+}
+
+static void
+register_rgba(Colour c)
+{ if ( c->access == NAME_read &&
+       isInteger(c->rgba) &&
+       !getMemberHashTable(RevColourTable, c->rgba) )
+    appendHashTable(RevColourTable, c->rgba, c);
+}
+
 /* Change the RGBA value of a colour in place.  Drawing uses the Colour
  * object, so the windows show the new value after they are redrawn.
- * This is used for colours whose value follows the system settings or
- * the theme.  Such a colour is not a valid answer for looking up a
- * colour from its RGBA value, so it is removed from the reverse table
- * and not added for the new value.  For the same reason, a colour
- * created from a name and RGB values is never in the reverse table.
+ * This is used for colours whose value follows the system settings and
+ * by ->rgba.
  */
 
 status
 rgbaColour(Colour c, Int rgba)
-{ if ( getMemberHashTable(RevColourTable, c->rgba) == c )
-    deleteHashTable(RevColourTable, c->rgba);
+{ unregister_rgba(c);
   assign(c, rgba, rgba);
+  register_rgba(c);
 
   succeed;
 }
@@ -154,7 +172,10 @@ rgbaColour(Colour c, Int rgba)
 
 static status
 setRgbaColour(Colour c, Any value)
-{ if ( instanceOfObject(value, ClassColour) )
+{ if ( c->access != NAME_both )
+    return errorPce(c, NAME_readOnly);
+
+  if ( instanceOfObject(value, ClassColour) )
   { Colour from = value;
 
     if ( isDefault(from->rgba) )
@@ -163,6 +184,18 @@ setRgbaColour(Colour c, Any value)
   }
 
   return rgbaColour(c, value);
+}
+
+
+static status
+accessColour(Colour c, Name access)
+{ if ( c->access != access )
+  { unregister_rgba(c);
+    assign(c, access, access);
+    register_rgba(c);
+  }
+
+  succeed;
 }
 
 
@@ -244,6 +277,8 @@ loadColour(Colour c, IOSTREAM *fd, ClassDef def)
 
   if ( c->kind == NAME_named && !isInteger(c->rgba) )
     assign(c, rgba, DEFAULT);
+  if ( !isName(c->access) )
+    assign(c, access, NAME_read);
 
   succeed;
 }
@@ -731,7 +766,9 @@ static vardecl var_colour[] =
   IV(NAME_kind, "{named,rgb}", IV_GET,
      NAME_kind, "From colour-name database or user-defined"),
   IV(NAME_rgba, "[int]", IV_GET,
-     NAME_colour, "Encoded RGBA tuple")
+     NAME_colour, "Encoded RGBA tuple"),
+  IV(NAME_access, "{read,both}", IV_GET,
+     NAME_colour, "If `both', ->rgba may change the value")
 };
 
 /* Send Methods */
@@ -744,7 +781,9 @@ static senddecl send_colour[] =
   SM(NAME_equal, 1, "any", equalColour,
      DEFAULT, "Test if colours have equal RGB"),
   SM(NAME_rgba, 1, "colour|int", setRgbaColour,
-     NAME_colour, "Change the RGBA value in place")
+     NAME_colour, "Change the RGBA value of a read/write colour"),
+  SM(NAME_access, 1, "{read,both}", accessColour,
+     NAME_colour, "Make the colour read-only or read/write")
 };
 
 /* Get Methods */

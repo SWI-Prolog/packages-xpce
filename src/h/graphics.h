@@ -755,6 +755,7 @@ NewClass(colour)
   Name		name;			/* Name of the colour (red, ...) */
   Name		kind;			/* `named' or `rgb' */
   Int		rgba;			/* 32-bit encoded RGBA */
+  Name		access;			/* `read' or `both' */
 End;
 
 

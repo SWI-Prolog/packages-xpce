@@ -94,7 +94,7 @@ test(reload_system_colours) :-
     get(@pce, convert, sys_accent, colour, C),
     get(C, rgba, Orig),
     send(@colour_names, append, sys_accent, 12345),
-    send(C, rgba, 12345),
+    send(C, slot, rgba, 12345),
     send(@display_manager, system_colours_changed),
     get(C, rgba, New),
     get(@colour_names, member, sys_accent, InTable),
@@ -103,25 +103,40 @@ test(reload_system_colours) :-
 
 test(set_rgba, RGB == rgb(255,0,0)) :-
     new(C, colour(test_colour_set, 1, 2, 3)),
+    send(C, access, both),
     send(C, rgba, red),
     colour_rgb(C, RGB),
     free(C).
 test(set_rgba_from_int, RGB == rgb(4,5,6)) :-
     new(C, colour(test_colour_set_int, 1, 2, 3)),
+    send(C, access, both),
     get(@pce, convert, '#040506', colour, From),
     get(From, rgba, Rgba),
     send(C, rgba, Rgba),
     colour_rgb(C, RGB),
     free(C).
-test(named_rgb_not_in_reverse_table, Same == false) :-
-    %  A colour with a name and RGB values may change its value, so it
-    %  must not be the answer to looking up a colour from its RGBA.
-    new(C, colour(test_colour_named_rgb, 11, 12, 13)),
+test(set_rgba_read_only, [RGB == rgb(1,2,3), Access == read]) :-
+    new(C, colour(test_colour_read_only, 1, 2, 3)),
+    get(C, access, Access),
+    \+ pce_catch_error(read_only, send(C, rgba, red)),
+    colour_rgb(C, RGB),
+    free(C).
+test(read_only_in_reverse_table, Same == true) :-
+    new(C, colour(test_colour_read_only_rev, 11, 12, 13)),
     new(Lookup, colour(@default, 11, 12, 13)),
+    same(Lookup, C, Same),
+    free(C).
+test(read_write_not_in_reverse_table, Same == false) :-
+    %  A read/write colour may change its value, so it must not be the
+    %  answer to looking up a colour from its RGBA.
+    new(C, colour(test_colour_read_write, 14, 15, 16)),
+    send(C, access, both),
+    new(Lookup, colour(@default, 14, 15, 16)),
     same(Lookup, C, Same),
     free(C).
 test(set_rgba_leaves_reverse_table, [OldSame == false, NewSame == false]) :-
     new(C, colour(@default, 21, 22, 23)),
+    send(C, access, both),
     get(C, rgba, OldRgba),
     send(C, rgba, colour(@default, 24, 25, 26)),
     get(C, rgba, NewRgba),
@@ -129,6 +144,14 @@ test(set_rgba_leaves_reverse_table, [OldSame == false, NewSame == false]) :-
     ( get(@rgba, member, NewRgba, New) -> true ; New = none ),
     same(Old, C, OldSame),
     same(New, C, NewSame),
+    free(C).
+test(read_only_again_in_reverse_table, Same == true) :-
+    new(C, colour(test_colour_back_to_read, 17, 18, 19)),
+    send(C, access, both),
+    send(C, access, read),
+    get(C, rgba, Rgba),
+    get(@rgba, member, Rgba, Found),
+    same(Found, C, Same),
     free(C).
 test(locked_colour_survives, [Unlocked == gone, Locked == alive]) :-
     %  A colour created as part of a graphical is freed with it, unless
