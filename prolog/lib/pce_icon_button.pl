@@ -36,6 +36,7 @@
 :- module(pce_icon_button, []).
 :- use_module(library(pce)).
 :- use_module(library(help_message), []).
+:- autoload(library(readutil), [read_file_to_string/3]).
 
 /** <module> Small picture that does something when it is clicked
 
@@ -47,6 +48,11 @@ Naming an SVG file rather than drawing   the picture is what makes one of
 these worth having: the file is easier   to  say what you want with, it is
 drawn at whatever size the button is given, and whoever does not like it
 can point the class variable at another one.
+
+An SVG file that draws in `currentColor` is a _symbolic_ icon: it is
+drawn in the colour of the class variable `symbolic_colour`, by default
+the text colour of dialogs.  It is drawn again when the theme changes,
+so it shows on light and dark backgrounds alike.
 */
 
 :- pce_begin_class(icon_button, figure,
@@ -54,6 +60,10 @@ can point the class variable at another one.
 
 class_variable(dim_opacity, num, 0.4,
                "Opacity while the pointer is elsewhere").
+class_variable(symbolic_colour, colour, ui_dialog_foreground,
+               "Colour for `currentColor` in a symbolic SVG icon").
+
+variable(image_file, name, get, "File the picture is drawn from").
 
 :- pce_global(@icon_button_hover, make_icon_button_hover).
 
@@ -66,10 +76,22 @@ make_icon_button_hover(G) :-
 initialise(B, Image:name, Size:size) :->
     "Show Image, drawn at Size"::
     send_super(B, initialise),
-    icon_image(Image, Size, Bitmap),
+    send(B, slot, image_file, Image),
+    icon_image(B, Image, Size, Bitmap),
     send(B, display, bitmap(Bitmap)),
     send(B, hovered, @off),
     send(B, recogniser, @icon_button_hover).
+
+colours_changed(B) :->
+    "Draw a symbolic icon again in the new colour"::
+    get(B, image_file, File),
+    (   symbolic_svg(File, _)
+    ->  get(B, member, bitmap, BM),
+        get(BM?image, size, Size),
+        icon_image(B, File, Size, Image),
+        send(BM, image, Image)
+    ;   true
+    ).
 
 hovered(B, Hovered:bool) :->
     "Come out fully while the pointer is on me"::
@@ -81,13 +103,31 @@ hovered(B, Hovered:bool) :->
 
 :- pce_end_class(icon_button).
 
-%!  icon_image(+File, +Size, -Image) is det.
+%!  icon_image(+Button, +File, +Size, -Image) is det.
 %
 %   The picture on a button, at Size.  An SVG is drawn at that size rather
 %   than drawn and then scaled to it, which is the point of naming one: it
-%   stays sharp whatever size the button is given.
+%   stays sharp whatever size the button is given.  A symbolic SVG is
+%   drawn in the `symbolic_colour` of Button.
 
-icon_image(File, Size, Image) :-
+icon_image(B, File, Size, Image) :-
+    symbolic_svg(File, SVG),
+    !,
+    get(B, class_variable_value, symbolic_colour, Colour),
+    colour_hex(Colour, Hex),
+    get(Size, width, W),
+    get(Size, height, H),
+    (   symbolic_image(File, W, H, Hex, Image)
+    ->  true
+    ;   atomic_list_concat(Parts, currentColor, SVG),
+        atomic_list_concat(Parts, Hex, Text),
+        new(TB, text_buffer),
+        send(TB, insert, 0, Text),
+        new(Image, image(TB, W, H)),
+        send(Image, lock_object, @on),
+        assertz(symbolic_image(File, W, H, Hex, Image))
+    ).
+icon_image(_B, File, Size, Image) :-
     get(Size, width, W),
     get(Size, height, H),
     new(Image0, image(File, W, H)),
@@ -95,3 +135,37 @@ icon_image(File, Size, Image) :-
     ->  Image = Image0
     ;   get(Image0, scale, Size, Image)      % not an SVG after all
     ).
+
+:- dynamic
+    symbolic_image/5,                   % File, W, H, Hex, Image
+    symbolic_svg_cache/2.               % File, SVG
+
+%!  symbolic_svg(+File, -SVG) is semidet.
+%
+%   True when File is an SVG image that draws in `currentColor`.  SVG is
+%   its text.
+
+symbolic_svg(File, SVG) :-
+    symbolic_svg_cache(File, SVG0),
+    !,
+    SVG0 \== false,
+    SVG = SVG0.
+symbolic_svg(File, SVG) :-
+    (   file_name_extension(_, svg, File),
+        absolute_file_name(image(File), Path,
+                           [ access(read),
+                             file_errors(fail)
+                           ]),
+        read_file_to_string(Path, SVG0, []),
+        sub_string(SVG0, _, _, _, "currentColor")
+    ->  assertz(symbolic_svg_cache(File, SVG0)),
+        SVG = SVG0
+    ;   assertz(symbolic_svg_cache(File, false)),
+        fail
+    ).
+
+colour_hex(Colour, Hex) :-
+    get(Colour, red, R),
+    get(Colour, green, G),
+    get(Colour, blue, B),
+    format(atom(Hex), '#~|~`0t~16r~2+~`0t~16r~2+~`0t~16r~2+', [R, G, B]).
