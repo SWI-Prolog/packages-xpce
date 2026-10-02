@@ -138,7 +138,7 @@ application non-portable.
 \hline
 \end{tabular}
 \end{center}
-\caption{Mapping of the \const{sys_} colour names.  The Windows column
+\caption[Mapping of the system colour names]{Mapping of the \const{sys_} colour names.  The Windows column
 	 names the argument to GetSysColor(), the MacOS column the
 	 NSColor class method and the KDE column the group (without
 	 \const{Colors:}) and key in \file{kdeglobals}.  The Fallback
@@ -308,7 +308,7 @@ accent colour is used.
 \hline
 \end{tabular}
 \end{center}
-\caption{The \const{sys_} colours on GNOME, using the default accent colour
+\caption[The system colours on GNOME]{The \const{sys_} colours on GNOME, using the default accent colour
 	 and normal contrast.}
 \label{tab:gnomecolours}
 \end{table}
@@ -342,12 +342,56 @@ or another KDE colour scheme with the same brightness, are not noticed.
 The application may send ->system_colours_changed itself, or
 \product{} must be restarted.
 
-\index{theme colour}%
-After reloading the system colours, the theme colours are resolved
-again (see below).  Next, ->system_colours_changed sends
-`display_manager <-system_colours_message' if this is not
-\const{@nil}, which allows the application to select another theme.
-Finally, all windows are redrawn.
+After reloading the system colours, the theme colours that are derived
+from them are resolved again (see \secref{themes}).  Next,
+->system_colours_changed sends `display_manager
+<-system_colours_message' if this is not \const{@nil}, which allows the
+application to select another theme.  Finally, all windows are redrawn.
+
+
+\subsubsection{Themes}				\label{sec:themes}
+
+\index{theme}\index{dark theme}\index{theme colour}%
+A \jargon{theme} defines the colours of the \product{} user interface
+and the SWI-Prolog development tools, such as the colours for syntax
+highlighting in PceEmacs.  \product{} itself only uses
+\jargon{theme colours}: colours whose name describes their role rather
+than their value.  For example, the background of windows is
+\const{ui_window_background} and the colour of a comment in PceEmacs
+is \const{syntax_comment}.  A theme maps these names to values.
+Switching themes changes the values of the theme colours in place and
+redraws all windows, so themes can be switched while \product{} is
+running.
+
+The library \pllib{pce_theme} manages themes.  The \const{light} theme
+is the default.  The other themes are files in
+\file{library(theme)} that define the colours for their theme, such as
+\file{library(theme/dark)}.
+
+\paragraph{Selecting a theme}
+
+By default, \product{} follows the light or dark setting of the desktop
+(see `display <-theme') and switches theme if the user changes this
+setting.  This is overruled by, in this order:
+
+\begin{itemlist}
+    \item [The Settings/Theme menu]
+The \emph{Settings} menu of the IDE tools, such as \program{swipl-win},
+has a \emph{Theme} submenu to follow the desktop or use one of the
+available themes.  This calls select_theme/1 and holds for the running
+session.
+    \item [The Prolog flag \prologflag{theme}]
+For example, \exam{swipl -Dtheme=dark}.
+    \item [The class variable \const{display.theme}]
+Setting this in the Defaults file (see \secref{classvar}) makes the
+choice permanent:
+
+\begin{code}
+display.theme: dark
+\end{code}
+\end{itemlist}
+
+\paragraph{Theme colours}
 
 A \idx{theme colour} is an instance of class \class{theme_colour}, a
 subclass of \class{colour}.  It is created from a name that describes
@@ -362,22 +406,156 @@ Theme colours may therefore refer to each other in any order.  Theme
 colours are locked, so they are never garbage collected, and they are
 never returned when looking up a colour from its RGB values.  After
 changing theme colours, `display_manager ->colours_changed' redraws all
-windows.  The library \pllib{pce_theme} uses theme colours to switch
-themes while \product{} is running.
+windows.  As graphicals refer to the colour object, either directly or
+by name, they show the new value after the windows are redrawn.
 
-Only the colours are reloaded.  The SWI-Prolog theme
-(\file{library(theme/dark)}) is selected when \product{} starts and is
-not changed.  The colours the theme defines, for example for syntax
-highlighting, therefore remain those for the appearance at startup.
+The theme colours are named using a prefix that describes where they
+are used:
 
-\index{dark theme}%
-If \const{sys_window_background} is dark, which is the case on MacOS in
-dark mode, on KDE using a dark colour scheme, on GNOME using the dark
-style and on Windows in dark mode or using a dark contrast theme, the
-SWI-Prolog \const{dark} theme (\file{library(theme/dark)}) leaves the
-basic colours of windows, dialogs and menus to the system colours.
-These follow switching between light and dark while \product{} is
-running.
+\begin{itemlist}
+    \item [\const{ui_}\arg{role}]
+The basic colours of the user interface.  For each system colour
+\const{sys_}\arg{role} (see \tabref{syscolours}) there is a theme
+colour \const{ui_}\arg{role}, e.g., \const{ui_window_background}.
+\product{} only uses the \const{ui_} names, such that a theme can
+replace the system colours (see below).  Other \const{ui_} colours are
+used for, e.g., the text selection
+(\const{ui_text_selection_background}) and incremental search
+(\const{ui_isearch_background}).  The \const{ui_} colours and their
+values in the \const{light} theme are in the hash table
+@theme_colour_defaults.
+    \item [\const{ansi_}\arg{colour}]
+The 16 ANSI colours of the terminal, from \const{ansi_black} to
+\const{ansi_bright_white}.
+    \item [\const{syntax_}\arg{class}]
+The colours of PceEmacs syntax highlighting.  The name is derived from
+the syntax class of library(prolog_colour): \const{syntax_} followed by
+the name and the atomic arguments of the class, separated by
+\const{_}.  For example, the class \exam{goal(built_in,_)} uses
+\const{syntax_goal_built_in}.  A background colour gets the suffix
+\const{_bg}.  The value in the \const{light} theme is the colour that
+is defined for the class.
+    \item [\const{debug_}, \const{prof_}, \const{xref_}, \ldots]
+The colours of the graphical debugger, the profiler, the cross
+referencer and other tools.
+\end{itemlist}
+
+\paragraph{Using the system colours}
+
+The \const{ui_} colours are the system colours if the theme and the
+desktop are both light or both dark.  This preserves the look of the
+desktop.  Otherwise, for example when using the dark theme on a light
+desktop, the theme replaces the system colours by colours of its own.
+A theme is dark if its \const{ui_window_background} is dark.  The
+\const{light} theme provides its own light colours for use on a dark
+desktop.
+
+\paragraph{Writing a theme}
+
+A theme is a Prolog file \file{library(theme/}\arg{Name}\file{)} that
+defines the values of the theme colours using the multifile predicate
+pce_theme:colour/3.  It does not need to load \productpl{}.  The
+library \file{library(theme/dark)} is a complete example.  The skeleton
+is below.
+
+\begin{code}
+:- module(prolog_theme_mytheme, []).
+:- multifile
+    prolog:theme/1,
+    pce_theme:colour/3.
+
+prolog:theme(mytheme).
+
+pce_theme:colour(mytheme, Name, Value) :-
+    colour(Name, Value).
+
+colour(ui_window_background, '#1e1e1e').
+colour(ui_window_foreground, white).
+...
+colour(syntax_comment,       green).
+...
+\end{code}
+
+A theme should define all theme colours.  Colours it does not define
+use their value in the \const{light} theme.  The theme colours of the
+\const{ui_} roles are only used if the theme does not match the
+desktop.  The predicate check_theme/1 verifies a theme against the
+theme colours of xpce and the development tools.  It reports theme
+colours that are not defined, defined twice or unknown, and values that
+are not colours.  After changing a theme file, use make/0 and
+apply_theme/1 to see the result.
+
+\paragraph{Theme colours of an application}
+
+An application that wants its colours to follow the theme declares
+theme colours with their value in the \const{light} theme and uses the
+name of the theme colour wherever it needs the colour, for example in
+a class variable:
+
+\begin{code}
+:- use_module(library(pce_theme)).
+:- theme_colours([ myapp_highlight = khaki1 ]).
+
+class_variable(highlight, colour, myapp_highlight).
+\end{code}
+
+A theme defines the value for the other themes:
+
+\begin{code}
+pce_theme:colour(dark, myapp_highlight, khaki4).
+\end{code}
+
+\paragraph{Colours chosen by the user}
+
+A colour that is chosen by the user, for example the background of an
+Epilog profile, is defined using adaptive_colour/3.  The theme colour
+is the given colour if this is as dark or as light as a reference, for
+example \const{ui_window_background} for a background colour.  If not,
+the lightness of the colour is mirrored, keeping its hue.  A light
+yellow background thus becomes a dark olive one in the dark theme.  It
+is also possible to give a value per theme.  The Epilog profile options
+\term{background}{Colour} and \term{foreground}{Colour} and the colours
+of set_epilog/1 use this:
+
+\begin{code}
+epilog:profile(shell, [ background(lightgoldenrodyellow) ]).
+epilog:profile(build, [ background([ light = lightgoldenrodyellow,
+                                     dark  = '#33301e'
+                                   ])
+                      ]).
+\end{code}
+
+\paragraph{Predicates}
+
+The library \pllib{pce_theme} provides the following predicates.  See
+the documentation of the library for details.
+
+\begin{description}
+    \predicate{apply_theme}{1}{+Theme}
+Make \arg{Theme} the active theme and redraw all windows.  This loads
+\file{library(theme/}\arg{Theme}\file{)} if it exists.
+    \predicate{select_theme}{1}{+Theme}
+Select \arg{Theme} or, if \arg{Theme} is \const{system}, follow the
+desktop for the running session.  This is used by the Settings/Theme
+menu.
+    \predicate{current_theme}{1}{-Theme}
+\arg{Theme} is the active theme.
+    \predicate{theme_colours}{1}{+List}
+Declare the theme colours of an application.  \arg{List} is a list of
+\arg{Name} \const{=} \arg{Value}, where \arg{Value} is the value in the
+\const{light} theme.
+    \predicate{adaptive_colour}{3}{+Name, +Spec, +Reference}
+Define the theme colour \arg{Name} from a colour chosen by the user.
+    \predicate{check_theme}{1}{+Theme}
+Report problems with the colours defined by \arg{Theme}.
+\end{description}
+
+The console colours of a theme, prolog:console_color/2, only apply
+while the theme is active.  Text that is already written keeps its
+colours.
+
+
+\subsubsection{Display colour depth}		\label{sec:colourdepth}
 
 Displays differ in the number of colours they can display simultaneously
 and whether this set can be changed or not. X11 defines 6 types of
