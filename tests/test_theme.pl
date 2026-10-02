@@ -188,6 +188,42 @@ test(available_theme, true) :-
     available_theme(light),
     available_theme(dark).
 
+test(adaptive_light_colour, [Light == rgb(250,250,210), Dark == rgb(36,36,16)]) :-
+    %  A light background becomes a dark one of the same hue in a dark
+    %  theme.
+    adaptive_colour(test_adaptive_bg, lightgoldenrodyellow,
+                    ui_window_background),
+    apply_theme(light),
+    theme_rgb(test_adaptive_bg, Light),
+    apply_theme(test_dark),
+    theme_rgb(test_adaptive_bg, Dark),
+    apply_theme(light).
+test(adaptive_dark_colour, [Light == rgb(230,230,230), Dark == rgb(0,0,0)]) :-
+    %  A dark background is kept in a dark theme and lightened in a
+    %  light one, where the text is dark.
+    adaptive_colour(test_adaptive_dark, black, ui_window_background),
+    apply_theme(light),
+    theme_rgb(test_adaptive_dark, Light),
+    apply_theme(test_dark),
+    theme_rgb(test_adaptive_dark, Dark),
+    apply_theme(light).
+test(adaptive_explicit, [Light == rgb(250,250,210), Dark == rgb(1,2,3)]) :-
+    adaptive_colour(test_adaptive_explicit,
+                    [light=lightgoldenrodyellow, test_dark='#010203'],
+                    ui_window_background),
+    apply_theme(light),
+    theme_rgb(test_adaptive_explicit, Light),
+    apply_theme(test_dark),
+    theme_rgb(test_adaptive_explicit, Dark),
+    apply_theme(light).
+test(adaptive_not_checked, Issues == []) :-
+    %  Adaptive colours adapt to any theme, so a theme need not define
+    %  them.
+    adaptive_colour(test_adaptive_bg, lightgoldenrodyellow,
+                    ui_window_background),
+    theme_issues(test_dark, Issues0),
+    include(adaptive_issue, Issues0, Issues).
+
 test(syntax_name, Name == syntax_goal_built_in) :-
     syntax_colour_name(goal(built_in,_), colour, Name).
 test(syntax_name, Name == syntax_lsp_enum) :-
@@ -246,6 +282,11 @@ test(prolog_mode_style, [Class == theme_colour, Same == true]) :-
     ( C == C2 -> Same = true ; Same = false ).
 
 informational_issue(redundant(_)).
+
+adaptive_issue(Issue) :-
+    arg(1, Issue, Name),
+    atom(Name),
+    sub_atom(Name, 0, _, _, test_adaptive_).
 
 %   Only consider the issues about the test colours, as the other
 %   semantic colours depend on the loaded libraries.

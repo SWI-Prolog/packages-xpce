@@ -39,6 +39,7 @@
             available_theme/1,          % ?Theme
             ensure_theme_colours/0,
             theme_colours/1,            % +List
+            adaptive_colour/3,          % +Name, +Spec, +Reference
             current_theme/1,            % -Theme
             syntax_colour_name/3,       % +Class, +Attribute, -Name
             check_theme/1,              % +Theme
@@ -89,6 +90,7 @@ apply_theme/1 can switch between themes at any time.
 
 :- dynamic
     current_theme_/1,
+    adaptive_colour_/3,                 % Name, Spec, Reference
     theme_selection_/1,
     builtin_colours_/1,
     declared_colour/3.                  % Name, Default, Module
@@ -132,6 +134,113 @@ theme_colours(M:List) :-
              assertz(declared_colour(Name, Default, M))
            )),
     ensure_theme_colours.
+
+%!  adaptive_colour(+Name, +Spec, +Reference) is det.
+%
+%   Define or redefine the semantic colour Name from a colour chosen by
+%   the user, e.g., the background of an Epilog profile.  Spec is a
+%   colour or a list `Theme = Colour`.  A theme that appears in the
+%   list uses its colour.  Otherwise the colour for the `light` theme
+%   (or the first colour or Spec itself) is _adapted_: if it is not as
+%   dark or as light as the semantic colour Reference in the theme, its
+%   lightness is mirrored, keeping its hue.  For example, a light yellow
+%   background with Reference `ui_window_background` becomes a dark
+%   olive in a dark theme.  The colour is created immediately.
+
+adaptive_colour(Name, Spec, Reference) :-
+    must_be(atom, Name),
+    must_be(atom, Reference),
+    with_mutex(pce_theme,
+               ( retractall(adaptive_colour_(Name, _, _)),
+                 assertz(adaptive_colour_(Name, Spec, Reference)),
+                 current_theme(Theme),
+                 update_colours(Theme)
+               )).
+
+adaptive_value(Theme, Match, Name, Value) :-
+    adaptive_colour_(Name, Spec, Reference),
+    (   is_list(Spec),
+        memberchk(Theme=Value0, Spec)
+    ->  Value = Value0
+    ;   spec_base(Spec, Base),
+        resolve_rgb(Theme, Match, Reference, RefRGB),
+        resolve_rgb(Theme, Match, Base, BaseRGB),
+        (   is_dark(RefRGB, Dark),
+            is_dark(BaseRGB, Dark)
+        ->  Value = Base
+        ;   mirror_rgb(BaseRGB, Mirrored),
+            rgb_name(Mirrored, Value)
+        )
+    ).
+
+spec_base(Spec, Base) :-
+    is_list(Spec),
+    !,
+    (   memberchk(light=Base, Spec)
+    ->  true
+    ;   Spec = [_=Base|_]
+    ).
+spec_base(Spec, Spec).
+
+%!  resolve_rgb(+Theme, +Match, +Value, -RGB) is det.
+%
+%   RGB is rgb(R,G,B) for Value in Theme.  If Value is a semantic colour
+%   we use its value in Theme rather than the colour object, which may
+%   still have the value of the previous theme.
+
+resolve_rgb(Theme, Match, Value, RGB) :-
+    resolve_rgb(Theme, Match, Value, 10, RGB).
+
+resolve_rgb(Theme, Match, Value, Depth, RGB) :-
+    Depth > 0,
+    atom(Value),
+    semantic_colour_name(Value, _),
+    !,
+    theme_value(Theme, Match, Value, Value1),
+    Depth1 is Depth - 1,
+    resolve_rgb(Theme, Match, Value1, Depth1, RGB).
+resolve_rgb(_, _, Value, _, rgb(R,G,B)) :-
+    get(@pce, convert, Value, colour, Colour),
+    get(Colour, red, R),
+    get(Colour, green, G),
+    get(Colour, blue, B).
+
+is_dark(rgb(R,G,B), Dark) :-
+    (   0.299*R + 0.587*G + 0.114*B < 128
+    ->  Dark = true
+    ;   Dark = false
+    ).
+
+%!  mirror_rgb(+RGB0, -RGB) is det.
+%
+%   Mirror the lightness of a colour in the HSL model, keeping the hue.
+%   The saturation is reduced, such that a pastel becomes a muted dark
+%   colour rather than a deep one.  The lightness is kept between 0.1
+%   and 0.9, such that we do not produce black or white.
+
+mirror_rgb(rgb(R0,G0,B0), rgb(R,G,B)) :-
+    R1 is R0/255, G1 is G0/255, B1 is B0/255,
+    Max is max(R1, max(G1, B1)),
+    Min is min(R1, min(G1, B1)),
+    L0 is (Max+Min)/2,
+    Chroma0 is Max-Min,
+    L is max(0.1, min(0.9, 1-L0)),
+    Chroma is min(Chroma0/2, 1-abs(2*L-1)),
+    (   Chroma0 =:= 0
+    ->  R2 = L, G2 = L, B2 = L
+    ;   Scale is Chroma/Chroma0,
+        Mid0 is (Max+Min)/2,
+        R2 is L + (R1-Mid0)*Scale,
+        G2 is L + (G1-Mid0)*Scale,
+        B2 is L + (B1-Mid0)*Scale
+    ),
+    R is round(255*max(0, min(1, R2))),
+    G is round(255*max(0, min(1, G2))),
+    B is round(255*max(0, min(1, B2))).
+
+rgb_name(rgb(R,G,B), Name) :-
+    format(atom(Name), '#~|~`0t~16r~2+~`0t~16r~2+~`0t~16r~2+',
+           [R,G,B]).
 
 %!  current_theme(-Theme) is det.
 %
@@ -182,6 +291,10 @@ update_colours(Theme) :-
 %   theme replaces them, for example to use a dark theme on a light
 %   desktop.
 
+theme_value(Theme, Match, Name, Value) :-
+    adaptive_colour_(Name, _, _),
+    !,
+    adaptive_value(Theme, Match, Name, Value).
 theme_value(Theme, Match, Name, Value) :-
     role(Name, System),
     !,
@@ -425,6 +538,9 @@ first_per_key([K-V|T0], Seen, T) :-
 semantic_colour_name(Name, Default) :-
     builtin_colour(Name, Default).
 semantic_colour_name(Name, Default) :-
+    adaptive_colour_(Name, Spec, _),
+    spec_base(Spec, Default).
+semantic_colour_name(Name, Default) :-
     declared_colour(Name, Default, _),
     \+ builtin_colour(Name, _).
 semantic_colour_name(Name, Default) :-
@@ -609,7 +725,10 @@ issue_level(collision(_,_),    warning).
 
 theme_issues(Theme0, Issues) :-
     canonical_theme(Theme0, Theme),
-    findall(N-D, semantic_colour_name(N, D), Known0),
+    findall(N-D,
+            ( semantic_colour_name(N, D),
+              \+ adaptive_colour_(N, _, _)
+            ), Known0),
     sort(1, @<, Known0, Known),
     pairs_keys(Known, Names),
     findall(N-V, colour(Theme, N, V), Defined),
