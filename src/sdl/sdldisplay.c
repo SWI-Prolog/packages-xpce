@@ -140,9 +140,17 @@ ws_init_displays(void)
   DisplayObj primary = ws_update_primary_display(dm);
   if ( primary )
   { assign(primary, number, ONE);
-    nameReferenceObject(primary, NAME_display);
     ws_number_displays(dm);
   }
+
+  /* @display is not a display, but the function ?(@display_manager,
+     current).  It is evaluated on each use, so it refers to the display
+     the user is working on and survives adding and removing displays.
+     It is created here rather than when the class display is realised,
+     so @display does not exist without a window system.
+  */
+  if ( !getObjectAssoc(NAME_display) )
+    globalObject(NAME_display, ClassObtain, dm, NAME_current, EAV);
 
   succeed;
 }
@@ -207,6 +215,8 @@ sdl_display_event(SDL_Event *ev)
     { SDL_DisplayID id = ev->display.displayID;
       DisplayObj dsp = dsp_id_to_display(id);
       DEBUG(NAME_display, Cprintf("Removed display %s\n", pp(dsp)));
+      if ( !dsp )
+	return true;
       if ( emptyChain(dsp->frames) )
       { send(dsp, NAME_removed, EAV);
       } else

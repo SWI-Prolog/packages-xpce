@@ -828,6 +828,7 @@ NewClass(display_manager)
 					   keyboard focus */
   Code		system_colours_message;	/* Sent after reloading the
 					   system colours */
+  Chain		inspect_handlers;	/* Shared by all displays */
 End;
 
 

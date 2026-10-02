@@ -295,7 +295,7 @@ forward(G, Target, Src) :-
 
 select_command(G, Commands:chain, Cmd:name) :<-
     "Select a command (normally right-button drag)"::
-    send(@display, busy_cursor, @nil),
+    send(@display_manager, busy_cursor, @nil),
     new(P, popup(command)),
     send(P, members, Commands),
     send_list(P, append,

@@ -26,6 +26,7 @@ test_libs(undefined            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(tool_panes           OPTIONS ${XPCE_TEST_OPTIONS})
 endif()
 test_libs(no_display           OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(display_function     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(number_conversion    OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(object_reference     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(popup_event          OPTIONS ${XPCE_TEST_OPTIONS})
@@ -58,6 +59,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:event_clone
                      xpce:prolog_mode
                      xpce:no_display
+                     xpce:display_function
                      xpce:number_conversion
                      xpce:object_reference
                      xpce:popup_event

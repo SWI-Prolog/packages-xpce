@@ -20,9 +20,8 @@ created at boot time.  Its responsibilities are:
 ## Instance variables {#class-display_manager-instvars}
 
 - display_manager<-members: chain
-    Chain of currently attached `display` objects.  Normally holds
-    just `@display` on a single-monitor setup; gains and loses
-    entries as monitors are hotplugged.
+    Chain of currently attached `display` objects, one for each
+    monitor.  Gains and loses entries as monitors are hotplugged.
 
 - display_manager<->test_queue: bool
     When `@on`, redraw passes are interrupted whenever events become
@@ -39,6 +38,12 @@ created at boot time.  Its responsibilities are:
     `->system_colours_changed` after reloading the system colours and
     before redrawing.  `library(pce_theme)` uses this to select the
     theme that matches the new desktop settings.
+
+- display_manager<-inspect_handlers: chain
+    Handlers that support inspector tools.  The chain is shared by all
+    displays: it is also `display <-inspect_handlers` of each display.
+
+    @see display<-inspect_handlers
 
 
 ## Send methods {#class-display_manager-send}
@@ -68,6 +73,17 @@ created at boot time.  Its responsibilities are:
 
     @see display->has_visible_frames
     @see frame<-keep_alive
+
+- display_manager->inspect_handler: handler
+    Add a handler to `<-inspect_handlers`.  It applies to all
+    displays.
+
+    @see display->inspect_handler
+
+- display_manager->busy_cursor: cursor=[cursor]*, block_input=[bool]
+    Send `display ->busy_cursor` to all displays, i.e., define a
+    (temporary) cursor for all frames of the application.  Calls must
+    be balanced: `@nil` restores the cursor.
 
 - display_manager->system_colours_changed
     Reload the system colours (`sys_*` and the platform specific
@@ -110,7 +126,11 @@ created at boot time.  Its responsibilities are:
 - display_manager<-current: -> display
     The display that received the last event, or `<-primary` when
     no event has happened yet.  Use this when you need to open a
-    new frame "where the user is".
+    new frame "where the user is".  `@display` is the function
+    `?(@display_manager, current)`.
+
+- display_manager<-frames: -> chain
+    New chain holding the frames of all displays.
 
 - display_manager<-member: name|1.. -> display
     Look up a display by its `<-name` or `<-number`.

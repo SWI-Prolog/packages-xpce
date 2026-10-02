@@ -51,7 +51,12 @@ Graphical objects that wishes to play a role in this must
 
 The currently armed object can be requested using
 
-        ?- get(@display, armed, Graphical).
+        ?- get(@display_manager, armed, Graphical).
+
+There is at most one armed object for the application.  It is therefore
+kept by @display_manager rather than by a display, so it does not depend
+on the display the mouse is on.  The `display` methods are kept for
+compatibility and delegate to @display_manager.
 
 The arm library was initially developed for  Triple20. It has been moved
 to  the  XPCE  core  library  in   version    5.6.9   for   use  in  the
@@ -74,7 +79,7 @@ define_event(Name, Parent) :-
 
 :- pce_global(@arm_recogniser,
               new(handler(arm,
-                          message(@event?display, try_arm,
+                          message(@display_manager, try_arm,
                                   @event?receiver)))).
 :- initialization
    define_event(arm, user).
@@ -84,7 +89,7 @@ event(W, Ev:event) :->
         get(W, arm, _Target)
     ->  true
     ;   send(Ev, is_a, area_exit)
-    ->  send(@display, arm_object, @nil)
+    ->  send(@display_manager, arm_object, @nil)
     ;   true
     ),
     send_super(W, event, Ev).
@@ -102,15 +107,15 @@ arm(W, For:[name|code], Target:graphical) :<-
         ),
         debug(arm, 'Posting arm to ~p at ~d,~d', [W, AX, AY]),
         send(Ev, post, W)
-    ->  get(@display, hypered, arm, Target)
-    ;   send(@display, arm_object, @nil),
+    ->  get(@display_manager, hypered, arm, Target)
+    ;   send(@display_manager, arm_object, @nil),
         fail
     ).
 
 :- pce_end_class(arm).
 
 
-:- pce_extend_class(display).
+:- pce_extend_class(display_manager).
 
 try_arm(W, Gr:graphical) :->
     (   get(@event, attribute, arm_for, For)
@@ -144,6 +149,20 @@ arm_object(W, Gr:graphical*) :->
 armed(W, Gr:graphical) :<-
     "Find currently armed graphical"::
     get(W, hypered, arm, Gr).
+
+:- pce_end_class(display_manager).
+
+:- pce_extend_class(display).
+
+try_arm(_W, Gr:graphical) :->
+    send(@display_manager, try_arm, Gr).
+
+arm_object(_W, Gr:graphical*) :->
+    send(@display_manager, arm_object, Gr).
+
+armed(_W, Gr:graphical) :<-
+    "Find currently armed graphical"::
+    get(@display_manager, armed, Gr).
 
 :- pce_end_class(display).
 

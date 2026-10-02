@@ -5,11 +5,12 @@ physical monitor, the system theme, DPI, system clipboard and the
 collection of frames currently hosted on that monitor.  The underlying
 driver is SDL3 across all platforms.
 
-xpce creates a single instance at boot, bound to the primary monitor
-and reachable as `@display`.  Additional `display` instances appear
-dynamically when a hotplugged monitor is attached (and disappear on
-removal).  Most applications never reference any other display than
-`@display`.
+xpce creates an instance for each monitor when the window system is
+initialised.  Additional `display` instances appear dynamically when a
+hotplugged monitor is attached (and disappear on removal).  Most
+applications use `@display`, the function that evaluates to the
+display that received the last event or else the primary display.
+See `display_manager <-current`.
 
 @see display<-convert
 @see display<-dpi
@@ -95,7 +96,9 @@ removal).  Most applications never reference any other display than
     @see window->background
 
 - display<-inspect_handlers: chain
-    Chain of handler objects used to support debugging tools.  When an
+    Chain of handler objects used to support debugging tools.  This
+    chain is shared by all displays: it is `display_manager
+    <-inspect_handlers`.  When an
     event occurs on a window and this chain is non-empty, the handlers
     in this chain are tried before the normal event-handling
     procedure.
@@ -146,7 +149,8 @@ removal).  Most applications never reference any other display than
 - display->busy_cursor: cursor=[cursor]*, block_input=[bool]
     Define (temporary) cursor for all frames on the display by calling
     `frame ->busy_cursor` on every entry in `<-frames`.  Used by
-    `popup ->execute` and `click_gesture ->terminate`.
+    `popup ->execute` and `click_gesture ->terminate`.  Use
+    `display_manager ->busy_cursor` for all frames of the application.
 
 - display->confirm: for=[visual], title=[char_array], message=char_array, any ...
     Format a string from the arguments and display a modal dialog
@@ -205,7 +209,8 @@ removal).  Most applications never reference any other display than
     Useful when the OS misreports DPI for high-density screens.
 
 - display->inspect_handler: handler
-    Add a handler to `<-inspect_handlers` (using `chain ->add`).
+    Add a handler to `<-inspect_handlers` (using `chain ->add`).  As
+    this chain is shared, the handler applies to all displays.
 
     @see topic Finding References
     @see display<-inspect_handlers

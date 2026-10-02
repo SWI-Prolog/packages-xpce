@@ -41,6 +41,7 @@ initialiseDisplayManager(DisplayManager dm)
 { assign(dm, members, newObject(ClassChain, EAV));
   assign(dm, focus_message, NIL);
   assign(dm, system_colours_message, NIL);
+  assign(dm, inspect_handlers, newObject(ClassChain, EAV));
 
   obtainClassVariablesObject(dm);
   protectObject(dm);
@@ -71,6 +72,44 @@ forwardFocusDisplayManager(Any focus)
 status
 appendDisplayManager(DisplayManager dm, DisplayObj d)
 { return appendChain(dm->members, d);
+}
+
+
+/* The inspect handlers are shared by all displays: the chain is also
+   <-inspect_handlers of each display, so handlers added through any
+   display or through @display apply to all of them.
+*/
+
+static status
+inspectHandlerDisplayManager(DisplayManager dm, Handler h)
+{ return addChain(dm->inspect_handlers, h);
+}
+
+
+static status
+busyCursorDisplayManager(DisplayManager dm, CursorObj c, BoolObj block)
+{ Cell cell;
+
+  for_cell(cell, dm->members)
+    busyCursorDisplay(cell->value, c, block);
+
+  succeed;
+}
+
+
+static Chain
+getFramesDisplayManager(DisplayManager dm)
+{ Chain frames = answerObject(ClassChain, EAV);
+  Cell dcell, fcell;
+
+  for_cell(dcell, dm->members)
+  { DisplayObj d = dcell->value;
+
+    for_cell(fcell, d->frames)
+      appendChain(frames, fcell->value);
+  }
+
+  answer(frames);
 }
 
 
@@ -356,8 +395,13 @@ static vardecl var_displayManager[] =
   IV(NAME_focusMessage, "code*", IV_BOTH,
      NAME_event, "Sent with the frame that gained keyboard focus"),
   IV(NAME_systemColoursMessage, "code*", IV_BOTH,
-     NAME_colour, "Sent after reloading the system colours")
+     NAME_colour, "Sent after reloading the system colours"),
+  IV(NAME_inspectHandlers, "chain", IV_GET,
+     NAME_event, "Handlers to support inspector tools (all displays)")
 };
+
+static char *T_busyCursor[] =
+        { "cursor=[cursor]*", "block_input=[bool]" };
 
 /* Send Methods */
 
@@ -374,7 +418,11 @@ static senddecl send_displayManager[] =
   SM(NAME_systemColoursChanged, 0, NULL, systemColoursChangedDisplayManager,
      NAME_colour, "Reload the system colours and redraw"),
   SM(NAME_coloursChanged, 0, NULL, coloursChangedDisplayManager,
-     NAME_colour, "Tell frames and graphicals colours changed and redraw")
+     NAME_colour, "Tell frames and graphicals colours changed and redraw"),
+  SM(NAME_inspectHandler, 1, "handler", inspectHandlerDisplayManager,
+     NAME_event, "Register handler for inspector tools"),
+  SM(NAME_busyCursor, 2, T_busyCursor, busyCursorDisplayManager,
+     NAME_event, "Define (temporary) cursor for all frames on all displays")
 };
 
 /* Get Methods */
@@ -388,6 +436,8 @@ static getdecl get_displayManager[] =
      NAME_current, "Get the current display"),
   GM(NAME_member, 1, "display", "name|1..", getMemberDisplayManager,
      NAME_display, "Find display from name or number"),
+  GM(NAME_frames, 0, "chain", NULL, getFramesDisplayManager,
+     NAME_organisation, "New chain with the frames of all displays"),
   GM(NAME_windowOfLastEvent, 0, "window", NULL,
      getWindowOfLastEventDisplayManager,
      NAME_event, "Find window that received last event")

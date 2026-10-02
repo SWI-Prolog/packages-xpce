@@ -215,14 +215,30 @@ equivalent to
 
 ## @display {#object-display}
 
-Access to the X-display
+The current display
 
-The global object @display refers to the default display object.  This
-display resides by default at the address specified by the environment
-variable DISPLAY.
+The global object @display is not a display, but the function
+
+	?(@display_manager, current)
+
+It evaluates to the display that received the last event or, if there
+was no event yet, the primary display.  Because it is evaluated each
+time it is used, it refers to the display the user is working on and
+it remains valid if monitors are added or removed.  @display exists
+after the window system is initialised.
 
 The object @display is normally used for the methods
-`@display ->inform`, `@display ->confirm` and `@display <-size`.
+`@display ->inform`, `@display ->confirm` and `@display <-size`.  As a
+function, it is evaluated if it is the receiver of a message or an
+argument of a method.  Because it is a function, note that
+
+  - `X == @display` compares with the function, not with a display.
+    Use `get(@display_manager, current, D)` to get the display object.
+  - Do not use `free(@display)`: this frees the current display.
+  - State that belongs to the application rather than to a monitor is
+    kept by @display_manager: `display_manager <-frames` (the frames
+    of all displays), `display_manager ->busy_cursor` and
+    `display_manager <-inspect_handlers`.
 
 See also class display and class display_manager.
 
@@ -233,10 +249,8 @@ See also class display and class display_manager.
 
 The global object @display_manager the single instance of class
 display_manager.   The display manager manages the set of
-available displays.   On the Win32 platforms, there is only one
-display called @display.  On X11, @display refers to the default
-display, but multiple displays on different computers may be
-managed by XPCE.  See also `display_manager <-members`.
+available displays, one for each monitor.  See also
+`display_manager <-members` and @display.
 
 ## @elevations {#object-elevations}
 

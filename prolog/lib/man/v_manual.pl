@@ -466,12 +466,12 @@ add_about(Text, Font, D) :-
     send(T, alignment, center).
 
 goto_url(Url) :-
-    send(@display, busy_cursor),
+    send(@display_manager, busy_cursor),
     (   catch(www_open_url(Url), _, fail)
     ->  true
     ;   send(@display, inform, @default, "XPCE Manual", 'Failed to open URL')
     ),
-    send(@display, busy_cursor, @nil).
+    send(@display_manager, busy_cursor, @nil).
 
                  /*******************************
                  *             HELP             *

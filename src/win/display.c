@@ -50,7 +50,7 @@ initialiseDisplay(DisplayObj d, Name name, Area a)
   assign(d, area,		a);
   assign(d, removed,		OFF);
   assign(d, frames,		newObject(ClassChain, EAV));
-  assign(d, inspect_handlers,	newObject(ClassChain, EAV));
+  assign(d, inspect_handlers,	dm->inspect_handlers);
   assign(d, display_manager,	dm);
   assign(d, busy_locks,		ZERO);
   obtainClassVariablesObject(d);
@@ -633,7 +633,7 @@ static vardecl var_display[] =
   IV(NAME_frames, "chain", IV_GET,
      NAME_organisation, "Frames displayed on this display"),
   IV(NAME_inspectHandlers, "chain", IV_GET,
-     NAME_event, "Chain of handlers to support inspector tools"),
+     NAME_event, "Handlers for inspector tools (shared by all displays)"),
   IV(NAME_foreground, "colour", IV_BOTH,
      NAME_appearance, "Windows default foreground colour"),
   IV(NAME_background, "colour", IV_BOTH,

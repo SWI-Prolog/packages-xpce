@@ -2892,7 +2892,7 @@ frame_application(Options, App) :-
 
 record_open_arrangements :-
     (   object(@display)
-    ->  send(@display?frames, for_all,
+    ->  send(@display_manager?frames, for_all,
              if(message(@arg1, instance_of, pane_frame),
                 if(message(@arg1, record_arrangement))))
     ;   true

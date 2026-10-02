@@ -696,7 +696,7 @@ adopt_target_font(SP) :->
 
 capture_target(SP) :->
     "Remember the application frame that currently has keyboard focus"::
-    get(@display, frames, Frames),
+    get(@display_manager, frames, Frames),
     chain_list(Frames, List),
     (   member(Fr, List),
         \+ own_window(SP, Fr),

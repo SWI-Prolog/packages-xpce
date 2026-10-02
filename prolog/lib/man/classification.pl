@@ -942,14 +942,17 @@ scope('M.display.S.screen_saver', obscure).
 scope('M.display.S.selection', advanced).
 scope('M.display.S.unlink', advanced).
 scope('M.display_manager.G.contains', internal).
-scope('M.display_manager.G.current', obscure).
+scope('M.display_manager.G.current', advanced).
+scope('M.display_manager.G.frames', advanced).
 scope('M.display_manager.G.member', obscure).
 scope('M.display_manager.G.primary', advanced).
 scope('M.display_manager.G.window_of_last_event', advanced).
 scope('M.display_manager.S.append', internal).
+scope('M.display_manager.S.busy_cursor', advanced).
 scope('M.display_manager.S.colours_changed', advanced).
 scope('M.display_manager.S.has_visible_frames', advanced).
 scope('M.display_manager.S.initialise', internal).
+scope('M.display_manager.S.inspect_handler', obscure).
 scope('M.display_manager.S.redraw', advanced).
 scope('M.display_manager.S.system_colours_changed', advanced).
 scope('M.edit_text_gesture.S.drag', advanced).
@@ -4220,6 +4223,7 @@ scope('V.display.removed', advanced).
 scope('V.display.work_area', advanced).
 scope('V.display.ws_ref', internal).
 scope('V.display_manager.focus_message', advanced).
+scope('V.display_manager.inspect_handlers', obscure).
 scope('V.display_manager.members', advanced).
 scope('V.display_manager.system_colours_message', advanced).
 scope('V.display_manager.test_queue', advanced).
