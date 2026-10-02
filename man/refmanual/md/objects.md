@@ -148,16 +148,21 @@ Commonly used for conditional Default specifications:
 
 See also `@display <-visual_type`, `@display <-depth`.
 
+## @colour_names {#object-colour_names}
+
+A hash_table object mapping colour names to their encoded RGBA value.
+It holds the CSS and X11 colour names and the _system colours_, whose
+names start with `sys_` (e.g., `sys_window_background`) or a platform
+prefix (`win_`, `mac_`, `kde_`).  The system colours reflect the
+desktop settings and are reloaded by `display_manager
+->system_colours_changed`.  See the section _System colours_ of the
+XPCE User Guide.
+
 ## @colours {#object-colours}
 
 A hash_table object mapping colour names into colour objects.  This
-table only holds actually used colours.  A list of predefined colour
-names is normally available from the file
-
-	/usr/lib/X11/rgb.txt
-
-The exact location of this file may be different on your X11
-installation.
+table only holds actually used colours, including all theme colours.
+The predefined colour names are in `@colour_names`.
 
 ## @cursor_names {#object-cursor_names}
 
@@ -484,6 +489,17 @@ Rubber object normally used to render spaces.  Attributes:
 	`rubber<-linebreak`: allow.
 
 Used by `tbox <-space`.
+
+## @theme_colour_defaults {#object-theme_colour_defaults}
+
+A hash_table object mapping the names of the theme colours that xpce
+defines itself, the `ui_*` and `ansi_*` colours, to their value in the
+default `light` theme.  `library(pce_theme)` uses this to reset these
+colours when switching themes.  See class `theme_colour`.
+
+## @theme_colours {#object-theme_colours}
+
+A chain holding all objects of class `theme_colour`.
 
 ## @types {#object-types}
 

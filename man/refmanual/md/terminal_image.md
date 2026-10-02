@@ -480,15 +480,20 @@ about the terminal.  Class `prolog_terminal` uses it for `->block_popup`.
 
 - font, bold_font, italic_font, bold_italic_font: default to `tt`,
   `boldtt`, `itt` and `bitt`.
-- background, colour: default to `white` and `black`.
-- selection_style: yellow background (X) or system selection style.
-- isearch_style: green background.
-- isearch_other_style: pale turquoise background.
+- background, colour: default to the theme colours
+  `ui_window_background` and `ui_window_foreground`.
+- selection_style: background `ui_text_selection_background` (Unix and
+  MacOS) or the system selection style (Windows).
+- isearch_style: background `ui_isearch_background`.
+- isearch_other_style: background `ui_isearch_other_background`.
 - exact_case, search_word: both `@off`, so matching ignores case and
   does not ask for word boundaries.
-- link_style, link_armed_style: blue, dotted/solid underline.
-- fold_style: grey50; `@nil` takes the fold markers away.
+- link_style, link_armed_style: colour `ui_link`, dotted/solid
+  underline.
+- fold_style: colour `ui_fold`; `@nil` takes the fold markers away.
 - save_lines: 1000 by default.
 - auto_copy: copy selected text to clipboard automatically (default
   `@on` on macOS, `@off` elsewhere).
-- ansi_colours: 16-element vector with the standard ANSI palette.
+- ansi_colours: 16-element vector with the theme colours
+  `ansi_black` ... `ansi_bright_white`, so the palette follows the
+  theme.

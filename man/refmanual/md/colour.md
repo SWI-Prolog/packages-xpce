@@ -22,6 +22,17 @@ also be specified in CSS hex notation (`#RGB`, `#RGBA`, `#RRGGBB`,
 `#RRGGBBAA`) or constructed from RGB or HSV triples — see
 `->initialise`.
 
+`@colour_names` also holds the _system colours_, whose names start
+with `sys_`, such as `sys_window_background`.  They reflect the
+colours of the desktop, e.g., the light or dark appearance and the
+accent colour, and are reloaded by `display_manager
+->system_colours_changed` if the desktop settings change.  Colour
+objects of these names change their value in place.  The xpce
+user interface and the development tools use _theme colours_, class
+`theme_colour`, whose value follows the selected theme.  See the
+sections _System colours_ and _Themes_ of the XPCE User Guide.
+
+@see class theme_colour
 @see device->foreground
 @see graphical<->colour
 @see window->colour
@@ -31,6 +42,12 @@ also be specified in CSS hex notation (`#RGB`, `#RGBA`, `#RRGGBB`,
 
 - colour.hilite_factor: real = 0.9
     Default factor for `<-hilite`.
+
+- colour.dark_hilite_factor: real = 0.2
+    Default factor for `<-hilite` if the colour is dark, i.e., its
+    `<-intensity` is below 128.  Moving a dark colour most of the
+    way to white makes it unrecognisable, e.g., the preview of a menu
+    item on a dark background would be almost white.
 
 - colour.reduce_factor: real = 0.6
     Default factor for `<-reduce`.
@@ -47,10 +64,11 @@ also be specified in CSS hex notation (`#RGB`, `#RGBA`, `#RRGGBB`,
     (`#RRGGBB` / `#RRGGBBAA`) or, for anonymous colours, the encoded
     integer value.
 
-- colour<-kind: {named,rgb}
+- colour<-kind: {named,rgb,theme}
     `named` when the colour was constructed by name (so resolution
     happens lazily through the colour database); `rgb` when the
-    caller supplied numeric components directly.
+    caller supplied numeric components directly; `theme` for a
+    `theme_colour`.
 
 - colour<-rgba: [int]
     Encoded 32-bit RGBA value as an integer (or @default for a
@@ -139,7 +157,8 @@ also be specified in CSS hex notation (`#RGB`, `#RGBA`, `#RRGGBB`,
     Used by class `elevation` to derive the lit and shadow sides of
     a 3-D box.  `0.0` returns the colour unchanged; `1.0` returns
     white (`<-hilite`) or black (`<-reduce`).  Defaults come from
-    the `hilite_factor` / `reduce_factor` class variables.
+    the `hilite_factor` / `reduce_factor` class variables.  A dark
+    colour uses `dark_hilite_factor` rather than `hilite_factor`.
 
     The derived colour is associated with the original; asking for
     the same modification again returns the cached object, and
@@ -176,10 +195,12 @@ also be specified in CSS hex notation (`#RGB`, `#RGBA`, `#RRGGBB`,
 - colour<-lookup: [name|int], red=[0..360], green=[0..255], blue=[0..255], alpha=[0..255], model=[{rgb,hsv}] -> colour
     Return an existing colour from `@colours` matching the
     arguments, or fail.  Used internally to deduplicate equivalent
-    colours; mirrors the signature of `->initialise`.
+    colours; mirrors the signature of `->initialise`.  A lookup from
+    RGB values never returns a theme colour, as its value changes
+    with the theme.
 
 - colour<-storage_reference: -> name
-    If the colour is `<-kind: named`, return its `<-name`.
+    If the colour is `<-kind: named` or `theme`, return its `<-name`.
     Otherwise return `#RRGGBB` (or `#RRGGBBAA` when alpha is not
     255).  The result is suitable as input to `<-convert`.
 

@@ -8,8 +8,12 @@ created at boot time.  Its responsibilities are:
   dynamically as monitors are added or removed.
 - Drive the top-level event loop (`->dispatch`) and flush damage to
   the screen (`->redraw`).
+- Reload the system colours if the desktop settings change and
+  redraw all windows after colours changed (`->system_colours_changed`,
+  `->colours_changed`).
 
 @see class display
+@see class theme_colour
 @see display<-display_manager
 
 
@@ -29,6 +33,12 @@ created at boot time.  Its responsibilities are:
     Optional code object invoked with the frame that gained keyboard
     focus.  Used by tools (e.g. the symbol picker) to track the
     active window without polling.
+
+- display_manager<->system_colours_message: code*
+    Optional code object that is executed by
+    `->system_colours_changed` after reloading the system colours and
+    before redrawing.  `library(pce_theme)` uses this to select the
+    theme that matches the new desktop settings.
 
 
 ## Send methods {#class-display_manager-send}
@@ -58,6 +68,22 @@ created at boot time.  Its responsibilities are:
 
     @see display->has_visible_frames
     @see frame<-keep_alive
+
+- display_manager->system_colours_changed
+    Reload the system colours (`sys_*` and the platform specific
+    names) from the desktop settings.  Colour objects of these names
+    change their value in place and the theme colours are resolved
+    again.  Next, run `<-system_colours_message` and redraw all
+    windows if anything changed.  xpce sends this message if it is
+    told that the desktop settings changed, e.g., if the user switches
+    between light and dark mode.  An application may send it as well.
+
+    @see class theme_colour
+
+- display_manager->colours_changed
+    Redraw all windows of all frames, including windows inside other
+    windows or devices such as tabs.  Send this after changing colours
+    in place, e.g., after changing the value of theme colours.
 
 
 ## Get methods {#class-display_manager-get}

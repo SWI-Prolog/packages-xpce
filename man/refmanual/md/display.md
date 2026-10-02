@@ -19,10 +19,10 @@ removal).  Most applications never reference any other display than
 
 ## Class variables {#class-display-classvars}
 
-- display.background: colour = white
+- display.background: colour = ui_window_background
     Default background for newly created windows.
 
-- display.foreground: colour = black
+- display.foreground: colour = ui_window_foreground
     Default foreground for newly created windows.
 
 - display.label_font: font = bold
@@ -38,8 +38,12 @@ removal).  Most applications never reference any other display than
     decide.
 
 - display.theme: [name] = @default
-    SWI-Prolog theme module to load for `swipl-win` / `epilog`.  If
-    @default, the choice is derived from `<-system_theme`.
+    The SWI-Prolog theme for the xpce user interface and the
+    development tools, e.g., `dark`.  If @default, the theme follows
+    `<-system_theme`, also if this changes while xpce is running.
+    Set this in the Defaults file to select a theme permanently.  The
+    Settings/Theme menu of the IDE sets it for the running session.
+    See `library(pce_theme)`.
 
 - display.volume: 0..100 = 0
     Default volume for `display ->bell`.
@@ -246,14 +250,16 @@ removal).  Most applications never reference any other display than
     value SDL reports for the monitor.
 
 - display<-system_theme: -> {light,dark}
-    The OS system theme as reported by `SDL_GetSystemTheme()`.  Some
-    platforms cannot report this reliably.
+    The OS system theme as reported by `SDL_GetSystemTheme()`.  On
+    Windows, a contrast theme with a dark window background also
+    counts as `dark`.  Fails if the platform cannot tell.
 
 - display<-theme: -> name
-    SWI-Prolog theme to load for `swipl-win` (epilog).  Derived from
-    the class variable; if that is @default, derived from
-    `<-system_theme`.  Setting it to a non-@default value causes
-    `use_module(library(theme/Theme))` to be loaded.
+    The SWI-Prolog theme for the xpce user interface: the class
+    variable `display.theme` or, if that is @default, `<-system_theme`.
+    `library(pce_theme)` applies this theme when xpce starts and, if
+    the class variable is @default, when the desktop switches between
+    light and dark.
 
 - display<-paste: which=[{primary,clipboard}] -> string
     Return the textual content of the indicated selection (defaults
