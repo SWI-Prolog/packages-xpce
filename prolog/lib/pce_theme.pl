@@ -1,0 +1,489 @@
+/*  Part of XPCE --- The SWI-Prolog GUI toolkit
+
+    Author:        Jan Wielemaker
+    E-mail:        jan@swi-prolog.org
+    WWW:           http://www.swi-prolog.org
+    Copyright (c)  2026, SWI-Prolog Solutions b.v.
+    All rights reserved.
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions
+    are met:
+
+    1. Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+
+    2. Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in
+       the documentation and/or other materials provided with the
+       distribution.
+
+    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+    "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+    FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+    COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+    INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+    BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+    LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+    CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+    LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+    ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE.
+*/
+
+:- module(pce_theme,
+          [ theme_colour/2,             % +Name, -Colour
+            apply_theme/1,              % +Theme
+            current_theme/1,            % -Theme
+            syntax_colour_name/3,       % +Class, +Attribute, -Name
+            check_theme/1,              % +Theme
+            theme_issues/2              % +Theme, -Issues
+          ]).
+:- use_module(library(pce)).
+:- autoload(library(apply), [maplist/3, exclude/3]).
+:- autoload(library(error),
+            [must_be/2, existence_error/2, domain_error/2]).
+:- autoload(library(lists), [member/2, append/2, append/3]).
+:- autoload(library(ordsets), [ord_subtract/3]).
+:- autoload(library(pairs), [pairs_keys/2, group_pairs_by_key/2]).
+
+/** <module> Semantic colours and themes
+
+A _semantic colour_ is a colour whose name describes its role, such as
+`syntax_comment`, rather than its value.  Its value depends on the
+_theme_.  The colour is a read/write xpce colour object of that name,
+so everything that refers to the colour, directly or by name, follows
+a change of the theme after the windows are redrawn.
+
+Semantic colours are declared with their value for the default `light`
+theme.  There are two sources:
+
+  - semantic_colour/3 clauses, declared by the library that uses the
+    colour.
+  - The PceEmacs syntax highlighting styles of def_style/2 in
+    library(prolog_colour).  The names are derived from the style
+    class by syntax_colour_name/3.
+
+A theme is a set of colour/3 facts that map a semantic colour name to a
+value.  Names a theme does not map keep their `light` value.  Theme
+files therefore do not change anything when they are loaded and
+apply_theme/1 can switch between themes at any time.
+*/
+
+:- multifile
+    semantic_colour/3,                  % ?Name, ?Default, ?Comment
+    colour/3.                           % ?Theme, ?Name, ?Value
+
+:- dynamic
+    theme_colour_object/2,              % Name, Colour
+    current_theme_/1.
+
+%!  semantic_colour(?Name, ?Default, ?Comment) is nondet.
+%
+%   Multifile hook that declares the semantic colour Name.  Default is
+%   its value in the `light` theme.  Comment describes its role and is
+%   used for documentation and the theme checker.  Default is a colour
+%   name, a `#rrggbb` string or another semantic colour.
+
+%!  colour(?Theme, ?Name, ?Value) is nondet.
+%
+%   Multifile hook that defines the value of the semantic colour Name
+%   in Theme.  Value is the same as for the default of
+%   semantic_colour/3.  This is normally defined in the theme file,
+%   e.g., library(theme/dark).
+
+%!  theme_colour(+Name, -Colour) is det.
+%
+%   Colour is the xpce colour object for the semantic colour Name.  The
+%   object is created on first use with its value in the current theme
+%   and is updated by apply_theme/1.
+
+theme_colour(Name, Colour) :-
+    theme_colour_object(Name, Colour),
+    !.
+theme_colour(Name, Colour) :-
+    must_be(atom, Name),
+    with_mutex(pce_theme, new_theme_colour(Name, Colour)).
+
+new_theme_colour(Name, Colour) :-
+    theme_colour_object(Name, Colour),
+    !.
+new_theme_colour(Name, Colour) :-
+    current_theme(Theme),
+    resolve(Theme, Name, Value),
+    (   get(@colours, member, Name, Colour)
+    ->  true
+    ;   new(Colour, colour(Name, 0, 0, 0))
+    ),
+    send(Colour, access, both),
+    send(Colour, lock_object, @on),
+    send(Colour, rgba, Value),
+    assertz(theme_colour_object(Name, Colour)).
+
+%!  current_theme(-Theme) is det.
+%
+%   Theme is the active theme.  This is `light` if no theme has been
+%   applied.
+
+current_theme(Theme) :-
+    current_theme_(Theme0),
+    !,
+    Theme = Theme0.
+current_theme(light).
+
+%!  apply_theme(+Theme) is det.
+%
+%   Make Theme the active theme.  This loads library(theme/Theme) if
+%   it exists, updates all semantic colours that are in use and
+%   redraws all windows.  The `light` theme uses the default values of
+%   the semantic colours and does not load library(theme/light), which
+%   only defines colours for the Prolog console.
+
+apply_theme(Theme) :-
+    update_theme(Theme),
+    send(@display_manager, colours_changed).
+
+update_theme(Theme0) :-
+    must_be(atom, Theme0),
+    canonical_theme(Theme0, Theme),
+    load_theme(Theme),
+    with_mutex(pce_theme, update_colours(Theme)).
+
+update_colours(Theme) :-
+    retractall(current_theme_(_)),
+    assertz(current_theme_(Theme)),
+    forall(theme_colour_object(Name, Colour),
+           ( resolve(Theme, Name, Value),
+             send(Colour, rgba, Value)
+           )).
+
+canonical_theme(default, light) :- !.
+canonical_theme(Theme, Theme).
+
+load_theme(light) :-
+    !.
+load_theme(Theme) :-
+    exists_source(library(theme/Theme)),
+    !,
+    use_module(library(theme/Theme)).
+load_theme(Theme) :-
+    colour(Theme, _, _),
+    !.
+load_theme(Theme) :-
+    existence_error(theme, Theme).
+
+%!  resolve(+Theme, +Name, -Colour) is det.
+%
+%   Colour is the colour object that holds the value of Name in Theme.
+%   If the value is another semantic colour, this is resolved
+%   recursively.  Otherwise it is converted to an xpce colour.
+
+resolve(Theme, Name, Colour) :-
+    resolve(Theme, Name, [], Colour).
+
+resolve(Theme, Name, Seen, Colour) :-
+    (   memberchk(Name, Seen)
+    ->  domain_error(acyclic_theme_colour, Name)
+    ;   colour_value(Theme, Name, Value)
+    ->  (   atom(Value),
+            colour_value(Theme, Value, _)
+        ->  resolve(Theme, Value, [Name|Seen], Colour)
+        ;   get(@pce, convert, Value, colour, Colour)
+        )
+    ;   existence_error(semantic_colour, Name)
+    ).
+
+colour_value(Theme, Name, Value) :-
+    colour(Theme, Name, Value),
+    !.
+colour_value(_, Name, Value) :-
+    default_colour(Name, Value).
+
+default_colour(Name, Value) :-
+    semantic_colour(Name, Value, _),
+    !.
+default_colour(Name, Value) :-
+    syntax_colour(Name, _Class, Value),
+    !.
+
+%!  syntax_colour_name(+Class, +Attribute, -Name) is det.
+%
+%   Name is the semantic colour for Attribute of the PceEmacs syntax
+%   highlighting style Class.  Attribute is one of `colour` or
+%   `background`.  Name is `syntax_` followed by the name and the
+%   atomic arguments of Class, separated by `_`.  Variables are
+%   skipped.  A background colour gets the suffix `_bg`.  For example,
+%   goal(built_in,_) becomes `syntax_goal_built_in`.
+
+syntax_colour_name(Class, Attribute, Name) :-
+    phrase(class_parts(Class), Parts),
+    attribute_suffix(Attribute, Suffix),
+    append([syntax|Parts], Suffix, AllParts),
+    atomic_list_concat(AllParts, '_', Name).
+
+class_parts(Var) -->
+    { var(Var) },
+    !.
+class_parts(Atomic) -->
+    { atomic(Atomic) },
+    !,
+    [Atomic].
+class_parts(Compound) -->
+    { compound_name_arguments(Compound, Name, Args) },
+    [Name],
+    args_parts(Args).
+
+args_parts([]) --> [].
+args_parts([H|T]) --> class_parts(H), args_parts(T).
+
+attribute_suffix(colour,     []).
+attribute_suffix(background, [bg]).
+
+%!  syntax_colour(?Name, -Class, -Default) is nondet.
+%
+%   Name is the semantic colour for a colour of the PceEmacs syntax
+%   highlighting style for Class, whose value in the light theme is
+%   Default.  This enumerates def_style/2 of library(prolog_colour) if
+%   this library is loaded.  If two classes map to the same name, the
+%   first wins, as def_style/2 is used with first-match semantics.
+
+syntax_colour(Name, Class, Default) :-
+    findall(N-(C-D), syntax_colour_(N, C, D), Pairs),
+    first_per_key(Pairs, Unique),
+    member(Name-(Class-Default), Unique).
+
+syntax_colour_(Name, Class, Default) :-
+    current_predicate(prolog_colour:def_style/2),
+    prolog_colour:def_style(Class, Attributes),
+    member(Attr, Attributes),
+    Attr =.. [Attribute, Default],
+    attribute_suffix(Attribute, _),
+    syntax_colour_name(Class, Attribute, Name).
+
+first_per_key(Pairs, Unique) :-
+    first_per_key(Pairs, [], Unique).
+
+first_per_key([], _, []).
+first_per_key([K-V|T0], Seen, T) :-
+    (   memberchk(K, Seen)
+    ->  first_per_key(T0, Seen, T)
+    ;   T = [K-V|T1],
+        first_per_key(T0, [K|Seen], T1)
+    ).
+
+%!  semantic_colour_name(?Name, ?Default) is nondet.
+%
+%   Enumerate all known semantic colours with their default value.
+
+semantic_colour_name(Name, Default) :-
+    semantic_colour(Name, Default, _).
+semantic_colour_name(Name, Default) :-
+    syntax_colour(Name, _, Default),
+    \+ semantic_colour(Name, _, _).
+
+
+		 /*******************************
+		 *        SYSTEM CHANGES	*
+		 *******************************/
+
+%!  init_theme
+%
+%   Called by library(pce) after the theme is set up.  Selects the
+%   initial theme and makes the theme follow the system if the user did
+%   not fix the theme.
+
+:- public init_theme/0.
+
+init_theme :-
+    initial_theme(Theme),
+    update_theme(Theme),
+    send(@display_manager, system_colours_message,
+         message(@prolog, system_colours_changed)).
+
+initial_theme(Theme) :-
+    current_prolog_flag(theme, Theme),
+    !.
+initial_theme(Theme) :-
+    catch(prolog:theme(Theme), error(_,_), fail),
+    !.
+initial_theme(Theme) :-
+    display_theme(Theme).
+
+display_theme(Theme) :-
+    get(@display, theme, Theme0),
+    !,
+    canonical_theme(Theme0, Theme).
+display_theme(light).
+
+%!  system_colours_changed
+%
+%   Called through `display_manager <-system_colours_message` after the
+%   system colours changed.  If the theme follows the system, select
+%   the theme for the new system settings.  Otherwise, apply the
+%   current theme again, as semantic colours may be defined from the
+%   system colours.  The display manager redraws the windows.
+
+:- public system_colours_changed/0.
+
+system_colours_changed :-
+    (   fixed_theme
+    ->  current_theme(Theme)
+    ;   display_theme(Theme)
+    ),
+    catch(update_theme(Theme), Error,
+          print_message(error, Error)).
+
+fixed_theme :-
+    current_prolog_flag(theme, _),
+    !.
+fixed_theme :-
+    get(@display, class_variable_value, theme, Theme),
+    Theme \== @default.
+
+
+		 /*******************************
+		 *            CHECK		*
+		 *******************************/
+
+%!  check_theme(+Theme) is semidet.
+%
+%   Verify the colour/3 facts of Theme against the known semantic
+%   colours.  Prints the issues found by theme_issues/2 and fails if
+%   there are errors.  Note that only semantic colours of loaded
+%   libraries are known.  This predicate loads library(prolog_colour)
+%   to know the syntax highlighting colours.
+
+check_theme(Theme) :-
+    use_module(library(prolog_colour), []),
+    load_theme(Theme),
+    theme_issues(Theme, Issues),
+    forall(member(Issue, Issues),
+           ( issue_level(Issue, Level),
+             print_message(Level, pce_theme(Theme, Issue))
+           )),
+    \+ ( member(Issue, Issues),
+         issue_level(Issue, error)
+       ).
+
+issue_level(missing(_),        warning).
+issue_level(unknown(_),        error).
+issue_level(duplicate(_),      error).
+issue_level(invalid(_,_),      error).
+issue_level(redundant(_),      informational).
+issue_level(collision(_,_),    warning).
+
+%!  theme_issues(+Theme, -Issues) is det.
+%
+%   Issues is a list of problems with the colour/3 facts for Theme.
+%   Each issue is one of:
+%
+%     - missing(Name)
+%       Theme does not define the semantic colour Name.  It uses the
+%       `light` value, which is likely wrong for a dark theme.  Not
+%       reported for the `light` theme.
+%     - unknown(Name)
+%       Theme defines Name, which is not a semantic colour.
+%     - duplicate(Name)
+%       Theme defines Name more than once.
+%     - invalid(Name, Value)
+%       Value is not a semantic colour nor a known colour.
+%     - redundant(Name)
+%       Theme defines Name as its `light` value.
+%     - collision(Name, Classes)
+%       Several syntax highlighting classes map to Name and have
+%       different values.
+
+theme_issues(Theme0, Issues) :-
+    canonical_theme(Theme0, Theme),
+    findall(N-D, semantic_colour_name(N, D), Known0),
+    sort(1, @<, Known0, Known),
+    pairs_keys(Known, Names),
+    findall(N-V, colour(Theme, N, V), Defined),
+    pairs_keys(Defined, DefinedNames0),
+    msort(DefinedNames0, DefinedNames),
+    sort(DefinedNames, DefinedSet),
+    (   Theme == light
+    ->  Missing = []
+    ;   ord_subtract(Names, DefinedSet, MissingNames),
+        maplist(wrap(missing), MissingNames, Missing)
+    ),
+    ord_subtract(DefinedSet, Names, UnknownNames),
+    maplist(wrap(unknown), UnknownNames, Unknown),
+    duplicates(DefinedNames, DupNames),
+    maplist(wrap(duplicate), DupNames, Duplicate),
+    findall(invalid(N,V),
+            ( member(N-V, Defined),
+              \+ valid_value(Theme, V)
+            ), Invalid),
+    findall(redundant(N),
+            ( member(N-V, Defined),
+              memberchk(N-V, Known)
+            ), Redundant),
+    findall(collision(N, Classes), syntax_collision(N, Classes), Collision),
+    append([Unknown, Duplicate, Invalid, Missing, Collision, Redundant],
+           Issues).
+
+wrap(Functor, Arg, Term) :-
+    Term =.. [Functor, Arg].
+
+duplicates([], []).
+duplicates([H,H|T0], [H|T]) :-
+    !,
+    exclude(==(H), T0, T1),
+    duplicates(T1, T).
+duplicates([_|T0], T) :-
+    duplicates(T0, T).
+
+valid_value(Theme, Value) :-
+    atom(Value),
+    colour_value(Theme, Value, _),
+    !.
+valid_value(_, Value) :-
+    atom(Value),
+    (   get(@colours, member, Value, _)
+    ;   get(@colour_names, member, Value, _)
+    ;   hex_colour(Value)
+    ),
+    !.
+
+hex_colour(Value) :-
+    atom_codes(Value, [0'#|Hex]),
+    length(Hex, Len),
+    memberchk(Len, [3,4,6,8]),
+    forall(member(C, Hex), code_type(C, xdigit(_))).
+
+syntax_collision(Name, Classes) :-
+    findall(N-(C-D), syntax_colour_(N, C, D), Pairs),
+    keysort(Pairs, Sorted),
+    group_pairs_by_key(Sorted, Groups),
+    member(Name-CDs, Groups),
+    findall(D, member(_-D, CDs), Ds0),
+    sort(Ds0, Ds),
+    Ds = [_,_|_],
+    findall(C, member(C-_, CDs), Classes).
+
+
+		 /*******************************
+		 *           MESSAGES		*
+		 *******************************/
+
+:- multifile prolog:message//1.
+
+prolog:message(pce_theme(Theme, Issue)) -->
+    [ 'Theme ~q: '-[Theme] ],
+    issue(Issue).
+
+issue(missing(Name)) -->
+    [ 'no value for ~q (uses the light value)'-[Name] ].
+issue(unknown(Name)) -->
+    [ '~q is not a semantic colour'-[Name] ].
+issue(duplicate(Name)) -->
+    [ '~q is defined more than once'-[Name] ].
+issue(invalid(Name, Value)) -->
+    [ '~q: ~q is not a colour'-[Name, Value] ].
+issue(redundant(Name)) -->
+    [ '~q has the same value as in the light theme'-[Name] ].
+issue(collision(Name, Classes)) -->
+    [ 'syntax classes ~q share ~q but have different values'-
+      [Classes, Name] ].

@@ -157,7 +157,7 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     pce_objects.pl pce.pl pce_progress.pl pane_frame.pl pane_layouts.pl
     log_store.pl
     pce_prolog_xref.pl pce_prompter.pl pce_regex_compat.pl pce_renew.pl
-    pce_report.pl pce_require.pl pce_select_set_item.pl
+    pce_report.pl pce_require.pl pce_select_set_item.pl pce_theme.pl
     pce_server.pl pce_set_item.pl pce_shell.pl pce_style_item.pl
     pce_symbol_picker.pl
     pce_tagged_connection.pl pce_template.pl pce_tick_box.pl pce_toc.pl

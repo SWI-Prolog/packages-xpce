@@ -236,7 +236,9 @@ get_pce_version :-
 %   forall(on_load, true).   The default initializes xpce's theme.
 
 on_load :-
-    setup_theme.
+    setup_theme,
+    use_module(library(pce_theme), []),
+    pce_theme:init_theme.
 
 %!  run_on_load
 %

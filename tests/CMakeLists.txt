@@ -2,6 +2,7 @@
 # Additional xpce tests (plunit-based, standalone modules)
 
 test_libs(colour               OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(theme                OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(text_image           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(editor_placeholder   OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(text_item            OPTIONS ${XPCE_TEST_OPTIONS})
@@ -40,6 +41,7 @@ test_libs(terminal_rewrap      OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(redraw_reentrance    OPTIONS ${XPCE_TEST_OPTIONS})
 
 set(XPCE_EXTRA_TESTS xpce:colour
+                     xpce:theme
                      xpce:text_image
                      xpce:editor_placeholder
                      xpce:text_item
