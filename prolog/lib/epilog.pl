@@ -315,9 +315,7 @@ configure_terminal(PT, Profile, Options) :-
 %   colour `epilog_<profile>_<which>`.  Colour may also be a colour
 %   object, e.g., when copying the colour of an existing terminal.
 
-set_profile_colour(PT, _Profile, Which, Colour), Colour = @_ =>
-    set_colour(Which, PT, Colour).
-set_profile_colour(PT, Profile, Which, Spec) =>
+set_profile_colour(PT, Profile, Which, Spec) :-
     format(atom(Name), 'epilog_~w_~w', [Profile, Which]),
     theme_colour(Name, Which, Spec, Colour),
     set_colour(Which, PT, Colour).
@@ -325,8 +323,13 @@ set_profile_colour(PT, Profile, Which, Spec) =>
 %!  theme_colour(+Name, +Which, +Spec, -Colour) is det.
 %
 %   Define the theme colour Name from Spec, the colour the user asked
-%   for, which adapts to the theme.  See adaptive_colour/3.
+%   for, which adapts to the theme.  See adaptive_colour/3.  If Spec is
+%   a colour object, e.g., the colour of an existing terminal, this is
+%   used as is.
 
+theme_colour(_Name, _Which, Colour, Colour) :-
+    is_object_reference(Colour),
+    !.
 theme_colour(Name, Which, Spec0, Name) :-
     theme_spec(Spec0, Spec),
     colour_reference(Which, Reference),
