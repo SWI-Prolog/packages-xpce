@@ -52,6 +52,8 @@
 :- autoload(library(gui_tracer), [guitracer/0]).
 :- autoload(library(pce_image), [pce_image_directory/1]).
 :- autoload(library(threadutil), [tdebug/0]).
+:- autoload(library(pce_theme),
+            [select_theme/1, current_theme_selection/1, available_theme/1]).
 
 /** <module> SWI-Prolog IDE controller
 
@@ -424,6 +426,32 @@ source_placement(IDE, Where:{as_arranged,here,tab,split,window}) :<-
     ;   Where = Placement
     ).
 
+%       The theme: follow the light or dark setting of the desktop or
+%       use a theme of library(theme) regardless.  See library(pce_theme).
+
+theme(_IDE, Theme:name) :->
+    "Select the colour theme"::
+    select_theme(Theme).
+
+update_theme_menu(_IDE, Popup:popup) :->
+    "Offer the available themes and tick the current one"::
+    send(Popup, clear),
+    send(Popup, append,
+         menu_item(system, @default, 'Follow the desktop', @on)),
+    forall(available_theme(Theme),
+           ( atom_concat(Theme, ' theme', Label0),
+             upcase_first(Label0, Label),
+             send(Popup, append, menu_item(Theme, @default, Label))
+           )),
+    current_theme_selection(Selection),
+    send(Popup, selection, Selection).
+
+upcase_first(In, Out) :-
+    sub_atom(In, 0, 1, _, First),
+    sub_atom(In, 1, _, 0, Rest),
+    upcase_atom(First, Up),
+    atom_concat(Up, Rest, Out).
+
 update_tool_placement_menu(IDE, Popup:popup) :->
     "Tick where a tool goes now"::
     get(IDE, tool_placement, @default, Where),
@@ -663,11 +691,18 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
               [ menu_item(user_init_file,
                           message(IDE, preferences, prolog)),
                 menu_item('GUI_preferences',
-                          message(IDE, preferences, xpce),
-                          end_group := @on),
+                          message(IDE, preferences, xpce)),
+                new(Theme, menu_item(theme, @default, 'Theme',
+                                     end_group := @on)),
                 new(Placement, menu_item(new_tools_open, @default,
                                          'New tools and sources open'))
               ]),
+    send(Theme, popup,
+         new(ThemePopup,
+             popup(theme, message(IDE, theme, @arg1)))),
+    send(ThemePopup, show_current, @on),
+    send(ThemePopup, update_message,
+         message(IDE, update_theme_menu, @receiver)),
     send(Placement, popup,
          new(PlacementPopup,
              popup(tool_placement,

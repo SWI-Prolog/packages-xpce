@@ -1005,11 +1005,12 @@ ClassDecl(themeColour_decls,
 	  2, colour_termnames2);
 
 /* Theme colours used by the class variable defaults of xpce.  The
- * value is used by the default `light' theme.  Most basic colours are
- * derived from the system colours.  A theme may map them to other
- * colours, e.g., to use a dark theme on a light desktop.  The values
- * are available as @theme_colour_defaults, which library(pce_theme)
- * uses to reset them when switching themes.
+ * value is used by the default `light' theme.  For each system colour
+ * sys_<role> there is a theme colour ui_<role> that is derived from it.
+ * xpce only uses the ui_* names, such that a theme can replace the
+ * system colours, e.g., to use a dark theme on a light desktop.  The
+ * values are available as @theme_colour_defaults, which
+ * library(pce_theme) uses to reset them when switching themes.
  */
 
 static const struct builtin_theme_colour
@@ -1023,18 +1024,27 @@ static const struct builtin_theme_colour
   { "ui_dialog_foreground",	    "sys_dialog_foreground" },
   { "ui_selection_background",	    "sys_selection_background" },
   { "ui_selection_foreground",	    "sys_selection_foreground" },
+  { "ui_button_background",	    "sys_button_background" },
+  { "ui_button_foreground",	    "sys_button_foreground" },
+  { "ui_button_pressed",	    "sys_button_pressed" },
+  { "ui_tooltip_background",	    "sys_tooltip_background" },
+  { "ui_tooltip_foreground",	    "sys_tooltip_foreground" },
+  { "ui_inactive",		    "sys_inactive" },
+  { "ui_link",			    "sys_link" },
+  { "ui_accent",		    "sys_accent" },
+  { "ui_separator",		    "sys_separator" },
+  { "ui_shadow",		    "sys_shadow" },
+  /* Derived from the basic colours */
   { "ui_margin_background",	    "ui_window_background" },
-  { "ui_scrollbar_background",	    "grey66" },
+  { "ui_scrollbar_background",	    UXWIN("grey66", "ui_window_background") },
   /* Text */
   { "ui_text_selection_background", "yellow" },
   { "ui_isearch_background",	    "green" },
   { "ui_isearch_other_background",  "pale_turquoise" },
-  { "ui_link",			    "blue" },
   { "ui_fold",			    "grey50" },
   { "ui_cursor",		    "red" },
   { "ui_cursor_inactive",	    "grey50" },
   /* Dialog items */
-  { "ui_inactive",		    "grey60" },
   { "ui_placeholder",		    "grey60" },
   { "ui_accelerator",		    "grey30" },
   /* ANSI terminal colours */

@@ -34,6 +34,9 @@
 
 :- module(pce_theme,
           [ apply_theme/1,              % +Theme
+            select_theme/1,             % +Theme
+            current_theme_selection/1,  % -Theme
+            available_theme/1,          % ?Theme
             ensure_theme_colours/0,
             theme_colours/1,            % +List
             current_theme/1,            % -Theme
@@ -86,6 +89,7 @@ apply_theme/1 can switch between themes at any time.
 
 :- dynamic
     current_theme_/1,
+    theme_selection_/1,
     builtin_colours_/1,
     declared_colour/3.                  % Name, Default, Module
 
@@ -161,10 +165,86 @@ update_theme(Theme0) :-
 update_colours(Theme) :-
     retractall(current_theme_(_)),
     assertz(current_theme_(Theme)),
+    (   matches_system(Theme)
+    ->  Match = true
+    ;   Match = false
+    ),
     forall(semantic_colour_name(Name, _),
-           ( colour_value(Theme, Name, Value),
+           ( theme_value(Theme, Match, Name, Value),
              new(_, theme_colour(Name, Value))
            )).
+
+%!  theme_value(+Theme, +MatchesSystem, +Name, -Value) is det.
+%
+%   Value is the value of the semantic colour Name in Theme.  The
+%   _roles_ `ui_<role>` are the system colours `sys_<role>` if the
+%   brightness of the theme matches the system colours.  Otherwise the
+%   theme replaces them, for example to use a dark theme on a light
+%   desktop.
+
+theme_value(Theme, Match, Name, Value) :-
+    role(Name, System),
+    !,
+    (   Match == true
+    ->  Value = System
+    ;   colour(Theme, Name, Value0)
+    ->  Value = Value0
+    ;   Value = System
+    ).
+theme_value(Theme, _, Name, Value) :-
+    colour_value(Theme, Name, Value).
+
+%!  role(?Name, ?System) is nondet.
+%
+%   Name is the theme colour `ui_<role>` that is derived from the
+%   system colour System, `sys_<role>`.
+
+role(Name, System) :-
+    builtin_colour(Name, System),
+    atom_concat(sys_, Role, System),
+    atom_concat(ui_, Role, Name).
+
+%!  matches_system(+Theme) is semidet.
+%
+%   True if Theme and the system colours are both dark or both light.
+%   A theme is dark if its `ui_window_background` is dark.  A theme that
+%   does not define `ui_window_background` matches any system.
+
+matches_system(Theme) :-
+    (   colour(Theme, ui_window_background, Value)
+    ->  dark_colour(Value, ThemeDark),
+        dark_colour(sys_window_background, SystemDark),
+        ThemeDark == SystemDark
+    ;   true
+    ).
+
+dark_colour(Spec, Dark) :-
+    get(@pce, convert, Spec, colour, Colour),
+    get(Colour, intensity, I),
+    (   I < 128
+    ->  Dark = true
+    ;   Dark = false
+    ).
+
+%   The light theme uses the system colours, unless these are dark.
+%   In that case it uses these.
+
+colour(light, ui_window_background,     white).
+colour(light, ui_window_foreground,     black).
+colour(light, ui_dialog_background,     '#f0f0f0').
+colour(light, ui_dialog_foreground,     black).
+colour(light, ui_button_background,     '#e1e1e1').
+colour(light, ui_button_foreground,     black).
+colour(light, ui_button_pressed,        '#cccccc').
+colour(light, ui_selection_background,  '#0078d7').
+colour(light, ui_selection_foreground,  white).
+colour(light, ui_tooltip_background,    '#ffffe1').
+colour(light, ui_tooltip_foreground,    black).
+colour(light, ui_inactive,              grey50).
+colour(light, ui_link,                  '#0066cc').
+colour(light, ui_accent,                '#0078d7').
+colour(light, ui_separator,             '#c0c0c0').
+colour(light, ui_shadow,                grey50).
 
 %!  ensure_theme_colours is det.
 %
@@ -177,6 +257,65 @@ update_colours(Theme) :-
 ensure_theme_colours :-
     current_theme(Theme),
     with_mutex(pce_theme, update_colours(Theme)).
+
+%!  select_theme(+Theme) is det.
+%
+%   Select the theme from the user interface.  Theme is the name of a
+%   theme or `system` to follow the light or dark setting of the
+%   desktop.  This sets the class variable `display.theme`, so the
+%   selection holds for this session.  To make it permanent, set
+%   `display.theme` in the xpce Defaults file.
+
+select_theme(Selection) :-
+    must_be(atom, Selection),
+    get(@pce, convert, display, class, Class),
+    (   Selection == system
+    ->  send(Class, class_variable_value, theme, @default),
+        display_theme(Theme)
+    ;   send(Class, class_variable_value, theme, Selection),
+        Theme = Selection
+    ),
+    retractall(theme_selection_(_)),
+    assertz(theme_selection_(Selection)),
+    apply_theme(Theme).
+
+%!  current_theme_selection(-Selection) is det.
+%
+%   Selection is `system` if the theme follows the desktop or the name
+%   of the selected theme.
+
+current_theme_selection(Selection) :-
+    (   fixed_theme
+    ->  current_theme(Selection)
+    ;   Selection = system
+    ).
+
+%!  available_theme(?Theme) is nondet.
+%
+%   True when Theme can be selected.  These are `light` and the themes
+%   in library(theme) that define colours for xpce.
+
+available_theme(light).
+available_theme(Theme) :-
+    absolute_file_name(library(theme), Dir,
+                       [ file_type(directory),
+                         solutions(all),
+                         file_errors(fail)
+                       ]),
+    directory_files(Dir, Files),
+    member(File, Files),
+    file_name_extension(Theme, pl, File),
+    Theme \== light,
+    directory_file_path(Dir, File, Path),
+    xpce_theme_file(Path).
+
+xpce_theme_file(Path) :-
+    setup_call_cleanup(
+        open(Path, read, In),
+        read_string(In, _, String),
+        close(In)),
+    sub_string(String, _, _, _, "pce_theme:colour"),
+    !.
 
 canonical_theme(default, light) :- !.
 canonical_theme(Theme, Theme).
@@ -381,6 +520,10 @@ system_colours_changed :-
     catch(update_theme(Theme), Error,
           print_message(error, Error)).
 
+fixed_theme :-
+    theme_selection_(Selection),
+    !,
+    Selection \== system.
 fixed_theme :-
     current_prolog_flag(theme, _),
     !.

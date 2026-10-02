@@ -65,6 +65,7 @@ pce_theme:colour(test_dark, test_theme_fg, blue).
 pce_theme:colour(test_dark, test_theme_bg, '#101010').
 pce_theme:colour(test_dark, test_theme_late, '#202020').
 pce_theme:colour(test_dark, test_theme_target2, '#040404').
+pce_theme:colour(test_dark, ui_window_background, '#010101').
 
 pce_theme:colour(test_bad,  test_theme_fg, no_such_colour_name).
 pce_theme:colour(test_bad,  test_theme_bg, black).
@@ -138,6 +139,55 @@ test(system_colours_message, RGB == rgb(0,0,255)) :-
           apply_theme(light)
         )).
 
+test(dark_on_light, [Dark == rgb(1,1,1), Dialog == Sys]) :-
+    %  The test runs on a light desktop.  A dark theme replaces the
+    %  roles it defines and keeps the system colour for the others.
+    \+ dark_system,
+    apply_theme(test_dark),
+    theme_rgb(ui_window_background, Dark),
+    theme_rgb(ui_dialog_background, Dialog),
+    theme_rgb(sys_dialog_background, Sys),
+    apply_theme(light).
+test(light_on_light, RGB == Sys) :-
+    \+ dark_system,
+    apply_theme(light),
+    theme_rgb(ui_window_background, RGB),
+    theme_rgb(sys_window_background, Sys).
+test(light_on_dark, [Window == rgb(255,255,255), Text == rgb(0,0,0)]) :-
+    %  Simulate a dark desktop.  The light theme replaces the system
+    %  colours by its own.
+    setup_call_cleanup(
+        fake_dark_system,
+        ( apply_theme(light),
+          theme_rgb(ui_window_background, Window),
+          theme_rgb(ui_window_foreground, Text)
+        ),
+        restore_system).
+test(dark_on_dark, RGB == rgb(16,16,16)) :-
+    %  A dark theme on a dark desktop uses the system colours
+    setup_call_cleanup(
+        fake_dark_system,
+        ( apply_theme(test_dark),
+          theme_rgb(ui_window_background, RGB)
+        ),
+        ( restore_system,
+          apply_theme(light)
+        )).
+test(select_theme, [Sel1 == test_dark, Cur1 == test_dark,
+                    Sel2 == system, Cur2 == light]) :-
+    select_theme(test_dark),
+    current_theme_selection(Sel1),
+    current_theme(Cur1),
+    select_theme(system),
+    current_theme_selection(Sel2),
+    current_theme(Cur2).
+test(restored_system, Dark == false) :-
+    %  The tests above restored the light system colours
+    ( dark_system -> Dark = true ; Dark = false ).
+test(available_theme, true) :-
+    available_theme(light),
+    available_theme(dark).
+
 test(syntax_name, Name == syntax_goal_built_in) :-
     syntax_colour_name(goal(built_in,_), colour, Name).
 test(syntax_name, Name == syntax_lsp_enum) :-
@@ -207,6 +257,34 @@ test_issue(Issue) :-
     arg(1, Issue, Name),
     atom(Name),
     sub_atom(Name, 0, _, _, test_theme_).
+
+theme_rgb(Name, RGB) :-
+    get(@pce, convert, Name, colour, C),
+    colour_rgb(C, RGB).
+
+dark_system :-
+    get(@pce, convert, sys_window_background, colour, C),
+    get(C, intensity, I),
+    I < 128.
+
+%   Make the system window colours dark.  ->system_colours_changed
+%   reloads the real values, as they differ from the faked values in
+%   @colour_names.
+
+fake_dark_system :-
+    get(@pce, convert, sys_window_background, colour, Bg),
+    get(@pce, convert, sys_window_foreground, colour, Fg),
+    get(@pce, convert, '#101010', colour, Dark),
+    get(@pce, convert, '#f0f0f0', colour, Light),
+    get(Dark, rgba, DarkRGBA),
+    get(Light, rgba, LightRGBA),
+    send(@colour_names, append, sys_window_background, DarkRGBA),
+    send(@colour_names, append, sys_window_foreground, LightRGBA),
+    send(Bg, slot, rgba, DarkRGBA),
+    send(Fg, slot, rgba, LightRGBA).
+
+restore_system :-
+    send(@display_manager, system_colours_changed).
 
 theme_colour(Name, C) :-
     ensure_theme_colours,

@@ -1387,12 +1387,12 @@ static getdecl get_pce[] =
 
 #ifdef __WINDOWS__
 #define BUTTON_ELEVATION \
-	"elevation(button, 1, sys_button_background,\n" \
-	"	   win_3dhighlight, win_3dshadow, '3d', sys_button_pressed)"
+	"elevation(button, 1, ui_button_background,\n" \
+	"	   @default, ui_shadow, '3d', ui_button_pressed)"
 #else
 #define BUTTON_ELEVATION \
-	"elevation(button, 2, sys_button_background,\n" \
-	"	   @default, @default, '3d', sys_button_pressed)"
+	"elevation(button, 2, ui_button_background,\n" \
+	"	   @default, @default, '3d', ui_button_pressed)"
 #endif
 
 static classvardecl rc_pce[] =
