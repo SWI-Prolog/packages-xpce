@@ -451,12 +451,18 @@ Colour
 getHiliteColour(Colour c, Real h)
 { float hf;
 
-  if ( isDefault(h) )
-    h = getClassVariableValueObject(c, NAME_hiliteFactor);
-  hf = h ? valReal(h) : 0.9;
-
   if ( isDefault(c->rgba) )
     ws_named_colour(c);
+
+  if ( isDefault(h) )			/* see comment at rc_colour[] */
+  { Int i = getIntensityColour(c);
+    bool dark = i && valInt(i) < 128;
+
+    h = getClassVariableValueObject(c, dark ? NAME_darkHiliteFactor
+					    : NAME_hiliteFactor);
+    hf = h ? valReal(h) : dark ? 0.2 : 0.9;
+  } else
+    hf = valReal(h);
 
   COLORRGBA rgb = valInt(c->rgba);
   int r = ColorRValue(rgb);
@@ -800,9 +806,17 @@ static getdecl get_colour[] =
 
 /* Resources */
 
+/* <-hilite moves the colour towards white.  For a dark colour, moving it
+ * most of the way to white makes it unrecognisable, e.g., the preview
+ * of a menu item on a dark background would be almost white.  Dark
+ * colours therefore use a smaller default factor.
+ */
+
 static classvardecl rc_colour[] =
 { RC(NAME_hiliteFactor, "real", "0.9",
      "Default factor for <-hilite'd colour"),
+  RC(NAME_darkHiliteFactor, "real", "0.2",
+     "Default factor for <-hilite'd colour if the colour is dark"),
   RC(NAME_reduceFactor, "real", "0.6",
      "Default factor for <-reduce'd colour"),
   RC(NAME_fadeFactor, "real", "0.5",
