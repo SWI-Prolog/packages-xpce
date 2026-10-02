@@ -162,7 +162,8 @@ load(F, Source:'file|string') :->
 
 render_json(F, JSON) :-
     graph_bb(JSON, bb(_,_,_,Ymax)),
-    render_object(JSON, F, Ymax),                       % graph-level draws
+    graph_draws(JSON, Graph),
+    render_object(Graph, F, Ymax),                      % graph-level draws
     Objects = JSON.get(objects, []),
     forall(( member(Obj, Objects),
              has_draw_attrs(Obj)
@@ -176,6 +177,22 @@ render_json(F, JSON) :-
              new(E, xdot_edge(Edge, Tail, Head, Ymax)),
              send(F, display, E)
            )).
+
+%!  graph_draws(+JSON, -Graph) is det.
+%
+%   The draw operations of the graph itself.  Graphviz paints the
+%   background of the graph white, also if no `bgcolor` is specified.
+%   Unless the graph asks for a background colour, we leave the
+%   background to the window, such that the graph follows the theme.
+
+graph_draws(JSON, Graph) :-
+    (   get_dict(bgcolor, JSON, BG),
+        \+ atom_string(transparent, BG)
+    ->  Graph = JSON
+    ;   del_dict('_draw_', JSON, _, Graph)
+    ->  true
+    ;   Graph = JSON
+    ).
 
 %!  has_draw_attrs(+Obj) is semidet.
 %

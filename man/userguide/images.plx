@@ -508,6 +508,21 @@ A theme defines the value for the other themes:
 pce_theme:colour(dark, myapp_highlight, khaki4).
 \end{code}
 
+Graphicals that refer to a theme colour follow the theme by themselves.
+Colours that are \emph{copied}, however, do not.  This applies to an
+image into which graphicals are drawn using `image ->draw_in', to a
+colour computed from another colour and to colours passed to an
+external program such as Graphviz.  For these, a frame or graphical
+class of the application defines ->colours_changed.  This message is
+sent by `display_manager ->colours_changed' to all frames and graphicals
+whose class defines it, before all windows are redrawn:
+
+\begin{code}
+colours_changed(Menu) :->
+    "Draw the icons again in the new colours"::
+    send(Menu, paint_icons).
+\end{code}
+
 \paragraph{Colours chosen by the user}
 
 A colour that is chosen by the user, for example the background of an

@@ -72,6 +72,22 @@ pce_theme:colour(test_bad,  test_theme_bg, black).
 pce_theme:colour(test_bad,  test_theme_bg, white).
 pce_theme:colour(test_bad,  test_theme_no_such_name, black).
 
+:- pce_begin_class(test_theme_device, device).
+variable(notified, int := 0, both, "Times ->colours_changed was received").
+colours_changed(D) :->
+    get(D, notified, N0),
+    N is N0+1,
+    send(D, notified, N).
+:- pce_end_class(test_theme_device).
+
+:- pce_begin_class(test_theme_frame, frame).
+variable(notified, int := 0, both, "Times ->colours_changed was received").
+colours_changed(F) :->
+    get(F, notified, N0),
+    N is N0+1,
+    send(F, notified, N).
+:- pce_end_class(test_theme_frame).
+
 :- begin_tests(theme, [cleanup(apply_theme(light))]).
 
 test(light_default, [RGB == rgb(255,0,0), Class == theme_colour,
@@ -223,6 +239,20 @@ test(adaptive_not_checked, Issues == []) :-
                     ui_window_background),
     theme_issues(test_dark, Issues0),
     include(adaptive_issue, Issues0, Issues).
+
+test(colours_changed_notifies, [FN == 1, DN == 1]) :-
+    %  ->colours_changed tells frames and graphicals in nested devices
+    %  that define it, so applications can update colours they painted
+    %  into images.
+    new(F, test_theme_frame),
+    send(F, append, new(P, picture)),
+    send(P, display, new(Outer, device)),
+    send(Outer, display, new(D, test_theme_device)),
+    send(F, open),
+    send(@display_manager, colours_changed),
+    get(F, notified, FN),
+    get(D, notified, DN),
+    send(F, destroy).
 
 test(syntax_name, Name == syntax_goal_built_in) :-
     syntax_colour_name(goal(built_in,_), colour, Name).

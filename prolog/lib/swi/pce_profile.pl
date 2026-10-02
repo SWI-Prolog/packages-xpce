@@ -560,7 +560,7 @@ details(DI) :->
 variable(tabular, tabular, get, "Displayed table").
 variable(node,    prolog,  get, "Currently shown node").
 
-class_variable(background,        colour, grey80).
+class_variable(background,        colour, ui_dialog_background).
 class_variable(header_colour,     colour, black,  "Predicate header colour").
 class_variable(header_background, colour, prof_header_background,
                "Predicate header background").
@@ -921,6 +921,10 @@ refresh(W) :->
     "Draw again, now if I can be seen, else when I can"::
     send(W, slot, stale, @on),
     send(W, update).
+
+colours_changed(W) :->
+    "The graph uses the colours of the window: draw it again"::
+    send(W, refresh).
 
 update(W) :->
     "Draw the graph if it changed and I can be seen"::

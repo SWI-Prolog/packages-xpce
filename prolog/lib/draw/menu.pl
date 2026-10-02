@@ -98,6 +98,13 @@ initialise(M) :->
     send(M, modified, @off).
 
 
+colours_changed(M) :->
+    "Paint the prototypes again in the new colours"::
+    get(M, member, proto, Menu),
+    send(Menu?members, for_all,
+         if(@arg1?painted == @on, message(@arg1, paint_proto))).
+
+
 new_size(M, Size:size) :->
     get(M, member, proto, Menu),
     get(Size, width, W),
@@ -400,6 +407,8 @@ variable(mode_cursor,   name,           both,
          "Associated cursor-name").
 variable(user_proto,    bool := @off,   both,
          "Prototype was created by the user").
+variable(painted,       bool := @off,   get,
+         "Image is painted from the prototype").
 
 item_size(48,32).
 
@@ -431,7 +440,8 @@ proto(I, Proto:'graphical|link*', Image:[image]) :->
     send(I, slot, proto, Proto),
     (   Image == @default
     ->  send(I, paint_proto)
-    ;   send(I, label, Image)
+    ;   send(I, slot, painted, @off),
+        send(I, label, Image)
     ).
 
 
@@ -509,6 +519,7 @@ paint_proto(MI) :->
         send(D, center, point(22, 14)),
         send(I, draw_in, D)
     ),
+    send(MI, slot, painted, @on),
     send(MI, label, I).
 
 

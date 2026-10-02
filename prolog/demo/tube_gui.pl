@@ -150,11 +150,11 @@ search_callback(TI, N, Pattern) :-
     (   Pattern == ''
     ->  send(N, reset_view),
         send(N, report, status, ''),
-        send(TI?value_text, colour, black)
+        send(TI?value_text, colour, @default)
     ;   send(N, report, status, '%d matches', Count),
         (   Count > 0
         ->  send(N, zoom_to_matches, Matches),
-            send(TI?value_text, colour, black)
+            send(TI?value_text, colour, @default)
         ;   send(TI?value_text, colour, red)
         )
     ).
@@ -379,7 +379,7 @@ matched(S, On:bool) :->
     "Search-match marker: thicker red outline"::
     (   On == @on
     ->  send(S, pen, 7), send(S, colour, red)
-    ;   send(S, pen, 1), send(S, colour, black)
+    ;   send(S, pen, 1), send(S, colour, @default)
     ).
 
 hovered(S, On:bool) :->

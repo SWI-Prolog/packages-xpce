@@ -198,32 +198,52 @@ redrawDisplayManager(DisplayManager dm)
  * after changing the value of theme colours.  Windows may be nested in
  * other devices, e.g., the tabs of a tab_stack, so we walk all devices
  * of each frame using an agenda.
+ *
+ * Some applications paint colours into images or compute colours from
+ * other colours.  A frame or graphical whose class defines
+ * ->colours_changed is sent this message before it is redrawn, so it
+ * can update these.  The built-in classes do not define it.
  */
+
+static void
+notify_colours_changed(Any obj)
+{ if ( !isFreeingObj(obj) &&
+       getSendMethodClass(classOfObject(obj), NAME_coloursChanged) )
+    send(obj, NAME_coloursChanged, EAV);
+}
+
 
 static status
 coloursChangedDisplayManager(DisplayManager dm)
 { Chain agenda = answerObject(ClassChain, EAV);
-  Cell dcell, fcell, wcell;
+  Cell dcell, fcell;
 
   for_cell(dcell, dm->members)
   { DisplayObj d = dcell->value;
 
     for_cell(fcell, d->frames)
-    { FrameObj fr = fcell->value;
-
-      for_cell(wcell, fr->members)
-	appendChain(agenda, wcell->value);
-    }
+      appendChain(agenda, fcell->value);
   }
 
-  Any gr;
-  while( (gr = getDeleteHeadChain(agenda)) )
-  { if ( instanceOfObject(gr, ClassWindow) )
-      redrawWindow(gr, DEFAULT);
-    if ( instanceOfObject(gr, ClassDevice) )
+  Any obj;
+  while( (obj = getDeleteHeadChain(agenda)) )
+  { notify_colours_changed(obj);
+    if ( isFreeingObj(obj) )
+      continue;
+
+    if ( instanceOfObject(obj, ClassFrame) )
     { Cell cell;
 
-      for_cell(cell, ((Device)gr)->graphicals)
+      for_cell(cell, ((FrameObj)obj)->members)
+	appendChain(agenda, cell->value);
+      continue;
+    }
+    if ( instanceOfObject(obj, ClassWindow) )
+      redrawWindow(obj, DEFAULT);
+    if ( instanceOfObject(obj, ClassDevice) )
+    { Cell cell;
+
+      for_cell(cell, ((Device)obj)->graphicals)
 	appendChain(agenda, cell->value);
     }
   }
@@ -354,7 +374,7 @@ static senddecl send_displayManager[] =
   SM(NAME_systemColoursChanged, 0, NULL, systemColoursChangedDisplayManager,
      NAME_colour, "Reload the system colours and redraw"),
   SM(NAME_coloursChanged, 0, NULL, coloursChangedDisplayManager,
-     NAME_colour, "Redraw all windows after colours changed")
+     NAME_colour, "Tell frames and graphicals colours changed and redraw")
 };
 
 /* Get Methods */

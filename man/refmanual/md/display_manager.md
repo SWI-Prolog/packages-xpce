@@ -85,6 +85,17 @@ created at boot time.  Its responsibilities are:
     windows or devices such as tabs.  Send this after changing colours
     in place, e.g., after changing the value of theme colours.
 
+    Before redrawing, each frame and each graphical in these frames
+    whose class defines `->colours_changed` is sent this message.  The
+    built-in classes do not define it.  An application defines it if
+    it holds colours that do not follow the theme by themselves, e.g.,
+    images that are drawn using `image ->draw_in` or colours that are
+    computed from other colours:
+
+    	colours_changed(W) :->
+    	    "Draw the icons again in the new colours"::
+    	    send(W, paint_icons).
+
 
 ## Get methods {#class-display_manager-get}
 

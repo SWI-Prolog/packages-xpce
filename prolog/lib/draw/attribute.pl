@@ -320,18 +320,9 @@ Create  a menu for  some prototype attribute.   Each menu_item   has a
 
 make_proto_menu(Menu, Proto, Attribute, Values) :-
     new(Menu, draw_proto_menu(Attribute)),
-    (   (   Attribute == colour
-        ;   Attribute == fill
-        ;   Attribute == transparent
-        )
-    ->  Kind = pixmap
-    ;   Kind = bitmap
-    ),
+    send(Menu, proto, Proto),
     (   member(Value, Values),
-            send(Proto, Attribute, Value),
-            new(I, image(@nil, 30, 16, Kind)),
-            send(I, draw_in, @menu_proto_box),
-            send(I, draw_in, Proto),
+            proto_image(Proto, Attribute, Value, I),
             send(Menu, append, menu_item(Value, @default, I)),
             fail
     ;   true
@@ -339,6 +330,26 @@ make_proto_menu(Menu, Proto, Attribute, Values) :-
     length(Values, N),
     Cols is (N+9) // 10,
     send(Menu, columns, Cols).
+
+%!  proto_image(+Proto, +Attribute, +Value, -Image) is det.
+%
+%   Image shows Proto with Attribute set to Value, inside an outline.
+%   The image holds the colours at the moment it is drawn, so it is
+%   drawn again if the colours change.  See `draw_proto_menu
+%   ->colours_changed`.
+
+proto_image(Proto, Attribute, Value, I) :-
+    (   (   Attribute == colour
+        ;   Attribute == fill
+        ;   Attribute == transparent
+        )
+    ->  Kind = pixmap
+    ;   Kind = bitmap
+    ),
+    send(Proto, Attribute, Value),
+    new(I, image(@nil, 30, 16, Kind)),
+    send(I, draw_in, @menu_proto_box),
+    send(I, draw_in, Proto).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -558,6 +569,7 @@ initialise(Menu, Attribute:name) :->
     send(Menu, send_super, initialise,
          Label, choice,
          message(@receiver?frame, client_attribute, Attribute, @arg1)),
+    send(Menu, attribute, proto_attribute, Attribute),
     send(Menu, off_image, @nil),
     send(Menu, border, 2),
     send(Menu, layout, horizontal).
@@ -565,5 +577,23 @@ initialise(Menu, Attribute:name) :->
 value_width(_Menu, _Width:int) :->
     "Ignore value alignment"::
     true.
+
+proto(Menu, Proto:graphical) :->
+    "Graphical whose attribute values are shown in the images"::
+    send(Menu, attribute, proto, Proto).
+
+colours_changed(Menu) :->
+    "Draw the images again in the new colours"::
+    (   get(Menu, attribute, proto, Proto)
+    ->  get(Menu, attribute, proto_attribute, Attribute),
+        get(Menu?members, copy, Items),
+        chain_list(Items, ItemList),
+        forall(member(Item, ItemList),
+               ( get(Item, value, Value),
+                 proto_image(Proto, Attribute, Value, Image),
+                 send(Item, label, Image)
+               ))
+    ;   true
+    ).
 
 :- pce_end_class.
