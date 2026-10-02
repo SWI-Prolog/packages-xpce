@@ -70,12 +70,17 @@ typedef struct
  * light palette is translucent, rgba(0,0,6,0.8).  Button, separator,
  * etc. colours are alpha(currentColor, f) in the libadwaita CSS.  We
  * compose them over the dialog background.
+ *
+ * The libadwaita window background is almost white, which makes xpce
+ * dialogs indistinguishable from the content windows.  We therefore use
+ * the sidebar background, the colour libadwaita uses for panels next to
+ * the content, as dialog background.
  */
 
-static const gnome_rgb adw_light_window_bg = RGB8(250, 250, 251);
+static const gnome_rgb adw_light_sidebar_bg = RGB8(235, 235, 237);
 static const gnome_rgb adw_light_view_bg   = RGB8(255, 255, 255);
 static const gnome_rgb adw_light_ink       = RGB8(  0,   0,   6);
-static const gnome_rgb adw_dark_window_bg  = RGB8( 34,  34,  38);
+static const gnome_rgb adw_dark_sidebar_bg  = RGB8( 46,  46,  50);
 static const gnome_rgb adw_dark_view_bg    = RGB8( 29,  29,  32);
 static const gnome_rgb adw_dark_ink        = RGB8(255, 255, 255);
 static const gnome_rgb adw_tooltip_bg      = RGB8(  0,   0,   6);
@@ -116,7 +121,7 @@ accent_foreground(gnome_rgb accent)
 static void
 palette_colours(sys_colour_callback add, void *closure,
 		const gnome_settings *s)
-{ gnome_rgb window_bg = s->dark ? adw_dark_window_bg : adw_light_window_bg;
+{ gnome_rgb dialog_bg = s->dark ? adw_dark_sidebar_bg : adw_light_sidebar_bg;
   gnome_rgb view_bg   = s->dark ? adw_dark_view_bg   : adw_light_view_bg;
   gnome_rgb ink       = s->dark ? adw_dark_ink       : adw_light_ink;
   double    ink_alpha = s->dark || s->high_contrast ? 1.0 : 0.8;
@@ -125,29 +130,29 @@ palette_colours(sys_colour_callback add, void *closure,
   add_colour(add, closure, "sys_window_background", view_bg);
   add_colour(add, closure, "sys_window_foreground",
 	     mix(view_bg, ink, ink_alpha));
-  add_colour(add, closure, "sys_dialog_background", window_bg);
+  add_colour(add, closure, "sys_dialog_background", dialog_bg);
   add_colour(add, closure, "sys_dialog_foreground",
-	     mix(window_bg, ink, ink_alpha));
+	     mix(dialog_bg, ink, ink_alpha));
   add_colour(add, closure, "sys_button_background",
-	     mix(window_bg, ink, 0.1*ink_alpha));
+	     mix(dialog_bg, ink, 0.1*ink_alpha));
   add_colour(add, closure, "sys_button_foreground",
-	     mix(window_bg, ink, ink_alpha));
+	     mix(dialog_bg, ink, ink_alpha));
   add_colour(add, closure, "sys_button_pressed",
-	     mix(window_bg, ink, 0.3*ink_alpha));
+	     mix(dialog_bg, ink, 0.3*ink_alpha));
   add_colour(add, closure, "sys_selection_background", accent);
   add_colour(add, closure, "sys_selection_foreground",
 	     accent_foreground(accent));
   add_colour(add, closure, "sys_tooltip_background",
-	     mix(window_bg, adw_tooltip_bg, 0.8));
+	     mix(dialog_bg, adw_tooltip_bg, 0.8));
   add_colour(add, closure, "sys_tooltip_foreground", adw_white);
   add_colour(add, closure, "sys_inactive",
-	     mix(window_bg, ink, 0.5*ink_alpha));
+	     mix(dialog_bg, ink, 0.5*ink_alpha));
   add_colour(add, closure, "sys_link", accent);
   add_colour(add, closure, "sys_accent", accent);
   add_colour(add, closure, "sys_separator",
-	     mix(window_bg, ink, (s->high_contrast ? 0.5 : 0.15)*ink_alpha));
+	     mix(dialog_bg, ink, (s->high_contrast ? 0.5 : 0.15)*ink_alpha));
   add_colour(add, closure, "sys_shadow",
-	     mix(window_bg, ink, (s->high_contrast ? 0.7 : 0.3)*ink_alpha));
+	     mix(dialog_bg, ink, (s->high_contrast ? 0.7 : 0.3)*ink_alpha));
 }
 
 

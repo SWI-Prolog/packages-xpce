@@ -275,9 +275,12 @@ text on a selection is white, unless the accent colour is light.
 \Tabref{gnomecolours} shows the result.  The \emph{ink} is the text
 colour of libadwaita: \verb$rgba(0,0,6,0.8)$ in the light palette and
 white in the dark palette.  A percentage means that this fraction of the
-ink is composed over the window background, which is how libadwaita
-defines these colours in its CSS.  There are no \const{gnome_} colour
-names.
+ink is composed over the dialog background, which is how libadwaita
+defines these colours in its CSS.  The libadwaita window background is
+almost white, which would make dialogs indistinguishable from the
+content windows.  The dialog background is therefore the sidebar
+background of libadwaita, which it uses for panels next to the
+content.  There are no \const{gnome_} colour names.
 
 The portal is accessed over D-Bus using GIO.  If \product{} was built
 without GIO, or there is no portal, the light palette with the default
@@ -291,20 +294,20 @@ accent colour is used.
 \hline
 \const{sys_window_background} & view background & \#ffffff & \#1d1d20 \\
 \const{sys_window_foreground} & ink & \#333338 & \#ffffff \\
-\const{sys_dialog_background} & window background & \#fafafb & \#222226 \\
-\const{sys_dialog_foreground} & ink & \#323237 & \#ffffff \\
-\const{sys_button_background} & 10\% ink & \#e6e6e7 & \#38383c \\
-\const{sys_button_foreground} & ink & \#323237 & \#ffffff \\
-\const{sys_button_pressed} & 30\% ink & \#bebec0 & \#646467 \\
+\const{sys_dialog_background} & sidebar background & \#ebebed & \#2e2e32 \\
+\const{sys_dialog_foreground} & ink & \#2f2f34 & \#ffffff \\
+\const{sys_button_background} & 10\% ink & \#d8d8db & \#434347 \\
+\const{sys_button_foreground} & ink & \#2f2f34 & \#ffffff \\
+\const{sys_button_pressed} & 30\% ink & \#b3b3b6 & \#6d6d70 \\
 \const{sys_selection_background} & accent & \#3584e4 & \#3584e4 \\
 \const{sys_selection_foreground} & white or black & \#ffffff & \#ffffff \\
-\const{sys_tooltip_background} & 80\% \#000006 & \#323237 & \#07070c \\
+\const{sys_tooltip_background} & 80\% \#000006 & \#2f2f34 & \#09090f \\
 \const{sys_tooltip_foreground} & white & \#ffffff & \#ffffff \\
-\const{sys_inactive} & 50\% ink & \#969699 & \#919193 \\
+\const{sys_inactive} & 50\% ink & \#8d8d91 & \#979799 \\
 \const{sys_link} & accent & \#3584e4 & \#3584e4 \\
 \const{sys_accent} & accent & \#3584e4 & \#3584e4 \\
-\const{sys_separator} & 15\% ink & \#dcdcde & \#434347 \\
-\const{sys_shadow} & 30\% ink & \#bebec0 & \#646467 \\
+\const{sys_separator} & 15\% ink & \#cfcfd1 & \#4d4d51 \\
+\const{sys_shadow} & 30\% ink & \#b3b3b6 & \#6d6d70 \\
 \hline
 \end{tabular}
 \end{center}
