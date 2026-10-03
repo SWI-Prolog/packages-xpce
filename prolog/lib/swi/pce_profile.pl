@@ -214,6 +214,8 @@ details(F, From:prolog) :->
     ->  Node = From
     ;   get(F, node_data, From, Node)
     ),
+    get(F, window, prof_browser, B),
+    send(B, current, Node),
     get(F, window, prof_details, W),
     send(W, node, Node),
     get(F, window, prof_graph, G),
@@ -321,6 +323,7 @@ class_variable(max_width, '1..100', 60,
 variable(sort_by,   name := ticks, get, "How the items are sorted").
 variable(all_items, chain,         get, "All items, shown or not").
 variable(filter,    regex*,        get, "Only show items matching this").
+variable(current,   prolog*,       get, "Node shown by the details").
 
 initialise(B) :->
     send_super(B, initialise),
@@ -386,9 +389,7 @@ select_interesting(B) :->
     get_chain(B?dict, members, Items),
     prof_tool(B, F),
     (   interesting_item(SortBy, Items, F, DI)
-    ->  send(B, selection, DI),
-        send(B, normalise, DI),
-        send(DI, details)
+    ->  send(DI, details)               % selects DI; see ->current
     ;   true
     ).
 
@@ -448,10 +449,6 @@ filter(B, Filter:regex*) :->
 
 show_items(B) :->
     "Show the items of <-all_items that match <-filter"::
-    (   get(B, selection, Selection)
-    ->  true
-    ;   Selection = @nil
-    ),
     send(B?dict, clear),
     get(B, all_items, All),
     get(B, filter, Filter),
@@ -461,12 +458,21 @@ show_items(B) :->
              if(message(Filter, search, @arg1?key),
                 message(B, append, @arg1)))
     ),
-    (   Selection \== @nil,
-        get(Selection, dict, Dict),
-        Dict \== @nil
-    ->  send(B, selection, Selection),
-        send(B, normalise, Selection)
-    ;   true
+    get(B, current, Node),
+    send(B, current, Node).
+
+%       The selection follows the current node, wherever it was made
+%       current: here, in the details or in the call graph.  If the
+%       filter hides it, nothing is selected.
+
+current(B, Node:prolog*) :->
+    "Make Node current and select it if it is shown"::
+    send(B, slot, current, Node),
+    (   Node \== @nil,
+        get(B?dict, find, message(@arg1, is_node, prolog(Node)), DI)
+    ->  send(B, selection, DI),
+        send(B, normalise, DI)
+    ;   send(B, selection, @nil)
     ).
 
 update_labels(B) :->
@@ -493,6 +499,11 @@ value(DI, Name:name, Value:prolog) :<-
     "Get associated value"::
     get(DI, data, Data),
     value(Name, Data, Value).
+
+is_node(DI, Node:prolog) :->
+    "True if I show Node"::
+    get(DI, data, Data),
+    Data.predicate == Node.predicate.
 
 has_predicate(DI, Test:prolog) :->
     get(DI, data, Data),
@@ -963,18 +974,9 @@ render(W, Data:prolog) :->
     string_codes(Dot, Codes),
     debug(profile(graph), '~s', [Dot]),
     get(W, xdot, X),
-    (   catch(send(X, load, Dot), E,
-              ( print_message(warning, E),
-                fail
-              ))
-    ->  send(W, star),
-        send(W, fit)
-    ;   send(X, clear, destroy),
-        send(X, transform, @nil),
-        send(X, display, text('Cannot draw the call graph.\n\c
-                               Is graphviz (dot) installed?')),
-        send(X, center, W?visible?center)
-    ).
+    send(X, load, Dot),                 % explains itself if dot fails
+    send(W, star),
+    send(W, fit).
 
 %       A new size fits the graph again, unless the user moved or
 %       zoomed it since it was fitted: the scrollbars that come and go as
