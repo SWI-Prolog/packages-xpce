@@ -43,7 +43,7 @@
 		********************************/
 
 #ifndef PCE_VERSION
-#define PCE_VERSION "7.1.0"
+#define PCE_VERSION "9.0.0"
 #endif
 
 #ifndef PCE_OS
