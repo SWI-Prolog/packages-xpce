@@ -94,8 +94,14 @@ super-section, and sections that have subsections contain a
 \begin{titlepage}
 \mbox{}
 \vfil
+\centerline{{\Huge Programming in XPCE/Prolog}}
+\vfil
 \centerline{\includegraphics[width=\textwidth]{title}}
-\vfil\vfil\vfil
+\vfil
+\centerline{{\Large \textit{Jan Wielemaker}}}
+\vspace{1ex}
+\centerline{{\Large \textit{Anjo Anjewierden}}}
+\vfil\vfil
 \newpage
 %\titlepageheader
 \vfil

@@ -96,3 +96,4 @@ distclean: clean
 
 upload:
 	rsync -P $(PDF) plweb@oehoe:srv/plweb/data/download/xpce/doc/prolog/userguide.pdf
+	rsync -P $(PDF) plweb@us:srv/plweb/data/download/xpce/doc/prolog/userguide.pdf
