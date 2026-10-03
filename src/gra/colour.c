@@ -882,6 +882,12 @@ makeClassColour(Class class)
   GREY50_COLOUR = newObject(ClassColour, NAME_grey50,    EAV);
   BLACK_COLOUR  = newObject(ClassColour, NAME_black,     EAV);
   BLUE_COLOUR   = newObject(ClassColour, NAME_royalblue, EAV);
+					/* referenced from C: never free */
+  lockObject(WHITE_COLOUR,  ON);
+  lockObject(GREY25_COLOUR, ON);
+  lockObject(GREY50_COLOUR, ON);
+  lockObject(BLACK_COLOUR,  ON);
+  lockObject(BLUE_COLOUR,   ON);
 
   succeed;
 }

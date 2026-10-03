@@ -72,7 +72,9 @@ ws_3d_grey(void)
 { static Colour c;
 
   if ( !c )
-    c = newObject(ClassColour, CtoKeyword("grey60"), EAV);
+  { c = newObject(ClassColour, CtoKeyword("grey60"), EAV);
+    lockObject(c, ON);
+  }
 
   return c;
 }
