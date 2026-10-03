@@ -73,11 +73,11 @@ RGBToHSV(float r, float g, float b, float *H, float *S, float *V)
 
   if ( s > 0 )
   { if ( r == cmax )
-    { h = (float)0.17 * (g - b) / (cmax - cmin);
+    { h = (g - b) / (cmax - cmin) / 6.0f;
     } else if ( g == cmax )
-    { h = (float)0.33 + (float)0.17 * (b - r) / (cmax - cmin);
+    { h = (2.0f + (b - r) / (cmax - cmin)) / 6.0f;
     } else
-    { h = (float)0.67 + (float)0.17 * (r - g) / (cmax - cmin);
+    { h = (4.0f + (r - g) / (cmax - cmin)) / 6.0f;
     }
     if ( h < 0.0 )
     { h = h + (float)1.0;
@@ -94,44 +94,19 @@ RGBToHSV(float r, float g, float b, float *H, float *S, float *V)
 
 void
 HSVToRGB(float hue, float sat, float V, float *R, float *G, float *B)
-{ float r, g, b;
+{ float h6 = (hue < 0.0f || hue >= 1.0f ? 0.0f : hue) * 6.0f;
+  int sextant = (int)h6;
+  float f = h6 - (float)sextant;
+  float p = V * (1.0f - sat);
+  float q = V * (1.0f - sat * f);
+  float t = V * (1.0f - sat * (1.0f - f));
 
-
-  if (hue > 0.17 && hue <= 0.33)	/* green/red */
-  { g = 1.0;
-    r = ((float)0.33 - hue) / (float)0.16;
-    b = 0.0;
-  } else if (hue > 0.33 && hue <= 0.5)	/* green/blue */
-  { g = 1.0;
-    b = (hue - (float)0.33) / (float)0.17;
-    r = 0.0;
-  } else if (hue > 0.5 && hue <= 0.67)	/* blue/green */
-  { b = 1.0;
-    g = ((float)0.67 - hue) / (float)0.17;
-    r = 0.0;
-  } else if (hue > 0.67 && hue <= 0.83)	/* blue/red */
-  { b = 1.0;
-    r = (hue - (float)0.67) / (float)0.16;
-    g = 0.0;
-  } else if (hue > 0.83 && hue <= 1.0)	/* red/blue */
-  { r = 1.0;
-    b = ((float)1.0 - hue) / (float)0.17;
-    g = 0.0;
-  } else				/* red/green */
-  { r = 1.0;
-    g = hue / (float)0.17;
-    b = 0.0;
+  switch(sextant)
+  { case 0:  *R = V; *G = t; *B = p; break; /* red/green */
+    case 1:  *R = q; *G = V; *B = p; break; /* green/red */
+    case 2:  *R = p; *G = V; *B = t; break; /* green/blue */
+    case 3:  *R = p; *G = q; *B = V; break; /* blue/green */
+    case 4:  *R = t; *G = p; *B = V; break; /* blue/red */
+    default: *R = V; *G = p; *B = q; break; /* red/blue */
   }
-
-  r = (sat * r + ((float)1.0 - sat));
-  g = (sat * g + ((float)1.0 - sat));
-  b = (sat * b + ((float)1.0 - sat));
-
-  r = r * V;
-  g = g * V;
-  b = b * V;
-
-  *R = r;
-  *G = g;
-  *B = b;
 }

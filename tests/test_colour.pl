@@ -119,6 +119,12 @@ test(theme_colour_derived_from, RGB == rgb(0,0,255)) :-
     colour_rgb(C, _),
     send(C, derived_from, blue),
     colour_rgb(C, RGB).
+test(theme_colour_hsv, [H == 240, S == 100, V == 100]) :-
+    %  colour<-value is the HSV value, also for a theme colour
+    new(C, theme_colour(test_colour_hsv, blue)),
+    get(C, hue, H0), H is round(H0),
+    get(C, saturnation, S0), S is round(S0),
+    get(C, value, V0), V is round(V0).
 test(theme_colour_lookup, [Same == true, RGB == rgb(0,255,0)]) :-
     %  Creating an existing theme colour changes its value
     new(C, theme_colour(test_colour_lookup, red)),
