@@ -430,8 +430,9 @@ another colour, which may be another theme colour or a system colour,
 or a colour object.  The RGB value is computed when it is needed by
 following `theme_colour <-derived_from' through other theme colours.
 Changing what a theme colour is derived from using `theme_colour
-->derived_from', or creating it again, makes all theme colours compute their RGB value again on their next use.
-Theme colours may therefore refer to each other in any order.  Theme
+->derived_from', or creating it again, makes all theme colours compute
+their RGB value again on their next use.  Theme colours may therefore
+refer to each other in any order.  Theme
 colours are locked, so they are never garbage collected, and they are
 never returned when looking up a colour from its RGB values.  After
 changing theme colours, `display_manager ->colours_changed' redraws all
@@ -447,8 +448,9 @@ The basic colours of the user interface.  For each system colour
 \const{sys_}\arg{role} (see \tabref{syscolours}) there is a theme
 colour \const{ui_}\arg{role}, e.g., \const{ui_window_background}.
 \product{} only uses the \const{ui_} names, such that a theme can
-replace the system colours (see below).  Other \const{ui_} colours are
-used for, e.g., incremental search (\const{ui_isearch_background}).  The \const{ui_} colours and their
+replace the system colours (see below).  We call these the \jargon{roles}.
+Other \const{ui_} colours are used for, e.g., incremental search
+(\const{ui_isearch_background}).  The \const{ui_} colours and their
 values in the \const{light} theme are in the hash table
 @theme_colour_defaults.
     \item [\const{ansi_}\arg{colour}]
@@ -469,13 +471,22 @@ referencer and other tools.
 
 \paragraph{Using the system colours}
 
-The \const{ui_} colours are the system colours if the theme and the
-desktop are both light or both dark.  This preserves the look of the
-desktop.  Otherwise, for example when using the dark theme on a light
-desktop, the theme replaces the system colours by colours of its own.
-A theme is dark if its \const{ui_window_background} is dark.  The
-\const{light} theme provides its own light colours for use on a dark
-desktop.
+The roles, the \const{ui_}\arg{role} colours that have a system colour
+\const{sys_}\arg{role}, are the system colours if the theme
+\jargon{matches} the desktop.  This preserves the look of the desktop,
+including colours the theme defines for the role.  If the theme does not
+match, for example when using the dark theme on a light desktop, the
+theme's own colours replace the system colours.  A role the theme does
+not define remains the system colour.  All other theme colours, such as
+\const{ui_isearch_background}, \const{ansi_}, \const{syntax_} and the
+colours of the tools, always come from the theme.
+
+The theme matches the desktop if both are light or both are dark.  The
+theme is dark if its \const{ui_window_background} is dark and the
+desktop is dark if \const{sys_window_background} is dark.  Only the
+brightness is compared.  A theme that does not define
+\const{ui_window_background} matches any desktop.  The \const{light}
+theme provides its own light colours for use on a dark desktop.
 
 \paragraph{Writing a theme}
 
@@ -504,13 +515,16 @@ colour(syntax_comment,       green).
 \end{code}
 
 A theme should define all theme colours.  Colours it does not define
-use their value in the \const{light} theme.  The theme colours of the
-\const{ui_} roles are only used if the theme does not match the
-desktop.  The predicate check_theme/1 verifies a theme against the
-theme colours of xpce and the development tools.  It reports theme
-colours that are not defined, defined twice or unknown, and values that
-are not colours.  After changing a theme file, use make/0 and
-apply_theme/1 to see the result.
+use their value in the \const{light} theme, except for the roles: these
+remain the system colour, also if the theme does not match the desktop.
+A dark theme that does not define, e.g., \const{ui_tooltip_background}
+thus uses the light tooltip colour of a light desktop.  The theme colours
+of the roles are only used if the theme does not match the desktop.
+The predicate check_theme/1 verifies a theme against the theme colours
+of xpce and the development tools.  It reports theme colours that are
+not defined, defined twice or unknown, and values that are not colours.
+After changing a theme file, use make/0 and apply_theme/1 to see the
+result.
 
 \paragraph{Theme colours of an application}
 
