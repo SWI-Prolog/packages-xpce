@@ -2956,7 +2956,7 @@ scope('M.text_margin.S.initialise', obscure).
 scope('M.theme_colour.G.lookup', internal).
 scope('M.theme_colour.S.initialise', advanced).
 scope('M.theme_colour.S.unlink', advanced).
-scope('M.theme_colour.S.value', advanced).
+scope('M.theme_colour.S.derived_from', advanced).
 scope('M.tile.G.can_resize', advanced).
 scope('M.tile.G.root', advanced).
 scope('M.tile.G.sub_tile_to_resize', obscure).
@@ -5827,7 +5827,7 @@ scope('V.text_margin.pen', advanced).
 scope('V.text_margin.request_compute', advanced).
 scope('V.text_margin.selected', advanced).
 scope('V.text_margin.texture', advanced).
-scope('V.theme_colour.value', advanced).
+scope('V.theme_colour.derived_from', advanced).
 scope('V.tile.area', advanced).
 scope('V.tile.border', advanced).
 scope('V.tile.can_resize', advanced).

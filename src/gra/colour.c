@@ -858,7 +858,6 @@ static classvardecl rc_colour[] =
 /* Class Declaration */
 
 static Name colour_termnames[] = { NAME_name };
-static Name colour_termnames2[] = { NAME_name, NAME_value };
 
 ClassDecl(colour_decls,
 	  var_colour, send_colour, get_colour, rc_colour,
@@ -898,9 +897,9 @@ makeClassColour(Class class)
 		 *******************************/
 
 /* A theme colour is a colour whose name describes its role, e.g.,
- * `syntax_comment'.  Its value is the name of another colour, possibly
- * another theme colour, or a colour object.  The RGBA value is computed
- * from the value when it is needed: changing the value of any theme
+ * `syntax_comment'.  It is derived from the name of another colour,
+ * possibly another theme colour, or a colour object.  The RGBA value is
+ * computed from <-derived_from when it is needed: changing that of any theme
  * colour, or reloading the system colours, resets the RGBA of all theme
  * colours to @default.  ws_named_colour() resolves it again on the next
  * use.  This makes the order in which theme colours are created or
@@ -911,11 +910,11 @@ makeClassColour(Class class)
 #define MAX_THEME_COLOUR_DEPTH 100
 
 static status
-initialiseThemeColour(ThemeColour tc, Name name, Any value)
-{ assign(tc, name,  name);
-  assign(tc, kind,  NAME_theme);
-  assign(tc, rgba,  DEFAULT);
-  assign(tc, value, value);
+initialiseThemeColour(ThemeColour tc, Name name, Any from)
+{ assign(tc, name,	   name);
+  assign(tc, kind,	   NAME_theme);
+  assign(tc, rgba,	   DEFAULT);
+  assign(tc, derived_from, from);
 
   appendHashTable(ColourTable, name, tc);
   appendChain(ThemeColours, tc);
@@ -933,18 +932,18 @@ unlinkThemeColour(ThemeColour tc)
 }
 
 
-/* Creating a theme colour that already exists changes its value and
- * returns the existing object.
+/* Creating a theme colour that already exists changes what it is
+ * derived from and returns the existing object.
  */
 
-static status valueThemeColour(ThemeColour tc, Any value);
+static status derivedFromThemeColour(ThemeColour tc, Any from);
 
 static ThemeColour
-getLookupThemeColour(Class class, Name name, Any value)
+getLookupThemeColour(Class class, Name name, Any from)
 { Colour c = getMemberHashTable(ColourTable, name);
 
   if ( c && instanceOfObject(c, ClassThemeColour) )
-  { valueThemeColour((ThemeColour)c, value);
+  { derivedFromThemeColour((ThemeColour)c, from);
     answer((ThemeColour)c);
   }
 
@@ -953,9 +952,9 @@ getLookupThemeColour(Class class, Name name, Any value)
 
 
 static status
-valueThemeColour(ThemeColour tc, Any value)
-{ if ( tc->value != value )
-  { assign(tc, value, value);
+derivedFromThemeColour(ThemeColour tc, Any from)
+{ if ( tc->derived_from != from )
+  { assign(tc, derived_from, from);
     invalidateThemeColours();
   }
 
@@ -964,7 +963,7 @@ valueThemeColour(ThemeColour tc, Any value)
 
 
 /* Reset the RGBA value of all theme colours, such that they are
- * resolved again from their value on the next use.  Returns the number
+ * resolved again on the next use.  Returns the number
  * of theme colours.
  */
 
@@ -987,7 +986,7 @@ invalidateThemeColours(void)
 }
 
 
-/* Compute the RGBA value of a theme colour by following its value
+/* Compute the RGBA value of a theme colour by following <-derived_from
  * through other theme colours until we find a resolved theme colour or
  * an ordinary colour.  An unknown colour name or a cycle prints a
  * message and resolves to grey50.
@@ -995,7 +994,7 @@ invalidateThemeColours(void)
 
 status
 resolveThemeColour(ThemeColour tc)
-{ Any v = tc->value;
+{ Any v = tc->derived_from;
   Int rgba = 0;
 
   for(int depth=0; ; depth++)
@@ -1014,7 +1013,7 @@ resolveThemeColour(ThemeColour tc)
     }
 
     if ( instanceOfObject(c, ClassThemeColour) && isDefault(c->rgba) )
-    { v = ((ThemeColour)c)->value;
+    { v = ((ThemeColour)c)->derived_from;
       continue;
     }
 
@@ -1031,20 +1030,20 @@ resolveThemeColour(ThemeColour tc)
 }
 
 
-static char *T_themeColour[] = { "name=name", "value=name|colour" };
+static char *T_themeColour[] = { "name=name", "derived_from=name|colour" };
 
 static vardecl var_themeColour[] =
-{ IV(NAME_value, "name|colour", IV_GET,
+{ IV(NAME_derivedFrom, "name|colour", IV_GET,
      NAME_colour, "Colour name or colour this colour is derived from")
 };
 
 static senddecl send_themeColour[] =
 { SM(NAME_initialise, 2, T_themeColour, initialiseThemeColour,
-     DEFAULT, "Create from semantic name and value"),
+     DEFAULT, "Create from semantic name and colour it is derived from"),
   SM(NAME_unlink, 0, NULL, unlinkThemeColour,
      DEFAULT, "Remove from the theme colours"),
-  SM(NAME_value, 1, "name|colour", valueThemeColour,
-     NAME_colour, "Change the value; all theme colours are resolved again")
+  SM(NAME_derivedFrom, 1, "name|colour", derivedFromThemeColour,
+     NAME_colour, "Change source; all theme colours are resolved again")
 };
 
 static getdecl get_themeColour[] =
@@ -1052,9 +1051,11 @@ static getdecl get_themeColour[] =
      NAME_oms, "Existing theme colour with this name")
 };
 
+static Name themeColour_termnames[] = { NAME_name, NAME_derivedFrom };
+
 ClassDecl(themeColour_decls,
 	  var_themeColour, send_themeColour, get_themeColour, NULL,
-	  2, colour_termnames2);
+	  2, themeColour_termnames);
 
 /* Theme colours used by the class variable defaults of xpce.  The
  * value is used by the default `light' theme.  For each system colour

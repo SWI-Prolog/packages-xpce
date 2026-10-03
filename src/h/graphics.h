@@ -762,7 +762,7 @@ End;
 
 NewClass(theme_colour)
   ABSTRACT_COLOUR
-  Any		value;			/* Name or colour it is derived from */
+  Any		derived_from;		/* Name or colour it is derived from */
 End;
 
 

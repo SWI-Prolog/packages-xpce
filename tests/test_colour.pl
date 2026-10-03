@@ -114,10 +114,10 @@ test(theme_colour_by_name, Same == true) :-
     new(C, theme_colour(test_colour_by_name, red)),
     get(@pce, convert, test_colour_by_name, colour, C2),
     same(C, C2, Same).
-test(theme_colour_value, RGB == rgb(0,0,255)) :-
-    new(C, theme_colour(test_colour_value, red)),
+test(theme_colour_derived_from, RGB == rgb(0,0,255)) :-
+    new(C, theme_colour(test_colour_derived_from, red)),
     colour_rgb(C, _),
-    send(C, value, blue),
+    send(C, derived_from, blue),
     colour_rgb(C, RGB).
 test(theme_colour_lookup, [Same == true, RGB == rgb(0,255,0)]) :-
     %  Creating an existing theme colour changes its value
@@ -131,7 +131,7 @@ test(theme_colour_alias_first, [RGB1 == rgb(1,2,3), RGB2 == rgb(4,5,6)]) :-
     new(A, theme_colour(test_colour_alias, test_colour_target)),
     new(T, theme_colour(test_colour_target, '#010203')),
     colour_rgb(A, RGB1),
-    send(T, value, '#040506'),
+    send(T, derived_from, '#040506'),
     colour_rgb(A, RGB2).
 test(theme_colour_not_in_reverse_table, Same == false) :-
     new(C, theme_colour(test_colour_reverse, '#0e0f10')),
@@ -150,8 +150,8 @@ test(theme_colour_follows_system, RGB == Orig) :-
     get(Sys, rgba, SysRgba),
     send(@colour_names, append, sys_accent, 12345),
     send(Sys, slot, rgba, 12345),
-    send(C, value, white),              % resolve again from the
-    send(C, value, sys_accent),         % changed system colour
+    send(C, derived_from, white),       % resolve again from the
+    send(C, derived_from, sys_accent),  % changed system colour
     colour_rgb(C, Stale),
     assertion(Stale \== Orig),
     send(@display_manager, system_colours_changed),

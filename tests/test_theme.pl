@@ -147,7 +147,7 @@ test(system_colours_message, RGB == rgb(0,0,255)) :-
     setup_call_cleanup(
         ( set_prolog_flag(theme, test_dark),
           pce_theme:init_theme,
-          send(C, value, green),
+          send(C, derived_from, green),
           send(@display_manager, system_colours_changed)
         ),
         colour_rgb(C, RGB),

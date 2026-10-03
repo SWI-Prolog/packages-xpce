@@ -412,13 +412,13 @@ display.theme: dark
 
 A \idx{theme colour} is an instance of class \class{theme_colour}, a
 subclass of \class{colour}.  It is created from a name that describes
-its role and a value, e.g., \exam{theme_colour(syntax_comment,
-dark_green)}.  The value is the name of another colour, which may be
-another theme colour or a system colour, or a colour object.  The RGB
-value is computed when it is needed by following the value through
-other theme colours.  Changing the value of a theme colour using
-`theme_colour ->value', or creating it again with another value, makes
-all theme colours compute their RGB value again on their next use.
+its role and the colour it is derived from, e.g.,
+\exam{theme_colour(syntax_comment, dark_green)}.  This is the name of
+another colour, which may be another theme colour or a system colour,
+or a colour object.  The RGB value is computed when it is needed by
+following `theme_colour <-derived_from' through other theme colours.
+Changing what a theme colour is derived from using `theme_colour
+->derived_from', or creating it again, makes all theme colours compute their RGB value again on their next use.
 Theme colours may therefore refer to each other in any order.  Theme
 colours are locked, so they are never garbage collected, and they are
 never returned when looking up a colour from its RGB values.  After
