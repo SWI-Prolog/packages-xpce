@@ -128,6 +128,8 @@ variable(node_clicked, code*,  both,
          "Left-click handler for xdot_node; @arg1 = the clicked node").
 variable(edge_clicked, code*,  both,
          "Left-click handler for xdot_edge; @arg1 = the clicked edge").
+variable(problem,      string*, get,
+         "Why the last ->load could not draw the graph; @nil if it did").
 
 initialise(F, Source:[file]*) :->
     "Create an xdot figure; if Source is provided, load it"::
@@ -137,13 +139,24 @@ initialise(F, Source:[file]*) :->
     ;   true
     ).
 
+%       If graphviz cannot lay out the graph, typically because it is
+%       not installed, I show why instead of the graph and remember it in
+%       <-problem: an empty figure leaves the user guessing.
+
 load(F, Source:'file|string') :->
     "Clear F and render a file or string as graphviz xdot"::
     send(F, clear, destroy),
     send(F, transform, @nil),           % reset any prior pan/zoom
     get(F, engine, Engine),
-    dot_to_json(Source, Engine, JSON),
-    render_json(F, JSON),
+    catch(dot_to_json(Source, Engine, JSON), E, true),
+    (   var(E)
+    ->  send(F, slot, problem, @nil),
+        render_json(F, JSON)
+    ;   print_message(warning, E),
+        problem_text(E, Engine, Problem),
+        send(F, slot, problem, Problem),
+        send(F, display, text(Problem, left))
+    ),
     send(F, slot, source, Source).
 
 :- pce_end_class(xdot).
@@ -527,6 +540,14 @@ fit(W) :->
      to fit the visible area with a margin; center"::
     get(W, xdot, F),
     send(F, transform, @nil),
+    (   get(F, problem, @nil)
+    ->  send(W, scale_to_fit, F)
+    ;   true                            % the explanation is read as is
+    ),
+    send(F, center, W?visible?center).
+
+scale_to_fit(W, F:xdot) :->
+    "Scale F to fit the visible area or to <-natural_zoom"::
     get(F, area, area(_,_,GW,GH)),
     get(W, visible, area(_,_,VW,VH)),
     get(W, natural_zoom, Natural),
@@ -538,8 +559,7 @@ fit(W) :->
     ->  new(T, transform(0.0, S)),
         send(F, transform, T)
     ;   true
-    ),
-    send(F, center, W?visible?center).
+    ).
 
 :- pce_end_class(xdot_window).
 
@@ -548,35 +568,66 @@ fit(W) :->
                  *      GRAPHVIZ INVOCATION     *
                  *******************************/
 
+%!  dot_to_json(+Source, +Engine, -JSON) is det.
+%
+%   Lay out Source using the graphviz program Engine.
+%
+%   @error existence_error(source_sink, path(Engine)) if Engine is not
+%   installed.
+%   @error graphviz(Engine, Status, Message) if Engine fails.  Message
+%   is what it wrote to its standard error.
+
 dot_to_json(Source, Engine, JSON) :-
-    send(Source, instance_of, file),
-    !,
-    get(Source, name, Path),                   % xpce file object → path atom
-    setup_call_cleanup(
-        process_create(path(Engine),
-                   ['-Tjson', Path],
-                   [ stdout(pipe(Out)),
+    dot_input(Source, Args, StdIn, Feed),
+    process_create(path(Engine), ['-Tjson'|Args],
+                   [ stdin(StdIn),
+                     stdout(pipe(Out)),
+                     stderr(pipe(Err)),
                      process(PID)
                    ]),
-        json_read_dict(Out, JSON),
-        ( close(Out),
-          process_wait(PID, _Status)
-        )).
-dot_to_json(String, Engine, JSON) :-
-    object(String, string(Data)),
-    setup_call_cleanup(
-        process_create(path(Engine),
-                       ['-Tjson'],
-                       [ stdin(pipe(In)),
-                         stdout(pipe(Out)),
-                         process(PID)
-                       ]),
-        ( send_to_dot(Data, In),
-          json_read_dict(Out, JSON)
+    (   Feed = feed(In, Data)
+    ->  send_to_dot(Data, In)
+    ;   true
+    ),
+    message_queue_create(Queue),
+    thread_create(read_stderr(Err, Queue), Reader, []),
+    call_cleanup(catch(json_read_dict(Out, JSON0), E, true),
+                 close(Out)),
+    thread_join(Reader, _),
+    (   thread_get_message(Queue, stderr(Message0), [timeout(0)])
+    ->  true
+    ;   Message0 = ""
+    ),
+    message_queue_destroy(Queue),
+    process_wait(PID, Status),
+    split_string(Message0, "", " \t\n", [Message]),
+    (   Status == exit(0),
+        var(E)
+    ->  (   Message == ""
+        ->  true
+        ;   print_message(warning, format('~w: ~s', [Engine, Message]))
         ),
-        ( close(Out),
-          process_wait(PID, _Status)
-        )).
+        JSON = JSON0
+    ;   throw(error(graphviz(Engine, Status, Message), _))
+    ).
+
+%   read_stderr(+Err, +Queue)
+%
+%   Read what dot writes to its standard error while we read its
+%   output.  Reading it afterwards would hang if dot fills the pipe with
+%   warnings before it finishes its output.
+
+read_stderr(Err, Queue) :-
+    call_cleanup(catch(read_string(Err, _, Message), _, Message = ""),
+                 close(Err)),
+    thread_send_message(Queue, stderr(Message)).
+
+dot_input(Source, [Path], null, none) :-
+    send(Source, instance_of, file),
+    !,
+    get(Source, name, Path).            % xpce file object → path atom
+dot_input(String, [], pipe(In), feed(In, Data)) :-
+    object(String, string(Data)).
 
 send_to_dot(String, ToDOT) :-
     set_stream(ToDOT, encoding(utf8)),
@@ -586,6 +637,34 @@ send_to_dot(String, ToDOT) :-
 send_to_dot_(String, ToDOT) :-
     call_cleanup(format(ToDOT, '~s', [String]),
                  close(ToDOT)), !.
+
+%!  problem_text(+Error, +Engine, -Text) is det.
+%
+%   Text explains why Engine could not draw the graph.
+
+problem_text(error(existence_error(source_sink, path(Engine)), _), Engine,
+             Text) :-
+    !,
+    format(string(Text),
+           'Cannot draw the graph: the graphviz program "~w"\n\c
+            is not installed or not in $PATH.\n\n\c
+            Graphviz is available from https://graphviz.org/download/\n\c
+            and from most package managers.', [Engine]).
+problem_text(Error, _Engine, Text) :-
+    phrase('$messages':translate_message(Error), Lines),
+    with_output_to(string(Message),
+                   print_message_lines(current_output, '', Lines)),
+    split_string(Message, "", " \n", [Text0]),
+    format(string(Text), 'Cannot draw the graph:\n\n~s', [Text0]).
+
+:- multifile prolog:error_message//1.
+
+prolog:error_message(graphviz(Engine, Status, Message)) -->
+    [ 'graphviz program "~w" failed (~p)'-[Engine, Status] ],
+    (   { Message == "" }
+    ->  []
+    ;   [ nl, '~s'-[Message] ]
+    ).
 
 
 graph_bb(JSON, bb(Xmin, Ymin, Xmax, Ymax)) :-
