@@ -1091,7 +1091,7 @@ static const struct builtin_theme_colour
   { "ui_margin_background",	    "ui_window_background" },
   { "ui_scrollbar_background",	    UXWIN("grey66", "ui_window_background") },
   /* Text */
-  { "ui_text_selection_background", "yellow" },
+  { "ui_text_selection_background", "sys_text_selection_background" },
   { "ui_isearch_background",	    "green" },
   { "ui_isearch_other_background",  "pale_turquoise" },
   { "ui_fold",			    "grey50" },

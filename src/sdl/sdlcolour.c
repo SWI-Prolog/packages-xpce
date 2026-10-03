@@ -132,6 +132,31 @@ running_kde(void)
 }
 #endif
 
+/* The background of selected text.  Selected text keeps its colour, so
+ * syntax highlighting remains visible.  This requires a background that
+ * differs little from the window background.  Unless the platform
+ * provides one, we tint the window background with the accent colour.
+ */
+
+#define TEXT_SELECTION_TINT 0.3
+
+static void
+add_text_selection_colour(HashTable cn)
+{ Int bg     = getMemberHashTable(cn, CtoKeyword("sys_window_background"));
+  Int accent = getMemberHashTable(cn, CtoKeyword("sys_accent"));
+
+  if ( bg && accent )
+  { COLORRGBA b = (COLORRGBA)valInt(bg);
+    COLORRGBA a = (COLORRGBA)valInt(accent);
+#define MIX(f) (unsigned)(f(b) + (f(a)-(double)f(b))*TEXT_SELECTION_TINT + 0.5)
+
+    add_system_colour(cn, "sys_text_selection_background",
+		      RGBA(MIX(ColorRValue), MIX(ColorGValue), MIX(ColorBValue),
+			   255));
+#undef MIX
+  }
+}
+
 static void
 load_system_colours(HashTable cn)
 {
@@ -148,6 +173,7 @@ load_system_colours(HashTable cn)
 
   for(const struct sys_colour *sc = sys_colours; sc->name; sc++)
     add_system_colour(cn, sc->name, sc->fallback);
+  add_text_selection_colour(cn);
 }
 
 

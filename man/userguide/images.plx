@@ -100,6 +100,11 @@ application non-portable.
 	& \const{alternateSelectedControlTextColor}
 	& \const{Selection} ForegroundNormal
 	& white \\
+\const{sys_text_selection_background}
+	& (derived)
+	& \const{selectedTextBackgroundColor}
+	& (derived)
+	& (derived) \\
 \const{sys_tooltip_background}
 	& \const{COLOR_INFOBK}
 	& \const{windowBackgroundColor}$^*$
@@ -151,6 +156,12 @@ application non-portable.
 The following notes apply to the mapping:
 
 \begin{itemlist}
+    \item [Text selection]
+\const{sys_text_selection_background} is the background of selected
+text in, e.g., the editor and the terminal.  Selected text keeps its
+colour, so syntax highlighting remains visible.  Except on MacOS it is
+derived by composing 30\% of \const{sys_accent} over
+\const{sys_window_background}.
     \item [Windows]
 The \const{win_} names are documented in \secref{mswin}.  Windows does
 not provide the accent colour through GetSysColor(), so
@@ -315,6 +326,7 @@ accent colour is used.
 \const{sys_button_pressed} & 30\% ink & \#b3b3b6 & \#6d6d70 \\
 \const{sys_selection_background} & accent & \#3584e4 & \#3584e4 \\
 \const{sys_selection_foreground} & white or black & \#ffffff & \#ffffff \\
+\const{sys_text_selection_background} & 30\% accent & \#c2daf7 & \#243c5b \\
 \const{sys_tooltip_background} & 80\% \#000006 & \#2f2f34 & \#09090f \\
 \const{sys_tooltip_foreground} & white & \#ffffff & \#ffffff \\
 \const{sys_inactive} & 50\% ink & \#8d8d91 & \#979799 \\
@@ -436,9 +448,7 @@ The basic colours of the user interface.  For each system colour
 colour \const{ui_}\arg{role}, e.g., \const{ui_window_background}.
 \product{} only uses the \const{ui_} names, such that a theme can
 replace the system colours (see below).  Other \const{ui_} colours are
-used for, e.g., the text selection
-(\const{ui_text_selection_background}) and incremental search
-(\const{ui_isearch_background}).  The \const{ui_} colours and their
+used for, e.g., incremental search (\const{ui_isearch_background}).  The \const{ui_} colours and their
 values in the \const{light} theme are in the hash table
 @theme_colour_defaults.
     \item [\const{ansi_}\arg{colour}]

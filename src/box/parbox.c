@@ -1831,8 +1831,7 @@ static classvardecl rc_parbox[] =
   RC(NAME_alignment, NULL, "left", NULL),
   RC(NAME_autoCrop,  NULL, "@off", NULL),
   RC(NAME_selectionStyle, "style",
-     UXWIN("style(background := ui_text_selection_background)",
-	   "@_select_style"),
+     "style(background := ui_text_selection_background)",
      "Style for selected text")
 };
 

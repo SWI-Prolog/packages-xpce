@@ -351,6 +351,7 @@ colour(light, ui_button_foreground,     black).
 colour(light, ui_button_pressed,        '#cccccc').
 colour(light, ui_selection_background,  '#0078d7').
 colour(light, ui_selection_foreground,  white).
+colour(light, ui_text_selection_background, '#b3d7f3').
 colour(light, ui_tooltip_background,    '#ffffe1').
 colour(light, ui_tooltip_foreground,    black).
 colour(light, ui_inactive,              grey50).

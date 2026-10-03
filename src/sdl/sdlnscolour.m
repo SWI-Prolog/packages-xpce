@@ -130,6 +130,7 @@ static const struct
   { "sys_button_pressed",	"selectedControlColor" },
   { "sys_selection_background",	"selectedContentBackgroundColor" },
   { "sys_selection_foreground",	"alternateSelectedControlTextColor" },
+  { "sys_text_selection_background", "selectedTextBackgroundColor" },
   { "sys_tooltip_background",	NULL },
   { "sys_tooltip_foreground",	"labelColor" },
   { "sys_inactive",		"disabledControlTextColor" },
