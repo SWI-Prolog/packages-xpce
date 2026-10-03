@@ -40,6 +40,7 @@ COMMON(status)	hasVisibleFramesDisplay(DisplayObj d, BoolObj keep_alive);
 COMMON(status)	appendDisplayManager(DisplayManager dm, DisplayObj d);
 COMMON(DisplayObj) getMemberDisplayManager(DisplayManager dm, Any name);
 COMMON(DisplayObj) CurrentDisplay(Any obj);
+COMMON(DisplayObj) getPrimaryDisplayManager(DisplayManager dm);
 COMMON(status)	deleteDisplayManager(DisplayManager dm, DisplayObj d);
 COMMON(status)	forwardFocusDisplayManager(Any focus);
 COMMON(status)	RedrawDisplayManager(DisplayManager dm);

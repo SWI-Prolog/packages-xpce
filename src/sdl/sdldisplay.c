@@ -35,6 +35,7 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 #include "sdldisplay.h"
+#include "sdlframe.h"
 #include "sdluserevent.h"
 #ifdef __WINDOWS__
 #include <msw/mscolour.h>
@@ -97,7 +98,8 @@ ws_update_primary_display(DisplayManager dm)
   for_cell(cell, dm->members)
   { DisplayObj dsp = cell->value;
     WsDisplay  wsd = dsp->ws_ref;
-    BoolObj isprimary = ( wsd && wsd->id == pid) ? ON : OFF;
+    BoolObj isprimary = ( wsd && wsd->id == pid && isOff(dsp->removed)
+			  ? ON : OFF );
     if ( isDefault(dsp->primary) )
       assign(dsp, primary, isprimary);
     else if ( dsp->primary != isprimary )
@@ -116,7 +118,7 @@ ws_number_displays(DisplayManager dm)
   for_cell(cell, dm->members)
   { DisplayObj dsp = cell->value;
     if ( isDefault(dsp->number) )
-    { for(int i=2; ; i++)
+    { for(int i=1; ; i++)
       { if ( !getMemberDisplayManager(dm, toInt(i)) )
 	{ assign(dsp, number, toInt(i));
 	  break;
@@ -164,7 +166,7 @@ dsp_id_to_display(SDL_DisplayID id)
   { DisplayObj d = cell->value;
     WsDisplay wsd = d->ws_ref;
 
-    if ( wsd && wsd->id == id )
+    if ( wsd && wsd->id == id && isOff(d->removed) )
       return d;
   }
 
@@ -183,7 +185,7 @@ status
 ws_poll_dimensions_display(DisplayObj dsp)
 { WsDisplay wsd = dsp->ws_ref;
 
-  if ( wsd )
+  if ( wsd && isOff(dsp->removed) )
   { ASSERT_SDL_MAIN();
     SDL_DisplayID id = wsd->id;
     SDL_Rect rect;
@@ -205,9 +207,14 @@ sdl_display_event(SDL_Event *ev)
       DisplayObj dsp = ws_create_display(id);
       if ( dsp )
       { DisplayManager dm = TheDisplayManager();
+	DisplayObj d;
+
 	ws_update_primary_display(dm);
-	ws_number_displays(dm);
 	DEBUG(NAME_display, Cprintf("Added display %s\n", pp(dsp)));
+	for_chain(dm->members, d,	/* move parked frames, free empty */
+		  if ( isOn(d->removed) )
+		    send(d, NAME_removed, EAV));
+	ws_number_displays(dm);
       }
       return true;
     }
@@ -215,13 +222,9 @@ sdl_display_event(SDL_Event *ev)
     { SDL_DisplayID id = ev->display.displayID;
       DisplayObj dsp = dsp_id_to_display(id);
       DEBUG(NAME_display, Cprintf("Removed display %s\n", pp(dsp)));
-      if ( !dsp )
-	return true;
-      if ( emptyChain(dsp->frames) )
+      if ( dsp )
       { send(dsp, NAME_removed, EAV);
-      } else
-      { assign(dsp, removed, ON);
-	Cprintf("Cannot destroy display %s: has frames\n", pp(dsp));
+	ws_update_primary_display(TheDisplayManager());
       }
       return true;
     }
@@ -433,6 +436,32 @@ ws_open_display(DisplayObj d, SDL_DisplayID id)
   wsd->hidden_cairo = cairo_create(wsd->hidden_surface);
   wsd->scale = SDL_GetWindowPixelDensity(wsd->hidden_window);
   cairo_scale(wsd->hidden_cairo, wsd->scale, wsd->scale);
+}
+
+/* Move the frames of the removed display d to the display SDL reports
+   for their window.  This is what SDL compares with to decide on
+   SDL_EVENT_WINDOW_DISPLAY_CHANGED, so if the window system moves the
+   window later we are told.  Frames without a window or on an unknown
+   display go to fallback.
+*/
+
+void
+ws_rehome_frames_display(DisplayObj d, DisplayObj fallback)
+{ ASSERT_SDL_MAIN();
+  FrameObj fr;
+
+  for_chain(d->frames, fr,
+	    { WsFrame wfr = fr->ws_ref;
+	      DisplayObj to = NULL;
+
+	      if ( wfr && wfr->ws_window )
+		to = dsp_id_to_display(SDL_GetDisplayForWindow(wfr->ws_window));
+	      if ( !to )
+		to = fallback;
+	      DEBUG(NAME_display, Cprintf("Moving %s from %s to %s\n",
+					  pp(fr), pp(d), pp(to)));
+	      send(fr, NAME_display, to, EAV);
+	    });
 }
 
 /**

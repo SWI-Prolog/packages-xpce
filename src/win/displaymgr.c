@@ -135,16 +135,31 @@ deleteDisplayManager(DisplayManager dm, DisplayObj d)
 }
 
 
-static DisplayObj
+/* A removed (hotplug) display stays a member while it has frames, and
+   the last display is kept as a parking place for the frames until a
+   display is added.  Removed displays are only used if there is no other
+   display, so there is always a display, but never a stale one if there
+   is a live display.
+*/
+
+DisplayObj
 getPrimaryDisplayManager(DisplayManager dm)
-{ Cell cell;
+{ DisplayObj live = NULL;
+  Cell cell;
 
   for_cell(cell, dm->members)
   { DisplayObj dsp = cell->value;
 
+    if ( isOn(dsp->removed) )
+      continue;
     if ( isOn(dsp->primary) )
       answer(dsp);
+    if ( !live )
+      live = dsp;
   }
+
+  if ( live )
+    answer(live);
 
   answer(getHeadChain(dm->members));
 }
@@ -154,7 +169,7 @@ static DisplayObj
 getCurrentDisplayManager(DisplayManager dm)
 { DisplayObj dsp = ws_last_display_from_event();
 
-  if ( dsp )
+  if ( dsp && isOff(dsp->removed) )
     answer(dsp);
   answer(getPrimaryDisplayManager(dm));
 }

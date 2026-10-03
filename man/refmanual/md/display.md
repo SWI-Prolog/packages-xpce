@@ -7,7 +7,8 @@ driver is SDL3 across all platforms.
 
 xpce creates an instance for each monitor when the window system is
 initialised.  Additional `display` instances appear dynamically when a
-hotplugged monitor is attached (and disappear on removal).  Most
+hotplugged monitor is attached (and disappear on removal, except
+for the last one; see `display->removed`).  Most
 applications use `@display`, the function that evaluates to the
 display that received the last event or else the primary display.
 See `display_manager <-current`.
@@ -130,8 +131,13 @@ See `display_manager <-current`.
     display-manager when the monitor is removed.
 
 - display->removed
-    Mark the display as hotplug-removed.  Existing frames keep
-    running until they are destroyed; no new frames are accepted.
+    Mark the display as hotplug-removed and move its frames to the
+    display the window system reports for their window, or else to
+    `display_manager <-primary`.  The display is freed when it has no
+    frames left.  If it was the last display it is kept as a parking
+    place: frames stay on it and new frames open on it, so `@display`
+    does not fail.  When a monitor is attached again, the frames move
+    to it and the parked display is freed.
 
 - display->poll_dimensions
     Re-query the OS for the monitor's `<-area`, `<-work_area` and

@@ -121,7 +121,9 @@ created at boot time.  Its responsibilities are:
 
 - display_manager<-primary: -> display
     The display the OS designates as primary.  Falls back to the
-    first member when no primary is set.
+    first member when no primary is set.  Removed displays (see
+    `display->removed`) are only returned if there is no other
+    display.
 
 - display_manager<-current: -> display
     The display that received the last event, or `<-primary` when

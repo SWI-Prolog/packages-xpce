@@ -1131,6 +1131,8 @@ sdl_frame_event(SDL_Event *ev)
       { DisplayObj new_display = dsp_id_to_display(ev->window.data1);
 	DEBUG(NAME_display, Cprintf("%s moved to %s\n",
 				    pp(fr), pp(new_display)));
+	if ( !new_display )		/* unknown or removed */
+	  return true;
 	return send(fr, NAME_display, new_display, EAV);
       }
     }

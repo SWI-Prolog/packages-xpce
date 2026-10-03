@@ -3,7 +3,7 @@
     Author:        Jan Wielemaker
     E-mail:        jan@swi-prolog.org
     WWW:           https://www.swi-prolog.org
-    Copyright (c)  2025, SWI-Prolog Solutions b.v.
+    Copyright (c)  2026, SWI-Prolog Solutions b.v.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -32,40 +32,52 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef RAYDISPLAY_H
-#define RAYDISPLAY_H
-#include <SDL3/SDL.h>
-#include <cairo/cairo.h>
+:- module(test_display_removed,
+          [ test_display_removed/0
+          ]).
+:- use_module(library(pce)).
+:- use_module(library(plunit)).
 
-typedef struct
-{ SDL_DisplayID    id;
-  float		   scale;
-  SDL_Window      *hidden_window;
-  SDL_Renderer    *hidden_renderer;
-  cairo_surface_t *hidden_surface;
-  cairo_t         *hidden_cairo;
-} ws_display, *WsDisplay;
+/** <module> Test removing a hotplug display
 
-float ws_pixel_density_display(Any obj);
-Name  ws_get_system_theme_display(DisplayObj d);
-status ws_poll_dimensions_display(DisplayObj d);
+When a display is removed, its frames move to another display.  If it
+was the last display, it is kept as a parking place for its frames, so
+@display never fails.  This test removes the current display, so after
+running it this process has no usable display.
+*/
 
-bool ws_init_displays(void);
-DisplayObj dsp_id_to_display(SDL_DisplayID id);
-bool sdl_display_event(SDL_Event *ev);
-void ws_bell_display(DisplayObj d, int volume);
-void ws_get_size_display(DisplayObj d, int *w, int *h);
-int ws_depth_display(DisplayObj d);
-bool ws_resolution_display(DisplayObj d, int *rx, int *ry);
-void ws_activate_screen_saver(DisplayObj d);
-void ws_deactivate_screen_saver(DisplayObj d);
-bool ws_has_screen_keyboard_support(DisplayObj d);
-bool ws_screen_keyboard_shown(DisplayObj d);
-void ws_set_screen_keyboard(DisplayObj d, Name mode);
-void ws_close_display(DisplayObj d);
-void ws_rehome_frames_display(DisplayObj d, DisplayObj fallback);
-status ws_events_queued_display(DisplayObj d);
-status ws_selection_display(DisplayObj d, Name which, StringObj data);
-Any ws_get_selection(DisplayObj d, Name which, Name target);
+test_display_removed :-
+    run_tests([ display_removed
+              ]).
 
-#endif /* RAYDISPLAY_H */
+:- begin_tests(display_removed).
+
+single_display :-
+    get(@display_manager?members, size, 1).
+
+test(park_last, [ condition(single_display),
+                  Removed == @on, Current == D, FD == D, Members == 1
+                ]) :-
+    new(F, frame(display_removed)),
+    send(F, append, new(_, window)),
+    send(F, open),
+    get(@display_manager, current, D),
+    send(D, removed),
+    get(D, slot, removed, Removed),
+    get(@display_manager, current, Current),
+    get(@display_manager?members, size, Members),
+    get(@display, size, _),
+    get(F, display, FD),
+    send(F, destroy).
+
+test(open_while_parked, [ condition(single_display),
+                          FD == Current
+                        ]) :-
+    get(@display_manager, current, Current),
+    new(F, frame(display_removed)),
+    send(F, append, new(_, window)),
+    send(F, open),
+    get(F, display, FD),
+    send(F, destroy).
+
+:- end_tests(display_removed).

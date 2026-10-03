@@ -87,9 +87,30 @@ unlinkDisplay(DisplayObj d)
 }
 
 
+/* A hotplug display was removed.  Its frames move to the display the
+   window system reports for them or else the primary display.  If there
+   is no other display, d stays as parking place for its frames, so
+   there is always a display.  ->removed is sent again to removed
+   displays after a display is added and when the last frame leaves a
+   removed display.  Moving the last frame may re-enter this method and
+   free d, hence the code reference.
+*/
+
 static status
 removedDisplay(DisplayObj d)
-{ return freeObject(d);
+{ DisplayObj live;
+
+  assign(d, removed, ON);
+  live = getPrimaryDisplayManager(d->display_manager);
+  if ( live && isOff(live->removed) )
+  { addCodeReference(d);
+    ws_rehome_frames_display(d, live);
+    if ( !isFreedObj(d) && emptyChain(d->frames) )
+      freeObject(d);
+    delCodeReference(d);
+  }
+
+  succeed;
 }
 
 
