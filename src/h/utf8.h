@@ -1,7 +1,7 @@
 /*  Part of SWI-Prolog
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
+    E-mail:        jan@swi-prolog.org
     WWW:           http://www.swi-prolog.org
     Copyright (c)  2005-2011, University of Amsterdam
     All rights reserved.

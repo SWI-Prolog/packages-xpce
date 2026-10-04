@@ -7,7 +7,7 @@
 	SWI, University of Amsterdam \\
 	Roetersstraat 15 \\
 	1018 WB~~Amsterdam \\
-	E-mail: \email{jan@swi.psy.uva.nl}}
+	E-mail: \email{jan@swi-prolog.org}}
 
 \begin{document}
 

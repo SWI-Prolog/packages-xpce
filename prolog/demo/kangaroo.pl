@@ -1,7 +1,7 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Anja van der Hulst
-    WWW:           https://www.swi-prolog.org/projects/xpce/
+    WWW:           https://www.swi-prolog.org/packages/xpce/
     Copyright (c)  1995-2026, University of Amsterdam
                               SWI-Prolog Solutions b.v.
     All rights reserved.

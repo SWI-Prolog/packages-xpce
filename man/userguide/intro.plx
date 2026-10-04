@@ -46,7 +46,7 @@ Besides the written version, this document is also available as an HTML
 document from the URL below.  The second URL may be used to download
 the entire WWW tree for installation on a local host.
 \begin{quote}\small
-\url{http://www.swi.psy.uva.nl/projects/xpce/UserGuide/} \\
+\url{https://www.swi-prolog.org/packages/xpce/UserGuide/} \\
 \url{ftp://ftp.swi.psy.uva.nl/xpce/HTML/UserGuide.tgz}
 \end{quote}
 
@@ -80,8 +80,8 @@ Various other information can be found on or through the \product{}
 WEB-home:
 
 \begin{quote}\small
-\ifpw{\url{http://www.swi.psy.uva.nl/projects/xpce/ProWindows.html}}{%
-      \url{http://www.swi.psy.uva.nl/projects/xpce/}}
+\ifpw{\url{https://www.swi-prolog.org/packages/xpce/ProWindows.html}}{%
+      \url{https://www.swi-prolog.org/packages/xpce/}}
 \end{quote}
 
 \noindent

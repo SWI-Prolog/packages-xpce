@@ -1,8 +1,8 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/packages/xpce/
     Copyright (c)  2000-2014, University of Amsterdam
     All rights reserved.
 
@@ -129,7 +129,7 @@ about(B) :->
          'Visualise HTML/XML/SGML DOM structure\n\c
               as produced by library(sgml)\n\n\c
               By Jan Wielemaker\n\c
-              jan@swi.psy.uva.nl').
+              jan@swi-prolog.org').
 
 view_dom(B) :->
     get(B, member, xml_browse_hierarchy, H),

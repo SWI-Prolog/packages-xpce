@@ -1,8 +1,8 @@
 /*  Part of XPCE --- The SWI-Prolog GUI toolkit
 
     Author:        Jan Wielemaker and Anjo Anjewierden
-    E-mail:        jan@swi.psy.uva.nl
-    WWW:           http://www.swi.psy.uva.nl/projects/xpce/
+    E-mail:        jan@swi-prolog.org
+    WWW:           https://www.swi-prolog.org/packages/xpce/
     Copyright (c)  1985-2002, University of Amsterdam
     All rights reserved.
 
@@ -84,7 +84,7 @@ xpce_file_header(ClassName) :-
     output('$\n\n'),
     output('    Part of XPCE\n'),
     output('    Designed and implemented by Anjo Anjewierden and Jan Wielemaker\n'),
-    output('    E-mail: jan@swi.psy.uva.nl\n\n'),
+    output('    E-mail: jan@swi-prolog.org\n\n'),
     output('    Copyright (C) 1993-1997 University of Amsterdam. All rights reserved.\n*/\n\n'),
     output('#ifndef _PCE_%s_H\n', ClassName?upcase),
     output('#define _PCE_%s_H\n\n', ClassName?upcase).
