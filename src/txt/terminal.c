@@ -1411,6 +1411,7 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
 { int chr;
   int fn;
   const char *seq = NULL;
+  size_t seqlen = 0;			/* 0: strlen(seq) */
   char buf[16];
   RlcData b = ti->data;
   int mod = xterm_modifier(ev);
@@ -1465,6 +1466,11 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
 
   if ( isInteger(ev->id) )
   { chr = valInt(ev->id);
+    /* Ctrl+Space is NUL, as in xterm: Emacs' set-mark.  SDL reports it
+     * as a space with Control held, there being no `@' on the key.
+     */
+    if ( chr == ' ' && (btns & BUTTON_control) )
+      chr = 0;
   } else if ( ev->id == NAME_BS )
   { chr = 127;
   } else if ( ev->id == NAME_DEL )
@@ -1548,11 +1554,12 @@ typedTerminalImage(TerminalImage ti, EventObj ev)
     buf[1] = chr;
     buf[2] = 0;
     seq = buf;
+    seqlen = 2;				/* Alt+Ctrl+Space is ESC NUL */
   }
 
   if ( seq )
   { dropInputSelectionTerminalImage(ti);
-    rlc_send(ti->data, seq, strlen(seq));
+    rlc_send(ti->data, seq, seqlen ? seqlen : strlen(seq));
   } else
   { /* Typing over a selection replaces it, as it would in any editor.
      * Only for a character that inserts itself: a control key is a
