@@ -52,6 +52,8 @@
 :- autoload(library(lists), [member/2, append/2, append/3]).
 :- autoload(library(ordsets), [ord_subtract/3]).
 :- autoload(library(pairs), [pairs_keys/2, group_pairs_by_key/2]).
+:- autoload(library(filesex), [directory_file_path/3]).
+:- autoload(library(pce_util), [chain_list/2]).
 
 /** <module> Semantic colours and themes
 
