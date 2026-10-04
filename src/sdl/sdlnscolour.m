@@ -347,10 +347,18 @@ ns_system_colours(sys_colour_callback add, void *closure)
 { @autoreleasepool
   { NSAppearance *appearance = system_appearance();
 
-    if ( @available(macOS 11.0, *) )
-    { [appearance performAsCurrentDrawingAppearance:^{
+    /* Not @available(): below a macOS 11 deployment target that calls
+       __isPlatformVersionAtLeast from clang's compiler-rt, which is
+       missing when GCC links the library */
+    if ( [appearance respondsToSelector:
+		       @selector(performAsCurrentDrawingAppearance:)] )
+    {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunguarded-availability-new"
+      [appearance performAsCurrentDrawingAppearance:^{
 	resolve_colours(add, closure);
       }];
+#pragma clang diagnostic pop
     } else
     {
 #pragma clang diagnostic push
