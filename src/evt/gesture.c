@@ -237,6 +237,29 @@ getScrollTarget(Gesture g, EventObj ev)
 
 #define DRAGSCROLL_MARGIN 50
 
+/* True if the button of the gesture is held according to `ev'.  The
+   gesture may still be active although the button was released, e.g.,
+   if the up-event went elsewhere.  The pointer leaving the window then
+   generates an `area_exit' outside the area, which must not start
+   drag-scrolling.
+*/
+
+static int
+buttonDownGesture(Gesture g, EventObj ev)
+{ int mask;
+
+  if ( g->button == NAME_left )
+    mask = BUTTON_ms_left;
+  else if ( g->button == NAME_middle )
+    mask = BUTTON_ms_middle;
+  else if ( g->button == NAME_right )
+    mask = BUTTON_ms_right;
+  else
+    return true;
+
+  return (valInt(ev->buttons) & mask) != 0;
+}
+
 static status
 scrollMessage(Gesture g, EventObj ev,
 	      Graphical *client, Name *Msg, Int *Amount)
@@ -248,7 +271,8 @@ scrollMessage(Gesture g, EventObj ev,
 
   if ( !(isDragEvent(ev) ||
 	 isAEvent(ev, NAME_locMove) ||
-	 isAEvent(ev, NAME_area)) )
+	 isAEvent(ev, NAME_area)) ||
+       !buttonDownGesture(g, ev) )
     fail;
 
   if ( !(gr = getScrollTarget(g, ev)) || !aliveObj(gr) )
