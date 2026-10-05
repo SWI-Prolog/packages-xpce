@@ -295,10 +295,10 @@ scrollMessage(Gesture g, EventObj ev,
   } else if ( ex > aw && ey >= 0 && ey <= ah && ex < aw + DRAGSCROLL_MARGIN )
   { msg = NAME_scrollHorizontal;
     amount = toInt(1);
-  } else if ( ey < 0 && ex >= 0 && ey <= aw && ey > -DRAGSCROLL_MARGIN )
+  } else if ( ey < 0 && ex >= 0 && ex <= aw && ey > -DRAGSCROLL_MARGIN )
   { msg = NAME_scrollVertical;
     amount = toInt(-1);
-  } else if ( ey > ah && ex >= 0 && ey <= aw && ey < ah + DRAGSCROLL_MARGIN )
+  } else if ( ey > ah && ex >= 0 && ex <= aw && ey < ah + DRAGSCROLL_MARGIN )
   { msg = NAME_scrollVertical;
     amount = toInt(1);
   } else
