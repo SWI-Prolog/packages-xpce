@@ -578,6 +578,37 @@ ws_last_display_from_event(void)
 { return dsp_id_to_display(last_display_id);
 }
 
+/* A mouse button was pressed in the SDL window `tracking_wid', but the
+   drag or up event is reported for another SDL window `*wid'.  The
+   xpce window that got the down must see the remainder of the
+   interaction: a gesture that misses its up-event remains active.
+   Translate the position using the screen positions of the two SDL
+   windows (unknown on Wayland, where this gives a wrong position, but
+   still delivers the event to the right window).
+*/
+
+static void
+redirect_to_tracking_frame(SDL_WindowID *wid, SDL_WindowID tracking_wid,
+			   float *fx, float *fy)
+{ SDL_Window *from = *wid ? SDL_GetWindowFromID(*wid) : NULL;
+  SDL_Window *to = SDL_GetWindowFromID(tracking_wid);
+  int x0, y0, x1, y1;
+
+  if ( !to )
+    return;
+  if ( from &&
+       SDL_GetWindowPosition(from, &x0, &y0) &&
+       SDL_GetWindowPosition(to, &x1, &y1) )
+  { *fx += (float)(x0-x1);
+    *fy += (float)(y0-y1);
+  }
+
+  DEBUG(NAME_event,
+	Cprintf("Redirecting mouse event from SDL window %d to %d\n",
+		*wid, tracking_wid));
+  *wid = tracking_wid;
+}
+
 EventObj
 CtoEvent(SDL_Event *event)
 { ASSERT_SDL_MAIN();
@@ -589,6 +620,7 @@ CtoEvent(SDL_Event *event)
   Any ctx = NULL;
   Int rotation = NULL;			/* wheel events */
   SDL_WindowID wid = 0;
+  SDL_WindowID tracking_wid = 0;	/* frame of the down event */
   FrameObj frame = NIL;		/* ev->frame */
   Any window;			/* ev->window */
 
@@ -628,6 +660,7 @@ CtoEvent(SDL_Event *event)
       /* https://wiki.libsdl.org/SDL3/SDL_MouseButtonEvent */
       if ( !event->button.windowID ) /* Seems to happen on MacOS */
 	event->button.windowID = mouse_tracking_wid;
+      tracking_wid = mouse_tracking_wid;
       mouse_tracking_wid = 0;
     mouse_cont:
       fx = event->button.x;	/* these are floats */
@@ -645,6 +678,8 @@ CtoEvent(SDL_Event *event)
       wid  = event->motion.windowID;
       time = event->motion.timestamp/1000000; // ns -> ms
       mouse_flags = event->motion.state;
+      if ( mouse_flags & (SDL_BUTTON_LMASK|SDL_BUTTON_MMASK|SDL_BUTTON_RMASK) )
+	tracking_wid = mouse_tracking_wid;
 
       if ( mouse_flags & SDL_BUTTON_LMASK )
 	name = NAME_msLeftDrag;
@@ -834,6 +869,9 @@ CtoEvent(SDL_Event *event)
     default:
       fail;			/* for now */
   }
+
+  if ( tracking_wid && wid != tracking_wid )
+    redirect_to_tracking_frame(&wid, tracking_wid, &fx, &fy);
 
   frame = wsid_to_frame(wid);
   DEBUG(NAME_event,
