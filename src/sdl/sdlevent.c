@@ -301,6 +301,8 @@ static float drop_tracking_x, drop_tracking_y; /* its position there */
 static bool drop_tracking_done = false;	/* drop_complete was delivered */
 static Uint8 mouse_tracking_button;
 static SDL_WindowID mouse_tracking_wid = 0;
+static Uint8 mouse_down_button;		/* button of mouse_tracking_wid */
+static SDL_Event lost_up_event;		/* see lost_mouse_up() */
 static SDL_DisplayID last_display_id = 0;
 static Uint32 keyboard_timer = 0;
 static SDL_Event keydown_event = {0};
@@ -609,6 +611,36 @@ redirect_to_tracking_frame(SDL_WindowID *wid, SDL_WindowID tracking_wid,
   *wid = tracking_wid;
 }
 
+/* A motion event shows the button pressed in `mouse_tracking_wid' is no
+   longer held, but we never saw it going up.  This may happen if it is
+   released outside our windows.  Turn the motion into the lost up-event
+   such that the gesture that handled the down terminates.
+*/
+
+static SDL_Event *
+lost_mouse_up(SDL_Event *motion)
+{ if ( !mouse_tracking_wid ||
+       (motion->motion.state & SDL_BUTTON_MASK(mouse_down_button)) )
+    return motion;
+
+  DEBUG(NAME_event,
+	Cprintf("Synthesizing lost up-event for button %d\n",
+		mouse_down_button));
+
+  memset(&lost_up_event, 0, sizeof(lost_up_event));
+  lost_up_event.button.type	 = SDL_EVENT_MOUSE_BUTTON_UP;
+  lost_up_event.button.timestamp = motion->motion.timestamp;
+  lost_up_event.button.windowID  = motion->motion.windowID;
+  lost_up_event.button.which	 = motion->motion.which;
+  lost_up_event.button.button	 = mouse_down_button;
+  lost_up_event.button.down	 = false;
+  lost_up_event.button.clicks	 = 1;
+  lost_up_event.button.x	 = motion->motion.x;
+  lost_up_event.button.y	 = motion->motion.y;
+
+  return &lost_up_event;
+}
+
 EventObj
 CtoEvent(SDL_Event *event)
 { ASSERT_SDL_MAIN();
@@ -651,10 +683,13 @@ CtoEvent(SDL_Event *event)
     fail;
   }
   mouse_flags = SDL_GetMouseState(&fx, &fy);
+  if ( event->type == SDL_EVENT_MOUSE_MOTION )
+    event = lost_mouse_up(event);
 
   switch (event->type)
   { case SDL_EVENT_MOUSE_BUTTON_DOWN:
       mouse_tracking_wid = event->button.windowID;
+      mouse_down_button = event->button.button;
       goto mouse_cont;
     case SDL_EVENT_MOUSE_BUTTON_UP:
       /* https://wiki.libsdl.org/SDL3/SDL_MouseButtonEvent */
