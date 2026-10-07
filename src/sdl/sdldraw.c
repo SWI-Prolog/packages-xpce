@@ -1638,8 +1638,8 @@ r_path(Chain points, int ox, int oy, int radius, int closed, Image fill)
   bool first = true;
   for_cell(cell, points)
   { Point p = cell->value;
-    int x = valInt(p->x)+ox;
-    int y = valInt(p->y)+oy;
+    double x = valNum(p->x)+ox;
+    double y = valNum(p->y)+oy;
     Translate(x,y);
     if ( first )
     { cairo_move_to(CR, x, y);

@@ -1930,9 +1930,17 @@ layoutDialogGraphical(Graphical gr)
 		*             PEN		*
 		********************************/
 
+/* The type of the slot is `num' rather than a range, as a real range
+ * converts to a `real' object, while the code uses valNum() and
+ * valInt() on the slot.  Negative values are mapped to 0.
+ */
+
 status
-penGraphical(Graphical gr, Int pen)
-{ if (gr->pen != pen)
+penGraphical(Graphical gr, Num pen)
+{ if ( valNum(pen) < 0.0 )
+    pen = ZERO;
+
+  if (gr->pen != pen)
   { CHANGING_GRAPHICAL(gr, assign(gr, pen, pen);
 			   changedEntireImageGraphical(gr));
   }
@@ -3462,7 +3470,7 @@ static vardecl var_graphical[] =
      NAME_area, "Bounding box of affected pixels"),
   SV(NAME_displayed, "bool", IV_GET|IV_STORE, displayedGraphical,
      NAME_visibility, "If @on, graphical is visible"),
-  SV(NAME_pen, "0..", IV_GET|IV_STORE, penGraphical,
+  SV(NAME_pen, "num", IV_GET|IV_STORE, penGraphical,
      NAME_appearance, "Thickness of drawing pen"),
   SV(NAME_texture, "texture_name", IV_GET|IV_STORE, textureGraphical,
      NAME_appearance, "Stipple pattern of drawing pen"),

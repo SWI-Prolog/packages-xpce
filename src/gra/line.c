@@ -146,7 +146,7 @@ computeLine(Line ln)
     int x2  = valInt(ln->end_x);
     int y1  = valInt(ln->start_y);
     int y2  = valInt(ln->end_y);
-    int pen = valInt(ln->pen);
+    int pen = (int)ceil(valNum(ln->pen)); /* pixels covered */
     int x, y, w, h;
     Area a = ln->area;
 
@@ -227,11 +227,11 @@ RedrawAreaLine(Line ln, Area a)
   int x2 = valInt(ln->end_x);
   int y1 = valInt(ln->start_y);
   int y2 = valInt(ln->end_y);
-  int pen = valInt(ln->pen);
+  double pen = valNum(ln->pen);
 
   initialiseDeviceGraphical(ln, &x, &y, &w, &h);
 
-  if ( pen != 0 )
+  if ( pen > 0.0 )
   { r_thickness(pen);
     r_dash(ln->texture);
     r_line(x1, y1, x2, y2);
@@ -615,8 +615,11 @@ orientationLine(Line ln, Name o)
 
 
 static status
-penLine(Line ln, Int pen)
-{ if ( ln->pen != pen )
+penLine(Line ln, Num pen)
+{ if ( valNum(pen) < 0.0 )
+    pen = ZERO;
+
+  if ( ln->pen != pen )
   { assign(ln, pen, pen);
 
     return requestComputeGraphical(ln, DEFAULT);
@@ -680,7 +683,7 @@ static senddecl send_line[] =
      NAME_tip, "Set start-point of line segment"),
   SM(NAME_resize, 3, T_resize, resizeLine,
      NAME_area, "Resize line with specified factor"),
-  SM(NAME_pen, 1, "0..", penLine,
+  SM(NAME_pen, 1, "num", penLine,
      NAME_appearance, "Thickness of drawing pen")
 };
 

@@ -141,7 +141,7 @@ RedrawAreaPath(Path p, Area a)
     ox = x - valInt(p->area->x) + valInt(p->offset->x);
     oy = y - valInt(p->area->y) + valInt(p->offset->y);
 
-    r_thickness(valInt(p->pen));
+    r_thickness(valNum(p->pen));
     r_dash(p->texture);
     if ( p->kind == NAME_smooth )
     { points = p->interpolation;

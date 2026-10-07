@@ -72,7 +72,7 @@ typedef struct colour_context *ColourContext; /* for selection/inactive */
   Device	device;			/* device on which displayed */ \
   Area		area;			/* area (bounding box) */ \
   BoolObj	displayed;		/* is graphical object displayed? */ \
-  Int		pen;			/* pen thickness for this object */ \
+  Num		pen;			/* pen thickness for this object */ \
   Name		texture;		/* dash pattern for lines */ \
   Any		colour;			/* colour of the graphical */ \
   Num		opacity;		/* 0.0..1.0; 1.0 = opaque */ \
