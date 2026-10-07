@@ -78,11 +78,12 @@ variable(bracket_gen,           int*,  get,  "Generation we checked brackets").
 variable(bracket_caret,         int*,  get,  "Location we checked brackets").
 variable(comment_column,        int,   both, "Column for line comment").
 variable(parameter_indentation, int,   both, "Indentation for parameters").
-variable(show_line_numbers,     'int|bool', get,  "Show line numbers?").
+variable(show_line_numbers,     '0..',      get,
+         "Show line numbers up to this character position (0: never)").
 
-class_variable(comment_column,        int,        48).
-class_variable(show_line_numbers,     'int|bool', 250000).
-class_variable(parameter_indentation, int,        4).
+class_variable(comment_column,        '0..',      48).
+class_variable(show_line_numbers,     '0..',      250000).
+class_variable(parameter_indentation, '0..',      4).
 
 setup_mode(E) :->
     "Switch editor into fill-mode"::
@@ -852,26 +853,21 @@ show_caret_line(M, Caret:[int]) :->
     ),
     (   get(M, frame, Frame),
         send(Frame, has_send_method, show_line_number)
-    ->  get(M, show_line_numbers, How),
-        (   How == @off
+    ->  get(M, show_line_numbers, Upto),
+        (   Upto == 0                   % never
         ->  send(Frame, show_line_number, @nil)
-        ;   (   (   integer(How)
-                ->  At =< How
-                ;   get(M, show_line_numbers, @on)
-                )
-            ->  get(M, line_number, Line),
-                send(Frame, show_line_number, Line)
-            ;   send(Frame, show_line_number, too_expensive)
-            )
-        ;   true
+        ;   At =< Upto                  % counting further is too expensive
+        ->  get(M, line_number, Line),
+            send(Frame, show_line_number, Line)
+        ;   send(Frame, show_line_number, too_expensive)
         )
     ;   true
     ).
 
 
-show_line_numbers(M, Show:bool) :->
-    "Show/do not show line numbers"::
-    send(M, slot, show_line_numbers, Show),
+show_line_numbers(M, Upto:'0..') :->
+    "Show line numbers up to this character position (0: never)"::
+    send(M, slot, show_line_numbers, Upto),
     send(M, new_caret_position, M?caret).
 
 

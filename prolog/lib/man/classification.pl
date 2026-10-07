@@ -3258,11 +3258,11 @@ scope('R.connect_gesture.mark', basic).
 scope('R.connect_gesture.modifier', advanced).
 scope('R.dialog.background', advanced).
 scope('R.dialog.border', advanced).
-scope('R.dialog.gap', basic).
+scope('R.dialog.gap', advanced).
 scope('R.dialog_group.alignment', advanced).
 scope('R.dialog_group.border', advanced).
 scope('R.dialog_group.elevation', advanced).
-scope('R.dialog_group.gap', basic).
+scope('R.dialog_group.gap', advanced).
 scope('R.dialog_group.label_font', basic).
 scope('R.dialog_group.label_format', advanced).
 scope('R.dialog_group.label_suffix', advanced).
@@ -3329,7 +3329,7 @@ scope('R.frame.can_resize', advanced).
 scope('R.frame.confirm_done', basic).
 scope('R.frame.decorate_transient', advanced).
 scope('R.frame.fit_after_append', advanced).
-scope('R.frame.geometry', basic).
+scope('R.frame.geometry', advanced).
 scope('R.frame.horizontal_resize_cursor', advanced).
 scope('R.frame.icon_label', advanced_programming).
 scope('R.frame.vertical_resize_cursor', advanced).
@@ -3556,7 +3556,11 @@ scope('R.text_margin.fragment_cursor', advanced).
 scope('R.text_margin.gap', advanced).
 scope('R.text_margin.icon_size', advanced).
 scope('R.text_margin.placement', advanced).
-scope('R.tile.border', advanced).
+scope('R.tile.border', basic).
+scope('R.tile.fixed_border', basic).
+scope('R.tile.gap_colour', basic).
+scope('R.tile.separator_colour', basic).
+scope('R.tile.separator_pen', basic).
 scope('R.tree.collapsed_image', advanced).
 scope('R.tree.direction', basic_programming).
 scope('R.tree.expanded_image', advanced).

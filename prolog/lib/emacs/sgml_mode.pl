@@ -81,9 +81,9 @@ elements that are closed by omited elements.
                       paragraph_end('\\s*$|^<p>|\\s+<')
                     ]).
 
-class_variable(auto_colourise_size_limit, int, 100000,
+class_variable(auto_colourise_size_limit, '0..', 100000,
                "Auto-colourise if buffer is smaller then this").
-class_variable(auto_colourise_all_limit, int, 20000,
+class_variable(auto_colourise_all_limit, '0..', 20000,
                "Auto-colourise whole buffer if small enough").
 
 variable(dialect,

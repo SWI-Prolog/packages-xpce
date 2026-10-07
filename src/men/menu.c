@@ -2462,7 +2462,7 @@ static classvardecl rc_menu[] =
      "Marker for items not in selection"),
   RC(NAME_onImage, "{marked}|image*", "@mark_image",
      "Marker for items in selection"),
-  RC(NAME_pen, "int", "0",
+  RC(NAME_pen, "0..", "0",
      "Thickness of pen around items"),
   RC(NAME_previewElevation, "elevation*", "0",
      "Elevation of item in preview mode"),

@@ -1271,7 +1271,7 @@ variable(m_x_argn,        int*,         both, "M-p/M-n current argument").
 variable(keep_selection,  bool := @off, both, "Keep selection for this method").
 variable(idle_timeout,    num,		both, "Auto highlighting timeout").
 
-class_variable(idle_timeout, num, 2).
+class_variable(idle_timeout, '0.0..', 2).
 
 delegate_to(editor).
 

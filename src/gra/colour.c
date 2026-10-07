@@ -845,13 +845,13 @@ static getdecl get_colour[] =
  */
 
 static classvardecl rc_colour[] =
-{ RC(NAME_hiliteFactor, "real", "0.9",
+{ RC(NAME_hiliteFactor, "0.0..1.0", "0.9",
      "Default factor for <-hilite'd colour"),
-  RC(NAME_darkHiliteFactor, "real", "0.2",
+  RC(NAME_darkHiliteFactor, "0.0..1.0", "0.2",
      "Default factor for <-hilite'd colour if the colour is dark"),
-  RC(NAME_reduceFactor, "real", "0.6",
+  RC(NAME_reduceFactor, "0.0..1.0", "0.6",
      "Default factor for <-reduce'd colour"),
-  RC(NAME_fadeFactor, "real", "0.5",
+  RC(NAME_fadeFactor, "0.0..1.0", "0.5",
      "Default alpha multiplier for <-fade")
 };
 

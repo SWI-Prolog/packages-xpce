@@ -139,7 +139,7 @@ variable(arranged_since,  prolog := none, none,
 
 class_variable(label_format, 'name*', 'SWI-Prolog -- %s',
                "Frame label; %s is the label of the tab in view").
-class_variable(inactive_opacity, num, 1.0,
+class_variable(inactive_opacity, '0.0..1.0', 1.0,
                "Opacity of a pane that has not got the focus").
 class_variable(prompt_style, {status_bar,dialog}, dialog,
                "Ask for one value at a time, or all of them in a dialog").

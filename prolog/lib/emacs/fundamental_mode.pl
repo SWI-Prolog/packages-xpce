@@ -170,14 +170,14 @@ class_variable(shell_command, chain*,
                  unix(chain('/bin/sh', '-c'))
                ],
                "Command for running grep, make, etc.").
-class_variable(auto_colourise_size_limit, int, 50000,
+class_variable(auto_colourise_size_limit, '0..', 50000,
                "Auto-colourise if buffer is smaller then this").
 class_variable(print_command, string,
                [ 'X'('lpr %s'),
                  windows('NOTEPAD.EXE /P %s')
                ],
                "Command to print a file").
-class_variable(tab_width, int,
+class_variable(tab_width, '1..',
                8,
                "Distance between tab-stops").
 

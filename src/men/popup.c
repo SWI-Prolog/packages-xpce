@@ -725,7 +725,7 @@ static classvardecl rc_popup[] =
      "Marker for items not in selection"),
   RC(NAME_onImage, "{marked}|image*", "@nil",
      "Marker for items in selection"),
-  RC(NAME_pen, "int", "0",
+  RC(NAME_pen, "0..", "0",
      "Thickness of the drawing-pen"),
   RC(NAME_previewFeedback, "name", UXWIN("box", "colour"),
      "Feedback on `preview' item"),

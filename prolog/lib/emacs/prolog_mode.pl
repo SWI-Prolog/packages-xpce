@@ -179,7 +179,7 @@ class_variable(varmark_style, style*,
                      underline := @on)).
 class_variable(show_syntax_errors, {never,typing,pause},
                typing).
-class_variable(auto_colourise_size_limit, int, 100000,
+class_variable(auto_colourise_size_limit, '0..', 100000,
                "Auto-colourise if buffer is smaller then this").
 class_variable(dependency_directive,
                { 'autoload/1',
@@ -220,9 +220,9 @@ variable(find_references_module_classes,
          "Module classes to search for references").
 
 class_variable(quasiquotation_syntax, name*, @nil).
-class_variable(body_indentation,      int,   4).
-class_variable(cond_indentation,      int,   4).
-class_variable(dict_indentation,      int,   2).
+class_variable(body_indentation,      '0..', 4).
+class_variable(cond_indentation,      '0..', 4).
+class_variable(dict_indentation,      '0..', 2).
 class_variable(indent_tabs,           bool,  @off,
                "Use tabs for indentation").
 

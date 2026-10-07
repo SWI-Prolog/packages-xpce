@@ -58,7 +58,7 @@ so it shows on light and dark backgrounds alike.
 :- pce_begin_class(icon_button, figure,
                    "Small picture that does something when clicked").
 
-class_variable(dim_opacity, num, 0.4,
+class_variable(dim_opacity, '0.0..1.0', 0.4,
                "Opacity while the pointer is elsewhere").
 class_variable(symbolic_colour, colour, ui_dialog_foreground,
                "Colour for `currentColor` in a symbolic SVG icon").

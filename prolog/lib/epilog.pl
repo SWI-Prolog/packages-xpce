@@ -2538,7 +2538,7 @@ variable(covers,    area*, get, "Terminal area I am placed in").
 
 class_variable(background,  colour, '#0008',  "Colour behind the message").
 class_variable(colour,      colour, white,    "Colour of the message").
-class_variable(hide_after,  int,    5,        "Seconds a message stays up").
+class_variable(hide_after,  '0..',  5,        "Seconds a message stays up").
 class_variable(placement,   {top,bottom,smart,none}, smart,
                "Show messages at the top, at the bottom, out of the \c
                 way (`smart') or not at all").

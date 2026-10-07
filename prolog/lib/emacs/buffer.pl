@@ -56,7 +56,7 @@ variable(mode,            name,         get,  "Major mode of operation").
 variable(time_stamp,      date*,        get,  "Time-stamp for file").
 variable(ensure_newline,  bool := @on,  both, "Add newline when done").
 variable(ensure_no_whitespace_errors,
-                          bool,         both, "Remove trailing whitespace when done").
+                          bool,         both, "Remove trailing whitespace when saving").
 variable(tab_width,       int := 8,     both, "Width of a tab").
 variable(auto_save_mode,  bool,         both, "Auto-save?").
 variable(auto_save_count, number,       get,  "Auto-save at expiration").
@@ -72,17 +72,19 @@ variable(xref_generation,
          both,
          "Last generation we analysed").
 
-class_variable(undo_buffer_size,      int, 40000).
+class_variable(undo_buffer_size,      '0..', 40000).
 class_variable(ensure_no_whitespace_errors, bool, @on).
-class_variable(newline_existing_file, {posix,dos,detect}, detect).
-class_variable(newline_new_file,      {posix,dos},        posix).
+class_variable(newline_existing_file, {posix,dos,detect}, detect,
+               "Whether to use \\n (POSIX) or \\r\\n (DOS) for a newline").
 :- if(current_prolog_flag(windows, true)).
-class_variable(newline_new_file,      {posix,dos},        dos).
-class_variable(unicode_encoding,      {utf8,unicode_le,unicode_be}, unicode_le).
+class_variable(newline_new_file,      {posix,dos},        dos,
+               "Whether to use \\n (POSIX) or \\r\\n (DOS) for a newline").
 :- else.
-class_variable(newline_new_file,      {posix,dos},        posix).
-class_variable(unicode_encoding,      {utf8,unicode_le,unicode_be}, utf8).
+class_variable(newline_new_file,      {posix,dos},        posix,
+               "Whether to use \\n (POSIX) or \\r\\n (DOS) for a newline").
 :- endif.
+class_variable(unicode_encoding,      {utf8,unicode_le,unicode_be}, utf8,
+               "Encoding used if the default encoding cannot represent the content").
 
 initialise(B, File:file*, Name:[name]) :->
     "Create from file and name"::

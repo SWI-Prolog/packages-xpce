@@ -126,7 +126,7 @@ c_keyword('_Alignof',       operator).
                     ]).
 
 variable(indent_level, int, both, "Indentation level in spaces").
-class_variable(indent_level, int, 2).
+class_variable(indent_level, '0..', 2).
 
 :- initialization
     send(@class, attribute, outline_regex_list,

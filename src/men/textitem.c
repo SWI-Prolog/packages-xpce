@@ -1948,7 +1948,7 @@ static classvardecl rc_textItem[] =
      "Border around <-value_text"),
   RC(NAME_length, "int", "25",
      "Width of area for selection (chars)"),
-  RC(NAME_pen, "int", "1",
+  RC(NAME_pen, "0..", "1",
      "Thickness of line below selection"),
   RC(NAME_autoCopy, "bool", UXWINMAC("@on", "@off", "@off"),
      "Automatically copy selected text to the clipboard"),

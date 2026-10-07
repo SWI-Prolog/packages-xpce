@@ -94,9 +94,9 @@ class_variable(horizontal_resize_cursor, cursor, ew_resize,
                "Cursor for horizontally resizing a tile").
 class_variable(vertical_resize_cursor,   cursor, ns_resize,
                "Cursor for vertically resizing a tile").
-class_variable(tile_border_root,         int,     0,
+class_variable(tile_border_root,         '0..',   0,
                "Border around the tile hierarchy (0: out to my edges)").
-class_variable(split_bias,               num,     2,
+class_variable(split_bias,               '0.0..', 2,
                "Weight of the top and bottom drop zones (>1: wider sides)").
 
 :- pce_global(@tab_frame_resize_gesture, new(tile_resize_gesture)).
@@ -1711,7 +1711,7 @@ gap_colour(G, Colour) :-
 
 class_variable(colour, colour, colour(@default, 80, 130, 200),
                "Fill of the ghost; the colour a split is outlined in").
-class_variable(opacity, num, 0.3,
+class_variable(opacity, '0.0..1.0', 0.3,
                "How much of what is under the ghost still shows").
 
 initialise(G, Label:name, Font:font) :->

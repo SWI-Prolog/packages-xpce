@@ -59,9 +59,9 @@ This module deals with colourisation of .lgt files.
                     [
                     ]).
 
-class_variable(tab_width, int, 4).
-class_variable(body_indentation, int, 4).
-class_variable(cond_indentation, int, 4).
+class_variable(tab_width, '1..', 4).
+class_variable(body_indentation, '0..', 4).
+class_variable(cond_indentation, '0..', 4).
 class_variable(indent_tabs, bool, @on).
 
 colourise_buffer(M) :->
