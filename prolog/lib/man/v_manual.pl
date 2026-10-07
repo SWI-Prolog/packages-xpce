@@ -583,7 +583,9 @@ in_scope(M, Obj:object) :->
     "Test if object is in current scope"::
     get(M, user_scope, Scope),
     get(Obj, man_id, Id),
-    (   (   scope(Id, Type)
+    (   send(Scope, member, all)
+    ->  true
+    ;   (   scope(Id, Type)
         ->  send(Scope, member, Type)
         ;   send(Scope, member, obscure)
         )

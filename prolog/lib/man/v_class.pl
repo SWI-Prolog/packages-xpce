@@ -39,6 +39,7 @@
 :- use_module(library(pce)).
 :- use_module(util).
 :- use_module(v_inherit).
+:- pce_autoload(filter_item, library(pce_filter_item)).
 :- require([ forall/2
            , get_chain/3
            , send_list/3
@@ -51,6 +52,8 @@ class_variable(value_font,      font,   normal).
 class_variable(label_font,      font,   bold).
 class_variable(active_font,     font,   italic).
 
+variable(search_filter, regex*,      get,
+         "Show only matches of this regex (search field)").
 variable(tool_focus,     class,         get,
          "Currently displayed class").
 
@@ -87,13 +90,12 @@ fill_dialog(D) :-
     send(D, append, label(reporter)),
 
     send(D, append, new(CI, text_item(class, '',
-                                      and(message(CB, show_class_name,
-                                                  @arg1),
-                                          message(@receiver, clear))))),
+                                      message(CB, show_class_name, @arg1)))),
     send(CI, value_set, ?(@prolog, expand_classname, @arg1)),
 
     send(D, append, new(FM, menu(filter, toggle))),
-    new(FmMsg, message(@manual, user_scope, FM?selection)),
+    new(FmMsg, and(message(@manual, user_scope, FM?selection),
+                   message(CB, apply))),
     forall(man_classification(T, L),
            send(FM, append, menu_item(T, @default, L))),
     send(FM, append,
@@ -102,25 +104,23 @@ fill_dialog(D) :-
                       and(message(FM, attribute, saved_selection,
                                   FM?selection),
                           message(FM, selection, FM?members),
-                          message(FM, modified, @on),
                           FmMsg),
                       and(message(FM, selection,
                                   ?(FM, attribute, saved_selection)),
                           message(FM, selected, all, @off),
-                          message(FM, modified, @on),
                           FmMsg)))),
     send(FM, message, FmMsg),
     send(FM, columns, 4),
     send(FM, selection, @manual?user_scope),
 
     send(D, append, new(DM, menu(display, toggle))),
-    send(D, append, new(KI, text_item(search, ''))),
+    send(D, append, new(KI, filter_item(search,
+                                        message(CB, search_filter, @arg1),
+                                        'Search'))),
     send(D, append, new(SM, menu(field, toggle))),
     send(SM, label, '... In:'),
-    send(D, append, graphical(0,0,1,1)), % bit extra spacing
-    send(D, append, button(apply,
-                           and(message(D, apply),
-                               message(CB, apply)))),
+    send(DM, message, message(CB, apply)),
+    send(SM, message, message(CB, apply)),
 
     send(KI, advance, none),
     send(CI, advance, none),
@@ -139,12 +139,7 @@ fill_dialog(D) :-
     send_list(SM, append, [ name, summary
                           , description /*, diagnostics*/
                               ]),
-    send(SM, selection, chain(name, summary)),
-
-    send(D, append, button(help, message(CB, help))),
-    send(D, append, button(quit, message(CB, quit))),
-
-    send(D, default_button, apply).
+    send(SM, selection, chain(name, summary)).
 
 
 expand_classname(Prefix, Classes) :-
@@ -238,6 +233,9 @@ tool_focus(CB, Obj:object*) :->
     get(Class, name, ClassName),
     atom_concat('Class ', ClassName, Label),
     send(CB, label, Label),
+    get(CB, dialog_member, Dialog),     % show the class we browse
+    get(Dialog, member, class, ClassItem),
+    send(ClassItem, selection, ClassName),
     send(CB, show_header),
     send(CB, show_inheritance),
     send(CB, apply).
@@ -264,23 +262,31 @@ apply(CB) :->
     get(CB, man_summary_browser_member, Browser),
     get_chain(Dialog?display_member, selection, Types),
     get_chain(Dialog?field_member, selection, Fields),
-    get(Dialog?search_member, selection, Keyword),
+    get(CB, search_filter, Filter),
+    (   Filter == @nil
+    ->  Keyword = ''
+    ;   Keyword = Filter
+    ),
     get(CB, scope, Scope),
 
     send(Browser, clear),
     send(CB, report, progress, 'Searching ...'),
     apropos_class(Class, Scope, Types, Fields, Keyword, Matches),
     send(CB, report, done),
-    send(Browser, members, Matches),
-    send(CB, keyboard_focus, Browser),
-    send(Dialog?apply_member, active, @off).
+    send(Browser, members, Matches).
 
+%   The search field calls this as the user types.
+
+search_filter(CB, Filter:regex*) :->
+    "Search for Filter (@nil: everything)"::
+    send(CB, slot, search_filter, Filter),
+    send(CB, apply).
+
+%   The inheritance tree calls this if the user changes the scope.
 
 activate_apply(CB) :->
-    "Activate the apply button"::
-    get(CB, member, dialog, Dialog),
-    get(Dialog, member, apply, Button),
-    send(Button, active, @on).
+    "The scope changed: show the matches"::
+    send(CB, apply).
 
 
 show_class_name(CB, Name:name) :->

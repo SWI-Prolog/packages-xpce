@@ -1371,6 +1371,90 @@ test(a_window_of_a_tool_asks_the_tool_to_show_something) :-
     send(Window, select_node, Class),
     send(Window, open_node, Class).
 
+%       The class field of the class browser shows the class it browses,
+%       also after a class was entered in it.
+
+test(the_class_field_shows_the_class, [Shown == [box, circle]]) :-
+    no_frames,
+    open_manual_tool(class_browser, Tool),
+    send(Tool, tool_focus, class(box)),
+    class_field(Tool, Box),
+    send(Tool, show_class_name, circle),
+    class_field(Tool, Circle),
+    Shown = [Box, Circle].
+
+%       The class browser applies changes immediately: the search field
+%       filters as the user types and the menus apply when changed.
+
+test(the_class_browser_searches_as_you_type,
+     [true(Searched < All), true(Displayed < Searched)]) :-
+    no_frames,
+    open_manual_tool(class_browser, Tool),
+    send(Tool, tool_focus, class(text_item)),
+    matches(Tool, All),
+    get(Tool, dialog_member, Dialog),
+    get(Dialog, member, search, Search),
+    forall(member(C, [0's, 0'e, 0'l]), send(Search, typed, C)),
+    matches(Tool, Searched),
+    get(Dialog, member, display, Display),
+    send(Display, selected, get_method, @off),
+    get(Display, message, Message),     % as a click on the menu
+    send(Message, execute),
+    matches(Tool, Displayed).
+
+matches(Tool, Count) :-
+    get(Tool, man_summary_browser_member, Browser),
+    get(Browser?members, size, Count).
+
+%       "All" in the filter menu selects all items and applies this.  A
+%       second click restores the selection from before.
+
+test(all_in_the_filter_shows_everything,
+     [ true(All > Basic), Restored == Basic,
+       cleanup(send(@manual, user_scope, chain(basic, user)))
+     ]) :-
+    no_frames,
+    open_manual_tool(class_browser, Tool),
+    send(Tool, tool_focus, class(tile)),
+    get(Tool, dialog_member, Dialog),
+    get(Dialog, member, display, Display),
+    send(Display, selection, chain(self, class_var, get_method)),
+    send(Tool, apply),
+    matches(Tool, Basic),
+    get(Dialog, member, filter, Filter),
+    click_item(Filter, all, 100000),
+    matches(Tool, All),
+    click_item(Filter, all, 105000),
+    matches(Tool, Restored).
+
+%   click_item(+Menu, +Value, +Time)
+%
+%   Click on the item with Value at Time (ms).
+
+click_item(Menu, Value, Time) :-
+    get(Menu, window, W),
+    get(Menu, area, area(MX, MY, MW, MH)),
+    between(0, MH, DY), Y is MY+DY,
+    between(0, MW, DX), X is MX+DX,
+    new(Probe, event(loc_move, W, X, Y)),
+    get(Menu, item_from_event, Probe, Item),
+    get(Item, value, Value),
+    !,
+    Up is Time+20,
+    post_event(W, ms_left_down, X, Y, 0x10, Time),
+    post_event(W, ms_left_up, X, Y, 0, Up).
+
+post_event(W, Id, X, Y, Buttons, Time) :-
+    new(Ev, event(Id, W, X, Y, Buttons, Time)),
+    send(@event, assign, Ev, global),
+    ignore(send(W, post_event, Ev)),
+    send(@event, assign, @nil, global).
+
+class_field(Tool, Name) :-
+    get(Tool, dialog_member, Dialog),
+    get(Dialog, member, class, Item),
+    get(Item, selection, Name).
+
 test(and_so_does_the_browser_of_a_summary, true(Asked == Tool)) :-
     no_frames,
     open_manual_tool(class_browser, Tool),

@@ -215,11 +215,16 @@ class_of_type(Type, Class) :-
                 ********************************/
 
 %       apropos_class(+Class, +Inherit, +Types, +Fields, +Keyword, -Matches)
+%
+%       Keyword is the text of a regular expression or a regex object.
 
 apropos_class(Class, Inherit, Types, Fields, Keyword, Match) :-
     !,
     (   Keyword == '' ; Keyword = '.*'
     ->  Regex = @nil
+    ;   object(Keyword),
+        send(Keyword, instance_of, regex)
+    ->  Regex = Keyword
     ;   new(Regex, regex(Keyword)),
         send(Regex, ignore_case, @off),
         send(Regex, compile, @on)
