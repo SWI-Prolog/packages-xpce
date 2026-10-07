@@ -86,7 +86,10 @@ variable(geometry_key,                name*, send,
 
 unlink(F) :->
     "Save layout and destroy"::
-    send(F, save_layout),
+    (   get(F, status, unmapped)        % never shown: nothing to save
+    ->  true
+    ;   send(F, save_layout)
+    ),
     send_super(F, unlink).
 
 create(F) :->
@@ -109,6 +112,7 @@ geometry_key(F, Key:name) :<-
 
 save_layout(F) :->
     "Save current layout in config DB"::
+    load_geometry_config,               % merge with what is saved
     get(F, geometry, Geometry),
     get(F, geometry_key, Key),
     set_config(history/geometry/Key, Geometry),
