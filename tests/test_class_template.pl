@@ -107,7 +107,25 @@ test(and_so_does_a_file_that_only_loads_one,
     '$qlf_sources'(Qlf, Sources),
     memberchk(dependency(PaneFrame, _), Sources).
 
+%       A class using a template keeps its own summary rather than
+%       getting the summary of the template.
+
+test(a_class_keeps_its_summary_over_the_template,
+     Summary == "Uses the template") :-
+    get(class(test_template_summary_user), summary, String),
+    get(String, value, Summary0),
+    atom_string(Summary0, Summary).
+
 :- end_tests(class_template).
+
+:- pce_begin_class(test_template_summary, template,
+                   "Template with a summary").
+:- pce_end_class.
+
+:- pce_begin_class(test_template_summary_user, object,
+                   "Uses the template").
+:- use_class_template(test_template_summary).
+:- pce_end_class.
 
 %!  compiled_user(-PlFile, -QlfFile, -TemplateFile) is det.
 %

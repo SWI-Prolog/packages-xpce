@@ -77,20 +77,24 @@ contextClassVariable(ClassVariable cv, Class context)
   succeed;
 }
 
+/* The summary, falling back to that of the instance variable with the
+ * same name, which the class variable typically provides the default
+ * for.
+ */
+
 static StringObj
 getSummaryClassVariable(ClassVariable cv)
-{ Class class = cv->class;
-  Variable var;
+{ Variable var;
 
   if ( instanceOfObject(cv->summary, ClassString) )
     answer(cv->summary);
 
   if ( isDefault(cv->summary) &&
-       (var = getInstanceVariableClass(class, cv->name)) )
-  { if ( notNil(var->summary) )
-      answer(var->summary);		/* TBD: getSummaryVariable() */
-  }
-					/* TBD: look for inheritence */
+       instanceOfObject(cv->context, ClassClass) &&
+       (var = getInstanceVariableClass(cv->context, cv->name)) &&
+       instanceOfObject(var->summary, ClassString) )
+    answer(var->summary);
+
   fail;
 }
 
@@ -187,6 +191,11 @@ getConvertStringClassVariable(ClassVariable cv, CharArray value)
   if ( cv->type->fullname == NAME_geometry )
     return checkType(value, cv->type, cv->context);
 
+  if ( value->data.s_size > 0 &&	/* #RRGGBB, etc.: a colour */
+       str_fetch(&value->data, 0) == '#' &&
+       (val = checkType(value, cv->type, cv->context)) )
+    answer(val);
+
   if ( (val = qadGetv(TheObjectParser(), NAME_parse, 1, (Any *)&value)) )
     answer(checkType(val, cv->type, cv->context));
 
@@ -215,22 +224,31 @@ getConvertStringClassVariable(ClassVariable cv, CharArray value)
 }
 
 
+/* Copy of the inherited class variable cv that belongs to class
+ */
+
+static ClassVariable
+cloneClassVariable(ClassVariable cv, Class class)
+{ ClassVariable clone = get(cv, NAME_clone, EAV);
+
+  assert(clone);
+  contextClassVariable(clone, class);
+
+  return clone;
+}
+
+
 static ClassVariable
 getSubClassVariable(ClassVariable cv, Class class)
 { if ( cv->context == class )
   { answer(cv);
   } else
   { Any val;
-    Name name = class->name;
 
-    if ( (val = getDefault(class, name, FALSE)) )
-    { ClassVariable clone = get(cv, NAME_clone, EAV);
+    if ( (val = getDefault(class, cv->name, FALSE)) )
+    { doneObject(val);			/* What to do with this? */
 
-      assert(clone);
-      contextClassVariable(clone, class);
-      doneObject(val);			/* What to do with this? */
-
-      answer(clone);
+      answer(cloneClassVariable(cv, class));
     } else
     { answer(cv);
     }
@@ -431,12 +449,49 @@ hasClassVariableClass(Class class, Name name)
 }
 
 
+/* Remove cv from the class_variable_table caches of all (indirect)
+ * subclasses of class, such that they look it up again.
+ */
+
+static void
+uncacheSubClassVariable(Class class, ClassVariable cv)
+{ Chain agenda = answerObject(ClassChain, class, EAV);
+  Class c;
+
+  while( (c = getDeleteHeadChain(agenda)) )
+  { if ( notNil(c->class_variable_table) &&
+	 getMemberHashTable(c->class_variable_table, cv->name) == cv )
+      deleteHashTable(c->class_variable_table, cv->name);
+    if ( notNil(c->sub_classes) )
+    { Cell cell;
+
+      for_cell(cell, c->sub_classes)
+	appendChain(agenda, cell->value);
+    }
+  }
+
+  doneObject(agenda);
+}
+
+
+/* Set the value of class variable name for class cl.  If cl inherits
+ * the class variable, make a copy that belongs to cl such that the
+ * value does not affect the super class.
+ */
+
 status
 classVariableValueClass(Class cl, Name name, Any val)
 { ClassVariable cv;
 
   if ( (cv = getClassVariableClass(cl, name)) )
+  { if ( cv->context != cl )
+    { uncacheSubClassVariable(cl, cv);
+      cv = cloneClassVariable(cv, cl);
+      appendHashTable(cl->class_variable_table, name, cv);
+    }
+
     return valueClassVariable(cv, val);
+  }
 
   fail;
 }
@@ -661,7 +716,7 @@ static vardecl var_class_variable[] =
      NAME_cache, "Current value"),
   IV(NAME_default, "any", IV_GET,
      NAME_default, "Program default value"),
-  IV(NAME_summary, "[string]*", IV_GET,
+  IV(NAME_summary, "[string]*", IV_NONE,
      NAME_manual, "Summary documentation")
 };
 
@@ -677,7 +732,9 @@ static senddecl send_class_variable[] =
 /* Get Methods */
 
 static getdecl get_class_variable[] =
-{ GM(NAME_group, 0, "name", NULL, getGroupClassVariable,
+{ GM(NAME_summary, 0, "string", NULL, getSummaryClassVariable,
+     NAME_manual, "Summary, or that of the instance variable"),
+  GM(NAME_group, 0, "name", NULL, getGroupClassVariable,
      NAME_manual, "Same as related variable"),
   GM(NAME_manId, 0, "name", NULL, getManIdClassVariable,
      NAME_manual, "Card Id for class variable"),

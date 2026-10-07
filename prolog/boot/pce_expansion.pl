@@ -594,7 +594,8 @@ compiled_into(ClassFile, File, Seen) :-
 %!  use_template_class_attributes(+Template)
 %
 %   Insert variables, class-variables and directives as if they appeared
-%   in the current class definition.
+%   in the current class definition.  The source and summary describe
+%   the template class and are not copied.
 
 use_template_class_attributes(Template) :-
     pce_class(Template, _, template, Variables, ClassVars, Directs),
@@ -605,11 +606,15 @@ use_template_class_attributes(Template) :-
 assert_attributes([], _).
 assert_attributes([H|T], Att) :-
     pce_compiling(ClassName),
-    (   H = send(@class, source, _Source)
+    (   H = send(@class, Attribute, _),
+        template_only_attribute(Attribute)
     ->  true
     ;   add_attribute(ClassName, Att, H)
     ),
     assert_attributes(T, Att).
+
+template_only_attribute(source).
+template_only_attribute(summary).
 
 use_template_send_methods(Template, Clauses) :-
     findall(C, use_template_send_method(Template, C), Clauses).
