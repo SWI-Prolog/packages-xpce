@@ -48,7 +48,6 @@ static status	restoreBoolItem(BoolItem b);
 
 #define KNOB_STEP   25			/* % of the travel per animation step */
 #define KNOB_TICK   0.016		/* seconds between animation steps */
-#define INACTIVE_ALPHA 0.4		/* opacity if not active */
 
 static status
 initialiseBoolItem(BoolItem b, Name name, Any def, Code msg)

@@ -1150,6 +1150,7 @@ GLOBAL  Chain grabbedWindows;		/* @grabbed_windows */
 #define TEXTFIELD_DECREMENT	0x20	/* stepper in `increment' mode */
 
 #define LABEL_INACTIVE		0x1	/* str_label() flags */
+#define INACTIVE_ALPHA		0.4	/* opacity of an inactive item */
 
 #define CHECKBOX_SELECTED	0x1	/* item is selected */
 #define CHECKBOX_ACTIVE		0x2	/* item is active */

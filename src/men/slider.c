@@ -157,12 +157,16 @@ RedrawAreaSlider(Slider s, Area a)
   { int by = y+sy+(SLIDER_HEIGHT-OL_BAR_HEIGHT)/2;
     int wx  = valInt(s->width)-vv-bw;
 
+    if ( s->active == OFF )		/* faded, as the label */
+      r_push_group();
     r_thickness(0);
     r_box(x+sx,            by, vv+bw/2, OL_BAR_HEIGHT, 10, BLUE_COLOUR);
     r_box(x+sx+vv+bw-bw/2, by, wx+bw/2, OL_BAR_HEIGHT, 10, GREY50_COLOUR);
     r_dash(NAME_none);
     r_thickness(1);
     r_arc(x+sx+vv, y+sy, bw, bw, 0, 360, NAME_chord, WHITE_COLOUR);
+    if ( s->active == OFF )
+      r_pop_group_with_alpha(INACTIVE_ALPHA);
   }
 
   if ( s->show_value == ON )
@@ -646,7 +650,9 @@ static getdecl get_slider[] =
 /* Resources */
 
 static classvardecl rc_slider[] =
-{ RC(NAME_look, RC_REFINE, "xpce", NULL)
+{ RC(NAME_look, RC_REFINE, "xpce", NULL),
+  RC(NAME_inactiveColour, RC_REFINE, "@nil",
+     "@nil: an inactive slider fades rather than using fixed colours")
 };
 
 /* Class Declaration */
