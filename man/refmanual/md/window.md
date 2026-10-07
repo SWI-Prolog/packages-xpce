@@ -1,13 +1,16 @@
 # class window {#class-window}
 
-A window is a subwindow of a frame object.  It appears on the screen as a
-rectangular area inside a frame.  It defines an infinite two-dimensional
-drawing plane of which a rectangular sub-area is <-visible.  A window
-optionally has ->scrollbars attached that allows the user to move the
-visible rectangle over the infinite plane.
+A window is a device with its own coordinate system.  It defines an
+infinite two-dimensional drawing plane of which a rectangular sub-area is
+<-visible.  A window optionally has ->scrollbars attached that allow the
+user to move the visible rectangle over the infinite plane.
+
+Usually a window is a subwindow of a frame, where it is a tile in the
+layout of the frame's windows.  As a window is a graphical, it may also
+be displayed on another device, such as a dialog or another window.
 
 Class window takes care of the communication with its <-frame and the
-window system it uses for it's graphical representation.
+window system it uses for its graphical representation.
 
 As defined in class device, a window can display graphical objects (i.e.
 instances of one of the subclasses of class graphical).  There are several

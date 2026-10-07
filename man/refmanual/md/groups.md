@@ -258,11 +258,11 @@ Manipulation and query of selections
 
 ## window_manager {#sec-groups-window_manager}
 
-Interaction with the X-window manager
+Interaction with the window manager
 
 ## x {#sec-groups-x}
 
-X-window interaction
+Window-system interaction
 
 ## behaviour {#sec-groups-behaviour}
 

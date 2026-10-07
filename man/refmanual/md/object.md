@@ -480,7 +480,7 @@ specification.  See:
     - Do not know how to save <object>
         Object cannot be saved because it contains alien references and
         no defined behaviour to take care of them.  This is the case
-        with most objects that refer directly to the X-window system
+        with most objects that refer directly to the window system
         (e.g. windows, cursors, etc.).
 
     Diagnostics related to opening, writing and closing a file are

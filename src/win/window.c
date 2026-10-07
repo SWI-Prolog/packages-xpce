@@ -562,7 +562,7 @@ resizeMessageWindow(PceWindow sw, Code msg)
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 offset_window(sw,  x, y) computes the offset  of the coordinate system
-of the  window  as a device,  relative   to the X-window's  coordinate
+of the  window  as a device,  relative   to the  native  window's coordinate
 system.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
@@ -2823,15 +2823,15 @@ static senddecl send_window[] =
   SM(NAME_right, 1, "window|tile", rightWindow,
      NAME_layout, "Put me right of argument"),
   SM(NAME_create, 1, "[window]", createWindow,
-     NAME_open, "Create associated X-window structure"),
+     NAME_open, "Create associated window-system structure"),
   SM(NAME_Create, 1, "[window]", createWindow,
-     NAME_open, "Create associated X-window structure (internal)"),
+     NAME_open, "Create associated window-system structure (internal)"),
   SM(NAME_open, 2, T_open, openWindow,
      NAME_open, "Open associated frame on the display"),
   SM(NAME_openCentered, 3, T_confirmCentered, openCenteredWindow,
      NAME_open, "Open frame centered around point"),
   SM(NAME_uncreate, 0, NULL, uncreateWindow,
-     NAME_open, "Destroy associated X-window structure"),
+     NAME_open, "Destroy associated window-system structure"),
   SM(NAME_pointer, 1, "point", pointerWindow,
      NAME_pointer, "Move the pointer relative to window"),
   SM(NAME_redraw, 1, "[area]", redrawWindow,

@@ -132,7 +132,7 @@ See also class stream and class socket.
     exited by calling exit().  @receiver is bound to the process object.
     @arg1 gives the name of the signal or the exit status (integer).
 
-    Note that input is dealt with through the event mechanism of X-windows,
+    Note that input is dealt with through the event mechanism of the window system,
     while status changes to the process are dealt with using Unix signals.
     This implies the process can signal it has terminated, while their is
     still input available from it.

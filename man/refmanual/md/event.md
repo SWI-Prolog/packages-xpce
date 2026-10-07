@@ -8,7 +8,7 @@ Events are typed and their types are organised in a hierarchy.  See
 Class event_tree.  Note that event-types have no relation to PCE
 data-types as described by class type.
 
-Events are trapped from the X-window environment by class window.  This
+Events are trapped from the window system by class window.  This
 class deals internally with low-level events such as repaint requests.
 All events that may be of interest to the user are transformed into PCE
 event objects, which are then dispatched by a graphical device object.

@@ -223,7 +223,7 @@ Constraints between object pairs
 
 Root of the topic index
 
-*Subtopics*: Host Interface, Class Hierarchy, Global Objects, Prolog Interface, Programming PCE, Object Management, Types, Link to application, Errors, Exceptions, Debugging, Manual, Programming Style, Techniques, User Interface, Events, X-windows
+*Subtopics*: Host Interface, Class Hierarchy, Global Objects, Prolog Interface, Programming PCE, Object Management, Types, Link to application, Errors, Exceptions, Debugging, Manual, Programming Style, Techniques, User Interface, Events, Window System
 
 ## Conversion {#sec-topics-conversion}
 
@@ -807,9 +807,9 @@ Adding resources to the class
 
 ## Resources {#sec-topics-resources}
 
-Interface to X resources
+Interface to the Defaults file
 
-*Parent*: X-windows
+*Parent*: Window System
 
 *Subtopics*: Resource Conversions
 
@@ -1040,7 +1040,7 @@ initialise(Text, String:string, Format:[name]) :->
 
 The call to pce_begin_class/2 will create the class and set the
 <->term_names variable of the class.  The resource/4 declaration will
-attach a resource (e.i.  interface to the X-windows default database)
+attach a resource (i.e., interface to the Defaults file)
 to the class) using `Class ->resource`.  The `initialise` declaration
 will attach a method to the class and assert a clause in the Prolog
 database.  The result of the translation will be:
@@ -1271,7 +1271,7 @@ is created with the window and the old stack as members.
 
 Interaction with the Window manager
 
-*Parent*: X-windows
+*Parent*: Window System
 
 ## Windows {#sec-topics-windows}
 
@@ -1281,9 +1281,9 @@ Frames and window classes
 
 *Subtopics*: Window Layout
 
-## X-windows {#sec-topics-x-windows}
+## Window System {#sec-topics-window-system}
 
-Description of X-window interface policy
+Description of the window-system interface policy
 
 *Parent*: Contents
 

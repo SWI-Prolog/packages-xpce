@@ -670,7 +670,7 @@ static getdecl get_display[] =
   GM(NAME_width, 0, "int", NULL, getWidthDisplay,
      NAME_dimension, "Width of the display in pixels"),
   GM(NAME_selection, 3, "any", T_getSelection, getSelectionDisplay,
-     NAME_selection, "Query value of the X-window selection"),
+     NAME_selection, "Query value of the primary selection or clipboard"),
   GM(NAME_paste, 1, "string", "which=[{primary,clipboard}]", getPasteDisplay,
      NAME_selection, "Simple interface to get clipboard value"),
   GM(NAME_hasScreenKeyboardSupport, 0, "bool", NULL,

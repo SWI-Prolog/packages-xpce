@@ -717,7 +717,7 @@ between a window and a picture is that the  latter has scrollbars.  We
 do not want to scroll the chess-board.
 
 \index{window,destruction}
-The message <->done_message is called  on   a  request from the X-window
+The message <->done_message is called  on   a  request from the window
 manager to delete the window (normally from the menu associated with the
 title-bar of the window).  The default  message destroys the window.  In
 our case we also have to kill the   chess  program.  The message to kill

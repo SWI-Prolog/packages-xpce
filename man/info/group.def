@@ -86,8 +86,8 @@
 #group status		"Flags indicating current status"
 
 #group selection	"Manipulation and query of selections"
-#group window_manager	"Interaction with the X-window manager"
-#group x		"X-window interaction"
+#group window_manager	"Interaction with the window manager"
+#group x		"Window-system interaction"
 
 #group behaviour	"Definition of behaviour"
 #group implementation	"Implementation of behaviour"

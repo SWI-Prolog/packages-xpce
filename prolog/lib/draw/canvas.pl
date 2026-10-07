@@ -248,7 +248,7 @@ The ->unlink behaviour  is called when  an object is  removed from the
 PCE object base, either initiated through  `Object ->free', or through
 the garbage collector.  `Object ->unlink' is responsible for unlinking
 the object   from its environment.   For  example,  when  a  window is
-unlinked it should inform X-windows; when a  graphical is unlinked, it
+unlinked it should inform the window system; when a  graphical is unlinked, it
 should  inform its device.  Removing an  object entails the  following
 steps:
 

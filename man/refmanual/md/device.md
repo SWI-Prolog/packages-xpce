@@ -8,7 +8,7 @@ events over their displayed graphical objects; etc.
 
 Devices communicate changed area's to their super-device and eventually
 to the window, which takes care of planning and executing the actual
-redisplay of the X-window.
+redisplay of the window.
 
 The PCE-user normally uses the behaviour of devices via the classes
 figure or one of the sub-classes of window.  Class device itself may be

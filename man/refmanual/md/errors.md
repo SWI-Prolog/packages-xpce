@@ -107,7 +107,7 @@ defined (i.e. 0).
 
 The methods `object ->save_in_file` and `file <-object` are intended to
 save *data* objects and *not* to save *UI* objects.  PCE can save almost
-all data objects, but only very few of the X-window related objects.
+all data objects, but only very few of the window-system related objects.
 
 @see object->save_in_file
 

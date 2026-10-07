@@ -203,8 +203,8 @@ group_summary(visibility, 'Making object (in-)visible').
 group_summary(visual, 'Behaviour related to the visual hierarchy').
 group_summary(visualisation, 'Making data visible').
 group_summary(whole, 'Managing object').
-group_summary(window_manager, 'Interaction with the X-window manager').
+group_summary(window_manager, 'Interaction with the window manager').
 group_summary(window_system, 'Connection to the underlying window system').
 group_summary(working_directory, 'Process\' or PCE working directory').
 group_summary(write, 'Writing to files').
-group_summary(x, 'X-window interaction').
+group_summary(x, 'Window-system interaction').

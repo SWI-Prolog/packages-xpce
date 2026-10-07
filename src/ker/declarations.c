@@ -540,7 +540,7 @@ static struct class_definition classdefs[] =
 
 
   { NAME_window, NAME_device, makeClassWindow,
-    &ClassWindow, "Interface between X-window and device" },
+    &ClassWindow, "Scrollable device with its own coordinate system" },
 
   { NAME_windowDecorator, NAME_window, makeClassWindowDecorator,
     &ClassWindowDecorator, "Attach scrollbars and label to a window" },

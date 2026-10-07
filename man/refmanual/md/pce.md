@@ -393,7 +393,7 @@ etc.
     	spatial				execution of spatial constraints
     	text				Updating of text_images
     	undo				Undo in text_buffers
-    	xref				X window references database
+    	xref				Window-system references database
 
     ->nodebug_subject removes an item from this list.
 
@@ -777,7 +777,7 @@ etc.
 - pce<-core_usage: -> bytes=int
     Number of bytes core allocated by PCE.  Notes:
 
-    1. Memory requested by the X-window libraries or the
+    1. Memory requested by the window-system libraries or the
     	host-language is not included
 
     2. Memory requested by PCE is never returned to the process.

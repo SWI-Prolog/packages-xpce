@@ -867,7 +867,7 @@ NewClass(frameobj)
   Application	application;		/* Application it belongs too */
   DisplayObj	display;		/* Display it is displayed on */
   Area		area;			/* Area of the frame */
-  Name		geometry;		/* X-Window geometry spec */
+  Name		geometry;		/* X11-style geometry spec */
   BoolObj	placed;			/* User tried to fix placement */
   Chain		members;		/* Windows displayed */
   Name		kind;			/* Kind of frame */
@@ -986,13 +986,13 @@ End;
 #define CLICK_TYPE_triple	(0x040000)
 
 		/********************************
-		*      X-WINDOW REFERENCES	*
+		*   WINDOW-SYSTEM REFERENCES	*
 		********************************/
 
 struct xref
 { Any		object;			/* Object (Cursor, Font, ...) */
   DisplayObj    display;		/* Display for which to get ref */
-  void *	xref;			/* X-window reference */
+  void *	xref;			/* Window-system reference */
   Xref		next;			/* Next entry of table */
 };
 
@@ -1133,7 +1133,7 @@ GLOBAL	HashTable FontTable;		/* FontName --> Font */
 GLOBAL  HashTable FontAliasTable;	/* Alias -> font */
 GLOBAL  HashTable FontFamilyTable;	/* Family -> Pango family */
 GLOBAL	HashTable ImageTable;		/* ImageName --> Image */
-GLOBAL  HashTable WindowTable;		/* X-Window --> PceWindow|FrameObj */
+GLOBAL  HashTable WindowTable;		/* Window system --> PceWindow|FrameObj */
 
 GLOBAL  EventTreeObj  EventTree;	/* @event_tree */
 GLOBAL  Chain grabbedWindows;		/* @grabbed_windows */

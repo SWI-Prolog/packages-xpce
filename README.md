@@ -15,7 +15,8 @@ is  the  result  of  a  joint  effort  from  Anjo  Anjewierden  and  Jan
 Wielemaker. This was the last version based  on SunView. Version 4 and 5
 have been designed and implemented by Jan  Wielemaker. It makes the full
 object oriented mechanisms  underlying  PCE   available  to  the  Prolog
-programmer and has bindings for X-windows (X11) and MS-Windows (Win32).
+programmer.  Current versions use SDL3 and Cairo for the graphics and
+run on Linux, macOS and Windows.
 
 
 # Copyrights
