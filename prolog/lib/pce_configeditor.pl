@@ -48,7 +48,10 @@
 :- pce_autoload(font_item,              library(pce_font_item)).
 :- pce_autoload(file_item,              library(file_item)).
 :- pce_autoload(colour_item,            library(pce_colour_item)).
+:- pce_autoload(cursor_item,            library(pce_cursor_item)).
+:- pce_autoload(style_item,             library(pce_style_item)).
 :- pce_autoload(colour_palette_item,    library(pce_colour_item)).
+:- pce_autoload(colour_set_item,        library(pce_colour_item)).
 :- pce_autoload(directory_item,         library(file_item)).
 :- pce_autoload(set_item,               library(pce_set_item)).
 

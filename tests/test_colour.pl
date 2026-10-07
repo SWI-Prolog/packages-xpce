@@ -49,7 +49,11 @@ colour, `Image <-pixel' and the terminal palette all read these tables.
 */
 
 test_colour :-
-    run_tests([ colour
+    run_tests([ colour,
+                colour_palette_item,
+                theme_colour_summary,
+                colour_item,
+                ansi_colours_item
               ]).
 
 :- begin_tests(colour).
@@ -235,3 +239,187 @@ test(colour_names_protected, [R == 250]) :- % kernel keeps pointers
     get(C, red, R).
 
 :- end_tests(colour).
+
+
+                 /*******************************
+                 *     COLOUR PALETTE ITEM      *
+                 *******************************/
+
+:- pce_autoload(colour_palette_item, library(pce_colour_item)).
+:- pce_autoload(colour_set_item, library(pce_colour_item)).
+:- pce_autoload(colour_item, library(pce_colour_item)).
+:- pce_autoload(ansi_colours_item, library(pce_colour_item)).
+:- pce_autoload(colour_editor, library(pce_colour_editor)).
+
+slider_values(Item, RGB) :-
+    maplist(slider_value(Item), [red,green,blue], RGB).
+
+slider_value(Item, Name, Value) :-
+    get(Item, member, Name, Slider),
+    get(Slider, selection, Value).
+
+:- begin_tests(colour_palette_item).
+
+test(sliders, [RGB == [255,128,0]]) :-
+    new(I, colour_palette_item(c, colour(@default, 255, 128, 0))),
+    slider_values(I, RGB).
+test(sliders_drive_selection, [RGB == [10,20,30]]) :-
+    new(I, colour_palette_item(c, red)),
+    get(I, member, red, R), send(R, selection, 10),
+    get(I, member, green, G), send(G, selection, 20),
+    get(I, member, blue, B), send(B, selection, 30),
+    send(I, slider_dragged),
+    get(I, selection, C),
+    maplist([S,V]>>get(C, S, V), [red,green,blue], RGB).
+test(hex_shows_name, [Name == red]) :-
+    new(I, colour_palette_item(c, colour(@default, 255, 0, 0))),
+    get(I, member, name, NI),
+    get(NI?value_text?string, value, Name).
+test(set_item, [Names == [red,green]]) :-
+    new(I, colour_set_item(p, chain(red, green))),
+    get(I, selection, Chain),
+    get(Chain, map, @arg1?name, NameChain),
+    chain_list(NameChain, Names).
+
+:- end_tests(colour_palette_item).
+
+:- begin_tests(theme_colour_summary).
+
+test(builtin, [true(sub_string(S, _, _, _, "focus"))]) :-
+    get(@pce, convert, ui_accent, colour, C),
+    get(C?summary, value, S0),
+    atom_string(S0, S).
+test(new, [S == 'Test role']) :-
+    new(C, theme_colour(test_summary_colour, red, 'Test role')),
+    get(C?summary, value, S).
+test(kept, [S == 'Test role']) :-
+    new(_, theme_colour(test_summary_colour2, red, 'Test role')),
+    new(C, theme_colour(test_summary_colour2, blue)),
+    get(C?summary, value, S).
+test(none, [S == @nil]) :-
+    new(C, theme_colour(test_summary_colour3, red)),
+    get(C, summary, S).
+
+:- end_tests(theme_colour_summary).
+
+
+                 /*******************************
+                 *          COLOUR ITEM         *
+                 *******************************/
+
+%   colour_item(-Item, +Initial, -Log)
+%
+%   Item in an open dialog.  Log collects the colours passed to the
+%   message.
+
+colour_item(Item, Initial, Log) :-
+    new(Log, chain),
+    new(D, dialog),
+    send(D, append,
+         new(Item, colour_item(c, Initial, message(Log, append, @arg1)))),
+    send(D, open).
+
+shown_name(Item, Name) :-
+    get(Item, member, colour_name, Label),
+    get(Label, selection, Name0),
+    get(Name0, value, Name).
+
+:- begin_tests(colour_item).
+
+test(initial, [Name-Shown == ui_accent-ui_accent]) :-
+    colour_item(I, ui_accent, _),
+    get(I?selection, name, Name),
+    shown_name(I, Shown).
+test(selection_no_message, [Log == []]) :-
+    colour_item(I, red, L),
+    send(I, selection, blue),
+    chain_list(L, Log).
+test(user_selection_message, [Names == [blue]]) :-
+    colour_item(I, red, L),
+    send(I, user_selection, blue),
+    get(L, map, @arg1?name, NC),
+    chain_list(NC, Names).
+test(theme_chooser, [Name == ui_link]) :-
+    colour_item(I, ui_accent, _),
+    new(Ch, pce_colour_item:theme_colour_chooser(
+                I?selection, message(I, user_selection, @arg1))),
+    get(Ch, member, browser, B),
+    send(B, selection, ui_link),
+    send(Ch, ok),
+    get(I?selection, name, Name).
+test(chooser_selects_current, [Key == ui_link]) :-
+    get(@pce, convert, ui_link, colour, C),
+    new(Ch, pce_colour_item:theme_colour_chooser(C, @nil)),
+    get(Ch, member, browser, B),
+    get(B?selection, key, Key),
+    send(Ch, destroy).
+test(editor_ok, [RGB == [0,128,255]]) :-
+    new(L, chain),
+    new(E, colour_editor(red, message(L, append, @arg1))),
+    send(E, current_colour, colour(@default, 0, 128, 255)),
+    send(E, ok),
+    get(L, head, C),
+    maplist([S,V]>>get(C, S, V), [red,green,blue], RGB).
+
+test(editor_ok_closes, [Gone-Name == true-blue]) :-
+    new(D, dialog),                     % as in the class variable editor
+    send(D, append, new(G, dialog_group(row, group))),
+    send(G, append, new(CI, colour_item(c, red))),
+    send(D, open),
+    new(E, colour_editor(red, message(CI, user_selection, @arg1))),
+    send(E, open),
+    send(E, current_colour, blue),
+    send(E, ok),
+    (object(E) -> Gone = false ; Gone = true),
+    get(CI?selection, name, Name).
+
+test(editor_use_named, [Name-Kind == salmon-named]) :-
+    new(L, chain),
+    new(E, colour_editor(colour(@default, 250, 130, 110),
+                         message(L, append, @arg1))),
+    get(E, member, named_1, Candidate),
+    send(Candidate, use),
+    send(E, ok),
+    get(L, head, C),
+    get(C, name, Name),
+    get(C, kind, Kind).
+
+:- end_tests(colour_item).
+
+
+%   ansi_colours_item edits terminal_image<-ansi_colours, a vector of 16
+%   colours.  @nil means the default (theme) colours.
+
+colour_name(Item, Index, Name) :-
+    get(Item, colour, Index, Colour),
+    get(Colour, name, Name).
+
+:- begin_tests(ansi_colours_item).
+
+test(defaults, [Squares-First-Last == 16-ansi_black-ansi_bright_white]) :-
+    new(I, ansi_colours_item(ansi, @nil)),
+    get(I?graphicals, find_all,
+        message(@arg1, instance_of, ansi_colour_swatch), Swatches),
+    get(Swatches, size, Squares),
+    colour_name(I, 1, First),
+    colour_name(I, 16, Last).
+test(tooltip, Tip == "Bright red (default ansi_bright_red)") :-
+    new(I, ansi_colours_item(ansi, @nil)),
+    get(I?graphicals, find, @arg1?index == 10, Swatch),
+    get(Swatch, help_message, tag, String),
+    get(String, value, Tip0),
+    atom_string(Tip0, Tip).
+test(edit, [Size-Edited-Other-Sent == 16-orange-ansi_red-orange]) :-
+    new(Log, chain),
+    new(I, ansi_colours_item(ansi, @nil,
+                             message(Log, append, @arg1))),
+    send(I, user_colour, 3, colour(orange)),
+    get(I, selection, V),
+    get(V, size, Size),
+    colour_name(I, 3, Edited),
+    colour_name(I, 2, Other),
+    get(Log, head, Sent0),
+    get(Sent0, element, 3, SentColour),
+    get(SentColour, name, Sent).
+
+:- end_tests(ansi_colours_item).

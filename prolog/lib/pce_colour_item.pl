@@ -34,20 +34,36 @@
 
 :- module(pce_colour_item, []).
 :- use_module(library(pce)).
-:- require([ absolute_file_name/3
-           , between/3
+:- use_module(library(help_message)).
+:- pce_autoload(colour_editor, library(pce_colour_editor)).
+:- autoload(library(pce_theme), [available_theme/1]).
+:- require([ between/3
            , default/3
            , forall/2
            , ignore/1
            , send_list/3
            ]).
 
-%       The following are the result of expanded math for Quintus
-%       Prolog
+/** <module> Dialog items for colours
 
-:- require([sqrt/2,
-            ceiling/2
-           ]).
+This library defines
+
+  - colour_item
+    A compact item showing the colour as a swatch with its name and
+    buttons to select a theme colour or edit the colour.
+  - colour_palette_item
+    An item showing a palette, RGB sliders and a name field.
+  - colour_set_item
+    A colour_palette_item that edits the palette (a set of colours).
+  - colour_name_item
+    A text item that completes colour names.
+  - ansi_colours_item
+    An item showing the 16 ANSI colours of a terminal as squares that
+    can be clicked to edit the colour.
+  - theme_item
+    A cycle menu to select the colour theme (see library(pce_theme))
+    for the class variable `display.theme`.
+*/
 
 resource(cpalette,      image,  image('16x16/cpalette1.png')).
 resource(trash,         image,  image('tool/trashcan.svg')).
@@ -65,8 +81,8 @@ default_palette_colour(black).
 default_palette_colour(grey80).
 default_palette_colour(grey50).
 
-:- pce_begin_class(colour_item, dialog_group,
-                   "Item for selecting a colour").
+:- pce_begin_class(colour_palette_item, dialog_group,
+                   "Item for selecting a colour from a palette").
 
 variable(message,       code*,        both, "Executed message").
 variable(modified,      bool := @off, both, "Item was modified").
@@ -219,9 +235,8 @@ init_slider(Slider) :-
 
 set_slider(CI, Colour, SliderName) :-
     get(CI, member, SliderName, Slider),
-    get(Colour, SliderName, Value),
-    Value256 is Value // 256,
-    send(Slider, selection, Value256).
+    get(Colour, SliderName, Value),     % 0..255
+    send(Slider, selection, Value).
 
 slider_dragged(CI) :->
     current_slider_value(CI, red,   R),
@@ -231,8 +246,7 @@ slider_dragged(CI) :->
 
 current_slider_value(CI, Colour, Value) :-
     get(CI, member, Colour, Slider),
-    get(Slider, selection, Value256),
-    Value is Value256 * 257.
+    get(Slider, selection, Value).
 
 
                  /*******************************
@@ -318,9 +332,7 @@ best_divisor([H|T], Entries, Ok0/I0, R) :-
     ).
 
 divisor(N, D) :-
-    sqrt(N, SqrtN),
-    Max is ceiling(SqrtN),
-%   Max is ceil(sqrt(N)),
+    Max is ceiling(sqrt(N)),
     between(1, Max, D),
     N mod D =:= 0.
 
@@ -328,78 +340,390 @@ divisor(N, D) :-
 
 
                  /*******************************
+                 *          COLOUR ITEM         *
+                 *******************************/
+
+:- pce_begin_class(colour_item, label_box,
+                   "Show a colour and buttons to change it").
+
+variable(selection, colour, get, "Current colour").
+
+initialise(CI, Name:[name], Selection:[colour], Msg:[code]*) :->
+    "Create from label, initial colour and message"::
+    default(Name, colour, Nm),
+    send_super(CI, initialise, Nm, Msg),
+    send(CI, gap, size(5,0)),
+    send(CI, append, new(colour_swatch)),
+    send(CI, append,
+         button(theme, message(CI, choose_theme_colour)), right),
+    send(CI, append,
+         button(rgb, message(CI, edit_colour)), right),
+    send(CI, append, new(NameLabel, label(colour_name, '')), right),
+    send(NameLabel, length, 0),         % as wide as the name
+    get(CI, member, theme, Theme),
+    send(Theme, label, 'Theme…'),
+    send(Theme, compute),
+    get(Theme?area, height, BH),
+    get(CI, member, colour_swatch, Swatch),
+    send(Swatch, size, BH-4),           % about as tall as the buttons
+    send(Theme, help_message, tag, 'Select a colour of the theme'),
+    get(CI, member, rgb, RGB),
+    send(RGB, label, 'Colour…'),
+    send(RGB, help_message, tag, 'Edit the colour'),
+    default(Selection, black, Initial),
+    send(CI, selection, Initial).
+
+selection(CI, Colour:colour) :->
+    "Set the colour"::
+    send(CI, slot, selection, Colour),
+    get(CI, member, colour_swatch, Swatch),
+    send(Swatch, colour, Colour),
+    get(CI, member, colour_name, Name),
+    send(Name, selection, Colour?name),
+    send(CI, modified, @off).
+
+user_selection(CI, Colour:colour) :->
+    "The user selected Colour"::
+    send(CI, selection, Colour),
+    send(CI, forward).
+
+forward(CI) :->
+    forward_item(CI).
+
+modified_item(_CI, _Gr:graphical, _Modified:bool) :->
+    fail.
+
+clear(_CI) :->
+    true.
+
+active(CI, Val:bool) :->
+    send_super(CI, active, Val),
+    send(CI?graphicals, for_all, message(@arg1, active, Val)).
+
+choose_theme_colour(CI) :->
+    "Select a theme colour"::
+    new(Chooser, theme_colour_chooser(CI?selection,
+                                      message(CI, user_selection, @arg1))),
+    open_for(Chooser, CI).
+
+edit_colour(CI) :->
+    "Edit the colour in the HSV/RGB model"::
+    new(Editor, colour_editor(CI?selection,
+                              message(CI, user_selection, @arg1))),
+    open_for(Editor, CI).
+
+%   open_for(+Window, +Item)
+%
+%   Open Window as a transient window of the frame of Item.
+
+open_for(Window, Item) :-
+    (   get(Item, frame, Frame)
+    ->  send(Window, transient_for, Frame),
+        send(Window, modal, transient),
+        get(Item, display_position, Pos),
+        send(Window, open, Pos)
+    ;   send(Window, open)
+    ).
+
+:- pce_end_class(colour_item).
+
+%   forward_item(+Item)
+%
+%   The user changed Item.  Tell the dialog, which may handle this as
+%   the config editor does, or execute the message of Item.
+
+forward_item(Item) :-
+    send(Item, modified, @on),
+    (   get(Item, device, Dev),
+        Dev \== @nil,
+        send(Dev, modified_item, Item, @on)
+    ->  true
+    ;   ignore(send(Item, apply))       % no message is fine
+    ).
+
+
+                 /*******************************
+                 *          ANSI COLOURS        *
+                 *******************************/
+
+%   The colours of `terminal_image <-ansi_colours`, a vector of 16
+%   colours.  Clicking a colour opens the colour editor for it.  If
+%   the selection is @nil, the terminal uses the default (theme)
+%   colours, which are shown.
+
+:- pce_begin_class(ansi_colours_item, label_box,
+                   "Edit the 16 ANSI colours of a terminal").
+
+variable(selection, vector*, get, "Current colours").
+
+initialise(AI, Name:[name], Selection:[vector]*, Msg:[code]*) :->
+    "Create from label, initial colours and message"::
+    default(Name, ansi_colours, Nm),
+    send_super(AI, initialise, Nm, Msg),
+    send(AI, gap, size(3,0)),
+    forall(between(1, 16, I),
+           ( new(S, ansi_colour_swatch(I)),
+             (   I == 1
+             ->  send(AI, append, S)
+             ;   send(AI, append, S, right)
+             )
+           )),
+    default(Selection, @nil, Initial),
+    send(AI, selection, Initial).
+
+selection(AI, Colours:vector*) :->
+    "Set the colours"::
+    send(AI, slot, selection, Colours),
+    send(AI?graphicals, for_all,
+         if(message(@arg1, instance_of, ansi_colour_swatch),
+            message(@arg1, show_colour, AI))),
+    send(AI, modified, @off).
+
+colour(AI, Index:'1..16', Colour:colour) :<-
+    "Colour at Index (1-based)"::
+    get(AI, selection, Colours),
+    (   Colours \== @nil,
+        get(Colours, element, Index, Colour0),
+        Colour0 \== @nil
+    ->  Colour = Colour0
+    ;   ansi_colour(Index, _, Name),
+        get(@pce, convert, Name, colour, Colour)
+    ).
+
+edit_colour(AI, Index:'1..16') :->
+    "Edit the colour at Index"::
+    get(AI, colour, Index, Colour),
+    new(Editor, colour_editor(Colour,
+                              message(AI, user_colour, Index, @arg1))),
+    open_for(Editor, AI).
+
+user_colour(AI, Index:'1..16', Colour:colour) :->
+    "The user set the colour at Index"::
+    get(AI, selection, Old),
+    (   Old == @nil
+    ->  new(New, vector),
+        forall(between(1, 16, I),
+               ( get(AI, colour, I, C),
+                 send(New, element, I, C)
+               ))
+    ;   get(Old, copy, New)
+    ),
+    send(New, element, Index, Colour),
+    send(AI, selection, New),
+    send(AI, forward).
+
+forward(AI) :->
+    forward_item(AI).
+
+modified_item(_AI, _Gr:graphical, _Modified:bool) :->
+    fail.
+
+clear(_AI) :->
+    true.
+
+active(AI, Val:bool) :->
+    send_super(AI, active, Val),
+    send(AI?graphicals, for_all, message(@arg1, active, Val)).
+
+:- pce_end_class(ansi_colours_item).
+
+%   ansi_colour(?Index, ?Role, ?Default)
+%
+%   The role and default colour of the ANSI colours.
+
+ansi_colour( 1, 'Black',          ansi_black).
+ansi_colour( 2, 'Red',            ansi_red).
+ansi_colour( 3, 'Green',          ansi_green).
+ansi_colour( 4, 'Yellow',         ansi_yellow).
+ansi_colour( 5, 'Blue',           ansi_blue).
+ansi_colour( 6, 'Magenta',        ansi_magenta).
+ansi_colour( 7, 'Cyan',           ansi_cyan).
+ansi_colour( 8, 'White',          ansi_white).
+ansi_colour( 9, 'Bright black',   ansi_bright_black).
+ansi_colour(10, 'Bright red',     ansi_bright_red).
+ansi_colour(11, 'Bright green',   ansi_bright_green).
+ansi_colour(12, 'Bright yellow',  ansi_bright_yellow).
+ansi_colour(13, 'Bright blue',    ansi_bright_blue).
+ansi_colour(14, 'Bright magenta', ansi_bright_magenta).
+ansi_colour(15, 'Bright cyan',    ansi_bright_cyan).
+ansi_colour(16, 'Bright white',   ansi_bright_white).
+
+
+:- pce_begin_class(ansi_colour_swatch, colour_swatch,
+                   "Square showing one of the ANSI colours").
+
+variable(index, '1..16', get, "Index in the ANSI colours").
+
+initialise(S, Index:'1..16') :->
+    send_super(S, initialise),
+    send(S, slot, index, Index),
+    send(S, size, 18),
+    ansi_colour(Index, Role, Default),
+    format(string(Tip), '~w (default ~w)', [Role, Default]),
+    send(S, help_message, tag, Tip),
+    send(S, cursor, hand2),
+    send(S, recogniser,
+         click_gesture(left, '', single,
+                       message(S?device, edit_colour, S?index))).
+
+show_colour(S, AI:ansi_colours_item) :->
+    "Show my colour in AI"::
+    get(S, index, Index),
+    get(AI, colour, Index, Colour),
+    send(S, colour, Colour).
+
+:- pce_end_class(ansi_colour_swatch).
+
+
+:- pce_begin_class(colour_swatch, device,
+                   "Square in a colour").
+
+initialise(S) :->
+    send_super(S, initialise),
+    send(S, name, colour_swatch),
+    send(S, display, new(B, box(16, 16))),
+    send(B, name, box),
+    send(B, colour, grey50).
+
+size(S, Size:int) :->
+    "Make the square Size x Size pixels"::
+    get(S, member, box, Box),
+    send(Box, size, size(Size, Size)).
+
+colour(S, Colour:colour) :->
+    "Show Colour"::
+    get(S, member, box, Box),
+    send(Box, fill, Colour).
+
+%   The reference point aligns the centre of the square with the centre
+%   of the buttons next to it.  As the buttons align their label with
+%   the item label, we have the offset from the centre of a button to
+%   its reference.
+
+reference(S, Ref:point) :<-
+    "Align the centre with the centre of the buttons"::
+    get(S, member, box, Box),
+    get(Box?area, height, H),
+    (   get(S, device, Dev), Dev \== @nil,
+        get(Dev, member, theme, Button)
+    ->  get(Button, reference, BRef),
+        get(BRef, y, BY),
+        get(Button?area, height, BH),
+        Y is H//2 + BY - BH//2
+    ;   get(@pce, convert, normal, font, Font),
+        get(Font, ascent, A),
+        Y is H//2 + A//2
+    ),
+    new(Ref, point(0, Y)).
+
+:- pce_end_class(colour_swatch).
+
+
+                 /*******************************
+                 *     THEME COLOUR CHOOSER     *
+                 *******************************/
+
+:- pce_begin_class(theme_colour_chooser, frame,
+                   "Select a theme colour").
+
+variable(message, code*, both, "Called with the selected theme colour").
+
+initialise(F, Current:[colour], Msg:[code]*) :->
+    "Create from current colour and message"::
+    send_super(F, initialise, 'Select theme colour'),
+    default(Msg, @nil, TheMsg),
+    send(F, message, TheMsg),
+    send(F, append, new(B, browser(size := size(80, 20)))),
+    get(B?font, width, "  ui_text_selection_background  ", W),
+    send(B?text_image, tab_stops, vector(W+24)),
+    send(B, open_message, message(F, ok)),
+    get(@theme_colours, copy, Colours),
+    send(Colours, sort, ?(@prolog, compare_theme_colours, @arg1, @arg2)),
+    send(Colours, for_all, message(F, append_colour, @arg1)),
+    send(new(D, dialog), below, B),
+    send(D, append, button(ok)),
+    send(D, append, button(cancel)),
+    (   Current \== @default,
+        send(Current, instance_of, theme_colour)
+    ->  get(Current, name, Name),
+        send(B, selection, Name),
+        send(B, normalise, Name)
+    ;   true
+    ).
+
+append_colour(F, Colour:theme_colour) :->
+    "Add an entry for Colour"::
+    get(F, member, browser, B),
+    get(Colour, name, Name),
+    new(Icon, image(@nil, 20, 14, pixmap)),
+    send(Icon, fill, Colour),
+    send(Icon, draw_in, new(Border, box(20, 14))),
+    send(Border, colour, grey50),
+    send(B, style, Name, style(icon := Icon)),
+    (   get(Colour, summary, Summary), Summary \== @nil
+    ->  Label = string('  %s\t%s', Name, Summary)  % spaces: gap after icon
+    ;   Label = string('  %s', Name)
+    ),
+    send(B, append, dict_item(Name, Label, Colour, Name)).
+
+ok(F) :->
+    "Call <-message with the selected colour and close"::
+    get(F, member, browser, B),
+    (   get(B, selection, DI), DI \== @nil
+    ->  get(DI, object, Colour),
+        get(F, message, Msg),
+        send(F, destroy),
+        (   Msg == @nil
+        ->  true
+        ;   send(Msg, forward, Colour)
+        )
+    ;   send(F, report, warning, 'No colour selected')
+    ).
+
+cancel(F) :->
+    "Close without selecting"::
+    send(F, destroy).
+
+:- pce_end_class(theme_colour_chooser).
+
+%   compare_theme_colours(+C1, +C2, -Order)
+%
+%   Order the ui_* colours first and the ansi_* colours last, each
+%   group by name.
+
+compare_theme_colours(C1, C2, Order) :-
+    get(C1, name, N1),
+    get(C2, name, N2),
+    theme_colour_group(N1, G1),
+    theme_colour_group(N2, G2),
+    compare(Order0, G1-N1, G2-N2),
+    order_name(Order0, Order).
+
+theme_colour_group(Name, 0) :- sub_atom(Name, 0, _, _, ui_), !.
+theme_colour_group(Name, 2) :- sub_atom(Name, 0, _, _, ansi_), !.
+theme_colour_group(_, 1).
+
+order_name(<, smaller).
+order_name(=, equal).
+order_name(>, larger).
+
+
+                 /*******************************
                  *          COLOUR NAMES        *
                  *******************************/
 
-colour_bits(3).
+:- pce_global(@colour_rgb_names, make_colour_rgb_names).
 
-:- multifile
-    user:file_search_path/2.
-:- dynamic
-    user:file_search_path/2.
+%   make_colour_rgb_names(-Table)
+%
+%   Table maps the 0xRRGGBB value of the named colours of
+%   @colour_names (provided by the kernel) to their name.
 
-user:file_search_path(x11, OpenWin) :-
-    get(@pce, environment_variable, 'OPENWINHOME', OpenWin).
-user:file_search_path(x11, '/usr/lib/X11').
-user:file_search_path(x11, PceLib) :-
-    get(@pce, window_system, windows),
-    get(@pce, home, PceHome),
-    atom_concat(PceHome, '/lib', PceLib).
-
-
-:- pce_global(@colour_names,     make_colour_table).
-:- pce_global(@colour_name_list, make_colour_name_list).
-:- pce_global(@rgb_table,        make_rgb_table).
-
-make_colour_table(DB) :-
-    new(DB, hash_table),
-    absolute_file_name(x11(rgb),
-                       [ extensions([txt]),
-                         access(read),
-                         file_errors(fail)
-                       ], DataBase),
-    new(F, file(DataBase)),
-    (   send(F, open, read)
-    ->  repeat,
-        (   get(F, read_line, String)
-        ->  get(String, scan, '%d%d%d%*[ \t]%[a-zA-Z0-9_ ]',
-                vector(R, G, B, Name)),
-            send(Name, translate, ' ', '_'),
-            send(Name, downcase),
-            get(Name, value, Atom),
-            RGB is B<<16 + G<<8 + R,
-            (   get(DB, member, Atom, _)
-            ->  true
-            ;   send(DB, append, Atom, RGB)
-            ),
-            fail
-        ;   !,
-            send(F, close)
-        )
-    ;   send(@nil, report, error,
-             'Cannot read colour database %s', DataBase)
-    ).
-
-make_colour_name_list(N) :-
-    new(N, chain),
-    send(@colour_names, for_all, message(N, append, @arg1)),
-    send(N, sort).                  % ???
-
-make_rgb_table(DB) :-
-    new(DB, hash_table),
+make_colour_rgb_names(Table) :-
+    new(Table, hash_table),
     send(@colour_names, for_all,
-         message(DB, append,
-                 ?(@prolog, quant_rgb, @arg2),
-                 @arg1)).
-
-quant_rgb(RGB0, RGB) :-
-    colour_bits(Bits),
-    EBits is 8-Bits,
-    Mask is (1<<Bits)-1,
-    Mask8 is Mask << EBits,
-    RGB is (((RGB0>>16)/\Mask8)>>EBits)<<(2*Bits) +
-           (((RGB0>>8)/\Mask8)>>EBits)<<Bits +
-           ((RGB0/\Mask8)>>EBits).
+         if(not(?(Table, member, @arg2)),
+            message(Table, append, @arg2, @arg1))).
 
 :- pce_begin_class(colour_name_item, text_item,
                    "Completing item for colour-names").
@@ -407,7 +731,7 @@ quant_rgb(RGB0, RGB) :-
 initialise(NI, Name:[name], Selection:[colour], Msg:[code]*) :->
     default(Name, colour, TheName),
     send(NI, send_super, initialise, TheName, Selection, Msg),
-    send(NI, value_set, @colour_name_list).
+    send(NI, value_set, @colour_list).
 
 selection(NI, Selection:colour) :<-
     "Get selection as a colour object"::
@@ -425,14 +749,8 @@ standardise_colour_name(Colour, XName) :-
     get(Colour, red, R),
     get(Colour, green, G),
     get(Colour, blue, B),
-    colour_bits(Bits),
-    Mask is (1<<Bits)-1,
-    EBits is 16-Bits,
-    Mask16 is Mask << EBits,
-    RGB is (((B/\Mask16)>>EBits)<<(2*Bits)) +
-           (((G/\Mask16)>>EBits)<<Bits) +
-           ((R/\Mask16)>>EBits),
-    get(@rgb_table, member, RGB, XName),
+    RGB is (R<<16) + (G<<8) + B,
+    get(@colour_rgb_names, member, RGB, XName),
     !.
 standardise_colour_name(Colour, Name) :-
     get(Colour, name, Name).
@@ -440,8 +758,8 @@ standardise_colour_name(Colour, Name) :-
 
 :- pce_end_class.
 
-:- pce_begin_class(colour_palette_item, colour_item,
-                   "Editor for a colour-palette").
+:- pce_begin_class(colour_set_item, colour_palette_item,
+                   "Editor for a set of colours (a palette)").
 
 initialise(PI, Name:[name], Selection:[chain], Msg:[code]*) :->
     send(PI, send_super, initialise, Name, @default, Msg, Selection).
@@ -458,5 +776,5 @@ selection(PI, Selection:chain) :<-
 
 test :-
     new(D, dialog),
-    send(D, append, colour_item(colour, red)),
+    send(D, append, colour_palette_item(colour, red)),
     send(D, open).

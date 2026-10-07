@@ -505,7 +505,7 @@ builtin_config_type(colour,             [ editor(colour_item),
                                           term(if(@arg1?kind == named, name)),
                                           term([@default, red, green, blue])
                                         ]).
-builtin_config_type(setof(colour),      [ editor(colour_palette_item),
+builtin_config_type(setof(colour),      [ editor(colour_set_item),
                                           icon(cpalette2)
                                         ]).
 builtin_config_type(image,              [ editor(image_item),

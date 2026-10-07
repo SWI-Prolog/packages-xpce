@@ -146,6 +146,7 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     help_message.pl http_client.pl hyper.pl imageops.pl isocomp.pl
     keybinding.pl make_dialog.pl MKINDEX.pl Overview pan_zoom.pl
     password_item.pl pce_arm.pl pce_arrow_item.pl pce_class_index.pl
+    pce_class_variable_editor.pl pce_colour_editor.pl pce_cursor_item.pl
     pce_colour_item.pl pce_configeditor.pl pce_config.pl pce_cxx_headers.pl
     pce_debug.pl pce_dispatch.pl pce_drop_target.pl
     pcedraw.pl pce_editable_text.pl
@@ -324,7 +325,7 @@ set(XPCE_DATA_bitmaps_tool
     copy.svg distribute.svg open.svg print.svg undo.svg cut.svg
     duplicate.svg paste.svg save.svg trashcan.svg ex_up.svg ex_down.svg
     nav-forward.svg nav-backward.svg user.svg clear-text.svg wipe.svg
-    newdir.svg drag-pane.svg close-tab.svg new-tab.svg)
+    newdir.svg drag-pane.svg close-tab.svg new-tab.svg pipette.svg)
 
 set(XPCE_DATA_bitmaps_logo
     New_Unicode_logo.svg)
