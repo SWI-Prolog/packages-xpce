@@ -45,10 +45,11 @@
             find_source/3,              % +Head, -File|TextBuffer, -Line
             thread_self_id/1            % -Name|Int
           ]).
-:- use_module(library(pce), [send/2, pce_open/3, op(_, _, _)]).
+:- use_module(library(pce)).
 :- use_module(library(debug), [debug/3]).
 :- autoload(library(listing), [portray_clause/1]).
 :- autoload(library(lists), [member/2]).
+:- autoload(library(pce_class_variable_editor), [save_class_variable/3]).
 :- autoload(library(portray_text), [portray_text/1, set_portray_text/3]).
 :- autoload(library(prolog_clause), [predicate_name/2]).
 :- autoload(library(readutil), [read_file_to_terms/3]).
@@ -62,29 +63,104 @@
                  *           SETTINGS           *
                  *******************************/
 
-:- dynamic
-    setting/2,                      % what, value
-    settings_changed/0.             % save them at halt
+/* The preferences of the debugger are class variables of the class
+prolog_debug_settings.  They are edited in Settings/Debugger (see
+library(trace/settings)) or the class variable editor and saved in the
+user's Defaults file.  Older versions saved them in config('Tracer.cnf').
+This file is read once into the Defaults file and then renamed.  The
+other settings are state of the running session.
+*/
 
-setting(active,            true).       % actually use this tracer
-setting(show_unbound,      false).      % show unbound variables
-setting(cluster_variables, true).       % cluster variables
-setting(list_max_clauses,  25).         % only list this amount of clauses
-setting(stack_depth,       10).         % # frames shown
-setting(choice_depth,      10).         % # choice-points shown
-setting(term_depth,        2).          % nesting for printing terms
-setting(portray_text,      Enabled) :-
+:- pce_begin_class(prolog_debug_settings, object,
+                   "Preferences of the graphical debugger").
+
+class_variable(show_unbound,        bool, @off,
+               "The bindings show unbound variables").
+class_variable(cluster_variables,   bool, @on,
+               "The bindings cluster variables with the same value").
+class_variable(portray_text,        bool, @on,
+               "Portray code lists as text").
+class_variable(portray_text_length, '0..', 30,
+               "Show an ellipsis for text that is longer").
+class_variable(stack_depth,         '2..', 10,
+               "Number of stack frames shown").
+class_variable(choice_depth,        '0..', 10,
+               "Number of choice points shown").
+class_variable(list_max_clauses,    '2..', 25,
+               "Most clauses decompiled when listing dynamic code").
+class_variable(auto_raise,          bool, @on,
+               "Raise the debugger when it is entered").
+class_variable(auto_close,          bool, @on,
+               "Close the debugger on nodebug and abort").
+class_variable(use_pce_emacs,       bool, @on,
+               "Use the built-in PceEmacs editor").
+class_variable(other_threads,       {trace,nodebug,block}, block,
+               "How to handle other threads that trap the debugger").
+
+:- pce_end_class(prolog_debug_settings).
+
+:- dynamic
+    local_setting/2.
+
+local_setting(active,          true).   % actually use this tracer
+local_setting(term_depth,      2).      % nesting for printing terms
+local_setting(console_actions, false).  % map actions from the console
+
+%!  setting(?Name, ?Value) is nondet.
+%
+%   Value is the value of the debugger setting Name.  Booleans are
+%   `true` or `false`.  The portray_text settings are those of
+%   library(portray_text).
+
+setting(Name, Value) :-
+    atom(Name),
+    !,
+    (   preference(Name)
+    ->  preference_value(Name, Value)
+    ;   local_setting(Name, Value)
+    ).
+setting(Name, Value) :-
+    (   preference(Name),
+        preference_value(Name, Value)
+    ;   local_setting(Name, Value)
+    ).
+
+%   preference(?Name) is nondet.
+%
+%   Name is a preference: a class variable of prolog_debug_settings.
+
+preference(Name) :-
+    atom(Name),
+    !,
+    get(class(prolog_debug_settings), class_variable, Name, _).
+preference(Name) :-
+    get(class(prolog_debug_settings), class_variables, CVs),
+    chain_list(CVs, List),
+    member(CV, List),
+    get(CV, name, Name).
+
+preference_value(portray_text, Enabled) :-
+    !,
     set_portray_text(enabled, Enabled, Enabled).
-setting(portray_text_length, Len) :-
+preference_value(portray_text_length, Len) :-
+    !,
     set_portray_text(ellipsis, Len, Len).
-setting(auto_raise,        true).       % automatically raise the frame
-setting(auto_close,        true).       % automatically raise the frame
-setting(console_actions,   false).      % map actions from the console
-setting(use_pce_emacs,     true).       % use PceEmacs editor
-setting(other_threads,     block).      % One of `trace`, `nodebug`, `block`
+preference_value(Name, Value) :-
+    get(class(prolog_debug_settings), class_variable, Name, CV),
+    get(CV, value, PceValue),
+    pce_value(PceValue, Value).
+
+pce_value(@on,  true) :- !.
+pce_value(@off, false) :- !.
+pce_value(Value, Value).
 
 trace_setting(Name, Value) :-
     setting(Name, Value).
+
+%!  trace_setting(+Name, -Old, +New) is det.
+%
+%   Set the setting Name to New.  A preference is also saved in the
+%   user's Defaults file.
 
 trace_setting(Name, Old, New) :-
     setting(Name, Old),
@@ -93,67 +169,123 @@ trace_setting(Name, Old, New) :-
 trace_setting(portray_codes, Old, New) :- % compatibility
     !,
     trace_setting(portray_text, Old, New).
-trace_setting(portray_text, Old, New) :-
-    !,
-    setting(portray_text, Old),
-    portray_text(New),
-    changed_settings.
-trace_setting(portray_text_length, Old, New) :-
-    !,
-    set_portray_text(ellipsis, Old, New),
-    changed_settings.
 trace_setting(Name, Old, New) :-
-    clause(setting(Name, Old), true, Ref),
+    preference(Name),
     !,
-    erase(Ref),
-    assertz(setting(Name, New)),
-    changed_settings,
+    setting(Name, Old),
+    set_preference(Name, New),
+    ignore(save_preference(Name, New)).
+trace_setting(Name, Old, New) :-
+    retract(local_setting(Name, Old)),
+    !,
+    assertz(local_setting(Name, New)),
+    notify_gui.
+trace_setting(Name, Old, _) :-
+    setting(Name, Old).
+
+set_preference(Name, Value) :-
+    pce_value(PceValue, Value),
+    send(class(prolog_debug_settings), class_variable_value, Name, PceValue),
+    preference_changed(Name, Value).
+
+save_preference(Name, Value) :-
+    pce_value(PceValue, Value),
+    save_class_variable(prolog_debug_settings, Name, PceValue).
+
+%   preference_changed(+Name, +Value)
+%
+%   Act on a preference that changed in the running session.
+
+preference_changed(portray_text, Enabled) :-
+    !,
+    portray_text(Enabled).
+preference_changed(portray_text_length, Len) :-
+    !,
+    set_portray_text(ellipsis, _, Len).
+preference_changed(_, _) :-
+    notify_gui.
+
+notify_gui :-
     (   current_predicate(prolog_gui:notify_gui/0)
     ->  prolog_gui:notify_gui
     ;   true
     ).
-trace_setting(Name, Old, _) :-
-    setting(Name, Old).
 
-%   The settings are only saved if they were changed, so a process
-%   that merely loads the debugger does not write the file.
+:- multifile
+    pce_preferences:class_variable_changed/3.
 
-changed_settings :-
-    (   settings_changed
-    ->  true
-    ;   assertz(settings_changed)
-    ).
+pce_preferences:class_variable_changed(prolog_debug_settings, Name,
+                                       PceValue) :-
+    pce_value(PceValue, Value),
+    preference_changed(Name, Value).
 
-save_trace_settings :-
-    settings_changed,
-    absolute_file_name(config('Tracer.cnf'), Path,
-                       [ access(write),
+%   init_trace_settings
+%
+%   Hand the portray_text preferences to library(portray_text) if they
+%   are not the defaults and migrate config('Tracer.cnf').
+
+init_trace_settings :-
+    forall(( member(Name, [portray_text, portray_text_length]),
+             get(class(prolog_debug_settings), class_variable, Name, CV),
+             get(CV, value, PceValue),
+             get(CV, default, Default),
+             \+ default_value(CV, Default, PceValue)
+           ),
+           ( pce_value(PceValue, Value),
+             preference_changed(Name, Value)
+           )),
+    migrate_trace_settings.
+
+default_value(CV, Default, Value) :-
+    (   send(Default, instance_of, char_array)
+    ->  get(CV, convert_string, Default, DefaultValue)
+    ;   DefaultValue = Default
+    ),
+    DefaultValue == Value.
+
+%   migrate_trace_settings
+%
+%   Apply the settings of config('Tracer.cnf'), written by older
+%   versions.  If they can be saved in the user's Defaults file, the
+%   file is renamed to Tracer.cnf.migrated, so this happens only once.
+
+migrate_trace_settings :-
+    absolute_file_name(config('Tracer.cnf'), File,
+                       [ access(read),
                          file_errors(fail)
                        ]),
+    read_file_to_terms(File, Terms, []),
     !,
-    setup_call_cleanup(
-        open(Path, write, Out),
-        forall(( setting(Name, Value),
-                 \+ no_save(Name)
-               ),
-               format(Out, '~q.~n', setting(Name, Value))),
-        close(Out)).
-save_trace_settings.
+    findall(Ok,
+            ( member(setting(Name, Value), Terms),
+              Name \== active,
+              migrate_setting(Name, Value, Ok)
+            ),
+            Oks),
+    (   \+ memberchk(false, Oks),
+        get(@pce, user_defaults, UserDefaults),
+        UserDefaults \== @nil
+    ->  file_name_extension(File, migrated, Migrated),
+        catch(rename_file(File, Migrated), _, true)
+    ;   true
+    ).
+migrate_trace_settings.
 
-no_save(active).
-
-load_trace_settings :-
-    read_file_to_terms(config('Tracer.cnf'), Terms,
-                       [ file_errors(fail)
-                       ]),
+migrate_setting(Name, Value, Ok) :-
+    preference(Name),
     !,
-    forall(member(setting(Name, Value), Terms),
-           trace_setting(Name, _, Value)),
-    retractall(settings_changed).       % loading is no change
-load_trace_settings.
+    (   setting(Name, Value)
+    ->  Ok = true
+    ;   set_preference(Name, Value),
+        (   save_preference(Name, Value)
+        ->  Ok = true
+        ;   Ok = false
+        )
+    ).
+migrate_setting(Name, Value, true) :-
+    trace_setting(Name, _, Value).
 
-:- initialization load_trace_settings.
-:- at_halt(save_trace_settings).
+:- initialization init_trace_settings.
 
 
                  /*******************************

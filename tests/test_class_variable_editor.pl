@@ -612,7 +612,7 @@ tab_rows(E, Tab, Names) :-
     get(D?rows, map, @arg1?name, Chain),
     chain_list(Chain, Names).
 
-test(general_tabs, [ Labels == ['Components', 'Text', 'Colours', 'Layout',
+test(general_tabs, [ Labels == ['Components', 'Text', 'Theme', 'Layout',
                                 'IDE'] ]) :-
     use_module(library(pane_frame)),    % adds the IDE tab
     new(E, class_variable_editor),
@@ -621,14 +621,21 @@ test(general_tabs, [ Labels == ['Components', 'Text', 'Colours', 'Layout',
     get(TS?graphicals, map, @arg1?label, Chain),
     chain_list(Chain, Labels),
     send(E, destroy).
+test(general_heading, [ Sections = [_,_] ]) :-
+    pce_preferences:general_preferences(Tabs),
+    memberchk(tab(theme, _, Theme), Tabs),
+    memberchk(heading('Bell', Sections), Theme).
 test(general_tab_without_classes, [ fail ]) :-
     pce_preferences:general_preferences(Tabs),
     memberchk(tab(tcve_empty, _, _), Tabs).
 test(general_rows, [ true(subset([scale, pango_families, blink], Text)),
+                     true(subset([theme, visual_bell, volume, bell_pitch,
+                                  bell_duration], Theme)),
                      true(subset([border, gap_colour], Layout))
                    ]) :-
     new(E, class_variable_editor),
     tab_rows(E, text, Text),
+    tab_rows(E, theme, Theme),
     tab_rows(E, layout, Layout),
     send(E, destroy).
 test(general_show_all, [ true(All > Basic) ]) :-
@@ -656,7 +663,7 @@ test(path_on_components_only, [ Shown == [@on, @off, @on] ]) :-
     Shown = [S0, S1, S2],
     send(E, destroy).
 
-%   The Colours tab selects the theme, the class variable display.theme.
+%   The Theme tab selects the theme, the class variable display.theme.
 %   @default follows the desktop.
 
 test(theme_item, [ Values == [@default, dark, my_theme] ]) :-
@@ -725,10 +732,45 @@ test(sync_on_focus, [ Shown == dark,
     send(E, open),
     pce_theme:select_theme(dark),       % as the menu of the IDE
     send(E, input_focus, @on),
-    get(E?general, find, @arg1?name == colours, D),
+    get(E?general, find, @arg1?name == theme, D),
     get(D?rows, find, @arg1?name == theme, Row),
     get(Row, value, Shown),
     send(E, destroy).
+
+%   The scope menu is only active if it offers a choice: a class
+%   variable that only display has can only be set for display.
+
+test(scope_single_class, [ Active == [@off, @on] ]) :-
+    new(Volume, pce_class_variable_editor:cv_row(class(display),
+                                                 class(display), volume)),
+    new(Style, pce_class_variable_editor:cv_row(class(editor),
+                                                class(editor),
+                                                selection_style)),
+    get(Volume?scope, active, A0),
+    get(Style?scope, active, A1),
+    Active = [A0, A1].
+
+%   The audible bell is only used if the visual bell is off.  The rows
+%   that configure it are inactive otherwise.
+
+test(requires, [ Active == [@off, @on, @on, @off],
+                 cleanup(send(class(graphical), class_variable_value,
+                              visual_bell, @on))
+               ]) :-
+    send(class(graphical), class_variable_value, visual_bell, @on),
+    new(Volume, pce_class_variable_editor:cv_row(class(display),
+                                                 class(display), volume)),
+    new(Flash, pce_class_variable_editor:cv_row(
+                   class(graphical), class(graphical),
+                   visual_bell_duration)),
+    get(Volume?item, active, A0),
+    get(Flash?item, active, A1),
+    send(class(graphical), class_variable_value, visual_bell, @off),
+    send(Volume, sync),
+    send(Flash, sync),
+    get(Volume?item, active, A2),
+    get(Flash?item, active, A3),
+    Active = [A0, A1, A2, A3].
 
 %   A tool in the IDE is a pane_stack.  Where it is added is shown with
 %   the preferences of any object in it.
@@ -759,6 +801,251 @@ test(emacs_buffer, [ true(memberchk(unicode_encoding, Names)) ]) :-
     chain_list(Chain, Names),
     send(E, destroy),
     free(V).
+
+%   The profiler shows the preferences of its panes, also of those in
+%   its tabs.
+
+test(profiler, [ Rows == [ prof_frame-auto_reset,
+                           prof_browser-max_width,
+                           prof_graph-caller_depth,
+                           prof_graph-callee_depth,
+                           prof_graph-prune_above,
+                           prof_graph-max_relatives,
+                           prof_graph-max_nodes,
+                           prof_graph-natural_zoom,
+                           prof_details-header_colour,
+                           prof_details-header_background
+                         ]
+               ]) :-
+    use_module(library(swi/pce_profile)),
+    new(P, prof_frame),
+    get(P, contained, class(prof_browser), B),
+    new(E, class_variable_editor),
+    send(E, edit, B),
+    get(E?rows, map, @arg1?class?name, ClassChain),
+    get(E?rows, map, @arg1?name, NameChain),
+    chain_list(ClassChain, Classes),
+    chain_list(NameChain, Names),
+    pairs_keys_values(Rows, Classes, Names),
+    send(E, destroy),
+    free(P).
+
+%   The settings of the cross-referencer are class variables, so the
+%   editor shows them with the colours it uses.
+
+test(xref, [ [Rows, Setting] ==
+             [ [ xref_tool-warn_autoload,
+                 xref_tool-warn_not_called,
+                 xref_tool-hide_system_files,
+                 xref_tool-hide_profile_files,
+                 xref_predicate_text-colour,
+                 xref_predicate_text-colour_autoload,
+                 xref_predicate_text-colour_global,
+                 xref_predicate_text-colour_undefined,
+                 xref_predicate_text-colour_not_called,
+                 xref_file_graph_node-background,
+                 xref_file_graph_node-colour,
+                 xref_file_graph_node-font,
+                 prolog_file_info-header_colour,
+                 prolog_file_info-header_background
+               ],
+               true
+             ],
+             cleanup(send(class(xref_tool), class_variable_value,
+                          warn_autoload, @off))
+           ]) :-
+    use_module(library(pce_xref)),
+    new(X, xref_tool),
+    send(X, setting, warn_autoload, @on),       % as the Settings menu
+    pce_xref_gui:setting(warn_autoload, Setting),
+    new(E, class_variable_editor),
+    send(E, edit, X),
+    get(E?rows, map, @arg1?class?name, ClassChain),
+    get(E?rows, map, @arg1?name, NameChain),
+    chain_list(ClassChain, Classes),
+    chain_list(NameChain, Names),
+    pairs_keys_values(Rows, Classes, Names),
+    send(E, destroy),
+    free(X).
+
+%   The preferences of the debugger are class variables of
+%   prolog_debug_settings.  A change in the editor reaches
+%   library(portray_text) through pce_preferences:class_variable_changed/3
+%   and the settings of an older config('Tracer.cnf') are applied.
+
+test(debugger, [ true(subset([ prolog_debug_settings-show_unbound,
+                               prolog_debug_settings-stack_depth,
+                               prolog_debug_settings-other_threads,
+                               prolog_bindings_view-font
+                             ], Rows))
+               ]) :-
+    use_module(library(trace/util)),
+    use_module(library(trace/gui)),
+    once(pce_preferences:preferences(prolog_debugger, Spec)),
+    pce_preferences:preference_sections(@nil, Spec, Sections),
+    findall(Class-Name,
+            ( member(section(C, Names), Sections),
+              get(C, name, Class),
+              member(Name, Names),
+              new(_, pce_class_variable_editor:cv_row(C, C, Name))
+            ),
+            Rows).
+test(debugger_portray_text, [ Len == 42,
+                              cleanup(( send(class(prolog_debug_settings),
+                                             class_variable_value,
+                                             portray_text_length, Old),
+                                        set_portray_text(ellipsis, _, Old)
+                                      ))
+                            ]) :-
+    use_module(library(trace/util)),
+    set_portray_text(ellipsis, Old, Old),
+    new(Row, pce_class_variable_editor:cv_row(
+                 class(prolog_debug_settings), class(prolog_debug_settings),
+                 portray_text_length)),
+    send(Row, value, 42),
+    send(Row, item_changed),
+    set_portray_text(ellipsis, Len, Len).
+test(debugger_migrate, [ Depth == 17,
+                         cleanup(( send(class(prolog_debug_settings),
+                                        class_variable_value,
+                                        stack_depth, Old),
+                                   ignore(delete_file(File))
+                                 ))
+                       ]) :-
+    use_module(library(trace/util)),
+    prolog_trace_utils:setting(stack_depth, Old),
+    absolute_file_name(config('Tracer.cnf'), File,
+                       [ access(write) ]),
+    setup_call_cleanup(open(File, write, Out),
+                       format(Out, '~q.~n', [setting(stack_depth, 17)]),
+                       close(Out)),
+    prolog_trace_utils:migrate_trace_settings,
+    prolog_trace_utils:setting(stack_depth, Depth).
+
+%   A view gives its font to its editor.  Changing the font of the
+%   view updates the editor; the bindings view of the debugger also
+%   updates its tab stops.
+
+test(view_font, [ [Points, TabChanged] == [20, true],
+                  cleanup(( send(class(prolog_bindings_view),
+                                 class_variable_value, font, Old),
+                            send(F, destroy)
+                          ))
+                ]) :-
+    use_module(library(trace/gui)),
+    get(class(prolog_bindings_view), class_variable, font, CV),
+    get(CV, value, Old),
+    new(F, frame),
+    send(F, append, new(B, prolog_bindings_view)),
+    send(F, open),
+    get(B?text_image?tab_stops, element, 1, Tab0),
+    new(Row, pce_class_variable_editor:cv_row(
+                 class(prolog_bindings_view), class(prolog_bindings_view),
+                 font)),
+    send(Row, value, font(mono, normal, 20)),
+    send(Row, item_changed),
+    get(B?editor?font, points, Points),
+    get(B?text_image?tab_stops, element, 1, Tab1),
+    (   Tab1 =\= Tab0
+    ->  TabChanged = true
+    ;   TabChanged = Tab0-Tab1
+    ).
+
+%   The styles of the debugger ports are class variables of the source
+%   view.  A change applies to the open source views, which keep the
+%   margin icon of the port.
+
+test(port_style, [ [Colour, Icon] == [red, port_call],
+                   cleanup(( send(class(prolog_source_view),
+                                  class_variable_value, call_style, Old),
+                             send(F, destroy)
+                           ))
+                 ]) :-
+    use_module(library(trace/gui)),
+    get(class(prolog_source_view), class_variable, call_style, CV),
+    get(CV, value, Old),
+    new(F, frame),
+    send(F, append, new(V, prolog_source_view)),
+    send(F, open),
+    new(Row, pce_class_variable_editor:cv_row(
+                 class(prolog_source_view), class(prolog_source_view),
+                 call_style)),
+    send(Row, value, style(background := red)),
+    send(Row, item_changed),
+    get(V?editor?styles, value, call, Style),
+    get(Style?background, name, Colour),
+    get(Style?icon, name, Icon).
+
+%   The thread monitor: the colours and pen of the graphs apply to an
+%   open diagram, the graphs are edited using a toggle menu and the
+%   update interval has a slider and a switch to turn updating off.
+
+test(thread_monitor,
+     [ [Colour, Pen, Item, Switch, Interval] == [red, 2.5, menu, @on, 1],
+       cleanup(( forall(member(N-V, Old),
+                        send(class(thread_diagram), class_variable_value,
+                             N, V)),
+                 send(class(prolog_thread_monitor), class_variable_value,
+                      update_interval, OldInterval),
+                 send(F, destroy)
+               ))
+     ]) :-
+    use_module(library(swi/thread_monitor)),
+    findall(N-V, ( member(N, [local_colour, graph_pen]),
+                   get(class(thread_diagram), class_variable, N, CV),
+                   get(CV, value, V)
+                 ), Old),
+    get(class(prolog_thread_monitor), class_variable, update_interval, ICV),
+    get(ICV, value, OldInterval),
+    new(F, frame),
+    send(F, append, new(TM, prolog_thread_monitor)),
+    send(F, open),
+    send(TM, selection, main),
+    get(@thread_diagrams, head, TD),
+    new(R1, pce_class_variable_editor:cv_row(
+                class(thread_diagram), class(thread_diagram), local_colour)),
+    send(R1, value, colour(red)),
+    send(R1, item_changed),
+    new(R2, pce_class_variable_editor:cv_row(
+                class(thread_diagram), class(thread_diagram), graph_pen)),
+    send(R2, value, 2.5),
+    send(R2, item_changed),
+    get(TD, member, local, Graph),
+    get(Graph?colour, name, Colour),
+    get(Graph, pen, Pen),
+    new(R3, pce_class_variable_editor:cv_row(
+                class(prolog_thread_monitor), class(prolog_thread_monitor),
+                graphs)),
+    get(R3?item, class_name, Item),
+    new(R4, pce_class_variable_editor:cv_row(
+                class(prolog_thread_monitor), class(prolog_thread_monitor),
+                update_interval)),
+    get(R4?switch, active, Switch),
+    send(R4, value, 1),
+    send(R4, item_changed),
+    get(TM, update_interval, Interval).
+
+%   The refresh timer of an open navigator follows auto_refresh.
+
+test(navigator, [ Interval == 5,
+                  cleanup(( send(class(prolog_source_structure),
+                                 class_variable_value, auto_refresh, Old),
+                            send(F, destroy)
+                          ))
+                ]) :-
+    use_module(library(trace/browse)),
+    get(class(prolog_source_structure), class_variable, auto_refresh, CV),
+    get(CV, value, Old),
+    new(F, frame),
+    send(F, append, new(SB, prolog_navigator)),
+    send(F, open),
+    new(Row, pce_class_variable_editor:cv_row(
+                 class(prolog_source_structure),
+                 class(prolog_source_structure), auto_refresh)),
+    send(Row, value, 5),
+    send(Row, item_changed),
+    get(SB, tree, Tree),
+    get(Tree?refresh_timer, interval, Interval).
 
 test(rows_unique, [Unique == true]) :-
     new(D, dialog),

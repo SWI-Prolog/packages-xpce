@@ -34,7 +34,8 @@
 
 :- module(pce_class_variable_editor,
           [ class_variable_editor/0,
-            class_variable_editor/1     % +Object
+            class_variable_editor/1,    % +Object
+            save_class_variable/3       % +Class, +Name, +Value
           ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_configeditor), [config_item/4]).
@@ -277,26 +278,36 @@ list_conj([H|T], (H,C)) :-
 %
 %   Create the item for editing a class variable.
 
-%   cv_ui_type(+Class, +Name, +CV, -Type)
+%   cv_ui_type(+Class, +Name, +CV, -Type, -SpecialsType)
 %
 %   Type is the type used to select the item for the class variable.  This
 %   is the type of the class variable, unless class_variable_ui_type/3
-%   gives a narrower type that makes a better item, e.g., a slider.  The
-%   type of the class variable still decides what is valid.
+%   or pce_preferences:edit_type/3 gives a narrower type that makes a
+%   better item, e.g., a slider.  The type of the class variable still
+%   decides what is valid.  SpecialsType decides whether @nil or
+%   @default are allowed, i.e., whether the row has a switch.  A type
+%   from edit_type/3 is only about the item, so the class variable
+%   still decides this.
 
-cv_ui_type(Class, Name, _CV, Type) :-
+cv_ui_type(Class, Name, _CV, Type, Type) :-
     class_variable_ui_type(ClassName, Name, TypeName),
     send(Class, is_a, ClassName),
     !,
     get(@pce, convert, TypeName, type, Type).
-cv_ui_type(_, _, CV, Type) :-
+cv_ui_type(Class, Name, CV, Type, CVType) :-
+    pce_preferences:edit_type(ClassName, Name, TypeName),
+    send(Class, is_a, ClassName),
+    !,
+    get(@pce, convert, TypeName, type, Type),
+    get(CV, type, CVType).
+cv_ui_type(_, _, CV, Type, Type) :-
     get(CV, type, Type).
 
 %   class_variable_ui_type(?Class, ?Name, ?Type)
 %
-%   The class variable Name of Class is edited as Type.
+%   The class variable Name of Class is edited as Type by the editor
+%   itself.
 
-class_variable_ui_type(font, scale, '0.5..3.0').
 class_variable_ui_type(display, theme, name).   % @default: see theme_item
 
 %   dedicated_item(+Class, +Name, +Value, -Item) is semidet.
@@ -314,6 +325,10 @@ dedicated_item(Class, ansi_colours, Value, Item) :-
 dedicated_item(Class, theme, Value, Item) :-
     send(Class, is_a, display),
     new(Item, theme_item(theme, Value)).
+dedicated_item(Class, Name, Value, Item) :-
+    get(Class, name, ClassName),
+    pce_preferences:edit_item(ClassName, Name, Value, Item),
+    !.
 dedicated_item(Class, pango_families, Value, Item) :-
     send(Class, is_a, font),
     \+ special_value(_, Value),
@@ -490,6 +505,35 @@ user_defaults_file(File) :-
     atomic_list_concat(Parts, '$PCEAPPDATA', Spec1),
     atomic_list_concat(Parts, DirPath, File).
 
+%!  save_class_variable(+Class, +Name, +Value) is semidet.
+%
+%   Save Value for the class variable Name of Class in the user's
+%   Defaults file, so it applies to later sessions.  This does not
+%   change the value in the running session.  Fails if xpce does not
+%   use a user Defaults file or Value cannot be represented.
+
+save_class_variable(ClassSpec, Name, Value) :-
+    get(@pce, convert, ClassSpec, class, Class),
+    user_defaults_file(File),
+    get(Class, name, ClassName),
+    atomic_list_concat([ClassName, Name], '.', Key),
+    save_value(File, Class, Key, Name, Value).
+
+%   save_value(+File, +Target, +Key, +Name, +Value) is semidet.
+%
+%   Save Value for the class variable Name of Target as Key in the
+%   Defaults file File.  If Value is the program default, the entry is
+%   deleted.  Fails if Value cannot be represented.
+
+save_value(File, Target, Key, Name, Value) :-
+    (   program_default(Target, Name, Default),
+        \+ changed(Default, Value)
+    ->  delete_defaults(File, Key)          % reverted: no entry needed
+    ;   get(Target, class_variable, Name, CV),
+        defaults_text(CV, Value, Text),
+        save_defaults(File, Key, Text)
+    ).
+
 %!  save_defaults(+File, +Key, +Text) is det.
 %
 %   Set Key (`class.name`) to Text in the Defaults file File.  If File
@@ -652,7 +696,13 @@ refresh_object(Obj, Class, CV, Name, Old, New) :-
     send(Obj, instance_of, Class),
     get(Obj, class, ObjClass),
     get(ObjClass, class_variable, Name, CV),
-    get(ObjClass, instance_variable, Name, _),
+    (   get(ObjClass, instance_variable, Name, _)
+    ->  refresh_slot(Obj, ObjClass, Name, Old, New)
+    ;   refresh_delegated(Obj, ObjClass, Name, Old, New)
+    ),
+    relayout(Obj).
+
+refresh_slot(Obj, ObjClass, Name, Old, New) :-
     get(Obj, slot, Name, Current),
     Current == Old,
     (   get(ObjClass, send_method, Name, _),
@@ -667,8 +717,28 @@ refresh_object(Obj, Class, CV, Name, Old, New) :-
         ->  send(Obj, redraw)
         ;   true
         )
-    ),
-    relayout(Obj).
+    ).
+
+%   An object may hand the value of a class variable to a part it
+%   delegates to, e.g., a view gives its font to its editor.  If that
+%   part still holds the old value, the object is sent the new value,
+%   which it handles itself or delegates to the part.  Note that
+%   <-Name of the object itself answers the new class variable value.
+
+refresh_delegated(Obj, ObjClass, Name, Old, New) :-
+    send(Obj, has_send_method, Name),
+    get(ObjClass, delegate, Delegates),
+    get(Delegates, find,
+        message(@prolog, holds_value, Obj, @arg1?name, Name, Old), _),
+    pce_catch_error(_, send(Obj, Name, New)).
+
+holds_value(Obj, Var, Name, Value) :-
+    get(Obj, slot, Var, Part),
+    object(Part),
+    get(Part, class, PartClass),
+    get(PartClass, instance_variable, Name, _),
+    get(Part, slot, Name, Current),
+    Current == Value.
 
 %   refresh_users(+Class, +Name, +Old, +New)
 %
@@ -806,24 +876,25 @@ variable(revert,   link_label,   get, "Link to revert to the default").
 variable(help,     link_label,   get, "Link to the manual entry").
 variable(saved,    any,          both, "Value in the Defaults file").
 variable(applied,  any,          both, "Value applied to the session").
+variable(relevant, bool := @on,  get, "Off if another value makes it unused").
 
-initialise(R, Class:class, Declarer:class, Name:name) :->
+initialise(R, Class:class, Declarer:class, Name:name, Scope:[name]) :->
     send(R, slot, class, Class),
     send(R, slot, declarer, Declarer),
     send(R, slot, name, Name),
     get(Class, class_variable, Name, CV),
-    cv_ui_type(Class, Name, CV, Type),
+    cv_ui_type(Class, Name, CV, Type, SpecialsType),
     class_variable_value(Class, Name, Value),
-    cv_config_type(Type, ConfigType, Specials),
+    cv_config_type(Type, ConfigType, _),
+    cv_config_type(SpecialsType, _, Specials),
     (   dedicated_item(Class, Name, Value, Item)
     ->  true
     ;   pce_catch_error(_, cv_item(ConfigType, Name, CV, Value, Item))
     ->  true
     ;   cv_item(generic, Name, CV, Value, Item)
     ),
-    (   get(CV, summary, Summary),
-        Summary \== @nil, Summary \== @default
-    ->  send(Item, help_message, tag, Summary)
+    (   item_tooltip(Class, Name, CV, Tooltip)
+    ->  send(Item, help_message, tag, Tooltip)
     ;   true
     ),
     value_tooltips(Item, Class, Name),
@@ -846,20 +917,32 @@ initialise(R, Class:class, Declarer:class, Name:name) :->
     ),
     make_switch(R, Specials),
     send(R, show_special, Value),
-    send(R, slot, scope, new(Scope, menu(scope, cycle))),
-    send(Scope, show_label, @off),
+    send(R, slot, scope, new(Menu, menu(scope, cycle))),
+    send(Menu, show_label, @off),
     get(Class, name, ClassName),
     get(Declarer, name, DeclName),
-    send(Scope, append, menu_item(ClassName, @default, ClassName)),
+    send(Menu, append, menu_item(ClassName, @default, ClassName)),
     (   DeclName == ClassName
     ->  true
-    ;   send(Scope, append, menu_item(DeclName, @default, DeclName))
+    ;   send(Menu, append, menu_item(DeclName, @default, DeclName))
     ),
-    send(Scope, append, menu_item(*, @default, *)),
-    send(Scope, help_message, tag,
-         'Class for which to set the value.  * sets it for all classes'),
+    send(Menu, append, menu_item(*, @default, *)),
+    (   Scope == @default
+    ->  true
+    ;   send(Menu, selection, Scope)
+    ),
+    (   Scope == @default,              % all choices set the same
+        DeclName == ClassName,
+        declaring_classes(Name, [_])
+    ->  send(Menu, active, @off),
+        send(Menu, help_message, tag,
+             'Only this class has this class variable')
+    ;   send(Menu, help_message, tag,
+             'Class for which to set the value.  * sets it for all classes')
+    ),
     send(R, saved, Value),
     send(R, applied, Value),
+    send(R, update_relevant),
     send(R, update_revert).
 
 %   value_tooltips(+Item, +Class, +Name)
@@ -921,7 +1004,8 @@ sync(R) :->
     ->  send(R, value, Value),
         send(R, applied, Value)
     ;   true
-    ).
+    ),
+    send(R, update_relevant).
 
 update_revert(R) :->
     "Show the revert link if the value differs from the default"::
@@ -999,9 +1083,77 @@ show_special(R, Value:any) :->
     send(R, activate_item).
 
 activate_item(R) :->
-    "The item is active if the switch is on"::
+    "The item is active if the switch is on and the value is used"::
     get(R?switch, selection, On),
-    send(R?item, active, On).
+    get(R, relevant, Relevant),
+    (   On == @on, Relevant == @on
+    ->  send(R?item, active, @on)
+    ;   send(R?item, active, @off)
+    ).
+
+update_relevant(R) :->
+    "Deactivate the row if the value it edits is not used"::
+    get(R, class, Class),
+    get(R, name, Name),
+    (   requirement(Class, Name, OnClass, OnName, Required)
+    ->  (   class_variable_value(OnClass, OnName, Current),
+            \+ changed(Current, Required)
+        ->  Relevant = @on
+        ;   Relevant = @off
+        )
+    ;   Relevant = @on
+    ),
+    (   get(R, relevant, Relevant)
+    ->  true
+    ;   send(R, slot, relevant, Relevant),
+        send(R, activate_item)
+    ).
+
+%   item_tooltip(+Class, +Name, +CV, -Tooltip) is semidet.
+%
+%   Tooltip is the summary of the class variable CV and the class
+%   variable it requires, if any.
+
+item_tooltip(Class, Name, CV, Tooltip) :-
+    (   get(CV, summary, Summary),
+        Summary \== @nil, Summary \== @default
+    ->  get(Summary, value, Lines0),
+        Lines = [Lines0]
+    ;   Lines = []
+    ),
+    (   requirement(Class, Name, OnClass, OnName, Required)
+    ->  get(OnClass, name, OnClassName),
+        value_to_defaults_text(Required, RequiredText),
+        format(string(Req), 'Only used if ~w.~w is ~w',
+               [OnClassName, OnName, RequiredText]),
+        append(Lines, [Req], All)
+    ;   All = Lines
+    ),
+    All \== [],
+    atomic_list_concat(All, '\n', Tooltip).
+
+%   requirement(+Class, +Name, -OnClass, -OnName, -Value) is semidet.
+%
+%   The class variable Name of Class is only used if the class variable
+%   OnName of OnClass has the value Value.
+
+requirement(Class, Name, OnClass, OnName, Value) :-
+    class_variable_requires(ClassName, Name, OnClassName, OnName, Value),
+    send(Class, is_a, ClassName),
+    !,
+    get(@pce, convert, OnClassName, class, OnClass).
+
+%   class_variable_requires(?Class, ?Name, ?OnClass, ?OnName, ?Value)
+%
+%   The class variable Name of Class is only used if OnClass.OnName is
+%   Value.  The editor deactivates the row of Name otherwise.  The bell
+%   is only rung by `graphical ->alert` if the visual bell is off.
+
+class_variable_requires(display,   volume,        graphical, visual_bell, @off).
+class_variable_requires(display,   bell_pitch,    graphical, visual_bell, @off).
+class_variable_requires(display,   bell_duration, graphical, visual_bell, @off).
+class_variable_requires(graphical, visual_bell_duration,
+                                                  graphical, visual_bell, @on).
 
 append(R, D:dialog) :->
     "Append the items of the row as a single line to dialog D"::
@@ -1075,17 +1227,95 @@ apply(R) :->
     get(R, value, New),
     get(R, applied, Old),
     (   changed(Old, New)
-    ->  get(R, target, Target),
-        get(R, name, Name),
-        (   class_variable_value(Target, Name, Current)
-        ->  true
-        ;   Current = Old
-        ),
-        send(Target, class_variable_value, Name, New),
-        refresh_class_variable(Target, Name, Current, New),
+    ->  get(R, name, Name),
+        get(R, targets, Targets),
+        maplist(apply_class_variable(Name, Old, New), Targets),
         send(R, applied, New)
     ;   true
     ).
+
+targets(R, Targets:prolog) :<-
+    "Classes to apply the value to"::
+    get(R?scope, selection, Scope),
+    get(R, name, Name),
+    (   Scope == (*)
+    ->  star_classes(Name, Targets)
+    ;   get(R, target, Target),
+        Targets = [Target]
+    ).
+
+apply_class_variable(Name, Old, New, Target) :-
+    (   class_variable_value(Target, Name, Current)
+    ->  true
+    ;   Current = Old
+    ),
+    send(Target, class_variable_value, Name, New),
+    refresh_class_variable(Target, Name, Current, New),
+    get(Target, name, TargetName),
+    forall(pce_preferences:class_variable_changed(TargetName, Name, New),
+           true).
+
+%   star_classes(+Name, -Classes) is det.
+%
+%   Classes are the loaded classes for which `*.Name` in the Defaults
+%   file defines the class variable Name: the classes that have their
+%   own class variable Name and for which neither the class itself nor
+%   one of its super classes has an entry `Class.Name` in a Defaults
+%   file, as such an entry takes precedence.
+
+star_classes(Name, Classes) :-
+    declaring_classes(Name, Classes0),
+    defaults_keys(Keys),
+    exclude(specific_default(Keys, Name), Classes0, Classes).
+
+%   declaring_classes(+Name, -Classes) is det.
+%
+%   Classes are the loaded classes that have their own class variable
+%   Name.
+
+declaring_classes(Name, Classes) :-
+    new(All, chain),
+    send(@classes, for_all, message(All, append, @arg2)),
+    get(All, find_all,
+        message(@prolog, own_class_variable, @arg1, Name), Own),
+    chain_list(Own, Classes).
+
+own_class_variable(Class, Name) :-
+    get(Class, slot, class_variables, CVs),
+    send(CVs, instance_of, chain),
+    get(CVs, find, @arg1?name == Name, _).
+
+specific_default(Keys, Name, Class) :-
+    get(Class, name, ClassName),
+    atomic_list_concat([ClassName, Name], '.', Key),
+    memberchk(Key, Keys),
+    !.
+specific_default(Keys, Name, Class) :-
+    get(Class, super_class, Super),
+    Super \== @nil,
+    specific_default(Keys, Name, Super).
+
+%   defaults_keys(-Keys) is det.
+%
+%   Keys are the keys of the entries in the system and user Defaults
+%   files.
+
+defaults_keys(Keys) :-
+    findall(Key,
+            ( defaults_file(File),
+              defaults_lines(File, Lines),
+              member(Line, Lines),
+              entry_key(Line, Key)
+            ),
+            Keys).
+
+defaults_file(File) :-
+    absolute_file_name(pce('Defaults'), File,
+                       [ access(read),
+                         file_errors(fail)
+                       ]).
+defaults_file(File) :-
+    user_defaults_file(File).
 
 revert(R) :->
     "Restore the saved value"::
@@ -1102,14 +1332,8 @@ save(R, File:name) :->
     ->  get(R, target, Target),
         get(R, name, Name),
         get(R, key, Key),
-        (   program_default(Target, Name, Default),
-            \+ changed(Default, New)
-        ->  delete_defaults(File, Key),     % reverted: no entry needed
-            send(R, saved, New)
-        ;   get(Target, class_variable, Name, CV),
-            defaults_text(CV, New, Text)
-        ->  save_defaults(File, Key, Text),
-            send(R, saved, New)
+        (   save_value(File, Target, Key, Name, New)
+        ->  send(R, saved, New)
         ;   send(R?item, report, error,
                  'Cannot represent value for %s', Name),
             fail
@@ -1673,9 +1897,9 @@ append_group(F, Class:class, Declarer:class, Seen:chain) :->
              message(F, append_row, Class, Declarer, @arg1?name))
     ).
 
-append_row(F, Class:class, Declarer:class, Name:name) :->
+append_row(F, Class:class, Declarer:class, Name:name, Scope:[name]) :->
     "Append a row for the class variable Name, if we can edit it"::
-    (   new_row(Class, Declarer, Name, Row)
+    (   new_row(Class, Declarer, Name, Scope, Row)
     ->  get(F, editor_dialog, D),
         send(D?rows, append, Row),
         send(Row, append, D)
@@ -1711,17 +1935,50 @@ align_labels(Rows) :-
 %
 %   Append the rows for a section of a preferences specification.  If
 %   all class variables are to be shown, these are all class variables
-%   of the class of the section rather than those it specifies.
+%   of the class of the section rather than those it specifies.  The
+%   rows of a section `*(Class)` set the value for all classes.  A
+%   heading(Title, Sections) shows the rows of Sections under Title.
+%   These are always the rows specified: all class variables of their
+%   classes would not belong under Title.
 
-append_section(F, section(Class, Names)) :-
+append_section(F, heading(Title, Sections)) :-
+    !,
     get(F, editor_dialog, D),
-    append_section_label(D, Class),
-    (   send(F, show_all)
-    ->  all_class_variables(Class, CVs),
-        send(CVs, for_all,
-             message(@prolog, append_preference, F, Class, @arg1?name))
-    ;   maplist(append_preference(F, Class), Names)
-    ).
+    send(D, append, new(L, label(heading, Title, bold))),
+    send(L, alignment, left),
+    maplist(append_specified_rows(F), Sections).
+append_section(F, Section) :-
+    get(F, editor_dialog, D),
+    append_section_title(D, Section),
+    append_section_rows(F, Section).
+
+append_section_title(D, section(*(_), _)) :-
+    !,
+    send(D, append, new(L, label(class, 'All classes', bold))),
+    send(L, help_message, tag, 'These values apply to all classes'),
+    send(L, alignment, left).
+append_section_title(D, section(Class, _)) :-
+    append_section_label(D, Class).
+
+append_section_rows(F, section(Class, _)) :-
+    Class \= *(_),
+    send(F, show_all),
+    !,
+    all_class_variables(Class, CVs),
+    send(CVs, for_all,
+         message(@prolog, append_preference, F, Class, @arg1?name)).
+append_section_rows(F, Section) :-
+    append_specified_rows(F, Section).
+
+append_specified_rows(F, section(*(Class), Names)) :-
+    !,
+    forall(member(Name, Names),
+           ( declaring_class(Class, Name, Declarer)
+           ->  send(F, append_row, Class, Declarer, Name, *)
+           ;   true
+           )).
+append_specified_rows(F, section(Class, Names)) :-
+    maplist(append_preference(F, Class), Names).
 
 %   all_class_variables(+Class, -CVs:chain) is det.
 %
@@ -1867,8 +2124,8 @@ path_tooltip(Obj, Tip) :-
     ;   Tip = Summary
     ).
 
-new_row(Class, Declarer, Name, Row) :-
-    pce_catch_error(_, new(Row, cv_row(Class, Declarer, Name))).
+new_row(Class, Declarer, Name, Scope, Row) :-
+    pce_catch_error(_, new(Row, cv_row(Class, Declarer, Name, Scope))).
 
 revert(F) :->
     "Restore the saved values"::

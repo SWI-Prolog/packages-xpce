@@ -619,10 +619,8 @@ variable(fold_previous, bool,                 both,
 variable(current_link,	name*,                get,  "Link under popup").
 variable(current_block,	terminal_block*,      get,  "Block under popup").
 
-class_variable(inject_tries, int, [windows(5), unix(20)],
-               "Times to look for a reader of inject(Spec) text").
-class_variable(fold_previous, bool, @off,
-               "Fold the output of the previous command when one is entered").
+class_variable(inject_tries, int, [windows(5), unix(20)]).
+class_variable(fold_previous, bool, @off).
 
 %!  binding(?Key, ?Method)
 %
@@ -2013,9 +2011,9 @@ terminal_prolog_flag(Term, Flag, Value, Default) :-
 %   pce_preferences:general/2).
 
 pce_preferences:preferences(epilog_window,
-    [ terminal_image - [ font, background, colour, selection_style,
+    [ terminal_image - [ font, background, colour,
                          link_style, save_lines, ansi_colours,
-                         exact_case, auto_copy
+                         exact_case, auto_copy, fold_previous
                        ],
       epilog_report  - [ placement, hide_after, background, colour ]
     ]).

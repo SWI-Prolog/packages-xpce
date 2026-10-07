@@ -1097,6 +1097,35 @@ mode(F, Mode:name) :->
 
 :- pce_end_class(prolog_debugger).
 
+:- multifile
+    pce_preferences:preferences/2,
+    pce_preferences:edit_type/3.
+
+%   The preferences a user may want to change for the debugger.  See
+%   library(pce_preferences) and the class variable editor.  Most are
+%   class variables of prolog_debug_settings (see library(trace/util)),
+%   which are also edited in Settings/Debugger.
+
+pce_preferences:preferences(prolog_debugger,
+    [ prolog_debug_settings - [ show_unbound, cluster_variables,
+                                portray_text, portray_text_length,
+                                stack_depth, choice_depth,
+                                list_max_clauses, other_threads,
+                                auto_raise, auto_close, use_pce_emacs
+                              ],
+      prolog_bindings_view  - [ font, background_inactive ],
+      prolog_source_view    - [ call_style, exit_style, redo_style,
+                                fail_style, exception_style, unify_style,
+                                break_style, choice_style, frame_style
+                              ]
+    ]).
+
+pce_preferences:edit_type(prolog_debug_settings, portray_text_length,
+                          '10..200').
+pce_preferences:edit_type(prolog_debug_settings, stack_depth,      '2..50').
+pce_preferences:edit_type(prolog_debug_settings, choice_depth,     '0..50').
+pce_preferences:edit_type(prolog_debug_settings, list_max_clauses, '2..100').
+
                  /*******************************
                  *            BUTTONS           *
                  *******************************/
@@ -1289,16 +1318,25 @@ make_prolog_binding_popup(P) :-
 initialise(B) :->
     send_super(B, initialise),
     send(B?text_buffer, undo_buffer_size, 0),
-    get(B, font, Font),
-    get(Font, ex, Ex),
-    Tab is 15 * Ex,
+    send(B, update_tab_stops),
     send(B, wrap, none),
-    send(B?text_image, tab_stops, vector(Tab)),
     send(B?text_image, recogniser, @prolog_binding_recogniser),
     send(B, editable, @off),
     send(B, style, constraint, style(colour := blue)),
     send(B?text_cursor, displayed, @off),
     send(B, ver_stretch, 0).
+
+font(B, Font:font) :->
+    "Use Font; the tab stops depend on it"::
+    send(B?editor, font, Font),
+    send(B, update_tab_stops).
+
+update_tab_stops(B) :->
+    "Set the tab stops at 15 times the width of an x"::
+    get(B, font, Font),
+    get(Font, ex, Ex),
+    Tab is 15 * Ex,
+    send(B?text_image, tab_stops, vector(Tab)).
 
 clear(B, Content:[bool]) :->
     send(B, prolog_frame, @nil),

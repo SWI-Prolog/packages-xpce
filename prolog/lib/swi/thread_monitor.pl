@@ -43,6 +43,7 @@
 :- use_module(library(tab_frame)).
 :- use_module(library(pane_frame)).
 :- use_module(library(pce_report)).
+:- use_module(library(pce_theme), [theme_colours/1]).
 :- autoload(library(aggregate), [aggregate_all/3]).
 :- autoload(library(gui_tracer), [gtrace/0]).
 :- autoload(library(pce_util), [default/3, send_list/3]).
@@ -61,6 +62,12 @@
 This library defines  the  class   prolog_thread_monitor,  a  pane  that
 displays the status of threads.
 */
+
+:- theme_colours([ thread_graph_local  = blue,
+                   thread_graph_global = orange,
+                   thread_graph_trail  = dark_green,
+                   thread_graph_cpu    = purple
+                 ]).
 
 resource(thread_running,   image, image('ide/threads/thread-running.svg')).
 resource(thread_true,      image, image('ide/threads/thread-true.svg')).
@@ -563,9 +570,21 @@ special_exception(unwind(abort)).
 
 variable(graphs, chain, get, "Graphs shown").
 
+class_variable(local_colour,  colour, thread_graph_local,
+               "Colour of the local stack graph").
+class_variable(global_colour, colour, thread_graph_global,
+               "Colour of the global stack graph").
+class_variable(trail_colour,  colour, thread_graph_trail,
+               "Colour of the trail stack graph").
+class_variable(cpu_colour,    colour, thread_graph_cpu,
+               "Colour of the CPU usage graph").
+class_variable(graph_pen,     num, 1.0,
+               "Thickness of the lines of the graphs").
+
 initialise(TD, TS:thread_status, Graphs:chain, H:int, V:int) :->
     "Create from thread-status report"::
     send_super(TD, initialise),
+    send(@thread_diagrams, append, TD),
     default_size_limit(Limit),
     send(TD, slot, graphs, Graphs),
     send(TD, axis,
@@ -582,6 +601,10 @@ default_size_limit(Limit) :-
     ->  Limit is 100*1000*1000
     ;   Limit is 10*1000*1000*1000
     ).
+
+unlink(TD) :->
+    send(@thread_diagrams, delete_all, TD),
+    send_super(TD, unlink).
 
 attach(TD, TS:thread_status) :->
     "Switch to another thread"::
@@ -634,8 +657,10 @@ show(TD, History:chain, Selector:name) :->
     get(TD, axis, x, XAxis),
     get(TD, axis, y, YAxis),
     send(TD, display, new(G, path)),
-    colour(Selector, Colour),
+    graph_colour(Selector, Colour),
     send(G, colour, Colour),
+    get(TD, class_variable_value, graph_pen, Pen),
+    send(G, pen, Pen),
     send(G, name, Selector),
     new(N, number(0)),
     send(History, for_all,
@@ -645,10 +670,20 @@ show(TD, History:chain, Selector:name) :->
                             ?(YAxis, location, Selector, @arg1?Selector))),
              message(N, plus, 1))).
 
-colour(local,  blue).
-colour(global, orange).
-colour(trail,  dark_green).
-colour(cpu,    purple).
+%   graph_colour(+Graph, -Colour)
+%
+%   Colour is the colour of Graph, the class variable <Graph>_colour of
+%   class thread_diagram.
+
+graph_colour(Graph, Colour) :-
+    atom_concat(Graph, '_colour', Name),
+    get(class(thread_diagram), class_variable, Name, CV),
+    get(CV, value, Colour).
+
+%   The diagrams, so they can be drawn again if a class variable that
+%   defines their appearance changes.
+
+:- pce_global(@thread_diagrams, new(chain)).
 
 shift_stat(TD) :->
     "Delete leftmost point"::
@@ -856,6 +891,7 @@ fill_menu_bar(TM, MD:tool_dialog) :->
 
 update_interval(TM, Interval:'int|real*') :->
     "Set the timer update interval"::
+    send(TM, slot, update_interval, Interval),
     (   get(TM, timer, Old), Old \== @nil
     ->  free(Old),
         send(TM, slot, timer, @nil)
@@ -931,8 +967,42 @@ initialise(D, TM:prolog_thread_monitor) :->
     send(D, transient_for, TM).
 
 add_field(Menu, Name) :-
-    colour(Name, Colour),
+    graph_colour(Name, Colour),
     send(Menu, append, new(MI, menu_item(Name))),
     send(MI, colour, Colour).
 
 :- pce_end_class.
+
+
+                 /*******************************
+                 *          PREFERENCES         *
+                 *******************************/
+
+:- multifile
+    pce_preferences:preferences/2,
+    pce_preferences:edit_type/3,
+    pce_preferences:edit_item/4,
+    pce_preferences:class_variable_changed/3.
+
+%   The preferences a user may want to change for the thread monitor.
+%   See library(pce_preferences) and the class variable editor.
+
+pce_preferences:preferences(prolog_thread_monitor,
+    [ prolog_thread_monitor - [ update_interval, graphs ],
+      thread_diagram        - [ local_colour, global_colour, trail_colour,
+                                cpu_colour, graph_pen
+                              ]
+    ]).
+
+pce_preferences:edit_type(prolog_thread_monitor, update_interval,
+                          '0.05..2.0').
+pce_preferences:edit_type(thread_diagram, graph_pen, '1.0..5.0').
+
+pce_preferences:edit_item(prolog_thread_monitor, graphs, Graphs, Item) :-
+    new(Item, menu(graphs, toggle)),
+    forall(member(Graph, [local, global, trail, cpu]),
+           add_field(Item, Graph)),
+    send(Item, selection, Graphs).
+
+pce_preferences:class_variable_changed(thread_diagram, _, _) :-
+    send(@thread_diagrams, for_all, message(@arg1, update)).

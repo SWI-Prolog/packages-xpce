@@ -272,6 +272,34 @@ help(_) :->
 
 
                  /*******************************
+                 *          PREFERENCES         *
+                 *******************************/
+
+:- multifile
+    pce_preferences:preferences/2,
+    pce_preferences:edit_type/3.
+
+%   The preferences a user may want to change for the profiler.  See
+%   library(pce_preferences) and the class variable editor.
+
+pce_preferences:preferences(prof_frame,
+    [ prof_frame   - [ auto_reset ],
+      prof_browser - [ max_width ],
+      prof_graph   - [ caller_depth, callee_depth, prune_above,
+                       max_relatives, max_nodes, natural_zoom
+                     ],
+      prof_details - [ header_colour, header_background ]
+    ]).
+
+pce_preferences:edit_type(prof_graph, caller_depth,  '1..5').
+pce_preferences:edit_type(prof_graph, callee_depth,  '1..5').
+pce_preferences:edit_type(prof_graph, prune_above,   '1..20').
+pce_preferences:edit_type(prof_graph, max_relatives, '1..30').
+pce_preferences:edit_type(prof_graph, max_nodes,     '10..100').
+pce_preferences:edit_type(prof_graph, natural_zoom,  '0.5..3.0').
+
+
+                 /*******************************
                  *            FILTER            *
                  *******************************/
 

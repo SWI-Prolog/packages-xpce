@@ -50,9 +50,10 @@ Run with:
 :- use_module(library(filesex), [directory_file_path/3,
                                   delete_directory_and_contents/1]).
 
-%   Loading the debugger reads and, at halt, saves its settings in
-%   config('Tracer.cnf').  Use an empty file of our own, so the tests
-%   neither depend on nor change the settings of the user.
+%   Loading the debugger migrates the settings of an old
+%   config('Tracer.cnf') to the user's Defaults file and renames it.
+%   Use an empty file of our own, so the tests neither depend on nor
+%   change the settings of the user.
 
 sandbox_tracer_config :-
     tmp_file(tracer_config, Dir),

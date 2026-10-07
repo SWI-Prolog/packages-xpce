@@ -145,7 +145,7 @@ pce_keybinding:alt_binding_function(cut,  prefix_or_cut).
 %   See library(pce_preferences) and the class variable editor.
 
 pce_preferences:preferences(emacs_view,
-    [ emacs_editor - [ font, background, selection_style,
+    [ emacs_editor - [ font, background,
                        show_open_bracket, insert_deletes_selection,
                        auto_copy, exact_case
                      ],

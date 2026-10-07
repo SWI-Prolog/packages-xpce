@@ -74,13 +74,22 @@ to a component, for example the scale of the fonts or the gaps between
 the tiles of a frame.  These are declared by the multifile predicates
 general_tab/3 and general/2, which group them in tabs of the class
 variable editor.
+
+The multifile predicate edit_type/3 narrows the type a class variable is
+edited as, for example to a range that is edited using a slider, and
+edit_item/4 provides a dedicated item.  The class variable editor calls
+class_variable_changed/3 after it changed a class variable, so a library
+can act on the new value.
 */
 
 :- multifile
     preferences/2,
     container_preferences/2,
     general_tab/3,
-    general/2.
+    general/2,
+    edit_type/3,
+    edit_item/4,
+    class_variable_changed/3.
 
 %!  preferences(?Class, ?Spec) is nondet.
 %
@@ -99,6 +108,11 @@ variable editor.
 %       the object if the root has no such member.  For example, the
 %       mode of a PceEmacs editor is via(emacs_editor, mode,
 %       emacs_language_mode).
+%     - *(Class)
+%       The class variables Names for all classes, i.e., `*.Name` in
+%       the Defaults file.  Class provides the type, the current value
+%       and the documentation.  For example, `*(editor)` for the
+%       selection style of all text objects.
 %
 %   The class variables of a member are those of the class of the
 %   member found.  If there is no member, those of the declared class
@@ -113,6 +127,34 @@ variable editor.
 %   object itself.
 
 container_preferences(pane_stack, [pane_stack - [pane_side]]).
+
+%!  edit_type(?Class, ?Name, ?Type) is nondet.
+%
+%   The class variable Name of Class (or a subclass) is edited as Type,
+%   a type that is narrower than its own and makes a better editor.
+%   Typically, Type is a range that is edited using a slider while the
+%   class variable itself accepts any number.  The type of the class
+%   variable still decides what is valid.
+
+edit_type(font,      scale,                '0.5..3.0').
+edit_type(display,   bell_pitch,           '200..2000').
+edit_type(display,   bell_duration,        '0.1..0.5').
+edit_type(graphical, visual_bell_duration, '0.1..0.5').
+
+%!  edit_item(+Class, +Name, +Value, -Item) is semidet.
+%
+%   Item is a dialog item to edit the class variable Name of the
+%   class named Class, showing Value.  Use this if the type of the
+%   class variable does not tell enough to edit it well.  The item must
+%   implement <-selection and ->selection and call its <-message if
+%   the user changes it.
+
+%!  class_variable_changed(+Class, +Name, +Value) is nondet.
+%
+%   Called by the class variable editor after it changed the class
+%   variable Name of the class named Class to Value in the running
+%   session.  A library can use this hook if the new value only takes
+%   effect if it acts on it.
 
 %!  container_components(+Visual, -Components) is det.
 %
@@ -142,7 +184,7 @@ enclosing(Visual, Root) :-
 %   class is not shown.
 
 general_tab(text,    'Text',    10).
-general_tab(colours, 'Colours', 15).
+general_tab(theme,   'Theme',   15).
 general_tab(layout,  'Layout',  20).
 general_tab(ide,    'IDE',    30).
 
@@ -150,18 +192,25 @@ general_tab(ide,    'IDE',    30).
 %
 %   Spec describes general preferences that are shown in the tab Tab.
 %   Spec is a list of `Class - Names`, where Names are class variables
-%   of Class.  The specifications of all clauses for Tab are combined,
+%   of Class, or heading(Title, Spec), which shows the preferences of
+%   Spec under Title rather than under the summaries of their classes.
+%   The specifications of all clauses for Tab are combined,
 %   so a library may add preferences to a tab.  For example, the IDE
 %   adds its preferences to the tab `ide`.
 
 general(text,
         [ font        - [ scale, pango_families ],
+          *(editor)   - [ selection_style ],
           text_cursor - [ fixed_font_style, proportional_font_style,
                           blink, colour, inactive_colour
                         ]
         ]).
-general(colours,
-        [ display - [ theme ]
+general(theme,
+        [ display - [ theme ],
+          heading('Bell',
+                  [ graphical - [ visual_bell, visual_bell_duration ],
+                    display   - [ volume, bell_pitch, bell_duration ]
+                  ])
         ]).
 general(layout,
         [ tile - [ border, fixed_border, gap_colour,
@@ -219,13 +268,22 @@ class_spec(Class, Kind, Spec) :-
 %!  preference_sections(+Root, +Spec, -Sections) is det.
 %
 %   Sections is a list of section(Class, Names), where Class is the
-%   class whose class variables Names are edited.  Members whose class
+%   class whose class variables Names are edited, or `*(Class)` for a
+%   member `*(Class)`.  An element heading(Title, Spec) results in
+%   heading(Title, Sections) if Sections is not empty.  Members whose class
 %   is not loaded are skipped.  If Root is `@nil`, the sections use the
 %   declared classes.
 
 preference_sections(Root, Spec, Sections) :-
     foldl(section(Root), Spec, Sections, []).
 
+section(Root, heading(Title, Spec)) -->
+    !,
+    { preference_sections(Root, Spec, Sections) },
+    (   { Sections == [] }
+    ->  []
+    ;   [ heading(Title, Sections) ]
+    ).
 section(Root, Member - Names) -->
     (   { member_class(Root, Member, Class) }
     ->  [ section(Class, Names) ]
@@ -242,6 +300,9 @@ member_class(Root, via(Source, Selector, Default), Class) :-
     ->  get(Obj, class, Class)
     ;   get(@pce, convert, Default, class, Class)
     ).
+member_class(Root, *(ClassName), *(Class)) :-
+    !,
+    member_class(Root, ClassName, Class).
 member_class(Root, ClassName, Class) :-
     get(@pce, convert, ClassName, class, Declared),
     (   Root \== @nil,

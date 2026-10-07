@@ -79,21 +79,57 @@ resource(port_ndet,   image, image('ndet.svg')).
 resource(port_stack,  image, image('stack.svg')).
 resource(port_stop,   image, image('stop.svg')).
 
+%!  style(?Port, -Style) is nondet.
+%
+%   Style is the style for highlighting Port in the source view.  The
+%   appearance of a port is the class variable `<Port>_style` of class
+%   prolog_source_view.  The margin icon is added here, as its size
+%   depends on the font.  The hook port_style/2 can still override
+%   attributes, as a list of Attribute(Value).
+
 style(Port, Style) :-
-    def_style(Port, DefAttrs),
-    (   port_style(Port, PrefAttrs)
-    ->  merge_options(PrefAttrs, DefAttrs, Attrs)
-    ;   Attrs = DefAttrs
+    port(Port, Icon),
+    (   style_class_variable(Port, CVName),
+        get(class(prolog_source_view), class_variable, CVName, CV),
+        get(CV, value, Base),
+        Base \== @nil
+    ->  get(Base, clone, Style)
+    ;   new(Style, style)
     ),
-    make_style(Attrs, Style).
+    (   Icon \== (-),
+        get(Style, icon, @nil)
+    ->  make_value(icon, resource(Icon), Image),
+        send(Style, icon, Image)
+    ;   true
+    ),
+    (   port_style(Port, PrefAttrs)
+    ->  forall(member(Attr, PrefAttrs),
+               ( Attr =.. [Name, Value0],
+                 make_value(Name, Value0, Value),
+                 send(Style, Name, Value)
+               ))
+    ;   true
+    ).
 
-make_style(Attributes, ObjTerm) :-
-    maplist(att_assign, Attributes, Args),
-    ObjTerm =.. [style|Args].
+%   port(?Port, ?Icon)
+%
+%   Port is highlighted in the source view, with the margin icon Icon
+%   (a resource) or `-` for no icon.
 
-att_assign(Term, Name := Value) :-
-    Term =.. [Name, Value0],
-    make_value(Name, Value0, Value).
+port(call,       port_call).
+port(break,      -).
+port(exit,       port_exit).
+port(redo,       port_redo).
+port(fail,       port_fail).
+port(exception,  port_except).
+port(unify,      -).
+port(choice,     port_ndet).
+port(frame,      port_stack).
+port(breakpoint, port_stop).
+
+style_class_variable(Port, CVName) :-
+    Port \== breakpoint,
+    atom_concat(Port, '_style', CVName).
 
 %!  make_value(+Attribute, +Prolog, -Value) is det.
 %
@@ -111,30 +147,24 @@ make_value(icon, Resource, Icon) =>
 make_value(_, Value0, Value) =>
     Value = Value0.
 
-def_style(call,       [ background(debug_port_call),
-                        icon(resource(port_call))
-                      ]).
-def_style(break,      [ background(debug_port_break) ]).
-def_style(exit,       [ background(debug_port_exit),
-                        icon(resource(port_exit))
-                      ]).
-def_style(redo,       [ background(debug_port_redo),
-                        icon(resource(port_redo))
-                      ]).
-def_style(fail,       [ background(debug_port_fail),
-                        icon(resource(port_fail))
-                      ]).
-def_style(exception,  [ background(debug_port_exception),
-                        icon(resource(port_except))
-                      ]).
-def_style(unify,      [ background(debug_port_unify) ]).
-def_style(choice,     [ background(debug_port_choice),
-                        icon(resource(port_ndet))
-                      ]).
-def_style(frame,      [ background(debug_port_frame),
-                        icon(resource(port_stack))
-                      ]).
-def_style(breakpoint,   [icon(resource(port_stop))]).
+%   The source views, so a changed style can be applied to them.
+
+:- pce_global(@prolog_source_views, new(chain)).
+
+:- multifile
+    pce_preferences:class_variable_changed/3.
+
+pce_preferences:class_variable_changed(prolog_source_view, CVName, _) :-
+    style_class_variable(Port, CVName),
+    port(Port, _),
+    !,
+    send(@prolog_source_views, for_all,
+         message(@prolog, restyle, @arg1, Port)).
+
+restyle(View, Port) :-
+    style(Port, Style),
+    send(View, style, Port, Style),
+    send(View, redraw).
 
 
 % If you define an alternative mode as a subclass of the Prolog mode
@@ -162,6 +192,27 @@ def_style(breakpoint,   [icon(resource(port_stop))]).
 
 class_variable(size,    size,   size(80,20), "Default size in characters").
 
+class_variable(call_style,      style*, style(background := debug_port_call),
+               "Style for the call port").
+class_variable(break_style,     style*, style(background := debug_port_break),
+               "Style for a break").
+class_variable(exit_style,      style*, style(background := debug_port_exit),
+               "Style for the exit port").
+class_variable(redo_style,      style*, style(background := debug_port_redo),
+               "Style for the redo port").
+class_variable(fail_style,      style*, style(background := debug_port_fail),
+               "Style for the fail port").
+class_variable(exception_style, style*,
+               style(background := debug_port_exception),
+               "Style for the exception port").
+class_variable(unify_style,     style*, style(background := debug_port_unify),
+               "Style for the unify port").
+class_variable(choice_style,    style*,
+               style(background := debug_port_choice),
+               "Style for a choice point").
+class_variable(frame_style,     style*, style(background := debug_port_frame),
+               "Style for a frame selected in the stack").
+
 variable(source,        'name|emacs_buffer*', get, "Currently shown source").
 
 initialise(V) :->
@@ -170,7 +221,12 @@ initialise(V) :->
     set_margin_width(V),
     forall(style(Name, Style), send(V, style, Name, Style)),
     send(V, editable, @off),
-    send(V, update_label).
+    send(V, update_label),
+    send(@prolog_source_views, append, V).
+
+unlink(V) :->
+    send(@prolog_source_views, delete_all, V),
+    send_super(V, unlink).
 
 %!  set_margin_width(+Object) is det.
 %

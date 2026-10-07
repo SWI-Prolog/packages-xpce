@@ -42,7 +42,7 @@ See `display_manager <-current`.
     Settings/Theme menu of the IDE sets it for the running session.
     See `library(pce_theme)`.
 
-- display.volume: 0..100 = 0
+- display.volume: 0..100 = 20
     Default volume for `display ->bell`.
 
 - display.bell_pitch: 20..20000 = 440

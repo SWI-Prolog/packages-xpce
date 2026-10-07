@@ -723,6 +723,7 @@ theme_library(library(trace/trace)).            % graphical debugger
 theme_library(library(swi/pce_profile)).
 theme_library(library(swi/pce_debug_monitor)).
 theme_library(library(pce_xref)).
+theme_library(library(swi/thread_monitor)).
 theme_library(library(emacs/bookmarks)).
 theme_library(library(pce_helper)).
 

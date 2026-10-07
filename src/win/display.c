@@ -699,7 +699,7 @@ static classvardecl rc_display[] =
      "Label font for confirm/inform"),
   RC(NAME_valueFont, "font", "normal",
      "Text font for confirm/inform"),
-  RC(NAME_volume, "0..100", "0",
+  RC(NAME_volume, "0..100", "20",
      "Default volume of ->bell"),
   RC(NAME_bellPitch, "20..20000", "440",
      "Frequency of ->bell in Hz"),

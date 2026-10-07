@@ -225,7 +225,8 @@ file_filter(D, Filter:regex*) :->
 
 class_variable(background,   colour, ui_window_background).
 class_variable(colour,       colour, ui_window_foreground).
-class_variable(auto_refresh, int*, @nil).
+class_variable(auto_refresh, int*, @nil,
+               "Check directories for modifications after this interval").
 class_variable(size,    size,   size(200, 500),
                "Intial window size").
 
@@ -821,6 +822,28 @@ event(FB, Ev:event) :->
     ).
 
 :- pce_end_class(prolog_source_structure).
+
+:- multifile
+    pce_preferences:preferences/2,
+    pce_preferences:edit_type/3,
+    pce_preferences:class_variable_changed/3.
+
+%   The preferences a user may want to change for the navigator.  See
+%   library(pce_preferences) and the class variable editor.
+
+pce_preferences:preferences(prolog_navigator,
+    [ prolog_navigator        - [ pane_side ],
+      prolog_source_structure - [ auto_refresh ]
+    ]).
+
+pce_preferences:edit_type(prolog_source_structure, auto_refresh, '1..60').
+
+%   The refresh timer is not a slot, so the editor cannot update it.
+
+pce_preferences:class_variable_changed(prolog_source_structure,
+                                       auto_refresh, Interval) :-
+    forall(prolog_overview_window(FB),
+           send(FB, auto_refresh, Interval)).
 
 
 :- pce_begin_class(sb_computer, toc_roots,

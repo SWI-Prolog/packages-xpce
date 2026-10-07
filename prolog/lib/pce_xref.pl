@@ -45,11 +45,15 @@
 :- use_module(pce_util).
 :- use_module(library(pce_theme), [theme_colours/1]).
 
-:- theme_colours([ xref_node_background = grey80,
-                   xref_node_foreground = black,
-                   xref_predicate       = dark_green,
-                   xref_autoload        = navy_blue,
-                   xref_global          = navy_blue
+:- theme_colours([ xref_node_background   = grey80,
+                   xref_node_foreground   = black,
+                   xref_predicate         = dark_green,
+                   xref_autoload          = navy_blue,
+                   xref_global            = navy_blue,
+                   xref_undefined         = red,
+                   xref_not_called        = red,
+                   xref_header_foreground = black,
+                   xref_header_background = khaki1
                  ]).
 :- autoload(library(swi_ide), [prolog_ide/1]).
 :- use_module(pce_toc).
@@ -90,18 +94,21 @@
 
 gxref_version('1.0').
 
-:- dynamic
-    setting/2.
 
 setting_menu([ warn_autoload,
                warn_not_called,
                hide_system_files
              ]).
 
-setting(warn_autoload,      false).
-setting(warn_not_called,    true).
-setting(hide_system_files,  true).
-setting(hide_profile_files, true).
+%   setting(+Name, ?Value) is semidet.
+%
+%   Value (`true` or `false`) is the value of the class variable Name of
+%   class xref_tool.
+
+setting(Name, Value) :-
+    get(class(xref_tool), class_variable, Name, CV),
+    get(CV, value, PceVal),
+    pce_to_prolog_bool(PceVal, Value).
 
 /** <module> Cross-referencer front-end
 
@@ -150,6 +157,15 @@ bar of whatever window it ends up in.
 
 :- pce_begin_class(xref_tool, tool_pane,
                    "GUI for the Prolog cross-referencer").
+
+class_variable(warn_autoload,      bool, @off,
+               "Warn about predicates that are autoloaded or global").
+class_variable(warn_not_called,    bool, @on,
+               "Warn about predicates that are not called").
+class_variable(hide_system_files,  bool, @on,
+               "Hide the files of the system libraries").
+class_variable(hide_profile_files, bool, @on,
+               "Hide the files of the user's profile").
 
 initialise(F) :->
     send_super(F, initialise, xref),
@@ -307,15 +323,30 @@ update_setting_menu(_F, Popup:popup) :->
 
 setting(F, S:name, PceVal:bool) :->
     "Update setting and redo analysis"::
-    pce_to_prolog_bool(PceVal, Val),
-    retractall(setting(S, _)),
-    assert(setting(S, Val)),
+    send(class(xref_tool), class_variable_value, S, PceVal),
     send(F, update).
 
 pce_to_prolog_bool(@on, true).
 pce_to_prolog_bool(@off, false).
 
 :- pce_end_class(xref_tool).
+
+:- multifile
+    pce_preferences:preferences/2.
+
+%   The preferences a user may want to change for the cross-referencer.
+%   See library(pce_preferences) and the class variable editor.
+
+pce_preferences:preferences(xref_tool,
+    [ xref_tool            - [ warn_autoload, warn_not_called,
+                               hide_system_files, hide_profile_files
+                             ],
+      xref_predicate_text  - [ colour, colour_autoload, colour_global,
+                               colour_undefined, colour_not_called
+                             ],
+      xref_file_graph_node - [ background, colour, font ],
+      prolog_file_info     - [ header_colour, header_background ]
+    ]).
 
 %!  tabbed(+Tool, +Which, -Tabs) is semidet.
 %
@@ -1111,8 +1142,10 @@ make_xref_image(Images, Image) :-
 variable(tabular,     tabular, get, "Displayed table").
 variable(prolog_file, name*,   get, "Displayed Prolog file").
 
-class_variable(header_colour,     colour, black,  "Predicate header colour").
-class_variable(header_background, colour, khaki1, "Predicate header background").
+class_variable(header_colour,     colour, xref_header_foreground,
+               "Predicate header colour").
+class_variable(header_background, colour, xref_header_background,
+               "Predicate header background").
 
 initialise(W, File:[name]*) :->
     send_super(W, initialise),
@@ -1405,8 +1438,8 @@ variable(file,           name*,  get, "File of predicate").
 class_variable(colour,            colour, xref_predicate).
 class_variable(colour_autoload,   colour, xref_autoload).
 class_variable(colour_global,     colour, xref_global).
-class_variable(colour_undefined,  colour, red).
-class_variable(colour_not_called, colour, red).
+class_variable(colour_undefined,  colour, xref_undefined).
+class_variable(colour_not_called, colour, xref_not_called).
 
 
 initialise(T, Callable0:prolog,
