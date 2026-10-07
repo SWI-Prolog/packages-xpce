@@ -660,11 +660,12 @@ clear(F, Content:[bool]) :->
 
 fill_menu_bar(F, MD:tool_dialog) :->
     "Put my menu on the bar of the window I am in"::
+    get(MD, popup, settings, @on, Settings),
+    send(Settings, append,
+         menu_item(debugger, message(F, settings))),
     get(MD, popup, debugger, @on, Popup),
     send_list(Popup, append,
-              [ menu_item(settings,
-                          message(F, settings)),
-                menu_item(clear_source_cache,
+              [ menu_item(clear_source_cache,
                           message(@prolog, clear_clause_info_cache),
                           end_group := @on),
                 menu_item(breakpoints,

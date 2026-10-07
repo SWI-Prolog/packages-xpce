@@ -88,6 +88,8 @@ trace_settings :-
     new(D, dialog('Trace Settings')),
     send(D, application, @prolog_gui),
     forall(setting(Name, _, _), make_item(D, Name)),
+    get(D, member, use_pce_emacs, PceEmacs),
+    send(PceEmacs, label, 'Use PceEmacs:'),
     send(D, append, new(A, button(apply, and(message(D, apply),
                                              message(D, destroy))))),
     send(D, append, button(reset, message(D, restore))),
@@ -104,25 +106,55 @@ trace_settings :-
     send(D, open_centered, Pos).
 
 
+%   make_item(+Dialog, +Name)
+%
+%   Append an item for the setting Name: a bool_item for a boolean, an
+%   int_item for a number and a cycle menu for other choices.  The
+%   dialog has a default button, so the setting is changed when the
+%   user presses Apply.
+
 make_item(D, Name) :-
-    setting(Name, ValueSet, Comment),
-    is_list(ValueSet),
+    setting(Name, [true, false], Comment),
     !,
-    send(D, append, new(M, menu(Name, marked,
-                                message(@prolog, set_trace_setting,
-                                        Name, @arg1)))),
-    send(M, layout, horizontal),
-    send_list(M, append, ValueSet),
-    send(M, default, ?(@prolog, trace_setting, Name)),
-    send(M, help_message, tag, Comment).
+    send(D, append,
+         new(I, bool_item(Name, @default,
+                          message(@prolog, set_bool_setting, Name, @arg1)))),
+    send(I, default, ?(@prolog, bool_setting, Name)),
+    send(I, help_message, tag, Comment).
 make_item(D, Name) :-
-    setting(Name, int(Low, infinite), Comment),
-    send(D, append, new(TI, text_item(Name, Low,
-                                      message(@prolog, set_trace_setting,
-                                              Name, @arg1)))),
-    send(TI, length, 5),
-    send(TI, default, ?(@prolog, trace_setting, Name)),
-    send(TI, help_message, tag, Comment).
+    setting(Name, int(Low, High), Comment),
+    !,
+    (   High == infinite
+    ->  Max = @default
+    ;   Max = High
+    ),
+    send(D, append,
+         new(I, int_item(Name, @default,
+                         message(@prolog, set_trace_setting, Name, @arg1),
+                         Low, Max))),
+    send(I, length, 5),
+    send(I, default, ?(@prolog, trace_setting, Name)),
+    send(I, help_message, tag, Comment).
+make_item(D, Name) :-
+    setting(Name, Values, Comment),
+    is_list(Values),
+    send(D, append,
+         new(I, menu(Name, cycle,
+                     message(@prolog, set_trace_setting, Name, @arg1)))),
+    send_list(I, append, Values),
+    send(I, default, ?(@prolog, trace_setting, Name)),
+    send(I, help_message, tag, Comment).
+
+bool_setting(Name, Bool) :-
+    trace_setting(Name, Value),
+    bool_value(Value, Bool).
+
+bool_value(true,  @on).
+bool_value(false, @off).
+
+set_bool_setting(Name, Bool) :-
+    bool_value(Value, Bool),
+    set_trace_setting(Name, Value).
 
 set_trace_setting(Name, Value) :-
     trace_setting(Name, _, Value).

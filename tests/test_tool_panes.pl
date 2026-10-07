@@ -2146,10 +2146,12 @@ test(and_names_the_thread_when_it_is_not_the_main_one,
     send(F, destroy).
 
 test(its_menu_reaches_the_bar_of_the_window_it_is_in,
-     Items == [settings, clear_source_cache,
-               breakpoints, exceptions,
-               toggle_edit_mode, copy_goal,
-               view, make, help_on_debugger, quit]) :-
+     [ Items == [clear_source_cache,
+                 breakpoints, exceptions,
+                 toggle_edit_mode, copy_goal,
+                 view, make, help_on_debugger, quit],
+       Settings == true
+     ]) :-
     no_frames,
     debugger(F),
     get(F, frame, Frame),
@@ -2158,9 +2160,18 @@ test(its_menu_reaches_the_bar_of_the_window_it_is_in,
     memberchk(debugger, Menus),
     get(Frame, menu_bar, MB),
     get(MB, member, debugger, Popup),
+    popup_values(Popup, Items),
+    get(MB, member, settings, SettingsPopup),
+    popup_values(SettingsPopup, SettingsItems),
+    (   memberchk(debugger, SettingsItems)  % Settings/Debugger
+    ->  Settings = true
+    ;   Settings = SettingsItems
+    ).
+
+popup_values(Popup, Values) :-
     get(Popup, members, Chain),
     chain_list(Chain, Members),
-    findall(V, (member(MI, Members), get(MI, value, V)), Items).
+    findall(V, (member(MI, Members), get(MI, value, V)), Values).
 
 %       The tracer waits in <-confirm for an action and ->return_action
 %       gives it one.  Which answer belongs to which debugger is kept per
