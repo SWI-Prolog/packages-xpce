@@ -249,8 +249,6 @@ sdl_display_event(SDL_Event *ev)
 		 *	       BELL		*
 		 *******************************/
 
-#define BELL_FREQ    440	/* Hz */
-#define BELL_MS      200	/* duration in milliseconds */
 #define BELL_RATE    44100	/* sample rate */
 #define BELL_POLL_MS 50		/* cleanup poll interval */
 
@@ -271,13 +269,15 @@ bell_cleanup(void *userdata, SDL_TimerID id, Uint32 interval)
 }
 
 /**
- * Sound the system bell with the specified volume.
+ * Sound the system bell with the specified volume, pitch and duration.
  *
  * @param d Pointer to the DisplayObj representing the display context.
  * @param volume The volume level for the bell sound (0-100).
+ * @param pitch The frequency of the bell sound in Hz.
+ * @param duration The length of the bell sound in seconds.
  */
 void
-ws_bell_display(DisplayObj d, int volume)
+ws_bell_display(DisplayObj d, int volume, int pitch, double duration)
 { if ( !SDL_WasInit(SDL_INIT_AUDIO) &&
        !SDL_InitSubSystem(SDL_INIT_AUDIO) )
   { Cprintf("ws_bell_display: audio init: %s\n", SDL_GetError());
@@ -293,7 +293,7 @@ ws_bell_display(DisplayObj d, int volume)
     return;
   }
 
-  int nsamples = BELL_RATE * BELL_MS / 1000;
+  int nsamples = (int)(BELL_RATE * duration);
   Sint16 *buf = malloc(nsamples * sizeof(Sint16));
   if ( !buf )
   { SDL_DestroyAudioStream(stream);
@@ -302,7 +302,7 @@ ws_bell_display(DisplayObj d, int volume)
 
   double amplitude = (volume / 100.0) * 32767.0;
   for ( int i = 0; i < nsamples; i++ )
-    buf[i] = (Sint16)(amplitude * sin(2.0 * M_PI * BELL_FREQ * i / BELL_RATE));
+    buf[i] = (Sint16)(amplitude * sin(2.0 * M_PI * pitch * i / BELL_RATE));
 
   SDL_PutAudioStreamData(stream, buf, nsamples * (int)sizeof(Sint16));
   free(buf);

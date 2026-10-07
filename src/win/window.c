@@ -2552,7 +2552,7 @@ flashWindow(PceWindow sw, Area a, Int time)
 
     if ( isDefault(time) )
       time = getClassVariableValueObject(sw, NAME_visualBellDuration);
-    t = (isInteger(time) ? valInt(time) : 250);
+    t = (int)((isNum(time) ? valNum(time) : 0.2) * 1000.0);
 
     if ( isDefault(a) )
       ws_flash_window(sw, t);
@@ -2686,7 +2686,7 @@ static char *T_confirm[] =
 static char *T_geometry[] =
         { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 static char *T_flash[] =
-	{ "area=[area]", "time=[int]" };
+	{ "area=[area]", "time=[num]" };
 static char *T_pdf[] =
 	{ "file=file", "scale=[num]" };
 static char *T_normalise[] =

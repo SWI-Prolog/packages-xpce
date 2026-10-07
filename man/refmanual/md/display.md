@@ -45,6 +45,12 @@ See `display_manager <-current`.
 - display.volume: 0..100 = 0
     Default volume for `display ->bell`.
 
+- display.bell_pitch: 20..20000 = 440
+    Frequency of the tone of `display ->bell` in Hz.
+
+- display.bell_duration: num = 0.2
+    Length of the tone of `display ->bell` in seconds.
+
 
 ## Instance variables {#class-display-instvars}
 
@@ -141,7 +147,8 @@ See `display_manager <-current`.
 
 - display->bell: volume=[0..100]
     Ring the bell on this display.  Volume defaults to
-    `display.volume`.
+    `display.volume`.  The tone is defined by `display.bell_pitch`
+    and `display.bell_duration`.
 
     @see display.volume
     @see frame->bell

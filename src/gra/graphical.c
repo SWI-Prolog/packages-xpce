@@ -2950,8 +2950,8 @@ flashGraphical(Graphical gr, Area a, Int time)
 
     if ( isDefault(time) )
       time = getClassVariableValueObject(gr, NAME_visualBellDuration);
-    if ( !isInteger(time) )
-      time = toInt(250);
+    if ( !isNum(time) )
+      time = toNum(0.2);
 
     int lx, ly, lw, lh;
     if ( isDefault(a) )
@@ -3447,7 +3447,7 @@ static char *T_drawBox[] =
 	{ "x=int", "y=int", "w=int", "h=int", "radius=[0..]",
 	  "fill=" TYPE_FILL_3D, "up=[bool]" };
 static char *T_flash[] =
-	{ "area=[area]", "time=[int]" };
+	{ "area=[area]", "time=[num]" };
 static char *T_containerSizeChanged[] =
 	{ "width=[int]", "height=[int]" };
 static char *T_pdf[] =
@@ -3825,8 +3825,8 @@ static classvardecl rc_graphical[] =
      "Visual feedback of <->selected"),
   RC(NAME_visualBell, "bool", "@on",
      "@on: flash; @off: ring bell on ->alert"),
-  RC(NAME_visualBellDuration, "int", "100",
-     "Length of flash in milliseconds"),
+  RC(NAME_visualBellDuration, "num", "0.2",
+     "Length of flash in seconds"),
   RC(NAME_eventTolerance, "0..", "5",
      "Minimum size of event-area")
 };

@@ -368,10 +368,11 @@ kinds of windows:
     Exposes (take to the front) the frame of the window on its
     screen.  Invokes `frame ->expose`.
 
-- window->flash: area=[area], time=[int]
-    Flashes the window by temporary inverting it.  Normally, applications
-    should invoke `graphical ->alert`, which depending on the setting of the
-    `window.visual_bell` will either ring the bell or flash the object.
+- window->flash: area=[area], time=[num]
+    Flashes the window by temporary inverting it for Time seconds.
+    Normally, applications should invoke `graphical ->alert`, which
+    depending on the setting of `graphical.visual_bell` will either ring
+    the bell or flash the object.
 
     @see graphical.visual_bell_duration
     @see graphical.visual_bell

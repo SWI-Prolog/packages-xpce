@@ -615,7 +615,7 @@ activeTab(Tab t, BoolObj active)
 static char *T_geometry[] =
         { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 static char *T_flash[] =
-	{ "area=[area]", "time=[int]" };
+	{ "area=[area]", "time=[num]" };
 static char *T_advance[] =
 	{ "from=[graphical]*",
 	  "propagate=[bool]",

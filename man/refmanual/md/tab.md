@@ -60,7 +60,7 @@ See also class tab_stack.
     `tab_stack->on_top` and <-status) process the event on
     the content of the tab.  See `dialog_group->event`.
 
-- tab->flash: area=[area], time=[int]
+- tab->flash: area=[area], time=[num]
     If the <-status is `on_top`, the drawing area of the tab is
     inverted, otherwise the tag is inverted.  See also `graphical ->flash`.
 

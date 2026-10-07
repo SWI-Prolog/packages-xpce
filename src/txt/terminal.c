@@ -10555,7 +10555,7 @@ rlc_putansi(RlcData b, int chr)
 	  CMD(rlc_caret_backward(b, 1));
 	  break;
         case 0x7:			/* BEL */
-	  send(b->object, NAME_flash, EAV);
+	  send(b->object, NAME_alert, EAV);
 	  break;
 	case '\r':
 	  CMD(rlc_cariage_return(b));

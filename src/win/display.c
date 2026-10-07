@@ -170,7 +170,12 @@ bellDisplay(DisplayObj d, Int vol)
 { if ( isDefault(vol) )
     vol = getClassVariableValueObject(d, NAME_volume);
 
-  ws_bell_display(d, valInt(vol));
+  Int pitch    = getClassVariableValueObject(d, NAME_bellPitch);
+  Any duration = getClassVariableValueObject(d, NAME_bellDuration);
+
+  ws_bell_display(d, valInt(vol),
+		  isInteger(pitch) ? valInt(pitch) : 440,
+		  isNum(duration) ? valNum(duration) : 0.2);
 
   succeed;
 }
@@ -695,7 +700,11 @@ static classvardecl rc_display[] =
   RC(NAME_valueFont, "font", "normal",
      "Text font for confirm/inform"),
   RC(NAME_volume, "0..100", "0",
-     "Default volume of ->bell")
+     "Default volume of ->bell"),
+  RC(NAME_bellPitch, "20..20000", "440",
+     "Frequency of ->bell in Hz"),
+  RC(NAME_bellDuration, "num", "0.2",
+     "Length of ->bell in seconds")
 };
 
 /* Class Declaration */

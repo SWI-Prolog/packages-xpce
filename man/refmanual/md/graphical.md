@@ -106,12 +106,15 @@ for creating customised graphical objects:
     	(`path ->paint_selected`).
 
 - graphical.visual_bell: bool = @on
+    If @on, `graphical ->alert` flashes the graphical.  Otherwise it
+    rings the bell (see `display.volume`).
+
     @see graphical->flash
     @see window->flash
     @see graphical->alert
 
-- graphical.visual_bell_duration: int = 100
-    Length of flash in milliseconds
+- graphical.visual_bell_duration: num = 0.2
+    Length of flash in seconds
 
     @see graphical->flash
     @see window->flash
@@ -351,7 +354,7 @@ for creating customised graphical objects:
     Alert the user of an error.  Depending on the graphical.visual_bell, either
      ->flash or ->bell are invoked.
 
-    **Defaults**: Depends on the resource Graphical.visual_bell.
+    **Defaults**: Depends on the class variable graphical.visual_bell.
 
     @see visual->report
     @see graphical->flash
@@ -687,10 +690,10 @@ for creating customised graphical objects:
     @see graphical->swap
     @see graphical->hide
 
-- graphical->flash: area=[area], time=[int]
+- graphical->flash: area=[area], time=[num]
     Alert the user of a possible problem by shortly inverting the graphical.
     Area specifies the area to be inverted, relative to the <-area
-    of the graphical itself.  Time is the time in milliseconds which
+    of the graphical itself.  Time is the time in seconds which
     the graphical remains in the inverted time; the time of the
     total operation is this time, plus two time the required time
     to invert the area.  The default time the graphical is inverted

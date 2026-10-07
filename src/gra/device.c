@@ -2350,7 +2350,7 @@ static char *T_geometry[] =
 static char *T_resize[] =
         { "x_factor=real", "y_factor=[real]", "origin=[point]" };
 static char *T_flash[] =
-	{ "area=[area]", "time=[int]" };
+	{ "area=[area]", "time=[num]" };
 static char *T_advance[] =
 	{ "from=[graphical]*",
 	  "propagate=[bool]",
