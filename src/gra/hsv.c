@@ -36,7 +36,7 @@
 #include <h/graphics.h>
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Convert between HSV  (Hue-Saturnation-Value)   and  RGB (Red-Green-Blue)
+Convert between HSV  (Hue-Saturation-Value)   and  RGB (Red-Green-Blue)
 colour models. XPCE uses the RGB  model internally, but provides methods
 to class colour to  deal  with  the  HSV   model  as  it  is  much  more
 comfortable in computing human aspects  of   colour  preception  such as

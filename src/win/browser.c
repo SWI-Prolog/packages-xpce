@@ -227,7 +227,7 @@ static senddecl send_browser[] =
      NAME_selection, "Test if object is selected"),
   SM(NAME_selection, 1, "member:dict_item|chain*", selectionBrowser,
      NAME_selection, "Set selected items"),
-  SM(NAME_background, 1, "[colour|pixmap]", backgroundBrowser,
+  SM(NAME_background, 1, "[colour]", backgroundBrowser,
      NAME_appearance, "Background colour")
 
 };

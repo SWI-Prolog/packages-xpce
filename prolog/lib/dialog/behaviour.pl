@@ -1533,13 +1533,13 @@ preview_drop(O, Obj:any*, Pos:[point]) :->
                      'Drop moves port %s to %s', Obj?identify, O?identify),
                 send(O, attribute, preview_outline,
                      new(OL, msg_port(Obj?name))),
-                send(OL, colour, @grey50_image),
+                send(OL, colour, grey50),
                 send(O, display, OL, Pos)
             )
         ;   port_type_from_object(Obj, Type)
         ->  send(O, attribute, preview_outline,
                  new(OL, msg_port(Obj?name))),
-            send(OL, colour, @grey50_image),
+            send(OL, colour, grey50),
             send(O, display, OL, Pos),
             send(O, report, status,
                  'Drop adds %s port "%s"', Type, Obj?name)
@@ -1864,12 +1864,12 @@ preview_drop(P, Obj:any, Pos:[point]) :->
             )
         ->  send(P, attribute, preview_outline,
                  new(OL, msg_port(Obj?name))),
-            send(OL, colour, @grey50_image),
+            send(OL, colour, grey50),
             send(P, display, OL, Pos)
         ;   send(Obj, has_get_method, proto)
         ->  send(P, attribute, preview_outline,
                  new(OL, msg_object(Obj?name))),
-            send(OL, colour, @grey50_image),
+            send(OL, colour, grey50),
             send(P, display, OL, Pos),
             send(P, report, status, 'Drop to add "%s" named "%s" to model',
                  Obj?proto, Obj?name)

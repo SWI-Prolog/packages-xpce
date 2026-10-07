@@ -92,7 +92,7 @@ of the cells.  Important attributes:
 
 ## Send methods {#class-table_cell-send}
 
-- table_cell->background: [colour|pixmap]
+- table_cell->background: [colour]
     Backround colour for the cell.  In addition to a colour or
     image, backgrounds can also be modified using the ->note_mark.
 

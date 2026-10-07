@@ -98,7 +98,7 @@ sections _System colours_ and _Themes_ of the XPCE User Guide.
     	new(C2, colour(@default, 255, 0, 0))           %% RGB triple
     	new(C3, colour(@default, 180, 50, 50, 255, hsv)) %% HSV
 
-    See `<-hue`/`<-saturnation`/`<-value` for the HSV model.
+    See `<-hue`/`<-saturation`/`<-value` for the HSV model.
 
 - colour->unlink
     Drop the colour from `@colours` and release any per-colour
@@ -122,13 +122,13 @@ sections _System colours_ and _Themes_ of the XPCE User Guide.
     database on first access.
 
 - colour<-hue: -> 0..360
-- colour<-saturnation: -> 0..100
+- colour<-saturation: -> 0..100
 - colour<-value: -> 0..100
     Query the colour in the HSV (Hue/Saturation/Value) model:
 
     - `<-hue` selects the basic colour (think of it as a position
       on the rainbow);
-    - `<-saturnation` is how intense the colour is — 0 is grey,
+    - `<-saturation` is how intense the colour is — 0 is grey,
       100 is fully saturated;
     - `<-value` is brightness — 0 is black, 100 is white.
 

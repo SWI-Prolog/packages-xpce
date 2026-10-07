@@ -39,7 +39,7 @@ editor.
 
 ## Instance variables {#class-text-instvars}
 
-- text<-background: [colour|pixmap]*
+- text<-background: [colour]*
     Defines the background of the text.  Allowed values are: @nil
     (transparent), @default (cleared to current background) or a
     colour object or a pixmap object.  See also ->transparent.

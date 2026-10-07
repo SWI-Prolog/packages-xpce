@@ -10,10 +10,6 @@ type specification for `coloured` images as needed for some
 graphical operations as well as automatic conversion of
 monochrome `bitmaps` into colour pixmaps.
 
-This class is often used implicitly: `window ->background:
-@grey25_image' will automatically convert the @grey25_image
-into a pixmap using <-convert.
-
 Explicit usage is normally done to create a coloured version of
 some monochrome bitmap:
 

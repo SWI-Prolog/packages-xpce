@@ -95,7 +95,8 @@ apply_theme/1 can switch between themes at any time.
     adaptive_colour_/3,                 % Name, Spec, Reference
     theme_selection_/1,
     builtin_colours_/1,
-    declared_colour/3.                  % Name, Default, Module
+    declared_colour/3,                  % Name, Default, Module
+    declared_summary/2.                 % Name, Summary
 
 :- meta_predicate
     theme_colours(:).
@@ -117,7 +118,10 @@ apply_theme/1 can switch between themes at any time.
 %!  theme_colours(+List) is det.
 %
 %   Declare the semantic colours used by a library.  List is a list of
-%   `Name = Default`, where Default is the value in the `light` theme.
+%   `Name = Default` or `Name = Default - Summary`, where Default is the
+%   value in the `light` theme and Summary is a string that describes
+%   the role of the colour.  The summary is available as
+%   `theme_colour<-summary`, e.g., for selecting a theme colour.
 %   The colours are created immediately, so the library can refer to
 %   them by name, for example in a class variable default.  Use as a
 %   directive:
@@ -130,12 +134,18 @@ apply_theme/1 can switch between themes at any time.
 
 theme_colours(M:List) :-
     must_be(list, List),
-    forall(member(Name = Default, List),
-           ( must_be(atom, Name),
-             retractall(declared_colour(Name, _, _)),
-             assertz(declared_colour(Name, Default, M))
-           )),
+    maplist(declare_colour(M), List),
     ensure_theme_colours.
+
+declare_colour(M, Name = Spec) :-
+    must_be(atom, Name),
+    (   Spec = Default - Summary
+    ->  retractall(declared_summary(Name, _)),
+        assertz(declared_summary(Name, Summary))
+    ;   Default = Spec
+    ),
+    retractall(declared_colour(Name, _, _)),
+    assertz(declared_colour(Name, Default, M)).
 
 %!  adaptive_colour(+Name, +Spec, +Reference) is det.
 %
@@ -282,8 +292,35 @@ update_colours(Theme) :-
     ),
     forall(semantic_colour_name(Name, _),
            ( theme_value(Theme, Match, Name, Value),
-             new(_, theme_colour(Name, Value))
+             colour_summary(Name, Summary),
+             new(_, theme_colour(Name, Value, Summary))
            )).
+
+%!  colour_summary(+Name, -Summary) is det.
+%
+%   Summary describes the semantic colour Name, or is `@default` if we
+%   have no description.
+
+colour_summary(Name, Summary) :-
+    declared_summary(Name, Summary0),
+    !,
+    Summary = Summary0.
+colour_summary(Name, Summary) :-
+    semantic_colour(Name, _, Summary0),
+    !,
+    Summary = Summary0.
+colour_summary(Name, Summary) :-
+    syntax_colour(Name, Class, _),
+    !,
+    (   sub_atom(Name, _, _, 0, '_bg')
+    ->  What = 'Background'
+    ;   What = 'Colour'
+    ),
+    copy_term(Class, Shown),
+    numbervars(Shown, 0, _, [singletons(true)]),
+    format(string(Summary), '~w for PceEmacs syntax class ~p',
+           [What, Shown]).
+colour_summary(_, @default).
 
 %!  theme_value(+Theme, +MatchesSystem, +Name, -Value) is det.
 %

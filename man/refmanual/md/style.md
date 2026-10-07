@@ -36,7 +36,7 @@ updated.  It is adviced to use styles in a read-only fashion.
     Or'ed bits for ->underline, ->highlight, ->grey, ->closed, ->bold
     and ->italic.
 
-- style<->background: [colour|pixmap|elevation]
+- style<->background: [colour|elevation]
     Background for the characters.  If it is an instance of class
     elevation, the characters are placed in an elevated box.
     See also ->colour.
@@ -107,7 +107,7 @@ updated.  It is adviced to use styles in a read-only fashion.
 - style->italic: bool
     *Inherits description from*: style<-bold
 
-- style->initialise: icon=[image]*, font=[font], colour=[colour], highlight=[bool], underline=[bool|texture_name|colour], bold=[bool], grey=[bool], background=[colour|pixmap|elevation], hidden=[bool], left_margin=[int], right_margin=[int], strikethrough=[bool|texture_name|colour], italic=[bool]
+- style->initialise: icon=[image]*, font=[font], colour=[colour], highlight=[bool], underline=[bool|texture_name|colour], bold=[bool], grey=[bool], background=[colour|elevation], hidden=[bool], left_margin=[int], right_margin=[int], strikethrough=[bool|texture_name|colour], italic=[bool]
     Create a style object from its (margin-)image, font and text-attributes.
     For example:
 
@@ -165,7 +165,7 @@ updated.  It is adviced to use styles in a read-only fashion.
     	| ->italic    | slanted text (see also ->font)                  |
     	| ->underline | underlined text.                                |
     	| ->highlight | inverted background and foreground.             |
-    	| ->grey      | greyed-out by and'ing with @grey50_image.       |
+    	| ->grey      | drawn in the inactive colour (`inactive_colour`)|
 
     **Bugs**:
     <->closed is not implemented.  Future versions might use this to `hide`

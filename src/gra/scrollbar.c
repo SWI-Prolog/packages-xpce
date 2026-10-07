@@ -1066,7 +1066,7 @@ static getdecl get_scrollBar[] =
 /* Resources */
 
 static classvardecl rc_scrollBar[] =
-{ RC(NAME_background, "[elevation|colour|pixmap]",
+{ RC(NAME_background, "[elevation|colour]",
      UXWIN("elevation(@nil, 1, ui_scrollbar_background)",
 	   "ui_scrollbar_background"),
      "Colour of background parts"),

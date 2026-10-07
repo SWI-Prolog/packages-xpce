@@ -5259,10 +5259,10 @@ static senddecl send_editor[] =
      NAME_appearance, "Associate new name --> style object map"),
   SM(NAME_tabStops, 1, "vector*", tabStopsEditor,
      NAME_appearance, "Set tab-stops (vector of pixels)"),
-  SM(NAME_background, 1, "colour|pixmap", backgroundEditor,
-     NAME_appearance, "Background colour or image for the text"),
-  SM(NAME_colour, 1, "colour|pixmap", colourEditor,
-     NAME_appearance, "Foreground colour or image for the text"),
+  SM(NAME_background, 1, "colour", backgroundEditor,
+     NAME_appearance, "Background colour for the text"),
+  SM(NAME_colour, 1, "colour", colourEditor,
+     NAME_appearance, "Foreground colour for the text"),
   SM(NAME_wrap, 1, "{none,character,word}", wrapEditor,
      NAME_appearance, "Wrap mode for long lines"),
   SM(NAME_Size, 1, "pixels=size", SizeEditor,
@@ -5661,7 +5661,7 @@ static getdecl get_editor[] =
 /* Resources */
 
 static classvardecl rc_editor[] =
-{ RC(NAME_background, "colour|pixmap", "ui_window_background",
+{ RC(NAME_background, "colour", "ui_window_background",
      "Colour/fill pattern of the background"),
   RC(NAME_caretModifier, "modifier", "",
      "Modify caret using this modifier"),

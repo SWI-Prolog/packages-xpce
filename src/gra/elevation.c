@@ -206,10 +206,10 @@ static char *T_modify[] =
 	  "value=any" };
 static char *T_initialise[] =
 { "name=[name|int]*", "height=[int]",
-  "colour=[{hilited,reduced}|colour|pixmap]",
-  "relief=[colour|pixmap]", "shadow=[colour|pixmap]",
-  "kind=[{3d,shadow}]", "background=[{reduced}|colour|pixmap]" };
-static char T_cbg[] = "[{hilited,reduced}|colour|pixmap]";
+  "colour=[{hilited,reduced}|colour]",
+  "relief=[colour]", "shadow=[colour]",
+  "kind=[{3d,shadow}]", "background=[{reduced}|colour]" };
+static char T_cbg[] = "[{hilited,reduced}|colour]";
 
 /* Instance Variables */
 
@@ -219,13 +219,13 @@ static vardecl var_elevation[] =
   SV(NAME_height, "int", IV_GET|IV_STORE, heightElevation,
      NAME_appearance, "Height above the surface"),
   SV(NAME_colour, T_cbg, IV_GET|IV_STORE, colourElevation,
-     NAME_appearance, "Colour/pixmap to paint the `top'"),
+     NAME_appearance, "Colour to paint the `top'"),
   SV(NAME_background, T_cbg, IV_GET|IV_STORE, backgroundElevation,
-     NAME_appearance, "Colour/pixmap when area is lowered"),
-  SV(NAME_relief, "[colour|pixmap]", IV_GET|IV_STORE, reliefElevation,
-     NAME_appearance, "Colour/pixmap used at `light' side"),
-  SV(NAME_shadow, "[colour|pixmap]", IV_GET|IV_STORE, shadowElevation,
-     NAME_appearance, "Colour/pixmap used at `dark' side"),
+     NAME_appearance, "Colour when area is lowered"),
+  SV(NAME_relief, "[colour]", IV_GET|IV_STORE, reliefElevation,
+     NAME_appearance, "Colour used at `light' side"),
+  SV(NAME_shadow, "[colour]", IV_GET|IV_STORE, shadowElevation,
+     NAME_appearance, "Colour used at `dark' side"),
   SV(NAME_kind, "{3d,shadow}", IV_GET|IV_STORE, kindElevation,
      NAME_appearance, "How the elevation is realised")
 };
@@ -259,9 +259,9 @@ static classvardecl rc_elevation[] =
      "Default height of the evaluation"),
   RC(NAME_kind, "{3d,shadow}", "3d",
      "How the elevation is realised"),
-  RC(NAME_relief, "[colour|pixmap]", "@default",
+  RC(NAME_relief, "[colour]", "@default",
      "Colour of lighted sides"),
-  RC(NAME_shadow, "[colour|pixmap]", "@default",
+  RC(NAME_shadow, "[colour]", "@default",
      "Colour of dark sides")
 };
 

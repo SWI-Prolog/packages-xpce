@@ -708,7 +708,7 @@ r_dash(Name name)
  */
 void
 r_fillpattern(Any fill, Name which)
-{ if ( context.fixed_colours && !instanceOfObject(fill, ClassImage) )
+{ if ( context.fixed_colours )
   { fill = (which == NAME_foreground ? context.colour
 				     : context.background);
   } else if ( isDefault(fill) )

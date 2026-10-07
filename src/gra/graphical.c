@@ -3417,8 +3417,8 @@ static char *T_handles[] =
 static char *T_draw[] =
 	{ "offset=[point]", "area=[area]" };
 static char *T_graphicsState[] =
-	{ "pen=[0..]", "texture=[texture_name]", "colour=[colour|pixmap]",
-	  "background=[colour|pixmap]" };
+	{ "pen=[0..]", "texture=[texture_name]", "colour=[colour]",
+	  "background=[colour]" };
 static char *T_drawPoly[] =
 	{ "points=chain|vector", "closed=[bool]", "fill=" TYPE_FILL_ARG };
 static char *T_focus[] =
@@ -3466,7 +3466,7 @@ static vardecl var_graphical[] =
      NAME_appearance, "Thickness of drawing pen"),
   SV(NAME_texture, "texture_name", IV_GET|IV_STORE, textureGraphical,
      NAME_appearance, "Stipple pattern of drawing pen"),
-  SV(NAME_colour, "[colour|pixmap]", IV_GET|IV_STORE, colourGraphical,
+  SV(NAME_colour, "[colour]", IV_GET|IV_STORE, colourGraphical,
      NAME_appearance, "Colour of drawing pen"),
   SV(NAME_opacity, "num", IV_GET|IV_STORE, opacityGraphical,
      NAME_appearance, "Opacity 0.0..1.0; 1.0 is opaque"),
@@ -3681,7 +3681,7 @@ static senddecl send_graphical[] =
 static getdecl get_graphical[] =
 { GM(NAME_containedIn, 0, "device|node", NULL, getContainedInGraphical,
      DEFAULT, "Device I'm contained in"),
-  GM(NAME_displayColour, 0, "colour|pixmap", NULL, getDisplayColourGraphical,
+  GM(NAME_displayColour, 0, "colour", NULL, getDisplayColourGraphical,
      NAME_appearance, "Colour graphical is displayed in"),
   GM(NAME_absolutePosition, 1, "point", "[device]", getAbsolutePositionGraphical,
      NAME_area, "Get position relative to device (or window)"),
@@ -3807,12 +3807,12 @@ static getdecl get_graphical[] =
 /* Resources */
 
 static classvardecl rc_graphical[] =
-{ RC(NAME_colour, "[colour|pixmap]", "@default",
+{ RC(NAME_colour, "[colour]", "@default",
      "Default colour for this object"),
   RC(NAME_pen, "0..", "1", NULL),
   RC(NAME_texture, NULL, "none", NULL),
-  RC(NAME_inactiveColour, "colour|pixmap*",
-     "when(@colour_display,  colour(ui_inactive),  @grey50_image)",
+  RC(NAME_inactiveColour, "colour*",
+     "ui_inactive",
      "Colour when <-active == @off"),
   RC(NAME_selectedForeground, "colour*",
      "ui_selection_foreground",

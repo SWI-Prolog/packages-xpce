@@ -137,7 +137,7 @@ for creating customised graphical objects:
 
     **Defaults**: The default area of most graphicals is area(0,0,0,0).
 
-- graphical<-colour: [colour|pixmap]
+- graphical<-colour: [colour]
     The <->colour attribute of a graphical describes the colour used to draw
     the affected pixels.  It is either a colour object or @default.  The
     latter implies the <->colour attribute of the device is used.
@@ -410,7 +410,7 @@ for creating customised graphical objects:
     returns.  See also ->_redraw_area, ->graphics_state
     ->draw_line, etc.
 
-- graphical->colour: [colour|pixmap]
+- graphical->colour: [colour]
     @see graphical<-display_colour
     @see device->foreground
     @see class colour
@@ -776,7 +776,7 @@ for creating customised graphical objects:
     @see graphical->set
     @see device->geometry
 
-- graphical->graphics_state: pen=[0..], texture=[texture_name], colour=[colour|pixmap], background=[colour|pixmap]
+- graphical->graphics_state: pen=[0..], texture=[texture_name], colour=[colour], background=[colour]
     Modify the graphics state.  Only the specified values will be
     modified.  This method will normally be called using the
     named-argument conventions of XPCE:
@@ -1385,7 +1385,7 @@ for creating customised graphical objects:
 
     @see graphical<-window
 
-- graphical<-display_colour: -> colour|pixmap
+- graphical<-display_colour: -> colour
     Return the colour in which the graphical is actually displayed.  If the
     variable `graphical <-colour` equals @default, this is the
     <-display_colour of the graphical's device.  Otherwise it is the value

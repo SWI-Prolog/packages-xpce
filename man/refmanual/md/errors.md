@@ -202,20 +202,6 @@ using the _Error Browser_ or using the following line in your
 
 @see object->_check
 
-## !replaced_by_colour {#error-replaced_by_colour}
-
-%O: replaced by colour(%N)
-The X11 versions allows colours to be replaced by pixmap
-objects, The MS-Windows version does not allow this.  If a
-pixmap object is specified as a colour, the system will check
-whether the pixmap is derived from one of the standard
-grey-patterns (@grey25_image, etc.) and replace the pixmap by a
-grey colour.  If this fails it will use colour(black).  This
-error is raised if a pixmap is replaced.
-
-You may redefine the mapping by attaching an `object ->attribute`
-named `replacement_colour` to the pixmap.
-
 ## !replaced_colour {#error-replaced_colour}
 
 format: %O: replaced by colour(%N)

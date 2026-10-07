@@ -806,6 +806,8 @@ LoadColourNames(void)
 
     ColourNames   = globalObject(NAME_colourNames, ClassHashTable, EAV);
     CSSColourList = globalObject(NAME_colourList,  ClassChain, EAV);
+    protectObject(ColourNames);		/* we keep pointers to them, so */
+    protectObject(CSSColourList);	/* free(@colour_names) must fail */
 
     for(cd = x11_colours; cd->name; cd++)
     { COLORRGBA rgb = RGBA(cd->red, cd->green, cd->blue, 255);

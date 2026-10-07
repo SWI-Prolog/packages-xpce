@@ -123,7 +123,7 @@ test(theme_colour_hsv, [H == 240, S == 100, V == 100]) :-
     %  colour<-value is the HSV value, also for a theme colour
     new(C, theme_colour(test_colour_hsv, blue)),
     get(C, hue, H0), H is round(H0),
-    get(C, saturnation, S0), S is round(S0),
+    get(C, saturation, S0), S is round(S0),
     get(C, value, V0), V is round(V0).
 test(theme_colour_lookup, [Same == true, RGB == rgb(0,255,0)]) :-
     %  Creating an existing theme colour changes its value
@@ -227,5 +227,11 @@ sys_colour(sys_link).
 sys_colour(sys_accent).
 sys_colour(sys_separator).
 sys_colour(sys_shadow).
+
+test(colour_names_protected, [R == 250]) :- % kernel keeps pointers
+    \+ free(@colour_names),
+    \+ free(@colour_list),
+    new(C, colour(salmon)),
+    get(C, red, R).
 
 :- end_tests(colour).

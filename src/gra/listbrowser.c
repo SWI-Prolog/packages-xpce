@@ -1730,7 +1730,7 @@ static senddecl send_listBrowser[] =
      NAME_appearance, "Set style associated with name"),
   SM(NAME_tabStops, 1, "vector*", tabStopsListBrowser,
      NAME_appearance, "Set tab-stops (pixels)"),
-  SM(NAME_background, 1, "[colour|pixmap]", backgroundListBrowser,
+  SM(NAME_background, 1, "[colour]", backgroundListBrowser,
      NAME_appearance, "Background colour"),
   SM(NAME_Size, 1, "pixels=size", SizeListBrowser,
      NAME_area, "Set size in pixels (trap window resize)"),
@@ -1840,7 +1840,7 @@ static getdecl get_listBrowser[] =
 /* Resources */
 
 static classvardecl rc_listBrowser[] =
-{ RC(NAME_background, "colour|pixmap", "ui_window_background",
+{ RC(NAME_background, "colour", "ui_window_background",
      "Colour/fill pattern of the background"),
   RC(NAME_clearSelectionOnSearch, "bool", "@on",
      "@on: clear selection when searching"),

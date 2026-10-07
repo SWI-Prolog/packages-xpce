@@ -160,7 +160,7 @@ demo('Colours',
      colour_browser).
 
 demo('HSV Colours',
-     'Colour browser using Hue-Saturnation-Value',
+     'Colour browser using Hue-Saturation-Value',
      demo(hsvcolour),
      hsv_browser).
 

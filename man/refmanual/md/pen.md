@@ -27,7 +27,7 @@ constructed and passed where a pen-valued argument is expected.
 
 ## Send methods {#class-pen-send}
 
-- pen->initialise: thickness=[0..], texture=[texture_name], colour=[colour|pixmap]
+- pen->initialise: thickness=[0..], texture=[texture_name], colour=[colour]
     Create a pen from a thickness, texture and stroke colour.  Omitted
     arguments default to 1, `none` and @default respectively.
 

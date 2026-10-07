@@ -651,7 +651,7 @@ scope('M.colour.G.lookup', internal).
 scope('M.colour.G.mix', advanced).
 scope('M.colour.G.red', advanced).
 scope('M.colour.G.reduce', internal).
-scope('M.colour.G.saturnation', advanced).
+scope('M.colour.G.saturation', advanced).
 scope('M.colour.G.storage_reference', advanced).
 scope('M.colour.G.value', advanced).
 scope('M.colour.S.equal', advanced).

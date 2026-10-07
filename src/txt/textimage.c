@@ -2508,7 +2508,7 @@ static char *T_geometry[] =
 static vardecl var_textImage[] =
 { IV(NAME_text, "object", IV_GET,
      NAME_storage, "Source of the text"),
-  SV(NAME_background, "[colour|pixmap]", IV_GET|IV_STORE, backgroundTextImage,
+  SV(NAME_background, "[colour]", IV_GET|IV_STORE, backgroundTextImage,
      NAME_appearance, "Background colour"),
   IV(NAME_start, "int", IV_NONE,
      NAME_scroll, "Index of first character displayed"),

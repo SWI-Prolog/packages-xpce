@@ -591,7 +591,7 @@ static vardecl var_dialogItem[] =
   SV(NAME_labelFormat, "{left,center,right}", IV_GET|IV_STORE,
      labelFormatDialogItem,
      NAME_layout, "Align labels in their box"),
-  SV(NAME_background, "image|colour*", IV_GET|IV_STORE, backgroundDialogItem,
+  SV(NAME_background, "colour*", IV_GET|IV_STORE, backgroundDialogItem,
      NAME_appearance, "Opaque background for item"),
   SV(NAME_status, "{inactive,active,preview,execute}", IV_GET|IV_STORE,
      statusDialogItem,
@@ -679,7 +679,7 @@ static getdecl get_dialogItem[] =
 static classvardecl rc_dialogItem[] =
 { RC(NAME_alignment, "{column,left,center,right}", "column",
      "Alignment in the row"),
-  RC(NAME_background, "colour|pixmap*", "@_dialog_bg",
+  RC(NAME_background, "colour*", "@_dialog_bg",
      "Background of the item"),
   RC(NAME_elevation, "elevation*", "1",
      "3-D elevation"),

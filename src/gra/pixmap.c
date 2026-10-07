@@ -155,8 +155,6 @@ getSourcePixmap(PixmapObj pm)
 
 /* Type declarations */
 
-static char *T_fill[] =
-        { "image|colour", "[area]" };
 static char *T_initialise[] =
         { "source=[image|file]*", "width=[int]", "height=[int]" };
 static char *T_lookup[] =
@@ -175,9 +173,7 @@ vardecl var_pixmap[] =
 
 static senddecl send_pixmap[] =
 { SM(NAME_initialise, 3, T_initialise, initialisePixmap,
-     DEFAULT, "Create image of <-kind pixmap"),
-  SM(NAME_fill, 2, T_fill, fillImage,
-     NAME_edit, "Fill rectangular area of image with pattern")
+     DEFAULT, "Create image of <-kind pixmap")
 };
 
 /* Get Methods */

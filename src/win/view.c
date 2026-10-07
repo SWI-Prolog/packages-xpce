@@ -242,9 +242,9 @@ static senddecl send_view[] =
      NAME_scroll, "Trap scroll_bar request"),
   SM(NAME_selection, 3, T_selection, selectionView,
      NAME_selection, "Overrule window behaviour"),
-  SM(NAME_background, 1, "colour|pixmap", backgroundView,
+  SM(NAME_background, 1, "colour", backgroundView,
      NAME_appearance, "Backround for the window"),
-  SM(NAME_colour, 1, "colour|pixmap", colourView,
+  SM(NAME_colour, 1, "colour", colourView,
      NAME_appearance, "Foreground colour for the text")
 };
 

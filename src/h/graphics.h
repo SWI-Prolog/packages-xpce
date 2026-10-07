@@ -115,7 +115,7 @@ typedef struct colour_context *ColourContext; /* for selection/inactive */
   FontObj    label_font;		/* Font used for the label */ \
   Int	     label_width;		/* Width of the label */ \
   Name	     label_format;		/* Alignment of label in box */ \
-  Any	     background;		/* Colour or Image for background */ \
+  Any	     background;		/* Colour for background */ \
   Name	     status;			/* inactive, focus, preview, execute*/\
   Code	     message;			/* Execution message */ \
   PopupObj   popup;			/* Popup associated with item */ \
@@ -763,6 +763,7 @@ End;
 NewClass(theme_colour)
   ABSTRACT_COLOUR
   Any		derived_from;		/* Name or colour it is derived from */
+  StringObj	summary;		/* Description of its role */
 End;
 
 
@@ -781,8 +782,8 @@ NewClass(elevation)
   Int		height;			/* Height of the top */
   Any		colour;			/* Colour of the top */
   Any		background;		/* Colour when down */
-  Any		relief;			/* Relief colour/pixmap */
-  Any		shadow;			/* Shadow colour/pixmap */
+  Any		relief;			/* Relief colour */
+  Any		shadow;			/* Shadow colour */
   Name		kind;			/* How elevation is painted */
 End;
 

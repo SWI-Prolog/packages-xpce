@@ -384,7 +384,7 @@ static vardecl var_textMargin[] =
      NAME_layout, "Distance between icons in X and Y"),
   SV(NAME_iconSize, "size*", IV_GET|IV_STORE, iconSizeMargin,
      NAME_layout, "Scale icons to this size"),
-  SV(NAME_background, "[colour|pixmap]", IV_GET|IV_STORE, backgroundTextMargin,
+  SV(NAME_background, "[colour]", IV_GET|IV_STORE, backgroundTextMargin,
      NAME_appearance, "Background colour"),
   IV(NAME_armed, "fragment*", IV_GET,
      NAME_event, "Icon of this fragment is hovered")
@@ -417,7 +417,7 @@ static classvardecl rc_textMargin[] =
      "Placement relative to the image"),
   RC(NAME_elevation, "elevation*", "@nil",
      "Elevation from the background"),
-  RC(NAME_background, "[colour|pixmap]", "ui_margin_background",
+  RC(NAME_background, "[colour]", "ui_margin_background",
      "Background colour for the text"),
   RC(NAME_fragmentCursor, "cursor*", "pointer",
      "Cursor when hovering a fragment")

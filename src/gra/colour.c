@@ -830,8 +830,8 @@ static getdecl get_colour[] =
      NAME_colour, "RGBA alpha component"),
   GM(NAME_hue, 0, "0..360", NULL, getHueColour,
      NAME_colour, "Hue from the HSV-model"),
-  GM(NAME_saturnation, 0, "0..100", NULL, getSaturationColour,
-     NAME_colour, "Saturnation from the HSV-model"),
+  GM(NAME_saturation, 0, "0..100", NULL, getSaturationColour,
+     NAME_colour, "Saturation from the HSV-model"),
   GM(NAME_value, 0, "0..100", NULL, getValueColour,
      NAME_colour, "Value from the HSV-model")
 };
@@ -910,11 +910,12 @@ makeClassColour(Class class)
 #define MAX_THEME_COLOUR_DEPTH 100
 
 static status
-initialiseThemeColour(ThemeColour tc, Name name, Any from)
+initialiseThemeColour(ThemeColour tc, Name name, Any from, StringObj summary)
 { assign(tc, name,	   name);
   assign(tc, kind,	   NAME_theme);
   assign(tc, rgba,	   DEFAULT);
   assign(tc, derived_from, from);
+  assign(tc, summary,	   isDefault(summary) ? NIL : summary);
 
   appendHashTable(ColourTable, name, tc);
   appendChain(ThemeColours, tc);
@@ -939,11 +940,13 @@ unlinkThemeColour(ThemeColour tc)
 static status derivedFromThemeColour(ThemeColour tc, Any from);
 
 static ThemeColour
-getLookupThemeColour(Class class, Name name, Any from)
+getLookupThemeColour(Class class, Name name, Any from, StringObj summary)
 { Colour c = getMemberHashTable(ColourTable, name);
 
   if ( c && instanceOfObject(c, ClassThemeColour) )
   { derivedFromThemeColour((ThemeColour)c, from);
+    if ( notDefault(summary) )
+      assign(((ThemeColour)c), summary, summary);
     answer((ThemeColour)c);
   }
 
@@ -1030,15 +1033,18 @@ resolveThemeColour(ThemeColour tc)
 }
 
 
-static char *T_themeColour[] = { "name=name", "derived_from=name|colour" };
+static char *T_themeColour[] =
+	{ "name=name", "derived_from=name|colour", "summary=[string]*" };
 
 static vardecl var_themeColour[] =
 { IV(NAME_derivedFrom, "name|colour", IV_GET,
-     NAME_colour, "Colour name or colour this colour is derived from")
+     NAME_colour, "Colour name or colour this colour is derived from"),
+  IV(NAME_summary, "string*", IV_BOTH,
+     NAME_manual, "Description of the role of this colour")
 };
 
 static senddecl send_themeColour[] =
-{ SM(NAME_initialise, 2, T_themeColour, initialiseThemeColour,
+{ SM(NAME_initialise, 3, T_themeColour, initialiseThemeColour,
      DEFAULT, "Create from semantic name and colour it is derived from"),
   SM(NAME_unlink, 0, NULL, unlinkThemeColour,
      DEFAULT, "Remove from the theme colours"),
@@ -1047,7 +1053,7 @@ static senddecl send_themeColour[] =
 };
 
 static getdecl get_themeColour[] =
-{ GM(NAME_lookup, 2, "theme_colour", T_themeColour, getLookupThemeColour,
+{ GM(NAME_lookup, 3, "theme_colour", T_themeColour, getLookupThemeColour,
      NAME_oms, "Existing theme colour with this name")
 };
 
@@ -1069,55 +1075,82 @@ ClassDecl(themeColour_decls,
 static const struct builtin_theme_colour
 { const char *name;
   const char *value;
+  const char *summary;
 } builtin_theme_colours[] =
 { /* Basic colours of windows */
-  { "ui_window_background",	    "sys_window_background" },
-  { "ui_window_foreground",	    "sys_window_foreground" },
-  { "ui_dialog_background",	    "sys_dialog_background" },
-  { "ui_dialog_foreground",	    "sys_dialog_foreground" },
-  { "ui_selection_background",	    "sys_selection_background" },
-  { "ui_selection_foreground",	    "sys_selection_foreground" },
-  { "ui_button_background",	    "sys_button_background" },
-  { "ui_button_foreground",	    "sys_button_foreground" },
-  { "ui_button_pressed",	    "sys_button_pressed" },
-  { "ui_tooltip_background",	    "sys_tooltip_background" },
-  { "ui_tooltip_foreground",	    "sys_tooltip_foreground" },
-  { "ui_inactive",		    "sys_inactive" },
-  { "ui_link",			    "sys_link" },
-  { "ui_accent",		    "sys_accent" },
-  { "ui_separator",		    "sys_separator" },
-  { "ui_shadow",		    "sys_shadow" },
+  { "ui_window_background",	    "sys_window_background",
+    "Background of windows that hold a document, e.g., an editor" },
+  { "ui_window_foreground",	    "sys_window_foreground",
+    "Text and lines in windows that hold a document" },
+  { "ui_dialog_background",	    "sys_dialog_background",
+    "Background of dialog windows and their items" },
+  { "ui_dialog_foreground",	    "sys_dialog_foreground",
+    "Text and lines in dialog windows" },
+  { "ui_selection_background",	    "sys_selection_background",
+    "Background of selected items in menus and lists" },
+  { "ui_selection_foreground",	    "sys_selection_foreground",
+    "Text of selected items in menus and lists" },
+  { "ui_button_background",	    "sys_button_background",
+    "Face of buttons" },
+  { "ui_button_foreground",	    "sys_button_foreground",
+    "Label of buttons" },
+  { "ui_button_pressed",	    "sys_button_pressed",
+    "Face of a button while it is pressed" },
+  { "ui_tooltip_background",	    "sys_tooltip_background",
+    "Background of tooltips (balloon help)" },
+  { "ui_tooltip_foreground",	    "sys_tooltip_foreground",
+    "Text of tooltips (balloon help)" },
+  { "ui_inactive",		    "sys_inactive",
+    "Text and lines of items that cannot be used" },
+  { "ui_link",			    "sys_link",
+    "Hyperlinks" },
+  { "ui_accent",		    "sys_accent",
+    "Highlights such as the focus ring and switches that are on" },
+  { "ui_separator",		    "sys_separator",
+    "Lines that separate parts of a window" },
+  { "ui_shadow",		    "sys_shadow",
+    "Shadows and the dark side of 3-D elevations" },
   /* Derived from the basic colours */
-  { "ui_margin_background",	    "ui_window_background" },
-  { "ui_scrollbar_background",	    UXWIN("grey66", "ui_window_background") },
+  { "ui_margin_background",	    "ui_window_background",
+    "Margin of an editor, e.g., with line numbers" },
+  { "ui_scrollbar_background",	    UXWIN("grey66", "ui_window_background"),
+    "Trough of scrollbars" },
   /* Text */
-  { "ui_text_selection_background", "sys_text_selection_background" },
-  { "ui_isearch_background",	    "green" },
-  { "ui_isearch_other_background",  "pale_turquoise" },
-  { "ui_fold",			    "grey50" },
-  { "ui_cursor",		    "red" },
-  { "ui_cursor_inactive",	    "grey50" },
+  { "ui_text_selection_background", "sys_text_selection_background",
+    "Background of selected text" },
+  { "ui_isearch_background",	    "green",
+    "Current match of incremental search" },
+  { "ui_isearch_other_background",  "pale_turquoise",
+    "Other matches of incremental search" },
+  { "ui_fold",			    "grey50",
+    "Marker of folded (hidden) text" },
+  { "ui_cursor",		    "red",
+    "Text cursor of the window that has the keyboard focus" },
+  { "ui_cursor_inactive",	    "grey50",
+    "Text cursor of other windows" },
   /* Dialog items */
-  { "ui_placeholder",		    "grey60" },
-  { "ui_accelerator",		    "grey30" },
+  { "ui_placeholder",		    "grey60",
+    "Placeholder text of an empty text field" },
+  { "ui_accelerator",		    "grey30",
+    "Underline of the accelerator key of a label" },
   /* ANSI terminal colours */
-  { "ansi_black",		    "black" },
-  { "ansi_red",			    "red3" },
-  { "ansi_green",		    "green3" },
-  { "ansi_yellow",		    "yellow3" },
-  { "ansi_blue",		    "blue2" },
-  { "ansi_magenta",		    "magenta3" },
-  { "ansi_cyan",		    "cyan3" },
-  { "ansi_white",		    "gray90" },
-  { "ansi_bright_black",	    "gray50" },
-  { "ansi_bright_red",		    "red" },
-  { "ansi_bright_green",	    "green" },
-  { "ansi_bright_yellow",	    "yellow" },
-  { "ansi_bright_blue",		    "blue" },
-  { "ansi_bright_magenta",	    "magenta" },
-  { "ansi_bright_cyan",		    "cyan" },
-  { "ansi_bright_white",	    "white" },
-  { NULL,			    NULL }
+  { "ansi_black",		    "black",	"Terminal colour 0 (black)" },
+  { "ansi_red",			    "red3",	"Terminal colour 1 (red)" },
+  { "ansi_green",		    "green3",	"Terminal colour 2 (green)" },
+  { "ansi_yellow",		    "yellow3",	"Terminal colour 3 (yellow)" },
+  { "ansi_blue",		    "blue2",	"Terminal colour 4 (blue)" },
+  { "ansi_magenta",		    "magenta3",	"Terminal colour 5 (magenta)" },
+  { "ansi_cyan",		    "cyan3",	"Terminal colour 6 (cyan)" },
+  { "ansi_white",		    "gray90",	"Terminal colour 7 (white)" },
+  { "ansi_bright_black",	    "gray50",	"Terminal colour 8 (bright black)" },
+  { "ansi_bright_red",		    "red",	"Terminal colour 9 (bright red)" },
+  { "ansi_bright_green",	    "green",	"Terminal colour 10 (bright green)" },
+  { "ansi_bright_yellow",	    "yellow",	"Terminal colour 11 (bright yellow)" },
+  { "ansi_bright_blue",		    "blue",	"Terminal colour 12 (bright blue)" },
+  { "ansi_bright_magenta",	    "magenta",	"Terminal colour 13 (bright magenta)" },
+  { "ansi_bright_cyan",		    "cyan",	"Terminal colour 14 (bright cyan)" },
+  { "ansi_bright_white",	    "white",	"Terminal colour 15 (bright white)" },
+  { NULL,			    NULL,	NULL }
 };
 
 
@@ -1136,7 +1169,8 @@ makeClassThemeColour(Class class)
     Name value = CtoName(bc->value);
 
     appendHashTable(defaults, name, value);
-    newObject(ClassThemeColour, name, value, EAV);
+    newObject(ClassThemeColour, name, value,
+	      CtoString(bc->summary), EAV);
   }
 
   succeed;

@@ -23,8 +23,8 @@ objects to simulate the object elevated above the surface.
 
 ## Instance variables {#class-elevation-instvars}
 
-- elevation<-colour: [{hilited,reduced}|colour|pixmap]
-    Colour or pixmap object used to fill the top of the elevated
+- elevation<-colour: [{hilited,reduced}|colour]
+    Colour used to fill the top of the elevated
     area.  When @default, only the edges will be painted.
 
 - elevation<-height: int
@@ -43,12 +43,12 @@ objects to simulate the object elevated above the surface.
     @nil <-name are stored in the table @elevations.   <-convert
     will convert elevation identifiers to elevation objects.
 
-- elevation<-relief: [colour|pixmap]
-    Colour/pixmap used at `light` side.  When @default, the
+- elevation<-relief: [colour]
+    Colour used at `light` side.  When @default, the
     elevation object will invoke `colour <-hilite` using the
     current background.  See also <-shadow.
 
-- elevation<-shadow: [colour|pixmap]
+- elevation<-shadow: [colour]
     Colour used to paint the right and bottom edges of the object.
     When @default, the elevation object will invoke `colour
     <-reduce' on the current background colour.
@@ -56,7 +56,7 @@ objects to simulate the object elevated above the surface.
 
 ## Send methods {#class-elevation-send}
 
-- elevation->initialise: name=[name|int]*, height=[int], colour=[{hilited,reduced}|colour|pixmap], relief=[colour|pixmap], shadow=[colour|pixmap], kind=[{3d,shadow}], background=[{reduced}|colour|pixmap]
+- elevation->initialise: name=[name|int]*, height=[int], colour=[{hilited,reduced}|colour], relief=[colour], shadow=[colour], kind=[{3d,shadow}], background=[{reduced}|colour]
     Create from <-name and description parameters.  In most cases
     the user will create an elevation object simply from its <-height:
 
@@ -72,7 +72,7 @@ objects to simulate the object elevated above the surface.
 
 ## Get methods {#class-elevation-get}
 
-- elevation<-lookup: name=[name|int]*, height=[int], colour=[{hilited,reduced}|colour|pixmap], relief=[colour|pixmap], shadow=[colour|pixmap], kind=[{3d,shadow}], background=[{reduced}|colour|pixmap] -> elevation
+- elevation<-lookup: name=[name|int]*, height=[int], colour=[{hilited,reduced}|colour], relief=[colour], shadow=[colour], kind=[{3d,shadow}], background=[{reduced}|colour] -> elevation
 
 - elevation<-convert: name|int -> elevation
     The <-convert and <-lookup methods realise reuse of elevation

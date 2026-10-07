@@ -552,7 +552,7 @@ static vardecl var_table_cell[] =
      NAME_layout, "Size around contents of the cell"),
   SV(NAME_selected, "bool", IV_GET|IV_STORE, selectedTableCell,
      NAME_selection, "Is cell selected?"),
-  SV(NAME_background, "[colour|pixmap]", IV_GET|IV_STORE, backgroundTableCell,
+  SV(NAME_background, "[colour]", IV_GET|IV_STORE, backgroundTableCell,
      NAME_colour, "Backround colour for the cell"),
   SV(NAME_noteMark, "image*", IV_GET|IV_STORE, noteMarkTableCell,
      NAME_appearance, "Image painted in the top-right corner")
