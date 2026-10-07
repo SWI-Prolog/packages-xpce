@@ -1134,8 +1134,13 @@ openComboBoxMenu(Menu m)
     DictItem di;
 
     if ( mi->active == ON )
-    { send(c, NAME_append,
-	   (di=newObject(ClassDictItem, mi->value, mi->label, EAV)), EAV);
+    { Any font = getAttributeObject(mi, NAME_previewFont);
+
+      if ( !font && notDefault(mi->font) )
+	font = mi->font;
+      di = appendCompletionItem(c, mi->value, mi->label,
+				getAttributeObject(mi, NAME_helpTag),
+				font, DEFAULT);
       if ( mi->selected == ON )
 	selection = di;
     }

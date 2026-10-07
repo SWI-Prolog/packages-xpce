@@ -306,6 +306,94 @@ coloursChangedDisplayManager(DisplayManager dm)
   succeed;
 }
 
+/* Fonts changed their size or family in place, e.g., after changing
+ * font.scale or font.pango_families: reload them and recompute and
+ * redraw all windows.  Everything that shows text has to recompute its
+ * size, and dialogs and frames their layout.  A frame or graphical
+ * whose class defines ->fonts_changed is sent this message, so it can
+ * drop what it computed from the font metrics.  A graphical gets it
+ * after its contents were recomputed, just before it is recomputed
+ * itself.  As for ->colours_changed, we walk all devices of each frame
+ * using an agenda.
+ */
+
+static status
+fontsChangedDisplayManager(DisplayManager dm)
+{ Chain agenda  = answerObject(ClassChain, EAV);
+  Chain graphicals = answerObject(ClassChain, EAV);
+  Chain dialogs = answerObject(ClassChain, EAV);
+  Chain frames  = answerObject(ClassChain, EAV);
+  Cell dcell, fcell;
+
+  reloadFonts();
+
+  for_cell(dcell, dm->members)
+  { DisplayObj d = dcell->value;
+
+    for_cell(fcell, d->frames)
+    { appendChain(agenda, fcell->value);
+      appendChain(frames, fcell->value);
+    }
+  }
+
+  Any obj;
+  while( (obj = getDeleteHeadChain(agenda)) )
+  { if ( isFreeingObj(obj) )
+      continue;
+
+    if ( instanceOfObject(obj, ClassFrame) )
+    { Cell cell;
+
+      if ( getSendMethodClass(classOfObject(obj), NAME_fontsChanged) )
+	send(obj, NAME_fontsChanged, EAV);
+
+      for_cell(cell, ((FrameObj)obj)->members)
+	appendChain(agenda, cell->value);
+      continue;
+    }
+    if ( instanceOfObject(obj, ClassGraphical) )
+    { requestComputeGraphical(obj, DEFAULT);
+      prependChain(graphicals, obj);	/* contents before devices */
+    }
+    if ( instanceOfObject(obj, ClassDialog) )
+      appendChain(dialogs, obj);
+    if ( instanceOfObject(obj, ClassWindow) )
+      redrawWindow(obj, DEFAULT);
+    if ( instanceOfObject(obj, ClassDevice) )
+    { Cell cell;
+
+      for_cell(cell, ((Device)obj)->graphicals)
+	appendChain(agenda, cell->value);
+    }
+  }
+
+				/* compute now, contents first, so */
+				/* the layout below uses the new sizes */
+  while( (obj = getDeleteHeadChain(graphicals)) )
+  { if ( isFreeingObj(obj) )
+      continue;
+    if ( getSendMethodClass(classOfObject(obj), NAME_fontsChanged) )
+      send(obj, NAME_fontsChanged, EAV);
+    ComputeGraphical(obj);
+  }
+  while( (obj = getDeleteHeadChain(dialogs)) )
+  { if ( !isFreeingObj(obj) )
+      send(obj, NAME_layout, EAV);
+  }
+  while( (obj = getDeleteHeadChain(frames)) )
+  { if ( !isFreeingObj(obj) && createdFrame(obj) )
+      send(obj, NAME_resize, EAV);
+  }
+
+  doneObject(agenda);
+  doneObject(graphicals);
+  doneObject(dialogs);
+  doneObject(frames);
+
+  succeed;
+}
+
+
 /* Called if the user changed the desktop settings: reload the system
  * colours (sys_*, etc.), make the theme colours follow them, send
  * <-system_colours_message, which allows the application to select
@@ -432,6 +520,8 @@ static senddecl send_displayManager[] =
      NAME_organisation, "True if there is a visible (keep_alive) frame"),
   SM(NAME_systemColoursChanged, 0, NULL, systemColoursChangedDisplayManager,
      NAME_colour, "Reload the system colours and redraw"),
+  SM(NAME_fontsChanged, 0, NULL, fontsChangedDisplayManager,
+     NAME_font, "Reload fonts, recompute and redraw all windows"),
   SM(NAME_coloursChanged, 0, NULL, coloursChangedDisplayManager,
      NAME_colour, "Tell frames and graphicals colours changed and redraw"),
   SM(NAME_inspectHandler, 1, "handler", inspectHandlerDisplayManager,

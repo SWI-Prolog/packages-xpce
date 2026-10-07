@@ -96,6 +96,18 @@ created at boot time.  Its responsibilities are:
 
     @see class theme_colour
 
+- display_manager->fonts_changed
+    Reload all fonts and recompute and redraw all windows of all frames.
+    Send this after changing `font.scale` or `font.pango_families` at
+    runtime.  Font objects keep their identity: only their size and
+    Pango family change, so all their users see the change.
+
+    Everything that shows text is recomputed, dialogs are laid out
+    again and frames resize their windows.  A frame or graphical whose
+    class defines `->fonts_changed` is sent this message, so it can drop
+    what it computed from the font metrics.  A graphical gets this after
+    its contents were recomputed.  Classes editor and menu_bar define it.
+
 - display_manager->colours_changed
     Redraw all windows of all frames, including windows inside other
     windows or devices such as tabs.  Send this after changing colours

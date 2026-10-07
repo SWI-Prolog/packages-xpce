@@ -36,6 +36,7 @@
           [ fontviewer/0
           ]).
 :- use_module(library(pce)).
+:- use_module(library(help_message)).
 :- use_module(library('unicode/blocks')).
 :- use_module(library(apply)).
 :- use_module(library(pce_util)).
@@ -71,6 +72,9 @@ initialise(FB) :->
 
     send(D, append, new(_Filter, text_item(filter, '', FilterMsg))),
     send(D, append, new(Type,   menu(type,   cycle, FilterMsg)), right),
+    send(D, append, new(Covers, text_item(covers, '', FilterMsg)), right),
+    send(Covers, help_message, tag,
+         'Only families that provide all these characters themselves'),
     send(D, append, new(Alias,  menu(alias,  cycle, AliasMsg)), next_row),
     send(D, append, new(ALBL,   label(alias_msg, "Show font from alias")), right),
     send(D, append, new(Family, menu(family, cycle, FontMsg)), next_row),
@@ -111,6 +115,19 @@ set_menu_options(Menu, Options) :-
     forall(member(Opt, Options),
            send(Menu, append, menu_item(Opt, @default, Opt))).
 
+%   covering_families(+FB, +Covers)
+%
+%   Only show the families whose fonts provide all characters of Covers
+%   themselves, i.e., without using the fallback fonts.  `font
+%   <-font_families` tests this without loading the fonts in xpce.
+
+covering_families(FB, '') =>
+    get(class(font), font_families, Fonts),
+    send(FB, slot, fonts, Fonts).
+covering_families(FB, Covers) =>
+    get(class(font), font_families, @default, Covers, Fonts),
+    send(FB, slot, fonts, Fonts).
+
 font_families(FB, Cond, Families) :-
     get(FB, fonts, Fonts),
     new(Ch, chain),
@@ -126,6 +143,8 @@ filter(FB) :->
     get(FB, member, dialog, D),
     get(D, member, filter, FilterItem), get(FilterItem, selection, Text),
     get(D, member, type, TypeItem), get(TypeItem, selection, Type),
+    get(D, member, covers, CoversItem), get(CoversItem, selection, Covers),
+    covering_families(FB, Covers),
     filter_condition(Text, Type, Cond),
     get(D, member, family, FamItem),
     ignore(get(FamItem, selection, Fam0)),

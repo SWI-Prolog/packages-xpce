@@ -497,6 +497,8 @@ resource(cpalette2,     image,  image('16x16/cpalette2.png')).
 builtin_config_type(bool,               [ editor(bool_item),
                                           term(map([@off=false, @on=true]))
                                         ]).
+builtin_config_type(mono_font,          [ editor(font_item)
+                                        ]).
 builtin_config_type(font,               [ editor(font_item),
                                           term([family, style, points]),
                                           icon(font)

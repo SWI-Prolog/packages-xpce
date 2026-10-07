@@ -75,6 +75,14 @@ the `dir.bm` icon, use the following code as a starting point:
 - list_browser<-dict: dict*
     Associated dict object (table of items).
 
+- list_browser<->drop_unrenderable: bool
+    If @on (default @off), a dict_item whose style (see <-styles)
+    has a font that does not provide all characters of the label is
+    deleted from the <-dict.  This is detected when the item is
+    displayed, so fonts are only loaded for the items that are seen.
+    It is used by the combo box of a text_item to show, e.g., font
+    family names in their own font while omitting symbol fonts.
+
 - list_browser<-text_image: text_image
     Text_image object used for visualisation of the items.  Class text_image
     is also used by class editor.  There are many similarities in the

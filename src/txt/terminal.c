@@ -4060,7 +4060,8 @@ static char *T_scrollVertical[] =
 { "direction={forwards,backwards,goto}",
   "unit={file,page,line}", "amount=int" };
 static char *T_font[] =
-{ "font=font", "bold=[font]", "italic=[font]", "bold_italic=[font]" };
+{ "font=mono_font", "bold=[mono_font]", "italic=[mono_font]",
+  "bold_italic=[mono_font]" };
 static char *T_workingDirectory[] =
 { "directory=name*", "host=name*" };
 static char *T_promptMark[] =
@@ -4082,13 +4083,13 @@ static char *T_cellStyle[] =
 static vardecl var_terminal_image[] =
 { IV(NAME_bindings, "key_binding", IV_BOTH,
      NAME_accelerator, "key_binding table"),
-  IV(NAME_font, "font", IV_GET,
+  IV(NAME_font, "mono_font", IV_GET,
      NAME_appearance, "Font used to draw the string"),
-  IV(NAME_boldFont, "font*", IV_GET,
+  IV(NAME_boldFont, "mono_font*", IV_GET,
      NAME_appearance, "Font for bold text"),
-  IV(NAME_italicFont, "font*", IV_GET,
+  IV(NAME_italicFont, "mono_font*", IV_GET,
      NAME_appearance, "Font for italic text"),
-  IV(NAME_boldItalicFont, "font*", IV_GET,
+  IV(NAME_boldItalicFont, "mono_font*", IV_GET,
      NAME_appearance, "Font for bold italic text"),
   SV(NAME_background, "[colour]", IV_GET|IV_STORE, backgroundTerminalImage,
      NAME_appearance, "Terminal background colour"),
@@ -4354,13 +4355,13 @@ static classvardecl rc_terminal_image[] =
      "How many lines are saved for scroll back"),
   RC(NAME_syntax, "[syntax_table]", "default",
      "Syntax definition"),
-  RC(NAME_font, "font", "tt",
+  RC(NAME_font, "mono_font", "tt",
      "Default font"),
-  RC(NAME_boldFont, "font*", "boldtt",
+  RC(NAME_boldFont, "mono_font*", "boldtt",
      "Bold font"),
-  RC(NAME_italicFont, "font*", "itt",
+  RC(NAME_italicFont, "mono_font*", "itt",
      "Italic font"),
-  RC(NAME_boldItalicFont, "font*", "bitt",
+  RC(NAME_boldItalicFont, "mono_font*", "bitt",
      "Bold italic font"),
   RC(NAME_ansiColours, "vector*",
      "vector("

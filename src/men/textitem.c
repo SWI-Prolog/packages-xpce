@@ -373,6 +373,7 @@ CompletionBrowser(void)
     send(Completer, NAME_cancelMessage, quit, EAV);
     send(get(Completer, NAME_tile, EAV), NAME_border, ZERO, EAV);
     send(Completer, NAME_kind, NAME_popup, EAV);
+    assign(Completer->list_browser, drop_unrenderable, ON);
     send(Completer, NAME_create, EAV);
 
     kb = get(Completer, NAME_keyBinding, EAV);

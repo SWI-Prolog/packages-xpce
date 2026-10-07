@@ -34,10 +34,14 @@ The xpce `<-family` slot is translated to a Pango family by looking
 the name up in the `@font_families` hash table (seeded from
 `font.pango_families`).  That table maps the generic family names
 `mono`, `sans` and `serif` to a sensible platform-specific Pango
-family; any name not in the table is passed to Pango literally.  A
-Pango family name may itself be a comma-separated list of
-alternatives that Pango tries in order; `<-pango_property` reports
-which family was actually selected.
+family.  The old names `screen`, `helvetica` and `times` use the
+mapping of `mono`, `sans` and `serif` unless the table maps them
+explicitly.  Any other name not in the table is passed to Pango
+literally.  A Pango family name may itself be a comma-separated list
+of alternatives that Pango tries in order; `<-pango_property` reports
+which family was actually selected.  Characters that none of these
+families provide are taken from the fallback fonts of the system, so
+the mapping does not limit the characters that can be shown.
 
 Fonts are reusable: constructing one with the same family, style,
 points and weight returns the existing instance (see `<-lookup`).
@@ -46,7 +50,15 @@ Font objects are auto-bound to a global reference of the form
 
 A sheet describing every Pango font on the host is available as
 
-	get(class(font), font_families, Sheet).
+	get(@font_class, font_families, Sheet).
+
+The method accepts two optional arguments: `get(@font_class,
+font_families, Monospace, Covers, Sheet)`.  If Monospace is `@on`,
+only monospaced families are returned, if `@off`, only the others.
+If Covers is a char_array, only families whose font provides all its
+characters (without using a fallback font) are returned.  For example,
+`Covers = 'Aé'` removes symbol fonts and fonts for other scripts.
+Checking Covers requires loading each font and is relatively slow.
 
 xpce text manipulation handles both fixed-width and proportional
 fonts.  Many classes ship class variables that pick reasonable
@@ -60,9 +72,11 @@ default fonts for their role.
 
 ## Class variables {#class-font-classvars}
 
-- font.scale: real = 1.0
+- font.scale: num = 1.0
     Multiplication factor applied to every font's `<-points` before
-    Pango is asked to render.  Useful for HiDPI tweaks.
+    Pango is asked to render, making all text larger or smaller.  After changing
+    it at runtime, send `display_manager ->fonts_changed` to apply it to
+    the existing fonts and windows.
 
 - font.system_fonts: chain
     Seed for `@font_aliases`: pairs of alias name → font object
@@ -74,11 +88,12 @@ default fonts for their role.
 
 - font.pango_families: chain
     Seed for `@font_families`: pairs that map an xpce generic
-    family name (`mono`, `sans`, `serif`, plus legacy `helvetica`,
-    `times`, `screen`) to a Pango family name (or a
-    comma-separated list of fallbacks).  As with `font.system_fonts`,
-    families omitted from an overruling definition keep their
-    built-in value.
+    family name (`mono`, `sans`, `serif`) to a Pango family name (or a
+    comma-separated list of fallbacks).  The legacy names `screen`,
+    `helvetica` and `times` follow `mono`, `sans` and `serif`.  As
+    with `font.system_fonts`, families omitted from an overruling
+    definition keep their built-in value.  After changing it at
+    runtime, send `display_manager ->fonts_changed`.
 
 - font.no_font: font = normal
     Substitute used when an explicitly-requested font cannot be

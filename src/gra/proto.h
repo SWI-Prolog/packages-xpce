@@ -112,6 +112,8 @@ COMMON(status)	makeClassFigure(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/font.c */
 COMMON(status)	makeBuiltinFonts(void);
+COMMON(status)	reloadFonts(void);
+COMMON(Name)	pangoFamilyFont(Name family);
 COMMON(FontObj) getCopyFont(FontObj f);
 COMMON(Int)	getWidthFont(FontObj f, CharArray txt);
 COMMON(Int)	getAdvanceFont(FontObj f, CharArray txt);

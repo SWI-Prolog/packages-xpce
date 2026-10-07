@@ -89,7 +89,21 @@ clear(_) :->
     true.
 
 active(FI, Val:bool) :->
-    send(FI?graphicals, for_all, message(@arg1, active, Val)).
+    send_super(FI, active, Val),
+    send(FI?graphicals, for_all, message(@arg1, active, Val)),
+    single_family(FI).
+
+%   single_family(+FontItem)
+%
+%   There is nothing to choose if we offer a single family, e.g., `mono`
+%   for a mono_font, so the family menu is inactive.
+
+single_family(FI) :-
+    get(FI, member, family, Fam),
+    (   get(Fam?members, size, 1)
+    ->  send(Fam, active, @off)
+    ;   true
+    ).
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -225,6 +239,19 @@ weight(FI, _Wgt:name) :->
 points(FI, _Pts:int) :->
     send(FI, forward).
 
+
+families(FI, Families:chain) :->
+    "Only offer these families"::
+    get(FI, member, family, Fam),
+    get(Fam, selection, Current),
+    send(Fam, clear),
+    send(Families, for_all, message(Fam, append, @arg1)),
+    (   send(Families, member, Current)
+    ->  true
+    ;   send(Fam, append, Current)      % do not lose the current value
+    ),
+    send(Fam, selection, Current),
+    single_family(FI).
 
                  /*******************************
                  *  GENERIC DIALOG OPERATIONS   *

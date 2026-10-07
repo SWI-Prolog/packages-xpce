@@ -488,10 +488,70 @@ loadFontFamilies(void)
 }
 
 
+/* The class variables font.pango_families or font.scale changed.
+ * Rebuild the family table and recreate the window system font of all
+ * fonts, so they use the new family and size.  Font objects are unique
+ * and keep their identity, so all their users see the change.  The users
+ * must recompute their layout: see `display_manager ->fonts_changed`.
+ */
+
+status
+reloadFonts(void)
+{ Chain ch;
+
+  clearHashTable(FontFamilyTable);
+  loadFontFamilies();
+  if ( (ch=getBuiltinChainFont(NAME_pangoFamilies)) )
+    loadFontFamilyChain(ch);
+  ws_reset_font_scale();
+
+  for_hash_table(FontTable, s,
+		 { FontObj f = s->value;
+
+		   assign(f, avg_char_width, NIL); /* computed lazily */
+		   if ( f->ws_ref )
+		   { ws_destroy_font(f);
+		     ws_create_font(f);
+		   }
+		 });
+
+  succeed;
+}
+
+
+/* The Pango family for the family of an xpce font.  The families screen,
+ * helvetica and times are old names for mono, sans and serif.  They use
+ * the same Pango family, unless font.pango_families maps them
+ * explicitly.
+ */
+
+Name
+pangoFamilyFont(Name family)
+{ Name pf;
+
+  if ( (pf = getMemberHashTable(FontFamilyTable, family)) )
+    return pf;
+
+  if ( family == NAME_screen )
+    family = NAME_mono;
+  else if ( family == NAME_helvetica )
+    family = NAME_sans;
+  else if ( family == NAME_times )
+    family = NAME_serif;
+  else
+    return family;
+
+  if ( (pf = getMemberHashTable(FontFamilyTable, family)) )
+    return pf;
+
+  return family;
+}
+
+
 /* Implements class(font)<-font_families */
 static Sheet
-getFontFamilies(Class class, BoolObj mono)
-{ answer(ws_font_families(mono));
+getFontFamilies(Class class, BoolObj mono, CharArray covers)
+{ answer(ws_font_families(mono, covers));
 }
 
 		 /*******************************
@@ -585,7 +645,7 @@ static getdecl get_font[] =
 /* Resources */
 
 static classvardecl rc_font[] =
-{ RC(NAME_scale, "real",  "1.0",
+{ RC(NAME_scale, "num",  "1.0",
      "Multiplication factor for all fonts"),
   RC(NAME_systemFonts, "chain",
      "[ normal    := font(sans, normal, 12),\n"
@@ -606,10 +666,7 @@ static classvardecl rc_font[] =
   RC(NAME_pangoFamilies, "chain",
      "[ mono      := '"MONO_FAMILY"',\n"
      "  sans      := '"SANS_FAMILY"',\n"
-     "  serif     := '"SERIF_FAMILY"',\n"
-     "  screen    := '"MONO_FAMILY"',\n" /* Backward compatibility */
-     "  helvetica := '"SANS_FAMILY"',\n"
-     "  times     := '"SERIF_FAMILY"'\n"
+     "  serif     := '"SERIF_FAMILY"'\n"
      "]",
      "Mapping from generic family to Pango family"),
   RC(NAME_noFont, "font", "normal",
@@ -641,7 +698,8 @@ makeClassFont(Class class)
     class,
     createGetMethod(NAME_fontFamilies,
 		    toType(NAME_sheet),
-		    newObject(ClassVector, CtoName("[monospace=bool]"), EAV),
+		    newObject(ClassVector, CtoName("[monospace=bool]"),
+			      CtoName("[covers=char_array]"), EAV),
 		    CtoString("Get Pango font families"),
 		    (void*)getFontFamilies));
 

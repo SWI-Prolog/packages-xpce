@@ -1614,6 +1614,13 @@ lay_out_bars(MD) :->
     ;   send(MD, height, Height)
     ).
 
+%       The fonts changed size: the bars may need another height.  See
+%       `display_manager ->fonts_changed`.
+
+fonts_changed(MD) :->
+    "Take the room the bars need with the new fonts"::
+    ignore(send(MD, lay_out_bars)).
+
 %       The row runs menus at the left and buttons at the right, both
 %       against the top.  The dialog lays its items out one after the
 %       other and lines them up on their baselines, which puts the

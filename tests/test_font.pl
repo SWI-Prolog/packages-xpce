@@ -51,9 +51,20 @@ setup_headless :-
 :- initialization(setup_headless, now).
 
 test_font :-
-    run_tests([font_member, font_domain]).
+    run_tests([font_member, font_domain, font_fixed_width, mono_font,
+               font_reload]).
 
 emoji(0x1F600).                         % 😀
+
+%   The emoji tests assume the sans font has no emoji and another
+%   installed font has, which is the normal situation on Linux.  This
+%   need not be the case elsewhere, e.g., under Wine.
+
+emoji_by_fallback :-
+    emoji(C),
+    new(F, font(sans, normal, 12)),
+    \+ send(F, member, C, @off),
+    send(F, member, C).
 
 :- begin_tests(font_member).
 
@@ -65,7 +76,7 @@ test(ascii_main_only) :-
     new(F, font(sans, normal, 12)),
     send(F, member, 0'a, @off).
 
-test(emoji_default_finds_via_fallback) :-
+test(emoji_default_finds_via_fallback, [condition(emoji_by_fallback)]) :-
     new(F, font(sans, normal, 12)),
     emoji(C),
     send(F, member, C).
@@ -75,7 +86,7 @@ test(emoji_main_only_fails, [fail]) :-
     emoji(C),
     send(F, member, C, @off).
 
-test(emoji_family_explicit) :-
+test(emoji_family_explicit, [condition(emoji_by_fallback)]) :-
     new(F, font(sans, normal, 12)),
     emoji(C),
     send(F, member, C, @on).
@@ -96,7 +107,7 @@ test(family_explicit_matches_default) :-
     get(F, domain, @on, tuple(A2, Z2)),
     A1 == A2, Z1 == Z2.
 
-test(main_only_envelope_excludes_emoji) :-
+test(main_only_envelope_excludes_emoji, [condition(emoji_by_fallback)]) :-
     new(F, font(sans, normal, 12)),
     emoji(C),
     get(F, domain, @off, tuple(_A, Z)),
@@ -113,3 +124,84 @@ test(domain_consistent_with_member) :-
     ).
 
 :- end_tests(font_domain).
+
+:- begin_tests(font_fixed_width).
+
+test(mono, [W == @on]) :-
+    new(F, font(mono, normal, 12)),
+    get(F, fixed_width, W).
+test(sans, [W == @off]) :-
+    new(F, font(sans, normal, 12)),
+    get(F, fixed_width, W).
+
+:- end_tests(font_fixed_width).
+
+:- begin_tests(mono_font).
+
+mono(Spec) :-
+    get(@pce, convert, Spec, mono_font, _).
+
+test(mono_font) :-
+    mono(font(mono, normal, 12)).
+test(alias) :-
+    mono(fixed).
+test(proportional, [fail]) :-
+    mono(font(sans, normal, 12)).
+test(proportional_alias, [fail]) :-
+    mono(normal).
+
+:- end_tests(mono_font).
+
+
+%   `display_manager ->fonts_changed` reloads the fonts after changing
+%   font.scale or font.pango_families.  The font objects stay the same.
+
+set_font_cv(Name, Value, Old) :-
+    get(@font_class, class_variable, Name, CV),
+    get(CV, value, Old),
+    send(@font_class, class_variable_value, Name, Value),
+    send(@display_manager, fonts_changed).
+
+font_height(Font, Height) :-
+    get(Font, height, Height).
+
+:- begin_tests(font_reload).
+
+test(scale, [true(H1 > H0), cleanup(set_font_cv(scale, Old, _))]) :-
+    new(F, font(sans, normal, 12)),
+    font_height(F, H0),
+    set_font_cv(scale, 2, Old),
+    font_height(F, H1).
+test(family_table, [Mapped == 'serif-test',
+                    cleanup(set_font_cv(pango_families, Old, _))]) :-
+    new(New, chain(mono := 'serif-test', sans := 'Noto Sans')),
+    set_font_cv(pango_families, New, Old),
+    get(@font_families, member, mono, Mapped).
+
+%   An editor with a mono font uses a copy of the bold font with the
+%   same ascent.  This copy is not a shared font, so ->fonts_changed has
+%   to make it again.
+
+test(editor_bold_font, [Bold == Plain, cleanup(set_font_cv(scale, Old, _))]) :-
+    new(E, editor),
+    send(E, font, font(mono, normal, 12)),
+    set_font_cv(scale, 2, Old),
+    send(E, fonts_changed),             % E is not displayed
+    get(E?bold_font, ascent, Bold),
+    get(E?font, ascent, Plain).
+
+%   The old families screen, helvetica and times follow mono, sans and
+%   serif.
+
+test(old_families, Same == [true, true, true]) :-
+    findall(B,
+            ( member(Old-New, [screen-mono, helvetica-sans, times-serif]),
+              new(O, font(Old, normal, 12)),
+              new(N, font(New, normal, 12)),
+              get(O, pango_property, family, OF),
+              get(N, pango_property, family, NF),
+              ( OF == NF -> B = true ; B = false )
+            ),
+            Same).
+
+:- end_tests(font_reload).

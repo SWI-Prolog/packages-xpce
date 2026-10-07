@@ -151,7 +151,12 @@ method.
     	<-type.
 
     - chain object
-    	<-completions answers with this chain.
+    	<-completions answers with this chain.  The elements may be
+    	dict_item objects.  The combo box copies their
+    	`help_message` (tooltip).  If the dict_item
+    	has an attribute `font`, the item is displayed in this
+    	font and dropped if the font cannot display its label.
+    	See `list_browser <-drop_unrenderable`.
 
     - function object
     	<-completions invokes the function and returns the result.

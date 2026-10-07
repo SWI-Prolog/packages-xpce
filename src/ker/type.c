@@ -62,6 +62,7 @@ static status	kindType(Type t, Name kind);
 #define TV_CHAR		16
 #define TV_EVENTID	17
 #define TV_ATOMIC	18
+#define TV_MONOFONT	19
 
 status
 initialiseType(Type t, Name name, Name kind, Any context, Chain supers)
@@ -553,6 +554,17 @@ eventIdType(const Type t, const Any val, const Any ctx)
 }
 
 
+/* mono_font: a font of which all characters have the same width, as
+ * needed by a terminal.
+ */
+
+static inline status
+monoFontType(const Type t, const Any val, const Any ctx)
+{ return ( instanceOfObject(val, ClassFont) &&
+	   getFixedWidthFont(val) == ON );
+}
+
+
 static inline status
 atomicType(const Type t, const Any val, const Any ctx)
 { if ( isInteger(val) )
@@ -674,6 +686,7 @@ validateType(Type t, const Any val, const Any ctx)
     case TV_CHAR:	rval = charType(t, val, ctx);		break;
     case TV_EVENTID:	rval = eventIdType(t, val, ctx);	break;
     case TV_ATOMIC:	rval = atomicType(t, val, ctx);		break;
+    case TV_MONOFONT:	rval = monoFontType(t, val, ctx);	break;
     default:
       return sysPce("%s: Invalid type.  Kind is %s, validate = 0x%x",
 		    pp(t), pp(t->kind), (int)t->validate_function);
@@ -778,6 +791,22 @@ getEventIdType(const Type t, const Any val, const Any ctx)
   TRY(rval = toName(val));
   if ( eventName(rval) )
     return rval;
+
+  fail;
+}
+
+
+static Any
+getMonoFontType(const Type t, const Any val, const Any ctx)
+{ FontObj f;
+
+  if ( instanceOfObject(val, ClassFont) )
+    f = val;
+  else
+    f = getTranslateType(nameToType(NAME_font), val, ctx);
+
+  if ( f && getFixedWidthFont(f) == ON )
+    return f;
 
   fail;
 }
@@ -979,6 +1008,9 @@ kindType(Type t, Name kind)
   } else if ( equalName(kind, NAME_atomic) )
   { t->validate_function  = TV_ATOMIC;
     t->translate_function = getAtomicType;
+  } else if ( equalName(kind, NAME_monoFont) )
+  { t->validate_function  = TV_MONOFONT;
+    t->translate_function = getMonoFontType;
   } else
     return errorPce(t, NAME_noTypeKind, kind);
 
@@ -1539,6 +1571,7 @@ struct built_in_type
   { &TypeChar,      NAME_char,      NAME_char,	    NIL },
   { &TypeEventId,   NAME_eventId,   NAME_eventId,   NIL },
   { &TypeAtomic,    NAME_atomic,    NAME_atomic,    NIL },
+  { &TypeMonoFont,  NAME_monoFont,  NAME_monoFont,  NIL },
   { NULL,	    NAME_none,	    NAME_none,      NIL }
 };
 
@@ -1720,6 +1753,7 @@ pceCheckNameType(PceType t, const char *s)
     case TV_ARG:
     case TV_REALRANGE:
     case TV_CHAR:
+    case TV_MONOFONT:
       break;
     case TV_VALUE:
       if ( isName(t->context) && streq(s, strName(t->context)) )

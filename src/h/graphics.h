@@ -676,6 +676,7 @@ NewClass(list_browser)
   PopupObj	popup;			/* Associated popup */
   FontObj	font;			/* Font for text */
   Sheet		styles;			/* Name --> style mapping */
+  BoolObj	drop_unrenderable;	/* Drop items the style cannot show */
   Size		size;			/* Size in characters */
   Int		start;			/* Index of first item shown */
   Int		search_origin;		/* Origin of incremental search */

@@ -89,6 +89,7 @@ initialiseListBrowser(ListBrowser lb, Dict dict, Int w, Int h)
   assign(lb,   search_hit,	      toInt(-1));
   assign(lb,   label_text,	      NIL);
   assign(lb,   styles,		      newObject(ClassSheet, EAV));
+  assign(lb,   drop_unrenderable,     OFF);
   assign(lb,   selection_style,       getClassVariableValueObject(lb,
 						      NAME_selectionStyle));
 
@@ -440,6 +441,63 @@ static Any	     current_background; /* Current background */
 static Any	     current_underline;	/* Current underline */
 static Image	     current_image;	/* Image to flag line */
 
+/* <-drop_unrenderable: an item whose style has a font that does not
+ * provide all characters of the label, e.g., the name of a symbol font
+ * or a font for another script in its own font, is dropped.  We find
+ * out when it is displayed, so fonts are only loaded for the items that
+ * are seen.  We cannot delete it while the text is being laid out, so
+ * we collect it and delete it from a timer.
+ */
+
+static bool
+font_shows_label(FontObj f, PceString s)
+{ for(size_t i = 0; i < s->s_size; i++)
+  { if ( !send(f, NAME_member, toInt(str_fetch(s, i)), OFF, EAV) )
+      return false;
+  }
+
+  return true;
+}
+
+
+static void
+drop_item_later(ListBrowser lb, DictItem di)
+{ Chain pending = getAttributeObject(lb, NAME_unrenderable);
+
+  if ( !pending )
+  { pending = newObject(ClassChain, EAV);
+    attributeObject(lb, NAME_unrenderable, pending);
+  }
+  if ( !memberChain(pending, di) )
+  { appendChain(pending, di);
+    if ( pending->size == ONE )
+    { Timer t = newObject(ClassTimer, toNum(0.0),
+			  newObject(ClassMessage, lb,
+				    NAME_dropUnrenderableItems, EAV),
+			  EAV);
+      startTimer(t, NAME_once, DEFAULT);
+    }
+  }
+}
+
+
+static status
+dropUnrenderableItemsListBrowser(ListBrowser lb)
+{ Chain pending = getAttributeObject(lb, NAME_unrenderable);
+
+  if ( pending )
+  { DictItem di;
+
+    while( (di = getDeleteHeadChain(pending)) )
+    { if ( !isFreedObj(di) && di->dict == lb->dict )
+	deleteDict(lb->dict, di);
+    }
+  }
+
+  succeed;
+}
+
+
 static void
 compute_current(ListBrowser lb)
 { if ( notNil(current_cell) )
@@ -460,7 +518,12 @@ compute_current(ListBrowser lb)
       current_image      = style->icon;
 
       if ( isDefault(current_font) )
-	current_font = lb->font;
+      { current_font = lb->font;
+      } else if ( lb->drop_unrenderable == ON && current_name &&
+		  !font_shows_label(current_font, current_name) )
+      { current_font = lb->font;
+	drop_item_later(lb, di);
+      }
     } else
     { current_font       = lb->font;
       current_colour     = DEFAULT;
@@ -1691,6 +1754,8 @@ static vardecl var_listBrowser[] =
      NAME_appearance, "Font for displayed items"),
   IV(NAME_styles, "sheet", IV_GET,
      NAME_appearance, "Name --> style mapping"),
+  IV(NAME_dropUnrenderable, "bool", IV_BOTH,
+     NAME_appearance, "Drop items whose style font cannot show the label"),
   IV(NAME_size, "characters=size", IV_GET,
      NAME_area, "Size in characters/lines"),
   IV(NAME_start, "int", IV_GET,
@@ -1714,6 +1779,8 @@ static vardecl var_listBrowser[] =
 static senddecl send_listBrowser[] =
 { SM(NAME_compute, 0, NULL, computeListBrowser,
      DEFAULT, "Recompute the image"),
+  SM(NAME_dropUnrenderableItems, 0, NULL, dropUnrenderableItemsListBrowser,
+     NAME_internal, "Delete the items found to be unrenderable"),
   SM(NAME_geometry, 4, T_xADintD_yADintD_widthADintD_heightADintD, geometryListBrowser,
      DEFAULT, "Resize the text_image"),
   SM(NAME_initialise, 3, T_initialise, initialiseListBrowser,

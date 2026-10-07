@@ -66,12 +66,13 @@ typedef struct
 } ws_font, *WsFont;
 
 status ws_create_font(FontObj f);
+void   ws_reset_font_scale(void);
 void   ws_destroy_font(FontObj f);
 bool   s_cwidth(uint32_t c, FontObj font, float *wp);
 bool   s_setcwidth(uint32_t c, FontObj font, float w);
 bool   s_has_char_family(FontObj f, unsigned int c);
 void   f_domain(FontObj f, bool family, int *a, int *z);
-Sheet  ws_font_families(BoolObj mono);
+Sheet  ws_font_families(BoolObj mono, CharArray covers);
 Any    ws_get_pango_property(FontObj f, Name property);
 
 static inline WsFont

@@ -186,6 +186,22 @@ computeButtonMenuBar(Button b)
 
 
 
+/* The font changed in place: see `display_manager ->fonts_changed`.
+ * Our buttons are not graphicals of a device, so we must ask them to
+ * recompute ourselves.
+ */
+
+static status
+fontsChangedMenuBar(MenuBar mb)
+{ Cell cell;
+
+  for_cell(cell, mb->buttons)
+    requestComputeGraphical(cell->value, DEFAULT);
+
+  return requestComputeGraphical(mb, DEFAULT);
+}
+
+
 static status
 computeMenuBar(MenuBar mb)
 { Cell cell;
@@ -861,7 +877,9 @@ static vardecl var_menuBar[] =
 /* Send Methods */
 
 static senddecl send_menuBar[] =
-{ SM(NAME_compute, 0, NULL, computeMenuBar,
+{ SM(NAME_fontsChanged, 0, NULL, fontsChangedMenuBar,
+     NAME_appearance, "The font changed in place: recompute"),
+  SM(NAME_compute, 0, NULL, computeMenuBar,
      DEFAULT, "Recompute the menu-bar"),
   SM(NAME_geometry, 4, T_geometry, geometryMenuBar,
      NAME_resize, "Resize menu-bar"),

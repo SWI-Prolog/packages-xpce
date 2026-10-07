@@ -249,6 +249,7 @@ GLOBAL Type TypeAny;
 GLOBAL Type TypeAny;
 GLOBAL Type TypeArg;
 GLOBAL Type TypeAtomic;
+GLOBAL Type TypeMonoFont;
 GLOBAL Type TypeBool;
 GLOBAL Type TypeChar;
 GLOBAL Type TypeChain;

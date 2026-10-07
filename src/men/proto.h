@@ -63,6 +63,8 @@ COMMON(status)	makeClassSlider(Class class);
 /* /staff/jan/src/pl/packages/xpce/src/men/textitem.c */
 COMMON(status)	initialiseTextItem(TextItem ti, Name name, Any val, Code msg);
 COMMON(Browser)	CompletionBrowser(void);
+COMMON(DictItem) appendCompletionItem(Browser c, Any key, Any label,
+				      Any tag, Any font, Name style);
 COMMON(status)	completerShownDialogItem(Any di);
 COMMON(status)	quitCompleterDialogItem(Any di);
 COMMON(bool)	destroyCompleterFrame(FrameObj fr);

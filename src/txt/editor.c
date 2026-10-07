@@ -4859,8 +4859,13 @@ saveEditor(Editor e, SourceSink file)
 		*          ATTRIBUTES		*
 		********************************/
 
-static status
-fontEditor(Editor e, FontObj font, FontObj bold)
+/* The bold font to use with font.  For a mono font it must have the same
+ * pitch, and the same ascent and descent: we make a copy that has.
+ * Returns NIL to simulate bold.
+ */
+
+static FontObj
+boldFontEditor(Editor e, FontObj font, FontObj bold)
 { if ( notNil(bold) )
   { if ( isDefault(bold) )
       bold = newObject(ClassFont, font->family, NAME_bold, font->points, EAV);
@@ -4885,6 +4890,14 @@ fontEditor(Editor e, FontObj font, FontObj bold)
     }
   }
 
+  return bold;
+}
+
+
+static status
+fontEditor(Editor e, FontObj font, FontObj bold)
+{ bold = boldFontEditor(e, font, bold);
+
   assign(e, bold_font, bold);
   if ( e->font != font )
   { assign(e, font, font);
@@ -4896,6 +4909,25 @@ fontEditor(Editor e, FontObj font, FontObj bold)
   }
 
   succeed;
+}
+
+
+/* The font changed in place: see `display_manager ->fonts_changed`.
+ * Recompute what we derived from its metrics.
+ */
+
+static status
+fontsChangedEditor(Editor e)
+{ double td = valNum(e->tab_distance) * valNum(getAvgCharWidthFont(e->font));
+
+  if ( notNil(e->bold_font) && e->font->family == NAME_mono )
+    assign(e, bold_font,		/* the copy made by boldFontEditor() */
+	   boldFontEditor(e, e->font, DEFAULT)); /* is not reloaded */
+  tabDistanceTextImage(e->text_image, toNum(td));
+  updateStyleCursorEditor(e);
+  ChangedEntireTextImage(e->text_image);
+
+  return ChangedEditor(e);
 }
 
 
@@ -5253,6 +5285,8 @@ static senddecl send_editor[] =
      DEFAULT, "<-text_buffer is being freed"),
   SM(NAME_keyBinding, 2, T_keyBinding, keyBindingEditor,
      NAME_accelerator, "Set a local key binding"),
+  SM(NAME_fontsChanged, 0, NULL, fontsChangedEditor,
+     NAME_appearance, "The font changed in place: recompute"),
   SM(NAME_font, 2, T_font, fontEditor,
      NAME_appearance, "Set font and bold font"),
   SM(NAME_style, 2, T_style, styleEditor,

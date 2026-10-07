@@ -55,12 +55,27 @@ ws_init_fonts(void)
     context = pango_font_map_create_context(fontmap);
     pango_cairo_context_set_resolution(context, 96.0); /* TBD: Get from SDL */
     g_object_ref(context);
-    Real r = getClassVariableValueClass(ClassFont, NAME_scale);
-    if ( r )
-      font_scale = valReal(r);
+    ws_reset_font_scale();
   }
 
   succeed;
+}
+
+
+/* (Re-)read font.scale, the factor for the size of all fonts.  Fonts
+ * created afterwards use the new value: see reloadFonts().
+ */
+
+void
+ws_reset_font_scale(void)
+{ Any r = getClassVariableValueClass(ClassFont, NAME_scale);
+
+  if ( r && (isInteger(r) || isNum(r) || instanceOfObject(r, ClassReal)) )
+  { double s = instanceOfObject(r, ClassReal) ? valReal(r) : valNum(r);
+
+    if ( s > 0.0 )
+      font_scale = s;
+  }
 }
 
 #define TRUST_PANGO_METRICS 0
@@ -170,7 +185,6 @@ ws_create_font(FontObj f)
   PangoWeight weight = PANGO_WEIGHT_NORMAL;
   const char *family;
 
-  fixed = OFF;
   if ( f->style == NAME_normal )
     slant = PANGO_STYLE_NORMAL;
   else if ( f->style == NAME_italic )
@@ -190,9 +204,7 @@ ws_create_font(FontObj f)
   { weight = valInt(f->weight);
   }
 
-  Name fam = getMemberHashTable(FontFamilyTable, f->family);
-  if ( !fam )
-    fam = f->family;
+  Name fam = pangoFamilyFont(f->family);
   family = nameToUTF8(fam);
 
   DEBUG(NAME_font, Cprintf("Creating %s using Pango font %s\n",
@@ -511,8 +523,35 @@ ws_get_pango_property(FontObj f, Name property)
  *     - description: a `name` holding the Pango description
  */
 
+/* Does the font of a family itself, i.e., without the fallback fonts,
+ * provide all characters of covers?  This rules out e.g., symbol fonts
+ * and fonts for other scripts.
+ */
+
+static bool
+family_covers(const char *family, CharArray covers)
+{ PangoFontDescription *desc = pango_font_description_new();
+  bool ok = true;
+
+  pango_font_description_set_family(desc, family);
+  pango_font_description_set_size(desc, 12*PANGO_SCALE);
+  PangoFont *pf = pango_font_map_load_font(fontmap, context, desc);
+  if ( pf )
+  { PceString s = &covers->data;
+
+    for(size_t i = 0; i < s->s_size && ok; i++)
+      ok = pango_font_has_char(pf, str_fetch(s, i));
+    g_object_unref(pf);
+  } else
+    ok = false;
+  pango_font_description_free(desc);
+
+  return ok;
+}
+
+
 Sheet
-ws_font_families(BoolObj mono)
+ws_font_families(BoolObj mono, CharArray covers)
 { Sheet xfonts = answerObject(ClassSheet, EAV);
   PangoFontFamily **families;
   int n_families;
@@ -529,6 +568,8 @@ ws_font_families(BoolObj mono)
       continue;
 
     const char *family_name = pango_font_family_get_name(family);
+    if ( notDefault(covers) && !family_covers(family_name, covers) )
+      continue;
 #if PANGO_VERSION_CHECK(1,44,0)
     bool is_variable = pango_font_family_is_variable(family);
 #endif
