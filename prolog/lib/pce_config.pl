@@ -494,7 +494,7 @@ make_config_editor(M, Editor) :-
 resource(font,          image,  image('16x16/font.png')).
 resource(cpalette2,     image,  image('16x16/cpalette2.png')).
 
-builtin_config_type(bool,               [ editor(config_bool_item),
+builtin_config_type(bool,               [ editor(bool_item),
                                           term(map([@off=false, @on=true]))
                                         ]).
 builtin_config_type(font,               [ editor(font_item),

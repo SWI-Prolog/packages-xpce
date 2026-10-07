@@ -36,7 +36,7 @@ set(KER_SRC	alloc.c assoc.c behaviour.c class.c conversion.c
 
 set(MEN_SRC	button.c dialogitem.c label.c menu.c menubar.c
 		menuitem.c popup.c slider.c textitem.c tab.c diagroup.c
-		tabstack.c labelbox.c intitem.c)
+		tabstack.c labelbox.c intitem.c boolitem.c)
 
 set(FMT_SRC	layoutmgr.c layoutitf.c
 		table.c tabcell.c tabslice.c)

@@ -434,6 +434,20 @@ NewClass(slider)
   BoolObj    drag;			/* Dragging gives messages */
 End;
 
+NewClass(bool_item)
+  ABSTRACT_DIALOGITEM
+  BoolObj    selection;			/* Current value (selection) */
+  Any	     default_value;		/* Default value (or function) */
+  BoolObj    displayed_value;		/* Currently displayed value */
+  BoolObj    show_label;		/* Display the label */
+  Size	     switch_size;		/* Size of the track */
+  Colour     on_colour;			/* Track colour if @on */
+  Colour     off_colour;		/* Track colour if @off */
+  Colour     knob_colour;		/* Colour of the knob */
+  Int	     knob_position;		/* 0..100: position of the knob */
+  Timer	     timer;			/* Animates the knob */
+End;
+
 #define ABSTRACT_MENU \
   ABSTRACT_DIALOGITEM \
   Any	     selection;			/* Current selection */ \

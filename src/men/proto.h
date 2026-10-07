@@ -54,6 +54,9 @@ COMMON(status)	makeClassMenuItem(Class class);
 COMMON(status)	defaultPopupImages(PopupObj p);
 COMMON(status)	makeClassPopup(Class class);
 
+/* src/men/boolitem.c */
+COMMON(status)	makeClassBoolItem(Class class);
+
 /* /staff/jan/src/pl/packages/xpce/src/men/slider.c */
 COMMON(status)	makeClassSlider(Class class);
 
