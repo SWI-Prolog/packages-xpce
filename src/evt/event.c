@@ -46,6 +46,7 @@ extern EventNodeObj getNodeEventTree(EventTreeObj t, Any value);
 
 static Int	 last_buttons     = TOINT(ZERO); /* defaults for next event */
 static Any	 last_window      = NIL;
+static Any	 last_frame       = NIL;	/* <-frame of the last event */
 static Int	 last_x		  = TOINT(ZERO);
 static Int	 last_y		  = TOINT(ZERO);
 static unsigned long last_time	  = 0L;
@@ -126,7 +127,8 @@ initialiseEvent(EventObj e, Name id, Any window,
       }
       e->buttons = toInt(valInt(e->buttons) & ~CLICK_TYPE_mask);
     } else
-    { if ( (t - last_down_time) < multi_click_time &&
+    { if ( t >= last_down_time &&	/* not before the last one */
+	   (t - last_down_time) < multi_click_time &&
 	   abs(last_down_x - px) <= multi_click_diff &&
 	   abs(last_down_y - py) <= multi_click_diff &&
 	   (valInt(last_down_bts)&BUTTON_mask) == (valInt(bts)&BUTTON_mask) &&
@@ -172,6 +174,19 @@ initialiseEvent(EventObj e, Name id, Any window,
 		 *	    LOC-STILL		*
 		 *******************************/
 
+/* The window system sets the <-frame of an event to the frame in which
+ * it happened.  This may differ from the frame of the <-window if the
+ * window grabs the pointer, e.g., while the combo box of a text_item is
+ * shown.  The <-x and <-y are relative to this frame.
+ */
+
+void
+setFrameEvent(EventObj ev, FrameObj fr)
+{ assign(ev, frame, fr);
+  last_frame = fr;
+}
+
+
 void
 considerLocStillEvent()
 { if ( !loc_still_posted )
@@ -196,6 +211,10 @@ considerLocStillEvent()
 				  NAME_locStill, last_window,
 				  last_x, last_y, last_buttons,
 				  toInt(last_time + now - host_last_time), EAV);
+		    if ( isProperObject(last_frame) &&
+			 instanceOfObject(last_frame, ClassFrame) &&
+			 !onFlag(last_frame, F_FREED|F_FREEING) )
+		      assign(e, frame, last_frame);	/* see setFrameEvent() */
 		    addCodeReference(e);
 		    postNamedEvent(e, (Graphical) last_window, DEFAULT, NAME_postEvent);
 		    delCodeReference(e);

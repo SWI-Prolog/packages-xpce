@@ -34,6 +34,7 @@
 
 #include <h/kernel.h>
 #include <h/graphics.h>
+#include <h/dialog.h>			/* completer of a text_item */
 #include "sdldisplay.h"
 #include "sdlframe.h"
 #include "sdlwindow.h"
@@ -1027,6 +1028,9 @@ sdl_frame_event(SDL_Event *ev)
     { case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
       { Code msg;
 
+	if ( destroyCompleterFrame(fr) ) /* Wayland closes a popup if the */
+	  return true;			/* user clicks outside it */
+
 	if ( (msg = checkType(getValueSheet(fr->wm_protocols,
 					    NAME_WM_DELETE_WINDOW),
 			      TypeCode, fr)) )
@@ -1114,7 +1118,8 @@ sdl_frame_event(SDL_Event *ev)
 	return rc;
       }
       case SDL_EVENT_WINDOW_FOCUS_LOST:
-      { PceWindow sw = ws_grabbing_window();
+      { focusLostCompleterFrame(fr);	/* before: it releases the grab */
+	PceWindow sw = ws_grabbing_window();
 	DEBUG(NAME_keyboard, Cprintf("Input focus lost for %s (grabbing=%s)\n",
 				     pp(fr), pp(sw)));
 	if ( sw && getFrameWindow(sw, OFF) != fr )

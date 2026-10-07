@@ -191,6 +191,40 @@ help_message(Gr, What:{tag,summary}, Ev:[event], Msg:string) :<-
 :- pce_end_class.
 
 
+:- pce_extend_class(list_browser).
+
+help_message(LB, What:{tag,summary}, Ev:[event], Msg:string) :<-
+    "Fetch the help message of the item below the pointer"::
+    (   Ev \== @default,
+        get(LB, dict_item, Ev, Item),
+        get(Item, help_message, What, Msg)
+    ->  true
+    ;   get(LB, get_super, help_message, What, Ev, Msg)
+    ).
+
+:- pce_end_class.
+
+
+%   A dict_item is not a visual, so it does not inherit the help
+%   messages above.
+
+:- pce_extend_class(dict_item).
+
+help_message(DI, What:{tag,summary}, Msg:string*) :->
+    "Associate a help message"::
+    attribute_name(What, AttName),
+    (   Msg == @nil
+    ->  send(DI, delete_attribute, AttName)
+    ;   send(DI, attribute, AttName, Msg)
+    ).
+help_message(DI, What:{tag,summary}, Msg:string) :<-
+    "Associated help message"::
+    attribute_name(What, AttName),
+    get(DI, attribute, AttName, Msg).
+
+:- pce_end_class.
+
+
 :- pce_begin_class(help_hyper, hyper,
                    "Hyper between help-balloon and owner").
 

@@ -1007,10 +1007,43 @@ getItemFromEventMenu(Menu m, EventObj ev)
 }
 
 
+/* The gesture of a menu.  As the gesture of a button, but it ignores
+ * the Alt key: Alt-click selects only the item clicked in a menu with
+ * multiple selection.  See soloMenuItem().
+ */
+
+static Any GESTURE_menu = NULL;
+
+static Any
+menuGesture(void)
+{ if ( !GESTURE_menu )
+    GESTURE_menu =
+      globalObject(NAME_MenuGesture, ClassClickGesture,
+		   NAME_left,
+		   newObject(ClassModifier, NAME_up, NAME_up, DEFAULT, NAME_up,
+			     EAV),
+		   DEFAULT,
+		   newObject(ClassMessage, RECEIVER, NAME_execute, EAV),
+		   newObject(ClassMessage, RECEIVER, NAME_status,NAME_preview,EAV),
+		   newObject(ClassMessage, RECEIVER, NAME_cancel, EAV),
+		   EAV);
+
+  return GESTURE_menu;
+}
+
+
 static status
 eventMenu(Menu m, EventObj ev)
 { if ( completerShownDialogItem(m) )
-  { forwardCompletionEvent(ev);
+  { ListBrowser lb = CompletionBrowser()->list_browser;
+
+    if ( isAEvent(ev, NAME_keyboard) )	/* up, down, RET, ESC, search */
+      return postEvent(ev, (Graphical)lb, DEFAULT);
+    if ( forwardCompletionEvent(ev) )
+      succeed;
+    if ( isAEvent(ev, NAME_msLeftDown) && !insideEvent(ev, (Graphical)lb) )
+      return quitCompleterDialogItem(m);
+
     succeed;
   }
 
@@ -1018,9 +1051,7 @@ eventMenu(Menu m, EventObj ev)
     succeed;
 
   if ( m->active == ON )
-  { makeButtonGesture();
-
-    if ( m->feedback == NAME_showSelectionOnly && ev->id == NAME_wheel )
+  { if ( m->feedback == NAME_showSelectionOnly && ev->id == NAME_wheel )
     { Int rot = ev->rotation;
 
       if ( notNil(rot) )
@@ -1032,7 +1063,7 @@ eventMenu(Menu m, EventObj ev)
       }
     }
 
-    return eventGesture(GESTURE_button, ev);
+    return eventGesture(menuGesture(), ev);
   }
 
   fail;
@@ -1154,6 +1185,60 @@ executeMenuItem(Menu m, MenuItem mi, EventObj ev)
 }
 
 
+/* Alt-click or double-click on an item of a menu with multiple selection
+ * selects only this item.  Doing so again on the item while it is the
+ * only one selected restores the selection from before.  The first click
+ * of a double-click toggled the item: undo that first.
+ */
+
+static status
+soloMenuItem(Menu m, MenuItem mi, EventObj ev, int undo_click)
+{ Chain saved = getAttributeObject(m, NAME_soloSelection);
+  int only = TRUE;
+  Cell cell;
+
+  if ( undo_click )
+    toggleMenu(m, mi);
+
+  for_cell(cell, m->members)
+  { MenuItem mi2 = cell->value;
+
+    if ( (mi2 == mi) != (mi2->selected == ON) )
+    { only = FALSE;
+      break;
+    }
+  }
+
+  if ( only && saved && instanceOfObject(saved, ClassChain) )
+  { for_cell(cell, m->members)
+    { MenuItem mi2 = cell->value;
+
+      send(m, NAME_selected, mi2, memberChain(saved, mi2) ? ON : OFF, EAV);
+    }
+    deleteAttributeObject(m, NAME_soloSelection);
+  } else
+  { Chain sel = newObject(ClassChain, EAV);
+
+    for_cell(cell, m->members)
+    { MenuItem mi2 = cell->value;
+
+      if ( mi2->selected == ON )
+	appendChain(sel, mi2);
+      send(m, NAME_selected, mi2, mi2 == mi ? ON : OFF, EAV);
+    }
+    attributeObject(m, NAME_soloSelection, sel);
+  }
+
+  send(m->device, NAME_modifiedItem, m, ON, EAV);
+  if ( !modifiedMenu(m, ON) &&
+       notNil(m->message) &&
+       notDefault(m->message) )
+    forwardReceiverCode(m->message, m, mi->value, mi->selected, ev, EAV);
+
+  succeed;
+}
+
+
 static status
 executeMenu(Menu m, EventObj ev)
 { MenuItem mi;
@@ -1174,6 +1259,13 @@ executeMenu(Menu m, EventObj ev)
   if ( isDefault(ev) )
     ev = getValueVar(EVENT);			/* @event */
   TRY((mi = getItemFromEventMenu(m, ev)) && mi->active == ON);
+
+  if ( m->multiple_selection == ON && instanceOfObject(ev, ClassEvent) )
+  { if ( valInt(ev->buttons) & BUTTON_meta )
+      return soloMenuItem(m, mi, ev, FALSE);
+    if ( (valInt(ev->buttons) & CLICK_TYPE_mask) == CLICK_TYPE_double )
+      return soloMenuItem(m, mi, ev, TRUE);
+  }
 
   return executeMenuItem(m, mi, ev);
 }

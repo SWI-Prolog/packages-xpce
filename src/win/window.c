@@ -705,7 +705,14 @@ inspectWindow(PceWindow sw, EventObj ev)
     { Handler h = cell->value;
 
       if ( isAEvent(ev, h->event) )
+      { Graphical gr;
+
+	if ( notNil(sw->focus) &&
+	     (gr = completerInspectTarget(sw->focus, ev)) )
+	  return isNil(gr) ? FAIL : inspectDisplay(d, gr, ev);
+
 	return inspectDevice((Device) sw, ev);
+      }
     }
   }
 
@@ -759,6 +766,12 @@ postEventWindow(PceWindow sw, EventObj ev)
   if ( isAEvent(ev, NAME_keyboard) )
   { PceWindow iw;
     FrameObj fr = getFrameWindow(sw, DEFAULT);
+
+    if ( notNil(sw->focus) &&		/* a combo box takes the keyboard */
+	 completerShownDialogItem(sw->focus) )
+    { rval = postEvent(ev, sw->focus, DEFAULT);
+      goto out;
+    }
 
     if ( notNil(fr) &&
 	 (iw = getKeyboardFocusFrame(fr)) &&
@@ -1608,10 +1621,18 @@ scrollWindow(PceWindow sw, Int x, Int y, BoolObj ax, BoolObj ay)
   if ( clamp_x || clamp_y )
   { computeBoundingBoxWindow(sw);
     Area bb = sw->bounding_box;
-    int vp_w = valInt(sw->area->w);
-    int vp_h = valInt(sw->area->h);
+    int p = valInt(sw->pen);		/* see visible_window() */
+    int vp_w = valInt(sw->area->w) - 2*p;
+    int vp_h = valInt(sw->area->h) - 2*p;
     int bx = valInt(bb->x),  by = valInt(bb->y);
     int bw = valInt(bb->w),  bh = valInt(bb->h);
+
+    /* The world origin belongs to the scrollable region, so a margin
+       left above or left of the content (e.g. a dialog's border) can be
+       scrolled back into view.
+    */
+    if ( bx > 0 ) { bw += bx; bx = 0; }
+    if ( by > 0 ) { bh += by; by = 0; }
 
     /* The viewport's top-left in world space is (-nx, -ny).  Keep it in
        [bx, bx+bw-vp_w] x [by, by+bh-vp_h]; when content is smaller than

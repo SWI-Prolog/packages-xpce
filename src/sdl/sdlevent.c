@@ -1053,7 +1053,7 @@ CtoEvent(SDL_Event *event)
 			     buttons,
 			     EAV);
   if ( ev )
-  { assign(ev, frame, frame);
+  { setFrameEvent(ev, frame);
 
     if ( rotation )
       assign(ev, rotation, rotation);

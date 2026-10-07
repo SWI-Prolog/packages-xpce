@@ -35,6 +35,7 @@
 
 #include <h/kernel.h>
 #include <h/dialog.h>
+#include <math.h>
 
 static void	compute_slider(Slider, int *, int *, int *, int *,
 			       int *, int *, int *, int *, int *);
@@ -73,20 +74,44 @@ initialiseSlider(Slider s, Name name, Any low, Any high, Any def, Message msg)
 }
 
 
+/* Numbers are tagged doubles: isInteger() is true for 0.5 too.  A value
+ * may also be a real object.  A slider between two whole numbers edits
+ * integers.
+ */
+
 static double
 convert_value(Any val)
-{ return isInteger(val) ? (double)valInt(val) : valReal(val);
+{ if ( isNum(val) )
+    return valNum(val);
+  if ( instanceOfObject(val, ClassReal) )
+    return valReal(val);
+
+  return 0.0;
 }
 
 
+static bool
+int_slider(Slider s)
+{ double l = convert_value(s->low);
+  double h = convert_value(s->high);
+
+  return isNum(s->low) && isNum(s->high) && l == floor(l) && h == floor(h);
+}
+
+
+/* A real value is shown with two decimals by default, so the value
+ * keeps its width while it changes.  See compute_slider().
+ */
+
 static void
 format_value(Slider s, char *buf, size_t size, Any val)
-{ int deffmt = isDefault(s->format);
+{ double v = convert_value(val);
 
-  if ( isInteger(val) )
-    snprintf(buf, size, deffmt ? "%" PRIdPTR : strName(s->format), valInt(val));
+  if ( int_slider(s) )
+    snprintf(buf, size, isDefault(s->format) ? "%" PRIdPTR : strName(s->format),
+	     (intptr_t)llround(v));
   else
-    snprintf(buf, size, deffmt ? "%g"  : strName(s->format), valReal(val));
+    snprintf(buf, size, isDefault(s->format) ? "%.2f" : strName(s->format), v);
 }
 
 
@@ -197,11 +222,18 @@ compute_slider(Slider s, int *ny, int *vx, int *vy, int *lx, int *ly, int *sx, i
     char buf[100];
     string str;
 
-    buf[0] = '[';
-    format_value(s, &buf[1], sizeof(buf)-1, s->high);
+    buf[0] = '[';			/* room for the value: the widest */
+    format_value(s, &buf[1], sizeof(buf)-1, s->high); /* of the bounds */
     strcat(buf, "]");
     str_set_ascii(&str, buf);
     str_size(&str, s->value_font, &shw, &sh);
+    buf[0] = '[';
+    format_value(s, &buf[1], sizeof(buf)-1, s->low);
+    strcat(buf, "]");
+    str_set_ascii(&str, buf);
+    str_size(&str, s->value_font, &tw, &sh);
+    if ( tw > shw )
+      shw = tw;
     format_value(s, buf, sizeof(buf), s->low);
     str_set_ascii(&str, buf);
     str_size(&str, s->value_font, &slw, &sh);
@@ -236,7 +268,7 @@ computeSlider(Slider s)
     { char buf[100];
       string str;
 
-      snprintf(buf, sizeof(buf), "%" PRIdPTR, valInt(s->high));
+      format_value(s, buf, sizeof(buf), s->high);
       str_set_ascii(&str, buf);
       str_size(&str, s->value_font, &sw, &sh);
       w = hx + sw;
@@ -361,7 +393,7 @@ eventSlider(Slider s, EventObj ev)
       if ( ex < sx ) ex = sx;
       if ( ex > se ) ex = se;
 
-      if ( isInteger(s->low) && isInteger(s->high) )
+      if ( int_slider(s) )
       { val = toInt(((ex - sx) * (valInt(s->high) - valInt(s->low)) /
 		     (se - sx)) + valInt(s->low));
       } else
@@ -482,7 +514,7 @@ modifiedSlider(Slider s, BoolObj val)
 
 static Type
 getTypeSlider(Slider s)
-{ if ( isInteger(s->low) && isInteger(s->high) )
+{ if ( int_slider(s) )
     answer(TypeInt);
 
   answer(TypeReal);

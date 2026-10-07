@@ -228,6 +228,8 @@ static getdecl get_dictItem[] =
      DEFAULT, "Convert <-key to dict_item"),
   GM(NAME_label, 0, "char_array", NULL, getLabelDictItem,
      DEFAULT, "<-label<-print_name or <-key if <-label == @default"),
+  GM(NAME_printName, 0, "char_array", NULL, getLabelDictItem,
+     DEFAULT, "Same as <-label"),
   GM(NAME_position, 0, "point", NULL, getPositionDictItem,
      NAME_area, "Position in coordinate-system of list_browser"),
   GM(NAME_image, 0, "list_browser", NULL, getImageDictItem,

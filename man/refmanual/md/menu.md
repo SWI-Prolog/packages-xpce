@@ -222,6 +222,11 @@ around it.
     If @on, any item can be either selected or deselected.  It @off, exactly
     one item has status `menu_item <->selected: @on`.
 
+    If @on, Alt-click or double-click on an item selects only this
+    item.  Doing so again on this item while it is the only one
+    selected restores the selection from before.  The message of the
+    menu is called as for a click on the item.
+
     @see menu_item-selected
 
 - menu<-off_image: image=image|{marked}*

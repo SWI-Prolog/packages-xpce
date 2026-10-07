@@ -345,6 +345,7 @@ pasteTextItem(TextItem ti, Name buffer)
 		********************************/
 
 static Browser Completer = NULL;
+static bool    combo_fresh_search = false; /* see eventTextItem() */
 
 Browser
 CompletionBrowser(void)
@@ -406,6 +407,7 @@ destroyCompleter(Browser c)
     }
   }
 
+  combo_fresh_search = false;
   send(c, NAME_clear, EAV);
   send(c, NAME_client, NIL, EAV);
   send(c, NAME_show, OFF, EAV);
@@ -424,12 +426,84 @@ destroyCompleterFrame(FrameObj fr)
   return false;
 }
 
+/* The frame fr lost the keyboard focus, e.g., because the user clicked
+ * in another application, which we never hear about.  Close the
+ * completer of an item in fr.
+ */
+
+void
+focusLostCompleterFrame(FrameObj fr)
+{ if ( Completer )
+  { Any di = getAttributeObject(Completer, NAME_client);
+
+    if ( di && notNil(di) && instanceOfObject(di, ClassGraphical) &&
+	 getFrameGraphical(di) == fr )
+      destroyCompleter(Completer);
+  }
+}
+
+
 status
 quitCompleterDialogItem(Any di)
 { if ( completerShownDialogItem(di) )
     destroyCompleter(CompletionBrowser());
 
   succeed;
+}
+
+
+/* A completion may be a dict_item with a tooltip (->help_message), a
+ * <-style or a `font` attribute and a menu item may have a tooltip and
+ * a font.  The completer shows a copy holding these.  A font is shown
+ * using a style named after the item's <-style or the font.  Items
+ * whose font cannot show the label are dropped (see
+ * `list_browser<-drop_unrenderable`).
+ */
+
+DictItem
+appendCompletionItem(Browser c, Any key, Any label,
+		     Any tag, Any font, Name style)
+{ DictItem di = newObject(ClassDictItem, key, label, EAV);
+
+  if ( tag )
+    attributeObject(di, NAME_helpTag, tag);
+  if ( font && instanceOfObject(font, ClassFont) )
+  { ListBrowser lb = c->list_browser;
+
+    if ( isDefault(style) )		/* fonts are reusable */
+    { char nm[64];
+
+      snprintf(nm, sizeof(nm), "font_%p", font);
+      style = CtoName(nm);
+    }
+    if ( !getValueSheet(lb->styles, style) )
+      send(lb, NAME_style, style,
+	   newObject(ClassStyle, DEFAULT, font, EAV), EAV);
+  }
+  if ( notDefault(style) )
+    assign(di, style, style);
+  send(c, NAME_append, di, EAV);
+
+  return di;
+}
+
+
+static void
+appendCompletion(Browser c, Any val)
+{ Any pn = get(val, NAME_printName, EAV);
+
+  if ( instanceOfObject(val, ClassDictItem) )
+  { DictItem vdi = val;
+    Any tag  = getAttributeObject(vdi, NAME_helpTag);
+    Any font = getAttributeObject(vdi, NAME_font);
+
+    if ( tag || font || notDefault(vdi->style) )
+    { appendCompletionItem(c, pn, DEFAULT, tag, font, vdi->style);
+      return;
+    }
+  }
+
+  send(c, NAME_append, pn, EAV);
 }
 
 
@@ -466,8 +540,7 @@ selectCompletionDialogItem(Any item, Chain matches,
   if ( notNil(matches) )
   { send(c, NAME_clear, EAV);
 
-    for_chain(matches, val,
-	      send(c, NAME_append, get(val, NAME_printName, EAV), EAV));
+    for_chain(matches, val, appendCompletion(c, val));
   }
 
   lines = valInt(getSizeChain(c->list_browser->dict->members));
@@ -510,6 +583,28 @@ selectCompletionDialogItem(Any item, Chain matches,
   }
 
   succeed;
+}
+
+
+/* While the completer of a dialog item is shown, the window of the item
+ * grabs the pointer.  The inspect handlers of the display (tooltips) must
+ * see the completer rather than what is below it in this window.  Return
+ * the list_browser of the completer if the event is inside it, NIL if
+ * the completer of focus is shown but the event is elsewhere and NULL if
+ * the completer of focus is not shown.
+ */
+
+Graphical
+completerInspectTarget(Graphical focus, EventObj ev)
+{ if ( completerShownDialogItem(focus) )
+  { ListBrowser lb = Completer->list_browser;
+
+    if ( insideEvent(ev, (Graphical)lb) )
+      return (Graphical)lb;
+    return NIL;
+  }
+
+  return NULL;
 }
 
 
@@ -896,9 +991,11 @@ showComboBoxTextItem(TextItem ti, BoolObj val)
     Chain files;
 
     if ( completions(ti, ti->value_text->string, ON, &dir, &file, &files) &&
-	 !emptyChain(files) )
-    { return send(ti, NAME_selectCompletion,
-		  files, dir, ti->value_text->string, ZERO, EAV);
+	 !emptyChain(files) &&
+	 send(ti, NAME_selectCompletion,
+	      files, dir, ti->value_text->string, ZERO, EAV) )
+    { combo_fresh_search = true;
+      succeed;
     }
 
     fail;
@@ -1025,7 +1122,12 @@ eventTextItem(TextItem ti, EventObj ev)
       Name f = getFunctionKeyBinding(kb, ev);
 
       if ( f != NAME_complete && f != NAME_keyboardQuit )
-      { postEvent(ev, (Graphical)lb, DEFAULT);
+      { if ( combo_fresh_search &&	/* the combo box starts at the */
+	     getFunctionKeyBinding(lb->key_binding, ev) == NAME_insertSelf )
+	{ send(lb, NAME_cancelSearch, EAV); /* current value: typing starts */
+	  combo_fresh_search = false;	/* a new search */
+	}
+	postEvent(ev, (Graphical)lb, DEFAULT);
 
 	f = getFunctionKeyBinding(lb->key_binding, ev);
 	if ( f == NAME_backwardDeleteChar )
@@ -1339,8 +1441,12 @@ getSelectionTextItem(TextItem ti)
 
 	if ( (pn = getv(ti, NAME_printNameOfValue, 1, &cell->value)) &&
 	     equalCharArray(ti->value_text->string, pn, OFF) )
-	{ valueString(ti->print_name, ti->value_text->string);
-	  assign(ti, selection, cell->value);
+	{ Any value = cell->value;
+
+	  if ( instanceOfObject(value, ClassDictItem) )
+	    value = ((DictItem)value)->key;	/* see appendCompletion() */
+	  valueString(ti->print_name, ti->value_text->string);
+	  assign(ti, selection, value);
 	  ok++;
 	  break;
 	}

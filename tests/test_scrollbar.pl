@@ -60,7 +60,8 @@ Run with:
 :- use_module(library(plunit)).
 
 test_scrollbar :-
-    run_tests([ scrollbar_bubble
+    run_tests([ scrollbar_bubble,
+                restrict_scroll
               ]).
 
                  /*******************************
@@ -125,3 +126,53 @@ test(the_bubble_follows_the_graphicals) :-
     L1 =:= L0+40.
 
 :- end_tests(scrollbar_bubble).
+
+
+                 /*******************************
+                 *        RESTRICT SCROLL       *
+                 *******************************/
+
+%   A window with <-restrict_scroll does not scroll past its graphicals,
+%   but it may always scroll back to its origin, so a margin above or
+%   left of the graphicals stays reachable.
+
+page(P, Dir) :-
+    forall(between(1, 10, _),
+           send(P, scroll_vertical, Dir, page, 900)).
+
+visible_y(P, Y) :-
+    get(P, visible, A),
+    get(A, y, Y).
+
+:- begin_tests(restrict_scroll).
+
+test(stops_at_the_end, [Y == Bottom]) :-
+    scrolling_picture(_F, P, _B),
+    send(P, restrict_scroll, @on),
+    send(P, display, box(20,20), point(10,480)),
+    page(P, forwards),
+    visible_y(P, Y),
+    get(P, bounding_box, BB),
+    get(BB, bottom_side, BBottom),
+    get(P?visible, height, H),
+    Bottom is BBottom - H.
+test(stops_at_the_end_with_a_pen, [Y == Bottom]) :-
+    scrolling_picture(_F, P, _B),
+    send(P, pen, 1),                    % the default on Windows
+    send(P, restrict_scroll, @on),
+    send(P, display, box(20,20), point(10,480)),
+    page(P, forwards),
+    visible_y(P, Y),
+    get(P, bounding_box, BB),
+    get(BB, bottom_side, BBottom),
+    get(P?visible, height, H),
+    Bottom is BBottom - H.
+test(returns_to_the_origin, [Y == 0]) :-
+    scrolling_picture(_F, P, _B),
+    send(P, restrict_scroll, @on),
+    send(P, display, box(20,20), point(10,480)),
+    page(P, forwards),
+    page(P, backwards),
+    visible_y(P, Y).
+
+:- end_tests(restrict_scroll).
