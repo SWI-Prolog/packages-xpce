@@ -2630,6 +2630,21 @@ does with the optional <-current_pane below.  See `emacs_pane' in
 library(emacs/window).
 */
 
+:- multifile pce_preferences:general/2.
+
+%   General preferences of the IDE, shown in the IDE tab of the class
+%   variable editor.  Where a tool is added is a preference of the tool,
+%   see the class variable pane_side of class pane_stack.
+
+pce_preferences:general(ide,
+                        [ prolog_ide     - [ tool_placement ],
+                          pane_frame     - [ prompt_style, focus_on_enter,
+                                             inactive_opacity
+                                           ],
+                          pane_tab_stack - [ hide_single_label ],
+                          pane_tab       - [ editable_label, closable ]
+                        ]).
+
 :- pce_begin_class(pane_stack, tabbed_window,
                    "A pane of the IDE that holds its windows in tabs").
 :- use_class_template(pane).

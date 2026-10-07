@@ -473,7 +473,7 @@ static struct class_definition classdefs[] =
     &ClassTextBuffer, "Editable text with fragments" },
 
   { NAME_textCursor, NAME_graphical, makeClassTextCursor,
-    &ClassTextCursor, "Caret in an editor" },
+    &ClassTextCursor, "Caret of an editor, text or terminal" },
 
   { NAME_textImage, NAME_graphical, makeClassTextImage,
     &ClassTextImage, "(Re)display large text fields" },

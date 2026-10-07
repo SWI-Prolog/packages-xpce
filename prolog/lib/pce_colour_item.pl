@@ -774,6 +774,60 @@ selection(PI, Selection:chain) :<-
 :- pce_end_class.
 
 
+
+                 /*******************************
+                 *             THEME            *
+                 *******************************/
+
+%   The selection of a theme_item is the value of `display.theme`:
+%   @default to follow the light or dark setting of the desktop or the
+%   name of a theme.  A theme that is not available, e.g., from the
+%   Defaults file, is added.
+
+:- pce_begin_class(theme_item, menu,
+                   "Select the colour theme").
+
+initialise(TI, Name:[name], Selection:[name], Msg:[code]*) :->
+    default(Name, theme, Nm),
+    send_super(TI, initialise, Nm, cycle, Msg),
+    send(TI, append, menu_item(system, @default, 'Follow the desktop')),
+    forall(available_theme(Theme),
+           ( theme_label(Theme, Label),
+             send(TI, append, menu_item(Theme, @default, Label))
+           )),
+    send(TI, selection, Selection).
+
+theme_label(Theme, Label) :-
+    atom_concat(Theme, ' theme', Label0),
+    sub_atom(Label0, 0, 1, _, First),
+    sub_atom(Label0, 1, _, 0, Rest),
+    upcase_atom(First, Up),
+    atom_concat(Up, Rest, Label).
+
+selection(TI, Selection:[name]) :->
+    "Select a theme; @default follows the desktop"::
+    (   Selection == @default
+    ->  Value = system
+    ;   Value = Selection
+    ),
+    (   get(TI, member, Value, _)
+    ->  true
+    ;   theme_label(Value, Label),
+        send(TI, append, menu_item(Value, @default, Label))
+    ),
+    send_super(TI, selection, Value).
+
+selection(TI, Selection:[name]) :<-
+    "The theme or @default to follow the desktop"::
+    get_super(TI, selection, Value),
+    (   Value == system
+    ->  Selection = @default
+    ;   Selection = Value
+    ).
+
+:- pce_end_class(theme_item).
+
+
 test :-
     new(D, dialog),
     send(D, append, colour_palette_item(colour, red)),

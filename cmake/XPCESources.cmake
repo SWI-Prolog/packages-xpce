@@ -147,6 +147,7 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     keybinding.pl make_dialog.pl MKINDEX.pl Overview pan_zoom.pl
     password_item.pl pce_arm.pl pce_arrow_item.pl pce_class_index.pl
     pce_class_variable_editor.pl pce_colour_editor.pl pce_cursor_item.pl
+    pce_style_item.pl pce_preferences.pl
     pce_colour_item.pl pce_configeditor.pl pce_config.pl pce_cxx_headers.pl
     pce_debug.pl pce_dispatch.pl pce_drop_target.pl
     pcedraw.pl pce_editable_text.pl

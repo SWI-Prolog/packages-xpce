@@ -41,6 +41,7 @@
 :- use_module(library(doc/window)).
 :- use_module(library(pldoc/man_index), [manual_object/5]).
 :- use_module(library(man/classmap), [mapped_class_name/2]).
+:- use_module(library(pce_history)).
 
 /** <module> Open the generated XPCE reference manual in a doc_browser
 
@@ -564,16 +565,21 @@ split_url_anchor(URL, URL, '').
 %
 %   A doc_window subclass with a =|->selection(Obj)|= method that
 %   renders just the indexed chunk for Obj. Used by =|man_card_editor|=
-%   to replace the legacy =|man_editor|= text panel.
+%   to replace the legacy =|man_editor|= text panel.  The card keeps
+%   the history of what it showed, including the links followed in it.
+%   Its =|history<-button|= objects navigate this history.
 
 :- pce_begin_class(man_html_card, doc_window,
                    "Render HTML chunk for a selected manual entry").
 
 variable(selection, object*, get, "Current selected manual object").
+variable(history,   history, get, "Navigation history").
 
 initialise(MHC) :->
     "Create with empty content"::
-    send_super(MHC, initialise).
+    send_super(MHC, initialise),
+    send(MHC, slot, history,
+         history(message(MHC, goto_history, @arg1))).
 
 selection(MHC, Obj:object*) :->
     "Display HTML for the selected object"::
@@ -582,12 +588,13 @@ selection(MHC, Obj:object*) :->
     ->  send(MHC, clear)
     ;   load_member_dom(Obj, Path, DOM),
         DOM \== []
-    ->  show_chunk(MHC, Path, DOM)
+    ->  show_chunk(MHC, Path, DOM),
+        send(MHC?history, location, Obj)
     ;   object_spec(Obj, Class),
         atom(Class),
         spec_url(Class, URL)
     ->  send(MHC, slot, url, @nil),   % force reload if same URL
-        send(MHC, url, URL)
+        send(MHC, url, URL)           % records the URL in the history
     ;   send(MHC, show, [element(p, [], ['No manual entry indexed.'])])
     ).
 
@@ -608,20 +615,28 @@ goto_url(MHC, URLSpec:name, _Dir:[{forward,backward}]) :->
     ->  show_chunk(MHC, Path, DOM)
     ;   send_super(MHC, goto_url, URLSpec)
     ),
-    notify_link_followed(MHC, AbsURL).
+    send(MHC, add_history, AbsURL).
 
-%!  notify_link_followed(+MHC, +AbsURL) is det.
+%!  ->goto_history(+Location) is det.
 %
-%   Tell whoever keeps the history of this card where the click went, so
-%   the navigation history records the new location.  Not =|<-frame|=:
-%   the tool is a pane of a window of the IDE now, and the frame is that
-%   window.  Silent when there is nobody to tell.
+%   Invoked by =|library(pce_history)|='s =|->forward|= /
+%   =|->backward|= on the history object during navigation. The
+%   history's =|action|= slot is non-=|@nil|= during this call, so
+%   showing Location does not record it again.
 
-notify_link_followed(MHC, AbsURL) :-
-    (   get(MHC, history_holder, Holder)
-    ->  send(Holder, add_history, AbsURL)
-    ;   true
+goto_history(MHC, Loc:any) :->
+    "Show a location from the history"::
+    (   atom(Loc)
+    ->  send(MHC, goto_url, Loc)
+    ;   send(MHC, selection, Loc)
     ).
+
+%   doc_window tells its <-history_holder about the pages it shows.
+%   This is the card itself.
+
+add_history(MHC, URL:any) :->
+    "Record a page shown in the history"::
+    send(MHC?history, location, URL).
 
 :- pce_end_class.
 

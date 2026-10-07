@@ -3321,8 +3321,8 @@ scope('R.ellipse.selection_handles', advanced_programming).
 scope('R.event.loc_still_time', advanced).
 scope('R.event.macos_option_characters', advanced).
 scope('R.font.no_font', advanced).
-scope('R.font.pango_families', advanced).
-scope('R.font.scale', advanced).
+scope('R.font.pango_families', basic).
+scope('R.font.scale', basic).
 scope('R.font.system_fonts', advanced).
 scope('R.frame.busy_cursor', basic).
 scope('R.frame.can_resize', advanced).

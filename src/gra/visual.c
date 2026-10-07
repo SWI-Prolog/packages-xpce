@@ -76,6 +76,67 @@ getContainerVisual(VisualObj v, Any cond)
 }
 
 
+static int
+visual_matches(VisualObj v, Any cond)
+{ if ( instanceOfObject(cond, ClassClass) )
+    return instanceOfObject(v, (Class)cond);
+
+  return forwardCodev(cond, 1, (Any *)&v) != FAIL;
+}
+
+
+/* The counterpart of <-container: the first visual below v that
+ * satisfies cond.  If recursive is @off, only the direct members of v
+ * (<-contains) are considered.  Otherwise the consists-of tree below v
+ * (v included) is searched breadth-first, so the match closest to v is
+ * found first.
+ */
+
+static VisualObj
+getContainedVisual(VisualObj v, Any cond, BoolObj recursive)
+{ VisualObj rval = FAIL;
+
+  if ( recursive == OFF )
+  { Chain subs;
+
+    if ( (subs = getv(v, NAME_contains, 0, NULL)) )
+    { Cell cell;
+
+      for_cell(cell, subs)
+      { if ( visual_matches(cell->value, cond) )
+	{ rval = cell->value;
+	  break;
+	}
+      }
+      doneObject(subs);
+    }
+  } else
+  { Chain agenda = newObject(ClassChain, v, EAV);
+    VisualObj x;
+
+    while( (x = getDeleteHeadChain(agenda)) )
+    { Chain subs;
+
+      if ( visual_matches(x, cond) )
+      { rval = x;
+	break;
+      }
+      if ( (subs = getv(x, NAME_contains, 0, NULL)) )
+      { Cell cell;
+
+	for_cell(cell, subs)
+	  appendChain(agenda, cell->value);
+	doneObject(subs);
+      }
+    }
+
+    doneObject(agenda);
+  }
+
+  answer(rval);
+}
+
+
 static VisualObj
 getMasterVisual(VisualObj v)
 { answer(v);
@@ -228,6 +289,9 @@ static senddecl send_visual[] =
 
 /* Get Methods */
 
+static char *T_contained[] =
+	{ "condition=class|code", "recursive=[bool]" };
+
 static getdecl get_visual[] =
 { GM(NAME_master, 0, "visual", NULL, getMasterVisual,
      NAME_event, "Principal visual I'm part of (self)"),
@@ -237,6 +301,8 @@ static getdecl get_visual[] =
      NAME_organisation, "Innermost visual that satisfies condition"),
   GM(NAME_contains, 0, "chain", NULL, getContainsVisual,
      NAME_organisation, "Chain with visuals I manage"),
+  GM(NAME_contained, 2, "member=visual", T_contained, getContainedVisual,
+     NAME_organisation, "First visual I contain that satisfies condition"),
   GM(NAME_frame, 0, "frame", NULL, getFrameVisual,
      NAME_organisation, "Frame I'm part of (if present)"),
   GM(NAME_reportTo, 0, "visual", NULL, getReportToVisual,

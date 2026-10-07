@@ -44,6 +44,7 @@
 :- autoload(library(gui_tracer), [guitracer/0]).
 :- autoload(library(pce_debug), [checkpce/0]).
 :- autoload(library(pce_emacs), [emacs/0, start_emacs/0]).
+:- autoload(library(pce_class_variable_editor), [class_variable_editor/0]).
 :- autoload(library(pce_util), [send_list/3]).
 :- autoload(library(swi_compatibility), [auto_call/1]).
 :- autoload(library(swi_ide), [prolog_ide/1]).
@@ -239,6 +240,8 @@ fill_dialog(M, D) :->
     send_list(T, append,
          [ visual_hierarchy,
            inspector,
+           menu_item(class_variables,
+                     message(M, class_variable_editor)),
            menu_item(event_viewer,
                      message(M, event_viewer)),
            gap,
@@ -494,6 +497,11 @@ start_demo(M) :->
     use_module(demo(pce_demo), []),
     pce_demo:pcedemo,
     send(M, report, done).
+
+
+class_variable_editor(_M) :->
+    "Edit the class variables of a GUI object"::
+    class_variable_editor.
 
 
                 /********************************

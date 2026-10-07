@@ -514,6 +514,16 @@ builtin_config_type(image,              [ editor(image_item),
                                           term(if(@arg1?name \== @nil, name)),
                                           term(@arg1?file?absolute_path)
                                         ]).
+builtin_config_type(int,                [ editor(int_item)
+                                        ]).
+builtin_config_type(float,              [ editor(float_item)
+                                        ]).
+builtin_config_type(between(_,_),       [ editor(slider)
+                                        ]).
+builtin_config_type(cursor,             [ editor(cursor_item)
+                                        ]).
+builtin_config_type(style,              [ editor(style_item)
+                                        ]).
 builtin_config_type(file,               [ editor(file_item)
                                         ]).
 builtin_config_type(directory,          [ editor(directory_item)

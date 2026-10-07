@@ -46,6 +46,8 @@
 :- autoload(library(man/v_visual), [pce_show_visual_tool/0]).
 :- autoload(library(www_browser), [www_open_url/1]).
 :- autoload(library(swi_preferences), [prolog_edit_preferences/1]).
+:- autoload(library(pce_class_variable_editor),
+            [class_variable_editor/0, class_variable_editor/1]).
 :- autoload(library(pce_openframes), [confirm_open_frames/1]).
 :- use_module(library(pce_util), [chain_list/2, send_list/3]).
 :- use_module(library(lists), [member/2]).
@@ -639,6 +641,13 @@ preferences(_IDE, Which:{prolog,xpce}) :->
     "Edit Prolog or GUI preferences"::
     prolog_edit_preferences(Which).
 
+class_variable_editor(_IDE, F:pane_frame) :->
+    "Edit the class variables of the current pane of F"::
+    (   get(F, current_pane, Pane)
+    ->  class_variable_editor(Pane)
+    ;   class_variable_editor
+    ).
+
 %       The IDE learns where panes go from how long a window is worked
 %       in, which takes a while to come round and fades again.  This says
 %       it outright: the window as it stands is where panes of these kinds
@@ -691,7 +700,7 @@ fill_menu_bar(IDE, MD:tool_dialog, F:pane_frame) :->
               [ menu_item(edit_user_prolog_init_file,
                           message(IDE, preferences, prolog)),
                 menu_item('edit_GUI_preferences',
-                          message(IDE, preferences, xpce),
+                          message(IDE, class_variable_editor, F),
                           end_group := @on),
                 new(Theme, menu_item(theme, @default, 'Theme',
                                      end_group := @on)),

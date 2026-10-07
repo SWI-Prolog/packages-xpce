@@ -278,3 +278,177 @@ selection(FI, Font:font) :<-
     new(Font, font(Family, Style, Points)).
 
 :- pce_end_class.
+
+
+                 /*******************************
+                 *        PANGO FAMILIES        *
+                 *******************************/
+
+/* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Class pango_families_item edits the class variable font.pango_families,
+which maps the generic families mono, sans and serif to a Pango family.
+The value is a chain of `Generic := Families`, where Families is a Pango
+family or a comma-separated list of families to try in turn.  The item
+shows a cycle menu per generic family with the families installed on
+this system, each shown in its own font.  A current value that is not
+an installed family, e.g., a list of families, is added to the menu.
+Other generic families in the value are not shown and dropped.  The old families screen, helvetica and times use the
+mapping of mono, sans and serif, see class font.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+:- pce_begin_class(pango_families_item, label_box,
+                   "Edit the mapping from generic to Pango families").
+
+initialise(PI, Name:[name], Families:chain, Message:[code]*) :->
+    "Create from the mapping and a message"::
+    default(Name, pango_families, Nm),
+    send_super(PI, initialise, Nm, Message),
+    send(PI, alignment, column),
+    forall(generic_family(Generic),
+           ( family_mapping(Families, Generic, Pango),
+             generic_monospace(Generic, Mono),
+             installed_families(Mono, Installed),
+             send(PI, append_family, Generic, Pango, Installed)
+           )),
+    get(PI, graphicals, Menus),
+    send(Menus, for_all, message(@arg1, compute)),
+    get(Menus, map, ?(@arg1, value_width), Widths),
+    chain_list(Widths, WidthList),
+    max_list(WidthList, Width),
+    send(Menus, for_all, message(@arg1, value_width, Width)).
+
+generic_family(mono).
+generic_family(sans).
+generic_family(serif).
+
+%   Pango tells which families are monospaced.  There is no way to tell
+%   whether a family is sans or serif, so these offer the others.
+
+generic_monospace(mono,  @on).
+generic_monospace(sans,  @off).
+generic_monospace(serif, @off).
+
+%   family_mapping(+Families, +Generic, -Pango)
+%
+%   Pango is the mapping of Generic in Families or, if Families does not
+%   map it, the one in use.
+
+family_mapping(Families, Generic, Pango) :-
+    chain_list(Families, Bindings),
+    member(Binding, Bindings),
+    object(Binding, Generic := Pango0),
+    !,
+    pango_text(Pango0, Pango).
+family_mapping(_, Generic, Pango) :-
+    get(@font_families, member, Generic, Pango),
+    !.
+family_mapping(_, Generic, Generic).
+
+pango_text(Text, Text) :-
+    atomic(Text),
+    !.
+pango_text(Obj, Text) :-
+    get(Obj, value, Text).
+
+append_family(PI, Generic:name, Families:name, Installed:chain) :->
+    "Add a menu for the families of Generic"::
+    new(M, menu(Generic, cycle, message(PI, forward))),
+    get(M, value_font, Font),
+    get(Font, points, Points),
+    send(Installed, for_all,
+         message(@prolog, append_family_item, M, @arg1, Points, @off)),
+    send(PI, append, M),
+    select_family(M, Families).
+
+%   append_family_item(+Menu, +Family, +Points, +Before)
+%
+%   Add a menu item for Family.  The combo box shows the item in the
+%   font of the attribute `preview_font` and drops it if the font
+%   cannot show the name, such as for symbol fonts.  Fonts are only
+%   loaded when shown.  Using `menu_item<-font` would load all of
+%   them to compute the size of the menu.  Accelerators make no sense
+%   for this many items.
+
+append_family_item(M, Family, Points, Before) :-
+    new(MI, menu_item(Family, @default, Family)),
+    send(MI, accelerator, @nil),
+    send(MI, attribute, preview_font, font(Family, normal, Points)),
+    (   Before == @on
+    ->  send(M, prepend, MI)
+    ;   send(M, append, MI)
+    ).
+
+%   select_family(+Menu, +Families)
+%
+%   Select Families, adding it if it is not installed, and show the
+%   selection in its font.
+
+select_family(M, Families0) :-
+    get(@pce, convert, Families0, name, Families),
+    (   get(M, member, Families, _)
+    ->  true
+    ;   get(M, value_font, Font),
+        get(Font, points, Points),
+        append_family_item(M, Families, Points, @on)
+    ),
+    send(M, selection, Families),
+    show_selection_font(M).
+
+show_selection_font(M) :-
+    send(M?members, for_all, message(@arg1, font, @default)),
+    (   get(M, selection, Family),
+        get(M, member, Family, MI)
+    ->  get(MI, attribute, preview_font, Font),
+        send(MI, font, Font)
+    ;   true
+    ).
+
+selection(PI, Families:chain) :<-
+    "New chain of Generic := Families"::
+    new(Families, chain),
+    send(PI?graphicals, for_all,
+         if(message(@arg1, instance_of, menu),
+            message(Families, append,
+                    create(':=', @arg1?name,
+                           create(string, '%s', @arg1?selection))))).
+
+selection(PI, Families:chain) :->
+    "Show the families of a mapping"::
+    forall(generic_family(Generic),
+           ( family_mapping(Families, Generic, Pango),
+             get(PI, member, Generic, Menu),
+             select_family(Menu, Pango)
+           )),
+    send(PI, modified, @off).
+
+modified_item(_PI, _Gr:graphical, _Modified:bool) :->
+    "Our fields call ->forward"::
+    fail.
+
+forward(PI) :->
+    "A menu changed"::
+    send(PI?graphicals, for_all,
+         if(message(@arg1, instance_of, menu),
+            message(@prolog, show_selection_font, @arg1))),
+    send(PI, modified, @on),
+    (   get(PI, device, Dev),
+        Dev \== @nil,
+        send(Dev, modified_item, PI, @on)
+    ->  true
+    ;   ignore(send(PI, apply))
+    ).
+
+clear(_PI) :->
+    true.
+
+:- pce_end_class(pango_families_item).
+
+%   installed_families(+Monospace, -Families:chain)
+%
+%   Families is a sorted chain with the names of the installed Pango
+%   families that are monospaced (Monospace is @on) or not.
+
+installed_families(Monospace, Families) :-
+    get(@font_class, font_families, Monospace, Sheet),
+    get(Sheet, attribute_names, Families),
+    send(Families, sort).

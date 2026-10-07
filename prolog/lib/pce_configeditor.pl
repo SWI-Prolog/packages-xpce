@@ -32,7 +32,9 @@
     POSSIBILITY OF SUCH DAMAGE.
 */
 
-:- module(pce_config_editor, []).
+:- module(pce_config_editor,
+          [ config_item/4               % +Type, +Label, +Value, -Item
+          ]).
 :- use_module(library(pce)).
 :- use_module(library(pce_config)).
 :- require([ chain_list/2
@@ -54,6 +56,7 @@
 :- pce_autoload(colour_set_item,        library(pce_colour_item)).
 :- pce_autoload(directory_item,         library(file_item)).
 :- pce_autoload(set_item,               library(pce_set_item)).
+:- pce_autoload(float_item,             library(pce_float_item)).
 
                  /*******************************
                  *            TYPES             *
@@ -358,11 +361,31 @@ make_config_item(Key, Item) :-
     make_item(Type, Name, Value, Item).
 
 
+%!  config_item(+Type, +Label, +Value, -Item) is det.
+%
+%   Create a dialog item for editing a value of the config type Type.
+%   Value is the initial value or `@default`.  The item has the
+%   protocol of the items of the config editor: `<-selection` and
+%   `->selection` for the value and `<-modified`.
+
+config_item(Type, Label, Value, Item) :-
+    make_item(Type, Label, Value, Item).
+
 make_item({}(Names), Label, Value, Item) :-
     !,
     curl_to_chain(Names, Chain),
     new(Item, text_item(Label, Value)),
     send(Item, value_set, Chain).
+make_item(mono_font, Label, Value, Item) :-
+    !,
+    (   Value == @default
+    ->  new(Item, font_item(Label, fixed))
+    ;   new(Item, font_item(Label, Value))
+    ),
+    send(Item, families, chain(mono)).  % see font.pango_families
+make_item(between(Low, High), Label, Value, Item) :-
+    !,
+    range_item(Low, High, Label, Value, Item).
 make_item(Type, Label, Value, Item) :-
     config_editor_class(Type, Class),
     Class \== config_generic_item,
@@ -385,6 +408,39 @@ make_item(Type, Label, Value, Item) :-
     ->  send(Item, config_type, Type)
     ;   true
     ).
+
+%   range_item(+Low, +High, +Label, +Value, -Item)
+%
+%   Item for a number between Low and High, where either may be `inf`
+%   for no bound.  A range bound on both sides is a slider; otherwise
+%   an int_item or float_item that checks the bound.
+
+range_item(Low, High, Label, Value, Item) :-
+    number(Low), number(High),
+    !,
+    default(Value, Low, Initial),
+    slider_value(Low, L),               % keep 0.0..1.0 a real range
+    slider_value(High, H),
+    new(Item, slider(Label, L, H, Initial)).
+range_item(Low, High, Label, Value, Item) :-
+    (   integer(Low)
+    ;   integer(High)
+    ),
+    !,
+    bound(Low, L),
+    bound(High, H),
+    new(Item, int_item(Label, Value, @default, L, H)).
+range_item(Low, High, Label, Value, Item) :-
+    bound(Low, L),
+    bound(High, H),
+    new(Item, float_item(Label, Value, @default, L, H)).
+
+slider_value(F, real(F)) :- float(F), !.
+slider_value(I, I).
+
+bound(inf, @default) :- !.
+bound(-inf, @default) :- !.
+bound(N, N).
 
 config_editor_class(Type, Class) :-
     current_config_type(Type, _, Attributes),
@@ -457,7 +513,7 @@ selection(I, Sel:any) :<-
 :- pce_end_class.
 
 value_text(@on, true).
-value_text(@on, false).
+value_text(@off, false).
 value_text(@nil, nil).
 
 value_to_text(Obj, Text) :-

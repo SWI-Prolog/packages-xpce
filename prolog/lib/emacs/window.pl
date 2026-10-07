@@ -132,6 +132,37 @@ pce_keybinding:alt_binding_function(cut,  prefix_or_cut).
 :- pce_end_class.
 
 
+                 /*******************************
+                 *          PREFERENCES         *
+                 *******************************/
+
+:- multifile pce_preferences:preferences/2.
+
+%   The preferences a user may want to change for a PceEmacs window.
+%   The mode lists the class variables of several modes; those the
+%   actual mode does not have are not shown.  General preferences,
+%   such as the caret and the fonts, are in pce_preferences:general/2.
+%   See library(pce_preferences) and the class variable editor.
+
+pce_preferences:preferences(emacs_view,
+    [ emacs_editor - [ font, background, selection_style,
+                       show_open_bracket, insert_deletes_selection,
+                       auto_copy, exact_case
+                     ],
+      text_margin  - [ background ],
+      via(emacs_editor, text_buffer, emacs_buffer)
+                   - [ unicode_encoding, newline_new_file,
+                       newline_existing_file, ensure_no_whitespace_errors,
+                       undo_buffer_size
+                     ],
+      via(emacs_editor, mode, emacs_language_mode)
+                   - [ tab_width, comment_column, show_line_numbers,
+                       body_indentation, cond_indentation,
+                       dict_indentation, indent_tabs,
+                       parameter_indentation
+                     ]
+    ]).
+
 :- pce_begin_class(emacs_view, view,
                    "View running an emacs_editor").
 :- use_class_template(pane).

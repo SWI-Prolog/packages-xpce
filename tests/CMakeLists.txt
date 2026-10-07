@@ -11,7 +11,10 @@ test_libs(tab_frame            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(fixed_graphicals     OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(font_alias           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(font                 OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(visual               OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(preferences          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(class_variable       OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(class_variable_editor OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(bool_item            OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(cursor_item          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(help_message         OPTIONS ${XPCE_TEST_OPTIONS})
@@ -61,7 +64,10 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:fixed_graphicals
                      xpce:font_alias
                      xpce:font
+                     xpce:visual
+                     xpce:preferences
                      xpce:class_variable
+                     xpce:class_variable_editor
                      xpce:bool_item
                      xpce:cursor_item
                      xpce:help_message

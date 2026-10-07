@@ -1389,9 +1389,10 @@ test(the_tool_is_not_the_window_it_is_in) :-
 %       that shows a card tells it -- `doc_window <-history_holder'.  It
 %       used to tell <-frame, which was the tool; the frame is a window
 %       of the IDE now and answers no ->add_history, and that took the
-%       whole of `doc_window ->url' down with it: no card appeared.
+%       whole of `doc_window ->url' down with it: no card appeared.  The
+%       card keeps the history itself, so it works wherever it is shown.
 
-test(the_history_of_a_card_is_kept_by_the_tool, true(Holder == CE)) :-
+test(the_history_of_a_card_is_kept_by_the_card, true(Holder == HC)) :-
     no_frames,
     open_manual_tool(card_viewer, CE),
     get(CE, member, html_card, HC),

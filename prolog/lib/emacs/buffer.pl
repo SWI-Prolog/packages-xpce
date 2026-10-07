@@ -45,7 +45,8 @@
            , maplist/3
            ]).
 
-:- pce_begin_class(emacs_buffer(file, name), text_buffer).
+:- pce_begin_class(emacs_buffer(file, name), text_buffer,
+                   "Text of a file or other buffer of PceEmacs").
 
 variable(name,            name,         get,  "Name of this buffer").
 variable(directory,       directory,    both, "Associated CWD").

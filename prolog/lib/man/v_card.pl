@@ -47,8 +47,6 @@
 :- pce_begin_class(man_card_editor,     man_frame,
                    "Show HTML manual page for the selected entry").
 
-variable(history, history, get, "Navigation history (library(pce_history))").
-
                 /********************************
                 *            CREATE             *
                 ********************************/
@@ -56,13 +54,11 @@ variable(history, history, get, "Navigation history (library(pce_history))").
 initialise(CE, Manual:man_manual) :->
     "Create from manual"::
     send(CE, send_super, initialise, Manual, 'Card Viewer'),
-    send(CE, slot, history,
-         history(message(CE, goto_history, @arg1))),
     send(CE, append, new(D, dialog)),
-    send(CE, fill_dialog),
     send(new(TE, man_html_card), below, D),
     send(new(report_dialog), below, TE),
     send(TE, name, html_card),
+    send(CE, fill_dialog),
     send(CE, selected, Manual?selection).      % a pane is laid out by the
                                               % window it ends up in
 
@@ -95,35 +91,12 @@ html_card(CE, HC) :<-
     "Inner HTML view"::
     get(CE, member, html_card, HC).
 
+history(CE, H:history) :<-
+    "Navigation history, kept by the card"::
+    get(CE?html_card, history, H).
+
 selected(CE, Obj:object*) :->
     "Display selected object"::
-    send(CE?html_card, selection, Obj),
-    (   Obj == @nil
-    ->  true
-    ;   send(CE?history, location, Obj)
-    ).
-
-%!  ->goto_history(+Obj) is det.
-%
-%   Invoked by =|library(pce_history)|='s =|->forward|= /
-%   =|->backward|= on the history object during navigation. The
-%   history's =|action|= slot is non-=|@nil|= during this call so the
-%   inner =|->selection|= call's =|->location|= is suppressed -- we
-%   only have to update the visible card.
-
-goto_history(CE, Obj:any) :->
-    (   atom(Obj)
-    ->  send(CE, goto_url, Obj)
-    ;   send(CE?html_card, selection, Obj)
-    ).
-
-add_history(CE, URL:any) :->
-    "doc_window expects this on its frame; no-op for the card view"::
-    send(CE?history, location, URL).
-
-goto_url(CE, URL:name) :->
-    "Open a link clicked in the rendered chunk"::
-    send(CE?html_card, url, URL),
-    send(CE?history, location, URL).
+    send(CE?html_card, selection, Obj).
 
 :- pce_end_class.

@@ -2001,6 +2001,25 @@ terminal_prolog_flag(Term, Flag, Value, Default) :-
                 *           TERMINAL           *
                 *******************************/
 
+                 /*******************************
+                 *          PREFERENCES         *
+                 *******************************/
+
+:- multifile pce_preferences:preferences/2.
+
+%   The preferences a user may want to change for an Epilog window.
+%   See library(pce_preferences) and the class variable editor.  The
+%   caret, fonts and layout are general preferences (see
+%   pce_preferences:general/2).
+
+pce_preferences:preferences(epilog_window,
+    [ terminal_image - [ font, background, colour, selection_style,
+                         link_style, save_lines, ansi_colours,
+                         exact_case, auto_copy
+                       ],
+      epilog_report  - [ placement, hide_after, background, colour ]
+    ]).
+
 :- pce_begin_class(epilog_window, window, "Implement an embedded terminal").
 :- use_class_template(pane).
 
