@@ -1958,6 +1958,19 @@ assign_accelerators(_) :->
                  *             TABS             *
                  *******************************/
 
+%   The tab stack of a window of the IDE (pane_tabbed_window) and of a
+%   pane holding more than one source (emacs_pane).  A single tab is
+%   not labelled by default.  This is a class variable, so the user may
+%   change it.
+
+:- pce_begin_class(pane_tab_stack, tab_stack,
+                   "Tab stack of the IDE").
+
+class_variable(hide_single_label, bool, @on,
+               "Do not label a tab if there is only one").
+
+:- pce_end_class(pane_tab_stack).
+
 :- pce_begin_class(pane_tabbed_window, tabbed_window,
                    "The tabs of a pane_frame").
 
@@ -1965,8 +1978,11 @@ initialise(TW, Label:label=[name], Size:size=[size],
                Display:display=[display]) :->
     "Create with a popup on the labels and a new-tab button"::
     send_super(TW, initialise, Label, Size, Display),
-    send(TW, hide_single_label, @on),   % one tab needs no name
     send(TW, label_popup, @pane_tab_popup).
+
+tab_stack_class(_TW, Class:name) :<-
+    "One tab needs no name; see class pane_tab_stack"::
+    Class = pane_tab_stack.
 
 new_pane(TW) :->
     "The new-tab button was pressed"::

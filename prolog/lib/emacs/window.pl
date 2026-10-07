@@ -683,10 +683,13 @@ make_emacs_tab_popup(P) :-
 :- pce_begin_class(emacs_pane, pane_stack,
                    "The editor of a window of the IDE: sources in tabs").
 
+tab_stack_class(_EP, Class:name) :<-
+    "One source needs no tab strip; see class pane_tab_stack"::
+    Class = pane_tab_stack.
+
 initialise(EP, View:view=[emacs_view], Label:label=[name]) :->
     "Create showing View, or a scratch buffer"::
     send_super(EP, initialise, Label),
-    send(EP, hide_single_label, @on),   % one source needs no tab strip
     send(EP, label_popup, @emacs_tab_popup),
     (   View == @default
     ->  new(V, emacs_view)

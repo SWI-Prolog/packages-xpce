@@ -1346,7 +1346,6 @@ scope('M.frame.S.append', basic).
 scope('M.frame.S.application', advanced).
 scope('M.frame.S.area', advanced).
 scope('M.frame.S.attach_transient', advanced).
-scope('M.frame.S.background', obscure).
 scope('M.frame.S.bell', internal).
 scope('M.frame.S.busy_cursor', obscure).
 scope('M.frame.S.center', advanced).
@@ -1367,7 +1366,6 @@ scope('M.frame.S.geometry', basic).
 scope('M.frame.S.height', obscure).
 scope('M.frame.S.hidden', basic_programming).
 scope('M.frame.S.initialise', basic).
-scope('M.frame.S.initialise_new_slot', internal).
 scope('M.frame.S.input_focus', internal).
 scope('M.frame.S.input_window', internal).
 scope('M.frame.S.keyboard_focus', internal).
@@ -3326,7 +3324,6 @@ scope('R.font.no_font', advanced).
 scope('R.font.pango_families', advanced).
 scope('R.font.scale', advanced).
 scope('R.font.system_fonts', advanced).
-scope('R.frame.background', basic).
 scope('R.frame.busy_cursor', basic).
 scope('R.frame.can_resize', advanced).
 scope('R.frame.confirm_done', basic).
@@ -4426,7 +4423,6 @@ scope('V.fragment.style', basic).
 scope('V.fragment.text_buffer', advanced).
 scope('V.frame.application', advanced).
 scope('V.frame.area', advanced).
-scope('V.frame.background', obscure).
 scope('V.frame.can_delete', advanced).
 scope('V.frame.can_resize', advanced).
 scope('V.frame.confirm_done', advanced).

@@ -72,7 +72,13 @@ initialise(W, Label:label=[name], Size:size=[size],
     send(W, ver_shrink, 100),
     send(W, pen, 0),
     send(W, border, size(0,0)),
-    send_super(W, append, new(tab_stack)).
+    get(W, tab_stack_class, Class),
+    send_super(W, append, new(TS, Class)),
+    send(TS, name, tab_stack).          % the name of class tab_stack
+
+tab_stack_class(_W, Class:name) :<-
+    "Class of the tab_stack, a subclass of tab_stack"::
+    Class = tab_stack.
 
 resize(W, Tab:[tab]) :->
     "Resize member tabs to fit the dialog"::

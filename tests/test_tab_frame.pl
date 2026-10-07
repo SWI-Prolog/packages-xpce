@@ -60,6 +60,7 @@ Run with:
 
 test_tab_frame :-
     run_tests([ tab_frame_layout,
+                frame_gap_colour,
                 tab_frame_single_tab,
                 tab_frame_label,
                 tab_frame_buttons,
@@ -237,7 +238,60 @@ test(separator_per_resizable_gap) :-
     send(TF, split, new(_P3, picture), P2, horizontally),
     get(TF?separators, size, 2).
 
+%   The space between the windows has the `tile <-gap_colour` of the
+%   root tile, which defaults to tile.gap_colour.
+
+gap_colour(TF, Name) :-
+    get(TF, gaps, Gaps),
+    get(Gaps, head, Gap),
+    tab_frame:gap_colour(Gap, Colour),
+    get(Colour, name, Name).
+
+test(gap_per_resizable_gap, Gaps == 1) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(_P2, picture), P1, vertically),
+    get(TF?gaps, size, Gaps).
+test(gap_default, Colour == ui_dialog_background) :-
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(_P2, picture), P1, vertically),
+    gap_colour(TF, Colour).
+test(gap_colour, [ Colour == blue,
+                   setup(get(class(tile)?class_variables, find,
+                             @arg1?name == gap_colour, CV)),
+                   cleanup(send(class(tile), class_variable_value,
+                                gap_colour, CV?default))
+                 ]) :-
+    send(class(tile), class_variable_value, gap_colour, colour(blue)),
+    tabbed(_TW, TF, P1),
+    send(TF, split, new(_P2, picture), P1, vertically),
+    gap_colour(TF, Colour).
+test(gap_colour_survives_split, Colour == red) :-
+    tabbed(_TW, TF, P1),
+    send(TF?tile, gap_colour, red),
+    send(TF, split, new(_P2, picture), P1, vertically),
+    gap_colour(TF, Colour).
+
 :- end_tests(tab_frame_layout).
+
+%   A frame shows the `tile <-gap_colour` of its root tile between and
+%   around its windows.
+
+:- begin_tests(frame_gap_colour).
+
+test(gap_colour_default, Name == ui_dialog_background) :-
+    new(F, frame),
+    send(F, append, new(picture)),
+    get(F?tile?gap_colour, name, Name),
+    send(F, destroy).
+test(gap_colour_survives_new_root, Name == red) :-
+    new(F, frame),
+    send(F, append, new(P1, picture)),
+    send(F?tile, gap_colour, red),
+    send(new(_P2, picture), right, P1),
+    get(F?tile?gap_colour, name, Name),
+    send(F, destroy).
+
+:- end_tests(frame_gap_colour).
 
 
 :- begin_tests(tab_frame_single_tab).

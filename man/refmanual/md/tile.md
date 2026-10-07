@@ -48,12 +48,51 @@ higher in the hierarchy whenever needed.
 @see class frame
 
 
+## Class variables {#class-tile-classvars}
+
+- tile.border: int = 4
+    Width of a gap between two tiles that the user can drag to
+    resize them.
+
+- tile.fixed_border: int = 0
+    Width of a gap between two tiles that cannot be resized.  Making
+    the resizable gaps wider than the fixed ones makes them easier to
+    see and to grab.
+
+- tile.border_root: int = 4
+    Distance around the root tile.
+
+- tile.gap_colour: colour = ui_dialog_background
+    Default for <-gap_colour.
+
+- tile.separator_colour: colour* = @nil
+    Colour of the line drawn in a gap that can be dragged.  If @nil,
+    the foreground colour is used.  Used by the frame or tab_frame
+    holding the root tile.
+
+- tile.separator_pen: 0.. = 1
+    Thickness of the line drawn in a gap that can be dragged.  If 0,
+    no line is drawn.
+
+
 ## Instance variables {#class-tile-instvars}
 
 - tile<->border: int
-    Distance between the object tiled and its reserved area.
+    Width of the gaps between the sub-tiles that can be resized.
+    Setting it also sets <->border_root.
 
     @see window->border
+    @see tile<->fixed_border
+
+- tile<->gap_colour: colour
+    Colour between and around the tiles.  Only the value of the root
+    tile is used: a frame fills the space between and around its
+    windows with it and a tab_frame its resizable gaps.  A tile created
+    above the root takes over the value.
+
+- tile<->fixed_border: int
+    Width of the gaps between the sub-tiles that cannot be resized,
+    i.e., where <-can_resize of the tile before the gap is @off.
 
 - tile->can_resize: [bool]
     This variable is used by class frame to deal with user-initiated

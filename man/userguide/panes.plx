@@ -319,9 +319,15 @@ Whether a tab carries a button to close it. Default is \const{@on}.
 Room made to type a new tab label in, if the tab strip has it. Default is
 \const{200}.
 
-    \classvarmethod{tab_frame}{separator_colour}{colour*}
+    \classvarmethod{tile}{separator_colour}{colour*}
 Colour of the lines drawn in the gaps that can be dragged. Default is
-\const{@nil}, which draws them in the foreground colour.
+\const{@nil}, which draws them in the foreground colour.  This also
+applies to the panes of a frame.
+    \classvarmethod{tile}{gap_colour}{colour}
+Colour between and around the panes. Default is
+\const{ui_dialog_background}.
+    \classvarmethod{tile}{separator_pen}{0..}
+Thickness of these lines. Default is \const{1}; \const{0} draws no line.
     \classvarmethod{tab_frame}{tile_border_root}{int}
 Margin between the tiled panes and the edges of the tab. Default is
 \const{0}: out to the edges.

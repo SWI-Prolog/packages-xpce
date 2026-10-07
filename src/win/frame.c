@@ -205,14 +205,6 @@ convertOldSlotFrame(FrameObj fr, Name var, Any value)
 }
 
 
-static status
-initialiseNewSlotFrame(FrameObj fr, Variable var)
-{ if ( var->name == NAME_background )
-    assign(fr, background, getClassVariableValueObject(fr, NAME_background));
-
-  succeed;
-}
-
 		/********************************
 		*          OPEN/CREATE		*
 		********************************/
@@ -868,16 +860,17 @@ showLabelFrame(FrameObj fr, BoolObj val)
 }
 
 
-static status
-backgroundFrame(FrameObj fr, Any bg)
-{ if ( fr->background != bg )
-  { assign(fr, background, bg);
+/* Called by `tile ->gap_colour` */
 
-    if ( ws_created_frame(fr) && ChangedFrames )
-      addChain(ChangedFrames, fr);
+void
+redrawGapsFrame(FrameObj fr)
+{ if ( ws_created_frame(fr) && ChangedFrames )
+  { Cell cell;
+
+    addChain(ChangedFrames, fr);
+    for_cell(cell, fr->members)		/* they may show the frame's */
+      send(cell->value, NAME_redraw, EAV); /* background, e.g., tile_gap */
   }
-
-  succeed;
 }
 
 		 /*******************************
@@ -932,6 +925,21 @@ getClosedFrame(FrameObj fr)
 static status
 bellFrame(FrameObj fr, Int volume)
 { return bellDisplay(fr->display, volume);
+}
+
+
+/* What is visible between and around the windows is the
+ * `tile <-gap_colour` of the root tile.
+ */
+
+Colour
+gapColourFrame(FrameObj fr)
+{ TileObj t = getTileFrame(fr);
+
+  if ( t )
+    answer(t->gap_colour);
+
+  answer(newObject(ClassColour, CtoName("ui_dialog_background"), EAV));
 }
 
 
@@ -2015,8 +2023,6 @@ static vardecl var_frame[] =
      NAME_organisation, "Application the frame belongs too"),
   IV(NAME_display, "display", IV_BOTH,
      NAME_organisation, "Display the frame resides on"),
-  SV(NAME_background, "colour|pixmap", IV_GET|IV_STORE, backgroundFrame,
-     NAME_appearance, "Background of the frame"),
   SV(NAME_area, "area", IV_GET|IV_STORE, areaFrame,
      NAME_area, "Area of the opened frame on the display"),
   IV(NAME_geometry, "name*", IV_NONE,
@@ -2066,8 +2072,6 @@ static senddecl send_frame[] =
      DEFAULT, "Create from label, kind and display"),
   SM(NAME_display, 1, "display", displayFrame,
      NAME_organisation, "The display of the frame has changed"),
-  SM(NAME_initialiseNewSlot, 1, "var=variable", initialiseNewSlotFrame,
-     DEFAULT, "Initialise <-background"),
   SM(NAME_reset, 0, NULL, resetFrame,
      DEFAULT, "Remove ->busy_cursor"),
   SM(NAME_unlink, 0, NULL, unlinkFrame,
@@ -2239,9 +2243,7 @@ static getdecl get_frame[] =
 /* Resources */
 
 static classvardecl rc_frame[] =
-{ RC(NAME_background, "colour|pixmap", "@_dialog_bg",
-     "Default background colour"),
-  RC(NAME_busyCursor, "cursor*", UXWIN("watch", "win_wait"),
+{ RC(NAME_busyCursor, "cursor*", UXWIN("watch", "win_wait"),
      "Default cursor displayed by ->busy_cursor"),
   RC(NAME_confirmDone, "bool", "@off",
      "Show confirmer on `Delete'"),

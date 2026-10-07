@@ -67,13 +67,17 @@
 !				]
 
 ! Splitting and resizing.  A line is drawn in every gap that can be
-! dragged; @nil draws it in the foreground colour.  The border is the
-! margin around the whole tiling (0: out to the edges of the tab).  The
+! dragged; @nil draws it in the foreground colour.  The gap colour is
+! the colour between and around the panes.  These apply to the tiles
+! of frames and tab frames.  The border is the margin around the
+! whole tiling (0: out to the edges of the tab).  The
 ! split bias weights the top and bottom zones when a pane is dropped on
 ! another: above 1 the left and right zones grow, and those are the
 ! commoner split.
 
-!tab_frame.separator_colour:	grey60
+!tile.separator_colour:		grey60
+!tile.separator_pen:		1
+!tile.gap_colour:		grey90
 !tab_frame.tile_border_root:	4
 !tab_frame.split_bias:		2
 

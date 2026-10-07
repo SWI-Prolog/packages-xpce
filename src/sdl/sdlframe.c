@@ -552,37 +552,54 @@ typedef struct
   float y;
 } foffset;
 
+typedef struct
+{ FrameObj frame;
+  Colour   colour;		/* tile.separator_colour */
+  float    pen;			/* tile.separator_pen */
+} resize_draw_ctx;
+
+static void
+set_draw_colour(WsFrame wfr, Colour colour)
+{ SDL_Color c = pceColour2SDL_Color(colour);
+
+  SDL_SetRenderDrawColor(wfr->ws_renderer, c.r, c.g, c.b, c.a);
+}
+
+/* Draw a line of tile.separator_pen in the middle of the gap.  The gap
+ * itself is filled by ws_draw_frame(), see gapColourFrame().
+ */
+
 static void*
 ws_draw_resize_area_frame(Any ctx, TileObj t, Int x, Int y, Int w, Int h)
 { ASSERT_SDL_MAIN();
-  FrameObj fr = ctx;
-  WsFrame wfr = fr->ws_ref;
-  float x1, y1, x2, y2;
+  resize_draw_ctx *dc = ctx;
+  WsFrame wfr = dc->frame->ws_ref;
+  float scale = SDL_GetWindowPixelDensity(wfr->ws_window);
+  float pen = rintf(dc->pen*scale);
+  SDL_FRect r;
 
-  //Cprintf("Resize area %s: %d %d %d %d\n", pp(fr),
-  //valInt(x), valInt(y), valInt(w), valInt(h));
+  if ( pen < 1 )
+    pen = 1;
 
   if ( t->super->orientation == NAME_horizontal )
-  { x1 = valNum(x) + valNum(w)/2.0;
-    y1 = valNum(y);
-    x2 = x1;
-    y2 = valInt(y) + valNum(h);
+  { r.x = rintf((valNum(x) + valNum(w)/2.0)*scale - pen/2);
+    r.y = rintf(valNum(y)*scale);
+    r.w = pen;
+    r.h = rintf(valNum(h)*scale);
   } else
-  { x1 = valNum(x);
-    y1 = valNum(y) + valNum(h)/2.0;
-    x2 = valNum(x) + valNum(w);
-    y2 = y1;
+  { r.x = rintf(valNum(x)*scale);
+    r.y = rintf((valNum(y) + valNum(h)/2.0)*scale - pen/2);
+    r.w = rintf(valNum(w)*scale);
+    r.h = pen;
   }
-  float scale = SDL_GetWindowPixelDensity(wfr->ws_window);
-  x1 = rintf(x1*scale);
-  y1 = rintf(y1*scale);
-  x2 = rintf(x2*scale);
-  y2 = rintf(y2*scale);
 
-  SDL_RenderLine(wfr->ws_renderer, x1, y1, x2, y2);
+  set_draw_colour(wfr, dc->colour);
+  SDL_RenderFillRect(wfr->ws_renderer, &r);
 
   return NULL;			/* continue */
 }
+
+/* The separators in the gaps between the tiles that can be resized */
 
 static void
 ws_draw_resize_frame(FrameObj fr)
@@ -590,12 +607,19 @@ ws_draw_resize_frame(FrameObj fr)
   TileObj tile = getTileFrame(fr);
 
   if ( tile )
-  { WsFrame wfr = fr->ws_ref;
-    Colour fg = fr->display->foreground;
-    SDL_Color c = pceColour2SDL_Color(fg);
+  { Any pen    = getClassVariableValueObject(tile, NAME_separatorPen);
+    Any colour = getClassVariableValueObject(tile, NAME_separatorColour);
 
-    SDL_SetRenderDrawColor(wfr->ws_renderer, c.r, c.g, c.b, c.a);
-    forResizeAreaTile(tile, ws_draw_resize_area_frame, fr);
+    if ( pen && isInteger(pen) && valNum(pen) > 0 )
+    { resize_draw_ctx dc =
+	{ .frame  = fr,
+	  .pen    = valNum(pen),
+	  .colour = ( colour && instanceOfObject(colour, ClassColour)
+		      ? colour : fr->display->foreground )
+	};
+
+      forResizeAreaTile(tile, ws_draw_resize_area_frame, &dc);
+    }
   }
 }
 
@@ -834,8 +858,7 @@ ws_draw_frame(FrameObj fr)
 
   DEBUG(NAME_sdl,
 	Cprintf("BEGIN ws_draw_frame(%s)\n", pp(fr)));
-  assert(instanceOfObject(fr->background, ClassColour));
-  SDL_Color c = pceColour2SDL_Color(fr->background);
+  SDL_Color c = pceColour2SDL_Color(gapColourFrame(fr));
   SDL_SetRenderDrawColor(wfr->ws_renderer, c.r, c.g, c.b, c.a);
   SDL_RenderClear(wfr->ws_renderer);
   Cell cell;
@@ -1649,7 +1672,7 @@ ws_image_of_frame(FrameObj fr)
   int     fh    = (int)(valInt(fr->area->h) * scale);
 
   cairo_surface_t *surf;
-  cairo_t *cr = pixel_image_start(&surf, fw, fh, fr->background);
+  cairo_t *cr = pixel_image_start(&surf, fw, fh, gapColourFrame(fr));
   if ( !cr )
     return NULL;
 

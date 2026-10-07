@@ -84,6 +84,7 @@ test :-
 
 variable(current,    window*,     get,  "Window that has the focus").
 variable(separators, chain,       get,  "Lines drawn between the tiles").
+variable(gaps,       chain,       get,  "Fills of the space between the tiles").
 variable(closing,    bool := @off, get, "I am being destroyed").
 variable(drop_feedback, chain*,   get, "Outline of the drop that would happen").
 variable(sizing,     bool := @off, none, "A size is being imposed on me").
@@ -97,8 +98,6 @@ class_variable(tile_border_root,         int,     0,
                "Border around the tile hierarchy (0: out to my edges)").
 class_variable(split_bias,               num,     2,
                "Weight of the top and bottom drop zones (>1: wider sides)").
-class_variable(separator_colour,         colour*, @nil,
-               "Colour of the tile separators (@nil: <-foreground)").
 
 :- pce_global(@tab_frame_resize_gesture, new(tile_resize_gesture)).
 
@@ -115,6 +114,7 @@ initialise(TF, Window:window=[window], Name:name=[name]) :->
     send_super(TF, initialise, TheName),
     send(TF, border, size(0,0)),
     send(TF, slot, separators, new(chain)),
+    send(TF, slot, gaps, new(chain)),
     send(TF, recogniser, @tab_frame_resize_gesture),
     send(TF, append, W).
 
@@ -998,32 +998,48 @@ resize_tile(Tile, vertical, Size) :-
 update_separators(TF) :->
     "Draw a line in each resizable gap"::
     get(TF, separators, Lines),
-    chain_list(Lines, Old),                % clear first: destroying a line
-    send(Lines, clear),                    % takes it out of the chain
-    forall(member(L, Old), send(L, destroy)),
+    get(TF, gaps, Gaps),
+    clear_graphicals(Lines),
+    clear_graphicals(Gaps),
     (   get(TF, tile, Tile),
         get(Tile, resize_areas, Areas)
     ->  send(Areas, for_all, message(TF, separator, @arg1))
     ;   true
     ).
 
+%   Destroy the graphicals in Chain.  Clear the chain first: destroying
+%   a graphical takes it out of the chain.
+
+clear_graphicals(Chain) :-
+    get(Chain, copy, Old),
+    send(Chain, clear),
+    send(Old, for_all, message(@arg1, destroy)).
+
 separator(TF, A:area) :->
-    "Display a separator line in the gap A"::
+    "Fill the gap A and display a separator line in it"::
     get(A, position, point(X, Y)),
     get(A, size, size(W, H)),
-    (   W < H
-    ->  XM is X + W//2,
-        new(L, line(XM, Y, XM, Y+H))
-    ;   YM is Y + H//2,
-        new(L, line(X, YM, X+W, YM))
-    ),
-    (   get(TF, class_variable_value, separator_colour, C),
-        C \== @nil
-    ->  send(L, colour, C)
+    send(TF, display, new(Gap, tile_gap(W, H)), point(X, Y)),
+    send(TF?gaps, append, Gap),
+    get(TF, tile, Tile),                % see tile.separator_pen
+    get(Tile, class_variable_value, separator_pen, Pen),
+    (   Pen > 0
+    ->  (   W < H
+        ->  XM is X + W//2,
+            new(L, line(XM, Y, XM, Y+H))
+        ;   YM is Y + H//2,
+            new(L, line(X, YM, X+W, YM))
+        ),
+        send(L, pen, Pen),
+        (   get(Tile, class_variable_value, separator_colour, C),
+            C \== @nil
+        ->  send(L, colour, C)
+        ;   true
+        ),
+        send(TF, display, L),
+        send(TF?separators, append, L)
     ;   true
-    ),
-    send(TF, display, L),
-    send(TF?separators, append, L).
+    ).
 
                  /*******************************
                  *          DRAG & DROP         *
@@ -1428,8 +1444,8 @@ carry, drawn where it will appear.
 
 :- pce_extend_class(tabbed_window).
 
-variable(drop_ghost, graphical*, get,
-         "Ghost of the tab a drop would make").
+%       The ghost is the attribute `drop_ghost`.  Extending a class with a
+%       variable is not allowed if it already has subclasses.
 
 %       The argument is typed `object' for the same reason as `tab_frame
 %       ->drop': a drag_and_drop_gesture offers whatever is being dragged
@@ -1491,13 +1507,19 @@ show_drop_ghost(TW, Window:window, Pos:point) :->
     get(Top, label_font, Font),
     send(Device, display, new(G, tab_drop_ghost(Label, Font))),
     send(G, place, X, Y, GW, H),
-    send(TW, slot, drop_ghost, G).
+    send(TW, attribute, drop_ghost, G).
+
+drop_ghost(TW, Ghost:graphical*) :<-
+    "Ghost of the tab a drop would make"::
+    (   get(TW, attribute, drop_ghost, Ghost0)
+    ->  Ghost = Ghost0
+    ;   Ghost = @nil
+    ).
 
 clear_drop_ghost(TW) :->
     "Take the ghost away"::
-    (   get(TW, slot, drop_ghost, G),
-        G \== @nil
-    ->  send(TW, slot, drop_ghost, @nil),
+    (   get(TW, attribute, drop_ghost, G)
+    ->  send(TW, delete_attribute, drop_ghost),
         (   object(G)                   % the stack it was on may have gone
         ->  send(G, destroy)
         ;   true
@@ -1653,6 +1675,35 @@ bar_backdrop(TW, Above, DX, Height) :-
     get(Above, display_position, point(AX, _)),
     get(Above, size, size(_, Height)),
     DX is TX-AX.
+
+
+%   The space between the windows of a tab_frame.  This has the
+%   `tile <-gap_colour` of the root tile, as the space between the
+%   windows of a frame.  The colour is resolved when drawing.
+
+:- pce_begin_class(tile_gap, box,
+                   "Space between the windows of a tab_frame").
+
+initialise(G, W:int, H:int) :->
+    "Create from the size of the gap"::
+    send_super(G, initialise, W, H),
+    send(G, pen, 0).
+
+'_redraw_area'(G, A:area) :->
+    "Fill with the gap colour"::
+    (   gap_colour(G, Colour)
+    ->  send(G, slot, fill, Colour)   % no ->changed: we are drawing
+    ;   send(G, slot, fill, @nil)
+    ),
+    send_super(G, '_redraw_area', A).
+
+gap_colour(G, Colour) :-
+    get(G, device, TF),
+    TF \== @nil,
+    get(TF, tile, Tile),
+    get(Tile, gap_colour, Colour).
+
+:- pce_end_class(tile_gap).
 
 
 :- pce_begin_class(tab_drop_ghost, device,

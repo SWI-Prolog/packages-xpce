@@ -35,6 +35,20 @@
 #include <h/kernel.h>
 #include <h/graphics.h>
 
+/* The gap after the member t2 of t.  A gap that can be dragged to resize
+ * the tiles next to it is <-border wide, one that cannot <-fixed_border.
+ * A wider resizable gap is easier to see and to grab.
+ */
+
+static int
+gap_after_tile(TileObj t, TileObj t2)
+{ if ( canResizeTile(t2) )		/* do not cache: the layout is */
+    return valInt(t->border);		/* computed while building */
+
+  return valInt(t->fixed_border);
+}
+
+
 static status	layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah);
 static status	computeTile(TileObj t);
 static void	relatedTile(TileObj t1, TileObj t2, Any manager);
@@ -247,7 +261,7 @@ computeTile(TileObj t)
       hst = Max(hst, t2->horStretch);
       vsh = Min(vsh, t2->verShrink);
       vst = Min(vst, t2->verStretch);
-      w = add(w, t->border);
+      w = add(w, toInt(gap_after_tile(t, t2)));
     }
 
     assign(t, idealWidth,  w);
@@ -273,7 +287,7 @@ computeTile(TileObj t)
       hst = Min(hst, t2->horStretch);
       vsh = Max(vsh, t2->verShrink);
       vst = Max(vst, t2->verStretch);
-      h = add(h, t->border);
+      h = add(h, toInt(gap_after_tile(t, t2)));
     }
 
     assign(t, idealWidth,  w);
@@ -313,6 +327,31 @@ borderTile(TileObj t, Int border)
 }
 
 
+/* The colour between and around the tiles is drawn by the manager of
+   the root: a frame fills its background with it and a tab_frame shows
+   it in its gaps.
+*/
+
+static status
+gapColourTile(TileObj t, Colour c)
+{ if ( t->gap_colour != c )
+  { TileObj root = getRootTile(t);
+
+    assign(t, gap_colour, c);
+    if ( root == t )
+    { Any mgr = t->manager;
+
+      if ( instanceOfObject(mgr, ClassFrame) )
+	redrawGapsFrame(mgr);
+      else if ( instanceOfObject(mgr, ClassGraphical) )
+	send(mgr, NAME_redraw, EAV);
+    }
+  }
+
+  succeed;
+}
+
+
 /* A tile put above another takes over its appearance.  It may be the root
    of the hierarchy now, and <-border_root is the manager's business.
 */
@@ -321,6 +360,8 @@ static void
 inheritTile(TileObj t, TileObj from)
 { assign(t, border,      from->border);
   assign(t, border_root, from->border_root);
+  assign(t, fixed_border, from->fixed_border);
+  assign(t, gap_colour,  from->gap_colour);
   assign(t, enforced,    from->enforced);
 }
 
@@ -416,6 +457,7 @@ leftTile(TileObj t, Any obj, BoolObj delegate)
     assign(super, members, newObject(ClassChain, t, t2, EAV));
     assign(super->area, x, t->area->x);
     assign(super->area, y, t->area->y);
+    inheritTile(super, notNil(t2->manager) ? t2 : t); /* the old root */
   }
 
   assign(t,  super, super);
@@ -527,6 +569,7 @@ aboveTile(TileObj t, Any obj, BoolObj delegate)
     assign(super, members, newObject(ClassChain, t, t2, EAV));
     assign(super->area, x, t->area->x);
     assign(super->area, y, t->area->y);
+    inheritTile(super, notNil(t2->manager) ? t2 : t); /* the old root */
   }
 
   assign(t,  super, super);
@@ -1122,24 +1165,35 @@ enforceTile(TileObj t, BoolObj val)
  * border above its content.
  */
 
+static bool
+non_empty_tile(TileObj t, TileObj t2)
+{ if ( t->orientation == NAME_horizontal )
+    return valInt(t2->idealWidth) > 0 || valInt(t2->horStretch) > 0;
+  else
+    return valInt(t2->idealHeight) > 0 || valInt(t2->verStretch) > 0;
+}
+
+
+/* The total size of the gaps between the non-empty members of t
+ */
+
 static int
-non_empty_tiles(TileObj t)
+gaps_tile(TileObj t)
 { Cell cell;
-  int n = 0;
+  TileObj prev = NULL;
+  int gaps = 0;
 
   for_cell(cell, t->members)
   { TileObj t2 = cell->value;
 
-    if ( t->orientation == NAME_horizontal )
-    { if ( valInt(t2->idealWidth) > 0 || valInt(t2->horStretch) > 0 )
-	n++;
-    } else
-    { if ( valInt(t2->idealHeight) > 0 || valInt(t2->verStretch) > 0 )
-	n++;
+    if ( non_empty_tile(t, t2) )
+    { if ( prev )
+	gaps += gap_after_tile(t, prev);
+      prev = t2;
     }
   }
 
-  return n;
+  return gaps;
 }
 
 
@@ -1178,8 +1232,6 @@ tile_minimum(TileObj t, bool horizontal)
     return ideal < MIN_TILE_SIZE ? ideal : MIN_TILE_SIZE;
 
   { bool along = ((t->orientation == NAME_horizontal) == horizontal);
-    int border = valInt(t->border);
-    int nvis   = non_empty_tiles(t);
     int min    = 0;
     Cell cell;
 
@@ -1192,8 +1244,8 @@ tile_minimum(TileObj t, bool horizontal)
 	min = m;			/* they cover one another */
     }
 
-    if ( along && nvis > 1 )
-      min += border * (nvis-1);
+    if ( along )
+      min += gaps_tile(t);
 
     return min < ideal ? min : ideal;	/* never more than it asks for */
   }
@@ -1202,11 +1254,9 @@ tile_minimum(TileObj t, bool horizontal)
 
 static status
 layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah)
-{ int border = valInt(t->border);
-  int nvis = isNil(t->members) ? 0 : non_empty_tiles(t);
-  int borders = nvis > 0 ? nvis-1 : 0;
+{ int gaps = isNil(t->members) ? 0 : gaps_tile(t);
+  TileObj prev = NULL;			/* last tile placed */
   int x, y, w, h;
-  bool placed = false;
 
   assign(t, enforced, ON);
 
@@ -1255,23 +1305,23 @@ layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah)
       sp++;
     }
 
-    distribute_stretches(s, sp-s, w - border*borders);
+    distribute_stretches(s, sp-s, w - gaps);
 
     sp = s;
     for_cell(cell, t->members)
     { TileObj t2 = cell->value;
-      int size = sp->size;
-      int room = x0 + w - x;		/* what is left of the box */
+      int size = sp->size > 0 ? sp->size : 0; /* if the minimums do not */
+      int room = x0 + w - x;		/* fit, a size can be negative */
 
-      if ( sp->size > 0 && placed )
-	x += border;
+      if ( sp->size > 0 && prev )
+	x += gap_after_tile(t, prev);
       if ( size > room )		/* the minimums do not fit: keep it
 					   inside rather than out of reach */
 	size = room > 0 ? room : 0;
       layoutTile(t2, toInt(x), toInt(y), toInt(size), toInt(h));
       x += size;
       if ( sp->size > 0 )
-	placed = true;
+	prev = t2;
       sp++;
     }
   } else /*if ( t->orientation == NAME_vertical )*/
@@ -1291,23 +1341,23 @@ layoutTile(TileObj t, Int ax, Int ay, Int aw, Int ah)
       sp++;
     }
 
-    distribute_stretches(s, sp-s, h - border*borders);
+    distribute_stretches(s, sp-s, h - gaps);
 
     sp = s;
     for_cell(cell, t->members)
     { TileObj t2 = cell->value;
-      int size = sp->size;
-      int room = y0 + h - y;		/* what is left of the box */
+      int size = sp->size > 0 ? sp->size : 0; /* if the minimums do not */
+      int room = y0 + h - y;		/* fit, a size can be negative */
 
-      if ( sp->size > 0 && placed )
-	y += border;
+      if ( sp->size > 0 && prev )
+	y += gap_after_tile(t, prev);
       if ( size > room )		/* the minimums do not fit: keep it
 					   inside rather than out of reach */
 	size = room > 0 ? room : 0;
       layoutTile(t2, toInt(x), toInt(y), toInt(w), toInt(size));
       y += size;
       if ( sp->size > 0 )
-	placed = true;
+	prev = t2;
       sp++;
     }
   }
@@ -1436,34 +1486,40 @@ ICanResizeTile(TileObj t, Name dir)
 }
 
 
+/* Whether the gap after t can be dragged, from where t sits among its
+ * siblings and what they can do.  Not cached: see getCanResizeTile().
+ */
+
+bool
+canResizeTile(TileObj t)
+{ if ( notDefault(t->canResize) )
+    return t->canResize == ON;
+
+  if ( notNil(t->super) &&
+       ICanResizeTile(t, t->super->orientation) )
+  { Cell cell;
+    int before = TRUE;
+
+    for_cell(cell, t->super->members)
+    { TileObj t2 = cell->value;
+
+      if ( before )
+      { if ( t == t2 )
+	  before = FALSE;
+      } else if ( ICanResizeTile(t2, t->super->orientation) )
+	return true;
+    }
+  }
+
+  return false;
+}
+
+
 BoolObj
 getCanResizeTile(TileObj t)
 { if ( isDefault(t->canResize) )
-  { if ( notNil(t->super) )
-    { if ( ICanResizeTile(t, t->super->orientation) )
-      { Cell cell;
-	int before = TRUE;
+    assign(t, canResize, canResizeTile(t) ? ON : OFF);
 
-	for_cell(cell, t->super->members)
-	{ TileObj t2 = cell->value;
-
-	  if ( before )
-	  { if ( t == t2 )
-	      before = FALSE;
-	  } else
-	  { if ( ICanResizeTile(t2, t->super->orientation) )
-	    { assign(t, canResize, ON);
-	      goto out;
-	    }
-	  }
-	}
-      }
-    }
-
-    assign(t, canResize, OFF);
-  }
-
-out:
   answer(t->canResize);
 }
 
@@ -1606,7 +1662,7 @@ ws_draw_resize_frame()).  A tile hierarchy that  lives inside a graphical
 device (see class tab_frame) paints them itself and thus needs the areas.
 
 A member laid out with no size at all leaves no gap after it -- see the
-comment at non_empty_tiles(), which is what withholds the border in that
+comment at non_empty_tile(), which is what withholds the border in that
 case.  Reporting one anyway is worse than useless: the gap is a rectangle
 of zero height, ws_draw_resize_area_frame() draws a line down the middle
 of it, and the middle of nothing is the first row of the tile that
@@ -1726,9 +1782,13 @@ static vardecl var_tile[] =
   IV(NAME_resized, "{none,width,height,both}", IV_NONE,
      NAME_resize, "Has been given a size by ->width and ->height"),
   SV(NAME_border, "int", IV_GET|IV_STORE, borderTile,
-     NAME_appearance, "Distance between areas"),
+     NAME_appearance, "Distance between areas that can be resized"),
   IV(NAME_borderRoot, "int", IV_BOTH,
      NAME_appearance, "Distance around the root tile"),
+  IV(NAME_fixedBorder, "int", IV_BOTH,
+     NAME_appearance, "Distance between areas that cannot be resized"),
+  SV(NAME_gapColour, "colour", IV_GET|IV_STORE, gapColourTile,
+     NAME_appearance, "Colour between and around the tiles"),
   IV(NAME_orientation, "{none,horizontal,vertical}", IV_GET,
      NAME_layout, "Direction of adjacent sub-tiles"),
   IV(NAME_members, "chain*", IV_GET,
@@ -1813,9 +1873,17 @@ static getdecl get_tile[] =
 
 static classvardecl rc_tile[] =
 { RC(NAME_border, "int", "4",
-     "Border between subtiles"),
+     "Border between subtiles that can be resized"),
   RC(NAME_borderRoot, "int", "4",
-     "Border around the root tile")
+     "Border around the root tile"),
+  RC(NAME_fixedBorder, "int", "0",
+     "Border between subtiles that cannot be resized"),
+  RC(NAME_gapColour, "colour", "ui_dialog_background",
+     "Colour between and around the tiles"),
+  RC(NAME_separatorColour, "colour*", "@nil",
+     "Colour of the separator lines (@nil: foreground)"),
+  RC(NAME_separatorPen, "0..", "1",
+     "Thickness of the separator lines (0: no line)")
 };
 
 /* Class Declaration */

@@ -226,6 +226,8 @@ NewClass(tileobj)
   Name		resized;		/* Sizes given by hand (see setTile()) */
   Int		border;			/* Border between subtiles */
   Int		border_root;		/* Border around the root tile */
+  Int		fixed_border;		/* Border between non-resizable tiles */
+  Colour	gap_colour;		/* Colour between and around tiles */
   Name		orientation;		/* none, horizontal, vertical */
   Chain		members;		/* subtiles */
   TileObj	super;			/* Super tile */
@@ -865,7 +867,6 @@ NewClass(frameobj)
   Name		label;			/* Label of the frame */
   Application	application;		/* Application it belongs too */
   DisplayObj	display;		/* Display it is displayed on */
-  Any		background;		/* Frames background */
   Area		area;			/* Area of the frame */
   Name		geometry;		/* X-Window geometry spec */
   BoolObj	placed;			/* User tried to fix placement */

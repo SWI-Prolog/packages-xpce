@@ -61,7 +61,7 @@ initialise(W) :->
     send(Frame, sensitive, @off),
     send(Frame?tile, border, 1),       % border in the text colour
     get(W, colour, Colour),
-    send(Frame, background, Colour),
+    send(Frame?tile, gap_colour, Colour),
     send(W, gap, size(5, 2)),
     send(W, append, new(L, label(feedback, '', normal))),
     send(L, length, 0),

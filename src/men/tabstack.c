@@ -165,6 +165,7 @@ initialiseTabStack(TabStack t, int argc, Tab tabs[])
 { int n;
 
   initialiseDevice((Device) t);
+  obtainClassVariablesObject(t);	/* e.g., <-hide_single_label */
   for(n=0; n<argc; n++)
     TRY(send(t, NAME_append, tabs[n], EAV));
 

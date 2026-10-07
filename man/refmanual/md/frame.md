@@ -32,10 +32,6 @@ imply X-specific semantics.
 
 ## Class variables {#class-frame-classvars}
 
-- frame.background: colour|pixmap = @_dialog_bg
-    Default background of the frame.  Inherited by windows that do
-    not set an explicit background.
-
 - frame.busy_cursor: cursor* = watch (Unix/macOS) / win_wait (Windows)
     Cursor used by `frame ->busy_cursor` when the call site does not
     pass a cursor.
@@ -95,9 +91,6 @@ imply X-specific semantics.
 - frame<->display: display
     Display (monitor) hosting the frame.  Defaults to `@display`.
     Changing it after `->create` is not allowed.
-
-- frame<->background: colour|pixmap
-    Background of the frame's client area.
 
 - frame<->area: area
     Client-area rectangle (the frame without title-bar and borders)
@@ -294,10 +287,6 @@ imply X-specific semantics.
 - frame->convert_old_slot: slot=name, value=any
     Backward-compatibility hook used when loading saved frames:
     translates the legacy `show` slot into `<-status`.
-
-- frame->initialise_new_slot: var=variable
-    Initialise newly-introduced slots (currently `background`) when
-    loading older saved instances.
 
 - frame->display: display
     React to a display change (e.g. when the host moves the frame to
