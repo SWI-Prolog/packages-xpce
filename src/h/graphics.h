@@ -341,6 +341,7 @@ NewClass(textobj)
   Int	     x_caret;		/* Caret X, relative to graphical */
   Int	     y_caret;		/* Caret Y, relative to graphical */
   Int	     selection;		/* Represented selection */
+  Any	     style;		/* Style (font, colour, ...) or NIL */
 End;
 
 NewClass(joint)

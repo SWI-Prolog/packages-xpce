@@ -157,6 +157,10 @@ void str_string(PceString s, FontObj font,
 		int x, int y, int w, int h,
 		Name hadjust, Name vadjust,
 		Any underline, int flags);
+void str_string_decorated(PceString s, FontObj font,
+			  int x, int y, int w, int h,
+			  Name hadjust, Name vadjust,
+			  Any underline, Any strike);
 void str_selected_string(PceString s, FontObj font,
 			 int f, int t, Style style, int x, int y, int w, int h,
 			 Name hadjust, Name vadjust);

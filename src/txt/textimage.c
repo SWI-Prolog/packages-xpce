@@ -1036,10 +1036,16 @@ paint_line(TextImage ti, Area a, TextLine l, int from, int to)
     int run_tw = prt ? (int)str_advance_W(buf, (int)(out-buf), f)
 		     : (int)l->chars[e].x - sx;
 
-    if ( atts & TXT_GREYED )
-    { if ( isDefault(c) )
-	c = r_colour(DEFAULT);
-      c = getReduceColour(c, DEFAULT);
+    if ( atts & TXT_GREYED )		/* as an inactive graphical */
+    { Any grey = getClassVariableValueObject(ti, NAME_inactiveColour);
+
+      if ( grey && notNil(grey) )
+	c = grey;
+      else
+      { if ( isDefault(c) )
+	  c = r_colour(DEFAULT);
+	c = getReduceColour(c, DEFAULT);
+      }
     }
 
     if ( notDefault(bg) )

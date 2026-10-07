@@ -56,6 +56,90 @@ static status	prepareEditText(TextObj t, Name selector);
 			}
 
 
+		/********************************
+		*            STYLE		*
+		********************************/
+
+/* A text may have a <-style.  The attributes the style defines take
+ * precedence over those of the text, and changing them through the
+ * text changes the style.  Style objects are shared and do not tell
+ * the texts using them that they changed: whoever changes a style
+ * directly must ->redraw the text.
+ */
+
+static inline Style
+text_style(TextObj t)
+{ return notNil(t->style) ? (Style)t->style : NULL;
+}
+
+static int
+text_attributes(TextObj t)
+{ Style s = text_style(t);
+
+  return s ? (int)s->attributes : 0;
+}
+
+/* The font: the style's font if it has one, else our font, in the
+ * bold or italic variant if the style asks for it.
+ */
+
+static FontObj
+text_font(TextObj t)
+{ Style s = text_style(t);
+  FontObj f;
+
+  if ( !s )
+    return t->font;
+
+  f = notDefault(s->font) ? s->font : t->font;
+  if ( isDefault(f) ||
+       !(s->attributes & (TXT_BOLDEN|TXT_ITALIC)) )
+    return f;
+
+  { Name style  = (s->attributes & TXT_ITALIC) ? NAME_italic : f->style;
+    Any  weight = (s->attributes & TXT_BOLDEN) ? NAME_bold : f->weight;
+    FontObj v   = newObject(ClassFont, f->family, style, f->points,
+				       weight, EAV);
+
+    return v ? v : f;
+  }
+}
+
+static Any
+text_background(TextObj t)
+{ Style s = text_style(t);
+
+  if ( s && instanceOfObject(s->background, ClassColour) )
+    return s->background;
+
+  return t->background;
+}
+
+/* Underline and strikethrough are @on/@off, a colour or (from the
+ * style) a line texture name.
+ */
+
+static Any
+text_underline(TextObj t)
+{ Style s = text_style(t);
+
+  if ( s && notDefault(s->underline) )
+    return s->underline;
+
+  return t->underline;
+}
+
+static Any
+text_strikethrough(TextObj t)
+{ Style s = text_style(t);
+
+  if ( s && notDefault(s->strikethrough) )
+    return s->strikethrough;
+
+  return OFF;
+}
+
+
 
 		/********************************
 		*            CREATE		*
@@ -84,6 +168,7 @@ initialiseText(TextObj t, CharArray string, Name format, FontObj font)
   assign(t, x_caret,	  ZERO);
   assign(t, y_caret,	  ZERO);
   assign(t, selection,	  NIL);
+  assign(t, style,	  NIL);
 
   return recomputeText(t, NAME_position);
 }
@@ -288,14 +373,34 @@ repaintText(TextObj t, int x, int y, int w, int h)
 { PceString s = &t->string->data;
   int b = valInt(t->border);
   int sf = 0, st = 0;
-  int flags = 0;
   Style style = NIL;
 
-  if ( notNil(t->background) )
-  { if ( isDefault(t->background) )
+  Any bg = text_background(t);
+  Any underline = text_underline(t);
+  Any strike = text_strikethrough(t);
+  int attributes = text_attributes(t);
+  Any old_colour = NULL;
+
+  if ( notNil(bg) )
+  { if ( isDefault(bg) )
       r_clear(x, y, w, h);
     else
-      r_fill(x, y, w, h, t->background);
+      r_fill(x, y, w, h, bg);
+  }
+
+  if ( (attributes & TXT_HIDDEN) )
+    succeed;
+  if ( notNil(t->style) && notDefault(((Style)t->style)->colour) )
+    old_colour = r_colour(((Style)t->style)->colour);
+  if ( (attributes & TXT_GREYED) )	/* as an inactive graphical */
+  { Any grey = getClassVariableValueObject(t, NAME_inactiveColour);
+
+    if ( grey && notNil(grey) )
+    { Any c = r_colour(grey);
+
+      if ( !old_colour )
+	old_colour = c;
+    }
   }
 
   x += b;
@@ -316,44 +421,46 @@ repaintText(TextObj t, int x, int y, int w, int h)
 
     DEBUG(NAME_text,
 	  Cprintf("RedrawAreaText(%s): \"%s\"\n", pp(t), s->s_textA));
-    str_format(buf, s, valInt(t->margin), t->font);
+    str_format(buf, s, valInt(t->margin), text_font(t));
     if ( notNil(t->selection) )
-      str_selected_string(buf, t->font, sf, st, style,
+      str_selected_string(buf, text_font(t), sf, st, style,
 			  x+valInt(t->x_offset), y, w, h,
 			  t->format, NAME_top);
     else
-      str_string(buf, t->font,
+      str_string_decorated(buf, text_font(t),
 		 x+valInt(t->x_offset), y, w, h,
-		 t->format, NAME_top, t->underline, flags);
+		 t->format, NAME_top, underline, strike);
   } else
   { if ( t->wrap == NAME_clip )
     { LocalString(buf, s->s_iswide, s->s_size+1);
 
       str_one_line(buf, s);
       if ( notNil(t->selection) )
-      { str_selected_string(buf, t->font, sf, st, style,
+      { str_selected_string(buf, text_font(t), sf, st, style,
 			    x+valInt(t->x_offset), y, w, h,
 			    t->format, NAME_top);
       } else
-      { str_string(buf, t->font,
+      { str_string_decorated(buf, text_font(t),
 		   x+valInt(t->x_offset), y, w, h,
-		   t->format, NAME_top, t->underline, flags);
+		   t->format, NAME_top, underline, strike);
       }
     } else
     { if ( notNil(t->selection) )
-      { str_selected_string(s, t->font, sf, st, style,
+      { str_selected_string(s, text_font(t), sf, st, style,
 			    x+valInt(t->x_offset), y, w, h,
 			    t->format, NAME_top);
       } else
-      { str_string(s, t->font,
+      { str_string_decorated(s, text_font(t),
 		   x+valInt(t->x_offset), y, w, h,
-		   t->format, NAME_top, t->underline, flags);
+		   t->format, NAME_top, underline, strike);
       }
     }
   }
 
   if ( t->wrap == NAME_clip )
     d_clip_done();
+  if ( old_colour )
+    r_colour(old_colour);
 
   if ( t->show_caret != OFF )
   { double fh = valNum(getAscentFont(t->font));
@@ -405,8 +512,8 @@ initAreaText(TextObj t)
   if ( Wrapped(t) )
   { LocalString(buf, s->s_iswide, s->s_size + MAX_WRAP_LINES);
 
-    str_format(buf, s, valInt(t->margin), t->font);
-    str_size(buf, t->font, &tw, &h);
+    str_format(buf, s, valInt(t->margin), text_font(t));
+    str_size(buf, text_font(t), &tw, &h);
     if ( t->wrap == NAME_wrapFixedWidth && tw < valInt(t->margin) )
       tw = valInt(t->margin);
   } else
@@ -414,9 +521,9 @@ initAreaText(TextObj t)
     { LocalString(buf, s->s_iswide, s->s_size + 1);
 
       str_one_line(buf, s);
-      str_size(buf, t->font, &tw, &h);
+      str_size(buf, text_font(t), &tw, &h);
     } else
-    { str_size(s, t->font, &tw, &h);
+    { str_size(s, text_font(t), &tw, &h);
     }
   }
 
@@ -457,8 +564,8 @@ initPositionText(TextObj t)
   if ( Wrapped(t) )
   { LocalString(buf, s->s_iswide, s->s_size + MAX_WRAP_LINES);
 
-    str_format(buf, s, valInt(t->margin), t->font);
-    str_size(buf, t->font, &tw, &h);
+    str_format(buf, s, valInt(t->margin), text_font(t));
+    str_size(buf, text_font(t), &tw, &h);
     if ( t->wrap == NAME_wrapFixedWidth && tw < valInt(t->margin) )
       tw = valInt(t->margin);
   } else
@@ -466,9 +573,9 @@ initPositionText(TextObj t)
     { LocalString(buf, s->s_iswide, s->s_size + 1);
 
       str_one_line(buf, s);
-      str_size(buf, t->font, &tw, &h);
+      str_size(buf, text_font(t), &tw, &h);
     } else
-    { str_size(s, t->font, &tw, &h);
+    { str_size(s, text_font(t), &tw, &h);
     }
   }
 
@@ -582,7 +689,7 @@ getCharacterPositionText(TextObj t, Int chr)
 static void
 get_char_pos_helper(TextObj t, PceString s, int caret, int *cx, int *cy)
 { int b = valInt(t->border);
-  int ch  = valInt(getHeightFont(t->font));
+  int ch  = valInt(getHeightFont(text_font(t)));
   int w   = abs((int)valInt(t->area->w));
   int lw, sl;
 
@@ -593,7 +700,7 @@ get_char_pos_helper(TextObj t, PceString s, int caret, int *cx, int *cy)
     *cy += (str_lineno(s, sl)-1) * ch;
   }
 
-  lw = str_advance(s, sl, caret, t->font);
+  lw = str_advance(s, sl, caret, text_font(t));
   w -= 2 * b;
 
   if ( t->format == NAME_left )
@@ -604,7 +711,7 @@ get_char_pos_helper(TextObj t, PceString s, int caret, int *cx, int *cy)
 
     if ( (el = str_next_index(s, caret, '\n')) < 0 )
       el = s->s_size;
-    rw = str_width(s, caret, el, t->font);
+    rw = str_width(s, caret, el, text_font(t));
 
     if ( t->format == NAME_center )
       *cx = w/2 - (lw+rw)/2 + lw;
@@ -630,7 +737,7 @@ get_char_pos_text(TextObj t, Int chr, int *X, int *Y)
   } else
   { LocalString(buf, s->s_iswide, Wrapped(t) ? s->s_size + MAX_WRAP_LINES : s->s_size+1);
 
-    str_format(buf, s, valInt(t->margin), t->font);
+    str_format(buf, s, valInt(t->margin), text_font(t));
     get_char_pos_helper(t, s, caret, &cx, &cy);
   }
 
@@ -644,7 +751,7 @@ get_char_pos_text(TextObj t, Int chr, int *X, int *Y)
 Int
 get_pointed_text(TextObj t, int x, int y, int round)
 { PceString s = &t->string->data;
-  int ch = valInt(getHeightFont(t->font));
+  int ch = valInt(getHeightFont(text_font(t)));
   int b = valInt(t->border);
   int w;
   int caret = 0, el;
@@ -657,7 +764,7 @@ get_pointed_text(TextObj t, int x, int y, int round)
   x -= b;
   if ( Wrapped(t) )
   { str_init(&buf, s, alloca(str_allocsize(s)));
-    str_format(&buf, s, valInt(t->margin), t->font);
+    str_format(&buf, s, valInt(t->margin), text_font(t));
     s = &buf;
   }
 
@@ -680,7 +787,7 @@ get_pointed_text(TextObj t, int x, int y, int round)
   if ( t->format == NAME_left )
     w = 0;
   else
-  { int lw = str_width(s, caret, el, t->font);
+  { int lw = str_width(s, caret, el, text_font(t));
 
     if ( t->format == NAME_center )
       w = (valInt(t->area->w) - lw)/2 - b;
@@ -693,7 +800,7 @@ get_pointed_text(TextObj t, int x, int y, int round)
      that renders the text, so proportional fonts and fallback glyphs
      are hit-tested correctly.
   */
-  answer(toInt(str_x_to_index(s, caret, el, t->font, x - w, round)));
+  answer(toInt(str_x_to_index(s, caret, el, text_font(t), x - w, round)));
 }
 
 
@@ -707,7 +814,7 @@ getPointedText(TextObj t, Point pos, BoolObj round)
 
 static Num
 getAscentText(TextObj t)
-{ answer(toInt(valNum(t->border)+valNum(getAscentFont(t->font))));
+{ answer(toInt(valNum(t->border)+valNum(getAscentFont(text_font(t)))));
 }
 
 
@@ -717,7 +824,14 @@ getAscentText(TextObj t)
 
 static status
 backgroundText(TextObj t, Any bg)
-{ if ( t->background != bg)
+{ Style s = text_style(t);
+
+  if ( s && notNil(bg) && notDefault(bg) )
+  { send(s, NAME_background, bg, EAV);
+    return changedEntireImageGraphical(t);
+  }
+
+  if ( t->background != bg)
   { CHANGING_GRAPHICAL(t,
 		       assign(t, background, bg);
 		       changedEntireImageGraphical(t));
@@ -729,7 +843,14 @@ backgroundText(TextObj t, Any bg)
 
 static status
 underlineText(TextObj t, Any underline)
-{ if ( t->underline != underline )
+{ Style s = text_style(t);
+
+  if ( s )
+  { send(s, NAME_underline, underline, EAV);
+    return changedEntireImageGraphical(t);
+  }
+
+  if ( t->underline != underline )
   { CHANGING_GRAPHICAL(t, assign(t, underline, underline);
 		       changedEntireImageGraphical(t));
   }
@@ -755,11 +876,88 @@ getTransparentText(TextObj t)
 
 status
 fontText(TextObj t, FontObj font)
-{ if (t->font != font)
+{ Style s = text_style(t);
+
+  if ( s )
+  { send(s, NAME_font, font, EAV);
+    return recomputeText(t, NAME_area);
+  }
+
+  if (t->font != font)
   { assign(t, font, font);
     recomputeText(t, NAME_area);
   }
   succeed;
+}
+
+
+static status
+colourText(TextObj t, Any colour)
+{ Style s = text_style(t);
+
+  if ( s && notDefault(colour) )
+  { send(s, NAME_colour, colour, EAV);
+    return changedEntireImageGraphical(t);
+  }
+
+  return colourGraphical((Graphical)t, colour);
+}
+
+
+static status
+styleText(TextObj t, Style style)
+{ if ( t->style != style )
+  { assign(t, style, style);
+    recomputeText(t, NAME_area);
+    changedEntireImageGraphical(t);
+  }
+
+  succeed;
+}
+
+
+/* Re-read the style after it was changed without telling us
+ */
+
+static status
+styleChangedText(TextObj t)
+{ recomputeText(t, NAME_area);
+  return changedEntireImageGraphical(t);
+}
+
+
+static FontObj
+getFontText(TextObj t)
+{ answer(text_font(t));
+}
+
+
+static Any
+getColourText(TextObj t)
+{ Style s = text_style(t);
+
+  if ( s && notDefault(s->colour) )
+    answer(s->colour);
+
+  answer(t->colour);
+}
+
+
+static Any
+getBackgroundText(TextObj t)
+{ answer(text_background(t));
+}
+
+
+static Any
+getUnderlineText(TextObj t)
+{ answer(text_underline(t));
+}
+
+
+static Any
+getStrikethroughText(TextObj t)
+{ answer(text_strikethrough(t));
 }
 
 
@@ -965,7 +1163,7 @@ geometryText(TextObj t, Int x, Int y, Int w, Int h)
 
     if ( isDefault(t->font) )
       obtainClassVariablesObject(t);		/* resolve the font */
-    str_size(&t->string->data, t->font, &tw, &h);
+    str_size(&t->string->data, text_font(t), &tw, &h);
     initOffsetText(t, tw);
   }
 
@@ -1108,8 +1306,8 @@ nextLineText(TextObj t, Int arg, Int column)
   int fw, fh;
 
   deselectText(t);
-  fw = valInt(getAvgCharWidthFont(t->font));
-  fh = valInt(getHeightFont(t->font));
+  fw = valInt(getAvgCharWidthFont(text_font(t)));
+  fh = valInt(getHeightFont(text_font(t)));
   get_char_pos_text(t, DEFAULT, &cx, &cy);
   cy += UArg(t) * fh + fh/2;
   cx  = (isDefault(column) ? cx + fw/2 : valInt(column));
@@ -1131,7 +1329,7 @@ getColumnText(TextObj t)
 { int cx, cy;
   int fw;
 
-  fw = valInt(getAvgCharWidthFont(t->font));
+  fw = valInt(getAvgCharWidthFont(text_font(t)));
   get_char_pos_text(t, DEFAULT, &cx, &cy);
 
   answer(toInt(cx + fw/2));
@@ -1501,7 +1699,7 @@ lengthText(TextObj t, Int l)
   if ( isDefault(t->font) )
     obtainClassVariablesObject(t);
 
-  fw = valInt(getAvgCharWidthFont(t->font));
+  fw = valInt(getAvgCharWidthFont(text_font(t)));
   len = (valInt(l)+1) * fw;
 
   return marginText(t, toInt(len), NAME_clip);
@@ -1655,13 +1853,13 @@ static char *T_catchAll[] =
 static vardecl var_text[] =
 { IV(NAME_string, "char_array", IV_GET,
      NAME_storage, "Represented string (may contain newlines)"),
-  SV(NAME_font, "font", IV_GET|IV_STORE, fontText,
+  SV(NAME_font, "font", IV_STORE, fontText,
      NAME_appearance, "Font used to draw the string"),
   SV(NAME_format, "{left,center,right}", IV_GET|IV_STORE, formatText,
      NAME_appearance, "Left, center or right alignment"),
   IV(NAME_margin, "int", IV_GET,
      NAME_appearance, "Margin for <->wrap equals wrap"),
-  SV(NAME_underline, "bool|colour", IV_GET|IV_STORE, underlineText,
+  SV(NAME_underline, "bool|colour", IV_STORE, underlineText,
      NAME_appearance, "Underlined text?"),
   IV(NAME_position, "point", IV_NONE,
      NAME_internal, "Avoid `walking' with alignment"),
@@ -1669,7 +1867,7 @@ static vardecl var_text[] =
      NAME_caret, "Index (0-based) of caret"),
   SV(NAME_showCaret, "bool|{passive}", IV_GET|IV_STORE, showCaretText,
      NAME_appearance, "If not @off, show the caret"),
-  SV(NAME_background, "[colour|pixmap]*", IV_GET|IV_STORE, backgroundText,
+  SV(NAME_background, "[colour]*", IV_STORE, backgroundText,
      NAME_appearance, "@nil: transparent; @default: cleared"),
   SV(NAME_border, "0..", IV_GET|IV_STORE, borderText,
      NAME_appearance, "Border around actual text"),
@@ -1682,13 +1880,18 @@ static vardecl var_text[] =
   IV(NAME_yCaret, "int", IV_NONE,
      NAME_internal, "Y-position of caret"),
   IV(NAME_Selection, "int*", IV_NONE,
-     NAME_internal, "Selected text")
+     NAME_internal, "Selected text"),
+  SV(NAME_style, "style*", IV_GET|IV_STORE, styleText,
+     NAME_appearance, "Style that overrules font, colour, etc.")
 };
 
 /* Send Methods */
 
 static senddecl send_text[] =
-{ SM(NAME_event, 1, "event", eventText,
+{ SM(NAME_colour, 1, "[colour]", colourText,
+     NAME_appearance, "Set colour, of <-style if we have one"),
+  SM(NAME_styleChanged, 0, NULL, styleChangedText,
+     NAME_appearance, "Update after <-style was changed"), SM(NAME_event, 1, "event", eventText,
      DEFAULT, "Handle focus and keyboard events"),
   SM(NAME_geometry, 4, T_geometry, geometryText,
      DEFAULT, "Only move text"),
@@ -1786,7 +1989,17 @@ static senddecl send_text[] =
 /* Get Methods */
 
 static getdecl get_text[] =
-{ GM(NAME_characterPosition, 1, "point", "index=[int]",
+{ GM(NAME_font, 0, "font", NULL, getFontText,
+     NAME_appearance, "Font, from <-style if it defines one"),
+  GM(NAME_colour, 0, "[colour]", NULL, getColourText,
+     NAME_appearance, "Colour, from <-style if it defines one"),
+  GM(NAME_background, 0, "[colour]*", NULL, getBackgroundText,
+     NAME_appearance, "Background, from <-style if it defines one"),
+  GM(NAME_underline, 0, "bool|colour|texture_name", NULL, getUnderlineText,
+     NAME_appearance, "Underline, from <-style if it defines one"),
+  GM(NAME_strikethrough, 0, "bool|colour|texture_name", NULL,
+     getStrikethroughText,
+     NAME_appearance, "Strikethrough, from <-style"), GM(NAME_characterPosition, 1, "point", "index=[int]",
      getCharacterPositionText,
      NAME_calculate, "Convert index to position of character"),
   GM(NAME_ascent, 0, "pixels=num", NULL, getAscentText,

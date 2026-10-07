@@ -2512,8 +2512,10 @@ str_stext(FontObj font, PceString s, int f, int len,
       if ( notDefault(style->background) )
       { double a = s_ascent(font);
 	double b = s_descent(font);
+	double fx = x, fy = y-a;
 
-	r_fill(x, y-a, w, b+a, style->background);
+	InvTranslate(fx, fy);		/* x,y are translated; r_fill() */
+	r_fill(fx, fy, w, b+a, style->background); /* translates again */
       }
       if ( notDefault(style->colour) )
 	ofg = r_colour(style->colour);
@@ -2663,7 +2665,6 @@ str_size(PceString s, FontObj font, int *width, int *height)
  * @param h The height of the drawing area.
  * @param hadjust Name indicating horizontal alignment (e.g., left, center, right).
  * @param vadjust Name indicating vertical alignment (e.g., top, center, bottom).
- * @param flags Additional flags controlling rendering behavior.
  * @param underline is a bool or colour, defining underlining
  * @param flags is currently unused
  */
@@ -2671,6 +2672,38 @@ void
 str_string(PceString s, FontObj font,
 	   int x, int y, int w, int h,
 	   Name hadjust, Name vadjust, Any underline, int flags)
+{ str_string_decorated(s, font, x, y, w, h, hadjust, vadjust,
+		       underline, OFF);
+}
+
+/* A decoration (underline, strikethrough) is @on/@off, a colour or a
+ * line texture name.  Find the bool-or-colour and the texture.
+ */
+
+static bool
+text_decoration(Any spec, Any *value, Name *texture)
+{ if ( !spec || isNil(spec) || isDefault(spec) || spec == OFF )
+    return false;
+  if ( instanceOfObject(spec, ClassName) )	/* texture name */
+  { *value   = ON;
+    *texture = spec;
+  } else
+  { *value   = spec;
+    *texture = NAME_none;
+  }
+
+  return true;
+}
+
+/**
+ * As str_string(), but also draw a strikethrough.
+ *
+ * @param underline, strike are @on/@off, a colour or a texture name
+ */
+void
+str_string_decorated(PceString s, FontObj font,
+		     int x, int y, int w, int h,
+		     Name hadjust, Name vadjust, Any underline, Any strike)
 { strTextLine lines[MAX_TEXT_LINES];
   strTextLine *line;
   int nlines, n;
@@ -2684,10 +2717,23 @@ str_string(PceString s, FontObj font,
   str_break_into_lines(s, lines, &nlines, MAX_TEXT_LINES);
   str_compute_lines(lines, nlines, font, x, y, w, h, hadjust, vadjust);
 
+  Any ul, st;
+  Name ul_texture, st_texture;
+  bool do_ul = text_decoration(underline, &ul, &ul_texture);
+  bool do_st = text_decoration(strike, &st, &st_texture);
+
   for(n=0, line = lines; n++ < nlines; line++)
   { str_text(font, &line->text, line->x, line->y+baseline);
-    if ( isOn(underline) || instanceOfObject(underline, ClassColour) )
-      r_underline(font, line->x, y+baseline, line->width, underline, NAME_none);
+    if ( do_ul || do_st )
+    { int lx = line->x;			/* r_line() translates again */
+      int ly = line->y+baseline;
+
+      InvTranslate(lx, ly);
+      if ( do_ul )
+	r_underline(font, lx, ly, line->width, ul, ul_texture);
+      if ( do_st )
+	r_strikethrough(font, lx, ly, line->width, st, st_texture);
+    }
   }
 }
 
