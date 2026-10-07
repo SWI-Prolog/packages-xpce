@@ -97,7 +97,10 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E rm -rf ${REFMAN_HOME_DIR}
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${REFMAN_TEX_DIR}/XPCERefMan ${REFMAN_HOME_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${REFMAN_MD_DIR} ${REFMAN_HOME_DIR}/md
     COMMAND ${CMAKE_COMMAND} -E touch ${REFMAN_HOME_STAMP}
+    COMMAND ${CMAKE_COMMAND} -E remove -f ${SWIPL_BUILD_HOME}/doc/manindex.db
     DEPENDS ${REFMAN_TEX_DIR}/XPCERefMan/index.html
     COMMENT "-- Staging xpce refman HTML for manindex.db")
 
