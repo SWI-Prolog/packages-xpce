@@ -63,7 +63,8 @@
                  *******************************/
 
 :- dynamic
-    setting/2.                      % what, value
+    setting/2,                      % what, value
+    settings_changed/0.             % save them at halt
 
 setting(active,            true).       % actually use this tracer
 setting(show_unbound,      false).      % show unbound variables
@@ -95,15 +96,18 @@ trace_setting(portray_codes, Old, New) :- % compatibility
 trace_setting(portray_text, Old, New) :-
     !,
     setting(portray_text, Old),
-    portray_text(New).
+    portray_text(New),
+    changed_settings.
 trace_setting(portray_text_length, Old, New) :-
     !,
-    set_portray_text(ellipsis, Old, New).
+    set_portray_text(ellipsis, Old, New),
+    changed_settings.
 trace_setting(Name, Old, New) :-
     clause(setting(Name, Old), true, Ref),
     !,
     erase(Ref),
     assertz(setting(Name, New)),
+    changed_settings,
     (   current_predicate(prolog_gui:notify_gui/0)
     ->  prolog_gui:notify_gui
     ;   true
@@ -111,7 +115,17 @@ trace_setting(Name, Old, New) :-
 trace_setting(Name, Old, _) :-
     setting(Name, Old).
 
+%   The settings are only saved if they were changed, so a process
+%   that merely loads the debugger does not write the file.
+
+changed_settings :-
+    (   settings_changed
+    ->  true
+    ;   assertz(settings_changed)
+    ).
+
 save_trace_settings :-
+    settings_changed,
     absolute_file_name(config('Tracer.cnf'), Path,
                        [ access(write),
                          file_errors(fail)
@@ -134,7 +148,8 @@ load_trace_settings :-
                        ]),
     !,
     forall(member(setting(Name, Value), Terms),
-           trace_setting(Name, _, Value)).
+           trace_setting(Name, _, Value)),
+    retractall(settings_changed).       % loading is no change
 load_trace_settings.
 
 :- initialization load_trace_settings.

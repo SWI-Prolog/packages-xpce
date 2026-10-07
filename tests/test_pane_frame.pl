@@ -60,6 +60,23 @@ see the value you chose rather than the one shipped.
 
 :- set_prolog_flag('SDL_VIDEODRIVER', dummy).
 
+:- use_module(library(filesex), [directory_file_path/3,
+                                  delete_directory_and_contents/1]).
+
+%   Loading the debugger reads and, at halt, saves its settings in
+%   config('Tracer.cnf').  Use an empty file of our own, so the tests
+%   neither depend on nor change the settings of the user.
+
+sandbox_tracer_config :-
+    tmp_file(tracer_config, Dir),
+    make_directory(Dir),
+    directory_file_path(Dir, 'Tracer.cnf', File),
+    setup_call_cleanup(open(File, write, Out), true, close(Out)),
+    asserta(user:file_search_path(config, Dir)),
+    at_halt(delete_directory_and_contents(Dir)).
+
+:- initialization(sandbox_tracer_config, now).
+
 :- use_module(library(pce)).
 :- use_module(library(plunit)).
 :- use_module(library(pane_frame)).
