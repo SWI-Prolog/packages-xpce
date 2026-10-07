@@ -828,7 +828,6 @@ NewClass(displayobj)
   Area		area;			/* Area occupied by this display */
   Area		work_area;		/* Area for applications */
   BoolObj	removed;		/* Display is being removed */
-  Size		dpi;			/* Resolution (dots per inch) */
   Chain		frames;			/* Created frames on this display */
   Chain		inspect_handlers;	/* Event-handlers for inspector */
   Colour	foreground;		/* Window default foreground */

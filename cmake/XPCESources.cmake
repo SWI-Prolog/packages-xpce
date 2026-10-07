@@ -164,7 +164,7 @@ set(XPCE_DATA_prolog_lib area.pl autowin.pl dragdict.pl dragdrop.pl
     pce_symbol_picker.pl
     pce_tagged_connection.pl pce_template.pl pce_tick_box.pl pce_toc.pl
     pce_type.pl pce_unclip.pl pce_util.pl pce_xref.pl persistent_frame.pl
-    portray_object.pl print_graphics.pl print_text.pl
+    portray_object.pl print_graphics.pl
     prolog_predicate_item.pl prolog_predicate.pl qrecompile.pl
     scaledbitmap.pl scan_arguments.pl splash_screen.pl
     stayup_popup.pl swi_compatibility.pl swi_edit.pl

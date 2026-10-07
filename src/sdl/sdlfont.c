@@ -41,7 +41,7 @@
 
 static bool ttf_initialized = false;
 static PangoFontMap *fontmap;	/* Per surface type (screen, PDF, ... */
-static PangoContext *context;	/* Per DPI and fontmap */
+static PangoContext *context;	/* For fontmap */
 static double font_scale = 1.0;
 
 static void clean_width_cache(charwidth_cache *wcache);
@@ -53,7 +53,7 @@ ws_init_fonts(void)
     fontmap = pango_cairo_font_map_get_default();
     // fontmap = pango_ft2_font_map_new();
     context = pango_font_map_create_context(fontmap);
-    pango_cairo_context_set_resolution(context, 96.0); /* TBD: Get from SDL */
+    pango_cairo_context_set_resolution(context, 96.0); /* 1pt = 4/3 px */
     g_object_ref(context);
     ws_reset_font_scale();
   }

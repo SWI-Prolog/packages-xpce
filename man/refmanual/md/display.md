@@ -1,7 +1,7 @@
 # class display {#class-display}
 
 Class `display` is xpce's handle on the host's graphical output: a
-physical monitor, the system theme, DPI, system clipboard and the
+physical monitor, the system theme, system clipboard and the
 collection of frames currently hosted on that monitor.  The underlying
 driver is SDL3 across all platforms.
 
@@ -14,7 +14,6 @@ display that received the last event or else the primary display.
 See `display_manager <-current`.
 
 @see display<-convert
-@see display<-dpi
 @see display<-primary
 @see class display_manager
 
@@ -34,10 +33,6 @@ See `display_manager <-current`.
 - display.value_font: font = normal
     Font used for the body of `display ->inform` /
     `display ->confirm`.
-
-- display.dpi: [size|int] = @default
-    Override for the resolution reported by SDL.  @default lets SDL
-    decide.
 
 - display.theme: [name] = @default
     The SWI-Prolog theme for the xpce user interface and the
@@ -140,8 +135,8 @@ See `display_manager <-current`.
     to it and the parked display is freed.
 
 - display->poll_dimensions
-    Re-query the OS for the monitor's `<-area`, `<-work_area` and
-    `<-dpi`.  Called automatically on display events; can be invoked
+    Re-query the OS for the monitor's `<-area` and `<-work_area`.
+    Called automatically on display events; can be invoked
     to refresh after an external change.
 
 - display->bell: volume=[0..100]
@@ -210,10 +205,6 @@ See `display_manager <-current`.
     widget gains focus.  `auto` lets SDL decide based on whether a
     physical keyboard is attached.
 
-- display->dpi: size|int
-    Override the display's reported resolution in dots per inch.
-    Useful when the OS misreports DPI for high-density screens.
-
 - display->inspect_handler: handler
     Add a handler to `<-inspect_handlers` (using `chain ->add`).  As
     this chain is shared, the handler applies to all displays.
@@ -254,11 +245,6 @@ See `display_manager <-current`.
 
 - display<-height: -> int
     Pixel height of the display: equivalent to `<-area?height`.
-
-- display<-dpi: -> size
-    Resolution of the display in dots per inch.  Either the value
-    set via `->dpi`, the override from the class variable, or the
-    value SDL reports for the monitor.
 
 - display<-system_theme: -> {light,dark}
     The OS system theme as reported by `SDL_GetSystemTheme()`.  On

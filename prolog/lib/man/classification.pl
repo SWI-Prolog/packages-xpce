@@ -912,7 +912,6 @@ scope('M.display.G.contained_in', internal).
 scope('M.display.G.contains', internal).
 scope('M.display.G.convert', internal).
 scope('M.display.G.depth', obscure).
-scope('M.display.G.dpi', advanced).
 scope('M.display.G.has_screen_keyboard_support', advanced).
 scope('M.display.G.height', obscure).
 scope('M.display.G.paste', advanced).
@@ -928,7 +927,6 @@ scope('M.display.S.busy_cursor', advanced).
 scope('M.display.S.confirm', basic).
 scope('M.display.S.copy', advanced).
 scope('M.display.S.dispatch', obscure).
-scope('M.display.S.dpi', advanced).
 scope('M.display.S.event_queued', obscure).
 scope('M.display.S.has_visible_frames', advanced).
 scope('M.display.S.inform', basic).
@@ -3279,7 +3277,6 @@ scope('R.dialog_item.value_font', advanced).
 scope('R.dict.sort_ignore_blanks', basic).
 scope('R.dict.sort_ignore_case', basic).
 scope('R.display.background', obscure).
-scope('R.display.dpi', advanced).
 scope('R.display.foreground', obscure).
 scope('R.display.label_font', basic).
 scope('R.display.theme', advanced).
@@ -4215,7 +4212,6 @@ scope('V.display.area', advanced).
 scope('V.display.background', internal).
 scope('V.display.busy_locks', advanced).
 scope('V.display.display_manager', internal).
-scope('V.display.dpi', advanced).
 scope('V.display.foreground', internal).
 scope('V.display.frames', advanced).
 scope('V.display.inspect_handlers', obscure).

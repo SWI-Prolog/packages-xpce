@@ -216,65 +216,6 @@ getThemeDisplay(DisplayObj d)
 }
 
 
-Size
-getDPIDisplay(DisplayObj d)
-{ int rx, ry;
-
-  if ( instanceOfObject(d->dpi, ClassSize) )
-    answer(d->dpi);
-  if ( isInteger(d->dpi) )
-  { assign(d, dpi, newObject(ClassSize, d->dpi, d->dpi, EAV));
-    answer(d->dpi);
-  }
-  Any rc = getClassVariableValueObject(d, NAME_dpi);
-  if ( rc && !isDefault(rc) )
-  { if ( instanceOfObject(rc, ClassSize) )
-      assign(d, dpi, rc);
-    else
-      assign(d, dpi, newObject(ClassSize, rc, rc, EAV));
-    answer(d->dpi);
-  }
-
-  if ( instanceOfObject(d->dpi, ClassSize) )
-    answer(d->dpi);
-  if ( ws_resolution_display(d, &rx, &ry) )
-  { assign(d, dpi, newObject(ClassSize, toInt(rx), toInt(ry), EAV));
-    answer(d->dpi);
-  }
-
-  assign(d, dpi, newObject(ClassSize, toInt(96), toInt(96), EAV));
-  answer(d->dpi);
-}
-
-int
-DPI(Any gr)
-{ DisplayObj d = CurrentDisplay(gr ? gr : NIL);
-
-  if ( d )
-  { Size sz = getDPIDisplay(d);
-
-    return (int)((valInt(sz->w) + valInt(sz->h) + 1)/2);
-  } else
-  { return 96;
-  }
-}
-
-double
-dpi_scale(Any gr, double px)
-{ return px;
-}
-
-static status
-DPIDisplay(DisplayObj d, Any arg)
-{ if ( instanceOfObject(arg, ClassSize) )
-    assign(d, dpi, arg);
-  else
-    assign(d, dpi, newObject(ClassSize, arg, arg, EAV));
-
-  succeed;
-}
-
-
 status
 hasVisibleFramesDisplay(DisplayObj d, BoolObj keep_alive)
 { if ( notNil(d->frames) )
@@ -649,8 +590,6 @@ static vardecl var_display[] =
      NAME_dimension, "Area available for applications"),
   IV(NAME_removed, "bool", IV_NONE,
      NAME_organisation, "Display is removed, but not yet empty"),
-  IV(NAME_dpi, "[size|int]", IV_NONE,
-     NAME_dimension, "Resolution (dots per inch)"),
   IV(NAME_frames, "chain", IV_GET,
      NAME_organisation, "Frames displayed on this display"),
   IV(NAME_inspectHandlers, "chain", IV_GET,
@@ -704,8 +643,6 @@ static senddecl send_display[] =
      NAME_power, "Activate (@on) or deactivate (@off) screensaver"),
   SM(NAME_screenKeyboard, 1, "[{auto,on,off}]", screenKeyboardDisplay,
      NAME_event, "Policy for the on-screen keyboard on text-input focus"),
-  SM(NAME_dpi, 1, "size|int", DPIDisplay,
-     NAME_dimension, "Resolution in dots per inch"),
   SM(NAME_hasVisibleFrames, 1, "keep_alive=[bool]", hasVisibleFramesDisplay,
      NAME_organisation, "True if there is a visible (keep_alive) frame")
 };
@@ -732,8 +669,6 @@ static getdecl get_display[] =
      NAME_dimension, "Size of the display"),
   GM(NAME_width, 0, "int", NULL, getWidthDisplay,
      NAME_dimension, "Width of the display in pixels"),
-  GM(NAME_dpi, 0, "size", NULL, getDPIDisplay,
-     NAME_dimension, "Resolution in dots per inch"),
   GM(NAME_selection, 3, "any", T_getSelection, getSelectionDisplay,
      NAME_selection, "Query value of the X-window selection"),
   GM(NAME_paste, 1, "string", "which=[{primary,clipboard}]", getPasteDisplay,
@@ -749,9 +684,7 @@ static getdecl get_display[] =
 /* Resources */
 
 static classvardecl rc_display[] =
-{ RC(NAME_dpi, "[size|int]", "@default",
-     "Screen resolution in Dots Per Inch"),
-  RC(NAME_theme, "[name]", "@default",
+{ RC(NAME_theme, "[name]", "@default",
      "SWI-Prolog theme library to load"),
   RC(NAME_background, "colour", "ui_window_background",
      "Default background for windows"),

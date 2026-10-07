@@ -20,7 +20,6 @@ COMMON(status)	flushDisplay(DisplayObj d);
 COMMON(status)	synchroniseDisplay(DisplayObj d);
 COMMON(status)	bellDisplay(DisplayObj d, Int vol);
 COMMON(Size)	getSizeDisplay(DisplayObj d);
-COMMON(Size)	getDPIDisplay(DisplayObj d);
 COMMON(Int)	getWidthDisplay(DisplayObj d);
 COMMON(Int)	getHeightDisplay(DisplayObj d);
 COMMON(Point)	getPointerLocationDisplay(DisplayObj d);
@@ -32,8 +31,6 @@ COMMON(status)	informDisplay(DisplayObj d, Any client, CharArray title,
 COMMON(status)	busyCursorDisplay(DisplayObj d, CursorObj c, BoolObj block_events);
 COMMON(status)	inspectDisplay(DisplayObj d, Graphical gr, EventObj ev);
 COMMON(status)	makeClassDisplay(Class class);
-COMMON(int)	DPI(Any gr);
-COMMON(double)	dpi_scale(Any gr, double px);
 COMMON(status)	hasVisibleFramesDisplay(DisplayObj d, BoolObj keep_alive);
 
 /* /staff/jan/src/pl/packages/xpce/src/win/displaymgr.c */

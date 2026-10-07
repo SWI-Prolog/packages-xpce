@@ -102,7 +102,7 @@ draw_generic_button_face(Button b,
 	    if ( !e )
 	      e = newObject(ClassElevation, ONE, EAV);
 
-	    int gtk_margin = dpi_scale(b, GTK_BUTTON_MARGIN);
+	    int gtk_margin = GTK_BUTTON_MARGIN;
 	    bx -= gtk_margin;
 	    by -= gtk_margin;
 	    bw += gtk_margin * 2;

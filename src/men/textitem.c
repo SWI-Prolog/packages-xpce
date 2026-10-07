@@ -925,11 +925,11 @@ text_item_combo_width(TextItem ti)
   if ( ti->style == NAME_comboBox )
   { int w = ws_combo_box_width((Graphical)ti);
 
-    return w >= 0 ? w : dpi_scale(ti, 14);
+    return w >= 0 ? w : 14;
   } else if ( ti->style == NAME_stepper )
   { int w = ws_stepper_width((Graphical)ti);
 
-    return w >= 0 ? w :  dpi_scale(ti, (STEPPER_BOX_W+STEPPER_BOX_GAP));
+    return w >= 0 ? w : STEPPER_BOX_W+STEPPER_BOX_GAP;
   }
 
   return 0;

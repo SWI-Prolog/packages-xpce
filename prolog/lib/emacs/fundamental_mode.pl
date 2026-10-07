@@ -37,7 +37,6 @@
 :- module(emacs_fundamental_mode, []).
 :- use_module(library(pce)).
 :- use_module(library(emacs_extend), []).
-:- use_module(library(print_text)).
 :- use_module(window, [emacs_register_closed_tab/1]).
 :- use_module(library(swi_ide), []).
 :- require([ append/3
@@ -87,8 +86,6 @@
           new                      = button(file),
           save_buffer              = key('\\C-x\\C-s') + button(file),
           save_as                  = button(file),
-          print                    = button(file),
-          print_selection          = button(file),
           -                        = button(file),
           revert                   = button(file),
           kill_buffer              = key('\\C-xk') + button(file),
@@ -576,42 +573,6 @@ tab_width(M, Width:width='2..') :->
     get(M, editor, E),
     send(TB, tab_width, Width),
     send(E, tab_distance, Width).
-
-
-                 /*******************************
-                 *             PRINT            *
-                 *******************************/
-
-print(M, From:[int], To:[int]) :->
-    "Print contents of the buffer"::
-    get(M, text_buffer, TB),
-    get(M, editor, E),
-    (   get(M, file, File),
-        File \== @nil
-    ->  get(File, absolute_path, Path),
-        prolog_to_os_filename(Path, FileName),
-        (   From \== @default, To \== @default
-        ->  get(M, line_number, From, FL),
-            get(M, line_number, To-1, TL),
-            format(string(Job), '~w (lines ~w..~w)', [FileName, FL, TL])
-        ;   Job = FileName
-        )
-    ;   Job = @default
-    ),
-    send(TB, print, From, To,
-         editor := E,
-         job := Job).
-
-
-print_region(M) :->
-    "Print current region"::
-    get(M, line_region, tuple(From, To)),
-    send(M, print, From, To).
-
-
-print_selection(M) :->
-    "Print the current selection (=region)"::
-    send(M, print_region).
 
 
                  /*******************************

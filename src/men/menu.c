@@ -687,7 +687,7 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
     { int bw, bh, by;
       Elevation mz = getClassVariableValueObject(m, NAME_markElevation);
 
-      bw = MARK_IMAGE_SIZE;	/* scale to DPI */
+      bw = MARK_IMAGE_SIZE;
       bh = MARK_IMAGE_SIZE;
       by = item_mark_y(m, y, h, bh);
 
