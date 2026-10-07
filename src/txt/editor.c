@@ -394,7 +394,9 @@ showCaretAtEditor(Editor e, Int caret)
 				   &x, &y, &w, &h, &b) )
   { x += valInt(e->text_image->area->x);
     y += valInt(e->text_image->area->y);
-    w = valInt(getAvgCharWidthFont(e->font));
+    if ( w <= 0 || valInt(caret) >= e->text_buffer->size ||
+	 tisendsline(e->text_buffer->syntax, Fetch(e, valInt(caret))) )
+      w = valInt(getAvgCharWidthFont(e->font));	/* no character there */
 
     setTextCursor(e->text_cursor,
 		  toInt(x), toInt(y), toInt(w), toInt(h), toInt(b));

@@ -334,6 +334,7 @@ static void	assign_variant_fonts(TerminalImage ti, FontObj bold,
 				     FontObj italic, FontObj bold_italic);
 static void	rlc_destroy_buffer(RlcData b);
 static bool	rlc_caret_xy(RlcData b, int *x, int *y);
+static void	blink_changed_caret(Graphical gr);
 static void	rlc_resize_pixel_units(RlcData b, int w, int h);
 static void	rlc_pixels_to_cells(RlcData b, int w, int h,
 				    int *cols, int *rows);
@@ -1017,6 +1018,7 @@ inputFocusTerminalImage(TerminalImage ti, BoolObj val)
   if ( val == ON )
   { ws_enable_text_input((Graphical)ti, ON);
     b->has_focus = true;
+    caret_blink_start((Graphical)ti, blink_changed_caret);
     if ( b->focus_inout_events )
     { const char *focus_in = S_ESC"[I";
       rlc_send(b, focus_in, strlen(focus_in));
@@ -1024,6 +1026,7 @@ inputFocusTerminalImage(TerminalImage ti, BoolObj val)
   } else
   { ws_enable_text_input((Graphical)ti, OFF);
     b->has_focus = false;
+    caret_blink_stop((Graphical)ti);
     endIsearchTerminalImage(ti, ON);	/* it lives off the keyboard */
     if ( b->focus_inout_events )
     { const char *focus_out = S_ESC"[O";
@@ -5834,33 +5837,56 @@ rlc_caret_xy(RlcData b, int *x, int *y)
   return false;
 }
 
+/* The area of the caret, relative to the terminal.  The caret is
+ * drawn using the style of class text_cursor.
+ */
+
+static Name
+rlc_caret_style(RlcData b)
+{ return text_caret_style(b->object->font);
+}
+
+static void
+rlc_caret_area(RlcData b, Name style,
+	       double *ax, double *ay, double *aw, double *ah)
+{ text_caret_area(style, b->caret_px, b->caret_py, b->cw, b->ch, b->cb,
+		  ax, ay, aw, ah);
+}
+
 static void
 rlc_draw_caret(RlcData b, int x, int y)
-{ if ( b->caret_is_shown && !b->hide_caret )
-  { Int h = getClassVariableValueClass(ClassTextCursor, NAME_height);
+{ if ( b->caret_is_shown && !b->hide_caret &&
+       !(b->has_focus && caret_blink_hidden((Graphical)b->object)) )
+  { Name style = rlc_caret_style(b);
+    double ax, ay, aw, ah;
 
-    double ols = h ? valNum(h) : 11;
-    double cx = x + b->caret_px - ols/2.0;
-    double cy = y + b->caret_py + b->cb - 3.0;
-
-    DEBUG(NAME_caret, Cprintf("Drawing caret at %.1f,%.1f\n", cx, cy));
-    draw_caret(cx, cy, ols, ols, b->has_focus);
+    rlc_caret_area(b, style, &ax, &ay, &aw, &ah);
+    DEBUG(NAME_caret, Cprintf("Drawing caret at %.1f,%.1f\n", ax, ay));
+    draw_text_caret(style, x+ax, y+ay, aw, ah, b->has_focus,
+		    text_caret_colour(b->has_focus));
   }
 }
 
 
-/* change the image area where the caret is */
+/* change the image area where the caret is.  The margin covers
+ * anti-aliasing.
+ */
 static void
 changed_caret(RlcData b)
 { if (  b->caret_is_shown )
-  { Int h = getClassVariableValueClass(ClassTextCursor, NAME_height);
+  { double ax, ay, aw, ah;
 
-    double ols = h ? valNum(h) : 11;
+    rlc_caret_area(b, rlc_caret_style(b), &ax, &ay, &aw, &ah);
     changedImageGraphical(b->object,
-			  toNum(b->caret_px - ols/2.0),
-			  toNum(b->caret_py + b->cb - 3),
-			  toNum(ols), toNum(ols));
+			  toNum(ax-1), toNum(ay-1), toNum(aw+2), toNum(ah+2));
   }
+}
+
+/* Redraw the caret for blinking
+ */
+static void
+blink_changed_caret(Graphical gr)
+{ changed_caret(((TerminalImage)gr)->data);
 }
 
 static void
@@ -5877,6 +5903,8 @@ rlc_place_caret(RlcData b)
     b->caret_is_shown = true;
     b->caret_px = x;
     b->caret_py = y;
+    if ( b->has_focus )
+      caret_blink_reset((Graphical)b->object);
     changed_caret(b);
   } else if ( b->caret_is_shown )
   { changed_caret(b);

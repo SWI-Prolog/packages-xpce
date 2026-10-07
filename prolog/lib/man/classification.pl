@@ -3526,12 +3526,14 @@ scope('R.text.selection_style', advanced).
 scope('R.text_buffer.indent_tabs', advanced).
 scope('R.text_buffer.syntax', basic_programming).
 scope('R.text_buffer.undo_buffer_size', basic).
+scope('R.text_cursor.blink', basic).
+scope('R.text_cursor.blink_interval', advanced).
+scope('R.text_cursor.blink_timeout', advanced).
 scope('R.text_cursor.colour', advanced).
 scope('R.text_cursor.fixed_font_style', basic).
 scope('R.text_cursor.height', advanced).
 scope('R.text_cursor.inactive_colour', advanced).
 scope('R.text_cursor.proportional_font_style', basic).
-scope('R.text_cursor.style', basic).
 scope('R.text_image.background', advanced).
 scope('R.text_image.colour', advanced).
 scope('R.text_image.elevation', advanced).

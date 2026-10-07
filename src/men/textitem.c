@@ -191,6 +191,9 @@ updateShowCaretTextItem(TextItem ti)
   } else
     showCaretText(ti->value_text, OFF);
 
+  if ( ti->value_text->show_caret == ON )	/* we draw the text */
+    caret_blink_damage((Graphical)ti->value_text, (Graphical)ti);
+
   if ( old != ti->value_text->show_caret )
   { send(ti, NAME_activate, ti->value_text->show_caret == ON ? ON : OFF, EAV);
 

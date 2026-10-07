@@ -170,6 +170,15 @@ COMMON(status)	delete_textbuffer(TextBuffer tb, intptr_t where, intptr_t length)
 COMMON(status)	makeClassTextBuffer(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/txt/textcursor.c */
+COMMON(void)	text_caret_area(Name style, double x, double y, double w, double h, double b, double *ax, double *ay, double *aw, double *ah);
+COMMON(void)	draw_text_caret(Name style, double x, double y, double w, double h, bool active, Any colour);
+COMMON(Any)	text_caret_colour(bool active);
+COMMON(Name)	text_caret_style(FontObj font);
+COMMON(void)	caret_blink_start(Graphical gr, void (*changed)(Graphical gr));
+COMMON(void)	caret_blink_stop(Graphical gr);
+COMMON(void)	caret_blink_damage(Graphical gr, Graphical damage);
+COMMON(void)	caret_blink_reset(Graphical gr);
+COMMON(bool)	caret_blink_hidden(Graphical gr);
 COMMON(status)	setTextCursor(TextCursor c, Int x, Int y, Int w, Int h, Int b);
 COMMON(status)	makeClassTextCursor(Class class);
 

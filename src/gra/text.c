@@ -341,33 +341,6 @@ str_one_line(PceString to, PceString from)
 }
 
 
-void
-draw_caret(double x, double y, double w, double h, bool active)
-{ if ( active )
-  { double cx = x + w/2.0;
-    Colour c = getClassVariableValueClass(ClassTextCursor, NAME_colour);
-
-    r_fillpattern(c, NAME_foreground);
-    r_fill_triangle(cx, y, x, y+h, x+w, y+h);
-  } else
-  { fpoint pts[4];
-    double cx = x + w/2.0;
-    Colour c = getClassVariableValueClass(ClassTextCursor, NAME_inactiveColour);
-
-    double cy = y + h/2.0;
-    int i = 0;
-
-    pts[i].x = cx;  pts[i].y = y;   i++;
-    pts[i].x = x;   pts[i].y = cy;  i++;
-    pts[i].x = cx;  pts[i].y = y+h; i++;
-    pts[i].x = x+w; pts[i].y = cy;  i++;
-
-    r_fillpattern(c, NAME_foreground);
-    r_fill_polygon(pts, i);
-  }
-}
-
-
 status
 repaintText(TextObj t, int x, int y, int w, int h)
 { PceString s = &t->string->data;
@@ -462,22 +435,20 @@ repaintText(TextObj t, int x, int y, int w, int h)
   if ( old_colour )
     r_colour(old_colour);
 
-  if ( t->show_caret != OFF )
-  { double fh = valNum(getAscentFont(t->font));
+  if ( t->show_caret != OFF &&
+       !(t->show_caret == ON && caret_blink_hidden((Graphical)t)) )
+  { FontObj f = text_font(t);
     bool active = (t->show_caret == ON);
-    Any colour = getClassVariableValueClass(ClassTextCursor,
-					    active ? NAME_colour
-						   : NAME_inactiveColour);
-    Any old = r_colour(colour);
-    Int h = getClassVariableValueClass(ClassTextCursor, NAME_height);
-    double ols = h ? valNum(h) : 11;
+    Name style = text_caret_style(f);
+    double ax, ay, aw, ah;
 
-    draw_caret(valNum(t->x_caret) - ols/2.0 + x - b,
-	       valNum(t->y_caret) + y + fh - b - 3.0,
-	       ols, ols,
-	       active);
-
-    r_colour(old);
+    text_caret_area(style,
+		    valNum(t->x_caret) + x - b, valNum(t->y_caret) + y - b,
+		    valNum(getExFont(f)), valNum(getHeightFont(f)),
+		    valNum(getAscentFont(f)),
+		    &ax, &ay, &aw, &ah);
+    draw_text_caret(style, ax, ay, aw, ah, active,
+		    text_caret_colour(active));
   }
 
   succeed;
@@ -1003,6 +974,10 @@ showCaretText(TextObj t, Any val)
   CHANGING_GRAPHICAL(t,
 		     assign(t, show_caret, val);
 		     changedEntireImageGraphical(t));
+  if ( val == ON )
+    caret_blink_start((Graphical)t, NULL);
+  else
+    caret_blink_stop((Graphical)t);
 
   succeed;
 }
@@ -1278,7 +1253,9 @@ caretText(TextObj t, Int where)
   }
   assign(t, caret, where);
   if ( t->show_caret == ON )
+  { caret_blink_reset((Graphical)t);
     recomputeText(t, NAME_area);
+  }
 
   succeed;
 }
