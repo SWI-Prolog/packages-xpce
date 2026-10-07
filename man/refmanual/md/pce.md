@@ -792,7 +792,7 @@ etc.
     @see pce<-core_usage
     @see tool Statistics
 
-- pce<-cpu_time: kind=[{user,system}] -> seconds=real
+- pce<-cpu_time: kind=[{user,system}] -> seconds=num
     CPU time used by the process PCE belongs to.  When the argument is
     @default, this is the combined user and system time, otherwise it is the
     time specified.

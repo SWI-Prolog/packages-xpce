@@ -422,7 +422,7 @@ electricCaretEditor(Editor e, Int caret, Num time)
 
   if ( !ElectricTimer )
   { if ( isDefault(time) )
-      time = CtoReal(0.5);
+      time = toNum(0.5);
 
     ElectricTimer = globalObject(NAME_electricTimer, ClassTimer, time,
 				 newObject(ClassMessage, e,

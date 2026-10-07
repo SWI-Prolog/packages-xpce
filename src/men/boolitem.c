@@ -333,7 +333,7 @@ move_knob(BoolItem b)
   if ( getIsDisplayedGraphical((Graphical)b, DEFAULT) == ON )
   { if ( isNil(b->timer) )
       assign(b, timer,
-	     newObject(ClassTimer, CtoReal(KNOB_TICK),
+	     newObject(ClassTimer, toNum(KNOB_TICK),
 		       newObject(ClassMessage, b, NAME_animate, EAV),
 		       EAV));
     startTimer(b->timer, NAME_repeat, DEFAULT);

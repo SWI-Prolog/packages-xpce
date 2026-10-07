@@ -575,12 +575,12 @@ waitStream(Stream s)
 		 *******************************/
 
 static StringObj
-getReadLineStream(Stream s, Real timeout)
+getReadLineStream(Stream s, Num timeout)
 { int64_t epoch, tmo, left;
   bool use_timeout;
 
-  if ( instanceOfObject(timeout, ClassReal) )
-  { double v = valReal(timeout);
+  if ( isNum(timeout) )
+  { double v = valNum(timeout);
 
     if ( v < 0.0 )
       answer((StringObj)NIL);
@@ -626,7 +626,7 @@ getReadLineStream(Stream s, Real timeout)
     } else
       left = 0;				/* keep compiler happy */
 
-    if ( !ws_dispatch(NULL, use_timeout ? toInt(left) : NIL) )
+    if ( !ws_dispatch(NULL, use_timeout ? toNum((double)left/1000.0) : NIL) )
       return (StringObj) NIL;
   }
 
@@ -769,7 +769,7 @@ static senddecl send_stream[] =
 /* Get Methods */
 
 static getdecl get_stream[] =
-{ GM(NAME_readLine, 1, "string*", "timeout=[real]", getReadLineStream,
+{ GM(NAME_readLine, 1, "string*", "timeout=[num]", getReadLineStream,
      NAME_input, "Read line with optional timeout (seconds)")
 };
 

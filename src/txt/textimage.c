@@ -1152,7 +1152,7 @@ paint_placeholder(TextImage ti)
   l = &ti->map->lines[ti->map->skip];
   c = r_colour(DEFAULT);
   if ( instanceOfObject(c, ClassColour) )
-  { Real f = getClassVariableValueObject(e, NAME_placeholderOpacity);
+  { Num f = getClassVariableValueObject(e, NAME_placeholderOpacity);
     c = getFadeColour(c, f);
   }
 

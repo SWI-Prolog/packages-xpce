@@ -614,7 +614,9 @@ type(type-1) :-
 type(type-2) :-
     get(@pce, convert, '0.2..32', type, Type),
     get(Type, kind, real_range),
-    get(Type, context, tuple(0.2, 32.0)).
+    get(Type, context, tuple(Low, High)),
+    Low =:= 0.2,
+    High =:= 32.
 
 
                  /*******************************

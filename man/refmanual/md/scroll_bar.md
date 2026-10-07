@@ -56,7 +56,7 @@ established:
 
 ## Class variables {#class-scroll_bar-classvars}
 
-- scroll_bar.repeat_interval: real = 0.06
+- scroll_bar.repeat_interval: num = 0.06
     If the scroll_bar object has a UI for repeated scrolling, this
     class-variable determines the speed.  See also
     scroll_bar.repeat_delay.

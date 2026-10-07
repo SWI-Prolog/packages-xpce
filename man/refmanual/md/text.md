@@ -203,7 +203,7 @@ editor.
 - text->paste: which=[{primary,clipboard}]
     Paste value of the numbered X-cut-buffer.  See `display <-cut_buffer`.
 
-- text->resize: factor_x=real, factor_y=[real], origin=[point]
+- text->resize: factor_x=num, factor_y=[num], origin=[point]
     @see graphical->resize
 
 - text->selection: from=[int]*, to=[int]

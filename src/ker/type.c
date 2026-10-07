@@ -278,7 +278,7 @@ l2:
       t1 = TypeInt;
       goto l2;
     case TV_REALRANGE:
-      t1 = TypeReal;
+      t1 = TypeNum;
       goto l2;
     case TV_CHAR:
       t1 = TypeInt;
@@ -625,12 +625,13 @@ intRangeType(const Type t, const Any val, const Any ctx)
 
 static inline status
 realRangeType(const Type t, const Any val, const Any ctx)
-{ if ( instanceOfObject(val, ClassReal) )
+{ if ( isNum(val) )
   { Tuple tp = t->context;
-    Real low = tp->first, high = tp->second, r = val;
+    Any low = tp->first, high = tp->second;
+    double v = valNum(val);
 
-    if ( (isNil(low)  || valReal(r) >= valReal(low)) &&
-	 (isNil(high) || valReal(r) <= valReal(high)) )
+    if ( (isNil(low)  || v >= valNum(low)) &&
+	 (isNil(high) || v <= valNum(high)) )
       succeed;
   }
 
@@ -911,10 +912,10 @@ getIntRangeType(const Type t, const Any val, const Any ctx)
 
 static Any
 getRealRangeType(const Type t, const Any val, const Any ctx)
-{ Real r = getConvertReal(ClassReal, val);
+{ Num n = convertToNum(val);
 
-  if ( r != FAIL && realRangeType(t, r, ctx) )
-    return r;
+  if ( n && realRangeType(t, n, ctx) )
+    return n;
 
   fail;
 }
@@ -1326,7 +1327,7 @@ real_range_type(StrPart str)
 { wchar_t *e0, *e, *e2;
   double low, high;
   Type type;
-  Real l = NIL, h = NIL;
+  Num l = NIL, h = NIL;
 
   low = cwcstod(str->start, &e0);
   for( e=e0; *e == ' '; e++ )
@@ -1342,9 +1343,9 @@ real_range_type(StrPart str)
 
   type = newObject(ClassType, WCToName(str->start, -1), NAME_realRange, EAV);
   if ( e2 > e )
-    h = CtoReal(high);
+    h = toNum(high);
   if ( e0 > str->start )
-    l = CtoReal(low);
+    l = toNum(low);
   assign(type, context, newObject(ClassTuple, l, h, EAV));
 
   return type;
@@ -1815,6 +1816,9 @@ pceCheckFloatType(PceType t, double f)
     assert(tmp);
     lockObj(tmp);
   }
+
+  if ( validateType(t, toNum(f), NIL) )
+    return TRUE;
 
   setReal(tmp, f);
 

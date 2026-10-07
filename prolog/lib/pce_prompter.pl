@@ -197,9 +197,19 @@ dialog_item_from_type_kind(Range, Type, Label, DI) :-
     ;   Range == real_range
     ),
     !,
-    get(Type?context, first, Low),
-    get(Type?context, second, High),
+    get(Type?context, first, Low0),
+    get(Type?context, second, High0),
+    slider_bounds(Range, Low0, High0, Low, High),
     new(DI, slider(Label, Low, High, (Low+High)/2)).
+
+%   A slider for a real range edits a real, also if the bounds are
+%   integral: make them `real` objects.
+
+slider_bounds(real_range, Low0, High0, real(Low), real(High)) :-
+    !,
+    Low is float(Low0),
+    High is float(High0).
+slider_bounds(_, Low, High, Low, High).
 
 
                 /********************************

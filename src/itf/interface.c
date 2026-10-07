@@ -773,7 +773,7 @@ pceDispatch(IOSTREAM *input, int time)
   } else
   {
 #ifndef HAVE_SELECT
-    ws_dispatch(input, toInt(time));
+    ws_dispatch(input, toNum((double)time/1000.0));
     return PCE_DISPATCH_TIMEOUT;
 #else
     int fd = Sfileno(input);

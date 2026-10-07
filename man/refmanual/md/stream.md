@@ -147,7 +147,7 @@ of this class is:
 
 ## Get methods {#class-stream-get}
 
-- stream<-read_line: timeout=[real] -> string*
+- stream<-read_line: timeout=[num] -> string*
     Dispatches events until the next physical line of data is
     available from the stream and return the line as a string object,
     including the terminating newline character.

@@ -1108,7 +1108,7 @@ dragSelectionTerminalImage(TerminalImage ti, int x, int y)
   { stopDragScrollTerminalImage(ti);
   } else if ( isNil(ti->drag_scroll_timer) )
   { assign(ti, drag_scroll_timer,
-	   newObject(ClassTimer, CtoReal(DRAG_SCROLL_INTERVAL),
+	   newObject(ClassTimer, toNum(DRAG_SCROLL_INTERVAL),
 		     newObject(ClassMessage, ti, NAME_dragScroll, EAV), EAV));
     startTimer(ti->drag_scroll_timer, NAME_repeat, DEFAULT);
   }

@@ -80,7 +80,7 @@ The most important methods are:
 
     See ->set for details and limitations.
 
-- date->posix_value: real
+- date->posix_value: num
     Communicate the represented time-stamp as a POSIX time stamp,
     i.e. the number of seconds elapsed since the epoch, Jan 1, 1970.
 
@@ -138,7 +138,7 @@ The most important methods are:
     `@on` if daylight-saving time is in effect at the represented instant,
     `@off` if standard time.  Fails if the system cannot determine this.
 
-- date<-posix_value: -> real
+- date<-posix_value: -> num
 
 - date<-print_name: -> string
     Equivalent to <-string.  The methods <-print_name and <-convert are used

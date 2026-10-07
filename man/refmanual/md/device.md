@@ -330,7 +330,7 @@ The <-area of a device is by definition the bounding box of all
 
     @see graphical->reparent
 
-- device->resize: x_factor=real, y_factor=[real], origin=[point]
+- device->resize: x_factor=num, y_factor=[num], origin=[point]
     Resize the member graphicals of the device in X and Y direction.  See
     `Graphical ->resize` for details on the parameters.
 

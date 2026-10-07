@@ -395,7 +395,7 @@ tryDragScrollGesture(Gesture g, EventObj ev)
   if ( doscroll )
   { if ( isNil(g->drag_scroll_event) )
     { assign(g, drag_scroll_timer,
-	     newObject(ClassTimer, CtoReal(0.06), /* TBD */
+	     newObject(ClassTimer, toNum(0.06), /* TBD */
 		       newObject(ClassMessage, g,
 				 NAME_scroll, EAV), EAV));
       startTimer(g->drag_scroll_timer, NAME_repeat, DEFAULT);
@@ -480,7 +480,7 @@ static classvardecl rc_gesture[] =
      "Condition on shift, control and meta"),
   RC(NAME_dragScroll, "{self,device,search}*", "@nil",
      "Automatically scroll window while dragging outside"),
-  RC(NAME_repeatInterval, "real", "0.06",
+  RC(NAME_repeatInterval, "num", "0.06",
      "Scrolling speed for ->drag_scroll'ing")
 };
 

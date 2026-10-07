@@ -751,7 +751,7 @@ referencePath(Path p, Point r)
 
 
 static status
-resizePath(Path p, Real xfactor, Real yfactor, Point origin)
+resizePath(Path p, Num xfactor, Num yfactor, Point origin)
 { float xf, yf;
   int ox = valInt(p->area->x);
   int oy = valInt(p->area->y);
@@ -926,7 +926,7 @@ initialiseNewSlotPath(Path p, Variable var)
 /* Type declarations */
 
 static char *T_resize[] =
-        { "factor_x=real", "factor_y=[real]", "origin=[point]" };
+        { "factor_x=num", "factor_y=[num]", "origin=[point]" };
 static char *T_initialise[] =
         { "kind=[{poly,smooth}]",
 	  "radius_or_interval=[int]",

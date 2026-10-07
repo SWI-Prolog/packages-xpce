@@ -1259,8 +1259,26 @@ win_wait_for_handle(HANDLE hConsole, int tmo)
  * @return true if an event was processed.  false on timeout.
  */
 
+/* The timeout of ws_dispatch() is a num in seconds.  Return it in
+ * milliseconds: @nil or a negative value waits forever (-1) and
+ * @default is 0.25 seconds.
+ */
+
+static int
+timeout_ms(Num timeout)
+{ if ( isNil(timeout) )
+    return -1;
+  if ( isNum(timeout) )
+  { double v = valNum(timeout);
+
+    return v < 0.0 ? -1 : (int)(v*1000.0);
+  }
+
+  return 250;
+}
+
 status
-ws_dispatch(IOSTREAM *input, Any timeout)
+ws_dispatch(IOSTREAM *input, Num timeout)
 { int tmo;
   waitable_t fd = NO_WAITABLE;
 
@@ -1273,17 +1291,7 @@ ws_dispatch(IOSTREAM *input, Any timeout)
 #endif
   }
 
-  if ( isNil(timeout) )
-  { tmo = -1;
-  } else if ( isDefault(timeout) )
-  { tmo = 250;
-  } else if ( isInteger(timeout) )
-  { tmo = valInt(timeout);
-  } else if ( instanceOfObject(timeout, ClassReal) )
-  { tmo = (int)(valReal(timeout)*1000.0);
-  } else
-  { tmo = 250;
-  }
+  tmo = timeout_ms(timeout);
 
   if ( SDL_IsMainThread() )
   { if ( dispatch_ready_event() )
@@ -1330,18 +1338,7 @@ ws_dispatch(IOSTREAM *input, Any timeout)
 
     return rc;
   } else			/* SDL not yet initialised */
-  { int to;
-
-    if ( isNil(timeout) )
-    { to = -1;
-    } else if ( isDefault(timeout) )
-    { to = 250;
-    } else if ( isInteger(timeout) )
-    { to = valInt(timeout);
-    } else if ( instanceOfObject(timeout, ClassReal) )
-    { to = (int)(valReal(timeout)*1000.0);
-    } else
-      to = 256;
+  { int to = timeout_ms(timeout);
 
 #if HAVE_POLL
     int ready;

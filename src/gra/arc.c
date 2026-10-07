@@ -364,7 +364,7 @@ positionArc(ArcObj a, Point pos)
 
 
 static status
-resizeArc(ArcObj a, Real xfactor, Real yfactor, Point origin)
+resizeArc(ArcObj a, Num xfactor, Num yfactor, Point origin)
 { float xf, yf;
   int ox = valInt(a->position->x);
   int oy = valInt(a->position->y);
@@ -482,8 +482,8 @@ connectAngleArc(ArcObj a, Line l1, Line l2)
     fail;				/* no intersection */
 
   positionArc(a, is);
-  startAngleArc(a, toNum(valReal(getAngleLine(l1, is))));
-  endAngleArc(a,   toNum(valReal(getAngleLine(l2, is))));
+  startAngleArc(a, getAngleLine(l1, is));
+  endAngleArc(a,   getAngleLine(l2, is));
   doneObject(is);
 
   succeed;
@@ -565,7 +565,7 @@ static char *T_connectAngle[] =
 static char *T_initialise[] =
         { "radius=[int]", "start=[num]", "size=[num]" };
 static char *T_resize[] =
-        { "real", "[real]", "[point]" };
+        { "num", "[num]", "[point]" };
 static char *T_points[] =
         { "start_x=int", "start_y=int", "end_x=int", "end_y=int", "curvature=int" };
 static char *T_geometry[] =

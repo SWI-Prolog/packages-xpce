@@ -251,7 +251,7 @@ ws_write_stream_data(Stream s, void *data, int len)
  * @return -2: timeout; -1: error; 0: end-of-file; >0: bytes read
  */
 int
-ws_read_stream_data(Stream s, void *data, int len, Real timeout)
+ws_read_stream_data(Stream s, void *data, int len, Num timeout)
 { if ( s->rdfd < 0 )
   { errno = EINVAL;
     return -1;
@@ -260,7 +260,7 @@ ws_read_stream_data(Stream s, void *data, int len, Real timeout)
   if ( notDefault(timeout) )
   {
 #ifdef HAVE_POLL
-    double v = valReal(timeout);
+    double v = valNum(timeout);
     int to = (int)(v*1000.0);
     struct pollfd fds[1];
 
@@ -274,7 +274,7 @@ ws_read_stream_data(Stream s, void *data, int len, Real timeout)
 #endif
     { fd_set readfds;
       struct timeval to;
-      double v = valReal(timeout);
+      double v = valNum(timeout);
 
       to.tv_sec  = (long)v;
       to.tv_usec = (long)(v * 1000000.0) % 1000000;

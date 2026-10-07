@@ -656,7 +656,7 @@ infoPce(Pce pce)
 #ifdef HAVE_SYS_TIMES_H
 #include <sys/times.h>
 
-static Real
+static Num
 getCpuTimePce(Pce pce, Name which)
 { struct tms buffer;
   float f;
@@ -669,17 +669,17 @@ getCpuTimePce(Pce pce, Name which)
   else
     f = (float) (buffer.tms_utime + buffer.tms_stime) / 60.0;
 
-  answer(CtoReal(f));
+  answer(toNum(f));
 }
 
 #else /*HAVE_SYS_TIMES_H*/
 
 /* DOS/Windows version */
 
-static Real
+static Num
 getCpuTimePce(Pce pce, Name which)
 {				/* TBD: warn on bad type? */
-  return CtoReal((float) clock()/(float)CLOCKS_PER_SEC);
+  return toNum((float) clock()/(float)CLOCKS_PER_SEC);
 }
 
 #endif /*HAVE_SYS_TIMES_H*/
@@ -1358,7 +1358,7 @@ static getdecl get_pce[] =
      NAME_statistics, "Total core in active use"),
   GM(NAME_coreWasted, 0, "bytes=int", NULL, getWastedCorePce,
      NAME_statistics, "Core requested from system, but not in use"),
-  GM(NAME_cpuTime, 1, "seconds=real", "kind=[{user,system}]", getCpuTimePce,
+  GM(NAME_cpuTime, 1, "seconds=num", "kind=[{user,system}]", getCpuTimePce,
      NAME_statistics, "Total CPU time for this process"),
   GM(NAME_deferredUnalloced, 0, "number=int", NULL, getDeferredUnallocedPce,
      NAME_statistics, "# freed referenced objects"),

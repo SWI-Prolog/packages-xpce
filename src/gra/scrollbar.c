@@ -395,9 +395,9 @@ thumb_colour(Colour trough)
 { Int i = getIntensityColour(trough);
 
   if ( i && valInt(i) >= 128 )
-    return getReduceColour(trough, CtoReal(0.55));
+    return getReduceColour(trough, toNum(0.55));
   else
-    return getHiliteColour(trough, CtoReal(0.45));
+    return getHiliteColour(trough, toNum(0.45));
 }
 
 
@@ -569,7 +569,7 @@ static Timer
 scrollBarRepeatTimer()
 { if ( !ScrollBarRepeatTimer )
     ScrollBarRepeatTimer = globalObject(NAME_scrollBarRepeatTimer,
-					ClassTimer, CtoReal(0.08),
+					ClassTimer, toNum(0.08),
 					( ScrollBarRepeatMessage =
 					  newObject(ClassMessage, NIL,
 						    NAME_repeat, EAV)), EAV);
@@ -604,8 +604,8 @@ repeatScrollBar(ScrollBar s)
     }
     forwardScrollBar(s);
     if ( Repeating(s) )		/* synchroniseGraphical() can handle up */
-    { Real t = getClassVariableValueObject(s, NAME_repeatInterval);
-      int ct = (int)(valReal(t) * 1000.0) - (float)(mclock() - clk);
+    { Num t = getClassVariableValueObject(s, NAME_repeatInterval);
+      int ct = (int)(valNum(t) * 1000.0) - (float)(mclock() - clk);
 
       assign(s, status, NAME_repeat);
 
@@ -1088,7 +1088,7 @@ static classvardecl rc_scrollBar[] =
      "Relative placement"),
   RC(NAME_repeatDelay, "num", "0.35",
      "OpenLook: time to wait until start of repeat"),
-  RC(NAME_repeatInterval, "real", "0.06",
+  RC(NAME_repeatInterval, "num", "0.06",
      "OpenLook: interval between repeats"),
   RC(NAME_width, "[int]", UXWIN("4mm", "@default"),
      "Width of the scroll_bar"),

@@ -221,7 +221,7 @@ blink_init(void)
     BlinkOwner = globalObject(NAME_caretBlinkOwner, ClassChain, EAV);
     blinker    = globalObject(NAME_caretBlinker, ClassTextCursor, EAV);
     BlinkTimer = globalObject(NAME_caretBlinkTimer, ClassTimer,
-			      CtoReal(0.5),
+			      toNum(0.5),
 			      newObject(ClassMessage, blinker, NAME_blink, EAV),
 			      EAV);
   }

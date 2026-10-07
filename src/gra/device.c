@@ -2084,7 +2084,7 @@ getInsideDevice(Device dev, Area a)
 
 
 static status
-resizeDevice(Device dev, Real xfactor, Real yfactor, Point origin)
+resizeDevice(Device dev, Num xfactor, Num yfactor, Point origin)
 { float xf, yf;
   int ox = valInt(dev->offset->x);
   int oy = valInt(dev->offset->y);
@@ -2348,7 +2348,7 @@ static char *T_changedUnion[] =
 static char *T_geometry[] =
         { "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 static char *T_resize[] =
-        { "x_factor=real", "y_factor=[real]", "origin=[point]" };
+        { "x_factor=num", "y_factor=[num]", "origin=[point]" };
 static char *T_flash[] =
 	{ "area=[area]", "time=[num]" };
 static char *T_advance[] =

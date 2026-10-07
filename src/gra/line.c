@@ -355,7 +355,7 @@ pointsLine(Line ln, Int sx, Int sy, Int ex, Int ey)
 
 
 static status
-resizeLine(Line ln, Real xfactor, Real yfactor, Point origin)
+resizeLine(Line ln, Num xfactor, Num yfactor, Point origin)
 { float xf, yf;
   int ox = valInt(ln->area->x);
   int oy = valInt(ln->area->y);
@@ -576,7 +576,7 @@ getIntersectionLine(Line l1, Line l2)
 }
 
 
-Real
+Num
 getAngleLine(Line ln, Point p)
 { int x1 = valInt(ln->start_x);
   int x2 = valInt(ln->end_x);
@@ -598,7 +598,7 @@ getAngleLine(Line ln, Point p)
 
   angle = (angle * 180.0) / M_PI;
 
-  answer(CtoReal(angle));
+  answer(toNum(angle));
 }
 
 
@@ -640,7 +640,7 @@ static char *T_points[] =
 static char *T_initialise[] =
         { "start_x=[int]", "start_y=[int]", "end_x=[int]", "end_y=[int]", "arrows=[{none,first,second,both}]" };
 static char *T_resize[] =
-	{ "factor_x=real", "factor_y=[real]", "origin=[point]" };
+	{ "factor_x=num", "factor_y=[num]", "origin=[point]" };
 static char *T_geometry[] =
 	{ "x=[int]", "y=[int]", "width=[int]", "height=[int]" };
 static char *T_distance[] =
@@ -690,7 +690,7 @@ static senddecl send_line[] =
 /* Get Methods */
 
 static getdecl get_line[] =
-{ GM(NAME_angle, 1, "degrees=real", "origin=[point]", getAngleLine,
+{ GM(NAME_angle, 1, "degrees=num", "origin=[point]", getAngleLine,
      NAME_calculate, "Angle"),
   GM(NAME_intersection, 1, "point", "with=line", getIntersectionLine,
      NAME_calculate, "Intersection between both infinitely extended lines"),

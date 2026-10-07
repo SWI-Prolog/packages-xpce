@@ -535,7 +535,7 @@ for creating customised graphical objects:
     This method may be used to redefine ->_redraw_area.  It should
     not be called outside this context.
 
-- graphical->draw_arc: x=int, y=int, w=int, h=int, angle1=[real], angle2=[real], fill=[colour|{foreground,background}]*
+- graphical->draw_arc: x=int, y=int, w=int, h=int, angle1=[num], angle2=[num], fill=[colour|{foreground,background}]*
     Draw an ellipse-part.  X,Y,W,H define the bounding box if the
     entire ellipse.  Angle1 and Angle2 the start and end angles (in
     degrees).  When omitted, an entire ellipse will be drawn.
@@ -893,7 +893,7 @@ for creating customised graphical objects:
 
     See also `device ->advance`
 
-- graphical->layout: attract=[real], nominal=[real], repel=[real], adapt=[int], iterations=[int], area=[area], network=[chain], move_only=[chain]
+- graphical->layout: attract=[num], nominal=[num], repel=[num], adapt=[int], iterations=[int], area=[area], network=[chain], move_only=[chain]
     When graphical is member of a `network` (see `graphical <-network`) of
     connected graphicals (see `graphical ->connect`), this method tries to
     give the entire graph of connected graphicals a sensible layout.  Don't
@@ -1105,7 +1105,7 @@ for creating customised graphical objects:
     by some other object.  For example, class window exploits this
     mechanism to let windows communicate with their tile object.
 
-- graphical->resize: factor_x=real, factor_y=[real], origin=[point]
+- graphical->resize: factor_x=num, factor_y=[num], origin=[point]
     Realises together with `device ->resize` resizing of collections of
     objects.  This method resizes the graphical with specified factor
     relative to the given origin.  The X- and Y-distance of each of the

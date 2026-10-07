@@ -1038,7 +1038,7 @@ getIncDecTextItem(TextItem ti, EventObj ev)
 
 static status
 attachTimerTextItem(TextItem ti)
-{ Real delay = getClassVariableValueObject(ti, NAME_repeatDelay);
+{ Num delay = getClassVariableValueObject(ti, NAME_repeatDelay);
 
   if ( delay )
   { Timer t = newObject(ClassTimer, delay,
@@ -1956,7 +1956,7 @@ static classvardecl rc_textItem[] =
      "Automatically select all text when ->activate'd"),
   RC(NAME_searchIgnoreCase, "bool", "@on",
      "@on: ignore case for completion"),
-  RC(NAME_repeatDelay, "real", "0.35",
+  RC(NAME_repeatDelay, "num", "0.35",
      "Time to wait until start of repeat"),
   RC(NAME_repeatInterval, "num", "0.06",
      "Interval between repeats"),

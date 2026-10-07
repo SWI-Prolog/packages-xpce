@@ -104,7 +104,7 @@ application-area of PCE, this would be a useful extension.
 
 ## Get methods {#class-line-get}
 
-- line<-angle: origin=[point] -> degrees=real
+- line<-angle: origin=[point] -> degrees=num
     Return the angle of the line with the positive X-axe in degrees
     counter clockwise.
 

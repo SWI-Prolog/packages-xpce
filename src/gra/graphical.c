@@ -1225,10 +1225,10 @@ rotateGraphical(Graphical gr, Int degrees)
 		********************************/
 
 status
-init_resize_graphical(Any obj, Real xfactor, Real yfactor, Point origin,
+init_resize_graphical(Any obj, Num xfactor, Num yfactor, Point origin,
 		      float *xf, float *yf, int *ox, int *oy)
-{ *xf = valReal(xfactor);
-  *yf = (isDefault(yfactor) ? *xf : valReal(yfactor));
+{ *xf = valNum(xfactor);
+  *yf = (isDefault(yfactor) ? *xf : valNum(yfactor));
 
   if ( notDefault(origin) )
   { *ox = valInt(origin->x);
@@ -1240,7 +1240,7 @@ init_resize_graphical(Any obj, Real xfactor, Real yfactor, Point origin,
 
 
 static status
-resizeGraphical(Graphical gr, Real xfactor, Real yfactor, Point origin)
+resizeGraphical(Graphical gr, Num xfactor, Num yfactor, Point origin)
 { float xf, yf;
   int ox = valInt(gr->area->x);
   int oy = valInt(gr->area->y);
@@ -2571,9 +2571,9 @@ distance_area(IArea a, IArea b)
 
 static status
 layoutGraphical(Graphical gr,
-		Real argC1,		/* strength of connections */
-		Real argC2,		/* natural distance */
-		Real argC3,		/* strength of not-connected */
+		Num argC1,		/* strength of connections */
+		Num argC2,		/* natural distance */
+		Num argC3,		/* strength of not-connected */
 		Int  argC4,		/* addaption-speed */
 		Int  argC5,		/* max iterations */
 		Area area,		/* Bounce objects in this area */
@@ -2586,9 +2586,9 @@ layoutGraphical(Graphical gr,
   int dx, dy, d;
   int n, l, i, j;
   Cell cell;
-  float C1 = (isDefault(argC1) ?  2.0 : valReal(argC1));
-  float C2 = (isDefault(argC2) ? 30.0 : valReal(argC2));
-  float C3 = (isDefault(argC3) ?  2.0 : valReal(argC3));
+  float C1 = (isDefault(argC1) ?  2.0 : valNum(argC1));
+  float C2 = (isDefault(argC2) ? 30.0 : valNum(argC2));
+  float C3 = (isDefault(argC3) ?  2.0 : valNum(argC3));
   int C4   = (isDefault(argC4) ?   15 : valInt(argC4));
   int C5   = (isDefault(argC5) ?  100 : valInt(argC5));
   int moved;
@@ -3270,9 +3270,9 @@ drawPolyGraphical(Graphical gr, Any points, BoolObj closed, Any fill)
 static status
 drawArcGraphical(Graphical gr,		/* has to handle mode */
 		 Int x, Int y, Int w, Int h,
-		 Real start, Real end, Any fill)
-{ double s = (isDefault(start) ? 0.0   : valReal(start));
-  double e = (isDefault(end)   ? 360.0 : valReal(end));
+		 Num start, Num end, Any fill)
+{ double s = (isDefault(start) ? 0.0   : valNum(start));
+  double e = (isDefault(end)   ? 360.0 : valNum(end));
 
   if ( isDefault(fill) )
     fill = NIL;
@@ -3405,14 +3405,14 @@ pdfGraphical(Graphical gr, FileObj dest, Int scale)
 /* Type declaractions */
 
 static char *T_layout[] =
-	{ "attract=[real]", "nominal=[real]", "repel=[real]",
+	{ "attract=[num]", "nominal=[num]", "repel=[num]",
 	  "adapt=[int]", "iterations=[int]",
 	  "area=[area]",
 	  "network=[chain]",
 	  "move_only=[chain]"
 	};
 static char *T_resize[] =
-	{ "factor_x=real", "factor_y=[real]", "origin=[point]" };
+	{ "factor_x=num", "factor_y=[num]", "origin=[point]" };
 static char *T_drawImage[] =
 	{ "image", "x=int", "y=int", "sx=[int]", "sy=[int]",
 	  "sw=[int]", "sh=[int]", "transparent=[bool]" };
@@ -3448,7 +3448,7 @@ static char *T_inEventArea[] =
 	{ "x=int", "y=int" };
 static char *T_drawArc[] =
 	{ "x=int", "y=int", "w=int", "h=int",
-	  "angle1=[real]", "angle2=[real]", "fill=" TYPE_FILL_ARG };
+	  "angle1=[num]", "angle2=[num]", "fill=" TYPE_FILL_ARG };
 static char *T_drawFill[] =
 	{ "x=int", "y=int", "w=int", "h=int", "fill=" TYPE_FILL_ARG };
 static char *T_drawBox[] =

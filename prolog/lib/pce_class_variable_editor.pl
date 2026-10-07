@@ -237,8 +237,8 @@ kind_config_type(Kind, Tuple, [], between(Low, High)) :-
     range_kind(Kind),
     get(Tuple, first, L),
     get(Tuple, second, H),
-    bound(L, -inf, Low),
-    bound(H, inf, High).
+    bound(Kind, L, -inf, Low),
+    bound(Kind, H, inf, High).
 kind_config_type(name_of, Chain, [], {}(Conj)) :-
     chain_list(Chain, Names),
     Names = [_|_],
@@ -258,17 +258,22 @@ class_config_type(style,  [],       style).
 range_kind(int_range).
 range_kind(real_range).
 
-%   bound(+Bound, +Open, -Value)
+%   bound(+Kind, +Bound, +Open, -Value)
 %
-%   Value is Open if Bound denotes the open end of a range.
+%   Value is Open if Bound denotes the open end of a range.  The bounds
+%   of a real range are floats, also if they are integral, such that the
+%   item edits a real number.
 
-bound(@nil, Open, Open) :- !.
-bound(N, Open, Open) :-
+bound(_, @nil, Open, Open) :- !.
+bound(_, N, Open, Open) :-
     (   get(@pce, max_integer, N)
     ;   get(@pce, min_integer, N)
     ),
     !.
-bound(N, _, N).
+bound(real_range, N, _, F) :-
+    !,
+    F is float(N).
+bound(_, N, _, N).
 
 list_conj([X], X) :- !.
 list_conj([H|T], (H,C)) :-

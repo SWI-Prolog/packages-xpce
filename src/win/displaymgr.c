@@ -425,20 +425,21 @@ RedrawDisplayManager(DisplayManager dm)
 }
 
 
-status
-dispatchDisplayManager(DisplayManager dm, IOSTREAM *fd, Int timeout)
-{ if ( isDefault(timeout) )
-    timeout = toInt(250);
+/* Dispatch events, waiting at most timeout seconds for one.  @nil
+ * waits forever and @default is 0.25 seconds.
+ */
 
-  return ws_dispatch(fd, timeout);
+status
+dispatchDisplayManager(DisplayManager dm, IOSTREAM *fd, Num timeout)
+{ return ws_dispatch(fd, timeout);
 }
 
 
 static status
-dispatch_events(IOSTREAM *fd, int timeout)
+dispatch_events(IOSTREAM *fd, int timeout)	/* timeout in ms */
 { return dispatchDisplayManager(TheDisplayManager(),
 				fd,
-				toInt(timeout));
+				toNum((double)timeout/1000.0));
 }
 
 		/********************************

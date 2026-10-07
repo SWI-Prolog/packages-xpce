@@ -622,7 +622,7 @@ initOffsetText(TextObj t, int tw)
 
 
 static status
-resizeText(TextObj t, Real xfactor, Real yfactor, Point origin)
+resizeText(TextObj t, Num xfactor, Num yfactor, Point origin)
 { float xf, yf;
   int ox = valInt(t->position->x);
   int oy = valInt(t->position->y);
@@ -1806,7 +1806,7 @@ static char *T_insert[] =
 static char *T_pointed[] =
         { "at=point", "round=[bool]" };
 static char *T_resize[] =
-        { "factor_x=real", "factor_y=[real]", "origin=[point]" };
+        { "factor_x=num", "factor_y=[num]", "origin=[point]" };
 static char *T_margin[] =
         { "int*", "[{wrap,wrap_fixed_width,clip}]" };
 static char *T_linesADintD_columnADintD[] =

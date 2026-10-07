@@ -350,28 +350,14 @@ statusTab(Tab t, Name stat)
  * applications do.
  */
 
-static Real
+static Num
 hidden_fill_factor(void)
-{ static Real f;
-
-  if ( !f )
-  { f = CtoReal(0.08);
-    lockObject(f, ON);
-  }
-
-  return f;
+{ return toNum(0.08);
 }
 
-static Real
+static Num
 hidden_label_factor(void)
-{ static Real f;
-
-  if ( !f )
-  { f = CtoReal(0.35);
-    lockObject(f, ON);
-  }
-
-  return f;
+{ return toNum(0.35);
 }
 
 static void

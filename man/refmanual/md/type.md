@@ -93,7 +93,7 @@ not be changed, except as part of their definition process.
     - real_range [<low>..<high>]
     		Context:		tuple(low, high).
     		Validate:		Checks range (including low and high).
-    		Translate:	Translates to `real` and validates range.
+    		Translate:	Translates to `num` and validates range.
 
     Events:
 

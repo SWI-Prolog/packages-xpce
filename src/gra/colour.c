@@ -448,7 +448,7 @@ associateColour(Colour c, Int r, Int g, Int b, Int a)
 
 
 Colour
-getHiliteColour(Colour c, Real h)
+getHiliteColour(Colour c, Num h)
 { float hf;
 
   if ( isDefault(c->rgba) )
@@ -460,9 +460,9 @@ getHiliteColour(Colour c, Real h)
 
     h = getClassVariableValueObject(c, dark ? NAME_darkHiliteFactor
 					    : NAME_hiliteFactor);
-    hf = h ? valReal(h) : dark ? 0.2 : 0.9;
+    hf = h ? valNum(h) : dark ? 0.2 : 0.9;
   } else
-    hf = valReal(h);
+    hf = valNum(h);
 
   COLORRGBA rgb = valInt(c->rgba);
   int r = ColorRValue(rgb);
@@ -478,12 +478,12 @@ getHiliteColour(Colour c, Real h)
 
 
 Colour
-getReduceColour(Colour c, Real re)
+getReduceColour(Colour c, Num re)
 { float rf;
 
   if ( isDefault(re) )
     re = getClassVariableValueObject(c, NAME_reduceFactor);
-  rf = re ? valReal(re) : 0.6;
+  rf = re ? valNum(re) : 0.6;
 
   if ( isDefault(c->rgba) )
     ws_named_colour(c);
@@ -507,13 +507,13 @@ getReduceColour(Colour c, Real re)
  * `fade_factor' supplies a default; hard-coded fallback 0.5.
  */
 Colour
-getFadeColour(Colour c, Real f)
+getFadeColour(Colour c, Num f)
 { float ff;
   int a;
 
   if ( isDefault(f) )
     f = getClassVariableValueObject(c, NAME_fadeFactor);
-  ff = f ? valReal(f) : 0.5;
+  ff = f ? valNum(f) : 0.5;
 
   if ( isDefault(c->rgba) )
     ws_named_colour(c);
@@ -538,8 +538,8 @@ getFadeColour(Colour c, Real f)
  */
 
 Colour
-getMixColour(Colour c, Colour with, Real f)
-{ float mf = isDefault(f) ? 0.5 : valReal(f);
+getMixColour(Colour c, Colour with, Num f)
+{ float mf = isDefault(f) ? 0.5 : valNum(f);
 
   if ( isDefault(c->rgba) )
     ws_named_colour(c);

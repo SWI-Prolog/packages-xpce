@@ -98,16 +98,16 @@ loadDate(Date d, IOSTREAM *fd, ClassDef def)
 }
 
 
-static Real
+static Num
 getPosixValueDate(Date d)
-{ answer(CtoReal((double)d->unix_date));
+{ answer(toNum((double)d->unix_date));
 }
 
 
 static status
-posixValueDate(Date d, Real r)
-{ time_t v = (time_t)valReal(r);
-  double diff = (double) v - valReal(r);
+posixValueDate(Date d, Num r)
+{ time_t v = (time_t)valNum(r);
+  double diff = (double) v - valNum(r);
 
   if ( diff < -1.0 || diff > 1.0 )
     return errorPce(d, NAME_intRange);
@@ -616,7 +616,7 @@ static senddecl send_date[] =
      NAME_set, "Copy time from argument date object"),
   SM(NAME_set, 6, T_initialise, setDate,
      NAME_set, "Set date from smhDMY"),
-  SM(NAME_posixValue, 1, "real", posixValueDate,
+  SM(NAME_posixValue, 1, "num", posixValueDate,
      NAME_set, "Set date from POSIX timestamp"),
   SM(NAME_convert, 1, "description=char_array", convertDate,
      NAME_textual, "Set date conform time description"),
@@ -629,7 +629,7 @@ static senddecl send_date[] =
 static getdecl doget_date[] =
 { GM(NAME_difference, 2, "units=int", T_difference, getDifferenceDate,
      NAME_calculate, "Difference between dates in specified units"),
-  GM(NAME_posixValue, 0, "real", NULL, getPosixValueDate,
+  GM(NAME_posixValue, 0, "num", NULL, getPosixValueDate,
      NAME_storage, "Fetch the value as a POSIX time-stamp"),
   GM(NAME_compare, 1, "{smaller,equal,larger}", "date", getCompareDate,
      NAME_compare, "Compare two dates for `chain ->sort'"),

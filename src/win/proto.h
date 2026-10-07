@@ -41,7 +41,7 @@ COMMON(DisplayObj) getPrimaryDisplayManager(DisplayManager dm);
 COMMON(status)	deleteDisplayManager(DisplayManager dm, DisplayObj d);
 COMMON(status)	forwardFocusDisplayManager(Any focus);
 COMMON(status)	RedrawDisplayManager(DisplayManager dm);
-COMMON(status)	dispatchDisplayManager(DisplayManager dm, IOSTREAM *fd, Int timeout);
+COMMON(status)	dispatchDisplayManager(DisplayManager dm, IOSTREAM *fd, Num timeout);
 COMMON(DisplayManager) TheDisplayManager(void);
 COMMON(status)	makeClassDisplayManager(Class class);
 
