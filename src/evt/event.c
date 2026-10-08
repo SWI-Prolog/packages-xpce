@@ -1007,58 +1007,81 @@ getDisplayEvent(EventObj ev)
 		 *******************************/
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-Deal with scroll-mice and trackpads, mapping  `wheel` events and their
-<-rotation to vertical scroll events.  Normally  a mouse scroll wheel has
-tick that are reported as 15 degrees rotations.
+Deal with scroll-mice and trackpads, mapping `wheel` and `horizontal_wheel`
+events and their <-rotation to scroll events.  Normally a mouse scroll
+wheel has ticks that are reported as 15 degrees rotations.  Following the
+common convention, Shift with the (vertical) wheel scrolls horizontally.
+If the receiver cannot scroll horizontally, Shift scrolls one line.
+Control with the wheel scrolls a page.
 
-@tbd We should also handle horizontal   scrolling  and smooth scrolling.
-As  is,  sdlevent.c  accumulates  fast  precise  scrolling  events  from
-trackpads into 15 degree motion events.
+@tbd We should also handle smooth scrolling.  As is, sdlevent.c
+accumulates fast precise scrolling events from trackpads into 15 degree
+motion events.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+static status
+scroll_wheel(Any rec, Name selector, Name dir, Name unit, Int count)
+{ if ( !hasSendMethodObject(rec, selector) )
+    fail;
+
+  return send(rec, selector, dir, unit, count, EAV);
+}
+
+
+/* Map a wheel event on rec.  If `horizontal` is true, a `wheel` event
+ * scrolls horizontally, e.g., if it is on a horizontal scroll_bar.
+ */
+
+status
+mapWheelMouseEventAs(EventObj ev, Any rec, bool horizontal)
+{ if ( ev->id == NAME_horizontalWheel )
+    horizontal = true;
+  else if ( ev->id != NAME_wheel )
+    fail;
+
+  if ( isNil(ev->rotation) )
+    fail;				/* Error? */
+  intptr_t rot = valInt(ev->rotation);
+  Int count = toInt((labs(rot)*3)/15);
+
+  if ( isDefault(rec) )
+    rec = ev->receiver;
+
+  DEBUG(NAME_wheel,
+	Cprintf("mapWheelMouseEvent() on %s, id=%s, rot=%s\n",
+		pp(rec), pp(ev->id), pp(ev->rotation)));
+
+  if ( ev->id == NAME_horizontalWheel )	/* positive: to the right */
+    return scroll_wheel(rec, NAME_scrollHorizontal,
+			rot > 0 ? NAME_forwards : NAME_backwards,
+			NAME_line, count);
+
+  Name dir = rot > 0 ? NAME_backwards : NAME_forwards;
+
+  if ( horizontal ||
+       (valInt(ev->buttons) & BUTTON_shift) )
+  { if ( scroll_wheel(rec, NAME_scrollHorizontal, dir, NAME_line, count) )
+      succeed;
+    if ( horizontal )
+      fail;
+    scroll_wheel(rec, NAME_scrollVertical, dir, NAME_line, ONE);
+    succeed;
+  }
+
+  if ( !hasSendMethodObject(rec, NAME_scrollVertical) )
+    fail;
+  if ( valInt(ev->buttons) & BUTTON_control )
+    send(rec, NAME_scrollVertical, dir, NAME_page, toInt(900), EAV);
+  else
+    send(rec, NAME_scrollVertical, dir, NAME_line, count, EAV);
+
+  succeed;				/* Or return? */
+}
+
 
 status
 mapWheelMouseEvent(EventObj ev, Any rec)
-{ if ( ev->id == NAME_wheel )
-  { Name dir, unit;
-    Int count;
-
-    if ( isNil(ev->rotation) )
-      fail;				/* Error? */
-    intptr_t rot = valInt(ev->rotation);
-
-    if ( isDefault(rec) )
-      rec = ev->receiver;
-
-    DEBUG(NAME_wheel,
-	  Cprintf("mapWheelMouseEvent() on %s, rot=%s\n",
-		  pp(rec), pp(ev->rotation)));
-
-    if ( !hasSendMethodObject(rec, NAME_scrollVertical) )
-      fail;
-
-    if ( rot > 0 )
-    { dir = NAME_backwards;
-    } else
-    { dir = NAME_forwards;
-      rot = -rot;
-    }
-
-    if ( valInt(ev->buttons) & BUTTON_shift )
-    { unit = NAME_line;
-      count = toInt(1);
-    } else if ( valInt(ev->buttons) & BUTTON_control )
-    { unit = NAME_page;
-      count = toInt(900);
-    } else
-    { unit = NAME_line;
-      count = toInt((rot*3)/15);
-    }
-
-    send(rec, NAME_scrollVertical, dir, unit, count, EAV);
-    succeed;				/* Or return? */
-  }
-
-  fail;
+{ return mapWheelMouseEventAs(ev, rec, false);
 }
 
 
@@ -1091,7 +1114,7 @@ static vardecl var_event[] =
   IV(NAME_y, "pixels=int", IV_GET,
      NAME_position, "Y-coordinate, relative to window"),
   IV(NAME_rotation, "degrees=int*", IV_GET,
-     NAME_classify, "`wheel' events: rotation, 15 per notch"),
+     NAME_classify, "`wheel' and `horizontal_wheel' events: rotation, 15 per notch"),
   IV(NAME_position, "point*", IV_NONE,
      NAME_position, "Last calculated position"),
   IV(NAME_time, "alien:Time", IV_NONE,
@@ -1237,6 +1260,7 @@ static struct namepair
 					/* Mouse button events */
   { NAME_button,	NAME_mouse },
   { NAME_wheel,		NAME_mouse },
+  { NAME_horizontalWheel,	NAME_mouse },
   { NAME_msLeft,	NAME_button },
   { NAME_msMiddle,	NAME_button },
   { NAME_msRight,	NAME_button },

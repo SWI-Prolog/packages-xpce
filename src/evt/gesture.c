@@ -74,7 +74,7 @@ eventGesture(Any obj, EventObj ev)
 
     if ( tryDragScrollGesture(g, ev) )
       succeed;
-    if ( isAEvent(ev, NAME_wheel) &&
+    if ( (isAEvent(ev, NAME_wheel) || isAEvent(ev, NAME_horizontalWheel)) &&
 	 (gr=getScrollTarget(g, ev)) )
       return postEvent(ev, gr, DEFAULT);
   }

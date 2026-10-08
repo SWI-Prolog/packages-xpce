@@ -729,13 +729,18 @@ CtoEvent(SDL_Event *event)
     { static int last_time = 0;
       wid  = event->wheel.windowID;
       time = event->wheel.timestamp/1000000;
-      name = NAME_wheel;
-      int dy = 0;
+      int dx = 0, dy = 0;
 #if SDL_VERSION_ATLEAST(3, 2, 12)
+      dx = event->wheel.integer_x;
       dy = event->wheel.integer_y;
 #else
-      static double dyf = 0.0;
+      static double dxf = 0.0, dyf = 0.0;
+      dxf += event->wheel.x;
       dyf += event->wheel.y;
+      if ( dxf >= 1.0 || dxf <= -1.0 )
+      { dx = trunc(dxf);
+	dxf -= dx;
+      }
       if ( dyf >= 1.0 || dyf <= -1.0 )
       { dy = trunc(dyf);
 	dyf -= dy;
@@ -743,16 +748,23 @@ CtoEvent(SDL_Event *event)
 #endif
 
       DEBUG(NAME_wheel,
-	    Cprintf("Mouse wheel event.  fy=%.6f, iy=%d, dt=%dms%s\n",
-		    event->wheel.y, dy, time-last_time,
+	    Cprintf("Mouse wheel event.  fx=%.6f, fy=%.6f, ix=%d, iy=%d, "
+		    "dt=%dms%s\n",
+		    event->wheel.x, event->wheel.y, dx, dy, time-last_time,
 		    event->wheel.direction == SDL_MOUSEWHEEL_FLIPPED
 		    ? " (flipped)" : ""));
-      if ( dy )
-      { last_time = time;
+      /* An xpce event scrolls in one direction.  If a trackpad scrolls
+	 diagonally, we use the dominant direction. */
+      if ( dy && abs(dy) >= abs(dx) )
+      { name = NAME_wheel;
 	rotation = toInt(dy*15);
-	break;
-      }
-      fail;
+      } else if ( dx )
+      { name = NAME_horizontalWheel;
+	rotation = toInt(dx*15);
+      } else
+	fail;
+      last_time = time;
+      break;
     }
       /* https://wiki.libsdl.org/SDL3/SDL_KeyboardEvent */
     case SDL_EVENT_KEYMAP_CHANGED:

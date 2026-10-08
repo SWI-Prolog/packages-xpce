@@ -39,6 +39,7 @@ COMMON(status)	postNamedEvent(EventObj ev, Graphical obj, Recogniser rec, Name m
 COMMON(status)	postEvent(EventObj ev, Graphical obj, Recogniser rec);
 COMMON(Any)	getMasterEvent(EventObj ev);
 COMMON(DisplayObj) getDisplayEvent(EventObj ev);
+COMMON(status)	mapWheelMouseEventAs(EventObj ev, Any rec, bool horizontal);
 COMMON(status)	mapWheelMouseEvent(EventObj ev, Any rec);
 COMMON(status)	makeClassEvent(Class class);
 

@@ -96,8 +96,17 @@ example-- type _3_ into _\C-c_.
     the low-level event handling will map the button 4 and button 5
     events to `wheel` events.
 
+    Horizontal scrolling, e.g., using a trackpad or tilting the wheel,
+    is mapped to an event with <-id: horizontal_wheel.  Its <-rotation
+    is positive to the right.  If a trackpad scrolls diagonally, the
+    event reports the dominant direction.
+
     The wheel event is handled by class window, class editor,
-    class list_browser and class scroll_bar.
+    class list_browser and class scroll_bar.  The wheel scrolls
+    vertically, a page if Control is held down.  As usual, the wheel
+    with Shift held down scrolls horizontally, as does the wheel on a
+    horizontal scroll_bar.  If the receiver cannot scroll horizontally,
+    Shift scrolls one line.
 
     @see event->is_a
 

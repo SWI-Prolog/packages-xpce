@@ -832,7 +832,8 @@ hoverScrollBar(ScrollBar s, BoolObj val)
 
 static status
 eventScrollBar(ScrollBar s, EventObj ev)
-{ if ( mapWheelMouseEvent(ev, s->object) )
+{ if ( mapWheelMouseEventAs(ev, s->object,	/* wheel on a horizontal bar */
+			   s->orientation == NAME_horizontal) )
     succeed;
 
   if ( isAEvent(ev, NAME_area) )

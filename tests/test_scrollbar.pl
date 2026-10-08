@@ -61,7 +61,8 @@ Run with:
 
 test_scrollbar :-
     run_tests([ scrollbar_bubble,
-                restrict_scroll
+                restrict_scroll,
+                wheel
               ]).
 
                  /*******************************
@@ -176,3 +177,90 @@ test(returns_to_the_origin, [Y == 0]) :-
     visible_y(P, Y).
 
 :- end_tests(restrict_scroll).
+
+
+                 /*******************************
+                 *             WHEEL            *
+                 *******************************/
+
+%   The wheel scrolls vertically.  As usual, Shift with the wheel and a
+%   horizontal wheel or trackpad swipe (`horizontal_wheel`) scroll
+%   horizontally.  Where that is not possible, Shift with the wheel
+%   scrolls one line.
+
+%!  wheel(+Window, +Id, +Notches, +Buttons) is det.
+%
+%   Turn the wheel Notches notches.  For `wheel`, positive is away from
+%   the user; for `horizontal_wheel` it is to the right.
+
+wheel(W, Id, Notches, Buttons) :-
+    Rotation is Notches*15,
+    new(Ev, event(Id, W, 50, 50, Buttons, 0)),
+    send(Ev, slot, rotation, Rotation),
+    ignore(send(W, post_event, Ev)).
+
+shift(2).
+
+visible_xy(P, X-Y) :-
+    get(P, visible, area(X, Y, _, _)).
+
+%   A picture that can scroll in both directions.
+
+wide_picture(P) :-
+    scrolling_picture(_F, P, _B),
+    send(P, display, box(20,20), point(600,600)).
+
+:- begin_tests(wheel).
+
+test(down_scrolls_down, [X == X0, true(Y > Y0)]) :-
+    wide_picture(P),
+    visible_xy(P, X0-Y0),
+    wheel(P, wheel, -1, 0),
+    visible_xy(P, X-Y).
+test(shift_scrolls_right, [Y == Y0, true(X > X0)]) :-
+    wide_picture(P),
+    visible_xy(P, X0-Y0),
+    shift(Shift),
+    wheel(P, wheel, -1, Shift),
+    visible_xy(P, X-Y).
+test(a_horizontal_wheel_scrolls_right, [Y == Y0, true(X > X0)]) :-
+    wide_picture(P),
+    visible_xy(P, X0-Y0),
+    wheel(P, horizontal_wheel, 1, 0),
+    visible_xy(P, X-Y).
+test(and_left, [true(X < X1)]) :-
+    wide_picture(P),
+    wheel(P, horizontal_wheel, 2, 0),
+    visible_xy(P, X1-_),
+    wheel(P, horizontal_wheel, -1, 0),
+    visible_xy(P, X-_).
+test(shift_scrolls_a_line_without_a_horizontal_bar, [Y == 20]) :-
+    %  window->scroll_horizontal only works with a horizontal bar
+    new(F, frame('Test')),
+    send(F, append, new(P, picture('', size(200,100)))),
+    send(P?decoration, horizontal_scrollbar, @off),
+    send(F, open),
+    send(P, display, box(20,20), point(10,600)),
+    shift(Shift),
+    wheel(P, wheel, -1, Shift),
+    visible_xy(P, _-Y).
+test(a_horizontal_wheel_on_a_vertical_window_is_not_used, [X-Y == X0-Y0]) :-
+    new(F, frame('Test')),
+    send(F, append, new(P, picture('', size(200,100)))),
+    send(P?decoration, horizontal_scrollbar, @off),
+    send(F, open),
+    send(P, display, box(20,20), point(600,600)),
+    visible_xy(P, X0-Y0),
+    wheel(P, horizontal_wheel, 1, 0),
+    visible_xy(P, X-Y).
+
+test(the_wheel_on_the_horizontal_bar_scrolls_right, [Y == Y0, true(X > X0)]) :-
+    wide_picture(P),
+    visible_xy(P, X0-Y0),
+    get(P?decoration, horizontal_scrollbar, SB),
+    new(Ev, event(wheel, P, 50, 50, 0, 0)),
+    send(Ev, slot, rotation, -15),
+    send(SB, event, Ev),
+    visible_xy(P, X-Y).
+
+:- end_tests(wheel).
