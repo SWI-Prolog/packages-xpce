@@ -71,7 +71,7 @@ COMMON(bool)	destroyCompleterFrame(FrameObj fr);
 COMMON(void)	focusLostCompleterFrame(FrameObj fr);
 COMMON(status)	selectCompletionDialogItem(Any item, Chain matches, CharArray searchstring, Int autohide);
 COMMON(status)	forwardCompletionEvent(EventObj ev);
-COMMON(Graphical) completerInspectTarget(Graphical focus, EventObj ev);
+COMMON(Graphical) completerInspectTarget(PceWindow sw, EventObj ev);
 COMMON(status)	styleTextItem(TextItem ti, Name style);
 COMMON(int)	text_item_combo_width(TextItem ti);
 COMMON(status)	typedTextItem(TextItem ti, EventId id);

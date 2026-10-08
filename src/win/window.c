@@ -707,8 +707,7 @@ inspectWindow(PceWindow sw, EventObj ev)
       if ( isAEvent(ev, h->event) )
       { Graphical gr;
 
-	if ( notNil(sw->focus) &&
-	     (gr = completerInspectTarget(sw->focus, ev)) )
+	if ( (gr = completerInspectTarget(sw, ev)) )
 	  return isNil(gr) ? FAIL : inspectDisplay(d, gr, ev);
 
 	return inspectDevice((Device) sw, ev);

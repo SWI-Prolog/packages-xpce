@@ -594,13 +594,20 @@ selectCompletionDialogItem(Any item, Chain matches,
  * grabs the pointer.  The inspect handlers of the display (tooltips) must
  * see the completer rather than what is below it in this window.  Return
  * the list_browser of the completer if the event is inside it, NIL if
- * the completer of focus is shown but the event is elsewhere and NULL if
- * the completer of focus is not shown.
+ * the completer of an item of `sw` is shown but the event is elsewhere
+ * and NULL if no such completer is shown.  We cannot use the focus of
+ * `sw`: moving over the completer passes the focus to the gesture of its
+ * list_browser (see forwardCompletionEvent()).
  */
 
 Graphical
-completerInspectTarget(Graphical focus, EventObj ev)
-{ if ( completerShownDialogItem(focus) )
+completerInspectTarget(PceWindow sw, EventObj ev)
+{ Any client;
+
+  if ( Completer &&
+       (client = getAttributeObject(Completer, NAME_client)) &&
+       instanceOfObject(client, ClassGraphical) &&
+       getWindowGraphical(client) == sw )
   { ListBrowser lb = Completer->list_browser;
 
     if ( insideEvent(ev, (Graphical)lb) )
