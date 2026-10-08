@@ -72,17 +72,66 @@ variable(xref_generation,
          both,
          "Last generation we analysed").
 
+%!  .undo_buffer_size
+%
+%   Size of the undo buffer in characters.  Larger values allow for
+%   undoing more changes at the cost of more memory.  Buffers that are
+%   not associated with a file have no undo buffer.
+
 class_variable(undo_buffer_size,      '0..', 40000).
+
+%!  .ensure_no_whitespace_errors
+%
+%   If @on, remove trailing spaces and tabs from all lines and replace
+%   spaces followed by a tab with tabs when the buffer is saved.  The
+%   status bar reports the number of fixed whitespace errors.
+
 class_variable(ensure_no_whitespace_errors, bool, @on).
+
+%!  .newline_existing_file
+%
+%   How lines end when loading and saving an existing file.  Values:
+%
+%     - posix
+%       Lines end in a newline (`\n`).  A carriage return (`\r`)
+%       is kept as part of the text.
+%     - dos
+%       Lines end in a carriage return and newline (`\r\n`).
+%     - detect
+%       Use `dos` if the file uses `\r\n`, otherwise `posix`.  The
+%       file is saved the same way.
+
 class_variable(newline_existing_file, {posix,dos,detect}, detect,
                "Whether to use \\n (POSIX) or \\r\\n (DOS) for a newline").
-:- if(current_prolog_flag(windows, true)).
-class_variable(newline_new_file,      {posix,dos},        dos,
+
+%!  .newline_new_file
+%
+%   How lines end when saving a new file.  The default is `dos` on
+%   Windows and `posix` elsewhere.  Values:
+%
+%     - posix
+%       Lines end in a newline (`\n`).
+%     - dos
+%       Lines end in a carriage return and newline (`\r\n`).
+
+class_variable(newline_new_file,      {posix,dos},
+               [ windows(dos), unix(posix) ],
                "Whether to use \\n (POSIX) or \\r\\n (DOS) for a newline").
-:- else.
-class_variable(newline_new_file,      {posix,dos},        posix,
-               "Whether to use \\n (POSIX) or \\r\\n (DOS) for a newline").
-:- endif.
+
+%!  .unicode_encoding
+%
+%   Encoding used to save the buffer if the encoding of the file, which
+%   is normally the default encoding of the locale, cannot represent
+%   the text.  The file is then saved with a BOM (Byte Order Mark)
+%   that identifies the encoding.  Values:
+%
+%     - utf8
+%       UTF-8
+%     - unicode_le
+%       UTF-16, little endian
+%     - unicode_be
+%       UTF-16, big endian
+
 class_variable(unicode_encoding,      {utf8,unicode_le,unicode_be}, utf8,
                "Encoding used if the default encoding cannot represent the content").
 

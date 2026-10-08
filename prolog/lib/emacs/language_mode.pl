@@ -81,8 +81,30 @@ variable(parameter_indentation, int,   both, "Indentation for parameters").
 variable(show_line_numbers,     '0..',      get,
          "Show line numbers up to this character position (0: never)").
 
+%!  .comment_column
+%
+%   Column at which a line comment is inserted after the code on a
+%   line.  If a nearby line has a comment after its code that starts
+%   between column 20 and 100, the comment is aligned with that one
+%   instead.
+
 class_variable(comment_column,        '0..',      48).
+
+%!  .show_line_numbers
+%
+%   Show the line number of the caret in the status bar while the
+%   caret is before this character position.  Further into the buffer
+%   counting lines is considered too expensive.  If 0, line numbers
+%   are never shown.
+
 class_variable(show_line_numbers,     '0..',      250000).
+
+%!  .parameter_indentation
+%
+%   Extra indentation for the arguments of a term if the line holding
+%   the open bracket ends after the bracket.  The arguments are
+%   indented relative to the start of the term.
+
 class_variable(parameter_indentation, '0..',      4).
 
 setup_mode(E) :->

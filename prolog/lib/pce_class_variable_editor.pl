@@ -51,6 +51,7 @@
 :- pce_autoload(pango_families_item, library(pce_font_item)).
 :- pce_autoload(theme_item, library(pce_colour_item)).
 :- autoload(library(pce_theme), [select_theme/1]).
+:- autoload(library(pce_class_doc), [xpce_doc_comment/5]).
 :- use_module(library(persistent_frame)).
 :- use_module(library(help_message)).
 :- use_module(library(swi_preferences), [prolog_edit_preferences/1]).
@@ -1132,13 +1133,18 @@ update_relevant(R) :->
 %   item_tooltip(+Class, +Name, +CV, -Tooltip) is semidet.
 %
 %   Tooltip is the summary of the class variable CV and the class
-%   variable it requires, if any.
+%   variable it requires, if any.  If CV has no summary, use the
+%   summary of its PlDoc comment.
 
 item_tooltip(Class, Name, CV, Tooltip) :-
     (   get(CV, summary, Summary),
         Summary \== @nil, Summary \== @default
     ->  get(Summary, value, Lines0),
         Lines = [Lines0]
+    ;   get(CV?context, name, ClassName),
+        xpce_doc_comment(xpce(ClassName, classvar, Name), _, Summary, _, _),
+        Summary \== ""
+    ->  Lines = [Summary]
     ;   Lines = []
     ),
     (   requirement(Class, Name, OnClass, OnName, Required)
@@ -1384,6 +1390,8 @@ class_variable_doc(Class, Name, Markdown) :-
 %   description.  If the manual does not describe the class variable
 %   itself, use the description of the instance variable with the same
 %   name.  If Class does not describe either, try its super classes.
+%   Classes defined in Prolog are described by the PlDoc comments in
+%   their source.
 
 class_variable_entry(Class, Name, Entry, Markdown) :-
     get(Class, name, ClassName),
@@ -1396,9 +1404,21 @@ class_variable_entry(Class, Name, Entry, Markdown) :-
         ->  get(Class, instance_variable, Name, Entry)
         )
     ->  atomic_list_concat(Body, '\n', Markdown)
+    ;   source_entry(Class, ClassName, Name, Entry, Markdown)
+    ->  true
     ;   get(Class, super_class, Super),
         Super \== @nil,
         class_variable_entry(Super, Name, Entry, Markdown)
+    ).
+
+source_entry(Class, ClassName, Name, Entry, Markdown) :-
+    (   xpce_doc_comment(xpce(ClassName, classvar, Name), _, _, Markdown, _),
+        Markdown \== ""
+    ->  get(Class, class_variable, Name, Entry)
+    ;   member(Kind, [both, ivar, get, send]),
+        xpce_doc_comment(xpce(ClassName, Kind, Name), _, _, Markdown, _),
+        Markdown \== ""
+    ->  get(Class, instance_variable, Name, Entry)
     ).
 
 class_doc_lines(ClassName, Lines) :-
@@ -1543,7 +1563,7 @@ initialise(F, Title:name, Entry:behaviour) :->
     send(TD, gap, size(5, 5)),
     send(TD, append, new(TB, tool_bar)),
     send(new(Card, man_html_card), below, TD),
-    send(Card, size, size(500, 200)),
+    send(Card, size, size(650, 200)),
     send(Card, scrollbars, vertical),
     get(Card, history, History),
     get(History, button, backward, Back),

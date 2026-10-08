@@ -41,6 +41,8 @@
 
 :- use_module(library(pldoc/doc_wiki), []).
 :- use_module(library(doc_latex), []).
+%   PlDoc's wiki DOM may contain \term(...) and \tags(...)
+:- use_module(library(pldoc/doc_html), [term//3, tags//1]).
 :- use_module(library(pce),
               [ op(_, _, _),
                 object/1,
@@ -1364,4 +1366,4 @@ access_arrow(send, '->').
 access_arrow(none, '-').
 
 dom_to_html(Tokens) -->
-    html(\(html_write:html(Tokens))).
+    html(Tokens).

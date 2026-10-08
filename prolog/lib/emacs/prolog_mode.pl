@@ -220,9 +220,36 @@ variable(find_references_module_classes,
          "Module classes to search for references").
 
 class_variable(quasiquotation_syntax, name*, @nil).
+%!  .body_indentation
+%
+%   Indentation of the goals in the body of a clause.  When a file is
+%   opened, PceEmacs uses the indentation of the first clause body it
+%   finds instead.
+
 class_variable(body_indentation,      '0..', 4).
+
+%!  .cond_indentation
+%
+%   Indentation step inside an if-then-else or disjunction, i.e., the
+%   distance between `(`, `->` or `;` and the goal after it.
+
 class_variable(cond_indentation,      '0..', 4).
+
+%!  .dict_indentation
+%
+%   Indentation of a dict value that is on the line after its key,
+%   relative to the key.
+
 class_variable(dict_indentation,      '0..', 2).
+
+%!  .indent_tabs
+%
+%   If @on, indentation uses tabs where possible.  Otherwise it only
+%   uses spaces.  When a file is opened, PceEmacs uses tabs if the
+%   first clause body it finds is indented with a tab.  A file can
+%   override this with an Emacs mode line such as
+%   `-*- indent-tabs: true -*-`.
+
 class_variable(indent_tabs,           bool,  @off,
                "Use tabs for indentation").
 

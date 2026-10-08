@@ -174,6 +174,11 @@ class_variable(print_command, string,
                  windows('NOTEPAD.EXE /P %s')
                ],
                "Command to print a file").
+%!  .tab_width
+%
+%   Distance between tab stops in characters.  A file can override this
+%   with an Emacs mode line such as `-*- tab-width: 4 -*-`.
+
 class_variable(tab_width, '1..',
                8,
                "Distance between tab-stops").

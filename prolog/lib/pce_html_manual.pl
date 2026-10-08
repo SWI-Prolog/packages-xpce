@@ -42,6 +42,7 @@
 :- use_module(library(pldoc/man_index), [manual_object/5]).
 :- use_module(library(man/classmap), [mapped_class_name/2]).
 :- use_module(library(pce_history)).
+:- autoload(library(pce_class_doc), [xpce_doc_dom/3]).
 
 /** <module> Open the generated XPCE reference manual in a doc_browser
 
@@ -590,6 +591,9 @@ selection(MHC, Obj:object*) :->
         DOM \== []
     ->  show_chunk(MHC, Path, DOM),
         send(MHC?history, location, Obj)
+    ;   source_doc_dom(Obj, Path, DOM)
+    ->  show_chunk(MHC, Path, DOM),
+        send(MHC?history, location, Obj)
     ;   object_spec(Obj, Class),
         atom(Class),
         spec_url(Class, URL)
@@ -597,6 +601,28 @@ selection(MHC, Obj:object*) :->
         send(MHC, url, URL)           % records the URL in the history
     ;   send(MHC, show, [element(p, [], ['No manual entry indexed.'])])
     ).
+
+%!  source_doc_dom(+Obj, -Path, -DOM) is semidet.
+%
+%   Classes defined in Prolog are not in the manual.  Use the PlDoc
+%   comments in the source of the class.  As with the manual, a member
+%   may be documented as instance variable or method.
+
+source_doc_dom(Obj, Path, DOM) :-
+    object_spec(Obj, Spec),
+    spec_doc_object(Spec, Object),
+    xpce_doc_dom(Object, Path, DOM),
+    !.
+
+spec_doc_object(Class, xpce(Class, class, Class)) :-
+    atom(Class).
+spec_doc_object(->(C, N), xpce(C, K, N)) :-
+    member(K, [send, both, ivar]).
+spec_doc_object(<-(C, N), xpce(C, K, N)) :-
+    member(K, [get, both, ivar]).
+spec_doc_object(<->(C, N), xpce(C, K, N)) :-
+    member(K, [both, ivar, get, send]).
+spec_doc_object(xpce(classvar, C, N), xpce(C, classvar, N)).
 
 %   Intercept link clicks inside the rendered chunk: if the URL
 %   resolves to a =|class-<C>.html#class-<C>-<K>-<S>|= entry that

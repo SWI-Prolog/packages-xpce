@@ -620,6 +620,13 @@ variable(current_link,	name*,                get,  "Link under popup").
 variable(current_block,	terminal_block*,      get,  "Block under popup").
 
 class_variable(inject_tries, int, [windows(5), unix(20)]).
+%!  .fold_previous
+%
+%   If @on, fold the output of the previous query when a new query is
+%   entered, so only the last output is shown in full.  Folded output
+%   can be shown again using the triangle in the margin beside the
+%   query.
+
 class_variable(fold_previous, bool, @off).
 
 %!  binding(?Key, ?Method)
@@ -2534,9 +2541,42 @@ variable(placement, {top,bottom,smart,none}, get,
          "Where I appear over the terminal").
 variable(covers,    area*, get, "Terminal area I am placed in").
 
+%!  .background
+%
+%   Colour of the bar that shows messages over the terminal.  The
+%   default is translucent black.
+
 class_variable(background,  colour, '#0008',  "Colour behind the message").
+
+%!  .colour
+%
+%   Colour of the text of a message.
+
 class_variable(colour,      colour, white,    "Colour of the message").
+
+%!  .hide_after
+%
+%   Number of seconds a message is shown.  Messages of an ongoing
+%   operation such as an incremental search stay until it is finished.
+
 class_variable(hide_after,  '0..',  5,        "Seconds a message stays up").
+
+%!  .placement
+%
+%   Where messages appear.  The message bar covers a line of the
+%   terminal.  Values:
+%
+%     - top
+%       Cover the first line of the window.
+%     - bottom
+%       Cover the last line of the window.
+%     - smart
+%       Cover the last line, unless that is where the user is
+%       looking, in which case cover the first.
+%     - none
+%       Do not show messages over the terminal, but use the normal
+%       xpce reporting.
+
 class_variable(placement,   {top,bottom,smart,none}, smart,
                "Show messages at the top, at the bottom, out of the \c
                 way (`smart') or not at all").

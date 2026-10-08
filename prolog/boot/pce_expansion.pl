@@ -48,12 +48,22 @@
 :- use_module(library(lists),
               [ append/3
               , flatten/2
+              , member/2
               , memberchk/2
               , reverse/2
               ]).
 :- use_module(library(apply),
               [ maplist/3
               ]).
+:- autoload(library(atom),
+            [ restyle_identifier/3
+            ]).
+:- autoload(library(pldoc/doc_wiki),
+            [ summary_from_lines/2
+            ]).
+:- autoload(library(pce_class_doc),
+            [ xpce_doc_html//3
+            ]).
 :- use_module(library(operators),
               [ push_operators/1
               , pop_operators/0
@@ -1116,6 +1126,223 @@ feedback(Term) :-
     ->  pce_info(Term)
     ;   true
     ).
+
+
+                 /*******************************
+                 *         DOCUMENTATION        *
+                 *******************************/
+
+:- multifile
+    prolog:doc_compile_comment/6,
+    prolog:doc_is_public_object/1,
+    prolog:doc_object//3,
+    prolog:message//1.
+
+%!  prolog:doc_compile_comment(+Comment, +Lines, +FilePos, ?Term,
+%!                             +VarNames, -Compiled) is semidet.
+%
+%   Compile PlDoc comments on the members of the class being compiled.
+%   The first line of the comment is one of the headers below, where
+%   the class is implied.
+%
+%     - `->Selector`, `<-Selector`
+%       Send or get method.  The comment must precede the method.
+%     - `<->Name`, `-Name`
+%       Instance variable.  The comment must precede variable/3,4.
+%     - `.Name`
+%       Class variable.  The comment must precede class_variable/3,4.
+%     - `<class> Title`
+%       The class itself.
+%
+%   The signature of the member is derived from Term and VarNames.
+%   Comments are compiled into object(xpce(Class, Kind, Name), Summary,
+%   Comment) and signature(xpce(Class, Kind, Name), Signature).
+
+prolog:doc_compile_comment(Comment, Lines, FilePos, Term, VarNames,
+                           Compiled) :-
+    pce_compiling(Class),
+    first_line(Lines, Line, RestLines),
+    doc_header(Line, Header),
+    compile_doc_comment(Header, Class, Comment, RestLines, FilePos,
+                        Term, VarNames, Compiled).
+
+first_line([_-[]|Lines0], Line, Lines) :-
+    !,
+    first_line(Lines0, Line, Lines).
+first_line([_-Line|Lines], Line, Lines).
+
+doc_header(Line, Header) :-
+    phrase(doc_header(Header), Line).
+
+doc_header(Header) -->
+    (   "!"
+    ->  []
+    ;   "%"
+    ->  []
+    ;   []
+    ),
+    blanks,
+    doc_header_(Header).
+
+doc_header_(class(Title)) -->
+    "<class>",
+    !,
+    blanks,
+    rest_string(Title).
+doc_header_(member(Op, Name)) -->
+    doc_op(Op),
+    csyms(Codes),
+    { Codes \== [],
+      atom_codes(Name, Codes)
+    },
+    blanks.
+
+doc_op('<->') --> "<->", !.
+doc_op('<-')  --> "<-", !.
+doc_op('->')  --> "->", !.
+doc_op(-)     --> "-", !.
+doc_op('.')   --> ".".
+
+blanks --> [C], { code_type(C, space) }, !, blanks.
+blanks --> [].
+
+csyms([H|T]) --> [H], { code_type(H, csym) }, !, csyms(T).
+csyms([]) --> [].
+
+rest_string(String, Codes, []) :-
+    string_codes(String0, Codes),
+    normalize_space(string(String), String0).
+
+compile_doc_comment(class(Title), Class, Comment, RestLines, _FilePos,
+                    _Term, _VarNames,
+                    [ object(xpce(Class, class, Class), Summary, Comment)
+                    ]) :-
+    !,
+    (   Title == ""
+    ->  doc_summary(RestLines, Summary)
+    ;   Summary = Title
+    ).
+compile_doc_comment(member(Op, Name), Class, Comment, RestLines, FilePos,
+                    Term, VarNames, Compiled) :-
+    op_kind(Op, Kind),
+    Object = xpce(Class, Kind, Name),
+    doc_summary(RestLines, Summary),
+    (   nonvar(Term),
+        member_signature(Term, Op, Name, VarNames, Sig)
+    ->  format(string(Signature), '~w~w', [Class, Sig]),
+        Compiled = [ object(Object, Summary, Comment),
+                     signature(Object, Signature)
+                   ]
+    ;   (   current_prolog_flag(xref, true)
+        ->  true
+        ;   print_message(warning, pce_doc(no_member(FilePos, Op, Name)))
+        ),
+        Compiled = [ object(Object, Summary, Comment) ]
+    ).
+
+op_kind('->',  send).
+op_kind('<-',  get).
+op_kind('<->', both).
+op_kind(-,     ivar).
+op_kind('.',   classvar).
+
+doc_summary(Lines, Summary) :-
+    summary_from_lines(Lines, Codes),
+    string_codes(Summary, Codes).
+
+%!  member_signature(+Term, +Op, +Name, +VarNames, -Signature) is semidet.
+%
+%   True when Term defines the member Op Name and Signature is its
+%   signature in the notation of the reference manual, without the
+%   class.
+
+member_signature((Head :-> _), '->', Name, VarNames, Signature) :-
+    Head =.. [Name, _Receiver | Args],
+    maplist(doc_arg(VarNames), Args, DocArgs),
+    (   DocArgs == []
+    ->  format(string(Signature), '->~w', [Name])
+    ;   atomic_list_concat(DocArgs, ', ', ArgText),
+        format(string(Signature), '->~w: ~w', [Name, ArgText])
+    ).
+member_signature((Head :<- _), '<-', Name, VarNames, Signature) :-
+    Head =.. [Name, _Receiver | Args0],
+    append(Args, [_Return], Args0),
+    return_type(Head, RType0),
+    (   RType0 == @default
+    ->  RType = any
+    ;   RType = RType0
+    ),
+    maplist(doc_arg(VarNames), Args, DocArgs),
+    atomic_list_concat(DocArgs, ', ', ArgText),
+    (   ArgText == ''
+    ->  format(string(Signature), '<-~w: -> ~w', [Name, RType])
+    ;   format(string(Signature), '<-~w: ~w -> ~w', [Name, ArgText, RType])
+    ).
+member_signature(Term, Op, Name, _VarNames, Signature) :-
+    variable_term(Term, Name, Type),
+    variable_op(Op),
+    var_type(Type, PceType, _Initial),
+    format(string(Signature), '~w~w: ~w', [Op, Name, PceType]).
+member_signature(Term, '.', Name, _VarNames, Signature) :-
+    class_variable_term(Term, Name, Type, Default),
+    pce_type(Type, PceType),
+    format(string(Signature), '.~w: ~w = ~q', [Name, PceType, Default]).
+
+variable_term(variable(Name, Type, _Access), Name, Type).
+variable_term(variable(Name, Type, _Access, _Doc), Name, Type).
+
+variable_op('<->').
+variable_op('<-').
+variable_op('->').
+variable_op(-).
+
+class_variable_term(class_variable(Name, Type, Default), Name, Type, Default).
+class_variable_term(class_variable(Name, Type, Default, _Doc),
+                    Name, Type, Default).
+
+%!  doc_arg(+VarNames, +ArgAndType, -Text) is det.
+%
+%   Text describes a method argument as `name=type`.  The name is
+%   the name of the type, if provided, or else derived from the
+%   variable name, e.g., `FileName` becomes `file_name`.
+
+doc_arg(VarNames, ArgAndType, Text) :-
+    head_arg(ArgAndType, Arg, Type),
+    pce_type(Type, PceType),
+    (   nonvar(Type),
+        Type = (_=_)
+    ->  Text = PceType
+    ;   var_arg_name(VarNames, Arg, ArgName),
+        ArgName \== PceType
+    ->  format(atom(Text), '~w=~w', [ArgName, PceType])
+    ;   Text = PceType
+    ).
+
+var_arg_name(VarNames, Var, Name) :-
+    var(Var),
+    member(VarName=V, VarNames),
+    V == Var,
+    !,
+    \+ sub_atom(VarName, 0, _, _, '_'),
+    restyle_identifier(one_two, VarName, Name).
+
+%!  prolog:doc_is_public_object(+Object) is semidet.
+%!  prolog:doc_object(+Object, +Pairs, +Options)// is semidet.
+%
+%   Show the documentation of xpce class members on the PlDoc web pages.
+%   Class members are public.
+
+prolog:doc_is_public_object(_:xpce(_,_,_)).
+prolog:doc_is_public_object(xpce(_,_,_)).
+
+prolog:doc_object(Object, Pairs, Options) -->
+    { strip_module(Object, _, xpce(_,_,_)) },
+    xpce_doc_html(Object, Pairs, Options).
+
+prolog:message(pce_doc(no_member(File:Line, Op, Name))) -->
+    [ url(File:Line), ': PlDoc: comment on ~w~w is not followed by its definition'-
+      [Op, Name]
+    ].
 
 
                 /********************************
