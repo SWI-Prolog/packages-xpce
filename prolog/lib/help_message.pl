@@ -123,6 +123,11 @@ feedback(W, S:string*, Ev:event, For:[any]*) :->
     (   S == @nil
     ->  send(W, show, @off)
     ;   get(W, member, feedback, L),
+        get(W, frame, Frame),
+        (   get(Frame, status, window)  % a new message, e.g., of another
+        ->  send(Frame, show, @off)     % browser item.  Reopen, as Wayland
+        ;   true                        % does not show a popup that moves
+        ),
         send(L, selection, S),
         send(W, layout),
         send(W?frame, fit),
