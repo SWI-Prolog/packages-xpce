@@ -754,14 +754,21 @@ postEventWindow(PceWindow sw, EventObj ev)
 /* A click makes this window the keyboard focus of the frame.  If the
  * focus follows the mouse, the window under the pointer already has the
  * input focus and we must not turn that into an explicit focus, as that
- * stops the focus from following the pointer.
+ * stops the focus from following the pointer.  A window that does not
+ * want the keyboard does not take it from a window that has it.  A
+ * frame may still want to know about the click, e.g., to make the pane
+ * that holds the window the one the user works in: if it defines
+ * ->window_clicked, it is told.
  */
 
   if ( isDownEvent(ev) && fr && notNil(fr) &&
-       (sw->input_focus == OFF || !focusFollowsMouseFrame(fr)) &&
-       ( send(sw, NAME_WantsKeyboardFocus, EAV) ||
-	 !getHyperedObject(fr, NAME_keyboardFocus, DEFAULT) ) )
-    send(fr, NAME_keyboardFocus, sw, EAV);
+       (sw->input_focus == OFF || !focusFollowsMouseFrame(fr)) )
+  { if ( send(sw, NAME_WantsKeyboardFocus, EAV) ||
+	 !getHyperedObject(fr, NAME_keyboardFocus, DEFAULT) )
+      send(fr, NAME_keyboardFocus, sw, EAV);
+    else if ( hasSendMethodObject(fr, NAME_windowClicked) )
+      send(fr, NAME_windowClicked, sw, EAV);
+  }
 
   if ( isAEvent(ev, NAME_keyboard) )
   { PceWindow iw;

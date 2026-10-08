@@ -185,7 +185,8 @@ initialise(F, App:application=[application],
     ;   true                            % no button: nothing to make
     ),
     (   status_bar(Status)
-    ->  send(new(pane_status_dialog), below, TW)
+    ->  send(new(SD, pane_status_dialog), below, TW),
+        send(SD, keep, @on)             % asked for: not ours to take away
     ;   true
     ),
     (   Pane == @default
@@ -221,6 +222,21 @@ pane_status_bar(Pane) :-
     ->  ignore(get(Frame, ensure_status_dialog, _))
     ;   true
     ).
+
+%!  uses_status_bar(+Pane) is det.
+%
+%   Record that Pane used the bar of its window: it reported, prompted
+%   or showed the line of the caret on it.  The group holding Pane is
+%   marked as well, as the window looks at the panes its tabs hold.  See
+%   `pane_frame ->update_status_bar`.
+
+uses_status_bar(Pane) :-
+    pane_group(Pane, Group),
+    forall(member(P, [Pane, Group]),
+           send(P, attribute, uses_status_bar, @on)).
+
+uses_status_bar_(Pane) :-
+    get(Pane, attribute, uses_status_bar, @on).
 
 %!  name_frame(+Frame) is det.
 %
@@ -296,6 +312,10 @@ status_dialog(F, SD:pane_status_dialog) :<-
 
 ensure_status_dialog(F, SD:pane_status_dialog) :<-
     "The bar at my bottom, made if I have none"::
+    (   get(F, current_pane, Pane)
+    ->  uses_status_bar(Pane)
+    ;   true
+    ),
     (   get(F, member, pane_status_dialog, SD)
     ->  true
     ;   get(F, tabs, TW),
@@ -683,12 +703,18 @@ pane_changed(F) :->
             send(F, slot, updating, @off))
     ).
 
+%       What the pane before had to say is not about the pane now in
+%       view, also if there is none yet, as while a pane is being moved
+%       out: clear the bar, and drop it if no pane left uses it.
+
 do_pane_changed(F) :->
     "Follow the current pane; see ->pane_changed"::
+    ignore(send(F, clear_status)),
+    ignore(send(F, update_status_bar)),
     get(F, current_pane, Pane),
     send(F?menu_dialog, client, Pane),
-    ignore(send(F, clear_status)),      % what the pane before had to say
-    ignore(send(F, update_menu_bar)),   % is not about this one
+    ignore(send(F, restore_report, Pane)),
+    ignore(send(F, update_menu_bar)),
     ignore(send(F, update_tab_label)),
     ignore(send(F, update_label)),
     ignore(send(F, update_opacity)),
@@ -729,6 +755,21 @@ keyboard_focus(F, W:[window]*) :->
             send(F, pane_changed)
         ;   true
         )
+    ).
+
+%       A click in a window that does not want the keyboard, e.g., a
+%       graph, does not move the keyboard focus (see postEventWindow()).
+%       It still says the user works in the pane that holds the window:
+%       give it the focus if that is another pane than the current one.
+%       Within the current pane the focus stays where it is.
+
+window_clicked(F, W:window) :->
+    "W was clicked but does not want the keyboard"::
+    pane_group(W, Group),
+    (   get(F, current_pane, Current),
+        pane_group(Current, Group)
+    ->  true
+    ;   send(F, keyboard_focus, W)
     ).
 
 %       A pane tells me the pointer entered it and I decide whether that
@@ -1040,6 +1081,45 @@ clear_status(F) :->
     (   get(F, status_dialog, SD)
     ->  send(SD, clear)
     ;   true                            % no bar: nothing to take away
+    ).
+
+%       A pane remembers the last thing it said (see `pane ->report'), so
+%       that it is said again when the pane comes back into view, also in
+%       another window it was moved to.  The message may be on the pane
+%       in view or on the group that holds it.
+
+restore_report(F, Pane:window) :->
+    "Show the last message of Pane, if it has one"::
+    pane_group(Pane, Group),
+    (   member(P, [Pane, Group]),
+        get(P, attribute, last_report, Report)
+    ->  get(F, ensure_status_dialog, SD),
+        get(Report, kind, Kind),
+        get(Report, text, Text),
+        send(SD, report, Kind, '%s', Text)
+    ;   true
+    ).
+
+%       A window grows a bar when a pane first wants one, and drops it
+%       when the last pane that ever used it has gone, e.g., moved to
+%       another window.  A bar the window was created with stays.
+
+update_status_bar(F) :->
+    "Remove my bar if none of my panes uses it"::
+    (   get(F, status_dialog, SD),
+        get(SD, keep, @off),
+        get(SD, prompter, @nil),
+        \+ ( get(F, panes, Panes),
+              get(Panes, find, message(@prolog, uses_status_bar_, @arg1),
+                  _)
+            )
+    ->  send(F, delete, SD),
+        free(SD),
+        (   get(F, status, unmapped)
+        ->  true
+        ;   send(F, resize)
+        )
+    ;   true
     ).
 
 show_line_number(F, Line:'int|{too_expensive}*') :->
@@ -2167,6 +2247,7 @@ The label on it is *named* `reporter', which is what makes `dialog
 variable(prompter,     dialog_item*, get,  "Item being prompted with").
 variable(report_count, number,       get,  "Count down to erasing a report").
 variable(report_type,  name*,        both, "Kind of the last report").
+variable(keep,         bool := @off, both, "Keep me if no pane uses me").
 
 initialise(D) :->
     "Create the reporter and the line counter"::
@@ -2420,12 +2501,43 @@ expose(P) :->
 
 report(P, Kind:name, Fmt:[char_array], Args:any ...) :->
     "Report on the bar of the window I am in, if I am the pane in view"::
+    remember_report(P, Kind, Fmt, Args),
     (   pane_in_view(P)
     ->  pane_status_bar(P),
         Msg =.. [report, Kind, Fmt|Args],
         send_super(P, Msg)
     ;   true
     ).
+
+%   remember_report(+Pane, +Kind, +Fmt, +Args) is det.
+%
+%   Remember what Pane said last, so it is said again when Pane comes
+%   back into view; see `pane_frame ->restore_report`.  Only messages of
+%   a kind that stays until something replaces it are remembered.  A
+%   status message is about the moment, e.g., the instruction while a
+%   pane is moved by its grip, and does not touch what is remembered,
+%   nor does clearing one.  An empty inform message forgets it.
+
+remember_report(P, Kind, Fmt, Args) :-
+    uses_status_bar(P),
+    (   \+ remembered_report(Kind)
+    ->  true
+    ;   ( Fmt == @default ; Fmt == '' )
+    ->  (   Kind == inform
+        ->  ignore(send(P, delete_attribute, last_report))
+        ;   true
+        )
+    ;   new(Text, string),
+        Format =.. [format, Fmt|Args],
+        send(Text, Format),
+        send(P, attribute, last_report,
+             report_memory(Kind, Text))
+    ).
+
+remembered_report(inform).
+remembered_report(warning).
+remembered_report(error).
+
 
 %!  pane_in_view(+Pane) is semidet.
 %
@@ -2980,3 +3092,18 @@ tab_name(Options, Name) :-
     ->  true
     ;   Name = ''
     ).
+
+
+%   A message a pane said last.  See `pane ->report`.
+
+:- pce_begin_class(report_memory, object,
+                   "The last message of a pane").
+
+variable(kind, name,   get, "Kind of report").
+variable(text, string, get, "Text of the report").
+
+initialise(R, Kind:name, Text:string) :->
+    send(R, slot, kind, Kind),
+    send(R, slot, text, Text).
+
+:- pce_end_class(report_memory).

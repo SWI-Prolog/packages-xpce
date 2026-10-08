@@ -111,7 +111,9 @@ test_pane_frame :-
                 pane_frame_term,
                 pane_frame_split_beside,
                 pane_frame_arranged,
-                pane_frame_tab_focus
+                pane_frame_tab_focus,
+                pane_frame_status,
+                pane_frame_click
               ]).
 
                  /*******************************
@@ -2117,3 +2119,166 @@ test(and_the_one_left_behind_lets_go, Focused == [second]) :-
     focused(F, Focused).
 
 :- end_tests(pane_frame_tab_focus).
+
+
+                 /*******************************
+                 *          STATUS BAR          *
+                 *******************************/
+
+%   A pane remembers what it said last.  It is said again when the pane
+%   comes back into view, also in another window it was moved to.  A
+%   window drops the bar it grew when no pane left uses it.
+
+%!  status_text(+Frame, -Text) is det.
+%
+%   Text on the reporter of Frame, or `no_bar` if Frame has no bar.
+
+status_text(F, Text) :-
+    (   get(F, status_dialog, SD)
+    ->  get(SD, member, reporter, L),
+        get(L, selection, S),
+        (   S == @nil
+        ->  Text = ''
+        ;   get(S, value, Text)
+        )
+    ;   Text = no_bar
+    ).
+
+%!  two_pane_frame(-Frame, -P1, -P2) is det.
+%
+%   An open frame with two panes in tabs of their own, P1 in view.
+
+two_pane_frame(F, P1, P2) :-
+    frame(F, _App, P1),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @off),
+    send(F, open),
+    send(F, current_pane, P1),
+    send(F, pane_changed).
+
+show(F, P) :-
+    send(F, current_pane, P),
+    send(F, pane_changed).
+
+:- begin_tests(pane_frame_status).
+
+test(a_report_is_shown, Text == 'Summary 42') :-
+    two_pane_frame(F, P1, _P2),
+    send(P1, report, inform, 'Summary %d', 42),
+    status_text(F, Text).
+test(another_pane_does_not_show_it, Text == '') :-
+    two_pane_frame(F, P1, P2),
+    send(P1, report, inform, 'Summary %d', 42),
+    show(F, P2),
+    status_text(F, Text).
+test(it_is_shown_again_when_the_pane_comes_back, Text == 'Summary 42') :-
+    two_pane_frame(F, P1, P2),
+    send(P1, report, inform, 'Summary %d', 42),
+    show(F, P2),
+    show(F, P1),
+    status_text(F, Text).
+test(an_empty_inform_forgets_it, Text == '') :-
+    two_pane_frame(F, P1, P2),
+    send(P1, report, inform, 'Summary %d', 42),
+    send(P1, report, inform, ''),
+    show(F, P2),
+    show(F, P1),
+    status_text(F, Text).
+
+%       Moving a pane by its grip reports an instruction on it and clears
+%       it when done (see `tab_frame` move mode).  That must not take the
+%       message the pane remembers away.
+
+test(a_status_message_leaves_it, Text == 'Summary 42') :-
+    two_pane_frame(F, P1, P2),
+    send(P1, report, inform, 'Summary %d', 42),
+    send(P1, report, status, 'Click the window to put this one beside'),
+    send(P1, report, status, ''),
+    show(F, P2),
+    show(F, P1),
+    status_text(F, Text).
+test(progress_is_not_remembered, Text == 'Summary 42') :-
+    two_pane_frame(F, P1, P2),
+    send(P1, report, inform, 'Summary %d', 42),
+    send(P1, report, progress, 'Working ...'),
+    show(F, P2),
+    show(F, P1),
+    status_text(F, Text).
+test(it_follows_the_pane_to_another_window, Text == 'Summary 42') :-
+    two_pane_frame(_F, P1, _P2),
+    send(P1, report, inform, 'Summary %d', 42),
+    send(P1, detach),
+    get(P1, frame, New),
+    status_text(New, Text).
+test(the_window_left_drops_its_bar, Text == no_bar) :-
+    two_pane_frame(F, P1, _P2),
+    send(P1, report, inform, 'Summary %d', 42),
+    send(P1, detach),
+    status_text(F, Text).
+test(but_not_if_a_pane_left_uses_it, Text == 'Other') :-
+    two_pane_frame(F, P1, P2),
+    send(P2, report, inform, 'Other'),  % not in view: said when shown
+    send(P1, report, inform, 'Summary %d', 42),
+    send(P1, detach),
+    status_text(F, Text).
+test(nor_a_bar_the_window_was_made_with, true(Text \== no_bar)) :-
+    frame(F, _App, P1, @on),
+    pane(second, alpha, P2),
+    send(F, append_pane, P2, @default, @off),
+    send(F, open),
+    send(P2, detach),
+    send(F, pane_changed),
+    status_text(F, Text),
+    P1 \== P2.
+
+:- end_tests(pane_frame_status).
+
+
+                 /*******************************
+                 *            CLICK             *
+                 *******************************/
+
+%   A click in a window that does not want the keyboard, such as a graph,
+%   does not move the keyboard focus.  It still makes the pane holding it
+%   the one the user works in (see `pane_frame ->window_clicked`).
+
+:- pce_begin_class(tp_view, view, "Pane that wants the keyboard").
+:- use_class_template(pane).
+:- pce_end_class(tp_view).
+
+click(W) :-
+    get(W, area, area(_, _, Wd, H)),
+    X is Wd//2, Y is H//2,
+    ignore(send(W, post_event, event(ms_left_down, W, X, Y))),
+    ignore(send(W, post_event, event(ms_left_up, W, X, Y))).
+
+%!  view_and_pane(-Frame, -View, -Pane) is det.
+%
+%   An open frame with a view that has the keyboard focus and below it a
+%   pane that does not want the keyboard.
+
+view_and_pane(F, V, P) :-
+    new(V, tp_view),
+    new(F, pane_frame(@default, @default, V)),
+    pane(other, alpha, P),
+    send(F, split, P, V, below),
+    send(F, open),
+    send(F, input_focus, @on),
+    send(F, keyboard_focus, V).
+
+:- begin_tests(pane_frame_click).
+
+test(the_view_has_the_focus, Current == V) :-
+    view_and_pane(F, V, _P),
+    get(F, current_pane, Current).
+test(a_click_in_a_pane_without_keyboard_makes_it_current, Current == P) :-
+    view_and_pane(F, _V, P),
+    click(P),
+    get(F, current_pane, Current).
+test(a_click_in_the_current_pane_keeps_the_focus, Focus == V) :-
+    view_and_pane(F, V, _P),
+    send(F, window_clicked, V),
+    get(F, keyboard_focus, Focus).
+
+:- end_tests(pane_frame_click).
+
