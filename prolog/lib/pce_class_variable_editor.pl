@@ -84,7 +84,9 @@ changes to the user's Defaults file, so they also apply to later
 sessions.
 
 A value is saved for the class of the selected object, for the class
-that declares the class variable or as `*.name` for all classes.
+that declares the class variable or as `*.name` for all classes.  The
+latter is not offered for class variables such as `colour` that have no
+common meaning among the classes that declare them.
 */
 
 %!  class_variable_editor is det.
@@ -932,17 +934,25 @@ initialise(R, Class:class, Declarer:class, Name:name, Scope:[name]) :->
     ->  true
     ;   send(Menu, append, menu_item(DeclName, @default, DeclName))
     ),
-    send(Menu, append, menu_item(*, @default, *)),
+    (   star_scope(Name, Scope)
+    ->  send(Menu, append, new(Star, menu_item(*, @default, *))),
+        star_tooltip(Name, Tip),
+        send(Star, help_message, tag, Tip)
+    ;   true
+    ),
     (   Scope == @default
     ->  true
     ;   send(Menu, selection, Scope)
     ),
-    (   Scope == @default,              % all choices set the same
-        DeclName == ClassName,
-        declaring_classes(Name, [_])
+    (   get(Menu?members, size, 1)
     ->  send(Menu, active, @off),
-        send(Menu, help_message, tag,
-             'Only this class has this class variable')
+        (   declaring_classes(Name, [_])
+        ->  send(Menu, help_message, tag,
+                 'Only this class has this class variable')
+        ;   send(Menu, help_message, tag,
+                 'This class variable has a different meaning in \c
+                  each class that declares it')
+        )
     ;   send(Menu, help_message, tag,
              'Class for which to set the value.  * sets it for all classes')
     ),
@@ -950,6 +960,67 @@ initialise(R, Class:class, Declarer:class, Name:name, Scope:[name]) :->
     send(R, applied, Value),
     send(R, update_relevant),
     send(R, update_revert).
+
+%   no_star_scope(?Name) is nondet.
+%
+%   The class variable Name has no common meaning among the classes
+%   that declare it.  Setting it for all classes using `*.Name` makes
+%   no sense, so the scope menu does not offer `*`.
+
+no_star_scope(alignment).
+no_star_scope(background).
+no_star_scope(border).
+no_star_scope(button).
+no_star_scope(colour).
+no_star_scope(cursor).
+no_star_scope(elevation).
+no_star_scope(font).
+no_star_scope(format).
+no_star_scope(gap).
+no_star_scope(height).
+no_star_scope(inactive_colour).
+no_star_scope(kind).
+no_star_scope(length).
+no_star_scope(margin).
+no_star_scope(pen).
+no_star_scope(placement).
+no_star_scope(radius).
+no_star_scope(selected_background).
+no_star_scope(selected_foreground).
+no_star_scope(selection_handles).
+no_star_scope(shadow).
+no_star_scope(size).
+no_star_scope(style).
+no_star_scope(text_colour).
+no_star_scope(texture).
+no_star_scope(width).
+
+%   star_scope(+Name, +Scope) is semidet.
+%
+%   True if the scope menu offers `*` for the class variable Name.  This
+%   is the case if several classes declare Name and it has a common
+%   meaning, or if a Defaults file already sets `*.Name`.
+
+star_scope(_, *) :-
+    !.
+star_scope(Name, _) :-
+    \+ no_star_scope(Name),
+    declaring_classes(Name, [_,_|_]).
+
+%   star_tooltip(+Name, -Tooltip) is det.
+%
+%   Tooltip for the `*` scope: the classes for which `*.Name` sets the
+%   value.
+
+star_tooltip(Name, Tooltip) :-
+    star_classes(Name, Classes),
+    maplist([C,N]>>get(C, name, N), Classes, Names0),
+    sort(Names0, Names),
+    (   Names == []
+    ->  Tooltip = 'All classes, but each class has a specific value'
+    ;   atomic_list_concat(Names, ', ', List),
+        format(string(Tooltip), 'Set the value for ~w', [List])
+    ).
 
 %   value_tooltips(+Item, +Class, +Name)
 %
