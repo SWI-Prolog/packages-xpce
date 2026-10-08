@@ -386,6 +386,22 @@ cToPceType(const char *name)
 }
 
 
+/* Type char_array, to convert the argument of string(Text) if it is not
+ * Prolog text.  `type <-check' translates, e.g., the Prolog term
+ * string(foo) to the string object it describes.
+ */
+
+static PceType
+char_array_type(void)
+{ static PceType t = NULL;
+
+  if ( !t )
+    t = cToPceType("char_array");
+
+  return t;
+}
+
+
 		 /*******************************
 		 *	   SICSTUS GLUE		*
 		 *******************************/
@@ -1729,12 +1745,22 @@ termToObject(term_t t, PceType type, atom_t assoc, int new)
       size_t len;
       term_t a = PL_new_term_ref();
       PceName pceassoc = atomToAssoc(assoc);
+      PceObject obj, ca;
 
       QGetArg(1, t, a);
       if ( PL_get_nchars(a, &len, &s, CVT_ALL) )
 	return cToPceStringA(pceassoc, s, len, FALSE);
       else if ( PL_get_wchars(a, &len, &sW, CVT_ALL) )
 	return cToPceStringW(pceassoc, sW, len, FALSE);
+					/* string(@ref), string(string(x)): */
+      if ( get_object_arg(a, &obj) &&	/* a copy of a char_array's text */
+	   (ca = pceGet(char_array_type(), NULL, cToPceName("check"),
+			1, &obj)) )
+      { if ( (s = pceCharArrayToCA(ca, &len)) )
+	  return cToPceStringA(pceassoc, s, len, FALSE);
+	if ( (sW = pceCharArrayToCW(ca, &len)) )
+	  return cToPceStringW(pceassoc, sW, len, FALSE);
+      }
 
       ThrowException(EX_TYPE, ATOM_string, t);
       return PCE_FAIL;

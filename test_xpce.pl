@@ -140,6 +140,23 @@ wstring(fmt-1) :-
     watom(A),
     get(string('hello %s', A), value, A2),
     atom_concat('hello ', A, A2).
+wstring(copy-1) :-                     % string(Object) copies the text
+    new(S0, string(hello)),
+    new(S, string(S0)),
+    send(S, append, '!'),
+    get(S0, value, hello),
+    get(S, value, 'hello!').
+wstring(copy-2) :-                      % ... of a term that makes one
+    new(S, string(string([1060,1061]))),
+    get(S, value, V),
+    atom_codes(V, [1060,1061]).
+wstring(copy-3) :-                      % ... literally, as string(Atom)
+    new(S, string(string('a%%b'))),
+    get(S, value, 'a%%b').
+wstring(copy-4) :-                      % ... and only of text
+    catch(( new(_, string(point(1,2))), fail ),
+          error(type_error(_,_),_),
+          true).
 wstring(append-1) :-
     new(S, string([97,98])),
     send(S, append, string([1060,1061])),
