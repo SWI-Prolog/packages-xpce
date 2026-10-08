@@ -952,10 +952,18 @@ initialise(R, Class:class, Declarer:class, Name:name, Scope:[name]) :->
 
 %   value_tooltips(+Item, +Class, +Name)
 %
-%   If Item offers a set of values (a combo box) and the manual
-%   describes these values, show the descriptions as tooltips of the
-%   values.
+%   If Item offers a set of values (a cycle menu or a combo box) and
+%   the manual describes these values, show the descriptions as
+%   tooltips of the values.
 
+value_tooltips(Item, Class, Name) :-
+    send(Item, instance_of, menu),
+    !,
+    (   class_variable_value_docs(Class, Name, Docs)
+    ->  send(Item?members, for_all,
+             message(@prolog, menu_item_tooltip, @arg1, prolog(Docs)))
+    ;   true
+    ).
 value_tooltips(Item, Class, Name) :-
     (   send(Item, instance_of, text_item),
         get(Item, value_set, Set),
@@ -965,6 +973,13 @@ value_tooltips(Item, Class, Name) :-
         send(Set, for_all,
              message(@prolog, value_item, Items, @arg1, prolog(Docs))),
         send(Item, value_set, Items)
+    ;   true
+    ).
+
+menu_item_tooltip(MI, Docs) :-
+    get(MI, value, Value),
+    (   memberchk(Value-Doc, Docs)
+    ->  send(MI, help_message, tag, Doc)
     ;   true
     ).
 

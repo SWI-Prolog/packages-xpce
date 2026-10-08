@@ -1125,6 +1125,25 @@ test(value_docs, true(sub_string(Doc, _, _, _, "vertical bar"))) :-
         class(text_cursor), fixed_font_style, Docs),
     memberchk(bar-Doc, Docs).
 
+%   A class variable with a set of values is edited using a cycle menu,
+%   whose values show their description as tooltip.
+
+test(value_set_cycle, [Class-Kind-Sel == menu-cycle-Value,
+                       true(sub_string(Doc, _, _, _, "vertical bar"))]) :-
+    get(class(text_cursor), class_variable, fixed_font_style, CV),
+    get(CV, value, Value),
+    new(Row, pce_class_variable_editor:cv_row(class(text_cursor),
+                                              class(text_cursor),
+                                              fixed_font_style)),
+    get(Row, item, Item),
+    get(Item, class_name, Class),
+    get(Item, kind, Kind),
+    get(Item, selection, Sel),
+    get(Item, member, bar, MI),
+    get(MI, help_message, tag, @default, Tag),
+    get(Tag, value, Doc),
+    free(Row).
+
 %   The geometry of a window is not a preference that belongs in the
 %   default view.
 

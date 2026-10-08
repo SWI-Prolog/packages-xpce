@@ -374,8 +374,14 @@ config_item(Type, Label, Value, Item) :-
 make_item({}(Names), Label, Value, Item) :-
     !,
     curl_to_chain(Names, Chain),
-    new(Item, text_item(Label, Value)),
-    send(Item, value_set, Chain).
+    new(Item, menu(Label, cycle)),
+    send(Chain, for_all, message(Item, append, @arg1)),
+    (   Value \== @default,
+        get(Item, member, Value, _)
+    ->  send(Item, selection, Value)
+    ;   true
+    ),
+    send(Item, modified, @off).
 make_item(mono_font, Label, Value, Item) :-
     !,
     (   Value == @default
