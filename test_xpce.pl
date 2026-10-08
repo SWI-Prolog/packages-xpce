@@ -421,6 +421,17 @@ real(store-1) :-
     send(R, save_in_file, Tmp),
     get(file(Tmp), object, R2),
     D == R2.
+real(store-2) :-                        % a num that is not an int32
+    new(L, line(0, 0, 10, 10)),
+    send(L, pen, 1.5),
+    send(L, attribute, big, 3000000000),
+    tmp_file(store, Tmp),
+    send(L, save_in_file, Tmp),
+    get(file(Tmp), object, L2),
+    get(L2, pen, Pen),
+    get(L2, attribute, big, Big),
+    Pen == 1.5,
+    Big == 3000000000.
 
                  /*******************************
                  *        OBJECT-AS-FILE        *

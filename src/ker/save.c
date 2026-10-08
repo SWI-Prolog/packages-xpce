@@ -88,6 +88,7 @@ Binary saved state of PCE object (collection). File format:
 		  | 'N' <string>		(a name)
 		  | 'S' <string> <string>	(HACK: a lisp_symbol)
 		  | 'I' <integer>		(an integer)
+		  | 'F' <double>		(any other num)
 		  | 'R' <object_name>		(reference to saved object)
 		  | 'A' <string>		(reference to exernal object)
 		  | 'D' <object>		(Descriptive object)
@@ -265,9 +266,17 @@ storeObject(Any obj, FileObj file)
 { /*DEBUG(NAME_save, Cprintf("Storing %s from %ld\n",
 	  pp(obj), ftell(file->fd)));*/
 
-  if ( isInteger(obj) )
-  { storeCharFile(file, 'I');
-    storeIntFile(file, obj);
+  if ( isNum(obj) )
+  { double f = valNum(obj);
+
+    if ( f >= INT32_MIN && f <= INT32_MAX && /* fits a word */
+	 f == (double)(int32_t)f )
+    { storeCharFile(file, 'I');
+      storeIntFile(file, obj);
+    } else
+    { storeCharFile(file, 'F');
+      storeDoubleFile(file, f);
+    }
     succeed;
   }
 
@@ -896,6 +905,7 @@ loadObject(IOSTREAM *fd)
     case '0':	return Arg(10);
     case 'N':   return loadName(fd);
     case 'I':   return toInt(loadWord(fd));
+    case 'F':   return toNum(loadDouble(fd));
     case 'R': { Any r;
 		Any ref = loadNameObject(fd);
 
