@@ -58,7 +58,8 @@ Run with:
 :- set_prolog_flag('SDL_VIDEODRIVER', dummy).
 
 :- use_module(library(filesex), [directory_file_path/3,
-                                  delete_directory_and_contents/1]).
+                                  delete_directory_and_contents/1,
+                                  directory_member/3]).
 
 %   Loading the debugger migrates the settings of an old
 %   config('Tracer.cnf') to the user's Defaults file and renames it.
@@ -849,6 +850,132 @@ test(and_it_lands_on_the_left_of_what_was_there, true(Landed == left)) :-
     chain_list(Chain, Windows),
     member(Other, Windows), Other \== SB, !,
     side_of(SB, Other, Landed).
+
+%       Expanding a file often loads files, e.g., to analyse it.  A file
+%       that loads appears in the tree and moves the nodes below it, but
+%       the view stays where it was: the node expanded last keeps its
+%       place, or else the top node of the window.
+
+test(a_file_that_loads_leaves_the_expanded_node_in_place,
+     Before == After) :-
+    with_loaded_tree(T, Dir,
+                     ( file(Dir, 'z.pl', Z),
+                       get(T, file_node, Z, Node),
+                       user_expands(T, Node),
+                       send(T, normalise, Node?image),
+                       settle,
+                       offset(T, Node, Before),
+                       load_new(T, Dir, 'c.pl'),
+                       offset(T, Node, After)
+                     )).
+test(without_one_the_top_node_stays,
+     [ true(Before == After), true(file_name_extension(_, pl, TopId)) ]) :-
+    with_loaded_tree(T, Dir,
+                     ( file(Dir, 'z.pl', Z0),
+                       get(T, file_node, Z0, Z),
+                       send(T, normalise, Z?image),
+                       settle,
+                       prolog_navigator:reference_node(T, Top),
+                       get(Top, identifier, TopId),
+                       offset(T, Top, Before),
+                       load_new(T, Dir, 'c.pl'),
+                       offset(T, Top, After)
+                     )).
+
+test(nor_does_an_update_that_scrolls, Before == After) :-
+    %  Updating may expand a directory, which scrolls it into view
+    with_loaded_tree(T, Dir,
+                     ( file(Dir, 'z.pl', Z),
+                       get(T, file_node, Z, Node),
+                       user_expands(T, Node),
+                       send(T, normalise, Node?image),
+                       settle,
+                       offset(T, Node, Before),
+                       send(T, keep_position, message(T, scroll_to, point(0, 0))),
+                       offset(T, Node, After)
+                     )).
+test(expanding_from_code_does_not_make_an_anchor, Anchor == @nil) :-
+    with_loaded_tree(T, Dir,
+                     ( file(Dir, 'z.pl', Z),
+                       get(T, file_node, Z, Node),
+                       send(Node, collapsed, @off),
+                       get(T, anchor, Anchor)
+                     )).
+
+%   user_expands(+Tree, +Node)
+%
+%   Expand Node as the user does by double clicking it: while
+%   processing an event of Tree.
+
+user_expands(T, Node) :-
+    new(G, box),
+    send(G, recogniser, handler(ms_left_down, message(Node, collapsed, @off))),
+    new(Ev, event(ms_left_down, T, 10, 10)),
+    send(Ev, post, G),
+    free(G).
+
+%   with_loaded_tree(-Tree, -Dir, :Goal)
+%
+%   Run Goal on a small tree that shows the loaded files of Dir, which
+%   holds more files than fit in the window.
+
+:- meta_predicate with_loaded_tree(-, -, 0).
+
+with_loaded_tree(T, Dir, Goal) :-
+    tmp_file(navigator, Dir),
+    make_directory(Dir),
+    numlist(1, 20, Is),
+    findall(Name, ( member(I, Is),
+                    format(atom(Name), 'm~|~`0t~d~2+.pl', [I])
+                  ), Names),
+    setup_call_cleanup(
+        ( maplist(load_new(@nil, Dir), ['z.pl'|Names]),
+          new(T, prolog_source_structure(Dir)),
+          send(T, content, loaded),
+          new(F, frame),
+          send(F, append, T),
+          send(T, size, size(200, 150)),
+          send(F, open)
+        ),
+        Goal,
+        ( settle,
+          send(F, destroy),
+          forall(( directory_member(Dir, File, [extensions([pl])]),
+                   source_file(File)
+                 ),
+                 unload_file(File)),
+          delete_directory_and_contents(Dir)
+        )).
+
+%   load_new(+Tree, +Dir, +Name)
+%
+%   Create and load the module file Name in Dir and tell Tree, as the
+%   hook of the IDE does.
+
+load_new(T, Dir, Name) :-
+    file(Dir, Name, File),
+    file_name_extension(Module, _, Name),
+    setup_call_cleanup(open(File, write, Out),
+                       format(Out, ':- module(~q, []).~n', [Module]),
+                       close(Out)),
+    load_files(File, [silent(true)]),
+    (   T == @nil
+    ->  true
+    ;   send(T, loaded_file, File)
+    ).
+
+file(Dir, Name, File) :-
+    directory_file_path(Dir, Name, File).
+
+offset(T, Node, Offset) :-
+    prolog_navigator:node_y(T, Node, Y),
+    get(T, visible, area(_, VY, _, _)),
+    Offset is Y - VY.
+
+%   Run the updates of the IDE that loading queued.
+
+settle :-
+    send(timer(0.2), delay).
 
 :- end_tests(navigator_pane).
 

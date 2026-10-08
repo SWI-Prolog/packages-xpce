@@ -241,6 +241,10 @@ variable(extra_seeds, chain, get,
          "Additional directories to browse (see <-scan_seeds)").
 variable(seed_cache, chain*, get,
          "Cached <-scan_seeds; @nil if it must be recomputed").
+variable(anchor, any*, get,
+         "Identifier of the node the user expanded last").
+variable(anchor_event, event*, get,
+         "Event that made the <-anchor").
 
 initialise(FB, Root:[directory]) :->
     source_pattern(Regex),
@@ -675,9 +679,100 @@ loaded_file(FB, File:name) :->
     send(FB, invalidate_seeds),         % its directory is a new seed
     (   file_directory_name(File, Dir),
         loaded_dir_node(FB, Dir, Node)
-    ->  send(Node, update)
+    ->  send(FB, keep_position, message(Node, update))
     ;   true
     ).
+
+expand_node(FB, Id:any) :->
+    "Expand a node; if the user expands it, it becomes the <-anchor"::
+    (   user_event(FB, Ev)
+    ->  send(FB, slot, anchor, Id),
+        send(FB, slot, anchor_event, Ev)
+    ;   true
+    ),
+    send_super(FB, expand_node, Id).
+
+%   user_event(+FB, -Event) is semidet.
+%
+%   True if we are processing Event, the user acting on FB, e.g., by
+%   double clicking a node or clicking its expand handle.  Expanding a
+%   node may expand the nodes below it.  Only the first expansion of an
+%   event is the one of the user.
+
+user_event(FB, Ev) :-
+    get(@event, '_value', Ev),
+    send(Ev, instance_of, event),
+    get(Ev, window, FB),
+    \+ get(FB, anchor_event, Ev).
+
+%   Loading a file adds it to the tree, which may move the nodes below
+%   it, and may expand directory nodes, which scrolls them into view.
+%   Expanding a file often loads files, e.g., for analysing it.
+%   ->keep_position keeps the view stable: the node the user expanded
+%   last, or else the top node of the window, stays where it is in the
+%   window.
+
+keep_position(FB, Msg:code) :->
+    "Run Msg, keeping the reference node in place"::
+    (   reference_node(FB, Node),
+        node_offset(FB, Node, O0)
+    ->  send(Msg, forward),
+        (   object(Node),
+            node_offset(FB, Node, O1),
+            O1 =\= O0
+        ->  get(FB, visible, area(X, VY, _, _)),
+            NewVY is max(0, VY+O1-O0),
+            send(FB, scroll_to, point(X, NewVY))
+        ;   true
+        )
+    ;   send(Msg, forward)
+    ).
+
+%   node_offset(+FB, +Node, -Offset) is semidet.
+%
+%   Offset is the distance from the top of the window to Node.
+
+node_offset(FB, Node, Offset) :-
+    node_y(FB, Node, Y),
+    get(FB, visible, area(_, VY, _, _)),
+    Offset is Y-VY.
+
+%   reference_node(+FB, -Node) is semidet.
+%
+%   Node is the displayed node that must keep its position: the
+%   <-anchor if it is displayed, else the top node in the window.
+
+reference_node(FB, Node) :-
+    get(FB, anchor, Id),
+    Id \== @nil,
+    get(FB?tree?nodes, member, Id, Node),
+    node_y(FB, Node, _),
+    !.
+reference_node(FB, Node) :-
+    send(FB, compute),
+    get(FB, visible, area(_, VY, _, _)),
+    get(FB?tree, root, Root),
+    new(Nodes, chain),
+    send(Root, for_all, message(Nodes, append, @arg1)),
+    chain_list(Nodes, List),
+    free(Nodes),
+    findall(Y-N, ( member(N, List),
+                   node_y(FB, N, Y),
+                   Y >= VY
+                 ), Pairs),
+    keysort(Pairs, [_-Node|_]).
+
+%   node_y(+FB, +Node, -Y) is semidet.
+%
+%   Y is the top of the image of Node in FB.  Fails if Node is not
+%   displayed, e.g., because its parent is collapsed.
+
+node_y(FB, Node, Y) :-
+    send(FB, compute),
+    get(Node, image, Image),
+    get(Image, device, Dev),
+    Dev \== @nil,
+    get(Image, absolute_y, FB, Y).
 
 %!  loaded_dir_node(+FB, +Dir, -Node) is semidet.
 %
