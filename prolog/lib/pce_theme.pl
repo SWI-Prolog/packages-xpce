@@ -44,7 +44,8 @@
             syntax_colour_name/3,       % +Class, +Attribute, -Name
             check_theme/1,              % +Theme
             load_theme_libraries/0,
-            theme_issues/2              % +Theme, -Issues
+            theme_issues/2,             % +Theme, -Issues
+            theme_colour_origin/2       % +Name, -Origin
           ]).
 :- use_module(library(pce)).
 :- autoload(library(apply), [maplist/3, exclude/3]).
@@ -345,6 +346,83 @@ theme_value(Theme, Match, Name, Value) :-
     ).
 theme_value(Theme, _, Name, Value) :-
     colour_value(Theme, Name, Value).
+
+%!  theme_colour_origin(+Name, -Origin) is semidet.
+%
+%   Origin explains why the semantic colour Name has its value in the
+%   current theme.  Origin is one of
+%
+%     - desktop(Theme, Why)
+%       Name is a role `ui_<role>` that uses the system colour
+%       `sys_<role>`.  Why is `matches` if Theme is as dark as the
+%       desktop or `undefined` if Theme does not define Name.
+%     - theme(Theme)
+%       The value is defined by Theme.
+%     - adaptive(Reference)
+%       The value is a colour chosen by the user, adapted to the
+%       brightness of Reference.  See adaptive_colour/3.
+%     - default(Source)
+%       The value is the default, defined by Source, which is one of
+%       `xpce` (see builtin_colour/2), module(Module) (see
+%       theme_colours/1), `hook` (see semantic_colour/3) or
+%       syntax(Class) (see syntax_colour/3).
+%     - program
+%       The program changed the value of the theme colour.
+%
+%   Fails if Name is not a semantic colour.
+
+theme_colour_origin(Name, Origin) :-
+    once(semantic_colour_name(Name, _)),
+    current_theme(Theme),
+    (   matches_system(Theme)
+    ->  Match = true
+    ;   Match = false
+    ),
+    theme_value(Theme, Match, Name, Value),
+    (   get(@theme_colours, find, @arg1?name == Name, Colour),
+        get(Colour, derived_from, Current),
+        \+ same_colour_value(Current, Value)
+    ->  Origin = program
+    ;   colour_origin(Theme, Match, Name, Origin)
+    ).
+
+same_colour_value(V1, V2) :-
+    atomic(V1), atomic(V2),
+    !,
+    atom_string(V1, S),
+    atom_string(V2, S).
+same_colour_value(V, V).
+
+colour_origin(_, _, Name, adaptive(Reference)) :-
+    adaptive_colour_(Name, _, Reference),
+    !.
+colour_origin(Theme, Match, Name, Origin) :-
+    role(Name, _),
+    !,
+    (   Match == true
+    ->  Origin = desktop(Theme, matches)
+    ;   colour(Theme, Name, _)
+    ->  Origin = theme(Theme)
+    ;   Origin = desktop(Theme, undefined)
+    ).
+colour_origin(Theme, _, Name, theme(Theme)) :-
+    colour(Theme, Name, _),
+    !.
+colour_origin(_, _, Name, default(Source)) :-
+    default_source(Name, Source).
+
+default_source(Name, xpce) :-
+    builtin_colour(Name, _),
+    !.
+default_source(Name, module(M)) :-
+    declared_colour(Name, _, M),
+    !.
+default_source(Name, hook) :-
+    semantic_colour(Name, _, _),
+    !.
+default_source(Name, syntax(Class)) :-
+    syntax_colour(Name, Class, _),
+    !.
 
 %!  role(?Name, ?System) is nondet.
 %

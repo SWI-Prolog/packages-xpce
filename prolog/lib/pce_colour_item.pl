@@ -36,7 +36,8 @@
 :- use_module(library(pce)).
 :- use_module(library(help_message)).
 :- pce_autoload(colour_editor, library(pce_colour_editor)).
-:- autoload(library(pce_theme), [available_theme/1]).
+:- autoload(library(pce_theme), [available_theme/1, theme_colour_origin/2]).
+:- autoload(library(aggregate), [aggregate_all/3]).
 :- require([ between/3
            , default/3
            , forall/2
@@ -633,9 +634,11 @@ initialise(F, Current:[colour], Msg:[code]*) :->
     send_super(F, initialise, 'Select theme colour'),
     default(Msg, @nil, TheMsg),
     send(F, message, TheMsg),
-    send(F, append, new(B, browser(size := size(80, 20)))),
-    get(B?font, width, "  ui_text_selection_background  ", W),
-    send(B?text_image, tab_stops, vector(W+24)),
+    send(F, append, new(B, browser(size := size(90, 20)))),
+    get(B?font, width, "  ui_text_selection_background  ", W1),
+    source_column_width(B?font, W2),
+    W is W1+24,
+    send(B?text_image, tab_stops, vector(W, W+W2)),
     send(B, open_message, message(F, ok)),
     get(@theme_colours, copy, Colours),
     send(Colours, sort, ?(@prolog, compare_theme_colours, @arg1, @arg2)),
@@ -660,11 +663,15 @@ append_colour(F, Colour:theme_colour) :->
     send(Icon, draw_in, new(Border, box(20, 14))),
     send(Border, colour, grey50),
     send(B, style, Name, style(icon := Icon)),
+    colour_trace(Colour, Trace, Source),
     (   get(Colour, summary, Summary), Summary \== @nil
-    ->  Label = string('  %s\t%s', Name, Summary)  % spaces: gap after icon
-    ;   Label = string('  %s', Name)
+    ->  true
+    ;   Summary = ''
     ),
-    send(B, append, dict_item(Name, Label, Colour, Name)).
+    Label = string('  %s\t%s\t%s', Name, Source, Summary), % spaces: gap after icon
+    send(B, append, new(DI, dict_item(Name, Label, Colour, Name))),
+    atomic_list_concat(Trace, '\n', Tip),
+    send(DI, help_message, tag, Tip).
 
 ok(F) :->
     "Call <-message with the selected colour and close"::
@@ -685,6 +692,133 @@ cancel(F) :->
     send(F, destroy).
 
 :- pce_end_class(theme_colour_chooser).
+
+%   source_column_width(+Font, -Width)
+%
+%   Width for the column that shows the source of the colours, which is
+%   `desktop`, `default`, `user`, `program` or the name of a theme.
+
+source_column_width(Font, Width) :-
+    findall(Source, ( member(Source, [desktop, default, user, program])
+                    ; available_theme(Source)
+                    ), Sources),
+    aggregate_all(max(W),
+                  ( member(Source, Sources),
+                    atom_concat(Source, '  ', Text),
+                    get(Font, width, Text, W)
+                  ), Width).
+
+%   colour_trace(+Colour, -Lines, -Source)
+%
+%   Lines describes how the theme colour Colour gets its value, one
+%   line for each step.  For example, in the light theme:
+%
+%       ui_margin_background = ui_window_background (default of xpce)
+%       ui_window_background = sys_window_background (desktop colour, ...)
+%       sys_window_background = #ffffff (from the GNOME desktop)
+%
+%   Source is a short summary: `desktop` if the value comes from the
+%   desktop, the theme that defines it or `default`.
+
+colour_trace(Colour, Lines, Source) :-
+    colour_trace(Colour, [], Lines, Source).
+
+colour_trace(Colour, Seen, [Line|Lines], Source) :-
+    get(Colour, name, Name),
+    get(Colour, derived_from, From0),
+    colour_value_name(From0, From),
+    (   theme_colour_origin(Name, Origin)
+    ->  origin_text(Origin, Why),
+        origin_source(Origin, Source0)
+    ;   Why = 'created by the program',
+        Source0 = program
+    ),
+    format(atom(Line), '~w = ~w (~w)', [Name, From, Why]),
+    (   memberchk(From, Seen)
+    ->  Lines = [],
+        Source = Source0
+    ;   get(@theme_colours, find, @arg1?name == From, Next)
+    ->  colour_trace(Next, [Name|Seen], Lines, Source)
+    ;   value_trace(From, Lines, Source1),
+        (   var(Source1)
+        ->  Source = Source0
+        ;   Source = Source1
+        )
+    ).
+
+%   value_trace(+Value, -Lines, -Source)
+%
+%   Lines describes the value of the colour Value that is not a theme
+%   colour.  For a system colour, Source tells whether the value comes
+%   from the desktop.
+
+value_trace(Value, [Line], Source) :-
+    sub_atom(Value, 0, _, _, sys_),
+    !,
+    colour_hex(Value, Hex),
+    (   object(@system_colour_origins),
+        get(@system_colour_origins, member, Value, Origin)
+    ->  system_origin_text(Origin, Why),
+        system_origin_source(Origin, Source)
+    ;   Why = 'system colour'
+    ),
+    format(atom(Line), '~w = ~w (~w)', [Value, Hex, Why]).
+value_trace(Value, [], _) :-
+    sub_atom(Value, 0, _, _, #),
+    !.
+value_trace(Value, [Line], _) :-
+    colour_hex(Value, Hex),
+    !,
+    format(atom(Line), '~w = ~w', [Value, Hex]).
+value_trace(_, [], _).
+
+colour_value_name(Value, Name) :-
+    atomic(Value),
+    !,
+    atom_string(Name, Value).
+colour_value_name(Colour, Name) :-
+    get(Colour, name, Name).
+
+colour_hex(Name, Hex) :-
+    get(@pce, convert, Name, colour, Colour),
+    get(Colour, red, R),
+    get(Colour, green, G),
+    get(Colour, blue, B),
+    format(atom(Hex), '#~|~`0t~16r~2+~|~`0t~16r~2+~|~`0t~16r~2+', [R,G,B]).
+
+origin_text(desktop(Theme, matches), Text) :-
+    format(atom(Text), 'desktop colour, as the ~w theme matches the desktop',
+           [Theme]).
+origin_text(desktop(Theme, undefined), Text) :-
+    format(atom(Text), 'desktop colour, not defined by the ~w theme',
+           [Theme]).
+origin_text(theme(Theme), Text) :-
+    format(atom(Text), 'set by the ~w theme', [Theme]).
+origin_text(adaptive(Reference), Text) :-
+    format(atom(Text), 'chosen by the user, adapted to ~w', [Reference]).
+origin_text(default(xpce), 'default of xpce').
+origin_text(default(module(M)), Text) :-
+    format(atom(Text), 'default of ~w', [M]).
+origin_text(default(hook), 'default').
+origin_text(default(syntax(_)), 'default PceEmacs syntax colour').
+origin_text(program, 'set by the program').
+
+origin_source(desktop(_, _), desktop).
+origin_source(theme(Theme), Theme).
+origin_source(adaptive(_), user).
+origin_source(default(_), default).
+origin_source(program, program).
+
+system_origin_text(gnome,   'from the GNOME desktop').
+system_origin_text(kde,     'from the KDE desktop').
+system_origin_text(windows, 'from the Windows settings').
+system_origin_text(macos,   'from the macOS settings').
+system_origin_text(xpce,    'default of xpce; the desktop does not define it').
+system_origin_text(tint,
+                   'sys_window_background tinted with sys_accent').
+
+system_origin_source(xpce, default) :- !.
+system_origin_source(_,    desktop).
 
 %   compare_theme_colours(+C1, +C2, -Order)
 %

@@ -311,6 +311,73 @@ test(prolog_mode_style, [Class == theme_colour, Same == true]) :-
     get(@colours, member, syntax_comment, C2),
     ( C == C2 -> Same = true ; Same = false ).
 
+
+%   theme_colour_origin/2 tells why a theme colour has its value.
+
+test(origin_role, [condition(\+ dark_system),
+                   Origin == desktop(light, matches)]) :-
+    apply_theme(light),
+    theme_colour_origin(ui_window_background, Origin).
+test(origin_theme, [condition(\+ dark_system),
+                    Origin == theme(test_dark)]) :-
+    setup_call_cleanup(
+        apply_theme(test_dark),
+        theme_colour_origin(ui_window_background, Origin),
+        apply_theme(light)).
+test(origin_not_in_theme, [condition(\+ dark_system),
+                           Origin == desktop(test_dark, undefined)]) :-
+    setup_call_cleanup(
+        apply_theme(test_dark),
+        theme_colour_origin(ui_dialog_background, Origin),
+        apply_theme(light)).
+test(origin_matching_theme, Origin == desktop(test_dark, matches)) :-
+    setup_call_cleanup(
+        ( fake_dark_system,
+          apply_theme(test_dark)
+        ),
+        theme_colour_origin(ui_window_background, Origin),
+        ( restore_system,
+          apply_theme(light)
+        )).
+test(origin_builtin, Origin == default(xpce)) :-
+    apply_theme(light),
+    theme_colour_origin(ui_cursor, Origin).
+test(origin_hook, Origin == default(hook)) :-
+    apply_theme(light),
+    theme_colour_origin(test_theme_fg, Origin).
+test(origin_program, Origin == program) :-
+    apply_theme(light),
+    theme_colour(test_theme_bg, C),
+    setup_call_cleanup(
+        send(C, derived_from, green),
+        theme_colour_origin(test_theme_bg, Origin),
+        send(C, derived_from, white)).
+test(origin_unknown, fail) :-
+    theme_colour_origin(test_theme_no_such_name, _).
+test(system_origin, true(memberchk(Origin, [gnome,kde,windows,macos,xpce]))) :-
+    theme_rgb(sys_window_background, _),
+    get(@system_colour_origins, member, sys_window_background, Origin).
+test(system_origin_tint,
+     true(memberchk(Origin, [gnome,kde,windows,macos,tint]))) :-
+    theme_rgb(sys_text_selection_background, _),
+    get(@system_colour_origins, member, sys_text_selection_background,
+        Origin).
+
+%   The theme colour chooser shows the trace as tooltip
+
+test(colour_trace, [ condition(\+ dark_system),
+                     Lines = [ 'ui_margin_background = ui_window_background (default of xpce)',
+                               'ui_window_background = sys_window_background (desktop colour, as the light theme matches the desktop)',
+                               Sys
+                             ],
+                     Source == desktop,
+                     true(sub_atom(Sys, 0, _, _, 'sys_window_background = #'))
+                   ]) :-
+    use_module(library(pce_colour_item), []),
+    apply_theme(light),
+    theme_colour(ui_margin_background, C),
+    pce_colour_item:colour_trace(C, Lines, Source).
+
 informational_issue(redundant(_)).
 
 adaptive_issue(Issue) :-

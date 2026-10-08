@@ -157,22 +157,53 @@ add_text_selection_colour(HashTable cn)
   }
 }
 
+/* @system_colour_origins maps each sys_* name to where its value comes
+ * from: the platform (windows, macos, kde or gnome), `xpce` for the
+ * fallback above or `tint` for a text selection background computed by
+ * add_text_selection_colour().  This allows the user to see whether a
+ * theme colour follows the desktop.
+ */
+
+static void
+set_system_colour_origin(HashTable cn, HashTable origins,
+			 const char *name, Name platform, Name fallback)
+{ Name key = CtoKeyword(name);
+
+  appendHashTable(origins, key,
+		  getMemberHashTable(cn, key) ? platform : fallback);
+}
+
 static void
 load_system_colours(HashTable cn)
-{
+{ static HashTable origins = NULL;
+  Name platform = NAME_xpce;
+
+  if ( !origins )
+    origins = globalObject(NAME_systemColourOrigins, ClassHashTable, EAV);
+  clearHashTable(origins);
+
 #ifdef __WINDOWS__
   ws_system_colours(cn);
+  platform = NAME_windows;
 #elif defined(__APPLE__)
   ns_system_colours(add_platform_colour, cn);
+  platform = NAME_macos;
 #else
   if ( running_kde() )
-    kde_system_colours(add_platform_colour, cn);
-  else if ( xdg_current_desktop("GNOME") )
-    gnome_system_colours(add_platform_colour, cn);
+  { kde_system_colours(add_platform_colour, cn);
+    platform = NAME_kde;
+  } else if ( xdg_current_desktop("GNOME") )
+  { gnome_system_colours(add_platform_colour, cn);
+    platform = NAME_gnome;
+  }
 #endif
 
   for(const struct sys_colour *sc = sys_colours; sc->name; sc++)
+  { set_system_colour_origin(cn, origins, sc->name, platform, NAME_xpce);
     add_system_colour(cn, sc->name, sc->fallback);
+  }
+  set_system_colour_origin(cn, origins, "sys_text_selection_background",
+			   platform, NAME_tint);
   add_text_selection_colour(cn);
 }
 
