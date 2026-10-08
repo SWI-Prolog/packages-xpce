@@ -53,7 +53,9 @@
 :- use_module(library(debug),[debug/3]).
 :- autoload(library(prolog_code), [head_name_arity/3]).
 :- autoload(library(prolog_debug), [(nospy)/1, (spy)/1]).
+:- use_module(library(edit), []).      % prolog_edit:predicate_location/2
 :- autoload(library(edit),[edit/1]).
+:- pce_autoload(prolog_predicate, library(prolog_predicate)).
 :- autoload(library(help),[help/1]).
 :- autoload(library(lists),[member/2,subtract/3,append/3,last/2]).
 :- autoload(library(pce_debug),
@@ -1883,13 +1885,41 @@ open(P) :->
     ;   send_super(P, open)
     ).
 
+%   A predicate that is not defined in the file, e.g., a built-in or
+%   library predicate, has its source elsewhere.  edit/1 finds it.
+
+has_source(P) :->
+    "Has associated source, in the file or elsewhere"::
+    (   send_super(P, has_source)
+    ->  true
+    ;   predicate_source(P, _, _)
+    ).
+
+edit(P) :->
+    "Open definition in editor"::
+    (   send_super(P, has_source)
+    ->  send_super(P, edit)
+    ;   predicate_source(P, _, _)
+    ->  get(P, head, @on, Head),
+        edit(Head)
+    ;   send(P, report, error, 'No source')
+    ).
+
+predicate_source(P, File, Line) :-
+    get(P, head, @on, Head),
+    once(prolog_edit:predicate_location(Head, Location)),
+    get_dict(file, Location, File),
+    get_dict(line, Location, Line).
+
+%   help/1 renders the manual on the console unless a hook shows it.
+%   In the GUI thread this may block, so we use class prolog_predicate,
+%   which shows the manual in a window.
+
 manual(P) :->
     get(P, name, Name),
     get(P, arity, Arity),
-    (   help(Name/Arity)
-    ->  true
-    ;   send(P, report, warning, 'No help for %s/%d', Name, Arity)
-    ).
+    new(PP, prolog_predicate(Name/Arity)),
+    send(PP, help).
 
 has_manual(P) :->
     "Succeed if there is a manual-page"::

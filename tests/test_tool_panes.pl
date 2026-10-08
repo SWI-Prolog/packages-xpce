@@ -902,6 +902,32 @@ test(expanding_from_code_does_not_make_an_anchor, Anchor == @nil) :-
                        get(T, anchor, Anchor)
                      )).
 
+%       A callee that is not defined in the file, e.g., a library or
+%       built-in predicate, is edited where it is defined.
+
+test(a_callee_from_a_library_can_be_edited,
+     [ true(Base == 'lists.pl'), true(Line > 0) ]) :-
+    with_loaded_tree(T, Dir,
+                     ( file(Dir, 'calls.pl', File),
+                       setup_call_cleanup(
+                           open(File, write, Out),
+                           format(Out, ':- module(calls, [p/1]).~n\c
+                                        :- use_module(library(lists)).~n\c
+                                        p(X) :- append([a], [b], X).~n', []),
+                           close(Out)),
+                       load_files(File, [silent(true)]),
+                       settle,
+                       send(T, compute),    % display the new nodes
+                       get(T, file_node, File, @on, FileNode),
+                       send(FileNode, collapsed, @off),
+                       get(FileNode?sons, find, @arg1?label == 'p/1', P),
+                       send(P, collapsed, @off),
+                       get(P?sons, find, @arg1?label == 'append/3', Append),
+                       send(Append, has_source),
+                       prolog_navigator:predicate_source(Append, Source, Line),
+                       file_base_name(Source, Base)
+                     )).
+
 %   user_expands(+Tree, +Node)
 %
 %   Expand Node as the user does by double clicking it: while
