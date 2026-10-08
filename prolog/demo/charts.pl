@@ -343,7 +343,7 @@ rainfall([1-62, 2-48, 3-55, 4-41, 5-58, 6-66,
 :- pce_begin_class(month_axis, plot_axis,
                    "Axis labelled with month names").
 
-label_for_value(A, Val:'int|real', Gr:graphical) :<-
+label_for_value(A, Val:num, Gr:graphical) :<-
     "Print the month name rather than its number"::
     get(A, tag_font, Font),
     Nth is round(Val),

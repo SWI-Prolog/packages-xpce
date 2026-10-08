@@ -197,7 +197,7 @@ initialise(G,
            Message:message=[code]*,
            Preview:preview=[code]*,
            Cancel:cancel=[code]*,
-           Time:time=[real]) :->
+           Time:time=[num]) :->
     "Initialise as click_gesture with timeout"::
     default(Time, 0.3, TheTime),
     send_super(G, initialise,

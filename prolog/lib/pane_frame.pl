@@ -449,7 +449,7 @@ split(F, Pane:window,
 split_beside(F, Pane:window,
                 Relatives:chain,
                 Side:{above,below,left,right},
-                Share:[real]) :->
+                Share:[num]) :->
     "Add Pane beside those panes, taking that share of their room"::
     get(Relatives, head, First0),
     pane_group(First0, First),

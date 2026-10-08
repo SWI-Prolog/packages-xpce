@@ -584,7 +584,7 @@ new_terminal(_IDE, F:pane_frame,
              Split:split=[bool|{above,below,left,right}],
              Profile:profile=[name],
              Beside:beside=[window],
-             Share:share=[real]) :->
+             Share:share=[num]) :->
     "Put an Epilog terminal in this window"::
     use_module(user:library(epilog), []),
     (   Split == @on

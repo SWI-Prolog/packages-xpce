@@ -71,7 +71,7 @@ pixel_range(P, Dir:{x,y}, Range:tuple) :<-
     ),
     get(Axis, pixel_range, Range).
 
-translate(P, X:'int|real', Y:'int|real', Point) :<-
+translate(P, X:num, Y:num, Point) :<-
     "Translate a coordinate"::
     get(P, member, x, XAxe),
     get(P, member, y, YAxe),
@@ -80,20 +80,20 @@ translate(P, X:'int|real', Y:'int|real', Point) :<-
     new(Point, point(PX, PY)).
 
 
-translate_x(P, X:'int|real', Xpoint:int) :<-
+translate_x(P, X:num, Xpoint:int) :<-
     "Translate an X- coordinate"::
     get(P, member, x, XAxe),
     get(XAxe, location, X, Xpoint).
-translate_y(P, Y:'int|real', Ypoint:int) :<-
+translate_y(P, Y:num, Ypoint:int) :<-
     "Translate an Y- coordinate"::
     get(P, member, y, YAxe),
     get(YAxe, location, Y, Ypoint).
 
-value_from_x(P, X:int, Value:'int|real') :<-
+value_from_x(P, X:int, Value:num) :<-
     "Translate X- coordinate to value"::
     get(P, member, x, XAxe),
     get(XAxe, value_from_coordinate, X, Value).
-value_from_y(P, Y:int, Value:'int|real') :<-
+value_from_y(P, Y:int, Value:num) :<-
     "Translate Y- coordinate to value"::
     get(P, member, y, YAxe),
     get(YAxe, value_from_coordinate, Y, Value).
@@ -142,11 +142,11 @@ expose_member(P, Name:name) :->
 :- pce_begin_class(plot_point(x_value, y_value), point, "Plotter point").
 
 variable(modified,      bool := @on,    both,   "X/Y value is modified").
-variable(x_value,       'int|real',     get,    "X-value").
-variable(y_value,       'int|real',     get,    "Y-value").
+variable(x_value,       num,            get,    "X-value").
+variable(y_value,       num,            get,    "Y-value").
 variable(curve,         plot_graph,     get,    "Curve I'm associated with").
 
-initialise(P, C:plot_graph, X:'x=int|real', Y:'y=int|real') :->
+initialise(P, C:plot_graph, X:x=num, Y:y=num) :->
     "Create from X and Y"::
     send_super(P, initialise),
     send(P, slot, curve, C),
@@ -177,16 +177,16 @@ compute(P) :->
     ;   true
     ).
 
-x(P, X:'int|real') :->
+x(P, X:num) :->
     send(P, slot, x_value, X),
     send(P, modified).
-y(P, Y:'int|real') :->
+y(P, Y:num) :->
     send(P, slot, y_value, Y),
     send(P, modified).
 
-x(P, X:'int|real') :<-
+x(P, X:num) :<-
     get(P, slot, x_value, X).
-y(P, Y:'int|real') :<-
+y(P, Y:num) :<-
     get(P, slot, y_value, Y).
 
 redundant(P) :->
@@ -238,7 +238,7 @@ kind(PG, T:{poly,smooth,points_only}) :->
     ).
 
 
-append(PG, X:'x=int|real', Y:'y=int|real') :->
+append(PG, X:x=num, Y:y=num) :->
     "Append a plot_point to <-values"::
     send_super(PG, append, plot_point(PG, X, Y)).
 
@@ -259,10 +259,10 @@ compute(PG) :->
                    "Graphical mark on a graph").
 
 variable(modified,      bool := @on,    none,   "X/Y value is modified").
-variable(x_value,       'int|real',     get,    "X-value").
-variable(y_value,       'int|real',     get,    "Y-value").
+variable(x_value,       num,            get,    "X-value").
+variable(y_value,       num,            get,    "Y-value").
 
-initialise(PM, X:x='int|real', Y:y='int|real', Img:image=[graphical]) :->
+initialise(PM, X:x=num, Y:y=num, Img:image=[graphical]) :->
     send_super(PM, initialise),
     (   Img \== @default
     ->  send(PM, display, Img),
@@ -296,11 +296,11 @@ modified(P) :->
         send(P, request_compute)
     ).
 
-x_value(PM, X:'int|real') :->
+x_value(PM, X:num) :->
     send(PM, slot, x_value, X),
     send(PM, modified).
 
-y_value(PM, Y:'int|real') :->
+y_value(PM, Y:num) :->
     send(PM, slot, y_value, Y),
     send(PM, modified).
 

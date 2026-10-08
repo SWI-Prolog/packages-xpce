@@ -116,7 +116,7 @@ it did when each was a frame.
 variable(samples,          int,  get, "Total # samples").
 variable(ticks,            int,  get, "Total # ticks").
 variable(accounting_ticks, int,  get, "# ticks while accounting").
-variable(time,             real, get, "Total time").
+variable(time,             num,  get, "Total time").
 variable(nodes,            int,  get, "Nodes created").
 variable(ports,            {true,false,classic},  get, "Port mode").
 variable(time_view,        {percentage,seconds} := percentage,

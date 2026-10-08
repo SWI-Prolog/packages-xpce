@@ -80,7 +80,7 @@ initialise(S, Img:image, Label:[char_array]) :->
     ),
     send(S, display, bitmap(Img)).
 
-open(S, Time:[real]*) :->
+open(S, Time:[num]*) :->
     send(S, open_centered),
     send(S, wait),
     (   number(Time)

@@ -155,7 +155,7 @@ base_type_name(Type, Name) :-
     atomic_list_concat(Alts, '|', Name).
 
 range_number_type(int_range,  int).
-range_number_type(real_range, real).
+range_number_type(real_range, num).
 
 strip_optional(Codes0, Codes) :-
     append(Codes1, `*`, Codes0),

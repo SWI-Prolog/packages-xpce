@@ -725,7 +725,7 @@ extend_graph(TD, Stat:thread_statistics, Sel:name) :->
 :- pce_begin_class(thread_axis, plot_axis,
                    "(Y-)Axis for thread-resources").
 
-label_for_value(A, Val:'int|real', Gr:graphical) :<-
+label_for_value(A, Val:num, Gr:graphical) :<-
     "Generate readable labels"::
     (   Val < 1000
     ->  S = Val
@@ -741,7 +741,7 @@ label_for_value(A, Val:'int|real', Gr:graphical) :<-
     get(A, tag_font, Font),
     new(Gr, text(S, right, Font)).
 
-location(A, Sel:name, Val:'int|real', Loc:int) :<-
+location(A, Sel:name, Val:num, Loc:int) :<-
     "Ignore values < low"::
     (   percent_scale(Sel)
     ->  get(A, percent_location, Val, Loc)
@@ -752,7 +752,7 @@ location(A, Sel:name, Val:'int|real', Loc:int) :<-
 
 percent_scale(cpu).
 
-percent_location(A, Val:'int|real', Loc:int) :<-
+percent_location(A, Val:num, Loc:int) :<-
     "Simple percent scale location"::
     get(A, origin, point(_, Y0)),
     get(A, length, Len),
@@ -889,7 +889,7 @@ fill_menu_bar(TM, MD:tool_dialog) :->
                  *           SETTINGS           *
                  *******************************/
 
-update_interval(TM, Interval:'int|real*') :->
+update_interval(TM, Interval:num*) :->
     "Set the timer update interval"::
     send(TM, slot, update_interval, Interval),
     (   get(TM, timer, Old), Old \== @nil

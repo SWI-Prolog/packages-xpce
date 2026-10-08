@@ -59,10 +59,10 @@ class_variable(tag_font, font, normal, "Font for values").
 
 :- pce_group(attributes).
 variable(origin,        point,          get,  "Location of the origin").
-variable(low,           'int|real',     get,  "Low end of the range").
-variable(high,          'int|real',     get,  "High end of the range").
-variable(step,          'int|real',     get,  "Indication steps").
-variable(small_step,    'int|real*',    get,  "Unnumbered indication steps").
+variable(low,           num,            get,  "Low end of the range").
+variable(high,          num,            get,  "High end of the range").
+variable(step,          num,            get,  "Indication steps").
+variable(small_step,    num*,    get,  "Unnumbered indication steps").
 variable(length,        int,            get,  "Total length").
 variable(scale,         {linear,log} := linear, get, "Type of scale").
 variable(type,          {x,y},          get,  "Horizontal/vertical").
@@ -78,7 +78,7 @@ variable(support,       chain,          none, "Supporting graphicals").
 
 initialise(A,
            Type:'type={x,y}',
-           Low:'low=int|real', High:'high=int|real', Step:step=[int|real],
+           Low:low=num, High:high=num, Step:step=[num],
            Length:length=[int],
            O:'origin=[point]') :->
     "Create from low, high, step, length and type"::
@@ -150,11 +150,11 @@ device(A, Dev:device*) :->
 
 :- pce_group(compute).
 
-location(A, Val:'int|real', Loc:int) :<-
+location(A, Val:num, Loc:int) :<-
     "Location for value"::
     catch(loc(A, Val, Loc), _, fail).
 
-value_from_coordinate(A, Loc:int, Val:'int|real') :<-
+value_from_coordinate(A, Loc:int, Val:num) :<-
     "Translate location into value"::
     catch(loc(A, Val, Loc), _, fail).
 
@@ -189,16 +189,16 @@ origin(A, P:point) :->
 label(A, L:graphical*) :->
     set(A, label, L).
 
-low(A, L:'int|real') :->
+low(A, L:num) :->
     set(A, low, L).
 
-high(A, L:'int|real') :->
+high(A, L:num) :->
     set(A, high, L).
 
-step(A, L:'int|real') :->
+step(A, L:num) :->
     set(A, step, L).
 
-small_step(A, L:'int|real*') :->
+small_step(A, L:num*) :->
     set(A, small_step, L).
 
 length(A, Length:int) :->
@@ -421,7 +421,7 @@ lines_extend(A, Which, Min, Max) :-
     ).
 
 
-label_for_value(A, Val:'int|real', Gr:graphical) :<-
+label_for_value(A, Val:num, Gr:graphical) :<-
     "Compute a label for a value"::
     get(A, format, Fmt),
     get(A, tag_font, Font),
@@ -523,7 +523,7 @@ initialise(R) :->
     send(T, background, navajo_white),
     send(R, slot, value, 0).
 
-attach(R, Axis:axis=plot_axis, Value:real, Length:length=[int]) :->
+attach(R, Axis:axis=plot_axis, Value:num, Length:length=[int]) :->
     send(R, detach),
     get(R, member, line, Line),
     get(R, member, text, Text),
@@ -562,7 +562,7 @@ detach(R) :->
     send(R, delete_hypers, axis),
     send(R, device, @nil).
 
-value(R, Val:real) :->
+value(R, Val:num) :->
     send(R, slot, value, Val),
     send(R, request_compute, value).
 

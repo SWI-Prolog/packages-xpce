@@ -143,7 +143,7 @@ should be class `object', the root of the PCE class hierarchy.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 variable(title,         name,   get, "Base-name of the program").
-variable(version,       real,   get, "Current version").
+variable(version,       num,    get, "Current version").
 
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

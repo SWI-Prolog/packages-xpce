@@ -612,7 +612,7 @@ reference(S, Ref:point) :<-
         Y is H//2 + BY - BH//2
     ;   get(@pce, convert, normal, font, Font),
         get(Font, ascent, A),
-        Y is H//2 + A//2
+        Y is H//2 + round(A)//2       % font metrics are nums
     ),
     new(Ref, point(0, Y)).
 

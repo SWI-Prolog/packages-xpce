@@ -923,7 +923,7 @@ editor_idle_event(E) :->
     send(Mode, idle).               % are active
 
 
-start_idle_timer(E, Interval:[real]) :->
+start_idle_timer(E, Interval:[num]) :->
     "Reset the idle timer to timeout after the specified time"::
     (   Interval == @default
     ->  get(E, mode, Mode),

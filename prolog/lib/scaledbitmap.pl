@@ -48,13 +48,14 @@ horizontal stretching.
                    "Bitmap that scales its image").
 
 variable(original,    image,         get, "Preserved original image").
-variable(scale,       [real|size],   get, "Scale-factor/area").
+variable(scale,       [num|size],    get, "Scale-factor/area").
 variable(keep_aspect, bool := @on,   get, "Keep aspect ratio").
 
-initialise(BM, Img:image, Spec:[real|size]) :->
+initialise(BM, Img:image, Spec:[num|size]) :->
     "Create from image and scaling factor"::
     send(BM, slot, original, Img),
-    send(BM, slot, scale, Spec?clone),
+    scale_copy(Spec, Scale),
+    send(BM, slot, scale, Scale),
     send_super(BM, initialise),
     send(BM, request_compute).
 
@@ -75,7 +76,7 @@ apply_scale(BM) :->
     (   Scale == @default
     ->  send_super(BM, image, Original)
     ;   get(Original, size, size(W0, H0)),
-        (   float(Scale),
+        (   number(Scale),
             W is round(W0*Scale),
             H is round(H0*Scale)
         ;   object(Scale, size(WM, HM)),
@@ -121,15 +122,33 @@ new_size(Gr, Ws, Hs, W, H) :-
     !.
 
 
-scale(BM, Scale:[real|size]) :->
+scale(BM, Scale:[num|size]) :->
     "Change the scale"::
     get(BM, scale, Old),
-    (   send(Scale, same_class, Old),
-        send(Scale, equal, Old)
+    (   same_scale(Scale, Old)
     ->  true
-    ;   send(BM, slot, scale, Scale?clone),
+    ;   scale_copy(Scale, Copy),
+        send(BM, slot, scale, Copy),
         send(BM, request_compute)
     ).
+
+same_scale(Scale, Scale) :- !.
+same_scale(Scale, Old) :-
+    \+ number(Scale),
+    \+ number(Old),
+    send(Scale, same_class, Old),
+    send(Scale, equal, Old).
+
+%   scale_copy(+Scale, -Copy)
+%
+%   A size is copied, such that changing the size passed does not change
+%   the scale.  A number or @default is not an object.
+
+scale_copy(Scale, Copy) :-
+    object(Scale, size(_,_)),
+    !,
+    get(Scale, clone, Copy).
+scale_copy(Scale, Scale).
 
 keep_aspect(BM, Keep:bool) :->
     send(BM, slot, keep_aspect, Keep),

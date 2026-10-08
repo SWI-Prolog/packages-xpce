@@ -44,20 +44,20 @@ See also the built-in class int_item.
 
 :- pce_begin_class(float_item, text_item).
 
-variable(low,           real*,        both, "Lowest value").
-variable(high,          real*,        both, "highest value").
+variable(low,           num*,         both, "Lowest value").
+variable(high,          num*,         both, "highest value").
 variable(format,        name, get,  "How values are formatted").
 variable(allow_default, bool := @off, get,  "'' <-> @default").
-variable(step,          real*,        get,  "Step for up/down").
+variable(step,          num*,         get,  "Step for up/down").
 variable(apply_step,    bool := @on,  both, "Apply stepping immediately").
 
 class_variable(format, name,  '%g').
-class_variable(step,   real*, @nil).
+class_variable(step,   num*,  @nil).
 
-initialise(RI, Label:label=name, Default:default=[real], Msg:message=[code]*,
-           Low:low=[real], High:high=[real]*) :->
+initialise(RI, Label:label=name, Default:default=[num], Msg:message=[code]*,
+           Low:low=[num], High:high=[num]*) :->
     send_super(RI, initialise, Label, '', Msg),
-    send(RI, type, real),
+    send(RI, type, num),
     send(RI, length, 10),
     send(RI, style, normal),
     (   Low \== @default
@@ -91,14 +91,14 @@ format(RI, Fmt:name) :->
 allow_default(RI, Val:bool) :->
     send(RI, slot, allow_default, Val),
     (   Val == @on
-    ->  send(RI, type, '[real]')
-    ;   send(RI, type, real)
+    ->  send(RI, type, '[num]')
+    ;   send(RI, type, num)
     ).
 
 
-selection(RI, Sel:[real]) :<-
+selection(RI, Sel:[num]) :<-
     get(RI?value_text, string, Text),
-    (   get(@pce, convert, Text, real, Sel)
+    (   text_float(Text, Sel)
     ->  get(RI, low, Low),
         get(RI, high, High),
         (   (   Low == @nil
@@ -133,19 +133,28 @@ clear(RI) :->
     send(RI, slot, selection, @default).
 
 
-value(RI, Value:real) :->
+value(RI, Value:num) :->
     "Set the displayed value"::
     get(RI, format, Fmt),
     send(RI, string, string(Fmt, Value)).
 
 
-value(RI, Value:real) :<-
-    "Set the displayed value"::
+value(RI, Value:num) :<-
+    "The displayed value"::
     get(RI, string, Text),
-    get(@pce, convert, Text, real, Value).
+    text_float(Text, Value).
+
+%   text_float(+Text, -Float) is semidet.
+%
+%   Float is the number Text holds as a float.  The item edits a real
+%   number, also if it is integral.
+
+text_float(Text, Float) :-
+    get(@pce, convert, Text, num, Num),
+    Float is float(Num).
 
 
-selection(RI, Sel:[real]) :->
+selection(RI, Sel:[num]) :->
     (   Sel == @default
     ->  send(RI, clear)
     ;   get(RI, format, Fmt),
@@ -160,19 +169,21 @@ type(RI, Type:type) :->
         ->  get(Type, context, tuple(Low, High)),
             send(RI, low, Low),
             send(RI, high, High)
-        ;   send(Type, includes, real)
+        ;   (   send(Type, includes, num)
+            ;   send(Type, includes, real)
+            )
         ->  send(RI, low, @nil),
             send(RI, high, @nil)
         )
     ->  send_super(RI, type, Type)
-    ;   send(Type, error, domainError, real)
+    ;   send(Type, error, domainError, num)
     ),
     (   get(RI, step, @nil)
     ->  send(RI, style, normal)
     ;   send(RI, style, stepper)
     ).
 
-step(RI, Step:real*, Apply:[bool]) :->
+step(RI, Step:num*, Apply:[bool]) :->
     send(RI, slot, step, Step),
     (   Step == @nil
     ->  send(RI, style, normal)
@@ -193,7 +204,6 @@ increment(RI) :->
     ->  NewVal is min(High, Now+Step)
     ;   NewVal is Now+Step
     ),
-    NewVal is Now+Step,
     send(RI, value, NewVal),
     (   get(RI, apply_step, @on)
     ->  send(RI, apply)

@@ -708,7 +708,7 @@ window_shares(TF, Tree:prolog) :->
 %       proportions everywhere else have to be put back to what they were.
 %       Hence Was: the tree as it was read before the window was added.
 
-window_share(TF, Window:window, Share:real, Was:prolog=[prolog]) :->
+window_share(TF, Window:window, Share:num, Was:prolog=[prolog]) :->
     "Give Window that share of the row it is in, leaving the rest as Was"::
     get(TF, window_tree, Now),
     (   Was == @default

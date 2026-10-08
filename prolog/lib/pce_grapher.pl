@@ -402,7 +402,7 @@ selection(G, Obj:'name|graphical|chain*') :->
         send_super(G, selection, Nodes)
     ).
 
-flash(G, From:name, To:[name], Time:[real]) :->
+flash(G, From:name, To:[name], Time:[num]) :->
     "Highlight for some time"::
     default(Time, 0.2, Delay),
     send(G, selected, From, To, @on),

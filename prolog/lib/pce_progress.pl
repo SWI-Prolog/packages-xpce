@@ -97,15 +97,15 @@ wouldn't work using the background thread id.
 :- pce_begin_class(progress_bar, label_box,
                    "Show progress to the user").
 
-variable(scale,  'int|real',      get, "100% value").
-variable(value,  'int|real' := 0, get, "Current value").
+variable(scale,  num,             get, "100% value").
+variable(value,  num := 0,        get, "Current value").
 variable(length, int,             get, "Width of the slider-part").
 
 class_variable(length,     int,    200).
 class_variable(bar_colour, colour, mediumblue).
 
 initialise(PB, Name:name=[name],
-           Scale:scale=[int|real], Length:length='[0..]') :->
+           Scale:scale=[num], Length:length='[0..]') :->
     send_super(PB, initialise, Name),
     default(Scale, 100, TheScale),
     (   Length \== @default
@@ -126,7 +126,7 @@ bar(PB, Bar:box) :<-
     get(Fig1, member, figure, Fig2),
     get(Fig2, member, box, Bar).
 
-scale(PB, Scale:[int|real]) :->
+scale(PB, Scale:[num]) :->
     "Set the scale"::
     send(PB, slot, scale, Scale),
     send(PB, clear),
@@ -147,7 +147,7 @@ scale(PB, Scale:[int|real]) :->
     send(B, pen, 0),
     send(B, fill, C).
 
-value(BP, Val:[int|real]) :->
+value(BP, Val:[num]) :->
     "Set progress"::
     (   get(BP, value, Val)
     ->  true

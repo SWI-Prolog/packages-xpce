@@ -724,7 +724,7 @@ add_attribute_values([H|T], Def, P) :-
     add_attribute_values(T, Def, P).
 
 
-insert_attribute(M, Att:name, Val:'[name|int|real]') :->
+insert_attribute(M, Att:name, Val:'[name|num]') :->
     "Add attribute-value pair"::
     get(M, text_buffer, TB),
     get(M, caret, Caret),

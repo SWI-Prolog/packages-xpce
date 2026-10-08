@@ -150,8 +150,8 @@ center_end(BS, End:point) :<-
 class_variable(thickness, '0..', 20, "Default thickness of the bar").
 class_variable(pen,       '0..', 0,  "Drawing pen for the bar").
 
-variable(low,           real*,                  get, "Minimum value").
-variable(high,          real*,                  get, "Maximum value").
+variable(low,           num*,                   get, "Minimum value").
+variable(high,          num*,                   get, "Maximum value").
 variable(value,         real,                   get, "Value represented").
 variable(orientation,   {horizontal,vertical},  get, "laying or standing").
 variable(message,       code*,                  both, "Executed after edit").
@@ -182,7 +182,7 @@ editable(Bar) :->
     Code \== @nil,
     !.
 
-value(B, Val:real) :->
+value(B, Val:num) :->
     send(B, slot, value, Val),
     send(B, request_compute).
 
@@ -196,7 +196,7 @@ thickness(B, W:'0..') :->
     ;   send(B, width, W)
     ).
 
-range(B, Low:low=real*, High:high=real*) :->
+range(B, Low:low=num*, High:high=num*) :->
     send(B, slot, low, Low),
     send(B, slot, high, High).
 
@@ -757,11 +757,11 @@ sort(BC) :->
 
 :- pce_group(value).
 
-value(BC, BarName:name, Value:real) :->
+value(BC, BarName:name, Value:num) :->
     "Set value of the named bar"::
     get(BC, member, BarName, Bar),
     send(Bar, value, Value).
-value(BC, BarName:name, Value:real) :<-
+value(BC, BarName:name, Value:num) :<-
     "Get value of the named bar"::
     get(BC, member, BarName, Bar),
     get(Bar, value, Value).

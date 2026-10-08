@@ -1018,7 +1018,7 @@ file(Canvas, File:file*) :->
                  *             VERSION          *
                  *******************************/
 
-convert_old_drawing(Canvas, SaveVersion:real*) :->
+convert_old_drawing(Canvas, SaveVersion:num*) :->
     (   convert_old_drawing(SaveVersion, Canvas),
         fail
     ;   true
