@@ -15,6 +15,11 @@ interior may be filled with a colour using ->fill.
 
     **Defaults**: @nil (transparent).
 
+- circle<->shadow: 0..|shadow*
+    Drop shadow painted outside the circle.  See class shadow.  An
+    integer N is a soft shadow N pixels to the bottom right; 0 is no
+    shadow.  The default is @nil (no shadow).
+
 
 ## Send methods {#class-circle-send}
 

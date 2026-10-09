@@ -474,6 +474,11 @@ getCommonDeviceGraphical(Graphical gr1, Graphical gr2)
 		*            CHANGES		*
 		********************************/
 
+/* How far a graphical may paint outside its <-area: a drop shadow
+ * (class shadow) of a box, ellipse or figure, and the focus and other
+ * decorations of text and dialog items.
+ */
+
 int
 get_extension_margin_graphical(Graphical gr)
 { if ( instanceOfObject(gr, ClassText) ||
@@ -489,6 +494,20 @@ get_extension_margin_graphical(Graphical gr)
 
     return m;
   }
+
+  Any val = NULL;
+  if ( instanceOfObject(gr, ClassBox) )
+    val = ((Box)gr)->shadow;
+  else if ( instanceOfObject(gr, ClassEllipse) )
+    val = ((EllipseObj)gr)->shadow;
+  else if ( instanceOfObject(gr, ClassCircle) )
+    val = ((Circle)gr)->shadow;
+  else if ( instanceOfObject(gr, ClassFigure) )
+    val = ((Figure)gr)->shadow;
+
+  Shadow s;
+  if ( val && (s = toShadow(val)) )
+    return extentShadow(s);
 
   return 0;
 }
@@ -652,10 +671,10 @@ changedImageGraphical(Any obj, Int x, Int y, Int w, Int h)
 				 * coords can paint just outside the
 				 * integer bounding box. */
 
-      if ( instanceOfObject(gr, ClassText) ||
-	   instanceOfObject(gr, ClassDialogItem) )
-      { cx -= 5; cy -= 5; cw += 10; ch += 10;
-      }				/* Motif hack */
+      int m = get_extension_margin_graphical(gr);
+      if ( m )			/* it paints outside its area */
+      { cx -= m; cy -= m; cw += 2*m; ch += 2*m;
+      }
 
       DEBUG(NAME_changesData,
 	    Cprintf("Change of %s --> %d %d %d %d%s\n",
@@ -1978,9 +1997,18 @@ opacityGraphical(Graphical gr, Num o)
 }
 
 
+/* ->shadow of a box, ellipse or figure.  The shadow is outside the
+ * area, which assignGraphical() damages with the new extension margin
+ * only, so we damage with the old one first.
+ */
+
 status
-shadowGraphical(Graphical gr, Int s)
-{ return assignGraphical(gr, NAME_shadow, s);
+shadowGraphical(Graphical gr, Any s)
+{ if ( isInteger(s) )			/* N is a soft shadow, 0 none */
+    s = (s == ZERO ? NIL : (Any)toShadow(s));
+
+  changedEntireImageGraphical(gr);
+  return assignGraphical(gr, NAME_shadow, s);
 }
 
 

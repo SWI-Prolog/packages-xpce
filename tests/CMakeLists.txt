@@ -26,6 +26,7 @@ test_libs(dialog_group         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(focus_border         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(scroll_bar           OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(list_browser         OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(shadow               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(frame_position       OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(slider               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(text_cursor          OPTIONS ${XPCE_TEST_OPTIONS})
@@ -88,6 +89,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:focus_border
                      xpce:scroll_bar
                      xpce:list_browser
+                     xpce:shadow
                      xpce:frame_position
                      xpce:slider
                      xpce:text_cursor

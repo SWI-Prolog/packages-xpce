@@ -16,9 +16,10 @@ top-left corner.  Use ->center to define the center.
 
     **Defaults**: @nil
 
-- ellipse<-shadow: int
-    Amount (pixels) of shadow painted below and right of the
-    ellipse.  The default is 0 (zero, no shadow).
+- ellipse<->shadow: 0..|shadow*
+    Drop shadow painted outside the ellipse.  See class shadow.  An
+    integer N is a soft shadow N pixels to the bottom right; 0 is no
+    shadow.  The default is @nil (no shadow).
 
 
 ## Send methods {#class-ellipse-send}

@@ -24,18 +24,14 @@ Boxes may have rounded corners (see ->radius); their line may have some
 
     **Defaults**: 0 (not rounded)
 
-- box<-shadow: int
-    Amount (pixels) of shadow painted below and right of the
-    box.  The default is 0 (zero, no shadow).
+- box<->shadow: 0..|shadow*
+    Drop shadow painted outside the box.  See class shadow.  An
+    integer N is a soft shadow N pixels to the bottom right; 0 is no
+    shadow.  The default is @nil (no shadow).
 
 
 ## Send methods {#class-box-send}
 
 - box->initialise: width=[int], height=[int]
     Create a box from W and H.  The dimensions may be zero or negative.
-
-- box->shadow: int
-    Amount of shadow added to this box in pixels.  In the current
-    implementation, shadow is always black and painted below and
-    right-of the object.
 

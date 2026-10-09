@@ -39,7 +39,7 @@ static status
 initialiseBox(Box b, Int w, Int h)
 { initialiseGraphical(b, ZERO, ZERO, w, h);
   assign(b, radius,	  ZERO);
-  assign(b, shadow,	  ZERO);
+  assign(b, shadow,	  NIL);
 /*assign(b, fill, NIL);
   assign(b, fill_offset,  NIL);
 */
@@ -55,11 +55,13 @@ RedrawAreaBox(Box b, Area a)
 
   initialiseDeviceGraphical(b, &x, &y, &w, &h);
 
+  Shadow s = toShadow(b->shadow);
+  if ( s )
+    r_drop_shadow(s, NAME_box, x, y, w, h, valInt(b->radius));
   r_filloffset(b->fill_offset, x, y, &state);
   r_thickness(valInt(b->pen));
   r_dash(b->texture);
-  r_shadow_box(x, y, w, h,
-	       valInt(b->radius), valInt(b->shadow), b->fill);
+  r_box(x, y, w, h, valInt(b->radius), b->fill);
   r_fillrestore(&state);
 
   return RedrawAreaGraphical(b, a);
@@ -91,8 +93,8 @@ static char *T_initialise[] =
 static vardecl var_box[] =
 { SV(NAME_radius, "int", IV_GET|IV_STORE, radiusBox,
      NAME_appearance, "Rounding radius for corners"),
-  SV(NAME_shadow, "int", IV_GET|IV_STORE, shadowGraphical,
-     NAME_appearance, "Shadow at bottom-right of box"),
+  SV(NAME_shadow, "0..|shadow*", IV_GET|IV_STORE, shadowGraphical,
+     NAME_appearance, "Drop shadow outside the box"),
   SV(NAME_fill, TYPE_FILL, IV_GET|IV_STORE, fillGraphical,
      NAME_appearance, "Fill pattern for internals"),
   SV(NAME_fillOffset, "point*", IV_GET|IV_STORE, fillOffsetGraphical,

@@ -1033,30 +1033,149 @@ r_rounded_frame(double x, double y, double w, double h, double r,
   cairo_new_path(CR);
 }
 
+/* One pass of a box blur of radius `r' over `n' values of `line', which
+ * are `step' bytes apart, using `tmp' (n bytes) as scratch.
+ */
+
+static void
+box_blur_line(unsigned char *line, int n, int step, int r, unsigned char *tmp)
+{ int w = 2*r+1;
+  int sum = 0;
+
+  for(int i=0; i<n; i++)
+    tmp[i] = line[(size_t)i*step];
+  for(int i=-r; i<=r; i++)
+    sum += (i >= 0 && i < n) ? tmp[i] : 0;
+  for(int i=0; i<n; i++)
+  { line[(size_t)i*step] = (unsigned char)((sum + w/2) / w);
+    int out = i-r, in = i+r+1;
+    sum -= (out >= 0 && out < n) ? tmp[out] : 0;
+    sum += (in  >= 0 && in  < n) ? tmp[in]  : 0;
+  }
+}
+
+
+/* Blur an A8 surface.  Three box blurs approximate a Gaussian blur with
+ * standard deviation `sigma' (pixels).
+ */
+
+static void
+blur_a8_surface(cairo_surface_t *surf, double sigma)
+{ int w = cairo_image_surface_get_width(surf);
+  int h = cairo_image_surface_get_height(surf);
+  int stride = cairo_image_surface_get_stride(surf);
+  unsigned char *data = cairo_image_surface_get_data(surf);
+  int r = (int)((sqrt(4.0*sigma*sigma+1.0)-1.0)/2.0 + 0.5);
+  unsigned char *tmp;
+
+  if ( r < 1 || !(tmp = malloc(max(w, h))) )
+    return;
+
+  cairo_surface_flush(surf);
+  for(int pass=0; pass<3; pass++)
+  { for(int y=0; y<h; y++)
+      box_blur_line(data + (size_t)y*stride, w, 1, r, tmp);
+    for(int x=0; x<w; x++)
+      box_blur_line(data + x, h, stride, r, tmp);
+  }
+  cairo_surface_mark_dirty(surf);
+  free(tmp);
+}
+
+
+static void
+shadow_shape_path(cairo_t *cr, Name shape,
+		  double x, double y, double w, double h, double r)
+{ if ( shape == NAME_ellipse )
+  { cairo_new_path(cr);
+    cairo_save(cr);
+    cairo_translate(cr, x+w/2.0, y+h/2.0);
+    cairo_scale(cr, w/2.0, h/2.0);
+    cairo_arc(cr, 0, 0, 1, 0, 2*M_PI);
+    cairo_restore(cr);
+  } else if ( r > 0 )
+  { my_cairo_rounded_rectangle(cr, x, y, w, h, r, false);
+  } else
+  { cairo_new_path(cr);
+    cairo_rectangle(cr, x, y, w, h);
+  }
+}
+
+
 /**
- * Draw a rectangle with a shadow effect.
+ * Draw the drop shadow `s' of a shape, as CSS `box-shadow' does.  The
+ * shape is a box (with corner radius `r') or an ellipse in x,y,w,h.  The
+ * shadow is the shape moved by the offset of `s', grown by its spread
+ * and blurred over its blur.  It is not drawn under the shape itself,
+ * so it shows correctly for a shape without (opaque) fill.  Call this
+ * before drawing the shape.
  *
- * @param x The x-coordinate of the top-left corner.
- * @param y The y-coordinate of the top-left corner.
- * @param w The width of the rectangle.
- * @param h The height of the rectangle.
- * @param r The radius for rounded corners.
- * @param shadow The size of the shadow.
- * @param fill The fill pattern or image.
+ * @param s The shadow object.
+ * @param shape NAME_box or NAME_ellipse.
  */
 void
-r_shadow_box(int x, int y, int w, int h, int r, int shadow, Any fill)
-{ if ( !shadow )
-  { r_box(x, y, w, h, r, fill);
-  } else
-  { if ( shadow > h ) shadow = h;
-    if ( shadow > w ) shadow = w;
+r_drop_shadow(Shadow s, Name shape,
+	      double x, double y, double w, double h, double r)
+{ Translate(x, y);
+  double sp = valInt(s->spread);
+  double blur = valInt(s->blur);
+  double sx = x + valInt(s->x_offset) - sp;
+  double sy = y + valInt(s->y_offset) - sp;
+  double sw = w + 2*sp;
+  double sh = h + 2*sp;
+  double sr = (r > 0 ? max(0, r+sp) : 0);
+  double ux = 1.0, uy = 0.0;
 
-    Any old = r_colour(BLACK_COLOUR);
-    r_box(x+shadow, y+shadow, w-shadow, h-shadow, r, BLACK_COLOUR);
-    r_colour(old);
-    r_box(x, y, w-shadow, h-shadow, r, isNil(fill) ? WHITE_COLOUR : fill);
+  if ( sw <= 0 || sh <= 0 || w <= 0 || h <= 0 )
+    return;
+
+  cairo_save(CR);
+  cairo_new_path(CR);			/* everything but the shape */
+  cairo_set_fill_rule(CR, CAIRO_FILL_RULE_EVEN_ODD);
+  cairo_rectangle(CR, sx-blur-1, sy-blur-1, sw+2*blur+2, sh+2*blur+2);
+  if ( shape == NAME_ellipse )
+  { cairo_new_sub_path(CR);
+    cairo_save(CR);
+    cairo_translate(CR, x+w/2.0, y+h/2.0);
+    cairo_scale(CR, w/2.0, h/2.0);
+    cairo_arc(CR, 0, 0, 1, 0, 2*M_PI);
+    cairo_restore(CR);
+  } else if ( r > 0 )
+  { my_cairo_rounded_rectangle(CR, x, y, w, h, r, true);
+  } else
+  { cairo_new_sub_path(CR);
+    cairo_rectangle(CR, x, y, w, h);
   }
+  cairo_clip(CR);
+  cairo_set_fill_rule(CR, CAIRO_FILL_RULE_WINDING);
+  pce_cairo_set_source_color(CR, s->colour);
+
+  cairo_user_to_device_distance(CR, &ux, &uy);
+  double scale = sqrt(ux*ux + uy*uy);
+  int pw = (int)ceil((sw+2*blur)*scale);
+  int ph = (int)ceil((sh+2*blur)*scale);
+
+  if ( blur <= 0 || scale <= 0 || (double)pw*ph > 16e6 )
+  { shadow_shape_path(CR, shape, sx, sy, sw, sh, sr);
+    cairo_fill(CR);
+  } else
+  { cairo_surface_t *mask = cairo_image_surface_create(CAIRO_FORMAT_A8,
+							pw, ph);
+    cairo_t *mcr = cairo_create(mask);
+
+    cairo_scale(mcr, scale, scale);
+    cairo_set_source_rgba(mcr, 0, 0, 0, 1);
+    shadow_shape_path(mcr, shape, blur, blur, sw, sh, sr);
+    cairo_fill(mcr);
+    cairo_destroy(mcr);
+
+    blur_a8_surface(mask, blur*scale/2.0);	/* CSS: blur is 2 sigma */
+    cairo_surface_set_device_scale(mask, scale, scale);
+    cairo_mask_surface(CR, mask, sx-blur, sy-blur);
+    cairo_surface_destroy(mask);
+  }
+
+  cairo_restore(CR);
 }
 
 /**

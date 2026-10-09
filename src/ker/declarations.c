@@ -191,6 +191,9 @@ static struct class_definition classdefs[] =
   { NAME_elevation, NAME_object, makeClassElevation,
     &ClassElevation, "Description of an elevation" },
 
+  { NAME_shadow, NAME_object, makeClassShadow,
+    &ClassShadow, "Description of a drop shadow" },
+
   { NAME_ellipse, NAME_graphical, makeClassEllipse,
     &ClassEllipse, "Ellipse" },
 

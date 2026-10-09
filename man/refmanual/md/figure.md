@@ -57,8 +57,12 @@ addition of class device, a figure offers:
 
 - figure<->elevation: elevation*
     `elevation` object describing a 3-D appearance (raised, sunken,
-    shadow, ...) of the figure's box.  @nil disables the effect.  The
-    legacy `<->shadow` shortcut creates a shadow elevation.
+    shadow, ...) of the figure's box.  @nil disables the effect.
+
+- figure<->shadow: 0..|shadow*
+    Drop shadow painted outside the box of the figure.  See class shadow.  An
+    integer N is a soft shadow N pixels to the bottom right; 0 is no
+    shadow.  The default is @nil (no shadow).
 
 - figure<->transform: transform*
     Optional 2-D affine `transform` applied to the figure's contents.

@@ -399,7 +399,17 @@ make_shadow_menu(Menu) :-
     new(Menu, menu(Label, cycle,
                    message(@receiver?frame, client_attribute,
                            shadow, @arg1))),
-    forall(between(0, 5, Shadow), send(Menu, append, Shadow)).
+    forall(between(0, 5, Shadow), send(Menu, append, Shadow)),
+    send(Menu, attribute, equal_predicates, chain(equal_shadow)).
+
+%   An integer N is a shadow N to the bottom right.  A graphical holds
+%   it as a shadow object, or @nil for 0.
+
+equal_shadow(0, @nil) :- !.
+equal_shadow(N, Shadow) :-
+    integer(N),
+    send(Shadow, instance_of, shadow),
+    get(Shadow, x_offset, N).
 
 
 make_closed_menu(Menu) :-

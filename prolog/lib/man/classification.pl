@@ -1221,7 +1221,6 @@ scope('M.event_tree.G.node', internal).
 scope('M.event_tree.S.initialise', internal).
 scope('M.event_tree.S.root', internal).
 scope('M.figure.G.clip_area', advanced).
-scope('M.figure.G.shadow', advanced).
 scope('M.figure.S._redraw_area', internal).
 scope('M.figure.S.background', basic).
 scope('M.figure.S.border', basic).
@@ -1235,7 +1234,6 @@ scope('M.figure.S.next_status', advanced).
 scope('M.figure.S.radius', basic).
 scope('M.figure.S.rotate', basic).
 scope('M.figure.S.scale', basic).
-scope('M.figure.S.shadow', basic).
 scope('M.figure.S.shear', advanced).
 scope('M.figure.S.status', advanced).
 scope('M.figure.S.transform', advanced).
@@ -3490,6 +3488,11 @@ scope('R.scroll_bar.repeat_delay', basic).
 scope('R.scroll_bar.repeat_interval', basic).
 scope('R.scroll_bar.thumb_colour', advanced).
 scope('R.scroll_bar.width', advanced).
+scope('R.shadow.blur', advanced).
+scope('R.shadow.colour', advanced).
+scope('R.shadow.spread', advanced).
+scope('R.shadow.x_offset', advanced).
+scope('R.shadow.y_offset', advanced).
 scope('R.slider.look', advanced).
 scope('R.source_sink.encoding', advanced).
 scope('R.tab.gap', advanced).
@@ -3910,6 +3913,7 @@ scope('V.circle.opacity', advanced).
 scope('V.circle.pen', advanced).
 scope('V.circle.request_compute', advanced).
 scope('V.circle.selected', advanced).
+scope('V.circle.shadow', basic).
 scope('V.circle.texture', advanced).
 scope('V.class.boot', internal).
 scope('V.class.c_declarations', internal).
@@ -4402,6 +4406,7 @@ scope('V.figure.radius', obscure).
 scope('V.figure.recompute', advanced).
 scope('V.figure.request_compute', advanced).
 scope('V.figure.selected', advanced).
+scope('V.figure.shadow', basic).
 scope('V.figure.status', obscure).
 scope('V.figure.texture', advanced).
 scope('V.figure.transform', advanced).
@@ -5367,6 +5372,11 @@ scope('V.send_method.name', advanced).
 scope('V.send_method.source', advanced).
 scope('V.send_method.summary', advanced).
 scope('V.send_method.types', advanced).
+scope('V.shadow.blur', basic).
+scope('V.shadow.colour', basic).
+scope('V.shadow.spread', basic).
+scope('V.shadow.x_offset', basic).
+scope('V.shadow.y_offset', basic).
 scope('V.sheet.members', advanced).
 scope('V.size.height', basic).
 scope('V.size.width', basic).

@@ -105,7 +105,8 @@ void r_rounded_frame(double x, double y, double w, double h, double r,
 		     Any outside);
 void r_smooth_box(double x, double y, double w, double h,
 		  double r, Any fill);
-void r_shadow_box(int x, int y, int w, int h, int r, int shadow, Any fill);
+void r_drop_shadow(Shadow s, Name shape,
+		   double x, double y, double w, double h, double r);
 Any r_elevation_shadow(Elevation e);
 void r_3d_segments(int n, ISegment s, Elevation e, int light);
 void r_3d_box(double x, double y, double w, double h,

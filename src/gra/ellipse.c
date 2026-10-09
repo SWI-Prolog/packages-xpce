@@ -63,7 +63,7 @@ ellipseNormDistance(int ax, int ay, int aw, int ah, int px, int py)
 static status
 initialiseEllipse(EllipseObj e, Int w, Int h)
 { initialiseGraphical(e, ZERO, ZERO, w, h);
-  assign(e, shadow, ZERO);
+  assign(e, shadow, NIL);
   assign(e, fill, NIL);
 
   succeed;
@@ -78,25 +78,11 @@ RedrawAreaEllipse(EllipseObj e, Area a)
   NormaliseArea(x, y, w, h);
   r_dash(e->texture);
 
-  if ( e->shadow != ZERO )
-  { int shadow = valInt(e->shadow);
-    Any fill = e->fill;
-
-    if ( isNil(fill) )
-      fill = NAME_background;
-
-    if ( shadow > w ) shadow = w;
-    if ( shadow > h ) shadow = h;
-
-    r_thickness(0.0);
-    r_ellipse(x+shadow, y+shadow, w-shadow, h-shadow, BLACK_COLOUR);
-    r_thickness(valNum(e->pen));
-    r_colour(DEFAULT);
-    r_ellipse(x, y, w-shadow, h-shadow, fill);
-  } else
-  { r_thickness(valNum(e->pen));
-    r_ellipse(x, y, w, h, e->fill);
-  }
+  Shadow s = toShadow(e->shadow);
+  if ( s )
+    r_drop_shadow(s, NAME_ellipse, x, y, w, h, 0);
+  r_thickness(valNum(e->pen));
+  r_ellipse(x, y, w, h, e->fill);
 
   return RedrawAreaGraphical(e, a);
 }
@@ -114,8 +100,8 @@ static char *T_initialise[] =
 /* Instance Variables */
 
 static vardecl var_ellipse[] =
-{ SV(NAME_shadow, "int", IV_GET|IV_STORE, shadowGraphical,
-     NAME_appearance, "Shadow painted below/right"),
+{ SV(NAME_shadow, "0..|shadow*", IV_GET|IV_STORE, shadowGraphical,
+     NAME_appearance, "Drop shadow outside the ellipse"),
   SV(NAME_fill, TYPE_FILL, IV_GET|IV_STORE, fillGraphical,
      NAME_appearance, "Fill pattern for internals")
 };

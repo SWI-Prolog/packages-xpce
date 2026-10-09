@@ -196,7 +196,7 @@ COMMON(status)	leftGraphical(Graphical gr1, Graphical gr2);
 COMMON(status)	referenceGraphical(Graphical gr, Point ref);
 COMMON(status)	penGraphical(Graphical gr, Int pen);
 COMMON(status)	opacityGraphical(Graphical gr, Num o);
-COMMON(status)	shadowGraphical(Graphical gr, Int s);
+COMMON(status)	shadowGraphical(Graphical gr, Any s);
 COMMON(status)	fillGraphical(Graphical gr, Any pattern);
 COMMON(status)	fillOffsetGraphical(Graphical gr, Point pattern);
 COMMON(status)	colourGraphical(Graphical gr, Any c);
@@ -362,6 +362,11 @@ COMMON(status)	makeClassPixmap(Class class);
 /* /swi40/jan/src/pl/packages/xpce/src/gra/elevation.c */
 COMMON(Elevation) getModifyElevation(Elevation e, Name att, Any val);
 COMMON(status)	makeClassElevation(Class class);
+
+/* gra/shadow.c */
+COMMON(Shadow)	toShadow(Any val);
+COMMON(int)	extentShadow(Shadow s);
+COMMON(status)	makeClassShadow(Class class);
 
 /* /swi40/jan/src/pl/packages/xpce/src/gra/pen.c */
 COMMON(status)	makeClassPen(Class class);

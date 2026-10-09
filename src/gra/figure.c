@@ -50,6 +50,7 @@ initialiseFigure(Figure f)
   assign(f, elevation,	NIL);
   assign(f, transform,	NIL);
   assign(f, local_area,	newObject(ClassArea, EAV));
+  assign(f, shadow,	NIL);
   assign(f, status,     NAME_allActive);
 
   succeed;
@@ -62,11 +63,15 @@ initialiseFigure(Figure f)
 Any
 RedrawBoxFigure(Figure f, Area area)
 { Any rval = NIL;
+  Shadow s = toShadow(f->shadow);
 
-  if ( f->pen != ZERO || notNil(f->background) || notNil(f->elevation) )
+  if ( f->pen != ZERO || notNil(f->background) || notNil(f->elevation) ||
+       s )
   { int x, y, w, h;
 
     initialiseDeviceGraphical(f, &x, &y, &w, &h);
+    if ( s )
+      r_drop_shadow(s, NAME_box, x, y, w, h, valNum(f->radius));
     if ( f->pen == ZERO && f->radius == ZERO && isNil(f->elevation) )
     { r_fill(x, y, w, h, f->background);
       rval = f->background;
@@ -75,13 +80,7 @@ RedrawBoxFigure(Figure f, Area area)
       r_dash(f->texture);
 
       if ( notNil(f->elevation) )
-      { Elevation e = f->elevation;
-	if ( e->kind == NAME_shadow )
-	{ r_shadow_box(x, y, w, h,
-		       valInt(f->radius), valInt(e->height), f->background);
-	} else
-	{ r_3d_box(x, y, w, h, valInt(f->radius), e, true);
-	}
+      { r_3d_box(x, y, w, h, valInt(f->radius), f->elevation, true);
 	rval = f->elevation->background;
       } else
       { r_box(x, y, w, h, valInt(f->radius), f->background);
@@ -403,26 +402,6 @@ shearFigureMethod(Figure f, Num kx, Num ky)
 }
 
 
-static status
-shadowFigure(Figure f, Int shadow)
-{ return elevationFigure(f, shadow == ZERO ?
-			      NIL :
-			      newObject(ClassElevation, NIL,
-					shadow, /* height */
-					isNil(f->background) ? DEFAULT
-							     : f->background,
-					DEFAULT, DEFAULT, /* edge colours */
-					NAME_shadow, EAV));
-}
-
-
-static Int
-getShadowFigure(Figure f)
-{ if ( notNil(f->elevation) )
-    answer(f->elevation->height);
-
-  answer(ZERO);
-}
 
 
 static status
@@ -454,13 +433,6 @@ displayFigure(Figure f, Graphical gr, Point pos)
 }
 
 
-static status
-convertOldSlotFigure(Figure f, Name slot, Any value)
-{ if ( slot == NAME_shadow )
-    shadowFigure(f, value);
-
-  succeed;
-}
 
 
 status
@@ -482,6 +454,8 @@ makeClassFigure(Class class)
 	     "Optional 2D affine transform applied to contents");
   localClass(class, NAME_localArea, NAME_area, "area", NAME_get,
 	     "Children bbox in figure-local coords (before transform/offset)");
+  localClass(class, NAME_shadow, NAME_appearance, "0..|shadow*", NAME_get,
+	     "Drop shadow outside the figure");
 
   setRedrawFunctionClass(class, RedrawAreaFigure);
 
@@ -492,6 +466,7 @@ makeClassFigure(Class class)
   storeMethod(class, NAME_radius,     radiusFigure);
   storeMethod(class, NAME_elevation,  elevationFigure);
   storeMethod(class, NAME_transform,  transformFigure);
+  storeMethod(class, NAME_shadow,     shadowGraphical);
 
   sendMethod(class, NAME_initialise, DEFAULT, 0,
 	     "Create figure",
@@ -505,9 +480,6 @@ makeClassFigure(Class class)
   sendMethod(class, NAME_display, NAME_organisation, 2, "graphical", "[point]",
 	     "Display graphical at point",
 	     displayFigure);
-  sendMethod(class, NAME_shadow, NAME_appearance, 1, "0..",
-	     "Attach `shadow' elevation object",
-	     shadowFigure);
   sendMethod(class, NAME_translate, NAME_calculate, 2,
 	     "dx=num", "dy=num",
 	     "Compose translate(dx,dy) into the figure's transform",
@@ -524,17 +496,10 @@ makeClassFigure(Class class)
 	     "kx=num", "ky=num",
 	     "Compose shear(kx,ky) into the figure's transform",
 	     shearFigureMethod);
-  sendMethod(class, NAME_convertOldSlot, NAME_compatibility, 2,
-	     "slot=name", "value=any",
-	     "Translate old shadow into elevation",
-	     convertOldSlotFigure);
 
   getMethod(class, NAME_clipArea, NAME_scroll, "area", 0,
 	    "Clip area associated with figure",
 	    getClipAreaFigure);
-  getMethod(class, NAME_shadow, NAME_compatibility, "0..", 0,
-	    "Read `elevation <-height'",
-	    getShadowFigure);
 
   succeed;
 }

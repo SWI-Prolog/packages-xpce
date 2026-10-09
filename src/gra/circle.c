@@ -39,6 +39,7 @@ static status
 initialiseCircle(Circle c, Int w)
 { initialiseGraphical(c, ZERO, ZERO, w, w);
   assign(c, fill, NIL);
+  assign(c, shadow, NIL);
 
   succeed;
 }
@@ -50,6 +51,9 @@ RedrawAreaCircle(Circle c, Area a)
 
   initialiseDeviceGraphical(c, &x, &y, &w, &h);
   NormaliseArea(x, y, w, h);
+  Shadow s = toShadow(c->shadow);
+  if ( s )
+    r_drop_shadow(s, NAME_ellipse, x, y, w, h, 0);
   r_thickness(valInt(c->pen));
   r_dash(c->texture);
   r_ellipse(x, y, w, h, c->fill);
@@ -147,7 +151,9 @@ static char *T_inside[] =
 
 static vardecl var_circle[] =
 { SV(NAME_fill, TYPE_FILL, IV_GET|IV_STORE, fillGraphical,
-     NAME_appearance, "Fill pattern for internals")
+     NAME_appearance, "Fill pattern for internals"),
+  SV(NAME_shadow, "0..|shadow*", IV_GET|IV_STORE, shadowGraphical,
+     NAME_appearance, "Drop shadow outside the circle")
 };
 
 /* Send Methods */

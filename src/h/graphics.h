@@ -107,7 +107,8 @@ typedef struct colour_context *ColourContext; /* for selection/inactive */
   Num		radius;			/* radius of outline */ \
   Elevation	elevation;		/* elevation of outline */ \
   Transform	transform;		/* optional 2D affine on contents */ \
-  Area		local_area;		/* children bbox in local coords */
+  Area		local_area;		/* children bbox in local coords */ \
+  Any		shadow;			/* Drop shadow (shadow*) */
 
 #define ABSTRACT_DIALOGITEM \
   ABSTRACT_GRAPHICAL \
@@ -291,11 +292,12 @@ End;
 NewClass(circle)
   ABSTRACT_GRAPHICAL
   Image		fill;		/* image to fill the circle */
+  Any		shadow;			/* Drop shadow (shadow*) */
 End;
 
 NewClass(ellipse)
   ABSTRACT_GRAPHICAL
-  Int		shadow;			/* shadow displayed around ellipse */
+  Any		shadow;			/* Drop shadow (shadow*) */
   Image		fill;		/* fill pattern  */
 End;
 
@@ -310,7 +312,7 @@ End;
 NewClass(box)
   ABSTRACT_GRAPHICAL
   Int        radius;			/* if displayed as a rounded box */
-  Int	     shadow;			/* shadow displayed around box */
+  Any	     shadow;			/* Drop shadow (shadow*) */
   Image	     fill;		/* fill box with this */
   Point	     fill_offset;		/* Offset for filling */
 End;
@@ -795,6 +797,15 @@ NewClass(gradient)
   Num		r0;			/* Num*, radial start-circle radius */
   Num		r1;			/* Num*, radial end-circle radius */
   Chain		stops;			/* Chain of tuple(fraction, colour) */
+End;
+
+
+NewClass(shadow)
+  Int		x_offset;		/* Horizontal offset */
+  Int		y_offset;		/* Vertical offset */
+  Int		blur;			/* Width of the blurred edge */
+  Colour	colour;			/* Colour (with alpha) */
+  Int		spread;			/* Growth of the shape */
 End;
 
 

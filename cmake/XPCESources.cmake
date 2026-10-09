@@ -22,7 +22,7 @@ set(GRA_SRC	arc.c arrow.c bitmap.c box.c circle.c colour.c gradient.c
 		figure.c font.c format.c graphical.c handle.c image.c
 		joint.c line.c link.c listbrowser.c node.c path.c
 		scrollbar.c text.c transform.c tree.c visual.c
-		pixmap.c elevation.c pen.c draw.c bezier.c hsv.c)
+		pixmap.c elevation.c shadow.c pen.c draw.c bezier.c hsv.c)
 
 set(ITF_SRC	host.c interface.c asfile.c console.c
 		stub.c xmalloc.c iostream.c srcsink.c rc.c hostdata.c)
