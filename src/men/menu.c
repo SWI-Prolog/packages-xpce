@@ -55,10 +55,8 @@ static MenuItem getMemberMenu(Menu m, Any obj);
 
 #define is_cycle_menu(m) ((m)->kind == NAME_cycle)
 
-#define MARK_IMAGE_SIZE	  16
-#define MARK_DIAMOND_SIZE 14
-#define MARK_BOX_SIZE     13
-#define MARK_CIRCLE_SIZE  8
+static int	mark_width(Menu m, Any mark);
+static int	mark_height(Menu m, Any mark);
 
 status
 initialiseMenu(Menu m, Name name, Name kind, Code msg)
@@ -264,26 +262,17 @@ computeItemsMenu(Menu m)
 
   if ( is_cycle_menu(m) )
   { rm = ws_combo_box_width((Graphical)m)+2;	/* 2 for the margin */
-  } else
-  { if ( notNil(m->on_image) || notNil(m->off_image) )
-    { int cw, ch;
+  } else if ( m->kind == NAME_choice )
+  { int ex = valInt(getExFont(m->value_font));
 
-      if ( instanceOfObject(m->on_image, ClassImage) )
-	lm = MARK_IMAGE_SIZE;
-      else if ( (Name)m->on_image == NAME_marked )
-      { ws_checkbox_size(0, &cw, &ch);
-	lm = cw;
-      }
+    lm = rm = ex;			/* room inside the segment */
+    h += 4;
+  } else if ( notNil(m->on_image) || notNil(m->off_image) )
+  { int mw = max(mark_width(m, m->on_image), mark_width(m, m->off_image));
+    int mh = max(mark_height(m, m->on_image), mark_height(m, m->off_image));
 
-      if ( instanceOfObject(m->off_image, ClassImage) )
-	lm = max(lm, MARK_IMAGE_SIZE);
-      else if ( (Name)m->off_image == NAME_marked )
-      { ws_checkbox_size(0, &cw, &ch);
-	lm = max(lm, cw);
-      }
-
-      lm += 5;				/* TBD: Parameter? */
-    }
+    lm = mw + 4;
+    h = max(h, mh + 2*border);
   }
 
   if ( isDefault(m->accelerator_font) )
@@ -506,44 +495,140 @@ draw_popup_indicator(Menu m, MenuItem mi,
 }
 
 
-static inline status
-elevated_items(Menu m, Elevation z)
-{ if ( is_cycle_menu(m) )
-    fail;
+/* Size of the radio button or check box of a marked menu.  By default
+ * it scales with the value font.
+ */
 
-  if ( instanceOfObject(z, ClassElevation) )
-  { if ( m->kind == NAME_choice )
-      succeed;
+static int
+indicator_size(Menu m)
+{ Any sz = getClassVariableValueObject(m, NAME_indicatorSize);
 
-    if ( m->look == NAME_xpce )
-    { if ( instanceOfObject(m, ClassPopup) )
-	succeed;
-      return m->feedback != NAME_image;
+  if ( isInteger(sz) )
+    return valInt(sz);
+
+  return max(10, (valInt(getHeightFont(m->value_font))*4)/5);
+}
+
+
+static int
+mark_width(Menu m, Any mark)
+{ if ( instanceOfObject(mark, ClassImage) )
+    return valInt(((Image)mark)->size->w);
+  if ( (Name)mark == NAME_marked )
+    return indicator_size(m);
+
+  return 0;
+}
+
+
+static int
+mark_height(Menu m, Any mark)
+{ if ( instanceOfObject(mark, ClassImage) )
+    return valInt(((Image)mark)->size->h);
+
+  return indicator_size(m);
+}
+
+
+/* Radius of the track and the segments of a `choice' menu
+ */
+
+static int
+segment_radius(Menu m)
+{ return min(6, valInt(m->item_size->h)/3);
+}
+
+
+static void
+draw_check_stroke(double x, double y, double d)
+{ fpoint pts[3] = { { x+d*0.24, y+d*0.52 },
+		    { x+d*0.43, y+d*0.71 },
+		    { x+d*0.77, y+d*0.31 } };
+
+  r_thickness(max(1.5, d/8.0));
+  r_polygon(pts, 3, FALSE);
+}
+
+
+/* Draw the standard indicator: a radio button for a single selection
+ * menu, a check box for multiple selection and just a check mark in a
+ * popup.  `hot` is used while the user presses the item.
+ */
+
+static void
+draw_indicator(Menu m, int x, int y, int d, int selected, int hot,
+	       Any fg)
+{ Any accent = getClassVariableValueObject(m, NAME_accentColour);
+  Any old = r_current_colour();
+
+  r_dash(NAME_none);
+  if ( instanceOfObject(m, ClassPopup) )
+  { if ( selected )
+    { r_colour(fg);
+      draw_check_stroke(x, y, d);
     }
+  } else
+  { Any border = (hot ? accent :
+		  getClassVariableValueObject(m, NAME_indicatorBorder));
+    Any bg = getClassVariableValueObject(m, NAME_indicatorBackground);
+    Any mark = getClassVariableValueObject(m, NAME_selectedForeground);
 
-    if ( m->look == NAME_win)
-      return (m->preview_feedback != NAME_colour &&
-	      instanceOfObject(m, ClassPopup));
+    if ( m->multiple_selection == ON )
+    { if ( selected )
+      { r_thickness(0);
+	r_smooth_box(x, y, d, d, d/5.0, accent);
+	r_colour(mark);
+	draw_check_stroke(x, y, d);
+      } else
+      { r_thickness(1);
+	r_colour(border);
+	r_smooth_box(x, y, d, d, d/5.0, bg);
+      }
+    } else
+    { if ( selected )
+      { double dd = d*0.4;
+
+	r_thickness(0);
+	r_arc(x, y, d, d, 0, 360, NAME_none, accent);
+	r_arc(x+(d-dd)/2, y+(d-dd)/2, dd, dd, 0, 360, NAME_none, mark);
+      } else
+      { r_thickness(1);
+	r_colour(border);
+	r_arc(x, y, d, d, 0, 360, NAME_none, bg);
+      }
+    }
   }
+  r_thickness(1);
+  r_colour(old);
+}
 
-  fail;
+
+static void
+draw_separator(Menu m, int x1, int y1, int x2, int y2)
+{ Any old = r_colour(getClassVariableValueObject(m, NAME_segmentBorder));
+
+  r_thickness(1);
+  r_dash(NAME_none);
+  r_line(x1, y1, x2, y2);
+  r_colour(old);
 }
 
 
 static status
-RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
+RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h)
 { int b = valInt(m->border);
   int lm = valInt(m->left_offset);
   int rm = valInt(m->right_offset);
-  Image leftmark = NIL;
+  Any leftmark = NIL;
   int pen = valInt(m->pen);
   int ix, iy, iw, ih;
   int radius = 0;
   Colour fill = NIL;
   Any colour = mi->colour;
-  Elevation z = iz;
-  int lblflags = (mi->active == ON && m->active == ON ? 0 : LABEL_INACTIVE);
-  int flags = 0;
+  int active = (mi->active == ON && m->active == ON);
+  int lblflags = (active ? 0 : LABEL_INACTIVE);
+  int is_popup = instanceOfObject(m, ClassPopup);
+  Any saved = r_current_colour();
 
   DEBUG(NAME_menu, Cprintf("Redraw %s at %d %d %d %d\n",
 			   pp(mi->value), x, y, w, h));
@@ -557,57 +642,38 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
     r_colour(colour);
   }
 
-					/* Windows '95 popup */
-  if ( m->preview_feedback == NAME_colour && m->preview == mi )
-  { Any fg = getClassVariableValueObject(m, NAME_selectedForeground);
-    Any bg = getClassVariableValueObject(m, NAME_selectedBackground);
-    Elevation mz = getClassVariableValueObject(m, NAME_elevation);
-    int bw = (mz && notNil(mz) ? valInt(mz->height) : 0);
-    int bh = valInt(m->border);
+  if ( m->kind == NAME_choice )		/* a segment */
+  { Any bg = NIL;
 
-    r_fill(x, y+bh/2, w-2*bw, h-bh, bg);
-    colour = fg;
-    r_colour(fg);
-  }
-  if ( mi->end_group == ON && m->look == NAME_win )
-  { Elevation mz = getClassVariableValueObject(m, NAME_elevation);
+    if ( mi->selected == ON )
+    { bg = getClassVariableValueObject(m, NAME_accentColour);
+      colour = getClassVariableValueObject(m, NAME_selectedForeground);
+    } else if ( m->preview == mi )
+      bg = getClassVariableValueObject(m, NAME_segmentPressed);
 
-    if ( m->layout == NAME_vertical )
-      r_3d_line(x, y+h, x+w, y+h, mz, FALSE);
-    else
-      r_3d_line(x+w, y, x+w, y+h, mz, FALSE);
-  }
+    if ( notNil(bg) )
+    { int r = segment_radius(m)-1;
 
-  if ( mi->selected == ON && notNil(m->on_image) )
-    leftmark = m->on_image;
-  else if ( mi->selected == OFF && notNil(m->off_image) )
-    leftmark = m->off_image;
-
-  if ( elevated_items(m, z) )
-  { bool up = true;
-
-    if ( m->preview == mi )
-    { z = getClassVariableValueObject(m, NAME_previewElevation);
-    } else if ( mi->selected == ON )
-      up = false;
-
-    r_3d_box(x, y, w, h, 0, z, up);
-
-    if ( mi->end_group == ON )
-    { Elevation mz = getClassVariableValueObject(m, NAME_elevation);
-
-      if ( m->layout == NAME_vertical )
-	r_3d_line(x, y+h, x+w, y+h, mz, false);
-      else
-	r_3d_line(x+w, y, x+w, y+h, mz, false);
+      if ( !active )
+	r_push_group();
+      r_thickness(0);
+      r_smooth_box(x+2, y+2, w-4, h-4, r, bg);
+      if ( !active )
+	r_pop_group_with_alpha(INACTIVE_ALPHA);
+      r_thickness(1);
     }
+  } else if ( m->preview == mi && is_popup )
+  { if ( m->preview_feedback == NAME_colour )
+    { Any fg = getClassVariableValueObject(m, NAME_selectedForeground);
+      Any bg = getClassVariableValueObject(m, NAME_selectedBackground);
+      int mx = valInt(m->margin)+1;
 
-    if ( notNil(mi->popup) )
-      draw_popup_indicator(m, mi, x, y, w, h, b);
-  } else
-  { if ( (mi->selected == ON && m->feedback == NAME_box) )
-      pen++;
-    else if ( m->preview == mi )
+      r_thickness(0);
+      r_smooth_box(x+mx, y+1, w-2*mx, h-2, 4, bg);
+      r_thickness(1);
+      colour = fg;
+      r_colour(fg);
+    } else
     { if ( m->preview_feedback == NAME_box )
 	pen++;
       else if ( m->preview_feedback == NAME_roundedBox )
@@ -617,75 +683,48 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
       { fill = BLACK_COLOUR;
 	radius = 10;
       }
-
-      DEBUG(NAME_menu, Cprintf("Feedback = %s, p = %d; r = %d, fill = %s\n",
-			       pp(m->preview_feedback),
-			       pen, radius, pp(fill)));
     }
-
-    if ( mi->end_group == ON && m->look != NAME_win )
-    { r_thickness(pen+1);
-      r_dash(m->texture);
-      if ( m->layout == NAME_vertical )
-	r_line(x, y+h, x+w, y+h);
-      else
-	r_line(x+w, y, x+w, y+h);
-    }
-
-    if ( pen != 0 || notNil(fill) )
-    { r_thickness(pen);
-      r_dash(m->texture);
-      r_box(x, y, w, h, radius, fill);
-      if ( notNil(fill) )
-	r_swap_background_and_foreground();
-    }
-
-    if ( notNil(mi->popup) )
-      draw_popup_indicator(m, mi, x, y, w, h, b);
   }
 
-  if ( mi->selected == ON )
-    flags |= CHECKBOX_SELECTED;
-  if ( mi->active == ON && m->active == ON )
-    flags |= CHECKBOX_ACTIVE;
-  if ( m->multiple_selection == ON )
-    flags |= CHECKBOX_MULTIPLE;
+  if ( mi->end_group == ON )
+  { if ( m->layout == NAME_vertical )
+      draw_separator(m, x+b, y+h-1, x+w-b, y+h-1);
+    else
+      draw_separator(m, x+w-1, y+b, x+w-1, y+h-b);
+  }
 
-  if ( ((mi->selected == ON  && (Name)m->on_image == NAME_marked ) ||
-	(mi->selected == OFF && (Name)m->off_image == NAME_marked)) )
-  { ws_draw_checkbox(x, y, w, h, b, flags);
-  } else
-  { if ( instanceOfObject(leftmark, ClassImage) )
-    { int bw, bh, by;
-      Elevation mz = getClassVariableValueObject(m, NAME_markElevation);
+  if ( pen != 0 || notNil(fill) )
+  { r_thickness(pen);
+    r_dash(m->texture);
+    r_box(x, y, w, h, radius, fill);
+    if ( notNil(fill) )
+      r_swap_background_and_foreground();
+  }
 
-      bw = MARK_IMAGE_SIZE;
-      bh = MARK_IMAGE_SIZE;
-      by = item_mark_y(m, y, h, bh);
+  if ( notNil(mi->popup) )
+    draw_popup_indicator(m, mi, x, y, w, h, b);
 
-      if ( instanceOfObject(mz, ClassElevation) && mz->height != ZERO )
-      { int h = valInt(mz->height);
-	r_3d_box(x+b-h, by-h, bw+2*h, bh+2*h, 0, mz, FALSE);
-      }
+  if ( m->kind != NAME_choice && !is_cycle_menu(m) )
+  { if ( mi->selected == ON )
+      leftmark = m->on_image;
+    else
+      leftmark = m->off_image;
+  }
 
-      r_image(leftmark, 0, 0, x+b, by, bw, bh);
-    } else if ( (Name) leftmark == NAME_marked )
-    { if ( m->look == NAME_win )
-      { if ( m->multiple_selection == OFF )
-	{ int d = MARK_CIRCLE_SIZE;
-	  int zh = valInt(z->height);
-	  int dy = item_mark_y(m, y, h, d);
-	  int dx = x+b+lm - (MARK_CIRCLE_SIZE+5);
-	  int mw = 3;			/* mark-width */
+  if ( notNil(leftmark) )
+  { int mw = mark_width(m, leftmark);
+    int mh = mark_height(m, leftmark);
+    int my = item_mark_y(m, y, h, mh);
 
-	  r_3d_ellipse(dx-zh, dy-zh, d+2*zh, d+2*zh, z, FALSE);
-	  r_thickness(0);
-	  r_ellipse(dx, dy, d, d, WHITE_COLOUR);
-	  if ( mi->selected == ON )
-	    r_fill(dx+(d-mw)/2, dy+(d-mw)/2, mw, mw, BLACK_COLOUR);
-	}
-      }
-    }
+    if ( !active && !is_popup )
+      r_push_group();
+    if ( instanceOfObject(leftmark, ClassImage) )
+      r_image(leftmark, 0, 0, x+b, my, mw, mh);
+    else
+      draw_indicator(m, x+b, my, mw, mi->selected == ON, m->preview == mi,
+		     isDefault(colour) ? r_current_colour() : colour);
+    if ( !active && !is_popup )
+      r_pop_group_with_alpha(INACTIVE_ALPHA);
   }
 
   if ( notNil(m->accelerator_font) && isName(mi->accelerator) )
@@ -718,15 +757,7 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
   if ( notDefault(colour) )
     r_colour(colour);
   if ( notDefault(mi->background) )
-  { int m;
-
-    if ( instanceOfObject(z, ClassElevation) )
-    { m = labs(valInt(z->height));
-    } else
-      m = 0;
-
-    r_fill(ix+m, iy+m, iw-2*m, ih-2*m, mi->background);
-  }
+    r_fill(ix, iy, iw, ih, mi->background);
 
   ix += b;
   iy += b;
@@ -763,10 +794,46 @@ RedrawMenuItem(Menu m, MenuItem mi, int x, int y, int w, int h, Elevation iz)
   if ( notNil(fill) )
     r_swap_background_and_foreground();
 
-  if ( notDefault(colour) )
-    r_colour(DEFAULT);
+  r_colour(saved);
 
   succeed;
+}
+
+
+/* The track of a `choice' menu: a rounded box around all items.
+ */
+
+static void
+draw_choice_track(Menu m, int x, int y, int w, int h)
+{ Any bg = getClassVariableValueObject(m, NAME_segmentBackground);
+  Any old = r_colour(getClassVariableValueObject(m, NAME_segmentBorder));
+
+  if ( m->active == OFF )
+    r_push_group();
+  r_thickness(1);
+  r_dash(NAME_none);
+  r_smooth_box(x, y, w, h, segment_radius(m), bg);
+  if ( m->active == OFF )
+    r_pop_group_with_alpha(INACTIVE_ALPHA);
+  r_colour(old);
+}
+
+
+/* Separate two adjacent segments of a `choice' menu, unless one of them
+ * is filled.
+ */
+
+static void
+draw_choice_separator(Menu m, MenuItem prev, int px, int py,
+		      MenuItem mi, int x, int y, int w, int h)
+{ if ( prev->selected == ON || mi->selected == ON ||
+       m->preview == prev || m->preview == mi )
+    return;
+
+  if ( py == y && px < x )
+    draw_separator(m, x, y+h/4, x, y+h-h/4);
+  else if ( px == x && py < y )
+    draw_separator(m, x+w/8, y, x+w-w/8, y);
 }
 
 
@@ -777,7 +844,6 @@ RedrawAreaMenu(Menu m, Area a)
   int gx = x_gap(m);
   int gy = y_gap(m);
   Elevation z  = getClassVariableValueObject(m, NAME_elevation);
-  Elevation iz = getClassVariableValueObject(m, NAME_itemElevation);
 
   initialiseDeviceGraphical(m, &x, &y, &w, &h);
   NormaliseArea(x, y, w, h);
@@ -813,12 +879,14 @@ RedrawAreaMenu(Menu m, Area a)
     ws_entry_field((Graphical)m, cx, by, iw, ih, flags);
 
     if ( mi != FAIL )
-      RedrawMenuItem(m, mi, cx, cy, iw, ih, iz);
+      RedrawMenuItem(m, mi, cx, cy, iw, ih);
   } else
   { int rows, cols;
     int n = 1;
     Cell cell;
     int ax, ay, aw, ah;
+    MenuItem prev = NULL;
+    int px = 0, py = 0;
 
     ax = valInt(a->x); ay = valInt(a->y);
     aw = valInt(a->w); ah = valInt(a->h);
@@ -829,20 +897,35 @@ RedrawAreaMenu(Menu m, Area a)
     if ( z && notNil(z) )
       r_3d_box(cx, cy, w-(cx-x), h-(cy-y), 0, z, TRUE);
     cx += valInt(m->margin);
+    bx = cx;
 
-    if ( m->look == NAME_win )
-    { iw += gx; ih += gy;
-      gx = gy = 0;
-    } else if ( m->pen != ZERO )
+    if ( m->pen != ZERO )
     { iw += gx + 1; ih += gy + 1;
       gx = gy = -1;
+    }
+
+    if ( m->kind == NAME_choice && rows > 0 )
+    { int tw, th;
+
+      if ( m->layout == NAME_horizontal )
+      { tw = rows*(iw+gx)-gx;
+	th = cols*(ih+gy)-gy;
+      } else
+      { tw = cols*(iw+gx)-gx;
+	th = rows*(ih+gy)-gy;
+      }
+      draw_choice_track(m, cx, cy, tw, th);
     }
 
     for_cell(cell, m->members)
     { MenuItem mi = cell->value;
 
       if ( OverlapArea(ax, ay, aw, ah, cx, cy, iw, ih) )
-	RedrawMenuItem(m, mi, cx, cy, iw, ih, iz);
+      { if ( prev && m->kind == NAME_choice )
+	  draw_choice_separator(m, prev, px, py, mi, cx, cy, iw, ih);
+	RedrawMenuItem(m, mi, cx, cy, iw, ih);
+      }
+      prev = mi; px = cx; py = cy;
 
       if ( m->layout == NAME_vertical )
       { if ( rows == 1 || (n > 1 && n % rows == 0) )
@@ -2367,24 +2450,18 @@ static classvardecl rc_menu[] =
      "Adjust items {left,center,right} in their box"),
   RC(NAME_gap, "size", "size(0,0)",
      "Gap between items (XxY)"),
-  RC(NAME_itemElevation, "elevation*", "button",
-     "Elevation of items in the menu"),
-  RC(NAME_markElevation, "elevation*", "mark",
-     "Elevation of marks"),
   RC(NAME_kind, "name", "marked",
      "Default menu kind"),
   RC(NAME_layout, "name", "horizontal",
      "Layout of the menu: {horizontal,vertical}"),
   RC(NAME_margin, "0..", "0",
      "Margin to the left and right"),
-  RC(NAME_offImage, "{marked}|image*", "@nomark_image",
-     "Marker for items not in selection"),
-  RC(NAME_onImage, "{marked}|image*", "@mark_image",
-     "Marker for items in selection"),
+  RC(NAME_offImage, "{marked}|image*", "marked",
+     "Marker for items not in selection (marked: radio button or check box)"),
+  RC(NAME_onImage, "{marked}|image*", "marked",
+     "Marker for items in selection (marked: radio button or check box)"),
   RC(NAME_pen, "0..", "0",
      "Thickness of pen around items"),
-  RC(NAME_previewElevation, "elevation*", "0",
-     "Elevation of item in preview mode"),
   RC(NAME_previewFeedback, "name", "box",
      "Indication item is in preview state"),
   RC(NAME_showLabel, "bool", "@on",
@@ -2404,7 +2481,21 @@ static classvardecl rc_menu[] =
   RC(NAME_elevation, RC_REFINE, "0", NULL),
   RC(NAME_valueFont, RC_REFINE, "normal", NULL),
   RC(NAME_comboBoxHeight, "1..", "6",
-     "Maximum height of the combo-box shown for completions")
+     "Maximum height of the combo-box shown for completions"),
+  RC(NAME_accentColour, "colour", "ui_accent",
+     "Fill of a selected radio button, check box or segment"),
+  RC(NAME_indicatorSize, "[0..]", "@default",
+     "Size of radio buttons and check boxes (@default: from value_font)"),
+  RC(NAME_indicatorBorder, "colour", "ui_inactive",
+     "Outline of an unselected radio button or check box"),
+  RC(NAME_indicatorBackground, "colour", "ui_window_background",
+     "Fill of an unselected radio button or check box"),
+  RC(NAME_segmentBackground, "colour", "ui_button_background",
+     "Background of a choice menu"),
+  RC(NAME_segmentBorder, "colour", "ui_separator",
+     "Outline of a choice menu and the lines between its segments"),
+  RC(NAME_segmentPressed, "colour", "ui_button_pressed",
+     "Fill of a segment of a choice menu while pressed")
 };
 
 /* Class Declaration */

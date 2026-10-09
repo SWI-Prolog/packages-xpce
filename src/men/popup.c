@@ -584,10 +584,7 @@ appendPopup(PopupObj p, Any obj)
 status
 defaultPopupImages(PopupObj p)
 { if ( p->show_current == ON )
-  { if ( p->multiple_selection == ON && p->look == NAME_win )
-      assign(p, on_image, NAME_marked);
-    else
-      assign(p, on_image, MARK_IMAGE);
+  { assign(p, on_image, NAME_marked);	/* a check mark */
   } else
     assign(p, on_image, NIL);
 
@@ -713,19 +710,14 @@ static classvardecl rc_popup[] =
      "Marker for items in selection"),
   RC(NAME_pen, "0..", "0",
      "Thickness of the drawing-pen"),
-  RC(NAME_previewFeedback, "name", UXWIN("box", "colour"),
+  RC(NAME_previewFeedback, "name", "colour",
      "Feedback on `preview' item"),
   RC(NAME_showLabel, "bool", "@off",
      "Label is visible"),
   RC(NAME_valueWidth, "int", "80",
      "Minimum width in pixels"),
-  RC(NAME_itemElevation, RC_REFINE, "0",
-     NULL),
   RC(NAME_elevation, RC_REFINE, UXWIN("2", "1"), NULL),
   RC(NAME_labelSuffix, RC_REFINE, "", NULL),
-  RC(NAME_previewElevation, RC_REFINE,
-     "elevation(preview, 1, hilited)",
-     NULL),
   RC(NAME_format, RC_REFINE, "left", NULL),
   RC(NAME_margin, RC_REFINE, "1",    NULL),
   RC(NAME_look,   RC_REFINE,
