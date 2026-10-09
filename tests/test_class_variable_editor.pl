@@ -92,6 +92,10 @@ class_variable(d,      '[colour]', @default).
 
 :- pce_begin_class(tcve_box, box).
 class_variable(colour, colour, red).
+class_variable(tcve_shared, bool, @on).
+:- pce_end_class.
+:- pce_begin_class(tcve_other, box).        % also declares tcve_shared,
+class_variable(tcve_shared, bool, @off).   % so it gets the `*` scope
 :- pce_end_class.
 :- pce_begin_class(tcve_sub_box, tcve_box).
 :- pce_end_class.
@@ -586,10 +590,20 @@ test(switch_shows_special, [S-A == @off - @off]) :-
                                               class(tcve_item), d)),
     get(Row?switch, selection, S),     % d is @default
     get(Row?item, active, A).
-test(scope, [Keys-Targets == ['tcve_sub_box.colour', 'tcve_box.colour', '*.colour']-[tcve_sub_box, tcve_box, tcve_box]]) :-
+test(scope, [Keys-Targets == ['tcve_sub_box.colour', 'tcve_box.colour']-[tcve_sub_box, tcve_box]]) :-
     new(Row, pce_class_variable_editor:cv_row(class(tcve_sub_box),
                                               class(tcve_box), colour)),
-    maplist(scope_key(Row), [tcve_sub_box, tcve_box, *], Keys, Targets).
+    maplist(scope_key(Row), [tcve_sub_box, tcve_box], Keys, Targets).
+test(no_star_scope, fail) :-
+    new(Row, pce_class_variable_editor:cv_row(class(tcve_sub_box),
+                                              class(tcve_box), colour)),
+    get(Row?scope, member, *, _).
+test(star_scope, [Key-Target == '*.tcve_shared'-tcve_box]) :-
+    forall(member(C, [tcve_box, tcve_other]),       % realise the classes
+           get(class(C), class_variable, tcve_shared, _)),
+    new(Row, pce_class_variable_editor:cv_row(class(tcve_sub_box),
+                                              class(tcve_box), tcve_shared)),
+    scope_key(Row, *, Key, Target).
 
 scope_key(Row, Scope, Key, Target) :-
     send(Row?scope, selection, Scope),
