@@ -312,9 +312,11 @@ the `dir.bm` icon, use the following code as a starting point:
     @see list_browser->scroll_to
 
 - list_browser->scroll_to: [int]
-    Make nth-1 item first of window
+    Make nth-1 item first of window.  Scrolling stops when the last
+    item is on the bottom line, so the window shows as many items as
+    it can.
 
-    **Defaults**: By default scrolls to the last item.
+    **Defaults**: By default scrolls to the end.
 
     @see list_browser->normalise
 

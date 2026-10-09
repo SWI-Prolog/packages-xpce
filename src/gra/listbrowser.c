@@ -1284,10 +1284,19 @@ getSelectionListBrowser(ListBrowser lb)
 		*          SCROLLING		*
 		********************************/
 
+/* Scrolling stops when the last item is on the bottom line: there is
+   nothing below it to show.  <-size is how many lines fit.
+*/
+
 status
 scrollToListBrowser(ListBrowser lb, Int index)
-{ if ( isDefault(index) )
-    index = (notNil(lb->dict) ? lb->dict->members->size : ZERO);
+{ int size = (notNil(lb->dict) ? valInt(lb->dict->members->size) : 0);
+  int last = size - valInt(lb->size->h);
+
+  if ( isDefault(index) )
+    index = toInt(size);
+  if ( valInt(index) > last )
+    index = toInt(last);
   index = normalise_index(lb, index);
 
   assign(lb, start, index);

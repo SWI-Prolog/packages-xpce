@@ -36,6 +36,7 @@ considered before delegation in PCE's message passing algorithm.
 
 - browser->scroll_to: int
     Scroll to the numbered dict_item object.  The first item is numbered 0.
+    See `list_browser->scroll_to`.
 
 - browser->selection: member:dict_item|chain*
     Set selected items.
