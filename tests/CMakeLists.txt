@@ -20,6 +20,7 @@ test_libs(cursor_item          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(help_message         OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(menu                 OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(accelerators         OPTIONS ${XPCE_TEST_OPTIONS})
+test_libs(password_item        OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(slider               OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(text_cursor          OPTIONS ${XPCE_TEST_OPTIONS})
 test_libs(text_style           OPTIONS ${XPCE_TEST_OPTIONS})
@@ -75,6 +76,7 @@ set(XPCE_EXTRA_TESTS xpce:colour
                      xpce:help_message
                      xpce:menu
                      xpce:accelerators
+                     xpce:password_item
                      xpce:slider
                      xpce:text_cursor
                      xpce:text_style

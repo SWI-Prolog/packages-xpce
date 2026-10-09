@@ -1092,7 +1092,10 @@ repeatTextItem(TextItem ti)
 
 static Int
 getPointedTextItem(TextItem ti, Point pos)
-{ return get_pointed_text(ti->value_text,
+{ if ( !pos )				/* event not on my window */
+    fail;
+
+  return get_pointed_text(ti->value_text,
 			  valInt(pos->x)-valInt(ti->value_text->area->x),
 			  valInt(pos->y), TRUE);
 }
@@ -1197,12 +1200,12 @@ eventTextItem(TextItem ti, EventObj ev)
       { Int X, Y;
 	int x, y;
 
-	get_xy_event(ev, ti, ON, &X, &Y);
-	x = valInt(X); y = valInt(Y);
-	if ( y >= 0 &&
-	     y <= valInt(ti->area->h) &&
-	     x <= valInt(ti->area->w) &&
-	     x >= valInt(ti->area->w) - cbw )
+	if ( get_xy_event(ev, ti, ON, &X, &Y) &&
+	     (x = valInt(X), y = valInt(Y),
+	      y >= 0 &&
+	      y <= valInt(ti->area->h) &&
+	      x <= valInt(ti->area->w) &&
+	      x >= valInt(ti->area->w) - cbw) )
 	{ BoolObj val = (completerShownDialogItem(ti) ? OFF : ON);
 
 	  send(ti, NAME_showComboBox, val, EAV);
@@ -1215,12 +1218,12 @@ eventTextItem(TextItem ti, EventObj ev)
 	int x, y;
 	int clrw = text_item_clear_width(ti);
 
-	get_xy_event(ev, ti, ON, &X, &Y);
-	x = valInt(X); y = valInt(Y);
-	if ( y >= 0 &&
-	     y <= valInt(ti->area->h) &&
-	     x <= valInt(ti->area->w) &&
-	     x >= valInt(ti->area->w) - clrw )
+	if ( get_xy_event(ev, ti, ON, &X, &Y) &&
+	     (x = valInt(X), y = valInt(Y),
+	      y >= 0 &&
+	      y <= valInt(ti->area->h) &&
+	      x <= valInt(ti->area->w) &&
+	      x >= valInt(ti->area->w) - clrw) )
 	{ send(ti, NAME_clear, EAV);
 	  succeed;
 	}

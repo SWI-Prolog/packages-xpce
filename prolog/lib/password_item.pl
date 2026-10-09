@@ -39,9 +39,13 @@
 
 /* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 This class realises a GUI password  item, visualising the typed password
-as a list of stars. The returned value   is  an XPCE string to avoid the
+as a row of bullets. The returned value   is  an XPCE string to avoid the
 password entering the XPCE symbol table where it would be much easier to
 find.
+
+The password is edited in an invisible  shadow text_item.  The visible
+item shows the bullets and does  everything else: Return applies it, Tab
+advances and the clear icon clears it.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
 
 
@@ -55,8 +59,8 @@ variable(shadow,        text_item,      get, "The real (invisible) item").
 
 initialise(I, Name:[name], Message:[message]) :->
     default(Name, password, TheName),
-    send_super(I, initialise, TheName, string('')),
-    send(I, slot, shadow, text_item(TheName, string(''), Message)).
+    send_super(I, initialise, TheName, string(''), Message),
+    send(I, slot, shadow, text_item(TheName, string(''))).
 
 
 unlink(I) :->
@@ -65,31 +69,51 @@ unlink(I) :->
     send_super(I, unlink).
 
 
+%   Keys that edit the text go to the invisible shadow.  Other keys
+%   (Return, Tab) are for the visible item.  So are mouse events, as
+%   that is where they happened; the shadow follows its caret.  The
+%   shadow is not displayed, so it cannot locate a mouse event.  Both
+%   items get the other events, notably those about the keyboard focus.
+
 event(I, Ev:event) :->
     get(I, shadow, Shadow),
-    (   get(Shadow, message, @default),
-        get(Ev, id, 13)             % RET
-    ->  send_super(I, event)
-    ;   get(Ev, id, 9)              % TAB
-    ->  send_super(I, event, Ev)
-    ;   send(Shadow, event, Ev),
-        send(I, update),
-        (   send(Ev, is_a, keyboard)
-        ->  true
-        ;   send_super(I, event, Ev)
-        )
+    (   send(Ev, is_a, keyboard),
+        \+ item_key(Ev)
+    ->  send(Shadow, event, Ev),
+        send(I, update)
+    ;   send(Ev, is_a, mouse)
+    ->  (   send_super(I, event, Ev)
+        ->  Done = true
+        ;   Done = false
+        ),
+        get(I, caret, Caret),
+        send(Shadow, caret, Caret),
+        Done == true
+    ;   ignore(send(Shadow, event, Ev)),    % focus events
+        send_super(I, event, Ev)
     ).
+
+item_key(Ev) :-
+    get(Ev, id, Id),
+    get(key_binding(text_item), function, Id, Function),
+    memberchk(Function, [enter, next, previous]).
 
 
 update(I) :->
     "Update visual representation"::
     get(I, shadow, Shadow),
-    get(Shadow, selection, String),
+    get(Shadow, displayed_value, String),  % <-selection resets <-modified
     get(Shadow, caret, Caret),
     get(String, size, Size),
-    make_star_string(Size, Stars),
-    send_super(I, selection, Stars),
-    send(I, caret, Caret).
+    bullet_string(Size, Bullets),
+    send_super(I, displayed_value, Bullets),
+    send(I, caret, Caret),
+    (   get(Shadow, modified, @on),
+        get(I, device, Dev),
+        Dev \== @nil
+    ->  ignore(send(Dev, modified_item, I, @on))
+    ;   true
+    ).
 
 
 selection(I, Passwd:string) :<-
@@ -99,10 +123,41 @@ selection(I, Passwd:string) :<-
 selection(I, Passwd:string) :->
     get(I, shadow, Shadow),
     send(Shadow, selection, Passwd),
+    get(Passwd, size, Size),
+    bullet_string(Size, Bullets),
+    send_super(I, selection, Bullets),
     send(I, update).
 
-make_star_string(Size, S) :-
+modified(I, Modified:bool) :<-
+    "True if the password was edited"::
+    get(I, shadow, Shadow),
+    get(Shadow, modified, Modified).
+
+modified(I, Modified:bool) :->
+    get(I, shadow, Shadow),
+    send(Shadow, modified, Modified).
+
+apply(I, Always:[bool]) :->
+    "Send the message with the password if it was edited"::
+    get(I, message, Msg),
+    send(Msg, instance_of, code),
+    (   Always == @on
+    ->  true
+    ;   get(I, modified, @on)
+    ),
+    get(I, selection, Passwd),
+    send(Msg, forward_receiver, I, Passwd),
+    send(I, modified, @off).
+
+clear(I) :->
+    "Clear the password"::
+    get(I, shadow, Shadow),
+    send(Shadow, clear),
+    send_super(I, clear),
+    send(I, update).
+
+bullet_string(Size, S) :-
     new(S, string),
-    forall(between(1, Size, _), send(S, append, '*')).
+    forall(between(1, Size, _), send(S, append, '\u25CF')).
 
 :- pce_end_class(password_item).
