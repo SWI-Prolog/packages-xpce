@@ -89,7 +89,7 @@ bundle menu items.
 
     **Defaults**: When @default, `menu <-value_font` of the associated <-menu is used.
 
-    The combo box of a `cycle` menu (see `menu.cycle_indicator`) shows
+    The combo box of a `cycle` menu (see `menu ->kind`) shows
     the items in this font, or in the font of the attribute
     `preview_font` if present.  Items whose font cannot display the
     label are omitted.  As the size of the menu is computed using

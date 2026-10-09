@@ -7,11 +7,28 @@ dynamically generated list that may be large, while a menu is
 meant to select from a small number of alternatives that is
 generally static.
 
-Class menu defines a large number of options that determine both the
-layout of the items, the feedback provided for the selected item, and
-whether or not one or more items may be selected at the same time.
-For convenience, there is a method called `Menu ->kind` that allows
-you to select some common configurations with a single message.
+Two independent properties define a menu.  `Menu ->kind` defines how
+the items are presented: as a drop-down combo box showing the selection
+(`cycle`), as a list of items with a radio button or check box
+(`marked`), or as a segmented control (`choice`).
+`Menu ->multiple_selection` defines whether the user may select one or
+more items.  `Menu ->kind` resets ->multiple_selection to @off, so set
+the kind first.  `toggle` is a shorthand for a `marked` menu with
+multiple selection:
+
+	?- new(M, menu(options, toggle)).
+	?- new(M, menu(options, marked)), send(M, multiple_selection, @on).
+
+Menus are drawn in the colours of the theme; see the class variables
+`accent_colour`, `indicator_border`, `indicator_background`,
+`indicator_size`, `segment_background`, `segment_border` and
+`segment_pressed`.
+
+`marked` and `choice` menus accept the keyboard focus.  The arrow keys
+move the selection of a single selection menu.  In a multiple selection
+menu they move <-focus_item, which Space or Return toggles.  At the
+first or last item, Left and Right move the focus to the previous or
+next dialog item.
 
 
 ## Message forwarding {#class-menu-message-forwarding}
@@ -69,10 +86,8 @@ horizontal layout, 2 columns and 5 items:
 	        item-4   item-5
 
 Various parameters influence the final layout.  `Menu<->gap` defines the
-horizontal and vertical space between the items.  `Menu<->pen` defines
-the thickness of the lines for the boxes drawn around the items.
-`Menu<->border` defines the white space between the item and the box
-around it.
+horizontal and vertical space between the items and `Menu<->border`
+defines the white space between the item and the box around it.
 
 @see menu->initialise
 @see menu_item-message
@@ -115,30 +130,24 @@ around it.
     <-selection.
 
 - menu<-feedback: feedback={box,image,show_selection_only}
-    Style parameter that determines the visual feedback for the selection.
-    The possible values are:
+    Old name for the presentation, kept for compatibility.  Sending
+    ->feedback sets ->kind, keeping ->multiple_selection:
 
     - show_selection_only
-    	Only applicable when `Menu <->multiple_selection` equals @off.
-    	In this mode, only the selected item is displayed.  Used to
-    	implement `Menu <->kind: cycle`.
+    	`Menu ->kind: cycle`
 
     - box
-    	Draw a box around the selected item(s).  The thickness of the
-    	line equals the pen of the menu plus 1.
-
-    - invert
-    	Invert the selected item(s).  Used to implement `Menu ->kind:
-    	choice'.  Note that inverting images gives strange results on
-    	colour displays.
+    	`Menu ->kind: choice`
 
     - image
-    	Indicate the selection by painting `Menu <-off_image` left of
-    	not-selected items and `Menu <-on_image` left of selected
-    	items.  Used to implement `Menu ->kind: `marked` or `toggle`.
+    	`Menu ->kind: marked`
 
-    @see menu_item-selected
     @see menu-kind
+
+- menu<-focus_item: item=menu_item
+    The item operated by the keyboard: the item with the focus ring.
+    Defaults to the (first) selected item or else the first active
+    item.  Set it with ->focus_item.
 
 - menu<-format: alignment={left,center,right}
     The layout of menu_items in a menu is a 1 or 2 dimensional table.  The
@@ -175,11 +184,9 @@ around it.
     @see menu-label_area
     @see menu-item_offset
 
-- menu<-kind: kind={cycle,marked,choice,toggle,popup,cycle_popup}
-    The kind attribute is a shorthand for setting various style attributes
-    to some predefined value.  The variable `Menu <-kind` provides the
-    argument of the latest `Menu ->kind` invocation.  Note that the menu
-    may look very different due to subsequent style-parameters changed.
+- menu<-kind: kind={cycle,marked,choice,toggle,popup}
+    How the items are presented.  Yields `toggle` for a `marked` menu
+    with <-multiple_selection @on.
 
     @see menu->initialise
     @see menu->kind
@@ -207,10 +214,8 @@ around it.
 
 - menu<-left_offset: offset=0..
     Left margin between the item-box and the item itself.  Used to reserve
-    space for placing the selection markers if present.  Its value is 0 if
-    both `Menu <-on_image` and `Menu <-off_image` equal @nil and the
-    maximum width plus `Menu <-border` if one or both of the markers are
-    defined.
+    space for the radio buttons, check boxes or images of a `marked`
+    menu and for the padding of the segments of a `choice` menu.
 
 - menu<-members: items=chain
     Chain of menu-items that are part of the menu.
@@ -220,7 +225,9 @@ around it.
 
 - menu<-multiple_selection: multiple=bool
     If @on, any item can be either selected or deselected.  It @off, exactly
-    one item has status `menu_item <->selected: @on`.
+    one item has status `menu_item <->selected: @on`.  A `marked` menu
+    shows radio buttons if @off and check boxes if @on.  A `cycle` menu
+    always has a single selection.
 
     If @on, Alt-click or double-click on an item selects only this
     item.  Doing so again on this item while it is the only one
@@ -230,19 +237,24 @@ around it.
     @see menu_item-selected
 
 - menu<-off_image: image=image|{marked}*
-    Image painted in front of items that have `MenuItem <->selected`: @off.
-    When @nil, no image is painted before the item.
+    Image painted in front of items of a `marked` menu that have
+    `MenuItem <->selected`: @off.  When `marked` (default), this is a
+    radio button or check box drawn in the theme colours.  When @nil,
+    nothing is painted before the item.
 
     @see menu-on_image
 
 - menu<-on_image: image=image|{marked}*
-    Image painted in front of items that have `MenuItem <->selected`: @on.
-    When @nil, no image is painted before the item.
+    Image painted in front of items of a `marked` menu that have
+    `MenuItem <->selected`: @on.  When `marked` (default), this is a
+    radio button or check box drawn in the theme colours; in a popup it
+    is a check mark.  When @nil, nothing is painted before the item.
 
     @see menu-off_image
 
 - menu<-preview: item=menu_item*
-    Menu_item in the preview state. Currently only used for popup-menu's.
+    Menu_item in the preview state: the item under the pointer of an
+    open popup or the item of a menu that is being pressed.
 
     @see menu-preview_feedback
 
@@ -444,34 +456,29 @@ around it.
 
     @see menu->is_off
 
-- menu->kind: kind={cycle,marked,choice,toggle,popup,cycle_popup}
-    The `Menu ->kind` method allows for the selection of some commonly
-    occurring combinations of menu parameters with a single method.  The
-    available options are:
+- menu->kind: kind={cycle,marked,choice,toggle,popup}
+    Set how the items are presented and reset ->multiple_selection to
+    @off.  The available options are:
 
     - cycle
-    	Only display the selection.  Clicking on the menu selects the
-    	next right-item.  The menu has a popup-menu associated that
-    	allows for an overview of all available items.  Useful for not
-    	very commonly used menu's as it uses much less space on the
-    	screen.
+    	Only display the selection, in a combo box.  Clicking the menu
+    	opens a list of all items.  Uses little space on the screen.
 
     - marked
-    	Single selection menu with markers (see `Menu <-on_image` and
-    	`Menu <-off_image`) to indicate the selected item.
+    	Show each item with a radio button, or a check box if
+    	->multiple_selection is @on (see `Menu <-on_image` and
+    	`Menu <-off_image`).
 
     - toggle
-    	As marked, but multiple items may be selected.
+    	As marked, setting ->multiple_selection to @on.
 
     - choice
-    	As marked, but the selection is indicated by inverting the it.
+    	A segmented control: a row of joined buttons, of which the
+    	selected ones are filled with the accent colour.
 
     - popup
     	Used internally.  Popup menus are implemented on top of class
     	menu.
-
-    - cycle_popup
-    	Used internally for the popup of <-kind cycle menus.
 
     @see menu-kind
     @see class menu
