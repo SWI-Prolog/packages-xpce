@@ -113,15 +113,16 @@ test(main_only_envelope_excludes_emoji, [condition(emoji_by_fallback)]) :-
     get(F, domain, @off, tuple(_A, Z)),
     Z < C.
 
-test(domain_consistent_with_member) :-
-    %% Outside the family domain, ->member must fail.
+test(domain_consistent_with_member, Members == []) :-
+    %% Outside the family domain, ->member must fail.  Probe all code
+    %% points just above the domain and every 256th beyond.
     new(F, font(sans, normal, 12)),
     get(F, domain, tuple(_A, Z)),
-    Outside is Z + 1,
-    ( Outside =< 0x10FFFF
-    -> \+ send(F, member, Outside)
-    ;  true
-    ).
+    Z1 is Z+1,
+    findall(C, ( between(Z1, 0x10FFFF, C),
+                 ( C - Z =< 0x20000 -> true ; C mod 0x100 =:= 0 ),
+                 send(F, member, C)
+               ), Members).
 
 :- end_tests(font_domain).
 

@@ -298,49 +298,69 @@ s_has_char_family(FontObj f, unsigned int c)
   return ok;
 }
 
-/* PangoCoverage envelope: minimum first / maximum last codepoint for
- * which any of the given coverages is not PANGO_COVERAGE_NONE.
+/* Envelope of the coverage of one or more fonts: the lowest and highest
+ * code point for which any of them is not PANGO_COVERAGE_NONE.  Fonts
+ * are added one by one.  Only the code points outside the envelope so
+ * far need to be examined.
  */
-static void
-coverages_envelope(PangoCoverage **covs, int n, int *a, int *z)
-{ gunichar first = 0, last = 0;
-  bool found = false;
 
-  for (gunichar wc = 0; wc <= 0x10FFFF; wc++)
-  { for (int i = 0; i < n; i++)
-    { if ( pango_coverage_get(covs[i], wc) != PANGO_COVERAGE_NONE )
-      { if ( !found )
-	{ first = wc;
-	  found = true;
-	}
-	last = wc;
+typedef struct
+{ gunichar first;
+  gunichar last;
+  bool	   found;
+} cov_envelope;
+
+#define covered(cov, wc) (pango_coverage_get(cov, wc) != PANGO_COVERAGE_NONE)
+
+static void
+extend_envelope(cov_envelope *e, PangoCoverage *cov)
+{ gunichar wc;
+
+  if ( !e->found )
+  { for(wc = 0; wc <= 0x10FFFF && !covered(cov, wc); wc++)
+      ;
+    if ( wc > 0x10FFFF )
+      return;				/* covers nothing */
+    e->first = e->last = wc;
+    e->found = true;
+  } else
+  { for(wc = 0; wc < e->first; wc++)
+    { if ( covered(cov, wc) )
+      { e->first = wc;
 	break;
       }
     }
   }
 
-  if ( found )
-  { *a = first;
-    *z = last;
+  for(wc = 0x10FFFF; wc > e->last; wc--)
+  { if ( covered(cov, wc) )
+    { e->last = wc;
+      break;
+    }
+  }
+}
+
+static void
+envelope_domain(const cov_envelope *e, int *a, int *z)
+{ if ( e->found )
+  { *a = e->first;
+    *z = e->last;
   } else
   { *a = 0;
     *z = 0x10ffff;
   }
 }
 
-#define MAX_FONTSET_FACES 64
-
-typedef struct
-{ PangoCoverage *covs[MAX_FONTSET_FACES];
-  int n;
-} cov_collector;
-
 static gboolean
-collect_cov(PangoFontset *fs, PangoFont *font, gpointer ud)
-{ cov_collector *c = ud;
-  if ( c->n < MAX_FONTSET_FACES )
-    c->covs[c->n++] = pango_font_get_coverage(font, NULL);
-  return FALSE;	/* keep iterating */
+add_font_coverage(PangoFontset *fs, PangoFont *font, gpointer ud)
+{ PangoCoverage *cov = pango_font_get_coverage(font, NULL);
+
+  if ( cov )
+  { extend_envelope(ud, cov);
+    g_object_unref(cov);
+  }
+
+  return FALSE;				/* keep iterating */
 }
 
 /**
@@ -377,21 +397,20 @@ f_domain(FontObj f, bool family, int *a, int *z)
   { PangoFontset *fs = pango_font_map_load_fontset(fontmap, context,
 						   wsf->desc,
 						   pango_language_get_default());
+    cov_envelope e = { .found = false };
+
     if ( fs )
-    { cov_collector c = { .n = 0 };
-      pango_fontset_foreach(fs, collect_cov, &c);
-      coverages_envelope(c.covs, c.n, a, z);
-      for (int i = 0; i < c.n; i++)
-	g_object_unref(c.covs[i]);
+    { pango_fontset_foreach(fs, add_font_coverage, &e);
       g_object_unref(fs);
-    } else
-    { *a = 0;
-      *z = 0x10ffff;
     }
+    envelope_domain(&e, a, z);
   } else
-  { PangoCoverage *cov = pango_font_get_coverage(wsf->font, NULL);
-    coverages_envelope(&cov, 1, a, z);
+  { cov_envelope e = { .found = false };
+    PangoCoverage *cov = pango_font_get_coverage(wsf->font, NULL);
+
+    extend_envelope(&e, cov);
     g_object_unref(cov);
+    envelope_domain(&e, a, z);
   }
 
   cache->first    = *a;
